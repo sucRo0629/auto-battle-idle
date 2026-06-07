@@ -1,11 +1,13 @@
 import type { BattleEventListener } from "./events.ts";
-import { getActiveCooldownRate, getPassiveDefs, resolveDotTick, resolveHotTick } from "./combatMath.ts";
+import { getActiveCooldownRate, getPassiveDefs, resolveDotTick, resolveHotAmountFromStatus, applyDamageToTarget, applyHealToTarget } from "./combatMath.ts";
 import {
   createAlliesFromPartyState,
   createCooldowns,
   createEnemiesForStage,
   resetEntityIdCounter,
 } from "./entities.ts";
+import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
+import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
   computeAllyPositions,
   computeEngagedAllyTargets,
@@ -25,12 +27,14 @@ import {
   toVisualCombatant,
 } from "../render/formationLayout.ts";
 import { SkillExecutor } from "./skills/SkillExecutor.ts";
+import { tickPendingHits } from "./skills/pendingSkillHits.ts";
 import type {
   BattlePhase,
   BattleSnapshot,
   CombatantState,
   GameData,
   PartySlotState,
+  PendingSkillHit,
   SkillCooldown,
   StatusEffect,
 } from "./types.ts";
@@ -50,6 +54,8 @@ export class BattleEngine {
   private restartTimer = 0;
   private readonly listeners = new Set<BattleEventListener>();
   private readonly executor: SkillExecutor;
+  private pendingHitQueue: PendingSkillHit[] = [];
+  private battleTimeSec = 0;
   private stageId: string;
   private waveIndex = 0;
 
@@ -60,12 +66,20 @@ export class BattleEngine {
     private readonly getStageId: () => string,
   ) {
     this.stageId = getStageId();
-    this.executor = new SkillExecutor(gameData, (e) => this.emit(e));
+    this.executor = new SkillExecutor(gameData, (e) => this.emit(e), {
+      getBattleTimeSec: () => this.battleTimeSec,
+      enqueuePendingHits: (hits) => {
+        this.pendingHitQueue.push(...hits);
+      },
+      getAllCombatants: () => [...this.allies, ...this.enemies],
+    });
     this.reloadBattlefield();
   }
 
   private reloadBattlefield(): void {
     resetEntityIdCounter();
+    this.pendingHitQueue = [];
+    this.battleTimeSec = 0;
     this.allies = createAlliesFromPartyState(
       this.gameData,
       this.getParty(),
@@ -78,7 +92,8 @@ export class BattleEngine {
       this.stageId,
       this.waveIndex,
     );
-    this.syncAllyVisualPositions();
+    // 戦場リロード時は常に非接敵の隊形配置（engaged だと敵 spawnX 基準で左へずれる）
+    this.syncAllyVisualPositions(false);
     this.resetEnemyVisualPositions();
   }
 
@@ -264,9 +279,9 @@ export class BattleEngine {
 
   /** パーティ変更などで戦闘を最初からやり直す */
   restartBattle(): void {
+    this.engaged = false;
     this.reloadBattlefield();
     this.worldOffsetX = 0;
-    this.engaged = false;
     this.restartTimer = 0;
     this.phase = "running";
   }
@@ -311,6 +326,7 @@ export class BattleEngine {
       name: c.name,
       hp: c.hp,
       maxHp: c.maxHp,
+      barrierHp: c.barrierHp,
       atk: c.atk,
       def: c.def,
       reg: c.reg,
@@ -356,6 +372,8 @@ export class BattleEngine {
   }
 
   private tickRunning(deltaTime: number): void {
+    this.battleTimeSec += deltaTime;
+    this.tickPendingHitQueue();
     if (!this.engaged) {
       const march = SCROLL_SPEED * deltaTime;
       this.worldOffsetX += march;
@@ -372,6 +390,14 @@ export class BattleEngine {
     }
   }
 
+  private tickPendingHitQueue(): void {
+    this.pendingHitQueue = tickPendingHits(
+      this.pendingHitQueue,
+      this.battleTimeSec,
+      (hit) => this.executor.applyPendingHit(hit),
+    );
+  }
+
   private tickStatusEffects(deltaTime: number): void {
     for (const unit of [...this.allies, ...this.enemies]) {
       const kept: StatusEffect[] = [];
@@ -383,8 +409,8 @@ export class BattleEngine {
         if (
           unit.isAlive &&
           (effect.overlay === "hot" || effect.overlay === "dot") &&
-          effect.powerMultiplier !== undefined &&
-          effect.sourceId
+          effect.sourceId &&
+          (effect.amount !== undefined || effect.powerMultiplier !== undefined)
         ) {
           if (effect.tickSec === undefined) {
             effect.tickSec = OVERLAY_TICK_SEC;
@@ -427,13 +453,10 @@ export class BattleEngine {
     const skillName = skill?.name ?? effect.overlay ?? "";
 
     if (effect.overlay === "hot") {
-      const amount = resolveHotTick(
-        source,
-        effect.powerMultiplier!,
-        passives,
-      );
+      const amount = resolveHotAmountFromStatus(source, target, effect, passives);
       if (amount <= 0) return;
-      target.hp = Math.min(target.maxHp, target.hp + amount);
+      const healed = applyHealToTarget(target, amount);
+      if (healed <= 0) return;
       this.emit({
         type: "skill",
         actorId: source.id,
@@ -441,7 +464,7 @@ export class BattleEngine {
         skillId: effect.skillId ?? "",
         skillName,
         effect: "hot",
-        amount,
+        amount: healed,
       });
       return;
     }
@@ -454,7 +477,7 @@ export class BattleEngine {
         effect.damageType ?? "physical",
         passives,
       );
-      target.hp = Math.max(0, target.hp - amount);
+      const { lethal } = applyDamageToTarget(target, amount);
       this.emit({
         type: "skill",
         actorId: source.id,
@@ -465,7 +488,7 @@ export class BattleEngine {
         amount,
       });
       this.emit({ type: "hurt", targetId: target.id });
-      if (target.hp <= 0) {
+      if (lethal) {
         target.isAlive = false;
         this.emit({ type: "death", targetId: target.id });
       }
@@ -480,9 +503,13 @@ export class BattleEngine {
         this.gameData.skillRegistry.passives
       );
       const activeRate = getActiveCooldownRate(passives);
+      const classPreset = this.gameData.classRegistry[unit.classId];
+      const basicRate = classPreset
+        ? getBasicCooldownRate(resolveAttackSpeedTier(classPreset), this.levelCurves)
+        : 1;
       for (const cd of unit.cooldowns) {
         if (cd.remaining <= 0) continue;
-        const rate = cd.slotKind === "active" ? activeRate : 1;
+        const rate = cd.slotKind === "active" ? activeRate : basicRate;
         cd.remaining = Math.max(0, cd.remaining - deltaTime * rate);
       }
     }

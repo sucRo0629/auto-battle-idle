@@ -1,24 +1,43 @@
 import type { BattleEventListener } from '../events.ts';
 import {
+  applyBarrierToTarget,
+  applyDamageToTarget,
+  applyHealToTarget,
   getPassiveDefs,
   resolveDamage,
-  resolveHeal,
+  resolveResourceAmount,
 } from '../combatMath.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
   GameData,
+  PendingSkillHit,
   SkillCooldown,
   SkillEffectDef,
   StatusEffect,
 } from '../types.ts';
 import { asStatusEffectStatList } from '../types.ts';
-import { pickTarget, resolveTargetRule } from './targeting.ts';
+import {
+  buildPendingHitsFromResolution,
+  findCombatantById,
+} from './pendingSkillHits.ts';
+import {
+  resolutionHasTargets,
+  resolveEffectResolution,
+  resolveTargetRule,
+} from './targeting.ts';
+
+export interface SkillExecutorDeps {
+  getBattleTimeSec: () => number;
+  enqueuePendingHits: (hits: PendingSkillHit[]) => void;
+  getAllCombatants: () => CombatantState[];
+}
 
 export class SkillExecutor {
   constructor(
     private readonly gameData: GameData,
     private readonly emit: BattleEventListener,
+    private readonly deps: SkillExecutorDeps,
   ) {}
 
   tryExecute(
@@ -40,11 +59,48 @@ export class SkillExecutor {
     let appliedAny = false;
     for (const effectDef of skill.effect) {
       const targetRule = resolveTargetRule(passives, effectDef.targetRule);
-      const target = pickTarget(targetRule, actor, allies, enemies);
-      if (!target) continue;
+      const resolution = resolveEffectResolution(
+        effectDef,
+        targetRule,
+        actor,
+        allies,
+        enemies,
+      );
+      if (!resolutionHasTargets(resolution)) continue;
 
-      if (this.applyEffect(actor, target, skill, effectDef, cd)) {
-        appliedAny = true;
+      const spread = resolution!.spreadDurationSec;
+      if (spread !== undefined && spread > 0) {
+        const pending = buildPendingHitsFromResolution(
+          resolution!,
+          this.deps.getBattleTimeSec(),
+          actor.id,
+          skill,
+          effectDef,
+          cd,
+        );
+        if (pending.length > 0) {
+          this.deps.enqueuePendingHits(pending);
+          appliedAny = true;
+        }
+        continue;
+      }
+
+      for (const wave of resolution!.waves) {
+        for (const { unit, powerMultiplierOverride } of wave.targets) {
+          if (
+            this.applyEffect(
+              actor,
+              unit,
+              skill,
+              effectDef,
+              cd,
+              powerMultiplierOverride,
+              wave.hitIndex,
+            )
+          ) {
+            appliedAny = true;
+          }
+        }
       }
     }
 
@@ -53,12 +109,51 @@ export class SkillExecutor {
     }
   }
 
+  applyPendingHit(hit: PendingSkillHit): void {
+    const [allies, enemies] = this.splitCombatants();
+    const actor = findCombatantById(hit.actorId, allies, enemies);
+    if (!actor?.isAlive) return;
+
+    const skill = this.gameData.skillRegistry.actives[hit.skillId];
+    if (!skill) return;
+
+    const cd: SkillCooldown = {
+      skillId: hit.skillId,
+      remaining: 0,
+      slotKind: hit.slotKind,
+    };
+
+    for (const entry of hit.targets) {
+      const target = findCombatantById(entry.targetId, allies, enemies);
+      if (!target?.isAlive) continue;
+      this.applyEffect(
+        actor,
+        target,
+        skill,
+        hit.effectDef,
+        cd,
+        entry.powerMultiplierOverride,
+        hit.hitIndex,
+      );
+    }
+  }
+
+  private splitCombatants(): [CombatantState[], CombatantState[]] {
+    const all = this.deps.getAllCombatants();
+    return [
+      all.filter((unit) => !unit.isEnemy),
+      all.filter((unit) => unit.isEnemy),
+    ];
+  }
+
   private applyEffect(
     actor: CombatantState,
     target: CombatantState,
     skill: ActiveSkillDef,
     effectDef: SkillEffectDef,
     cd: SkillCooldown,
+    powerMultiplierOverride?: number,
+    hitIndex?: number,
   ): boolean {
     if (effectDef.type === 'damage') {
       const amount = resolveDamage(
@@ -66,8 +161,9 @@ export class SkillExecutor {
         target,
         effectDef,
         this.gameData.skillRegistry.passives,
+        powerMultiplierOverride,
       );
-      target.hp = Math.max(0, target.hp - amount);
+      const { lethal } = applyDamageToTarget(target, amount);
       this.emit({
         type: 'skill',
         actorId: actor.id,
@@ -78,9 +174,10 @@ export class SkillExecutor {
         effect: 'damage',
         amount,
         range: effectDef.range,
+        ...(hitIndex !== undefined ? { hitIndex } : {}),
       });
       this.emit({ type: 'hurt', targetId: target.id });
-      if (target.hp <= 0) {
+      if (lethal) {
         target.isAlive = false;
         this.emit({ type: 'death', targetId: target.id });
       }
@@ -88,12 +185,15 @@ export class SkillExecutor {
     }
 
     if (effectDef.type === 'heal') {
-      const amount = resolveHeal(
+      const amount = resolveResourceAmount(
         actor,
-        effectDef,
+        target,
+        effectDef.amount,
         this.gameData.skillRegistry.passives,
+        powerMultiplierOverride,
       );
-      target.hp = Math.min(target.maxHp, target.hp + amount);
+      if (amount <= 0) return false;
+      applyHealToTarget(target, amount);
       this.emit({
         type: 'skill',
         actorId: actor.id,
@@ -104,6 +204,32 @@ export class SkillExecutor {
         effect: 'heal',
         amount,
         range: effectDef.range,
+        ...(hitIndex !== undefined ? { hitIndex } : {}),
+      });
+      return true;
+    }
+
+    if (effectDef.type === 'barrier') {
+      const grant = resolveResourceAmount(
+        actor,
+        target,
+        effectDef.amount,
+        this.gameData.skillRegistry.passives,
+        powerMultiplierOverride,
+      );
+      if (grant <= 0) return false;
+      applyBarrierToTarget(target, grant, effectDef.barrierStack ?? false);
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'barrier',
+        amount: grant,
+        range: effectDef.range,
+        ...(hitIndex !== undefined ? { hitIndex } : {}),
       });
       return true;
     }
@@ -157,6 +283,7 @@ export class SkillExecutor {
         effect: effectDef.type,
         statusLabel: statusLabels.join(', '),
         range: effectDef.range,
+        ...(hitIndex !== undefined ? { hitIndex } : {}),
       });
       return true;
     }
@@ -171,7 +298,9 @@ export class SkillExecutor {
         multiplier: 1,
         durationSec: effectDef.durationSec,
         remainingSec: effectDef.durationSec,
-        powerMultiplier: effectDef.powerMultiplier,
+        ...(overlay === 'hot'
+          ? { amount: effectDef.amount }
+          : { powerMultiplier: effectDef.powerMultiplier }),
         sourceId: actor.id,
         skillId: skill.id,
         ...(overlay === 'dot'
@@ -189,6 +318,7 @@ export class SkillExecutor {
         effect: effectDef.type,
         statusLabel: overlay,
         range: effectDef.range,
+        ...(hitIndex !== undefined ? { hitIndex } : {}),
       });
       return true;
     }

@@ -60,7 +60,7 @@ export function createAllyFromMember(
     curves && 'progress' in member
       ? computeStatsAtLevel(
           classPreset,
-          member.classId,
+          classPreset,
           member.progress.level,
           curves,
         )
@@ -87,6 +87,7 @@ export function createAllyFromMember(
     def: stats.def,
     reg: stats.reg,
     hp: stats.maxHp,
+    barrierHp: 0,
     isAlive: true,
     cooldowns: createCooldowns(classPreset.basicAttackSkillId, member.build),
     statusEffects: [],
@@ -141,7 +142,7 @@ export function createEnemyFromTemplate(
   const skillIds = template.activeSkillIds ?? [];
   const equipped = skillIds.slice(0, 1);
   const build: CharacterBuild = {
-    learnedPassiveIds: [],
+    learnedPassiveIds: template.passiveSkillIds ?? [],
     learnedActiveIds: [...skillIds],
     equippedActiveSlots: equipped,
   };
@@ -158,7 +159,7 @@ export function createEnemyFromTemplate(
     classId: template.id,
     formationRow: 'front',
     traits: {
-      attackRange: 'melee',
+      attackRange: template.attackRange ?? 'melee',
       rangePx: template.rangePx ?? DEFAULT_MELEE_RANGE_PX,
     },
     build,
@@ -167,6 +168,7 @@ export function createEnemyFromTemplate(
     def: template.def,
     reg: template.reg,
     hp: template.maxHp,
+    barrierHp: 0,
     isAlive: true,
     cooldowns,
     statusEffects: [],
@@ -203,6 +205,7 @@ export function createEnemiesForStage(
 export function healAllAllies(allies: CombatantState[]): void {
   for (const ally of allies) {
     ally.hp = ally.maxHp;
+    ally.barrierHp = 0;
     ally.isAlive = true;
     ally.statusEffects = [];
   }

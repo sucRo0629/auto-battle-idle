@@ -5,6 +5,8 @@ export type AttackRange = "melee" | "ranged";
 
 /** 近接の rangePx 未指定時（px） */
 export const DEFAULT_MELEE_RANGE_PX = 45;
+/** 遠隔の rangePx 未指定時フォールバック（px） */
+export const DEFAULT_RANGED_RANGE_PX = 120;
 
 export interface ClassTraits {
   attackRange: AttackRange;
@@ -24,6 +26,34 @@ export interface ClassSkillUnlock {
   skillIds: string[];
 }
 
+export type JobTier = 1 | 2;
+
+/** 攻撃速度段階（内部略称 SPD）。未指定時は normal */
+export type AttackSpeedTier =
+  | "slow"
+  | "somewhatSlow"
+  | "normal"
+  | "somewhatFast"
+  | "fast";
+
+/** Phase 7 で本番化。Phase 4 では JSON 予約のみ */
+export interface ClassPromotion {
+  minLevel: number;
+  targetClassIds: ClassId[];
+}
+
+/** 成長段階（1=低 / 2=中 / 3=高） */
+export type GrowthTier = 1 | 2 | 3;
+
+export interface GrowthTierSet {
+  maxHp: GrowthTier;
+  atk: GrowthTier;
+  def: GrowthTier;
+}
+
+/** role=attacker のみ。未指定は attacker（物理） */
+export type GrowthPresetKey = "attacker" | "caster";
+
 export interface ClassPreset extends CombatStats {
   id: ClassId;
   role: Role;
@@ -36,11 +66,23 @@ export interface ClassPreset extends CombatStats {
   iconKey?: string;
   basicAttackSkillId: string;
   skills: ClassSkillUnlock[];
+  /** 一次職 = 1（既定）。二次職 = 2 は Phase 7 以降 */
+  jobTier?: JobTier;
+  /** 一次職のみ（Phase 7） */
+  promotion?: ClassPromotion;
+  /** 二次職のみ（Phase 7） */
+  promotesFrom?: ClassId;
   /** skills[level=0] から導出 */
   starterPassiveIds: string[];
   starterActiveIds: string[];
-  /** skills[] 全 ID（検証・装備可否） */
+  /** skills[] 全 ID（検証・セット可否） */
   classSkillIds: string[];
+  /** 基本攻撃 CD 段階（SPD）。未指定は normal */
+  attackSpeedTier?: AttackSpeedTier;
+  /** LvUP 成長段階（HP/ATK/DEF 各独立）。一次職は必須 */
+  growthTier?: GrowthTierSet;
+  /** 術師のみ caster（HP/DEF=supporter 表、ATK=attacker 表） */
+  growthPresetKey?: GrowthPresetKey;
 }
 
 export type TargetRule =
@@ -48,7 +90,45 @@ export type TargetRule =
   | "frontEnemy"
   | "lowestHpEnemy"
   | "mostDamagedAlly"
-  | "self";
+  | "self"
+  | "rangedAttackingEnemy"
+  | "highestAtkEnemy"
+  | "lowestDefEnemy"
+  | "highestDefEnemy"
+  | "lowestRegEnemy"
+  | "highestRegEnemy"
+  | "highestHpEnemy"
+  | "farthestEnemy";
+
+/** 効果のターゲット形状。未指定は single */
+export type TargetShape =
+  | "single"
+  | "aoe"
+  | "multiLock"
+  | "pierce"
+  | "chain"
+  | "scatter";
+
+export type PowerStepMode = "multiply" | "divide";
+
+/** heal / hot / barrier 共用の効果量種別 */
+export type ResourceAmountKind = "atkBased" | "flat" | "percentMaxHp";
+
+export interface ResourceAmountSpec {
+  kind: ResourceAmountKind;
+  /** atkBased — 使用者 effectiveAtk + passive healBonus を基準 */
+  atkAdd?: number;
+  /** 未指定時 1（旧 powerMultiplier 互換） */
+  atkMultiply?: number;
+  /** 未指定時 1 */
+  atkDivide?: number;
+  /** 未指定時 0 */
+  atkSubtract?: number;
+  /** flat */
+  flatAmount?: number;
+  /** 0〜1、percentMaxHp — 対象 maxHp 基準 */
+  percentOfMaxHp?: number;
+}
 
 export interface Combatant extends CombatStats {
   id: string;
@@ -69,6 +149,7 @@ export interface SkillCooldown {
 export interface CharacterBuild {
   learnedPassiveIds: string[];
   learnedActiveIds: string[];
+  /** セット済みアクティブスキル ID（JSON キー名は歴史的に equippedActiveSlots） */
   equippedActiveSlots: string[];
 }
 
@@ -108,7 +189,9 @@ export interface StatusEffect {
   stat?: StatusEffectStat;
   /** HoT/DoT バッジ用 */
   overlay?: "hot" | "dot";
-  /** HoT/DoT tick 量（スキル powerMultiplier） */
+  /** HoT tick 量（ResourceAmountSpec） */
+  amount?: ResourceAmountSpec;
+  /** HoT/DoT tick 量（旧 JSON 互換） */
   powerMultiplier?: number;
   /** HoT/DoT 付与者 */
   sourceId?: string;
@@ -134,6 +217,8 @@ export function asStatusEffectStatList(
 }
 
 export interface CombatantState extends Combatant {
+  /** ダメージ先消耗のシールド量（maxHp 超え可） */
+  barrierHp: number;
   role: Role;
   classId: ClassId;
   /** 味方のみ: save.party のスロット番号 */
@@ -177,7 +262,8 @@ export type SkillEffectKind =
   | "buff"
   | "debuff"
   | "hot"
-  | "dot";
+  | "dot"
+  | "barrier";
 export type DamageType = "physical" | "magic";
 
 /** スキル演出プリセット ID（render 層が描画。将来 skills.json の vfx で指定） */
@@ -194,9 +280,63 @@ export interface SkillVfxDef {
 
 interface SkillEffectCommon {
   targetRule: TargetRule;
+  /** 未指定は single（単体） */
+  targetShape?: TargetShape;
+  /** aoe 時必須: anchor から ±px */
+  aoeRadiusPx?: number;
+  /** multiLock 時必須: ヒット回数（>= 2） */
+  hitCount?: number;
+  /** pierce 時: 命中ごとの威力 step */
+  piercePowerStepMultiplier?: number;
+  piercePowerStepMode?: PowerStepMode;
+  /** pierce 時: hit 分散秒（未指定 = 即時） */
+  pierceDurationSec?: number;
+  /** chain 時必須 */
+  chainCount?: number;
+  chainMaxDistancePx?: number;
+  chainPowerStepMultiplier?: number;
+  chainPowerStepMode?: PowerStepMode;
+  /** scatter 時必須 */
+  scatterRadiusPx?: number;
+  scatterHitCount?: number;
+  scatterDurationSec?: number;
+  /** 0〜1。0 = anchor 中心固定 */
+  scatterSpreadRate?: number;
   type: SkillEffectKind;
-  /** 射程が必要な効果のみ（px） */
+  /** 命中判定・VFX 共用（px）。未指定 = 使用者 traits.rangePx */
   range?: number;
+}
+
+export interface SkillHitTarget {
+  unit: CombatantState;
+  powerMultiplierOverride?: number;
+}
+
+export interface SkillHitWave {
+  hitIndex: number;
+  targets: SkillHitTarget[];
+}
+
+export interface SkillEffectResolution {
+  waves: SkillHitWave[];
+  /** 設定時: wave を battle 時間で均等分散適用 */
+  spreadDurationSec?: number;
+}
+
+export interface PendingSkillHitTarget {
+  targetId: string;
+  powerMultiplierOverride?: number;
+}
+
+export interface PendingSkillHit {
+  applyAtBattleSec: number;
+  actorId: string;
+  skillId: string;
+  skillName: string;
+  effectDef: SkillEffectDef;
+  slotKind: SkillSlotKind;
+  hitIndex: number;
+  targets: PendingSkillHitTarget[];
 }
 
 export interface DamageSkillEffect extends SkillEffectCommon {
@@ -207,7 +347,7 @@ export interface DamageSkillEffect extends SkillEffectCommon {
 
 export interface HealSkillEffect extends SkillEffectCommon {
   type: "heal";
-  powerMultiplier: number;
+  amount: ResourceAmountSpec;
 }
 
 export interface BuffSkillEffect extends SkillEffectCommon {
@@ -229,7 +369,14 @@ export interface DebuffSkillEffect extends SkillEffectCommon {
 export interface HotSkillEffect extends SkillEffectCommon {
   type: "hot";
   durationSec: number;
-  powerMultiplier: number;
+  amount: ResourceAmountSpec;
+}
+
+export interface BarrierSkillEffect extends SkillEffectCommon {
+  type: "barrier";
+  amount: ResourceAmountSpec;
+  /** true = 既存に加算。false/未指定 = 置換 */
+  barrierStack?: boolean;
 }
 
 export interface DotSkillEffect extends SkillEffectCommon {
@@ -245,7 +392,8 @@ export type SkillEffectDef =
   | BuffSkillEffect
   | DebuffSkillEffect
   | HotSkillEffect
-  | DotSkillEffect;
+  | DotSkillEffect
+  | BarrierSkillEffect;
 
 export interface ActiveSkillDef {
   id: string;
@@ -263,7 +411,10 @@ export interface EnemyTemplate extends CombatStats {
   /** 撃破時に生存味方全員が得る EXP */
   exp: number;
   spriteKey: string;
+  passiveSkillIds?: string[];
   activeSkillIds?: string[];
+  /** 未指定時は melee */
+  attackRange?: AttackRange;
   /** 攻撃可能距離（px）。未指定時は近接デフォルト */
   rangePx?: number;
 }
@@ -314,6 +465,7 @@ export interface CombatantSnapshot {
   name: string;
   hp: number;
   maxHp: number;
+  barrierHp: number;
   atk: number;
   def: number;
   reg: number;

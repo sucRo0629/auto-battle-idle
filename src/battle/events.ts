@@ -12,6 +12,7 @@ export type BattleEvent =
       amount?: number;
       range?: number;
       statusLabel?: string;
+      hitIndex?: number;
     }
   | { type: 'hurt'; targetId: string }
   | { type: 'death'; targetId: string }
