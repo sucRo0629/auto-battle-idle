@@ -291,7 +291,15 @@ export class BattleEngine {
       visualX: c.visualX,
       activeCooldowns: c.cooldowns
         .filter((cd) => cd.slotKind === "active")
-        .map((cd) => ({ skillId: cd.skillId, remaining: cd.remaining })),
+        .map((cd) => {
+          const skill = this.gameData.skillRegistry.actives[cd.skillId];
+          return {
+            skillId: cd.skillId,
+            remaining: cd.remaining,
+            interval: skill?.interval ?? 1,
+            slotIndex: cd.slotIndex ?? 0,
+          };
+        }),
     };
   }
 

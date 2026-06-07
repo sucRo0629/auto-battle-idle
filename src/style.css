@@ -53,22 +53,6 @@ body {
   image-rendering: crisp-edges;
 }
 
-.battle-log {
-  font-family: ui-monospace, 'Cascadia Code', monospace;
-  font-size: 0.75rem;
-  background: #16213e;
-  border-radius: 6px;
-  padding: 8px 12px;
-  min-height: 80px;
-  max-height: 160px;
-  overflow-y: auto;
-  line-height: 1.5;
-}
-
-.battle-log div {
-  opacity: 0.92;
-}
-
 html[data-view-mode='ambient'] body {
   background: transparent;
 }
@@ -79,9 +63,4 @@ html[data-view-mode='ambient'] #app {
 
 html[data-view-mode='ambient'] .battle-view {
   width: min(360px, 100%);
-}
-
-html[data-view-mode='ambient'] .battle-log {
-  min-height: 48px;
-  max-height: 72px;
 }

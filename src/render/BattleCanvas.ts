@@ -38,8 +38,17 @@ interface AllyHudEntry {
   hp: number;
   maxHp: number;
   isAlive: boolean;
-  activeCooldowns: { skillId: string; remaining: number }[];
+  activeCooldowns: {
+    skillId: string;
+    remaining: number;
+    interval: number;
+    slotIndex: 0 | 1;
+  }[];
 }
+
+const ACTIVE_SKILL_SLOT_COUNT = 2;
+const SKILL_RECAST_CHARGING = "#5a6270";
+const SKILL_RECAST_READY = "#9aa3b0";
 
 export class BattleCanvas implements IBattleRenderer {
   private canvas!: HTMLCanvasElement;
@@ -232,25 +241,61 @@ export class BattleCanvas implements IBattleRenderer {
     });
   }
 
-  /** HPバー下のリキャストバー（将来: クールダウン表示） */
+  /** HPバー下のリキャストバー（上: スロット1 / 下: スロット2） */
   private drawSkillRecastRow(
     ally: AllyHudEntry,
     x: number,
     y: number,
     width: number,
     height: number,
-    _hudScale: number
+    hudScale: number
   ): void {
     const { ctx } = this;
+    const bySlot = new Map(
+      ally.activeCooldowns.map((cd) => [cd.slotIndex, cd] as const)
+    );
+
     ctx.save();
     if (!ally.isAlive) {
       ctx.globalAlpha = 0.35;
     }
+
+    const gap = Math.max(1, hudScale);
+    const rowH = (height - gap) / ACTIVE_SKILL_SLOT_COUNT;
+
+    for (let slot = 0; slot < ACTIVE_SKILL_SLOT_COUNT; slot++) {
+      const rowY = y + slot * (rowH + gap);
+      this.drawSkillRecastBar(bySlot.get(slot as 0 | 1), x, rowY, width, rowH);
+    }
+
+    ctx.restore();
+  }
+
+  private drawSkillRecastBar(
+    cd: AllyHudEntry["activeCooldowns"][number] | undefined,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
+    const { ctx } = this;
+
     ctx.fillStyle = "#1a1a1a";
     ctx.fillRect(x - 1, y - 1, width + 2, height + 2);
     ctx.fillStyle = "#2a2a35";
     ctx.fillRect(x, y, width, height);
-    ctx.restore();
+
+    if (!cd) return;
+
+    const ready = cd.remaining <= 0;
+    const ratio = ready
+      ? 1
+      : Math.max(0, Math.min(1, 1 - cd.remaining / cd.interval));
+
+    if (ratio <= 0) return;
+
+    ctx.fillStyle = ready ? SKILL_RECAST_READY : SKILL_RECAST_CHARGING;
+    ctx.fillRect(x, y, width * ratio, height);
   }
 
   private drawHudIcon(

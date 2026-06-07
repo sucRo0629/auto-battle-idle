@@ -185,7 +185,12 @@ export interface CombatantSnapshot {
   formationRow: FormationRow;
   isEnemy: boolean;
   visualX: number;
-  activeCooldowns: { skillId: string; remaining: number }[];
+  activeCooldowns: {
+    skillId: string;
+    remaining: number;
+    interval: number;
+    slotIndex: 0 | 1;
+  }[];
 }
 
 export interface BattleSnapshot {

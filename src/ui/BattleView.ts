@@ -3,21 +3,16 @@ import type { BattleEvent } from '../battle/events.ts';
 import { BattleCanvas } from '../render/BattleCanvas.ts';
 import type { ViewMode } from './viewMode.ts';
 
-const LOG_LIMIT_FULL = 20;
-const LOG_LIMIT_AMBIENT = 3;
-
 export class BattleView {
   private readonly root: HTMLElement;
   private readonly canvasHost: HTMLElement;
-  private readonly logEl: HTMLElement;
   private readonly statusEl: HTMLElement;
   private readonly canvas: BattleCanvas;
-  private readonly logs: string[] = [];
 
   constructor(
     container: HTMLElement,
     private readonly engine: BattleEngine,
-    private readonly viewMode: ViewMode,
+    viewMode: ViewMode,
   ) {
     this.root = document.createElement('div');
     this.root.className = 'battle-view';
@@ -34,10 +29,6 @@ export class BattleView {
     this.canvasHost = document.createElement('div');
     this.canvasHost.className = 'battle-canvas-host';
     this.root.appendChild(this.canvasHost);
-
-    this.logEl = document.createElement('div');
-    this.logEl.className = 'battle-log';
-    this.root.appendChild(this.logEl);
 
     container.appendChild(this.root);
 
@@ -73,16 +64,7 @@ export class BattleView {
   }
 
   private pushLog(message: string): void {
-    this.logs.unshift(message);
-    const limit = this.viewMode === 'ambient' ? LOG_LIMIT_AMBIENT : LOG_LIMIT_FULL;
-    if (this.logs.length > limit) {
-      this.logs.length = limit;
-    }
-    this.renderLog();
-  }
-
-  private renderLog(): void {
-    this.logEl.innerHTML = this.logs.map((l) => `<div>${l}</div>`).join('');
+    console.log(`[battle] ${message}`);
   }
 
   tick(deltaMs: number): void {
