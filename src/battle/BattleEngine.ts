@@ -30,7 +30,7 @@ import type {
   BattleSnapshot,
   CombatantState,
   GameData,
-  PartyMemberState,
+  PartySlotState,
   SkillCooldown,
   StatusEffect,
 } from "./types.ts";
@@ -56,7 +56,7 @@ export class BattleEngine {
   constructor(
     private readonly gameData: GameData,
     private readonly levelCurves: LevelCurvesConfig,
-    private readonly getParty: () => PartyMemberState[],
+    private readonly getParty: () => PartySlotState[],
     private readonly getStageId: () => string,
   ) {
     this.stageId = getStageId();
@@ -276,10 +276,11 @@ export class BattleEngine {
     if (this.phase !== "running") return;
 
     const party = this.getParty();
-    for (let i = 0; i < this.allies.length; i++) {
-      const member = party[i];
-      const ally = this.allies[i];
-      if (!member || !ally) continue;
+    for (const ally of this.allies) {
+      const slotIndex = ally.partySlotIndex;
+      if (slotIndex === undefined) continue;
+      const member = party[slotIndex];
+      if (!member) continue;
 
       const preset = this.gameData.classRegistry[member.classId];
       if (!preset) continue;
@@ -510,8 +511,8 @@ export class BattleEngine {
     const alliesAlive = this.allies.some((a) => a.isAlive);
     const enemiesAlive = this.enemies.some((e) => e.isAlive);
     const survivingPartyIndices = this.allies
-      .map((ally, index) => (ally.isAlive ? index : -1))
-      .filter((index) => index >= 0);
+      .filter((ally) => ally.isAlive && ally.partySlotIndex !== undefined)
+      .map((ally) => ally.partySlotIndex!);
 
     if (!enemiesAlive) {
       const stage = this.gameData.stages.find((s) => s.id === this.stageId);

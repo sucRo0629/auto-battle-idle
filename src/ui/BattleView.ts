@@ -20,6 +20,7 @@ export class BattleView {
   private readonly stageLabelEl: HTMLElement;
   private readonly verifyModeInput: HTMLInputElement;
   private readonly menuButton: HTMLButtonElement;
+  private readonly enhancementTreeButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
 
   constructor(
@@ -65,19 +66,22 @@ export class BattleView {
     this.stageLabelEl.className = 'battle-stage-label';
     this.canvasHost.appendChild(this.stageLabelEl);
 
-    this.menuButton = document.createElement('button');
-    this.menuButton.type = 'button';
-    this.menuButton.className = 'battle-menu-button';
-    this.menuButton.setAttribute('aria-label', 'メニュー');
-    const menuIcon = document.createElement('span');
-    menuIcon.className = 'material-symbols-outlined';
-    menuIcon.setAttribute('aria-hidden', 'true');
-    menuIcon.textContent = 'menu_book';
-    this.menuButton.appendChild(menuIcon);
+    const menuButtons = document.createElement('div');
+    menuButtons.className = 'battle-menu-buttons';
+
+    this.enhancementTreeButton = this.createBattleMenuButton(
+      'flowchart',
+      '強化ツリー（準備中）',
+    );
+    this.enhancementTreeButton.disabled = true;
+
+    this.menuButton = this.createBattleMenuButton('group', 'パーティ');
     this.menuButton.addEventListener('click', () => {
       verifyModeControls?.onOpenMetaMenu();
     });
-    this.canvasHost.appendChild(this.menuButton);
+
+    menuButtons.append(this.enhancementTreeButton, this.menuButton);
+    this.canvasHost.appendChild(menuButtons);
 
     this.root.appendChild(this.canvasHost);
 
@@ -181,18 +185,20 @@ export class BattleView {
       save.stageProgress.currentStageId,
     );
     const stageLabel = stage?.displayName ?? save.stageProgress.currentStageId;
-    const partyMeta: PartyHudMeta[] = save.party.map((member) => {
-      const preset = this.gameData.classRegistry[member.classId];
-      return {
-        displayName: preset?.displayName ?? member.classId,
-        level: member.progress.level,
-        exp: member.progress.exp,
-        expRequired: expRequiredForLevel(
-          member.progress.level,
-          this.levelCurves,
-        ),
-      };
-    });
+    const partyMeta: PartyHudMeta[] = save.party
+      .filter((member): member is NonNullable<typeof member> => member !== null)
+      .map((member) => {
+        const preset = this.gameData.classRegistry[member.classId];
+        return {
+          displayName: preset?.displayName ?? member.classId,
+          level: member.progress.level,
+          exp: member.progress.exp,
+          expRequired: expRequiredForLevel(
+            member.progress.level,
+            this.levelCurves,
+          ),
+        };
+      });
 
     this.stageLabelEl.textContent = stageLabel;
     this.canvas.syncFromSnapshot(snapshot, partyMeta);
@@ -201,6 +207,22 @@ export class BattleView {
 
   setMenuButtonDisabled(disabled: boolean): void {
     this.menuButton.disabled = disabled;
+  }
+
+  private createBattleMenuButton(
+    iconName: string,
+    ariaLabel: string,
+  ): HTMLButtonElement {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'battle-menu-button';
+    button.setAttribute('aria-label', ariaLabel);
+    const icon = document.createElement('span');
+    icon.className = 'material-symbols-outlined';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = iconName;
+    button.appendChild(icon);
+    return button;
   }
 
   destroy(): void {

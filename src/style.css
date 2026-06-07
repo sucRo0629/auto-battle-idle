@@ -193,12 +193,18 @@ body {
   image-rendering: crisp-edges;
 }
 
-.battle-menu-button {
+.battle-menu-buttons {
   -webkit-app-region: no-drag;
   position: absolute;
   right: 24px;
   bottom: calc((var(--battle-ground-margin) + 8) * 1px);
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.battle-menu-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -285,7 +291,7 @@ body {
   max-height: min(70vh, 560px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   border: 1px solid var(--canvas-border-color);
   border-radius: 10px;
   background: rgba(22, 33, 62, 0.98);
@@ -307,17 +313,12 @@ body {
 
 .meta-menu-window-body {
   flex: 1;
-  overflow: auto;
+  overflow: visible;
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 16px 18px 18px;
-}
-
-.skill-menu-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  min-height: 0;
 }
 
 .meta-menu-title {
@@ -326,8 +327,7 @@ body {
   font-weight: 700;
 }
 
-.meta-menu-close,
-.skill-menu-back {
+.meta-menu-close {
   -webkit-app-region: no-drag;
   border: none;
   background: transparent;
@@ -353,6 +353,17 @@ body {
   flex-direction: column;
   gap: 14px;
   min-height: 0;
+  overflow: visible;
+}
+
+.skill-menu-formation-block {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skill-menu-formation-block[hidden] {
+  display: none;
 }
 
 .meta-menu-hub {
@@ -397,8 +408,8 @@ body {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  min-height: 72px;
-  padding: 8px 4px;
+  min-height: 84px;
+  padding: 6px 4px 8px;
   border: 1px solid var(--canvas-border-color);
   border-radius: 6px;
   background: rgba(15, 15, 26, 0.65);
@@ -448,22 +459,31 @@ body {
   border-color: #4a90d9;
 }
 
+.skill-menu-tab--active .skill-menu-tab-sprite {
+  border-color: #4a90d9;
+}
+
+.skill-menu-tab--empty {
+  opacity: 0.55;
+  border-style: dashed;
+}
+
+.skill-menu-tab--empty .skill-menu-tab-label {
+  color: #888;
+}
+
 .skill-menu-body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-
-.skill-menu-member-summary {
-  font-size: 15px;
-  font-weight: 600;
-  color: #c8d6e5;
+  overflow: visible;
 }
 
 .skill-menu-section {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  overflow: visible;
 }
 
 .skill-menu-section-title {
@@ -516,6 +536,215 @@ body {
   gap: 8px;
 }
 
+.skill-menu-section--compose {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.skill-menu-compose-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.skill-menu-compose-group--class {
+  flex: 1 1 auto;
+}
+
+.skill-menu-compose-group--active {
+  flex: 0 0 auto;
+  align-items: flex-start;
+}
+
+.skill-menu-active-skill-slots {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.skill-menu-tab-character {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+}
+
+.skill-menu-tab-sprite {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+}
+
+.skill-menu-tab-sprite--empty {
+  border: 1px dashed var(--canvas-border-color);
+  border-radius: 4px;
+  opacity: 0.45;
+}
+
+.skill-menu-tab-sprite-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center bottom;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+@keyframes skill-menu-sprite-idle-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+.skill-menu-tab-sprite-img--idle {
+  animation: skill-menu-sprite-idle-bob 1.3s ease-in-out infinite;
+}
+
+.skill-menu-class-slot-text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
+.skill-menu-class-slot-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.skill-menu-class-slot-level {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #9aa3b0;
+  line-height: 1.2;
+}
+
+.skill-menu-skill-icon-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  padding: 6px;
+  box-sizing: border-box;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 6px;
+  background: rgba(15, 15, 26, 0.55);
+  cursor: pointer;
+}
+
+.skill-menu-skill-icon-slot:hover:not(:disabled) {
+  border-color: #4a90d9;
+}
+
+.skill-menu-skill-icon-slot--filled {
+  border-color: #4a90d9;
+  background: rgba(74, 144, 217, 0.18);
+}
+
+.skill-menu-skill-icon-slot--locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.skill-menu-skill-icon-slot .skill-menu-tab-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.skill-menu-floating-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 1100;
+  min-width: 140px;
+  max-width: 220px;
+  padding: 8px 10px;
+  border: 1px solid #4a90d9;
+  border-radius: 6px;
+  background: rgba(12, 14, 24, 0.96);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(6px);
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease,
+    visibility 0.15s ease;
+}
+
+.skill-menu-floating-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #4a90d9;
+}
+
+.skill-menu-floating-tooltip-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--app-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.skill-menu-floating-tooltip-desc {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #9aa3b0;
+  line-height: 1.35;
+}
+
+.skill-menu-skill-icon-slot:hover .skill-menu-floating-tooltip,
+.skill-menu-skill-icon-slot:focus-visible .skill-menu-floating-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.skill-menu-skill-icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  overflow: visible;
+}
+
+.skill-menu-skill-icon-slot--passive {
+  cursor: default;
+}
+
+.skill-menu-skill-icon-slot--passive:hover,
+.skill-menu-skill-icon-slot--passive:focus-visible {
+  border-color: #4a90d9;
+}
+
 .skill-menu-slot {
   display: flex;
   flex-direction: column;
@@ -536,6 +765,25 @@ body {
 .skill-menu-slot--filled {
   border-color: #4a90d9;
   background: rgba(74, 144, 217, 0.18);
+}
+
+.skill-menu-slot.skill-menu-class-slot {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 48px;
+  padding: 6px 10px;
+  box-sizing: border-box;
+}
+
+.skill-menu-slot.skill-menu-class-slot .skill-menu-tab-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
 }
 
 .skill-menu-slot--locked {
@@ -559,6 +807,13 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow: visible;
+}
+
+.skill-menu-picker .skill-menu-skill-list {
+  max-height: min(50vh, 320px);
+  overflow-y: auto;
+  overflow-x: visible;
 }
 
 .skill-menu-picker-row {
@@ -572,6 +827,23 @@ body {
   color: var(--app-text);
   text-align: left;
   cursor: pointer;
+}
+
+.skill-menu-picker-row--icon {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+
+.skill-menu-picker-row-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.skill-menu-picker-row--icon .skill-menu-skill-desc {
+  margin-top: 4px;
 }
 
 .skill-menu-picker-row:hover {

@@ -1,4 +1,4 @@
-import type { MenuHost, MenuHostContext } from './menuHost.ts';
+import type { MenuHost, MenuHostContext, MetaMenuInitialView } from './menuHost.ts';
 
 export class ElectronBattleMenuHost implements MenuHost {
   private opened = false;
@@ -11,19 +11,23 @@ export class ElectronBattleMenuHost implements MenuHost {
       this.context.onBuildChanged(partyIndex, build);
     });
 
+    api.onMenuPartySlotChanged((slotIndex, member) => {
+      this.context.onPartySlotChanged(slotIndex, member);
+    });
+
     api.onMenuClosed(() => {
       this.close();
     });
   }
 
-  open(): void {
+  open(initialView: MetaMenuInitialView = 'hub'): void {
     if (this.opened) return;
     const api = window.battleElectronAPI;
     if (!api) return;
 
     this.opened = true;
     this.context.onOpenChange(true);
-    void api.openMenu();
+    void api.openMenu(initialView);
   }
 
   close(): void {

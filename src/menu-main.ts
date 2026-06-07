@@ -1,6 +1,6 @@
 import './style.css';
 import { loadGameData } from './battle/data/loadGameData.ts';
-import type { PartyMemberState } from './battle/types.ts';
+import type { ClassId, PartySlotState } from './battle/types.ts';
 import { isElectronMenu } from './platform/electronApi.ts';
 import { MetaMenuOverlay } from './ui/MetaMenuOverlay.ts';
 
@@ -10,7 +10,8 @@ if (!app) {
 }
 
 const gameData = loadGameData();
-let party: PartyMemberState[] = [];
+let party: PartySlotState[] = [];
+let unlockedClassIds: ClassId[] = [];
 let overlay: MetaMenuOverlay | null = null;
 
 function mountMenu(): void {
@@ -20,21 +21,33 @@ function mountMenu(): void {
     app,
     gameData,
     () => party,
+    () => unlockedClassIds,
     {
       onBuildChanged: (partyIndex, build) => {
         window.menuElectronAPI?.applyBuildChange(partyIndex, build);
+      },
+      onPartySlotChanged: (slotIndex, member) => {
+        party[slotIndex] = member ? structuredClone(member) : null;
+        window.menuElectronAPI?.applyPartySlotChange(slotIndex, member);
       },
       onClose: () => {
         window.menuElectronAPI?.close();
       },
     },
-    'window',
+    {
+      presentation: 'window',
+      initialView: menuInitialView,
+    },
   );
 }
 
+let menuInitialView: 'hub' | 'party' = 'hub';
+
 if (isElectronMenu()) {
-  window.menuElectronAPI?.onInit((initialParty) => {
-    party = initialParty;
+  window.menuElectronAPI?.onInit((payload) => {
+    party = payload.party;
+    unlockedClassIds = payload.unlockedClassIds;
+    menuInitialView = payload.initialView ?? 'hub';
     mountMenu();
   });
 } else {

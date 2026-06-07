@@ -80,5 +80,26 @@
         "skillIds": ["snipe", "arrow"]
       }
     ]
+  },
+  {
+    "id": "attacker_arcanist",
+    "role": "attacker",
+    "displayName": "Arcanist",
+    "formationRow": "back",
+    "traits": {
+      "attackRange": "ranged",
+      "rangePx": 120
+    },
+    "maxHp": 80,
+    "atk": 22,
+    "def": 5,
+    "reg": 0,
+    "basicAttackSkillId": "hawkeye_shot",
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["snipe", "arrow"]
+      }
+    ]
   }
 ]

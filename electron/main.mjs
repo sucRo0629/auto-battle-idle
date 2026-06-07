@@ -73,26 +73,26 @@ function createTray() {
   );
 }
 
-async function getPartyFromBattle() {
-  if (!battleWindow) return [];
+async function getMenuSnapshotFromBattle() {
+  if (!battleWindow) return { party: [], unlockedClassIds: [] };
   return battleWindow.webContents.executeJavaScript(
-    'globalThis.__getPartySnapshot?.() ?? []',
+    'globalThis.__getMenuSnapshot?.() ?? { party: [], unlockedClassIds: [] }',
   );
 }
 
-async function openMenuWindow() {
+async function openMenuWindow(initialView = 'hub') {
   if (!battleWindow) return;
   if (!menuWindow) createMenuWindow();
 
-  const party = await getPartyFromBattle();
-  menuWindow.webContents.send('menu:init', party);
+  const snapshot = await getMenuSnapshotFromBattle();
+  menuWindow.webContents.send('menu:init', { ...snapshot, initialView });
   menuWindow.show();
   menuWindow.focus();
 }
 
 function setupIpc() {
-  ipcMain.handle('menu:open', async () => {
-    await openMenuWindow();
+  ipcMain.handle('menu:open', async (_event, initialView = 'hub') => {
+    await openMenuWindow(initialView);
   });
 
   ipcMain.on('menu:close', () => {
@@ -102,6 +102,10 @@ function setupIpc() {
 
   ipcMain.on('menu:build-changed', (_event, partyIndex, build) => {
     battleWindow?.webContents.send('menu:build-changed', partyIndex, build);
+  });
+
+  ipcMain.on('menu:party-slot-changed', (_event, slotIndex, member) => {
+    battleWindow?.webContents.send('menu:party-slot-changed', slotIndex, member);
   });
 }
 

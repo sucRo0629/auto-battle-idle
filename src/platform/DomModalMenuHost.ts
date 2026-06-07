@@ -1,5 +1,5 @@
 import { MetaMenuOverlay } from '../ui/MetaMenuOverlay.ts';
-import type { MenuHost, MenuHostContext } from './menuHost.ts';
+import type { MenuHost, MenuHostContext, MetaMenuInitialView } from './menuHost.ts';
 
 export class DomModalMenuHost implements MenuHost {
   private overlay: MetaMenuOverlay | null = null;
@@ -7,7 +7,7 @@ export class DomModalMenuHost implements MenuHost {
 
   constructor(private readonly context: MenuHostContext) {}
 
-  open(): void {
+  open(initialView: MetaMenuInitialView = 'hub'): void {
     if (this.opened) return;
     this.opened = true;
     this.context.onOpenChange(true);
@@ -15,13 +15,17 @@ export class DomModalMenuHost implements MenuHost {
       document.body,
       this.context.gameData,
       this.context.getParty,
+      this.context.getUnlockedClassIds,
       {
         onBuildChanged: (partyIndex, build) => {
           this.context.onBuildChanged(partyIndex, build);
         },
+        onPartySlotChanged: (slotIndex, member) => {
+          this.context.onPartySlotChanged(slotIndex, member);
+        },
         onClose: () => this.close(),
       },
-      'modal',
+      { presentation: 'modal', initialView },
     );
   }
 

@@ -48,4 +48,9 @@ export function getClassIconImage(iconKey: string): HTMLImageElement | undefined
   );
 }
 
+/** アクティブスキル用プレースホルダ（将来 skillId ごとに差し替え） */
+export function getSkillIconUrl(_skillId?: string): string {
+  return ICON_URLS[PLACEHOLDER_SPRITE_KEYS.supporter];
+}
+
 void preloadClassIcons();

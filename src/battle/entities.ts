@@ -6,6 +6,7 @@ import type {
   GameData,
   PartyMemberDef,
   PartyMemberState,
+  PartySlotState,
   SkillCooldown,
 } from './types.ts';
 import { DEFAULT_MELEE_RANGE_PX } from './types.ts';
@@ -98,16 +99,22 @@ export function createAllyFromMember(
 
 export function createAlliesFromPartyState(
   gameData: GameData,
-  party: PartyMemberState[],
+  party: PartySlotState[],
   curves: LevelCurvesConfig,
 ): CombatantState[] {
-  return party.map((member) => {
+  const allies: CombatantState[] = [];
+  party.forEach((member, slotIndex) => {
+    if (!member) return;
     const preset = gameData.classRegistry[member.classId];
     if (!preset) {
       throw new Error(`Class not found: ${member.classId}`);
     }
-    return createAllyFromMember(member, preset, curves);
+    allies.push({
+      ...createAllyFromMember(member, preset, curves),
+      partySlotIndex: slotIndex,
+    });
   });
+  return allies;
 }
 
 export function createAlliesFromParty(

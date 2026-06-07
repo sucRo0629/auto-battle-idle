@@ -1,17 +1,32 @@
-import type { CharacterBuild, PartyMemberState } from '../battle/types.ts';
+import type {
+  CharacterBuild,
+  ClassId,
+  PartySlotState,
+} from '../battle/types.ts';
+import type { MetaMenuInitialView } from '../ui/MetaMenuOverlay.ts';
+
+export interface MenuInitPayload {
+  party: PartySlotState[];
+  unlockedClassIds: ClassId[];
+  initialView?: MetaMenuInitialView;
+}
 
 export interface BattleElectronAPI {
   readonly isElectron: true;
-  openMenu: () => Promise<void>;
+  openMenu: (initialView?: MetaMenuInitialView) => Promise<void>;
   onMenuBuildChanged: (
     handler: (partyIndex: number, build: CharacterBuild) => void,
+  ) => void;
+  onMenuPartySlotChanged: (
+    handler: (slotIndex: number, member: PartySlotState) => void,
   ) => void;
   onMenuClosed: (handler: () => void) => void;
 }
 
 export interface MenuElectronAPI {
-  onInit: (handler: (party: PartyMemberState[]) => void) => void;
+  onInit: (handler: (payload: MenuInitPayload) => void) => void;
   applyBuildChange: (partyIndex: number, build: CharacterBuild) => void;
+  applyPartySlotChange: (slotIndex: number, member: PartySlotState) => void;
   close: () => void;
 }
 
@@ -19,7 +34,7 @@ declare global {
   interface Window {
     battleElectronAPI?: BattleElectronAPI;
     menuElectronAPI?: MenuElectronAPI;
-    __getPartySnapshot?: () => PartyMemberState[];
+    __getMenuSnapshot?: () => MenuInitPayload;
   }
 }
 

@@ -1,10 +1,22 @@
-import type { CharacterBuild, GameData, PartyMemberState } from '../battle/types.ts';
-import { SkillMenuPanel } from './SkillMenuPanel.ts';
+import type {
+  CharacterBuild,
+  ClassId,
+  GameData,
+  PartySlotState,
+} from "../battle/types.ts";
+import { SkillMenuPanel } from "./SkillMenuPanel.ts";
 
-export type MetaMenuPresentation = 'modal' | 'window';
+export type MetaMenuPresentation = "modal" | "window";
+export type MetaMenuInitialView = "hub" | "party";
+
+export interface MetaMenuOverlayOptions {
+  presentation?: MetaMenuPresentation;
+  initialView?: MetaMenuInitialView;
+}
 
 export interface MetaMenuOverlayCallbacks {
   onBuildChanged: (partyIndex: number, build: CharacterBuild) => void;
+  onPartySlotChanged: (slotIndex: number, member: PartySlotState) => void;
   onClose: () => void;
 }
 
@@ -14,93 +26,108 @@ export class MetaMenuOverlay {
   private readonly titleEl: HTMLElement;
   private readonly bodyEl: HTMLElement;
   private skillPanel: SkillMenuPanel | null = null;
+  private readonly directPartyEntry: boolean;
 
   constructor(
     private readonly host: HTMLElement,
     private readonly gameData: GameData,
-    private readonly getParty: () => PartyMemberState[],
+    private readonly getParty: () => PartySlotState[],
+    private readonly getUnlockedClassIds: () => ClassId[],
     private readonly callbacks: MetaMenuOverlayCallbacks,
-    presentation: MetaMenuPresentation = 'modal',
+    options: MetaMenuOverlayOptions = {}
   ) {
-    this.root = document.createElement('div');
-    this.root.className =
-      presentation === 'window'
-        ? 'meta-menu-overlay meta-menu-overlay--window'
-        : 'meta-menu-overlay';
+    const presentation = options.presentation ?? "modal";
+    const initialView = options.initialView ?? "hub";
+    this.directPartyEntry = initialView === "party";
 
-    if (presentation === 'modal') {
-      const backdrop = document.createElement('button');
-      backdrop.type = 'button';
-      backdrop.className = 'meta-menu-backdrop';
-      backdrop.setAttribute('aria-label', 'メニューを閉じる');
-      backdrop.addEventListener('click', () => this.callbacks.onClose());
+    this.root = document.createElement("div");
+    this.root.className =
+      presentation === "window"
+        ? "meta-menu-overlay meta-menu-overlay--window"
+        : "meta-menu-overlay";
+
+    if (presentation === "modal") {
+      const backdrop = document.createElement("button");
+      backdrop.type = "button";
+      backdrop.className = "meta-menu-backdrop";
+      backdrop.setAttribute("aria-label", "メニューを閉じる");
+      backdrop.addEventListener("click", () => this.callbacks.onClose());
       this.root.appendChild(backdrop);
     }
 
-    this.windowEl = document.createElement('div');
-    this.windowEl.className = 'meta-menu-window';
-    this.windowEl.addEventListener('click', (event) => event.stopPropagation());
+    this.windowEl = document.createElement("div");
+    this.windowEl.className = "meta-menu-window";
+    this.windowEl.addEventListener("click", (event) => event.stopPropagation());
 
-    const titleBar = document.createElement('div');
-    titleBar.className = 'meta-menu-window-bar';
+    const titleBar = document.createElement("div");
+    titleBar.className = "meta-menu-window-bar";
 
-    this.titleEl = document.createElement('h2');
-    this.titleEl.className = 'meta-menu-title';
-    this.titleEl.textContent = 'メニュー';
+    this.titleEl = document.createElement("h2");
+    this.titleEl.className = "meta-menu-title";
+    this.titleEl.textContent = "メニュー";
 
-    const closeButton = document.createElement('button');
-    closeButton.type = 'button';
-    closeButton.className = 'meta-menu-close';
-    closeButton.setAttribute('aria-label', '閉じる');
-    closeButton.textContent = '×';
-    closeButton.addEventListener('click', () => this.callbacks.onClose());
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "meta-menu-close";
+    closeButton.setAttribute("aria-label", "閉じる");
+    closeButton.textContent = "×";
+    closeButton.addEventListener("click", () => this.callbacks.onClose());
 
     titleBar.append(this.titleEl, closeButton);
 
-    this.bodyEl = document.createElement('div');
-    this.bodyEl.className = 'meta-menu-window-body';
+    this.bodyEl = document.createElement("div");
+    this.bodyEl.className = "meta-menu-window-body";
 
     this.windowEl.append(titleBar, this.bodyEl);
     this.root.appendChild(this.windowEl);
     this.host.appendChild(this.root);
-    this.renderHub();
+    if (this.directPartyEntry) {
+      this.openParty();
+    } else {
+      this.renderHub();
+    }
   }
 
   private renderHub(): void {
     this.destroySkillPanel();
-    this.titleEl.textContent = 'メニュー';
+    this.titleEl.textContent = "メニュー";
     this.bodyEl.replaceChildren();
 
-    const hub = document.createElement('div');
-    hub.className = 'meta-menu-hub';
+    const hub = document.createElement("div");
+    hub.className = "meta-menu-hub";
 
-    const skillsButton = document.createElement('button');
-    skillsButton.type = 'button';
-    skillsButton.className = 'meta-menu-item';
-    skillsButton.textContent = 'スキル';
-    skillsButton.addEventListener('click', () => this.openSkills());
+    const partyButton = document.createElement("button");
+    partyButton.type = "button";
+    partyButton.className = "meta-menu-item";
+    partyButton.textContent = "パーティ";
+    partyButton.addEventListener("click", () => this.openParty());
 
-    const enhancementButton = document.createElement('button');
-    enhancementButton.type = 'button';
-    enhancementButton.className = 'meta-menu-item meta-menu-item--disabled';
+    const enhancementButton = document.createElement("button");
+    enhancementButton.type = "button";
+    enhancementButton.className = "meta-menu-item meta-menu-item--disabled";
     enhancementButton.disabled = true;
-    enhancementButton.textContent = '強化ツリー（準備中）';
+    enhancementButton.textContent = "強化ツリー（準備中）";
 
-    hub.append(skillsButton, enhancementButton);
+    hub.append(partyButton, enhancementButton);
     this.bodyEl.appendChild(hub);
   }
 
-  private openSkills(): void {
-    this.titleEl.textContent = 'スキル管理';
+  private openParty(): void {
+    this.titleEl.textContent = "パーティ設定";
     this.bodyEl.replaceChildren();
     this.skillPanel = new SkillMenuPanel(
       this.bodyEl,
       this.gameData,
-      this.getParty().map((member) => ({
-        classId: member.classId,
-        progress: structuredClone(member.progress),
-        build: structuredClone(member.build),
-      })),
+      this.getParty().map((member) =>
+        member
+          ? {
+              classId: member.classId,
+              progress: structuredClone(member.progress),
+              build: structuredClone(member.build),
+            }
+          : null
+      ),
+      this.getUnlockedClassIds(),
       {
         onBuildChanged: (partyIndex, build) => {
           const member = this.getParty()[partyIndex];
@@ -109,8 +136,11 @@ export class MetaMenuOverlay {
           }
           this.callbacks.onBuildChanged(partyIndex, build);
         },
-        onBack: () => this.renderHub(),
-      },
+        onPartySlotChanged: (slotIndex, member) => {
+          this.getParty()[slotIndex] = member ? structuredClone(member) : null;
+          this.callbacks.onPartySlotChanged(slotIndex, member);
+        },
+      }
     );
   }
 

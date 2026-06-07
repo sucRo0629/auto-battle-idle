@@ -1,5 +1,10 @@
 import { BattleEngine } from '../battle/BattleEngine.ts';
-import type { CharacterBuild, GameData, SaveGameState } from '../battle/types.ts';
+import type {
+  CharacterBuild,
+  GameData,
+  PartySlotState,
+  SaveGameState,
+} from '../battle/types.ts';
 import { normalizeEquippedSlots } from '../progression/skillBuild.ts';
 import {
   isVerifyModeEnabled,
@@ -61,7 +66,7 @@ export class GameSession {
       {
         isVerifyMode: () => this.verifyMode,
         onVerifyModeChange: (enabled) => this.setVerifyMode(enabled),
-        onOpenMetaMenu: () => this.openMetaMenu(),
+        onOpenMetaMenu: () => this.openPartyMenu(),
       },
     );
 
@@ -69,6 +74,9 @@ export class GameSession {
       gameData,
       getParty: () => this.save.party,
       onBuildChanged: (partyIndex, build) => this.updateMemberBuild(partyIndex, build),
+      getUnlockedClassIds: () => this.save.unlockedClassIds,
+      onPartySlotChanged: (slotIndex, member) =>
+        this.updatePartySlot(slotIndex, member),
       onOpenChange: (open) => {
         this.metaMenuOpen = open;
         this.view.setMenuButtonDisabled(open);
@@ -116,8 +124,8 @@ export class GameSession {
     return this.metaMenuOpen;
   }
 
-  openMetaMenu(): void {
-    this.menuHost.open();
+  openPartyMenu(): void {
+    this.menuHost.open('party');
   }
 
   closeMetaMenu(): void {
@@ -130,6 +138,15 @@ export class GameSession {
     member.build = structuredClone(normalizeEquippedSlots(build));
     this.persistSave();
     this.engine.syncPartyBuilds();
+  }
+
+  updatePartySlot(slotIndex: number, member: PartySlotState): void {
+    if (slotIndex < 0 || slotIndex >= this.save.party.length) return;
+    this.save.party[slotIndex] = member
+      ? structuredClone(member)
+      : null;
+    this.persistSave();
+    this.engine.restartBattle();
   }
 
   tick(deltaSec: number, deltaMs: number): void {

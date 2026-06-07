@@ -1,4 +1,9 @@
-import type { GameData, SaveGameState } from '../battle/types.ts';
+import type { GameData, PartySlotState, SaveGameState } from '../battle/types.ts';
+import { PARTY_SLOT_COUNT, SAVE_VERSION } from '../battle/types.ts';
+import {
+  buildDefaultUnlockedClassIds,
+  normalizePartySlots,
+} from './partyCompose.ts';
 import {
   addExp,
   computeStatsAtLevel,
@@ -35,32 +40,39 @@ export function createDefaultSave(
     throw new Error('No stages defined');
   }
 
+  const slots: PartySlotState[] = Array.from({ length: PARTY_SLOT_COUNT }, () => null);
+  party.members.forEach((member, index) => {
+    if (index >= PARTY_SLOT_COUNT) return;
+    const preset = gameData.classRegistry[member.classId];
+    if (!preset) {
+      throw new Error(`Class not found: ${member.classId}`);
+    }
+    const learned = resolveLearnedSkills(
+      preset,
+      1,
+      gameData.skillRegistry,
+    );
+    slots[index] = {
+      classId: member.classId,
+      progress: { level: 1, exp: 0 },
+      build: {
+        learnedPassiveIds: learned.learnedPassiveIds,
+        learnedActiveIds: learned.learnedActiveIds,
+        equippedActiveSlots: structuredClone(member.build.equippedActiveSlots),
+      },
+    };
+  });
+
+  const normalizedParty = normalizePartySlots(slots);
+
   return {
-    version: 1,
+    version: SAVE_VERSION,
     stageProgress: {
       currentStageId: firstStageId,
       totalClears: 0,
     },
-    party: party.members.map((member) => {
-      const preset = gameData.classRegistry[member.classId];
-      if (!preset) {
-        throw new Error(`Class not found: ${member.classId}`);
-      }
-      const learned = resolveLearnedSkills(
-        preset,
-        1,
-        gameData.skillRegistry,
-      );
-      return {
-        classId: member.classId,
-        progress: { level: 1, exp: 0 },
-        build: {
-          learnedPassiveIds: learned.learnedPassiveIds,
-          learnedActiveIds: learned.learnedActiveIds,
-          equippedActiveSlots: structuredClone(member.build.equippedActiveSlots),
-        },
-      };
-    }),
+    party: normalizedParty,
+    unlockedClassIds: buildDefaultUnlockedClassIds(normalizedParty, partyId),
   };
 }
 

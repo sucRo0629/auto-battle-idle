@@ -77,11 +77,17 @@ export interface CharacterProgress {
   exp: number;
 }
 
+export const PARTY_SLOT_COUNT = 4;
+
 export interface PartyMemberState {
   classId: ClassId;
   progress: CharacterProgress;
   build: CharacterBuild;
 }
+
+export type PartySlotState = PartyMemberState | null;
+
+export const SAVE_VERSION = 2;
 
 export interface StageProgress {
   currentStageId: string;
@@ -91,7 +97,8 @@ export interface StageProgress {
 export interface SaveGameState {
   version: number;
   stageProgress: StageProgress;
-  party: PartyMemberState[];
+  party: PartySlotState[];
+  unlockedClassIds: ClassId[];
 }
 
 export interface StatusEffect {
@@ -129,6 +136,8 @@ export function asStatusEffectStatList(
 export interface CombatantState extends Combatant {
   role: Role;
   classId: ClassId;
+  /** 味方のみ: save.party のスロット番号 */
+  partySlotIndex?: number;
   formationRow: FormationRow;
   traits: ClassTraits;
   build: CharacterBuild;

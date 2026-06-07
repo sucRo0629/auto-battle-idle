@@ -96,5 +96,54 @@
         "skillIds": ["test_dot"]
       }
     ]
+  },
+  {
+    "id": "test_attacker_arcanist",
+    "role": "attacker",
+    "displayName": "Test Arcanist",
+    "formationRow": "back",
+    "traits": {
+      "attackRange": "ranged",
+      "rangePx": 120
+    },
+    "maxHp": 80,
+    "atk": 22,
+    "def": 5,
+    "reg": 0,
+    "basicAttackSkillId": "test_strike",
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["snipe", "arrow"]
+      },
+      {
+        "level": 1,
+        "skillIds": ["test_dot"]
+      }
+    ]
+  },
+  {
+    "id": "test_defender_paladin",
+    "role": "defender",
+    "displayName": "Test Paladin",
+    "formationRow": "front",
+    "traits": {
+      "attackRange": "melee"
+    },
+    "maxHp": 260,
+    "atk": 14,
+    "def": 20,
+    "reg": 5,
+    "basicAttackSkillId": "test_strike",
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["thick_skin", "iron_guard"]
+      },
+      {
+        "level": 1,
+        "skillIds": ["test_buff"]
+      }
+    ]
   }
 ]

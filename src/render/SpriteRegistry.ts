@@ -59,6 +59,13 @@ export function preloadSprites(): Promise<void> {
   return preloadPromise;
 }
 
+export function getSpriteUrl(spriteKey: string): string {
+  return (
+    SPRITE_URLS[spriteKey] ??
+    SPRITE_URLS[ENEMY_DEFAULT_SPRITE_KEY]
+  );
+}
+
 export function getSpriteImage(spriteKey: string): HTMLImageElement | undefined {
   return (
     spriteImages.get(spriteKey) ??
