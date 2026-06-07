@@ -5,10 +5,10 @@ import type {
   PartySlotState,
 } from '../battle/types.ts';
 import { PARTY_SLOT_COUNT } from '../battle/types.ts';
-import { resolveLearnedSkills } from './skillUnlocks.ts';
+import { reconcileMemberBuildFromGameData } from './skillBuild.ts';
 
 export const DEFAULT_ROSTER_EXTRAS: Record<string, ClassId[]> = {
-  demo: ['attacker_arcanist'],
+  demo: ['attacker_jutsushi'],
   test: ['test_attacker_arcanist', 'test_defender_paladin'],
 };
 
@@ -28,17 +28,21 @@ export function createMemberFromClass(
   if (!preset) {
     throw new Error(`Class not found: ${classId}`);
   }
-  const learned = resolveLearnedSkills(preset, 1, gameData.skillRegistry);
-  const firstActive = learned.learnedActiveIds[0] ?? '';
-  return {
+  const firstActive =
+    preset.starterActiveIds[0] ?? preset.classSkillIds.find(
+      (id) => gameData.skillRegistry.actives[id],
+    ) ?? '';
+  const member: PartyMemberState = {
     classId,
     progress: { level: 1, exp: 0 },
     build: {
-      learnedPassiveIds: [...learned.learnedPassiveIds],
-      learnedActiveIds: [...learned.learnedActiveIds],
+      learnedPassiveIds: [],
+      learnedActiveIds: [],
       equippedActiveSlots: firstActive ? [firstActive] : [],
     },
   };
+  reconcileMemberBuildFromGameData(member, gameData);
+  return member;
 }
 
 export function getAssignableClassIds(

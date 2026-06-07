@@ -20,6 +20,10 @@
       {
         "level": 1,
         "skillIds": ["test_buff"]
+      },
+      {
+        "level": 2,
+        "skillIds": ["test_passive_lv2", "test_active_lv2"]
       }
     ]
   },
@@ -44,6 +48,10 @@
       {
         "level": 1,
         "skillIds": ["test_debuff"]
+      },
+      {
+        "level": 2,
+        "skillIds": ["test_passive_lv2", "test_active_lv2"]
       }
     ]
   },
@@ -69,6 +77,10 @@
       {
         "level": 1,
         "skillIds": ["test_hot"]
+      },
+      {
+        "level": 2,
+        "skillIds": ["test_passive_lv2", "test_active_lv2"]
       }
     ]
   },
@@ -94,6 +106,10 @@
       {
         "level": 1,
         "skillIds": ["test_dot"]
+      },
+      {
+        "level": 2,
+        "skillIds": ["test_passive_lv2", "test_active_lv2"]
       }
     ]
   },
@@ -119,6 +135,10 @@
       {
         "level": 1,
         "skillIds": ["test_dot"]
+      },
+      {
+        "level": 2,
+        "skillIds": ["test_passive_lv2", "test_active_lv2"]
       }
     ]
   },
@@ -143,6 +163,10 @@
       {
         "level": 1,
         "skillIds": ["test_buff"]
+      },
+      {
+        "level": 2,
+        "skillIds": ["test_passive_lv2", "test_active_lv2"]
       }
     ]
   }

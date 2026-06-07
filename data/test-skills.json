@@ -1,5 +1,12 @@
 {
-  "passives": [],
+  "passives": [
+    {
+      "id": "test_passive_lv2",
+      "name": "Test Passive Lv2",
+      "effect": "damageMultiplier",
+      "damageMultiplier": 1.1
+    }
+  ],
   "actives": [
     {
       "id": "test_strike",
@@ -65,6 +72,19 @@
           "type": "dot",
           "durationSec": 8,
           "powerMultiplier": 0.4
+        }
+      ]
+    },
+    {
+      "id": "test_active_lv2",
+      "name": "Test Active Lv2",
+      "interval": 5,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 1.0
         }
       ]
     }

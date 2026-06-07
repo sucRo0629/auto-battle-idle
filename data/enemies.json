@@ -6,7 +6,7 @@
     "atk": 50,
     "def": 4,
     "reg": 0,
-    "exp": 1,
+    "exp": 3,
     "spriteKey": "none",
     "activeSkillIds": [
       "bite"
@@ -19,7 +19,7 @@
     "atk": 55,
     "def": 4,
     "reg": 0,
-    "exp": 1,
+    "exp": 3,
     "spriteKey": "none",
     "activeSkillIds": [
       "bite"

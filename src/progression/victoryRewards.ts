@@ -1,4 +1,10 @@
-import type { GameData, PartySlotState, SaveGameState } from '../battle/types.ts';
+import type {
+  GameData,
+  PartyMemberState,
+  PartySlotState,
+  SaveGameState,
+  SkillRegistry,
+} from '../battle/types.ts';
 import { PARTY_SLOT_COUNT, SAVE_VERSION } from '../battle/types.ts';
 import {
   buildDefaultUnlockedClassIds,
@@ -10,6 +16,7 @@ import {
   type LevelCurvesConfig,
 } from './levelGrowth.ts';
 import { computeStageExpReward, getNextStageId } from './stageProgression.ts';
+import { reconcileMemberBuild } from './skillBuild.ts';
 import { resolveLearnedSkills } from './skillUnlocks.ts';
 
 export interface MemberLevelUpInfo {
@@ -19,6 +26,33 @@ export interface MemberLevelUpInfo {
   oldLevel: number;
   newLevel: number;
   statDelta: { maxHp: number; atk: number; def: number };
+  newSkillNames: string[];
+}
+
+function getNewSkillNames(
+  oldLevel: number,
+  newLevel: number,
+  preset: GameData['classRegistry'][string],
+  registry: SkillRegistry,
+): string[] {
+  const oldLearned = resolveLearnedSkills(preset, oldLevel, registry);
+  const newLearned = resolveLearnedSkills(preset, newLevel, registry);
+  const oldIds = new Set([
+    ...oldLearned.learnedPassiveIds,
+    ...oldLearned.learnedActiveIds,
+  ]);
+  const newIds = [
+    ...newLearned.learnedPassiveIds,
+    ...newLearned.learnedActiveIds,
+  ].filter((id) => !oldIds.has(id));
+
+  return newIds.map((id) => {
+    const passive = registry.passives[id];
+    if (passive) return passive.name;
+    const active = registry.actives[id];
+    if (active) return active.name;
+    return id;
+  });
 }
 
 export interface VictoryRewardResult {
@@ -47,20 +81,17 @@ export function createDefaultSave(
     if (!preset) {
       throw new Error(`Class not found: ${member.classId}`);
     }
-    const learned = resolveLearnedSkills(
-      preset,
-      1,
-      gameData.skillRegistry,
-    );
-    slots[index] = {
+    const slotMember: PartyMemberState = {
       classId: member.classId,
       progress: { level: 1, exp: 0 },
       build: {
-        learnedPassiveIds: learned.learnedPassiveIds,
-        learnedActiveIds: learned.learnedActiveIds,
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
         equippedActiveSlots: structuredClone(member.build.equippedActiveSlots),
       },
     };
+    reconcileMemberBuild(slotMember, preset, gameData.skillRegistry);
+    slots[index] = slotMember;
   });
 
   const normalizedParty = normalizePartySlots(slots);
@@ -98,7 +129,7 @@ export function applyVictoryRewards(
     const oldLevel = member.progress.level;
     const oldStats = computeStatsAtLevel(
       preset,
-      member.classId,
+      preset,
       oldLevel,
       curves,
     );
@@ -108,10 +139,12 @@ export function applyVictoryRewards(
 
     const newStats = computeStatsAtLevel(
       preset,
-      member.classId,
+      preset,
       newLevel,
       curves,
     );
+
+    reconcileMemberBuild(member, preset, gameData.skillRegistry);
 
     levelUps.push({
       partyIndex: index,
@@ -124,6 +157,12 @@ export function applyVictoryRewards(
         atk: newStats.atk - oldStats.atk,
         def: newStats.def - oldStats.def,
       },
+      newSkillNames: getNewSkillNames(
+        oldLevel,
+        newLevel,
+        preset,
+        gameData.skillRegistry,
+      ),
     });
   }
 
@@ -144,7 +183,11 @@ export function formatLevelUpLog(info: MemberLevelUpInfo): string {
   if (statDelta.atk > 0) parts.push(`+${statDelta.atk} ATK`);
   if (statDelta.def > 0) parts.push(`+${statDelta.def} DEF`);
   const bonus = parts.length > 0 ? ` (${parts.join(', ')})` : '';
-  return `${info.displayName} reached Lv ${info.newLevel}!${bonus}`;
+  const learned =
+    info.newSkillNames.length > 0
+      ? ` Learned: ${info.newSkillNames.join(', ')}`
+      : '';
+  return `${info.displayName} reached Lv ${info.newLevel}!${bonus}${learned}`;
 }
 
 export function formatExpGrantLog(
