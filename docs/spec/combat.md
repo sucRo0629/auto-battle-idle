@@ -11,8 +11,14 @@
    それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
 5. `final = max(1, floor(afterDefense × damageTakenMul))`
 
-`effectiveAtk = atk × atkBuffMul`  
-`damageTakenMul` = ステータス効果 × パッシブ `damageTakenMultiplier`（例：Thick Skin, Iron Guard）
+`effectiveAtk = max(0, (atk + atkFlatSum) × atkMulProduct)`  
+`effectiveDef = max(0, (def + defFlatSum) × defMulProduct)`  
+`damageTakenMul = max(0, (1 + damageTakenFlatSum) × damageTakenMulProduct)` × パッシブ `damageTakenMultiplier`
+
+固定値（flat）: 同一 stat 内で buff は `+flatBonus`、debuff は `-flatBonus` を代数和。  
+係数（multiplier）: 同一 stat 内で乗算。
+
+**ダメージ乱数:** 最終ダメージ・回復量に乱数ブレは設けない（完全決定）。
 
 ## 魔法ダメージ
 
@@ -31,7 +37,7 @@ Phase 1 デモは物理のみ。全クラス `reg: 0`。
 
 | 枠 | 進行ルール |
 |----|------------|
-| **basic** | `remaining -= deltaTime`（固定。AGI は Phase 4） |
+| **basic** | `remaining -= deltaTime`（固定。AGI は Phase 3） |
 | **active** | `remaining -= deltaTime × ∏ passive.activeCooldownRate` |
 
 枠が 0 になると `SkillExecutor` が1回発動し、`skill.interval` にリセット。
@@ -50,6 +56,7 @@ Phase 1 デモは物理のみ。全クラス `reg: 0`。
 **重複（同一対象・同一 stat）：**
 
 - `multiplier` — 乗算
+- `flatBonus` — 代数和（buff `+` / debuff `-`）
 - `remainingSec` — **長い方**を採用（短い効果は上書き）
 
 毎 tick：`remainingSec -= deltaTime`、0 以下で除去。
@@ -71,10 +78,12 @@ Phase 1 デモは物理のみ。全クラス `reg: 0`。
 
 ## 演出（render 層）
 
+Phase 1 はプレースホルダー VFX のみ。**スキル別 `vfx` 設定・新プリセット追加は Phase 7**（[phase-roadmap.md](../plans/phase-roadmap.md)）。
+
 | イベント | VFX |
 |----------|-----|
-| ダメージ | attack / hurt アニメ、ダメージポップアップ、近接/遠隔エフェクト |
-| 回復 | heal アニメ、緑ポップアップ、回復弾エフェクト |
+| ダメージ | attack / hurt アニメ、ダメージポップアップ、近接/遠隔プレースホルダー（slash / orb / arrow） |
+| 回復 | heal アニメ、緑ポップアップ、healRise プレースホルダー |
 | buff / debuff | 対象の白い光（約0.8秒） |
 
 ロジックは `BattleEvent` を発火；`BattleView` が `BattleCanvas` を駆動。`render/` に戦闘ルールは置かない。

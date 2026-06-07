@@ -1,4 +1,4 @@
-import type { AttackRange, SkillEffectKind } from './types.ts';
+import type { SkillEffectKind } from './types.ts';
 
 export type BattleEvent =
   | {
@@ -10,7 +10,7 @@ export type BattleEvent =
       slotKind?: 'basic' | 'active';
       effect: SkillEffectKind;
       amount?: number;
-      range?: AttackRange;
+      range?: number;
       statusLabel?: string;
     }
   | { type: 'hurt'; targetId: string }

@@ -1,10 +1,15 @@
 import type {
-  ActiveSkillDef,
   CombatantState,
+  DamageSkillEffect,
   DamageType,
+  HealSkillEffect,
   PassiveSkillDef,
   StatusEffect,
 } from './types.ts';
+import {
+  aggregateStatEffects,
+  computeEffectiveStat,
+} from './statusEffectDisplay.ts';
 
 export function getPassiveDefs(
   combatant: CombatantState,
@@ -33,46 +38,42 @@ export function getActiveCooldownRate(passives: PassiveSkillDef[]): number {
   return passives.reduce((acc, p) => acc * (p.activeCooldownRate ?? 1), 1);
 }
 
-function getStatMultiplier(
-  effects: StatusEffect[],
-  stat: StatusEffect['stat'],
-): number {
-  return effects
-    .filter((e) => e.stat === stat)
-    .reduce((acc, e) => acc * e.multiplier, 1);
-}
-
 export function getEffectiveAtk(combatant: CombatantState): number {
-  const mul = getStatMultiplier(combatant.statusEffects, 'atk');
-  return Math.max(0, combatant.atk * mul);
+  const agg = aggregateStatEffects(combatant.statusEffects, 'atk');
+  return computeEffectiveStat(combatant.atk, agg);
 }
 
 export function getEffectiveDef(combatant: CombatantState): number {
-  const mul = getStatMultiplier(combatant.statusEffects, 'def');
-  return Math.max(0, combatant.def * mul);
+  const agg = aggregateStatEffects(combatant.statusEffects, 'def');
+  return computeEffectiveStat(combatant.def, agg);
+}
+
+export function getEffectiveReg(combatant: CombatantState): number {
+  const agg = aggregateStatEffects(combatant.statusEffects, 'reg');
+  return computeEffectiveStat(combatant.reg, agg);
 }
 
 export function getDamageTakenMultiplier(combatant: CombatantState): number {
-  const statusMul = getStatMultiplier(combatant.statusEffects, 'damageTaken');
-  return statusMul;
+  const agg = aggregateStatEffects(combatant.statusEffects, 'damageTaken');
+  return computeEffectiveStat(1, agg);
 }
 
 export function resolveDamage(
   attacker: CombatantState,
   target: CombatantState,
-  skill: ActiveSkillDef,
+  effect: DamageSkillEffect,
   passives: Record<string, PassiveSkillDef>,
 ): number {
   const attackerPassives = getPassiveDefs(attacker, passives);
   const targetPassives = getPassiveDefs(target, passives);
   const baseDamage = Math.floor(
     getEffectiveAtk(attacker) *
-      (skill.powerMultiplier ?? 1) *
+      effect.powerMultiplier *
       getPassiveDamageMultiplier(attackerPassives),
   );
-  const damageType: DamageType = skill.damageType ?? 'physical';
+  const damageType: DamageType = effect.damageType;
   const effectiveDef = getEffectiveDef(target);
-  const effectiveReg = target.reg;
+  const effectiveReg = getEffectiveReg(target);
 
   let afterDefense: number;
   if (damageType === 'magic') {
@@ -98,12 +99,37 @@ export function resolveDamage(
 
 export function resolveHeal(
   actor: CombatantState,
-  skill: ActiveSkillDef,
+  effect: HealSkillEffect,
   passives: Record<string, PassiveSkillDef>,
 ): number {
   const actorPassives = getPassiveDefs(actor, passives);
   return Math.floor(
     (getEffectiveAtk(actor) + getPassiveHealBonus(actorPassives)) *
-      (skill.powerMultiplier ?? 1),
+      effect.powerMultiplier,
   );
 }
+
+export function resolveHotTick(
+  source: CombatantState,
+  powerMultiplier: number,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  return resolveHeal(source, { type: "heal", targetRule: "self", powerMultiplier }, passives);
+}
+
+export function resolveDotTick(
+  source: CombatantState,
+  target: CombatantState,
+  powerMultiplier: number,
+  damageType: DamageType,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  return resolveDamage(
+    source,
+    target,
+    { type: "damage", targetRule: "frontEnemy", damageType, powerMultiplier },
+    passives,
+  );
+}
+
+export type { StatusEffect };

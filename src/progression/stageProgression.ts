@@ -1,4 +1,4 @@
-import type { GameData, StageDef } from '../battle/types.ts';
+import type { GameData, SaveGameState, StageDef } from '../battle/types.ts';
 
 export function getNextStageId(
   stages: StageDef[],
@@ -10,6 +10,29 @@ export function getNextStageId(
   }
   const next = stages[index + 1];
   return next?.id ?? currentStageId;
+}
+
+export function getPreviousStageId(
+  stages: StageDef[],
+  currentStageId: string,
+): string {
+  const index = stages.findIndex((stage) => stage.id === currentStageId);
+  if (index <= 0) {
+    return stages[0]?.id ?? currentStageId;
+  }
+  return stages[index - 1]!.id;
+}
+
+export function applyStageRollbackOnDefeat(
+  save: SaveGameState,
+  stages: StageDef[],
+): string {
+  const previousStageId = getPreviousStageId(
+    stages,
+    save.stageProgress.currentStageId,
+  );
+  save.stageProgress.currentStageId = previousStageId;
+  return previousStageId;
 }
 
 export function getStageById(

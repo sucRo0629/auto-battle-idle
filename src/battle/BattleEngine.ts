@@ -1,5 +1,5 @@
 import type { BattleEventListener } from "./events.ts";
-import { getActiveCooldownRate, getPassiveDefs } from "./combatMath.ts";
+import { getActiveCooldownRate, getPassiveDefs, resolveDotTick, resolveHotTick } from "./combatMath.ts";
 import {
   createAlliesFromPartyState,
   createEnemiesForStage,
@@ -31,12 +31,14 @@ import type {
   GameData,
   PartyMemberState,
   SkillCooldown,
+  StatusEffect,
 } from "./types.ts";
 import { DEFAULT_MELEE_RANGE_PX } from "./types.ts";
 import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 
 const RESTART_DELAY_SEC = 3;
 const VICTORY_EXIT_SPEED = SCROLL_SPEED * 2;
+const OVERLAY_TICK_SEC = 1;
 
 export class BattleEngine {
   private phase: BattlePhase = "idle";
@@ -85,6 +87,7 @@ export class BattleEngine {
       role: a.role,
       formationRow: a.formationRow,
       rangePx: a.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+      isAlive: a.isAlive,
     }));
   }
 
@@ -145,19 +148,6 @@ export class BattleEngine {
     }
   }
 
-  private updateAllyFormationReform(deltaTime: number): void {
-    const targets = computeAllyPositions(this.getAllyPlacementInputs(), {
-      engaged: false,
-    });
-    const step = APPROACH_SPEED * deltaTime;
-    for (const ally of this.allies) {
-      if (!ally.isAlive) continue;
-      const target = targets.get(ally.id);
-      if (target === undefined) continue;
-      ally.visualX = moveTowardX(ally.visualX, target, step);
-    }
-  }
-
   private updateVictoryExitMarch(deltaTime: number): void {
     const step = VICTORY_EXIT_SPEED * deltaTime;
     for (const ally of this.allies) {
@@ -197,7 +187,8 @@ export class BattleEngine {
       if (!ally.isAlive) continue;
       const target = allyTargets.get(ally.id);
       if (target === undefined) continue;
-      if (ally.formationRow === "front") {
+      // 接敵中は敵方向（左）への接近のみ。右への退避はしない
+      if (target <= ally.visualX) {
         ally.visualX = moveTowardX(ally.visualX, target, approachStep);
       }
     }
@@ -223,16 +214,6 @@ export class BattleEngine {
   }
 
   private applyEngagedLayout(): void {
-    this.applySpritePositions(
-      separateEngagedSprites(
-        this.allies.map((u) => ({
-          id: u.id,
-          visualX: u.visualX,
-          isAlive: u.isAlive,
-        })),
-      ),
-      this.allies,
-    );
     this.applySpritePositions(
       separateEngagedSprites(
         this.enemies.map((u) => ({
@@ -280,6 +261,15 @@ export class BattleEngine {
     this.restartTimer = 0;
   }
 
+  /** パーティ変更などで戦闘を最初からやり直す */
+  restartBattle(): void {
+    this.reloadBattlefield();
+    this.worldOffsetX = 0;
+    this.engaged = false;
+    this.restartTimer = 0;
+    this.phase = "running";
+  }
+
   stopBattle(): void {
     this.phase = "idle";
   }
@@ -301,12 +291,17 @@ export class BattleEngine {
       name: c.name,
       hp: c.hp,
       maxHp: c.maxHp,
+      atk: c.atk,
+      def: c.def,
+      reg: c.reg,
       role: c.isEnemy ? undefined : c.role,
+      attackRange: c.traits.attackRange,
       spriteKey: c.spriteKey,
       iconKey: c.iconKey,
       formationRow: c.formationRow,
       isEnemy: c.isEnemy,
       visualX: c.visualX,
+      statusEffects: c.statusEffects.map((effect) => ({ ...effect })),
       activeCooldowns: c.cooldowns
         .filter((cd) => cd.slotKind === "active")
         .map((cd) => {
@@ -330,8 +325,6 @@ export class BattleEngine {
       this.restartTimer -= deltaTime;
       if (this.phase === "victory") {
         this.updateVictoryExitMarch(deltaTime);
-      } else {
-        this.updateAllyFormationReform(deltaTime);
       }
       const readyToRespawn =
         this.restartTimer <= 0 &&
@@ -347,7 +340,6 @@ export class BattleEngine {
       const march = SCROLL_SPEED * deltaTime;
       this.worldOffsetX += march;
       this.applyEnemyMarch(march);
-      this.updateAllyFormationReform(deltaTime);
       this.updateEngagementState();
     } else {
       this.updateEngagedMovement(deltaTime);
@@ -362,10 +354,101 @@ export class BattleEngine {
 
   private tickStatusEffects(deltaTime: number): void {
     for (const unit of [...this.allies, ...this.enemies]) {
-      unit.statusEffects = unit.statusEffects.filter((e) => {
-        e.remainingSec -= deltaTime;
-        return e.remainingSec > 0;
+      const kept: StatusEffect[] = [];
+
+      for (const effect of unit.statusEffects) {
+        effect.remainingSec -= deltaTime;
+        if (effect.remainingSec <= 0) continue;
+
+        if (
+          unit.isAlive &&
+          (effect.overlay === "hot" || effect.overlay === "dot") &&
+          effect.powerMultiplier !== undefined &&
+          effect.sourceId
+        ) {
+          if (effect.tickSec === undefined) {
+            effect.tickSec = OVERLAY_TICK_SEC;
+          }
+          effect.tickSec -= deltaTime;
+          while (
+            effect.tickSec <= 0 &&
+            effect.remainingSec > 0 &&
+            unit.isAlive
+          ) {
+            this.applyOverlayTick(unit, effect);
+            effect.tickSec += OVERLAY_TICK_SEC;
+          }
+        }
+
+        if (effect.remainingSec > 0) {
+          kept.push(effect);
+        }
+      }
+
+      unit.statusEffects = kept;
+    }
+  }
+
+  private findCombatant(id: string): CombatantState | undefined {
+    return [...this.allies, ...this.enemies].find((unit) => unit.id === id);
+  }
+
+  private applyOverlayTick(
+    target: CombatantState,
+    effect: StatusEffect,
+  ): void {
+    const source = this.findCombatant(effect.sourceId!);
+    if (!source?.isAlive) return;
+
+    const passives = this.gameData.skillRegistry.passives;
+    const skill = effect.skillId
+      ? this.gameData.skillRegistry.actives[effect.skillId]
+      : undefined;
+    const skillName = skill?.name ?? effect.overlay ?? "";
+
+    if (effect.overlay === "hot") {
+      const amount = resolveHotTick(
+        source,
+        effect.powerMultiplier!,
+        passives,
+      );
+      if (amount <= 0) return;
+      target.hp = Math.min(target.maxHp, target.hp + amount);
+      this.emit({
+        type: "skill",
+        actorId: source.id,
+        targetId: target.id,
+        skillId: effect.skillId ?? "",
+        skillName,
+        effect: "hot",
+        amount,
       });
+      return;
+    }
+
+    if (effect.overlay === "dot") {
+      const amount = resolveDotTick(
+        source,
+        target,
+        effect.powerMultiplier!,
+        effect.damageType ?? "physical",
+        passives,
+      );
+      target.hp = Math.max(0, target.hp - amount);
+      this.emit({
+        type: "skill",
+        actorId: source.id,
+        targetId: target.id,
+        skillId: effect.skillId ?? "",
+        skillName,
+        effect: "dot",
+        amount,
+      });
+      this.emit({ type: "hurt", targetId: target.id });
+      if (target.hp <= 0) {
+        target.isAlive = false;
+        this.emit({ type: "death", targetId: target.id });
+      }
     }
   }
 
@@ -423,7 +506,6 @@ export class BattleEngine {
           this.waveIndex,
         );
         this.resetEnemyVisualPositions();
-        this.syncAllyVisualPositions(false);
         this.engaged = false;
         return;
       }

@@ -43,7 +43,7 @@ function createCooldowns(
         skillId,
         remaining: 0,
         slotKind: 'active',
-        slotIndex: i as 0 | 1,
+        slotIndex: i,
       });
     }
   }
@@ -142,7 +142,7 @@ export function createEnemyFromTemplate(
     skillId,
     remaining: 0,
     slotKind: 'active',
-    slotIndex: i as 0 | 1,
+    slotIndex: i,
   }));
   return {
     id: nextId(template.id),

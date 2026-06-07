@@ -22,6 +22,10 @@ export function pickTarget(
   allies: CombatantState[],
   enemies: CombatantState[],
 ): CombatantState | null {
+  if (rule === 'self') {
+    return actor.isAlive ? actor : null;
+  }
+
   const livingAllies = allies.filter((a) => a.isAlive);
   const livingEnemies = enemies.filter((e) => e.isAlive);
 

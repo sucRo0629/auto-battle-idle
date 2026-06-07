@@ -2,14 +2,19 @@ import type {
   ActiveSkillDef,
   AttackRange,
   ClassPreset,
+  DamageType,
   EnemyTemplate,
   FormationRow,
   PartyDef,
   PassiveEffectKind,
   PassiveSkillDef,
   Role,
+  SkillEffectDef,
   SkillEffectKind,
+  SkillVfxDef,
+  SkillVfxPresetId,
   StageDef,
+  StatusEffectStat,
   TargetRule,
 } from '../types.ts';
 
@@ -21,12 +26,22 @@ const SKILL_EFFECTS = new Set<SkillEffectKind>([
   'heal',
   'buff',
   'debuff',
+  'hot',
+  'dot',
+]);
+const DAMAGE_TYPES = new Set<DamageType>(['physical', 'magic']);
+const VFX_PRESETS = new Set<SkillVfxPresetId>([
+  'slash',
+  'orb',
+  'arrow',
+  'healRise',
 ]);
 const TARGET_RULES = new Set<TargetRule>([
   'closestAlly',
   'frontEnemy',
   'lowestHpEnemy',
   'mostDamagedAlly',
+  'self',
 ]);
 const PASSIVE_EFFECTS = new Set<PassiveEffectKind>([
   'damageMultiplier',
@@ -35,6 +50,12 @@ const PASSIVE_EFFECTS = new Set<PassiveEffectKind>([
   'targetRuleOverride',
   'evasionChance',
   'activeCooldownRate',
+]);
+const STATUS_EFFECT_STATS = new Set([
+  'atk',
+  'def',
+  'reg',
+  'damageTaken',
 ]);
 const VALID_REG = new Set([0, 5, 10, 15, 20]);
 
@@ -79,6 +100,208 @@ function requireNumber(
     missingField(context, key);
   }
   return value;
+}
+
+function requireBuffOrDebuffModifier(
+  obj: Record<string, unknown>,
+  context: string,
+  multiplierKey: string,
+  flatBonusKey: string,
+): void {
+  const multiplier = obj[multiplierKey];
+  const flatBonus = obj[flatBonusKey];
+  const hasMultiplier =
+    typeof multiplier === 'number' && !Number.isNaN(multiplier);
+  const hasFlatBonus =
+    typeof flatBonus === 'number' && !Number.isNaN(flatBonus);
+  if (!hasMultiplier && !hasFlatBonus) {
+    invalidField(
+      context,
+      `${multiplierKey} or ${flatBonusKey}`,
+      'at least one is required',
+    );
+  }
+  if (hasFlatBonus && flatBonus <= 0) {
+    invalidField(context, flatBonusKey, 'must be a positive number');
+  }
+}
+
+function requireStatusEffectStat(
+  obj: Record<string, unknown>,
+  key: string,
+  context: string,
+): StatusEffectStat | StatusEffectStat[] {
+  const value = obj[key];
+  if (typeof value === 'string') {
+    if (!STATUS_EFFECT_STATS.has(value)) {
+      invalidField(
+        context,
+        key,
+        `must be one of ${[...STATUS_EFFECT_STATS].join(', ')}`,
+      );
+    }
+    return value as StatusEffectStat;
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      invalidField(context, key, 'must not be empty');
+    }
+    for (let i = 0; i < value.length; i++) {
+      const item = value[i];
+      if (typeof item !== 'string' || !STATUS_EFFECT_STATS.has(item)) {
+        invalidField(
+          context,
+          `${key}[${i}]`,
+          `must be one of ${[...STATUS_EFFECT_STATS].join(', ')}`,
+        );
+      }
+    }
+    return value as StatusEffectStat[];
+  }
+  missingField(context, key);
+}
+
+function parseOptionalRange(
+  obj: Record<string, unknown>,
+  context: string,
+): number | undefined {
+  const rangePx = obj.range;
+  if (rangePx === undefined) return undefined;
+  if (typeof rangePx !== 'number' || Number.isNaN(rangePx) || rangePx <= 0) {
+    invalidField(context, 'range', 'must be a positive number');
+  }
+  return rangePx;
+}
+
+function parseSkillVfx(
+  raw: unknown,
+  context: string,
+): SkillVfxDef | undefined {
+  if (raw === undefined) return undefined;
+  const obj = requireRecord(raw, context);
+  const preset = requireEnum(obj, 'preset', context, VFX_PRESETS);
+  const arc = obj.arc;
+  if (arc !== undefined && typeof arc !== 'boolean') {
+    invalidField(context, 'arc', 'must be a boolean');
+  }
+  const durationMs = obj.durationMs;
+  if (
+    durationMs !== undefined &&
+    (typeof durationMs !== 'number' ||
+      Number.isNaN(durationMs) ||
+      durationMs <= 0)
+  ) {
+    invalidField(context, 'durationMs', 'must be a positive number');
+  }
+  return {
+    preset,
+    ...(typeof arc === 'boolean' ? { arc } : {}),
+    ...(typeof durationMs === 'number' ? { durationMs } : {}),
+  };
+}
+
+function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
+  const obj = requireRecord(entry, context);
+  const targetRule = requireEnum(obj, 'targetRule', context, TARGET_RULES);
+  const type = requireEnum(obj, 'type', context, SKILL_EFFECTS);
+  const range = parseOptionalRange(obj, context);
+
+  if (type === 'damage') {
+    const damageType = requireEnum(obj, 'damageType', context, DAMAGE_TYPES);
+    const powerMultiplier = requireNumber(obj, 'powerMultiplier', context);
+    return {
+      targetRule,
+      type,
+      damageType,
+      powerMultiplier,
+      ...(range !== undefined ? { range } : {}),
+    };
+  }
+
+  if (type === 'heal') {
+    const powerMultiplier = requireNumber(obj, 'powerMultiplier', context);
+    return {
+      targetRule,
+      type,
+      powerMultiplier,
+      ...(range !== undefined ? { range } : {}),
+    };
+  }
+
+  if (type === 'buff') {
+    const buffStat = requireStatusEffectStat(obj, 'buffStat', context);
+    const buffDurationSec = requireNumber(obj, 'buffDurationSec', context);
+    requireBuffOrDebuffModifier(
+      obj,
+      context,
+      'buffMultiplier',
+      'buffFlatBonus',
+    );
+    return {
+      targetRule,
+      type,
+      buffStat,
+      buffDurationSec,
+      ...(typeof obj.buffMultiplier === 'number'
+        ? { buffMultiplier: obj.buffMultiplier }
+        : {}),
+      ...(typeof obj.buffFlatBonus === 'number'
+        ? { buffFlatBonus: obj.buffFlatBonus }
+        : {}),
+      ...(range !== undefined ? { range } : {}),
+    };
+  }
+
+  if (type === 'hot') {
+    const durationSec = requireNumber(obj, 'durationSec', context);
+    const powerMultiplier = requireNumber(obj, 'powerMultiplier', context);
+    return {
+      targetRule,
+      type: 'hot',
+      durationSec,
+      powerMultiplier,
+      ...(range !== undefined ? { range } : {}),
+    };
+  }
+
+  if (type === 'dot') {
+    const durationSec = requireNumber(obj, 'durationSec', context);
+    const powerMultiplier = requireNumber(obj, 'powerMultiplier', context);
+    const damageType =
+      obj.damageType === undefined
+        ? undefined
+        : requireEnum(obj, 'damageType', context, DAMAGE_TYPES);
+    return {
+      targetRule,
+      type: 'dot',
+      durationSec,
+      powerMultiplier,
+      ...(damageType !== undefined ? { damageType } : {}),
+      ...(range !== undefined ? { range } : {}),
+    };
+  }
+
+  const debuffStat = requireStatusEffectStat(obj, 'debuffStat', context);
+  const debuffDurationSec = requireNumber(obj, 'debuffDurationSec', context);
+  requireBuffOrDebuffModifier(
+    obj,
+    context,
+    'debuffMultiplier',
+    'debuffFlatBonus',
+  );
+  return {
+    targetRule,
+    type,
+    debuffStat,
+    debuffDurationSec,
+    ...(typeof obj.debuffMultiplier === 'number'
+      ? { debuffMultiplier: obj.debuffMultiplier }
+      : {}),
+    ...(typeof obj.debuffFlatBonus === 'number'
+      ? { debuffFlatBonus: obj.debuffFlatBonus }
+      : {}),
+    ...(range !== undefined ? { range } : {}),
+  };
 }
 
 function requireStringArray(
@@ -268,37 +491,14 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
     const id = requireString(obj, 'id', context);
     const name = requireString(obj, 'name', context);
     const interval = requireNumber(obj, 'interval', context);
-    const targetRule = requireEnum(obj, 'targetRule', context, TARGET_RULES);
-    const effect = requireEnum(obj, 'effect', context, SKILL_EFFECTS);
-    const range = requireEnum(obj, 'range', context, ATTACK_RANGES);
 
-    if (effect === 'damage') {
-      requireString(obj, 'damageType', context);
-      requireNumber(obj, 'powerMultiplier', context);
-    } else if (effect === 'heal') {
-      requireNumber(obj, 'powerMultiplier', context);
-    } else if (effect === 'buff') {
-      requireString(obj, 'buffStat', context);
-      requireNumber(obj, 'buffMultiplier', context);
-      requireNumber(obj, 'buffDurationSec', context);
-    } else if (effect === 'debuff') {
-      requireString(obj, 'debuffStat', context);
-      requireNumber(obj, 'debuffMultiplier', context);
-      requireNumber(obj, 'debuffDurationSec', context);
+    const effectsRaw = obj.effect;
+    if (!Array.isArray(effectsRaw) || effectsRaw.length === 0) {
+      invalidField(context, 'effect', 'must be a non-empty array');
     }
-
-    const allowedRoles = obj.allowedRoles;
-    if (allowedRoles !== undefined) {
-      if (!Array.isArray(allowedRoles)) {
-        invalidField(context, 'allowedRoles', 'must be an array');
-      }
-      for (let i = 0; i < allowedRoles.length; i++) {
-        const role = allowedRoles[i];
-        if (typeof role !== 'string' || !ROLES.has(role as Role)) {
-          invalidField(context, `allowedRoles[${i}]`, 'must be a valid role');
-        }
-      }
-    }
+    const effect = (effectsRaw as unknown[]).map((entry, effectIndex) =>
+      parseSkillEffect(entry, `${context}.effect[${effectIndex}]`),
+    );
 
     const allowedClassIds = obj.allowedClassIds;
     if (allowedClassIds !== undefined) {
@@ -309,43 +509,17 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
       );
     }
 
+    const vfx = parseSkillVfx(obj.vfx, `${context}.vfx`);
+
     return {
       id,
       name,
       interval,
-      targetRule,
       effect,
-      range,
-      ...(typeof obj.damageType === 'string'
-        ? { damageType: obj.damageType as ActiveSkillDef['damageType'] }
-        : {}),
-      ...(typeof obj.powerMultiplier === 'number'
-        ? { powerMultiplier: obj.powerMultiplier }
-        : {}),
-      ...(typeof obj.buffStat === 'string'
-        ? { buffStat: obj.buffStat as ActiveSkillDef['buffStat'] }
-        : {}),
-      ...(typeof obj.buffMultiplier === 'number'
-        ? { buffMultiplier: obj.buffMultiplier }
-        : {}),
-      ...(typeof obj.buffDurationSec === 'number'
-        ? { buffDurationSec: obj.buffDurationSec }
-        : {}),
-      ...(typeof obj.debuffStat === 'string'
-        ? { debuffStat: obj.debuffStat as ActiveSkillDef['debuffStat'] }
-        : {}),
-      ...(typeof obj.debuffMultiplier === 'number'
-        ? { debuffMultiplier: obj.debuffMultiplier }
-        : {}),
-      ...(typeof obj.debuffDurationSec === 'number'
-        ? { debuffDurationSec: obj.debuffDurationSec }
-        : {}),
-      ...(Array.isArray(allowedRoles)
-        ? { allowedRoles: allowedRoles as Role[] }
-        : {}),
       ...(Array.isArray(allowedClassIds)
         ? { allowedClassIds: allowedClassIds as string[] }
         : {}),
+      ...(vfx !== undefined ? { vfx } : {}),
     };
   });
 }
@@ -495,8 +669,9 @@ function validateReferences(
 ): void {
   const passiveIds = new Set(passives.map((p) => p.id));
   const activeIds = new Set(actives.map((a) => a.id));
-  const classIds = new Set(classes.map((c) => c.id));
   const enemyIds = new Set(enemies.map((e) => e.id));
+
+  const classById = new Map(classes.map((cls) => [cls.id, cls] as const));
 
   for (const cls of classes) {
     if (!activeIds.has(cls.basicAttackSkillId)) {
@@ -539,9 +714,11 @@ function validateReferences(
   for (const [partyId, party] of Object.entries(parties)) {
     party.members.forEach((member, memberIndex) => {
       const context = `parties.${partyId}.members[${memberIndex}]`;
-      if (!classIds.has(member.classId)) {
+      const cls = classById.get(member.classId);
+      if (!cls) {
         throw new Error(`Unknown classId "${member.classId}": ${context}`);
       }
+      const classSkillPool = new Set(cls.starterActiveIds);
       for (const passiveId of member.build.learnedPassiveIds) {
         if (!passiveIds.has(passiveId)) {
           throw new Error(`Unknown learnedPassiveId "${passiveId}": ${context}`);
@@ -551,11 +728,21 @@ function validateReferences(
         if (!activeIds.has(activeId)) {
           throw new Error(`Unknown learnedActiveId "${activeId}": ${context}`);
         }
+        if (!classSkillPool.has(activeId)) {
+          throw new Error(
+            `learnedActiveId "${activeId}" is not in class starterActiveIds: ${context}`,
+          );
+        }
       }
       for (const activeId of member.build.equippedActiveSlots) {
         if (activeId.length > 0 && !activeIds.has(activeId)) {
           throw new Error(
             `Unknown equippedActiveSlot "${activeId}": ${context}`,
+          );
+        }
+        if (activeId.length > 0 && !classSkillPool.has(activeId)) {
+          throw new Error(
+            `equippedActiveSlot "${activeId}" is not in class starterActiveIds: ${context}`,
           );
         }
       }

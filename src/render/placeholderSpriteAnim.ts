@@ -11,7 +11,10 @@ export function hasSpriteSheetAnimation(_spriteKey: string): boolean {
   return false;
 }
 
-/** スプライトシート未設定時の縦方向オフセット（待機の揺れ・攻撃の跳ね） */
+/**
+ * スプライトシート未設定時の縦方向オフセット（待機の揺れ・攻撃の跳ね）。
+ * attack の跳ねは確認用プレースホルダー。将来スプライトアニメに置き換える。
+ */
 export function getPlaceholderSpriteYOffset(
   layout: AnimLayout,
   scale: number

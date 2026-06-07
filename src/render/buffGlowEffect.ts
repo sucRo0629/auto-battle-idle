@@ -1,5 +1,4 @@
 const BUFF_GLOW_DURATION_MS = 800;
-const BUFF_GLOW_PEAK = 0.55;
 
 let spriteBuffer: HTMLCanvasElement | null = null;
 
@@ -9,6 +8,9 @@ export function drawSpriteWithBuffGlow(
   size: number,
   intensity: number,
   drawSprite: (ctx: CanvasRenderingContext2D) => void,
+  glowR: number,
+  glowG: number,
+  glowB: number,
 ): void {
   if (intensity <= 0) {
     drawSprite(targetCtx);
@@ -18,7 +20,7 @@ export function drawSpriteWithBuffGlow(
   const pixelSize = Math.ceil(size);
   const bufferCtx = getSpriteBuffer(pixelSize);
   drawSprite(bufferCtx);
-  applyBuffGlow(bufferCtx, pixelSize, intensity);
+  applyBuffGlow(bufferCtx, pixelSize, intensity, glowR, glowG, glowB);
   targetCtx.drawImage(
     spriteBuffer!,
     0,
@@ -51,6 +53,9 @@ function applyBuffGlow(
   ctx: CanvasRenderingContext2D,
   size: number,
   intensity: number,
+  glowR: number,
+  glowG: number,
+  glowB: number,
 ): void {
   const strength = Math.max(0, Math.min(1, intensity));
   const imageData = ctx.getImageData(0, 0, size, size);
@@ -60,9 +65,9 @@ function applyBuffGlow(
     const alpha = data[i + 3];
     if (alpha === 0) continue;
 
-    data[i] = Math.round(data[i] * (1 - strength) + 255 * strength);
-    data[i + 1] = Math.round(data[i + 1] * (1 - strength) + 255 * strength);
-    data[i + 2] = Math.round(data[i + 2] * (1 - strength) + 255 * strength);
+    data[i] = Math.round(data[i] * (1 - strength) + glowR * strength);
+    data[i + 1] = Math.round(data[i + 1] * (1 - strength) + glowG * strength);
+    data[i + 2] = Math.round(data[i + 2] * (1 - strength) + glowB * strength);
   }
 
   ctx.putImageData(imageData, 0, 0);
@@ -86,10 +91,10 @@ export class BuffGlowManager {
     }
   }
 
-  getIntensity(combatantId: string): number {
+  getIntensity(combatantId: string, peak: number): number {
     const remaining = this.glows.get(combatantId);
     if (!remaining) return 0;
     const t = remaining / BUFF_GLOW_DURATION_MS;
-    return t * BUFF_GLOW_PEAK;
+    return t * peak;
   }
 }

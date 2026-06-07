@@ -4,9 +4,9 @@ export const SAVE_STORAGE_KEY = 'auto-battle-idle:save';
 const CURRENT_SAVE_VERSION = 1;
 
 export class SaveManager {
-  load(): SaveGameState | null {
+  load(storageKey = SAVE_STORAGE_KEY): SaveGameState | null {
     try {
-      const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+      const raw = localStorage.getItem(storageKey);
       if (!raw) return null;
       const parsed = JSON.parse(raw) as unknown;
       return parseSaveGameState(parsed);
@@ -16,9 +16,9 @@ export class SaveManager {
     }
   }
 
-  save(state: SaveGameState): void {
+  save(state: SaveGameState, storageKey = SAVE_STORAGE_KEY): void {
     try {
-      localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(storageKey, JSON.stringify(state));
     } catch (error) {
       console.warn('[save] Failed to persist save:', error);
     }

@@ -2,26 +2,28 @@
 
 **Phase 1** で存在するものと、以降のフェーズで追加するもの。
 
-## Phase 1（現状）
+## Phase 1（完了）
 
-- **セーブなし。** リロードで `stage_1` のデモ編成にリセット。
-- **EXP・レベルなし**（型定義のみ将来用に存在）。
-- **スキル成長なし。** 編成は `parties.json` 固定。
-- **ステージループ：** Victory / Defeat 後、3秒待って同一ウェーブ再スポーン（HP全回復）。
-- **メタ通貨なし**（globalExp、強化ツリー）。
-- **描画：** アニメーション基盤 + ロール別プレースホルダー（本番スプライトは Phase 3）。
-
-Phase 1 は戦闘 + 表示のサンドボックス。
+- セーブなし・EXP/Lv なしの戦闘サンドボックス。
+- Victory / Defeat 後、3秒待って HP 全回復し同一ウェーブ再スポーン。
+- 描画：アニメーション基盤 + ロール別プレースホルダー（本番スプライトは Phase 6）。
 
 ---
 
-## Phase 2 — 個別成長とステージ
+## Phase 2 — 個別成長とステージ（完了）
 
 ### ステージ進行
 
-- `stages.json` に順序付きステージと `expReward` を定義。
-- Victory → 次ステージへ（最終後のループは TBD）。
-- Defeat → `currentStageId` 維持、同ステージ再戦。
+- `stages.json` に順序付きステージを定義。
+- **Victory** → 次のステージへ進行（最終ステージの次は同ステージを周回）。`totalClears` を +1。
+- **Defeat** → `currentStageId` を 1 つ前のステージへロールバック（先頭ステージでは据え置き）。
+- 戦闘終了後は 3 秒待って HP 全回復し再スポーン（Phase 1 と同様）。
+
+### EXP 報酬
+
+- ステージ単位の `expReward` は使わない。
+- 勝利時、**撃破した敵の `exp` 合計**（`enemies.json` の各テンプレート）を生存味方全員に付与。
+- 計算：`computeStageExpReward` がステージ内の全ウェーブ・全敵の `exp` を合算。
 
 ### 個別レベル（ステのみ）
 
@@ -32,14 +34,18 @@ interface CharacterProgress {
 }
 ```
 
-- 勝利で生存味方全員に EXP（詳細ルールは 2a で確定）。
 - LvUP で **maxHp, atk, def** が `levelCurves.json` に従って上昇。
 - **REG は成長しない。**
 - **Phase 2 では LvUP してもスキルは増えない。**
 
 ### セーブ（`SaveManager`）
 
-予定キー：`localStorage` → `auto-battle-idle:save`
+`localStorage` キー：
+
+| モード | キー |
+|--------|------|
+| 確認モード | `auto-battle-idle:save:verify` |
+| リリースモード | `auto-battle-idle:save:release` |
 
 ```typescript
 interface SaveGameState {
@@ -53,26 +59,19 @@ interface SaveGameState {
 }
 ```
 
-保存タイミング：Victory/Defeat 後、60秒ごと、unload 時。
+初回セーブは `parties.json`（確認モードは `test-parties.json`）からパーティを生成。
+
+保存タイミング：Victory/Defeat 後、60秒ごと、`beforeunload` 時。
 
 ### 進行 UI
 
-- 現在ステージ名
-- メンバー別 Lv（コンパクト）
-- ステージクリア / LvUP のログ（console または将来 DOM）
+- 現在ステージ名（Canvas 左上）
+- メンバー別 Lv / Exp バー（パーティ HUD）
+- ステージクリア / LvUP / ステージロールバックのログ（console）
 
 ---
 
-## Phase 3 — 本番スプライトアニメーション
-
-進行・育成とは独立した **見た目フェーズ**。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
-
-- クラス別・敵別の本番ドット絵スプライトシート
-- Phase 1 の `SpriteAnimator` / イベント連動は維持、`SpriteRegistry` とアセットのみ差し替え
-
----
-
-## Phase 4 — スキル習得・戦闘拡張
+## Phase 3 — スキル習得・戦闘拡張（次フェーズ）
 
 ### スキル習得
 
@@ -102,7 +101,7 @@ interface SkillUnlockEntry {
 
 ---
 
-## Phase 5 — パーティ全体メタ
+## Phase 4 — パーティ全体メタ
 
 ### globalExp
 
@@ -127,12 +126,33 @@ interface SkillUnlockEntry {
 
 ---
 
+## Phase 6 — 本番スプライトアニメーション
+
+進行・育成とは独立した **見た目フェーズ**（Phase 3〜4 の後）。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
+
+- クラス別・敵別の本番ドット絵スプライトシート
+- Phase 1 の `SpriteAnimator` / イベント連動は維持、`SpriteRegistry` とアセットのみ差し替え
+
+---
+
+## Phase 7 — スキル VFX
+
+Phase 6 完了後。`skills.json` の `vfx` フィールドでスキル別エフェクトをデータ駆動化。
+
+---
+
+## Phase 8 — バランス調整
+
+Phase 3〜7 完了後。敵 `exp`、成長曲線、クラス/スキル/ステージ数値の体感チューニング。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
+
+---
+
 ## 最終ステータス式（目標）
 
 ```
 finalStat = クラス基礎値
           + levelGrowth(level)      // Phase 2
-          × enhancementMultiplier   // Phase 5
+          × enhancementMultiplier   // Phase 4
 ```
 
 スキル・パッシブは戦闘時に上乗せ（[combat.md](combat.md) 参照）。

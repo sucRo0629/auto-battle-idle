@@ -1,25 +1,41 @@
 import type { CombatantLayout } from "./IBattleRenderer.ts";
-import { battleCanvasHeight } from "./formationLayout.ts";
+import type { BattleHudTheme } from "./battleHudTheme.ts";
 import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
 
 const POPUP_DURATION_MS = 800;
-const BATTLE_CANVAS_HEIGHT = battleCanvasHeight(1);
-const RISE_HEIGHT_RATIO = 25 / BATTLE_CANVAS_HEIGHT;
-const FONT_SIZE = 18;
-const POPUP_TOP_MARGIN = 2;
-const OUTLINE_WIDTH = 1;
+const FADE_IN_END = 0.15;
+const FADE_OUT_START = 0.5;
+const ZOOM_IN_END = 0.35;
+const START_SCALE = 0.4;
+const END_SCALE = 1;
+const ORIGIN_Y_JITTER = 16;
 
-const POPUP_COLORS = {
-  damage: { fill: "#fff", stroke: "#000" },
-  heal: { fill: "#2ecc71", stroke: "#1a3d24" },
-} as const;
+type PopupKind = "damage" | "heal";
 
-type PopupKind = keyof typeof POPUP_COLORS;
+function easeOutCubic(t: number): number {
+  return 1 - (1 - t) ** 3;
+}
 
-function computeRisePx(startBottomY: number, canvasHeight: number): number {
-  const risePx = canvasHeight * RISE_HEIGHT_RATIO;
-  const maxRise = Math.max(0, startBottomY - FONT_SIZE - POPUP_TOP_MARGIN);
-  return Math.min(risePx, maxRise);
+function popupAlpha(progress: number): number {
+  if (progress < FADE_IN_END) {
+    return progress / FADE_IN_END;
+  }
+  if (progress > FADE_OUT_START) {
+    return 1 - (progress - FADE_OUT_START) / (1 - FADE_OUT_START);
+  }
+  return 1;
+}
+
+function popupScale(progress: number): number {
+  if (progress < ZOOM_IN_END) {
+    const t = easeOutCubic(progress / ZOOM_IN_END);
+    return START_SCALE + t * (END_SCALE - START_SCALE);
+  }
+  if (progress > FADE_OUT_START) {
+    const t = (progress - FADE_OUT_START) / (1 - FADE_OUT_START);
+    return END_SCALE + t * 0.15;
+  }
+  return END_SCALE;
 }
 
 interface PopupEntry {
@@ -27,7 +43,7 @@ interface PopupEntry {
   amount: number;
   kind: PopupKind;
   elapsedMs: number;
-  offsetX: number;
+  offsetY: number;
 }
 
 export class DamagePopupManager {
@@ -39,7 +55,7 @@ export class DamagePopupManager {
       amount,
       kind,
       elapsedMs: 0,
-      offsetX: (Math.random() - 0.5) * 30,
+      offsetY: (Math.random() - 0.5) * ORIGIN_Y_JITTER,
     });
   }
 
@@ -54,37 +70,42 @@ export class DamagePopupManager {
     ctx: CanvasRenderingContext2D,
     layouts: CombatantLayout[],
     spriteSize: number,
-    scale: number
+    scale: number,
+    theme: BattleHudTheme,
   ): void {
-    const canvasHeight = battleCanvasHeight(scale);
     for (const popup of this.popups) {
       const layout = layouts.find((l) => l.id === popup.targetId);
       if (!layout) continue;
 
       const progress = popup.elapsedMs / POPUP_DURATION_MS;
-      const alpha = 1 - progress * progress;
+      const alpha = popupAlpha(progress);
+      const popupScaleValue = popupScale(progress);
       const bob = getPlaceholderSpriteYOffset(layout, scale);
-      const startBottomY = layout.y + bob + 16;
-      const risePx = computeRisePx(startBottomY, canvasHeight);
-      const rise = progress * risePx;
-      const x = layout.x + spriteSize / 2 + popup.offsetX;
-      const y = startBottomY - rise;
+      const centerX = layout.x + spriteSize / 2;
+      const centerY = layout.y + bob + spriteSize / 2 + popup.offsetY;
 
       const text =
         popup.kind === "heal" ? `${popup.amount}` : String(popup.amount);
-      const colors = POPUP_COLORS[popup.kind];
+      const fill =
+        popup.kind === "heal" ? theme.popupHealFill : theme.popupDamageFill;
+      const stroke =
+        popup.kind === "heal"
+          ? theme.popupHealStroke
+          : theme.popupDamageStroke;
       ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.scale(popupScaleValue, popupScaleValue);
       ctx.globalAlpha = alpha;
-      ctx.font = `${FONT_SIZE}px sans-serif`;
+      ctx.font = `${theme.popupFontSize}px ${theme.popupFontFamily}`;
       ctx.textAlign = "center";
-      ctx.textBaseline = "bottom";
+      ctx.textBaseline = "middle";
       ctx.lineJoin = "round";
       ctx.miterLimit = 2;
-      ctx.strokeStyle = colors.stroke;
-      ctx.lineWidth = OUTLINE_WIDTH;
-      ctx.strokeText(text, x, y);
-      ctx.fillStyle = colors.fill;
-      ctx.fillText(text, x, y);
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = theme.popupOutlineWidth;
+      ctx.strokeText(text, 0, 0);
+      ctx.fillStyle = fill;
+      ctx.fillText(text, 0, 0);
       ctx.restore();
     }
   }

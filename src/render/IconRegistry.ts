@@ -4,13 +4,6 @@ import attackerRangedPlaceholderIconUrl from '../assets/class-icons/attacker_ran
 import supporterPlaceholderIconUrl from '../assets/class-icons/supporter_placeholder.png';
 import { PLACEHOLDER_SPRITE_KEYS } from '../battle/classVisuals.ts';
 
-export const ICON_COLORS: Record<string, string> = {
-  [PLACEHOLDER_SPRITE_KEYS.defender]: '#2c5f9e',
-  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: '#c0392b',
-  [PLACEHOLDER_SPRITE_KEYS.supporter]: '#1e8449',
-  [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: '#922b21',
-};
-
 const ICON_URLS: Record<string, string> = {
   [PLACEHOLDER_SPRITE_KEYS.defender]: defenderPlaceholderIconUrl,
   [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: attackerMeleePlaceholderIconUrl,
@@ -39,10 +32,6 @@ export function preloadClassIcons(): Promise<void> {
     ).then(() => {});
   }
   return preloadPromise;
-}
-
-export function getClassIconColor(iconKey: string): string {
-  return ICON_COLORS[iconKey] ?? '#888888';
 }
 
 export function getClassIconImage(iconKey: string): HTMLImageElement | undefined {

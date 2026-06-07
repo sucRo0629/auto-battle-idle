@@ -1,32 +1,27 @@
-import type { AttackRange, Role } from "../battle/types.ts";
+import type { SkillVfxDef, SkillVfxPresetId } from "../battle/types.ts";
 import type { CombatantLayout } from "./IBattleRenderer.ts";
+import type { BattleHudTheme } from "./battleHudTheme.ts";
 import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
 
-export type AttackEffectKind = "slash" | "orb" | "arrow";
-
-const SLASH_DURATION_MS = 320;
-const ORB_DURATION_MS = 380;
-const ARROW_DURATION_MS = 420;
-const HEAL_RISE_DURATION_MS = 520;
+const PRESET_DURATION_MS: Record<SkillVfxPresetId, number> = {
+  slash: 320,
+  orb: 380,
+  arrow: 420,
+  healRise: 520,
+};
 
 const HEAL_RISE_LINE_COUNT = 6;
 
 interface EffectEntry {
   actorId: string;
   targetId: string;
-  kind: AttackEffectKind;
-  isHeal: boolean;
+  spec: SkillVfxDef;
   elapsedMs: number;
   durationMs: number;
 }
 
-export function resolveAttackEffectKind(
-  role: Role | undefined,
-  range: AttackRange | undefined
-): AttackEffectKind {
-  if (role === "supporter") return "orb";
-  if (range === "melee") return "slash";
-  return "arrow";
+function durationForSpec(spec: SkillVfxDef): number {
+  return spec.durationMs ?? PRESET_DURATION_MS[spec.preset];
 }
 
 function getCombatantCenter(
@@ -60,34 +55,16 @@ function getCombatantFoot(
   };
 }
 
-function durationForKind(kind: AttackEffectKind, isHeal: boolean): number {
-  if (isHeal) return HEAL_RISE_DURATION_MS;
-  switch (kind) {
-    case "slash":
-      return SLASH_DURATION_MS;
-    case "orb":
-      return ORB_DURATION_MS;
-    case "arrow":
-      return ARROW_DURATION_MS;
-  }
-}
-
 export class AttackEffectManager {
   private effects: EffectEntry[] = [];
 
-  spawn(
-    actorId: string,
-    targetId: string,
-    kind: AttackEffectKind,
-    isHeal = false
-  ): void {
+  spawn(actorId: string, targetId: string, spec: SkillVfxDef): void {
     this.effects.push({
       actorId,
       targetId,
-      kind,
-      isHeal,
+      spec,
       elapsedMs: 0,
-      durationMs: durationForKind(kind, isHeal),
+      durationMs: durationForSpec(spec),
     });
   }
 
@@ -102,7 +79,8 @@ export class AttackEffectManager {
     ctx: CanvasRenderingContext2D,
     layouts: CombatantLayout[],
     spriteSize: number,
-    scale: number
+    scale: number,
+    theme: BattleHudTheme,
   ): void {
     for (const effect of this.effects) {
       const actor = layouts.find((l) => l.id === effect.actorId);
@@ -113,15 +91,14 @@ export class AttackEffectManager {
       const start = getCombatantCenter(actor, spriteSize, scale);
       const end = getCombatantCenter(target, spriteSize, scale);
 
-      if (effect.isHeal) {
-        const foot = getCombatantFoot(target, spriteSize, scale);
-        this.drawHealRise(ctx, foot, progress, spriteSize);
-        continue;
-      }
-
-      switch (effect.kind) {
+      switch (effect.spec.preset) {
+        case "healRise": {
+          const foot = getCombatantFoot(target, spriteSize, scale);
+          this.drawHealRise(ctx, foot, progress, spriteSize, theme);
+          break;
+        }
         case "slash":
-          this.drawSlash(ctx, start, end, progress);
+          this.drawSlash(ctx, start, end, progress, theme);
           break;
         case "orb":
           this.drawOrb(
@@ -129,11 +106,20 @@ export class AttackEffectManager {
             start.x,
             end.x,
             getCombatantBaseCenterY(target, spriteSize),
-            progress
+            progress,
+            theme,
           );
           break;
         case "arrow":
-          this.drawArrow(ctx, start, end, progress, scale);
+          this.drawArrow(
+            ctx,
+            start,
+            end,
+            progress,
+            scale,
+            theme,
+            effect.spec.arc ?? false,
+          );
           break;
       }
     }
@@ -144,7 +130,8 @@ export class AttackEffectManager {
     ctx: CanvasRenderingContext2D,
     start: { x: number; y: number },
     end: { x: number; y: number },
-    progress: number
+    progress: number,
+    theme: BattleHudTheme,
   ): void {
     const angle = Math.atan2(end.y - start.y, end.x - start.x);
     const alpha = 1 - progress * progress;
@@ -156,15 +143,15 @@ export class AttackEffectManager {
     ctx.globalAlpha = alpha;
     ctx.lineCap = "round";
 
-    ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = theme.attackSlashPrimary;
+    ctx.lineWidth = theme.attackSlashPrimaryWidth;
     ctx.beginPath();
     ctx.moveTo(-slashLength * (1 - progress * 0.6), 0);
     ctx.lineTo(slashLength * progress, 0);
     ctx.stroke();
 
-    ctx.strokeStyle = "#8ecfff";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = theme.attackSlashSecondary;
+    ctx.lineWidth = theme.attackSlashSecondaryWidth;
     ctx.beginPath();
     ctx.moveTo(-slashLength * 0.35, -slashLength * 0.18);
     ctx.lineTo(slashLength * 0.55, slashLength * 0.18);
@@ -178,7 +165,8 @@ export class AttackEffectManager {
     ctx: CanvasRenderingContext2D,
     foot: { x: number; y: number },
     progress: number,
-    spriteSize: number
+    spriteSize: number,
+    theme: BattleHudTheme,
   ): void {
     const spread = spriteSize * 0.55;
     const maxRise = spriteSize * 1.1;
@@ -198,12 +186,17 @@ export class AttackEffectManager {
 
       const rise = localProgress * maxRise;
       const lineLen = 8 + localProgress * 18;
-      const alpha = (1 - localProgress * localProgress) * 0.95;
+      const alpha =
+        (1 - localProgress * localProgress) * theme.attackHealPeakAlpha;
       const baseY = foot.y + 2;
 
       ctx.globalAlpha = alpha;
-      ctx.strokeStyle = i % 2 === 0 ? "#2ecc71" : "#7bed9f";
-      ctx.lineWidth = i % 3 === 0 ? 2.5 : 2;
+      ctx.strokeStyle =
+        i % 2 === 0 ? theme.attackHealPrimary : theme.attackHealSecondary;
+      ctx.lineWidth =
+        i % 3 === 0
+          ? theme.attackHealPrimaryWidth
+          : theme.attackHealSecondaryWidth;
       ctx.beginPath();
       ctx.moveTo(x, baseY);
       ctx.lineTo(x, baseY - rise - lineLen * localProgress);
@@ -213,43 +206,46 @@ export class AttackEffectManager {
     ctx.restore();
   }
 
-  /** ヒーラー：直線飛翔の丸（通常攻撃・Y軸固定） */
+  /** ヒーラー：直線飛翔の丸 */
   private drawOrb(
     ctx: CanvasRenderingContext2D,
     startX: number,
     endX: number,
     flyY: number,
-    progress: number
+    progress: number,
+    theme: BattleHudTheme,
   ): void {
     const x = startX + (endX - startX) * progress;
     const y = flyY;
     const radius = 5;
 
     ctx.save();
-    ctx.globalAlpha = 0.85;
-    ctx.fillStyle = "#74b9ff";
+    ctx.globalAlpha = theme.attackOrbAlpha;
+    ctx.fillStyle = theme.attackOrbFill;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle = "#ffffff";
+    ctx.globalAlpha = theme.attackOrbHighlightAlpha;
+    ctx.fillStyle = theme.attackOrbHighlight;
     ctx.beginPath();
     ctx.arc(x - 1.5, y - 1.5, radius * 0.35, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
-  /** レンジド：放物線を描く矢状直方体 */
+  /** レンジド：矢状直方体（spec.arc で放物線 ON/OFF） */
   private drawArrow(
     ctx: CanvasRenderingContext2D,
     start: { x: number; y: number },
     end: { x: number; y: number },
     progress: number,
-    scale: number
+    scale: number,
+    theme: BattleHudTheme,
+    arc: boolean,
   ): void {
     const dist = Math.hypot(end.x - start.x, end.y - start.y);
-    const arcHeight = Math.min(10 * scale, dist * 0.2);
+    const arcHeight = arc ? Math.min(10 * scale, dist * 0.2) : 0;
 
     const sample = (t: number) => {
       const x = start.x + (end.x - start.x) * t;
@@ -267,10 +263,10 @@ export class AttackEffectManager {
     ctx.save();
     ctx.translate(pos.x, pos.y);
     ctx.rotate(angle);
-    ctx.fillStyle = "#c8a165";
+    ctx.fillStyle = theme.attackArrowShaft;
     ctx.fillRect(-arrowLen / 2, -arrowW / 2, arrowLen, arrowW);
 
-    ctx.fillStyle = "#8b6914";
+    ctx.fillStyle = theme.attackArrowTip;
     ctx.fillRect(arrowLen / 2 - 2 * scale, -arrowW / 2, 2 * scale, arrowW);
     ctx.restore();
   }

@@ -1,7 +1,6 @@
 export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death';
 
-import type { Role } from '../battle/types.ts';
-import type { AttackEffectKind } from './AttackEffect.ts';
+import type { Role, StatusEffect, SkillVfxDef } from '../battle/types.ts';
 
 export interface CombatantLayout {
   id: string;
@@ -10,11 +9,15 @@ export interface CombatantLayout {
   spriteKey: string;
   hp: number;
   maxHp: number;
+  atk: number;
+  def: number;
+  reg: number;
   role?: Role;
   isEnemy: boolean;
   isAlive: boolean;
   anim: AnimState;
   animFrame: number;
+  statusEffects: StatusEffect[];
 }
 
 export interface IBattleRenderer {
@@ -25,8 +28,7 @@ export interface IBattleRenderer {
   playAttackEffect(
     actorId: string,
     targetId: string,
-    kind: AttackEffectKind,
-    isHeal?: boolean
+    vfx: SkillVfxDef,
   ): void;
   showDamagePopup(targetId: string, amount: number): void;
   showHealPopup(targetId: string, amount: number): void;

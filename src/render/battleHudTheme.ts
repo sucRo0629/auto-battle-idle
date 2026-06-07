@@ -1,3 +1,7 @@
+import { PLACEHOLDER_SPRITE_KEYS } from '../battle/classVisuals.ts';
+import type { StatusDisplayCategory } from '../battle/statusEffectDisplay.ts';
+import { ENEMY_DEFAULT_SPRITE_KEY } from './SpriteRegistry.ts';
+
 export interface BattleHudTheme {
   iconSize: number;
   barW: number;
@@ -22,6 +26,72 @@ export interface BattleHudTheme {
   skillRecastCharging: string;
   skillRecastReady: string;
   iconFrame: string;
+  statusBuffColor: string;
+  statusBadgeBg: string;
+  statusDebuffColor: string;
+  statusBadgeIconSize: number;
+  statusBadgeArrowWidth: number;
+  statusBadgeOverlap: number;
+  popupFontSize: number;
+  popupOutlineWidth: number;
+  popupFontFamily: string;
+  popupDamageFill: string;
+  popupDamageStroke: string;
+  popupHealFill: string;
+  popupHealStroke: string;
+  sceneSkyFill: string;
+  sceneGroundFill: string;
+  sceneGroundStroke: string;
+  sceneGroundStrokeWidth: number;
+  deadAlpha: number;
+  enemyHpBarOutline: string;
+  enemyHpBarOutlineWidth: number;
+  victoryFontSize: number;
+  victoryFill: string;
+  victoryStroke: string;
+  victoryOutlineWidth: number;
+  attackSlashPrimary: string;
+  attackSlashSecondary: string;
+  attackSlashPrimaryWidth: number;
+  attackSlashSecondaryWidth: number;
+  attackHealPrimary: string;
+  attackHealSecondary: string;
+  attackHealPrimaryWidth: number;
+  attackHealSecondaryWidth: number;
+  attackHealPeakAlpha: number;
+  attackOrbFill: string;
+  attackOrbHighlight: string;
+  attackOrbAlpha: number;
+  attackOrbHighlightAlpha: number;
+  attackArrowShaft: string;
+  attackArrowTip: string;
+  statusBadgeOverlay: string;
+  statusIconFallbackAlpha: number;
+  hurtTintR: number;
+  hurtTintG: number;
+  hurtTintB: number;
+  hurtTintStrength: number;
+  buffGlowR: number;
+  buffGlowG: number;
+  buffGlowB: number;
+  buffGlowPeak: number;
+  spriteDefender: string;
+  spriteAttackerMelee: string;
+  spriteSupporter: string;
+  spriteAttackerRanged: string;
+  spriteSlime: string;
+  spriteEnemyDefault: string;
+  spriteDefault: string;
+  iconDefender: string;
+  iconAttackerMelee: string;
+  iconSupporter: string;
+  iconAttackerRanged: string;
+  iconDefault: string;
+  statusIconAtk: string;
+  statusIconDef: string;
+  statusIconReg: string;
+  statusIconHot: string;
+  statusIconDot: string;
 }
 
 function readNumber(
@@ -79,5 +149,145 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     ),
     skillRecastReady: readString(style, '--hud-skill-recast-ready', '#9aa3b0'),
     iconFrame: readString(style, '--hud-icon-frame', '#1a1a1a'),
+    statusBuffColor: readString(style, '--status-buff-color', '#e62222'),
+    statusBadgeBg: readString(
+      style,
+      '--status-badge-bg',
+      'rgba(255, 255, 255, 0.5)',
+    ),
+    statusDebuffColor: readString(style, '--status-debuff-color', '#318aff'),
+    statusBadgeIconSize: readNumber(style, '--status-badge-icon-size', 8),
+    statusBadgeArrowWidth: readNumber(style, '--status-badge-arrow-width', 3),
+    statusBadgeOverlap: readNumber(style, '--status-badge-overlap', 0),
+    popupFontSize: readNumber(style, '--popup-font-size', 18),
+    popupOutlineWidth: readNumber(style, '--popup-outline-width', 1),
+    popupFontFamily: readString(
+      style,
+      '--popup-font-family',
+      "'Segoe UI', system-ui, sans-serif",
+    ),
+    popupDamageFill: readString(style, '--popup-damage-fill', '#ffffff'),
+    popupDamageStroke: readString(style, '--popup-damage-stroke', '#000000'),
+    popupHealFill: readString(style, '--popup-heal-fill', '#2ecc71'),
+    popupHealStroke: readString(style, '--popup-heal-stroke', '#1a3d24'),
+    sceneSkyFill: readString(style, '--scene-sky-fill', '#1a1a2e'),
+    sceneGroundFill: readString(style, '--scene-ground-fill', '#22283a'),
+    sceneGroundStroke: readString(style, '--scene-ground-stroke', '#2d3a4f'),
+    sceneGroundStrokeWidth: readNumber(style, '--scene-ground-stroke-width', 2),
+    deadAlpha: readNumber(style, '--dead-alpha', 0.35),
+    enemyHpBarOutline: readString(style, '--enemy-hp-bar-outline', '#000000'),
+    enemyHpBarOutlineWidth: readNumber(style, '--enemy-hp-bar-outline-width', 1),
+    victoryFontSize: readNumber(style, '--victory-font-size', 48),
+    victoryFill: readString(style, '--victory-fill', '#ffffff'),
+    victoryStroke: readString(style, '--victory-stroke', 'rgba(0, 0, 0, 0.65)'),
+    victoryOutlineWidth: readNumber(style, '--victory-outline-width', 3),
+    attackSlashPrimary: readString(style, '--attack-slash-primary', '#ffffff'),
+    attackSlashSecondary: readString(style, '--attack-slash-secondary', '#8ecfff'),
+    attackSlashPrimaryWidth: readNumber(style, '--attack-slash-primary-width', 3),
+    attackSlashSecondaryWidth: readNumber(
+      style,
+      '--attack-slash-secondary-width',
+      2,
+    ),
+    attackHealPrimary: readString(style, '--attack-heal-primary', '#2ecc71'),
+    attackHealSecondary: readString(style, '--attack-heal-secondary', '#7bed9f'),
+    attackHealPrimaryWidth: readNumber(style, '--attack-heal-primary-width', 2.5),
+    attackHealSecondaryWidth: readNumber(
+      style,
+      '--attack-heal-secondary-width',
+      2,
+    ),
+    attackHealPeakAlpha: readNumber(style, '--attack-heal-peak-alpha', 0.95),
+    attackOrbFill: readString(style, '--attack-orb-fill', '#74b9ff'),
+    attackOrbHighlight: readString(style, '--attack-orb-highlight', '#ffffff'),
+    attackOrbAlpha: readNumber(style, '--attack-orb-alpha', 0.85),
+    attackOrbHighlightAlpha: readNumber(
+      style,
+      '--attack-orb-highlight-alpha',
+      0.45,
+    ),
+    attackArrowShaft: readString(style, '--attack-arrow-shaft', '#c8a165'),
+    attackArrowTip: readString(style, '--attack-arrow-tip', '#8b6914'),
+    statusBadgeOverlay: readString(
+      style,
+      '--status-badge-overlay',
+      'rgba(0, 0, 0, 0.55)',
+    ),
+    statusIconFallbackAlpha: readNumber(
+      style,
+      '--status-icon-fallback-alpha',
+      0.35,
+    ),
+    hurtTintR: readNumber(style, '--hurt-tint-r', 255),
+    hurtTintG: readNumber(style, '--hurt-tint-g', 0),
+    hurtTintB: readNumber(style, '--hurt-tint-b', 0),
+    hurtTintStrength: readNumber(style, '--hurt-tint-strength', 0.35),
+    buffGlowR: readNumber(style, '--buff-glow-r', 255),
+    buffGlowG: readNumber(style, '--buff-glow-g', 255),
+    buffGlowB: readNumber(style, '--buff-glow-b', 255),
+    buffGlowPeak: readNumber(style, '--buff-glow-peak', 0.55),
+    spriteDefender: readString(style, '--sprite-defender', '#4a90d9'),
+    spriteAttackerMelee: readString(style, '--sprite-attacker-melee', '#e67e22'),
+    spriteSupporter: readString(style, '--sprite-supporter', '#2ecc71'),
+    spriteAttackerRanged: readString(
+      style,
+      '--sprite-attacker-ranged',
+      '#e74c3c',
+    ),
+    spriteSlime: readString(style, '--sprite-slime', '#9b59b6'),
+    spriteEnemyDefault: readString(style, '--sprite-enemy-default', '#888888'),
+    spriteDefault: readString(style, '--sprite-default', '#888888'),
+    iconDefender: readString(style, '--icon-defender', '#2c5f9e'),
+    iconAttackerMelee: readString(style, '--icon-attacker-melee', '#c0392b'),
+    iconSupporter: readString(style, '--icon-supporter', '#1e8449'),
+    iconAttackerRanged: readString(style, '--icon-attacker-ranged', '#922b21'),
+    iconDefault: readString(style, '--icon-default', '#888888'),
+    statusIconAtk: readString(style, '--status-icon-atk', '#c0392b'),
+    statusIconDef: readString(style, '--status-icon-def', '#2980b9'),
+    statusIconReg: readString(style, '--status-icon-reg', '#9b59b6'),
+    statusIconHot: readString(style, '--status-icon-hot', '#27ae60'),
+    statusIconDot: readString(style, '--status-icon-dot', '#8e44ad'),
   };
+}
+
+export function resolveSpritePlaceholderColor(
+  spriteKey: string,
+  theme: BattleHudTheme,
+): string {
+  const colors: Record<string, string> = {
+    [PLACEHOLDER_SPRITE_KEYS.defender]: theme.spriteDefender,
+    [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: theme.spriteAttackerMelee,
+    [PLACEHOLDER_SPRITE_KEYS.supporter]: theme.spriteSupporter,
+    [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: theme.spriteAttackerRanged,
+    slime: theme.spriteSlime,
+    [ENEMY_DEFAULT_SPRITE_KEY]: theme.spriteEnemyDefault,
+  };
+  return colors[spriteKey] ?? theme.spriteDefault;
+}
+
+export function resolveClassIconPlaceholderColor(
+  iconKey: string,
+  theme: BattleHudTheme,
+): string {
+  const colors: Record<string, string> = {
+    [PLACEHOLDER_SPRITE_KEYS.defender]: theme.iconDefender,
+    [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: theme.iconAttackerMelee,
+    [PLACEHOLDER_SPRITE_KEYS.supporter]: theme.iconSupporter,
+    [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: theme.iconAttackerRanged,
+  };
+  return colors[iconKey] ?? theme.iconDefault;
+}
+
+export function resolveStatusIconFallbackColor(
+  category: StatusDisplayCategory,
+  theme: BattleHudTheme,
+): string {
+  const colors: Record<StatusDisplayCategory, string> = {
+    atk: theme.statusIconAtk,
+    def: theme.statusIconDef,
+    reg: theme.statusIconReg,
+    hot: theme.statusIconHot,
+    dot: theme.statusIconDot,
+  };
+  return colors[category];
 }

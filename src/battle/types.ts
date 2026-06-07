@@ -38,7 +38,8 @@ export type TargetRule =
   | "closestAlly"
   | "frontEnemy"
   | "lowestHpEnemy"
-  | "mostDamagedAlly";
+  | "mostDamagedAlly"
+  | "self";
 
 export interface Combatant extends CombatStats {
   id: string;
@@ -53,7 +54,7 @@ export interface SkillCooldown {
   skillId: string;
   remaining: number;
   slotKind: SkillSlotKind;
-  slotIndex?: 0 | 1;
+  slotIndex?: number;
 }
 
 export interface CharacterBuild {
@@ -87,9 +88,33 @@ export interface SaveGameState {
 export interface StatusEffect {
   id: string;
   kind: "buff" | "debuff";
-  stat: "atk" | "def" | "damageTaken";
+  /** buff/debuff 用（stat 系） */
+  stat?: StatusEffectStat;
+  /** HoT/DoT バッジ用 */
+  overlay?: "hot" | "dot";
+  /** HoT/DoT tick 量（スキル powerMultiplier） */
+  powerMultiplier?: number;
+  /** HoT/DoT 付与者 */
+  sourceId?: string;
+  skillId?: string;
+  damageType?: DamageType;
+  /** 次 tick までの残秒（1 秒間隔） */
+  tickSec?: number;
   multiplier: number;
+  /** 正の量。符号は kind から決定 */
+  flatBonus?: number;
+  /** 付与時の効果時間（秒） */
+  durationSec: number;
   remainingSec: number;
+}
+
+export type StatusEffectStat = "atk" | "def" | "reg" | "damageTaken";
+
+export function asStatusEffectStatList(
+  stat: StatusEffectStat | StatusEffectStat[] | undefined,
+): StatusEffectStat[] {
+  if (!stat) return [];
+  return Array.isArray(stat) ? stat : [stat];
 }
 
 export interface CombatantState extends Combatant {
@@ -128,26 +153,90 @@ export interface PassiveSkillDef {
   activeCooldownRate?: number;
 }
 
-export type SkillEffectKind = "damage" | "heal" | "buff" | "debuff";
+export type SkillEffectKind =
+  | "damage"
+  | "heal"
+  | "buff"
+  | "debuff"
+  | "hot"
+  | "dot";
 export type DamageType = "physical" | "magic";
+
+/** スキル演出プリセット ID（render 層が描画。将来 skills.json の vfx で指定） */
+export type SkillVfxPresetId = "slash" | "orb" | "arrow" | "healRise";
+
+/** スキルごとの演出定義（skills.json に optional で載せる想定） */
+export interface SkillVfxDef {
+  preset: SkillVfxPresetId;
+  /** arrow プリセット: 放物線軌道 */
+  arc?: boolean;
+  /** 演出時間（ms）。未指定時はプリセット既定 */
+  durationMs?: number;
+}
+
+interface SkillEffectCommon {
+  targetRule: TargetRule;
+  type: SkillEffectKind;
+  /** 射程が必要な効果のみ（px） */
+  range?: number;
+}
+
+export interface DamageSkillEffect extends SkillEffectCommon {
+  type: "damage";
+  damageType: DamageType;
+  powerMultiplier: number;
+}
+
+export interface HealSkillEffect extends SkillEffectCommon {
+  type: "heal";
+  powerMultiplier: number;
+}
+
+export interface BuffSkillEffect extends SkillEffectCommon {
+  type: "buff";
+  buffStat: StatusEffectStat | StatusEffectStat[];
+  buffMultiplier?: number;
+  buffFlatBonus?: number;
+  buffDurationSec: number;
+}
+
+export interface DebuffSkillEffect extends SkillEffectCommon {
+  type: "debuff";
+  debuffStat: StatusEffectStat | StatusEffectStat[];
+  debuffMultiplier?: number;
+  debuffFlatBonus?: number;
+  debuffDurationSec: number;
+}
+
+export interface HotSkillEffect extends SkillEffectCommon {
+  type: "hot";
+  durationSec: number;
+  powerMultiplier: number;
+}
+
+export interface DotSkillEffect extends SkillEffectCommon {
+  type: "dot";
+  durationSec: number;
+  powerMultiplier: number;
+  damageType?: DamageType;
+}
+
+export type SkillEffectDef =
+  | DamageSkillEffect
+  | HealSkillEffect
+  | BuffSkillEffect
+  | DebuffSkillEffect
+  | HotSkillEffect
+  | DotSkillEffect;
 
 export interface ActiveSkillDef {
   id: string;
   name: string;
   interval: number;
-  targetRule: TargetRule;
-  effect: SkillEffectKind;
-  damageType?: DamageType;
-  powerMultiplier?: number;
-  buffStat?: StatusEffect["stat"];
-  buffMultiplier?: number;
-  buffDurationSec?: number;
-  debuffStat?: StatusEffect["stat"];
-  debuffMultiplier?: number;
-  debuffDurationSec?: number;
-  range: AttackRange;
-  allowedRoles?: Role[];
+  effect: SkillEffectDef[];
   allowedClassIds?: ClassId[];
+  /** 未指定時は role / attackRange 等からプレースホルダー VFX を自動選択 */
+  vfx?: SkillVfxDef;
 }
 
 export interface EnemyTemplate extends CombatStats {
@@ -207,17 +296,22 @@ export interface CombatantSnapshot {
   name: string;
   hp: number;
   maxHp: number;
+  atk: number;
+  def: number;
+  reg: number;
   role?: Role;
+  attackRange: AttackRange;
   spriteKey: string;
   iconKey: string;
   formationRow: FormationRow;
   isEnemy: boolean;
   visualX: number;
+  statusEffects: StatusEffect[];
   activeCooldowns: {
     skillId: string;
     remaining: number;
     interval: number;
-    slotIndex: 0 | 1;
+    slotIndex: number;
   }[];
 }
 

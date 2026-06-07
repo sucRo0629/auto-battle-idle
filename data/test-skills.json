@@ -1,0 +1,72 @@
+{
+  "passives": [],
+  "actives": [
+    {
+      "id": "test_strike",
+      "name": "Test Strike",
+      "interval": 3,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 0.5
+        }
+      ]
+    },
+    {
+      "id": "test_buff",
+      "name": "Test Buff",
+      "interval": 6,
+      "effect": [
+        {
+          "targetRule": "self",
+          "type": "buff",
+          "buffStat": "def",
+          "buffFlatBonus": 5,
+          "buffDurationSec": 8
+        }
+      ]
+    },
+    {
+      "id": "test_debuff",
+      "name": "Test Debuff",
+      "interval": 6,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "debuff",
+          "debuffStat": "def",
+          "debuffMultiplier": 0.75,
+          "debuffDurationSec": 8
+        }
+      ]
+    },
+    {
+      "id": "test_hot",
+      "name": "Test HoT",
+      "interval": 7,
+      "effect": [
+        {
+          "targetRule": "mostDamagedAlly",
+          "type": "hot",
+          "durationSec": 8,
+          "powerMultiplier": 0.4
+        }
+      ]
+    },
+    {
+      "id": "test_dot",
+      "name": "Test DoT",
+      "interval": 7,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "dot",
+          "durationSec": 8,
+          "powerMultiplier": 0.4
+        }
+      ]
+    }
+  ]
+}

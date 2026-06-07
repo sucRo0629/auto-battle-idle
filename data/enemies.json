@@ -11,5 +11,18 @@
     "activeSkillIds": [
       "bite"
     ]
+  },
+  {
+    "id": "test_enemy_elite",
+    "displayName": "test_enemy_elite",
+    "maxHp": 200,
+    "atk": 55,
+    "def": 4,
+    "reg": 0,
+    "exp": 1,
+    "spriteKey": "none",
+    "activeSkillIds": [
+      "bite"
+    ]
   }
 ]

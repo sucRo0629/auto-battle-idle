@@ -1,8 +1,11 @@
 import classesJson from '../../../data/classes.json';
+import testClassesJson from '../../../data/test-classes.json';
 import skillsJson from '../../../data/skills.json';
+import testSkillsJson from '../../../data/test-skills.json';
 import enemiesJson from '../../../data/enemies.json';
 import stagesJson from '../../../data/stages.json';
 import partiesJson from '../../../data/parties.json';
+import testPartiesJson from '../../../data/test-parties.json';
 import type {
   ClassPreset,
   ClassTraits,
@@ -14,6 +17,16 @@ import { parseAndValidateGameDataJson } from './validateGameData.ts';
 
 function indexById<T extends { id: string }>(items: T[]): Record<string, T> {
   return Object.fromEntries(items.map((item) => [item.id, item]));
+}
+
+function mergeSkills(
+  base: { passives: unknown[]; actives: unknown[] },
+  extra: { passives?: unknown[]; actives?: unknown[] },
+): { passives: unknown[]; actives: unknown[] } {
+  return {
+    passives: [...base.passives, ...(extra.passives ?? [])],
+    actives: [...base.actives, ...(extra.actives ?? [])],
+  };
 }
 
 function normalizeTraits(
@@ -45,11 +58,11 @@ function normalizeEnemy(enemy: EnemyTemplate): EnemyTemplate {
 
 export function loadGameData(): GameData {
   const parsed = parseAndValidateGameDataJson({
-    classes: classesJson,
-    skills: skillsJson,
+    classes: [...classesJson, ...testClassesJson],
+    skills: mergeSkills(skillsJson, testSkillsJson),
     enemies: enemiesJson,
     stages: stagesJson,
-    parties: partiesJson,
+    parties: { ...partiesJson, ...testPartiesJson },
   });
 
   const classes = parsed.classes.map(normalizeClass);

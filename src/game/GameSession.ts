@@ -1,7 +1,17 @@
 import { BattleEngine } from '../battle/BattleEngine.ts';
 import type { GameData, SaveGameState } from '../battle/types.ts';
+import {
+  isVerifyModeEnabled,
+  partyIdForVerifyMode,
+  saveStorageKey,
+  setVerifyModeEnabled,
+} from '../dev/verifyMode.ts';
 import { loadLevelCurves, type LevelCurvesConfig } from '../progression/levelGrowth.ts';
-import { computeStageExpReward, getStageById } from '../progression/stageProgression.ts';
+import {
+  applyStageRollbackOnDefeat,
+  computeStageExpReward,
+  getStageById,
+} from '../progression/stageProgression.ts';
 import {
   applyVictoryRewards,
   createDefaultSave,
@@ -17,7 +27,8 @@ const AUTO_SAVE_INTERVAL_MS = 60_000;
 export class GameSession {
   private readonly saveManager = new SaveManager();
   private readonly levelCurves: LevelCurvesConfig;
-  private readonly save: SaveGameState;
+  private save: SaveGameState;
+  private verifyMode: boolean;
   private readonly engine: BattleEngine;
   readonly view: BattleView;
   private autoSaveTimer: ReturnType<typeof setInterval> | null = null;
@@ -27,8 +38,8 @@ export class GameSession {
     container: HTMLElement,
   ) {
     this.levelCurves = loadLevelCurves(levelCurvesJson);
-    this.save = this.saveManager.load() ?? createDefaultSave(gameData);
-    this.saveManager.save(this.save);
+    this.verifyMode = isVerifyModeEnabled();
+    this.save = this.loadSaveForMode(this.verifyMode);
 
     this.engine = new BattleEngine(
       gameData,
@@ -43,12 +54,18 @@ export class GameSession {
       gameData,
       this.levelCurves,
       () => this.save,
+      {
+        isVerifyMode: () => this.verifyMode,
+        onVerifyModeChange: (enabled) => this.setVerifyMode(enabled),
+      },
     );
 
     this.engine.onEvent((event) => {
       if (event.type !== 'battleEnd') return;
       if (event.result === 'victory') {
         this.handleVictory(event.survivingPartyIndices);
+      } else {
+        this.handleDefeat();
       }
       this.persistSave();
     });
@@ -59,6 +76,21 @@ export class GameSession {
 
   getSaveState(): SaveGameState {
     return this.save;
+  }
+
+  isVerifyMode(): boolean {
+    return this.verifyMode;
+  }
+
+  setVerifyMode(enabled: boolean): void {
+    if (this.verifyMode === enabled) return;
+
+    this.persistSave();
+    this.verifyMode = enabled;
+    setVerifyModeEnabled(enabled);
+    this.save = this.loadSaveForMode(enabled);
+    this.engine.restartBattle();
+    this.persistSave();
   }
 
   start(): void {
@@ -80,9 +112,40 @@ export class GameSession {
     this.view.destroy();
   }
 
+  private loadSaveForMode(verifyMode: boolean): SaveGameState {
+    const storageKey = saveStorageKey(verifyMode);
+    const partyId = partyIdForVerifyMode(verifyMode);
+    const loaded = this.saveManager.load(storageKey);
+    const save = loaded ?? createDefaultSave(this.gameData, partyId);
+    this.saveManager.save(save, storageKey);
+    return save;
+  }
+
   private handleBeforeUnload = (): void => {
     this.persistSave();
   };
+
+  private handleDefeat(): void {
+    const failedStageId = this.save.stageProgress.currentStageId;
+    const failedStage = getStageById(this.gameData.stages, failedStageId);
+    const failedStageName = failedStage?.displayName ?? failedStageId;
+
+    const previousStageId = applyStageRollbackOnDefeat(
+      this.save,
+      this.gameData.stages,
+    );
+    const previousStage = getStageById(this.gameData.stages, previousStageId);
+    const previousStageName = previousStage?.displayName ?? previousStageId;
+
+    if (previousStageId === failedStageId) {
+      console.log(`[progress] Defeat at ${failedStageName} (staying)`);
+      return;
+    }
+
+    console.log(
+      `[progress] Defeat at ${failedStageName} → ${previousStageName}`,
+    );
+  }
 
   private handleVictory(survivingPartyIndices: number[]): void {
     const clearedStageId = this.save.stageProgress.currentStageId;
@@ -125,6 +188,6 @@ export class GameSession {
   }
 
   private persistSave(): void {
-    this.saveManager.save(this.save);
+    this.saveManager.save(this.save, saveStorageKey(this.verifyMode));
   }
 }

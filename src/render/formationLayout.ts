@@ -12,8 +12,12 @@ export const SPRITE_WIDTH = 32;
 export const SPRITE_GAP = 38;
 /** 地面ライン下: 地面演出 + パーティ HUD（クラス名 + アイコン行） */
 export const BATTLE_GROUND_MARGIN = 50;
-/** スプライト上の最小余白 */
-export const BATTLE_TOP_PAD = 25;
+/** スプライト上の最小余白（ステータスバッジ行 + 敵 HP バー積み上げ） */
+export const BATTLE_TOP_PAD = 43;
+/** ステータスバッジ 1 行の高さ（アイコン/矢印 8px） */
+export const STATUS_BADGE_H = 8;
+/** スプライト / HP バーとバッジ行の間隔 */
+export const STATUS_BADGE_GAP = 2;
 export const ENEMY_VISIBLE_MIN_X = -32;
 /** 非戦闘時: 背景スクロール・敵進軍速度（px/秒） */
 export const SCROLL_SPEED = 160;
@@ -25,6 +29,7 @@ export interface AllyPlacementInput {
   role: Role;
   formationRow: FormationRow;
   rangePx: number;
+  isAlive: boolean;
 }
 
 export interface AllyPositionOptions {
@@ -214,11 +219,6 @@ function resolvePairOverlap(
     return;
   }
 
-  if (right.role === "supporter" && sameRow !== "back") {
-    right.x = Math.max(minXForRight, ROW_X.back);
-    return;
-  }
-
   right.x = minXForRight;
 }
 
@@ -250,14 +250,61 @@ function resolveOverlaps(
   }
 }
 
-/** 接敵時: 前列を敵方向へ（体同士が重ならない standoff） */
-function compressFrontRowTowardEnemy(
+/** 生存味方のうち最も前の列（front → middle → back） */
+export function getLeadingAllyFormationRow(
+  allies: AllyPlacementInput[]
+): FormationRow | null {
+  const living = allies.filter((ally) => ally.isAlive);
+  for (const row of ROW_ORDER) {
+    if (living.some((ally) => ally.formationRow === row)) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function livingAllies(allies: AllyPlacementInput[]): AllyPlacementInput[] {
+  return allies.filter((ally) => ally.isAlive);
+}
+
+function rowDepthOffset(from: FormationRow, to: FormationRow): number {
+  return ROW_X[to] - ROW_X[from];
+}
+
+/** 接敵時: 最前生存列の後方へ中列・後列を相対配置（ROW_X 絶対座標へ戻さない） */
+function anchorRowsBehindLeading(
   placements: Placement[],
+  leadingRow: FormationRow,
+): void {
+  const leading = placements.filter((p) => p.formationRow === leadingRow);
+  if (leading.length === 0) return;
+
+  const leadingFrontX = Math.min(...leading.map((p) => p.x));
+  const leadingIndex = ROW_ORDER.indexOf(leadingRow);
+
+  for (let ri = leadingIndex + 1; ri < ROW_ORDER.length; ri++) {
+    const row = ROW_ORDER[ri]!;
+    const rowUnits = placements
+      .filter((p) => p.formationRow === row)
+      .sort((a, b) => rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role));
+    if (rowUnits.length === 0) continue;
+
+    const baseX = leadingFrontX + rowDepthOffset(leadingRow, row);
+    rowUnits.forEach((unit, slot) => {
+      unit.x = baseX + slot * ALLY_ROW_SPACING;
+    });
+  }
+}
+
+/** 接敵時: 最前線の生存列を敵方向へ（体同士が重ならない standoff） */
+function compressLeadingRowTowardEnemy(
+  placements: Placement[],
+  leadingRow: FormationRow,
   frontEnemyX: number
 ): void {
-  const front = placements.filter((p) => p.formationRow === "front");
+  const leading = placements.filter((p) => p.formationRow === leadingRow);
   const minGap = engagedMinLeftEdgeGap();
-  for (const placement of front) {
+  for (const placement of leading) {
     const gap = Math.max(placement.rangePx, minGap);
     placement.x = frontEnemyX + gap;
   }
@@ -342,8 +389,13 @@ function buildEngagedPlacements(
   allies: AllyPlacementInput[],
   frontEnemyX: number
 ): Placement[] {
-  const placements = buildFormationPlacements(allies);
-  compressFrontRowTowardEnemy(placements, frontEnemyX);
+  const living = livingAllies(allies);
+  const leadingRow = getLeadingAllyFormationRow(living);
+  const placements = buildFormationPlacements(living);
+  if (leadingRow !== null) {
+    compressLeadingRowTowardEnemy(placements, leadingRow, frontEnemyX);
+    anchorRowsBehindLeading(placements, leadingRow);
+  }
   resolveOverlaps(placements, engagedMinLeftEdgeGap());
   return placements;
 }
@@ -388,10 +440,11 @@ export function computeAllyPositions(
   allies: AllyPlacementInput[],
   options: AllyPositionOptions = {}
 ): Map<string, number> {
+  const living = livingAllies(allies);
   const placements =
     options.engaged && options.frontEnemyX !== undefined
       ? buildEngagedPlacements(allies, options.frontEnemyX)
-      : buildFormationPlacements(allies);
+      : buildFormationPlacements(living);
 
   return new Map(placements.map((p) => [p.id, p.x]));
 }

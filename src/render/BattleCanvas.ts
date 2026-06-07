@@ -1,12 +1,12 @@
-import type { BattleSnapshot } from "../battle/types.ts";
-import { getSpriteColor, getSpriteImage } from "./SpriteRegistry.ts";
+import type { BattleSnapshot, StatusEffect, SkillVfxDef } from "../battle/types.ts";
+import { getSpriteImage } from "./SpriteRegistry.ts";
 import { BuffGlowManager, drawSpriteWithBuffGlow } from "./buffGlowEffect.ts";
 import { drawSpriteWithDamageEffect } from "./damageEffect.ts";
 import {
   getPlaceholderSpriteYOffset,
   hasSpriteSheetAnimation,
 } from "./placeholderSpriteAnim.ts";
-import { getClassIconColor, getClassIconImage } from "./IconRegistry.ts";
+import { getClassIconImage } from "./IconRegistry.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
 import {
   groundY,
@@ -14,7 +14,7 @@ import {
   BATTLE_GROUND_MARGIN,
   battleCanvasHeight,
 } from "./formationLayout.ts";
-import { AttackEffectManager, type AttackEffectKind } from "./AttackEffect.ts";
+import { AttackEffectManager } from "./AttackEffect.ts";
 import { DamagePopupManager } from "./DamagePopup.ts";
 import {
   computeEnemyHpBarTops,
@@ -22,12 +22,28 @@ import {
   ENEMY_HP_BAR_H,
   ENEMY_HP_BAR_W,
 } from "./enemyHpBarLayout.ts";
+import { aggregateStatStatusEffects } from "../battle/statusEffectDisplay.ts";
+import {
+  computeStatusBadgeTops,
+  type StatusBadgeLayoutInput,
+} from "./statusBadgeLayout.ts";
+import {
+  drawStatusBadgeRow,
+  orderBadgesForDraw,
+  statusBadgeRowWidth,
+} from "./statusBadgeRenderer.ts";
 import type {
   AnimState,
   CombatantLayout,
   IBattleRenderer,
 } from "./IBattleRenderer.ts";
-import { readBattleHudTheme, type BattleHudTheme } from "./battleHudTheme.ts";
+import {
+  readBattleHudTheme,
+  resolveClassIconPlaceholderColor,
+  resolveSpritePlaceholderColor,
+  resolveStatusIconFallbackColor,
+  type BattleHudTheme,
+} from "./battleHudTheme.ts";
 import { VictoryOverlay } from "./VictoryOverlay.ts";
 
 const CANVAS_W = 480;
@@ -43,12 +59,16 @@ interface AllyHudEntry {
   iconKey: string;
   hp: number;
   maxHp: number;
+  atk: number;
+  def: number;
+  reg: number;
   isAlive: boolean;
+  statusEffects: StatusEffect[];
   activeCooldowns: {
     skillId: string;
     remaining: number;
     interval: number;
-    slotIndex: 0 | 1;
+    slotIndex: number;
   }[];
 }
 
@@ -59,7 +79,7 @@ export interface PartyHudMeta {
   expRequired: number;
 }
 
-const ACTIVE_SKILL_SLOT_COUNT = 2;
+const MIN_ACTIVE_SKILL_SLOTS = 1;
 
 export class BattleCanvas implements IBattleRenderer {
   private canvas!: HTMLCanvasElement;
@@ -102,10 +122,9 @@ export class BattleCanvas implements IBattleRenderer {
   playAttackEffect(
     actorId: string,
     targetId: string,
-    kind: AttackEffectKind,
-    isHeal = false
+    vfx: SkillVfxDef,
   ): void {
-    this.attackEffects.spawn(actorId, targetId, kind, isHeal);
+    this.attackEffects.spawn(actorId, targetId, vfx);
   }
 
   showDamagePopup(targetId: string, amount: number): void {
@@ -156,10 +175,14 @@ export class BattleCanvas implements IBattleRenderer {
           spriteKey: enemy.spriteKey,
           hp: enemy.hp,
           maxHp: enemy.maxHp,
+          atk: enemy.atk,
+          def: enemy.def,
+          reg: enemy.reg,
           isEnemy: true,
           isAlive: enemy.hp > 0,
           anim: animState.anim,
           animFrame: animState.frame,
+          statusEffects: enemy.statusEffects,
         });
       }
     }
@@ -173,11 +196,15 @@ export class BattleCanvas implements IBattleRenderer {
         spriteKey: ally.spriteKey,
         hp: ally.hp,
         maxHp: ally.maxHp,
+        atk: ally.atk,
+        def: ally.def,
+        reg: ally.reg,
         role: ally.role,
         isEnemy: false,
         isAlive: ally.hp > 0,
         anim: animState.anim,
         animFrame: animState.frame,
+        statusEffects: ally.statusEffects,
       });
     }
 
@@ -192,7 +219,11 @@ export class BattleCanvas implements IBattleRenderer {
         iconKey: ally.iconKey,
         hp: ally.hp,
         maxHp: ally.maxHp,
+        atk: ally.atk,
+        def: ally.def,
+        reg: ally.reg,
         isAlive: ally.hp > 0,
+        statusEffects: ally.statusEffects,
         activeCooldowns: ally.activeCooldowns,
       };
     });
@@ -202,20 +233,21 @@ export class BattleCanvas implements IBattleRenderer {
 
   private drawBackground(): void {
     const { ctx, canvas } = this;
-    ctx.fillStyle = "#1a1a2e";
+    const theme = this.theme;
+    ctx.fillStyle = theme.sceneSkyFill;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const groundLineY = canvas.height - BATTLE_GROUND_MARGIN;
     const tileW = 32;
     const scrollX = ((this.worldOffsetX % tileW) + tileW) % tileW;
 
-    ctx.fillStyle = "#22283a";
+    ctx.fillStyle = theme.sceneGroundFill;
     for (let x = -tileW + scrollX; x < canvas.width + tileW; x += tileW) {
       ctx.fillRect(x, groundLineY + 4, tileW / 2, 8);
     }
 
-    ctx.strokeStyle = "#2d3a4f";
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = theme.sceneGroundStroke;
+    ctx.lineWidth = theme.sceneGroundStrokeWidth;
     ctx.beginPath();
     ctx.moveTo(0, groundLineY);
     ctx.lineTo(canvas.width, groundLineY);
@@ -248,17 +280,21 @@ export class BattleCanvas implements IBattleRenderer {
       }
     }
 
+    this.drawStatusBadges(enemyBarTops, SPRITE_SCALE);
+
     this.attackEffects.draw(
       this.ctx,
       this.layouts,
       SPRITE_SIZE * SPRITE_SCALE,
-      SPRITE_SCALE
+      SPRITE_SCALE,
+      this.theme,
     );
     this.damagePopups.draw(
       this.ctx,
       this.layouts,
       SPRITE_SIZE * SPRITE_SCALE,
-      SPRITE_SCALE
+      SPRITE_SCALE,
+      this.theme,
     );
 
     this.drawPartyHud();
@@ -266,7 +302,7 @@ export class BattleCanvas implements IBattleRenderer {
       this.ctx,
       canvas.width,
       canvas.height,
-      this.theme.fontFamily,
+      this.theme,
     );
   }
 
@@ -281,6 +317,14 @@ export class BattleCanvas implements IBattleRenderer {
     );
     const blockGap = theme.headerBlockGap * hudScale;
     return { headerH: labelH + blockGap, labelH };
+  }
+
+  private maxActiveSkillSlots(): number {
+    if (this.allyHud.length === 0) return MIN_ACTIVE_SKILL_SLOTS;
+    return Math.max(
+      MIN_ACTIVE_SKILL_SLOTS,
+      ...this.allyHud.map((ally) => ally.activeCooldowns.length),
+    );
   }
 
   private measurePartyHudBarStack(
@@ -300,9 +344,10 @@ export class BattleCanvas implements IBattleRenderer {
     const barSkillGap = theme.barSkillGap * hudScale;
     const recastBarH = Math.max(2, Math.round(theme.recastBarH * hudScale));
     const recastGap = theme.recastGap * hudScale;
+    const activeSkillSlotCount = this.maxActiveSkillSlots();
     const recastTotalH =
-      recastBarH * ACTIVE_SKILL_SLOT_COUNT +
-      recastGap * (ACTIVE_SKILL_SLOT_COUNT - 1);
+      recastBarH * activeSkillSlotCount +
+      recastGap * (activeSkillSlotCount - 1);
     const hpBarH = Math.max(
       2,
       iconSize - expBarH - expHpGap - barSkillGap - recastTotalH,
@@ -341,6 +386,7 @@ export class BattleCanvas implements IBattleRenderer {
       this.drawHudIcon(ally, x, blockTop, iconSize);
       this.drawHudExpBar(ally, barX, expBarY, barW, expBarH);
       this.drawHudHpBar(ally, barX, hpBarY, barW, hpBarH);
+      this.drawHudStatusBadges(ally, barX, hpBarY, barW, hpBarH);
       this.drawSkillRecastRow(
         ally,
         barX,
@@ -362,7 +408,7 @@ export class BattleCanvas implements IBattleRenderer {
 
     ctx.save();
     if (!ally.isAlive) {
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = this.theme.deadAlpha;
     }
 
     ctx.font = `${fontSize}px ${this.theme.fontFamily}`;
@@ -414,12 +460,12 @@ export class BattleCanvas implements IBattleRenderer {
 
     ctx.save();
     if (!ally.isAlive) {
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = this.theme.deadAlpha;
     }
 
-    for (let slot = 0; slot < ACTIVE_SKILL_SLOT_COUNT; slot++) {
+    for (let slot = 0; slot < this.maxActiveSkillSlots(); slot++) {
       const rowY = y + slot * (rowH + rowGap);
-      this.drawSkillRecastBar(bySlot.get(slot as 0 | 1), x, rowY, width, rowH);
+      this.drawSkillRecastBar(bySlot.get(slot), x, rowY, width, rowH);
     }
 
     ctx.restore();
@@ -464,7 +510,7 @@ export class BattleCanvas implements IBattleRenderer {
 
     ctx.save();
     if (!ally.isAlive) {
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = this.theme.deadAlpha;
     }
 
     ctx.fillStyle = this.theme.iconFrame;
@@ -490,7 +536,7 @@ export class BattleCanvas implements IBattleRenderer {
 
     ctx.save();
     if (!ally.isAlive) {
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = this.theme.deadAlpha;
     }
 
     ctx.fillStyle = this.theme.barBorder;
@@ -501,6 +547,55 @@ export class BattleCanvas implements IBattleRenderer {
 
     ctx.fillStyle = this.theme.hpBarFill;
     ctx.fillRect(x, y, barW * ratio, barH);
+
+    ctx.restore();
+  }
+
+  private drawHudStatusBadges(
+    ally: AllyHudEntry,
+    barX: number,
+    hpBarY: number,
+    barW: number,
+    hpBarH: number,
+  ): void {
+    const badges = aggregateStatStatusEffects(ally.statusEffects, {
+      atk: ally.atk,
+      def: ally.def,
+      reg: ally.reg,
+    });
+    const drawItems = orderBadgesForDraw(badges);
+    if (drawItems.length === 0) return;
+
+    const scale = 1;
+    const rowW = statusBadgeRowWidth(
+      drawItems.length,
+      scale,
+      this.theme.statusBadgeIconSize,
+      this.theme.statusBadgeArrowWidth,
+      this.theme.statusBadgeOverlap,
+    );
+    const badgeH = this.theme.statusBadgeIconSize * scale;
+    const centerX = barX + barW - rowW / 2;
+    const top = hpBarY + hpBarH - badgeH;
+
+    const { ctx } = this;
+    ctx.save();
+    if (!ally.isAlive) {
+      ctx.globalAlpha = this.theme.deadAlpha;
+    }
+
+    drawStatusBadgeRow(this.ctx, centerX, top, drawItems, scale, {
+      buffColor: this.theme.statusBuffColor,
+      badgeBg: this.theme.statusBadgeBg,
+      debuffColor: this.theme.statusDebuffColor,
+      iconSize: this.theme.statusBadgeIconSize,
+      arrowWidth: this.theme.statusBadgeArrowWidth,
+      rowOverlap: this.theme.statusBadgeOverlap,
+      overlayColor: this.theme.statusBadgeOverlay,
+      iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
+      resolveIconFallbackColor: (category) =>
+        resolveStatusIconFallbackColor(category, this.theme),
+    });
 
     ctx.restore();
   }
@@ -520,7 +615,7 @@ export class BattleCanvas implements IBattleRenderer {
       return;
     }
 
-    ctx.fillStyle = getClassIconColor(iconKey);
+    ctx.fillStyle = resolveClassIconPlaceholderColor(iconKey, this.theme);
     ctx.fillRect(x, y, width, height);
   }
 
@@ -539,7 +634,7 @@ export class BattleCanvas implements IBattleRenderer {
       return;
     }
 
-    ctx.fillStyle = getSpriteColor(spriteKey);
+    ctx.fillStyle = resolveSpritePlaceholderColor(spriteKey, this.theme);
     ctx.fillRect(x, y, width, height);
   }
 
@@ -564,19 +659,38 @@ export class BattleCanvas implements IBattleRenderer {
     }
 
     if (!layout.isAlive) {
-      ctx.globalAlpha = 0.35;
+      ctx.globalAlpha = this.theme.deadAlpha;
     }
 
     const drawLocalSprite = (localCtx: CanvasRenderingContext2D) => {
       this.drawSpriteImage(localCtx, layout.spriteKey, 0, 0, size, size);
     };
 
-    const buffGlow = this.buffGlows.getIntensity(layout.id);
+    const buffGlow = this.buffGlows.getIntensity(
+      layout.id,
+      this.theme.buffGlowPeak,
+    );
 
     if (layout.anim === "hurt") {
-      drawSpriteWithDamageEffect(ctx, size, drawLocalSprite);
+      drawSpriteWithDamageEffect(
+        ctx,
+        size,
+        drawLocalSprite,
+        this.theme.hurtTintStrength,
+        this.theme.hurtTintR,
+        this.theme.hurtTintG,
+        this.theme.hurtTintB,
+      );
     } else if (buffGlow > 0) {
-      drawSpriteWithBuffGlow(ctx, size, buffGlow, drawLocalSprite);
+      drawSpriteWithBuffGlow(
+        ctx,
+        size,
+        buffGlow,
+        drawLocalSprite,
+        this.theme.buffGlowR,
+        this.theme.buffGlowG,
+        this.theme.buffGlowB,
+      );
     } else {
       drawLocalSprite(ctx);
     }
@@ -605,9 +719,77 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.fillStyle = this.theme.enemyHpBarFill;
     ctx.fillRect(x, y, barW * ratio, barH);
 
-    ctx.strokeStyle = "#000";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = this.theme.enemyHpBarOutline;
+    ctx.lineWidth = this.theme.enemyHpBarOutlineWidth;
     ctx.strokeRect(x - 0.5, y - 0.5, barW + 1, barH + 1);
+  }
+
+  private drawStatusBadges(
+    enemyBarTops: Map<string, number>,
+    scale: number,
+  ): void {
+    const badgeInputs: StatusBadgeLayoutInput[] = [];
+    const rowWidthById = new Map<string, number>();
+
+    for (const layout of this.layouts) {
+      const badges = aggregateStatStatusEffects(layout.statusEffects, {
+        atk: layout.atk,
+        def: layout.def,
+        reg: layout.reg,
+      });
+      const drawItems = orderBadgesForDraw(badges);
+      if (drawItems.length === 0) continue;
+
+      const rowWidth = statusBadgeRowWidth(
+        drawItems.length,
+        scale,
+        this.theme.statusBadgeIconSize,
+        this.theme.statusBadgeArrowWidth,
+        this.theme.statusBadgeOverlap,
+      );
+      rowWidthById.set(layout.id, rowWidth);
+      badgeInputs.push({
+        id: layout.id,
+        x: layout.x,
+        y: layout.y,
+        isEnemy: layout.isEnemy,
+        hpBarTop: layout.isEnemy ? enemyBarTops.get(layout.id) : undefined,
+      });
+    }
+
+    const badgeTops = computeStatusBadgeTops(
+      badgeInputs,
+      rowWidthById,
+      scale,
+      SPRITE_SIZE,
+    );
+
+    for (const layout of this.layouts) {
+      const badges = aggregateStatStatusEffects(layout.statusEffects, {
+        atk: layout.atk,
+        def: layout.def,
+        reg: layout.reg,
+      });
+      const drawItems = orderBadgesForDraw(badges);
+      const top = badgeTops.get(layout.id);
+      if (drawItems.length === 0 || top === undefined) continue;
+
+      const spriteW = SPRITE_SIZE * scale;
+      const centerX = layout.x + spriteW / 2;
+
+      drawStatusBadgeRow(this.ctx, centerX, top, drawItems, scale, {
+        buffColor: this.theme.statusBuffColor,
+        badgeBg: this.theme.statusBadgeBg,
+        debuffColor: this.theme.statusDebuffColor,
+        iconSize: this.theme.statusBadgeIconSize,
+        arrowWidth: this.theme.statusBadgeArrowWidth,
+        rowOverlap: this.theme.statusBadgeOverlap,
+        overlayColor: this.theme.statusBadgeOverlay,
+        iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
+        resolveIconFallbackColor: (category) =>
+          resolveStatusIconFallbackColor(category, this.theme),
+      });
+    }
   }
 }
 

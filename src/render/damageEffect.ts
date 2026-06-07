@@ -1,17 +1,19 @@
-const HURT_TINT_STRENGTH = 0.35;
-
 let spriteBuffer: HTMLCanvasElement | null = null;
 
 /** 透過を保持したままスプライトに被ダメージの赤みを付けて描画する */
 export function drawSpriteWithDamageEffect(
   targetCtx: CanvasRenderingContext2D,
   size: number,
-  drawSprite: (ctx: CanvasRenderingContext2D) => void
+  drawSprite: (ctx: CanvasRenderingContext2D) => void,
+  tintStrength: number,
+  tintR: number,
+  tintG: number,
+  tintB: number,
 ): void {
   const pixelSize = Math.ceil(size);
   const bufferCtx = getSpriteBuffer(pixelSize);
   drawSprite(bufferCtx);
-  applyHurtTint(bufferCtx, pixelSize);
+  applyHurtTint(bufferCtx, pixelSize, tintStrength, tintR, tintG, tintB);
   targetCtx.drawImage(
     spriteBuffer!,
     0,
@@ -40,7 +42,15 @@ function getSpriteBuffer(size: number): CanvasRenderingContext2D {
   return ctx;
 }
 
-function applyHurtTint(ctx: CanvasRenderingContext2D, size: number): void {
+function applyHurtTint(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  tintStrength: number,
+  tintR: number,
+  tintG: number,
+  tintB: number,
+): void {
+  const strength = Math.max(0, Math.min(1, tintStrength));
   const imageData = ctx.getImageData(0, 0, size, size);
   const data = imageData.data;
 
@@ -48,11 +58,9 @@ function applyHurtTint(ctx: CanvasRenderingContext2D, size: number): void {
     const alpha = data[i + 3];
     if (alpha === 0) continue;
 
-    data[i] = Math.round(
-      data[i] * (1 - HURT_TINT_STRENGTH) + 255 * HURT_TINT_STRENGTH
-    );
-    data[i + 1] = Math.round(data[i + 1] * (1 - HURT_TINT_STRENGTH));
-    data[i + 2] = Math.round(data[i + 2] * (1 - HURT_TINT_STRENGTH));
+    data[i] = Math.round(data[i] * (1 - strength) + tintR * strength);
+    data[i + 1] = Math.round(data[i + 1] * (1 - strength) + tintG * strength);
+    data[i + 2] = Math.round(data[i + 2] * (1 - strength) + tintB * strength);
   }
 
   ctx.putImageData(imageData, 0, 0);

@@ -21,10 +21,13 @@ export interface VictoryRewardResult {
   nextStageId: string;
 }
 
-export function createDefaultSave(gameData: GameData): SaveGameState {
-  const demo = gameData.parties.demo;
-  if (!demo) {
-    throw new Error('Default party "demo" not found');
+export function createDefaultSave(
+  gameData: GameData,
+  partyId = 'demo',
+): SaveGameState {
+  const party = gameData.parties[partyId];
+  if (!party) {
+    throw new Error(`Party not found: ${partyId}`);
   }
   const firstStageId = gameData.stages[0]?.id;
   if (!firstStageId) {
@@ -37,7 +40,7 @@ export function createDefaultSave(gameData: GameData): SaveGameState {
       currentStageId: firstStageId,
       totalClears: 0,
     },
-    party: demo.members.map((member) => ({
+    party: party.members.map((member) => ({
       classId: member.classId,
       progress: { level: 1, exp: 0 },
       build: structuredClone(member.build),

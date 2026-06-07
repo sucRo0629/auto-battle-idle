@@ -1,11 +1,13 @@
 import type { BattlePhase } from "../battle/types.ts";
+import type { BattleHudTheme } from "./battleHudTheme.ts";
 
 const FADE_IN_MS = 600;
 const FADE_OUT_MS = 500;
-const BASE_FONT_SIZE = 48;
-const TEXT = "Victory";
+/** BattleEngine RESTART_DELAY_SEC (3s) − FADE_OUT_MS */
+const DEFEAT_HOLD_MS = 2500;
 
 type OverlayPhase = "idle" | "visible" | "fadingOut" | "done";
+type ResultPhase = "victory" | "defeat";
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -18,20 +20,24 @@ function easeOutCubic(t: number): number {
 export class VictoryOverlay {
   private phase: OverlayPhase = "idle";
   private elapsedMs = 0;
+  private resultPhase: ResultPhase | null = null;
 
   syncPhase(phase: BattlePhase, alliesOffScreen: boolean): void {
-    if (phase !== "victory") {
+    if (phase !== "victory" && phase !== "defeat") {
       this.phase = "idle";
       this.elapsedMs = 0;
+      this.resultPhase = null;
       return;
     }
+
+    this.resultPhase = phase;
 
     if (this.phase === "idle") {
       this.phase = "visible";
       this.elapsedMs = 0;
     }
 
-    if (this.phase === "visible" && alliesOffScreen) {
+    if (this.phase === "visible" && phase === "victory" && alliesOffScreen) {
       this.phase = "fadingOut";
       this.elapsedMs = 0;
     }
@@ -42,6 +48,15 @@ export class VictoryOverlay {
 
     this.elapsedMs += deltaMs;
 
+    if (
+      this.phase === "visible" &&
+      this.resultPhase === "defeat" &&
+      this.elapsedMs >= DEFEAT_HOLD_MS
+    ) {
+      this.phase = "fadingOut";
+      this.elapsedMs = 0;
+    }
+
     if (this.phase === "fadingOut" && this.elapsedMs >= FADE_OUT_MS) {
       this.phase = "done";
     }
@@ -51,7 +66,7 @@ export class VictoryOverlay {
     ctx: CanvasRenderingContext2D,
     width: number,
     height: number,
-    fontFamily: string,
+    theme: BattleHudTheme,
   ): void {
     if (this.phase === "idle" || this.phase === "done") return;
 
@@ -69,8 +84,9 @@ export class VictoryOverlay {
       scale = 1.05 + 0.25 * easeOutCubic(fadeOut);
     }
 
-    if (alpha <= 0) return;
+    if (alpha <= 0 || this.resultPhase === null) return;
 
+    const text = this.resultPhase === "defeat" ? "Defeat" : "Victory";
     const centerX = width / 2;
     const centerY = height * 0.38;
 
@@ -78,14 +94,14 @@ export class VictoryOverlay {
     ctx.globalAlpha = alpha;
     ctx.translate(centerX, centerY);
     ctx.scale(scale, scale);
-    ctx.font = `bold ${BASE_FONT_SIZE}px ${fontFamily}`;
+    ctx.font = `bold ${theme.victoryFontSize}px ${theme.fontFamily}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.65)";
-    ctx.strokeText(TEXT, 0, 0);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(TEXT, 0, 0);
+    ctx.lineWidth = theme.victoryOutlineWidth;
+    ctx.strokeStyle = theme.victoryStroke;
+    ctx.strokeText(text, 0, 0);
+    ctx.fillStyle = theme.victoryFill;
+    ctx.fillText(text, 0, 0);
     ctx.restore();
   }
 }

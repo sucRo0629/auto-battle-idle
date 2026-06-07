@@ -24,15 +24,15 @@
       {
         "enemies": [
           {
-            "templateId": "test_enemy",
+            "templateId": "test_enemy_elite",
             "spawnX": -15
           },
           {
-            "templateId": "test_enemy",
+            "templateId": "test_enemy_elite",
             "spawnX": -5
           },
           {
-            "templateId": "test_enemy",
+            "templateId": "test_enemy_elite",
             "spawnX": 5
           }
         ]
@@ -40,7 +40,7 @@
       {
         "enemies": [
           {
-            "templateId": "test_enemy",
+            "templateId": "test_enemy_elite",
             "spawnX": -30
           }
         ]

@@ -19,15 +19,6 @@ export interface SpriteAnimDef {
 
 export const ENEMY_DEFAULT_SPRITE_KEY = 'enemy_default';
 
-export const SPRITE_COLORS: Record<string, string> = {
-  [PLACEHOLDER_SPRITE_KEYS.defender]: '#4a90d9',
-  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: '#e67e22',
-  [PLACEHOLDER_SPRITE_KEYS.supporter]: '#2ecc71',
-  [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: '#e74c3c',
-  slime: '#9b59b6',
-  [ENEMY_DEFAULT_SPRITE_KEY]: '#888888',
-};
-
 const SPRITE_URLS: Record<string, string> = {
   [PLACEHOLDER_SPRITE_KEYS.defender]: defenderPlaceholderUrl,
   [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: attackerMeleePlaceholderUrl,
@@ -66,10 +57,6 @@ export function preloadSprites(): Promise<void> {
     ).then(() => {});
   }
   return preloadPromise;
-}
-
-export function getSpriteColor(spriteKey: string): string {
-  return SPRITE_COLORS[spriteKey] ?? '#888888';
 }
 
 export function getSpriteImage(spriteKey: string): HTMLImageElement | undefined {
