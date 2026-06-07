@@ -1,5 +1,7 @@
 export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death';
 
+import type { Role } from '../battle/types.ts';
+
 export interface CombatantLayout {
   id: string;
   x: number;
@@ -7,6 +9,7 @@ export interface CombatantLayout {
   spriteKey: string;
   hp: number;
   maxHp: number;
+  role?: Role;
   isEnemy: boolean;
   isAlive: boolean;
   anim: AnimState;
@@ -18,6 +21,7 @@ export interface IBattleRenderer {
   setCombatants(layout: CombatantLayout[]): void;
   setWorldOffset(offsetX: number): void;
   playAnim(combatantId: string, state: AnimState): void;
+  showDamagePopup(targetId: string, amount: number): void;
   tick(deltaMs: number): void;
   destroy(): void;
 }

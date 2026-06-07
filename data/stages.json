@@ -6,8 +6,14 @@
     "waves": [
       {
         "enemies": [
-          { "templateId": "slime" },
-          { "templateId": "slime" }
+          {
+            "templateId": "slime",
+            "spawnX": -20
+          },
+          {
+            "templateId": "slime",
+            "spawnX": -10
+          }
         ]
       }
     ]

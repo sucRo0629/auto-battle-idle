@@ -2,11 +2,13 @@
   {
     "id": "slime",
     "displayName": "Slime",
-    "maxHp": 80,
-    "atk": 10,
+    "maxHp": 200,
+    "atk": 50,
     "def": 4,
     "reg": 0,
     "spriteKey": "slime",
-    "activeSkillIds": ["bite"]
+    "activeSkillIds": [
+      "bite"
+    ]
   }
 ]

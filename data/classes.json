@@ -4,59 +4,85 @@
     "role": "defender",
     "displayName": "Bulwark",
     "formationRow": "front",
-    "traits": { "attackRange": "melee" },
+    "traits": {
+      "attackRange": "melee"
+    },
     "maxHp": 300,
     "atk": 12,
     "def": 24,
     "reg": 0,
     "basicAttackSkillId": "bulwark_strike",
     "spriteKey": "defender_bulwark",
-    "starterPassiveIds": ["thick_skin"],
-    "starterActiveIds": ["shield_bash"]
+    "starterPassiveIds": [
+      "thick_skin"
+    ],
+    "starterActiveIds": [
+      "shield_bash"
+    ]
   },
   {
     "id": "attacker_berserker",
     "role": "attacker",
     "displayName": "Berserker",
     "formationRow": "front",
-    "traits": { "attackRange": "melee" },
+    "traits": {
+      "attackRange": "melee"
+    },
     "maxHp": 120,
     "atk": 28,
-    "def": 8,
+    "def": 10,
     "reg": 0,
     "basicAttackSkillId": "berserker_strike",
     "spriteKey": "attacker_berserker",
-    "starterPassiveIds": ["brute"],
-    "starterActiveIds": ["slash"]
+    "starterPassiveIds": [
+      "brute"
+    ],
+    "starterActiveIds": [
+      "slash"
+    ]
   },
   {
     "id": "supporter_cleric",
     "role": "supporter",
     "displayName": "Cleric",
     "formationRow": "middle",
-    "traits": { "attackRange": "ranged" },
+    "traits": {
+      "attackRange": "ranged",
+      "rangePx": 100
+    },
     "maxHp": 100,
     "atk": 14,
     "def": 10,
     "reg": 0,
     "basicAttackSkillId": "cleric_strike",
     "spriteKey": "supporter_cleric",
-    "starterPassiveIds": ["gentle_touch"],
-    "starterActiveIds": ["heal"]
+    "starterPassiveIds": [
+      "gentle_touch"
+    ],
+    "starterActiveIds": [
+      "heal"
+    ]
   },
   {
     "id": "attacker_hawkeye",
     "role": "attacker",
     "displayName": "Hawkeye",
     "formationRow": "back",
-    "traits": { "attackRange": "ranged" },
+    "traits": {
+      "attackRange": "ranged",
+      "rangePx": 140
+    },
     "maxHp": 90,
     "atk": 18,
     "def": 6,
     "reg": 0,
     "basicAttackSkillId": "hawkeye_shot",
     "spriteKey": "attacker_hawkeye",
-    "starterPassiveIds": ["snipe"],
-    "starterActiveIds": ["arrow"]
+    "starterPassiveIds": [
+      "snipe"
+    ],
+    "starterActiveIds": [
+      "arrow"
+    ]
   }
 ]

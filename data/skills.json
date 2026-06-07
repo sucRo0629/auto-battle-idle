@@ -3,21 +3,25 @@
     {
       "id": "thick_skin",
       "name": "Thick Skin",
+      "effect": "damageTakenMultiplier",
       "damageTakenMultiplier": 0.9
     },
     {
       "id": "brute",
       "name": "Brute",
+      "effect": "damageMultiplier",
       "damageMultiplier": 1.15
     },
     {
       "id": "gentle_touch",
       "name": "Gentle Touch",
+      "effect": "healBonus",
       "healBonus": 4
     },
     {
       "id": "snipe",
       "name": "Snipe",
+      "effect": "targetRuleOverride",
       "targetRuleOverride": "lowestHpEnemy"
     }
   ],

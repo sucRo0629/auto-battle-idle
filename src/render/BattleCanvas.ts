@@ -1,47 +1,68 @@
-import type { BattleSnapshot } from '../battle/types.ts';
-import type { Role } from '../battle/types.ts';
-import { ANIM_DEFS, getSpriteColor } from './SpriteRegistry.ts';
-import { SpriteAnimator } from './SpriteAnimator.ts';
-import type { AnimState, CombatantLayout, IBattleRenderer } from './IBattleRenderer.ts';
+import type { BattleSnapshot } from "../battle/types.ts";
+import { ANIM_DEFS, getSpriteColor } from "./SpriteRegistry.ts";
+import { SpriteAnimator } from "./SpriteAnimator.ts";
+import {
+  groundY,
+  ENEMY_VISIBLE_MIN_X,
+  BATTLE_GROUND_MARGIN,
+  battleCanvasHeight,
+} from "./formationLayout.ts";
+import { DamagePopupManager } from "./DamagePopup.ts";
+import type {
+  AnimState,
+  CombatantLayout,
+  IBattleRenderer,
+} from "./IBattleRenderer.ts";
 
 const CANVAS_W = 480;
-const CANVAS_H = 320;
+const CANVAS_H = battleCanvasHeight(1);
 const AMBIENT_W = 320;
-const AMBIENT_H = 240;
+const AMBIENT_H = battleCanvasHeight(2);
 const SPRITE_SIZE = 32;
 
-const ROW_Y: Record<string, number> = {
-  front: 200,
-  middle: 180,
-  back: 160,
-};
+const HP_BAR_W = 48;
+const HP_BAR_H = 6;
+const ALLY_HP_BAR_FILL = "#2ecc71";
+const ENEMY_HP_BAR_FILL = "#e74c3c";
 
-const ROLE_COLORS: Record<Role, string> = {
-  defender: '#3498db',
-  supporter: '#2ecc71',
-  attacker: '#e67e22',
-};
+const HUD_ICON_SIZE = 18;
+const HUD_BAR_W = 52;
+const HUD_ICON_BAR_GAP = 4;
+const HUD_BAR_SKILL_GAP = 2;
+const HUD_BOTTOM_MARGIN = 10;
+
+const HUD_ICON_BORDER = "#4a5568";
+
+interface AllyHudEntry {
+  spriteKey: string;
+  hp: number;
+  maxHp: number;
+  isAlive: boolean;
+  activeCooldowns: { skillId: string; remaining: number }[];
+}
 
 export class BattleCanvas implements IBattleRenderer {
   private canvas!: HTMLCanvasElement;
   private ctx!: CanvasRenderingContext2D;
   private animator = new SpriteAnimator();
+  private damagePopups = new DamagePopupManager();
   private layouts: CombatantLayout[] = [];
-  private worldOffsetX = 0;
+  private allyHud: AllyHudEntry[] = [];
   private ambient = false;
+  private worldOffsetX = 0;
 
   constructor(ambient = false) {
     this.ambient = ambient;
   }
 
   mount(container: HTMLElement): void {
-    this.canvas = document.createElement('canvas');
+    this.canvas = document.createElement("canvas");
     this.canvas.width = this.ambient ? AMBIENT_W : CANVAS_W;
     this.canvas.height = this.ambient ? AMBIENT_H : CANVAS_H;
-    this.canvas.className = 'battle-canvas';
+    this.canvas.className = "battle-canvas";
     container.appendChild(this.canvas);
-    const ctx = this.canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas 2D unavailable');
+    const ctx = this.canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas 2D unavailable");
     this.ctx = ctx;
     this.ctx.imageSmoothingEnabled = false;
   }
@@ -58,10 +79,15 @@ export class BattleCanvas implements IBattleRenderer {
     this.animator.setAnim(combatantId, state);
   }
 
+  showDamagePopup(targetId: string, amount: number): void {
+    this.damagePopups.spawn(targetId, amount);
+  }
+
   tick(deltaMs: number): void {
     for (const layout of this.layouts) {
       this.animator.tick(layout.id, deltaMs);
     }
+    this.damagePopups.tick(deltaMs);
     this.draw();
   }
 
@@ -71,81 +97,227 @@ export class BattleCanvas implements IBattleRenderer {
 
   syncFromSnapshot(snapshot: BattleSnapshot): void {
     const layouts: CombatantLayout[] = [];
-    let enemyIndex = 0;
-    let allyIndex = 0;
+    const scale = this.ambient ? 2 : 1;
+    const y = groundY(this.canvas.height, scale);
 
-    for (const enemy of snapshot.enemies) {
-      const animState = this.animator.getState(enemy.id);
-      layouts.push({
-        id: enemy.id,
-        x: 80 + enemyIndex * 56,
-        y: ROW_Y.front,
-        spriteKey: enemy.spriteKey,
-        hp: enemy.hp,
-        maxHp: enemy.maxHp,
-        isEnemy: true,
-        isAlive: enemy.hp > 0,
-        anim: animState.anim,
-        animFrame: animState.frame,
-      });
-      enemyIndex++;
+    // 進軍中は画面内に入ってから表示。Victory 等の非戦闘時は非表示
+    const canShowEnemies = snapshot.phase === "running";
+    if (canShowEnemies) {
+      for (const enemy of snapshot.enemies) {
+        if (enemy.hp <= 0) continue;
+        if (!snapshot.engaged && enemy.visualX < ENEMY_VISIBLE_MIN_X) continue;
+        const animState = this.animator.getState(enemy.id);
+        layouts.push({
+          id: enemy.id,
+          x: enemy.visualX,
+          y,
+          spriteKey: enemy.spriteKey,
+          hp: enemy.hp,
+          maxHp: enemy.maxHp,
+          isEnemy: true,
+          isAlive: enemy.hp > 0,
+          anim: animState.anim,
+          animFrame: animState.frame,
+        });
+      }
     }
 
     for (const ally of snapshot.allies) {
       const animState = this.animator.getState(ally.id);
       layouts.push({
         id: ally.id,
-        x: 280 + allyIndex * 48,
-        y: ROW_Y[ally.formationRow] ?? ROW_Y.front,
+        x: ally.visualX,
+        y,
         spriteKey: ally.spriteKey,
         hp: ally.hp,
         maxHp: ally.maxHp,
+        role: ally.role,
         isEnemy: false,
         isAlive: ally.hp > 0,
         anim: animState.anim,
         animFrame: animState.frame,
       });
-      allyIndex++;
     }
 
     this.layouts = layouts;
+    this.allyHud = snapshot.allies.map((ally) => ({
+      spriteKey: ally.spriteKey,
+      hp: ally.hp,
+      maxHp: ally.maxHp,
+      isAlive: ally.hp > 0,
+      activeCooldowns: ally.activeCooldowns,
+    }));
     this.worldOffsetX = snapshot.worldOffsetX;
+  }
+
+  private drawBackground(): void {
+    const { ctx, canvas } = this;
+    ctx.fillStyle = "#1a1a2e";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const groundLineY = canvas.height - BATTLE_GROUND_MARGIN;
+    const tileW = 32;
+    const scrollX = ((this.worldOffsetX % tileW) + tileW) % tileW;
+
+    ctx.fillStyle = "#22283a";
+    for (let x = -tileW + scrollX; x < canvas.width + tileW; x += tileW) {
+      ctx.fillRect(x, groundLineY + 4, tileW / 2, 8);
+    }
+
+    ctx.strokeStyle = "#2d3a4f";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, groundLineY);
+    ctx.lineTo(canvas.width, groundLineY);
+    ctx.stroke();
   }
 
   private draw(): void {
     const { ctx, canvas } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = '#1a1a2e';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.strokeStyle = '#2d3a4f';
-    ctx.beginPath();
-    ctx.moveTo(0, canvas.height - 48);
-    ctx.lineTo(canvas.width, canvas.height - 48);
-    ctx.stroke();
+    this.drawBackground();
 
     const scale = this.ambient ? 2 : 1;
-    const offsetX = this.worldOffsetX % canvas.width;
 
     for (const layout of this.layouts) {
-      const x = layout.x + offsetX;
-      const y = layout.y;
-      this.drawSprite(layout, x, y, scale);
-      this.drawHpBar(layout, x, y - 10, scale);
+      this.drawSprite(layout, layout.x, layout.y, scale);
+      if (layout.isEnemy) {
+        this.drawHpBar(layout, layout.x, layout.y, scale);
+      }
     }
+
+    this.damagePopups.draw(this.ctx, this.layouts, SPRITE_SIZE * scale);
+
+    this.drawPartyHud(scale);
+  }
+
+  private measurePartyHudBars(
+    iconSize: number,
+    hudScale: number
+  ): { hpBarH: number; recastBarH: number; barSkillGap: number } {
+    const barSkillGap = HUD_BAR_SKILL_GAP * hudScale;
+    const stackH = iconSize - barSkillGap;
+    const hpBarH = Math.max(2, Math.min(HP_BAR_H * hudScale, stackH * 0.55));
+    return { hpBarH, recastBarH: stackH - hpBarH, barSkillGap };
+  }
+
+  private drawPartyHud(scale: number): void {
+    if (this.allyHud.length === 0) return;
+
+    const { canvas } = this;
+    const compact = this.ambient;
+    const hudScale = compact ? 1 : scale;
+    const iconSize = (compact ? 14 : HUD_ICON_SIZE) * hudScale;
+    const barW = (compact ? 40 : HUD_BAR_W) * hudScale;
+    const { hpBarH, recastBarH, barSkillGap } = this.measurePartyHudBars(
+      iconSize,
+      hudScale
+    );
+    const iconBarGap = HUD_ICON_BAR_GAP * hudScale;
+    const entryW = iconSize + iconBarGap + barW;
+    const blockBottom = canvas.height - HUD_BOTTOM_MARGIN;
+    const blockTop = blockBottom - iconSize;
+    const slotW = canvas.width / this.allyHud.length;
+
+    this.allyHud.forEach((ally, index) => {
+      const slotCenterX = slotW * index + slotW / 2;
+      const x = slotCenterX - entryW / 2;
+      const barX = x + iconSize + iconBarGap;
+      const barY = blockTop;
+      const recastY = blockTop + hpBarH + barSkillGap;
+
+      this.drawHudIcon(ally, x, blockTop, iconSize);
+      this.drawHudHpBar(ally, barX, barY, barW, hpBarH);
+      this.drawSkillRecastRow(ally, barX, recastY, barW, recastBarH, hudScale);
+    });
+  }
+
+  /** HPバー下のリキャストバー（将来: クールダウン表示） */
+  private drawSkillRecastRow(
+    ally: AllyHudEntry,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    _hudScale: number
+  ): void {
+    const { ctx } = this;
+    ctx.save();
+    if (!ally.isAlive) {
+      ctx.globalAlpha = 0.35;
+    }
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(x - 1, y - 1, width + 2, height + 2);
+    ctx.fillStyle = "#2a2a35";
+    ctx.fillRect(x, y, width, height);
+    ctx.restore();
+  }
+
+  private drawHudIcon(
+    ally: AllyHudEntry,
+    x: number,
+    y: number,
+    size: number
+  ): void {
+    const { ctx } = this;
+    const fill = getSpriteColor(ally.spriteKey);
+
+    ctx.save();
+    if (!ally.isAlive) {
+      ctx.globalAlpha = 0.35;
+    }
+
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(x - 1, y - 1, size + 2, size + 2);
+
+    ctx.fillStyle = HUD_ICON_BORDER;
+    ctx.fillRect(x, y, size, size);
+
+    const inset = Math.max(2, size * 0.15);
+    ctx.fillStyle = fill;
+    ctx.fillRect(x + inset, y + inset, size - inset * 2, size - inset * 2);
+
+    ctx.restore();
+  }
+
+  private drawHudHpBar(
+    ally: AllyHudEntry,
+    x: number,
+    y: number,
+    barW: number,
+    barH: number
+  ): void {
+    const { ctx } = this;
+    const ratio = ally.maxHp > 0 ? Math.max(0, ally.hp / ally.maxHp) : 0;
+
+    ctx.save();
+    if (!ally.isAlive) {
+      ctx.globalAlpha = 0.35;
+    }
+
+    ctx.fillStyle = "#1a1a1a";
+    ctx.fillRect(x - 1, y - 1, barW + 2, barH + 2);
+
+    ctx.fillStyle = "#333";
+    ctx.fillRect(x, y, barW, barH);
+
+    ctx.fillStyle = ALLY_HP_BAR_FILL;
+    ctx.fillRect(x, y, barW * ratio, barH);
+
+    ctx.restore();
   }
 
   private drawSprite(
     layout: CombatantLayout,
     x: number,
     y: number,
-    scale: number,
+    scale: number
   ): void {
     const { ctx } = this;
     const size = SPRITE_SIZE * scale;
     const color = getSpriteColor(layout.spriteKey);
-    const bob = layout.anim === 'idle' ? Math.sin(layout.animFrame * 0.8) * 2 : 0;
+    const bob =
+      layout.anim === "idle" ? Math.sin(layout.animFrame * 0.8) * 2 : 0;
 
     ctx.save();
     if (layout.isEnemy) {
@@ -164,11 +336,11 @@ export class BattleCanvas implements IBattleRenderer {
 
     const def = ANIM_DEFS[layout.anim];
     const flash = layout.animFrame % def.frames;
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.fillStyle = "rgba(255,255,255,0.25)";
     ctx.fillRect(flash * (size / def.frames), 0, size / def.frames, size);
 
-    if (layout.anim === 'hurt') {
-      ctx.fillStyle = 'rgba(255,0,0,0.35)';
+    if (layout.anim === "hurt") {
+      ctx.fillStyle = "rgba(255,0,0,0.35)";
       ctx.fillRect(0, 0, size, size);
     }
 
@@ -177,23 +349,27 @@ export class BattleCanvas implements IBattleRenderer {
 
   private drawHpBar(
     layout: CombatantLayout,
-    x: number,
-    y: number,
-    scale: number,
+    spriteX: number,
+    spriteY: number,
+    scale: number
   ): void {
     const { ctx } = this;
-    const w = SPRITE_SIZE * scale;
-    const h = 4 * scale;
-    const ratio = layout.maxHp > 0 ? layout.hp / layout.maxHp : 0;
-    ctx.fillStyle = '#333';
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = layout.isEnemy ? '#9b59b6' : '#3498db';
-    ctx.fillRect(x, y, w * ratio, h);
-  }
+    const spriteW = SPRITE_SIZE * scale;
+    const barW = HP_BAR_W * scale;
+    const barH = HP_BAR_H * scale;
+    const x = spriteX + (spriteW - barW) / 2;
+    const y = spriteY - barH - 4 * scale;
+    const ratio = layout.maxHp > 0 ? Math.max(0, layout.hp / layout.maxHp) : 0;
 
-  static hpColorForRole(role?: Role): string {
-    if (!role) return '#9b59b6';
-    return ROLE_COLORS[role] ?? '#3498db';
+    ctx.fillStyle = "#333";
+    ctx.fillRect(x, y, barW, barH);
+
+    ctx.fillStyle = ENEMY_HP_BAR_FILL;
+    ctx.fillRect(x, y, barW * ratio, barH);
+
+    ctx.strokeStyle = "#000";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x - 0.5, y - 0.5, barW + 1, barH + 1);
   }
 }
 

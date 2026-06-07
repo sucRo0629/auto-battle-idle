@@ -7,6 +7,7 @@ import type {
   PartyMemberDef,
   SkillCooldown,
 } from './types.ts';
+import { DEFAULT_MELEE_RANGE_PX } from './types.ts';
 
 let idCounter = 0;
 
@@ -50,7 +51,10 @@ export function createAllyFromMember(
     role: classPreset.role,
     classId: classPreset.id,
     formationRow: classPreset.formationRow,
-    traits: { ...classPreset.traits },
+    traits: {
+      ...classPreset.traits,
+      rangePx: classPreset.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+    },
     build: structuredClone(member.build),
     maxHp: classPreset.maxHp,
     atk: classPreset.atk,
@@ -62,6 +66,7 @@ export function createAllyFromMember(
     statusEffects: [],
     spriteKey: classPreset.spriteKey,
     isEnemy: false,
+    visualX: 0,
   };
 }
 
@@ -82,11 +87,15 @@ export function createAlliesFromParty(
   });
 }
 
-export function createEnemyFromTemplate(template: EnemyTemplate): CombatantState {
-  const equipped = template.activeSkillIds.slice(0, 1);
+export function createEnemyFromTemplate(
+  template: EnemyTemplate,
+  spawnX: number,
+): CombatantState {
+  const skillIds = template.activeSkillIds ?? [];
+  const equipped = skillIds.slice(0, 1);
   const build: CharacterBuild = {
     learnedPassiveIds: [],
-    learnedActiveIds: [...template.activeSkillIds],
+    learnedActiveIds: [...skillIds],
     equippedActiveSlots: equipped,
   };
   const cooldowns: SkillCooldown[] = equipped.map((skillId, i) => ({
@@ -101,7 +110,10 @@ export function createEnemyFromTemplate(template: EnemyTemplate): CombatantState
     role: 'attacker',
     classId: template.id,
     formationRow: 'front',
-    traits: { attackRange: 'melee' },
+    traits: {
+      attackRange: 'melee',
+      rangePx: template.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+    },
     build,
     maxHp: template.maxHp,
     atk: template.atk,
@@ -113,6 +125,8 @@ export function createEnemyFromTemplate(template: EnemyTemplate): CombatantState
     statusEffects: [],
     spriteKey: template.spriteKey,
     isEnemy: true,
+    visualX: spawnX,
+    spawnX,
   };
 }
 
@@ -124,12 +138,12 @@ export function createEnemiesForStage(
   if (!stage || stage.waves.length === 0) {
     throw new Error(`Stage not found: ${stageId}`);
   }
-  return stage.waves[0].enemies.map(({ templateId }) => {
+  return stage.waves[0].enemies.map(({ templateId, spawnX }) => {
     const template = gameData.enemyRegistry[templateId];
     if (!template) {
       throw new Error(`Enemy template not found: ${templateId}`);
     }
-    return createEnemyFromTemplate(template);
+    return createEnemyFromTemplate(template, spawnX);
   });
 }
 

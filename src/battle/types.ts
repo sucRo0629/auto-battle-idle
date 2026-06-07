@@ -1,10 +1,15 @@
-export type Role = 'defender' | 'attacker' | 'supporter';
+export type Role = "defender" | "attacker" | "supporter";
 export type ClassId = string;
-export type FormationRow = 'front' | 'middle' | 'back';
-export type AttackRange = 'melee' | 'ranged';
+export type FormationRow = "front" | "middle" | "back";
+export type AttackRange = "melee" | "ranged";
+
+/** 近接の rangePx 未指定時（px） */
+export const DEFAULT_MELEE_RANGE_PX = 45;
 
 export interface ClassTraits {
   attackRange: AttackRange;
+  /** 攻撃可能距離（px）。近接で未指定時は DEFAULT_MELEE_RANGE_PX */
+  rangePx?: number;
 }
 
 export interface CombatStats {
@@ -27,10 +32,10 @@ export interface ClassPreset extends CombatStats {
 }
 
 export type TargetRule =
-  | 'closestAlly'
-  | 'frontEnemy'
-  | 'lowestHpEnemy'
-  | 'mostDamagedAlly';
+  | "closestAlly"
+  | "frontEnemy"
+  | "lowestHpEnemy"
+  | "mostDamagedAlly";
 
 export interface Combatant extends CombatStats {
   id: string;
@@ -39,7 +44,7 @@ export interface Combatant extends CombatStats {
   isAlive: boolean;
 }
 
-export type SkillSlotKind = 'basic' | 'active';
+export type SkillSlotKind = "basic" | "active";
 
 export interface SkillCooldown {
   skillId: string;
@@ -56,8 +61,8 @@ export interface CharacterBuild {
 
 export interface StatusEffect {
   id: string;
-  kind: 'buff' | 'debuff';
-  stat: 'atk' | 'def' | 'damageTaken';
+  kind: "buff" | "debuff";
+  stat: "atk" | "def" | "damageTaken";
   multiplier: number;
   remainingSec: number;
 }
@@ -72,11 +77,23 @@ export interface CombatantState extends Combatant {
   statusEffects: StatusEffect[];
   spriteKey: string;
   isEnemy: boolean;
+  visualX: number;
+  /** 敵のみ: ステージ配置のスポーン X */
+  spawnX?: number;
 }
+
+export type PassiveEffectKind =
+  | "damageMultiplier"
+  | "damageTakenMultiplier"
+  | "healBonus"
+  | "targetRuleOverride"
+  | "evasionChance"
+  | "activeCooldownRate";
 
 export interface PassiveSkillDef {
   id: string;
   name: string;
+  effect: PassiveEffectKind;
   targetRuleOverride?: TargetRule;
   damageMultiplier?: number;
   damageTakenMultiplier?: number;
@@ -85,8 +102,8 @@ export interface PassiveSkillDef {
   activeCooldownRate?: number;
 }
 
-export type SkillEffectKind = 'damage' | 'heal' | 'buff' | 'debuff';
-export type DamageType = 'physical' | 'magic';
+export type SkillEffectKind = "damage" | "heal" | "buff" | "debuff";
+export type DamageType = "physical" | "magic";
 
 export interface ActiveSkillDef {
   id: string;
@@ -96,10 +113,10 @@ export interface ActiveSkillDef {
   effect: SkillEffectKind;
   damageType?: DamageType;
   powerMultiplier?: number;
-  buffStat?: StatusEffect['stat'];
+  buffStat?: StatusEffect["stat"];
   buffMultiplier?: number;
   buffDurationSec?: number;
-  debuffStat?: StatusEffect['stat'];
+  debuffStat?: StatusEffect["stat"];
   debuffMultiplier?: number;
   debuffDurationSec?: number;
   range: AttackRange;
@@ -111,11 +128,19 @@ export interface EnemyTemplate extends CombatStats {
   id: string;
   displayName: string;
   spriteKey: string;
-  activeSkillIds: string[];
+  activeSkillIds?: string[];
+  /** 攻撃可能距離（px）。未指定時は近接デフォルト */
+  rangePx?: number;
+}
+
+export interface StageWaveEnemy {
+  templateId: string;
+  /** スポーン X（px） */
+  spawnX: number;
 }
 
 export interface StageWave {
-  enemies: { templateId: string }[];
+  enemies: StageWaveEnemy[];
 }
 
 export interface StageDef {
@@ -148,7 +173,7 @@ export interface GameData {
   parties: Record<string, PartyDef>;
 }
 
-export type BattlePhase = 'idle' | 'running' | 'victory' | 'defeat';
+export type BattlePhase = "idle" | "running" | "victory" | "defeat";
 
 export interface CombatantSnapshot {
   id: string;
@@ -159,11 +184,13 @@ export interface CombatantSnapshot {
   spriteKey: string;
   formationRow: FormationRow;
   isEnemy: boolean;
+  visualX: number;
   activeCooldowns: { skillId: string; remaining: number }[];
 }
 
 export interface BattleSnapshot {
   phase: BattlePhase;
+  engaged: boolean;
   worldOffsetX: number;
   allies: CombatantSnapshot[];
   enemies: CombatantSnapshot[];

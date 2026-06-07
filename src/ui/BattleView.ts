@@ -53,6 +53,7 @@ export class BattleView {
         event.slotKind === 'basic' ? '通常攻撃' : event.skillName;
       if (event.effect === 'damage' && event.amount !== undefined) {
         this.pushLog(`${slotLabel} → ${event.amount} dmg`);
+        this.canvas.showDamagePopup(event.targetId, event.amount);
       } else if (event.effect === 'heal' && event.amount !== undefined) {
         this.pushLog(`${slotLabel} → +${event.amount} HP`);
         this.canvas.playAnim(event.actorId, 'heal');
