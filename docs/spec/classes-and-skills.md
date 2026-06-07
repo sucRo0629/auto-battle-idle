@@ -29,7 +29,7 @@
 | `supporter_cleric` | Cleric | supporter | middle | ranged (100px) | 100 | 14 | 10 | 0 |
 | `attacker_hawkeye` | Hawkeye | attacker | back | ranged (140px) | 90 | 18 | 6 | 0 |
 
-`spriteKey` / `iconKey` 未指定時はロール別プレースホルダーを使用。
+`spriteKey` / `iconKey` 未指定時はロール別プレースホルダーを使用（Phase 1）。**Phase 3** でクラス別本番スプライトシートに差し替え。
 
 ## スキル枠
 
@@ -40,14 +40,14 @@
 
 - 基本攻撃も `skills.json` の `actives` に定義し、`slotKind: 'basic'` で実行。
 - 基本攻撃 ID を `equippedActiveSlots` に入れない。
-- Phase 3 以降：アクティブ最大2枠。
+- Phase 4 以降：アクティブ最大2枠。
 
 ## ビルドルール
 
 ```typescript
 interface CharacterBuild {
   learnedPassiveIds: string[];   // すべて同時発動
-  learnedActiveIds: string[];    // 習得プール（Phase 3+ で LvUP 時に増加）
+  learnedActiveIds: string[];    // 習得プール（Phase 4+ で LvUP 時に増加）
   equippedActiveSlots: string[]; // Phase 1〜2: 長さ1
 }
 ```

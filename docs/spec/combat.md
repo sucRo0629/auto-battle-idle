@@ -31,7 +31,7 @@ Phase 1 デモは物理のみ。全クラス `reg: 0`。
 
 | 枠 | 進行ルール |
 |----|------------|
-| **basic** | `remaining -= deltaTime`（固定。AGI は Phase 3） |
+| **basic** | `remaining -= deltaTime`（固定。AGI は Phase 4） |
 | **active** | `remaining -= deltaTime × ∏ passive.activeCooldownRate` |
 
 枠が 0 になると `SkillExecutor` が1回発動し、`skill.interval` にリセット。

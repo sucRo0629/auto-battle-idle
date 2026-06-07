@@ -7,4 +7,4 @@
 | [stats.md](stats.md) | 基礎ステータス（HP, ATK, DEF, REG） |
 | [combat.md](combat.md) | ダメージ、回復、CD、ステータス効果 |
 | [classes-and-skills.md](classes-and-skills.md) | ロール、クラス、スキル、デモ編成 |
-| [progression.md](progression.md) | EXP、レベル、セーブ、Phase 2〜4 |
+| [progression.md](progression.md) | EXP、レベル、セーブ、Phase 2〜5 |

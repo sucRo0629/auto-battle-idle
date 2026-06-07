@@ -9,6 +9,7 @@
 - **スキル成長なし。** 編成は `parties.json` 固定。
 - **ステージループ：** Victory / Defeat 後、3秒待って同一ウェーブ再スポーン（HP全回復）。
 - **メタ通貨なし**（globalExp、強化ツリー）。
+- **描画：** アニメーション基盤 + ロール別プレースホルダー（本番スプライトは Phase 3）。
 
 Phase 1 は戦闘 + 表示のサンドボックス。
 
@@ -62,7 +63,16 @@ interface SaveGameState {
 
 ---
 
-## Phase 3 — スキル習得・戦闘拡張
+## Phase 3 — 本番スプライトアニメーション
+
+進行・育成とは独立した **見た目フェーズ**。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
+
+- クラス別・敵別の本番ドット絵スプライトシート
+- Phase 1 の `SpriteAnimator` / イベント連動は維持、`SpriteRegistry` とアセットのみ差し替え
+
+---
+
+## Phase 4 — スキル習得・戦闘拡張
 
 ### スキル習得
 
@@ -92,7 +102,7 @@ interface SkillUnlockEntry {
 
 ---
 
-## Phase 4 — パーティ全体メタ
+## Phase 5 — パーティ全体メタ
 
 ### globalExp
 
@@ -122,7 +132,7 @@ interface SkillUnlockEntry {
 ```
 finalStat = クラス基礎値
           + levelGrowth(level)      // Phase 2
-          × enhancementMultiplier   // Phase 4
+          × enhancementMultiplier   // Phase 5
 ```
 
 スキル・パッシブは戦闘時に上乗せ（[combat.md](combat.md) 参照）。
