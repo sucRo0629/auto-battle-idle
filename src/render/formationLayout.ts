@@ -10,15 +10,15 @@ export const ROW_X: Record<FormationRow, number> = {
 export const ALLY_ROW_SPACING = 42;
 export const SPRITE_WIDTH = 32;
 export const SPRITE_GAP = 38;
-/** 地面ライン下: 地面演出 + パーティ HUD */
-export const BATTLE_GROUND_MARGIN = 40;
+/** 地面ライン下: 地面演出 + パーティ HUD（クラス名 + アイコン行） */
+export const BATTLE_GROUND_MARGIN = 50;
 /** スプライト上の最小余白 */
 export const BATTLE_TOP_PAD = 25;
 export const ENEMY_VISIBLE_MIN_X = -32;
 /** 非戦闘時: 背景スクロール・敵進軍速度（px/秒） */
-export const SCROLL_SPEED = 80;
+export const SCROLL_SPEED = 160;
 /** 接敵後: 味方・敵の戦闘位置への接近速度（px/秒） */
-export const APPROACH_SPEED = 100;
+export const APPROACH_SPEED = 200;
 
 export interface AllyPlacementInput {
   id: string;
@@ -85,6 +85,20 @@ export function engagedStandoffGap(
   enemyRangePx: number
 ): number {
   return Math.max(Math.min(allyRangePx, enemyRangePx), engagedMinLeftEdgeGap());
+}
+
+export function computeEngagedStandoffAnchors(
+  frontAllyX: number,
+  frontEnemyX: number,
+  frontAllyRangePx: number,
+  frontEnemyRangePx: number
+): { anchorAllyX: number; anchorEnemyX: number } {
+  const gap = engagedStandoffGap(frontAllyRangePx, frontEnemyRangePx);
+  const mid = (frontAllyX + frontEnemyX) / 2;
+  return {
+    anchorAllyX: mid + gap / 2,
+    anchorEnemyX: mid - gap / 2,
+  };
 }
 
 /** 接敵中: 最前線が重なったら左右へ押し出す */

@@ -1,19 +1,26 @@
 import type { BattleEngine } from '../battle/BattleEngine.ts';
 import type { BattleEvent } from '../battle/events.ts';
+import type { GameData, SaveGameState } from '../battle/types.ts';
+import {
+  expRequiredForLevel,
+  type LevelCurvesConfig,
+} from '../progression/levelGrowth.ts';
+import { getStageById } from '../progression/stageProgression.ts';
 import { resolveAttackEffectKind } from '../render/AttackEffect.ts';
-import { BattleCanvas } from '../render/BattleCanvas.ts';
-import type { ViewMode } from './viewMode.ts';
+import { BattleCanvas, type PartyHudMeta } from '../render/BattleCanvas.ts';
 
 export class BattleView {
   private readonly root: HTMLElement;
   private readonly canvasHost: HTMLElement;
-  private readonly statusEl: HTMLElement;
+  private readonly stageLabelEl: HTMLElement;
   private readonly canvas: BattleCanvas;
 
   constructor(
     container: HTMLElement,
     private readonly engine: BattleEngine,
-    viewMode: ViewMode,
+    private readonly gameData: GameData,
+    private readonly levelCurves: LevelCurvesConfig,
+    private readonly getSave: () => SaveGameState,
   ) {
     this.root = document.createElement('div');
     this.root.className = 'battle-view';
@@ -23,17 +30,18 @@ export class BattleView {
     header.textContent = 'Auto Battle Idle';
     this.root.appendChild(header);
 
-    this.statusEl = document.createElement('div');
-    this.statusEl.className = 'battle-status';
-    this.root.appendChild(this.statusEl);
-
     this.canvasHost = document.createElement('div');
     this.canvasHost.className = 'battle-canvas-host';
+
+    this.stageLabelEl = document.createElement('div');
+    this.stageLabelEl.className = 'battle-stage-label';
+    this.canvasHost.appendChild(this.stageLabelEl);
+
     this.root.appendChild(this.canvasHost);
 
     container.appendChild(this.root);
 
-    this.canvas = new BattleCanvas(viewMode === 'ambient');
+    this.canvas = new BattleCanvas();
     this.canvas.mount(this.canvasHost);
 
     this.engine.onEvent((event) => this.onBattleEvent(event));
@@ -78,6 +86,9 @@ export class BattleView {
       this.canvas.playAnim(event.targetId, 'death');
     } else if (event.type === 'battleEnd') {
       this.pushLog(event.result === 'victory' ? 'Victory!' : 'Defeat...');
+      if (event.result === 'victory') {
+        this.pushLog('Advancing to next stage...');
+      }
     }
   }
 
@@ -87,8 +98,27 @@ export class BattleView {
 
   tick(deltaMs: number): void {
     const snapshot = this.engine.getSnapshot();
-    this.statusEl.textContent = `Status: ${snapshot.phase.toUpperCase()}`;
-    this.canvas.syncFromSnapshot(snapshot);
+    const save = this.getSave();
+    const stage = getStageById(
+      this.gameData.stages,
+      save.stageProgress.currentStageId,
+    );
+    const stageLabel = stage?.displayName ?? save.stageProgress.currentStageId;
+    const partyMeta: PartyHudMeta[] = save.party.map((member) => {
+      const preset = this.gameData.classRegistry[member.classId];
+      return {
+        displayName: preset?.displayName ?? member.classId,
+        level: member.progress.level,
+        exp: member.progress.exp,
+        expRequired: expRequiredForLevel(
+          member.progress.level,
+          this.levelCurves,
+        ),
+      };
+    });
+
+    this.stageLabelEl.textContent = stageLabel;
+    this.canvas.syncFromSnapshot(snapshot, partyMeta);
     this.canvas.tick(deltaMs);
   }
 

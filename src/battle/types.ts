@@ -62,6 +62,28 @@ export interface CharacterBuild {
   equippedActiveSlots: string[];
 }
 
+export interface CharacterProgress {
+  level: number;
+  exp: number;
+}
+
+export interface PartyMemberState {
+  classId: ClassId;
+  progress: CharacterProgress;
+  build: CharacterBuild;
+}
+
+export interface StageProgress {
+  currentStageId: string;
+  totalClears: number;
+}
+
+export interface SaveGameState {
+  version: number;
+  stageProgress: StageProgress;
+  party: PartyMemberState[];
+}
+
 export interface StatusEffect {
   id: string;
   kind: "buff" | "debuff";
@@ -131,6 +153,8 @@ export interface ActiveSkillDef {
 export interface EnemyTemplate extends CombatStats {
   id: string;
   displayName: string;
+  /** 撃破時に生存味方全員が得る EXP */
+  exp: number;
   spriteKey: string;
   activeSkillIds?: string[];
   /** 攻撃可能距離（px）。未指定時は近接デフォルト */
@@ -150,7 +174,6 @@ export interface StageWave {
 export interface StageDef {
   id: string;
   displayName: string;
-  expReward: number;
   waves: StageWave[];
 }
 
@@ -202,6 +225,7 @@ export interface BattleSnapshot {
   phase: BattlePhase;
   engaged: boolean;
   worldOffsetX: number;
+  alliesOffScreen: boolean;
   allies: CombatantSnapshot[];
   enemies: CombatantSnapshot[];
 }

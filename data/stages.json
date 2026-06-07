@@ -1,8 +1,7 @@
 [
   {
-    "id": "stage_1",
-    "displayName": "Grassland",
-    "expReward": 10,
+    "id": "1",
+    "displayName": "Stage 1",
     "waves": [
       {
         "enemies": [
@@ -13,6 +12,36 @@
           {
             "templateId": "test_enemy",
             "spawnX": -10
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "2",
+    "displayName": "Stage 2",
+    "waves": [
+      {
+        "enemies": [
+          {
+            "templateId": "test_enemy",
+            "spawnX": -15
+          },
+          {
+            "templateId": "test_enemy",
+            "spawnX": -5
+          },
+          {
+            "templateId": "test_enemy",
+            "spawnX": 5
+          }
+        ]
+      },
+      {
+        "enemies": [
+          {
+            "templateId": "test_enemy",
+            "spawnX": -30
           }
         ]
       }

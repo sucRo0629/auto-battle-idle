@@ -35,15 +35,50 @@ body {
   text-align: center;
 }
 
-.battle-status {
-  text-align: center;
-  font-size: 0.85rem;
-  color: #aab;
-}
-
 .battle-canvas-host {
+  position: relative;
   display: flex;
   justify-content: center;
+
+  --hud-icon-size: 24;
+  --hud-bar-w: 80;
+  --hud-icon-bar-gap: 4;
+  --hud-bar-skill-gap: 2;
+  --hud-bottom-margin: 5;
+  --hud-header-font-size: 11;
+  --hud-exp-bar-h: 3;
+  --hud-header-block-gap: 2;
+  --hud-exp-hp-gap: 2;
+  --hud-recast-bar-h: 3;
+  --hud-recast-gap: 1;
+  --hud-font-family: 'Segoe UI', system-ui, sans-serif;
+  --hud-icon-border: #4a5568;
+  --hud-name-color: #ffffff;
+  --hud-exp-bar-fill: #f5a623;
+  --hud-hp-bar-fill: #2ecc71;
+  --hud-enemy-hp-bar-fill: #e74c3c;
+  --hud-bar-border: #1a1a1a;
+  --hud-bar-track: #333333;
+  --hud-skill-recast-track: #2a2a35;
+  --hud-skill-recast-charging: #5a6270;
+  --hud-skill-recast-ready: #9aa3b0;
+  --hud-icon-frame: #1a1a1a;
+}
+
+.battle-stage-label {
+  position: absolute;
+  top: 4px;
+  left: 23px;
+  z-index: 1;
+  padding: 4px 6px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+  border-radius: 4px;
 }
 
 .battle-canvas {
@@ -51,16 +86,4 @@ body {
   border-radius: 4px;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
-}
-
-html[data-view-mode='ambient'] body {
-  background: transparent;
-}
-
-html[data-view-mode='ambient'] #app {
-  padding: 4px;
-}
-
-html[data-view-mode='ambient'] .battle-view {
-  width: min(360px, 100%);
 }

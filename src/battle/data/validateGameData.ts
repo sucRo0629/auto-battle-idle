@@ -364,6 +364,10 @@ function parseEnemies(raw: unknown): EnemyTemplate[] {
     const def = requireNumber(obj, 'def', context);
     const reg = requireNumber(obj, 'reg', context);
     requireReg(reg, context);
+    const exp = requireNumber(obj, 'exp', context);
+    if (exp < 0) {
+      invalidField(context, 'exp', 'must be >= 0');
+    }
     const spriteKey = requireString(obj, 'spriteKey', context);
     const activeSkillIds =
       obj.activeSkillIds === undefined
@@ -381,6 +385,7 @@ function parseEnemies(raw: unknown): EnemyTemplate[] {
       atk,
       def,
       reg,
+      exp,
       spriteKey,
       ...(activeSkillIds !== undefined ? { activeSkillIds } : {}),
       ...(typeof rangePx === 'number' ? { rangePx } : {}),
@@ -397,7 +402,6 @@ function parseStages(raw: unknown): StageDef[] {
     const obj = requireRecord(entry, context);
     const id = requireString(obj, 'id', context);
     const displayName = requireString(obj, 'displayName', context);
-    const expReward = requireNumber(obj, 'expReward', context);
     const wavesRaw = obj.waves;
     if (!Array.isArray(wavesRaw) || wavesRaw.length === 0) {
       invalidField(context, 'waves', 'must be a non-empty array');
@@ -423,7 +427,7 @@ function parseStages(raw: unknown): StageDef[] {
       return { enemies };
     });
 
-    return { id, displayName, expReward, waves };
+    return { id, displayName, waves };
   });
 }
 

@@ -18,6 +18,10 @@ export type BattleEvent =
   | { type: 'levelUp'; actorId: string; newLevel: number; statOnly: boolean }
   | { type: 'skillLearn'; actorId: string; skillId: string; skillName: string }
   | { type: 'enhancementUnlock'; nodeId: string; nodeName: string }
-  | { type: 'battleEnd'; result: 'victory' | 'defeat' };
+  | {
+      type: 'battleEnd';
+      result: 'victory' | 'defeat';
+      survivingPartyIndices: number[];
+    };
 
 export type BattleEventListener = (event: BattleEvent) => void;

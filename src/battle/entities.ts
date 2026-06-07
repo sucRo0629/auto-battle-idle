@@ -5,6 +5,7 @@ import type {
   EnemyTemplate,
   GameData,
   PartyMemberDef,
+  PartyMemberState,
   SkillCooldown,
 } from './types.ts';
 import { DEFAULT_MELEE_RANGE_PX } from './types.ts';
@@ -12,6 +13,10 @@ import {
   resolveClassIconKey,
   resolveClassSpriteKey,
 } from './classVisuals.ts';
+import {
+  computeStatsAtLevel,
+  type LevelCurvesConfig,
+} from '../progression/levelGrowth.ts';
 
 let idCounter = 0;
 
@@ -46,9 +51,25 @@ function createCooldowns(
 }
 
 export function createAllyFromMember(
-  member: PartyMemberDef,
+  member: PartyMemberDef | PartyMemberState,
   classPreset: ClassPreset,
+  curves?: LevelCurvesConfig,
 ): CombatantState {
+  const stats =
+    curves && 'progress' in member
+      ? computeStatsAtLevel(
+          classPreset,
+          member.classId,
+          member.progress.level,
+          curves,
+        )
+      : {
+          maxHp: classPreset.maxHp,
+          atk: classPreset.atk,
+          def: classPreset.def,
+          reg: classPreset.reg,
+        };
+
   return {
     id: nextId(classPreset.id),
     name: classPreset.displayName,
@@ -60,11 +81,11 @@ export function createAllyFromMember(
       rangePx: classPreset.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
     },
     build: structuredClone(member.build),
-    maxHp: classPreset.maxHp,
-    atk: classPreset.atk,
-    def: classPreset.def,
-    reg: classPreset.reg,
-    hp: classPreset.maxHp,
+    maxHp: stats.maxHp,
+    atk: stats.atk,
+    def: stats.def,
+    reg: stats.reg,
+    hp: stats.maxHp,
     isAlive: true,
     cooldowns: createCooldowns(classPreset.basicAttackSkillId, member.build),
     statusEffects: [],
@@ -73,6 +94,20 @@ export function createAllyFromMember(
     isEnemy: false,
     visualX: 0,
   };
+}
+
+export function createAlliesFromPartyState(
+  gameData: GameData,
+  party: PartyMemberState[],
+  curves: LevelCurvesConfig,
+): CombatantState[] {
+  return party.map((member) => {
+    const preset = gameData.classRegistry[member.classId];
+    if (!preset) {
+      throw new Error(`Class not found: ${member.classId}`);
+    }
+    return createAllyFromMember(member, preset, curves);
+  });
 }
 
 export function createAlliesFromParty(
@@ -139,12 +174,17 @@ export function createEnemyFromTemplate(
 export function createEnemiesForStage(
   gameData: GameData,
   stageId: string,
+  waveIndex = 0,
 ): CombatantState[] {
   const stage = gameData.stages.find((s) => s.id === stageId);
   if (!stage || stage.waves.length === 0) {
     throw new Error(`Stage not found: ${stageId}`);
   }
-  return stage.waves[0].enemies.map(({ templateId, spawnX }) => {
+  const wave = stage.waves[waveIndex];
+  if (!wave) {
+    throw new Error(`Wave not found: ${stageId} wave ${waveIndex}`);
+  }
+  return wave.enemies.map(({ templateId, spawnX }) => {
     const template = gameData.enemyRegistry[templateId];
     if (!template) {
       throw new Error(`Enemy template not found: ${templateId}`);

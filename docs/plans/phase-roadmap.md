@@ -35,7 +35,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 - Canvas 2D：**アニメーション基盤**（`SpriteAnimator`、イベント連動、近接突進/遠隔弾、ダメージポップアップ）
 - **プレースホルダースプライト**（ロール別色分け PNG。本番ドット絵は Phase 3）
 - buff VFX：対象スプライトの白い光（約0.8秒）
-- 表示モード：`full`（デフォルト）、`?mode=ambient`（コンパクト）
+- Canvas UI：ステージ名（左上）、パーティ HUD（クラス名 / Exp / HP / スキル CD）
 - バトルログ：**console のみ**（DOM ログは意図的に未実装）
 
 ### デモ編成
@@ -122,7 +122,7 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 - 勝利・オフライン時間から **globalExp** 付与
 - 強化ツリー（`enhancementTree.json`）：パーティ永続のステノード
 - オフライン抽象報酬（戦闘シミュレーションはしない）
-- Electron シェル：frameless、常に前面、トレイ、片隅配置；`ambient` UI を流用
+- Electron シェル：frameless、常に前面、トレイ、片隅配置
 
 ---
 

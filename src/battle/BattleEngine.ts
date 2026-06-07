@@ -1,18 +1,18 @@
 import type { BattleEventListener } from "./events.ts";
 import { getActiveCooldownRate, getPassiveDefs } from "./combatMath.ts";
 import {
-  createAlliesFromParty,
+  createAlliesFromPartyState,
   createEnemiesForStage,
-  healAllAllies,
   resetEntityIdCounter,
 } from "./entities.ts";
 import {
   computeAllyPositions,
   computeEngagedAllyTargets,
   computeEngagedEnemyPositions,
+  computeEngagedStandoffAnchors,
   APPROACH_SPEED,
   SCROLL_SPEED,
-  enforceEngagedStandoff,
+  SPRITE_WIDTH,
   separateEngagedSprites,
   getFrontAllyX,
   getFrontEnemyX,
@@ -29,12 +29,14 @@ import type {
   BattleSnapshot,
   CombatantState,
   GameData,
+  PartyMemberState,
   SkillCooldown,
 } from "./types.ts";
 import { DEFAULT_MELEE_RANGE_PX } from "./types.ts";
+import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 
 const RESTART_DELAY_SEC = 3;
-const VICTORY_BURST_SPEED = SCROLL_SPEED * 2;
+const VICTORY_EXIT_SPEED = SCROLL_SPEED * 2;
 
 export class BattleEngine {
   private phase: BattlePhase = "idle";
@@ -46,17 +48,33 @@ export class BattleEngine {
   private readonly listeners = new Set<BattleEventListener>();
   private readonly executor: SkillExecutor;
   private stageId: string;
+  private waveIndex = 0;
 
   constructor(
     private readonly gameData: GameData,
-    partyId: string,
-    stageId: string
+    private readonly levelCurves: LevelCurvesConfig,
+    private readonly getParty: () => PartyMemberState[],
+    private readonly getStageId: () => string,
   ) {
-    this.stageId = stageId;
+    this.stageId = getStageId();
     this.executor = new SkillExecutor(gameData, (e) => this.emit(e));
+    this.reloadBattlefield();
+  }
+
+  private reloadBattlefield(): void {
     resetEntityIdCounter();
-    this.allies = createAlliesFromParty(gameData, partyId);
-    this.enemies = createEnemiesForStage(gameData, stageId);
+    this.allies = createAlliesFromPartyState(
+      this.gameData,
+      this.getParty(),
+      this.levelCurves,
+    );
+    this.stageId = this.getStageId();
+    this.waveIndex = 0;
+    this.enemies = createEnemiesForStage(
+      this.gameData,
+      this.stageId,
+      this.waveIndex,
+    );
     this.syncAllyVisualPositions();
     this.resetEnemyVisualPositions();
   }
@@ -140,6 +158,18 @@ export class BattleEngine {
     }
   }
 
+  private updateVictoryExitMarch(deltaTime: number): void {
+    const step = VICTORY_EXIT_SPEED * deltaTime;
+    for (const ally of this.allies) {
+      ally.visualX -= step;
+    }
+  }
+
+  private areAlliesOffScreen(): boolean {
+    if (this.allies.length === 0) return true;
+    return this.allies.every((ally) => ally.visualX + SPRITE_WIDTH <= 0);
+  }
+
   private updateEngagedMovement(deltaTime: number): void {
     const visualAllies = this.getVisualAllies();
     const visualEnemies = this.getVisualEnemies();
@@ -149,12 +179,19 @@ export class BattleEngine {
 
     const pair = getFrontLinePair(visualAllies, visualEnemies);
     const frontAllyRangePx = pair?.ally.rangePx ?? DEFAULT_MELEE_RANGE_PX;
+    const frontEnemyRangePx = pair?.enemy.rangePx ?? DEFAULT_MELEE_RANGE_PX;
 
     const approachStep = APPROACH_SPEED * deltaTime;
+    const { anchorAllyX, anchorEnemyX } = computeEngagedStandoffAnchors(
+      frontAllyX,
+      frontEnemyX,
+      frontAllyRangePx,
+      frontEnemyRangePx,
+    );
 
     const allyTargets = computeEngagedAllyTargets(
       this.getAllyPlacementInputs(),
-      frontEnemyX
+      anchorEnemyX,
     );
     for (const ally of this.allies) {
       if (!ally.isAlive) continue;
@@ -172,8 +209,8 @@ export class BattleEngine {
         rangePx: enemy.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
         isAlive: enemy.isAlive,
       })),
-      frontAllyX,
-      frontAllyRangePx
+      anchorAllyX,
+      frontAllyRangePx,
     );
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
@@ -206,27 +243,6 @@ export class BattleEngine {
       ),
       this.enemies,
     );
-
-    const { allyDelta, enemyDelta } = enforceEngagedStandoff(
-      this.allies,
-      this.enemies,
-    );
-    if (allyDelta === 0 && enemyDelta === 0) return;
-
-    const frontAlly = this.allies
-      .filter((u) => u.isAlive)
-      .reduce<(typeof this.allies)[0] | null>(
-        (best, u) => (!best || u.visualX < best.visualX ? u : best),
-        null,
-      );
-    const frontEnemy = this.enemies
-      .filter((u) => u.isAlive)
-      .reduce<(typeof this.enemies)[0] | null>(
-        (best, u) => (!best || u.visualX > best.visualX ? u : best),
-        null,
-      );
-    if (frontAlly) frontAlly.visualX += allyDelta;
-    if (frontEnemy) frontEnemy.visualX += enemyDelta;
   }
 
   private applySpritePositions(
@@ -273,6 +289,7 @@ export class BattleEngine {
       phase: this.phase,
       engaged: this.engaged,
       worldOffsetX: this.worldOffsetX,
+      alliesOffScreen: this.areAlliesOffScreen(),
       allies: this.allies.map((c) => this.toSnapshot(c)),
       enemies: this.enemies.map((c) => this.toSnapshot(c)),
     };
@@ -311,13 +328,15 @@ export class BattleEngine {
     }
     if (this.phase === "victory" || this.phase === "defeat") {
       this.restartTimer -= deltaTime;
-      this.updateAllyFormationReform(deltaTime);
       if (this.phase === "victory") {
-        const burst = VICTORY_BURST_SPEED * deltaTime;
-        this.worldOffsetX += burst;
-        this.applyEnemyMarch(burst);
+        this.updateVictoryExitMarch(deltaTime);
+      } else {
+        this.updateAllyFormationReform(deltaTime);
       }
-      if (this.restartTimer <= 0) {
+      const readyToRespawn =
+        this.restartTimer <= 0 &&
+        (this.phase === "defeat" || this.areAlliesOffScreen());
+      if (readyToRespawn) {
         this.respawnAfterEnd();
       }
     }
@@ -388,29 +407,53 @@ export class BattleEngine {
   private checkBattleEnd(): void {
     const alliesAlive = this.allies.some((a) => a.isAlive);
     const enemiesAlive = this.enemies.some((e) => e.isAlive);
+    const survivingPartyIndices = this.allies
+      .map((ally, index) => (ally.isAlive ? index : -1))
+      .filter((index) => index >= 0);
 
     if (!enemiesAlive) {
+      const stage = this.gameData.stages.find((s) => s.id === this.stageId);
+      const hasNextWave =
+        stage !== undefined && this.waveIndex + 1 < stage.waves.length;
+      if (hasNextWave) {
+        this.waveIndex += 1;
+        this.enemies = createEnemiesForStage(
+          this.gameData,
+          this.stageId,
+          this.waveIndex,
+        );
+        this.resetEnemyVisualPositions();
+        this.syncAllyVisualPositions(false);
+        this.engaged = false;
+        return;
+      }
+
       this.phase = "victory";
       this.engaged = false;
       this.restartTimer = RESTART_DELAY_SEC;
-      this.emit({ type: "battleEnd", result: "victory" });
+      this.emit({
+        type: "battleEnd",
+        result: "victory",
+        survivingPartyIndices,
+      });
       return;
     }
     if (!alliesAlive) {
       this.phase = "defeat";
       this.engaged = false;
       this.restartTimer = RESTART_DELAY_SEC;
-      this.emit({ type: "battleEnd", result: "defeat" });
+      this.emit({
+        type: "battleEnd",
+        result: "defeat",
+        survivingPartyIndices,
+      });
     }
   }
 
   private respawnAfterEnd(): void {
-    healAllAllies(this.allies);
-    this.enemies = createEnemiesForStage(this.gameData, this.stageId);
-    this.resetEnemyVisualPositions();
+    this.reloadBattlefield();
     this.worldOffsetX = 0;
     this.engaged = false;
-    this.syncAllyVisualPositions(false);
     this.phase = "running";
   }
 }

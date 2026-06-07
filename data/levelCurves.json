@@ -1,0 +1,12 @@
+{
+  "expPerLevel": 100,
+  "statGrowth": {
+    "default": { "maxHp": 10, "atk": 2, "def": 1 },
+    "byClass": {
+      "defender_bulwark": { "maxHp": 15, "atk": 1, "def": 2 },
+      "attacker_berserker": { "maxHp": 8, "atk": 4, "def": 1 },
+      "supporter_cleric": { "maxHp": 6, "atk": 2, "def": 1 },
+      "attacker_hawkeye": { "maxHp": 5, "atk": 3, "def": 1 }
+    }
+  }
+}

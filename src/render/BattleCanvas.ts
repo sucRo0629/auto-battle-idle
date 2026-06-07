@@ -27,26 +27,19 @@ import type {
   CombatantLayout,
   IBattleRenderer,
 } from "./IBattleRenderer.ts";
+import { readBattleHudTheme, type BattleHudTheme } from "./battleHudTheme.ts";
+import { VictoryOverlay } from "./VictoryOverlay.ts";
 
 const CANVAS_W = 480;
 const CANVAS_H = battleCanvasHeight(1);
-const AMBIENT_W = 320;
-const AMBIENT_H = battleCanvasHeight(2);
 const SPRITE_SIZE = 32;
-
-const ALLY_HP_BAR_FILL = "#2ecc71";
-const ENEMY_HP_BAR_FILL = "#e74c3c";
-
-const HUD_ICON_SIZE = 24;
-const HUD_BAR_W = 80;
-const HUD_ICON_BAR_GAP = 4;
-const HUD_BAR_SKILL_GAP = 2;
-const HUD_BOTTOM_MARGIN = 5;
-
-const HUD_ICON_BORDER = "#4a5568";
-const HUD_HP_BAR_RATIO = 0.5;
+const SPRITE_SCALE = 1;
 
 interface AllyHudEntry {
+  displayName: string;
+  level: number;
+  exp: number;
+  expRequired: number;
   iconKey: string;
   hp: number;
   maxHp: number;
@@ -59,9 +52,14 @@ interface AllyHudEntry {
   }[];
 }
 
+export interface PartyHudMeta {
+  displayName: string;
+  level: number;
+  exp: number;
+  expRequired: number;
+}
+
 const ACTIVE_SKILL_SLOT_COUNT = 2;
-const SKILL_RECAST_CHARGING = "#5a6270";
-const SKILL_RECAST_READY = "#9aa3b0";
 
 export class BattleCanvas implements IBattleRenderer {
   private canvas!: HTMLCanvasElement;
@@ -70,19 +68,17 @@ export class BattleCanvas implements IBattleRenderer {
   private attackEffects = new AttackEffectManager();
   private damagePopups = new DamagePopupManager();
   private buffGlows = new BuffGlowManager();
+  private victoryOverlay = new VictoryOverlay();
   private layouts: CombatantLayout[] = [];
   private allyHud: AllyHudEntry[] = [];
-  private ambient = false;
+  private theme!: BattleHudTheme;
   private worldOffsetX = 0;
 
-  constructor(ambient = false) {
-    this.ambient = ambient;
-  }
-
   mount(container: HTMLElement): void {
+    this.theme = readBattleHudTheme(container);
     this.canvas = document.createElement("canvas");
-    this.canvas.width = this.ambient ? AMBIENT_W : CANVAS_W;
-    this.canvas.height = this.ambient ? AMBIENT_H : CANVAS_H;
+    this.canvas.width = CANVAS_W;
+    this.canvas.height = CANVAS_H;
     this.canvas.className = "battle-canvas";
     container.appendChild(this.canvas);
     const ctx = this.canvas.getContext("2d");
@@ -131,6 +127,7 @@ export class BattleCanvas implements IBattleRenderer {
     this.attackEffects.tick(deltaMs);
     this.damagePopups.tick(deltaMs);
     this.buffGlows.tick(deltaMs);
+    this.victoryOverlay.tick(deltaMs);
     this.draw();
   }
 
@@ -138,10 +135,12 @@ export class BattleCanvas implements IBattleRenderer {
     this.canvas.remove();
   }
 
-  syncFromSnapshot(snapshot: BattleSnapshot): void {
+  syncFromSnapshot(
+    snapshot: BattleSnapshot,
+    partyMeta: PartyHudMeta[] = []
+  ): void {
     const layouts: CombatantLayout[] = [];
-    const scale = this.ambient ? 2 : 1;
-    const y = groundY(this.canvas.height, scale);
+    const y = groundY(this.canvas.height, SPRITE_SCALE);
 
     // 進軍中は画面内に入ってから表示。Victory 等の非戦闘時は非表示
     const canShowEnemies = snapshot.phase === "running";
@@ -183,14 +182,22 @@ export class BattleCanvas implements IBattleRenderer {
     }
 
     this.layouts = layouts;
-    this.allyHud = snapshot.allies.map((ally) => ({
-      iconKey: ally.iconKey,
-      hp: ally.hp,
-      maxHp: ally.maxHp,
-      isAlive: ally.hp > 0,
-      activeCooldowns: ally.activeCooldowns,
-    }));
+    this.allyHud = snapshot.allies.map((ally, index) => {
+      const meta = partyMeta[index];
+      return {
+        displayName: meta?.displayName ?? ally.name,
+        level: meta?.level ?? 1,
+        exp: meta?.exp ?? 0,
+        expRequired: meta?.expRequired ?? 1,
+        iconKey: ally.iconKey,
+        hp: ally.hp,
+        maxHp: ally.maxHp,
+        isAlive: ally.hp > 0,
+        activeCooldowns: ally.activeCooldowns,
+      };
+    });
     this.worldOffsetX = snapshot.worldOffsetX;
+    this.victoryOverlay.syncPhase(snapshot.phase, snapshot.alliesOffScreen);
   }
 
   private drawBackground(): void {
@@ -220,74 +227,175 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawBackground();
 
-    const scale = this.ambient ? 2 : 1;
     const enemyBarTops = computeEnemyHpBarTops(
       this.layouts
         .filter((layout) => layout.isEnemy)
         .map((layout) => ({ id: layout.id, x: layout.x, y: layout.y })),
-      scale,
+      SPRITE_SCALE,
       SPRITE_SIZE
     );
 
     for (const layout of this.layouts) {
-      this.drawSprite(layout, layout.x, layout.y, scale);
+      this.drawSprite(layout, layout.x, layout.y, SPRITE_SCALE);
       if (layout.isEnemy) {
         this.drawHpBar(
           layout,
           layout.x,
           layout.y,
-          scale,
+          SPRITE_SCALE,
           enemyBarTops.get(layout.id)
         );
       }
     }
 
-    this.attackEffects.draw(this.ctx, this.layouts, SPRITE_SIZE * scale, scale);
-    this.damagePopups.draw(this.ctx, this.layouts, SPRITE_SIZE * scale, scale);
+    this.attackEffects.draw(
+      this.ctx,
+      this.layouts,
+      SPRITE_SIZE * SPRITE_SCALE,
+      SPRITE_SCALE
+    );
+    this.damagePopups.draw(
+      this.ctx,
+      this.layouts,
+      SPRITE_SIZE * SPRITE_SCALE,
+      SPRITE_SCALE
+    );
 
-    this.drawPartyHud(scale);
+    this.drawPartyHud();
+    this.victoryOverlay.draw(
+      this.ctx,
+      canvas.width,
+      canvas.height,
+      this.theme.fontFamily,
+    );
   }
 
-  private measurePartyHudBars(
+  private measurePartyHudHeader(hudScale: number): {
+    headerH: number;
+    labelH: number;
+  } {
+    const theme = this.theme;
+    const labelH = Math.max(
+      8,
+      Math.round(theme.headerFontSize * hudScale),
+    );
+    const blockGap = theme.headerBlockGap * hudScale;
+    return { headerH: labelH + blockGap, labelH };
+  }
+
+  private measurePartyHudBarStack(
     iconSize: number,
-    hudScale: number
-  ): { hpBarH: number; recastBarH: number; barSkillGap: number } {
-    const barSkillGap = HUD_BAR_SKILL_GAP * hudScale;
-    const stackH = iconSize - barSkillGap;
-    const hpBarH = Math.max(2, Math.round(stackH * HUD_HP_BAR_RATIO));
-    const recastBarH = stackH - hpBarH;
-    return { hpBarH, recastBarH, barSkillGap };
+    hudScale: number,
+  ): {
+    expBarH: number;
+    expHpGap: number;
+    hpBarH: number;
+    barSkillGap: number;
+    recastBarH: number;
+    recastGap: number;
+  } {
+    const theme = this.theme;
+    const expBarH = Math.max(2, Math.round(theme.expBarH * hudScale));
+    const expHpGap = theme.expHpGap * hudScale;
+    const barSkillGap = theme.barSkillGap * hudScale;
+    const recastBarH = Math.max(2, Math.round(theme.recastBarH * hudScale));
+    const recastGap = theme.recastGap * hudScale;
+    const recastTotalH =
+      recastBarH * ACTIVE_SKILL_SLOT_COUNT +
+      recastGap * (ACTIVE_SKILL_SLOT_COUNT - 1);
+    const hpBarH = Math.max(
+      2,
+      iconSize - expBarH - expHpGap - barSkillGap - recastTotalH,
+    );
+    return { expBarH, expHpGap, hpBarH, barSkillGap, recastBarH, recastGap };
   }
 
-  private drawPartyHud(scale: number): void {
+  private drawPartyHud(): void {
     if (this.allyHud.length === 0) return;
 
     const { canvas } = this;
-    const compact = this.ambient;
-    const hudScale = compact ? 1 : scale;
-    const iconSize = (compact ? 14 : HUD_ICON_SIZE) * hudScale;
-    const barW = (compact ? 40 : HUD_BAR_W) * hudScale;
-    const { hpBarH, recastBarH, barSkillGap } = this.measurePartyHudBars(
-      iconSize,
-      hudScale
-    );
-    const iconBarGap = HUD_ICON_BAR_GAP * hudScale;
+    const theme = this.theme;
+    const iconSize = theme.iconSize;
+    const barW = theme.barW;
+    const { expBarH, expHpGap, hpBarH, barSkillGap, recastBarH, recastGap } =
+      this.measurePartyHudBarStack(iconSize, 1);
+    const iconBarGap = theme.iconBarGap;
     const entryW = iconSize + iconBarGap + barW;
-    const blockBottom = canvas.height - HUD_BOTTOM_MARGIN;
+    const { headerH } = this.measurePartyHudHeader(1);
+    const blockBottom = canvas.height - theme.bottomMargin;
     const blockTop = blockBottom - iconSize;
+    const headerTop = blockTop - headerH;
     const slotW = canvas.width / this.allyHud.length;
+    const labelFontSize = Math.max(8, Math.round(theme.headerFontSize));
 
     this.allyHud.forEach((ally, index) => {
       const slotCenterX = slotW * index + slotW / 2;
       const x = slotCenterX - entryW / 2;
       const barX = x + iconSize + iconBarGap;
-      const barY = blockTop;
-      const recastY = blockTop + hpBarH + barSkillGap;
+      const labelY = headerTop;
+      const expBarY = blockTop;
+      const hpBarY = blockTop + expBarH + expHpGap;
+      const recastY = hpBarY + hpBarH + barSkillGap;
 
+      this.drawHudClassLabel(ally, x, labelY, labelFontSize);
       this.drawHudIcon(ally, x, blockTop, iconSize);
-      this.drawHudHpBar(ally, barX, barY, barW, hpBarH);
-      this.drawSkillRecastRow(ally, barX, recastY, barW, recastBarH, hudScale);
+      this.drawHudExpBar(ally, barX, expBarY, barW, expBarH);
+      this.drawHudHpBar(ally, barX, hpBarY, barW, hpBarH);
+      this.drawSkillRecastRow(
+        ally,
+        barX,
+        recastY,
+        barW,
+        recastBarH,
+        recastGap,
+      );
     });
+  }
+
+  private drawHudClassLabel(
+    ally: AllyHudEntry,
+    leftX: number,
+    labelY: number,
+    fontSize: number,
+  ): void {
+    const { ctx } = this;
+
+    ctx.save();
+    if (!ally.isAlive) {
+      ctx.globalAlpha = 0.35;
+    }
+
+    ctx.font = `${fontSize}px ${this.theme.fontFamily}`;
+    ctx.fillStyle = this.theme.nameColor;
+    ctx.textAlign = "left";
+    ctx.textBaseline = "top";
+    ctx.fillText(`${ally.displayName} Lv${ally.level}`, leftX, labelY);
+    ctx.restore();
+  }
+
+  private drawHudExpBar(
+    ally: AllyHudEntry,
+    x: number,
+    y: number,
+    barW: number,
+    barH: number
+  ): void {
+    const { ctx } = this;
+    const ratio =
+      ally.expRequired > 0
+        ? Math.max(0, Math.min(1, ally.exp / ally.expRequired))
+        : 0;
+
+    ctx.fillStyle = this.theme.barBorder;
+    ctx.fillRect(x - 1, y - 1, barW + 2, barH + 2);
+
+    ctx.fillStyle = this.theme.barTrack;
+    ctx.fillRect(x, y, barW, barH);
+
+    if (ratio > 0) {
+      ctx.fillStyle = this.theme.expBarFill;
+      ctx.fillRect(x, y, barW * ratio, barH);
+    }
   }
 
   /** HPバー下のリキャストバー（上: スロット1 / 下: スロット2） */
@@ -296,8 +404,8 @@ export class BattleCanvas implements IBattleRenderer {
     x: number,
     y: number,
     width: number,
-    height: number,
-    hudScale: number
+    rowH: number,
+    rowGap: number,
   ): void {
     const { ctx } = this;
     const bySlot = new Map(
@@ -309,11 +417,8 @@ export class BattleCanvas implements IBattleRenderer {
       ctx.globalAlpha = 0.35;
     }
 
-    const gap = Math.max(1, hudScale);
-    const rowH = (height - gap) / ACTIVE_SKILL_SLOT_COUNT;
-
     for (let slot = 0; slot < ACTIVE_SKILL_SLOT_COUNT; slot++) {
-      const rowY = y + slot * (rowH + gap);
+      const rowY = y + slot * (rowH + rowGap);
       this.drawSkillRecastBar(bySlot.get(slot as 0 | 1), x, rowY, width, rowH);
     }
 
@@ -329,9 +434,9 @@ export class BattleCanvas implements IBattleRenderer {
   ): void {
     const { ctx } = this;
 
-    ctx.fillStyle = "#1a1a1a";
+    ctx.fillStyle = this.theme.barBorder;
     ctx.fillRect(x - 1, y - 1, width + 2, height + 2);
-    ctx.fillStyle = "#2a2a35";
+    ctx.fillStyle = this.theme.skillRecastTrack;
     ctx.fillRect(x, y, width, height);
 
     if (!cd) return;
@@ -343,7 +448,9 @@ export class BattleCanvas implements IBattleRenderer {
 
     if (ratio <= 0) return;
 
-    ctx.fillStyle = ready ? SKILL_RECAST_READY : SKILL_RECAST_CHARGING;
+    ctx.fillStyle = ready
+      ? this.theme.skillRecastReady
+      : this.theme.skillRecastCharging;
     ctx.fillRect(x, y, width * ratio, height);
   }
 
@@ -360,10 +467,10 @@ export class BattleCanvas implements IBattleRenderer {
       ctx.globalAlpha = 0.35;
     }
 
-    ctx.fillStyle = "#1a1a1a";
+    ctx.fillStyle = this.theme.iconFrame;
     ctx.fillRect(x - 1, y - 1, size + 2, size + 2);
 
-    ctx.fillStyle = HUD_ICON_BORDER;
+    ctx.fillStyle = this.theme.iconBorder;
     ctx.fillRect(x, y, size, size);
 
     this.drawClassIconImage(ally.iconKey, x, y, size, size);
@@ -386,13 +493,13 @@ export class BattleCanvas implements IBattleRenderer {
       ctx.globalAlpha = 0.35;
     }
 
-    ctx.fillStyle = "#1a1a1a";
+    ctx.fillStyle = this.theme.barBorder;
     ctx.fillRect(x - 1, y - 1, barW + 2, barH + 2);
 
-    ctx.fillStyle = "#333";
+    ctx.fillStyle = this.theme.barTrack;
     ctx.fillRect(x, y, barW, barH);
 
-    ctx.fillStyle = ALLY_HP_BAR_FILL;
+    ctx.fillStyle = this.theme.hpBarFill;
     ctx.fillRect(x, y, barW * ratio, barH);
 
     ctx.restore();
@@ -492,10 +599,10 @@ export class BattleCanvas implements IBattleRenderer {
     const y = barTop ?? defaultEnemyHpBarTop(spriteY, scale);
     const ratio = layout.maxHp > 0 ? Math.max(0, layout.hp / layout.maxHp) : 0;
 
-    ctx.fillStyle = "#333";
+    ctx.fillStyle = this.theme.barTrack;
     ctx.fillRect(x, y, barW, barH);
 
-    ctx.fillStyle = ENEMY_HP_BAR_FILL;
+    ctx.fillStyle = this.theme.enemyHpBarFill;
     ctx.fillRect(x, y, barW * ratio, barH);
 
     ctx.strokeStyle = "#000";
@@ -504,4 +611,4 @@ export class BattleCanvas implements IBattleRenderer {
   }
 }
 
-export { CANVAS_W, CANVAS_H, AMBIENT_W, AMBIENT_H };
+export { CANVAS_W, CANVAS_H };
