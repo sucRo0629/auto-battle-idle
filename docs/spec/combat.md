@@ -27,18 +27,65 @@
 3. `afterDefense = floor(baseDamage × 100 / (100 + effectiveReg))`
 4. `final = max(1, floor(afterDefense × damageTakenMul))`
 
-Phase 1 デモは物理のみ。全クラス `reg: 0`。
+Phase 1 デモは物理のみ。術師等は `damageType: "magic"` + `reg` による割合軽減（DEF 減算なし）。
+
+## 攻撃速度と基本攻撃
+
+- クラス `attackSpeedTier`（5 段階 enum）→ `attackSpeedPresets.basicCooldownRate`
+- **アクティブ枠**の CD 加速には **適用しない**（`activeCooldownRate` のみ）
+- 戦闘中の tier 変更（スキル由来）は **未実装** — 実装後は [stats.md](stats.md) の SPD 節を参照
 
 ## 回復
 
-`heal = floor((effectiveAtk + passiveHealBonus) × skill.powerMultiplier)`
+**原則:** 回復後の HP は `min(maxHp, hp + amount)` — 超過分は切り捨て。
+
+heal / HoT / barrier は **`ResourceAmountSpec`**（`amount`）で効果量を定義。旧 JSON のトップレベル `powerMultiplier` のみも、`kind: atkBased` + `atkMultiply` として読み込む（後方互換）。
+
+| kind | 式 |
+|------|-----|
+| `atkBased`（既定） | `floor(max(0, ((effectiveAtk + healBonus + atkAdd) × atkMultiply ÷ atkDivide) − atkSubtract))` |
+| `flat` | `floor(max(0, flatAmount + healBonus))` |
+| `percentMaxHp` | `floor(max(0, target.maxHp × percentOfMaxHp + healBonus))` |
+
+- `healBonus` — 使用者パッシブ `healBonus` の合算
+- HoT — 1 秒 tick ごとに上記を **再計算**（付与時の ATK buff 変動を反映）
+- 具体スキルへの割当・数値変更は Phase 4a マスタ確定後
+
+## バリア
+
+**effect 種別:** `barrier` — HP とは別の **`barrierHp`** プール。maxHp を超えて付与可。
+
+| 項目 | 仕様 |
+|------|------|
+| 付与量 | `ResourceAmountSpec`（heal と同式） |
+| 非スタック（既定） | 新量で **置換**（既存残量は捨てる） |
+| 継ぎ足し | `barrierStack: true` で既存に加算 |
+| 持続 | 時間切れなし — **ダメージで消費されるまで維持** |
+| 死亡 | `hp ≤ 0` のみ（バリアだけ残っても HP 0 なら死亡） |
+| リスポーン | HP 全回復と同時に `barrierHp = 0` |
+
+**ダメージ吸収**（`applyDamageToTarget` — damage / DoT 共通）:
+
+```
+remaining = rawDamage
+barrierDamage = min(barrierHp, remaining)
+barrierHp -= barrierDamage
+remaining -= barrierDamage
+hp = max(0, hp - remaining)
+```
+
+HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さらに超過分 tier2（`max(0, barrierHp − maxHp)`）を明るい色で左から重ね描画。
 
 ## クールダウン
 
 | 枠 | 進行ルール |
 |----|------------|
-| **basic** | `remaining -= deltaTime`（固定。AGI は Phase 3） |
+| **basic** | `remaining -= deltaTime × basicCooldownRate` |
 | **active** | `remaining -= deltaTime × ∏ passive.activeCooldownRate` |
+
+**basicCooldownRate** — クラス `attackSpeedTier` を `levelCurves.json` の `attackSpeedPresets` で係数化（`normal` = 1.0）。詳細は [stats.md](stats.md)。
+
+**予定（未実装）** — パッシブ `attackSpeedTierShift` と buff/debuff `attackSpeed` による tier ステップ加算後、上記 preset から rate を再解決。
 
 枠が 0 になると `SkillExecutor` が1回発動し、`skill.interval` にリセット。
 
@@ -64,7 +111,20 @@ Phase 1 デモは物理のみ。全クラス `reg: 0`。
 ## ターゲット解決
 
 1. パッシブを集約 → `targetRuleOverride` を適用（配列の後ろが優先）
-2. `pickTarget(rule, actor, allies, enemies)` — [classes-and-skills.md](classes-and-skills.md) 参照
+2. スキル `range`（未指定 = 使用者射程）で **攻撃可能プール** を絞り込み
+3. 各 effect の `targetShape` に従い **発動 tick で全 hit を一括解決**（`resolveEffectResolution`）
+4. `scatter` / `pierce`（`pierceDurationSec` あり）は `pendingHitQueue` で **適用のみ時間分散**（再ターゲットなし）
+
+| 形状 | 挙動 |
+|------|------|
+| `single` | 攻撃可能プールから 1 体 |
+| `aoe` | anchor + 半径内全員 |
+| `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打） |
+| `pierce` | 射線上の敵を手前→奥。`pierceDurationSec` で適用分散可 |
+| `chain` | anchor から同陣営へ距離内で連鎖 |
+| `scatter` | 乱打（半径内ランダム着弾 × 回数、`scatterDurationSec` で適用分散） |
+
+プール：味方 actor → 敵、敵 actor → 味方。heal / buff 向け `mostDamagedAlly` 等も anchor として同じ形状を利用。
 
 ## 戦闘フロー（Phase 1）
 
@@ -78,7 +138,7 @@ Phase 1 デモは物理のみ。全クラス `reg: 0`。
 
 ## 演出（render 層）
 
-Phase 1 はプレースホルダー VFX のみ。**スキル別 `vfx` 設定・新プリセット追加は Phase 7**（[phase-roadmap.md](../plans/phase-roadmap.md)）。
+Phase 1 はプレースホルダー VFX のみ。**スキル別 `vfx` 設定・新プリセット追加は Phase 6**（[phase-roadmap.md](../plans/phase-roadmap.md)）。
 
 | イベント | VFX |
 |----------|-----|
