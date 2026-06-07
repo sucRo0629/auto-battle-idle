@@ -28,7 +28,6 @@ import type {
 } from '../types.ts';
 import {
   enrichClassPreset,
-  resolveLearnedSkills,
   type ClassPresetBeforeEnrich,
 } from '../../progression/skillUnlocks.ts';
 
@@ -640,6 +639,31 @@ function requireStringArray(
   return items as string[];
 }
 
+function optionalStringArray(
+  obj: Record<string, unknown>,
+  key: string,
+  context: string,
+  options?: { allowEmptyItems?: boolean },
+): string[] {
+  const value = obj[key];
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    invalidField(context, key, 'must be an array');
+  }
+  const items = value as unknown[];
+  for (let i = 0; i < items.length; i++) {
+    if (typeof items[i] !== 'string') {
+      invalidField(context, `${key}[${i}]`, 'must be a string');
+    }
+    if (!options?.allowEmptyItems && (items[i] as string).length === 0) {
+      invalidField(context, `${key}[${i}]`, 'must be a non-empty string');
+    }
+  }
+  return items as string[];
+}
+
 function requireEnum<T extends string>(
   obj: Record<string, unknown>,
   key: string,
@@ -1055,21 +1079,25 @@ function parseParties(raw: unknown): Record<string, PartyDef> {
       const memberContext = `${context}.members[${memberIndex}]`;
       const memberObj = requireRecord(memberEntry, memberContext);
       const classId = requireString(memberObj, 'classId', memberContext);
-      const buildObj = requireRecord(memberObj.build, `${memberContext}.build`);
-      const learnedPassiveIds = requireStringArray(
+      const buildObj =
+        memberObj.build === undefined
+          ? {}
+          : requireRecord(memberObj.build, `${memberContext}.build`);
+      const learnedPassiveIds = optionalStringArray(
         buildObj,
         'learnedPassiveIds',
         `${memberContext}.build`,
       );
-      const learnedActiveIds = requireStringArray(
+      const learnedActiveIds = optionalStringArray(
         buildObj,
         'learnedActiveIds',
         `${memberContext}.build`,
       );
-      const equippedActiveSlots = requireStringArray(
+      const equippedActiveSlots = optionalStringArray(
         buildObj,
         'equippedActiveSlots',
         `${memberContext}.build`,
+        { allowEmptyItems: true },
       );
 
       return {
@@ -1105,7 +1133,6 @@ function validateReferences(
   enemies: EnemyTemplate[],
   stages: StageDef[],
   parties: Record<string, PartyDef>,
-  skillRegistry: SkillRegistry,
   mode: GameDataValidationMode,
 ): void {
   const passiveIds = new Set(passives.map((p) => p.id));
@@ -1182,25 +1209,6 @@ function validateReferences(
         throw new Error(`Unknown classId "${member.classId}": ${context}`);
       }
       const classSkillPool = new Set(cls.classSkillIds);
-      const expectedLearned = resolveLearnedSkills(cls, 1, skillRegistry);
-
-      const sameIds = (a: string[], b: string[]): boolean => {
-        if (a.length !== b.length) return false;
-        const sortedA = [...a].sort();
-        const sortedB = [...b].sort();
-        return sortedA.every((id, index) => id === sortedB[index]);
-      };
-
-      if (!sameIds(member.build.learnedPassiveIds, expectedLearned.learnedPassiveIds)) {
-        throw new Error(
-          `learnedPassiveIds must match resolveLearnedSkills(level 1): ${context}`,
-        );
-      }
-      if (!sameIds(member.build.learnedActiveIds, expectedLearned.learnedActiveIds)) {
-        throw new Error(
-          `learnedActiveIds must match resolveLearnedSkills(level 1): ${context}`,
-        );
-      }
 
       for (const passiveId of member.build.learnedPassiveIds) {
         if (!passiveIds.has(passiveId)) {
@@ -1306,7 +1314,6 @@ export function parseAndValidateGameDataJson(
     enemies,
     stages,
     parties,
-    skillRegistry,
     mode,
   );
 

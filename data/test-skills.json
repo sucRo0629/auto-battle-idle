@@ -9,6 +9,87 @@
   ],
   "actives": [
     {
+      "id": "test_defender_bulwark_basic_attack",
+      "name": "打撃",
+      "interval": 3,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 0.5
+        }
+      ]
+    },
+    {
+      "id": "test_attacker_berserker_basic_attack",
+      "name": "打撃",
+      "interval": 3,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 0.5
+        }
+      ]
+    },
+    {
+      "id": "test_supporter_cleric_basic_attack",
+      "name": "打撃",
+      "interval": 3,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 0.5,
+          "range": 100
+        }
+      ]
+    },
+    {
+      "id": "test_attacker_hawkeye_basic_attack",
+      "name": "射撃",
+      "interval": 3,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 0.5,
+          "range": 140
+        }
+      ]
+    },
+    {
+      "id": "test_attacker_arcanist_basic_attack",
+      "name": "魔弾",
+      "interval": 3,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "magic",
+          "powerMultiplier": 0.5,
+          "range": 120
+        }
+      ]
+    },
+    {
+      "id": "test_defender_paladin_basic_attack",
+      "name": "打撃",
+      "interval": 3,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 0.5
+        }
+      ]
+    },
+    {
       "id": "test_strike",
       "name": "Test Strike",
       "interval": 3,

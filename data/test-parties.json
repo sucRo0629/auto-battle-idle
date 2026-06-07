@@ -2,38 +2,10 @@
   "test": {
     "name": "Test Party",
     "members": [
-      {
-        "classId": "test_defender_bulwark",
-        "build": {
-          "learnedPassiveIds": ["eishi_thick_skin"],
-          "learnedActiveIds": ["eishi_iron_guard", "test_buff"],
-          "equippedActiveSlots": ["eishi_iron_guard"]
-        }
-      },
-      {
-        "classId": "test_attacker_berserker",
-        "build": {
-          "learnedPassiveIds": ["kenshi_brute"],
-          "learnedActiveIds": ["kenshi_slash", "test_debuff"],
-          "equippedActiveSlots": ["kenshi_slash"]
-        }
-      },
-      {
-        "classId": "test_supporter_cleric",
-        "build": {
-          "learnedPassiveIds": ["yakushi_gentle_touch"],
-          "learnedActiveIds": ["yakushi_heal", "test_hot"],
-          "equippedActiveSlots": ["yakushi_heal"]
-        }
-      },
-      {
-        "classId": "test_attacker_hawkeye",
-        "build": {
-          "learnedPassiveIds": ["kyushi_snipe"],
-          "learnedActiveIds": ["kyushi_arrow", "test_dot"],
-          "equippedActiveSlots": ["kyushi_arrow"]
-        }
-      }
+      { "classId": "test_defender_bulwark" },
+      { "classId": "test_attacker_berserker" },
+      { "classId": "test_supporter_cleric" },
+      { "classId": "test_attacker_hawkeye" }
     ]
   }
 }

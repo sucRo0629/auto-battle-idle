@@ -11,11 +11,11 @@
     "atk": 12,
     "def": 24,
     "reg": 0,
-    "basicAttackSkillId": "test_strike",
+    "basicAttackSkillId": "test_defender_bulwark_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["eishi_thick_skin", "eishi_iron_guard"]
+        "skillIds": ["test_passive_lv2", "test_buff"]
       },
       {
         "level": 1,
@@ -39,11 +39,11 @@
     "atk": 28,
     "def": 10,
     "reg": 0,
-    "basicAttackSkillId": "test_strike",
+    "basicAttackSkillId": "test_attacker_berserker_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["kenshi_brute", "kenshi_slash"]
+        "skillIds": ["test_passive_lv2", "test_active_lv2"]
       },
       {
         "level": 1,
@@ -68,11 +68,11 @@
     "atk": 14,
     "def": 10,
     "reg": 0,
-    "basicAttackSkillId": "test_strike",
+    "basicAttackSkillId": "test_supporter_cleric_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["yakushi_gentle_touch", "yakushi_heal"]
+        "skillIds": ["test_passive_lv2", "test_hot"]
       },
       {
         "level": 1,
@@ -97,11 +97,11 @@
     "atk": 18,
     "def": 6,
     "reg": 0,
-    "basicAttackSkillId": "test_strike",
+    "basicAttackSkillId": "test_attacker_hawkeye_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["kyushi_snipe", "kyushi_arrow"]
+        "skillIds": ["test_passive_lv2", "test_dot"]
       },
       {
         "level": 1,
@@ -126,11 +126,11 @@
     "atk": 22,
     "def": 5,
     "reg": 0,
-    "basicAttackSkillId": "test_strike",
+    "basicAttackSkillId": "test_attacker_arcanist_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["jutsushi_focus", "jutsushi_orb", "jutsushi_chain"]
+        "skillIds": ["test_passive_lv2", "test_dot", "test_debuff"]
       },
       {
         "level": 1,
@@ -154,11 +154,11 @@
     "atk": 14,
     "def": 20,
     "reg": 5,
-    "basicAttackSkillId": "test_strike",
+    "basicAttackSkillId": "test_defender_paladin_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["eishi_thick_skin", "eishi_iron_guard"]
+        "skillIds": ["test_passive_lv2", "test_buff"]
       },
       {
         "level": 1,
