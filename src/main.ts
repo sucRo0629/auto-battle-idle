@@ -1,6 +1,7 @@
 import './style.css';
 import { loadGameData } from './battle/data/loadGameData.ts';
 import { GameSession } from './game/GameSession.ts';
+import { bindElectronBattle } from './platform/bindElectronBattle.ts';
 
 const gameData = loadGameData();
 
@@ -10,6 +11,7 @@ if (!app) {
 }
 
 const session = new GameSession(gameData, app);
+bindElectronBattle(session);
 session.start();
 
 let lastTime = performance.now();

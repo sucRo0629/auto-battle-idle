@@ -5,57 +5,33 @@
       {
         "classId": "test_defender_bulwark",
         "build": {
-          "learnedPassiveIds": [
-            "thick_skin"
-          ],
-          "learnedActiveIds": [
-            "test_buff"
-          ],
-          "equippedActiveSlots": [
-            "test_buff"
-          ]
+          "learnedPassiveIds": ["thick_skin"],
+          "learnedActiveIds": ["iron_guard", "test_buff"],
+          "equippedActiveSlots": ["iron_guard"]
         }
       },
       {
         "classId": "test_attacker_berserker",
         "build": {
-          "learnedPassiveIds": [
-            "brute"
-          ],
-          "learnedActiveIds": [
-            "test_debuff"
-          ],
-          "equippedActiveSlots": [
-            "test_debuff"
-          ]
+          "learnedPassiveIds": ["brute"],
+          "learnedActiveIds": ["slash", "test_debuff"],
+          "equippedActiveSlots": ["slash"]
         }
       },
       {
         "classId": "test_supporter_cleric",
         "build": {
-          "learnedPassiveIds": [
-            "gentle_touch"
-          ],
-          "learnedActiveIds": [
-            "test_hot"
-          ],
-          "equippedActiveSlots": [
-            "test_hot"
-          ]
+          "learnedPassiveIds": ["gentle_touch"],
+          "learnedActiveIds": ["heal", "test_hot"],
+          "equippedActiveSlots": ["heal"]
         }
       },
       {
         "classId": "test_attacker_hawkeye",
         "build": {
-          "learnedPassiveIds": [
-            "snipe"
-          ],
-          "learnedActiveIds": [
-            "test_dot"
-          ],
-          "equippedActiveSlots": [
-            "test_dot"
-          ]
+          "learnedPassiveIds": ["snipe"],
+          "learnedActiveIds": ["arrow", "test_dot"],
+          "equippedActiveSlots": ["arrow"]
         }
       }
     ]

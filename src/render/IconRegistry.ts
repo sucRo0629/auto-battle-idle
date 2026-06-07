@@ -34,6 +34,13 @@ export function preloadClassIcons(): Promise<void> {
   return preloadPromise;
 }
 
+export function getClassIconUrl(iconKey: string): string {
+  return (
+    ICON_URLS[iconKey] ??
+    ICON_URLS[PLACEHOLDER_SPRITE_KEYS.defender]
+  );
+}
+
 export function getClassIconImage(iconKey: string): HTMLImageElement | undefined {
   return (
     iconImages.get(iconKey) ??

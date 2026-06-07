@@ -2,6 +2,7 @@ import type { BattleEventListener } from "./events.ts";
 import { getActiveCooldownRate, getPassiveDefs, resolveDotTick, resolveHotTick } from "./combatMath.ts";
 import {
   createAlliesFromPartyState,
+  createCooldowns,
   createEnemiesForStage,
   resetEntityIdCounter,
 } from "./entities.ts";
@@ -268,6 +269,24 @@ export class BattleEngine {
     this.engaged = false;
     this.restartTimer = 0;
     this.phase = "running";
+  }
+
+  /** スキルセット変更を戦闘中に反映（HP・位置は維持） */
+  syncPartyBuilds(): void {
+    if (this.phase !== "running") return;
+
+    const party = this.getParty();
+    for (let i = 0; i < this.allies.length; i++) {
+      const member = party[i];
+      const ally = this.allies[i];
+      if (!member || !ally) continue;
+
+      const preset = this.gameData.classRegistry[member.classId];
+      if (!preset) continue;
+
+      ally.build = structuredClone(member.build);
+      ally.cooldowns = createCooldowns(preset.basicAttackSkillId, member.build);
+    }
   }
 
   stopBattle(): void {

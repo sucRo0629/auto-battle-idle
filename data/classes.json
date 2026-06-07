@@ -12,11 +12,11 @@
     "def": 24,
     "reg": 0,
     "basicAttackSkillId": "bulwark_strike",
-    "starterPassiveIds": [
-      "thick_skin"
-    ],
-    "starterActiveIds": [
-      "iron_guard"
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["thick_skin", "iron_guard"]
+      }
     ]
   },
   {
@@ -32,11 +32,11 @@
     "def": 10,
     "reg": 0,
     "basicAttackSkillId": "berserker_strike",
-    "starterPassiveIds": [
-      "brute"
-    ],
-    "starterActiveIds": [
-      "slash"
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["brute", "slash"]
+      }
     ]
   },
   {
@@ -53,11 +53,11 @@
     "def": 10,
     "reg": 0,
     "basicAttackSkillId": "cleric_strike",
-    "starterPassiveIds": [
-      "gentle_touch"
-    ],
-    "starterActiveIds": [
-      "heal"
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["gentle_touch", "heal"]
+      }
     ]
   },
   {
@@ -74,11 +74,11 @@
     "def": 6,
     "reg": 0,
     "basicAttackSkillId": "hawkeye_shot",
-    "starterPassiveIds": [
-      "snipe"
-    ],
-    "starterActiveIds": [
-      "arrow"
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["snipe", "arrow"]
+      }
     ]
   }
 ]

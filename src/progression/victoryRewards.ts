@@ -5,6 +5,7 @@ import {
   type LevelCurvesConfig,
 } from './levelGrowth.ts';
 import { computeStageExpReward, getNextStageId } from './stageProgression.ts';
+import { resolveLearnedSkills } from './skillUnlocks.ts';
 
 export interface MemberLevelUpInfo {
   partyIndex: number;
@@ -40,11 +41,26 @@ export function createDefaultSave(
       currentStageId: firstStageId,
       totalClears: 0,
     },
-    party: party.members.map((member) => ({
-      classId: member.classId,
-      progress: { level: 1, exp: 0 },
-      build: structuredClone(member.build),
-    })),
+    party: party.members.map((member) => {
+      const preset = gameData.classRegistry[member.classId];
+      if (!preset) {
+        throw new Error(`Class not found: ${member.classId}`);
+      }
+      const learned = resolveLearnedSkills(
+        preset,
+        1,
+        gameData.skillRegistry,
+      );
+      return {
+        classId: member.classId,
+        progress: { level: 1, exp: 0 },
+        build: {
+          learnedPassiveIds: learned.learnedPassiveIds,
+          learnedActiveIds: learned.learnedActiveIds,
+          equippedActiveSlots: structuredClone(member.build.equippedActiveSlots),
+        },
+      };
+    }),
   };
 }
 

@@ -2,6 +2,7 @@ import type {
   ActiveSkillDef,
   AttackRange,
   ClassPreset,
+  ClassSkillUnlock,
   DamageType,
   EnemyTemplate,
   FormationRow,
@@ -11,12 +12,18 @@ import type {
   Role,
   SkillEffectDef,
   SkillEffectKind,
+  SkillRegistry,
   SkillVfxDef,
   SkillVfxPresetId,
   StageDef,
   StatusEffectStat,
   TargetRule,
 } from '../types.ts';
+import {
+  enrichClassPreset,
+  resolveLearnedSkills,
+  type ClassPresetBeforeEnrich,
+} from '../../progression/skillUnlocks.ts';
 
 const ROLES = new Set<Role>(['defender', 'attacker', 'supporter']);
 const FORMATION_ROWS = new Set<FormationRow>(['front', 'middle', 'back']);
@@ -396,7 +403,26 @@ function requirePassiveEffectParams(
   }
 }
 
-function parseClasses(raw: unknown): ClassPreset[] {
+function parseClassSkills(raw: unknown, context: string): ClassSkillUnlock[] {
+  if (!Array.isArray(raw)) {
+    throw new Error(`${context}.skills must be an array`);
+  }
+  return raw.map((entry, index) => {
+    const entryContext = `${context}.skills[${index}]`;
+    const obj = requireRecord(entry, entryContext);
+    const level = requireNumber(obj, 'level', entryContext);
+    if (!Number.isInteger(level) || level < 0) {
+      throw new Error(`${entryContext}.level must be a non-negative integer`);
+    }
+    const skillIds = requireStringArray(obj, 'skillIds', entryContext);
+    if (skillIds.length === 0) {
+      throw new Error(`${entryContext}.skillIds must not be empty`);
+    }
+    return { level, skillIds };
+  });
+}
+
+function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
   if (!Array.isArray(raw)) {
     throw new Error('classes.json must be an array');
   }
@@ -436,16 +462,14 @@ function parseClasses(raw: unknown): ClassPreset[] {
       obj.iconKey === undefined
         ? undefined
         : requireString(obj, 'iconKey', context);
-    const starterPassiveIds = requireStringArray(
-      obj,
-      'starterPassiveIds',
-      context,
-    );
-    const starterActiveIds = requireStringArray(
-      obj,
-      'starterActiveIds',
-      context,
-    );
+    const skills = parseClassSkills(obj.skills, context);
+    if (skills.length === 0) {
+      throw new Error(`${context}.skills must not be empty`);
+    }
+    const hasLevelZero = skills.some((entry) => entry.level === 0);
+    if (!hasLevelZero) {
+      throw new Error(`${context}.skills must include a level 0 entry`);
+    }
 
     return {
       id,
@@ -463,8 +487,7 @@ function parseClasses(raw: unknown): ClassPreset[] {
       basicAttackSkillId,
       spriteKey,
       iconKey,
-      starterPassiveIds,
-      starterActiveIds,
+      skills,
     };
   });
 }
@@ -666,6 +689,7 @@ function validateReferences(
   enemies: EnemyTemplate[],
   stages: StageDef[],
   parties: Record<string, PartyDef>,
+  skillRegistry: SkillRegistry,
 ): void {
   const passiveIds = new Set(passives.map((p) => p.id));
   const activeIds = new Set(actives.map((a) => a.id));
@@ -687,6 +711,16 @@ function validateReferences(
     for (const activeId of cls.starterActiveIds) {
       if (!activeIds.has(activeId)) {
         throw new Error(`Unknown starterActiveId "${activeId}": ${cls.id}`);
+      }
+    }
+    for (const skillId of cls.classSkillIds) {
+      if (!passiveIds.has(skillId) && !activeIds.has(skillId)) {
+        throw new Error(`Unknown class skillId "${skillId}": ${cls.id}`);
+      }
+      if (skillId === cls.basicAttackSkillId) {
+        throw new Error(
+          `basicAttackSkillId must not appear in skills[]: ${cls.id}`,
+        );
       }
     }
   }
@@ -718,10 +752,35 @@ function validateReferences(
       if (!cls) {
         throw new Error(`Unknown classId "${member.classId}": ${context}`);
       }
-      const classSkillPool = new Set(cls.starterActiveIds);
+      const classSkillPool = new Set(cls.classSkillIds);
+      const expectedLearned = resolveLearnedSkills(cls, 1, skillRegistry);
+
+      const sameIds = (a: string[], b: string[]): boolean => {
+        if (a.length !== b.length) return false;
+        const sortedA = [...a].sort();
+        const sortedB = [...b].sort();
+        return sortedA.every((id, index) => id === sortedB[index]);
+      };
+
+      if (!sameIds(member.build.learnedPassiveIds, expectedLearned.learnedPassiveIds)) {
+        throw new Error(
+          `learnedPassiveIds must match resolveLearnedSkills(level 1): ${context}`,
+        );
+      }
+      if (!sameIds(member.build.learnedActiveIds, expectedLearned.learnedActiveIds)) {
+        throw new Error(
+          `learnedActiveIds must match resolveLearnedSkills(level 1): ${context}`,
+        );
+      }
+
       for (const passiveId of member.build.learnedPassiveIds) {
         if (!passiveIds.has(passiveId)) {
           throw new Error(`Unknown learnedPassiveId "${passiveId}": ${context}`);
+        }
+        if (!classSkillPool.has(passiveId)) {
+          throw new Error(
+            `learnedPassiveId "${passiveId}" is not in class skills[]: ${context}`,
+          );
         }
       }
       for (const activeId of member.build.learnedActiveIds) {
@@ -730,7 +789,7 @@ function validateReferences(
         }
         if (!classSkillPool.has(activeId)) {
           throw new Error(
-            `learnedActiveId "${activeId}" is not in class starterActiveIds: ${context}`,
+            `learnedActiveId "${activeId}" is not in class skills[]: ${context}`,
           );
         }
       }
@@ -742,7 +801,15 @@ function validateReferences(
         }
         if (activeId.length > 0 && !classSkillPool.has(activeId)) {
           throw new Error(
-            `equippedActiveSlot "${activeId}" is not in class starterActiveIds: ${context}`,
+            `equippedActiveSlot "${activeId}" is not in class skills[]: ${context}`,
+          );
+        }
+        if (
+          activeId.length > 0 &&
+          !member.build.learnedActiveIds.includes(activeId)
+        ) {
+          throw new Error(
+            `equippedActiveSlot "${activeId}" is not learned: ${context}`,
           );
         }
       }
@@ -776,14 +843,27 @@ export function parseAndValidateGameDataJson(raw: {
     missingField('skills.json', 'actives');
   }
 
-  const classes = parseClasses(raw.classes);
+  const classesRaw = parseClasses(raw.classes);
   const passives = parsePassives(passivesRaw);
   const actives = parseActives(activesRaw);
+  const skillRegistry: SkillRegistry = {
+    passives: Object.fromEntries(passives.map((skill) => [skill.id, skill])),
+    actives: Object.fromEntries(actives.map((skill) => [skill.id, skill])),
+  };
+  const classes = classesRaw.map((cls) => enrichClassPreset(cls, skillRegistry));
   const enemies = parseEnemies(raw.enemies);
   const stages = parseStages(raw.stages);
   const parties = parseParties(raw.parties);
 
-  validateReferences(classes, passives, actives, enemies, stages, parties);
+  validateReferences(
+    classes,
+    passives,
+    actives,
+    enemies,
+    stages,
+    parties,
+    skillRegistry,
+  );
 
   return { classes, passives, actives, enemies, stages, parties };
 }

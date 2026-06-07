@@ -8,10 +8,10 @@ import {
 import { getNextStageId, getStageById } from '../progression/stageProgression.ts';
 import { resolveSkillVfx } from '../render/skillVfx/resolveSkillVfx.ts';
 import { BattleCanvas, type PartyHudMeta } from '../render/BattleCanvas.ts';
-
 export interface VerifyModeControls {
   isVerifyMode: () => boolean;
   onVerifyModeChange: (enabled: boolean) => void;
+  onOpenMetaMenu: () => void;
 }
 
 export class BattleView {
@@ -19,6 +19,7 @@ export class BattleView {
   private readonly canvasHost: HTMLElement;
   private readonly stageLabelEl: HTMLElement;
   private readonly verifyModeInput: HTMLInputElement;
+  private readonly menuButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
 
   constructor(
@@ -63,6 +64,20 @@ export class BattleView {
     this.stageLabelEl = document.createElement('div');
     this.stageLabelEl.className = 'battle-stage-label';
     this.canvasHost.appendChild(this.stageLabelEl);
+
+    this.menuButton = document.createElement('button');
+    this.menuButton.type = 'button';
+    this.menuButton.className = 'battle-menu-button';
+    this.menuButton.setAttribute('aria-label', 'メニュー');
+    const menuIcon = document.createElement('span');
+    menuIcon.className = 'material-symbols-outlined';
+    menuIcon.setAttribute('aria-hidden', 'true');
+    menuIcon.textContent = 'menu_book';
+    this.menuButton.appendChild(menuIcon);
+    this.menuButton.addEventListener('click', () => {
+      verifyModeControls?.onOpenMetaMenu();
+    });
+    this.canvasHost.appendChild(this.menuButton);
 
     this.root.appendChild(this.canvasHost);
 
@@ -182,6 +197,10 @@ export class BattleView {
     this.stageLabelEl.textContent = stageLabel;
     this.canvas.syncFromSnapshot(snapshot, partyMeta);
     this.canvas.tick(deltaMs);
+  }
+
+  setMenuButtonDisabled(disabled: boolean): void {
+    this.menuButton.disabled = disabled;
   }
 
   destroy(): void {

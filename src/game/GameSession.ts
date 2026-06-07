@@ -1,5 +1,6 @@
 import { BattleEngine } from '../battle/BattleEngine.ts';
-import type { GameData, SaveGameState } from '../battle/types.ts';
+import type { CharacterBuild, GameData, SaveGameState } from '../battle/types.ts';
+import { normalizeEquippedSlots } from '../progression/skillBuild.ts';
 import {
   isVerifyModeEnabled,
   partyIdForVerifyMode,
@@ -18,6 +19,7 @@ import {
   formatExpGrantLog,
   formatLevelUpLog,
 } from '../progression/victoryRewards.ts';
+import { createMenuHost, type MenuHost } from '../platform/menuHost.ts';
 import { SaveManager } from '../save/SaveManager.ts';
 import { BattleView } from '../ui/BattleView.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
@@ -32,6 +34,8 @@ export class GameSession {
   private readonly engine: BattleEngine;
   readonly view: BattleView;
   private autoSaveTimer: ReturnType<typeof setInterval> | null = null;
+  private metaMenuOpen = false;
+  private readonly menuHost: MenuHost;
 
   constructor(
     private readonly gameData: GameData,
@@ -57,8 +61,19 @@ export class GameSession {
       {
         isVerifyMode: () => this.verifyMode,
         onVerifyModeChange: (enabled) => this.setVerifyMode(enabled),
+        onOpenMetaMenu: () => this.openMetaMenu(),
       },
     );
+
+    this.menuHost = createMenuHost({
+      gameData,
+      getParty: () => this.save.party,
+      onBuildChanged: (partyIndex, build) => this.updateMemberBuild(partyIndex, build),
+      onOpenChange: (open) => {
+        this.metaMenuOpen = open;
+        this.view.setMenuButtonDisabled(open);
+      },
+    });
 
     this.engine.onEvent((event) => {
       if (event.type !== 'battleEnd') return;
@@ -97,12 +112,35 @@ export class GameSession {
     this.engine.startBattle();
   }
 
+  isMetaMenuOpen(): boolean {
+    return this.metaMenuOpen;
+  }
+
+  openMetaMenu(): void {
+    this.menuHost.open();
+  }
+
+  closeMetaMenu(): void {
+    this.menuHost.close();
+  }
+
+  updateMemberBuild(partyIndex: number, build: CharacterBuild): void {
+    const member = this.save.party[partyIndex];
+    if (!member) return;
+    member.build = structuredClone(normalizeEquippedSlots(build));
+    this.persistSave();
+    this.engine.syncPartyBuilds();
+  }
+
   tick(deltaSec: number, deltaMs: number): void {
-    this.engine.tick(deltaSec);
+    if (!this.metaMenuOpen) {
+      this.engine.tick(deltaSec);
+    }
     this.view.tick(deltaMs);
   }
 
   destroy(): void {
+    this.closeMetaMenu();
     window.removeEventListener('beforeunload', this.handleBeforeUnload);
     if (this.autoSaveTimer !== null) {
       clearInterval(this.autoSaveTimer);

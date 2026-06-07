@@ -19,6 +19,11 @@ export interface CombatStats {
   reg: number;
 }
 
+export interface ClassSkillUnlock {
+  level: number;
+  skillIds: string[];
+}
+
 export interface ClassPreset extends CombatStats {
   id: ClassId;
   role: Role;
@@ -30,8 +35,12 @@ export interface ClassPreset extends CombatStats {
   /** 未指定時は role / attackRange からプレースホルダーを使用 */
   iconKey?: string;
   basicAttackSkillId: string;
+  skills: ClassSkillUnlock[];
+  /** skills[level=0] から導出 */
   starterPassiveIds: string[];
   starterActiveIds: string[];
+  /** skills[] 全 ID（検証・装備可否） */
+  classSkillIds: string[];
 }
 
 export type TargetRule =

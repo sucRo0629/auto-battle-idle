@@ -12,11 +12,15 @@
     "def": 24,
     "reg": 0,
     "basicAttackSkillId": "test_strike",
-    "starterPassiveIds": [
-      "thick_skin"
-    ],
-    "starterActiveIds": [
-      "test_buff"
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["thick_skin", "iron_guard"]
+      },
+      {
+        "level": 1,
+        "skillIds": ["test_buff"]
+      }
     ]
   },
   {
@@ -32,11 +36,15 @@
     "def": 10,
     "reg": 0,
     "basicAttackSkillId": "test_strike",
-    "starterPassiveIds": [
-      "brute"
-    ],
-    "starterActiveIds": [
-      "test_debuff"
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["brute", "slash"]
+      },
+      {
+        "level": 1,
+        "skillIds": ["test_debuff"]
+      }
     ]
   },
   {
@@ -53,11 +61,15 @@
     "def": 10,
     "reg": 0,
     "basicAttackSkillId": "test_strike",
-    "starterPassiveIds": [
-      "gentle_touch"
-    ],
-    "starterActiveIds": [
-      "test_hot"
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["gentle_touch", "heal"]
+      },
+      {
+        "level": 1,
+        "skillIds": ["test_hot"]
+      }
     ]
   },
   {
@@ -74,11 +86,15 @@
     "def": 6,
     "reg": 0,
     "basicAttackSkillId": "test_strike",
-    "starterPassiveIds": [
-      "snipe"
-    ],
-    "starterActiveIds": [
-      "test_dot"
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["snipe", "arrow"]
+      },
+      {
+        "level": 1,
+        "skillIds": ["test_dot"]
+      }
     ]
   }
 ]

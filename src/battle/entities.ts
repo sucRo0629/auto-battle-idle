@@ -29,7 +29,7 @@ export function resetEntityIdCounter(): void {
   idCounter = 0;
 }
 
-function createCooldowns(
+export function createCooldowns(
   basicSkillId: string,
   build: CharacterBuild,
 ): SkillCooldown[] {
