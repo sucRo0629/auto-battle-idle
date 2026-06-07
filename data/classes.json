@@ -1,8 +1,8 @@
 [
   {
-    "id": "defender_bulwark",
+    "id": "defender_eishi",
     "role": "defender",
-    "displayName": "Bulwark",
+    "displayName": "衛士",
     "formationRow": "front",
     "traits": {
       "attackRange": "melee"
@@ -11,18 +11,21 @@
     "atk": 12,
     "def": 24,
     "reg": 0,
-    "basicAttackSkillId": "bulwark_strike",
+    "jobTier": 1,
+    "growthTier": { "maxHp": 3, "atk": 1, "def": 3 },
+    "attackSpeedTier": "somewhatSlow",
+    "basicAttackSkillId": "defender_eishi_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["thick_skin", "iron_guard"]
+        "skillIds": ["eishi_thick_skin", "eishi_iron_guard"]
       }
     ]
   },
   {
-    "id": "attacker_berserker",
+    "id": "attacker_kenshi",
     "role": "attacker",
-    "displayName": "Berserker",
+    "displayName": "剣士",
     "formationRow": "front",
     "traits": {
       "attackRange": "melee"
@@ -31,39 +34,21 @@
     "atk": 28,
     "def": 10,
     "reg": 0,
-    "basicAttackSkillId": "berserker_strike",
+    "jobTier": 1,
+    "growthTier": { "maxHp": 2, "atk": 3, "def": 3 },
+    "attackSpeedTier": "normal",
+    "basicAttackSkillId": "attacker_kenshi_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["brute", "slash"]
+        "skillIds": ["kenshi_brute", "kenshi_slash"]
       }
     ]
   },
   {
-    "id": "supporter_cleric",
-    "role": "supporter",
-    "displayName": "Cleric",
-    "formationRow": "middle",
-    "traits": {
-      "attackRange": "ranged",
-      "rangePx": 100
-    },
-    "maxHp": 100,
-    "atk": 14,
-    "def": 10,
-    "reg": 0,
-    "basicAttackSkillId": "cleric_strike",
-    "skills": [
-      {
-        "level": 0,
-        "skillIds": ["gentle_touch", "heal"]
-      }
-    ]
-  },
-  {
-    "id": "attacker_hawkeye",
+    "id": "attacker_kyushi",
     "role": "attacker",
-    "displayName": "Hawkeye",
+    "displayName": "弓士",
     "formationRow": "back",
     "traits": {
       "attackRange": "ranged",
@@ -73,18 +58,21 @@
     "atk": 18,
     "def": 6,
     "reg": 0,
-    "basicAttackSkillId": "hawkeye_shot",
+    "jobTier": 1,
+    "growthTier": { "maxHp": 1, "atk": 2, "def": 2 },
+    "attackSpeedTier": "fast",
+    "basicAttackSkillId": "attacker_kyushi_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["snipe", "arrow"]
+        "skillIds": ["kyushi_snipe", "kyushi_arrow"]
       }
     ]
   },
   {
-    "id": "attacker_arcanist",
+    "id": "attacker_jutsushi",
     "role": "attacker",
-    "displayName": "Arcanist",
+    "displayName": "術師",
     "formationRow": "back",
     "traits": {
       "attackRange": "ranged",
@@ -94,11 +82,38 @@
     "atk": 22,
     "def": 5,
     "reg": 0,
-    "basicAttackSkillId": "hawkeye_shot",
+    "jobTier": 1,
+    "growthPresetKey": "caster",
+    "growthTier": { "maxHp": 2, "atk": 3, "def": 1 },
+    "attackSpeedTier": "somewhatSlow",
+    "basicAttackSkillId": "attacker_jutsushi_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["snipe", "arrow"]
+        "skillIds": ["jutsushi_focus", "jutsushi_orb", "jutsushi_chain"]
+      }
+    ]
+  },
+  {
+    "id": "supporter_yakushi",
+    "role": "supporter",
+    "displayName": "薬師",
+    "formationRow": "middle",
+    "traits": {
+      "attackRange": "melee"
+    },
+    "maxHp": 100,
+    "atk": 14,
+    "def": 10,
+    "reg": 0,
+    "jobTier": 1,
+    "growthTier": { "maxHp": 1, "atk": 2, "def": 1 },
+    "attackSpeedTier": "slow",
+    "basicAttackSkillId": "supporter_yakushi_basic_attack",
+    "skills": [
+      {
+        "level": 0,
+        "skillIds": ["yakushi_gentle_touch", "yakushi_heal"]
       }
     ]
   }
