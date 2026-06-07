@@ -8,6 +8,10 @@ import type {
   SkillCooldown,
 } from './types.ts';
 import { DEFAULT_MELEE_RANGE_PX } from './types.ts';
+import {
+  resolveClassIconKey,
+  resolveClassSpriteKey,
+} from './classVisuals.ts';
 
 let idCounter = 0;
 
@@ -64,8 +68,8 @@ export function createAllyFromMember(
     isAlive: true,
     cooldowns: createCooldowns(classPreset.basicAttackSkillId, member.build),
     statusEffects: [],
-    spriteKey: classPreset.spriteKey,
-    iconKey: classPreset.iconKey,
+    spriteKey: resolveClassSpriteKey(classPreset),
+    iconKey: resolveClassIconKey(classPreset),
     isEnemy: false,
     visualX: 0,
   };

@@ -1,5 +1,10 @@
 import type { BattleSnapshot } from "../battle/types.ts";
-import { ANIM_DEFS, getSpriteColor, getSpriteImage } from "./SpriteRegistry.ts";
+import { getSpriteColor, getSpriteImage } from "./SpriteRegistry.ts";
+import { drawSpriteWithDamageEffect } from "./damageEffect.ts";
+import {
+  getPlaceholderSpriteYOffset,
+  hasSpriteSheetAnimation,
+} from "./placeholderSpriteAnim.ts";
 import { getClassIconColor, getClassIconImage } from "./IconRegistry.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
 import {
@@ -197,7 +202,7 @@ export class BattleCanvas implements IBattleRenderer {
       }
     }
 
-    this.damagePopups.draw(this.ctx, this.layouts, SPRITE_SIZE * scale);
+    this.damagePopups.draw(this.ctx, this.layouts, SPRITE_SIZE * scale, scale);
 
     this.drawPartyHud(scale);
   }
@@ -372,13 +377,13 @@ export class BattleCanvas implements IBattleRenderer {
   }
 
   private drawSpriteImage(
+    ctx: CanvasRenderingContext2D,
     spriteKey: string,
     x: number,
     y: number,
     width: number,
     height: number
   ): void {
-    const { ctx } = this;
     const image = getSpriteImage(spriteKey);
 
     if (image) {
@@ -398,31 +403,30 @@ export class BattleCanvas implements IBattleRenderer {
   ): void {
     const { ctx } = this;
     const size = SPRITE_SIZE * scale;
-    const bob =
-      layout.anim === "idle" ? Math.sin(layout.animFrame * 0.8) * 2 : 0;
+    const offsetY = hasSpriteSheetAnimation(layout.spriteKey)
+      ? 0
+      : getPlaceholderSpriteYOffset(layout, scale);
 
     ctx.save();
     if (layout.isEnemy) {
-      ctx.translate(x + size, y + bob);
+      ctx.translate(x + size, y + offsetY);
       ctx.scale(-1, 1);
     } else {
-      ctx.translate(x, y + bob);
+      ctx.translate(x, y + offsetY);
     }
 
     if (!layout.isAlive) {
       ctx.globalAlpha = 0.35;
     }
 
-    this.drawSpriteImage(layout.spriteKey, 0, 0, size, size);
-
-    const def = ANIM_DEFS[layout.anim];
-    const flash = layout.animFrame % def.frames;
-    ctx.fillStyle = "rgba(255,255,255,0.25)";
-    ctx.fillRect(flash * (size / def.frames), 0, size / def.frames, size);
+    const drawLocalSprite = (localCtx: CanvasRenderingContext2D) => {
+      this.drawSpriteImage(localCtx, layout.spriteKey, 0, 0, size, size);
+    };
 
     if (layout.anim === "hurt") {
-      ctx.fillStyle = "rgba(255,0,0,0.35)";
-      ctx.fillRect(0, 0, size, size);
+      drawSpriteWithDamageEffect(ctx, size, drawLocalSprite);
+    } else {
+      drawLocalSprite(ctx);
     }
 
     ctx.restore();

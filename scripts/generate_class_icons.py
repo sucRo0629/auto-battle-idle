@@ -43,41 +43,35 @@ def draw_badge(
     draw_symbol(draw, symbol)
 
 
-def icon_bulwark(draw: ImageDraw.ImageDraw, color: tuple[int, int, int, int]) -> None:
+def icon_defender(draw: ImageDraw.ImageDraw, color: tuple[int, int, int, int]) -> None:
     put_rect(draw, 14, 8, 4, 10, color)
     put_rect(draw, 10, 12, 12, 8, color)
     put_rect(draw, 12, 20, 8, 4, color)
 
 
-def icon_berserker(draw: ImageDraw.ImageDraw, color: tuple[int, int, int, int]) -> None:
+def icon_attacker_melee(draw: ImageDraw.ImageDraw, color: tuple[int, int, int, int]) -> None:
     put_rect(draw, 15, 7, 2, 14, color)
     put_rect(draw, 11, 7, 10, 3, color)
     put_rect(draw, 10, 10, 3, 8, color)
 
 
-def icon_cleric(draw: ImageDraw.ImageDraw, color: tuple[int, int, int, int]) -> None:
+def icon_supporter(draw: ImageDraw.ImageDraw, color: tuple[int, int, int, int]) -> None:
     put_rect(draw, 14, 8, 4, 14, color)
     put_rect(draw, 10, 12, 12, 4, color)
 
 
-def icon_hawkeye(draw: ImageDraw.ImageDraw, color: tuple[int, int, int, int]) -> None:
+def icon_attacker_ranged(draw: ImageDraw.ImageDraw, color: tuple[int, int, int, int]) -> None:
     put_rect(draw, 8, 14, 12, 2, color)
     put_rect(draw, 18, 12, 2, 6, color)
     put_rect(draw, 20, 13, 4, 2, color)
     put_rect(draw, 20, 15, 2, 2, color)
 
 
-def icon_default(draw: ImageDraw.ImageDraw, color: tuple[int, int, int, int]) -> None:
-    put_rect(draw, 12, 9, 8, 8, color)
-    put_rect(draw, 10, 18, 12, 6, color)
-
-
 ICONS = {
-    "bulwark": ("#2c5f9e", icon_bulwark),
-    "berserker": ("#c0392b", icon_berserker),
-    "cleric": ("#1e8449", icon_cleric),
-    "hawkeye": ("#922b21", icon_hawkeye),
-    "default": ("#666666", icon_default),
+    "defender_placeholder": ("#2c5f9e", icon_defender),
+    "attacker_melee_placeholder": ("#c0392b", icon_attacker_melee),
+    "supporter_placeholder": ("#1e8449", icon_supporter),
+    "attacker_ranged_placeholder": ("#922b21", icon_attacker_ranged),
 }
 
 

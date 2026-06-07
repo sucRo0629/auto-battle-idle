@@ -205,8 +205,14 @@ function parseClasses(raw: unknown): ClassPreset[] {
     const reg = requireNumber(obj, 'reg', context);
     requireReg(reg, context);
     const basicAttackSkillId = requireString(obj, 'basicAttackSkillId', context);
-    const spriteKey = requireString(obj, 'spriteKey', context);
-    const iconKey = requireString(obj, 'iconKey', context);
+    const spriteKey =
+      obj.spriteKey === undefined
+        ? undefined
+        : requireString(obj, 'spriteKey', context);
+    const iconKey =
+      obj.iconKey === undefined
+        ? undefined
+        : requireString(obj, 'iconKey', context);
     const starterPassiveIds = requireStringArray(
       obj,
       'starterPassiveIds',

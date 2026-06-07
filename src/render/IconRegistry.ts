@@ -1,22 +1,21 @@
-import bulwarkIconUrl from '../assets/class-icons/bulwark.png';
-import berserkerIconUrl from '../assets/class-icons/berserker.png';
-import clericIconUrl from '../assets/class-icons/cleric.png';
-import hawkeyeIconUrl from '../assets/class-icons/hawkeye.png';
-import defaultIconUrl from '../assets/class-icons/default.png';
+import defenderPlaceholderIconUrl from '../assets/class-icons/defender_placeholder.png';
+import attackerMeleePlaceholderIconUrl from '../assets/class-icons/attacker_melee_placeholder.png';
+import attackerRangedPlaceholderIconUrl from '../assets/class-icons/attacker_ranged_placeholder.png';
+import supporterPlaceholderIconUrl from '../assets/class-icons/supporter_placeholder.png';
+import { PLACEHOLDER_SPRITE_KEYS } from '../battle/classVisuals.ts';
 
 export const ICON_COLORS: Record<string, string> = {
-  bulwark: '#2c5f9e',
-  berserker: '#c0392b',
-  cleric: '#1e8449',
-  hawkeye: '#922b21',
+  [PLACEHOLDER_SPRITE_KEYS.defender]: '#2c5f9e',
+  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: '#c0392b',
+  [PLACEHOLDER_SPRITE_KEYS.supporter]: '#1e8449',
+  [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: '#922b21',
 };
 
 const ICON_URLS: Record<string, string> = {
-  bulwark: bulwarkIconUrl,
-  berserker: berserkerIconUrl,
-  cleric: clericIconUrl,
-  hawkeye: hawkeyeIconUrl,
-  default: defaultIconUrl,
+  [PLACEHOLDER_SPRITE_KEYS.defender]: defenderPlaceholderIconUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: attackerMeleePlaceholderIconUrl,
+  [PLACEHOLDER_SPRITE_KEYS.supporter]: supporterPlaceholderIconUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: attackerRangedPlaceholderIconUrl,
 };
 
 const iconImages = new Map<string, HTMLImageElement>();
@@ -47,7 +46,10 @@ export function getClassIconColor(iconKey: string): string {
 }
 
 export function getClassIconImage(iconKey: string): HTMLImageElement | undefined {
-  return iconImages.get(iconKey) ?? iconImages.get('default');
+  return (
+    iconImages.get(iconKey) ??
+    iconImages.get(PLACEHOLDER_SPRITE_KEYS.defender)
+  );
 }
 
 void preloadClassIcons();

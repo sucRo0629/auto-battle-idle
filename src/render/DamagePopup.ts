@@ -1,4 +1,5 @@
 import type { CombatantLayout } from "./IBattleRenderer.ts";
+import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
 
 const POPUP_DURATION_MS = 500;
 const RISE_PX = 5;
@@ -34,7 +35,8 @@ export class DamagePopupManager {
   draw(
     ctx: CanvasRenderingContext2D,
     layouts: CombatantLayout[],
-    spriteSize: number
+    spriteSize: number,
+    scale: number
   ): void {
     for (const popup of this.popups) {
       const layout = layouts.find((l) => l.id === popup.targetId);
@@ -43,8 +45,7 @@ export class DamagePopupManager {
       const progress = popup.elapsedMs / POPUP_DURATION_MS;
       const alpha = 1 - progress * progress;
       const rise = progress * RISE_PX;
-      const bob =
-        layout.anim === "idle" ? Math.sin(layout.animFrame * 0.8) * 2 : 0;
+      const bob = getPlaceholderSpriteYOffset(layout, scale);
       const x = layout.x + spriteSize / 2 + popup.offsetX;
       const y = layout.y + bob - rise + 16;
 

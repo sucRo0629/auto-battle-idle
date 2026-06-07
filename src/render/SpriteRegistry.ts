@@ -1,9 +1,13 @@
-import defenderBulwarkUrl from '../assets/sprites/defender_bulwark.png';
-import attackerBerserkerUrl from '../assets/sprites/attacker_berserker.png';
-import supporterClericUrl from '../assets/sprites/supporter_cleric.png';
-import attackerHawkeyeUrl from '../assets/sprites/attacker_hawkeye.png';
+import defenderPlaceholderUrl from '../assets/sprites/defender_placeholder.png';
+import attackerMeleePlaceholderUrl from '../assets/sprites/attacker_melee_placeholder.png';
+import attackerRangedPlaceholderUrl from '../assets/sprites/attacker_ranged_placeholder.png';
+import supporterPlaceholderUrl from '../assets/sprites/supporter_placeholder.png';
 import slimeUrl from '../assets/sprites/slime.png';
-import defaultSpriteUrl from '../assets/sprites/default.png';
+import enemyDefaultUrl from '../assets/sprites/enemy_default.png';
+import {
+  PLACEHOLDER_SPRITE_KEYS,
+  type PlaceholderSpriteKey,
+} from '../battle/classVisuals.ts';
 
 export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death';
 
@@ -13,21 +17,24 @@ export interface SpriteAnimDef {
   loop: boolean;
 }
 
+export const ENEMY_DEFAULT_SPRITE_KEY = 'enemy_default';
+
 export const SPRITE_COLORS: Record<string, string> = {
-  defender_bulwark: '#4a90d9',
-  attacker_berserker: '#e67e22',
-  supporter_cleric: '#2ecc71',
-  attacker_hawkeye: '#e74c3c',
+  [PLACEHOLDER_SPRITE_KEYS.defender]: '#4a90d9',
+  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: '#e67e22',
+  [PLACEHOLDER_SPRITE_KEYS.supporter]: '#2ecc71',
+  [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: '#e74c3c',
   slime: '#9b59b6',
+  [ENEMY_DEFAULT_SPRITE_KEY]: '#888888',
 };
 
 const SPRITE_URLS: Record<string, string> = {
-  defender_bulwark: defenderBulwarkUrl,
-  attacker_berserker: attackerBerserkerUrl,
-  supporter_cleric: supporterClericUrl,
-  attacker_hawkeye: attackerHawkeyeUrl,
+  [PLACEHOLDER_SPRITE_KEYS.defender]: defenderPlaceholderUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: attackerMeleePlaceholderUrl,
+  [PLACEHOLDER_SPRITE_KEYS.supporter]: supporterPlaceholderUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: attackerRangedPlaceholderUrl,
   slime: slimeUrl,
-  default: defaultSpriteUrl,
+  [ENEMY_DEFAULT_SPRITE_KEY]: enemyDefaultUrl,
 };
 
 export const ANIM_DEFS: Record<AnimState, SpriteAnimDef> = {
@@ -66,7 +73,16 @@ export function getSpriteColor(spriteKey: string): string {
 }
 
 export function getSpriteImage(spriteKey: string): HTMLImageElement | undefined {
-  return spriteImages.get(spriteKey) ?? spriteImages.get('default');
+  return (
+    spriteImages.get(spriteKey) ??
+    spriteImages.get(ENEMY_DEFAULT_SPRITE_KEY)
+  );
+}
+
+export function getPlaceholderSpriteImage(
+  key: PlaceholderSpriteKey,
+): HTMLImageElement | undefined {
+  return spriteImages.get(key);
 }
 
 void preloadSprites();

@@ -25,8 +25,10 @@ export interface ClassPreset extends CombatStats {
   displayName: string;
   formationRow: FormationRow;
   traits: ClassTraits;
-  spriteKey: string;
-  iconKey: string;
+  /** 未指定時は role / attackRange からプレースホルダーを使用 */
+  spriteKey?: string;
+  /** 未指定時は role / attackRange からプレースホルダーを使用 */
+  iconKey?: string;
   basicAttackSkillId: string;
   starterPassiveIds: string[];
   starterActiveIds: string[];
