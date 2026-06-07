@@ -1,0 +1,119 @@
+{
+  "passives": [
+    {
+      "id": "thick_skin",
+      "name": "Thick Skin",
+      "damageTakenMultiplier": 0.9
+    },
+    {
+      "id": "brute",
+      "name": "Brute",
+      "damageMultiplier": 1.15
+    },
+    {
+      "id": "gentle_touch",
+      "name": "Gentle Touch",
+      "healBonus": 4
+    },
+    {
+      "id": "snipe",
+      "name": "Snipe",
+      "targetRuleOverride": "lowestHpEnemy"
+    }
+  ],
+  "actives": [
+    {
+      "id": "bulwark_strike",
+      "name": "Strike",
+      "interval": 2,
+      "targetRule": "frontEnemy",
+      "effect": "damage",
+      "damageType": "physical",
+      "powerMultiplier": 0.8,
+      "range": "melee"
+    },
+    {
+      "id": "berserker_strike",
+      "name": "Strike",
+      "interval": 2,
+      "targetRule": "frontEnemy",
+      "effect": "damage",
+      "damageType": "physical",
+      "powerMultiplier": 0.85,
+      "range": "melee"
+    },
+    {
+      "id": "cleric_strike",
+      "name": "Strike",
+      "interval": 2.2,
+      "targetRule": "frontEnemy",
+      "effect": "damage",
+      "damageType": "physical",
+      "powerMultiplier": 0.6,
+      "range": "ranged"
+    },
+    {
+      "id": "hawkeye_shot",
+      "name": "Strike",
+      "interval": 2,
+      "targetRule": "frontEnemy",
+      "effect": "damage",
+      "damageType": "physical",
+      "powerMultiplier": 0.75,
+      "range": "ranged"
+    },
+    {
+      "id": "shield_bash",
+      "name": "Shield Bash",
+      "interval": 4,
+      "targetRule": "frontEnemy",
+      "effect": "damage",
+      "damageType": "physical",
+      "powerMultiplier": 1.2,
+      "range": "melee",
+      "allowedRoles": ["defender"]
+    },
+    {
+      "id": "slash",
+      "name": "Slash",
+      "interval": 3,
+      "targetRule": "frontEnemy",
+      "effect": "damage",
+      "damageType": "physical",
+      "powerMultiplier": 1.2,
+      "range": "melee",
+      "allowedRoles": ["attacker"]
+    },
+    {
+      "id": "heal",
+      "name": "Heal",
+      "interval": 5,
+      "targetRule": "mostDamagedAlly",
+      "effect": "heal",
+      "powerMultiplier": 1.4,
+      "range": "ranged",
+      "allowedRoles": ["supporter", "defender"]
+    },
+    {
+      "id": "arrow",
+      "name": "Arrow",
+      "interval": 2.5,
+      "targetRule": "frontEnemy",
+      "effect": "damage",
+      "damageType": "physical",
+      "powerMultiplier": 1.3,
+      "range": "ranged",
+      "allowedRoles": ["attacker"]
+    },
+    {
+      "id": "bite",
+      "name": "Bite",
+      "interval": 2.5,
+      "targetRule": "closestAlly",
+      "effect": "damage",
+      "damageType": "physical",
+      "powerMultiplier": 1,
+      "range": "melee"
+    }
+  ]
+}

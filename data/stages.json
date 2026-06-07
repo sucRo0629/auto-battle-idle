@@ -1,0 +1,15 @@
+[
+  {
+    "id": "stage_1",
+    "displayName": "Grassland",
+    "expReward": 10,
+    "waves": [
+      {
+        "enemies": [
+          { "templateId": "slime" },
+          { "templateId": "slime" }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,12 @@
+[
+  {
+    "id": "slime",
+    "displayName": "Slime",
+    "maxHp": 80,
+    "atk": 10,
+    "def": 4,
+    "reg": 0,
+    "spriteKey": "slime",
+    "activeSkillIds": ["bite"]
+  }
+]

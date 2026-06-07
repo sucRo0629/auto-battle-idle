@@ -1,0 +1,39 @@
+{
+  "demo": {
+    "name": "Demo Party",
+    "members": [
+      {
+        "classId": "defender_bulwark",
+        "build": {
+          "learnedPassiveIds": ["thick_skin"],
+          "learnedActiveIds": ["shield_bash"],
+          "equippedActiveSlots": ["shield_bash"]
+        }
+      },
+      {
+        "classId": "attacker_berserker",
+        "build": {
+          "learnedPassiveIds": ["brute"],
+          "learnedActiveIds": ["slash"],
+          "equippedActiveSlots": ["slash"]
+        }
+      },
+      {
+        "classId": "supporter_cleric",
+        "build": {
+          "learnedPassiveIds": ["gentle_touch"],
+          "learnedActiveIds": ["heal"],
+          "equippedActiveSlots": ["heal"]
+        }
+      },
+      {
+        "classId": "attacker_hawkeye",
+        "build": {
+          "learnedPassiveIds": ["snipe"],
+          "learnedActiveIds": ["arrow"],
+          "equippedActiveSlots": ["arrow"]
+        }
+      }
+    ]
+  }
+}
