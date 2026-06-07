@@ -1,5 +1,6 @@
 import type { BattleEngine } from '../battle/BattleEngine.ts';
 import type { BattleEvent } from '../battle/events.ts';
+import { resolveAttackEffectKind } from '../render/AttackEffect.ts';
 import { BattleCanvas } from '../render/BattleCanvas.ts';
 import type { ViewMode } from './viewMode.ts';
 
@@ -47,9 +48,23 @@ export class BattleView {
         this.canvas.showDamagePopup(event.targetId, event.amount);
       } else if (event.effect === 'heal' && event.amount !== undefined) {
         this.pushLog(`${slotLabel} → +${event.amount} HP`);
+        this.canvas.showHealPopup(event.targetId, event.amount);
         this.canvas.playAnim(event.actorId, 'heal');
       } else {
         this.pushLog(`${slotLabel} (${event.effect})`);
+      }
+      if (event.effect === 'damage' || event.effect === 'heal') {
+        const snapshot = this.engine.getSnapshot();
+        const actor = [...snapshot.allies, ...snapshot.enemies].find(
+          (c) => c.id === event.actorId,
+        );
+        const kind = resolveAttackEffectKind(actor?.role, event.range);
+        this.canvas.playAttackEffect(
+          event.actorId,
+          event.targetId,
+          kind,
+          event.effect === 'heal',
+        );
       }
       if (event.effect === 'damage') {
         this.canvas.playAnim(event.actorId, 'attack');

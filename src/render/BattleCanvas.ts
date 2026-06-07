@@ -13,6 +13,7 @@ import {
   BATTLE_GROUND_MARGIN,
   battleCanvasHeight,
 } from "./formationLayout.ts";
+import { AttackEffectManager, type AttackEffectKind } from "./AttackEffect.ts";
 import { DamagePopupManager } from "./DamagePopup.ts";
 import type {
   AnimState,
@@ -61,6 +62,7 @@ export class BattleCanvas implements IBattleRenderer {
   private canvas!: HTMLCanvasElement;
   private ctx!: CanvasRenderingContext2D;
   private animator = new SpriteAnimator();
+  private attackEffects = new AttackEffectManager();
   private damagePopups = new DamagePopupManager();
   private layouts: CombatantLayout[] = [];
   private allyHud: AllyHudEntry[] = [];
@@ -95,14 +97,28 @@ export class BattleCanvas implements IBattleRenderer {
     this.animator.setAnim(combatantId, state);
   }
 
+  playAttackEffect(
+    actorId: string,
+    targetId: string,
+    kind: AttackEffectKind,
+    isHeal = false
+  ): void {
+    this.attackEffects.spawn(actorId, targetId, kind, isHeal);
+  }
+
   showDamagePopup(targetId: string, amount: number): void {
-    this.damagePopups.spawn(targetId, amount);
+    this.damagePopups.spawn(targetId, amount, "damage");
+  }
+
+  showHealPopup(targetId: string, amount: number): void {
+    this.damagePopups.spawn(targetId, amount, "heal");
   }
 
   tick(deltaMs: number): void {
     for (const layout of this.layouts) {
       this.animator.tick(layout.id, deltaMs);
     }
+    this.attackEffects.tick(deltaMs);
     this.damagePopups.tick(deltaMs);
     this.draw();
   }
@@ -202,6 +218,7 @@ export class BattleCanvas implements IBattleRenderer {
       }
     }
 
+    this.attackEffects.draw(this.ctx, this.layouts, SPRITE_SIZE * scale, scale);
     this.damagePopups.draw(this.ctx, this.layouts, SPRITE_SIZE * scale, scale);
 
     this.drawPartyHud(scale);
