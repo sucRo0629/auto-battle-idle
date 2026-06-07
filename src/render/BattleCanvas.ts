@@ -16,6 +16,12 @@ import {
 } from "./formationLayout.ts";
 import { AttackEffectManager, type AttackEffectKind } from "./AttackEffect.ts";
 import { DamagePopupManager } from "./DamagePopup.ts";
+import {
+  computeEnemyHpBarTops,
+  defaultEnemyHpBarTop,
+  ENEMY_HP_BAR_H,
+  ENEMY_HP_BAR_W,
+} from "./enemyHpBarLayout.ts";
 import type {
   AnimState,
   CombatantLayout,
@@ -28,8 +34,6 @@ const AMBIENT_W = 320;
 const AMBIENT_H = battleCanvasHeight(2);
 const SPRITE_SIZE = 32;
 
-const HP_BAR_W = 48;
-const HP_BAR_H = 6;
 const ALLY_HP_BAR_FILL = "#2ecc71";
 const ENEMY_HP_BAR_FILL = "#e74c3c";
 
@@ -217,11 +221,24 @@ export class BattleCanvas implements IBattleRenderer {
     this.drawBackground();
 
     const scale = this.ambient ? 2 : 1;
+    const enemyBarTops = computeEnemyHpBarTops(
+      this.layouts
+        .filter((layout) => layout.isEnemy)
+        .map((layout) => ({ id: layout.id, x: layout.x, y: layout.y })),
+      scale,
+      SPRITE_SIZE
+    );
 
     for (const layout of this.layouts) {
       this.drawSprite(layout, layout.x, layout.y, scale);
       if (layout.isEnemy) {
-        this.drawHpBar(layout, layout.x, layout.y, scale);
+        this.drawHpBar(
+          layout,
+          layout.x,
+          layout.y,
+          scale,
+          enemyBarTops.get(layout.id)
+        );
       }
     }
 
@@ -464,14 +481,15 @@ export class BattleCanvas implements IBattleRenderer {
     layout: CombatantLayout,
     spriteX: number,
     spriteY: number,
-    scale: number
+    scale: number,
+    barTop?: number
   ): void {
     const { ctx } = this;
     const spriteW = SPRITE_SIZE * scale;
-    const barW = HP_BAR_W * scale;
-    const barH = HP_BAR_H * scale;
+    const barW = ENEMY_HP_BAR_W * scale;
+    const barH = ENEMY_HP_BAR_H * scale;
     const x = spriteX + (spriteW - barW) / 2;
-    const y = spriteY - barH - 4 * scale;
+    const y = barTop ?? defaultEnemyHpBarTop(spriteY, scale);
     const ratio = layout.maxHp > 0 ? Math.max(0, layout.hp / layout.maxHp) : 0;
 
     ctx.fillStyle = "#333";
