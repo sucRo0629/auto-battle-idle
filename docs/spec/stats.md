@@ -1,10 +1,10 @@
-# Stats (Phase 1–2)
+# ステータス（Phase 1〜2）
 
-| Abbrev | Field | Notes |
-|--------|-------|-------|
-| HP | maxHp | Health |
-| ATK | atk | Attack / heal power |
-| DEF | def | Physical defense |
-| REG | reg | Magic resist; 0 or 5/10/15/20 for magic classes |
+| 略称 | フィールド | 説明 |
+|------|------------|------|
+| HP | maxHp | 体力 |
+| ATK | atk | 攻撃力 / 回復威力の基礎 |
+| DEF | def | 物理防御 |
+| REG | reg | 魔法耐性。非魔法系は 0、魔法系クラスは 5/10/15/20 のいずれか |
 
-AGI is planned for Phase 3.
+AGI（攻撃速度）は Phase 3 で追加予定。

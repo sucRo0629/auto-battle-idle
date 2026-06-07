@@ -50,6 +50,9 @@ export class BattleView {
         this.pushLog(`${slotLabel} → +${event.amount} HP`);
         this.canvas.showHealPopup(event.targetId, event.amount);
         this.canvas.playAnim(event.actorId, 'heal');
+      } else if (event.effect === 'buff' || event.effect === 'debuff') {
+        this.pushLog(`${slotLabel} → ${event.statusLabel ?? event.effect}`);
+        this.canvas.showBuffGlow(event.targetId);
       } else {
         this.pushLog(`${slotLabel} (${event.effect})`);
       }

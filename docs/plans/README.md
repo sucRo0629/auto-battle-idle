@@ -1,6 +1,16 @@
-# Plans
+# Plans（開発計画）
 
-Phase 1: battle core demo (current).
-Phase 2: save, stages, individual level stat growth.
-Phase 3: skill unlock on level up, AGI, second active slot.
-Phase 4: globalExp, enhancement tree, offline rewards, Electron desktop.
+Auto Battle Idle の開発ロードマップ。
+
+- **[フェーズロードマップ](phase-roadmap.md)** — Phase 1〜4 の内容・状態・依存関係
+
+## 概要
+
+| Phase | 内容 |
+|-------|------|
+| **1** | 戦闘コアデモ — **完了** |
+| **2** | セーブ・ステージ進行・個別Lv（ステのみ成長）；2a / 2b / 2c |
+| **3** | Lvアップ時スキル習得、AGI、アクティブ2枠目 |
+| **4** | globalExp、強化ツリー、オフライン報酬、Electron 常駐 |
+
+ゲームルール・データ定義: [spec](../spec/README.md)

@@ -1,5 +1,6 @@
 import type { BattleSnapshot } from "../battle/types.ts";
 import { getSpriteColor, getSpriteImage } from "./SpriteRegistry.ts";
+import { BuffGlowManager, drawSpriteWithBuffGlow } from "./buffGlowEffect.ts";
 import { drawSpriteWithDamageEffect } from "./damageEffect.ts";
 import {
   getPlaceholderSpriteYOffset,
@@ -64,6 +65,7 @@ export class BattleCanvas implements IBattleRenderer {
   private animator = new SpriteAnimator();
   private attackEffects = new AttackEffectManager();
   private damagePopups = new DamagePopupManager();
+  private buffGlows = new BuffGlowManager();
   private layouts: CombatantLayout[] = [];
   private allyHud: AllyHudEntry[] = [];
   private ambient = false;
@@ -114,12 +116,17 @@ export class BattleCanvas implements IBattleRenderer {
     this.damagePopups.spawn(targetId, amount, "heal");
   }
 
+  showBuffGlow(targetId: string): void {
+    this.buffGlows.trigger(targetId);
+  }
+
   tick(deltaMs: number): void {
     for (const layout of this.layouts) {
       this.animator.tick(layout.id, deltaMs);
     }
     this.attackEffects.tick(deltaMs);
     this.damagePopups.tick(deltaMs);
+    this.buffGlows.tick(deltaMs);
     this.draw();
   }
 
@@ -440,8 +447,12 @@ export class BattleCanvas implements IBattleRenderer {
       this.drawSpriteImage(localCtx, layout.spriteKey, 0, 0, size, size);
     };
 
+    const buffGlow = this.buffGlows.getIntensity(layout.id);
+
     if (layout.anim === "hurt") {
       drawSpriteWithDamageEffect(ctx, size, drawLocalSprite);
+    } else if (buffGlow > 0) {
+      drawSpriteWithBuffGlow(ctx, size, buffGlow, drawLocalSprite);
     } else {
       drawLocalSprite(ctx);
     }

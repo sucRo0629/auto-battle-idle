@@ -6,8 +6,8 @@
         "classId": "defender_bulwark",
         "build": {
           "learnedPassiveIds": ["thick_skin"],
-          "learnedActiveIds": ["shield_bash"],
-          "equippedActiveSlots": ["shield_bash"]
+          "learnedActiveIds": ["iron_guard"],
+          "equippedActiveSlots": ["iron_guard"]
         }
       },
       {

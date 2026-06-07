@@ -67,15 +67,18 @@
       "range": "ranged"
     },
     {
-      "id": "shield_bash",
-      "name": "Shield Bash",
+      "id": "iron_guard",
+      "name": "Iron Guard",
       "interval": 4,
-      "targetRule": "frontEnemy",
-      "effect": "damage",
-      "damageType": "physical",
-      "powerMultiplier": 1.2,
-      "range": "melee",
-      "allowedRoles": ["defender"]
+      "targetRule": "mostDamagedAlly",
+      "effect": "buff",
+      "buffStat": "damageTaken",
+      "buffMultiplier": 0.75,
+      "buffDurationSec": 5,
+      "range": "ranged",
+      "allowedRoles": [
+        "defender"
+      ]
     },
     {
       "id": "slash",
@@ -86,7 +89,9 @@
       "damageType": "physical",
       "powerMultiplier": 1.2,
       "range": "melee",
-      "allowedRoles": ["attacker"]
+      "allowedRoles": [
+        "attacker"
+      ]
     },
     {
       "id": "heal",
@@ -96,7 +101,10 @@
       "effect": "heal",
       "powerMultiplier": 1.4,
       "range": "ranged",
-      "allowedRoles": ["supporter", "defender"]
+      "allowedRoles": [
+        "supporter",
+        "defender"
+      ]
     },
     {
       "id": "arrow",
@@ -107,7 +115,9 @@
       "damageType": "physical",
       "powerMultiplier": 1.3,
       "range": "ranged",
-      "allowedRoles": ["attacker"]
+      "allowedRoles": [
+        "attacker"
+      ]
     },
     {
       "id": "bite",
