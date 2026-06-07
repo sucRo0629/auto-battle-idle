@@ -4,6 +4,7 @@ import type {
   GameData,
   PartySlotState,
 } from '../battle/types.ts';
+import type { LevelCurvesConfig } from '../progression/levelGrowth.ts';
 import type { MetaMenuInitialView } from '../ui/MetaMenuOverlay.ts';
 import { DomModalMenuHost } from './DomModalMenuHost.ts';
 import { ElectronBattleMenuHost } from './ElectronBattleMenuHost.ts';
@@ -13,6 +14,7 @@ export type { MetaMenuInitialView };
 
 export interface MenuHostContext {
   gameData: GameData;
+  levelCurves: LevelCurvesConfig;
   getParty: () => PartySlotState[];
   getUnlockedClassIds: () => ClassId[];
   onBuildChanged: (partyIndex: number, build: CharacterBuild) => void;

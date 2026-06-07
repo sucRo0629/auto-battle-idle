@@ -38,6 +38,8 @@ function formatEffectKind(effect: SkillEffectDef): string {
       return 'HoT';
     case 'dot':
       return 'DoT';
+    case 'barrier':
+      return 'バリア';
   }
 }
 

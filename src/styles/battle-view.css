@@ -62,7 +62,11 @@
   --hud-name-color: #ffffff;
   --hud-exp-bar-fill: #f5a623;
   --hud-hp-bar-fill: #2ecc71;
+  --hud-barrier-fill: #7bed9f;
+  --hud-barrier-overflow-fill: #d5f5e3;
   --hud-enemy-hp-bar-fill: #e74c3c;
+  --enemy-barrier-fill: #ff8a80;
+  --enemy-barrier-overflow-fill: #ffcdd2;
   --hud-bar-border: #1a1a1a;
   --hud-bar-track: #333333;
   --hud-skill-recast-track: #2a2a35;

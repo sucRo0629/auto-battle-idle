@@ -1,11 +1,18 @@
 import type { BattleSnapshot, StatusEffect, SkillVfxDef } from "../battle/types.ts";
-import { getSpriteImage } from "./SpriteRegistry.ts";
 import { BuffGlowManager, drawSpriteWithBuffGlow } from "./buffGlowEffect.ts";
 import { drawSpriteWithDamageEffect } from "./damageEffect.ts";
 import {
   getPlaceholderSpriteYOffset,
-  hasSpriteSheetAnimation,
+  beginDeathPlaceholder,
+  clearDeathPlaceholder,
+  getDeathPlaceholderTransform,
 } from "./placeholderSpriteAnim.ts";
+import { hasSpriteSheetAnimation } from "./spriteSheetRegistry.ts";
+import { drawSpriteFrameAtFootAnchor } from "./spriteFrameDraw.ts";
+import {
+  getSheetCellSize,
+  SPRITE_LAYOUT_SIZE,
+} from "./spriteLayout.ts";
 import { getClassIconImage } from "./IconRegistry.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
 import {
@@ -45,10 +52,11 @@ import {
   type BattleHudTheme,
 } from "./battleHudTheme.ts";
 import { VictoryOverlay } from "./VictoryOverlay.ts";
+import { DeathPlaybackManager } from "./deathPlayback.ts";
 
 const CANVAS_W = 480;
 const CANVAS_H = battleCanvasHeight(1);
-const SPRITE_SIZE = 32;
+const SPRITE_SIZE = SPRITE_LAYOUT_SIZE;
 const SPRITE_SCALE = 1;
 
 interface AllyHudEntry {
@@ -59,6 +67,7 @@ interface AllyHudEntry {
   iconKey: string;
   hp: number;
   maxHp: number;
+  barrierHp: number;
   atk: number;
   def: number;
   reg: number;
@@ -88,6 +97,7 @@ export class BattleCanvas implements IBattleRenderer {
   private attackEffects = new AttackEffectManager();
   private damagePopups = new DamagePopupManager();
   private buffGlows = new BuffGlowManager();
+  private deathPlayback = new DeathPlaybackManager();
   private victoryOverlay = new VictoryOverlay();
   private layouts: CombatantLayout[] = [];
   private allyHud: AllyHudEntry[] = [];
@@ -117,6 +127,13 @@ export class BattleCanvas implements IBattleRenderer {
 
   playAnim(combatantId: string, state: AnimState): void {
     this.animator.setAnim(combatantId, state);
+    if (state === "death") {
+      const layout = this.layouts.find((l) => l.id === combatantId);
+      this.deathPlayback.trigger(combatantId, {
+        persist: layout ? !layout.isEnemy : false,
+      });
+      beginDeathPlaceholder(combatantId);
+    }
   }
 
   playAttackEffect(
@@ -146,6 +163,7 @@ export class BattleCanvas implements IBattleRenderer {
     this.attackEffects.tick(deltaMs);
     this.damagePopups.tick(deltaMs);
     this.buffGlows.tick(deltaMs);
+    this.deathPlayback.tick(deltaMs);
     this.victoryOverlay.tick(deltaMs);
     this.draw();
   }
@@ -165,8 +183,18 @@ export class BattleCanvas implements IBattleRenderer {
     const canShowEnemies = snapshot.phase === "running";
     if (canShowEnemies) {
       for (const enemy of snapshot.enemies) {
-        if (enemy.hp <= 0) continue;
-        if (!snapshot.engaged && enemy.visualX < ENEMY_VISIBLE_MIN_X) continue;
+        const isDead = enemy.hp <= 0;
+        if (!isDead) {
+          this.resetDeathVisuals(enemy.id);
+        }
+        if (isDead && !this.deathPlayback.shouldShow(enemy.id)) continue;
+        if (
+          !isDead &&
+          !snapshot.engaged &&
+          enemy.visualX < ENEMY_VISIBLE_MIN_X
+        ) {
+          continue;
+        }
         const animState = this.animator.getState(enemy.id);
         layouts.push({
           id: enemy.id,
@@ -175,11 +203,12 @@ export class BattleCanvas implements IBattleRenderer {
           spriteKey: enemy.spriteKey,
           hp: enemy.hp,
           maxHp: enemy.maxHp,
+          barrierHp: enemy.barrierHp,
           atk: enemy.atk,
           def: enemy.def,
           reg: enemy.reg,
           isEnemy: true,
-          isAlive: enemy.hp > 0,
+          isAlive: !isDead,
           anim: animState.anim,
           animFrame: animState.frame,
           statusEffects: enemy.statusEffects,
@@ -188,6 +217,9 @@ export class BattleCanvas implements IBattleRenderer {
     }
 
     for (const ally of snapshot.allies) {
+      if (ally.hp > 0) {
+        this.resetDeathVisuals(ally.id);
+      }
       const animState = this.animator.getState(ally.id);
       layouts.push({
         id: ally.id,
@@ -196,6 +228,7 @@ export class BattleCanvas implements IBattleRenderer {
         spriteKey: ally.spriteKey,
         hp: ally.hp,
         maxHp: ally.maxHp,
+        barrierHp: ally.barrierHp,
         atk: ally.atk,
         def: ally.def,
         reg: ally.reg,
@@ -219,6 +252,7 @@ export class BattleCanvas implements IBattleRenderer {
         iconKey: ally.iconKey,
         hp: ally.hp,
         maxHp: ally.maxHp,
+        barrierHp: ally.barrierHp,
         atk: ally.atk,
         def: ally.def,
         reg: ally.reg,
@@ -229,6 +263,16 @@ export class BattleCanvas implements IBattleRenderer {
     });
     this.worldOffsetX = snapshot.worldOffsetX;
     this.victoryOverlay.syncPhase(snapshot.phase, snapshot.alliesOffScreen);
+  }
+
+  /** リスポーン等で HP が回復したユニットの死亡演出を解除 */
+  private resetDeathVisuals(combatantId: string): void {
+    this.deathPlayback.clear(combatantId);
+    clearDeathPlaceholder(combatantId);
+    const animState = this.animator.getState(combatantId);
+    if (animState.anim === "death") {
+      this.animator.setAnim(combatantId, "idle");
+    }
   }
 
   private drawBackground(): void {
@@ -261,7 +305,7 @@ export class BattleCanvas implements IBattleRenderer {
 
     const enemyBarTops = computeEnemyHpBarTops(
       this.layouts
-        .filter((layout) => layout.isEnemy)
+        .filter((layout) => layout.isEnemy && layout.isAlive)
         .map((layout) => ({ id: layout.id, x: layout.x, y: layout.y })),
       SPRITE_SCALE,
       SPRITE_SIZE
@@ -269,7 +313,7 @@ export class BattleCanvas implements IBattleRenderer {
 
     for (const layout of this.layouts) {
       this.drawSprite(layout, layout.x, layout.y, SPRITE_SCALE);
-      if (layout.isEnemy) {
+      if (layout.isEnemy && layout.isAlive) {
         this.drawHpBar(
           layout,
           layout.x,
@@ -532,7 +576,6 @@ export class BattleCanvas implements IBattleRenderer {
     barH: number
   ): void {
     const { ctx } = this;
-    const ratio = ally.maxHp > 0 ? Math.max(0, ally.hp / ally.maxHp) : 0;
 
     ctx.save();
     if (!ally.isAlive) {
@@ -545,10 +588,52 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.fillStyle = this.theme.barTrack;
     ctx.fillRect(x, y, barW, barH);
 
-    ctx.fillStyle = this.theme.hpBarFill;
-    ctx.fillRect(x, y, barW * ratio, barH);
+    this.fillHpBarWithBarrier(
+      x,
+      y,
+      barW,
+      barH,
+      ally.hp,
+      ally.maxHp,
+      ally.barrierHp,
+      this.theme.hpBarFill,
+      this.theme.barrierFill,
+      this.theme.barrierOverflowFill,
+    );
 
     ctx.restore();
+  }
+
+  private fillHpBarWithBarrier(
+    x: number,
+    y: number,
+    barW: number,
+    barH: number,
+    hp: number,
+    maxHp: number,
+    barrierHp: number,
+    hpFill: string,
+    barrierFill: string,
+    barrierOverflowFill: string,
+  ): void {
+    const { ctx } = this;
+    if (maxHp <= 0) return;
+
+    const hpRatio = Math.max(0, hp / maxHp);
+    ctx.fillStyle = hpFill;
+    ctx.fillRect(x, y, barW * hpRatio, barH);
+
+    if (barrierHp <= 0) return;
+
+    const tier1Ratio = Math.min(barrierHp, maxHp) / maxHp;
+    ctx.fillStyle = barrierFill;
+    ctx.fillRect(x, y, barW * tier1Ratio, barH);
+
+    const overflowRatio = Math.max(0, barrierHp - maxHp) / maxHp;
+    if (overflowRatio > 0) {
+      ctx.fillStyle = barrierOverflowFill;
+      ctx.fillRect(x, y, barW * overflowRatio, barH);
+    }
   }
 
   private drawHudStatusBadges(
@@ -619,63 +704,104 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.fillRect(x, y, width, height);
   }
 
-  private drawSpriteImage(
-    ctx: CanvasRenderingContext2D,
-    spriteKey: string,
-    x: number,
-    y: number,
-    width: number,
-    height: number
-  ): void {
-    const image = getSpriteImage(spriteKey);
-
-    if (image) {
-      ctx.drawImage(image, x, y, width, height);
-      return;
-    }
-
-    ctx.fillStyle = resolveSpritePlaceholderColor(spriteKey, this.theme);
-    ctx.fillRect(x, y, width, height);
-  }
-
   private drawSprite(
     layout: CombatantLayout,
     x: number,
     y: number,
-    scale: number
+    scale: number,
   ): void {
     const { ctx } = this;
     const size = SPRITE_SIZE * scale;
-    const offsetY = hasSpriteSheetAnimation(layout.spriteKey)
+    const offsetY = hasSpriteSheetAnimation(layout.spriteKey, layout.anim)
       ? 0
       : getPlaceholderSpriteYOffset(layout, scale);
 
+    const deathTransform =
+      layout.anim === "death" &&
+      !hasSpriteSheetAnimation(layout.spriteKey, "death")
+        ? getDeathPlaceholderTransform(layout.id, layout)
+        : null;
+    const deathAlpha = this.deathPlayback.isActive(layout.id)
+      ? this.deathPlayback.getAlpha(layout.id)
+      : null;
+
     ctx.save();
-    if (layout.isEnemy) {
+
+    if (deathTransform) {
+      const pivotX = x + size / 2;
+      const pivotY = y + offsetY + size;
+      ctx.translate(pivotX, pivotY);
+      ctx.rotate(deathTransform.rotationRad);
+      ctx.translate(-size / 2, -size);
+      if (layout.isEnemy) {
+        ctx.translate(size, 0);
+        ctx.scale(-1, 1);
+      }
+      if (deathAlpha !== null) {
+        ctx.globalAlpha = deathAlpha;
+      }
+    } else if (layout.isEnemy) {
       ctx.translate(x + size, y + offsetY);
       ctx.scale(-1, 1);
+      if (!layout.isAlive) {
+        ctx.globalAlpha = this.theme.deadAlpha;
+      }
     } else {
       ctx.translate(x, y + offsetY);
+      if (!layout.isAlive) {
+        ctx.globalAlpha = this.theme.deadAlpha;
+      }
     }
 
-    if (!layout.isAlive) {
-      ctx.globalAlpha = this.theme.deadAlpha;
-    }
+    const placeholderColor = resolveSpritePlaceholderColor(
+      layout.spriteKey,
+      this.theme,
+    );
+    const footX = size / 2;
+    const footY = size;
+
+    const drawAtFoot = (
+      targetCtx: CanvasRenderingContext2D,
+      anchorFootX: number,
+      anchorFootY: number,
+    ) => {
+      drawSpriteFrameAtFootAnchor(
+        targetCtx,
+        layout.spriteKey,
+        layout.anim,
+        layout.animFrame,
+        anchorFootX,
+        anchorFootY,
+        size,
+        size,
+        scale,
+        placeholderColor,
+      );
+    };
 
     const drawLocalSprite = (localCtx: CanvasRenderingContext2D) => {
-      this.drawSpriteImage(localCtx, layout.spriteKey, 0, 0, size, size);
+      drawAtFoot(localCtx, footX, footY);
     };
+
+    const tintBufferSize = Math.ceil(
+      Math.max(size, getSheetCellSize(layout.spriteKey) * scale),
+    );
 
     const buffGlow = this.buffGlows.getIntensity(
       layout.id,
       this.theme.buffGlowPeak,
     );
 
-    if (layout.anim === "hurt") {
+    if (layout.anim === "death") {
+      drawLocalSprite(ctx);
+    } else if (layout.anim === "hurt") {
       drawSpriteWithDamageEffect(
         ctx,
+        tintBufferSize,
         size,
-        drawLocalSprite,
+        (bufferCtx) => {
+          drawAtFoot(bufferCtx, tintBufferSize / 2, tintBufferSize);
+        },
         this.theme.hurtTintStrength,
         this.theme.hurtTintR,
         this.theme.hurtTintG,
@@ -684,9 +810,12 @@ export class BattleCanvas implements IBattleRenderer {
     } else if (buffGlow > 0) {
       drawSpriteWithBuffGlow(
         ctx,
+        tintBufferSize,
         size,
         buffGlow,
-        drawLocalSprite,
+        (bufferCtx) => {
+          drawAtFoot(bufferCtx, tintBufferSize / 2, tintBufferSize);
+        },
         this.theme.buffGlowR,
         this.theme.buffGlowG,
         this.theme.buffGlowB,
@@ -711,13 +840,22 @@ export class BattleCanvas implements IBattleRenderer {
     const barH = ENEMY_HP_BAR_H * scale;
     const x = spriteX + (spriteW - barW) / 2;
     const y = barTop ?? defaultEnemyHpBarTop(spriteY, scale);
-    const ratio = layout.maxHp > 0 ? Math.max(0, layout.hp / layout.maxHp) : 0;
 
     ctx.fillStyle = this.theme.barTrack;
     ctx.fillRect(x, y, barW, barH);
 
-    ctx.fillStyle = this.theme.enemyHpBarFill;
-    ctx.fillRect(x, y, barW * ratio, barH);
+    this.fillHpBarWithBarrier(
+      x,
+      y,
+      barW,
+      barH,
+      layout.hp,
+      layout.maxHp,
+      layout.barrierHp,
+      this.theme.enemyHpBarFill,
+      this.theme.enemyBarrierFill,
+      this.theme.enemyBarrierOverflowFill,
+    );
 
     ctx.strokeStyle = this.theme.enemyHpBarOutline;
     ctx.lineWidth = this.theme.enemyHpBarOutlineWidth;
@@ -732,6 +870,8 @@ export class BattleCanvas implements IBattleRenderer {
     const rowWidthById = new Map<string, number>();
 
     for (const layout of this.layouts) {
+      if (layout.isEnemy && !layout.isAlive) continue;
+
       const badges = aggregateStatStatusEffects(layout.statusEffects, {
         atk: layout.atk,
         def: layout.def,
@@ -765,6 +905,8 @@ export class BattleCanvas implements IBattleRenderer {
     );
 
     for (const layout of this.layouts) {
+      if (layout.isEnemy && !layout.isAlive) continue;
+
       const badges = aggregateStatStatusEffects(layout.statusEffects, {
         atk: layout.atk,
         def: layout.def,

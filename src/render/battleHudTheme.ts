@@ -19,7 +19,11 @@ export interface BattleHudTheme {
   nameColor: string;
   expBarFill: string;
   hpBarFill: string;
+  barrierFill: string;
+  barrierOverflowFill: string;
   enemyHpBarFill: string;
+  enemyBarrierFill: string;
+  enemyBarrierOverflowFill: string;
   barBorder: string;
   barTrack: string;
   skillRecastTrack: string;
@@ -138,7 +142,19 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     nameColor: readString(style, '--hud-name-color', '#ffffff'),
     expBarFill: readString(style, '--hud-exp-bar-fill', '#f5a623'),
     hpBarFill: readString(style, '--hud-hp-bar-fill', '#2ecc71'),
+    barrierFill: readString(style, '--hud-barrier-fill', '#7bed9f'),
+    barrierOverflowFill: readString(
+      style,
+      '--hud-barrier-overflow-fill',
+      '#d5f5e3',
+    ),
     enemyHpBarFill: readString(style, '--hud-enemy-hp-bar-fill', '#e74c3c'),
+    enemyBarrierFill: readString(style, '--enemy-barrier-fill', '#ff8a80'),
+    enemyBarrierOverflowFill: readString(
+      style,
+      '--enemy-barrier-overflow-fill',
+      '#ffcdd2',
+    ),
     barBorder: readString(style, '--hud-bar-border', '#1a1a1a'),
     barTrack: readString(style, '--hud-bar-track', '#333333'),
     skillRecastTrack: readString(style, '--hud-skill-recast-track', '#2a2a35'),

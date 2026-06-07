@@ -5,7 +5,11 @@ import type {
   PartySlotState,
   SaveGameState,
 } from '../battle/types.ts';
-import { normalizeEquippedSlots } from '../progression/skillBuild.ts';
+import {
+  normalizeActiveSlots,
+  reconcilePartyBuilds,
+} from '../progression/skillBuild.ts';
+import { applyDebugMemberLevel } from '../dev/debugLevel.ts';
 import {
   isVerifyModeEnabled,
   partyIdForVerifyMode,
@@ -67,11 +71,14 @@ export class GameSession {
         isVerifyMode: () => this.verifyMode,
         onVerifyModeChange: (enabled) => this.setVerifyMode(enabled),
         onOpenMetaMenu: () => this.openPartyMenu(),
+        onMemberLevelChange: (partyIndex, level) =>
+          this.setMemberLevel(partyIndex, level),
       },
     );
 
     this.menuHost = createMenuHost({
       gameData,
+      levelCurves: this.levelCurves,
       getParty: () => this.save.party,
       onBuildChanged: (partyIndex, build) => this.updateMemberBuild(partyIndex, build),
       getUnlockedClassIds: () => this.save.unlockedClassIds,
@@ -114,6 +121,7 @@ export class GameSession {
     this.save = this.loadSaveForMode(enabled);
     this.engine.restartBattle();
     this.persistSave();
+    this.view.syncVerifyModeToggle(enabled);
   }
 
   start(): void {
@@ -135,7 +143,7 @@ export class GameSession {
   updateMemberBuild(partyIndex: number, build: CharacterBuild): void {
     const member = this.save.party[partyIndex];
     if (!member) return;
-    member.build = structuredClone(normalizeEquippedSlots(build));
+    member.build = structuredClone(normalizeActiveSlots(build));
     this.persistSave();
     this.engine.syncPartyBuilds();
   }
@@ -147,6 +155,20 @@ export class GameSession {
       : null;
     this.persistSave();
     this.engine.restartBattle();
+  }
+
+  setMemberLevel(partyIndex: number, level: number): void {
+    if (!this.verifyMode) return;
+
+    const member = this.save.party[partyIndex];
+    if (!member) return;
+
+    applyDebugMemberLevel(member, level, this.gameData);
+    this.persistSave();
+    this.engine.restartBattle();
+    console.log(
+      `[debug] ${this.gameData.classRegistry[member.classId]?.displayName ?? member.classId} → Lv ${member.progress.level}`,
+    );
   }
 
   tick(deltaSec: number, deltaMs: number): void {
@@ -172,6 +194,7 @@ export class GameSession {
     const partyId = partyIdForVerifyMode(verifyMode);
     const loaded = this.saveManager.load(storageKey);
     const save = loaded ?? createDefaultSave(this.gameData, partyId);
+    reconcilePartyBuilds(save.party, this.gameData);
     this.saveManager.save(save, storageKey);
     return save;
   }

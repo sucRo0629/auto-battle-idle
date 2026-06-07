@@ -1,8 +1,12 @@
 import './styles/app-base.css';
 import { loadGameData } from './battle/data/loadGameData.ts';
 import type { ClassId, PartySlotState } from './battle/types.ts';
+import { loadLevelCurves } from './progression/levelGrowth.ts';
 import { isElectronMenu } from './platform/electronApi.ts';
 import { MetaMenuOverlay } from './ui/MetaMenuOverlay.ts';
+import levelCurvesJson from '../data/levelCurves.json';
+
+const levelCurves = loadLevelCurves(levelCurvesJson);
 
 const app = document.querySelector<HTMLDivElement>('#menu-app');
 if (!app) {
@@ -20,6 +24,7 @@ function mountMenu(): void {
   overlay = new MetaMenuOverlay(
     app,
     gameData,
+    levelCurves,
     () => party,
     () => unlockedClassIds,
     {

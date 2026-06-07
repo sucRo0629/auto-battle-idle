@@ -116,7 +116,7 @@
   border-color: #4a90d9;
 }
 
-.skill-menu-skill-row--equipped {
+.skill-menu-skill-row--set {
   border-color: #4a90d9;
   background: rgba(74, 144, 217, 0.18);
 }
@@ -154,6 +154,46 @@
 
 .skill-menu-compose-group--class {
   flex: 1 1 auto;
+}
+
+.skill-menu-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.skill-menu-stats-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b8c0cc;
+}
+
+.skill-menu-stats-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 12px;
+  margin: 0;
+}
+
+.skill-menu-stats-label {
+  margin: 0;
+  font-size: 12px;
+  color: #8a939f;
+}
+
+.skill-menu-stats-label--latin {
+  font-variant: normal;
+  letter-spacing: 0.04em;
+}
+
+.skill-menu-stats-value {
+  margin: 0;
+  font-size: 12px;
+  color: #e8ecf1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .skill-menu-compose-group--active {

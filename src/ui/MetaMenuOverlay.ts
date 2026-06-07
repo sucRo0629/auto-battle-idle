@@ -5,6 +5,7 @@ import type {
   GameData,
   PartySlotState,
 } from "../battle/types.ts";
+import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 import { SkillMenuPanel } from "./SkillMenuPanel.ts";
 
 export type MetaMenuPresentation = "modal" | "window";
@@ -32,6 +33,7 @@ export class MetaMenuOverlay {
   constructor(
     private readonly host: HTMLElement,
     private readonly gameData: GameData,
+    private readonly levelCurves: LevelCurvesConfig,
     private readonly getParty: () => PartySlotState[],
     private readonly getUnlockedClassIds: () => ClassId[],
     private readonly callbacks: MetaMenuOverlayCallbacks,
@@ -119,6 +121,7 @@ export class MetaMenuOverlay {
     this.skillPanel = new SkillMenuPanel(
       this.bodyEl,
       this.gameData,
+      this.levelCurves,
       this.getParty().map((member) =>
         member
           ? {

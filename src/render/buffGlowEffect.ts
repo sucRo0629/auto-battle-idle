@@ -1,3 +1,5 @@
+import { blitSpriteBufferAtLayoutFoot } from "./spriteFrameDraw.ts";
+
 const BUFF_GLOW_DURATION_MS = 800;
 
 let spriteBuffer: HTMLCanvasElement | null = null;
@@ -5,7 +7,8 @@ let spriteBuffer: HTMLCanvasElement | null = null;
 /** 透過を保持したままスプライトを白く光らせて描画する */
 export function drawSpriteWithBuffGlow(
   targetCtx: CanvasRenderingContext2D,
-  size: number,
+  bufferSize: number,
+  layoutSize: number,
   intensity: number,
   drawSprite: (ctx: CanvasRenderingContext2D) => void,
   glowR: number,
@@ -17,20 +20,15 @@ export function drawSpriteWithBuffGlow(
     return;
   }
 
-  const pixelSize = Math.ceil(size);
+  const pixelSize = Math.ceil(bufferSize);
   const bufferCtx = getSpriteBuffer(pixelSize);
   drawSprite(bufferCtx);
   applyBuffGlow(bufferCtx, pixelSize, intensity, glowR, glowG, glowB);
-  targetCtx.drawImage(
+  blitSpriteBufferAtLayoutFoot(
+    targetCtx,
     spriteBuffer!,
-    0,
-    0,
     pixelSize,
-    pixelSize,
-    0,
-    0,
-    size,
-    size,
+    layoutSize,
   );
 }
 

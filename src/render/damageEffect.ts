@@ -1,29 +1,27 @@
+import { blitSpriteBufferAtLayoutFoot } from "./spriteFrameDraw.ts";
+
 let spriteBuffer: HTMLCanvasElement | null = null;
 
 /** 透過を保持したままスプライトに被ダメージの赤みを付けて描画する */
 export function drawSpriteWithDamageEffect(
   targetCtx: CanvasRenderingContext2D,
-  size: number,
+  bufferSize: number,
+  layoutSize: number,
   drawSprite: (ctx: CanvasRenderingContext2D) => void,
   tintStrength: number,
   tintR: number,
   tintG: number,
   tintB: number,
 ): void {
-  const pixelSize = Math.ceil(size);
+  const pixelSize = Math.ceil(bufferSize);
   const bufferCtx = getSpriteBuffer(pixelSize);
   drawSprite(bufferCtx);
   applyHurtTint(bufferCtx, pixelSize, tintStrength, tintR, tintG, tintB);
-  targetCtx.drawImage(
+  blitSpriteBufferAtLayoutFoot(
+    targetCtx,
     spriteBuffer!,
-    0,
-    0,
     pixelSize,
-    pixelSize,
-    0,
-    0,
-    size,
-    size
+    layoutSize,
   );
 }
 

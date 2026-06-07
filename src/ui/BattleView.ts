@@ -9,10 +9,13 @@ import {
 import { getNextStageId, getStageById } from '../progression/stageProgression.ts';
 import { resolveSkillVfx } from '../render/skillVfx/resolveSkillVfx.ts';
 import { BattleCanvas, type PartyHudMeta } from '../render/BattleCanvas.ts';
+import { DebugMenuPanel } from './DebugMenuPanel.ts';
+
 export interface VerifyModeControls {
   isVerifyMode: () => boolean;
   onVerifyModeChange: (enabled: boolean) => void;
   onOpenMetaMenu: () => void;
+  onMemberLevelChange?: (partyIndex: number, level: number) => void;
 }
 
 export class BattleView {
@@ -23,6 +26,7 @@ export class BattleView {
   private readonly menuButton: HTMLButtonElement;
   private readonly enhancementTreeButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
+  private readonly debugMenu: DebugMenuPanel;
 
   constructor(
     container: HTMLElement,
@@ -86,6 +90,16 @@ export class BattleView {
 
     this.root.appendChild(this.canvasHost);
 
+    this.debugMenu = new DebugMenuPanel(this.gameData, {
+      isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
+      getSave: this.getSave,
+      onMemberLevelChange: (partyIndex, level) => {
+        verifyModeControls?.onMemberLevelChange?.(partyIndex, level);
+        this.debugMenu.refresh();
+      },
+    });
+    this.debugMenu.mount(this.root);
+
     container.appendChild(this.root);
 
     this.canvas = new BattleCanvas();
@@ -108,6 +122,10 @@ export class BattleView {
           this.pushLog(`${slotLabel} → +${event.amount} HP`);
           this.canvas.showHealPopup(event.targetId, event.amount);
           this.canvas.playAnim(event.actorId, 'heal');
+        }
+      } else if (event.effect === 'barrier') {
+        if (event.amount !== undefined) {
+          this.pushLog(`${slotLabel} → +${event.amount} barrier`);
         }
       } else if (
         event.effect === 'buff' ||
@@ -228,10 +246,12 @@ export class BattleView {
 
   destroy(): void {
     this.canvas.destroy();
+    this.debugMenu.destroy();
     this.root.remove();
   }
 
   syncVerifyModeToggle(enabled: boolean): void {
     this.verifyModeInput.checked = enabled;
+    this.debugMenu.refresh();
   }
 }

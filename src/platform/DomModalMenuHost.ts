@@ -14,6 +14,7 @@ export class DomModalMenuHost implements MenuHost {
     this.overlay = new MetaMenuOverlay(
       document.body,
       this.context.gameData,
+      this.context.levelCurves,
       this.context.getParty,
       this.context.getUnlockedClassIds,
       {

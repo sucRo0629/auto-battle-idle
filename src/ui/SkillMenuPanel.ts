@@ -1,4 +1,5 @@
 import "../styles/skill-menu-panel.css";
+import { MEMBER_STAT_LABELS } from "../battle/data/gameDataSchema.ts";
 import {
   resolveClassIconKey,
   resolveClassSpriteKey,
@@ -16,13 +17,15 @@ import {
   createMemberFromClass,
   getAssignableClassIds,
 } from "../progression/partyCompose.ts";
+import { type LevelCurvesConfig } from "../progression/levelGrowth.ts";
+import { resolveMemberDisplayStats } from "../progression/memberStatsDisplay.ts";
 import {
-  canEquipActive,
+  canSetActive,
   cloneBuild,
-  equipActiveSlot,
   getUnlockedActiveSlotCount,
   MAX_ACTIVE_SLOTS,
-  normalizeEquippedSlots,
+  normalizeActiveSlots,
+  setActiveSlot,
 } from "../progression/skillBuild.ts";
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
 import {
@@ -56,6 +59,7 @@ export class SkillMenuPanel {
   constructor(
     private readonly container: HTMLElement,
     private readonly gameData: GameData,
+    private readonly levelCurves: LevelCurvesConfig,
     sourceParty: PartySlotState[],
     unlockedClassIds: ClassId[],
     private readonly callbacks: SkillMenuPanelCallbacks
@@ -66,7 +70,7 @@ export class SkillMenuPanel {
         ? {
             classId: member.classId,
             progress: structuredClone(member.progress),
-            build: normalizeEquippedSlots(cloneBuild(member.build)),
+            build: normalizeActiveSlots(cloneBuild(member.build)),
           }
         : null
     );
@@ -145,12 +149,18 @@ export class SkillMenuPanel {
 
       if (
         skillId &&
-        !canEquipActive(member.build, skillId, this.gameData, member.classId)
+        !canSetActive(
+          member.build,
+          skillId,
+          this.gameData,
+          member.classId,
+          slotIndex
+        )
       ) {
         return;
       }
 
-      member.build = equipActiveSlot(member.build, skillId, slotIndex);
+      member.build = setActiveSlot(member.build, skillId, slotIndex);
       this.commitBuildChange(this.selectedIndex);
       this.pickerTarget = null;
       this.render();
@@ -179,7 +189,7 @@ export class SkillMenuPanel {
   private commitBuildChange(partyIndex: number): void {
     const member = this.draftParty[partyIndex];
     if (!member) return;
-    member.build = normalizeEquippedSlots(member.build);
+    member.build = normalizeActiveSlots(member.build);
     this.callbacks.onBuildChanged(partyIndex, member.build);
   }
 
@@ -304,7 +314,13 @@ export class SkillMenuPanel {
     classHeading.className = "skill-menu-section-title";
     classHeading.textContent = "クラス設定";
 
-    classGroup.append(classHeading, this.createClassSlotButton(member, preset));
+    classGroup.append(classHeading);
+    if (member && preset) {
+      classGroup.appendChild(
+        this.createStatsSection(member, preset)
+      );
+    }
+    classGroup.appendChild(this.createClassSlotButton(member, preset));
     section.appendChild(classGroup);
 
     if (member) {
@@ -330,6 +346,54 @@ export class SkillMenuPanel {
       section.appendChild(activeGroup);
     }
 
+    return section;
+  }
+
+  private createStatsSection(
+    member: PartyMemberState,
+    preset: ClassPreset
+  ): HTMLElement {
+    const stats = resolveMemberDisplayStats(
+      preset,
+      member.progress.level,
+      this.levelCurves
+    );
+
+    const section = document.createElement("section");
+    section.className = "skill-menu-stats";
+
+    const heading = document.createElement("h4");
+    heading.className = "skill-menu-stats-title";
+    heading.textContent = `ステータス（Lv ${stats.level}）`;
+    section.appendChild(heading);
+
+    const grid = document.createElement("dl");
+    grid.className = "skill-menu-stats-grid";
+
+    const rows: { label: string; value: string; latin?: boolean }[] = [
+      { label: MEMBER_STAT_LABELS.hp, value: String(stats.maxHp), latin: true },
+      { label: MEMBER_STAT_LABELS.atk, value: String(stats.atk) },
+      { label: MEMBER_STAT_LABELS.def, value: String(stats.def) },
+      { label: MEMBER_STAT_LABELS.reg, value: String(stats.reg) },
+      { label: MEMBER_STAT_LABELS.spd, value: stats.spdLabel },
+    ];
+
+    for (const row of rows) {
+      const dt = document.createElement("dt");
+      dt.className = "skill-menu-stats-label";
+      if (row.latin) {
+        dt.classList.add("skill-menu-stats-label--latin");
+      }
+      dt.textContent = row.label;
+
+      const dd = document.createElement("dd");
+      dd.className = "skill-menu-stats-value";
+      dd.textContent = row.value;
+
+      grid.append(dt, dd);
+    }
+
+    section.appendChild(grid);
     return section;
   }
 
@@ -560,7 +624,13 @@ export class SkillMenuPanel {
     for (const skillId of member.build.learnedActiveIds) {
       const def = this.gameData.skillRegistry.actives[skillId];
       if (
-        !canEquipActive(member.build, skillId, this.gameData, member.classId)
+        !canSetActive(
+          member.build,
+          skillId,
+          this.gameData,
+          member.classId,
+          slotIndex
+        )
       ) {
         continue;
       }

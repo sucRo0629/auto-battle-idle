@@ -1,0 +1,77 @@
+.debug-menu {
+  -webkit-app-region: no-drag;
+  padding: 8px 10px;
+  background: rgba(22, 33, 62, 0.95);
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.debug-menu-title {
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: #a8b8d0;
+  letter-spacing: 0.02em;
+}
+
+.debug-menu-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.debug-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.debug-menu-member-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.debug-menu-level-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #c8d6e5;
+}
+
+.debug-menu-level-input {
+  width: 44px;
+  padding: 2px 4px;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 4px;
+  background: #0f0f1a;
+  color: var(--app-text);
+  font: inherit;
+  text-align: center;
+}
+
+.debug-menu-level-input:focus {
+  outline: 1px solid #4a90d9;
+}
+
+.debug-menu-level-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 4px;
+  background: rgba(45, 58, 79, 0.9);
+  color: var(--app-text);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.debug-menu-level-button:hover {
+  background: rgba(74, 144, 217, 0.35);
+}
