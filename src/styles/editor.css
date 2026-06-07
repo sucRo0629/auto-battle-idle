@@ -1,0 +1,265 @@
+#editor-app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px 48px;
+}
+
+.editor-header {
+  margin-bottom: 20px;
+}
+
+.editor-title {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.editor-subtitle {
+  margin: 0;
+  color: #9aa8bc;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.editor-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.editor-panel {
+  margin-bottom: 28px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid #2d3a4f;
+}
+
+.editor-panel-class,
+.editor-panel-enemy {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.editor-tab {
+  padding: 8px 16px;
+  border: 1px solid #2d3a4f;
+  border-radius: 6px;
+  background: #16213e;
+  color: var(--app-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.editor-tab.is-active {
+  border-color: #4a7cff;
+  background: #1e3a6e;
+}
+
+.editor-status {
+  min-height: 0;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.editor-status.is-error {
+  background: rgba(180, 40, 40, 0.25);
+  border: 1px solid #b42828;
+}
+
+.editor-status.is-success {
+  background: rgba(40, 120, 60, 0.25);
+  border: 1px solid #28783c;
+}
+
+.editor-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.editor-step-header {
+  margin-bottom: 8px;
+}
+
+.editor-step-title {
+  margin: 0 0 4px;
+  font-size: 1.2rem;
+}
+
+.editor-step-desc {
+  margin: 0;
+  color: #9aa8bc;
+  font-size: 0.88rem;
+}
+
+.editor-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.editor-picker-label {
+  font-size: 0.9rem;
+  color: #c8d6e5;
+}
+
+.editor-section {
+  padding: 14px;
+  border: 1px solid #2d3a4f;
+  border-radius: 8px;
+  background: rgba(22, 33, 62, 0.6);
+}
+
+.editor-section-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.editor-subgrid {
+  margin-top: 8px;
+}
+
+.editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.editor-field-label {
+  font-size: 0.82rem;
+  color: #9aa8bc;
+}
+
+.editor-input,
+.editor-select {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid #2d3a4f;
+  border-radius: 4px;
+  background: #0f0f1a;
+  color: var(--app-text);
+  font: inherit;
+}
+
+.editor-input:read-only {
+  opacity: 0.7;
+}
+
+.editor-id-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.editor-id-row .editor-input {
+  flex: 1;
+  min-width: 180px;
+}
+
+.editor-skill-card {
+  margin-bottom: 12px;
+}
+
+.editor-effect-block {
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px dashed #2d3a4f;
+  border-radius: 6px;
+}
+
+.editor-effect-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.editor-effect-label {
+  font-size: 0.88rem;
+  color: #c8d6e5;
+}
+
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.editor-btn {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.editor-btn-primary {
+  background: #4a7cff;
+  color: #fff;
+}
+
+.editor-btn-secondary {
+  background: #2d3a4f;
+  color: var(--app-text);
+}
+
+.editor-btn-small {
+  padding: 5px 10px;
+  font-size: 0.85rem;
+  background: #2d3a4f;
+  color: var(--app-text);
+}
+
+.editor-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.editor-hint {
+  color: #9aa8bc;
+  font-size: 0.9rem;
+}
+
+.editor-preview {
+  padding: 0.75rem 1rem;
+  border: 1px solid #3a3a4a;
+  border-radius: 6px;
+  background: #1a1a24;
+}
+
+.editor-preview-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.editor-preview-list {
+  margin: 0 0 0.5rem;
+  padding-left: 1.25rem;
+  font-size: 0.9rem;
+}
+
+.editor-preview-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #9a9aaa;
+}
+
+.editor-field-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}

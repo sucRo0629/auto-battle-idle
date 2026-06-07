@@ -1,4 +1,4 @@
-# Electron シェル（Phase 4 基盤）
+# Electron シェル（Phase 8 基盤）
 
 ## ウィンドウ構成
 

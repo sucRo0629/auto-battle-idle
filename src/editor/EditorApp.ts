@@ -1,0 +1,511 @@
+import type { EnemyTemplate } from '../battle/types.ts';
+import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
+import { ClassEditorStep, loadClassDraftById } from './ClassEditorStep.ts';
+import { EnemyEditorStep, loadEnemyDraftById } from './EnemyEditorStep.ts';
+import {
+  buildClassPresetFromDraft,
+  buildEnemyFromDraft,
+  buildSkillDrafts,
+  collectEnemySkillRefs,
+  collectSkillsFromDrafts,
+  createEmptyClassDraft,
+  createEmptyEnemyDraft,
+  defaultBasicAttackId,
+  ensureClassBasicAttackPool,
+  ensureClassGrowthFields,
+  fetchClasses,
+  fetchEnemies,
+  fetchSkills,
+  initClassSkillEntriesFromPreset,
+  isBasicAttackSkillId,
+  mergeSkillPoolEntries,
+  nextClassSkillId,
+  saveClassBundle,
+  saveEnemyBundle,
+  syncSkillDraftEntries,
+  type ClassDraft,
+  type EnemyDraft,
+  type SkillDraftEntry,
+  type SkillSlotKind,
+  type SkillsJson,
+} from './editorApi.ts';
+import { SkillEditorStep } from './SkillEditorStep.ts';
+import { createActionButton, createButton, createEl, preserveScrollDuring } from './formUtils.ts';
+
+type EditorTab = 'class' | 'enemy';
+
+export class EditorApp {
+  private tab: EditorTab = 'class';
+  private classes: ClassPresetBeforeEnrich[] = [];
+  private enemies: EnemyTemplate[] = [];
+  private skills: SkillsJson = { passives: [], actives: [] };
+
+  private classDraft: ClassDraft = createEmptyClassDraft();
+  private selectedClassId = '';
+  private classSkillEntries: SkillDraftEntry[] = [];
+
+  private enemyDraft: EnemyDraft = createEmptyEnemyDraft();
+  private selectedEnemyId = '';
+  private enemySkillEntries: SkillDraftEntry[] = [];
+
+  private saving = false;
+  private statusMessage = '';
+  private statusIsError = false;
+
+  private classStep: ClassEditorStep | null = null;
+  private enemyStep: EnemyEditorStep | null = null;
+  private skillStep: SkillEditorStep | null = null;
+
+  private statusEl!: HTMLElement;
+  private contentEl!: HTMLElement;
+
+  constructor(private root: HTMLElement) {
+    this.buildShell();
+    void this.loadData();
+  }
+
+  private buildShell(): void {
+    this.root.replaceChildren();
+
+    const header = createEl('header', 'editor-header');
+    header.appendChild(createEl('h1', 'editor-title', 'データ編集（開発用）'));
+    header.appendChild(
+      createEl(
+        'p',
+        'editor-subtitle',
+        'classes.json / skills.json / enemies.json を編集します。保存後はゲームを再読み込みしてください。',
+      ),
+    );
+    this.root.appendChild(header);
+
+    const tabs = createEl('nav', 'editor-tabs');
+    this.root.appendChild(tabs);
+    this.renderTabs(tabs);
+
+    this.statusEl = createEl('div', 'editor-status');
+    this.root.appendChild(this.statusEl);
+
+    this.contentEl = createEl('main', 'editor-content');
+    this.root.appendChild(this.contentEl);
+  }
+
+  private renderTabs(tabs: HTMLElement): void {
+    tabs.replaceChildren();
+    const items: { id: EditorTab; label: string }[] = [
+      { id: 'class', label: 'クラス' },
+      { id: 'enemy', label: '敵' },
+    ];
+    for (const item of items) {
+      const btn = createButton(item.label, 'editor-tab', () => {
+        if (this.tab === item.id) return;
+        this.tab = item.id;
+        this.clearStatus();
+        this.render();
+      });
+      if (this.tab === item.id) btn.classList.add('is-active');
+      tabs.appendChild(btn);
+    }
+  }
+
+  private async loadData(): Promise<void> {
+    try {
+      const [classes, enemies, skills] = await Promise.all([
+        fetchClasses(),
+        fetchEnemies(),
+        fetchSkills(),
+      ]);
+      this.classes = classes;
+      this.enemies = enemies;
+      this.skills = skills;
+      this.render();
+    } catch (error) {
+      this.setStatus(
+        error instanceof Error ? error.message : 'データの読み込みに失敗しました',
+        true,
+      );
+    }
+  }
+
+  private setStatus(message: string, isError: boolean): void {
+    this.statusMessage = message;
+    this.statusIsError = isError;
+    this.renderStatus();
+  }
+
+  private clearStatus(): void {
+    this.statusMessage = '';
+    this.statusIsError = false;
+    this.renderStatus();
+  }
+
+  private renderStatus(): void {
+    this.statusEl.className = 'editor-status';
+    if (!this.statusMessage) {
+      this.statusEl.replaceChildren();
+      return;
+    }
+    if (this.statusIsError) this.statusEl.classList.add('is-error');
+    else this.statusEl.classList.add('is-success');
+    this.statusEl.textContent = this.statusMessage;
+  }
+
+  private render(): void {
+    const tabs = this.root.querySelector('.editor-tabs');
+    if (tabs) this.renderTabs(tabs as HTMLElement);
+    this.renderStatus();
+
+    this.classStep?.destroy();
+    this.enemyStep?.destroy();
+    this.skillStep?.destroy();
+    this.classStep = null;
+    this.enemyStep = null;
+    this.skillStep = null;
+
+    preserveScrollDuring(() => {
+      this.contentEl.replaceChildren();
+
+      if (this.tab === 'class') {
+        this.renderClassEditor();
+        return;
+      }
+
+      this.renderEnemyEditor();
+    });
+  }
+
+  private renderClassEditor(): void {
+    const skillsHost = createEl('div', 'editor-panel editor-panel-skills');
+    const classHost = createEl('div', 'editor-panel editor-panel-class');
+    this.contentEl.appendChild(skillsHost);
+    this.contentEl.appendChild(classHost);
+
+    this.skillStep = new SkillEditorStep(skillsHost, {
+      ...this.buildClassSkillOptions(),
+      hideSave: true,
+    });
+
+    this.classStep = new ClassEditorStep(classHost, {
+      getDraft: () => this.classDraft,
+      classes: this.classes,
+      selectedClassId: this.selectedClassId,
+      onDraftChange: (draft) => {
+        this.classDraft = draft;
+      },
+      onSelectClass: (classId) => this.selectClass(classId),
+      onNewClass: () => this.startNewClass(),
+      onSave: () => void this.saveClass(),
+      saving: this.saving,
+      hidePicker: true,
+      hideSave: true,
+    });
+
+    this.appendSaveActions(() => void this.saveClass());
+  }
+
+  private renderEnemyEditor(): void {
+    const skillsHost = createEl('div', 'editor-panel editor-panel-skills');
+    const enemyHost = createEl('div', 'editor-panel editor-panel-enemy');
+    this.contentEl.appendChild(skillsHost);
+    this.contentEl.appendChild(enemyHost);
+
+    this.skillStep = new SkillEditorStep(skillsHost, {
+      ...this.buildEnemySkillOptions(),
+      hideSave: true,
+    });
+
+    this.enemyStep = new EnemyEditorStep(enemyHost, {
+      getDraft: () => this.enemyDraft,
+      enemies: this.enemies,
+      selectedEnemyId: this.selectedEnemyId,
+      onDraftChange: (draft) => {
+        this.enemyDraft = draft;
+      },
+      onSelectEnemy: (enemyId) => this.selectEnemy(enemyId),
+      onNewEnemy: () => this.startNewEnemy(),
+      onSave: () => void this.saveEnemy(),
+      saving: this.saving,
+      hidePicker: true,
+      hideSkillIds: true,
+      hideSave: true,
+    });
+
+    this.appendSaveActions(() => void this.saveEnemy());
+  }
+
+  private appendSaveActions(onSave: () => void): void {
+    const actions = createEl('div', 'editor-actions');
+    const saveBtn = createActionButton(
+      this.saving ? '保存中…' : '保存',
+      'editor-btn editor-btn-primary',
+      onSave,
+    );
+    saveBtn.disabled = this.saving;
+    actions.appendChild(saveBtn);
+    this.contentEl.appendChild(actions);
+  }
+
+  private buildClassSkillOptions() {
+    return {
+      getEntries: () => this.classSkillEntries,
+      onChange: (next: SkillDraftEntry[]) => {
+        this.classSkillEntries = next;
+      },
+      isIdReadonly: (entry: SkillDraftEntry) =>
+        entry.ref.kind === 'active' &&
+        isBasicAttackSkillId(entry.ref.skillId, this.classDraft.class.id),
+      onSkillIdChange: (_oldId: string, _newId: string, _kind: SkillSlotKind) => {},
+      onRemoveSkill: (index: number) => {
+        this.removeClassSkill(index);
+      },
+      entityPicker: {
+        label: '既存クラス',
+        items: this.classes.map((cls) => ({
+          id: cls.id,
+          label: `${cls.displayName} (${cls.id})`,
+        })),
+        selectedId: this.selectedClassId,
+        onSelect: (classId: string) => this.selectClass(classId),
+        onNew: () => this.startNewClass(),
+      },
+      classIdentity: {
+        classId: this.classDraft.class.id,
+        displayName: this.classDraft.class.displayName,
+        onClassIdChange: (classId: string) => {
+          this.classDraft.class.id = classId;
+          const trimmed = classId.trim();
+          const prevCount = this.classSkillEntries.length;
+          if (trimmed) {
+            this.classDraft.class.basicAttackSkillId = defaultBasicAttackId(trimmed);
+            this.classSkillEntries = ensureClassBasicAttackPool(
+              trimmed,
+              this.classSkillEntries,
+              this.skills,
+            );
+          } else {
+            this.classSkillEntries = [];
+          }
+          if (this.classSkillEntries.length !== prevCount) {
+            this.render();
+          }
+        },
+        onDisplayNameChange: (displayName: string) => {
+          this.classDraft.class.displayName = displayName;
+        },
+      },
+      onAddSkill: (kind: SkillSlotKind) => {
+        this.addClassSkill(kind);
+      },
+      onSave: () => void this.saveClass(),
+      saving: this.saving,
+    };
+  }
+
+  private buildEnemySkillOptions() {
+    return {
+      getEntries: () => this.enemySkillEntries,
+      onChange: (next: SkillDraftEntry[]) => {
+        this.enemySkillEntries = next;
+      },
+      onSkillIdChange: (oldId: string, newId: string, kind: SkillSlotKind) => {
+        this.applyEnemySkillIdRename(oldId, newId, kind);
+      },
+      onAddSkill: (kind: SkillSlotKind) => {
+        this.addEnemySkill(kind);
+      },
+      onRemoveSkill: (index: number) => {
+        this.enemySkillEntries = this.enemySkillEntries.filter((_, i) => i !== index);
+        this.render();
+      },
+      entityPicker: {
+        label: '既存の敵',
+        items: this.enemies.map((enemy) => ({
+          id: enemy.id,
+          label: `${enemy.displayName} (${enemy.id})`,
+        })),
+        selectedId: this.selectedEnemyId,
+        onSelect: (enemyId: string) => this.selectEnemy(enemyId),
+        onNew: () => this.startNewEnemy(),
+      },
+      onSave: () => void this.saveEnemy(),
+      saving: this.saving,
+    };
+  }
+
+  private selectClass(classId: string): void {
+    this.selectedClassId = classId;
+    this.classDraft = loadClassDraftById(this.classes, classId);
+    this.classSkillEntries = initClassSkillEntriesFromPreset(this.classDraft.class, this.skills);
+    this.render();
+  }
+
+  private startNewClass(): void {
+    this.selectedClassId = '';
+    this.classDraft = createEmptyClassDraft();
+    this.classSkillEntries = [];
+    this.render();
+  }
+
+  private selectEnemy(enemyId: string): void {
+    this.selectedEnemyId = enemyId;
+    this.enemyDraft = loadEnemyDraftById(this.enemies, enemyId);
+    this.enemySkillEntries = syncSkillDraftEntries(
+      collectEnemySkillRefs(this.enemyDraft),
+      [],
+      this.skills,
+    );
+    this.render();
+  }
+
+  private startNewEnemy(): void {
+    this.selectedEnemyId = '';
+    this.enemyDraft = createEmptyEnemyDraft();
+    this.enemySkillEntries = [];
+    this.render();
+  }
+
+  private addClassSkill(kind: SkillSlotKind): void {
+    const classId = this.classDraft.class.id.trim();
+    if (!classId) {
+      this.setStatus('classId を入力してください', true);
+      return;
+    }
+    this.classDraft.class.basicAttackSkillId = defaultBasicAttackId(classId);
+    this.classSkillEntries = ensureClassBasicAttackPool(
+      classId,
+      this.classSkillEntries,
+      this.skills,
+    );
+    const skillId = nextClassSkillId(classId, kind, this.classSkillEntries);
+    const built = buildSkillDrafts([{ skillId, kind }], this.skills).map((entry) => ({
+      ...entry,
+      unlockLevel: 0,
+    }));
+    this.classSkillEntries = [...this.classSkillEntries, ...built];
+    this.render();
+  }
+
+  private addEnemySkill(kind: SkillSlotKind): void {
+    const enemyId = this.enemyDraft.enemy.id.trim() || 'enemy';
+    const skillId = nextClassSkillId(enemyId, kind, this.enemySkillEntries);
+    const built = buildSkillDrafts([{ skillId, kind }], this.skills);
+    this.enemySkillEntries = [...this.enemySkillEntries, ...built];
+    this.render();
+  }
+
+  private removeClassSkill(index: number): void {
+    const entry = this.classSkillEntries[index];
+    if (!entry) return;
+    if (
+      entry.ref.kind === 'active' &&
+      isBasicAttackSkillId(entry.ref.skillId, this.classDraft.class.id)
+    ) {
+      return;
+    }
+    this.classSkillEntries = this.classSkillEntries.filter((_, i) => i !== index);
+    this.render();
+  }
+
+  private applyEnemySkillIdRename(oldId: string, newId: string, kind: SkillSlotKind): void {
+    const draft = structuredClone(this.enemyDraft);
+    if (kind === 'passive') {
+      draft.passiveIds = draft.passiveIds.map((id) => (id === oldId ? newId : id));
+    } else {
+      draft.activeIds = draft.activeIds.map((id) => (id === oldId ? newId : id));
+    }
+    this.enemyDraft = draft;
+  }
+
+  private prepareClassSkillEntriesForSave(): void {
+    ensureClassGrowthFields(this.classDraft.class);
+    const classId = this.classDraft.class.id.trim();
+    if (!classId) return;
+    this.classDraft.class.basicAttackSkillId = defaultBasicAttackId(classId);
+    this.classSkillEntries = ensureClassBasicAttackPool(
+      classId,
+      this.classSkillEntries,
+      this.skills,
+    );
+  }
+
+  private async saveClass(): Promise<void> {
+    if (!this.classDraft.class.id.trim()) {
+      this.setStatus('classId を入力してください', true);
+      return;
+    }
+    if (!this.classDraft.class.displayName.trim()) {
+      this.setStatus('表示名を入力してください', true);
+      return;
+    }
+
+    this.saving = true;
+    this.render();
+    try {
+      this.prepareClassSkillEntriesForSave();
+      const cls = buildClassPresetFromDraft(this.classDraft, this.classSkillEntries);
+      const { passives, actives } = collectSkillsFromDrafts(this.classSkillEntries);
+      await saveClassBundle({ class: cls, passives, actives });
+      this.classes = await fetchClasses();
+      this.skills = await fetchSkills();
+      this.selectedClassId = cls.id;
+      this.classDraft = loadClassDraftById(this.classes, cls.id);
+      this.classSkillEntries = initClassSkillEntriesFromPreset(this.classDraft.class, this.skills);
+      this.setStatus(`保存しました: ${cls.displayName}`, false);
+    } catch (error) {
+      this.setStatus(
+        error instanceof Error ? error.message : '保存に失敗しました',
+        true,
+      );
+    } finally {
+      this.saving = false;
+      this.render();
+    }
+  }
+
+  private prepareEnemySkillEntriesForSave(): void {
+    const enemyId = this.enemyDraft.enemy.id.trim();
+    if (!enemyId) return;
+    this.enemySkillEntries = mergeSkillPoolEntries(
+      this.enemySkillEntries,
+      collectEnemySkillRefs(this.enemyDraft),
+      this.skills,
+    );
+  }
+
+  private async saveEnemy(): Promise<void> {
+    if (!this.enemyDraft.enemy.id.trim()) {
+      this.setStatus('enemyId を入力してください', true);
+      return;
+    }
+    if (!this.enemyDraft.enemy.displayName.trim()) {
+      this.setStatus('表示名を入力してください', true);
+      return;
+    }
+
+    this.saving = true;
+    this.render();
+    try {
+      this.prepareEnemySkillEntriesForSave();
+      const enemy = buildEnemyFromDraft(this.enemyDraft, this.enemySkillEntries);
+      const { passives, actives } = collectSkillsFromDrafts(this.enemySkillEntries);
+      await saveEnemyBundle({ enemy, passives, actives });
+      this.enemies = await fetchEnemies();
+      this.skills = await fetchSkills();
+      this.selectedEnemyId = enemy.id;
+      this.enemyDraft = loadEnemyDraftById(this.enemies, enemy.id);
+      this.enemySkillEntries = syncSkillDraftEntries(
+        collectEnemySkillRefs(this.enemyDraft),
+        [],
+        this.skills,
+      );
+      this.setStatus(`保存しました: ${enemy.displayName}`, false);
+    } catch (error) {
+      this.setStatus(
+        error instanceof Error ? error.message : '保存に失敗しました',
+        true,
+      );
+    } finally {
+      this.saving = false;
+      this.render();
+    }
+  }
+}
