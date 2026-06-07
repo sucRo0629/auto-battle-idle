@@ -26,6 +26,7 @@ export interface ClassPreset extends CombatStats {
   formationRow: FormationRow;
   traits: ClassTraits;
   spriteKey: string;
+  iconKey: string;
   basicAttackSkillId: string;
   starterPassiveIds: string[];
   starterActiveIds: string[];
@@ -76,6 +77,7 @@ export interface CombatantState extends Combatant {
   cooldowns: SkillCooldown[];
   statusEffects: StatusEffect[];
   spriteKey: string;
+  iconKey: string;
   isEnemy: boolean;
   visualX: number;
   /** 敵のみ: ステージ配置のスポーン X */
@@ -182,6 +184,7 @@ export interface CombatantSnapshot {
   maxHp: number;
   role?: Role;
   spriteKey: string;
+  iconKey: string;
   formationRow: FormationRow;
   isEnemy: boolean;
   visualX: number;

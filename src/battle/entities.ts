@@ -65,6 +65,7 @@ export function createAllyFromMember(
     cooldowns: createCooldowns(classPreset.basicAttackSkillId, member.build),
     statusEffects: [],
     spriteKey: classPreset.spriteKey,
+    iconKey: classPreset.iconKey,
     isEnemy: false,
     visualX: 0,
   };
@@ -124,6 +125,7 @@ export function createEnemyFromTemplate(
     cooldowns,
     statusEffects: [],
     spriteKey: template.spriteKey,
+    iconKey: 'default',
     isEnemy: true,
     visualX: spawnX,
     spawnX,

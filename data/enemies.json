@@ -1,12 +1,12 @@
 [
   {
-    "id": "slime",
-    "displayName": "Slime",
+    "id": "test_enemy",
+    "displayName": "test_enemy",
     "maxHp": 200,
     "atk": 50,
     "def": 4,
     "reg": 0,
-    "spriteKey": "slime",
+    "spriteKey": "test_enemy",
     "activeSkillIds": [
       "bite"
     ]

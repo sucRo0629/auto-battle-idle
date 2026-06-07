@@ -7,11 +7,11 @@
       {
         "enemies": [
           {
-            "templateId": "slime",
+            "templateId": "test_enemy",
             "spawnX": -20
           },
           {
-            "templateId": "slime",
+            "templateId": "test_enemy",
             "spawnX": -10
           }
         ]

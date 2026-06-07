@@ -13,6 +13,7 @@
     "reg": 0,
     "basicAttackSkillId": "bulwark_strike",
     "spriteKey": "defender_bulwark",
+    "iconKey": "bulwark",
     "starterPassiveIds": [
       "thick_skin"
     ],
@@ -34,6 +35,7 @@
     "reg": 0,
     "basicAttackSkillId": "berserker_strike",
     "spriteKey": "attacker_berserker",
+    "iconKey": "berserker",
     "starterPassiveIds": [
       "brute"
     ],
@@ -56,6 +58,7 @@
     "reg": 0,
     "basicAttackSkillId": "cleric_strike",
     "spriteKey": "supporter_cleric",
+    "iconKey": "cleric",
     "starterPassiveIds": [
       "gentle_touch"
     ],
@@ -78,6 +81,7 @@
     "reg": 0,
     "basicAttackSkillId": "hawkeye_shot",
     "spriteKey": "attacker_hawkeye",
+    "iconKey": "hawkeye",
     "starterPassiveIds": [
       "snipe"
     ],

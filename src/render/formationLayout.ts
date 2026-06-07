@@ -14,7 +14,7 @@ export const SPRITE_GAP = 38;
 export const BATTLE_GROUND_MARGIN = 40;
 /** スプライト上の最小余白 */
 export const BATTLE_TOP_PAD = 25;
-export const ENEMY_VISIBLE_MIN_X = 0;
+export const ENEMY_VISIBLE_MIN_X = -32;
 /** 非戦闘時: 背景スクロール・敵進軍速度（px/秒） */
 export const SCROLL_SPEED = 80;
 /** 接敵後: 味方・敵の戦闘位置への接近速度（px/秒） */

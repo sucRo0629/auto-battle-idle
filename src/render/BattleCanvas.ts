@@ -1,5 +1,6 @@
 import type { BattleSnapshot } from "../battle/types.ts";
-import { ANIM_DEFS, getSpriteColor } from "./SpriteRegistry.ts";
+import { ANIM_DEFS, getSpriteColor, getSpriteImage } from "./SpriteRegistry.ts";
+import { getClassIconColor, getClassIconImage } from "./IconRegistry.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
 import {
   groundY,
@@ -25,16 +26,17 @@ const HP_BAR_H = 6;
 const ALLY_HP_BAR_FILL = "#2ecc71";
 const ENEMY_HP_BAR_FILL = "#e74c3c";
 
-const HUD_ICON_SIZE = 18;
-const HUD_BAR_W = 52;
+const HUD_ICON_SIZE = 24;
+const HUD_BAR_W = 80;
 const HUD_ICON_BAR_GAP = 4;
 const HUD_BAR_SKILL_GAP = 2;
-const HUD_BOTTOM_MARGIN = 10;
+const HUD_BOTTOM_MARGIN = 5;
 
 const HUD_ICON_BORDER = "#4a5568";
+const HUD_HP_BAR_RATIO = 0.5;
 
 interface AllyHudEntry {
-  spriteKey: string;
+  iconKey: string;
   hp: number;
   maxHp: number;
   isAlive: boolean;
@@ -150,7 +152,7 @@ export class BattleCanvas implements IBattleRenderer {
 
     this.layouts = layouts;
     this.allyHud = snapshot.allies.map((ally) => ({
-      spriteKey: ally.spriteKey,
+      iconKey: ally.iconKey,
       hp: ally.hp,
       maxHp: ally.maxHp,
       isAlive: ally.hp > 0,
@@ -206,8 +208,9 @@ export class BattleCanvas implements IBattleRenderer {
   ): { hpBarH: number; recastBarH: number; barSkillGap: number } {
     const barSkillGap = HUD_BAR_SKILL_GAP * hudScale;
     const stackH = iconSize - barSkillGap;
-    const hpBarH = Math.max(2, Math.min(HP_BAR_H * hudScale, stackH * 0.55));
-    return { hpBarH, recastBarH: stackH - hpBarH, barSkillGap };
+    const hpBarH = Math.max(2, Math.round(stackH * HUD_HP_BAR_RATIO));
+    const recastBarH = stackH - hpBarH;
+    return { hpBarH, recastBarH, barSkillGap };
   }
 
   private drawPartyHud(scale: number): void {
@@ -305,7 +308,6 @@ export class BattleCanvas implements IBattleRenderer {
     size: number
   ): void {
     const { ctx } = this;
-    const fill = getSpriteColor(ally.spriteKey);
 
     ctx.save();
     if (!ally.isAlive) {
@@ -318,9 +320,7 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.fillStyle = HUD_ICON_BORDER;
     ctx.fillRect(x, y, size, size);
 
-    const inset = Math.max(2, size * 0.15);
-    ctx.fillStyle = fill;
-    ctx.fillRect(x + inset, y + inset, size - inset * 2, size - inset * 2);
+    this.drawClassIconImage(ally.iconKey, x, y, size, size);
 
     ctx.restore();
   }
@@ -352,6 +352,44 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.restore();
   }
 
+  private drawClassIconImage(
+    iconKey: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
+    const { ctx } = this;
+    const image = getClassIconImage(iconKey);
+
+    if (image) {
+      ctx.drawImage(image, x, y, width, height);
+      return;
+    }
+
+    ctx.fillStyle = getClassIconColor(iconKey);
+    ctx.fillRect(x, y, width, height);
+  }
+
+  private drawSpriteImage(
+    spriteKey: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
+    const { ctx } = this;
+    const image = getSpriteImage(spriteKey);
+
+    if (image) {
+      ctx.drawImage(image, x, y, width, height);
+      return;
+    }
+
+    ctx.fillStyle = getSpriteColor(spriteKey);
+    ctx.fillRect(x, y, width, height);
+  }
+
   private drawSprite(
     layout: CombatantLayout,
     x: number,
@@ -360,7 +398,6 @@ export class BattleCanvas implements IBattleRenderer {
   ): void {
     const { ctx } = this;
     const size = SPRITE_SIZE * scale;
-    const color = getSpriteColor(layout.spriteKey);
     const bob =
       layout.anim === "idle" ? Math.sin(layout.animFrame * 0.8) * 2 : 0;
 
@@ -376,8 +413,7 @@ export class BattleCanvas implements IBattleRenderer {
       ctx.globalAlpha = 0.35;
     }
 
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, size, size);
+    this.drawSpriteImage(layout.spriteKey, 0, 0, size, size);
 
     const def = ANIM_DEFS[layout.anim];
     const flash = layout.animFrame % def.frames;

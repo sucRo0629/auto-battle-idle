@@ -286,6 +286,7 @@ export class BattleEngine {
       maxHp: c.maxHp,
       role: c.isEnemy ? undefined : c.role,
       spriteKey: c.spriteKey,
+      iconKey: c.iconKey,
       formationRow: c.formationRow,
       isEnemy: c.isEnemy,
       visualX: c.visualX,
