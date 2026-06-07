@@ -9,22 +9,22 @@ import {
   GROWTH_TIER_OPTIONS,
   REG_OPTIONS,
   ROLE_OPTIONS,
-} from '../battle/data/gameDataSchema.ts';
+} from "../battle/data/gameDataSchema.ts";
 import type {
   AttackRange,
   FormationRow,
   GrowthPresetKey,
   GrowthTier,
   Role,
-} from '../battle/types.ts';
-import levelCurvesJson from '../../data/levelCurves.json';
+} from "../battle/types.ts";
+import levelCurvesJson from "../../data/levelCurves.json";
 import {
   computeStatsAtLevel,
   getBasicCooldownRate,
   loadLevelCurves,
   resolveStatGrowth,
-} from '../progression/levelGrowth.ts';
-import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
+} from "../progression/levelGrowth.ts";
+import type { ClassPresetBeforeEnrich } from "../progression/skillUnlocks.ts";
 import {
   type ClassDraft,
   type DraftChangeOptions,
@@ -34,7 +34,7 @@ import {
   defaultBasicAttackId,
   defaultGrowthTierForRole,
   ensureClassGrowthFields,
-} from './editorApi.ts';
+} from "./editorApi.ts";
 import {
   appendGrid,
   createActionButton,
@@ -46,23 +46,23 @@ import {
   createSelect,
   createTextInput,
   preserveScrollDuring,
-} from './formUtils.ts';
+} from "./formUtils.ts";
 
 const ROLE_LABELS: Record<Role, string> = {
-  defender: '守備 (defender)',
-  attacker: '攻撃 (attacker)',
-  supporter: '支援 (supporter)',
+  defender: "守備 (defender)",
+  attacker: "攻撃 (attacker)",
+  supporter: "支援 (supporter)",
 };
 
 const ROW_LABELS: Record<FormationRow, string> = {
-  front: '前列',
-  middle: '中列',
-  back: '後列',
+  front: "前列",
+  middle: "中列",
+  back: "後列",
 };
 
 const RANGE_LABELS: Record<AttackRange, string> = {
-  melee: '近接',
-  ranged: '遠距離',
+  melee: "近接",
+  ranged: "遠距離",
 };
 
 const LEVEL_CURVES = loadLevelCurves(levelCurvesJson);
@@ -72,7 +72,7 @@ const DEFAULT_BASIC_INTERVAL_SEC = 2;
 function growthTierField(
   label: string,
   value: GrowthTier,
-  onChange: (tier: GrowthTier) => void,
+  onChange: (tier: GrowthTier) => void
 ): HTMLElement {
   return createFieldRow(
     label,
@@ -82,8 +82,8 @@ function growthTierField(
         value: tier,
         label: GROWTH_TIER_LABELS[tier],
       })),
-      onChange,
-    ),
+      onChange
+    )
   );
 }
 
@@ -99,38 +99,42 @@ function renderGrowthPreview(parent: HTMLElement, draft: ClassDraft): void {
     },
     draft.class,
     PREVIEW_LEVEL,
-    LEVEL_CURVES,
+    LEVEL_CURVES
   );
-  const speedTier = draft.class.attackSpeedTier ?? 'normal';
+  const speedTier = draft.class.attackSpeedTier ?? "normal";
   const cdRate = getBasicCooldownRate(speedTier, LEVEL_CURVES);
   const effectiveCd = DEFAULT_BASIC_INTERVAL_SEC / cdRate;
 
-  const box = createEl('div', 'editor-preview');
+  const box = createEl("div", "editor-preview");
   box.appendChild(
     createEl(
-      'p',
-      'editor-preview-title',
-      `Lv${PREVIEW_LEVEL} 試算（Lv1 + 成長 × ${PREVIEW_LEVEL - 1}）`,
-    ),
+      "p",
+      "editor-preview-title",
+      `Lv${PREVIEW_LEVEL} 試算（Lv1 + 成長 × ${PREVIEW_LEVEL - 1}）`
+    )
   );
-  const list = createEl('ul', 'editor-preview-list');
+  const list = createEl("ul", "editor-preview-list");
   for (const [label, total, perLevel] of [
-    ['HP', lv10.maxHp, growth.maxHp],
-    ['ATK', lv10.atk, growth.atk],
-    ['DEF', lv10.def, growth.def],
+    ["HP", lv10.maxHp, growth.maxHp],
+    ["ATK", lv10.atk, growth.atk],
+    ["DEF", lv10.def, growth.def],
   ] as const) {
-    const item = createEl('li');
+    const item = createEl("li");
     item.textContent = `${label}: ${total}（+${perLevel}/Lv）`;
     list.appendChild(item);
   }
   box.appendChild(list);
   box.appendChild(
     createEl(
-      'p',
-      'editor-preview-note',
-      `攻撃速度: ${ATTACK_SPEED_TIER_LABELS[speedTier]} — 基本攻撃 CD 係数 ${cdRate.toFixed(3)}` +
-        `（interval ${DEFAULT_BASIC_INTERVAL_SEC}s 想定 → 約 ${effectiveCd.toFixed(2)}s/発）`,
-    ),
+      "p",
+      "editor-preview-note",
+      `攻撃速度: ${
+        ATTACK_SPEED_TIER_LABELS[speedTier]
+      } — 基本攻撃 CD 係数 ${cdRate.toFixed(3)}` +
+        `（interval ${DEFAULT_BASIC_INTERVAL_SEC}s 想定 → 約 ${effectiveCd.toFixed(
+          2
+        )}s/発）`
+    )
   );
   parent.appendChild(box);
 }
@@ -153,7 +157,7 @@ export class ClassEditorStep {
 
   constructor(
     private container: HTMLElement,
-    private options: ClassEditorStepOptions,
+    private options: ClassEditorStepOptions
   ) {
     this.render();
   }
@@ -170,7 +174,7 @@ export class ClassEditorStep {
 
   private updatePreview(): void {
     if (!this.previewHost) return;
-    const contentStart = this.previewHost.querySelector('.editor-preview');
+    const contentStart = this.previewHost.querySelector(".editor-preview");
     if (contentStart) contentStart.remove();
     renderGrowthPreview(this.previewHost, this.options.getDraft());
   }
@@ -200,7 +204,7 @@ export class ClassEditorStep {
 
     const commitDraft = (
       mutate: (next: ClassDraft) => void,
-      options?: DraftChangeOptions,
+      options?: DraftChangeOptions
     ) => {
       const next = structuredClone(getDraft());
       mutate(next);
@@ -212,49 +216,49 @@ export class ClassEditorStep {
       }
     };
 
-    const header = createEl('div', 'editor-step-header');
-    header.appendChild(createEl('h2', 'editor-step-title', 'クラス設定'));
+    const header = createEl("div", "editor-step-header");
+    header.appendChild(createEl("h2", "editor-step-title", "クラス設定"));
     header.appendChild(
       createEl(
-        'p',
-        'editor-step-desc',
-        'クラステンプレートを編集します。スキル定義・習得 Lv は上のセクションで設定します。',
-      ),
+        "p",
+        "editor-step-desc",
+        "クラステンプレートを編集します。スキル定義・習得 Lv は下のセクションで設定します。"
+      )
     );
     this.container.appendChild(header);
 
     if (!hidePicker) {
-      const picker = createEl('div', 'editor-picker');
-    const select = createEl('select', 'editor-select') as HTMLSelectElement;
-    const emptyOpt = createEl('option') as HTMLOptionElement;
-    emptyOpt.value = '';
-    emptyOpt.textContent = '— 選択 —';
-    select.appendChild(emptyOpt);
-    for (const cls of classes) {
-      const opt = createEl('option') as HTMLOptionElement;
-      opt.value = cls.id;
-      opt.textContent = `${cls.displayName} (${cls.id})`;
-      if (cls.id === selectedClassId) opt.selected = true;
-      select.appendChild(opt);
-    }
-    select.addEventListener('change', () => {
-      if (select.value) onSelectClass(select.value);
-    });
-    picker.appendChild(createEl('span', 'editor-picker-label', '既存クラス'));
-    picker.appendChild(select);
-    picker.appendChild(
-      createButton('新規', 'editor-btn editor-btn-secondary', onNewClass),
-    );
-    this.container.appendChild(picker);
+      const picker = createEl("div", "editor-picker");
+      const select = createEl("select", "editor-select") as HTMLSelectElement;
+      const emptyOpt = createEl("option") as HTMLOptionElement;
+      emptyOpt.value = "";
+      emptyOpt.textContent = "— 選択 —";
+      select.appendChild(emptyOpt);
+      for (const cls of classes) {
+        const opt = createEl("option") as HTMLOptionElement;
+        opt.value = cls.id;
+        opt.textContent = `${cls.displayName} (${cls.id})`;
+        if (cls.id === selectedClassId) opt.selected = true;
+        select.appendChild(opt);
+      }
+      select.addEventListener("change", () => {
+        if (select.value) onSelectClass(select.value);
+      });
+      picker.appendChild(createEl("span", "editor-picker-label", "既存クラス"));
+      picker.appendChild(select);
+      picker.appendChild(
+        createButton("新規", "editor-btn editor-btn-secondary", onNewClass)
+      );
+      this.container.appendChild(picker);
     }
 
-    const identity = createSection('基本');
+    const identity = createSection("基本");
     this.container.appendChild(identity);
     const identityGrid = appendGrid(identity);
     if (!hidePicker) {
       identityGrid.appendChild(
         createFieldRow(
-          'classId',
+          "classId",
           createTextInput(draft.class.id, (id) => {
             commitDraft((next) => {
               next.class.id = id;
@@ -262,23 +266,23 @@ export class ClassEditorStep {
                 next.class.basicAttackSkillId = defaultBasicAttackId(id.trim());
               }
             });
-          }),
-        ),
+          })
+        )
       );
       identityGrid.appendChild(
         createFieldRow(
-          '表示名',
+          "表示名",
           createTextInput(draft.class.displayName, (displayName) => {
             commitDraft((next) => {
               next.class.displayName = displayName;
             });
-          }),
-        ),
+          })
+        )
       );
     }
     identityGrid.appendChild(
       createFieldRow(
-        'ロール',
+        "ロール",
         createSelect(
           draft.class.role,
           ROLE_OPTIONS.map((value) => ({ value, label: ROLE_LABELS[value] })),
@@ -287,20 +291,21 @@ export class ClassEditorStep {
               (next) => {
                 next.class.role = role;
                 next.class.growthTier = defaultGrowthTierForRole(role);
-                next.class.attackSpeedTier = defaultAttackSpeedTierForRole(role);
-                if (role !== 'attacker') {
+                next.class.attackSpeedTier =
+                  defaultAttackSpeedTierForRole(role);
+                if (role !== "attacker") {
                   delete next.class.growthPresetKey;
                 }
               },
-              { rerender: true },
+              { rerender: true }
             );
-          },
-        ),
-      ),
+          }
+        )
+      )
     );
     identityGrid.appendChild(
       createFieldRow(
-        '配置列',
+        "配置列",
         createSelect(
           draft.class.formationRow,
           FORMATION_ROW_OPTIONS.map((value) => ({
@@ -311,23 +316,23 @@ export class ClassEditorStep {
             commitDraft((next) => {
               next.class.formationRow = formationRow;
             });
-          },
-        ),
-      ),
+          }
+        )
+      )
     );
     identityGrid.appendChild(
       createFieldRow(
-        'jobTier',
-        createTextInput('1', () => {}, { readonly: true }),
-      ),
+        "jobTier",
+        createTextInput("1", () => {}, { readonly: true })
+      )
     );
 
-    const traitsSection = createSection('特性');
+    const traitsSection = createSection("特性");
     this.container.appendChild(traitsSection);
     const traitsGrid = appendGrid(traitsSection);
     traitsGrid.appendChild(
       createFieldRow(
-        '攻撃射程',
+        "攻撃射程",
         createSelect(
           draft.class.traits.attackRange,
           ATTACK_RANGE_OPTIONS.map((value) => ({
@@ -338,18 +343,18 @@ export class ClassEditorStep {
             commitDraft(
               (next) => {
                 next.class.traits.attackRange = attackRange;
-                if (attackRange === 'melee') delete next.class.traits.rangePx;
+                if (attackRange === "melee") delete next.class.traits.rangePx;
               },
-              { rerender: true },
+              { rerender: true }
             );
-          },
-        ),
-      ),
+          }
+        )
+      )
     );
-    if (draft.class.traits.attackRange === 'ranged') {
+    if (draft.class.traits.attackRange === "ranged") {
       traitsGrid.appendChild(
         createFieldRow(
-          'rangePx',
+          "rangePx",
           createNumberInput(
             draft.class.traits.rangePx ?? 100,
             (rangePx) => {
@@ -357,64 +362,76 @@ export class ClassEditorStep {
                 next.class.traits.rangePx = rangePx;
               });
             },
-            { min: 1, step: 10 },
-          ),
-        ),
+            { min: 1, step: 10 }
+          )
+        )
       );
     }
 
-    const statsSection = createSection('Lv1 ステータス');
+    const statsSection = createSection("Lv1 ステータス");
     this.container.appendChild(statsSection);
     statsSection.appendChild(
       createEl(
-        'p',
-        'editor-hint',
-        'maxHp / atk / def は Lv1 基準値。reg と攻撃速度は Lv とともに変化しません。',
-      ),
+        "p",
+        "editor-hint",
+        "maxHp / atk / def は Lv1 基準値。reg と攻撃速度は Lv とともに変化しません。"
+      )
     );
     const statsGrid = appendGrid(statsSection);
     statsGrid.appendChild(
       createFieldRow(
-        'maxHp',
-        createNumberInput(draft.class.maxHp, (maxHp) => {
-          commitDraft(
-            (next) => {
-              next.class.maxHp = maxHp;
-            },
-            { updatePreview: true },
-          );
-        }, { min: 1 }),
-      ),
+        "maxHp",
+        createNumberInput(
+          draft.class.maxHp,
+          (maxHp) => {
+            commitDraft(
+              (next) => {
+                next.class.maxHp = maxHp;
+              },
+              { updatePreview: true }
+            );
+          },
+          { min: 1 }
+        )
+      )
     );
     statsGrid.appendChild(
       createFieldRow(
-        'atk',
-        createNumberInput(draft.class.atk, (atk) => {
-          commitDraft(
-            (next) => {
-              next.class.atk = atk;
-            },
-            { updatePreview: true },
-          );
-        }, { min: 0 }),
-      ),
+        "atk",
+        createNumberInput(
+          draft.class.atk,
+          (atk) => {
+            commitDraft(
+              (next) => {
+                next.class.atk = atk;
+              },
+              { updatePreview: true }
+            );
+          },
+          { min: 0 }
+        )
+      )
     );
     statsGrid.appendChild(
       createFieldRow(
-        'def',
-        createNumberInput(draft.class.def, (def) => {
-          commitDraft(
-            (next) => {
-              next.class.def = def;
-            },
-            { updatePreview: true },
-          );
-        }, { min: 0 }),
-      ),
+        "def",
+        createNumberInput(
+          draft.class.def,
+          (def) => {
+            commitDraft(
+              (next) => {
+                next.class.def = def;
+              },
+              { updatePreview: true }
+            );
+          },
+          { min: 0 }
+        )
+      )
     );
     statsGrid.appendChild(
       createFieldRow(
-        'reg',
+        "reg",
         createSelect(
           draft.class.reg,
           REG_OPTIONS.map((value) => ({ value, label: String(value) })),
@@ -422,64 +439,64 @@ export class ClassEditorStep {
             commitDraft((next) => {
               next.class.reg = reg;
             });
-          },
-        ),
-      ),
+          }
+        )
+      )
     );
 
     ensureClassGrowthFields(draft.class);
     const growthTier = draft.class.growthTier!;
 
-    const growthSection = createSection('成長段階（LvUP 加算）');
+    const growthSection = createSection("成長段階（LvUP 加算）");
     this.container.appendChild(growthSection);
     growthSection.appendChild(
       createEl(
-        'p',
-        'editor-hint',
-        '低・中・高は levelCurves.json の growthPresets から実数を解決します。',
-      ),
+        "p",
+        "editor-hint",
+        "低・中・高は levelCurves.json の growthPresets から実数を解決します。"
+      )
     );
     const growthGrid = appendGrid(growthSection);
     growthGrid.appendChild(
-      growthTierField('HP 成長', growthTier.maxHp, (maxHp) => {
+      growthTierField("HP 成長", growthTier.maxHp, (maxHp) => {
         commitDraft(
           (next) => {
             ensureClassGrowthFields(next.class);
             next.class.growthTier!.maxHp = maxHp;
           },
-          { updatePreview: true },
+          { updatePreview: true }
         );
-      }),
+      })
     );
     growthGrid.appendChild(
-      growthTierField('ATK 成長', growthTier.atk, (atk) => {
+      growthTierField("ATK 成長", growthTier.atk, (atk) => {
         commitDraft(
           (next) => {
             ensureClassGrowthFields(next.class);
             next.class.growthTier!.atk = atk;
           },
-          { updatePreview: true },
+          { updatePreview: true }
         );
-      }),
+      })
     );
     growthGrid.appendChild(
-      growthTierField('DEF 成長', growthTier.def, (def) => {
+      growthTierField("DEF 成長", growthTier.def, (def) => {
         commitDraft(
           (next) => {
             ensureClassGrowthFields(next.class);
             next.class.growthTier!.def = def;
           },
-          { updatePreview: true },
+          { updatePreview: true }
         );
-      }),
+      })
     );
 
-    if (draft.class.role === 'attacker') {
+    if (draft.class.role === "attacker") {
       const presetKey: GrowthPresetKey =
-        draft.class.growthPresetKey === 'caster' ? 'caster' : 'attacker';
+        draft.class.growthPresetKey === "caster" ? "caster" : "attacker";
       growthGrid.appendChild(
         createFieldRow(
-          '成長 preset',
+          "成長 preset",
           createSelect(
             presetKey,
             GROWTH_PRESET_KEY_OPTIONS.map((value) => ({
@@ -489,37 +506,37 @@ export class ClassEditorStep {
             (key) => {
               commitDraft(
                 (next) => {
-                  if (key === 'caster') {
-                    next.class.growthPresetKey = 'caster';
+                  if (key === "caster") {
+                    next.class.growthPresetKey = "caster";
                   } else {
                     delete next.class.growthPresetKey;
                   }
                 },
-                { rerender: true },
+                { rerender: true }
               );
-            },
-          ),
-        ),
+            }
+          )
+        )
       );
-      if (presetKey === 'caster') {
+      if (presetKey === "caster") {
         growthSection.appendChild(
           createEl(
-            'p',
-            'editor-hint',
-            'caster: HP/DEF → supporter 表、ATK → attacker 表',
-          ),
+            "p",
+            "editor-hint",
+            "caster: HP/DEF → supporter 表、ATK → attacker 表"
+          )
         );
       }
     }
 
-    const speedSection = createSection('攻撃速度（基本攻撃 CD）');
+    const speedSection = createSection("攻撃速度（基本攻撃 CD）");
     this.container.appendChild(speedSection);
     const speedGrid = appendGrid(speedSection);
     speedGrid.appendChild(
       createFieldRow(
-        'SPD 段階',
+        "SPD 段階",
         createSelect(
-          draft.class.attackSpeedTier ?? 'normal',
+          draft.class.attackSpeedTier ?? "normal",
           ATTACK_SPEED_TIER_OPTIONS.map((value) => ({
             value,
             label: ATTACK_SPEED_TIER_LABELS[value],
@@ -529,48 +546,48 @@ export class ClassEditorStep {
               (next) => {
                 next.class.attackSpeedTier = attackSpeedTier;
               },
-              { updatePreview: true },
+              { updatePreview: true }
             );
-          },
-        ),
-      ),
+          }
+        )
+      )
     );
 
-    const previewSection = createSection('プレビュー');
+    const previewSection = createSection("プレビュー");
     this.container.appendChild(previewSection);
     this.previewHost = previewSection;
     renderGrowthPreview(previewSection, draft);
 
-    const assetsSection = createSection('見た目キー');
+    const assetsSection = createSection("見た目キー");
     this.container.appendChild(assetsSection);
     const assetsGrid = appendGrid(assetsSection);
     assetsGrid.appendChild(
       createFieldRow(
-        'spriteKey',
-        createTextInput(draft.class.spriteKey ?? '', (spriteKey) => {
+        "spriteKey",
+        createTextInput(draft.class.spriteKey ?? "", (spriteKey) => {
           commitDraft((next) => {
             next.class.spriteKey = spriteKey.trim() || undefined;
           });
-        }),
-      ),
+        })
+      )
     );
     assetsGrid.appendChild(
       createFieldRow(
-        'iconKey',
-        createTextInput(draft.class.iconKey ?? '', (iconKey) => {
+        "iconKey",
+        createTextInput(draft.class.iconKey ?? "", (iconKey) => {
           commitDraft((next) => {
             next.class.iconKey = iconKey.trim() || undefined;
           });
-        }),
-      ),
+        })
+      )
     );
 
     if (!hideSave) {
-      const actions = createEl('div', 'editor-actions');
+      const actions = createEl("div", "editor-actions");
       const saveBtn = createActionButton(
-        saving ? '保存中…' : '保存',
-        'editor-btn editor-btn-primary',
-        onSave,
+        saving ? "保存中…" : "保存",
+        "editor-btn editor-btn-primary",
+        onSave
       );
       saveBtn.disabled = Boolean(saving);
       actions.appendChild(saveBtn);
@@ -581,7 +598,7 @@ export class ClassEditorStep {
 
 export function loadClassDraftById(
   classes: ClassPresetBeforeEnrich[],
-  classId: string,
+  classId: string
 ): ClassDraft {
   const preset = classes.find((cls) => cls.id === classId);
   return preset ? classDraftFromPreset(preset) : createEmptyClassDraft();

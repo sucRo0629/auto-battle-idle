@@ -73,7 +73,7 @@ function loadValidationPayload(): {
 }
 
 function validateAll(payload: ReturnType<typeof loadValidationPayload>): void {
-  parseAndValidateGameDataJson(payload);
+  parseAndValidateGameDataJson(payload, { mode: 'editor' });
 }
 
 function upsertById<T extends { id: string }>(list: T[], item: T): T[] {

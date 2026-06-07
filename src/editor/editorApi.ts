@@ -265,10 +265,14 @@ export function buildClassSkillsFromEntries(
     list.push(skillId);
     byLevel.set(level, list);
   }
-  return [...byLevel.entries()]
+  const blocks = [...byLevel.entries()]
     .sort((a, b) => a[0] - b[0])
     .map(([level, skillIds]) => ({ level, skillIds }))
-    .filter((block) => block.skillIds.length > 0);
+    .filter((block) => block.skillIds.length > 0 || block.level === 0);
+  if (blocks.length === 0) {
+    return [{ level: 0, skillIds: [] }];
+  }
+  return blocks;
 }
 
 export function initClassSkillEntriesFromPreset(

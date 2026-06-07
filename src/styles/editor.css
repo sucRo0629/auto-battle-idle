@@ -35,8 +35,16 @@
 
 .editor-panel-class,
 .editor-panel-enemy {
-  border-bottom: none;
-  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.editor-panel-header {
+  margin-bottom: 0;
+  padding-bottom: 20px;
+}
+
+.editor-panel-skills {
+  margin-top: 8px;
 }
 
 .editor-tab {
@@ -152,7 +160,10 @@
 }
 
 .editor-input:read-only {
-  opacity: 0.7;
+  opacity: 0.45;
+  cursor: not-allowed;
+  background: #14141e;
+  color: #7a8494;
 }
 
 .editor-id-row {

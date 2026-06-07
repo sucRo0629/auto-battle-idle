@@ -15,7 +15,7 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": ["thick_skin", "iron_guard"]
+        "skillIds": ["eishi_thick_skin", "eishi_iron_guard"]
       },
       {
         "level": 1,
@@ -43,7 +43,7 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": ["brute", "slash"]
+        "skillIds": ["kenshi_brute", "kenshi_slash"]
       },
       {
         "level": 1,
@@ -72,7 +72,7 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": ["gentle_touch", "heal"]
+        "skillIds": ["yakushi_gentle_touch", "yakushi_heal"]
       },
       {
         "level": 1,
@@ -101,7 +101,7 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": ["snipe", "arrow"]
+        "skillIds": ["kyushi_snipe", "kyushi_arrow"]
       },
       {
         "level": 1,
@@ -130,7 +130,7 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": ["snipe", "arrow"]
+        "skillIds": ["jutsushi_focus", "jutsushi_orb", "jutsushi_chain"]
       },
       {
         "level": 1,
@@ -158,7 +158,7 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": ["thick_skin", "iron_guard"]
+        "skillIds": ["eishi_thick_skin", "eishi_iron_guard"]
       },
       {
         "level": 1,

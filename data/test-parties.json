@@ -5,33 +5,33 @@
       {
         "classId": "test_defender_bulwark",
         "build": {
-          "learnedPassiveIds": ["thick_skin"],
-          "learnedActiveIds": ["iron_guard", "test_buff"],
-          "equippedActiveSlots": ["iron_guard"]
+          "learnedPassiveIds": ["eishi_thick_skin"],
+          "learnedActiveIds": ["eishi_iron_guard", "test_buff"],
+          "equippedActiveSlots": ["eishi_iron_guard"]
         }
       },
       {
         "classId": "test_attacker_berserker",
         "build": {
-          "learnedPassiveIds": ["brute"],
-          "learnedActiveIds": ["slash", "test_debuff"],
-          "equippedActiveSlots": ["slash"]
+          "learnedPassiveIds": ["kenshi_brute"],
+          "learnedActiveIds": ["kenshi_slash", "test_debuff"],
+          "equippedActiveSlots": ["kenshi_slash"]
         }
       },
       {
         "classId": "test_supporter_cleric",
         "build": {
-          "learnedPassiveIds": ["gentle_touch"],
-          "learnedActiveIds": ["heal", "test_hot"],
-          "equippedActiveSlots": ["heal"]
+          "learnedPassiveIds": ["yakushi_gentle_touch"],
+          "learnedActiveIds": ["yakushi_heal", "test_hot"],
+          "equippedActiveSlots": ["yakushi_heal"]
         }
       },
       {
         "classId": "test_attacker_hawkeye",
         "build": {
-          "learnedPassiveIds": ["snipe"],
-          "learnedActiveIds": ["arrow", "test_dot"],
-          "equippedActiveSlots": ["arrow"]
+          "learnedPassiveIds": ["kyushi_snipe"],
+          "learnedActiveIds": ["kyushi_arrow", "test_dot"],
+          "equippedActiveSlots": ["kyushi_arrow"]
         }
       }
     ]

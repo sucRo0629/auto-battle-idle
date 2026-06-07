@@ -263,6 +263,76 @@ export interface SkillEditorStepOptions {
   onAddSkill?: (kind: SkillSlotKind) => void;
   saving?: boolean;
   hideSave?: boolean;
+  /** entityPicker / classIdentity を別ホストで描画済みのとき true */
+  hideEntityHeader?: boolean;
+}
+
+export function renderEntityPicker(
+  container: HTMLElement,
+  entityPicker: SkillEditorEntityPicker,
+): void {
+  const picker = createEl('div', 'editor-picker');
+  const select = createEl('select', 'editor-select') as HTMLSelectElement;
+  const emptyOpt = createEl('option') as HTMLOptionElement;
+  emptyOpt.value = '';
+  emptyOpt.textContent = '— 選択 —';
+  select.appendChild(emptyOpt);
+  for (const item of entityPicker.items) {
+    const opt = createEl('option') as HTMLOptionElement;
+    opt.value = item.id;
+    opt.textContent = item.label;
+    if (item.id === entityPicker.selectedId) opt.selected = true;
+    select.appendChild(opt);
+  }
+  select.addEventListener('change', () => {
+    if (select.value) entityPicker.onSelect(select.value);
+  });
+  picker.appendChild(createEl('span', 'editor-picker-label', entityPicker.label));
+  picker.appendChild(select);
+  picker.appendChild(
+    createButton('新規', 'editor-btn editor-btn-secondary', entityPicker.onNew),
+  );
+  container.appendChild(picker);
+}
+
+export function renderClassIdentity(
+  container: HTMLElement,
+  classIdentity: SkillEditorClassIdentity,
+): void {
+  const identity = createSection('クラス ID');
+  container.appendChild(identity);
+  const grid = appendGrid(identity);
+  grid.appendChild(
+    createFieldRow(
+      'classId',
+      createTextInput(classIdentity.classId, (classId) => {
+        classIdentity.onClassIdChange(classId);
+      }),
+    ),
+  );
+  grid.appendChild(
+    createFieldRow(
+      '表示名',
+      createTextInput(classIdentity.displayName, (displayName) => {
+        classIdentity.onDisplayNameChange(displayName);
+      }),
+    ),
+  );
+  identity.appendChild(
+    createEl(
+      'p',
+      'editor-hint',
+      'classId 確定後、通常攻撃（{classId}_basic_attack）を自動追加します。',
+    ),
+  );
+}
+
+function skillCardTitle(entry: SkillDraftEntry, idReadonly: boolean): string {
+  const kindLabel = entry.ref.kind === 'passive' ? 'パッシブ' : 'アクティブ';
+  const titleSuffix = idReadonly ? '（通常攻撃）' : '';
+  const displayName =
+    (entry.passive?.name ?? entry.active?.name)?.trim() || '（名前未設定）';
+  return `${kindLabel}: ${displayName}${titleSuffix}`;
 }
 
 export class SkillEditorStep {
@@ -335,60 +405,16 @@ export class SkillEditorStep {
     onSave: () => void,
     saving?: boolean,
   ): void {
-    const { entityPicker, classIdentity, onAddSkill, hideSave } = this.options;
+    const { entityPicker, classIdentity, onAddSkill, hideSave, hideEntityHeader } =
+      this.options;
 
-    if (entityPicker) {
-      const picker = createEl('div', 'editor-picker');
-      const select = createEl('select', 'editor-select') as HTMLSelectElement;
-      const emptyOpt = createEl('option') as HTMLOptionElement;
-      emptyOpt.value = '';
-      emptyOpt.textContent = '— 選択 —';
-      select.appendChild(emptyOpt);
-      for (const item of entityPicker.items) {
-        const opt = createEl('option') as HTMLOptionElement;
-        opt.value = item.id;
-        opt.textContent = item.label;
-        if (item.id === entityPicker.selectedId) opt.selected = true;
-        select.appendChild(opt);
+    if (!hideEntityHeader) {
+      if (entityPicker) {
+        renderEntityPicker(this.container, entityPicker);
       }
-      select.addEventListener('change', () => {
-        if (select.value) entityPicker.onSelect(select.value);
-      });
-      picker.appendChild(createEl('span', 'editor-picker-label', entityPicker.label));
-      picker.appendChild(select);
-      picker.appendChild(
-        createButton('新規', 'editor-btn editor-btn-secondary', entityPicker.onNew),
-      );
-      this.container.appendChild(picker);
-    }
-
-    if (classIdentity) {
-      const identity = createSection('クラス ID');
-      this.container.appendChild(identity);
-      const grid = appendGrid(identity);
-      grid.appendChild(
-        createFieldRow(
-          'classId',
-          createTextInput(classIdentity.classId, (classId) => {
-            classIdentity.onClassIdChange(classId);
-          }),
-        ),
-      );
-      grid.appendChild(
-        createFieldRow(
-          '表示名',
-          createTextInput(classIdentity.displayName, (displayName) => {
-            classIdentity.onDisplayNameChange(displayName);
-          }),
-        ),
-      );
-      identity.appendChild(
-        createEl(
-          'p',
-          'editor-hint',
-          'classId 確定後、通常攻撃（{classId}_basic_attack）を自動追加します。',
-        ),
-      );
+      if (classIdentity) {
+        renderClassIdentity(this.container, classIdentity);
+      }
     }
 
     const header = createEl('div', 'editor-step-header');
@@ -425,7 +451,7 @@ export class SkillEditorStep {
           'p',
           'editor-hint',
           classIdentity
-            ? 'classId を入力すると通常攻撃が追加されます。パッシブ / アクティブは上のボタンで追加してください。'
+            ? 'classId を入力すると通常攻撃が追加されます。パッシブ / アクティブはボタンで追加してください。'
             : 'スキル ID が未設定のため、編集対象がありません。',
         ),
       );
@@ -434,9 +460,7 @@ export class SkillEditorStep {
     for (let index = 0; index < entries.length; index++) {
       const entry = entries[index]!;
       const idReadonly = this.options.isIdReadonly?.(entry) ?? false;
-      const kindLabel = entry.ref.kind === 'passive' ? 'パッシブ' : 'アクティブ';
-      const titleSuffix = idReadonly ? '（通常攻撃）' : '';
-      const card = createSection(`${kindLabel}: ${entry.ref.skillId}${titleSuffix}`);
+      const card = createSection(skillCardTitle(entry, idReadonly));
       card.classList.add('editor-skill-card');
 
       if (!idReadonly && this.options.onRemoveSkill) {
@@ -526,7 +550,7 @@ export class SkillEditorStep {
         createTextInput(passive.name, (name) => {
           this.patchPassive(index, (current) => {
             current.name = name;
-          }, { rerender: false });
+          }, { rerender: true });
         }),
       ),
     );
@@ -694,7 +718,7 @@ export class SkillEditorStep {
         createTextInput(active.name, (name) => {
           setActive((current) => {
             current.name = name;
-          }, { rerender: false });
+          }, { rerender: true });
         }),
       ),
     );
@@ -704,14 +728,24 @@ export class SkillEditorStep {
         createNumberInput(
           active.interval,
           (interval) => {
+            if (idReadonly) return;
             setActive((current) => {
               current.interval = interval;
             }, { rerender: false });
           },
-          { min: 0.1, step: 0.1 },
+          { min: 0.1, step: 0.1, readonly: idReadonly },
         ),
       ),
     );
+    if (idReadonly) {
+      grid.appendChild(
+        createEl(
+          'p',
+          'editor-hint',
+          '通常攻撃の間隔はクラス設定の「攻撃速度（SPD 段階）」から決まります。',
+        ),
+      );
+    }
 
     const effectsSection = createSection('効果');
     parent.appendChild(effectsSection);

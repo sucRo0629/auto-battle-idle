@@ -29,7 +29,11 @@ import {
   type SkillSlotKind,
   type SkillsJson,
 } from './editorApi.ts';
-import { SkillEditorStep } from './SkillEditorStep.ts';
+import {
+  renderClassIdentity,
+  renderEntityPicker,
+  SkillEditorStep,
+} from './SkillEditorStep.ts';
 import { createActionButton, createButton, createEl, preserveScrollDuring } from './formUtils.ts';
 
 type EditorTab = 'class' | 'enemy';
@@ -174,15 +178,20 @@ export class EditorApp {
   }
 
   private renderClassEditor(): void {
-    const skillsHost = createEl('div', 'editor-panel editor-panel-skills');
+    const classOptions = this.buildClassSkillOptions();
+    const headerHost = createEl('div', 'editor-panel editor-panel-header');
     const classHost = createEl('div', 'editor-panel editor-panel-class');
-    this.contentEl.appendChild(skillsHost);
+    const skillsHost = createEl('div', 'editor-panel editor-panel-skills');
+    this.contentEl.appendChild(headerHost);
     this.contentEl.appendChild(classHost);
+    this.contentEl.appendChild(skillsHost);
 
-    this.skillStep = new SkillEditorStep(skillsHost, {
-      ...this.buildClassSkillOptions(),
-      hideSave: true,
-    });
+    if (classOptions.entityPicker) {
+      renderEntityPicker(headerHost, classOptions.entityPicker);
+    }
+    if (classOptions.classIdentity) {
+      renderClassIdentity(headerHost, classOptions.classIdentity);
+    }
 
     this.classStep = new ClassEditorStep(classHost, {
       getDraft: () => this.classDraft,
@@ -199,19 +208,27 @@ export class EditorApp {
       hideSave: true,
     });
 
+    this.skillStep = new SkillEditorStep(skillsHost, {
+      ...classOptions,
+      hideSave: true,
+      hideEntityHeader: true,
+    });
+
     this.appendSaveActions(() => void this.saveClass());
   }
 
   private renderEnemyEditor(): void {
-    const skillsHost = createEl('div', 'editor-panel editor-panel-skills');
+    const enemyOptions = this.buildEnemySkillOptions();
+    const headerHost = createEl('div', 'editor-panel editor-panel-header');
     const enemyHost = createEl('div', 'editor-panel editor-panel-enemy');
-    this.contentEl.appendChild(skillsHost);
+    const skillsHost = createEl('div', 'editor-panel editor-panel-skills');
+    this.contentEl.appendChild(headerHost);
     this.contentEl.appendChild(enemyHost);
+    this.contentEl.appendChild(skillsHost);
 
-    this.skillStep = new SkillEditorStep(skillsHost, {
-      ...this.buildEnemySkillOptions(),
-      hideSave: true,
-    });
+    if (enemyOptions.entityPicker) {
+      renderEntityPicker(headerHost, enemyOptions.entityPicker);
+    }
 
     this.enemyStep = new EnemyEditorStep(enemyHost, {
       getDraft: () => this.enemyDraft,
@@ -227,6 +244,12 @@ export class EditorApp {
       hidePicker: true,
       hideSkillIds: true,
       hideSave: true,
+    });
+
+    this.skillStep = new SkillEditorStep(skillsHost, {
+      ...enemyOptions,
+      hideSave: true,
+      hideEntityHeader: true,
     });
 
     this.appendSaveActions(() => void this.saveEnemy());

@@ -7,10 +7,7 @@
     "def": 4,
     "reg": 0,
     "exp": 3,
-    "spriteKey": "none",
-    "activeSkillIds": [
-      "bite"
-    ]
+    "spriteKey": "none"
   },
   {
     "id": "test_enemy_elite",
@@ -20,9 +17,6 @@
     "def": 4,
     "reg": 0,
     "exp": 3,
-    "spriteKey": "none",
-    "activeSkillIds": [
-      "bite"
-    ]
+    "spriteKey": "none"
   }
 ]

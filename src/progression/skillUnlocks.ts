@@ -42,6 +42,26 @@ export function classifySkillIds(
   return { learnedPassiveIds, learnedActiveIds };
 }
 
+export function classifySkillIdsLenient(
+  skillIds: string[],
+  registry: SkillRegistry,
+): { learnedPassiveIds: string[]; learnedActiveIds: string[] } {
+  const learnedPassiveIds: string[] = [];
+  const learnedActiveIds: string[] = [];
+
+  for (const skillId of skillIds) {
+    if (registry.passives[skillId]) {
+      learnedPassiveIds.push(skillId);
+      continue;
+    }
+    if (registry.actives[skillId]) {
+      learnedActiveIds.push(skillId);
+    }
+  }
+
+  return { learnedPassiveIds, learnedActiveIds };
+}
+
 export function resolveLearnedSkills(
   classPreset: ClassPreset,
   characterLevel: number,
@@ -64,12 +84,11 @@ export type ClassPresetBeforeEnrich = Omit<
 export function enrichClassPreset(
   cls: ClassPresetBeforeEnrich,
   registry: SkillRegistry,
+  options?: { lenient?: boolean },
 ): ClassPreset {
+  const classify = options?.lenient ? classifySkillIdsLenient : classifySkillIds;
   const starterIds = getStarterSkillIds(cls.skills);
-  const { learnedPassiveIds, learnedActiveIds } = classifySkillIds(
-    starterIds,
-    registry,
-  );
+  const { learnedPassiveIds, learnedActiveIds } = classify(starterIds, registry);
 
   return {
     ...cls,

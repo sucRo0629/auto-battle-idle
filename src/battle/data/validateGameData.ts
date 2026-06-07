@@ -786,9 +786,6 @@ function parseClassSkills(raw: unknown, context: string): ClassSkillUnlock[] {
       throw new Error(`${entryContext}.level must be a non-negative integer`);
     }
     const skillIds = requireStringArray(obj, 'skillIds', entryContext);
-    if (skillIds.length === 0) {
-      throw new Error(`${entryContext}.skillIds must not be empty`);
-    }
     return { level, skillIds };
   });
 }
@@ -1095,6 +1092,12 @@ function parseParties(raw: unknown): Record<string, PartyDef> {
   return parties;
 }
 
+export type GameDataValidationMode = 'strict' | 'editor';
+
+export interface ParseAndValidateGameDataOptions {
+  mode?: GameDataValidationMode;
+}
+
 function validateReferences(
   classes: ClassPreset[],
   passives: PassiveSkillDef[],
@@ -1103,6 +1106,7 @@ function validateReferences(
   stages: StageDef[],
   parties: Record<string, PartyDef>,
   skillRegistry: SkillRegistry,
+  mode: GameDataValidationMode,
 ): void {
   const passiveIds = new Set(passives.map((p) => p.id));
   const activeIds = new Set(actives.map((a) => a.id));
@@ -1115,6 +1119,9 @@ function validateReferences(
       throw new Error(
         `Unknown basicAttackSkillId "${cls.basicAttackSkillId}": ${cls.id}`,
       );
+    }
+    if (mode === 'editor') {
+      continue;
     }
     for (const passiveId of cls.starterPassiveIds) {
       if (!passiveIds.has(passiveId)) {
@@ -1161,6 +1168,10 @@ function validateReferences(
         }
       });
     });
+  }
+
+  if (mode === 'editor') {
+    return;
   }
 
   for (const [partyId, party] of Object.entries(parties)) {
@@ -1253,13 +1264,17 @@ export interface ParsedGameDataJson {
   parties: Record<string, PartyDef>;
 }
 
-export function parseAndValidateGameDataJson(raw: {
-  classes: unknown;
-  skills: unknown;
-  enemies: unknown;
-  stages: unknown;
-  parties: unknown;
-}): ParsedGameDataJson {
+export function parseAndValidateGameDataJson(
+  raw: {
+    classes: unknown;
+    skills: unknown;
+    enemies: unknown;
+    stages: unknown;
+    parties: unknown;
+  },
+  options?: ParseAndValidateGameDataOptions,
+): ParsedGameDataJson {
+  const mode = options?.mode ?? 'strict';
   const skillsRoot = requireRecord(raw.skills, 'skills.json');
   const passivesRaw = skillsRoot.passives;
   const activesRaw = skillsRoot.actives;
@@ -1277,7 +1292,9 @@ export function parseAndValidateGameDataJson(raw: {
     passives: Object.fromEntries(passives.map((skill) => [skill.id, skill])),
     actives: Object.fromEntries(actives.map((skill) => [skill.id, skill])),
   };
-  const classes = classesRaw.map((cls) => enrichClassPreset(cls, skillRegistry));
+  const classes = classesRaw.map((cls) =>
+    enrichClassPreset(cls, skillRegistry, { lenient: mode === 'editor' }),
+  );
   const enemies = parseEnemies(raw.enemies);
   const stages = parseStages(raw.stages);
   const parties = parseParties(raw.parties);
@@ -1290,6 +1307,7 @@ export function parseAndValidateGameDataJson(raw: {
     stages,
     parties,
     skillRegistry,
+    mode,
   );
 
   return { classes, passives, actives, enemies, stages, parties };

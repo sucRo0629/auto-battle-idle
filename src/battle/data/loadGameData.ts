@@ -56,6 +56,41 @@ function normalizeEnemy(enemy: EnemyTemplate): EnemyTemplate {
   };
 }
 
+export type LoadGameDataResult =
+  | { ok: true; data: GameData }
+  | { ok: false; error: string };
+
+export function tryLoadGameData(): LoadGameDataResult {
+  try {
+    return { ok: true, data: loadGameData() };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+export function renderGameDataLoadError(
+  container: HTMLElement,
+  message: string,
+): void {
+  container.replaceChildren();
+  const panel = document.createElement('div');
+  panel.className = 'game-data-error';
+  const title = document.createElement('h1');
+  title.textContent = 'ゲームデータの読み込みに失敗しました';
+  const detail = document.createElement('pre');
+  detail.className = 'game-data-error-detail';
+  detail.textContent = message;
+  const hint = document.createElement('p');
+  hint.className = 'game-data-error-hint';
+  hint.textContent =
+    'data/ の JSON を確認してください。エディタで保存した内容に不整合がある可能性があります。';
+  panel.append(title, detail, hint);
+  container.appendChild(panel);
+}
+
 export function loadGameData(): GameData {
   const parsed = parseAndValidateGameDataJson({
     classes: [...classesJson, ...testClassesJson],

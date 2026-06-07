@@ -7,18 +7,22 @@
     "traits": {
       "attackRange": "melee"
     },
-    "maxHp": 300,
+    "maxHp": 200,
     "atk": 12,
     "def": 24,
     "reg": 0,
     "jobTier": 1,
-    "growthTier": { "maxHp": 3, "atk": 1, "def": 3 },
+    "growthTier": {
+      "maxHp": 3,
+      "atk": 1,
+      "def": 3
+    },
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "defender_eishi_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["eishi_thick_skin", "eishi_iron_guard"]
+        "skillIds": []
       }
     ]
   },
@@ -35,13 +39,17 @@
     "def": 10,
     "reg": 0,
     "jobTier": 1,
-    "growthTier": { "maxHp": 2, "atk": 3, "def": 3 },
+    "growthTier": {
+      "maxHp": 2,
+      "atk": 3,
+      "def": 3
+    },
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "attacker_kenshi_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["kenshi_brute", "kenshi_slash"]
+        "skillIds": []
       }
     ]
   },
@@ -59,13 +67,17 @@
     "def": 6,
     "reg": 0,
     "jobTier": 1,
-    "growthTier": { "maxHp": 1, "atk": 2, "def": 2 },
+    "growthTier": {
+      "maxHp": 1,
+      "atk": 2,
+      "def": 2
+    },
     "attackSpeedTier": "fast",
     "basicAttackSkillId": "attacker_kyushi_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["kyushi_snipe", "kyushi_arrow"]
+        "skillIds": []
       }
     ]
   },
@@ -84,13 +96,17 @@
     "reg": 0,
     "jobTier": 1,
     "growthPresetKey": "caster",
-    "growthTier": { "maxHp": 2, "atk": 3, "def": 1 },
+    "growthTier": {
+      "maxHp": 2,
+      "atk": 3,
+      "def": 1
+    },
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "attacker_jutsushi_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["jutsushi_focus", "jutsushi_orb", "jutsushi_chain"]
+        "skillIds": []
       }
     ]
   },
@@ -107,13 +123,17 @@
     "def": 10,
     "reg": 0,
     "jobTier": 1,
-    "growthTier": { "maxHp": 1, "atk": 2, "def": 1 },
+    "growthTier": {
+      "maxHp": 1,
+      "atk": 2,
+      "def": 1
+    },
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "supporter_yakushi_basic_attack",
     "skills": [
       {
         "level": 0,
-        "skillIds": ["yakushi_gentle_touch", "yakushi_heal"]
+        "skillIds": []
       }
     ]
   }

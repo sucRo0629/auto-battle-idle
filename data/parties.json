@@ -5,33 +5,33 @@
       {
         "classId": "defender_eishi",
         "build": {
-          "learnedPassiveIds": ["eishi_thick_skin"],
-          "learnedActiveIds": ["eishi_iron_guard"],
-          "equippedActiveSlots": ["eishi_iron_guard"]
+          "learnedPassiveIds": [],
+          "learnedActiveIds": [],
+          "equippedActiveSlots": []
         }
       },
       {
         "classId": "attacker_kenshi",
         "build": {
-          "learnedPassiveIds": ["kenshi_brute"],
-          "learnedActiveIds": ["kenshi_slash"],
-          "equippedActiveSlots": ["kenshi_slash"]
+          "learnedPassiveIds": [],
+          "learnedActiveIds": [],
+          "equippedActiveSlots": []
         }
       },
       {
         "classId": "supporter_yakushi",
         "build": {
-          "learnedPassiveIds": ["yakushi_gentle_touch"],
-          "learnedActiveIds": ["yakushi_heal"],
-          "equippedActiveSlots": ["yakushi_heal"]
+          "learnedPassiveIds": [],
+          "learnedActiveIds": [],
+          "equippedActiveSlots": []
         }
       },
       {
         "classId": "attacker_kyushi",
         "build": {
-          "learnedPassiveIds": ["kyushi_snipe"],
-          "learnedActiveIds": ["kyushi_arrow"],
-          "equippedActiveSlots": ["kyushi_arrow"]
+          "learnedPassiveIds": [],
+          "learnedActiveIds": [],
+          "equippedActiveSlots": []
         }
       }
     ]

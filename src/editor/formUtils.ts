@@ -40,7 +40,7 @@ export function createTextInput(
 export function createNumberInput(
   value: number,
   onInput: (value: number) => void,
-  options?: { id?: string; min?: number; step?: number },
+  options?: { id?: string; min?: number; step?: number; readonly?: boolean },
 ): HTMLInputElement {
   const input = createEl('input', 'editor-input') as HTMLInputElement;
   input.type = 'number';
@@ -48,7 +48,9 @@ export function createNumberInput(
   if (options?.id) input.id = options.id;
   if (options?.min !== undefined) input.min = String(options.min);
   if (options?.step !== undefined) input.step = String(options.step);
+  if (options?.readonly) input.readOnly = true;
   input.addEventListener('input', () => {
+    if (options?.readonly) return;
     const parsed = Number(input.value);
     onInput(Number.isNaN(parsed) ? 0 : parsed);
   });
