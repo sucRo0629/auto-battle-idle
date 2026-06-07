@@ -1,0 +1,32 @@
+:root {
+  --app-font-family: 'Segoe UI', system-ui, sans-serif;
+  --app-text: #e8e8e8;
+  --app-bg: #0f0f1a;
+  --battle-header-bg: #16213e;
+  --verify-toggle-color: #c8d6e5;
+  --verify-toggle-font-size: 12;
+  --stage-label-bg: rgba(0, 0, 0, 0.3);
+  --stage-label-color: #ffffff;
+  --stage-label-font-size: 11;
+  --canvas-border-color: #2d3a4f;
+  --canvas-border-width: 2;
+
+  font-family: var(--app-font-family);
+  color: var(--app-text);
+  background: var(--app-bg);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+#app {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}

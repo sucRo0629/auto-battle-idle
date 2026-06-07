@@ -1,4 +1,4 @@
-import './style.css';
+import './styles/app-base.css';
 import { loadGameData } from './battle/data/loadGameData.ts';
 import type { ClassId, PartySlotState } from './battle/types.ts';
 import { isElectronMenu } from './platform/electronApi.ts';

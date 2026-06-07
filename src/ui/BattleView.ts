@@ -1,3 +1,4 @@
+import '../styles/battle-view.css';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
 import type { BattleEvent } from '../battle/events.ts';
 import type { GameData, SaveGameState } from '../battle/types.ts';

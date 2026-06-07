@@ -1,4 +1,4 @@
-import './style.css';
+import './styles/app-base.css';
 import { loadGameData } from './battle/data/loadGameData.ts';
 import { GameSession } from './game/GameSession.ts';
 import { bindElectronBattle } from './platform/bindElectronBattle.ts';

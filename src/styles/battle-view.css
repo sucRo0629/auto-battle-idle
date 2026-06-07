@@ -1,0 +1,204 @@
+.battle-view {
+  width: min(520px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.battle-header {
+  -webkit-app-region: drag;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--battle-header-bg);
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.battle-header-title {
+  flex: 1;
+  text-align: center;
+}
+
+.verify-mode-toggle {
+  -webkit-app-region: no-drag;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: calc(var(--verify-toggle-font-size) * 1px);
+  font-weight: 500;
+  color: var(--verify-toggle-color);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.verify-mode-toggle input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.battle-canvas-host {
+  position: relative;
+  display: flex;
+  justify-content: center;
+
+  --battle-ground-margin: 50;
+  --hud-icon-size: 24;
+  --hud-bar-w: 80;
+  --hud-icon-bar-gap: 4;
+  --hud-bar-skill-gap: 2;
+  --hud-bottom-margin: 5;
+  --hud-header-font-size: 11;
+  --hud-exp-bar-h: 3;
+  --hud-header-block-gap: 2;
+  --hud-exp-hp-gap: 2;
+  --hud-recast-bar-h: 3;
+  --hud-recast-gap: 1;
+  --hud-font-family: 'Segoe UI', system-ui, sans-serif;
+  --hud-icon-border: #4a5568;
+  --hud-name-color: #ffffff;
+  --hud-exp-bar-fill: #f5a623;
+  --hud-hp-bar-fill: #2ecc71;
+  --hud-enemy-hp-bar-fill: #e74c3c;
+  --hud-bar-border: #1a1a1a;
+  --hud-bar-track: #333333;
+  --hud-skill-recast-track: #2a2a35;
+  --hud-skill-recast-charging: #5a6270;
+  --hud-skill-recast-ready: #9aa3b0;
+  --hud-icon-frame: #1a1a1a;
+  --status-buff-color: #e62222;
+  --status-badge-bg: rgba(255, 255, 255, 0.1);
+  --status-debuff-color: #318aff;
+  --popup-font-size: 18;
+  --popup-outline-width: 1;
+  --popup-font-family: 'Segoe UI', system-ui, sans-serif;
+  --popup-damage-fill: #ffffff;
+  --popup-damage-stroke: #000000;
+  --popup-heal-fill: #40ff90;
+  --popup-heal-stroke: #000000;
+  --scene-sky-fill: #1a1a2e;
+  --scene-ground-fill: #22283a;
+  --scene-ground-stroke: #2d3a4f;
+  --scene-ground-stroke-width: 2;
+  --dead-alpha: 0.35;
+  --enemy-hp-bar-outline: #000000;
+  --enemy-hp-bar-outline-width: 1;
+  --victory-font-size: 48;
+  --victory-fill: #ffffff;
+  --victory-stroke: rgba(0, 0, 0, 0.65);
+  --victory-outline-width: 3;
+  --attack-slash-primary: #ffffff;
+  --attack-slash-secondary: #8ecfff;
+  --attack-slash-primary-width: 3;
+  --attack-slash-secondary-width: 2;
+  --attack-heal-primary: #2ecc71;
+  --attack-heal-secondary: #7bed9f;
+  --attack-heal-primary-width: 2.5;
+  --attack-heal-secondary-width: 2;
+  --attack-heal-peak-alpha: 0.95;
+  --attack-orb-fill: #74b9ff;
+  --attack-orb-highlight: #ffffff;
+  --attack-orb-alpha: 0.85;
+  --attack-orb-highlight-alpha: 0.45;
+  --attack-arrow-shaft: #c8a165;
+  --attack-arrow-tip: #8b6914;
+  --status-badge-icon-size: 8;
+  --status-badge-arrow-width: 3;
+  --status-badge-overlap: 0;
+  --status-badge-overlay: rgba(0, 0, 0, 0.55);
+  --status-icon-fallback-alpha: 0.35;
+  --hurt-tint-r: 255;
+  --hurt-tint-g: 0;
+  --hurt-tint-b: 0;
+  --hurt-tint-strength: 0.35;
+  --buff-glow-r: 255;
+  --buff-glow-g: 255;
+  --buff-glow-b: 255;
+  --buff-glow-peak: 0.55;
+  --sprite-defender: #4a90d9;
+  --sprite-attacker-melee: #e67e22;
+  --sprite-supporter: #2ecc71;
+  --sprite-attacker-ranged: #e74c3c;
+  --sprite-slime: #9b59b6;
+  --sprite-enemy-default: #888888;
+  --sprite-default: #888888;
+  --icon-defender: #2c5f9e;
+  --icon-attacker-melee: #c0392b;
+  --icon-supporter: #1e8449;
+  --icon-attacker-ranged: #922b21;
+  --icon-default: #888888;
+  --status-icon-atk: #c0392b;
+  --status-icon-def: #2980b9;
+  --status-icon-reg: #9b59b6;
+  --status-icon-hot: #27ae60;
+  --status-icon-dot: #8e44ad;
+}
+
+.battle-stage-label {
+  position: absolute;
+  top: 4px;
+  left: 23px;
+  z-index: 1;
+  padding: 4px 6px;
+  background: var(--stage-label-bg);
+  color: var(--stage-label-color);
+  font-size: calc(var(--stage-label-font-size) * 1px);
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+  white-space: nowrap;
+  border-radius: 4px;
+}
+
+.battle-canvas {
+  border: calc(var(--canvas-border-width) * 1px) solid var(--canvas-border-color);
+  border-radius: 4px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.battle-menu-buttons {
+  -webkit-app-region: no-drag;
+  position: absolute;
+  right: 24px;
+  bottom: calc((var(--battle-ground-margin) + 8) * 1px);
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.battle-menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 6px;
+  background: rgba(22, 33, 62, 0.92);
+  color: var(--app-text);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.battle-menu-button .material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: normal;
+  color: #e3e3e3;
+}
+
+.battle-menu-button:hover:not(:disabled) {
+  background: rgba(45, 58, 79, 0.95);
+}
+
+.battle-menu-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

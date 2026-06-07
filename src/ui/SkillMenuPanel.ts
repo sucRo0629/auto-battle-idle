@@ -1,3 +1,4 @@
+import "../styles/skill-menu-panel.css";
 import {
   resolveClassIconKey,
   resolveClassSpriteKey,
