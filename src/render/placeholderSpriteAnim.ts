@@ -1,4 +1,4 @@
-import { ANIM_DEFS } from "./SpriteRegistry.ts";
+import { ANIM_DEFS, type AnimState } from "./SpriteRegistry.ts";
 import type { CombatantLayout } from "./IBattleRenderer.ts";
 
 const IDLE_BOB_AMPLITUDE = 2;
@@ -6,9 +6,43 @@ const ATTACK_BOUNCE_HEIGHT = 8;
 
 type AnimLayout = Pick<CombatantLayout, "anim" | "animFrame">;
 
-/** スプライトシートアニメーションが定義されているか（未設定時はプレースホルダを使う） */
-export function hasSpriteSheetAnimation(_spriteKey: string): boolean {
-  return false;
+const deathFallDirections = new Map<string, -1 | 1>();
+
+/** 死亡プレースホルダー（回転倒れ）の開始。playAnim(death) 時に呼ぶ */
+export function beginDeathPlaceholder(combatantId: string): void {
+  deathFallDirections.set(combatantId, Math.random() < 0.5 ? -1 : 1);
+}
+
+/** リスポーン等で死亡プレースホルダー状態を解除 */
+export function clearDeathPlaceholder(combatantId: string): void {
+  deathFallDirections.delete(combatantId);
+}
+
+export interface DeathPlaceholderTransform {
+  rotationRad: number;
+}
+
+function easeOut(t: number): number {
+  return 1 - (1 - t) ** 2;
+}
+
+/**
+ * スプライトシート未設定時の死亡演出（90° 回転倒れ）。
+ * SpriteAnimator の death フレーム進行に同期。death シートがある spriteKey では使わない。
+ */
+export function getDeathPlaceholderTransform(
+  combatantId: string,
+  layout: AnimLayout & { anim: AnimState },
+): DeathPlaceholderTransform | null {
+  if (layout.anim !== "death") return null;
+
+  const direction = deathFallDirections.get(combatantId);
+  if (direction === undefined) return null;
+
+  const def = ANIM_DEFS.death;
+  const frameProgress = Math.min((layout.animFrame + 1) / def.frames, 1);
+  const t = easeOut(frameProgress);
+  return { rotationRad: direction * t * (Math.PI / 2) };
 }
 
 /**
@@ -17,7 +51,7 @@ export function hasSpriteSheetAnimation(_spriteKey: string): boolean {
  */
 export function getPlaceholderSpriteYOffset(
   layout: AnimLayout,
-  scale: number
+  scale: number,
 ): number {
   if (layout.anim === "idle") {
     return Math.sin(layout.animFrame * 0.8) * IDLE_BOB_AMPLITUDE;

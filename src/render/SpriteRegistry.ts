@@ -8,6 +8,7 @@ import {
   PLACEHOLDER_SPRITE_KEYS,
   type PlaceholderSpriteKey,
 } from '../battle/classVisuals.ts';
+import { preloadSpriteSheets } from './spriteSheetRegistry.ts';
 
 export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death';
 
@@ -50,11 +51,12 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 
 export function preloadSprites(): Promise<void> {
   if (!preloadPromise) {
-    preloadPromise = Promise.all(
-      Object.entries(SPRITE_URLS).map(async ([key, url]) => {
+    preloadPromise = Promise.all([
+      ...Object.entries(SPRITE_URLS).map(async ([key, url]) => {
         spriteImages.set(key, await loadImage(url));
       }),
-    ).then(() => {});
+      preloadSpriteSheets(),
+    ]).then(() => {});
   }
   return preloadPromise;
 }

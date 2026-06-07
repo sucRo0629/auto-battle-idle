@@ -1,5 +1,9 @@
 import type { FormationRow, Role } from "../battle/types.ts";
 import { DEFAULT_MELEE_RANGE_PX } from "../battle/types.ts";
+import {
+  SPRITE_LAYOUT_SIZE,
+  spriteSheetMaxOverflowTop,
+} from "./spriteLayout.ts";
 
 export const ROW_X: Record<FormationRow, number> = {
   front: 210,
@@ -8,12 +12,14 @@ export const ROW_X: Record<FormationRow, number> = {
 };
 
 export const ALLY_ROW_SPACING = 42;
-export const SPRITE_WIDTH = 32;
+export const SPRITE_WIDTH = SPRITE_LAYOUT_SIZE;
 export const SPRITE_GAP = 38;
 /** 地面ライン下: 地面演出 + パーティ HUD（クラス名 + アイコン行） */
 export const BATTLE_GROUND_MARGIN = 50;
-/** スプライト上の最小余白（ステータスバッジ行 + 敵 HP バー積み上げ） */
-export const BATTLE_TOP_PAD = 43;
+/** スプライト上の最小余白（バッジ + HP バー + シートはみ出し分） */
+const BASE_BATTLE_TOP_PAD = 43;
+export const BATTLE_TOP_PAD =
+  BASE_BATTLE_TOP_PAD + spriteSheetMaxOverflowTop();
 /** ステータスバッジ 1 行の高さ（アイコン/矢印 8px） */
 export const STATUS_BADGE_H = 8;
 /** スプライト / HP バーとバッジ行の間隔 */
