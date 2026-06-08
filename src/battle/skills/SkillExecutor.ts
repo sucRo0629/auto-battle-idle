@@ -8,6 +8,7 @@ import {
   resolveResourceAmount,
 } from '../combatMath.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
+import { resolveMoveVisualX } from '../../render/formationLayout.ts';
 import { resetCooldownAfterFire } from '../skillTrigger.ts';
 import type {
   ActiveSkillDef,
@@ -260,6 +261,7 @@ export class SkillExecutor {
       actorId: actor.id,
       fromX,
       toX,
+      toVisualX: resolveMoveVisualX(actor, anchor, effectDef),
       remainingSec: effectDef.moveDurationSec,
       totalSec: effectDef.moveDurationSec,
       baseVisualX: actor.visualX,

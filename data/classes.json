@@ -22,7 +22,9 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": []
+        "skillIds": [
+          "defender_eishi_active_1"
+        ]
       }
     ]
   },
@@ -49,7 +51,9 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": ["attacker_kenshi_charge"]
+        "skillIds": [
+          "attacker_kenshi_charge"
+        ]
       }
     ]
   },

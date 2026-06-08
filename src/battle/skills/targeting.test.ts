@@ -95,9 +95,20 @@ describe('resolveEffectTargets', () => {
       enemies,
     );
     const ids = targets.map((t) => t.id);
-    expect(ids).toContain('e1');
+    expect(ids).toContain('e3');
     expect(ids).toContain('e2');
-    expect(ids).not.toContain('e3');
+    expect(ids).not.toContain('e1');
+  });
+
+  it('frontEnemy picks maximum battleX among in-range', () => {
+    const targets = resolveEffectTargets(
+      { targetShape: 'single' },
+      'frontEnemy',
+      actor,
+      allies,
+      enemies,
+    );
+    expect(targets[0]?.id).toBe('e3');
   });
 
   it('excludes enemies outside skill range', () => {
@@ -120,15 +131,14 @@ describe('resolveEffectTargets', () => {
   });
 
   it('farthestEnemy picks minimum battleX among in-range', () => {
-    const inRangeFar = mockUnit('e2b', 170, { isEnemy: true });
     const targets = resolveEffectTargets(
-      { targetShape: 'single', range: 120 },
+      { targetShape: 'single' },
       'farthestEnemy',
       actor,
       allies,
-      [mockUnit('e-out', 50, { isEnemy: true }), inRangeFar],
+      enemies,
     );
-    expect(targets[0]?.id).toBe('e2b');
+    expect(targets[0]?.id).toBe('e1');
   });
 
   it('multiLock: distributes hits across ordered pool', () => {
@@ -140,7 +150,7 @@ describe('resolveEffectTargets', () => {
       enemies,
     );
     expect(targets).toHaveLength(3);
-    expect(targets.map((t) => t.id)).toEqual(['e1', 'e2', 'e3']);
+    expect(targets.map((t) => t.id)).toEqual(['e3', 'e2', 'e1']);
   });
 
   it('multiLock: round-robin repeats when hits exceed pool size', () => {
@@ -203,7 +213,7 @@ describe('resolveEffectTargets', () => {
       enemies,
     );
     const ids = resolution?.waves[0]?.targets.map((t) => t.unit.id);
-    expect(ids).toEqual(['e1', 'e2', 'e3']);
+    expect(ids).toEqual(['e3', 'e2', 'e1']);
   });
 
   it('scatter: uses deterministic random', () => {

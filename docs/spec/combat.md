@@ -135,7 +135,11 @@ HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さ�
 | `battleX` | `src/battle` | 射程判定・接敵移動・ターゲット選定 |
 | `visualX` | `src/render` | 画面描画のみ（`formationLayout` の隊形配置・standoff で算出） |
 
-同一 `battleX` のユニットはロジック上重なってよい（近接 range 0 等）。描画は `visualX` で隊形・standoff（演出用 `DEFAULT_MELEE_RANGE_PX` = 45px）を維持し、`battleX` の内部接近は画面に反映しない。スキル `move` のみ `baseVisualX + (battleX - fromX)` で画面上の移動を演出する。
+同一 `battleX` のユニットはロジック上重なってよい（近接 range 0 等）。描画は `visualX` で隊形・standoff（演出用 `DEFAULT_MELEE_RANGE_PX` = 45px）を維持し、`battleX` の内部接近は画面に反映しない。
+
+**スキル `move` の演出:** `battleX` はロジック上の目標（接触等）へ補間し、`visualX` は `resolveMoveVisualX` で求めた standoff 目標へ同じ進捗率で補間する（`battleX` デルタの 1:1 ミラーはしない）。
+
+**接敵カメラ:** 接敵フェーズ中は最前線の `visualX` 中点がキャンバス中央（240px）へ来るよう `combatCameraX` をスプライト描画に加算する。非接敵・Victory 退出時は 0 にリセット。HUD はオフセットしない。
 
 ## 射程と移動
 

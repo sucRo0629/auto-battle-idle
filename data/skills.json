@@ -97,7 +97,10 @@
     {
       "id": "attacker_kenshi_charge",
       "name": "突進",
-      "trigger": { "kind": "time", "value": 5 },
+      "trigger": {
+        "kind": "time",
+        "value": 5
+      },
       "effect": [
         {
           "type": "move",
@@ -112,7 +115,9 @@
           "damageType": "physical",
           "powerMultiplier": 1.2,
           "anim": "attack",
-          "vfx": { "preset": "slash" }
+          "vfx": {
+            "preset": "slash"
+          }
         }
       ]
     },
@@ -126,6 +131,28 @@
           "type": "damage",
           "damageType": "physical",
           "powerMultiplier": 1
+        }
+      ]
+    },
+    {
+      "id": "defender_eishi_active_1",
+      "name": "突撃",
+      "trigger": {
+        "kind": "time",
+        "value": 10
+      },
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "move",
+          "moveMode": "engage",
+          "moveDurationSec": 0.25
+        },
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 1.25
         }
       ]
     }

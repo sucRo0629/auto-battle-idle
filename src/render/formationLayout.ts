@@ -1,4 +1,9 @@
-import type { FormationRow, Role } from "../battle/types.ts";
+import type {
+  CombatantState,
+  FormationRow,
+  MoveSkillEffect,
+  Role,
+} from "../battle/types.ts";
 import { DEFAULT_MELEE_RANGE_PX } from "../battle/types.ts";
 import {
   SPRITE_LAYOUT_SIZE,
@@ -462,6 +467,34 @@ export function computeEnemyStopX(
 ): number {
   const gap = engagedStandoffGap(targetAllyRangePx, enemyRangePx);
   return targetAllyX - gap;
+}
+
+/** move 効果の目標 visualX（anchor 基準・standoff 維持） */
+export function resolveMoveVisualX(
+  actor: CombatantState,
+  anchor: CombatantState,
+  effect: MoveSkillEffect,
+): number {
+  const mode = effect.moveMode ?? "engage";
+  if (mode === "toAnchor") {
+    return anchor.visualX;
+  }
+
+  const actorRangePx = actor.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX;
+
+  if (mode === "behindTarget") {
+    const offset = effect.behindOffsetPx ?? 0;
+    return actor.isEnemy
+      ? anchor.visualX + offset
+      : anchor.visualX - offset;
+  }
+
+  const anchorRangePx = anchor.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX;
+  if (actor.isEnemy) {
+    return computeEnemyStopX(actorRangePx, anchor.visualX, anchorRangePx);
+  }
+  const gap = Math.max(actorRangePx, engagedMinLeftEdgeGap());
+  return anchor.visualX + gap;
 }
 
 /** 現在位置を目標へ最大 maxDelta だけ近づける */

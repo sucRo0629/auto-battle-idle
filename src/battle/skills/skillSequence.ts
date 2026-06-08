@@ -16,6 +16,8 @@ export interface ActiveSkillMove {
   actorId: string;
   fromX: number;
   toX: number;
+  /** move 完了時の visualX（standoff 基準） */
+  toVisualX: number;
   remainingSec: number;
   totalSec: number;
   /** move 開始時の formation 基準 visualX（演出オーバーレイ用） */

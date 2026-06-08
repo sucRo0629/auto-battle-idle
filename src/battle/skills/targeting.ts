@@ -84,7 +84,7 @@ export function pickTargetFromPool(
     case 'frontEnemy':
     case 'rangedAttackingEnemy':
       return pool.reduce((a, b) =>
-        getBattleX(a) <= getBattleX(b) ? a : b,
+        getBattleX(a) >= getBattleX(b) ? a : b,
       );
     case 'lowestHpEnemy':
       return pool.reduce((a, b) => (a.hp <= b.hp ? a : b));
@@ -179,6 +179,7 @@ function orderPoolByRule(
   switch (rule) {
     case 'frontEnemy':
     case 'rangedAttackingEnemy':
+      return copy.sort((a, b) => getBattleX(b) - getBattleX(a));
     case 'farthestEnemy':
       return copy.sort((a, b) => getBattleX(a) - getBattleX(b));
     case 'lowestHpEnemy':
@@ -244,7 +245,7 @@ function resolvePierceHitTargets(
       const x = getBattleX(unit);
       return x <= actorX && x >= minX;
     })
-    .sort((a, b) => getBattleX(a) - getBattleX(b));
+    .sort((a, b) => getBattleX(b) - getBattleX(a));
 
   const step = pierceStepFields(effect);
   const base = basePowerMultiplier ?? 1;

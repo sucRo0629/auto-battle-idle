@@ -61,12 +61,15 @@ import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 const RESTART_DELAY_SEC = 3;
 const VICTORY_EXIT_SPEED = SCROLL_SPEED * 2;
 const OVERLAY_TICK_SEC = 1;
+const COMBAT_CAMERA_CENTER_X = 240;
+const CAMERA_PAN_SPEED = 400;
 
 export class BattleEngine {
   private phase: BattlePhase = "idle";
   private allies: CombatantState[] = [];
   private enemies: CombatantState[] = [];
   private worldOffsetX = 0;
+  private combatCameraX = 0;
   private engaged = false;
   private restartTimer = 0;
   private readonly listeners = new Set<BattleEventListener>();
@@ -276,9 +279,7 @@ export class BattleEngine {
       }
       const target = allyTargets.get(ally.id);
       if (target === undefined) continue;
-      if (target <= ally.visualX) {
-        ally.visualX = moveTowardX(ally.visualX, target, approachStep);
-      }
+      ally.visualX = moveTowardX(ally.visualX, target, approachStep);
     }
 
     const enemyTargets = computeEngagedEnemyPositions(
@@ -335,8 +336,32 @@ export class BattleEngine {
       );
       if (!unit) continue;
       const baseVisualX = move.baseVisualX ?? unit.visualX;
-      unit.visualX = baseVisualX + (unit.battleX - move.fromX);
+      const t =
+        move.toX === move.fromX
+          ? 1
+          : (unit.battleX - move.fromX) / (move.toX - move.fromX);
+      unit.visualX = baseVisualX + (move.toVisualX - baseVisualX) * t;
     }
+  }
+
+  private updateCombatCamera(deltaTime: number): void {
+    const visualAllies = this.getVisualAllies();
+    const visualEnemies = this.getVisualEnemies();
+    const frontAllyX = getFrontAllyX(visualAllies);
+    const frontEnemyX = getFrontEnemyX(visualEnemies);
+    if (frontAllyX === null || frontEnemyX === null) return;
+
+    const mid = (frontAllyX + frontEnemyX) / 2;
+    const target = COMBAT_CAMERA_CENTER_X - mid;
+    this.combatCameraX = moveTowardX(
+      this.combatCameraX,
+      target,
+      CAMERA_PAN_SPEED * deltaTime,
+    );
+  }
+
+  private resetCombatCamera(): void {
+    this.combatCameraX = 0;
   }
 
   private updateEngagementState(): void {
@@ -369,6 +394,7 @@ export class BattleEngine {
     this.engaged = false;
     this.reloadBattlefield();
     this.worldOffsetX = 0;
+    this.resetCombatCamera();
     this.restartTimer = 0;
     this.phase = "running";
   }
@@ -400,6 +426,7 @@ export class BattleEngine {
       phase: this.phase,
       engaged: this.engaged,
       worldOffsetX: this.worldOffsetX,
+      combatCameraX: this.combatCameraX,
       alliesOffScreen: this.areAlliesOffScreen(),
       allies: this.allies.map((c) => this.toSnapshot(c)),
       enemies: this.enemies.map((c) => this.toSnapshot(c)),
@@ -475,6 +502,7 @@ export class BattleEngine {
       this.updateEngagedBattleMovement(deltaTime);
       this.updateEngagedVisualMovement(deltaTime);
       this.applySkillMoveVisualOverlay();
+      this.updateCombatCamera(deltaTime);
       this.tickStatusEffects(deltaTime);
       this.tickCooldowns(this.allies, deltaTime);
       this.tickCooldowns(this.enemies, deltaTime);
@@ -683,11 +711,13 @@ export class BattleEngine {
         this.resetEnemyBattlePositions();
         this.resetEnemyVisualPositions();
         this.engaged = false;
+        this.resetCombatCamera();
         return;
       }
 
       this.phase = "victory";
       this.engaged = false;
+      this.resetCombatCamera();
       this.restartTimer = RESTART_DELAY_SEC;
       this.emit({
         type: "battleEnd",
@@ -699,6 +729,7 @@ export class BattleEngine {
     if (!alliesAlive) {
       this.phase = "defeat";
       this.engaged = false;
+      this.resetCombatCamera();
       this.restartTimer = RESTART_DELAY_SEC;
       this.emit({
         type: "battleEnd",
@@ -711,6 +742,7 @@ export class BattleEngine {
   private respawnAfterEnd(): void {
     this.reloadBattlefield();
     this.worldOffsetX = 0;
+    this.resetCombatCamera();
     this.engaged = false;
     this.phase = "running";
   }

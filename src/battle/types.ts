@@ -538,6 +538,8 @@ export interface BattleSnapshot {
   phase: BattlePhase;
   engaged: boolean;
   worldOffsetX: number;
+  /** 接敵中: 前線を画面中央へ寄せるスプライト描画オフセット */
+  combatCameraX: number;
   alliesOffScreen: boolean;
   allies: CombatantSnapshot[];
   enemies: CombatantSnapshot[];

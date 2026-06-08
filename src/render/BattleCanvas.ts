@@ -179,6 +179,7 @@ export class BattleCanvas implements IBattleRenderer {
   ): void {
     const layouts: CombatantLayout[] = [];
     const y = groundY(this.canvas.height, SPRITE_SCALE);
+    const cameraX = snapshot.combatCameraX;
 
     // 進軍中は画面内に入ってから表示。Victory 等の非戦闘時は非表示
     const canShowEnemies = snapshot.phase === "running";
@@ -199,7 +200,7 @@ export class BattleCanvas implements IBattleRenderer {
         const animState = this.animator.getState(enemy.id);
         layouts.push({
           id: enemy.id,
-          x: enemy.visualX,
+          x: enemy.visualX + cameraX,
           y,
           spriteKey: enemy.spriteKey,
           hp: enemy.hp,
@@ -224,7 +225,7 @@ export class BattleCanvas implements IBattleRenderer {
       const animState = this.animator.getState(ally.id);
       layouts.push({
         id: ally.id,
-        x: ally.visualX,
+        x: ally.visualX + cameraX,
         y,
         spriteKey: ally.spriteKey,
         hp: ally.hp,
