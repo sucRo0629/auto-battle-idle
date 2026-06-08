@@ -1,5 +1,4 @@
 export const VERIFY_MODE_STORAGE_KEY = 'auto-battle-idle:verify-mode';
-export const VERIFY_PARTY_ID = 'test';
 export const RELEASE_PARTY_ID = 'demo';
 
 export function isVerifyModeEnabled(): boolean {
@@ -20,8 +19,8 @@ export function setVerifyModeEnabled(enabled: boolean): void {
   }
 }
 
-export function partyIdForVerifyMode(verifyMode: boolean): string {
-  return verifyMode ? VERIFY_PARTY_ID : RELEASE_PARTY_ID;
+export function partyIdForVerifyMode(_verifyMode: boolean): string {
+  return RELEASE_PARTY_ID;
 }
 
 export function saveStorageKey(verifyMode: boolean): string {

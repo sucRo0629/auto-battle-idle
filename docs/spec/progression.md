@@ -5,7 +5,7 @@
 ## Phase 1（完了）
 
 - セーブなし・EXP/Lv なしの戦闘サンドボックス。
-- Victory / Defeat 後、3秒待って HP 全回復し同一ウェーブ再スポーン。
+- Victory / Defeat 後、3 秒待って HP 全回復し同一ウェーブ再スポーン。
 - 描画：アニメーション基盤 + ロール別プレースホルダー（本番スプライトは Phase 5）。
 
 ---
@@ -29,7 +29,7 @@
 
 ```typescript
 interface CharacterProgress {
-  level: number;  // 初期 1
+  level: number; // 初期 1
   exp: number;
 }
 ```
@@ -42,9 +42,9 @@ interface CharacterProgress {
 
 `localStorage` キー：
 
-| モード | キー |
-|--------|------|
-| 確認モード | `auto-battle-idle:save:verify` |
+| モード         | キー                            |
+| -------------- | ------------------------------- |
+| 確認モード     | `auto-battle-idle:save:verify`  |
 | リリースモード | `auto-battle-idle:save:release` |
 
 ```typescript
@@ -61,16 +61,16 @@ interface SaveGameState {
 
 初回セーブは `parties.json`（確認モードは `test-parties.json`）からパーティを生成。
 
-保存タイミング：Victory/Defeat 後、60秒ごと、`beforeunload` 時。スキルセット変更・パーティ編集時は即時。
+保存タイミング：Victory/Defeat 後、60 秒ごと、`beforeunload` 時。スキルセット変更・パーティ編集時は即時。
 
 ### 習得済みビルドの永続化
 
 各メンバーの `build: CharacterBuild` をセーブに含める。
 
-| フィールド | 永続化のタイミング |
-|------------|-------------------|
-| `learnedPassiveIds` / `learnedActiveIds` | LvUP 時に `classes.json` の `skills[]` から再計算して更新 |
-| `equippedActiveSlots` | スキルメニューでのセット変更時に即セーブ。LvUP 後も維持（未習得になった ID は除去） |
+| フィールド                               | 永続化のタイミング                                                                  |
+| ---------------------------------------- | ----------------------------------------------------------------------------------- |
+| `learnedPassiveIds` / `learnedActiveIds` | LvUP 時に `classes.json` の `skills[]` から再計算して更新                           |
+| `equippedActiveSlots`                    | スキルメニューでのセット変更時に即セーブ。LvUP 後も維持（未習得になった ID は除去） |
 
 - ロード時：`reconcilePartyBuilds` がレベルと習得リストを突き合わせ、不整合を修復してから再保存する。
 - 新アクティブ習得時は自動セットしない（プレイヤーがスキルメニューで選ぶ）。
@@ -80,7 +80,7 @@ interface SaveGameState {
 - 現在ステージ名（Canvas 左上）
 - メンバー別 Lv / Exp バー（パーティ HUD）
 - **パーティ編成メニュー**（`SkillMenuPanel`）— 選択中メンバーの **Lv 反映ステータス**を表示
-  - **HP** のみ英字表記、それ以外は日本語（攻撃力 / 防御力 / 魔法防御 / 攻撃速度）
+  - **HP** のみ英字表記、それ以外は日本語（攻撃力 / 防御力 / 魔法耐性 / 攻撃速度）
   - 攻撃速度は内部略称 **SPD**（`attackSpeedTier`）。UI では 5 段階ラベル（遅い〜早い）
   - 編成画面ではスキル buff 込みの実効値は表示しない（素のクラス + Lv）
 - ステージクリア / LvUP / ステージロールバックのログ（console）
@@ -93,7 +93,7 @@ interface SaveGameState {
 
 ```typescript
 interface ClassSkillUnlock {
-  level: number;      // この Lv 以上で習得
+  level: number; // この Lv 以上で習得
   skillIds: string[];
 }
 // classes.json の skills[] に定義。種別は skills.json から解決
@@ -103,11 +103,11 @@ interface ClassSkillUnlock {
 - 新アクティブの自動セットはしない（スキルセット UI でプレイヤーが選ぶ）。
 - 動作確認用：`test-classes.json` に Lv1/Lv2 エントリあり。
 
-### アクティブセット2枠目
+### アクティブセット 2 枠目
 
-- セット枠（`equippedActiveSlots`）の配列・UI・HUD は最大2枠に対応（Phase 3 で基盤完成）。
-- **Phase 7 までの標準プレイは1枠のみ**（`getUnlockedActiveSlotCount` → 1）。2枠目は UI 上ロック表示。
-- 2枠目の解放条件と、UI / 戦闘側の未解放枠チェックは **Phase 7** でまとめて実装する（Phase 3〜6 では戦闘エンジンはセット済みスロットをそのまま参照）。
+- セット枠（`equippedActiveSlots`）の配列・UI・HUD は最大 2 枠に対応（Phase 3 で基盤完成）。
+- **Phase 7 までの標準プレイは 1 枠のみ**（`getUnlockedActiveSlotCount` → 1）。2 枠目は UI 上ロック表示。
+- 2 枠目の解放条件と、UI / 戦闘側の未解放枠チェックは **Phase 7** でまとめて実装する（Phase 3〜6 では戦闘エンジンはセット済みスロットをそのまま参照）。
 
 ### 習得済みビルドの永続化
 
@@ -117,7 +117,7 @@ interface ClassSkillUnlock {
 
 ## Phase 4 — 一次職マスタ
 
-Phase 3 の習得機構 + キャラクターデータ GUI で **一次職5種**（衛士・剣士・弓士・術師・薬師）を確定する。
+Phase 3 の習得機構 + キャラクターデータ GUI で **一次職 5 種**（衛士・剣士・弓士・術師・薬師）を確定する。
 
 - 二次職・転職は **Phase 7 以降**（`jobTier` / `promotion` は Phase 4 で JSON 予約のみ可）
 - 数値・習得タイミングの最終調整は **Phase 7**
@@ -156,9 +156,9 @@ Phase 5 完了後。`skills.json` の `vfx` フィールドでスキル別エフ
 
 Phase 3〜6 完了後。敵 `exp`、成長曲線、クラス/スキル/ステージ数値の体感チューニング。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
 
-### アクティブセット2枠目の解放
+### アクティブセット 2 枠目の解放
 
-- Phase 3 で追加した2枠目基盤に対し、**いつ・誰が2枠目を使えるか**を決定する。
+- Phase 3 で追加した 2 枠目基盤に対し、**いつ・誰が 2 枠目を使えるか**を決定する。
 - `getUnlockedActiveSlotCount` に本番ロジックを実装する。
 - **UI**（スキルメニュー）と**戦闘**（`createCooldowns` 等）の両方で未解放枠を無効化し、セーブ改ざん・デバッグ Lv 変更時も整合する。
 - 候補：ステージマイルストーン / Lv / クラス別等。

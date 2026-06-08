@@ -67,6 +67,19 @@
           "range": 120
         }
       ]
+    },
+    {
+      "id": "bite",
+      "name": "Bite",
+      "interval": 2.5,
+      "effect": [
+        {
+          "targetRule": "closestAlly",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 1
+        }
+      ]
     }
   ]
 }

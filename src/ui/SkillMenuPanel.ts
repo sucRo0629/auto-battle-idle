@@ -229,7 +229,7 @@ export class SkillMenuPanel {
   /** 編成枠タブ上部。クラスごとの仮スプライト（将来は本番スプライトアニメに差し替え） */
   private createTabCharacterDisplay(
     preset: ClassPreset | undefined,
-    label: string,
+    label: string
   ): HTMLElement {
     const character = document.createElement("span");
     character.className = "skill-menu-tab-character";
@@ -241,7 +241,8 @@ export class SkillMenuPanel {
       spriteWrap.setAttribute("aria-hidden", "true");
     } else {
       const img = document.createElement("img");
-      img.className = "skill-menu-tab-sprite-img skill-menu-tab-sprite-img--idle";
+      img.className =
+        "skill-menu-tab-sprite-img skill-menu-tab-sprite-img--idle";
       img.alt = "";
       img.decoding = "async";
       img.src = getSpriteUrl(resolveClassSpriteKey(preset));
@@ -308,19 +309,18 @@ export class SkillMenuPanel {
     section.className = "skill-menu-section skill-menu-section--compose";
 
     const classGroup = document.createElement("div");
-    classGroup.className = "skill-menu-compose-group skill-menu-compose-group--class";
+    classGroup.className =
+      "skill-menu-compose-group skill-menu-compose-group--class";
 
     const classHeading = document.createElement("h3");
     classHeading.className = "skill-menu-section-title";
     classHeading.textContent = "クラス設定";
 
     classGroup.append(classHeading);
-    if (member && preset) {
-      classGroup.appendChild(
-        this.createStatsSection(member, preset)
-      );
-    }
     classGroup.appendChild(this.createClassSlotButton(member, preset));
+    if (member && preset) {
+      classGroup.appendChild(this.createStatsSection(member, preset));
+    }
     section.appendChild(classGroup);
 
     if (member) {
@@ -374,7 +374,7 @@ export class SkillMenuPanel {
       { label: MEMBER_STAT_LABELS.hp, value: String(stats.maxHp), latin: true },
       { label: MEMBER_STAT_LABELS.atk, value: String(stats.atk) },
       { label: MEMBER_STAT_LABELS.def, value: String(stats.def) },
-      { label: MEMBER_STAT_LABELS.reg, value: String(stats.reg) },
+      { label: MEMBER_STAT_LABELS.reg, value: String(stats.reg) + "%" },
       { label: MEMBER_STAT_LABELS.spd, value: stats.spdLabel },
     ];
 
