@@ -316,16 +316,6 @@ export class ClassEditorStep {
     );
     identityGrid.appendChild(
       createFieldRow(
-        "jobTier",
-        createTextInput("1", () => {}, { readonly: true })
-      )
-    );
-
-    const traitsSection = createSection("特性");
-    this.container.appendChild(traitsSection);
-    const traitsGrid = appendGrid(traitsSection);
-    traitsGrid.appendChild(
-      createFieldRow(
         "攻撃射程",
         createSelect(
           draft.class.traits.attackRange,
@@ -342,6 +332,12 @@ export class ClassEditorStep {
             );
           }
         )
+      )
+    );
+    identityGrid.appendChild(
+      createFieldRow(
+        "jobTier",
+        createTextInput("1", () => {}, { readonly: true })
       )
     );
 
