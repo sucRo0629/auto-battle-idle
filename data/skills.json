@@ -281,13 +281,14 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
+          "targetRule": "closestAlly",
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
             "atkScale": 1
-          }
+          },
+          "range": 120
         }
       ],
       "vfx": {

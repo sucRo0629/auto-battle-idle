@@ -274,7 +274,7 @@ export class SkillExecutor {
       actorId: actor.id,
       fromX,
       toX,
-      toVisualX: resolveMoveVisualX(actor, anchor, effectDef),
+      toVisualX: resolveMoveVisualX(actor, anchor, effectDef, this.gameData),
       remainingSec: effectDef.moveDurationSec,
       totalSec: effectDef.moveDurationSec,
       baseVisualX: actor.visualX,

@@ -213,32 +213,10 @@ export class EnemyEditorStep {
           draft.enemy.attackRange ?? 'melee',
           ATTACK_RANGE_OPTIONS.map((value) => ({ value, label: value })),
           (attackRange: AttackRange) => {
-            commitDraft(
-              (next) => {
-                next.enemy.attackRange = attackRange;
-              },
-              { rerender: true },
-            );
-          },
-        ),
-      ),
-    );
-    const isRanged = (draft.enemy.attackRange ?? 'melee') === 'ranged';
-    statsGrid.appendChild(
-      createFieldRow(
-        isRanged ? 'rangePx（必須）' : 'rangePx（任意・未指定=0）',
-        createNumberInput(
-          draft.enemy.rangePx ?? (isRanged ? 120 : 0),
-          (rangePx) => {
             commitDraft((next) => {
-              if (!isRanged && rangePx <= 0) {
-                delete next.enemy.rangePx;
-              } else {
-                next.enemy.rangePx = rangePx;
-              }
+              next.enemy.attackRange = attackRange;
             });
           },
-          { min: isRanged ? 1 : 0 },
         ),
       ),
     );

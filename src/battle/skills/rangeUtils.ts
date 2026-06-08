@@ -31,7 +31,6 @@ export function resolveSkillRangePx(
   effect: Pick<SkillEffectDef, 'range'>,
 ): number {
   if (effect.range !== undefined) return effect.range;
-  if (actor.traits.rangePx !== undefined) return actor.traits.rangePx;
   return actor.traits.attackRange === 'melee'
     ? DEFAULT_MELEE_ATTACK_RANGE_PX
     : DEFAULT_RANGED_RANGE_PX;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveAttackBattleX } from './combatPosition.ts';
+import { resolveAttackBattleX, resolveMaxEffectiveRangePx } from './combatPosition.ts';
 import { hideFallenAllyCorpses } from './entities.ts';
 import {
   approachAllyVisualX,
@@ -16,7 +16,6 @@ import {
 } from '../render/formationLayout.ts';
 import type { ActiveSkillMove } from './skills/skillSequence.ts';
 import type { CombatantState, GameData } from './types.ts';
-import { DEFAULT_MELEE_RANGE_PX } from './types.ts';
 
 function mockCombatant(
   overrides: Partial<CombatantState> & { id: string },
@@ -95,13 +94,16 @@ describe('visual position separation', () => {
     const battleTarget = resolveAttackBattleX(sword, contactX, gameData);
     expect(battleTarget).toBe(contactX);
 
+    const meleeRangePx = resolveMaxEffectiveRangePx(sword, gameData);
+    expect(meleeRangePx).toBe(0);
+
     const visualTargets = computeEngagedAllyTargets(
       [
         {
           id: sword.id,
           role: sword.role,
           formationRow: sword.formationRow,
-          rangePx: DEFAULT_MELEE_RANGE_PX,
+          rangePx: meleeRangePx,
           isAlive: true,
         },
       ],
@@ -111,7 +113,7 @@ describe('visual position separation', () => {
 
     expect(visualTarget).toBeGreaterThan(battleTarget);
     expect(visualTarget).toBeGreaterThanOrEqual(
-      contactX + Math.max(DEFAULT_MELEE_RANGE_PX, engagedMinLeftEdgeGap()),
+      contactX + Math.max(meleeRangePx, engagedMinLeftEdgeGap()),
     );
   });
 
@@ -132,7 +134,7 @@ describe('visual position separation', () => {
       targetRule: 'frontEnemy',
       moveDurationSec: 0.2,
       moveMode: 'engage',
-    });
+    }, gameData);
     const move: ActiveSkillMove = {
       actorId: 'actor',
       fromX: 200,
@@ -183,7 +185,7 @@ describe('visual position separation', () => {
         id: 'living',
         role: 'attacker',
         formationRow: 'middle',
-        rangePx: DEFAULT_MELEE_RANGE_PX,
+        rangePx: 0,
         isAlive: true,
       },
     ]);
@@ -207,7 +209,7 @@ describe('visual position separation', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { attackRange: 'ranged', rangePx: 140 },
+      traits: { attackRange: 'ranged' },
       visualX: 180,
     });
     clampAllyVisualDepth([guard, archer]);
@@ -220,7 +222,7 @@ describe('visual position separation', () => {
         id: 'guard',
         role: 'defender',
         formationRow: 'front',
-        rangePx: DEFAULT_MELEE_RANGE_PX,
+        rangePx: 0,
         isAlive: true,
         visualX: 210,
       },
@@ -234,7 +236,7 @@ describe('visual position separation', () => {
       },
     ]);
     expect(front?.visualX).toBe(210);
-    expect(front?.rangePx).toBe(DEFAULT_MELEE_RANGE_PX);
+    expect(front?.rangePx).toBe(0);
   });
 
   it('getLeadingAllyFront tracks back row when only ranged survivor remains', () => {
@@ -258,7 +260,7 @@ describe('visual position separation', () => {
         id: 'guard',
         role: 'defender',
         formationRow: 'front',
-        rangePx: DEFAULT_MELEE_RANGE_PX,
+        rangePx: 0,
         isAlive: true,
         visualX: 200,
       },
@@ -312,7 +314,7 @@ describe('resolveEngagedVisualTargets', () => {
       id: 'guard',
       role: 'defender' as const,
       formationRow: 'front' as const,
-      rangePx: DEFAULT_MELEE_RANGE_PX,
+      rangePx: 0,
       isAlive: true,
       visualX: ROW_X.front,
     },
@@ -320,7 +322,7 @@ describe('resolveEngagedVisualTargets', () => {
       id: 'sword',
       role: 'attacker' as const,
       formationRow: 'front' as const,
-      rangePx: DEFAULT_MELEE_RANGE_PX,
+      rangePx: 0,
       isAlive: true,
       visualX: ROW_X.front + 42,
     },
@@ -328,7 +330,7 @@ describe('resolveEngagedVisualTargets', () => {
       id: 'healer',
       role: 'healer' as const,
       formationRow: 'front' as const,
-      rangePx: DEFAULT_MELEE_RANGE_PX,
+      rangePx: 0,
       isAlive: true,
       visualX: ROW_X.front + 84,
     },
@@ -353,7 +355,7 @@ describe('resolveEngagedVisualTargets', () => {
       stage2Wave1Allies,
       stage2Wave1Enemies,
       5,
-      DEFAULT_MELEE_RANGE_PX,
+      0,
     );
     expect(layout).not.toBeNull();
 
@@ -379,7 +381,7 @@ describe('resolveEngagedVisualTargets', () => {
       stage2Wave1Allies,
       stage2Wave1Enemies,
       5,
-      DEFAULT_MELEE_RANGE_PX,
+      0,
     );
     expect(before).not.toBeNull();
     const maxBefore = Math.max(...before!.enemyTargets.values());
@@ -391,7 +393,7 @@ describe('resolveEngagedVisualTargets', () => {
       withoutFront,
       stage2Wave1Enemies,
       5,
-      DEFAULT_MELEE_RANGE_PX,
+      0,
     );
     expect(after).not.toBeNull();
     const maxAfter = Math.max(...after!.enemyTargets.values());
@@ -413,7 +415,7 @@ describe('resolveEngagedVisualTargets', () => {
       ],
       [{ id: 'e1', visualX: frontEnemyX, rangePx: 0, isAlive: true }],
       frontEnemyX,
-      DEFAULT_MELEE_RANGE_PX,
+      0,
     );
     expect(layout).not.toBeNull();
     expect(layout!.frontLineTargetX).toBeGreaterThanOrEqual(ROW_X.back - 1);
@@ -458,10 +460,9 @@ describe('resolveMoveVisualX', () => {
       targetRule: 'frontEnemy',
       moveDurationSec: 0.2,
       moveMode: 'engage',
-    });
+    }, gameData);
     expect(x).toBe(
-      enemy.visualX +
-        Math.max(DEFAULT_MELEE_RANGE_PX, engagedMinLeftEdgeGap()),
+      enemy.visualX + Math.max(0, engagedMinLeftEdgeGap()),
     );
   });
 
@@ -473,7 +474,7 @@ describe('resolveMoveVisualX', () => {
       targetRule: 'closestAlly',
       moveDurationSec: 0.2,
       moveMode: 'toAnchor',
-    });
+    }, gameData);
     expect(x).toBe(215);
   });
 
@@ -490,7 +491,7 @@ describe('resolveMoveVisualX', () => {
       moveDurationSec: 0.2,
       moveMode: 'behindTarget',
       behindOffsetPx: 20,
-    });
+    }, gameData);
     expect(x).toBe(60);
   });
 });

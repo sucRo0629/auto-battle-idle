@@ -16,6 +16,7 @@ import {
   getEnemyContactX,
   marchEnemiesRight as marchEnemiesBattleRight,
   resolveAttackBattleX,
+  resolveMaxEffectiveRangePx,
   SCROLL_SPEED,
   separateByGap,
   shouldStartApproach,
@@ -177,7 +178,7 @@ export class BattleEngine {
         id: a.id,
         role: a.role,
         formationRow: a.formationRow,
-        rangePx: a.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+        rangePx: resolveMaxEffectiveRangePx(a, this.gameData),
         isAlive: a.isAlive,
       }));
   }
@@ -189,7 +190,7 @@ export class BattleEngine {
         id: a.id,
         role: a.role,
         formationRow: a.formationRow,
-        rangePx: a.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+        rangePx: resolveMaxEffectiveRangePx(a, this.gameData),
         isAlive: true as const,
         visualX: a.visualX,
       }));
@@ -198,11 +199,11 @@ export class BattleEngine {
   private getVisualAllies() {
     return this.allies
       .filter((a) => this.isOnBattlefield(a))
-      .map((unit) => toVisualCombatant(unit));
+      .map((unit) => toVisualCombatant(unit, this.gameData));
   }
 
   private getVisualEnemies() {
-    return this.enemies.map((unit) => toVisualCombatant(unit));
+    return this.enemies.map((unit) => toVisualCombatant(unit, this.gameData));
   }
 
   private syncAllyVisualPositions(engaged = this.engaged): void {
@@ -346,7 +347,7 @@ export class BattleEngine {
       this.enemies.map((enemy) => ({
         id: enemy.id,
         visualX: enemy.visualX,
-        rangePx: enemy.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+        rangePx: resolveMaxEffectiveRangePx(enemy, this.gameData),
         isAlive: enemy.isAlive,
       })),
       frontEnemyX,

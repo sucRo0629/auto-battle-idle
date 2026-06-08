@@ -3,54 +3,21 @@ import skillsJson from '../../../data/skills.json';
 import enemiesJson from '../../../data/enemies.json';
 import stagesJson from '../../../data/stages.json';
 import partiesJson from '../../../data/parties.json';
-import type {
-  ClassPreset,
-  ClassTraits,
-  EnemyTemplate,
-  GameData,
-} from '../types.ts';
-import { DEFAULT_RANGED_RANGE_PX } from '../types.ts';
+import type { ClassPreset, EnemyTemplate, GameData } from '../types.ts';
 import { parseAndValidateGameDataJson } from './validateGameData.ts';
 
 function indexById<T extends { id: string }>(items: T[]): Record<string, T> {
   return Object.fromEntries(items.map((item) => [item.id, item]));
 }
 
-function normalizeTraits(
-  traits: ClassTraits,
-  context: string,
-): ClassTraits {
-  if (traits.attackRange === 'melee') {
-    return traits.rangePx !== undefined
-      ? { ...traits, rangePx: traits.rangePx }
-      : { attackRange: traits.attackRange };
-  }
-  if (traits.rangePx !== undefined) {
-    return { ...traits, rangePx: traits.rangePx };
-  }
-  throw new Error(`rangePx required for ranged class: ${context}`);
-}
-
 function normalizeClass(cls: ClassPreset): ClassPreset {
-  return {
-    ...cls,
-    traits: normalizeTraits(cls.traits, cls.id),
-  };
+  return cls;
 }
 
 function normalizeEnemy(enemy: EnemyTemplate): EnemyTemplate {
-  const attackRange = enemy.attackRange ?? 'melee';
-  if (attackRange === 'ranged') {
-    return {
-      ...enemy,
-      attackRange,
-      rangePx: enemy.rangePx ?? DEFAULT_RANGED_RANGE_PX,
-    };
-  }
   return {
     ...enemy,
-    attackRange,
-    ...(enemy.rangePx !== undefined ? { rangePx: enemy.rangePx } : {}),
+    attackRange: enemy.attackRange ?? 'melee',
   };
 }
 

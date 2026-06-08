@@ -552,9 +552,6 @@ export function buildClassPresetFromDraft(
   delete cls.promotion;
   delete cls.promotesFrom;
   ensureClassGrowthFields(cls);
-  if (cls.traits.attackRange === 'melee' && !cls.traits.rangePx) {
-    delete cls.traits.rangePx;
-  }
   if (cls.id.trim()) {
     cls.basicAttackSkillId = defaultBasicAttackId(cls.id.trim());
   }

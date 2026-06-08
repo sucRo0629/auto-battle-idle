@@ -103,7 +103,7 @@ describe('combatPosition', () => {
     });
     const bow = mockCombatant({
       id: 'bow',
-      traits: { attackRange: 'ranged', rangePx: 140 },
+      traits: { attackRange: 'ranged' },
       formationRow: 'back',
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
@@ -112,10 +112,10 @@ describe('combatPosition', () => {
     expect(resolveAttackBattleX(bow, contactX, gameData)).toBe(150);
   });
 
-  it('approach range follows skill range when narrower than traits.rangePx', () => {
+  it('approach range follows skill effect range', () => {
     const bow = mockCombatant({
       id: 'bow',
-      traits: { attackRange: 'ranged', rangePx: 140 },
+      traits: { attackRange: 'ranged' },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
     expect(resolveMaxEffectiveRangePx(bow, gameData)).toBe(100);
@@ -141,7 +141,7 @@ describe('combatPosition', () => {
       id: 'b',
       formationRow: 'back',
       role: 'attacker',
-      traits: { attackRange: 'ranged', rangePx: 140 },
+      traits: { attackRange: 'ranged' },
     });
     assignInitialAllyBattleX([front, back]);
     expect(front.battleX).toBeLessThan(back.battleX);
@@ -162,7 +162,7 @@ describe('combatPosition', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { attackRange: 'ranged', rangePx: 140 },
+      traits: { attackRange: 'ranged' },
       battleX: 70,
     });
     expect(getAllyContactX([guard, archer])).toBe(120);
@@ -223,11 +223,11 @@ describe('battle contact visual sync', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { attackRange: 'ranged', rangePx: 140 },
+      traits: { attackRange: 'ranged' },
       battleX: 70,
       visualX: 180,
     });
-    const contact = getBattleContactAllyVisual([guard, archer]);
+    const contact = getBattleContactAllyVisual([guard, archer], gameData);
     expect(contact?.visualX).toBe(200);
   });
 

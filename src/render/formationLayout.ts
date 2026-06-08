@@ -1,10 +1,11 @@
 import type {
   CombatantState,
   FormationRow,
+  GameData,
   MoveSkillEffect,
   Role,
 } from "../battle/types.ts";
-import { DEFAULT_MELEE_RANGE_PX } from "../battle/types.ts";
+import { resolveMaxEffectiveRangePx } from "../battle/combatPosition.ts";
 import {
   SPRITE_LAYOUT_SIZE,
   spriteSheetMaxOverflowTop,
@@ -299,7 +300,7 @@ export function clampAllyVisualDepth(allies: CombatantState[]): void {
       id: ally.id,
       role: ally.role,
       formationRow: ally.formationRow,
-      rangePx: ally.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+      rangePx: 0,
       isAlive: true,
     })),
   );
@@ -494,13 +495,14 @@ export function resolveMoveVisualX(
   actor: CombatantState,
   anchor: CombatantState,
   effect: MoveSkillEffect,
+  gameData: GameData,
 ): number {
   const mode = effect.moveMode ?? "engage";
   if (mode === "toAnchor") {
     return anchor.visualX;
   }
 
-  const actorRangePx = actor.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX;
+  const actorRangePx = resolveMaxEffectiveRangePx(actor, gameData);
 
   if (mode === "behindTarget") {
     const offset = effect.behindOffsetPx ?? 0;
@@ -509,7 +511,7 @@ export function resolveMoveVisualX(
       : anchor.visualX - offset;
   }
 
-  const anchorRangePx = anchor.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX;
+  const anchorRangePx = resolveMaxEffectiveRangePx(anchor, gameData);
   if (actor.isEnemy) {
     return computeEnemyStopX(actorRangePx, anchor.visualX, anchorRangePx);
   }
@@ -615,15 +617,14 @@ export function groundY(canvasHeight: number, scale: number): number {
   return canvasHeight - BATTLE_GROUND_MARGIN - SPRITE_WIDTH * scale;
 }
 
-export function toVisualCombatant(unit: {
-  visualX: number;
-  isAlive: boolean;
-  traits: { rangePx?: number };
-}): VisualCombatant {
+export function toVisualCombatant(
+  unit: CombatantState,
+  gameData: GameData,
+): VisualCombatant {
   return {
     visualX: unit.visualX,
     isAlive: unit.isAlive,
-    rangePx: unit.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+    rangePx: resolveMaxEffectiveRangePx(unit, gameData),
   };
 }
 

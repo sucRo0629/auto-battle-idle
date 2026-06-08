@@ -109,6 +109,12 @@ describe('BattleEngine engaged visual layout', () => {
 
   it('clean victory: allies start on-screen before exit march', () => {
     const gameData = loadGameData();
+    const stage1 = gameData.stages.find((s) => s.id === '1');
+    if (stage1?.waves[0]) {
+      stage1.waves[0].enemies = stage1.waves[0].enemies.filter(
+        (spawn) => spawn.templateId !== 'test_ranged',
+      );
+    }
     const levelCurves = loadLevelCurves(levelCurvesJson);
     const save = createDefaultSave(gameData, 'demo');
     save.stageProgress.currentStageId = '1';

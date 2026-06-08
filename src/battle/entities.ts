@@ -98,9 +98,7 @@ export function createAllyFromMember(
 }
 
 function copyTraits(traits: ClassTraits): ClassTraits {
-  return traits.rangePx !== undefined
-    ? { attackRange: traits.attackRange, rangePx: traits.rangePx }
-    : { attackRange: traits.attackRange };
+  return { attackRange: traits.attackRange };
 }
 
 export function createAlliesFromPartyState(
@@ -179,10 +177,7 @@ export function createEnemyFromTemplate(
 }
 
 function enemyTraitsFromTemplate(template: EnemyTemplate): ClassTraits {
-  const attackRange = template.attackRange ?? 'melee';
-  return template.rangePx !== undefined
-    ? { attackRange, rangePx: template.rangePx }
-    : { attackRange };
+  return { attackRange: template.attackRange ?? 'melee' };
 }
 
 export function createEnemiesForStage(

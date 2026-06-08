@@ -8,7 +8,6 @@ import type {
 import {
   BATTLE_ENEMY_VISIBLE_MIN_X,
   DEFAULT_MELEE_ATTACK_RANGE_PX,
-  DEFAULT_MELEE_RANGE_PX,
   DEFAULT_RANGED_RANGE_PX,
 } from './types.ts';
 import { resolveSkillRangePx } from './skills/rangeUtils.ts';
@@ -85,12 +84,13 @@ function leadingRowContactAlly(
 /** 接敵ロジック（最前線列の min battleX）と同じ味方の visual 基準点 */
 export function getBattleContactAllyVisual(
   allies: CombatantState[],
+  gameData: GameData,
 ): { visualX: number; rangePx: number } | null {
   const contact = leadingRowContactAlly(allies);
   if (!contact) return null;
   return {
     visualX: contact.visualX,
-    rangePx: contact.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+    rangePx: resolveMaxEffectiveRangePx(contact, gameData),
   };
 }
 
@@ -120,11 +120,10 @@ export function resolveMaxEffectiveRangePx(
   unit: CombatantState,
   gameData: GameData,
 ): number {
-  const traitDefault =
-    unit.traits.rangePx ??
-    (unit.traits.attackRange === 'melee'
+  const attackRangeDefault =
+    unit.traits.attackRange === 'melee'
       ? DEFAULT_MELEE_ATTACK_RANGE_PX
-      : DEFAULT_RANGED_RANGE_PX);
+      : DEFAULT_RANGED_RANGE_PX;
   let max = -1;
   for (const cd of unit.cooldowns) {
     const skill = gameData.skillRegistry.actives[cd.skillId];
@@ -134,7 +133,7 @@ export function resolveMaxEffectiveRangePx(
       max = Math.max(max, resolveSkillRangePx(unit, effect));
     }
   }
-  return max >= 0 ? max : traitDefault;
+  return max >= 0 ? max : attackRangeDefault;
 }
 
 /** move 効果の目標 battleX（anchor 基準） */

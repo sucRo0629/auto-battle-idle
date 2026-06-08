@@ -19,7 +19,6 @@ function mockUnit(
     def?: number;
     reg?: number;
     attackRange?: 'melee' | 'ranged';
-    rangePx?: number;
   } = {},
 ): CombatantState {
   const maxHp = opts.maxHp ?? 100;
@@ -38,11 +37,6 @@ function mockUnit(
     formationRow: 'back',
     traits: {
       attackRange: opts.attackRange ?? 'ranged',
-      ...(opts.rangePx !== undefined
-        ? { rangePx: opts.rangePx }
-        : (opts.attackRange ?? 'ranged') === 'ranged'
-          ? { rangePx: 120 }
-          : {}),
     },
     build: {
       learnedPassiveIds: [],
@@ -124,7 +118,7 @@ describe('resolveEffectTargets', () => {
   });
 
   it('melee range 0 requires contact', () => {
-    const ally = mockUnit('ally', 100, { attackRange: 'melee', rangePx: undefined });
+    const ally = mockUnit('ally', 100, { attackRange: 'melee' });
     const enemy = mockUnit('e1', 100, { isEnemy: true, attackRange: 'melee' });
     expect(isWithinSkillRange(ally, enemy, 0)).toBe(true);
     const farEnemy = mockUnit('e2', 90, { isEnemy: true, attackRange: 'melee' });

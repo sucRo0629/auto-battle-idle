@@ -15,8 +15,6 @@ export const DEFAULT_MELEE_RANGE_PX = 45;
 
 export interface ClassTraits {
   attackRange: AttackRange;
-  /** 攻撃射程（px）。遠隔は必須。近接は任意（未指定=0、槍等は 30 等） */
-  rangePx?: number;
 }
 
 export interface CombatStats {
@@ -355,7 +353,7 @@ interface SkillEffectCommon {
   /** 0〜1。0 = anchor 中心固定 */
   scatterSpreadRate?: number;
   type: SkillEffectKind;
-  /** 命中判定・VFX 共用（px）。未指定 = 使用者 traits.rangePx */
+  /** 命中判定・VFX 共用（px）。未指定 = attackRange 既定値（近接 0 / 遠隔 120） */
   range?: number;
   /** 未指定時は effect 種別の既定アニメ。none = スプライトアニメなし */
   anim?: SkillEffectAnimId;
@@ -487,8 +485,6 @@ export interface EnemyTemplate extends CombatStats {
   activeSkillIds?: string[];
   /** 未指定時は melee */
   attackRange?: AttackRange;
-  /** 攻撃可能距離（px）。未指定時は近接デフォルト */
-  rangePx?: number;
 }
 
 export interface StageWaveEnemy {

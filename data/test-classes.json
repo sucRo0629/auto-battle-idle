@@ -63,8 +63,7 @@
     "displayName": "Test Cleric",
     "formationRow": "middle",
     "traits": {
-      "attackRange": "ranged",
-      "rangePx": 100
+      "attackRange": "ranged"
     },
     "maxHp": 100,
     "atk": 14,
@@ -93,8 +92,7 @@
     "displayName": "Test Hawkeye",
     "formationRow": "back",
     "traits": {
-      "attackRange": "ranged",
-      "rangePx": 140
+      "attackRange": "ranged"
     },
     "maxHp": 90,
     "atk": 18,
@@ -123,8 +121,7 @@
     "displayName": "Test Arcanist",
     "formationRow": "back",
     "traits": {
-      "attackRange": "ranged",
-      "rangePx": 120
+      "attackRange": "ranged"
     },
     "maxHp": 80,
     "atk": 22,

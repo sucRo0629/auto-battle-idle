@@ -25,7 +25,7 @@ function mockCombatant(
     role: 'supporter',
     classId: 'test',
     formationRow: 'back',
-    traits: { attackRange: 'ranged', rangePx: 120 },
+    traits: { attackRange: 'ranged' },
     build: {
       learnedPassiveIds: [],
       learnedActiveIds: [],

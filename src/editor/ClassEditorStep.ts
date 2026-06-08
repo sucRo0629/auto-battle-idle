@@ -344,25 +344,6 @@ export class ClassEditorStep {
         )
       )
     );
-    const isRanged = draft.class.traits.attackRange === "ranged";
-    traitsGrid.appendChild(
-      createFieldRow(
-        isRanged ? "rangePx（必須）" : "rangePx（任意・未指定=0）",
-        createNumberInput(
-          draft.class.traits.rangePx ?? (isRanged ? 100 : 0),
-          (rangePx) => {
-            commitDraft((next) => {
-              if (!isRanged && rangePx <= 0) {
-                delete next.class.traits.rangePx;
-              } else {
-                next.class.traits.rangePx = rangePx;
-              }
-            });
-          },
-          { min: isRanged ? 1 : 0, step: 10 }
-        )
-      )
-    );
 
     const statsSection = createSection("Lv1 ステータス");
     this.container.appendChild(statsSection);

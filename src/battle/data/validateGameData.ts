@@ -1051,15 +1051,12 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       `${context}.traits`,
       ATTACK_RANGES_SET,
     );
-    const rangePx = traitsObj.rangePx;
-    if (attackRange === 'ranged') {
-      if (typeof rangePx !== 'number' || Number.isNaN(rangePx)) {
-        missingField(`${context}.traits`, 'rangePx');
-      }
-    } else if (rangePx !== undefined) {
-      if (typeof rangePx !== 'number' || Number.isNaN(rangePx) || rangePx <= 0) {
-        invalidField(`${context}.traits`, 'rangePx', 'must be a positive number');
-      }
+    if (traitsObj.rangePx !== undefined) {
+      invalidField(
+        `${context}.traits`,
+        'rangePx',
+        'removed; set effect.range on skills instead',
+      );
     }
     const maxHp = requireNumber(obj, 'maxHp', context);
     const atk = requireNumber(obj, 'atk', context);
@@ -1115,7 +1112,6 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       formationRow,
       traits: {
         attackRange,
-        ...(typeof rangePx === 'number' ? { rangePx } : {}),
       },
       maxHp,
       atk,
@@ -1271,9 +1267,8 @@ function parseEnemies(raw: unknown): EnemyTemplate[] {
       obj.activeSkillIds === undefined
         ? undefined
         : requireStringArray(obj, 'activeSkillIds', context);
-    const rangePx = obj.rangePx;
-    if (rangePx !== undefined && typeof rangePx !== 'number') {
-      invalidField(context, 'rangePx', 'must be a number');
+    if (obj.rangePx !== undefined) {
+      invalidField(context, 'rangePx', 'removed; set effect.range on skills instead');
     }
     const attackRangeRaw = obj.attackRange;
     let attackRange: AttackRange | undefined;
@@ -1299,7 +1294,6 @@ function parseEnemies(raw: unknown): EnemyTemplate[] {
       ...(attackSpeedTier !== undefined ? { attackSpeedTier } : {}),
       ...(passiveSkillIds !== undefined ? { passiveSkillIds } : {}),
       ...(activeSkillIds !== undefined ? { activeSkillIds } : {}),
-      ...(typeof rangePx === 'number' ? { rangePx } : {}),
       ...(attackRange !== undefined ? { attackRange } : {}),
     };
   });

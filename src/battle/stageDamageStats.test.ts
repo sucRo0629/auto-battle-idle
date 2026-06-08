@@ -61,7 +61,7 @@ const classRegistry = {
     displayName: '弓士',
     role: 'attacker',
     formationRow: 'back',
-    traits: { attackRange: 'ranged', rangePx: 120 },
+    traits: { attackRange: 'ranged' },
     maxHp: 80,
     atk: 18,
     def: 4,

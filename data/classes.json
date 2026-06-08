@@ -63,8 +63,7 @@
     "displayName": "弓士",
     "formationRow": "back",
     "traits": {
-      "attackRange": "ranged",
-      "rangePx": 140
+      "attackRange": "ranged"
     },
     "maxHp": 90,
     "atk": 20,
@@ -96,8 +95,7 @@
     "displayName": "術師",
     "formationRow": "back",
     "traits": {
-      "attackRange": "ranged",
-      "rangePx": 120
+      "attackRange": "ranged"
     },
     "maxHp": 80,
     "atk": 25,
