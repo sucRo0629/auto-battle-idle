@@ -728,6 +728,16 @@ export class SkillEditorStep {
     );
     grid.appendChild(
       createFieldRow(
+        'iconKey',
+        createTextInput(passive.iconKey ?? '', (iconKey) => {
+          this.patchPassive(index, (current) => {
+            current.iconKey = iconKey.trim() || undefined;
+          }, { rerender: false });
+        }),
+      ),
+    );
+    grid.appendChild(
+      createFieldRow(
         '効果種別',
         createSelect(
           passive.effect,
@@ -890,6 +900,21 @@ export class SkillEditorStep {
         ),
       );
     }
+
+    grid.appendChild(
+      createFieldRow(
+        'iconKey',
+        createTextInput(
+          active.iconKey ?? '',
+          (iconKey) => {
+            setActive((current) => {
+              current.iconKey = iconKey.trim() || undefined;
+            }, { rerender: false });
+          },
+          { readonly: idReadonly },
+        ),
+      ),
+    );
 
     const basicAttackSpeedTier = this.options.basicAttackSpeedTier;
     if (idReadonly && basicAttackSpeedTier) {

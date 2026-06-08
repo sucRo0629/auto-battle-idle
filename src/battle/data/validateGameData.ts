@@ -748,15 +748,26 @@ function requireReg(value: number, context: string): void {
   }
 }
 
+function parseOptionalIconKey(
+  obj: Record<string, unknown>,
+  context: string,
+): string | undefined {
+  return obj.iconKey === undefined
+    ? undefined
+    : requireString(obj, 'iconKey', context);
+}
+
 function requirePassiveEffectParams(
   obj: Record<string, unknown>,
   effect: PassiveEffectKind,
   context: string,
 ): PassiveSkillDef {
+  const iconKey = parseOptionalIconKey(obj, context);
   const base = {
     id: requireString(obj, 'id', context),
     name: requireString(obj, 'name', context),
     effect,
+    ...(iconKey !== undefined ? { iconKey } : {}),
   };
 
   switch (effect) {
@@ -1061,6 +1072,7 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
     }
 
     const vfx = parseSkillVfx(obj.vfx, `${context}.vfx`);
+    const iconKey = parseOptionalIconKey(obj, context);
 
     return {
       id,
@@ -1071,6 +1083,7 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
         ? { allowedClassIds: allowedClassIds as string[] }
         : {}),
       ...(vfx !== undefined ? { vfx } : {}),
+      ...(iconKey !== undefined ? { iconKey } : {}),
     };
   });
 }

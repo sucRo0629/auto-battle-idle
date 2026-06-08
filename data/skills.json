@@ -155,6 +155,27 @@
           "powerMultiplier": 1.25
         }
       ]
+    },
+    {
+      "id": "supporter_yakushi_active_1",
+      "name": "手当",
+      "trigger": {
+        "kind": "time",
+        "value": 8
+      },
+      "effect": [
+        {
+          "targetRule": "mostDamagedAlly",
+          "type": "heal",
+          "amount": {
+            "kind": "atkBased",
+            "atkMultiply": 1
+          }
+        }
+      ],
+      "vfx": {
+        "preset": "healRise"
+      }
     }
   ]
 }

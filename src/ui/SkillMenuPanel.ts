@@ -5,13 +5,15 @@ import {
   resolveClassSpriteKey,
 } from "../battle/classVisuals.ts";
 import type {
+  ActiveSkillDef,
   ClassId,
   ClassPreset,
   GameData,
+  PassiveSkillDef,
   PartyMemberState,
   PartySlotState,
 } from "../battle/types.ts";
-import { getClassIconUrl, getSkillIconUrl } from "../render/IconRegistry.ts";
+import { getClassIconUrl, getSkillIconUrlForSkill } from "../render/IconRegistry.ts";
 import { getSpriteUrl } from "../render/SpriteRegistry.ts";
 import {
   createMemberFromClass,
@@ -277,6 +279,18 @@ export class SkillMenuPanel {
     return iconWrap;
   }
 
+  private resolveSkillIconUrl(
+    skillId: string,
+    skill?: (PassiveSkillDef | ActiveSkillDef) | undefined,
+    classPreset?: ClassPreset
+  ): string | undefined {
+    if (!skillId) return undefined;
+    return getSkillIconUrlForSkill(skill ?? { id: skillId }, {
+      classPreset,
+      classRegistry: this.gameData.classRegistry,
+    });
+  }
+
   private renderBody(): void {
     this.bodyEl.replaceChildren();
     const member = this.draftParty[this.selectedIndex];
@@ -437,6 +451,7 @@ export class SkillMenuPanel {
     slotIndex: number,
     unlockedCount: number
   ): HTMLElement {
+    const preset = this.gameData.classRegistry[member.classId];
     const skillId = member.build.equippedActiveSlots[slotIndex] ?? "";
     const def = skillId
       ? this.gameData.skillRegistry.actives[skillId]
@@ -459,7 +474,7 @@ export class SkillMenuPanel {
       slot.setAttribute("aria-disabled", "true");
     }
 
-    const iconUrl = skillId ? getSkillIconUrl(skillId) : undefined;
+    const iconUrl = this.resolveSkillIconUrl(skillId, def, preset);
     slot.appendChild(this.createIconWrap(undefined, label, iconUrl));
 
     let tooltipDesc: string;
@@ -521,7 +536,9 @@ export class SkillMenuPanel {
         this.createPassiveIconSlot(
           skillId,
           def?.name ?? skillId,
-          def ? formatPassiveDescription(def) : ""
+          def ? formatPassiveDescription(def) : "",
+          def,
+          preset
         )
       );
     }
@@ -533,7 +550,9 @@ export class SkillMenuPanel {
   private createPassiveIconSlot(
     skillId: string,
     name: string,
-    description: string
+    description: string,
+    skill?: PassiveSkillDef,
+    classPreset?: ClassPreset
   ): HTMLElement {
     const slot = document.createElement("div");
     slot.className =
@@ -543,7 +562,11 @@ export class SkillMenuPanel {
     slot.tabIndex = 0;
 
     slot.appendChild(
-      this.createIconWrap(undefined, name, getSkillIconUrl(skillId))
+      this.createIconWrap(
+        undefined,
+        name,
+        this.resolveSkillIconUrl(skillId, skill, classPreset)
+      )
     );
     slot.appendChild(this.createFloatingTooltip(name, description));
     return slot;
@@ -617,8 +640,9 @@ export class SkillMenuPanel {
     list.className = "skill-menu-skill-list";
 
     list.appendChild(this.createCancelPickerRow());
+    const preset = this.gameData.classRegistry[member.classId];
     list.appendChild(
-      this.createSkillPickerRow("外す", "スロットを空にする", "")
+      this.createSkillPickerRow("外す", "スロットを空にする", "", preset)
     );
 
     for (const skillId of member.build.learnedActiveIds) {
@@ -638,7 +662,9 @@ export class SkillMenuPanel {
         this.createSkillPickerRow(
           def?.name ?? skillId,
           def ? formatActiveDescription(def) : "",
-          skillId
+          skillId,
+          preset,
+          def
         )
       );
     }
@@ -701,14 +727,16 @@ export class SkillMenuPanel {
   private createSkillPickerRow(
     name: string,
     description: string,
-    skillId: string
+    skillId: string,
+    classPreset?: ClassPreset,
+    skill?: ActiveSkillDef
   ): HTMLElement {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "skill-menu-picker-row skill-menu-picker-row--icon";
     row.dataset.skillId = skillId;
 
-    const iconUrl = skillId ? getSkillIconUrl(skillId) : undefined;
+    const iconUrl = this.resolveSkillIconUrl(skillId, skill, classPreset);
     row.appendChild(this.createIconWrap(undefined, name, iconUrl));
 
     const text = document.createElement("div");

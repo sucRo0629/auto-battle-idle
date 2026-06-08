@@ -263,6 +263,8 @@ export type PassiveEffectKind =
 export interface PassiveSkillDef {
   id: string;
   name: string;
+  /** 未指定時は所属クラス role からプレースホルダー。PNG は assets/skill-icons/{iconKey}.png */
+  iconKey?: string;
   effect: PassiveEffectKind;
   targetRuleOverride?: TargetRule;
   damageMultiplier?: number;
@@ -439,6 +441,8 @@ export type SkillEffectDef =
 export interface ActiveSkillDef {
   id: string;
   name: string;
+  /** 未指定時は所属クラス role からプレースホルダー。PNG は assets/skill-icons/{iconKey}.png */
+  iconKey?: string;
   /** 発動条件（アクティブ）。未指定時は legacy interval を time として解釈 */
   trigger?: SkillTrigger;
   /** @deprecated レガシー JSON 互換。parse 時 trigger へ昇格 */

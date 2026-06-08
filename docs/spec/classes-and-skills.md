@@ -152,6 +152,18 @@ interface CharacterBuild {
 }
 ```
 
+### スキルアイコン（`iconKey`）
+
+`passives[]` / `actives[]` の各エントリに optional で指定。PNG は `src/assets/skill-icons/{iconKey}.png`。
+
+| 優先 | 未指定時の表示 |
+|------|----------------|
+| 1. `iconKey` | カスタム PNG（glob 自動登録） |
+| 2. `allowedClassIds[0]` | 該当クラスの role / `attackRange` プレースホルダ |
+| 3. UI コンテキストの所属クラス | 同上 |
+| 4. `id` の role プレフィックス（`defender_*` 等） | 同上 |
+| 5. 上記いずれも不可 | `supporter_placeholder` |
+
 ### パッシブの合成
 
 | 効果 | 合成ルール |
