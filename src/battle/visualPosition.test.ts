@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { resolveAttackBattleX, resolveMaxEffectiveRangePx } from './combatPosition.ts';
 import { hideFallenAllyCorpses } from './entities.ts';
 import {
+  ALLY_FORMATION_BACK_DEPTH,
   approachAllyVisualX,
   computeAllyPositions,
   computeEngagedAllyTargets,
   computeEngagedEnemyPositions,
+  computeEnemyStopX,
+  computeRangedEnemyVisualX,
   clampAllyVisualDepth,
   engagedMinLeftEdgeGap,
   getLeadingAllyFront,
@@ -274,6 +277,7 @@ describe('visual position separation', () => {
       },
     ]);
     expect(leadingFront?.visualX).toBe(200);
+    const guardX = 200;
     const targets = computeEngagedEnemyPositions(
       [
         {
@@ -283,15 +287,14 @@ describe('visual position separation', () => {
           isAlive: true,
         },
       ],
-      leadingFront!.visualX,
-      leadingFront!.rangePx,
+      () => ({ x: guardX, rangePx: 0 }),
     );
-    expect(targets.get('melee')).toBe(200 - engagedMinLeftEdgeGap());
+    expect(targets.get('melee')).toBe(guardX - engagedMinLeftEdgeGap());
     expect(targets.get('melee')!).toBeLessThan(326);
   });
 
-  it('computeEngagedEnemyPositions tracks front ally X for stop distance', () => {
-    const frontAllyX = 326;
+  it('computeEngagedEnemyPositions tracks target ally X for melee stop distance', () => {
+    const guardX = 326;
     const targets = computeEngagedEnemyPositions(
       [
         {
@@ -301,10 +304,53 @@ describe('visual position separation', () => {
           isAlive: true,
         },
       ],
-      frontAllyX,
-      140,
+      () => ({ x: guardX, rangePx: 0 }),
     );
-    expect(targets.get('melee')).toBe(frontAllyX - engagedMinLeftEdgeGap());
+    expect(targets.get('melee')).toBe(guardX - engagedMinLeftEdgeGap());
+  });
+
+  it('computeEngagedEnemyPositions keeps ranged behind melee at back-row depth', () => {
+    const guardX = 240;
+    const targets = computeEngagedEnemyPositions(
+      [
+        {
+          id: 'ranged',
+          visualX: 50,
+          rangePx: 100,
+          isAlive: true,
+        },
+        {
+          id: 'melee',
+          visualX: 200,
+          rangePx: 0,
+          isAlive: true,
+        },
+      ],
+      (enemyId) =>
+        enemyId === 'ranged' || enemyId === 'melee'
+          ? { x: guardX, rangePx: 0 }
+          : null,
+    );
+    expect(targets.get('ranged')).toBe(computeRangedEnemyVisualX(guardX));
+    expect(targets.get('melee')).toBe(guardX - engagedMinLeftEdgeGap());
+    expect(targets.get('ranged')!).toBeLessThan(targets.get('melee')!);
+  });
+
+  it('computeEngagedEnemyPositions mirrors ally back-row depth for ranged enemy', () => {
+    const guardX = 240;
+    const targets = computeEngagedEnemyPositions(
+      [
+        {
+          id: 'ranged',
+          visualX: 50,
+          rangePx: 50,
+          isAlive: true,
+        },
+      ],
+      () => ({ x: guardX, rangePx: 0 }),
+    );
+    expect(targets.get('ranged')).toBe(guardX - ALLY_FORMATION_BACK_DEPTH);
+    expect(ROW_X.back - ROW_X.front).toBe(ALLY_FORMATION_BACK_DEPTH);
   });
 });
 
@@ -350,30 +396,31 @@ describe('resolveEngagedVisualTargets', () => {
     { id: 'e3', visualX: 5, rangePx: 0, isAlive: true },
   ];
 
+  const targetGuard = () => ({ allyId: 'guard', rangePx: 0 });
+
   it('Stage 2 Wave 1 full party: enemies stop left of front line not archer', () => {
     const layout = resolveEngagedVisualTargets(
       stage2Wave1Allies,
       stage2Wave1Enemies,
       5,
       0,
+      targetGuard,
     );
     expect(layout).not.toBeNull();
 
     const { allyTargets, enemyTargets, frontLineTargetX } = layout!;
     expect(frontLineTargetX).toBeLessThan(ROW_X.back);
 
-    const frontRowTargets = [
-      allyTargets.get('guard')!,
-      allyTargets.get('sword')!,
-      allyTargets.get('healer')!,
-    ];
-    const minFrontTarget = Math.min(...frontRowTargets);
+    const frontRowVisuals = stage2Wave1Allies
+      .filter((ally) => ally.formationRow === 'front')
+      .map((ally) => ally.visualX);
+    const minFrontVisual = Math.min(...frontRowVisuals);
     const maxEnemyTarget = Math.max(...enemyTargets.values());
 
     expect(maxEnemyTarget).toBeLessThan(ROW_X.back);
-    expect(maxEnemyTarget).toBeLessThan(minFrontTarget);
+    expect(maxEnemyTarget).toBeLessThan(minFrontVisual);
     expect(allyTargets.get('archer')).toBeGreaterThanOrEqual(ROW_X.back - 1);
-    expect(minFrontTarget).toBeLessThan(ROW_X.back - 50);
+    expect(frontLineTargetX).toBeLessThan(ROW_X.back - 50);
   });
 
   it('shifts enemy stop targets right when front row is eliminated', () => {
@@ -382,6 +429,7 @@ describe('resolveEngagedVisualTargets', () => {
       stage2Wave1Enemies,
       5,
       0,
+      targetGuard,
     );
     expect(before).not.toBeNull();
     const maxBefore = Math.max(...before!.enemyTargets.values());
@@ -394,6 +442,7 @@ describe('resolveEngagedVisualTargets', () => {
       stage2Wave1Enemies,
       5,
       0,
+      () => ({ allyId: 'archer', rangePx: 140 }),
     );
     expect(after).not.toBeNull();
     const maxAfter = Math.max(...after!.enemyTargets.values());
@@ -416,6 +465,7 @@ describe('resolveEngagedVisualTargets', () => {
       [{ id: 'e1', visualX: frontEnemyX, rangePx: 0, isAlive: true }],
       frontEnemyX,
       0,
+      () => ({ allyId: 'archer', rangePx: 140 }),
     );
     expect(layout).not.toBeNull();
     expect(layout!.frontLineTargetX).toBeGreaterThanOrEqual(ROW_X.back - 1);

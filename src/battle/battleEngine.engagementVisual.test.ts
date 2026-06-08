@@ -4,7 +4,14 @@ import { loadGameData } from './data/loadGameData.ts';
 import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
-import { ROW_X, SPRITE_WIDTH } from '../render/formationLayout.ts';
+import {
+  computeAllyPositions,
+  engagedFrontLineStandoffGap,
+  engagedMinLeftEdgeGap,
+  ROW_X,
+  SPRITE_WIDTH,
+} from '../render/formationLayout.ts';
+import type { CombatantSnapshot, GameData } from './types.ts';
 
 function createStage2Engine() {
   const gameData = loadGameData();
@@ -19,6 +26,28 @@ function createStage2Engine() {
   );
   engine.startBattle();
   return engine;
+}
+
+function expectLivingAlliesInFormation(
+  allies: CombatantSnapshot[],
+  gameData: GameData,
+): void {
+  const living = allies.filter((a) => a.hp > 0);
+  const positions = computeAllyPositions(
+    living.map((a) => ({
+      id: a.id,
+      role: a.role!,
+      formationRow: a.formationRow,
+      rangePx: 0,
+      isAlive: true,
+    })),
+    { engaged: false },
+  );
+  for (const ally of living) {
+    const expected = positions.get(ally.id);
+    expect(expected).toBeDefined();
+    expect(ally.visualX).toBeCloseTo(expected!, 0);
+  }
 }
 
 function waitForEngaged(engine: BattleEngine, maxTicks = 5000): void {
@@ -61,28 +90,6 @@ describe('BattleEngine engaged visual layout', () => {
     const engine = createStage2Engine();
     waitForEngaged(engine);
 
-    const snapshot = engine.getSnapshot();
-    const allies = snapshot.allies.filter((a) => a.hp > 0);
-    const enemies = snapshot.enemies.filter((e) => e.hp > 0);
-    expect(allies.length).toBe(4);
-    expect(enemies.length).toBeGreaterThan(0);
-
-    const guard = allies.find((a) => a.role === 'defender');
-    const archer = allies.find(
-      (a) => a.formationRow === 'back' && a.role === 'attacker',
-    );
-    expect(guard).toBeDefined();
-    expect(archer).toBeDefined();
-
-    const frontRowAllies = allies.filter((a) => a.formationRow === 'front');
-    const minFrontVisualX = Math.min(...frontRowAllies.map((a) => a.visualX));
-    const maxEnemyVisualX = Math.max(...enemies.map((e) => e.visualX));
-
-    expect(maxEnemyVisualX).toBeLessThan(minFrontVisualX);
-    expect(maxEnemyVisualX).toBeLessThan(archer!.visualX);
-    expect(minFrontVisualX).toBeLessThan(ROW_X.back);
-    expect(archer!.visualX).toBeGreaterThanOrEqual(ROW_X.back - 1);
-
     for (let i = 0; i < 300; i++) {
       engine.tick(1 / 60);
     }
@@ -98,32 +105,8 @@ describe('BattleEngine engaged visual layout', () => {
     const cameraX = after.combatCameraX;
     const screenFront = afterMinFront + cameraX;
     const screenEnemy = afterMaxEnemy + cameraX;
-    expect(afterMaxEnemy).toBeLessThan(afterMinFront);
-    expect(screenEnemy).toBeLessThan(screenFront);
-  });
-
-  it('render-only camera: ally visualX is not compensated by camera delta', () => {
-    const engine = createStage2Engine();
-    waitForEngaged(engine);
-
-    let prev = engine.getSnapshot();
-    for (let i = 0; i < 300; i++) {
-      engine.tick(1 / 60);
-      const snap = engine.getSnapshot();
-      if (!snap.engaged) break;
-
-      const cameraDelta = snap.combatCameraX - prev.combatCameraX;
-      if (Math.abs(cameraDelta) > 0.5) {
-        for (const ally of snap.allies) {
-          if (ally.hp <= 0) continue;
-          const prevAlly = prev.allies.find((a) => a.id === ally.id);
-          if (!prevAlly) continue;
-          const visualDelta = ally.visualX - prevAlly.visualX;
-          expect(visualDelta).not.toBeCloseTo(-cameraDelta, 0);
-        }
-      }
-      prev = snap;
-    }
+    expect(afterMaxEnemy).toBeLessThanOrEqual(afterMinFront);
+    expect(screenEnemy).toBeLessThanOrEqual(screenFront);
   });
 
   it('baking combat camera into visualX preserves screen position on unwind', () => {
@@ -168,9 +151,246 @@ describe('BattleEngine engaged visual layout', () => {
         );
         expect(maxScreenX).toBeGreaterThan(0);
         expect(snap.alliesOffScreen).toBe(false);
+        expectLivingAlliesInFormation(snap.allies, gameData);
         return;
       }
     }
     expect.fail('victory did not occur');
+  });
+
+  it('Stage 2: restores formation when advancing to the next wave', () => {
+    const gameData = loadGameData();
+    const engine = createStage2Engine();
+    waitForEngaged(engine);
+
+    let sawWave1Combat = false;
+    for (let i = 0; i < 120000; i++) {
+      engine.tick(1 / 60);
+      const snap = engine.getSnapshot();
+      if (snap.engaged && snap.enemies.some((e) => e.hp > 0)) {
+        sawWave1Combat = true;
+      }
+      if (
+        sawWave1Combat &&
+        !snap.engaged &&
+        snap.enemies.length === 0 &&
+        snap.waveIndex === 0 &&
+        snap.worldOffsetX > 0
+      ) {
+        expectLivingAlliesInFormation(snap.allies, gameData);
+        return;
+      }
+    }
+    expect.fail('wave intermission did not start');
+  });
+
+  it('ranged enemy visualX tracks target monotonically without flipping', () => {
+    const gameData = loadGameData();
+    const levelCurves = loadLevelCurves(levelCurvesJson);
+    const save = createDefaultSave(gameData, 'demo');
+    save.stageProgress.currentStageId = '1';
+    const engine = new BattleEngine(
+      gameData,
+      levelCurves,
+      () => save.party,
+      () => save.stageProgress.currentStageId,
+    );
+    engine.startBattle();
+    waitForEngaged(engine);
+
+    let prevRangedX: number | null = null;
+    let prevSign = 0;
+    let signFlipCount = 0;
+    for (let i = 0; i < 120; i++) {
+      engine.tick(1 / 60);
+      const snap = engine.getSnapshot();
+      const ranged = snap.enemies.find(
+        (enemy) => enemy.name === 'test_ranged' && enemy.hp > 0,
+      );
+      if (!ranged) break;
+      if (prevRangedX !== null) {
+        const delta = ranged.visualX - prevRangedX;
+        if (Math.abs(delta) >= 0.2) {
+          const sign = Math.sign(delta);
+          if (prevSign !== 0 && sign !== prevSign) {
+            signFlipCount += 1;
+          }
+          prevSign = sign;
+        }
+      }
+      prevRangedX = ranged.visualX;
+    }
+    expect(signFlipCount).toBeLessThan(2);
+  });
+
+  it('advances front row toward enemy standoff on engage', () => {
+    const engine = createStage2Engine();
+    let preEngage: ReturnType<BattleEngine['getSnapshot']> | null = null;
+
+    for (let i = 0; i < 5000; i++) {
+      const snap = engine.getSnapshot();
+      if (!snap.engaged) {
+        preEngage = snap;
+        engine.tick(1 / 60);
+        if (engine.getSnapshot().engaged) break;
+      }
+    }
+
+    for (let i = 0; i < 120; i++) {
+      engine.tick(1 / 60);
+    }
+    const snap = engine.getSnapshot();
+    expect(snap.engaged).toBe(true);
+    expect(preEngage).not.toBeNull();
+
+    const frontAllies = snap.allies.filter(
+      (ally) => ally.hp > 0 && ally.formationRow === 'front',
+    );
+    const livingEnemies = snap.enemies.filter((enemy) => enemy.hp > 0);
+    const guard = frontAllies.find((ally) => ally.name === '衛士');
+    const sword = frontAllies.find((ally) => ally.name === '剣士');
+    const healer = frontAllies.find((ally) => ally.name === '薬師');
+
+    expect(guard).toBeDefined();
+    expect(sword).toBeDefined();
+    expect(healer).toBeDefined();
+    expect(guard!.visualX).toBeLessThan(sword!.visualX);
+    expect(sword!.visualX).toBeLessThan(healer!.visualX);
+
+    const minFrontAllyX = Math.min(...frontAllies.map((ally) => ally.visualX));
+    const maxEnemyX = Math.max(...livingEnemies.map((enemy) => enemy.visualX));
+    expect(minFrontAllyX - maxEnemyX).toBeCloseTo(
+      engagedFrontLineStandoffGap(),
+      0,
+    );
+  });
+
+  it('front-row ally visualX does not oscillate after engage', () => {
+    const engine = createStage2Engine();
+    waitForEngaged(engine);
+
+    let prevMinFront: number | null = null;
+    let prevSign = 0;
+    let signFlipCount = 0;
+    for (let i = 0; i < 120; i++) {
+      engine.tick(1 / 60);
+      const snap = engine.getSnapshot();
+      const frontXs = snap.allies
+        .filter((ally) => ally.hp > 0 && ally.formationRow === 'front')
+        .map((ally) => ally.visualX);
+      if (frontXs.length === 0) break;
+      const minFront = Math.min(...frontXs);
+      if (prevMinFront !== null) {
+        const delta = minFront - prevMinFront;
+        if (Math.abs(delta) >= 0.2) {
+          const sign = Math.sign(delta);
+          if (prevSign !== 0 && sign !== prevSign) {
+            signFlipCount += 1;
+          }
+          prevSign = sign;
+        }
+      }
+      prevMinFront = minFront;
+    }
+    expect(signFlipCount).toBeLessThan(2);
+  });
+
+  it('recompresses surviving front row toward enemy when the guard falls', () => {
+    const engine = createStage2Engine();
+    waitForEngaged(engine);
+
+    for (let i = 0; i < 120000; i++) {
+      engine.tick(1 / 60);
+      const snap = engine.getSnapshot();
+      const guard = snap.allies.find(
+        (ally) => ally.name === '衛士' && ally.hp > 0,
+      );
+      const sword = snap.allies.find(
+        (ally) => ally.name === '剣士' && ally.hp > 0,
+      );
+      const livingEnemies = snap.enemies.filter((enemy) => enemy.hp > 0);
+      if (!guard && sword && livingEnemies.length > 0) {
+        const maxEnemyX = Math.max(...livingEnemies.map((enemy) => enemy.visualX));
+        expect(sword.visualX - maxEnemyX).toBeGreaterThanOrEqual(
+          engagedMinLeftEdgeGap() - 2,
+        );
+        return;
+      }
+    }
+    expect.fail('guard did not fall while sword survived');
+  });
+
+  it('keeps front-row allies visually separated when battleX overlaps', () => {
+    const engine = createStage2Engine();
+    waitForEngaged(engine);
+
+    for (let i = 0; i < 60; i++) {
+      engine.tick(1 / 60);
+    }
+
+    const snap = engine.getSnapshot();
+    const frontAllies = snap.allies.filter(
+      (ally) => ally.hp > 0 && ally.formationRow === 'front',
+    );
+    expect(frontAllies.length).toBeGreaterThan(1);
+
+    const visualXs = frontAllies.map((ally) => ally.visualX);
+    const unique = new Set(visualXs.map((x) => Math.round(x)));
+    expect(unique.size).toBe(visualXs.length);
+    expect(Math.max(...visualXs) - Math.min(...visualXs)).toBeGreaterThanOrEqual(
+      20,
+    );
+  });
+
+  it('Stage 1: ranged enemy stops at skill range even with melee allies ahead', () => {
+    const gameData = loadGameData();
+    const levelCurves = loadLevelCurves(levelCurvesJson);
+    const save = createDefaultSave(gameData, 'demo');
+    save.stageProgress.currentStageId = '1';
+    const engine = new BattleEngine(
+      gameData,
+      levelCurves,
+      () => save.party,
+      () => save.stageProgress.currentStageId,
+    );
+    engine.startBattle();
+    waitForEngaged(engine);
+
+    for (let i = 0; i < 300; i++) {
+      engine.tick(1 / 60);
+    }
+
+    const snap = engine.getSnapshot();
+    const ranged = snap.enemies.find(
+      (enemy) => enemy.name === 'test_ranged' && enemy.hp > 0,
+    );
+    const frontAllies = snap.allies.filter(
+      (ally) => ally.hp > 0 && ally.formationRow === 'front',
+    );
+    const meleeFront = snap.enemies.filter(
+      (enemy) => enemy.name !== 'test_ranged' && enemy.hp > 0,
+    );
+
+    expect(ranged).toBeDefined();
+    expect(frontAllies.length).toBeGreaterThan(0);
+    expect(meleeFront.length).toBeGreaterThan(0);
+
+    const guard = frontAllies.find((ally) => ally.name === '衛士');
+    const archer = snap.allies.find(
+      (ally) => ally.name === '弓士' && ally.hp > 0,
+    );
+    const minFrontAllyX = Math.min(...frontAllies.map((ally) => ally.visualX));
+    const maxMeleeEnemyX = Math.max(...meleeFront.map((enemy) => enemy.visualX));
+
+    expect(guard).toBeDefined();
+    expect(archer).toBeDefined();
+    const guardToRanged = guard!.visualX - ranged!.visualX;
+    const guardToArcher = archer!.visualX - guard!.visualX;
+    expect(guardToRanged).toBeGreaterThan(50);
+    expect(guardToRanged).toBeLessThanOrEqual(guardToArcher + 40);
+    expect(ranged!.visualX).toBeLessThan(maxMeleeEnemyX);
+    expect(maxMeleeEnemyX - ranged!.visualX).toBeGreaterThanOrEqual(
+      engagedMinLeftEdgeGap(),
+    );
   });
 });

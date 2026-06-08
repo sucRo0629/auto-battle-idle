@@ -23,6 +23,7 @@ import {
   getAttackablePool,
   resolveSkillRangePx,
 } from './rangeUtils.ts';
+import { pickThreatWeightedAlly } from '../threat.ts';
 import { getTargetPoolForRule } from './targetingPool.ts';
 
 export { getTargetPoolForRule } from './targetingPool.ts';
@@ -79,9 +80,7 @@ export function pickTargetFromPool(
   if (actor.isEnemy) {
     switch (rule) {
       case 'closestAlly':
-        return pool.reduce((a, b) =>
-          getBattleX(a) <= getBattleX(b) ? a : b,
-        );
+        return pickThreatWeightedAlly(pool);
       default:
         return pool[0] ?? null;
     }
@@ -179,7 +178,7 @@ function orderPoolByRule(
 
   if (actor.isEnemy) {
     if (rule === 'closestAlly') {
-      return copy.sort((a, b) => getBattleX(a) - getBattleX(b));
+      return copy.sort((a, b) => (b.threat ?? 0) - (a.threat ?? 0));
     }
     return copy;
   }

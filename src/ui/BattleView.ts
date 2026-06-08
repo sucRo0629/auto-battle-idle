@@ -114,6 +114,7 @@ export class BattleView {
     this.debugMenu = new DebugMenuPanel(this.gameData, {
       isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
       getSave: this.getSave,
+      getAllySnapshots: () => this.engine.getSnapshot().allies,
       getLoopStageId: () => verifyModeControls?.getLoopStageId?.() ?? null,
       onLoopStageChange: (stageId) => {
         verifyModeControls?.onLoopStageChange?.(stageId);
@@ -264,6 +265,7 @@ export class BattleView {
     this.stageLabelEl.textContent = stageLabel;
     this.canvas.syncFromSnapshot(snapshot, partyMeta);
     this.canvas.tick(deltaMs);
+    this.debugMenu.updateThreatDisplay();
   }
 
   setMenuButtonDisabled(disabled: boolean): void {

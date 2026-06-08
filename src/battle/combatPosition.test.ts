@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState, GameData } from './types.ts';
 import { BATTLE_ENEMY_VISIBLE_MIN_X } from './types.ts';
-import { engagedMinLeftEdgeGap } from '../render/formationLayout.ts';
+import {
+  computeEnemyStopX,
+  engagedMinLeftEdgeGap,
+  resolveEnemyMarchEngageGap,
+} from '../render/formationLayout.ts';
 import {
   assignInitialAllyBattleX,
+  resolveEnemyMarchCapX,
   getAllyContactX,
   getBattleContactAllyVisual,
   getEnemyContactX,
@@ -109,6 +114,57 @@ describe('combatPosition', () => {
     expect(resolveEngageLineX([ally], [far], gameData)).toBe(engageLine);
     expect(shouldStartApproach([ally], [far], gameData)).toBe(false);
     expect(shouldStartApproach([ally], [near], gameData)).toBe(true);
+  });
+
+  it('starts approach at ranged enemy attack distance', () => {
+    const ally = mockCombatant({ id: 'guard', formationRow: 'front', battleX: 240 });
+    const rangedEnemy = mockCombatant({
+      id: 'ranged',
+      isEnemy: true,
+      traits: { attackRange: 'ranged' },
+      cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
+      battleX: BATTLE_ENEMY_VISIBLE_MIN_X,
+    });
+    const engageLine = 240 - resolveEnemyMarchEngageGap(0, 100);
+    expect(resolveEngageLineX([ally], [rangedEnemy], gameData)).toBe(engageLine);
+    expect(shouldStartApproach([ally], [rangedEnemy], gameData)).toBe(false);
+    rangedEnemy.battleX = engageLine;
+    expect(shouldStartApproach([ally], [rangedEnemy], gameData)).toBe(true);
+  });
+
+  it('caps each enemy march by its own attack range', () => {
+    const ally = mockCombatant({ id: 'guard', formationRow: 'front', battleX: 240 });
+    const melee = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 200,
+    });
+    const ranged = mockCombatant({
+      id: 'ranged',
+      isEnemy: true,
+      traits: { attackRange: 'ranged' },
+      cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
+      battleX: 200,
+    });
+    const meleeCap = resolveEnemyMarchCapX(melee, [ally], gameData)!;
+    const rangedCap = resolveEnemyMarchCapX(ranged, [ally], gameData)!;
+    expect(meleeCap).toBe(240 - engagedMinLeftEdgeGap());
+    expect(rangedCap).toBe(240 - 100);
+    expect(rangedCap).toBeLessThan(meleeCap);
+  });
+
+  it('ranged enemies can back up to attack range after over-marching', () => {
+    const enemy = mockCombatant({
+      id: 'ranged',
+      isEnemy: true,
+      traits: { attackRange: 'ranged' },
+      cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
+      battleX: 200,
+    });
+    updateUnitApproach(enemy, 140, 10);
+    expect(enemy.battleX).toBe(190);
+    updateUnitApproach(enemy, 140, 100);
+    expect(enemy.battleX).toBe(140);
   });
 
   it('resolves melee range 0 and spear range 30', () => {

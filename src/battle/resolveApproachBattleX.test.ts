@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState, GameData } from './types.ts';
-import { resolveAllyApproachBattleX } from './resolveApproachBattleX.ts';
+import {
+  resolveAllyApproachBattleX,
+  resolveEnemyApproachBattleX,
+} from './resolveApproachBattleX.ts';
 
 function mockCombatant(
   overrides: Partial<CombatantState> & { id: string },
@@ -170,5 +173,38 @@ describe('resolveAllyApproachBattleX', () => {
     );
 
     expect(approachX).toBe(-10 + 100);
+  });
+});
+
+describe('resolveEnemyApproachBattleX', () => {
+  it('stops at skill range from closest ally', () => {
+    const rangedEnemy = mockCombatant({
+      id: 'enemy',
+      isEnemy: true,
+      formationRow: 'front',
+      cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
+    });
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      traits: { attackRange: 'melee' },
+      battleX: 240,
+      cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
+    });
+    const archer = mockCombatant({
+      id: 'archer',
+      formationRow: 'back',
+      battleX: 356,
+      cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
+    });
+
+    const approachX = resolveEnemyApproachBattleX(
+      rangedEnemy,
+      [guard, archer],
+      [rangedEnemy],
+      gameData,
+    );
+
+    expect(approachX).toBe(240 - 100);
   });
 });

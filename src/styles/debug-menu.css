@@ -56,11 +56,79 @@
 }
 
 .debug-menu-member-name {
-  flex: 1;
+  flex: 0 1 4.5em;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.debug-menu-threat {
+  flex: 1 1 72px;
+  min-width: 72px;
+  max-width: 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.debug-menu-threat-bar {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 3px;
+  background: rgba(8, 12, 22, 0.85);
+  border: 1px solid rgba(74, 144, 217, 0.25);
+  overflow: hidden;
+}
+
+.debug-menu-threat-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-radius: 2px 0 0 2px;
+  background: linear-gradient(90deg, #2d5a8a 0%, #4a90d9 100%);
+  transition: width 0.12s ease-out;
+}
+
+.debug-menu-threat-base {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #e8c547;
+  box-shadow: 0 0 3px rgba(232, 197, 71, 0.6);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.debug-menu-threat-label {
+  font-size: 10px;
+  line-height: 1.2;
+  color: #8fa8c8;
+  white-space: nowrap;
+}
+
+.debug-menu-threat.is-down .debug-menu-threat-bar {
+  opacity: 0.45;
+  border-color: rgba(120, 120, 120, 0.35);
+}
+
+.debug-menu-threat.is-down .debug-menu-threat-fill {
+  background: linear-gradient(90deg, #4a4a5a 0%, #6a6a7a 100%);
+}
+
+.debug-menu-threat.is-down .debug-menu-threat-base {
+  background: #a89850;
+  box-shadow: none;
+}
+
+.debug-menu-threat.is-down .debug-menu-threat-label {
+  color: #6a7588;
 }
 
 .debug-menu-level-label {

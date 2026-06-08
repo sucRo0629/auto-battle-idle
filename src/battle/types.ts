@@ -6,7 +6,7 @@ export type AttackRange = "melee" | "ranged";
 /** 近接スキル射程の未指定時デフォルト（px） */
 export const DEFAULT_MELEE_ATTACK_RANGE_PX = 0;
 /** 遠隔の rangePx 未指定時フォールバック（px） */
-export const DEFAULT_RANGED_RANGE_PX = 120;
+export const DEFAULT_RANGED_RANGE_PX = 50;
 /** 敵が画面内とみなす battleX の下限（接敵トリガーには使わない） */
 export const BATTLE_ENEMY_VISIBLE_MIN_X = -32;
 /** 進軍中にスプライトを表示する battleX の下限 */
@@ -246,10 +246,20 @@ export interface CombatantState extends Combatant {
   battleX: number;
   /** snapshot 出力用。描画は formationLayout の隊形配置で算出 */
   visualX: number;
+  /** 接敵中: battleX 基準線からの描画レーンずれ（接敵開始時に固定） */
+  engagedVisualLaneX?: number;
+  /** 近接敵: 最前列からの奥行きスロット（接敵開始時に固定、0=最前列） */
+  engagedMeleeVisualSlot?: number;
+  /** 遠距離敵: 描画アンカー用の狙い味方 id（接敵開始時に固定） */
+  engagedVisualTargetAllyId?: string;
   /** 味方: Wave 中の death スプライト表示。Wave 移行で false（HP0・HUD は維持） */
   corpseVisible: boolean;
   /** 敵のみ: ステージ配置のスポーン battleX */
   spawnX?: number;
+  /** 味方のみ: 敵 AI ヘイト（ランタイム） */
+  threat?: number;
+  /** 味方のみ: 減衰の目標ヘイト */
+  baseThreat?: number;
 }
 
 export type PassiveEffectKind =
@@ -355,7 +365,7 @@ interface SkillEffectCommon {
   /** 0〜1。0 = anchor 中心固定 */
   scatterSpreadRate?: number;
   type: SkillEffectKind;
-  /** 命中判定・VFX 共用（px）。未指定 = attackRange 既定値（近接 0 / 遠隔 120） */
+  /** 命中判定・VFX 共用（px）。未指定 = attackRange 既定値（近接 0 / 遠隔 50） */
   range?: number;
   /** 未指定時は effect 種別の既定アニメ。none = スプライトアニメなし */
   anim?: SkillEffectAnimId;
@@ -549,6 +559,10 @@ export interface CombatantSnapshot {
   visualX: number;
   /** 味方のみ: フィールド上に death スプライトを描くか */
   corpseVisible?: boolean;
+  /** 味方のみ: デバッグ用ヘイト */
+  threat?: number;
+  baseThreat?: number;
+  partySlotIndex?: number;
   statusEffects: StatusEffect[];
   activeCooldowns: {
     skillId: string;

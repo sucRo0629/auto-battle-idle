@@ -1,17 +1,30 @@
 import '../styles/debug-menu.css';
-import type { GameData, SaveGameState } from '../battle/types.ts';
+import type { CombatantSnapshot, GameData, SaveGameState } from '../battle/types.ts';
 
 export interface DebugMenuControls {
   isVerifyMode: () => boolean;
   getSave: () => SaveGameState;
   getLoopStageId: () => string | null;
+  getAllySnapshots?: () => CombatantSnapshot[];
   onLoopStageChange: (stageId: string | null) => void;
   onMemberLevelChange: (partyIndex: number, level: number) => void;
+}
+
+interface ThreatDisplayRefs {
+  root: HTMLElement;
+  fill: HTMLElement;
+  baseMarker: HTMLElement;
+  label: HTMLElement;
+}
+
+function isAllyDown(snapshot: CombatantSnapshot): boolean {
+  return snapshot.hp <= 0;
 }
 
 export class DebugMenuPanel {
   private readonly root: HTMLElement;
   private readonly rowsHost: HTMLElement;
+  private readonly threatByPartyIndex = new Map<number, ThreatDisplayRefs>();
 
   constructor(
     private readonly gameData: GameData,
@@ -36,6 +49,45 @@ export class DebugMenuPanel {
     this.refresh();
   }
 
+  updateThreatDisplay(): void {
+    if (!this.controls.isVerifyMode()) return;
+    const snapshots = this.controls.getAllySnapshots?.() ?? [];
+    const partyThreats = snapshots.filter(
+      (snapshot) => snapshot.partySlotIndex !== undefined,
+    );
+    const livingThreats = partyThreats.filter((snapshot) => !isAllyDown(snapshot));
+    const livingMaxScale = Math.max(
+      1,
+      ...livingThreats.flatMap((snapshot) => [
+        snapshot.threat ?? 0,
+        snapshot.baseThreat ?? 0,
+      ]),
+    );
+
+    for (const snapshot of partyThreats) {
+      const refs = this.threatByPartyIndex.get(snapshot.partySlotIndex!);
+      if (!refs) continue;
+      const threat = Math.round(snapshot.threat ?? 0);
+      const base = Math.round(snapshot.baseThreat ?? 0);
+      const down = isAllyDown(snapshot);
+      refs.root.classList.toggle('is-down', down);
+
+      if (down) {
+        const localMax = Math.max(threat, base, 1);
+        refs.fill.style.width = `${(threat / localMax) * 100}%`;
+        refs.baseMarker.style.left = `${(base / localMax) * 100}%`;
+        refs.label.textContent = `Hate ${threat} · base ${base} (倒)`;
+        continue;
+      }
+
+      const fillPct = Math.min(100, (threat / livingMaxScale) * 100);
+      const basePct = Math.min(100, (base / livingMaxScale) * 100);
+      refs.fill.style.width = `${fillPct}%`;
+      refs.baseMarker.style.left = `${basePct}%`;
+      refs.label.textContent = `Hate ${threat} · base ${base}`;
+    }
+  }
+
   refresh(): void {
     const verifyMode = this.controls.isVerifyMode();
     this.root.hidden = !verifyMode;
@@ -43,6 +95,7 @@ export class DebugMenuPanel {
 
     const save = this.controls.getSave();
     this.rowsHost.replaceChildren();
+    this.threatByPartyIndex.clear();
 
     const stageRow = document.createElement('div');
     stageRow.className = 'debug-menu-stage-row';
@@ -145,9 +198,37 @@ export class DebugMenuPanel {
       });
 
       levelLabel.appendChild(levelInput);
-      row.append(nameEl, levelLabel, decButton, incButton);
+
+      const threatEl = document.createElement('div');
+      threatEl.className = 'debug-menu-threat';
+
+      const bar = document.createElement('div');
+      bar.className = 'debug-menu-threat-bar';
+
+      const fill = document.createElement('div');
+      fill.className = 'debug-menu-threat-fill';
+
+      const baseMarker = document.createElement('div');
+      baseMarker.className = 'debug-menu-threat-base';
+
+      const label = document.createElement('span');
+      label.className = 'debug-menu-threat-label';
+      label.textContent = 'Hate —';
+
+      bar.append(fill, baseMarker);
+      threatEl.append(bar, label);
+      this.threatByPartyIndex.set(partyIndex, {
+        root: threatEl,
+        fill,
+        baseMarker,
+        label,
+      });
+
+      row.append(nameEl, threatEl, levelLabel, decButton, incButton);
       this.rowsHost.appendChild(row);
     });
+
+    this.updateThreatDisplay();
   }
 
   destroy(): void {

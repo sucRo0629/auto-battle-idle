@@ -49,6 +49,7 @@ export interface SkillExecutorDeps {
     target: CombatantState,
     amount: number,
   ) => void;
+  onDebuffApplied?: (actor: CombatantState) => void;
 }
 
 export class SkillExecutor {
@@ -445,6 +446,9 @@ export class SkillExecutor {
         range: effectDef.range,
         ...(hitIndex !== undefined ? { hitIndex } : {}),
       });
+      if (!isBuff && actor.isEnemy === false && target.isEnemy) {
+        this.deps.onDebuffApplied?.(actor);
+      }
       return true;
     }
 
