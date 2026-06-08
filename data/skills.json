@@ -4,7 +4,6 @@
       "id": "attacker_kyushi_passive_1",
       "name": "射手排除",
       "effect": "targetRuleOverride",
-      "damageMultiplier": 1.1,
       "targetRuleOverride": "rangedAttackingEnemy"
     }
   ],

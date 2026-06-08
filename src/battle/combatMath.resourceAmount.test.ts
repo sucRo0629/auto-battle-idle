@@ -5,16 +5,9 @@ import {
   applyHealToTarget,
   resolveResourceAmount,
 } from './combatMath.ts';
-import type { CombatantState, PassiveSkillDef, ResourceAmountSpec } from './types.ts';
+import type { CombatantState, ResourceAmountSpec } from './types.ts';
 
-const passives: Record<string, PassiveSkillDef> = {
-  heal_passive: {
-    id: 'heal_passive',
-    name: 'Heal+',
-    effect: 'healBonus',
-    healBonus: 5,
-  },
-};
+const passives = {};
 
 function mockCombatant(
   overrides: Partial<CombatantState> = {},
@@ -34,7 +27,7 @@ function mockCombatant(
     formationRow: 'back',
     traits: { attackRange: 'ranged', rangePx: 120 },
     build: {
-      learnedPassiveIds: ['heal_passive'],
+      learnedPassiveIds: [],
       learnedActiveIds: [],
       equippedActiveSlots: [],
     },
@@ -60,11 +53,11 @@ describe('resolveResourceAmount', () => {
       atkOffset: 7,
       atkScale: 2,
     };
-    // (20 + 5 + 7) * 2 = 64
-    expect(resolveResourceAmount(actor, target, spec, passives)).toBe(64);
+    // (20 + 7) * 2 = 54
+    expect(resolveResourceAmount(actor, target, spec, passives)).toBe(54);
   });
 
-  it('resolves flat with healBonus', () => {
+  it('resolves flat amount', () => {
     expect(
       resolveResourceAmount(
         actor,
@@ -72,10 +65,10 @@ describe('resolveResourceAmount', () => {
         { kind: 'flat', flatAmount: 10 },
         passives,
       ),
-    ).toBe(15);
+    ).toBe(10);
   });
 
-  it('resolves percentMaxHp from target maxHp with healBonus', () => {
+  it('resolves percentMaxHp from target maxHp', () => {
     expect(
       resolveResourceAmount(
         actor,
@@ -83,7 +76,7 @@ describe('resolveResourceAmount', () => {
         { kind: 'percentMaxHp', percentOfMaxHp: 0.1 },
         passives,
       ),
-    ).toBe(15);
+    ).toBe(10);
   });
 
   it('uses atkScaleOverride', () => {
@@ -95,7 +88,7 @@ describe('resolveResourceAmount', () => {
         passives,
         0.5,
       ),
-    ).toBe(12);
+    ).toBe(10);
   });
 });
 

@@ -3,8 +3,8 @@
     {
       "id": "test_passive_lv2",
       "name": "Test Passive Lv2",
-      "effect": "damageMultiplier",
-      "damageMultiplier": 1.1
+      "effect": "targetRuleOverride",
+      "targetRuleOverride": "lowestHpEnemy"
     }
   ],
   "actives": [

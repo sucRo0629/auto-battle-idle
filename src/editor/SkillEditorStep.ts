@@ -4,6 +4,7 @@ import {
   DAMAGE_TYPE_OPTIONS,
   MOVE_MODE_LABELS,
   MOVE_MODES,
+  PASSIVE_EFFECT_KIND_LABELS,
   PASSIVE_EFFECT_KIND_OPTIONS,
   RESOURCE_AMOUNT_KIND_LABELS,
   RESOURCE_AMOUNT_KIND_OPTIONS,
@@ -51,15 +52,6 @@ import {
   createTextInput,
   preserveScrollDuring,
 } from './formUtils.ts';
-
-const PASSIVE_EFFECT_LABELS: Record<PassiveEffectKind, string> = {
-  damageMultiplier: '与ダメ倍率',
-  damageTakenMultiplier: '被ダメ倍率',
-  healBonus: '回復ボーナス',
-  targetRuleOverride: 'ターゲット上書き',
-  evasionChance: '回避率',
-  activeCooldownRate: 'アクティブCD倍率',
-};
 
 const EFFECT_KIND_LABELS: Record<SkillEffectKind, string> = {
   damage: 'ダメージ',
@@ -763,7 +755,7 @@ export class SkillEditorStep {
           passive.effect,
           PASSIVE_EFFECT_KIND_OPTIONS.map((value) => ({
             value,
-            label: PASSIVE_EFFECT_LABELS[value],
+            label: PASSIVE_EFFECT_KIND_LABELS[value],
           })),
           (effect) => {
             this.patchPassive(index, (current) => {
@@ -778,54 +770,6 @@ export class SkillEditorStep {
     effectGrid.classList.add('editor-subgrid');
 
     switch (passive.effect) {
-      case 'damageMultiplier':
-        effectGrid.appendChild(
-          createFieldRow(
-            '与ダメ倍率',
-            createNumberInput(
-              passive.damageMultiplier ?? 1,
-              (damageMultiplier) => {
-                this.patchPassive(index, (current) => {
-                  current.damageMultiplier = damageMultiplier;
-                }, { rerender: false });
-              },
-              { step: 0.01 },
-            ),
-          ),
-        );
-        break;
-      case 'damageTakenMultiplier':
-        effectGrid.appendChild(
-          createFieldRow(
-            '被ダメ倍率',
-            createNumberInput(
-              passive.damageTakenMultiplier ?? 1,
-              (damageTakenMultiplier) => {
-                this.patchPassive(index, (current) => {
-                  current.damageTakenMultiplier = damageTakenMultiplier;
-                }, { rerender: false });
-              },
-              { step: 0.01 },
-            ),
-          ),
-        );
-        break;
-      case 'healBonus':
-        effectGrid.appendChild(
-          createFieldRow(
-            '回復ボーナス',
-            createNumberInput(
-              passive.healBonus ?? 0,
-              (healBonus) => {
-                this.patchPassive(index, (current) => {
-                  current.healBonus = healBonus;
-                }, { rerender: false });
-              },
-              { step: 1 },
-            ),
-          ),
-        );
-        break;
       case 'targetRuleOverride':
         effectGrid.appendChild(
           createFieldRow(
@@ -861,18 +805,219 @@ export class SkillEditorStep {
           ),
         );
         break;
-      case 'activeCooldownRate':
+      case 'basicAttackFeedsActive':
         effectGrid.appendChild(
           createFieldRow(
-            'CD倍率',
-            createNumberInput(
-              passive.activeCooldownRate ?? 1,
-              (activeCooldownRate) => {
+            '対象アクティブ ID（任意）',
+            createTextInput(
+              passive.feedActiveSkillId ?? '',
+              (feedActiveSkillId) => {
                 this.patchPassive(index, (current) => {
-                  current.activeCooldownRate = activeCooldownRate;
+                  current.feedActiveSkillId = feedActiveSkillId || undefined;
+                }, { rerender: false });
+              },
+            ),
+          ),
+        );
+        break;
+      case 'heavyStrikeDamageScale':
+      case 'damageVsDotTarget':
+        effectGrid.appendChild(
+          createFieldRow(
+            '倍率 scale',
+            createNumberInput(
+              passive.scale ?? 1,
+              (scale) => {
+                this.patchPassive(index, (current) => {
+                  current.scale = scale;
                 }, { rerender: false });
               },
               { step: 0.01 },
+            ),
+          ),
+        );
+        if (passive.effect === 'damageVsDotTarget') {
+          effectGrid.appendChild(
+            createFieldRow(
+              '自分付与 DoT のみ',
+              createSelect(
+                passive.selfAppliedOnly ? 'true' : 'false',
+                [
+                  { value: 'false', label: 'いいえ' },
+                  { value: 'true', label: 'はい' },
+                ],
+                (value) => {
+                  this.patchPassive(index, (current) => {
+                    current.selfAppliedOnly = value === 'true';
+                  }, { rerender: false });
+                },
+              ),
+            ),
+          );
+        }
+        break;
+      case 'threatBonus':
+        effectGrid.appendChild(
+          createFieldRow(
+            'bonus',
+            createNumberInput(
+              passive.bonus ?? 0,
+              (bonus) => {
+                this.patchPassive(index, (current) => {
+                  current.bonus = bonus;
+                }, { rerender: false });
+              },
+              { step: 1 },
+            ),
+          ),
+        );
+        break;
+      case 'threatOnDebuff':
+        effectGrid.appendChild(
+          createFieldRow(
+            'multiplier',
+            createNumberInput(
+              passive.multiplier ?? 1,
+              (multiplier) => {
+                this.patchPassive(index, (current) => {
+                  current.multiplier = multiplier;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        break;
+      case 'selfLowHpDamageScale':
+        effectGrid.appendChild(
+          createFieldRow(
+            'scale',
+            createNumberInput(
+              passive.scale ?? 1,
+              (scale) => {
+                this.patchPassive(index, (current) => {
+                  current.scale = scale;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'maxMul',
+            createNumberInput(
+              passive.maxMul ?? 1,
+              (maxMul) => {
+                this.patchPassive(index, (current) => {
+                  current.maxMul = maxMul;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        break;
+      case 'damageTakenToHeal':
+        effectGrid.appendChild(
+          createFieldRow(
+            'ratio',
+            createNumberInput(
+              passive.ratio ?? 0,
+              (ratio) => {
+                this.patchPassive(index, (current) => {
+                  current.ratio = ratio;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        break;
+      case 'partyHotAura':
+        appendResourceAmountFields(
+          effectGrid,
+          passive.partyHotAuraAmount ?? { kind: 'atkBased', atkScale: 0.05 },
+          (amount) => {
+            this.patchPassive(index, (current) => {
+              current.partyHotAuraAmount = amount;
+            }, { rerender: false });
+          },
+        );
+        break;
+      case 'healAppliesBarrier':
+        effectGrid.appendChild(
+          createFieldRow(
+            'barrierScale',
+            createNumberInput(
+              passive.barrierScale ?? 1,
+              (barrierScale) => {
+                this.patchPassive(index, (current) => {
+                  current.barrierScale = barrierScale;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        break;
+      case 'extendSelfAppliedDebuff':
+        effectGrid.appendChild(
+          createFieldRow(
+            'extendSec（任意）',
+            createNumberInput(
+              passive.extendSec ?? 0,
+              (extendSec) => {
+                this.patchPassive(index, (current) => {
+                  current.extendSec = extendSec || undefined;
+                }, { rerender: false });
+              },
+              { step: 0.1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'durationMultiplier（任意）',
+            createNumberInput(
+              passive.durationMultiplier ?? 1,
+              (durationMultiplier) => {
+                this.patchPassive(index, (current) => {
+                  current.durationMultiplier =
+                    durationMultiplier === 1 ? undefined : durationMultiplier;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        break;
+      case 'aoeCrowdBonus':
+        effectGrid.appendChild(
+          createFieldRow(
+            'perExtraTargetScale',
+            createNumberInput(
+              passive.perExtraTargetScale ?? 0.1,
+              (perExtraTargetScale) => {
+                this.patchPassive(index, (current) => {
+                  current.perExtraTargetScale = perExtraTargetScale;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'maxExtraTargets',
+            createNumberInput(
+              passive.maxExtraTargets ?? 4,
+              (maxExtraTargets) => {
+                this.patchPassive(index, (current) => {
+                  current.maxExtraTargets = maxExtraTargets;
+                }, { rerender: false });
+              },
+              { step: 1 },
             ),
           ),
         );

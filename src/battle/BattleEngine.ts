@@ -1,5 +1,5 @@
 import type { BattleEventListener } from "./events.ts";
-import { getActiveCooldownRate, getPassiveDefs, resolveDotAmountFromStatus, resolveHotAmountFromStatus, applyDamageToTarget, applyHealToTarget } from "./combatMath.ts";
+import { resolveDotAmountFromStatus, resolveHotAmountFromStatus, applyDamageToTarget, applyHealToTarget } from "./combatMath.ts";
 import {
   createAlliesFromPartyState,
   createCooldowns,
@@ -855,11 +855,6 @@ export class BattleEngine {
   private tickCooldowns(units: CombatantState[], deltaTime: number): void {
     for (const unit of units) {
       if (!unit.isAlive) continue;
-      const passives = getPassiveDefs(
-        unit,
-        this.gameData.skillRegistry.passives
-      );
-      const activeRate = getActiveCooldownRate(passives);
       let basicRate = 1;
       if (unit.isEnemy) {
         const enemyTemplate = this.gameData.enemyRegistry[unit.classId];
@@ -882,7 +877,7 @@ export class BattleEngine {
         if (cd.remaining <= 0) continue;
         const skill = this.gameData.skillRegistry.actives[cd.skillId];
         if (!skill || !shouldTickCooldown(skill, cd.slotKind)) continue;
-        const rate = cd.slotKind === "active" ? activeRate : basicRate;
+        const rate = cd.slotKind === "active" ? 1 : basicRate;
         cd.remaining = Math.max(0, cd.remaining - deltaTime * rate);
       }
     }

@@ -20,24 +20,6 @@ export function getPassiveDefs(
     .filter((p): p is PassiveSkillDef => p !== undefined);
 }
 
-export function getPassiveDamageMultiplier(passives: PassiveSkillDef[]): number {
-  return passives.reduce((acc, p) => acc * (p.damageMultiplier ?? 1), 1);
-}
-
-export function getPassiveDamageTakenMultiplier(
-  passives: PassiveSkillDef[],
-): number {
-  return passives.reduce((acc, p) => acc * (p.damageTakenMultiplier ?? 1), 1);
-}
-
-export function getPassiveHealBonus(passives: PassiveSkillDef[]): number {
-  return passives.reduce((acc, p) => acc + (p.healBonus ?? 0), 0);
-}
-
-export function getActiveCooldownRate(passives: PassiveSkillDef[]): number {
-  return passives.reduce((acc, p) => acc * (p.activeCooldownRate ?? 1), 1);
-}
-
 export function getEffectiveAtk(combatant: CombatantState): number {
   const agg = aggregateStatEffects(combatant.statusEffects, 'atk');
   return computeEffectiveStat(combatant.atk, agg);
@@ -62,27 +44,21 @@ export function resolvePowerAmount(
   actor: CombatantState,
   target: CombatantState,
   spec: ResourceAmountSpec,
-  passives: Record<string, PassiveSkillDef>,
+  _passives: Record<string, PassiveSkillDef>,
   atkScaleOverride?: number,
-  options?: { includeHealBonus?: boolean },
 ): number {
-  const actorPassives = getPassiveDefs(actor, passives);
-  const healBonus = options?.includeHealBonus
-    ? getPassiveHealBonus(actorPassives)
-    : 0;
-
   switch (spec.kind) {
     case 'atkBased': {
       const offset = spec.atkOffset ?? 0;
       const scale = atkScaleOverride ?? spec.atkScale ?? 1;
-      const base = (getEffectiveAtk(actor) + healBonus + offset) * scale;
+      const base = (getEffectiveAtk(actor) + offset) * scale;
       return Math.floor(Math.max(0, base));
     }
     case 'flat':
-      return Math.floor(Math.max(0, (spec.flatAmount ?? 0) + healBonus));
+      return Math.floor(Math.max(0, spec.flatAmount ?? 0));
     case 'percentMaxHp':
       return Math.floor(
-        Math.max(0, target.maxHp * (spec.percentOfMaxHp ?? 0) + healBonus),
+        Math.max(0, target.maxHp * (spec.percentOfMaxHp ?? 0)),
       );
   }
 }
@@ -94,9 +70,7 @@ export function resolveResourceAmount(
   passives: Record<string, PassiveSkillDef>,
   atkScaleOverride?: number,
 ): number {
-  return resolvePowerAmount(actor, target, spec, passives, atkScaleOverride, {
-    includeHealBonus: true,
-  });
+  return resolvePowerAmount(actor, target, spec, passives, atkScaleOverride);
 }
 
 export function resolveHotAmountFromStatus(
@@ -181,8 +155,6 @@ export function resolveDamage(
   passives: Record<string, PassiveSkillDef>,
   atkScaleOverride?: number,
 ): number {
-  const attackerPassives = getPassiveDefs(attacker, passives);
-  const targetPassives = getPassiveDefs(target, passives);
   const baseDamage = Math.floor(
     resolvePowerAmount(
       attacker,
@@ -190,8 +162,7 @@ export function resolveDamage(
       effect.amount,
       passives,
       atkScaleOverride,
-      { includeHealBonus: false },
-    ) * getPassiveDamageMultiplier(attackerPassives),
+    ),
   );
   const damageType: DamageType = effect.damageType;
   const effectiveDef = getEffectiveDef(target);
@@ -213,9 +184,7 @@ export function resolveDamage(
     }
   }
 
-  const takenMul =
-    getDamageTakenMultiplier(target) *
-    getPassiveDamageTakenMultiplier(targetPassives);
+  const takenMul = getDamageTakenMultiplier(target);
   return Math.max(1, Math.floor(afterDefense * takenMul));
 }
 

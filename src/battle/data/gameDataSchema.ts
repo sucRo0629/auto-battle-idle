@@ -153,13 +153,36 @@ export const POWER_STEP_MODES = [
 ] as const satisfies readonly import("../types.ts").PowerStepMode[];
 
 export const PASSIVE_EFFECT_KINDS = [
-  "damageMultiplier",
-  "damageTakenMultiplier",
-  "healBonus",
   "targetRuleOverride",
   "evasionChance",
-  "activeCooldownRate",
+  "basicAttackFeedsActive",
+  "heavyStrikeDamageScale",
+  "threatBonus",
+  "threatOnDebuff",
+  "selfLowHpDamageScale",
+  "damageTakenToHeal",
+  "partyHotAura",
+  "healAppliesBarrier",
+  "extendSelfAppliedDebuff",
+  "aoeCrowdBonus",
+  "damageVsDotTarget",
 ] as const satisfies readonly PassiveEffectKind[];
+
+export const PASSIVE_EFFECT_KIND_LABELS: Record<PassiveEffectKind, string> = {
+  targetRuleOverride: "ターゲット上書き",
+  evasionChance: "回避率",
+  basicAttackFeedsActive: "通常攻撃で構え",
+  heavyStrikeDamageScale: "重撃威力倍率",
+  threatBonus: "ヘイトボーナス",
+  threatOnDebuff: "デバフ付与ヘイト倍化",
+  selfLowHpDamageScale: "低HP火力",
+  damageTakenToHeal: "被ダメ回復",
+  partyHotAura: "味方全体HoT",
+  healAppliesBarrier: "回復時バリア",
+  extendSelfAppliedDebuff: "デバフ延長",
+  aoeCrowdBonus: "密集ボーナス",
+  damageVsDotTarget: "DoT対象与ダメ増",
+};
 export const STATUS_EFFECT_STATS = [
   "atk",
   "def",

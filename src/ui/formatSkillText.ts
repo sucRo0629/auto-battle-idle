@@ -1,3 +1,4 @@
+import { TARGET_RULE_LABELS } from '../battle/data/gameDataSchema.ts';
 import { resolveSkillTrigger } from '../battle/skillTrigger.ts';
 import type {
   ActiveSkillDef,
@@ -20,18 +21,34 @@ function formatTriggerLabel(kind: SkillTriggerKind, value: number): string {
 
 function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): string {
   switch (effect) {
-    case 'damageMultiplier':
-      return `与ダメ ×${def.damageMultiplier ?? 1}`;
-    case 'damageTakenMultiplier':
-      return `被ダメ ×${def.damageTakenMultiplier ?? 1}`;
-    case 'healBonus':
-      return `回復 +${def.healBonus ?? 0}`;
     case 'targetRuleOverride':
-      return `ターゲット → ${def.targetRuleOverride ?? '?'}`;
+      return `ターゲット → ${TARGET_RULE_LABELS[def.targetRuleOverride ?? 'frontEnemy']}`;
     case 'evasionChance':
       return `回避 +${def.evasionChance ?? 0}`;
-    case 'activeCooldownRate':
-      return `アクティブCD ×${def.activeCooldownRate ?? 1}`;
+    case 'basicAttackFeedsActive':
+      return def.feedActiveSkillId
+        ? `通常攻撃で ${def.feedActiveSkillId} を構え`
+        : '通常攻撃で構え';
+    case 'heavyStrikeDamageScale':
+      return `重撃 ×${def.scale ?? 1}`;
+    case 'threatBonus':
+      return `ヘイト +${def.bonus ?? 0}`;
+    case 'threatOnDebuff':
+      return `デバフヘイト ×${def.multiplier ?? 1}`;
+    case 'selfLowHpDamageScale':
+      return `低HP火力 scale ${def.scale ?? 1}（上限 ×${def.maxMul ?? 1}）`;
+    case 'damageTakenToHeal':
+      return `被ダメ回復 ${def.ratio ?? 0}`;
+    case 'partyHotAura':
+      return '味方全体 HoT';
+    case 'healAppliesBarrier':
+      return `回復バリア ×${def.barrierScale ?? 1}`;
+    case 'extendSelfAppliedDebuff':
+      return '付与デバフ延長';
+    case 'aoeCrowdBonus':
+      return `密集 +${def.perExtraTargetScale ?? 0}/体（上限 ${def.maxExtraTargets ?? 0}）`;
+    case 'damageVsDotTarget':
+      return `DoT対象与ダメ ×${def.scale ?? 1}`;
     default:
       return effect;
   }

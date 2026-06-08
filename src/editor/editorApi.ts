@@ -656,8 +656,8 @@ export function defaultPassiveSkill(id: string): PassiveSkillDef {
   return {
     id,
     name: id,
-    effect: 'damageMultiplier',
-    damageMultiplier: 1.1,
+    effect: 'targetRuleOverride',
+    targetRuleOverride: 'frontEnemy',
   };
 }
 

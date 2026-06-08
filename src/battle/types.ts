@@ -253,12 +253,19 @@ export interface CombatantState extends Combatant {
 }
 
 export type PassiveEffectKind =
-  | "damageMultiplier"
-  | "damageTakenMultiplier"
-  | "healBonus"
   | "targetRuleOverride"
   | "evasionChance"
-  | "activeCooldownRate";
+  | "basicAttackFeedsActive"
+  | "heavyStrikeDamageScale"
+  | "threatBonus"
+  | "threatOnDebuff"
+  | "selfLowHpDamageScale"
+  | "damageTakenToHeal"
+  | "partyHotAura"
+  | "healAppliesBarrier"
+  | "extendSelfAppliedDebuff"
+  | "aoeCrowdBonus"
+  | "damageVsDotTarget";
 
 export interface PassiveSkillDef {
   id: string;
@@ -267,11 +274,21 @@ export interface PassiveSkillDef {
   iconKey?: string;
   effect: PassiveEffectKind;
   targetRuleOverride?: TargetRule;
-  damageMultiplier?: number;
-  damageTakenMultiplier?: number;
-  healBonus?: number;
   evasionChance?: number;
-  activeCooldownRate?: number;
+  /** basicAttackFeedsActive: 対象アクティブ skillId（未指定 = basicAttackCount トリガー全般） */
+  feedActiveSkillId?: string;
+  scale?: number;
+  maxMul?: number;
+  bonus?: number;
+  multiplier?: number;
+  ratio?: number;
+  partyHotAuraAmount?: ResourceAmountSpec;
+  barrierScale?: number;
+  extendSec?: number;
+  durationMultiplier?: number;
+  perExtraTargetScale?: number;
+  maxExtraTargets?: number;
+  selfAppliedOnly?: boolean;
 }
 
 export type SkillEffectKind =

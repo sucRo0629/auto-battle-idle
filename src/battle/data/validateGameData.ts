@@ -123,6 +123,18 @@ function requireNumber(
   return value;
 }
 
+function requireBoolean(
+  obj: Record<string, unknown>,
+  key: string,
+  context: string,
+): boolean {
+  const value = obj[key];
+  if (typeof value !== 'boolean') {
+    invalidField(context, key, 'must be a boolean');
+  }
+  return value;
+}
+
 function requireBuffOrDebuffModifier(
   obj: Record<string, unknown>,
   context: string,
@@ -849,22 +861,6 @@ function requirePassiveEffectParams(
   };
 
   switch (effect) {
-    case 'damageMultiplier':
-      return {
-        ...base,
-        damageMultiplier: requireNumber(obj, 'damageMultiplier', context),
-      };
-    case 'damageTakenMultiplier':
-      return {
-        ...base,
-        damageTakenMultiplier: requireNumber(
-          obj,
-          'damageTakenMultiplier',
-          context,
-        ),
-      };
-    case 'healBonus':
-      return { ...base, healBonus: requireNumber(obj, 'healBonus', context) };
     case 'targetRuleOverride':
       return {
         ...base,
@@ -880,10 +876,79 @@ function requirePassiveEffectParams(
         ...base,
         evasionChance: requireNumber(obj, 'evasionChance', context),
       };
-    case 'activeCooldownRate':
+    case 'basicAttackFeedsActive': {
+      const feedActiveSkillId =
+        obj.feedActiveSkillId === undefined
+          ? undefined
+          : requireString(obj, 'feedActiveSkillId', context);
       return {
         ...base,
-        activeCooldownRate: requireNumber(obj, 'activeCooldownRate', context),
+        ...(feedActiveSkillId !== undefined ? { feedActiveSkillId } : {}),
+      };
+    }
+    case 'heavyStrikeDamageScale':
+    case 'damageVsDotTarget':
+      return {
+        ...base,
+        scale: requireNumber(obj, 'scale', context),
+        ...(effect === 'damageVsDotTarget' && obj.selfAppliedOnly !== undefined
+          ? { selfAppliedOnly: requireBoolean(obj, 'selfAppliedOnly', context) }
+          : {}),
+      };
+    case 'threatBonus':
+      return { ...base, bonus: requireNumber(obj, 'bonus', context) };
+    case 'threatOnDebuff':
+      return { ...base, multiplier: requireNumber(obj, 'multiplier', context) };
+    case 'selfLowHpDamageScale':
+      return {
+        ...base,
+        scale: requireNumber(obj, 'scale', context),
+        maxMul: requireNumber(obj, 'maxMul', context),
+      };
+    case 'damageTakenToHeal':
+      return { ...base, ratio: requireNumber(obj, 'ratio', context) };
+    case 'partyHotAura':
+      return {
+        ...base,
+        partyHotAuraAmount: parseResourceAmountSpec(
+          obj.partyHotAuraAmount,
+          `${context}.partyHotAuraAmount`,
+        ),
+      };
+    case 'healAppliesBarrier':
+      return {
+        ...base,
+        barrierScale: requireNumber(obj, 'barrierScale', context),
+      };
+    case 'extendSelfAppliedDebuff': {
+      const extendSec = parseOptionalNumber(obj, 'extendSec', context);
+      const durationMultiplier = parseOptionalNumber(
+        obj,
+        'durationMultiplier',
+        context,
+      );
+      if (extendSec === undefined && durationMultiplier === undefined) {
+        invalidField(
+          context,
+          'extendSec',
+          'or durationMultiplier is required',
+        );
+      }
+      return {
+        ...base,
+        ...(extendSec !== undefined ? { extendSec } : {}),
+        ...(durationMultiplier !== undefined ? { durationMultiplier } : {}),
+      };
+    }
+    case 'aoeCrowdBonus':
+      return {
+        ...base,
+        perExtraTargetScale: requireNumber(
+          obj,
+          'perExtraTargetScale',
+          context,
+        ),
+        maxExtraTargets: requireNumber(obj, 'maxExtraTargets', context),
       };
   }
 }
