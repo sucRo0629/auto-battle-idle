@@ -53,38 +53,54 @@ export function getEnemyContactX(enemies: CombatantState[]): number | null {
   return Math.max(...living.map((e) => e.battleX));
 }
 
-/** 最前線生存味方の battleX（敵から最も近い味方） */
-export function getAllyContactX(allies: CombatantState[]): number | null {
+function livingAlliesOnLeadingRow(
+  allies: CombatantState[],
+): CombatantState[] {
   const living = allies.filter((a) => a.isAlive);
-  if (living.length === 0) return null;
-  return Math.min(...living.map((a) => a.battleX));
+  if (living.length === 0) return [];
+  for (const row of ROW_ORDER) {
+    const rowUnits = living.filter((a) => a.formationRow === row);
+    if (rowUnits.length > 0) return rowUnits;
+  }
+  return [];
 }
 
-/** 接敵ロジック（min battleX）と同じ味方の visual 基準点 */
+/** 最前線生存列のうち最も敵側（min battleX）— 後列の射程調整は含めない */
+export function getAllyContactX(allies: CombatantState[]): number | null {
+  const frontLine = livingAlliesOnLeadingRow(allies);
+  if (frontLine.length === 0) return null;
+  return Math.min(...frontLine.map((a) => a.battleX));
+}
+
+function leadingRowContactAlly(
+  allies: CombatantState[],
+): CombatantState | null {
+  const frontLine = livingAlliesOnLeadingRow(allies);
+  if (frontLine.length === 0) return null;
+  return frontLine.reduce((best, ally) =>
+    ally.battleX < best.battleX ? ally : best,
+  );
+}
+
+/** 接敵ロジック（最前線列の min battleX）と同じ味方の visual 基準点 */
 export function getBattleContactAllyVisual(
   allies: CombatantState[],
 ): { visualX: number; rangePx: number } | null {
-  const living = allies.filter((a) => a.isAlive);
-  if (living.length === 0) return null;
-  const contact = living.reduce((best, ally) =>
-    ally.battleX < best.battleX ? ally : best,
-  );
+  const contact = leadingRowContactAlly(allies);
+  if (!contact) return null;
   return {
     visualX: contact.visualX,
     rangePx: contact.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
   };
 }
 
-/** 敵 visualX を battleX ベースの接敵位置へ写像（contact 味方の visual−battle オフセット） */
+/** 敵 visualX を battleX ベースの接敵位置へ写像（最前線味方の visual−battle オフセット） */
 export function syncEnemyVisualToBattleContact(
   allies: CombatantState[],
   enemies: CombatantState[],
 ): void {
-  const living = allies.filter((a) => a.isAlive);
-  if (living.length === 0) return;
-  const contact = living.reduce((best, ally) =>
-    ally.battleX < best.battleX ? ally : best,
-  );
+  const contact = leadingRowContactAlly(allies);
+  if (!contact) return;
   const offset = contact.visualX - contact.battleX;
   for (const enemy of enemies) {
     if (!enemy.isAlive) continue;

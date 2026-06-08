@@ -20,6 +20,35 @@
   gap: 4px;
 }
 
+.debug-menu-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--canvas-border-color);
+}
+
+.debug-menu-stage-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  color: #c8d6e5;
+}
+
+.debug-menu-stage-select {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 4px;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 4px;
+  background: #0f0f1a;
+  color: var(--app-text);
+  font: inherit;
+}
+
 .debug-menu-row {
   display: flex;
   align-items: center;

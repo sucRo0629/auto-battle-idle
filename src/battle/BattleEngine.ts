@@ -21,6 +21,7 @@ import {
   shouldStartApproach,
   updateUnitApproach,
 } from "./combatPosition.ts";
+import { resolveAllyApproachBattleX } from "./resolveApproachBattleX.ts";
 import { deathAnimDurationMs } from "../render/deathPlayback.ts";
 import {
   APPROACH_SPEED,
@@ -316,7 +317,12 @@ export class BattleEngine {
 
     for (const ally of this.allies) {
       if (this.skillSequenceRunner.isActorBusy(ally.id)) continue;
-      const target = resolveAttackBattleX(ally, enemyContact, this.gameData);
+      const target = resolveAllyApproachBattleX(
+        ally,
+        this.allies,
+        this.enemies,
+        this.gameData,
+      );
       updateUnitApproach(ally, target, approachStep);
     }
 

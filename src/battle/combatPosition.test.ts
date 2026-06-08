@@ -3,6 +3,7 @@ import type { CombatantState, GameData } from './types.ts';
 import { BATTLE_ENEMY_VISIBLE_MIN_X } from './types.ts';
 import {
   assignInitialAllyBattleX,
+  getAllyContactX,
   getBattleContactAllyVisual,
   getEnemyContactX,
   isEnemyVisibleOnScreen,
@@ -152,6 +153,21 @@ describe('combatPosition', () => {
     expect(getEnemyContactX([e1, e2])).toBe(40);
   });
 
+  it('getAllyContactX ignores back row battleX advanced for ranged approach', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 120,
+    });
+    const archer = mockCombatant({
+      id: 'archer',
+      formationRow: 'back',
+      traits: { attackRange: 'ranged', rangePx: 140 },
+      battleX: 70,
+    });
+    expect(getAllyContactX([guard, archer])).toBe(120);
+  });
+
   it('resolveMoveBattleX engage and behindTarget', () => {
     const sword = mockCombatant({
       id: 'sword',
@@ -197,7 +213,7 @@ describe('combatPosition', () => {
 });
 
 describe('battle contact visual sync', () => {
-  it('getBattleContactAllyVisual picks min battleX ally visual', () => {
+  it('getBattleContactAllyVisual picks leading row contact, not advanced back row', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
@@ -208,7 +224,7 @@ describe('battle contact visual sync', () => {
       id: 'archer',
       formationRow: 'back',
       traits: { attackRange: 'ranged', rangePx: 140 },
-      battleX: 326,
+      battleX: 70,
       visualX: 180,
     });
     const contact = getBattleContactAllyVisual([guard, archer]);

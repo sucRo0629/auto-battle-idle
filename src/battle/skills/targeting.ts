@@ -27,14 +27,32 @@ import { getTargetPoolForRule } from './targetingPool.ts';
 
 export { getTargetPoolForRule } from './targetingPool.ts';
 
+export interface TargetRuleContext {
+  actor: CombatantState;
+  allies: CombatantState[];
+  enemies: CombatantState[];
+}
+
+/** パッシブ targetRuleOverride は候補がいるときだけ適用（射手排除など） */
 export function resolveTargetRule(
   passives: PassiveSkillDef[],
   defaultRule: TargetRule,
+  context?: TargetRuleContext,
 ): TargetRule {
   for (let i = passives.length - 1; i >= 0; i--) {
-    if (passives[i].targetRuleOverride) {
-      return passives[i].targetRuleOverride!;
+    const override = passives[i].targetRuleOverride;
+    if (!override) continue;
+    if (context) {
+      const pool = getTargetPoolForRule(
+        override,
+        context.actor,
+        context.allies,
+        context.enemies,
+      );
+      if (pool.length > 0) return override;
+      continue;
     }
+    return override;
   }
   return defaultRule;
 }

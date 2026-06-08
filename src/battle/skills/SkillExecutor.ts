@@ -94,7 +94,11 @@ export class SkillExecutor {
     let appliedAny = false;
     for (let effectIndex = 0; effectIndex < skill.effect.length; effectIndex++) {
       const effectDef = skill.effect[effectIndex]!;
-      const targetRule = resolveTargetRule(passives, effectDef.targetRule);
+      const targetRule = resolveTargetRule(passives, effectDef.targetRule, {
+        actor,
+        allies,
+        enemies,
+      });
       const resolution = resolveEffectResolution(
         effectDef,
         targetRule,
@@ -164,7 +168,11 @@ export class SkillExecutor {
       actor,
       this.gameData.skillRegistry.passives,
     );
-    const rule = resolveTargetRule(passives, step.effectDef.targetRule);
+    const rule = resolveTargetRule(passives, step.effectDef.targetRule, {
+      actor,
+      allies,
+      enemies,
+    });
     const target =
       step.effectDef.type === 'move'
         ? findCombatantById(step.targetId, allies, enemies)

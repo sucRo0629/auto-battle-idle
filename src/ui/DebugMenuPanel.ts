@@ -4,6 +4,8 @@ import type { GameData, SaveGameState } from '../battle/types.ts';
 export interface DebugMenuControls {
   isVerifyMode: () => boolean;
   getSave: () => SaveGameState;
+  getLoopStageId: () => string | null;
+  onLoopStageChange: (stageId: string | null) => void;
   onMemberLevelChange: (partyIndex: number, level: number) => void;
 }
 
@@ -41,6 +43,40 @@ export class DebugMenuPanel {
 
     const save = this.controls.getSave();
     this.rowsHost.replaceChildren();
+
+    const stageRow = document.createElement('div');
+    stageRow.className = 'debug-menu-stage-row';
+
+    const stageLabel = document.createElement('label');
+    stageLabel.className = 'debug-menu-stage-label';
+    stageLabel.textContent = '周回ステージ';
+
+    const stageSelect = document.createElement('select');
+    stageSelect.className = 'debug-menu-stage-select';
+
+    const normalOption = document.createElement('option');
+    normalOption.value = '';
+    normalOption.textContent = '通常進行';
+    stageSelect.appendChild(normalOption);
+
+    for (const stage of this.gameData.stages) {
+      const option = document.createElement('option');
+      option.value = stage.id;
+      option.textContent = stage.displayName;
+      stageSelect.appendChild(option);
+    }
+
+    const loopStageId = this.controls.getLoopStageId();
+    stageSelect.value = loopStageId ?? '';
+
+    stageSelect.addEventListener('change', () => {
+      const selected = stageSelect.value;
+      this.controls.onLoopStageChange(selected === '' ? null : selected);
+    });
+
+    stageLabel.appendChild(stageSelect);
+    stageRow.appendChild(stageLabel);
+    this.rowsHost.appendChild(stageRow);
 
     save.party.forEach((member, partyIndex) => {
       if (!member) return;

@@ -1,5 +1,14 @@
 import type { GameData, SaveGameState, StageDef } from '../battle/types.ts';
 
+export function resolveVictoryNextStageId(
+  stages: StageDef[],
+  currentStageId: string,
+  loopStageId: string | null | undefined,
+): string {
+  if (loopStageId) return loopStageId;
+  return getNextStageId(stages, currentStageId);
+}
+
 export function getNextStageId(
   stages: StageDef[],
   currentStageId: string,

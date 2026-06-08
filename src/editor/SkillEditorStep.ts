@@ -1095,8 +1095,9 @@ export class SkillEditorStep {
       createFieldRow(
         'プリセット',
         createSelect(
-          (preset || 'slash') as SkillVfxPresetId,
+          (preset || '') as SkillVfxPresetId | '',
           [
+            { value: '', label: '— 既定（role/射程）—' },
             { value: 'slash' as SkillVfxPresetId, label: 'slash' },
             ...VFX_PRESET_OPTIONS.filter((v) => v !== 'slash').map((value) => ({
               value,
@@ -1105,8 +1106,12 @@ export class SkillEditorStep {
           ],
           (value) => {
             setActive((current) => {
-              current.vfx = { ...current.vfx, preset: value };
-            }, { rerender: false });
+              if (value.length === 0) {
+                current.vfx = undefined;
+              } else {
+                current.vfx = { ...current.vfx, preset: value };
+              }
+            }, { rerender: value.length === 0 });
           },
         ),
       ),
@@ -1740,8 +1745,18 @@ export class SkillEditorStep {
       }
     }
 
-    if (showPerEffectPresentation) {
+    if (effectSupportsPresentationFields(effect)) {
       appendEffectPresentationFields(parent, effect, patchEffect);
     }
   }
+}
+
+function effectSupportsPresentationFields(effect: SkillEffectDef): boolean {
+  return (
+    effect.type === 'move' ||
+    effect.type === 'damage' ||
+    effect.type === 'dot' ||
+    effect.type === 'heal' ||
+    effect.type === 'hot'
+  );
 }

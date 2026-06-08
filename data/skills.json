@@ -272,6 +272,29 @@
         "preset": "arrow",
         "durationMs": 50
       }
+    },
+    {
+      "id": "test_ranged_basic_attack",
+      "name": "test_ranged_basic_attack",
+      "trigger": {
+        "kind": "time",
+        "value": 5
+      },
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ],
+      "vfx": {
+        "preset": "arrow",
+        "arc": true
+      }
     }
   ]
 }

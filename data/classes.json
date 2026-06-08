@@ -78,6 +78,9 @@
     },
     "attackSpeedTier": "fast",
     "basicAttackSkillId": "attacker_kyushi_basic_attack",
+    "passiveIds": [
+      "attacker_kyushi_passive_1"
+    ],
     "skills": [
       {
         "level": 0,

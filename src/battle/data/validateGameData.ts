@@ -32,6 +32,7 @@ import type {
 } from '../types.ts';
 import {
   enrichClassPreset,
+  getClassSkillIds,
   type ClassPresetBeforeEnrich,
 } from '../../progression/skillUnlocks.ts';
 
@@ -1009,6 +1010,10 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       obj.iconKey === undefined
         ? undefined
         : requireString(obj, 'iconKey', context);
+    const passiveIds =
+      obj.passiveIds === undefined
+        ? []
+        : requireStringArray(obj, 'passiveIds', context);
     const skills = parseClassSkills(obj.skills, context);
     if (skills.length === 0) {
       throw new Error(`${context}.skills must not be empty`);
@@ -1054,6 +1059,7 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       basicAttackSkillId,
       spriteKey,
       iconKey,
+      ...(passiveIds.length > 0 ? { passiveIds } : {}),
       skills,
       ...(jobTier !== undefined ? { jobTier } : {}),
       ...(promotion !== undefined ? { promotion } : {}),
@@ -1360,9 +1366,9 @@ function validateReferences(
     if (mode === 'editor') {
       continue;
     }
-    for (const passiveId of cls.starterPassiveIds) {
+    for (const passiveId of cls.passiveIds ?? cls.starterPassiveIds) {
       if (!passiveIds.has(passiveId)) {
-        throw new Error(`Unknown starterPassiveId "${passiveId}": ${cls.id}`);
+        throw new Error(`Unknown passiveId "${passiveId}": ${cls.id}`);
       }
     }
     for (const activeId of cls.starterActiveIds) {
@@ -1370,14 +1376,24 @@ function validateReferences(
         throw new Error(`Unknown starterActiveId "${activeId}": ${cls.id}`);
       }
     }
-    for (const skillId of cls.classSkillIds) {
-      if (!passiveIds.has(skillId) && !activeIds.has(skillId)) {
-        throw new Error(`Unknown class skillId "${skillId}": ${cls.id}`);
+    for (const skillId of getClassSkillIds(cls.skills)) {
+      if (passiveIds.has(skillId)) {
+        throw new Error(
+          `passive "${skillId}" must be listed in passiveIds, not skills[]: ${cls.id}`,
+        );
+      }
+      if (!activeIds.has(skillId)) {
+        throw new Error(`Unknown active skillId in skills[] "${skillId}": ${cls.id}`);
       }
       if (skillId === cls.basicAttackSkillId) {
         throw new Error(
           `basicAttackSkillId must not appear in skills[]: ${cls.id}`,
         );
+      }
+    }
+    for (const skillId of cls.classSkillIds) {
+      if (!passiveIds.has(skillId) && !activeIds.has(skillId)) {
+        throw new Error(`Unknown class skillId "${skillId}": ${cls.id}`);
       }
     }
   }
@@ -1434,9 +1450,10 @@ function validateReferences(
         if (!passiveIds.has(passiveId)) {
           throw new Error(`Unknown learnedPassiveId "${passiveId}": ${context}`);
         }
-        if (!classSkillPool.has(passiveId)) {
+        const classPassiveIds = new Set(cls.passiveIds ?? cls.starterPassiveIds);
+        if (!classPassiveIds.has(passiveId)) {
           throw new Error(
-            `learnedPassiveId "${passiveId}" is not in class skills[]: ${context}`,
+            `learnedPassiveId "${passiveId}" is not in class passiveIds: ${context}`,
           );
         }
       }

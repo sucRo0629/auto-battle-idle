@@ -12,6 +12,10 @@ import {
 } from '../progression/skillBuild.ts';
 import { applyDebugMemberLevel } from '../dev/debugLevel.ts';
 import {
+  getDebugLoopStageId,
+  setDebugLoopStageId,
+} from '../dev/debugLoopStage.ts';
+import {
   isVerifyModeEnabled,
   partyIdForVerifyMode,
   saveStorageKey,
@@ -22,6 +26,7 @@ import {
   applyStageRollbackOnDefeat,
   computeStageExpReward,
   getStageById,
+  resolveVictoryNextStageId,
 } from '../progression/stageProgression.ts';
 import {
   applyVictoryRewards,
@@ -41,6 +46,7 @@ export class GameSession {
   private readonly levelCurves: LevelCurvesConfig;
   private save: SaveGameState;
   private verifyMode: boolean;
+  private loopStageId: string | null;
   private readonly engine: BattleEngine;
   readonly view: BattleView;
   private autoSaveTimer: ReturnType<typeof setInterval> | null = null;
@@ -55,7 +61,11 @@ export class GameSession {
   ) {
     this.levelCurves = loadLevelCurves(levelCurvesJson);
     this.verifyMode = isVerifyModeEnabled();
+    this.loopStageId = this.verifyMode ? getDebugLoopStageId() : null;
     this.save = this.loadSaveForMode(this.verifyMode);
+    if (this.verifyMode && this.loopStageId) {
+      this.save.stageProgress.currentStageId = this.loopStageId;
+    }
     this.stageDamageStats.resetForStage(
       this.save.stageProgress.currentStageId,
     );
@@ -84,6 +94,8 @@ export class GameSession {
         onOpenMetaMenu: () => this.openPartyMenu(),
         onMemberLevelChange: (partyIndex, level) =>
           this.setMemberLevel(partyIndex, level),
+        getLoopStageId: () => this.getLoopStageId(),
+        onLoopStageChange: (stageId) => this.setLoopStage(stageId),
         getStageDamageDisplayRows: () =>
           this.stageDamageStats.getDisplayRows(
             this.save.party,
@@ -141,7 +153,11 @@ export class GameSession {
     this.persistSave();
     this.verifyMode = enabled;
     setVerifyModeEnabled(enabled);
+    this.loopStageId = enabled ? getDebugLoopStageId() : null;
     this.save = this.loadSaveForMode(enabled);
+    if (enabled && this.loopStageId) {
+      this.save.stageProgress.currentStageId = this.loopStageId;
+    }
     this.stageDamageStats.resetForStage(
       this.save.stageProgress.currentStageId,
     );
@@ -197,6 +213,30 @@ export class GameSession {
     );
   }
 
+  getLoopStageId(): string | null {
+    return this.verifyMode ? this.loopStageId : null;
+  }
+
+  setLoopStage(stageId: string | null): void {
+    if (!this.verifyMode) return;
+
+    this.loopStageId = stageId;
+    setDebugLoopStageId(stageId);
+
+    if (stageId !== null) {
+      this.save.stageProgress.currentStageId = stageId;
+      this.stageDamageStats.resetForStage(stageId);
+      this.engine.restartBattle();
+      this.persistSave();
+      const stage = getStageById(this.gameData.stages, stageId);
+      console.log(
+        `[debug] Loop stage pinned: ${stage?.displayName ?? stageId}`,
+      );
+    } else {
+      console.log('[debug] Loop stage cleared (normal progression)');
+    }
+  }
+
   tick(deltaSec: number, deltaMs: number): void {
     if (!this.metaMenuOpen && !this.statsOverlayOpen) {
       this.engine.tick(deltaSec);
@@ -233,6 +273,11 @@ export class GameSession {
     const failedStageId = this.save.stageProgress.currentStageId;
     const failedStage = getStageById(this.gameData.stages, failedStageId);
     const failedStageName = failedStage?.displayName ?? failedStageId;
+
+    if (this.verifyMode && this.loopStageId) {
+      console.log(`[progress] Defeat at ${failedStageName} (loop locked)`);
+      return;
+    }
 
     const previousStageId = applyStageRollbackOnDefeat(
       this.save,
@@ -278,6 +323,17 @@ export class GameSession {
       this.levelCurves,
       survivingPartyIndices,
     );
+
+    const loopStageId = this.verifyMode ? this.loopStageId : null;
+    const nextStageId = resolveVictoryNextStageId(
+      this.gameData.stages,
+      clearedStageId,
+      loopStageId,
+    );
+    if (nextStageId !== result.nextStageId) {
+      this.save.stageProgress.currentStageId = nextStageId;
+    }
+
     this.stageDamageStats.resetForStage(
       this.save.stageProgress.currentStageId,
     );
@@ -286,10 +342,11 @@ export class GameSession {
       console.log(`[progress] ${formatLevelUpLog(levelUp)}`);
     }
 
-    const nextStage = getStageById(this.gameData.stages, result.nextStageId);
-    const nextStageName = nextStage?.displayName ?? result.nextStageId;
-    const progressLog =
-      result.nextStageId === clearedStageId
+    const nextStage = getStageById(this.gameData.stages, nextStageId);
+    const nextStageName = nextStage?.displayName ?? nextStageId;
+    const progressLog = loopStageId
+      ? `[progress] Stage clear: ${stageName} (loop: ${nextStageName})`
+      : nextStageId === clearedStageId
         ? `[progress] Stage clear: ${stageName} (loop)`
         : `[progress] Stage clear: ${stageName} → ${nextStageName}`;
     console.log(progressLog);

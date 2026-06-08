@@ -70,6 +70,8 @@ export interface ClassPreset extends CombatStats {
   /** 未指定時は role / attackRange からプレースホルダーを使用 */
   iconKey?: string;
   basicAttackSkillId: string;
+  /** 固定パッシブ（LvUP で増えない）。skills[] とは分離 */
+  passiveIds?: string[];
   skills: ClassSkillUnlock[];
   /** 一次職 = 1（既定）。二次職 = 2 は Phase 7 以降 */
   jobTier?: JobTier;

@@ -34,5 +34,18 @@
     "spriteKey": "enemy_default",
     "basicAttackSkillId": "stage1_1_basic_attack",
     "attackSpeedTier": "somewhatSlow"
+  },
+  {
+    "id": "test_ranged",
+    "displayName": "test_ranged",
+    "maxHp": 100,
+    "atk": 10,
+    "def": 5,
+    "reg": 0,
+    "exp": 0,
+    "spriteKey": "attacker_ranged_placeholder",
+    "basicAttackSkillId": "test_ranged_basic_attack",
+    "attackSpeedTier": "normal",
+    "attackRange": "ranged"
   }
 ]

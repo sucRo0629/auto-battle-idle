@@ -59,7 +59,11 @@ export function buildSkillSequence(
 
   for (let i = 0; i < skill.effect.length; i++) {
     const effectDef = skill.effect[i]!;
-    const rule = resolveTargetRule(passives, effectDef.targetRule);
+    const rule = resolveTargetRule(passives, effectDef.targetRule, {
+      actor,
+      allies,
+      enemies,
+    });
     const anchor = resolveSequenceStepAnchor(
       effectDef,
       rule,

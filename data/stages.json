@@ -12,6 +12,10 @@
           {
             "templateId": "test_enemy",
             "spawnX": -10
+          },
+          {
+            "templateId": "test_ranged",
+            "spawnX": -30
           }
         ]
       }

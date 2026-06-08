@@ -21,6 +21,8 @@ export interface VerifyModeControls {
   onVerifyModeChange: (enabled: boolean) => void;
   onOpenMetaMenu: () => void;
   onMemberLevelChange?: (partyIndex: number, level: number) => void;
+  getLoopStageId?: () => string | null;
+  onLoopStageChange?: (stageId: string | null) => void;
   getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
   getCurrentStageId?: () => string;
   onStatsOverlayOpenChange?: (open: boolean) => void;
@@ -37,6 +39,7 @@ export class BattleView {
   private readonly canvas: BattleCanvas;
   private readonly debugMenu: DebugMenuPanel;
   private statsOverlay: BattleStatsOverlay | null = null;
+  private readonly verifyModeControls?: VerifyModeControls;
 
   constructor(
     container: HTMLElement,
@@ -46,6 +49,7 @@ export class BattleView {
     private readonly getSave: () => SaveGameState,
     verifyModeControls?: VerifyModeControls,
   ) {
+    this.verifyModeControls = verifyModeControls;
     this.root = document.createElement('div');
     this.root.className = 'battle-view';
 
@@ -110,6 +114,11 @@ export class BattleView {
     this.debugMenu = new DebugMenuPanel(this.gameData, {
       isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
       getSave: this.getSave,
+      getLoopStageId: () => verifyModeControls?.getLoopStageId?.() ?? null,
+      onLoopStageChange: (stageId) => {
+        verifyModeControls?.onLoopStageChange?.(stageId);
+        this.debugMenu.refresh();
+      },
       onMemberLevelChange: (partyIndex, level) => {
         verifyModeControls?.onMemberLevelChange?.(partyIndex, level);
         this.debugMenu.refresh();
@@ -197,17 +206,25 @@ export class BattleView {
       this.canvas.playAnim(event.targetId, 'death');
     } else if (event.type === 'battleEnd') {
       this.pushLog(event.result === 'victory' ? 'Victory!' : 'Defeat...');
+      const currentStageId = this.getSave().stageProgress.currentStageId;
       if (event.result === 'victory') {
-        const currentStageId = this.getSave().stageProgress.currentStageId;
-        const nextStageId = getNextStageId(
-          this.gameData.stages,
-          currentStageId,
-        );
-        this.pushLog(
-          nextStageId === currentStageId
-            ? 'Looping current stage...'
-            : 'Advancing to next stage...',
-        );
+        const pinnedLoopStageId =
+          this.verifyModeControls?.getLoopStageId?.() ?? null;
+        if (pinnedLoopStageId) {
+          this.pushLog('Looping pinned stage...');
+        } else {
+          const nextStageId = getNextStageId(
+            this.gameData.stages,
+            currentStageId,
+          );
+          this.pushLog(
+            nextStageId === currentStageId
+              ? 'Looping current stage...'
+              : 'Advancing to next stage...',
+          );
+        }
+      } else if (this.verifyModeControls?.getLoopStageId?.()) {
+        this.pushLog('Staying on pinned stage...');
       } else {
         this.pushLog('Returning to previous stage...');
       }

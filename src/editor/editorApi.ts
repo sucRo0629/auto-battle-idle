@@ -365,13 +365,24 @@ export function resyncEnemyBasicAttackEntry(
   }
 
   const entry = next[idx]!;
+  const previousId = entry.ref.skillId;
   entry.ref.skillId = newId;
-  if (entry.active) {
+
+  if (!entry.active) {
     const existing = skills.actives.find((active) => active.id === newId);
     entry.active = existing
       ? structuredClone(existing)
       : { ...defaultActiveSkill(newId), id: newId };
+    return next;
   }
+
+  if (entry.active.id !== newId) {
+    entry.active = { ...entry.active, id: newId };
+    if (entry.active.name === previousId) {
+      entry.active.name = newId;
+    }
+  }
+
   return next;
 }
 
@@ -434,6 +445,7 @@ export function buildClassSkillsFromEntries(
 ): { level: number; skillIds: string[] }[] {
   const byLevel = new Map<number, string[]>();
   for (const entry of entries) {
+    if (entry.ref.kind === 'passive') continue;
     if (isBasicAttackSkillId(entry.ref.skillId, classId)) continue;
     const skillId = entry.ref.skillId.trim();
     if (!skillId) continue;
@@ -472,13 +484,18 @@ export function initClassSkillEntriesFromPreset(
   ];
   const seen = new Set(refs.map((ref) => ref.skillId));
 
+  for (const passiveId of preset.passiveIds ?? []) {
+    const id = passiveId.trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    refs.push({ skillId: id, kind: 'passive' });
+  }
+
   for (const [skillId] of levelBySkillId) {
     if (skillId === defaultBasicAttackId(classId) || seen.has(skillId)) continue;
+    if (passiveIds.has(skillId)) continue;
     seen.add(skillId);
-    refs.push({
-      skillId,
-      kind: passiveIds.has(skillId) ? 'passive' : 'active',
-    });
+    refs.push({ skillId, kind: 'active' });
   }
 
   return buildSkillDrafts(refs, skills).map((entry) => {
@@ -503,6 +520,7 @@ export function createEmptyClassDraft(): ClassDraft {
       def: 10,
       reg: 0,
       basicAttackSkillId: '',
+      passiveIds: [],
       skills: [{ level: 0, skillIds: [] }],
       jobTier: 1,
       growthTier: defaultGrowthTierForRole('defender'),
@@ -525,6 +543,10 @@ export function buildClassPresetFromDraft(
   entries: SkillDraftEntry[],
 ): ClassPresetBeforeEnrich {
   const cls = structuredClone(draft.class);
+  cls.passiveIds = entries
+    .filter((entry) => entry.ref.kind === 'passive')
+    .map((entry) => entry.ref.skillId.trim())
+    .filter(Boolean);
   cls.skills = buildClassSkillsFromEntries(cls.id, entries);
   cls.jobTier = 1;
   delete cls.promotion;
