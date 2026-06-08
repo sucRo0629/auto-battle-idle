@@ -121,14 +121,10 @@ export type ResourceAmountKind = "atkBased" | "flat" | "percentMaxHp";
 
 export interface ResourceAmountSpec {
   kind: ResourceAmountKind;
-  /** atkBased — 使用者 effectiveAtk + passive healBonus を基準 */
-  atkAdd?: number;
-  /** 未指定時 1（旧 powerMultiplier 互換） */
-  atkMultiply?: number;
-  /** 未指定時 1 */
-  atkDivide?: number;
-  /** 未指定時 0 */
-  atkSubtract?: number;
+  /** atkBased — effectiveAtk への加減（加算・減算の net）。未指定時 0 */
+  atkOffset?: number;
+  /** atkBased — 倍率（乗算・除算の net）。未指定時 1（旧 powerMultiplier 互換） */
+  atkScale?: number;
   /** flat */
   flatAmount?: number;
   /** 0〜1、percentMaxHp — 対象 maxHp 基準 */
@@ -248,6 +244,8 @@ export interface CombatantState extends Combatant {
   battleX: number;
   /** snapshot 出力用。描画は formationLayout の隊形配置で算出 */
   visualX: number;
+  /** 味方: Wave 中の death スプライト表示。Wave 移行で false（HP0・HUD は維持） */
+  corpseVisible: boolean;
   /** 敵のみ: ステージ配置のスポーン battleX */
   spawnX?: number;
 }
@@ -315,8 +313,10 @@ interface SkillEffectCommon {
   targetShape?: TargetShape;
   /** aoe 時必須: anchor から ±px */
   aoeRadiusPx?: number;
-  /** multiLock 時必須: ヒット回数（>= 2） */
+  /** single / aoe / multiLock。single/aoe は省略=1 */
   hitCount?: number;
+  /** single / aoe で hitCount>=2 時必須: 全ヒットを均等分散 */
+  hitDurationSec?: number;
   /** pierce 時: 命中ごとの威力 step */
   piercePowerStepMultiplier?: number;
   piercePowerStepMode?: PowerStepMode;
@@ -327,8 +327,10 @@ interface SkillEffectCommon {
   chainMaxDistancePx?: number;
   chainPowerStepMultiplier?: number;
   chainPowerStepMode?: PowerStepMode;
-  /** scatter 時必須 */
+  /** scatter 時必須: 命中判定半径（乱打半径） */
   scatterRadiusPx?: number;
+  /** scatter 任意: 着弾位置の分散半径（±px）。未指定 = scatterRadiusPx */
+  scatterSpreadRadiusPx?: number;
   scatterHitCount?: number;
   scatterDurationSec?: number;
   /** 0〜1。0 = anchor 中心固定 */
@@ -377,7 +379,7 @@ export interface PendingSkillHit {
 export interface DamageSkillEffect extends SkillEffectCommon {
   type: "damage";
   damageType: DamageType;
-  powerMultiplier: number;
+  amount: ResourceAmountSpec;
 }
 
 export interface HealSkillEffect extends SkillEffectCommon {
@@ -528,6 +530,8 @@ export interface CombatantSnapshot {
   isEnemy: boolean;
   battleX: number;
   visualX: number;
+  /** 味方のみ: フィールド上に death スプライトを描くか */
+  corpseVisible?: boolean;
   statusEffects: StatusEffect[];
   activeCooldowns: {
     skillId: string;
@@ -541,10 +545,17 @@ export interface CombatantSnapshot {
 export interface BattleSnapshot {
   phase: BattlePhase;
   engaged: boolean;
+  /** 0-based。表示は +1 */
+  waveIndex: number;
+  waveCount: number;
   worldOffsetX: number;
   /** 接敵中: 前線を画面中央へ寄せるスプライト描画オフセット */
   combatCameraX: number;
   alliesOffScreen: boolean;
+  /** Victory: タイマー基準でフェード（画面外退出待ちの早期 fade なし） */
+  victoryUseTimerFade: boolean;
+  /** Victory（全員生存）: 退出 march 完了までオーバーレイ非表示 */
+  victoryAwaitExitMarch: boolean;
   allies: CombatantSnapshot[];
   enemies: CombatantSnapshot[];
 }

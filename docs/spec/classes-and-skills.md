@@ -195,25 +195,27 @@ interface CharacterBuild {
 | `targetRule` | anchor 選定ルール（上表）。**射程内**のユニットのみ対象 |
 | `targetShape` | `single`（既定）／`aoe`／`multiLock`／`pierce`／`chain`／`scatter` |
 | `aoeRadiusPx` | `aoe` 必須。anchor の X から ±px |
-| `hitCount` | `multiLock` 必須。整数 ≥ 2。`targetRule` 順に並べたプールへ **ラウンドロビン**（対象不足時は同一 ID も可） |
+| `hitCount` | `multiLock` 必須（整数 ≥ 2）。`single` / `aoe` 任意（整数 ≥ 2、省略=1） |
+| `hitDurationSec` | `single` / `aoe` で `hitCount >= 2` 時必須。全ヒットを均等分散 |
 | `chainCount` / `chainMaxDistancePx` | `chain` 必須 |
-| `scatterRadiusPx` / `scatterHitCount` / `scatterDurationSec` | `scatter` 必須 |
-| `scatterSpreadRate` | `scatter` 任意（0〜1。0 = anchor 中心固定） |
+| `scatterSpreadRadiusPx` | `scatter` 任意。着弾位置の分散半径（±px）。未指定 = `scatterRadiusPx` |
+| `scatterRadiusPx` / `scatterHitCount` / `scatterDurationSec` | `scatter` 必須（`scatterRadiusPx` = 乱打半径・命中判定） |
+| `scatterSpreadRate` | `scatter` 任意（0〜1。0 = anchor 中心固定。着弾 offset = `scatterSpreadRadiusPx × rate`） |
 | `range` | 命中判定・VFX 共用（px）。`0` 可。未指定 = `traits.rangePx` → 近接は 0 |
 | `anim` | 任意。スプライトアニメ（`idle` / `attack` / `dash` / `heal` / `none` 等）。未指定 = effect 種別の既定 |
 | `vfx` | 任意。effect 単位の VFX プリセット。未指定 = スキル `vfx` → 種別既定（damage/heal 等） |
 
 **move を含むスキル:** シーケンスの各 step 発火時に、その effect の `anim` / `vfx` で演出する（例: 突進 `dash` → 斬撃 `attack`+`slash` → 帰還 `idle`）。
 
-### ResourceAmountSpec（`heal` / `hot` / `barrier`）
+### ResourceAmountSpec（`damage` / `heal` / `hot` / `barrier`）
 
 | フィールド | 説明 |
 |------------|------|
 | `amount.kind` | `atkBased`（既定）／`flat`／`percentMaxHp` |
-| `amount.atkAdd` / `atkMultiply` / `atkDivide` / `atkSubtract` | `atkBased` 用四則（未指定: add=0, multiply=1, divide=1, subtract=0） |
+| `amount.atkOffset` / `atkScale` | `atkBased` 用（加減 net / 倍率 net。未指定: offset=0, scale=1） |
 | `amount.flatAmount` | `flat` 必須 |
 | `amount.percentOfMaxHp` | `percentMaxHp` 必須（0〜1、**対象 maxHp** 基準） |
-| `powerMultiplier` | **旧 JSON 互換** — `amount` 未指定時は `atkBased` + `atkMultiply` として読む |
+| `powerMultiplier` | **旧 JSON 互換** — `amount` 未指定時は `atkBased` + `atkScale` として読む |
 
 ### barrier 専用
 
@@ -246,7 +248,7 @@ interface CharacterBuild {
   "aoeRadiusPx": 70,
   "type": "damage",
   "damageType": "magic",
-  "powerMultiplier": 1.2,
+  "amount": { "kind": "atkBased", "atkScale": 1.2 },
   "range": 120
 }
 ```
@@ -261,7 +263,7 @@ interface CharacterBuild {
   "chainMaxDistancePx": 80,
   "type": "damage",
   "damageType": "magic",
-  "powerMultiplier": 0.9,
+  "amount": { "kind": "atkBased", "atkScale": 0.9 },
   "range": 120
 }
 ```

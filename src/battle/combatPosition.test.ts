@@ -3,12 +3,14 @@ import type { CombatantState, GameData } from './types.ts';
 import { BATTLE_ENEMY_VISIBLE_MIN_X } from './types.ts';
 import {
   assignInitialAllyBattleX,
+  getBattleContactAllyVisual,
   getEnemyContactX,
   isEnemyVisibleOnScreen,
   resolveAttackBattleX,
   resolveMoveBattleX,
   resolveMaxEffectiveRangePx,
   shouldStartApproach,
+  syncEnemyVisualToBattleContact,
   updateUnitApproach,
 } from './combatPosition.ts';
 
@@ -40,6 +42,7 @@ function mockCombatant(
     isEnemy: false,
     battleX: 200,
     visualX: 200,
+    corpseVisible: true,
     ...overrides,
   };
 }
@@ -52,19 +55,19 @@ const gameData = {
         id: 'basic',
         name: 'basic',
         interval: 2,
-        effect: [{ targetRule: 'frontEnemy', type: 'damage', damageType: 'physical', powerMultiplier: 1 }],
+        effect: [{ targetRule: 'frontEnemy', type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 } }],
       },
       spear: {
         id: 'spear',
         name: 'spear',
         interval: 2,
-        effect: [{ targetRule: 'frontEnemy', type: 'damage', damageType: 'physical', powerMultiplier: 1, range: 30 }],
+        effect: [{ targetRule: 'frontEnemy', type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 }, range: 30 }],
       },
       bow: {
         id: 'bow',
         name: 'bow',
         interval: 2,
-        effect: [{ targetRule: 'frontEnemy', type: 'damage', damageType: 'physical', powerMultiplier: 1, range: 140 }],
+        effect: [{ targetRule: 'frontEnemy', type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 }, range: 100 }],
       },
     },
   },
@@ -105,7 +108,16 @@ describe('combatPosition', () => {
     });
     expect(resolveAttackBattleX(sword, contactX, gameData)).toBe(50);
     expect(resolveAttackBattleX(spear, contactX, gameData)).toBe(80);
-    expect(resolveAttackBattleX(bow, contactX, gameData)).toBe(190);
+    expect(resolveAttackBattleX(bow, contactX, gameData)).toBe(150);
+  });
+
+  it('approach range follows skill range when narrower than traits.rangePx', () => {
+    const bow = mockCombatant({
+      id: 'bow',
+      traits: { attackRange: 'ranged', rangePx: 140 },
+      cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
+    });
+    expect(resolveMaxEffectiveRangePx(bow, gameData)).toBe(100);
   });
 
   it('moves allies left toward attack position only', () => {
@@ -181,5 +193,42 @@ describe('combatPosition', () => {
         gameData,
       ),
     ).toBe(60);
+  });
+});
+
+describe('battle contact visual sync', () => {
+  it('getBattleContactAllyVisual picks min battleX ally visual', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 120,
+      visualX: 200,
+    });
+    const archer = mockCombatant({
+      id: 'archer',
+      formationRow: 'back',
+      traits: { attackRange: 'ranged', rangePx: 140 },
+      battleX: 326,
+      visualX: 180,
+    });
+    const contact = getBattleContactAllyVisual([guard, archer]);
+    expect(contact?.visualX).toBe(200);
+  });
+
+  it('syncEnemyVisualToBattleContact maps enemy battleX through contact offset', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 120,
+      visualX: 200,
+    });
+    const enemy = mockCombatant({
+      id: 'enemy',
+      isEnemy: true,
+      battleX: 110,
+      visualX: 0,
+    });
+    syncEnemyVisualToBattleContact([guard], [enemy]);
+    expect(enemy.visualX).toBe(190);
   });
 });

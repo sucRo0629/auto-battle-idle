@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { resolveAttackBattleX } from './combatPosition.ts';
+import { hideFallenAllyCorpses } from './entities.ts';
 import {
+  approachAllyVisualX,
+  computeAllyPositions,
   computeEngagedAllyTargets,
+  computeEngagedEnemyPositions,
+  clampAllyVisualDepth,
   engagedMinLeftEdgeGap,
+  getLeadingAllyFront,
+  moveTowardX,
+  resolveEngagedVisualTargets,
   resolveMoveVisualX,
+  ROW_X,
 } from '../render/formationLayout.ts';
 import type { ActiveSkillMove } from './skills/skillSequence.ts';
 import type { CombatantState, GameData } from './types.ts';
@@ -37,6 +46,7 @@ function mockCombatant(
     isEnemy: false,
     battleX: 200,
     visualX: 210,
+    corpseVisible: true,
     ...overrides,
   };
 }
@@ -54,7 +64,7 @@ const gameData = {
             targetRule: 'frontEnemy',
             type: 'damage',
             damageType: 'physical',
-            powerMultiplier: 1,
+            amount: { kind: 'atkBased', atkScale: 1 },
           },
         ],
       },
@@ -152,6 +162,286 @@ describe('visual position separation', () => {
     ally.battleX = contactX;
     expect(ally.visualX).toBe(210);
     expect(ally.battleX).not.toBe(ally.visualX);
+  });
+
+  it('hideFallenAllyCorpses clears corpseVisible for dead allies only', () => {
+    const living = mockCombatant({ id: 'living' });
+    const fallen = mockCombatant({
+      id: 'fallen',
+      hp: 0,
+      isAlive: false,
+      corpseVisible: true,
+    });
+    hideFallenAllyCorpses([living, fallen]);
+    expect(living.corpseVisible).toBe(true);
+    expect(fallen.corpseVisible).toBe(false);
+  });
+
+  it('computeAllyPositions ignores hidden corpses when not engaged', () => {
+    const positions = computeAllyPositions([
+      {
+        id: 'living',
+        role: 'attacker',
+        formationRow: 'middle',
+        rangePx: DEFAULT_MELEE_RANGE_PX,
+        isAlive: true,
+      },
+    ]);
+    expect(positions.get('living')).toBe(ROW_X.middle);
+    expect(positions.has('fallen')).toBe(false);
+  });
+
+  it('approachAllyVisualX does not move right when standoff target is ahead', () => {
+    const current = 326;
+    const standoffTarget = 350;
+    expect(approachAllyVisualX(current, standoffTarget, 10)).toBe(current);
+    expect(approachAllyVisualX(current, 300, 10)).toBe(316);
+  });
+
+  it('clampAllyVisualDepth keeps back row right of leading front', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      visualX: 200,
+    });
+    const archer = mockCombatant({
+      id: 'archer',
+      formationRow: 'back',
+      traits: { attackRange: 'ranged', rangePx: 140 },
+      visualX: 180,
+    });
+    clampAllyVisualDepth([guard, archer]);
+    expect(archer.visualX).toBe(200 + (ROW_X.back - ROW_X.front));
+  });
+
+  it('getLeadingAllyFront uses leading formation row not global min visualX', () => {
+    const front = getLeadingAllyFront([
+      {
+        id: 'guard',
+        role: 'defender',
+        formationRow: 'front',
+        rangePx: DEFAULT_MELEE_RANGE_PX,
+        isAlive: true,
+        visualX: 210,
+      },
+      {
+        id: 'archer',
+        role: 'attacker',
+        formationRow: 'back',
+        rangePx: 140,
+        isAlive: true,
+        visualX: 180,
+      },
+    ]);
+    expect(front?.visualX).toBe(210);
+    expect(front?.rangePx).toBe(DEFAULT_MELEE_RANGE_PX);
+  });
+
+  it('getLeadingAllyFront tracks back row when only ranged survivor remains', () => {
+    const front = getLeadingAllyFront([
+      {
+        id: 'archer',
+        role: 'attacker',
+        formationRow: 'back',
+        rangePx: 140,
+        isAlive: true,
+        visualX: 326,
+      },
+    ]);
+    expect(front?.visualX).toBe(326);
+    expect(front?.rangePx).toBe(140);
+  });
+
+  it('computeEngagedEnemyPositions stops before leading front row not back row', () => {
+    const leadingFront = getLeadingAllyFront([
+      {
+        id: 'guard',
+        role: 'defender',
+        formationRow: 'front',
+        rangePx: DEFAULT_MELEE_RANGE_PX,
+        isAlive: true,
+        visualX: 200,
+      },
+      {
+        id: 'archer',
+        role: 'attacker',
+        formationRow: 'back',
+        rangePx: 140,
+        isAlive: true,
+        visualX: 326,
+      },
+    ]);
+    expect(leadingFront?.visualX).toBe(200);
+    const targets = computeEngagedEnemyPositions(
+      [
+        {
+          id: 'melee',
+          visualX: 50,
+          rangePx: 0,
+          isAlive: true,
+        },
+      ],
+      leadingFront!.visualX,
+      leadingFront!.rangePx,
+    );
+    expect(targets.get('melee')).toBe(200 - engagedMinLeftEdgeGap());
+    expect(targets.get('melee')!).toBeLessThan(326);
+  });
+
+  it('computeEngagedEnemyPositions tracks front ally X for stop distance', () => {
+    const frontAllyX = 326;
+    const targets = computeEngagedEnemyPositions(
+      [
+        {
+          id: 'melee',
+          visualX: 500,
+          rangePx: 0,
+          isAlive: true,
+        },
+      ],
+      frontAllyX,
+      140,
+    );
+    expect(targets.get('melee')).toBe(frontAllyX - engagedMinLeftEdgeGap());
+  });
+});
+
+describe('resolveEngagedVisualTargets', () => {
+  const stage2Wave1Allies = [
+    {
+      id: 'guard',
+      role: 'defender' as const,
+      formationRow: 'front' as const,
+      rangePx: DEFAULT_MELEE_RANGE_PX,
+      isAlive: true,
+      visualX: ROW_X.front,
+    },
+    {
+      id: 'sword',
+      role: 'attacker' as const,
+      formationRow: 'front' as const,
+      rangePx: DEFAULT_MELEE_RANGE_PX,
+      isAlive: true,
+      visualX: ROW_X.front + 42,
+    },
+    {
+      id: 'healer',
+      role: 'healer' as const,
+      formationRow: 'front' as const,
+      rangePx: DEFAULT_MELEE_RANGE_PX,
+      isAlive: true,
+      visualX: ROW_X.front + 84,
+    },
+    {
+      id: 'archer',
+      role: 'attacker' as const,
+      formationRow: 'back' as const,
+      rangePx: 140,
+      isAlive: true,
+      visualX: ROW_X.back,
+    },
+  ];
+
+  const stage2Wave1Enemies = [
+    { id: 'e1', visualX: -15, rangePx: 0, isAlive: true },
+    { id: 'e2', visualX: -5, rangePx: 0, isAlive: true },
+    { id: 'e3', visualX: 5, rangePx: 0, isAlive: true },
+  ];
+
+  it('Stage 2 Wave 1 full party: enemies stop left of front line not archer', () => {
+    const layout = resolveEngagedVisualTargets(
+      stage2Wave1Allies,
+      stage2Wave1Enemies,
+      5,
+      DEFAULT_MELEE_RANGE_PX,
+    );
+    expect(layout).not.toBeNull();
+
+    const { allyTargets, enemyTargets, frontLineTargetX } = layout!;
+    expect(frontLineTargetX).toBeLessThan(ROW_X.back);
+
+    const frontRowTargets = [
+      allyTargets.get('guard')!,
+      allyTargets.get('sword')!,
+      allyTargets.get('healer')!,
+    ];
+    const minFrontTarget = Math.min(...frontRowTargets);
+    const maxEnemyTarget = Math.max(...enemyTargets.values());
+
+    expect(maxEnemyTarget).toBeLessThan(ROW_X.back);
+    expect(maxEnemyTarget).toBeLessThan(minFrontTarget);
+    expect(allyTargets.get('archer')).toBeGreaterThanOrEqual(ROW_X.back - 1);
+    expect(minFrontTarget).toBeLessThan(ROW_X.back - 50);
+  });
+
+  it('shifts enemy stop targets right when front row is eliminated', () => {
+    const before = resolveEngagedVisualTargets(
+      stage2Wave1Allies,
+      stage2Wave1Enemies,
+      5,
+      DEFAULT_MELEE_RANGE_PX,
+    );
+    expect(before).not.toBeNull();
+    const maxBefore = Math.max(...before!.enemyTargets.values());
+
+    const withoutFront = stage2Wave1Allies.filter(
+      (a) => a.formationRow !== 'front',
+    );
+    const after = resolveEngagedVisualTargets(
+      withoutFront,
+      stage2Wave1Enemies,
+      5,
+      DEFAULT_MELEE_RANGE_PX,
+    );
+    expect(after).not.toBeNull();
+    const maxAfter = Math.max(...after!.enemyTargets.values());
+    expect(maxAfter).toBeGreaterThan(maxBefore);
+  });
+
+  it('keeps archer at ROW_X.back when only back row survives', () => {
+    const frontEnemyX = 50;
+    const layout = resolveEngagedVisualTargets(
+      [
+        {
+          id: 'archer',
+          role: 'attacker',
+          formationRow: 'back',
+          rangePx: 140,
+          isAlive: true,
+          visualX: ROW_X.back,
+        },
+      ],
+      [{ id: 'e1', visualX: frontEnemyX, rangePx: 0, isAlive: true }],
+      frontEnemyX,
+      DEFAULT_MELEE_RANGE_PX,
+    );
+    expect(layout).not.toBeNull();
+    expect(layout!.frontLineTargetX).toBeGreaterThanOrEqual(ROW_X.back - 1);
+    expect(layout!.allyTargets.get('archer')).toBeGreaterThanOrEqual(
+      ROW_X.back - 1,
+    );
+    expect(Math.max(...layout!.enemyTargets.values())).toBeLessThan(
+      layout!.frontLineTargetX,
+    );
+    expect(Math.max(...layout!.enemyTargets.values())).toBeGreaterThan(
+      frontEnemyX,
+    );
+  });
+});
+
+describe('enemy visual bidirectional approach', () => {
+  it('moveTowardX closes gap when target is left of current (one-way bug fix)', () => {
+    const target = 198;
+    const stuckAt = 250;
+    const step = 10;
+
+    const next = moveTowardX(stuckAt, target, step);
+    expect(next).toBe(240);
+    expect(next).toBeLessThan(stuckAt);
+
+    const oneWayWouldStay = stuckAt;
+    expect(oneWayWouldStay).toBe(250);
+    expect(next).not.toBe(oneWayWouldStay);
   });
 });
 

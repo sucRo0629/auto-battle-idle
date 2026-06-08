@@ -44,6 +44,11 @@ export interface SkillExecutorDeps {
   getAllCombatants: () => CombatantState[];
   getSequenceRunner: () => SkillSequenceRunner;
   onBasicAttackExecuted?: (actorId: string) => void;
+  onDamageApplied?: (
+    actor: CombatantState,
+    target: CombatantState,
+    amount: number,
+  ) => void;
 }
 
 export class SkillExecutor {
@@ -301,7 +306,11 @@ export class SkillExecutor {
         this.gameData.skillRegistry.passives,
         powerMultiplierOverride,
       );
-      const { lethal } = applyDamageToTarget(target, amount);
+      const damageResult = applyDamageToTarget(target, amount);
+      const appliedDamage =
+        damageResult.hpDamage + damageResult.barrierDamage;
+      this.deps.onDamageApplied?.(actor, target, appliedDamage);
+      const { lethal } = damageResult;
       this.emit({
         type: 'skill',
         actorId: actor.id,

@@ -45,6 +45,7 @@ function mockCombatant(
     isEnemy: false,
     battleX: 0,
     visualX: 0,
+    corpseVisible: true,
     ...overrides,
   };
 }
@@ -53,16 +54,14 @@ describe('resolveResourceAmount', () => {
   const actor = mockCombatant({ atk: 20 });
   const target = mockCombatant({ hp: 50, maxHp: 100 });
 
-  it('resolves atkBased with add/multiply/divide/subtract', () => {
+  it('resolves atkBased with offset and scale', () => {
     const spec: ResourceAmountSpec = {
       kind: 'atkBased',
-      atkAdd: 10,
-      atkMultiply: 2,
-      atkDivide: 2,
-      atkSubtract: 3,
+      atkOffset: 7,
+      atkScale: 2,
     };
-    // ((20 + 5 + 10) * 2 / 2) - 3 = 32
-    expect(resolveResourceAmount(actor, target, spec, passives)).toBe(32);
+    // (20 + 5 + 7) * 2 = 64
+    expect(resolveResourceAmount(actor, target, spec, passives)).toBe(64);
   });
 
   it('resolves flat with healBonus', () => {
@@ -87,12 +86,12 @@ describe('resolveResourceAmount', () => {
     ).toBe(15);
   });
 
-  it('uses powerMultiplierOverride as atkMultiply', () => {
+  it('uses atkScaleOverride', () => {
     expect(
       resolveResourceAmount(
         actor,
         target,
-        { kind: 'atkBased', atkMultiply: 1 },
+        { kind: 'atkBased', atkScale: 1 },
         passives,
         0.5,
       ),

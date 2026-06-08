@@ -6,7 +6,7 @@
     "atk": 50,
     "def": 4,
     "reg": 0,
-    "exp": 3,
+    "exp": 0,
     "spriteKey": "none",
     "basicAttackSkillId": "test_enemy_basic_attack",
     "attackSpeedTier": "normal"
@@ -18,7 +18,7 @@
     "atk": 55,
     "def": 4,
     "reg": 0,
-    "exp": 3,
+    "exp": 0,
     "spriteKey": "none",
     "basicAttackSkillId": "test_enemy_elite_basic_attack",
     "attackSpeedTier": "normal"
@@ -30,7 +30,7 @@
     "atk": 45,
     "def": 5,
     "reg": 0,
-    "exp": 1,
+    "exp": 0,
     "spriteKey": "enemy_default",
     "basicAttackSkillId": "stage1_1_basic_attack",
     "attackSpeedTier": "somewhatSlow"

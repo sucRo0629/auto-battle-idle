@@ -219,7 +219,12 @@ export class BattleCanvas implements IBattleRenderer {
     }
 
     for (const ally of snapshot.allies) {
-      if (ally.hp > 0) {
+      const isDead = ally.hp <= 0;
+      if (isDead && ally.corpseVisible === false) {
+        this.resetDeathVisuals(ally.id);
+        continue;
+      }
+      if (!isDead) {
         this.resetDeathVisuals(ally.id);
       }
       const animState = this.animator.getState(ally.id);
@@ -264,7 +269,12 @@ export class BattleCanvas implements IBattleRenderer {
       };
     });
     this.worldOffsetX = snapshot.worldOffsetX;
-    this.victoryOverlay.syncPhase(snapshot.phase, snapshot.alliesOffScreen);
+    this.victoryOverlay.syncPhase(
+      snapshot.phase,
+      snapshot.alliesOffScreen,
+      snapshot.victoryUseTimerFade,
+      snapshot.victoryAwaitExitMarch,
+    );
   }
 
   /** リスポーン等で HP が回復したユニットの死亡演出を解除 */

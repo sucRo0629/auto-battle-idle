@@ -23,9 +23,6 @@ import {
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
-  BarrierSkillEffect,
-  HealSkillEffect,
-  HotSkillEffect,
   MoveSkillEffect,
   PassiveEffectKind,
   PassiveSkillDef,
@@ -82,16 +79,36 @@ const STAT_LABELS: Record<StatusEffectStat, string> = {
   damageTaken: '被ダメ',
 };
 
-function defaultResourceAmount(atkMultiply = 1): ResourceAmountSpec {
-  return { kind: 'atkBased', atkMultiply };
+function defaultResourceAmount(atkScale = 1): ResourceAmountSpec {
+  return { kind: 'atkBased', atkScale };
 }
 
-function normalizeResourceAmount(
-  effect: HealSkillEffect | HotSkillEffect | BarrierSkillEffect,
-): ResourceAmountSpec {
+function normalizeEffectAmount(effect: {
+  amount?: ResourceAmountSpec;
+  powerMultiplier?: number;
+}): ResourceAmountSpec {
   if (effect.amount) return effect.amount;
-  const legacy = (effect as { powerMultiplier?: number }).powerMultiplier;
+  const legacy = effect.powerMultiplier;
   return defaultResourceAmount(legacy ?? 1);
+}
+
+type EffectPatch = SkillEffectDef | ((prev: SkillEffectDef) => SkillEffectDef);
+
+function patchEffectState(
+  initial: SkillEffectDef,
+  onUpdate: (effect: SkillEffectDef, options?: { rerender?: boolean }) => void,
+): {
+  patch: (patch: EffectPatch, options?: { rerender?: boolean }) => void;
+  get: () => SkillEffectDef;
+} {
+  let current = initial;
+  return {
+    get: () => current,
+    patch: (patch, options) => {
+      current = typeof patch === 'function' ? patch(current) : patch;
+      onUpdate(current, options);
+    },
+  };
 }
 
 function appendResourceAmountFields(
@@ -99,6 +116,15 @@ function appendResourceAmountFields(
   amount: ResourceAmountSpec,
   onUpdate: (amount: ResourceAmountSpec, options?: { rerender?: boolean }) => void,
 ): void {
+  let current = amount;
+  const patchAmount = (
+    patch: (prev: ResourceAmountSpec) => ResourceAmountSpec,
+    options?: { rerender?: boolean },
+  ) => {
+    current = patch(current);
+    onUpdate(current, options);
+  };
+
   grid.appendChild(
     createFieldRow(
       '効果量種別',
@@ -110,15 +136,21 @@ function appendResourceAmountFields(
         })),
         (kind) => {
           if (kind === 'atkBased') {
-            onUpdate(defaultResourceAmount(amount.atkMultiply ?? 1), { rerender: true });
+            patchAmount(
+              () => defaultResourceAmount(current.atkScale ?? 1),
+              { rerender: true },
+            );
           } else if (kind === 'flat') {
-            onUpdate({ kind, flatAmount: amount.flatAmount ?? 0 }, { rerender: true });
+            patchAmount(
+              () => ({ kind, flatAmount: current.flatAmount ?? 0 }),
+              { rerender: true },
+            );
           } else {
-            onUpdate(
-              {
+            patchAmount(
+              () => ({
                 kind,
-                percentOfMaxHp: amount.percentOfMaxHp ?? 0.1,
-              },
+                percentOfMaxHp: current.percentOfMaxHp ?? 0.1,
+              }),
               { rerender: true },
             );
           }
@@ -130,41 +162,21 @@ function appendResourceAmountFields(
   if (amount.kind === 'atkBased') {
     grid.appendChild(
       createFieldRow(
-        'ATK 加算',
+        'ATK 加減',
         createNumberInput(
-          amount.atkAdd ?? 0,
-          (atkAdd) => onUpdate({ ...amount, atkAdd }),
+          amount.atkOffset ?? 0,
+          (atkOffset) => patchAmount((prev) => ({ ...prev, atkOffset })),
           { step: 1 },
         ),
       ),
     );
     grid.appendChild(
       createFieldRow(
-        'ATK 乗算',
+        'ATK 倍率',
         createNumberInput(
-          amount.atkMultiply ?? 1,
-          (atkMultiply) => onUpdate({ ...amount, atkMultiply }),
+          amount.atkScale ?? 1,
+          (atkScale) => patchAmount((prev) => ({ ...prev, atkScale })),
           { step: 0.01 },
-        ),
-      ),
-    );
-    grid.appendChild(
-      createFieldRow(
-        'ATK 除算',
-        createNumberInput(
-          amount.atkDivide ?? 1,
-          (atkDivide) => onUpdate({ ...amount, atkDivide }),
-          { step: 0.01, min: 0.01 },
-        ),
-      ),
-    );
-    grid.appendChild(
-      createFieldRow(
-        'ATK 減算',
-        createNumberInput(
-          amount.atkSubtract ?? 0,
-          (atkSubtract) => onUpdate({ ...amount, atkSubtract }),
-          { step: 1 },
         ),
       ),
     );
@@ -177,7 +189,7 @@ function appendResourceAmountFields(
         '固定値',
         createNumberInput(
           amount.flatAmount ?? 0,
-          (flatAmount) => onUpdate({ ...amount, flatAmount }),
+          (flatAmount) => patchAmount((prev) => ({ ...prev, flatAmount })),
           { step: 1 },
         ),
       ),
@@ -191,10 +203,10 @@ function appendResourceAmountFields(
       createNumberInput(
         (amount.percentOfMaxHp ?? 0) * 100,
         (percent) =>
-          onUpdate({
-            ...amount,
+          patchAmount((prev) => ({
+            ...prev,
             percentOfMaxHp: Math.min(100, Math.max(0, percent)) / 100,
-          }),
+          })),
         { step: 1, min: 0 },
       ),
     ),
@@ -204,7 +216,7 @@ function appendResourceAmountFields(
 function appendEffectPresentationFields(
   parent: HTMLElement,
   effect: SkillEffectDef,
-  onUpdate: (effect: SkillEffectDef, options?: { rerender?: boolean }) => void,
+  patchEffect: (patch: EffectPatch, options?: { rerender?: boolean }) => void,
 ): void {
   const section = createSection('演出（この effect）');
   parent.appendChild(section);
@@ -223,13 +235,15 @@ function appendEffectPresentationFields(
           })),
         ],
         (value) => {
-          const next = { ...effect } as SkillEffectDef;
-          if (value.length === 0) {
-            delete next.anim;
-          } else {
-            next.anim = value as SkillEffectAnimId;
-          }
-          onUpdate(next);
+          patchEffect((prev) => {
+            const next = { ...prev } as SkillEffectDef;
+            if (value.length === 0) {
+              delete next.anim;
+            } else {
+              next.anim = value as SkillEffectAnimId;
+            }
+            return next;
+          });
         },
       ),
     ),
@@ -250,13 +264,15 @@ function appendEffectPresentationFields(
           })),
         ],
         (value) => {
-          const next = { ...effect } as SkillEffectDef;
-          if (value.length === 0) {
-            delete next.vfx;
-          } else {
-            next.vfx = { ...next.vfx, preset: value as SkillVfxPresetId };
-          }
-          onUpdate(next);
+          patchEffect((prev) => {
+            const next = { ...prev } as SkillEffectDef;
+            if (value.length === 0) {
+              delete next.vfx;
+            } else {
+              next.vfx = { ...next.vfx, preset: value as SkillVfxPresetId };
+            }
+            return next;
+          });
         },
       ),
     ),
@@ -269,11 +285,13 @@ function appendEffectPresentationFields(
         createNumberInput(
           effect.vfx.durationMs ?? 0,
           (durationMs) => {
-            const vfx: SkillVfxDef = {
-              ...effect.vfx!,
-              durationMs: durationMs || undefined,
-            };
-            onUpdate({ ...effect, vfx });
+            patchEffect((prev) => ({
+              ...prev,
+              vfx: {
+                ...prev.vfx!,
+                durationMs: durationMs || undefined,
+              },
+            }));
           },
           { min: 0, step: 50 },
         ),
@@ -284,22 +302,24 @@ function appendEffectPresentationFields(
     arcInput.type = 'checkbox';
     arcInput.checked = Boolean(effect.vfx.arc);
     arcInput.addEventListener('change', () => {
-      onUpdate({
-        ...effect,
+      patchEffect((prev) => ({
+        ...prev,
         vfx: {
-          ...effect.vfx!,
+          ...prev.vfx!,
           arc: arcInput.checked || undefined,
         },
-      });
+      }));
     });
     arcRow.appendChild(createEl('label', undefined, 'VFX arc（放物線）'));
     arcRow.appendChild(arcInput);
     grid.appendChild(arcRow);
     section.appendChild(
       createButton('effect VFX を削除', 'editor-btn editor-btn-small', () => {
-        const next = { ...effect } as SkillEffectDef;
-        delete next.vfx;
-        onUpdate(next, { rerender: true });
+        patchEffect((prev) => {
+          const next = { ...prev } as SkillEffectDef;
+          delete next.vfx;
+          return next;
+        }, { rerender: true });
       }),
     );
   }
@@ -312,7 +332,7 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         targetRule: 'frontEnemy',
         type: 'damage',
         damageType: 'physical',
-        powerMultiplier: 1,
+        amount: defaultResourceAmount(),
       };
     case 'heal':
       return {
@@ -1148,6 +1168,7 @@ export class SkillEditorStep {
     onUpdate: (effect: SkillEffectDef, options?: { rerender?: boolean }) => void,
     showPerEffectPresentation = false,
   ): void {
+    const { patch: patchEffect, get: getEffect } = patchEffectState(effect, onUpdate);
     const grid = appendGrid(parent);
     grid.appendChild(
       createFieldRow(
@@ -1158,7 +1179,7 @@ export class SkillEditorStep {
             value,
             label: EFFECT_KIND_LABELS[value],
           })),
-          (type) => onUpdate(defaultEffect(type), { rerender: true }),
+          (type) => patchEffect(defaultEffect(type), { rerender: true }),
         ),
       ),
     );
@@ -1171,7 +1192,8 @@ export class SkillEditorStep {
             value,
             label: TARGET_RULE_LABELS[value],
           })),
-          (targetRule) => onUpdate({ ...effect, targetRule } as SkillEffectDef),
+          (targetRule) =>
+            patchEffect((prev) => ({ ...prev, targetRule } as SkillEffectDef)),
         ),
       ),
     );
@@ -1188,9 +1210,11 @@ export class SkillEditorStep {
               label: TARGET_SHAPE_LABELS[value],
             })),
             (shape) => {
-            const next: SkillEffectDef = { ...effect, targetShape: shape };
+            patchEffect((prev) => {
+            const next: SkillEffectDef = { ...prev, targetShape: shape };
             delete next.aoeRadiusPx;
             delete next.hitCount;
+            delete next.hitDurationSec;
             delete next.piercePowerStepMultiplier;
             delete next.piercePowerStepMode;
             delete next.pierceDurationSec;
@@ -1199,6 +1223,7 @@ export class SkillEditorStep {
             delete next.chainPowerStepMultiplier;
             delete next.chainPowerStepMode;
             delete next.scatterRadiusPx;
+            delete next.scatterSpreadRadiusPx;
             delete next.scatterHitCount;
             delete next.scatterDurationSec;
             delete next.scatterSpreadRate;
@@ -1211,11 +1236,13 @@ export class SkillEditorStep {
               next.chainMaxDistancePx = 80;
             } else if (shape === 'scatter') {
               next.scatterRadiusPx = 70;
+              next.scatterSpreadRadiusPx = 70;
               next.scatterHitCount = 3;
               next.scatterDurationSec = 1;
               next.scatterSpreadRate = 1;
             }
-            onUpdate(next, { rerender: true });
+            return next;
+            }, { rerender: true });
           },
         ),
       ),
@@ -1225,6 +1252,66 @@ export class SkillEditorStep {
         createEl('p', 'editor-hint', '移動効果は単体（single）のみ。ターゲットは移動先の基準（anchor）です。'),
       );
     }
+    if (!isMove && (targetShape === 'single' || targetShape === 'aoe')) {
+      grid.appendChild(
+        createFieldRow(
+          '攻撃回数（2以上・省略=1）',
+          createNumberInput(
+            effect.hitCount ?? 0,
+            (hitCount) => {
+              const rounded = Math.round(hitCount);
+              if (rounded < 2) {
+                if (getEffect().hitCount === undefined) return;
+                patchEffect((prev) => {
+                const next: SkillEffectDef = { ...prev, targetShape };
+                delete next.hitCount;
+                delete next.hitDurationSec;
+                return next;
+                }, { rerender: true });
+                return;
+              }
+              const showDuration = (getEffect().hitCount ?? 0) < 2;
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape,
+                    hitCount: rounded,
+                    hitDurationSec: prev.hitDurationSec ?? 1,
+                  }) as SkillEffectDef,
+                { rerender: showDuration },
+              );
+            },
+            {
+              min: 2,
+              step: 1,
+              emptyWhen: 0,
+              placeholder: '1（省略）',
+            },
+          ),
+        ),
+      );
+      if ((effect.hitCount ?? 0) >= 2) {
+        grid.appendChild(
+          createFieldRow(
+            '攻撃時間（秒）',
+            createNumberInput(
+              effect.hitDurationSec ?? 1,
+              (hitDurationSec) =>
+                patchEffect(
+                  (prev) =>
+                    ({
+                      ...prev,
+                      targetShape,
+                      hitDurationSec: hitDurationSec > 0 ? hitDurationSec : 1,
+                    }) as SkillEffectDef,
+                ),
+              { min: 0.1, step: 0.1 },
+            ),
+          ),
+        );
+      }
+    }
     if (!isMove && targetShape === 'aoe') {
       grid.appendChild(
         createFieldRow(
@@ -1232,11 +1319,14 @@ export class SkillEditorStep {
           createNumberInput(
             effect.aoeRadiusPx ?? 70,
             (aoeRadiusPx) =>
-              onUpdate({
-                ...effect,
-                targetShape: 'aoe',
-                aoeRadiusPx: aoeRadiusPx > 0 ? aoeRadiusPx : 70,
-              } as SkillEffectDef),
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'aoe',
+                    aoeRadiusPx: aoeRadiusPx > 0 ? aoeRadiusPx : 70,
+                  }) as SkillEffectDef,
+              ),
             { min: 1, step: 10 },
           ),
         ),
@@ -1249,11 +1339,14 @@ export class SkillEditorStep {
           createNumberInput(
             effect.hitCount ?? 3,
             (hitCount) =>
-              onUpdate({
-                ...effect,
-                targetShape: 'multiLock',
-                hitCount: Math.max(2, Math.round(hitCount)),
-              } as SkillEffectDef),
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'multiLock',
+                    hitCount: Math.max(2, Math.round(hitCount)),
+                  }) as SkillEffectDef,
+              ),
             { min: 2, step: 1 },
           ),
         ),
@@ -1266,11 +1359,14 @@ export class SkillEditorStep {
           createNumberInput(
             effect.chainCount ?? 3,
             (chainCount) =>
-              onUpdate({
-                ...effect,
-                targetShape: 'chain',
-                chainCount: Math.max(1, Math.round(chainCount)),
-              } as SkillEffectDef),
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'chain',
+                    chainCount: Math.max(1, Math.round(chainCount)),
+                  }) as SkillEffectDef,
+              ),
             { min: 1, step: 1 },
           ),
         ),
@@ -1281,11 +1377,15 @@ export class SkillEditorStep {
           createNumberInput(
             effect.chainMaxDistancePx ?? 80,
             (chainMaxDistancePx) =>
-              onUpdate({
-                ...effect,
-                targetShape: 'chain',
-                chainMaxDistancePx: chainMaxDistancePx > 0 ? chainMaxDistancePx : 80,
-              } as SkillEffectDef),
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'chain',
+                    chainMaxDistancePx:
+                      chainMaxDistancePx > 0 ? chainMaxDistancePx : 80,
+                  }) as SkillEffectDef,
+              ),
             { min: 1, step: 10 },
           ),
         ),
@@ -1294,15 +1394,37 @@ export class SkillEditorStep {
     if (!isMove && targetShape === 'scatter') {
       grid.appendChild(
         createFieldRow(
+          '範囲半径 px',
+          createNumberInput(
+            effect.scatterSpreadRadiusPx ?? effect.scatterRadiusPx ?? 70,
+            (scatterSpreadRadiusPx) =>
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'scatter',
+                    scatterSpreadRadiusPx:
+                      scatterSpreadRadiusPx > 0 ? scatterSpreadRadiusPx : 70,
+                  }) as SkillEffectDef,
+              ),
+            { min: 1, step: 10 },
+          ),
+        ),
+      );
+      grid.appendChild(
+        createFieldRow(
           '乱打半径 px',
           createNumberInput(
             effect.scatterRadiusPx ?? 70,
             (scatterRadiusPx) =>
-              onUpdate({
-                ...effect,
-                targetShape: 'scatter',
-                scatterRadiusPx: scatterRadiusPx > 0 ? scatterRadiusPx : 70,
-              } as SkillEffectDef),
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'scatter',
+                    scatterRadiusPx: scatterRadiusPx > 0 ? scatterRadiusPx : 70,
+                  }) as SkillEffectDef,
+              ),
             { min: 1, step: 10 },
           ),
         ),
@@ -1313,11 +1435,14 @@ export class SkillEditorStep {
           createNumberInput(
             effect.scatterHitCount ?? 3,
             (scatterHitCount) =>
-              onUpdate({
-                ...effect,
-                targetShape: 'scatter',
-                scatterHitCount: Math.max(2, Math.round(scatterHitCount)),
-              } as SkillEffectDef),
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'scatter',
+                    scatterHitCount: Math.max(2, Math.round(scatterHitCount)),
+                  }) as SkillEffectDef,
+              ),
             { min: 2, step: 1 },
           ),
         ),
@@ -1328,11 +1453,15 @@ export class SkillEditorStep {
           createNumberInput(
             effect.scatterDurationSec ?? 1,
             (scatterDurationSec) =>
-              onUpdate({
-                ...effect,
-                targetShape: 'scatter',
-                scatterDurationSec: scatterDurationSec > 0 ? scatterDurationSec : 1,
-              } as SkillEffectDef),
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'scatter',
+                    scatterDurationSec:
+                      scatterDurationSec > 0 ? scatterDurationSec : 1,
+                  }) as SkillEffectDef,
+              ),
             { min: 0.1, step: 0.1 },
           ),
         ),
@@ -1343,11 +1472,14 @@ export class SkillEditorStep {
           createNumberInput(
             effect.scatterSpreadRate ?? 1,
             (scatterSpreadRate) =>
-              onUpdate({
-                ...effect,
-                targetShape: 'scatter',
-                scatterSpreadRate: Math.min(1, Math.max(0, scatterSpreadRate)),
-              } as SkillEffectDef),
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'scatter',
+                    scatterSpreadRate: Math.min(1, Math.max(0, scatterSpreadRate)),
+                  }) as SkillEffectDef,
+              ),
             { min: 0, step: 0.1 },
           ),
         ),
@@ -1360,11 +1492,15 @@ export class SkillEditorStep {
           createNumberInput(
             effect.pierceDurationSec ?? 0,
             (pierceDurationSec) =>
-              onUpdate({
-                ...effect,
-                targetShape: 'pierce',
-                pierceDurationSec: pierceDurationSec > 0 ? pierceDurationSec : undefined,
-              } as SkillEffectDef),
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'pierce',
+                    pierceDurationSec:
+                      pierceDurationSec > 0 ? pierceDurationSec : undefined,
+                  }) as SkillEffectDef,
+              ),
             { min: 0, step: 0.1 },
           ),
         ),
@@ -1376,10 +1512,10 @@ export class SkillEditorStep {
         createNumberInput(
           effect.range ?? 0,
           (range) =>
-            onUpdate({
-              ...effect,
+            patchEffect((prev) => ({
+              ...prev,
               range: range > 0 ? range : undefined,
-            } as SkillEffectDef),
+            } as SkillEffectDef)),
           { min: 0, step: 10 },
         ),
       ),
@@ -1396,24 +1532,17 @@ export class SkillEditorStep {
             createSelect(
               effect.damageType,
               DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
-              (damageType) => onUpdate({ ...effect, damageType }),
+              (damageType) => patchEffect((prev) => ({ ...prev, damageType })),
             ),
           ),
         );
-        detailGrid.appendChild(
-          createFieldRow(
-            '威力倍率',
-            createNumberInput(
-              effect.powerMultiplier,
-              (powerMultiplier) => onUpdate({ ...effect, powerMultiplier }),
-              { step: 0.01 },
-            ),
-          ),
+        appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
+          patchEffect((prev) => ({ ...prev, amount }), options),
         );
         break;
       case 'heal':
-        appendResourceAmountFields(detailGrid, normalizeResourceAmount(effect), (amount, options) =>
-          onUpdate({ ...effect, amount }, options),
+        appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
+          patchEffect((prev) => ({ ...prev, amount }), options),
         );
         break;
       case 'buff':
@@ -1426,7 +1555,7 @@ export class SkillEditorStep {
                 value,
                 label: STAT_LABELS[value],
               })),
-              (buffStat) => onUpdate({ ...effect, buffStat }),
+              (buffStat) => patchEffect((prev) => ({ ...prev, buffStat })),
             ),
           ),
         );
@@ -1435,7 +1564,7 @@ export class SkillEditorStep {
             '倍率',
             createNumberInput(
               effect.buffMultiplier ?? 1,
-              (buffMultiplier) => onUpdate({ ...effect, buffMultiplier }),
+              (buffMultiplier) => patchEffect((prev) => ({ ...prev, buffMultiplier })),
               { step: 0.01 },
             ),
           ),
@@ -1445,7 +1574,7 @@ export class SkillEditorStep {
             '秒数',
             createNumberInput(
               effect.buffDurationSec,
-              (buffDurationSec) => onUpdate({ ...effect, buffDurationSec }),
+              (buffDurationSec) => patchEffect((prev) => ({ ...prev, buffDurationSec })),
               { min: 0.1, step: 0.5 },
             ),
           ),
@@ -1463,7 +1592,7 @@ export class SkillEditorStep {
                 value,
                 label: STAT_LABELS[value],
               })),
-              (debuffStat) => onUpdate({ ...effect, debuffStat }),
+              (debuffStat) => patchEffect((prev) => ({ ...prev, debuffStat })),
             ),
           ),
         );
@@ -1472,7 +1601,8 @@ export class SkillEditorStep {
             '倍率',
             createNumberInput(
               effect.debuffMultiplier ?? 1,
-              (debuffMultiplier) => onUpdate({ ...effect, debuffMultiplier }),
+              (debuffMultiplier) =>
+                patchEffect((prev) => ({ ...prev, debuffMultiplier })),
               { step: 0.01 },
             ),
           ),
@@ -1482,7 +1612,8 @@ export class SkillEditorStep {
             '秒数',
             createNumberInput(
               effect.debuffDurationSec,
-              (debuffDurationSec) => onUpdate({ ...effect, debuffDurationSec }),
+              (debuffDurationSec) =>
+                patchEffect((prev) => ({ ...prev, debuffDurationSec })),
               { min: 0.1, step: 0.5 },
             ),
           ),
@@ -1494,18 +1625,18 @@ export class SkillEditorStep {
             '秒数',
             createNumberInput(
               effect.durationSec,
-              (durationSec) => onUpdate({ ...effect, durationSec }),
+              (durationSec) => patchEffect((prev) => ({ ...prev, durationSec })),
               { min: 0.1, step: 0.5 },
             ),
           ),
         );
-        appendResourceAmountFields(detailGrid, normalizeResourceAmount(effect), (amount, options) =>
-          onUpdate({ ...effect, amount }, options),
+        appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
+          patchEffect((prev) => ({ ...prev, amount }), options),
         );
         break;
       case 'barrier':
-        appendResourceAmountFields(detailGrid, normalizeResourceAmount(effect), (amount, options) =>
-          onUpdate({ ...effect, amount }, options),
+        appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
+          patchEffect((prev) => ({ ...prev, amount }), options),
         );
         detailGrid.appendChild(
           (() => {
@@ -1515,10 +1646,10 @@ export class SkillEditorStep {
             input.type = 'checkbox';
             input.checked = effect.barrierStack ?? false;
             input.addEventListener('change', () => {
-              onUpdate({
-                ...effect,
+              patchEffect((prev) => ({
+                ...prev,
                 barrierStack: input.checked ? true : undefined,
-              });
+              }));
             });
             label.appendChild(input);
             label.append(' 継ぎ足し（既存バリアに加算）');
@@ -1533,7 +1664,7 @@ export class SkillEditorStep {
             '秒数',
             createNumberInput(
               effect.durationSec,
-              (durationSec) => onUpdate({ ...effect, durationSec }),
+              (durationSec) => patchEffect((prev) => ({ ...prev, durationSec })),
               { min: 0.1, step: 0.5 },
             ),
           ),
@@ -1543,7 +1674,7 @@ export class SkillEditorStep {
             '威力倍率',
             createNumberInput(
               effect.powerMultiplier,
-              (powerMultiplier) => onUpdate({ ...effect, powerMultiplier }),
+              (powerMultiplier) => patchEffect((prev) => ({ ...prev, powerMultiplier })),
               { step: 0.01 },
             ),
           ),
@@ -1554,7 +1685,7 @@ export class SkillEditorStep {
             createSelect(
               effect.damageType ?? 'physical',
               DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
-              (damageType) => onUpdate({ ...effect, damageType }),
+              (damageType) => patchEffect((prev) => ({ ...prev, damageType })),
             ),
           ),
         );
@@ -1567,10 +1698,10 @@ export class SkillEditorStep {
             createNumberInput(
               moveEffect.moveDurationSec,
               (moveDurationSec) =>
-                onUpdate({
-                  ...moveEffect,
+                patchEffect((prev) => ({
+                  ...(prev as MoveSkillEffect),
                   moveDurationSec: moveDurationSec > 0 ? moveDurationSec : 0.1,
-                }),
+                })),
               { min: 0.05, step: 0.05 },
             ),
           ),
@@ -1584,7 +1715,8 @@ export class SkillEditorStep {
                 value,
                 label: MOVE_MODE_LABELS[value],
               })),
-              (moveMode) => onUpdate({ ...moveEffect, moveMode }),
+              (moveMode) =>
+                patchEffect((prev) => ({ ...(prev as MoveSkillEffect), moveMode })),
             ),
           ),
         );
@@ -1595,10 +1727,10 @@ export class SkillEditorStep {
               createNumberInput(
                 moveEffect.behindOffsetPx ?? 0,
                 (behindOffsetPx) =>
-                  onUpdate({
-                    ...moveEffect,
+                  patchEffect((prev) => ({
+                    ...(prev as MoveSkillEffect),
                     behindOffsetPx: behindOffsetPx > 0 ? behindOffsetPx : undefined,
-                  }),
+                  })),
                 { min: 0, step: 10 },
               ),
             ),
@@ -1609,7 +1741,7 @@ export class SkillEditorStep {
     }
 
     if (showPerEffectPresentation) {
-      appendEffectPresentationFields(parent, effect, onUpdate);
+      appendEffectPresentationFields(parent, effect, patchEffect);
     }
   }
 }

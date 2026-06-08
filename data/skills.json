@@ -1,5 +1,13 @@
 {
-  "passives": [],
+  "passives": [
+    {
+      "id": "attacker_kyushi_passive_1",
+      "name": "射手排除",
+      "effect": "targetRuleOverride",
+      "damageMultiplier": 1.1,
+      "targetRuleOverride": "rangedAttackingEnemy"
+    }
+  ],
   "actives": [
     {
       "id": "defender_eishi_basic_attack",
@@ -10,7 +18,10 @@
           "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
-          "powerMultiplier": 0.8
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
         }
       ]
     },
@@ -23,7 +34,11 @@
           "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
-          "powerMultiplier": 0.85
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          },
+          "targetShape": "single"
         }
       ]
     },
@@ -36,9 +51,15 @@
           "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
-          "powerMultiplier": 0.9
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
         }
-      ]
+      ],
+      "vfx": {
+        "preset": "slash"
+      }
     },
     {
       "id": "attacker_kyushi_basic_attack",
@@ -49,10 +70,17 @@
           "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
-          "powerMultiplier": 0.75,
-          "range": 140
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          },
+          "range": 100
         }
-      ]
+      ],
+      "vfx": {
+        "preset": "arrow",
+        "arc": true
+      }
     },
     {
       "id": "attacker_jutsushi_basic_attack",
@@ -63,7 +91,10 @@
           "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "magic",
-          "powerMultiplier": 0.75,
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.75
+          },
           "range": 120
         }
       ]
@@ -77,7 +108,10 @@
           "targetRule": "closestAlly",
           "type": "damage",
           "damageType": "physical",
-          "powerMultiplier": 1
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
         }
       ]
     },
@@ -90,7 +124,10 @@
           "targetRule": "closestAlly",
           "type": "damage",
           "damageType": "physical",
-          "powerMultiplier": 1
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
         }
       ]
     },
@@ -113,7 +150,10 @@
           "type": "damage",
           "targetRule": "frontEnemy",
           "damageType": "physical",
-          "powerMultiplier": 1.2,
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1.2
+          },
           "anim": "attack",
           "vfx": {
             "preset": "slash"
@@ -130,13 +170,16 @@
           "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
-          "powerMultiplier": 1
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
         }
       ]
     },
     {
       "id": "defender_eishi_active_1",
-      "name": "突撃",
+      "name": "シールドバッシュ",
       "trigger": {
         "kind": "time",
         "value": 10
@@ -144,15 +187,20 @@
       "effect": [
         {
           "targetRule": "frontEnemy",
-          "type": "move",
-          "moveMode": "engage",
-          "moveDurationSec": 0.25
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          },
+          "targetShape": "single"
         },
         {
           "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "powerMultiplier": 1.25
+          "type": "debuff",
+          "debuffStat": "atk",
+          "debuffMultiplier": 0.8,
+          "debuffDurationSec": 5
         }
       ]
     },
@@ -169,12 +217,60 @@
           "type": "heal",
           "amount": {
             "kind": "atkBased",
-            "atkMultiply": 1
+            "atkScale": 1
           }
         }
       ],
       "vfx": {
         "preset": "healRise"
+      }
+    },
+    {
+      "id": "attacker_kenshi_active_1",
+      "name": "重撃",
+      "trigger": {
+        "kind": "time",
+        "value": 10
+      },
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1.2,
+            "atkOffset": 10
+          },
+          "targetShape": "single"
+        }
+      ]
+    },
+    {
+      "id": "attacker_kyushi_active_1",
+      "name": "速射",
+      "trigger": {
+        "kind": "basicAttackCount",
+        "value": 4
+      },
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.65,
+            "atkOffset": 5
+          },
+          "targetShape": "multiLock",
+          "hitCount": 2,
+          "range": 100
+        }
+      ],
+      "vfx": {
+        "preset": "arrow",
+        "durationMs": 50
       }
     }
   ]

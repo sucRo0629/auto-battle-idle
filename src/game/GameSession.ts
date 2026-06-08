@@ -1,4 +1,5 @@
 import { BattleEngine } from '../battle/BattleEngine.ts';
+import { StageDamageStatsTracker } from '../battle/stageDamageStats.ts';
 import type {
   CharacterBuild,
   GameData,
@@ -44,6 +45,8 @@ export class GameSession {
   readonly view: BattleView;
   private autoSaveTimer: ReturnType<typeof setInterval> | null = null;
   private metaMenuOpen = false;
+  private statsOverlayOpen = false;
+  private readonly stageDamageStats = new StageDamageStatsTracker();
   private readonly menuHost: MenuHost;
 
   constructor(
@@ -53,12 +56,20 @@ export class GameSession {
     this.levelCurves = loadLevelCurves(levelCurvesJson);
     this.verifyMode = isVerifyModeEnabled();
     this.save = this.loadSaveForMode(this.verifyMode);
+    this.stageDamageStats.resetForStage(
+      this.save.stageProgress.currentStageId,
+    );
 
     this.engine = new BattleEngine(
       gameData,
       this.levelCurves,
       () => this.save.party,
       () => this.save.stageProgress.currentStageId,
+      {
+        onDamageApplied: (actor, target, amount) => {
+          this.stageDamageStats.recordDamage(actor, target, amount);
+        },
+      },
     );
 
     this.view = new BattleView(
@@ -73,6 +84,17 @@ export class GameSession {
         onOpenMetaMenu: () => this.openPartyMenu(),
         onMemberLevelChange: (partyIndex, level) =>
           this.setMemberLevel(partyIndex, level),
+        getStageDamageDisplayRows: () =>
+          this.stageDamageStats.getDisplayRows(
+            this.save.party,
+            this.gameData.classRegistry,
+          ),
+        getCurrentStageId: () => this.save.stageProgress.currentStageId,
+        onStatsOverlayOpenChange: (open) => {
+          this.statsOverlayOpen = open;
+          this.view.setStatsButtonDisabled(open || this.metaMenuOpen);
+          this.view.setMenuButtonDisabled(open || this.metaMenuOpen);
+        },
       },
     );
 
@@ -86,7 +108,8 @@ export class GameSession {
         this.updatePartySlot(slotIndex, member),
       onOpenChange: (open) => {
         this.metaMenuOpen = open;
-        this.view.setMenuButtonDisabled(open);
+        this.view.setMenuButtonDisabled(open || this.statsOverlayOpen);
+        this.view.setStatsButtonDisabled(open || this.statsOverlayOpen);
       },
     });
 
@@ -119,6 +142,9 @@ export class GameSession {
     this.verifyMode = enabled;
     setVerifyModeEnabled(enabled);
     this.save = this.loadSaveForMode(enabled);
+    this.stageDamageStats.resetForStage(
+      this.save.stageProgress.currentStageId,
+    );
     this.engine.restartBattle();
     this.persistSave();
     this.view.syncVerifyModeToggle(enabled);
@@ -172,7 +198,7 @@ export class GameSession {
   }
 
   tick(deltaSec: number, deltaMs: number): void {
-    if (!this.metaMenuOpen) {
+    if (!this.metaMenuOpen && !this.statsOverlayOpen) {
       this.engine.tick(deltaSec);
     }
     this.view.tick(deltaMs);
@@ -220,6 +246,7 @@ export class GameSession {
       return;
     }
 
+    this.stageDamageStats.resetForStage(previousStageId);
     console.log(
       `[progress] Defeat at ${failedStageName} → ${previousStageName}`,
     );
@@ -250,6 +277,9 @@ export class GameSession {
       this.gameData,
       this.levelCurves,
       survivingPartyIndices,
+    );
+    this.stageDamageStats.resetForStage(
+      this.save.stageProgress.currentStageId,
     );
 
     for (const levelUp of result.levelUps) {

@@ -4,7 +4,7 @@
 
 ## 物理ダメージ
 
-1. `baseDamage = floor(effectiveAtk × skill.powerMultiplier × passiveDamageMul)`
+1. `baseDamage = floor(resolvePowerAmount(amount) × passiveDamageMul)`（`atkBased`: `(effectiveAtk + atkOffset) × atkScale`）
 2. `effectiveDef = def × defBuffMul`（ステータス効果から）
 3. `afterSubtract = baseDamage - effectiveDef`
 4. `afterSubtract <= 0` なら `afterDefense = 0`、  
@@ -39,11 +39,11 @@ Phase 1 デモは物理のみ。術師等は `damageType: "magic"` + `reg` に�
 
 **原則:** 回復後の HP は `min(maxHp, hp + amount)` — 超過分は切り捨て。
 
-heal / HoT / barrier は **`ResourceAmountSpec`**（`amount`）で効果量を定義。旧 JSON のトップレベル `powerMultiplier` のみも、`kind: atkBased` + `atkMultiply` として読み込む（後方互換）。
+heal / HoT / barrier / **damage** は **`ResourceAmountSpec`**（`amount`）で効果量を定義。旧 JSON のトップレベル `powerMultiplier` のみも、`kind: atkBased` + `atkScale` として読み込む（後方互換）。
 
 | kind | 式 |
 |------|-----|
-| `atkBased`（既定） | `floor(max(0, ((effectiveAtk + healBonus + atkAdd) × atkMultiply ÷ atkDivide) − atkSubtract))` |
+| `atkBased`（既定） | `floor(max(0, (effectiveAtk + healBonus + atkOffset) × atkScale))`（damage は healBonus なし） |
 | `flat` | `floor(max(0, flatAmount + healBonus))` |
 | `percentMaxHp` | `floor(max(0, target.maxHp × percentOfMaxHp + healBonus))` |
 
@@ -119,12 +119,12 @@ HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さ�
 
 | 形状 | 挙動 |
 |------|------|
-| `single` | 攻撃可能プールから 1 体 |
-| `aoe` | anchor + 半径内全員 |
+| `single` | 攻撃可能プールから 1 体。`hitCount >= 2` なら同一対象へ N 回（`hitDurationSec` で分散） |
+| `aoe` | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散） |
 | `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打） |
 | `pierce` | 射線上の敵を手前→奥。`pierceDurationSec` で適用分散可 |
 | `chain` | anchor から同陣営へ距離内で連鎖 |
-| `scatter` | 乱打（半径内ランダム着弾 × 回数、`scatterDurationSec` で適用分散） |
+| `scatter` | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
 
 プール：味方 actor → 敵、敵 actor → 味方。heal / buff 向け `mostDamagedAlly` 等も anchor として同じ形状を利用。
 
@@ -175,6 +175,9 @@ effectiveRangePx = effect.range ?? traits.rangePx ?? 既定値
 5. 3秒後：HP全回復、同一ステージ再スポーン、`Running` 再開
 
 死亡ユニットはターゲット対象外。次の再スポーンまで death アニメ。
+
+- **味方**: 同一 Wave 中はフィールド上に death 表示。次 Wave 進軍開始時にスプライトのみ消える（`hp`・HUD の灰色表示は維持）。ステージ再スポーンで HP 全回復。
+- **敵**: Wave 終了でエンティティごと差し替わるため、死体は Wave 内のみ表示。
 
 ## 演出（render 層）
 

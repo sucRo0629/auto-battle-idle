@@ -1,0 +1,159 @@
+.battle-stats-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.battle-stats-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgba(8, 10, 18, 0.55);
+  cursor: pointer;
+}
+
+.battle-stats-window {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  transform: translate(-50%, -50%);
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 10px;
+  background: rgba(22, 33, 62, 0.98);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.battle-stats-window-bar {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--canvas-border-color);
+  background: rgba(15, 15, 26, 0.75);
+}
+
+.battle-stats-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.battle-stats-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.battle-stats-subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: rgba(227, 227, 227, 0.72);
+}
+
+.battle-stats-close {
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 6px;
+  background: rgba(22, 33, 62, 0.92);
+  color: var(--app-text);
+  font-size: 1.125rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.battle-stats-close:hover {
+  background: rgba(45, 58, 79, 0.95);
+}
+
+.battle-stats-window-body {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.battle-stats-empty,
+.battle-stats-section-empty {
+  margin: 0;
+  font-size: 0.875rem;
+  color: rgba(227, 227, 227, 0.65);
+}
+
+.battle-stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.battle-stats-section-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.battle-stats-bar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.battle-stats-bar-item {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr 2.5rem;
+  align-items: center;
+  gap: 8px;
+}
+
+.battle-stats-bar-label {
+  font-size: 0.8125rem;
+  color: rgba(227, 227, 227, 0.88);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battle-stats-bar-track {
+  height: 14px;
+  border-radius: 4px;
+  background: rgba(8, 10, 18, 0.55);
+  overflow: hidden;
+}
+
+.battle-stats-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  min-width: 0;
+  transition: width 0.15s ease;
+}
+
+.battle-stats-bar-fill--dealt {
+  background: linear-gradient(90deg, #c45c26 0%, #e8843d 100%);
+}
+
+.battle-stats-bar-fill--taken {
+  background: linear-gradient(90deg, #2f6f9c 0%, #4a9fd4 100%);
+}
+
+.battle-stats-bar-value {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: rgba(227, 227, 227, 0.78);
+  text-align: right;
+}

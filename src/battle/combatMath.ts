@@ -58,25 +58,24 @@ export function getDamageTakenMultiplier(combatant: CombatantState): number {
   return computeEffectiveStat(1, agg);
 }
 
-export function resolveResourceAmount(
+export function resolvePowerAmount(
   actor: CombatantState,
   target: CombatantState,
   spec: ResourceAmountSpec,
   passives: Record<string, PassiveSkillDef>,
-  powerMultiplierOverride?: number,
+  atkScaleOverride?: number,
+  options?: { includeHealBonus?: boolean },
 ): number {
   const actorPassives = getPassiveDefs(actor, passives);
-  const healBonus = getPassiveHealBonus(actorPassives);
+  const healBonus = options?.includeHealBonus
+    ? getPassiveHealBonus(actorPassives)
+    : 0;
 
   switch (spec.kind) {
     case 'atkBased': {
-      const add = spec.atkAdd ?? 0;
-      const multiply = powerMultiplierOverride ?? spec.atkMultiply ?? 1;
-      const divide = spec.atkDivide ?? 1;
-      const subtract = spec.atkSubtract ?? 0;
-      const base =
-        ((getEffectiveAtk(actor) + healBonus + add) * multiply) / divide -
-        subtract;
+      const offset = spec.atkOffset ?? 0;
+      const scale = atkScaleOverride ?? spec.atkScale ?? 1;
+      const base = (getEffectiveAtk(actor) + healBonus + offset) * scale;
       return Math.floor(Math.max(0, base));
     }
     case 'flat':
@@ -88,6 +87,18 @@ export function resolveResourceAmount(
   }
 }
 
+export function resolveResourceAmount(
+  actor: CombatantState,
+  target: CombatantState,
+  spec: ResourceAmountSpec,
+  passives: Record<string, PassiveSkillDef>,
+  atkScaleOverride?: number,
+): number {
+  return resolvePowerAmount(actor, target, spec, passives, atkScaleOverride, {
+    includeHealBonus: true,
+  });
+}
+
 export function resolveHotAmountFromStatus(
   source: CombatantState,
   target: CombatantState,
@@ -96,8 +107,26 @@ export function resolveHotAmountFromStatus(
 ): number {
   const spec =
     effect.amount ??
-    ({ kind: 'atkBased', atkMultiply: effect.powerMultiplier ?? 1 } satisfies ResourceAmountSpec);
+    ({ kind: 'atkBased', atkScale: effect.powerMultiplier ?? 1 } satisfies ResourceAmountSpec);
   return resolveResourceAmount(source, target, spec, passives);
+}
+
+export function resolveDotAmountFromStatus(
+  source: CombatantState,
+  target: CombatantState,
+  effect: StatusEffect,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  const spec =
+    effect.amount ??
+    ({ kind: 'atkBased', atkScale: effect.powerMultiplier ?? 1 } satisfies ResourceAmountSpec);
+  return resolveDotTick(
+    source,
+    target,
+    spec,
+    effect.damageType ?? 'physical',
+    passives,
+  );
 }
 
 export function applyHealToTarget(
@@ -150,15 +179,19 @@ export function resolveDamage(
   target: CombatantState,
   effect: DamageSkillEffect,
   passives: Record<string, PassiveSkillDef>,
-  powerMultiplierOverride?: number,
+  atkScaleOverride?: number,
 ): number {
   const attackerPassives = getPassiveDefs(attacker, passives);
   const targetPassives = getPassiveDefs(target, passives);
-  const powerMultiplier = powerMultiplierOverride ?? effect.powerMultiplier;
   const baseDamage = Math.floor(
-    getEffectiveAtk(attacker) *
-      powerMultiplier *
-      getPassiveDamageMultiplier(attackerPassives),
+    resolvePowerAmount(
+      attacker,
+      target,
+      effect.amount,
+      passives,
+      atkScaleOverride,
+      { includeHealBonus: false },
+    ) * getPassiveDamageMultiplier(attackerPassives),
   );
   const damageType: DamageType = effect.damageType;
   const effectiveDef = getEffectiveDef(target);
@@ -189,14 +222,19 @@ export function resolveDamage(
 export function resolveDotTick(
   source: CombatantState,
   target: CombatantState,
-  powerMultiplier: number,
+  amount: ResourceAmountSpec,
   damageType: DamageType,
   passives: Record<string, PassiveSkillDef>,
 ): number {
   return resolveDamage(
     source,
     target,
-    { type: "damage", targetRule: "frontEnemy", damageType, powerMultiplier },
+    {
+      type: "damage",
+      targetRule: "frontEnemy",
+      damageType,
+      amount,
+    },
     passives,
   );
 }

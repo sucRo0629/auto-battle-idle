@@ -35,6 +35,7 @@ function mockUnit(
     isEnemy: false,
     battleX: 200,
     visualX: 200,
+    corpseVisible: true,
     ...overrides,
   };
 }
@@ -65,7 +66,7 @@ describe('skillSequence', () => {
           type: 'damage',
           targetRule: 'farthestEnemy',
           damageType: 'physical',
-          powerMultiplier: 1.5,
+          amount: { kind: 'atkBased', atkScale: 1.5 },
         },
         {
           type: 'move',
@@ -139,7 +140,7 @@ describe('skillSequence', () => {
           type: 'damage',
           targetRule: 'frontEnemy',
           damageType: 'physical',
-          powerMultiplier: 1,
+          amount: { kind: 'atkBased', atkScale: 1 },
         },
       ],
     };
@@ -203,7 +204,7 @@ describe('skillSequence', () => {
           type: 'damage',
           targetRule: 'farthestEnemy',
           damageType: 'physical',
-          powerMultiplier: 1,
+          amount: { kind: 'atkBased', atkScale: 1 },
         },
         {
           type: 'move',
@@ -280,7 +281,7 @@ describe('resolveMoveBattleX', () => {
           targetRule: 'frontEnemy',
           type: 'damage',
           damageType: 'physical',
-          powerMultiplier: 1,
+          amount: { kind: 'atkBased', atkScale: 1 },
         },
       ],
     },

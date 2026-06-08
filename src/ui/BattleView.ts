@@ -11,7 +11,9 @@ import {
   resolveEffectPresentation,
   shouldPlayActorAnim,
 } from '../render/skillVfx/resolveEffectPresentation.ts';
+import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 import { BattleCanvas, type PartyHudMeta } from '../render/BattleCanvas.ts';
+import { BattleStatsOverlay } from './BattleStatsOverlay.ts';
 import { DebugMenuPanel } from './DebugMenuPanel.ts';
 
 export interface VerifyModeControls {
@@ -19,6 +21,9 @@ export interface VerifyModeControls {
   onVerifyModeChange: (enabled: boolean) => void;
   onOpenMetaMenu: () => void;
   onMemberLevelChange?: (partyIndex: number, level: number) => void;
+  getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
+  getCurrentStageId?: () => string;
+  onStatsOverlayOpenChange?: (open: boolean) => void;
 }
 
 export class BattleView {
@@ -27,9 +32,11 @@ export class BattleView {
   private readonly stageLabelEl: HTMLElement;
   private readonly verifyModeInput: HTMLInputElement;
   private readonly menuButton: HTMLButtonElement;
+  private readonly statsButton: HTMLButtonElement;
   private readonly enhancementTreeButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
   private readonly debugMenu: DebugMenuPanel;
+  private statsOverlay: BattleStatsOverlay | null = null;
 
   constructor(
     container: HTMLElement,
@@ -90,6 +97,13 @@ export class BattleView {
 
     menuButtons.append(this.enhancementTreeButton, this.menuButton);
     this.canvasHost.appendChild(menuButtons);
+
+    this.statsButton = this.createBattleMenuButton('analytics', '統計情報');
+    this.statsButton.classList.add('battle-stats-button');
+    this.statsButton.addEventListener('click', () => {
+      this.openStatsOverlay(verifyModeControls);
+    });
+    this.canvasHost.appendChild(this.statsButton);
 
     this.root.appendChild(this.canvasHost);
 
@@ -211,7 +225,10 @@ export class BattleView {
       this.gameData.stages,
       save.stageProgress.currentStageId,
     );
-    const stageLabel = stage?.displayName ?? save.stageProgress.currentStageId;
+    const stageName = stage?.displayName ?? save.stageProgress.currentStageId;
+    const waveNum = snapshot.waveIndex + 1;
+    const waveTotal = snapshot.waveCount;
+    const stageLabel = `${stageName}  Wave ${waveNum}/${waveTotal}`;
     const partyMeta: PartyHudMeta[] = save.party
       .filter((member): member is NonNullable<typeof member> => member !== null)
       .map((member) => {
@@ -236,6 +253,34 @@ export class BattleView {
     this.menuButton.disabled = disabled;
   }
 
+  setStatsButtonDisabled(disabled: boolean): void {
+    this.statsButton.disabled = disabled;
+  }
+
+  private openStatsOverlay(controls?: VerifyModeControls): void {
+    if (
+      this.statsOverlay ||
+      !controls?.getStageDamageDisplayRows ||
+      !controls.getCurrentStageId
+    ) {
+      return;
+    }
+
+    controls.onStatsOverlayOpenChange?.(true);
+    this.statsOverlay = new BattleStatsOverlay(document.body, this.gameData, {
+      getDisplayRows: controls.getStageDamageDisplayRows,
+      getCurrentStageId: controls.getCurrentStageId,
+      onClose: () => this.closeStatsOverlay(controls),
+    });
+  }
+
+  private closeStatsOverlay(controls?: VerifyModeControls): void {
+    if (!this.statsOverlay) return;
+    this.statsOverlay.destroy();
+    this.statsOverlay = null;
+    controls?.onStatsOverlayOpenChange?.(false);
+  }
+
   private createBattleMenuButton(
     iconName: string,
     ariaLabel: string,
@@ -253,6 +298,8 @@ export class BattleView {
   }
 
   destroy(): void {
+    this.statsOverlay?.destroy();
+    this.statsOverlay = null;
     this.canvas.destroy();
     this.debugMenu.destroy();
     this.root.remove();

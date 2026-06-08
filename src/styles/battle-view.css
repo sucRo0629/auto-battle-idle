@@ -167,12 +167,20 @@
 .battle-menu-buttons {
   -webkit-app-region: no-drag;
   position: absolute;
-  right: 24px;
-  bottom: calc((var(--battle-ground-margin) + 8) * 1px);
+  top: 4px;
+  right: 8px;
   z-index: 2;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 6px;
+}
+
+.battle-stats-button {
+  -webkit-app-region: no-drag;
+  position: absolute;
+  top: 30px;
+  left: 8px;
+  z-index: 2;
 }
 
 .battle-menu-button {

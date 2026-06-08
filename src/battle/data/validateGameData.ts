@@ -215,14 +215,25 @@ function parseResourceAmountSpec(
 
   if (kind === 'atkBased') {
     const spec: ResourceAmountSpec = { kind };
-    const atkAdd = parseOptionalNumber(obj, 'atkAdd', context);
-    const atkMultiply = parseOptionalNumber(obj, 'atkMultiply', context);
-    const atkDivide = parseOptionalNumber(obj, 'atkDivide', context);
-    const atkSubtract = parseOptionalNumber(obj, 'atkSubtract', context);
-    if (atkAdd !== undefined) spec.atkAdd = atkAdd;
-    if (atkMultiply !== undefined) spec.atkMultiply = atkMultiply;
-    if (atkDivide !== undefined) spec.atkDivide = atkDivide;
-    if (atkSubtract !== undefined) spec.atkSubtract = atkSubtract;
+    const atkOffset = parseOptionalNumber(obj, 'atkOffset', context);
+    const atkScale = parseOptionalNumber(obj, 'atkScale', context);
+    if (atkOffset !== undefined) spec.atkOffset = atkOffset;
+    if (atkScale !== undefined) spec.atkScale = atkScale;
+
+    if (spec.atkOffset === undefined || spec.atkScale === undefined) {
+      const legacyAdd = parseOptionalNumber(obj, 'atkAdd', context);
+      const legacyMultiply = parseOptionalNumber(obj, 'atkMultiply', context);
+      const legacyDivide = parseOptionalNumber(obj, 'atkDivide', context);
+      const legacySubtract = parseOptionalNumber(obj, 'atkSubtract', context);
+      if (spec.atkOffset === undefined) {
+        const offset = (legacyAdd ?? 0) - (legacySubtract ?? 0);
+        if (offset !== 0) spec.atkOffset = offset;
+      }
+      if (spec.atkScale === undefined) {
+        const scale = (legacyMultiply ?? 1) / (legacyDivide ?? 1);
+        if (scale !== 1) spec.atkScale = scale;
+      }
+    }
     return spec;
   }
 
@@ -238,22 +249,41 @@ function parseResourceAmountSpec(
   return { kind, percentOfMaxHp };
 }
 
-function parseResourceAmount(
+function parseEffectAmount(
   obj: Record<string, unknown>,
   context: string,
+  label: string,
 ): ResourceAmountSpec {
   if (obj.amount !== undefined) {
     return parseResourceAmountSpec(obj.amount, `${context}.amount`);
   }
   const legacy = obj.powerMultiplier;
   if (typeof legacy === 'number' && !Number.isNaN(legacy)) {
-    return { kind: 'atkBased', atkMultiply: legacy };
+    return { kind: 'atkBased', atkScale: legacy };
   }
-  invalidField(
-    context,
-    'amount',
-    'or legacy powerMultiplier is required for heal/hot/barrier',
-  );
+  invalidField(context, 'amount', `or legacy powerMultiplier is required for ${label}`);
+}
+
+function parseOptionalRepeatedHitFields(
+  obj: Record<string, unknown>,
+  context: string,
+): Partial<Pick<SkillEffectDef, 'hitCount' | 'hitDurationSec'>> {
+  const hitCountRaw = obj.hitCount;
+  if (hitCountRaw === undefined) {
+    if (obj.hitDurationSec !== undefined) {
+      invalidField(context, 'hitDurationSec', 'only allowed when hitCount >= 2');
+    }
+    return {};
+  }
+  const hitCount = requireNumber(obj, 'hitCount', context);
+  if (!Number.isInteger(hitCount) || hitCount < 2) {
+    invalidField(context, 'hitCount', 'must be an integer >= 2');
+  }
+  const hitDurationSec = requireNumber(obj, 'hitDurationSec', context);
+  if (hitDurationSec <= 0) {
+    invalidField(context, 'hitDurationSec', 'must be a positive number');
+  }
+  return { hitCount, hitDurationSec };
 }
 
 function parseTargetShapeFields(
@@ -265,6 +295,7 @@ function parseTargetShapeFields(
     | 'targetShape'
     | 'aoeRadiusPx'
     | 'hitCount'
+    | 'hitDurationSec'
     | 'piercePowerStepMultiplier'
     | 'piercePowerStepMode'
     | 'pierceDurationSec'
@@ -273,6 +304,7 @@ function parseTargetShapeFields(
     | 'chainPowerStepMultiplier'
     | 'chainPowerStepMode'
     | 'scatterRadiusPx'
+    | 'scatterSpreadRadiusPx'
     | 'scatterHitCount'
     | 'scatterDurationSec'
     | 'scatterSpreadRate'
@@ -288,6 +320,7 @@ function parseTargetShapeFields(
   const shapeOnlyFields = [
     'aoeRadiusPx',
     'hitCount',
+    'hitDurationSec',
     'piercePowerStepMultiplier',
     'piercePowerStepMode',
     'pierceDurationSec',
@@ -296,13 +329,20 @@ function parseTargetShapeFields(
     'chainPowerStepMultiplier',
     'chainPowerStepMode',
     'scatterRadiusPx',
+    'scatterSpreadRadiusPx',
     'scatterHitCount',
     'scatterDurationSec',
     'scatterSpreadRate',
   ] as const;
 
+  const singleAllowedFields = new Set(['hitCount', 'hitDurationSec']);
+
   for (const key of shapeOnlyFields) {
-    if (effectiveShape === 'single' && obj[key] !== undefined) {
+    if (
+      effectiveShape === 'single' &&
+      obj[key] !== undefined &&
+      !singleAllowedFields.has(key)
+    ) {
       invalidField(context, key, `only allowed when targetShape is not single`);
     }
   }
@@ -310,8 +350,28 @@ function parseTargetShapeFields(
   if (effectiveShape !== 'aoe' && obj.aoeRadiusPx !== undefined) {
     invalidField(context, 'aoeRadiusPx', 'only allowed when targetShape is aoe');
   }
-  if (effectiveShape !== 'multiLock' && obj.hitCount !== undefined) {
-    invalidField(context, 'hitCount', 'only allowed when targetShape is multiLock');
+  if (
+    effectiveShape !== 'multiLock' &&
+    effectiveShape !== 'single' &&
+    effectiveShape !== 'aoe' &&
+    obj.hitCount !== undefined
+  ) {
+    invalidField(
+      context,
+      'hitCount',
+      'only allowed when targetShape is single, aoe, or multiLock',
+    );
+  }
+  if (
+    effectiveShape !== 'single' &&
+    effectiveShape !== 'aoe' &&
+    obj.hitDurationSec !== undefined
+  ) {
+    invalidField(
+      context,
+      'hitDurationSec',
+      'only allowed when targetShape is single or aoe',
+    );
   }
   if (effectiveShape !== 'chain') {
     for (const key of [
@@ -328,6 +388,7 @@ function parseTargetShapeFields(
   if (effectiveShape !== 'scatter') {
     for (const key of [
       'scatterRadiusPx',
+      'scatterSpreadRadiusPx',
       'scatterHitCount',
       'scatterDurationSec',
       'scatterSpreadRate',
@@ -350,7 +411,10 @@ function parseTargetShapeFields(
   }
 
   if (effectiveShape === 'single') {
-    return targetShape !== undefined ? { targetShape: 'single' } : {};
+    return {
+      ...(targetShape !== undefined ? { targetShape: 'single' } : {}),
+      ...parseOptionalRepeatedHitFields(obj, context),
+    };
   }
 
   if (effectiveShape === 'aoe') {
@@ -358,7 +422,11 @@ function parseTargetShapeFields(
     if (aoeRadiusPx <= 0) {
       invalidField(context, 'aoeRadiusPx', 'must be a positive number');
     }
-    return { targetShape: 'aoe', aoeRadiusPx };
+    return {
+      targetShape: 'aoe',
+      aoeRadiusPx,
+      ...parseOptionalRepeatedHitFields(obj, context),
+    };
   }
 
   if (effectiveShape === 'multiLock') {
@@ -425,11 +493,20 @@ function parseTargetShapeFields(
       }
       scatterSpreadRate = spreadRaw;
     }
+    const spreadRadiusRaw = obj.scatterSpreadRadiusPx;
+    let scatterSpreadRadiusPx: number | undefined;
+    if (spreadRadiusRaw !== undefined) {
+      if (typeof spreadRadiusRaw !== 'number' || spreadRadiusRaw <= 0) {
+        invalidField(context, 'scatterSpreadRadiusPx', 'must be a positive number');
+      }
+      scatterSpreadRadiusPx = spreadRadiusRaw;
+    }
     return {
       targetShape: 'scatter',
       scatterRadiusPx,
       scatterHitCount,
       scatterDurationSec,
+      ...(scatterSpreadRadiusPx !== undefined ? { scatterSpreadRadiusPx } : {}),
       ...(scatterSpreadRate !== undefined ? { scatterSpreadRate } : {}),
     };
   }
@@ -527,20 +604,20 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
 
   if (type === 'damage') {
     const damageType = requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
-    const powerMultiplier = requireNumber(obj, 'powerMultiplier', context);
+    const amount = parseEffectAmount(obj, context, 'damage');
     return {
       targetRule,
       ...targetShapeFields,
       type,
       damageType,
-      powerMultiplier,
+      amount,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
   }
 
   if (type === 'heal') {
-    const amount = parseResourceAmount(obj, context);
+    const amount = parseEffectAmount(obj, context, 'heal');
     return {
       targetRule,
       ...targetShapeFields,
@@ -579,7 +656,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
 
   if (type === 'hot') {
     const durationSec = requireNumber(obj, 'durationSec', context);
-    const amount = parseResourceAmount(obj, context);
+    const amount = parseEffectAmount(obj, context, 'hot');
     return {
       targetRule,
       ...targetShapeFields,
@@ -592,7 +669,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
   }
 
   if (type === 'barrier') {
-    const amount = parseResourceAmount(obj, context);
+    const amount = parseEffectAmount(obj, context, 'barrier');
     const barrierStack = obj.barrierStack;
     if (barrierStack !== undefined && typeof barrierStack !== 'boolean') {
       invalidField(context, 'barrierStack', 'must be a boolean');

@@ -21,25 +21,32 @@ export class VictoryOverlay {
   private phase: OverlayPhase = "idle";
   private elapsedMs = 0;
   private resultPhase: ResultPhase | null = null;
+  private victoryUseTimerFade = false;
 
-  syncPhase(phase: BattlePhase, alliesOffScreen: boolean): void {
+  syncPhase(
+    phase: BattlePhase,
+    alliesOffScreen: boolean,
+    victoryUseTimerFade = false,
+    victoryAwaitExitMarch = false,
+  ): void {
     if (phase !== "victory" && phase !== "defeat") {
       this.phase = "idle";
       this.elapsedMs = 0;
       this.resultPhase = null;
+      this.victoryUseTimerFade = false;
       return;
     }
 
     this.resultPhase = phase;
+    this.victoryUseTimerFade = victoryUseTimerFade;
 
     if (this.phase === "idle") {
-      this.phase = "visible";
-      this.elapsedMs = 0;
-    }
-
-    if (this.phase === "visible" && phase === "victory" && alliesOffScreen) {
-      this.phase = "fadingOut";
-      this.elapsedMs = 0;
+      const waitForExitMarch =
+        phase === "victory" && victoryAwaitExitMarch && !alliesOffScreen;
+      if (!waitForExitMarch) {
+        this.phase = "visible";
+        this.elapsedMs = 0;
+      }
     }
   }
 
@@ -47,6 +54,16 @@ export class VictoryOverlay {
     if (this.phase === "idle" || this.phase === "done") return;
 
     this.elapsedMs += deltaMs;
+
+    if (
+      this.phase === "visible" &&
+      this.resultPhase === "victory" &&
+      this.victoryUseTimerFade &&
+      this.elapsedMs >= DEFEAT_HOLD_MS
+    ) {
+      this.phase = "fadingOut";
+      this.elapsedMs = 0;
+    }
 
     if (
       this.phase === "visible" &&

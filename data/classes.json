@@ -52,7 +52,7 @@
       {
         "level": 0,
         "skillIds": [
-          "attacker_kenshi_charge"
+          "attacker_kenshi_active_1"
         ]
       }
     ]
@@ -81,7 +81,9 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": []
+        "skillIds": [
+          "attacker_kyushi_active_1"
+        ]
       }
     ]
   },

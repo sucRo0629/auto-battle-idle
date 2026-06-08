@@ -18,7 +18,7 @@ function skill(overrides: Partial<ActiveSkillDef> = {}): ActiveSkillDef {
         targetRule: 'frontEnemy',
         type: 'damage',
         damageType: 'physical',
-        powerMultiplier: 1,
+        amount: { kind: 'atkBased', atkScale: 1 },
       },
     ],
     ...overrides,

@@ -8,6 +8,7 @@ import type {
 import {
   BATTLE_ENEMY_VISIBLE_MIN_X,
   DEFAULT_MELEE_ATTACK_RANGE_PX,
+  DEFAULT_MELEE_RANGE_PX,
   DEFAULT_RANGED_RANGE_PX,
 } from './types.ts';
 import { resolveSkillRangePx } from './skills/rangeUtils.ts';
@@ -59,6 +60,38 @@ export function getAllyContactX(allies: CombatantState[]): number | null {
   return Math.min(...living.map((a) => a.battleX));
 }
 
+/** 接敵ロジック（min battleX）と同じ味方の visual 基準点 */
+export function getBattleContactAllyVisual(
+  allies: CombatantState[],
+): { visualX: number; rangePx: number } | null {
+  const living = allies.filter((a) => a.isAlive);
+  if (living.length === 0) return null;
+  const contact = living.reduce((best, ally) =>
+    ally.battleX < best.battleX ? ally : best,
+  );
+  return {
+    visualX: contact.visualX,
+    rangePx: contact.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+  };
+}
+
+/** 敵 visualX を battleX ベースの接敵位置へ写像（contact 味方の visual−battle オフセット） */
+export function syncEnemyVisualToBattleContact(
+  allies: CombatantState[],
+  enemies: CombatantState[],
+): void {
+  const living = allies.filter((a) => a.isAlive);
+  if (living.length === 0) return;
+  const contact = living.reduce((best, ally) =>
+    ally.battleX < best.battleX ? ally : best,
+  );
+  const offset = contact.visualX - contact.battleX;
+  for (const enemy of enemies) {
+    if (!enemy.isAlive) continue;
+    enemy.visualX = enemy.battleX + offset;
+  }
+}
+
 export function isEnemyVisibleOnScreen(enemy: CombatantState): boolean {
   return enemy.battleX >= BATTLE_ENEMY_VISIBLE_MIN_X;
 }
@@ -76,15 +109,16 @@ export function resolveMaxEffectiveRangePx(
     (unit.traits.attackRange === 'melee'
       ? DEFAULT_MELEE_ATTACK_RANGE_PX
       : DEFAULT_RANGED_RANGE_PX);
-  let max = traitDefault;
+  let max = -1;
   for (const cd of unit.cooldowns) {
     const skill = gameData.skillRegistry.actives[cd.skillId];
     if (!skill) continue;
     for (const effect of skill.effect) {
+      if (effect.type === 'move') continue;
       max = Math.max(max, resolveSkillRangePx(unit, effect));
     }
   }
-  return max;
+  return max >= 0 ? max : traitDefault;
 }
 
 /** move 効果の目標 battleX（anchor 基準） */

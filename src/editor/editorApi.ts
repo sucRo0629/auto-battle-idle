@@ -649,7 +649,7 @@ export function defaultActiveSkill(id: string): ActiveSkillDef {
         targetRule: 'frontEnemy',
         type: 'damage',
         damageType: 'physical',
-        powerMultiplier: 1,
+        amount: { kind: 'atkBased', atkScale: 1 },
       },
     ],
   };

@@ -311,11 +311,25 @@ function resolveChainHitTargets(
   return result;
 }
 
+function resolveRepeatedHitWaves(
+  targets: SkillHitTarget[],
+  hitCount: number,
+  hitDurationSec: number,
+): SkillEffectResolution | null {
+  if (targets.length === 0) return null;
+  const waves: SkillHitWave[] = [];
+  for (let i = 0; i < hitCount; i++) {
+    waves.push({ hitIndex: i, targets });
+  }
+  return { spreadDurationSec: hitDurationSec, waves };
+}
+
 function resolveScatterWaves(
   rule: TargetRule,
   actor: CombatantState,
   attackablePool: CombatantState[],
-  scatterRadiusPx: number,
+  spreadRadiusPx: number,
+  hitRadiusPx: number,
   hitCount: number,
   spreadRate: number,
   rand: () => number,
@@ -327,11 +341,11 @@ function resolveScatterWaves(
   const waves: SkillHitWave[] = [];
 
   for (let i = 0; i < hitCount; i++) {
-    const offset = (rand() * 2 - 1) * scatterRadiusPx * spreadRate;
+    const offset = (rand() * 2 - 1) * spreadRadiusPx * spreadRate;
     const centerX = anchorX + offset;
     const targets = attackablePool
       .filter(
-        (unit) => Math.abs(getBattleX(unit) - centerX) <= scatterRadiusPx,
+        (unit) => Math.abs(getBattleX(unit) - centerX) <= hitRadiusPx,
       )
       .map((unit) => ({ unit }));
     waves.push({ hitIndex: i, targets });
@@ -340,12 +354,11 @@ function resolveScatterWaves(
   return waves;
 }
 
-function getBasePowerMultiplier(effect: SkillEffectDef): number | undefined {
-  if (effect.type === 'damage') {
-    return effect.powerMultiplier;
-  }
-  if (effect.type === 'heal') {
-    return effect.amount.atkMultiply;
+function getBaseAtkScale(effect: SkillEffectDef): number | undefined {
+  if (effect.type === 'damage' || effect.type === 'heal') {
+    if (effect.amount.kind === 'atkBased') {
+      return effect.amount.atkScale ?? 1;
+    }
   }
   return undefined;
 }
@@ -392,14 +405,20 @@ export function resolveEffectResolution(
   const rangePx = resolveSkillRangePx(actor, effect);
   const attackablePool = getAttackablePool(rule, actor, allies, enemies, rangePx);
   const shape: TargetShape = effect.targetShape ?? 'single';
-  const basePower = getBasePowerMultiplier(effect);
+  const basePower = getBaseAtkScale(effect);
 
   if (shape === 'single') {
     const target = pickTargetFromPool(rule, actor, attackablePool);
     if (!target) return null;
-    return {
-      waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
-    };
+    const hits = effect.hitCount;
+    if (hits === undefined || hits < 2) {
+      return {
+        waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
+      };
+    }
+    const duration = effect.hitDurationSec;
+    if (duration === undefined || duration <= 0) return null;
+    return resolveRepeatedHitWaves([{ unit: target }], hits, duration);
   }
 
   if (shape === 'aoe') {
@@ -407,7 +426,13 @@ export function resolveEffectResolution(
     if (radius === undefined || radius <= 0) return null;
     const targets = resolveAoeHitTargets(rule, actor, attackablePool, radius);
     if (targets.length === 0) return null;
-    return { waves: [{ hitIndex: 0, targets }] };
+    const hits = effect.hitCount;
+    if (hits === undefined || hits < 2) {
+      return { waves: [{ hitIndex: 0, targets }] };
+    }
+    const duration = effect.hitDurationSec;
+    if (duration === undefined || duration <= 0) return null;
+    return resolveRepeatedHitWaves(targets, hits, duration);
   }
 
   if (shape === 'multiLock') {
@@ -487,10 +512,12 @@ export function resolveEffectResolution(
       return null;
     }
     const spreadRate = effect.scatterSpreadRate ?? 1;
+    const spreadRadiusPx = effect.scatterSpreadRadiusPx ?? radius;
     const waves = resolveScatterWaves(
       rule,
       actor,
       attackablePool,
+      spreadRadiusPx,
       radius,
       hitCount,
       spreadRate,

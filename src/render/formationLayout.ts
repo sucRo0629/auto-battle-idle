@@ -274,37 +274,58 @@ export function getLeadingAllyFormationRow(
   return null;
 }
 
+/** 接敵中: 最前生存列のうち最も敵側（visualX 最小）の位置と射程 */
+export function getLeadingAllyFront(
+  allies: Array<AllyPlacementInput & { visualX: number }>,
+): { visualX: number; rangePx: number } | null {
+  const living = allies.filter((ally) => ally.isAlive);
+  if (living.length === 0) return null;
+  const leadingRow = getLeadingAllyFormationRow(living);
+  if (leadingRow === null) return null;
+  const rowUnits = living.filter((ally) => ally.formationRow === leadingRow);
+  let front = rowUnits[0]!;
+  for (const unit of rowUnits) {
+    if (unit.visualX < front.visualX) front = unit;
+  }
+  return { visualX: front.visualX, rangePx: front.rangePx };
+}
+
+/** 後列 visualX が前衛より敵側へ出ないよう clamp（battleX 非連動の standoff 移動用） */
+export function clampAllyVisualDepth(allies: CombatantState[]): void {
+  const living = allies.filter((ally) => ally.isAlive);
+  if (living.length === 0) return;
+  const leadingRow = getLeadingAllyFormationRow(
+    living.map((ally) => ({
+      id: ally.id,
+      role: ally.role,
+      formationRow: ally.formationRow,
+      rangePx: ally.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+      isAlive: true,
+    })),
+  );
+  if (leadingRow === null) return;
+  const leadingMinX = Math.min(
+    ...living
+      .filter((ally) => ally.formationRow === leadingRow)
+      .map((ally) => ally.visualX),
+  );
+  const leadingIndex = ROW_ORDER.indexOf(leadingRow);
+  for (const ally of living) {
+    const rowIndex = ROW_ORDER.indexOf(ally.formationRow);
+    if (rowIndex <= leadingIndex) continue;
+    const minX = leadingMinX + rowDepthOffset(leadingRow, ally.formationRow);
+    if (ally.visualX < minX) {
+      ally.visualX = minX;
+    }
+  }
+}
+
 function livingAllies(allies: AllyPlacementInput[]): AllyPlacementInput[] {
   return allies.filter((ally) => ally.isAlive);
 }
 
 function rowDepthOffset(from: FormationRow, to: FormationRow): number {
   return ROW_X[to] - ROW_X[from];
-}
-
-/** 接敵時: 最前生存列の後方へ中列・後列を相対配置（ROW_X 絶対座標へ戻さない） */
-function anchorRowsBehindLeading(
-  placements: Placement[],
-  leadingRow: FormationRow,
-): void {
-  const leading = placements.filter((p) => p.formationRow === leadingRow);
-  if (leading.length === 0) return;
-
-  const leadingFrontX = Math.min(...leading.map((p) => p.x));
-  const leadingIndex = ROW_ORDER.indexOf(leadingRow);
-
-  for (let ri = leadingIndex + 1; ri < ROW_ORDER.length; ri++) {
-    const row = ROW_ORDER[ri]!;
-    const rowUnits = placements
-      .filter((p) => p.formationRow === row)
-      .sort((a, b) => rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role));
-    if (rowUnits.length === 0) continue;
-
-    const baseX = leadingFrontX + rowDepthOffset(leadingRow, row);
-    rowUnits.forEach((unit, slot) => {
-      unit.x = baseX + slot * ALLY_ROW_SPACING;
-    });
-  }
 }
 
 /** 接敵時: 最前線の生存列を敵方向へ（体同士が重ならない standoff） */
@@ -403,9 +424,9 @@ function buildEngagedPlacements(
   const living = livingAllies(allies);
   const leadingRow = getLeadingAllyFormationRow(living);
   const placements = buildFormationPlacements(living);
-  if (leadingRow !== null) {
+  // 後列のみ生存時は ROW_X.back を維持（遠距離は動かず敵が右から接敵）
+  if (leadingRow !== null && leadingRow !== "back") {
     compressLeadingRowTowardEnemy(placements, leadingRow, frontEnemyX);
-    anchorRowsBehindLeading(placements, leadingRow);
   }
   resolveOverlaps(placements, engagedMinLeftEdgeGap());
   return placements;
@@ -451,11 +472,10 @@ export function computeAllyPositions(
   allies: AllyPlacementInput[],
   options: AllyPositionOptions = {}
 ): Map<string, number> {
-  const living = livingAllies(allies);
   const placements =
     options.engaged && options.frontEnemyX !== undefined
       ? buildEngagedPlacements(allies, options.frontEnemyX)
-      : buildFormationPlacements(living);
+      : buildFormationPlacements(allies);
 
   return new Map(placements.map((p) => [p.id, p.x]));
 }
@@ -509,6 +529,16 @@ export function moveTowardX(
   return current + Math.sign(delta) * maxDelta;
 }
 
+/** 接敵中: 味方 visualX は敵方向（左 / 減少）へだけ接近（battleX と同様） */
+export function approachAllyVisualX(
+  current: number,
+  target: number,
+  maxDelta: number,
+): number {
+  if (target >= current) return current;
+  return moveTowardX(current, target, maxDelta);
+}
+
 /** 接敵中の味方・敵の目標 X（即時適用しない） */
 export function computeEngagedAllyTargets(
   allies: AllyPlacementInput[],
@@ -518,6 +548,63 @@ export function computeEngagedAllyTargets(
     engaged: true,
     frontEnemyX,
   });
+}
+
+export interface EngagedEnemyVisualInput {
+  id: string;
+  visualX: number;
+  rangePx: number;
+  isAlive: boolean;
+}
+
+export interface EngagedVisualTargetsResult {
+  allyTargets: Map<string, number>;
+  enemyTargets: Map<string, number>;
+  frontLineTargetX: number;
+  frontLineRangePx: number;
+}
+
+/**
+ * 接敵中: 味方配置 target と敵 stop を同一 buildEngagedPlacements から解決。
+ * 敵 stop は frontLineTargetX（配置 target）基準 — 現在 visualX ではない。
+ */
+export function resolveEngagedVisualTargets(
+  livingAllies: Array<AllyPlacementInput & { visualX: number }>,
+  enemies: EngagedEnemyVisualInput[],
+  frontEnemyVisualX: number,
+  frontEnemyRangePx: number,
+): EngagedVisualTargetsResult | null {
+  const living = livingAllies.filter((ally) => ally.isAlive);
+  if (living.length === 0) return null;
+
+  const leadingRow = getLeadingAllyFormationRow(living);
+  if (leadingRow === null) return null;
+
+  const placements = buildEngagedPlacements(living, frontEnemyVisualX);
+  const allyTargets = new Map(placements.map((p) => [p.id, p.x]));
+
+  const leadingPlacements = placements.filter(
+    (p) => p.formationRow === leadingRow,
+  );
+  if (leadingPlacements.length === 0) return null;
+
+  let frontLine = leadingPlacements[0]!;
+  for (const placement of leadingPlacements) {
+    if (placement.x < frontLine.x) frontLine = placement;
+  }
+
+  const enemyTargets = computeEngagedEnemyPositions(
+    enemies,
+    frontLine.x,
+    frontLine.rangePx,
+  );
+
+  return {
+    allyTargets,
+    enemyTargets,
+    frontLineTargetX: frontLine.x,
+    frontLineRangePx: frontLine.rangePx,
+  };
 }
 
 export function battleCanvasHeight(spriteScale: number): number {

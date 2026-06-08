@@ -40,20 +40,37 @@ export function createTextInput(
 export function createNumberInput(
   value: number,
   onInput: (value: number) => void,
-  options?: { id?: string; min?: number; step?: number; readonly?: boolean },
+  options?: {
+    id?: string;
+    min?: number;
+    step?: number;
+    readonly?: boolean;
+    /** この値のとき input を空表示（省略値用） */
+    emptyWhen?: number;
+    placeholder?: string;
+  },
 ): HTMLInputElement {
   const input = createEl('input', 'editor-input') as HTMLInputElement;
   input.type = 'number';
-  input.value = String(value);
+  const showEmpty =
+    options?.emptyWhen !== undefined && value === options.emptyWhen;
+  input.value = showEmpty ? '' : String(value);
   if (options?.id) input.id = options.id;
   if (options?.min !== undefined) input.min = String(options.min);
   if (options?.step !== undefined) input.step = String(options.step);
+  if (options?.placeholder) input.placeholder = options.placeholder;
   if (options?.readonly) input.readOnly = true;
-  input.addEventListener('input', () => {
+  const commit = () => {
     if (options?.readonly) return;
+    if (input.value === '') {
+      onInput(options?.emptyWhen ?? 0);
+      return;
+    }
     const parsed = Number(input.value);
-    onInput(Number.isNaN(parsed) ? 0 : parsed);
-  });
+    onInput(Number.isNaN(parsed) ? (options?.emptyWhen ?? 0) : parsed);
+  };
+  input.addEventListener('input', commit);
+  input.addEventListener('change', commit);
   return input;
 }
 

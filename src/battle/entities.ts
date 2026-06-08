@@ -93,6 +93,7 @@ export function createAllyFromMember(
     isEnemy: false,
     battleX: 0,
     visualX: 0,
+    corpseVisible: true,
   };
 }
 
@@ -173,6 +174,7 @@ export function createEnemyFromTemplate(
     battleX: spawnX,
     visualX: spawnX,
     spawnX,
+    corpseVisible: true,
   };
 }
 
@@ -210,6 +212,16 @@ export function healAllAllies(allies: CombatantState[]): void {
     ally.hp = ally.maxHp;
     ally.barrierHp = 0;
     ally.isAlive = true;
+    ally.corpseVisible = true;
     ally.statusEffects = [];
+  }
+}
+
+/** Wave 移行: 倒れた味方のフィールド表示だけ消す（戦闘状態は維持） */
+export function hideFallenAllyCorpses(allies: CombatantState[]): void {
+  for (const ally of allies) {
+    if (!ally.isAlive) {
+      ally.corpseVisible = false;
+    }
   }
 }

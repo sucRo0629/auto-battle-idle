@@ -57,6 +57,7 @@ function mockUnit(
     isEnemy: opts.isEnemy ?? false,
     battleX,
     visualX: battleX,
+    corpseVisible: true,
   };
 }
 
@@ -177,6 +178,54 @@ describe('resolveEffectTargets', () => {
     expect(targets.every((t) => t.id === 'solo')).toBe(true);
   });
 
+  it('single: repeated hits on same target with duration', () => {
+    const resolution = resolveEffectResolution(
+      {
+        targetShape: 'single',
+        hitCount: 3,
+        hitDurationSec: 1.5,
+        type: 'damage',
+        targetRule: 'frontEnemy',
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      'frontEnemy',
+      actor,
+      allies,
+      enemies,
+    );
+    expect(resolution?.spreadDurationSec).toBe(1.5);
+    expect(resolution?.waves).toHaveLength(3);
+    expect(
+      resolution?.waves.every((wave) => wave.targets[0]?.unit.id === 'e3'),
+    ).toBe(true);
+  });
+
+  it('aoe: repeated hits use same target snapshot', () => {
+    const resolution = resolveEffectResolution(
+      {
+        targetShape: 'aoe',
+        aoeRadiusPx: 60,
+        hitCount: 2,
+        hitDurationSec: 0.8,
+        type: 'damage',
+        targetRule: 'frontEnemy',
+        damageType: 'magic',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      'frontEnemy',
+      actor,
+      allies,
+      enemies,
+    );
+    expect(resolution?.spreadDurationSec).toBe(0.8);
+    expect(resolution?.waves).toHaveLength(2);
+    const wave0Ids = resolution?.waves[0]?.targets.map((t) => t.unit.id).sort();
+    const wave1Ids = resolution?.waves[1]?.targets.map((t) => t.unit.id).sort();
+    expect(wave0Ids).toEqual(wave1Ids);
+    expect(wave0Ids).toEqual(['e2', 'e3']);
+  });
+
   it('chain: jumps to nearby enemies', () => {
     const resolution = resolveEffectResolution(
       {
@@ -186,7 +235,7 @@ describe('resolveEffectTargets', () => {
         type: 'damage',
         targetRule: 'lowestHpEnemy',
         damageType: 'magic',
-        powerMultiplier: 1,
+        amount: { kind: 'atkBased', atkScale: 1 },
       },
       'lowestHpEnemy',
       actor,
@@ -203,7 +252,7 @@ describe('resolveEffectTargets', () => {
       type: 'damage',
       targetRule: 'frontEnemy',
       damageType: 'physical',
-      powerMultiplier: 1,
+      amount: { kind: 'atkBased', atkScale: 1 },
     };
     const resolution = resolveEffectResolution(
       effect,
@@ -227,7 +276,7 @@ describe('resolveEffectTargets', () => {
         type: 'damage',
         targetRule: 'frontEnemy',
         damageType: 'magic',
-        powerMultiplier: 1,
+        amount: { kind: 'atkBased', atkScale: 1 },
       },
       'frontEnemy',
       actor,
@@ -237,6 +286,33 @@ describe('resolveEffectTargets', () => {
     );
     expect(resolution?.spreadDurationSec).toBe(1);
     expect(resolution?.waves).toHaveLength(2);
+  });
+
+  it('scatter: spread radius and hit radius are independent', () => {
+    let call = 0;
+    const rand = () => (call++ === 0 ? 0 : 1);
+    const resolution = resolveEffectResolution(
+      {
+        targetShape: 'scatter',
+        scatterSpreadRadiusPx: 100,
+        scatterRadiusPx: 30,
+        scatterHitCount: 2,
+        scatterDurationSec: 1,
+        scatterSpreadRate: 1,
+        type: 'damage',
+        targetRule: 'frontEnemy',
+        damageType: 'magic',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      'frontEnemy',
+      actor,
+      allies,
+      enemies,
+      rand,
+    );
+    const wave0Ids = resolution?.waves[0]?.targets.map((t) => t.unit.id);
+    expect(wave0Ids).toEqual(['e1']);
+    expect(resolution?.waves[1]?.targets).toHaveLength(0);
   });
 
   it('closestAlly for ally actor picks nearest ally by battleX', () => {
