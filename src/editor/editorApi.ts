@@ -113,6 +113,89 @@ export async function saveClassBundle(payload: {
   });
 }
 
+export interface ClassStatsPatch {
+  id: string;
+  maxHp: number;
+  atk: number;
+  def: number;
+  reg: number;
+  growthTier: GrowthTierSet;
+  attackSpeedTier: AttackSpeedTier;
+  growthPresetKey?: 'caster';
+}
+
+export interface BalanceClassRow {
+  id: string;
+  baseline: ClassPresetBeforeEnrich;
+  current: ClassPresetBeforeEnrich;
+}
+
+function growthTierEqual(a: GrowthTierSet, b: GrowthTierSet): boolean {
+  return a.maxHp === b.maxHp && a.atk === b.atk && a.def === b.def;
+}
+
+export function classStatsEqual(
+  a: ClassPresetBeforeEnrich,
+  b: ClassPresetBeforeEnrich,
+): boolean {
+  const left = structuredClone(a);
+  const right = structuredClone(b);
+  ensureClassGrowthFields(left);
+  ensureClassGrowthFields(right);
+  if (
+    left.maxHp !== right.maxHp ||
+    left.atk !== right.atk ||
+    left.def !== right.def ||
+    left.reg !== right.reg
+  ) {
+    return false;
+  }
+  if (left.attackSpeedTier !== right.attackSpeedTier) return false;
+  if (!growthTierEqual(left.growthTier!, right.growthTier!)) return false;
+  return left.growthPresetKey === right.growthPresetKey;
+}
+
+export function isBalanceRowDirty(row: BalanceClassRow): boolean {
+  return !classStatsEqual(row.baseline, row.current);
+}
+
+export function toClassStatsPatch(cls: ClassPresetBeforeEnrich): ClassStatsPatch {
+  const copy = structuredClone(cls);
+  ensureClassGrowthFields(copy);
+  return {
+    id: copy.id,
+    maxHp: copy.maxHp,
+    atk: copy.atk,
+    def: copy.def,
+    reg: copy.reg,
+    growthTier: structuredClone(copy.growthTier!),
+    attackSpeedTier: copy.attackSpeedTier ?? 'normal',
+    ...(copy.growthPresetKey === 'caster' ? { growthPresetKey: 'caster' as const } : {}),
+  };
+}
+
+export function createBalanceRowsFromClasses(
+  classes: ClassPresetBeforeEnrich[],
+): BalanceClassRow[] {
+  return classes.map((cls) => {
+    const snapshot = structuredClone(cls);
+    ensureClassGrowthFields(snapshot);
+    return {
+      id: cls.id,
+      baseline: structuredClone(snapshot),
+      current: structuredClone(snapshot),
+    };
+  });
+}
+
+export async function saveClassStatsBulk(patches: ClassStatsPatch[]): Promise<void> {
+  await fetchJson('/__editor/class-stats-bulk', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ patches }),
+  });
+}
+
 export async function saveEnemyBundle(payload: {
   enemy: EnemyTemplate;
   passives: PassiveSkillDef[];

@@ -1,5 +1,6 @@
 import type { EnemyTemplate } from '../battle/types.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
+import { BalanceEditorStep } from './BalanceEditorStep.ts';
 import { ClassEditorStep, loadClassDraftById } from './ClassEditorStep.ts';
 import { EnemyEditorStep, loadEnemyDraftById } from './EnemyEditorStep.ts';
 import {
@@ -8,6 +9,7 @@ import {
   buildSkillDrafts,
   collectEnemySkillRefs,
   collectSkillsFromDrafts,
+  createBalanceRowsFromClasses,
   createEmptyClassDraft,
   createEmptyEnemyDraft,
   defaultBasicAttackId,
@@ -17,12 +19,16 @@ import {
   fetchEnemies,
   fetchSkills,
   initClassSkillEntriesFromPreset,
+  isBalanceRowDirty,
   isBasicAttackSkillId,
   mergeSkillPoolEntries,
   nextClassSkillId,
   saveClassBundle,
+  saveClassStatsBulk,
   saveEnemyBundle,
   syncSkillDraftEntries,
+  toClassStatsPatch,
+  type BalanceClassRow,
   type ClassDraft,
   type EnemyDraft,
   type SkillDraftEntry,
@@ -36,7 +42,7 @@ import {
 } from './SkillEditorStep.ts';
 import { createActionButton, createButton, createEl, preserveScrollDuring } from './formUtils.ts';
 
-type EditorTab = 'class' | 'enemy';
+type EditorTab = 'class' | 'enemy' | 'balance';
 
 export class EditorApp {
   private tab: EditorTab = 'class';
@@ -52,6 +58,9 @@ export class EditorApp {
   private selectedEnemyId = '';
   private enemySkillEntries: SkillDraftEntry[] = [];
 
+  private balanceRows: BalanceClassRow[] = [];
+  private balanceJobTier = 1;
+
   private saving = false;
   private statusMessage = '';
   private statusIsError = false;
@@ -59,6 +68,7 @@ export class EditorApp {
   private classStep: ClassEditorStep | null = null;
   private enemyStep: EnemyEditorStep | null = null;
   private skillStep: SkillEditorStep | null = null;
+  private balanceStep: BalanceEditorStep | null = null;
 
   private statusEl!: HTMLElement;
   private contentEl!: HTMLElement;
@@ -98,15 +108,18 @@ export class EditorApp {
     const items: { id: EditorTab; label: string }[] = [
       { id: 'class', label: 'クラス' },
       { id: 'enemy', label: '敵' },
+      { id: 'balance', label: 'バランス' },
     ];
     for (const item of items) {
       const btn = createButton(item.label, 'editor-tab', () => {
+        if (this.saving) return;
         if (this.tab === item.id) return;
         this.tab = item.id;
         this.clearStatus();
         this.render();
       });
       if (this.tab === item.id) btn.classList.add('is-active');
+      btn.disabled = this.saving;
       tabs.appendChild(btn);
     }
   }
@@ -121,6 +134,7 @@ export class EditorApp {
       this.classes = classes;
       this.enemies = enemies;
       this.skills = skills;
+      this.syncBalanceRowsFromClasses();
       this.render();
     } catch (error) {
       this.setStatus(
@@ -161,15 +175,22 @@ export class EditorApp {
     this.classStep?.destroy();
     this.enemyStep?.destroy();
     this.skillStep?.destroy();
+    this.balanceStep?.destroy();
     this.classStep = null;
     this.enemyStep = null;
     this.skillStep = null;
+    this.balanceStep = null;
 
     preserveScrollDuring(() => {
       this.contentEl.replaceChildren();
 
       if (this.tab === 'class') {
         this.renderClassEditor();
+        return;
+      }
+
+      if (this.tab === 'balance') {
+        this.renderBalanceEditor();
         return;
       }
 
@@ -215,6 +236,58 @@ export class EditorApp {
     });
 
     this.appendSaveActions(() => void this.saveClass());
+  }
+
+  private renderBalanceEditor(): void {
+    const host = createEl('div', 'editor-panel editor-panel-balance');
+    this.contentEl.appendChild(host);
+
+    this.balanceStep = new BalanceEditorStep(host, {
+      getRows: () => this.balanceRows,
+      jobTier: this.balanceJobTier,
+      onJobTierChange: (tier) => {
+        this.balanceJobTier = tier;
+        this.render();
+      },
+      onRowChange: (classId, mutate) => {
+        const row = this.balanceRows.find((entry) => entry.id === classId);
+        if (!row) return;
+        mutate(row.current);
+        ensureClassGrowthFields(row.current);
+        this.balanceStep?.refreshRow(classId);
+      },
+      onSave: () => void this.saveBalance(),
+      saving: this.saving,
+    });
+  }
+
+  private syncBalanceRowsFromClasses(): void {
+    this.balanceRows = createBalanceRowsFromClasses(this.classes);
+  }
+
+  private async saveBalance(): Promise<void> {
+    const dirtyRows = this.balanceRows.filter(isBalanceRowDirty);
+    if (dirtyRows.length === 0) return;
+
+    this.tab = 'balance';
+    this.saving = true;
+    this.render();
+    try {
+      const patches = dirtyRows.map((row) => toClassStatsPatch(row.current));
+      await saveClassStatsBulk(patches);
+      this.classes = await fetchClasses();
+      this.syncBalanceRowsFromClasses();
+      this.setStatus(`保存しました: ${patches.length} 件`, false);
+    } catch (error) {
+      this.setStatus(
+        error instanceof Error ? error.message : '保存に失敗しました',
+        true,
+      );
+    } finally {
+      this.saving = false;
+      this.tab = 'balance';
+      this.render();
+    }
   }
 
   private renderEnemyEditor(): void {
@@ -469,6 +542,7 @@ export class EditorApp {
       await saveClassBundle({ class: cls, passives, actives });
       this.classes = await fetchClasses();
       this.skills = await fetchSkills();
+      this.syncBalanceRowsFromClasses();
       this.selectedClassId = cls.id;
       this.classDraft = loadClassDraftById(this.classes, cls.id);
       this.classSkillEntries = initClassSkillEntriesFromPreset(this.classDraft.class, this.skills);

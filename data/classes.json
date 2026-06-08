@@ -36,13 +36,13 @@
     },
     "maxHp": 120,
     "atk": 28,
-    "def": 10,
+    "def": 14,
     "reg": 0,
     "jobTier": 1,
     "growthTier": {
       "maxHp": 2,
       "atk": 3,
-      "def": 3
+      "def": 2
     },
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "attacker_kenshi_basic_attack",

@@ -9,6 +9,7 @@ import type {
   PassiveSkillDef,
 } from './src/battle/types.ts';
 import type { ClassPresetBeforeEnrich } from './src/progression/skillUnlocks.ts';
+import { ensureClassGrowthFields } from './src/editor/editorApi.ts';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 
@@ -126,6 +127,21 @@ interface EnemyBundleBody {
   actives: ActiveSkillDef[];
 }
 
+interface ClassStatsPatchBody {
+  id: string;
+  maxHp: number;
+  atk: number;
+  def: number;
+  reg: number;
+  growthTier: ClassPresetBeforeEnrich['growthTier'];
+  attackSpeedTier: ClassPresetBeforeEnrich['attackSpeedTier'];
+  growthPresetKey?: 'caster';
+}
+
+interface ClassStatsBulkBody {
+  patches: ClassStatsPatchBody[];
+}
+
 function applyClassBundle(body: ClassBundleBody): void {
   const classes = readJsonFile(READ_FILES.classes) as ClassPresetBeforeEnrich[];
   const skillsRoot = readJsonFile(READ_FILES.skills) as {
@@ -151,6 +167,51 @@ function applyClassBundle(body: ClassBundleBody): void {
 
   writeJsonFile(READ_FILES.classes, nextClasses);
   writeJsonFile(READ_FILES.skills, nextSkills);
+}
+
+function applyClassStatsBulk(body: ClassStatsBulkBody): void {
+  if (!Array.isArray(body.patches) || body.patches.length === 0) {
+    throw new Error('patches must be a non-empty array');
+  }
+
+  const classes = readJsonFile(READ_FILES.classes) as ClassPresetBeforeEnrich[];
+  let nextClasses = classes;
+
+  for (const patch of body.patches) {
+    const index = nextClasses.findIndex((entry) => entry.id === patch.id);
+    if (index < 0) {
+      throw new Error(`class not found: ${patch.id}`);
+    }
+    const existing = nextClasses[index]!;
+    const merged: ClassPresetBeforeEnrich = {
+      ...existing,
+      maxHp: patch.maxHp,
+      atk: patch.atk,
+      def: patch.def,
+      reg: patch.reg,
+      growthTier: patch.growthTier,
+      attackSpeedTier: patch.attackSpeedTier,
+    };
+    if (merged.role === 'attacker' && patch.growthPresetKey === 'caster') {
+      merged.growthPresetKey = 'caster';
+    } else {
+      delete merged.growthPresetKey;
+    }
+    ensureClassGrowthFields(merged);
+    nextClasses = [...nextClasses];
+    nextClasses[index] = merged;
+  }
+
+  const validationBase = loadValidationPayload();
+  validateAll({
+    ...validationBase,
+    classes: [
+      ...nextClasses,
+      ...(readJsonFile(READ_FILES.testClasses) as unknown[]),
+    ],
+  });
+
+  writeJsonFile(READ_FILES.classes, nextClasses);
 }
 
 function applyEnemyBundle(body: EnemyBundleBody): void {
@@ -207,6 +268,12 @@ export function editorApiPlugin(): Plugin {
           if (req.method === 'PUT' && url.pathname === '/__editor/class-bundle') {
             const body = JSON.parse(await readBody(req)) as ClassBundleBody;
             applyClassBundle(body);
+            sendJson(res, 200, { ok: true });
+            return;
+          }
+          if (req.method === 'PUT' && url.pathname === '/__editor/class-stats-bulk') {
+            const body = JSON.parse(await readBody(req)) as ClassStatsBulkBody;
+            applyClassStatsBulk(body);
             sendJson(res, 200, { ok: true });
             return;
           }
