@@ -12,9 +12,9 @@ import {
 } from "./spriteLayout.ts";
 
 export const ROW_X: Record<FormationRow, number> = {
-  front: 210,
-  middle: 268,
-  back: 326,
+  front: 240,
+  middle: 298,
+  back: 356,
 };
 
 export const ALLY_ROW_SPACING = 42;
@@ -411,11 +411,37 @@ export function separateEngagedSprites(
   return separateSpritesByGap(units, engagedMinLeftEdgeGap());
 }
 
-/** 非戦闘時: 敵同士の体が重ならないよう右へずらす */
+/** 非戦闘時: 左から出現する敵の重なりを左へ広げる */
 export function separateEnemySprites(
   enemies: Array<{ id: string; visualX: number; isAlive: boolean }>
 ): Map<string, number> {
-  return separateSpritesByGap(enemies, SPRITE_GAP);
+  return separateSpritesByGapLeft(enemies, SPRITE_GAP);
+}
+
+function separateSpritesByGapLeft(
+  units: Array<{ id: string; visualX: number; isAlive: boolean }>,
+  minGap: number,
+): Map<string, number> {
+  const living = units
+    .filter((unit) => unit.isAlive)
+    .sort((a, b) => a.visualX - b.visualX);
+  const positions = new Map<string, number>();
+
+  for (const unit of living) {
+    positions.set(unit.id, unit.visualX);
+  }
+
+  for (let i = living.length - 2; i >= 0; i--) {
+    const right = living[i + 1];
+    const cur = living[i];
+    const maxX = (positions.get(right.id) ?? right.visualX) - minGap;
+    const curX = positions.get(cur.id) ?? cur.visualX;
+    if (curX > maxX) {
+      positions.set(cur.id, maxX);
+    }
+  }
+
+  return positions;
 }
 
 function buildEngagedPlacements(

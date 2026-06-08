@@ -6,6 +6,7 @@ import type {
   Role,
 } from './types.ts';
 import {
+  BATTLE_ENEMY_MARCH_VISIBLE_MIN_X,
   BATTLE_ENEMY_VISIBLE_MIN_X,
   DEFAULT_MELEE_ATTACK_RANGE_PX,
   DEFAULT_RANGED_RANGE_PX,
@@ -14,6 +15,7 @@ import { resolveSkillRangePx } from './skills/rangeUtils.ts';
 import {
   ALLY_ROW_SPACING,
   ROW_X,
+  engagedStandoffGap,
 } from '../render/formationLayout.ts';
 
 /** 非戦闘時: 背景スクロール・敵進軍速度（px/秒） */
@@ -112,8 +114,47 @@ export function isEnemyVisibleOnScreen(enemy: CombatantState): boolean {
   return enemy.battleX >= BATTLE_ENEMY_VISIBLE_MIN_X;
 }
 
-export function shouldStartApproach(enemies: CombatantState[]): boolean {
-  return enemies.some((e) => e.isAlive && isEnemyVisibleOnScreen(e));
+export function isEnemyMarchVisible(enemy: CombatantState): boolean {
+  return enemy.battleX >= BATTLE_ENEMY_MARCH_VISIBLE_MIN_X;
+}
+
+function getFrontEnemyForEngage(
+  enemies: CombatantState[],
+): CombatantState | null {
+  const living = enemies.filter((e) => e.isAlive);
+  if (living.length === 0) return null;
+  return living.reduce((best, enemy) =>
+    enemy.battleX > best.battleX ? enemy : best,
+  );
+}
+
+/** 最前線敵が standoff 距離まで近づいた battleX（ここで接敵開始） */
+export function resolveEngageLineX(
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): number | null {
+  const allyContact = getAllyContactX(allies);
+  const contactAlly = leadingRowContactAlly(allies);
+  const frontEnemy = getFrontEnemyForEngage(enemies);
+  if (allyContact === null || contactAlly === null || frontEnemy === null) {
+    return null;
+  }
+  const gap = engagedStandoffGap(
+    resolveMaxEffectiveRangePx(contactAlly, gameData),
+    resolveMaxEffectiveRangePx(frontEnemy, gameData),
+  );
+  return allyContact - gap;
+}
+
+export function shouldStartApproach(
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): boolean {
+  const engageLineX = resolveEngageLineX(allies, enemies, gameData);
+  if (engageLineX === null) return false;
+  return enemies.some((e) => e.isAlive && e.battleX >= engageLineX);
 }
 
 export function resolveMaxEffectiveRangePx(
@@ -198,6 +239,7 @@ export function marchEnemiesRight(
   return positions;
 }
 
+/** 左から出現する敵: 重なりは左へ広げ、右端が画面外に残るようにする */
 export function separateByGap(
   units: Array<{ id: string; battleX: number; isAlive: boolean }>,
   minGap: number,
@@ -211,13 +253,13 @@ export function separateByGap(
     positions.set(unit.id, unit.battleX);
   }
 
-  for (let i = 1; i < living.length; i++) {
-    const prev = living[i - 1];
+  for (let i = living.length - 2; i >= 0; i--) {
+    const right = living[i + 1];
     const cur = living[i];
-    const minX = (positions.get(prev.id) ?? prev.battleX) + minGap;
+    const maxX = (positions.get(right.id) ?? right.battleX) - minGap;
     const curX = positions.get(cur.id) ?? cur.battleX;
-    if (curX < minX) {
-      positions.set(cur.id, minX);
+    if (curX > maxX) {
+      positions.set(cur.id, maxX);
     }
   }
 

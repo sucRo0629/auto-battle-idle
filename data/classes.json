@@ -115,7 +115,8 @@
         "level": 0,
         "skillIds": []
       }
-    ]
+    ],
+    "passiveIds": []
   },
   {
     "id": "supporter_yakushi",

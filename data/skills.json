@@ -73,7 +73,7 @@
             "kind": "atkBased",
             "atkScale": 1
           },
-          "range": 100
+          "range": 50
         }
       ],
       "vfx": {
@@ -94,7 +94,7 @@
             "kind": "atkBased",
             "atkScale": 0.75
           },
-          "range": 120
+          "range": 50
         }
       ]
     },
@@ -264,7 +264,7 @@
           },
           "targetShape": "multiLock",
           "hitCount": 2,
-          "range": 100
+          "range": 50
         }
       ],
       "vfx": {
@@ -288,7 +288,7 @@
             "kind": "atkBased",
             "atkScale": 1
           },
-          "range": 120
+          "range": 50
         }
       ],
       "vfx": {

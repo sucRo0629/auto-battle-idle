@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState, GameData } from './types.ts';
 import { BATTLE_ENEMY_VISIBLE_MIN_X } from './types.ts';
+import { engagedMinLeftEdgeGap } from '../render/formationLayout.ts';
 import {
   assignInitialAllyBattleX,
   getAllyContactX,
@@ -10,10 +11,13 @@ import {
   resolveAttackBattleX,
   resolveMoveBattleX,
   resolveMaxEffectiveRangePx,
+  resolveEngageLineX,
+  separateByGap,
   shouldStartApproach,
   syncEnemyVisualToBattleContact,
   updateUnitApproach,
 } from './combatPosition.ts';
+import { SPRITE_GAP } from '../render/formationLayout.ts';
 
 function mockCombatant(
   overrides: Partial<CombatantState> & { id: string },
@@ -75,13 +79,36 @@ const gameData = {
 } as unknown as GameData;
 
 describe('combatPosition', () => {
+  it('separateByGap spreads enemy spawns left to stay off-screen', () => {
+    const separated = separateByGap(
+      [
+        { id: 'ranged', battleX: -160, isAlive: true },
+        { id: 'mid', battleX: -120, isAlive: true },
+        { id: 'front', battleX: -100, isAlive: true },
+      ],
+      SPRITE_GAP,
+    );
+    for (const id of ['ranged', 'mid', 'front']) {
+      expect(separated.get(id)!).toBeLessThan(BATTLE_ENEMY_VISIBLE_MIN_X);
+    }
+    expect(separated.get('front')!).toBe(-100);
+  });
+
   it('detects enemy on screen', () => {
     const off = mockCombatant({ id: 'e1', isEnemy: true, battleX: BATTLE_ENEMY_VISIBLE_MIN_X - 1 });
     const on = mockCombatant({ id: 'e2', isEnemy: true, battleX: BATTLE_ENEMY_VISIBLE_MIN_X });
     expect(isEnemyVisibleOnScreen(off)).toBe(false);
     expect(isEnemyVisibleOnScreen(on)).toBe(true);
-    expect(shouldStartApproach([off])).toBe(false);
-    expect(shouldStartApproach([on])).toBe(true);
+  });
+
+  it('starts approach at standoff distance from ally front, not at screen edge', () => {
+    const ally = mockCombatant({ id: 'guard', formationRow: 'front', battleX: 240 });
+    const far = mockCombatant({ id: 'far', isEnemy: true, battleX: BATTLE_ENEMY_VISIBLE_MIN_X });
+    const near = mockCombatant({ id: 'near', isEnemy: true, battleX: 240 });
+    const engageLine = 240 - engagedMinLeftEdgeGap();
+    expect(resolveEngageLineX([ally], [far], gameData)).toBe(engageLine);
+    expect(shouldStartApproach([ally], [far], gameData)).toBe(false);
+    expect(shouldStartApproach([ally], [near], gameData)).toBe(true);
   });
 
   it('resolves melee range 0 and spear range 30', () => {

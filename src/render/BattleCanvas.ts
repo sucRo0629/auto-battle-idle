@@ -15,7 +15,7 @@ import {
 } from "./spriteLayout.ts";
 import { getClassIconImage } from "./IconRegistry.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
-import { BATTLE_ENEMY_VISIBLE_MIN_X } from "../battle/types.ts";
+import { BATTLE_ENEMY_MARCH_VISIBLE_MIN_X } from "../battle/types.ts";
 import {
   groundY,
   BATTLE_GROUND_MARGIN,
@@ -193,7 +193,7 @@ export class BattleCanvas implements IBattleRenderer {
         if (
           !isDead &&
           !snapshot.engaged &&
-          enemy.battleX < BATTLE_ENEMY_VISIBLE_MIN_X
+          enemy.battleX < BATTLE_ENEMY_MARCH_VISIBLE_MIN_X
         ) {
           continue;
         }

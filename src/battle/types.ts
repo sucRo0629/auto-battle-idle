@@ -7,8 +7,10 @@ export type AttackRange = "melee" | "ranged";
 export const DEFAULT_MELEE_ATTACK_RANGE_PX = 0;
 /** 遠隔の rangePx 未指定時フォールバック（px） */
 export const DEFAULT_RANGED_RANGE_PX = 120;
-/** 敵が画面内とみなす battleX の下限 */
+/** 敵が画面内とみなす battleX の下限（接敵トリガーには使わない） */
 export const BATTLE_ENEMY_VISIBLE_MIN_X = -32;
+/** 進軍中にスプライトを表示する battleX の下限 */
+export const BATTLE_ENEMY_MARCH_VISIBLE_MIN_X = -200;
 
 /** @deprecated 演出用。ロジックには使わない */
 export const DEFAULT_MELEE_RANGE_PX = 45;

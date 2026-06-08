@@ -7,15 +7,15 @@
         "enemies": [
           {
             "templateId": "stage1_1",
-            "spawnX": -20
+            "spawnX": -120
           },
           {
             "templateId": "test_enemy",
-            "spawnX": -10
+            "spawnX": -100
           },
           {
             "templateId": "test_ranged",
-            "spawnX": -50
+            "spawnX": -160
           }
         ]
       }
@@ -29,15 +29,15 @@
         "enemies": [
           {
             "templateId": "test_enemy_elite",
-            "spawnX": -20
+            "spawnX": -100
           },
           {
             "templateId": "test_enemy_elite",
-            "spawnX": -15
+            "spawnX": -95
           },
           {
             "templateId": "test_enemy_elite",
-            "spawnX": -10
+            "spawnX": -90
           }
         ]
       },
@@ -45,7 +45,7 @@
         "enemies": [
           {
             "templateId": "test_enemy_elite",
-            "spawnX": -30
+            "spawnX": -110
           }
         ]
       }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { BattleEngine } from './BattleEngine.ts';
+import { BattleEngine, WAVE_APPROACH_MARCH_SEC } from './BattleEngine.ts';
 import { loadGameData } from './data/loadGameData.ts';
 import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
@@ -30,6 +30,33 @@ function waitForEngaged(engine: BattleEngine, maxTicks = 5000): void {
 }
 
 describe('BattleEngine engaged visual layout', () => {
+  it('Stage 1 does not engage immediately on battlefield load', () => {
+    const gameData = loadGameData();
+    const levelCurves = loadLevelCurves(levelCurvesJson);
+    const save = createDefaultSave(gameData, 'demo');
+    save.stageProgress.currentStageId = '1';
+    const engine = new BattleEngine(
+      gameData,
+      levelCurves,
+      () => save.party,
+      () => save.stageProgress.currentStageId,
+    );
+    engine.startBattle();
+    const initial = engine.getSnapshot();
+    expect(initial.engaged).toBe(false);
+    expect(initial.enemies).toHaveLength(0);
+    const preambleTicks = Math.floor(WAVE_APPROACH_MARCH_SEC * 60) - 1;
+    for (let i = 0; i < preambleTicks; i++) {
+      engine.tick(1 / 60);
+      const snap = engine.getSnapshot();
+      expect(snap.engaged).toBe(false);
+      expect(snap.enemies).toHaveLength(0);
+    }
+    engine.tick(1 / 60);
+    expect(engine.getSnapshot().enemies.length).toBeGreaterThan(0);
+    expect(engine.getSnapshot().engaged).toBe(false);
+  });
+
   it('Stage 2 Wave 1: enemies stay left of front row after engagement snap', () => {
     const engine = createStage2Engine();
     waitForEngaged(engine);
@@ -112,7 +139,7 @@ describe('BattleEngine engaged visual layout', () => {
     const stage1 = gameData.stages.find((s) => s.id === '1');
     if (stage1?.waves[0]) {
       stage1.waves[0].enemies = stage1.waves[0].enemies.filter(
-        (spawn) => spawn.templateId !== 'test_ranged',
+        (spawn) => spawn.templateId === 'stage1_1',
       );
     }
     const levelCurves = loadLevelCurves(levelCurvesJson);

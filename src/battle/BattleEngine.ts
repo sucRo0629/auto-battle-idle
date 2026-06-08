@@ -16,6 +16,7 @@ import {
   getEnemyContactX,
   marchEnemiesRight as marchEnemiesBattleRight,
   resolveAttackBattleX,
+  resolveEngageLineX,
   resolveMaxEffectiveRangePx,
   SCROLL_SPEED,
   separateByGap,
@@ -75,8 +76,8 @@ const ENEMY_DEATH_SETTLE_DELAY_SEC =
 /** 味方死亡演出（アニメ + ホールド）後に Defeat へ遷移 */
 const ALLY_DEATH_DEFEAT_DELAY_SEC =
   (deathAnimDurationMs() + 500) / 1000;
-/** Wave 間: 生存味方が接敵位置から左へ進軍する時間 */
-const WAVE_INTERMISSION_SEC = 0.75;
+/** 各 Wave 開始前: 敵出現前に味方が左へ進軍する時間（Wave 1 含む全 Wave 共通） */
+export const WAVE_APPROACH_MARCH_SEC = 0.75;
 
 export interface BattleEngineOptions {
   onDamageApplied?: (
@@ -154,17 +155,11 @@ export class BattleEngine {
     );
     this.stageId = this.getStageId();
     this.waveIndex = 0;
-    this.enemies = createEnemiesForStage(
-      this.gameData,
-      this.stageId,
-      this.waveIndex,
-    );
-    this.resetEnemyBattlePositions();
     this.restoreAlliesToFormationMarch();
-    this.resetEnemyVisualPositions();
     this.clearPendingVictory();
     this.clearPendingDefeat();
     this.clearPendingWaveAdvance();
+    this.beginWaveApproachMarch(0);
   }
 
   private isOnBattlefield(ally: CombatantState): boolean {
@@ -272,6 +267,11 @@ export class BattleEngine {
   }
 
   private applyEnemyMarch(deltaX: number): void {
+    const engageLineX = resolveEngageLineX(
+      this.allies,
+      this.enemies,
+      this.gameData,
+    );
     const positions = marchEnemiesBattleRight(
       this.enemies.map((enemy) => ({
         id: enemy.id,
@@ -281,10 +281,12 @@ export class BattleEngine {
       deltaX,
     );
     for (const enemy of this.enemies) {
-      const x = positions.get(enemy.id);
-      if (x !== undefined) {
-        enemy.battleX = x;
+      let x = positions.get(enemy.id);
+      if (x === undefined) continue;
+      if (engageLineX !== null) {
+        x = Math.min(x, engageLineX);
       }
+      enemy.battleX = x;
     }
     this.syncEnemyVisualFromBattle();
   }
@@ -298,10 +300,6 @@ export class BattleEngine {
 
   private hasFallenAllies(): boolean {
     return this.allies.some((ally) => !ally.isAlive);
-  }
-
-  private tickAllyFormationMarch(deltaTime: number): void {
-    this.worldOffsetX += SCROLL_SPEED * deltaTime;
   }
 
   private areAlliesOffScreen(): boolean {
@@ -483,30 +481,15 @@ export class BattleEngine {
     this.waveIntermissionElapsed = 0;
   }
 
-  private startWaveIntermission(): void {
-    this.engaged = false;
-    hideFallenAllyCorpses(this.allies);
+  private beginWaveApproachMarch(waveIndex: number): void {
     this.enemies = [];
-    assignInitialAllyBattleX(this.allies);
+    this.pendingNextWaveIndex = waveIndex;
+    this.engaged = false;
     this.waveIntermissionActive = true;
     this.waveIntermissionElapsed = 0;
   }
 
-  private updateWaveIntermissionMarch(deltaTime: number): void {
-    const step = SCROLL_SPEED * deltaTime;
-    for (const ally of this.allies) {
-      if (!ally.isAlive) continue;
-      ally.visualX -= step;
-    }
-    this.worldOffsetX += step;
-    this.waveIntermissionElapsed += deltaTime;
-  }
-
-  private completeWaveIntermission(): void {
-    const nextIndex = this.pendingNextWaveIndex;
-    if (nextIndex === null) return;
-
-    this.waveIndex = nextIndex;
+  private spawnWaveEnemies(): void {
     this.enemies = createEnemiesForStage(
       this.gameData,
       this.stageId,
@@ -514,6 +497,30 @@ export class BattleEngine {
     );
     this.resetEnemyBattlePositions();
     this.resetEnemyVisualPositions();
+  }
+
+  private startWaveIntermission(): void {
+    this.engaged = false;
+    hideFallenAllyCorpses(this.allies);
+    assignInitialAllyBattleX(this.allies);
+    this.syncAllyVisualPositions(false);
+    if (this.pendingNextWaveIndex === null) return;
+    this.enemies = [];
+    this.waveIntermissionActive = true;
+    this.waveIntermissionElapsed = 0;
+  }
+
+  private updateWaveIntermissionMarch(deltaTime: number): void {
+    this.worldOffsetX += SCROLL_SPEED * deltaTime;
+    this.waveIntermissionElapsed += deltaTime;
+  }
+
+  private completeWaveIntermission(): void {
+    const waveIndex = this.pendingNextWaveIndex;
+    if (waveIndex === null) return;
+
+    this.waveIndex = waveIndex;
+    this.spawnWaveEnemies();
     this.waveIntermissionActive = false;
     this.waveIntermissionElapsed = 0;
     this.pendingNextWaveIndex = null;
@@ -547,9 +554,8 @@ export class BattleEngine {
 
   private updateEngagementState(): void {
     if (this.engaged) return;
-    if (shouldStartApproach(this.enemies)) {
+    if (shouldStartApproach(this.allies, this.enemies, this.gameData)) {
       this.engaged = true;
-      this.snapEngagedVisualLayout();
     }
   }
 
@@ -690,7 +696,7 @@ export class BattleEngine {
     this.tickSkillSequences(deltaTime);
     if (this.waveIntermissionActive) {
       this.updateWaveIntermissionMarch(deltaTime);
-      if (this.waveIntermissionElapsed >= WAVE_INTERMISSION_SEC) {
+      if (this.waveIntermissionElapsed >= WAVE_APPROACH_MARCH_SEC) {
         this.completeWaveIntermission();
       }
       return;
@@ -704,7 +710,6 @@ export class BattleEngine {
       return;
     }
     if (!this.engaged) {
-      this.tickAllyFormationMarch(deltaTime);
       this.applyEnemyMarch(SCROLL_SPEED * deltaTime);
       this.updateEngagementState();
     } else {
