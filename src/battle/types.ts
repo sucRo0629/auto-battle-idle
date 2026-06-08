@@ -3,14 +3,19 @@ export type ClassId = string;
 export type FormationRow = "front" | "middle" | "back";
 export type AttackRange = "melee" | "ranged";
 
-/** 近接の rangePx 未指定時（px） */
-export const DEFAULT_MELEE_RANGE_PX = 45;
+/** 近接スキル射程の未指定時デフォルト（px） */
+export const DEFAULT_MELEE_ATTACK_RANGE_PX = 0;
 /** 遠隔の rangePx 未指定時フォールバック（px） */
 export const DEFAULT_RANGED_RANGE_PX = 120;
+/** 敵が画面内とみなす battleX の下限 */
+export const BATTLE_ENEMY_VISIBLE_MIN_X = -32;
+
+/** @deprecated 演出用。ロジックには使わない */
+export const DEFAULT_MELEE_RANGE_PX = 45;
 
 export interface ClassTraits {
   attackRange: AttackRange;
-  /** 攻撃可能距離（px）。近接で未指定時は DEFAULT_MELEE_RANGE_PX */
+  /** 攻撃射程（px）。遠隔は必須。近接は任意（未指定=0、槍等は 30 等） */
   rangePx?: number;
 }
 
@@ -139,6 +144,14 @@ export interface Combatant extends CombatStats {
 
 export type SkillSlotKind = "basic" | "active";
 
+export type SkillTriggerKind = "time" | "basicAttackCount" | "hitsTaken";
+
+export interface SkillTrigger {
+  kind: SkillTriggerKind;
+  /** time=秒 / basicAttackCount=通常攻撃回数 / hitsTaken=被攻撃回数 */
+  value: number;
+}
+
 export interface SkillCooldown {
   skillId: string;
   remaining: number;
@@ -231,8 +244,11 @@ export interface CombatantState extends Combatant {
   spriteKey: string;
   iconKey: string;
   isEnemy: boolean;
+  /** 戦闘ロジック用 1D 座標（大きいほど味方側＝右） */
+  battleX: number;
+  /** snapshot 出力用。描画は formationLayout の隊形配置で算出 */
   visualX: number;
-  /** 敵のみ: ステージ配置のスポーン X */
+  /** 敵のみ: ステージ配置のスポーン battleX */
   spawnX?: number;
 }
 
@@ -263,7 +279,10 @@ export type SkillEffectKind =
   | "debuff"
   | "hot"
   | "dot"
-  | "barrier";
+  | "barrier"
+  | "move";
+
+export type MoveMode = "engage" | "toAnchor" | "behindTarget";
 export type DamageType = "physical" | "magic";
 
 /** スキル演出プリセット ID（render 層が描画。将来 skills.json の vfx で指定） */
@@ -277,6 +296,16 @@ export interface SkillVfxDef {
   /** 演出時間（ms）。未指定時はプリセット既定 */
   durationMs?: number;
 }
+
+/** effect ごとのスプライトアニメ。none = 再生なし */
+export type SkillEffectAnimId =
+  | "idle"
+  | "attack"
+  | "heal"
+  | "hurt"
+  | "death"
+  | "dash"
+  | "none";
 
 interface SkillEffectCommon {
   targetRule: TargetRule;
@@ -305,6 +334,10 @@ interface SkillEffectCommon {
   type: SkillEffectKind;
   /** 命中判定・VFX 共用（px）。未指定 = 使用者 traits.rangePx */
   range?: number;
+  /** 未指定時は effect 種別の既定アニメ。none = スプライトアニメなし */
+  anim?: SkillEffectAnimId;
+  /** 未指定時はスキル vfx → 既定プリセット（damage/heal 等のみ） */
+  vfx?: SkillVfxDef;
 }
 
 export interface SkillHitTarget {
@@ -386,6 +419,13 @@ export interface DotSkillEffect extends SkillEffectCommon {
   damageType?: DamageType;
 }
 
+export interface MoveSkillEffect extends SkillEffectCommon {
+  type: "move";
+  moveDurationSec: number;
+  moveMode?: MoveMode;
+  behindOffsetPx?: number;
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -393,12 +433,16 @@ export type SkillEffectDef =
   | DebuffSkillEffect
   | HotSkillEffect
   | DotSkillEffect
-  | BarrierSkillEffect;
+  | BarrierSkillEffect
+  | MoveSkillEffect;
 
 export interface ActiveSkillDef {
   id: string;
   name: string;
-  interval: number;
+  /** 発動条件（アクティブ）。未指定時は legacy interval を time として解釈 */
+  trigger?: SkillTrigger;
+  /** @deprecated レガシー JSON 互換。parse 時 trigger へ昇格 */
+  interval?: number;
   effect: SkillEffectDef[];
   allowedClassIds?: ClassId[];
   /** 未指定時は role / attackRange 等からプレースホルダー VFX を自動選択 */
@@ -478,12 +522,14 @@ export interface CombatantSnapshot {
   iconKey: string;
   formationRow: FormationRow;
   isEnemy: boolean;
+  battleX: number;
   visualX: number;
   statusEffects: StatusEffect[];
   activeCooldowns: {
     skillId: string;
     remaining: number;
-    interval: number;
+    triggerKind: SkillTriggerKind;
+    triggerValue: number;
     slotIndex: number;
   }[];
 }

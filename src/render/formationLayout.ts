@@ -506,3 +506,4 @@ export function toVisualCombatant(unit: {
     rangePx: unit.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
   };
 }
+

@@ -23,6 +23,13 @@ export function getTargetPoolForRule(
   const enemiesLive = livingEnemies(enemies);
 
   if (actor.isEnemy) {
+    if (rule === 'closestAlly') {
+      return alliesLive;
+    }
+    return alliesLive;
+  }
+
+  if (rule === 'closestAlly') {
     return alliesLive;
   }
 

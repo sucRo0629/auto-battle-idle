@@ -216,7 +216,6 @@ export class EnemyEditorStep {
             commitDraft(
               (next) => {
                 next.enemy.attackRange = attackRange;
-                if (attackRange === 'melee') delete next.enemy.rangePx;
               },
               { rerender: true },
             );
@@ -224,22 +223,25 @@ export class EnemyEditorStep {
         ),
       ),
     );
-    if ((draft.enemy.attackRange ?? 'melee') === 'ranged') {
-      statsGrid.appendChild(
-        createFieldRow(
-          'rangePx',
-          createNumberInput(
-            draft.enemy.rangePx ?? 120,
-            (rangePx) => {
-              commitDraft((next) => {
+    const isRanged = (draft.enemy.attackRange ?? 'melee') === 'ranged';
+    statsGrid.appendChild(
+      createFieldRow(
+        isRanged ? 'rangePx（必須）' : 'rangePx（任意・未指定=0）',
+        createNumberInput(
+          draft.enemy.rangePx ?? (isRanged ? 120 : 0),
+          (rangePx) => {
+            commitDraft((next) => {
+              if (!isRanged && rangePx <= 0) {
+                delete next.enemy.rangePx;
+              } else {
                 next.enemy.rangePx = rangePx;
-              });
-            },
-            { min: 1 },
-          ),
+              }
+            });
+          },
+          { min: isRanged ? 1 : 0 },
         ),
-      );
-    }
+      ),
+    );
 
     if (!hideSkillIds) {
       const passiveSection = createSection('パッシブスキル ID');

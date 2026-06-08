@@ -9,7 +9,7 @@ import type {
   PartySlotState,
   SkillCooldown,
 } from './types.ts';
-import { DEFAULT_MELEE_RANGE_PX } from './types.ts';
+import type { ClassTraits } from './types.ts';
 import {
   resolveClassIconKey,
   resolveClassSpriteKey,
@@ -77,10 +77,7 @@ export function createAllyFromMember(
     role: classPreset.role,
     classId: classPreset.id,
     formationRow: classPreset.formationRow,
-    traits: {
-      ...classPreset.traits,
-      rangePx: classPreset.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX,
-    },
+    traits: copyTraits(classPreset.traits),
     build: structuredClone(member.build),
     maxHp: stats.maxHp,
     atk: stats.atk,
@@ -94,8 +91,15 @@ export function createAllyFromMember(
     spriteKey: resolveClassSpriteKey(classPreset),
     iconKey: resolveClassIconKey(classPreset),
     isEnemy: false,
+    battleX: 0,
     visualX: 0,
   };
+}
+
+function copyTraits(traits: ClassTraits): ClassTraits {
+  return traits.rangePx !== undefined
+    ? { attackRange: traits.attackRange, rangePx: traits.rangePx }
+    : { attackRange: traits.attackRange };
 }
 
 export function createAlliesFromPartyState(
@@ -152,10 +156,7 @@ export function createEnemyFromTemplate(
     role: 'attacker',
     classId: template.id,
     formationRow: 'front',
-    traits: {
-      attackRange: template.attackRange ?? 'melee',
-      rangePx: template.rangePx ?? DEFAULT_MELEE_RANGE_PX,
-    },
+    traits: enemyTraitsFromTemplate(template),
     build,
     maxHp: template.maxHp,
     atk: template.atk,
@@ -169,9 +170,17 @@ export function createEnemyFromTemplate(
     spriteKey: template.spriteKey,
     iconKey: 'default',
     isEnemy: true,
+    battleX: spawnX,
     visualX: spawnX,
     spawnX,
   };
+}
+
+function enemyTraitsFromTemplate(template: EnemyTemplate): ClassTraits {
+  const attackRange = template.attackRange ?? 'melee';
+  return template.rangePx !== undefined
+    ? { attackRange, rangePx: template.rangePx }
+    : { attackRange };
 }
 
 export function createEnemiesForStage(

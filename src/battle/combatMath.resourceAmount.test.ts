@@ -43,6 +43,7 @@ function mockCombatant(
     spriteKey: 'placeholder',
     iconKey: 'placeholder',
     isEnemy: false,
+    battleX: 0,
     visualX: 0,
     ...overrides,
   };

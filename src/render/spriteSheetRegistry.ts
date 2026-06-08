@@ -3,6 +3,7 @@ import type { AnimState } from "./SpriteRegistry.ts";
 const VALID_ANIMS = new Set<AnimState>([
   "idle",
   "attack",
+  "dash",
   "heal",
   "hurt",
   "death",

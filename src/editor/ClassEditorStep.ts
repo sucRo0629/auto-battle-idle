@@ -337,7 +337,6 @@ export class ClassEditorStep {
             commitDraft(
               (next) => {
                 next.class.traits.attackRange = attackRange;
-                if (attackRange === "melee") delete next.class.traits.rangePx;
               },
               { rerender: true }
             );
@@ -345,22 +344,25 @@ export class ClassEditorStep {
         )
       )
     );
-    if (draft.class.traits.attackRange === "ranged") {
-      traitsGrid.appendChild(
-        createFieldRow(
-          "rangePx",
-          createNumberInput(
-            draft.class.traits.rangePx ?? 100,
-            (rangePx) => {
-              commitDraft((next) => {
+    const isRanged = draft.class.traits.attackRange === "ranged";
+    traitsGrid.appendChild(
+      createFieldRow(
+        isRanged ? "rangePx（必須）" : "rangePx（任意・未指定=0）",
+        createNumberInput(
+          draft.class.traits.rangePx ?? (isRanged ? 100 : 0),
+          (rangePx) => {
+            commitDraft((next) => {
+              if (!isRanged && rangePx <= 0) {
+                delete next.class.traits.rangePx;
+              } else {
                 next.class.traits.rangePx = rangePx;
-              });
-            },
-            { min: 1, step: 10 }
-          )
+              }
+            });
+          },
+          { min: isRanged ? 1 : 0, step: 10 }
         )
-      );
-    }
+      )
+    );
 
     const statsSection = createSection("Lv1 ステータス");
     this.container.appendChild(statsSection);

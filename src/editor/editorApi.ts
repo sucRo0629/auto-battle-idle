@@ -530,7 +530,7 @@ export function buildClassPresetFromDraft(
   delete cls.promotion;
   delete cls.promotesFrom;
   ensureClassGrowthFields(cls);
-  if (cls.traits.attackRange === 'melee') {
+  if (cls.traits.attackRange === 'melee' && !cls.traits.rangePx) {
     delete cls.traits.rangePx;
   }
   if (cls.id.trim()) {
@@ -643,7 +643,7 @@ export function defaultActiveSkill(id: string): ActiveSkillDef {
   return {
     id,
     name: id,
-    interval: 2,
+    trigger: { kind: 'time', value: 5 },
     effect: [
       {
         targetRule: 'frontEnemy',

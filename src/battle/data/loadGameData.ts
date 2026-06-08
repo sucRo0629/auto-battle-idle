@@ -9,7 +9,7 @@ import type {
   EnemyTemplate,
   GameData,
 } from '../types.ts';
-import { DEFAULT_MELEE_RANGE_PX } from '../types.ts';
+import { DEFAULT_RANGED_RANGE_PX } from '../types.ts';
 import { parseAndValidateGameDataJson } from './validateGameData.ts';
 
 function indexById<T extends { id: string }>(items: T[]): Record<string, T> {
@@ -20,11 +20,13 @@ function normalizeTraits(
   traits: ClassTraits,
   context: string,
 ): ClassTraits {
+  if (traits.attackRange === 'melee') {
+    return traits.rangePx !== undefined
+      ? { ...traits, rangePx: traits.rangePx }
+      : { attackRange: traits.attackRange };
+  }
   if (traits.rangePx !== undefined) {
     return { ...traits, rangePx: traits.rangePx };
-  }
-  if (traits.attackRange === 'melee') {
-    return { ...traits, rangePx: DEFAULT_MELEE_RANGE_PX };
   }
   throw new Error(`rangePx required for ranged class: ${context}`);
 }
@@ -37,9 +39,18 @@ function normalizeClass(cls: ClassPreset): ClassPreset {
 }
 
 function normalizeEnemy(enemy: EnemyTemplate): EnemyTemplate {
+  const attackRange = enemy.attackRange ?? 'melee';
+  if (attackRange === 'ranged') {
+    return {
+      ...enemy,
+      attackRange,
+      rangePx: enemy.rangePx ?? DEFAULT_RANGED_RANGE_PX,
+    };
+  }
   return {
     ...enemy,
-    rangePx: enemy.rangePx ?? DEFAULT_MELEE_RANGE_PX,
+    attackRange,
+    ...(enemy.rangePx !== undefined ? { rangePx: enemy.rangePx } : {}),
   };
 }
 

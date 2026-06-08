@@ -18,6 +18,7 @@ import {
   chainStepFields,
   pierceStepFields,
 } from './powerStep.ts';
+import { getBattleX } from '../combatPosition.ts';
 import {
   getAttackablePool,
   resolveSkillRangePx,
@@ -36,10 +37,6 @@ export function resolveTargetRule(
     }
   }
   return defaultRule;
-}
-
-function getBattleX(combatant: CombatantState): number {
-  return combatant.visualX;
 }
 
 function livingAllies(allies: CombatantState[]): CombatantState[] {
@@ -70,6 +67,17 @@ export function pickTargetFromPool(
       default:
         return pool[0] ?? null;
     }
+  }
+
+  if (rule === 'closestAlly') {
+    const others = pool.filter((unit) => unit.id !== actor.id);
+    if (others.length === 0) return null;
+    const actorX = getBattleX(actor);
+    return others.reduce((a, b) =>
+      Math.abs(getBattleX(a) - actorX) <= Math.abs(getBattleX(b) - actorX)
+        ? a
+        : b,
+    );
   }
 
   switch (rule) {
@@ -156,6 +164,16 @@ function orderPoolByRule(
       return copy.sort((a, b) => getBattleX(a) - getBattleX(b));
     }
     return copy;
+  }
+
+  if (rule === 'closestAlly') {
+    const actorX = getBattleX(actor);
+    return copy
+      .filter((unit) => unit.id !== actor.id)
+      .sort(
+        (a, b) =>
+          Math.abs(getBattleX(a) - actorX) - Math.abs(getBattleX(b) - actorX),
+      );
   }
 
   switch (rule) {
@@ -331,6 +349,28 @@ function getBasePowerMultiplier(effect: SkillEffectDef): number | undefined {
   return undefined;
 }
 
+/** move は射程外でも anchor を選ぶ */
+export function resolveEffectAnchor(
+  effect: SkillEffectDef,
+  rule: TargetRule,
+  actor: CombatantState,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+): CombatantState | null {
+  if (effect.type === 'move') {
+    const pool = getTargetPoolForRule(rule, actor, allies, enemies);
+    return pickTargetFromPool(rule, actor, pool);
+  }
+  const resolution = resolveEffectResolution(
+    effect,
+    rule,
+    actor,
+    allies,
+    enemies,
+  );
+  return resolution?.waves[0]?.targets[0]?.unit ?? null;
+}
+
 export function resolveEffectResolution(
   effect: SkillEffectDef,
   rule: TargetRule,
@@ -339,6 +379,15 @@ export function resolveEffectResolution(
   enemies: CombatantState[],
   rand: () => number = Math.random,
 ): SkillEffectResolution | null {
+  if (effect.type === 'move') {
+    const pool = getTargetPoolForRule(rule, actor, allies, enemies);
+    const target = pickTargetFromPool(rule, actor, pool);
+    if (!target) return null;
+    return {
+      waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
+    };
+  }
+
   const rangePx = resolveSkillRangePx(actor, effect);
   const attackablePool = getAttackablePool(rule, actor, allies, enemies, rangePx);
   const shape: TargetShape = effect.targetShape ?? 'single';

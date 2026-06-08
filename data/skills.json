@@ -36,7 +36,7 @@
           "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
-          "powerMultiplier": 0.6
+          "powerMultiplier": 0.9
         }
       ]
     },
@@ -91,6 +91,28 @@
           "type": "damage",
           "damageType": "physical",
           "powerMultiplier": 1
+        }
+      ]
+    },
+    {
+      "id": "attacker_kenshi_charge",
+      "name": "突進",
+      "trigger": { "kind": "time", "value": 5 },
+      "effect": [
+        {
+          "type": "move",
+          "targetRule": "frontEnemy",
+          "moveMode": "engage",
+          "moveDurationSec": 0.25,
+          "anim": "dash"
+        },
+        {
+          "type": "damage",
+          "targetRule": "frontEnemy",
+          "damageType": "physical",
+          "powerMultiplier": 1.2,
+          "anim": "attack",
+          "vfx": { "preset": "slash" }
         }
       ]
     },

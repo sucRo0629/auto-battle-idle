@@ -13,11 +13,15 @@ import type {
   PartyDef,
   PassiveEffectKind,
   PassiveSkillDef,
+  MoveMode,
   ResourceAmountKind,
   ResourceAmountSpec,
   Role,
+  SkillEffectAnimId,
   SkillEffectDef,
   SkillEffectKind,
+  SkillTrigger,
+  SkillTriggerKind,
   SkillRegistry,
   SkillVfxDef,
   SkillVfxPresetId,
@@ -43,6 +47,9 @@ import {
   SKILL_EFFECT_KINDS,
   STATUS_EFFECT_STATS,
   TARGET_RULES,
+  MOVE_MODES,
+  SKILL_EFFECT_ANIM_IDS,
+  SKILL_TRIGGER_KINDS,
   TARGET_SHAPES,
   VALID_REG_VALUES,
   VFX_PRESETS,
@@ -57,6 +64,11 @@ const DAMAGE_TYPES_SET = new Set<DamageType>(DAMAGE_TYPES);
 const VFX_PRESETS_SET = new Set<SkillVfxPresetId>(VFX_PRESETS);
 const TARGET_RULES_SET = new Set<TargetRule>(TARGET_RULES);
 const TARGET_SHAPES_SET = new Set<TargetShape>(TARGET_SHAPES);
+const MOVE_MODES_SET = new Set<MoveMode>(MOVE_MODES);
+const SKILL_EFFECT_ANIM_IDS_SET = new Set<SkillEffectAnimId>(
+  SKILL_EFFECT_ANIM_IDS,
+);
+const SKILL_TRIGGER_KINDS_SET = new Set<SkillTriggerKind>(SKILL_TRIGGER_KINDS);
 const PASSIVE_EFFECTS = new Set<PassiveEffectKind>(PASSIVE_EFFECT_KINDS);
 const STATUS_EFFECT_STATS_SET = new Set<string>(STATUS_EFFECT_STATS);
 const VALID_REG = new Set<number>(VALID_REG_VALUES);
@@ -175,8 +187,8 @@ function parseOptionalRange(
 ): number | undefined {
   const rangePx = obj.range;
   if (rangePx === undefined) return undefined;
-  if (typeof rangePx !== 'number' || Number.isNaN(rangePx) || rangePx <= 0) {
-    invalidField(context, 'range', 'must be a positive number');
+  if (typeof rangePx !== 'number' || Number.isNaN(rangePx) || rangePx < 0) {
+    invalidField(context, 'range', 'must be a non-negative number');
   }
   return rangePx;
 }
@@ -490,12 +502,28 @@ function parseSkillVfx(
   };
 }
 
+function parseOptionalEffectPresentation(
+  obj: Record<string, unknown>,
+  context: string,
+): Pick<SkillEffectDef, 'anim' | 'vfx'> {
+  const result: Pick<SkillEffectDef, 'anim' | 'vfx'> = {};
+  if (obj.anim !== undefined) {
+    result.anim = requireEnum(obj, 'anim', context, SKILL_EFFECT_ANIM_IDS_SET);
+  }
+  const vfx = parseSkillVfx(obj.vfx, `${context}.vfx`);
+  if (vfx !== undefined) {
+    result.vfx = vfx;
+  }
+  return result;
+}
+
 function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
   const obj = requireRecord(entry, context);
   const targetRule = requireEnum(obj, 'targetRule', context, TARGET_RULES_SET);
   const type = requireEnum(obj, 'type', context, SKILL_EFFECTS);
   const range = parseOptionalRange(obj, context);
   const targetShapeFields = parseTargetShapeFields(obj, context);
+  const presentation = parseOptionalEffectPresentation(obj, context);
 
   if (type === 'damage') {
     const damageType = requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
@@ -506,6 +534,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       type,
       damageType,
       powerMultiplier,
+      ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
   }
@@ -517,6 +546,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       ...targetShapeFields,
       type,
       amount,
+      ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
   }
@@ -542,6 +572,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       ...(typeof obj.buffFlatBonus === 'number'
         ? { buffFlatBonus: obj.buffFlatBonus }
         : {}),
+      ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
   }
@@ -555,6 +586,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       type: 'hot',
       durationSec,
       amount,
+      ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
   }
@@ -571,6 +603,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       type: 'barrier',
       amount,
       ...(typeof barrierStack === 'boolean' ? { barrierStack } : {}),
+      ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
   }
@@ -589,8 +622,39 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       durationSec,
       powerMultiplier,
       ...(damageType !== undefined ? { damageType } : {}),
+      ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
+  }
+
+  if (type === 'move') {
+    const effectiveShape = targetShapeFields.targetShape ?? 'single';
+    if (effectiveShape !== 'single') {
+      invalidField(context, 'targetShape', 'move effects must use single');
+    }
+    const moveDurationSec = requireNumber(obj, 'moveDurationSec', context);
+    if (moveDurationSec <= 0) {
+      invalidField(context, 'moveDurationSec', 'must be a positive number');
+    }
+    const moveModeRaw = obj.moveMode;
+    let moveMode: MoveMode | undefined;
+    if (moveModeRaw !== undefined) {
+      moveMode = requireEnum(obj, 'moveMode', context, MOVE_MODES_SET);
+    }
+    const behindOffsetPx = parseOptionalNumber(obj, 'behindOffsetPx', context);
+    return {
+      targetRule,
+      type: 'move',
+      moveDurationSec,
+      ...(moveMode !== undefined ? { moveMode } : {}),
+      ...(behindOffsetPx !== undefined ? { behindOffsetPx } : {}),
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    };
+  }
+
+  if (type !== 'debuff') {
+    invalidField(context, 'type', `unsupported effect type ${type}`);
   }
 
   const debuffStat = requireStatusEffectStat(obj, 'debuffStat', context);
@@ -613,6 +677,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
     ...(typeof obj.debuffFlatBonus === 'number'
       ? { debuffFlatBonus: obj.debuffFlatBonus }
       : {}),
+    ...presentation,
     ...(range !== undefined ? { range } : {}),
   };
 }
@@ -837,8 +902,10 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       if (typeof rangePx !== 'number' || Number.isNaN(rangePx)) {
         missingField(`${context}.traits`, 'rangePx');
       }
-    } else if (rangePx !== undefined && typeof rangePx !== 'number') {
-      invalidField(`${context}.traits`, 'rangePx', 'must be a number');
+    } else if (rangePx !== undefined) {
+      if (typeof rangePx !== 'number' || Number.isNaN(rangePx) || rangePx <= 0) {
+        invalidField(`${context}.traits`, 'rangePx', 'must be a positive number');
+      }
     }
     const maxHp = requireNumber(obj, 'maxHp', context);
     const atk = requireNumber(obj, 'atk', context);
@@ -922,6 +989,49 @@ function parsePassives(raw: unknown): PassiveSkillDef[] {
   });
 }
 
+function parseSkillTrigger(
+  obj: Record<string, unknown>,
+  context: string,
+): SkillTrigger {
+  const triggerRaw = obj.trigger;
+  if (triggerRaw !== undefined) {
+    const triggerObj = requireRecord(triggerRaw, `${context}.trigger`);
+    const kind = requireEnum(
+      triggerObj,
+      'kind',
+      `${context}.trigger`,
+      SKILL_TRIGGER_KINDS_SET,
+    );
+    const value = requireNumber(triggerObj, 'value', `${context}.trigger`);
+    validateTriggerValue(kind, value, `${context}.trigger`);
+    return { kind, value };
+  }
+
+  const intervalRaw = obj.interval;
+  if (intervalRaw === undefined) {
+    missingField(context, 'trigger or interval');
+  }
+  const value = requireNumber(obj, 'interval', context);
+  validateTriggerValue('time', value, context);
+  return { kind: 'time', value };
+}
+
+function validateTriggerValue(
+  kind: SkillTriggerKind,
+  value: number,
+  context: string,
+): void {
+  if (kind === 'time') {
+    if (value < 0.1) {
+      invalidField(context, 'value', 'must be >= 0.1 for time trigger');
+    }
+    return;
+  }
+  if (!Number.isInteger(value) || value < 1) {
+    invalidField(context, 'value', 'must be an integer >= 1 for count triggers');
+  }
+}
+
 function parseActives(raw: unknown): ActiveSkillDef[] {
   if (!Array.isArray(raw)) {
     throw new Error('skills.json actives must be an array');
@@ -931,7 +1041,7 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
     const obj = requireRecord(entry, context);
     const id = requireString(obj, 'id', context);
     const name = requireString(obj, 'name', context);
-    const interval = requireNumber(obj, 'interval', context);
+    const trigger = parseSkillTrigger(obj, context);
 
     const effectsRaw = obj.effect;
     if (!Array.isArray(effectsRaw) || effectsRaw.length === 0) {
@@ -955,7 +1065,7 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
     return {
       id,
       name,
-      interval,
+      trigger,
       effect,
       ...(Array.isArray(allowedClassIds)
         ? { allowedClassIds: allowedClassIds as string[] }

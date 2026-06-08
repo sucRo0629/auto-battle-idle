@@ -1,4 +1,4 @@
-export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death';
+export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death' | 'dash';
 
 import type { Role, StatusEffect, SkillVfxDef } from '../battle/types.ts';
 

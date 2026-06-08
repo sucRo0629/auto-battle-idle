@@ -64,7 +64,16 @@
 
 同一列内の横並び順はパーティ **配列順**。
 
-敵のターゲットは **戦場 X**（`closestAlly`）：位置が最も近い生存味方。ロール優先はなし。
+敵のターゲットは **戦場 X**（`battleX` / `closestAlly`）：位置が最も近い生存味方。ロール優先はなし。
+
+### `traits.rangePx`
+
+| `attackRange` | 必須 | 未指定時 |
+|---------------|------|----------|
+| `ranged` | はい | バリデーションエラー |
+| `melee` | いいえ | 攻撃射程 **0px**（剣・拳）。槍等は `30` 等を明示 |
+
+スキル個別の `effect.range` があればそちらが優先（[combat.md](combat.md)）。
 
 ## デモクラス（Phase 1 → Phase 4 で一次職に移行）
 
@@ -123,7 +132,25 @@ interface CharacterBuild {
 ```
 
 - **パッシブ：** `learnedPassiveIds` の全 ID が同時に有効（枠上限なし）
-- **アクティブ：** セット枠に入っているスキルのみ、CD 完了時に自動発動
+- **アクティブ：** セット枠に入っているスキルのみ、発動条件を満たしたときに自動発動
+
+### アクティブの発動条件（`trigger`）
+
+| フィールド | 説明 |
+|------------|------|
+| `trigger.kind` | `time`（秒）／`basicAttackCount`（通常攻撃回数）／`hitsTaken`（被攻撃回数） |
+| `trigger.value` | 条件の閾値。発動後に `remaining` として再設定され、0 になるまで再充填 |
+
+- **通常攻撃** は従来どおり JSON の `interval`（時間のみ）+ `attackSpeedTier` / SPD
+- レガシー JSON の `interval` はアクティブでも `trigger: { kind: "time", value: interval }` として読み込む
+
+```json
+{
+  "id": "attacker_kenshi_charge",
+  "trigger": { "kind": "time", "value": 5 },
+  "effect": [ ... ]
+}
+```
 
 ### パッシブの合成
 
@@ -139,7 +166,7 @@ interface CharacterBuild {
 
 | ルール | 説明 |
 |--------|------|
-| `closestAlly` | 敵が攻撃する味方（X が最も近い） |
+| `closestAlly` | 敵: 攻撃する味方（X が最も近い）。味方: 自分以外の生存味方のうち **battleX 距離が最小** |
 | `frontEnemy` | X が最も近い敵 |
 | `lowestHpEnemy` | 現在 HP が最も低い敵 |
 | `mostDamagedAlly` | 欠損 HP が最も大きい味方 |
@@ -160,7 +187,11 @@ interface CharacterBuild {
 | `chainCount` / `chainMaxDistancePx` | `chain` 必須 |
 | `scatterRadiusPx` / `scatterHitCount` / `scatterDurationSec` | `scatter` 必須 |
 | `scatterSpreadRate` | `scatter` 任意（0〜1。0 = anchor 中心固定） |
-| `range` | 命中判定・VFX 共用（px）。未指定 = 使用者 `traits.rangePx` |
+| `range` | 命中判定・VFX 共用（px）。`0` 可。未指定 = `traits.rangePx` → 近接は 0 |
+| `anim` | 任意。スプライトアニメ（`idle` / `attack` / `dash` / `heal` / `none` 等）。未指定 = effect 種別の既定 |
+| `vfx` | 任意。effect 単位の VFX プリセット。未指定 = スキル `vfx` → 種別既定（damage/heal 等） |
+
+**move を含むスキル:** シーケンスの各 step 発火時に、その effect の `anim` / `vfx` で演出する（例: 突進 `dash` → 斬撃 `attack`+`slash` → 帰還 `idle`）。
 
 ### ResourceAmountSpec（`heal` / `hot` / `barrier`）
 
@@ -177,6 +208,20 @@ interface CharacterBuild {
 | フィールド | 説明 |
 |------------|------|
 | `barrierStack` | `true` = 既存 `barrierHp` に加算。未指定/`false` = 新量で置換 |
+
+### move 専用
+
+| フィールド | 説明 |
+|------------|------|
+| `type: move` | 使用者（actor）の `battleX` を anchor 基準位置へ移動 |
+| `moveDurationSec` | 補間秒（必須・正数） |
+| `moveMode` | `engage`（接敵・射程内）／`toAnchor`（帰還・同座標可）／`behindTarget`（敵の背後） |
+| `behindOffsetPx` | `behindTarget` 時、anchor より敵奥へ何 px（味方: 左＝減算） |
+
+- `targetShape` は **single のみ**（Phase 1）
+- `engage` / `behindTarget`: 敵向け `targetRule`（`frontEnemy`, `farthestEnemy` 等）
+- `toAnchor`: 味方向け `targetRule`（`closestAlly`, `self` 等）
+- move を含むスキルは effect 列を **順序実行**（移動完了後に次 effect）。CD はシーケンス全 step 完了後にリセット
 
 ### targetShape の JSON 例（スキーマ参考・具体 ID は未固定）
 

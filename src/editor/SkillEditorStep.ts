@@ -2,10 +2,17 @@ import {
   ATTACK_SPEED_TIER_LABELS,
   ATTACK_SPEED_TIER_OPTIONS,
   DAMAGE_TYPE_OPTIONS,
+  MOVE_MODE_LABELS,
+  MOVE_MODES,
   PASSIVE_EFFECT_KIND_OPTIONS,
   RESOURCE_AMOUNT_KIND_LABELS,
   RESOURCE_AMOUNT_KIND_OPTIONS,
+  SKILL_EFFECT_ANIM_LABELS,
+  SKILL_EFFECT_ANIM_OPTIONS,
   SKILL_EFFECT_KIND_OPTIONS,
+  SKILL_TRIGGER_KIND_LABELS,
+  SKILL_TRIGGER_KIND_OPTIONS,
+  SKILL_TRIGGER_VALUE_LABELS,
   STATUS_EFFECT_STAT_OPTIONS,
   TARGET_RULE_LABELS,
   TARGET_RULE_OPTIONS,
@@ -19,15 +26,21 @@ import type {
   BarrierSkillEffect,
   HealSkillEffect,
   HotSkillEffect,
+  MoveSkillEffect,
   PassiveEffectKind,
   PassiveSkillDef,
   ResourceAmountSpec,
+  SkillEffectAnimId,
   SkillEffectDef,
   SkillEffectKind,
+  SkillTriggerKind,
+  SkillVfxDef,
   SkillVfxPresetId,
   StatusEffectStat,
   TargetShape,
 } from '../battle/types.ts';
+import { skillHasMoveEffect } from '../battle/skills/skillSequence.ts';
+import { resolveSkillTrigger } from '../battle/skillTrigger.ts';
 import type { SkillDraftEntry, SkillSlotKind } from './editorApi.ts';
 import {
   appendGrid,
@@ -59,6 +72,7 @@ const EFFECT_KIND_LABELS: Record<SkillEffectKind, string> = {
   hot: 'HOT',
   dot: 'DOT',
   barrier: 'バリア',
+  move: '移動',
 };
 
 const STAT_LABELS: Record<StatusEffectStat, string> = {
@@ -83,7 +97,7 @@ function normalizeResourceAmount(
 function appendResourceAmountFields(
   grid: HTMLElement,
   amount: ResourceAmountSpec,
-  onUpdate: (amount: ResourceAmountSpec) => void,
+  onUpdate: (amount: ResourceAmountSpec, options?: { rerender?: boolean }) => void,
 ): void {
   grid.appendChild(
     createFieldRow(
@@ -96,14 +110,17 @@ function appendResourceAmountFields(
         })),
         (kind) => {
           if (kind === 'atkBased') {
-            onUpdate(defaultResourceAmount(amount.atkMultiply ?? 1));
+            onUpdate(defaultResourceAmount(amount.atkMultiply ?? 1), { rerender: true });
           } else if (kind === 'flat') {
-            onUpdate({ kind, flatAmount: amount.flatAmount ?? 0 });
+            onUpdate({ kind, flatAmount: amount.flatAmount ?? 0 }, { rerender: true });
           } else {
-            onUpdate({
-              kind,
-              percentOfMaxHp: amount.percentOfMaxHp ?? 0.1,
-            });
+            onUpdate(
+              {
+                kind,
+                percentOfMaxHp: amount.percentOfMaxHp ?? 0.1,
+              },
+              { rerender: true },
+            );
           }
         },
       ),
@@ -184,6 +201,110 @@ function appendResourceAmountFields(
   );
 }
 
+function appendEffectPresentationFields(
+  parent: HTMLElement,
+  effect: SkillEffectDef,
+  onUpdate: (effect: SkillEffectDef, options?: { rerender?: boolean }) => void,
+): void {
+  const section = createSection('演出（この effect）');
+  parent.appendChild(section);
+  const grid = appendGrid(section);
+
+  grid.appendChild(
+    createFieldRow(
+      'スプライトアニメ',
+      createSelect(
+        effect.anim ?? '',
+        [
+          { value: '', label: '— 種別の既定 —' },
+          ...SKILL_EFFECT_ANIM_OPTIONS.map((value) => ({
+            value,
+            label: SKILL_EFFECT_ANIM_LABELS[value],
+          })),
+        ],
+        (value) => {
+          const next = { ...effect } as SkillEffectDef;
+          if (value.length === 0) {
+            delete next.anim;
+          } else {
+            next.anim = value as SkillEffectAnimId;
+          }
+          onUpdate(next);
+        },
+      ),
+    ),
+  );
+
+  const preset = effect.vfx?.preset ?? '';
+  grid.appendChild(
+    createFieldRow(
+      'VFX プリセット',
+      createSelect(
+        (preset || '') as SkillVfxPresetId | '',
+        [
+          { value: '', label: '— スキル既定 / なし —' },
+          { value: 'slash' as SkillVfxPresetId, label: 'slash' },
+          ...VFX_PRESET_OPTIONS.filter((v) => v !== 'slash').map((value) => ({
+            value,
+            label: value,
+          })),
+        ],
+        (value) => {
+          const next = { ...effect } as SkillEffectDef;
+          if (value.length === 0) {
+            delete next.vfx;
+          } else {
+            next.vfx = { ...next.vfx, preset: value as SkillVfxPresetId };
+          }
+          onUpdate(next);
+        },
+      ),
+    ),
+  );
+
+  if (effect.vfx) {
+    grid.appendChild(
+      createFieldRow(
+        'VFX durationMs',
+        createNumberInput(
+          effect.vfx.durationMs ?? 0,
+          (durationMs) => {
+            const vfx: SkillVfxDef = {
+              ...effect.vfx!,
+              durationMs: durationMs || undefined,
+            };
+            onUpdate({ ...effect, vfx });
+          },
+          { min: 0, step: 50 },
+        ),
+      ),
+    );
+    const arcRow = createEl('div', 'editor-field editor-field-checkbox');
+    const arcInput = createEl('input') as HTMLInputElement;
+    arcInput.type = 'checkbox';
+    arcInput.checked = Boolean(effect.vfx.arc);
+    arcInput.addEventListener('change', () => {
+      onUpdate({
+        ...effect,
+        vfx: {
+          ...effect.vfx!,
+          arc: arcInput.checked || undefined,
+        },
+      });
+    });
+    arcRow.appendChild(createEl('label', undefined, 'VFX arc（放物線）'));
+    arcRow.appendChild(arcInput);
+    grid.appendChild(arcRow);
+    section.appendChild(
+      createButton('effect VFX を削除', 'editor-btn editor-btn-small', () => {
+        const next = { ...effect } as SkillEffectDef;
+        delete next.vfx;
+        onUpdate(next, { rerender: true });
+      }),
+    );
+  }
+}
+
 function defaultEffect(type: SkillEffectKind): SkillEffectDef {
   switch (type) {
     case 'damage':
@@ -235,6 +356,13 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         targetRule: 'mostDamagedAlly',
         type: 'barrier',
         amount: defaultResourceAmount(),
+      };
+    case 'move':
+      return {
+        targetRule: 'frontEnemy',
+        type: 'move',
+        moveMode: 'engage',
+        moveDurationSec: 0.25,
       };
   }
 }
@@ -787,35 +915,86 @@ export class SkillEditorStep {
           '通常攻撃の間隔は SPD 段階とスキル interval から決まります。',
         ),
       );
-    } else {
+    } else if (idReadonly) {
+      const trigger = resolveSkillTrigger(active);
       grid.appendChild(
         createFieldRow(
           '発動間隔 (秒)',
           createNumberInput(
-            active.interval,
-            (interval) => {
-              if (idReadonly) return;
+            trigger.value,
+            (value) => {
               setActive((current) => {
-                current.interval = interval;
+                current.interval = value;
+                current.trigger = { kind: 'time', value };
               }, { rerender: false });
             },
-            { min: 0.1, step: 0.1, readonly: idReadonly },
+            { min: 0.1, step: 0.1, readonly: true },
           ),
         ),
       );
-      if (idReadonly) {
-        grid.appendChild(
-          createEl(
-            'p',
-            'editor-hint',
-            '通常攻撃の間隔はクラス設定の「攻撃速度（SPD 段階）」から決まります。',
+      grid.appendChild(
+        createEl(
+          'p',
+          'editor-hint',
+          '通常攻撃の間隔はクラス設定の「攻撃速度（SPD 段階）」から決まります。',
+        ),
+      );
+    } else {
+      const trigger = resolveSkillTrigger(active);
+      grid.appendChild(
+        createFieldRow(
+          '発動条件',
+          createSelect(
+            trigger.kind,
+            SKILL_TRIGGER_KIND_OPTIONS.map((value) => ({
+              value,
+              label: SKILL_TRIGGER_KIND_LABELS[value],
+            })),
+            (kind) => {
+              const nextKind = kind as SkillTriggerKind;
+              const nextValue =
+                nextKind === 'time'
+                  ? trigger.kind === 'time'
+                    ? trigger.value
+                    : 5
+                  : trigger.kind === nextKind
+                    ? trigger.value
+                    : 3;
+              setActive((current) => {
+                current.trigger = { kind: nextKind, value: nextValue };
+                delete current.interval;
+              }, { rerender: true });
+            },
           ),
-        );
-      }
+        ),
+      );
+      const valueMin = trigger.kind === 'time' ? 0.1 : 1;
+      const valueStep = trigger.kind === 'time' ? 0.1 : 1;
+      grid.appendChild(
+        createFieldRow(
+          SKILL_TRIGGER_VALUE_LABELS[trigger.kind],
+          createNumberInput(
+            trigger.value,
+            (value) => {
+              setActive((current) => {
+                const kind = resolveSkillTrigger(current).kind;
+                const nextValue =
+                  kind === 'time'
+                    ? Math.max(0.1, value)
+                    : Math.max(1, Math.round(value));
+                current.trigger = { kind, value: nextValue };
+                delete current.interval;
+              }, { rerender: false });
+            },
+            { min: valueMin, step: valueStep },
+          ),
+        ),
+      );
     }
 
     const effectsSection = createSection('効果');
     parent.appendChild(effectsSection);
+    const showPerEffectPresentation = skillHasMoveEffect(active);
 
     active.effect.forEach((effect, effectIndex) => {
       const block = createEl('div', 'editor-effect-block');
@@ -833,11 +1012,16 @@ export class SkillEditorStep {
         );
       }
       block.appendChild(effectHeader);
-      this.renderEffect(block, effect, (nextEffect, options) => {
-        setActive((current) => {
-          current.effect[effectIndex] = nextEffect;
-        }, options);
-      });
+      this.renderEffect(
+        block,
+        effect,
+        (nextEffect, options) => {
+          setActive((current) => {
+            current.effect[effectIndex] = nextEffect;
+          }, options);
+        },
+        showPerEffectPresentation,
+      );
       effectsSection.appendChild(block);
     });
 
@@ -851,6 +1035,15 @@ export class SkillEditorStep {
 
     const vfxSection = createSection('VFX（任意）');
     parent.appendChild(vfxSection);
+    if (showPerEffectPresentation) {
+      vfxSection.appendChild(
+        createEl(
+          'p',
+          'editor-hint',
+          'move を含むスキル: 各 effect の演出は効果ブロック内で設定。ここは effect 未指定時のフォールバックです。',
+        ),
+      );
+    }
     const vfxGrid = appendGrid(vfxSection);
     const preset = active.vfx?.preset ?? '';
     vfxGrid.appendChild(
@@ -928,6 +1121,7 @@ export class SkillEditorStep {
     parent: HTMLElement,
     effect: SkillEffectDef,
     onUpdate: (effect: SkillEffectDef, options?: { rerender?: boolean }) => void,
+    showPerEffectPresentation = false,
   ): void {
     const grid = appendGrid(parent);
     grid.appendChild(
@@ -956,17 +1150,19 @@ export class SkillEditorStep {
         ),
       ),
     );
+    const isMove = effect.type === 'move';
     const targetShape: TargetShape = effect.targetShape ?? 'single';
-    grid.appendChild(
-      createFieldRow(
-        'ターゲット形状',
-        createSelect(
-          targetShape,
-          TARGET_SHAPE_OPTIONS.map((value) => ({
-            value,
-            label: TARGET_SHAPE_LABELS[value],
-          })),
-          (shape) => {
+    if (!isMove) {
+      grid.appendChild(
+        createFieldRow(
+          'ターゲット形状',
+          createSelect(
+            targetShape,
+            TARGET_SHAPE_OPTIONS.map((value) => ({
+              value,
+              label: TARGET_SHAPE_LABELS[value],
+            })),
+            (shape) => {
             const next: SkillEffectDef = { ...effect, targetShape: shape };
             delete next.aoeRadiusPx;
             delete next.hitCount;
@@ -998,8 +1194,13 @@ export class SkillEditorStep {
           },
         ),
       ),
-    );
-    if (targetShape === 'aoe') {
+      );
+    } else {
+      grid.appendChild(
+        createEl('p', 'editor-hint', '移動効果は単体（single）のみ。ターゲットは移動先の基準（anchor）です。'),
+      );
+    }
+    if (!isMove && targetShape === 'aoe') {
       grid.appendChild(
         createFieldRow(
           '範囲半径 px',
@@ -1016,7 +1217,7 @@ export class SkillEditorStep {
         ),
       );
     }
-    if (targetShape === 'multiLock') {
+    if (!isMove && targetShape === 'multiLock') {
       grid.appendChild(
         createFieldRow(
           'ヒット回数',
@@ -1033,7 +1234,7 @@ export class SkillEditorStep {
         ),
       );
     }
-    if (targetShape === 'chain') {
+    if (!isMove && targetShape === 'chain') {
       grid.appendChild(
         createFieldRow(
           '連鎖回数',
@@ -1065,7 +1266,7 @@ export class SkillEditorStep {
         ),
       );
     }
-    if (targetShape === 'scatter') {
+    if (!isMove && targetShape === 'scatter') {
       grid.appendChild(
         createFieldRow(
           '乱打半径 px',
@@ -1127,7 +1328,7 @@ export class SkillEditorStep {
         ),
       );
     }
-    if (targetShape === 'pierce') {
+    if (!isMove && targetShape === 'pierce') {
       grid.appendChild(
         createFieldRow(
           '貫通時間（秒・任意）',
@@ -1186,8 +1387,8 @@ export class SkillEditorStep {
         );
         break;
       case 'heal':
-        appendResourceAmountFields(detailGrid, normalizeResourceAmount(effect), (amount) =>
-          onUpdate({ ...effect, amount }),
+        appendResourceAmountFields(detailGrid, normalizeResourceAmount(effect), (amount, options) =>
+          onUpdate({ ...effect, amount }, options),
         );
         break;
       case 'buff':
@@ -1273,13 +1474,13 @@ export class SkillEditorStep {
             ),
           ),
         );
-        appendResourceAmountFields(detailGrid, normalizeResourceAmount(effect), (amount) =>
-          onUpdate({ ...effect, amount }),
+        appendResourceAmountFields(detailGrid, normalizeResourceAmount(effect), (amount, options) =>
+          onUpdate({ ...effect, amount }, options),
         );
         break;
       case 'barrier':
-        appendResourceAmountFields(detailGrid, normalizeResourceAmount(effect), (amount) =>
-          onUpdate({ ...effect, amount }),
+        appendResourceAmountFields(detailGrid, normalizeResourceAmount(effect), (amount, options) =>
+          onUpdate({ ...effect, amount }, options),
         );
         detailGrid.appendChild(
           (() => {
@@ -1333,6 +1534,57 @@ export class SkillEditorStep {
           ),
         );
         break;
+      case 'move': {
+        const moveEffect = effect as MoveSkillEffect;
+        detailGrid.appendChild(
+          createFieldRow(
+            '移動時間（秒）',
+            createNumberInput(
+              moveEffect.moveDurationSec,
+              (moveDurationSec) =>
+                onUpdate({
+                  ...moveEffect,
+                  moveDurationSec: moveDurationSec > 0 ? moveDurationSec : 0.1,
+                }),
+              { min: 0.05, step: 0.05 },
+            ),
+          ),
+        );
+        detailGrid.appendChild(
+          createFieldRow(
+            '移動モード',
+            createSelect(
+              moveEffect.moveMode ?? 'engage',
+              MOVE_MODES.map((value) => ({
+                value,
+                label: MOVE_MODE_LABELS[value],
+              })),
+              (moveMode) => onUpdate({ ...moveEffect, moveMode }),
+            ),
+          ),
+        );
+        if ((moveEffect.moveMode ?? 'engage') === 'behindTarget') {
+          detailGrid.appendChild(
+            createFieldRow(
+              '背後オフセット px',
+              createNumberInput(
+                moveEffect.behindOffsetPx ?? 0,
+                (behindOffsetPx) =>
+                  onUpdate({
+                    ...moveEffect,
+                    behindOffsetPx: behindOffsetPx > 0 ? behindOffsetPx : undefined,
+                  }),
+                { min: 0, step: 10 },
+              ),
+            ),
+          );
+        }
+        break;
+      }
+    }
+
+    if (showPerEffectPresentation) {
+      appendEffectPresentationFields(parent, effect, onUpdate);
     }
   }
 }

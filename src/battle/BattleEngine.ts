@@ -9,25 +9,41 @@ import {
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
+  APPROACH_SPEED as BATTLE_APPROACH_SPEED,
+  assignInitialAllyBattleX,
+  getAllyContactX,
+  getEnemyContactX,
+  marchEnemiesRight as marchEnemiesBattleRight,
+  resolveAttackBattleX,
+  SCROLL_SPEED,
+  separateByGap,
+  shouldStartApproach,
+  updateUnitApproach,
+} from "./combatPosition.ts";
+import {
+  APPROACH_SPEED,
   computeAllyPositions,
   computeEngagedAllyTargets,
   computeEngagedEnemyPositions,
   computeEngagedStandoffAnchors,
-  APPROACH_SPEED,
-  SCROLL_SPEED,
-  SPRITE_WIDTH,
-  separateEngagedSprites,
   getFrontAllyX,
   getFrontEnemyX,
   getFrontLinePair,
-  isBattleEngaged,
-  marchEnemiesRight,
   moveTowardX,
+  separateEngagedSprites,
   separateEnemySprites,
+  SPRITE_GAP,
+  SPRITE_WIDTH,
   toVisualCombatant,
 } from "../render/formationLayout.ts";
 import { SkillExecutor } from "./skills/SkillExecutor.ts";
 import { tickPendingHits } from "./skills/pendingSkillHits.ts";
+import { SkillSequenceRunner } from "./skills/skillSequence.ts";
+import {
+  resolveSkillTrigger,
+  shouldTickCooldown,
+  tickCountTriggerCooldowns,
+} from "./skillTrigger.ts";
 import type {
   BattlePhase,
   BattleSnapshot,
@@ -36,6 +52,7 @@ import type {
   PartySlotState,
   PendingSkillHit,
   SkillCooldown,
+  SkillTriggerKind,
   StatusEffect,
 } from "./types.ts";
 import { DEFAULT_MELEE_RANGE_PX } from "./types.ts";
@@ -54,6 +71,7 @@ export class BattleEngine {
   private restartTimer = 0;
   private readonly listeners = new Set<BattleEventListener>();
   private readonly executor: SkillExecutor;
+  private readonly skillSequenceRunner = new SkillSequenceRunner();
   private pendingHitQueue: PendingSkillHit[] = [];
   private battleTimeSec = 0;
   private stageId: string;
@@ -72,6 +90,10 @@ export class BattleEngine {
         this.pendingHitQueue.push(...hits);
       },
       getAllCombatants: () => [...this.allies, ...this.enemies],
+      getSequenceRunner: () => this.skillSequenceRunner,
+      onBasicAttackExecuted: (actorId) => {
+        this.tickCountTriggers(actorId, "basicAttackCount");
+      },
     });
     this.reloadBattlefield();
   }
@@ -79,6 +101,7 @@ export class BattleEngine {
   private reloadBattlefield(): void {
     resetEntityIdCounter();
     this.pendingHitQueue = [];
+    this.skillSequenceRunner.clearAll();
     this.battleTimeSec = 0;
     this.allies = createAlliesFromPartyState(
       this.gameData,
@@ -92,7 +115,8 @@ export class BattleEngine {
       this.stageId,
       this.waveIndex,
     );
-    // 戦場リロード時は常に非接敵の隊形配置（engaged だと敵 spawnX 基準で左へずれる）
+    assignInitialAllyBattleX(this.allies);
+    this.resetEnemyBattlePositions();
     this.syncAllyVisualPositions(false);
     this.resetEnemyVisualPositions();
   }
@@ -137,7 +161,7 @@ export class BattleEngine {
         id: enemy.id,
         visualX: enemy.visualX,
         isAlive: enemy.isAlive,
-      }))
+      })),
     );
     for (const enemy of this.enemies) {
       const x = separated.get(enemy.id);
@@ -147,21 +171,48 @@ export class BattleEngine {
     }
   }
 
-  private applyEnemyMarch(deltaX: number): void {
-    const positions = marchEnemiesRight(
+  private syncEnemyVisualFromBattle(): void {
+    for (const enemy of this.enemies) {
+      enemy.visualX = enemy.battleX;
+    }
+  }
+
+  private resetEnemyBattlePositions(): void {
+    for (const enemy of this.enemies) {
+      enemy.battleX = enemy.spawnX!;
+    }
+    const separated = separateByGap(
       this.enemies.map((enemy) => ({
         id: enemy.id,
-        visualX: enemy.visualX,
+        battleX: enemy.battleX,
         isAlive: enemy.isAlive,
       })),
-      deltaX
+      SPRITE_GAP,
+    );
+    for (const enemy of this.enemies) {
+      const x = separated.get(enemy.id);
+      if (x !== undefined) {
+        enemy.battleX = x;
+      }
+    }
+  }
+
+  private applyEnemyMarch(deltaX: number): void {
+    const positions = marchEnemiesBattleRight(
+      this.enemies.map((enemy) => ({
+        id: enemy.id,
+        battleX: enemy.battleX,
+        isAlive: enemy.isAlive,
+      })),
+      deltaX,
     );
     for (const enemy of this.enemies) {
       const x = positions.get(enemy.id);
       if (x !== undefined) {
-        enemy.visualX = x;
+        enemy.battleX = x;
       }
     }
+    this.syncEnemyVisualFromBattle();
   }
 
   private updateVictoryExitMarch(deltaTime: number): void {
@@ -176,7 +227,27 @@ export class BattleEngine {
     return this.allies.every((ally) => ally.visualX + SPRITE_WIDTH <= 0);
   }
 
-  private updateEngagedMovement(deltaTime: number): void {
+  private updateEngagedBattleMovement(deltaTime: number): void {
+    const enemyContact = getEnemyContactX(this.enemies);
+    const allyContact = getAllyContactX(this.allies);
+    if (enemyContact === null || allyContact === null) return;
+
+    const approachStep = BATTLE_APPROACH_SPEED * deltaTime;
+
+    for (const ally of this.allies) {
+      if (this.skillSequenceRunner.isActorBusy(ally.id)) continue;
+      const target = resolveAttackBattleX(ally, enemyContact, this.gameData);
+      updateUnitApproach(ally, target, approachStep);
+    }
+
+    for (const enemy of this.enemies) {
+      if (this.skillSequenceRunner.isActorBusy(enemy.id)) continue;
+      const target = resolveAttackBattleX(enemy, allyContact, this.gameData);
+      updateUnitApproach(enemy, target, approachStep);
+    }
+  }
+
+  private updateEngagedVisualMovement(deltaTime: number): void {
     const visualAllies = this.getVisualAllies();
     const visualEnemies = this.getVisualEnemies();
     const frontAllyX = getFrontAllyX(visualAllies);
@@ -200,10 +271,11 @@ export class BattleEngine {
       anchorEnemyX,
     );
     for (const ally of this.allies) {
-      if (!ally.isAlive) continue;
+      if (!ally.isAlive || this.skillSequenceRunner.isActorBusy(ally.id)) {
+        continue;
+      }
       const target = allyTargets.get(ally.id);
       if (target === undefined) continue;
-      // 接敵中は敵方向（左）への接近のみ。右への退避はしない
       if (target <= ally.visualX) {
         ally.visualX = moveTowardX(ally.visualX, target, approachStep);
       }
@@ -220,7 +292,9 @@ export class BattleEngine {
       frontAllyRangePx,
     );
     for (const enemy of this.enemies) {
-      if (!enemy.isAlive) continue;
+      if (!enemy.isAlive || this.skillSequenceRunner.isActorBusy(enemy.id)) {
+        continue;
+      }
       const target = enemyTargets.get(enemy.id);
       if (target === undefined) continue;
       enemy.visualX = moveTowardX(enemy.visualX, target, approachStep);
@@ -254,9 +328,20 @@ export class BattleEngine {
     }
   }
 
+  private applySkillMoveVisualOverlay(): void {
+    for (const move of this.skillSequenceRunner.getActiveMoves()) {
+      const unit = [...this.allies, ...this.enemies].find(
+        (u) => u.id === move.actorId,
+      );
+      if (!unit) continue;
+      const baseVisualX = move.baseVisualX ?? unit.visualX;
+      unit.visualX = baseVisualX + (unit.battleX - move.fromX);
+    }
+  }
+
   private updateEngagementState(): void {
     if (this.engaged) return;
-    if (isBattleEngaged(this.getVisualAllies(), this.getVisualEnemies())) {
+    if (shouldStartApproach(this.enemies)) {
       this.engaged = true;
     }
   }
@@ -267,6 +352,9 @@ export class BattleEngine {
   }
 
   private emit(event: Parameters<BattleEventListener>[0]): void {
+    if (event.type === "hurt") {
+      this.tickCountTriggers(event.targetId, "hitsTaken");
+    }
     for (const listener of this.listeners) {
       listener(event);
     }
@@ -277,7 +365,6 @@ export class BattleEngine {
     this.restartTimer = 0;
   }
 
-  /** パーティ変更などで戦闘を最初からやり直す */
   restartBattle(): void {
     this.engaged = false;
     this.reloadBattlefield();
@@ -286,7 +373,6 @@ export class BattleEngine {
     this.phase = "running";
   }
 
-  /** スキルセット変更を戦闘中に反映（HP・位置は維持） */
   syncPartyBuilds(): void {
     if (this.phase !== "running") return;
 
@@ -336,16 +422,21 @@ export class BattleEngine {
       iconKey: c.iconKey,
       formationRow: c.formationRow,
       isEnemy: c.isEnemy,
+      battleX: c.battleX,
       visualX: c.visualX,
       statusEffects: c.statusEffects.map((effect) => ({ ...effect })),
       activeCooldowns: c.cooldowns
         .filter((cd) => cd.slotKind === "active")
         .map((cd) => {
           const skill = this.gameData.skillRegistry.actives[cd.skillId];
+          const trigger = skill
+            ? resolveSkillTrigger(skill)
+            : { kind: "time" as const, value: 1 };
           return {
             skillId: cd.skillId,
             remaining: cd.remaining,
-            interval: skill?.interval ?? 1,
+            triggerKind: trigger.kind,
+            triggerValue: trigger.value,
             slotIndex: cd.slotIndex ?? 0,
           };
         }),
@@ -374,13 +465,16 @@ export class BattleEngine {
   private tickRunning(deltaTime: number): void {
     this.battleTimeSec += deltaTime;
     this.tickPendingHitQueue();
+    this.tickSkillSequences(deltaTime);
     if (!this.engaged) {
       const march = SCROLL_SPEED * deltaTime;
       this.worldOffsetX += march;
       this.applyEnemyMarch(march);
       this.updateEngagementState();
     } else {
-      this.updateEngagedMovement(deltaTime);
+      this.updateEngagedBattleMovement(deltaTime);
+      this.updateEngagedVisualMovement(deltaTime);
+      this.applySkillMoveVisualOverlay();
       this.tickStatusEffects(deltaTime);
       this.tickCooldowns(this.allies, deltaTime);
       this.tickCooldowns(this.enemies, deltaTime);
@@ -396,6 +490,14 @@ export class BattleEngine {
       this.battleTimeSec,
       (hit) => this.executor.applyPendingHit(hit),
     );
+  }
+
+  private tickSkillSequences(deltaTime: number): void {
+    const units = [...this.allies, ...this.enemies];
+    this.skillSequenceRunner.tickMoves(deltaTime, units);
+    this.skillSequenceRunner.tickSequences(this.battleTimeSec, (step) => {
+      this.executor.applyScheduledStep(step, this.allies, this.enemies);
+    });
   }
 
   private tickStatusEffects(deltaTime: number): void {
@@ -523,10 +625,22 @@ export class BattleEngine {
       }
       for (const cd of unit.cooldowns) {
         if (cd.remaining <= 0) continue;
+        const skill = this.gameData.skillRegistry.actives[cd.skillId];
+        if (!skill || !shouldTickCooldown(skill, cd.slotKind)) continue;
         const rate = cd.slotKind === "active" ? activeRate : basicRate;
         cd.remaining = Math.max(0, cd.remaining - deltaTime * rate);
       }
     }
+  }
+
+  private tickCountTriggers(unitId: string, kind: SkillTriggerKind): void {
+    const unit = [...this.allies, ...this.enemies].find((u) => u.id === unitId);
+    if (!unit?.isAlive) return;
+    tickCountTriggerCooldowns(
+      unit.cooldowns,
+      this.gameData.skillRegistry.actives,
+      kind,
+    );
   }
 
   private runUnitSkills(actors: CombatantState[]): void {
@@ -566,6 +680,7 @@ export class BattleEngine {
           this.stageId,
           this.waveIndex,
         );
+        this.resetEnemyBattlePositions();
         this.resetEnemyVisualPositions();
         this.engaged = false;
         return;

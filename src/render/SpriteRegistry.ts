@@ -10,7 +10,7 @@ import {
 } from '../battle/classVisuals.ts';
 import { preloadSpriteSheets } from './spriteSheetRegistry.ts';
 
-export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death';
+export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death' | 'dash';
 
 export interface SpriteAnimDef {
   frames: number;
@@ -32,6 +32,7 @@ const SPRITE_URLS: Record<string, string> = {
 export const ANIM_DEFS: Record<AnimState, SpriteAnimDef> = {
   idle: { frames: 4, fps: 6, loop: true },
   attack: { frames: 4, fps: 12, loop: false },
+  dash: { frames: 4, fps: 12, loop: false },
   heal: { frames: 3, fps: 10, loop: false },
   hurt: { frames: 2, fps: 10, loop: false },
   death: { frames: 3, fps: 8, loop: false },

@@ -1,9 +1,22 @@
+import { resolveSkillTrigger } from '../battle/skillTrigger.ts';
 import type {
   ActiveSkillDef,
   PassiveSkillDef,
   PassiveEffectKind,
   SkillEffectDef,
+  SkillTriggerKind,
 } from '../battle/types.ts';
+
+function formatTriggerLabel(kind: SkillTriggerKind, value: number): string {
+  switch (kind) {
+    case 'time':
+      return `${value}s`;
+    case 'basicAttackCount':
+      return `${value}攻撃`;
+    case 'hitsTaken':
+      return `被攻撃${value}回`;
+  }
+}
 
 function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): string {
   switch (effect) {
@@ -40,6 +53,8 @@ function formatEffectKind(effect: SkillEffectDef): string {
       return 'DoT';
     case 'barrier':
       return 'バリア';
+    case 'move':
+      return '移動';
   }
 }
 
@@ -49,5 +64,6 @@ export function formatPassiveDescription(def: PassiveSkillDef): string {
 
 export function formatActiveDescription(def: ActiveSkillDef): string {
   const effects = def.effect.map(formatEffectKind).join(' / ');
-  return `CD ${def.interval}s / ${effects}`;
+  const trigger = resolveSkillTrigger(def);
+  return `${formatTriggerLabel(trigger.kind, trigger.value)} / ${effects}`;
 }

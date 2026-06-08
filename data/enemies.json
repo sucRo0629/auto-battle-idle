@@ -26,8 +26,8 @@
   {
     "id": "stage1_1",
     "displayName": "stage1_1",
-    "maxHp": 100,
-    "atk": 10,
+    "maxHp": 90,
+    "atk": 45,
     "def": 5,
     "reg": 0,
     "exp": 1,

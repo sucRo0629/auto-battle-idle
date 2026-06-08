@@ -6,7 +6,7 @@
       {
         "enemies": [
           {
-            "templateId": "test_enemy",
+            "templateId": "stage1_1",
             "spawnX": -20
           },
           {

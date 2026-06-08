@@ -9,6 +9,7 @@ export type BattleEvent =
       skillName: string;
       slotKind?: 'basic' | 'active';
       effect: SkillEffectKind;
+      effectIndex?: number;
       amount?: number;
       range?: number;
       statusLabel?: string;

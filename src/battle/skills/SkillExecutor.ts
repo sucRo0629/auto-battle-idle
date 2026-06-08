@@ -7,10 +7,13 @@ import {
   resolveDamage,
   resolveResourceAmount,
 } from '../combatMath.ts';
+import { resolveMoveBattleX } from '../combatPosition.ts';
+import { resetCooldownAfterFire } from '../skillTrigger.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
   GameData,
+  MoveSkillEffect,
   PendingSkillHit,
   SkillCooldown,
   SkillEffectDef,
@@ -22,6 +25,13 @@ import {
   findCombatantById,
 } from './pendingSkillHits.ts';
 import {
+  buildSkillSequence,
+  type PendingSkillStep,
+  resolveSequenceStepAnchor,
+  type SkillSequenceRunner,
+  skillHasMoveEffect,
+} from './skillSequence.ts';
+import {
   resolutionHasTargets,
   resolveEffectResolution,
   resolveTargetRule,
@@ -31,6 +41,8 @@ export interface SkillExecutorDeps {
   getBattleTimeSec: () => number;
   enqueuePendingHits: (hits: PendingSkillHit[]) => void;
   getAllCombatants: () => CombatantState[];
+  getSequenceRunner: () => SkillSequenceRunner;
+  onBasicAttackExecuted?: (actorId: string) => void;
 }
 
 export class SkillExecutor {
@@ -47,6 +59,7 @@ export class SkillExecutor {
     enemies: CombatantState[],
   ): void {
     if (!actor.isAlive || cd.remaining > 0) return;
+    if (this.deps.getSequenceRunner().isActorBusy(actor.id)) return;
 
     const skill = this.gameData.skillRegistry.actives[cd.skillId];
     if (!skill || skill.effect.length === 0) return;
@@ -56,8 +69,25 @@ export class SkillExecutor {
       this.gameData.skillRegistry.passives,
     );
 
+    if (skillHasMoveEffect(skill)) {
+      const sequence = buildSkillSequence(
+        skill,
+        actor,
+        allies,
+        enemies,
+        this.gameData,
+        passives,
+        this.deps.getBattleTimeSec(),
+        cd,
+      );
+      if (!sequence) return;
+      this.deps.getSequenceRunner().schedule(sequence);
+      return;
+    }
+
     let appliedAny = false;
-    for (const effectDef of skill.effect) {
+    for (let effectIndex = 0; effectIndex < skill.effect.length; effectIndex++) {
+      const effectDef = skill.effect[effectIndex]!;
       const targetRule = resolveTargetRule(passives, effectDef.targetRule);
       const resolution = resolveEffectResolution(
         effectDef,
@@ -94,6 +124,7 @@ export class SkillExecutor {
               skill,
               effectDef,
               cd,
+              effectIndex,
               powerMultiplierOverride,
               wave.hitIndex,
             )
@@ -105,8 +136,61 @@ export class SkillExecutor {
     }
 
     if (appliedAny) {
-      cd.remaining = skill.interval;
+      resetCooldownAfterFire(cd, skill);
+      if (cd.slotKind === 'basic') {
+        this.deps.onBasicAttackExecuted?.(actor.id);
+      }
     }
+  }
+
+  applyScheduledStep(
+    step: PendingSkillStep,
+    allies: CombatantState[],
+    enemies: CombatantState[],
+  ): void {
+    const actor = findCombatantById(step.actorId, allies, enemies);
+    if (!actor?.isAlive) return;
+
+    const skill = this.gameData.skillRegistry.actives[step.skillId];
+    if (!skill) return;
+
+    const passives = getPassiveDefs(
+      actor,
+      this.gameData.skillRegistry.passives,
+    );
+    const rule = resolveTargetRule(passives, step.effectDef.targetRule);
+    const target =
+      step.effectDef.type === 'move'
+        ? findCombatantById(step.targetId, allies, enemies)
+        : resolveSequenceStepAnchor(
+            step.effectDef,
+            rule,
+            actor,
+            allies,
+            enemies,
+          );
+    if (!target?.isAlive) return;
+
+    if (step.effectDef.type === 'move') {
+      this.applyMoveEffect(
+        actor,
+        target,
+        skill,
+        step.effectDef,
+        step.cd,
+        step.effectIndex,
+      );
+      return;
+    }
+
+    this.applyEffect(
+      actor,
+      target,
+      skill,
+      step.effectDef,
+      step.cd,
+      step.effectIndex,
+    );
   }
 
   applyPendingHit(hit: PendingSkillHit): void {
@@ -123,6 +207,7 @@ export class SkillExecutor {
       slotKind: hit.slotKind,
     };
 
+    const effectIndex = skill.effect.findIndex((def) => def === hit.effectDef);
     for (const entry of hit.targets) {
       const target = findCombatantById(entry.targetId, allies, enemies);
       if (!target?.isAlive) continue;
@@ -132,6 +217,7 @@ export class SkillExecutor {
         skill,
         hit.effectDef,
         cd,
+        effectIndex >= 0 ? effectIndex : 0,
         entry.powerMultiplierOverride,
         hit.hitIndex,
       );
@@ -146,15 +232,65 @@ export class SkillExecutor {
     ];
   }
 
+  private applyMoveEffect(
+    actor: CombatantState,
+    anchor: CombatantState,
+    skill: ActiveSkillDef,
+    effectDef: MoveSkillEffect,
+    cd: SkillCooldown,
+    effectIndex: number,
+  ): void {
+    const toX = resolveMoveBattleX(actor, anchor, effectDef, this.gameData);
+    const fromX = actor.battleX;
+    if (fromX === toX) {
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: anchor.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'move',
+        effectIndex,
+      });
+      return;
+    }
+
+    this.deps.getSequenceRunner().startMove({
+      actorId: actor.id,
+      fromX,
+      toX,
+      remainingSec: effectDef.moveDurationSec,
+      totalSec: effectDef.moveDurationSec,
+      baseVisualX: actor.visualX,
+    });
+
+    this.emit({
+      type: 'skill',
+      actorId: actor.id,
+      targetId: anchor.id,
+      skillId: skill.id,
+      skillName: skill.name,
+      slotKind: cd.slotKind,
+      effect: 'move',
+      effectIndex,
+    });
+  }
+
   private applyEffect(
     actor: CombatantState,
     target: CombatantState,
     skill: ActiveSkillDef,
     effectDef: SkillEffectDef,
     cd: SkillCooldown,
+    effectIndex: number,
     powerMultiplierOverride?: number,
     hitIndex?: number,
   ): boolean {
+    if (effectDef.type === 'move') {
+      return false;
+    }
+
     if (effectDef.type === 'damage') {
       const amount = resolveDamage(
         actor,
@@ -172,6 +308,7 @@ export class SkillExecutor {
         skillName: skill.name,
         slotKind: cd.slotKind,
         effect: 'damage',
+        effectIndex,
         amount,
         range: effectDef.range,
         ...(hitIndex !== undefined ? { hitIndex } : {}),
@@ -180,6 +317,7 @@ export class SkillExecutor {
       if (lethal) {
         target.isAlive = false;
         this.emit({ type: 'death', targetId: target.id });
+        this.deps.getSequenceRunner().clearForActor(target.id);
       }
       return true;
     }
@@ -202,6 +340,7 @@ export class SkillExecutor {
         skillName: skill.name,
         slotKind: cd.slotKind,
         effect: 'heal',
+        effectIndex,
         amount,
         range: effectDef.range,
         ...(hitIndex !== undefined ? { hitIndex } : {}),
@@ -227,6 +366,7 @@ export class SkillExecutor {
         skillName: skill.name,
         slotKind: cd.slotKind,
         effect: 'barrier',
+        effectIndex,
         amount: grant,
         range: effectDef.range,
         ...(hitIndex !== undefined ? { hitIndex } : {}),
@@ -281,6 +421,7 @@ export class SkillExecutor {
         skillName: skill.name,
         slotKind: cd.slotKind,
         effect: effectDef.type,
+        effectIndex,
         statusLabel: statusLabels.join(', '),
         range: effectDef.range,
         ...(hitIndex !== undefined ? { hitIndex } : {}),
@@ -316,6 +457,7 @@ export class SkillExecutor {
         skillName: skill.name,
         slotKind: cd.slotKind,
         effect: effectDef.type,
+        effectIndex,
         statusLabel: overlay,
         range: effectDef.range,
         ...(hitIndex !== undefined ? { hitIndex } : {}),

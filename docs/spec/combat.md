@@ -80,14 +80,16 @@ HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さ�
 
 | 枠 | 進行ルール |
 |----|------------|
-| **basic** | `remaining -= deltaTime × basicCooldownRate` |
-| **active** | `remaining -= deltaTime × ∏ passive.activeCooldownRate` |
+| **basic** | 常に **時間**（`remaining -= deltaTime × basicCooldownRate`） |
+| **active（時間）** | `remaining -= deltaTime × ∏ passive.activeCooldownRate` |
+| **active（攻撃回数）** | 使用者の通常攻撃が命中するたび `remaining--` |
+| **active（被攻撃回数）** | 使用者が `hurt` になるたび `remaining--` |
 
 **basicCooldownRate** — クラス `attackSpeedTier` を `levelCurves.json` の `attackSpeedPresets` で係数化（`normal` = 1.0）。詳細は [stats.md](stats.md)。
 
 **予定（未実装）** — パッシブ `attackSpeedTierShift` と buff/debuff `attackSpeed` による tier ステップ加算後、上記 preset から rate を再解決。
 
-枠が 0 になると `SkillExecutor` が1回発動し、`skill.interval` にリセット。
+`remaining` が 0 になると `SkillExecutor` が1回発動し、`trigger.value` にリセット（レガシー `interval` は `trigger.kind: time` として解釈）。
 
 1 tick あたりの実行順（1ユニット）：basic → active 枠0 → active 枠1（Phase 1〜2 では枠1未使用）
 
@@ -126,10 +128,44 @@ HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さ�
 
 プール：味方 actor → 敵、敵 actor → 味方。heal / buff 向け `mostDamagedAlly` 等も anchor として同じ形状を利用。
 
+## 座標（ロジックと演出の分離）
+
+| 座標 | 層 | 用途 |
+|------|-----|------|
+| `battleX` | `src/battle` | 射程判定・接敵移動・ターゲット選定 |
+| `visualX` | `src/render` | 画面描画のみ（`formationLayout` の隊形配置・standoff で算出） |
+
+同一 `battleX` のユニットはロジック上重なってよい（近接 range 0 等）。描画は `visualX` で隊形・standoff（演出用 `DEFAULT_MELEE_RANGE_PX` = 45px）を維持し、`battleX` の内部接近は画面に反映しない。スキル `move` のみ `baseVisualX + (battleX - fromX)` で画面上の移動を演出する。
+
+## 射程と移動
+
+```
+effectiveRangePx = effect.range ?? traits.rangePx ?? 既定値
+  近接の既定値: 0px（剣・拳）。槍等は traits.rangePx や effect.range で 30px 等
+  遠隔の既定値: traits.rangePx（必須）
+```
+
+- 命中: `battleDistance(actor, target) <= effectiveRangePx`
+- 敵が画面内（`battleX >= BATTLE_ENEMY_VISIBLE_MIN_X`）に入ると **Engaged** 開始
+- 射程外のユニットは攻撃可能位置まで接近（味方: `contactX + range`、敵: `contactX - range`）。到達後に攻撃
+- `contactX` = 最前線生存敵の `battleX`
+- **スキル移動中**（`move` 効果の補間中、または move を含むスキルシーケンス実行中）の actor は自動接近の対象外
+
+## スキルシーケンス（move 含むスキル）
+
+`move` を 1 つでも含むアクティブは、発動時に effect 列を battle 時間でスケジュールし順に適用する。
+
+1. 各 effect の anchor を事前解決（move は射程外でも選択可）
+2. `move` は `moveDurationSec` で `battleX` を線形補間
+3. 次の effect の `applyAt` = 直前 move 完了時刻（move 連続時は累積）
+4. 全 step 完了後に CD リセット（途中キャンセルは死亡時のみ）
+
+例（奇襲帰還）: `move farthestEnemy` → `damage` → `move closestAlly (toAnchor)`
+
 ## 戦闘フロー（Phase 1）
 
-1. 味方は右→左へ進軍、敵は左から出現
-2. 前衛同士が射程内 → **接敵（Engaged）** → CD とスキルが進行
+1. 味方は初期隊列の `battleX` に配置、敵は左から出現・右進軍
+2. 敵が画面内 → **Engaged** → 接近 + CD / スキル進行（射程内のみ発動）
 3. 毎 tick：味方行動 → 敵行動
 4. 敵全滅 → **Victory**；味方全滅 → **Defeat**
 5. 3秒後：HP全回復、同一ステージ再スポーン、`Running` 再開

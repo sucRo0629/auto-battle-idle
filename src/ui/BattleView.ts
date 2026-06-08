@@ -7,7 +7,10 @@ import {
   type LevelCurvesConfig,
 } from '../progression/levelGrowth.ts';
 import { getNextStageId, getStageById } from '../progression/stageProgression.ts';
-import { resolveSkillVfx } from '../render/skillVfx/resolveSkillVfx.ts';
+import {
+  resolveEffectPresentation,
+  shouldPlayActorAnim,
+} from '../render/skillVfx/resolveEffectPresentation.ts';
 import { BattleCanvas, type PartyHudMeta } from '../render/BattleCanvas.ts';
 import { DebugMenuPanel } from './DebugMenuPanel.ts';
 
@@ -121,7 +124,6 @@ export class BattleView {
         if (event.amount !== undefined) {
           this.pushLog(`${slotLabel} → +${event.amount} HP`);
           this.canvas.showHealPopup(event.targetId, event.amount);
-          this.canvas.playAnim(event.actorId, 'heal');
         }
       } else if (event.effect === 'barrier') {
         if (event.amount !== undefined) {
@@ -129,44 +131,50 @@ export class BattleView {
         }
       } else if (
         event.effect === 'buff' ||
-        event.effect === 'debuff' ||
-        event.effect === 'hot' ||
-        event.effect === 'dot'
+        event.effect === 'debuff'
       ) {
         this.pushLog(`${slotLabel} → ${event.statusLabel ?? event.effect}`);
         this.canvas.showBuffGlow(event.targetId);
+      } else if (event.effect === 'move') {
+        this.pushLog(`${slotLabel} → 移動`);
       } else {
         this.pushLog(`${slotLabel} (${event.effect})`);
       }
-      if (
-        event.effect === 'damage' ||
-        event.effect === 'dot' ||
-        event.effect === 'heal'
-      ) {
-        const snapshot = this.engine.getSnapshot();
-        const actor = [...snapshot.allies, ...snapshot.enemies].find(
-          (c) => c.id === event.actorId,
-        );
-        const skillDef = this.gameData.skillRegistry.actives[event.skillId];
-        const vfx = resolveSkillVfx(
+
+      const snapshot = this.engine.getSnapshot();
+      const actor = [...snapshot.allies, ...snapshot.enemies].find(
+        (c) => c.id === event.actorId,
+      );
+      const skillDef = this.gameData.skillRegistry.actives[event.skillId];
+      const effectDef = skillDef?.effect[event.effectIndex ?? 0];
+      if (effectDef) {
+        const presentation = resolveEffectPresentation(
           event.skillId,
+          effectDef,
+          skillDef,
           {
             role: actor?.role,
             attackRange: actor?.attackRange ?? 'melee',
             slotKind: event.slotKind,
             effectKind: event.effect,
           },
-          skillDef?.vfx,
         );
-        this.canvas.playAttackEffect(event.actorId, event.targetId, vfx);
-        // attack = プレースホルダーの跳ね（将来スプライトアニメに差し替え）
         if (
-          (event.effect === 'damage' || event.effect === 'dot') &&
-          !(
-            actor?.attackRange === 'ranged' && event.slotKind === 'basic'
+          presentation.anim &&
+          shouldPlayActorAnim(
+            presentation.anim,
+            actor?.attackRange ?? 'melee',
+            event.slotKind,
           )
         ) {
-          this.canvas.playAnim(event.actorId, 'attack');
+          this.canvas.playAnim(event.actorId, presentation.anim);
+        }
+        if (presentation.vfx) {
+          this.canvas.playAttackEffect(
+            event.actorId,
+            event.targetId,
+            presentation.vfx,
+          );
         }
       }
     } else if (event.type === 'hurt') {

@@ -1,10 +1,10 @@
 import type { CombatantState, SkillEffectDef, TargetRule } from '../types.ts';
-import { DEFAULT_MELEE_RANGE_PX } from '../types.ts';
+import {
+  DEFAULT_MELEE_ATTACK_RANGE_PX,
+  DEFAULT_RANGED_RANGE_PX,
+} from '../types.ts';
+import { getBattleX } from '../combatPosition.ts';
 import { getTargetPoolForRule } from './targetingPool.ts';
-
-function getBattleX(combatant: CombatantState): number {
-  return combatant.visualX;
-}
 
 /** 味方→敵 / 敵→味方の 1D 距離（px） */
 export function battleDistance(
@@ -30,7 +30,11 @@ export function resolveSkillRangePx(
   actor: CombatantState,
   effect: Pick<SkillEffectDef, 'range'>,
 ): number {
-  return effect.range ?? actor.traits.rangePx ?? DEFAULT_MELEE_RANGE_PX;
+  if (effect.range !== undefined) return effect.range;
+  if (actor.traits.rangePx !== undefined) return actor.traits.rangePx;
+  return actor.traits.attackRange === 'melee'
+    ? DEFAULT_MELEE_ATTACK_RANGE_PX
+    : DEFAULT_RANGED_RANGE_PX;
 }
 
 export function getAttackablePool(

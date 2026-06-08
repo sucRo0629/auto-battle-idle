@@ -3,13 +3,14 @@ import type { CombatantState, DamageSkillEffect } from '../types.ts';
 import { applyPowerStep } from './powerStep.ts';
 import { battleDistance, isWithinSkillRange } from './rangeUtils.ts';
 import {
+  resolveEffectAnchor,
   resolveEffectResolution,
   resolveEffectTargets,
 } from './targeting.ts';
 
 function mockUnit(
   id: string,
-  visualX: number,
+  battleX: number,
   opts: {
     hp?: number;
     maxHp?: number;
@@ -37,7 +38,11 @@ function mockUnit(
     formationRow: 'back',
     traits: {
       attackRange: opts.attackRange ?? 'ranged',
-      rangePx: opts.rangePx ?? 120,
+      ...(opts.rangePx !== undefined
+        ? { rangePx: opts.rangePx }
+        : (opts.attackRange ?? 'ranged') === 'ranged'
+          ? { rangePx: 120 }
+          : {}),
     },
     build: {
       learnedPassiveIds: [],
@@ -50,7 +55,8 @@ function mockUnit(
     spriteKey: 'placeholder',
     iconKey: 'placeholder',
     isEnemy: opts.isEnemy ?? false,
-    visualX,
+    battleX,
+    visualX: battleX,
   };
 }
 
@@ -105,7 +111,15 @@ describe('resolveEffectTargets', () => {
     expect(targets.map((t) => t.id)).toEqual(['e3']);
   });
 
-  it('farthestEnemy picks minimum visualX among in-range', () => {
+  it('melee range 0 requires contact', () => {
+    const ally = mockUnit('ally', 100, { attackRange: 'melee', rangePx: undefined });
+    const enemy = mockUnit('e1', 100, { isEnemy: true, attackRange: 'melee' });
+    expect(isWithinSkillRange(ally, enemy, 0)).toBe(true);
+    const farEnemy = mockUnit('e2', 90, { isEnemy: true, attackRange: 'melee' });
+    expect(isWithinSkillRange(ally, farEnemy, 0)).toBe(false);
+  });
+
+  it('farthestEnemy picks minimum battleX among in-range', () => {
     const inRangeFar = mockUnit('e2b', 170, { isEnemy: true });
     const targets = resolveEffectTargets(
       { targetShape: 'single', range: 120 },
@@ -213,6 +227,20 @@ describe('resolveEffectTargets', () => {
     );
     expect(resolution?.spreadDurationSec).toBe(1);
     expect(resolution?.waves).toHaveLength(2);
+  });
+
+  it('closestAlly for ally actor picks nearest ally by battleX', () => {
+    const actor = mockUnit('actor', 150);
+    const allyNear = mockUnit('near', 120);
+    const allyFar = mockUnit('far', 240);
+    const anchor = resolveEffectAnchor(
+      { type: 'move', targetRule: 'closestAlly', moveDurationSec: 0.2 },
+      'closestAlly',
+      actor,
+      [actor, allyNear, allyFar],
+      [],
+    );
+    expect(anchor?.id).toBe('near');
   });
 
   it('aoe heal: mostDamagedAlly anchor plus radius on allies', () => {

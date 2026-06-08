@@ -8,7 +8,9 @@ import type {
   PassiveEffectKind,
   Role,
   ResourceAmountKind,
+  SkillEffectAnimId,
   SkillEffectKind,
+  SkillTriggerKind,
   SkillVfxPresetId,
   StatusEffectStat,
   TargetRule,
@@ -37,7 +39,43 @@ export const SKILL_EFFECT_KINDS = [
   "hot",
   "dot",
   "barrier",
+  "move",
 ] as const satisfies readonly SkillEffectKind[];
+
+export const MOVE_MODES = [
+  "engage",
+  "toAnchor",
+  "behindTarget",
+] as const satisfies readonly import("../types.ts").MoveMode[];
+
+export const MOVE_MODE_LABELS: Record<
+  import("../types.ts").MoveMode,
+  string
+> = {
+  engage: "接敵（射程内）",
+  toAnchor: "アンカー座標へ",
+  behindTarget: "敵の背後",
+};
+
+export const SKILL_EFFECT_ANIM_IDS = [
+  "idle",
+  "attack",
+  "heal",
+  "hurt",
+  "death",
+  "dash",
+  "none",
+] as const satisfies readonly SkillEffectAnimId[];
+
+export const SKILL_EFFECT_ANIM_LABELS: Record<SkillEffectAnimId, string> = {
+  idle: "待機",
+  attack: "攻撃",
+  heal: "回復",
+  hurt: "被弾",
+  death: "死亡",
+  dash: "突進",
+  none: "なし",
+};
 
 export const RESOURCE_AMOUNT_KINDS = [
   "atkBased",
@@ -185,6 +223,31 @@ export const FORMATION_ROW_OPTIONS: FormationRow[] = [...FORMATION_ROWS];
 export const ATTACK_RANGE_OPTIONS: AttackRange[] = [...ATTACK_RANGES];
 export const SKILL_EFFECT_KIND_OPTIONS: SkillEffectKind[] = [
   ...SKILL_EFFECT_KINDS,
+];
+export const SKILL_EFFECT_ANIM_OPTIONS: SkillEffectAnimId[] = [
+  ...SKILL_EFFECT_ANIM_IDS,
+];
+
+export const SKILL_TRIGGER_KINDS = [
+  "time",
+  "basicAttackCount",
+  "hitsTaken",
+] as const satisfies readonly SkillTriggerKind[];
+
+export const SKILL_TRIGGER_KIND_LABELS: Record<SkillTriggerKind, string> = {
+  time: "時間",
+  basicAttackCount: "攻撃回数",
+  hitsTaken: "被攻撃回数",
+};
+
+export const SKILL_TRIGGER_VALUE_LABELS: Record<SkillTriggerKind, string> = {
+  time: "秒",
+  basicAttackCount: "通常攻撃回数",
+  hitsTaken: "被攻撃回数",
+};
+
+export const SKILL_TRIGGER_KIND_OPTIONS: SkillTriggerKind[] = [
+  ...SKILL_TRIGGER_KINDS,
 ];
 export const RESOURCE_AMOUNT_KIND_OPTIONS: ResourceAmountKind[] = [
   ...RESOURCE_AMOUNT_KINDS,

@@ -622,6 +622,7 @@ export class EditorApp {
       return;
     }
 
+    this.tab = 'enemy';
     this.saving = true;
     this.render();
     try {
@@ -645,6 +646,7 @@ export class EditorApp {
       );
     } finally {
       this.saving = false;
+      this.tab = 'enemy';
       this.render();
     }
   }

@@ -15,9 +15,9 @@ import {
 } from "./spriteLayout.ts";
 import { getClassIconImage } from "./IconRegistry.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
+import { BATTLE_ENEMY_VISIBLE_MIN_X } from "../battle/types.ts";
 import {
   groundY,
-  ENEMY_VISIBLE_MIN_X,
   BATTLE_GROUND_MARGIN,
   battleCanvasHeight,
 } from "./formationLayout.ts";
@@ -76,7 +76,8 @@ interface AllyHudEntry {
   activeCooldowns: {
     skillId: string;
     remaining: number;
-    interval: number;
+    triggerKind: import("../battle/types.ts").SkillTriggerKind;
+    triggerValue: number;
     slotIndex: number;
   }[];
 }
@@ -191,7 +192,7 @@ export class BattleCanvas implements IBattleRenderer {
         if (
           !isDead &&
           !snapshot.engaged &&
-          enemy.visualX < ENEMY_VISIBLE_MIN_X
+          enemy.battleX < BATTLE_ENEMY_VISIBLE_MIN_X
         ) {
           continue;
         }
@@ -534,7 +535,7 @@ export class BattleCanvas implements IBattleRenderer {
     const ready = cd.remaining <= 0;
     const ratio = ready
       ? 1
-      : Math.max(0, Math.min(1, 1 - cd.remaining / cd.interval));
+      : Math.max(0, Math.min(1, 1 - cd.remaining / cd.triggerValue));
 
     if (ratio <= 0) return;
 
