@@ -8,9 +8,8 @@
     "reg": 0,
     "exp": 3,
     "spriteKey": "none",
-    "activeSkillIds": [
-      "bite"
-    ]
+    "basicAttackSkillId": "test_enemy_basic_attack",
+    "attackSpeedTier": "normal"
   },
   {
     "id": "test_enemy_elite",
@@ -21,8 +20,19 @@
     "reg": 0,
     "exp": 3,
     "spriteKey": "none",
-    "activeSkillIds": [
-      "bite"
-    ]
+    "basicAttackSkillId": "test_enemy_elite_basic_attack",
+    "attackSpeedTier": "normal"
+  },
+  {
+    "id": "stage1_1",
+    "displayName": "stage1_1",
+    "maxHp": 100,
+    "atk": 10,
+    "def": 5,
+    "reg": 0,
+    "exp": 1,
+    "spriteKey": "enemy_default",
+    "basicAttackSkillId": "stage1_1_basic_attack",
+    "attackSpeedTier": "somewhatSlow"
   }
 ]

@@ -7,7 +7,7 @@
     "traits": {
       "attackRange": "melee"
     },
-    "maxHp": 200,
+    "maxHp": 210,
     "atk": 12,
     "def": 24,
     "reg": 0,
@@ -63,7 +63,7 @@
       "rangePx": 140
     },
     "maxHp": 90,
-    "atk": 18,
+    "atk": 20,
     "def": 6,
     "reg": 0,
     "jobTier": 1,
@@ -91,9 +91,9 @@
       "rangePx": 120
     },
     "maxHp": 80,
-    "atk": 22,
+    "atk": 25,
     "def": 5,
-    "reg": 0,
+    "reg": 20,
     "jobTier": 1,
     "growthPresetKey": "caster",
     "growthTier": {
@@ -121,7 +121,7 @@
     "maxHp": 100,
     "atk": 14,
     "def": 10,
-    "reg": 0,
+    "reg": 10,
     "jobTier": 1,
     "growthTier": {
       "maxHp": 1,

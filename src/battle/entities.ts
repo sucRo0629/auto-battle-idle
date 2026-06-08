@@ -139,19 +139,13 @@ export function createEnemyFromTemplate(
   template: EnemyTemplate,
   spawnX: number,
 ): CombatantState {
-  const skillIds = template.activeSkillIds ?? [];
-  const equipped = skillIds.slice(0, 1);
+  const activeSkillIds = template.activeSkillIds ?? [];
   const build: CharacterBuild = {
     learnedPassiveIds: template.passiveSkillIds ?? [],
-    learnedActiveIds: [...skillIds],
-    equippedActiveSlots: equipped,
+    learnedActiveIds: [...activeSkillIds],
+    equippedActiveSlots: [...activeSkillIds],
   };
-  const cooldowns: SkillCooldown[] = equipped.map((skillId, i) => ({
-    skillId,
-    remaining: 0,
-    slotKind: 'active',
-    slotIndex: i,
-  }));
+  const cooldowns = createCooldowns(template.basicAttackSkillId, build);
   return {
     id: nextId(template.id),
     name: template.displayName,

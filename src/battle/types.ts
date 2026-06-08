@@ -411,6 +411,9 @@ export interface EnemyTemplate extends CombatStats {
   /** 撃破時に生存味方全員が得る EXP */
   exp: number;
   spriteKey: string;
+  basicAttackSkillId: string;
+  /** 通常攻撃 CD（基本攻撃 interval への倍率）。未指定時は normal */
+  attackSpeedTier?: AttackSpeedTier;
   passiveSkillIds?: string[];
   activeSkillIds?: string[];
   /** 未指定時は melee */

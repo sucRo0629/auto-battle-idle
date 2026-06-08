@@ -320,6 +320,61 @@ export function nextClassSkillId(
   return `${prefix}${Date.now()}`;
 }
 
+/** 敵 ID 未確定時の通常攻撃枠プレースホルダー */
+export const PLACEHOLDER_ENEMY_BASIC_ATTACK_ID = '__pending_basic_attack__';
+
+export function isEnemyBasicAttackEntry(
+  entry: SkillDraftEntry,
+  enemyId: string,
+): boolean {
+  if (entry.ref.kind !== 'active') return false;
+  const id = entry.ref.skillId.trim();
+  if (id === PLACEHOLDER_ENEMY_BASIC_ATTACK_ID) return true;
+  const trimmed = enemyId.trim();
+  if (trimmed && isBasicAttackSkillId(id, trimmed)) return true;
+  return isBasicAttackSkillIdPattern(id);
+}
+
+export function createEnemyBasicAttackSlot(
+  enemyId: string,
+  skills: SkillsJson,
+): SkillDraftEntry {
+  const id = enemyId.trim()
+    ? defaultBasicAttackId(enemyId.trim())
+    : PLACEHOLDER_ENEMY_BASIC_ATTACK_ID;
+  return buildSkillDrafts([{ skillId: id, kind: 'active' }], skills)[0]!;
+}
+
+export function createInitialEnemySkillEntries(skills: SkillsJson): SkillDraftEntry[] {
+  return [createEnemyBasicAttackSlot('', skills)];
+}
+
+export function resyncEnemyBasicAttackEntry(
+  entries: SkillDraftEntry[],
+  enemyId: string,
+  skills: SkillsJson,
+): SkillDraftEntry[] {
+  const next = structuredClone(entries);
+  const idx = next.findIndex((entry) => isEnemyBasicAttackEntry(entry, enemyId));
+  const newId = enemyId.trim()
+    ? defaultBasicAttackId(enemyId.trim())
+    : PLACEHOLDER_ENEMY_BASIC_ATTACK_ID;
+
+  if (idx < 0) {
+    return [createEnemyBasicAttackSlot(enemyId, skills), ...next];
+  }
+
+  const entry = next[idx]!;
+  entry.ref.skillId = newId;
+  if (entry.active) {
+    const existing = skills.actives.find((active) => active.id === newId);
+    entry.active = existing
+      ? structuredClone(existing)
+      : { ...defaultActiveSkill(newId), id: newId };
+  }
+  return next;
+}
+
 export function ensureClassBasicAttackPool(
   classId: string,
   entries: SkillDraftEntry[],
@@ -332,6 +387,45 @@ export function ensureClassBasicAttackPool(
     [{ skillId: defaultBasicAttackId(id), kind: 'active' }],
     skills,
   );
+}
+
+export function ensureEnemyBasicAttackPool(
+  enemyId: string,
+  entries: SkillDraftEntry[],
+  skills: SkillsJson,
+): SkillDraftEntry[] {
+  return resyncEnemyBasicAttackEntry(entries, enemyId, skills);
+}
+
+export function initEnemySkillEntriesFromPreset(
+  template: EnemyTemplate,
+  skills: SkillsJson,
+): SkillDraftEntry[] {
+  const enemyId = template.id.trim();
+  if (!enemyId) return [];
+
+  const basicAttackSkillId =
+    template.basicAttackSkillId.trim() || defaultBasicAttackId(enemyId);
+  const refs: SkillSlotRef[] = [
+    { skillId: basicAttackSkillId, kind: 'active' },
+  ];
+  const seen = new Set(refs.map((ref) => ref.skillId));
+
+  for (const skillId of template.passiveSkillIds ?? []) {
+    const id = skillId.trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    refs.push({ skillId: id, kind: 'passive' });
+  }
+
+  for (const skillId of template.activeSkillIds ?? []) {
+    const id = skillId.trim();
+    if (!id || seen.has(id) || isBasicAttackSkillId(id, enemyId)) continue;
+    seen.add(id);
+    refs.push({ skillId: id, kind: 'active' });
+  }
+
+  return buildSkillDrafts(refs, skills);
 }
 
 export function buildClassSkillsFromEntries(
@@ -462,23 +556,26 @@ export function createEmptyEnemyDraft(): EnemyDraft {
       reg: 0,
       exp: 1,
       spriteKey: 'enemy_default',
+      basicAttackSkillId: '',
+      attackSpeedTier: 'normal',
     },
-    passiveIds: [''],
-    activeIds: [''],
+    passiveIds: [],
+    activeIds: [],
   };
 }
 
 export function enemyDraftFromTemplate(template: EnemyTemplate): EnemyDraft {
+  const enemy = structuredClone(template);
+  if (enemy.id.trim() && !enemy.basicAttackSkillId.trim()) {
+    enemy.basicAttackSkillId = defaultBasicAttackId(enemy.id.trim());
+  }
+  if (!enemy.attackSpeedTier) {
+    enemy.attackSpeedTier = 'normal';
+  }
   return {
-    enemy: structuredClone(template),
-    passiveIds:
-      template.passiveSkillIds && template.passiveSkillIds.length > 0
-        ? [...template.passiveSkillIds]
-        : [''],
-    activeIds:
-      template.activeSkillIds && template.activeSkillIds.length > 0
-        ? [...template.activeSkillIds]
-        : [''],
+    enemy,
+    passiveIds: [...(template.passiveSkillIds ?? [])],
+    activeIds: [...(template.activeSkillIds ?? [])],
   };
 }
 
@@ -486,6 +583,7 @@ export function buildEnemyFromDraft(
   draft: EnemyDraft,
   entries?: SkillDraftEntry[],
 ): EnemyTemplate {
+  const enemyId = draft.enemy.id.trim();
   const passiveSkillIds =
     entries !== undefined
       ? entries
@@ -498,9 +596,27 @@ export function buildEnemyFromDraft(
       ? entries
           .filter((entry) => entry.ref.kind === 'active')
           .map((entry) => entry.ref.skillId.trim())
-          .filter(Boolean)
-      : draft.activeIds.map((id) => id.trim()).filter(Boolean);
+          .filter(
+            (id) =>
+              Boolean(id) &&
+              id !== PLACEHOLDER_ENEMY_BASIC_ATTACK_ID &&
+              !isBasicAttackSkillId(id, enemyId),
+          )
+      : draft.activeIds
+          .map((id) => id.trim())
+          .filter(
+            (id) =>
+              Boolean(id) &&
+              id !== PLACEHOLDER_ENEMY_BASIC_ATTACK_ID &&
+              !isBasicAttackSkillId(id, enemyId),
+          );
   const enemy = structuredClone(draft.enemy);
+  if (enemyId) {
+    enemy.basicAttackSkillId = defaultBasicAttackId(enemyId);
+  }
+  if (!enemy.attackSpeedTier) {
+    enemy.attackSpeedTier = 'normal';
+  }
   if (passiveSkillIds.length > 0) {
     enemy.passiveSkillIds = passiveSkillIds;
   } else {
@@ -600,8 +716,20 @@ export function collectSkillsFromDrafts(entries: SkillDraftEntry[]): {
 }
 
 export function collectEnemySkillRefs(draft: EnemyDraft): SkillSlotRef[] {
+  const enemyId = draft.enemy.id.trim();
   const refs: SkillSlotRef[] = [];
   const seen = new Set<string>();
+
+  if (enemyId) {
+    const basicId =
+      draft.enemy.basicAttackSkillId.trim() || defaultBasicAttackId(enemyId);
+    refs.push({ skillId: basicId, kind: 'active' });
+    seen.add(basicId);
+  } else {
+    refs.push({ skillId: PLACEHOLDER_ENEMY_BASIC_ATTACK_ID, kind: 'active' });
+    seen.add(PLACEHOLDER_ENEMY_BASIC_ATTACK_ID);
+  }
+
   for (const id of draft.passiveIds) {
     const skillId = id.trim();
     if (!skillId || seen.has(skillId)) continue;
@@ -610,7 +738,9 @@ export function collectEnemySkillRefs(draft: EnemyDraft): SkillSlotRef[] {
   }
   for (const id of draft.activeIds) {
     const skillId = id.trim();
-    if (!skillId || seen.has(skillId)) continue;
+    if (!skillId || seen.has(skillId) || isBasicAttackSkillId(skillId, enemyId)) {
+      continue;
+    }
     seen.add(skillId);
     refs.push({ skillId, kind: 'active' });
   }

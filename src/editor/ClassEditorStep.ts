@@ -38,7 +38,6 @@ import {
 import {
   appendGrid,
   createActionButton,
-  createButton,
   createEl,
   createFieldRow,
   createNumberInput,
@@ -145,7 +144,6 @@ export interface ClassEditorStepOptions {
   selectedClassId: string;
   onDraftChange: (draft: ClassDraft, options?: DraftChangeOptions) => void;
   onSelectClass: (classId: string) => void;
-  onNewClass: () => void;
   onSave: () => void;
   saving?: boolean;
   hidePicker?: boolean;
@@ -193,7 +191,6 @@ export class ClassEditorStep {
       selectedClassId,
       onDraftChange,
       onSelectClass,
-      onNewClass,
       onSave,
       saving,
       hidePicker,
@@ -246,9 +243,6 @@ export class ClassEditorStep {
       });
       picker.appendChild(createEl("span", "editor-picker-label", "既存クラス"));
       picker.appendChild(select);
-      picker.appendChild(
-        createButton("新規", "editor-btn editor-btn-secondary", onNewClass)
-      );
       this.container.appendChild(picker);
     }
 

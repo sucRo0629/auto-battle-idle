@@ -1,4 +1,4 @@
-import type { EnemyTemplate } from '../battle/types.ts';
+import type { AttackSpeedTier, EnemyTemplate } from '../battle/types.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 import { BalanceEditorStep } from './BalanceEditorStep.ts';
 import { ClassEditorStep, loadClassDraftById } from './ClassEditorStep.ts';
@@ -7,11 +7,11 @@ import {
   buildClassPresetFromDraft,
   buildEnemyFromDraft,
   buildSkillDrafts,
-  collectEnemySkillRefs,
   collectSkillsFromDrafts,
   createBalanceRowsFromClasses,
   createEmptyClassDraft,
   createEmptyEnemyDraft,
+  createInitialEnemySkillEntries,
   defaultBasicAttackId,
   ensureClassBasicAttackPool,
   ensureClassGrowthFields,
@@ -19,14 +19,15 @@ import {
   fetchEnemies,
   fetchSkills,
   initClassSkillEntriesFromPreset,
+  initEnemySkillEntriesFromPreset,
   isBalanceRowDirty,
   isBasicAttackSkillId,
-  mergeSkillPoolEntries,
+  isEnemyBasicAttackEntry,
   nextClassSkillId,
+  resyncEnemyBasicAttackEntry,
   saveClassBundle,
   saveClassStatsBulk,
   saveEnemyBundle,
-  syncSkillDraftEntries,
   toClassStatsPatch,
   type BalanceClassRow,
   type ClassDraft,
@@ -222,7 +223,6 @@ export class EditorApp {
         this.classDraft = draft;
       },
       onSelectClass: (classId) => this.selectClass(classId),
-      onNewClass: () => this.startNewClass(),
       onSave: () => void this.saveClass(),
       saving: this.saving,
       hidePicker: true,
@@ -291,6 +291,9 @@ export class EditorApp {
   }
 
   private renderEnemyEditor(): void {
+    if (this.enemySkillEntries.length === 0) {
+      this.enemySkillEntries = createInitialEnemySkillEntries(this.skills);
+    }
     const enemyOptions = this.buildEnemySkillOptions();
     const headerHost = createEl('div', 'editor-panel editor-panel-header');
     const enemyHost = createEl('div', 'editor-panel editor-panel-enemy');
@@ -308,10 +311,24 @@ export class EditorApp {
       enemies: this.enemies,
       selectedEnemyId: this.selectedEnemyId,
       onDraftChange: (draft) => {
+        const prevId = this.enemyDraft.enemy.id.trim();
         this.enemyDraft = draft;
+        const nextId = draft.enemy.id.trim();
+        if (nextId) {
+          this.enemyDraft.enemy.basicAttackSkillId = defaultBasicAttackId(nextId);
+        } else {
+          this.enemyDraft.enemy.basicAttackSkillId = '';
+        }
+        if (nextId !== prevId) {
+          this.enemySkillEntries = resyncEnemyBasicAttackEntry(
+            this.enemySkillEntries,
+            nextId,
+            this.skills,
+          );
+          this.refreshSkillEditor();
+        }
       },
       onSelectEnemy: (enemyId) => this.selectEnemy(enemyId),
-      onNewEnemy: () => this.startNewEnemy(),
       onSave: () => void this.saveEnemy(),
       saving: this.saving,
       hidePicker: true,
@@ -340,6 +357,24 @@ export class EditorApp {
     this.contentEl.appendChild(actions);
   }
 
+  private refreshSkillEditor(): void {
+    if (this.tab === 'class' && this.skillStep) {
+      this.skillStep.update({
+        ...this.buildClassSkillOptions(),
+        hideSave: true,
+        hideEntityHeader: true,
+      });
+      return;
+    }
+    if (this.tab === 'enemy' && this.skillStep) {
+      this.skillStep.update({
+        ...this.buildEnemySkillOptions(),
+        hideSave: true,
+        hideEntityHeader: true,
+      });
+    }
+  }
+
   private buildClassSkillOptions() {
     return {
       getEntries: () => this.classSkillEntries,
@@ -361,7 +396,6 @@ export class EditorApp {
         })),
         selectedId: this.selectedClassId,
         onSelect: (classId: string) => this.selectClass(classId),
-        onNew: () => this.startNewClass(),
       },
       classIdentity: {
         classId: this.classDraft.class.id,
@@ -397,20 +431,41 @@ export class EditorApp {
   }
 
   private buildEnemySkillOptions() {
+    const enemyId = this.enemyDraft.enemy.id.trim();
     return {
       getEntries: () => this.enemySkillEntries,
       onChange: (next: SkillDraftEntry[]) => {
         this.enemySkillEntries = next;
       },
+      isIdReadonly: (entry: SkillDraftEntry) =>
+        isEnemyBasicAttackEntry(entry, enemyId),
+      basicAttackSpeedTier: {
+        get: (): AttackSpeedTier =>
+          this.enemyDraft.enemy.attackSpeedTier ?? 'normal',
+        onChange: (tier: AttackSpeedTier) => {
+          this.enemyDraft.enemy.attackSpeedTier = tier;
+        },
+      },
       onSkillIdChange: (oldId: string, newId: string, kind: SkillSlotKind) => {
+        if (
+          kind === 'active' &&
+          isEnemyBasicAttackEntry({ ref: { skillId: oldId, kind: 'active' } }, enemyId)
+        ) {
+          this.enemyDraft.enemy.basicAttackSkillId = newId;
+          return;
+        }
         this.applyEnemySkillIdRename(oldId, newId, kind);
       },
       onAddSkill: (kind: SkillSlotKind) => {
         this.addEnemySkill(kind);
       },
       onRemoveSkill: (index: number) => {
+        const entry = this.enemySkillEntries[index];
+        if (entry && isEnemyBasicAttackEntry(entry, enemyId)) {
+          return;
+        }
         this.enemySkillEntries = this.enemySkillEntries.filter((_, i) => i !== index);
-        this.render();
+        this.refreshSkillEditor();
       },
       entityPicker: {
         label: '既存の敵',
@@ -420,7 +475,6 @@ export class EditorApp {
         })),
         selectedId: this.selectedEnemyId,
         onSelect: (enemyId: string) => this.selectEnemy(enemyId),
-        onNew: () => this.startNewEnemy(),
       },
       onSave: () => void this.saveEnemy(),
       saving: this.saving,
@@ -434,28 +488,13 @@ export class EditorApp {
     this.render();
   }
 
-  private startNewClass(): void {
-    this.selectedClassId = '';
-    this.classDraft = createEmptyClassDraft();
-    this.classSkillEntries = [];
-    this.render();
-  }
-
   private selectEnemy(enemyId: string): void {
     this.selectedEnemyId = enemyId;
     this.enemyDraft = loadEnemyDraftById(this.enemies, enemyId);
-    this.enemySkillEntries = syncSkillDraftEntries(
-      collectEnemySkillRefs(this.enemyDraft),
-      [],
+    this.enemySkillEntries = initEnemySkillEntriesFromPreset(
+      this.enemyDraft.enemy,
       this.skills,
     );
-    this.render();
-  }
-
-  private startNewEnemy(): void {
-    this.selectedEnemyId = '';
-    this.enemyDraft = createEmptyEnemyDraft();
-    this.enemySkillEntries = [];
     this.render();
   }
 
@@ -477,15 +516,19 @@ export class EditorApp {
       unlockLevel: 0,
     }));
     this.classSkillEntries = [...this.classSkillEntries, ...built];
-    this.render();
+    this.refreshSkillEditor();
   }
 
   private addEnemySkill(kind: SkillSlotKind): void {
-    const enemyId = this.enemyDraft.enemy.id.trim() || 'enemy';
+    const enemyId = this.enemyDraft.enemy.id.trim();
+    if (!enemyId) {
+      this.setStatus('enemyId を入力してください', true);
+      return;
+    }
     const skillId = nextClassSkillId(enemyId, kind, this.enemySkillEntries);
     const built = buildSkillDrafts([{ skillId, kind }], this.skills);
     this.enemySkillEntries = [...this.enemySkillEntries, ...built];
-    this.render();
+    this.refreshSkillEditor();
   }
 
   private removeClassSkill(index: number): void {
@@ -498,7 +541,7 @@ export class EditorApp {
       return;
     }
     this.classSkillEntries = this.classSkillEntries.filter((_, i) => i !== index);
-    this.render();
+    this.refreshSkillEditor();
   }
 
   private applyEnemySkillIdRename(oldId: string, newId: string, kind: SkillSlotKind): void {
@@ -561,9 +604,10 @@ export class EditorApp {
   private prepareEnemySkillEntriesForSave(): void {
     const enemyId = this.enemyDraft.enemy.id.trim();
     if (!enemyId) return;
-    this.enemySkillEntries = mergeSkillPoolEntries(
+    this.enemyDraft.enemy.basicAttackSkillId = defaultBasicAttackId(enemyId);
+    this.enemySkillEntries = resyncEnemyBasicAttackEntry(
       this.enemySkillEntries,
-      collectEnemySkillRefs(this.enemyDraft),
+      enemyId,
       this.skills,
     );
   }
@@ -589,9 +633,8 @@ export class EditorApp {
       this.skills = await fetchSkills();
       this.selectedEnemyId = enemy.id;
       this.enemyDraft = loadEnemyDraftById(this.enemies, enemy.id);
-      this.enemySkillEntries = syncSkillDraftEntries(
-        collectEnemySkillRefs(this.enemyDraft),
-        [],
+      this.enemySkillEntries = initEnemySkillEntriesFromPreset(
+        this.enemyDraft.enemy,
         this.skills,
       );
       this.setStatus(`保存しました: ${enemy.displayName}`, false);

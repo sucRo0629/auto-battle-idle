@@ -984,6 +984,14 @@ function parseEnemies(raw: unknown): EnemyTemplate[] {
       invalidField(context, 'exp', 'must be >= 0');
     }
     const spriteKey = requireString(obj, 'spriteKey', context);
+    const basicAttackSkillId =
+      obj.basicAttackSkillId === undefined
+        ? `${id}_basic_attack`
+        : requireString(obj, 'basicAttackSkillId', context);
+    const attackSpeedTier =
+      obj.attackSpeedTier === undefined
+        ? undefined
+        : requireEnum(obj, 'attackSpeedTier', context, ATTACK_SPEED_TIERS_SET);
     const passiveSkillIds =
       obj.passiveSkillIds === undefined
         ? undefined
@@ -1016,6 +1024,8 @@ function parseEnemies(raw: unknown): EnemyTemplate[] {
       reg,
       exp,
       spriteKey,
+      basicAttackSkillId,
+      ...(attackSpeedTier !== undefined ? { attackSpeedTier } : {}),
       ...(passiveSkillIds !== undefined ? { passiveSkillIds } : {}),
       ...(activeSkillIds !== undefined ? { activeSkillIds } : {}),
       ...(typeof rangePx === 'number' ? { rangePx } : {}),
@@ -1173,12 +1183,22 @@ function validateReferences(
   }
 
   for (const enemy of enemies) {
+    if (!activeIds.has(enemy.basicAttackSkillId)) {
+      throw new Error(
+        `Unknown basicAttackSkillId "${enemy.basicAttackSkillId}": ${enemy.id}`,
+      );
+    }
     for (const skillId of enemy.passiveSkillIds ?? []) {
       if (!passiveIds.has(skillId)) {
         throw new Error(`Unknown passiveSkillId "${skillId}": ${enemy.id}`);
       }
     }
     for (const skillId of enemy.activeSkillIds ?? []) {
+      if (skillId === enemy.basicAttackSkillId) {
+        throw new Error(
+          `basicAttackSkillId must not appear in activeSkillIds: ${enemy.id}`,
+        );
+      }
       if (!activeIds.has(skillId)) {
         throw new Error(`Unknown activeSkillId "${skillId}": ${enemy.id}`);
       }

@@ -25,7 +25,6 @@ export interface EnemyEditorStepOptions {
   selectedEnemyId: string;
   onDraftChange: (draft: EnemyDraft, options?: DraftChangeOptions) => void;
   onSelectEnemy: (enemyId: string) => void;
-  onNewEnemy: () => void;
   onSave: () => void;
   saving?: boolean;
   hidePicker?: boolean;
@@ -58,7 +57,6 @@ export class EnemyEditorStep {
       selectedEnemyId,
       onDraftChange,
       onSelectEnemy,
-      onNewEnemy,
       onSave,
       saving,
       hidePicker,
@@ -87,7 +85,7 @@ export class EnemyEditorStep {
         'p',
         'editor-step-desc',
         hideSkillIds
-          ? 'ステータス等を編集します。スキル定義は上のセクションで設定します。'
+          ? 'ステータス等を編集します。通常攻撃枠はスキル定義に常に含まれます。enemyId 変更時は通常攻撃 ID のみ同期されます。'
           : '敵テンプレートとパッシブ / アクティブスキル ID を編集します。',
       ),
     );
@@ -112,9 +110,6 @@ export class EnemyEditorStep {
     });
     picker.appendChild(createEl('span', 'editor-picker-label', '既存の敵'));
     picker.appendChild(select);
-    picker.appendChild(
-      createButton('新規', 'editor-btn editor-btn-secondary', onNewEnemy),
-    );
     this.container.appendChild(picker);
     }
 

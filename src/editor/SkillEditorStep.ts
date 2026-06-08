@@ -1,4 +1,6 @@
 import {
+  ATTACK_SPEED_TIER_LABELS,
+  ATTACK_SPEED_TIER_OPTIONS,
   DAMAGE_TYPE_OPTIONS,
   PASSIVE_EFFECT_KIND_OPTIONS,
   RESOURCE_AMOUNT_KIND_LABELS,
@@ -13,6 +15,7 @@ import {
 } from '../battle/data/gameDataSchema.ts';
 import type {
   ActiveSkillDef,
+  AttackSpeedTier,
   BarrierSkillEffect,
   HealSkillEffect,
   HotSkillEffect,
@@ -241,7 +244,6 @@ export interface SkillEditorEntityPicker {
   items: { id: string; label: string }[];
   selectedId: string;
   onSelect: (id: string) => void;
-  onNew: () => void;
 }
 
 export interface SkillEditorClassIdentity {
@@ -265,6 +267,11 @@ export interface SkillEditorStepOptions {
   hideSave?: boolean;
   /** entityPicker / classIdentity を別ホストで描画済みのとき true */
   hideEntityHeader?: boolean;
+  /** 敵の通常攻撃: interval の代わりに SPD 段階を編集 */
+  basicAttackSpeedTier?: {
+    get: () => AttackSpeedTier;
+    onChange: (tier: AttackSpeedTier) => void;
+  };
 }
 
 export function renderEntityPicker(
@@ -289,9 +296,6 @@ export function renderEntityPicker(
   });
   picker.appendChild(createEl('span', 'editor-picker-label', entityPicker.label));
   picker.appendChild(select);
-  picker.appendChild(
-    createButton('新規', 'editor-btn editor-btn-secondary', entityPicker.onNew),
-  );
   container.appendChild(picker);
 }
 
@@ -329,10 +333,10 @@ export function renderClassIdentity(
 
 function skillCardTitle(entry: SkillDraftEntry, idReadonly: boolean): string {
   const kindLabel = entry.ref.kind === 'passive' ? 'パッシブ' : 'アクティブ';
-  const titleSuffix = idReadonly ? '（通常攻撃）' : '';
-  const displayName =
-    (entry.passive?.name ?? entry.active?.name)?.trim() || '（名前未設定）';
-  return `${kindLabel}: ${displayName}${titleSuffix}`;
+  if (idReadonly) {
+    return `${kindLabel}: 通常攻撃`;
+  }
+  return kindLabel;
 }
 
 export class SkillEditorStep {
@@ -430,21 +434,6 @@ export class SkillEditorStep {
     );
     this.container.appendChild(header);
 
-    if (onAddSkill) {
-      const addRow = createEl('div', 'editor-actions');
-      addRow.appendChild(
-        createButton('+ パッシブ', 'editor-btn editor-btn-small', () => {
-          onAddSkill('passive');
-        }),
-      );
-      addRow.appendChild(
-        createButton('+ アクティブ', 'editor-btn editor-btn-small', () => {
-          onAddSkill('active');
-        }),
-      );
-      this.container.appendChild(addRow);
-    }
-
     if (entries.length === 0) {
       this.container.appendChild(
         createEl(
@@ -505,6 +494,21 @@ export class SkillEditorStep {
       this.container.appendChild(card);
     }
 
+    if (onAddSkill) {
+      const addRow = createEl('div', 'editor-actions');
+      addRow.appendChild(
+        createButton('+ パッシブ', 'editor-btn editor-btn-small', () => {
+          onAddSkill('passive');
+        }),
+      );
+      addRow.appendChild(
+        createButton('+ アクティブ', 'editor-btn editor-btn-small', () => {
+          onAddSkill('active');
+        }),
+      );
+      this.container.appendChild(addRow);
+    }
+
     if (!hideSave) {
       const actions = createEl('div', 'editor-actions');
       const saveBtn = createActionButton(
@@ -518,6 +522,52 @@ export class SkillEditorStep {
     }
   }
 
+  private createSkillIdInput(
+    index: number,
+    kind: SkillSlotKind,
+    currentId: string,
+    idReadonly: boolean,
+    applyId: (entry: SkillDraftEntry, id: string) => void,
+  ): HTMLInputElement {
+    const input = createTextInput(
+      currentId,
+      (id) => {
+        if (idReadonly) return;
+        this.commitEntries((next) => {
+          const entry = next[index];
+          if (!entry) return;
+          applyId(entry, id);
+        }, { rerender: false });
+      },
+      { readonly: idReadonly },
+    );
+
+    if (!idReadonly) {
+      let idOnFocus = currentId;
+      input.addEventListener('focus', () => {
+        const entry = this.options.getEntries()[index];
+        idOnFocus =
+          kind === 'passive' ? entry?.passive?.id ?? '' : entry?.active?.id ?? '';
+      });
+      input.addEventListener('blur', () => {
+        const trimmed = input.value.trim();
+        if (!trimmed) return;
+        const oldId = idOnFocus;
+        this.commitEntries((next) => {
+          const entry = next[index];
+          if (!entry) return;
+          applyId(entry, trimmed);
+        }, { rerender: false });
+        input.value = trimmed;
+        if (trimmed !== oldId) {
+          this.options.onSkillIdChange?.(oldId, trimmed, kind);
+        }
+      });
+    }
+
+    return input;
+  }
+
   private renderPassive(parent: HTMLElement, index: number, idReadonly: boolean): void {
     const passive = this.options.getEntries()[index]?.passive;
     if (!passive) return;
@@ -525,22 +575,16 @@ export class SkillEditorStep {
     grid.appendChild(
       createFieldRow(
         'ID',
-        createTextInput(
+        this.createSkillIdInput(
+          index,
+          'passive',
           passive.id,
-          (id) => {
-            if (idReadonly) return;
-            const newId = id.trim();
-            if (!newId || newId === passive.id) return;
-            const oldId = passive.id;
-            this.commitEntries((next) => {
-              const entry = next[index];
-              if (!entry?.passive) return;
-              entry.passive.id = newId;
-              entry.ref.skillId = newId;
-            }, { rerender: true });
-            this.options.onSkillIdChange?.(oldId, newId, 'passive');
+          idReadonly,
+          (entry, id) => {
+            if (!entry.passive) return;
+            entry.passive.id = id;
+            entry.ref.skillId = id;
           },
-          { readonly: idReadonly },
         ),
       ),
     );
@@ -550,7 +594,7 @@ export class SkillEditorStep {
         createTextInput(passive.name, (name) => {
           this.patchPassive(index, (current) => {
             current.name = name;
-          }, { rerender: true });
+          }, { rerender: false });
         }),
       ),
     );
@@ -693,58 +737,81 @@ export class SkillEditorStep {
     grid.appendChild(
       createFieldRow(
         'ID',
-        createTextInput(
+        this.createSkillIdInput(
+          index,
+          'active',
           active.id,
-          (id) => {
-            if (idReadonly) return;
-            const newId = id.trim();
-            if (!newId || newId === active.id) return;
-            const oldId = active.id;
-            this.commitEntries((next) => {
-              const entry = next[index];
-              if (!entry?.active) return;
-              entry.active.id = newId;
-              entry.ref.skillId = newId;
-            }, { rerender: true });
-            this.options.onSkillIdChange?.(oldId, newId, 'active');
+          idReadonly,
+          (entry, id) => {
+            if (!entry.active) return;
+            entry.active.id = id;
+            entry.ref.skillId = id;
           },
-          { readonly: idReadonly },
         ),
       ),
     );
-    grid.appendChild(
-      createFieldRow(
-        '名前',
-        createTextInput(active.name, (name) => {
-          setActive((current) => {
-            current.name = name;
-          }, { rerender: true });
-        }),
-      ),
-    );
-    grid.appendChild(
-      createFieldRow(
-        '発動間隔 (秒)',
-        createNumberInput(
-          active.interval,
-          (interval) => {
-            if (idReadonly) return;
+    if (!idReadonly) {
+      grid.appendChild(
+        createFieldRow(
+          '名前',
+          createTextInput(active.name, (name) => {
             setActive((current) => {
-              current.interval = interval;
+              current.name = name;
             }, { rerender: false });
-          },
-          { min: 0.1, step: 0.1, readonly: idReadonly },
+          }),
         ),
-      ),
-    );
-    if (idReadonly) {
+      );
+    }
+
+    const basicAttackSpeedTier = this.options.basicAttackSpeedTier;
+    if (idReadonly && basicAttackSpeedTier) {
+      grid.appendChild(
+        createFieldRow(
+          '攻撃速度（SPD）',
+          createSelect(
+            basicAttackSpeedTier.get(),
+            ATTACK_SPEED_TIER_OPTIONS.map((value) => ({
+              value,
+              label: ATTACK_SPEED_TIER_LABELS[value],
+            })),
+            (attackSpeedTier) => {
+              basicAttackSpeedTier.onChange(attackSpeedTier);
+            },
+          ),
+        ),
+      );
       grid.appendChild(
         createEl(
           'p',
           'editor-hint',
-          '通常攻撃の間隔はクラス設定の「攻撃速度（SPD 段階）」から決まります。',
+          '通常攻撃の間隔は SPD 段階とスキル interval から決まります。',
         ),
       );
+    } else {
+      grid.appendChild(
+        createFieldRow(
+          '発動間隔 (秒)',
+          createNumberInput(
+            active.interval,
+            (interval) => {
+              if (idReadonly) return;
+              setActive((current) => {
+                current.interval = interval;
+              }, { rerender: false });
+            },
+            { min: 0.1, step: 0.1, readonly: idReadonly },
+          ),
+        ),
+      );
+      if (idReadonly) {
+        grid.appendChild(
+          createEl(
+            'p',
+            'editor-hint',
+            '通常攻撃の間隔はクラス設定の「攻撃速度（SPD 段階）」から決まります。',
+          ),
+        );
+      }
     }
 
     const effectsSection = createSection('効果');

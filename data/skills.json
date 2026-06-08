@@ -69,12 +69,38 @@
       ]
     },
     {
-      "id": "bite",
-      "name": "Bite",
+      "id": "test_enemy_basic_attack",
+      "name": "test_enemy_basic_attack",
       "interval": 2.5,
       "effect": [
         {
           "targetRule": "closestAlly",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 1
+        }
+      ]
+    },
+    {
+      "id": "test_enemy_elite_basic_attack",
+      "name": "test_enemy_elite_basic_attack",
+      "interval": 2.5,
+      "effect": [
+        {
+          "targetRule": "closestAlly",
+          "type": "damage",
+          "damageType": "physical",
+          "powerMultiplier": 1
+        }
+      ]
+    },
+    {
+      "id": "stage1_1_basic_attack",
+      "name": "stage1_1_basic_attack",
+      "interval": 2,
+      "effect": [
+        {
+          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
           "powerMultiplier": 1

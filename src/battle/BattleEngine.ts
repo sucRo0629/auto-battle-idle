@@ -503,10 +503,24 @@ export class BattleEngine {
         this.gameData.skillRegistry.passives
       );
       const activeRate = getActiveCooldownRate(passives);
-      const classPreset = this.gameData.classRegistry[unit.classId];
-      const basicRate = classPreset
-        ? getBasicCooldownRate(resolveAttackSpeedTier(classPreset), this.levelCurves)
-        : 1;
+      let basicRate = 1;
+      if (unit.isEnemy) {
+        const enemyTemplate = this.gameData.enemyRegistry[unit.classId];
+        if (enemyTemplate) {
+          basicRate = getBasicCooldownRate(
+            enemyTemplate.attackSpeedTier ?? "normal",
+            this.levelCurves,
+          );
+        }
+      } else {
+        const classPreset = this.gameData.classRegistry[unit.classId];
+        if (classPreset) {
+          basicRate = getBasicCooldownRate(
+            resolveAttackSpeedTier(classPreset),
+            this.levelCurves,
+          );
+        }
+      }
       for (const cd of unit.cooldowns) {
         if (cd.remaining <= 0) continue;
         const rate = cd.slotKind === "active" ? activeRate : basicRate;
