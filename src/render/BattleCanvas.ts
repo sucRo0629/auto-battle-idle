@@ -64,8 +64,6 @@ const SPRITE_SCALE = 1;
 interface AllyHudEntry {
   displayName: string;
   level: number;
-  exp: number;
-  expRequired: number;
   iconKey: string;
   hp: number;
   maxHp: number;
@@ -87,8 +85,6 @@ interface AllyHudEntry {
 export interface PartyHudMeta {
   displayName: string;
   level: number;
-  exp: number;
-  expRequired: number;
 }
 
 const MIN_ACTIVE_SKILL_SLOTS = MAX_ACTIVE_SLOTS;
@@ -266,8 +262,6 @@ export class BattleCanvas implements IBattleRenderer {
       return {
         displayName: meta?.displayName ?? ally.name,
         level: meta?.level ?? 1,
-        exp: meta?.exp ?? 0,
-        expRequired: meta?.expRequired ?? 1,
         iconKey: ally.iconKey,
         hp: ally.hp,
         maxHp: ally.maxHp,
@@ -402,16 +396,12 @@ export class BattleCanvas implements IBattleRenderer {
     iconSize: number,
     hudScale: number,
   ): {
-    expBarH: number;
-    expHpGap: number;
     hpBarH: number;
     barSkillGap: number;
     recastBarH: number;
     recastGap: number;
   } {
     const theme = this.theme;
-    const expBarH = Math.max(2, Math.round(theme.expBarH * hudScale));
-    const expHpGap = theme.expHpGap * hudScale;
     const barSkillGap = theme.barSkillGap * hudScale;
     const recastBarH = Math.max(2, Math.round(theme.recastBarH * hudScale));
     const recastGap = theme.recastGap * hudScale;
@@ -419,11 +409,8 @@ export class BattleCanvas implements IBattleRenderer {
     const recastTotalH =
       recastBarH * activeSkillSlotCount +
       recastGap * (activeSkillSlotCount - 1);
-    const hpBarH = Math.max(
-      2,
-      iconSize - expBarH - expHpGap - barSkillGap - recastTotalH,
-    );
-    return { expBarH, expHpGap, hpBarH, barSkillGap, recastBarH, recastGap };
+    const hpBarH = Math.max(2, iconSize - barSkillGap - recastTotalH);
+    return { hpBarH, barSkillGap, recastBarH, recastGap };
   }
 
   private drawPartyHud(): void {
@@ -433,7 +420,7 @@ export class BattleCanvas implements IBattleRenderer {
     const theme = this.theme;
     const iconSize = theme.iconSize;
     const barW = theme.barW;
-    const { expBarH, expHpGap, hpBarH, barSkillGap, recastBarH, recastGap } =
+    const { hpBarH, barSkillGap, recastBarH, recastGap } =
       this.measurePartyHudBarStack(iconSize, 1);
     const iconBarGap = theme.iconBarGap;
     const entryW = iconSize + iconBarGap + barW;
@@ -449,13 +436,11 @@ export class BattleCanvas implements IBattleRenderer {
       const x = slotCenterX - entryW / 2;
       const barX = x + iconSize + iconBarGap;
       const labelY = headerTop;
-      const expBarY = blockTop;
-      const hpBarY = blockTop + expBarH + expHpGap;
+      const hpBarY = blockTop;
       const recastY = hpBarY + hpBarH + barSkillGap;
 
       this.drawHudClassLabel(ally, x, labelY, labelFontSize);
       this.drawHudIcon(ally, x, blockTop, iconSize);
-      this.drawHudExpBar(ally, barX, expBarY, barW, expBarH);
       this.drawHudHpBar(ally, barX, hpBarY, barW, hpBarH);
       this.drawHudStatusBadges(ally, barX, hpBarY, barW, hpBarH);
       this.drawSkillRecastRow(
@@ -488,31 +473,6 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.textBaseline = "top";
     ctx.fillText(`${ally.displayName} Lv${ally.level}`, leftX, labelY);
     ctx.restore();
-  }
-
-  private drawHudExpBar(
-    ally: AllyHudEntry,
-    x: number,
-    y: number,
-    barW: number,
-    barH: number
-  ): void {
-    const { ctx } = this;
-    const ratio =
-      ally.expRequired > 0
-        ? Math.max(0, Math.min(1, ally.exp / ally.expRequired))
-        : 0;
-
-    ctx.fillStyle = this.theme.barBorder;
-    ctx.fillRect(x - 1, y - 1, barW + 2, barH + 2);
-
-    ctx.fillStyle = this.theme.barTrack;
-    ctx.fillRect(x, y, barW, barH);
-
-    if (ratio > 0) {
-      ctx.fillStyle = this.theme.expBarFill;
-      ctx.fillRect(x, y, barW * ratio, barH);
-    }
   }
 
   /** HPバー下のリキャストバー（上: スロット1 / 下: スロット2） */

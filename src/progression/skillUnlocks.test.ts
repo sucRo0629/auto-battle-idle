@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { enrichClassPreset, resolveLearnedSkills } from './skillUnlocks.ts';
-import type { ClassPresetBeforeEnrich, SkillRegistry } from '../battle/types.ts';
+import type { SkillRegistry } from '../battle/types.ts';
+import type { ClassPresetBeforeEnrich } from './skillUnlocks.ts';
 
 const registry: SkillRegistry = {
   passives: {
@@ -23,7 +24,7 @@ const baseClass: ClassPresetBeforeEnrich = {
   role: 'attacker',
   displayName: 'Test',
   formationRow: 'front',
-  traits: { attackRange: 'melee' },
+  traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
   maxHp: 100,
   atk: 10,
   def: 10,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { CombatantState, DamageSkillEffect } from '../types.ts';
+import type { CombatantState, DamageSkillEffect, GameData } from '../types.ts';
 import { applyPowerStep } from './powerStep.ts';
 import { battleDistance, isWithinSkillRange } from './rangeUtils.ts';
 import {
@@ -7,6 +7,36 @@ import {
   resolveEffectResolution,
   resolveEffectTargets,
 } from './targeting.ts';
+
+const BASIC_SKILL_ID = 'test_basic_attack';
+
+function mockGameData(basicRange = 50): GameData {
+  return {
+    classRegistry: {},
+    skillRegistry: {
+      passives: {},
+      actives: {
+        [BASIC_SKILL_ID]: {
+          id: BASIC_SKILL_ID,
+          name: 'basic',
+          interval: 2,
+          effect: [
+            {
+              targetRule: 'frontEnemy',
+              type: 'damage',
+              damageType: 'physical',
+              amount: { kind: 'atkBased', atkScale: 1 },
+              range: basicRange,
+            },
+          ],
+        },
+      },
+    },
+    enemyRegistry: {},
+    stages: [],
+    parties: {},
+  };
+}
 
 function mockUnit(
   id: string,
@@ -18,7 +48,7 @@ function mockUnit(
     atk?: number;
     def?: number;
     reg?: number;
-    attackRange?: 'melee' | 'ranged';
+    rangePx?: number;
   } = {},
 ): CombatantState {
   const maxHp = opts.maxHp ?? 100;
@@ -36,14 +66,18 @@ function mockUnit(
     classId: opts.isEnemy ? 'test_enemy' : 'at_sorcerer',
     formationRow: 'back',
     traits: {
-      attackRange: opts.attackRange ?? 'ranged',
+      rangePx: opts.rangePx ?? 50,
+      damageType: 'physical',
+      basicAttackVfx: { preset: 'arrow', arc: true },
     },
     build: {
       learnedPassiveIds: [],
       learnedActiveIds: [],
       equippedActiveSlots: [],
     },
-    cooldowns: [],
+    cooldowns: [
+      { skillId: BASIC_SKILL_ID, remaining: 0, slotKind: 'basic' },
+    ],
     statusEffects: [],
     barrierHp: 0,
     spriteKey: 'placeholder',
@@ -74,6 +108,7 @@ describe('applyPowerStep', () => {
 });
 
 describe('resolveEffectTargets', () => {
+  const gameData = mockGameData(50);
   const actor = mockUnit('ally', 200);
   const enemyNear = mockUnit('e1', 100, { isEnemy: true, hp: 80 });
   const enemyMid = mockUnit('e2', 140, { isEnemy: true, hp: 50 });
@@ -90,6 +125,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
     );
     const ids = targets.map((t) => t.id);
     expect(ids).toContain('e3');
@@ -104,6 +140,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
     );
     expect(targets.map((t) => t.id).sort()).toEqual(['e1', 'e2', 'e3']);
   });
@@ -116,6 +153,7 @@ describe('resolveEffectTargets', () => {
       actor,
       [actor, ally2],
       enemies,
+      gameData,
     );
     expect(targets.map((t) => t.id).sort()).toEqual(['ally', 'ally2']);
   });
@@ -127,6 +165,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
     );
     expect(targets[0]?.id).toBe('e3');
   });
@@ -138,15 +177,16 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
     );
     expect(targets.map((t) => t.id)).toEqual(['e3']);
   });
 
   it('melee range 0 requires contact', () => {
-    const ally = mockUnit('ally', 100, { attackRange: 'melee' });
-    const enemy = mockUnit('e1', 100, { isEnemy: true, attackRange: 'melee' });
+    const ally = mockUnit('ally', 100, { rangePx: 0 });
+    const enemy = mockUnit('e1', 100, { isEnemy: true, rangePx: 0 });
     expect(isWithinSkillRange(ally, enemy, 0)).toBe(true);
-    const farEnemy = mockUnit('e2', 90, { isEnemy: true, attackRange: 'melee' });
+    const farEnemy = mockUnit('e2', 90, { isEnemy: true, rangePx: 0 });
     expect(isWithinSkillRange(ally, farEnemy, 0)).toBe(false);
   });
 
@@ -157,6 +197,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
     );
     expect(targets[0]?.id).toBe('e1');
   });
@@ -168,6 +209,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
     );
     expect(targets).toHaveLength(3);
     expect(targets.map((t) => t.id)).toEqual(['e3', 'e2', 'e1']);
@@ -180,6 +222,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       [enemyMid, enemyFar],
+      gameData,
     );
     expect(targets.map((t) => t.id)).toEqual(['e3', 'e2', 'e3']);
   });
@@ -192,6 +235,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       loneEnemy,
+      gameData,
     );
     expect(targets).toHaveLength(3);
     expect(targets.every((t) => t.id === 'solo')).toBe(true);
@@ -213,6 +257,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
     );
     expect(resolution?.spreadDurationSec).toBe(1.5);
     expect(resolution?.waves).toHaveLength(3);
@@ -238,6 +283,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
     );
     expect(resolution?.spreadDurationSec).toBe(0.8);
     expect(resolution?.waves).toHaveLength(2);
@@ -263,6 +309,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
     );
     const ids = resolution?.waves.map((w) => w.targets[0]?.unit.id);
     expect(ids).toEqual(['e3', 'e2', 'e1']);
@@ -283,6 +330,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
     );
     const ids = resolution?.waves[0]?.targets.map((t) => t.unit.id);
     expect(ids).toEqual(['e3', 'e2', 'e1']);
@@ -305,6 +353,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
       () => 0.5,
     );
     expect(resolution?.spreadDurationSec).toBe(1);
@@ -332,6 +381,7 @@ describe('resolveEffectTargets', () => {
       actor,
       allies,
       enemies,
+      gameData,
       rand,
     );
     const wave0Ids = resolution?.waves[0]?.targets.map((t) => t.unit.id);
@@ -349,6 +399,7 @@ describe('resolveEffectTargets', () => {
       actor,
       [actor, allyNear, allyFar],
       [],
+      gameData,
     );
     expect(anchor?.id).toBe('near');
   });
@@ -366,6 +417,7 @@ describe('resolveEffectTargets', () => {
       healer,
       party,
       enemies,
+      gameData,
     );
     const ids = targets.map((t) => t.id);
     expect(ids).toContain('ally-a');
@@ -398,6 +450,7 @@ describe('resolveEffectTargets', () => {
       ally,
       [ally],
       [debuffed, clean],
+      gameData,
     );
     expect(anchor?.id).toBe('deb');
   });

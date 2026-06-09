@@ -6,6 +6,7 @@ import type {
   ActiveSkillDef,
   ClassId,
   ClassPreset,
+  NormalizedEntityTraits,
   PassiveSkillDef,
 } from './types.ts';
 
@@ -32,22 +33,30 @@ const RANGED_ATTACKER_SKILL_PREFIXES = [
   'attacker_jutsushi_',
 ] as const;
 
+function placeholderTraits(rangePx: number): NormalizedEntityTraits {
+  return {
+    rangePx,
+    damageType: 'physical',
+    basicAttackVfx: { preset: rangePx >= 25 ? 'arrow' : 'slash' },
+  };
+}
+
 function parseRoleFromSkillId(
   skillId: string,
 ): Pick<ClassPreset, 'role' | 'traits'> | undefined {
   if (skillId.startsWith('df_') || skillId.startsWith('defender_')) {
-    return { role: 'defender', traits: { attackRange: 'melee' } };
+    return { role: 'defender', traits: placeholderTraits(0) };
   }
   if (skillId.startsWith('sp_') || skillId.startsWith('supporter_')) {
-    return { role: 'supporter', traits: { attackRange: 'melee' } };
+    return { role: 'supporter', traits: placeholderTraits(0) };
   }
   if (skillId.startsWith('at_') || skillId.startsWith('attacker_')) {
-    const attackRange = RANGED_ATTACKER_SKILL_PREFIXES.some((prefix) =>
+    const rangePx = RANGED_ATTACKER_SKILL_PREFIXES.some((prefix) =>
       skillId.startsWith(prefix),
     )
-      ? 'ranged'
-      : 'melee';
-    return { role: 'attacker', traits: { attackRange } };
+      ? 50
+      : 0;
+    return { role: 'attacker', traits: placeholderTraits(rangePx) };
   }
   return undefined;
 }
@@ -55,7 +64,7 @@ function parseRoleFromSkillId(
 function resolvePlaceholderFromClassPreset(
   preset: Pick<ClassPreset, 'role' | 'traits'>,
 ): string {
-  return resolvePlaceholderIconKey(preset.role, preset.traits.attackRange);
+  return resolvePlaceholderIconKey(preset.role, preset.traits.rangePx);
 }
 
 export function resolveSkillIconKey(

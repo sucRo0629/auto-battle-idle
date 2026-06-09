@@ -1,8 +1,4 @@
 import type { CombatantState, SkillEffectDef, TargetRule } from '../types.ts';
-import {
-  DEFAULT_MELEE_ATTACK_RANGE_PX,
-  DEFAULT_RANGED_RANGE_PX,
-} from '../types.ts';
 import { getBattleX } from '../combatPosition.ts';
 import { getTargetPoolForRule } from './targetingPool.ts';
 
@@ -30,10 +26,7 @@ export function resolveSkillRangePx(
   actor: CombatantState,
   effect: Pick<SkillEffectDef, 'range'>,
 ): number {
-  if (effect.range !== undefined) return effect.range;
-  return actor.traits.attackRange === 'melee'
-    ? DEFAULT_MELEE_ATTACK_RANGE_PX
-    : DEFAULT_RANGED_RANGE_PX;
+  return effect.range ?? actor.traits.rangePx;
 }
 
 export function getAttackablePool(

@@ -238,7 +238,7 @@ export class GameSession {
   }
 
   tick(deltaSec: number, deltaMs: number): void {
-    if (!this.metaMenuOpen && !this.statsOverlayOpen) {
+    if (!this.metaMenuOpen) {
       this.engine.tick(deltaSec);
     }
     this.view.tick(deltaMs);

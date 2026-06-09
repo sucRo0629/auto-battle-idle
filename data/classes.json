@@ -6,9 +6,7 @@
     "epithetEn": "Guardian",
     "flavorJa": "鉄壁となり、最も危険な敵の矛先を受け止める",
     "formationRow": "front",
-    "traits": {
-      "attackRange": "melee"
-    },
+    "traits": {},
     "maxHp": 220,
     "atk": 11,
     "def": 26,
@@ -42,9 +40,7 @@
     "epithetEn": "Paladin",
     "flavorJa": "聖なる防護と小さな癒しで、前線を守り抜く",
     "formationRow": "front",
-    "traits": {
-      "attackRange": "melee"
-    },
+    "traits": {},
     "maxHp": 185,
     "atk": 13,
     "def": 20,
@@ -77,9 +73,7 @@
     "epithetEn": "Duelist",
     "flavorJa": "搦め手で敵を弱らせ、隙に致命の一撃を繰り出す",
     "formationRow": "front",
-    "traits": {
-      "attackRange": "melee"
-    },
+    "traits": {},
     "maxHp": 115,
     "atk": 26,
     "def": 12,
@@ -112,9 +106,7 @@
     "epithetEn": "Warrior",
     "flavorJa": "両手の重刃を構え、粘り強く戦場を制す",
     "formationRow": "front",
-    "traits": {
-      "attackRange": "melee"
-    },
+    "traits": {},
     "maxHp": 155,
     "atk": 30,
     "def": 16,
@@ -144,9 +136,7 @@
     "epithetEn": "Assassin",
     "flavorJa": "敵の背後へ忍び込み、二刃で仕留める影",
     "formationRow": "front",
-    "traits": {
-      "attackRange": "melee"
-    },
+    "traits": {},
     "maxHp": 82,
     "atk": 32,
     "def": 8,
@@ -181,7 +171,7 @@
     "flavorJa": "長槍の一突きで、どんな巨体も貫く",
     "formationRow": "front",
     "traits": {
-      "attackRange": "melee"
+      "rangePx": 24
     },
     "maxHp": 135,
     "atk": 24,
@@ -216,7 +206,7 @@
     "flavorJa": "遠くの脅威を先に射落とす迎撃の弓",
     "formationRow": "back",
     "traits": {
-      "attackRange": "ranged"
+      "rangePx": 50
     },
     "maxHp": 92,
     "atk": 20,
@@ -251,7 +241,7 @@
     "flavorJa": "最も遠い獲物だけを狙い、一矢で沈める",
     "formationRow": "back",
     "traits": {
-      "attackRange": "ranged"
+      "rangePx": 50
     },
     "maxHp": 88,
     "atk": 28,
@@ -286,7 +276,7 @@
     "flavorJa": "罠と毒で追い詰め、獲物を仕留める",
     "formationRow": "back",
     "traits": {
-      "attackRange": "ranged"
+      "rangePx": 50
     },
     "maxHp": 96,
     "atk": 18,
@@ -321,7 +311,8 @@
     "flavorJa": "魔力を一点に集め、魔防の薄い敵を穿つ",
     "formationRow": "back",
     "traits": {
-      "attackRange": "ranged"
+      "rangePx": 50,
+      "damageType": "magic"
     },
     "maxHp": 80,
     "atk": 26,
@@ -357,7 +348,8 @@
     "flavorJa": "符が敵から敵へ跳ね、連鎖の術式を織る",
     "formationRow": "back",
     "traits": {
-      "attackRange": "ranged"
+      "rangePx": 50,
+      "damageType": "magic"
     },
     "maxHp": 78,
     "atk": 22,
@@ -393,7 +385,8 @@
     "flavorJa": "地面に法陣を描き、踏み込んだ者を焼き尽くす",
     "formationRow": "back",
     "traits": {
-      "attackRange": "ranged"
+      "rangePx": 50,
+      "damageType": "magic"
     },
     "maxHp": 72,
     "atk": 24,
@@ -427,9 +420,12 @@
     "displayName": "療養師",
     "epithetEn": "Cleric",
     "flavorJa": "前線に立ち、味方全体をやさしく癒し続ける",
-    "formationRow": "front",
+    "formationRow": "back",
     "traits": {
-      "attackRange": "melee"
+      "rangePx": 40,
+      "basicAttackVfx": {
+        "preset": "orb"
+      }
     },
     "maxHp": 105,
     "atk": 12,
@@ -451,7 +447,10 @@
       "maxHp": 2,
       "atk": 1,
       "def": 2
-    }
+    },
+    "passiveIds": [
+      "sp_cleric_passive_1"
+    ]
   },
   {
     "id": "sp_abjurer",
@@ -460,9 +459,7 @@
     "epithetEn": "Abjurer",
     "flavorJa": "結界と弱体化で、味方への一撃をそらす",
     "formationRow": "middle",
-    "traits": {
-      "attackRange": "melee"
-    },
+    "traits": {},
     "maxHp": 95,
     "atk": 10,
     "def": 12,
@@ -495,9 +492,7 @@
     "epithetEn": "Alchemist",
     "flavorJa": "薬草と毒で戦場を操り、敵の弱点を長く灼く",
     "formationRow": "middle",
-    "traits": {
-      "attackRange": "melee"
-    },
+    "traits": {},
     "maxHp": 98,
     "atk": 14,
     "def": 9,

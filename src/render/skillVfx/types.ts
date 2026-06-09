@@ -1,14 +1,18 @@
 import type {
-  AttackRange,
+  DamageType,
   Role,
   SkillEffectKind,
   SkillSlotKind,
+  SkillVfxDef,
 } from "../../battle/types.ts";
 
 /** resolveSkillVfx に渡す実行時コンテキスト（BattleEvent + スナップショット由来） */
 export interface SkillVfxContext {
   role?: Role;
-  attackRange: AttackRange;
+  rangePx: number;
+  damageType: DamageType;
+  /** 通常攻撃スロット用（traits.basicAttackVfx） */
+  basicAttackVfx?: SkillVfxDef;
   slotKind?: SkillSlotKind;
   effectKind: SkillEffectKind;
 }

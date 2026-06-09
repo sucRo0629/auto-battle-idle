@@ -1,11 +1,11 @@
 import type {
   ActiveSkillDef,
-  AttackRange,
   AttackSpeedTier,
   ClassPreset,
   ClassSkillUnlock,
   DamageType,
   EnemyTemplate,
+  EntityTraits,
   FormationRow,
   GrowthPresetKey,
   GrowthTier,
@@ -39,9 +39,13 @@ import {
   getClassSkillIds,
   type ClassPresetBeforeEnrich,
 } from '../../progression/skillUnlocks.ts';
+import { normalizeEntityTraits } from './entityTraits.ts';
+import {
+  defaultBasicAttackId,
+  synthesizeBasicAttackSkill,
+} from './synthesizeBasicAttack.ts';
 
 import {
-  ATTACK_RANGES,
   ATTACK_SPEED_TIERS,
   DAMAGE_TYPES,
   FORMATION_ROWS,
@@ -65,7 +69,6 @@ import {
 
 const ROLES_SET = new Set<Role>(ROLES);
 const FORMATION_ROWS_SET = new Set<FormationRow>(FORMATION_ROWS);
-const ATTACK_RANGES_SET = new Set<AttackRange>(ATTACK_RANGES);
 const ATTACK_SPEED_TIERS_SET = new Set<AttackSpeedTier>(ATTACK_SPEED_TIERS);
 const SKILL_EFFECTS = new Set<SkillEffectKind>(SKILL_EFFECT_KINDS);
 const DAMAGE_TYPES_SET = new Set<DamageType>(DAMAGE_TYPES);
@@ -818,14 +821,17 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
   );
 
   if (type === 'damage') {
-    const damageType = requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
+    const damageType =
+      obj.damageType === undefined
+        ? undefined
+        : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
     const amount = parseEffectAmount(obj, context, 'damage');
     return {
       targetRule,
       ...targetShapeFields,
       ...combatModifiers,
       type,
-      damageType,
+      ...(damageType !== undefined ? { damageType } : {}),
       amount,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
@@ -1392,6 +1398,131 @@ function parseClassSkills(raw: unknown, context: string): ClassSkillUnlock[] {
   });
 }
 
+function parseEntityTraits(
+  raw: unknown,
+  context: string,
+): EntityTraits {
+  if (raw === undefined) return {};
+  const obj = requireRecord(raw, context);
+  if (obj.attackRange !== undefined) {
+    invalidField(context, 'attackRange', 'removed; use rangePx instead');
+  }
+  const traits: EntityTraits = {};
+  const rangePx = parseOptionalNumber(obj, 'rangePx', context);
+  if (rangePx !== undefined) {
+    if (rangePx < 0) {
+      invalidField(context, 'rangePx', 'must be a non-negative number');
+    }
+    traits.rangePx = rangePx;
+  }
+  const damageTypeRaw = obj.damageType;
+  if (damageTypeRaw !== undefined) {
+    traits.damageType = requireEnum(
+      obj,
+      'damageType',
+      context,
+      DAMAGE_TYPES_SET,
+    );
+  }
+  const basicAttackVfx = parseSkillVfx(obj.basicAttackVfx, `${context}.basicAttackVfx`);
+  if (basicAttackVfx !== undefined) {
+    traits.basicAttackVfx = basicAttackVfx;
+  }
+  return traits;
+}
+
+function defaultAttackSpeedTierForRole(role: Role): AttackSpeedTier {
+  switch (role) {
+    case 'defender':
+      return 'somewhatSlow';
+    case 'supporter':
+      return 'slow';
+    default:
+      return 'normal';
+  }
+}
+
+function isBasicAttackSkillId(skillId: string, entityIds: Set<string>): boolean {
+  for (const entityId of entityIds) {
+    if (skillId === defaultBasicAttackId(entityId)) return true;
+  }
+  return false;
+}
+
+function validateBasicAttackJsonOverride(
+  skill: ActiveSkillDef,
+  context: string,
+): void {
+  if (skill.vfx !== undefined) {
+    invalidField(context, 'vfx', 'basic attack VFX must be set on entity traits');
+  }
+  skill.effect.forEach((effect, effectIndex) => {
+    const effectContext = `${context}.effect[${effectIndex}]`;
+    if (effect.vfx !== undefined) {
+      invalidField(
+        effectContext,
+        'vfx',
+        'basic attack VFX must be set on entity traits',
+      );
+    }
+    if (effect.type === 'move') return;
+    if (effect.range !== undefined) {
+      invalidField(
+        effectContext,
+        'range',
+        'basic attack range must be set on entity traits',
+      );
+    }
+    if ('damageType' in effect && effect.damageType !== undefined) {
+      invalidField(
+        effectContext,
+        'damageType',
+        'basic attack damageType must be set on entity traits',
+      );
+    }
+  });
+}
+
+function injectSynthesizedBasicAttacks(
+  classes: ClassPresetBeforeEnrich[],
+  enemies: EnemyTemplate[],
+  activesById: Map<string, ActiveSkillDef>,
+): void {
+  for (const cls of classes) {
+    const traits = normalizeEntityTraits(cls.traits);
+    const basicId = cls.basicAttackSkillId;
+    const jsonOverride = activesById.get(basicId);
+    activesById.set(
+      basicId,
+      synthesizeBasicAttackSkill({
+        entityId: cls.id,
+        isEnemy: false,
+        traits,
+        attackSpeedTier:
+          cls.attackSpeedTier ?? defaultAttackSpeedTierForRole(cls.role),
+        displayName: cls.displayName,
+        jsonOverride,
+      }),
+    );
+  }
+  for (const enemy of enemies) {
+    const traits = normalizeEntityTraits(enemy.traits);
+    const basicId = enemy.basicAttackSkillId;
+    const jsonOverride = activesById.get(basicId);
+    activesById.set(
+      basicId,
+      synthesizeBasicAttackSkill({
+        entityId: enemy.id,
+        isEnemy: true,
+        traits,
+        attackSpeedTier: enemy.attackSpeedTier ?? 'normal',
+        displayName: enemy.displayName,
+        jsonOverride,
+      }),
+    );
+  }
+}
+
 function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
   if (!Array.isArray(raw)) {
     throw new Error('classes.json must be an array');
@@ -1411,26 +1542,16 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
         ? undefined
         : requireString(obj, 'flavorJa', context);
     const formationRow = requireEnum(obj, 'formationRow', context, FORMATION_ROWS_SET);
-    const traitsObj = requireRecord(obj.traits, `${context}.traits`);
-    const attackRange = requireEnum(
-      traitsObj,
-      'attackRange',
-      `${context}.traits`,
-      ATTACK_RANGES_SET,
-    );
-    if (traitsObj.rangePx !== undefined) {
-      invalidField(
-        `${context}.traits`,
-        'rangePx',
-        'removed; set effect.range on skills instead',
-      );
-    }
+    const traitsRaw = parseEntityTraits(obj.traits, `${context}.traits`);
     const maxHp = requireNumber(obj, 'maxHp', context);
     const atk = requireNumber(obj, 'atk', context);
     const def = requireNumber(obj, 'def', context);
     const reg = requireNumber(obj, 'reg', context);
     requireReg(reg, context);
-    const basicAttackSkillId = requireString(obj, 'basicAttackSkillId', context);
+    const basicAttackSkillId =
+      obj.basicAttackSkillId === undefined
+        ? defaultBasicAttackId(id)
+        : requireString(obj, 'basicAttackSkillId', context);
     const spriteKey =
       obj.spriteKey === undefined
         ? undefined
@@ -1479,9 +1600,7 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       ...(epithetEn !== undefined ? { epithetEn } : {}),
       ...(flavorJa !== undefined ? { flavorJa } : {}),
       formationRow,
-      traits: {
-        attackRange,
-      },
+      traits: traitsRaw,
       maxHp,
       atk,
       def,
@@ -1617,7 +1736,11 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
   });
 }
 
-function parseEnemies(raw: unknown): EnemyTemplate[] {
+type EnemyTemplateParsed = Omit<EnemyTemplate, 'traits'> & {
+  traits: EntityTraits;
+};
+
+function parseEnemies(raw: unknown): EnemyTemplateParsed[] {
   if (!Array.isArray(raw)) {
     throw new Error('enemies.json must be an array');
   }
@@ -1652,19 +1775,13 @@ function parseEnemies(raw: unknown): EnemyTemplate[] {
       obj.activeSkillIds === undefined
         ? undefined
         : requireStringArray(obj, 'activeSkillIds', context);
+    if (obj.attackRange !== undefined) {
+      invalidField(context, 'attackRange', 'removed; use traits.rangePx instead');
+    }
     if (obj.rangePx !== undefined) {
-      invalidField(context, 'rangePx', 'removed; set effect.range on skills instead');
+      invalidField(context, 'rangePx', 'removed; use traits.rangePx instead');
     }
-    const attackRangeRaw = obj.attackRange;
-    let attackRange: AttackRange | undefined;
-    if (attackRangeRaw !== undefined) {
-      attackRange = requireEnum(
-        obj,
-        'attackRange',
-        context,
-        ATTACK_RANGES_SET,
-      );
-    }
+    const traitsRaw = parseEntityTraits(obj.traits, `${context}.traits`);
 
     return {
       id,
@@ -1676,10 +1793,10 @@ function parseEnemies(raw: unknown): EnemyTemplate[] {
       exp,
       spriteKey,
       basicAttackSkillId,
+      traits: traitsRaw,
       ...(attackSpeedTier !== undefined ? { attackSpeedTier } : {}),
       ...(passiveSkillIds !== undefined ? { passiveSkillIds } : {}),
       ...(activeSkillIds !== undefined ? { activeSkillIds } : {}),
-      ...(attackRange !== undefined ? { attackRange } : {}),
     };
   });
 }
@@ -1865,6 +1982,15 @@ function validateReferences(
     }
   }
 
+  const entityIds = new Set([
+    ...classes.map((cls) => cls.id),
+    ...enemies.map((enemy) => enemy.id),
+  ]);
+  for (const skill of actives) {
+    if (!isBasicAttackSkillId(skill.id, entityIds)) continue;
+    validateBasicAttackJsonOverride(skill, `actives id=${skill.id}`);
+  }
+
   for (const stage of stages) {
     stage.waves.forEach((wave, waveIndex) => {
       wave.enemies.forEach((spawn, enemyIndex) => {
@@ -1976,15 +2102,34 @@ export function parseAndValidateGameDataJson(
 
   const classesRaw = parseClasses(raw.classes);
   const passives = parsePassives(passivesRaw);
-  const actives = parseActives(activesRaw);
+  const activesParsed = parseActives(activesRaw);
+  const activesById = new Map(activesParsed.map((skill) => [skill.id, skill]));
+  const enemiesRaw = parseEnemies(raw.enemies);
+
+  const classesWithTraits = classesRaw.map((cls) => ({
+    ...cls,
+    traits: normalizeEntityTraits(cls.traits),
+  }));
+  const enemiesWithTraits = enemiesRaw.map((enemy) => ({
+    ...enemy,
+    traits: normalizeEntityTraits(enemy.traits),
+  }));
+
+  injectSynthesizedBasicAttacks(
+    classesWithTraits,
+    enemiesWithTraits,
+    activesById,
+  );
+
+  const actives = [...activesById.values()];
   const skillRegistry: SkillRegistry = {
     passives: Object.fromEntries(passives.map((skill) => [skill.id, skill])),
     actives: Object.fromEntries(actives.map((skill) => [skill.id, skill])),
   };
-  const classes = classesRaw.map((cls) =>
+  const classes = classesWithTraits.map((cls) =>
     enrichClassPreset(cls, skillRegistry, { lenient: mode === 'editor' }),
   );
-  const enemies = parseEnemies(raw.enemies);
+  const enemies = enemiesWithTraits;
   const stages = parseStages(raw.stages);
   const parties = parseParties(raw.parties);
 

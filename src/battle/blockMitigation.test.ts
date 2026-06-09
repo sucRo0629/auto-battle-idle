@@ -22,7 +22,7 @@ function mockUnit(
     role: 'defender',
     classId: 'test',
     formationRow: 'front',
-    traits: { attackRange: 'melee' },
+    traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
     build: {
       learnedPassiveIds: [],
       learnedActiveIds: [],

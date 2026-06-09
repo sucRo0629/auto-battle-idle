@@ -7,8 +7,8 @@
 1. `baseDamage = floor(resolvePowerAmount(amount) × crowdBonus × damageIncreaseMul)`（`damageIncrease` はパッシブ + effect + DoT status の乗算）
 2. `effectiveDef = applyDefenseIgnore(getEffectiveDef(target))`（DEF 無視: flat 減算 → percent 減算、パッシブ + effect 合算）
 3. `afterSubtract = baseDamage - effectiveDef`
-4. `afterSubtract <= 0` なら `afterDefense = 0`、  
-   それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
+4. `afterSubtract <= 0` なら `afterDefense = 0`、
+  それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
 5. `final = max(1, floor(afterDefense × damageTakenMul))`
 6. **物理直接 `damage` のみ:** 回避判定 → ブロック判定（成功時 `blocked = floor(final × min(1, 0.25 + effectiveAtk/100))`、実ダメ = `final - blocked`）
 
@@ -46,15 +46,19 @@
 
 **余剰回復バリア変換**（パッシブ `excessHealToBarrier`）: 試行回復量のうち maxHp 超過分 × `barrierScale` を **バリア上書き**（`barrierStack` なし）。
 
-**被回復量増加**（パッシブ `healReceivedIncrease`）: 回復対象のパッシブ `percent` を加算し、`heal` / HoT tick 量に `floor(量 × (1 + percent合算))` を適用。`damageTakenToHeal` 等の自己回復は対象外。
+**特効ダメージ**（パッシブ `damageIncrease` + effect `damageIncrease`）: **直接 `heal` のみ**に乗算（`damage` と同式の条件判定）。**HoT tick には非適用**（`damage` 直接のみ / DoT tick あり、という攻撃側の対比と同様）。
 
-heal / HoT / barrier / **damage** は **`ResourceAmountSpec`**（`amount`）で効果量を定義。旧 JSON のトップレベル `powerMultiplier` のみも、`kind: atkBased` + `atkScale` として読み込む（後方互換）。
+**被回復量増加**（パッシブ `healReceivedIncrease`）: 回復対象のパッシブ `percent` を加算し、`heal` / HoT tick 量に `floor(量 × (1 + percent合算))` を適用（`damageIncrease` 適用後の量に対して乗算）。`damageTakenToHeal` 等の自己回復は対象外。
 
-| kind | 式 |
-|------|-----|
+heal / HoT / barrier / **damage** は `**ResourceAmountSpec`**（`amount`）で効果量を定義。旧 JSON のトップレベル `powerMultiplier` のみも、`kind: atkBased` + `atkScale` として読み込む（後方互換）。
+
+
+| kind           | 式                                                                                         |
+| -------------- | ----------------------------------------------------------------------------------------- |
 | `atkBased`（既定） | `floor(max(0, (effectiveAtk + healBonus + atkOffset) × atkScale))`（damage は healBonus なし） |
-| `flat` | `floor(max(0, flatAmount + healBonus))` |
-| `percentMaxHp` | `floor(max(0, target.maxHp × percentOfMaxHp + healBonus))` |
+| `flat`         | `floor(max(0, flatAmount + healBonus))`                                                   |
+| `percentMaxHp` | `floor(max(0, target.maxHp × percentOfMaxHp + healBonus))`                                |
+
 
 - `healBonus` — 使用者パッシブ `healBonus` の合算
 - HoT — 1 秒 tick ごとに上記を **再計算**（付与時の ATK buff 変動を反映）
@@ -62,16 +66,18 @@ heal / HoT / barrier / **damage** は **`ResourceAmountSpec`**（`amount`）で�
 
 ## バリア
 
-**effect 種別:** `barrier` — HP とは別の **`barrierHp`** プール。maxHp を超えて付与可。
+**effect 種別:** `barrier` — HP とは別の `**barrierHp`** プール。maxHp を超えて付与可。
 
-| 項目 | 仕様 |
-|------|------|
-| 付与量 | `ResourceAmountSpec`（heal と同式） |
-| 非スタック（既定） | 新量で **置換**（既存残量は捨てる） |
-| 継ぎ足し | `barrierStack: true` で既存に加算 |
-| 持続 | 時間切れなし — **ダメージで消費されるまで維持** |
-| 死亡 | `hp ≤ 0` のみ（バリアだけ残っても HP 0 なら死亡） |
-| リスポーン | HP 全回復と同時に `barrierHp = 0` |
+
+| 項目        | 仕様                               |
+| --------- | -------------------------------- |
+| 付与量       | `ResourceAmountSpec`（heal と同式）   |
+| 非スタック（既定） | 新量で **置換**（既存残量は捨てる）             |
+| 継ぎ足し      | `barrierStack: true` で既存に加算      |
+| 持続        | 時間切れなし — **ダメージで消費されるまで維持**      |
+| 死亡        | `hp ≤ 0` のみ（バリアだけ残っても HP 0 なら死亡） |
+| リスポーン     | HP 全回復と同時に `barrierHp = 0`       |
+
 
 **ダメージ吸収**（`applyDamageToTarget` — damage / DoT 共通）:
 
@@ -87,12 +93,14 @@ HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さ�
 
 ## クールダウン
 
-| 枠 | 進行ルール |
-|----|------------|
-| **basic** | 常に **時間**（`remaining -= deltaTime × basicCooldownRate`） |
-| **active（時間）** | `remaining -= deltaTime × ∏ passive.activeCooldownRate` |
-| **active（攻撃回数）** | 使用者の通常攻撃が命中するたび `remaining--` |
-| **active（被攻撃回数）** | 使用者が `hurt` になるたび `remaining--` |
+
+| 枠                 | 進行ルール                                                   |
+| ----------------- | ------------------------------------------------------- |
+| **basic**         | 常に **時間**（`remaining -= deltaTime × basicCooldownRate`） |
+| **active（時間）**    | `remaining -= deltaTime × ∏ passive.activeCooldownRate` |
+| **active（攻撃回数）**  | 使用者の通常攻撃が命中するたび `remaining--`                           |
+| **active（被攻撃回数）** | 使用者が `hurt` になるたび `remaining--`                         |
+
 
 **basicCooldownRate** — クラス `attackSpeedTier` を `levelCurves.json` の `attackSpeedPresets` で係数化（`normal` = 1.0）。詳細は [stats.md](stats.md)。
 
@@ -119,11 +127,13 @@ baseThreat = statComponent + frontRowPressureBonus
 
 ### 変動と減衰
 
-| イベント | 変化 |
-|----------|------|
-| 与ダメ / 被ダメ | 双方（味方 actor・味方 target）に `floor(damage × 0.5)` を加算 |
-| debuff 付与成功 | actor に `+15` 固定 |
-| 毎 tick | `threat > baseThreat` なら `threat -= 20 × deltaTime`、下限 `baseThreat` |
+
+| イベント        | 変化                                                                  |
+| ----------- | ------------------------------------------------------------------- |
+| 与ダメ / 被ダメ   | 双方（味方 actor・味方 target）に `floor(damage × 0.5)` を加算                   |
+| debuff 付与成功 | actor に `+15` 固定                                                    |
+| 毎 tick      | `threat > baseThreat` なら `threat -= 20 × deltaTime`、下限 `baseThreat` |
+
 
 ### 敵ターゲット抽選
 
@@ -133,15 +143,17 @@ baseThreat = statComponent + frontRowPressureBonus
 
 対象ステ：`atk`, `def`, `reg`（耐魔）, `damageTaken`。`reg` の buff / debuff とも可。
 
-**HUD バッジ表示順：** `atk` → `def` → `reg` → `damageReduction` → `damageIncrease` → `hot` → `dot` → `block`。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン（矢印なし・原色）。`stun` はバッジ非表示（将来キャラ頭上エフェクト予定）。
+**HUD バッジ表示順：** `atk` → `def` → `reg` → `damageReduction` → `damageIncrease` → `hot` → `dot` → `block` → `stun`。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン（矢印なし・原色）。
 
-| 種別 | 定義方法 |
-|------|----------|
-| buff | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec` |
-| debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec` |
-| スタン | `effect: "stun"` + `durationSec` — `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可（CD は進行） |
-| デバフ解除 | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `remainingSec` 降順 N 件。パッシブ `periodicDispel` は `intervalSec` ごとに `dispelTargetRule` で対象選択 |
-| ノックバック | `effect: "knockback"` + `distancePx` — 敵は左（`-X`）、味方は右（`+X`）へ即時移動。敵は `BATTLE_ENEMY_MARCH_VISIBLE_MIN_X` 未満にならない |
+
+| 種別     | 定義方法                                                                                                                                           |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| buff   | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec`                                                                           |
+| debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                   |
+| スタン    | `effect: "stun"` + `durationSec` — `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可（CD は進行）                                     |
+| デバフ解除  | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `remainingSec` 降順 N 件。パッシブ `periodicDispel` は `intervalSec` ごとに `dispelTargetRule` で対象選択 |
+| ノックバック | `effect: "knockback"` + `distancePx` — 敵は左（`-X`）、味方は右（`+X`）へ即時移動。敵は `BATTLE_ENEMY_MARCH_VISIBLE_MIN_X` 未満にならない                                 |
+
 
 **重複（同一対象・同一 stat / CC）：**
 
@@ -158,23 +170,27 @@ baseThreat = statComponent + frontRowPressureBonus
 3. 各 effect の `targetShape` に従い **発動 tick で全 hit を一括解決**（`resolveEffectResolution`）
 4. `scatter` / `pierce`（`pierceDurationSec` あり）は `pendingHitQueue` で **適用のみ時間分散**（再ターゲットなし）
 
-| 形状 | 挙動 |
-|------|------|
-| `single` | 攻撃可能プールから 1 体。`hitCount >= 2` なら同一対象へ N 回（`hitDurationSec` で分散） |
-| `aoe` | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散） |
-| `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打） |
-| `pierce` | 射線上の敵を手前→奥。`pierceDurationSec` で適用分散可 |
-| `chain` | anchor から同陣営へ距離内で連鎖 |
-| `scatter` | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
+
+| 形状          | 挙動                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------ |
+| `single`    | 攻撃可能プールから 1 体。`hitCount >= 2` なら同一対象へ N 回（`hitDurationSec` で分散）                      |
+| `aoe`       | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散）                     |
+| `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打）                  |
+| `pierce`    | 射線上の敵を手前→奥。`pierceDurationSec` で適用分散可                                                |
+| `chain`     | anchor から同陣営へ距離内で連鎖                                                                  |
+| `scatter`   | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
+
 
 プール：味方 actor → 敵、敵 actor → 味方。heal / buff 向け `mostDamagedAlly` 等も anchor として同じ形状を利用。
 
 ## 座標（ロジックと演出の分離）
 
-| 座標 | 層 | 用途 |
-|------|-----|------|
-| `battleX` | `src/battle` | 射程判定・接敵移動・ターゲット選定 |
+
+| 座標        | 層            | 用途                                           |
+| --------- | ------------ | -------------------------------------------- |
+| `battleX` | `src/battle` | 射程判定・接敵移動・ターゲット選定                            |
 | `visualX` | `src/render` | 画面描画のみ（`formationLayout` の隊形配置・standoff で算出） |
+
 
 同一 `battleX` のユニットはロジック上重なってよい（近接 range 0 等）。描画は `visualX` で隊形・standoff（演出用 `DEFAULT_MELEE_RANGE_PX` = 45px）を維持し、`battleX` の内部接近は画面に反映しない。
 
@@ -185,10 +201,10 @@ baseThreat = statComponent + frontRowPressureBonus
 ## 射程と移動
 
 ```
-effectiveRangePx = effect.range ?? traits.rangePx ?? 既定値
-  近接の既定値: 0px（剣・拳）。槍等は traits.rangePx や effect.range で 30px 等
-  遠隔の既定値: traits.rangePx（必須）
+effectiveRangePx = effect.range ?? actor.traits.rangePx
 ```
+
+通常攻撃（合成 basic）は effect に `range` を持たず、常に `traits.rangePx` を参照する。
 
 - 命中: `battleDistance(actor, target) <= effectiveRangePx`
 - 敵が画面内（`battleX >= BATTLE_ENEMY_VISIBLE_MIN_X`）に入ると **Engaged** 開始
@@ -224,11 +240,13 @@ effectiveRangePx = effect.range ?? traits.rangePx ?? 既定値
 
 Phase 1 はプレースホルダー VFX のみ。**スキル別 `vfx` 設定・新プリセット追加は Phase 6**（[phase-roadmap.md](../plans/phase-roadmap.md)）。
 
-| イベント | VFX |
-|----------|-----|
-| ダメージ | attack / hurt アニメ、ダメージポップアップ、近接/遠隔プレースホルダー（slash / orb / arrow） |
-| 回復 | heal アニメ、緑ポップアップ、healRise プレースホルダー |
-| buff / debuff | 対象の白い光（約0.8秒） |
-| スタン（CC） | オーバーレイ `stun`（バッジ非表示。将来キャラ頭上エフェクト予定） |
+
+| イベント          | VFX                                                             |
+| ------------- | --------------------------------------------------------------- |
+| ダメージ          | attack / hurt アニメ、ダメージポップアップ、近接/遠隔プレースホルダー（slash / orb / arrow） |
+| 回復            | heal アニメ、緑ポップアップ、healRise プレースホルダー                              |
+| buff / debuff | 対象の白い光（約0.8秒）                                                   |
+| スタン（CC）       | オーバーレイ `stun`（`stun` バッジ表示）                                     |
+
 
 ロジックは `BattleEvent` を発火；`BattleView` が `BattleCanvas` を駆動。`render/` に戦闘ルールは置かない。

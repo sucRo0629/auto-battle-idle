@@ -1,11 +1,15 @@
 export type Role = "defender" | "attacker" | "supporter";
 export type ClassId = string;
 export type FormationRow = "front" | "middle" | "back";
+/** 遠隔攻撃とみなす traits.rangePx の下限（px） */
+export const RANGED_ATTACK_THRESHOLD_PX = 25;
+
+/** @deprecated traits.rangePx を使用 */
 export type AttackRange = "melee" | "ranged";
 
 /** 近接スキル射程の未指定時デフォルト（px） */
 export const DEFAULT_MELEE_ATTACK_RANGE_PX = 0;
-/** 遠隔の rangePx 未指定時フォールバック（px） */
+/** @deprecated 旧遠隔フォールバック。traits.rangePx を使用 */
 export const DEFAULT_RANGED_RANGE_PX = 50;
 /** 敵が画面内とみなす battleX の下限（接敵トリガーには使わない） */
 export const BATTLE_ENEMY_VISIBLE_MIN_X = -32;
@@ -15,9 +19,22 @@ export const BATTLE_ENEMY_MARCH_VISIBLE_MIN_X = -200;
 /** @deprecated 演出用。ロジックには使わない */
 export const DEFAULT_MELEE_RANGE_PX = 45;
 
-export interface ClassTraits {
-  attackRange: AttackRange;
+/** PC・敵共通の traits JSON（省略可フィールド） */
+export interface EntityTraits {
+  rangePx?: number;
+  damageType?: DamageType;
+  basicAttackVfx?: SkillVfxDef;
 }
+
+/** ロード後の正規化済み traits（戦闘用・PC/敵共通） */
+export interface NormalizedEntityTraits {
+  rangePx: number;
+  damageType: DamageType;
+  basicAttackVfx: SkillVfxDef;
+}
+
+/** @deprecated EntityTraits / NormalizedEntityTraits に置換 */
+export type ClassTraits = NormalizedEntityTraits;
 
 export interface CombatStats {
   maxHp: number;
@@ -68,11 +85,12 @@ export interface ClassPreset extends CombatStats {
   /** 1行フレーバーテキスト */
   flavorJa?: string;
   formationRow: FormationRow;
-  traits: ClassTraits;
-  /** 未指定時は role / attackRange からプレースホルダーを使用 */
+  traits: NormalizedEntityTraits;
+  /** 未指定時は role / rangePx からプレースホルダーを使用 */
   spriteKey?: string;
-  /** 未指定時は role / attackRange からプレースホルダーを使用 */
+  /** 未指定時は role / rangePx からプレースホルダーを使用 */
   iconKey?: string;
+  /** 未指定時は `{id}_basic_attack` */
   basicAttackSkillId: string;
   /** 固定パッシブ（LvUP で増えない）。skills[] とは分離 */
   passiveIds?: string[];
@@ -103,6 +121,7 @@ export type TargetRule =
   | "mostDamagedAlly"
   | "self"
   | "rangedAttackingEnemy"
+  | "magicAttackingEnemy"
   | "highestAtkEnemy"
   | "lowestDefEnemy"
   | "highestDefEnemy"
@@ -423,7 +442,7 @@ interface SkillEffectCommon {
   /** 0〜1。0 = anchor 中心固定 */
   scatterSpreadRate?: number;
   type: SkillEffectKind;
-  /** 命中判定・VFX 共用（px）。未指定 = attackRange 既定値（近接 0 / 遠隔 50） */
+  /** 命中判定・VFX 共用（px）。未指定 = actor.traits.rangePx */
   range?: number;
   /** 未指定時は effect 種別の既定アニメ。none = スプライトアニメなし */
   anim?: SkillEffectAnimId;
@@ -431,7 +450,7 @@ interface SkillEffectCommon {
   vfx?: SkillVfxDef;
   /** debuffedEnemy 選択時必須 */
   targetDebuffFilter?: DebuffFilterTag[];
-  /** damage / dot 用 */
+  /** damage / heal / dot 用（HoT tick 非対象） */
   damageIncrease?: DamageIncreaseSpec;
   /** damage / dot 用 */
   defenseIgnore?: DefenseIgnoreSpec;
@@ -471,7 +490,8 @@ export interface PendingSkillHit {
 
 export interface DamageSkillEffect extends SkillEffectCommon {
   type: "damage";
-  damageType: DamageType;
+  /** 省略時 = actor.traits.damageType */
+  damageType?: DamageType;
   amount: ResourceAmountSpec;
 }
 
@@ -580,13 +600,13 @@ export interface EnemyTemplate extends CombatStats {
   /** 撃破時に生存味方全員が得る EXP */
   exp: number;
   spriteKey: string;
+  /** 未指定時は `{id}_basic_attack` */
   basicAttackSkillId: string;
+  traits: NormalizedEntityTraits;
   /** 通常攻撃 CD（基本攻撃 interval への倍率）。未指定時は normal */
   attackSpeedTier?: AttackSpeedTier;
   passiveSkillIds?: string[];
   activeSkillIds?: string[];
-  /** 未指定時は melee */
-  attackRange?: AttackRange;
 }
 
 export interface StageWaveEnemy {
@@ -640,7 +660,9 @@ export interface CombatantSnapshot {
   def: number;
   reg: number;
   role?: Role;
-  attackRange: AttackRange;
+  rangePx: number;
+  damageType: DamageType;
+  basicAttackVfx: SkillVfxDef;
   spriteKey: string;
   iconKey: string;
   formationRow: FormationRow;

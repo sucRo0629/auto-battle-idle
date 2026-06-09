@@ -1,5 +1,5 @@
 .battle-view {
-  width: min(520px, 100%);
+  width: min(480px, 100%);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -41,7 +41,6 @@
 }
 
 .battle-canvas-host {
-  position: relative;
   display: flex;
   justify-content: center;
 
@@ -144,12 +143,19 @@
   --status-icon-hot: #27ae60;
   --status-icon-dot: #8e44ad;
   --status-icon-block: #7f8c8d;
+  --status-icon-stun: #f1c40f;
+}
+
+.battle-canvas-frame {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
 }
 
 .battle-stage-label {
   position: absolute;
   top: 4px;
-  left: 23px;
+  left: 4px;
   z-index: 1;
   padding: 4px 6px;
   background: var(--stage-label-bg);
@@ -173,28 +179,20 @@
   -webkit-app-region: no-drag;
   position: absolute;
   top: 4px;
-  right: 8px;
+  right: 2px;
   z-index: 2;
   display: flex;
   flex-direction: row;
-  gap: 6px;
-}
-
-.battle-stats-button {
-  -webkit-app-region: no-drag;
-  position: absolute;
-  top: 30px;
-  left: 8px;
-  z-index: 2;
+  gap: 1px;
 }
 
 .battle-menu-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px;
+  padding: 1px;
   border: 1px solid var(--canvas-border-color);
-  border-radius: 6px;
+  border-radius: 1px;
   background: rgba(22, 33, 62, 0.92);
   color: var(--app-text);
   cursor: pointer;
@@ -205,7 +203,8 @@
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
   font-style: normal;
-  font-size: 16px;
+  text-align: center;
+  font-size: 20px;
   line-height: 1;
   letter-spacing: normal;
   color: #e3e3e3;

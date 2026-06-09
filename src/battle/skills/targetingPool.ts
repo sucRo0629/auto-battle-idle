@@ -1,3 +1,4 @@
+import { isRangedAttack } from '../data/entityTraits.ts';
 import type { CombatantState, TargetRule } from '../types.ts';
 
 function livingAllies(allies: CombatantState[]): CombatantState[] {
@@ -49,7 +50,9 @@ export function getTargetPoolForRule(
     case 'debuffedEnemy':
       return enemiesLive;
     case 'rangedAttackingEnemy':
-      return enemiesLive.filter((e) => e.traits.attackRange === 'ranged');
+      return enemiesLive.filter((e) => isRangedAttack(e.traits.rangePx));
+    case 'magicAttackingEnemy':
+      return enemiesLive.filter((e) => e.traits.damageType === 'magic');
     case 'mostDamagedAlly':
     case 'allAllies':
       return alliesLive;

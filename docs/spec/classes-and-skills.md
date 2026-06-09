@@ -45,8 +45,6 @@
 
 転職条件・候補は `classes.json` の `promotion`（Phase 7 で本番化）。現フェーズでは転職ロジックは実装しない。
 
-`test-classes.json` は検証用として**本番 15 クラスとは別系統**。
-
 ### 一次職マスタ（15 種）
 
 表示名の英語肩書きは `epithetEn`、一行フレーバーは `flavorJa`（UI 表示は Phase 3c 以降。データのみ先行投入）。
@@ -100,14 +98,26 @@
 
 味方の heal / move 向け `closestAlly` は **battleX 距離**が最小の味方。敵の `closestAlly` は **ヘイト加重抽選**（[combat.md](combat.md) の Threat 節）。
 
-### 射程（`traits.attackRange`）
+### EntityTraits（PC・敵共通）
 
-| `attackRange` | クラス traits | スキル射程 |
-|---------------|---------------|------------|
-| `melee` | 必須 | 未指定時 **0px**（剣・拳）。槍等は `effect.range` で 30px 等を明示 |
-| `ranged` | 必須 | 未指定時 `DEFAULT_RANGED_RANGE_PX`（50px）。各 effect の `range` で上書き可 |
+`classes.json` / `enemies.json` の `traits`（省略可。ロード時に正規化）:
 
-`traits.rangePx` は廃止。射程はスキル effect 単位で定義する。
+| フィールド | 省略時 |
+|------------|--------|
+| `rangePx` | `0` |
+| `damageType` | `physical` |
+| `basicAttackVfx` | `deriveBasicAttackVfxFromTraits()`（magic→orb / physical+rangePx≥25→arrow / それ以外→slash） |
+
+`basicAttackSkillId` は省略可（`{entityId}_basic_attack`）。通常攻撃スキルはロード時に合成。`skills.json` に同名 ID があれば `name` / `atkScale` / `interval` 等のみ上書き可（`range` / `damageType` / `vfx` は traits 正）。
+
+### 射程
+
+| スキル種別 | `effect.range` |
+|------------|----------------|
+| **通常攻撃**（合成 basic） | effect に書かない（`actor.traits.rangePx`） |
+| アクティブ等 | 任意。省略時 = `actor.traits.rangePx` |
+
+`traits.rangePx >= 25` で遠隔攻撃（`rangedAttackingEnemy`）。`traits.damageType === 'magic'` で `magicAttackingEnemy`。
 
 ## クラスステータスと成長（Phase 4）
 
@@ -209,7 +219,7 @@ interface CharacterBuild {
 | `targetRuleOverride` | `targetRuleOverride` | 味方の攻撃 anchor ルールを上書き（複数時は配列の後ろ優先） |
 | `evasionChance` | `evasionChance` | 被ダメ回避率（加算、上限 1）。**直接 `damage` の物理/魔法両方**（DoT 非対象） |
 | `block` | `blockChance` | 物理直接ダメージを確率で軽減（加算、上限 1）。軽減量 = `floor(dmg × min(1, 0.25 + effectiveAtk/100))` |
-| `damageIncrease` | `damageIncrease` | 条件付き特効ダメ倍率（`damage` / `dot` でも effect 単位で指定可） |
+| `damageIncrease` | `damageIncrease` | 条件付き特効ダメ倍率（`damage` / `heal` / `dot` でも effect 単位で指定可。`heal` は直接回復のみ、HoT 非対象） |
 | `damageReduction` | `damageReductionPercent`, `damageReductionTargetRule` | 対象に常時被ダメ軽減を付与（戦闘開始時同期） |
 | `defenseIgnore` | `defenseIgnore` | 与ダメ時の DEF / REG 無視（`damage` / `dot` でも effect 単位で指定可） |
 | `periodicDispel` | `intervalSec`, `dispelTargetRule`, `dispelCount`, `dispelTags?` | 一定間隔でデバフ解除 |
@@ -274,7 +284,8 @@ interface CharacterBuild {
 | `frontEnemy` | X が最も近い敵 |
 | `lowestHpEnemy` | 現在 HP が最も低い敵 |
 | `mostDamagedAlly` | 欠損 HP が最も大きい味方 |
-| `rangedAttackingEnemy` | 攻撃可能な遠隔敵（`attackRange: ranged`） |
+| `rangedAttackingEnemy` | 攻撃可能な遠隔敵（`traits.rangePx >= 25`） |
+| `magicAttackingEnemy` | 攻撃可能な魔法攻撃敵（`traits.damageType === 'magic'`） |
 | `highestAtkEnemy` / `lowestDefEnemy` / `highestDefEnemy` | 攻撃可能敵の stat 比較 |
 | `lowestRegEnemy` / `highestRegEnemy` | 同上（REG） |
 | `highestHpEnemy` | 攻撃可能敵の現在 HP 最大 |
@@ -289,7 +300,7 @@ interface CharacterBuild {
 |------------|------|
 | `targetRule` | anchor 選定ルール（上表）。**射程内**のユニットのみ対象 |
 | `targetDebuffFilter` | `debuffedEnemy` 時必須。デバフタグ配列（OR 判定） |
-| `damageIncrease` | 任意。`damage` / `dot` 用条件付き倍率 |
+| `damageIncrease` | 任意。`damage` / `heal` / `dot` 用条件付き倍率（`heal` は直接回復のみ） |
 | `defenseIgnore` | 任意。`damage` / `dot` 用 DEF / REG 無視 |
 | `targetShape` | `single`（既定）／`aoe`／`multiLock`／`pierce`／`chain`／`scatter` |
 | `aoeRadiusPx` | `aoe` 必須。anchor の X から ±px |
@@ -299,7 +310,7 @@ interface CharacterBuild {
 | `scatterSpreadRadiusPx` | `scatter` 任意。着弾位置の分散半径（±px）。未指定 = `scatterRadiusPx` |
 | `scatterRadiusPx` / `scatterHitCount` / `scatterDurationSec` | `scatter` 必須（`scatterRadiusPx` = 乱打半径・命中判定） |
 | `scatterSpreadRate` | `scatter` 任意（0〜1。0 = anchor 中心固定。着弾 offset = `scatterSpreadRadiusPx × rate`） |
-| `range` | 命中判定・VFX 共用（px）。`0` 可。未指定 = `traits.rangePx` → 近接は 0 |
+| `range` | 命中判定・VFX 共用（px）。省略時 = `actor.traits.rangePx` |
 | `anim` | 任意。スプライトアニメ（`idle` / `attack` / `dash` / `heal` / `none` 等）。未指定 = effect 種別の既定 |
 | `vfx` | 任意。effect 単位の VFX プリセット。未指定 = スキル `vfx` → 種別既定（damage/heal 等） |
 

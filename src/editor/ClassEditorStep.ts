@@ -1,7 +1,7 @@
 import {
-  ATTACK_RANGE_OPTIONS,
   ATTACK_SPEED_TIER_LABELS,
   ATTACK_SPEED_TIER_OPTIONS,
+  DAMAGE_TYPE_OPTIONS,
   FORMATION_ROW_OPTIONS,
   GROWTH_PRESET_KEY_LABELS,
   GROWTH_PRESET_KEY_OPTIONS,
@@ -9,13 +9,15 @@ import {
   GROWTH_TIER_OPTIONS,
   REG_OPTIONS,
   ROLE_OPTIONS,
+  VFX_PRESET_OPTIONS,
 } from "../battle/data/gameDataSchema.ts";
 import type {
-  AttackRange,
+  DamageType,
   FormationRow,
   GrowthPresetKey,
   GrowthTier,
   Role,
+  SkillVfxPresetId,
 } from "../battle/types.ts";
 import levelCurvesJson from "../../data/levelCurves.json";
 import {
@@ -57,11 +59,6 @@ const ROW_LABELS: Record<FormationRow, string> = {
   front: "前列",
   middle: "中列",
   back: "後列",
-};
-
-const RANGE_LABELS: Record<AttackRange, string> = {
-  melee: "近接",
-  ranged: "遠距離",
 };
 
 const LEVEL_CURVES = loadLevelCurves(levelCurvesJson);
@@ -346,20 +343,58 @@ export class ClassEditorStep {
     );
     identityGrid.appendChild(
       createFieldRow(
-        "攻撃射程",
+        "射程 (px)",
+        createNumberInput(
+          draft.class.traits.rangePx ?? 0,
+          (rangePx) => {
+            commitDraft((next) => {
+              next.class.traits.rangePx = rangePx;
+            }, { rerender: true });
+          },
+          { min: 0 }
+        )
+      )
+    );
+    identityGrid.appendChild(
+      createFieldRow(
+        "ダメージ種",
         createSelect(
-          draft.class.traits.attackRange,
-          ATTACK_RANGE_OPTIONS.map((value) => ({
+          draft.class.traits.damageType ?? "physical",
+          DAMAGE_TYPE_OPTIONS.map((value) => ({
             value,
-            label: RANGE_LABELS[value],
+            label: value,
           })),
-          (attackRange) => {
-            commitDraft(
-              (next) => {
-                next.class.traits.attackRange = attackRange;
-              },
-              { rerender: true }
-            );
+          (damageType: DamageType) => {
+            commitDraft((next) => {
+              next.class.traits.damageType = damageType;
+            }, { rerender: true });
+          }
+        )
+      )
+    );
+    identityGrid.appendChild(
+      createFieldRow(
+        "通常攻撃 VFX",
+        createSelect(
+          draft.class.traits.basicAttackVfx?.preset ?? "",
+          [
+            { value: "", label: "（traits から自動）" },
+            ...VFX_PRESET_OPTIONS.map((value) => ({
+              value,
+              label: value,
+            })),
+          ],
+          (preset) => {
+            commitDraft((next) => {
+              if (!preset) {
+                delete next.class.traits.basicAttackVfx;
+                return;
+              }
+              next.class.traits.basicAttackVfx = {
+                preset: preset as SkillVfxPresetId,
+                ...(preset === "arrow" ? { arc: true } : {}),
+              };
+            }, { rerender: true });
           }
         )
       )

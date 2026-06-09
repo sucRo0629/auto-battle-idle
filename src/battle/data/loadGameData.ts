@@ -10,17 +10,6 @@ function indexById<T extends { id: string }>(items: T[]): Record<string, T> {
   return Object.fromEntries(items.map((item) => [item.id, item]));
 }
 
-function normalizeClass(cls: ClassPreset): ClassPreset {
-  return cls;
-}
-
-function normalizeEnemy(enemy: EnemyTemplate): EnemyTemplate {
-  return {
-    ...enemy,
-    attackRange: enemy.attackRange ?? 'melee',
-  };
-}
-
 export type LoadGameDataResult =
   | { ok: true; data: GameData }
   | { ok: false; error: string };
@@ -65,16 +54,13 @@ export function loadGameData(): GameData {
     parties: partiesJson,
   });
 
-  const classes = parsed.classes.map(normalizeClass);
-  const enemies = parsed.enemies.map(normalizeEnemy);
-
   return {
-    classRegistry: indexById(classes),
+    classRegistry: indexById(parsed.classes as ClassPreset[]),
     skillRegistry: {
       passives: indexById(parsed.passives),
       actives: indexById(parsed.actives),
     },
-    enemyRegistry: indexById(enemies),
+    enemyRegistry: indexById(parsed.enemies as EnemyTemplate[]),
     stages: parsed.stages,
     parties: parsed.parties,
   };

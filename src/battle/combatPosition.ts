@@ -8,8 +8,6 @@ import type {
 import {
   BATTLE_ENEMY_MARCH_VISIBLE_MIN_X,
   BATTLE_ENEMY_VISIBLE_MIN_X,
-  DEFAULT_MELEE_ATTACK_RANGE_PX,
-  DEFAULT_RANGED_RANGE_PX,
 } from './types.ts';
 import { resolveSkillRangePx } from './skills/rangeUtils.ts';
 import {
@@ -190,10 +188,6 @@ export function resolveMaxEffectiveRangePx(
   unit: CombatantState,
   gameData: GameData,
 ): number {
-  const attackRangeDefault =
-    unit.traits.attackRange === 'melee'
-      ? DEFAULT_MELEE_ATTACK_RANGE_PX
-      : DEFAULT_RANGED_RANGE_PX;
   let max = -1;
   for (const cd of unit.cooldowns) {
     const skill = gameData.skillRegistry.actives[cd.skillId];
@@ -203,7 +197,7 @@ export function resolveMaxEffectiveRangePx(
       max = Math.max(max, resolveSkillRangePx(unit, effect));
     }
   }
-  return max >= 0 ? max : attackRangeDefault;
+  return max >= 0 ? max : unit.traits.rangePx;
 }
 
 /** move 効果の目標 battleX（anchor 基準） */

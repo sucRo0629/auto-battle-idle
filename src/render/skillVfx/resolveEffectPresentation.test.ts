@@ -14,7 +14,8 @@ const skill: ActiveSkillDef = {
 };
 
 const ctx = {
-  attackRange: 'melee' as const,
+  rangePx: 0,
+  damageType: 'physical' as const,
   slotKind: 'active' as const,
   effectKind: 'damage' as const,
 };
@@ -102,8 +103,8 @@ describe('resolveEffectPresentation', () => {
 
 describe('shouldPlayActorAnim', () => {
   it('skips ranged basic attack anim', () => {
-    expect(shouldPlayActorAnim('attack', 'ranged', 'basic')).toBe(false);
-    expect(shouldPlayActorAnim('attack', 'ranged', 'active')).toBe(true);
-    expect(shouldPlayActorAnim('dash', 'melee', 'active')).toBe(true);
+    expect(shouldPlayActorAnim('attack', 50, 'basic')).toBe(false);
+    expect(shouldPlayActorAnim('attack', 50, 'active')).toBe(true);
+    expect(shouldPlayActorAnim('dash', 0, 'active')).toBe(true);
   });
 });

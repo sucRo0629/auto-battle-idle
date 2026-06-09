@@ -23,6 +23,7 @@ import {
   updateUnitApproach,
 } from './combatPosition.ts';
 import { SPRITE_GAP } from '../render/formationLayout.ts';
+import { mockMeleeTraits, mockRangedTraits } from './testFixtures.ts';
 
 function mockCombatant(
   overrides: Partial<CombatantState> & { id: string },
@@ -39,7 +40,7 @@ function mockCombatant(
     role: 'attacker',
     classId: 'test',
     formationRow: 'front',
-    traits: { attackRange: 'melee' },
+    traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
     build: {
       learnedPassiveIds: [],
       learnedActiveIds: [],
@@ -121,7 +122,7 @@ describe('combatPosition', () => {
     const rangedEnemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
       battleX: BATTLE_ENEMY_VISIBLE_MIN_X,
     });
@@ -142,7 +143,7 @@ describe('combatPosition', () => {
     const ranged = mockCombatant({
       id: 'ranged',
       isEnemy: true,
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
       battleX: 200,
     });
@@ -157,7 +158,7 @@ describe('combatPosition', () => {
     const enemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
       battleX: 200,
     });
@@ -186,7 +187,7 @@ describe('combatPosition', () => {
     });
     const bow = mockCombatant({
       id: 'bow',
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       formationRow: 'back',
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
@@ -198,7 +199,7 @@ describe('combatPosition', () => {
   it('approach range follows skill effect range', () => {
     const bow = mockCombatant({
       id: 'bow',
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
     expect(resolveMaxEffectiveRangePx(bow, gameData)).toBe(100);
@@ -224,7 +225,7 @@ describe('combatPosition', () => {
       id: 'b',
       formationRow: 'back',
       role: 'attacker',
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
     });
     assignInitialAllyBattleX([front, back]);
     expect(front.battleX).toBeLessThan(back.battleX);
@@ -245,7 +246,7 @@ describe('combatPosition', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       battleX: 70,
     });
     expect(getAllyContactX([guard, archer])).toBe(120);
@@ -306,7 +307,7 @@ describe('battle contact visual sync', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       battleX: 70,
       visualX: 180,
     });

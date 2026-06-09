@@ -1,3 +1,5 @@
+@import './party-member-stats.css';
+
 .battle-stats-overlay {
   position: fixed;
   inset: 0;
@@ -83,77 +85,10 @@
   flex: 1;
   overflow: auto;
   padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
 }
 
-.battle-stats-empty,
-.battle-stats-section-empty {
+.battle-stats-empty {
   margin: 0;
   font-size: 0.875rem;
   color: rgba(227, 227, 227, 0.65);
-}
-
-.battle-stats-section {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.battle-stats-section-title {
-  margin: 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--app-text);
-}
-
-.battle-stats-bar-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.battle-stats-bar-item {
-  display: grid;
-  grid-template-columns: 4.5rem 1fr 2.5rem;
-  align-items: center;
-  gap: 8px;
-}
-
-.battle-stats-bar-label {
-  font-size: 0.8125rem;
-  color: rgba(227, 227, 227, 0.88);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.battle-stats-bar-track {
-  height: 14px;
-  border-radius: 4px;
-  background: rgba(8, 10, 18, 0.55);
-  overflow: hidden;
-}
-
-.battle-stats-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  min-width: 0;
-  transition: width 0.15s ease;
-}
-
-.battle-stats-bar-fill--dealt {
-  background: linear-gradient(90deg, #c45c26 0%, #e8843d 100%);
-}
-
-.battle-stats-bar-fill--taken {
-  background: linear-gradient(90deg, #2f6f9c 0%, #4a9fd4 100%);
-}
-
-.battle-stats-bar-value {
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-  color: rgba(227, 227, 227, 0.78);
-  text-align: right;
 }

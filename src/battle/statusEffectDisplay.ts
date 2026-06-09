@@ -8,7 +8,8 @@ export type StatusDisplayCategory =
   | 'damageIncrease'
   | 'hot'
   | 'dot'
-  | 'block';
+  | 'block'
+  | 'stun';
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   'atk',
@@ -19,6 +20,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   'hot',
   'dot',
   'block',
+  'stun',
 ];
 
 export const STATUS_BADGE_SLOT_COUNT = STATUS_BADGE_SLOT_ORDER.length;
@@ -70,6 +72,9 @@ function effectsForCategory(
   if (category === 'block') {
     return effects.filter((effect) => effect.overlay === 'block');
   }
+  if (category === 'stun') {
+    return effects.filter((effect) => effect.overlay === 'stun');
+  }
   return [];
 }
 
@@ -110,7 +115,7 @@ function aggregateStatCategory(
 
 function aggregateOverlayCategory(
   effects: StatusEffect[],
-  category: 'hot' | 'dot' | 'block',
+  category: 'hot' | 'dot' | 'block' | 'stun',
 ): AggregatedCategoryEffect | null {
   const relevant = effectsForCategory(effects, category);
   if (relevant.length === 0) return null;
@@ -205,7 +210,7 @@ export function aggregateStatStatusEffects(
   const damageTakenBadge = aggregateDamageTakenCategory(effects);
   if (damageTakenBadge) result.push(damageTakenBadge);
 
-  for (const category of ['hot', 'dot', 'block'] as const) {
+  for (const category of ['hot', 'dot', 'block', 'stun'] as const) {
     const badge = aggregateOverlayCategory(effects, category);
     if (badge) result.push(badge);
   }

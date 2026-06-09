@@ -1,5 +1,13 @@
-import { ATTACK_RANGE_OPTIONS, REG_OPTIONS } from '../battle/data/gameDataSchema.ts';
-import type { AttackRange, EnemyTemplate } from '../battle/types.ts';
+import {
+  DAMAGE_TYPE_OPTIONS,
+  REG_OPTIONS,
+  VFX_PRESET_OPTIONS,
+} from '../battle/data/gameDataSchema.ts';
+import type {
+  DamageType,
+  EnemyTemplate,
+  SkillVfxPresetId,
+} from '../battle/types.ts';
 import {
   createEmptyEnemyDraft,
   enemyDraftFromTemplate,
@@ -208,13 +216,54 @@ export class EnemyEditorStep {
     );
     statsGrid.appendChild(
       createFieldRow(
-        'attackRange',
-        createSelect(
-          draft.enemy.attackRange ?? 'melee',
-          ATTACK_RANGE_OPTIONS.map((value) => ({ value, label: value })),
-          (attackRange: AttackRange) => {
+        '射程 (px)',
+        createNumberInput(
+          draft.enemy.traits?.rangePx ?? 0,
+          (rangePx) => {
             commitDraft((next) => {
-              next.enemy.attackRange = attackRange;
+              if (!next.enemy.traits) next.enemy.traits = {};
+              next.enemy.traits.rangePx = rangePx;
+            });
+          },
+          { min: 0 },
+        ),
+      ),
+    );
+    statsGrid.appendChild(
+      createFieldRow(
+        'ダメージ種',
+        createSelect(
+          draft.enemy.traits?.damageType ?? 'physical',
+          DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
+          (damageType: DamageType) => {
+            commitDraft((next) => {
+              if (!next.enemy.traits) next.enemy.traits = {};
+              next.enemy.traits.damageType = damageType;
+            });
+          },
+        ),
+      ),
+    );
+    statsGrid.appendChild(
+      createFieldRow(
+        '通常攻撃 VFX',
+        createSelect(
+          draft.enemy.traits?.basicAttackVfx?.preset ?? '',
+          [
+            { value: '', label: '（traits から自動）' },
+            ...VFX_PRESET_OPTIONS.map((value) => ({ value, label: value })),
+          ],
+          (preset) => {
+            commitDraft((next) => {
+              if (!next.enemy.traits) next.enemy.traits = {};
+              if (!preset) {
+                delete next.enemy.traits.basicAttackVfx;
+                return;
+              }
+              next.enemy.traits.basicAttackVfx = {
+                preset: preset as SkillVfxPresetId,
+                ...(preset === 'arrow' ? { arc: true } : {}),
+              };
             });
           },
         ),

@@ -70,6 +70,7 @@ export function buildSkillSequence(
       actor,
       allies,
       enemies,
+      _gameData,
     );
     if (!anchor) return null;
 
@@ -110,9 +111,10 @@ export function resolveSequenceStepAnchor(
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
+  gameData: GameData,
 ): CombatantState | null {
   if (effect.type === 'move') {
-    return resolveEffectAnchor(effect, rule, actor, allies, enemies);
+    return resolveEffectAnchor(effect, rule, actor, allies, enemies, gameData);
   }
   const pool = getTargetPoolForRule(rule, actor, allies, enemies);
   return pickTargetFromPool(rule, actor, pool);

@@ -27,6 +27,7 @@ describe('statusEffectDisplay', () => {
       'hot',
       'dot',
       'block',
+      'stun',
     ]);
   });
 
@@ -102,5 +103,25 @@ describe('statusEffectDisplay', () => {
 
     expect(badges.map((badge) => badge.category)).toEqual(['block']);
     expect(badges[0]?.kind).toBe('buff');
+  });
+
+  it('aggregates stun overlay', () => {
+    const badges = aggregateStatStatusEffects(
+      [
+        {
+          id: 'stun',
+          kind: 'cc',
+          overlay: 'stun',
+          multiplier: 1,
+          durationSec: 1.2,
+          remainingSec: 0.8,
+        },
+      ],
+      { atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges.map((badge) => badge.category)).toEqual(['stun']);
+    expect(badges[0]?.kind).toBe('debuff');
+    expect(badges[0]?.remainingRatio).toBeCloseTo(0.8 / 1.2);
   });
 });

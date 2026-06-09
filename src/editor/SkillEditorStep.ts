@@ -39,6 +39,7 @@ import type {
 } from '../battle/types.ts';
 import { skillHasMoveEffect } from '../battle/skills/skillSequence.ts';
 import { resolveSkillTrigger } from '../battle/skillTrigger.ts';
+import { formatActiveDescription } from '../ui/formatSkillText.ts';
 import type { SkillDraftEntry, SkillSlotKind } from './editorApi.ts';
 import {
   appendDefenseIgnoreFields,
@@ -575,6 +576,7 @@ function skillCardTitle(entry: SkillDraftEntry, idReadonly: boolean): string {
 
 export class SkillEditorStep {
   private container: HTMLElement;
+  private basicAttackExpanded = false;
 
   constructor(
     container: HTMLElement,
@@ -669,13 +671,16 @@ export class SkillEditorStep {
     this.container.appendChild(header);
 
     const passiveIndices: number[] = [];
-    const activeIndices: number[] = [];
+    const basicAttackIndices: number[] = [];
+    const otherActiveIndices: number[] = [];
     for (let index = 0; index < entries.length; index++) {
-      const kind = entries[index]!.ref.kind;
-      if (kind === 'passive') {
+      const entry = entries[index]!;
+      if (entry.ref.kind === 'passive') {
         passiveIndices.push(index);
+      } else if (this.isBasicAttackEntry(entry)) {
+        basicAttackIndices.push(index);
       } else {
-        activeIndices.push(index);
+        otherActiveIndices.push(index);
       }
     }
 
@@ -689,13 +694,16 @@ export class SkillEditorStep {
         : '参照されているパッシブスキルがありません。',
       onAddSkill,
     );
+    this.renderBasicAttackSection(entries, basicAttackIndices);
     this.renderSkillKindSection(
       'アクティブ',
       'active',
       entries,
-      activeIndices,
+      otherActiveIndices,
       classIdentity
-        ? 'アクティブスキルがありません。classId 入力で通常攻撃が追加されます。'
+        ? basicAttackIndices.length > 0
+          ? '通常攻撃以外のアクティブスキルがありません。下のボタンから追加できます。'
+          : 'アクティブスキルがありません。classId 入力で通常攻撃が追加されます。'
         : '参照されているアクティブスキルがありません。',
       onAddSkill,
     );
@@ -711,6 +719,54 @@ export class SkillEditorStep {
       actions.appendChild(saveBtn);
       this.container.appendChild(actions);
     }
+  }
+
+  private isBasicAttackEntry(entry: SkillDraftEntry): boolean {
+    return this.options.isIdReadonly?.(entry) ?? false;
+  }
+
+  private renderBasicAttackSection(
+    entries: SkillDraftEntry[],
+    indices: number[],
+  ): void {
+    if (indices.length === 0) return;
+
+    const section = createEl(
+      'section',
+      'editor-skill-section editor-basic-attack-section',
+    );
+
+    const details = createEl('details', 'editor-basic-attack-details');
+    details.open = this.basicAttackExpanded;
+    details.addEventListener('toggle', () => {
+      this.basicAttackExpanded = details.open;
+    });
+
+    const summary = createEl('summary', 'editor-basic-attack-summary');
+    summary.appendChild(
+      createEl('span', 'editor-basic-attack-summary-label', '通常攻撃'),
+    );
+
+    const descriptions = indices
+      .map((index) => {
+        const entry = entries[index]!;
+        return entry.active
+          ? formatActiveDescription(entry.active)
+          : entry.ref.skillId;
+      })
+      .join(' / ');
+    summary.appendChild(
+      createEl('span', 'editor-basic-attack-summary-desc', descriptions),
+    );
+    details.appendChild(summary);
+
+    const list = createEl('div', 'editor-skill-list');
+    for (const index of indices) {
+      this.renderEntryCard(list, entries[index]!, index, { hideTitle: true });
+    }
+    details.appendChild(list);
+    section.appendChild(details);
+    this.container.appendChild(section);
   }
 
   private renderSkillKindSection(
@@ -751,10 +807,15 @@ export class SkillEditorStep {
     parent: HTMLElement,
     entry: SkillDraftEntry,
     index: number,
+    cardOptions?: { hideTitle?: boolean },
   ): void {
     const idReadonly = this.options.isIdReadonly?.(entry) ?? false;
-    const card = createSection(skillCardTitle(entry, idReadonly));
-    card.classList.add('editor-skill-card');
+    const card = cardOptions?.hideTitle
+      ? createEl('div', 'editor-skill-card')
+      : createSection(skillCardTitle(entry, idReadonly));
+    if (!cardOptions?.hideTitle) {
+      card.classList.add('editor-skill-card');
+    }
 
     if (!idReadonly && this.options.onRemoveSkill) {
       const removeBtn = createButton('削除', 'editor-btn editor-btn-small', () => {
@@ -1203,7 +1264,7 @@ export class SkillEditorStep {
         createEl(
           'p',
           'editor-hint',
-          '通常攻撃の間隔はクラス設定の「攻撃速度（SPD 段階）」から決まります。',
+          '通常攻撃の間隔はクラス設定の「攻撃速度（SPD 段階）」から決まります。射程・ダメージ種・VFX はクラス／敵の traits で編集します。',
         ),
       );
     } else {
@@ -1288,6 +1349,7 @@ export class SkillEditorStep {
           }, options);
         },
         showPerEffectPresentation,
+        idReadonly,
       );
       effectsSection.appendChild(block);
     });
@@ -1299,6 +1361,10 @@ export class SkillEditorStep {
         }, { rerender: true });
       }),
     );
+
+    if (idReadonly) {
+      return;
+    }
 
     const vfxSection = createSection('VFX（任意）');
     parent.appendChild(vfxSection);
@@ -1394,6 +1460,7 @@ export class SkillEditorStep {
     effect: SkillEffectDef,
     onUpdate: (effect: SkillEffectDef, options?: { rerender?: boolean }) => void,
     showPerEffectPresentation = false,
+    isBasicAttack = false,
   ): void {
     const { patch: patchEffect, get: getEffect } = patchEffectState(effect, onUpdate);
     const grid = appendGrid(parent);
@@ -1751,36 +1818,40 @@ export class SkillEditorStep {
         ),
       );
     }
-    grid.appendChild(
-      createFieldRow(
-        '射程 px（任意）',
-        createNumberInput(
-          effect.range ?? 0,
-          (range) =>
-            patchEffect((prev) => ({
-              ...prev,
-              range: range > 0 ? range : undefined,
-            } as SkillEffectDef)),
-          { min: 0, step: 10 },
+    if (!isBasicAttack) {
+      grid.appendChild(
+        createFieldRow(
+          '射程 px（省略時=traits.rangePx）',
+          createNumberInput(
+            effect.range ?? 0,
+            (range) =>
+              patchEffect((prev) => ({
+                ...prev,
+                range: range > 0 ? range : undefined,
+              } as SkillEffectDef)),
+            { min: 0, step: 10 },
+          ),
         ),
-      ),
-    );
+      );
+    }
 
     const detailGrid = appendGrid(parent);
     detailGrid.classList.add('editor-subgrid');
 
     switch (effect.type) {
       case 'damage':
-        detailGrid.appendChild(
-          createFieldRow(
-            'ダメージ種',
-            createSelect(
-              effect.damageType,
-              DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
-              (damageType) => patchEffect((prev) => ({ ...prev, damageType })),
+        if (!isBasicAttack) {
+          detailGrid.appendChild(
+            createFieldRow(
+              'ダメージ種',
+              createSelect(
+                effect.damageType ?? 'physical',
+                DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
+                (damageType) => patchEffect((prev) => ({ ...prev, damageType })),
+              ),
             ),
-          ),
-        );
+          );
+        }
         appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
           patchEffect((prev) => ({ ...prev, amount }), options),
         );
@@ -1802,6 +1873,13 @@ export class SkillEditorStep {
       case 'heal':
         appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
           patchEffect((prev) => ({ ...prev, amount }), options),
+        );
+        appendDamageIncreaseFields(
+          detailGrid,
+          effect.damageIncrease,
+          (damageIncrease) => {
+            patchEffect((prev) => ({ ...prev, damageIncrease }), { rerender: true });
+          },
         );
         break;
       case 'buff':
@@ -2066,7 +2144,7 @@ export class SkillEditorStep {
       }
     }
 
-    if (effectSupportsPresentationFields(effect)) {
+    if (!isBasicAttack && effectSupportsPresentationFields(effect)) {
       appendEffectPresentationFields(parent, effect, patchEffect);
     }
   }

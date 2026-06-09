@@ -7,6 +7,7 @@ import { hasMatchingDebuff } from '../debuffMatching.ts';
 import type {
   CombatantState,
   DebuffFilterTag,
+  GameData,
   PassiveSkillDef,
   SkillEffectDef,
   SkillEffectResolution,
@@ -426,6 +427,7 @@ export function resolveEffectAnchor(
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
+  gameData: GameData,
 ): CombatantState | null {
   if (effect.type === 'move') {
     const pool = getTargetPoolForRule(rule, actor, allies, enemies);
@@ -437,6 +439,7 @@ export function resolveEffectAnchor(
     actor,
     allies,
     enemies,
+    gameData,
   );
   return resolution?.waves[0]?.targets[0]?.unit ?? null;
 }
@@ -447,6 +450,7 @@ export function resolveEffectResolution(
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
+  gameData: GameData,
   rand: () => number = Math.random,
 ): SkillEffectResolution | null {
   if (effect.type === 'move') {
@@ -619,6 +623,7 @@ export function resolveEffectTargets(
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
+  gameData: GameData,
 ): CombatantState[] {
   const resolution = resolveEffectResolution(
     effect as SkillEffectDef,
@@ -626,6 +631,7 @@ export function resolveEffectTargets(
     actor,
     allies,
     enemies,
+    gameData,
   );
   if (!resolution) return [];
   return resolution.waves.flatMap((wave) =>

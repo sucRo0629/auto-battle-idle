@@ -21,7 +21,6 @@ export const DEFAULT_ROSTER_EXTRAS: Record<string, ClassId[]> = {
     'sp_abjurer',
     'sp_alchemist',
   ],
-  test: ['test_attacker_arcanist', 'test_defender_paladin'],
 };
 
 export function normalizePartySlots(party: PartySlotState[]): PartySlotState[] {

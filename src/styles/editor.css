@@ -200,6 +200,66 @@
   margin-bottom: 0;
 }
 
+.editor-basic-attack-section {
+  margin-bottom: 16px;
+}
+
+.editor-basic-attack-details {
+  padding: 10px 14px;
+  border: 1px solid #2d3a4f;
+  border-radius: 8px;
+  background: rgba(22, 33, 62, 0.6);
+}
+
+.editor-basic-attack-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.editor-basic-attack-summary::-webkit-details-marker {
+  display: none;
+}
+
+.editor-basic-attack-summary::marker {
+  content: '';
+}
+
+.editor-basic-attack-summary::before {
+  content: '▶';
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  color: #9aa8bc;
+  transition: transform 0.15s ease;
+}
+
+.editor-basic-attack-details[open] .editor-basic-attack-summary::before {
+  transform: rotate(90deg);
+}
+
+.editor-basic-attack-summary-label {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.editor-basic-attack-summary-desc {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: #9aa8bc;
+  line-height: 1.4;
+}
+
+.editor-basic-attack-details[open] .editor-skill-list {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #2d3a4f;
+}
+
 .editor-section-actions {
   display: flex;
   flex-wrap: wrap;

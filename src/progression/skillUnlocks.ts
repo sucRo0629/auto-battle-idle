@@ -1,6 +1,8 @@
+import { normalizeEntityTraits } from '../battle/data/entityTraits.ts';
 import type {
   ClassPreset,
   ClassSkillUnlock,
+  EntityTraits,
   SkillRegistry,
 } from '../battle/types.ts';
 
@@ -85,8 +87,10 @@ export function resolveLearnedSkills(
 
 export type ClassPresetBeforeEnrich = Omit<
   ClassPreset,
-  'starterPassiveIds' | 'starterActiveIds' | 'classSkillIds'
->;
+  'starterPassiveIds' | 'starterActiveIds' | 'classSkillIds' | 'traits'
+> & {
+  traits: EntityTraits;
+};
 
 export function enrichClassPreset(
   cls: ClassPresetBeforeEnrich,
@@ -100,6 +104,7 @@ export function enrichClassPreset(
 
   return {
     ...cls,
+    traits: normalizeEntityTraits(cls.traits),
     passiveIds,
     starterPassiveIds: passiveIds,
     starterActiveIds: learnedActiveIds,

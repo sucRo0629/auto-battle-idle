@@ -1,0 +1,215 @@
+.party-stats-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.party-stats-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.party-stats-member {
+  flex: 0 1 9em;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.party-stats-member-header {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+}
+
+.party-stats-member-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.8125rem;
+  color: rgba(227, 227, 227, 0.88);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party-stats-exp {
+  width: 100%;
+}
+
+.party-stats-exp-bar {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(8, 12, 22, 0.85);
+  border: 1px solid rgba(245, 166, 35, 0.25);
+  overflow: hidden;
+}
+
+.party-stats-exp-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-radius: 1px 0 0 1px;
+  background: linear-gradient(90deg, #c47d12 0%, #f5a623 100%);
+  transition: width 0.12s ease-out;
+}
+
+.party-stats-exp-label {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1.2;
+  color: #8fa8c8;
+  white-space: nowrap;
+}
+
+.party-stats-member.is-down .party-stats-exp-bar {
+  opacity: 0.45;
+  border-color: rgba(120, 120, 120, 0.35);
+}
+
+.party-stats-member.is-down .party-stats-exp-fill {
+  background: linear-gradient(90deg, #6a5a3a 0%, #8a7a5a 100%);
+}
+
+.party-stats-member.is-down .party-stats-exp-label {
+  color: #6a7588;
+}
+
+.party-stats-threat {
+  flex: 1 1 72px;
+  min-width: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.party-stats-threat-bar {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  border-radius: 3px;
+  background: rgba(8, 12, 22, 0.85);
+  border: 1px solid rgba(74, 144, 217, 0.25);
+  overflow: hidden;
+}
+
+.party-stats-threat-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-radius: 2px 0 0 2px;
+  background: linear-gradient(90deg, #2d5a8a 0%, #4a90d9 100%);
+  transition: width 0.12s ease-out;
+}
+
+.party-stats-threat-base {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #e8c547;
+  box-shadow: 0 0 3px rgba(232, 197, 71, 0.6);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.party-stats-threat-label {
+  font-size: 10px;
+  line-height: 1.2;
+  color: #8fa8c8;
+  white-space: nowrap;
+}
+
+.party-stats-threat.is-down .party-stats-threat-bar {
+  opacity: 0.45;
+  border-color: rgba(120, 120, 120, 0.35);
+}
+
+.party-stats-threat.is-down .party-stats-threat-fill {
+  background: linear-gradient(90deg, #4a4a5a 0%, #6a6a7a 100%);
+}
+
+.party-stats-threat.is-down .party-stats-threat-base {
+  background: #a89850;
+  box-shadow: none;
+}
+
+.party-stats-threat.is-down .party-stats-threat-label {
+  color: #6a7588;
+}
+
+.party-stats-damage {
+  flex: 1 1 72px;
+  min-width: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.party-stats-damage-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.party-stats-damage-bar {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(8, 12, 22, 0.85);
+  border: 1px solid rgba(74, 144, 217, 0.2);
+  overflow: hidden;
+}
+
+.party-stats-damage-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-radius: 1px 0 0 1px;
+  transition: width 0.12s ease-out;
+}
+
+.party-stats-damage-fill--dealt {
+  background: linear-gradient(90deg, #c45c26 0%, #e8843d 100%);
+}
+
+.party-stats-damage-fill--taken {
+  background: linear-gradient(90deg, #2f6f9c 0%, #4a9fd4 100%);
+}
+
+.party-stats-damage-label {
+  font-size: 10px;
+  line-height: 1.2;
+  color: #8fa8c8;
+  white-space: nowrap;
+}
+
+.party-stats-damage.is-down .party-stats-damage-bar {
+  opacity: 0.45;
+  border-color: rgba(120, 120, 120, 0.35);
+}
+
+.party-stats-damage.is-down .party-stats-damage-fill--dealt {
+  background: linear-gradient(90deg, #6a4a3a 0%, #8a6a5a 100%);
+}
+
+.party-stats-damage.is-down .party-stats-damage-fill--taken {
+  background: linear-gradient(90deg, #4a5a6a 0%, #6a7a8a 100%);
+}
+
+.party-stats-damage.is-down .party-stats-damage-label {
+  color: #6a7588;
+}

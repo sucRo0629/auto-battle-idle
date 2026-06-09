@@ -59,7 +59,7 @@ interface SaveGameState {
 }
 ```
 
-初回セーブは `parties.json`（確認モードは `test-parties.json`）からパーティを生成。
+初回セーブは `parties.json` からパーティを生成。
 
 保存タイミング：Victory/Defeat 後、60 秒ごと、`beforeunload` 時。スキルセット変更・パーティ編集時は即時。
 
@@ -101,7 +101,7 @@ interface ClassSkillUnlock {
 
 - LvUP 時、`resolveLearnedSkills` が該当 `skillIds` を `learnedPassiveIds` / `learnedActiveIds` に反映。
 - 新アクティブの自動セットはしない（スキルセット UI でプレイヤーが選ぶ）。
-- 動作確認用：`test-classes.json` に Lv1/Lv2 エントリあり。
+- 習得エントリは `classes.json` の各クラス `skills[]` に定義する。
 
 ### アクティブセット 2 枠目
 

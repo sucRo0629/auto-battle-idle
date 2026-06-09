@@ -48,7 +48,11 @@ export function resolveEffectPresentation(
 
   let vfx: SkillVfxDef | null = null;
   if (supportsVfx(effectDef)) {
-    vfx = effectDef.vfx ?? resolveSkillVfx(skillId, ctx, skillDef?.vfx);
+    if (ctx.slotKind === "basic" && ctx.basicAttackVfx) {
+      vfx = ctx.basicAttackVfx;
+    } else {
+      vfx = effectDef.vfx ?? resolveSkillVfx(skillId, ctx, skillDef?.vfx);
+    }
   }
 
   return { anim, vfx };
@@ -56,10 +60,10 @@ export function resolveEffectPresentation(
 
 export function shouldPlayActorAnim(
   anim: AnimState,
-  attackRange: "melee" | "ranged",
+  rangePx: number,
   slotKind: "basic" | "active" | undefined,
 ): boolean {
-  if (anim === "attack" && attackRange === "ranged" && slotKind === "basic") {
+  if (anim === "attack" && rangePx >= 25 && slotKind === "basic") {
     return false;
   }
   return true;

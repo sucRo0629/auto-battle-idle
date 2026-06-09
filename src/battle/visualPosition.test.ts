@@ -35,7 +35,7 @@ function mockCombatant(
     role: 'attacker',
     classId: 'test',
     formationRow: 'front',
-    traits: { attackRange: 'melee' },
+    traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
     build: {
       learnedPassiveIds: [],
       learnedActiveIds: [],
@@ -212,7 +212,7 @@ describe('visual position separation', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       visualX: 180,
     });
     clampAllyVisualDepth([guard, archer]);

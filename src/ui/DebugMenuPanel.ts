@@ -1,6 +1,12 @@
 import '../styles/debug-menu.css';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 import type { CombatantSnapshot, GameData, SaveGameState } from '../battle/types.ts';
+import {
+  PartyMemberStatsDisplay,
+  type PartyMemberProgress,
+  type PartyMemberStatsDataSource,
+  type PartyMemberStatsRowSpec,
+} from './PartyMemberStatsDisplay.ts';
 
 export interface DebugMenuControls {
   isVerifyMode: () => boolean;
@@ -8,38 +14,28 @@ export interface DebugMenuControls {
   getLoopStageId: () => string | null;
   getAllySnapshots?: () => CombatantSnapshot[];
   getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
+  getPartyProgress?: () => PartyMemberProgress[];
   onLoopStageChange: (stageId: string | null) => void;
   onMemberLevelChange: (partyIndex: number, level: number) => void;
-}
-
-interface ThreatDisplayRefs {
-  root: HTMLElement;
-  fill: HTMLElement;
-  baseMarker: HTMLElement;
-  label: HTMLElement;
-}
-
-interface DamageDisplayRefs {
-  root: HTMLElement;
-  dealtFill: HTMLElement;
-  takenFill: HTMLElement;
-  label: HTMLElement;
-}
-
-function isAllyDown(snapshot: CombatantSnapshot): boolean {
-  return snapshot.hp <= 0;
 }
 
 export class DebugMenuPanel {
   private readonly root: HTMLElement;
   private readonly rowsHost: HTMLElement;
-  private readonly threatByPartyIndex = new Map<number, ThreatDisplayRefs>();
-  private readonly damageByPartyIndex = new Map<number, DamageDisplayRefs>();
+  private readonly statsHost: HTMLElement;
+  private readonly statsDisplay: PartyMemberStatsDisplay;
+  private readonly dataSource: PartyMemberStatsDataSource;
 
   constructor(
     private readonly gameData: GameData,
     private readonly controls: DebugMenuControls,
   ) {
+    this.dataSource = {
+      getDisplayRows: () => this.controls.getStageDamageDisplayRows?.() ?? [],
+      getAllySnapshots: () => this.controls.getAllySnapshots?.() ?? [],
+      getPartyProgress: () => this.controls.getPartyProgress?.() ?? [],
+    };
+
     this.root = document.createElement('aside');
     this.root.className = 'debug-menu';
     this.root.hidden = true;
@@ -51,6 +47,11 @@ export class DebugMenuPanel {
     this.rowsHost = document.createElement('div');
     this.rowsHost.className = 'debug-menu-rows';
 
+    this.statsHost = document.createElement('div');
+    this.statsDisplay = new PartyMemberStatsDisplay(this.statsHost, {
+      listClass: 'party-stats-rows debug-menu-stats-rows',
+    });
+
     this.root.append(title, this.rowsHost);
   }
 
@@ -60,75 +61,20 @@ export class DebugMenuPanel {
   }
 
   updateDamageDisplay(): void {
-    if (!this.controls.isVerifyMode()) return;
-    const rows = this.controls.getStageDamageDisplayRows?.() ?? [];
-    const snapshots = this.controls.getAllySnapshots?.() ?? [];
-    const downBySlot = new Map(
-      snapshots
-        .filter((snapshot) => snapshot.partySlotIndex !== undefined)
-        .map((snapshot) => [snapshot.partySlotIndex!, isAllyDown(snapshot)]),
-    );
-
-    const maxDealt = Math.max(1, ...rows.map((row) => row.damageDealt));
-    const maxTaken = Math.max(1, ...rows.map((row) => row.damageTaken));
-
-    for (const row of rows) {
-      const refs = this.damageByPartyIndex.get(row.slotIndex);
-      if (!refs) continue;
-
-      const down = downBySlot.get(row.slotIndex) ?? false;
-      refs.root.classList.toggle('is-down', down);
-
-      const dealtPct = Math.min(100, (row.damageDealt / maxDealt) * 100);
-      const takenPct = Math.min(100, (row.damageTaken / maxTaken) * 100);
-      refs.dealtFill.style.width = `${dealtPct}%`;
-      refs.takenFill.style.width = `${takenPct}%`;
-
-      const dealtLabel = row.damageDealt.toLocaleString();
-      const takenLabel = row.damageTaken.toLocaleString();
-      refs.label.textContent = down
-        ? `与 ${dealtLabel} · 被 ${takenLabel} (倒)`
-        : `与 ${dealtLabel} · 被 ${takenLabel}`;
-    }
+    this.updateStatsDisplay();
   }
 
   updateThreatDisplay(): void {
+    this.updateStatsDisplay();
+  }
+
+  updateExpDisplay(): void {
+    this.updateStatsDisplay();
+  }
+
+  private updateStatsDisplay(): void {
     if (!this.controls.isVerifyMode()) return;
-    const snapshots = this.controls.getAllySnapshots?.() ?? [];
-    const partyThreats = snapshots.filter(
-      (snapshot) => snapshot.partySlotIndex !== undefined,
-    );
-    const livingThreats = partyThreats.filter((snapshot) => !isAllyDown(snapshot));
-    const livingMaxScale = Math.max(
-      1,
-      ...livingThreats.flatMap((snapshot) => [
-        snapshot.threat ?? 0,
-        snapshot.baseThreat ?? 0,
-      ]),
-    );
-
-    for (const snapshot of partyThreats) {
-      const refs = this.threatByPartyIndex.get(snapshot.partySlotIndex!);
-      if (!refs) continue;
-      const threat = Math.round(snapshot.threat ?? 0);
-      const base = Math.round(snapshot.baseThreat ?? 0);
-      const down = isAllyDown(snapshot);
-      refs.root.classList.toggle('is-down', down);
-
-      if (down) {
-        const localMax = Math.max(threat, base, 1);
-        refs.fill.style.width = `${(threat / localMax) * 100}%`;
-        refs.baseMarker.style.left = `${(base / localMax) * 100}%`;
-        refs.label.textContent = `Hate ${threat} · base ${base} (倒)`;
-        continue;
-      }
-
-      const fillPct = Math.min(100, (threat / livingMaxScale) * 100);
-      const basePct = Math.min(100, (base / livingMaxScale) * 100);
-      refs.fill.style.width = `${fillPct}%`;
-      refs.baseMarker.style.left = `${basePct}%`;
-      refs.label.textContent = `Hate ${threat} · base ${base}`;
-    }
+    this.statsDisplay.update(this.dataSource);
   }
 
   refresh(): void {
@@ -138,8 +84,7 @@ export class DebugMenuPanel {
 
     const save = this.controls.getSave();
     this.rowsHost.replaceChildren();
-    this.threatByPartyIndex.clear();
-    this.damageByPartyIndex.clear();
+    this.statsDisplay.clear();
 
     const stageRow = document.createElement('div');
     stageRow.className = 'debug-menu-stage-row';
@@ -173,20 +118,27 @@ export class DebugMenuPanel {
 
     stageLabel.appendChild(stageSelect);
     stageRow.appendChild(stageLabel);
-    this.rowsHost.appendChild(stageRow);
+    this.rowsHost.append(stageRow, this.statsHost);
+
+    const specs: PartyMemberStatsRowSpec[] = [];
+    save.party.forEach((member, partyIndex) => {
+      if (!member) return;
+      const preset = this.gameData.classRegistry[member.classId];
+      specs.push({
+        slotIndex: partyIndex,
+        displayName: preset?.displayName ?? member.classId,
+      });
+    });
+
+    const rowElements = this.statsDisplay.rebuild(specs);
 
     save.party.forEach((member, partyIndex) => {
       if (!member) return;
 
       const preset = this.gameData.classRegistry[member.classId];
       const displayName = preset?.displayName ?? member.classId;
-
-      const row = document.createElement('div');
-      row.className = 'debug-menu-row';
-
-      const nameEl = document.createElement('span');
-      nameEl.className = 'debug-menu-member-name';
-      nameEl.textContent = displayName;
+      const row = rowElements.get(partyIndex);
+      if (!row) return;
 
       const levelLabel = document.createElement('label');
       levelLabel.className = 'debug-menu-level-label';
@@ -242,74 +194,10 @@ export class DebugMenuPanel {
       });
 
       levelLabel.appendChild(levelInput);
-
-      const threatEl = document.createElement('div');
-      threatEl.className = 'debug-menu-threat';
-
-      const bar = document.createElement('div');
-      bar.className = 'debug-menu-threat-bar';
-
-      const fill = document.createElement('div');
-      fill.className = 'debug-menu-threat-fill';
-
-      const baseMarker = document.createElement('div');
-      baseMarker.className = 'debug-menu-threat-base';
-
-      const label = document.createElement('span');
-      label.className = 'debug-menu-threat-label';
-      label.textContent = 'Hate —';
-
-      bar.append(fill, baseMarker);
-      threatEl.append(bar, label);
-      this.threatByPartyIndex.set(partyIndex, {
-        root: threatEl,
-        fill,
-        baseMarker,
-        label,
-      });
-
-      const damageEl = document.createElement('div');
-      damageEl.className = 'debug-menu-damage';
-
-      const bars = document.createElement('div');
-      bars.className = 'debug-menu-damage-bars';
-
-      const dealtBar = document.createElement('div');
-      dealtBar.className = 'debug-menu-damage-bar';
-
-      const dealtFill = document.createElement('div');
-      dealtFill.className =
-        'debug-menu-damage-fill debug-menu-damage-fill--dealt';
-
-      const takenBar = document.createElement('div');
-      takenBar.className = 'debug-menu-damage-bar';
-
-      const takenFill = document.createElement('div');
-      takenFill.className =
-        'debug-menu-damage-fill debug-menu-damage-fill--taken';
-
-      dealtBar.appendChild(dealtFill);
-      takenBar.appendChild(takenFill);
-      bars.append(dealtBar, takenBar);
-
-      const damageLabel = document.createElement('span');
-      damageLabel.className = 'debug-menu-damage-label';
-      damageLabel.textContent = '与 — · 被 —';
-
-      damageEl.append(bars, damageLabel);
-      this.damageByPartyIndex.set(partyIndex, {
-        root: damageEl,
-        dealtFill,
-        takenFill,
-        label: damageLabel,
-      });
-
-      row.append(nameEl, threatEl, damageEl, levelLabel, decButton, incButton);
-      this.rowsHost.appendChild(row);
+      row.append(levelLabel, decButton, incButton);
     });
 
-    this.updateThreatDisplay();
-    this.updateDamageDisplay();
+    this.statsDisplay.update(this.dataSource);
   }
 
   destroy(): void {

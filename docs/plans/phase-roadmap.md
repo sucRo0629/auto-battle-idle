@@ -83,7 +83,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ### 2c — クラス基盤（完了）
 
-- セーブ + JSON のみからパーティ/ビルドを構築（`parties.json` / `test-parties.json`）
+- セーブ + JSON のみからパーティ/ビルドを構築（`parties.json`）
 - `levelCurves.json` による Lv 成長（Phase 4 で **growthPresets + classes.growthTier** 方式に刷新）
 
 ---
@@ -100,11 +100,6 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 - **プレイ可能な標準は Phase 7 まで1枠**（`getUnlockedActiveSlotCount` は常に 1）。2枠目の解放条件・UI / 戦闘側チェックは **Phase 7** で追加
 - 新アクティブ習得時は自動セットしない（スキルメニューでプレイヤーが選ぶ）
 - セーブに `CharacterBuild` を含め、ロード時 `reconcilePartyBuilds` でレベルと整合
-
-### 検証用データ
-
-- `test-classes.json` / `test-skills.json` に Lv1/Lv2 習得エントリあり（Phase 3 機能の動作確認用）
-- デモ4クラス（`classes.json`）への習得データ投入は **Phase 4**
 
 ---
 
@@ -149,7 +144,7 @@ Phase 4 では `jobTier: 1` を付与しても **ゲームロジックは転職�
 | supporter | 近接 | **薬師** | `supporter_yakushi` | middle |
 
 - 術師: 基本攻撃・スキルは `damageType: "magic"` を基本とする。
-- 旧デモ4クラス（Bulwark / Berserker 等）は **`classes.json` から削除**し一次職5種に差し替え。**`test-classes.json` は触らない**（Phase 3 習得検証用の `test_*` クラスのまま。旧4クラスをコピーしない）
+- 旧デモ4クラス（Bulwark / Berserker 等）は **`classes.json` から削除**し一次職5種に差し替え
 - `parties.json` demo は GUI 対象外。5一次職データ確定後に手動更新
 - `skills[]` LvUP 習得・スキル本体は GUI / JSON で定義（数値調整の最終版は Phase 7）。
 

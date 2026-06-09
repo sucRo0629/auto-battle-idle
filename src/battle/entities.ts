@@ -9,7 +9,8 @@ import type {
   PartySlotState,
   SkillCooldown,
 } from './types.ts';
-import type { ClassTraits } from './types.ts';
+import { copyNormalizedTraits } from './data/entityTraits.ts';
+import type { NormalizedEntityTraits } from './types.ts';
 import {
   resolveClassIconKey,
   resolveClassSpriteKey,
@@ -97,8 +98,8 @@ export function createAllyFromMember(
   };
 }
 
-function copyTraits(traits: ClassTraits): ClassTraits {
-  return { attackRange: traits.attackRange };
+function copyTraits(traits: NormalizedEntityTraits): NormalizedEntityTraits {
+  return copyNormalizedTraits(traits);
 }
 
 export function createAlliesFromPartyState(
@@ -176,8 +177,10 @@ export function createEnemyFromTemplate(
   };
 }
 
-function enemyTraitsFromTemplate(template: EnemyTemplate): ClassTraits {
-  return { attackRange: template.attackRange ?? 'melee' };
+function enemyTraitsFromTemplate(
+  template: EnemyTemplate,
+): NormalizedEntityTraits {
+  return copyNormalizedTraits(template.traits);
 }
 
 export function createEnemiesForStage(

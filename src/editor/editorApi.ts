@@ -1,8 +1,10 @@
+import { normalizeEntityTraits } from '../battle/data/entityTraits.ts';
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
   ClassId,
   EnemyTemplate,
+  EntityTraits,
   GrowthTierSet,
   PassiveSkillDef,
   Role,
@@ -63,8 +65,12 @@ export interface ClassDraft {
   class: ClassPresetBeforeEnrich;
 }
 
+export type EnemyTemplateDraft = Omit<EnemyTemplate, 'traits'> & {
+  traits?: EntityTraits;
+};
+
 export interface EnemyDraft {
-  enemy: EnemyTemplate;
+  enemy: EnemyTemplateDraft;
   passiveIds: string[];
   activeIds: string[];
 }
@@ -424,7 +430,10 @@ export function ensureEnemyBasicAttackPool(
 }
 
 export function initEnemySkillEntriesFromPreset(
-  template: EnemyTemplate,
+  template: Pick<
+    EnemyTemplate,
+    'id' | 'basicAttackSkillId' | 'passiveSkillIds' | 'activeSkillIds'
+  >,
   skills: SkillsJson,
 ): SkillDraftEntry[] {
   const enemyId = template.id.trim();
@@ -529,7 +538,7 @@ export function createEmptyClassDraft(): ClassDraft {
       role: 'defender',
       displayName: '',
       formationRow: 'front',
-      traits: { attackRange: 'melee' },
+      traits: {},
       maxHp: 100,
       atk: 10,
       def: 10,
@@ -591,6 +600,7 @@ export function createEmptyEnemyDraft(): EnemyDraft {
       exp: 1,
       spriteKey: 'enemy_default',
       basicAttackSkillId: '',
+      traits: {},
       attackSpeedTier: 'normal',
     },
     passiveIds: [],
@@ -661,7 +671,10 @@ export function buildEnemyFromDraft(
   } else {
     delete enemy.activeSkillIds;
   }
-  return enemy;
+  return {
+    ...enemy,
+    traits: normalizeEntityTraits(enemy.traits),
+  };
 }
 
 export function defaultPassiveSkill(id: string): PassiveSkillDef {
@@ -670,6 +683,21 @@ export function defaultPassiveSkill(id: string): PassiveSkillDef {
     name: id,
     effect: 'targetRuleOverride',
     targetRuleOverride: 'frontEnemy',
+  };
+}
+
+export function defaultBasicAttackActiveSkill(id: string): ActiveSkillDef {
+  return {
+    id,
+    name: id,
+    interval: 2,
+    effect: [
+      {
+        targetRule: 'frontEnemy',
+        type: 'damage',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+    ],
   };
 }
 
@@ -731,7 +759,9 @@ export function buildSkillDrafts(
       ref,
       active: existing
         ? structuredClone(existing)
-        : defaultActiveSkill(ref.skillId),
+        : isBasicAttackSkillIdPattern(ref.skillId)
+          ? defaultBasicAttackActiveSkill(ref.skillId)
+          : defaultActiveSkill(ref.skillId),
     };
   });
 }

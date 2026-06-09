@@ -1,4 +1,5 @@
-import type { AttackRange, ClassPreset, Role } from './types.ts';
+import { isRangedAttack } from './data/entityTraits.ts';
+import type { ClassPreset, Role } from './types.ts';
 
 export const PLACEHOLDER_SPRITE_KEYS = {
   defender: 'defender_placeholder',
@@ -16,34 +17,34 @@ const PLACEHOLDER_SPRITE_KEY_SET = new Set<string>(
 
 export function resolvePlaceholderSpriteKey(
   role: Role,
-  attackRange: AttackRange,
+  rangePx: number,
 ): PlaceholderSpriteKey {
   if (role === 'defender') return PLACEHOLDER_SPRITE_KEYS.defender;
   if (role === 'supporter') return PLACEHOLDER_SPRITE_KEYS.supporter;
-  return attackRange === 'ranged'
+  return isRangedAttack(rangePx)
     ? PLACEHOLDER_SPRITE_KEYS.attackerRanged
     : PLACEHOLDER_SPRITE_KEYS.attackerMelee;
 }
 
 export function resolvePlaceholderIconKey(
   role: Role,
-  attackRange: AttackRange,
+  rangePx: number,
 ): PlaceholderSpriteKey {
-  return resolvePlaceholderSpriteKey(role, attackRange);
+  return resolvePlaceholderSpriteKey(role, rangePx);
 }
 
 export function resolveClassSpriteKey(
   preset: Pick<ClassPreset, 'role' | 'traits' | 'spriteKey'>,
 ): string {
   if (preset.spriteKey) return preset.spriteKey;
-  return resolvePlaceholderSpriteKey(preset.role, preset.traits.attackRange);
+  return resolvePlaceholderSpriteKey(preset.role, preset.traits.rangePx);
 }
 
 export function resolveClassIconKey(
   preset: Pick<ClassPreset, 'role' | 'traits' | 'iconKey'>,
 ): string {
   if (preset.iconKey) return preset.iconKey;
-  return resolvePlaceholderIconKey(preset.role, preset.traits.attackRange);
+  return resolvePlaceholderIconKey(preset.role, preset.traits.rangePx);
 }
 
 export function isPlaceholderSpriteKey(spriteKey: string): boolean {

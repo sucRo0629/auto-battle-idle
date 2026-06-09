@@ -5,6 +5,7 @@ import {
   applyHealToTarget,
   getPassiveDefs,
   resolveDamage,
+  resolveHealAmount,
   resolveResourceAmount,
 } from '../combatMath.ts';
 import {
@@ -14,7 +15,6 @@ import {
 } from '../ccEffects.ts';
 import {
   applyExcessHealToBarrierFromPassive,
-  resolveIncomingHealAmount,
   resolveDebuffDurationWithPassives,
   rollsEvasion,
   stripPassivesAurasFromSource,
@@ -43,6 +43,7 @@ import {
   buildPendingHitsFromResolution,
   findCombatantById,
 } from './pendingSkillHits.ts';
+import { resolveSkillDamageType } from './damageTypeUtils.ts';
 import {
   buildSkillSequence,
   type PendingSkillStep,
@@ -125,6 +126,7 @@ export class SkillExecutor {
         actor,
         allies,
         enemies,
+        this.gameData,
       );
       if (!resolutionHasTargets(resolution)) continue;
 
@@ -222,6 +224,7 @@ export class SkillExecutor {
             actor,
             allies,
             enemies,
+            this.gameData,
           );
     if (!target?.isAlive) return;
 
@@ -365,7 +368,7 @@ export class SkillExecutor {
         },
       );
       let finalDamage = amount;
-      if (effectDef.damageType === 'physical') {
+      if (resolveSkillDamageType(actor, effectDef) === 'physical') {
         const blockResult = applyBlockToPhysicalDamage(
           target,
           amount,
@@ -410,17 +413,15 @@ export class SkillExecutor {
     }
 
     if (effectDef.type === 'heal') {
-      const baseAmount = resolveResourceAmount(
+      const amount = resolveHealAmount(
         actor,
         target,
         effectDef.amount,
         this.gameData.skillRegistry.passives,
-        powerMultiplierOverride,
-      );
-      const amount = resolveIncomingHealAmount(
-        target,
-        baseAmount,
-        this.gameData.skillRegistry.passives,
+        {
+          atkScaleOverride: powerMultiplierOverride,
+          effectDamageIncrease: effectDef.damageIncrease,
+        },
       );
       if (amount <= 0) return false;
       applyExcessHealToBarrierFromPassive(
@@ -648,7 +649,7 @@ export class SkillExecutor {
         skillId: skill.id,
         ...(overlay === 'dot'
           ? {
-              damageType: effectDef.damageType ?? 'physical',
+              damageType: resolveSkillDamageType(actor, effectDef),
               damageIncrease: effectDef.damageIncrease,
               defenseIgnore: effectDef.defenseIgnore,
             }

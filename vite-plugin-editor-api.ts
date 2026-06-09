@@ -15,13 +15,10 @@ const DATA_DIR = path.resolve(process.cwd(), 'data');
 
 const READ_FILES = {
   classes: path.join(DATA_DIR, 'classes.json'),
-  testClasses: path.join(DATA_DIR, 'test-classes.json'),
   skills: path.join(DATA_DIR, 'skills.json'),
-  testSkills: path.join(DATA_DIR, 'test-skills.json'),
   enemies: path.join(DATA_DIR, 'enemies.json'),
   stages: path.join(DATA_DIR, 'stages.json'),
   parties: path.join(DATA_DIR, 'parties.json'),
-  testParties: path.join(DATA_DIR, 'test-parties.json'),
 } as const;
 
 function readJsonFile(filePath: string): unknown {
@@ -33,16 +30,6 @@ function writeJsonFile(filePath: string, data: unknown): void {
   fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
-function mergeSkills(
-  base: { passives: unknown[]; actives: unknown[] },
-  extra: { passives?: unknown[]; actives?: unknown[] },
-): { passives: unknown[]; actives: unknown[] } {
-  return {
-    passives: [...base.passives, ...(extra.passives ?? [])],
-    actives: [...base.actives, ...(extra.actives ?? [])],
-  };
-}
-
 function loadValidationPayload(): {
   classes: unknown;
   skills: unknown;
@@ -50,26 +37,12 @@ function loadValidationPayload(): {
   stages: unknown;
   parties: unknown;
 } {
-  const classes = [
-    ...(readJsonFile(READ_FILES.classes) as unknown[]),
-    ...(readJsonFile(READ_FILES.testClasses) as unknown[]),
-  ];
-  const skills = mergeSkills(
-    readJsonFile(READ_FILES.skills) as { passives: unknown[]; actives: unknown[] },
-    readJsonFile(READ_FILES.testSkills) as {
-      passives?: unknown[];
-      actives?: unknown[];
-    },
-  );
   return {
-    classes,
-    skills,
+    classes: readJsonFile(READ_FILES.classes),
+    skills: readJsonFile(READ_FILES.skills),
     enemies: readJsonFile(READ_FILES.enemies),
     stages: readJsonFile(READ_FILES.stages),
-    parties: {
-      ...(readJsonFile(READ_FILES.parties) as Record<string, unknown>),
-      ...(readJsonFile(READ_FILES.testParties) as Record<string, unknown>),
-    },
+    parties: readJsonFile(READ_FILES.parties),
   };
 }
 
@@ -155,14 +128,8 @@ function applyClassBundle(body: ClassBundleBody): void {
   const validationBase = loadValidationPayload();
   validateAll({
     ...validationBase,
-    classes: [
-      ...nextClasses,
-      ...(readJsonFile(READ_FILES.testClasses) as unknown[]),
-    ],
-    skills: mergeSkills(nextSkills, readJsonFile(READ_FILES.testSkills) as {
-      passives?: unknown[];
-      actives?: unknown[];
-    }),
+    classes: nextClasses,
+    skills: nextSkills,
   });
 
   writeJsonFile(READ_FILES.classes, nextClasses);
@@ -205,10 +172,7 @@ function applyClassStatsBulk(body: ClassStatsBulkBody): void {
   const validationBase = loadValidationPayload();
   validateAll({
     ...validationBase,
-    classes: [
-      ...nextClasses,
-      ...(readJsonFile(READ_FILES.testClasses) as unknown[]),
-    ],
+    classes: nextClasses,
   });
 
   writeJsonFile(READ_FILES.classes, nextClasses);
@@ -228,10 +192,7 @@ function applyEnemyBundle(body: EnemyBundleBody): void {
   validateAll({
     ...validationBase,
     enemies: nextEnemies,
-    skills: mergeSkills(nextSkills, readJsonFile(READ_FILES.testSkills) as {
-      passives?: unknown[];
-      actives?: unknown[];
-    }),
+    skills: nextSkills,
   });
 
   writeJsonFile(READ_FILES.enemies, nextEnemies);

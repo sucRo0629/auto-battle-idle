@@ -4,10 +4,15 @@ import {
   applyDamageToTarget,
   applyHealToTarget,
   resolveDamage,
+  resolveHealAmount,
   resolveHotAmountFromStatus,
   resolveResourceAmount,
 } from './combatMath.ts';
-import type { CombatantState, ResourceAmountSpec } from './types.ts';
+import type {
+  CombatantState,
+  PassiveSkillDef,
+  ResourceAmountSpec,
+} from './types.ts';
 
 const passives = {};
 
@@ -27,7 +32,7 @@ function mockCombatant(
     role: 'supporter',
     classId: 'test',
     formationRow: 'back',
-    traits: { attackRange: 'ranged' },
+    traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
     build: {
       learnedPassiveIds: [],
       learnedActiveIds: [],
@@ -91,6 +96,100 @@ describe('resolveResourceAmount', () => {
         0.5,
       ),
     ).toBe(10);
+  });
+});
+
+describe('resolveHealAmount', () => {
+  const actor = mockCombatant({ atk: 100 });
+  const target = mockCombatant({ hp: 50, maxHp: 100 });
+
+  it('applies passive and effect damageIncrease before healReceivedIncrease', () => {
+    const healer = mockCombatant({
+      atk: 100,
+      build: {
+        learnedPassiveIds: ['lowHpBonus'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const boostedTarget = mockCombatant({
+      hp: 50,
+      maxHp: 100,
+      build: {
+        learnedPassiveIds: ['healBoost'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const passives: Record<string, PassiveSkillDef> = {
+      lowHpBonus: {
+        id: 'lowHpBonus',
+        name: 'LowHpBonus',
+        effect: 'damageIncrease',
+        damageIncrease: {
+          scale: 2,
+          conditions: [{ kind: 'selfHp', maxHpRatio: 1, mode: 'threshold' }],
+        },
+      },
+      healBoost: {
+        id: 'healBoost',
+        name: 'HealBoost',
+        effect: 'healReceivedIncrease',
+        percent: 0.25,
+      },
+    };
+    const amount = resolveHealAmount(
+      healer,
+      boostedTarget,
+      { kind: 'flat', flatAmount: 10 },
+      passives,
+      {
+        effectDamageIncrease: {
+          scale: 1.5,
+          conditions: [{ kind: 'targetHp', maxHpRatio: 1 }],
+        },
+      },
+    );
+    // floor(10 * 2 * 1.5) = 30 → floor(30 * 1.25) = 37
+    expect(amount).toBe(37);
+  });
+
+  it('does not apply damageIncrease to hot tick amounts', () => {
+    const healer = mockCombatant({
+      atk: 100,
+      build: {
+        learnedPassiveIds: ['lowHpBonus'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const passives: Record<string, PassiveSkillDef> = {
+      lowHpBonus: {
+        id: 'lowHpBonus',
+        name: 'LowHpBonus',
+        effect: 'damageIncrease',
+        damageIncrease: {
+          scale: 2,
+          conditions: [{ kind: 'selfHp', maxHpRatio: 1, mode: 'threshold' }],
+        },
+      },
+    };
+    const hotAmount = resolveHotAmountFromStatus(
+      healer,
+      target,
+      {
+        id: 'hot',
+        kind: 'buff',
+        overlay: 'hot',
+        amount: { kind: 'flat', flatAmount: 10 },
+        sourceId: healer.id,
+        multiplier: 1,
+        durationSec: 5,
+        remainingSec: 5,
+      },
+      passives,
+    );
+    expect(hotAmount).toBe(10);
   });
 });
 

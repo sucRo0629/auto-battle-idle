@@ -20,7 +20,7 @@ function mockCombatant(
     role: 'attacker',
     classId: 'test',
     formationRow: 'back',
-    traits: { attackRange: 'ranged' },
+    traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
     build: {
       learnedPassiveIds: ['archer_passive'],
       learnedActiveIds: [],
@@ -76,7 +76,7 @@ describe('resolveAllyApproachBattleX', () => {
       id: 'melee',
       isEnemy: true,
       battleX: -10,
-      traits: { attackRange: 'melee' },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],
@@ -88,7 +88,7 @@ describe('resolveAllyApproachBattleX', () => {
       id: 'ranged',
       isEnemy: true,
       battleX: -30,
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],
@@ -112,14 +112,14 @@ describe('resolveAllyApproachBattleX', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
-      traits: { attackRange: 'melee' },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });
     const frontMelee = mockCombatant({
       id: 'melee',
       isEnemy: true,
       battleX: -10,
-      traits: { attackRange: 'melee' },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],
@@ -131,7 +131,7 @@ describe('resolveAllyApproachBattleX', () => {
       id: 'ranged',
       isEnemy: true,
       battleX: -30,
-      traits: { attackRange: 'ranged' },
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],
@@ -156,7 +156,7 @@ describe('resolveAllyApproachBattleX', () => {
       id: 'melee',
       isEnemy: true,
       battleX: -10,
-      traits: { attackRange: 'melee' },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],
@@ -187,7 +187,7 @@ describe('resolveEnemyApproachBattleX', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
-      traits: { attackRange: 'melee' },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
       battleX: 240,
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });

@@ -136,275 +136,69 @@
       "effect": "healReceivedIncrease",
       "targetRuleOverride": "frontEnemy",
       "percent": 0.2
+    },
+    {
+      "id": "sp_cleric_passive_1",
+      "name": "救命の技",
+      "effect": "damageIncrease",
+      "targetRuleOverride": "frontEnemy",
+      "barrierScale": 1,
+      "damageIncrease": {
+        "scale": 1.5,
+        "conditions": [
+          {
+            "kind": "targetHp",
+            "maxHpRatio": 0.5
+          }
+        ]
+      }
     }
   ],
   "actives": [
     {
-      "id": "df_guardian_basic_attack",
-      "name": "打撃",
-      "interval": 2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "df_paladin_basic_attack",
-      "name": "打撃",
-      "interval": 2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "df_duelist_basic_attack",
-      "name": "打撃",
-      "interval": 2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "at_warrior_basic_attack",
-      "name": "打撃",
-      "interval": 2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "at_assassin_basic_attack",
-      "name": "打撃",
-      "interval": 2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "at_lancer_basic_attack",
-      "name": "打撃",
-      "interval": 2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "at_ranger_basic_attack",
-      "name": "射撃",
-      "interval": 2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          },
-          "range": 50,
-          "vfx": {
-            "preset": "arrow",
-            "arc": true
-          }
-        }
-      ]
-    },
-    {
-      "id": "at_sniper_basic_attack",
-      "name": "射撃",
-      "interval": 2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          },
-          "range": 50,
-          "vfx": {
-            "preset": "arrow",
-            "arc": true
-          }
-        }
-      ]
-    },
-    {
-      "id": "at_hunter_basic_attack",
-      "name": "射撃",
-      "interval": 2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          },
-          "range": 50,
-          "vfx": {
-            "preset": "arrow",
-            "arc": true
-          }
-        }
-      ]
-    },
-    {
       "id": "at_sorcerer_basic_attack",
       "name": "魔弾",
-      "interval": 2,
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
-          "damageType": "magic",
           "amount": {
             "kind": "atkBased",
             "atkScale": 0.85
           },
-          "range": 50,
-          "vfx": {
-            "preset": "orb"
-          }
+          "targetRule": "frontEnemy"
         }
-      ]
+      ],
+      "interval": 2
     },
     {
       "id": "at_enchanter_basic_attack",
       "name": "魔弾",
-      "interval": 2,
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
-          "damageType": "magic",
           "amount": {
             "kind": "atkBased",
             "atkScale": 0.85
           },
-          "range": 50,
-          "vfx": {
-            "preset": "orb"
-          }
+          "targetRule": "frontEnemy"
         }
-      ]
+      ],
+      "interval": 2
     },
     {
       "id": "at_geomancer_basic_attack",
       "name": "魔弾",
-      "interval": 2,
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
-          "damageType": "magic",
           "amount": {
             "kind": "atkBased",
             "atkScale": 0.85
           },
-          "range": 50,
-          "vfx": {
-            "preset": "orb"
-          }
+          "targetRule": "frontEnemy"
         }
-      ]
-    },
-    {
-      "id": "sp_cleric_basic_attack",
-      "name": "打撃",
-      "interval": 2.2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "sp_abjurer_basic_attack",
-      "name": "打撃",
-      "interval": 2.2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "sp_alchemist_basic_attack",
-      "name": "打撃",
-      "interval": 2.2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
+      ],
+      "interval": 2
     },
     {
       "id": "df_guardian_active_1",
@@ -1019,7 +813,7 @@
     },
     {
       "id": "sp_cleric_active_1",
-      "name": "癒しの手",
+      "name": "癒しの光",
       "trigger": {
         "kind": "time",
         "value": 8
@@ -1030,13 +824,25 @@
           "type": "heal",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.2
+            "atkScale": 1
           },
           "vfx": {
-            "preset": "healRise"
+            "preset": "orb"
+          }
+        },
+        {
+          "targetRule": "mostDamagedAlly",
+          "type": "hot",
+          "durationSec": 3,
+          "amount": {
+            "kind": "percentMaxHp",
+            "percentOfMaxHp": 0.01
           }
         }
-      ]
+      ],
+      "vfx": {
+        "preset": "healRise"
+      }
     },
     {
       "id": "sp_cleric_active_2",
@@ -1126,78 +932,6 @@
           "aoeRadiusPx": 60
         }
       ]
-    },
-    {
-      "id": "test_enemy_basic_attack",
-      "name": "test_enemy_basic_attack",
-      "interval": 2.5,
-      "effect": [
-        {
-          "targetRule": "closestAlly",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "test_enemy_elite_basic_attack",
-      "name": "test_enemy_elite_basic_attack",
-      "interval": 2.5,
-      "effect": [
-        {
-          "targetRule": "closestAlly",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "stage1_1_basic_attack",
-      "name": "stage1_1_basic_attack",
-      "interval": 2,
-      "effect": [
-        {
-          "targetRule": "frontEnemy",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
-        }
-      ]
-    },
-    {
-      "id": "test_ranged_basic_attack",
-      "name": "test_ranged_basic_attack",
-      "trigger": {
-        "kind": "time",
-        "value": 5
-      },
-      "effect": [
-        {
-          "targetRule": "closestAlly",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          },
-          "range": 50
-        }
-      ],
-      "vfx": {
-        "preset": "arrow",
-        "arc": true
-      }
     }
   ]
 }

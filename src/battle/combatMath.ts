@@ -1,5 +1,6 @@
 import type {
   CombatantState,
+  DamageIncreaseSpec,
   DamageSkillEffect,
   DamageType,
   DefenseIgnoreSpec,
@@ -15,6 +16,7 @@ import {
 import {
   getPassiveOutgoingDamageMultiplier,
   resolveEffectDamageIncreaseMultiplier,
+  resolveIncomingHealAmount,
   type PassiveDamageContext,
 } from './passiveEffects.ts';
 import {
@@ -82,6 +84,38 @@ export function resolveResourceAmount(
   atkScaleOverride?: number,
 ): number {
   return resolvePowerAmount(actor, target, spec, passives, atkScaleOverride);
+}
+
+export interface HealResolveOptions {
+  atkScaleOverride?: number;
+  effectDamageIncrease?: DamageIncreaseSpec;
+}
+
+/** 直接 heal 用。damageIncrease（パッシブ + effect）→ healReceivedIncrease の順。HoT 非対象。 */
+export function resolveHealAmount(
+  actor: CombatantState,
+  target: CombatantState,
+  amount: ResourceAmountSpec,
+  passives: Record<string, PassiveSkillDef>,
+  options: HealResolveOptions = {},
+): number {
+  const increaseMul = resolveEffectDamageIncreaseMultiplier(
+    actor,
+    target,
+    options.effectDamageIncrease,
+    undefined,
+    passives,
+  );
+  const baseAmount = Math.floor(
+    resolvePowerAmount(
+      actor,
+      target,
+      amount,
+      passives,
+      options.atkScaleOverride,
+    ) * increaseMul,
+  );
+  return resolveIncomingHealAmount(target, baseAmount, passives);
 }
 
 export function resolveHotAmountFromStatus(

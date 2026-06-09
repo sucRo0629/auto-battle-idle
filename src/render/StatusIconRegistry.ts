@@ -6,6 +6,7 @@ import damageIncreaseIconUrl from "../assets/status-icons/damageIncrease.png";
 import hotIconUrl from "../assets/status-icons/hot.png";
 import dotIconUrl from "../assets/status-icons/dot.png";
 import blockIconUrl from "../assets/status-icons/block.png";
+import stunIconUrl from "../assets/status-icons/stun.png";
 import arrowUpUrl from "../assets/status-icons/arrow_up.png";
 import arrowDownUrl from "../assets/status-icons/arrow_down.png";
 import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
@@ -22,6 +23,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   hot: hotIconUrl,
   dot: dotIconUrl,
   block: blockIconUrl,
+  stun: stunIconUrl,
 };
 
 const ARROW_URLS: Record<StatusArrowKind, string> = {

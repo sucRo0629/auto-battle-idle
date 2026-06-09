@@ -1,20 +1,24 @@
-import '../styles/battle-view.css';
-import type { BattleEngine } from '../battle/BattleEngine.ts';
-import type { BattleEvent } from '../battle/events.ts';
-import type { GameData, SaveGameState } from '../battle/types.ts';
+import "../styles/battle-view.css";
+import type { BattleEngine } from "../battle/BattleEngine.ts";
+import type { BattleEvent } from "../battle/events.ts";
+import type { GameData, SaveGameState } from "../battle/types.ts";
 import {
   expRequiredForLevel,
   type LevelCurvesConfig,
-} from '../progression/levelGrowth.ts';
-import { getNextStageId, getStageById } from '../progression/stageProgression.ts';
+} from "../progression/levelGrowth.ts";
+import {
+  getNextStageId,
+  getStageById,
+} from "../progression/stageProgression.ts";
 import {
   resolveEffectPresentation,
   shouldPlayActorAnim,
-} from '../render/skillVfx/resolveEffectPresentation.ts';
-import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
-import { BattleCanvas, type PartyHudMeta } from '../render/BattleCanvas.ts';
-import { BattleStatsOverlay } from './BattleStatsOverlay.ts';
-import { DebugMenuPanel } from './DebugMenuPanel.ts';
+} from "../render/skillVfx/resolveEffectPresentation.ts";
+import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
+import { BattleCanvas, type PartyHudMeta } from "../render/BattleCanvas.ts";
+import { BattleStatsOverlay } from "./BattleStatsOverlay.ts";
+import { DebugMenuPanel } from "./DebugMenuPanel.ts";
+import type { PartyMemberProgress } from "./PartyMemberStatsDisplay.ts";
 
 export interface VerifyModeControls {
   isVerifyMode: () => boolean;
@@ -47,67 +51,73 @@ export class BattleView {
     private readonly gameData: GameData,
     private readonly levelCurves: LevelCurvesConfig,
     private readonly getSave: () => SaveGameState,
-    verifyModeControls?: VerifyModeControls,
+    verifyModeControls?: VerifyModeControls
   ) {
     this.verifyModeControls = verifyModeControls;
-    this.root = document.createElement('div');
-    this.root.className = 'battle-view';
+    this.root = document.createElement("div");
+    this.root.className = "battle-view";
 
-    const header = document.createElement('header');
-    header.className = 'battle-header';
+    const header = document.createElement("header");
+    header.className = "battle-header";
 
-    const title = document.createElement('span');
-    title.className = 'battle-header-title';
-    title.textContent = 'Auto Battle Idle';
+    const title = document.createElement("span");
+    title.className = "battle-header-title";
+    title.textContent = "Auto Battle Idle";
     header.appendChild(title);
 
-    const verifyLabel = document.createElement('label');
-    verifyLabel.className = 'verify-mode-toggle';
+    const verifyLabel = document.createElement("label");
+    verifyLabel.className = "verify-mode-toggle";
 
-    this.verifyModeInput = document.createElement('input');
-    this.verifyModeInput.type = 'checkbox';
+    this.verifyModeInput = document.createElement("input");
+    this.verifyModeInput.type = "checkbox";
     this.verifyModeInput.checked = verifyModeControls?.isVerifyMode() ?? true;
-    this.verifyModeInput.addEventListener('change', () => {
+    this.verifyModeInput.addEventListener("change", () => {
       verifyModeControls?.onVerifyModeChange(this.verifyModeInput.checked);
     });
 
-    const verifyText = document.createElement('span');
-    verifyText.textContent = '確認モード';
+    const verifyText = document.createElement("span");
+    verifyText.textContent = "確認モード";
 
     verifyLabel.append(this.verifyModeInput, verifyText);
     header.appendChild(verifyLabel);
     this.root.appendChild(header);
 
-    this.canvasHost = document.createElement('div');
-    this.canvasHost.className = 'battle-canvas-host';
+    this.canvasHost = document.createElement("div");
+    this.canvasHost.className = "battle-canvas-host";
 
-    this.stageLabelEl = document.createElement('div');
-    this.stageLabelEl.className = 'battle-stage-label';
-    this.canvasHost.appendChild(this.stageLabelEl);
+    const canvasFrame = document.createElement("div");
+    canvasFrame.className = "battle-canvas-frame";
 
-    const menuButtons = document.createElement('div');
-    menuButtons.className = 'battle-menu-buttons';
+    this.stageLabelEl = document.createElement("div");
+    this.stageLabelEl.className = "battle-stage-label";
+    canvasFrame.appendChild(this.stageLabelEl);
+
+    const menuButtons = document.createElement("div");
+    menuButtons.className = "battle-menu-buttons";
 
     this.enhancementTreeButton = this.createBattleMenuButton(
-      'flowchart',
-      '強化ツリー（準備中）',
+      "flowchart",
+      "強化ツリー（準備中）"
     );
     this.enhancementTreeButton.disabled = true;
 
-    this.menuButton = this.createBattleMenuButton('group', 'パーティ');
-    this.menuButton.addEventListener('click', () => {
+    this.menuButton = this.createBattleMenuButton("group", "パーティ");
+    this.menuButton.addEventListener("click", () => {
       verifyModeControls?.onOpenMetaMenu();
     });
 
-    menuButtons.append(this.enhancementTreeButton, this.menuButton);
-    this.canvasHost.appendChild(menuButtons);
-
-    this.statsButton = this.createBattleMenuButton('analytics', '統計情報');
-    this.statsButton.classList.add('battle-stats-button');
-    this.statsButton.addEventListener('click', () => {
+    this.statsButton = this.createBattleMenuButton("analytics", "統計情報");
+    this.statsButton.addEventListener("click", () => {
       this.openStatsOverlay(verifyModeControls);
     });
-    this.canvasHost.appendChild(this.statsButton);
+
+    menuButtons.append(
+      this.enhancementTreeButton,
+      this.menuButton,
+      this.statsButton
+    );
+    canvasFrame.appendChild(menuButtons);
+    this.canvasHost.appendChild(canvasFrame);
 
     this.root.appendChild(this.canvasHost);
 
@@ -115,6 +125,7 @@ export class BattleView {
       isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
       getSave: this.getSave,
       getAllySnapshots: () => this.engine.getSnapshot().allies,
+      getPartyProgress: () => this.getPartyProgress(),
       getStageDamageDisplayRows: () =>
         verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
       getLoopStageId: () => verifyModeControls?.getLoopStageId?.() ?? null,
@@ -132,36 +143,33 @@ export class BattleView {
     container.appendChild(this.root);
 
     this.canvas = new BattleCanvas();
-    this.canvas.mount(this.canvasHost);
+    this.canvas.mount(canvasFrame);
 
     this.engine.onEvent((event) => this.onBattleEvent(event));
   }
 
   private onBattleEvent(event: BattleEvent): void {
-    if (event.type === 'skill') {
+    if (event.type === "skill") {
       const slotLabel =
-        event.slotKind === 'basic' ? '通常攻撃' : event.skillName;
-      if (event.effect === 'damage' || event.effect === 'dot') {
+        event.slotKind === "basic" ? "通常攻撃" : event.skillName;
+      if (event.effect === "damage" || event.effect === "dot") {
         if (event.amount !== undefined) {
           this.pushLog(`${slotLabel} → ${event.amount} dmg`);
           this.canvas.showDamagePopup(event.targetId, event.amount);
         }
-      } else if (event.effect === 'heal' || event.effect === 'hot') {
+      } else if (event.effect === "heal" || event.effect === "hot") {
         if (event.amount !== undefined) {
           this.pushLog(`${slotLabel} → +${event.amount} HP`);
           this.canvas.showHealPopup(event.targetId, event.amount);
         }
-      } else if (event.effect === 'barrier') {
+      } else if (event.effect === "barrier") {
         if (event.amount !== undefined) {
           this.pushLog(`${slotLabel} → +${event.amount} barrier`);
         }
-      } else if (
-        event.effect === 'buff' ||
-        event.effect === 'debuff'
-      ) {
+      } else if (event.effect === "buff" || event.effect === "debuff") {
         this.pushLog(`${slotLabel} → ${event.statusLabel ?? event.effect}`);
         this.canvas.showBuffGlow(event.targetId);
-      } else if (event.effect === 'move') {
+      } else if (event.effect === "move") {
         this.pushLog(`${slotLabel} → 移動`);
       } else {
         this.pushLog(`${slotLabel} (${event.effect})`);
@@ -169,7 +177,7 @@ export class BattleView {
 
       const snapshot = this.engine.getSnapshot();
       const actor = [...snapshot.allies, ...snapshot.enemies].find(
-        (c) => c.id === event.actorId,
+        (c) => c.id === event.actorId
       );
       const skillDef = this.gameData.skillRegistry.actives[event.skillId];
       const effectDef = skillDef?.effect[event.effectIndex ?? 0];
@@ -180,17 +188,19 @@ export class BattleView {
           skillDef,
           {
             role: actor?.role,
-            attackRange: actor?.attackRange ?? 'melee',
+            rangePx: actor?.rangePx ?? 0,
+            damageType: actor?.damageType ?? "physical",
+            basicAttackVfx: actor?.basicAttackVfx,
             slotKind: event.slotKind,
             effectKind: event.effect,
-          },
+          }
         );
         if (
           presentation.anim &&
           shouldPlayActorAnim(
             presentation.anim,
-            actor?.attackRange ?? 'melee',
-            event.slotKind,
+            actor?.rangePx ?? 0,
+            event.slotKind
           )
         ) {
           this.canvas.playAnim(event.actorId, presentation.anim);
@@ -199,41 +209,41 @@ export class BattleView {
           this.canvas.playAttackEffect(
             event.actorId,
             event.targetId,
-            presentation.vfx,
+            presentation.vfx
           );
         }
       }
-    } else if (event.type === 'evade') {
+    } else if (event.type === "evade") {
       this.canvas.showEvadePopup(event.targetId);
-    } else if (event.type === 'block') {
+    } else if (event.type === "block") {
       this.canvas.showBlockPopup(event.targetId);
-    } else if (event.type === 'hurt') {
-      this.canvas.playAnim(event.targetId, 'hurt');
-    } else if (event.type === 'death') {
-      this.canvas.playAnim(event.targetId, 'death');
-    } else if (event.type === 'battleEnd') {
-      this.pushLog(event.result === 'victory' ? 'Victory!' : 'Defeat...');
+    } else if (event.type === "hurt") {
+      this.canvas.playAnim(event.targetId, "hurt");
+    } else if (event.type === "death") {
+      this.canvas.playAnim(event.targetId, "death");
+    } else if (event.type === "battleEnd") {
+      this.pushLog(event.result === "victory" ? "Victory!" : "Defeat...");
       const currentStageId = this.getSave().stageProgress.currentStageId;
-      if (event.result === 'victory') {
+      if (event.result === "victory") {
         const pinnedLoopStageId =
           this.verifyModeControls?.getLoopStageId?.() ?? null;
         if (pinnedLoopStageId) {
-          this.pushLog('Looping pinned stage...');
+          this.pushLog("Looping pinned stage...");
         } else {
           const nextStageId = getNextStageId(
             this.gameData.stages,
-            currentStageId,
+            currentStageId
           );
           this.pushLog(
             nextStageId === currentStageId
-              ? 'Looping current stage...'
-              : 'Advancing to next stage...',
+              ? "Looping current stage..."
+              : "Advancing to next stage..."
           );
         }
       } else if (this.verifyModeControls?.getLoopStageId?.()) {
-        this.pushLog('Staying on pinned stage...');
+        this.pushLog("Staying on pinned stage...");
       } else {
-        this.pushLog('Returning to previous stage...');
+        this.pushLog("Returning to previous stage...");
       }
     }
   }
@@ -242,12 +252,30 @@ export class BattleView {
     console.log(`[battle] ${message}`);
   }
 
+  private getPartyProgress(): PartyMemberProgress[] {
+    const save = this.getSave();
+    const rows: PartyMemberProgress[] = [];
+    save.party.forEach((member, slotIndex) => {
+      if (!member) return;
+      rows.push({
+        slotIndex,
+        level: member.progress.level,
+        exp: member.progress.exp,
+        expRequired: expRequiredForLevel(
+          member.progress.level,
+          this.levelCurves,
+        ),
+      });
+    });
+    return rows;
+  }
+
   tick(deltaMs: number): void {
     const snapshot = this.engine.getSnapshot();
     const save = this.getSave();
     const stage = getStageById(
       this.gameData.stages,
-      save.stageProgress.currentStageId,
+      save.stageProgress.currentStageId
     );
     const stageName = stage?.displayName ?? save.stageProgress.currentStageId;
     const waveNum = snapshot.waveIndex + 1;
@@ -260,11 +288,6 @@ export class BattleView {
         return {
           displayName: preset?.displayName ?? member.classId,
           level: member.progress.level,
-          exp: member.progress.exp,
-          expRequired: expRequiredForLevel(
-            member.progress.level,
-            this.levelCurves,
-          ),
         };
       });
 
@@ -272,7 +295,9 @@ export class BattleView {
     this.canvas.syncFromSnapshot(snapshot, partyMeta);
     this.canvas.tick(deltaMs);
     this.debugMenu.updateThreatDisplay();
+    this.debugMenu.updateExpDisplay();
     this.debugMenu.updateDamageDisplay();
+    this.statsOverlay?.update();
   }
 
   setMenuButtonDisabled(disabled: boolean): void {
@@ -295,6 +320,8 @@ export class BattleView {
     controls.onStatsOverlayOpenChange?.(true);
     this.statsOverlay = new BattleStatsOverlay(document.body, this.gameData, {
       getDisplayRows: controls.getStageDamageDisplayRows,
+      getAllySnapshots: () => this.engine.getSnapshot().allies,
+      getPartyProgress: () => this.getPartyProgress(),
       getCurrentStageId: controls.getCurrentStageId,
       onClose: () => this.closeStatsOverlay(controls),
     });
@@ -309,15 +336,15 @@ export class BattleView {
 
   private createBattleMenuButton(
     iconName: string,
-    ariaLabel: string,
+    ariaLabel: string
   ): HTMLButtonElement {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'battle-menu-button';
-    button.setAttribute('aria-label', ariaLabel);
-    const icon = document.createElement('span');
-    icon.className = 'material-symbols-outlined';
-    icon.setAttribute('aria-hidden', 'true');
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "battle-menu-button";
+    button.setAttribute("aria-label", ariaLabel);
+    const icon = document.createElement("span");
+    icon.className = "material-symbols-outlined";
+    icon.setAttribute("aria-hidden", "true");
     icon.textContent = iconName;
     button.appendChild(icon);
     return button;
