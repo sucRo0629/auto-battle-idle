@@ -437,9 +437,6 @@
     "jobTier": 1,
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "sp_cleric_basic_attack",
-    "passiveIds": [
-      "passive_cleric_hot"
-    ],
     "skills": [
       {
         "level": 0,

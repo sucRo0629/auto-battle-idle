@@ -13,12 +13,13 @@ import {
   isUnitStunned,
 } from '../ccEffects.ts';
 import {
-  applyHealBarrierFromPassive,
+  applyExcessHealToBarrierFromPassive,
   resolveDebuffDurationWithPassives,
   rollsEvasion,
   stripPassivesAurasFromSource,
   type PassiveDamageContext,
 } from '../passiveEffects.ts';
+import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
 import { resolveMoveVisualX } from '../../render/formationLayout.ts';
 import {
@@ -353,8 +354,12 @@ export class SkillExecutor {
         target,
         effectDef,
         this.gameData.skillRegistry.passives,
-        powerMultiplierOverride,
-        damageContext,
+        {
+          atkScaleOverride: powerMultiplierOverride,
+          passiveContext: damageContext,
+          effectDamageIncrease: effectDef.damageIncrease,
+          effectDefenseIgnore: effectDef.defenseIgnore,
+        },
       );
       const damageResult = applyDamageToTarget(target, amount);
       const appliedDamage =
@@ -398,15 +403,14 @@ export class SkillExecutor {
         powerMultiplierOverride,
       );
       if (amount <= 0) return false;
+      applyExcessHealToBarrierFromPassive(
+        actor,
+        target,
+        amount,
+        this.gameData.skillRegistry.passives,
+      );
       const healed = applyHealToTarget(target, amount);
-      if (healed > 0) {
-        applyHealBarrierFromPassive(
-          actor,
-          target,
-          healed,
-          this.gameData.skillRegistry.passives,
-        );
-      }
+      if (healed <= 0 && target.barrierHp <= 0) return false;
       this.emit({
         type: 'skill',
         actorId: actor.id,
@@ -554,6 +558,30 @@ export class SkillExecutor {
       return true;
     }
 
+    if (effectDef.type === 'dispel') {
+      const removed = dispelDebuffsOnTarget(
+        target,
+        effectDef.dispelCount,
+        effectDef.dispelTags,
+        actor.id,
+      );
+      if (removed <= 0) return false;
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'dispel',
+        effectIndex,
+        amount: removed,
+        range: effectDef.range,
+        ...(hitIndex !== undefined ? { hitIndex } : {}),
+      });
+      return true;
+    }
+
     if (effectDef.type === 'hot' || effectDef.type === 'dot') {
       const overlay = effectDef.type;
       const appliedAt = Date.now();
@@ -570,7 +598,11 @@ export class SkillExecutor {
         sourceId: actor.id,
         skillId: skill.id,
         ...(overlay === 'dot'
-          ? { damageType: effectDef.damageType ?? 'physical' }
+          ? {
+              damageType: effectDef.damageType ?? 'physical',
+              damageIncrease: effectDef.damageIncrease,
+              defenseIgnore: effectDef.defenseIgnore,
+            }
           : {}),
         tickSec: 1,
       });

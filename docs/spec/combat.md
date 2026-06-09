@@ -4,8 +4,8 @@
 
 ## 物理ダメージ
 
-1. `baseDamage = floor(resolvePowerAmount(amount) × passiveDamageMul)`（`atkBased`: `(effectiveAtk + atkOffset) × atkScale`）
-2. `effectiveDef = def × defBuffMul`（ステータス効果から）
+1. `baseDamage = floor(resolvePowerAmount(amount) × crowdBonus × damageIncreaseMul)`（`damageIncrease` はパッシブ + effect + DoT status の乗算）
+2. `effectiveDef = applyDefenseIgnore(getEffectiveDef(target))`（DEF 無視: flat 減算 → percent 減算、パッシブ + effect 合算）
 3. `afterSubtract = baseDamage - effectiveDef`
 4. `afterSubtract <= 0` なら `afterDefense = 0`、  
    それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
@@ -23,7 +23,7 @@
 ## 魔法ダメージ
 
 1. 上記と同じ `baseDamage`
-2. `effectiveReg = reg`（固定。REG への buff/debuff なし）
+2. `effectiveReg = applyDefenseIgnore(getEffectiveReg(target))`（REG percent 無視）
 3. `afterDefense = floor(baseDamage × 100 / (100 + effectiveReg))`
 4. `final = max(1, floor(afterDefense × damageTakenMul))`
 
@@ -38,6 +38,8 @@
 ## 回復
 
 **原則:** 回復後の HP は `min(maxHp, hp + amount)` — 超過分は切り捨て。
+
+**余剰回復バリア変換**（パッシブ `excessHealToBarrier`）: 試行回復量のうち maxHp 超過分 × `barrierScale` を **バリア上書き**（`barrierStack` なし）。
 
 heal / HoT / barrier / **damage** は **`ResourceAmountSpec`**（`amount`）で効果量を定義。旧 JSON のトップレベル `powerMultiplier` のみも、`kind: atkBased` + `atkScale` として読み込む（後方互換）。
 
@@ -129,6 +131,7 @@ baseThreat = statComponent + frontRowPressureBonus
 | buff | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec` |
 | debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec` |
 | スタン | `effect: "stun"` + `durationSec` — `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可（CD は進行） |
+| デバフ解除 | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `remainingSec` 降順 N 件。パッシブ `periodicDispel` は `intervalSec` ごとに `dispelTargetRule` で対象選択 |
 | ノックバック | `effect: "knockback"` + `distancePx` — 敵は左（`-X`）、味方は右（`+X`）へ即時移動。敵は `BATTLE_ENEMY_MARCH_VISIBLE_MIN_X` 未満にならない |
 
 **重複（同一対象・同一 stat / CC）：**

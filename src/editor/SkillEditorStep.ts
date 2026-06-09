@@ -41,6 +41,15 @@ import { skillHasMoveEffect } from '../battle/skills/skillSequence.ts';
 import { resolveSkillTrigger } from '../battle/skillTrigger.ts';
 import type { SkillDraftEntry, SkillSlotKind } from './editorApi.ts';
 import {
+  appendDefenseIgnoreFields,
+  appendDispelEffectFields,
+  appendDamageIncreaseFields,
+  appendPassiveDamageIncreaseFields,
+  appendPassiveDefenseIgnoreFields,
+  appendPassiveDispelFields,
+  appendTargetDebuffFilterFields,
+} from './skillEditorCombatFields.ts';
+import {
   appendGrid,
   createActionButton,
   createButton,
@@ -64,6 +73,7 @@ const EFFECT_KIND_LABELS: Record<SkillEffectKind, string> = {
   move: '移動',
   stun: 'スタン',
   knockback: 'ノックバック',
+  dispel: 'デバフ解除',
 };
 
 const STAT_LABELS: Record<StatusEffectStat, string> = {
@@ -85,12 +95,19 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case 'evasionChance':
       passive.evasionChance ??= 0.1;
       break;
-    case 'damageVsDotTarget':
-      passive.scale ??= 1.2;
+    case 'damageIncrease':
+      passive.damageIncrease ??= {
+        scale: 1.2,
+        conditions: [{ kind: 'debuff', tags: ['def'] }],
+      };
       break;
-    case 'selfLowHpDamageScale':
-      passive.scale ??= 0.5;
-      passive.maxMul ??= 1.5;
+    case 'defenseIgnore':
+      passive.defenseIgnore ??= { def: { mode: 'percent', amount: 0.2 } };
+      break;
+    case 'periodicDispel':
+      passive.intervalSec ??= 5;
+      passive.dispelTargetRule ??= 'self';
+      passive.dispelCount ??= 0;
       break;
     case 'damageTakenToHeal':
       passive.ratio ??= 0.1;
@@ -98,7 +115,7 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case 'partyHotAura':
       passive.partyHotAuraAmount ??= { kind: 'atkBased', atkScale: 0.05 };
       break;
-    case 'healAppliesBarrier':
+    case 'excessHealToBarrier':
       passive.barrierScale ??= 1;
       break;
     case 'aoeCrowdBonus':
@@ -423,6 +440,12 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         targetRule: 'frontEnemy',
         type: 'knockback',
         distancePx: 30,
+      };
+    case 'dispel':
+      return {
+        targetRule: 'mostDamagedAlly',
+        type: 'dispel',
+        dispelCount: 0,
       };
   }
 }
@@ -854,70 +877,20 @@ export class SkillEditorStep {
           ),
         );
         break;
-      case 'damageVsDotTarget':
-        effectGrid.appendChild(
-          createFieldRow(
-            '倍率 scale',
-            createNumberInput(
-              passive.scale ?? 1,
-              (scale) => {
-                this.patchPassive(index, (current) => {
-                  current.scale = scale;
-                }, { rerender: false });
-              },
-              { step: 0.01 },
-            ),
-          ),
-        );
-        if (passive.effect === 'damageVsDotTarget') {
-          effectGrid.appendChild(
-            createFieldRow(
-              '自分付与 DoT のみ',
-              createSelect(
-                passive.selfAppliedOnly ? 'true' : 'false',
-                [
-                  { value: 'false', label: 'いいえ' },
-                  { value: 'true', label: 'はい' },
-                ],
-                (value) => {
-                  this.patchPassive(index, (current) => {
-                    current.selfAppliedOnly = value === 'true';
-                  }, { rerender: false });
-                },
-              ),
-            ),
-          );
-        }
+      case 'damageIncrease':
+        appendPassiveDamageIncreaseFields(effectGrid, passive, (mutate, options) => {
+          this.patchPassive(index, mutate, options);
+        });
         break;
-      case 'selfLowHpDamageScale':
-        effectGrid.appendChild(
-          createFieldRow(
-            'scale',
-            createNumberInput(
-              passive.scale ?? 1,
-              (scale) => {
-                this.patchPassive(index, (current) => {
-                  current.scale = scale;
-                }, { rerender: false });
-              },
-              { step: 0.01 },
-            ),
-          ),
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            'maxMul',
-            createNumberInput(
-              passive.maxMul ?? 1,
-              (maxMul) => {
-                this.patchPassive(index, (current) => {
-                  current.maxMul = maxMul;
-                }, { rerender: false });
-              },
-              { step: 0.01 },
-            ),
-          ),
-        );
+      case 'defenseIgnore':
+        appendPassiveDefenseIgnoreFields(effectGrid, passive, (mutate, options) => {
+          this.patchPassive(index, mutate, options);
+        });
+        break;
+      case 'periodicDispel':
+        appendPassiveDispelFields(effectGrid, passive, (mutate, options) => {
+          this.patchPassive(index, mutate, options);
+        });
         break;
       case 'damageTakenToHeal':
         effectGrid.appendChild(
@@ -946,7 +919,7 @@ export class SkillEditorStep {
           },
         );
         break;
-      case 'healAppliesBarrier':
+      case 'excessHealToBarrier':
         effectGrid.appendChild(
           createFieldRow(
             'barrierScale',
@@ -1344,9 +1317,27 @@ export class SkillEditorStep {
             label: TARGET_RULE_LABELS[value],
           })),
           (targetRule) =>
-            patchEffect((prev) => ({ ...prev, targetRule } as SkillEffectDef)),
+            patchEffect((prev) => {
+              const next = { ...prev, targetRule } as SkillEffectDef;
+              if (targetRule !== 'debuffedEnemy') {
+                delete next.targetDebuffFilter;
+              } else if (!next.targetDebuffFilter?.length) {
+                next.targetDebuffFilter = ['def'];
+              }
+              return next;
+            }, { rerender: true }),
         ),
       ),
+    );
+    appendTargetDebuffFilterFields(
+      grid,
+      effect.targetRule,
+      effect.targetDebuffFilter,
+      (targetDebuffFilter) => {
+        patchEffect((prev) => ({ ...prev, targetDebuffFilter }), {
+          rerender: true,
+        });
+      },
     );
     const isMove = effect.type === 'move';
     const targetShape: TargetShape = effect.targetShape ?? 'single';
@@ -1690,6 +1681,20 @@ export class SkillEditorStep {
         appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
           patchEffect((prev) => ({ ...prev, amount }), options),
         );
+        appendDamageIncreaseFields(
+          detailGrid,
+          effect.damageIncrease,
+          (damageIncrease) => {
+            patchEffect((prev) => ({ ...prev, damageIncrease }), { rerender: true });
+          },
+        );
+        appendDefenseIgnoreFields(
+          detailGrid,
+          effect.defenseIgnore,
+          (defenseIgnore) => {
+            patchEffect((prev) => ({ ...prev, defenseIgnore }), { rerender: true });
+          },
+        );
         break;
       case 'heal':
         appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
@@ -1864,6 +1869,23 @@ export class SkillEditorStep {
             ),
           ),
         );
+        appendDamageIncreaseFields(
+          detailGrid,
+          effect.damageIncrease,
+          (damageIncrease) => {
+            patchEffect((prev) => ({ ...prev, damageIncrease }), { rerender: true });
+          },
+        );
+        appendDefenseIgnoreFields(
+          detailGrid,
+          effect.defenseIgnore,
+          (defenseIgnore) => {
+            patchEffect((prev) => ({ ...prev, defenseIgnore }), { rerender: true });
+          },
+        );
+        break;
+      case 'dispel':
+        appendDispelEffectFields(detailGrid, effect, patchEffect);
         break;
       case 'move': {
         const moveEffect = effect as MoveSkillEffect;

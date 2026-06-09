@@ -1,8 +1,10 @@
-import { getPassiveDefs } from './combatMath.ts';
+import { applyBarrierToTarget, getPassiveDefs } from './combatMath.ts';
+import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
 import { resolveSkillTrigger } from './skillTrigger.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
+  DamageIncreaseSpec,
   PassiveSkillDef,
   ResourceAmountSpec,
   SkillCooldown,
@@ -49,28 +51,26 @@ export function rollsEvasion(
   return Math.random() < Math.min(1, chance);
 }
 
-function hasDotFromSource(
+export function getPassiveDamageIncreaseMultiplier(
+  attacker: CombatantState,
   target: CombatantState,
-  sourceId: string,
-  selfAppliedOnly: boolean,
-): boolean {
-  return target.statusEffects.some(
-    (effect) =>
-      effect.overlay === 'dot' &&
-      effect.remainingSec > 0 &&
-      (!selfAppliedOnly || effect.sourceId === sourceId),
-  );
-}
-
-function hasAnyDot(target: CombatantState): boolean {
-  return target.statusEffects.some(
-    (effect) => effect.overlay === 'dot' && effect.remainingSec > 0,
-  );
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  let mul = 1;
+  for (const passive of getPassiveDefs(attacker, passives)) {
+    if (passive.effect !== 'damageIncrease' || !passive.damageIncrease) continue;
+    mul *= resolveDamageIncreaseMultiplier(
+      attacker,
+      target,
+      passive.damageIncrease,
+    );
+  }
+  return mul;
 }
 
 export function getPassiveOutgoingDamageMultiplier(
   attacker: CombatantState,
-  target: CombatantState,
+  _target: CombatantState,
   passives: Record<string, PassiveSkillDef>,
   context: PassiveDamageContext = {},
 ): number {
@@ -78,41 +78,34 @@ export function getPassiveOutgoingDamageMultiplier(
   let mul = 1;
 
   for (const passive of defs) {
-    switch (passive.effect) {
-      case 'selfLowHpDamageScale': {
-        const scale = passive.scale ?? 0;
-        const maxMul = passive.maxMul ?? 1;
-        const missingRatio = 1 - attacker.hp / attacker.maxHp;
-        mul *= Math.min(maxMul, 1 + scale * missingRatio);
-        break;
-      }
-      case 'damageVsDotTarget': {
-        const selfOnly = passive.selfAppliedOnly ?? false;
-        const dotted = selfOnly
-          ? hasDotFromSource(target, attacker.id, true)
-          : hasAnyDot(target);
-        if (dotted) {
-          mul *= passive.scale ?? 1;
-        }
-        break;
-      }
-      case 'aoeCrowdBonus': {
-        const shape = context.targetShape;
-        const hits = context.crowdHitCount ?? 0;
-        if (
-          (shape === 'aoe' || shape === 'scatter') &&
-          hits > 1
-        ) {
-          const per = passive.perExtraTargetScale ?? 0;
-          const cap = passive.maxExtraTargets ?? 0;
-          const extra = Math.min(hits - 1, cap);
-          mul *= 1 + extra * per;
-        }
-        break;
-      }
+    if (passive.effect !== 'aoeCrowdBonus') continue;
+    const shape = context.targetShape;
+    const hits = context.crowdHitCount ?? 0;
+    if ((shape === 'aoe' || shape === 'scatter') && hits > 1) {
+      const per = passive.perExtraTargetScale ?? 0;
+      const cap = passive.maxExtraTargets ?? 0;
+      const extra = Math.min(hits - 1, cap);
+      mul *= 1 + extra * per;
     }
   }
 
+  return mul;
+}
+
+export function resolveEffectDamageIncreaseMultiplier(
+  attacker: CombatantState,
+  target: CombatantState,
+  effectIncrease: DamageIncreaseSpec | undefined,
+  statusIncrease: DamageIncreaseSpec | undefined,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  let mul = getPassiveDamageIncreaseMultiplier(attacker, target, passives);
+  if (effectIncrease) {
+    mul *= resolveDamageIncreaseMultiplier(attacker, target, effectIncrease);
+  }
+  if (statusIncrease) {
+    mul *= resolveDamageIncreaseMultiplier(attacker, target, statusIncrease);
+  }
   return mul;
 }
 
@@ -134,22 +127,29 @@ export function applyDamageTakenToHeal(
   return target.hp - before;
 }
 
-export function applyHealBarrierFromPassive(
+export function applyExcessHealToBarrierFromPassive(
   actor: CombatantState,
   target: CombatantState,
-  healAmount: number,
+  attemptedHeal: number,
   passives: Record<string, PassiveSkillDef>,
 ): number {
-  if (healAmount <= 0) return 0;
+  if (attemptedHeal <= 0) return 0;
   const defs = getPassiveDefs(actor, passives);
-  let grant = 0;
+  let scaleSum = 0;
   for (const passive of defs) {
-    if (passive.effect !== 'healAppliesBarrier') continue;
-    grant += Math.floor(healAmount * (passive.barrierScale ?? 1));
+    if (passive.effect !== 'excessHealToBarrier') continue;
+    scaleSum += passive.barrierScale ?? 1;
   }
+  if (scaleSum <= 0) return 0;
+
+  const hpBefore = target.hp;
+  const afterHealHp = Math.min(target.maxHp, hpBefore + attemptedHeal);
+  const excess = attemptedHeal - (afterHealHp - hpBefore);
+  if (excess <= 0) return 0;
+
+  const grant = Math.floor(excess * scaleSum);
   if (grant <= 0) return 0;
-  target.barrierHp += grant;
-  return grant;
+  return applyBarrierToTarget(target, grant, false);
 }
 
 export function resolveDebuffDurationWithPassives(
@@ -231,4 +231,53 @@ export function countDamageTargetsInResolution(
 ): number {
   if (effectDef.type !== 'damage') return 0;
   return waves.reduce((sum, wave) => sum + wave.targets.length, 0);
+}
+
+export interface PeriodicDispelPassiveState {
+  passiveId: string;
+  remainingSec: number;
+}
+
+export function initializePeriodicDispelStates(
+  unit: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): PeriodicDispelPassiveState[] {
+  return getPassiveDefs(unit, passives)
+    .filter((passive) => passive.effect === 'periodicDispel')
+    .map((passive) => ({
+      passiveId: passive.id,
+      remainingSec: passive.intervalSec ?? 1,
+    }));
+}
+
+export function tickPeriodicDispelStates(
+  states: PeriodicDispelPassiveState[],
+  passives: Record<string, PassiveSkillDef>,
+  deltaTime: number,
+): PeriodicDispelPassiveState[] {
+  return states.map((state) => {
+    const passive = passives[state.passiveId];
+    const interval = passive?.intervalSec ?? 1;
+    let remainingSec = state.remainingSec - deltaTime;
+    if (remainingSec <= 0) {
+      remainingSec = interval;
+    }
+    return { ...state, remainingSec };
+  });
+}
+
+export function getPeriodicDispelReady(
+  before: PeriodicDispelPassiveState[],
+  after: PeriodicDispelPassiveState[],
+): string[] {
+  const ready: string[] = [];
+  for (let i = 0; i < after.length; i++) {
+    const prev = before[i];
+    const next = after[i];
+    if (!prev || !next) continue;
+    if (next.remainingSec > prev.remainingSec) {
+      ready.push(next.passiveId);
+    }
+  }
+  return ready;
 }

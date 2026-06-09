@@ -3,8 +3,10 @@ import {
   getEffectiveDef,
   getEffectiveReg,
 } from '../combatMath.ts';
+import { hasMatchingDebuff } from '../debuffMatching.ts';
 import type {
   CombatantState,
+  DebuffFilterTag,
   PassiveSkillDef,
   SkillEffectDef,
   SkillEffectResolution,
@@ -100,6 +102,7 @@ export function pickTargetFromPool(
   switch (rule) {
     case 'frontEnemy':
     case 'rangedAttackingEnemy':
+    case 'debuffedEnemy':
       return pool.reduce((a, b) =>
         getBattleX(a) >= getBattleX(b) ? a : b,
       );
@@ -196,6 +199,7 @@ function orderPoolByRule(
   switch (rule) {
     case 'frontEnemy':
     case 'rangedAttackingEnemy':
+    case 'debuffedEnemy':
       return copy.sort((a, b) => getBattleX(b) - getBattleX(a));
     case 'farthestEnemy':
       return copy.sort((a, b) => getBattleX(a) - getBattleX(b));
@@ -371,6 +375,23 @@ function resolveScatterWaves(
   return waves;
 }
 
+function filterPoolByDebuffTags(
+  pool: CombatantState[],
+  tags: DebuffFilterTag[] | undefined,
+): CombatantState[] {
+  if (!tags || tags.length === 0) return [];
+  return pool.filter((unit) => hasMatchingDebuff(unit, tags));
+}
+
+function applyDebuffTargetFilter(
+  effect: SkillEffectDef,
+  rule: TargetRule,
+  pool: CombatantState[],
+): CombatantState[] {
+  if (rule !== 'debuffedEnemy') return pool;
+  return filterPoolByDebuffTags(pool, effect.targetDebuffFilter);
+}
+
 function getBaseAtkScale(effect: SkillEffectDef): number | undefined {
   if (effect.type === 'damage' || effect.type === 'heal') {
     if (effect.amount.kind === 'atkBased') {
@@ -411,7 +432,11 @@ export function resolveEffectResolution(
   rand: () => number = Math.random,
 ): SkillEffectResolution | null {
   if (effect.type === 'move') {
-    const pool = getTargetPoolForRule(rule, actor, allies, enemies);
+    const pool = applyDebuffTargetFilter(
+      effect,
+      rule,
+      getTargetPoolForRule(rule, actor, allies, enemies),
+    );
     const target = pickTargetFromPool(rule, actor, pool);
     if (!target) return null;
     return {
@@ -420,7 +445,11 @@ export function resolveEffectResolution(
   }
 
   const rangePx = resolveSkillRangePx(actor, effect);
-  const attackablePool = getAttackablePool(rule, actor, allies, enemies, rangePx);
+  const attackablePool = applyDebuffTargetFilter(
+    effect,
+    rule,
+    getAttackablePool(rule, actor, allies, enemies, rangePx),
+  );
   const shape: TargetShape = effect.targetShape ?? 'single';
   const basePower = getBaseAtkScale(effect);
 

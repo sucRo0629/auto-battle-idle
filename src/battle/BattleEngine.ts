@@ -32,9 +32,15 @@ import {
 import { isUnitStunned } from "./ccEffects.ts";
 import {
   applyDamageTakenToHeal,
+  getPeriodicDispelReady,
   initializeCountTriggerCooldowns,
+  initializePeriodicDispelStates,
   syncPartyHotAuras,
+  tickPeriodicDispelStates,
+  type PeriodicDispelPassiveState,
 } from "./passiveEffects.ts";
+import { dispelDebuffsOnTarget } from "./debuffDispel.ts";
+import { pickTarget } from "./skills/targeting.ts";
 import {
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
@@ -129,6 +135,7 @@ export class BattleEngine {
   /** 近接敵の生存構成変化検知（奥行きスロット再固定用） */
   private engagedMeleeEnemySignature: string | null = null;
   private restartTimer = 0;
+  private periodicDispelStates = new Map<string, PeriodicDispelPassiveState[]>();
   private readonly listeners = new Set<BattleEventListener>();
   private readonly executor: SkillExecutor;
   private readonly skillSequenceRunner = new SkillSequenceRunner();
@@ -212,8 +219,13 @@ export class BattleEngine {
     const actives = this.gameData.skillRegistry.actives;
     initializeAllyThreat(this.allies);
     syncPartyHotAuras(this.allies, passives);
+    this.periodicDispelStates.clear();
     for (const unit of [...this.allies, ...this.enemies]) {
       initializeCountTriggerCooldowns(unit, actives);
+      const dispelStates = initializePeriodicDispelStates(unit, passives);
+      if (dispelStates.length > 0) {
+        this.periodicDispelStates.set(unit.id, dispelStates);
+      }
     }
   }
 
@@ -962,6 +974,7 @@ export class BattleEngine {
       this.applySkillMoveVisualOverlay();
       this.updateCombatCamera(deltaTime);
       this.tickStatusEffects(deltaTime);
+      this.tickPeriodicDispels(deltaTime);
       this.tickCooldowns(this.allies, deltaTime);
       this.tickCooldowns(this.enemies, deltaTime);
       this.runUnitSkills(this.allies);
@@ -992,6 +1005,32 @@ export class BattleEngine {
     this.skillSequenceRunner.tickSequences(this.battleTimeSec, (step) => {
       this.executor.applyScheduledStep(step, this.allies, this.enemies);
     });
+  }
+
+  private tickPeriodicDispels(deltaTime: number): void {
+    const passives = this.gameData.skillRegistry.passives;
+    for (const actor of [...this.allies, ...this.enemies]) {
+      if (!actor.isAlive) continue;
+      const before = this.periodicDispelStates.get(actor.id);
+      if (!before || before.length === 0) continue;
+
+      const after = tickPeriodicDispelStates(before, passives, deltaTime);
+      this.periodicDispelStates.set(actor.id, after);
+      const readyIds = getPeriodicDispelReady(before, after);
+      for (const passiveId of readyIds) {
+        const passive = passives[passiveId];
+        if (!passive || passive.effect !== 'periodicDispel') continue;
+        const rule = passive.dispelTargetRule ?? 'self';
+        const target = pickTarget(rule, actor, this.allies, this.enemies);
+        if (!target) continue;
+        dispelDebuffsOnTarget(
+          target,
+          passive.dispelCount ?? 0,
+          passive.dispelTags,
+          actor.id,
+        );
+      }
+    }
   }
 
   private tickStatusEffects(deltaTime: number): void {

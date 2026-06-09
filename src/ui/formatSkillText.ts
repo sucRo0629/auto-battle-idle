@@ -25,20 +25,22 @@ function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): s
       return `ターゲット → ${TARGET_RULE_LABELS[def.targetRuleOverride ?? 'frontEnemy']}`;
     case 'evasionChance':
       return `回避 +${def.evasionChance ?? 0}`;
-    case 'selfLowHpDamageScale':
-      return `低HP火力 scale ${def.scale ?? 1}（上限 ×${def.maxMul ?? 1}）`;
+    case 'damageIncrease':
+      return `ダメージ増加 ×${def.damageIncrease?.scale ?? 1}`;
+    case 'defenseIgnore':
+      return '防御無視';
+    case 'periodicDispel':
+      return `定期デバフ解除 ${def.intervalSec ?? 0}s`;
     case 'damageTakenToHeal':
       return `被ダメの ${Math.round((def.ratio ?? 0) * 100)}% を即時回復`;
     case 'partyHotAura':
       return '味方全体 HoT';
-    case 'healAppliesBarrier':
-      return `回復バリア ×${def.barrierScale ?? 1}`;
+    case 'excessHealToBarrier':
+      return `余剰回復バリア ×${def.barrierScale ?? 1}`;
     case 'extendSelfAppliedDebuff':
       return '付与デバフ延長';
     case 'aoeCrowdBonus':
       return `密集 +${def.perExtraTargetScale ?? 0}/体（上限 ${def.maxExtraTargets ?? 0}）`;
-    case 'damageVsDotTarget':
-      return `DoT対象与ダメ ×${def.scale ?? 1}`;
     default:
       return effect;
   }
@@ -66,6 +68,8 @@ function formatEffectKind(effect: SkillEffectDef): string {
       return 'スタン';
     case 'knockback':
       return 'ノックバック';
+    case 'dispel':
+      return 'デバフ解除';
   }
 }
 

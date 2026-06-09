@@ -2,12 +2,19 @@ import type {
   CombatantState,
   DamageSkillEffect,
   DamageType,
+  DefenseIgnoreSpec,
   PassiveSkillDef,
   ResourceAmountSpec,
   StatusEffect,
 } from './types.ts';
 import {
+  applyDefenseIgnoreToDef,
+  applyDefenseIgnoreToReg,
+  getPassiveDefenseIgnoreSpec,
+} from './defenseIgnore.ts';
+import {
   getPassiveOutgoingDamageMultiplier,
+  resolveEffectDamageIncreaseMultiplier,
   type PassiveDamageContext,
 } from './passiveEffects.ts';
 import {
@@ -89,6 +96,12 @@ export function resolveHotAmountFromStatus(
   return resolveResourceAmount(source, target, spec, passives);
 }
 
+export interface DotTickOptions {
+  effectDamageIncrease?: DamageIncreaseSpec;
+  effectDefenseIgnore?: DefenseIgnoreSpec;
+  statusEffect?: StatusEffect;
+}
+
 export function resolveDotAmountFromStatus(
   source: CombatantState,
   target: CombatantState,
@@ -104,6 +117,11 @@ export function resolveDotAmountFromStatus(
     spec,
     effect.damageType ?? 'physical',
     passives,
+    {
+      effectDamageIncrease: effect.damageIncrease,
+      effectDefenseIgnore: effect.defenseIgnore,
+      statusEffect: effect,
+    },
   );
 }
 
@@ -152,6 +170,15 @@ export function applyDamageToTarget(
   };
 }
 
+export interface DamageResolveOptions {
+  atkScaleOverride?: number;
+  passiveContext?: PassiveDamageContext;
+  effectDamageIncrease?: DamageIncreaseSpec;
+  effectDefenseIgnore?: DefenseIgnoreSpec;
+  statusDamageIncrease?: DamageIncreaseSpec;
+  statusDefenseIgnore?: DefenseIgnoreSpec;
+}
+
 export function resolveDamage(
   attacker: CombatantState,
   target: CombatantState,
@@ -159,7 +186,38 @@ export function resolveDamage(
   passives: Record<string, PassiveSkillDef>,
   atkScaleOverride?: number,
   passiveContext: PassiveDamageContext = {},
+): number;
+export function resolveDamage(
+  attacker: CombatantState,
+  target: CombatantState,
+  effect: DamageSkillEffect,
+  passives: Record<string, PassiveSkillDef>,
+  options?: DamageResolveOptions,
+): number;
+export function resolveDamage(
+  attacker: CombatantState,
+  target: CombatantState,
+  effect: DamageSkillEffect,
+  passives: Record<string, PassiveSkillDef>,
+  optionsOrOverride?: number | DamageResolveOptions,
+  passiveContext: PassiveDamageContext = {},
 ): number {
+  const options: DamageResolveOptions =
+    typeof optionsOrOverride === 'number'
+      ? { atkScaleOverride: optionsOrOverride, passiveContext }
+      : (optionsOrOverride ?? {});
+
+  const atkScaleOverride = options.atkScaleOverride;
+  const context = options.passiveContext ?? passiveContext;
+
+  const increaseMul = resolveEffectDamageIncreaseMultiplier(
+    attacker,
+    target,
+    options.effectDamageIncrease ?? effect.damageIncrease,
+    options.statusDamageIncrease,
+    passives,
+  );
+
   const baseDamage = Math.floor(
     resolvePowerAmount(
       attacker,
@@ -172,18 +230,30 @@ export function resolveDamage(
         attacker,
         target,
         passives,
-        passiveContext,
-      ),
+        context,
+      ) *
+      increaseMul,
   );
+
+  const ignoreSpecs = [
+    getPassiveDefenseIgnoreSpec(attacker, passives),
+    options.effectDefenseIgnore ?? effect.defenseIgnore,
+    options.statusDefenseIgnore,
+  ];
+
   const damageType: DamageType = effect.damageType;
-  const effectiveDef = getEffectiveDef(target);
-  const effectiveReg = getEffectiveReg(target);
+  const effectiveDef = applyDefenseIgnoreToDef(
+    getEffectiveDef(target),
+    ignoreSpecs,
+  );
+  const effectiveReg = applyDefenseIgnoreToReg(
+    getEffectiveReg(target),
+    ignoreSpecs,
+  );
 
   let afterDefense: number;
   if (damageType === 'magic') {
-    afterDefense = Math.floor(
-      (baseDamage * 100) / (100 + effectiveReg),
-    );
+    afterDefense = Math.floor((baseDamage * 100) / (100 + effectiveReg));
   } else {
     const afterSubtract = baseDamage - effectiveDef;
     if (afterSubtract <= 0) {
@@ -205,17 +275,25 @@ export function resolveDotTick(
   amount: ResourceAmountSpec,
   damageType: DamageType,
   passives: Record<string, PassiveSkillDef>,
+  options: DotTickOptions = {},
 ): number {
+  const status = options.statusEffect;
   return resolveDamage(
     source,
     target,
     {
-      type: "damage",
-      targetRule: "frontEnemy",
+      type: 'damage',
+      targetRule: 'frontEnemy',
       damageType,
       amount,
     },
     passives,
+    {
+      effectDamageIncrease:
+        options.effectDamageIncrease ?? status?.damageIncrease,
+      effectDefenseIgnore:
+        options.effectDefenseIgnore ?? status?.defenseIgnore,
+    },
   );
 }
 

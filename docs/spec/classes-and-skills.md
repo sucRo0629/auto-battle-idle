@@ -77,7 +77,7 @@
 
 | classId | 表示名 | epithetEn | 列 | 射程 | パッシブ | アクティブ |
 |---------|--------|-----------|-----|------|----------|------------|
-| `sp_cleric` | 療養師 | Cleric | front | 近接 | 味方全体 HoT（強） | 癒しの手／鼓舞 |
+| `sp_cleric` | 療養師 | Cleric | front | 近接 | なし | 癒しの手／鼓舞 |
 | `sp_abjurer` | 結界師 | Abjurer | middle | 近接 | 回復時バリア付与 | 結界／弱体符 |
 | `sp_alchemist` | 薬草師 | Alchemist | middle | 近接 | 弱 HoT + 自 debuff 延長 | 攻性薬／毒霧 |
 
@@ -208,13 +208,42 @@ interface CharacterBuild {
 |--------|----------------|------|
 | `targetRuleOverride` | `targetRuleOverride` | 味方の攻撃 anchor ルールを上書き（複数時は配列の後ろ優先） |
 | `evasionChance` | `evasionChance` | 被ダメ回避率（加算、上限 1） |
-| `selfLowHpDamageScale` | `scale`, `maxMul` | 欠損 HP 率に応じた与ダメ倍率（上限 `maxMul`） |
-| `damageVsDotTarget` | `scale`, `selfAppliedOnly?` | DoT 対象への与ダメ倍率 |
+| `damageIncrease` | `damageIncrease` | 条件付き与ダメ倍率（`damage` / `dot` でも effect 単位で指定可） |
+| `defenseIgnore` | `defenseIgnore` | 与ダメ時の DEF / REG 無視（`damage` / `dot` でも effect 単位で指定可） |
+| `periodicDispel` | `intervalSec`, `dispelTargetRule`, `dispelCount`, `dispelTags?` | 一定間隔でデバフ解除 |
 | `aoeCrowdBonus` | `perExtraTargetScale`, `maxExtraTargets` | `aoe` / `scatter` の追加ヒット数ボーナス |
 | `damageTakenToHeal` | `ratio` | HP に入った最終ダメージの `ratio` 割合を即時回復（バリア吸収後。ATK 基準ではない） |
 | `partyHotAura` | `partyHotAuraAmount` | 味方全体に常時 HoT を付与（戦闘開始時同期） |
-| `healAppliesBarrier` | `barrierScale` | 使用者の heal 量に比例してバリア付与 |
+| `excessHealToBarrier` | `barrierScale` | 回復が maxHp を超過した分をバリアに変換（**上書き**） |
 | `extendSelfAppliedDebuff` | `extendSec`, `durationMultiplier?` | 使用者が付与する debuff 持続延長 |
+
+**移行（削除済み）:** `selfLowHpDamageScale` → `damageIncrease`（`selfHp` + `scaling`）、`damageVsDotTarget` → `damageIncrease`（`debuff` + `dot`）、`healAppliesBarrier` → `excessHealToBarrier`
+
+### ダメージ増加（`DamageIncreaseSpec`）
+
+| フィールド | 説明 |
+|------------|------|
+| `scale` | 条件成立時の倍率 |
+| `conditions[]` | 全条件 **AND**。種別: `debuff` / `targetHp` / `selfHp` |
+| `debuff.tags` | デバフタグ（OR）。`DEBUFF_FILTER_TAGS` 参照 |
+| `debuff.selfAppliedOnly` | DoT 等で自分付与のみ |
+| `targetHp.maxHpRatio` | 対象 `hp/maxHp ≤ ratio` |
+| `selfHp.maxHpRatio` | 自身 HP 閾値。`mode: scaling` で欠損 HP 比例（剣闘士互換） |
+
+### 防御無視（`DefenseIgnoreSpec`）
+
+| フィールド | 説明 |
+|------------|------|
+| `def.mode` | `flat` / `percent` |
+| `def.amount` | 固定値 or 0〜1 割合 |
+| `reg.percent` | REG 無視割合（0〜1、魔法ダメージ） |
+
+### デバフ解除（`dispel` effect / `periodicDispel` passive）
+
+| フィールド | 説明 |
+|------------|------|
+| `dispelCount` | `0` = 対象タグすべて、`N>0` = `remainingSec` 降順で N 件 |
+| `dispelTags` | 未指定 = 全デバフタグ |
 
 レガシー合成（未使用の一次職データに残る場合）:
 
@@ -238,12 +267,16 @@ interface CharacterBuild {
 | `lowestRegEnemy` / `highestRegEnemy` | 同上（REG） |
 | `highestHpEnemy` | 攻撃可能敵の現在 HP 最大 |
 | `farthestEnemy` | 攻撃可能敵のうち X が最も小さい（味方から最も遠い） |
+| `debuffedEnemy` | 指定デバフ（`targetDebuffFilter`）を受けている攻撃可能敵 |
 
 ## effect 共通フィールド（`skills.json`）
 
 | フィールド | 説明 |
 |------------|------|
 | `targetRule` | anchor 選定ルール（上表）。**射程内**のユニットのみ対象 |
+| `targetDebuffFilter` | `debuffedEnemy` 時必須。デバフタグ配列（OR 判定） |
+| `damageIncrease` | 任意。`damage` / `dot` 用条件付き倍率 |
+| `defenseIgnore` | 任意。`damage` / `dot` 用 DEF / REG 無視 |
 | `targetShape` | `single`（既定）／`aoe`／`multiLock`／`pierce`／`chain`／`scatter` |
 | `aoeRadiusPx` | `aoe` 必須。anchor の X から ±px |
 | `hitCount` | `multiLock` 必須（整数 ≥ 2）。`single` / `aoe` 任意（整数 ≥ 2、省略=1） |

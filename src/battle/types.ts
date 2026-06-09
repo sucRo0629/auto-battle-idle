@@ -109,7 +109,8 @@ export type TargetRule =
   | "lowestRegEnemy"
   | "highestRegEnemy"
   | "highestHpEnemy"
-  | "farthestEnemy";
+  | "farthestEnemy"
+  | "debuffedEnemy";
 
 /** 効果のターゲット形状。未指定は single */
 export type TargetShape =
@@ -220,9 +221,48 @@ export interface StatusEffect {
   /** 付与時の効果時間（秒） */
   durationSec: number;
   remainingSec: number;
+  /** DoT tick 用: 付与スキル effect からコピー */
+  damageIncrease?: DamageIncreaseSpec;
+  defenseIgnore?: DefenseIgnoreSpec;
 }
 
 export type StatusEffectStat = "atk" | "def" | "reg" | "damageTaken";
+
+/** デバフフィルタタグ（gameDataSchema.DEBUFF_FILTER_TAGS と同期） */
+export type DebuffFilterTag = StatusEffectStat | "dot" | "stun";
+
+export type DamageIncreaseCondition =
+  | {
+      kind: "debuff";
+      tags: DebuffFilterTag[];
+      selfAppliedOnly?: boolean;
+    }
+  | { kind: "targetHp"; maxHpRatio: number }
+  | {
+      kind: "selfHp";
+      maxHpRatio: number;
+      mode?: "threshold" | "scaling";
+      maxMul?: number;
+    };
+
+export interface DamageIncreaseSpec {
+  scale: number;
+  conditions: DamageIncreaseCondition[];
+}
+
+export interface DefenseIgnoreDefSpec {
+  mode: "flat" | "percent";
+  amount: number;
+}
+
+export interface DefenseIgnoreRegSpec {
+  percent: number;
+}
+
+export interface DefenseIgnoreSpec {
+  def?: DefenseIgnoreDefSpec;
+  reg?: DefenseIgnoreRegSpec;
+}
 
 export function asStatusEffectStatList(
   stat: StatusEffectStat | StatusEffectStat[] | undefined,
@@ -269,13 +309,14 @@ export interface CombatantState extends Combatant {
 export type PassiveEffectKind =
   | "targetRuleOverride"
   | "evasionChance"
-  | "selfLowHpDamageScale"
   | "damageTakenToHeal"
   | "partyHotAura"
-  | "healAppliesBarrier"
+  | "excessHealToBarrier"
   | "extendSelfAppliedDebuff"
   | "aoeCrowdBonus"
-  | "damageVsDotTarget";
+  | "damageIncrease"
+  | "defenseIgnore"
+  | "periodicDispel";
 
 export interface PassiveSkillDef {
   id: string;
@@ -285,8 +326,6 @@ export interface PassiveSkillDef {
   effect: PassiveEffectKind;
   targetRuleOverride?: TargetRule;
   evasionChance?: number;
-  scale?: number;
-  maxMul?: number;
   ratio?: number;
   partyHotAuraAmount?: ResourceAmountSpec;
   barrierScale?: number;
@@ -294,7 +333,12 @@ export interface PassiveSkillDef {
   durationMultiplier?: number;
   perExtraTargetScale?: number;
   maxExtraTargets?: number;
-  selfAppliedOnly?: boolean;
+  damageIncrease?: DamageIncreaseSpec;
+  defenseIgnore?: DefenseIgnoreSpec;
+  intervalSec?: number;
+  dispelTargetRule?: TargetRule;
+  dispelTags?: DebuffFilterTag[];
+  dispelCount?: number;
 }
 
 export type SkillEffectKind =
@@ -307,7 +351,8 @@ export type SkillEffectKind =
   | "barrier"
   | "move"
   | "stun"
-  | "knockback";
+  | "knockback"
+  | "dispel";
 
 export type MoveMode = "engage" | "toAnchor" | "behindTarget";
 export type DamageType = "physical" | "magic";
@@ -369,6 +414,12 @@ interface SkillEffectCommon {
   anim?: SkillEffectAnimId;
   /** 未指定時はスキル vfx → 既定プリセット（damage/heal 等のみ） */
   vfx?: SkillVfxDef;
+  /** debuffedEnemy 選択時必須 */
+  targetDebuffFilter?: DebuffFilterTag[];
+  /** damage / dot 用 */
+  damageIncrease?: DamageIncreaseSpec;
+  /** damage / dot 用 */
+  defenseIgnore?: DefenseIgnoreSpec;
 }
 
 export interface SkillHitTarget {
@@ -467,6 +518,12 @@ export interface KnockbackSkillEffect extends SkillEffectCommon {
   distancePx: number;
 }
 
+export interface DispelSkillEffect extends SkillEffectCommon {
+  type: "dispel";
+  dispelTags?: DebuffFilterTag[];
+  dispelCount: number;
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -477,7 +534,8 @@ export type SkillEffectDef =
   | BarrierSkillEffect
   | MoveSkillEffect
   | StunSkillEffect
-  | KnockbackSkillEffect;
+  | KnockbackSkillEffect
+  | DispelSkillEffect;
 
 export interface ActiveSkillDef {
   id: string;

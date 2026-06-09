@@ -5,6 +5,8 @@ import type {
   FormationRow,
   GrowthPresetKey,
   GrowthTier,
+  DebuffFilterTag,
+  DamageIncreaseCondition,
   PassiveEffectKind,
   Role,
   ResourceAmountKind,
@@ -42,6 +44,7 @@ export const SKILL_EFFECT_KINDS = [
   "move",
   "stun",
   "knockback",
+  "dispel",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [
@@ -114,6 +117,7 @@ export const TARGET_RULES = [
   "highestRegEnemy",
   "highestHpEnemy",
   "farthestEnemy",
+  "debuffedEnemy",
 ] as const satisfies readonly TargetRule[];
 export const TARGET_SHAPES = [
   "single",
@@ -138,6 +142,7 @@ export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
   highestRegEnemy: "REG最高の敵",
   highestHpEnemy: "HP最高の敵",
   farthestEnemy: "最も遠い敵",
+  debuffedEnemy: "デバフを受けている対象",
 };
 
 export const TARGET_SHAPE_LABELS: Record<TargetShape, string> = {
@@ -157,25 +162,27 @@ export const POWER_STEP_MODES = [
 export const PASSIVE_EFFECT_KINDS = [
   "targetRuleOverride",
   "evasionChance",
-  "selfLowHpDamageScale",
   "damageTakenToHeal",
   "partyHotAura",
-  "healAppliesBarrier",
+  "excessHealToBarrier",
   "extendSelfAppliedDebuff",
   "aoeCrowdBonus",
-  "damageVsDotTarget",
+  "damageIncrease",
+  "defenseIgnore",
+  "periodicDispel",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<PassiveEffectKind, string> = {
   targetRuleOverride: "ターゲット上書き",
   evasionChance: "回避率",
-  selfLowHpDamageScale: "低HP火力",
   damageTakenToHeal: "被ダメ回復",
   partyHotAura: "味方全体HoT",
-  healAppliesBarrier: "回復時バリア",
+  excessHealToBarrier: "余剰回復バリア変換",
   extendSelfAppliedDebuff: "デバフ延長",
   aoeCrowdBonus: "密集ボーナス",
-  damageVsDotTarget: "DoT対象与ダメ増",
+  damageIncrease: "ダメージ増加",
+  defenseIgnore: "防御無視",
+  periodicDispel: "デバフ解除（定期）",
 };
 export const STATUS_EFFECT_STATS = [
   "atk",
@@ -279,5 +286,49 @@ export const PASSIVE_EFFECT_KIND_OPTIONS: PassiveEffectKind[] = [
 export const STATUS_EFFECT_STAT_OPTIONS: StatusEffectStat[] = [
   ...STATUS_EFFECT_STATS,
 ];
+
+/** デバフフィルタ用タグ（新デバフ種追加時はここと debuffMatching.ts を更新） */
+export const DEBUFF_FILTER_TAGS = [
+  { id: "atk" as const, label: "ATKデバフ" },
+  { id: "def" as const, label: "DEFデバフ" },
+  { id: "reg" as const, label: "REGデバフ" },
+  { id: "damageTaken" as const, label: "被ダメデバフ" },
+  { id: "dot" as const, label: "DoT" },
+  { id: "stun" as const, label: "スタン" },
+] as const satisfies readonly { id: DebuffFilterTag; label: string }[];
+
+export const DEBUFF_FILTER_TAG_OPTIONS: DebuffFilterTag[] =
+  DEBUFF_FILTER_TAGS.map((entry) => entry.id);
+
+export const DEBUFF_FILTER_TAG_LABELS: Record<DebuffFilterTag, string> =
+  Object.fromEntries(DEBUFF_FILTER_TAGS.map((entry) => [entry.id, entry.label])) as Record<
+    DebuffFilterTag,
+    string
+  >;
+
+export const DAMAGE_INCREASE_CONDITION_KINDS = [
+  "debuff",
+  "targetHp",
+  "selfHp",
+] as const satisfies readonly DamageIncreaseCondition["kind"][];
+
+export const DAMAGE_INCREASE_CONDITION_KIND_LABELS: Record<
+  DamageIncreaseCondition["kind"],
+  string
+> = {
+  debuff: "デバフ",
+  targetHp: "対象HP",
+  selfHp: "自身HP",
+};
+
+export const DEFENSE_IGNORE_DEF_MODES = ["flat", "percent"] as const;
+
+export const DEFENSE_IGNORE_DEF_MODE_LABELS: Record<
+  "flat" | "percent",
+  string
+> = {
+  flat: "固定値",
+  percent: "割合",
+};
 export const REG_OPTIONS: number[] = [...VALID_REG_VALUES];
 export const JOB_TIER_OPTIONS: number[] = [...JOB_TIERS];

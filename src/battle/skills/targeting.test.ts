@@ -349,4 +349,33 @@ describe('resolveEffectTargets', () => {
     expect(ids).toContain('ally-b');
     expect(ids).not.toContain('ally-c');
   });
+
+  it('debuffedEnemy filters pool by targetDebuffFilter', () => {
+    const ally = mockUnit('ally', 200);
+    const debuffed = mockUnit('deb', 260, { isEnemy: true });
+    debuffed.statusEffects.push({
+      id: 'def',
+      kind: 'debuff',
+      stat: 'def',
+      multiplier: 0.8,
+      durationSec: 5,
+      remainingSec: 5,
+    });
+    const clean = mockUnit('clean', 280, { isEnemy: true });
+    const effect = {
+      type: 'damage' as const,
+      targetRule: 'debuffedEnemy' as const,
+      targetDebuffFilter: ['def'] as const,
+      damageType: 'physical' as const,
+      amount: { kind: 'flat' as const, flatAmount: 10 },
+    };
+    const anchor = resolveEffectAnchor(
+      effect,
+      'debuffedEnemy',
+      ally,
+      [ally],
+      [debuffed, clean],
+    );
+    expect(anchor?.id).toBe('deb');
+  });
 });

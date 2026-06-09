@@ -43,6 +43,7 @@ export function getTargetPoolForRule(
     case 'highestRegEnemy':
     case 'highestHpEnemy':
     case 'farthestEnemy':
+    case 'debuffedEnemy':
       return enemiesLive;
     case 'rangedAttackingEnemy':
       return enemiesLive.filter((e) => e.traits.attackRange === 'ranged');

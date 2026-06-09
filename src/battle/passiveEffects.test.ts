@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 import {
+  applyExcessHealToBarrierFromPassive,
+  getPassiveDamageIncreaseMultiplier,
   getPassiveOutgoingDamageMultiplier,
   initializeCountTriggerCooldowns,
   resolveDebuffDurationWithPassives,
@@ -54,14 +56,23 @@ const passives: Record<string, PassiveSkillDef> = {
   dotBonus: {
     id: 'dotBonus',
     name: 'DotBonus',
-    effect: 'damageVsDotTarget',
-    scale: 2,
+    effect: 'damageIncrease',
+    damageIncrease: {
+      scale: 2,
+      conditions: [{ kind: 'debuff', tags: ['dot'] }],
+    },
   },
   aura: {
     id: 'aura',
     name: 'Aura',
     effect: 'partyHotAura',
     partyHotAuraAmount: { kind: 'flat', flatAmount: 2 },
+  },
+  excessBarrier: {
+    id: 'excessBarrier',
+    name: 'ExcessBarrier',
+    effect: 'excessHealToBarrier',
+    barrierScale: 1,
   },
 };
 
@@ -101,7 +112,7 @@ describe('passiveEffects', () => {
     vi.restoreAllMocks();
   });
 
-  it('getPassiveOutgoingDamageMultiplier applies low HP and dot bonus', () => {
+  it('getPassiveDamageIncreaseMultiplier applies low HP scaling and dot bonus', () => {
     const warrior = mockAlly({
       id: 'warrior',
       hp: 25,
@@ -116,12 +127,16 @@ describe('passiveEffects', () => {
       lowHp: {
         id: 'lowHp',
         name: 'LowHp',
-        effect: 'selfLowHpDamageScale',
-        scale: 0.6,
-        maxMul: 1.5,
+        effect: 'damageIncrease',
+        damageIncrease: {
+          scale: 0.6,
+          conditions: [
+            { kind: 'selfHp', maxHpRatio: 1, mode: 'scaling', maxMul: 1.5 },
+          ],
+        },
       },
     };
-    const lowHpMul = getPassiveOutgoingDamageMultiplier(
+    const lowHpMul = getPassiveDamageIncreaseMultiplier(
       warrior,
       mockAlly({ id: 'enemy' }),
       lowHpPassives,
@@ -136,7 +151,7 @@ describe('passiveEffects', () => {
         equippedActiveSlots: [],
       },
     });
-    const hunterMul = getPassiveOutgoingDamageMultiplier(
+    const hunterMul = getPassiveDamageIncreaseMultiplier(
       dotted,
       mockAlly({
         id: 'enemy',
@@ -154,6 +169,37 @@ describe('passiveEffects', () => {
       passives,
     );
     expect(hunterMul).toBe(2);
+  });
+
+  it('applyExcessHealToBarrierFromPassive converts overheal and replaces barrier', () => {
+    const healer = mockAlly({
+      id: 'healer',
+      build: {
+        learnedPassiveIds: ['excessBarrier'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const target = mockAlly({ id: 'target', hp: 90, maxHp: 100, barrierHp: 5 });
+    const grant = applyExcessHealToBarrierFromPassive(
+      healer,
+      target,
+      20,
+      passives,
+    );
+    expect(grant).toBe(10);
+    expect(target.barrierHp).toBe(10);
+  });
+
+  it('getPassiveOutgoingDamageMultiplier only handles crowd bonus', () => {
+    expect(
+      getPassiveOutgoingDamageMultiplier(
+        mockAlly({ id: 'a' }),
+        mockAlly({ id: 'b' }),
+        {},
+        { targetShape: 'aoe', crowdHitCount: 3 },
+      ),
+    ).toBe(1);
   });
 
   it('resolveDebuffDurationWithPassives extends duration', () => {
