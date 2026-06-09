@@ -21,21 +21,32 @@ type SkillIconSource = Pick<
   allowedClassIds?: ClassId[];
 };
 
+const RANGED_ATTACKER_SKILL_PREFIXES = [
+  'at_ranger_',
+  'at_sniper_',
+  'at_hunter_',
+  'at_sorcerer_',
+  'at_enchanter_',
+  'at_geomancer_',
+  'attacker_kyushi_',
+  'attacker_jutsushi_',
+] as const;
+
 function parseRoleFromSkillId(
   skillId: string,
 ): Pick<ClassPreset, 'role' | 'traits'> | undefined {
-  if (skillId.startsWith('defender_')) {
+  if (skillId.startsWith('df_') || skillId.startsWith('defender_')) {
     return { role: 'defender', traits: { attackRange: 'melee' } };
   }
-  if (skillId.startsWith('supporter_')) {
+  if (skillId.startsWith('sp_') || skillId.startsWith('supporter_')) {
     return { role: 'supporter', traits: { attackRange: 'melee' } };
   }
-  if (skillId.startsWith('attacker_')) {
-    const attackRange =
-      skillId.startsWith('attacker_kyushi_') ||
-      skillId.startsWith('attacker_jutsushi_')
-        ? 'ranged'
-        : 'melee';
+  if (skillId.startsWith('at_') || skillId.startsWith('attacker_')) {
+    const attackRange = RANGED_ATTACKER_SKILL_PREFIXES.some((prefix) =>
+      skillId.startsWith(prefix),
+    )
+      ? 'ranged'
+      : 'melee';
     return { role: 'attacker', traits: { attackRange } };
   }
   return undefined;

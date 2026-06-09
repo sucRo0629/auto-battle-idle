@@ -77,6 +77,40 @@ function defaultResourceAmount(atkScale = 1): ResourceAmountSpec {
   return { kind: 'atkBased', atkScale };
 }
 
+function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
+  switch (passive.effect) {
+    case 'targetRuleOverride':
+      passive.targetRuleOverride ??= 'frontEnemy';
+      break;
+    case 'evasionChance':
+      passive.evasionChance ??= 0.1;
+      break;
+    case 'damageVsDotTarget':
+      passive.scale ??= 1.2;
+      break;
+    case 'selfLowHpDamageScale':
+      passive.scale ??= 0.5;
+      passive.maxMul ??= 1.5;
+      break;
+    case 'damageTakenToHeal':
+      passive.ratio ??= 0.1;
+      break;
+    case 'partyHotAura':
+      passive.partyHotAuraAmount ??= { kind: 'atkBased', atkScale: 0.05 };
+      break;
+    case 'healAppliesBarrier':
+      passive.barrierScale ??= 1;
+      break;
+    case 'aoeCrowdBonus':
+      passive.perExtraTargetScale ??= 0.1;
+      passive.maxExtraTargets ??= 4;
+      break;
+    case 'extendSelfAppliedDebuff':
+      passive.extendSec ??= 2;
+      break;
+  }
+}
+
 function normalizeEffectAmount(effect: {
   amount?: ResourceAmountSpec;
   powerMultiplier?: number;
@@ -774,6 +808,7 @@ export class SkillEditorStep {
           (effect) => {
             this.patchPassive(index, (current) => {
               current.effect = effect;
+              applyPassiveEffectDefaults(current);
             }, { rerender: true });
           },
         ),
@@ -819,22 +854,6 @@ export class SkillEditorStep {
           ),
         );
         break;
-      case 'basicAttackFeedsActive':
-        effectGrid.appendChild(
-          createFieldRow(
-            '対象アクティブ ID（任意）',
-            createTextInput(
-              passive.feedActiveSkillId ?? '',
-              (feedActiveSkillId) => {
-                this.patchPassive(index, (current) => {
-                  current.feedActiveSkillId = feedActiveSkillId || undefined;
-                }, { rerender: false });
-              },
-            ),
-          ),
-        );
-        break;
-      case 'heavyStrikeDamageScale':
       case 'damageVsDotTarget':
         effectGrid.appendChild(
           createFieldRow(
@@ -869,38 +888,6 @@ export class SkillEditorStep {
             ),
           );
         }
-        break;
-      case 'threatBonus':
-        effectGrid.appendChild(
-          createFieldRow(
-            'bonus',
-            createNumberInput(
-              passive.bonus ?? 0,
-              (bonus) => {
-                this.patchPassive(index, (current) => {
-                  current.bonus = bonus;
-                }, { rerender: false });
-              },
-              { step: 1 },
-            ),
-          ),
-        );
-        break;
-      case 'threatOnDebuff':
-        effectGrid.appendChild(
-          createFieldRow(
-            'multiplier',
-            createNumberInput(
-              passive.multiplier ?? 1,
-              (multiplier) => {
-                this.patchPassive(index, (current) => {
-                  current.multiplier = multiplier;
-                }, { rerender: false });
-              },
-              { step: 0.01 },
-            ),
-          ),
-        );
         break;
       case 'selfLowHpDamageScale':
         effectGrid.appendChild(

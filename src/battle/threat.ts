@@ -1,5 +1,4 @@
-import { getPassiveDefs } from "./combatMath.ts";
-import type { CombatantState, PassiveSkillDef } from "./types.ts";
+import type { CombatantState } from "./types.ts";
 
 /** maxHp 係数（statComponent = floor(maxHp×a + def×b)） */
 export const THREAT_STAT_HP_WEIGHT = 0.1;
@@ -17,13 +16,6 @@ export const THREAT_TARGET_WEIGHT_EXPONENT = 3;
 export function computeThreatStatComponent(unit: CombatantState): number {
   return Math.floor(
     unit.maxHp * THREAT_STAT_HP_WEIGHT + unit.def * THREAT_STAT_DEF_WEIGHT
-  );
-}
-
-function sumPassiveThreatBonus(passives: PassiveSkillDef[]): number {
-  return passives.reduce(
-    (sum, p) => sum + (p.effect === "threatBonus" ? p.bonus ?? 0 : 0),
-    0
   );
 }
 
@@ -47,32 +39,24 @@ function computeFrontRowPressureBonus(
 export function computeAllyBaseThreat(
   ally: CombatantState,
   allies: CombatantState[],
-  passives: Record<string, PassiveSkillDef>
 ): number {
   const statComponent = computeThreatStatComponent(ally);
-  const passiveBonus = sumPassiveThreatBonus(getPassiveDefs(ally, passives));
   const pressureBonus = computeFrontRowPressureBonus(ally, allies);
-  return statComponent + passiveBonus + pressureBonus;
+  return statComponent + pressureBonus;
 }
 
-export function initializeAllyThreat(
-  allies: CombatantState[],
-  passives: Record<string, PassiveSkillDef>
-): void {
+export function initializeAllyThreat(allies: CombatantState[]): void {
   for (const ally of allies) {
-    const base = computeAllyBaseThreat(ally, allies, passives);
+    const base = computeAllyBaseThreat(ally, allies);
     ally.baseThreat = base;
     ally.threat = base;
   }
 }
 
-export function refreshAlliesBaseThreat(
-  allies: CombatantState[],
-  passives: Record<string, PassiveSkillDef>
-): void {
+export function refreshAlliesBaseThreat(allies: CombatantState[]): void {
   for (const ally of allies) {
     if (!ally.isAlive) continue;
-    ally.baseThreat = computeAllyBaseThreat(ally, allies, passives);
+    ally.baseThreat = computeAllyBaseThreat(ally, allies);
   }
 }
 
@@ -106,19 +90,10 @@ export function applyThreatFromDamage(
   }
 }
 
-export function applyThreatFromDebuffApply(
-  actor: CombatantState,
-  passives: Record<string, PassiveSkillDef>
-): void {
+export function applyThreatFromDebuffApply(actor: CombatantState): void {
   if (actor.isEnemy || !actor.isAlive) return;
-  const actorPassives = getPassiveDefs(actor, passives);
-  let amount = THREAT_DEBUFF_APPLY;
-  for (const passive of actorPassives) {
-    if (passive.effect === "threatOnDebuff") {
-      amount = Math.floor(amount * (passive.multiplier ?? 1));
-    }
-  }
-  actor.threat = (actor.threat ?? actor.baseThreat ?? 0) + amount;
+  actor.threat =
+    (actor.threat ?? actor.baseThreat ?? 0) + THREAT_DEBUFF_APPLY;
 }
 
 function threatTargetWeight(threat: number): number {

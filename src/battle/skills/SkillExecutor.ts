@@ -14,7 +14,6 @@ import {
 } from '../ccEffects.ts';
 import {
   applyHealBarrierFromPassive,
-  feedBasicAttackToActives,
   resolveDebuffDurationWithPassives,
   rollsEvasion,
   stripPassivesAurasFromSource,
@@ -22,7 +21,10 @@ import {
 } from '../passiveEffects.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
 import { resolveMoveVisualX } from '../../render/formationLayout.ts';
-import { resetCooldownAfterFire } from '../skillTrigger.ts';
+import {
+  resetCooldownAfterFire,
+  tickCountTriggerCooldowns,
+} from '../skillTrigger.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -178,10 +180,10 @@ export class SkillExecutor {
     if (appliedAny) {
       resetCooldownAfterFire(cd, skill);
       if (cd.slotKind === 'basic') {
-        feedBasicAttackToActives(
-          actor,
-          this.gameData.skillRegistry.passives,
+        tickCountTriggerCooldowns(
+          actor.cooldowns,
           this.gameData.skillRegistry.actives,
+          'basicAttackCount',
         );
         this.deps.onBasicAttackExecuted?.(actor.id);
       }

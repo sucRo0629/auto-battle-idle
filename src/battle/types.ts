@@ -269,10 +269,6 @@ export interface CombatantState extends Combatant {
 export type PassiveEffectKind =
   | "targetRuleOverride"
   | "evasionChance"
-  | "basicAttackFeedsActive"
-  | "heavyStrikeDamageScale"
-  | "threatBonus"
-  | "threatOnDebuff"
   | "selfLowHpDamageScale"
   | "damageTakenToHeal"
   | "partyHotAura"
@@ -289,12 +285,8 @@ export interface PassiveSkillDef {
   effect: PassiveEffectKind;
   targetRuleOverride?: TargetRule;
   evasionChance?: number;
-  /** basicAttackFeedsActive: 対象アクティブ skillId（未指定 = basicAttackCount トリガー全般） */
-  feedActiveSkillId?: string;
   scale?: number;
   maxMul?: number;
-  bonus?: number;
-  multiplier?: number;
   ratio?: number;
   partyHotAuraAmount?: ResourceAmountSpec;
   barrierScale?: number;

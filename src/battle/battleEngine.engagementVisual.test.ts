@@ -247,9 +247,9 @@ describe('BattleEngine engaged visual layout', () => {
       (ally) => ally.hp > 0 && ally.formationRow === 'front',
     );
     const livingEnemies = snap.enemies.filter((enemy) => enemy.hp > 0);
-    const guard = frontAllies.find((ally) => ally.name === '衛士');
-    const sword = frontAllies.find((ally) => ally.name === '剣士');
-    const healer = frontAllies.find((ally) => ally.name === '薬師');
+    const guard = frontAllies.find((ally) => ally.name === '鉄衛士');
+    const sword = frontAllies.find((ally) => ally.name === '重戦士');
+    const healer = frontAllies.find((ally) => ally.name === '療養師');
 
     expect(guard).toBeDefined();
     expect(sword).toBeDefined();
@@ -303,10 +303,10 @@ describe('BattleEngine engaged visual layout', () => {
       engine.tick(1 / 60);
       const snap = engine.getSnapshot();
       const guard = snap.allies.find(
-        (ally) => ally.name === '衛士' && ally.hp > 0,
+        (ally) => ally.name === '鉄衛士' && ally.hp > 0,
       );
       const sword = snap.allies.find(
-        (ally) => ally.name === '剣士' && ally.hp > 0,
+        (ally) => ally.name === '重戦士' && ally.hp > 0,
       );
       const livingEnemies = snap.enemies.filter((enemy) => enemy.hp > 0);
       if (!guard && sword && livingEnemies.length > 0) {
@@ -375,9 +375,9 @@ describe('BattleEngine engaged visual layout', () => {
     expect(frontAllies.length).toBeGreaterThan(0);
     expect(meleeFront.length).toBeGreaterThan(0);
 
-    const guard = frontAllies.find((ally) => ally.name === '衛士');
+    const guard = frontAllies.find((ally) => ally.name === '鉄衛士');
     const archer = snap.allies.find(
-      (ally) => ally.name === '弓士' && ally.hp > 0,
+      (ally) => ally.name === '弓術士' && ally.hp > 0,
     );
     const minFrontAllyX = Math.min(...frontAllies.map((ally) => ally.visualX));
     const maxMeleeEnemyX = Math.max(...meleeFront.map((enemy) => enemy.visualX));

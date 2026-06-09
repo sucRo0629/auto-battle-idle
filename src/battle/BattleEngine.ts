@@ -163,10 +163,7 @@ export class BattleEngine {
         this.handleDamageThreat(actor, target, amount);
       },
       onDebuffApplied: (actor) => {
-        applyThreatFromDebuffApply(
-          actor,
-          this.gameData.skillRegistry.passives,
-        );
+        applyThreatFromDebuffApply(actor);
       },
     });
     this.reloadBattlefield();
@@ -213,7 +210,7 @@ export class BattleEngine {
   private initBattlePassiveState(): void {
     const passives = this.gameData.skillRegistry.passives;
     const actives = this.gameData.skillRegistry.actives;
-    initializeAllyThreat(this.allies, passives);
+    initializeAllyThreat(this.allies);
     syncPartyHotAuras(this.allies, passives);
     for (const unit of [...this.allies, ...this.enemies]) {
       initializeCountTriggerCooldowns(unit, actives);
@@ -975,7 +972,7 @@ export class BattleEngine {
   }
 
   private tickAllyThreat(deltaTime: number): void {
-    refreshAlliesBaseThreat(this.allies, this.gameData.skillRegistry.passives);
+    refreshAlliesBaseThreat(this.allies);
     for (const ally of this.allies) {
       tickAllyThreatDecay(ally, deltaTime);
     }

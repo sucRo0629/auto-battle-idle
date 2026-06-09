@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { CombatantState, PassiveSkillDef } from './types.ts';
+import type { CombatantState } from './types.ts';
 import {
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
   computeAllyBaseThreat,
   initializeAllyThreat,
   pickThreatWeightedAlly,
-  refreshAlliesBaseThreat,
   tickAllyThreatDecay,
 } from './threat.ts';
 
@@ -43,35 +42,15 @@ function mockAlly(
   };
 }
 
-const passives: Record<string, PassiveSkillDef> = {
-  tank_bonus: {
-    id: 'tank_bonus',
-    name: 'Tank',
-    effect: 'threatBonus',
-    bonus: 50,
-  },
-  duelist_threat: {
-    id: 'duelist_threat',
-    name: 'Duelist',
-    effect: 'threatOnDebuff',
-    multiplier: 2,
-  },
-};
-
 describe('threat', () => {
-  it('computes base threat from stats and threatBonus passive', () => {
+  it('computes base threat from stats only', () => {
     const tank = mockAlly({
       id: 'tank',
       maxHp: 200,
       def: 20,
-      build: {
-        learnedPassiveIds: ['tank_bonus'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
     });
-    const base = computeAllyBaseThreat(tank, [tank], passives);
-    expect(base).toBe(Math.floor(200 * 0.1 + 20 * 2) + 50);
+    const base = computeAllyBaseThreat(tank, [tank]);
+    expect(base).toBe(Math.floor(200 * 0.1 + 20 * 2));
   });
 
   it('adds front-row pressure when another front ally is damaged', () => {
@@ -89,11 +68,10 @@ describe('threat', () => {
       def: 15,
       hp: 180,
     });
-    const warriorBaseAlone = computeAllyBaseThreat(warrior, [warrior], passives);
+    const warriorBaseAlone = computeAllyBaseThreat(warrior, [warrior]);
     const warriorBaseWithPressure = computeAllyBaseThreat(
       warrior,
       [guard, warrior],
-      passives,
     );
     expect(warriorBaseWithPressure).toBeGreaterThan(warriorBaseAlone);
   });
@@ -119,19 +97,14 @@ describe('threat', () => {
     expect(ally.threat).toBe(50 + Math.floor(40 * 0.5) * 2);
   });
 
-  it('applyThreatFromDebuffApply respects threatOnDebuff multiplier', () => {
+  it('applyThreatFromDebuffApply adds fixed debuff threat', () => {
     const duelist = mockAlly({
       id: 'duelist',
       threat: 30,
       baseThreat: 30,
-      build: {
-        learnedPassiveIds: ['duelist_threat'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
     });
-    applyThreatFromDebuffApply(duelist, passives);
-    expect(duelist.threat).toBe(30 + 15 * 2);
+    applyThreatFromDebuffApply(duelist);
+    expect(duelist.threat).toBe(45);
   });
 
   it('tickAllyThreatDecay moves threat toward baseThreat', () => {
@@ -145,7 +118,7 @@ describe('threat', () => {
       mockAlly({ id: 'a', maxHp: 100, def: 5 }),
       mockAlly({ id: 'b', maxHp: 80, def: 5, formationRow: 'back' }),
     ];
-    initializeAllyThreat(allies, passives);
+    initializeAllyThreat(allies);
     expect(allies[0]!.threat).toBe(allies[0]!.baseThreat);
     expect(allies[1]!.threat).toBe(allies[1]!.baseThreat);
   });

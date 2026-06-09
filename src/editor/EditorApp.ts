@@ -1,5 +1,6 @@
 import type { AttackSpeedTier, EnemyTemplate } from '../battle/types.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
+import type { BalanceDisplayMode } from './balanceReference.ts';
 import { BalanceEditorStep } from './BalanceEditorStep.ts';
 import { ClassEditorStep, loadClassDraftById } from './ClassEditorStep.ts';
 import { EnemyEditorStep, loadEnemyDraftById } from './EnemyEditorStep.ts';
@@ -61,6 +62,7 @@ export class EditorApp {
 
   private balanceRows: BalanceClassRow[] = [];
   private balanceJobTier = 1;
+  private balanceDisplayMode: BalanceDisplayMode = 'all';
 
   private saving = false;
   private statusMessage = '';
@@ -244,6 +246,12 @@ export class EditorApp {
 
     this.balanceStep = new BalanceEditorStep(host, {
       getRows: () => this.balanceRows,
+      getClassOrder: () => this.classes.map((cls) => cls.id),
+      displayMode: this.balanceDisplayMode,
+      onDisplayModeChange: (mode) => {
+        this.balanceDisplayMode = mode;
+        this.render();
+      },
       jobTier: this.balanceJobTier,
       onJobTierChange: (tier) => {
         this.balanceJobTier = tier;

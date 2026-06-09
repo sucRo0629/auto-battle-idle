@@ -8,7 +8,19 @@ import { PARTY_SLOT_COUNT } from '../battle/types.ts';
 import { reconcileMemberBuildFromGameData } from './skillBuild.ts';
 
 export const DEFAULT_ROSTER_EXTRAS: Record<string, ClassId[]> = {
-  demo: ['attacker_jutsushi'],
+  demo: [
+    'df_paladin',
+    'df_duelist',
+    'at_assassin',
+    'at_lancer',
+    'at_sniper',
+    'at_hunter',
+    'at_sorcerer',
+    'at_enchanter',
+    'at_geomancer',
+    'sp_abjurer',
+    'sp_alchemist',
+  ],
   test: ['test_attacker_arcanist', 'test_defender_paladin'],
 };
 

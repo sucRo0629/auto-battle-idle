@@ -103,10 +103,9 @@ HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さ�
 
 ```
 statComponent = floor(maxHp × 0.1 + def × 2)
-baseThreat = statComponent + Σ threatBonus + frontRowPressureBonus
+baseThreat = statComponent + frontRowPressureBonus
 ```
 
-- `threatBonus` — パッシブ `threatBonus.bonus` の合算
 - `frontRowPressureBonus` — **前列**味方のみ。他前列の `1 - hp/maxHp` の最大値 × 自 statComponent（床が削れたほどタンクの基礎ヘイト上昇）
 
 ### 変動と減衰
@@ -114,7 +113,7 @@ baseThreat = statComponent + Σ threatBonus + frontRowPressureBonus
 | イベント | 変化 |
 |----------|------|
 | 与ダメ / 被ダメ | 双方（味方 actor・味方 target）に `floor(damage × 0.5)` を加算 |
-| debuff 付与成功 | actor に `15 × threatOnDebuff.multiplier`（パッシブなし時 15） |
+| debuff 付与成功 | actor に `+15` 固定 |
 | 毎 tick | `threat > baseThreat` なら `threat -= 20 × deltaTime`、下限 `baseThreat` |
 
 ### 敵ターゲット抽選

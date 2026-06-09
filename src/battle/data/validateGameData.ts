@@ -906,29 +906,14 @@ function requirePassiveEffectParams(
         ...base,
         evasionChance: requireNumber(obj, 'evasionChance', context),
       };
-    case 'basicAttackFeedsActive': {
-      const feedActiveSkillId =
-        obj.feedActiveSkillId === undefined
-          ? undefined
-          : requireString(obj, 'feedActiveSkillId', context);
-      return {
-        ...base,
-        ...(feedActiveSkillId !== undefined ? { feedActiveSkillId } : {}),
-      };
-    }
-    case 'heavyStrikeDamageScale':
     case 'damageVsDotTarget':
       return {
         ...base,
         scale: requireNumber(obj, 'scale', context),
-        ...(effect === 'damageVsDotTarget' && obj.selfAppliedOnly !== undefined
+        ...(obj.selfAppliedOnly !== undefined
           ? { selfAppliedOnly: requireBoolean(obj, 'selfAppliedOnly', context) }
           : {}),
       };
-    case 'threatBonus':
-      return { ...base, bonus: requireNumber(obj, 'bonus', context) };
-    case 'threatOnDebuff':
-      return { ...base, multiplier: requireNumber(obj, 'multiplier', context) };
     case 'selfLowHpDamageScale':
       return {
         ...base,
@@ -945,11 +930,16 @@ function requirePassiveEffectParams(
           `${context}.partyHotAuraAmount`,
         ),
       };
-    case 'healAppliesBarrier':
+    case 'healAppliesBarrier': {
+      const barrierScale =
+        obj.barrierScale === undefined
+          ? 1
+          : requireNumber(obj, 'barrierScale', context);
       return {
         ...base,
-        barrierScale: requireNumber(obj, 'barrierScale', context),
+        barrierScale,
       };
+    }
     case 'extendSelfAppliedDebuff': {
       const extendSec = parseOptionalNumber(obj, 'extendSec', context);
       const durationMultiplier = parseOptionalNumber(

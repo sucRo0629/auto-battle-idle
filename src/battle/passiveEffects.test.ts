@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 import {
-  feedBasicAttackToActives,
   getPassiveOutgoingDamageMultiplier,
   initializeCountTriggerCooldowns,
   resolveDebuffDurationWithPassives,
@@ -26,7 +25,7 @@ function mockAlly(
     formationRow: 'front',
     traits: { attackRange: 'melee' },
     build: {
-      learnedPassiveIds: ['feed', 'heavy'],
+      learnedPassiveIds: [],
       learnedActiveIds: [],
       equippedActiveSlots: [],
     },
@@ -46,17 +45,6 @@ function mockAlly(
 }
 
 const passives: Record<string, PassiveSkillDef> = {
-  feed: {
-    id: 'feed',
-    name: 'Feed',
-    effect: 'basicAttackFeedsActive',
-  },
-  heavy: {
-    id: 'heavy',
-    name: 'Heavy',
-    effect: 'heavyStrikeDamageScale',
-    scale: 1.5,
-  },
   evade: {
     id: 'evade',
     name: 'Evade',
@@ -92,12 +80,6 @@ const actives = {
 };
 
 describe('passiveEffects', () => {
-  it('feedBasicAttackToActives decrements basicAttackCount cooldowns', () => {
-    const warrior = mockAlly({ id: 'warrior' });
-    feedBasicAttackToActives(warrior, passives, actives);
-    expect(warrior.cooldowns[0]!.remaining).toBe(2);
-  });
-
   it('initializeCountTriggerCooldowns sets count trigger remaining to trigger value', () => {
     const warrior = mockAlly({ id: 'warrior' });
     warrior.cooldowns[0]!.remaining = 0;
@@ -119,39 +101,41 @@ describe('passiveEffects', () => {
     vi.restoreAllMocks();
   });
 
-  it('getPassiveOutgoingDamageMultiplier applies heavyStrike and dot bonus', () => {
-    const warrior = mockAlly({ id: 'warrior', hp: 25, maxHp: 100 });
-    const dotted = mockAlly({
-      id: 'dotted',
-      statusEffects: [
-        {
-          id: 'dot1',
-          kind: 'debuff',
-          overlay: 'dot',
-          multiplier: 1,
-          durationSec: 5,
-          remainingSec: 5,
-        },
-      ],
+  it('getPassiveOutgoingDamageMultiplier applies low HP and dot bonus', () => {
+    const warrior = mockAlly({
+      id: 'warrior',
+      hp: 25,
+      maxHp: 100,
+      build: {
+        learnedPassiveIds: ['lowHp'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
     });
-    dotted.build.learnedPassiveIds = ['dotBonus'];
-
-    const heavyMul = getPassiveOutgoingDamageMultiplier(
+    const lowHpPassives: Record<string, PassiveSkillDef> = {
+      lowHp: {
+        id: 'lowHp',
+        name: 'LowHp',
+        effect: 'selfLowHpDamageScale',
+        scale: 0.6,
+        maxMul: 1.5,
+      },
+    };
+    const lowHpMul = getPassiveOutgoingDamageMultiplier(
       warrior,
       mockAlly({ id: 'enemy' }),
-      passives,
-      { skill: actives.heavy, slotKind: 'active' },
+      lowHpPassives,
     );
-    expect(heavyMul).toBe(1.5);
+    expect(lowHpMul).toBeCloseTo(1.45, 5);
 
-    const dotMul = getPassiveOutgoingDamageMultiplier(
-      dotted,
-      mockAlly({ id: 'enemy' }),
-      passives,
-    );
-    expect(dotMul).toBe(1);
-
-    dotted.build.learnedPassiveIds = ['dotBonus'];
+    const dotted = mockAlly({
+      id: 'dotted',
+      build: {
+        learnedPassiveIds: ['dotBonus'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
     const hunterMul = getPassiveOutgoingDamageMultiplier(
       dotted,
       mockAlly({

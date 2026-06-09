@@ -157,10 +157,6 @@ export const POWER_STEP_MODES = [
 export const PASSIVE_EFFECT_KINDS = [
   "targetRuleOverride",
   "evasionChance",
-  "basicAttackFeedsActive",
-  "heavyStrikeDamageScale",
-  "threatBonus",
-  "threatOnDebuff",
   "selfLowHpDamageScale",
   "damageTakenToHeal",
   "partyHotAura",
@@ -173,10 +169,6 @@ export const PASSIVE_EFFECT_KINDS = [
 export const PASSIVE_EFFECT_KIND_LABELS: Record<PassiveEffectKind, string> = {
   targetRuleOverride: "ターゲット上書き",
   evasionChance: "回避率",
-  basicAttackFeedsActive: "通常攻撃で構え",
-  heavyStrikeDamageScale: "重撃威力倍率",
-  threatBonus: "ヘイトボーナス",
-  threatOnDebuff: "デバフ付与ヘイト倍化",
   selfLowHpDamageScale: "低HP火力",
   damageTakenToHeal: "被ダメ回復",
   partyHotAura: "味方全体HoT",

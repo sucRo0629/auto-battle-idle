@@ -17,8 +17,7 @@
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "df_guardian_basic_attack",
     "passiveIds": [
-      "passive_target_highest_atk",
-      "passive_threat_high"
+      "passive_target_highest_atk"
     ],
     "skills": [
       {
@@ -53,8 +52,7 @@
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "df_paladin_basic_attack",
     "passiveIds": [
-      "passive_damage_taken_heal",
-      "passive_threat_medium"
+      "passive_damage_taken_heal"
     ],
     "skills": [
       {
@@ -89,7 +87,6 @@
     "attackSpeedTier": "fast",
     "basicAttackSkillId": "df_duelist_basic_attack",
     "passiveIds": [
-      "passive_threat_on_debuff",
       "passive_self_low_hp_dmg"
     ],
     "skills": [
@@ -124,10 +121,6 @@
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_warrior_basic_attack",
-    "passiveIds": [
-      "passive_basic_attack_feeds",
-      "passive_heavy_strike_scale"
-    ],
     "skills": [
       {
         "level": 0,

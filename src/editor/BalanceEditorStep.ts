@@ -9,6 +9,7 @@ import {
   REG_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
 import type {
+  ClassId,
   GrowthPresetKey,
   GrowthTier,
   Role,
@@ -20,6 +21,14 @@ import {
   resolveStatGrowth,
 } from '../progression/levelGrowth.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
+import {
+  BALANCE_DISPLAY_MODE_OPTIONS,
+  BALANCE_ROLE_ORDER,
+  type BalanceDisplayMode,
+  filterBalanceRowsForDisplay,
+  groupBalanceRowsByRole,
+  sortBalanceRowsByClassOrder,
+} from './balanceReference.ts';
 import {
   type BalanceClassRow,
   ensureClassGrowthFields,
@@ -62,12 +71,18 @@ function computeRowDerived(cls: ClassPresetBeforeEnrich): {
   return { growth, lv10 };
 }
 
-function peerJobTier(cls: ClassPresetBeforeEnrich): number {
-  return cls.jobTier ?? 1;
-}
+const ROLE_SECTION_HINTS: Record<Role, string> = {
+  defender: '基準: 鉄衛士',
+  attacker: '基準: 重戦士・弓術士・魔術士',
+  supporter: '基準: 療養師',
+};
 
 export interface BalanceEditorStepOptions {
   getRows: () => BalanceClassRow[];
+  /** 既存クラス選択プルダウンと同じ classId 並び */
+  getClassOrder: () => ClassId[];
+  displayMode: BalanceDisplayMode;
+  onDisplayModeChange: (mode: BalanceDisplayMode) => void;
   jobTier: number;
   onJobTierChange: (tier: number) => void;
   onRowChange: (
@@ -79,7 +94,6 @@ export interface BalanceEditorStepOptions {
 }
 
 export class BalanceEditorStep {
-  private tableBody: HTMLTableSectionElement | null = null;
   private saveBtn: HTMLButtonElement | null = null;
 
   constructor(
@@ -96,15 +110,14 @@ export class BalanceEditorStep {
 
   destroy(): void {
     this.container.replaceChildren();
-    this.tableBody = null;
     this.saveBtn = null;
   }
 
   refreshRow(classId: string): void {
     const row = this.options.getRows().find((entry) => entry.id === classId);
-    if (!row || !this.tableBody) return;
+    if (!row) return;
 
-    const tr = this.tableBody.querySelector<HTMLTableRowElement>(
+    const tr = this.container.querySelector<HTMLTableRowElement>(
       `tr[data-class-id="${CSS.escape(classId)}"]`,
     );
     if (!tr) return;
@@ -170,14 +183,22 @@ export class BalanceEditorStep {
 
   private render(): void {
     preserveScrollDuring(() => {
-      this.tableBody = null;
       this.saveBtn = null;
       this.renderContent();
     });
   }
 
   private renderContent(): void {
-    const { getRows, jobTier, onJobTierChange, onRowChange, onSave } = this.options;
+    const {
+      getRows,
+      getClassOrder,
+      displayMode,
+      onDisplayModeChange,
+      jobTier,
+      onJobTierChange,
+      onRowChange,
+      onSave,
+    } = this.options;
     this.container.replaceChildren();
 
     const header = createEl('div', 'editor-step-header');
@@ -186,11 +207,12 @@ export class BalanceEditorStep {
       createEl(
         'p',
         'editor-step-desc',
-        '同じ jobTier のクラスステータスを比較・編集します。スキル・表示名の編集はクラスタブで行ってください。',
+        '同じ jobTier のクラスステータスを比較・編集します。表示は「すべて」「基準クラスのみ」「ロール別」で切り替えられます。スキル・表示名はクラスタブで編集してください。',
       ),
     );
     this.container.appendChild(header);
 
+    const toolbar = createEl('div', 'editor-balance-toolbar');
     const tierPicker = createEl('div', 'editor-balance-tier-picker');
     tierPicker.appendChild(createEl('span', 'editor-picker-label', 'jobTier'));
     tierPicker.appendChild(
@@ -200,71 +222,64 @@ export class BalanceEditorStep {
         (tier) => onJobTierChange(tier),
       ),
     );
-    this.container.appendChild(tierPicker);
+    toolbar.appendChild(tierPicker);
 
-    const filteredRows = getRows()
-      .filter((row) => peerJobTier(row.current) === jobTier)
-      .sort((a, b) =>
-        a.current.displayName.localeCompare(b.current.displayName, 'ja'),
-      );
-
-    const section = createEl('section', 'editor-section');
-    section.appendChild(
-      createEl(
-        'h3',
-        'editor-section-title',
-        `同格クラス比較（jobTier ${jobTier}）`,
+    const modePicker = createEl('div', 'editor-balance-mode-picker');
+    modePicker.appendChild(createEl('span', 'editor-picker-label', '表示'));
+    modePicker.appendChild(
+      createSelect(
+        displayMode,
+        BALANCE_DISPLAY_MODE_OPTIONS.map((option) => ({
+          value: option.value,
+          label: option.label,
+        })),
+        (mode) => onDisplayModeChange(mode as BalanceDisplayMode),
       ),
     );
-    section.appendChild(
+    toolbar.appendChild(modePicker);
+    this.container.appendChild(toolbar);
+
+    const classOrder = getClassOrder();
+    const filteredRows = sortBalanceRowsByClassOrder(
+      filterBalanceRowsForDisplay(getRows(), jobTier, displayMode),
+      classOrder,
+    );
+    let renderedRowCount = 0;
+
+    this.container.appendChild(
       createEl(
         'p',
-        'editor-hint',
+        'editor-hint editor-balance-global-hint',
         `Lv${PREVIEW_LEVEL} 試算列は Lv1 + 成長 × ${PREVIEW_LEVEL - 1} です。未保存の行は色付きで表示されます。`,
       ),
     );
 
-    const wrap = createEl('div', 'editor-compare-wrap');
-    const table = createEl('table', 'editor-compare-table');
-    const thead = createEl('thead');
-    const headRow = createEl('tr');
-    for (const label of [
-      'クラス',
-      'ロール',
-      'Lv1 HP',
-      'Lv1 ATK',
-      'Lv1 DEF',
-      'REG',
-      'HP 成長',
-      'ATK 成長',
-      'DEF 成長',
-      'preset',
-      `Lv${PREVIEW_LEVEL} HP`,
-      `Lv${PREVIEW_LEVEL} ATK`,
-      `Lv${PREVIEW_LEVEL} DEF`,
-      'SPD',
-    ]) {
-      headRow.appendChild(createEl('th', undefined, label));
-    }
-    thead.appendChild(headRow);
-    table.appendChild(thead);
-
-    const tbody = createEl('tbody') as HTMLTableSectionElement;
-    this.tableBody = tbody;
-
-    for (const row of filteredRows) {
-      tbody.appendChild(this.buildDataRow(row, onRowChange));
-    }
-
-    table.appendChild(tbody);
-    wrap.appendChild(table);
-    section.appendChild(wrap);
-    this.container.appendChild(section);
-
-    if (filteredRows.length === 0) {
-      section.appendChild(
-        createEl('p', 'editor-hint', 'この jobTier に該当するクラスがありません。'),
+    if (displayMode === 'byRole') {
+      renderedRowCount = this.renderRoleGroupedTables(
+        filteredRows,
+        classOrder,
+        jobTier,
+        onRowChange,
       );
+    } else {
+      const sectionTitle =
+        displayMode === 'reference'
+          ? `基準クラス比較（jobTier ${jobTier}）`
+          : `同格クラス比較（jobTier ${jobTier}）`;
+      renderedRowCount = this.renderFlatTable(
+        filteredRows,
+        sectionTitle,
+        onRowChange,
+        { showRole: true },
+      );
+    }
+
+    if (renderedRowCount === 0) {
+      const emptyMessage =
+        displayMode === 'reference'
+          ? 'この jobTier に該当する基準クラスがありません。'
+          : 'この jobTier に該当するクラスがありません。';
+      this.container.appendChild(createEl('p', 'editor-hint', emptyMessage));
     }
 
     const actions = createEl('div', 'editor-actions');
@@ -283,9 +298,101 @@ export class BalanceEditorStep {
     this.container.appendChild(actions);
   }
 
+  private renderFlatTable(
+    rows: BalanceClassRow[],
+    sectionTitle: string,
+    onRowChange: BalanceEditorStepOptions['onRowChange'],
+    options: { showRole: boolean },
+  ): number {
+    const section = createEl('section', 'editor-section');
+    section.appendChild(createEl('h3', 'editor-section-title', sectionTitle));
+    const count = this.appendCompareTable(section, rows, onRowChange, options);
+    this.container.appendChild(section);
+    return count;
+  }
+
+  private renderRoleGroupedTables(
+    rows: BalanceClassRow[],
+    classOrder: ClassId[],
+    jobTier: number,
+    onRowChange: BalanceEditorStepOptions['onRowChange'],
+  ): number {
+    const groupedRows = groupBalanceRowsByRole(rows, classOrder);
+    let renderedRowCount = 0;
+
+    for (const role of BALANCE_ROLE_ORDER) {
+      const roleRows = groupedRows.get(role) ?? [];
+      if (roleRows.length === 0) continue;
+
+      const section = createEl('section', 'editor-section editor-balance-role-section');
+      section.dataset.role = role;
+      section.appendChild(
+        createEl(
+          'h3',
+          'editor-section-title',
+          `${ROLE_LABELS[role]}ロール（jobTier ${jobTier}）`,
+        ),
+      );
+      section.appendChild(createEl('p', 'editor-hint', ROLE_SECTION_HINTS[role]));
+
+      renderedRowCount += this.appendCompareTable(
+        section,
+        roleRows,
+        onRowChange,
+        { showRole: false },
+      );
+      this.container.appendChild(section);
+    }
+
+    return renderedRowCount;
+  }
+
+  private appendCompareTable(
+    section: HTMLElement,
+    rows: BalanceClassRow[],
+    onRowChange: BalanceEditorStepOptions['onRowChange'],
+    options: { showRole: boolean },
+  ): number {
+    const wrap = createEl('div', 'editor-compare-wrap');
+    const table = createEl('table', 'editor-compare-table');
+    const thead = createEl('thead');
+    const headRow = createEl('tr');
+    const columns = [
+      'クラス',
+      ...(options.showRole ? ['ロール'] : []),
+      'Lv1 HP',
+      'Lv1 ATK',
+      'Lv1 DEF',
+      'REG',
+      'HP 成長',
+      'ATK 成長',
+      'DEF 成長',
+      'preset',
+      `Lv${PREVIEW_LEVEL} HP`,
+      `Lv${PREVIEW_LEVEL} ATK`,
+      `Lv${PREVIEW_LEVEL} DEF`,
+      'SPD',
+    ];
+    for (const label of columns) {
+      headRow.appendChild(createEl('th', undefined, label));
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = createEl('tbody') as HTMLTableSectionElement;
+    for (const row of rows) {
+      tbody.appendChild(this.buildDataRow(row, onRowChange, options.showRole));
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    section.appendChild(wrap);
+    return rows.length;
+  }
+
   private buildDataRow(
     row: BalanceClassRow,
     onRowChange: BalanceEditorStepOptions['onRowChange'],
+    showRole = false,
   ): HTMLTableRowElement {
     const cls = row.current;
     ensureClassGrowthFields(cls);
@@ -304,9 +411,11 @@ export class BalanceEditorStep {
     nameCell.textContent = cls.displayName;
     tr.appendChild(nameCell);
 
-    const roleCell = createEl('td');
-    roleCell.textContent = ROLE_LABELS[cls.role];
-    tr.appendChild(roleCell);
+    if (showRole) {
+      const roleCell = createEl('td');
+      roleCell.textContent = ROLE_LABELS[cls.role];
+      tr.appendChild(roleCell);
+    }
 
     tr.appendChild(
       this.numberCell('maxHp', cls.maxHp, { min: 1 }, (value) => {

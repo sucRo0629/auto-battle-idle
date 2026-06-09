@@ -3,7 +3,7 @@
     "name": "Demo Party",
     "members": [
       {
-        "classId": "defender_eishi",
+        "classId": "df_guardian",
         "build": {
           "learnedPassiveIds": [],
           "learnedActiveIds": [],
@@ -11,7 +11,7 @@
         }
       },
       {
-        "classId": "attacker_kenshi",
+        "classId": "at_warrior",
         "build": {
           "learnedPassiveIds": [],
           "learnedActiveIds": [],
@@ -19,7 +19,7 @@
         }
       },
       {
-        "classId": "supporter_yakushi",
+        "classId": "sp_cleric",
         "build": {
           "learnedPassiveIds": [],
           "learnedActiveIds": [],
@@ -27,7 +27,7 @@
         }
       },
       {
-        "classId": "attacker_kyushi",
+        "classId": "at_ranger",
         "build": {
           "learnedPassiveIds": [],
           "learnedActiveIds": [],

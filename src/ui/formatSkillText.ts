@@ -25,20 +25,10 @@ function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): s
       return `ターゲット → ${TARGET_RULE_LABELS[def.targetRuleOverride ?? 'frontEnemy']}`;
     case 'evasionChance':
       return `回避 +${def.evasionChance ?? 0}`;
-    case 'basicAttackFeedsActive':
-      return def.feedActiveSkillId
-        ? `通常攻撃で ${def.feedActiveSkillId} を構え`
-        : '通常攻撃で構え';
-    case 'heavyStrikeDamageScale':
-      return `重撃 ×${def.scale ?? 1}`;
-    case 'threatBonus':
-      return `ヘイト +${def.bonus ?? 0}`;
-    case 'threatOnDebuff':
-      return `デバフヘイト ×${def.multiplier ?? 1}`;
     case 'selfLowHpDamageScale':
       return `低HP火力 scale ${def.scale ?? 1}（上限 ×${def.maxMul ?? 1}）`;
     case 'damageTakenToHeal':
-      return `被ダメ回復 ${def.ratio ?? 0}`;
+      return `被ダメの ${Math.round((def.ratio ?? 0) * 100)}% を即時回復`;
     case 'partyHotAura':
       return '味方全体 HoT';
     case 'healAppliesBarrier':

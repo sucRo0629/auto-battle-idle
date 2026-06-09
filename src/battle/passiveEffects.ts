@@ -20,33 +20,6 @@ export interface PassiveDamageContext {
   targetShape?: TargetShape;
 }
 
-export function feedBasicAttackToActives(
-  actor: CombatantState,
-  passives: Record<string, PassiveSkillDef>,
-  actives: Record<string, ActiveSkillDef>,
-): void {
-  const defs = getPassiveDefs(actor, passives).filter(
-    (p) => p.effect === 'basicAttackFeedsActive',
-  );
-  if (defs.length === 0) return;
-
-  const feedSkillIds = new Set(
-    defs
-      .map((p) => p.feedActiveSkillId)
-      .filter((id): id is string => Boolean(id)),
-  );
-  const filterBySkillId = feedSkillIds.size > 0;
-
-  for (const cd of actor.cooldowns) {
-    if (cd.slotKind !== 'active' || cd.remaining <= 0) continue;
-    const skill = actives[cd.skillId];
-    if (!skill) continue;
-    if (resolveSkillTrigger(skill).kind !== 'basicAttackCount') continue;
-    if (filterBySkillId && !feedSkillIds.has(cd.skillId)) continue;
-    cd.remaining = Math.max(0, cd.remaining - 1);
-  }
-}
-
 export function initializeCountTriggerCooldowns(
   unit: CombatantState,
   actives: Record<string, ActiveSkillDef>,
@@ -111,16 +84,6 @@ export function getPassiveOutgoingDamageMultiplier(
         const maxMul = passive.maxMul ?? 1;
         const missingRatio = 1 - attacker.hp / attacker.maxHp;
         mul *= Math.min(maxMul, 1 + scale * missingRatio);
-        break;
-      }
-      case 'heavyStrikeDamageScale': {
-        const skill = context.skill;
-        if (
-          skill &&
-          resolveSkillTrigger(skill).kind === 'basicAttackCount'
-        ) {
-          mul *= passive.scale ?? 1;
-        }
         break;
       }
       case 'damageVsDotTarget': {

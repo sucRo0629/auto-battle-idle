@@ -1,5 +1,4 @@
 #editor-app {
-  max-width: 960px;
   margin: 0 auto;
   padding: 24px 16px 48px;
 }
@@ -269,12 +268,28 @@
   color: #9a9aaa;
 }
 
-.editor-balance-tier-picker {
+.editor-balance-global-hint {
+  margin-bottom: 0.75rem;
+}
+
+.editor-balance-role-section + .editor-balance-role-section {
+  margin-top: 1.25rem;
+}
+
+.editor-balance-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+  margin-bottom: 16px;
+}
+
+.editor-balance-tier-picker,
+.editor-balance-mode-picker {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-bottom: 16px;
 }
 
 .editor-compare-wrap {
