@@ -14,7 +14,8 @@ import type { NormalizedEntityTraits } from './types.ts';
 import {
   resolveClassIconKey,
   resolveClassSpriteKey,
-} from './classVisuals.ts';
+  resolveEnemySpriteKey,
+} from '../render/entityVisuals.ts';
 import {
   computeStatsAtLevel,
   type LevelCurvesConfig,
@@ -167,7 +168,7 @@ export function createEnemyFromTemplate(
     isAlive: true,
     cooldowns,
     statusEffects: [],
-    spriteKey: template.spriteKey,
+    spriteKey: resolveEnemySpriteKey(template),
     iconKey: 'default',
     isEnemy: true,
     battleX: spawnX,

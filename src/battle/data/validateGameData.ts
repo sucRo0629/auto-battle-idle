@@ -1747,14 +1747,20 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       obj.basicAttackSkillId === undefined
         ? defaultBasicAttackId(id)
         : requireString(obj, 'basicAttackSkillId', context);
-    const spriteKey =
-      obj.spriteKey === undefined
-        ? undefined
-        : requireString(obj, 'spriteKey', context);
-    const iconKey =
-      obj.iconKey === undefined
-        ? undefined
-        : requireString(obj, 'iconKey', context);
+    if (obj.spriteKey !== undefined) {
+      invalidField(
+        context,
+        'spriteKey',
+        'removed; use sprites/{id}.png or sheets/{id}/',
+      );
+    }
+    if (obj.iconKey !== undefined) {
+      invalidField(
+        context,
+        'iconKey',
+        'removed; use class-icons/{id}.png',
+      );
+    }
     const passiveIds =
       obj.passiveIds === undefined
         ? []
@@ -1801,8 +1807,6 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       def,
       reg,
       basicAttackSkillId,
-      spriteKey,
-      iconKey,
       ...(passiveIds.length > 0 ? { passiveIds } : {}),
       skills,
       ...(jobTier !== undefined ? { jobTier } : {}),
@@ -1964,7 +1968,13 @@ function parseEnemies(raw: unknown): EnemyTemplateParsed[] {
     if (exp < 0) {
       invalidField(context, 'exp', 'must be >= 0');
     }
-    const spriteKey = requireString(obj, 'spriteKey', context);
+    if (obj.spriteKey !== undefined) {
+      invalidField(
+        context,
+        'spriteKey',
+        'removed; use sprites/{id}.png or sheets/{id}/',
+      );
+    }
     const basicAttackSkillId =
       obj.basicAttackSkillId === undefined
         ? `${id}_basic_attack`
@@ -1997,7 +2007,6 @@ function parseEnemies(raw: unknown): EnemyTemplateParsed[] {
       def,
       reg,
       exp,
-      spriteKey,
       basicAttackSkillId,
       traits: traitsRaw,
       ...(attackSpeedTier !== undefined ? { attackSpeedTier } : {}),

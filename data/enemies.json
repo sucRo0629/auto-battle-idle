@@ -7,7 +7,6 @@
     "def": 4,
     "reg": 0,
     "exp": 0,
-    "spriteKey": "none",
     "basicAttackSkillId": "test_enemy_basic_attack",
     "attackSpeedTier": "normal",
     "traits": {}
@@ -20,7 +19,6 @@
     "def": 4,
     "reg": 0,
     "exp": 0,
-    "spriteKey": "none",
     "basicAttackSkillId": "test_enemy_elite_basic_attack",
     "attackSpeedTier": "normal",
     "traits": {}
@@ -33,7 +31,6 @@
     "def": 5,
     "reg": 0,
     "exp": 0,
-    "spriteKey": "enemy_default",
     "basicAttackSkillId": "stage1_1_basic_attack",
     "attackSpeedTier": "somewhatSlow",
     "traits": {}
@@ -46,7 +43,6 @@
     "def": 5,
     "reg": 0,
     "exp": 0,
-    "spriteKey": "attacker_ranged_placeholder",
     "basicAttackSkillId": "test_ranged_basic_attack",
     "attackSpeedTier": "normal",
     "traits": {

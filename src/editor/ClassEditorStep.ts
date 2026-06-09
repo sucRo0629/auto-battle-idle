@@ -596,30 +596,6 @@ export class ClassEditorStep {
     this.previewHost = previewSection;
     renderGrowthPreview(previewSection, draft);
 
-    const assetsSection = createSection("見た目キー");
-    this.container.appendChild(assetsSection);
-    const assetsGrid = appendGrid(assetsSection);
-    assetsGrid.appendChild(
-      createFieldRow(
-        "spriteKey",
-        createTextInput(draft.class.spriteKey ?? "", (spriteKey) => {
-          commitDraft((next) => {
-            next.class.spriteKey = spriteKey.trim() || undefined;
-          });
-        })
-      )
-    );
-    assetsGrid.appendChild(
-      createFieldRow(
-        "iconKey",
-        createTextInput(draft.class.iconKey ?? "", (iconKey) => {
-          commitDraft((next) => {
-            next.class.iconKey = iconKey.trim() || undefined;
-          });
-        })
-      )
-    );
-
     if (!hideSave) {
       const actions = createEl("div", "editor-actions");
       const saveBtn = createActionButton(

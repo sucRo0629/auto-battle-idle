@@ -1,21 +1,21 @@
 # スプライトシート
 
-`{spriteKey}` フォルダに、アニメーション種別ごとの横並び PNG を置く。
+`{entityId}` フォルダに、アニメーション種別ごとの横並び PNG を置く（クラスは `classId`、敵は `enemyId` と一致）。
 
 ## 配置
 
 ```
 sheets/
-  slime/
+  df_guardian/
     idle.png
     attack.png
     death.png
-  enemy_default/
+  stage1_1/
     idle.png
     death.png
 ```
 
-- **spriteKey** … `enemies.json` / `classes.json` の `spriteKey` と一致させる（例: `slime`, `enemy_default`）
+- **entityId** … クラス / 敵テンプレートの `id` と一致させる（例: `df_guardian`, `stage1_1`）
 - **ファイル名** … `idle` / `attack` / `heal` / `hurt` / `death` のいずれか（拡張子 `.png`）
 
 ## PNG 仕様
@@ -70,9 +70,9 @@ const SHEET_CELL_OVERRIDES = {
 ## 動作
 
 - シート PNG を置くと、その anim だけ自動登録される（コード変更不要）
-- 未配置の anim は従来どおり静止画（`sprites/{spriteKey}.png`）またはプレースホルダー演出
+- 未配置の anim は従来どおり静止画（`sprites/{entityId}.png`）またはプレースホルダー演出
 - death シートがある場合、回転プレースホルダーは使われない
 
 ## 静止画（シートなし）
 
-`sprites/{spriteKey}.png` は **32 × 32 px**。足元中央を layout 箱の下辺中央に合わせて描画。
+`sprites/{entityId}.png` は **32 × 32 px**。足元中央を layout 箱の下辺中央に合わせて描画。

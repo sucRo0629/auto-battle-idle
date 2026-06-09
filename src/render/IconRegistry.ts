@@ -1,6 +1,3 @@
-import defenderPlaceholderIconUrl from '../assets/class-icons/placeholder_df.png';
-import supporterPlaceholderIconUrl from '../assets/class-icons/placeholder_sp.png';
-import attackerGeneralPlaceholderIconUrl from '../assets/class-icons/placeholder_at_general.png';
 import {
   resolveSkillIconKey,
   type SkillIconContext,
@@ -10,18 +7,7 @@ import type {
   ActiveSkillDef,
   PassiveSkillDef,
 } from '../battle/types.ts';
-
-const CLASS_ICON_URLS: Record<string, string> = {
-  [PLACEHOLDER_SPRITE_KEYS.defender]: defenderPlaceholderIconUrl,
-  [PLACEHOLDER_SPRITE_KEYS.supporter]: supporterPlaceholderIconUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerGeneral]: attackerGeneralPlaceholderIconUrl,
-  // 再分類用キー — PNG 追加までは general にフォールバック
-  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: attackerGeneralPlaceholderIconUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical]:
-    attackerGeneralPlaceholderIconUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerRangedMagic]:
-    attackerGeneralPlaceholderIconUrl,
-};
+import { CLASS_ICON_URLS } from './classIconAssets.ts';
 
 const skillIconModules = import.meta.glob<string>(
   '../assets/skill-icons/*.png',
@@ -49,12 +35,14 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 }
 
 function collectIconUrls(): Map<string, string> {
-  const urls = new Map<string, string>(Object.entries(CLASS_ICON_URLS));
+  const urls = new Map<string, string>(CLASS_ICON_URLS);
   for (const [key, url] of SKILL_ICON_URLS) {
     urls.set(key, url);
   }
   return urls;
 }
+
+export { hasClassIconAsset } from './classIconAssets.ts';
 
 export function preloadClassIcons(): Promise<void> {
   if (!preloadPromise) {
@@ -70,8 +58,9 @@ export function preloadClassIcons(): Promise<void> {
 export function getSkillIconUrl(resolvedKey: string): string {
   return (
     SKILL_ICON_URLS.get(resolvedKey) ??
-    CLASS_ICON_URLS[resolvedKey] ??
-    CLASS_ICON_URLS[PLACEHOLDER_SPRITE_KEYS.defender]
+    CLASS_ICON_URLS.get(resolvedKey) ??
+    CLASS_ICON_URLS.get(PLACEHOLDER_SPRITE_KEYS.defender) ??
+    ''
   );
 }
 

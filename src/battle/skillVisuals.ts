@@ -22,22 +22,35 @@ type SkillIconSource = Pick<
   allowedClassIds?: ClassId[];
 };
 
-const RANGED_ATTACKER_SKILL_PREFIXES = [
+const RANGED_PHYSICAL_ATTACKER_SKILL_PREFIXES = [
   'at_ranger_',
   'at_sniper_',
   'at_hunter_',
+  'attacker_kyushi_',
+] as const;
+
+const RANGED_MAGIC_ATTACKER_SKILL_PREFIXES = [
   'at_sorcerer_',
   'at_enchanter_',
   'at_geomancer_',
-  'attacker_kyushi_',
   'attacker_jutsushi_',
 ] as const;
 
-function placeholderTraits(rangePx: number): NormalizedEntityTraits {
+function placeholderTraits(
+  rangePx: number,
+  damageType: NormalizedEntityTraits['damageType'] = 'physical',
+): NormalizedEntityTraits {
   return {
     rangePx,
-    damageType: 'physical',
-    basicAttackVfx: { preset: rangePx >= 25 ? 'arrow' : 'slash' },
+    damageType,
+    basicAttackVfx: {
+      preset:
+        damageType === 'magic'
+          ? 'orb'
+          : rangePx >= 25
+            ? 'arrow'
+            : 'slash',
+    },
   };
 }
 
@@ -51,12 +64,18 @@ function parseRoleFromSkillId(
     return { role: 'supporter', traits: placeholderTraits(0) };
   }
   if (skillId.startsWith('at_') || skillId.startsWith('attacker_')) {
-    const rangePx = RANGED_ATTACKER_SKILL_PREFIXES.some((prefix) =>
+    const isMagic = RANGED_MAGIC_ATTACKER_SKILL_PREFIXES.some((prefix) =>
       skillId.startsWith(prefix),
-    )
-      ? 50
-      : 0;
-    return { role: 'attacker', traits: placeholderTraits(rangePx) };
+    );
+    const isRanged =
+      isMagic ||
+      RANGED_PHYSICAL_ATTACKER_SKILL_PREFIXES.some((prefix) =>
+        skillId.startsWith(prefix),
+      );
+    return {
+      role: 'attacker',
+      traits: placeholderTraits(isRanged ? 50 : 0, isMagic ? 'magic' : 'physical'),
+    };
   }
   return undefined;
 }
@@ -64,7 +83,11 @@ function parseRoleFromSkillId(
 function resolvePlaceholderFromClassPreset(
   preset: Pick<ClassPreset, 'role' | 'traits'>,
 ): string {
-  return resolvePlaceholderIconKey(preset.role, preset.traits.rangePx);
+  return resolvePlaceholderIconKey(
+    preset.role,
+    preset.traits.rangePx,
+    preset.traits.damageType,
+  );
 }
 
 export function resolveSkillIconKey(

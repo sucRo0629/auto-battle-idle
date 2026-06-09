@@ -598,7 +598,6 @@ export function createEmptyEnemyDraft(): EnemyDraft {
       def: 5,
       reg: 0,
       exp: 1,
-      spriteKey: 'enemy_default',
       basicAttackSkillId: '',
       traits: {},
       attackSpeedTier: 'normal',

@@ -72,6 +72,10 @@ export function preloadSpriteSheets(): Promise<void> {
   return preloadPromise;
 }
 
+export function hasSpriteSheetKey(spriteKey: string): boolean {
+  return sheetUrls.has(spriteKey);
+}
+
 export function hasSpriteSheetAnimation(
   spriteKey: string,
   anim: AnimState,

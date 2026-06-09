@@ -146,17 +146,6 @@ export class EnemyEditorStep {
         ),
       );
     }
-    identityGrid.appendChild(
-      createFieldRow(
-        'spriteKey',
-        createTextInput(draft.enemy.spriteKey ?? '', (spriteKey) => {
-          commitDraft((next) => {
-            next.enemy.spriteKey = spriteKey.trim() || 'enemy_default';
-          });
-        }),
-      ),
-    );
-
     const statsSection = createSection('ステータス');
     this.container.appendChild(statsSection);
     const statsGrid = appendGrid(statsSection);

@@ -3,7 +3,7 @@ import { MEMBER_STAT_LABELS } from "../battle/data/gameDataSchema.ts";
 import {
   resolveClassIconKey,
   resolveClassSpriteKey,
-} from "../battle/classVisuals.ts";
+} from "../render/entityVisuals.ts";
 import type {
   ActiveSkillDef,
   ClassId,

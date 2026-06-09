@@ -1,13 +1,9 @@
-import defenderPlaceholderUrl from '../assets/sprites/defender_placeholder.png';
-import attackerMeleePlaceholderUrl from '../assets/sprites/attacker_melee_placeholder.png';
-import attackerRangedPlaceholderUrl from '../assets/sprites/attacker_ranged_placeholder.png';
-import supporterPlaceholderUrl from '../assets/sprites/supporter_placeholder.png';
-import slimeUrl from '../assets/sprites/slime.png';
-import enemyDefaultUrl from '../assets/sprites/enemy_default.png';
+import type { PlaceholderSpriteKey } from '../battle/classVisuals.ts';
 import {
-  PLACEHOLDER_SPRITE_KEYS,
-  type PlaceholderSpriteKey,
-} from '../battle/classVisuals.ts';
+  ENEMY_DEFAULT_SPRITE_KEY,
+  hasEntitySpriteAsset,
+  SPRITE_URLS,
+} from './spriteAssets.ts';
 import { preloadSpriteSheets } from './spriteSheetRegistry.ts';
 
 export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death' | 'dash';
@@ -18,23 +14,7 @@ export interface SpriteAnimDef {
   loop: boolean;
 }
 
-export const ENEMY_DEFAULT_SPRITE_KEY = 'enemy_default';
-
-const SPRITE_URLS: Record<string, string> = {
-  [PLACEHOLDER_SPRITE_KEYS.defender]: defenderPlaceholderUrl,
-  [PLACEHOLDER_SPRITE_KEYS.supporter]: supporterPlaceholderUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerGeneral]: attackerMeleePlaceholderUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: attackerMeleePlaceholderUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical]: attackerRangedPlaceholderUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerRangedMagic]: attackerRangedPlaceholderUrl,
-  // 旧 spriteKey（enemies.json 等）
-  defender_placeholder: defenderPlaceholderUrl,
-  attacker_melee_placeholder: attackerMeleePlaceholderUrl,
-  attacker_ranged_placeholder: attackerRangedPlaceholderUrl,
-  supporter_placeholder: supporterPlaceholderUrl,
-  slime: slimeUrl,
-  [ENEMY_DEFAULT_SPRITE_KEY]: enemyDefaultUrl,
-};
+export { ENEMY_DEFAULT_SPRITE_KEY, hasEntitySpriteAsset };
 
 export const ANIM_DEFS: Record<AnimState, SpriteAnimDef> = {
   idle: { frames: 4, fps: 6, loop: true },

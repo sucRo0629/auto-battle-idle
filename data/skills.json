@@ -1163,6 +1163,63 @@
           }
         }
       ]
+    },
+    {
+      "id": "df_paladin_basic_attack",
+      "name": "df_paladin_basic_attack",
+      "interval": 2,
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "df_guardian_basic_attack",
+      "name": "df_guardian_basic_attack",
+      "interval": 2,
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "df_duelist_basic_attack",
+      "name": "df_duelist_basic_attack",
+      "interval": 2,
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ]
     }
   ]
 }

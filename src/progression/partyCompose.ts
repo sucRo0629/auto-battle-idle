@@ -39,17 +39,13 @@ export function createMemberFromClass(
   if (!preset) {
     throw new Error(`Class not found: ${classId}`);
   }
-  const firstActive =
-    preset.starterActiveIds[0] ?? preset.classSkillIds.find(
-      (id) => gameData.skillRegistry.actives[id],
-    ) ?? '';
   const member: PartyMemberState = {
     classId,
     progress: { level: 1, exp: 0 },
     build: {
       learnedPassiveIds: [],
       learnedActiveIds: [],
-      equippedActiveSlots: firstActive ? [firstActive] : [],
+      equippedActiveSlots: [],
     },
   };
   reconcileMemberBuildFromGameData(member, gameData);

@@ -86,10 +86,6 @@ export interface ClassPreset extends CombatStats {
   flavorJa?: string;
   formationRow: FormationRow;
   traits: NormalizedEntityTraits;
-  /** 未指定時は role / rangePx からプレースホルダーを使用 */
-  spriteKey?: string;
-  /** 未指定時は role / rangePx からプレースホルダーを使用 */
-  iconKey?: string;
   /** 未指定時は `{id}_basic_attack` */
   basicAttackSkillId: string;
   /** 固定パッシブ（LvUP で増えない）。skills[] とは分離 */
@@ -632,7 +628,6 @@ export interface EnemyTemplate extends CombatStats {
   displayName: string;
   /** 撃破時に生存味方全員が得る EXP */
   exp: number;
-  spriteKey: string;
   /** 未指定時は `{id}_basic_attack` */
   basicAttackSkillId: string;
   traits: NormalizedEntityTraits;

@@ -82,6 +82,24 @@ export function hasBuildChanges(a: CharacterBuild, b: CharacterBuild): boolean {
  * 現在レベルに応じて習得スキルを同期し、未習得のセット枠を外す。
  * セーブロード・LvUP・クラス差し替え時に呼ぶ。
  */
+/** 習得済みの取得Lv0アクティブを、空きセット枠へ順に入れる */
+export function equipStarterActiveSkills(
+  build: CharacterBuild,
+  classPreset: ClassPreset,
+  learnedActiveIds: string[],
+): void {
+  const learnedSet = new Set(learnedActiveIds);
+  const equippedSet = new Set(build.equippedActiveSlots.filter(Boolean));
+
+  for (const skillId of classPreset.starterActiveIds) {
+    if (!learnedSet.has(skillId) || equippedSet.has(skillId)) continue;
+    const emptyIndex = build.equippedActiveSlots.findIndex((id) => !id);
+    if (emptyIndex === -1) break;
+    build.equippedActiveSlots[emptyIndex] = skillId;
+    equippedSet.add(skillId);
+  }
+}
+
 export function reconcileMemberBuild(
   member: PartyMemberState,
   classPreset: ClassPreset,
@@ -103,6 +121,11 @@ export function reconcileMemberBuild(
       member.build.equippedActiveSlots[i] = '';
     }
   }
+  equipStarterActiveSkills(
+    member.build,
+    classPreset,
+    learned.learnedActiveIds,
+  );
 }
 
 export function reconcileMemberBuildFromGameData(
