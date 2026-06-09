@@ -63,6 +63,7 @@ const SPRITE_SCALE = 1;
 
 interface AllyHudEntry {
   displayName: string;
+  epithetEn?: string;
   level: number;
   iconKey: string;
   hp: number;
@@ -84,6 +85,7 @@ interface AllyHudEntry {
 
 export interface PartyHudMeta {
   displayName: string;
+  epithetEn?: string;
   level: number;
 }
 
@@ -261,6 +263,7 @@ export class BattleCanvas implements IBattleRenderer {
       const meta = partyMeta[index];
       return {
         displayName: meta?.displayName ?? ally.name,
+        epithetEn: meta?.epithetEn,
         level: meta?.level ?? 1,
         iconKey: ally.iconKey,
         hp: ally.hp,
@@ -385,7 +388,10 @@ export class BattleCanvas implements IBattleRenderer {
       Math.round(theme.headerFontSize * hudScale),
     );
     const blockGap = theme.headerBlockGap * hudScale;
-    return { headerH: labelH + blockGap, labelH };
+    // epithet + 名前の2行ヘッダ（drawHudClassLabel と同期）
+    const epithetSize = Math.max(7, labelH - 3);
+    const epithetH = epithetSize + 1 * hudScale;
+    return { headerH: epithetH + labelH + blockGap, labelH };
   }
 
   private maxActiveSkillSlots(): number {
@@ -467,10 +473,17 @@ export class BattleCanvas implements IBattleRenderer {
       ctx.globalAlpha = this.theme.deadAlpha;
     }
 
-    ctx.font = `${fontSize}px ${this.theme.fontFamily}`;
-    ctx.fillStyle = this.theme.nameColor;
     ctx.textAlign = "left";
     ctx.textBaseline = "top";
+    if (ally.epithetEn) {
+      const epithetSize = Math.max(7, fontSize - 3);
+      ctx.font = `${epithetSize}px ${this.theme.fontFamily}`;
+      ctx.fillStyle = this.theme.epithetColor;
+      ctx.fillText(ally.epithetEn, leftX, labelY);
+      labelY += epithetSize + 1;
+    }
+    ctx.font = `${fontSize}px ${this.theme.fontFamily}`;
+    ctx.fillStyle = this.theme.nameColor;
     ctx.fillText(`${ally.displayName} Lv${ally.level}`, leftX, labelY);
     ctx.restore();
   }

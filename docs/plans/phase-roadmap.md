@@ -11,7 +11,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2b** | 戦闘計算（`combatMath` 等） | **完了** |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除 | **完了** |
 | **3** | Lvアップ時スキル習得、アクティブセット2枠目 | **完了** |
-| **4** | 一次職5種 + 習得スキル・マスタ（漢字2文字）；4a データ / 4b 説明自動生成 | **次フェーズ** |
+| **4** | 一次職マスタ + スキル説明；4a データ **完了** / 4b 説明自動生成 | **4b が次** |
 | **5** | 本番スプライトアニメーション（クラス別ドット絵） | 未着手 |
 | **6** | スキル VFX（スキル別設定・新プリセット） | 未着手（Phase 5 後） |
 | **7** | バランス調整（数値チューニング全般） | 未着手 |
@@ -19,7 +19,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
-**開発優先（Phase 3 完了後）：** **Phase 4a → 4b（一次職マスタ → スキル説明自動生成）を先に完成**させる。LvUP でスキルが増える体験を本番デモ編成で遊べる状態を優先し、globalExp / 強化ツリー / Electron 仕上げは Phase 8（バランス調整の後）に着手。
+**開発優先:** **Phase 4b（スキル説明自動生成）** を次に完成させる。一次職 15 種のデータ投入（旧 4a）は完了済み（[classes-and-skills.md](../spec/classes-and-skills.md)）。接敵ビジュアル整理は [master-work-order.md](./master-work-order.md) Phase 3a/3b を参照。globalExp / 強化ツリー / Electron は Phase 8。
 
 ---
 
@@ -103,20 +103,20 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ---
 
-## Phase 4 — 一次職マスタ + スキル（次フェーズ）
+## Phase 4 — 一次職マスタ + スキル
 
-Phase 3 の習得機構 + **キャラクターデータ GUI**（第1弾）で、一次職（1次職）の JSON を確定する。**クラス転職（2次職）は Phase 7 以降**。
+Phase 3 の習得機構 + **キャラクターデータ GUI** で一次職 JSON を確定。**クラス転職（2次職）は Phase 7 以降**。
 
-| サブフェーズ | 内容 |
-|-------------|------|
-| **4a** | 一次職5種・スキル JSON・GUI・validate |
-| **4b** | スキル説明の自動生成（`formatSkillText`）調整・エディタプレビュー |
+| サブフェーズ | 内容 | 状態 |
+|-------------|------|------|
+| **4a** | 一次職 15 種・スキル JSON・GUI・validate・`epithetEn` データ | **完了** |
+| **4b** | スキル説明の自動生成（`formatSkillText`）調整・エディタプレビュー | **次** |
 
 ### 一次職 / 二次職（設計方針）
 
 | 概念 | Phase 4 | Phase 7 以降 |
 |------|---------|--------------|
-| **一次職** | プレイ開始〜育成の基本クラス（下表5種） | 転職元として維持 |
+| **一次職** | プレイ開始〜育成の基本クラス（15 種・`df_` / `at_` / `sp_`） | 転職元として維持 |
 | **二次職** | データ上の予約フィールドのみ（未使用） | 一定 Lv で一次職から**複数候補へ分化**；転職 UI・セーブ反映 |
 | **表示名** | **漢字2文字**（`displayName`） | 二次職も同方針 |
 
@@ -133,20 +133,13 @@ promotesFrom?: string;    // 二次職のみ：元の一次職 classId
 
 Phase 4 では `jobTier: 1` を付与しても **ゲームロジックは転職しない**（フィールドは validate のみ）。
 
-### 初期一次職（5種）
+### 一次職マスタ（15 種・完了）
 
-| ロール | 射程 | 表示名 | classId | 列（案） |
-|--------|------|--------|---------|----------|
-| defender | 近接 | **衛士** | `defender_eishi` | front |
-| attacker | 近接 | **剣士** | `attacker_kenshi` | front |
-| attacker | 遠隔物理 | **弓士** | `attacker_kyushi` | back |
-| attacker | 遠隔魔法 | **術師** | `attacker_jutsushi` | back |
-| supporter | 近接 | **薬師** | `supporter_yakushi` | middle |
+ロスター全表は [classes-and-skills.md](../spec/classes-and-skills.md) を正とする。`displayName`（漢字）+ `epithetEn`（英語肩書き）+ `flavorJa` を `classes.json` に保持。デモ編成は `parties.json`（鉄衛士 / 剣術士 / 療養師 / 弓術士）。
 
-- 術師: 基本攻撃・スキルは `damageType: "magic"` を基本とする。
-- 旧デモ4クラス（Bulwark / Berserker 等）は **`classes.json` から削除**し一次職5種に差し替え
-- `parties.json` demo は GUI 対象外。5一次職データ確定後に手動更新
-- `skills[]` LvUP 習得・スキル本体は GUI / JSON で定義（数値調整の最終版は Phase 7）。
+- 旧デモ 4 クラス（Bulwark 等）は削除済み
+- `epithetEn` の 2 段ルビ UI は master-work-order Phase 3c
+- 数値バランスの最終版は Phase 7
 
 ### 二次職名称メモ（Phase 7 設計用・未実装）
 
@@ -162,9 +155,9 @@ Phase 4 では `jobTier: 1` を付与しても **ゲームロジックは転職�
 
 - 鉄衛・武者・剣客・法師は一次職名より「上位」トーンで二次職向き。
 
-### 4a — 一次職データ + GUI
+### 4a — 一次職データ + GUI（完了）
 
-- 上記5一次職を `classes.json` + `skills.json` に投入
+- 15 一次職を `classes.json` + `skills.json` に投入済み
 - **ステータス・成長** — Lv1 基準 + `growthTier`（低/中/高）+ `levelCurves.growthPresets` + `attackSpeedPresets`；術師は `growthPresetKey: caster`；`ClassEditorStep` 成長 UI + Lv10 プレビュー（[stats.md](../spec/stats.md)）
 - **複数ターゲットスキル**（`targetShape` 等）— 実装検証用 WIP データ。**仕様書へのスキル一覧転記はマスタ確定後**
 - キャラクターデータ GUI で編集・保存

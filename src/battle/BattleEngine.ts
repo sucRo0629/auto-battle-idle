@@ -15,6 +15,7 @@ import {
   getAllyContactX,
   getBattleVisualOffset,
   getEngagedFrontEnemyVisualAnchor,
+  leadingRowContactAlly,
   getEnemyContactX,
   marchEnemiesRight as marchEnemiesBattleRight,
   resolveEnemyMarchCapX,
@@ -61,14 +62,13 @@ import {
   clampAllyVisualDepth,
   computeAllyPositions,
   computeEngagedAllyLaneOffsets,
-  computeRangedEnemyVisualX,
   ENGAGED_VISUAL_TUNING,
-  engagedFrontLineStandoffGap,
   getFrontEnemyX,
   getLeadingAllyFormationRow,
   moveTowardX,
-  resolveEngagedMeleeEnemyVisuals,
-  resolveStableAllyEngagedVisuals,
+  resolveEngagedContactVisualX,
+  resolveEngagedLayout,
+  type EngagedLayoutResult,
   ROW_X,
   separateEnemySprites,
   SPRITE_GAP,
@@ -136,8 +136,6 @@ export class BattleEngine {
   private waveIntermissionActive = false;
   private waveIntermissionElapsed = 0;
   private engaged = false;
-  /** 接敵開始時に固定する visualX − battleX（フレーム間で変動させない） */
-  private engagedBattleVisualOffset: number | null = null;
   /** 最前線列の生存メンバー変化検知（レーン再固定用） */
   private engagedLeadingRowSignature: string | null = null;
   /** 近接敵の生存構成変化検知（奥行きスロット再固定用） */
@@ -213,7 +211,6 @@ export class BattleEngine {
     );
     this.stageId = this.getStageId();
     this.waveIndex = 0;
-    this.engagedBattleVisualOffset = null;
     this.clearEngagedVisualState();
     this.restoreAlliesToFormationMarch();
     this.clearPendingVictory();
@@ -430,6 +427,67 @@ export class BattleEngine {
     }
   }
 
+  private getEngagedLeadingRowSignature(): string | null {
+    const inputs = this.getAllyPlacementInputs().filter((ally) => ally.isAlive);
+    const leadingRow = getLeadingAllyFormationRow(inputs);
+    if (leadingRow === null) return null;
+    const ids = inputs
+      .filter((ally) => ally.formationRow === leadingRow)
+      .map((ally) => ally.id)
+      .sort()
+      .join(",");
+    return `${leadingRow}:${ids}`;
+  }
+
+  /** 前列構成変化時のみレーンを固定（振動防止） */
+  private refreshEngagedVisualLanes(): void {
+    const offset = getBattleVisualOffset(this.allies);
+    const allyInputs = this.allies
+      .filter((ally) => this.isOnBattlefield(ally))
+      .map((ally) => ({
+        id: ally.id,
+        role: ally.role,
+        formationRow: ally.formationRow,
+        rangePx: resolveMaxEffectiveRangePx(ally, this.gameData),
+        isAlive: ally.isAlive,
+        visualX: ally.visualX,
+        battleX: ally.battleX,
+      }));
+    const contactVisual = resolveEngagedContactVisualX(
+      allyInputs,
+      getAllyContactX(this.allies),
+      offset ?? 0,
+    );
+    const frontEnemyAnchor = getEngagedFrontEnemyVisualAnchor(
+      this.allies,
+      this.enemies,
+      offset,
+    );
+    if (offset === null || contactVisual === null || frontEnemyAnchor === null) {
+      return;
+    }
+
+    const lanes = computeEngagedAllyLaneOffsets(
+      this.getAllyPlacementInputs(),
+      frontEnemyAnchor,
+      contactVisual,
+    );
+    const contact = leadingRowContactAlly(this.allies);
+    const contactLane = contact ? (lanes.get(contact.id) ?? 0) : 0;
+    for (const ally of this.allies) {
+      if (!this.isOnBattlefield(ally)) continue;
+      if (ally.formationRow === "back") {
+        ally.engagedVisualLaneX = 0;
+        continue;
+      }
+      ally.engagedVisualLaneX = (lanes.get(ally.id) ?? 0) - contactLane;
+    }
+    if (contact && contactLane !== 0) {
+      contact.visualX += contactLane;
+    }
+    this.engagedLeadingRowSignature = this.getEngagedLeadingRowSignature();
+  }
+
   private getEngagedMeleeEnemySignature(): string | null {
     const ids = this.enemies
       .filter(
@@ -462,23 +520,44 @@ export class BattleEngine {
     this.engagedMeleeEnemySignature = this.getEngagedMeleeEnemySignature();
   }
 
-  private getEngagedLeadingRowSignature(): string | null {
-    const inputs = this.getAllyPlacementInputs().filter((ally) => ally.isAlive);
-    const leadingRow = getLeadingAllyFormationRow(inputs);
-    if (leadingRow === null) return null;
-    const ids = inputs
-      .filter((ally) => ally.formationRow === leadingRow)
-      .map((ally) => ally.id)
-      .sort()
-      .join(",");
-    return `${leadingRow}:${ids}`;
-  }
+  private resolveCurrentEngagedLayout(): EngagedLayoutResult | null {
+    const offset = getBattleVisualOffset(this.allies);
+    if (offset === null) return null;
 
-  private getEngagedFrontLineVisualX(): number | null {
-    const contact = getAllyContactX(this.allies);
-    const offset = this.engagedBattleVisualOffset;
-    if (contact === null || offset === null) return null;
-    return contact + offset;
+    return resolveEngagedLayout({
+      allies: this.allies
+        .filter((ally) => this.isOnBattlefield(ally))
+        .map((ally) => ({
+          id: ally.id,
+          role: ally.role,
+          formationRow: ally.formationRow,
+          rangePx: resolveMaxEffectiveRangePx(ally, this.gameData),
+          isAlive: ally.isAlive,
+          visualX: ally.visualX,
+          battleX: ally.battleX,
+          engagedVisualLaneX: ally.engagedVisualLaneX,
+        })),
+      enemies: this.enemies.map((enemy) => ({
+        id: enemy.id,
+        isAlive: enemy.isAlive,
+        rangePx: resolveMaxEffectiveRangePx(enemy, this.gameData),
+        battleX: enemy.battleX,
+        engagedMeleeVisualSlot: enemy.engagedMeleeVisualSlot,
+      })),
+      allyContactBattleX: getAllyContactX(this.allies),
+      battleVisualOffset: offset,
+      frontEnemyVisualAnchor: getEngagedFrontEnemyVisualAnchor(
+        this.allies,
+        this.enemies,
+        offset,
+      ),
+      resolveRangedTargetVisualX: (enemyId) => {
+        const enemy = this.enemies.find((unit) => unit.id === enemyId);
+        if (!enemy) return null;
+        const target = this.resolveEngagedRangedTargetAlly(enemy);
+        return target?.visualX ?? null;
+      },
+    });
   }
 
   /** 接敵開始時: 遠距離敵の狙い味方だけ固定（ターゲット切替のちらつき防止） */
@@ -496,94 +575,29 @@ export class BattleEngine {
     }
   }
 
-  /** 接敵中: 固定レーン + battleX オフセット描画（味方↔敵 visual 相互参照なし） */
+  /** 接敵中: resolver 目標へ補間のみ適用 */
   private applyEngagedVisualLayoutFromBattle(deltaTime: number): void {
-    const offset = this.engagedBattleVisualOffset;
-    if (offset === null) return;
+    const layout = this.resolveCurrentEngagedLayout();
+    if (layout === null) return;
 
-    const contactVisual = this.getEngagedFrontLineVisualX();
-    if (contactVisual === null) return;
+    const moveStep = ENGAGED_VISUAL_TUNING.engageMoveSpeedPxPerSec * deltaTime;
 
-    const moveStep = ENGAGED_VISUAL_TUNING.engageVisualMoveSpeed * deltaTime;
-
-    const allyPositions = resolveStableAllyEngagedVisuals(
-      this.allies
-        .filter((ally) => this.isOnBattlefield(ally))
-        .map((ally) => ({
-          id: ally.id,
-          formationRow: ally.formationRow,
-          isAlive: ally.isAlive,
-          engagedVisualLaneX: ally.engagedVisualLaneX,
-        })),
-      contactVisual,
-    );
     for (const ally of this.allies) {
       if (!this.isOnBattlefield(ally)) continue;
-      const target = allyPositions.get(ally.id);
+      const target = layout.allyVisualX.get(ally.id);
       if (target !== undefined) {
         ally.visualX = moveTowardX(ally.visualX, target, moveStep);
       }
     }
     clampAllyVisualDepth(this.allies);
 
-    const frontLineStandoff = engagedFrontLineStandoffGap();
-    const enemyFrontTargetX = contactVisual - frontLineStandoff;
-
-    const meleePositions = resolveEngagedMeleeEnemyVisuals(
-      this.enemies.map((enemy) => ({
-        id: enemy.id,
-        isAlive: enemy.isAlive,
-        engagedMeleeVisualSlot: enemy.engagedMeleeVisualSlot,
-      })),
-      enemyFrontTargetX,
-    );
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
-      const rangePx = resolveMaxEffectiveRangePx(enemy, this.gameData);
-      if (rangePx > 0) {
-        const targetAlly = this.resolveEngagedRangedTargetAlly(enemy);
-        if (targetAlly) {
-          const target = computeRangedEnemyVisualX(
-            targetAlly.battleX + offset,
-          );
-          enemy.visualX = moveTowardX(enemy.visualX, target, moveStep);
-        }
-        continue;
-      }
-      const target = meleePositions.get(enemy.id);
+      const target = layout.enemyVisualX.get(enemy.id);
       if (target !== undefined) {
         enemy.visualX = moveTowardX(enemy.visualX, target, moveStep);
       }
     }
-  }
-
-  /** 接敵列の横ずれを固定（隊列と standoff のブレンド） */
-  private refreshEngagedVisualLanes(): void {
-    const offset = this.engagedBattleVisualOffset;
-    const contactVisual = this.getEngagedFrontLineVisualX();
-    const frontEnemyAnchor = getEngagedFrontEnemyVisualAnchor(
-      this.allies,
-      this.enemies,
-      offset,
-    );
-    if (offset === null || contactVisual === null || frontEnemyAnchor === null) {
-      return;
-    }
-
-    const lanes = computeEngagedAllyLaneOffsets(
-      this.getAllyPlacementInputs(),
-      frontEnemyAnchor,
-      contactVisual,
-    );
-    for (const ally of this.allies) {
-      if (!this.isOnBattlefield(ally)) continue;
-      if (ally.formationRow === "back") {
-        ally.engagedVisualLaneX = 0;
-        continue;
-      }
-      ally.engagedVisualLaneX = lanes.get(ally.id) ?? 0;
-    }
-    this.engagedLeadingRowSignature = this.getEngagedLeadingRowSignature();
   }
 
   private resolveEngagedRangedTargetAlly(
@@ -612,9 +626,9 @@ export class BattleEngine {
     this.freezeEngagedRangedTargets();
     this.freezeEngagedMeleeVisualSlots();
     this.refreshEngagedVisualLanes();
-    const frontLine = this.getEngagedFrontLineVisualX();
-    if (frontLine !== null) {
-      this.cameraFocusLineX = frontLine;
+    const layout = this.resolveCurrentEngagedLayout();
+    if (layout !== null) {
+      this.cameraFocusLineX = layout.frontLineVisualX;
     }
   }
 
@@ -652,7 +666,8 @@ export class BattleEngine {
   }
 
   private updateCombatCamera(deltaTime: number): void {
-    const frontLineTargetX = this.getEngagedFrontLineVisualX();
+    const frontLineTargetX =
+      this.resolveCurrentEngagedLayout()?.frontLineVisualX ?? null;
     if (frontLineTargetX === null) return;
 
     const step = CAMERA_PAN_SPEED * deltaTime;
@@ -743,7 +758,6 @@ export class BattleEngine {
 
   private startWaveIntermission(): void {
     this.engaged = false;
-    this.engagedBattleVisualOffset = null;
     this.clearEngagedVisualState();
     hideFallenAllyCorpses(this.allies);
     this.restoreAlliesToFormationMarch();
@@ -772,7 +786,6 @@ export class BattleEngine {
   private applyVictoryTransition(survivingPartyIndices: number[]): void {
     this.phase = "victory";
     this.engaged = false;
-    this.engagedBattleVisualOffset = null;
     this.clearEngagedVisualState();
     this.beginVictoryExit();
     this.restartTimer = RESTART_DELAY_SEC;
@@ -786,7 +799,6 @@ export class BattleEngine {
   private applyDefeatTransition(survivingPartyIndices: number[]): void {
     this.phase = "defeat";
     this.engaged = false;
-    this.engagedBattleVisualOffset = null;
     this.clearEngagedVisualState();
     this.clearPendingWaveAdvance();
     hideFallenAllyCorpses(this.allies);
@@ -803,7 +815,6 @@ export class BattleEngine {
     if (this.engaged) return;
     if (shouldStartApproach(this.allies, this.enemies, this.gameData)) {
       this.engaged = true;
-      this.engagedBattleVisualOffset = getBattleVisualOffset(this.allies);
       this.snapEngagedVisualLayout();
     }
   }

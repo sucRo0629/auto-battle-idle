@@ -104,6 +104,7 @@ export class BattleStatsOverlay {
     const specs: PartyMemberStatsRowSpec[] = rows.map((row) => ({
       slotIndex: row.slotIndex,
       displayName: row.displayName,
+      epithetEn: row.epithetEn,
     }));
     this.statsDisplay.rebuild(specs);
     this.statsDisplay.update(this.dataSource);

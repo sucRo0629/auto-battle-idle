@@ -71,7 +71,7 @@ export function getAllyContactX(allies: CombatantState[]): number | null {
   return Math.min(...frontLine.map((a) => a.battleX));
 }
 
-function leadingRowContactAlly(
+export function leadingRowContactAlly(
   allies: CombatantState[],
 ): CombatantState | null {
   const frontLine = livingAlliesOnLeadingRow(allies);

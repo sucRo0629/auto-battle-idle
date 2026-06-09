@@ -44,7 +44,7 @@
   display: flex;
   justify-content: center;
 
-  --battle-ground-margin: 50;
+  --battle-ground-margin: 54;
   --hud-icon-size: 24;
   --hud-bar-w: 80;
   --hud-icon-bar-gap: 4;
@@ -59,6 +59,7 @@
   --hud-font-family: 'Segoe UI', system-ui, sans-serif;
   --hud-icon-border: #4a5568;
   --hud-name-color: #ffffff;
+  --hud-epithet-color: rgba(255, 255, 255, 0.65);
   --hud-exp-bar-fill: #f5a623;
   --hud-hp-bar-fill: #2ecc71;
   --hud-barrier-fill: #7bed9f;

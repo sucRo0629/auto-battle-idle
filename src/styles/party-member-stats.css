@@ -25,6 +25,16 @@
   min-width: 0;
 }
 
+.party-stats-member-epithet {
+  font-size: 0.6875rem;
+  line-height: 1.1;
+  color: rgba(227, 227, 227, 0.55);
+  letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .party-stats-member-name {
   flex: 1 1 auto;
   min-width: 0;

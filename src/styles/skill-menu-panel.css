@@ -23,10 +23,12 @@
 }
 
 .skill-menu-tab-icon {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   box-sizing: content-box;
+  flex: 0 0 auto;
+  flex-shrink: 0;
   width: 24px;
   height: 24px;
   border: 1px solid var(--hud-icon-border, #4a5568);
@@ -37,9 +39,11 @@
 
 .skill-menu-tab-icon-img {
   display: block;
+  flex: none;
   width: 24px;
   height: 24px;
   object-fit: none;
+  object-position: center;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
@@ -257,10 +261,31 @@
 
 .skill-menu-class-slot-text {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.skill-menu-class-slot-epithet {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: #9aa3b0;
+  letter-spacing: 0.03em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.skill-menu-class-slot-name-row {
+  display: flex;
   align-items: baseline;
   gap: 6px;
   min-width: 0;
-  flex: 1;
+  max-width: 100%;
 }
 
 .skill-menu-class-slot-name {
@@ -286,9 +311,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
+  flex: 0 0 48px;
   width: 48px;
+  min-width: 48px;
   height: 48px;
+  min-height: 48px;
   padding: 6px;
   box-sizing: border-box;
   border: 1px solid var(--canvas-border-color);
@@ -318,7 +345,7 @@
 .skill-menu-floating-tooltip {
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 50%;
+  left: 0;
   z-index: 1100;
   min-width: 140px;
   max-width: 220px;
@@ -327,10 +354,11 @@
   border-radius: 6px;
   background: rgba(12, 14, 24, 0.96);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  text-align: left;
   opacity: 0;
   visibility: hidden;
   pointer-events: none;
-  transform: translateX(-50%) translateY(6px);
+  transform: translateY(6px);
   transition:
     opacity 0.15s ease,
     transform 0.15s ease,
@@ -341,7 +369,7 @@
   content: '';
   position: absolute;
   top: 100%;
-  left: 50%;
+  left: 24px;
   transform: translateX(-50%);
   border: 6px solid transparent;
   border-top-color: #4a90d9;
@@ -367,7 +395,7 @@
 .skill-menu-skill-icon-slot:focus-visible .skill-menu-floating-tooltip {
   opacity: 1;
   visibility: visible;
-  transform: translateX(-50%) translateY(0);
+  transform: translateY(0);
 }
 
 .skill-menu-skill-icon-row {
@@ -476,6 +504,15 @@
   flex-direction: row;
   align-items: center;
   gap: 12px;
+}
+
+/* スキル説明が長い行でもアイコンをテキスト先頭に揃える（クラス選択は epithet 付きで行高が揃う） */
+.skill-menu-picker--active .skill-menu-picker-row--icon {
+  align-items: flex-start;
+}
+
+.skill-menu-picker--active .skill-menu-picker-row--icon > .skill-menu-tab-icon {
+  margin-top: 2px;
 }
 
 .skill-menu-picker-row-text {

@@ -127,6 +127,7 @@ export class DebugMenuPanel {
       specs.push({
         slotIndex: partyIndex,
         displayName: preset?.displayName ?? member.classId,
+        epithetEn: preset?.epithetEn,
       });
     });
 

@@ -2,6 +2,7 @@ import {
   PLACEHOLDER_SPRITE_KEYS,
   resolvePlaceholderIconKey,
 } from './classVisuals.ts';
+import { resolveClassIconKey } from '../render/entityVisuals.ts';
 import type {
   ActiveSkillDef,
   ClassId,
@@ -11,7 +12,7 @@ import type {
 } from './types.ts';
 
 export interface SkillIconContext {
-  classPreset?: Pick<ClassPreset, 'role' | 'traits'>;
+  classPreset?: Pick<ClassPreset, 'id' | 'role' | 'traits'>;
   classRegistry?: Record<ClassId, ClassPreset>;
 }
 
@@ -106,6 +107,9 @@ export function resolveSkillIconKey(
   }
 
   if (context?.classPreset) {
+    if (context.classPreset.id) {
+      return resolveClassIconKey(context.classPreset);
+    }
     return resolvePlaceholderFromClassPreset(context.classPreset);
   }
 

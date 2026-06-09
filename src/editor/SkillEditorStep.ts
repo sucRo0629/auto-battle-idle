@@ -41,7 +41,10 @@ import {
 } from '../battle/skills/targetSpec.ts';
 import { skillHasMoveEffect } from '../battle/skills/skillSequence.ts';
 import { resolveSkillTrigger } from '../battle/skillTrigger.ts';
-import { formatActiveDescription } from '../ui/formatSkillText.ts';
+import {
+  formatActiveDescription,
+  formatPassiveDescription,
+} from '../ui/formatSkillText.ts';
 import type { SkillDraftEntry, SkillSlotKind } from './editorApi.ts';
 import {
   appendDefenseIgnoreFields,
@@ -1146,6 +1149,14 @@ export class SkillEditorStep {
         );
         break;
     }
+
+    parent.appendChild(
+      createEl(
+        'p',
+        'editor-skill-desc-preview',
+        `説明: ${formatPassiveDescription(passive)}`,
+      ),
+    );
   }
 
   private renderActive(parent: HTMLElement, index: number, idReadonly: boolean): void {
@@ -1329,6 +1340,14 @@ export class SkillEditorStep {
         ),
       );
     }
+
+    parent.appendChild(
+      createEl(
+        'p',
+        'editor-skill-desc-preview',
+        `説明: ${formatActiveDescription(active)}`,
+      ),
+    );
 
     const effectsSection = createSection('効果');
     parent.appendChild(effectsSection);

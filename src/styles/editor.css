@@ -330,6 +330,16 @@
   font-size: 0.9rem;
 }
 
+.editor-skill-desc-preview {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-left: 3px solid #4a6fa5;
+  color: #c8d4e4;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  background: rgba(26, 36, 52, 0.6);
+}
+
 .editor-preview {
   padding: 0.75rem 1rem;
   border: 1px solid #3a3a4a;

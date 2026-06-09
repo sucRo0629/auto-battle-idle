@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [editorApiPlugin()],
   test: {
     include: ['src/**/*.test.ts'],
+    setupFiles: ['src/test/setup.ts'],
   },
   build: {
     rollupOptions: {

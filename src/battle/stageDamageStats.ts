@@ -16,6 +16,7 @@ export interface StageDamageDisplayRow {
   slotIndex: number;
   classId: ClassId;
   displayName: string;
+  epithetEn?: string;
   damageDealt: number;
   damageTaken: number;
   dealtRatio: number;
@@ -82,6 +83,7 @@ export class StageDamageStatsTracker {
         classId: member.classId,
         displayName:
           classRegistry[member.classId]?.displayName ?? member.classId,
+        epithetEn: classRegistry[member.classId]?.epithetEn,
         damageDealt: stats?.damageDealt ?? 0,
         damageTaken: stats?.damageTaken ?? 0,
         dealtRatio: 0,

@@ -10,9 +10,11 @@ import {
   computeEnemyStopX,
   computeRangedEnemyVisualX,
   clampAllyVisualDepth,
+  engagedFrontLineGap,
   engagedMinLeftEdgeGap,
   getLeadingAllyFront,
   moveTowardX,
+  resolveEngagedLayout,
   resolveEngagedVisualTargets,
   resolveMoveVisualX,
   ROW_X,
@@ -478,6 +480,78 @@ describe('resolveEngagedVisualTargets', () => {
     expect(Math.max(...layout!.enemyTargets.values())).toBeGreaterThan(
       frontEnemyX,
     );
+  });
+});
+
+describe('resolveEngagedLayout', () => {
+  it('places melee enemy at frontLineGap from archer when only back row survives', () => {
+    const archerVisual = ROW_X.back;
+    const layout = resolveEngagedLayout({
+      allies: [
+        {
+          id: 'archer',
+          role: 'attacker',
+          formationRow: 'back',
+          rangePx: 100,
+          isAlive: true,
+          visualX: archerVisual,
+          battleX: 300,
+        },
+      ],
+      enemies: [
+        {
+          id: 'melee',
+          isAlive: true,
+          rangePx: 0,
+          battleX: 100,
+          engagedMeleeVisualSlot: 0,
+        },
+      ],
+      allyContactBattleX: 300,
+      battleVisualOffset: archerVisual - 300,
+      frontEnemyVisualAnchor: 120,
+      resolveRangedTargetVisualX: () => null,
+    });
+
+    expect(layout).not.toBeNull();
+    const meleeX = layout!.enemyVisualX.get('melee');
+    expect(meleeX).toBeDefined();
+    expect(meleeX!).toBeCloseTo(archerVisual - engagedFrontLineGap(), 0);
+  });
+
+  it('skips back-row depth mirror for ranged enemy when only back row survives', () => {
+    const archerVisual = ROW_X.back;
+    const layout = resolveEngagedLayout({
+      allies: [
+        {
+          id: 'archer',
+          role: 'attacker',
+          formationRow: 'back',
+          rangePx: 100,
+          isAlive: true,
+          visualX: archerVisual,
+          battleX: 300,
+        },
+      ],
+      enemies: [
+        {
+          id: 'ranged',
+          isAlive: true,
+          rangePx: 100,
+          battleX: 50,
+          engagedMeleeVisualSlot: undefined,
+        },
+      ],
+      allyContactBattleX: 300,
+      battleVisualOffset: archerVisual - 300,
+      frontEnemyVisualAnchor: 120,
+      resolveRangedTargetVisualX: () => archerVisual,
+    });
+
+    expect(layout).not.toBeNull();
+    const rangedX = layout!.enemyVisualX.get('ranged');
+    expect(rangedX).toBeCloseTo(archerVisual - engagedFrontLineGap(), 0);
+    expect(rangedX!).toBeGreaterThan(archerVisual - ALLY_FORMATION_BACK_DEPTH);
   });
 });
 

@@ -12,6 +12,7 @@ export interface PartyMemberProgress {
 export interface PartyMemberStatsRowSpec {
   slotIndex: number;
   displayName: string;
+  epithetEn?: string;
 }
 
 export interface PartyMemberStatsDataSource {
@@ -55,7 +56,10 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
-export function createPartyMemberStatsRow(displayName: string): {
+export function createPartyMemberStatsRow(
+  displayName: string,
+  epithetEn?: string,
+): {
   row: HTMLElement;
   refs: {
     threat: ThreatBarRefs;
@@ -67,6 +71,10 @@ export function createPartyMemberStatsRow(displayName: string): {
 
   const memberEl = el('div', 'party-stats-member');
   const nameRow = el('div', 'party-stats-member-header');
+  if (epithetEn) {
+    const epithetEl = el('span', 'party-stats-member-epithet', epithetEn);
+    memberEl.appendChild(epithetEl);
+  }
   const nameEl = el('span', 'party-stats-member-name', displayName);
   const expLabel = el('span', 'party-stats-exp-label', 'Exp —');
   nameRow.append(nameEl, expLabel);
@@ -236,7 +244,10 @@ export class PartyMemberStatsDisplay {
 
     const rowElements = new Map<number, HTMLElement>();
     for (const spec of specs) {
-      const { row, refs } = createPartyMemberStatsRow(spec.displayName);
+      const { row, refs } = createPartyMemberStatsRow(
+        spec.displayName,
+        spec.epithetEn,
+      );
       this.threatByPartyIndex.set(spec.slotIndex, refs.threat);
       this.expByPartyIndex.set(spec.slotIndex, refs.exp);
       this.damageByPartyIndex.set(spec.slotIndex, refs.damage);

@@ -23,8 +23,11 @@ export const ALLY_FORMATION_BACK_DEPTH = ROW_X.back - ROW_X.front;
 export const ALLY_ROW_SPACING = 42;
 export const SPRITE_WIDTH = SPRITE_LAYOUT_SIZE;
 export const SPRITE_GAP = 38;
-/** 地面ライン下: 地面演出 + パーティ HUD（クラス名 + アイコン行） */
-export const BATTLE_GROUND_MARGIN = 50;
+/**
+ * 地面ライン下: 地面演出 + パーティ HUD（epithet + クラス名 + アイコン行）。
+ * battle-view.css の --hud-bottom-margin / --hud-icon-size / --hud-header-font-size と同期。
+ */
+export const BATTLE_GROUND_MARGIN = 54;
 /** スプライト上の最小余白（バッジ + HP バー + シートはみ出し分） */
 const BASE_BATTLE_TOP_PAD = 43;
 export const BATTLE_TOP_PAD = BASE_BATTLE_TOP_PAD + spriteSheetMaxOverflowTop();
@@ -94,54 +97,46 @@ function prefersLeftOnOverlap(row: FormationRow, role: Role): boolean {
 /**
  * 接敵ビジュアル調整（仮スプライト用 — 差し替え後はここだけ触る）
  *
- * - frontLineStandoffPx: 敵味方の最前列 gap を px 直指定（0 = frontLineClearancePx 使用）
- * - frontLineClearancePx: 敵味方 gap 自動時の clearance（bodyClearancePx とは独立）
- * - bodyClearancePx: 味方同士のすき間のみ
- * - enemyBodyClearancePx: 敵同士のすき間のみ（0 = frontLineClearancePx と同値）
- * - meleeAdvanceGapPx: 味方前列の寄せ先 gap 上書き
- * - leadingRowAdvanceT: 隊列→standoff への寄せ率（0=隊列, 1=完全接近）
- * - engageVisualMoveSpeed: 接敵後 visualX が目標へ寄る速度（px/s）
+ * - bodyClearancePx: 同陣営内 clearance（味方同士・敵同士・敵味方自動 gap 共通）
+ * - frontLineGapPx: 敵味方最前列 gap（0 = 自動: SPRITE_WIDTH + bodyClearancePx）
+ * - leadingRowAdvanceT: 接敵時に前列が接敵距離へ寄る割合（0=隊列, 1=完全）
+ * - engageMoveSpeedPxPerSec: 接敵後 visual 接近速度（px/s）
  */
 export const ENGAGED_VISUAL_TUNING = {
-  frontLineStandoffPx: 0,
-  frontLineClearancePx: -20,
   bodyClearancePx: -20,
-  enemyBodyClearancePx: 0,
-  meleeAdvanceGapPx: 0,
+  frontLineGapPx: 0,
   leadingRowAdvanceT: 0.8,
-  engageVisualMoveSpeed: 100,
+  engageMoveSpeedPxPerSec: 100,
 } as const;
 
 /** @deprecated ENGAGED_VISUAL_TUNING.bodyClearancePx を参照 */
 export const ENGAGED_BODY_CLEARANCE_PX = ENGAGED_VISUAL_TUNING.bodyClearancePx;
 
-/** 味方同士の左端 gap */
+/** 同陣営内の左端 gap（味方同士・敵同士） */
 export function engagedMinLeftEdgeGap(): number {
   return SPRITE_WIDTH + ENGAGED_VISUAL_TUNING.bodyClearancePx;
 }
 
-/** 敵最前列↔味方最前列の左端 gap（ビジュアル standoff） */
-export function engagedFrontLineStandoffGap(): number {
-  const tuned = ENGAGED_VISUAL_TUNING.frontLineStandoffPx;
+/** 敵味方最前列同士の左端 gap（接敵距離） */
+export function engagedFrontLineGap(): number {
+  const tuned = ENGAGED_VISUAL_TUNING.frontLineGapPx;
   if (tuned > 0) return tuned;
-  return SPRITE_WIDTH + ENGAGED_VISUAL_TUNING.frontLineClearancePx;
+  return engagedMinLeftEdgeGap();
 }
 
-/** 敵同士の左端 gap */
-export function engagedEnemyMinLeftEdgeGap(): number {
-  const enemyClearance = ENGAGED_VISUAL_TUNING.enemyBodyClearancePx;
-  const clearance =
-    enemyClearance !== 0
-      ? enemyClearance
-      : ENGAGED_VISUAL_TUNING.frontLineClearancePx;
-  return SPRITE_WIDTH + clearance;
+/** @deprecated engagedFrontLineGap を使用 */
+export function engagedFrontLineStandoffGap(): number {
+  return engagedFrontLineGap();
 }
 
 /** 近接ユニットが敵側へ寄るときの左端 gap */
 export function engagedMeleeAdvanceGap(rangePx: number): number {
-  const standoff = engagedFrontLineStandoffGap();
-  const tuned = ENGAGED_VISUAL_TUNING.meleeAdvanceGapPx;
-  return Math.max(rangePx, tuned > 0 ? tuned : standoff);
+  return Math.max(rangePx, engagedFrontLineGap());
+}
+
+/** 生存味方が後列のみか */
+export function isBackRowOnlyFormation(allies: AllyPlacementInput[]): boolean {
+  return getLeadingAllyFormationRow(allies.filter((ally) => ally.isAlive)) === "back";
 }
 
 export function engagedStandoffGap(
@@ -349,7 +344,7 @@ export function getLeadingAllyFront(
   return { visualX: front.visualX, rangePx: front.rangePx };
 }
 
-/** 後列 visualX が前衛より敵側へ出ないよう clamp（battleX 非連動の standoff 移動用） */
+/** 後列 visualX が前衛より敵側へ出ないよう clamp（接敵距離ベースの visual 移動用） */
 export function clampAllyVisualDepth(allies: CombatantState[]): void {
   const living = allies.filter((ally) => ally.isAlive);
   if (living.length === 0) return;
@@ -387,7 +382,7 @@ function rowDepthOffset(from: FormationRow, to: FormationRow): number {
   return ROW_X[to] - ROW_X[from];
 }
 
-/** 接敵時: 最前線の生存列を敵方向へ（体同士が重ならない standoff） */
+/** 接敵時: 最前線の生存列を敵方向へ（体同士が重ならない接敵距離） */
 function compressLeadingRowTowardEnemy(
   placements: Placement[],
   leadingRow: FormationRow,
@@ -563,7 +558,7 @@ export function computeEngagedAllyVisualTargets(
 }
 
 /**
- * 接敵中: 前線接敵点からの固定レーン（隊列と standoff のブレンド）
+ * 接敵中: 前線接敵点からの固定レーン（隊列と接敵距離のブレンド）
  * advanceT は ENGAGED_VISUAL_TUNING.leadingRowAdvanceT を既定とする
  */
 export function computeEngagedAllyLaneOffsets(
@@ -611,7 +606,7 @@ export function resolveStableMeleeEnemyVisuals(
 export function separateEngagedMeleeSprites(
   units: Array<{ id: string; visualX: number; isAlive: boolean }>
 ): Map<string, number> {
-  return separateSpritesByGapLeft(units, engagedEnemyMinLeftEdgeGap());
+  return separateSpritesByGapLeft(units, engagedMinLeftEdgeGap());
 }
 
 /**
@@ -625,7 +620,7 @@ export function resolveEngagedMeleeEnemyVisuals(
   }>,
   frontLineTargetX: number,
 ): Map<string, number> {
-  const gap = engagedEnemyMinLeftEdgeGap();
+  const gap = engagedMinLeftEdgeGap();
   const positions = new Map<string, number>();
   for (const enemy of enemies) {
     if (!enemy.isAlive) continue;
@@ -646,7 +641,7 @@ export function layoutEngagedMeleeEnemyVisuals(
   const living = enemies
     .filter((enemy) => enemy.isAlive)
     .sort((a, b) => b.battleX - a.battleX);
-  const gap = engagedEnemyMinLeftEdgeGap();
+  const gap = engagedMinLeftEdgeGap();
   const positions = new Map<string, number>();
   living.forEach((enemy, slot) => {
     positions.set(enemy.id, frontLineTargetX - slot * gap);
@@ -654,7 +649,7 @@ export function layoutEngagedMeleeEnemyVisuals(
   return positions;
 }
 
-/** 味方 X 配置。非戦闘時は重なり解消、接敵時は standoff まで詰める */
+/** 味方 X 配置。非戦闘時は重なり解消、接敵時は接敵距離まで詰める */
 export function computeAllyPositions(
   allies: AllyPlacementInput[],
   options: AllyPositionOptions = {}
@@ -682,13 +677,140 @@ export function computeEnemyStopX(
 /** 遠距離敵の視覚 X: 狙い味方から味方後列と同じ距離だけ離す */
 export function computeRangedEnemyVisualX(
   targetAllyX: number,
-  referenceBackRowAllyX?: number
+  referenceBackRowAllyX?: number,
 ): number {
   const depth =
     referenceBackRowAllyX !== undefined
       ? referenceBackRowAllyX - targetAllyX
       : ALLY_FORMATION_BACK_DEPTH;
   return targetAllyX - Math.max(depth, ALLY_FORMATION_BACK_DEPTH);
+}
+
+export interface EngagedLayoutAllyInput extends AllyPlacementInput {
+  visualX: number;
+  battleX: number;
+  /** 接敵開始 or 前列交代時に固定したレーン（未設定時は毎フレーム再計算） */
+  engagedVisualLaneX?: number;
+}
+
+export interface EngagedLayoutEnemyInput {
+  id: string;
+  isAlive: boolean;
+  rangePx: number;
+  battleX: number;
+  engagedMeleeVisualSlot?: number;
+}
+
+export interface EngagedLayoutContext {
+  allies: EngagedLayoutAllyInput[];
+  enemies: EngagedLayoutEnemyInput[];
+  allyContactBattleX: number | null;
+  battleVisualOffset: number;
+  frontEnemyVisualAnchor: number | null;
+  resolveRangedTargetVisualX: (enemyId: string) => number | null;
+}
+
+export interface EngagedLayoutResult {
+  allyVisualX: Map<string, number>;
+  enemyVisualX: Map<string, number>;
+  frontLineVisualX: number;
+}
+
+/** 接敵中の前線 visual 基準点（後列のみ生存時は leadingFront.visualX） */
+export function resolveEngagedContactVisualX(
+  allies: EngagedLayoutAllyInput[],
+  allyContactBattleX: number | null,
+  battleVisualOffset: number,
+): number | null {
+  const living = allies.filter((ally) => ally.isAlive);
+  if (living.length === 0) return null;
+
+  if (isBackRowOnlyFormation(living)) {
+    const front = getLeadingAllyFront(living);
+    return front?.visualX ?? ROW_X.back;
+  }
+
+  if (allyContactBattleX === null) return null;
+  return allyContactBattleX + battleVisualOffset;
+}
+
+/**
+ * 接敵中: 全ユニットの目標 visualX を一括算出（BattleEngine は補間のみ担当）
+ */
+export function resolveEngagedLayout(
+  ctx: EngagedLayoutContext,
+): EngagedLayoutResult | null {
+  const living = ctx.allies.filter((ally) => ally.isAlive);
+  if (living.length === 0) return null;
+
+  const frontLineVisualX = resolveEngagedContactVisualX(
+    ctx.allies,
+    ctx.allyContactBattleX,
+    ctx.battleVisualOffset,
+  );
+  if (frontLineVisualX === null) return null;
+
+  const backRowOnly = isBackRowOnlyFormation(living);
+  const hasFrozenLanes = living
+    .filter((ally) => ally.formationRow !== "back")
+    .every((ally) => ally.engagedVisualLaneX !== undefined);
+  const lanes =
+    !backRowOnly && ctx.frontEnemyVisualAnchor !== null
+      ? hasFrozenLanes
+        ? new Map(
+            living.map((ally) => [ally.id, ally.engagedVisualLaneX ?? 0]),
+          )
+        : computeEngagedAllyLaneOffsets(
+            living,
+            ctx.frontEnemyVisualAnchor,
+            frontLineVisualX,
+          )
+      : new Map<string, number>();
+
+  const allyVisualX = resolveStableAllyEngagedVisuals(
+    living.map((ally) => ({
+      id: ally.id,
+      formationRow: ally.formationRow,
+      isAlive: true as const,
+      engagedVisualLaneX: lanes.get(ally.id) ?? 0,
+    })),
+    frontLineVisualX,
+  );
+
+  const frontLineGap = engagedFrontLineGap();
+  const enemyFrontTargetX = frontLineVisualX - frontLineGap;
+  const meleePositions = resolveEngagedMeleeEnemyVisuals(
+    ctx.enemies,
+    enemyFrontTargetX,
+  );
+
+  const backRowAlly = living.find((ally) => ally.formationRow === "back");
+  const referenceBackRowAllyX =
+    !backRowOnly && backRowAlly
+      ? allyVisualX.get(backRowAlly.id)
+      : undefined;
+
+  const enemyVisualX = new Map<string, number>();
+  for (const enemy of ctx.enemies) {
+    if (!enemy.isAlive) continue;
+    if (enemy.rangePx > 0) {
+      const targetX = ctx.resolveRangedTargetVisualX(enemy.id);
+      if (targetX === null) continue;
+      enemyVisualX.set(
+        enemy.id,
+        backRowOnly
+          ? targetX - frontLineGap
+          : computeRangedEnemyVisualX(targetX, referenceBackRowAllyX),
+      );
+      continue;
+    }
+    const meleeX = meleePositions.get(enemy.id);
+    if (meleeX !== undefined) {
+      enemyVisualX.set(enemy.id, meleeX);
+    }
+  }
+
+  return { allyVisualX, enemyVisualX, frontLineVisualX };
 }
 
 /** 接敵中: 前線接敵点 + 固定レーンから味方 visualX（重なり解消のみ） */
@@ -745,7 +867,7 @@ export function resolveStableEnemyEngagedVisuals(
   return separateSpritesByGapLeft(ideals, engagedMinLeftEdgeGap());
 }
 
-/** move 効果の目標 visualX（anchor 基準・standoff 維持） */
+/** move 効果の目標 visualX（anchor 基準・接敵距離維持） */
 export function resolveMoveVisualX(
   actor: CombatantState,
   anchor: CombatantState,

@@ -17,6 +17,7 @@ export interface BattleHudTheme {
   fontFamily: string;
   iconBorder: string;
   nameColor: string;
+  epithetColor: string;
   expBarFill: string;
   hpBarFill: string;
   barrierFill: string;
@@ -146,6 +147,7 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     ),
     iconBorder: readString(style, '--hud-icon-border', '#4a5568'),
     nameColor: readString(style, '--hud-name-color', '#ffffff'),
+    epithetColor: readString(style, '--hud-epithet-color', 'rgba(255,255,255,0.65)'),
     expBarFill: readString(style, '--hud-exp-bar-fill', '#f5a623'),
     hpBarFill: readString(style, '--hud-hp-bar-fill', '#2ecc71'),
     barrierFill: readString(style, '--hud-barrier-fill', '#7bed9f'),

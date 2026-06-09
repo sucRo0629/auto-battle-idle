@@ -193,15 +193,19 @@ baseThreat = statComponent + frontRowPressureBonus
 
 | 座標        | 層            | 用途                                           |
 | --------- | ------------ | -------------------------------------------- |
-| `battleX` | `src/battle` | 射程判定・接敵移動・ターゲット選定                            |
-| `visualX` | `src/render` | 画面描画のみ（`formationLayout` の隊形配置・standoff で算出） |
+| `battleX` | `src/battle` | 射程判定・接敵移動・ターゲット選定・knockback |
+| `visualX` | `src/render` | 画面描画のみ（`resolveEngagedLayout` で算出） |
 
 
-同一 `battleX` のユニットはロジック上重なってよい（近接 range 0 等）。描画は `visualX` で隊形・standoff（演出用 `DEFAULT_MELEE_RANGE_PX` = 45px）を維持し、`battleX` の内部接近は画面に反映しない。
+同一 `battleX` のユニットはロジック上重なってよい（近接 range 0 等）。描画は `visualX` で隊形・接敵距離（`ENGAGED_VISUAL_TUNING`）を維持し、`battleX` の内部接近はそのまま画面に反映しない。
 
-**スキル `move` の演出:** `battleX` はロジック上の目標（接触等）へ補間し、`visualX` は `resolveMoveVisualX` で求めた standoff 目標へ同じ進捗率で補間する（`battleX` デルタの 1:1 ミラーはしない）。
+**接敵中の visual 更新:** `BattleEngine` は毎フレーム `resolveEngagedLayout`（`formationLayout.ts`）を呼び、返却された目標 `visualX` へ `moveTowardX` で補間するのみ。凍結するのは遠距離敵の狙い味方 ID（`engagedVisualTargetAllyId`）と近接敵の奥行きスロット（`engagedMeleeVisualSlot`）、前列レーン（`engagedVisualLaneX`・前列構成変化時のみ）に限定。前列交代時は接触味方のレーンを 0 に正規化し `contact.visualX += contactLane` でスナップして `frontLineVisualX` の無限左追従を防ぐ。
 
-**接敵カメラ:** 接敵フェーズ中は最前線の `visualX` 中点がキャンバス中央（240px）へ来るよう `combatCameraX` をスプライト描画に加算する。非接敵・Victory 退出時は 0 にリセット。HUD はオフセットしない。
+**接敵調整定数（`ENGAGED_VISUAL_TUNING`）:** `bodyClearancePx`（同陣営内 gap）、`frontLineGapPx`（敵味方最前列 gap、0=自動）、`leadingRowAdvanceT`（前列の接敵距離への寄せ率）、`engageMoveSpeedPxPerSec`（接近速度）。
+
+**スキル `move` の演出:** `battleX` はロジック上の目標（接触等）へ補間し、`visualX` は `resolveMoveVisualX` で求めた接敵距離目標へ同じ進捗率で補間する（`battleX` デルタの 1:1 ミラーはしない）。
+
+**接敵カメラ:** 接敵フェーズ中は `resolveEngagedLayout` の `frontLineVisualX` がキャンバス中央（240px）へ来るよう `combatCameraX` をスプライト描画に加算する。非接敵・Victory 退出時は 0 にリセット。HUD はオフセットしない。
 
 ## 射程と移動
 

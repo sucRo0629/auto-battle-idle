@@ -6,7 +6,7 @@ import levelCurvesJson from '../../data/levelCurves.json';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
 import {
   computeAllyPositions,
-  engagedFrontLineStandoffGap,
+  engagedFrontLineGap,
   engagedMinLeftEdgeGap,
   ROW_X,
   SPRITE_WIDTH,
@@ -260,7 +260,7 @@ describe('BattleEngine engaged visual layout', () => {
     const minFrontAllyX = Math.min(...frontAllies.map((ally) => ally.visualX));
     const maxEnemyX = Math.max(...livingEnemies.map((enemy) => enemy.visualX));
     expect(minFrontAllyX - maxEnemyX).toBeCloseTo(
-      engagedFrontLineStandoffGap(),
+      engagedFrontLineGap(),
       0,
     );
   });
@@ -293,6 +293,87 @@ describe('BattleEngine engaged visual layout', () => {
       prevMinFront = minFront;
     }
     expect(signFlipCount).toBeLessThan(2);
+  });
+
+  it('Stage 2 Wave 2: front row stays on-screen after guard death', () => {
+    const engine = createStage2Engine();
+    waitForEngaged(engine);
+
+    let wave2Engaged = false;
+    for (let i = 0; i < 120000; i++) {
+      engine.tick(1 / 60);
+      const snap = engine.getSnapshot();
+      if (snap.waveIndex === 1 && snap.engaged) {
+        wave2Engaged = true;
+        break;
+      }
+    }
+    expect(wave2Engaged).toBe(true);
+
+    let guardDeathSnap: ReturnType<BattleEngine['getSnapshot']> | null = null;
+    for (let i = 0; i < 120000; i++) {
+      engine.tick(1 / 60);
+      const snap = engine.getSnapshot();
+      const guard = snap.allies.find(
+        (ally) => ally.name === '鉄衛士' && ally.hp > 0,
+      );
+      const sword = snap.allies.find(
+        (ally) => ally.name === '剣術士' && ally.hp > 0,
+      );
+      const livingEnemies = snap.enemies.filter((enemy) => enemy.hp > 0);
+      if (!guard && sword && livingEnemies.length > 0 && snap.engaged) {
+        guardDeathSnap = snap;
+        break;
+      }
+    }
+    expect(guardDeathSnap).not.toBeNull();
+
+    const swordId = guardDeathSnap!.allies.find(
+      (ally) => ally.name === '剣術士',
+    )!.id;
+    let prevSwordX = guardDeathSnap!.allies.find((a) => a.id === swordId)!
+      .visualX;
+    let prevMinEnemyX = Math.min(
+      ...guardDeathSnap!.enemies
+        .filter((e) => e.hp > 0)
+        .map((e) => e.visualX),
+    );
+    const cameraAtDeath = guardDeathSnap!.combatCameraX;
+
+    const swordAtDeath = guardDeathSnap!.allies.find((a) => a.id === swordId)!.visualX;
+    for (let i = 0; i < 90; i++) {
+      engine.tick(1 / 60);
+      const snap = engine.getSnapshot();
+      const sword = snap.allies.find((a) => a.id === swordId && a.hp > 0);
+      if (!sword) break;
+
+      const swordScreenX = sword.visualX + snap.combatCameraX;
+      expect(swordScreenX).toBeGreaterThan(-SPRITE_WIDTH);
+      expect(swordScreenX).toBeLessThan(480 + SPRITE_WIDTH);
+
+      const swordDelta = sword.visualX - prevSwordX;
+      expect(swordDelta).toBeGreaterThan(-30);
+      prevSwordX = sword.visualX;
+
+      const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
+      if (livingEnemies.length > 0) {
+        const minEnemyScreenX = Math.min(
+          ...livingEnemies.map((e) => e.visualX + snap.combatCameraX),
+        );
+        expect(minEnemyScreenX).toBeGreaterThan(-SPRITE_WIDTH * 2);
+        const enemyDelta =
+          Math.min(...livingEnemies.map((e) => e.visualX)) - prevMinEnemyX;
+        expect(enemyDelta).toBeGreaterThan(-30);
+        prevMinEnemyX = Math.min(...livingEnemies.map((e) => e.visualX));
+      }
+    }
+
+    const finalSnap = engine.getSnapshot();
+    const finalSword = finalSnap.allies.find((a) => a.id === swordId);
+    if (finalSword && finalSword.hp > 0) {
+      expect(finalSword.visualX - swordAtDeath).toBeGreaterThan(-50);
+      expect(Math.abs(finalSnap.combatCameraX - cameraAtDeath)).toBeLessThan(80);
+    }
   });
 
   it('recompresses surviving front row toward enemy when the guard falls', () => {

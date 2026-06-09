@@ -266,6 +266,8 @@ export class SkillMenuPanel {
     iconWrap.className = "skill-menu-tab-icon";
     const img = document.createElement("img");
     img.className = "skill-menu-tab-icon-img";
+    img.width = 24;
+    img.height = 24;
     img.alt = "";
     img.decoding = "async";
     if (iconUrl) {
@@ -289,6 +291,37 @@ export class SkillMenuPanel {
       classPreset,
       classRegistry: this.gameData.classRegistry,
     });
+  }
+
+  /** iconKey 未指定時はクラス選択と同じ preset 経路で描画する */
+  private appendSkillIcon(
+    parent: HTMLElement,
+    label: string,
+    skillId: string,
+    skill: PassiveSkillDef | ActiveSkillDef | undefined,
+    classPreset?: ClassPreset
+  ): void {
+    if (skill?.iconKey) {
+      parent.appendChild(
+        this.createIconWrap(
+          undefined,
+          label,
+          this.resolveSkillIconUrl(skillId, skill, classPreset)
+        )
+      );
+      return;
+    }
+    if (classPreset) {
+      parent.appendChild(this.createIconWrap(classPreset, label));
+      return;
+    }
+    parent.appendChild(
+      this.createIconWrap(
+        undefined,
+        label,
+        this.resolveSkillIconUrl(skillId, skill, classPreset)
+      )
+    );
   }
 
   private renderBody(): void {
@@ -430,17 +463,29 @@ export class SkillMenuPanel {
     const textWrap = document.createElement("span");
     textWrap.className = "skill-menu-class-slot-text";
 
+    if (preset?.epithetEn) {
+      const epithetEl = document.createElement("span");
+      epithetEl.className = "skill-menu-class-slot-epithet";
+      epithetEl.textContent = preset.epithetEn;
+      textWrap.appendChild(epithetEl);
+    }
+
+    const nameRow = document.createElement("span");
+    nameRow.className = "skill-menu-class-slot-name-row";
+
     const nameEl = document.createElement("span");
     nameEl.className = "skill-menu-class-slot-name";
     nameEl.textContent = label;
-    textWrap.appendChild(nameEl);
+    nameRow.appendChild(nameEl);
 
     if (member) {
       const levelEl = document.createElement("span");
       levelEl.className = "skill-menu-class-slot-level";
       levelEl.textContent = `Lv ${member.progress.level}`;
-      textWrap.appendChild(levelEl);
+      nameRow.appendChild(levelEl);
     }
+
+    textWrap.appendChild(nameRow);
 
     slot.appendChild(textWrap);
     return slot;
@@ -474,8 +519,7 @@ export class SkillMenuPanel {
       slot.setAttribute("aria-disabled", "true");
     }
 
-    const iconUrl = this.resolveSkillIconUrl(skillId, def, preset);
-    slot.appendChild(this.createIconWrap(undefined, label, iconUrl));
+    this.appendSkillIcon(slot, label, skillId, def, preset);
 
     let tooltipDesc: string;
     if (slotIndex >= unlockedCount) {
@@ -561,13 +605,7 @@ export class SkillMenuPanel {
     slot.setAttribute("aria-label", name);
     slot.tabIndex = 0;
 
-    slot.appendChild(
-      this.createIconWrap(
-        undefined,
-        name,
-        this.resolveSkillIconUrl(skillId, skill, classPreset)
-      )
-    );
+    this.appendSkillIcon(slot, name, skillId, skill, classPreset);
     slot.appendChild(this.createFloatingTooltip(name, description));
     return slot;
   }
@@ -630,7 +668,7 @@ export class SkillMenuPanel {
     slotIndex: number
   ): HTMLElement {
     const picker = document.createElement("div");
-    picker.className = "skill-menu-picker";
+    picker.className = "skill-menu-picker skill-menu-picker--active";
 
     const heading = document.createElement("h3");
     heading.className = "skill-menu-section-title";
@@ -642,7 +680,7 @@ export class SkillMenuPanel {
     list.appendChild(this.createCancelPickerRow());
     const preset = this.gameData.classRegistry[member.classId];
     list.appendChild(
-      this.createSkillPickerRow("外す", "スロットを空にする", "", preset)
+      this.createSkillPickerRow("外す", "スロットを空にする", "")
     );
 
     for (const skillId of member.build.learnedActiveIds) {
@@ -711,6 +749,13 @@ export class SkillMenuPanel {
     const text = document.createElement("div");
     text.className = "skill-menu-picker-row-text";
 
+    if (preset?.epithetEn) {
+      const epithetEl = document.createElement("div");
+      epithetEl.className = "skill-menu-class-slot-epithet";
+      epithetEl.textContent = preset.epithetEn;
+      text.appendChild(epithetEl);
+    }
+
     const nameEl = document.createElement("div");
     nameEl.className = "skill-menu-skill-name";
     nameEl.textContent = name;
@@ -731,27 +776,20 @@ export class SkillMenuPanel {
     classPreset?: ClassPreset,
     skill?: ActiveSkillDef
   ): HTMLElement {
-    const row = document.createElement("button");
-    row.type = "button";
-    row.className = "skill-menu-picker-row skill-menu-picker-row--icon";
+    const row = this.createClassPickerRow(name, description, "", classPreset);
+    delete row.dataset.classId;
     row.dataset.skillId = skillId;
 
-    const iconUrl = this.resolveSkillIconUrl(skillId, skill, classPreset);
-    row.appendChild(this.createIconWrap(undefined, name, iconUrl));
+    if (skill?.iconKey) {
+      row.querySelector(".skill-menu-tab-icon")?.replaceWith(
+        this.createIconWrap(
+          undefined,
+          name,
+          this.resolveSkillIconUrl(skillId, skill, classPreset)
+        )
+      );
+    }
 
-    const text = document.createElement("div");
-    text.className = "skill-menu-picker-row-text";
-
-    const nameEl = document.createElement("div");
-    nameEl.className = "skill-menu-skill-name";
-    nameEl.textContent = name;
-
-    const descEl = document.createElement("div");
-    descEl.className = "skill-menu-skill-desc";
-    descEl.textContent = description;
-
-    text.append(nameEl, descEl);
-    row.appendChild(text);
     return row;
   }
 

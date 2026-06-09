@@ -287,6 +287,7 @@ export class BattleView {
         const preset = this.gameData.classRegistry[member.classId];
         return {
           displayName: preset?.displayName ?? member.classId,
+          epithetEn: preset?.epithetEn,
           level: member.progress.level,
         };
       });
