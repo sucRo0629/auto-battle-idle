@@ -1020,20 +1020,6 @@
             "stat": "hp",
             "order": "ratio"
           }
-        },
-        {
-          "type": "hot",
-          "durationSec": 3,
-          "amount": {
-            "kind": "percentMaxHp",
-            "percentOfMaxHp": 0.01
-          },
-          "target": {
-            "kind": "stat",
-            "side": "ally",
-            "stat": "hp",
-            "order": "ratio"
-          }
         }
       ],
       "vfx": {
@@ -1049,18 +1035,25 @@
       },
       "effect": [
         {
-          "type": "buff",
-          "buffStat": "atk",
-          "buffMultiplier": 1.2,
-          "buffDurationSec": 6,
           "target": {
             "kind": "stat",
             "side": "ally",
             "stat": "hp",
             "order": "ratio"
-          }
+          },
+          "type": "hot",
+          "durationSec": 5,
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.2
+          },
+          "targetShape": "single"
         }
-      ]
+      ],
+      "vfx": {
+        "preset": "orb",
+        "arc": true
+      }
     },
     {
       "id": "sp_abjurer_active_1",
