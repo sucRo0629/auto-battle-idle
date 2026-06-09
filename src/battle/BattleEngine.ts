@@ -1020,6 +1020,7 @@ export class BattleEngine {
 
   private tickSkillSequences(deltaTime: number): void {
     const units = [...this.allies, ...this.enemies];
+    this.skillSequenceRunner.tickUseLocks(deltaTime);
     this.skillSequenceRunner.tickMoves(deltaTime, units);
     this.skillSequenceRunner.tickSequences(this.battleTimeSec, (step) => {
       this.executor.applyScheduledStep(step, this.allies, this.enemies);

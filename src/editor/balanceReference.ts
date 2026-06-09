@@ -14,7 +14,7 @@ const REFERENCE_ID_SET = new Set<ClassId>(BALANCE_REFERENCE_CLASS_IDS);
 
 export const BALANCE_REFERENCE_DISPLAY_NAMES: Record<ClassId, string> = {
   df_guardian: '鉄衛士',
-  at_warrior: '重戦士',
+  at_warrior: '剣術士',
   at_ranger: '弓術士',
   at_sorcerer: '魔術士',
   sp_cleric: '療養師',

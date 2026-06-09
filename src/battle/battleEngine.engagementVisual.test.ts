@@ -248,8 +248,8 @@ describe('BattleEngine engaged visual layout', () => {
     );
     const livingEnemies = snap.enemies.filter((enemy) => enemy.hp > 0);
     const guard = frontAllies.find((ally) => ally.name === '鉄衛士');
-    const sword = frontAllies.find((ally) => ally.name === '重戦士');
-    const healer = frontAllies.find((ally) => ally.name === '療養師');
+    const sword = frontAllies.find((ally) => ally.name === '剣術士');
+    const healer = snap.allies.find((ally) => ally.name === '療養師');
 
     expect(guard).toBeDefined();
     expect(sword).toBeDefined();
@@ -306,7 +306,7 @@ describe('BattleEngine engaged visual layout', () => {
         (ally) => ally.name === '鉄衛士' && ally.hp > 0,
       );
       const sword = snap.allies.find(
-        (ally) => ally.name === '重戦士' && ally.hp > 0,
+        (ally) => ally.name === '剣術士' && ally.hp > 0,
       );
       const livingEnemies = snap.enemies.filter((enemy) => enemy.hp > 0);
       if (!guard && sword && livingEnemies.length > 0) {
@@ -338,7 +338,7 @@ describe('BattleEngine engaged visual layout', () => {
     const unique = new Set(visualXs.map((x) => Math.round(x)));
     expect(unique.size).toBe(visualXs.length);
     expect(Math.max(...visualXs) - Math.min(...visualXs)).toBeGreaterThanOrEqual(
-      20,
+      engagedMinLeftEdgeGap(),
     );
   });
 

@@ -4,14 +4,16 @@ import type { CombatantState } from "./types.ts";
 export const THREAT_STAT_HP_WEIGHT = 0.1;
 /** def 係数 */
 export const THREAT_STAT_DEF_WEIGHT = 2;
-/** 与ダメ・被ダメ 1 につき threat 増加 */
+/** 与ダメ・被ダメ 1 につき threat 増加（defender / supporter / 被ダメ） */
 export const THREAT_DAMAGE_SCALE = 0.5;
+/** attacker が与ダメしたときの threat 増加係数 */
+export const THREAT_DAMAGE_SCALE_ATTACKER_DEALT = 0.3;
 /** debuff 付与成功時の基本 threat */
 export const THREAT_DEBUFF_APPLY = 15;
 /** 秒あたり baseThreat 方向への減衰量 */
 export const THREAT_DECAY_PER_SEC = 20;
 /** 敵ターゲット抽選: threat^N で重み付け（N>1 で低ヘイトの当選率を下げる） */
-export const THREAT_TARGET_WEIGHT_EXPONENT = 3;
+export const THREAT_TARGET_WEIGHT_EXPONENT = 5;
 
 export function computeThreatStatComponent(unit: CombatantState): number {
   return Math.floor(
@@ -80,13 +82,17 @@ export function applyThreatFromDamage(
   amount: number
 ): void {
   if (amount <= 0) return;
-  const gain = Math.floor(amount * THREAT_DAMAGE_SCALE);
-  if (gain <= 0) return;
-  if (!actor.isEnemy && actor.isAlive) {
-    actor.threat = (actor.threat ?? actor.baseThreat ?? 0) + gain;
+  const actorScale =
+    !actor.isEnemy && actor.role === "attacker"
+      ? THREAT_DAMAGE_SCALE_ATTACKER_DEALT
+      : THREAT_DAMAGE_SCALE;
+  const actorGain = Math.floor(amount * actorScale);
+  const targetGain = Math.floor(amount * THREAT_DAMAGE_SCALE);
+  if (!actor.isEnemy && actor.isAlive && actorGain > 0) {
+    actor.threat = (actor.threat ?? actor.baseThreat ?? 0) + actorGain;
   }
-  if (!target.isEnemy && target.isAlive) {
-    target.threat = (target.threat ?? target.baseThreat ?? 0) + gain;
+  if (!target.isEnemy && target.isAlive && targetGain > 0) {
+    target.threat = (target.threat ?? target.baseThreat ?? 0) + targetGain;
   }
 }
 

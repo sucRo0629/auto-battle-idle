@@ -268,6 +268,39 @@ describe('skillSequence', () => {
     expect(actor.battleX).toBe(100);
     expect(runner.isActorBusy('actor')).toBe(false);
   });
+
+  it('beginUse marks actor busy until tickUseLocks elapses', () => {
+    const runner = new SkillSequenceRunner();
+    expect(runner.isActorBusy('actor')).toBe(false);
+
+    runner.beginUse('actor', 0.4);
+    expect(runner.isActorBusy('actor')).toBe(true);
+
+    runner.tickUseLocks(0.2);
+    expect(runner.isActorBusy('actor')).toBe(true);
+
+    runner.tickUseLocks(0.2);
+    expect(runner.isActorBusy('actor')).toBe(false);
+  });
+
+  it('beginUse keeps the longer remaining lock', () => {
+    const runner = new SkillSequenceRunner();
+    runner.beginUse('actor', 0.3);
+    runner.beginUse('actor', 0.5);
+
+    runner.tickUseLocks(0.3);
+    expect(runner.isActorBusy('actor')).toBe(true);
+
+    runner.tickUseLocks(0.2);
+    expect(runner.isActorBusy('actor')).toBe(false);
+  });
+
+  it('clearForActor removes use lock', () => {
+    const runner = new SkillSequenceRunner();
+    runner.beginUse('actor', 1);
+    runner.clearForActor('actor');
+    expect(runner.isActorBusy('actor')).toBe(false);
+  });
 });
 
 describe('resolveMoveBattleX', () => {

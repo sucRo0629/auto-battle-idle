@@ -112,6 +112,8 @@ HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さ�
 
 1 tick あたりの実行順（1ユニット）：basic → active 枠0 → active 枠1
 
+**発動硬直（`useDurationSec`）:** アクティブのみ optional（省略 / `0` = 即時・現状同等）。発動成功時に `SkillSequenceRunner.beginUse` で硬直を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。効果適用タイミングは変更なし（即時 / spread は pending キュー）。硬直中も時間 CD は進行（スタンと同様）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。
+
 **スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、通常攻撃・アクティブは発動しない。`basicAttackCount` / `hitsTaken` トリガーもスタン中は進まない（命中・被弾が起きないため）。
 
 ## ヘイト（Threat）
@@ -132,14 +134,15 @@ baseThreat = statComponent + frontRowPressureBonus
 
 | イベント        | 変化                                                                  |
 | ----------- | ------------------------------------------------------------------- |
-| 与ダメ / 被ダメ   | 双方（味方 actor・味方 target）に `floor(damage × 0.5)` を加算                   |
+| 与ダメ（actor）   | 味方 actor に加算。`attacker` は `floor(damage × 0.3)`、それ以外は `floor(damage × 0.5)` |
+| 被ダメ（target）  | 味方 target に `floor(damage × 0.5)` を加算                                      |
 | debuff 付与成功 | actor に `+15` 固定                                                    |
 | 毎 tick      | `threat > baseThreat` なら `threat -= 20 × deltaTime`、下限 `baseThreat` |
 
 
 ### 敵ターゲット抽選
 
-`pickThreatWeightedAlly`: 重み = `max(threat, 1) ^ 3`。高ヘイトほど当たりやすい（指数 3 で低ヘイトの当選率を抑制）。
+`pickThreatWeightedAlly`: 重み = `max(threat, 1) ^ 5`。高ヘイトほど当たりやすい（指数 5 で低ヘイトの当選率を抑制）。
 
 ## ステータス効果
 

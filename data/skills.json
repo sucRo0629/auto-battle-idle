@@ -433,7 +433,7 @@
     },
     {
       "id": "at_warrior_active_1",
-      "name": "重撃",
+      "name": "剣閃",
       "trigger": {
         "kind": "basicAttackCount",
         "value": 4

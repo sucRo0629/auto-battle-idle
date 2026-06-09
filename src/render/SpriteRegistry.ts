@@ -22,9 +22,16 @@ export const ENEMY_DEFAULT_SPRITE_KEY = 'enemy_default';
 
 const SPRITE_URLS: Record<string, string> = {
   [PLACEHOLDER_SPRITE_KEYS.defender]: defenderPlaceholderUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: attackerMeleePlaceholderUrl,
   [PLACEHOLDER_SPRITE_KEYS.supporter]: supporterPlaceholderUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: attackerRangedPlaceholderUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerGeneral]: attackerMeleePlaceholderUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: attackerMeleePlaceholderUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical]: attackerRangedPlaceholderUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerRangedMagic]: attackerRangedPlaceholderUrl,
+  // 旧 spriteKey（enemies.json 等）
+  defender_placeholder: defenderPlaceholderUrl,
+  attacker_melee_placeholder: attackerMeleePlaceholderUrl,
+  attacker_ranged_placeholder: attackerRangedPlaceholderUrl,
+  supporter_placeholder: supporterPlaceholderUrl,
   slime: slimeUrl,
   [ENEMY_DEFAULT_SPRITE_KEY]: enemyDefaultUrl,
 };

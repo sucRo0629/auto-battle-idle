@@ -296,9 +296,11 @@ export function resolveSpritePlaceholderColor(
 ): string {
   const colors: Record<string, string> = {
     [PLACEHOLDER_SPRITE_KEYS.defender]: theme.spriteDefender,
-    [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: theme.spriteAttackerMelee,
     [PLACEHOLDER_SPRITE_KEYS.supporter]: theme.spriteSupporter,
-    [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: theme.spriteAttackerRanged,
+    [PLACEHOLDER_SPRITE_KEYS.attackerGeneral]: theme.spriteAttackerMelee,
+    [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: theme.spriteAttackerMelee,
+    [PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical]: theme.spriteAttackerRanged,
+    [PLACEHOLDER_SPRITE_KEYS.attackerRangedMagic]: theme.spriteAttackerRanged,
     slime: theme.spriteSlime,
     [ENEMY_DEFAULT_SPRITE_KEY]: theme.spriteEnemyDefault,
   };
@@ -311,9 +313,11 @@ export function resolveClassIconPlaceholderColor(
 ): string {
   const colors: Record<string, string> = {
     [PLACEHOLDER_SPRITE_KEYS.defender]: theme.iconDefender,
-    [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: theme.iconAttackerMelee,
     [PLACEHOLDER_SPRITE_KEYS.supporter]: theme.iconSupporter,
-    [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: theme.iconAttackerRanged,
+    [PLACEHOLDER_SPRITE_KEYS.attackerGeneral]: theme.iconAttackerMelee,
+    [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: theme.iconAttackerMelee,
+    [PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical]: theme.iconAttackerRanged,
+    [PLACEHOLDER_SPRITE_KEYS.attackerRangedMagic]: theme.iconAttackerRanged,
   };
   return colors[iconKey] ?? theme.iconDefault;
 }

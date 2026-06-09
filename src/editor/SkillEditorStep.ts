@@ -1303,6 +1303,31 @@ export class SkillEditorStep {
           ),
         ),
       );
+      grid.appendChild(
+        createFieldRow(
+          '発動時間（秒）',
+          createNumberInput(
+            active.useDurationSec ?? 0,
+            (value) => {
+              setActive((current) => {
+                if (value <= 0) {
+                  delete current.useDurationSec;
+                } else {
+                  current.useDurationSec = value;
+                }
+              }, { rerender: false });
+            },
+            { min: 0, step: 0.05 },
+          ),
+        ),
+      );
+      grid.appendChild(
+        createEl(
+          'p',
+          'editor-hint',
+          '0 = 即時。硬直中は全スキル発動不可（効果は即時適用）。参考: attack/dash 0.33s、heal 0.30s',
+        ),
+      );
     }
 
     const effectsSection = createSection('効果');

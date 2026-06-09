@@ -623,6 +623,8 @@ export interface ActiveSkillDef {
   allowedClassIds?: ClassId[];
   /** 未指定時は role / attackRange 等からプレースホルダー VFX を自動選択 */
   vfx?: SkillVfxDef;
+  /** 発動硬直（秒）。省略/0 = 即時。アニメ長に合わせて設定 */
+  useDurationSec?: number;
 }
 
 export interface EnemyTemplate extends CombatStats {

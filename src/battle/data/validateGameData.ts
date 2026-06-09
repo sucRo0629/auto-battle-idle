@@ -1886,6 +1886,15 @@ function validateTriggerValue(
   }
 }
 
+function parseOptionalUseDurationSec(
+  obj: Record<string, unknown>,
+  context: string,
+): number | undefined {
+  const value = parseOptionalNonNegativeNumber(obj, 'useDurationSec', context);
+  if (value === undefined || value === 0) return undefined;
+  return value;
+}
+
 function parseActives(raw: unknown): ActiveSkillDef[] {
   if (!Array.isArray(raw)) {
     throw new Error('skills.json actives must be an array');
@@ -1916,6 +1925,7 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
 
     const vfx = parseSkillVfx(obj.vfx, `${context}.vfx`);
     const iconKey = parseOptionalIconKey(obj, context);
+    const useDurationSec = parseOptionalUseDurationSec(obj, context);
 
     return {
       id,
@@ -1927,6 +1937,7 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
         : {}),
       ...(vfx !== undefined ? { vfx } : {}),
       ...(iconKey !== undefined ? { iconKey } : {}),
+      ...(useDurationSec !== undefined ? { useDurationSec } : {}),
     };
   });
 }

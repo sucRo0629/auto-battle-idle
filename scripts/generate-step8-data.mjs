@@ -63,12 +63,12 @@ function addActive(id, name, trigger, effect, vfx) {
 }
 
 const classes = [
-  { id: 'df_guardian', displayName: '鉄衛士', epithetEn: 'Guardian', flavorJa: '鉄壁となり、最も危険な敵の矛先を受け止める', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'somewhatSlow', maxHp: 220, atk: 11, def: 26, reg: 0, growthTier: { maxHp: 3, atk: 1, def: 3 }, passiveIds: ['passive_target_highest_atk'] },
-  { id: 'df_paladin', displayName: '護法士', epithetEn: 'Paladin', flavorJa: '聖なる防護と小さな癒しで、前線を守り抜く', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 185, atk: 13, def: 20, reg: 15, growthTier: { maxHp: 2, atk: 1, def: 2 }, passiveIds: ['passive_damage_taken_heal'] },
-  { id: 'df_duelist', displayName: '剣闘士', epithetEn: 'Duelist', flavorJa: '搦め手で敵を弱らせ、隙に致命の一撃を繰り出す', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'fast', maxHp: 115, atk: 26, def: 12, reg: 0, growthTier: { maxHp: 2, atk: 3, def: 1 }, passiveIds: ['passive_self_low_hp_dmg'] },
-  { id: 'at_warrior', displayName: '重戦士', epithetEn: 'Warrior', flavorJa: '両手の重刃を構え、粘り強く戦場を制す', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 155, atk: 30, def: 16, reg: 0, growthTier: { maxHp: 3, atk: 3, def: 2 }, passiveIds: [] },
-  { id: 'at_assassin', displayName: '双短剣', epithetEn: 'Assassin', flavorJa: '敵の背後へ忍び込み、二刃で仕留める影', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'fast', maxHp: 82, atk: 32, def: 8, reg: 0, growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_target_lowest_hp', 'passive_evasion'] },
-  { id: 'at_lancer', displayName: '槍術士', epithetEn: 'Lancer', flavorJa: '長槍の一突きで、どんな巨体も貫く', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'somewhatSlow', maxHp: 135, atk: 24, def: 14, reg: 0, growthTier: { maxHp: 2, atk: 2, def: 2 }, passiveIds: ['passive_target_highest_hp'] },
+  { id: 'df_guardian', displayName: '鉄衛士', epithetEn: 'Guardian', flavorJa: '鉄壁となり、最も危険な敵の矛先を受け止める', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'somewhatSlow', maxHp: 235, atk: 11, def: 26, reg: 0, growthTier: { maxHp: 3, atk: 1, def: 3 }, passiveIds: ['passive_target_highest_atk'] },
+  { id: 'df_paladin', displayName: '護法士', epithetEn: 'Paladin', flavorJa: '聖なる防護と小さな癒しで、前線を守り抜く', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 200, atk: 13, def: 20, reg: 15, growthTier: { maxHp: 2, atk: 1, def: 2 }, passiveIds: ['passive_damage_taken_heal'] },
+  { id: 'df_duelist', displayName: '闘技士', epithetEn: 'Gladiator', flavorJa: '搦め手で敵を弱らせ、隙に致命の一撃を繰り出す', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'fast', maxHp: 190, atk: 26, def: 12, reg: 0, growthTier: { maxHp: 2, atk: 3, def: 1 }, passiveIds: ['passive_self_low_hp_dmg'] },
+  { id: 'at_warrior', displayName: '剣術士', epithetEn: 'Swordsman', flavorJa: '研ぎ澄まされた剣技で、近接戦の要となる', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 165, atk: 30, def: 14, reg: 0, growthTier: { maxHp: 2, atk: 3, def: 2 }, passiveIds: [] },
+  { id: 'at_assassin', displayName: '双短剣', epithetEn: 'Assassin', flavorJa: '敵の背後へ忍び込み、二刃で仕留める影', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'fast', maxHp: 100, atk: 32, def: 8, reg: 0, growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_target_lowest_hp', 'passive_evasion'] },
+  { id: 'at_lancer', displayName: '槍術士', epithetEn: 'Lancer', flavorJa: '長槍の一突きで、どんな巨体も貫く', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'somewhatSlow', maxHp: 150, atk: 24, def: 14, reg: 0, growthTier: { maxHp: 2, atk: 2, def: 2 }, passiveIds: ['passive_target_highest_hp'] },
   { id: 'at_ranger', displayName: '弓術士', epithetEn: 'Ranger', flavorJa: '遠くの脅威を先に射落とす迎撃の弓', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'fast', maxHp: 92, atk: 20, def: 6, reg: 0, growthTier: { maxHp: 1, atk: 2, def: 1 }, passiveIds: ['passive_target_ranged_attacking'] },
   { id: 'at_sniper', displayName: '狙撃士', epithetEn: 'Sniper', flavorJa: '最も遠い獲物だけを狙い、一矢で沈める', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'slow', maxHp: 88, atk: 28, def: 5, reg: 0, growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_target_farthest'] },
   { id: 'at_hunter', displayName: '狩猟士', epithetEn: 'Hunter', flavorJa: '罠と毒で追い詰め、獲物を仕留める', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'normal', maxHp: 96, atk: 18, def: 8, reg: 0, growthTier: { maxHp: 2, atk: 2, def: 1 }, passiveIds: ['passive_damage_vs_dot'] },
@@ -115,7 +115,7 @@ addActive('df_duelist_active_2', '隙撃ち', { kind: 'time', value: 10 }, [
   meleeHit(1.8, { targetShape: 'single' }),
 ]);
 
-addActive('at_warrior_active_1', '重撃', { kind: 'basicAttackCount', value: 4 }, [
+addActive('at_warrior_active_1', '剣閃', { kind: 'basicAttackCount', value: 4 }, [
   meleeHit(2.1, { targetShape: 'single' }),
 ]);
 addActive('at_warrior_active_2', '薙ぎ払い', { kind: 'time', value: 11 }, [

@@ -104,6 +104,10 @@ export function skillHasMoveEffect(skill: ActiveSkillDef): boolean {
   return skill.effect.some((effect) => effect.type === 'move');
 }
 
+export function resolveUseDurationSec(skill: ActiveSkillDef): number {
+  return skill.useDurationSec ?? 0;
+}
+
 /** move 含むシーケンスでは非 move も射程外 anchor を許可（適用時に再解決） */
 export function resolveSequenceStepAnchor(
   effect: SkillEffectDef,
@@ -124,6 +128,7 @@ export function resolveSequenceStepAnchor(
 export class SkillSequenceRunner {
   private sequences: ActiveSkillSequence[] = [];
   private activeMoves: ActiveSkillMove[] = [];
+  private useLockRemainingSec = new Map<string, number>();
 
   getActiveMoves(): readonly ActiveSkillMove[] {
     return this.activeMoves;
@@ -131,9 +136,16 @@ export class SkillSequenceRunner {
 
   isActorBusy(actorId: string): boolean {
     return (
+      (this.useLockRemainingSec.get(actorId) ?? 0) > 0 ||
       this.sequences.some((seq) => seq.actorId === actorId) ||
       this.activeMoves.some((move) => move.actorId === actorId)
     );
+  }
+
+  beginUse(actorId: string, durationSec: number): void {
+    if (durationSec <= 0) return;
+    const current = this.useLockRemainingSec.get(actorId) ?? 0;
+    this.useLockRemainingSec.set(actorId, Math.max(current, durationSec));
   }
 
   schedule(sequence: ActiveSkillSequence): void {
@@ -147,6 +159,7 @@ export class SkillSequenceRunner {
   clearAll(): void {
     this.sequences = [];
     this.activeMoves = [];
+    this.useLockRemainingSec.clear();
   }
 
   clearForActor(actorId: string): void {
@@ -154,6 +167,18 @@ export class SkillSequenceRunner {
     this.activeMoves = this.activeMoves.filter(
       (move) => move.actorId !== actorId,
     );
+    this.useLockRemainingSec.delete(actorId);
+  }
+
+  tickUseLocks(deltaTime: number): void {
+    for (const [actorId, remaining] of this.useLockRemainingSec) {
+      const next = remaining - deltaTime;
+      if (next <= 0) {
+        this.useLockRemainingSec.delete(actorId);
+      } else {
+        this.useLockRemainingSec.set(actorId, next);
+      }
+    }
   }
 
   tickMoves(

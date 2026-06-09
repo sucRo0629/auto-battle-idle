@@ -55,13 +55,13 @@
 |---------|--------|-----------|-----|------|----------|------------|
 | `df_guardian` | 鉄衛士 | Guardian | front | 近接 | 最高 ATK 狙い | シールドバッシュ（ダメ+スタン）／威圧 |
 | `df_paladin` | 護法士 | Paladin | front | 近接 | 被ダメ 12% 即時回復 | 手当／聖盾 |
-| `df_duelist` | 剣闘士 | Duelist | front | 近接 | 低 HP 火力 | 砂かけ（debuff+スタン）／隙撃ち |
+| `df_duelist` | 闘技士 | Gladiator | front | 近接 | 低 HP 火力 | 砂かけ（debuff+スタン）／隙撃ち |
 
 #### attacker（`at_`）
 
 | classId | 表示名 | epithetEn | 列 | 射程 | パッシブ | アクティブ |
 |---------|--------|-----------|-----|------|----------|------------|
-| `at_warrior` | 重戦士 | Warrior | front | 近接 | — | 重撃（4 通常後・atk×2.1）／薙ぎ払い |
+| `at_warrior` | 剣術士 | Swordsman | front | 近接 | — | 剣閃（4 通常後・atk×2.1）／薙ぎ払い |
 | `at_assassin` | 双短剣 | Assassin | front | 近接 | 最低 HP 狙い + 回避 | 背刺（背後+連打）／仕留め |
 | `at_lancer` | 槍術士 | Lancer | front | 近接 | 最高 HP 狙い | 貫突／突き刺し |
 | `at_ranger` | 弓術士 | Ranger | back | 遠隔物理 | 遠隔攻撃中敵優先 | 速射（4 通常後）／貫矢 |
@@ -84,7 +84,7 @@
 | 枠 | classId | 表示名 |
 |----|---------|--------|
 | 1 | `df_guardian` | 鉄衛士 |
-| 2 | `at_warrior` | 重戦士 |
+| 2 | `at_warrior` | 剣術士 |
 | 3 | `sp_cleric` | 療養師 |
 | 4 | `at_ranger` | 弓術士 |
 
@@ -184,6 +184,7 @@ interface CharacterBuild {
 |------------|------|
 | `trigger.kind` | `time`（秒）／`basicAttackCount`（通常攻撃回数）／`hitsTaken`（被攻撃回数） |
 | `trigger.value` | 条件の閾値。発動後に `remaining` として再設定され、0 になるまで再充填 |
+| `useDurationSec` | optional。発動硬直（秒）。省略 / `0` = 即時。アニメ長に合わせて設定（詳細は [combat.md](combat.md)） |
 
 - `basicAttackCount` — 戦闘開始時 `remaining = value`。**通常攻撃が命中するたび** `remaining--`（エンジン標準。パッシブ不要）
 - `hitsTaken` — 被ダメ（`hurt`）のたび `remaining--`
@@ -241,7 +242,7 @@ interface CharacterBuild {
 | `debuff.tags` | デバフタグ（OR）。`DEBUFF_FILTER_TAGS` 参照 |
 | `debuff.selfAppliedOnly` | DoT 等で自分付与のみ |
 | `targetHp.maxHpRatio` | 対象 `hp/maxHp ≤ ratio` |
-| `selfHp.maxHpRatio` | 自身 HP 閾値。`mode: scaling` で欠損 HP 比例（剣闘士互換） |
+| `selfHp.maxHpRatio` | 自身 HP 閾値。`mode: scaling` で欠損 HP 比例（闘技士互換） |
 
 ### 防御無視（`DefenseIgnoreSpec`）
 

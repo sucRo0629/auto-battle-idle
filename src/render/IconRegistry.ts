@@ -1,7 +1,6 @@
-import defenderPlaceholderIconUrl from '../assets/class-icons/defender_placeholder.png';
-import attackerMeleePlaceholderIconUrl from '../assets/class-icons/attacker_melee_placeholder.png';
-import attackerRangedPlaceholderIconUrl from '../assets/class-icons/attacker_ranged_placeholder.png';
-import supporterPlaceholderIconUrl from '../assets/class-icons/supporter_placeholder.png';
+import defenderPlaceholderIconUrl from '../assets/class-icons/placeholder_df.png';
+import supporterPlaceholderIconUrl from '../assets/class-icons/placeholder_sp.png';
+import attackerGeneralPlaceholderIconUrl from '../assets/class-icons/placeholder_at_general.png';
 import {
   resolveSkillIconKey,
   type SkillIconContext,
@@ -14,9 +13,14 @@ import type {
 
 const CLASS_ICON_URLS: Record<string, string> = {
   [PLACEHOLDER_SPRITE_KEYS.defender]: defenderPlaceholderIconUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: attackerMeleePlaceholderIconUrl,
   [PLACEHOLDER_SPRITE_KEYS.supporter]: supporterPlaceholderIconUrl,
-  [PLACEHOLDER_SPRITE_KEYS.attackerRanged]: attackerRangedPlaceholderIconUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerGeneral]: attackerGeneralPlaceholderIconUrl,
+  // 再分類用キー — PNG 追加までは general にフォールバック
+  [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: attackerGeneralPlaceholderIconUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical]:
+    attackerGeneralPlaceholderIconUrl,
+  [PLACEHOLDER_SPRITE_KEYS.attackerRangedMagic]:
+    attackerGeneralPlaceholderIconUrl,
 };
 
 const skillIconModules = import.meta.glob<string>(

@@ -36,6 +36,7 @@ import type {
   PendingSkillHit,
   SkillCooldown,
   SkillEffectDef,
+  SkillSlotKind,
   StatusEffect,
 } from '../types.ts';
 import { asStatusEffectStatList } from '../types.ts';
@@ -48,6 +49,7 @@ import {
   buildSkillSequence,
   type PendingSkillStep,
   resolveSequenceStepAnchor,
+  resolveUseDurationSec,
   type SkillSequenceRunner,
   skillHasMoveEffect,
 } from './skillSequence.ts';
@@ -109,6 +111,7 @@ export class SkillExecutor {
         cd,
       );
       if (!sequence) return;
+      this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
       this.deps.getSequenceRunner().schedule(sequence);
       return;
     }
@@ -180,6 +183,7 @@ export class SkillExecutor {
     }
 
     if (appliedAny) {
+      this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
       resetCooldownAfterFire(cd, skill);
       if (cd.slotKind === 'basic') {
         tickCountTriggerCooldowns(
@@ -671,6 +675,18 @@ export class SkillExecutor {
     }
 
     return false;
+  }
+
+  private beginSkillUseIfActive(
+    actorId: string,
+    skill: ActiveSkillDef,
+    slotKind: SkillSlotKind,
+  ): void {
+    if (slotKind === 'basic') return;
+    const duration = resolveUseDurationSec(skill);
+    if (duration > 0) {
+      this.deps.getSequenceRunner().beginUse(actorId, duration);
+    }
   }
 }
 

@@ -73,7 +73,7 @@ function computeRowDerived(cls: ClassPresetBeforeEnrich): {
 
 const ROLE_SECTION_HINTS: Record<Role, string> = {
   defender: '基準: 鉄衛士',
-  attacker: '基準: 重戦士・弓術士・魔術士',
+  attacker: '基準: 剣術士・弓術士・魔術士',
   supporter: '基準: 療養師',
 };
 

@@ -1,11 +1,16 @@
-import { isRangedAttack } from './data/entityTraits.ts';
 import type { ClassPreset, Role } from './types.ts';
 
 export const PLACEHOLDER_SPRITE_KEYS = {
-  defender: 'defender_placeholder',
-  attackerMelee: 'attacker_melee_placeholder',
-  attackerRanged: 'attacker_ranged_placeholder',
-  supporter: 'supporter_placeholder',
+  defender: 'placeholder_df',
+  supporter: 'placeholder_sp',
+  /** 再分類まで全アタッカー共通 */
+  attackerGeneral: 'placeholder_at_general',
+  /** 将来: 近接アタッカー */
+  attackerMelee: 'placeholder_at_melee',
+  /** 将来: 物理遠距離アタッカー */
+  attackerRangedPhysical: 'placeholder_at_rng_physical',
+  /** 将来: 魔法遠距離アタッカー */
+  attackerRangedMagic: 'placeholder_at_rng_magic',
 } as const;
 
 export type PlaceholderSpriteKey =
@@ -17,13 +22,12 @@ const PLACEHOLDER_SPRITE_KEY_SET = new Set<string>(
 
 export function resolvePlaceholderSpriteKey(
   role: Role,
-  rangePx: number,
+  _rangePx: number,
 ): PlaceholderSpriteKey {
   if (role === 'defender') return PLACEHOLDER_SPRITE_KEYS.defender;
   if (role === 'supporter') return PLACEHOLDER_SPRITE_KEYS.supporter;
-  return isRangedAttack(rangePx)
-    ? PLACEHOLDER_SPRITE_KEYS.attackerRanged
-    : PLACEHOLDER_SPRITE_KEYS.attackerMelee;
+  // TODO: melee / ranged physical / ranged magic に再分類
+  return PLACEHOLDER_SPRITE_KEYS.attackerGeneral;
 }
 
 export function resolvePlaceholderIconKey(
