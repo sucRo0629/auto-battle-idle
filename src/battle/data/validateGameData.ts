@@ -717,6 +717,36 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
     };
   }
 
+  if (type === 'stun') {
+    const durationSec = requireNumber(obj, 'durationSec', context);
+    if (durationSec <= 0) {
+      invalidField(context, 'durationSec', 'must be a positive number');
+    }
+    return {
+      targetRule,
+      ...targetShapeFields,
+      type: 'stun',
+      durationSec,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    };
+  }
+
+  if (type === 'knockback') {
+    const distancePx = requireNumber(obj, 'distancePx', context);
+    if (distancePx <= 0) {
+      invalidField(context, 'distancePx', 'must be a positive number');
+    }
+    return {
+      targetRule,
+      ...targetShapeFields,
+      type: 'knockback',
+      distancePx,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    };
+  }
+
   if (type === 'move') {
     const effectiveShape = targetShapeFields.targetShape ?? 'single';
     if (effectiveShape !== 'single') {
@@ -1043,6 +1073,14 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
     const id = requireString(obj, 'id', context);
     const role = requireEnum(obj, 'role', context, ROLES_SET);
     const displayName = requireString(obj, 'displayName', context);
+    const epithetEn =
+      obj.epithetEn === undefined
+        ? undefined
+        : requireString(obj, 'epithetEn', context);
+    const flavorJa =
+      obj.flavorJa === undefined
+        ? undefined
+        : requireString(obj, 'flavorJa', context);
     const formationRow = requireEnum(obj, 'formationRow', context, FORMATION_ROWS_SET);
     const traitsObj = requireRecord(obj.traits, `${context}.traits`);
     const attackRange = requireEnum(
@@ -1109,6 +1147,8 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       id,
       role,
       displayName,
+      ...(epithetEn !== undefined ? { epithetEn } : {}),
+      ...(flavorJa !== undefined ? { flavorJa } : {}),
       formationRow,
       traits: {
         attackRange,

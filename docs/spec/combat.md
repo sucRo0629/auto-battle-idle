@@ -27,7 +27,7 @@
 3. `afterDefense = floor(baseDamage × 100 / (100 + effectiveReg))`
 4. `final = max(1, floor(afterDefense × damageTakenMul))`
 
-Phase 1 デモは物理のみ。術師等は `damageType: "magic"` + `reg` による割合軽減（DEF 減算なし）。
+一次職マスタ（`at_sorcerer` / `at_enchanter` / `at_geomancer` 等）は `damageType: "magic"` を使用。敵の `reg` が 0 のときも上式で最低 1 ダメージ。
 
 ## 攻撃速度と基本攻撃
 
@@ -91,7 +91,35 @@ HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さ�
 
 `remaining` が 0 になると `SkillExecutor` が1回発動し、`trigger.value` にリセット（レガシー `interval` は `trigger.kind: time` として解釈）。
 
-1 tick あたりの実行順（1ユニット）：basic → active 枠0 → active 枠1（Phase 1〜2 では枠1未使用）
+1 tick あたりの実行順（1ユニット）：basic → active 枠0 → active 枠1
+
+**スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、通常攻撃・アクティブは発動しない。`basicAttackCount` / `hitsTaken` トリガーもスタン中は進まない（命中・被弾が起きないため）。
+
+## ヘイト（Threat）
+
+味方のみランタイムで `threat` / `baseThreat` を保持。敵の `closestAlly` ターゲットは **ヘイト加重抽選**（実装：`src/battle/threat.ts`）。
+
+### baseThreat（戦闘開始・前列圧力更新時）
+
+```
+statComponent = floor(maxHp × 0.1 + def × 2)
+baseThreat = statComponent + Σ threatBonus + frontRowPressureBonus
+```
+
+- `threatBonus` — パッシブ `threatBonus.bonus` の合算
+- `frontRowPressureBonus` — **前列**味方のみ。他前列の `1 - hp/maxHp` の最大値 × 自 statComponent（床が削れたほどタンクの基礎ヘイト上昇）
+
+### 変動と減衰
+
+| イベント | 変化 |
+|----------|------|
+| 与ダメ / 被ダメ | 双方（味方 actor・味方 target）に `floor(damage × 0.5)` を加算 |
+| debuff 付与成功 | actor に `15 × threatOnDebuff.multiplier`（パッシブなし時 15） |
+| 毎 tick | `threat > baseThreat` なら `threat -= 20 × deltaTime`、下限 `baseThreat` |
+
+### 敵ターゲット抽選
+
+`pickThreatWeightedAlly`: 重み = `max(threat, 1) ^ 3`。高ヘイトほど当たりやすい（指数 3 で低ヘイトの当選率を抑制）。
 
 ## ステータス効果
 
@@ -101,12 +129,14 @@ HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さ�
 |------|----------|
 | buff | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec` |
 | debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec` |
+| スタン | `effect: "stun"` + `durationSec` — `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可（CD は進行） |
+| ノックバック | `effect: "knockback"` + `distancePx` — 敵は左（`-X`）、味方は右（`+X`）へ即時移動。敵は `BATTLE_ENEMY_MARCH_VISIBLE_MIN_X` 未満にならない |
 
-**重複（同一対象・同一 stat）：**
+**重複（同一対象・同一 stat / CC）：**
 
-- `multiplier` — 乗算
-- `flatBonus` — 代数和（buff `+` / debuff `-`）
-- `remainingSec` — **長い方**を採用（短い効果は上書き）
+- buff/debuff `multiplier` — 乗算
+- buff/debuff `flatBonus` — 代数和（buff `+` / debuff `-`）
+- buff/debuff / CC `remainingSec` — **長い方**を採用（短い効果は上書き）
 
 毎 tick：`remainingSec -= deltaTime`、0 以下で除去。
 
@@ -188,5 +218,6 @@ Phase 1 はプレースホルダー VFX のみ。**スキル別 `vfx` 設定・�
 | ダメージ | attack / hurt アニメ、ダメージポップアップ、近接/遠隔プレースホルダー（slash / orb / arrow） |
 | 回復 | heal アニメ、緑ポップアップ、healRise プレースホルダー |
 | buff / debuff | 対象の白い光（約0.8秒） |
+| スタン（CC） | オーバーレイ `stun`（バッジ UI は Phase 3c 予定） |
 
 ロジックは `BattleEvent` を発火；`BattleView` が `BattleCanvas` を駆動。`render/` に戦闘ルールは置かない。

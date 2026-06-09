@@ -15,12 +15,12 @@ export function cloneBuild(build: CharacterBuild): CharacterBuild {
   return structuredClone(build);
 }
 
-/** Phase 7 まで常に 1。解放条件と UI / 戦闘側チェックは Phase 7 で追加。 */
+/** アクティブセット枠の解放数（現状は初回から MAX_ACTIVE_SLOTS まで） */
 export function getUnlockedActiveSlotCount(
   _member: PartyMemberState,
   _gameData: GameData,
 ): number {
-  return 1;
+  return MAX_ACTIVE_SLOTS;
 }
 
 /** セット枠配列を最大長に正規化する */

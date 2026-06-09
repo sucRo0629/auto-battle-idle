@@ -273,6 +273,36 @@ export class ClassEditorStep {
           })
         )
       );
+      identityGrid.appendChild(
+        createFieldRow(
+          "英語名 (epithetEn)",
+          createTextInput(draft.class.epithetEn ?? "", (epithetEn) => {
+            commitDraft((next) => {
+              const trimmed = epithetEn.trim();
+              if (trimmed) {
+                next.class.epithetEn = trimmed;
+              } else {
+                delete next.class.epithetEn;
+              }
+            });
+          })
+        )
+      );
+      identityGrid.appendChild(
+        createFieldRow(
+          "背景文 (flavorJa)",
+          createTextInput(draft.class.flavorJa ?? "", (flavorJa) => {
+            commitDraft((next) => {
+              const trimmed = flavorJa.trim();
+              if (trimmed) {
+                next.class.flavorJa = trimmed;
+              } else {
+                delete next.class.flavorJa;
+              }
+            });
+          })
+        )
+      );
     }
     identityGrid.appendChild(
       createFieldRow(

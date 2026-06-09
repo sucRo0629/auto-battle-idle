@@ -53,6 +53,7 @@ import {
 } from "./battleHudTheme.ts";
 import { VictoryOverlay } from "./VictoryOverlay.ts";
 import { DeathPlaybackManager } from "./deathPlayback.ts";
+import { MAX_ACTIVE_SLOTS } from "../progression/skillBuild.ts";
 
 const CANVAS_W = 480;
 const CANVAS_H = battleCanvasHeight(1);
@@ -89,7 +90,7 @@ export interface PartyHudMeta {
   expRequired: number;
 }
 
-const MIN_ACTIVE_SKILL_SLOTS = 1;
+const MIN_ACTIVE_SKILL_SLOTS = MAX_ACTIVE_SLOTS;
 
 export class BattleCanvas implements IBattleRenderer {
   private canvas!: HTMLCanvasElement;
@@ -376,11 +377,7 @@ export class BattleCanvas implements IBattleRenderer {
   }
 
   private maxActiveSkillSlots(): number {
-    if (this.allyHud.length === 0) return MIN_ACTIVE_SKILL_SLOTS;
-    return Math.max(
-      MIN_ACTIVE_SKILL_SLOTS,
-      ...this.allyHud.map((ally) => ally.activeCooldowns.length),
-    );
+    return MIN_ACTIVE_SKILL_SLOTS;
   }
 
   private measurePartyHudBarStack(

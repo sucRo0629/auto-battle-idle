@@ -63,6 +63,10 @@ export interface ClassPreset extends CombatStats {
   id: ClassId;
   role: Role;
   displayName: string;
+  /** 英語職名（UI ルビ上段。表示リファクタ時に使用） */
+  epithetEn?: string;
+  /** 1行フレーバーテキスト */
+  flavorJa?: string;
   formationRow: FormationRow;
   traits: ClassTraits;
   /** 未指定時は role / attackRange からプレースホルダーを使用 */
@@ -195,11 +199,11 @@ export interface SaveGameState {
 
 export interface StatusEffect {
   id: string;
-  kind: "buff" | "debuff";
+  kind: "buff" | "debuff" | "cc";
   /** buff/debuff 用（stat 系） */
   stat?: StatusEffectStat;
-  /** HoT/DoT バッジ用 */
-  overlay?: "hot" | "dot";
+  /** HoT/DoT/CC バッジ用 */
+  overlay?: "hot" | "dot" | "stun";
   /** HoT tick 量（ResourceAmountSpec） */
   amount?: ResourceAmountSpec;
   /** HoT/DoT tick 量（旧 JSON 互換） */
@@ -309,7 +313,9 @@ export type SkillEffectKind =
   | "hot"
   | "dot"
   | "barrier"
-  | "move";
+  | "move"
+  | "stun"
+  | "knockback";
 
 export type MoveMode = "engage" | "toAnchor" | "behindTarget";
 export type DamageType = "physical" | "magic";
@@ -459,6 +465,16 @@ export interface MoveSkillEffect extends SkillEffectCommon {
   behindOffsetPx?: number;
 }
 
+export interface StunSkillEffect extends SkillEffectCommon {
+  type: "stun";
+  durationSec: number;
+}
+
+export interface KnockbackSkillEffect extends SkillEffectCommon {
+  type: "knockback";
+  distancePx: number;
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -467,7 +483,9 @@ export type SkillEffectDef =
   | HotSkillEffect
   | DotSkillEffect
   | BarrierSkillEffect
-  | MoveSkillEffect;
+  | MoveSkillEffect
+  | StunSkillEffect
+  | KnockbackSkillEffect;
 
 export interface ActiveSkillDef {
   id: string;

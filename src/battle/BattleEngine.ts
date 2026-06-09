@@ -29,6 +29,12 @@ import {
   resolveEnemyApproachBattleX,
   resolveEnemyBasicAttackTarget,
 } from "./resolveApproachBattleX.ts";
+import { isUnitStunned } from "./ccEffects.ts";
+import {
+  applyDamageTakenToHeal,
+  initializeCountTriggerCooldowns,
+  syncPartyHotAuras,
+} from "./passiveEffects.ts";
 import {
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
@@ -152,9 +158,7 @@ export class BattleEngine {
       },
       getAllCombatants: () => [...this.allies, ...this.enemies],
       getSequenceRunner: () => this.skillSequenceRunner,
-      onBasicAttackExecuted: (actorId) => {
-        this.tickCountTriggers(actorId, "basicAttackCount");
-      },
+      onBasicAttackExecuted: () => {},
       onDamageApplied: (actor, target, amount) => {
         this.handleDamageThreat(actor, target, amount);
       },
@@ -174,6 +178,13 @@ export class BattleEngine {
     amount: number,
   ): void {
     applyThreatFromDamage(actor, target, amount);
+    if (!target.isEnemy && target.isAlive && amount > 0) {
+      applyDamageTakenToHeal(
+        target,
+        amount,
+        this.gameData.skillRegistry.passives,
+      );
+    }
     this.onDamageApplied?.(actor, target, amount);
   }
 
@@ -196,7 +207,17 @@ export class BattleEngine {
     this.clearPendingDefeat();
     this.clearPendingWaveAdvance();
     this.beginWaveApproachMarch(0);
-    initializeAllyThreat(this.allies, this.gameData.skillRegistry.passives);
+    this.initBattlePassiveState();
+  }
+
+  private initBattlePassiveState(): void {
+    const passives = this.gameData.skillRegistry.passives;
+    const actives = this.gameData.skillRegistry.actives;
+    initializeAllyThreat(this.allies, passives);
+    syncPartyHotAuras(this.allies, passives);
+    for (const unit of [...this.allies, ...this.enemies]) {
+      initializeCountTriggerCooldowns(unit, actives);
+    }
   }
 
   private isOnBattlefield(ally: CombatantState): boolean {
@@ -687,6 +708,12 @@ export class BattleEngine {
     );
     this.resetEnemyBattlePositions();
     this.resetEnemyVisualPositions();
+    for (const enemy of this.enemies) {
+      initializeCountTriggerCooldowns(
+        enemy,
+        this.gameData.skillRegistry.actives,
+      );
+    }
   }
 
   private startWaveIntermission(): void {
@@ -1113,7 +1140,7 @@ export class BattleEngine {
 
   private runUnitSkills(actors: CombatantState[]): void {
     for (const actor of actors) {
-      if (!actor.isAlive) continue;
+      if (!actor.isAlive || isUnitStunned(actor)) continue;
       const ordered = this.orderCooldowns(actor.cooldowns);
       for (const cd of ordered) {
         if (cd.remaining > 0) continue;

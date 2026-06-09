@@ -7,6 +7,10 @@ import type {
   StatusEffect,
 } from './types.ts';
 import {
+  getPassiveOutgoingDamageMultiplier,
+  type PassiveDamageContext,
+} from './passiveEffects.ts';
+import {
   aggregateStatEffects,
   computeEffectiveStat,
 } from './statusEffectDisplay.ts';
@@ -154,6 +158,7 @@ export function resolveDamage(
   effect: DamageSkillEffect,
   passives: Record<string, PassiveSkillDef>,
   atkScaleOverride?: number,
+  passiveContext: PassiveDamageContext = {},
 ): number {
   const baseDamage = Math.floor(
     resolvePowerAmount(
@@ -162,7 +167,13 @@ export function resolveDamage(
       effect.amount,
       passives,
       atkScaleOverride,
-    ),
+    ) *
+      getPassiveOutgoingDamageMultiplier(
+        attacker,
+        target,
+        passives,
+        passiveContext,
+      ),
   );
   const damageType: DamageType = effect.damageType;
   const effectiveDef = getEffectiveDef(target);

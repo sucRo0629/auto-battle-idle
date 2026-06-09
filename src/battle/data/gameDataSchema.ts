@@ -40,6 +40,8 @@ export const SKILL_EFFECT_KINDS = [
   "dot",
   "barrier",
   "move",
+  "stun",
+  "knockback",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [

@@ -33,7 +33,7 @@ function mockUnit(
     reg: opts.reg ?? 0,
     isAlive: hp > 0,
     role: opts.isEnemy ? 'attacker' : 'attacker',
-    classId: opts.isEnemy ? 'test_enemy' : 'attacker_jutsushi',
+    classId: opts.isEnemy ? 'test_enemy' : 'at_sorcerer',
     formationRow: 'back',
     traits: {
       attackRange: opts.attackRange ?? 'ranged',
@@ -80,10 +80,12 @@ describe('resolveEffectTargets', () => {
   const enemyFar = mockUnit('e3', 180, { isEnemy: true, hp: 30 });
   const enemies = [enemyNear, enemyMid, enemyFar];
   const allies = [actor];
+  /** Default ranged range (50px) only reaches e3; use this for multi-target tests. */
+  const fullSkillRange = 120;
 
   it('aoe: hits units within radius of frontEnemy anchor', () => {
     const targets = resolveEffectTargets(
-      { targetShape: 'aoe', aoeRadiusPx: 60 },
+      { targetShape: 'aoe', aoeRadiusPx: 60, range: fullSkillRange },
       'frontEnemy',
       actor,
       allies,
@@ -127,7 +129,7 @@ describe('resolveEffectTargets', () => {
 
   it('farthestEnemy picks minimum battleX among in-range', () => {
     const targets = resolveEffectTargets(
-      { targetShape: 'single' },
+      { targetShape: 'single', range: fullSkillRange },
       'farthestEnemy',
       actor,
       allies,
@@ -138,7 +140,7 @@ describe('resolveEffectTargets', () => {
 
   it('multiLock: distributes hits across ordered pool', () => {
     const targets = resolveEffectTargets(
-      { targetShape: 'multiLock', hitCount: 3 },
+      { targetShape: 'multiLock', hitCount: 3, range: fullSkillRange },
       'frontEnemy',
       actor,
       allies,
@@ -150,7 +152,7 @@ describe('resolveEffectTargets', () => {
 
   it('multiLock: round-robin repeats when hits exceed pool size', () => {
     const targets = resolveEffectTargets(
-      { targetShape: 'multiLock', hitCount: 3 },
+      { targetShape: 'multiLock', hitCount: 3, range: 70 },
       'lowestHpEnemy',
       actor,
       allies,
@@ -162,7 +164,7 @@ describe('resolveEffectTargets', () => {
   it('multiLock: single enemy receives hitCount hits on same id', () => {
     const loneEnemy = [mockUnit('solo', 100, { isEnemy: true })];
     const targets = resolveEffectTargets(
-      { targetShape: 'multiLock', hitCount: 3 },
+      { targetShape: 'multiLock', hitCount: 3, range: fullSkillRange },
       'frontEnemy',
       actor,
       allies,
@@ -178,6 +180,7 @@ describe('resolveEffectTargets', () => {
         targetShape: 'single',
         hitCount: 3,
         hitDurationSec: 1.5,
+        range: fullSkillRange,
         type: 'damage',
         targetRule: 'frontEnemy',
         damageType: 'physical',
@@ -202,6 +205,7 @@ describe('resolveEffectTargets', () => {
         aoeRadiusPx: 60,
         hitCount: 2,
         hitDurationSec: 0.8,
+        range: fullSkillRange,
         type: 'damage',
         targetRule: 'frontEnemy',
         damageType: 'magic',
@@ -226,6 +230,7 @@ describe('resolveEffectTargets', () => {
         targetShape: 'chain',
         chainCount: 3,
         chainMaxDistancePx: 60,
+        range: fullSkillRange,
         type: 'damage',
         targetRule: 'lowestHpEnemy',
         damageType: 'magic',
@@ -243,6 +248,7 @@ describe('resolveEffectTargets', () => {
   it('pierce: orders front to back', () => {
     const effect: DamageSkillEffect = {
       targetShape: 'pierce',
+      range: fullSkillRange,
       type: 'damage',
       targetRule: 'frontEnemy',
       damageType: 'physical',
@@ -293,6 +299,7 @@ describe('resolveEffectTargets', () => {
         scatterHitCount: 2,
         scatterDurationSec: 1,
         scatterSpreadRate: 1,
+        range: fullSkillRange,
         type: 'damage',
         targetRule: 'frontEnemy',
         damageType: 'magic',

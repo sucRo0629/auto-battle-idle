@@ -72,6 +72,10 @@ function formatEffectKind(effect: SkillEffectDef): string {
       return 'バリア';
     case 'move':
       return '移動';
+    case 'stun':
+      return 'スタン';
+    case 'knockback':
+      return 'ノックバック';
   }
 }
 

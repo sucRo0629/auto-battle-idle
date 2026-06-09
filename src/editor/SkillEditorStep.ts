@@ -62,6 +62,8 @@ const EFFECT_KIND_LABELS: Record<SkillEffectKind, string> = {
   dot: 'DOT',
   barrier: 'バリア',
   move: '移動',
+  stun: 'スタン',
+  knockback: 'ノックバック',
 };
 
 const STAT_LABELS: Record<StatusEffectStat, string> = {
@@ -375,6 +377,18 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         type: 'move',
         moveMode: 'engage',
         moveDurationSec: 0.25,
+      };
+    case 'stun':
+      return {
+        targetRule: 'frontEnemy',
+        type: 'stun',
+        durationSec: 1,
+      };
+    case 'knockback':
+      return {
+        targetRule: 'frontEnemy',
+        type: 'knockback',
+        distancePx: 30,
       };
   }
 }
@@ -1765,6 +1779,30 @@ export class SkillEditorStep {
               (debuffDurationSec) =>
                 patchEffect((prev) => ({ ...prev, debuffDurationSec })),
               { min: 0.1, step: 0.5 },
+            ),
+          ),
+        );
+        break;
+      case 'stun':
+        detailGrid.appendChild(
+          createFieldRow(
+            '秒数',
+            createNumberInput(
+              effect.durationSec,
+              (durationSec) => patchEffect((prev) => ({ ...prev, durationSec })),
+              { min: 0.1, step: 0.1 },
+            ),
+          ),
+        );
+        break;
+      case 'knockback':
+        detailGrid.appendChild(
+          createFieldRow(
+            '距離 px',
+            createNumberInput(
+              effect.distancePx,
+              (distancePx) => patchEffect((prev) => ({ ...prev, distancePx })),
+              { min: 1, step: 5 },
             ),
           ),
         );

@@ -7,6 +7,19 @@ import {
   resolveDamage,
   resolveResourceAmount,
 } from '../combatMath.ts';
+import {
+  applyKnockbackToTarget,
+  applyStunToTarget,
+  isUnitStunned,
+} from '../ccEffects.ts';
+import {
+  applyHealBarrierFromPassive,
+  feedBasicAttackToActives,
+  resolveDebuffDurationWithPassives,
+  rollsEvasion,
+  stripPassivesAurasFromSource,
+  type PassiveDamageContext,
+} from '../passiveEffects.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
 import { resolveMoveVisualX } from '../../render/formationLayout.ts';
 import { resetCooldownAfterFire } from '../skillTrigger.ts';
@@ -66,6 +79,7 @@ export class SkillExecutor {
     enemies: CombatantState[],
   ): void {
     if (!actor.isAlive || cd.remaining > 0) return;
+    if (isUnitStunned(actor)) return;
     if (this.deps.getSequenceRunner().isActorBusy(actor.id)) return;
 
     const skill = this.gameData.skillRegistry.actives[cd.skillId];
@@ -126,6 +140,20 @@ export class SkillExecutor {
         continue;
       }
 
+      const crowdHitCount =
+        effectDef.type === 'damage'
+          ? resolution!.waves.reduce(
+              (sum, wave) => sum + wave.targets.length,
+              0,
+            )
+          : undefined;
+      const damageContext: PassiveDamageContext = {
+        skill,
+        slotKind: cd.slotKind,
+        crowdHitCount,
+        targetShape: effectDef.targetShape,
+      };
+
       for (const wave of resolution!.waves) {
         for (const { unit, powerMultiplierOverride } of wave.targets) {
           if (
@@ -138,6 +166,7 @@ export class SkillExecutor {
               effectIndex,
               powerMultiplierOverride,
               wave.hitIndex,
+              damageContext,
             )
           ) {
             appliedAny = true;
@@ -149,6 +178,11 @@ export class SkillExecutor {
     if (appliedAny) {
       resetCooldownAfterFire(cd, skill);
       if (cd.slotKind === 'basic') {
+        feedBasicAttackToActives(
+          actor,
+          this.gameData.skillRegistry.passives,
+          this.gameData.skillRegistry.actives,
+        );
         this.deps.onBasicAttackExecuted?.(actor.id);
       }
     }
@@ -302,18 +336,23 @@ export class SkillExecutor {
     effectIndex: number,
     powerMultiplierOverride?: number,
     hitIndex?: number,
+    damageContext: PassiveDamageContext = {},
   ): boolean {
     if (effectDef.type === 'move') {
       return false;
     }
 
     if (effectDef.type === 'damage') {
+      if (rollsEvasion(target, this.gameData.skillRegistry.passives)) {
+        return false;
+      }
       const amount = resolveDamage(
         actor,
         target,
         effectDef,
         this.gameData.skillRegistry.passives,
         powerMultiplierOverride,
+        damageContext,
       );
       const damageResult = applyDamageToTarget(target, amount);
       const appliedDamage =
@@ -336,6 +375,12 @@ export class SkillExecutor {
       this.emit({ type: 'hurt', targetId: target.id });
       if (lethal) {
         target.isAlive = false;
+        if (!target.isEnemy) {
+          stripPassivesAurasFromSource(
+            target.id,
+            this.deps.getAllCombatants().filter((unit) => !unit.isEnemy),
+          );
+        }
         this.emit({ type: 'death', targetId: target.id });
         this.deps.getSequenceRunner().clearForActor(target.id);
       }
@@ -351,7 +396,15 @@ export class SkillExecutor {
         powerMultiplierOverride,
       );
       if (amount <= 0) return false;
-      applyHealToTarget(target, amount);
+      const healed = applyHealToTarget(target, amount);
+      if (healed > 0) {
+        applyHealBarrierFromPassive(
+          actor,
+          target,
+          healed,
+          this.gameData.skillRegistry.passives,
+        );
+      }
       this.emit({
         type: 'skill',
         actorId: actor.id,
@@ -405,9 +458,16 @@ export class SkillExecutor {
       const flatBonus = isBuff
         ? effectDef.buffFlatBonus
         : effectDef.debuffFlatBonus;
-      const duration = isBuff
+      let duration = isBuff
         ? effectDef.buffDurationSec
         : effectDef.debuffDurationSec;
+      if (!isBuff && !actor.isEnemy) {
+        duration = resolveDebuffDurationWithPassives(
+          actor,
+          duration,
+          this.gameData.skillRegistry.passives,
+        );
+      }
       if (
         stats.length === 0 ||
         (multiplier === undefined && flatBonus === undefined)
@@ -449,6 +509,46 @@ export class SkillExecutor {
       if (!isBuff && actor.isEnemy === false && target.isEnemy) {
         this.deps.onDebuffApplied?.(actor);
       }
+      return true;
+    }
+
+    if (effectDef.type === 'stun') {
+      const applied = applyStunToTarget(target, effectDef.durationSec, {
+        skillId: skill.id,
+        sourceId: actor.id,
+      });
+      if (!applied) return false;
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'stun',
+        effectIndex,
+        statusLabel: 'stun',
+        range: effectDef.range,
+        ...(hitIndex !== undefined ? { hitIndex } : {}),
+      });
+      return true;
+    }
+
+    if (effectDef.type === 'knockback') {
+      const applied = applyKnockbackToTarget(target, effectDef.distancePx);
+      if (!applied) return false;
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'knockback',
+        effectIndex,
+        range: effectDef.range,
+        ...(hitIndex !== undefined ? { hitIndex } : {}),
+      });
       return true;
     }
 
