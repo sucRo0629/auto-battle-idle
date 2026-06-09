@@ -14,7 +14,7 @@ describe('synthesizeBasicAttackSkill', () => {
       attackSpeedTier: 'normal',
     });
     expect(skill.id).toBe(defaultBasicAttackId('df_guardian'));
-    expect(skill.effect[0]?.targetRule).toBe('frontEnemy');
+    expect(skill.effect[0]?.target).toEqual({ kind: "distance", side: "enemy", order: "nearest" });
     expect(skill.effect[0]?.type).toBe('damage');
     expect(skill.effect[0]).not.toHaveProperty('range');
     expect(skill.vfx).toBeUndefined();
@@ -27,7 +27,7 @@ describe('synthesizeBasicAttackSkill', () => {
       traits: normalizeEntityTraits({}),
       attackSpeedTier: 'normal',
     });
-    expect(skill.effect[0]?.targetRule).toBe('closestAlly');
+    expect(skill.effect[0]?.target).toEqual({ kind: "distance", side: "ally", order: "nearest" });
   });
 
   it('merges atkScale override from JSON', () => {
@@ -42,7 +42,7 @@ describe('synthesizeBasicAttackSkill', () => {
         interval: 2,
         effect: [
           {
-            targetRule: 'frontEnemy',
+            target: { kind: "distance", side: "enemy", order: "nearest" },
             type: 'damage',
             amount: { kind: 'atkBased', atkScale: 0.85 },
           },

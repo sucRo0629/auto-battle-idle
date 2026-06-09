@@ -8,9 +8,8 @@ import type {
 } from '../types.ts';
 import type { GameData } from '../types.ts';
 import { resolveSkillTrigger } from '../skillTrigger.ts';
-import { pickTargetFromPool } from './targeting.ts';
-import { getTargetPoolForRule } from './targetingPool.ts';
-import { resolveEffectAnchor, resolveTargetRule } from './targeting.ts';
+import { getEffectTarget, getTargetPool } from './targetSpec.ts';
+import { pickTargetFromPool, resolveTargetSpec } from './targeting.ts';
 
 export interface ActiveSkillMove {
   actorId: string;
@@ -59,14 +58,15 @@ export function buildSkillSequence(
 
   for (let i = 0; i < skill.effect.length; i++) {
     const effectDef = skill.effect[i]!;
-    const rule = resolveTargetRule(passives, effectDef.targetRule, {
+    const defaultSpec = getEffectTarget(effectDef);
+    const spec = resolveTargetSpec(passives, defaultSpec, {
       actor,
       allies,
       enemies,
     });
     const anchor = resolveSequenceStepAnchor(
       effectDef,
-      rule,
+      spec,
       actor,
       allies,
       enemies,
@@ -107,17 +107,18 @@ export function skillHasMoveEffect(skill: ActiveSkillDef): boolean {
 /** move 含むシーケンスでは非 move も射程外 anchor を許可（適用時に再解決） */
 export function resolveSequenceStepAnchor(
   effect: SkillEffectDef,
-  rule: import('../types.ts').TargetRule,
+  spec: import('../types.ts').TargetSpec,
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
 ): CombatantState | null {
   if (effect.type === 'move') {
-    return resolveEffectAnchor(effect, rule, actor, allies, enemies, gameData);
+    const pool = getTargetPool(spec, actor, allies, enemies);
+    return pickTargetFromPool(spec, actor, pool);
   }
-  const pool = getTargetPoolForRule(rule, actor, allies, enemies);
-  return pickTargetFromPool(rule, actor, pool);
+  const pool = getTargetPool(spec, actor, allies, enemies);
+  return pickTargetFromPool(spec, actor, pool);
 }
 
 export class SkillSequenceRunner {

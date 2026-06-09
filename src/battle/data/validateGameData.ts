@@ -29,6 +29,8 @@ import type {
   StatusEffectStat,
   TargetRule,
   TargetShape,
+  TargetSpec,
+  BuffFilterTag,
   DebuffFilterTag,
   DamageIncreaseCondition,
   DamageIncreaseSpec,
@@ -66,6 +68,12 @@ import {
   DAMAGE_INCREASE_CONDITION_KINDS,
   DEFENSE_IGNORE_DEF_MODES,
 } from './gameDataSchema.ts';
+import { normalizeTarget } from '../skills/targetSpec.ts';
+import {
+  isBuffFilterTag,
+  isDebuffFilterTag,
+} from '../statusMatching.ts';
+import { BUFF_FILTER_TAG_OPTIONS } from './gameDataSchema.ts';
 
 const ROLES_SET = new Set<Role>(ROLES);
 const FORMATION_ROWS_SET = new Set<FormationRow>(FORMATION_ROWS);
@@ -87,6 +95,7 @@ const GROWTH_TIERS = new Set<GrowthTier>([1, 2, 3]);
 const GROWTH_PRESET_KEYS = new Set<GrowthPresetKey>(['attacker', 'caster']);
 const JOB_TIERS_SET = new Set<number>(JOB_TIERS);
 const DEBUFF_FILTER_TAGS_SET = new Set<string>(DEBUFF_FILTER_TAG_OPTIONS);
+const BUFF_FILTER_TAGS_SET = new Set<string>(BUFF_FILTER_TAG_OPTIONS);
 const DAMAGE_INCREASE_CONDITION_KINDS_SET = new Set<string>(
   DAMAGE_INCREASE_CONDITION_KINDS,
 );
@@ -565,6 +574,19 @@ function parseOptionalPositiveNumber(
   return { [key]: value };
 }
 
+function parseOptionalNonNegativeNumber(
+  obj: Record<string, unknown>,
+  key: string,
+  context: string,
+): number | undefined {
+  const value = obj[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || Number.isNaN(value) || value < 0) {
+    invalidField(context, key, 'must be a non-negative number');
+  }
+  return value;
+}
+
 function parseOptionalPowerStep(
   obj: Record<string, unknown>,
   context: string,
@@ -752,29 +774,211 @@ function parseDefenseIgnoreSpec(
   return result;
 }
 
+function parseTargetTagList<T extends string>(
+  raw: unknown,
+  context: string,
+  allowed: readonly T[],
+  isTag: (value: string) => value is T,
+): T[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    invalidField(context, 'tags', 'must be a non-empty array');
+  }
+  const tags: T[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const entry = raw[i];
+    if (typeof entry !== 'string' || !isTag(entry)) {
+      invalidField(
+        context,
+        `[${i}]`,
+        `must be one of ${[...allowed].join(', ')}`,
+      );
+    }
+    tags.push(entry);
+  }
+  return tags;
+}
+
+function parseTargetSpec(raw: unknown, context: string): TargetSpec {
+  if (typeof raw === 'string') {
+    if (!TARGET_RULES_SET.has(raw as TargetRule)) {
+      invalidField(
+        context,
+        'value',
+        `must be one of ${[...TARGET_RULES_SET].join(', ')}`,
+      );
+    }
+    return normalizeTarget(raw);
+  }
+  const obj = requireRecord(raw, context);
+  const kind = obj.kind;
+  if (kind === 'self') return { kind: 'self' };
+  if (kind === 'all') {
+    const side = requireEnum(obj, 'side', context, new Set(['ally', 'enemy']));
+    return { kind: 'all', side: side as 'ally' | 'enemy' };
+  }
+  if (kind === 'distance') {
+    const side = requireEnum(obj, 'side', context, new Set(['ally', 'enemy']));
+    const order = requireEnum(
+      obj,
+      'order',
+      context,
+      new Set(['nearest', 'farthest']),
+    );
+    return {
+      kind: 'distance',
+      side: side as 'ally' | 'enemy',
+      order: order as 'nearest' | 'farthest',
+    };
+  }
+  if (kind === 'stat') {
+    const side = requireEnum(obj, 'side', context, new Set(['ally', 'enemy']));
+    const stat = requireEnum(
+      obj,
+      'stat',
+      context,
+      new Set(['hp', 'atk', 'def', 'reg']),
+    );
+    const order = requireEnum(
+      obj,
+      'order',
+      context,
+      new Set(['highest', 'lowest', 'ratio']),
+    );
+    if (order === 'ratio' && stat !== 'hp') {
+      invalidField(context, 'order', 'ratio is only valid when stat is hp');
+    }
+    return {
+      kind: 'stat',
+      side: side as 'ally' | 'enemy',
+      stat: stat as 'hp' | 'atk' | 'def' | 'reg',
+      order: order as 'highest' | 'lowest' | 'ratio',
+    };
+  }
+  if (kind === 'attackType') {
+    const physical = obj.physical === true;
+    const magic = obj.magic === true;
+    const melee = obj.melee === true;
+    const ranged = obj.ranged === true;
+    if (!physical && !magic && !melee && !ranged) {
+      invalidField(
+        context,
+        'attackType',
+        'requires at least one of physical, magic, melee, ranged',
+      );
+    }
+    return {
+      kind: 'attackType',
+      ...(physical ? { physical: true } : {}),
+      ...(magic ? { magic: true } : {}),
+      ...(melee ? { melee: true } : {}),
+      ...(ranged ? { ranged: true } : {}),
+    };
+  }
+  if (kind === 'status') {
+    const sideRaw = obj.side;
+    if (
+      sideRaw !== undefined &&
+      sideRaw !== 'ally' &&
+      sideRaw !== 'enemy'
+    ) {
+      invalidField(context, 'side', 'must be ally or enemy');
+    }
+    const debuffTags =
+      obj.debuffTags === undefined
+        ? undefined
+        : parseTargetTagList(
+            obj.debuffTags,
+            `${context}.debuffTags`,
+            DEBUFF_FILTER_TAG_OPTIONS,
+            isDebuffFilterTag,
+          );
+    const buffTags =
+      obj.buffTags === undefined
+        ? undefined
+        : parseTargetTagList(
+            obj.buffTags,
+            `${context}.buffTags`,
+            BUFF_FILTER_TAG_OPTIONS,
+            isBuffFilterTag,
+          );
+    if (
+      (!debuffTags || debuffTags.length === 0) &&
+      (!buffTags || buffTags.length === 0)
+    ) {
+      invalidField(
+        context,
+        'status',
+        'requires debuffTags and/or buffTags',
+      );
+    }
+    return {
+      kind: 'status',
+      ...(sideRaw !== undefined ? { side: sideRaw as 'ally' | 'enemy' } : {}),
+      ...(debuffTags && debuffTags.length > 0 ? { debuffTags } : {}),
+      ...(buffTags && buffTags.length > 0 ? { buffTags } : {}),
+    };
+  }
+  invalidField(context, 'kind', `must be a valid target kind`);
+}
+
+function parseEffectTarget(
+  obj: Record<string, unknown>,
+  context: string,
+): TargetSpec {
+  if (obj.target !== undefined) {
+    if (obj.targetDebuffFilter !== undefined) {
+      invalidField(
+        context,
+        'targetDebuffFilter',
+        'use target.kind status instead',
+      );
+    }
+    if (obj.targetRule !== undefined) {
+      invalidField(context, 'targetRule', 'use target instead');
+    }
+    return parseTargetSpec(obj.target, `${context}.target`);
+  }
+  if (obj.targetRule !== undefined) {
+    const legacyRule = requireEnum(obj, 'targetRule', context, TARGET_RULES_SET);
+    let debuffTags: DebuffFilterTag[] | undefined;
+    if (legacyRule === 'debuffedEnemy') {
+      debuffTags = parseDebuffFilterTags(
+        obj.targetDebuffFilter,
+        `${context}.targetDebuffFilter`,
+        true,
+      );
+    } else if (obj.targetDebuffFilter !== undefined) {
+      invalidField(
+        context,
+        'targetDebuffFilter',
+        'is only allowed when targetRule is debuffedEnemy',
+      );
+    }
+    return normalizeTarget(legacyRule, legacyRule, debuffTags);
+  }
+  missingField(context, 'target');
+}
+
+function parseOptionalPassiveTarget(
+  obj: Record<string, unknown>,
+  key: string,
+  context: string,
+): TargetSpec | undefined {
+  const raw = obj[key];
+  if (raw === undefined) return undefined;
+  return parseTargetSpec(raw, `${context}.${key}`);
+}
+
 function parseOptionalEffectCombatModifiers(
   obj: Record<string, unknown>,
   context: string,
-  targetRule: TargetRule,
-): Pick<
-  SkillEffectDef,
-  'targetDebuffFilter' | 'damageIncrease' | 'defenseIgnore'
-> {
-  const result: Pick<
-    SkillEffectDef,
-    'targetDebuffFilter' | 'damageIncrease' | 'defenseIgnore'
-  > = {};
-  if (targetRule === 'debuffedEnemy') {
-    result.targetDebuffFilter = parseDebuffFilterTags(
-      obj.targetDebuffFilter,
-      `${context}.targetDebuffFilter`,
-      true,
-    );
-  } else if (obj.targetDebuffFilter !== undefined) {
+): Pick<SkillEffectDef, 'damageIncrease' | 'defenseIgnore'> {
+  const result: Pick<SkillEffectDef, 'damageIncrease' | 'defenseIgnore'> = {};
+  if (obj.targetDebuffFilter !== undefined) {
     invalidField(
       context,
       'targetDebuffFilter',
-      'is only allowed when targetRule is debuffedEnemy',
+      'use target.kind status instead',
     );
   }
   if (obj.damageIncrease !== undefined) {
@@ -809,16 +1013,12 @@ function parseOptionalEffectPresentation(
 
 function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
   const obj = requireRecord(entry, context);
-  const targetRule = requireEnum(obj, 'targetRule', context, TARGET_RULES_SET);
+  const target = parseEffectTarget(obj, context);
   const type = requireEnum(obj, 'type', context, SKILL_EFFECTS);
   const range = parseOptionalRange(obj, context);
   const targetShapeFields = parseTargetShapeFields(obj, context);
   const presentation = parseOptionalEffectPresentation(obj, context);
-  const combatModifiers = parseOptionalEffectCombatModifiers(
-    obj,
-    context,
-    targetRule,
-  );
+  const combatModifiers = parseOptionalEffectCombatModifiers(obj, context);
 
   if (type === 'damage') {
     const damageType =
@@ -827,7 +1027,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
         : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
     const amount = parseEffectAmount(obj, context, 'damage');
     return {
-      targetRule,
+      target,
       ...targetShapeFields,
       ...combatModifiers,
       type,
@@ -841,7 +1041,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
   if (type === 'heal') {
     const amount = parseEffectAmount(obj, context, 'heal');
     return {
-      targetRule,
+      target,
       ...targetShapeFields,
       ...combatModifiers,
       type,
@@ -861,7 +1061,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       'buffFlatBonus',
     );
     return {
-      targetRule,
+      target,
       ...targetShapeFields,
       ...combatModifiers,
       type,
@@ -882,7 +1082,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
     const durationSec = requireNumber(obj, 'durationSec', context);
     const amount = parseEffectAmount(obj, context, 'hot');
     return {
-      targetRule,
+      target,
       ...targetShapeFields,
       ...combatModifiers,
       type: 'hot',
@@ -900,7 +1100,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       invalidField(context, 'barrierStack', 'must be a boolean');
     }
     return {
-      targetRule,
+      target,
       ...targetShapeFields,
       ...combatModifiers,
       type: 'barrier',
@@ -919,7 +1119,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
         ? undefined
         : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
     return {
-      targetRule,
+      target,
       ...targetShapeFields,
       ...combatModifiers,
       type: 'dot',
@@ -937,7 +1137,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       invalidField(context, 'durationSec', 'must be a positive number');
     }
     return {
-      targetRule,
+      target,
       ...targetShapeFields,
       ...combatModifiers,
       type: 'stun',
@@ -953,7 +1153,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       invalidField(context, 'distancePx', 'must be a positive number');
     }
     return {
-      targetRule,
+      target,
       ...targetShapeFields,
       ...combatModifiers,
       type: 'knockback',
@@ -979,7 +1179,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
     }
     const behindOffsetPx = parseOptionalNumber(obj, 'behindOffsetPx', context);
     return {
-      targetRule,
+      target,
       type: 'move',
       moveDurationSec,
       ...(moveMode !== undefined ? { moveMode } : {}),
@@ -1000,7 +1200,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       false,
     );
     return {
-      targetRule,
+      target,
       ...targetShapeFields,
       ...combatModifiers,
       type: 'dispel',
@@ -1021,7 +1221,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
       invalidField(context, 'durationSec', 'must be a positive number');
     }
     return {
-      targetRule,
+      target,
       ...targetShapeFields,
       ...combatModifiers,
       type: 'block',
@@ -1045,7 +1245,7 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
     'debuffFlatBonus',
   );
   return {
-    targetRule,
+    target,
     ...targetShapeFields,
     ...combatModifiers,
     type,
@@ -1154,11 +1354,9 @@ function requirePassiveEffectParams(
     case 'targetRuleOverride':
       return {
         ...base,
-        targetRuleOverride: requireEnum(
-          obj,
-          'targetRuleOverride',
-          context,
-          TARGET_RULES_SET,
+        targetRuleOverride: parseTargetSpec(
+          obj.targetRuleOverride ?? obj.target,
+          `${context}.targetRuleOverride`,
         ),
       };
     case 'evasionChance':
@@ -1171,15 +1369,11 @@ function requirePassiveEffectParams(
       if (blockChance < 0 || blockChance > 1) {
         invalidField(context, 'blockChance', 'must be between 0 and 1');
       }
-      const targetRuleOverride =
-        obj.targetRuleOverride === undefined
-          ? undefined
-          : requireEnum(
-              obj,
-              'targetRuleOverride',
-              context,
-              TARGET_RULES_SET,
-            );
+      const targetRuleOverride = parseOptionalPassiveTarget(
+        obj,
+        'targetRuleOverride',
+        context,
+      );
       return {
         ...base,
         blockChance,
@@ -1219,11 +1413,9 @@ function requirePassiveEffectParams(
       return {
         ...base,
         intervalSec,
-        dispelTargetRule: requireEnum(
-          obj,
-          'dispelTargetRule',
-          context,
-          TARGET_RULES_SET,
+        dispelTargetRule: parseTargetSpec(
+          obj.dispelTargetRule ?? 'self',
+          `${context}.dispelTargetRule`,
         ),
         dispelCount,
         ...(dispelTags !== undefined ? { dispelTags } : {}),
@@ -1234,18 +1426,23 @@ function requirePassiveEffectParams(
     case 'hot': {
       const amountSource = obj.hotAmount ?? obj.partyHotAuraAmount;
       const targetSource = obj.hotTargetRule ?? obj.partyHotTargetRule;
+      const hotDurationSec = parseOptionalNonNegativeNumber(
+        obj,
+        'hotDurationSec',
+        context,
+      );
       return {
         ...base,
         hotAmount: parseResourceAmountSpec(
           amountSource,
           `${context}.hotAmount`,
         ),
-        hotTargetRule: requireEnum(
-          { hotTargetRule: targetSource ?? 'self' },
-          'hotTargetRule',
-          context,
-          TARGET_RULES_SET,
+        hotTargetRule: parseTargetSpec(
+          targetSource ?? 'self',
+          `${context}.hotTargetRule`,
         ),
+        ...parseOptionalPositiveNumber(obj, context, 'intervalSec'),
+        ...(hotDurationSec !== undefined ? { hotDurationSec } : {}),
       };
     }
     case 'damageReduction': {
@@ -1260,11 +1457,9 @@ function requirePassiveEffectParams(
       return {
         ...base,
         damageReductionPercent: percent,
-        damageReductionTargetRule: requireEnum(
-          { damageReductionTargetRule: obj.damageReductionTargetRule ?? 'self' },
-          'damageReductionTargetRule',
-          context,
-          TARGET_RULES_SET,
+        damageReductionTargetRule: parseTargetSpec(
+          obj.damageReductionTargetRule ?? 'self',
+          `${context}.damageReductionTargetRule`,
         ),
       };
     }

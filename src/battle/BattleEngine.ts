@@ -33,14 +33,19 @@ import { isUnitStunned } from "./ccEffects.ts";
 import {
   applyDamageTakenToHeal,
   resolveIncomingHealAmount,
+  applyPassiveHotFromPassive,
   getPeriodicDispelReady,
+  getPeriodicHotReady,
   initializeCountTriggerCooldowns,
   initializePeriodicDispelStates,
+  initializePeriodicHotStates,
   syncHotAuras,
   syncBlockAuras,
   syncDamageReductionAuras,
   tickPeriodicDispelStates,
+  tickPeriodicHotStates,
   type PeriodicDispelPassiveState,
+  type PeriodicHotPassiveState,
 } from "./passiveEffects.ts";
 import { dispelDebuffsOnTarget } from "./debuffDispel.ts";
 import { pickTargets } from "./skills/targeting.ts";
@@ -139,6 +144,7 @@ export class BattleEngine {
   private engagedMeleeEnemySignature: string | null = null;
   private restartTimer = 0;
   private periodicDispelStates = new Map<string, PeriodicDispelPassiveState[]>();
+  private periodicHotStates = new Map<string, PeriodicHotPassiveState[]>();
   private readonly listeners = new Set<BattleEventListener>();
   private readonly executor: SkillExecutor;
   private readonly skillSequenceRunner = new SkillSequenceRunner();
@@ -225,11 +231,16 @@ export class BattleEngine {
     syncBlockAuras(this.allies, this.enemies, passives);
     syncDamageReductionAuras(this.allies, this.enemies, passives);
     this.periodicDispelStates.clear();
+    this.periodicHotStates.clear();
     for (const unit of [...this.allies, ...this.enemies]) {
       initializeCountTriggerCooldowns(unit, actives);
       const dispelStates = initializePeriodicDispelStates(unit, passives);
       if (dispelStates.length > 0) {
         this.periodicDispelStates.set(unit.id, dispelStates);
+      }
+      const hotStates = initializePeriodicHotStates(unit, passives);
+      if (hotStates.length > 0) {
+        this.periodicHotStates.set(unit.id, hotStates);
       }
     }
   }
@@ -982,6 +993,7 @@ export class BattleEngine {
       this.updateCombatCamera(deltaTime);
       this.tickStatusEffects(deltaTime);
       this.tickPeriodicDispels(deltaTime);
+      this.tickPeriodicHots(deltaTime);
       this.tickCooldowns(this.allies, deltaTime);
       this.tickCooldowns(this.enemies, deltaTime);
       this.runUnitSkills(this.allies);
@@ -1014,6 +1026,29 @@ export class BattleEngine {
     });
   }
 
+  private tickPeriodicHots(deltaTime: number): void {
+    const passives = this.gameData.skillRegistry.passives;
+    for (const actor of this.allies) {
+      if (!actor.isAlive) continue;
+      const before = this.periodicHotStates.get(actor.id);
+      if (!before || before.length === 0) continue;
+
+      const after = tickPeriodicHotStates(before, passives, deltaTime);
+      this.periodicHotStates.set(actor.id, after);
+      const readyIds = getPeriodicHotReady(before, after);
+      for (const passiveId of readyIds) {
+        const passive = passives[passiveId];
+        if (!passive || passive.effect !== 'hot') continue;
+        applyPassiveHotFromPassive(
+          actor,
+          passive,
+          this.allies,
+          this.enemies,
+        );
+      }
+    }
+  }
+
   private tickPeriodicDispels(deltaTime: number): void {
     const passives = this.gameData.skillRegistry.passives;
     for (const actor of [...this.allies, ...this.enemies]) {
@@ -1027,8 +1062,8 @@ export class BattleEngine {
       for (const passiveId of readyIds) {
         const passive = passives[passiveId];
         if (!passive || passive.effect !== 'periodicDispel') continue;
-        const rule = passive.dispelTargetRule ?? 'self';
-        const targets = pickTargets(rule, actor, this.allies, this.enemies);
+        const spec = passive.dispelTargetRule ?? { kind: 'self' as const };
+        const targets = pickTargets(spec, actor, this.allies, this.enemies);
         for (const target of targets) {
           dispelDebuffsOnTarget(
             target,

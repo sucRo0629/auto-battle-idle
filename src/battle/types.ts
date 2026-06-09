@@ -133,6 +133,33 @@ export type TargetRule =
   | "allAllies"
   | "allEnemies";
 
+export type TargetSide = "ally" | "enemy";
+export type TargetDistanceOrder = "nearest" | "farthest";
+export type TargetStat = "hp" | "atk" | "def" | "reg";
+export type TargetStatOrder = "highest" | "lowest" | "ratio";
+
+/** バフフィルタタグ（gameDataSchema.BUFF_FILTER_TAGS と同期） */
+export type BuffFilterTag = StatusEffectStat | "hot" | "block";
+
+export type TargetSpec =
+  | { kind: "self" }
+  | { kind: "all"; side: TargetSide }
+  | { kind: "distance"; side: TargetSide; order: TargetDistanceOrder }
+  | { kind: "stat"; side: TargetSide; stat: TargetStat; order: TargetStatOrder }
+  | {
+      kind: "attackType";
+      physical?: boolean;
+      magic?: boolean;
+      melee?: boolean;
+      ranged?: boolean;
+    }
+  | {
+      kind: "status";
+      side?: TargetSide;
+      debuffTags?: DebuffFilterTag[];
+      buffTags?: BuffFilterTag[];
+    };
+
 /** 効果のターゲット形状。未指定は single */
 export type TargetShape =
   | "single"
@@ -350,15 +377,17 @@ export interface PassiveSkillDef {
   /** 未指定時は所属クラス role からプレースホルダー。PNG は assets/skill-icons/{iconKey}.png */
   iconKey?: string;
   effect: PassiveEffectKind;
-  targetRuleOverride?: TargetRule;
+  targetRuleOverride?: TargetSpec;
   evasionChance?: number;
   blockChance?: number;
   ratio?: number;
   hotAmount?: ResourceAmountSpec;
-  hotTargetRule?: TargetRule;
+  hotTargetRule?: TargetSpec;
+  /** hot: 付与 HoT の効果時間（秒）。0 または未指定 = 無限 */
+  hotDurationSec?: number;
   /** damageReduction: 被ダメ軽減率（0.2 = 20% 軽減） */
   damageReductionPercent?: number;
-  damageReductionTargetRule?: TargetRule;
+  damageReductionTargetRule?: TargetSpec;
   barrierScale?: number;
   extendSec?: number;
   durationMultiplier?: number;
@@ -367,7 +396,7 @@ export interface PassiveSkillDef {
   damageIncrease?: DamageIncreaseSpec;
   defenseIgnore?: DefenseIgnoreSpec;
   intervalSec?: number;
-  dispelTargetRule?: TargetRule;
+  dispelTargetRule?: TargetSpec;
   dispelTags?: DebuffFilterTag[];
   dispelCount?: number;
   /** healReceivedIncrease: 受ける回復・HoT 量の加算割合（0.2 = +20%） */
@@ -414,7 +443,9 @@ export type SkillEffectAnimId =
   | "none";
 
 interface SkillEffectCommon {
-  targetRule: TargetRule;
+  target: TargetSpec;
+  /** @deprecated 読み込み専用。正規化後は target のみ使用 */
+  targetRule?: TargetRule;
   /** 未指定は single（単体） */
   targetShape?: TargetShape;
   /** aoe 時必須: anchor から ±px */
@@ -448,7 +479,7 @@ interface SkillEffectCommon {
   anim?: SkillEffectAnimId;
   /** 未指定時はスキル vfx → 既定プリセット（damage/heal 等のみ） */
   vfx?: SkillVfxDef;
-  /** debuffedEnemy 選択時必須 */
+  /** @deprecated target.kind==="status" に統合。読み込み専用 */
   targetDebuffFilter?: DebuffFilterTag[];
   /** damage / heal / dot 用（HoT tick 非対象） */
   damageIncrease?: DamageIncreaseSpec;

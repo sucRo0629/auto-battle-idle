@@ -15,7 +15,7 @@ function skill(overrides: Partial<ActiveSkillDef> = {}): ActiveSkillDef {
     trigger: { kind: 'time', value: 5 },
     effect: [
       {
-        targetRule: 'frontEnemy',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
         type: 'damage',
         damageType: 'physical',
         amount: { kind: 'atkBased', atkScale: 1 },

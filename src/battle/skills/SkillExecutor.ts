@@ -51,10 +51,11 @@ import {
   type SkillSequenceRunner,
   skillHasMoveEffect,
 } from './skillSequence.ts';
+import { getEffectTarget } from './targetSpec.ts';
 import {
   resolutionHasTargets,
   resolveEffectResolution,
-  resolveTargetRule,
+  resolveTargetSpec,
 } from './targeting.ts';
 
 export interface SkillExecutorDeps {
@@ -115,18 +116,14 @@ export class SkillExecutor {
     let appliedAny = false;
     for (let effectIndex = 0; effectIndex < skill.effect.length; effectIndex++) {
       const effectDef = skill.effect[effectIndex]!;
-      const targetRule = resolveTargetRule(passives, effectDef.targetRule, {
-        actor,
-        allies,
-        enemies,
-      });
       const resolution = resolveEffectResolution(
         effectDef,
-        targetRule,
         actor,
         allies,
         enemies,
         this.gameData,
+        Math.random,
+        passives,
       );
       if (!resolutionHasTargets(resolution)) continue;
 
@@ -210,7 +207,8 @@ export class SkillExecutor {
       actor,
       this.gameData.skillRegistry.passives,
     );
-    const rule = resolveTargetRule(passives, step.effectDef.targetRule, {
+    const defaultSpec = getEffectTarget(step.effectDef);
+    const spec = resolveTargetSpec(passives, defaultSpec, {
       actor,
       allies,
       enemies,
@@ -220,7 +218,7 @@ export class SkillExecutor {
         ? findCombatantById(step.targetId, allies, enemies)
         : resolveSequenceStepAnchor(
             step.effectDef,
-            rule,
+            spec,
             actor,
             allies,
             enemies,

@@ -425,7 +425,8 @@
       "rangePx": 40,
       "basicAttackVfx": {
         "preset": "orb"
-      }
+      },
+      "damageType": "magic"
     },
     "maxHp": 105,
     "atk": 12,

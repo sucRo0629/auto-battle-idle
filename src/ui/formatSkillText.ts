@@ -1,4 +1,4 @@
-import { TARGET_RULE_LABELS } from '../battle/data/gameDataSchema.ts';
+import { formatTargetLabel } from '../battle/skills/targetSpec.ts';
 import { resolveSkillTrigger } from '../battle/skillTrigger.ts';
 import type {
   ActiveSkillDef,
@@ -6,6 +6,7 @@ import type {
   PassiveEffectKind,
   SkillEffectDef,
   SkillTriggerKind,
+  TargetSpec,
 } from '../battle/types.ts';
 
 function formatTriggerLabel(kind: SkillTriggerKind, value: number): string {
@@ -19,10 +20,14 @@ function formatTriggerLabel(kind: SkillTriggerKind, value: number): string {
   }
 }
 
+function formatTarget(spec: TargetSpec | undefined, fallback: TargetSpec): string {
+  return formatTargetLabel(spec ?? fallback);
+}
+
 function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): string {
   switch (effect) {
     case 'targetRuleOverride':
-      return `ターゲット → ${TARGET_RULE_LABELS[def.targetRuleOverride ?? 'frontEnemy']}`;
+      return `ターゲット → ${formatTarget(def.targetRuleOverride, { kind: 'distance', side: 'enemy', order: 'nearest' })}`;
     case 'evasionChance':
       return `回避 +${def.evasionChance ?? 0}`;
     case 'block':
@@ -30,7 +35,7 @@ function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): s
     case 'damageIncrease':
       return `特効ダメージ ×${def.damageIncrease?.scale ?? 1}`;
     case 'damageReduction':
-      return `ダメージ軽減 ${Math.round((def.damageReductionPercent ?? 0) * 100)}% → ${TARGET_RULE_LABELS[def.damageReductionTargetRule ?? 'self']}`;
+      return `ダメージ軽減 ${Math.round((def.damageReductionPercent ?? 0) * 100)}% → ${formatTarget(def.damageReductionTargetRule, { kind: 'self' })}`;
     case 'defenseIgnore':
       return '防御無視';
     case 'periodicDispel':
@@ -39,8 +44,12 @@ function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): s
       return `被ダメの ${Math.round((def.ratio ?? 0) * 100)}% を即時回復`;
     case 'healReceivedIncrease':
       return `被回復 +${Math.round((def.percent ?? 0) * 100)}%`;
-    case 'hot':
-      return `HoT → ${TARGET_RULE_LABELS[def.hotTargetRule ?? 'self']}`;
+    case 'hot': {
+      const interval = def.intervalSec ?? 0;
+      const duration = def.hotDurationSec ?? 0;
+      const durationLabel = duration <= 0 ? '無限' : `${duration}s`;
+      return `HoT ${interval}s毎 → ${formatTarget(def.hotTargetRule, { kind: 'self' })}（${durationLabel}）`;
+    }
     case 'excessHealToBarrier':
       return `余剰回復バリア ×${def.barrierScale ?? 1}`;
     case 'extendSelfAppliedDebuff':

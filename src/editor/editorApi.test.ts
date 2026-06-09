@@ -29,7 +29,7 @@ describe('resyncEnemyBasicAttackEntry', () => {
         interval: 2.5,
         effect: [
           {
-            targetRule: 'closestAlly',
+            target: { kind: "distance", side: "ally", order: "nearest" },
             type: 'damage',
             damageType: 'physical',
             amount: { kind: 'atkBased', atkScale: 1 },

@@ -1,21 +1,31 @@
 import {
+  BUFF_FILTER_TAGS,
   DAMAGE_INCREASE_CONDITION_KIND_LABELS,
   DAMAGE_INCREASE_CONDITION_KINDS,
   DEBUFF_FILTER_TAGS,
   DEFENSE_IGNORE_DEF_MODE_LABELS,
   DEFENSE_IGNORE_DEF_MODES,
-  TARGET_RULE_LABELS,
-  TARGET_RULE_OPTIONS,
+  TARGET_DISTANCE_ORDER_LABELS,
+  TARGET_DISTANCE_ORDER_OPTIONS,
+  TARGET_SIDE_LABELS,
+  TARGET_SPEC_KIND_LABELS,
+  TARGET_SPEC_KINDS,
+  TARGET_STAT_LABELS,
+  TARGET_STAT_ORDER_LABELS,
+  TARGET_STAT_OPTIONS,
+  TARGET_STAT_ORDER_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
+import { formatTargetLabel } from '../battle/skills/targetSpec.ts';
 import type {
+  BuffFilterTag,
   DamageIncreaseCondition,
   DamageIncreaseSpec,
   DebuffFilterTag,
   DefenseIgnoreSpec,
   PassiveSkillDef,
   ResourceAmountSpec,
-  SkillEffectDef,
-  TargetRule,
+  TargetSpec,
+  TargetSpecKind,
 } from '../battle/types.ts';
 import {
   createActionButton,
@@ -394,22 +404,14 @@ export function appendPassiveDamageReductionFields(
     options?: { rerender?: boolean },
   ) => void,
 ): void {
-  parent.appendChild(
-    createFieldRow(
-      '対象',
-      createSelect(
-        passive.damageReductionTargetRule ?? 'self',
-        TARGET_RULE_OPTIONS.map((value) => ({
-          value,
-          label: TARGET_RULE_LABELS[value],
-        })),
-        (damageReductionTargetRule) => {
-          patchPassive((current) => {
-            current.damageReductionTargetRule = damageReductionTargetRule;
-          });
-        },
-      ),
-    ),
+  appendTargetSpecFields(
+    parent,
+    passive.damageReductionTargetRule ?? { kind: 'self' },
+    (damageReductionTargetRule) => {
+      patchPassive((current) => {
+        current.damageReductionTargetRule = damageReductionTargetRule;
+      });
+    },
   );
   parent.appendChild(
     createFieldRow(
@@ -445,20 +447,40 @@ export function appendPassiveHotFields(
 ): void {
   parent.appendChild(
     createFieldRow(
-      '対象',
-      createSelect(
-        passive.hotTargetRule ?? 'self',
-        TARGET_RULE_OPTIONS.map((value) => ({
-          value,
-          label: TARGET_RULE_LABELS[value],
-        })),
-        (hotTargetRule) => {
+      '発動間隔 (秒)',
+      createNumberInput(
+        passive.intervalSec ?? 5,
+        (intervalSec) => {
           patchPassive((current) => {
-            current.hotTargetRule = hotTargetRule;
+            current.intervalSec = intervalSec;
           });
         },
+        { min: 0.1, step: 0.1 },
       ),
     ),
+  );
+  parent.appendChild(
+    createFieldRow(
+      '効果時間 (秒, 0=無限)',
+      createNumberInput(
+        passive.hotDurationSec ?? 0,
+        (hotDurationSec) => {
+          patchPassive((current) => {
+            current.hotDurationSec = hotDurationSec;
+          });
+        },
+        { min: 0, step: 0.1 },
+      ),
+    ),
+  );
+  appendTargetSpecFields(
+    parent,
+    passive.hotTargetRule ?? { kind: 'self' },
+    (hotTargetRule) => {
+      patchPassive((current) => {
+        current.hotTargetRule = hotTargetRule;
+      });
+    },
   );
   appendResourceAmountFields(
     parent,
@@ -493,22 +515,14 @@ export function appendPassiveDispelFields(
       ),
     ),
   );
-  parent.appendChild(
-    createFieldRow(
-      '対象',
-      createSelect(
-        passive.dispelTargetRule ?? 'self',
-        TARGET_RULE_OPTIONS.map((value) => ({
-          value,
-          label: TARGET_RULE_LABELS[value],
-        })),
-        (dispelTargetRule) => {
-          patchPassive((current) => {
-            current.dispelTargetRule = dispelTargetRule;
-          });
-        },
-      ),
-    ),
+  appendTargetSpecFields(
+    parent,
+    passive.dispelTargetRule ?? { kind: 'self' },
+    (dispelTargetRule) => {
+      patchPassive((current) => {
+        current.dispelTargetRule = dispelTargetRule;
+      });
+    },
   );
   parent.appendChild(
     createFieldRow(
@@ -536,18 +550,235 @@ export function appendPassiveDispelFields(
   );
 }
 
-export function appendTargetDebuffFilterFields(
-  parent: HTMLElement,
-  targetRule: TargetRule,
-  filter: DebuffFilterTag[] | undefined,
-  onChange: (filter: DebuffFilterTag[] | undefined) => void,
-): void {
-  if (targetRule !== 'debuffedEnemy') return;
-  parent.appendChild(createEl('p', 'editor-hint', '対象デバフ（いずれか）'));
-  appendDebuffFilterCheckboxes(parent, filter ?? [], (tags) => {
-    onChange(tags.length > 0 ? tags : undefined);
-  });
+function targetSpecKind(spec: TargetSpec): TargetSpecKind {
+  return spec.kind;
 }
+
+function defaultTargetForKind(kind: TargetSpecKind): TargetSpec {
+  switch (kind) {
+    case 'self':
+      return { kind: 'self' };
+    case 'all':
+      return { kind: 'all', side: 'ally' };
+    case 'distance':
+      return { kind: 'distance', side: 'enemy', order: 'nearest' };
+    case 'stat':
+      return { kind: 'stat', side: 'enemy', stat: 'hp', order: 'lowest' };
+    case 'attackType':
+      return { kind: 'attackType', physical: true };
+    case 'status':
+      return { kind: 'status', side: 'enemy', debuffTags: ['def'] };
+  }
+}
+
+function appendStatusTagCheckboxes(
+  parent: HTMLElement,
+  debuffTags: DebuffFilterTag[],
+  buffTags: BuffFilterTag[],
+  onChange: (debuffTags: DebuffFilterTag[], buffTags: BuffFilterTag[]) => void,
+): void {
+  parent.appendChild(createEl('p', 'editor-hint', 'デバフ（いずれか）'));
+  appendDebuffFilterCheckboxes(parent, debuffTags, (nextDebuff) => {
+    onChange(nextDebuff, buffTags);
+  });
+  parent.appendChild(createEl('p', 'editor-hint', 'バフ（いずれか）'));
+  const buffWrap = createEl('div', 'editor-debuff-tag-checkboxes');
+  for (const tag of BUFF_FILTER_TAGS) {
+    const row = createEl('div', 'editor-field editor-field-checkbox');
+    const input = createEl('input') as HTMLInputElement;
+    input.type = 'checkbox';
+    input.checked = buffTags.includes(tag.id);
+    input.addEventListener('change', () => {
+      const next = new Set(buffTags);
+      if (input.checked) next.add(tag.id);
+      else next.delete(tag.id);
+      onChange(debuffTags, [...next]);
+    });
+    row.appendChild(createEl('label', undefined, tag.label));
+    row.appendChild(input);
+    buffWrap.appendChild(row);
+  }
+  parent.appendChild(buffWrap);
+}
+
+export function appendTargetSpecFields(
+  parent: HTMLElement,
+  target: TargetSpec,
+  onChange: (target: TargetSpec) => void,
+): void {
+  const wrap = createEl('div', 'editor-target-spec-fields');
+  const kind = targetSpecKind(target);
+
+  wrap.appendChild(
+    createFieldRow(
+      '種別',
+      createSelect(
+        kind,
+        TARGET_SPEC_KINDS.map((value) => ({
+          value,
+          label: TARGET_SPEC_KIND_LABELS[value],
+        })),
+        (nextKind) => onChange(defaultTargetForKind(nextKind)),
+      ),
+    ),
+  );
+
+  if (target.kind === 'distance') {
+    wrap.appendChild(
+      createFieldRow(
+        '距離',
+        createSelect(
+          target.order,
+          TARGET_DISTANCE_ORDER_OPTIONS.map((value) => ({
+            value,
+            label: TARGET_DISTANCE_ORDER_LABELS[value],
+          })),
+          (order) => onChange({ ...target, order }),
+        ),
+      ),
+    );
+    wrap.appendChild(
+      createFieldRow(
+        '対象側',
+        createSelect(
+          target.side,
+          (['ally', 'enemy'] as const).map((value) => ({
+            value,
+            label: TARGET_SIDE_LABELS[value],
+          })),
+          (side) => onChange({ ...target, side }),
+        ),
+      ),
+    );
+  }
+
+  if (target.kind === 'stat') {
+    wrap.appendChild(
+      createFieldRow(
+        '対象側',
+        createSelect(
+          target.side,
+          (['ally', 'enemy'] as const).map((value) => ({
+            value,
+            label: TARGET_SIDE_LABELS[value],
+          })),
+          (side) => onChange({ ...target, side }),
+        ),
+      ),
+    );
+    wrap.appendChild(
+      createFieldRow(
+        'ステータス',
+        createSelect(
+          target.stat,
+          TARGET_STAT_OPTIONS.map((value) => ({
+            value,
+            label: TARGET_STAT_LABELS[value],
+          })),
+          (stat) =>
+            onChange({
+              ...target,
+              stat,
+              order: stat === 'hp' ? target.order : target.order === 'ratio' ? 'lowest' : target.order,
+            }),
+        ),
+      ),
+    );
+    const orderOptions =
+      target.stat === 'hp'
+        ? TARGET_STAT_ORDER_OPTIONS
+        : TARGET_STAT_ORDER_OPTIONS.filter((value) => value !== 'ratio');
+    wrap.appendChild(
+      createFieldRow(
+        '順序',
+        createSelect(
+          target.order,
+          orderOptions.map((value) => ({
+            value,
+            label: TARGET_STAT_ORDER_LABELS[value],
+          })),
+          (order) => onChange({ ...target, order }),
+        ),
+      ),
+    );
+  }
+
+  if (target.kind === 'attackType') {
+    const attackRow = createEl('div', 'editor-debuff-tag-checkboxes');
+    for (const [key, label] of [
+      ['physical', '物理'],
+      ['magic', '魔法'],
+      ['melee', '近接'],
+      ['ranged', '遠隔'],
+    ] as const) {
+      const row = createEl('div', 'editor-field editor-field-checkbox');
+      const input = createEl('input') as HTMLInputElement;
+      input.type = 'checkbox';
+      input.checked = target[key] === true;
+      input.addEventListener('change', () => {
+        const next = { ...target, [key]: input.checked ? true : undefined };
+        const hasAny =
+          next.physical || next.magic || next.melee || next.ranged;
+        if (hasAny) onChange(next);
+      });
+      row.appendChild(createEl('label', undefined, label));
+      row.appendChild(input);
+      attackRow.appendChild(row);
+    }
+    wrap.appendChild(attackRow);
+  }
+
+  if (target.kind === 'status') {
+    wrap.appendChild(
+      createFieldRow(
+        '対象側',
+        createSelect(
+          target.side ?? 'enemy',
+          (['ally', 'enemy'] as const).map((value) => ({
+            value,
+            label: TARGET_SIDE_LABELS[value],
+          })),
+          (side) => onChange({ ...target, side }),
+        ),
+      ),
+    );
+    appendStatusTagCheckboxes(
+      wrap,
+      target.debuffTags ?? [],
+      target.buffTags ?? [],
+      (debuffTags, buffTags) =>
+        onChange({
+          ...target,
+          debuffTags: debuffTags.length > 0 ? debuffTags : undefined,
+          buffTags: buffTags.length > 0 ? buffTags : undefined,
+        }),
+    );
+  }
+
+  if (target.kind === 'all') {
+    wrap.appendChild(
+      createFieldRow(
+        '対象側',
+        createSelect(
+          target.side,
+          (['ally', 'enemy'] as const).map((value) => ({
+            value,
+            label: value === 'ally' ? '味方全員' : '敵全員',
+          })),
+          (side) => onChange({ ...target, side }),
+        ),
+      ),
+    );
+  }
+
+  wrap.appendChild(
+    createEl('p', 'editor-hint', `プレビュー: ${formatTargetLabel(target)}`),
+  );
+  parent.appendChild(wrap);
+}
+
+/** @deprecated appendTargetSpecFields を使用 */
+export function appendTargetDebuffFilterFields(): void {}
 
 export function appendPassiveDamageIncreaseFields(
   parent: HTMLElement,

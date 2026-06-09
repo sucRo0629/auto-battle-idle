@@ -47,7 +47,7 @@ const gameData = {
         id: 'archer_passive',
         name: '射手排除',
         effect: 'targetRuleOverride',
-        targetRuleOverride: 'rangedAttackingEnemy',
+        targetRuleOverride: { kind: "attackType", ranged: true },
       },
     },
     actives: {
@@ -57,7 +57,7 @@ const gameData = {
         interval: 2,
         effect: [
           {
-            targetRule: 'frontEnemy',
+            target: { kind: "distance", side: "enemy", order: "nearest" },
             type: 'damage',
             damageType: 'physical',
             amount: { kind: 'atkBased', atkScale: 1 },

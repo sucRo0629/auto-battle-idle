@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { CombatantState, DamageSkillEffect, GameData } from '../types.ts';
+import type { CombatantState, DamageSkillEffect, GameData, SkillEffectDef, TargetRule } from '../types.ts';
+import { normalizeTarget } from './targetSpec.ts';
 import { applyPowerStep } from './powerStep.ts';
 import { battleDistance, isWithinSkillRange } from './rangeUtils.ts';
 import {
@@ -9,6 +10,28 @@ import {
 } from './targeting.ts';
 
 const BASIC_SKILL_ID = 'test_basic_attack';
+
+function damageEffect(
+  fields: Record<string, unknown>,
+  rule: TargetRule,
+): SkillEffectDef {
+  return {
+    type: 'damage',
+    damageType: 'physical',
+    amount: { kind: 'atkBased', atkScale: 1 },
+    target: normalizeTarget(rule),
+    ...fields,
+  } as SkillEffectDef;
+}
+
+function moveEffect(fields: Record<string, unknown>, rule: TargetRule) {
+  return {
+    type: 'move',
+    moveDurationSec: 0.2,
+    target: normalizeTarget(rule),
+    ...fields,
+  } as SkillEffectDef;
+}
 
 function mockGameData(basicRange = 50): GameData {
   return {
@@ -22,7 +45,7 @@ function mockGameData(basicRange = 50): GameData {
           interval: 2,
           effect: [
             {
-              targetRule: 'frontEnemy',
+              target: { kind: "distance", side: "enemy", order: "nearest" },
               type: 'damage',
               damageType: 'physical',
               amount: { kind: 'atkBased', atkScale: 1 },
@@ -119,14 +142,7 @@ describe('resolveEffectTargets', () => {
   const fullSkillRange = 120;
 
   it('aoe: hits units within radius of frontEnemy anchor', () => {
-    const targets = resolveEffectTargets(
-      { targetShape: 'aoe', aoeRadiusPx: 60, range: fullSkillRange },
-      'frontEnemy',
-      actor,
-      allies,
-      enemies,
-      gameData,
-    );
+    const targets = resolveEffectTargets(damageEffect({ targetShape: 'aoe', aoeRadiusPx: 60, range: fullSkillRange }, 'frontEnemy'), actor, allies, enemies, gameData);
     const ids = targets.map((t) => t.id);
     expect(ids).toContain('e3');
     expect(ids).toContain('e2');
@@ -134,51 +150,23 @@ describe('resolveEffectTargets', () => {
   });
 
   it('allEnemies hits every living enemy regardless of range', () => {
-    const targets = resolveEffectTargets(
-      { targetShape: 'single', range: 10 },
-      'allEnemies',
-      actor,
-      allies,
-      enemies,
-      gameData,
-    );
+    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single', range: 10 }, 'allEnemies'), actor, allies, enemies, gameData);
     expect(targets.map((t) => t.id).sort()).toEqual(['e1', 'e2', 'e3']);
   });
 
   it('allAllies hits every living ally regardless of range', () => {
     const ally2 = mockUnit('ally2', 50);
-    const targets = resolveEffectTargets(
-      { targetShape: 'single', range: 10 },
-      'allAllies',
-      actor,
-      [actor, ally2],
-      enemies,
-      gameData,
-    );
+    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single', range: 10 }, 'allAllies'), actor, [actor, ally2], enemies, gameData);
     expect(targets.map((t) => t.id).sort()).toEqual(['ally', 'ally2']);
   });
 
   it('frontEnemy picks maximum battleX among in-range', () => {
-    const targets = resolveEffectTargets(
-      { targetShape: 'single' },
-      'frontEnemy',
-      actor,
-      allies,
-      enemies,
-      gameData,
-    );
+    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single' }, 'frontEnemy'), actor, allies, enemies, gameData);
     expect(targets[0]?.id).toBe('e3');
   });
 
   it('excludes enemies outside skill range', () => {
-    const targets = resolveEffectTargets(
-      { targetShape: 'single', range: 95 },
-      'lowestHpEnemy',
-      actor,
-      allies,
-      enemies,
-      gameData,
-    );
+    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single', range: 95 }, 'lowestHpEnemy'), actor, allies, enemies, gameData);
     expect(targets.map((t) => t.id)).toEqual(['e3']);
   });
 
@@ -191,34 +179,22 @@ describe('resolveEffectTargets', () => {
   });
 
   it('farthestEnemy picks minimum battleX among in-range', () => {
-    const targets = resolveEffectTargets(
-      { targetShape: 'single', range: fullSkillRange },
-      'farthestEnemy',
-      actor,
-      allies,
-      enemies,
-      gameData,
-    );
+    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single', range: fullSkillRange }, 'farthestEnemy'), actor, allies, enemies, gameData);
     expect(targets[0]?.id).toBe('e1');
   });
 
   it('multiLock: distributes hits across ordered pool', () => {
-    const targets = resolveEffectTargets(
-      { targetShape: 'multiLock', hitCount: 3, range: fullSkillRange },
-      'frontEnemy',
-      actor,
-      allies,
-      enemies,
-      gameData,
-    );
+    const targets = resolveEffectTargets(damageEffect({ targetShape: 'multiLock', hitCount: 3, range: fullSkillRange }, 'frontEnemy'), actor, allies, enemies, gameData);
     expect(targets).toHaveLength(3);
     expect(targets.map((t) => t.id)).toEqual(['e3', 'e2', 'e1']);
   });
 
   it('multiLock: round-robin repeats when hits exceed pool size', () => {
     const targets = resolveEffectTargets(
-      { targetShape: 'multiLock', hitCount: 3, range: 70 },
-      'lowestHpEnemy',
+      damageEffect(
+        { targetShape: 'multiLock', hitCount: 3, range: 70 },
+        'lowestHpEnemy',
+      ),
       actor,
       allies,
       [enemyMid, enemyFar],
@@ -230,8 +206,10 @@ describe('resolveEffectTargets', () => {
   it('multiLock: single enemy receives hitCount hits on same id', () => {
     const loneEnemy = [mockUnit('solo', 100, { isEnemy: true })];
     const targets = resolveEffectTargets(
-      { targetShape: 'multiLock', hitCount: 3, range: fullSkillRange },
-      'frontEnemy',
+      damageEffect(
+        { targetShape: 'multiLock', hitCount: 3, range: fullSkillRange },
+        'frontEnemy',
+      ),
       actor,
       allies,
       loneEnemy,
@@ -249,11 +227,10 @@ describe('resolveEffectTargets', () => {
         hitDurationSec: 1.5,
         range: fullSkillRange,
         type: 'damage',
-        targetRule: 'frontEnemy',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
         damageType: 'physical',
         amount: { kind: 'atkBased', atkScale: 1 },
       },
-      'frontEnemy',
       actor,
       allies,
       enemies,
@@ -275,11 +252,10 @@ describe('resolveEffectTargets', () => {
         hitDurationSec: 0.8,
         range: fullSkillRange,
         type: 'damage',
-        targetRule: 'frontEnemy',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
         damageType: 'magic',
         amount: { kind: 'atkBased', atkScale: 1 },
       },
-      'frontEnemy',
       actor,
       allies,
       enemies,
@@ -301,11 +277,10 @@ describe('resolveEffectTargets', () => {
         chainMaxDistancePx: 60,
         range: fullSkillRange,
         type: 'damage',
-        targetRule: 'lowestHpEnemy',
+        target: { kind: "stat", side: "enemy", stat: "hp", order: "lowest" },
         damageType: 'magic',
         amount: { kind: 'atkBased', atkScale: 1 },
       },
-      'lowestHpEnemy',
       actor,
       allies,
       enemies,
@@ -320,13 +295,12 @@ describe('resolveEffectTargets', () => {
       targetShape: 'pierce',
       range: fullSkillRange,
       type: 'damage',
-      targetRule: 'frontEnemy',
+      target: { kind: "distance", side: "enemy", order: "nearest" },
       damageType: 'physical',
       amount: { kind: 'atkBased', atkScale: 1 },
     };
     const resolution = resolveEffectResolution(
       effect,
-      'frontEnemy',
       actor,
       allies,
       enemies,
@@ -344,12 +318,12 @@ describe('resolveEffectTargets', () => {
         scatterHitCount: 2,
         scatterDurationSec: 1,
         scatterSpreadRate: 0,
+        range: fullSkillRange,
         type: 'damage',
-        targetRule: 'frontEnemy',
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
         damageType: 'magic',
         amount: { kind: 'atkBased', atkScale: 1 },
       },
-      'frontEnemy',
       actor,
       allies,
       enemies,
@@ -373,11 +347,10 @@ describe('resolveEffectTargets', () => {
         scatterSpreadRate: 1,
         range: fullSkillRange,
         type: 'damage',
-        targetRule: 'frontEnemy',
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
         damageType: 'magic',
         amount: { kind: 'atkBased', atkScale: 1 },
       },
-      'frontEnemy',
       actor,
       allies,
       enemies,
@@ -394,8 +367,11 @@ describe('resolveEffectTargets', () => {
     const allyNear = mockUnit('near', 120);
     const allyFar = mockUnit('far', 240);
     const anchor = resolveEffectAnchor(
-      { type: 'move', targetRule: 'closestAlly', moveDurationSec: 0.2 },
-      'closestAlly',
+      {
+        type: 'move',
+        target: { kind: 'distance', side: 'ally', order: 'nearest' },
+        moveDurationSec: 0.2,
+      },
       actor,
       [actor, allyNear, allyFar],
       [],
@@ -412,8 +388,13 @@ describe('resolveEffectTargets', () => {
     const party = [healer, allyDamaged, allyNear, allyFar];
 
     const targets = resolveEffectTargets(
-      { targetShape: 'aoe', aoeRadiusPx: 50 },
-      'mostDamagedAlly',
+      {
+        type: 'heal',
+        target: { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' },
+        amount: { kind: 'atkBased', atkScale: 1 },
+        targetShape: 'aoe',
+        aoeRadiusPx: 50,
+      },
       healer,
       party,
       enemies,
@@ -439,14 +420,13 @@ describe('resolveEffectTargets', () => {
     const clean = mockUnit('clean', 280, { isEnemy: true });
     const effect = {
       type: 'damage' as const,
-      targetRule: 'debuffedEnemy' as const,
+      target: { kind: "status", side: "enemy", debuffTags: ["def"] } as const,
       targetDebuffFilter: ['def'] as const,
       damageType: 'physical' as const,
       amount: { kind: 'flat' as const, flatAmount: 10 },
     };
     const anchor = resolveEffectAnchor(
       effect,
-      'debuffedEnemy',
       ally,
       [ally],
       [debuffed, clean],

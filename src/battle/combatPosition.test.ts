@@ -66,19 +66,19 @@ const gameData = {
         id: 'basic',
         name: 'basic',
         interval: 2,
-        effect: [{ targetRule: 'frontEnemy', type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 } }],
+        effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 } }],
       },
       spear: {
         id: 'spear',
         name: 'spear',
         interval: 2,
-        effect: [{ targetRule: 'frontEnemy', type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 }, range: 30 }],
+        effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 }, range: 30 }],
       },
       bow: {
         id: 'bow',
         name: 'bow',
         interval: 2,
-        effect: [{ targetRule: 'frontEnemy', type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 }, range: 100 }],
+        effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 }, range: 100 }],
       },
     },
   },
@@ -267,7 +267,7 @@ describe('combatPosition', () => {
       resolveMoveBattleX(
         sword,
         enemy,
-        { type: 'move', targetRule: 'frontEnemy', moveDurationSec: 0.2, moveMode: 'engage' },
+        { type: 'move', target: { kind: "distance", side: "enemy", order: "nearest" }, moveDurationSec: 0.2, moveMode: 'engage' },
         gameData,
       ),
     ).toBe(80);
@@ -275,7 +275,7 @@ describe('combatPosition', () => {
       resolveMoveBattleX(
         spear,
         enemy,
-        { type: 'move', targetRule: 'frontEnemy', moveDurationSec: 0.2, moveMode: 'engage' },
+        { type: 'move', target: { kind: "distance", side: "enemy", order: "nearest" }, moveDurationSec: 0.2, moveMode: 'engage' },
         gameData,
       ),
     ).toBe(110);
@@ -285,7 +285,7 @@ describe('combatPosition', () => {
         enemy,
         {
           type: 'move',
-          targetRule: 'frontEnemy',
+          target: { kind: "distance", side: "enemy", order: "nearest" },
           moveDurationSec: 0.2,
           moveMode: 'behindTarget',
           behindOffsetPx: 20,

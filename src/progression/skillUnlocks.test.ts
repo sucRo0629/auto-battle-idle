@@ -9,7 +9,7 @@ const registry: SkillRegistry = {
       id: 'cls_passive',
       name: 'Passive',
       effect: 'targetRuleOverride',
-      targetRuleOverride: 'highestHpEnemy',
+      targetRuleOverride: { kind: "stat", side: "enemy", stat: "hp", order: "highest" },
     },
   },
   actives: {

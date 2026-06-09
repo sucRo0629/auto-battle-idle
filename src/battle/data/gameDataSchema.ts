@@ -5,6 +5,7 @@ import type {
   FormationRow,
   GrowthPresetKey,
   GrowthTier,
+  BuffFilterTag,
   DebuffFilterTag,
   DamageIncreaseCondition,
   PassiveEffectKind,
@@ -17,6 +18,7 @@ import type {
   StatusEffectStat,
   TargetRule,
   TargetShape,
+  TargetSpec,
 } from "../types.ts";
 
 export const ROLES = [
@@ -54,14 +56,12 @@ export const MOVE_MODES = [
   "behindTarget",
 ] as const satisfies readonly import("../types.ts").MoveMode[];
 
-export const MOVE_MODE_LABELS: Record<
-  import("../types.ts").MoveMode,
-  string
-> = {
-  engage: "接敵（射程内）",
-  toAnchor: "アンカー座標へ",
-  behindTarget: "敵の背後",
-};
+export const MOVE_MODE_LABELS: Record<import("../types.ts").MoveMode, string> =
+  {
+    engage: "接敵（射程内）",
+    toAnchor: "アンカー座標へ",
+    behindTarget: "敵の背後",
+  };
 
 export const SKILL_EFFECT_ANIM_IDS = [
   "idle",
@@ -192,7 +192,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<PassiveEffectKind, string> = {
   aoeCrowdBonus: "密集ボーナス",
   damageIncrease: "特効ダメージ",
   defenseIgnore: "防御無視",
-  periodicDispel: "デバフ解除（定期）",
+  periodicDispel: "デバフ解除",
   block: "ブロック",
   healReceivedIncrease: "被回復量増加",
   damageReduction: "ダメージ軽減",
@@ -314,10 +314,90 @@ export const DEBUFF_FILTER_TAG_OPTIONS: DebuffFilterTag[] =
   DEBUFF_FILTER_TAGS.map((entry) => entry.id);
 
 export const DEBUFF_FILTER_TAG_LABELS: Record<DebuffFilterTag, string> =
-  Object.fromEntries(DEBUFF_FILTER_TAGS.map((entry) => [entry.id, entry.label])) as Record<
-    DebuffFilterTag,
-    string
-  >;
+  Object.fromEntries(
+    DEBUFF_FILTER_TAGS.map((entry) => [entry.id, entry.label])
+  ) as Record<DebuffFilterTag, string>;
+
+/** バフフィルタ用タグ（新バフ種追加時はここと statusMatching.ts を更新） */
+export const BUFF_FILTER_TAGS = [
+  { id: "atk" as const, label: "ATKバフ" },
+  { id: "def" as const, label: "DEFバフ" },
+  { id: "reg" as const, label: "耐魔バフ" },
+  { id: "damageTaken" as const, label: "被ダメバフ" },
+  { id: "hot" as const, label: "HoT" },
+  { id: "block" as const, label: "ブロック" },
+] as const satisfies readonly { id: BuffFilterTag; label: string }[];
+
+export const BUFF_FILTER_TAG_OPTIONS: BuffFilterTag[] = BUFF_FILTER_TAGS.map(
+  (entry) => entry.id
+);
+
+export const BUFF_FILTER_TAG_LABELS: Record<BuffFilterTag, string> =
+  Object.fromEntries(
+    BUFF_FILTER_TAGS.map((entry) => [entry.id, entry.label])
+  ) as Record<BuffFilterTag, string>;
+
+export const TARGET_SPEC_KINDS = [
+  "distance",
+  "stat",
+  "attackType",
+  "status",
+  "self",
+  "all",
+] as const;
+
+export type TargetSpecKind = (typeof TARGET_SPEC_KINDS)[number];
+
+export const TARGET_SPEC_KIND_LABELS: Record<TargetSpecKind, string> = {
+  distance: "距離",
+  stat: "ステータス",
+  attackType: "攻撃種別",
+  status: "状態",
+  self: "自身",
+  all: "全体",
+};
+
+export const TARGET_SIDE_OPTIONS = ["ally", "enemy"] as const;
+export const TARGET_DISTANCE_ORDER_OPTIONS = ["nearest", "farthest"] as const;
+export const TARGET_STAT_OPTIONS = ["hp", "atk", "def", "reg"] as const;
+export const TARGET_STAT_ORDER_OPTIONS = [
+  "highest",
+  "lowest",
+  "ratio",
+] as const;
+
+export const TARGET_SIDE_LABELS: Record<
+  TargetSpec["kind"] extends never ? never : "ally" | "enemy",
+  string
+> = {
+  ally: "味方",
+  enemy: "敵",
+};
+
+export const TARGET_DISTANCE_ORDER_LABELS: Record<
+  "nearest" | "farthest",
+  string
+> = {
+  nearest: "最近",
+  farthest: "最遠",
+};
+
+export const TARGET_STAT_LABELS: Record<"hp" | "atk" | "def" | "reg", string> =
+  {
+    hp: "HP",
+    atk: "ATK",
+    def: "DEF",
+    reg: "耐魔",
+  };
+
+export const TARGET_STAT_ORDER_LABELS: Record<
+  "highest" | "lowest" | "ratio",
+  string
+> = {
+  highest: "最高",
+  lowest: "最低",
+  ratio: "割合（最低）",
+};
 
 export const DAMAGE_INCREASE_CONDITION_KINDS = [
   "debuff",

@@ -682,7 +682,7 @@ export function defaultPassiveSkill(id: string): PassiveSkillDef {
     id,
     name: id,
     effect: 'targetRuleOverride',
-    targetRuleOverride: 'frontEnemy',
+    targetRuleOverride: { kind: 'distance', side: 'enemy', order: 'nearest' },
   };
 }
 
@@ -693,7 +693,7 @@ export function defaultBasicAttackActiveSkill(id: string): ActiveSkillDef {
     interval: 2,
     effect: [
       {
-        targetRule: 'frontEnemy',
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
         type: 'damage',
         amount: { kind: 'atkBased', atkScale: 1 },
       },
@@ -708,7 +708,7 @@ export function defaultActiveSkill(id: string): ActiveSkillDef {
     trigger: { kind: 'time', value: 5 },
     effect: [
       {
-        targetRule: 'frontEnemy',
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
         type: 'damage',
         damageType: 'physical',
         amount: { kind: 'atkBased', atkScale: 1 },

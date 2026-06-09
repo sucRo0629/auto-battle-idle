@@ -317,7 +317,7 @@ export function resolveDotTick(
     target,
     {
       type: 'damage',
-      targetRule: 'frontEnemy',
+      target: { kind: 'distance', side: 'enemy', order: 'nearest' },
       damageType,
       amount,
     },

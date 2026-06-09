@@ -1,6 +1,6 @@
-import type { CombatantState, SkillEffectDef, TargetRule } from '../types.ts';
+import type { CombatantState, SkillEffectDef, TargetSpec } from '../types.ts';
 import { getBattleX } from '../combatPosition.ts';
-import { getTargetPoolForRule } from './targetingPool.ts';
+import { getTargetPool, isMultiTargetSpec } from './targetSpec.ts';
 
 /** 味方→敵 / 敵→味方の 1D 距離（px） */
 export function battleDistance(
@@ -30,14 +30,14 @@ export function resolveSkillRangePx(
 }
 
 export function getAttackablePool(
-  rule: TargetRule,
+  spec: TargetSpec,
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
   rangePx: number,
 ): CombatantState[] {
-  const pool = getTargetPoolForRule(rule, actor, allies, enemies);
-  if (rule === 'self' || rule === 'allAllies' || rule === 'allEnemies') {
+  const pool = getTargetPool(spec, actor, allies, enemies);
+  if (spec.kind === 'self' || isMultiTargetSpec(spec)) {
     return pool;
   }
   return pool.filter((unit) => isWithinSkillRange(actor, unit, rangePx));

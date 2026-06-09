@@ -263,7 +263,7 @@ describe('resolveDamage defenseIgnore', () => {
   const target = mockCombatant({ def: 50, reg: 20, isEnemy: true });
   const baseEffect = {
     type: 'damage' as const,
-    targetRule: 'frontEnemy' as const,
+    target: { kind: "distance", side: "enemy", order: "nearest" } as const,
     damageType: 'physical' as const,
     amount: { kind: 'flat' as const, flatAmount: 100 },
   };
@@ -301,7 +301,7 @@ describe('resolveDamage defenseIgnore', () => {
   it('reg buff increases magic mitigation and reg debuff weakens it', () => {
     const magicEffect = {
       type: 'damage' as const,
-      targetRule: 'frontEnemy' as const,
+      target: { kind: "distance", side: "enemy", order: "nearest" } as const,
       damageType: 'magic' as const,
       amount: { kind: 'flat' as const, flatAmount: 200 },
     };

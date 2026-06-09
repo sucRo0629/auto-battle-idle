@@ -4,7 +4,12 @@
       "id": "passive_target_highest_atk",
       "name": "脅威の標的",
       "effect": "targetRuleOverride",
-      "targetRuleOverride": "highestAtkEnemy"
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "atk",
+        "order": "highest"
+      }
     },
     {
       "id": "passive_damage_taken_heal",
@@ -32,7 +37,12 @@
       "id": "passive_target_lowest_hp",
       "name": "仕留めの眼",
       "effect": "targetRuleOverride",
-      "targetRuleOverride": "lowestHpEnemy"
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "hp",
+        "order": "lowest"
+      }
     },
     {
       "id": "passive_evasion",
@@ -44,19 +54,31 @@
       "id": "passive_target_highest_hp",
       "name": "巨体穿ち",
       "effect": "targetRuleOverride",
-      "targetRuleOverride": "highestHpEnemy"
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "hp",
+        "order": "highest"
+      }
     },
     {
       "id": "passive_target_ranged_attacking",
       "name": "射手排除",
       "effect": "targetRuleOverride",
-      "targetRuleOverride": "rangedAttackingEnemy"
+      "targetRuleOverride": {
+        "kind": "attackType",
+        "ranged": true
+      }
     },
     {
       "id": "passive_target_farthest",
       "name": "遠点狙い",
       "effect": "targetRuleOverride",
-      "targetRuleOverride": "farthestEnemy"
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "farthest"
+      }
     },
     {
       "id": "passive_damage_vs_dot",
@@ -79,13 +101,23 @@
       "id": "passive_target_lowest_reg",
       "name": "魔角狙い",
       "effect": "targetRuleOverride",
-      "targetRuleOverride": "lowestRegEnemy"
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "reg",
+        "order": "lowest"
+      }
     },
     {
       "id": "passive_target_lowest_def",
       "name": "脆き穿ち",
       "effect": "targetRuleOverride",
-      "targetRuleOverride": "lowestDefEnemy"
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "def",
+        "order": "lowest"
+      }
     },
     {
       "id": "passive_aoe_crowd_bonus",
@@ -104,7 +136,12 @@
       "id": "passive_alchemist_hot",
       "name": "薬草の香り",
       "effect": "hot",
-      "hotTargetRule": "mostDamagedAlly",
+      "hotTargetRule": {
+        "kind": "stat",
+        "side": "ally",
+        "stat": "hp",
+        "order": "ratio"
+      },
       "hotAmount": {
         "kind": "flat",
         "flatAmount": 1
@@ -120,28 +157,46 @@
       "id": "passive_blocking_guardian",
       "name": "守勢",
       "effect": "block",
-      "targetRuleOverride": "highestAtkEnemy",
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "atk",
+        "order": "highest"
+      },
       "blockChance": 0.15
     },
     {
       "id": "df_guardian_passive_1",
       "name": "守勢",
       "effect": "block",
-      "targetRuleOverride": "highestAtkEnemy",
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "atk",
+        "order": "highest"
+      },
       "blockChance": 0.15
     },
     {
       "id": "df_guardian_passive_2",
       "name": "守りの備え",
       "effect": "healReceivedIncrease",
-      "targetRuleOverride": "frontEnemy",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
       "percent": 0.2
     },
     {
       "id": "sp_cleric_passive_1",
       "name": "救命の技",
       "effect": "damageIncrease",
-      "targetRuleOverride": "frontEnemy",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
       "barrierScale": 1,
       "damageIncrease": {
         "scale": 1.5,
@@ -165,7 +220,11 @@
             "kind": "atkBased",
             "atkScale": 0.85
           },
-          "targetRule": "frontEnemy"
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ],
       "interval": 2
@@ -180,7 +239,11 @@
             "kind": "atkBased",
             "atkScale": 0.85
           },
-          "targetRule": "frontEnemy"
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ],
       "interval": 2
@@ -195,7 +258,11 @@
             "kind": "atkBased",
             "atkScale": 0.85
           },
-          "targetRule": "frontEnemy"
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ],
       "interval": 2
@@ -209,20 +276,28 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
             "atkScale": 1.1
           },
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         },
         {
-          "targetRule": "frontEnemy",
           "type": "stun",
           "durationSec": 1,
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -235,19 +310,23 @@
       },
       "effect": [
         {
-          "targetRule": "self",
           "type": "buff",
           "buffStat": "def",
           "buffMultiplier": 1.5,
           "buffDurationSec": 5,
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "self"
+          }
         },
         {
-          "targetRule": "self",
           "type": "debuff",
           "debuffStat": "atk",
           "debuffMultiplier": 0.8,
-          "debuffDurationSec": 5
+          "debuffDurationSec": 5,
+          "target": {
+            "kind": "self"
+          }
         }
       ]
     },
@@ -260,7 +339,6 @@
       },
       "effect": [
         {
-          "targetRule": "mostDamagedAlly",
           "type": "heal",
           "amount": {
             "kind": "atkBased",
@@ -268,6 +346,12 @@
           },
           "vfx": {
             "preset": "healRise"
+          },
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
           }
         }
       ]
@@ -281,11 +365,13 @@
       },
       "effect": [
         {
-          "targetRule": "self",
           "type": "buff",
           "buffStat": "def",
           "buffMultiplier": 1.25,
-          "buffDurationSec": 6
+          "buffDurationSec": 6,
+          "target": {
+            "kind": "self"
+          }
         }
       ]
     },
@@ -298,18 +384,26 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "debuff",
           "debuffStat": "atk",
           "debuffMultiplier": 0.8,
           "debuffDurationSec": 5,
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         },
         {
-          "targetRule": "frontEnemy",
           "type": "stun",
           "durationSec": 1.2,
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -322,14 +416,18 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
             "atkScale": 1.8
           },
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -342,14 +440,18 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
             "atkScale": 2.1
           },
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -362,7 +464,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "targetShape": "aoe",
           "aoeRadiusPx": 50,
           "type": "damage",
@@ -370,6 +471,11 @@
           "amount": {
             "kind": "atkBased",
             "atkScale": 0.9
+          },
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
           }
         }
       ]
@@ -384,13 +490,16 @@
       "effect": [
         {
           "type": "move",
-          "targetRule": "frontEnemy",
           "moveMode": "behindTarget",
           "moveDurationSec": 0.3,
-          "anim": "dash"
+          "anim": "dash",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         },
         {
-          "targetRule": "frontEnemy",
           "targetShape": "multiLock",
           "hitCount": 3,
           "type": "damage",
@@ -398,6 +507,11 @@
           "amount": {
             "kind": "atkBased",
             "atkScale": 0.7
+          },
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
           }
         }
       ]
@@ -411,14 +525,18 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
             "atkScale": 2.2
           },
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -431,7 +549,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "targetShape": "pierce",
           "type": "damage",
           "damageType": "physical",
@@ -440,7 +557,12 @@
             "atkScale": 1.1
           },
           "pierceDurationSec": 0.2,
-          "range": 10
+          "range": 10,
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -453,14 +575,18 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
             "atkScale": 1.6
           },
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -473,7 +599,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "targetShape": "multiLock",
           "hitCount": 2,
           "type": "damage",
@@ -486,6 +611,11 @@
           "range": 50,
           "vfx": {
             "preset": "arrow"
+          },
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
           }
         }
       ]
@@ -499,7 +629,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
           "amount": {
@@ -511,7 +640,12 @@
             "preset": "arrow",
             "arc": true
           },
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -524,7 +658,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "physical",
           "amount": {
@@ -536,7 +669,12 @@
             "preset": "arrow",
             "arc": true
           },
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -549,7 +687,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "targetShape": "pierce",
           "type": "damage",
           "damageType": "physical",
@@ -562,6 +699,11 @@
           "vfx": {
             "preset": "arrow",
             "arc": true
+          },
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
           }
         }
       ]
@@ -575,7 +717,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "targetShape": "scatter",
           "scatterRadiusPx": 70,
           "scatterSpreadRadiusPx": 90,
@@ -588,10 +729,14 @@
           "amount": {
             "kind": "atkBased",
             "atkScale": 0.35
+          },
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
           }
         },
         {
-          "targetRule": "frontEnemy",
           "targetShape": "scatter",
           "scatterRadiusPx": 70,
           "scatterSpreadRadiusPx": 90,
@@ -602,7 +747,12 @@
           "type": "dot",
           "durationSec": 6,
           "powerMultiplier": 0.18,
-          "damageType": "physical"
+          "damageType": "physical",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -615,7 +765,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "targetShape": "scatter",
           "scatterRadiusPx": 70,
           "scatterSpreadRadiusPx": 90,
@@ -628,10 +777,14 @@
           "amount": {
             "kind": "atkBased",
             "atkScale": 0.25
+          },
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
           }
         },
         {
-          "targetRule": "frontEnemy",
           "targetShape": "scatter",
           "scatterRadiusPx": 70,
           "scatterSpreadRadiusPx": 90,
@@ -640,10 +793,14 @@
           "scatterSpreadRate": 0.4,
           "range": 50,
           "type": "stun",
-          "durationSec": 1
+          "durationSec": 1,
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         },
         {
-          "targetRule": "frontEnemy",
           "targetShape": "scatter",
           "scatterRadiusPx": 70,
           "scatterSpreadRadiusPx": 90,
@@ -654,7 +811,12 @@
           "type": "debuff",
           "debuffStat": "atk",
           "debuffMultiplier": 0.85,
-          "debuffDurationSec": 4
+          "debuffDurationSec": 4,
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -667,7 +829,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "magic",
           "amount": {
@@ -678,7 +839,12 @@
           "vfx": {
             "preset": "orb"
           },
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -691,7 +857,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "magic",
           "amount": {
@@ -703,7 +868,12 @@
             "preset": "orb"
           },
           "targetShape": "multiLock",
-          "hitCount": 2
+          "hitCount": 2,
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -716,7 +886,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "targetShape": "chain",
           "chainCount": 3,
           "chainMaxDistancePx": 80,
@@ -729,6 +898,11 @@
           "range": 50,
           "vfx": {
             "preset": "orb"
+          },
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
           }
         }
       ]
@@ -742,7 +916,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "magic",
           "amount": {
@@ -754,7 +927,12 @@
             "preset": "orb"
           },
           "targetShape": "aoe",
-          "aoeRadiusPx": 55
+          "aoeRadiusPx": 55,
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -767,7 +945,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "magic",
           "amount": {
@@ -779,7 +956,12 @@
             "preset": "orb"
           },
           "targetShape": "aoe",
-          "aoeRadiusPx": 90
+          "aoeRadiusPx": 90,
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -792,7 +974,6 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "damage",
           "damageType": "magic",
           "amount": {
@@ -807,7 +988,12 @@
           "scatterRadiusPx": 60,
           "scatterHitCount": 2,
           "scatterDurationSec": 0.4,
-          "scatterSpreadRate": 0.3
+          "scatterSpreadRate": 0.3,
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -820,7 +1006,6 @@
       },
       "effect": [
         {
-          "targetRule": "mostDamagedAlly",
           "type": "heal",
           "amount": {
             "kind": "atkBased",
@@ -828,15 +1013,26 @@
           },
           "vfx": {
             "preset": "orb"
+          },
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
           }
         },
         {
-          "targetRule": "mostDamagedAlly",
           "type": "hot",
           "durationSec": 3,
           "amount": {
             "kind": "percentMaxHp",
             "percentOfMaxHp": 0.01
+          },
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
           }
         }
       ],
@@ -853,11 +1049,16 @@
       },
       "effect": [
         {
-          "targetRule": "mostDamagedAlly",
           "type": "buff",
           "buffStat": "atk",
           "buffMultiplier": 1.2,
-          "buffDurationSec": 6
+          "buffDurationSec": 6,
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
+          }
         }
       ]
     },
@@ -870,11 +1071,16 @@
       },
       "effect": [
         {
-          "targetRule": "mostDamagedAlly",
           "type": "barrier",
           "amount": {
             "kind": "atkBased",
             "atkScale": 1.5
+          },
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
           }
         }
       ]
@@ -888,12 +1094,16 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "debuff",
           "debuffStat": "atk",
           "debuffMultiplier": 0.8,
           "debuffDurationSec": 5,
-          "targetShape": "single"
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
         }
       ]
     },
@@ -906,11 +1116,16 @@
       },
       "effect": [
         {
-          "targetRule": "mostDamagedAlly",
           "type": "buff",
           "buffStat": "atk",
           "buffMultiplier": 1.15,
-          "buffDurationSec": 8
+          "buffDurationSec": 8,
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
+          }
         }
       ]
     },
@@ -923,13 +1138,36 @@
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
           "type": "debuff",
           "debuffStat": "def",
           "debuffMultiplier": 0.85,
           "debuffDurationSec": 6,
           "targetShape": "aoe",
-          "aoeRadiusPx": 60
+          "aoeRadiusPx": 60,
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
+        }
+      ]
+    },
+    {
+      "id": "sp_cleric_basic_attack",
+      "name": "sp_cleric_basic_attack",
+      "interval": 2,
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
         }
       ]
     }

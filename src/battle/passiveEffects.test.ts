@@ -8,9 +8,13 @@ import {
   resolveDebuffDurationWithPassives,
   resolveIncomingHealAmount,
   rollsEvasion,
+  applyPassiveHotFromPassive,
+  getPeriodicHotReady,
+  initializePeriodicHotStates,
   syncHotAuras,
   syncBlockAuras,
   syncDamageReductionAuras,
+  tickPeriodicHotStates,
 } from './passiveEffects.ts';
 import { aggregateStatStatusEffects } from './statusEffectDisplay.ts';
 
@@ -70,7 +74,7 @@ const passives: Record<string, PassiveSkillDef> = {
     id: 'aura',
     name: 'Aura',
     effect: 'hot',
-    hotTargetRule: 'self',
+    hotTargetRule: { kind: "self" },
     hotAmount: { kind: 'flat', flatAmount: 2 },
   },
   excessBarrier: {
@@ -303,7 +307,7 @@ describe('passiveEffects', () => {
       ...passives,
       aura: {
         ...passives.aura,
-        hotTargetRule: 'mostDamagedAlly' as const,
+        hotTargetRule: { kind: "stat", side: "ally", stat: "hp", order: "ratio" } as const,
       },
     };
     const healer = mockAlly({
@@ -335,7 +339,7 @@ describe('passiveEffects', () => {
       ...passives,
       aura: {
         ...passives.aura,
-        hotTargetRule: 'allAllies' as const,
+        hotTargetRule: { kind: "all", side: "ally" } as const,
       },
     };
     const healer = mockAlly({
@@ -398,7 +402,7 @@ describe('passiveEffects', () => {
         name: 'Guard',
         effect: 'damageReduction' as const,
         damageReductionPercent: 0.25,
-        damageReductionTargetRule: 'allAllies' as const,
+        damageReductionTargetRule: { kind: "all", side: "ally" } as const,
       },
     };
     const tank = mockAlly({
@@ -424,5 +428,76 @@ describe('passiveEffects', () => {
       ?.multiplier;
     expect(tankMul).toBe(0.75);
     expect(allyMul).toBe(0.75);
+  });
+
+  it('applyPassiveHotFromPassive respects hotDurationSec', () => {
+    const periodicHotPassives = {
+      aura: {
+        id: 'aura',
+        name: 'Aura',
+        effect: 'hot' as const,
+        hotTargetRule: { kind: 'self' as const },
+        hotAmount: { kind: 'flat', flatAmount: 2 },
+        hotDurationSec: 8,
+      },
+    };
+    const healer = mockAlly({ id: 'healer', role: 'supporter' });
+    applyPassiveHotFromPassive(
+      healer,
+      periodicHotPassives.aura,
+      [healer],
+      [],
+    );
+    const hot = healer.statusEffects.find((e) => e.overlay === 'hot');
+    expect(hot?.durationSec).toBe(8);
+    expect(hot?.remainingSec).toBe(8);
+  });
+
+  it('syncHotAuras skips passives with intervalSec', () => {
+    const periodicHotPassives = {
+      aura: {
+        id: 'aura',
+        name: 'Aura',
+        effect: 'hot' as const,
+        hotTargetRule: { kind: 'self' as const },
+        hotAmount: { kind: 'flat', flatAmount: 2 },
+        intervalSec: 5,
+      },
+    };
+    const healer = mockAlly({
+      id: 'healer',
+      build: {
+        learnedPassiveIds: ['aura'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    syncHotAuras([healer], [], periodicHotPassives);
+    expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
+  });
+
+  it('tickPeriodicHotStates fires on interval wrap', () => {
+    const periodicHotPassives = {
+      aura: {
+        id: 'aura',
+        name: 'Aura',
+        effect: 'hot' as const,
+        hotTargetRule: { kind: 'self' as const },
+        hotAmount: { kind: 'flat', flatAmount: 2 },
+        intervalSec: 3,
+      },
+    };
+    const healer = mockAlly({
+      id: 'healer',
+      build: {
+        learnedPassiveIds: ['aura'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const states = initializePeriodicHotStates(healer, periodicHotPassives);
+    const before = states;
+    const after = tickPeriodicHotStates(before, periodicHotPassives, 0.1);
+    expect(getPeriodicHotReady(before, after)).toEqual(['aura']);
   });
 });

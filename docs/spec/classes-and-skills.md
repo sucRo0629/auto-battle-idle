@@ -225,7 +225,7 @@ interface CharacterBuild {
 | `periodicDispel` | `intervalSec`, `dispelTargetRule`, `dispelCount`, `dispelTags?` | 一定間隔でデバフ解除 |
 | `aoeCrowdBonus` | `perExtraTargetScale`, `maxExtraTargets` | `aoe` / `scatter` の追加ヒット数ボーナス |
 | `damageTakenToHeal` | `ratio` | HP に入った最終ダメージの `ratio` 割合を即時回復（バリア吸収後。ATK 基準ではない） |
-| `hot` | `hotAmount`, `hotTargetRule` | 対象に常時 HoT を付与（戦闘開始時同期） |
+| `hot` | `hotAmount`, `hotTargetRule`, `intervalSec?`, `hotDurationSec?` | `intervalSec` 指定時はその間隔で HoT 付与。未指定時は戦闘開始時に常時 HoT。`hotDurationSec` は付与 HoT の持続（0=無限） |
 | `excessHealToBarrier` | `barrierScale` | 回復が maxHp を超過した分をバリアに変換（**上書き**） |
 | `healReceivedIncrease` | `percent` | 受ける `heal` / HoT 量を `floor(量 × (1 + percent合算))` で増加 |
 | `extendSelfAppliedDebuff` | `extendSec`, `durationMultiplier?` | 使用者が付与する debuff 持続延長 |
@@ -276,30 +276,39 @@ interface CharacterBuild {
 | `healBonus` | 加算 |
 | `activeCooldownRate` | 乗算（active 枠のみ） |
 
-## ターゲットルール
+## ターゲット指定（`target: TargetSpec`）
 
-| ルール | 説明 |
+effect・パッシブのターゲットは構造化オブジェクト `target` で指定する。読み込み時に旧 `targetRule` 文字列は正規化される（書き込みは `target` のみ）。
+
+### 種別一覧
+
+| `kind` | 説明 |
 |--------|------|
-| `closestAlly` | 敵: **ヘイト加重**で味方 1 体（`pickThreatWeightedAlly`）。味方: 自分以外で **battleX 距離が最小** |
-| `frontEnemy` | X が最も近い敵 |
-| `lowestHpEnemy` | 現在 HP が最も低い敵 |
-| `mostDamagedAlly` | 欠損 HP が最も大きい味方 |
-| `rangedAttackingEnemy` | 攻撃可能な遠隔敵（`traits.rangePx >= 25`） |
-| `magicAttackingEnemy` | 攻撃可能な魔法攻撃敵（`traits.damageType === 'magic'`） |
-| `highestAtkEnemy` / `lowestDefEnemy` / `highestDefEnemy` | 攻撃可能敵の stat 比較 |
-| `lowestRegEnemy` / `highestRegEnemy` | 同上（REG） |
-| `highestHpEnemy` | 攻撃可能敵の現在 HP 最大 |
-| `farthestEnemy` | 攻撃可能敵のうち X が最も小さい（味方から最も遠い） |
-| `debuffedEnemy` | 指定デバフ（`targetDebuffFilter`）を受けている攻撃可能敵 |
-| `allAllies` | 味方側の生存ユニット全員（射程無視） |
-| `allEnemies` | 敵側の生存ユニット全員（Wave 内・射程無視） |
+| `distance` | `side`（ally/enemy）+ `order`（nearest/farthest）。味方 actor + enemy/nearest = 最前線敵。敵 actor + ally/nearest = ヘイト加重味方 |
+| `stat` | `side` + `stat`（hp/atk/def/reg）+ `order`（highest/lowest/ratio）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方） |
+| `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。フィルタ後 anchor は最前線 |
+| `status` | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR）。フィルタ後 anchor は最前線 |
+| `self` | 自身 |
+| `all` | `side` で味方全員 / 敵全員（射程無視） |
+
+### 旧 `targetRule` との対応（読み込み互換）
+
+| 旧 `targetRule` | 新 `target` |
+|-----------------|-------------|
+| `frontEnemy` | `{ "kind": "distance", "side": "enemy", "order": "nearest" }` |
+| `closestAlly` | `{ "kind": "distance", "side": "ally", "order": "nearest" }` |
+| `farthestEnemy` | `{ "kind": "distance", "side": "enemy", "order": "farthest" }` |
+| `lowestHpEnemy` | `{ "kind": "stat", "side": "enemy", "stat": "hp", "order": "lowest" }` |
+| `mostDamagedAlly` | `{ "kind": "stat", "side": "ally", "stat": "hp", "order": "ratio" }` |
+| `rangedAttackingEnemy` | `{ "kind": "attackType", "ranged": true }` |
+| `debuffedEnemy` + `targetDebuffFilter` | `{ "kind": "status", "side": "enemy", "debuffTags": [...] }` |
+| `allAllies` / `allEnemies` | `{ "kind": "all", "side": "ally" \| "enemy" }` |
 
 ## effect 共通フィールド（`skills.json`）
 
 | フィールド | 説明 |
 |------------|------|
-| `targetRule` | anchor 選定ルール（上表）。**射程内**のユニットのみ対象 |
-| `targetDebuffFilter` | `debuffedEnemy` 時必須。デバフタグ配列（OR 判定） |
+| `target` | anchor 選定（`TargetSpec`）。**射程内**のユニットのみ対象（`self` / `all` を除く） |
 | `damageIncrease` | 任意。`damage` / `heal` / `dot` 用条件付き倍率（`heal` は直接回復のみ） |
 | `defenseIgnore` | 任意。`damage` / `dot` 用 DEF / REG 無視 |
 | `targetShape` | `single`（既定）／`aoe`／`multiLock`／`pierce`／`chain`／`scatter` |
@@ -342,8 +351,8 @@ interface CharacterBuild {
 | `behindOffsetPx` | `behindTarget` 時、anchor より敵奥へ何 px（味方: 左＝減算） |
 
 - `targetShape` は **single のみ**（Phase 1）
-- `engage` / `behindTarget`: 敵向け `targetRule`（`frontEnemy`, `farthestEnemy` 等）
-- `toAnchor`: 味方向け `targetRule`（`closestAlly`, `self` 等）
+- `engage` / `behindTarget`: 敵向け `target`（`distance` + enemy 等）
+- `toAnchor`: 味方向け `target`（`distance` + ally / `self` 等）
 - move を含むスキルは effect 列を **順序実行**（移動完了後に次 effect）。CD はシーケンス全 step 完了後にリセット
 
 ### targetShape の JSON 例（スキーマ参考・具体 ID は未固定）
@@ -352,7 +361,7 @@ interface CharacterBuild {
 
 ```json
 {
-  "targetRule": "frontEnemy",
+  "target": { "kind": "distance", "side": "enemy", "order": "nearest" },
   "targetShape": "aoe",
   "aoeRadiusPx": 70,
   "type": "damage",
@@ -366,7 +375,7 @@ interface CharacterBuild {
 
 ```json
 {
-  "targetRule": "lowestHpEnemy",
+  "target": { "kind": "stat", "side": "enemy", "stat": "hp", "order": "lowest" },
   "targetShape": "chain",
   "chainCount": 3,
   "chainMaxDistancePx": 80,

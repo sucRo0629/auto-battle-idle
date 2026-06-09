@@ -15,8 +15,6 @@ import {
   SKILL_TRIGGER_KIND_OPTIONS,
   SKILL_TRIGGER_VALUE_LABELS,
   STATUS_EFFECT_STAT_OPTIONS,
-  TARGET_RULE_LABELS,
-  TARGET_RULE_OPTIONS,
   TARGET_SHAPE_LABELS,
   TARGET_SHAPE_OPTIONS,
   VFX_PRESET_OPTIONS,
@@ -37,6 +35,10 @@ import type {
   StatusEffectStat,
   TargetShape,
 } from '../battle/types.ts';
+import {
+  defaultTargetForEffectType,
+  getEffectTarget,
+} from '../battle/skills/targetSpec.ts';
 import { skillHasMoveEffect } from '../battle/skills/skillSequence.ts';
 import { resolveSkillTrigger } from '../battle/skillTrigger.ts';
 import { formatActiveDescription } from '../ui/formatSkillText.ts';
@@ -50,7 +52,7 @@ import {
   appendPassiveDispelFields,
   appendPassiveDamageReductionFields,
   appendPassiveHotFields,
-  appendTargetDebuffFilterFields,
+  appendTargetSpecFields,
 } from './skillEditorCombatFields.ts';
 import {
   appendGrid,
@@ -94,7 +96,11 @@ function defaultResourceAmount(atkScale = 1): ResourceAmountSpec {
 function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
   switch (passive.effect) {
     case 'targetRuleOverride':
-      passive.targetRuleOverride ??= 'frontEnemy';
+      passive.targetRuleOverride ??= {
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      };
       break;
     case 'evasionChance':
       passive.evasionChance ??= 0.1;
@@ -120,8 +126,10 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.ratio ??= 0.1;
       break;
     case 'hot':
-      passive.hotTargetRule ??= 'self';
+      passive.hotTargetRule ??= { kind: 'self' };
       passive.hotAmount ??= { kind: 'atkBased', atkScale: 0.05 };
+      passive.intervalSec ??= 5;
+      passive.hotDurationSec ??= 0;
       break;
     case 'damageReduction':
       passive.damageReductionTargetRule ??= 'self';
@@ -386,23 +394,20 @@ function appendEffectPresentationFields(
 }
 
 function defaultEffect(type: SkillEffectKind): SkillEffectDef {
+  const target = defaultTargetForEffectType(type);
   switch (type) {
     case 'damage':
       return {
-        targetRule: 'frontEnemy',
+        target,
         type: 'damage',
         damageType: 'physical',
         amount: defaultResourceAmount(),
       };
     case 'heal':
-      return {
-        targetRule: 'mostDamagedAlly',
-        type: 'heal',
-        amount: defaultResourceAmount(),
-      };
+      return { target, type: 'heal', amount: defaultResourceAmount() };
     case 'buff':
       return {
-        targetRule: 'self',
+        target,
         type: 'buff',
         buffStat: 'atk',
         buffMultiplier: 1.2,
@@ -410,7 +415,7 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
       };
     case 'debuff':
       return {
-        targetRule: 'frontEnemy',
+        target,
         type: 'debuff',
         debuffStat: 'def',
         debuffMultiplier: 0.8,
@@ -418,53 +423,37 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
       };
     case 'hot':
       return {
-        targetRule: 'mostDamagedAlly',
+        target,
         type: 'hot',
         durationSec: 5,
         amount: defaultResourceAmount(0.2),
       };
     case 'dot':
       return {
-        targetRule: 'frontEnemy',
+        target,
         type: 'dot',
         durationSec: 5,
         powerMultiplier: 0.2,
         damageType: 'physical',
       };
     case 'barrier':
-      return {
-        targetRule: 'mostDamagedAlly',
-        type: 'barrier',
-        amount: defaultResourceAmount(),
-      };
+      return { target, type: 'barrier', amount: defaultResourceAmount() };
     case 'move':
       return {
-        targetRule: 'frontEnemy',
+        target,
         type: 'move',
         moveMode: 'engage',
         moveDurationSec: 0.25,
       };
     case 'stun':
-      return {
-        targetRule: 'frontEnemy',
-        type: 'stun',
-        durationSec: 1,
-      };
+      return { target, type: 'stun', durationSec: 1 };
     case 'knockback':
-      return {
-        targetRule: 'frontEnemy',
-        type: 'knockback',
-        distancePx: 30,
-      };
+      return { target, type: 'knockback', distancePx: 30 };
     case 'dispel':
-      return {
-        targetRule: 'mostDamagedAlly',
-        type: 'dispel',
-        dispelCount: 0,
-      };
+      return { target, type: 'dispel', dispelCount: 0 };
     case 'block':
       return {
-        targetRule: 'self',
+        target,
         type: 'block',
         blockChance: 0.2,
         durationSec: 5,
@@ -969,22 +958,18 @@ export class SkillEditorStep {
 
     switch (passive.effect) {
       case 'targetRuleOverride':
-        effectGrid.appendChild(
-          createFieldRow(
-            'ターゲット',
-            createSelect(
-              passive.targetRuleOverride ?? 'frontEnemy',
-              TARGET_RULE_OPTIONS.map((value) => ({
-                value,
-                label: TARGET_RULE_LABELS[value],
-              })),
-              (targetRuleOverride) => {
-                this.patchPassive(index, (current) => {
-                  current.targetRuleOverride = targetRuleOverride;
-                }, { rerender: false });
-              },
-            ),
-          ),
+        appendTargetSpecFields(
+          effectGrid,
+          passive.targetRuleOverride ?? {
+            kind: 'distance',
+            side: 'enemy',
+            order: 'nearest',
+          },
+          (targetRuleOverride) => {
+            this.patchPassive(index, (current) => {
+              current.targetRuleOverride = targetRuleOverride;
+            }, { rerender: true });
+          },
         );
         break;
       case 'evasionChance':
@@ -1477,38 +1462,11 @@ export class SkillEditorStep {
         ),
       ),
     );
-    grid.appendChild(
-      createFieldRow(
-        'ターゲット',
-        createSelect(
-          effect.targetRule,
-          TARGET_RULE_OPTIONS.map((value) => ({
-            value,
-            label: TARGET_RULE_LABELS[value],
-          })),
-          (targetRule) =>
-            patchEffect((prev) => {
-              const next = { ...prev, targetRule } as SkillEffectDef;
-              if (targetRule !== 'debuffedEnemy') {
-                delete next.targetDebuffFilter;
-              } else if (!next.targetDebuffFilter?.length) {
-                next.targetDebuffFilter = ['def'];
-              }
-              return next;
-            }, { rerender: true }),
-        ),
-      ),
-    );
-    appendTargetDebuffFilterFields(
-      grid,
-      effect.targetRule,
-      effect.targetDebuffFilter,
-      (targetDebuffFilter) => {
-        patchEffect((prev) => ({ ...prev, targetDebuffFilter }), {
-          rerender: true,
-        });
-      },
-    );
+    appendTargetSpecFields(grid, getEffectTarget(effect), (target) => {
+      patchEffect((prev) => ({ ...prev, target }) as SkillEffectDef, {
+        rerender: true,
+      });
+    });
     const isMove = effect.type === 'move';
     const targetShape: TargetShape = effect.targetShape ?? 'single';
     if (!isMove) {

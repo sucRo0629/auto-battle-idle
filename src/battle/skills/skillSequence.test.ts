@@ -58,19 +58,19 @@ describe('skillSequence', () => {
       effect: [
         {
           type: 'move',
-          targetRule: 'farthestEnemy',
+          target: { kind: "distance", side: "enemy", order: "farthest" },
           moveMode: 'engage',
           moveDurationSec: 0.3,
         },
         {
           type: 'damage',
-          targetRule: 'farthestEnemy',
+          target: { kind: "distance", side: "enemy", order: "farthest" },
           damageType: 'physical',
           amount: { kind: 'atkBased', atkScale: 1.5 },
         },
         {
           type: 'move',
-          targetRule: 'closestAlly',
+          target: { kind: "distance", side: "ally", order: "nearest" },
           moveMode: 'toAnchor',
           moveDurationSec: 0.3,
         },
@@ -132,13 +132,13 @@ describe('skillSequence', () => {
       effect: [
         {
           type: 'move',
-          targetRule: 'frontEnemy',
+          target: { kind: "distance", side: "enemy", order: "nearest" },
           moveMode: 'engage',
           moveDurationSec: 0.2,
         },
         {
           type: 'damage',
-          targetRule: 'frontEnemy',
+          target: { kind: "distance", side: "enemy", order: "nearest" },
           damageType: 'physical',
           amount: { kind: 'atkBased', atkScale: 1 },
         },
@@ -196,19 +196,19 @@ describe('skillSequence', () => {
       effect: [
         {
           type: 'move',
-          targetRule: 'farthestEnemy',
+          target: { kind: "distance", side: "enemy", order: "farthest" },
           moveMode: 'engage',
           moveDurationSec: 0.1,
         },
         {
           type: 'damage',
-          targetRule: 'farthestEnemy',
+          target: { kind: "distance", side: "enemy", order: "farthest" },
           damageType: 'physical',
           amount: { kind: 'atkBased', atkScale: 1 },
         },
         {
           type: 'move',
-          targetRule: 'closestAlly',
+          target: { kind: "distance", side: "ally", order: "nearest" },
           moveMode: 'toAnchor',
           moveDurationSec: 0.1,
         },
@@ -278,7 +278,7 @@ describe('resolveMoveBattleX', () => {
       interval: 2,
       effect: [
         {
-          targetRule: 'frontEnemy',
+          target: { kind: "distance", side: "enemy", order: "nearest" },
           type: 'damage',
           damageType: 'physical',
           amount: { kind: 'atkBased', atkScale: 1 },
@@ -293,7 +293,7 @@ describe('resolveMoveBattleX', () => {
     const x = resolveMoveBattleX(
       actor,
       enemy,
-      { type: 'move', targetRule: 'frontEnemy', moveDurationSec: 0.2, moveMode: 'engage' },
+      { type: 'move', target: { kind: "distance", side: "enemy", order: "nearest" }, moveDurationSec: 0.2, moveMode: 'engage' },
       basicData,
     );
     expect(x).toBe(60);
@@ -305,7 +305,7 @@ describe('resolveMoveBattleX', () => {
     const x = resolveMoveBattleX(
       actor,
       ally,
-      { type: 'move', targetRule: 'closestAlly', moveDurationSec: 0.2, moveMode: 'toAnchor' },
+      { type: 'move', target: { kind: "distance", side: "ally", order: "nearest" }, moveDurationSec: 0.2, moveMode: 'toAnchor' },
       basicData,
     );
     expect(x).toBe(215);

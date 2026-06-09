@@ -63,7 +63,7 @@ const gameData = {
         interval: 2,
         effect: [
           {
-            targetRule: 'frontEnemy',
+            target: { kind: "distance", side: "enemy", order: "nearest" },
             type: 'damage',
             damageType: 'physical',
             amount: { kind: 'atkBased', atkScale: 1 },
@@ -134,7 +134,7 @@ describe('visual position separation', () => {
     });
     const toVisualX = resolveMoveVisualX(actor, enemy, {
       type: 'move',
-      targetRule: 'frontEnemy',
+      target: { kind: "distance", side: "enemy", order: "nearest" },
       moveDurationSec: 0.2,
       moveMode: 'engage',
     }, gameData);
@@ -507,7 +507,7 @@ describe('resolveMoveVisualX', () => {
     });
     const x = resolveMoveVisualX(actor, enemy, {
       type: 'move',
-      targetRule: 'frontEnemy',
+      target: { kind: "distance", side: "enemy", order: "nearest" },
       moveDurationSec: 0.2,
       moveMode: 'engage',
     }, gameData);
@@ -521,7 +521,7 @@ describe('resolveMoveVisualX', () => {
     const ally = mockCombatant({ id: 'ally', visualX: 215 });
     const x = resolveMoveVisualX(actor, ally, {
       type: 'move',
-      targetRule: 'closestAlly',
+      target: { kind: "distance", side: "ally", order: "nearest" },
       moveDurationSec: 0.2,
       moveMode: 'toAnchor',
     }, gameData);
@@ -537,7 +537,7 @@ describe('resolveMoveVisualX', () => {
     });
     const x = resolveMoveVisualX(actor, enemy, {
       type: 'move',
-      targetRule: 'frontEnemy',
+      target: { kind: "distance", side: "enemy", order: "nearest" },
       moveDurationSec: 0.2,
       moveMode: 'behindTarget',
       behindOffsetPx: 20,

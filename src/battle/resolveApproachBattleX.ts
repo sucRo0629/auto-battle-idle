@@ -1,4 +1,4 @@
-import type { CombatantState, GameData, TargetRule } from './types.ts';
+import type { CombatantState, GameData, TargetSpec } from './types.ts';
 import { getPassiveDefs } from './combatMath.ts';
 import {
   getAllyContactX,
@@ -6,17 +6,19 @@ import {
   resolveAttackBattleX,
   resolveMaxEffectiveRangePx,
 } from './combatPosition.ts';
-import { pickTargetFromPool, resolveTargetRule } from './skills/targeting.ts';
-import { getTargetPoolForRule } from './skills/targetingPool.ts';
+import { pickTargetFromPool, resolveTargetSpec } from './skills/targeting.ts';
+import { getEffectTarget, getTargetPool } from './skills/targetSpec.ts';
 
-function resolveBasicAttackTargetRule(
+function resolveBasicAttackTarget(
   unit: CombatantState,
   gameData: GameData,
-): TargetRule {
+): TargetSpec {
   const basicCd = unit.cooldowns.find((cd) => cd.slotKind === 'basic');
   const skillId = basicCd?.skillId;
   const skill = skillId ? gameData.skillRegistry.actives[skillId] : undefined;
-  return skill?.effect[0]?.targetRule ?? 'frontEnemy';
+  const effect = skill?.effect[0];
+  if (effect) return getEffectTarget(effect);
+  return { kind: 'distance', side: 'enemy', order: 'nearest' };
 }
 
 /** 後列の接敵 battleX: パッシブ等で決まる狙い先が射程外なら、その敵まで届く位置を目指す */
@@ -34,14 +36,14 @@ export function resolveAllyApproachBattleX(
   }
 
   const passives = getPassiveDefs(ally, gameData.skillRegistry.passives);
-  const defaultRule = resolveBasicAttackTargetRule(ally, gameData);
-  const rule = resolveTargetRule(passives, defaultRule, {
+  const defaultSpec = resolveBasicAttackTarget(ally, gameData);
+  const spec = resolveTargetSpec(passives, defaultSpec, {
     actor: ally,
     allies,
     enemies,
   });
-  const pool = getTargetPoolForRule(rule, ally, allies, enemies);
-  const target = pickTargetFromPool(rule, ally, pool);
+  const pool = getTargetPool(spec, ally, allies, enemies);
+  const target = pickTargetFromPool(spec, ally, pool);
 
   if (target) {
     const range = resolveMaxEffectiveRangePx(ally, gameData);
@@ -58,14 +60,14 @@ export function resolveEnemyBasicAttackTarget(
   gameData: GameData,
 ): CombatantState | null {
   const passives = getPassiveDefs(enemy, gameData.skillRegistry.passives);
-  const defaultRule = resolveBasicAttackTargetRule(enemy, gameData);
-  const rule = resolveTargetRule(passives, defaultRule, {
+  const defaultSpec = resolveBasicAttackTarget(enemy, gameData);
+  const spec = resolveTargetSpec(passives, defaultSpec, {
     actor: enemy,
     allies,
     enemies,
   });
-  const pool = getTargetPoolForRule(rule, enemy, allies, enemies);
-  return pickTargetFromPool(rule, enemy, pool);
+  const pool = getTargetPool(spec, enemy, allies, enemies);
+  return pickTargetFromPool(spec, enemy, pool);
 }
 
 /** 敵の接敵 battleX: 狙い先が射程外なら、その味方まで届く位置を目指す */
@@ -78,13 +80,7 @@ export function resolveEnemyApproachBattleX(
   const contact = getAllyContactX(allies);
   if (contact === null) return enemy.battleX;
 
-  const target = resolveEnemyBasicAttackTarget(
-    enemy,
-    allies,
-    enemies,
-    gameData,
-  );
-
+  const target = resolveEnemyBasicAttackTarget(enemy, allies, enemies, gameData);
   if (target) {
     const range = resolveMaxEffectiveRangePx(enemy, gameData);
     return target.battleX - range;

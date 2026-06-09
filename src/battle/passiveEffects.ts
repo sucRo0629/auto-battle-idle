@@ -200,16 +200,14 @@ export function syncHotAuras(
   for (const source of allies) {
     if (!source.isAlive) continue;
     for (const passive of getPassiveDefs(source, passives)) {
-      if (passive.effect !== 'hot' || !passive.hotAmount) {
+      if (
+        passive.effect !== 'hot' ||
+        !passive.hotAmount ||
+        passive.intervalSec !== undefined
+      ) {
         continue;
       }
-      const rule = passive.hotTargetRule ?? 'self';
-      const targets = pickTargets(rule, source, allies, enemies);
-      for (const target of targets) {
-        target.statusEffects.push(
-          createPassiveHotEffect(source, passive.id, passive.hotAmount),
-        );
-      }
+      applyPassiveHotFromPassive(source, passive, allies, enemies);
     }
   }
 }
@@ -257,8 +255,8 @@ export function syncDamageReductionAuras(
       if (passive.effect !== 'damageReduction') continue;
       const percent = passive.damageReductionPercent ?? 0;
       if (percent <= 0) continue;
-      const rule = passive.damageReductionTargetRule ?? 'self';
-      const targets = pickTargets(rule, source, allies, enemies);
+      const spec = passive.damageReductionTargetRule ?? { kind: 'self' as const };
+      const targets = pickTargets(spec, source, allies, enemies);
       for (const target of targets) {
         target.statusEffects.push(
           createPassiveDamageReductionEffect(source, passive.id, percent),
@@ -301,20 +299,58 @@ function createPassiveDamageReductionEffect(
   };
 }
 
+function resolvePassiveHotDurationSec(hotDurationSec: number | undefined): number {
+  if (hotDurationSec === undefined || hotDurationSec <= 0) {
+    return PASSIVE_AURA_DURATION_SEC;
+  }
+  return hotDurationSec;
+}
+
+function passiveHotEffectId(sourceId: string, passiveId: string): string {
+  return `passive_hot_${sourceId}_${passiveId}`;
+}
+
+export function applyPassiveHotFromPassive(
+  source: CombatantState,
+  passive: PassiveSkillDef,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+): void {
+  if (passive.effect !== 'hot' || !passive.hotAmount) return;
+  const spec = passive.hotTargetRule ?? { kind: 'self' as const };
+  const targets = pickTargets(spec, source, allies, enemies);
+  const durationSec = resolvePassiveHotDurationSec(passive.hotDurationSec);
+  const effectId = passiveHotEffectId(source.id, passive.id);
+  for (const target of targets) {
+    target.statusEffects = target.statusEffects.filter(
+      (effect) => effect.id !== effectId,
+    );
+    target.statusEffects.push(
+      createPassiveHotEffect(
+        source,
+        passive.id,
+        passive.hotAmount,
+        durationSec,
+      ),
+    );
+  }
+}
+
 function createPassiveHotEffect(
   source: CombatantState,
   passiveId: string,
   amount: ResourceAmountSpec,
+  durationSec: number = PASSIVE_AURA_DURATION_SEC,
 ): StatusEffect {
   return {
-    id: `passive_hot_${source.id}_${passiveId}`,
+    id: passiveHotEffectId(source.id, passiveId),
     kind: 'buff',
     overlay: 'hot',
     amount,
     sourceId: source.id,
     multiplier: 1,
-    durationSec: PASSIVE_AURA_DURATION_SEC,
-    remainingSec: PASSIVE_AURA_DURATION_SEC,
+    durationSec,
+    remainingSec: durationSec,
     tickSec: 1,
   };
 }
@@ -376,6 +412,53 @@ export function tickPeriodicDispelStates(
 }
 
 export function getPeriodicDispelReady(
+  before: PeriodicDispelPassiveState[],
+  after: PeriodicDispelPassiveState[],
+): string[] {
+  return getPeriodicPassiveReady(before, after);
+}
+
+export type PeriodicHotPassiveState = PeriodicDispelPassiveState;
+
+export function initializePeriodicHotStates(
+  unit: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): PeriodicHotPassiveState[] {
+  return getPassiveDefs(unit, passives)
+    .filter(
+      (passive) =>
+        passive.effect === 'hot' && passive.intervalSec !== undefined,
+    )
+    .map((passive) => ({
+      passiveId: passive.id,
+      remainingSec: 0,
+    }));
+}
+
+export function tickPeriodicHotStates(
+  states: PeriodicHotPassiveState[],
+  passives: Record<string, PassiveSkillDef>,
+  deltaTime: number,
+): PeriodicHotPassiveState[] {
+  return states.map((state) => {
+    const passive = passives[state.passiveId];
+    const interval = passive?.intervalSec ?? 1;
+    let remainingSec = state.remainingSec - deltaTime;
+    if (remainingSec <= 0) {
+      remainingSec = interval;
+    }
+    return { ...state, remainingSec };
+  });
+}
+
+export function getPeriodicHotReady(
+  before: PeriodicHotPassiveState[],
+  after: PeriodicHotPassiveState[],
+): string[] {
+  return getPeriodicPassiveReady(before, after);
+}
+
+function getPeriodicPassiveReady(
   before: PeriodicDispelPassiveState[],
   after: PeriodicDispelPassiveState[],
 ): string[] {

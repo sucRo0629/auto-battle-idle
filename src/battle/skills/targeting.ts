@@ -1,12 +1,5 @@
-import {
-  getEffectiveAtk,
-  getEffectiveDef,
-  getEffectiveReg,
-} from '../combatMath.ts';
-import { hasMatchingDebuff } from '../debuffMatching.ts';
 import type {
   CombatantState,
-  DebuffFilterTag,
   GameData,
   PassiveSkillDef,
   SkillEffectDef,
@@ -15,6 +8,7 @@ import type {
   SkillHitWave,
   TargetRule,
   TargetShape,
+  TargetSpec,
 } from '../types.ts';
 import {
   applyPowerStep,
@@ -26,10 +20,30 @@ import {
   getAttackablePool,
   resolveSkillRangePx,
 } from './rangeUtils.ts';
-import { pickThreatWeightedAlly } from '../threat.ts';
-import { getTargetPoolForRule } from './targetingPool.ts';
+import {
+  getEffectTarget,
+  getTargetPool,
+  isMultiTargetSpec,
+  normalizeTarget,
+  orderPoolByTarget,
+  pickTargetFromPool as pickTargetFromPoolSpec,
+} from './targetSpec.ts';
+import {
+  getTargetPoolForEffect,
+  getTargetPoolForRule,
+  getTargetPoolForSpec,
+} from './targetingPool.ts';
 
-export { getTargetPoolForRule } from './targetingPool.ts';
+export {
+  getTargetPoolForEffect,
+  getTargetPoolForRule,
+  getTargetPoolForSpec,
+} from './targetingPool.ts';
+export {
+  formatTargetLabel,
+  getEffectTarget,
+  normalizeTarget,
+} from './targetSpec.ts';
 
 export interface TargetRuleContext {
   actor: CombatantState;
@@ -38,27 +52,83 @@ export interface TargetRuleContext {
 }
 
 /** パッシブ targetRuleOverride は候補がいるときだけ適用（射手排除など） */
-export function resolveTargetRule(
+export function resolveTargetSpec(
   passives: PassiveSkillDef[],
-  defaultRule: TargetRule,
+  defaultSpec: TargetSpec,
   context?: TargetRuleContext,
-): TargetRule {
+): TargetSpec {
   for (let i = passives.length - 1; i >= 0; i--) {
     const override = passives[i].targetRuleOverride;
     if (!override) continue;
     if (context) {
-      const pool = getTargetPoolForRule(
-        override,
-        context.actor,
-        context.allies,
-        context.enemies,
-      );
+      const pool = getTargetPool(override, context.actor, context.allies, context.enemies);
       if (pool.length > 0) return override;
       continue;
     }
     return override;
   }
-  return defaultRule;
+  return defaultSpec;
+}
+
+/** @deprecated Use resolveTargetSpec */
+export function resolveTargetRule(
+  passives: PassiveSkillDef[],
+  defaultRule: TargetRule,
+  context?: TargetRuleContext,
+): TargetRule {
+  const defaultSpec = normalizeTarget(defaultRule);
+  const resolved = resolveTargetSpec(passives, defaultSpec, context);
+  return targetSpecToLegacyRule(resolved) ?? defaultRule;
+}
+
+function targetSpecToLegacyRule(spec: TargetSpec): TargetRule | null {
+  switch (spec.kind) {
+    case 'self':
+      return 'self';
+    case 'all':
+      return spec.side === 'ally' ? 'allAllies' : 'allEnemies';
+    case 'distance':
+      if (spec.side === 'ally' && spec.order === 'nearest') return 'closestAlly';
+      if (spec.side === 'enemy' && spec.order === 'nearest') return 'frontEnemy';
+      if (spec.side === 'enemy' && spec.order === 'farthest') return 'farthestEnemy';
+      return null;
+    case 'stat':
+      if (spec.side === 'ally' && spec.stat === 'hp' && spec.order === 'ratio') {
+        return 'mostDamagedAlly';
+      }
+      if (spec.side === 'enemy' && spec.stat === 'hp' && spec.order === 'lowest') {
+        return 'lowestHpEnemy';
+      }
+      if (spec.side === 'enemy' && spec.stat === 'hp' && spec.order === 'highest') {
+        return 'highestHpEnemy';
+      }
+      if (spec.side === 'enemy' && spec.stat === 'atk' && spec.order === 'highest') {
+        return 'highestAtkEnemy';
+      }
+      if (spec.side === 'enemy' && spec.stat === 'def' && spec.order === 'lowest') {
+        return 'lowestDefEnemy';
+      }
+      if (spec.side === 'enemy' && spec.stat === 'def' && spec.order === 'highest') {
+        return 'highestDefEnemy';
+      }
+      if (spec.side === 'enemy' && spec.stat === 'reg' && spec.order === 'lowest') {
+        return 'lowestRegEnemy';
+      }
+      if (spec.side === 'enemy' && spec.stat === 'reg' && spec.order === 'highest') {
+        return 'highestRegEnemy';
+      }
+      return null;
+    case 'attackType':
+      if (spec.ranged && !spec.physical && !spec.magic && !spec.melee) {
+        return 'rangedAttackingEnemy';
+      }
+      if (spec.magic && !spec.physical && !spec.ranged && !spec.melee) {
+        return 'magicAttackingEnemy';
+      }
+      return null;
+    case 'status':
+      return 'debuffedEnemy';
+  }
 }
 
 function livingAllies(allies: CombatantState[]): CombatantState[] {
@@ -70,78 +140,15 @@ function livingEnemies(enemies: CombatantState[]): CombatantState[] {
 }
 
 export function pickTargetFromPool(
-  rule: TargetRule,
+  specOrRule: TargetSpec | TargetRule,
   actor: CombatantState,
   pool: CombatantState[],
 ): CombatantState | null {
-  if (pool.length === 0) return null;
-
-  if (rule === 'self') {
-    return actor.isAlive ? actor : null;
-  }
-
-  if (actor.isEnemy) {
-    switch (rule) {
-      case 'closestAlly':
-        return pickThreatWeightedAlly(pool);
-      default:
-        return pool[0] ?? null;
-    }
-  }
-
-  if (rule === 'closestAlly') {
-    const others = pool.filter((unit) => unit.id !== actor.id);
-    if (others.length === 0) return null;
-    const actorX = getBattleX(actor);
-    return others.reduce((a, b) =>
-      Math.abs(getBattleX(a) - actorX) <= Math.abs(getBattleX(b) - actorX)
-        ? a
-        : b,
-    );
-  }
-
-  switch (rule) {
-    case 'frontEnemy':
-    case 'rangedAttackingEnemy':
-    case 'debuffedEnemy':
-      return pool.reduce((a, b) =>
-        getBattleX(a) >= getBattleX(b) ? a : b,
-      );
-    case 'lowestHpEnemy':
-      return pool.reduce((a, b) => (a.hp <= b.hp ? a : b));
-    case 'highestHpEnemy':
-      return pool.reduce((a, b) => (a.hp >= b.hp ? a : b));
-    case 'highestAtkEnemy':
-      return pool.reduce((a, b) =>
-        getEffectiveAtk(a) >= getEffectiveAtk(b) ? a : b,
-      );
-    case 'lowestDefEnemy':
-      return pool.reduce((a, b) =>
-        getEffectiveDef(a) <= getEffectiveDef(b) ? a : b,
-      );
-    case 'highestDefEnemy':
-      return pool.reduce((a, b) =>
-        getEffectiveDef(a) >= getEffectiveDef(b) ? a : b,
-      );
-    case 'lowestRegEnemy':
-      return pool.reduce((a, b) =>
-        getEffectiveReg(a) <= getEffectiveReg(b) ? a : b,
-      );
-    case 'highestRegEnemy':
-      return pool.reduce((a, b) =>
-        getEffectiveReg(a) >= getEffectiveReg(b) ? a : b,
-      );
-    case 'farthestEnemy':
-      return pool.reduce((a, b) =>
-        getBattleX(a) <= getBattleX(b) ? a : b,
-      );
-    case 'mostDamagedAlly':
-      return pool.reduce((a, b) =>
-        a.maxHp - a.hp >= b.maxHp - b.hp ? a : b,
-      );
-    default:
-      return pool[0] ?? null;
-  }
+  const spec =
+    typeof specOrRule === 'string'
+      ? normalizeTarget(specOrRule)
+      : specOrRule;
+  return pickTargetFromPoolSpec(spec, actor, pool);
 }
 
 export function isMultiTargetRule(rule: TargetRule): boolean {
@@ -149,37 +156,37 @@ export function isMultiTargetRule(rule: TargetRule): boolean {
 }
 
 export function pickTargets(
-  rule: TargetRule,
+  spec: TargetSpec,
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
 ): CombatantState[] {
-  const pool = getTargetPoolForRule(rule, actor, allies, enemies);
-  if (isMultiTargetRule(rule)) {
+  const pool = getTargetPool(spec, actor, allies, enemies);
+  if (isMultiTargetSpec(spec)) {
     return pool.filter((unit) => unit.isAlive);
   }
-  const target = pickTargetFromPool(rule, actor, pool);
+  const target = pickTargetFromPoolSpec(spec, actor, pool);
   return target?.isAlive ? [target] : [];
 }
 
 /** @deprecated 互換用。resolveEffectResolution を優先 */
 export function pickTarget(
-  rule: TargetRule,
+  spec: TargetSpec,
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
 ): CombatantState | null {
-  const pool = getTargetPoolForRule(rule, actor, allies, enemies);
-  return pickTargetFromPool(rule, actor, pool);
+  const pool = getTargetPool(spec, actor, allies, enemies);
+  return pickTargetFromPoolSpec(spec, actor, pool);
 }
 
 function resolveAoeHitTargets(
-  rule: TargetRule,
+  spec: TargetSpec,
   actor: CombatantState,
   attackablePool: CombatantState[],
   aoeRadiusPx: number,
 ): SkillHitTarget[] {
-  const anchor = pickTargetFromPool(rule, actor, attackablePool);
+  const anchor = pickTargetFromPoolSpec(spec, actor, attackablePool);
   if (!anchor) return [];
 
   const anchorX = getBattleX(anchor);
@@ -188,82 +195,225 @@ function resolveAoeHitTargets(
     .map((unit) => ({ unit }));
 }
 
-function orderPoolByRule(
-  rule: TargetRule,
-  actor: CombatantState,
-  pool: CombatantState[],
-): CombatantState[] {
-  if (pool.length <= 1) return [...pool];
-
-  const copy = [...pool];
-  if (rule === 'self') return copy;
-
-  if (actor.isEnemy) {
-    if (rule === 'closestAlly') {
-      return copy.sort((a, b) => (b.threat ?? 0) - (a.threat ?? 0));
+function getBaseAtkScale(effect: SkillEffectDef): number | undefined {
+  if (effect.type === 'damage' || effect.type === 'heal') {
+    if (effect.amount.kind === 'atkBased') {
+      return effect.amount.atkScale ?? 1;
     }
-    return copy;
+  }
+  return undefined;
+}
+
+function resolveEffectTargetSpec(
+  effect: SkillEffectDef,
+  actor: CombatantState,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  passives?: PassiveSkillDef[],
+): TargetSpec {
+  const defaultSpec = getEffectTarget(effect);
+  if (!passives || passives.length === 0) return defaultSpec;
+  return resolveTargetSpec(passives, defaultSpec, { actor, allies, enemies });
+}
+
+/** move は射程外でも anchor を選ぶ */
+export function resolveEffectAnchor(
+  effect: SkillEffectDef,
+  actor: CombatantState,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  passives?: PassiveSkillDef[],
+): CombatantState | null {
+  const spec = resolveEffectTargetSpec(effect, actor, allies, enemies, passives);
+  if (effect.type === 'move') {
+    const pool = getTargetPool(spec, actor, allies, enemies);
+    return pickTargetFromPoolSpec(spec, actor, pool);
+  }
+  const resolution = resolveEffectResolution(
+    effect,
+    actor,
+    allies,
+    enemies,
+    gameData,
+    Math.random,
+    passives,
+  );
+  return resolution?.waves[0]?.targets[0]?.unit ?? null;
+}
+
+export function resolveEffectResolution(
+  effect: SkillEffectDef,
+  actor: CombatantState,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  rand: () => number = Math.random,
+  passives?: PassiveSkillDef[],
+): SkillEffectResolution | null {
+  const spec = resolveEffectTargetSpec(effect, actor, allies, enemies, passives);
+
+  if (effect.type === 'move') {
+    const pool = getTargetPool(spec, actor, allies, enemies);
+    const target = pickTargetFromPoolSpec(spec, actor, pool);
+    if (!target) return null;
+    return {
+      waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
+    };
   }
 
-  if (rule === 'closestAlly') {
-    const actorX = getBattleX(actor);
-    return copy
-      .filter((unit) => unit.id !== actor.id)
-      .sort(
-        (a, b) =>
-          Math.abs(getBattleX(a) - actorX) - Math.abs(getBattleX(b) - actorX),
-      );
+  const rangePx = resolveSkillRangePx(actor, effect);
+  const attackablePool = getAttackablePool(spec, actor, allies, enemies, rangePx);
+  const shape: TargetShape = effect.targetShape ?? 'single';
+  const basePower = getBaseAtkScale(effect);
+
+  if (shape === 'single') {
+    if (isMultiTargetSpec(spec)) {
+      const targets = attackablePool
+        .filter((unit) => unit.isAlive)
+        .map((unit) => ({ unit }));
+      if (targets.length === 0) return null;
+      const hits = effect.hitCount;
+      if (hits === undefined || hits < 2) {
+        return { waves: [{ hitIndex: 0, targets }] };
+      }
+      const duration = effect.hitDurationSec;
+      if (duration === undefined || duration <= 0) return null;
+      return resolveRepeatedHitWaves(targets, hits, duration);
+    }
+
+    const target = pickTargetFromPoolSpec(spec, actor, attackablePool);
+    if (!target) return null;
+    const hits = effect.hitCount;
+    if (hits === undefined || hits < 2) {
+      return {
+        waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
+      };
+    }
+    const duration = effect.hitDurationSec;
+    if (duration === undefined || duration <= 0) return null;
+    return resolveRepeatedHitWaves([{ unit: target }], hits, duration);
   }
 
-  switch (rule) {
-    case 'frontEnemy':
-    case 'rangedAttackingEnemy':
-    case 'debuffedEnemy':
-      return copy.sort((a, b) => getBattleX(b) - getBattleX(a));
-    case 'farthestEnemy':
-      return copy.sort((a, b) => getBattleX(a) - getBattleX(b));
-    case 'lowestHpEnemy':
-      return copy.sort((a, b) => a.hp - b.hp);
-    case 'highestHpEnemy':
-      return copy.sort((a, b) => b.hp - a.hp);
-    case 'highestAtkEnemy':
-      return copy.sort(
-        (a, b) => getEffectiveAtk(b) - getEffectiveAtk(a),
-      );
-    case 'lowestDefEnemy':
-      return copy.sort(
-        (a, b) => getEffectiveDef(a) - getEffectiveDef(b),
-      );
-    case 'highestDefEnemy':
-      return copy.sort(
-        (a, b) => getEffectiveDef(b) - getEffectiveDef(a),
-      );
-    case 'lowestRegEnemy':
-      return copy.sort(
-        (a, b) => getEffectiveReg(a) - getEffectiveReg(b),
-      );
-    case 'highestRegEnemy':
-      return copy.sort(
-        (a, b) => getEffectiveReg(b) - getEffectiveReg(a),
-      );
-    case 'mostDamagedAlly':
-      return copy.sort(
-        (a, b) => b.maxHp - b.hp - (a.maxHp - a.hp),
-      );
-    default:
-      return copy.sort((a, b) => getBattleX(a) - getBattleX(b));
+  if (shape === 'aoe') {
+    const radius = effect.aoeRadiusPx;
+    if (radius === undefined || radius <= 0) return null;
+    const targets = resolveAoeHitTargets(spec, actor, attackablePool, radius);
+    if (targets.length === 0) return null;
+    const hits = effect.hitCount;
+    if (hits === undefined || hits < 2) {
+      return { waves: [{ hitIndex: 0, targets }] };
+    }
+    const duration = effect.hitDurationSec;
+    if (duration === undefined || duration <= 0) return null;
+    return resolveRepeatedHitWaves(targets, hits, duration);
   }
+
+  if (shape === 'multiLock') {
+    const hits = effect.hitCount;
+    if (hits === undefined || hits < 2) return null;
+    const targets = resolveMultiLockHitTargets(
+      spec,
+      actor,
+      attackablePool,
+      hits,
+    );
+    if (targets.length === 0) return null;
+    return { waves: [{ hitIndex: 0, targets }] };
+  }
+
+  if (shape === 'pierce') {
+    const targets = resolvePierceHitTargets(
+      actor,
+      attackablePool,
+      rangePx,
+      basePower,
+      effect,
+    );
+    if (targets.length === 0) return null;
+
+    const duration = effect.pierceDurationSec;
+    if (duration !== undefined && duration > 0 && targets.length > 1) {
+      return {
+        spreadDurationSec: duration,
+        waves: targets.map((entry, hitIndex) => ({
+          hitIndex,
+          targets: [entry],
+        })),
+      };
+    }
+    return { waves: [{ hitIndex: 0, targets }] };
+  }
+
+  if (shape === 'chain') {
+    const count = effect.chainCount;
+    const maxDist = effect.chainMaxDistancePx;
+    if (count === undefined || count < 1 || maxDist === undefined || maxDist <= 0) {
+      return null;
+    }
+    const targets = resolveChainHitTargets(
+      spec,
+      actor,
+      attackablePool,
+      allies,
+      enemies,
+      count,
+      maxDist,
+      basePower,
+      effect,
+    );
+    if (targets.length === 0) return null;
+    return {
+      waves: targets.map((entry, hitIndex) => ({
+        hitIndex,
+        targets: [entry],
+      })),
+    };
+  }
+
+  if (shape === 'scatter') {
+    const radius = effect.scatterRadiusPx;
+    const hitCount = effect.scatterHitCount;
+    const duration = effect.scatterDurationSec;
+    if (
+      radius === undefined ||
+      radius <= 0 ||
+      hitCount === undefined ||
+      hitCount < 2 ||
+      duration === undefined ||
+      duration <= 0
+    ) {
+      return null;
+    }
+    const spreadRate = effect.scatterSpreadRate ?? 1;
+    const spreadRadiusPx = effect.scatterSpreadRadiusPx ?? radius;
+    const waves = resolveScatterWaves(
+      spec,
+      actor,
+      attackablePool,
+      spreadRadiusPx,
+      radius,
+      hitCount,
+      spreadRate,
+      rand,
+    );
+    const hasAny = waves.some((wave) => wave.targets.length > 0);
+    if (!hasAny) return null;
+    return { spreadDurationSec: duration, waves };
+  }
+
+  return null;
 }
 
 function resolveMultiLockHitTargets(
-  rule: TargetRule,
+  spec: TargetSpec,
   actor: CombatantState,
   attackablePool: CombatantState[],
   hitCount: number,
 ): SkillHitTarget[] {
   if (attackablePool.length === 0) return [];
 
-  const ordered = orderPoolByRule(rule, actor, attackablePool);
+  const ordered = orderPoolByTarget(spec, actor, attackablePool);
   const targets: SkillHitTarget[] = [];
   for (let i = 0; i < hitCount; i++) {
     targets.push({ unit: ordered[i % ordered.length]! });
@@ -298,7 +448,7 @@ function resolvePierceHitTargets(
 }
 
 function resolveChainHitTargets(
-  rule: TargetRule,
+  spec: TargetSpec,
   actor: CombatantState,
   attackablePool: CombatantState[],
   allies: CombatantState[],
@@ -309,8 +459,8 @@ function resolveChainHitTargets(
   effect: SkillEffectDef,
 ): SkillHitTarget[] {
   const result: SkillHitTarget[] = [];
-  let current: CombatantState | null = pickTargetFromPool(
-    rule,
+  let current: CombatantState | null = pickTargetFromPoolSpec(
+    spec,
     actor,
     attackablePool,
   );
@@ -365,7 +515,7 @@ function resolveRepeatedHitWaves(
 }
 
 function resolveScatterWaves(
-  rule: TargetRule,
+  spec: TargetSpec,
   actor: CombatantState,
   attackablePool: CombatantState[],
   spreadRadiusPx: number,
@@ -374,7 +524,7 @@ function resolveScatterWaves(
   spreadRate: number,
   rand: () => number,
 ): SkillHitWave[] {
-  const anchor = pickTargetFromPool(rule, actor, attackablePool);
+  const anchor = pickTargetFromPoolSpec(spec, actor, attackablePool);
   if (!anchor) return [];
 
   const anchorX = getBattleX(anchor);
@@ -394,232 +544,12 @@ function resolveScatterWaves(
   return waves;
 }
 
-function filterPoolByDebuffTags(
-  pool: CombatantState[],
-  tags: DebuffFilterTag[] | undefined,
-): CombatantState[] {
-  if (!tags || tags.length === 0) return [];
-  return pool.filter((unit) => hasMatchingDebuff(unit, tags));
-}
-
-function applyDebuffTargetFilter(
-  effect: SkillEffectDef,
-  rule: TargetRule,
-  pool: CombatantState[],
-): CombatantState[] {
-  if (rule !== 'debuffedEnemy') return pool;
-  return filterPoolByDebuffTags(pool, effect.targetDebuffFilter);
-}
-
-function getBaseAtkScale(effect: SkillEffectDef): number | undefined {
-  if (effect.type === 'damage' || effect.type === 'heal') {
-    if (effect.amount.kind === 'atkBased') {
-      return effect.amount.atkScale ?? 1;
-    }
-  }
-  return undefined;
-}
-
-/** move は射程外でも anchor を選ぶ */
-export function resolveEffectAnchor(
-  effect: SkillEffectDef,
-  rule: TargetRule,
-  actor: CombatantState,
-  allies: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-): CombatantState | null {
-  if (effect.type === 'move') {
-    const pool = getTargetPoolForRule(rule, actor, allies, enemies);
-    return pickTargetFromPool(rule, actor, pool);
-  }
-  const resolution = resolveEffectResolution(
-    effect,
-    rule,
-    actor,
-    allies,
-    enemies,
-    gameData,
-  );
-  return resolution?.waves[0]?.targets[0]?.unit ?? null;
-}
-
-export function resolveEffectResolution(
-  effect: SkillEffectDef,
-  rule: TargetRule,
-  actor: CombatantState,
-  allies: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-  rand: () => number = Math.random,
-): SkillEffectResolution | null {
-  if (effect.type === 'move') {
-    const pool = applyDebuffTargetFilter(
-      effect,
-      rule,
-      getTargetPoolForRule(rule, actor, allies, enemies),
-    );
-    const target = pickTargetFromPool(rule, actor, pool);
-    if (!target) return null;
-    return {
-      waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
-    };
-  }
-
-  const rangePx = resolveSkillRangePx(actor, effect);
-  const attackablePool = applyDebuffTargetFilter(
-    effect,
-    rule,
-    getAttackablePool(rule, actor, allies, enemies, rangePx),
-  );
-  const shape: TargetShape = effect.targetShape ?? 'single';
-  const basePower = getBaseAtkScale(effect);
-
-  if (shape === 'single') {
-    if (isMultiTargetRule(rule)) {
-      const targets = attackablePool
-        .filter((unit) => unit.isAlive)
-        .map((unit) => ({ unit }));
-      if (targets.length === 0) return null;
-      const hits = effect.hitCount;
-      if (hits === undefined || hits < 2) {
-        return { waves: [{ hitIndex: 0, targets }] };
-      }
-      const duration = effect.hitDurationSec;
-      if (duration === undefined || duration <= 0) return null;
-      return resolveRepeatedHitWaves(targets, hits, duration);
-    }
-
-    const target = pickTargetFromPool(rule, actor, attackablePool);
-    if (!target) return null;
-    const hits = effect.hitCount;
-    if (hits === undefined || hits < 2) {
-      return {
-        waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
-      };
-    }
-    const duration = effect.hitDurationSec;
-    if (duration === undefined || duration <= 0) return null;
-    return resolveRepeatedHitWaves([{ unit: target }], hits, duration);
-  }
-
-  if (shape === 'aoe') {
-    const radius = effect.aoeRadiusPx;
-    if (radius === undefined || radius <= 0) return null;
-    const targets = resolveAoeHitTargets(rule, actor, attackablePool, radius);
-    if (targets.length === 0) return null;
-    const hits = effect.hitCount;
-    if (hits === undefined || hits < 2) {
-      return { waves: [{ hitIndex: 0, targets }] };
-    }
-    const duration = effect.hitDurationSec;
-    if (duration === undefined || duration <= 0) return null;
-    return resolveRepeatedHitWaves(targets, hits, duration);
-  }
-
-  if (shape === 'multiLock') {
-    const hits = effect.hitCount;
-    if (hits === undefined || hits < 2) return null;
-    const targets = resolveMultiLockHitTargets(
-      rule,
-      actor,
-      attackablePool,
-      hits,
-    );
-    if (targets.length === 0) return null;
-    return { waves: [{ hitIndex: 0, targets }] };
-  }
-
-  if (shape === 'pierce') {
-    const targets = resolvePierceHitTargets(
-      actor,
-      attackablePool,
-      rangePx,
-      basePower,
-      effect,
-    );
-    if (targets.length === 0) return null;
-
-    const duration = effect.pierceDurationSec;
-    if (duration !== undefined && duration > 0 && targets.length > 1) {
-      return {
-        spreadDurationSec: duration,
-        waves: targets.map((entry, hitIndex) => ({
-          hitIndex,
-          targets: [entry],
-        })),
-      };
-    }
-    return { waves: [{ hitIndex: 0, targets }] };
-  }
-
-  if (shape === 'chain') {
-    const count = effect.chainCount;
-    const maxDist = effect.chainMaxDistancePx;
-    if (count === undefined || count < 1 || maxDist === undefined || maxDist <= 0) {
-      return null;
-    }
-    const targets = resolveChainHitTargets(
-      rule,
-      actor,
-      attackablePool,
-      allies,
-      enemies,
-      count,
-      maxDist,
-      basePower,
-      effect,
-    );
-    if (targets.length === 0) return null;
-    return {
-      waves: targets.map((entry, hitIndex) => ({
-        hitIndex,
-        targets: [entry],
-      })),
-    };
-  }
-
-  if (shape === 'scatter') {
-    const radius = effect.scatterRadiusPx;
-    const hitCount = effect.scatterHitCount;
-    const duration = effect.scatterDurationSec;
-    if (
-      radius === undefined ||
-      radius <= 0 ||
-      hitCount === undefined ||
-      hitCount < 2 ||
-      duration === undefined ||
-      duration <= 0
-    ) {
-      return null;
-    }
-    const spreadRate = effect.scatterSpreadRate ?? 1;
-    const spreadRadiusPx = effect.scatterSpreadRadiusPx ?? radius;
-    const waves = resolveScatterWaves(
-      rule,
-      actor,
-      attackablePool,
-      spreadRadiusPx,
-      radius,
-      hitCount,
-      spreadRate,
-      rand,
-    );
-    const hasAny = waves.some((wave) => wave.targets.length > 0);
-    if (!hasAny) return null;
-    return { spreadDurationSec: duration, waves };
-  }
-
-  return null;
-}
-
 /** @deprecated 互換用。即時適用分のフラット target 一覧 */
 export function resolveEffectTargets(
   effect: Pick<
     SkillEffectDef,
     'targetShape' | 'aoeRadiusPx' | 'hitCount' | 'range'
-  >,
-  rule: TargetRule,
+  > & { target?: TargetSpec; targetRule?: TargetRule; targetDebuffFilter?: import('../types.ts').DebuffFilterTag[] },
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
@@ -627,7 +557,6 @@ export function resolveEffectTargets(
 ): CombatantState[] {
   const resolution = resolveEffectResolution(
     effect as SkillEffectDef,
-    rule,
     actor,
     allies,
     enemies,

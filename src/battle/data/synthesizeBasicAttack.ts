@@ -17,7 +17,9 @@ function synthesizedDamageEffect(
   amount: ResourceAmountSpec,
 ): DamageSkillEffect {
   return {
-    targetRule: isEnemy ? 'closestAlly' : 'frontEnemy',
+    target: isEnemy
+      ? { kind: 'distance', side: 'ally', order: 'nearest' }
+      : { kind: 'distance', side: 'enemy', order: 'nearest' },
     type: 'damage',
     amount,
   };
