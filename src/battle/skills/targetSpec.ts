@@ -330,7 +330,7 @@ export function pickTargetFromPool(
   }
 
   if (actor.isEnemy) {
-    if (spec.kind === 'distance' && spec.side === 'ally' && spec.order === 'nearest') {
+    if (spec.kind === 'distance' && spec.side === 'enemy' && spec.order === 'nearest') {
       return pickThreatWeightedAlly(pool);
     }
     return pool[0] ?? null;
@@ -393,7 +393,7 @@ export function orderPoolByTarget(
   const copy = [...pool];
   if (spec.kind === 'self' || spec.kind === 'all') return copy;
 
-  if (actor.isEnemy && spec.kind === 'distance' && spec.side === 'ally' && spec.order === 'nearest') {
+  if (actor.isEnemy && spec.kind === 'distance' && spec.side === 'enemy' && spec.order === 'nearest') {
     return copy.sort((a, b) => (b.threat ?? 0) - (a.threat ?? 0));
   }
 

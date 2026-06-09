@@ -44,6 +44,8 @@
 
 **原則:** 回復後の HP は `min(maxHp, hp + amount)` — 超過分は切り捨て。
 
+**アクティブ heal / hot の発動保留:** 射程内の対象候補（`self` のときは自身）に **欠損 HP（`hp < maxHp`）の味方が 1 人もいない場合は発動しない**（CD 進行なし）。パッシブ由来の HoT aura / 定期 tick は対象外。`target` の `order: ratio` で同率タイのときはプール先頭が選ばれる（実 HP のタイブレークなし）— 保留ルール適用後、全員満タン時には通常到達しない。
+
 **余剰回復バリア変換**（パッシブ `excessHealToBarrier`）: 試行回復量のうち maxHp 超過分 × `barrierScale` を **バリア上書き**（`barrierStack` なし）。
 
 **特効ダメージ**（パッシブ `damageIncrease` + effect `damageIncrease`）: **直接 `heal` のみ**に乗算（`damage` と同式の条件判定）。**HoT tick には非適用**（`damage` 直接のみ / DoT tick あり、という攻撃側の対比と同様）。

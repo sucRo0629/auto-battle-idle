@@ -126,6 +126,17 @@ describe('getTargetPool / pickTargetFromPool', () => {
     expect(pool.map((u) => u.id)).toEqual(['e3']);
   });
 
+  it('enemy basic attack pools and picks player allies', () => {
+    const enemyActor = mockUnit('e1', 300, { isEnemy: true });
+    const guard = mockUnit('guard', 200, { threat: 80 });
+    const healer = mockUnit('healer', 250, { threat: 20 });
+    const spec = { kind: 'distance', side: 'enemy', order: 'nearest' } as const;
+    const pool = getTargetPool(spec, enemyActor, [guard, healer], [enemyActor]);
+    expect(pool.map((u) => u.id).sort()).toEqual(['guard', 'healer']);
+    const picked = pickTargetFromPool(spec, enemyActor, pool);
+    expect(['guard', 'healer']).toContain(picked?.id);
+  });
+
   it('filters by debuff status', () => {
     const debuffed = mockUnit('e2', 40, {
       isEnemy: true,

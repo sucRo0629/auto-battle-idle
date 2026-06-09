@@ -20,14 +20,14 @@ describe('synthesizeBasicAttackSkill', () => {
     expect(skill.vfx).toBeUndefined();
   });
 
-  it('synthesizes enemy basic with closestAlly', () => {
+  it('synthesizes enemy basic targeting opposing faction (player allies)', () => {
     const skill = synthesizeBasicAttackSkill({
       entityId: 'test_enemy',
       isEnemy: true,
       traits: normalizeEntityTraits({}),
       attackSpeedTier: 'normal',
     });
-    expect(skill.effect[0]?.target).toEqual({ kind: "distance", side: "ally", order: "nearest" });
+    expect(skill.effect[0]?.target).toEqual({ kind: "distance", side: "enemy", order: "nearest" });
   });
 
   it('merges atkScale override from JSON', () => {

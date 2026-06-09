@@ -119,7 +119,7 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       break;
     case 'periodicDispel':
       passive.intervalSec ??= 5;
-      passive.dispelTargetRule ??= 'self';
+      passive.dispelTargetRule ??= { kind: 'self' };
       passive.dispelCount ??= 0;
       break;
     case 'damageTakenToHeal':
@@ -132,7 +132,7 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.hotDurationSec ??= 0;
       break;
     case 'damageReduction':
-      passive.damageReductionTargetRule ??= 'self';
+      passive.damageReductionTargetRule ??= { kind: 'self' };
       passive.damageReductionPercent ??= 0.2;
       break;
     case 'excessHealToBarrier':

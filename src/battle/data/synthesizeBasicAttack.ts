@@ -13,13 +13,10 @@ export function defaultBasicAttackId(entityId: string): string {
 }
 
 function synthesizedDamageEffect(
-  isEnemy: boolean,
   amount: ResourceAmountSpec,
 ): DamageSkillEffect {
   return {
-    target: isEnemy
-      ? { kind: 'distance', side: 'ally', order: 'nearest' }
-      : { kind: 'distance', side: 'enemy', order: 'nearest' },
+    target: { kind: 'distance', side: 'enemy', order: 'nearest' },
     type: 'damage',
     amount,
   };
@@ -53,7 +50,7 @@ export function synthesizeBasicAttackSkill(params: {
     id,
     name: displayName ?? (isEnemy ? entityId : '打撃'),
     interval: DEFAULT_BASIC_ATTACK_INTERVAL_SEC,
-    effect: [synthesizedDamageEffect(isEnemy, amount)],
+    effect: [synthesizedDamageEffect(amount)],
   };
 
   if (!jsonOverride) return synthesized;
@@ -66,7 +63,7 @@ export function synthesizeBasicAttackSkill(params: {
     trigger: jsonOverride.trigger,
     iconKey: jsonOverride.iconKey,
     effect: [
-      synthesizedDamageEffect(isEnemy, amount),
+      synthesizedDamageEffect(amount),
       ...jsonOverride.effect.slice(1),
     ],
   };

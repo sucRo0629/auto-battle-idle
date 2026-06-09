@@ -15,7 +15,7 @@ import {
   TARGET_STAT_OPTIONS,
   TARGET_STAT_ORDER_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
-import { formatTargetLabel } from '../battle/skills/targetSpec.ts';
+import { formatTargetLabel, normalizeTarget } from '../battle/skills/targetSpec.ts';
 import type {
   BuffFilterTag,
   DamageIncreaseCondition,
@@ -410,7 +410,7 @@ export function appendPassiveDamageReductionFields(
     (damageReductionTargetRule) => {
       patchPassive((current) => {
         current.damageReductionTargetRule = damageReductionTargetRule;
-      });
+      }, { rerender: true });
     },
   );
   parent.appendChild(
@@ -479,7 +479,7 @@ export function appendPassiveHotFields(
     (hotTargetRule) => {
       patchPassive((current) => {
         current.hotTargetRule = hotTargetRule;
-      });
+      }, { rerender: true });
     },
   );
   appendResourceAmountFields(
@@ -521,7 +521,7 @@ export function appendPassiveDispelFields(
     (dispelTargetRule) => {
       patchPassive((current) => {
         current.dispelTargetRule = dispelTargetRule;
-      });
+      }, { rerender: true });
     },
   );
   parent.appendChild(
@@ -607,7 +607,8 @@ export function appendTargetSpecFields(
   onChange: (target: TargetSpec) => void,
 ): void {
   const wrap = createEl('div', 'editor-target-spec-fields');
-  const kind = targetSpecKind(target);
+  const normalized = normalizeTarget(target);
+  const kind = targetSpecKind(normalized);
 
   wrap.appendChild(
     createFieldRow(
@@ -623,17 +624,17 @@ export function appendTargetSpecFields(
     ),
   );
 
-  if (target.kind === 'distance') {
+  if (normalized.kind === 'distance') {
     wrap.appendChild(
       createFieldRow(
         '距離',
         createSelect(
-          target.order,
+          normalized.order,
           TARGET_DISTANCE_ORDER_OPTIONS.map((value) => ({
             value,
             label: TARGET_DISTANCE_ORDER_LABELS[value],
           })),
-          (order) => onChange({ ...target, order }),
+          (order) => onChange({ ...normalized, order }),
         ),
       ),
     );
@@ -641,28 +642,28 @@ export function appendTargetSpecFields(
       createFieldRow(
         '対象側',
         createSelect(
-          target.side,
+          normalized.side,
           (['ally', 'enemy'] as const).map((value) => ({
             value,
             label: TARGET_SIDE_LABELS[value],
           })),
-          (side) => onChange({ ...target, side }),
+          (side) => onChange({ ...normalized, side }),
         ),
       ),
     );
   }
 
-  if (target.kind === 'stat') {
+  if (normalized.kind === 'stat') {
     wrap.appendChild(
       createFieldRow(
         '対象側',
         createSelect(
-          target.side,
+          normalized.side,
           (['ally', 'enemy'] as const).map((value) => ({
             value,
             label: TARGET_SIDE_LABELS[value],
           })),
-          (side) => onChange({ ...target, side }),
+          (side) => onChange({ ...normalized, side }),
         ),
       ),
     );
@@ -670,40 +671,45 @@ export function appendTargetSpecFields(
       createFieldRow(
         'ステータス',
         createSelect(
-          target.stat,
+          normalized.stat,
           TARGET_STAT_OPTIONS.map((value) => ({
             value,
             label: TARGET_STAT_LABELS[value],
           })),
           (stat) =>
             onChange({
-              ...target,
+              ...normalized,
               stat,
-              order: stat === 'hp' ? target.order : target.order === 'ratio' ? 'lowest' : target.order,
+              order:
+                stat === 'hp'
+                  ? normalized.order
+                  : normalized.order === 'ratio'
+                    ? 'lowest'
+                    : normalized.order,
             }),
         ),
       ),
     );
     const orderOptions =
-      target.stat === 'hp'
+      normalized.stat === 'hp'
         ? TARGET_STAT_ORDER_OPTIONS
         : TARGET_STAT_ORDER_OPTIONS.filter((value) => value !== 'ratio');
     wrap.appendChild(
       createFieldRow(
         '順序',
         createSelect(
-          target.order,
+          normalized.order,
           orderOptions.map((value) => ({
             value,
             label: TARGET_STAT_ORDER_LABELS[value],
           })),
-          (order) => onChange({ ...target, order }),
+          (order) => onChange({ ...normalized, order }),
         ),
       ),
     );
   }
 
-  if (target.kind === 'attackType') {
+  if (normalized.kind === 'attackType') {
     const attackRow = createEl('div', 'editor-debuff-tag-checkboxes');
     for (const [key, label] of [
       ['physical', '物理'],
@@ -714,9 +720,9 @@ export function appendTargetSpecFields(
       const row = createEl('div', 'editor-field editor-field-checkbox');
       const input = createEl('input') as HTMLInputElement;
       input.type = 'checkbox';
-      input.checked = target[key] === true;
+      input.checked = normalized[key] === true;
       input.addEventListener('change', () => {
-        const next = { ...target, [key]: input.checked ? true : undefined };
+        const next = { ...normalized, [key]: input.checked ? true : undefined };
         const hasAny =
           next.physical || next.magic || next.melee || next.ranged;
         if (hasAny) onChange(next);
@@ -728,51 +734,51 @@ export function appendTargetSpecFields(
     wrap.appendChild(attackRow);
   }
 
-  if (target.kind === 'status') {
+  if (normalized.kind === 'status') {
     wrap.appendChild(
       createFieldRow(
         '対象側',
         createSelect(
-          target.side ?? 'enemy',
+          normalized.side ?? 'enemy',
           (['ally', 'enemy'] as const).map((value) => ({
             value,
             label: TARGET_SIDE_LABELS[value],
           })),
-          (side) => onChange({ ...target, side }),
+          (side) => onChange({ ...normalized, side }),
         ),
       ),
     );
     appendStatusTagCheckboxes(
       wrap,
-      target.debuffTags ?? [],
-      target.buffTags ?? [],
+      normalized.debuffTags ?? [],
+      normalized.buffTags ?? [],
       (debuffTags, buffTags) =>
         onChange({
-          ...target,
+          ...normalized,
           debuffTags: debuffTags.length > 0 ? debuffTags : undefined,
           buffTags: buffTags.length > 0 ? buffTags : undefined,
         }),
     );
   }
 
-  if (target.kind === 'all') {
+  if (normalized.kind === 'all') {
     wrap.appendChild(
       createFieldRow(
         '対象側',
         createSelect(
-          target.side,
+          normalized.side,
           (['ally', 'enemy'] as const).map((value) => ({
             value,
             label: value === 'ally' ? '味方全員' : '敵全員',
           })),
-          (side) => onChange({ ...target, side }),
+          (side) => onChange({ ...normalized, side }),
         ),
       ),
     );
   }
 
   wrap.appendChild(
-    createEl('p', 'editor-hint', `プレビュー: ${formatTargetLabel(target)}`),
+    createEl('p', 'editor-hint', `プレビュー: ${formatTargetLabel(normalized)}`),
   );
   parent.appendChild(wrap);
 }

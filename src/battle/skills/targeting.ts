@@ -204,6 +204,21 @@ function getBaseAtkScale(effect: SkillEffectDef): number | undefined {
   return undefined;
 }
 
+/** アクティブ heal / hot: 射程内候補に欠損 HP の味方がいなければ発動保留 */
+function hasDamagedHealCandidate(
+  spec: TargetSpec,
+  actor: CombatantState,
+  attackablePool: CombatantState[],
+): boolean {
+  const candidates =
+    spec.kind === 'self'
+      ? actor.isAlive
+        ? [actor]
+        : []
+      : attackablePool.filter((unit) => unit.isAlive);
+  return candidates.some((unit) => unit.hp < unit.maxHp);
+}
+
 function resolveEffectTargetSpec(
   effect: SkillEffectDef,
   actor: CombatantState,
@@ -266,6 +281,13 @@ export function resolveEffectResolution(
   const attackablePool = getAttackablePool(spec, actor, allies, enemies, rangePx);
   const shape: TargetShape = effect.targetShape ?? 'single';
   const basePower = getBaseAtkScale(effect);
+
+  if (
+    (effect.type === 'heal' || effect.type === 'hot') &&
+    !hasDamagedHealCandidate(spec, actor, attackablePool)
+  ) {
+    return null;
+  }
 
   if (shape === 'single') {
     if (isMultiTargetSpec(spec)) {
