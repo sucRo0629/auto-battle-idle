@@ -32,15 +32,18 @@ import {
 import { isUnitStunned } from "./ccEffects.ts";
 import {
   applyDamageTakenToHeal,
+  resolveIncomingHealAmount,
   getPeriodicDispelReady,
   initializeCountTriggerCooldowns,
   initializePeriodicDispelStates,
-  syncPartyHotAuras,
+  syncHotAuras,
+  syncBlockAuras,
+  syncDamageReductionAuras,
   tickPeriodicDispelStates,
   type PeriodicDispelPassiveState,
 } from "./passiveEffects.ts";
 import { dispelDebuffsOnTarget } from "./debuffDispel.ts";
-import { pickTarget } from "./skills/targeting.ts";
+import { pickTargets } from "./skills/targeting.ts";
 import {
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
@@ -218,7 +221,9 @@ export class BattleEngine {
     const passives = this.gameData.skillRegistry.passives;
     const actives = this.gameData.skillRegistry.actives;
     initializeAllyThreat(this.allies);
-    syncPartyHotAuras(this.allies, passives);
+    syncHotAuras(this.allies, this.enemies, passives);
+    syncBlockAuras(this.allies, this.enemies, passives);
+    syncDamageReductionAuras(this.allies, this.enemies, passives);
     this.periodicDispelStates.clear();
     for (const unit of [...this.allies, ...this.enemies]) {
       initializeCountTriggerCooldowns(unit, actives);
@@ -1021,14 +1026,15 @@ export class BattleEngine {
         const passive = passives[passiveId];
         if (!passive || passive.effect !== 'periodicDispel') continue;
         const rule = passive.dispelTargetRule ?? 'self';
-        const target = pickTarget(rule, actor, this.allies, this.enemies);
-        if (!target) continue;
-        dispelDebuffsOnTarget(
-          target,
-          passive.dispelCount ?? 0,
-          passive.dispelTags,
-          actor.id,
-        );
+        const targets = pickTargets(rule, actor, this.allies, this.enemies);
+        for (const target of targets) {
+          dispelDebuffsOnTarget(
+            target,
+            passive.dispelCount ?? 0,
+            passive.dispelTags,
+            actor.id,
+          );
+        }
       }
     }
   }
@@ -1088,7 +1094,8 @@ export class BattleEngine {
     const skillName = skill?.name ?? effect.overlay ?? "";
 
     if (effect.overlay === "hot") {
-      const amount = resolveHotAmountFromStatus(source, target, effect, passives);
+      const baseAmount = resolveHotAmountFromStatus(source, target, effect, passives);
+      const amount = resolveIncomingHealAmount(target, baseAmount, passives);
       if (amount <= 0) return;
       const healed = applyHealToTarget(target, amount);
       if (healed <= 0) return;

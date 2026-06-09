@@ -42,7 +42,7 @@ const passives = [
   { id: 'passive_target_lowest_def', name: '脆き穿ち', effect: 'targetRuleOverride', targetRuleOverride: 'lowestDefEnemy' },
   { id: 'passive_aoe_crowd_bonus', name: '密集爆破', effect: 'aoeCrowdBonus', perExtraTargetScale: 0.1, maxExtraTargets: 4 },
   { id: 'passive_heal_barrier', name: '結界付与', effect: 'excessHealToBarrier', barrierScale: 0.5 },
-  { id: 'passive_alchemist_hot', name: '薬草の香り', effect: 'partyHotAura', partyHotAuraAmount: { kind: 'flat', flatAmount: 1 } },
+  { id: 'passive_alchemist_hot', name: '薬草の香り', effect: 'hot', hotTargetRule: 'mostDamagedAlly', hotAmount: { kind: 'flat', flatAmount: 1 } },
   { id: 'passive_extend_debuff', name: '毒延長', effect: 'extendSelfAppliedDebuff', extendSec: 2 },
 ];
 

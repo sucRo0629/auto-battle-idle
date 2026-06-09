@@ -198,4 +198,39 @@ describe('resolveDamage defenseIgnore', () => {
     const baseline = resolveDamage(attacker, magicTarget, magicEffect, {});
     expect(withIgnore).toBeGreaterThan(baseline);
   });
+
+  it('reg buff increases magic mitigation and reg debuff weakens it', () => {
+    const magicEffect = {
+      type: 'damage' as const,
+      targetRule: 'frontEnemy' as const,
+      damageType: 'magic' as const,
+      amount: { kind: 'flat' as const, flatAmount: 200 },
+    };
+    const baselineTarget = mockCombatant({ reg: 20, isEnemy: true });
+    const baseline = resolveDamage(attacker, baselineTarget, magicEffect, {});
+
+    const buffedTarget = mockCombatant({ reg: 20, isEnemy: true });
+    buffedTarget.statusEffects.push({
+      id: 'reg_buff',
+      kind: 'buff',
+      stat: 'reg',
+      multiplier: 2,
+      durationSec: 5,
+      remainingSec: 5,
+    });
+    const buffed = resolveDamage(attacker, buffedTarget, magicEffect, {});
+    expect(buffed).toBeLessThan(baseline);
+
+    const debuffedTarget = mockCombatant({ reg: 20, isEnemy: true });
+    debuffedTarget.statusEffects.push({
+      id: 'reg_debuff',
+      kind: 'debuff',
+      stat: 'reg',
+      multiplier: 0.5,
+      durationSec: 5,
+      remainingSec: 5,
+    });
+    const debuffed = resolveDamage(attacker, debuffedTarget, magicEffect, {});
+    expect(debuffed).toBeGreaterThan(baseline);
+  });
 });

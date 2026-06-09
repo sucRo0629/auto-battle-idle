@@ -23,7 +23,10 @@ export function getTargetPoolForRule(
   const enemiesLive = livingEnemies(enemies);
 
   if (actor.isEnemy) {
-    if (rule === 'closestAlly') {
+    if (rule === 'allAllies') {
+      return enemiesLive;
+    }
+    if (rule === 'allEnemies') {
       return alliesLive;
     }
     return alliesLive;
@@ -48,7 +51,10 @@ export function getTargetPoolForRule(
     case 'rangedAttackingEnemy':
       return enemiesLive.filter((e) => e.traits.attackRange === 'ranged');
     case 'mostDamagedAlly':
+    case 'allAllies':
       return alliesLive;
+    case 'allEnemies':
+      return enemiesLive;
     default:
       return enemiesLive;
   }

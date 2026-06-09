@@ -13,6 +13,7 @@ import type {
   DebuffFilterTag,
   DefenseIgnoreSpec,
   PassiveSkillDef,
+  ResourceAmountSpec,
   SkillEffectDef,
   TargetRule,
 } from '../battle/types.ts';
@@ -177,7 +178,7 @@ export function appendDamageIncreaseFields(
   onChange: (spec: DamageIncreaseSpec | undefined) => void,
 ): void {
   const section = createEl('div', 'editor-subsection');
-  section.appendChild(createEl('h4', 'editor-subsection-title', 'ダメージ増加'));
+  section.appendChild(createEl('h4', 'editor-subsection-title', '特効ダメージ'));
 
   const enabledRow = createEl('div', 'editor-field editor-field-checkbox');
   const enabledInput = createEl('input') as HTMLInputElement;
@@ -327,14 +328,14 @@ export function appendDefenseIgnoreFields(
       onChange(next.def || next.reg ? next : undefined);
     }
   });
-  regEnableRow.appendChild(createEl('label', undefined, 'REG 無視'));
+  regEnableRow.appendChild(createEl('label', undefined, '耐魔無視'));
   regEnableRow.appendChild(regEnableInput);
   section.appendChild(regEnableRow);
 
   if (spec.reg) {
     section.appendChild(
       createFieldRow(
-        'REG 割合 (0–1)',
+        '耐魔割合 (0–1)',
         createNumberInput(
           spec.reg.percent,
           (percent) => {
@@ -381,6 +382,91 @@ export function appendDispelEffectFields(
           ? { ...prev, dispelTags: tags.length > 0 ? tags : undefined }
           : prev,
       );
+    },
+  );
+}
+
+export function appendPassiveDamageReductionFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean },
+  ) => void,
+): void {
+  parent.appendChild(
+    createFieldRow(
+      '対象',
+      createSelect(
+        passive.damageReductionTargetRule ?? 'self',
+        TARGET_RULE_OPTIONS.map((value) => ({
+          value,
+          label: TARGET_RULE_LABELS[value],
+        })),
+        (damageReductionTargetRule) => {
+          patchPassive((current) => {
+            current.damageReductionTargetRule = damageReductionTargetRule;
+          });
+        },
+      ),
+    ),
+  );
+  parent.appendChild(
+    createFieldRow(
+      '軽減率 (0–1)',
+      createNumberInput(
+        passive.damageReductionPercent ?? 0,
+        (damageReductionPercent) => {
+          patchPassive((current) => {
+            current.damageReductionPercent = damageReductionPercent;
+          });
+        },
+        { min: 0, max: 1, step: 0.01 },
+      ),
+    ),
+  );
+}
+
+export function appendPassiveHotFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean },
+  ) => void,
+  appendResourceAmountFields: (
+    grid: HTMLElement,
+    amount: ResourceAmountSpec,
+    onUpdate: (
+      amount: ResourceAmountSpec,
+      options?: { rerender?: boolean },
+    ) => void,
+  ) => void,
+): void {
+  parent.appendChild(
+    createFieldRow(
+      '対象',
+      createSelect(
+        passive.hotTargetRule ?? 'self',
+        TARGET_RULE_OPTIONS.map((value) => ({
+          value,
+          label: TARGET_RULE_LABELS[value],
+        })),
+        (hotTargetRule) => {
+          patchPassive((current) => {
+            current.hotTargetRule = hotTargetRule;
+          });
+        },
+      ),
+    ),
+  );
+  appendResourceAmountFields(
+    parent,
+    passive.hotAmount ?? { kind: 'atkBased', atkScale: 0.05 },
+    (amount) => {
+      patchPassive((current) => {
+        current.hotAmount = amount;
+      });
     },
   );
 }

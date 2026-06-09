@@ -97,6 +97,29 @@ describe('resolveEffectTargets', () => {
     expect(ids).not.toContain('e1');
   });
 
+  it('allEnemies hits every living enemy regardless of range', () => {
+    const targets = resolveEffectTargets(
+      { targetShape: 'single', range: 10 },
+      'allEnemies',
+      actor,
+      allies,
+      enemies,
+    );
+    expect(targets.map((t) => t.id).sort()).toEqual(['e1', 'e2', 'e3']);
+  });
+
+  it('allAllies hits every living ally regardless of range', () => {
+    const ally2 = mockUnit('ally2', 50);
+    const targets = resolveEffectTargets(
+      { targetShape: 'single', range: 10 },
+      'allAllies',
+      actor,
+      [actor, ally2],
+      enemies,
+    );
+    expect(targets.map((t) => t.id).sort()).toEqual(['ally', 'ally2']);
+  });
+
   it('frontEnemy picks maximum battleX among in-range', () => {
     const targets = resolveEffectTargets(
       { targetShape: 'single' },

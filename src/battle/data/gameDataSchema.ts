@@ -45,6 +45,7 @@ export const SKILL_EFFECT_KINDS = [
   "stun",
   "knockback",
   "dispel",
+  "block",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [
@@ -118,6 +119,8 @@ export const TARGET_RULES = [
   "highestHpEnemy",
   "farthestEnemy",
   "debuffedEnemy",
+  "allAllies",
+  "allEnemies",
 ] as const satisfies readonly TargetRule[];
 export const TARGET_SHAPES = [
   "single",
@@ -138,11 +141,13 @@ export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
   highestAtkEnemy: "ATK最高の敵",
   lowestDefEnemy: "DEF最低の敵",
   highestDefEnemy: "DEF最高の敵",
-  lowestRegEnemy: "REG最低の敵",
-  highestRegEnemy: "REG最高の敵",
+  lowestRegEnemy: "耐魔最低の敵",
+  highestRegEnemy: "耐魔最高の敵",
   highestHpEnemy: "HP最高の敵",
   farthestEnemy: "最も遠い敵",
   debuffedEnemy: "デバフを受けている対象",
+  allAllies: "味方全員",
+  allEnemies: "敵全員",
 };
 
 export const TARGET_SHAPE_LABELS: Record<TargetShape, string> = {
@@ -163,26 +168,32 @@ export const PASSIVE_EFFECT_KINDS = [
   "targetRuleOverride",
   "evasionChance",
   "damageTakenToHeal",
-  "partyHotAura",
+  "hot",
   "excessHealToBarrier",
   "extendSelfAppliedDebuff",
   "aoeCrowdBonus",
   "damageIncrease",
   "defenseIgnore",
   "periodicDispel",
+  "block",
+  "healReceivedIncrease",
+  "damageReduction",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<PassiveEffectKind, string> = {
   targetRuleOverride: "ターゲット上書き",
   evasionChance: "回避率",
   damageTakenToHeal: "被ダメ回復",
-  partyHotAura: "味方全体HoT",
+  hot: "HoT",
   excessHealToBarrier: "余剰回復バリア変換",
   extendSelfAppliedDebuff: "デバフ延長",
   aoeCrowdBonus: "密集ボーナス",
-  damageIncrease: "ダメージ増加",
+  damageIncrease: "特効ダメージ",
   defenseIgnore: "防御無視",
   periodicDispel: "デバフ解除（定期）",
+  block: "ブロック",
+  healReceivedIncrease: "被回復量増加",
+  damageReduction: "ダメージ軽減",
 };
 export const STATUS_EFFECT_STATS = [
   "atk",
@@ -291,7 +302,7 @@ export const STATUS_EFFECT_STAT_OPTIONS: StatusEffectStat[] = [
 export const DEBUFF_FILTER_TAGS = [
   { id: "atk" as const, label: "ATKデバフ" },
   { id: "def" as const, label: "DEFデバフ" },
-  { id: "reg" as const, label: "REGデバフ" },
+  { id: "reg" as const, label: "耐魔デバフ" },
   { id: "damageTaken" as const, label: "被ダメデバフ" },
   { id: "dot" as const, label: "DoT" },
   { id: "stun" as const, label: "スタン" },

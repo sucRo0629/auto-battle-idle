@@ -1,20 +1,27 @@
-import atkIconUrl from '../assets/status-icons/atk.png';
-import defIconUrl from '../assets/status-icons/def.png';
-import regIconUrl from '../assets/status-icons/reg.png';
-import potIconUrl from '../assets/status-icons/pot.png';
-import arrowUpUrl from '../assets/status-icons/arrow_up.png';
-import arrowDownUrl from '../assets/status-icons/arrow_down.png';
-import type { StatusDisplayCategory } from '../battle/statusEffectDisplay.ts';
+import atkIconUrl from "../assets/status-icons/atk.png";
+import defIconUrl from "../assets/status-icons/def.png";
+import regIconUrl from "../assets/status-icons/reg.png";
+import damageReductionIconUrl from "../assets/status-icons/damageReduction.png";
+import damageIncreaseIconUrl from "../assets/status-icons/damageIncrease.png";
+import hotIconUrl from "../assets/status-icons/hot.png";
+import dotIconUrl from "../assets/status-icons/dot.png";
+import blockIconUrl from "../assets/status-icons/block.png";
+import arrowUpUrl from "../assets/status-icons/arrow_up.png";
+import arrowDownUrl from "../assets/status-icons/arrow_down.png";
+import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
 
 export type { StatusDisplayCategory };
-export type StatusArrowKind = 'up' | 'down';
+export type StatusArrowKind = "up" | "down";
 
 const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   atk: atkIconUrl,
   def: defIconUrl,
   reg: regIconUrl,
-  hot: potIconUrl,
-  dot: potIconUrl,
+  damageReduction: damageReductionIconUrl,
+  damageIncrease: damageIncreaseIconUrl,
+  hot: hotIconUrl,
+  dot: dotIconUrl,
+  block: blockIconUrl,
 };
 
 const ARROW_URLS: Record<StatusArrowKind, string> = {
@@ -50,13 +57,13 @@ export function preloadStatusIcons(): Promise<void> {
 }
 
 export function getStatusIconImage(
-  category: StatusDisplayCategory,
+  category: StatusDisplayCategory
 ): HTMLImageElement | undefined {
   return iconImages.get(category);
 }
 
 export function getStatusArrowImage(
-  kind: StatusArrowKind,
+  kind: StatusArrowKind
 ): HTMLImageElement | undefined {
   return arrowImages.get(kind);
 }

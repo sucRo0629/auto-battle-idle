@@ -47,6 +47,8 @@ import {
   appendPassiveDamageIncreaseFields,
   appendPassiveDefenseIgnoreFields,
   appendPassiveDispelFields,
+  appendPassiveDamageReductionFields,
+  appendPassiveHotFields,
   appendTargetDebuffFilterFields,
 } from './skillEditorCombatFields.ts';
 import {
@@ -74,12 +76,13 @@ const EFFECT_KIND_LABELS: Record<SkillEffectKind, string> = {
   stun: 'スタン',
   knockback: 'ノックバック',
   dispel: 'デバフ解除',
+  block: 'ブロック付与',
 };
 
 const STAT_LABELS: Record<StatusEffectStat, string> = {
   atk: '攻撃',
   def: '防御',
-  reg: '再生',
+  reg: '耐魔',
   damageTaken: '被ダメ',
 };
 
@@ -94,6 +97,9 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       break;
     case 'evasionChance':
       passive.evasionChance ??= 0.1;
+      break;
+    case 'block':
+      passive.blockChance ??= 0.15;
       break;
     case 'damageIncrease':
       passive.damageIncrease ??= {
@@ -112,8 +118,13 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case 'damageTakenToHeal':
       passive.ratio ??= 0.1;
       break;
-    case 'partyHotAura':
-      passive.partyHotAuraAmount ??= { kind: 'atkBased', atkScale: 0.05 };
+    case 'hot':
+      passive.hotTargetRule ??= 'self';
+      passive.hotAmount ??= { kind: 'atkBased', atkScale: 0.05 };
+      break;
+    case 'damageReduction':
+      passive.damageReductionTargetRule ??= 'self';
+      passive.damageReductionPercent ??= 0.2;
       break;
     case 'excessHealToBarrier':
       passive.barrierScale ??= 1;
@@ -124,6 +135,9 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       break;
     case 'extendSelfAppliedDebuff':
       passive.extendSec ??= 2;
+      break;
+    case 'healReceivedIncrease':
+      passive.percent ??= 0.2;
       break;
   }
 }
@@ -447,6 +461,13 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         type: 'dispel',
         dispelCount: 0,
       };
+    case 'block':
+      return {
+        targetRule: 'self',
+        type: 'block',
+        blockChance: 0.2,
+        durationSec: 5,
+      };
   }
 }
 
@@ -543,11 +564,13 @@ export function renderClassIdentity(
 }
 
 function skillCardTitle(entry: SkillDraftEntry, idReadonly: boolean): string {
-  const kindLabel = entry.ref.kind === 'passive' ? 'パッシブ' : 'アクティブ';
   if (idReadonly) {
-    return `${kindLabel}: 通常攻撃`;
+    return '通常攻撃';
   }
-  return kindLabel;
+  const skill = entry.passive ?? entry.active;
+  if (skill?.name?.trim()) return skill.name.trim();
+  if (skill?.id?.trim()) return skill.id.trim();
+  return entry.ref.kind === 'passive' ? 'パッシブ' : 'アクティブ';
 }
 
 export class SkillEditorStep {
@@ -645,80 +668,37 @@ export class SkillEditorStep {
     );
     this.container.appendChild(header);
 
-    if (entries.length === 0) {
-      this.container.appendChild(
-        createEl(
-          'p',
-          'editor-hint',
-          classIdentity
-            ? 'classId を入力すると通常攻撃が追加されます。パッシブ / アクティブはボタンで追加してください。'
-            : 'スキル ID が未設定のため、編集対象がありません。',
-        ),
-      );
-    }
-
+    const passiveIndices: number[] = [];
+    const activeIndices: number[] = [];
     for (let index = 0; index < entries.length; index++) {
-      const entry = entries[index]!;
-      const idReadonly = this.options.isIdReadonly?.(entry) ?? false;
-      const card = createSection(skillCardTitle(entry, idReadonly));
-      card.classList.add('editor-skill-card');
-
-      if (!idReadonly && this.options.onRemoveSkill) {
-        const removeBtn = createButton('削除', 'editor-btn editor-btn-small', () => {
-          this.options.onRemoveSkill?.(index);
-        });
-        removeBtn.style.float = 'right';
-        const title = card.querySelector('.editor-section-title');
-        if (title) title.appendChild(removeBtn);
+      const kind = entries[index]!.ref.kind;
+      if (kind === 'passive') {
+        passiveIndices.push(index);
+      } else {
+        activeIndices.push(index);
       }
-
-      if (!idReadonly) {
-        const unlockGrid = appendGrid(card);
-        unlockGrid.appendChild(
-          createFieldRow(
-            '習得 Lv',
-            createNumberInput(
-              entry.unlockLevel ?? 0,
-              (unlockLevel) => {
-                this.commitEntries((next) => {
-                  const current = next[index];
-                  if (!current) return;
-                  current.unlockLevel = Math.max(0, Math.round(unlockLevel));
-                }, { rerender: false });
-              },
-              { min: 0, step: 1 },
-            ),
-          ),
-        );
-        card.appendChild(
-          createEl('p', 'editor-hint', '0 = 初期習得（Lv0）。1 以上 = その Lv で習得'),
-        );
-      }
-
-      if (entry.passive) {
-        this.renderPassive(card, index, idReadonly);
-      }
-      if (entry.active) {
-        this.renderActive(card, index, idReadonly);
-      }
-
-      this.container.appendChild(card);
     }
 
-    if (onAddSkill) {
-      const addRow = createEl('div', 'editor-actions');
-      addRow.appendChild(
-        createButton('+ パッシブ', 'editor-btn editor-btn-small', () => {
-          onAddSkill('passive');
-        }),
-      );
-      addRow.appendChild(
-        createButton('+ アクティブ', 'editor-btn editor-btn-small', () => {
-          onAddSkill('active');
-        }),
-      );
-      this.container.appendChild(addRow);
-    }
+    this.renderSkillKindSection(
+      'パッシブ',
+      'passive',
+      entries,
+      passiveIndices,
+      classIdentity
+        ? 'パッシブスキルがありません。下のボタンから追加できます。'
+        : '参照されているパッシブスキルがありません。',
+      onAddSkill,
+    );
+    this.renderSkillKindSection(
+      'アクティブ',
+      'active',
+      entries,
+      activeIndices,
+      classIdentity
+        ? 'アクティブスキルがありません。classId 入力で通常攻撃が追加されます。'
+        : '参照されているアクティブスキルがありません。',
+      onAddSkill,
+    );
 
     if (!hideSave) {
       const actions = createEl('div', 'editor-actions');
@@ -731,6 +711,91 @@ export class SkillEditorStep {
       actions.appendChild(saveBtn);
       this.container.appendChild(actions);
     }
+  }
+
+  private renderSkillKindSection(
+    title: string,
+    kind: SkillSlotKind,
+    entries: SkillDraftEntry[],
+    indices: number[],
+    emptyHint: string,
+    onAddSkill?: (kind: SkillSlotKind) => void,
+  ): void {
+    const section = createSection(title);
+    section.classList.add('editor-skill-section');
+
+    const list = createEl('div', 'editor-skill-list');
+    if (indices.length === 0) {
+      list.appendChild(createEl('p', 'editor-hint', emptyHint));
+    } else {
+      for (const index of indices) {
+        this.renderEntryCard(list, entries[index]!, index);
+      }
+    }
+    section.appendChild(list);
+
+    if (onAddSkill) {
+      const addRow = createEl('div', 'editor-section-actions');
+      addRow.appendChild(
+        createButton(`+ ${title}`, 'editor-btn editor-btn-small', () => {
+          onAddSkill(kind);
+        }),
+      );
+      section.appendChild(addRow);
+    }
+
+    this.container.appendChild(section);
+  }
+
+  private renderEntryCard(
+    parent: HTMLElement,
+    entry: SkillDraftEntry,
+    index: number,
+  ): void {
+    const idReadonly = this.options.isIdReadonly?.(entry) ?? false;
+    const card = createSection(skillCardTitle(entry, idReadonly));
+    card.classList.add('editor-skill-card');
+
+    if (!idReadonly && this.options.onRemoveSkill) {
+      const removeBtn = createButton('削除', 'editor-btn editor-btn-small', () => {
+        this.options.onRemoveSkill?.(index);
+      });
+      removeBtn.style.float = 'right';
+      const cardTitle = card.querySelector('.editor-section-title');
+      if (cardTitle) cardTitle.appendChild(removeBtn);
+    }
+
+    if (!idReadonly) {
+      const unlockGrid = appendGrid(card);
+      unlockGrid.appendChild(
+        createFieldRow(
+          '習得 Lv',
+          createNumberInput(
+            entry.unlockLevel ?? 0,
+            (unlockLevel) => {
+              this.commitEntries((next) => {
+                const current = next[index];
+                if (!current) return;
+                current.unlockLevel = Math.max(0, Math.round(unlockLevel));
+              }, { rerender: false });
+            },
+            { min: 0, step: 1 },
+          ),
+        ),
+      );
+      card.appendChild(
+        createEl('p', 'editor-hint', '0 = 初期習得（Lv0）。1 以上 = その Lv で習得'),
+      );
+    }
+
+    if (entry.passive) {
+      this.renderPassive(card, index, idReadonly);
+    }
+    if (entry.active) {
+      this.renderActive(card, index, idReadonly);
+    }
+
+    parent.appendChild(card);
   }
 
   private createSkillIdInput(
@@ -877,6 +942,22 @@ export class SkillEditorStep {
           ),
         );
         break;
+      case 'block':
+        effectGrid.appendChild(
+          createFieldRow(
+            'ブロック率 (0–1)',
+            createNumberInput(
+              passive.blockChance ?? 0,
+              (blockChance) => {
+                this.patchPassive(index, (current) => {
+                  current.blockChance = blockChance;
+                }, { rerender: false });
+              },
+              { min: 0, max: 1, step: 0.01 },
+            ),
+          ),
+        );
+        break;
       case 'damageIncrease':
         appendPassiveDamageIncreaseFields(effectGrid, passive, (mutate, options) => {
           this.patchPassive(index, mutate, options);
@@ -908,16 +989,38 @@ export class SkillEditorStep {
           ),
         );
         break;
-      case 'partyHotAura':
-        appendResourceAmountFields(
+      case 'healReceivedIncrease':
+        effectGrid.appendChild(
+          createFieldRow(
+            '増加率 (0–1)',
+            createNumberInput(
+              passive.percent ?? 0,
+              (percent) => {
+                this.patchPassive(index, (current) => {
+                  current.percent = percent;
+                }, { rerender: false });
+              },
+              { min: 0, step: 0.01 },
+            ),
+          ),
+        );
+        break;
+      case 'hot':
+        appendPassiveHotFields(
           effectGrid,
-          passive.partyHotAuraAmount ?? { kind: 'atkBased', atkScale: 0.05 },
-          (amount) => {
-            this.patchPassive(index, (current) => {
-              current.partyHotAuraAmount = amount;
-            }, { rerender: false });
+          passive,
+          (mutate, options) => {
+            this.patchPassive(index, mutate, options);
+          },
+          (grid, amount, onUpdate) => {
+            appendResourceAmountFields(grid, amount, onUpdate);
           },
         );
+        break;
+      case 'damageReduction':
+        appendPassiveDamageReductionFields(effectGrid, passive, (mutate, options) => {
+          this.patchPassive(index, mutate, options);
+        });
         break;
       case 'excessHealToBarrier':
         effectGrid.appendChild(
@@ -1886,6 +1989,32 @@ export class SkillEditorStep {
         break;
       case 'dispel':
         appendDispelEffectFields(detailGrid, effect, patchEffect);
+        break;
+      case 'block':
+        detailGrid.appendChild(
+          createFieldRow(
+            'ブロック率 (0–1)',
+            createNumberInput(
+              effect.blockChance,
+              (blockChance) => patchEffect((prev) =>
+                prev.type === 'block' ? { ...prev, blockChance } : prev,
+              ),
+              { min: 0, max: 1, step: 0.01 },
+            ),
+          ),
+        );
+        detailGrid.appendChild(
+          createFieldRow(
+            '秒数',
+            createNumberInput(
+              effect.durationSec,
+              (durationSec) => patchEffect((prev) =>
+                prev.type === 'block' ? { ...prev, durationSec } : prev,
+              ),
+              { min: 0.1, step: 0.5 },
+            ),
+          ),
+        );
         break;
       case 'move': {
         const moveEffect = effect as MoveSkillEffect;

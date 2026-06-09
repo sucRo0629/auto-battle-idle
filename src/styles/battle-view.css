@@ -74,7 +74,6 @@
   --hud-skill-recast-ready: #9aa3b0;
   --hud-icon-frame: #1a1a1a;
   --status-buff-color: #e62222;
-  --status-badge-bg: rgba(255, 255, 255, 0.1);
   --status-debuff-color: #318aff;
   --popup-font-size: 18;
   --popup-outline-width: 1;
@@ -111,8 +110,11 @@
   --attack-arrow-tip: #8b6914;
   --status-badge-icon-size: 8;
   --status-badge-arrow-width: 3;
+  --status-badge-arrow-overlap: 2;
   --status-badge-overlap: 0;
   --status-badge-overlay: rgba(0, 0, 0, 0.55);
+  --status-icon-outline-color: #000000;
+  --status-icon-outline-width: 1;
   --status-icon-fallback-alpha: 0.35;
   --hurt-tint-r: 255;
   --hurt-tint-g: 0;
@@ -137,8 +139,11 @@
   --status-icon-atk: #c0392b;
   --status-icon-def: #2980b9;
   --status-icon-reg: #9b59b6;
+  --status-icon-damage-reduction: #27ae60;
+  --status-icon-damage-increase: #d35400;
   --status-icon-hot: #27ae60;
   --status-icon-dot: #8e44ad;
+  --status-icon-block: #7f8c8d;
 }
 
 .battle-stage-label {

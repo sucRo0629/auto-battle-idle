@@ -115,6 +115,8 @@ export class BattleView {
       isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
       getSave: this.getSave,
       getAllySnapshots: () => this.engine.getSnapshot().allies,
+      getStageDamageDisplayRows: () =>
+        verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
       getLoopStageId: () => verifyModeControls?.getLoopStageId?.() ?? null,
       onLoopStageChange: (stageId) => {
         verifyModeControls?.onLoopStageChange?.(stageId);
@@ -201,6 +203,10 @@ export class BattleView {
           );
         }
       }
+    } else if (event.type === 'evade') {
+      this.canvas.showEvadePopup(event.targetId);
+    } else if (event.type === 'block') {
+      this.canvas.showBlockPopup(event.targetId);
     } else if (event.type === 'hurt') {
       this.canvas.playAnim(event.targetId, 'hurt');
     } else if (event.type === 'death') {
@@ -266,6 +272,7 @@ export class BattleView {
     this.canvas.syncFromSnapshot(snapshot, partyMeta);
     this.canvas.tick(deltaMs);
     this.debugMenu.updateThreatDisplay();
+    this.debugMenu.updateDamageDisplay();
   }
 
   setMenuButtonDisabled(disabled: boolean): void {

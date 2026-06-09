@@ -10,7 +10,7 @@
       "id": "passive_damage_taken_heal",
       "name": "聖なる吸収",
       "effect": "damageTakenToHeal",
-      "ratio": 0.10
+      "ratio": 0.1
     },
     {
       "id": "passive_self_low_hp_dmg",
@@ -67,7 +67,9 @@
         "conditions": [
           {
             "kind": "debuff",
-            "tags": ["dot"],
+            "tags": [
+              "dot"
+            ],
             "selfAppliedOnly": true
           }
         ]
@@ -101,8 +103,9 @@
     {
       "id": "passive_alchemist_hot",
       "name": "薬草の香り",
-      "effect": "partyHotAura",
-      "partyHotAuraAmount": {
+      "effect": "hot",
+      "hotTargetRule": "mostDamagedAlly",
+      "hotAmount": {
         "kind": "flat",
         "flatAmount": 1
       }
@@ -112,6 +115,27 @@
       "name": "毒延長",
       "effect": "extendSelfAppliedDebuff",
       "extendSec": 2
+    },
+    {
+      "id": "passive_blocking_guardian",
+      "name": "守勢",
+      "effect": "block",
+      "targetRuleOverride": "highestAtkEnemy",
+      "blockChance": 0.15
+    },
+    {
+      "id": "df_guardian_passive_1",
+      "name": "守勢",
+      "effect": "block",
+      "targetRuleOverride": "highestAtkEnemy",
+      "blockChance": 0.15
+    },
+    {
+      "id": "df_guardian_passive_2",
+      "name": "守りの備え",
+      "effect": "healReceivedIncrease",
+      "targetRuleOverride": "frontEnemy",
+      "percent": 0.2
     }
   ],
   "actives": [
@@ -387,7 +411,7 @@
       "name": "シールドバッシュ",
       "trigger": {
         "kind": "time",
-        "value": 9
+        "value": 10
       },
       "effect": [
         {
@@ -410,19 +434,26 @@
     },
     {
       "id": "df_guardian_active_2",
-      "name": "威圧",
+      "name": "防御専念",
       "trigger": {
-        "kind": "time",
-        "value": 12
+        "kind": "hitsTaken",
+        "value": 10
       },
       "effect": [
         {
-          "targetRule": "frontEnemy",
+          "targetRule": "self",
+          "type": "buff",
+          "buffStat": "def",
+          "buffMultiplier": 1.5,
+          "buffDurationSec": 5,
+          "targetShape": "single"
+        },
+        {
+          "targetRule": "self",
           "type": "debuff",
           "debuffStat": "atk",
-          "debuffMultiplier": 0.75,
-          "debuffDurationSec": 5,
-          "targetShape": "single"
+          "debuffMultiplier": 0.8,
+          "debuffDurationSec": 5
         }
       ]
     },

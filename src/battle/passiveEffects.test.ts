@@ -6,9 +6,13 @@ import {
   getPassiveOutgoingDamageMultiplier,
   initializeCountTriggerCooldowns,
   resolveDebuffDurationWithPassives,
+  resolveIncomingHealAmount,
   rollsEvasion,
-  syncPartyHotAuras,
+  syncHotAuras,
+  syncBlockAuras,
+  syncDamageReductionAuras,
 } from './passiveEffects.ts';
+import { aggregateStatStatusEffects } from './statusEffectDisplay.ts';
 
 function mockAlly(
   overrides: Partial<CombatantState> & { id: string },
@@ -65,8 +69,9 @@ const passives: Record<string, PassiveSkillDef> = {
   aura: {
     id: 'aura',
     name: 'Aura',
-    effect: 'partyHotAura',
-    partyHotAuraAmount: { kind: 'flat', flatAmount: 2 },
+    effect: 'hot',
+    hotTargetRule: 'self',
+    hotAmount: { kind: 'flat', flatAmount: 2 },
   },
   excessBarrier: {
     id: 'excessBarrier',
@@ -171,6 +176,54 @@ describe('passiveEffects', () => {
     expect(hunterMul).toBe(2);
   });
 
+  it('resolveIncomingHealAmount scales heal and hot by target passives', () => {
+    const target = mockAlly({
+      id: 'target',
+      build: {
+        learnedPassiveIds: ['healBoost'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const healPassives: Record<string, PassiveSkillDef> = {
+      healBoost: {
+        id: 'healBoost',
+        name: 'HealBoost',
+        effect: 'healReceivedIncrease',
+        percent: 0.25,
+      },
+    };
+    expect(resolveIncomingHealAmount(target, 100, healPassives)).toBe(125);
+    expect(resolveIncomingHealAmount(target, 0, healPassives)).toBe(0);
+    expect(resolveIncomingHealAmount(target, 100, {})).toBe(100);
+  });
+
+  it('resolveIncomingHealAmount sums percent from multiple passives', () => {
+    const target = mockAlly({
+      id: 'target',
+      build: {
+        learnedPassiveIds: ['a', 'b'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const healPassives: Record<string, PassiveSkillDef> = {
+      a: {
+        id: 'a',
+        name: 'A',
+        effect: 'healReceivedIncrease',
+        percent: 0.1,
+      },
+      b: {
+        id: 'b',
+        name: 'B',
+        effect: 'healReceivedIncrease',
+        percent: 0.15,
+      },
+    };
+    expect(resolveIncomingHealAmount(target, 100, healPassives)).toBe(125);
+  });
+
   it('applyExcessHealToBarrierFromPassive converts overheal and replaces barrier', () => {
     const healer = mockAlly({
       id: 'healer',
@@ -222,7 +275,7 @@ describe('passiveEffects', () => {
     expect(resolveDebuffDurationWithPassives(actor, 4, extendPassives)).toBe(6);
   });
 
-  it('syncPartyHotAuras applies hot overlay to all living allies', () => {
+  it('syncHotAuras applies hot overlay to the selected target only', () => {
     const healer = mockAlly({
       id: 'healer',
       role: 'supporter',
@@ -240,8 +293,136 @@ describe('passiveEffects', () => {
         equippedActiveSlots: [],
       },
     });
-    syncPartyHotAuras([healer, ally], passives);
+    syncHotAuras([healer, ally], [], passives);
+    expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
+    expect(ally.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
+  });
+
+  it('syncHotAuras respects hotTargetRule', () => {
+    const passivesWithAllyTarget = {
+      ...passives,
+      aura: {
+        ...passives.aura,
+        hotTargetRule: 'mostDamagedAlly' as const,
+      },
+    };
+    const healer = mockAlly({
+      id: 'healer',
+      role: 'supporter',
+      hp: 100,
+      build: {
+        learnedPassiveIds: ['aura'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const ally = mockAlly({
+      id: 'ally',
+      hp: 50,
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    syncHotAuras([healer, ally], [], passivesWithAllyTarget);
+    expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
+    expect(ally.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
+  });
+
+  it('syncHotAuras applies hot to all allies when hotTargetRule is allAllies', () => {
+    const passivesWithPartyHot = {
+      ...passives,
+      aura: {
+        ...passives.aura,
+        hotTargetRule: 'allAllies' as const,
+      },
+    };
+    const healer = mockAlly({
+      id: 'healer',
+      build: {
+        learnedPassiveIds: ['aura'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const ally = mockAlly({
+      id: 'ally',
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    syncHotAuras([healer, ally], [], passivesWithPartyHot);
     expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
     expect(ally.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
+  });
+
+  it('syncBlockAuras applies block overlay on self without atk badge', () => {
+    const blockPassives = {
+      ...passives,
+      df_guardian_passive_1: {
+        id: 'df_guardian_passive_1',
+        name: '守勢',
+        effect: 'block' as const,
+        blockChance: 0.15,
+      },
+    };
+    const guard = mockAlly({
+      id: 'guard',
+      build: {
+        learnedPassiveIds: ['df_guardian_passive_1'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    syncBlockAuras([guard], [], blockPassives);
+    const blockEffect = guard.statusEffects.find((e) => e.overlay === 'block');
+    expect(blockEffect?.blockChance).toBe(0.15);
+    expect(blockEffect?.stat).toBeUndefined();
+
+    const badges = aggregateStatStatusEffects(guard.statusEffects, {
+      atk: guard.atk,
+      def: guard.def,
+      reg: guard.reg,
+    });
+    expect(badges.map((badge) => badge.category)).toEqual(['block']);
+  });
+
+  it('syncDamageReductionAuras applies damageTaken reduction to selected targets', () => {
+    const reductionPassives = {
+      ...passives,
+      guard: {
+        id: 'guard',
+        name: 'Guard',
+        effect: 'damageReduction' as const,
+        damageReductionPercent: 0.25,
+        damageReductionTargetRule: 'allAllies' as const,
+      },
+    };
+    const tank = mockAlly({
+      id: 'tank',
+      build: {
+        learnedPassiveIds: ['guard'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const ally = mockAlly({
+      id: 'ally',
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    syncDamageReductionAuras([tank, ally], [], reductionPassives);
+    const tankMul = tank.statusEffects.find((e) => e.stat === 'damageTaken')
+      ?.multiplier;
+    const allyMul = ally.statusEffects.find((e) => e.stat === 'damageTaken')
+      ?.multiplier;
+    expect(tankMul).toBe(0.75);
+    expect(allyMul).toBe(0.75);
   });
 });

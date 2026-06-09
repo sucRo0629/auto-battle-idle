@@ -143,6 +143,24 @@ export function pickTargetFromPool(
   }
 }
 
+export function isMultiTargetRule(rule: TargetRule): boolean {
+  return rule === 'allAllies' || rule === 'allEnemies';
+}
+
+export function pickTargets(
+  rule: TargetRule,
+  actor: CombatantState,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+): CombatantState[] {
+  const pool = getTargetPoolForRule(rule, actor, allies, enemies);
+  if (isMultiTargetRule(rule)) {
+    return pool.filter((unit) => unit.isAlive);
+  }
+  const target = pickTargetFromPool(rule, actor, pool);
+  return target?.isAlive ? [target] : [];
+}
+
 /** @deprecated 互換用。resolveEffectResolution を優先 */
 export function pickTarget(
   rule: TargetRule,
@@ -454,6 +472,20 @@ export function resolveEffectResolution(
   const basePower = getBaseAtkScale(effect);
 
   if (shape === 'single') {
+    if (isMultiTargetRule(rule)) {
+      const targets = attackablePool
+        .filter((unit) => unit.isAlive)
+        .map((unit) => ({ unit }));
+      if (targets.length === 0) return null;
+      const hits = effect.hitCount;
+      if (hits === undefined || hits < 2) {
+        return { waves: [{ hitIndex: 0, targets }] };
+      }
+      const duration = effect.hitDurationSec;
+      if (duration === undefined || duration <= 0) return null;
+      return resolveRepeatedHitWaves(targets, hits, duration);
+    }
+
     const target = pickTargetFromPool(rule, actor, attackablePool);
     if (!target) return null;
     const hits = effect.hitCount;

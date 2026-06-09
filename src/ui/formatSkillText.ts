@@ -25,16 +25,22 @@ function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): s
       return `ターゲット → ${TARGET_RULE_LABELS[def.targetRuleOverride ?? 'frontEnemy']}`;
     case 'evasionChance':
       return `回避 +${def.evasionChance ?? 0}`;
+    case 'block':
+      return `ブロック ${Math.round((def.blockChance ?? 0) * 100)}%`;
     case 'damageIncrease':
-      return `ダメージ増加 ×${def.damageIncrease?.scale ?? 1}`;
+      return `特効ダメージ ×${def.damageIncrease?.scale ?? 1}`;
+    case 'damageReduction':
+      return `ダメージ軽減 ${Math.round((def.damageReductionPercent ?? 0) * 100)}% → ${TARGET_RULE_LABELS[def.damageReductionTargetRule ?? 'self']}`;
     case 'defenseIgnore':
       return '防御無視';
     case 'periodicDispel':
       return `定期デバフ解除 ${def.intervalSec ?? 0}s`;
     case 'damageTakenToHeal':
       return `被ダメの ${Math.round((def.ratio ?? 0) * 100)}% を即時回復`;
-    case 'partyHotAura':
-      return '味方全体 HoT';
+    case 'healReceivedIncrease':
+      return `被回復 +${Math.round((def.percent ?? 0) * 100)}%`;
+    case 'hot':
+      return `HoT → ${TARGET_RULE_LABELS[def.hotTargetRule ?? 'self']}`;
     case 'excessHealToBarrier':
       return `余剰回復バリア ×${def.barrierScale ?? 1}`;
     case 'extendSelfAppliedDebuff':
@@ -70,6 +76,8 @@ function formatEffectKind(effect: SkillEffectDef): string {
       return 'ノックバック';
     case 'dispel':
       return 'デバフ解除';
+    case 'block':
+      return 'ブロック付与';
   }
 }
 

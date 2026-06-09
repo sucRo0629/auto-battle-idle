@@ -17,7 +17,8 @@
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "df_guardian_basic_attack",
     "passiveIds": [
-      "passive_target_highest_atk"
+      "df_guardian_passive_1",
+      "df_guardian_passive_2"
     ],
     "skills": [
       {

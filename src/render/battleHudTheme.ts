@@ -31,10 +31,10 @@ export interface BattleHudTheme {
   skillRecastReady: string;
   iconFrame: string;
   statusBuffColor: string;
-  statusBadgeBg: string;
   statusDebuffColor: string;
   statusBadgeIconSize: number;
   statusBadgeArrowWidth: number;
+  statusBadgeArrowOverlap: number;
   statusBadgeOverlap: number;
   popupFontSize: number;
   popupOutlineWidth: number;
@@ -70,6 +70,8 @@ export interface BattleHudTheme {
   attackArrowShaft: string;
   attackArrowTip: string;
   statusBadgeOverlay: string;
+  statusIconOutlineColor: string;
+  statusIconOutlineWidth: number;
   statusIconFallbackAlpha: number;
   hurtTintR: number;
   hurtTintG: number;
@@ -94,8 +96,11 @@ export interface BattleHudTheme {
   statusIconAtk: string;
   statusIconDef: string;
   statusIconReg: string;
+  statusIconDamageReduction: string;
+  statusIconDamageIncrease: string;
   statusIconHot: string;
   statusIconDot: string;
+  statusIconBlock: string;
 }
 
 function readNumber(
@@ -166,14 +171,14 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     skillRecastReady: readString(style, '--hud-skill-recast-ready', '#9aa3b0'),
     iconFrame: readString(style, '--hud-icon-frame', '#1a1a1a'),
     statusBuffColor: readString(style, '--status-buff-color', '#e62222'),
-    statusBadgeBg: readString(
-      style,
-      '--status-badge-bg',
-      'rgba(255, 255, 255, 0.5)',
-    ),
     statusDebuffColor: readString(style, '--status-debuff-color', '#318aff'),
     statusBadgeIconSize: readNumber(style, '--status-badge-icon-size', 8),
     statusBadgeArrowWidth: readNumber(style, '--status-badge-arrow-width', 3),
+    statusBadgeArrowOverlap: readNumber(
+      style,
+      '--status-badge-arrow-overlap',
+      2,
+    ),
     statusBadgeOverlap: readNumber(style, '--status-badge-overlap', 0),
     popupFontSize: readNumber(style, '--popup-font-size', 18),
     popupOutlineWidth: readNumber(style, '--popup-outline-width', 1),
@@ -229,6 +234,12 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
       '--status-badge-overlay',
       'rgba(0, 0, 0, 0.55)',
     ),
+    statusIconOutlineColor: readString(
+      style,
+      '--status-icon-outline-color',
+      '#000000',
+    ),
+    statusIconOutlineWidth: readNumber(style, '--status-icon-outline-width', 1),
     statusIconFallbackAlpha: readNumber(
       style,
       '--status-icon-fallback-alpha',
@@ -261,8 +272,19 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     statusIconAtk: readString(style, '--status-icon-atk', '#c0392b'),
     statusIconDef: readString(style, '--status-icon-def', '#2980b9'),
     statusIconReg: readString(style, '--status-icon-reg', '#9b59b6'),
+    statusIconDamageReduction: readString(
+      style,
+      '--status-icon-damage-reduction',
+      '#27ae60',
+    ),
+    statusIconDamageIncrease: readString(
+      style,
+      '--status-icon-damage-increase',
+      '#d35400',
+    ),
     statusIconHot: readString(style, '--status-icon-hot', '#27ae60'),
     statusIconDot: readString(style, '--status-icon-dot', '#8e44ad'),
+    statusIconBlock: readString(style, '--status-icon-block', '#7f8c8d'),
   };
 }
 
@@ -302,8 +324,11 @@ export function resolveStatusIconFallbackColor(
     atk: theme.statusIconAtk,
     def: theme.statusIconDef,
     reg: theme.statusIconReg,
+    damageReduction: theme.statusIconDamageReduction,
+    damageIncrease: theme.statusIconDamageIncrease,
     hot: theme.statusIconHot,
     dot: theme.statusIconDot,
+    block: theme.statusIconBlock,
   };
   return colors[category];
 }

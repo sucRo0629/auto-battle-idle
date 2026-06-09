@@ -10,6 +10,11 @@
 4. `afterSubtract <= 0` なら `afterDefense = 0`、  
    それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
 5. `final = max(1, floor(afterDefense × damageTakenMul))`
+6. **物理直接 `damage` のみ:** 回避判定 → ブロック判定（成功時 `blocked = floor(final × min(1, 0.25 + effectiveAtk/100))`、実ダメ = `final - blocked`）
+
+**回避:** 直接 `damage` の物理/魔法問わず（DoT tick 非対象）。`SkillExecutor` で `resolveDamage` 前に判定。
+
+**ブロック:** 直接 `damage` かつ `damageType: physical` のみ。`resolveDamage` 後に判定（DoT 非対象）。
 
 `effectiveAtk = max(0, (atk + atkFlatSum) × atkMulProduct)`  
 `effectiveDef = max(0, (def + defFlatSum) × defMulProduct)`  
@@ -40,6 +45,8 @@
 **原則:** 回復後の HP は `min(maxHp, hp + amount)` — 超過分は切り捨て。
 
 **余剰回復バリア変換**（パッシブ `excessHealToBarrier`）: 試行回復量のうち maxHp 超過分 × `barrierScale` を **バリア上書き**（`barrierStack` なし）。
+
+**被回復量増加**（パッシブ `healReceivedIncrease`）: 回復対象のパッシブ `percent` を加算し、`heal` / HoT tick 量に `floor(量 × (1 + percent合算))` を適用。`damageTakenToHeal` 等の自己回復は対象外。
 
 heal / HoT / barrier / **damage** は **`ResourceAmountSpec`**（`amount`）で効果量を定義。旧 JSON のトップレベル `powerMultiplier` のみも、`kind: atkBased` + `atkScale` として読み込む（後方互換）。
 
@@ -124,7 +131,9 @@ baseThreat = statComponent + frontRowPressureBonus
 
 ## ステータス効果
 
-対象ステ：`atk`, `def`, `damageTaken`。REG は buff 不可。
+対象ステ：`atk`, `def`, `reg`（耐魔）, `damageTaken`。`reg` の buff / debuff とも可。
+
+**HUD バッジ表示順：** `atk` → `def` → `reg` → `damageReduction` → `damageIncrease` → `hot` → `dot` → `block`。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン（矢印なし・原色）。`stun` はバッジ非表示（将来キャラ頭上エフェクト予定）。
 
 | 種別 | 定義方法 |
 |------|----------|
@@ -220,6 +229,6 @@ Phase 1 はプレースホルダー VFX のみ。**スキル別 `vfx` 設定・�
 | ダメージ | attack / hurt アニメ、ダメージポップアップ、近接/遠隔プレースホルダー（slash / orb / arrow） |
 | 回復 | heal アニメ、緑ポップアップ、healRise プレースホルダー |
 | buff / debuff | 対象の白い光（約0.8秒） |
-| スタン（CC） | オーバーレイ `stun`（バッジ UI は Phase 3c 予定） |
+| スタン（CC） | オーバーレイ `stun`（バッジ非表示。将来キャラ頭上エフェクト予定） |
 
 ロジックは `BattleEvent` を発火；`BattleView` が `BattleCanvas` を駆動。`render/` に戦闘ルールは置かない。

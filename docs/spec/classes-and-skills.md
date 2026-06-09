@@ -207,19 +207,22 @@ interface CharacterBuild {
 | effect | 主なフィールド | 挙動 |
 |--------|----------------|------|
 | `targetRuleOverride` | `targetRuleOverride` | 味方の攻撃 anchor ルールを上書き（複数時は配列の後ろ優先） |
-| `evasionChance` | `evasionChance` | 被ダメ回避率（加算、上限 1） |
-| `damageIncrease` | `damageIncrease` | 条件付き与ダメ倍率（`damage` / `dot` でも effect 単位で指定可） |
+| `evasionChance` | `evasionChance` | 被ダメ回避率（加算、上限 1）。**直接 `damage` の物理/魔法両方**（DoT 非対象） |
+| `block` | `blockChance` | 物理直接ダメージを確率で軽減（加算、上限 1）。軽減量 = `floor(dmg × min(1, 0.25 + effectiveAtk/100))` |
+| `damageIncrease` | `damageIncrease` | 条件付き特効ダメ倍率（`damage` / `dot` でも effect 単位で指定可） |
+| `damageReduction` | `damageReductionPercent`, `damageReductionTargetRule` | 対象に常時被ダメ軽減を付与（戦闘開始時同期） |
 | `defenseIgnore` | `defenseIgnore` | 与ダメ時の DEF / REG 無視（`damage` / `dot` でも effect 単位で指定可） |
 | `periodicDispel` | `intervalSec`, `dispelTargetRule`, `dispelCount`, `dispelTags?` | 一定間隔でデバフ解除 |
 | `aoeCrowdBonus` | `perExtraTargetScale`, `maxExtraTargets` | `aoe` / `scatter` の追加ヒット数ボーナス |
 | `damageTakenToHeal` | `ratio` | HP に入った最終ダメージの `ratio` 割合を即時回復（バリア吸収後。ATK 基準ではない） |
-| `partyHotAura` | `partyHotAuraAmount` | 味方全体に常時 HoT を付与（戦闘開始時同期） |
+| `hot` | `hotAmount`, `hotTargetRule` | 対象に常時 HoT を付与（戦闘開始時同期） |
 | `excessHealToBarrier` | `barrierScale` | 回復が maxHp を超過した分をバリアに変換（**上書き**） |
+| `healReceivedIncrease` | `percent` | 受ける `heal` / HoT 量を `floor(量 × (1 + percent合算))` で増加 |
 | `extendSelfAppliedDebuff` | `extendSec`, `durationMultiplier?` | 使用者が付与する debuff 持続延長 |
 
 **移行（削除済み）:** `selfLowHpDamageScale` → `damageIncrease`（`selfHp` + `scaling`）、`damageVsDotTarget` → `damageIncrease`（`debuff` + `dot`）、`healAppliesBarrier` → `excessHealToBarrier`
 
-### ダメージ増加（`DamageIncreaseSpec`）
+### 特効ダメージ（`DamageIncreaseSpec`）
 
 | フィールド | 説明 |
 |------------|------|
@@ -245,6 +248,15 @@ interface CharacterBuild {
 | `dispelCount` | `0` = 対象タグすべて、`N>0` = `remainingSec` 降順で N 件 |
 | `dispelTags` | 未指定 = 全デバフタグ |
 
+### ブロック（`block` effect / `block` passive）
+
+| フィールド | 説明 |
+|------------|------|
+| `blockChance` | 0〜1。複数ソースは加算（上限 1） |
+| `durationSec` | アクティブ `block` 効果のみ。付与 buff の持続 |
+
+アクティブ `block` は `StatusEffect`（`overlay: block`, `blockChance`）を付与。DEF 適用後の物理直接ダメージにのみ判定。
+
 レガシー合成（未使用の一次職データに残る場合）:
 
 | 効果 | 合成ルール |
@@ -268,6 +280,8 @@ interface CharacterBuild {
 | `highestHpEnemy` | 攻撃可能敵の現在 HP 最大 |
 | `farthestEnemy` | 攻撃可能敵のうち X が最も小さい（味方から最も遠い） |
 | `debuffedEnemy` | 指定デバフ（`targetDebuffFilter`）を受けている攻撃可能敵 |
+| `allAllies` | 味方側の生存ユニット全員（射程無視） |
+| `allEnemies` | 敵側の生存ユニット全員（Wave 内・射程無視） |
 
 ## effect 共通フィールド（`skills.json`）
 

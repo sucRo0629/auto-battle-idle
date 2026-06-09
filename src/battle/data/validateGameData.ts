@@ -91,6 +91,7 @@ const DEFENSE_IGNORE_DEF_MODES_SET = new Set<string>(DEFENSE_IGNORE_DEF_MODES);
 
 const LEGACY_PASSIVE_EFFECT_ALIASES: Record<string, PassiveEffectKind> = {
   healAppliesBarrier: 'excessHealToBarrier',
+  partyHotAura: 'hot',
 };
 
 const REMOVED_PASSIVE_EFFECTS = new Set([
@@ -1004,6 +1005,27 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
     };
   }
 
+  if (type === 'block') {
+    const blockChance = requireNumber(obj, 'blockChance', context);
+    if (blockChance < 0 || blockChance > 1) {
+      invalidField(context, 'blockChance', 'must be between 0 and 1');
+    }
+    const durationSec = requireNumber(obj, 'durationSec', context);
+    if (durationSec <= 0) {
+      invalidField(context, 'durationSec', 'must be a positive number');
+    }
+    return {
+      targetRule,
+      ...targetShapeFields,
+      ...combatModifiers,
+      type: 'block',
+      blockChance,
+      durationSec,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    };
+  }
+
   if (type !== 'debuff') {
     invalidField(context, 'type', `unsupported effect type ${type}`);
   }
@@ -1138,6 +1160,26 @@ function requirePassiveEffectParams(
         ...base,
         evasionChance: requireNumber(obj, 'evasionChance', context),
       };
+    case 'block': {
+      const blockChance = requireNumber(obj, 'blockChance', context);
+      if (blockChance < 0 || blockChance > 1) {
+        invalidField(context, 'blockChance', 'must be between 0 and 1');
+      }
+      const targetRuleOverride =
+        obj.targetRuleOverride === undefined
+          ? undefined
+          : requireEnum(
+              obj,
+              'targetRuleOverride',
+              context,
+              TARGET_RULES_SET,
+            );
+      return {
+        ...base,
+        blockChance,
+        ...(targetRuleOverride !== undefined ? { targetRuleOverride } : {}),
+      };
+    }
     case 'damageIncrease':
       return {
         ...base,
@@ -1183,14 +1225,43 @@ function requirePassiveEffectParams(
     }
     case 'damageTakenToHeal':
       return { ...base, ratio: requireNumber(obj, 'ratio', context) };
-    case 'partyHotAura':
+    case 'hot': {
+      const amountSource = obj.hotAmount ?? obj.partyHotAuraAmount;
+      const targetSource = obj.hotTargetRule ?? obj.partyHotTargetRule;
       return {
         ...base,
-        partyHotAuraAmount: parseResourceAmountSpec(
-          obj.partyHotAuraAmount,
-          `${context}.partyHotAuraAmount`,
+        hotAmount: parseResourceAmountSpec(
+          amountSource,
+          `${context}.hotAmount`,
+        ),
+        hotTargetRule: requireEnum(
+          { hotTargetRule: targetSource ?? 'self' },
+          'hotTargetRule',
+          context,
+          TARGET_RULES_SET,
         ),
       };
+    }
+    case 'damageReduction': {
+      const percent = requireNumber(obj, 'damageReductionPercent', context);
+      if (percent < 0 || percent > 1) {
+        invalidField(
+          context,
+          'damageReductionPercent',
+          'must be between 0 and 1',
+        );
+      }
+      return {
+        ...base,
+        damageReductionPercent: percent,
+        damageReductionTargetRule: requireEnum(
+          { damageReductionTargetRule: obj.damageReductionTargetRule ?? 'self' },
+          'damageReductionTargetRule',
+          context,
+          TARGET_RULES_SET,
+        ),
+      };
+    }
     case 'excessHealToBarrier': {
       const barrierScale =
         obj.barrierScale === undefined
@@ -1231,6 +1302,13 @@ function requirePassiveEffectParams(
         ),
         maxExtraTargets: requireNumber(obj, 'maxExtraTargets', context),
       };
+    case 'healReceivedIncrease': {
+      const percent = requireNumber(obj, 'percent', context);
+      if (percent < 0) {
+        invalidField(context, 'percent', 'must be a non-negative number');
+      }
+      return { ...base, percent };
+    }
   }
 }
 

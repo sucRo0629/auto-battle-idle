@@ -14,12 +14,14 @@ import {
 } from '../ccEffects.ts';
 import {
   applyExcessHealToBarrierFromPassive,
+  resolveIncomingHealAmount,
   resolveDebuffDurationWithPassives,
   rollsEvasion,
   stripPassivesAurasFromSource,
   type PassiveDamageContext,
 } from '../passiveEffects.ts';
 import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
+import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
 import { resolveMoveVisualX } from '../../render/formationLayout.ts';
 import {
@@ -347,6 +349,7 @@ export class SkillExecutor {
 
     if (effectDef.type === 'damage') {
       if (rollsEvasion(target, this.gameData.skillRegistry.passives)) {
+        this.emit({ type: 'evade', targetId: target.id });
         return false;
       }
       const amount = resolveDamage(
@@ -361,7 +364,19 @@ export class SkillExecutor {
           effectDefenseIgnore: effectDef.defenseIgnore,
         },
       );
-      const damageResult = applyDamageToTarget(target, amount);
+      let finalDamage = amount;
+      if (effectDef.damageType === 'physical') {
+        const blockResult = applyBlockToPhysicalDamage(
+          target,
+          amount,
+          this.gameData.skillRegistry.passives,
+        );
+        finalDamage = blockResult.finalDamage;
+        if (blockResult.didBlock) {
+          this.emit({ type: 'block', targetId: target.id });
+        }
+      }
+      const damageResult = applyDamageToTarget(target, finalDamage);
       const appliedDamage =
         damageResult.hpDamage + damageResult.barrierDamage;
       this.deps.onDamageApplied?.(actor, target, appliedDamage);
@@ -375,7 +390,7 @@ export class SkillExecutor {
         slotKind: cd.slotKind,
         effect: 'damage',
         effectIndex,
-        amount,
+        amount: finalDamage,
         range: effectDef.range,
         ...(hitIndex !== undefined ? { hitIndex } : {}),
       });
@@ -385,7 +400,7 @@ export class SkillExecutor {
         if (!target.isEnemy) {
           stripPassivesAurasFromSource(
             target.id,
-            this.deps.getAllCombatants().filter((unit) => !unit.isEnemy),
+            this.deps.getAllCombatants(),
           );
         }
         this.emit({ type: 'death', targetId: target.id });
@@ -395,12 +410,17 @@ export class SkillExecutor {
     }
 
     if (effectDef.type === 'heal') {
-      const amount = resolveResourceAmount(
+      const baseAmount = resolveResourceAmount(
         actor,
         target,
         effectDef.amount,
         this.gameData.skillRegistry.passives,
         powerMultiplierOverride,
+      );
+      const amount = resolveIncomingHealAmount(
+        target,
+        baseAmount,
+        this.gameData.skillRegistry.passives,
       );
       if (amount <= 0) return false;
       applyExcessHealToBarrierFromPassive(
@@ -576,6 +596,35 @@ export class SkillExecutor {
         effect: 'dispel',
         effectIndex,
         amount: removed,
+        range: effectDef.range,
+        ...(hitIndex !== undefined ? { hitIndex } : {}),
+      });
+      return true;
+    }
+
+    if (effectDef.type === 'block') {
+      const appliedAt = Date.now();
+      target.statusEffects.push({
+        id: `${skill.id}_block_${appliedAt}`,
+        kind: 'buff',
+        overlay: 'block',
+        blockChance: effectDef.blockChance,
+        multiplier: 1,
+        durationSec: effectDef.durationSec,
+        remainingSec: effectDef.durationSec,
+        sourceId: actor.id,
+        skillId: skill.id,
+      });
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'block',
+        effectIndex,
+        statusLabel: 'block',
         range: effectDef.range,
         ...(hitIndex !== undefined ? { hitIndex } : {}),
       });

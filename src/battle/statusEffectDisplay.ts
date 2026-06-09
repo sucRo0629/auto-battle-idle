@@ -1,16 +1,27 @@
 import type { StatusEffect } from './types.ts';
 
-export type StatusDisplayCategory = 'atk' | 'def' | 'reg' | 'hot' | 'dot';
+export type StatusDisplayCategory =
+  | 'atk'
+  | 'def'
+  | 'reg'
+  | 'damageReduction'
+  | 'damageIncrease'
+  | 'hot'
+  | 'dot'
+  | 'block';
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   'atk',
   'def',
   'reg',
+  'damageReduction',
+  'damageIncrease',
   'hot',
   'dot',
+  'block',
 ];
 
-export const STATUS_BADGE_SLOT_COUNT = 5;
+export const STATUS_BADGE_SLOT_COUNT = STATUS_BADGE_SLOT_ORDER.length;
 
 const NEUTRAL_EPSILON = 0.001;
 
@@ -53,6 +64,12 @@ function effectsForCategory(
   if (category === 'reg') {
     return effects.filter((effect) => effect.stat === 'reg');
   }
+  if (category === 'damageReduction' || category === 'damageIncrease') {
+    return effects.filter((effect) => effect.stat === 'damageTaken');
+  }
+  if (category === 'block') {
+    return effects.filter((effect) => effect.overlay === 'block');
+  }
   return [];
 }
 
@@ -93,7 +110,7 @@ function aggregateStatCategory(
 
 function aggregateOverlayCategory(
   effects: StatusEffect[],
-  category: 'hot' | 'dot',
+  category: 'hot' | 'dot' | 'block',
 ): AggregatedCategoryEffect | null {
   const relevant = effectsForCategory(effects, category);
   if (relevant.length === 0) return null;
@@ -102,7 +119,8 @@ function aggregateOverlayCategory(
     category,
     netFlat: 0,
     netMul: 1,
-    kind: category === 'hot' ? 'buff' : 'debuff',
+    kind:
+      category === 'hot' || category === 'block' ? 'buff' : 'debuff',
     remainingRatio: categoryRemainingRatio(effects, category),
   };
 }
@@ -153,6 +171,22 @@ export function statEffectKind(
   return effective > base ? 'buff' : 'debuff';
 }
 
+function aggregateDamageTakenCategory(
+  effects: StatusEffect[],
+): AggregatedCategoryEffect | null {
+  const agg = aggregateStatEffects(effects, 'damageTaken');
+  const kind = statEffectKind(1, 'damageTaken', agg);
+  if (!kind) return null;
+
+  return {
+    category: kind === 'buff' ? 'damageReduction' : 'damageIncrease',
+    netFlat: agg.netFlat,
+    netMul: agg.netMul,
+    kind,
+    remainingRatio: categoryRemainingRatio(effects, 'damageReduction'),
+  };
+}
+
 export function aggregateStatStatusEffects(
   effects: StatusEffect[],
   baseStats: StatBadgeBaseStats,
@@ -168,7 +202,10 @@ export function aggregateStatStatusEffects(
     if (badge) result.push(badge);
   }
 
-  for (const category of ['hot', 'dot'] as const) {
+  const damageTakenBadge = aggregateDamageTakenCategory(effects);
+  if (damageTakenBadge) result.push(damageTakenBadge);
+
+  for (const category of ['hot', 'dot', 'block'] as const) {
     const badge = aggregateOverlayCategory(effects, category);
     if (badge) result.push(badge);
   }

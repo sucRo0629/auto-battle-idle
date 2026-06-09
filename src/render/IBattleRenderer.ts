@@ -33,6 +33,8 @@ export interface IBattleRenderer {
   ): void;
   showDamagePopup(targetId: string, amount: number): void;
   showHealPopup(targetId: string, amount: number): void;
+  showEvadePopup(targetId: string): void;
+  showBlockPopup(targetId: string): void;
   showBuffGlow(targetId: string): void;
   tick(deltaMs: number): void;
   destroy(): void;

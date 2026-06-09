@@ -1,5 +1,6 @@
 import { applyBarrierToTarget, getPassiveDefs } from './combatMath.ts';
 import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
+import { pickTargets } from './skills/targeting.ts';
 import { resolveSkillTrigger } from './skillTrigger.ts';
 import type {
   ActiveSkillDef,
@@ -13,7 +14,7 @@ import type {
   TargetShape,
 } from './types.ts';
 
-const PARTY_HOT_AURA_DURATION_SEC = 99999;
+const PASSIVE_AURA_DURATION_SEC = 99999;
 
 export interface PassiveDamageContext {
   skill?: ActiveSkillDef;
@@ -109,6 +110,21 @@ export function resolveEffectDamageIncreaseMultiplier(
   return mul;
 }
 
+export function resolveIncomingHealAmount(
+  target: CombatantState,
+  baseAmount: number,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  if (baseAmount <= 0) return 0;
+  let percentSum = 0;
+  for (const passive of getPassiveDefs(target, passives)) {
+    if (passive.effect !== 'healReceivedIncrease') continue;
+    percentSum += passive.percent ?? 0;
+  }
+  if (percentSum === 0) return baseAmount;
+  return Math.floor(Math.max(0, baseAmount * (1 + percentSum)));
+}
+
 export function applyDamageTakenToHeal(
   target: CombatantState,
   damage: number,
@@ -170,57 +186,150 @@ export function resolveDebuffDurationWithPassives(
   return duration;
 }
 
-export function syncPartyHotAuras(
+export function syncHotAuras(
   allies: CombatantState[],
+  enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
 ): void {
   for (const ally of allies) {
     ally.statusEffects = ally.statusEffects.filter(
-      (effect) => !effect.id.startsWith('party_hot_'),
+      (effect) => !effect.id.startsWith('passive_hot_'),
     );
   }
 
   for (const source of allies) {
     if (!source.isAlive) continue;
     for (const passive of getPassiveDefs(source, passives)) {
-      if (passive.effect !== 'partyHotAura' || !passive.partyHotAuraAmount) {
+      if (passive.effect !== 'hot' || !passive.hotAmount) {
         continue;
       }
-      for (const target of allies) {
-        if (!target.isAlive) continue;
+      const rule = passive.hotTargetRule ?? 'self';
+      const targets = pickTargets(rule, source, allies, enemies);
+      for (const target of targets) {
         target.statusEffects.push(
-          createPartyHotAuraEffect(source, passive.partyHotAuraAmount),
+          createPassiveHotEffect(source, passive.id, passive.hotAmount),
         );
       }
     }
   }
 }
 
-function createPartyHotAuraEffect(
+export function syncBlockAuras(
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+): void {
+  const units = [...allies, ...enemies];
+  for (const unit of units) {
+    unit.statusEffects = unit.statusEffects.filter(
+      (effect) => !effect.id.startsWith('passive_block_'),
+    );
+  }
+
+  for (const unit of units) {
+    if (!unit.isAlive) continue;
+    for (const passive of getPassiveDefs(unit, passives)) {
+      if (passive.effect !== 'block') continue;
+      const blockChance = passive.blockChance ?? 0;
+      if (blockChance <= 0) continue;
+      unit.statusEffects.push(
+        createPassiveBlockEffect(unit, passive.id, blockChance),
+      );
+    }
+  }
+}
+
+export function syncDamageReductionAuras(
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+): void {
+  const units = [...allies, ...enemies];
+  for (const unit of units) {
+    unit.statusEffects = unit.statusEffects.filter(
+      (effect) => !effect.id.startsWith('passive_dmg_reduction_'),
+    );
+  }
+
+  for (const source of units) {
+    if (!source.isAlive) continue;
+    for (const passive of getPassiveDefs(source, passives)) {
+      if (passive.effect !== 'damageReduction') continue;
+      const percent = passive.damageReductionPercent ?? 0;
+      if (percent <= 0) continue;
+      const rule = passive.damageReductionTargetRule ?? 'self';
+      const targets = pickTargets(rule, source, allies, enemies);
+      for (const target of targets) {
+        target.statusEffects.push(
+          createPassiveDamageReductionEffect(source, passive.id, percent),
+        );
+      }
+    }
+  }
+}
+
+function createPassiveBlockEffect(
   source: CombatantState,
+  passiveId: string,
+  blockChance: number,
+): StatusEffect {
+  return {
+    id: `passive_block_${source.id}_${passiveId}`,
+    kind: 'buff',
+    overlay: 'block',
+    blockChance,
+    sourceId: source.id,
+    multiplier: 1,
+    durationSec: PASSIVE_AURA_DURATION_SEC,
+    remainingSec: PASSIVE_AURA_DURATION_SEC,
+  };
+}
+
+function createPassiveDamageReductionEffect(
+  source: CombatantState,
+  passiveId: string,
+  percent: number,
+): StatusEffect {
+  return {
+    id: `passive_dmg_reduction_${source.id}_${passiveId}`,
+    kind: 'buff',
+    stat: 'damageTaken',
+    multiplier: Math.max(0, 1 - percent),
+    sourceId: source.id,
+    durationSec: PASSIVE_AURA_DURATION_SEC,
+    remainingSec: PASSIVE_AURA_DURATION_SEC,
+  };
+}
+
+function createPassiveHotEffect(
+  source: CombatantState,
+  passiveId: string,
   amount: ResourceAmountSpec,
 ): StatusEffect {
   return {
-    id: `party_hot_${source.id}`,
+    id: `passive_hot_${source.id}_${passiveId}`,
     kind: 'buff',
     overlay: 'hot',
     amount,
     sourceId: source.id,
     multiplier: 1,
-    durationSec: PARTY_HOT_AURA_DURATION_SEC,
-    remainingSec: PARTY_HOT_AURA_DURATION_SEC,
+    durationSec: PASSIVE_AURA_DURATION_SEC,
+    remainingSec: PASSIVE_AURA_DURATION_SEC,
     tickSec: 1,
   };
 }
 
 export function stripPassivesAurasFromSource(
   sourceId: string,
-  allies: CombatantState[],
+  units: CombatantState[],
 ): void {
-  for (const ally of allies) {
-    ally.statusEffects = ally.statusEffects.filter(
+  for (const unit of units) {
+    unit.statusEffects = unit.statusEffects.filter(
       (effect) =>
-        effect.sourceId !== sourceId || !effect.id.startsWith('party_hot_'),
+        effect.sourceId !== sourceId ||
+        (!effect.id.startsWith('passive_hot_') &&
+          !effect.id.startsWith('passive_dmg_reduction_') &&
+          !effect.id.startsWith('passive_block_')),
     );
   }
 }

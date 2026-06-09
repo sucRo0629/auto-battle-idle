@@ -110,7 +110,9 @@ export type TargetRule =
   | "highestRegEnemy"
   | "highestHpEnemy"
   | "farthestEnemy"
-  | "debuffedEnemy";
+  | "debuffedEnemy"
+  | "allAllies"
+  | "allEnemies";
 
 /** 効果のターゲット形状。未指定は single */
 export type TargetShape =
@@ -204,7 +206,7 @@ export interface StatusEffect {
   /** buff/debuff 用（stat 系） */
   stat?: StatusEffectStat;
   /** HoT/DoT/CC バッジ用 */
-  overlay?: "hot" | "dot" | "stun";
+  overlay?: "hot" | "dot" | "stun" | "block";
   /** HoT tick 量（ResourceAmountSpec） */
   amount?: ResourceAmountSpec;
   /** HoT/DoT tick 量（旧 JSON 互換） */
@@ -224,6 +226,8 @@ export interface StatusEffect {
   /** DoT tick 用: 付与スキル effect からコピー */
   damageIncrease?: DamageIncreaseSpec;
   defenseIgnore?: DefenseIgnoreSpec;
+  /** 一時ブロック付与（アクティブ block 効果） */
+  blockChance?: number;
 }
 
 export type StatusEffectStat = "atk" | "def" | "reg" | "damageTaken";
@@ -310,13 +314,16 @@ export type PassiveEffectKind =
   | "targetRuleOverride"
   | "evasionChance"
   | "damageTakenToHeal"
-  | "partyHotAura"
+  | "hot"
   | "excessHealToBarrier"
   | "extendSelfAppliedDebuff"
   | "aoeCrowdBonus"
   | "damageIncrease"
   | "defenseIgnore"
-  | "periodicDispel";
+  | "periodicDispel"
+  | "block"
+  | "healReceivedIncrease"
+  | "damageReduction";
 
 export interface PassiveSkillDef {
   id: string;
@@ -326,8 +333,13 @@ export interface PassiveSkillDef {
   effect: PassiveEffectKind;
   targetRuleOverride?: TargetRule;
   evasionChance?: number;
+  blockChance?: number;
   ratio?: number;
-  partyHotAuraAmount?: ResourceAmountSpec;
+  hotAmount?: ResourceAmountSpec;
+  hotTargetRule?: TargetRule;
+  /** damageReduction: 被ダメ軽減率（0.2 = 20% 軽減） */
+  damageReductionPercent?: number;
+  damageReductionTargetRule?: TargetRule;
   barrierScale?: number;
   extendSec?: number;
   durationMultiplier?: number;
@@ -339,6 +351,8 @@ export interface PassiveSkillDef {
   dispelTargetRule?: TargetRule;
   dispelTags?: DebuffFilterTag[];
   dispelCount?: number;
+  /** healReceivedIncrease: 受ける回復・HoT 量の加算割合（0.2 = +20%） */
+  percent?: number;
 }
 
 export type SkillEffectKind =
@@ -352,7 +366,8 @@ export type SkillEffectKind =
   | "move"
   | "stun"
   | "knockback"
-  | "dispel";
+  | "dispel"
+  | "block";
 
 export type MoveMode = "engage" | "toAnchor" | "behindTarget";
 export type DamageType = "physical" | "magic";
@@ -524,6 +539,12 @@ export interface DispelSkillEffect extends SkillEffectCommon {
   dispelCount: number;
 }
 
+export interface BlockSkillEffect extends SkillEffectCommon {
+  type: "block";
+  blockChance: number;
+  durationSec: number;
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -535,7 +556,8 @@ export type SkillEffectDef =
   | MoveSkillEffect
   | StunSkillEffect
   | KnockbackSkillEffect
-  | DispelSkillEffect;
+  | DispelSkillEffect
+  | BlockSkillEffect;
 
 export interface ActiveSkillDef {
   id: string;

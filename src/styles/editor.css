@@ -182,6 +182,33 @@
   margin-bottom: 12px;
 }
 
+.editor-skill-section {
+  margin-bottom: 16px;
+}
+
+.editor-skill-section:last-of-type {
+  margin-bottom: 0;
+}
+
+.editor-skill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.editor-skill-list .editor-skill-card {
+  margin-bottom: 0;
+}
+
+.editor-section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #2d3a4f;
+}
+
 .editor-effect-block {
   margin-bottom: 12px;
   padding: 10px;

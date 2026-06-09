@@ -44,7 +44,7 @@ export function getAttackablePool(
   rangePx: number,
 ): CombatantState[] {
   const pool = getTargetPoolForRule(rule, actor, allies, enemies);
-  if (rule === 'self') {
+  if (rule === 'self' || rule === 'allAllies' || rule === 'allEnemies') {
     return pool;
   }
   return pool.filter((unit) => isWithinSkillRange(actor, unit, rangePx));

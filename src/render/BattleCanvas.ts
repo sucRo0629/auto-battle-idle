@@ -22,6 +22,7 @@ import {
   battleCanvasHeight,
 } from "./formationLayout.ts";
 import { AttackEffectManager } from "./AttackEffect.ts";
+import { CombatReactionPopupManager } from "./CombatReactionPopup.ts";
 import { DamagePopupManager } from "./DamagePopup.ts";
 import {
   computeEnemyHpBarTops,
@@ -98,6 +99,7 @@ export class BattleCanvas implements IBattleRenderer {
   private animator = new SpriteAnimator();
   private attackEffects = new AttackEffectManager();
   private damagePopups = new DamagePopupManager();
+  private combatReactionPopups = new CombatReactionPopupManager();
   private buffGlows = new BuffGlowManager();
   private deathPlayback = new DeathPlaybackManager();
   private victoryOverlay = new VictoryOverlay();
@@ -154,6 +156,14 @@ export class BattleCanvas implements IBattleRenderer {
     this.damagePopups.spawn(targetId, amount, "heal");
   }
 
+  showEvadePopup(targetId: string): void {
+    this.combatReactionPopups.spawn(targetId, "evade");
+  }
+
+  showBlockPopup(targetId: string): void {
+    this.combatReactionPopups.spawn(targetId, "block");
+  }
+
   showBuffGlow(targetId: string): void {
     this.buffGlows.trigger(targetId);
   }
@@ -164,6 +174,7 @@ export class BattleCanvas implements IBattleRenderer {
     }
     this.attackEffects.tick(deltaMs);
     this.damagePopups.tick(deltaMs);
+    this.combatReactionPopups.tick(deltaMs);
     this.buffGlows.tick(deltaMs);
     this.deathPlayback.tick(deltaMs);
     this.victoryOverlay.tick(deltaMs);
@@ -347,6 +358,13 @@ export class BattleCanvas implements IBattleRenderer {
       this.theme,
     );
     this.damagePopups.draw(
+      this.ctx,
+      this.layouts,
+      SPRITE_SIZE * SPRITE_SCALE,
+      SPRITE_SCALE,
+      this.theme,
+    );
+    this.combatReactionPopups.draw(
       this.ctx,
       this.layouts,
       SPRITE_SIZE * SPRITE_SCALE,
@@ -662,11 +680,12 @@ export class BattleCanvas implements IBattleRenderer {
 
     const scale = 1;
     const rowW = statusBadgeRowWidth(
-      drawItems.length,
+      drawItems,
       scale,
       this.theme.statusBadgeIconSize,
       this.theme.statusBadgeArrowWidth,
       this.theme.statusBadgeOverlap,
+      this.theme.statusBadgeArrowOverlap,
     );
     const badgeH = this.theme.statusBadgeIconSize * scale;
     const centerX = barX + barW - rowW / 2;
@@ -680,12 +699,14 @@ export class BattleCanvas implements IBattleRenderer {
 
     drawStatusBadgeRow(this.ctx, centerX, top, drawItems, scale, {
       buffColor: this.theme.statusBuffColor,
-      badgeBg: this.theme.statusBadgeBg,
       debuffColor: this.theme.statusDebuffColor,
       iconSize: this.theme.statusBadgeIconSize,
       arrowWidth: this.theme.statusBadgeArrowWidth,
+      arrowOverlap: this.theme.statusBadgeArrowOverlap,
       rowOverlap: this.theme.statusBadgeOverlap,
       overlayColor: this.theme.statusBadgeOverlay,
+      iconOutlineColor: this.theme.statusIconOutlineColor,
+      iconOutlineWidth: this.theme.statusIconOutlineWidth,
       iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
       resolveIconFallbackColor: (category) =>
         resolveStatusIconFallbackColor(category, this.theme),
@@ -890,11 +911,12 @@ export class BattleCanvas implements IBattleRenderer {
       if (drawItems.length === 0) continue;
 
       const rowWidth = statusBadgeRowWidth(
-        drawItems.length,
+        drawItems,
         scale,
         this.theme.statusBadgeIconSize,
         this.theme.statusBadgeArrowWidth,
         this.theme.statusBadgeOverlap,
+        this.theme.statusBadgeArrowOverlap,
       );
       rowWidthById.set(layout.id, rowWidth);
       badgeInputs.push({
@@ -930,12 +952,14 @@ export class BattleCanvas implements IBattleRenderer {
 
       drawStatusBadgeRow(this.ctx, centerX, top, drawItems, scale, {
         buffColor: this.theme.statusBuffColor,
-        badgeBg: this.theme.statusBadgeBg,
         debuffColor: this.theme.statusDebuffColor,
         iconSize: this.theme.statusBadgeIconSize,
         arrowWidth: this.theme.statusBadgeArrowWidth,
+        arrowOverlap: this.theme.statusBadgeArrowOverlap,
         rowOverlap: this.theme.statusBadgeOverlap,
         overlayColor: this.theme.statusBadgeOverlay,
+        iconOutlineColor: this.theme.statusIconOutlineColor,
+        iconOutlineWidth: this.theme.statusIconOutlineWidth,
         iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
         resolveIconFallbackColor: (category) =>
           resolveStatusIconFallbackColor(category, this.theme),

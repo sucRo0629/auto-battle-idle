@@ -363,7 +363,7 @@ export class BalanceEditorStep {
       'Lv1 HP',
       'Lv1 ATK',
       'Lv1 DEF',
-      'REG',
+      '耐魔',
       'HP 成長',
       'ATK 成長',
       'DEF 成長',
