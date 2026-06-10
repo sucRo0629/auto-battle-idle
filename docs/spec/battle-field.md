@@ -322,6 +322,18 @@ Wave 進軍・FormationReset 中等、**非接敵中**も DoT/HoT・バフ/デ�
 
 ---
 
+## 付録 B. 仕様準拠テスト ID
+
+| 接頭辞 | ファイル | 内容 |
+|--------|----------|------|
+| F-* | `battleFieldFormation.test.ts` | §3.3 隊形 pure（BattleEngine 不使用） |
+| A-* | `battleFieldArchitecture.test.ts` | L1 / §4.2 / §4.6 構造 invariant。`it.fails` は現行未準拠 |
+| I-* | `battleFieldIntegration.test.ts` | §4.1 画面結果・勝利演出 |
+
+共通 harness: `src/battle/test/battleFieldSpec.harness.ts`
+
+---
+
 ## 関連ドキュメント
 
 - [combat.md](combat.md) — ダメージ、CD、脅威、ステータス（座標節は本書へ委譲）

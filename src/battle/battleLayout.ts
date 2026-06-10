@@ -562,9 +562,20 @@ export function resolveStablePlayerEngagedVisuals(
 /** @deprecated resolveStablePlayerEngagedVisuals */
 export const resolveStableAllyEngagedVisuals = resolveStablePlayerEngagedVisuals;
 
+/** Vitest 専用: resolveEngagedLayout の呼び出し回数（spec A-L1-01） */
+let resolveEngagedLayoutCallCount = 0;
+
+export const __testOnlyBattleLayout = {
+  getResolveEngagedLayoutCallCount: (): number => resolveEngagedLayoutCallCount,
+  resetResolveEngagedLayoutCallCount: (): void => {
+    resolveEngagedLayoutCallCount = 0;
+  },
+};
+
 export function resolveEngagedLayout(
   ctx: EngagedLayoutContext,
 ): EngagedLayoutResult | null {
+  resolveEngagedLayoutCallCount += 1;
   const players = layoutPlayers(ctx);
   const living = players.filter((p) => p.isAlive);
   if (living.length === 0) return null;

@@ -1,13 +1,6 @@
 /**
- * Engagement visual contract tests
- *
- * These tests assert player-visible screen-space outcomes only — what you would
- * notice during playtest — not battleX, formationResetActive, or other internal
- * state. Each contract maps to a reported visual bug class; thresholds are tight
- * enough to fail on broken engage flow rather than passing with loose deltas.
- *
- * Contract IDs (C1–C5) are the authoritative engage-layout spec for this file.
- * Victory exit tests live here because they share the same engine harness.
+ * battle-field.md §4.1 / §4.3 / §4.6 — integration screen-space outcomes.
+ * Migrated from battleEngine.engagementVisual.test.ts with spec IDs (I-*).
  */
 import { describe, expect, it } from 'vitest';
 import { BattleEngine } from './BattleEngine.ts';
@@ -15,185 +8,34 @@ import { loadGameData } from './data/loadGameData.ts';
 import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
-import { SPRITE_WIDTH } from '../render/formationLayout.ts';
 import { engagedMinBodyGap } from './battleConstants.ts';
 import type { CombatantSnapshot } from './types.ts';
+import {
+  BACK_ROW_NAMES,
+  LONG_BATTLE_TIMEOUT_MS,
+  MARCH_MAX_ALLY_SCREEN_X,
+  SCREEN_MAX_X,
+  SCREEN_MIN_X,
+  SPRITE_WIDTH,
+  TICK_DT,
+  advanceUntil,
+  countScreenXSignFlips,
+  createStage1Engine,
+  createStage1Wave2MeleeOnlyEngine,
+  reachWave1Engage,
+  reachWave2Engage,
+  screenX,
+  waitForEngaged,
+} from './test/battleFieldSpec.harness.ts';
 
-const LONG_BATTLE_TIMEOUT_MS = 60_000;
-const SCREEN_MIN_X = -16;
-const SCREEN_MAX_X = 496;
-const MARCH_MAX_ALLY_SCREEN_X = 280;
+const allyScreenX = screenX;
+const enemyScreenX = screenX;
 
-function createStage1Engine(options?: { reliableWaveClear?: boolean }) {
-  const gameData = structuredClone(loadGameData());
-  if (options?.reliableWaveClear) {
-    const stage = gameData.stages.find((s) => s.id === '1');
-    if (stage?.waves[0]) {
-      stage.waves[0].enemies = [{ templateId: 'stage1_1', spawnX: 600 }];
-    }
-    const wave1Enemy = gameData.enemyRegistry.stage1_1;
-    if (wave1Enemy) wave1Enemy.maxHp = 1;
-  }
-  const levelCurves = loadLevelCurves(levelCurvesJson);
-  const save = createDefaultSave(gameData, 'demo');
-  save.stageProgress.currentStageId = '1';
-  if (options?.reliableWaveClear) {
-    for (const slot of save.party) {
-      if (slot) slot.progress.level = 10;
-    }
-  }
-  const engine = new BattleEngine(
-    gameData,
-    levelCurves,
-    () => save.party,
-    () => save.stageProgress.currentStageId,
-  );
-  engine.startBattle();
-  return engine;
-}
-
-function createStage1Wave2MeleeOnlyEngine() {
-  const gameData = structuredClone(loadGameData());
-  const stage = gameData.stages.find((s) => s.id === '1');
-  if (stage?.waves[0]) {
-    stage.waves[0].enemies = [{ templateId: 'stage1_1', spawnX: 600 }];
-  }
-  const wave1Enemy = gameData.enemyRegistry.stage1_1;
-  if (wave1Enemy) wave1Enemy.maxHp = 1;
-  const ranged = gameData.enemyRegistry.test_ranged;
-  const melee = gameData.enemyRegistry.test_enemy;
-  if (ranged) ranged.maxHp = 1;
-  if (melee) melee.maxHp = 9_999;
-  const levelCurves = loadLevelCurves(levelCurvesJson);
-  const save = createDefaultSave(gameData, 'demo');
-  save.stageProgress.currentStageId = '1';
-  for (const slot of save.party) {
-    if (slot) slot.progress.level = 12;
-  }
-  const engine = new BattleEngine(
-    gameData,
-    levelCurves,
-    () => save.party,
-    () => save.stageProgress.currentStageId,
-  );
-  engine.startBattle();
-  return engine;
-}
-
-function allyScreenX(
-  ally: CombatantSnapshot,
-  combatCameraX: number,
-): number {
-  return ally.visualX + combatCameraX;
-}
-
-function enemyScreenX(
-  enemy: CombatantSnapshot,
-  combatCameraX: number,
-): number {
-  return enemy.visualX + combatCameraX;
-}
-
-function waitForEngaged(engine: BattleEngine, maxTicks = 5000): void {
-  for (let i = 0; i < maxTicks; i++) {
-    engine.tick(1 / 60);
-    if (engine.getSnapshot().engaged) return;
-  }
-  throw new Error('engagement did not start');
-}
-
-function advanceUntil(
-  engine: BattleEngine,
-  predicate: (snap: ReturnType<BattleEngine['getSnapshot']>) => boolean,
-  maxTicks = 120_000,
-): ReturnType<BattleEngine['getSnapshot']> | null {
-  for (let i = 0; i < maxTicks; i++) {
-    engine.tick(1 / 60);
-    const snap = engine.getSnapshot();
-    if (predicate(snap)) return snap;
-  }
-  return null;
-}
-
-function countScreenXSignFlips(samples: number[]): number {
-  let flips = 0;
-  let prevDelta = 0;
-  for (let i = 1; i < samples.length; i++) {
-    const delta = samples[i]! - samples[i - 1]!;
-    if (Math.abs(delta) < 0.01) continue;
-    if (prevDelta !== 0 && Math.sign(delta) !== Math.sign(prevDelta)) {
-      flips += 1;
-    }
-    prevDelta = delta;
-  }
-  return flips;
-}
-
-function reachWave1Engage(
-  engine: BattleEngine,
-): {
-  preEngage: ReturnType<BattleEngine['getSnapshot']>;
-  engageSnap: ReturnType<BattleEngine['getSnapshot']>;
-} {
-  let preEngage: ReturnType<BattleEngine['getSnapshot']> | null = null;
-  for (let i = 0; i < 20_000; i++) {
-    const before = engine.getSnapshot();
-    if (
-      before.waveIndex === 0 &&
-      !before.engaged &&
-      before.enemies.some((e) => e.hp > 0)
-    ) {
-      preEngage = before;
-    }
-    engine.tick(1 / 60);
-    const after = engine.getSnapshot();
-    if (
-      preEngage &&
-      after.waveIndex === 0 &&
-      after.engaged &&
-      !before.engaged
-    ) {
-      return { preEngage, engageSnap: after };
-    }
-  }
-  throw new Error('wave 1 engagement did not occur');
-}
-
-function reachWave2Engage(
-  engine: BattleEngine,
-): ReturnType<BattleEngine['getSnapshot']> {
-  waitForEngaged(engine);
-  let preEngage: ReturnType<BattleEngine['getSnapshot']> | null = null;
-  for (let i = 0; i < 200_000; i++) {
-    const before = engine.getSnapshot();
-    if (
-      before.waveIndex === 1 &&
-      !before.engaged &&
-      before.enemies.some((e) => e.hp > 0)
-    ) {
-      preEngage = before;
-    }
-    engine.tick(1 / 60);
-    const after = engine.getSnapshot();
-    if (
-      preEngage &&
-      after.waveIndex === 1 &&
-      after.engaged &&
-      !before.engaged
-    ) {
-      return after;
-    }
-  }
-  throw new Error('wave 2 engagement did not occur');
-}
-
-const BACK_ROW_NAMES = ['療養師', '弓術士'] as const;
-
-describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TIMEOUT_MS }, () => {
-  it('C1: march pre-engage keeps allies left-aligned (max screenX < 280, camera 0)', () => {
+describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_MS }, () => {
+  it('I-§4.1-01: march pre-engage keeps allies left-aligned (max screenX < 280, camera 0)', () => {
     const engine = createStage1Engine();
     for (let i = 0; i < 8000; i++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (snap.engaged) break;
       expect(snap.combatCameraX).toBe(0);
@@ -206,7 +48,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     }
   });
 
-  it('C2: Wave 2 engage ticks 0–90 back-row screen delta stays under 8px', () => {
+  it('I-§4.1-02: Wave 2 engage ticks 0–90 back-row screen delta stays under 8px', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     const engageSnap = reachWave2Engage(engine);
 
@@ -221,7 +63,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     }
 
     for (let t = 0; t < 90; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 1) break;
       for (const name of BACK_ROW_NAMES) {
@@ -233,12 +75,12 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     }
   });
 
-  it('C3: Wave 2 engage 3s all living allies stay on screen', () => {
+  it('I-§4.1-03: Wave 2 engage 3s all living allies stay on screen', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     reachWave2Engage(engine);
 
     for (let t = 0; t < 180; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 1) break;
       for (const ally of snap.allies.filter((a) => a.hp > 0)) {
@@ -249,7 +91,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     }
   });
 
-  it('C3b: Wave 2 engage front row screenX advances right during first 90 ticks', () => {
+  it('I-§4.4-01: Wave 2 engage front row screenX advances right during first 90 ticks', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     const engageSnap = reachWave2Engage(engine);
 
@@ -262,7 +104,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
 
     let maxScreen = startMaxScreen;
     for (let t = 0; t < 90; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 1) break;
       const front = snap.allies.filter(
@@ -276,14 +118,14 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(maxScreen).toBeGreaterThan(startMaxScreen + 0.5);
   });
 
-  it('C3c: Wave 2 engage camera pans forward without backward oscillation (first 2s)', () => {
+  it('I-§4.6-03: Wave 2 engage camera pans forward without backward oscillation (first 2s)', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     reachWave2Engage(engine);
 
     let prevCamera = engine.getSnapshot().combatCameraX;
     let backwardSteps = 0;
     for (let t = 0; t < 120; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 1) break;
       if (snap.combatCameraX < 3 && snap.combatCameraX < prevCamera - 0.5) {
@@ -294,7 +136,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(backwardSteps).toBe(0);
   });
 
-  it('C4: Wave 2 at engage defender screenX >= attacker (front row order)', () => {
+  it('I-§3.3-06: Wave 2 at engage defender screenX >= attacker (front row order)', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     const engageSnap = reachWave2Engage(engine);
 
@@ -311,13 +153,13 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(guardScreen).toBeGreaterThanOrEqual(swordScreen);
   });
 
-  it('C6: Wave 2 engage front row screenX oscillates fewer than 3 sign flips in 90 ticks', () => {
+  it('I-§4.1-08: Wave 2 engage front row screenX oscillates fewer than 3 sign flips in 90 ticks', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     reachWave2Engage(engine);
 
     const screenSamples: number[] = [];
     for (let t = 0; t < 90; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 1) break;
       const front = snap.allies.filter(
@@ -332,13 +174,13 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(countScreenXSignFlips(screenSamples)).toBeLessThan(3);
   });
 
-  it('C7: Wave 2 engage front row battleX stays left of enemy front line', () => {
+  it('I-§4.3-01: Wave 2 engage front row battleX stays left of enemy front line', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     reachWave2Engage(engine);
 
     const minStandoff = engagedMinBodyGap();
     for (let t = 0; t < 90; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 1) break;
       const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
@@ -354,7 +196,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     }
   });
 
-  it('C8: Wave 1 engage frame 0 front non-defender + enemies screen delta < 5px vs pre-engage', () => {
+  it('I-§4.1-04: Wave 1 engage frame 0 front non-defender + enemies screen delta < 5px vs pre-engage', () => {
     const engine = createStage1Engine();
     const { preEngage } = reachWave1Engage(engine);
     engine.tick(1 / 60);
@@ -402,12 +244,12 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(enemyDelta).toBeLessThan(5);
   });
 
-  it('C11: Wave 1 engage first 15s all allies stay on screen', () => {
+  it('I-§4.1-03b: Wave 1 engage first 15s all allies stay on screen', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
 
     for (let t = 0; t < 900; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 0) break;
       for (const ally of snap.allies.filter((a) => a.hp > 0)) {
@@ -418,12 +260,12 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     }
   });
 
-  it('C14: Wave 1 engage ticks 0-360 all living enemies stay on screen', () => {
+  it('I-§4.1-07a: Wave 1 engage ticks 0-360 all living enemies stay on screen', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
 
     for (let t = 0; t < 360; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 0) break;
       for (const enemy of snap.enemies.filter((e) => e.hp > 0)) {
@@ -434,7 +276,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     }
   });
 
-  it('C16: Wave 1 engage enemy max per-tick screen delta stays under 2px for 360 ticks', () => {
+  it('I-§4.1-07c: Wave 1 engage enemy max per-tick screen delta stays under 2px for 360 ticks', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
 
@@ -442,7 +284,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     let maxSingleTickDelta = 0;
 
     for (let t = 0; t < 360; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 0) break;
       for (const enemy of snap.enemies.filter((e) => e.hp > 0)) {
@@ -461,7 +303,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(maxSingleTickDelta).toBeLessThanOrEqual(2);
   });
 
-  it('C15: Wave 1 engage enemy min screenX does not drift left more than 20px over 360 ticks', () => {
+  it('I-§4.1-07b: Wave 1 engage enemy min screenX does not drift left more than 20px over 360 ticks', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
 
@@ -469,7 +311,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     let baselineMinScreenX: number | null = null;
 
     for (let t = 0; t < 360; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 0) break;
       const living = snap.enemies.filter((e) => e.hp > 0);
@@ -487,13 +329,13 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(baselineMinScreenX! - minScreenX).toBeLessThanOrEqual(20);
   });
 
-  it('C12: Wave 1 engage combatCameraX never decreases', () => {
+  it('I-§4.6-04: Wave 1 engage combatCameraX never decreases', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
 
     let prevCamera = engine.getSnapshot().combatCameraX;
     for (let t = 0; t < 900; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 0) break;
       expect(snap.combatCameraX).toBeGreaterThanOrEqual(prevCamera - 0.01);
@@ -501,7 +343,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     }
   });
 
-  it('C13: Victory wipe max single-tick ally screen jump stays under 15px', () => {
+  it('I-§4.1-06a: Victory wipe max single-tick ally screen jump stays under 15px', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     waitForEngaged(engine);
 
@@ -523,7 +365,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
           );
         }
       }
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const after = engine.getSnapshot();
 
       if (tracking) {
@@ -554,12 +396,12 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(maxSingleTickJump).toBeLessThanOrEqual(15);
   });
 
-  it('C9: Wave 1 engage 3s all living allies stay on screen', () => {
+  it('I-§4.1-03c: Wave 1 engage 3s all living allies stay on screen', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
 
     for (let t = 0; t < 180; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 0) break;
       for (const ally of snap.allies.filter((a) => a.hp > 0)) {
@@ -570,14 +412,14 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     }
   });
 
-  it('C6b: Wave 1 engage front row + enemy screen sign flips < 3 in 120 ticks', () => {
+  it('I-§4.1-08b: Wave 1 engage front row + enemy screen sign flips < 3 in 120 ticks', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
 
     const frontSamples: number[] = [];
     const enemySamples: number[] = [];
     for (let t = 0; t < 120; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged || snap.waveIndex !== 0) break;
       const front = snap.allies.filter(
@@ -599,7 +441,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(countScreenXSignFlips(enemySamples)).toBeLessThan(3);
   });
 
-  it('C10: Victory transition from Wave 2 clear no ally screen jump > 20px on enemy wipe tick', () => {
+  it('I-§4.1-06b: Victory transition from Wave 2 clear no ally screen jump > 20px on enemy wipe tick', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     waitForEngaged(engine);
 
@@ -607,7 +449,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     let maxWipeJump = 0;
     for (let i = 0; i < 200_000; i++) {
       const before = engine.getSnapshot();
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const after = engine.getSnapshot();
       if (
         before.waveIndex === 1 &&
@@ -634,7 +476,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(maxWipeJump).toBeLessThanOrEqual(20);
   });
 
-  it('C5: Wave 2 after both test_ranged dead, no ally screen jump > 15px for 60 ticks', () => {
+  it('I-§4.1-05: Wave 2 after both test_ranged dead, no ally screen jump > 15px for 60 ticks', () => {
     const engine = createStage1Wave2MeleeOnlyEngine();
     waitForEngaged(engine);
 
@@ -657,7 +499,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
 
     let maxSingleTickJump = 0;
     for (let t = 0; t < 60; t++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (snap.waveIndex !== 1 || !snap.engaged) break;
       const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
@@ -683,7 +525,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect(maxSingleTickJump).toBeLessThanOrEqual(15);
   });
 
-  it('clean victory: allies start on-screen before exit march', () => {
+  it('I-Victory-01: allies start on-screen before exit march', () => {
     const gameData = loadGameData();
     const stage1 = gameData.stages.find((s) => s.id === '1');
     if (stage1?.waves[0]) {
@@ -705,7 +547,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     waitForEngaged(engine);
 
     for (let i = 0; i < 120000; i++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (snap.phase === 'victory') {
         expect(snap.victoryAwaitExitMarch).toBe(true);
@@ -722,7 +564,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
     expect.fail('victory did not occur');
   });
 
-  it('clean victory: allies march off-screen to the right', () => {
+  it('I-Victory-02: allies march off-screen to the right', () => {
     const gameData = loadGameData();
     const stage1 = gameData.stages.find((s) => s.id === '1');
     if (stage1?.waves[0]) {
@@ -748,7 +590,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
 
     let victorySnap: ReturnType<BattleEngine['getSnapshot']> | null = null;
     for (let i = 0; i < 120000; i++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (snap.phase === 'victory') {
         victorySnap = snap;
@@ -761,7 +603,7 @@ describe('BattleEngine engage screen-space contracts', { timeout: LONG_BATTLE_TI
       ...victorySnap!.allies.filter((a) => a.hp > 0).map((a) => a.visualX),
     );
     for (let i = 0; i < 120; i++) {
-      engine.tick(1 / 60);
+      engine.tick(TICK_DT);
     }
     const later = engine.getSnapshot();
     const laterX = Math.min(
