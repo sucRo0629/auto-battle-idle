@@ -193,28 +193,25 @@ export function isBackRowOnlyFormation(
   );
 }
 
-export function getFrontEnemyVisualX(
-  enemies: Array<{ visualX: number; isAlive: boolean }>,
+export function getFrontEnemyBattleX(
+  enemies: Array<{ battleX: number; isAlive: boolean }>,
 ): number | null {
   const living = enemies.filter((e) => e.isAlive);
   if (living.length === 0) return null;
-  return Math.min(...living.map((e) => e.visualX));
+  return Math.min(...living.map((e) => e.battleX));
 }
 
-/** @deprecated getFrontEnemyVisualX */
-export const getFrontEnemyX = getFrontEnemyVisualX;
-
-export function getFrontPlayerVisualX(
-  players: Array<{ visualX: number; isAlive: boolean }>,
+export function getFrontPlayerBattleX(
+  players: Array<{ battleX: number; isAlive: boolean }>,
 ): number | null {
   const living = players.filter((p) => p.isAlive);
   if (living.length === 0) return null;
-  return Math.max(...living.map((p) => p.visualX));
+  return Math.max(...living.map((p) => p.battleX));
 }
 
 export function getLeadingPlayerFront(
-  players: Array<PlayerPlacementInput & { visualX: number }>,
-): { visualX: number; rangePx: number } | null {
+  players: Array<PlayerPlacementInput & { battleX: number }>,
+): { battleX: number; rangePx: number } | null {
   const living = players.filter((p) => p.isAlive);
   if (living.length === 0) return null;
   const leadingRow = getLeadingPlayerFormationRow(living);
@@ -222,9 +219,9 @@ export function getLeadingPlayerFront(
   const rowUnits = living.filter((p) => p.formationRow === leadingRow);
   let front = rowUnits[0]!;
   for (const unit of rowUnits) {
-    if (unit.visualX > front.visualX) front = unit;
+    if (unit.battleX > front.battleX) front = unit;
   }
-  return { visualX: front.visualX, rangePx: front.rangePx };
+  return { battleX: front.battleX, rangePx: front.rangePx };
 }
 
 /** @deprecated getLeadingPlayerFront */
@@ -258,8 +255,8 @@ function buildFormationPlacements(
 /** 接敵時: 右端（最短射程側）を接敵アンカーへブレンド */
 function buildEngagedPlacements(
   players: PlayerPlacementInput[],
-  frontEnemyVisualX: number,
-  _contactVisualX: number,
+  frontEnemyBattleX: number,
+  _contactBattleX: number,
 ): Placement[] {
   const living = livingPlayers(players);
   const placements = buildFormationPlacements(living);
@@ -269,7 +266,7 @@ function buildEngagedPlacements(
 
   const advanceT = ENGAGED_VISUAL_TUNING.leadingRowAdvanceT;
   const frontLineGap = engagedFrontLineGap();
-  const engageAnchorX = frontEnemyVisualX - frontLineGap;
+  const engageAnchorX = frontEnemyBattleX - frontLineGap;
   const rightmostX = Math.max(...placements.map((p) => p.x));
 
   for (const placement of placements) {
@@ -306,16 +303,16 @@ export const computeAllyPositions = computePlayerPositions;
 
 export function computeEngagedPlayerLaneOffsets(
   players: PlayerPlacementInput[],
-  frontEnemyVisualX: number,
-  contactVisualX: number,
+  frontEnemyBattleX: number,
+  contactBattleX: number,
   advanceT: number = ENGAGED_VISUAL_TUNING.leadingRowAdvanceT,
 ): Map<string, number> {
   const living = livingPlayers(players);
   const formation = buildFormationPlacements(living);
   const engaged = buildEngagedPlacements(
     living,
-    frontEnemyVisualX,
-    contactVisualX,
+    frontEnemyBattleX,
+    contactBattleX,
   );
   const formationMap = new Map(formation.map((p) => [p.id, p.x]));
   const engagedMap = new Map(engaged.map((p) => [p.id, p.x]));
@@ -324,15 +321,15 @@ export function computeEngagedPlayerLaneOffsets(
   const formationAnchorX =
     formation.length > 0
       ? Math.max(...formation.map((p) => p.x))
-      : contactVisualX;
+      : contactBattleX;
   const leadingRow = getLeadingPlayerFormationRow(living);
 
   for (const player of living) {
-    const formX = formationMap.get(player.id) ?? contactVisualX;
+    const formX = formationMap.get(player.id) ?? contactBattleX;
     if (player.formationRow === leadingRow) {
       const engagedX = engagedMap.get(player.id) ?? formX;
       const blendedX = formX + (engagedX - formX) * advanceT;
-      lanes.set(player.id, blendedX - contactVisualX);
+      lanes.set(player.id, blendedX - contactBattleX);
       continue;
     }
     lanes.set(player.id, formX - formationAnchorX);
@@ -344,23 +341,23 @@ export function computeEngagedPlayerLaneOffsets(
 export const computeEngagedAllyLaneOffsets = computeEngagedPlayerLaneOffsets;
 
 function separateSpritesByGap(
-  units: Array<{ id: string; visualX: number; isAlive: boolean }>,
+  units: Array<{ id: string; battleX: number; isAlive: boolean }>,
   minGap: number,
 ): Map<string, number> {
   const living = units
     .filter((unit) => unit.isAlive)
-    .sort((a, b) => a.visualX - b.visualX);
+    .sort((a, b) => a.battleX - b.battleX);
   const positions = new Map<string, number>();
 
   for (const unit of living) {
-    positions.set(unit.id, unit.visualX);
+    positions.set(unit.id, unit.battleX);
   }
 
   for (let i = 1; i < living.length; i++) {
     const prev = living[i - 1];
     const cur = living[i];
-    const minX = (positions.get(prev.id) ?? prev.visualX) + minGap;
-    const curX = positions.get(cur.id) ?? cur.visualX;
+    const minX = (positions.get(prev.id) ?? prev.battleX) + minGap;
+    const curX = positions.get(cur.id) ?? cur.battleX;
     if (curX < minX) {
       positions.set(cur.id, minX);
     }
@@ -370,23 +367,23 @@ function separateSpritesByGap(
 }
 
 export function separateSpritesByGapRight(
-  units: Array<{ id: string; visualX: number; isAlive: boolean }>,
+  units: Array<{ id: string; battleX: number; isAlive: boolean }>,
   minGap: number,
 ): Map<string, number> {
   const living = units
     .filter((unit) => unit.isAlive)
-    .sort((a, b) => a.visualX - b.visualX);
+    .sort((a, b) => a.battleX - b.battleX);
   const positions = new Map<string, number>();
 
   for (const unit of living) {
-    positions.set(unit.id, unit.visualX);
+    positions.set(unit.id, unit.battleX);
   }
 
   for (let i = living.length - 2; i >= 0; i--) {
     const right = living[i + 1];
     const cur = living[i];
-    const maxX = (positions.get(right.id) ?? right.visualX) - minGap;
-    const curX = positions.get(cur.id) ?? cur.visualX;
+    const maxX = (positions.get(right.id) ?? right.battleX) - minGap;
+    const curX = positions.get(cur.id) ?? cur.battleX;
     if (curX > maxX) {
       positions.set(cur.id, maxX);
     }
@@ -396,7 +393,7 @@ export function separateSpritesByGapRight(
 }
 
 export function separateEngagedSprites(
-  units: Array<{ id: string; visualX: number; isAlive: boolean }>,
+  units: Array<{ id: string; battleX: number; isAlive: boolean }>,
 ): Map<string, number> {
   return separateSpritesByGap(units, engagedMinBodyGap());
 }
@@ -427,7 +424,7 @@ export function computeEnemyStopX(
   return targetPlayerX + gap;
 }
 
-export function computeRangedEnemyVisualX(
+export function computeRangedEnemyBattleX(
   targetPlayerX: number,
   referenceBackRowPlayerX?: number,
   partySize: number = 5,
@@ -441,7 +438,6 @@ export function computeRangedEnemyVisualX(
 }
 
 export interface EngagedLayoutPlayerInput extends PlayerPlacementInput {
-  visualX: number;
   battleX: number;
   engagedVisualLaneX?: number;
 }
@@ -467,15 +463,15 @@ export interface EngagedLayoutContext {
   allyContactBattleX?: number | null;
   battleVisualOffset: number;
   frontEnemyVisualAnchor: number | null;
-  resolveRangedTargetVisualX: (enemyId: string) => number | null;
+  resolveRangedTargetBattleX: (enemyId: string) => number | null;
 }
 
 export interface EngagedLayoutResult {
-  playerVisualX: Map<string, number>;
-  /** @deprecated playerVisualX */
-  allyVisualX: Map<string, number>;
-  enemyVisualX: Map<string, number>;
-  frontLineVisualX: number;
+  playerBattleX: Map<string, number>;
+  /** @deprecated playerBattleX */
+  allyBattleX: Map<string, number>;
+  enemyBattleX: Map<string, number>;
+  frontLineBattleX: number;
 }
 
 function layoutPlayers(ctx: EngagedLayoutContext): EngagedLayoutPlayerInput[] {
@@ -486,7 +482,7 @@ function layoutPlayerContact(ctx: EngagedLayoutContext): number | null {
   return ctx.playerContactBattleX ?? ctx.allyContactBattleX ?? null;
 }
 
-export function resolveEngagedContactVisualX(
+export function resolveEngagedContactBattleX(
   players: EngagedLayoutPlayerInput[],
   playerContactBattleX: number | null,
   battleVisualOffset: number,
@@ -525,14 +521,14 @@ export function resolveStablePlayerEngagedVisuals(
     isAlive: boolean;
     engagedVisualLaneX?: number;
   }>,
-  contactVisualX: number,
+  contactBattleX: number,
   battleVisualOffset: number,
   leadingRow: FormationRow | null = null,
   useAbsoluteRear: boolean = false,
 ): Map<string, number> {
   const living = players.filter((p) => p.isAlive);
   const result = new Map<string, number>();
-  const leadingIdeals: Array<{ id: string; visualX: number; isAlive: true }> =
+  const leadingIdeals: Array<{ id: string; battleX: number; isAlive: true }> =
     [];
 
   for (const player of living) {
@@ -542,14 +538,14 @@ export function resolveStablePlayerEngagedVisuals(
     }
     leadingIdeals.push({
       id: player.id,
-      visualX: contactVisualX + (player.engagedVisualLaneX ?? 0),
+      battleX: contactBattleX + (player.engagedVisualLaneX ?? 0),
       isAlive: true as const,
     });
   }
 
   const separated = separateEngagedSprites(leadingIdeals);
-  for (const [id, visualX] of separated) {
-    result.set(id, visualX);
+  for (const [id, x] of separated) {
+    result.set(id, x);
   }
   return result;
 }
@@ -576,12 +572,12 @@ export function computeEngagedLayout(
   if (living.length === 0) return null;
 
   const playerContact = layoutPlayerContact(ctx);
-  const frontLineVisualX = resolveEngagedContactVisualX(
+  const frontLineBattleX = resolveEngagedContactBattleX(
     players,
     playerContact,
     ctx.battleVisualOffset,
   );
-  if (frontLineVisualX === null) return null;
+  if (frontLineBattleX === null) return null;
 
   const backRowOnly = isBackRowOnlyFormation(living);
   const leadingRow = getLeadingPlayerFormationRow(living);
@@ -601,10 +597,10 @@ export function computeEngagedLayout(
         )
       : null;
 
-  const playerVisualX = new Map<string, number>();
+  const playerBattleX = new Map<string, number>();
 
   if (engagedFormationTargets && leadingRow !== null) {
-    const frontIdeals: Array<{ id: string; visualX: number; isAlive: true }> =
+    const frontIdeals: Array<{ id: string; battleX: number; isAlive: true }> =
       [];
     for (const player of living) {
       if (player.formationRow !== leadingRow) continue;
@@ -612,13 +608,13 @@ export function computeEngagedLayout(
       if (target === undefined) continue;
       frontIdeals.push({
         id: player.id,
-        visualX: target,
+        battleX: target,
         isAlive: true as const,
       });
     }
     const separatedFront = separateEngagedSprites(frontIdeals);
-    for (const [id, visualX] of separatedFront) {
-      playerVisualX.set(id, visualX);
+    for (const [id, x] of separatedFront) {
+      playerBattleX.set(id, x);
     }
   } else {
     const lanes =
@@ -626,7 +622,7 @@ export function computeEngagedLayout(
         ? computeEngagedPlayerLaneOffsets(
             living,
             ctx.frontEnemyVisualAnchor,
-            frontLineVisualX,
+            frontLineBattleX,
           )
         : new Map<string, number>();
     const leadingVisuals = resolveStablePlayerEngagedVisuals(
@@ -642,34 +638,34 @@ export function computeEngagedLayout(
           isAlive: true as const,
           engagedVisualLaneX: lanes.get(p.id) ?? 0,
         })),
-      frontLineVisualX,
+      frontLineBattleX,
       ctx.battleVisualOffset,
       leadingRow,
       false,
     );
-    for (const [id, visualX] of leadingVisuals) {
-      playerVisualX.set(id, visualX);
+    for (const [id, x] of leadingVisuals) {
+      playerBattleX.set(id, x);
     }
   }
 
   for (const player of living) {
     if (leadingRow !== null && player.formationRow !== leadingRow) {
-      playerVisualX.set(player.id, player.battleX);
+      playerBattleX.set(player.id, player.battleX);
     }
   }
 
   const frontLineGap = engagedFrontLineGap();
-  let frontRowMaxVisualX = frontLineVisualX;
+  let frontRowMaxBattleX = frontLineBattleX;
   if (leadingRow !== null) {
     for (const player of living) {
       if (player.formationRow !== leadingRow) continue;
-      const x = playerVisualX.get(player.id);
+      const x = playerBattleX.get(player.id);
       if (x !== undefined) {
-        frontRowMaxVisualX = Math.max(frontRowMaxVisualX, x);
+        frontRowMaxBattleX = Math.max(frontRowMaxBattleX, x);
       }
     }
   }
-  const enemyFrontTargetX = frontRowMaxVisualX + frontLineGap;
+  const enemyFrontTargetX = frontRowMaxBattleX + frontLineGap;
   const meleePositions = resolveEngagedMeleeEnemyVisuals(
     ctx.enemies,
     enemyFrontTargetX,
@@ -687,7 +683,7 @@ export function computeEngagedLayout(
   );
   const referenceBackRowPlayerX =
     !backRowOnly && leadingRow && backRowPlayers.length > 0
-      ? frontLineVisualX +
+      ? frontLineBattleX +
         Math.max(
           ...backRowPlayers.map(
             (p) =>
@@ -697,19 +693,19 @@ export function computeEngagedLayout(
         )
       : undefined;
 
-  const enemyVisualX = new Map<string, number>();
+  const enemyBattleX = new Map<string, number>();
   for (const enemy of ctx.enemies) {
     if (!enemy.isAlive) continue;
     if (!isMeleeRangePx(enemy.rangePx)) {
-      const targetX = ctx.resolveRangedTargetVisualX(enemy.id);
+      const targetX = ctx.resolveRangedTargetBattleX(enemy.id);
       if (targetX === null) continue;
       const rangeStopX = computeEnemyStopX(enemy.rangePx, targetX, 0);
-      const formationStopX = computeRangedEnemyVisualX(
+      const formationStopX = computeRangedEnemyBattleX(
         targetX,
         referenceBackRowPlayerX,
       );
       const rangedStopX = Math.max(rangeStopX, formationStopX);
-      enemyVisualX.set(
+      enemyBattleX.set(
         enemy.id,
         backRowOnly ? rangedStopX + frontLineGap : rangedStopX,
       );
@@ -717,50 +713,50 @@ export function computeEngagedLayout(
     }
     const meleeX = meleePositions.get(enemy.id);
     if (meleeX !== undefined) {
-      enemyVisualX.set(enemy.id, meleeX);
+      enemyBattleX.set(enemy.id, meleeX);
     }
   }
 
   const separatedEnemies = separateSpritesByGapRight(
-    [...enemyVisualX.entries()]
+    [...enemyBattleX.entries()]
       .filter(([id]) => {
         const enemy = ctx.enemies.find((e) => e.id === id);
         return enemy !== undefined && !isMeleeRangePx(enemy.rangePx);
       })
-      .map(([id, visualX]) => ({
+      .map(([id, x]) => ({
         id,
-        visualX,
+        battleX: x,
         isAlive: true as const,
       })),
     engagedMinBodyGap(),
   );
-  for (const [id, visualX] of separatedEnemies) {
-    enemyVisualX.set(id, visualX);
+  for (const [id, x] of separatedEnemies) {
+    enemyBattleX.set(id, x);
   }
 
-  let maxMeleeVisualX = Number.NEGATIVE_INFINITY;
+  let maxMeleeBattleX = Number.NEGATIVE_INFINITY;
   for (const enemy of ctx.enemies) {
     if (!enemy.isAlive || !isMeleeRangePx(enemy.rangePx)) continue;
-    const meleeX = enemyVisualX.get(enemy.id);
+    const meleeX = enemyBattleX.get(enemy.id);
     if (meleeX !== undefined) {
-      maxMeleeVisualX = Math.max(maxMeleeVisualX, meleeX);
+      maxMeleeBattleX = Math.max(maxMeleeBattleX, meleeX);
     }
   }
-  if (Number.isFinite(maxMeleeVisualX)) {
-    const rangedRearCap = maxMeleeVisualX + enemyRangedRearGap();
+  if (Number.isFinite(maxMeleeBattleX)) {
+    const rangedRearCap = maxMeleeBattleX + enemyRangedRearGap();
     for (const enemy of ctx.enemies) {
       if (!enemy.isAlive || isMeleeRangePx(enemy.rangePx)) continue;
-      const ideal = enemyVisualX.get(enemy.id);
+      const ideal = enemyBattleX.get(enemy.id);
       if (ideal === undefined) continue;
-      enemyVisualX.set(enemy.id, Math.max(ideal, rangedRearCap));
+      enemyBattleX.set(enemy.id, Math.max(ideal, rangedRearCap));
     }
   }
 
   return {
-    playerVisualX,
-    allyVisualX: playerVisualX,
-    enemyVisualX,
-    frontLineVisualX,
+    playerBattleX,
+    allyBattleX: playerBattleX,
+    enemyBattleX,
+    frontLineBattleX,
   };
 }
 
@@ -790,20 +786,20 @@ export function applyEngagedFormationToBattleX(
     for (const player of players) {
       if (!player.isAlive) continue;
       if (options?.isOnField && !options.isOnField(player)) continue;
-      const x = layout.playerVisualX.get(player.id);
+      const x = layout.playerBattleX.get(player.id);
       if (x !== undefined) {
         player.battleX = x;
-        player.visualX = x;
+        player.battleX = x;
       }
     }
   }
   if (applyEnemies) {
     for (const enemy of enemies) {
       if (!enemy.isAlive) continue;
-      const x = layout.enemyVisualX.get(enemy.id);
+      const x = layout.enemyBattleX.get(enemy.id);
       if (x !== undefined) {
         enemy.battleX = x;
-        enemy.visualX = x;
+        enemy.battleX = x;
       }
     }
   }
@@ -833,7 +829,7 @@ export function resolveEngagedFormationOverlaps(
   const separated = separateSpritesByGapRight(
     frontUnits.map((p) => ({
       id: p.id,
-      visualX: p.battleX,
+      battleX: p.battleX,
       isAlive: true as const,
     })),
     PLAYER_ROW_SPACING,
@@ -842,15 +838,9 @@ export function resolveEngagedFormationOverlaps(
     const x = separated.get(player.id);
     if (x !== undefined) {
       player.battleX = x;
-      player.visualX = x;
+      player.battleX = x;
     }
   }
-}
-
-export function resolveLayoutTargets(
-  ctx: EngagedLayoutContext,
-): EngagedLayoutResult | null {
-  return resolveEngagedLayout(ctx);
 }
 
 export function moveTowardX(
@@ -893,54 +883,8 @@ export function approachEnemyVisualX(
   return approachVisualX(current, target, maxDelta);
 }
 
-export function clampPlayerVisualDepth(players: CombatantState[]): void {
-  const living = players.filter((p) => p.isAlive);
-  if (living.length === 0) return;
-  const leadingRow = getLeadingPlayerFormationRow(
-    living.map((p) => ({
-      id: p.id,
-      role: p.role,
-      formationRow: p.formationRow,
-      rangePx: 0,
-      isAlive: true,
-    })),
-  );
-  if (leadingRow === null) return;
-  const leadingMaxX = Math.max(
-    ...living
-      .filter((p) => p.formationRow === leadingRow)
-      .map((p) => p.visualX),
-  );
-  const leadingIndex = ROW_ORDER.indexOf(leadingRow);
-  const rowGap = engagedMinBodyGap();
-
-  for (const row of ROW_ORDER.slice(leadingIndex + 1)) {
-    const rowUnits = living
-      .filter((p) => p.formationRow === row)
-      .sort((a, b) => {
-        const rangeA = resolveFormationRangePx(a);
-        const rangeB = resolveFormationRangePx(b);
-        if (rangeA !== rangeB) return rangeA - rangeB;
-        return rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role);
-      });
-    const baseMaxX = leadingMaxX + rowDepthOffset(leadingRow, row);
-    const maxSlot = rowUnits.length - 1;
-    rowUnits.forEach((player, slot) => {
-      if (isAbsoluteEngagedVisualLane(player, leadingRow, true)) return;
-      // 同一列: 射程が短い（右／前方）スロットほど maxX を大きくする
-      const maxX = baseMaxX + (maxSlot - slot) * rowGap;
-      if (player.visualX > maxX) {
-        player.visualX = maxX;
-      }
-    });
-  }
-}
-
-/** @deprecated clampPlayerVisualDepth */
-export const clampAllyVisualDepth = clampPlayerVisualDepth;
-
 export function clampEngagedEnemyGroupOnScreen(
-  enemies: Array<{ id: string; visualX: number; isAlive: boolean }>,
+  enemies: Array<{ id: string; battleX: number; isAlive: boolean }>,
   _combatCameraX: number = 0,
   maxScreenX: number = CANVAS_W,
   minScreenX: number = -SPRITE_WIDTH,
@@ -949,79 +893,32 @@ export function clampEngagedEnemyGroupOnScreen(
   if (positions.size === 0) return positions;
 
   let groupMax = Number.NEGATIVE_INFINITY;
-  for (const visualX of positions.values()) {
-    groupMax = Math.max(groupMax, visualX);
+  for (const battleX of positions.values()) {
+    groupMax = Math.max(groupMax, battleX);
   }
   if (Number.isFinite(groupMax) && groupMax > maxScreenX) {
     const shift = maxScreenX - groupMax;
     const shifted = new Map<string, number>();
-    for (const [id, visualX] of positions) {
-      shifted.set(id, visualX + shift);
+    for (const [id, x] of positions) {
+      shifted.set(id, x + shift);
     }
     positions = shifted;
   }
 
   let groupMin = Number.POSITIVE_INFINITY;
-  for (const visualX of positions.values()) {
-    groupMin = Math.min(groupMin, visualX);
+  for (const battleX of positions.values()) {
+    groupMin = Math.min(groupMin, battleX);
   }
   if (Number.isFinite(groupMin) && groupMin < minScreenX) {
     const shift = minScreenX - groupMin;
     const shifted = new Map<string, number>();
-    for (const [id, visualX] of positions) {
-      shifted.set(id, visualX + shift);
+    for (const [id, x] of positions) {
+      shifted.set(id, x + shift);
     }
     positions = shifted;
   }
 
   return positions;
-}
-
-/** 画面 clamp 後も近接前線より遠距離敵が左に寄りすぎないよう下限を再適用 */
-export function enforceEngagedRangedEnemyRearGap(
-  enemies: Array<{ id: string; visualX: number; rangePx: number; isAlive: boolean }>,
-): void {
-  let maxMeleeVisualX = Number.NEGATIVE_INFINITY;
-  for (const enemy of enemies) {
-    if (!enemy.isAlive || !isMeleeRangePx(enemy.rangePx)) continue;
-    maxMeleeVisualX = Math.max(maxMeleeVisualX, enemy.visualX);
-  }
-  if (!Number.isFinite(maxMeleeVisualX)) return;
-  const rangedRearCap = maxMeleeVisualX + enemyRangedRearGap();
-  for (const enemy of enemies) {
-    if (!enemy.isAlive || isMeleeRangePx(enemy.rangePx)) continue;
-    if (enemy.visualX < rangedRearCap) {
-      enemy.visualX = rangedRearCap;
-    }
-  }
-}
-
-export function resolveMoveVisualX(
-  actor: CombatantState,
-  anchor: CombatantState,
-  effect: MoveSkillEffect,
-  gameData: GameData,
-): number {
-  const mode = effect.moveMode ?? 'engage';
-  if (mode === 'toAnchor') {
-    return anchor.visualX;
-  }
-
-  const actorRangePx = resolveMaxEffectiveRangePx(actor, gameData);
-
-  if (mode === 'behindTarget') {
-    const offset = effect.behindOffsetPx ?? 0;
-    return actor.isEnemy
-      ? anchor.visualX - offset
-      : anchor.visualX + offset;
-  }
-
-  const anchorRangePx = resolveMaxEffectiveRangePx(anchor, gameData);
-  if (actor.isEnemy) {
-    return computeEnemyStopX(actorRangePx, anchor.visualX, anchorRangePx);
-  }
-  const gap = Math.max(actorRangePx, engagedMinBodyGap());
-  return anchor.visualX - gap;
 }
 
 export type FormationRestorePhase = 'lead' | 'trail' | 'marching';
@@ -1034,7 +931,7 @@ export interface FormationRestoreUnit {
   formationRow: FormationRow;
   rangePx?: number;
   isAlive: boolean;
-  visualX: number;
+  battleX: number;
 }
 
 export interface FormationRestoreGroups {
@@ -1158,7 +1055,7 @@ export function isFormationSpacingRestored(
   for (const player of living) {
     const target = targets.get(player.id);
     if (target === undefined) continue;
-    if (Math.abs(player.visualX - target) > epsilon) return false;
+    if (Math.abs(player.battleX - target) > epsilon) return false;
   }
   return true;
 }
@@ -1196,7 +1093,7 @@ export function isFormationScreenLayoutRestored(
   for (const player of living) {
     const target = targets.get(player.id);
     if (target === undefined) continue;
-    if (Math.abs(player.visualX - target) > epsilon) return false;
+    if (Math.abs(player.battleX - target) > epsilon) return false;
   }
   return true;
 }
@@ -1209,7 +1106,7 @@ export function snapFormationScreenLayout(
   for (const player of living) {
     const target = targets.get(player.id);
     if (target !== undefined) {
-      player.visualX = target;
+      player.battleX = target;
     }
   }
 }
@@ -1239,16 +1136,16 @@ export function tickCompensatedFormationReset(
   const { leadIds, trailIds } = getFormationRestoreGroups(living);
 
   for (const player of living) {
-    player.visualX += marchStep;
+    player.battleX += marchStep;
   }
 
   const correctPlayerTowardTarget = (player: FormationRestoreUnit): void => {
     const target = targets.get(player.id);
     if (target === undefined) return;
-    if (Math.abs(player.visualX - target) <= FORMATION_RESTORE_SPACING_EPSILON) {
+    if (Math.abs(player.battleX - target) <= FORMATION_RESTORE_SPACING_EPSILON) {
       return;
     }
-    player.visualX = approachVisualX(player.visualX, target, spacingStep);
+    player.battleX = approachVisualX(player.battleX, target, spacingStep);
   };
 
   let phase = state.phase;
@@ -1263,7 +1160,7 @@ export function tickCompensatedFormationReset(
       if (!leadIds.has(p.id)) return true;
       const target = targets.get(p.id);
       if (target === undefined) return true;
-      return Math.abs(p.visualX - target) <= FORMATION_RESTORE_SPACING_EPSILON;
+      return Math.abs(p.battleX - target) <= FORMATION_RESTORE_SPACING_EPSILON;
     });
     if (leadRestored) phase = 'trail';
   }
@@ -1305,7 +1202,7 @@ export interface EngagedEnemyTargetPlayer {
 export function computeEngagedEnemyPositions(
   enemies: Array<{
     id: string;
-    visualX: number;
+    battleX: number;
     rangePx: number;
     isAlive: boolean;
   }>,
@@ -1318,13 +1215,13 @@ export function computeEngagedEnemyPositions(
 
   const ideals = living.map((enemy) => {
     const target = targetPlayerForEnemy(enemy.id);
-    const visualX =
+    const idealX =
       target === null
-        ? enemy.visualX
+        ? enemy.battleX
         : !isMeleeRangePx(enemy.rangePx)
           ? Math.max(
               computeEnemyStopX(enemy.rangePx, target.x, target.rangePx),
-              computeRangedEnemyVisualX(
+              computeRangedEnemyBattleX(
                 target.x,
                 target.referenceBackRowPlayerX,
               ),
@@ -1332,100 +1229,12 @@ export function computeEngagedEnemyPositions(
           : computeEnemyStopX(0, target.x, target.rangePx);
     return {
       id: enemy.id,
-      visualX,
+      battleX: idealX,
       isAlive: true as const,
     };
   });
 
   return separateSpritesByGapRight(ideals, engagedMinBodyGap());
-}
-
-export interface EngagedEnemyVisualInput {
-  id: string;
-  visualX: number;
-  rangePx: number;
-  isAlive: boolean;
-}
-
-export interface EngagedVisualTargetsResult {
-  allyTargets: Map<string, number>;
-  enemyTargets: Map<string, number>;
-  frontLineTargetX: number;
-  frontLineRangePx: number;
-}
-
-export interface EngagedEnemyTargetRef {
-  allyId: string;
-  rangePx: number;
-}
-
-export function resolveEngagedVisualTargets(
-  livingPlayers: Array<PlayerPlacementInput & { visualX: number }>,
-  enemies: EngagedEnemyVisualInput[],
-  frontEnemyVisualX: number,
-  _frontEnemyRangePx: number,
-  resolveEnemyTargetRef: (enemyId: string) => EngagedEnemyTargetRef | null,
-): EngagedVisualTargetsResult | null {
-  const living = livingPlayers.filter((p) => p.isAlive);
-  if (living.length === 0) return null;
-
-  const leadingRow = getLeadingPlayerFormationRow(living);
-  if (leadingRow === null) return null;
-
-  const targets = computeEngagedPlayerTargets(living, frontEnemyVisualX);
-  const placements = [...targets.entries()].map(([id, x]) => {
-    const p = living.find((u) => u.id === id)!;
-    return {
-      id,
-      role: p.role,
-      formationRow: p.formationRow,
-      rangePx: p.rangePx,
-      x,
-    };
-  });
-
-  const leadingPlacements = placements.filter(
-    (p) => p.formationRow === leadingRow,
-  );
-  if (leadingPlacements.length === 0) return null;
-
-  let frontLine = leadingPlacements[0]!;
-  for (const placement of leadingPlacements) {
-    if (placement.x > frontLine.x) frontLine = placement;
-  }
-
-  const backRowPlayer = living.find((p) => p.formationRow === 'back');
-  const referenceBackRowPlayerX = backRowPlayer
-    ? targets.get(backRowPlayer.id)
-    : undefined;
-
-  const enemyTargets = computeEngagedEnemyPositions(enemies, (enemyId) => {
-    const ref = resolveEnemyTargetRef(enemyId);
-    if (ref === null) return null;
-    const enemy = enemies.find((u) => u.id === enemyId);
-    if (!enemy) return null;
-    if (!isMeleeRangePx(enemy.rangePx)) {
-      const targetPlayerX = targets.get(ref.allyId);
-      if (targetPlayerX === undefined) return null;
-      return {
-        x: targetPlayerX,
-        rangePx: ref.rangePx,
-        referenceBackRowPlayerX,
-      };
-    }
-    return {
-      x: frontLine.x,
-      rangePx: frontLine.rangePx,
-      referenceBackRowPlayerX,
-    };
-  });
-
-  return {
-    allyTargets: targets,
-    enemyTargets,
-    frontLineTargetX: frontLine.x,
-    frontLineRangePx: frontLine.rangePx,
-  };
 }
 
 export interface FormationMarchPlacementInput extends PlayerPlacementInput {}
@@ -1457,15 +1266,15 @@ export function applyFormationMarchTick(
     }
   }
 
-  let marchOrigin = anchor.visualX - anchorIdeal;
+  let marchOrigin = anchor.battleX - anchorIdeal;
   for (const unit of living) {
-    unit.visualX = (ideals.get(unit.id) ?? unit.visualX) + marchOrigin;
+    unit.battleX = (ideals.get(unit.id) ?? unit.battleX) + marchOrigin;
   }
 
-  anchor.visualX += SCROLL_SPEED * deltaTime;
-  marchOrigin = anchor.visualX - anchorIdeal;
+  anchor.battleX += SCROLL_SPEED * deltaTime;
+  marchOrigin = anchor.battleX - anchorIdeal;
   for (const unit of living) {
-    unit.visualX = (ideals.get(unit.id) ?? unit.visualX) + marchOrigin;
+    unit.battleX = (ideals.get(unit.id) ?? unit.battleX) + marchOrigin;
   }
 }
 
@@ -1489,7 +1298,7 @@ export function applyStaggeredFormationMarchRestore(
   const spacingStep = spacingSpeed * deltaTime;
 
   for (const player of living) {
-    player.visualX += marchStep;
+    player.battleX += marchStep;
   }
 
   const anchors = resolveFormationRestoreAnchors(living);
@@ -1500,16 +1309,16 @@ export function applyStaggeredFormationMarchRestore(
       phase = 'trail';
     } else {
       const targetBackX =
-        anchors.leadFront.visualX + PLAYER_FORMATION_DEPTH;
-      anchors.leadBack.visualX = approachVisualX(
-        anchors.leadBack.visualX,
+        anchors.leadFront.battleX + PLAYER_FORMATION_DEPTH;
+      anchors.leadBack.battleX = approachVisualX(
+        anchors.leadBack.battleX,
         targetBackX,
         spacingStep,
       );
       if (
         isLeadColumnSpacingRestored(
-          anchors.leadFront.visualX,
-          anchors.leadBack.visualX,
+          anchors.leadFront.battleX,
+          anchors.leadBack.battleX,
         )
       ) {
         phase = 'trail';
@@ -1519,17 +1328,17 @@ export function applyStaggeredFormationMarchRestore(
 
   if (phase === 'trail') {
     if (anchors.leadFront && anchors.trailFront) {
-      const target = anchors.leadFront.visualX + PLAYER_ROW_SPACING;
-      anchors.trailFront.visualX = approachVisualX(
-        anchors.trailFront.visualX,
+      const target = anchors.leadFront.battleX + PLAYER_ROW_SPACING;
+      anchors.trailFront.battleX = approachVisualX(
+        anchors.trailFront.battleX,
         target,
         spacingStep,
       );
     }
     if (anchors.leadBack && anchors.trailBack) {
-      const target = anchors.leadBack.visualX + PLAYER_ROW_SPACING;
-      anchors.trailBack.visualX = approachVisualX(
-        anchors.trailBack.visualX,
+      const target = anchors.leadBack.battleX + PLAYER_ROW_SPACING;
+      anchors.trailBack.battleX = approachVisualX(
+        anchors.trailBack.battleX,
         target,
         spacingStep,
       );
@@ -1546,7 +1355,7 @@ export function applyStaggeredFormationMarchRestore(
 export interface BeginEngagedLayoutUnit {
   id: string;
   formationRow: FormationRow;
-  visualX: number;
+  battleX: number;
   isAlive: boolean;
 }
 
@@ -1554,14 +1363,15 @@ export interface BeginEngagedLayoutInput {
   allies: BeginEngagedLayoutUnit[];
   combatCameraX: number;
   leadingRow: FormationRow | null;
-  contactVisualX: number | null;
+  contactBattleX: number | null;
 }
 
 export interface BeginEngagedLayoutResult {
   combatCameraX: number;
   engageRearScreenX: Map<string, number>;
   cameraFocusLineX: number;
-  allyVisualX: Map<string, number>;
+  /** @deprecated playerBattleX */
+  allyBattleX: Map<string, number>;
 }
 
 /** 接敵開始: 後列の battleX を記録（カメラ廃止後は screenX = battleX） */
@@ -1569,39 +1379,30 @@ export function beginEngagedLayout(
   input: BeginEngagedLayoutInput,
 ): BeginEngagedLayoutResult {
   const engageRearScreenX = new Map<string, number>();
-  const allyVisualX = new Map<string, number>();
+  const playerBattleXMap = new Map<string, number>();
 
   for (const ally of input.allies) {
     if (!ally.isAlive) continue;
-    allyVisualX.set(ally.id, ally.visualX);
+    playerBattleXMap.set(ally.id, ally.battleX);
     if (
       input.leadingRow !== null &&
       ally.formationRow !== input.leadingRow
     ) {
-      engageRearScreenX.set(ally.id, ally.visualX);
+      engageRearScreenX.set(ally.id, ally.battleX);
     }
   }
 
   const cameraFocusLineX =
-    input.contactVisualX !== null
-      ? input.contactVisualX + SPRITE_WIDTH / 2
+    input.contactBattleX !== null
+      ? input.contactBattleX + SPRITE_WIDTH / 2
       : PARTY_FORMATION_LEFT_ANCHOR + PARTY_FORMATION_SLOT_SPACING * 2;
 
   return {
     combatCameraX: 0,
     engageRearScreenX,
     cameraFocusLineX,
-    allyVisualX,
+    allyBattleX: playerBattleXMap,
   };
-}
-
-/** @deprecated カメラ廃止後は engageRearScreenX をそのまま返す */
-export function tickEngagedRearVisuals(
-  _visualX: number,
-  engageRearScreenX: number,
-  _combatCameraX: number = 0,
-): number {
-  return engageRearScreenX;
 }
 
 export { ENGAGED_VISUAL_TUNING };

@@ -1,7 +1,5 @@
 import type { DamageType, Role } from './types.ts';
-
-/** traits.rangePx >= この値で遠隔攻撃（combat.md / classes-and-skills.md） */
-const RANGED_RANGE_PX_THRESHOLD = 25;
+import { isRangedAttack } from './data/entityTraits.ts';
 
 export const PLACEHOLDER_SPRITE_KEYS = {
   defender: 'placeholder_df',
@@ -27,7 +25,7 @@ export function resolvePlaceholderSpriteKey(
 ): PlaceholderSpriteKey {
   if (role === 'defender') return PLACEHOLDER_SPRITE_KEYS.defender;
   if (role === 'supporter') return PLACEHOLDER_SPRITE_KEYS.supporter;
-  if (rangePx >= RANGED_RANGE_PX_THRESHOLD) {
+  if (isRangedAttack(rangePx)) {
     return damageType === 'magic'
       ? PLACEHOLDER_SPRITE_KEYS.attackerRangedMagic
       : PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical;

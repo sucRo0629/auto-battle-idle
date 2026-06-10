@@ -14,7 +14,11 @@ import type {
   GrowthTier,
   Role,
 } from '../battle/types.ts';
-import levelCurvesJson from '../../data/levelCurves.json';
+import { CONFIGURABLE_RANGE_PX_MAX } from '../battle/rangeLimits.ts';
+import {
+  computeBasicAttackDps,
+  formatBasicAttackDps,
+} from '../progression/basicAttackPreview.ts';
 import {
   computeStatsAtLevel,
   loadLevelCurves,
@@ -23,6 +27,7 @@ import {
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 import {
   BALANCE_DISPLAY_MODE_OPTIONS,
+  BALANCE_RANGE_COLUMN_HINT,
   BALANCE_ROLE_ORDER,
   type BalanceDisplayMode,
   filterBalanceRowsForDisplay,
@@ -54,6 +59,8 @@ const ROLE_LABELS: Record<Role, string> = {
 function computeRowDerived(cls: ClassPresetBeforeEnrich): {
   growth: { maxHp: number; atk: number; def: number };
   lv10: { maxHp: number; atk: number; def: number };
+  lv1Dps: number;
+  lv10Dps: number;
 } {
   ensureClassGrowthFields(cls);
   const growth = resolveStatGrowth(cls, LEVEL_CURVES);
@@ -68,7 +75,13 @@ function computeRowDerived(cls: ClassPresetBeforeEnrich): {
     PREVIEW_LEVEL,
     LEVEL_CURVES,
   );
-  return { growth, lv10 };
+  const attackSpeedTier = cls.attackSpeedTier ?? 'normal';
+  return {
+    growth,
+    lv10,
+    lv1Dps: computeBasicAttackDps(cls.atk, attackSpeedTier, LEVEL_CURVES),
+    lv10Dps: computeBasicAttackDps(lv10.atk, attackSpeedTier, LEVEL_CURVES),
+  };
 }
 
 const ROLE_SECTION_HINTS: Record<Role, string> = {
@@ -131,6 +144,8 @@ export class BalanceEditorStep {
     this.setCellText(tr, 'lv10-hp', String(derived.lv10.maxHp));
     this.setCellText(tr, 'lv10-atk', String(derived.lv10.atk));
     this.setCellText(tr, 'lv10-def', String(derived.lv10.def));
+    this.setCellText(tr, 'lv1-dps', formatBasicAttackDps(derived.lv1Dps));
+    this.setCellText(tr, 'lv10-dps', formatBasicAttackDps(derived.lv10Dps));
 
     if (!tr.contains(document.activeElement)) {
       this.syncRowInputs(tr, row.current);
@@ -169,6 +184,7 @@ export class BalanceEditorStep {
     setNumber('maxHp', cls.maxHp);
     setNumber('atk', cls.atk);
     setNumber('def', cls.def);
+    setNumber('rangePx', cls.traits.rangePx ?? 0);
     setSelect('reg', String(cls.reg));
     setSelect('growth-maxHp', String(growthTier.maxHp));
     setSelect('growth-atk', String(growthTier.atk));
@@ -250,7 +266,7 @@ export class BalanceEditorStep {
       createEl(
         'p',
         'editor-hint editor-balance-global-hint',
-        `Lv${PREVIEW_LEVEL} 試算列は Lv1 + 成長 × ${PREVIEW_LEVEL - 1} です。未保存の行は色付きで表示されます。`,
+        `Lv${PREVIEW_LEVEL} 試算列は Lv1 + 成長 × ${PREVIEW_LEVEL - 1} です。DPS = floor(ATK) ÷ 実効基本攻撃 interval（2s ÷ SPD 係数）。基本攻撃のみ。未保存の行は色付きで表示されます。${BALANCE_RANGE_COLUMN_HINT}`,
       ),
     );
 
@@ -357,24 +373,29 @@ export class BalanceEditorStep {
     const table = createEl('table', 'editor-compare-table');
     const thead = createEl('thead');
     const headRow = createEl('tr');
-    const columns = [
-      'クラス',
-      ...(options.showRole ? ['ロール'] : []),
-      'Lv1 HP',
-      'Lv1 ATK',
-      'Lv1 DEF',
-      '耐魔',
-      'HP 成長',
-      'ATK 成長',
-      'DEF 成長',
-      'preset',
-      `Lv${PREVIEW_LEVEL} HP`,
-      `Lv${PREVIEW_LEVEL} ATK`,
-      `Lv${PREVIEW_LEVEL} DEF`,
-      'SPD',
+    const columns: { label: string; compact?: boolean }[] = [
+      { label: 'クラス' },
+      ...(options.showRole ? [{ label: 'ロール' }] : []),
+      { label: 'Lv1 HP', compact: true },
+      { label: 'Lv1 ATK', compact: true },
+      { label: 'Lv1 DEF', compact: true },
+      { label: '射程', compact: true },
+      { label: '耐魔' },
+      { label: 'HP 成長' },
+      { label: 'ATK 成長' },
+      { label: 'DEF 成長' },
+      { label: 'preset' },
+      { label: `Lv${PREVIEW_LEVEL} HP`, compact: true },
+      { label: `Lv${PREVIEW_LEVEL} ATK`, compact: true },
+      { label: `Lv${PREVIEW_LEVEL} DEF`, compact: true },
+      { label: 'SPD' },
+      { label: 'Lv1 DPS', compact: true },
+      { label: `Lv${PREVIEW_LEVEL} DPS`, compact: true },
     ];
-    for (const label of columns) {
-      headRow.appendChild(createEl('th', undefined, label));
+    for (const column of columns) {
+      headRow.appendChild(
+        createEl('th', column.compact ? 'col-compact' : undefined, column.label),
+      );
     }
     thead.appendChild(headRow);
     table.appendChild(thead);
@@ -422,21 +443,34 @@ export class BalanceEditorStep {
         mutate((current) => {
           current.maxHp = value;
         });
-      }),
+      }, true),
     );
     tr.appendChild(
       this.numberCell('atk', cls.atk, (value) => {
         mutate((current) => {
           current.atk = value;
         });
-      }),
+      }, true),
     );
     tr.appendChild(
       this.numberCell('def', cls.def, (value) => {
         mutate((current) => {
           current.def = value;
         });
-      }),
+      }, true),
+    );
+    tr.appendChild(
+      this.numberCell(
+        'rangePx',
+        cls.traits.rangePx ?? 0,
+        (value) => {
+          mutate((current) => {
+            current.traits.rangePx = value;
+          });
+        },
+        true,
+        { min: 0, max: CONFIGURABLE_RANGE_PX_MAX, step: 1 },
+      ),
     );
 
     const regCell = createEl('td');
@@ -505,9 +539,9 @@ export class BalanceEditorStep {
     }
     tr.appendChild(presetCell);
 
-    tr.appendChild(this.readonlyNumCell('lv10-hp', derived.lv10.maxHp));
-    tr.appendChild(this.readonlyNumCell('lv10-atk', derived.lv10.atk));
-    tr.appendChild(this.readonlyNumCell('lv10-def', derived.lv10.def));
+    tr.appendChild(this.readonlyNumCell('lv10-hp', derived.lv10.maxHp, true));
+    tr.appendChild(this.readonlyNumCell('lv10-atk', derived.lv10.atk, true));
+    tr.appendChild(this.readonlyNumCell('lv10-def', derived.lv10.def, true));
 
     const spdCell = createEl('td');
     const spdSelect = createSelect(
@@ -526,6 +560,9 @@ export class BalanceEditorStep {
     spdCell.appendChild(spdSelect);
     tr.appendChild(spdCell);
 
+    tr.appendChild(this.readonlyDpsCell('lv1-dps', derived.lv1Dps));
+    tr.appendChild(this.readonlyDpsCell('lv10-dps', derived.lv10Dps));
+
     return tr;
   }
 
@@ -533,9 +570,15 @@ export class BalanceEditorStep {
     field: string,
     value: number,
     onInput: (value: number) => void,
+    compact = false,
+    inputOptions?: {
+      min?: number;
+      max?: number;
+      step?: number;
+    },
   ): HTMLTableCellElement {
-    const cell = createEl('td', 'num');
-    const input = createNumberInput(value, onInput);
+    const cell = createEl('td', compact ? 'num col-compact' : 'num');
+    const input = createNumberInput(value, onInput, inputOptions);
     input.dataset.field = field;
     cell.appendChild(input);
     return cell;
@@ -565,8 +608,19 @@ export class BalanceEditorStep {
     return cell;
   }
 
-  private readonlyNumCell(col: string, value: number): HTMLTableCellElement {
-    const cell = createEl('td', 'num');
+  private readonlyDpsCell(col: string, dps: number): HTMLTableCellElement {
+    const cell = createEl('td', 'num col-compact');
+    cell.dataset.col = col;
+    cell.textContent = formatBasicAttackDps(dps);
+    return cell;
+  }
+
+  private readonlyNumCell(
+    col: string,
+    value: number,
+    compact = false,
+  ): HTMLTableCellElement {
+    const cell = createEl('td', compact ? 'num col-compact' : 'num');
     cell.dataset.col = col;
     cell.textContent = String(value);
     return cell;

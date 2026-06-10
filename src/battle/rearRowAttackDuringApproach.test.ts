@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { isRangedAttack } from './data/entityTraits.ts';
 import { loadGameData } from './data/loadGameData.ts';
 import { resolveMaxEffectiveRangePx } from './combatPosition.ts';
 import { isWithinSkillRange } from './skills/rangeUtils.ts';
@@ -54,12 +55,12 @@ describe('rear row attack during approach', () => {
 
     for (const unit of front) {
       unit.battleX = 40;
-      unit.visualX = 40;
+      unit.battleX = 40;
     }
     rear!.battleX = 180;
-    rear!.visualX = 180;
+    rear!.battleX = 180;
     enemy!.battleX = 220;
-    enemy!.visualX = 220;
+    enemy!.battleX = 220;
 
     const rearRange = resolveMaxEffectiveRangePx(rear!, gameData);
     expect(isWithinSkillRange(rear!, enemy!, rearRange)).toBe(true);
@@ -87,24 +88,24 @@ describe('rear row attack during approach', () => {
     );
     const archer = internal.players.find((p) => p.name === '弓術士');
     const rangedEnemy = internal.enemies.find(
-      (e) => e.isAlive && (e.traits.rangePx ?? 0) >= 25,
+      (e) => e.isAlive && isRangedAttack(e.traits.rangePx ?? 0),
     );
     expect(archer).toBeDefined();
     expect(rangedEnemy).toBeDefined();
 
     for (const unit of front) {
       unit.battleX = 40;
-      unit.visualX = 40;
+      unit.battleX = 40;
     }
     archer!.battleX = 180;
-    archer!.visualX = 180;
+    archer!.battleX = 180;
     rangedEnemy!.battleX = 210;
-    rangedEnemy!.visualX = 210;
+    rangedEnemy!.battleX = 210;
     internal.enemies
       .filter((e) => e.isAlive && e.id !== rangedEnemy!.id)
       .forEach((e) => {
         e.battleX = 400;
-        e.visualX = 400;
+        e.battleX = 400;
       });
 
     const rearRange = resolveMaxEffectiveRangePx(archer!, gameData);

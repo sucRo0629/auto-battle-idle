@@ -13,9 +13,15 @@ describe('normalizeEntityTraits', () => {
     });
   });
 
-  it('derives arrow for physical ranged', () => {
+  it('derives slash for physical at melee threshold', () => {
     expect(
       normalizeEntityTraits({ rangePx: 50 }).basicAttackVfx,
+    ).toEqual({ preset: 'slash' });
+  });
+
+  it('derives arrow for physical ranged', () => {
+    expect(
+      normalizeEntityTraits({ rangePx: 55 }).basicAttackVfx,
     ).toEqual({ preset: 'arrow', arc: true });
   });
 

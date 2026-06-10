@@ -4,9 +4,11 @@ import {
   buildClassPresetFromDraft,
   buildClassSkillsFromEntries,
   classDraftFromPreset,
+  classStatsEqual,
   defaultBasicAttackId,
   initClassSkillEntriesFromPreset,
   resyncEnemyBasicAttackEntry,
+  toClassStatsPatch,
   type SkillDraftEntry,
   type SkillsJson,
 } from './editorApi.ts';
@@ -21,6 +23,29 @@ function basicAttackEntry(
     active,
   };
 }
+
+describe('classStatsEqual', () => {
+  const base: ClassPresetBeforeEnrich = {
+    id: 'at_ranger',
+    role: 'attacker',
+    displayName: '弓術士',
+    formationRow: 'back',
+    traits: { rangePx: 50 },
+    maxHp: 100,
+    atk: 10,
+    def: 10,
+    reg: 0,
+    basicAttackSkillId: 'at_ranger_basic',
+    skills: [],
+  };
+
+  it('detects rangePx changes', () => {
+    const changed = structuredClone(base);
+    changed.traits.rangePx = 60;
+    expect(classStatsEqual(base, changed)).toBe(false);
+    expect(toClassStatsPatch(changed).rangePx).toBe(60);
+  });
+});
 
 describe('class passive unlock levels', () => {
   const classId = 'test_cls';
@@ -153,7 +178,7 @@ describe('resyncEnemyBasicAttackEntry', () => {
       {
         id: basicId,
         name: basicId,
-        interval: 2.5,
+        trigger: { kind: 'time', value: 2.5 },
         effect: [
           {
             target: { kind: "distance", side: "ally", order: "nearest" },

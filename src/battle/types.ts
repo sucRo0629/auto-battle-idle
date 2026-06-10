@@ -1,13 +1,13 @@
 export type Role = "defender" | "attacker" | "supporter";
 export type ClassId = string;
 export type FormationRow = "front" | "middle" | "back";
-/** 遠隔攻撃とみなす traits.rangePx の下限（px） */
-export const RANGED_ATTACK_THRESHOLD_PX = 25;
-/** 近接帯の上限（px）。rangePx < RANGED_ATTACK_THRESHOLD_PX */
-export const MELEE_RANGE_MAX_PX = RANGED_ATTACK_THRESHOLD_PX - 1;
+/** 遠隔攻撃とみなす traits.rangePx の境界（px）。`> RANGED_ATTACK_THRESHOLD_PX` が遠隔帯 */
+export const RANGED_ATTACK_THRESHOLD_PX = 50;
+/** 近接帯の上限（px）。rangePx <= RANGED_ATTACK_THRESHOLD_PX */
+export const MELEE_RANGE_MAX_PX = RANGED_ATTACK_THRESHOLD_PX;
 
 export function isMeleeRangePx(rangePx: number): boolean {
-  return rangePx < RANGED_ATTACK_THRESHOLD_PX;
+  return rangePx <= RANGED_ATTACK_THRESHOLD_PX;
 }
 
 /** @deprecated traits.rangePx を使用 */

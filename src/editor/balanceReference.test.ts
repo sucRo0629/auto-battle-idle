@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 import {
+  BALANCE_RANGE_COLUMN_HINT,
   BALANCE_REFERENCE_CLASS_IDS,
   filterBalanceRowsForDisplay,
   groupBalanceRowsByRole,
   isBalanceReferenceClass,
   sortBalanceRowsByClassOrder,
 } from './balanceReference.ts';
+import { CONFIGURABLE_RANGE_PX_MAX } from '../battle/rangeLimits.ts';
 import type { BalanceClassRow } from './editorApi.ts';
 
 function row(
@@ -36,6 +38,10 @@ describe('balanceReference', () => {
     expect(isBalanceReferenceClass('df_guardian')).toBe(true);
     expect(isBalanceReferenceClass('df_paladin')).toBe(false);
     expect(BALANCE_REFERENCE_CLASS_IDS).toContain('df_guardian');
+  });
+
+  it('range column hint references configurable max', () => {
+    expect(BALANCE_RANGE_COLUMN_HINT).toContain(String(CONFIGURABLE_RANGE_PX_MAX));
   });
 
   it('filterBalanceRowsForDisplay supports all, reference, and byRole modes', () => {

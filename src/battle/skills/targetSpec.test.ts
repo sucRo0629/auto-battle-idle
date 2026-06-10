@@ -136,7 +136,7 @@ describe('getTargetPool / pickTargetFromPool', () => {
   });
 
   it('filters ranged attackers', () => {
-    const rangedEnemy = mockUnit('e3', 60, { isEnemy: true, rangePx: 50 });
+    const rangedEnemy = mockUnit('e3', 60, { isEnemy: true, rangePx: 55 });
     const poolEnemies = [...enemies, rangedEnemy];
     const spec = { kind: 'attackType', ranged: true } as const;
     const pool = getTargetPool(spec, actor, allies, poolEnemies);

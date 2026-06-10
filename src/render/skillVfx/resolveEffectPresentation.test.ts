@@ -8,7 +8,7 @@ import {
 const skill: ActiveSkillDef = {
   id: 'test_skill',
   name: 'test',
-  interval: 5,
+  trigger: { kind: 'time', value: 5 },
   vfx: { preset: 'orb' },
   effect: [],
 };
@@ -103,8 +103,9 @@ describe('resolveEffectPresentation', () => {
 
 describe('shouldPlayActorAnim', () => {
   it('skips ranged basic attack anim', () => {
-    expect(shouldPlayActorAnim('attack', 50, 'basic')).toBe(false);
-    expect(shouldPlayActorAnim('attack', 50, 'active')).toBe(true);
+    expect(shouldPlayActorAnim('attack', 55, 'basic')).toBe(false);
+    expect(shouldPlayActorAnim('attack', 50, 'basic')).toBe(true);
+    expect(shouldPlayActorAnim('attack', 55, 'active')).toBe(true);
     expect(shouldPlayActorAnim('dash', 0, 'active')).toBe(true);
   });
 });

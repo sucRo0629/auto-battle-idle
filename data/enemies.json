@@ -46,7 +46,7 @@
     "basicAttackSkillId": "test_ranged_basic_attack",
     "attackSpeedTier": "normal",
     "traits": {
-      "rangePx": 50
+      "rangePx": 55
     }
   }
 ]

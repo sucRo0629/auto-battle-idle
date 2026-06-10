@@ -19,6 +19,10 @@ import type {
   Role,
   SkillVfxPresetId,
 } from "../battle/types.ts";
+import {
+  CONFIGURABLE_RANGE_PX_MAX,
+  configurableRangeHintJa,
+} from "../battle/rangeLimits.ts";
 import levelCurvesJson from "../../data/levelCurves.json";
 import {
   computeStatsAtLevel,
@@ -353,9 +357,12 @@ export class ClassEditorStep {
               next.class.traits.rangePx = rangePx;
             });
           },
-          {}
+          { min: 0, max: CONFIGURABLE_RANGE_PX_MAX, step: 1 },
         )
       )
+    );
+    identityGrid.appendChild(
+      createEl("p", "editor-hint", configurableRangeHintJa())
     );
     identityGrid.appendChild(
       createFieldRow(

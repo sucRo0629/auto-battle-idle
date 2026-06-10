@@ -49,7 +49,7 @@ export function synthesizeBasicAttackSkill(params: {
   const synthesized: ActiveSkillDef = {
     id,
     name: displayName ?? (isEnemy ? entityId : '打撃'),
-    interval: DEFAULT_BASIC_ATTACK_INTERVAL_SEC,
+    trigger: { kind: 'time', value: DEFAULT_BASIC_ATTACK_INTERVAL_SEC },
     effect: [synthesizedDamageEffect(amount)],
   };
 
@@ -59,8 +59,7 @@ export function synthesizeBasicAttackSkill(params: {
     ...synthesized,
     id,
     name: jsonOverride.name ?? synthesized.name,
-    interval: jsonOverride.interval ?? synthesized.interval,
-    trigger: jsonOverride.trigger,
+    trigger: jsonOverride.trigger ?? synthesized.trigger,
     iconKey: jsonOverride.iconKey,
     effect: [
       synthesizedDamageEffect(amount),

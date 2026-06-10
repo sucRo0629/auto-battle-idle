@@ -5,84 +5,7 @@ import {
   spriteSheetMaxOverflowTop,
 } from './spriteLayout.ts';
 
-export {
-  ALLY_FORMATION_BACK_DEPTH,
-  ALLY_ROW_SPACING,
-  APPROACH_SPEED,
-  BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
-  BATTLE_ENEMY_MARCH_VISIBLE_MIN_X,
-  BATTLE_ENEMY_VISIBLE_MAX_X,
-  CANVAS_W,
-  ENGAGED_VISUAL_TUNING,
-  PLAYER_FORMATION_DEPTH,
-  PLAYER_ROW_SPACING,
-  ROW_X,
-  SCROLL_SPEED,
-  SPRITE_GAP,
-  SPRITE_WIDTH,
-  engagedFrontLineGap,
-  engagedMinBodyGap,
-  engagedStandoffGap,
-  enemyRangedRearGap,
-  resolveEnemyMarchEngageGap,
-} from '../battle/battleConstants.ts';
-
-export {
-  type AllyPlacementInput,
-  type AllyPositionOptions,
-  type CompensatedFormationResetState,
-  type EngagedLayoutAllyInput,
-  type EngagedLayoutContext,
-  type EngagedLayoutEnemyInput,
-  type EngagedLayoutResult,
-  type FormationRestoreAnchors,
-  type FormationRestoreGroups,
-  type FormationRestorePhase,
-  type FormationRestoreUnit,
-  type PlayerPlacementInput,
-  type PlayerPositionOptions,
-  type StaggeredFormationRestoreState,
-  applyStaggeredFormationMarchRestore,
-  approachAllyVisualX,
-  approachEnemyVisualX,
-  approachPlayerVisualX,
-  approachVisualX,
-  clampAllyVisualDepth,
-  clampEngagedEnemyGroupOnScreen,
-  clampPlayerVisualDepth,
-  computeAllyPositions,
-  computeEngagedAllyLaneOffsets,
-  computeEngagedAllyTargets,
-  computeEngagedEnemyPositions,
-  computeEnemyStopX,
-  computePlayerPositions,
-  computeRangedEnemyVisualX,
-  FORMATION_RESTORE_SPACING_EPSILON,
-  getFormationRestoreGroups,
-  getLeadingAllyFormationRow,
-  getLeadingAllyFront,
-  getLeadingPlayerFormationRow,
-  getLeadingPlayerFront,
-  isBackRowOnlyFormation,
-  isFormationScreenLayoutRestored,
-  isFormationSpacingRestored,
-  isLeadColumnSpacingRestored,
-  moveTowardX,
-  resolveEngagedContactVisualX,
-  resolveEngagedLayout,
-  resolveEngagedVisualTargets,
-  resolveFormationRestoreAnchors,
-  resolveFormationScreenTargets,
-  resolveLayoutTargets,
-  resolveMoveVisualX,
-  resolveOverlaps,
-  separateEngagedSprites,
-  snapFormationScreenLayout,
-  tickCompensatedFormationReset,
-} from '../battle/battleLayout.ts';
-
-/** @deprecated engagedMinBodyGap */
-export { engagedMinBodyGap as engagedMinLeftEdgeGap } from '../battle/battleConstants.ts';
+export { CANVAS_W, SPRITE_GAP, SPRITE_WIDTH } from '../battle/battleConstants.ts';
 
 export const ENEMY_VISIBLE_MIN_X = -32;
 
@@ -97,7 +20,7 @@ export const STATUS_BADGE_H = 8;
 export const STATUS_BADGE_GAP = 2;
 
 export interface VisualCombatant {
-  visualX: number;
+  battleX: number;
   isAlive: boolean;
   rangePx: number;
 }
@@ -120,7 +43,7 @@ export function toVisualCombatant(
   gameData: GameData,
 ): VisualCombatant {
   return {
-    visualX: unit.battleX,
+    battleX: unit.battleX,
     isAlive: unit.isAlive,
     rangePx: resolveMaxEffectiveRangePx(unit, gameData),
   };

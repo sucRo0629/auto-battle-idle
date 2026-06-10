@@ -27,109 +27,17 @@ import {
   normalizeTarget,
   orderPoolByTarget,
   pickTargetFromPool as pickTargetFromPoolSpec,
+  resolveTargetSpec,
 } from './targetSpec.ts';
-import {
-  getTargetPoolForEffect,
-  getTargetPoolForRule,
-  getTargetPoolForSpec,
-} from './targetingPool.ts';
 
-export {
-  getTargetPoolForEffect,
-  getTargetPoolForRule,
-  getTargetPoolForSpec,
-} from './targetingPool.ts';
 export {
   formatTargetLabel,
   getEffectTarget,
   normalizeTarget,
+  resolveTargetSpec,
 } from './targetSpec.ts';
 
-export interface TargetRuleContext {
-  actor: CombatantState;
-  allies: CombatantState[];
-  enemies: CombatantState[];
-}
-
-/** パッシブ targetRuleOverride は候補がいるときだけ適用（射手排除など） */
-export function resolveTargetSpec(
-  passives: PassiveSkillDef[],
-  defaultSpec: TargetSpec,
-  context?: TargetRuleContext,
-): TargetSpec {
-  for (let i = passives.length - 1; i >= 0; i--) {
-    const override = passives[i].targetRuleOverride;
-    if (!override) continue;
-    if (context) {
-      const pool = getTargetPool(override, context.actor, context.allies, context.enemies);
-      if (pool.length > 0) return override;
-      continue;
-    }
-    return override;
-  }
-  return defaultSpec;
-}
-
-/** @deprecated Use resolveTargetSpec */
-export function resolveTargetRule(
-  passives: PassiveSkillDef[],
-  defaultRule: TargetRule,
-  context?: TargetRuleContext,
-): TargetRule {
-  const defaultSpec = normalizeTarget(defaultRule);
-  const resolved = resolveTargetSpec(passives, defaultSpec, context);
-  return targetSpecToLegacyRule(resolved) ?? defaultRule;
-}
-
-function targetSpecToLegacyRule(spec: TargetSpec): TargetRule | null {
-  switch (spec.kind) {
-    case 'self':
-      return 'self';
-    case 'all':
-      return spec.side === 'ally' ? 'allAllies' : 'allEnemies';
-    case 'distance':
-      if (spec.side === 'ally' && spec.order === 'nearest') return 'closestAlly';
-      if (spec.side === 'enemy' && spec.order === 'nearest') return 'frontEnemy';
-      if (spec.side === 'enemy' && spec.order === 'farthest') return 'farthestEnemy';
-      return null;
-    case 'stat':
-      if (spec.side === 'ally' && spec.stat === 'hp' && spec.order === 'ratio') {
-        return 'mostDamagedAlly';
-      }
-      if (spec.side === 'enemy' && spec.stat === 'hp' && spec.order === 'lowest') {
-        return 'lowestHpEnemy';
-      }
-      if (spec.side === 'enemy' && spec.stat === 'hp' && spec.order === 'highest') {
-        return 'highestHpEnemy';
-      }
-      if (spec.side === 'enemy' && spec.stat === 'atk' && spec.order === 'highest') {
-        return 'highestAtkEnemy';
-      }
-      if (spec.side === 'enemy' && spec.stat === 'def' && spec.order === 'lowest') {
-        return 'lowestDefEnemy';
-      }
-      if (spec.side === 'enemy' && spec.stat === 'def' && spec.order === 'highest') {
-        return 'highestDefEnemy';
-      }
-      if (spec.side === 'enemy' && spec.stat === 'reg' && spec.order === 'lowest') {
-        return 'lowestRegEnemy';
-      }
-      if (spec.side === 'enemy' && spec.stat === 'reg' && spec.order === 'highest') {
-        return 'highestRegEnemy';
-      }
-      return null;
-    case 'attackType':
-      if (spec.ranged && !spec.physical && !spec.magic && !spec.melee) {
-        return 'rangedAttackingEnemy';
-      }
-      if (spec.magic && !spec.physical && !spec.ranged && !spec.melee) {
-        return 'magicAttackingEnemy';
-      }
-      return null;
-    case 'status':
-      return 'debuffedEnemy';
-  }
-}
+export type { TargetRuleContext } from './targetSpec.ts';
 
 function livingAllies(allies: CombatantState[]): CombatantState[] {
   return allies.filter((a) => a.isAlive);

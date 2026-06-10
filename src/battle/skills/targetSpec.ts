@@ -12,6 +12,7 @@ import type {
   BuffFilterTag,
   CombatantState,
   DebuffFilterTag,
+  PassiveSkillDef,
   TargetDistanceOrder,
   TargetRule,
   TargetSide,
@@ -203,6 +204,36 @@ export function getEffectTarget(effect: {
     effect.targetRule,
     effect.targetDebuffFilter,
   );
+}
+
+export interface TargetRuleContext {
+  actor: CombatantState;
+  allies: CombatantState[];
+  enemies: CombatantState[];
+}
+
+/** パッシブ targetRuleOverride は候補がいるときだけ適用（射手排除など） */
+export function resolveTargetSpec(
+  passives: PassiveSkillDef[],
+  defaultSpec: TargetSpec,
+  context?: TargetRuleContext,
+): TargetSpec {
+  for (let i = passives.length - 1; i >= 0; i--) {
+    const override = passives[i].targetRuleOverride;
+    if (!override) continue;
+    if (context) {
+      const pool = getTargetPool(
+        override,
+        context.actor,
+        context.allies,
+        context.enemies,
+      );
+      if (pool.length > 0) return override;
+      continue;
+    }
+    return override;
+  }
+  return defaultSpec;
 }
 
 function factionPool(

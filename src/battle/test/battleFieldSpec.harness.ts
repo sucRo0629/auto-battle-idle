@@ -8,7 +8,7 @@ import { loadGameData } from '../data/loadGameData.ts';
 import { loadLevelCurves } from '../../progression/levelGrowth.ts';
 import levelCurvesJson from '../../../data/levelCurves.json';
 import { createDefaultSave } from '../../progression/victoryRewards.ts';
-import { SPRITE_WIDTH } from '../../render/formationLayout.ts';
+import { SPRITE_WIDTH } from '../battleConstants.ts';
 import type { CombatantSnapshot } from '../types.ts';
 
 export const LONG_BATTLE_TIMEOUT_MS = 60_000;
@@ -434,42 +434,6 @@ export function assertWaveWipeCorpseNoJump(
   }
 
   expect.fail(`wave ${options.waveIndex} wipe did not occur`);
-}
-
-/** @deprecated assertEngagedDeathVisualStability を使用 */
-export function assertDeadEnemyCorpseScreenStable(
-  engine: BattleEngine,
-  options: Parameters<typeof assertEngagedDeathVisualStability>[1] = {},
-): void {
-  assertEngagedDeathVisualStability(engine, {
-    ...options,
-    livingMaxDeltaPx: options.livingMaxDeltaPx ?? 9999,
-  });
-}
-
-/** @deprecated assertEngagedDeathVisualStability を使用 */
-export function assertLivingEnemyScreenStableOnCompositionChange(
-  engine: BattleEngine,
-  options: Parameters<typeof assertEngagedDeathVisualStability>[1] = {},
-): void {
-  assertEngagedDeathVisualStability(engine, {
-    ...options,
-    corpseMaxDeltaPx: options.corpseMaxDeltaPx ?? 9999,
-  });
-}
-
-/** @deprecated L1 以降は assertEngagedEnemyScreenStable を使用 */
-export function assertEnemyVisualBattleSync(
-  engine: BattleEngine,
-  options: EngagedVisualAssertOptions & {
-    epsilon?: number;
-    maxJumpPx?: number;
-  } = {},
-): void {
-  assertEngagedEnemyScreenStable(engine, {
-    ...options,
-    maxJumpPx: options.maxJumpPx ?? 24,
-  });
 }
 
 /** 接敵中: 前線味方の画面右端が生存敵の右端を大きく超えない */

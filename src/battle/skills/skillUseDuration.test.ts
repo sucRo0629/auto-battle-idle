@@ -58,7 +58,7 @@ describe('skillUseDuration', () => {
     const basicSkill: ActiveSkillDef = {
       id: 'basic',
       name: 'basic',
-      interval: 2,
+      trigger: { kind: 'time', value: 2 },
       effect: [
         {
           type: 'damage',

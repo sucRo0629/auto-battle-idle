@@ -410,24 +410,18 @@ describe('parseSkillEffect counter', () => {
     expect(effect.responses[0]?.kind).toBe('damage');
   });
 
-  it('upgrades legacy amount to damage response', () => {
-    const effect = parseSkillEffect(
-      {
-        type: 'counter',
-        durationSec: 5,
-        amount: { kind: 'flat', flatAmount: 12 },
-        damageType: 'magic',
-      },
-      'test',
-    );
-    if (effect.type !== 'counter') throw new Error('expected counter');
-    expect(effect.responses).toEqual([
-      {
-        kind: 'damage',
-        amount: { kind: 'flat', flatAmount: 12 },
-        damageType: 'magic',
-      },
-    ]);
+  it('requires responses array for counter', () => {
+    expect(() =>
+      parseSkillEffect(
+        {
+          type: 'counter',
+          durationSec: 5,
+          amount: { kind: 'flat', flatAmount: 12 },
+          damageType: 'magic',
+        },
+        'test',
+      ),
+    ).toThrow();
   });
 
   it('rejects multiLock targetShape', () => {

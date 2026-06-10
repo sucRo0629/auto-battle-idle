@@ -6,8 +6,11 @@ import {
   getPlayerContactX,
   getEnemyContactX,
   getMeleeEnemyContactX,
+  resolveApproachAttackBattleX,
   resolveAttackBattleX,
   resolveMaxEffectiveRangePx,
+  resolveBasicAttackRangePx,
+  resolveApproachRangePx,
   leadingRowContactPlayer,
 } from './combatPosition.ts';
 import { engagedMinBodyGap } from './battleConstants.ts';
@@ -44,27 +47,43 @@ function resolvePlayerPriorityTarget(
   return pickTargetFromPool(spec, player, pool);
 }
 
-function capBackRowToFormationDepth(
-  player: CombatantState,
-  _players: CombatantState[],
-  _enemies: CombatantState[],
-  _gameData: GameData,
-  rangeStopX: number,
-): number {
-  if (player.formationRow !== 'back') return rangeStopX;
-  // 射程停止を正本とする。隊形深度で rangeStopX より前方へ引きずらない（過進軍時は戻す）
-  return Math.min(Math.max(rangeStopX, player.battleX), rangeStopX);
-}
-
-function capRangedOnlyRetreat(
+function capForwardAfterMeleeWipe(
   player: CombatantState,
   enemies: CombatantState[],
   gameData: GameData,
   approachX: number,
 ): number {
-  if (getMeleeEnemyContactX(enemies, gameData) !== null) return approachX;
-  // 近接全滅後: 敵接触点の左流れに引きずられない（前進のみ）
-  return Math.max(approachX, player.battleX);
+  if (player.formationRow !== 'back') return approachX;
+  if (getMeleeEnemyContactX(enemies, gameData) !== null) {
+    return approachX;
+  }
+  // 近接全滅後: 後方敵接触点ジャンプによる後列の一斉右追いを防ぐ（後退は許可）
+  if (approachX > player.battleX) {
+    return player.battleX;
+  }
+  return approachX;
+}
+
+function resolveApproachEnemyContact(
+  enemies: CombatantState[],
+  gameData: GameData,
+  frozenMeleeContactX: number | null,
+): number | null {
+  const meleeContact = getMeleeEnemyContactX(enemies, gameData);
+  if (meleeContact !== null) return meleeContact;
+  const front = getEnemyContactX(enemies);
+  if (front === null) return null;
+  if (frozenMeleeContactX !== null && front > frozenMeleeContactX) {
+    return frozenMeleeContactX;
+  }
+  return front;
+}
+
+function capBackRowRangeStop(
+  _player: CombatantState,
+  rangeStopX: number,
+): number {
+  return rangeStopX;
 }
 
 /** 前列は敵最前線より左（rear 側）に留める — battleX 過進軍防止 */
@@ -78,8 +97,17 @@ function capFrontRowBeforeEnemyContact(
   const meleeContact = getMeleeEnemyContactX(enemies, gameData);
   const enemyContact = meleeContact ?? getEnemyContactX(enemies);
   if (enemyContact === null) return approachX;
-  const maxForward = resolveAttackBattleX(player, enemyContact, gameData);
+  const maxForward = resolveApproachAttackBattleX(
+    player,
+    enemyContact,
+    gameData,
+  );
   return Math.min(approachX, maxForward);
+}
+
+export interface PlayerApproachOptions {
+  /** 近接全滅直前の最前線 battleX（後方敵への接触点ジャンプ抑制） */
+  frozenMeleeContactX?: number | null;
 }
 
 export function resolvePlayerApproachBattleX(
@@ -87,15 +115,21 @@ export function resolvePlayerApproachBattleX(
   players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
+  options: PlayerApproachOptions = {},
 ): number {
-  const contact = getEnemyContactX(enemies);
+  const frozenMeleeContactX = options.frozenMeleeContactX ?? null;
+  const contact = resolveApproachEnemyContact(
+    enemies,
+    gameData,
+    frozenMeleeContactX,
+  );
   if (contact === null) return player.battleX;
 
   if (player.formationRow !== 'back') {
     let approachX: number;
     const meleeContact = getMeleeEnemyContactX(enemies, gameData);
     if (meleeContact !== null) {
-      approachX = resolveAttackBattleX(player, meleeContact, gameData);
+      approachX = resolveApproachAttackBattleX(player, meleeContact, gameData);
     } else {
       const target = resolvePlayerPriorityTarget(
         player,
@@ -104,16 +138,20 @@ export function resolvePlayerApproachBattleX(
         gameData,
       );
       if (target) {
-        approachX = resolveAttackBattleX(player, target.battleX, gameData);
+        approachX = resolveApproachAttackBattleX(
+          player,
+          target.battleX,
+          gameData,
+        );
       } else {
-        approachX = resolveAttackBattleX(player, contact, gameData);
+        approachX = resolveApproachAttackBattleX(player, contact, gameData);
       }
     }
     return capFrontRowBeforeEnemyContact(
       player,
       enemies,
       gameData,
-      capRangedOnlyRetreat(player, enemies, gameData, approachX),
+      approachX,
     );
   }
 
@@ -124,31 +162,27 @@ export function resolvePlayerApproachBattleX(
     gameData,
   );
   if (target) {
-    return capBackRowToFormationDepth(
+    return capBackRowRangeStop(
       player,
-      players,
-      enemies,
-      gameData,
-      resolveAttackBattleX(player, target.battleX, gameData),
+      capForwardAfterMeleeWipe(
+        player,
+        enemies,
+        gameData,
+        resolveApproachAttackBattleX(player, target.battleX, gameData),
+      ),
     );
   }
 
-  return capBackRowToFormationDepth(
+  return capBackRowRangeStop(
     player,
-    players,
-    enemies,
-    gameData,
-    capRangedOnlyRetreat(
+    capForwardAfterMeleeWipe(
       player,
       enemies,
       gameData,
-      resolveAttackBattleX(player, contact, gameData),
+      resolveApproachAttackBattleX(player, contact, gameData),
     ),
   );
 }
-
-/** @deprecated resolvePlayerApproachBattleX */
-export const resolveAllyApproachBattleX = resolvePlayerApproachBattleX;
 
 export function resolveEnemyBasicAttackTarget(
   enemy: CombatantState,
@@ -231,7 +265,7 @@ function resolveEnemyMeleeStopBattleX(
   return targetPlayer.battleX + engagedMinBodyGap() + playerReach;
 }
 
-/** 接敵中: 通常攻撃が射程内に届くなら自動接近を止める */
+/** 接敵中: 接近停止射程（通常攻撃 or 使用可能な短い装備アクティブ）内に届くなら自動接近を止める */
 export function shouldSkipEngagedAutoApproach(
   unit: CombatantState,
   players: CombatantState[],
@@ -248,7 +282,7 @@ export function shouldSkipEngagedAutoApproach(
       enemies,
     },
   );
-  const range = resolveMaxEffectiveRangePx(unit, gameData);
+  const range = resolveApproachRangePx(unit, gameData);
   const pool = getAttackablePool(spec, unit, players, enemies, range);
   return pool.some((opponent) => opponent.isAlive);
 }

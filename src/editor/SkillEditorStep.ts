@@ -40,6 +40,7 @@ import type {
   StatusEffectStat,
   TargetShape,
 } from '../battle/types.ts';
+import { CONFIGURABLE_RANGE_PX_MAX, configurableRangeHintJa } from '../battle/rangeLimits.ts';
 import {
   defaultTargetForEffectType,
   getEffectTarget,
@@ -195,7 +196,7 @@ function appendCounterEffectFields(
             ...prev,
             range,
           })),
-        {},
+        { min: 0, max: CONFIGURABLE_RANGE_PX_MAX, step: 1 },
       ),
     ),
   );
@@ -2330,9 +2331,12 @@ export class SkillEditorStep {
                 ...prev,
                 range: range > 0 ? range : undefined,
               } as SkillEffectDef)),
-            { min: 0, step: 10 },
+            { min: 0, max: CONFIGURABLE_RANGE_PX_MAX, step: 10 },
           ),
         ),
+      );
+      grid.appendChild(
+        createEl('p', 'editor-hint', configurableRangeHintJa()),
       );
     }
 

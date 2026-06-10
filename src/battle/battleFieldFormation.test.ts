@@ -86,8 +86,8 @@ describe('battle-field formation spec (F-*)', () => {
 
   it('clampEngagedEnemyGroupOnScreen keeps group inside canvas horizontally', () => {
     const ideals = [
-      { id: 'e1', visualX: -100, isAlive: true as const },
-      { id: 'e2', visualX: -60, isAlive: true as const },
+      { id: 'e1', battleX: -100, isAlive: true as const },
+      { id: 'e2', battleX: -60, isAlive: true as const },
     ];
     const clamped = clampEngagedEnemyGroupOnScreen(ideals);
     for (const x of clamped.values()) {

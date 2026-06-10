@@ -1,4 +1,5 @@
 import { normalizeEntityTraits } from '../battle/data/entityTraits.ts';
+import { assertConfigurableRangePx } from '../battle/rangeLimits.ts';
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
@@ -126,6 +127,7 @@ export interface ClassStatsPatch {
   atk: number;
   def: number;
   reg: number;
+  rangePx: number;
   growthTier: GrowthTierSet;
   attackSpeedTier: AttackSpeedTier;
   growthPresetKey?: 'caster';
@@ -153,7 +155,8 @@ export function classStatsEqual(
     left.maxHp !== right.maxHp ||
     left.atk !== right.atk ||
     left.def !== right.def ||
-    left.reg !== right.reg
+    left.reg !== right.reg ||
+    (left.traits.rangePx ?? 0) !== (right.traits.rangePx ?? 0)
   ) {
     return false;
   }
@@ -175,6 +178,7 @@ export function toClassStatsPatch(cls: ClassPresetBeforeEnrich): ClassStatsPatch
     atk: copy.atk,
     def: copy.def,
     reg: copy.reg,
+    rangePx: copy.traits.rangePx ?? 0,
     growthTier: structuredClone(copy.growthTier!),
     attackSpeedTier: copy.attackSpeedTier ?? 'normal',
     ...(copy.growthPresetKey === 'caster' ? { growthPresetKey: 'caster' as const } : {}),
@@ -198,7 +202,7 @@ export function validateClassDraftForSave(draft: ClassDraft): void {
   assertMinNumber('maxHp', draft.class.maxHp, 1);
   assertMinNumber('atk', draft.class.atk, 0);
   assertMinNumber('def', draft.class.def, 0);
-  assertMinNumber('射程 (px)', draft.class.traits.rangePx ?? 0, 0);
+  assertConfigurableRangePx('射程 (px)', draft.class.traits.rangePx ?? 0);
 }
 
 export function validateEnemyDraftForSave(draft: EnemyDraft): void {
@@ -206,13 +210,17 @@ export function validateEnemyDraftForSave(draft: EnemyDraft): void {
   assertMinNumber('atk', draft.enemy.atk, 0);
   assertMinNumber('def', draft.enemy.def, 0);
   assertMinNumber('exp', draft.enemy.exp, 0);
-  assertMinNumber('射程 (px)', draft.enemy.traits?.rangePx ?? 0, 0);
+  assertConfigurableRangePx('射程 (px)', draft.enemy.traits?.rangePx ?? 0);
 }
 
 export function validateClassStatsForSave(cls: ClassPresetBeforeEnrich): void {
   assertMinNumber(`${cls.displayName || cls.id} の maxHp`, cls.maxHp, 1);
   assertMinNumber(`${cls.displayName || cls.id} の atk`, cls.atk, 0);
   assertMinNumber(`${cls.displayName || cls.id} の def`, cls.def, 0);
+  assertConfigurableRangePx(
+    `${cls.displayName || cls.id} の射程 (px)`,
+    cls.traits.rangePx ?? 0,
+  );
 }
 
 /** 既存クラス選択プルダウンと同じ並び（classes.json の配列順） */
@@ -753,7 +761,7 @@ export function defaultBasicAttackActiveSkill(id: string): ActiveSkillDef {
   return {
     id,
     name: id,
-    interval: 2,
+    trigger: { kind: 'time', value: 2 },
     effect: [
       {
         target: { kind: 'distance', side: 'enemy', order: 'nearest' },

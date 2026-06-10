@@ -55,7 +55,7 @@ const gameData = {
       basic: {
         id: 'basic',
         name: 'basic',
-        interval: 2,
+        trigger: { kind: 'time', value: 2 },
         effect: [
           {
             target: { kind: 'distance', side: 'enemy', order: 'nearest' },
@@ -79,7 +79,6 @@ describe('battleLayout snapshots', () => {
           formationRow: 'front',
           rangePx: 0,
           isAlive: true,
-          visualX: 200,
           battleX: 180,
           engagedVisualLaneX: 0,
         },
@@ -96,12 +95,12 @@ describe('battleLayout snapshots', () => {
       playerContactBattleX: 180,
       battleVisualOffset: 20,
       frontEnemyVisualAnchor: 270,
-      resolveRangedTargetVisualX: () => null,
+      resolveRangedTargetBattleX: () => null,
     });
 
     expect(layout).not.toBeNull();
-    const guardX = layout!.playerVisualX.get('guard')!;
-    const meleeX = layout!.enemyVisualX.get('melee')!;
+    const guardX = layout!.playerBattleX.get('guard')!;
+    const meleeX = layout!.enemyBattleX.get('melee')!;
     expect(meleeX - guardX).toBeGreaterThanOrEqual(engagedFrontLineGap() - 1);
   });
 
@@ -114,7 +113,6 @@ describe('battleLayout snapshots', () => {
           formationRow: 'front',
           rangePx: 0,
           isAlive: true,
-          visualX: 200,
           battleX: 180,
           engagedVisualLaneX: 0,
         },
@@ -122,9 +120,8 @@ describe('battleLayout snapshots', () => {
           id: 'archer',
           role: 'attacker',
           formationRow: 'back',
-          rangePx: 50,
+          rangePx: 55,
           isAlive: true,
-          visualX: 80,
           battleX: 60,
           engagedVisualLaneX: -120,
         },
@@ -140,20 +137,20 @@ describe('battleLayout snapshots', () => {
         {
           id: 'ranged',
           isAlive: true,
-          rangePx: 50,
+          rangePx: 55,
           battleX: 320,
         },
       ],
       playerContactBattleX: 180,
       battleVisualOffset: 20,
       frontEnemyVisualAnchor: 270,
-      resolveRangedTargetVisualX: (enemyId) =>
+      resolveRangedTargetBattleX: (enemyId) =>
         enemyId === 'ranged' ? 200 : null,
     });
 
     expect(layout).not.toBeNull();
-    const meleeX = layout!.enemyVisualX.get('melee')!;
-    const rangedX = layout!.enemyVisualX.get('ranged')!;
+    const meleeX = layout!.enemyBattleX.get('melee')!;
+    const rangedX = layout!.enemyBattleX.get('ranged')!;
     expect(rangedX).toBeGreaterThan(meleeX);
     expect(rangedX - meleeX).toBeGreaterThanOrEqual(enemyRangedRearGap() - 1);
   });
@@ -167,7 +164,6 @@ describe('battleLayout snapshots', () => {
           formationRow: 'front',
           rangePx: 0,
           isAlive: true,
-          visualX: 200,
           battleX: 180,
           engagedVisualLaneX: 0,
         },
@@ -190,22 +186,22 @@ describe('battleLayout snapshots', () => {
         {
           id: 'ranged',
           isAlive: true,
-          rangePx: 50,
+          rangePx: 55,
           battleX: 320,
         },
       ],
       playerContactBattleX: 180,
       battleVisualOffset: 20,
       frontEnemyVisualAnchor: 270,
-      resolveRangedTargetVisualX: (enemyId) =>
+      resolveRangedTargetBattleX: (enemyId) =>
         enemyId === 'ranged' ? 200 : null,
     });
 
     expect(layout).not.toBeNull();
-    const meleeAX = layout!.enemyVisualX.get('melee-a')!;
-    const meleeBX = layout!.enemyVisualX.get('melee-b')!;
+    const meleeAX = layout!.enemyBattleX.get('melee-a')!;
+    const meleeBX = layout!.enemyBattleX.get('melee-b')!;
     expect(meleeBX).toBe(meleeAX);
-    const rangedX = layout!.enemyVisualX.get('ranged')!;
+    const rangedX = layout!.enemyBattleX.get('ranged')!;
     expect(rangedX - meleeBX).toBeGreaterThanOrEqual(enemyRangedRearGap() - 1);
   });
 
@@ -218,7 +214,6 @@ describe('battleLayout snapshots', () => {
           formationRow: 'front',
           rangePx: 0,
           isAlive: true,
-          visualX: 200,
           battleX: 180,
           engagedVisualLaneX: 0,
         },
@@ -228,7 +223,6 @@ describe('battleLayout snapshots', () => {
           formationRow: 'back',
           rangePx: 0,
           isAlive: true,
-          visualX: 80,
           battleX: 120,
         },
         {
@@ -237,7 +231,6 @@ describe('battleLayout snapshots', () => {
           formationRow: 'back',
           rangePx: 100,
           isAlive: true,
-          visualX: 60,
           battleX: 100,
         },
       ],
@@ -253,11 +246,11 @@ describe('battleLayout snapshots', () => {
       playerContactBattleX: 180,
       battleVisualOffset: 20,
       frontEnemyVisualAnchor: 270,
-      resolveRangedTargetVisualX: () => null,
+      resolveRangedTargetBattleX: () => null,
     });
-    const swordX = layout!.playerVisualX.get('sword')!;
-    const clericX = layout!.playerVisualX.get('cleric')!;
-    const rangerX = layout!.playerVisualX.get('ranger')!;
+    const swordX = layout!.playerBattleX.get('sword')!;
+    const clericX = layout!.playerBattleX.get('cleric')!;
+    const rangerX = layout!.playerBattleX.get('ranger')!;
     expect(swordX).toBeGreaterThan(rangerX);
     expect(clericX - rangerX).toBeGreaterThanOrEqual(engagedMinBodyGap() - 1);
   });
@@ -270,12 +263,12 @@ describe('battleLayout snapshots', () => {
     expect(fallen.corpseVisible).toBe(false);
   });
 
-  it('getLeadingPlayerFront picks max visualX on leading row', () => {
+  it('getLeadingPlayerFront picks max battleX on leading row', () => {
     const front = getLeadingPlayerFront([
-      { id: 'g', role: 'defender', formationRow: 'front', rangePx: 0, isAlive: true, visualX: 200 },
-      { id: 's', role: 'attacker', formationRow: 'front', rangePx: 0, isAlive: true, visualX: 180 },
+      { id: 'g', role: 'defender', formationRow: 'front', rangePx: 0, isAlive: true, battleX: 200 },
+      { id: 's', role: 'attacker', formationRow: 'front', rangePx: 0, isAlive: true, battleX: 180 },
     ]);
-    expect(front?.visualX).toBe(200);
+    expect(front?.battleX).toBe(200);
   });
 });
 
@@ -290,7 +283,7 @@ describe('battle contact (R1-fix: battleX single)', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       battleX: 220,
       visualX: 120,
     });

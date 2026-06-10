@@ -24,7 +24,6 @@ import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
 import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
 import { grantCounterStatus } from '../counterEffects.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
-import { resolveMoveVisualX } from '../battleLayout.ts';
 import {
   resetCooldownAfterFire,
   tickCountTriggerCooldowns,
@@ -326,10 +325,10 @@ export class SkillExecutor {
       actorId: actor.id,
       fromX,
       toX,
-      toVisualX: resolveMoveVisualX(actor, anchor, effectDef, this.gameData),
+      toVisualX: toX,
       remainingSec: effectDef.moveDurationSec,
       totalSec: effectDef.moveDurationSec,
-      baseVisualX: actor.visualX,
+      baseVisualX: actor.battleX,
     });
 
     this.emit({

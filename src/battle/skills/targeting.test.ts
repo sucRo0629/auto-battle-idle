@@ -47,7 +47,7 @@ function mockGameData(basicRange = 50): GameData {
         [BASIC_SKILL_ID]: {
           id: BASIC_SKILL_ID,
           name: 'basic',
-          interval: 2,
+          trigger: { kind: 'time', value: 2 },
           effect: [
             {
               target: { kind: "distance", side: "enemy", order: "nearest" },
@@ -94,7 +94,7 @@ function mockUnit(
     classId: opts.isEnemy ? 'test_enemy' : 'at_sorcerer',
     formationRow: 'back',
     traits: {
-      rangePx: opts.rangePx ?? 50,
+      rangePx: opts.rangePx ?? 55,
       damageType: 'physical',
       basicAttackVfx: { preset: 'arrow', arc: true },
     },

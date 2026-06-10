@@ -13,7 +13,8 @@ import {
   waitForEngaged,
 } from './test/battleFieldSpec.harness.ts';
 import { CANVAS_W, SCROLL_SPEED } from './battleConstants.ts';
-import { SPRITE_WIDTH } from '../render/formationLayout.ts';
+import { isMeleeRangePx } from './types.ts';
+import { SPRITE_WIDTH } from '../battle/battleConstants.ts';
 
 function frontContactScreenCenter(
   snap: ReturnType<BattleEngine['getSnapshot']>,
@@ -240,7 +241,7 @@ describe('battle-field transition spec (T-*)', () => {
     for (let i = 0; i < 120_000; i++) {
       const snap = engine.getSnapshot();
       const livingMelee = snap.enemies.filter(
-        (e) => e.hp > 0 && (e.rangePx ?? 0) < 25,
+        (e) => e.hp > 0 && isMeleeRangePx(e.rangePx ?? 0),
       );
       const ranged = snap.enemies.find(
         (e) => e.hp > 0 && e.name === 'test_ranged',

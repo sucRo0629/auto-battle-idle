@@ -6,6 +6,7 @@ import { isWithinSkillRange } from './skills/rangeUtils.ts';
 import { resolveMaxEffectiveRangePx } from './combatPosition.ts';
 import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
+import { isRangedAttack } from './data/entityTraits.ts';
 import { shouldSkipEngagedAutoApproach } from './resolveApproachBattleX.ts';
 import {
   createStage1Engine,
@@ -74,7 +75,7 @@ describe('engage approach skill fixes', () => {
     for (const enemy of internal.enemies) {
       if (!enemy.isAlive || enemy.name !== 'test_ranged') continue;
       enemy.battleX = archer.battleX + 35;
-      enemy.visualX = enemy.battleX;
+      enemy.battleX = enemy.battleX;
     }
 
     const hpBefore = internal.enemies
@@ -115,16 +116,16 @@ describe('engage approach skill fixes', () => {
     for (const unit of internal.players) {
       if (!unit.isAlive || unit.formationRow !== 'front') continue;
       unit.battleX = 30;
-      unit.visualX = 30;
+      unit.battleX = 30;
     }
     const archer = internal.players.find((p) => p.name === '弓術士')!;
     const enemy = internal.enemies.find(
       (e) => e.isAlive && e.name === 'test_ranged',
     )!;
     archer.battleX = 120;
-    archer.visualX = 120;
+    archer.battleX = 120;
     enemy.battleX = 155;
-    enemy.visualX = 155;
+    enemy.battleX = 155;
 
     const range = resolveMaxEffectiveRangePx(archer as never, internal.gameData);
     expect(isWithinSkillRange(archer as never, enemy as never, range)).toBe(
@@ -163,7 +164,7 @@ describe('engage approach skill fixes', () => {
     for (const unit of internal.players) {
       if (!unit.isAlive || unit.formationRow !== 'front') continue;
       unit.battleX = 30;
-      unit.visualX = 30;
+      unit.battleX = 30;
     }
     const melee = internal.enemies.find(
       (e) => e.isAlive && e.name === 'test_enemy',
@@ -172,13 +173,13 @@ describe('engage approach skill fixes', () => {
       (e) => e.isAlive && e.name === 'test_ranged',
     )!;
     melee.battleX = 80;
-    melee.visualX = 80;
+    melee.battleX = 80;
     ranged.battleX = 155;
-    ranged.visualX = 155;
+    ranged.battleX = 155;
 
     const target = internal.players.find((p) => p.name === '弓術士')!;
     target.battleX = 120;
-    target.visualX = 120;
+    target.battleX = 120;
 
     const range = resolveMaxEffectiveRangePx(ranged as never, internal.gameData);
     expect(
@@ -206,7 +207,7 @@ describe('engage approach skill fixes', () => {
         onDamageApplied: (actor, target, amount) => {
           if (
             actor.isEnemy &&
-            (actor.traits.rangePx ?? 0) >= 25 &&
+            isRangedAttack(actor.traits.rangePx ?? 0) &&
             target.isEnemy === false &&
             amount > 0
           ) {

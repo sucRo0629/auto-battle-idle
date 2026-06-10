@@ -111,9 +111,9 @@
 
 | フィールド | 省略時 |
 |------------|--------|
-| `rangePx` | `0`（近接帯 0〜24。25 以上 = 遠隔帯） |
+| `rangePx` | `0`（近接帯 0〜50。51 以上 = 遠隔帯） |
 | `damageType` | `physical` |
-| `basicAttackVfx` | `deriveBasicAttackVfxFromTraits()`（magic→orb / physical+rangePx≥25→arrow / それ以外→slash） |
+| `basicAttackVfx` | `deriveBasicAttackVfxFromTraits()`（magic→orb / physical+rangePx>50→arrow / それ以外→slash） |
 
 `basicAttackSkillId` は省略可（`{entityId}_basic_attack`）。通常攻撃スキルはロード時に合成。`skills.json` に同名 ID があれば `name` / `atkScale` / `interval` 等のみ上書き可（`range` / `damageType` / `vfx` は traits 正）。
 
@@ -124,7 +124,9 @@
 | **通常攻撃**（合成 basic） | effect に書かない（`actor.traits.rangePx`） |
 | アクティブ等 | 任意。省略時 = `actor.traits.rangePx` |
 
-`traits.rangePx >= 25` で遠隔攻撃（`rangedAttackingEnemy`）。`0〜24` は近接帯（slash VFX、停止位置は §battle-field 2.5）。`traits.damageType === 'magic'` で `magicAttackingEnemy`。
+**設定上限:** `traits.rangePx` および `effect.range` は `0〜CONFIGURABLE_RANGE_PX_MAX` px（`rangeLimits.ts`: `CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`）。近接帯・遠隔帯の境界は `RANGED_ATTACK_THRESHOLD_PX`（50）— 詳細は [battle-field.md §2.6](./battle-field.md#26-定数単一正本battleconstantsts-または-typests)。
+
+`traits.rangePx > RANGED_ATTACK_THRESHOLD_PX` で遠隔攻撃（`rangedAttackingEnemy`）。`0〜MELEE_RANGE_MAX_PX` は近接帯（slash VFX、停止位置は §battle-field 2.5）。`traits.damageType === 'magic'` で `magicAttackingEnemy`。
 
 **一次職 `rangePx`（参考）：** 双短剣/闘技 0、鉄衛/護法 5、剣術 8、槍術 24、魔法 30、物理レンジ 40。
 

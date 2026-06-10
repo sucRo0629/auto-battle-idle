@@ -2,6 +2,7 @@ import {
   PLACEHOLDER_SPRITE_KEYS,
   resolvePlaceholderIconKey,
 } from './classVisuals.ts';
+import { isRangedAttack } from './data/entityTraits.ts';
 import { resolveClassIconKey } from '../render/entityVisuals.ts';
 import type {
   ActiveSkillDef,
@@ -48,7 +49,7 @@ function placeholderTraits(
       preset:
         damageType === 'magic'
           ? 'orb'
-          : rangePx >= 25
+          : isRangedAttack(rangePx)
             ? 'arrow'
             : 'slash',
     },

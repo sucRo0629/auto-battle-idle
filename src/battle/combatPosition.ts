@@ -4,6 +4,7 @@ import type {
   GameData,
   MoveSkillEffect,
   Role,
+  SkillCooldown,
 } from './types.ts';
 import { isMeleeRangePx } from './types.ts';
 import {
@@ -329,6 +330,98 @@ export function resolveMaxEffectiveRangePx(
   return max >= 0 ? max : unit.traits.rangePx;
 }
 
+/** 自動接近の停止距離: 通常攻撃射程（traits / basic の range）のみ */
+export function resolveBasicAttackRangePx(
+  unit: CombatantState,
+  gameData: GameData,
+): number {
+  const basicCd = unit.cooldowns.find((cd) => cd.slotKind === 'basic');
+  const skillId = basicCd?.skillId;
+  const skill = skillId ? gameData.skillRegistry.actives[skillId] : undefined;
+  const effect = skill?.effect.find((e) => e.type !== 'move');
+  if (effect && effect.type !== 'counter') {
+    return resolveSkillRangePx(unit, effect);
+  }
+  return unit.traits.rangePx;
+}
+
+/** 装備中アクティブの最短射程（move 効果は除外） */
+export function resolveMinEquippedActiveRangePx(
+  unit: CombatantState,
+  gameData: GameData,
+): number | null {
+  let min: number | null = null;
+  for (const cd of unit.cooldowns) {
+    if (cd.slotKind !== 'active') continue;
+    const skill = gameData.skillRegistry.actives[cd.skillId];
+    if (!skill) continue;
+    for (const effect of skill.effect) {
+      if (effect.type === 'move') continue;
+      const range = resolveSkillRangePx(unit, effect);
+      min = min === null ? range : Math.min(min, range);
+    }
+  }
+  return min;
+}
+
+/** 使用可能（CD 完了）な装備アクティブのみ対象 */
+export function isEquippedActiveSkillReady(cd: SkillCooldown): boolean {
+  return cd.slotKind === 'active' && cd.remaining <= 0;
+}
+
+/** 使用可能な装備アクティブの最短射程（move 効果は除外） */
+export function resolveMinReadyEquippedActiveRangePx(
+  unit: CombatantState,
+  gameData: GameData,
+): number | null {
+  let min: number | null = null;
+  for (const cd of unit.cooldowns) {
+    if (!isEquippedActiveSkillReady(cd)) continue;
+    const skill = gameData.skillRegistry.actives[cd.skillId];
+    if (!skill) continue;
+    for (const effect of skill.effect) {
+      if (effect.type === 'move') continue;
+      const range = resolveSkillRangePx(unit, effect);
+      min = min === null ? range : Math.min(min, range);
+    }
+  }
+  return min;
+}
+
+/** 自動接近の停止距離: 使用可能な短い装備アクティブがあればその最短射程、なければ通常攻撃 */
+export function resolveApproachRangePx(
+  unit: CombatantState,
+  gameData: GameData,
+): number {
+  const basic = resolveBasicAttackRangePx(unit, gameData);
+  const minReadyActive = resolveMinReadyEquippedActiveRangePx(unit, gameData);
+  if (minReadyActive !== null && minReadyActive < basic) {
+    return minReadyActive;
+  }
+  return basic;
+}
+
+export function resolveApproachAttackBattleX(
+  unit: CombatantState,
+  contactX: number,
+  gameData: GameData,
+): number {
+  const basicRange = resolveBasicAttackRangePx(unit, gameData);
+  const rangePx = resolveApproachRangePx(unit, gameData);
+  const stopX =
+    !unit.isEnemy && !isMeleeRangePx(basicRange)
+      ? contactX - rangePx
+      : resolveAttackBattleX(unit, contactX, gameData, rangePx);
+  if (
+    !unit.isEnemy &&
+    !isMeleeRangePx(basicRange) &&
+    stopX < unit.battleX
+  ) {
+    return unit.battleX;
+  }
+  return stopX;
+}
+
 export function resolveMoveBattleX(
   actor: CombatantState,
   anchor: CombatantState,
@@ -360,8 +453,9 @@ export function resolveAttackBattleX(
   unit: CombatantState,
   contactX: number,
   gameData: GameData,
+  rangePx?: number,
 ): number {
-  const range = resolveMaxEffectiveRangePx(unit, gameData);
+  const range = rangePx ?? resolveMaxEffectiveRangePx(unit, gameData);
   if (unit.isEnemy) {
     if (isMeleeRangePx(range)) {
       const standoff = engagedMinBodyGap();

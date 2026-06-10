@@ -266,7 +266,10 @@
           }
         }
       ],
-      "interval": 2
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      }
     },
     {
       "id": "at_enchanter_basic_attack",
@@ -285,7 +288,10 @@
           }
         }
       ],
-      "interval": 2
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      }
     },
     {
       "id": "at_geomancer_basic_attack",
@@ -304,7 +310,10 @@
           }
         }
       ],
-      "interval": 2
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      }
     },
     {
       "id": "df_guardian_active_1",
@@ -774,12 +783,15 @@
           "range": 50,
           "type": "dot",
           "durationSec": 6,
-          "powerMultiplier": 0.18,
           "damageType": "physical",
           "target": {
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
+          },
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.18
           }
         }
       ]
@@ -1200,7 +1212,6 @@
     {
       "id": "sp_cleric_basic_attack",
       "name": "sp_cleric_basic_attack",
-      "interval": 2,
       "effect": [
         {
           "target": {
@@ -1214,12 +1225,15 @@
             "atkScale": 1
           }
         }
-      ]
+      ],
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      }
     },
     {
       "id": "df_paladin_basic_attack",
       "name": "df_paladin_basic_attack",
-      "interval": 2,
       "effect": [
         {
           "target": {
@@ -1233,12 +1247,15 @@
             "atkScale": 1
           }
         }
-      ]
+      ],
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      }
     },
     {
       "id": "df_guardian_basic_attack",
       "name": "df_guardian_basic_attack",
-      "interval": 2,
       "effect": [
         {
           "target": {
@@ -1252,12 +1269,41 @@
             "atkScale": 1
           }
         }
-      ]
+      ],
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      }
     },
     {
       "id": "df_duelist_basic_attack",
       "name": "df_duelist_basic_attack",
-      "interval": 2,
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ],
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      }
+    },
+    {
+      "id": "at_lancer_basic_attack",
+      "name": "at_lancer_basic_attack",
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      },
       "effect": [
         {
           "target": {

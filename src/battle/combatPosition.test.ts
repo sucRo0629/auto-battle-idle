@@ -13,6 +13,11 @@ import {
   getMeleeEnemyContactX,
   isEnemyVisibleOnScreen,
   resolveAttackBattleX,
+  resolveApproachAttackBattleX,
+  resolveApproachRangePx,
+  resolveMinEquippedActiveRangePx,
+  resolveMinReadyEquippedActiveRangePx,
+  resolveBasicAttackRangePx,
   resolveMoveBattleX,
   resolveMaxEffectiveRangePx,
   resolveRangedRearBattleXCap,
@@ -66,20 +71,32 @@ const gameData = {
       basic: {
         id: 'basic',
         name: 'basic',
-        interval: 2,
+        trigger: { kind: 'time', value: 2 },
         effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 } }],
       },
       spear: {
         id: 'spear',
         name: 'spear',
-        interval: 2,
+        trigger: { kind: 'time', value: 2 },
         effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 }, range: 30 }],
       },
       bow: {
         id: 'bow',
         name: 'bow',
-        interval: 2,
+        trigger: { kind: 'time', value: 2 },
         effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 }, range: 100 }],
+      },
+      short_magic: {
+        id: 'short_magic',
+        name: 'short magic',
+        trigger: { kind: 'time', value: 8 },
+        effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', damageType: 'magic', amount: { kind: 'atkBased', atkScale: 1.4 }, range: 50 }],
+      },
+      sorcerer_basic: {
+        id: 'sorcerer_basic',
+        name: '魔弾',
+        trigger: { kind: 'time', value: 2 },
+        effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', amount: { kind: 'atkBased', atkScale: 0.85 } }],
       },
     },
   },
@@ -143,7 +160,7 @@ describe('combatPosition', () => {
     const enemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
       battleX: 300,
     });
@@ -174,21 +191,23 @@ describe('combatPosition', () => {
     });
     const bow = mockCombatant({
       id: 'bow',
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       formationRow: 'back',
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
     expect(resolveAttackBattleX(sword, contactX, gameData)).toBe(
       contactX - engagedMinBodyGap(),
     );
-    expect(resolveAttackBattleX(spear, contactX, gameData)).toBe(220);
+    expect(resolveAttackBattleX(spear, contactX, gameData)).toBe(
+      contactX - engagedMinBodyGap() - 30,
+    );
     expect(resolveAttackBattleX(bow, contactX, gameData)).toBe(150);
   });
 
   it('approach range follows skill effect range', () => {
     const bow = mockCombatant({
       id: 'bow',
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
     expect(resolveMaxEffectiveRangePx(bow, gameData)).toBe(100);
@@ -227,7 +246,7 @@ describe('combatPosition', () => {
       id: 'b',
       formationRow: 'back',
       role: 'attacker',
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
     });
     assignInitialPlayerBattleX([front, back]);
     expect(front.battleX).toBeGreaterThan(back.battleX);
@@ -244,7 +263,7 @@ describe('combatPosition', () => {
       id: 'ranger',
       formationRow: 'back',
       role: 'attacker',
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
     });
     assignInitialPlayerBattleX([cleric, ranger]);
     expect(cleric.battleX).toBeGreaterThan(ranger.battleX);
@@ -315,7 +334,7 @@ describe('combatPosition', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       battleX: 220,
     });
     expect(getPlayerContactX([guard, archer])).toBe(220);
@@ -362,6 +381,86 @@ describe('combatPosition', () => {
         gameData,
       ),
     ).toBe(300);
+  });
+
+  it('resolveApproachRangePx uses shorter equipped active range when ready', () => {
+    const mage = mockCombatant({
+      id: 'mage',
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      cooldowns: [
+        { skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' },
+        { skillId: 'short_magic', remaining: 0, slotKind: 'active', slotIndex: 0 },
+      ],
+    });
+    expect(resolveBasicAttackRangePx(mage, gameData)).toBe(200);
+    expect(resolveMinEquippedActiveRangePx(mage, gameData)).toBe(50);
+    expect(resolveMinReadyEquippedActiveRangePx(mage, gameData)).toBe(50);
+    expect(resolveApproachRangePx(mage, gameData)).toBe(50);
+  });
+
+  it('resolveApproachRangePx uses basic range while shorter active is on cooldown', () => {
+    const mage = mockCombatant({
+      id: 'mage',
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      cooldowns: [
+        { skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' },
+        { skillId: 'short_magic', remaining: 8, slotKind: 'active', slotIndex: 0 },
+      ],
+    });
+    expect(resolveMinReadyEquippedActiveRangePx(mage, gameData)).toBeNull();
+    expect(resolveApproachRangePx(mage, gameData)).toBe(200);
+  });
+
+  it('resolveApproachRangePx falls back to basic when no actives', () => {
+    const mage = mockCombatant({
+      id: 'mage',
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      cooldowns: [{ skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' }],
+    });
+    expect(resolveApproachRangePx(mage, gameData)).toBe(200);
+    expect(resolveMinEquippedActiveRangePx(mage, gameData)).toBeNull();
+  });
+
+  it('resolveApproachAttackBattleX does not retreat when already closer', () => {
+    const enemyX = 280;
+    const mage = mockCombatant({
+      id: 'mage',
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      battleX: enemyX - 40,
+      cooldowns: [
+        { skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' },
+        { skillId: 'short_magic', remaining: 0, slotKind: 'active', slotIndex: 0 },
+      ],
+    });
+    expect(resolveApproachAttackBattleX(mage, enemyX, gameData)).toBe(enemyX - 40);
+  });
+
+  it('resolveApproachAttackBattleX advances to shorter active range when ready', () => {
+    const enemyX = 280;
+    const mage = mockCombatant({
+      id: 'mage',
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      battleX: 40,
+      cooldowns: [
+        { skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' },
+        { skillId: 'short_magic', remaining: 0, slotKind: 'active', slotIndex: 0 },
+      ],
+    });
+    expect(resolveApproachAttackBattleX(mage, enemyX, gameData)).toBe(enemyX - 50);
+  });
+
+  it('resolveApproachAttackBattleX holds at basic range while shorter active is on cooldown', () => {
+    const enemyX = 280;
+    const mage = mockCombatant({
+      id: 'mage',
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      battleX: 40,
+      cooldowns: [
+        { skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' },
+        { skillId: 'short_magic', remaining: 8, slotKind: 'active', slotIndex: 0 },
+      ],
+    });
+    expect(resolveApproachAttackBattleX(mage, enemyX, gameData)).toBe(enemyX - 200);
   });
 
   it('syncDeadEnemyCorpseBattleX keeps corpse battleX at death anchor', () => {

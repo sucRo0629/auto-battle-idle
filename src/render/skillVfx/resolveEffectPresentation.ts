@@ -1,3 +1,4 @@
+import { isRangedAttack } from "../../battle/data/entityTraits.ts";
 import type {
   ActiveSkillDef,
   SkillEffectAnimId,
@@ -63,7 +64,7 @@ export function shouldPlayActorAnim(
   rangePx: number,
   slotKind: "basic" | "active" | undefined,
 ): boolean {
-  if (anim === "attack" && rangePx >= 25 && slotKind === "basic") {
+  if (anim === "attack" && isRangedAttack(rangePx) && slotKind === "basic") {
     return false;
   }
   return true;

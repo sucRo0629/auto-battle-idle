@@ -1,7 +1,10 @@
 import type { ClassId, Role } from '../battle/types.ts';
+import { configurableRangeHintJa } from '../battle/rangeLimits.ts';
 import { compareByClassListOrder, type BalanceClassRow } from './editorApi.ts';
 
 /** バランス比較の基準一次職（鉄衛・重戦・弓術・魔術・療養） */
+export const BALANCE_RANGE_COLUMN_HINT = `射程列: ${configurableRangeHintJa()}。`;
+
 export const BALANCE_REFERENCE_CLASS_IDS: readonly ClassId[] = [
   'df_guardian',
   'at_warrior',

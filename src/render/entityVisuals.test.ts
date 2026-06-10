@@ -35,7 +35,7 @@ const warriorPreset = {
 const rangedEnemy = {
   id: 'test_ranged',
   traits: {
-    rangePx: 50,
+    rangePx: 55,
     damageType: 'physical' as const,
     basicAttackVfx: { preset: 'ranged_arrow' as const },
   },

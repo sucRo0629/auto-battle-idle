@@ -59,8 +59,8 @@
 
 - **`battleX` が唯一の横位置正本。** ロジックと描画は同じ値を参照する
 - 隊形スペーシングは `battleX` に直接反映（§3.3 スロット ideal を battle 座標として使用）
-- 近接帯（`rangePx` 0〜24）は **`contact - engagedMinBodyGap() - rangePx`** で奥行き分離。同射程のみ接触線共有可（L10）。混成前列・後列は `resolveOverlaps` で間隔確保
-- `visualX` は **非推奨・削除予定**。snapshot 互換のため当面 `battleX` と同値を出力してもよい
+- 近接帯（`rangePx` 0〜50）は **`contact - engagedMinBodyGap() - rangePx`** で奥行き分離。同射程のみ接触線共有可（L10）。混成前列・後列は `resolveOverlaps` で間隔確保
+- `visualX` は **snapshot 互換ミラー**（`battleX` と同値。layout ロジックは参照しない）
 - `src/render` は `battleX`（= `screenX`）のみ参照し、戦闘ルールを持たない
 
 ### 2.3 毎 tick パイプライン
@@ -79,7 +79,7 @@ BattlePhase 判定
 | フェーズ | プレイヤー `battleX` 自動接近 | 敵 `battleX` 自動接近 |
 |----------|------------------------------|----------------------|
 | `PartyDeploy` | 右のみ（左外 → 初期位置） | 左のみ（右外 → spawn 位置） |
-| 接敵（`Engaged`） | 前方寄り（詳細 §4） | 左のみ（layout 収束） |
+| 接敵（`Engaged`） | 射程ベース接近（§4.4 `resolvePlayerApproachBattleX`） | 左のみ・射程ベース接近（§4.4 `resolveEnemyApproachBattleX`） |
 | スキル `move` 中 | シーケンスが正本 | 同左 |
 
 **スコープ外：** 敵がプレイヤー背後へ回る AI / 敵 `move`（後列狙い）。プレイヤー側の `behindTarget` 等スキル `move` は §4.4 で維持。
@@ -88,8 +88,8 @@ BattlePhase 判定
 
 ```
 effectiveRangePx = effect.range ?? actor.traits.rangePx
-近接帯（rangePx < 25）命中: battleDistance <= 0 かつ battleDistance >= -(engagedMinBodyGap() + rangePx)
-遠隔帯（rangePx >= 25）命中: battleDistance <= effectiveRangePx
+近接帯（rangePx <= 50）命中: battleDistance <= 0 かつ battleDistance >= -(engagedMinBodyGap() + rangePx)
+遠隔帯（rangePx > 50）命中: battleDistance <= effectiveRangePx
 ```
 
 **攻撃可能 `battleX`（プレイヤー → 敵・近接帯）：** `target.battleX - engagedMinBodyGap() - rangePx`  
@@ -107,7 +107,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 **ノックバック：** 各陣営の **後方** へ押す。プレイヤーは `-X`（左）、敵は `+X`（右）。敵は `battleX` が進軍表示下限未満にならない。
 
-### 2.6 定数（単一正本：`battleConstants.ts` または `types.ts`）
+### 2.6 定数（単一正本：`battleConstants.ts` / `types.ts` / `rangeLimits.ts`）
 
 | 定数 | 用途 |
 |------|------|
@@ -117,8 +117,9 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | `PARTY_FORMATION_SLOT_SPACING`（32） | 味方隊列スロット間隔 |
 | `SPAWN_X_MAX`（240） | 敵 `spawnX` 上限（中心からの右オフセット） |
 | `PLAYER_VISUAL_MIN_GAP` | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`） |
-| `RANGED_ATTACK_THRESHOLD_PX`（25） | 遠隔帯下限。`rangePx < 25` = 近接帯（0〜24） |
-| `MELEE_RANGE_MAX_PX`（24） | 近接帯上限 |
+| `RANGED_ATTACK_THRESHOLD_PX`（50） | 遠隔帯境界。`rangePx <= 50` = 近接帯（0〜50） |
+| `MELEE_RANGE_MAX_PX`（50） | 近接帯上限 |
+| `CONFIGURABLE_RANGE_PX_MAX` | `traits.rangePx` / `effect.range` の設定上限（`CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`） |
 | `SCROLL_SPEED` / `APPROACH_SPEED` | Victory 退場パララックス / 接敵・PartyDeploy 接近（px/s） |
 
 `formationRow` は Y 描画・ターゲット用。X 深度の正本は射程順一列（`partyFormation.ts`）。
@@ -250,13 +251,18 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 ## 6. 現状の問題と解消方針
 
-### 6.1 症状
+### 6.1 症状（解消済み / 監視中）
 
-- 接敵中のスプライト **振動・ワープ・ちらつき**（前列死亡・Wave 跨ぎ）
-- 接敵前後の **隊形ジャンプ**（カメラ bake / reset の不統一）
-- **Wave 1 と Wave 2+** で reset 挙動が異なる
-- 近接/遠距離の **前線ずれ**（判定式の分裂）
-- テストが 120000 tick + 緩い閾値で回帰を疑似的に担保
+**解消済み（2026-06 レガシー整理）：**
+
+- 接敵中の layout 収束フラグ（`engagedEnemyLayoutTargets`）と combat approach の二重分岐
+- `battleLayout` が `visualX` を正本として layout bake と approach が乖離
+- 後衛が隊形深度 cap で射程停止より前方へ引きずられる問題
+
+**監視中：**
+
+- 前列死亡・Wave 跨ぎ時のワープ（layout snap と approach の競合）
+- 混成前列の overlap 補正タイミング
 
 ### 6.2 根本原因
 
@@ -274,15 +280,15 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | **R1-fix** | **`battleX` 単一座標。** `visualX` 廃止。描画 = ロジック |
 | L2 | 単一 `FormationReset`（Wave 1 は背景・時間差分のみ） |
 | L5 | `engagedVisualTargetPlayerId` を layout で必ず参照 |
-| L6 | `isMeleeRangePx(resolveMaxEffectiveRangePx(u))` を唯一の近接判定（`< 25`） |
+| L6 | `isMeleeRangePx(resolveMaxEffectiveRangePx(u))` を唯一の近接判定（`<= 50`） |
 | L7 | モジュール分割 + 一方向 import |
 | L8 | 軸反転を座標系として一括適用 |
 | L9 | layout snapshot 単体テストへ置換 |
 | L10 | 近接帯は `rangePx` 差で battleX 奥行き分離。混成前列のみ `resolveOverlaps` |
 
-**廃止：** L1（毎 tick layout tick）、L3（visual 双方向補間）、L4（`engagedVisualLaneX`）、`battleX`/`visualX` 橋渡し。
+**廃止：** L1（毎 tick layout tick）、L3（visual 双方向補間を approach 正本へ統合）、接敵 layout 収束タイマー（`engagedEnemyLayoutTargets`）、`engageStandoff.ts` 等の未使用 helper。
 
-**overlap 解消は維持。** 捨てるのは二重パイプライン・毎 tick layout 再計算・visual 補間。
+**overlap 解消は維持。** 捨てるのは二重パイプライン・毎 tick layout 再計算・layout 収束と approach の競合。
 
 ### 6.4 背後移動スコープ
 

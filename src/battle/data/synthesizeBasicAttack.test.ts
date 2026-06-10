@@ -39,7 +39,7 @@ describe('synthesizeBasicAttackSkill', () => {
       jsonOverride: {
         id: 'at_sorcerer_basic_attack',
         name: '魔弾',
-        interval: 2,
+        trigger: { kind: 'time', value: 2 },
         effect: [
           {
             target: { kind: "distance", side: "enemy", order: "nearest" },

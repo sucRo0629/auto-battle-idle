@@ -30,19 +30,12 @@ function skill(overrides: Partial<ActiveSkillDef> = {}): ActiveSkillDef {
 }
 
 describe('skillTrigger', () => {
-  it('resolveSkillTrigger prefers trigger over legacy interval', () => {
+  it('resolveSkillTrigger uses trigger', () => {
     expect(
       resolveSkillTrigger(
-        skill({ trigger: { kind: 'basicAttackCount', value: 3 }, interval: 9 }),
+        skill({ trigger: { kind: 'basicAttackCount', value: 3 } }),
       ),
     ).toEqual({ kind: 'basicAttackCount', value: 3 });
-  });
-
-  it('resolveSkillTrigger falls back to legacy interval', () => {
-    expect(resolveSkillTrigger(skill({ trigger: undefined, interval: 4 }))).toEqual({
-      kind: 'time',
-      value: 4,
-    });
   });
 
   it('shouldTickCooldown is true only for time actives and all basics', () => {

@@ -44,6 +44,7 @@ import {
   type ClassPresetBeforeEnrich,
 } from '../../progression/skillUnlocks.ts';
 import { normalizeEntityTraits } from './entityTraits.ts';
+import { CONFIGURABLE_RANGE_PX_MAX } from '../rangeLimits.ts';
 import {
   defaultBasicAttackId,
   synthesizeBasicAttackSkill,
@@ -243,6 +244,13 @@ function parseOptionalRange(
   if (typeof rangePx !== 'number' || Number.isNaN(rangePx) || rangePx < 0) {
     invalidField(context, 'range', 'must be a non-negative number');
   }
+  if (rangePx > CONFIGURABLE_RANGE_PX_MAX) {
+    invalidField(
+      context,
+      'range',
+      `must be at most ${CONFIGURABLE_RANGE_PX_MAX}`,
+    );
+  }
   return rangePx;
 }
 
@@ -272,20 +280,8 @@ function parseResourceAmountSpec(
     const atkScale = parseOptionalNumber(obj, 'atkScale', context);
     if (atkOffset !== undefined) spec.atkOffset = atkOffset;
     if (atkScale !== undefined) spec.atkScale = atkScale;
-
-    if (spec.atkOffset === undefined || spec.atkScale === undefined) {
-      const legacyAdd = parseOptionalNumber(obj, 'atkAdd', context);
-      const legacyMultiply = parseOptionalNumber(obj, 'atkMultiply', context);
-      const legacyDivide = parseOptionalNumber(obj, 'atkDivide', context);
-      const legacySubtract = parseOptionalNumber(obj, 'atkSubtract', context);
-      if (spec.atkOffset === undefined) {
-        const offset = (legacyAdd ?? 0) - (legacySubtract ?? 0);
-        if (offset !== 0) spec.atkOffset = offset;
-      }
-      if (spec.atkScale === undefined) {
-        const scale = (legacyMultiply ?? 1) / (legacyDivide ?? 1);
-        if (scale !== 1) spec.atkScale = scale;
-      }
+    if (spec.atkScale === undefined) {
+      missingField(`${context}`, 'atkScale for atkBased amount');
     }
     return spec;
   }
@@ -296,20 +292,8 @@ function parseResourceAmountSpec(
     const defScale = parseOptionalNumber(obj, 'defScale', context);
     if (defOffset !== undefined) spec.defOffset = defOffset;
     if (defScale !== undefined) spec.defScale = defScale;
-
-    if (spec.defOffset === undefined || spec.defScale === undefined) {
-      const legacyAdd = parseOptionalNumber(obj, 'defAdd', context);
-      const legacyMultiply = parseOptionalNumber(obj, 'defMultiply', context);
-      const legacyDivide = parseOptionalNumber(obj, 'defDivide', context);
-      const legacySubtract = parseOptionalNumber(obj, 'defSubtract', context);
-      if (spec.defOffset === undefined) {
-        const offset = (legacyAdd ?? 0) - (legacySubtract ?? 0);
-        if (offset !== 0) spec.defOffset = offset;
-      }
-      if (spec.defScale === undefined) {
-        const scale = (legacyMultiply ?? 1) / (legacyDivide ?? 1);
-        if (scale !== 1) spec.defScale = scale;
-      }
+    if (spec.defScale === undefined) {
+      missingField(`${context}`, 'defScale for defBased amount');
     }
     return spec;
   }
@@ -334,11 +318,7 @@ function parseEffectAmount(
   if (obj.amount !== undefined) {
     return parseResourceAmountSpec(obj.amount, `${context}.amount`);
   }
-  const legacy = obj.powerMultiplier;
-  if (typeof legacy === 'number' && !Number.isNaN(legacy)) {
-    return { kind: 'atkBased', atkScale: legacy };
-  }
-  invalidField(context, 'amount', `or legacy powerMultiplier is required for ${label}`);
+  missingField(context, 'amount', `is required for ${label}`);
 }
 
 function parseOptionalRepeatedHitFields(
@@ -971,24 +951,6 @@ function parseEffectTarget(
     }
     return parseTargetSpec(obj.target, `${context}.target`);
   }
-  if (obj.targetRule !== undefined) {
-    const legacyRule = requireEnum(obj, 'targetRule', context, TARGET_RULES_SET);
-    let debuffTags: DebuffFilterTag[] | undefined;
-    if (legacyRule === 'debuffedEnemy') {
-      debuffTags = parseDebuffFilterTags(
-        obj.targetDebuffFilter,
-        `${context}.targetDebuffFilter`,
-        true,
-      );
-    } else if (obj.targetDebuffFilter !== undefined) {
-      invalidField(
-        context,
-        'targetDebuffFilter',
-        'is only allowed when targetRule is debuffedEnemy',
-      );
-    }
-    return normalizeTarget(legacyRule, legacyRule, debuffTags);
-  }
   missingField(context, 'target');
 }
 
@@ -1088,7 +1050,10 @@ function parseCounterResponseEntry(
 
   if (kind === 'dot') {
     const durationSec = requireNumber(obj, 'durationSec', context);
-    const powerMultiplier = requireNumber(obj, 'powerMultiplier', context);
+    const amount = parseEffectAmount(obj, context, 'counter dot');
+    if (amount.kind !== 'atkBased' || amount.atkScale === undefined) {
+      invalidField(context, 'amount', 'dot counter response requires atkBased amount');
+    }
     const damageType =
       obj.damageType === undefined
         ? undefined
@@ -1097,7 +1062,7 @@ function parseCounterResponseEntry(
     return {
       kind,
       durationSec,
-      powerMultiplier,
+      powerMultiplier: amount.atkScale,
       ...(damageType !== undefined ? { damageType } : {}),
       ...combatModifiers,
     };
@@ -1137,25 +1102,7 @@ function parseCounterEffectResponses(
   if (obj.responses !== undefined) {
     return parseCounterResponses(obj.responses, `${context}.responses`);
   }
-  if (obj.amount !== undefined || obj.powerMultiplier !== undefined) {
-    const amount = parseEffectAmount(obj, context, 'counter legacy amount');
-    const damageType =
-      obj.damageType === undefined
-        ? undefined
-        : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
-    return [
-      {
-        kind: 'damage',
-        amount,
-        ...(damageType !== undefined ? { damageType } : {}),
-      },
-    ];
-  }
-  invalidField(
-    context,
-    'responses',
-    'is required (or legacy amount / powerMultiplier)',
-  );
+  invalidField(context, 'responses', 'is required');
 }
 
 export function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
@@ -1263,7 +1210,10 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
 
   if (type === 'dot') {
     const durationSec = requireNumber(obj, 'durationSec', context);
-    const powerMultiplier = requireNumber(obj, 'powerMultiplier', context);
+    const amount = parseEffectAmount(obj, context, 'dot');
+    if (amount.kind !== 'atkBased' || amount.atkScale === undefined) {
+      invalidField(context, 'amount', 'dot effect requires atkBased amount');
+    }
     const damageType =
       obj.damageType === undefined
         ? undefined
@@ -1274,7 +1224,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...combatModifiers,
       type: 'dot',
       durationSec,
-      powerMultiplier,
+      powerMultiplier: amount.atkScale,
       ...(damageType !== undefined ? { damageType } : {}),
       ...presentation,
       ...(range !== undefined ? { range } : {}),
@@ -1883,6 +1833,13 @@ function parseEntityTraits(
     if (rangePx < 0) {
       invalidField(context, 'rangePx', 'must be a non-negative number');
     }
+    if (rangePx > CONFIGURABLE_RANGE_PX_MAX) {
+      invalidField(
+        context,
+        'rangePx',
+        `must be at most ${CONFIGURABLE_RANGE_PX_MAX}`,
+      );
+    }
     traits.rangePx = rangePx;
   }
   const damageTypeRaw = obj.damageType;
@@ -2140,13 +2097,10 @@ function parseSkillTrigger(
     return { kind, value };
   }
 
-  const intervalRaw = obj.interval;
-  if (intervalRaw === undefined) {
-    missingField(context, 'trigger or interval');
+  if (triggerRaw === undefined) {
+    missingField(context, 'trigger');
   }
-  const value = requireNumber(obj, 'interval', context);
-  validateTriggerValue('time', value, context);
-  return { kind: 'time', value };
+  throw new Error('unreachable');
 }
 
 function validateTriggerValue(

@@ -50,7 +50,7 @@
     "maxHp": 200,
     "atk": 13,
     "def": 20,
-    "reg": 15,
+    "reg": 10,
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "df_paladin_basic_attack",
@@ -80,13 +80,15 @@
     "epithetEn": "Gladiator",
     "flavorJa": "搦め手で敵を弱らせ、隙に致命の一撃を繰り出す",
     "formationRow": "front",
-    "traits": {},
+    "traits": {
+      "rangePx": 5
+    },
     "maxHp": 190,
     "atk": 26,
     "def": 12,
     "reg": 0,
     "jobTier": 1,
-    "attackSpeedTier": "somewhatFast",
+    "attackSpeedTier": "normal",
     "basicAttackSkillId": "df_duelist_basic_attack",
     "passiveIds": [
       "df_duelist_passive_1",
@@ -124,14 +126,14 @@
     "flavorJa": "研ぎ澄まされた剣技で、近接戦の要となる",
     "formationRow": "front",
     "traits": {
-      "rangePx": 8
+      "rangePx": 10
     },
     "maxHp": 165,
     "atk": 30,
     "def": 14,
     "reg": 0,
     "jobTier": 1,
-    "attackSpeedTier": "somewhatSlow",
+    "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_warrior_basic_attack",
     "skills": [
       {
@@ -155,7 +157,9 @@
     "epithetEn": "Assassin",
     "flavorJa": "敵の背後へ忍び込み、二刃で仕留める影",
     "formationRow": "front",
-    "traits": {},
+    "traits": {
+      "rangePx": 5
+    },
     "maxHp": 100,
     "atk": 32,
     "def": 8,
@@ -190,7 +194,10 @@
     "flavorJa": "長槍の一突きで、どんな巨体も貫く",
     "formationRow": "front",
     "traits": {
-      "rangePx": 24
+      "rangePx": 50,
+      "basicAttackVfx": {
+        "preset": "slash"
+      }
     },
     "maxHp": 150,
     "atk": 24,
@@ -206,6 +213,7 @@
       {
         "level": 0,
         "skillIds": [
+          "passive_target_highest_hp",
           "at_lancer_active_1",
           "at_lancer_active_2"
         ]
@@ -225,7 +233,7 @@
     "flavorJa": "遠くの脅威を先に射落とす迎撃の弓",
     "formationRow": "back",
     "traits": {
-      "rangePx": 40
+      "rangePx": 180
     },
     "maxHp": 92,
     "atk": 20,
@@ -260,7 +268,7 @@
     "flavorJa": "最も遠い獲物だけを狙い、一矢で沈める",
     "formationRow": "back",
     "traits": {
-      "rangePx": 40
+      "rangePx": 240
     },
     "maxHp": 88,
     "atk": 28,
@@ -295,7 +303,7 @@
     "flavorJa": "罠と毒で追い詰め、獲物を仕留める",
     "formationRow": "back",
     "traits": {
-      "rangePx": 40
+      "rangePx": 180
     },
     "maxHp": 96,
     "atk": 18,
@@ -330,7 +338,7 @@
     "flavorJa": "魔力を一点に集め、魔防の薄い敵を穿つ",
     "formationRow": "back",
     "traits": {
-      "rangePx": 100,
+      "rangePx": 150,
       "damageType": "magic"
     },
     "maxHp": 80,
@@ -368,7 +376,7 @@
     "flavorJa": "符が敵から敵へ跳ね、連鎖の術式を織る",
     "formationRow": "back",
     "traits": {
-      "rangePx": 30,
+      "rangePx": 150,
       "damageType": "magic"
     },
     "maxHp": 78,
@@ -403,7 +411,7 @@
     "flavorJa": "地面に法陣を描き、踏み込んだ者を焼き尽くす",
     "formationRow": "back",
     "traits": {
-      "rangePx": 30,
+      "rangePx": 110,
       "damageType": "magic"
     },
     "maxHp": 72,
@@ -440,7 +448,7 @@
     "flavorJa": "前線に立ち、味方全体をやさしく癒し続ける",
     "formationRow": "back",
     "traits": {
-      "rangePx": 30,
+      "rangePx": 90,
       "basicAttackVfx": {
         "preset": "orb"
       },
@@ -478,7 +486,9 @@
     "epithetEn": "Abjurer",
     "flavorJa": "結界と弱体化で、味方への一撃をそらす",
     "formationRow": "middle",
-    "traits": {},
+    "traits": {
+      "rangePx": 90
+    },
     "maxHp": 95,
     "atk": 10,
     "def": 12,
@@ -511,7 +521,9 @@
     "epithetEn": "Alchemist",
     "flavorJa": "薬草と毒で戦場を操り、敵の弱点を長く灼く",
     "formationRow": "middle",
-    "traits": {},
+    "traits": {
+      "rangePx": 70
+    },
     "maxHp": 98,
     "atk": 14,
     "def": 9,

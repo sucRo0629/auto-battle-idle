@@ -106,6 +106,7 @@ interface ClassStatsPatchBody {
   atk: number;
   def: number;
   reg: number;
+  rangePx: number;
   growthTier: ClassPresetBeforeEnrich['growthTier'];
   attackSpeedTier: ClassPresetBeforeEnrich['attackSpeedTier'];
   growthPresetKey?: 'caster';
@@ -156,6 +157,10 @@ function applyClassStatsBulk(body: ClassStatsBulkBody): void {
       atk: patch.atk,
       def: patch.def,
       reg: patch.reg,
+      traits: {
+        ...existing.traits,
+        rangePx: patch.rangePx,
+      },
       growthTier: patch.growthTier,
       attackSpeedTier: patch.attackSpeedTier,
     };

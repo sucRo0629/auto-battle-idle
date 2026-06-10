@@ -25,7 +25,7 @@ function mockCombatant(
     role: 'attacker',
     classId: 'test',
     formationRow: 'back',
-    traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+    traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
     build: {
       learnedPassiveIds: ['archer_passive'],
       learnedActiveIds: [],
@@ -59,13 +59,13 @@ const gameData = {
       basic_melee: {
         id: 'basic_melee',
         name: 'basic',
-        interval: 2,
+        trigger: { kind: 'time', value: 2 },
         effect: [{ target: { kind: "distance", side: "enemy", order: "nearest" }, type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1 } }],
       },
       bow_basic: {
         id: 'bow_basic',
         name: '射撃',
-        interval: 2,
+        trigger: { kind: 'time', value: 2 },
         effect: [
           {
             target: { kind: "distance", side: "enemy", order: "nearest" },
@@ -99,7 +99,7 @@ describe('resolvePlayerApproachBattleX', () => {
       id: 'ranged',
       isEnemy: true,
       battleX: 320,
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],
@@ -147,7 +147,7 @@ describe('resolvePlayerApproachBattleX', () => {
       id: 'ranged',
       isEnemy: true,
       battleX: 320,
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],
@@ -262,7 +262,7 @@ describe('resolvePlayerApproachBattleX', () => {
       id: 'ranged',
       isEnemy: true,
       battleX: 280,
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],
@@ -298,7 +298,7 @@ describe('resolvePlayerApproachBattleX', () => {
       id: 'enchanter',
       formationRow: 'back',
       battleX: 60,
-      traits: { rangePx: 50, damageType: 'magic', basicAttackVfx: { preset: 'magic' } },
+      traits: { rangePx: 55, damageType: 'magic', basicAttackVfx: { preset: 'magic' } },
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
       build: {
         learnedPassiveIds: [],
@@ -330,7 +330,7 @@ describe('resolvePlayerApproachBattleX', () => {
     expect(approachX).toBeLessThan(guard.battleX);
   });
 
-  it('back row stopping battleX changes with attack range (100 vs 50)', () => {
+  it('back row stopping battleX changes with attack range (100 vs 55)', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
@@ -347,7 +347,7 @@ describe('resolvePlayerApproachBattleX', () => {
       id: 'archer',
       formationRow: 'back',
       battleX: 60,
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
       build: {
         learnedPassiveIds: ['archer_passive'],
@@ -371,7 +371,7 @@ describe('resolvePlayerApproachBattleX', () => {
       gameDataRange100,
     );
 
-    const gameDataRange50 = {
+    const gameDataRange55 = {
       ...gameData,
       skillRegistry: {
         ...gameData.skillRegistry,
@@ -382,7 +382,7 @@ describe('resolvePlayerApproachBattleX', () => {
             effect: [
               {
                 ...gameData.skillRegistry.actives.bow_basic.effect[0],
-                range: 50,
+                range: 55,
               },
             ],
           },
@@ -390,16 +390,301 @@ describe('resolvePlayerApproachBattleX', () => {
       },
     } as unknown as GameData;
 
-    const stop50 = resolvePlayerApproachBattleX(
+    const stop55 = resolvePlayerApproachBattleX(
       archer,
       [guard, archer],
       [meleeEnemy],
-      gameDataRange50,
+      gameDataRange55,
     );
 
     expect(stop100).toBe(250 - 100);
-    expect(stop50).toBe(250 - 50);
-    expect(stop100).toBeLessThan(stop50);
+    expect(stop55).toBe(250 - 55);
+    expect(stop100).toBeLessThan(stop55);
+  });
+
+  it('back row stops at shorter equipped active range when skill is ready (sorcerer actives 50)', () => {
+    const sorcererBasic = {
+      id: 'at_sorcerer_basic_attack',
+      name: '魔弾',
+      trigger: { kind: 'time', value: 2 },
+      effect: [
+        {
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          type: 'damage',
+          amount: { kind: 'atkBased', atkScale: 0.85 },
+        },
+      ],
+    };
+    const sorcererActive = {
+      id: 'at_sorcerer_active_1',
+      name: '魔弾',
+      trigger: { kind: 'time', value: 8 },
+      effect: [
+        {
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          type: 'damage',
+          damageType: 'magic',
+          amount: { kind: 'atkBased', atkScale: 1.4 },
+          range: 50,
+        },
+      ],
+    };
+    const sorcererData = {
+      skillRegistry: {
+        passives: {},
+        actives: {
+          at_sorcerer_basic_attack: sorcererBasic,
+          at_sorcerer_active_1: sorcererActive,
+        },
+      },
+    } as unknown as GameData;
+    const mage = mockCombatant({
+      id: 'mage',
+      formationRow: 'back',
+      classId: 'at_sorcerer',
+      traits: {
+        rangePx: 200,
+        damageType: 'magic',
+        basicAttackVfx: { preset: 'orb' },
+      },
+      battleX: 40,
+      cooldowns: [
+        { skillId: 'at_sorcerer_basic_attack', remaining: 0, slotKind: 'basic' },
+        { skillId: 'at_sorcerer_active_1', remaining: 0, slotKind: 'active', slotIndex: 0 },
+      ],
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 280,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+
+    const stop = resolvePlayerApproachBattleX(
+      mage,
+      [mage],
+      [meleeEnemy],
+      sorcererData,
+    );
+    expect(stop).toBe(280 - 50);
+  });
+
+  it('back row uses basic range while shorter active is on cooldown', () => {
+    const sorcererBasic = {
+      id: 'at_sorcerer_basic_attack',
+      name: '魔弾',
+      trigger: { kind: 'time', value: 2 },
+      effect: [
+        {
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          type: 'damage',
+          amount: { kind: 'atkBased', atkScale: 0.85 },
+        },
+      ],
+    };
+    const sorcererActive = {
+      id: 'at_sorcerer_active_1',
+      name: '魔弾',
+      trigger: { kind: 'time', value: 8 },
+      effect: [
+        {
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          type: 'damage',
+          damageType: 'magic',
+          amount: { kind: 'atkBased', atkScale: 1.4 },
+          range: 50,
+        },
+      ],
+    };
+    const sorcererData = {
+      skillRegistry: {
+        passives: {},
+        actives: {
+          at_sorcerer_basic_attack: sorcererBasic,
+          at_sorcerer_active_1: sorcererActive,
+        },
+      },
+    } as unknown as GameData;
+    const mage = mockCombatant({
+      id: 'mage',
+      formationRow: 'back',
+      classId: 'at_sorcerer',
+      traits: {
+        rangePx: 200,
+        damageType: 'magic',
+        basicAttackVfx: { preset: 'orb' },
+      },
+      battleX: 40,
+      cooldowns: [
+        { skillId: 'at_sorcerer_basic_attack', remaining: 0, slotKind: 'basic' },
+        { skillId: 'at_sorcerer_active_1', remaining: 8, slotKind: 'active', slotIndex: 0 },
+      ],
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 280,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+
+    const stop = resolvePlayerApproachBattleX(
+      mage,
+      [mage],
+      [meleeEnemy],
+      sorcererData,
+    );
+    expect(stop).toBe(280 - 200);
+  });
+
+  it('back row does not retreat when already closer than approach stop', () => {
+    const sorcererBasic = {
+      id: 'at_sorcerer_basic_attack',
+      name: '魔弾',
+      trigger: { kind: 'time', value: 2 },
+      effect: [
+        {
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          type: 'damage',
+          amount: { kind: 'atkBased', atkScale: 0.85 },
+        },
+      ],
+    };
+    const sorcererActive = {
+      id: 'at_sorcerer_active_1',
+      name: '魔弾',
+      trigger: { kind: 'time', value: 8 },
+      effect: [
+        {
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          type: 'damage',
+          damageType: 'magic',
+          amount: { kind: 'atkBased', atkScale: 1.4 },
+          range: 50,
+        },
+      ],
+    };
+    const sorcererData = {
+      skillRegistry: {
+        passives: {},
+        actives: {
+          at_sorcerer_basic_attack: sorcererBasic,
+          at_sorcerer_active_1: sorcererActive,
+        },
+      },
+    } as unknown as GameData;
+    const mage = mockCombatant({
+      id: 'mage',
+      formationRow: 'back',
+      classId: 'at_sorcerer',
+      traits: {
+        rangePx: 200,
+        damageType: 'magic',
+        basicAttackVfx: { preset: 'orb' },
+      },
+      battleX: 240,
+      cooldowns: [
+        { skillId: 'at_sorcerer_basic_attack', remaining: 0, slotKind: 'basic' },
+        { skillId: 'at_sorcerer_active_1', remaining: 0, slotKind: 'active', slotIndex: 0 },
+      ],
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 280,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+
+    const stop = resolvePlayerApproachBattleX(
+      mage,
+      [mage],
+      [meleeEnemy],
+      sorcererData,
+    );
+    expect(stop).toBe(240);
+  });
+
+  it('back row uses traits range when basic attack has no range field (sorcerer)', () => {
+    const sorcererBasic = {
+      id: 'at_sorcerer_basic_attack',
+      name: '魔弾',
+      trigger: { kind: 'time', value: 2 },
+      effect: [
+        {
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          type: 'damage',
+          amount: { kind: 'atkBased', atkScale: 0.85 },
+        },
+      ],
+    };
+    const sorcererData = {
+      skillRegistry: {
+        passives: {},
+        actives: { at_sorcerer_basic_attack: sorcererBasic },
+      },
+    } as unknown as GameData;
+    const mage = mockCombatant({
+      id: 'mage',
+      formationRow: 'back',
+      classId: 'at_sorcerer',
+      traits: {
+        rangePx: 200,
+        damageType: 'magic',
+        basicAttackVfx: { preset: 'orb' },
+      },
+      battleX: 40,
+      cooldowns: [{ skillId: 'at_sorcerer_basic_attack', remaining: 0, slotKind: 'basic' }],
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 280,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+
+    const stop = resolvePlayerApproachBattleX(
+      mage,
+      [mage],
+      [meleeEnemy],
+      sorcererData,
+    );
+    expect(stop).toBe(280 - 200);
+  });
+
+  it('does not lunge right after enemy melee wipe when rear ranged remains', () => {
+    const archer = mockCombatant({
+      id: 'archer',
+      formationRow: 'back',
+      battleX: 80,
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
+    });
+    const melee = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 200,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const ranged = mockCombatant({
+      id: 'ranged',
+      isEnemy: true,
+      battleX: 320,
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
+    });
+
+    const stop = resolvePlayerApproachBattleX(
+      archer,
+      [archer],
+      [ranged],
+      gameData,
+      { frozenMeleeContactX: 200 },
+    );
+    expect(stop).toBe(80);
   });
 
   it('front row melee allies approach to per-unit range stop', () => {
@@ -466,7 +751,7 @@ describe('resolveEnemyBasicAttackTarget', () => {
       id: 'enchanter',
       formationRow: 'back',
       battleX: 80,
-      traits: { rangePx: 50, damageType: 'magic', basicAttackVfx: { preset: 'magic' } },
+      traits: { rangePx: 55, damageType: 'magic', basicAttackVfx: { preset: 'magic' } },
       cooldowns: [],
       build: {
         learnedPassiveIds: [],
@@ -534,7 +819,7 @@ describe('resolveEnemyApproachBattleX', () => {
     const rangedEnemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       battleX: 300,
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
@@ -560,14 +845,14 @@ describe('resolveEnemyApproachBattleX', () => {
       gameData,
     );
 
-    expect(approachX).toBe(180 + 50);
+    expect(approachX).toBe(180 + 55);
   });
 
   it('ranged enemies approach attack range toward front-line target', () => {
     const rangedEnemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       battleX: 300,
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
@@ -581,7 +866,7 @@ describe('resolveEnemyApproachBattleX', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       battleX: 60,
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
@@ -600,6 +885,6 @@ describe('resolveEnemyApproachBattleX', () => {
       gameData,
     );
 
-    expect(approachX).toBe(180 + 50);
+    expect(approachX).toBe(180 + 55);
   });
 });

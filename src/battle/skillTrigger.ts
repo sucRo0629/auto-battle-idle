@@ -8,11 +8,7 @@ import type {
 
 export function resolveSkillTrigger(skill: ActiveSkillDef): SkillTrigger {
   if (skill.trigger) return skill.trigger;
-  const legacy = skill.interval;
-  if (typeof legacy === 'number' && !Number.isNaN(legacy)) {
-    return { kind: 'time', value: legacy };
-  }
-  return { kind: 'time', value: 1 };
+  throw new Error(`Skill ${skill.id} is missing trigger`);
 }
 
 export function isTimeTrigger(skill: ActiveSkillDef): boolean {

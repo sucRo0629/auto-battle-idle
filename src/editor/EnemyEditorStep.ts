@@ -9,6 +9,10 @@ import type {
   SkillVfxPresetId,
 } from '../battle/types.ts';
 import {
+  CONFIGURABLE_RANGE_PX_MAX,
+  configurableRangeHintJa,
+} from '../battle/rangeLimits.ts';
+import {
   createEmptyEnemyDraft,
   enemyDraftFromTemplate,
   type EnemyDraft,
@@ -214,8 +218,12 @@ export class EnemyEditorStep {
               next.enemy.traits.rangePx = rangePx;
             });
           },
+          { min: 0, max: CONFIGURABLE_RANGE_PX_MAX, step: 1 },
         ),
       ),
+    );
+    statsGrid.appendChild(
+      createEl('p', 'editor-hint', configurableRangeHintJa()),
     );
     statsGrid.appendChild(
       createFieldRow(

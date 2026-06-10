@@ -108,7 +108,7 @@ describe('count trigger consumption', () => {
     const basicSkill: ActiveSkillDef = {
       id: 'test_basic',
       name: 'test_basic',
-      interval: 0,
+      trigger: { kind: 'time', value: 0 },
       effect: [
         {
           type: 'damage',
