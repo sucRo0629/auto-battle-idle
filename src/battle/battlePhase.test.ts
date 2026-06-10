@@ -7,18 +7,34 @@ describe('resolveRuntimeBattlePhase', () => {
       resolveRuntimeBattlePhase({
         phase: 'running',
         engaged: false,
-        formationResetActive: false,
-        waveIntermissionActive: true,
+        waveAnnouncementActive: true,
+        partyDeployActive: false,
+        postCombatSettling: false,
+        waveExitMarchActive: false,
         victoryAwaitExitMarch: false,
       }),
-    ).toBe('WaveApproach');
+    ).toBe('WaveAnnouncement');
+
+    expect(
+      resolveRuntimeBattlePhase({
+        phase: 'running',
+        engaged: false,
+        waveAnnouncementActive: false,
+        partyDeployActive: true,
+        postCombatSettling: false,
+        waveExitMarchActive: false,
+        victoryAwaitExitMarch: false,
+      }),
+    ).toBe('PartyDeploy');
 
     expect(
       resolveRuntimeBattlePhase({
         phase: 'running',
         engaged: true,
-        formationResetActive: false,
-        waveIntermissionActive: false,
+        waveAnnouncementActive: false,
+        partyDeployActive: false,
+        postCombatSettling: false,
+        waveExitMarchActive: false,
         victoryAwaitExitMarch: false,
       }),
     ).toBe('Engaged');
@@ -27,10 +43,24 @@ describe('resolveRuntimeBattlePhase', () => {
       resolveRuntimeBattlePhase({
         phase: 'running',
         engaged: false,
-        formationResetActive: true,
-        waveIntermissionActive: false,
+        waveAnnouncementActive: false,
+        partyDeployActive: false,
+        postCombatSettling: true,
+        waveExitMarchActive: false,
         victoryAwaitExitMarch: false,
       }),
-    ).toBe('FormationReset');
+    ).toBe('PostCombatSettle');
+
+    expect(
+      resolveRuntimeBattlePhase({
+        phase: 'running',
+        engaged: false,
+        waveAnnouncementActive: false,
+        partyDeployActive: false,
+        postCombatSettling: false,
+        waveExitMarchActive: true,
+        victoryAwaitExitMarch: false,
+      }),
+    ).toBe('VictoryExit');
   });
 });

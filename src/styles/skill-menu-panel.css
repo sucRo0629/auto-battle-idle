@@ -308,7 +308,7 @@
   border: 1px solid var(--canvas-border-color);
   border-radius: 6px;
   background: rgba(15, 15, 26, 0.55);
-  overflow: hidden;
+  overflow: visible;
   cursor: pointer;
 }
 

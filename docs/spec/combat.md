@@ -102,17 +102,27 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 | ----------------- | ------------------------------------------------------- |
 | **basic**         | 常に **時間**（`remaining -= deltaTime × basicCooldownRate`） |
 | **active（時間）**    | `remaining -= deltaTime × ∏ passive.activeCooldownRate` |
-| **active（攻撃回数）**  | 使用者の通常攻撃が命中するたび `remaining--`                           |
-| **active（被攻撃回数）** | 使用者が `hurt` になるたび `remaining--`                         |
+| **active（攻撃回数）**  | 使用者の通常攻撃が命中するたび `remaining--`（`remaining > 0` のときのみ） |
+| **active（被攻撃回数）** | 使用者が `hurt` になるたび `remaining--`（`remaining > 0` のときのみ） |
 
 
 **basicCooldownRate** — クラス `attackSpeedTier` を `levelCurves.json` の `attackSpeedPresets` で係数化（`normal` = 1.0）。詳細は [stats.md](stats.md)。
 
 **予定（未実装）** — パッシブ `attackSpeedTierShift` と buff/debuff `attackSpeed` による tier ステップ加算後、上記 preset から rate を再解決。
 
-`remaining` が 0 になると `SkillExecutor` が1回発動し、`trigger.value` にリセット（レガシー `interval` は `trigger.kind: time` として解釈）。ステージ開始時は `remaining = trigger.value`（HUD ゲージ未充填）。`remaining <= 0` が発動可能。
+**時間トリガー（`time`）** — `remaining` が 0 になると `SkillExecutor` が1回発動し、`trigger.value` にリセット（レガシー `interval` は `trigger.kind: time` として解釈）。ステージ開始時は `remaining = trigger.value`（HUD ゲージ未充填）。
 
-1 tick あたりの実行順（1ユニット）：basic → active 枠0 → active 枠1
+**カウントトリガー（`basicAttackCount` / `hitsTaken`）** — `trigger.value = N` のとき、次の3段階で進行する。
+
+| フェーズ | 条件 | 攻撃回数 | 被攻撃回数 | HUD ゲージ |
+| -------- | ---- | -------- | ---------- | ---------- |
+| 充填中 | `remaining > 0` | 通常攻撃命中ごとに `remaining--` | `hurt` ごとに `remaining--` | `1 - remaining/N` |
+| 準備完了 | `remaining === 0` | 発動しない | 発動しない | **100%（Max）** |
+| 消費 | 準備完了後の N+1 回目 | **通常攻撃の代わりに**アクティブ発動 → `remaining = N` にリセット | **N+1 回目の被弾**でアクティブ発動（ダメージは通常通り）→ リセット | 0% に戻る |
+
+ステージ開始時は `remaining = trigger.value`（ゲージ未充填）。カウントトリガーは `remaining === 0` でも active 枠から自動発動せず、上記の消費イベントを待つ。
+
+1 tick あたりの実行順（1ユニット）：basic（準備完了カウント active があればそちらを優先）→ active 枠0 → active 枠1
 
 **発動硬直（`useDurationSec`）:** アクティブのみ optional（省略 / `0` = 即時・現状同等）。発動成功時に `SkillSequenceRunner.beginUse` で硬直を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。効果適用タイミングは変更なし（即時 / spread は pending キュー）。硬直中も時間 CD は進行（スタンと同様）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。
 

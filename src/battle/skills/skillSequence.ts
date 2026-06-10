@@ -134,11 +134,18 @@ export class SkillSequenceRunner {
     return this.activeMoves;
   }
 
+  /** move シーケンス実行中のみ（useDuration 硬直は含めない） */
+  isActorInSkillMotion(actorId: string): boolean {
+    return (
+      this.sequences.some((seq) => seq.actorId === actorId) ||
+      this.activeMoves.some((move) => move.actorId === actorId)
+    );
+  }
+
   isActorBusy(actorId: string): boolean {
     return (
       (this.useLockRemainingSec.get(actorId) ?? 0) > 0 ||
-      this.sequences.some((seq) => seq.actorId === actorId) ||
-      this.activeMoves.some((move) => move.actorId === actorId)
+      this.isActorInSkillMotion(actorId)
     );
   }
 

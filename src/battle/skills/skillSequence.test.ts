@@ -261,6 +261,7 @@ describe('skillSequence', () => {
       baseVisualX: 210,
     });
 
+    expect(runner.isActorInSkillMotion('actor')).toBe(true);
     expect(runner.isActorBusy('actor')).toBe(true);
 
     runner.tickMoves(1, [actor]);
@@ -271,9 +272,11 @@ describe('skillSequence', () => {
   it('beginUse marks actor busy until tickUseLocks elapses', () => {
     const runner = new SkillSequenceRunner();
     expect(runner.isActorBusy('actor')).toBe(false);
+    expect(runner.isActorInSkillMotion('actor')).toBe(false);
 
     runner.beginUse('actor', 0.4);
     expect(runner.isActorBusy('actor')).toBe(true);
+    expect(runner.isActorInSkillMotion('actor')).toBe(false);
 
     runner.tickUseLocks(0.2);
     expect(runner.isActorBusy('actor')).toBe(true);

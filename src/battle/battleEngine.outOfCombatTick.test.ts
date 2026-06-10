@@ -81,11 +81,11 @@ describe('BattleEngine out-of-combat ticking', () => {
 
   it('does not advance periodic HoT during wave advance death delay', () => {
     const engine = createEngine();
-    for (let i = 0; i < 120; i++) {
+    for (let i = 0; i < 20_000; i++) {
       engine.tick(1 / 60);
-      const snap = engine.getSnapshot();
-      if (snap.enemies.length > 0 && !snap.engaged) break;
+      if (engine.getSnapshot().engaged) break;
     }
+    expect(engine.getSnapshot().engaged).toBe(true);
 
     const cleric = getAllies(engine).find((a) => a.classId === 'sp_cleric')!;
 
@@ -102,6 +102,8 @@ describe('BattleEngine out-of-combat ticking', () => {
       { passiveId: 'sp_cleric_passive_1', remainingSec: 5 },
     ]);
     internal.pendingNextWaveIndex = 1;
+    (engine as unknown as { partyDeployActive: boolean }).partyDeployActive =
+      false;
     internal.beginEnemyWipeSettle(true);
 
     const before = internal.periodicHotStates.get(cleric.id)![0]!.remainingSec;

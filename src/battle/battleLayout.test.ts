@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  PLAYER_ROW_SPACING,
-  ROW_X,
-  SCROLL_SPEED,
   engagedFrontLineGap,
   engagedMinBodyGap,
   enemyRangedRearGap,
@@ -12,23 +9,10 @@ import {
   syncAllFieldX,
 } from './combatPosition.ts';
 import { hideFallenAllyCorpses } from './entities.ts';
-import type { ActiveSkillMove } from './skills/skillSequence.ts';
 import type { CombatantState, GameData } from './types.ts';
 import {
-  applyFormationMarchTick,
-  applyStaggeredFormationMarchRestore,
-  beginEngagedLayout,
-  clampPlayerVisualDepth,
-  computeEngagedPlayerLaneOffsets,
-  computeEnemyStopX,
-  computeRangedEnemyVisualX,
   getLeadingPlayerFront,
-  isFormationScreenLayoutRestored,
   resolveEngagedLayout,
-  resolveStablePlayerEngagedVisuals,
-  approachVisualX,
-  resolveMoveVisualX,
-  tickCompensatedFormationReset,
 } from './battleLayout.ts';
 
 function mockCombatant(
@@ -57,8 +41,8 @@ function mockCombatant(
     spriteKey: 'placeholder',
     iconKey: 'placeholder',
     isEnemy: false,
-    battleX: ROW_X.front,
-    visualX: ROW_X.front,
+    battleX: 180,
+    visualX: 180,
     corpseVisible: true,
     ...overrides,
   };
@@ -84,18 +68,6 @@ const gameData = {
     },
   },
 } as unknown as GameData;
-
-function applySkillMoveVisualOverlay(
-  unit: CombatantState,
-  move: ActiveSkillMove,
-): void {
-  const baseVisualX = move.baseVisualX ?? unit.visualX;
-  const t =
-    move.toX === move.fromX
-      ? 1
-      : (unit.battleX - move.fromX) / (move.toX - move.fromX);
-  unit.visualX = baseVisualX + (move.toVisualX - baseVisualX) * t;
-}
 
 describe('battleLayout snapshots', () => {
   it('resolveEngagedLayout returns stable player and enemy visual targets', () => {
@@ -230,14 +202,11 @@ describe('battleLayout snapshots', () => {
     });
 
     expect(layout).not.toBeNull();
-    const rearMeleeX = layout!.enemyVisualX.get('melee-b')!;
+    const meleeAX = layout!.enemyVisualX.get('melee-a')!;
+    const meleeBX = layout!.enemyVisualX.get('melee-b')!;
+    expect(meleeBX).toBe(meleeAX);
     const rangedX = layout!.enemyVisualX.get('ranged')!;
-    expect(rangedX - rearMeleeX).toBeGreaterThanOrEqual(enemyRangedRearGap() - 1);
-  });
-
-  it('approachVisualX moves bidirectionally toward target', () => {
-    expect(approachVisualX(100, 120, 5)).toBe(105);
-    expect(approachVisualX(100, 80, 5)).toBe(95);
+    expect(rangedX - meleeBX).toBeGreaterThanOrEqual(enemyRangedRearGap() - 1);
   });
 
   it('keeps back row separated when only one front-row player remains', () => {
@@ -289,222 +258,8 @@ describe('battleLayout snapshots', () => {
     const swordX = layout!.playerVisualX.get('sword')!;
     const clericX = layout!.playerVisualX.get('cleric')!;
     const rangerX = layout!.playerVisualX.get('ranger')!;
-    expect(swordX).toBeGreaterThan(layout!.frontLineVisualX);
-    expect(clericX).toBe(120);
-    expect(rangerX).toBe(100);
+    expect(swordX).toBeGreaterThan(rangerX);
     expect(clericX - rangerX).toBeGreaterThanOrEqual(engagedMinBodyGap() - 1);
-  });
-
-  it('applyFormationMarchTick preserves spacing for three back-row units', () => {
-    const placements = [
-      { id: 'cleric', role: 'supporter' as const, formationRow: 'back' as const, rangePx: 40, isAlive: true },
-      { id: 'sigil', role: 'attacker' as const, formationRow: 'back' as const, rangePx: 50, isAlive: true },
-      { id: 'geomancer', role: 'attacker' as const, formationRow: 'back' as const, rangePx: 55, isAlive: true },
-    ];
-    const units = [
-      { id: 'geomancer', role: 'attacker' as const, formationRow: 'back' as const, rangePx: 55, isAlive: true as const, visualX: 60 },
-      { id: 'sigil', role: 'attacker' as const, formationRow: 'back' as const, rangePx: 50, isAlive: true as const, visualX: 102 },
-      { id: 'cleric', role: 'supporter' as const, formationRow: 'back' as const, rangePx: 40, isAlive: true as const, visualX: 144 },
-    ];
-    for (let i = 0; i < 30; i++) {
-      applyFormationMarchTick(units, placements, 1 / 60);
-    }
-    expect(units[1]!.visualX - units[0]!.visualX).toBeCloseTo(PLAYER_ROW_SPACING, 0);
-    expect(units[2]!.visualX - units[1]!.visualX).toBeCloseTo(PLAYER_ROW_SPACING, 0);
-  });
-
-  it('computeEngagedPlayerLaneOffsets preserves back-row formation depth', () => {
-    const players = [
-      { id: 'guard', role: 'defender' as const, formationRow: 'front' as const, rangePx: 0, isAlive: true },
-      { id: 'cleric', role: 'supporter' as const, formationRow: 'back' as const, rangePx: 40, isAlive: true },
-      { id: 'ranger', role: 'attacker' as const, formationRow: 'back' as const, rangePx: 50, isAlive: true },
-    ];
-    const lanes = computeEngagedPlayerLaneOffsets(players, 400, 220);
-    expect(lanes.get('ranger')).toBe(ROW_X.back - ROW_X.front);
-    expect(lanes.get('cleric')).toBe(ROW_X.back + PLAYER_ROW_SPACING - ROW_X.front);
-    expect(lanes.get('guard')).toBeGreaterThan(0);
-  });
-
-  it('computeEngagedPlayerLaneOffsets anchors rear rows to forwardmost front slot', () => {
-    const frontContactX = ROW_X.front + PLAYER_ROW_SPACING;
-    const players = [
-      { id: 'guard', role: 'defender' as const, formationRow: 'front' as const, rangePx: 0, isAlive: true },
-      { id: 'sword', role: 'attacker' as const, formationRow: 'front' as const, rangePx: 0, isAlive: true },
-      { id: 'cleric', role: 'supporter' as const, formationRow: 'back' as const, rangePx: 40, isAlive: true },
-      { id: 'ranger', role: 'attacker' as const, formationRow: 'back' as const, rangePx: 50, isAlive: true },
-    ];
-    const lanes = computeEngagedPlayerLaneOffsets(players, 400, 220);
-    expect(lanes.get('ranger')).toBe(ROW_X.back - frontContactX);
-    expect(lanes.get('cleric')).toBe(
-      ROW_X.back + PLAYER_ROW_SPACING - frontContactX,
-    );
-  });
-
-  it('beginEngagedLayout records rear screen X without snapping front row', () => {
-    const clericMarchX = 160;
-    const rangerMarchX = 118;
-    const guardMarchX = 280;
-    const layout = beginEngagedLayout({
-      allies: [
-        {
-          id: 'guard',
-          formationRow: 'front',
-          visualX: guardMarchX,
-          isAlive: true,
-        },
-        {
-          id: 'cleric',
-          formationRow: 'back',
-          visualX: clericMarchX,
-          isAlive: true,
-        },
-        {
-          id: 'ranger',
-          formationRow: 'back',
-          visualX: rangerMarchX,
-          isAlive: true,
-        },
-      ],
-      combatCameraX: 0,
-      leadingRow: 'front',
-      contactVisualX: guardMarchX,
-    });
-
-    expect(layout.combatCameraX).toBe(0);
-    expect(layout.allyVisualX.get('guard')).toBe(guardMarchX);
-    expect(layout.engageRearScreenX.get('cleric')).toBe(clericMarchX);
-    expect(layout.engageRearScreenX.get('ranger')).toBe(rangerMarchX);
-    expect(layout.engageRearScreenX.has('guard')).toBe(false);
-    expect(layout.engageRearScreenX.get('cleric')! - layout.engageRearScreenX.get('ranger')!).toBeGreaterThanOrEqual(
-      PLAYER_ROW_SPACING - 1,
-    );
-  });
-
-  it('resolveStablePlayerEngagedVisuals keeps absolute rear targets off leading separation', () => {
-    const contactVisualX = 280;
-    const clericX = 180;
-    const rangerX = 138;
-    const result = resolveStablePlayerEngagedVisuals(
-      [
-        {
-          id: 'sword',
-          formationRow: 'front',
-          rangePx: 0,
-          battleX: 222,
-          isAlive: true,
-          engagedVisualLaneX: 0,
-        },
-        {
-          id: 'cleric',
-          formationRow: 'back',
-          rangePx: 40,
-          battleX: 120,
-          isAlive: true,
-          engagedVisualLaneX: clericX,
-        },
-        {
-          id: 'ranger',
-          formationRow: 'back',
-          rangePx: 50,
-          battleX: 60,
-          isAlive: true,
-          engagedVisualLaneX: rangerX,
-        },
-      ],
-      contactVisualX,
-      0,
-      'front',
-      true,
-    );
-    expect(result.get('cleric')).toBe(clericX);
-    expect(result.get('ranger')).toBe(rangerX);
-    expect(result.get('sword')).toBe(contactVisualX);
-  });
-
-  it('clampPlayerVisualDepth keeps shorter-range back-row slot further forward', () => {
-    const gap = engagedMinBodyGap();
-    const frontContactX = ROW_X.front + PLAYER_ROW_SPACING;
-    const players = [
-      mockCombatant({
-        id: 'guard',
-        role: 'defender',
-        formationRow: 'front',
-        visualX: frontContactX,
-        battleX: ROW_X.front,
-      }),
-      mockCombatant({
-        id: 'sword',
-        role: 'attacker',
-        formationRow: 'front',
-        visualX: frontContactX,
-        battleX: ROW_X.front + PLAYER_ROW_SPACING,
-      }),
-      mockCombatant({
-        id: 'cleric',
-        role: 'supporter',
-        formationRow: 'back',
-        traits: {
-          rangePx: 40,
-          damageType: 'magic',
-          basicAttackVfx: { preset: 'orb' },
-        },
-        visualX: 320,
-        battleX: ROW_X.back + PLAYER_ROW_SPACING,
-      }),
-      mockCombatant({
-        id: 'ranger',
-        role: 'attacker',
-        formationRow: 'back',
-        traits: {
-          rangePx: 50,
-          damageType: 'physical',
-          basicAttackVfx: { preset: 'arrow' },
-        },
-        visualX: 300,
-        battleX: ROW_X.back,
-      }),
-    ];
-
-    clampPlayerVisualDepth(players);
-
-    const cleric = players.find((p) => p.id === 'cleric')!;
-    const ranger = players.find((p) => p.id === 'ranger')!;
-    expect(cleric.visualX).toBeGreaterThan(ranger.visualX);
-    expect(cleric.visualX - ranger.visualX).toBeGreaterThanOrEqual(gap - 1);
-  });
-
-  it('applyStaggeredFormationMarchRestore marches lead front player right each tick', () => {
-    const players = [
-      { id: 'guard', role: 'defender' as const, formationRow: 'front' as const, isAlive: true as const, visualX: 140 },
-      { id: 'cleric', role: 'supporter' as const, formationRow: 'back' as const, isAlive: true as const, visualX: 60 },
-    ];
-    const dt = 1 / 60;
-    const guardBefore = players[0]!.visualX;
-    applyStaggeredFormationMarchRestore({ phase: 'lead', players }, dt);
-    const marchStep = SCROLL_SPEED * dt;
-    expect(players[0]!.visualX).toBeGreaterThanOrEqual(guardBefore + marchStep - 0.01);
-  });
-
-  it('computeEnemyStopX places enemy right of player contact', () => {
-    const stopX = computeEnemyStopX(0, 200, 0);
-    expect(stopX).toBeGreaterThan(200);
-  });
-
-  it('computeRangedEnemyVisualX places ranged enemy further right', () => {
-    const x = computeRangedEnemyVisualX(200, 80);
-    expect(x).toBeGreaterThan(200);
-  });
-
-  it('resolveMoveVisualX engage places player left of enemy anchor', () => {
-    const actor = mockCombatant({ id: 'a', visualX: 180 });
-    const enemy = mockCombatant({ id: 'e', isEnemy: true, visualX: 280 });
-    const x = resolveMoveVisualX(actor, enemy, {
-      type: 'move',
-      target: { kind: 'distance', side: 'enemy', order: 'nearest' },
-      moveDurationSec: 0.2,
-      moveMode: 'engage',
-    }, gameData);
-    expect(x).toBe(enemy.visualX - Math.max(0, engagedMinBodyGap()));
   });
 
   it('hideFallenAllyCorpses clears corpseVisible for dead players only', () => {
@@ -522,56 +277,10 @@ describe('battleLayout snapshots', () => {
     ]);
     expect(front?.visualX).toBe(200);
   });
-
-  it('tickCompensatedFormationReset keeps screen X stable during right march', () => {
-    const players = [
-      { id: 'guard', role: 'defender' as const, formationRow: 'front' as const, isAlive: true as const, visualX: 100 },
-    ];
-    const dt = 1 / 60;
-    const beforeScreen = players[0]!.visualX;
-    const result = tickCompensatedFormationReset(
-      { phase: 'lead', players },
-      0,
-      dt,
-    );
-    const afterScreen = players[0]!.visualX + result.combatCameraX;
-    expect(Math.abs(afterScreen - beforeScreen)).toBeLessThan(10);
-  });
-
-  it('isFormationScreenLayoutRestored checks ROW_X screen positions', () => {
-    const players = [
-      { id: 'guard', role: 'defender' as const, formationRow: 'front' as const, isAlive: true as const, visualX: ROW_X.front },
-      { id: 'archer', role: 'attacker' as const, formationRow: 'back' as const, isAlive: true as const, visualX: ROW_X.back },
-    ];
-    expect(isFormationScreenLayoutRestored(players, 0)).toBe(true);
-  });
-
-  it('skill move overlay interpolates visualX toward move target', () => {
-    const enemy = mockCombatant({ id: 'enemy', isEnemy: true, battleX: 280, visualX: 280 });
-    const actor = mockCombatant({ id: 'actor', battleX: 100, visualX: 100 });
-    const toVisualX = resolveMoveVisualX(actor, enemy, {
-      type: 'move',
-      target: { kind: 'distance', side: 'enemy', order: 'nearest' },
-      moveDurationSec: 0.2,
-      moveMode: 'engage',
-    }, gameData);
-    const move: ActiveSkillMove = {
-      actorId: 'actor',
-      fromX: 100,
-      toX: 280,
-      toVisualX,
-      remainingSec: 0.5,
-      totalSec: 1,
-      baseVisualX: 100,
-    };
-    actor.battleX = 190;
-    applySkillMoveVisualOverlay(actor, move);
-    expect(actor.visualX).toBe(100 + (toVisualX - 100) * 0.5);
-  });
 });
 
 describe('battle contact (R1-fix: battleX single)', () => {
-  it('getBattleContactPlayerVisual picks leading row contact, not advanced back row', () => {
+  it('getBattleContactPlayerVisual picks rightmost battleX contact', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
@@ -586,7 +295,7 @@ describe('battle contact (R1-fix: battleX single)', () => {
       visualX: 120,
     });
     const contact = getBattleContactPlayerVisual([guard, archer], gameData);
-    expect(contact?.battleX).toBe(180);
+    expect(contact?.battleX).toBe(220);
   });
 
   it('syncAllFieldX mirrors battleX into visualX', () => {

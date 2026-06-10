@@ -8,7 +8,7 @@ import {
 export function resolveEnemyEngageVisualTargets(
   layout: EngagedLayoutResult,
   enemies: Array<{ id: string; isAlive: boolean; rangePx: number }>,
-  combatCameraX: number,
+  _combatCameraX: number = 0,
 ): Map<string, number> {
   const ideals = enemies
     .filter((enemy) => enemy.isAlive)
@@ -17,7 +17,7 @@ export function resolveEnemyEngageVisualTargets(
       visualX: layout.enemyVisualX.get(enemy.id) ?? 0,
       isAlive: true as const,
     }));
-  const clamped = clampEngagedEnemyGroupOnScreen(ideals, combatCameraX);
+  const clamped = clampEngagedEnemyGroupOnScreen(ideals);
 
   let maxMeleeVisualX = Number.NEGATIVE_INFINITY;
   for (const enemy of enemies) {

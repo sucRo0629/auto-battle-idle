@@ -312,6 +312,10 @@ export class SkillMenuPanel {
     skill: PassiveSkillDef | ActiveSkillDef | undefined,
     classPreset?: ClassPreset
   ): void {
+    if (!skillId) {
+      parent.appendChild(this.createIconWrap(undefined, label));
+      return;
+    }
     if (skill?.iconKey) {
       parent.appendChild(
         this.createIconWrap(

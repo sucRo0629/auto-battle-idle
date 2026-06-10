@@ -12,10 +12,12 @@ export interface DebugMenuControls {
   isVerifyMode: () => boolean;
   getSave: () => SaveGameState;
   getLoopStageId: () => string | null;
+  getLoopWaveIndex: () => number | null;
   getAllySnapshots?: () => CombatantSnapshot[];
   getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
   getPartyProgress?: () => PartyMemberProgress[];
   onLoopStageChange: (stageId: string | null) => void;
+  onLoopWaveChange: (waveIndex: number | null) => void;
   onMemberLevelChange: (partyIndex: number, level: number) => void;
 }
 
@@ -118,7 +120,55 @@ export class DebugMenuPanel {
 
     stageLabel.appendChild(stageSelect);
     stageRow.appendChild(stageLabel);
-    this.rowsHost.append(stageRow, this.statsHost);
+    this.rowsHost.append(stageRow);
+
+    if (loopStageId !== null) {
+      const stage = this.gameData.stages.find((s) => s.id === loopStageId);
+      const waveCount = stage?.waves.length ?? 0;
+
+      if (waveCount > 0) {
+        const waveRow = document.createElement('div');
+        waveRow.className = 'debug-menu-stage-row';
+
+        const waveLabel = document.createElement('label');
+        waveLabel.className = 'debug-menu-stage-label';
+        waveLabel.textContent = '周回Wave';
+
+        const waveSelect = document.createElement('select');
+        waveSelect.className = 'debug-menu-stage-select';
+
+        const allWavesOption = document.createElement('option');
+        allWavesOption.value = '';
+        allWavesOption.textContent = '全Wave';
+        waveSelect.appendChild(allWavesOption);
+
+        for (let waveIndex = 0; waveIndex < waveCount; waveIndex++) {
+          const option = document.createElement('option');
+          option.value = String(waveIndex);
+          option.textContent = `Wave ${waveIndex + 1}`;
+          waveSelect.appendChild(option);
+        }
+
+        const loopWaveIndex = this.controls.getLoopWaveIndex();
+        waveSelect.value =
+          loopWaveIndex !== null && loopWaveIndex < waveCount
+            ? String(loopWaveIndex)
+            : '';
+
+        waveSelect.addEventListener('change', () => {
+          const selected = waveSelect.value;
+          this.controls.onLoopWaveChange(
+            selected === '' ? null : Number.parseInt(selected, 10),
+          );
+        });
+
+        waveLabel.appendChild(waveSelect);
+        waveRow.appendChild(waveLabel);
+        this.rowsHost.append(waveRow);
+      }
+    }
+
+    this.rowsHost.append(this.statsHost);
 
     const specs: PartyMemberStatsRowSpec[] = [];
     save.party.forEach((member, partyIndex) => {

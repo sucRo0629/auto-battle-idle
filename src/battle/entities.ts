@@ -9,6 +9,7 @@ import type {
   PartySlotState,
   SkillCooldown,
 } from './types.ts';
+import { resolveEnemySpawnBattleX } from './battleConstants.ts';
 import { copyNormalizedTraits } from './data/entityTraits.ts';
 import type { NormalizedEntityTraits } from './types.ts';
 import {
@@ -142,8 +143,9 @@ export function createAlliesFromParty(
 
 export function createEnemyFromTemplate(
   template: EnemyTemplate,
-  spawnX: number,
+  spawnOffset: number,
 ): CombatantState {
+  const battleX = resolveEnemySpawnBattleX(spawnOffset);
   const activeSkillIds = template.activeSkillIds ?? [];
   const build: CharacterBuild = {
     learnedPassiveIds: template.passiveSkillIds ?? [],
@@ -171,9 +173,9 @@ export function createEnemyFromTemplate(
     spriteKey: resolveEnemySpriteKey(template),
     iconKey: 'default',
     isEnemy: true,
-    battleX: spawnX,
-    visualX: spawnX,
-    spawnX,
+    battleX,
+    visualX: battleX,
+    spawnX: spawnOffset,
     corpseVisible: true,
   };
 }

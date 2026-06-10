@@ -1,7 +1,7 @@
 # 戦闘フィールド（位置・移動・描画）
 
-実装予定：`src/battle/battleLayout.ts`, `battleCamera.ts`, `combatPosition.ts`, `BattleEngine.ts`  
-現行実装（作り直し前）：`src/battle/BattleEngine.ts`, `combatPosition.ts`, `src/render/formationLayout.ts`
+実装：`src/battle/battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `BattleEngine.ts`  
+描画：`src/render/BattleCanvas.ts`（`screenX = battleX`）
 
 本ドキュメントは **横 1 軸のバトルライン** における座標・隊形・Wave・接敵・描画の設計正本。ダメージ/CD/脅威等は [combat.md](combat.md) を参照。
 
@@ -52,9 +52,8 @@
 | 層 | コード名 | 更新責務 | 用途 |
 |----|----------|----------|------|
 | フィールド | `battleX` | `combatPosition.ts` / `BattleEngine` / `battleLayout.ts` | 射程・接近・隊形・knockback・描画基準（正本） |
-| 画面 | `screenX` | 計算値 | `battleX + combatCameraX` |
-| カメラ | `combatCameraX` | `battleCamera.ts` | 接敵中パーティ重心をキャンバス中央へ |
-| 背景 | `worldOffsetX` | `BattleEngine` | 地面タイルのパララックスのみ |
+| 画面 | `screenX` | 計算値 | **`battleX` と同一**（カメラ廃止） |
+| 背景 | `worldOffsetX` | `BattleEngine` | 地面タイルのパララックス（Victory 退場時のみ） |
 
 **統一原則（R1 解消）：**
 
@@ -62,15 +61,14 @@
 - 隊形スペーシングは `battleX` に直接反映（§3.3 スロット ideal を battle 座標として使用）
 - 近接帯（`rangePx` 0〜24）は **`contact - engagedMinBodyGap() - rangePx`** で奥行き分離。同射程のみ接触線共有可（L10）。混成前列・後列は `resolveOverlaps` で間隔確保
 - `visualX` は **非推奨・削除予定**。snapshot 互換のため当面 `battleX` と同値を出力してもよい
-- `src/render` は `battleX + combatCameraX`（= `screenX`）のみ参照し、戦闘ルールを持たない
+- `src/render` は `battleX`（= `screenX`）のみ参照し、戦闘ルールを持たない
 
 ### 2.3 毎 tick パイプライン
 
 ```
 BattlePhase 判定
-  → tickBattleX（自動接近・knockback・隊形 overlap 解消）
+  → tickBattleX（PartyDeploy / 自動接近・knockback・隊形 overlap 解消）
   → skill move（busy actor。SkillSequenceRunner が battleX を補間）
-  → tickCamera
   → BattleSnapshot
 ```
 
@@ -80,8 +78,8 @@ BattlePhase 判定
 
 | フェーズ | プレイヤー `battleX` 自動接近 | 敵 `battleX` 自動接近 |
 |----------|------------------------------|----------------------|
-| 進軍（`WaveApproach` 等） | 増加のみ（右） | 減少のみ（左） |
-| 接敵（`Engaged`） | 前方寄り（詳細 §4） | 減少のみ（左） |
+| `PartyDeploy` | 右のみ（左外 → 初期位置） | 左のみ（右外 → spawn 位置） |
+| 接敵（`Engaged`） | 前方寄り（詳細 §4） | 左のみ（layout 収束） |
 | スキル `move` 中 | シーケンスが正本 | 同左 |
 
 **スコープ外：** 敵がプレイヤー背後へ回る AI / 敵 `move`（後列狙い）。プレイヤー側の `behindTarget` 等スキル `move` は §4.4 で維持。
@@ -113,17 +111,17 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 | 定数 | 用途 |
 |------|------|
-| `CANVAS_W`（480） | 画面幅。カメラ中央 ≈ 240 |
-| `ROW_X.front` / `middle` / `back` | 隊形列基準。**back < middle < front**（新軸） |
-| `PLAYER_ROW_SPACING`（42） | 同一列内スロット間隔 |
+| `CANVAS_W`（480） | 画面幅 |
+| `COMBAT_CAMERA_CENTER_X`（240） | 敵 spawn オフセット基準（カメラは廃止、名前のみ残す） |
+| `PARTY_FORMATION_LEFT_ANCHOR`（20） | 味方隊列左端（射程最長ユニット） |
+| `PARTY_FORMATION_SLOT_SPACING`（32） | 味方隊列スロット間隔 |
+| `SPAWN_X_MAX`（240） | 敵 `spawnX` 上限（中心からの右オフセット） |
 | `PLAYER_VISUAL_MIN_GAP` | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`） |
-| `BATTLE_ENEMY_SPAWN_MIN_X` | 敵 `spawnX` の前方下限（例: `CANVAS_W + margin`） |
-| `BATTLE_ENEMY_MARCH_VISIBLE_MAX_X` | 進軍中スプライト表示の前方上限 |
 | `RANGED_ATTACK_THRESHOLD_PX`（25） | 遠隔帯下限。`rangePx < 25` = 近接帯（0〜24） |
 | `MELEE_RANGE_MAX_PX`（24） | 近接帯上限 |
-| `SCROLL_SPEED` / `APPROACH_SPEED` | 進軍・接敵接近（px/s） |
+| `SCROLL_SPEED` / `APPROACH_SPEED` | Victory 退場パララックス / 接敵・PartyDeploy 接近（px/s） |
 
-現行の `ROW_X`（front 240 等）は旧軸用。実装時に新軸へ再チューニングする。
+`formationRow` は Y 描画・ターゲット用。X 深度の正本は射程順一列（`partyFormation.ts`）。
 
 ---
 
@@ -140,39 +138,31 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
   "waves": [
     {
       "enemies": [
-        { "templateId": "stage1_1", "spawnX": 520 }
+        { "templateId": "stage1_1", "spawnX": 120 }
       ]
     }
   ]
 }
 ```
 
-- `spawnX` — **前方（右）基準の正値**。キャンバス右外から出現
-- 旧データ（負の `spawnX`）は実装時に移行（例: `CANVAS_W + abs(oldSpawnX)`）
+- `spawnX` — **画面中心（240px）からの右オフセット**。`0 <= spawnX <= 240`。`battleX = 240 + spawnX`（240 で中央、240 で右端 480）
 
-### 3.3 プレイヤー隊形スロット
+### 3.3 プレイヤー隊形（射程順一列）
 
-1. **列 `formationRow`** — クラスマスタ（`classes.json`）で固定
-2. **列内順** — `rowRoleOrder(role)` でソート後、0 始まりの `slotIndex` を付与。同一列に複数ユニットがいる場合は **射程（`traits.rangePx`）で整列**（短い＝前方／右、長い＝後方／左）し、同射程は role 順
-
-| 列 | role 優先順（小さいほど slot 0） |
-|----|----------------------------------|
-| `front` / `middle` | defender → attacker → supporter |
-| `back` | supporter → attacker → defender |
-
-3. **理想 battleX（非接敵）：** `ROW_X[row] + slotIndex × PLAYER_ROW_SPACING`
-4. **列内順（射程）** — 同一列では **射程が短いほど前方（右）**、長いほど後方（左）。例: 後列で range 40 の療養師は range 50 の弓術士より右（前線側）
-5. **overlap 解消** — §4.2（プレイヤーのみ必須）
+1. **X 配置正本** — 全生存味方を **射程降順（長い＝左）** で一列。同射程は **物理 `attacker`** を左
+2. **スロット間隔** — 左端 `PARTY_FORMATION_LEFT_ANCHOR`（20px）、以降 `+32px`
+3. **`formationRow`** — Y 描画・スキルターゲット用（`classes.json`）。X 深度には使わない
+4. **overlap 解消** — §4.2（接敵時プレイヤー必須）
 
 **近接判定（統一）：** `isMeleeUnit(u) := isMeleeRangePx(resolveMaxEffectiveRangePx(u))`（`< RANGED_ATTACK_THRESHOLD_PX`）
 
 ### 3.4 Wave ライフサイクル
 
-1. プレイヤー隊列を後方（左）に配置
-2. 敵 Wave を前方（`spawnX`）にスポーン → 左へ進軍
-3. standoff cap 到達 → `Engaged`（§4.3）
-4. 敵全滅 → 死亡演出 → `FormationReset`（§4.1）
-5. 次 Wave へ（敵エンティティ差し替え）
+1. **`WaveAnnouncement` + `PartyDeploy`（同時）** — Wave 告知オーバーレイ表示と同時に、味方を画面左外から初期位置へ、敵を画面右外から `spawnX` 解決位置へ移動
+2. **接敵** — 告知 fade-out 開始から 250ms 経過 **かつ** PartyDeploy 到達後に `Engaged`
+3. 敵全滅 → 死亡演出 → `PostCombatSettle`
+4. 次 Wave あり → `VictoryExit` と同様の右退場（`worldOffsetX` パララックス）→ Wave 告知 + PartyDeploy（同時）
+5. ステージクリア → `VictoryExit`（接敵終了時の `battleX` を維持し右退場のみ）
 
 **生死と表示：**
 
@@ -187,14 +177,14 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 | Phase | 概要 |
 |-------|------|
-| `WaveApproach` | Wave 1（および必要なら各 Wave）の右進軍。`worldOffsetX` パララックス。**Wave 1 のみ** 進軍時間 `WAVE_APPROACH_MARCH_SEC`（0.75s） |
-| `PreEngage` | 敵左進軍。プレイヤーは隊列維持 or 右進軍 |
-| `Engaged` | 接敵戦闘。自動接近・スキル・カメラ |
-| `FormationReset` | 敵全滅後。**Wave 1 / 2+ 共通**の単一処理。screen 絶対目標へ隊列復帰しつつ右進軍。完了まで次 Wave に進まない |
-| `VictoryExit` | ステージクリア演出 |
+| `WaveAnnouncement` | 各 Wave 開始。告知オーバーレイ（Victory 同様の fade/hold/fade） |
+| `PartyDeploy` | 告知と **同時**。味方左外 → 初期位置、敵右外 → spawn 位置 |
+| `Engaged` | 告知 fade-out 開始 + 250ms かつ Deploy 到達後。自動接近・スキル |
+| `PostCombatSettle` | 敵全滅後の死亡演出待ち |
+| `VictoryExit` | Wave 間・ステージクリア。位置維持のまま右退場（`worldOffsetX` パララックス） |
 | `Defeat` / `Respawn` | 既存 combat フローに準拠 |
 
-`FormationReset` 中はスキルシーケンス・periodic HoT/dispel を停止（現行同等）。
+`PartyDeploy` / 告知中はスキル発動を停止。CD / DoT / HoT は継続。
 
 ### 4.2 `applyEngagedFormationToBattleX`（R1-fix + L10）
 
@@ -204,7 +194,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 1. スロット ideal battleX（§3.3）
 2. 接敵アンカーへ前衛を配置
 3. resolveOverlaps(PLAYER_VISUAL_MIN_GAP) on battleX  ← プレイヤー必須
-4. 敵: アンカー + separation（重なり時のみ）
+4. 敵: 近接帯は接触線共有（重なり可）。遠隔は近接前線 + `enemyRangedRearGap` より後方
 ```
 
 **禁止：**
@@ -218,16 +208,11 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 - `engagedMeleeVisualSlot` — 近接敵の奥行き（接敵開始時 `battleX` 順で固定）
 - `engagedVisualTargetPlayerId` — 遠距離敵の狙いプレイヤー（L5）
 
-### 4.3 接敵トリガー（standoff cap）
+### 4.3 接敵開始
 
-**正本：** `shouldStartApproach`（`resolveEnemyMarchCapX`）
+**正本：** Wave 告知と PartyDeploy が同時開始。接敵（`engaged = true`）は **告知 fade-out 開始 + 250ms** 経過 **かつ** 全ユニットが deploy 目標に到達した時点。
 
-1. 最前線の生存敵（プレイヤーに最も近い敵 = **`min(battleX)`**）を取る
-2. プレイヤー前衛の `battleX`（**`max(battleX)`** の前衛列）と双方射程から `resolveEnemyMarchEngageGap` を算出
-3. 敵の進軍上限 `cap = playerContactX + gap`（新軸・前方側）
-4. 敵 `battleX <= cap`（十分左に進んだ）→ `engaged = true`
-
-**表示閾値**（`BATTLE_ENEMY_MARCH_VISIBLE_MAX_X` 等）は **スプライト出現のみ**。Engaged 開始条件ではない。
+敵左進軍・standoff cap による接敵トリガーは廃止。
 
 ### 4.4 自動接近（`battleX`）
 
@@ -241,16 +226,9 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 - `battleX` — `SkillSequenceRunner` が線形補間（正本・描画も同値）
 - 敵背後へのプレイヤー `behindTarget` はスコープ内。敵のプレイヤー背後移動はスコープ外
 
-### 4.6 カメラ
+### 4.6 非接敵 tick
 
-- 接敵中：`combatCameraX` で生存プレイヤーの screen 重心がキャンバス中央へ（補間）
-- `FormationReset` 完了時：`combatCameraX = 0`、`battleX` 正規化
-- 接敵開始時：`combatCameraX !== 0` なら `bakeCombatCameraIntoBattleX`（一度だけ）
-- HUD は `combatCameraX` の影響を受けない
-
-### 4.7 非接敵 tick
-
-Wave 進軍・FormationReset 中等、**非接敵中**も DoT/HoT・バフ/デバフ持続・CD 進行は継続。スキル発動・脅威 decay は `Engaged` 中のみ（[combat.md](combat.md) と整合）。
+`PartyDeploy` / `PostCombatSettle` 中も DoT/HoT・バフ/デバフ持続・CD 進行は継続。スキル発動・脅威 decay は `Engaged` 中のみ（[combat.md](combat.md) と整合）。
 
 ---
 
@@ -260,7 +238,7 @@ Wave 進軍・FormationReset 中等、**非接敵中**も DoT/HoT・バフ/デ�
 |------------|------|
 | `combatPosition.ts` | **pure `battleX`**。接近・cap・knockback・`resolveMoveBattleX`。render へ import しない |
 | `battleLayout.ts` | 隊形スロット、overlap、`applyEngagedFormationToBattleX` |
-| `battleCamera.ts` | `combatCameraX`、`toScreenX`、`bakeCombatCameraIntoBattleX` |
+| `partyFormation.ts` | 射程順一列の ideal `battleX` |
 | `battleConstants.ts`（新設 or `types.ts`） | §2.6 定数の単一正本 |
 | `BattleEngine.ts` | BattlePhase FSM、tick 順序のオーケストレーション |
 | `formationLayout.ts` | `groundY`、HUD 余白、`CANVAS_W` 等 **キャンバス定数のみ** |

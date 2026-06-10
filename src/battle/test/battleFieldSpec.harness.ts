@@ -19,11 +19,12 @@ export const TICK_DT = 1 / 60;
 
 export const BACK_ROW_NAMES = ['療養師', '弓術士'] as const;
 
+/** screenX = battleX（カメラ廃止） */
 export function screenX(
-  unit: Pick<CombatantSnapshot, 'visualX'>,
-  combatCameraX: number,
+  unit: Pick<CombatantSnapshot, 'visualX' | 'battleX'>,
+  _combatCameraX: number = 0,
 ): number {
-  return unit.visualX + combatCameraX;
+  return unit.battleX;
 }
 
 export function createStage1Engine(options?: { reliableWaveClear?: boolean }) {
@@ -31,7 +32,7 @@ export function createStage1Engine(options?: { reliableWaveClear?: boolean }) {
   if (options?.reliableWaveClear) {
     const stage = gameData.stages.find((s) => s.id === '1');
     if (stage?.waves[0]) {
-      stage.waves[0].enemies = [{ templateId: 'stage1_1', spawnX: 600 }];
+      stage.waves[0].enemies = [{ templateId: 'stage1_1', spawnX: 120 }];
     }
     const wave1Enemy = gameData.enemyRegistry.stage1_1;
     if (wave1Enemy) wave1Enemy.maxHp = 1;
@@ -43,6 +44,30 @@ export function createStage1Engine(options?: { reliableWaveClear?: boolean }) {
     for (const slot of save.party) {
       if (slot) slot.progress.level = 10;
     }
+  }
+  const engine = new BattleEngine(
+    gameData,
+    levelCurves,
+    () => save.party,
+    () => save.stageProgress.currentStageId,
+  );
+  engine.startBattle();
+  return engine;
+}
+
+export function createStage1Wave1MeleeFirstDeathEngine() {
+  const gameData = structuredClone(loadGameData());
+  const stage1_1 = gameData.enemyRegistry.stage1_1;
+  const melee = gameData.enemyRegistry.test_enemy;
+  const ranged = gameData.enemyRegistry.test_ranged;
+  if (stage1_1) stage1_1.maxHp = 1;
+  if (melee) melee.maxHp = 1;
+  if (ranged) ranged.maxHp = 9_999;
+  const levelCurves = loadLevelCurves(levelCurvesJson);
+  const save = createDefaultSave(gameData, 'demo');
+  save.stageProgress.currentStageId = '1';
+  for (const slot of save.party) {
+    if (slot) slot.progress.level = 12;
   }
   const engine = new BattleEngine(
     gameData,
@@ -89,7 +114,7 @@ export interface TickSample {
   tick: number;
   engaged: boolean;
   waveIndex: number;
-  combatCameraX: number;
+  partyDeployActive: boolean;
   allies: CombatantSnapshot[];
   enemies: CombatantSnapshot[];
 }
@@ -103,7 +128,7 @@ export function tickRecord(engine: BattleEngine, count: number): TickSample[] {
       tick: i,
       engaged: snap.engaged,
       waveIndex: snap.waveIndex,
-      combatCameraX: snap.combatCameraX,
+      partyDeployActive: snap.partyDeployActive,
       allies: snap.allies,
       enemies: snap.enemies,
     });
@@ -209,6 +234,7 @@ export function assertEngagedEnemyScreenStable(
   let engagedTicks = 0;
   let maxJump = 0;
   const prevScreenX = new Map<string, number>();
+  let prevEnemySignature = '';
 
   for (let i = 0; i < maxTicks; i++) {
     engine.tick(TICK_DT);
@@ -216,12 +242,23 @@ export function assertEngagedEnemyScreenStable(
     if (!snap.engaged) {
       engagedTicks = 0;
       prevScreenX.clear();
+      prevEnemySignature = '';
       continue;
     }
     engagedTicks += 1;
 
     for (const unit of [...snap.allies, ...snap.enemies].filter((u) => u.hp > 0)) {
       expect(unit.visualX).toBe(unit.battleX);
+    }
+
+    const enemySignature = snap.enemies
+      .filter((e) => e.hp > 0)
+      .map((e) => e.id)
+      .sort()
+      .join(',');
+    if (enemySignature !== prevEnemySignature) {
+      prevScreenX.clear();
+      prevEnemySignature = enemySignature;
     }
 
     if (engagedTicks <= skipAfterEngage) continue;
@@ -236,6 +273,189 @@ export function assertEngagedEnemyScreenStable(
     }
   }
   expect(maxJump).toBeLessThanOrEqual(maxJumpPx);
+}
+
+/** 接敵中: 構成変化後も生存敵・死体の screenX が 1-tick で大きく動かない */
+export function assertEngagedDeathVisualStability(
+  engine: BattleEngine,
+  options: {
+    maxTicks?: number;
+    livingMaxDeltaPx?: number;
+    corpseMaxDeltaPx?: number;
+    corpseTrackTicksAfterDeath?: number;
+  } = {},
+): void {
+  const maxTicks = options.maxTicks ?? 120_000;
+  const livingMaxDelta = options.livingMaxDeltaPx ?? 24;
+  const corpseMaxDelta = options.corpseMaxDeltaPx ?? 20;
+  const trackAfter = options.corpseTrackTicksAfterDeath ?? 90;
+  const prevLivingScreenX = new Map<string, number>();
+  const corpsePrevScreenX = new Map<string, number>();
+  const deathTick = new Map<string, number>();
+  let prevLivingSignature = '';
+  let maxLivingJump = 0;
+  let maxCorpseJump = 0;
+  let sawDeath = false;
+
+  for (let i = 0; i < maxTicks; i++) {
+    engine.tick(TICK_DT);
+    const snap = engine.getSnapshot();
+    if (!snap.engaged) {
+      prevLivingScreenX.clear();
+      corpsePrevScreenX.clear();
+      deathTick.clear();
+      prevLivingSignature = '';
+      continue;
+    }
+
+    const living = snap.enemies.filter((e) => e.hp > 0);
+    const signature = living
+      .map((e) => e.id)
+      .sort()
+      .join(',');
+    if (signature !== prevLivingSignature) {
+      prevLivingScreenX.clear();
+      prevLivingSignature = signature;
+      for (const enemy of living) {
+        prevLivingScreenX.set(enemy.id, screenX(enemy, snap.combatCameraX));
+      }
+    } else {
+      for (const enemy of living) {
+        const sx = screenX(enemy, snap.combatCameraX);
+        const prev = prevLivingScreenX.get(enemy.id);
+        if (prev !== undefined) {
+          maxLivingJump = Math.max(maxLivingJump, Math.abs(sx - prev));
+        }
+        prevLivingScreenX.set(enemy.id, sx);
+      }
+    }
+
+    for (const enemy of snap.enemies.filter((e) => e.hp <= 0)) {
+      // ウェーブ全滅後の settle bake は対象外
+      if (living.length === 0) continue;
+
+      const sx = screenX(enemy, snap.combatCameraX);
+      if (!deathTick.has(enemy.id)) {
+        deathTick.set(enemy.id, i);
+        corpsePrevScreenX.set(enemy.id, sx);
+        sawDeath = true;
+        continue;
+      }
+      const start = deathTick.get(enemy.id)!;
+      if (i - start > trackAfter) continue;
+      const prev = corpsePrevScreenX.get(enemy.id)!;
+      maxCorpseJump = Math.max(maxCorpseJump, Math.abs(sx - prev));
+      corpsePrevScreenX.set(enemy.id, sx);
+    }
+  }
+
+  expect(sawDeath).toBe(true);
+  expect(maxLivingJump).toBeLessThanOrEqual(livingMaxDelta);
+  expect(maxCorpseJump).toBeLessThanOrEqual(corpseMaxDelta);
+}
+
+/** 最初の敵死亡から N tick だけ死体 screenX を追跡（ウェーブ遷移のノイズ除外） */
+export function assertFirstEnemyDeathCorpseStable(
+  engine: BattleEngine,
+  options: {
+    maxTicks?: number;
+    trackTicksAfterFirstDeath?: number;
+    maxSingleTickDeltaPx?: number;
+  } = {},
+): void {
+  const maxTicks = options.maxTicks ?? 120_000;
+  const trackAfter = options.trackTicksAfterFirstDeath ?? 120;
+  const maxDelta = options.maxSingleTickDeltaPx ?? 8;
+  const corpsePrevScreenX = new Map<string, number>();
+  let firstDeathTick: number | null = null;
+  let maxCorpseJump = 0;
+
+  for (let i = 0; i < maxTicks; i++) {
+    engine.tick(TICK_DT);
+    const snap = engine.getSnapshot();
+    if (!snap.engaged) continue;
+    if (firstDeathTick !== null && i - firstDeathTick > trackAfter) break;
+
+    const living = snap.enemies.filter((e) => e.hp > 0);
+    for (const enemy of snap.enemies.filter((e) => e.hp <= 0)) {
+      if (living.length === 0) continue;
+      const sx = screenX(enemy, snap.combatCameraX);
+      if (firstDeathTick === null) {
+        firstDeathTick = i;
+        corpsePrevScreenX.set(enemy.id, sx);
+        continue;
+      }
+      const prev = corpsePrevScreenX.get(enemy.id);
+      if (prev !== undefined) {
+        maxCorpseJump = Math.max(maxCorpseJump, Math.abs(sx - prev));
+      }
+      corpsePrevScreenX.set(enemy.id, sx);
+    }
+  }
+
+  expect(firstDeathTick).not.toBeNull();
+  expect(maxCorpseJump).toBeLessThanOrEqual(maxDelta);
+}
+
+/** ウェーブ全滅 settle 時: 最後の敵 death tick から screenX が大きく動かない */
+export function assertWaveWipeCorpseNoJump(
+  engine: BattleEngine,
+  options: {
+    waveIndex: number;
+    maxTicks?: number;
+    maxWipeJumpPx?: number;
+  },
+): void {
+  const maxTicks = options.maxTicks ?? 200_000;
+  const maxJump = options.maxWipeJumpPx ?? 20;
+
+  for (let i = 0; i < maxTicks; i++) {
+    const before = engine.getSnapshot();
+    engine.tick(TICK_DT);
+    const after = engine.getSnapshot();
+
+    if (before.waveIndex !== options.waveIndex) continue;
+
+    const wipeTick =
+      before.enemies.some((e) => e.hp > 0) &&
+      after.enemies.every((e) => e.hp <= 0);
+    if (!wipeTick) continue;
+
+    for (const enemy of after.enemies) {
+      const livingBefore = before.enemies.find(
+        (e) => e.id === enemy.id && e.hp > 0,
+      );
+      if (!livingBefore) continue;
+      const beforeSx = screenX(livingBefore, before.combatCameraX);
+      const afterSx = screenX(enemy, after.combatCameraX);
+      expect(Math.abs(afterSx - beforeSx)).toBeLessThanOrEqual(maxJump);
+    }
+    return;
+  }
+
+  expect.fail(`wave ${options.waveIndex} wipe did not occur`);
+}
+
+/** @deprecated assertEngagedDeathVisualStability を使用 */
+export function assertDeadEnemyCorpseScreenStable(
+  engine: BattleEngine,
+  options: Parameters<typeof assertEngagedDeathVisualStability>[1] = {},
+): void {
+  assertEngagedDeathVisualStability(engine, {
+    ...options,
+    livingMaxDeltaPx: options.livingMaxDeltaPx ?? 9999,
+  });
+}
+
+/** @deprecated assertEngagedDeathVisualStability を使用 */
+export function assertLivingEnemyScreenStableOnCompositionChange(
+  engine: BattleEngine,
+  options: Parameters<typeof assertEngagedDeathVisualStability>[1] = {},
+): void {
+  assertEngagedDeathVisualStability(engine, {
+    ...options,
+    corpseMaxDeltaPx: options.corpseMaxDeltaPx ?? 9999,
+  });
 }
 
 /** @deprecated L1 以降は assertEngagedEnemyScreenStable を使用 */
@@ -339,7 +559,7 @@ export function countScreenXSignFlips(samples: number[]): number {
   return flips;
 }
 
-/** spec A-§4.2-01: screenX Δ = battleX Δ + camera Δ（R1-fix 単一座標） */
+/** spec A-§4.2-01: screenX === battleX（カメラ廃止） */
 export function assertFrozenScreenDelta(
   samples: TickSample[],
   unitId: string,
@@ -347,7 +567,6 @@ export function assertFrozenScreenDelta(
   epsilon = 0.5,
 ): void {
   let prevScreen: number | null = null;
-  let prevCamera: number | null = null;
   let prevBattleX: number | null = null;
 
   for (const sample of samples) {
@@ -355,20 +574,17 @@ export function assertFrozenScreenDelta(
     const unit = list.find((u) => u.id === unitId && u.hp > 0);
     if (!unit) continue;
 
-    const sx = screenX(unit, sample.combatCameraX);
-    if (prevScreen !== null && prevCamera !== null && prevBattleX !== null) {
+    const sx = screenX(unit);
+    if (prevScreen !== null && prevBattleX !== null) {
       const battleDelta = unit.battleX - prevBattleX;
       const screenDelta = sx - prevScreen;
-      const cameraDelta = sample.combatCameraX - prevCamera;
-      const expectedScreenDelta = battleDelta + cameraDelta;
-      if (Math.abs(screenDelta - expectedScreenDelta) > epsilon) {
+      if (Math.abs(screenDelta - battleDelta) > epsilon) {
         throw new Error(
-          `unit ${unitId}: screenX Δ=${screenDelta.toFixed(2)} expected ${expectedScreenDelta.toFixed(2)} (battleX Δ=${battleDelta.toFixed(2)}, camera Δ=${cameraDelta.toFixed(2)})`,
+          `unit ${unitId}: screenX Δ=${screenDelta.toFixed(2)} expected ${battleDelta.toFixed(2)}`,
         );
       }
     }
     prevScreen = sx;
-    prevCamera = sample.combatCameraX;
     prevBattleX = unit.battleX;
   }
 }

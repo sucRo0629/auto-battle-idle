@@ -13,7 +13,9 @@ import {
 import { applyDebugMemberLevel } from '../dev/debugLevel.ts';
 import {
   getDebugLoopStageId,
+  getDebugLoopWaveIndex,
   setDebugLoopStageId,
+  setDebugLoopWaveIndex,
 } from '../dev/debugLoopStage.ts';
 import {
   isVerifyModeEnabled,
@@ -47,6 +49,7 @@ export class GameSession {
   private save: SaveGameState;
   private verifyMode: boolean;
   private loopStageId: string | null;
+  private loopWaveIndex: number | null;
   private readonly engine: BattleEngine;
   readonly view: BattleView;
   private autoSaveTimer: ReturnType<typeof setInterval> | null = null;
@@ -62,9 +65,11 @@ export class GameSession {
     this.levelCurves = loadLevelCurves(levelCurvesJson);
     this.verifyMode = isVerifyModeEnabled();
     this.loopStageId = this.verifyMode ? getDebugLoopStageId() : null;
+    this.loopWaveIndex = this.verifyMode ? getDebugLoopWaveIndex() : null;
     this.save = this.loadSaveForMode(this.verifyMode);
     if (this.verifyMode && this.loopStageId) {
       this.save.stageProgress.currentStageId = this.loopStageId;
+      this.sanitizeLoopWaveIndex();
     }
     this.stageDamageStats.resetForStage(
       this.save.stageProgress.currentStageId,
@@ -79,6 +84,8 @@ export class GameSession {
         onDamageApplied: (actor, target, amount) => {
           this.stageDamageStats.recordDamage(actor, target, amount);
         },
+        getLoopWaveIndex: () =>
+          this.verifyMode ? this.loopWaveIndex : null,
       },
     );
 
@@ -95,7 +102,9 @@ export class GameSession {
         onMemberLevelChange: (partyIndex, level) =>
           this.setMemberLevel(partyIndex, level),
         getLoopStageId: () => this.getLoopStageId(),
+        getLoopWaveIndex: () => this.getLoopWaveIndex(),
         onLoopStageChange: (stageId) => this.setLoopStage(stageId),
+        onLoopWaveChange: (waveIndex) => this.setLoopWave(waveIndex),
         getStageDamageDisplayRows: () =>
           this.stageDamageStats.getDisplayRows(
             this.save.party,
@@ -154,9 +163,11 @@ export class GameSession {
     this.verifyMode = enabled;
     setVerifyModeEnabled(enabled);
     this.loopStageId = enabled ? getDebugLoopStageId() : null;
+    this.loopWaveIndex = enabled ? getDebugLoopWaveIndex() : null;
     this.save = this.loadSaveForMode(enabled);
     if (enabled && this.loopStageId) {
       this.save.stageProgress.currentStageId = this.loopStageId;
+      this.sanitizeLoopWaveIndex();
     }
     this.stageDamageStats.resetForStage(
       this.save.stageProgress.currentStageId,
@@ -217,23 +228,65 @@ export class GameSession {
     return this.verifyMode ? this.loopStageId : null;
   }
 
+  getLoopWaveIndex(): number | null {
+    return this.verifyMode ? this.loopWaveIndex : null;
+  }
+
   setLoopStage(stageId: string | null): void {
     if (!this.verifyMode) return;
 
     this.loopStageId = stageId;
     setDebugLoopStageId(stageId);
 
-    if (stageId !== null) {
-      this.save.stageProgress.currentStageId = stageId;
-      this.stageDamageStats.resetForStage(stageId);
-      this.engine.restartBattle();
-      this.persistSave();
-      const stage = getStageById(this.gameData.stages, stageId);
+    if (stageId === null) {
+      this.loopWaveIndex = null;
+      setDebugLoopWaveIndex(null);
+      console.log('[debug] Loop stage cleared (normal progression)');
+      return;
+    }
+
+    const stage = getStageById(this.gameData.stages, stageId);
+    const waveCount = stage?.waves.length ?? 0;
+    if (
+      this.loopWaveIndex !== null &&
+      (waveCount === 0 || this.loopWaveIndex >= waveCount)
+    ) {
+      this.loopWaveIndex = null;
+      setDebugLoopWaveIndex(null);
+    }
+
+    this.save.stageProgress.currentStageId = stageId;
+    this.stageDamageStats.resetForStage(stageId);
+    this.engine.restartBattle();
+    this.persistSave();
+    console.log(
+      `[debug] Loop stage pinned: ${stage?.displayName ?? stageId}`,
+    );
+  }
+
+  setLoopWave(waveIndex: number | null): void {
+    if (!this.verifyMode || this.loopStageId === null) return;
+
+    const stage = getStageById(this.gameData.stages, this.loopStageId);
+    const waveCount = stage?.waves.length ?? 0;
+    const clamped =
+      waveIndex !== null && waveIndex >= 0 && waveIndex < waveCount
+        ? waveIndex
+        : null;
+
+    this.loopWaveIndex = clamped;
+    setDebugLoopWaveIndex(clamped);
+    this.engine.restartBattle();
+    this.persistSave();
+
+    if (clamped === null) {
       console.log(
-        `[debug] Loop stage pinned: ${stage?.displayName ?? stageId}`,
+        `[debug] Loop wave cleared (all waves): ${stage?.displayName ?? this.loopStageId}`,
       );
     } else {
-      console.log('[debug] Loop stage cleared (normal progression)');
+      console.log(
+        `[debug] Loop wave pinned: ${stage?.displayName ?? this.loopStageId} Wave ${clamped + 1}`,
+      );
     }
   }
 
@@ -350,6 +403,17 @@ export class GameSession {
         ? `[progress] Stage clear: ${stageName} (loop)`
         : `[progress] Stage clear: ${stageName} → ${nextStageName}`;
     console.log(progressLog);
+  }
+
+  private sanitizeLoopWaveIndex(): void {
+    if (this.loopStageId === null || this.loopWaveIndex === null) return;
+
+    const stage = getStageById(this.gameData.stages, this.loopStageId);
+    const waveCount = stage?.waves.length ?? 0;
+    if (waveCount === 0 || this.loopWaveIndex >= waveCount) {
+      this.loopWaveIndex = null;
+      setDebugLoopWaveIndex(null);
+    }
   }
 
   private persistSave(): void {

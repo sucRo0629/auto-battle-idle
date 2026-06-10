@@ -23,6 +23,14 @@ export class VictoryOverlay {
   private resultPhase: ResultPhase | null = null;
   private victoryUseTimerFade = false;
 
+  isIdle(): boolean {
+    return this.phase === "idle";
+  }
+
+  isShowing(): boolean {
+    return this.phase === "visible" || this.phase === "fadingOut";
+  }
+
   syncPhase(
     phase: BattlePhase,
     alliesOffScreen: boolean,

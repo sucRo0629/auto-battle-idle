@@ -2317,12 +2317,16 @@ function parseStages(raw: unknown): StageDef[] {
         const enemyContext = `${waveContext}.enemies[${enemyIndex}]`;
         const enemyObj = requireRecord(enemyEntry, enemyContext);
         const rawSpawnX = requireNumber(enemyObj, 'spawnX', enemyContext);
+        if (rawSpawnX < 0 || rawSpawnX > 240) {
+          invalidField(
+            enemyContext,
+            'spawnX',
+            'must be between 0 and 240 (offset right from screen center)',
+          );
+        }
         return {
           templateId: requireString(enemyObj, 'templateId', enemyContext),
-          spawnX:
-            rawSpawnX < 0
-              ? 480 + Math.abs(rawSpawnX)
-              : rawSpawnX,
+          spawnX: rawSpawnX,
         };
       });
 

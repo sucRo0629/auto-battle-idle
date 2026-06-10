@@ -78,6 +78,7 @@ export interface SkillExecutorDeps {
   ) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
   onHealApplied?: (target: CombatantState) => void;
+  onUnitDied?: (unit: CombatantState) => void;
 }
 
 export class SkillExecutor {
@@ -416,8 +417,9 @@ export class SkillExecutor {
             this.deps.getAllCombatants(),
           );
         }
-        this.emit({ type: 'death', targetId: target.id });
         this.deps.getSequenceRunner().clearForActor(target.id);
+        this.deps.onUnitDied?.(target);
+        this.emit({ type: 'death', targetId: target.id });
       }
       return true;
     }

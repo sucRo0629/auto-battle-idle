@@ -429,7 +429,7 @@ describe('resolveEffectTargets', () => {
 
   it('debuffedEnemy filters pool by targetDebuffFilter', () => {
     const ally = mockUnit('ally', 200);
-    const debuffed = mockUnit('deb', 260, { isEnemy: true });
+    const debuffed = mockUnit('deb', 250, { isEnemy: true });
     debuffed.statusEffects.push({
       id: 'def',
       kind: 'debuff',

@@ -12,7 +12,7 @@
     "maxHp": 235,
     "atk": 11,
     "def": 26,
-    "reg": 0,
+    "reg": 5,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "df_guardian_basic_attack",
@@ -69,7 +69,7 @@
     ],
     "growthTier": {
       "maxHp": 2,
-      "atk": 1,
+      "atk": 2,
       "def": 2
     }
   },
@@ -131,7 +131,7 @@
     "def": 14,
     "reg": 0,
     "jobTier": 1,
-    "attackSpeedTier": "normal",
+    "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "at_warrior_basic_attack",
     "skills": [
       {
@@ -197,7 +197,7 @@
     "def": 14,
     "reg": 0,
     "jobTier": 1,
-    "attackSpeedTier": "somewhatSlow",
+    "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_lancer_basic_attack",
     "passiveIds": [
       "passive_target_highest_hp"
@@ -330,7 +330,7 @@
     "flavorJa": "魔力を一点に集め、魔防の薄い敵を穿つ",
     "formationRow": "back",
     "traits": {
-      "rangePx": 30,
+      "rangePx": 100,
       "damageType": "magic"
     },
     "maxHp": 80,
@@ -347,6 +347,7 @@
       {
         "level": 0,
         "skillIds": [
+          "passive_target_lowest_reg",
           "at_sorcerer_active_1",
           "at_sorcerer_active_2"
         ]
@@ -373,9 +374,9 @@
     "maxHp": 78,
     "atk": 22,
     "def": 6,
-    "reg": 15,
+    "reg": 20,
     "jobTier": 1,
-    "attackSpeedTier": "normal",
+    "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "at_enchanter_basic_attack",
     "passiveIds": [],
     "skills": [
@@ -408,9 +409,9 @@
     "maxHp": 72,
     "atk": 24,
     "def": 4,
-    "reg": 10,
+    "reg": 20,
     "jobTier": 1,
-    "attackSpeedTier": "somewhatSlow",
+    "attackSpeedTier": "slow",
     "basicAttackSkillId": "at_geomancer_basic_attack",
     "passiveIds": [
       "passive_aoe_crowd_bonus"
@@ -481,9 +482,9 @@
     "maxHp": 95,
     "atk": 10,
     "def": 12,
-    "reg": 10,
+    "reg": 15,
     "jobTier": 1,
-    "attackSpeedTier": "normal",
+    "attackSpeedTier": "slow",
     "basicAttackSkillId": "sp_abjurer_basic_attack",
     "passiveIds": [
       "passive_heal_barrier"
@@ -516,7 +517,7 @@
     "def": 9,
     "reg": 10,
     "jobTier": 1,
-    "attackSpeedTier": "normal",
+    "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "sp_alchemist_basic_attack",
     "passiveIds": [
       "passive_alchemist_hot",
@@ -532,7 +533,7 @@
       }
     ],
     "growthTier": {
-      "maxHp": 2,
+      "maxHp": 3,
       "atk": 2,
       "def": 1
     }

@@ -120,7 +120,7 @@ export function toVisualCombatant(
   gameData: GameData,
 ): VisualCombatant {
   return {
-    visualX: unit.visualX,
+    visualX: unit.battleX,
     isAlive: unit.isAlive,
     rangePx: resolveMaxEffectiveRangePx(unit, gameData),
   };

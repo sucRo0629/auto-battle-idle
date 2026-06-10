@@ -2,10 +2,10 @@ import type { BattlePhase } from './types.ts';
 
 /** 戦闘フィールド FSM（battle-field.md §4.1） */
 export type RuntimeBattlePhase =
-  | 'WaveApproach'
-  | 'PreEngage'
+  | 'WaveAnnouncement'
+  | 'PartyDeploy'
   | 'Engaged'
-  | 'FormationReset'
+  | 'PostCombatSettle'
   | 'VictoryExit'
   | 'Defeat'
   | 'Respawn'
@@ -14,8 +14,10 @@ export type RuntimeBattlePhase =
 export interface RuntimeBattlePhaseInput {
   phase: BattlePhase;
   engaged: boolean;
-  formationResetActive: boolean;
-  waveIntermissionActive: boolean;
+  waveAnnouncementActive: boolean;
+  partyDeployActive: boolean;
+  postCombatSettling: boolean;
+  waveExitMarchActive: boolean;
   victoryAwaitExitMarch: boolean;
 }
 
@@ -27,8 +29,10 @@ export function resolveRuntimeBattlePhase(
   if (input.phase === 'victory') {
     return input.victoryAwaitExitMarch ? 'VictoryExit' : 'Respawn';
   }
-  if (input.formationResetActive) return 'FormationReset';
-  if (input.waveIntermissionActive) return 'WaveApproach';
+  if (input.postCombatSettling) return 'PostCombatSettle';
+  if (input.waveExitMarchActive) return 'VictoryExit';
+  if (input.waveAnnouncementActive) return 'WaveAnnouncement';
+  if (input.partyDeployActive) return 'PartyDeploy';
   if (input.engaged) return 'Engaged';
-  return 'PreEngage';
+  return 'PartyDeploy';
 }

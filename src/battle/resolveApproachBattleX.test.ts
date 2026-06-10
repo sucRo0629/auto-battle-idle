@@ -3,7 +3,6 @@ import type { CombatantState, GameData } from './types.ts';
 import {
   engagedMinBodyGap,
   enemyRangedRearGap,
-  PLAYER_FORMATION_DEPTH,
 } from './battleConstants.ts';
 import {
   resolvePlayerApproachBattleX,
@@ -167,7 +166,7 @@ describe('resolvePlayerApproachBattleX', () => {
     expect(approachX).toBe(280 - engagedMinBodyGap());
   });
 
-  it('melee band: shorter range stops further forward than longer range', () => {
+  it('melee band: front row separates by rangePx depth (L10)', () => {
     const guardian = mockCombatant({
       id: 'guardian',
       role: 'defender',
@@ -220,8 +219,10 @@ describe('resolvePlayerApproachBattleX', () => {
       gameData,
     );
 
-    expect(guardianX).toBe(280 - engagedMinBodyGap() - 5);
-    expect(warriorX).toBe(280 - engagedMinBodyGap() - 8);
+    const guardianStop = 280 - engagedMinBodyGap() - 5;
+    const warriorStop = 280 - engagedMinBodyGap() - 8;
+    expect(guardianX).toBe(guardianStop);
+    expect(warriorX).toBe(warriorStop);
     expect(guardianX - warriorX).toBe(3);
   });
 
@@ -280,7 +281,7 @@ describe('resolvePlayerApproachBattleX', () => {
     expect(approachX).toBe(280 - 100);
   });
 
-  it('back row stays behind front contact in battleX even when in ranged firing range', () => {
+  it('back row stops at skill range from target, not formation depth pull-forward', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
@@ -325,8 +326,125 @@ describe('resolvePlayerApproachBattleX', () => {
       gameData,
     );
 
-    expect(approachX).toBeLessThanOrEqual(200 + PLAYER_FORMATION_DEPTH);
-    expect(approachX).toBeLessThan(250 - 50);
+    expect(approachX).toBe(250 - 100);
+    expect(approachX).toBeLessThan(guard.battleX);
+  });
+
+  it('back row stopping battleX changes with attack range (100 vs 50)', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 220,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const archer = mockCombatant({
+      id: 'archer',
+      formationRow: 'back',
+      battleX: 60,
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: ['archer_passive'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 250,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+
+    const gameDataRange100 = gameData;
+    const stop100 = resolvePlayerApproachBattleX(
+      archer,
+      [guard, archer],
+      [meleeEnemy],
+      gameDataRange100,
+    );
+
+    const gameDataRange50 = {
+      ...gameData,
+      skillRegistry: {
+        ...gameData.skillRegistry,
+        actives: {
+          ...gameData.skillRegistry.actives,
+          bow_basic: {
+            ...gameData.skillRegistry.actives.bow_basic,
+            effect: [
+              {
+                ...gameData.skillRegistry.actives.bow_basic.effect[0],
+                range: 50,
+              },
+            ],
+          },
+        },
+      },
+    } as unknown as GameData;
+
+    const stop50 = resolvePlayerApproachBattleX(
+      archer,
+      [guard, archer],
+      [meleeEnemy],
+      gameDataRange50,
+    );
+
+    expect(stop100).toBe(250 - 100);
+    expect(stop50).toBe(250 - 50);
+    expect(stop100).toBeLessThan(stop50);
+  });
+
+  it('front row melee allies approach to per-unit range stop', () => {
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      battleX: 300,
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const guardian = mockCombatant({
+      id: 'guardian',
+      formationRow: 'front',
+      role: 'defender',
+      traits: { rangePx: 5, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      battleX: 100,
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const warrior = mockCombatant({
+      id: 'warrior',
+      formationRow: 'front',
+      role: 'attacker',
+      traits: { rangePx: 8, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      battleX: 100,
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const players = [guardian, warrior];
+    const enemies = [meleeEnemy];
+
+    const guardStop = resolvePlayerApproachBattleX(
+      guardian,
+      players,
+      enemies,
+      gameData as unknown as GameData,
+    );
+    const warriorStop = resolvePlayerApproachBattleX(
+      warrior,
+      players,
+      enemies,
+      gameData as unknown as GameData,
+    );
+
+    expect(guardStop - warriorStop).toBe(3);
+    expect(guardStop).toBeGreaterThan(guardian.battleX);
+    expect(warriorStop).toBeGreaterThan(warrior.battleX);
   });
 });
 
@@ -442,10 +560,10 @@ describe('resolveEnemyApproachBattleX', () => {
       gameData,
     );
 
-    expect(approachX).toBeGreaterThanOrEqual(250 + enemyRangedRearGap());
+    expect(approachX).toBe(180 + 50);
   });
 
-  it('keeps ranged battleX at formation depth behind melee contact', () => {
+  it('ranged enemies approach attack range toward front-line target', () => {
     const rangedEnemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
@@ -482,8 +600,6 @@ describe('resolveEnemyApproachBattleX', () => {
       gameData,
     );
 
-    expect(approachX - melee.battleX).toBeGreaterThanOrEqual(
-      enemyRangedRearGap() - 1,
-    );
+    expect(approachX).toBe(180 + 50);
   });
 });

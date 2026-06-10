@@ -6,7 +6,6 @@ import type {
   SkillRegistry,
 } from '../battle/types.ts';
 import {
-  equipStarterActiveSkills,
   getUnlockedActiveSlotCount,
   MAX_ACTIVE_SLOTS,
   normalizeActiveSlots,
@@ -31,6 +30,33 @@ const gameData = {
   parties: {},
 } as unknown as GameData;
 
+const starterRegistry: SkillRegistry = {
+  passives: {
+    passive_a: {
+      id: 'passive_a',
+      name: 'Passive',
+      effect: 'targetRuleOverride',
+      targetRuleOverride: {
+        kind: 'stat',
+        side: 'enemy',
+        stat: 'hp',
+        order: 'highest',
+      },
+    },
+  },
+  actives: {
+    active_1: { id: 'active_1', name: 'Active 1', effect: [] },
+    active_2: { id: 'active_2', name: 'Active 2', effect: [] },
+  },
+};
+
+const starterClassPreset = {
+  passiveIds: ['passive_a'],
+  starterPassiveIds: ['passive_a'],
+  starterActiveIds: ['active_1', 'active_2'],
+  skills: [{ level: 0, skillIds: ['active_1', 'active_2'] }],
+} as ClassPreset;
+
 describe('skillBuild', () => {
   it('unlocks both active slots from the start', () => {
     expect(getUnlockedActiveSlotCount(member, gameData)).toBe(MAX_ACTIVE_SLOTS);
@@ -44,47 +70,7 @@ describe('skillBuild', () => {
     expect(normalized.equippedActiveSlots[1]).toBe('');
   });
 
-  it('equipStarterActiveSkills fills empty slots with level-0 actives', () => {
-    const classPreset = {
-      starterActiveIds: ['active_1', 'active_2'],
-    } as ClassPreset;
-    const build = normalizeActiveSlots({
-      learnedPassiveIds: [],
-      learnedActiveIds: ['active_1', 'active_2'],
-      equippedActiveSlots: [],
-    });
-
-    equipStarterActiveSkills(build, classPreset, build.learnedActiveIds);
-
-    expect(build.equippedActiveSlots).toEqual(['active_1', 'active_2']);
-  });
-
-  it('reconcileMemberBuild equips both starter actives from empty slots', () => {
-    const registry: SkillRegistry = {
-      passives: {
-        passive_a: {
-          id: 'passive_a',
-          name: 'Passive',
-          effect: 'targetRuleOverride',
-          targetRuleOverride: {
-            kind: 'stat',
-            side: 'enemy',
-            stat: 'hp',
-            order: 'highest',
-          },
-        },
-      },
-      actives: {
-        active_1: { id: 'active_1', name: 'Active 1', effect: [] },
-        active_2: { id: 'active_2', name: 'Active 2', effect: [] },
-      },
-    };
-    const classPreset = {
-      passiveIds: ['passive_a'],
-      starterPassiveIds: ['passive_a'],
-      starterActiveIds: ['active_1', 'active_2'],
-      skills: [{ level: 0, skillIds: ['active_1', 'active_2'] }],
-    } as ClassPreset;
+  it('reconcileMemberBuild learns passives and equips starter actives into empty slots', () => {
     const slotMember: PartyMemberState = {
       classId: 'test',
       progress: { level: 1, exp: 0 },
@@ -95,9 +81,35 @@ describe('skillBuild', () => {
       },
     };
 
-    reconcileMemberBuild(slotMember, classPreset, registry);
+    reconcileMemberBuild(slotMember, starterClassPreset, starterRegistry);
 
+    expect(slotMember.build.learnedPassiveIds).toContain('passive_a');
     expect(slotMember.build.learnedActiveIds).toEqual(['active_1', 'active_2']);
     expect(slotMember.build.equippedActiveSlots).toEqual(['active_1', 'active_2']);
+  });
+
+  it('reconcileMemberBuild strips equipped actives above current level', () => {
+    const levelGatedPreset = {
+      ...starterClassPreset,
+      skills: [
+        { level: 0, skillIds: ['active_1'] },
+        { level: 5, skillIds: ['active_2'] },
+      ],
+    } as ClassPreset;
+    const slotMember: PartyMemberState = {
+      classId: 'test',
+      progress: { level: 1, exp: 0 },
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: ['active_1', 'active_2'],
+      },
+    };
+
+    reconcileMemberBuild(slotMember, levelGatedPreset, starterRegistry);
+
+    expect(slotMember.build.learnedActiveIds).toEqual(['active_1']);
+    expect(slotMember.build.equippedActiveSlots[0]).toBe('active_1');
+    expect(slotMember.build.equippedActiveSlots[1]).toBe('');
   });
 });

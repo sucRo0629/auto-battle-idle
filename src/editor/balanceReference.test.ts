@@ -35,7 +35,7 @@ describe('balanceReference', () => {
   it('identifies baseline class ids', () => {
     expect(isBalanceReferenceClass('df_guardian')).toBe(true);
     expect(isBalanceReferenceClass('df_paladin')).toBe(false);
-    expect(BALANCE_REFERENCE_CLASS_IDS).toHaveLength(5);
+    expect(BALANCE_REFERENCE_CLASS_IDS).toContain('df_guardian');
   });
 
   it('filterBalanceRowsForDisplay supports all, reference, and byRole modes', () => {

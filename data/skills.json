@@ -167,7 +167,7 @@
         "stat": "atk",
         "order": "highest"
       },
-      "blockChance": 0.2
+      "blockChance": 0.15
     },
     {
       "id": "df_guardian_passive_2",

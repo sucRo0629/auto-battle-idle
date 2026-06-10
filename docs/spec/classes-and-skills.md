@@ -192,11 +192,11 @@ interface CharacterBuild {
 | フィールド | 説明 |
 |------------|------|
 | `trigger.kind` | `time`（秒）／`basicAttackCount`（通常攻撃回数）／`hitsTaken`（被攻撃回数） |
-| `trigger.value` | 条件の閾値。発動後に `remaining` として再設定され、0 になるまで再充填。ステージ開始時も `remaining = value`（ゲージ未充填） |
+| `trigger.value` | 条件の閾値 N。ステージ開始時 `remaining = N`（ゲージ未充填）。カウントトリガーは N 回のイベントで `remaining === 0`（ゲージ Max）となり、N+1 回目で発動・`remaining = N` にリセット。時間トリガーは 0 到達で即発動 |
 | `useDurationSec` | optional。発動硬直（秒）。省略 / `0` = 即時。アニメ長に合わせて設定（詳細は [combat.md](combat.md)） |
 
-- `basicAttackCount` — ステージ開始時 `remaining = value`（未充填）。**通常攻撃が命中するたび** `remaining--`、0 で発動可（エンジン標準。パッシブ不要）
-- `hitsTaken` — 被ダメ（`hurt`）のたび `remaining--`
+- `basicAttackCount` — ステージ開始時 `remaining = value`（未充填）。**通常攻撃が命中するたび** `remaining--`（`remaining > 0` のとき）。N 回目でゲージ Max（発動せず）、**N+1 回目の通常攻撃枠でアクティブ発動**（通常攻撃の代わり）
+- `hitsTaken` — 被ダメ（`hurt`）のたび `remaining--`（`remaining > 0` のとき）。N 回目でゲージ Max（発動せず）、**N+1 回目の被弾でアクティブ発動**（ダメージは通常通り）
 - **通常攻撃** は従来どおり JSON の `interval`（時間のみ）+ `attackSpeedTier` / SPD
 - レガシー JSON の `interval` はアクティブでも `trigger: { kind: "time", value: interval }` として読み込む
 

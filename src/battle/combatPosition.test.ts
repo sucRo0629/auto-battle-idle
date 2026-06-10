@@ -5,11 +5,9 @@ import {
   SPRITE_GAP,
   engagedMinBodyGap,
   enemyRangedRearGap,
-  resolveEnemyMarchEngageGap,
 } from './battleConstants.ts';
 import {
   assignInitialPlayerBattleX,
-  resolveEnemyMarchCapX,
   getPlayerContactX,
   getEnemyContactX,
   getMeleeEnemyContactX,
@@ -18,9 +16,11 @@ import {
   resolveMoveBattleX,
   resolveMaxEffectiveRangePx,
   resolveRangedRearBattleXCap,
-  resolveEngageLineX,
   separateByGap,
-  shouldStartApproach,
+  enemyDeployOffScreenBattleX,
+  resolveEnemyDeployTargets,
+  freezeEnemyCorpseScreenAnchor,
+  syncDeadEnemyCorpseBattleX,
   updateUnitApproach,
 } from './combatPosition.ts';
 import { isWithinSkillRange } from './skills/rangeUtils.ts';
@@ -86,6 +86,19 @@ const gameData = {
 } as unknown as GameData;
 
 describe('combatPosition', () => {
+  it('enemyDeployOffScreenBattleX shifts right by canvas width', () => {
+    expect(enemyDeployOffScreenBattleX(360)).toBe(360 + 480);
+  });
+
+  it('resolveEnemyDeployTargets applies spawn offset and gap', () => {
+    const positions = resolveEnemyDeployTargets([
+      { id: 'a', spawnX: 120, isAlive: true },
+      { id: 'b', spawnX: 160, isAlive: true },
+    ]);
+    expect(positions.get('a')).toBe(360);
+    expect(positions.get('b')).toBe(400);
+  });
+
   it('separateByGap spreads enemy spawns right to stay off-screen', () => {
     const separated = separateByGap(
       [
@@ -106,52 +119,6 @@ describe('combatPosition', () => {
     const on = mockCombatant({ id: 'e2', isEnemy: true, battleX: BATTLE_ENEMY_VISIBLE_MAX_X });
     expect(isEnemyVisibleOnScreen(off)).toBe(false);
     expect(isEnemyVisibleOnScreen(on)).toBe(true);
-  });
-
-  it('starts approach at standoff distance from player front, not at screen edge', () => {
-    const player = mockCombatant({ id: 'guard', formationRow: 'front', battleX: 180 });
-    const far = mockCombatant({ id: 'far', isEnemy: true, battleX: 600 });
-    const near = mockCombatant({ id: 'near', isEnemy: true, battleX: 180 });
-    const engageLine = 180 + engagedMinBodyGap();
-    expect(resolveEngageLineX([player], [far], gameData)).toBe(engageLine);
-    expect(shouldStartApproach([player], [far], gameData)).toBe(false);
-    expect(shouldStartApproach([player], [near], gameData)).toBe(true);
-  });
-
-  it('starts approach at ranged enemy attack distance', () => {
-    const player = mockCombatant({ id: 'guard', formationRow: 'front', battleX: 180 });
-    const rangedEnemy = mockCombatant({
-      id: 'ranged',
-      isEnemy: true,
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
-      cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
-      battleX: 600,
-    });
-    const engageLine = 180 + resolveEnemyMarchEngageGap(0, 100);
-    expect(resolveEngageLineX([player], [rangedEnemy], gameData)).toBe(engageLine);
-    expect(shouldStartApproach([player], [rangedEnemy], gameData)).toBe(false);
-    rangedEnemy.battleX = engageLine;
-    expect(shouldStartApproach([player], [rangedEnemy], gameData)).toBe(true);
-  });
-
-  it('caps each enemy march by its own attack range', () => {
-    const player = mockCombatant({ id: 'guard', formationRow: 'front', battleX: 180 });
-    const melee = mockCombatant({
-      id: 'melee',
-      isEnemy: true,
-      battleX: 220,
-    });
-    const ranged = mockCombatant({
-      id: 'ranged',
-      isEnemy: true,
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
-      cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
-      battleX: 220,
-    });
-    const meleeCap = resolveEnemyMarchCapX(melee, [player], gameData, [melee, ranged])!;
-    const rangedCap = resolveEnemyMarchCapX(ranged, [player], gameData, [melee, ranged])!;
-    expect(meleeCap).toBe(180 + engagedMinBodyGap());
-    expect(rangedCap).toBeGreaterThanOrEqual(meleeCap + enemyRangedRearGap());
   });
 
   it('ranged approach stays behind melee front line', () => {
@@ -339,7 +306,7 @@ describe('combatPosition', () => {
     expect(isWithinSkillRange(enemy, player, 0)).toBe(true);
   });
 
-  it('getPlayerContactX ignores back row battleX advanced for ranged approach', () => {
+  it('getPlayerContactX returns rightmost living ally battleX', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
@@ -351,7 +318,7 @@ describe('combatPosition', () => {
       traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       battleX: 220,
     });
-    expect(getPlayerContactX([guard, archer])).toBe(180);
+    expect(getPlayerContactX([guard, archer])).toBe(220);
   });
 
   it('resolveMoveBattleX engage and behindTarget', () => {
@@ -395,5 +362,22 @@ describe('combatPosition', () => {
         gameData,
       ),
     ).toBe(300);
+  });
+
+  it('syncDeadEnemyCorpseBattleX keeps corpse battleX at death anchor', () => {
+    const enemy = mockCombatant({
+      id: 'dead',
+      isEnemy: true,
+      isAlive: false,
+      hp: 0,
+      battleX: 200,
+      visualX: 200,
+    });
+    freezeEnemyCorpseScreenAnchor(enemy);
+    expect(enemy.corpseScreenAnchorX).toBe(200);
+
+    enemy.battleX = 150;
+    syncDeadEnemyCorpseBattleX([enemy]);
+    expect(enemy.battleX).toBe(200);
   });
 });

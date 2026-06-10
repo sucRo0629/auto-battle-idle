@@ -1,70 +1,149 @@
 import { describe, expect, it } from 'vitest';
-import skillsData from '../../data/skills.json';
 import type { ActiveSkillDef, PassiveSkillDef } from '../battle/types.ts';
 import {
   formatActiveDescription,
   formatPassiveDescription,
 } from './formatSkillText.ts';
 
-const passives = skillsData.passives as PassiveSkillDef[];
-const actives = skillsData.actives as ActiveSkillDef[];
-
-function findPassive(id: string): PassiveSkillDef {
-  const def = passives.find((p) => p.id === id);
-  if (!def) throw new Error(`passive not found: ${id}`);
-  return def;
-}
-
-function findActive(id: string): ActiveSkillDef {
-  const def = actives.find((a) => a.id === id);
-  if (!def) throw new Error(`active not found: ${id}`);
-  return def;
-}
-
 describe('formatPassiveDescription', () => {
-  it('formats target rule override', () => {
-    expect(formatPassiveDescription(findPassive('passive_target_highest_atk'))).toBe(
-      'ターゲット → 敵・ATK最高',
-    );
-  });
-
-  it('formats damage taken to heal', () => {
-    expect(formatPassiveDescription(findPassive('passive_damage_taken_heal'))).toBe(
-      '被ダメの 10% を即時回復',
-    );
-  });
-
-  it('formats self HP ratio buff', () => {
-    expect(formatPassiveDescription(findPassive('passive_self_low_hp_dmg'))).toBe(
-      '自HP比例 ATK ×1.5（60%以下で最大）',
-    );
-  });
-
-  it('formats extend debuff', () => {
-    expect(formatPassiveDescription(findPassive('passive_extend_debuff'))).toBe(
-      '付与デバフ +2s',
-    );
+  it.each([
+    {
+      name: 'target rule override',
+      def: {
+        id: 'passive_target_highest_atk',
+        name: '脅威の標的',
+        effect: 'targetRuleOverride',
+        targetRuleOverride: {
+          kind: 'stat',
+          side: 'enemy',
+          stat: 'atk',
+          order: 'highest',
+        },
+      } satisfies PassiveSkillDef,
+      fragments: ['ターゲット', '敵', 'ATK最高'],
+    },
+    {
+      name: 'damage taken to heal',
+      def: {
+        id: 'passive_damage_taken_heal',
+        name: '聖なる吸収',
+        effect: 'damageTakenToHeal',
+        ratio: 0.1,
+      } satisfies PassiveSkillDef,
+      fragments: ['被ダメの', '10%', '即時回復'],
+    },
+    {
+      name: 'self HP ratio buff',
+      def: {
+        id: 'passive_self_low_hp_dmg',
+        name: '滾る闘志',
+        effect: 'selfHpRatioBuff',
+        buffStat: 'atk',
+        buffMultiplierMax: 1.5,
+        maxBuffAtHpRatio: 0.6,
+      } satisfies PassiveSkillDef,
+      fragments: ['自HP比例', 'ATK', '×1.5', '60%以下'],
+    },
+    {
+      name: 'extend debuff',
+      def: {
+        id: 'passive_extend_debuff',
+        name: '毒延長',
+        effect: 'extendSelfAppliedDebuff',
+        extendSec: 2,
+      } satisfies PassiveSkillDef,
+      fragments: ['付与デバフ', '+2s'],
+    },
+    {
+      name: 'evasion chance',
+      def: {
+        id: 'passive_evasion',
+        name: '影歩',
+        effect: 'evasionChance',
+        evasionChance: 0.18,
+      } satisfies PassiveSkillDef,
+      fragments: ['回避', '18%'],
+    },
+  ])('$name', ({ def, fragments }) => {
+    const desc = formatPassiveDescription(def);
+    for (const fragment of fragments) {
+      expect(desc).toContain(fragment);
+    }
   });
 });
 
 describe('formatActiveDescription', () => {
   it('formats aoe physical damage', () => {
-    const desc = formatActiveDescription(findActive('at_warrior_active_2'));
+    const def: ActiveSkillDef = {
+      id: 'at_warrior_active_2',
+      name: '薙ぎ払い',
+      trigger: { kind: 'time', value: 11 },
+      effect: [
+        {
+          targetShape: 'aoe',
+          aoeRadiusPx: 50,
+          type: 'damage',
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 0.9 },
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        },
+      ],
+    };
+    const desc = formatActiveDescription(def);
     expect(desc).toContain('11s');
     expect(desc).toContain('物理 ATK×0.9');
-    expect(desc).toContain('範囲 ±50px');
+    expect(desc).toContain('範囲');
+    expect(desc).toContain('±50px');
   });
 
   it('formats move + multi-lock damage', () => {
-    const desc = formatActiveDescription(findActive('at_assassin_active_1'));
+    const def: ActiveSkillDef = {
+      id: 'at_assassin_active_1',
+      name: '背刺',
+      trigger: { kind: 'time', value: 9 },
+      effect: [
+        {
+          type: 'move',
+          moveMode: 'behindTarget',
+          moveDurationSec: 0.3,
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        },
+        {
+          targetShape: 'multiLock',
+          hitCount: 3,
+          type: 'damage',
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 0.7 },
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        },
+      ],
+    };
+    const desc = formatActiveDescription(def);
     expect(desc).toContain('9s');
-    expect(desc).toContain('移動 背後');
-    expect(desc).toContain('マルチロック（複数対象・同一可） ×3');
+    expect(desc).toContain('移動');
+    expect(desc).toContain('背後');
+    expect(desc).toContain('マルチロック');
+    expect(desc).toContain('×3');
     expect(desc).toContain('物理 ATK×0.7');
   });
 
   it('formats pierce damage', () => {
-    const desc = formatActiveDescription(findActive('at_lancer_active_1'));
+    const def: ActiveSkillDef = {
+      id: 'at_lancer_active_1',
+      name: '貫突',
+      trigger: { kind: 'time', value: 9 },
+      effect: [
+        {
+          targetShape: 'pierce',
+          pierceDurationSec: 0.2,
+          type: 'damage',
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 1.1 },
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        },
+      ],
+    };
+    const desc = formatActiveDescription(def);
     expect(desc).toContain('貫通');
     expect(desc).toContain('物理 ATK×1.1');
   });

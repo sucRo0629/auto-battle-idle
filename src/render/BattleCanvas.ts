@@ -14,8 +14,7 @@ import {
   SPRITE_LAYOUT_SIZE,
 } from "./spriteLayout.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
-import { BATTLE_ENEMY_MARCH_VISIBLE_MAX_X } from "../battle/battleConstants.ts";
-import { toScreenX } from "../battle/battleCamera.ts";
+import { BATTLE_ALLY_MARCH_VISIBLE_MIN_X, BATTLE_ENEMY_MARCH_VISIBLE_MAX_X } from "../battle/battleConstants.ts";
 import {
   groundY,
   groundLineY,
@@ -52,6 +51,7 @@ import {
   type BattleHudTheme,
 } from "./battleHudTheme.ts";
 import { VictoryOverlay } from "./VictoryOverlay.ts";
+import { WaveOverlay } from "./WaveOverlay.ts";
 import { DeathPlaybackManager } from "./deathPlayback.ts";
 import { drawBattleFieldBackground } from "./battleFieldBackground.ts";
 import { layoutHpBarBarrier } from "./hpBarBarrierLayout.ts";
@@ -71,6 +71,9 @@ export class BattleCanvas implements IBattleRenderer {
   private buffGlows = new BuffGlowManager();
   private deathPlayback = new DeathPlaybackManager();
   private victoryOverlay = new VictoryOverlay();
+  private waveOverlay = new WaveOverlay();
+  private waveAnnouncementWaveIndex = 0;
+  private waveAnnouncementElapsedMs = 0;
   private layouts: CombatantLayout[] = [];
   private theme!: BattleHudTheme;
   private worldOffsetX = 0;
@@ -155,8 +158,6 @@ export class BattleCanvas implements IBattleRenderer {
   syncFromSnapshot(snapshot: BattleSnapshot): void {
     const layouts: CombatantLayout[] = [];
     const y = groundY(this.canvas.height, SPRITE_SCALE);
-    const cameraX = snapshot.combatCameraX;
-
     // 進軍中は画面内に入ってから表示。Victory 等の非戦闘時は非表示
     const canShowEnemies = snapshot.phase === "running";
     if (canShowEnemies) {
@@ -176,7 +177,7 @@ export class BattleCanvas implements IBattleRenderer {
         const animState = this.animator.getState(enemy.id);
         layouts.push({
           id: enemy.id,
-          x: toScreenX(enemy.visualX, cameraX),
+          x: enemy.battleX,
           y,
           spriteKey: enemy.spriteKey,
           hp: enemy.hp,
@@ -203,10 +204,18 @@ export class BattleCanvas implements IBattleRenderer {
       if (!isDead) {
         this.resetDeathVisuals(ally.id);
       }
+      if (
+        !isDead &&
+        !snapshot.engaged &&
+        (snapshot.partyDeployActive || snapshot.waveAnnouncementActive) &&
+        ally.battleX < BATTLE_ALLY_MARCH_VISIBLE_MIN_X
+      ) {
+        continue;
+      }
       const animState = this.animator.getState(ally.id);
       layouts.push({
         id: ally.id,
-        x: toScreenX(ally.visualX, cameraX),
+        x: ally.battleX,
         y,
         spriteKey: ally.spriteKey,
         hp: ally.hp,
@@ -232,6 +241,10 @@ export class BattleCanvas implements IBattleRenderer {
       snapshot.victoryUseTimerFade,
       snapshot.victoryAwaitExitMarch,
     );
+    this.waveAnnouncementWaveIndex = snapshot.waveIndex;
+    this.waveAnnouncementElapsedMs = snapshot.waveAnnouncementActive
+      ? snapshot.waveAnnouncementElapsedMs
+      : 0;
   }
 
   /** リスポーン等で HP が回復したユニットの死亡演出を解除 */
@@ -313,6 +326,14 @@ export class BattleCanvas implements IBattleRenderer {
       this.theme,
     );
 
+    this.waveOverlay.draw(
+      this.ctx,
+      canvas.width,
+      canvas.height,
+      this.theme,
+      this.waveAnnouncementWaveIndex,
+      this.waveAnnouncementElapsedMs,
+    );
     this.victoryOverlay.draw(
       this.ctx,
       canvas.width,

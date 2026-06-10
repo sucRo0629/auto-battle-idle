@@ -9,15 +9,21 @@ import { isMeleeRangePx } from './types.ts';
 import {
   BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
   BATTLE_ENEMY_VISIBLE_MAX_X,
+  CANVAS_W,
   engagedMinBodyGap,
   enemyRangedRearGap,
-  PLAYER_ROW_SPACING,
-  ROW_X,
+  PARTY_FORMATION_SLOT_SPACING,
   SPRITE_GAP,
+  SPRITE_WIDTH,
   resolveEnemyMarchEngageGap,
+  resolveEnemySpawnBattleX,
   SCROLL_SPEED,
   APPROACH_SPEED,
 } from './battleConstants.ts';
+import {
+  computePartyFormationBattleX,
+  type PartyFormationUnit,
+} from './partyFormation.ts';
 import { resolveSkillRangePx } from './skills/rangeUtils.ts';
 
 export { SCROLL_SPEED, APPROACH_SPEED };
@@ -97,46 +103,48 @@ function livingPlayersOnLeadingRow(
 ): CombatantState[] {
   const living = players.filter((a) => a.isAlive);
   if (living.length === 0) return [];
-  for (const row of ROW_ORDER) {
-    const rowUnits = living.filter((a) => a.formationRow === row);
-    if (rowUnits.length > 0) return rowUnits;
-  }
-  return [];
+  const maxX = Math.max(...living.map((a) => a.battleX));
+  return living.filter((a) => a.battleX === maxX);
 }
 
-/** 最前線生存列のうち最も前方（max battleX） */
+/** 最前線（射程順一列の右端 = max battleX） */
 export function getPlayerContactX(players: CombatantState[]): number | null {
-  const frontLine = livingPlayersOnLeadingRow(players);
-  if (frontLine.length === 0) return null;
-  return Math.max(...frontLine.map((a) => a.battleX));
+  const living = players.filter((a) => a.isAlive);
+  if (living.length === 0) return null;
+  return Math.max(...living.map((a) => a.battleX));
 }
 
-/** 接敵中: 前線 contact を基準にした理想 battleX（非接敵の ROW_X 隊形と同じ相対位置） */
+function toPartyFormationUnits(
+  players: CombatantState[],
+): PartyFormationUnit[] {
+  return players
+    .filter((p) => p.isAlive)
+    .map((p) => ({
+      id: p.id,
+      role: p.role,
+      rangePx: resolveFormationRangePx(p),
+      damageType: p.traits.damageType,
+    }));
+}
+
+/** 接敵中: 前線 contact を基準にした理想 battleX（非接敵隊列と同じ相対オフセット） */
 export function resolvePlayerFormationBattleX(
   player: CombatantState,
   players: CombatantState[],
-  gameData?: GameData,
+  _gameData?: GameData,
 ): number | null {
   const living = players.filter((p) => p.isAlive);
   const contact = getPlayerContactX(living);
   if (contact === null) return null;
 
-  const row = player.formationRow;
-  const rowUnits = living.filter((p) => p.formationRow === row);
-  if (gameData) {
-    rowUnits.sort((a, b) =>
-      compareFormationBattleSlot(row, a, b, gameData),
-    );
-  } else {
-    rowUnits.sort(
-      (a, b) => rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role),
-    );
-  }
-  const slot = rowUnits.findIndex((p) => p.id === player.id);
-  if (slot < 0) return null;
+  const formation = computePartyFormationBattleX(
+    toPartyFormationUnits(living),
+  );
+  const ideal = formation.get(player.id);
+  if (ideal === undefined) return null;
 
-  const rowBase = ROW_X[row] - ROW_X.front;
-  return contact + rowBase + slot * PLAYER_ROW_SPACING;
+  const rightmostIdeal = Math.max(...formation.values());
+  return contact + (ideal - rightmostIdeal);
 }
 
 /** @deprecated getPlayerContactX */
@@ -190,6 +198,31 @@ export function syncAllFieldX(units: CombatantState[]): void {
   }
 }
 
+/** 敵死亡: 以降の battleX を固定 */
+export function freezeEnemyCorpseScreenAnchor(
+  enemy: CombatantState,
+  _combatCameraX: number = 0,
+): void {
+  if (!enemy.isEnemy || enemy.isAlive) return;
+  if (enemy.corpseScreenAnchorX === undefined) {
+    enemy.corpseScreenAnchorX = enemy.battleX;
+  }
+  enemy.battleX = enemy.corpseScreenAnchorX;
+  enemy.visualX = enemy.battleX;
+}
+
+/** 死体 battleX をアンカーから再同期（カメラ廃止後は no-op 相当） */
+export function syncDeadEnemyCorpseBattleX(
+  enemies: CombatantState[],
+  _combatCameraX: number = 0,
+): void {
+  for (const enemy of enemies) {
+    if (enemy.isAlive || enemy.corpseScreenAnchorX === undefined) continue;
+    enemy.battleX = enemy.corpseScreenAnchorX;
+    enemy.visualX = enemy.battleX;
+  }
+}
+
 export function getEngagedFrontEnemyVisualAnchor(
   players: CombatantState[],
   enemies: CombatantState[],
@@ -232,7 +265,7 @@ export function resolveEngageLineX(
 export function resolveRangedRearBattleXCap(
   enemies: CombatantState[],
   gameData: GameData,
-  minGap: number = enemyRangedRearGap(),
+  minGap: number = enemyRangedRearGap(5),
 ): number | null {
   const meleeContact = getMeleeEnemyContactX(enemies, gameData);
   if (meleeContact === null) return null;
@@ -418,30 +451,77 @@ export function capEngagedEnemyApproachBattleX(
 
 export function assignInitialPlayerBattleX(
   players: CombatantState[],
-  gameData?: GameData,
+  _gameData?: GameData,
 ): void {
   const living = players.filter((a) => a.isAlive);
-  const byRow = new Map<FormationRow, CombatantState[]>();
-  for (const row of ROW_ORDER) {
-    byRow.set(row, []);
-  }
+  const positions = computePartyFormationBattleX(
+    toPartyFormationUnits(living),
+  );
   for (const player of living) {
-    byRow.get(player.formationRow)!.push(player);
-  }
-  for (const row of ROW_ORDER) {
-    const rowPlayers = byRow.get(row)!;
-    rowPlayers.sort((a, b) =>
-      compareFormationBattleSlot(row, a, b, gameData),
-    );
-  }
-
-  const rowSlot = new Map<FormationRow, number>();
-  for (const row of ROW_ORDER) {
-    for (const player of byRow.get(row)!) {
-      const slot = rowSlot.get(row) ?? 0;
-      rowSlot.set(row, slot + 1);
-      player.battleX = ROW_X[row] + slot * PLAYER_ROW_SPACING;
+    const x = positions.get(player.id);
+    if (x !== undefined) {
+      player.battleX = x;
     }
+  }
+}
+
+/** PartyDeploy 目標 battleX */
+export function resolvePartyDeployTargets(
+  players: CombatantState[],
+): Map<string, number> {
+  return computePartyFormationBattleX(toPartyFormationUnits(players));
+}
+
+/** PartyDeploy: 左外からの開始 battleX */
+export function placePartyOffScreenForDeploy(
+  players: CombatantState[],
+  targets: Map<string, number>,
+): void {
+  for (const player of players) {
+    if (!player.isAlive) continue;
+    const target = targets.get(player.id);
+    if (target === undefined) continue;
+    player.battleX = target - CANVAS_W;
+    player.visualX = player.battleX;
+  }
+}
+
+/** EnemyDeploy: spawn 解決位置（gap 適用後） */
+export function resolveEnemyDeployTargets(
+  enemies: Array<Pick<CombatantState, 'id' | 'spawnX' | 'isAlive'>>,
+): Map<string, number> {
+  const units = enemies.map((enemy) => ({
+    id: enemy.id,
+    battleX: resolveEnemySpawnBattleX(enemy.spawnX ?? 0),
+    isAlive: enemy.isAlive,
+  }));
+  const separated = separateByGap(units, SPRITE_GAP);
+  const positions = new Map<string, number>();
+  for (const enemy of enemies) {
+    const x = separated.get(enemy.id);
+    if (x !== undefined) {
+      positions.set(enemy.id, x);
+    }
+  }
+  return positions;
+}
+
+/** EnemyDeploy: 目標より右外へ一括オフセット */
+export function enemyDeployOffScreenBattleX(targetBattleX: number): number {
+  return targetBattleX + CANVAS_W;
+}
+
+/** EnemyDeploy: 右外からの開始 battleX */
+export function placeEnemiesOffScreenForDeploy(
+  enemies: CombatantState[],
+  targets: Map<string, number>,
+): void {
+  for (const enemy of enemies) {
+    if (!enemy.isAlive) continue;
+    const target = targets.get(enemy.id);
+    if (target === undefined) continue;
+    enemy.battleX = enemyDeployOffScreenBattleX(target);
+    enemy.visualX = enemy.battleX;
   }
 }
 

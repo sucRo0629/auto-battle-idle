@@ -5,21 +5,21 @@ describe('VictoryOverlay syncPhase', () => {
   it('clean victory: stays idle until allies leave screen', () => {
     const overlay = new VictoryOverlay();
     overlay.syncPhase('victory', false, true, true);
-    expect(overlay['phase']).toBe('idle');
+    expect(overlay.isIdle()).toBe(true);
 
     overlay.syncPhase('victory', true, true, true);
-    expect(overlay['phase']).toBe('visible');
+    expect(overlay.isShowing()).toBe(true);
   });
 
   it('victory with fallen allies: shows immediately', () => {
     const overlay = new VictoryOverlay();
     overlay.syncPhase('victory', false, true, false);
-    expect(overlay['phase']).toBe('visible');
+    expect(overlay.isShowing()).toBe(true);
   });
 
   it('defeat: shows immediately', () => {
     const overlay = new VictoryOverlay();
     overlay.syncPhase('defeat', false, false, false);
-    expect(overlay['phase']).toBe('visible');
+    expect(overlay.isShowing()).toBe(true);
   });
 });

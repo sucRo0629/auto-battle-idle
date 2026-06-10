@@ -26,7 +26,7 @@ export function isWithinSkillRange(
     const reach = engagedMinBodyGap() + rangePx;
     return dist <= 0 && dist >= -reach;
   }
-  return dist <= rangePx;
+  return Math.abs(dist) <= rangePx;
 }
 export function resolveSkillRangePx(
   actor: CombatantState,

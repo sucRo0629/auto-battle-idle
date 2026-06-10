@@ -367,6 +367,8 @@ export interface CombatantState extends Combatant {
   corpseVisible: boolean;
   /** 敵のみ: ステージ配置のスポーン battleX */
   spawnX?: number;
+  /** 敵 dead: 死亡時 screen X 固定（battleX = anchor - combatCameraX） */
+  corpseScreenAnchorX?: number;
   /** 味方のみ: 敵 AI ヘイト（ランタイム） */
   threat?: number;
   /** 味方のみ: 減衰の目標ヘイト */
@@ -808,9 +810,15 @@ export interface BattleSnapshot {
   waveIndex: number;
   waveCount: number;
   worldOffsetX: number;
-  /** 接敵中: 前線を画面中央へ寄せるスプライト描画オフセット */
-  combatCameraX: number;
-  /** Wave 2+: カメラ補正付き絶対隊列リセット中 */
+  /** Wave 開始前の告知オーバーレイ表示中（PartyDeploy より前） */
+  waveAnnouncementActive: boolean;
+  /** waveAnnouncementActive 時の経過 ms（描画アニメ用） */
+  waveAnnouncementElapsedMs: number;
+  /** 各 Wave 開始: 味方が左外から初期位置へ移動中 */
+  partyDeployActive: boolean;
+  /** PartyDeploy 到達済み（接敵待ち） */
+  partyDeploySettled: boolean;
+  /** @deprecated partyDeployActive を使用 */
   formationResetActive: boolean;
   alliesOffScreen: boolean;
   /** Victory: タイマー基準でフェード（画面外退出待ちの早期 fade なし） */

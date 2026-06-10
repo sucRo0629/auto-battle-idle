@@ -39,14 +39,11 @@ function restoreFocusState(state: FocusRestoreState | null): void {
   }
 }
 
-/** DOM 再構築後もページスクロール位置とフォーカスを維持する */
+/** DOM 再構築後もフォーカス入力を維持する */
 export function preserveScrollDuring(fn: () => void): void {
-  const scrollY = window.scrollY;
   const focusState = buildFocusRestoreState();
   fn();
-  window.scrollTo({ top: scrollY, left: 0, behavior: 'instant' });
   requestAnimationFrame(() => {
-    window.scrollTo({ top: scrollY, left: 0, behavior: 'instant' });
     restoreFocusState(focusState);
   });
 }
@@ -107,16 +104,27 @@ export function createNumberInput(
   if (options?.id) input.id = options.id;
   if (options?.placeholder) input.placeholder = options.placeholder;
   if (options?.readonly) input.readOnly = true;
+  const displayValue = () =>
+    options?.emptyWhen !== undefined && value === options.emptyWhen
+      ? ''
+      : String(value);
+
   const commit = () => {
     if (options?.readonly) return;
-    if (input.value.trim() === '') {
+    const raw = input.value.trim();
+    if (raw === '') {
       onInput(options?.emptyWhen ?? 0);
+      input.value = displayValue();
       return;
     }
-    const parsed = Number(input.value);
-    onInput(Number.isNaN(parsed) ? (options?.emptyWhen ?? 0) : parsed);
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed)) {
+      input.value = displayValue();
+      return;
+    }
+    onInput(parsed);
   };
-  input.addEventListener('input', commit);
+  input.addEventListener('blur', commit);
   input.addEventListener('change', commit);
   return input;
 }

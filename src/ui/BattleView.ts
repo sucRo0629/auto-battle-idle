@@ -31,7 +31,9 @@ export interface VerifyModeControls {
   onOpenMetaMenu: () => void;
   onMemberLevelChange?: (partyIndex: number, level: number) => void;
   getLoopStageId?: () => string | null;
+  getLoopWaveIndex?: () => number | null;
   onLoopStageChange?: (stageId: string | null) => void;
+  onLoopWaveChange?: (waveIndex: number | null) => void;
   getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
   getCurrentStageId?: () => string;
   onStatsOverlayOpenChange?: (open: boolean) => void;
@@ -139,8 +141,13 @@ export class BattleView {
       getStageDamageDisplayRows: () =>
         verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
       getLoopStageId: () => verifyModeControls?.getLoopStageId?.() ?? null,
+      getLoopWaveIndex: () => verifyModeControls?.getLoopWaveIndex?.() ?? null,
       onLoopStageChange: (stageId) => {
         verifyModeControls?.onLoopStageChange?.(stageId);
+        this.debugMenu.refresh();
+      },
+      onLoopWaveChange: (waveIndex) => {
+        verifyModeControls?.onLoopWaveChange?.(waveIndex);
         this.debugMenu.refresh();
       },
       onMemberLevelChange: (partyIndex, level) => {
@@ -240,8 +247,16 @@ export class BattleView {
       if (event.result === "victory") {
         const pinnedLoopStageId =
           this.verifyModeControls?.getLoopStageId?.() ?? null;
+        const pinnedLoopWaveIndex =
+          this.verifyModeControls?.getLoopWaveIndex?.() ?? null;
         if (pinnedLoopStageId) {
-          this.pushLog("Looping pinned stage...");
+          if (pinnedLoopWaveIndex !== null) {
+            this.pushLog(
+              `Looping pinned wave ${pinnedLoopWaveIndex + 1}...`,
+            );
+          } else {
+            this.pushLog("Looping pinned stage...");
+          }
         } else {
           const nextStageId = getNextStageId(
             this.gameData.stages,
