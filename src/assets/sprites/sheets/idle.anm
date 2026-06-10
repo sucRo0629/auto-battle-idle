@@ -1,0 +1,67 @@
+;EDGE用アニメーションデータ
+ANIME_VERSION=1
+
+
+;--------------------------
+PATTERN_NAME=noname000
+
+	FRAME_NUMBER=1
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\idle_template.edg
+		WIN_TITLE=idle_template.edg
+		SRC_X=0
+		SRC_Y=0
+		LAYER_NUM=1
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=33
+		LAYER_ADD=1
+		CKEY_ENABLE=0
+		CKEY_NUM=0
+
+	FRAME_NUMBER=2
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\idle_template.edg
+		WIN_TITLE=idle_template.edg
+		SRC_X=48
+		SRC_Y=0
+		LAYER_NUM=1
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=33
+		LAYER_ADD=1
+		CKEY_ENABLE=0
+		CKEY_NUM=0
+
+	FRAME_NUMBER=3
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\idle_template.edg
+		WIN_TITLE=idle_template.edg
+		SRC_X=96
+		SRC_Y=0
+		LAYER_NUM=1
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=33
+		LAYER_ADD=1
+		CKEY_ENABLE=0
+		CKEY_NUM=0
+
+	FRAME_NUMBER=4
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\idle_template.edg
+		WIN_TITLE=idle_template.edg
+		SRC_X=144
+		SRC_Y=0
+		LAYER_NUM=1
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=33
+		LAYER_ADD=1
+		CKEY_ENABLE=0
+		CKEY_NUM=0
+
