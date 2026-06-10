@@ -13,6 +13,7 @@ import { resolveSkillRangePx } from './skills/rangeUtils.ts';
 import {
   ALLY_ROW_SPACING,
   ROW_X,
+  SPRITE_GAP,
   resolveEnemyMarchEngageGap,
 } from '../render/formationLayout.ts';
 
@@ -48,6 +49,15 @@ export function getBattleX(unit: CombatantState): number {
 /** 最前線生存敵の battleX（味方から最も近い敵） */
 export function getEnemyContactX(enemies: CombatantState[]): number | null {
   const living = enemies.filter((e) => e.isAlive);
+  if (living.length === 0) return null;
+  return Math.max(...living.map((e) => e.battleX));
+}
+
+/** 最前線生存近接敵の battleX（traits.rangePx === 0 のみ） */
+export function getMeleeEnemyContactX(
+  enemies: CombatantState[],
+): number | null {
+  const living = enemies.filter((e) => e.isAlive && e.traits.rangePx === 0);
   if (living.length === 0) return null;
   return Math.max(...living.map((e) => e.battleX));
 }
@@ -153,7 +163,28 @@ export function resolveEngageLineX(
 ): number | null {
   const frontEnemy = getFrontEnemyForEngage(enemies);
   if (frontEnemy === null) return null;
-  return resolveEnemyMarchCapX(frontEnemy, allies, gameData);
+  return resolveEnemyMarchCapX(frontEnemy, allies, gameData, enemies);
+}
+
+/** 近接前線より後方（battleX 小）に ranged を置く上限 */
+export function resolveRangedRearBattleXCap(
+  enemies: CombatantState[],
+  minGap: number = SPRITE_GAP,
+): number | null {
+  const meleeContact = getMeleeEnemyContactX(enemies);
+  if (meleeContact === null) return null;
+  return meleeContact - minGap;
+}
+
+function capRangedApproachBehindMelee(
+  enemy: CombatantState,
+  enemies: CombatantState[],
+  approachX: number,
+): number {
+  if (enemy.traits.rangePx === 0) return approachX;
+  const rearCap = resolveRangedRearBattleXCap(enemies);
+  if (rearCap === null) return approachX;
+  return Math.min(approachX, rearCap);
 }
 
 /** 敵1体の進軍上限 battleX（味方接触点 − その敵の射程） */
@@ -161,6 +192,7 @@ export function resolveEnemyMarchCapX(
   enemy: CombatantState,
   allies: CombatantState[],
   gameData: GameData,
+  enemies: CombatantState[] = [],
 ): number | null {
   const allyContact = getAllyContactX(allies);
   const contactAlly = leadingRowContactAlly(allies);
@@ -169,7 +201,8 @@ export function resolveEnemyMarchCapX(
     resolveMaxEffectiveRangePx(contactAlly, gameData),
     resolveMaxEffectiveRangePx(enemy, gameData),
   );
-  return allyContact - gap;
+  let cap = allyContact - gap;
+  return capRangedApproachBehindMelee(enemy, enemies, cap);
 }
 
 export function shouldStartApproach(
@@ -179,7 +212,7 @@ export function shouldStartApproach(
 ): boolean {
   const frontEnemy = getFrontEnemyForEngage(enemies);
   if (frontEnemy === null) return false;
-  const cap = resolveEnemyMarchCapX(frontEnemy, allies, gameData);
+  const cap = resolveEnemyMarchCapX(frontEnemy, allies, gameData, enemies);
   if (cap === null) return false;
   return frontEnemy.battleX >= cap;
 }
@@ -289,7 +322,7 @@ export function separateByGap(
   return positions;
 }
 
-/** 接敵中: 味方は左（敵方向）へ、敵は右（味方方向）へ目標 battleX へ接近 */
+/** 接敵中: 味方は左（battleX 減）のみ、敵は右（battleX 増）のみ接近 */
 export function updateUnitApproach(
   unit: CombatantState,
   targetBattleX: number,
@@ -297,7 +330,9 @@ export function updateUnitApproach(
 ): void {
   if (!unit.isAlive) return;
   if (unit.isEnemy) {
-    unit.battleX = moveTowardX(unit.battleX, targetBattleX, approachStep);
+    if (targetBattleX > unit.battleX) {
+      unit.battleX = moveTowardX(unit.battleX, targetBattleX, approachStep);
+    }
   } else if (targetBattleX < unit.battleX) {
     unit.battleX = moveTowardX(unit.battleX, targetBattleX, approachStep);
   }

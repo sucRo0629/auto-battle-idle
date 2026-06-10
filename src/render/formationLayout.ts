@@ -364,13 +364,19 @@ export function clampAllyVisualDepth(allies: CombatantState[]): void {
       .map((ally) => ally.visualX)
   );
   const leadingIndex = ROW_ORDER.indexOf(leadingRow);
-  for (const ally of living) {
-    const rowIndex = ROW_ORDER.indexOf(ally.formationRow);
-    if (rowIndex <= leadingIndex) continue;
-    const minX = leadingMinX + rowDepthOffset(leadingRow, ally.formationRow);
-    if (ally.visualX < minX) {
-      ally.visualX = minX;
-    }
+  const rowGap = engagedMinLeftEdgeGap();
+
+  for (const row of ROW_ORDER.slice(leadingIndex + 1)) {
+    const rowUnits = living
+      .filter((ally) => ally.formationRow === row)
+      .sort((a, b) => rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role));
+    const baseMinX = leadingMinX + rowDepthOffset(leadingRow, row);
+    rowUnits.forEach((ally, slot) => {
+      const minX = baseMinX + slot * rowGap;
+      if (ally.visualX < minX) {
+        ally.visualX = minX;
+      }
+    });
   }
 }
 
@@ -458,11 +464,42 @@ function separateSpritesByGap(
   return positions;
 }
 
+/** 接敵中: 敵同士の重なりを左へ広げる（前衛より右に押し出さない） */
+function separateEngagedEnemySpritesLeft(
+  units: Array<{ id: string; visualX: number; isAlive: boolean }>,
+): Map<string, number> {
+  return separateSpritesByGapLeft(units, engagedMinLeftEdgeGap());
+}
+
 /** 接敵中: 同一陣営のスプライト重なり解消 */
 export function separateEngagedSprites(
-  units: Array<{ id: string; visualX: number; isAlive: boolean }>
+  units: Array<{ id: string; visualX: number; isAlive: boolean }>,
 ): Map<string, number> {
   return separateSpritesByGap(units, engagedMinLeftEdgeGap());
+}
+
+/** 接敵中: 敵グループを gap 維持したまま画面左端以上へまとめてシフト */
+export function clampEngagedEnemyGroupOnScreen(
+  enemies: Array<{ id: string; visualX: number; isAlive: boolean }>,
+  combatCameraX: number,
+  minScreenX = 0,
+): Map<string, number> {
+  const separated = separateEngagedSprites(enemies);
+  if (separated.size === 0) return separated;
+
+  let groupMinScreen = Infinity;
+  for (const visualX of separated.values()) {
+    groupMinScreen = Math.min(groupMinScreen, visualX + combatCameraX);
+  }
+  if (!Number.isFinite(groupMinScreen) || groupMinScreen >= minScreenX) {
+    return separated;
+  }
+  const shift = minScreenX - groupMinScreen;
+  const shifted = new Map<string, number>();
+  for (const [id, visualX] of separated) {
+    shifted.set(id, visualX + shift);
+  }
+  return shifted;
 }
 
 /** 非戦闘時: 左から出現する敵の重なりを左へ広げる */
@@ -662,6 +699,366 @@ export function computeAllyPositions(
   return new Map(placements.map((p) => [p.id, p.x]));
 }
 
+/** 戦闘後の段階的隊列復帰フェーズ */
+export type FormationRestorePhase = "lead" | "trail" | "marching";
+
+export const FORMATION_RESTORE_SPACING_EPSILON = 2;
+
+export interface FormationRestoreUnit {
+  id: string;
+  role: Role;
+  formationRow: FormationRow;
+  isAlive: boolean;
+  visualX: number;
+}
+
+export interface FormationRestoreGroups {
+  leadIds: Set<string>;
+  trailIds: Set<string>;
+}
+
+export interface FormationRestoreAnchors {
+  leadFront: FormationRestoreUnit | null;
+  leadBack: FormationRestoreUnit | null;
+  trailFront: FormationRestoreUnit | null;
+  trailBack: FormationRestoreUnit | null;
+}
+
+export interface StaggeredFormationRestoreState {
+  phase: FormationRestorePhase;
+  allies: FormationRestoreUnit[];
+}
+
+function formationSlotInRow(
+  ally: Pick<AllyPlacementInput, "id" | "role" | "formationRow" | "isAlive">,
+  rowAllies: Array<
+    Pick<AllyPlacementInput, "id" | "role" | "formationRow" | "isAlive">
+  >,
+): number {
+  const row = ally.formationRow;
+  const sorted = rowAllies
+    .filter((a) => a.formationRow === row && a.isAlive)
+    .sort((a, b) => rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role));
+  return sorted.findIndex((a) => a.id === ally.id);
+}
+
+/** slot 0 = defender/supporter 列、slot 1+ = attacker 列 */
+export function getFormationRestoreGroups(
+  allies: Array<
+    Pick<AllyPlacementInput, "id" | "role" | "formationRow" | "isAlive">
+  >,
+): FormationRestoreGroups {
+  const living = allies.filter((ally) => ally.isAlive);
+  const leadIds = new Set<string>();
+  const trailIds = new Set<string>();
+
+  for (const ally of living) {
+    const slot = formationSlotInRow(ally, living);
+    if (slot <= 0) {
+      leadIds.add(ally.id);
+    } else {
+      trailIds.add(ally.id);
+    }
+  }
+
+  return { leadIds, trailIds };
+}
+
+export function resolveFormationRestoreAnchors(
+  allies: FormationRestoreUnit[],
+): FormationRestoreAnchors {
+  const living = allies.filter((ally) => ally.isAlive);
+  let leadFront: FormationRestoreUnit | null = null;
+  let leadBack: FormationRestoreUnit | null = null;
+  let trailFront: FormationRestoreUnit | null = null;
+  let trailBack: FormationRestoreUnit | null = null;
+
+  for (const ally of living) {
+    const slot = formationSlotInRow(ally, living);
+    if (ally.formationRow === "front") {
+      if (slot <= 0) leadFront = ally;
+      else trailFront = ally;
+    } else if (ally.formationRow === "back") {
+      if (slot <= 0) leadBack = ally;
+      else trailBack = ally;
+    }
+  }
+
+  return { leadFront, leadBack, trailFront, trailBack };
+}
+
+export function isLeadColumnSpacingRestored(
+  leadFrontX: number,
+  leadBackX: number,
+  epsilon: number = FORMATION_RESTORE_SPACING_EPSILON,
+): boolean {
+  return (
+    Math.abs(leadBackX - leadFrontX - ALLY_FORMATION_BACK_DEPTH) <= epsilon
+  );
+}
+
+/** slot0 前後 + slot1 同列間隔が隊列どおり */
+export function isFormationSpacingRestored(
+  allies: FormationRestoreUnit[],
+  epsilon: number = FORMATION_RESTORE_SPACING_EPSILON,
+): boolean {
+  const living = allies.filter((ally) => ally.isAlive);
+  if (living.length === 0) return true;
+
+  const anchors = resolveFormationRestoreAnchors(living);
+  const { trailIds } = getFormationRestoreGroups(living);
+
+  if (anchors.leadFront && anchors.leadBack) {
+    if (
+      !isLeadColumnSpacingRestored(
+        anchors.leadFront.visualX,
+        anchors.leadBack.visualX,
+        epsilon,
+      )
+    ) {
+      return false;
+    }
+  }
+
+  if (trailIds.size === 0) {
+    return true;
+  }
+
+  if (anchors.leadFront && anchors.trailFront) {
+    const gap = anchors.trailFront.visualX - anchors.leadFront.visualX;
+    if (Math.abs(gap - ALLY_ROW_SPACING) > epsilon) return false;
+  }
+
+  if (anchors.leadBack && anchors.trailBack) {
+    const gap = anchors.trailBack.visualX - anchors.leadBack.visualX;
+    if (Math.abs(gap - ALLY_ROW_SPACING) > epsilon) return false;
+  }
+
+  return true;
+}
+
+/**
+ * 戦闘後: 左進軍しつつ slot0 前後間隔 → slot1 同列間隔の順で隊列を広げる。
+ * allies.visualX を直接更新し、次フェーズを返す。
+ */
+export function applyStaggeredFormationMarchRestore(
+  state: StaggeredFormationRestoreState,
+  deltaTime: number,
+  spacingSpeed: number = APPROACH_SPEED,
+): FormationRestorePhase {
+  const living = state.allies.filter((ally) => ally.isAlive);
+  if (living.length === 0) {
+    return state.phase;
+  }
+
+  const marchStep = SCROLL_SPEED * deltaTime;
+  const spacingStep = spacingSpeed * deltaTime;
+
+  for (const ally of living) {
+    ally.visualX -= marchStep;
+  }
+
+  const anchors = resolveFormationRestoreAnchors(living);
+  let phase = state.phase;
+
+  if (phase === "lead") {
+    if (!anchors.leadFront || !anchors.leadBack) {
+      phase = "trail";
+    } else {
+      const targetBackX =
+        anchors.leadFront.visualX + ALLY_FORMATION_BACK_DEPTH;
+      anchors.leadBack.visualX = approachAllyVisualX(
+        anchors.leadBack.visualX,
+        targetBackX,
+        spacingStep,
+      );
+      if (
+        isLeadColumnSpacingRestored(
+          anchors.leadFront.visualX,
+          anchors.leadBack.visualX,
+        )
+      ) {
+        phase = "trail";
+      }
+    }
+  }
+
+  if (phase === "trail") {
+    if (anchors.leadFront && anchors.trailFront) {
+      const target = anchors.leadFront.visualX + ALLY_ROW_SPACING;
+      anchors.trailFront.visualX = approachAllyVisualX(
+        anchors.trailFront.visualX,
+        target,
+        spacingStep,
+      );
+    }
+    if (anchors.leadBack && anchors.trailBack) {
+      const target = anchors.leadBack.visualX + ALLY_ROW_SPACING;
+      anchors.trailBack.visualX = approachAllyVisualX(
+        anchors.trailBack.visualX,
+        target,
+        spacingStep,
+      );
+    }
+    if (isFormationSpacingRestored(living)) {
+      phase = "marching";
+    }
+  }
+
+  state.phase = phase;
+  return phase;
+}
+
+export interface CompensatedFormationResetState {
+  phase: FormationRestorePhase;
+  allies: FormationRestoreUnit[];
+}
+
+/** 非接敵時の screen 目標 X（ROW_X + slot 間隔） */
+export function resolveFormationScreenTargets(
+  allies: Array<
+    Pick<AllyPlacementInput, "id" | "role" | "formationRow" | "isAlive">
+  >,
+): Map<string, number> {
+  const living = allies.filter((ally) => ally.isAlive);
+  return computeAllyPositions(
+    living.map((ally) => ({
+      id: ally.id,
+      role: ally.role,
+      formationRow: ally.formationRow,
+      rangePx: 0,
+      isAlive: true as const,
+    })),
+    { engaged: false },
+  );
+}
+
+function isLeadScreenLayoutRestored(
+  allies: FormationRestoreUnit[],
+  combatCameraX: number,
+  targets: Map<string, number>,
+  epsilon: number = FORMATION_RESTORE_SPACING_EPSILON,
+): boolean {
+  const { leadIds } = getFormationRestoreGroups(allies);
+  for (const ally of allies) {
+    if (!ally.isAlive || !leadIds.has(ally.id)) continue;
+    const target = targets.get(ally.id);
+    if (target === undefined) continue;
+    const screenX = ally.visualX + combatCameraX;
+    if (Math.abs(screenX - target) > epsilon) return false;
+  }
+  return true;
+}
+
+/** 各味方の screen X が初期隊列位置と一致しているか */
+export function isFormationScreenLayoutRestored(
+  allies: FormationRestoreUnit[],
+  combatCameraX: number,
+  epsilon: number = FORMATION_RESTORE_SPACING_EPSILON,
+): boolean {
+  const living = allies.filter((ally) => ally.isAlive);
+  if (living.length === 0) return true;
+
+  const targets = resolveFormationScreenTargets(living);
+  for (const ally of living) {
+    const target = targets.get(ally.id);
+    if (target === undefined) continue;
+    const screenX = ally.visualX + combatCameraX;
+    if (Math.abs(screenX - target) > epsilon) return false;
+  }
+  return true;
+}
+
+/** 完了時: visualX を ROW_X 基準へ、combatCameraX を 0 に正規化 */
+export function snapFormationScreenLayout(
+  allies: FormationRestoreUnit[],
+): void {
+  const living = allies.filter((ally) => ally.isAlive);
+  const targets = resolveFormationScreenTargets(living);
+  for (const ally of living) {
+    const target = targets.get(ally.id);
+    if (target !== undefined) {
+      ally.visualX = target;
+    }
+  }
+}
+
+/**
+ * Wave 間: 左進軍 + カメラ右移補正しつつ screen 絶対位置へ隊列を戻す。
+ * allies.visualX を直接更新し、更新後の combatCameraX と phase を返す。
+ */
+export function tickCompensatedFormationReset(
+  state: CompensatedFormationResetState,
+  combatCameraX: number,
+  deltaTime: number,
+  spacingSpeed: number = APPROACH_SPEED,
+): { phase: FormationRestorePhase; combatCameraX: number } {
+  const living = state.allies.filter((ally) => ally.isAlive);
+  if (living.length === 0) {
+    return { phase: state.phase, combatCameraX };
+  }
+
+  const marchStep = SCROLL_SPEED * deltaTime;
+  const spacingStep = spacingSpeed * deltaTime;
+  const targets = resolveFormationScreenTargets(living);
+  const { leadIds, trailIds } = getFormationRestoreGroups(living);
+
+  for (const ally of living) {
+    ally.visualX -= marchStep;
+  }
+  let camera = combatCameraX + marchStep;
+
+  const correctAllyTowardScreenTarget = (ally: FormationRestoreUnit): void => {
+    const targetScreen = targets.get(ally.id);
+    if (targetScreen === undefined) return;
+    const screenX = ally.visualX + camera;
+    if (screenX <= targetScreen + FORMATION_RESTORE_SPACING_EPSILON) return;
+    const targetVisual = targetScreen - camera;
+    ally.visualX = approachAllyVisualX(ally.visualX, targetVisual, spacingStep);
+  };
+
+  let phase = state.phase;
+
+  if (phase === "lead") {
+    for (const ally of living) {
+      if (leadIds.has(ally.id)) {
+        correctAllyTowardScreenTarget(ally);
+      }
+    }
+    if (isLeadScreenLayoutRestored(living, camera, targets)) {
+      phase = "trail";
+    }
+  }
+
+  if (phase === "trail") {
+    for (const ally of living) {
+      if (leadIds.has(ally.id) || trailIds.has(ally.id)) {
+        correctAllyTowardScreenTarget(ally);
+      }
+    }
+    if (isFormationScreenLayoutRestored(living, camera)) {
+      phase = "marching";
+    }
+  }
+
+  let maxLeftDeficit = 0;
+  for (const ally of living) {
+    const targetScreen = targets.get(ally.id);
+    if (targetScreen === undefined) continue;
+    const screenX = ally.visualX + camera;
+    const deficit = targetScreen - screenX;
+    if (deficit > maxLeftDeficit) {
+      maxLeftDeficit = deficit;
+    }
+  }
+  if (maxLeftDeficit > FORMATION_RESTORE_SPACING_EPSILON) {
+    camera += Math.min(spacingStep, maxLeftDeficit);
+  }
+
+  state.phase = phase;
+  return { phase, combatCameraX: camera };
+}
+
 export function computeEnemyStopX(
   enemyRangePx: number,
   targetAllyX: number,
@@ -771,10 +1168,13 @@ export function resolveEngagedLayout(
     living.map((ally) => ({
       id: ally.id,
       formationRow: ally.formationRow,
+      rangePx: ally.rangePx,
+      battleX: ally.battleX,
       isAlive: true as const,
       engagedVisualLaneX: lanes.get(ally.id) ?? 0,
     })),
     frontLineVisualX,
+    ctx.battleVisualOffset,
   );
 
   const frontLineGap = engagedFrontLineGap();
@@ -800,7 +1200,10 @@ export function resolveEngagedLayout(
         enemy.id,
         backRowOnly
           ? targetX - frontLineGap
-          : computeRangedEnemyVisualX(targetX, referenceBackRowAllyX),
+          : computeRangedEnemyVisualX(
+              frontLineVisualX,
+              referenceBackRowAllyX,
+            ),
       );
       continue;
     }
@@ -808,6 +1211,35 @@ export function resolveEngagedLayout(
     if (meleeX !== undefined) {
       enemyVisualX.set(enemy.id, meleeX);
     }
+  }
+
+  let maxMeleeVisualX = Number.NEGATIVE_INFINITY;
+  for (const enemy of ctx.enemies) {
+    if (!enemy.isAlive || enemy.rangePx > 0) continue;
+    const meleeX = enemyVisualX.get(enemy.id);
+    if (meleeX !== undefined) {
+      maxMeleeVisualX = Math.max(maxMeleeVisualX, meleeX);
+    }
+  }
+  if (Number.isFinite(maxMeleeVisualX)) {
+    const rangedRearCap = maxMeleeVisualX - engagedMinLeftEdgeGap();
+    for (const enemy of ctx.enemies) {
+      if (!enemy.isAlive || enemy.rangePx <= 0) continue;
+      const ideal = enemyVisualX.get(enemy.id);
+      if (ideal === undefined) continue;
+      enemyVisualX.set(enemy.id, Math.min(ideal, rangedRearCap));
+    }
+  }
+
+  const separatedEnemies = separateEngagedEnemySpritesLeft(
+    [...enemyVisualX.entries()].map(([id, visualX]) => ({
+      id,
+      visualX,
+      isAlive: true as const,
+    })),
+  );
+  for (const [id, visualX] of separatedEnemies) {
+    enemyVisualX.set(id, visualX);
   }
 
   return { allyVisualX, enemyVisualX, frontLineVisualX };
@@ -818,21 +1250,27 @@ export function resolveStableAllyEngagedVisuals(
   allies: Array<{
     id: string;
     formationRow: FormationRow;
+    rangePx: number;
+    battleX: number;
     isAlive: boolean;
     engagedVisualLaneX?: number;
   }>,
-  contactVisualX: number
+  contactVisualX: number,
+  battleVisualOffset: number,
 ): Map<string, number> {
   const ideals = allies
     .filter((ally) => ally.isAlive)
-    .map((ally) => ({
-      id: ally.id,
-      visualX:
-        ally.formationRow === "back"
-          ? ROW_X.back
-          : contactVisualX + (ally.engagedVisualLaneX ?? 0),
-      isAlive: true as const,
-    }));
+    .map((ally) => {
+      let visualX: number;
+      if (ally.formationRow === "back" && ally.rangePx > 0) {
+        visualX = ally.battleX + battleVisualOffset;
+      } else if (ally.formationRow === "back") {
+        visualX = ROW_X.back;
+      } else {
+        visualX = contactVisualX + (ally.engagedVisualLaneX ?? 0);
+      }
+      return { id: ally.id, visualX, isAlive: true as const };
+    });
   return separateEngagedSprites(ideals);
 }
 

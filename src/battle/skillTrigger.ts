@@ -1,4 +1,10 @@
-import type { ActiveSkillDef, SkillCooldown, SkillTrigger, SkillTriggerKind } from './types.ts';
+import type {
+  ActiveSkillDef,
+  CombatantState,
+  SkillCooldown,
+  SkillTrigger,
+  SkillTriggerKind,
+} from './types.ts';
 
 export function resolveSkillTrigger(skill: ActiveSkillDef): SkillTrigger {
   if (skill.trigger) return skill.trigger;
@@ -18,6 +24,18 @@ export function resetCooldownAfterFire(
   skill: ActiveSkillDef,
 ): void {
   cd.remaining = resolveSkillTrigger(skill).value;
+}
+
+/** ステージ開始時: 全スキル CD を未充填（remaining = trigger.value）にする */
+export function initializeSkillCooldowns(
+  unit: CombatantState,
+  actives: Record<string, ActiveSkillDef>,
+): void {
+  for (const cd of unit.cooldowns) {
+    const skill = actives[cd.skillId];
+    if (!skill) continue;
+    cd.remaining = resolveSkillTrigger(skill).value;
+  }
 }
 
 export function shouldTickCooldown(

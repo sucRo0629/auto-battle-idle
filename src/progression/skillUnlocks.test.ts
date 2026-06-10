@@ -11,6 +11,12 @@ const registry: SkillRegistry = {
       effect: 'targetRuleOverride',
       targetRuleOverride: { kind: "stat", side: "enemy", stat: "hp", order: "highest" },
     },
+    cls_passive_lv5: {
+      id: 'cls_passive_lv5',
+      name: 'Passive5',
+      effect: 'evasionChance',
+      evasionChance: 0.1,
+    },
   },
   actives: {
     cls_basic: { id: 'cls_basic', name: 'Basic', effect: [] },
@@ -46,7 +52,7 @@ describe('passiveIds separation', () => {
     expect(enriched.classSkillIds).toContain('cls_active_lv0');
   });
 
-  it('resolveLearnedSkills always returns passiveIds regardless of level', () => {
+  it('resolveLearnedSkills returns legacy passiveIds when not listed in skills[]', () => {
     const enriched = enrichClassPreset(baseClass, registry);
     const lv1 = resolveLearnedSkills(enriched, 1, registry);
     expect(lv1.learnedPassiveIds).toEqual(['cls_passive']);
@@ -55,5 +61,27 @@ describe('passiveIds separation', () => {
     const lv2 = resolveLearnedSkills(enriched, 2, registry);
     expect(lv2.learnedPassiveIds).toEqual(['cls_passive']);
     expect(lv2.learnedActiveIds).toEqual(['cls_active_lv0', 'cls_active_lv2']);
+  });
+
+  it('resolveLearnedSkills gates passives listed in skills[] by level', () => {
+    const classWithLeveledPassive: ClassPresetBeforeEnrich = {
+      ...baseClass,
+      passiveIds: ['cls_passive', 'cls_passive_lv5'],
+      skills: [
+        { level: 0, skillIds: ['cls_active_lv0', 'cls_passive'] },
+        { level: 2, skillIds: ['cls_active_lv2'] },
+        { level: 5, skillIds: ['cls_passive_lv5'] },
+      ],
+    };
+    const enriched = enrichClassPreset(classWithLeveledPassive, registry);
+    expect(enriched.starterPassiveIds).toEqual(['cls_passive']);
+
+    const lv1 = resolveLearnedSkills(enriched, 1, registry);
+    expect(lv1.learnedPassiveIds).toEqual(['cls_passive']);
+    expect(lv1.learnedActiveIds).toEqual(['cls_active_lv0']);
+
+    const lv5 = resolveLearnedSkills(enriched, 5, registry);
+    expect(lv5.learnedPassiveIds).toEqual(['cls_passive', 'cls_passive_lv5']);
+    expect(lv5.learnedActiveIds).toEqual(['cls_active_lv0', 'cls_active_lv2']);
   });
 });

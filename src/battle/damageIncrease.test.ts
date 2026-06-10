@@ -59,6 +59,16 @@ describe('damageIncrease', () => {
     expect(mul).toBe(1.5);
   });
 
+  it('targetHp ignores barrierHp when comparing hp ratio', () => {
+    const attacker = unit({ id: 'a' });
+    const target = unit({ id: 't', hp: 100, maxHp: 100, barrierHp: 50 });
+    const mul = resolveDamageIncreaseMultiplier(attacker, target, {
+      scale: 2,
+      conditions: [{ kind: 'targetHp', maxHpRatio: 0.5 }],
+    });
+    expect(mul).toBe(1);
+  });
+
   it('requires all conditions (AND)', () => {
     const attacker = unit({ id: 'a', hp: 20, maxHp: 100 });
     const target = unit({ id: 't', hp: 30, maxHp: 100 });
@@ -66,21 +76,9 @@ describe('damageIncrease', () => {
       scale: 2,
       conditions: [
         { kind: 'targetHp', maxHpRatio: 0.5 },
-        { kind: 'selfHp', maxHpRatio: 0.5, mode: 'threshold' },
+        { kind: 'targetHp', maxHpRatio: 0.4 },
       ],
     });
     expect(mul).toBe(4);
-  });
-
-  it('supports selfHp scaling mode', () => {
-    const attacker = unit({ id: 'a', hp: 25, maxHp: 100 });
-    const target = unit({ id: 't' });
-    const mul = resolveDamageIncreaseMultiplier(attacker, target, {
-      scale: 0.6,
-      conditions: [
-        { kind: 'selfHp', maxHpRatio: 1, mode: 'scaling', maxMul: 1.5 },
-      ],
-    });
-    expect(mul).toBeCloseTo(1.45, 5);
   });
 });

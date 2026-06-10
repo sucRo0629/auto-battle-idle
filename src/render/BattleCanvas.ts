@@ -53,6 +53,7 @@ import {
   type BattleHudTheme,
 } from "./battleHudTheme.ts";
 import { VictoryOverlay } from "./VictoryOverlay.ts";
+import { layoutHpBarBarrier } from "./hpBarBarrierLayout.ts";
 import { DeathPlaybackManager } from "./deathPlayback.ts";
 import { MAX_ACTIVE_SLOTS } from "../progression/skillBuild.ts";
 
@@ -619,15 +620,18 @@ export class BattleCanvas implements IBattleRenderer {
     const { ctx } = this;
     if (maxHp <= 0) return;
 
-    const hpRatio = Math.max(0, hp / maxHp);
+    const layout = layoutHpBarBarrier(x, barW, hp, maxHp, barrierHp);
+    if (!layout) return;
+
     ctx.fillStyle = hpFill;
-    ctx.fillRect(x, y, barW * hpRatio, barH);
+    ctx.fillRect(x, y, layout.hpWidth, barH);
 
-    if (barrierHp <= 0) return;
+    if (layout.tier1.length === 0) return;
 
-    const tier1Ratio = Math.min(barrierHp, maxHp) / maxHp;
     ctx.fillStyle = barrierFill;
-    ctx.fillRect(x, y, barW * tier1Ratio, barH);
+    for (const segment of layout.tier1) {
+      ctx.fillRect(segment.x, y, segment.width, barH);
+    }
 
     const overflowRatio = Math.max(0, barrierHp - maxHp) / maxHp;
     if (overflowRatio > 0) {

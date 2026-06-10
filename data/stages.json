@@ -18,6 +18,22 @@
             "spawnX": -160
           }
         ]
+      },
+      {
+        "enemies": [
+          {
+            "templateId": "test_enemy",
+            "spawnX": -100
+          },
+          {
+            "templateId": "test_ranged",
+            "spawnX": -120
+          },
+          {
+            "templateId": "test_ranged",
+            "spawnX": -200
+          }
+        ]
       }
     ]
   },
@@ -46,6 +62,10 @@
           {
             "templateId": "test_enemy_elite",
             "spawnX": -110
+          },
+          {
+            "templateId": "test_enemy_elite",
+            "spawnX": -105
           }
         ]
       }

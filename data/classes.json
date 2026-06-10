@@ -79,10 +79,12 @@
     "def": 12,
     "reg": 0,
     "jobTier": 1,
-    "attackSpeedTier": "fast",
+    "attackSpeedTier": "somewhatFast",
     "basicAttackSkillId": "df_duelist_basic_attack",
     "passiveIds": [
-      "passive_self_low_hp_dmg"
+      "df_duelist_passive_1",
+      "df_duelist_passive_2",
+      "df_duelist_passive_3"
     ],
     "skills": [
       {

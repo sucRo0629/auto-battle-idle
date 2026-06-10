@@ -9,6 +9,7 @@ import {
 } from '../battle/data/gameDataSchema.ts';
 import type {
   ActiveSkillDef,
+  CounterResponseDef,
   DamageIncreaseCondition,
   DamageType,
   PassiveSkillDef,
@@ -58,6 +59,12 @@ function formatAtkScale(scale: number | undefined): string {
   return `ATK×${s}`;
 }
 
+function formatDefScale(scale: number | undefined): string {
+  const s = scale ?? 1;
+  if (s === 1) return 'DEF';
+  return `DEF×${s}`;
+}
+
 function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
   if (!amount) return '—';
   switch (amount.kind) {
@@ -67,6 +74,13 @@ function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
       if (offset === 0) return formatAtkScale(scale);
       const sign = offset > 0 ? '+' : '';
       return `(ATK${sign}${offset})×${scale}`;
+    }
+    case 'defBased': {
+      const scale = amount.defScale ?? 1;
+      const offset = amount.defOffset ?? 0;
+      if (offset === 0) return formatDefScale(scale);
+      const sign = offset > 0 ? '+' : '';
+      return `(DEF${sign}${offset})×${scale}`;
     }
     case 'flat':
       return `固定${amount.flatAmount ?? 0}`;
@@ -107,11 +121,6 @@ function formatDamageIncreaseCondition(condition: DamageIncreaseCondition): stri
     }
     case 'targetHp':
       return `対象HP${formatPercent(condition.maxHpRatio)}以下`;
-    case 'selfHp':
-      if (condition.mode === 'scaling' && condition.maxMul !== undefined) {
-        return `自HP低下（最大×${condition.maxMul}）`;
-      }
-      return `自HP${formatPercent(condition.maxHpRatio)}以下`;
   }
 }
 
@@ -179,6 +188,26 @@ function formatTargetShape(effect: SkillEffectDef): string {
   }
 
   return parts.join(' ');
+}
+
+function formatCounterResponse(response: CounterResponseDef): string {
+  switch (response.kind) {
+    case 'damage': {
+      const dmgType = response.damageType
+        ? DAMAGE_TYPE_LABELS[response.damageType]
+        : '';
+      const amount = formatResourceAmount(response.amount);
+      return dmgType ? `${dmgType}${amount}` : amount;
+    }
+    case 'debuff':
+      return `デバフ${formatStatusStats(response.debuffStat)} ${response.debuffDurationSec}s`;
+    case 'dot':
+      return `DoT×${response.powerMultiplier} ${response.durationSec}s`;
+    case 'stun':
+      return `スタン${response.durationSec}s`;
+    case 'knockback':
+      return `ノック${response.distancePx}px`;
+  }
 }
 
 function formatActiveEffectDetail(effect: SkillEffectDef): string {
@@ -267,6 +296,21 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
     case 'block':
       extras.push(`${formatPercent(effect.blockChance)} ${effect.durationSec}s`);
       break;
+    case 'counter': {
+      const responseParts = effect.responses.map(formatCounterResponse);
+      const range =
+        effect.range !== undefined ? `射程${effect.range}` : '';
+      extras.push(
+        [
+          responseParts.join(' / '),
+          `${effect.durationSec}s`,
+          range,
+        ]
+          .filter(Boolean)
+          .join(' '),
+      );
+      break;
+    }
   }
 
   if (effect.range !== undefined) {
@@ -344,8 +388,25 @@ function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): s
         : '—';
       return `HoT ${interval}s毎 ${amount} → ${formatTarget(def.hotTargetRule, { kind: 'self' })}（${durationLabel}）`;
     }
-    case 'excessHealToBarrier':
-      return `余剰回復バリア ×${def.barrierScale ?? 1}`;
+    case 'excessHealToBarrier': {
+      const sourceLabels = (def.excessHealSources ?? ['outgoing']).map((s) =>
+        s === 'outgoing' ? '与' : '被',
+      );
+      return `余剰回復バリア ×${def.barrierScale ?? 1}（${sourceLabels.join('・')}）`;
+    }
+    case 'selfHpRatioBuff': {
+      const stat = formatStatusStats(def.buffStat);
+      const maxParts: string[] = [];
+      if (def.buffMultiplierMax !== undefined) {
+        maxParts.push(`×${def.buffMultiplierMax}`);
+      }
+      if (def.buffFlatBonusMax !== undefined) {
+        maxParts.push(`+${def.buffFlatBonusMax}`);
+      }
+      const maxLabel = maxParts.length > 0 ? maxParts.join(' ') : '—';
+      const ratio = formatPercent(def.maxBuffAtHpRatio ?? 0);
+      return `自HP比例 ${stat} ${maxLabel}（${ratio}以下で最大）`;
+    }
     case 'extendSelfAppliedDebuff': {
       const parts = [`付与デバフ +${def.extendSec ?? 0}s`];
       if (def.durationMultiplier !== undefined && def.durationMultiplier !== 1) {
@@ -355,6 +416,20 @@ function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): s
     }
     case 'aoeCrowdBonus':
       return `密集 +${def.perExtraTargetScale ?? 0}/体（上限 ${def.maxExtraTargets ?? 0}）`;
+    case 'counterChance': {
+      const responseParts = (def.counterResponses ?? []).map(
+        formatCounterResponse,
+      );
+      const range =
+        def.counterRange !== undefined ? `射程${def.counterRange}` : '';
+      return [
+        `被攻撃時 ${formatPercent(def.counterChance ?? 0)} で反撃`,
+        responseParts.join(' / '),
+        range,
+      ]
+        .filter(Boolean)
+        .join(' ');
+    }
     default:
       return effect;
   }

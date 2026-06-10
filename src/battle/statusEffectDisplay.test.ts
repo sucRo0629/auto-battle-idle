@@ -22,11 +22,13 @@ describe('statusEffectDisplay', () => {
       'atk',
       'def',
       'reg',
+      'attackSpeed',
       'damageReduction',
       'damageIncrease',
       'hot',
       'dot',
       'block',
+      'counter',
       'stun',
     ]);
   });

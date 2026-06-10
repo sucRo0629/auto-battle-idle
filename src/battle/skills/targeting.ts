@@ -219,6 +219,22 @@ function hasDamagedHealCandidate(
   return candidates.some((unit) => unit.hp < unit.maxHp);
 }
 
+function shouldApplyTargetRuleOverride(effect: SkillEffectDef, defaultSpec: TargetSpec): boolean {
+  // targetRuleOverride は攻撃 anchor 専用（classes-and-skills.md）。自己対象・サポート effect は上書きしない
+  if (defaultSpec.kind === 'self') return false;
+  switch (effect.type) {
+    case 'barrier':
+    case 'heal':
+    case 'hot':
+    case 'dispel':
+    case 'buff':
+    case 'block':
+      return false;
+    default:
+      return true;
+  }
+}
+
 function resolveEffectTargetSpec(
   effect: SkillEffectDef,
   actor: CombatantState,
@@ -228,6 +244,7 @@ function resolveEffectTargetSpec(
 ): TargetSpec {
   const defaultSpec = getEffectTarget(effect);
   if (!passives || passives.length === 0) return defaultSpec;
+  if (!shouldApplyTargetRuleOverride(effect, defaultSpec)) return defaultSpec;
   return resolveTargetSpec(passives, defaultSpec, { actor, allies, enemies });
 }
 

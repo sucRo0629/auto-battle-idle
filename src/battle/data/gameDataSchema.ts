@@ -48,6 +48,7 @@ export const SKILL_EFFECT_KINDS = [
   "knockback",
   "dispel",
   "block",
+  "counter",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [
@@ -85,14 +86,35 @@ export const SKILL_EFFECT_ANIM_LABELS: Record<SkillEffectAnimId, string> = {
 
 export const RESOURCE_AMOUNT_KINDS = [
   "atkBased",
+  "defBased",
   "flat",
   "percentMaxHp",
 ] as const satisfies readonly ResourceAmountKind[];
 
 export const RESOURCE_AMOUNT_KIND_LABELS: Record<ResourceAmountKind, string> = {
   atkBased: "ATK 四則",
+  defBased: "DEF 四則",
   flat: "固定値",
   percentMaxHp: "maxHp 割合",
+};
+
+export const COUNTER_RESPONSE_KINDS = [
+  "damage",
+  "debuff",
+  "dot",
+  "stun",
+  "knockback",
+] as const satisfies readonly import("../types.ts").CounterResponseKind[];
+
+export const COUNTER_RESPONSE_KIND_LABELS: Record<
+  import("../types.ts").CounterResponseKind,
+  string
+> = {
+  damage: "ダメージ",
+  debuff: "デバフ",
+  dot: "DoT",
+  stun: "スタン",
+  knockback: "ノックバック",
 };
 export const DAMAGE_TYPES = [
   "physical",
@@ -180,6 +202,8 @@ export const PASSIVE_EFFECT_KINDS = [
   "block",
   "healReceivedIncrease",
   "damageReduction",
+  "counterChance",
+  "selfHpRatioBuff",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<PassiveEffectKind, string> = {
@@ -196,12 +220,15 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<PassiveEffectKind, string> = {
   block: "ブロック",
   healReceivedIncrease: "被回復量増加",
   damageReduction: "ダメージ軽減",
+  counterChance: "確率反撃",
+  selfHpRatioBuff: "自HP割合バフ",
 };
 export const STATUS_EFFECT_STATS = [
   "atk",
   "def",
   "reg",
   "damageTaken",
+  "attackSpeed",
 ] as const satisfies readonly StatusEffectStat[];
 export const VALID_REG_VALUES = [0, 5, 10, 15, 20] as const;
 export const JOB_TIERS = [1, 2] as const;
@@ -402,7 +429,6 @@ export const TARGET_STAT_ORDER_LABELS: Record<
 export const DAMAGE_INCREASE_CONDITION_KINDS = [
   "debuff",
   "targetHp",
-  "selfHp",
 ] as const satisfies readonly DamageIncreaseCondition["kind"][];
 
 export const DAMAGE_INCREASE_CONDITION_KIND_LABELS: Record<
@@ -411,7 +437,6 @@ export const DAMAGE_INCREASE_CONDITION_KIND_LABELS: Record<
 > = {
   debuff: "デバフ",
   targetHp: "対象HP",
-  selfHp: "自身HP",
 };
 
 export const DEFENSE_IGNORE_DEF_MODES = ["flat", "percent"] as const;

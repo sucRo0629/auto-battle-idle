@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState, GameData } from './types.ts';
+import { SPRITE_GAP } from '../render/formationLayout.ts';
 import {
   resolveAllyApproachBattleX,
   resolveEnemyApproachBattleX,
@@ -174,6 +175,36 @@ describe('resolveAllyApproachBattleX', () => {
 
     expect(approachX).toBe(-10 + 100);
   });
+
+  it('front row approaches ranged target after melee enemies are gone', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
+    });
+    const ranged = mockCombatant({
+      id: 'ranged',
+      isEnemy: true,
+      battleX: 80,
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+      cooldowns: [],
+    });
+
+    const approachX = resolveAllyApproachBattleX(
+      guard,
+      [guard],
+      [ranged],
+      gameData,
+    );
+
+    expect(approachX).toBe(80 + 100);
+  });
 });
 
 describe('resolveEnemyApproachBattleX', () => {
@@ -206,5 +237,38 @@ describe('resolveEnemyApproachBattleX', () => {
     );
 
     expect(approachX).toBe(240 - 100);
+  });
+
+  it('caps ranged approach behind living melee', () => {
+    const rangedEnemy = mockCombatant({
+      id: 'ranged',
+      isEnemy: true,
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      battleX: 50,
+      cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
+    });
+    const melee = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      battleX: 120,
+      cooldowns: [],
+    });
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      battleX: 240,
+      cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
+    });
+
+    const approachX = resolveEnemyApproachBattleX(
+      rangedEnemy,
+      [guard],
+      [melee, rangedEnemy],
+      gameData,
+    );
+
+    expect(approachX).toBeLessThanOrEqual(120 - SPRITE_GAP);
   });
 });

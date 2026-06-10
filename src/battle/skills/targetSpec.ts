@@ -1,5 +1,6 @@
 import { isRangedAttack } from '../data/entityTraits.ts';
 import {
+  currentHpRatio,
   getEffectiveAtk,
   getEffectiveDef,
   getEffectiveReg,
@@ -259,11 +260,6 @@ function compareStat(
   }
 }
 
-function hpRatio(unit: CombatantState): number {
-  if (unit.maxHp <= 0) return 0;
-  return unit.hp / unit.maxHp;
-}
-
 function isFrontlineAnchorSpec(spec: TargetSpec): boolean {
   if (spec.kind === 'distance' && spec.side === 'enemy' && spec.order === 'nearest') {
     return true;
@@ -365,7 +361,9 @@ export function pickTargetFromPool(
     const pickHigher = spec.order === 'highest';
     const pickLower = spec.order === 'lowest' || spec.order === 'ratio';
     if (spec.stat === 'hp' && spec.order === 'ratio') {
-      return pool.reduce((a, b) => (hpRatio(a) <= hpRatio(b) ? a : b));
+      return pool.reduce((a, b) =>
+        currentHpRatio(a) <= currentHpRatio(b) ? a : b,
+      );
     }
     return pool.reduce((a, b) => {
       const av = compareStat(a, spec.stat);
@@ -417,7 +415,7 @@ export function orderPoolByTarget(
 
   if (spec.kind === 'stat') {
     if (spec.stat === 'hp' && spec.order === 'ratio') {
-      return copy.sort((a, b) => hpRatio(a) - hpRatio(b));
+      return copy.sort((a, b) => currentHpRatio(a) - currentHpRatio(b));
     }
     const desc = spec.order === 'highest';
     return copy.sort((a, b) => {
@@ -491,6 +489,7 @@ export function defaultTargetForEffectType(
       return { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' };
     case 'buff':
     case 'block':
+    case 'counter':
       return { kind: 'self' };
     default:
       return { kind: 'distance', side: 'enemy', order: 'nearest' };

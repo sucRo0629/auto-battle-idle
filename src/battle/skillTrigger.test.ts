@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ActiveSkillDef, SkillCooldown } from './types.ts';
+import type { CombatantState } from './types.ts';
 import {
+  initializeSkillCooldowns,
   isTimeTrigger,
   resetCooldownAfterFire,
   resolveSkillTrigger,
@@ -50,6 +52,27 @@ describe('skillTrigger', () => {
       ),
     ).toBe(false);
     expect(shouldTickCooldown(skill(), 'basic')).toBe(true);
+  });
+
+  it('initializeSkillCooldowns sets all slots to trigger value at stage start', () => {
+    const registry = {
+      basic: skill({ id: 'basic', trigger: { kind: 'time', value: 2 } }),
+      heavy: skill({ id: 'heavy', trigger: { kind: 'basicAttackCount', value: 4 } }),
+      guard: skill({ id: 'guard', trigger: { kind: 'hitsTaken', value: 3 } }),
+    };
+    const unit = {
+      cooldowns: [
+        { skillId: 'basic', remaining: 0, slotKind: 'basic' as const },
+        { skillId: 'heavy', remaining: 0, slotKind: 'active' as const, slotIndex: 0 },
+        { skillId: 'guard', remaining: 0, slotKind: 'active' as const, slotIndex: 1 },
+      ],
+    } as CombatantState;
+
+    initializeSkillCooldowns(unit, registry);
+
+    expect(unit.cooldowns[0]!.remaining).toBe(2);
+    expect(unit.cooldowns[1]!.remaining).toBe(4);
+    expect(unit.cooldowns[2]!.remaining).toBe(3);
   });
 
   it('resetCooldownAfterFire sets trigger value', () => {

@@ -6,6 +6,8 @@ import {
   MOVE_MODES,
   PASSIVE_EFFECT_KIND_LABELS,
   PASSIVE_EFFECT_KIND_OPTIONS,
+  COUNTER_RESPONSE_KIND_LABELS,
+  COUNTER_RESPONSE_KINDS,
   RESOURCE_AMOUNT_KIND_LABELS,
   RESOURCE_AMOUNT_KIND_OPTIONS,
   SKILL_EFFECT_ANIM_LABELS,
@@ -22,6 +24,9 @@ import {
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
+  CounterResponseDef,
+  CounterResponseKind,
+  CounterSkillEffect,
   MoveSkillEffect,
   PassiveEffectKind,
   PassiveSkillDef,
@@ -83,6 +88,7 @@ const EFFECT_KIND_LABELS: Record<SkillEffectKind, string> = {
   knockback: 'ノックバック',
   dispel: 'デバフ解除',
   block: 'ブロック付与',
+  counter: '反撃',
 };
 
 const STAT_LABELS: Record<StatusEffectStat, string> = {
@@ -90,10 +96,308 @@ const STAT_LABELS: Record<StatusEffectStat, string> = {
   def: '防御',
   reg: '耐魔',
   damageTaken: '被ダメ',
+  attackSpeed: '攻撃速度',
 };
 
 function defaultResourceAmount(atkScale = 1): ResourceAmountSpec {
   return { kind: 'atkBased', atkScale };
+}
+
+function defaultDefResourceAmount(defScale = 1): ResourceAmountSpec {
+  return { kind: 'defBased', defScale };
+}
+
+function defaultCounterResponse(kind: CounterResponseKind): CounterResponseDef {
+  switch (kind) {
+    case 'damage':
+      return {
+        kind: 'damage',
+        amount: defaultDefResourceAmount(0.5),
+        damageType: 'physical',
+      };
+    case 'debuff':
+      return {
+        kind: 'debuff',
+        debuffStat: 'atk',
+        debuffMultiplier: 0.8,
+        debuffDurationSec: 3,
+      };
+    case 'dot':
+      return {
+        kind: 'dot',
+        durationSec: 3,
+        powerMultiplier: 0.5,
+        damageType: 'physical',
+      };
+    case 'stun':
+      return { kind: 'stun', durationSec: 1 };
+    case 'knockback':
+      return { kind: 'knockback', distancePx: 30 };
+  }
+}
+
+function counterHasResponse(
+  effect: CounterSkillEffect,
+  kind: CounterResponseKind,
+): boolean {
+  return effect.responses.some((response) => response.kind === kind);
+}
+
+function patchCounterResponses(
+  effect: CounterSkillEffect,
+  kind: CounterResponseKind,
+  enabled: boolean,
+): CounterResponseDef[] {
+  const rest = effect.responses.filter((response) => response.kind !== kind);
+  if (!enabled) {
+    return rest.length > 0 ? rest : [defaultCounterResponse('damage')];
+  }
+  return [...rest, defaultCounterResponse(kind)];
+}
+
+function findCounterResponse<T extends CounterResponseKind>(
+  effect: CounterSkillEffect,
+  kind: T,
+): Extract<CounterResponseDef, { kind: T }> | undefined {
+  return effect.responses.find(
+    (response): response is Extract<CounterResponseDef, { kind: T }> =>
+      response.kind === kind,
+  );
+}
+
+function appendCounterEffectFields(
+  parent: HTMLElement,
+  effect: CounterSkillEffect,
+  patchEffect: (
+    patch: (prev: CounterSkillEffect) => CounterSkillEffect,
+    options?: { rerender?: boolean },
+  ) => void,
+  options?: { showDuration?: boolean },
+): void {
+  const showDuration = options?.showDuration ?? true;
+  const grid = appendGrid(parent);
+  grid.appendChild(
+    createEl(
+      'p',
+      'editor-hint',
+      showDuration
+        ? '付与対象: 自身（固定）。反撃は設定射程内の攻撃を受けたとき攻撃者へ適用。'
+        : '常時受付。被攻撃のたびに発動確率を判定し、成功時に反撃内容を適用。',
+    ),
+  );
+  grid.appendChild(
+    createFieldRow(
+      '反撃射程 (px)',
+      createNumberInput(
+        effect.range ?? 0,
+        (range) =>
+          patchEffect((prev) => ({
+            ...prev,
+            range: range >= 0 ? range : 0,
+          })),
+        { min: 0, step: 5 },
+      ),
+    ),
+  );
+  if (showDuration) {
+    grid.appendChild(
+      createFieldRow(
+        '秒数',
+        createNumberInput(
+          effect.durationSec,
+          (durationSec) =>
+            patchEffect((prev) => ({ ...prev, durationSec })),
+          { min: 0.1, step: 0.5 },
+        ),
+      ),
+    );
+  }
+
+  const responseSection = createSection('反撃内容（1種別以上）');
+  grid.appendChild(responseSection);
+  for (const kind of COUNTER_RESPONSE_KINDS) {
+    const enabled = counterHasResponse(effect, kind);
+    const toggleRow = createEl('div', 'editor-field editor-field-checkbox');
+    const toggleInput = createEl('input') as HTMLInputElement;
+    toggleInput.type = 'checkbox';
+    toggleInput.checked = enabled;
+    toggleInput.addEventListener('change', () => {
+      patchEffect(
+        (prev) => ({
+          ...prev,
+          responses: patchCounterResponses(prev, kind, toggleInput.checked),
+        }),
+        { rerender: true },
+      );
+    });
+    toggleRow.appendChild(
+      createEl('label', undefined, COUNTER_RESPONSE_KIND_LABELS[kind]),
+    );
+    toggleRow.appendChild(toggleInput);
+    responseSection.appendChild(toggleRow);
+
+    if (!enabled) continue;
+    const response = findCounterResponse(effect, kind);
+    if (!response) continue;
+
+    if (kind === 'damage' && response.kind === 'damage') {
+      appendResourceAmountFields(responseSection, response.amount, (amount) =>
+        patchEffect((prev) => ({
+          ...prev,
+          responses: prev.responses.map((entry) =>
+            entry.kind === 'damage' ? { ...entry, amount } : entry,
+          ),
+        })),
+      );
+      responseSection.appendChild(
+        createFieldRow(
+          'ダメージ種別',
+          createSelect(
+            response.damageType ?? 'physical',
+            DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
+            (damageType) =>
+              patchEffect((prev) => ({
+                ...prev,
+                responses: prev.responses.map((entry) =>
+                  entry.kind === 'damage' ? { ...entry, damageType } : entry,
+                ),
+              })),
+          ),
+        ),
+      );
+    }
+
+    if (kind === 'debuff' && response.kind === 'debuff') {
+      responseSection.appendChild(
+        createFieldRow(
+          'デバフ stat',
+          createSelect(
+            Array.isArray(response.debuffStat)
+              ? response.debuffStat[0] ?? 'atk'
+              : response.debuffStat,
+            STATUS_EFFECT_STAT_OPTIONS.map((value) => ({
+              value,
+              label: STAT_LABELS[value],
+            })),
+            (debuffStat) =>
+              patchEffect((prev) => ({
+                ...prev,
+                responses: prev.responses.map((entry) =>
+                  entry.kind === 'debuff' ? { ...entry, debuffStat } : entry,
+                ),
+              })),
+          ),
+        ),
+      );
+      responseSection.appendChild(
+        createFieldRow(
+          '倍率',
+          createNumberInput(
+            response.debuffMultiplier ?? 1,
+            (debuffMultiplier) =>
+              patchEffect((prev) => ({
+                ...prev,
+                responses: prev.responses.map((entry) =>
+                  entry.kind === 'debuff' ? { ...entry, debuffMultiplier } : entry,
+                ),
+              })),
+            { step: 0.05 },
+          ),
+        ),
+      );
+      responseSection.appendChild(
+        createFieldRow(
+          '秒数',
+          createNumberInput(
+            response.debuffDurationSec,
+            (debuffDurationSec) =>
+              patchEffect((prev) => ({
+                ...prev,
+                responses: prev.responses.map((entry) =>
+                  entry.kind === 'debuff'
+                    ? { ...entry, debuffDurationSec }
+                    : entry,
+                ),
+              })),
+            { min: 0.1, step: 0.5 },
+          ),
+        ),
+      );
+    }
+
+    if (kind === 'dot' && response.kind === 'dot') {
+      responseSection.appendChild(
+        createFieldRow(
+          '威力倍率',
+          createNumberInput(
+            response.powerMultiplier,
+            (powerMultiplier) =>
+              patchEffect((prev) => ({
+                ...prev,
+                responses: prev.responses.map((entry) =>
+                  entry.kind === 'dot' ? { ...entry, powerMultiplier } : entry,
+                ),
+              })),
+            { step: 0.05 },
+          ),
+        ),
+      );
+      responseSection.appendChild(
+        createFieldRow(
+          '秒数',
+          createNumberInput(
+            response.durationSec,
+            (durationSec) =>
+              patchEffect((prev) => ({
+                ...prev,
+                responses: prev.responses.map((entry) =>
+                  entry.kind === 'dot' ? { ...entry, durationSec } : entry,
+                ),
+              })),
+            { min: 0.1, step: 0.5 },
+          ),
+        ),
+      );
+    }
+
+    if (kind === 'stun' && response.kind === 'stun') {
+      responseSection.appendChild(
+        createFieldRow(
+          '秒数',
+          createNumberInput(
+            response.durationSec,
+            (durationSec) =>
+              patchEffect((prev) => ({
+                ...prev,
+                responses: prev.responses.map((entry) =>
+                  entry.kind === 'stun' ? { ...entry, durationSec } : entry,
+                ),
+              })),
+            { min: 0.1, step: 0.5 },
+          ),
+        ),
+      );
+    }
+
+    if (kind === 'knockback' && response.kind === 'knockback') {
+      responseSection.appendChild(
+        createFieldRow(
+          '距離 px',
+          createNumberInput(
+            response.distancePx,
+            (distancePx) =>
+              patchEffect((prev) => ({
+                ...prev,
+                responses: prev.responses.map((entry) =>
+                  entry.kind === 'knockback' ? { ...entry, distancePx } : entry,
+                ),
+              })),
+            { min: 1, step: 5 },
+          ),
+        ),
+      );
+    }
+  }
 }
 
 function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
@@ -140,6 +444,12 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       break;
     case 'excessHealToBarrier':
       passive.barrierScale ??= 1;
+      passive.excessHealSources ??= ['outgoing'];
+      break;
+    case 'selfHpRatioBuff':
+      passive.buffStat ??= 'atk';
+      passive.buffMultiplierMax ??= 1.5;
+      passive.maxBuffAtHpRatio ??= 0;
       break;
     case 'aoeCrowdBonus':
       passive.perExtraTargetScale ??= 0.1;
@@ -151,7 +461,30 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case 'healReceivedIncrease':
       passive.percent ??= 0.2;
       break;
+    case 'counterChance':
+      passive.counterChance ??= 0.3;
+      passive.counterResponses ??= [defaultCounterResponse('damage')];
+      passive.counterRange ??= 0;
+      break;
   }
+}
+
+function passiveToCounterEffect(passive: PassiveSkillDef): CounterSkillEffect {
+  return {
+    type: 'counter',
+    target: { kind: 'self' },
+    durationSec: 5,
+    range: passive.counterRange,
+    responses: passive.counterResponses ?? [defaultCounterResponse('damage')],
+  };
+}
+
+function applyCounterEffectToPassive(
+  passive: PassiveSkillDef,
+  effect: CounterSkillEffect,
+): void {
+  passive.counterRange = effect.range;
+  passive.counterResponses = effect.responses;
 }
 
 function normalizeEffectAmount(effect: {
@@ -211,6 +544,11 @@ function appendResourceAmountFields(
               () => defaultResourceAmount(current.atkScale ?? 1),
               { rerender: true },
             );
+          } else if (kind === 'defBased') {
+            patchAmount(
+              () => defaultDefResourceAmount(current.defScale ?? 1),
+              { rerender: true },
+            );
           } else if (kind === 'flat') {
             patchAmount(
               () => ({ kind, flatAmount: current.flatAmount ?? 0 }),
@@ -247,6 +585,30 @@ function appendResourceAmountFields(
         createNumberInput(
           amount.atkScale ?? 1,
           (atkScale) => patchAmount((prev) => ({ ...prev, atkScale })),
+          { step: 0.01 },
+        ),
+      ),
+    );
+    return;
+  }
+
+  if (amount.kind === 'defBased') {
+    grid.appendChild(
+      createFieldRow(
+        'DEF 加減',
+        createNumberInput(
+          amount.defOffset ?? 0,
+          (defOffset) => patchAmount((prev) => ({ ...prev, defOffset })),
+          { step: 1 },
+        ),
+      ),
+    );
+    grid.appendChild(
+      createFieldRow(
+        'DEF 倍率',
+        createNumberInput(
+          amount.defScale ?? 1,
+          (defScale) => patchAmount((prev) => ({ ...prev, defScale })),
           { step: 0.01 },
         ),
       ),
@@ -460,6 +822,14 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         type: 'block',
         blockChance: 0.2,
         durationSec: 5,
+      };
+    case 'counter':
+      return {
+        target: { kind: 'self' },
+        type: 'counter',
+        responses: [defaultCounterResponse('damage')],
+        durationSec: 5,
+        range: 0,
       };
   }
 }
@@ -1086,6 +1456,97 @@ export class SkillEditorStep {
             ),
           ),
         );
+        for (const source of ['outgoing', 'incoming'] as const) {
+          const label = source === 'outgoing' ? '与回復' : '被回復';
+          const sources = passive.excessHealSources ?? ['outgoing'];
+          const row = createEl('div', 'editor-field editor-field-checkbox');
+          const input = createEl('input') as HTMLInputElement;
+          input.type = 'checkbox';
+          input.checked = sources.includes(source);
+          input.addEventListener('change', () => {
+            this.patchPassive(index, (current) => {
+              const currentSources = new Set(
+                current.excessHealSources ?? ['outgoing'],
+              );
+              if (input.checked) {
+                currentSources.add(source);
+              } else {
+                currentSources.delete(source);
+              }
+              const next = [...currentSources];
+              current.excessHealSources =
+                next.length > 0 ? next : ['outgoing'];
+            }, { rerender: false });
+          });
+          row.appendChild(createEl('label', undefined, label));
+          row.appendChild(input);
+          effectGrid.appendChild(row);
+        }
+        break;
+      case 'selfHpRatioBuff':
+        effectGrid.appendChild(
+          createFieldRow(
+            '対象ステ',
+            createSelect(
+              Array.isArray(passive.buffStat)
+                ? passive.buffStat[0] ?? 'atk'
+                : passive.buffStat ?? 'atk',
+              STATUS_EFFECT_STAT_OPTIONS.map((value) => ({
+                value,
+                label: STAT_LABELS[value],
+              })),
+              (buffStat) => {
+                this.patchPassive(index, (current) => {
+                  current.buffStat = buffStat;
+                }, { rerender: false });
+              },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '最大倍率',
+            createNumberInput(
+              passive.buffMultiplierMax ?? 1,
+              (buffMultiplierMax) => {
+                this.patchPassive(index, (current) => {
+                  current.buffMultiplierMax =
+                    buffMultiplierMax > 1 ? buffMultiplierMax : undefined;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '最大固定値',
+            createNumberInput(
+              passive.buffFlatBonusMax ?? 0,
+              (buffFlatBonusMax) => {
+                this.patchPassive(index, (current) => {
+                  current.buffFlatBonusMax =
+                    buffFlatBonusMax > 0 ? buffFlatBonusMax : undefined;
+                }, { rerender: false });
+              },
+              { step: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '最大になるHP割合 (0–1)',
+            createNumberInput(
+              passive.maxBuffAtHpRatio ?? 0,
+              (maxBuffAtHpRatio) => {
+                this.patchPassive(index, (current) => {
+                  current.maxBuffAtHpRatio = maxBuffAtHpRatio;
+                }, { rerender: false });
+              },
+              { min: 0, max: 0.99, step: 0.01 },
+            ),
+          ),
+        );
         break;
       case 'extendSelfAppliedDebuff':
         effectGrid.appendChild(
@@ -1146,6 +1607,39 @@ export class SkillEditorStep {
               { step: 1 },
             ),
           ),
+        );
+        break;
+      case 'counterChance':
+        effectGrid.appendChild(
+          createFieldRow(
+            '発動確率 (0–1)',
+            createNumberInput(
+              passive.counterChance ?? 0,
+              (counterChance) => {
+                this.patchPassive(index, (current) => {
+                  current.counterChance = counterChance;
+                }, { rerender: false });
+              },
+              { min: 0, max: 1, step: 0.01 },
+            ),
+          ),
+        );
+        appendCounterEffectFields(
+          effectGrid,
+          passiveToCounterEffect(passive),
+          (patch, options) => {
+            this.patchPassive(
+              index,
+              (current) => {
+                applyCounterEffectToPassive(
+                  current,
+                  patch(passiveToCounterEffect(current)),
+                );
+              },
+              options,
+            );
+          },
+          { showDuration: false },
         );
         break;
     }
@@ -1506,23 +2000,32 @@ export class SkillEditorStep {
         ),
       ),
     );
-    appendTargetSpecFields(grid, getEffectTarget(effect), (target) => {
-      patchEffect((prev) => ({ ...prev, target }) as SkillEffectDef, {
-        rerender: true,
+    if (effect.type === 'counter') {
+      grid.appendChild(
+        createEl('p', 'editor-hint', '付与対象: 自身（固定）'),
+      );
+    } else {
+      appendTargetSpecFields(grid, getEffectTarget(effect), (target) => {
+        patchEffect((prev) => ({ ...prev, target }) as SkillEffectDef, {
+          rerender: true,
+        });
       });
-    });
+    }
     const isMove = effect.type === 'move';
+    const isCounter = effect.type === 'counter';
     const targetShape: TargetShape = effect.targetShape ?? 'single';
-    if (!isMove) {
+    if (!isMove && !isCounter) {
       grid.appendChild(
         createFieldRow(
           'ターゲット形状',
           createSelect(
             targetShape,
-            TARGET_SHAPE_OPTIONS.map((value) => ({
-              value,
-              label: TARGET_SHAPE_LABELS[value],
-            })),
+            TARGET_SHAPE_OPTIONS.filter((value) => value !== 'multiLock').map(
+              (value) => ({
+                value,
+                label: TARGET_SHAPE_LABELS[value],
+              }),
+            ),
             (shape) => {
             patchEffect((prev) => {
             const next: SkillEffectDef = { ...prev, targetShape: shape };
@@ -1910,6 +2413,20 @@ export class SkillEditorStep {
         );
         detailGrid.appendChild(
           createFieldRow(
+            '固定値',
+            createNumberInput(
+              effect.buffFlatBonus ?? 0,
+              (buffFlatBonus) =>
+                patchEffect((prev) => ({
+                  ...prev,
+                  buffFlatBonus: buffFlatBonus > 0 ? buffFlatBonus : undefined,
+                })),
+              { step: 1 },
+            ),
+          ),
+        );
+        detailGrid.appendChild(
+          createFieldRow(
             '秒数',
             createNumberInput(
               effect.buffDurationSec,
@@ -2094,6 +2611,18 @@ export class SkillEditorStep {
               { min: 0.1, step: 0.5 },
             ),
           ),
+        );
+        break;
+      case 'counter':
+        appendCounterEffectFields(
+          detailGrid,
+          effect,
+          (patch, options) =>
+            patchEffect(
+              (prev) =>
+                prev.type === 'counter' ? patch(prev) : prev,
+              options,
+            ),
         );
         break;
       case 'move': {

@@ -3,6 +3,8 @@ import { resolveAttackBattleX, resolveMaxEffectiveRangePx } from './combatPositi
 import { hideFallenAllyCorpses } from './entities.ts';
 import {
   ALLY_FORMATION_BACK_DEPTH,
+  ALLY_ROW_SPACING,
+  applyStaggeredFormationMarchRestore,
   approachAllyVisualX,
   computeAllyPositions,
   computeEngagedAllyTargets,
@@ -13,11 +15,16 @@ import {
   engagedFrontLineGap,
   engagedMinLeftEdgeGap,
   getLeadingAllyFront,
+  isFormationScreenLayoutRestored,
+  isFormationSpacingRestored,
+  isLeadColumnSpacingRestored,
   moveTowardX,
   resolveEngagedLayout,
   resolveEngagedVisualTargets,
   resolveMoveVisualX,
   ROW_X,
+  SCROLL_SPEED,
+  tickCompensatedFormationReset,
 } from '../render/formationLayout.ts';
 import type { ActiveSkillMove } from './skills/skillSequence.ts';
 import type { CombatantState, GameData } from './types.ts';
@@ -219,6 +226,215 @@ describe('visual position separation', () => {
     });
     clampAllyVisualDepth([guard, archer]);
     expect(archer.visualX).toBe(200 + (ROW_X.back - ROW_X.front));
+  });
+
+  it('clampAllyVisualDepth keeps multiple back-row allies separated', () => {
+    const sword = mockCombatant({
+      id: 'sword',
+      formationRow: 'front',
+      role: 'attacker',
+      visualX: 285,
+    });
+    const cleric = mockCombatant({
+      id: 'cleric',
+      formationRow: 'back',
+      role: 'supporter',
+      visualX: 350,
+    });
+    const ranger = mockCombatant({
+      id: 'ranger',
+      formationRow: 'back',
+      role: 'attacker',
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      visualX: 350,
+    });
+    clampAllyVisualDepth([sword, cleric, ranger]);
+    expect(ranger.visualX - cleric.visualX).toBeGreaterThanOrEqual(
+      engagedMinLeftEdgeGap(),
+    );
+  });
+
+  it('applyStaggeredFormationMarchRestore marches all allies left each tick', () => {
+    const allies = [
+      {
+        id: 'guard',
+        role: 'defender' as const,
+        formationRow: 'front' as const,
+        isAlive: true as const,
+        visualX: 140,
+      },
+      {
+        id: 'cleric',
+        role: 'supporter' as const,
+        formationRow: 'back' as const,
+        isAlive: true as const,
+        visualX: 360,
+      },
+    ];
+    const dt = 1 / 60;
+    const before = allies.map((a) => a.visualX);
+    applyStaggeredFormationMarchRestore({ phase: 'lead', allies }, dt);
+    const marchStep = SCROLL_SPEED * dt;
+    for (let i = 0; i < allies.length; i++) {
+      expect(allies[i]!.visualX).toBeLessThanOrEqual(before[i]! - marchStep + 0.01);
+    }
+  });
+
+  it('applyStaggeredFormationMarchRestore advances to trail after lead spacing', () => {
+    const allies = [
+      {
+        id: 'guard',
+        role: 'defender' as const,
+        formationRow: 'front' as const,
+        isAlive: true as const,
+        visualX: 140,
+      },
+      {
+        id: 'cleric',
+        role: 'supporter' as const,
+        formationRow: 'back' as const,
+        isAlive: true as const,
+        visualX: 140 + ALLY_FORMATION_BACK_DEPTH,
+      },
+      {
+        id: 'sword',
+        role: 'attacker' as const,
+        formationRow: 'front' as const,
+        isAlive: true as const,
+        visualX: 120,
+      },
+    ];
+    const phase = applyStaggeredFormationMarchRestore(
+      { phase: 'lead', allies },
+      1 / 60,
+    );
+    expect(phase).toBe('trail');
+    expect(
+      isLeadColumnSpacingRestored(allies[0]!.visualX, allies[1]!.visualX),
+    ).toBe(true);
+  });
+
+  it('applyStaggeredFormationMarchRestore keeps trail idle during lead phase', () => {
+    const allies = [
+      {
+        id: 'guard',
+        role: 'defender' as const,
+        formationRow: 'front' as const,
+        isAlive: true as const,
+        visualX: 140,
+      },
+      {
+        id: 'cleric',
+        role: 'supporter' as const,
+        formationRow: 'back' as const,
+        isAlive: true as const,
+        visualX: 360,
+      },
+      {
+        id: 'sword',
+        role: 'attacker' as const,
+        formationRow: 'front' as const,
+        isAlive: true as const,
+        visualX: 120,
+      },
+    ];
+    const swordBefore = allies[2]!.visualX;
+    applyStaggeredFormationMarchRestore({ phase: 'lead', allies }, 1 / 60);
+    const swordDelta = allies[2]!.visualX - swordBefore;
+    expect(swordDelta).toBeCloseTo(-SCROLL_SPEED / 60, 0);
+  });
+
+  it('isFormationSpacingRestored checks lead depth and trail row spacing', () => {
+    const allies = [
+      {
+        id: 'guard',
+        role: 'defender' as const,
+        formationRow: 'front' as const,
+        isAlive: true as const,
+        visualX: 200,
+      },
+      {
+        id: 'sword',
+        role: 'attacker' as const,
+        formationRow: 'front' as const,
+        isAlive: true as const,
+        visualX: 200 + ALLY_ROW_SPACING,
+      },
+      {
+        id: 'cleric',
+        role: 'supporter' as const,
+        formationRow: 'back' as const,
+        isAlive: true as const,
+        visualX: 200 + ALLY_FORMATION_BACK_DEPTH,
+      },
+      {
+        id: 'ranger',
+        role: 'attacker' as const,
+        formationRow: 'back' as const,
+        isAlive: true as const,
+        visualX: 200 + ALLY_FORMATION_BACK_DEPTH + ALLY_ROW_SPACING,
+      },
+    ];
+    expect(isFormationSpacingRestored(allies)).toBe(true);
+  });
+
+  it('tickCompensatedFormationReset keeps screen X stable during base march', () => {
+    const allies = [
+      {
+        id: 'guard',
+        role: 'defender' as const,
+        formationRow: 'front' as const,
+        isAlive: true as const,
+        visualX: ROW_X.front,
+      },
+      {
+        id: 'cleric',
+        role: 'supporter' as const,
+        formationRow: 'back' as const,
+        isAlive: true as const,
+        visualX: ROW_X.back,
+      },
+    ];
+    const beforeScreen = allies.map((ally) => ally.visualX);
+    const result = tickCompensatedFormationReset(
+      { phase: 'marching', allies },
+      0,
+      1 / 60,
+    );
+    for (let i = 0; i < allies.length; i++) {
+      expect(allies[i]!.visualX + result.combatCameraX).toBeCloseTo(
+        beforeScreen[i]!,
+        0,
+      );
+    }
+  });
+
+  it('isFormationScreenLayoutRestored checks absolute ROW_X screen positions', () => {
+    const allies = [
+      {
+        id: 'guard',
+        role: 'defender' as const,
+        formationRow: 'front' as const,
+        isAlive: true as const,
+        visualX: ROW_X.front,
+      },
+      {
+        id: 'sword',
+        role: 'attacker' as const,
+        formationRow: 'front' as const,
+        isAlive: true as const,
+        visualX: ROW_X.front + ALLY_ROW_SPACING,
+      },
+      {
+        id: 'cleric',
+        role: 'supporter' as const,
+        formationRow: 'back' as const,
+        isAlive: true as const,
+        visualX: ROW_X.back,
+      },
+    ];
+    expect(isFormationScreenLayoutRestored(allies, 0)).toBe(true);
+    expect(isFormationScreenLayoutRestored(allies, 10)).toBe(false);
   });
 
   it('getLeadingAllyFront uses leading formation row not global min visualX', () => {

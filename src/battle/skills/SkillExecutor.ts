@@ -22,6 +22,7 @@ import {
 } from '../passiveEffects.ts';
 import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
 import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
+import { grantCounterStatus } from '../counterEffects.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
 import { resolveMoveVisualX } from '../../render/formationLayout.ts';
 import {
@@ -70,8 +71,13 @@ export interface SkillExecutorDeps {
     actor: CombatantState,
     target: CombatantState,
     amount: number,
+    meta?: {
+      attackKind: 'damage' | 'dot';
+      isCounterDamage?: boolean;
+    },
   ) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
+  onHealApplied?: (target: CombatantState) => void;
 }
 
 export class SkillExecutor {
@@ -384,7 +390,9 @@ export class SkillExecutor {
       const damageResult = applyDamageToTarget(target, finalDamage);
       const appliedDamage =
         damageResult.hpDamage + damageResult.barrierDamage;
-      this.deps.onDamageApplied?.(actor, target, appliedDamage);
+      this.deps.onDamageApplied?.(actor, target, appliedDamage, {
+        attackKind: 'damage',
+      });
       const { lethal } = damageResult;
       this.emit({
         type: 'skill',
@@ -426,14 +434,24 @@ export class SkillExecutor {
         },
       );
       if (amount <= 0) return false;
+      const passives = this.gameData.skillRegistry.passives;
       applyExcessHealToBarrierFromPassive(
         actor,
         target,
         amount,
-        this.gameData.skillRegistry.passives,
+        passives,
+        'outgoing',
+      );
+      applyExcessHealToBarrierFromPassive(
+        target,
+        target,
+        amount,
+        passives,
+        'incoming',
       );
       const healed = applyHealToTarget(target, amount);
       if (healed <= 0 && target.barrierHp <= 0) return false;
+      this.deps.onHealApplied?.(target);
       this.emit({
         type: 'skill',
         actorId: actor.id,
@@ -628,6 +646,30 @@ export class SkillExecutor {
         effect: 'block',
         effectIndex,
         statusLabel: 'block',
+        range: effectDef.range,
+        ...(hitIndex !== undefined ? { hitIndex } : {}),
+      });
+      return true;
+    }
+
+    if (effectDef.type === 'counter') {
+      grantCounterStatus(actor, {
+        responses: effectDef.responses,
+        durationSec: effectDef.durationSec,
+        range: effectDef.range,
+        skillId: skill.id,
+        sourceId: actor.id,
+      });
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: actor.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'counter',
+        effectIndex,
+        statusLabel: 'counter',
         range: effectDef.range,
         ...(hitIndex !== undefined ? { hitIndex } : {}),
       });

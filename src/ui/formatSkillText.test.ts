@@ -34,9 +34,9 @@ describe('formatPassiveDescription', () => {
     );
   });
 
-  it('formats scaling damage increase', () => {
+  it('formats self HP ratio buff', () => {
     expect(formatPassiveDescription(findPassive('passive_self_low_hp_dmg'))).toBe(
-      '特効×0.6（自HP低下（最大×2））',
+      '自HP比例 ATK ×2（0%以下で最大）',
     );
   });
 

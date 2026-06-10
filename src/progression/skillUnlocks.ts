@@ -64,24 +64,82 @@ export function classifySkillIdsLenient(
   return { learnedPassiveIds, learnedActiveIds };
 }
 
+function getPassiveIdsListedInSkills(
+  skills: ClassSkillUnlock[],
+  registry: SkillRegistry,
+): Set<string> {
+  const ids = new Set<string>();
+  for (const entry of skills) {
+    for (const skillId of entry.skillIds) {
+      if (registry.passives[skillId]) {
+        ids.add(skillId);
+      }
+    }
+  }
+  return ids;
+}
+
+export function resolveStarterPassiveIds(
+  classPreset: Pick<ClassPreset, 'passiveIds' | 'starterPassiveIds' | 'skills'>,
+  registry: SkillRegistry,
+): string[] {
+  const passiveIdsInSkills = getPassiveIdsListedInSkills(
+    classPreset.skills,
+    registry,
+  );
+  const starterPassiveIds: string[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of classPreset.skills) {
+    if (entry.level !== 0) continue;
+    for (const skillId of entry.skillIds) {
+      if (!registry.passives[skillId] || seen.has(skillId)) continue;
+      seen.add(skillId);
+      starterPassiveIds.push(skillId);
+    }
+  }
+
+  for (const passiveId of classPreset.passiveIds ?? classPreset.starterPassiveIds) {
+    if (passiveIdsInSkills.has(passiveId) || seen.has(passiveId)) continue;
+    seen.add(passiveId);
+    starterPassiveIds.push(passiveId);
+  }
+
+  return starterPassiveIds;
+}
+
 export function resolveLearnedSkills(
   classPreset: ClassPreset,
   characterLevel: number,
   registry: SkillRegistry,
 ): { learnedPassiveIds: string[]; learnedActiveIds: string[] } {
-  const learnedPassiveIds = [
-    ...(classPreset.passiveIds ?? classPreset.starterPassiveIds),
-  ];
+  const learnedPassiveIds: string[] = [];
   const learnedActiveIds: string[] = [];
+  const passiveIdsInSkills = getPassiveIdsListedInSkills(
+    classPreset.skills,
+    registry,
+  );
+
   for (const entry of classPreset.skills) {
-    if (entry.level <= characterLevel) {
-      for (const skillId of entry.skillIds) {
-        if (registry.actives[skillId]) {
-          learnedActiveIds.push(skillId);
-        }
+    if (entry.level > characterLevel) continue;
+    for (const skillId of entry.skillIds) {
+      if (registry.passives[skillId]) {
+        learnedPassiveIds.push(skillId);
+        continue;
+      }
+      if (registry.actives[skillId]) {
+        learnedActiveIds.push(skillId);
       }
     }
   }
+
+  for (const passiveId of classPreset.passiveIds ?? classPreset.starterPassiveIds) {
+    if (passiveIdsInSkills.has(passiveId) || learnedPassiveIds.includes(passiveId)) {
+      continue;
+    }
+    learnedPassiveIds.push(passiveId);
+  }
+
   return { learnedPassiveIds, learnedActiveIds };
 }
 
@@ -101,13 +159,14 @@ export function enrichClassPreset(
   const passiveIds = (cls.passiveIds ?? []).map((id) => id.trim()).filter(Boolean);
   const starterIds = getStarterSkillIds(cls.skills);
   const { learnedActiveIds } = classify(starterIds, registry);
-
-  return {
+  const enriched: ClassPreset = {
     ...cls,
     traits: normalizeEntityTraits(cls.traits),
     passiveIds,
-    starterPassiveIds: passiveIds,
+    starterPassiveIds: [],
     starterActiveIds: learnedActiveIds,
     classSkillIds: [...new Set([...passiveIds, ...getClassSkillIds(cls.skills)])],
   };
+  enriched.starterPassiveIds = resolveStarterPassiveIds(enriched, registry);
+  return enriched;
 }

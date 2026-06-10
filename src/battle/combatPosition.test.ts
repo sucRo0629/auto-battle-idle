@@ -12,10 +12,12 @@ import {
   getAllyContactX,
   getBattleContactAllyVisual,
   getEnemyContactX,
+  getMeleeEnemyContactX,
   isEnemyVisibleOnScreen,
   resolveAttackBattleX,
   resolveMoveBattleX,
   resolveMaxEffectiveRangePx,
+  resolveRangedRearBattleXCap,
   resolveEngageLineX,
   separateByGap,
   shouldStartApproach,
@@ -147,24 +149,44 @@ describe('combatPosition', () => {
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
       battleX: 200,
     });
-    const meleeCap = resolveEnemyMarchCapX(melee, [ally], gameData)!;
-    const rangedCap = resolveEnemyMarchCapX(ranged, [ally], gameData)!;
+    const meleeCap = resolveEnemyMarchCapX(melee, [ally], gameData, [melee, ranged])!;
+    const rangedCap = resolveEnemyMarchCapX(ranged, [ally], gameData, [melee, ranged])!;
     expect(meleeCap).toBe(240 - engagedMinLeftEdgeGap());
-    expect(rangedCap).toBe(240 - 100);
-    expect(rangedCap).toBeLessThan(meleeCap);
+    expect(rangedCap).toBeLessThanOrEqual(meleeCap - SPRITE_GAP);
   });
 
-  it('ranged enemies can back up to attack range after over-marching', () => {
+  it('ranged approach stays behind melee front line', () => {
+    const ally = mockCombatant({ id: 'guard', formationRow: 'front', battleX: 240 });
+    const melee = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 100,
+      traits: mockMeleeTraits(),
+    });
+    const ranged = mockCombatant({
+      id: 'ranged',
+      isEnemy: true,
+      traits: mockRangedTraits(),
+      battleX: 120,
+      cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
+    });
+    const rearCap = resolveRangedRearBattleXCap([melee, ranged]);
+    expect(rearCap).toBe(100 - SPRITE_GAP);
+  });
+
+  it('ranged enemies only advance right toward attack range', () => {
     const enemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
       traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
-      battleX: 200,
+      battleX: 100,
     });
     updateUnitApproach(enemy, 140, 10);
-    expect(enemy.battleX).toBe(190);
+    expect(enemy.battleX).toBe(110);
     updateUnitApproach(enemy, 140, 100);
+    expect(enemy.battleX).toBe(140);
+    updateUnitApproach(enemy, 130, 5);
     expect(enemy.battleX).toBe(140);
   });
 
@@ -205,7 +227,7 @@ describe('combatPosition', () => {
     expect(resolveMaxEffectiveRangePx(bow, gameData)).toBe(100);
   });
 
-  it('moves allies left toward attack position only', () => {
+  it('moves allies left and enemies right toward attack position', () => {
     const ally = mockCombatant({
       id: 'ally',
       battleX: 200,
@@ -217,6 +239,19 @@ describe('combatPosition', () => {
     expect(ally.battleX).toBe(50);
     updateUnitApproach(ally, 40, 5);
     expect(ally.battleX).toBe(45);
+
+    const enemy = mockCombatant({
+      id: 'enemy',
+      isEnemy: true,
+      battleX: 10,
+      cooldowns: [],
+    });
+    updateUnitApproach(enemy, 140, 10);
+    expect(enemy.battleX).toBe(20);
+    updateUnitApproach(enemy, 140, 120);
+    expect(enemy.battleX).toBe(140);
+    updateUnitApproach(enemy, 130, 5);
+    expect(enemy.battleX).toBe(140);
   });
 
   it('assigns initial ally battleX by formation row', () => {
@@ -235,6 +270,23 @@ describe('combatPosition', () => {
     const e1 = mockCombatant({ id: 'e1', isEnemy: true, battleX: 10 });
     const e2 = mockCombatant({ id: 'e2', isEnemy: true, battleX: 40 });
     expect(getEnemyContactX([e1, e2])).toBe(40);
+  });
+
+  it('getMeleeEnemyContactX ignores ranged enemies', () => {
+    const melee = mockCombatant({
+      id: 'm',
+      isEnemy: true,
+      battleX: 10,
+      traits: mockMeleeTraits(),
+    });
+    const ranged = mockCombatant({
+      id: 'r',
+      isEnemy: true,
+      battleX: 40,
+      traits: mockRangedTraits(),
+    });
+    expect(getMeleeEnemyContactX([melee, ranged])).toBe(10);
+    expect(getMeleeEnemyContactX([ranged])).toBeNull();
   });
 
   it('getAllyContactX ignores back row battleX advanced for ranged approach', () => {

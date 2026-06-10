@@ -20,6 +20,7 @@ function mockUnit(
     rangePx?: number;
     damageType?: 'physical' | 'magic';
     statusEffects?: CombatantState['statusEffects'];
+    barrierHp?: number;
   } = {},
 ): CombatantState {
   const maxHp = opts.maxHp ?? 100;
@@ -48,7 +49,7 @@ function mockUnit(
     },
     cooldowns: [],
     statusEffects: opts.statusEffects ?? [],
-    barrierHp: 0,
+    barrierHp: opts.barrierHp ?? 0,
     spriteKey: 'placeholder',
     iconKey: 'placeholder',
     isEnemy: opts.isEnemy ?? false,
@@ -116,6 +117,23 @@ describe('getTargetPool / pickTargetFromPool', () => {
     } as const;
     const pool = getTargetPool(spec, actor, allies, enemies);
     expect(pickTargetFromPool(spec, actor, pool)?.id).toBe('a2');
+  });
+
+  it('ignores barrierHp when picking ally by hp ratio', () => {
+    const spec = {
+      kind: 'stat',
+      side: 'ally',
+      stat: 'hp',
+      order: 'ratio',
+    } as const;
+    const fullHpWithBarrier = mockUnit('shielded', 200, {
+      hp: 100,
+      maxHp: 100,
+      barrierHp: 80,
+    });
+    const lowHp = mockUnit('wounded', 180, { hp: 30, maxHp: 100 });
+    const pool = getTargetPool(spec, actor, [fullHpWithBarrier, lowHp], enemies);
+    expect(pickTargetFromPool(spec, actor, pool)?.id).toBe('wounded');
   });
 
   it('filters ranged attackers', () => {

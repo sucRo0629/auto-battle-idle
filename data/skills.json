@@ -19,19 +19,11 @@
     },
     {
       "id": "passive_self_low_hp_dmg",
-      "name": "背水の刃",
-      "effect": "damageIncrease",
-      "damageIncrease": {
-        "scale": 0.6,
-        "conditions": [
-          {
-            "kind": "selfHp",
-            "maxHpRatio": 1,
-            "mode": "scaling",
-            "maxMul": 2
-          }
-        ]
-      }
+      "name": "滾る闘志",
+      "effect": "selfHpRatioBuff",
+      "buffStat": "atk",
+      "buffMultiplierMax": 1.5,
+      "maxBuffAtHpRatio": 0.6
     },
     {
       "id": "passive_target_lowest_hp",
@@ -175,7 +167,7 @@
         "stat": "atk",
         "order": "highest"
       },
-      "blockChance": 0.15
+      "blockChance": 0.2
     },
     {
       "id": "df_guardian_passive_2",
@@ -190,7 +182,7 @@
     },
     {
       "id": "sp_cleric_passive_1",
-      "name": "救命の技",
+      "name": "救命の心得",
       "effect": "damageIncrease",
       "targetRuleOverride": {
         "kind": "distance",
@@ -207,6 +199,53 @@
           }
         ]
       }
+    },
+    {
+      "id": "df_duelist_passive_1",
+      "name": "滾る闘志",
+      "effect": "selfHpRatioBuff",
+      "buffStat": "atk",
+      "buffMultiplierMax": 1.5,
+      "maxBuffAtHpRatio": 0.6
+    },
+    {
+      "id": "df_duelist_passive_2",
+      "name": "チャンスメイク",
+      "effect": "counterChance",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "counterChance": 0.2,
+      "counterResponses": [
+        {
+          "kind": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.5
+          },
+          "damageType": "physical"
+        },
+        {
+          "kind": "stun",
+          "durationSec": 1
+        }
+      ],
+      "counterRange": 0
+    },
+    {
+      "id": "df_duelist_passive_3",
+      "name": "不屈",
+      "effect": "selfHpRatioBuff",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "buffStat": "def",
+      "buffMultiplierMax": 1.5,
+      "maxBuffAtHpRatio": 0.4
     }
   ],
   "actives": [
@@ -269,34 +308,20 @@
     },
     {
       "id": "df_guardian_active_1",
-      "name": "シールドバッシュ",
+      "name": "体力増強",
       "trigger": {
         "kind": "time",
         "value": 10
       },
       "effect": [
         {
-          "type": "damage",
-          "damageType": "physical",
+          "target": {
+            "kind": "self"
+          },
+          "type": "barrier",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.1
-          },
-          "targetShape": "single",
-          "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
-          }
-        },
-        {
-          "type": "stun",
-          "durationSec": 1,
-          "targetShape": "single",
-          "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
+            "atkScale": 1
           }
         }
       ]
@@ -305,30 +330,33 @@
       "id": "df_guardian_active_2",
       "name": "防御専念",
       "trigger": {
-        "kind": "hitsTaken",
-        "value": 10
+        "kind": "time",
+        "value": 8
       },
       "effect": [
         {
           "type": "buff",
           "buffStat": "def",
           "buffMultiplier": 1.5,
-          "buffDurationSec": 5,
+          "buffDurationSec": 4,
           "targetShape": "single",
           "target": {
             "kind": "self"
           }
         },
         {
-          "type": "debuff",
-          "debuffStat": "atk",
-          "debuffMultiplier": 0.8,
-          "debuffDurationSec": 5,
           "target": {
             "kind": "self"
+          },
+          "type": "hot",
+          "durationSec": 4,
+          "amount": {
+            "kind": "percentMaxHp",
+            "percentOfMaxHp": 0.01
           }
         }
-      ]
+      ],
+      "useDurationSec": 4
     },
     {
       "id": "df_paladin_active_1",
@@ -1002,7 +1030,7 @@
       "name": "癒しの光",
       "trigger": {
         "kind": "time",
-        "value": 8
+        "value": 6
       },
       "effect": [
         {
@@ -1020,20 +1048,7 @@
             "stat": "hp",
             "order": "ratio"
           }
-        }
-      ],
-      "vfx": {
-        "preset": "healRise"
-      }
-    },
-    {
-      "id": "sp_cleric_active_2",
-      "name": "鼓舞",
-      "trigger": {
-        "kind": "time",
-        "value": 10
-      },
-      "effect": [
+        },
         {
           "target": {
             "kind": "stat",
@@ -1042,12 +1057,49 @@
             "order": "ratio"
           },
           "type": "hot",
+          "durationSec": 3,
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.3
+          }
+        }
+      ],
+      "vfx": {
+        "preset": "healRise"
+      }
+    },
+    {
+      "id": "sp_cleric_active_2",
+      "name": "広域治療",
+      "trigger": {
+        "kind": "time",
+        "value": 10
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "all",
+            "side": "ally"
+          },
+          "type": "hot",
+          "durationSec": 10,
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.5
+          },
+          "targetShape": "single"
+        },
+        {
+          "target": {
+            "kind": "all",
+            "side": "ally"
+          },
+          "type": "hot",
           "durationSec": 5,
           "amount": {
             "kind": "atkBased",
             "atkScale": 0.2
-          },
-          "targetShape": "single"
+          }
         }
       ],
       "vfx": {

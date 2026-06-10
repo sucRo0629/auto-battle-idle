@@ -4,22 +4,26 @@ export type StatusDisplayCategory =
   | 'atk'
   | 'def'
   | 'reg'
+  | 'attackSpeed'
   | 'damageReduction'
   | 'damageIncrease'
   | 'hot'
   | 'dot'
   | 'block'
+  | 'counter'
   | 'stun';
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   'atk',
   'def',
   'reg',
+  'attackSpeed',
   'damageReduction',
   'damageIncrease',
   'hot',
   'dot',
   'block',
+  'counter',
   'stun',
 ];
 
@@ -66,11 +70,17 @@ function effectsForCategory(
   if (category === 'reg') {
     return effects.filter((effect) => effect.stat === 'reg');
   }
+  if (category === 'attackSpeed') {
+    return effects.filter((effect) => effect.stat === 'attackSpeed');
+  }
   if (category === 'damageReduction' || category === 'damageIncrease') {
     return effects.filter((effect) => effect.stat === 'damageTaken');
   }
   if (category === 'block') {
     return effects.filter((effect) => effect.overlay === 'block');
+  }
+  if (category === 'counter') {
+    return effects.filter((effect) => effect.overlay === 'counter');
   }
   if (category === 'stun') {
     return effects.filter((effect) => effect.overlay === 'stun');
@@ -97,7 +107,7 @@ export function categoryRemainingRatio(
 
 function aggregateStatCategory(
   effects: StatusEffect[],
-  category: 'atk' | 'def' | 'reg',
+  category: 'atk' | 'def' | 'reg' | 'attackSpeed',
   base: number,
 ): AggregatedCategoryEffect | null {
   const agg = aggregateStatEffects(effects, category);
@@ -115,7 +125,7 @@ function aggregateStatCategory(
 
 function aggregateOverlayCategory(
   effects: StatusEffect[],
-  category: 'hot' | 'dot' | 'block' | 'stun',
+  category: 'hot' | 'dot' | 'block' | 'counter' | 'stun',
 ): AggregatedCategoryEffect | null {
   const relevant = effectsForCategory(effects, category);
   if (relevant.length === 0) return null;
@@ -125,7 +135,9 @@ function aggregateOverlayCategory(
     netFlat: 0,
     netMul: 1,
     kind:
-      category === 'hot' || category === 'block' ? 'buff' : 'debuff',
+      category === 'hot' || category === 'block' || category === 'counter'
+        ? 'buff'
+        : 'debuff',
     remainingRatio: categoryRemainingRatio(effects, category),
   };
 }
@@ -207,10 +219,13 @@ export function aggregateStatStatusEffects(
     if (badge) result.push(badge);
   }
 
+  const attackSpeedBadge = aggregateStatCategory(effects, 'attackSpeed', 1);
+  if (attackSpeedBadge) result.push(attackSpeedBadge);
+
   const damageTakenBadge = aggregateDamageTakenCategory(effects);
   if (damageTakenBadge) result.push(damageTakenBadge);
 
-  for (const category of ['hot', 'dot', 'block', 'stun'] as const) {
+  for (const category of ['hot', 'dot', 'block', 'counter', 'stun'] as const) {
     const badge = aggregateOverlayCategory(effects, category);
     if (badge) result.push(badge);
   }

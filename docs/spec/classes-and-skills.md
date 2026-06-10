@@ -18,6 +18,13 @@
 - UI・仕様書・コメントでは「スキルを装備」ではなく「スキルをセット」「セット枠」と書く。
 - JSON / TypeScript の `equippedActiveSlots` 等は歴史的な識別子として維持（中身は「セット済み」）。
 
+### 戦闘用語
+
+| 用語 | 定義 |
+|------|------|
+| **攻撃** | `damage` または `dot` を含むスキル（通常攻撃 `slotKind: basic` 含む） |
+| **反撃** | 攻撃を受けたとき、設定量のダメージを攻撃者へ返す効果。バフ/デバフタグには含めない |
+
 ## ロール（3種）
 
 | ロール | 役割 |
@@ -183,10 +190,10 @@ interface CharacterBuild {
 | フィールド | 説明 |
 |------------|------|
 | `trigger.kind` | `time`（秒）／`basicAttackCount`（通常攻撃回数）／`hitsTaken`（被攻撃回数） |
-| `trigger.value` | 条件の閾値。発動後に `remaining` として再設定され、0 になるまで再充填 |
+| `trigger.value` | 条件の閾値。発動後に `remaining` として再設定され、0 になるまで再充填。ステージ開始時も `remaining = value`（ゲージ未充填） |
 | `useDurationSec` | optional。発動硬直（秒）。省略 / `0` = 即時。アニメ長に合わせて設定（詳細は [combat.md](combat.md)） |
 
-- `basicAttackCount` — 戦闘開始時 `remaining = value`。**通常攻撃が命中するたび** `remaining--`（エンジン標準。パッシブ不要）
+- `basicAttackCount` — ステージ開始時 `remaining = value`（未充填）。**通常攻撃が命中するたび** `remaining--`、0 で発動可（エンジン標準。パッシブ不要）
 - `hitsTaken` — 被ダメ（`hurt`）のたび `remaining--`
 - **通常攻撃** は従来どおり JSON の `interval`（時間のみ）+ `attackSpeedTier` / SPD
 - レガシー JSON の `interval` はアクティブでも `trigger: { kind: "time", value: interval }` として読み込む
@@ -227,22 +234,23 @@ interface CharacterBuild {
 | `aoeCrowdBonus` | `perExtraTargetScale`, `maxExtraTargets` | `aoe` / `scatter` の追加ヒット数ボーナス |
 | `damageTakenToHeal` | `ratio` | HP に入った最終ダメージの `ratio` 割合を即時回復（バリア吸収後。ATK 基準ではない） |
 | `hot` | `hotAmount`, `hotTargetRule`, `intervalSec?`, `hotDurationSec?` | `intervalSec` 指定時はその間隔で HoT 付与。未指定時は戦闘開始時に常時 HoT。`hotDurationSec` は付与 HoT の持続（0=無限） |
-| `excessHealToBarrier` | `barrierScale` | 回復が maxHp を超過した分をバリアに変換（**上書き**） |
+| `excessHealToBarrier` | `barrierScale`, `excessHealSources?` | 回復が maxHp を超過した分をバリアに変換（**上書き**）。`outgoing`（与回復）/ `incoming`（被回復）を複数選択可。未指定 = `outgoing` のみ。直接 `heal` のみ |
 | `healReceivedIncrease` | `percent` | 受ける `heal` / HoT 量を `floor(量 × (1 + percent合算))` で増加 |
 | `extendSelfAppliedDebuff` | `extendSec`, `durationMultiplier?` | 使用者が付与する debuff 持続延長 |
+| `counterChance` | `counterChance`, `counterResponses[]`, `counterRange?` | 常時受付。被攻撃のたびに確率判定し、成功時に反撃内容を直接適用（`counterResponses` = `responses` 相当） |
+| `selfHpRatioBuff` | `buffStat`, `buffMultiplierMax?` / `buffFlatBonusMax?`, `maxBuffAtHpRatio` | 自身 HP 割合（`hp/maxHp`。バリア非含有）に応じた常時バフ（対象・形状は自身単体固定）。満タン時は中立、指定 HP 割合以下で最大 |
 
-**移行（削除済み）:** `selfLowHpDamageScale` → `damageIncrease`（`selfHp` + `scaling`）、`damageVsDotTarget` → `damageIncrease`（`debuff` + `dot`）、`healAppliesBarrier` → `excessHealToBarrier`
+**移行（削除済み）:** `selfLowHpDamageScale` → `selfHpRatioBuff`、`damageVsDotTarget` → `damageIncrease`（`debuff` + `dot`）、`healAppliesBarrier` → `excessHealToBarrier`、`damageIncrease` の `selfHp` 条件 → `selfHpRatioBuff`
 
 ### 特効ダメージ（`DamageIncreaseSpec`）
 
 | フィールド | 説明 |
 |------------|------|
 | `scale` | 条件成立時の倍率 |
-| `conditions[]` | 全条件 **AND**。種別: `debuff` / `targetHp` / `selfHp` |
+| `conditions[]` | 全条件 **AND**。種別: `debuff` / `targetHp` |
 | `debuff.tags` | デバフタグ（OR）。`DEBUFF_FILTER_TAGS` 参照 |
 | `debuff.selfAppliedOnly` | DoT 等で自分付与のみ |
-| `targetHp.maxHpRatio` | 対象 `hp/maxHp ≤ ratio` |
-| `selfHp.maxHpRatio` | 自身 HP 閾値。`mode: scaling` で欠損 HP 比例（闘技士互換） |
+| `targetHp.maxHpRatio` | 対象 `hp/maxHp ≤ ratio`（バリア非含有） |
 
 ### 防御無視（`DefenseIgnoreSpec`）
 
@@ -267,6 +275,31 @@ interface CharacterBuild {
 | `durationSec` | アクティブ `block` 効果のみ。付与 buff の持続 |
 
 アクティブ `block` は `StatusEffect`（`overlay: block`, `blockChance`）を付与。DEF 適用後の物理直接ダメージにのみ判定。
+
+### 反撃（`counter` effect）
+
+| フィールド | 説明 |
+|------------|------|
+| `target` | **常に `{ kind: "self" }`**（パーサーで正規化。付与は自身のみ） |
+| `responses[]` | 反撃時に攻撃者へ適用する内容（**1 種別以上必須**）。各要素の `kind`: `damage` / `debuff` / `dot` / `stun` / `knockback` |
+| `responses[].amount` 等 | 種別ごとに通常 effect と同型のフィールド（`damage` は `amount` + `damageType?`、`debuff` は `debuffStat` 等） |
+| `durationSec` | 反撃状態の持続（秒） |
+| `range` | optional。反撃発動の射程（px）。この距離以内の攻撃のみ反撃。`0` = 近接接触のみ（遠距離攻撃は不発） |
+| `targetShape` | **`multiLock` 禁止**（その他の形状も付与は自身のみのため実質未使用） |
+
+アクティブ `counter` は `StatusEffect`（`overlay: counter`, `responses`, `counterRangePx?`）を付与。バフ/デバフフィルタタグには含めない。詳細は [combat.md](combat.md) の反撃節。
+
+### 確率反撃（`counterChance` passive）
+
+| フィールド | 説明 |
+|------------|------|
+| `counterChance` | 被攻撃時の反撃発動確率（0〜1） |
+| `counterResponses[]` | 反撃内容（アクティブ `counter` の `responses[]` と同型） |
+| `counterRange` | optional。反撃発動の射程（px）。未指定 = 持有者 `traits.rangePx` |
+
+常時受付。被 `damage` / `dot` で HP に入ったダメージがあるたび、射程内なら `counterChance` を判定し、成功時に `counterResponses` を攻撃者へ直接適用。反撃 `StatusEffect` は付与しない。アクティブ `counter` とは独立に併用可。
+
+**旧 JSON 互換:** トップレベル `amount` のみの場合は `responses: [{ kind: "damage", amount, damageType? }]` に昇格。
 
 レガシー合成（未使用の一次職データに残る場合）:
 
@@ -330,8 +363,9 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 
 | フィールド | 説明 |
 |------------|------|
-| `amount.kind` | `atkBased`（既定）／`flat`／`percentMaxHp` |
+| `amount.kind` | `atkBased`（既定）／`defBased`／`flat`／`percentMaxHp` |
 | `amount.atkOffset` / `atkScale` | `atkBased` 用（加減 net / 倍率 net。未指定: offset=0, scale=1） |
+| `amount.defOffset` / `defScale` | `defBased` 用（加減 net / 倍率 net。未指定: offset=0, scale=1）。参照は **使用者 effective DEF** |
 | `amount.flatAmount` | `flat` 必須 |
 | `amount.percentOfMaxHp` | `percentMaxHp` 必須（0〜1、**対象 maxHp** 基準） |
 | `powerMultiplier` | **旧 JSON 互換** — `amount` 未指定時は `atkBased` + `atkScale` として読む |

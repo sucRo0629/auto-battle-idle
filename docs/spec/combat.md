@@ -91,7 +91,9 @@ remaining -= barrierDamage
 hp = max(0, hp - remaining)
 ```
 
-HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さらに超過分 tier2（`max(0, barrierHp − maxHp)`）を明るい色で左から重ね描画。
+HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 HP の右端から描画。HP 満タン時は tier1 を左から HP fill の上に重ねる。超過分 tier2（`max(0, barrierHp − maxHp)`）は従来どおり左端から明るい色で描画。
+
+**HP 割合の参照:** 戦闘ロジックで「現在 HP 割合」を使うとき（`target.stat hp order: ratio`、特効 `targetHp`、`selfHpRatioBuff`、前列圧力ボーナス等）は **`hp / maxHp` のみ**とする。`barrierHp` は含めない（満タン HP + 大バリアでも HP 割合は 1.0）。
 
 ## クールダウン
 
@@ -108,7 +110,7 @@ HP バー: HP fill の上にバリア tier1（`min(barrierHp, maxHp)`）、さ�
 
 **予定（未実装）** — パッシブ `attackSpeedTierShift` と buff/debuff `attackSpeed` による tier ステップ加算後、上記 preset から rate を再解決。
 
-`remaining` が 0 になると `SkillExecutor` が1回発動し、`trigger.value` にリセット（レガシー `interval` は `trigger.kind: time` として解釈）。
+`remaining` が 0 になると `SkillExecutor` が1回発動し、`trigger.value` にリセット（レガシー `interval` は `trigger.kind: time` として解釈）。ステージ開始時は `remaining = trigger.value`（HUD ゲージ未充填）。`remaining <= 0` が発動可能。
 
 1 tick あたりの実行順（1ユニット）：basic → active 枠0 → active 枠1
 
@@ -146,9 +148,9 @@ baseThreat = statComponent + frontRowPressureBonus
 
 ## ステータス効果
 
-対象ステ：`atk`, `def`, `reg`（耐魔）, `damageTaken`。`reg` の buff / debuff とも可。
+対象ステ：`atk`, `def`, `reg`（耐魔）, `damageTaken`, `attackSpeed`（攻撃速度。基本攻撃 CD 回復倍率に適用）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
 
-**HUD バッジ表示順：** `atk` → `def` → `reg` → `damageReduction` → `damageIncrease` → `hot` → `dot` → `block` → `stun`。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン（矢印なし・原色）。
+**HUD バッジ表示順：** `atk` → `def` → `reg` → `attackSpeed` → `damageReduction` → `damageIncrease` → `hot` → `dot` → `block` → `counter` → `stun`。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン（矢印なし・原色）。
 
 
 | 種別     | 定義方法                                                                                                                                           |
@@ -156,9 +158,25 @@ baseThreat = statComponent + frontRowPressureBonus
 | buff   | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec`                                                                           |
 | debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                   |
 | スタン    | `effect: "stun"` + `durationSec` — `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可（CD は進行）                                     |
+| 反撃    | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記 |
 | デバフ解除  | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `remainingSec` 降順 N 件。パッシブ `periodicDispel` は `intervalSec` ごとに `dispelTargetRule` で対象選択 |
 | ノックバック | `effect: "knockback"` + `distancePx` — 敵は左（`-X`）、味方は右（`+X`）へ即時移動。敵は `BATTLE_ENEMY_MARCH_VISIBLE_MIN_X` 未満にならない                                 |
 
+### 反撃（`counter`）
+
+**攻撃**（`damage` / `dot` を含むスキル。通常攻撃含む）を受け、バリア吸収後の **実ダメージ > 0**、かつ **攻撃者が反撃の `range` 以内** のとき、反撃状態の持有者が `responses[]` の内容を **すべて** 攻撃者へ適用する。
+
+| 項目 | 挙動 |
+|------|------|
+| 付与対象 | 常に自身（`target: self`） |
+| 射程 | `battleDistance(attacker, victim) <= (counter.range ?? 持有者 traits.rangePx)`。`range: 0` は近接接触のみ（遠距離は不発） |
+| レスポンス | `damage` / `debuff` / `dot` / `stun` / `knockback` から 1 種別以上。被攻撃 1 回で選択種別を同時適用 |
+| トリガー | 直接 `damage` および DoT tick |
+| 非トリガー | 回避・0 ダメージ・反撃ダメージ（連鎖反撃なし）・射程外 |
+| `damage` 軽減 | 攻撃者の DEF（物理）/ REG（魔法）を適用。回避・ブロックは非適用 |
+| `targetShape` | `multiLock` 禁止 |
+
+**確率反撃（パッシブ `counterChance`）：** 常時受付。上記と同じ被攻撃条件・射程・`responses` 内容だが、ヒットごとに `counterChance` を判定し、成功時に反撃内容を直接適用（`StatusEffect` 付与なし）。アクティブ `counter` とは独立に併用可。
 
 **重複（同一対象・同一 stat / CC）：**
 
@@ -199,13 +217,17 @@ baseThreat = statComponent + frontRowPressureBonus
 
 同一 `battleX` のユニットはロジック上重なってよい（近接 range 0 等）。描画は `visualX` で隊形・接敵距離（`ENGAGED_VISUAL_TUNING`）を維持し、`battleX` の内部接近はそのまま画面に反映しない。
 
-**接敵中の visual 更新:** `BattleEngine` は毎フレーム `resolveEngagedLayout`（`formationLayout.ts`）を呼び、返却された目標 `visualX` へ `moveTowardX` で補間するのみ。凍結するのは遠距離敵の狙い味方 ID（`engagedVisualTargetAllyId`）と近接敵の奥行きスロット（`engagedMeleeVisualSlot`）、前列レーン（`engagedVisualLaneX`・前列構成変化時のみ）に限定。前列交代時は接触味方のレーンを 0 に正規化し `contact.visualX += contactLane` でスナップして `frontLineVisualX` の無限左追従を防ぐ。
+**接敵中の visual 更新:** `BattleEngine` は毎フレーム `resolveEngagedLayout`（`formationLayout.ts`）を呼び、返却された目標 `visualX` へ `approachAllyVisualX` / `approachEnemyVisualX` で補間する（味方は左のみ、敵は右のみ）。凍結するのは遠距離敵の狙い味方 ID（`engagedVisualTargetAllyId`）と近接敵の奥行きスロット（`engagedMeleeVisualSlot`）、前列レーン（`engagedVisualLaneX`・前列構成変化時のみ）に限定。
 
-**接敵調整定数（`ENGAGED_VISUAL_TUNING`）:** `bodyClearancePx`（同陣営内 gap）、`frontLineGapPx`（敵味方最前列 gap、0=自動）、`leadingRowAdvanceT`（前列の接敵距離への寄せ率）、`engageMoveSpeedPxPerSec`（接近速度）。
+**敵全滅後の隊列復帰（Wave 2 以降）:** 死亡演出待ちの後、`tickCompensatedFormationReset` が **screen 絶対位置**（`ROW_X[row] + slot × ALLY_ROW_SPACING`）へ戻す。毎 tick 味方 `visualX` を左へ `SCROLL_SPEED` 分進め、同量 `combatCameraX` を右へ加算し screen 上の静止感を維持。screen 右ズレは左移動のみ、左ズレはカメラ右移で補正（`visualX` は増やさない）。完了まで次 Wave に進まない。完了時に `visualX` / `battleX` を隊列へ正規化し `combatCameraX = 0`。settle / reset 中はスキルシーケンス・periodic HoT/dispel を停止。
 
-**スキル `move` の演出:** `battleX` はロジック上の目標（接触等）へ補間し、`visualX` は `resolveMoveVisualX` で求めた接敵距離目標へ同じ進捗率で補間する（`battleX` デルタの 1:1 ミラーはしない）。
+**Wave 1 開始進軍:** 従来どおり `WAVE_APPROACH_MARCH_SEC`（0.75s）の左進軍 + `applyStaggeredFormationMarchRestore`（相対間隔）。`worldOffsetX` で背景のみスクロール。
 
-**接敵カメラ:** 接敵フェーズ中は `resolveEngagedLayout` の `frontLineVisualX` がキャンバス中央（240px）へ来るよう `combatCameraX` をスプライト描画に加算する。非接敵・Victory 退出時は 0 にリセット。HUD はオフセットしない。
+**Victory 退出:** 相対間隔 restore（`applyStaggeredFormationMarchRestore`）のまま。settle 開始時は `seedPostCombatFormationCamera`。
+
+**接敵開始時:** `combatCameraX !== 0` のときのみ `bakeCombatCameraIntoVisualX`。
+
+**接敵カメラ:** `combatCameraX` は生存味方の screen 重心（パーティ center）がキャンバス中央（240px）へ来るよう加算。Victory 退出・リスポーン・Defeat 時は 0。HUD はオフセットしない。
 
 ## 射程と移動
 
@@ -218,7 +240,11 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 - 命中: `battleDistance(actor, target) <= effectiveRangePx`
 - 敵が画面内（`battleX >= BATTLE_ENEMY_VISIBLE_MIN_X`）に入ると **Engaged** 開始
 - 射程外のユニットは攻撃可能位置まで接近（味方: `contactX + range`、敵: `contactX - range`）。到達後に攻撃
-- `contactX` = 最前線生存敵の `battleX`
+- **味方**: `battleX` / `visualX` は **左方向のみ**（減少のみ）。隊列間隔調整も右へ広げず左進軍で合流
+- **敵**: `battleX` / `visualX` は **右方向のみ**（増加のみ）。接敵中は **画面外に出さない**（screen clamp）
+- **敵奥行き:** ranged の `battleX` は近接前線より後方（`battleX` 小）。`resolveRangedRearBattleXCap` で cap。**visualX** も melee 前線より後方（`resolveEngagedLayout` で cap + 左方向 gap 分離）
+- 味方接近: 近接生存中は `getMeleeEnemyContactX`、全滅後は攻撃ターゲット基準
+- 後列 ranged の visualX は `battleX + battleVisualOffset` で battle 接近に追従
 - **スキル移動中**（`move` 効果の補間中、または move を含むスキルシーケンス実行中）の actor は自動接近の対象外
 
 ## スキルシーケンス（move 含むスキル）
@@ -235,10 +261,11 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 ## 戦闘フロー（Phase 1）
 
 1. 味方は初期隊列の `battleX` に配置、敵は左から出現・右進軍
-2. 敵が画面内 → **Engaged** → 接近 + CD / スキル進行（射程内のみ発動）
-3. 毎 tick：味方行動 → 敵行動
-4. 敵全滅 → **Victory**；味方全滅 → **Defeat**
-5. 3秒後：HP全回復、同一ステージ再スポーン、`Running` 再開
+2. 敵が画面内 → **Engaged** → 接近 + スキル発動（射程内のみ）
+3. **非接敵中**（Wave 進軍・接敵前進軍・全滅後インターミッション等）も DoT/HoT tick・バフ/デバフ持続・CD 進行は継続。スキル発動・脅威 decay は接敵中のみ
+4. 毎 tick（接敵中）：味方行動 → 敵行動
+5. 敵全滅 → **Victory**；味方全滅 → **Defeat**
+6. 3秒後：HP全回復、同一ステージ再スポーン、`Running` 再開
 
 死亡ユニットはターゲット対象外。次の再スポーンまで death アニメ。
 

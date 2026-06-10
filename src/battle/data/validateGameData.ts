@@ -33,6 +33,8 @@ import type {
   BuffFilterTag,
   DebuffFilterTag,
   DamageIncreaseCondition,
+  CounterResponseDef,
+  CounterResponseKind,
   DamageIncreaseSpec,
   DefenseIgnoreSpec,
 } from '../types.ts';
@@ -67,6 +69,7 @@ import {
   DEBUFF_FILTER_TAG_OPTIONS,
   DAMAGE_INCREASE_CONDITION_KINDS,
   DEFENSE_IGNORE_DEF_MODES,
+  COUNTER_RESPONSE_KINDS,
 } from './gameDataSchema.ts';
 import { normalizeTarget } from '../skills/targetSpec.ts';
 import {
@@ -79,6 +82,9 @@ const ROLES_SET = new Set<Role>(ROLES);
 const FORMATION_ROWS_SET = new Set<FormationRow>(FORMATION_ROWS);
 const ATTACK_SPEED_TIERS_SET = new Set<AttackSpeedTier>(ATTACK_SPEED_TIERS);
 const SKILL_EFFECTS = new Set<SkillEffectKind>(SKILL_EFFECT_KINDS);
+const COUNTER_RESPONSE_KINDS_SET = new Set<CounterResponseKind>(
+  COUNTER_RESPONSE_KINDS,
+);
 const DAMAGE_TYPES_SET = new Set<DamageType>(DAMAGE_TYPES);
 const VFX_PRESETS_SET = new Set<SkillVfxPresetId>(VFX_PRESETS);
 const TARGET_RULES_SET = new Set<TargetRule>(TARGET_RULES);
@@ -279,6 +285,30 @@ function parseResourceAmountSpec(
       if (spec.atkScale === undefined) {
         const scale = (legacyMultiply ?? 1) / (legacyDivide ?? 1);
         if (scale !== 1) spec.atkScale = scale;
+      }
+    }
+    return spec;
+  }
+
+  if (kind === 'defBased') {
+    const spec: ResourceAmountSpec = { kind };
+    const defOffset = parseOptionalNumber(obj, 'defOffset', context);
+    const defScale = parseOptionalNumber(obj, 'defScale', context);
+    if (defOffset !== undefined) spec.defOffset = defOffset;
+    if (defScale !== undefined) spec.defScale = defScale;
+
+    if (spec.defOffset === undefined || spec.defScale === undefined) {
+      const legacyAdd = parseOptionalNumber(obj, 'defAdd', context);
+      const legacyMultiply = parseOptionalNumber(obj, 'defMultiply', context);
+      const legacyDivide = parseOptionalNumber(obj, 'defDivide', context);
+      const legacySubtract = parseOptionalNumber(obj, 'defSubtract', context);
+      if (spec.defOffset === undefined) {
+        const offset = (legacyAdd ?? 0) - (legacySubtract ?? 0);
+        if (offset !== 0) spec.defOffset = offset;
+      }
+      if (spec.defScale === undefined) {
+        const scale = (legacyMultiply ?? 1) / (legacyDivide ?? 1);
+        if (scale !== 1) spec.defScale = scale;
       }
     }
     return spec;
@@ -697,25 +727,7 @@ function parseDamageIncreaseCondition(
     return { kind, maxHpRatio };
   }
 
-  const maxHpRatio = requireNumber(obj, 'maxHpRatio', context);
-  if (maxHpRatio < 0 || maxHpRatio > 1) {
-    invalidField(context, 'maxHpRatio', 'must be between 0 and 1');
-  }
-  const modeRaw = obj.mode;
-  let mode: 'threshold' | 'scaling' | undefined;
-  if (modeRaw !== undefined) {
-    if (modeRaw !== 'threshold' && modeRaw !== 'scaling') {
-      invalidField(context, 'mode', 'must be threshold or scaling');
-    }
-    mode = modeRaw;
-  }
-  const maxMul = parseOptionalNumber(obj, 'maxMul', context);
-  return {
-    kind: 'selfHp',
-    maxHpRatio,
-    ...(mode !== undefined ? { mode } : {}),
-    ...(maxMul !== undefined ? { maxMul } : {}),
-  };
+  invalidField(context, 'kind', `unsupported condition kind: ${kind}`);
 }
 
 function parseDamageIncreaseSpec(
@@ -1011,10 +1023,127 @@ function parseOptionalEffectPresentation(
   return result;
 }
 
-function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
+function parseCounterResponseEntry(
+  entry: unknown,
+  context: string,
+): CounterResponseDef {
   const obj = requireRecord(entry, context);
-  const target = parseEffectTarget(obj, context);
+  const kind = requireEnum(obj, 'kind', context, COUNTER_RESPONSE_KINDS_SET);
+
+  if (kind === 'damage') {
+    const amount = parseEffectAmount(obj, context, 'counter damage response');
+    const damageType =
+      obj.damageType === undefined
+        ? undefined
+        : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
+    return {
+      kind,
+      amount,
+      ...(damageType !== undefined ? { damageType } : {}),
+    };
+  }
+
+  if (kind === 'debuff') {
+    const debuffStat = requireStatusEffectStat(obj, 'debuffStat', context);
+    const debuffDurationSec = requireNumber(obj, 'debuffDurationSec', context);
+    requireBuffOrDebuffModifier(
+      obj,
+      context,
+      'debuffMultiplier',
+      'debuffFlatBonus',
+    );
+    return {
+      kind,
+      debuffStat,
+      debuffDurationSec,
+      ...(typeof obj.debuffMultiplier === 'number'
+        ? { debuffMultiplier: obj.debuffMultiplier }
+        : {}),
+      ...(typeof obj.debuffFlatBonus === 'number'
+        ? { debuffFlatBonus: obj.debuffFlatBonus }
+        : {}),
+    };
+  }
+
+  if (kind === 'dot') {
+    const durationSec = requireNumber(obj, 'durationSec', context);
+    const powerMultiplier = requireNumber(obj, 'powerMultiplier', context);
+    const damageType =
+      obj.damageType === undefined
+        ? undefined
+        : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
+    const combatModifiers = parseOptionalEffectCombatModifiers(obj, context);
+    return {
+      kind,
+      durationSec,
+      powerMultiplier,
+      ...(damageType !== undefined ? { damageType } : {}),
+      ...combatModifiers,
+    };
+  }
+
+  if (kind === 'stun') {
+    const durationSec = requireNumber(obj, 'durationSec', context);
+    if (durationSec <= 0) {
+      invalidField(context, 'durationSec', 'must be a positive number');
+    }
+    return { kind, durationSec };
+  }
+
+  const distancePx = requireNumber(obj, 'distancePx', context);
+  if (distancePx <= 0) {
+    invalidField(context, 'distancePx', 'must be a positive number');
+  }
+  return { kind: 'knockback', distancePx };
+}
+
+function parseCounterResponses(
+  raw: unknown,
+  context: string,
+): CounterResponseDef[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    invalidField(context, 'responses', 'must be a non-empty array');
+  }
+  return raw.map((entry, index) =>
+    parseCounterResponseEntry(entry, `${context}[${index}]`),
+  );
+}
+
+function parseCounterEffectResponses(
+  obj: Record<string, unknown>,
+  context: string,
+): CounterResponseDef[] {
+  if (obj.responses !== undefined) {
+    return parseCounterResponses(obj.responses, `${context}.responses`);
+  }
+  if (obj.amount !== undefined || obj.powerMultiplier !== undefined) {
+    const amount = parseEffectAmount(obj, context, 'counter legacy amount');
+    const damageType =
+      obj.damageType === undefined
+        ? undefined
+        : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
+    return [
+      {
+        kind: 'damage',
+        amount,
+        ...(damageType !== undefined ? { damageType } : {}),
+      },
+    ];
+  }
+  invalidField(
+    context,
+    'responses',
+    'is required (or legacy amount / powerMultiplier)',
+  );
+}
+
+export function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
+  const obj = requireRecord(entry, context);
   const type = requireEnum(obj, 'type', context, SKILL_EFFECTS);
+  const target =
+    type === 'counter'
+      ? ({ kind: 'self' } satisfies TargetSpec)
+      : parseEffectTarget(obj, context);
   const range = parseOptionalRange(obj, context);
   const targetShapeFields = parseTargetShapeFields(obj, context);
   const presentation = parseOptionalEffectPresentation(obj, context);
@@ -1211,6 +1340,29 @@ function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
     };
   }
 
+  if (type === 'counter') {
+    if (obj.targetShape === 'multiLock') {
+      invalidField(
+        context,
+        'targetShape',
+        'multiLock is not allowed for counter effects',
+      );
+    }
+    const durationSec = requireNumber(obj, 'durationSec', context);
+    if (durationSec <= 0) {
+      invalidField(context, 'durationSec', 'must be a positive number');
+    }
+    const responses = parseCounterEffectResponses(obj, context);
+    return {
+      target: { kind: 'self' },
+      type: 'counter',
+      responses,
+      durationSec,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    };
+  }
+
   if (type === 'block') {
     const blockChance = requireNumber(obj, 'blockChance', context);
     if (blockChance < 0 || blockChance > 1) {
@@ -1335,6 +1487,35 @@ function parseOptionalIconKey(
   return obj.iconKey === undefined
     ? undefined
     : requireString(obj, 'iconKey', context);
+}
+
+const EXCESS_HEAL_SOURCES = ['outgoing', 'incoming'] as const;
+const EXCESS_HEAL_SOURCES_SET = new Set<string>(EXCESS_HEAL_SOURCES);
+
+function parseExcessHealSources(
+  obj: Record<string, unknown>,
+  context: string,
+): PassiveSkillDef['excessHealSources'] | undefined {
+  const raw = obj.excessHealSources;
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw) || raw.length === 0) {
+    invalidField(context, 'excessHealSources', 'must be a non-empty array');
+  }
+  const sources: Array<'outgoing' | 'incoming'> = [];
+  for (let i = 0; i < raw.length; i++) {
+    const entry = raw[i];
+    if (typeof entry !== 'string' || !EXCESS_HEAL_SOURCES_SET.has(entry)) {
+      invalidField(
+        context,
+        `excessHealSources[${i}]`,
+        `must be one of ${[...EXCESS_HEAL_SOURCES_SET].join(', ')}`,
+      );
+    }
+    if (!sources.includes(entry as 'outgoing' | 'incoming')) {
+      sources.push(entry as 'outgoing' | 'incoming');
+    }
+  }
+  return sources;
 }
 
 function requirePassiveEffectParams(
@@ -1468,9 +1649,11 @@ function requirePassiveEffectParams(
         obj.barrierScale === undefined
           ? 1
           : requireNumber(obj, 'barrierScale', context);
+      const excessHealSources = parseExcessHealSources(obj, context);
       return {
         ...base,
         barrierScale,
+        ...(excessHealSources !== undefined ? { excessHealSources } : {}),
       };
     }
     case 'extendSelfAppliedDebuff': {
@@ -1509,6 +1692,77 @@ function requirePassiveEffectParams(
         invalidField(context, 'percent', 'must be a non-negative number');
       }
       return { ...base, percent };
+    }
+    case 'counterChance': {
+      const counterChance = requireNumber(obj, 'counterChance', context);
+      if (counterChance < 0 || counterChance > 1) {
+        invalidField(context, 'counterChance', 'must be between 0 and 1');
+      }
+      const responseSource =
+        obj.counterResponses !== undefined
+          ? { responses: obj.counterResponses }
+          : obj;
+      const counterResponses = parseCounterEffectResponses(
+        responseSource,
+        context,
+      );
+      const counterRange = parseOptionalNumber(obj, 'counterRange', context);
+      if (counterRange !== undefined && counterRange < 0) {
+        invalidField(context, 'counterRange', 'must be a non-negative number');
+      }
+      return {
+        ...base,
+        counterChance,
+        counterResponses,
+        ...(counterRange !== undefined ? { counterRange } : {}),
+      };
+    }
+    case 'selfHpRatioBuff': {
+      const buffStat = requireStatusEffectStat(obj, 'buffStat', context);
+      const buffMultiplierMax = parseOptionalNumber(
+        obj,
+        'buffMultiplierMax',
+        context,
+      );
+      const buffFlatBonusMax = parseOptionalNumber(
+        obj,
+        'buffFlatBonusMax',
+        context,
+      );
+      if (buffMultiplierMax === undefined && buffFlatBonusMax === undefined) {
+        invalidField(
+          context,
+          'buffMultiplierMax',
+          'or buffFlatBonusMax is required',
+        );
+      }
+      if (
+        buffMultiplierMax !== undefined &&
+        buffMultiplierMax <= 0
+      ) {
+        invalidField(context, 'buffMultiplierMax', 'must be a positive number');
+      }
+      if (
+        buffFlatBonusMax !== undefined &&
+        buffFlatBonusMax <= 0
+      ) {
+        invalidField(context, 'buffFlatBonusMax', 'must be a positive number');
+      }
+      const maxBuffAtHpRatio = requireNumber(obj, 'maxBuffAtHpRatio', context);
+      if (maxBuffAtHpRatio < 0 || maxBuffAtHpRatio >= 1) {
+        invalidField(
+          context,
+          'maxBuffAtHpRatio',
+          'must be between 0 and 1 (exclusive of 1)',
+        );
+      }
+      return {
+        ...base,
+        buffStat,
+        maxBuffAtHpRatio,
+        ...(buffMultiplierMax !== undefined ? { buffMultiplierMax } : {}),
+        ...(buffFlatBonusMax !== undefined ? { buffFlatBonusMax } : {}),
+      };
     }
   }
 }
@@ -2152,11 +2406,15 @@ function validateReferences(
         throw new Error(`Unknown starterActiveId "${activeId}": ${cls.id}`);
       }
     }
+    const classPassiveIds = new Set(cls.passiveIds ?? cls.starterPassiveIds);
     for (const skillId of getClassSkillIds(cls.skills)) {
       if (passiveIds.has(skillId)) {
-        throw new Error(
-          `passive "${skillId}" must be listed in passiveIds, not skills[]: ${cls.id}`,
-        );
+        if (!classPassiveIds.has(skillId)) {
+          throw new Error(
+            `passive "${skillId}" in skills[] must also be listed in passiveIds: ${cls.id}`,
+          );
+        }
+        continue;
       }
       if (!activeIds.has(skillId)) {
         throw new Error(`Unknown active skillId in skills[] "${skillId}": ${cls.id}`);

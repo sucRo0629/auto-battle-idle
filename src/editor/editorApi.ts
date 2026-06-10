@@ -469,7 +469,6 @@ export function buildClassSkillsFromEntries(
 ): { level: number; skillIds: string[] }[] {
   const byLevel = new Map<number, string[]>();
   for (const entry of entries) {
-    if (entry.ref.kind === 'passive') continue;
     if (isBasicAttackSkillId(entry.ref.skillId, classId)) continue;
     const skillId = entry.ref.skillId.trim();
     if (!skillId) continue;
@@ -502,22 +501,48 @@ export function initClassSkillEntriesFromPreset(
     }
   }
 
-  const passiveIds = new Set(skills.passives.map((p) => p.id));
+  const registryPassiveIds = new Set(skills.passives.map((p) => p.id));
   const refs: SkillSlotRef[] = [
     { skillId: defaultBasicAttackId(classId), kind: 'active' },
   ];
   const seen = new Set(refs.map((ref) => ref.skillId));
 
+  const passiveIdList: string[] = [];
+  const passiveIdSet = new Set<string>();
   for (const passiveId of preset.passiveIds ?? []) {
     const id = passiveId.trim();
-    if (!id || seen.has(id)) continue;
+    if (!id || passiveIdSet.has(id)) continue;
+    passiveIdSet.add(id);
+    passiveIdList.push(id);
+  }
+  for (const skillId of levelBySkillId.keys()) {
+    if (!registryPassiveIds.has(skillId) || passiveIdSet.has(skillId)) continue;
+    passiveIdSet.add(skillId);
+    passiveIdList.push(skillId);
+  }
+  passiveIdList.sort(
+    (a, b) =>
+      (levelBySkillId.get(a) ?? 0) - (levelBySkillId.get(b) ?? 0) ||
+      a.localeCompare(b),
+  );
+  for (const id of passiveIdList) {
+    if (seen.has(id)) continue;
     seen.add(id);
     refs.push({ skillId: id, kind: 'passive' });
   }
 
-  for (const [skillId] of levelBySkillId) {
+  const activeIdList: string[] = [];
+  for (const skillId of levelBySkillId.keys()) {
     if (skillId === defaultBasicAttackId(classId) || seen.has(skillId)) continue;
-    if (passiveIds.has(skillId)) continue;
+    if (registryPassiveIds.has(skillId)) continue;
+    activeIdList.push(skillId);
+  }
+  activeIdList.sort(
+    (a, b) =>
+      (levelBySkillId.get(a) ?? 0) - (levelBySkillId.get(b) ?? 0) ||
+      a.localeCompare(b),
+  );
+  for (const skillId of activeIdList) {
     seen.add(skillId);
     refs.push({ skillId, kind: 'active' });
   }
@@ -569,6 +594,11 @@ export function buildClassPresetFromDraft(
   const cls = structuredClone(draft.class);
   cls.passiveIds = entries
     .filter((entry) => entry.ref.kind === 'passive')
+    .sort(
+      (a, b) =>
+        (a.unlockLevel ?? 0) - (b.unlockLevel ?? 0) ||
+        a.ref.skillId.localeCompare(b.ref.skillId),
+    )
     .map((entry) => entry.ref.skillId.trim())
     .filter(Boolean);
   cls.skills = buildClassSkillsFromEntries(cls.id, entries);

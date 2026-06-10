@@ -64,6 +64,17 @@ describe('resolveResourceAmount', () => {
     expect(resolveResourceAmount(actor, target, spec, passives)).toBe(54);
   });
 
+  it('resolves defBased with offset and scale', () => {
+    const defender = mockCombatant({ def: 15 });
+    const spec: ResourceAmountSpec = {
+      kind: 'defBased',
+      defOffset: 5,
+      defScale: 2,
+    };
+    // (15 + 5) * 2 = 40
+    expect(resolveResourceAmount(defender, target, spec, passives)).toBe(40);
+  });
+
   it('resolves flat amount', () => {
     expect(
       resolveResourceAmount(
@@ -107,7 +118,7 @@ describe('resolveHealAmount', () => {
     const healer = mockCombatant({
       atk: 100,
       build: {
-        learnedPassiveIds: ['lowHpBonus'],
+        learnedPassiveIds: [],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
@@ -122,15 +133,6 @@ describe('resolveHealAmount', () => {
       },
     });
     const passives: Record<string, PassiveSkillDef> = {
-      lowHpBonus: {
-        id: 'lowHpBonus',
-        name: 'LowHpBonus',
-        effect: 'damageIncrease',
-        damageIncrease: {
-          scale: 2,
-          conditions: [{ kind: 'selfHp', maxHpRatio: 1, mode: 'threshold' }],
-        },
-      },
       healBoost: {
         id: 'healBoost',
         name: 'HealBoost',
@@ -150,30 +152,20 @@ describe('resolveHealAmount', () => {
         },
       },
     );
-    // floor(10 * 2 * 1.5) = 30 → floor(30 * 1.25) = 37
-    expect(amount).toBe(37);
+    // floor(10 * 1.5) = 15 → floor(15 * 1.25) = 18
+    expect(amount).toBe(18);
   });
 
   it('does not apply damageIncrease to hot tick amounts', () => {
     const healer = mockCombatant({
       atk: 100,
       build: {
-        learnedPassiveIds: ['lowHpBonus'],
+        learnedPassiveIds: [],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
     });
-    const passives: Record<string, PassiveSkillDef> = {
-      lowHpBonus: {
-        id: 'lowHpBonus',
-        name: 'LowHpBonus',
-        effect: 'damageIncrease',
-        damageIncrease: {
-          scale: 2,
-          conditions: [{ kind: 'selfHp', maxHpRatio: 1, mode: 'threshold' }],
-        },
-      },
-    };
+    const passives: Record<string, PassiveSkillDef> = {};
     const hotAmount = resolveHotAmountFromStatus(
       healer,
       target,

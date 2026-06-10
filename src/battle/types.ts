@@ -168,7 +168,11 @@ export type TargetShape =
 export type PowerStepMode = "multiply" | "divide";
 
 /** heal / hot / barrier 共用の効果量種別 */
-export type ResourceAmountKind = "atkBased" | "flat" | "percentMaxHp";
+export type ResourceAmountKind =
+  | "atkBased"
+  | "defBased"
+  | "flat"
+  | "percentMaxHp";
 
 export interface ResourceAmountSpec {
   kind: ResourceAmountKind;
@@ -176,6 +180,10 @@ export interface ResourceAmountSpec {
   atkOffset?: number;
   /** atkBased — 倍率（乗算・除算の net）。未指定時 1（旧 powerMultiplier 互換） */
   atkScale?: number;
+  /** defBased — effectiveDef への加減（加算・減算の net）。未指定時 0 */
+  defOffset?: number;
+  /** defBased — 倍率（乗算・除算の net）。未指定時 1 */
+  defScale?: number;
   /** flat */
   flatAmount?: number;
   /** 0〜1、percentMaxHp — 対象 maxHp 基準 */
@@ -248,7 +256,7 @@ export interface StatusEffect {
   /** buff/debuff 用（stat 系） */
   stat?: StatusEffectStat;
   /** HoT/DoT/CC バッジ用 */
-  overlay?: "hot" | "dot" | "stun" | "block";
+  overlay?: "hot" | "dot" | "stun" | "block" | "counter";
   /** HoT tick 量（ResourceAmountSpec） */
   amount?: ResourceAmountSpec;
   /** HoT/DoT tick 量（旧 JSON 互換） */
@@ -270,9 +278,18 @@ export interface StatusEffect {
   defenseIgnore?: DefenseIgnoreSpec;
   /** 一時ブロック付与（アクティブ block 効果） */
   blockChance?: number;
+  /** 反撃 overlay: 発動時に攻撃者へ適用するレスポンス一覧 */
+  responses?: CounterResponseDef[];
+  /** 反撃 overlay: この射程内の攻撃のみ反撃発動（未指定 = 持有者 traits.rangePx） */
+  counterRangePx?: number;
 }
 
-export type StatusEffectStat = "atk" | "def" | "reg" | "damageTaken";
+export type StatusEffectStat =
+  | "atk"
+  | "def"
+  | "reg"
+  | "damageTaken"
+  | "attackSpeed";
 
 /** デバフフィルタタグ（gameDataSchema.DEBUFF_FILTER_TAGS と同期） */
 export type DebuffFilterTag = StatusEffectStat | "dot" | "stun";
@@ -283,13 +300,7 @@ export type DamageIncreaseCondition =
       tags: DebuffFilterTag[];
       selfAppliedOnly?: boolean;
     }
-  | { kind: "targetHp"; maxHpRatio: number }
-  | {
-      kind: "selfHp";
-      maxHpRatio: number;
-      mode?: "threshold" | "scaling";
-      maxMul?: number;
-    };
+  | { kind: "targetHp"; maxHpRatio: number };
 
 export interface DamageIncreaseSpec {
   scale: number;
@@ -365,7 +376,9 @@ export type PassiveEffectKind =
   | "periodicDispel"
   | "block"
   | "healReceivedIncrease"
-  | "damageReduction";
+  | "damageReduction"
+  | "counterChance"
+  | "selfHpRatioBuff";
 
 export interface PassiveSkillDef {
   id: string;
@@ -397,6 +410,22 @@ export interface PassiveSkillDef {
   dispelCount?: number;
   /** healReceivedIncrease: 受ける回復・HoT 量の加算割合（0.2 = +20%） */
   percent?: number;
+  /** counterChance: 被攻撃時の反撃発動確率（0〜1） */
+  counterChance?: number;
+  /** counterChance: 反撃内容（アクティブ counter の responses と同型） */
+  counterResponses?: CounterResponseDef[];
+  /** counterChance: 反撃発動射程（px）。未指定 = 持有者 traits.rangePx */
+  counterRange?: number;
+  /** selfHpRatioBuff: バフ対象 stat（自身固定） */
+  buffStat?: StatusEffectStat | StatusEffectStat[];
+  /** selfHpRatioBuff: 最大倍率（満タン時は 1 = 中立） */
+  buffMultiplierMax?: number;
+  /** selfHpRatioBuff: 最大固定加算 */
+  buffFlatBonusMax?: number;
+  /** selfHpRatioBuff: この HP 割合以下で最大バフ（0〜1、1 未満） */
+  maxBuffAtHpRatio?: number;
+  /** excessHealToBarrier: 余剰変換の対象（未指定 = outgoing のみ） */
+  excessHealSources?: Array<"outgoing" | "incoming">;
 }
 
 export type SkillEffectKind =
@@ -411,7 +440,8 @@ export type SkillEffectKind =
   | "stun"
   | "knockback"
   | "dispel"
-  | "block";
+  | "block"
+  | "counter";
 
 export type MoveMode = "engage" | "toAnchor" | "behindTarget";
 export type DamageType = "physical" | "magic";
@@ -592,6 +622,49 @@ export interface BlockSkillEffect extends SkillEffectCommon {
   durationSec: number;
 }
 
+export type CounterResponseKind =
+  | "damage"
+  | "debuff"
+  | "dot"
+  | "stun"
+  | "knockback";
+
+export type CounterResponseDef =
+  | {
+      kind: "damage";
+      amount: ResourceAmountSpec;
+      damageType?: DamageType;
+    }
+  | {
+      kind: "debuff";
+      debuffStat: StatusEffectStat | StatusEffectStat[];
+      debuffMultiplier?: number;
+      debuffFlatBonus?: number;
+      debuffDurationSec: number;
+    }
+  | {
+      kind: "dot";
+      durationSec: number;
+      powerMultiplier: number;
+      damageType?: DamageType;
+      damageIncrease?: DamageIncreaseSpec;
+      defenseIgnore?: DefenseIgnoreSpec;
+    }
+  | {
+      kind: "stun";
+      durationSec: number;
+    }
+  | {
+      kind: "knockback";
+      distancePx: number;
+    };
+
+export interface CounterSkillEffect extends SkillEffectCommon {
+  type: "counter";
+  responses: CounterResponseDef[];
+  durationSec: number;
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -604,7 +677,8 @@ export type SkillEffectDef =
   | StunSkillEffect
   | KnockbackSkillEffect
   | DispelSkillEffect
-  | BlockSkillEffect;
+  | BlockSkillEffect
+  | CounterSkillEffect;
 
 export interface ActiveSkillDef {
   id: string;
@@ -722,6 +796,8 @@ export interface BattleSnapshot {
   worldOffsetX: number;
   /** 接敵中: 前線を画面中央へ寄せるスプライト描画オフセット */
   combatCameraX: number;
+  /** Wave 2+: カメラ補正付き絶対隊列リセット中 */
+  formationResetActive: boolean;
   alliesOffScreen: boolean;
   /** Victory: タイマー基準でフェード（画面外退出待ちの早期 fade なし） */
   victoryUseTimerFade: boolean;

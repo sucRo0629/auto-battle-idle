@@ -7,6 +7,7 @@ import {
   hideFallenAllyCorpses,
   resetEntityIdCounter,
 } from "./entities.ts";
+import { getEffectiveAttackSpeedMultiplier } from "./combatMath.ts";
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
@@ -23,6 +24,7 @@ import {
   SCROLL_SPEED,
   separateByGap,
   shouldStartApproach,
+  syncEnemyVisualToBattleContact,
   updateUnitApproach,
 } from "./combatPosition.ts";
 import {
@@ -32,17 +34,22 @@ import {
 } from "./resolveApproachBattleX.ts";
 import { isUnitStunned } from "./ccEffects.ts";
 import {
+  applyCounterRetaliation,
+  applyPassiveCounterRetaliation,
+  type CounterAttackKind,
+} from "./counterEffects.ts";
+import {
   applyDamageTakenToHeal,
   resolveIncomingHealAmount,
   applyPassiveHotFromPassive,
   getPeriodicDispelReady,
   getPeriodicHotReady,
-  initializeCountTriggerCooldowns,
   initializePeriodicDispelStates,
   initializePeriodicHotStates,
   syncHotAuras,
   syncBlockAuras,
   syncDamageReductionAuras,
+  syncSelfHpRatioBuffAuras,
   tickPeriodicDispelStates,
   tickPeriodicHotStates,
   type PeriodicDispelPassiveState,
@@ -59,18 +66,27 @@ import {
 } from "./threat.ts";
 import { deathAnimDurationMs } from "../render/deathPlayback.ts";
 import {
+  applyStaggeredFormationMarchRestore,
+  approachAllyVisualX,
+  approachEnemyVisualX,
   clampAllyVisualDepth,
+  clampEngagedEnemyGroupOnScreen,
   computeAllyPositions,
   computeEngagedAllyLaneOffsets,
   ENGAGED_VISUAL_TUNING,
   getFrontEnemyX,
   getLeadingAllyFormationRow,
+  isFormationScreenLayoutRestored,
+  isFormationSpacingRestored,
   moveTowardX,
   resolveEngagedContactVisualX,
   resolveEngagedLayout,
+  separateEngagedSprites,
+  snapFormationScreenLayout,
+  tickCompensatedFormationReset,
   type EngagedLayoutResult,
+  type FormationRestorePhase,
   ROW_X,
-  separateEnemySprites,
   SPRITE_GAP,
   SPRITE_WIDTH,
   toVisualCombatant,
@@ -79,21 +95,13 @@ import { SkillExecutor } from "./skills/SkillExecutor.ts";
 import { tickPendingHits } from "./skills/pendingSkillHits.ts";
 import { SkillSequenceRunner } from "./skills/skillSequence.ts";
 import {
+  initializeSkillCooldowns,
   resolveSkillTrigger,
   shouldTickCooldown,
   tickCountTriggerCooldowns,
 } from "./skillTrigger.ts";
-import type {
-  BattlePhase,
-  BattleSnapshot,
-  CombatantState,
-  GameData,
-  PartySlotState,
-  PendingSkillHit,
-  SkillCooldown,
-  SkillTriggerKind,
-  StatusEffect,
-} from "./types.ts";
+import type { BattlePhase, BattleSnapshot, CombatantState, GameData, PartySlotState, PendingSkillHit, SkillCooldown, SkillTriggerKind, StatusEffect } from "./types.ts";
+import { BATTLE_ENEMY_MARCH_VISIBLE_MIN_X } from "./types.ts";
 import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 
 const RESTART_DELAY_SEC = 3;
@@ -111,6 +119,8 @@ const ALLY_DEATH_DEFEAT_DELAY_SEC =
   (deathAnimDurationMs() + 500) / 1000;
 /** 各 Wave 開始前: 敵出現前に味方が左へ進軍する時間（Wave 1 含む全 Wave 共通） */
 export const WAVE_APPROACH_MARCH_SEC = 0.75;
+/** 接敵解除後: 隊列 visualX を戻す速度（px/s） */
+const FORMATION_RESTORE_SPEED = BATTLE_APPROACH_SPEED;
 
 export interface BattleEngineOptions {
   onDamageApplied?: (
@@ -135,7 +145,13 @@ export class BattleEngine {
   private pendingNextWaveIndex: number | null = null;
   private waveIntermissionActive = false;
   private waveIntermissionElapsed = 0;
+  /** Wave 2+: カメラ補正付き絶対隊列リセット中 */
+  private formationResetActive = false;
   private engaged = false;
+  /** 戦闘後の段階的隊列復帰フェーズ */
+  private formationRestorePhase: FormationRestorePhase = "lead";
+  /** Victory 退出前: 隊列復帰完了（exit march の切替振動防止） */
+  private victoryFormationReady = false;
   /** 最前線列の生存メンバー変化検知（レーン再固定用） */
   private engagedLeadingRowSignature: string | null = null;
   /** 近接敵の生存構成変化検知（奥行きスロット再固定用） */
@@ -173,11 +189,14 @@ export class BattleEngine {
       getAllCombatants: () => [...this.allies, ...this.enemies],
       getSequenceRunner: () => this.skillSequenceRunner,
       onBasicAttackExecuted: () => {},
-      onDamageApplied: (actor, target, amount) => {
-        this.handleDamageThreat(actor, target, amount);
+      onDamageApplied: (actor, target, amount, meta) => {
+        this.handleDamageThreat(actor, target, amount, meta);
       },
       onDebuffApplied: (actor) => {
         applyThreatFromDebuffApply(actor);
+      },
+      onHealApplied: () => {
+        this.refreshSelfHpRatioBuffAuras();
       },
     });
     this.reloadBattlefield();
@@ -187,6 +206,10 @@ export class BattleEngine {
     actor: CombatantState,
     target: CombatantState,
     amount: number,
+    meta?: {
+      attackKind: CounterAttackKind;
+      isCounterDamage?: boolean;
+    },
   ): void {
     applyThreatFromDamage(actor, target, amount);
     if (!target.isEnemy && target.isAlive && amount > 0) {
@@ -196,6 +219,59 @@ export class BattleEngine {
         this.gameData.skillRegistry.passives,
       );
     }
+    if (amount > 0 && meta?.attackKind) {
+      const counterCallbacks = {
+        emit: (event: Parameters<typeof this.emit>[0]) => this.emit(event),
+        getAllCombatants: () => [...this.allies, ...this.enemies],
+        onDamageApplied: (
+          counterActor: CombatantState,
+          counterTarget: CombatantState,
+          counterAmount: number,
+          counterMeta?: {
+            attackKind: CounterAttackKind;
+            isCounterDamage?: boolean;
+          },
+        ) => {
+          this.handleDamageThreat(
+            counterActor,
+            counterTarget,
+            counterAmount,
+            counterMeta,
+          );
+        },
+        getSkillName: (skillId: string) =>
+          this.gameData.skillRegistry.actives[skillId]?.name ??
+          this.gameData.skillRegistry.passives[skillId]?.name ??
+          "反撃",
+        onUnitDied: (unit: CombatantState) => {
+          this.emit({ type: "death", targetId: unit.id });
+          this.skillSequenceRunner.clearForActor(unit.id);
+        },
+        onDebuffApplied: (counterActor: CombatantState) => {
+          applyThreatFromDebuffApply(counterActor);
+        },
+      };
+      const counterCtx = {
+        attackKind: meta.attackKind,
+        appliedDamage: amount,
+        isCounterDamage: meta.isCounterDamage,
+      };
+      applyPassiveCounterRetaliation(
+        target,
+        actor,
+        counterCtx,
+        this.gameData.skillRegistry.passives,
+        counterCallbacks,
+      );
+      applyCounterRetaliation(
+        target,
+        actor,
+        counterCtx,
+        this.gameData.skillRegistry.passives,
+        counterCallbacks,
+      );
+    }
+    this.refreshSelfHpRatioBuffAuras();
     this.onDamageApplied?.(actor, target, amount);
   }
 
@@ -212,12 +288,22 @@ export class BattleEngine {
     this.stageId = this.getStageId();
     this.waveIndex = 0;
     this.clearEngagedVisualState();
-    this.restoreAlliesToFormationMarch();
+    this.formationRestorePhase = "lead";
+    this.victoryFormationReady = false;
+    this.restoreAlliesToFormationMarch(true);
     this.clearPendingVictory();
     this.clearPendingDefeat();
     this.clearPendingWaveAdvance();
     this.beginWaveApproachMarch(0);
     this.initBattlePassiveState();
+  }
+
+  private refreshSelfHpRatioBuffAuras(): void {
+    syncSelfHpRatioBuffAuras(
+      this.allies,
+      this.enemies,
+      this.gameData.skillRegistry.passives,
+    );
   }
 
   private initBattlePassiveState(): void {
@@ -227,10 +313,11 @@ export class BattleEngine {
     syncHotAuras(this.allies, this.enemies, passives);
     syncBlockAuras(this.allies, this.enemies, passives);
     syncDamageReductionAuras(this.allies, this.enemies, passives);
+    syncSelfHpRatioBuffAuras(this.allies, this.enemies, passives);
     this.periodicDispelStates.clear();
     this.periodicHotStates.clear();
     for (const unit of [...this.allies, ...this.enemies]) {
-      initializeCountTriggerCooldowns(unit, actives);
+      initializeSkillCooldowns(unit, actives);
       const dispelStates = initializePeriodicDispelStates(unit, passives);
       if (dispelStates.length > 0) {
         this.periodicDispelStates.set(unit.id, dispelStates);
@@ -295,34 +382,104 @@ export class BattleEngine {
     }
   }
 
-  /** 非接敵進軍・戦闘区切り: フィールド在席者の visualX を隊列へ戻す */
-  private restoreAlliesToFormationMarch(): void {
+  private getFormationRestoreUnits() {
+    return this.allies
+      .filter((ally) => this.isOnBattlefield(ally) && ally.isAlive)
+      .map((ally) => ({
+        id: ally.id,
+        role: ally.role,
+        formationRow: ally.formationRow,
+        isAlive: true as const,
+        visualX: ally.visualX,
+      }));
+  }
+
+  private isFormationSpacingRestored(): boolean {
+    return isFormationSpacingRestored(this.getFormationRestoreUnits());
+  }
+
+  /** 非接敵: 左進軍しつつ段階的に隊列間隔を広げる */
+  private tickStaggeredFormationRestore(deltaTime: number): void {
+    const units = this.getFormationRestoreUnits();
+    this.formationRestorePhase = applyStaggeredFormationMarchRestore(
+      {
+        phase: this.formationRestorePhase,
+        allies: units,
+      },
+      deltaTime,
+      FORMATION_RESTORE_SPEED,
+    );
+    for (const unit of units) {
+      const ally = this.allies.find((a) => a.id === unit.id);
+      if (ally) ally.visualX = unit.visualX;
+    }
+    this.alignPartyCenterCamera();
+  }
+
+  /** 生存味方スプライト中心の visualX */
+  private resolvePartyCenterVisualX(): number | null {
+    const living = this.allies.filter(
+      (ally) => this.isOnBattlefield(ally) && ally.isAlive,
+    );
+    if (living.length === 0) return null;
+    const centers = living.map((ally) => ally.visualX + SPRITE_WIDTH / 2);
+    return centers.reduce((sum, x) => sum + x, 0) / centers.length;
+  }
+
+  /** パーティ全員がなるべく画面中央に映るよう combatCameraX を設定 */
+  private alignPartyCenterCamera(): void {
+    const center = this.resolvePartyCenterVisualX();
+    if (center === null) return;
+
+    this.cameraFocusLineX = center;
+    let targetCamera = COMBAT_CAMERA_CENTER_X - center;
+    const maxCamera =
+      BATTLE_CANVAS_W - BATTLE_UI_RIGHT_PAD - ROW_X.back - SPRITE_WIDTH;
+    this.combatCameraX = Math.min(targetCamera, maxCamera);
+  }
+
+  /** 接敵終了 bake 後: パーティ中心でカメラ seed */
+  private seedPostCombatFormationCamera(): void {
+    this.alignPartyCenterCamera();
+  }
+
+  /** 非接敵進軍・戦闘区切り: battleX を隊列へ。visualX は instant 時のみ即時同期 */
+  private restoreAlliesToFormationMarch(instant = false): void {
     assignInitialAllyBattleX(this.allies);
-    this.syncAllyVisualPositions(false);
+    if (instant) {
+      this.syncAllyVisualPositions(false);
+    }
   }
 
   private resetEnemyVisualPositions(): void {
-    for (const enemy of this.enemies) {
-      enemy.visualX = enemy.spawnX!;
-    }
-    const separated = separateEnemySprites(
-      this.enemies.map((enemy) => ({
-        id: enemy.id,
-        visualX: enemy.visualX,
-        isAlive: enemy.isAlive,
-      })),
-    );
-    for (const enemy of this.enemies) {
-      const x = separated.get(enemy.id);
-      if (x !== undefined) {
-        enemy.visualX = x;
-      }
-    }
+    this.applyEnemyVisualFromBattle();
   }
 
   private syncEnemyVisualFromBattle(): void {
+    this.applyEnemyVisualFromBattle();
+  }
+
+  private clampEnemyVisualOnScreen(visualX: number): number {
+    const minScreen = this.engaged ? 0 : BATTLE_ENEMY_MARCH_VISIBLE_MIN_X;
+    const screenX = visualX + this.combatCameraX;
+    if (screenX >= minScreen) return visualX;
+    return minScreen - this.combatCameraX;
+  }
+
+  private applyEnemyVisualFromBattle(): void {
+    syncEnemyVisualToBattleContact(this.allies, this.enemies);
+    const living = this.enemies
+      .filter((enemy) => enemy.isAlive)
+      .map((enemy) => ({
+        id: enemy.id,
+        visualX: enemy.visualX,
+        isAlive: true as const,
+      }));
+    const separated = separateEngagedSprites(living);
     for (const enemy of this.enemies) {
-      enemy.visualX = enemy.battleX;
+      const x = separated.get(enemy.id);
+      if (x === undefined) continue;
+      enemy.visualX = this.clampEnemyVisualOnScreen(x);
     }
   }
 
@@ -362,6 +519,7 @@ export class BattleEngine {
         enemy,
         this.allies,
         this.gameData,
+        this.enemies,
       );
       if (marchCap !== null) {
         x = Math.min(x, marchCap);
@@ -586,7 +744,7 @@ export class BattleEngine {
       if (!this.isOnBattlefield(ally)) continue;
       const target = layout.allyVisualX.get(ally.id);
       if (target !== undefined) {
-        ally.visualX = moveTowardX(ally.visualX, target, moveStep);
+        ally.visualX = approachAllyVisualX(ally.visualX, target, moveStep);
       }
     }
     clampAllyVisualDepth(this.allies);
@@ -595,7 +753,23 @@ export class BattleEngine {
       if (!enemy.isAlive) continue;
       const target = layout.enemyVisualX.get(enemy.id);
       if (target !== undefined) {
-        enemy.visualX = moveTowardX(enemy.visualX, target, moveStep);
+        enemy.visualX = approachEnemyVisualX(enemy.visualX, target, moveStep);
+      }
+    }
+    const clampedEnemies = clampEngagedEnemyGroupOnScreen(
+      this.enemies
+        .filter((enemy) => enemy.isAlive)
+        .map((enemy) => ({
+          id: enemy.id,
+          visualX: enemy.visualX,
+          isAlive: true as const,
+        })),
+      this.combatCameraX,
+    );
+    for (const enemy of this.enemies) {
+      const x = clampedEnemies.get(enemy.id);
+      if (x !== undefined) {
+        enemy.visualX = x;
       }
     }
   }
@@ -641,11 +815,13 @@ export class BattleEngine {
       this.refreshEngagedVisualLanes();
     }
     const meleeSignature = this.getEngagedMeleeEnemySignature();
-    if (
-      meleeSignature !== null &&
-      meleeSignature !== this.engagedMeleeEnemySignature
-    ) {
-      this.freezeEngagedMeleeVisualSlots();
+    if (meleeSignature !== this.engagedMeleeEnemySignature) {
+      if (meleeSignature !== null) {
+        this.freezeEngagedMeleeVisualSlots();
+      } else {
+        this.refreshEngagedVisualLanes();
+        this.engagedMeleeEnemySignature = null;
+      }
     }
     this.applyEngagedVisualLayoutFromBattle(deltaTime);
   }
@@ -666,14 +842,13 @@ export class BattleEngine {
   }
 
   private updateCombatCamera(deltaTime: number): void {
-    const frontLineTargetX =
-      this.resolveCurrentEngagedLayout()?.frontLineVisualX ?? null;
-    if (frontLineTargetX === null) return;
+    const partyCenter = this.resolvePartyCenterVisualX();
+    if (partyCenter === null) return;
 
     const step = CAMERA_PAN_SPEED * deltaTime;
     this.cameraFocusLineX = moveTowardX(
       this.cameraFocusLineX,
-      frontLineTargetX,
+      partyCenter,
       step,
     );
     let targetCamera = COMBAT_CAMERA_CENTER_X - this.cameraFocusLineX;
@@ -699,7 +874,6 @@ export class BattleEngine {
   }
 
   private beginVictoryExit(): void {
-    this.bakeCombatCameraIntoVisualX((unit) => !unit.isEnemy && unit.isAlive);
     this.restoreAlliesToFormationMarch();
   }
 
@@ -730,6 +904,64 @@ export class BattleEngine {
     this.pendingNextWaveIndex = null;
     this.waveIntermissionActive = false;
     this.waveIntermissionElapsed = 0;
+    this.formationResetActive = false;
+  }
+
+  private isWaveTransitionSettling(): boolean {
+    return (
+      this.waveAdvanceDelayTimer > 0 ||
+      this.formationResetActive ||
+      this.waveIntermissionActive
+    );
+  }
+
+  private shouldSuppressCombatSkills(): boolean {
+    return (
+      this.formationResetActive ||
+      this.waveAdvanceDelayTimer > 0 ||
+      this.pendingVictoryTimer > 0
+    );
+  }
+
+  private isPostCombatSettling(): boolean {
+    return this.waveAdvanceDelayTimer > 0 || this.pendingVictoryTimer > 0;
+  }
+
+  /** 敵全滅後: 死亡演出待ち → Wave 2+ はカメラ補正付き隊列リセット */
+  private tickPostCombatSettle(deltaTime: number): void {
+    if (this.waveAdvanceDelayTimer > 0) {
+      this.waveAdvanceDelayTimer -= deltaTime;
+      if (this.waveAdvanceDelayTimer <= 0) {
+        this.startFormationReset();
+      }
+      return;
+    }
+
+    if (this.pendingVictoryTimer > 0) {
+      this.tickStaggeredFormationRestore(deltaTime);
+      this.pendingVictoryTimer -= deltaTime;
+      if (this.pendingVictoryTimer <= 0) {
+        this.applyVictoryTransition(this.pendingVictorySurvivors ?? []);
+        this.pendingVictorySurvivors = null;
+      }
+    }
+  }
+
+  private beginEnemyWipeSettle(hasNextWave: boolean): void {
+    this.engaged = false;
+    this.clearEngagedVisualState();
+    this.skillSequenceRunner.clearAll();
+    this.formationRestorePhase = "lead";
+    if (hasNextWave) {
+      this.bakeCombatCameraForWaveAdvance();
+      this.waveAdvanceDelayTimer = ENEMY_DEATH_SETTLE_DELAY_SEC;
+    } else {
+      this.bakeCombatCameraIntoVisualX(
+        (unit) => !unit.isEnemy && unit.isAlive,
+      );
+      this.pendingVictoryTimer = ENEMY_DEATH_SETTLE_DELAY_SEC;
+      this.seedPostCombatFormationCamera();
+    }
   }
 
   private beginWaveApproachMarch(waveIndex: number): void {
@@ -748,19 +980,73 @@ export class BattleEngine {
     );
     this.resetEnemyBattlePositions();
     this.resetEnemyVisualPositions();
+    const actives = this.gameData.skillRegistry.actives;
     for (const enemy of this.enemies) {
-      initializeCountTriggerCooldowns(
-        enemy,
-        this.gameData.skillRegistry.actives,
-      );
+      initializeSkillCooldowns(enemy, actives);
     }
   }
 
+  private startFormationReset(): void {
+    this.engaged = false;
+    this.clearEngagedVisualState();
+    hideFallenAllyCorpses(this.allies);
+    if (this.pendingNextWaveIndex === null) return;
+    this.enemies = [];
+    this.formationResetActive = true;
+    this.formationRestorePhase = "lead";
+  }
+
+  private tickCompensatedFormationReset(deltaTime: number): void {
+    const units = this.getFormationRestoreUnits();
+    const result = tickCompensatedFormationReset(
+      {
+        phase: this.formationRestorePhase,
+        allies: units,
+      },
+      this.combatCameraX,
+      deltaTime,
+      FORMATION_RESTORE_SPEED,
+    );
+    this.formationRestorePhase = result.phase;
+    this.combatCameraX = result.combatCameraX;
+    for (const unit of units) {
+      const ally = this.allies.find((a) => a.id === unit.id);
+      if (ally) ally.visualX = unit.visualX;
+    }
+  }
+
+  private isFormationScreenLayoutRestored(): boolean {
+    return isFormationScreenLayoutRestored(
+      this.getFormationRestoreUnits(),
+      this.combatCameraX,
+    );
+  }
+
+  private completeWaveFormationReset(): void {
+    const waveIndex = this.pendingNextWaveIndex;
+    if (waveIndex === null) return;
+
+    const units = this.getFormationRestoreUnits();
+    snapFormationScreenLayout(units);
+    for (const unit of units) {
+      const ally = this.allies.find((a) => a.id === unit.id);
+      if (ally) ally.visualX = unit.visualX;
+    }
+    this.combatCameraX = 0;
+    this.resetCombatCamera();
+    assignInitialAllyBattleX(this.allies);
+    this.formationRestorePhase = "lead";
+    this.formationResetActive = false;
+    this.waveIndex = waveIndex;
+    this.spawnWaveEnemies();
+    this.pendingNextWaveIndex = null;
+  }
+
+  /** Wave 1 開始 preamble 用（Wave 2+ は startFormationReset） */
   private startWaveIntermission(): void {
     this.engaged = false;
     this.clearEngagedVisualState();
     hideFallenAllyCorpses(this.allies);
-    this.restoreAlliesToFormationMarch();
     if (this.pendingNextWaveIndex === null) return;
     this.enemies = [];
     this.waveIntermissionActive = true;
@@ -776,6 +1062,7 @@ export class BattleEngine {
     const waveIndex = this.pendingNextWaveIndex;
     if (waveIndex === null) return;
 
+    this.alignPartyCenterCamera();
     this.waveIndex = waveIndex;
     this.spawnWaveEnemies();
     this.waveIntermissionActive = false;
@@ -784,9 +1071,15 @@ export class BattleEngine {
   }
 
   private applyVictoryTransition(survivingPartyIndices: number[]): void {
+    if (this.combatCameraX !== 0) {
+      this.bakeCombatCameraIntoVisualX(
+        (unit) => !unit.isEnemy && unit.isAlive,
+      );
+    }
     this.phase = "victory";
     this.engaged = false;
     this.clearEngagedVisualState();
+    this.victoryFormationReady = this.isFormationSpacingRestored();
     this.beginVictoryExit();
     this.restartTimer = RESTART_DELAY_SEC;
     this.emit({
@@ -814,6 +1107,9 @@ export class BattleEngine {
   private updateEngagementState(): void {
     if (this.engaged) return;
     if (shouldStartApproach(this.allies, this.enemies, this.gameData)) {
+      if (this.combatCameraX !== 0) {
+        this.bakeCombatCameraIntoVisualX(() => true);
+      }
       this.engaged = true;
       this.snapEngagedVisualLayout();
     }
@@ -865,6 +1161,7 @@ export class BattleEngine {
 
       ally.build = structuredClone(member.build);
       ally.cooldowns = createCooldowns(preset.basicAttackSkillId, member.build);
+      initializeSkillCooldowns(ally, this.gameData.skillRegistry.actives);
     }
   }
 
@@ -882,6 +1179,7 @@ export class BattleEngine {
       waveCount,
       worldOffsetX: this.worldOffsetX,
       combatCameraX: this.combatCameraX,
+      formationResetActive: this.formationResetActive,
       alliesOffScreen: this.areAlliesOffScreen(),
       victoryUseTimerFade: this.phase === "victory",
       victoryAwaitExitMarch:
@@ -946,7 +1244,14 @@ export class BattleEngine {
     if (this.phase === "victory" || this.phase === "defeat") {
       this.restartTimer -= deltaTime;
       if (this.phase === "victory" && !this.hasFallenAllies()) {
-        this.updateVictoryExitMarch(deltaTime);
+        if (!this.victoryFormationReady) {
+          this.tickStaggeredFormationRestore(deltaTime);
+          if (this.isFormationSpacingRestored()) {
+            this.victoryFormationReady = true;
+          }
+        } else {
+          this.updateVictoryExitMarch(deltaTime);
+        }
       }
       const readyToRespawn =
         this.restartTimer <= 0 &&
@@ -962,9 +1267,21 @@ export class BattleEngine {
   private tickRunning(deltaTime: number): void {
     this.battleTimeSec += deltaTime;
     this.tickPendingHitQueue();
-    this.tickSkillSequences(deltaTime);
+    if (!this.shouldSuppressCombatSkills()) {
+      this.tickSkillSequences(deltaTime);
+    }
+    if (this.formationResetActive) {
+      this.tickCompensatedFormationReset(deltaTime);
+      this.tickStatusAndCooldowns(deltaTime, { suppressPeriodic: true });
+      if (this.isFormationScreenLayoutRestored()) {
+        this.completeWaveFormationReset();
+      }
+      return;
+    }
     if (this.waveIntermissionActive) {
       this.updateWaveIntermissionMarch(deltaTime);
+      this.tickStaggeredFormationRestore(deltaTime);
+      this.tickStatusAndCooldowns(deltaTime);
       if (this.waveIntermissionElapsed >= WAVE_APPROACH_MARCH_SEC) {
         this.completeWaveIntermission();
       }
@@ -972,29 +1289,36 @@ export class BattleEngine {
     }
     if (this.pendingDefeatTimer > 0) {
       this.pendingDefeatTimer -= deltaTime;
+      this.tickStatusAndCooldowns(deltaTime);
       if (this.pendingDefeatTimer <= 0) {
         this.applyDefeatTransition(this.pendingDefeatSurvivors ?? []);
         this.pendingDefeatSurvivors = null;
       }
       return;
     }
+    if (this.isPostCombatSettling()) {
+      const suppressPeriodic =
+        this.waveAdvanceDelayTimer > 0 ||
+        this.formationResetActive ||
+        this.pendingVictoryTimer > 0;
+      this.tickPostCombatSettle(deltaTime);
+      this.tickStatusAndCooldowns(deltaTime, { suppressPeriodic });
+      return;
+    }
     if (!this.engaged) {
       this.applyEnemyMarch(SCROLL_SPEED * deltaTime);
       this.updateEngagementState();
+      this.tickStatusAndCooldowns(deltaTime);
     } else {
-      if (this.waveAdvanceDelayTimer > 0) {
-        this.waveAdvanceDelayTimer -= deltaTime;
-        if (this.waveAdvanceDelayTimer <= 0) {
-          this.startWaveIntermission();
-        }
-        return;
-      }
-      if (this.pendingVictoryTimer > 0) {
-        this.pendingVictoryTimer -= deltaTime;
-        this.updateCombatCamera(deltaTime);
-        if (this.pendingVictoryTimer <= 0) {
-          this.applyVictoryTransition(this.pendingVictorySurvivors ?? []);
-          this.pendingVictorySurvivors = null;
+      if (!this.enemies.some((enemy) => enemy.isAlive)) {
+        this.checkBattleEnd();
+        if (this.isPostCombatSettling()) {
+          const suppressPeriodic =
+            this.waveAdvanceDelayTimer > 0 ||
+            this.formationResetActive ||
+            this.pendingVictoryTimer > 0;
+          this.tickPostCombatSettle(deltaTime);
+          this.tickStatusAndCooldowns(deltaTime, { suppressPeriodic });
         }
         return;
       }
@@ -1002,16 +1326,27 @@ export class BattleEngine {
       this.updateEngagedVisualMovement(deltaTime);
       this.applySkillMoveVisualOverlay();
       this.updateCombatCamera(deltaTime);
-      this.tickStatusEffects(deltaTime);
-      this.tickPeriodicDispels(deltaTime);
-      this.tickPeriodicHots(deltaTime);
-      this.tickCooldowns(this.allies, deltaTime);
-      this.tickCooldowns(this.enemies, deltaTime);
-      this.runUnitSkills(this.allies);
+      this.tickStatusAndCooldowns(deltaTime);
+      // 敵→味方の順でスキル解決し、同 tick 内で付与したバリア等が描画前に消費されないようにする
       this.runUnitSkills(this.enemies);
+      this.runUnitSkills(this.allies);
       this.tickAllyThreat(deltaTime);
       this.checkBattleEnd();
     }
+  }
+
+  /** DoT/HoT・バフ/デバフ持続・CD を接敵状態に関係なく進める */
+  private tickStatusAndCooldowns(
+    deltaTime: number,
+    options?: { suppressPeriodic?: boolean },
+  ): void {
+    this.tickStatusEffects(deltaTime);
+    if (!options?.suppressPeriodic) {
+      this.tickPeriodicDispels(deltaTime);
+      this.tickPeriodicHots(deltaTime);
+    }
+    this.tickCooldowns(this.allies, deltaTime);
+    this.tickCooldowns(this.enemies, deltaTime);
   }
 
   private tickAllyThreat(deltaTime: number): void {
@@ -1148,6 +1483,7 @@ export class BattleEngine {
       if (amount <= 0) return;
       const healed = applyHealToTarget(target, amount);
       if (healed <= 0) return;
+      this.refreshSelfHpRatioBuffAuras();
       this.emit({
         type: "skill",
         actorId: source.id,
@@ -1170,7 +1506,9 @@ export class BattleEngine {
       const damageResult = applyDamageToTarget(target, amount);
       const appliedDamage =
         damageResult.hpDamage + damageResult.barrierDamage;
-      this.handleDamageThreat(source, target, appliedDamage);
+      this.handleDamageThreat(source, target, appliedDamage, {
+        attackKind: "dot",
+      });
       const { lethal } = damageResult;
       this.emit({
         type: "skill",
@@ -1214,7 +1552,9 @@ export class BattleEngine {
         if (cd.remaining <= 0) continue;
         const skill = this.gameData.skillRegistry.actives[cd.skillId];
         if (!skill || !shouldTickCooldown(skill, cd.slotKind)) continue;
-        const rate = cd.slotKind === "active" ? 1 : basicRate;
+        const speedMul =
+          cd.slotKind === "active" ? 1 : getEffectiveAttackSpeedMultiplier(unit);
+        const rate = cd.slotKind === "active" ? 1 : basicRate * speedMul;
         cd.remaining = Math.max(0, cd.remaining - deltaTime * rate);
       }
     }
@@ -1264,18 +1604,18 @@ export class BattleEngine {
         if (
           this.pendingNextWaveIndex !== null ||
           this.waveIntermissionActive ||
+          this.formationResetActive ||
           this.waveAdvanceDelayTimer > 0
         ) {
           return;
         }
-        this.bakeCombatCameraForWaveAdvance();
-        this.waveAdvanceDelayTimer = ENEMY_DEATH_SETTLE_DELAY_SEC;
+        this.beginEnemyWipeSettle(true);
         this.pendingNextWaveIndex = this.waveIndex + 1;
         return;
       }
 
       if (this.pendingVictoryTimer <= 0 && this.pendingVictorySurvivors === null) {
-        this.pendingVictoryTimer = ENEMY_DEATH_SETTLE_DELAY_SEC;
+        this.beginEnemyWipeSettle(false);
         this.pendingVictorySurvivors = survivingPartyIndices;
       }
       return;

@@ -1,3 +1,4 @@
+import { currentHpRatio } from './combatMath.ts';
 import { hasMatchingDebuff } from './debuffMatching.ts';
 import type {
   CombatantState,
@@ -16,18 +17,8 @@ function evaluateCondition(
         selfSourceId: attacker.id,
         selfAppliedOnly: condition.selfAppliedOnly,
       });
-    case 'targetHp': {
-      if (target.maxHp <= 0) return false;
-      return target.hp / target.maxHp <= condition.maxHpRatio;
-    }
-    case 'selfHp': {
-      if (attacker.maxHp <= 0) return false;
-      const hpRatio = attacker.hp / attacker.maxHp;
-      if (condition.mode === 'scaling') {
-        return hpRatio < 1;
-      }
-      return hpRatio <= condition.maxHpRatio;
-    }
+    case 'targetHp':
+      return currentHpRatio(target) <= condition.maxHpRatio;
   }
 }
 
@@ -40,13 +31,6 @@ function resolveConditionMultiplier(
   if (!evaluateCondition(attacker, target, condition)) {
     return 1;
   }
-
-  if (condition.kind === 'selfHp' && condition.mode === 'scaling') {
-    const missingRatio = 1 - attacker.hp / attacker.maxHp;
-    const maxMul = condition.maxMul ?? scale;
-    return Math.min(maxMul, 1 + scale * missingRatio);
-  }
-
   return scale;
 }
 

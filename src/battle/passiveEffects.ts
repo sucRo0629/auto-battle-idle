@@ -1,7 +1,10 @@
-import { applyBarrierToTarget, getPassiveDefs } from './combatMath.ts';
+import {
+  applyBarrierToTarget,
+  currentHpRatio,
+  getPassiveDefs,
+} from './combatMath.ts';
 import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
 import { pickTargets } from './skills/targeting.ts';
-import { resolveSkillTrigger } from './skillTrigger.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -11,8 +14,10 @@ import type {
   SkillCooldown,
   SkillEffectDef,
   StatusEffect,
+  StatusEffectStat,
   TargetShape,
 } from './types.ts';
+import { asStatusEffectStatList } from './types.ts';
 
 const PASSIVE_AURA_DURATION_SEC = 99999;
 
@@ -21,20 +26,6 @@ export interface PassiveDamageContext {
   slotKind?: SkillCooldown['slotKind'];
   crowdHitCount?: number;
   targetShape?: TargetShape;
-}
-
-export function initializeCountTriggerCooldowns(
-  unit: CombatantState,
-  actives: Record<string, ActiveSkillDef>,
-): void {
-  for (const cd of unit.cooldowns) {
-    if (cd.slotKind !== 'active') continue;
-    const skill = actives[cd.skillId];
-    if (!skill) continue;
-    const trigger = resolveSkillTrigger(skill);
-    if (trigger.kind === 'time') continue;
-    cd.remaining = trigger.value;
-  }
 }
 
 export function rollsEvasion(
@@ -143,17 +134,29 @@ export function applyDamageTakenToHeal(
   return target.hp - before;
 }
 
+export type ExcessHealSource = 'outgoing' | 'incoming';
+
+function passiveExcessHealSources(
+  passive: PassiveSkillDef,
+): ExcessHealSource[] {
+  const sources = passive.excessHealSources;
+  if (!sources || sources.length === 0) return ['outgoing'];
+  return sources;
+}
+
 export function applyExcessHealToBarrierFromPassive(
-  actor: CombatantState,
+  owner: CombatantState,
   target: CombatantState,
   attemptedHeal: number,
   passives: Record<string, PassiveSkillDef>,
+  source: ExcessHealSource,
 ): number {
   if (attemptedHeal <= 0) return 0;
-  const defs = getPassiveDefs(actor, passives);
+  const defs = getPassiveDefs(owner, passives);
   let scaleSum = 0;
   for (const passive of defs) {
     if (passive.effect !== 'excessHealToBarrier') continue;
+    if (!passiveExcessHealSources(passive).includes(source)) continue;
     scaleSum += passive.barrierScale ?? 1;
   }
   if (scaleSum <= 0) return 0;
@@ -297,6 +300,93 @@ function createPassiveDamageReductionEffect(
     durationSec: PASSIVE_AURA_DURATION_SEC,
     remainingSec: PASSIVE_AURA_DURATION_SEC,
   };
+}
+
+const SELF_HP_BUFF_NEUTRAL_EPSILON = 0.001;
+
+export function resolveSelfHpRatioBuffScale(
+  unit: CombatantState,
+  maxBuffAtHpRatio: number,
+): number {
+  if (unit.maxHp <= 0) return 0;
+  if (maxBuffAtHpRatio >= 1) return 0;
+  const hpRatio = currentHpRatio(unit);
+  const denom = 1 - maxBuffAtHpRatio;
+  if (denom <= 0) return 0;
+  return Math.max(0, Math.min(1, (1 - hpRatio) / denom));
+}
+
+function createSelfHpRatioBuffEffect(
+  unit: CombatantState,
+  passive: PassiveSkillDef,
+  stat: StatusEffectStat,
+  multiplier: number,
+  flatBonus?: number,
+): StatusEffect {
+  return {
+    id: `passive_self_hp_buff_${unit.id}_${passive.id}_${stat}`,
+    kind: 'buff',
+    stat,
+    multiplier,
+    ...(flatBonus !== undefined && flatBonus > 0 ? { flatBonus } : {}),
+    sourceId: unit.id,
+    skillId: passive.id,
+    durationSec: PASSIVE_AURA_DURATION_SEC,
+    remainingSec: PASSIVE_AURA_DURATION_SEC,
+  };
+}
+
+export function syncSelfHpRatioBuffAuras(
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+): void {
+  const units = [...allies, ...enemies];
+  for (const unit of units) {
+    unit.statusEffects = unit.statusEffects.filter(
+      (effect) => !effect.id.startsWith('passive_self_hp_buff_'),
+    );
+  }
+
+  for (const unit of units) {
+    if (!unit.isAlive) continue;
+    for (const passive of getPassiveDefs(unit, passives)) {
+      if (passive.effect !== 'selfHpRatioBuff') continue;
+      const maxBuffAtHpRatio = passive.maxBuffAtHpRatio ?? 0;
+      const t = resolveSelfHpRatioBuffScale(unit, maxBuffAtHpRatio);
+      if (t <= 0) continue;
+
+      const stats = asStatusEffectStatList(passive.buffStat);
+      if (stats.length === 0) continue;
+
+      for (const stat of stats) {
+        let multiplier = 1;
+        let flatBonus: number | undefined;
+
+        if (passive.buffMultiplierMax !== undefined) {
+          multiplier = 1 + (passive.buffMultiplierMax - 1) * t;
+        }
+        if (passive.buffFlatBonusMax !== undefined) {
+          flatBonus = passive.buffFlatBonusMax * t;
+        }
+
+        const hasMul =
+          Math.abs(multiplier - 1) >= SELF_HP_BUFF_NEUTRAL_EPSILON;
+        const hasFlat = flatBonus !== undefined && flatBonus > 0;
+        if (!hasMul && !hasFlat) continue;
+
+        unit.statusEffects.push(
+          createSelfHpRatioBuffEffect(
+            unit,
+            passive,
+            stat,
+            multiplier,
+            flatBonus,
+          ),
+        );
+      }
+    }
+  }
 }
 
 function resolvePassiveHotDurationSec(hotDurationSec: number | undefined): number {

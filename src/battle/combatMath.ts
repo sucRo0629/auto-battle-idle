@@ -53,6 +53,19 @@ export function getDamageTakenMultiplier(combatant: CombatantState): number {
   return computeEffectiveStat(1, agg);
 }
 
+/** 現在 HP 割合（0〜1）。barrierHp は含めない。 */
+export function currentHpRatio(unit: CombatantState): number {
+  if (unit.maxHp <= 0) return 0;
+  return unit.hp / unit.maxHp;
+}
+
+export function getEffectiveAttackSpeedMultiplier(
+  combatant: CombatantState,
+): number {
+  const agg = aggregateStatEffects(combatant.statusEffects, 'attackSpeed');
+  return computeEffectiveStat(1, agg);
+}
+
 export function resolvePowerAmount(
   actor: CombatantState,
   target: CombatantState,
@@ -65,6 +78,12 @@ export function resolvePowerAmount(
       const offset = spec.atkOffset ?? 0;
       const scale = atkScaleOverride ?? spec.atkScale ?? 1;
       const base = (getEffectiveAtk(actor) + offset) * scale;
+      return Math.floor(Math.max(0, base));
+    }
+    case 'defBased': {
+      const offset = spec.defOffset ?? 0;
+      const scale = spec.defScale ?? 1;
+      const base = (getEffectiveDef(actor) + offset) * scale;
       return Math.floor(Math.max(0, base));
     }
     case 'flat':
@@ -185,6 +204,31 @@ export interface DamageApplicationResult {
   hpDamage: number;
   barrierDamage: number;
   lethal: boolean;
+}
+
+export function applyDefenseMitigation(
+  rawDamage: number,
+  defender: CombatantState,
+  damageType: DamageType,
+): number {
+  if (rawDamage <= 0) return 0;
+
+  const effectiveDef = getEffectiveDef(defender);
+  const effectiveReg = getEffectiveReg(defender);
+
+  let afterDefense: number;
+  if (damageType === 'magic') {
+    afterDefense = Math.floor((rawDamage * 100) / (100 + effectiveReg));
+  } else {
+    const afterSubtract = rawDamage - effectiveDef;
+    if (afterSubtract <= 0) {
+      return 0;
+    }
+    afterDefense = Math.floor((afterSubtract * 100) / (100 + effectiveDef));
+  }
+
+  const takenMul = getDamageTakenMultiplier(defender);
+  return Math.floor(afterDefense * takenMul);
 }
 
 export function applyDamageToTarget(

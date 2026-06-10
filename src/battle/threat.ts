@@ -1,3 +1,4 @@
+import { currentHpRatio } from "./combatMath.ts";
 import type { CombatantState } from "./types.ts";
 
 /** maxHp 係数（statComponent = floor(maxHp×a + def×b)） */
@@ -33,7 +34,7 @@ function computeFrontRowPressureBonus(
   );
   if (frontOthers.length === 0) return 0;
   const pressure = Math.max(
-    ...frontOthers.map((unit) => 1 - unit.hp / unit.maxHp)
+    ...frontOthers.map((unit) => 1 - currentHpRatio(unit))
   );
   return Math.floor(statComponent * pressure);
 }

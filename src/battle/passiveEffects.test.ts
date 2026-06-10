@@ -4,7 +4,6 @@ import {
   applyExcessHealToBarrierFromPassive,
   getPassiveDamageIncreaseMultiplier,
   getPassiveOutgoingDamageMultiplier,
-  initializeCountTriggerCooldowns,
   resolveDebuffDurationWithPassives,
   resolveIncomingHealAmount,
   rollsEvasion,
@@ -14,6 +13,8 @@ import {
   syncHotAuras,
   syncBlockAuras,
   syncDamageReductionAuras,
+  syncSelfHpRatioBuffAuras,
+  resolveSelfHpRatioBuffScale,
   tickPeriodicHotStates,
 } from './passiveEffects.ts';
 import { aggregateStatStatusEffects } from './statusEffectDisplay.ts';
@@ -85,28 +86,7 @@ const passives: Record<string, PassiveSkillDef> = {
   },
 };
 
-const actives = {
-  heavy: {
-    id: 'heavy',
-    name: 'Heavy',
-    trigger: { kind: 'basicAttackCount' as const, value: 4 },
-    effect: [],
-  },
-  basic: {
-    id: 'basic',
-    name: 'Basic',
-    effect: [],
-  },
-};
-
 describe('passiveEffects', () => {
-  it('initializeCountTriggerCooldowns sets count trigger remaining to trigger value', () => {
-    const warrior = mockAlly({ id: 'warrior' });
-    warrior.cooldowns[0]!.remaining = 0;
-    initializeCountTriggerCooldowns(warrior, actives);
-    expect(warrior.cooldowns[0]!.remaining).toBe(4);
-  });
-
   it('rollsEvasion respects evasionChance', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.1);
     const rogue = mockAlly({
@@ -121,37 +101,7 @@ describe('passiveEffects', () => {
     vi.restoreAllMocks();
   });
 
-  it('getPassiveDamageIncreaseMultiplier applies low HP scaling and dot bonus', () => {
-    const warrior = mockAlly({
-      id: 'warrior',
-      hp: 25,
-      maxHp: 100,
-      build: {
-        learnedPassiveIds: ['lowHp'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
-    });
-    const lowHpPassives: Record<string, PassiveSkillDef> = {
-      lowHp: {
-        id: 'lowHp',
-        name: 'LowHp',
-        effect: 'damageIncrease',
-        damageIncrease: {
-          scale: 0.6,
-          conditions: [
-            { kind: 'selfHp', maxHpRatio: 1, mode: 'scaling', maxMul: 1.5 },
-          ],
-        },
-      },
-    };
-    const lowHpMul = getPassiveDamageIncreaseMultiplier(
-      warrior,
-      mockAlly({ id: 'enemy' }),
-      lowHpPassives,
-    );
-    expect(lowHpMul).toBeCloseTo(1.45, 5);
-
+  it('getPassiveDamageIncreaseMultiplier applies dot bonus', () => {
     const dotted = mockAlly({
       id: 'dotted',
       build: {
@@ -243,6 +193,38 @@ describe('passiveEffects', () => {
       target,
       20,
       passives,
+      'outgoing',
+    );
+    expect(grant).toBe(10);
+    expect(target.barrierHp).toBe(10);
+  });
+
+  it('applyExcessHealToBarrierFromPassive supports incoming heal on target', () => {
+    const target = mockAlly({
+      id: 'target',
+      hp: 90,
+      maxHp: 100,
+      build: {
+        learnedPassiveIds: ['incomingBarrier'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const incomingPassives: Record<string, PassiveSkillDef> = {
+      incomingBarrier: {
+        id: 'incomingBarrier',
+        name: 'IncomingBarrier',
+        effect: 'excessHealToBarrier',
+        barrierScale: 1,
+        excessHealSources: ['incoming'],
+      },
+    };
+    const grant = applyExcessHealToBarrierFromPassive(
+      target,
+      target,
+      20,
+      incomingPassives,
+      'incoming',
     );
     expect(grant).toBe(10);
     expect(target.barrierHp).toBe(10);
@@ -474,6 +456,55 @@ describe('passiveEffects', () => {
     });
     syncHotAuras([healer], [], periodicHotPassives);
     expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
+  });
+
+  it('resolveSelfHpRatioBuffScale scales from full HP to max ratio', () => {
+    const unit = mockAlly({ hp: 100, maxHp: 100 });
+    expect(resolveSelfHpRatioBuffScale(unit, 0)).toBe(0);
+    unit.hp = 50;
+    expect(resolveSelfHpRatioBuffScale(unit, 0)).toBeCloseTo(0.5, 5);
+    unit.hp = 0;
+    expect(resolveSelfHpRatioBuffScale(unit, 0)).toBe(1);
+  });
+
+  it('resolveSelfHpRatioBuffScale ignores barrierHp', () => {
+    const unit = mockAlly({ hp: 100, maxHp: 100, barrierHp: 80 });
+    expect(resolveSelfHpRatioBuffScale(unit, 0)).toBe(0);
+    unit.hp = 50;
+    unit.barrierHp = 100;
+    expect(resolveSelfHpRatioBuffScale(unit, 0)).toBeCloseTo(0.5, 5);
+  });
+
+  it('syncSelfHpRatioBuffAuras applies atk buff at low HP', () => {
+    const warrior = mockAlly({
+      id: 'warrior',
+      hp: 50,
+      maxHp: 100,
+      atk: 20,
+      build: {
+        learnedPassiveIds: ['lowHpBuff'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const lowHpPassives: Record<string, PassiveSkillDef> = {
+      lowHpBuff: {
+        id: 'lowHpBuff',
+        name: 'LowHpBuff',
+        effect: 'selfHpRatioBuff',
+        buffStat: 'atk',
+        buffMultiplierMax: 2,
+        maxBuffAtHpRatio: 0,
+      },
+    };
+    syncSelfHpRatioBuffAuras([warrior], [], lowHpPassives);
+    const badges = aggregateStatStatusEffects(warrior.statusEffects, {
+      atk: warrior.atk,
+      def: warrior.def,
+      reg: warrior.reg,
+    });
+    const atkBadge = badges.find((b) => b.category === 'atk');
+    expect(atkBadge?.netMul).toBeCloseTo(1.5, 5);
   });
 
   it('tickPeriodicHotStates fires on interval wrap', () => {

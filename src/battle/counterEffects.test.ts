@@ -1,0 +1,449 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  applyCounterRetaliation,
+  applyPassiveCounterRetaliation,
+  isCounterInTriggerRange,
+} from './counterEffects.ts';
+import { parseSkillEffect } from './data/validateGameData.ts';
+import type {
+  CombatantState,
+  CounterResponseDef,
+  PassiveSkillDef,
+  StatusEffect,
+} from './types.ts';
+
+const passives: Record<string, PassiveSkillDef> = {};
+
+const counterChancePassive: PassiveSkillDef = {
+  id: 'passive_counter_chance',
+  name: '確率反撃',
+  effect: 'counterChance',
+  counterChance: 0.5,
+  counterRange: 100,
+  counterResponses: [
+    { kind: 'damage', amount: { kind: 'flat', flatAmount: 25 } },
+  ],
+};
+
+function mockCombatant(
+  overrides: Partial<CombatantState> = {},
+): CombatantState {
+  return {
+    id: 'unit',
+    name: 'Unit',
+    hp: 100,
+    maxHp: 100,
+    barrierHp: 0,
+    atk: 20,
+    def: 10,
+    reg: 0,
+    isAlive: true,
+    role: 'defender',
+    classId: 'test',
+    formationRow: 'front',
+    traits: {
+      rangePx: 0,
+      damageType: 'physical',
+      basicAttackVfx: { preset: 'slash' },
+    },
+    build: {
+      learnedPassiveIds: [],
+      learnedActiveIds: [],
+      equippedActiveSlots: [],
+    },
+    cooldowns: [],
+    statusEffects: [],
+    spriteKey: 'placeholder',
+    iconKey: 'placeholder',
+    isEnemy: false,
+    battleX: 0,
+    visualX: 0,
+    corpseVisible: true,
+    ...overrides,
+  };
+}
+
+function counterStatus(
+  responses: CounterResponseDef[],
+  overrides: Partial<StatusEffect> = {},
+): StatusEffect {
+  return {
+    id: 'counter_1',
+    kind: 'buff',
+    overlay: 'counter',
+    responses,
+    counterRangePx: 0,
+    multiplier: 1,
+    durationSec: 5,
+    remainingSec: 5,
+    skillId: 'counter_skill',
+    ...overrides,
+  };
+}
+
+const callbacks = {
+  emit: vi.fn(),
+  getAllCombatants: () => [] as CombatantState[],
+};
+
+describe('isCounterInTriggerRange', () => {
+  it('allows melee contact when counter range is 0', () => {
+    const victim = mockCombatant({ battleX: 100 });
+    const attacker = mockCombatant({ id: 'atk', isEnemy: true, battleX: 100 });
+    const effect = counterStatus(
+      [{ kind: 'damage', amount: { kind: 'flat', flatAmount: 5 } }],
+      { counterRangePx: 0 },
+    );
+    expect(isCounterInTriggerRange(effect, victim, attacker)).toBe(true);
+  });
+
+  it('rejects ranged attacker when counter range is 0', () => {
+    const victim = mockCombatant({ battleX: 100 });
+    const attacker = mockCombatant({ id: 'atk', isEnemy: true, battleX: 50 });
+    const effect = counterStatus(
+      [{ kind: 'damage', amount: { kind: 'flat', flatAmount: 5 } }],
+      { counterRangePx: 0 },
+    );
+    expect(isCounterInTriggerRange(effect, victim, attacker)).toBe(false);
+  });
+});
+
+describe('applyCounterRetaliation', () => {
+  it('returns configured damage to attacker on hit', () => {
+    const victim = mockCombatant({
+      id: 'victim',
+      battleX: 100,
+      statusEffects: [
+        counterStatus([
+          {
+            kind: 'damage',
+            amount: { kind: 'flat', flatAmount: 20 },
+          },
+        ]),
+      ],
+    });
+    const attacker = mockCombatant({
+      id: 'attacker',
+      hp: 100,
+      def: 0,
+      isEnemy: true,
+      battleX: 100,
+    });
+    const emit = vi.fn();
+
+    applyCounterRetaliation(
+      victim,
+      attacker,
+      { attackKind: 'damage', appliedDamage: 10 },
+      passives,
+      { emit, getAllCombatants: () => [victim, attacker] },
+    );
+
+    expect(attacker.hp).toBe(80);
+    expect(emit).toHaveBeenCalled();
+  });
+
+  it('applies damage and stun responses together', () => {
+    const victim = mockCombatant({
+      id: 'victim',
+      battleX: 100,
+      statusEffects: [
+        counterStatus([
+          { kind: 'damage', amount: { kind: 'flat', flatAmount: 10 } },
+          { kind: 'stun', durationSec: 2 },
+        ]),
+      ],
+    });
+    const attacker = mockCombatant({
+      id: 'attacker',
+      hp: 100,
+      def: 0,
+      isEnemy: true,
+      battleX: 100,
+    });
+    const emit = vi.fn();
+
+    applyCounterRetaliation(
+      victim,
+      attacker,
+      { attackKind: 'damage', appliedDamage: 10 },
+      passives,
+      { emit, getAllCombatants: () => [victim, attacker] },
+    );
+
+    expect(attacker.hp).toBe(90);
+    expect(attacker.statusEffects.some((e) => e.overlay === 'stun')).toBe(true);
+  });
+
+  it('applies debuff response to attacker', () => {
+    const victim = mockCombatant({
+      id: 'victim',
+      battleX: 100,
+      statusEffects: [
+        counterStatus([
+          {
+            kind: 'debuff',
+            debuffStat: 'atk',
+            debuffMultiplier: 0.5,
+            debuffDurationSec: 3,
+          },
+        ]),
+      ],
+    });
+    const attacker = mockCombatant({
+      id: 'attacker',
+      isEnemy: true,
+      battleX: 100,
+    });
+    const emit = vi.fn();
+
+    applyCounterRetaliation(
+      victim,
+      attacker,
+      { attackKind: 'damage', appliedDamage: 10 },
+      passives,
+      { emit, getAllCombatants: () => [victim, attacker] },
+    );
+
+    expect(
+      attacker.statusEffects.some(
+        (e) => e.kind === 'debuff' && e.stat === 'atk',
+      ),
+    ).toBe(true);
+  });
+
+  it('does not retaliate when attacker is out of range', () => {
+    const victim = mockCombatant({
+      id: 'victim',
+      battleX: 100,
+      statusEffects: [
+        counterStatus(
+          [{ kind: 'damage', amount: { kind: 'flat', flatAmount: 20 } }],
+          { counterRangePx: 0 },
+        ),
+      ],
+    });
+    const attacker = mockCombatant({
+      id: 'attacker',
+      hp: 100,
+      isEnemy: true,
+      battleX: 50,
+    });
+    const emit = vi.fn();
+
+    applyCounterRetaliation(
+      victim,
+      attacker,
+      { attackKind: 'damage', appliedDamage: 10 },
+      passives,
+      { emit, getAllCombatants: () => [victim, attacker] },
+    );
+
+    expect(attacker.hp).toBe(100);
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('does not chain counter damage into another counter', () => {
+    const victim = mockCombatant({
+      id: 'victim',
+      battleX: 100,
+      statusEffects: [
+        counterStatus([
+          { kind: 'damage', amount: { kind: 'flat', flatAmount: 20 } },
+        ]),
+      ],
+    });
+    const attacker = mockCombatant({
+      id: 'attacker',
+      hp: 100,
+      battleX: 100,
+      statusEffects: [
+        counterStatus([
+          { kind: 'damage', amount: { kind: 'flat', flatAmount: 99 } },
+        ]),
+      ],
+    });
+    const emit = vi.fn();
+
+    applyCounterRetaliation(
+      victim,
+      attacker,
+      { attackKind: 'damage', appliedDamage: 10, isCounterDamage: true },
+      passives,
+      { emit, getAllCombatants: () => [victim, attacker] },
+    );
+
+    expect(attacker.hp).toBe(100);
+    expect(emit).not.toHaveBeenCalled();
+  });
+});
+
+describe('applyPassiveCounterRetaliation', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('retaliates on proc success without granting counter status', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const registry = { [counterChancePassive.id]: counterChancePassive };
+    const victim = mockCombatant({
+      id: 'victim',
+      battleX: 100,
+      build: {
+        learnedPassiveIds: [counterChancePassive.id],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const attacker = mockCombatant({
+      id: 'attacker',
+      hp: 100,
+      def: 0,
+      isEnemy: true,
+      battleX: 100,
+    });
+    const emit = vi.fn();
+
+    applyPassiveCounterRetaliation(
+      victim,
+      attacker,
+      { attackKind: 'damage', appliedDamage: 10 },
+      registry,
+      { emit, getAllCombatants: () => [victim, attacker] },
+    );
+
+    expect(victim.statusEffects).toHaveLength(0);
+    expect(attacker.hp).toBe(75);
+    expect(emit).toHaveBeenCalled();
+  });
+
+  it('does not retaliate when roll fails', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    const registry = { [counterChancePassive.id]: counterChancePassive };
+    const victim = mockCombatant({
+      build: {
+        learnedPassiveIds: [counterChancePassive.id],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+      battleX: 100,
+    });
+    const attacker = mockCombatant({
+      id: 'attacker',
+      hp: 100,
+      isEnemy: true,
+      battleX: 100,
+    });
+    const emit = vi.fn();
+
+    applyPassiveCounterRetaliation(
+      victim,
+      attacker,
+      { attackKind: 'damage', appliedDamage: 10 },
+      registry,
+      { emit, getAllCombatants: () => [victim, attacker] },
+    );
+
+    expect(attacker.hp).toBe(100);
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('does not proc when attacker is out of range', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const registry = {
+      [counterChancePassive.id]: {
+        ...counterChancePassive,
+        counterRange: 0,
+      },
+    };
+    const victim = mockCombatant({
+      build: {
+        learnedPassiveIds: [counterChancePassive.id],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+      battleX: 100,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+    });
+    const attacker = mockCombatant({
+      id: 'attacker',
+      hp: 100,
+      isEnemy: true,
+      battleX: 50,
+    });
+    const emit = vi.fn();
+
+    applyPassiveCounterRetaliation(
+      victim,
+      attacker,
+      { attackKind: 'damage', appliedDamage: 10 },
+      registry,
+      { emit, getAllCombatants: () => [victim, attacker] },
+    );
+
+    expect(attacker.hp).toBe(100);
+    expect(emit).not.toHaveBeenCalled();
+  });
+});
+
+describe('parseSkillEffect counter', () => {
+  it('normalizes target to self and parses responses', () => {
+    const effect = parseSkillEffect(
+      {
+        type: 'counter',
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        durationSec: 5,
+        range: 0,
+        responses: [
+          {
+            kind: 'damage',
+            amount: { kind: 'defBased', defScale: 0.5 },
+          },
+        ],
+      },
+      'test',
+    );
+    expect(effect.type).toBe('counter');
+    if (effect.type !== 'counter') return;
+    expect(effect.target).toEqual({ kind: 'self' });
+    expect(effect.responses).toHaveLength(1);
+    expect(effect.responses[0]?.kind).toBe('damage');
+  });
+
+  it('upgrades legacy amount to damage response', () => {
+    const effect = parseSkillEffect(
+      {
+        type: 'counter',
+        durationSec: 5,
+        amount: { kind: 'flat', flatAmount: 12 },
+        damageType: 'magic',
+      },
+      'test',
+    );
+    if (effect.type !== 'counter') throw new Error('expected counter');
+    expect(effect.responses).toEqual([
+      {
+        kind: 'damage',
+        amount: { kind: 'flat', flatAmount: 12 },
+        damageType: 'magic',
+      },
+    ]);
+  });
+
+  it('rejects multiLock targetShape', () => {
+    expect(() =>
+      parseSkillEffect(
+        {
+          type: 'counter',
+          targetShape: 'multiLock',
+          hitCount: 2,
+          durationSec: 5,
+          responses: [
+            { kind: 'damage', amount: { kind: 'flat', flatAmount: 1 } },
+          ],
+        },
+        'test',
+      ),
+    ).toThrow(/multiLock/);
+  });
+});
