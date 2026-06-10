@@ -810,6 +810,15 @@ function parseTargetTagList<T extends string>(
   return tags;
 }
 
+/** JSON `"player"` をランタイム `ally` 側へ正規化（battle-field.md §1） */
+function normalizeTargetSide(
+  side: string,
+  _context: string,
+): 'ally' | 'enemy' {
+  if (side === 'player' || side === 'ally') return 'ally';
+  return 'enemy';
+}
+
 function parseTargetSpec(raw: unknown, context: string): TargetSpec {
   if (typeof raw === 'string') {
     if (!TARGET_RULES_SET.has(raw as TargetRule)) {
@@ -825,11 +834,17 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
   const kind = obj.kind;
   if (kind === 'self') return { kind: 'self' };
   if (kind === 'all') {
-    const side = requireEnum(obj, 'side', context, new Set(['ally', 'enemy']));
-    return { kind: 'all', side: side as 'ally' | 'enemy' };
+    const side = normalizeTargetSide(
+      requireEnum(obj, 'side', context, new Set(['ally', 'enemy', 'player'])),
+      context,
+    );
+    return { kind: 'all', side };
   }
   if (kind === 'distance') {
-    const side = requireEnum(obj, 'side', context, new Set(['ally', 'enemy']));
+    const side = normalizeTargetSide(
+      requireEnum(obj, 'side', context, new Set(['ally', 'enemy', 'player'])),
+      context,
+    );
     const order = requireEnum(
       obj,
       'order',
@@ -838,12 +853,15 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
     );
     return {
       kind: 'distance',
-      side: side as 'ally' | 'enemy',
+      side,
       order: order as 'nearest' | 'farthest',
     };
   }
   if (kind === 'stat') {
-    const side = requireEnum(obj, 'side', context, new Set(['ally', 'enemy']));
+    const side = normalizeTargetSide(
+      requireEnum(obj, 'side', context, new Set(['ally', 'enemy', 'player'])),
+      context,
+    );
     const stat = requireEnum(
       obj,
       'stat',
@@ -861,7 +879,7 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
     }
     return {
       kind: 'stat',
-      side: side as 'ally' | 'enemy',
+      side,
       stat: stat as 'hp' | 'atk' | 'def' | 'reg',
       order: order as 'highest' | 'lowest' | 'ratio',
     };
@@ -891,9 +909,10 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
     if (
       sideRaw !== undefined &&
       sideRaw !== 'ally' &&
-      sideRaw !== 'enemy'
+      sideRaw !== 'enemy' &&
+      sideRaw !== 'player'
     ) {
-      invalidField(context, 'side', 'must be ally or enemy');
+      invalidField(context, 'side', 'must be ally, player, or enemy');
     }
     const debuffTags =
       obj.debuffTags === undefined
@@ -925,7 +944,9 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
     }
     return {
       kind: 'status',
-      ...(sideRaw !== undefined ? { side: sideRaw as 'ally' | 'enemy' } : {}),
+      ...(sideRaw !== undefined
+        ? { side: normalizeTargetSide(String(sideRaw), context) }
+        : {}),
       ...(debuffTags && debuffTags.length > 0 ? { debuffTags } : {}),
       ...(buffTags && buffTags.length > 0 ? { buffTags } : {}),
     };
@@ -2295,9 +2316,13 @@ function parseStages(raw: unknown): StageDef[] {
       const enemies = (enemiesRaw as unknown[]).map((enemyEntry, enemyIndex) => {
         const enemyContext = `${waveContext}.enemies[${enemyIndex}]`;
         const enemyObj = requireRecord(enemyEntry, enemyContext);
+        const rawSpawnX = requireNumber(enemyObj, 'spawnX', enemyContext);
         return {
           templateId: requireString(enemyObj, 'templateId', enemyContext),
-          spawnX: requireNumber(enemyObj, 'spawnX', enemyContext),
+          spawnX:
+            rawSpawnX < 0
+              ? 480 + Math.abs(rawSpawnX)
+              : rawSpawnX,
         };
       });
 

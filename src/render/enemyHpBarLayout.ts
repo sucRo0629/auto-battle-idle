@@ -50,7 +50,7 @@ export function hpBarRectsOverlapHorizontally(a: HpBarRect, b: HpBarRect): boole
   return a.left < b.right && b.left < a.right;
 }
 
-/** 前線（右）→ 後方（左）の順に HP バー top を確定。水平重なり時は半分重ねて上へずらす。 */
+/** 前線（左）→ 後方（右）の順に HP バー top を確定。右側ほど半分重ねて上へずらす。 */
 export function computeEnemyHpBarTops(
   enemies: EnemyHpBarLayoutInput[],
   scale: number,
@@ -58,7 +58,7 @@ export function computeEnemyHpBarTops(
 ): Map<string, number> {
   const placed: HpBarRect[] = [];
   const tops = new Map<string, number>();
-  const sorted = [...enemies].sort((a, b) => b.x - a.x);
+  const sorted = [...enemies].sort((a, b) => a.x - b.x);
   const stackOverlap = ENEMY_HP_BAR_STACK_OVERLAP * scale;
 
   for (const layout of sorted) {

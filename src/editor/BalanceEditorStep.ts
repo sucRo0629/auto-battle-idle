@@ -418,21 +418,21 @@ export class BalanceEditorStep {
     }
 
     tr.appendChild(
-      this.numberCell('maxHp', cls.maxHp, { min: 1 }, (value) => {
+      this.numberCell('maxHp', cls.maxHp, (value) => {
         mutate((current) => {
           current.maxHp = value;
         });
       }),
     );
     tr.appendChild(
-      this.numberCell('atk', cls.atk, { min: 0 }, (value) => {
+      this.numberCell('atk', cls.atk, (value) => {
         mutate((current) => {
           current.atk = value;
         });
       }),
     );
     tr.appendChild(
-      this.numberCell('def', cls.def, { min: 0 }, (value) => {
+      this.numberCell('def', cls.def, (value) => {
         mutate((current) => {
           current.def = value;
         });
@@ -532,11 +532,10 @@ export class BalanceEditorStep {
   private numberCell(
     field: string,
     value: number,
-    options: { min: number },
     onInput: (value: number) => void,
   ): HTMLTableCellElement {
     const cell = createEl('td', 'num');
-    const input = createNumberInput(value, onInput, options);
+    const input = createNumberInput(value, onInput);
     input.dataset.field = field;
     cell.appendChild(input);
     return cell;

@@ -156,7 +156,7 @@ export class EnemyEditorStep {
           commitDraft((next) => {
             next.enemy.maxHp = maxHp;
           });
-        }, { min: 1 }),
+        }),
       ),
     );
     statsGrid.appendChild(
@@ -166,7 +166,7 @@ export class EnemyEditorStep {
           commitDraft((next) => {
             next.enemy.atk = atk;
           });
-        }, { min: 0 }),
+        }),
       ),
     );
     statsGrid.appendChild(
@@ -176,7 +176,7 @@ export class EnemyEditorStep {
           commitDraft((next) => {
             next.enemy.def = def;
           });
-        }, { min: 0 }),
+        }),
       ),
     );
     statsGrid.appendChild(
@@ -200,7 +200,7 @@ export class EnemyEditorStep {
           commitDraft((next) => {
             next.enemy.exp = exp;
           });
-        }, { min: 0 }),
+        }),
       ),
     );
     statsGrid.appendChild(
@@ -214,7 +214,6 @@ export class EnemyEditorStep {
               next.enemy.traits.rangePx = rangePx;
             });
           },
-          { min: 0 },
         ),
       ),
     );

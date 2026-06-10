@@ -22,6 +22,8 @@
       {
         "level": 0,
         "skillIds": [
+          "df_guardian_passive_1",
+          "df_guardian_passive_2",
           "df_guardian_active_1",
           "df_guardian_active_2"
         ]
@@ -55,6 +57,7 @@
       {
         "level": 0,
         "skillIds": [
+          "passive_damage_taken_heal",
           "df_paladin_active_1",
           "df_paladin_active_2"
         ]
@@ -90,8 +93,16 @@
       {
         "level": 0,
         "skillIds": [
+          "df_duelist_passive_1",
+          "df_duelist_passive_2",
           "df_duelist_active_1",
           "df_duelist_active_2"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "df_duelist_passive_3"
         ]
       }
     ],
@@ -360,9 +371,7 @@
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_enchanter_basic_attack",
-    "passiveIds": [
-      "passive_target_lowest_def"
-    ],
+    "passiveIds": [],
     "skills": [
       {
         "level": 0,

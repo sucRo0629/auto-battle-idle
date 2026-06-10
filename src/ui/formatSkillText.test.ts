@@ -36,7 +36,7 @@ describe('formatPassiveDescription', () => {
 
   it('formats self HP ratio buff', () => {
     expect(formatPassiveDescription(findPassive('passive_self_low_hp_dmg'))).toBe(
-      '自HP比例 ATK ×2（0%以下で最大）',
+      '自HP比例 ATK ×1.5（60%以下で最大）',
     );
   });
 

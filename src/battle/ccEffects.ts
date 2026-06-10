@@ -1,6 +1,6 @@
 import { getBattleX } from './combatPosition.ts';
 import type { CombatantState, StatusEffect } from './types.ts';
-import { BATTLE_ENEMY_MARCH_VISIBLE_MIN_X } from './types.ts';
+import { BATTLE_ENEMY_MARCH_VISIBLE_MIN_X } from './battleConstants.ts';
 
 const STUN_OVERLAY = 'stun' as const;
 
@@ -45,14 +45,14 @@ export function applyStunToTarget(
   return true;
 }
 
-/** 敵は左へ、味方は右へ押し出す（敵陣から遠ざける） */
+/** 各陣営の後方へ押す（プレイヤーは左、敵は右） */
 export function applyKnockbackToTarget(
   target: CombatantState,
   distancePx: number,
 ): boolean {
   if (!target.isAlive || distancePx <= 0) return false;
 
-  const delta = target.isEnemy ? -distancePx : distancePx;
+  const delta = target.isEnemy ? distancePx : -distancePx;
   const nextX = getBattleX(target) + delta;
   if (target.isEnemy) {
     target.battleX = Math.max(BATTLE_ENEMY_MARCH_VISIBLE_MIN_X, nextX);

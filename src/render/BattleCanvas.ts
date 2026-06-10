@@ -1,4 +1,4 @@
-import type { BattleSnapshot, StatusEffect, SkillVfxDef } from "../battle/types.ts";
+import type { BattleSnapshot, SkillVfxDef } from "../battle/types.ts";
 import { BuffGlowManager, drawSpriteWithBuffGlow } from "./buffGlowEffect.ts";
 import { drawSpriteWithDamageEffect } from "./damageEffect.ts";
 import {
@@ -13,12 +13,12 @@ import {
   getSheetCellSize,
   SPRITE_LAYOUT_SIZE,
 } from "./spriteLayout.ts";
-import { getClassIconImage } from "./IconRegistry.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
-import { BATTLE_ENEMY_MARCH_VISIBLE_MIN_X } from "../battle/types.ts";
+import { BATTLE_ENEMY_MARCH_VISIBLE_MAX_X } from "../battle/battleConstants.ts";
+import { toScreenX } from "../battle/battleCamera.ts";
 import {
   groundY,
-  BATTLE_GROUND_MARGIN,
+  groundLineY,
   battleCanvasHeight,
 } from "./formationLayout.ts";
 import { AttackEffectManager } from "./AttackEffect.ts";
@@ -47,50 +47,19 @@ import type {
 } from "./IBattleRenderer.ts";
 import {
   readBattleHudTheme,
-  resolveClassIconPlaceholderColor,
   resolveSpritePlaceholderColor,
   resolveStatusIconFallbackColor,
   type BattleHudTheme,
 } from "./battleHudTheme.ts";
 import { VictoryOverlay } from "./VictoryOverlay.ts";
-import { layoutHpBarBarrier } from "./hpBarBarrierLayout.ts";
 import { DeathPlaybackManager } from "./deathPlayback.ts";
-import { MAX_ACTIVE_SLOTS } from "../progression/skillBuild.ts";
+import { drawBattleFieldBackground } from "./battleFieldBackground.ts";
+import { layoutHpBarBarrier } from "./hpBarBarrierLayout.ts";
 
 const CANVAS_W = 480;
 const CANVAS_H = battleCanvasHeight(1);
 const SPRITE_SIZE = SPRITE_LAYOUT_SIZE;
 const SPRITE_SCALE = 1;
-
-interface AllyHudEntry {
-  displayName: string;
-  epithetEn?: string;
-  level: number;
-  iconKey: string;
-  hp: number;
-  maxHp: number;
-  barrierHp: number;
-  atk: number;
-  def: number;
-  reg: number;
-  isAlive: boolean;
-  statusEffects: StatusEffect[];
-  activeCooldowns: {
-    skillId: string;
-    remaining: number;
-    triggerKind: import("../battle/types.ts").SkillTriggerKind;
-    triggerValue: number;
-    slotIndex: number;
-  }[];
-}
-
-export interface PartyHudMeta {
-  displayName: string;
-  epithetEn?: string;
-  level: number;
-}
-
-const MIN_ACTIVE_SKILL_SLOTS = MAX_ACTIVE_SLOTS;
 
 export class BattleCanvas implements IBattleRenderer {
   private canvas!: HTMLCanvasElement;
@@ -103,7 +72,6 @@ export class BattleCanvas implements IBattleRenderer {
   private deathPlayback = new DeathPlaybackManager();
   private victoryOverlay = new VictoryOverlay();
   private layouts: CombatantLayout[] = [];
-  private allyHud: AllyHudEntry[] = [];
   private theme!: BattleHudTheme;
   private worldOffsetX = 0;
 
@@ -184,10 +152,7 @@ export class BattleCanvas implements IBattleRenderer {
     this.canvas.remove();
   }
 
-  syncFromSnapshot(
-    snapshot: BattleSnapshot,
-    partyMeta: PartyHudMeta[] = []
-  ): void {
+  syncFromSnapshot(snapshot: BattleSnapshot): void {
     const layouts: CombatantLayout[] = [];
     const y = groundY(this.canvas.height, SPRITE_SCALE);
     const cameraX = snapshot.combatCameraX;
@@ -204,14 +169,14 @@ export class BattleCanvas implements IBattleRenderer {
         if (
           !isDead &&
           !snapshot.engaged &&
-          enemy.battleX < BATTLE_ENEMY_MARCH_VISIBLE_MIN_X
+          enemy.battleX > BATTLE_ENEMY_MARCH_VISIBLE_MAX_X
         ) {
           continue;
         }
         const animState = this.animator.getState(enemy.id);
         layouts.push({
           id: enemy.id,
-          x: enemy.visualX + cameraX,
+          x: toScreenX(enemy.visualX, cameraX),
           y,
           spriteKey: enemy.spriteKey,
           hp: enemy.hp,
@@ -241,7 +206,7 @@ export class BattleCanvas implements IBattleRenderer {
       const animState = this.animator.getState(ally.id);
       layouts.push({
         id: ally.id,
-        x: ally.visualX + cameraX,
+        x: toScreenX(ally.visualX, cameraX),
         y,
         spriteKey: ally.spriteKey,
         hp: ally.hp,
@@ -260,24 +225,6 @@ export class BattleCanvas implements IBattleRenderer {
     }
 
     this.layouts = layouts;
-    this.allyHud = snapshot.allies.map((ally, index) => {
-      const meta = partyMeta[index];
-      return {
-        displayName: meta?.displayName ?? ally.name,
-        epithetEn: meta?.epithetEn,
-        level: meta?.level ?? 1,
-        iconKey: ally.iconKey,
-        hp: ally.hp,
-        maxHp: ally.maxHp,
-        barrierHp: ally.barrierHp,
-        atk: ally.atk,
-        def: ally.def,
-        reg: ally.reg,
-        isAlive: ally.hp > 0,
-        statusEffects: ally.statusEffects,
-        activeCooldowns: ally.activeCooldowns,
-      };
-    });
     this.worldOffsetX = snapshot.worldOffsetX;
     this.victoryOverlay.syncPhase(
       snapshot.phase,
@@ -298,26 +245,14 @@ export class BattleCanvas implements IBattleRenderer {
   }
 
   private drawBackground(): void {
-    const { ctx, canvas } = this;
-    const theme = this.theme;
-    ctx.fillStyle = theme.sceneSkyFill;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const groundLineY = canvas.height - BATTLE_GROUND_MARGIN;
-    const tileW = 32;
-    const scrollX = ((this.worldOffsetX % tileW) + tileW) % tileW;
-
-    ctx.fillStyle = theme.sceneGroundFill;
-    for (let x = -tileW + scrollX; x < canvas.width + tileW; x += tileW) {
-      ctx.fillRect(x, groundLineY + 4, tileW / 2, 8);
-    }
-
-    ctx.strokeStyle = theme.sceneGroundStroke;
-    ctx.lineWidth = theme.sceneGroundStrokeWidth;
-    ctx.beginPath();
-    ctx.moveTo(0, groundLineY);
-    ctx.lineTo(canvas.width, groundLineY);
-    ctx.stroke();
+    const { canvas } = this;
+    drawBattleFieldBackground(this.ctx, {
+      canvasW: canvas.width,
+      canvasH: canvas.height,
+      groundLineY: groundLineY(canvas.height),
+      worldOffsetX: this.worldOffsetX,
+      theme: this.theme,
+    });
   }
 
   private draw(): void {
@@ -333,9 +268,14 @@ export class BattleCanvas implements IBattleRenderer {
       SPRITE_SIZE
     );
 
-    for (const layout of this.layouts) {
+    const enemyLayouts = this.layouts
+      .filter((layout) => layout.isEnemy)
+      .sort((a, b) => b.x - a.x);
+    const allyLayouts = this.layouts.filter((layout) => !layout.isEnemy);
+
+    for (const layout of enemyLayouts) {
       this.drawSprite(layout, layout.x, layout.y, SPRITE_SCALE);
-      if (layout.isEnemy && layout.isAlive) {
+      if (layout.isAlive) {
         this.drawHpBar(
           layout,
           layout.x,
@@ -344,6 +284,9 @@ export class BattleCanvas implements IBattleRenderer {
           enemyBarTops.get(layout.id)
         );
       }
+    }
+    for (const layout of allyLayouts) {
+      this.drawSprite(layout, layout.x, layout.y, SPRITE_SCALE);
     }
 
     this.drawStatusBadges(enemyBarTops, SPRITE_SCALE);
@@ -370,239 +313,12 @@ export class BattleCanvas implements IBattleRenderer {
       this.theme,
     );
 
-    this.drawPartyHud();
     this.victoryOverlay.draw(
       this.ctx,
       canvas.width,
       canvas.height,
       this.theme,
     );
-  }
-
-  private measurePartyHudHeader(hudScale: number): {
-    headerH: number;
-    labelH: number;
-  } {
-    const theme = this.theme;
-    const labelH = Math.max(
-      8,
-      Math.round(theme.headerFontSize * hudScale),
-    );
-    const blockGap = theme.headerBlockGap * hudScale;
-    // epithet + 名前の2行ヘッダ（drawHudClassLabel と同期）
-    const epithetSize = Math.max(7, labelH - 3);
-    const epithetH = epithetSize + 1 * hudScale;
-    return { headerH: epithetH + labelH + blockGap, labelH };
-  }
-
-  private maxActiveSkillSlots(): number {
-    return MIN_ACTIVE_SKILL_SLOTS;
-  }
-
-  private measurePartyHudBarStack(
-    iconSize: number,
-    hudScale: number,
-  ): {
-    hpBarH: number;
-    barSkillGap: number;
-    recastBarH: number;
-    recastGap: number;
-  } {
-    const theme = this.theme;
-    const barSkillGap = theme.barSkillGap * hudScale;
-    const recastBarH = Math.max(2, Math.round(theme.recastBarH * hudScale));
-    const recastGap = theme.recastGap * hudScale;
-    const activeSkillSlotCount = this.maxActiveSkillSlots();
-    const recastTotalH =
-      recastBarH * activeSkillSlotCount +
-      recastGap * (activeSkillSlotCount - 1);
-    const hpBarH = Math.max(2, iconSize - barSkillGap - recastTotalH);
-    return { hpBarH, barSkillGap, recastBarH, recastGap };
-  }
-
-  private drawPartyHud(): void {
-    if (this.allyHud.length === 0) return;
-
-    const { canvas } = this;
-    const theme = this.theme;
-    const iconSize = theme.iconSize;
-    const barW = theme.barW;
-    const { hpBarH, barSkillGap, recastBarH, recastGap } =
-      this.measurePartyHudBarStack(iconSize, 1);
-    const iconBarGap = theme.iconBarGap;
-    const entryW = iconSize + iconBarGap + barW;
-    const { headerH } = this.measurePartyHudHeader(1);
-    const blockBottom = canvas.height - theme.bottomMargin;
-    const blockTop = blockBottom - iconSize;
-    const headerTop = blockTop - headerH;
-    const slotW = canvas.width / this.allyHud.length;
-    const labelFontSize = Math.max(8, Math.round(theme.headerFontSize));
-
-    this.allyHud.forEach((ally, index) => {
-      const slotCenterX = slotW * index + slotW / 2;
-      const x = slotCenterX - entryW / 2;
-      const barX = x + iconSize + iconBarGap;
-      const labelY = headerTop;
-      const hpBarY = blockTop;
-      const recastY = hpBarY + hpBarH + barSkillGap;
-
-      this.drawHudClassLabel(ally, x, labelY, labelFontSize);
-      this.drawHudIcon(ally, x, blockTop, iconSize);
-      this.drawHudHpBar(ally, barX, hpBarY, barW, hpBarH);
-      this.drawHudStatusBadges(ally, barX, hpBarY, barW, hpBarH);
-      this.drawSkillRecastRow(
-        ally,
-        barX,
-        recastY,
-        barW,
-        recastBarH,
-        recastGap,
-      );
-    });
-  }
-
-  private drawHudClassLabel(
-    ally: AllyHudEntry,
-    leftX: number,
-    labelY: number,
-    fontSize: number,
-  ): void {
-    const { ctx } = this;
-
-    ctx.save();
-    if (!ally.isAlive) {
-      ctx.globalAlpha = this.theme.deadAlpha;
-    }
-
-    ctx.textAlign = "left";
-    ctx.textBaseline = "top";
-    if (ally.epithetEn) {
-      const epithetSize = Math.max(7, fontSize - 3);
-      ctx.font = `${epithetSize}px ${this.theme.fontFamily}`;
-      ctx.fillStyle = this.theme.epithetColor;
-      ctx.fillText(ally.epithetEn, leftX, labelY);
-      labelY += epithetSize + 1;
-    }
-    ctx.font = `${fontSize}px ${this.theme.fontFamily}`;
-    ctx.fillStyle = this.theme.nameColor;
-    ctx.fillText(`${ally.displayName} Lv${ally.level}`, leftX, labelY);
-    ctx.restore();
-  }
-
-  /** HPバー下のリキャストバー（上: スロット1 / 下: スロット2） */
-  private drawSkillRecastRow(
-    ally: AllyHudEntry,
-    x: number,
-    y: number,
-    width: number,
-    rowH: number,
-    rowGap: number,
-  ): void {
-    const { ctx } = this;
-    const bySlot = new Map(
-      ally.activeCooldowns.map((cd) => [cd.slotIndex, cd] as const)
-    );
-
-    ctx.save();
-    if (!ally.isAlive) {
-      ctx.globalAlpha = this.theme.deadAlpha;
-    }
-
-    for (let slot = 0; slot < this.maxActiveSkillSlots(); slot++) {
-      const rowY = y + slot * (rowH + rowGap);
-      this.drawSkillRecastBar(bySlot.get(slot), x, rowY, width, rowH);
-    }
-
-    ctx.restore();
-  }
-
-  private drawSkillRecastBar(
-    cd: AllyHudEntry["activeCooldowns"][number] | undefined,
-    x: number,
-    y: number,
-    width: number,
-    height: number
-  ): void {
-    const { ctx } = this;
-
-    ctx.fillStyle = this.theme.barBorder;
-    ctx.fillRect(x - 1, y - 1, width + 2, height + 2);
-    ctx.fillStyle = this.theme.skillRecastTrack;
-    ctx.fillRect(x, y, width, height);
-
-    if (!cd) return;
-
-    const ready = cd.remaining <= 0;
-    const ratio = ready
-      ? 1
-      : Math.max(0, Math.min(1, 1 - cd.remaining / cd.triggerValue));
-
-    if (ratio <= 0) return;
-
-    ctx.fillStyle = ready
-      ? this.theme.skillRecastReady
-      : this.theme.skillRecastCharging;
-    ctx.fillRect(x, y, width * ratio, height);
-  }
-
-  private drawHudIcon(
-    ally: AllyHudEntry,
-    x: number,
-    y: number,
-    size: number
-  ): void {
-    const { ctx } = this;
-
-    ctx.save();
-    if (!ally.isAlive) {
-      ctx.globalAlpha = this.theme.deadAlpha;
-    }
-
-    ctx.fillStyle = this.theme.iconFrame;
-    ctx.fillRect(x - 1, y - 1, size + 2, size + 2);
-
-    ctx.fillStyle = this.theme.iconBorder;
-    ctx.fillRect(x, y, size, size);
-
-    this.drawClassIconImage(ally.iconKey, x, y, size, size);
-
-    ctx.restore();
-  }
-
-  private drawHudHpBar(
-    ally: AllyHudEntry,
-    x: number,
-    y: number,
-    barW: number,
-    barH: number
-  ): void {
-    const { ctx } = this;
-
-    ctx.save();
-    if (!ally.isAlive) {
-      ctx.globalAlpha = this.theme.deadAlpha;
-    }
-
-    ctx.fillStyle = this.theme.barBorder;
-    ctx.fillRect(x - 1, y - 1, barW + 2, barH + 2);
-
-    ctx.fillStyle = this.theme.barTrack;
-    ctx.fillRect(x, y, barW, barH);
-
-    this.fillHpBarWithBarrier(
-      x,
-      y,
-      barW,
-      barH,
-      ally.hp,
-      ally.maxHp,
-      ally.barrierHp,
-      this.theme.hpBarFill,
-      this.theme.barrierFill,
-      this.theme.barrierOverflowFill,
-    );
-
-    ctx.restore();
   }
 
   private fillHpBarWithBarrier(
@@ -638,77 +354,6 @@ export class BattleCanvas implements IBattleRenderer {
       ctx.fillStyle = barrierOverflowFill;
       ctx.fillRect(x, y, barW * overflowRatio, barH);
     }
-  }
-
-  private drawHudStatusBadges(
-    ally: AllyHudEntry,
-    barX: number,
-    hpBarY: number,
-    barW: number,
-    hpBarH: number,
-  ): void {
-    const badges = aggregateStatStatusEffects(ally.statusEffects, {
-      atk: ally.atk,
-      def: ally.def,
-      reg: ally.reg,
-    });
-    const drawItems = orderBadgesForDraw(badges);
-    if (drawItems.length === 0) return;
-
-    const scale = 1;
-    const rowW = statusBadgeRowWidth(
-      drawItems,
-      scale,
-      this.theme.statusBadgeIconSize,
-      this.theme.statusBadgeArrowWidth,
-      this.theme.statusBadgeOverlap,
-      this.theme.statusBadgeArrowOverlap,
-    );
-    const badgeH = this.theme.statusBadgeIconSize * scale;
-    const centerX = barX + barW - rowW / 2;
-    const top = hpBarY + hpBarH - badgeH;
-
-    const { ctx } = this;
-    ctx.save();
-    if (!ally.isAlive) {
-      ctx.globalAlpha = this.theme.deadAlpha;
-    }
-
-    drawStatusBadgeRow(this.ctx, centerX, top, drawItems, scale, {
-      buffColor: this.theme.statusBuffColor,
-      debuffColor: this.theme.statusDebuffColor,
-      iconSize: this.theme.statusBadgeIconSize,
-      arrowWidth: this.theme.statusBadgeArrowWidth,
-      arrowOverlap: this.theme.statusBadgeArrowOverlap,
-      rowOverlap: this.theme.statusBadgeOverlap,
-      overlayColor: this.theme.statusBadgeOverlay,
-      iconOutlineColor: this.theme.statusIconOutlineColor,
-      iconOutlineWidth: this.theme.statusIconOutlineWidth,
-      iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
-      resolveIconFallbackColor: (category) =>
-        resolveStatusIconFallbackColor(category, this.theme),
-    });
-
-    ctx.restore();
-  }
-
-  private drawClassIconImage(
-    iconKey: string,
-    x: number,
-    y: number,
-    width: number,
-    height: number
-  ): void {
-    const { ctx } = this;
-    const image = getClassIconImage(iconKey);
-
-    if (image) {
-      ctx.drawImage(image, x, y, width, height);
-      return;
-    }
-
-    ctx.fillStyle = resolveClassIconPlaceholderColor(iconKey, this.theme);
-    ctx.fillRect(x, y, width, height);
   }
 
   private drawSprite(

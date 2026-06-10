@@ -11,10 +11,12 @@ export type AttackRange = "melee" | "ranged";
 export const DEFAULT_MELEE_ATTACK_RANGE_PX = 0;
 /** @deprecated 旧遠隔フォールバック。traits.rangePx を使用 */
 export const DEFAULT_RANGED_RANGE_PX = 50;
-/** 敵が画面内とみなす battleX の下限（接敵トリガーには使わない） */
-export const BATTLE_ENEMY_VISIBLE_MIN_X = -32;
-/** 進軍中にスプライトを表示する battleX の下限 */
-export const BATTLE_ENEMY_MARCH_VISIBLE_MIN_X = -200;
+/** @deprecated battleConstants.ts を参照 */
+export {
+  BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
+  BATTLE_ENEMY_MARCH_VISIBLE_MIN_X,
+  BATTLE_ENEMY_VISIBLE_MAX_X,
+} from './battleConstants.ts';
 
 /** @deprecated 演出用。ロジックには使わない */
 export const DEFAULT_MELEE_RANGE_PX = 45;
@@ -343,7 +345,7 @@ export interface CombatantState extends Combatant {
   spriteKey: string;
   iconKey: string;
   isEnemy: boolean;
-  /** 戦闘ロジック用 1D 座標（大きいほど味方側＝右） */
+  /** 戦闘ロジック用 1D 座標（大きいほど前方＝右） */
   battleX: number;
   /** snapshot 出力用。描画は formationLayout の隊形配置で算出 */
   visualX: number;
@@ -351,7 +353,9 @@ export interface CombatantState extends Combatant {
   engagedVisualLaneX?: number;
   /** 近接敵: 最前列からの奥行きスロット（接敵開始時に固定、0=最前列） */
   engagedMeleeVisualSlot?: number;
-  /** 遠距離敵: 描画アンカー用の狙い味方 id（接敵開始時に固定） */
+  /** 遠距離敵: 描画アンカー用の狙いプレイヤー id（接敵開始時に固定） */
+  engagedVisualTargetPlayerId?: string;
+  /** @deprecated engagedVisualTargetPlayerId */
   engagedVisualTargetAllyId?: string;
   /** 味方: Wave 中の death スプライト表示。Wave 移行で false（HP0・HUD は維持） */
   corpseVisible: boolean;
@@ -752,6 +756,8 @@ export interface GameData {
 
 export type BattlePhase = "idle" | "running" | "victory" | "defeat";
 
+export type { RuntimeBattlePhase } from './battlePhase.ts';
+
 export interface CombatantSnapshot {
   id: string;
   name: string;
@@ -789,6 +795,8 @@ export interface CombatantSnapshot {
 
 export interface BattleSnapshot {
   phase: BattlePhase;
+  /** 戦闘フィールド FSM（battle-field.md §4.1） */
+  runtimePhase: import('./battlePhase.ts').RuntimeBattlePhase;
   engaged: boolean;
   /** 0-based。表示は +1 */
   waveIndex: number;
@@ -803,6 +811,9 @@ export interface BattleSnapshot {
   victoryUseTimerFade: boolean;
   /** Victory（全員生存）: 退出 march 完了までオーバーレイ非表示 */
   victoryAwaitExitMarch: boolean;
+  /** プレイヤー側ユニット（ランタイム正本） */
+  players: CombatantSnapshot[];
+  /** @deprecated players */
   allies: CombatantSnapshot[];
   enemies: CombatantSnapshot[];
 }

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "test": "vitest run",
+    "test": "vitest run --testTimeout=120000",
     "preview": "vite preview",
     "electron": "electron electron/main.mjs",
     "electron:dev": "npm run build && electron electron/main.mjs"

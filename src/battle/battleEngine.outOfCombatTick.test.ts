@@ -21,7 +21,7 @@ function createEngine() {
 }
 
 function getAllies(engine: BattleEngine): CombatantState[] {
-  return (engine as unknown as { allies: CombatantState[] }).allies;
+  return (engine as unknown as { players: CombatantState[] }).players;
 }
 
 describe('BattleEngine out-of-combat ticking', () => {
@@ -92,8 +92,12 @@ describe('BattleEngine out-of-combat ticking', () => {
     const internal = engine as unknown as {
       beginEnemyWipeSettle: (hasNextWave: boolean) => void;
       pendingNextWaveIndex: number | null;
+      enemies: CombatantState[];
       periodicHotStates: Map<string, { passiveId: string; remainingSec: number }[]>;
     };
+    for (const enemy of internal.enemies) {
+      enemy.isAlive = false;
+    }
     internal.periodicHotStates.set(cleric.id, [
       { passiveId: 'sp_cleric_passive_1', remainingSec: 5 },
     ]);

@@ -30,6 +30,9 @@ import {
   saveClassStatsBulk,
   saveEnemyBundle,
   toClassStatsPatch,
+  validateClassDraftForSave,
+  validateClassStatsForSave,
+  validateEnemyDraftForSave,
   type BalanceClassRow,
   type ClassDraft,
   type EnemyDraft,
@@ -45,6 +48,14 @@ import {
 import { createActionButton, createButton, createEl, preserveScrollDuring } from './formUtils.ts';
 
 type EditorTab = 'class' | 'enemy' | 'balance';
+
+const EDITOR_SESSION_KEY = 'auto-battle-idle:editor-session';
+
+interface EditorSessionState {
+  tab?: EditorTab;
+  selectedClassId?: string;
+  selectedEnemyId?: string;
+}
 
 export class EditorApp {
   private tab: EditorTab = 'class';
@@ -77,8 +88,60 @@ export class EditorApp {
   private contentEl!: HTMLElement;
 
   constructor(private root: HTMLElement) {
+    this.restoreSelectionFromSession();
     this.buildShell();
     void this.loadData();
+  }
+
+  private restoreSelectionFromSession(): void {
+    try {
+      const raw = sessionStorage.getItem(EDITOR_SESSION_KEY);
+      if (!raw) return;
+      const state = JSON.parse(raw) as EditorSessionState;
+      if (state.tab === 'class' || state.tab === 'enemy' || state.tab === 'balance') {
+        this.tab = state.tab;
+      }
+      if (typeof state.selectedClassId === 'string') {
+        this.selectedClassId = state.selectedClassId;
+      }
+      if (typeof state.selectedEnemyId === 'string') {
+        this.selectedEnemyId = state.selectedEnemyId;
+      }
+    } catch {
+      // ignore corrupt session data
+    }
+  }
+
+  private persistSession(): void {
+    const state: EditorSessionState = {
+      tab: this.tab,
+      selectedClassId: this.selectedClassId,
+      selectedEnemyId: this.selectedEnemyId,
+    };
+    sessionStorage.setItem(EDITOR_SESSION_KEY, JSON.stringify(state));
+  }
+
+  private restoreDraftsAfterLoad(): void {
+    if (
+      this.selectedClassId &&
+      this.classes.some((cls) => cls.id === this.selectedClassId)
+    ) {
+      this.classDraft = loadClassDraftById(this.classes, this.selectedClassId);
+      this.classSkillEntries = initClassSkillEntriesFromPreset(
+        this.classDraft.class,
+        this.skills,
+      );
+    }
+    if (
+      this.selectedEnemyId &&
+      this.enemies.some((enemy) => enemy.id === this.selectedEnemyId)
+    ) {
+      this.enemyDraft = loadEnemyDraftById(this.enemies, this.selectedEnemyId);
+      this.enemySkillEntries = initEnemySkillEntriesFromPreset(
+        this.enemyDraft.enemy,
+        this.skills,
+      );
+    }
   }
 
   private buildShell(): void {
@@ -119,6 +182,7 @@ export class EditorApp {
         if (this.tab === item.id) return;
         this.tab = item.id;
         this.clearStatus();
+        this.persistSession();
         this.render();
       });
       if (this.tab === item.id) btn.classList.add('is-active');
@@ -138,6 +202,7 @@ export class EditorApp {
       this.enemies = enemies;
       this.skills = skills;
       this.syncBalanceRowsFromClasses();
+      this.restoreDraftsAfterLoad();
       this.render();
     } catch (error) {
       this.setStatus(
@@ -281,6 +346,9 @@ export class EditorApp {
     this.saving = true;
     this.render();
     try {
+      for (const row of dirtyRows) {
+        validateClassStatsForSave(row.current);
+      }
       const patches = dirtyRows.map((row) => toClassStatsPatch(row.current));
       await saveClassStatsBulk(patches);
       this.classes = await fetchClasses();
@@ -398,10 +466,7 @@ export class EditorApp {
       },
       entityPicker: {
         label: '既存クラス',
-        items: this.classes.map((cls) => ({
-          id: cls.id,
-          label: `${cls.displayName} (${cls.id})`,
-        })),
+        items: this.buildClassPickerItems(),
         selectedId: this.selectedClassId,
         onSelect: (classId: string) => this.selectClass(classId),
       },
@@ -411,6 +476,9 @@ export class EditorApp {
         onClassIdChange: (classId: string) => {
           this.classDraft.class.id = classId;
           const trimmed = classId.trim();
+          if (trimmed && this.classes.some((cls) => cls.id === trimmed)) {
+            this.selectedClassId = trimmed;
+          }
           const prevCount = this.classSkillEntries.length;
           if (trimmed) {
             this.classDraft.class.basicAttackSkillId = defaultBasicAttackId(trimmed);
@@ -489,10 +557,24 @@ export class EditorApp {
     };
   }
 
+  private buildClassPickerItems(): { id: string; label: string }[] {
+    const items = this.classes.map((cls) => ({
+      id: cls.id,
+      label: `${cls.displayName} (${cls.id})`,
+    }));
+    const selectedId = this.selectedClassId.trim();
+    if (selectedId && !items.some((item) => item.id === selectedId)) {
+      const displayName = this.classDraft.class.displayName.trim() || selectedId;
+      items.push({ id: selectedId, label: `${displayName} (${selectedId})` });
+    }
+    return items;
+  }
+
   private selectClass(classId: string): void {
     this.selectedClassId = classId;
     this.classDraft = loadClassDraftById(this.classes, classId);
     this.classSkillEntries = initClassSkillEntriesFromPreset(this.classDraft.class, this.skills);
+    this.persistSession();
     this.render();
   }
 
@@ -503,6 +585,7 @@ export class EditorApp {
       this.enemyDraft.enemy,
       this.skills,
     );
+    this.persistSession();
     this.render();
   }
 
@@ -562,6 +645,56 @@ export class EditorApp {
     this.enemyDraft = draft;
   }
 
+  private refreshClassTabUi(options?: { reheader?: boolean }): void {
+    preserveScrollDuring(() => {
+      if (options?.reheader) {
+        const headerHost = this.contentEl.querySelector('.editor-panel-header');
+        if (headerHost instanceof HTMLElement) {
+          headerHost.replaceChildren();
+          const classOptions = this.buildClassSkillOptions();
+          if (classOptions.entityPicker) {
+            renderEntityPicker(headerHost, classOptions.entityPicker);
+          }
+          if (classOptions.classIdentity) {
+            renderClassIdentity(headerHost, classOptions.classIdentity);
+          }
+        }
+      }
+
+      this.classStep?.update({
+        getDraft: () => this.classDraft,
+        classes: this.classes,
+        selectedClassId: this.selectedClassId,
+        onDraftChange: (draft) => {
+          this.classDraft = draft;
+        },
+        onSelectClass: (classId) => this.selectClass(classId),
+        onSave: () => void this.saveClass(),
+        saving: this.saving,
+        hidePicker: true,
+        hideSave: true,
+      });
+
+      this.skillStep?.update({
+        ...this.buildClassSkillOptions(),
+        hideSave: true,
+        hideEntityHeader: true,
+      });
+
+      const saveBtn = this.contentEl.querySelector(
+        '.editor-actions .editor-btn-primary',
+      );
+      if (saveBtn instanceof HTMLButtonElement) {
+        saveBtn.disabled = this.saving;
+        saveBtn.textContent = this.saving ? '保存中…' : '保存';
+      }
+
+      const tabs = this.root.querySelector('.editor-tabs');
+      if (tabs) this.renderTabs(tabs as HTMLElement);
+      this.renderStatus();
+    });
+  }
+
   private prepareClassSkillEntriesForSave(): void {
     ensureClassGrowthFields(this.classDraft.class);
     const classId = this.classDraft.class.id.trim();
@@ -584,9 +717,13 @@ export class EditorApp {
       return;
     }
 
+    this.tab = 'class';
+    const savedClassId = this.classDraft.class.id.trim();
+    const loadedClassId = this.selectedClassId || savedClassId;
     this.saving = true;
-    this.render();
+    this.refreshClassTabUi();
     try {
+      validateClassDraftForSave(this.classDraft);
       this.prepareClassSkillEntriesForSave();
       const cls = buildClassPresetFromDraft(this.classDraft, this.classSkillEntries);
       const { passives, actives } = collectSkillsFromDrafts(this.classSkillEntries);
@@ -594,10 +731,12 @@ export class EditorApp {
       this.classes = await fetchClasses();
       this.skills = await fetchSkills();
       this.syncBalanceRowsFromClasses();
-      this.selectedClassId = cls.id;
-      this.classDraft = loadClassDraftById(this.classes, cls.id);
+      const nextClassId = cls.id.trim() || loadedClassId;
+      this.selectedClassId = nextClassId;
+      this.classDraft = loadClassDraftById(this.classes, nextClassId);
       this.classSkillEntries = initClassSkillEntriesFromPreset(this.classDraft.class, this.skills);
       this.setStatus(`保存しました: ${cls.displayName}`, false);
+      this.persistSession();
     } catch (error) {
       this.setStatus(
         error instanceof Error ? error.message : '保存に失敗しました',
@@ -605,7 +744,7 @@ export class EditorApp {
       );
     } finally {
       this.saving = false;
-      this.render();
+      this.refreshClassTabUi({ reheader: true });
     }
   }
 
@@ -634,6 +773,7 @@ export class EditorApp {
     this.saving = true;
     this.render();
     try {
+      validateEnemyDraftForSave(this.enemyDraft);
       this.prepareEnemySkillEntriesForSave();
       const enemy = buildEnemyFromDraft(this.enemyDraft, this.enemySkillEntries);
       const { passives, actives } = collectSkillsFromDrafts(this.enemySkillEntries);
@@ -647,6 +787,7 @@ export class EditorApp {
         this.skills,
       );
       this.setStatus(`保存しました: ${enemy.displayName}`, false);
+      this.persistSession();
     } catch (error) {
       this.setStatus(
         error instanceof Error ? error.message : '保存に失敗しました',

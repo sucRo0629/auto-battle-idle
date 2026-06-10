@@ -8,6 +8,11 @@ export interface BattleHudTheme {
   iconBarGap: number;
   barSkillGap: number;
   bottomMargin: number;
+  offsetY: number;
+  backdropColor: string;
+  backdropPadX: number;
+  backdropPadY: number;
+  backdropPadBottom: number;
   headerFontSize: number;
   expBarH: number;
   headerBlockGap: number;
@@ -135,6 +140,19 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     iconBarGap: readNumber(style, '--hud-icon-bar-gap', 4),
     barSkillGap: readNumber(style, '--hud-bar-skill-gap', 2),
     bottomMargin: readNumber(style, '--hud-bottom-margin', 5),
+    offsetY: readNumber(style, '--hud-offset-y', 0),
+    backdropColor: readString(
+      style,
+      '--hud-backdrop-color',
+      'rgba(0, 0, 0, 0.45)',
+    ),
+    backdropPadX: readNumber(style, '--hud-backdrop-pad-x', 6),
+    backdropPadY: readNumber(style, '--hud-backdrop-pad-y', 4),
+    backdropPadBottom: readNumber(
+      style,
+      '--hud-backdrop-pad-bottom',
+      readNumber(style, '--hud-backdrop-pad-y', 4),
+    ),
     headerFontSize: readNumber(style, '--hud-header-font-size', 9),
     expBarH: readNumber(style, '--hud-exp-bar-h', 4),
     headerBlockGap: readNumber(style, '--hud-header-block-gap', 2),
@@ -174,8 +192,8 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     ),
     skillRecastReady: readString(style, '--hud-skill-recast-ready', '#9aa3b0'),
     iconFrame: readString(style, '--hud-icon-frame', '#1a1a1a'),
-    statusBuffColor: readString(style, '--status-buff-color', '#e62222'),
-    statusDebuffColor: readString(style, '--status-debuff-color', '#318aff'),
+    statusBuffColor: readString(style, '--status-buff-color', '#e6b422'),
+    statusDebuffColor: readString(style, '--status-debuff-color', '#a855f7'),
     statusBadgeIconSize: readNumber(style, '--status-badge-icon-size', 8),
     statusBadgeArrowWidth: readNumber(style, '--status-badge-arrow-width', 3),
     statusBadgeArrowOverlap: readNumber(
@@ -195,8 +213,8 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     popupDamageStroke: readString(style, '--popup-damage-stroke', '#000000'),
     popupHealFill: readString(style, '--popup-heal-fill', '#2ecc71'),
     popupHealStroke: readString(style, '--popup-heal-stroke', '#1a3d24'),
-    sceneSkyFill: readString(style, '--scene-sky-fill', '#1a1a2e'),
-    sceneGroundFill: readString(style, '--scene-ground-fill', '#22283a'),
+    sceneSkyFill: readString(style, '--scene-sky-fill', '#87ceeb'),
+    sceneGroundFill: readString(style, '--scene-ground-fill', '#4aa83f'),
     sceneGroundStroke: readString(style, '--scene-ground-stroke', '#2d3a4f'),
     sceneGroundStrokeWidth: readNumber(style, '--scene-ground-stroke-width', 2),
     deadAlpha: readNumber(style, '--dead-alpha', 0.35),

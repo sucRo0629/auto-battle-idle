@@ -7,15 +7,15 @@
         "enemies": [
           {
             "templateId": "stage1_1",
-            "spawnX": -120
+            "spawnX": 600
           },
           {
             "templateId": "test_enemy",
-            "spawnX": -100
+            "spawnX": 580
           },
           {
             "templateId": "test_ranged",
-            "spawnX": -160
+            "spawnX": 640
           }
         ]
       },
@@ -23,15 +23,15 @@
         "enemies": [
           {
             "templateId": "test_enemy",
-            "spawnX": -100
+            "spawnX": 580
           },
           {
             "templateId": "test_ranged",
-            "spawnX": -120
+            "spawnX": 600
           },
           {
             "templateId": "test_ranged",
-            "spawnX": -200
+            "spawnX": 680
           }
         ]
       }
@@ -44,28 +44,28 @@
       {
         "enemies": [
           {
-            "templateId": "test_enemy_elite",
-            "spawnX": -100
+            "templateId": "test_enemy",
+            "spawnX": 580
           },
           {
-            "templateId": "test_enemy_elite",
-            "spawnX": -95
+            "templateId": "test_enemy",
+            "spawnX": 575
           },
           {
-            "templateId": "test_enemy_elite",
-            "spawnX": -90
+            "templateId": "test_enemy",
+            "spawnX": 570
           }
         ]
       },
       {
         "enemies": [
           {
-            "templateId": "test_enemy_elite",
-            "spawnX": -110
+            "templateId": "test_enemy",
+            "spawnX": 590
           },
           {
-            "templateId": "test_enemy_elite",
-            "spawnX": -105
+            "templateId": "test_enemy",
+            "spawnX": 585
           }
         ]
       }

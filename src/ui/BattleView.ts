@@ -15,7 +15,12 @@ import {
   shouldPlayActorAnim,
 } from "../render/skillVfx/resolveEffectPresentation.ts";
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
-import { BattleCanvas, type PartyHudMeta } from "../render/BattleCanvas.ts";
+import { BattleCanvas } from "../render/BattleCanvas.ts";
+import { PartyHudPanel } from "./PartyHudPanel.ts";
+import {
+  buildPartyHudEntries,
+  type PartyHudMeta,
+} from "./partyHudTypes.ts";
 import { BattleStatsOverlay } from "./BattleStatsOverlay.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 import type { PartyMemberProgress } from "./PartyMemberStatsDisplay.ts";
@@ -41,6 +46,7 @@ export class BattleView {
   private readonly statsButton: HTMLButtonElement;
   private readonly enhancementTreeButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
+  private readonly partyHud: PartyHudPanel;
   private readonly debugMenu: DebugMenuPanel;
   private statsOverlay: BattleStatsOverlay | null = null;
   private readonly verifyModeControls?: VerifyModeControls;
@@ -88,9 +94,12 @@ export class BattleView {
     const canvasFrame = document.createElement("div");
     canvasFrame.className = "battle-canvas-frame";
 
+    const canvasWrap = document.createElement("div");
+    canvasWrap.className = "battle-canvas-wrap";
+
     this.stageLabelEl = document.createElement("div");
     this.stageLabelEl.className = "battle-stage-label";
-    canvasFrame.appendChild(this.stageLabelEl);
+    canvasWrap.appendChild(this.stageLabelEl);
 
     const menuButtons = document.createElement("div");
     menuButtons.className = "battle-menu-buttons";
@@ -116,7 +125,8 @@ export class BattleView {
       this.menuButton,
       this.statsButton
     );
-    canvasFrame.appendChild(menuButtons);
+    canvasWrap.appendChild(menuButtons);
+    canvasFrame.appendChild(canvasWrap);
     this.canvasHost.appendChild(canvasFrame);
 
     this.root.appendChild(this.canvasHost);
@@ -143,7 +153,10 @@ export class BattleView {
     container.appendChild(this.root);
 
     this.canvas = new BattleCanvas();
-    this.canvas.mount(canvasFrame);
+    this.canvas.mount(canvasWrap);
+
+    this.partyHud = new PartyHudPanel(this.canvasHost);
+    this.partyHud.mount(canvasFrame);
 
     this.engine.onEvent((event) => this.onBattleEvent(event));
   }
@@ -293,7 +306,8 @@ export class BattleView {
       });
 
     this.stageLabelEl.textContent = stageLabel;
-    this.canvas.syncFromSnapshot(snapshot, partyMeta);
+    this.canvas.syncFromSnapshot(snapshot);
+    this.partyHud.update(buildPartyHudEntries(snapshot, partyMeta));
     this.canvas.tick(deltaMs);
     this.debugMenu.updateThreatDisplay();
     this.debugMenu.updateExpDisplay();
@@ -355,6 +369,7 @@ export class BattleView {
     this.statsOverlay?.destroy();
     this.statsOverlay = null;
     this.canvas.destroy();
+    this.partyHud.destroy();
     this.debugMenu.destroy();
     this.root.remove();
   }

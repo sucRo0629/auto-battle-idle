@@ -210,6 +210,19 @@
     },
     {
       "id": "df_duelist_passive_2",
+      "name": "不屈",
+      "effect": "selfHpRatioBuff",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "buffStat": "def",
+      "buffMultiplierMax": 1.5,
+      "maxBuffAtHpRatio": 0.4
+    },
+    {
+      "id": "df_duelist_passive_3",
       "name": "チャンスメイク",
       "effect": "counterChance",
       "targetRuleOverride": {
@@ -233,19 +246,6 @@
         }
       ],
       "counterRange": 0
-    },
-    {
-      "id": "df_duelist_passive_3",
-      "name": "不屈",
-      "effect": "selfHpRatioBuff",
-      "targetRuleOverride": {
-        "kind": "distance",
-        "side": "enemy",
-        "order": "nearest"
-      },
-      "buffStat": "def",
-      "buffMultiplierMax": 1.5,
-      "maxBuffAtHpRatio": 0.4
     }
   ],
   "actives": [
@@ -916,7 +916,7 @@
         {
           "targetShape": "chain",
           "chainCount": 3,
-          "chainMaxDistancePx": 80,
+          "chainMaxDistancePx": 5,
           "type": "damage",
           "damageType": "magic",
           "amount": {

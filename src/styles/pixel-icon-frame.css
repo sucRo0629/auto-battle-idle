@@ -1,0 +1,35 @@
+/* 24px ピクセルアート用の共通アイコン枠（border-box グローバル設定の影響を受けない） */
+.pixel-icon-frame {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: content-box;
+  flex: 0 0 auto;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.pixel-icon-img {
+  display: block;
+  flex: none;
+  box-sizing: content-box;
+  object-fit: none;
+  object-position: center;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* ネイティブ 24×24 をそのまま表示 */
+.pixel-icon-frame--24 {
+  width: 24px;
+  height: 24px;
+}
+
+.pixel-icon-img--24 {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  max-width: none;
+  max-height: none;
+}

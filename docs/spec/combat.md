@@ -160,7 +160,7 @@ baseThreat = statComponent + frontRowPressureBonus
 | スタン    | `effect: "stun"` + `durationSec` — `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可（CD は進行）                                     |
 | 反撃    | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記 |
 | デバフ解除  | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `remainingSec` 降順 N 件。パッシブ `periodicDispel` は `intervalSec` ごとに `dispelTargetRule` で対象選択 |
-| ノックバック | `effect: "knockback"` + `distancePx` — 敵は左（`-X`）、味方は右（`+X`）へ即時移動。敵は `BATTLE_ENEMY_MARCH_VISIBLE_MIN_X` 未満にならない                                 |
+| ノックバック | `effect: "knockback"` + `distancePx` — 各陣営の **後方** へ即時移動（プレイヤーは左 `-X`、敵は右 `+X`）。敵は進軍表示下限未満にならない。詳細は [battle-field.md](battle-field.md) §2.5 |
 
 ### 反撃（`counter`）
 
@@ -204,32 +204,13 @@ baseThreat = statComponent + frontRowPressureBonus
 | `scatter`   | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
 
 
-プール：味方 actor → 敵、敵 actor → 味方。heal / buff 向け `mostDamagedAlly` 等も anchor として同じ形状を利用。
+プール：プレイヤー actor → 敵、敵 actor → プレイヤー（実装移行中は `ally` 表記の残存あり）。heal / buff 向け `mostDamagedAlly` 等も anchor として同じ形状を利用。
 
-## 座標（ロジックと演出の分離）
+## 座標・移動・戦闘フェーズ
 
+横 1 軸のバトルライン、座標層（`battleX` / `visualX` / `screenX`）、Wave・`spawnX`、隊形スロット、接敵トリガー、カメラ、BattlePhase FSM、生死表示は **[battle-field.md](battle-field.md)** を正本とする。現行コードは旧軸・旧パイプラインのため、実装が追いつくまで本節の旧記述は battle-field.md に置き換え済み。
 
-| 座標        | 層            | 用途                                           |
-| --------- | ------------ | -------------------------------------------- |
-| `battleX` | `src/battle` | 射程判定・接敵移動・ターゲット選定・knockback |
-| `visualX` | `src/render` | 画面描画のみ（`resolveEngagedLayout` で算出） |
-
-
-同一 `battleX` のユニットはロジック上重なってよい（近接 range 0 等）。描画は `visualX` で隊形・接敵距離（`ENGAGED_VISUAL_TUNING`）を維持し、`battleX` の内部接近はそのまま画面に反映しない。
-
-**接敵中の visual 更新:** `BattleEngine` は毎フレーム `resolveEngagedLayout`（`formationLayout.ts`）を呼び、返却された目標 `visualX` へ `approachAllyVisualX` / `approachEnemyVisualX` で補間する（味方は左のみ、敵は右のみ）。凍結するのは遠距離敵の狙い味方 ID（`engagedVisualTargetAllyId`）と近接敵の奥行きスロット（`engagedMeleeVisualSlot`）、前列レーン（`engagedVisualLaneX`・前列構成変化時のみ）に限定。
-
-**敵全滅後の隊列復帰（Wave 2 以降）:** 死亡演出待ちの後、`tickCompensatedFormationReset` が **screen 絶対位置**（`ROW_X[row] + slot × ALLY_ROW_SPACING`）へ戻す。毎 tick 味方 `visualX` を左へ `SCROLL_SPEED` 分進め、同量 `combatCameraX` を右へ加算し screen 上の静止感を維持。screen 右ズレは左移動のみ、左ズレはカメラ右移で補正（`visualX` は増やさない）。完了まで次 Wave に進まない。完了時に `visualX` / `battleX` を隊列へ正規化し `combatCameraX = 0`。settle / reset 中はスキルシーケンス・periodic HoT/dispel を停止。
-
-**Wave 1 開始進軍:** 従来どおり `WAVE_APPROACH_MARCH_SEC`（0.75s）の左進軍 + `applyStaggeredFormationMarchRestore`（相対間隔）。`worldOffsetX` で背景のみスクロール。
-
-**Victory 退出:** 相対間隔 restore（`applyStaggeredFormationMarchRestore`）のまま。settle 開始時は `seedPostCombatFormationCamera`。
-
-**接敵開始時:** `combatCameraX !== 0` のときのみ `bakeCombatCameraIntoVisualX`。
-
-**接敵カメラ:** `combatCameraX` は生存味方の screen 重心（パーティ center）がキャンバス中央（240px）へ来るよう加算。Victory 退出・リスポーン・Defeat 時は 0。HUD はオフセットしない。
-
-## 射程と移動
+### 射程（要約）
 
 ```
 effectiveRangePx = effect.range ?? actor.traits.rangePx
@@ -238,39 +219,29 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 通常攻撃（合成 basic）は effect に `range` を持たず、常に `traits.rangePx` を参照する。
 
 - 命中: `battleDistance(actor, target) <= effectiveRangePx`
-- 敵が画面内（`battleX >= BATTLE_ENEMY_VISIBLE_MIN_X`）に入ると **Engaged** 開始
-- 射程外のユニットは攻撃可能位置まで接近（味方: `contactX + range`、敵: `contactX - range`）。到達後に攻撃
-- **味方**: `battleX` / `visualX` は **左方向のみ**（減少のみ）。隊列間隔調整も右へ広げず左進軍で合流
-- **敵**: `battleX` / `visualX` は **右方向のみ**（増加のみ）。接敵中は **画面外に出さない**（screen clamp）
-- **敵奥行き:** ranged の `battleX` は近接前線より後方（`battleX` 小）。`resolveRangedRearBattleXCap` で cap。**visualX** も melee 前線より後方（`resolveEngagedLayout` で cap + 左方向 gap 分離）
-- 味方接近: 近接生存中は `getMeleeEnemyContactX`、全滅後は攻撃ターゲット基準
-- 後列 ranged の visualX は `battleX + battleVisualOffset` で battle 接近に追従
-- **スキル移動中**（`move` 効果の補間中、または move を含むスキルシーケンス実行中）の actor は自動接近の対象外
+- 攻撃可能位置・自動接近・接敵開始条件は [battle-field.md](battle-field.md) §2.5・§4.3–§4.4
 
-## スキルシーケンス（move 含むスキル）
+### スキルシーケンス（move 含むスキル）
 
 `move` を 1 つでも含むアクティブは、発動時に effect 列を battle 時間でスケジュールし順に適用する。
 
 1. 各 effect の anchor を事前解決（move は射程外でも選択可）
-2. `move` は `moveDurationSec` で `battleX` を線形補間
+2. `move` は `moveDurationSec` で `battleX` を線形補間（`visualX` は overlay。layout とは分離 — battle-field.md §4.5）
 3. 次の effect の `applyAt` = 直前 move 完了時刻（move 連続時は累積）
 4. 全 step 完了後に CD リセット（途中キャンセルは死亡時のみ）
 
-例（奇襲帰還）: `move farthestEnemy` → `damage` → `move closestAlly (toAnchor)`
+例（奇襲帰還）: `move farthestEnemy` → `damage` → `move closestPlayer (toAnchor)`
 
-## 戦闘フロー（Phase 1）
+### 戦闘フロー（Phase 1）
 
-1. 味方は初期隊列の `battleX` に配置、敵は左から出現・右進軍
-2. 敵が画面内 → **Engaged** → 接近 + スキル発動（射程内のみ）
-3. **非接敵中**（Wave 進軍・接敵前進軍・全滅後インターミッション等）も DoT/HoT tick・バフ/デバフ持続・CD 進行は継続。スキル発動・脅威 decay は接敵中のみ
-4. 毎 tick（接敵中）：味方行動 → 敵行動
-5. 敵全滅 → **Victory**；味方全滅 → **Defeat**
+1. プレイヤー隊列を後方に配置、敵 Wave を前方（`spawnX`）から左進軍 — [battle-field.md](battle-field.md) §3–§4
+2. standoff cap 到達 → **Engaged** → 接近 + スキル発動（射程内のみ）
+3. **非接敵中**も DoT/HoT tick・バフ/デバフ持続・CD 進行は継続。スキル発動・脅威 decay は接敵中のみ（battle-field.md §4.7）
+4. 毎 tick（接敵中）：プレイヤー行動 → 敵行動
+5. 敵全滅 → **Victory**；プレイヤー全滅 → **Defeat**
 6. 3秒後：HP全回復、同一ステージ再スポーン、`Running` 再開
 
-死亡ユニットはターゲット対象外。次の再スポーンまで death アニメ。
-
-- **味方**: 同一 Wave 中はフィールド上に death 表示。次 Wave 進軍開始時にスプライトのみ消える（`hp`・HUD の灰色表示は維持）。ステージ再スポーンで HP 全回復。
-- **敵**: Wave 終了でエンティティごと差し替わるため、死体は Wave 内のみ表示。
+死亡ユニットはターゲット対象外。次の再スポーンまで death アニメ。Wave 跨ぎの生死表示は battle-field.md §3.4。
 
 ## 演出（render 層）
 

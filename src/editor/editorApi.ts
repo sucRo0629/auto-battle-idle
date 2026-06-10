@@ -181,6 +181,40 @@ export function toClassStatsPatch(cls: ClassPresetBeforeEnrich): ClassStatsPatch
   };
 }
 
+function assertFiniteNumber(label: string, value: number): void {
+  if (!Number.isFinite(value)) {
+    throw new Error(`${label} は数値を入力してください`);
+  }
+}
+
+function assertMinNumber(label: string, value: number, min: number): void {
+  assertFiniteNumber(label, value);
+  if (value < min) {
+    throw new Error(`${label} は ${min} 以上である必要があります`);
+  }
+}
+
+export function validateClassDraftForSave(draft: ClassDraft): void {
+  assertMinNumber('maxHp', draft.class.maxHp, 1);
+  assertMinNumber('atk', draft.class.atk, 0);
+  assertMinNumber('def', draft.class.def, 0);
+  assertMinNumber('射程 (px)', draft.class.traits.rangePx ?? 0, 0);
+}
+
+export function validateEnemyDraftForSave(draft: EnemyDraft): void {
+  assertMinNumber('maxHp', draft.enemy.maxHp, 1);
+  assertMinNumber('atk', draft.enemy.atk, 0);
+  assertMinNumber('def', draft.enemy.def, 0);
+  assertMinNumber('exp', draft.enemy.exp, 0);
+  assertMinNumber('射程 (px)', draft.enemy.traits?.rangePx ?? 0, 0);
+}
+
+export function validateClassStatsForSave(cls: ClassPresetBeforeEnrich): void {
+  assertMinNumber(`${cls.displayName || cls.id} の maxHp`, cls.maxHp, 1);
+  assertMinNumber(`${cls.displayName || cls.id} の atk`, cls.atk, 0);
+  assertMinNumber(`${cls.displayName || cls.id} の def`, cls.def, 0);
+}
+
 /** 既存クラス選択プルダウンと同じ並び（classes.json の配列順） */
 export function compareByClassListOrder(
   aId: ClassId,

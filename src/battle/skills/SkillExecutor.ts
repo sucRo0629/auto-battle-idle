@@ -24,7 +24,7 @@ import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
 import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
 import { grantCounterStatus } from '../counterEffects.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
-import { resolveMoveVisualX } from '../../render/formationLayout.ts';
+import { resolveMoveVisualX } from '../battleLayout.ts';
 import {
   resetCooldownAfterFire,
   tickCountTriggerCooldowns,

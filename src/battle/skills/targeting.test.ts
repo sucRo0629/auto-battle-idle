@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { CombatantState, DamageSkillEffect, GameData, SkillEffectDef, TargetRule } from '../types.ts';
 import { normalizeTarget } from './targetSpec.ts';
 import { applyPowerStep } from './powerStep.ts';
-import { battleDistance, isWithinSkillRange } from './rangeUtils.ts';
+import {
+  battleDistance,
+  getAttackablePool,
+  isWithinSkillRange,
+} from './rangeUtils.ts';
+import { engagedMinBodyGap } from '../battleConstants.ts';
 import {
   resolveEffectAnchor,
   resolveEffectResolution,
@@ -176,6 +181,22 @@ describe('resolveEffectTargets', () => {
     expect(isWithinSkillRange(ally, enemy, 0)).toBe(true);
     const farEnemy = mockUnit('e2', 90, { isEnemy: true, rangePx: 0 });
     expect(isWithinSkillRange(ally, farEnemy, 0)).toBe(false);
+  });
+
+  it('melee units at engage standoff gap can target each other', () => {
+    const standoff = engagedMinBodyGap();
+    const paladin = mockUnit('paladin', 250, { rangePx: 0, formationRow: 'front' });
+    const enemy = mockUnit('e1', 250 + standoff, {
+      isEnemy: true,
+      rangePx: 0,
+    });
+    const spec = {
+      kind: 'distance' as const,
+      side: 'enemy' as const,
+      order: 'nearest' as const,
+    };
+    expect(getAttackablePool(spec, paladin, [paladin], [enemy], 0)).toHaveLength(1);
+    expect(getAttackablePool(spec, enemy, [paladin], [enemy], 0)).toHaveLength(1);
   });
 
   it('farthestEnemy picks minimum battleX among in-range', () => {

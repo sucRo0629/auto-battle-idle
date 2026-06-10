@@ -1,8 +1,54 @@
-/** DOM 再構築後もページスクロール位置を維持する */
+interface FocusRestoreState {
+  selector: string;
+  selectionStart: number | null;
+  selectionEnd: number | null;
+}
+
+function buildFocusRestoreState(): FocusRestoreState | null {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement)) {
+    return null;
+  }
+  const parts: string[] = [`input.editor-input`];
+  if (active.id) {
+    parts.push(`#${CSS.escape(active.id)}`);
+  }
+  if (active.dataset.field) {
+    parts.push(`[data-field="${CSS.escape(active.dataset.field)}"]`);
+  }
+  return {
+    selector: parts.join(''),
+    selectionStart: active.selectionStart,
+    selectionEnd: active.selectionEnd,
+  };
+}
+
+function restoreFocusState(state: FocusRestoreState | null): void {
+  if (!state) return;
+  const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+    state.selector,
+  );
+  if (!input) return;
+  input.focus({ preventScroll: true });
+  if (
+    state.selectionStart !== null &&
+    state.selectionEnd !== null &&
+    typeof input.setSelectionRange === 'function'
+  ) {
+    input.setSelectionRange(state.selectionStart, state.selectionEnd);
+  }
+}
+
+/** DOM 再構築後もページスクロール位置とフォーカスを維持する */
 export function preserveScrollDuring(fn: () => void): void {
   const scrollY = window.scrollY;
+  const focusState = buildFocusRestoreState();
   fn();
-  window.scrollTo(0, scrollY);
+  window.scrollTo({ top: scrollY, left: 0, behavior: 'instant' });
+  requestAnimationFrame(() => {
+    window.scrollTo({ top: scrollY, left: 0, behavior: 'instant' });
+    restoreFocusState(focusState);
+  });
 }
 
 export function createEl<K extends keyof HTMLElementTagNameMap>(
@@ -42,27 +88,28 @@ export function createNumberInput(
   onInput: (value: number) => void,
   options?: {
     id?: string;
-    min?: number;
-    step?: number;
     readonly?: boolean;
     /** この値のとき input を空表示（省略値用） */
     emptyWhen?: number;
     placeholder?: string;
+    /** 互換用。DOM には反映せず、保存時バリデーションで検証する */
+    min?: number;
+    max?: number;
+    step?: number;
   },
 ): HTMLInputElement {
   const input = createEl('input', 'editor-input') as HTMLInputElement;
-  input.type = 'number';
+  input.type = 'text';
+  input.inputMode = 'decimal';
   const showEmpty =
     options?.emptyWhen !== undefined && value === options.emptyWhen;
   input.value = showEmpty ? '' : String(value);
   if (options?.id) input.id = options.id;
-  if (options?.min !== undefined) input.min = String(options.min);
-  if (options?.step !== undefined) input.step = String(options.step);
   if (options?.placeholder) input.placeholder = options.placeholder;
   if (options?.readonly) input.readOnly = true;
   const commit = () => {
     if (options?.readonly) return;
-    if (input.value === '') {
+    if (input.value.trim() === '') {
       onInput(options?.emptyWhen ?? 0);
       return;
     }

@@ -1,3 +1,5 @@
+@import './pixel-icon-frame.css';
+
 .skill-menu-tabs {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -23,29 +25,14 @@
 }
 
 .skill-menu-tab-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: content-box;
-  flex: 0 0 auto;
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
   border: 1px solid var(--hud-icon-border, #4a5568);
   border-radius: 4px;
   background: rgba(0, 0, 0, 0.25);
-  overflow: hidden;
 }
 
-.skill-menu-tab-icon-img {
-  display: block;
-  flex: none;
-  width: 24px;
-  height: 24px;
-  object-fit: none;
-  object-position: center;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
+.skill-menu-tab-icon--empty {
+  border-style: dashed;
+  opacity: 0.55;
 }
 
 .skill-menu-tab-label {
@@ -311,16 +298,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 48px;
-  width: 48px;
-  min-width: 48px;
-  height: 48px;
-  min-height: 48px;
-  padding: 6px;
+  flex: 0 0 32px;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
   box-sizing: border-box;
   border: 1px solid var(--canvas-border-color);
   border-radius: 6px;
   background: rgba(15, 15, 26, 0.55);
+  overflow: hidden;
   cursor: pointer;
 }
 
@@ -340,6 +328,9 @@
 
 .skill-menu-skill-icon-slot .skill-menu-tab-icon {
   flex-shrink: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
 }
 
 .skill-menu-floating-tooltip {
@@ -446,15 +437,13 @@
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  height: 48px;
+  height: 36px;
   padding: 6px 10px;
   box-sizing: border-box;
 }
 
 .skill-menu-slot.skill-menu-class-slot .skill-menu-tab-icon {
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
 }
 
 .skill-menu-slot--locked {
@@ -502,17 +491,12 @@
 
 .skill-menu-picker-row--icon {
   flex-direction: row;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
 }
 
-/* スキル説明が長い行でもアイコンをテキスト先頭に揃える（クラス選択は epithet 付きで行高が揃う） */
-.skill-menu-picker--active .skill-menu-picker-row--icon {
-  align-items: flex-start;
-}
-
-.skill-menu-picker--active .skill-menu-picker-row--icon > .skill-menu-tab-icon {
-  margin-top: 2px;
+.skill-menu-picker-row--icon > .skill-menu-tab-icon {
+  flex-shrink: 0;
 }
 
 .skill-menu-picker-row-text {
@@ -524,6 +508,8 @@
 
 .skill-menu-picker-row--icon .skill-menu-skill-desc {
   margin-top: 4px;
+  line-height: 1.35;
+  min-height: calc(2 * 1.35em);
 }
 
 .skill-menu-picker-row:hover {

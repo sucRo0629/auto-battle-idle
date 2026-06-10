@@ -6,27 +6,27 @@ import type {
   Role,
 } from './types.ts';
 import {
-  BATTLE_ENEMY_MARCH_VISIBLE_MIN_X,
-  BATTLE_ENEMY_VISIBLE_MIN_X,
-} from './types.ts';
-import { resolveSkillRangePx } from './skills/rangeUtils.ts';
-import {
-  ALLY_ROW_SPACING,
+  BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
+  BATTLE_ENEMY_VISIBLE_MAX_X,
+  engagedMinBodyGap,
+  enemyRangedRearGap,
+  PLAYER_ROW_SPACING,
   ROW_X,
   SPRITE_GAP,
   resolveEnemyMarchEngageGap,
-} from '../render/formationLayout.ts';
+  SCROLL_SPEED,
+  APPROACH_SPEED,
+} from './battleConstants.ts';
+import { resolveSkillRangePx } from './skills/rangeUtils.ts';
 
-/** 非戦闘時: 背景スクロール・敵進軍速度（px/秒） */
-export const SCROLL_SPEED = 160;
-/** 接敵後: 攻撃可能位置への接近速度（px/秒） */
-export const APPROACH_SPEED = 200;
+export { SCROLL_SPEED, APPROACH_SPEED };
 
 const ROW_ORDER: FormationRow[] = ['front', 'middle', 'back'];
 
+/** Front row: lower order = left/rear; defender is most forward (right). */
 const FRONT_ROW_ROLE_ORDER: Record<Role, number> = {
-  defender: 0,
-  attacker: 1,
+  attacker: 0,
+  defender: 1,
   supporter: 2,
 };
 
@@ -42,30 +42,59 @@ function rowRoleOrder(row: FormationRow, role: Role): number {
   return FRONT_ROW_ROLE_ORDER[role];
 }
 
+/** 隊形スロット整列用（traits.rangePx。スキル最大射程とは別） */
+export function resolveFormationRangePx(unit: CombatantState): number {
+  return unit.traits.rangePx;
+}
+
+function compareFormationBattleSlot(
+  row: FormationRow,
+  a: CombatantState,
+  b: CombatantState,
+  _gameData?: GameData,
+): number {
+  const rangeA = resolveFormationRangePx(a);
+  const rangeB = resolveFormationRangePx(b);
+  if (rangeA !== rangeB) return rangeB - rangeA;
+  const roleDelta = rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role);
+  if (roleDelta !== 0) return roleDelta;
+  return a.id.localeCompare(b.id);
+}
+
+export function isMeleeUnit(
+  unit: CombatantState,
+  gameData: GameData,
+): boolean {
+  return resolveMaxEffectiveRangePx(unit, gameData) <= 0;
+}
+
 export function getBattleX(unit: CombatantState): number {
   return unit.battleX;
 }
 
-/** 最前線生存敵の battleX（味方から最も近い敵） */
+/** 最前線生存敵の battleX（プレイヤーに最も近い = min） */
 export function getEnemyContactX(enemies: CombatantState[]): number | null {
   const living = enemies.filter((e) => e.isAlive);
   if (living.length === 0) return null;
-  return Math.max(...living.map((e) => e.battleX));
+  return Math.min(...living.map((e) => e.battleX));
 }
 
-/** 最前線生存近接敵の battleX（traits.rangePx === 0 のみ） */
+/** 最前線生存近接敵の battleX */
 export function getMeleeEnemyContactX(
   enemies: CombatantState[],
+  gameData: GameData,
 ): number | null {
-  const living = enemies.filter((e) => e.isAlive && e.traits.rangePx === 0);
+  const living = enemies.filter(
+    (e) => e.isAlive && resolveMaxEffectiveRangePx(e, gameData) <= 0,
+  );
   if (living.length === 0) return null;
-  return Math.max(...living.map((e) => e.battleX));
+  return Math.min(...living.map((e) => e.battleX));
 }
 
-function livingAlliesOnLeadingRow(
-  allies: CombatantState[],
+function livingPlayersOnLeadingRow(
+  players: CombatantState[],
 ): CombatantState[] {
-  const living = allies.filter((a) => a.isAlive);
+  const living = players.filter((a) => a.isAlive);
   if (living.length === 0) return [];
   for (const row of ROW_ORDER) {
     const rowUnits = living.filter((a) => a.formationRow === row);
@@ -74,29 +103,62 @@ function livingAlliesOnLeadingRow(
   return [];
 }
 
-/** 最前線生存列のうち最も敵側（min battleX）— 後列の射程調整は含めない */
-export function getAllyContactX(allies: CombatantState[]): number | null {
-  const frontLine = livingAlliesOnLeadingRow(allies);
+/** 最前線生存列のうち最も前方（max battleX） */
+export function getPlayerContactX(players: CombatantState[]): number | null {
+  const frontLine = livingPlayersOnLeadingRow(players);
   if (frontLine.length === 0) return null;
-  return Math.min(...frontLine.map((a) => a.battleX));
+  return Math.max(...frontLine.map((a) => a.battleX));
 }
 
-export function leadingRowContactAlly(
-  allies: CombatantState[],
+/** 接敵中: 前線 contact を基準にした理想 battleX（非接敵の ROW_X 隊形と同じ相対位置） */
+export function resolvePlayerFormationBattleX(
+  player: CombatantState,
+  players: CombatantState[],
+  gameData?: GameData,
+): number | null {
+  const living = players.filter((p) => p.isAlive);
+  const contact = getPlayerContactX(living);
+  if (contact === null) return null;
+
+  const row = player.formationRow;
+  const rowUnits = living.filter((p) => p.formationRow === row);
+  if (gameData) {
+    rowUnits.sort((a, b) =>
+      compareFormationBattleSlot(row, a, b, gameData),
+    );
+  } else {
+    rowUnits.sort(
+      (a, b) => rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role),
+    );
+  }
+  const slot = rowUnits.findIndex((p) => p.id === player.id);
+  if (slot < 0) return null;
+
+  const rowBase = ROW_X[row] - ROW_X.front;
+  return contact + rowBase + slot * PLAYER_ROW_SPACING;
+}
+
+/** @deprecated getPlayerContactX */
+export const getAllyContactX = getPlayerContactX;
+
+export function leadingRowContactPlayer(
+  players: CombatantState[],
 ): CombatantState | null {
-  const frontLine = livingAlliesOnLeadingRow(allies);
+  const frontLine = livingPlayersOnLeadingRow(players);
   if (frontLine.length === 0) return null;
-  return frontLine.reduce((best, ally) =>
-    ally.battleX < best.battleX ? ally : best,
+  return frontLine.reduce((best, player) =>
+    player.battleX > best.battleX ? player : best,
   );
 }
 
-/** 接敵ロジック（最前線列の min battleX）と同じ味方の visual 基準点 */
-export function getBattleContactAllyVisual(
-  allies: CombatantState[],
+/** @deprecated leadingRowContactPlayer */
+export const leadingRowContactAlly = leadingRowContactPlayer;
+
+export function getBattleContactPlayerVisual(
+  players: CombatantState[],
   gameData: GameData,
 ): { visualX: number; rangePx: number } | null {
-  const contact = leadingRowContactAlly(allies);
+  const contact = leadingRowContactPlayer(players);
   if (!contact) return null;
   return {
     visualX: contact.visualX,
@@ -104,31 +166,31 @@ export function getBattleContactAllyVisual(
   };
 }
 
-/** 最前線味方の visualX − battleX（接敵中の battle→visual 写像オフセット） */
-export function getBattleVisualOffset(allies: CombatantState[]): number | null {
-  const contact = leadingRowContactAlly(allies);
+/** @deprecated getBattleContactPlayerVisual */
+export const getBattleContactAllyVisual = getBattleContactPlayerVisual;
+
+export function getBattleVisualOffset(players: CombatantState[]): number | null {
+  const contact = leadingRowContactPlayer(players);
   if (!contact) return null;
   return contact.visualX - contact.battleX;
 }
 
-/** 味方接触オフセットを保ったまま、最前線敵 battleX を visual 座標へ写像 */
 export function getEngagedFrontEnemyVisualAnchor(
-  allies: CombatantState[],
+  players: CombatantState[],
   enemies: CombatantState[],
   battleVisualOffset?: number | null,
 ): number | null {
   const frontEnemyBattleX = getEnemyContactX(enemies);
-  const offset = battleVisualOffset ?? getBattleVisualOffset(allies);
+  const offset = battleVisualOffset ?? getBattleVisualOffset(players);
   if (frontEnemyBattleX === null || offset === null) return null;
   return frontEnemyBattleX + offset;
 }
 
-/** 敵 visualX を battleX ベースの接敵位置へ写像（最前線味方の visual−battle オフセット） */
 export function syncEnemyVisualToBattleContact(
-  allies: CombatantState[],
+  players: CombatantState[],
   enemies: CombatantState[],
 ): void {
-  const contact = leadingRowContactAlly(allies);
+  const contact = leadingRowContactPlayer(players);
   if (!contact) return;
   const offset = contact.visualX - contact.battleX;
   for (const enemy of enemies) {
@@ -138,11 +200,11 @@ export function syncEnemyVisualToBattleContact(
 }
 
 export function isEnemyVisibleOnScreen(enemy: CombatantState): boolean {
-  return enemy.battleX >= BATTLE_ENEMY_VISIBLE_MIN_X;
+  return enemy.battleX <= BATTLE_ENEMY_VISIBLE_MAX_X;
 }
 
 export function isEnemyMarchVisible(enemy: CombatantState): boolean {
-  return enemy.battleX >= BATTLE_ENEMY_MARCH_VISIBLE_MIN_X;
+  return enemy.battleX <= BATTLE_ENEMY_MARCH_VISIBLE_MAX_X;
 }
 
 function getFrontEnemyForEngage(
@@ -151,70 +213,70 @@ function getFrontEnemyForEngage(
   const living = enemies.filter((e) => e.isAlive);
   if (living.length === 0) return null;
   return living.reduce((best, enemy) =>
-    enemy.battleX > best.battleX ? enemy : best,
+    enemy.battleX < best.battleX ? enemy : best,
   );
 }
 
-/** 最前線敵が standoff 距離まで近づいた battleX（ここで接敵開始） */
 export function resolveEngageLineX(
-  allies: CombatantState[],
+  players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
 ): number | null {
   const frontEnemy = getFrontEnemyForEngage(enemies);
   if (frontEnemy === null) return null;
-  return resolveEnemyMarchCapX(frontEnemy, allies, gameData, enemies);
+  return resolveEnemyMarchCapX(frontEnemy, players, gameData, enemies);
 }
 
-/** 近接前線より後方（battleX 小）に ranged を置く上限 */
+/** 近接前線より後方（battleX 大）に ranged を置く下限 */
 export function resolveRangedRearBattleXCap(
   enemies: CombatantState[],
-  minGap: number = SPRITE_GAP,
+  gameData: GameData,
+  minGap: number = enemyRangedRearGap(),
 ): number | null {
-  const meleeContact = getMeleeEnemyContactX(enemies);
+  const meleeContact = getMeleeEnemyContactX(enemies, gameData);
   if (meleeContact === null) return null;
-  return meleeContact - minGap;
+  return meleeContact + minGap;
 }
 
 function capRangedApproachBehindMelee(
   enemy: CombatantState,
   enemies: CombatantState[],
+  gameData: GameData,
   approachX: number,
 ): number {
-  if (enemy.traits.rangePx === 0) return approachX;
-  const rearCap = resolveRangedRearBattleXCap(enemies);
+  if (resolveMaxEffectiveRangePx(enemy, gameData) <= 0) return approachX;
+  const rearCap = resolveRangedRearBattleXCap(enemies, gameData);
   if (rearCap === null) return approachX;
-  return Math.min(approachX, rearCap);
+  return Math.max(approachX, rearCap);
 }
 
-/** 敵1体の進軍上限 battleX（味方接触点 − その敵の射程） */
 export function resolveEnemyMarchCapX(
   enemy: CombatantState,
-  allies: CombatantState[],
+  players: CombatantState[],
   gameData: GameData,
   enemies: CombatantState[] = [],
 ): number | null {
-  const allyContact = getAllyContactX(allies);
-  const contactAlly = leadingRowContactAlly(allies);
-  if (allyContact === null || contactAlly === null) return null;
+  const playerContact = getPlayerContactX(players);
+  const contactPlayer = leadingRowContactPlayer(players);
+  if (playerContact === null || contactPlayer === null) return null;
   const gap = resolveEnemyMarchEngageGap(
-    resolveMaxEffectiveRangePx(contactAlly, gameData),
+    resolveMaxEffectiveRangePx(contactPlayer, gameData),
     resolveMaxEffectiveRangePx(enemy, gameData),
   );
-  let cap = allyContact - gap;
-  return capRangedApproachBehindMelee(enemy, enemies, cap);
+  let cap = playerContact + gap;
+  return capRangedApproachBehindMelee(enemy, enemies, gameData, cap);
 }
 
 export function shouldStartApproach(
-  allies: CombatantState[],
+  players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
 ): boolean {
   const frontEnemy = getFrontEnemyForEngage(enemies);
   if (frontEnemy === null) return false;
-  const cap = resolveEnemyMarchCapX(frontEnemy, allies, gameData, enemies);
+  const cap = resolveEnemyMarchCapX(frontEnemy, players, gameData, enemies);
   if (cap === null) return false;
-  return frontEnemy.battleX >= cap;
+  return frontEnemy.battleX <= cap;
 }
 
 export function resolveMaxEffectiveRangePx(
@@ -233,7 +295,6 @@ export function resolveMaxEffectiveRangePx(
   return max >= 0 ? max : unit.traits.rangePx;
 }
 
-/** move 効果の目標 battleX（anchor 基準） */
 export function resolveMoveBattleX(
   actor: CombatantState,
   anchor: CombatantState,
@@ -249,25 +310,29 @@ export function resolveMoveBattleX(
 
   if (actor.isEnemy) {
     if (mode === 'behindTarget') {
-      return anchor.battleX + (effect.behindOffsetPx ?? 0);
+      return anchor.battleX - (effect.behindOffsetPx ?? 0);
     }
-    return anchor.battleX - range;
+    return anchor.battleX + range;
   }
 
   if (mode === 'behindTarget') {
-    return anchor.battleX - (effect.behindOffsetPx ?? 0);
+    return anchor.battleX + (effect.behindOffsetPx ?? 0);
   }
-  return anchor.battleX + range;
+  return anchor.battleX - range;
 }
 
-/** 味方: contactX + range / 敵: contactX - range */
+/** プレイヤー: contact − range / 敵: contact + range（近接は standoff 幅を挟む） */
 export function resolveAttackBattleX(
   unit: CombatantState,
   contactX: number,
   gameData: GameData,
 ): number {
   const range = resolveMaxEffectiveRangePx(unit, gameData);
-  return unit.isEnemy ? contactX - range : contactX + range;
+  if (range <= 0) {
+    const standoff = engagedMinBodyGap();
+    return unit.isEnemy ? contactX + standoff : contactX - standoff;
+  }
+  return unit.isEnemy ? contactX + range : contactX - range;
 }
 
 export function moveTowardX(
@@ -281,7 +346,8 @@ export function moveTowardX(
   return current + Math.sign(delta) * maxDelta;
 }
 
-export function marchEnemiesRight(
+/** 敵を左へ進軍（battleX 減少） */
+export function marchEnemiesLeft(
   enemies: Array<{ id: string; battleX: number; isAlive: boolean }>,
   deltaX: number,
 ): Map<string, number> {
@@ -289,13 +355,16 @@ export function marchEnemiesRight(
   for (const enemy of enemies) {
     positions.set(
       enemy.id,
-      enemy.isAlive ? enemy.battleX + deltaX : enemy.battleX,
+      enemy.isAlive ? enemy.battleX - deltaX : enemy.battleX,
     );
   }
   return positions;
 }
 
-/** 左から出現する敵: 重なりは左へ広げ、右端が画面外に残るようにする */
+/** @deprecated marchEnemiesLeft */
+export const marchEnemiesRight = marchEnemiesLeft;
+
+/** 右側から出現する敵: 重なりは右へ広げる */
 export function separateByGap(
   units: Array<{ id: string; battleX: number; isAlive: boolean }>,
   minGap: number,
@@ -309,57 +378,57 @@ export function separateByGap(
     positions.set(unit.id, unit.battleX);
   }
 
-  for (let i = living.length - 2; i >= 0; i--) {
-    const right = living[i + 1];
+  for (let i = 1; i < living.length; i++) {
+    const prev = living[i - 1];
     const cur = living[i];
-    const maxX = (positions.get(right.id) ?? right.battleX) - minGap;
+    const minX = (positions.get(prev.id) ?? prev.battleX) + minGap;
     const curX = positions.get(cur.id) ?? cur.battleX;
-    if (curX > maxX) {
-      positions.set(cur.id, maxX);
+    if (curX < minX) {
+      positions.set(cur.id, minX);
     }
   }
 
   return positions;
 }
 
-/** 接敵中: 味方は左（battleX 減）のみ、敵は右（battleX 増）のみ接近 */
+/** 接敵中: standoff 目標へ双方向補間（過進軍後の離脱も許可） */
 export function updateUnitApproach(
   unit: CombatantState,
   targetBattleX: number,
   approachStep: number,
 ): void {
   if (!unit.isAlive) return;
-  if (unit.isEnemy) {
-    if (targetBattleX > unit.battleX) {
-      unit.battleX = moveTowardX(unit.battleX, targetBattleX, approachStep);
-    }
-  } else if (targetBattleX < unit.battleX) {
-    unit.battleX = moveTowardX(unit.battleX, targetBattleX, approachStep);
-  }
+  unit.battleX = moveTowardX(unit.battleX, targetBattleX, approachStep);
 }
 
-/** 非接敵時の味方 battleX（隊列ベースの初期配置） */
-export function assignInitialAllyBattleX(allies: CombatantState[]): void {
-  const living = allies.filter((a) => a.isAlive);
+export function assignInitialPlayerBattleX(
+  players: CombatantState[],
+  gameData?: GameData,
+): void {
+  const living = players.filter((a) => a.isAlive);
   const byRow = new Map<FormationRow, CombatantState[]>();
   for (const row of ROW_ORDER) {
     byRow.set(row, []);
   }
-  for (const ally of living) {
-    byRow.get(ally.formationRow)!.push(ally);
+  for (const player of living) {
+    byRow.get(player.formationRow)!.push(player);
   }
   for (const row of ROW_ORDER) {
-    byRow
-      .get(row)!
-      .sort((a, b) => rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role));
+    const rowPlayers = byRow.get(row)!;
+    rowPlayers.sort((a, b) =>
+      compareFormationBattleSlot(row, a, b, gameData),
+    );
   }
 
   const rowSlot = new Map<FormationRow, number>();
   for (const row of ROW_ORDER) {
-    for (const ally of byRow.get(row)!) {
+    for (const player of byRow.get(row)!) {
       const slot = rowSlot.get(row) ?? 0;
       rowSlot.set(row, slot + 1);
-      ally.battleX = ROW_X[row] + slot * ALLY_ROW_SPACING;
+      player.battleX = ROW_X[row] + slot * PLAYER_ROW_SPACING;
     }
   }
 }
+
+/** @deprecated assignInitialPlayerBattleX */
+export const assignInitialAllyBattleX = assignInitialPlayerBattleX;

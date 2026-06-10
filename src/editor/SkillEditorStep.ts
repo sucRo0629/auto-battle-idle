@@ -193,9 +193,9 @@ function appendCounterEffectFields(
         (range) =>
           patchEffect((prev) => ({
             ...prev,
-            range: range >= 0 ? range : 0,
+            range,
           })),
-        { min: 0, step: 5 },
+        {},
       ),
     ),
   );
@@ -638,7 +638,7 @@ function appendResourceAmountFields(
         (percent) =>
           patchAmount((prev) => ({
             ...prev,
-            percentOfMaxHp: Math.min(100, Math.max(0, percent)) / 100,
+            percentOfMaxHp: percent / 100,
           })),
         { step: 1, min: 0 },
       ),
@@ -883,8 +883,13 @@ export function renderEntityPicker(
     const opt = createEl('option') as HTMLOptionElement;
     opt.value = item.id;
     opt.textContent = item.label;
-    if (item.id === entityPicker.selectedId) opt.selected = true;
     select.appendChild(opt);
+  }
+  if (
+    entityPicker.selectedId &&
+    entityPicker.items.some((item) => item.id === entityPicker.selectedId)
+  ) {
+    select.value = entityPicker.selectedId;
   }
   select.addEventListener('change', () => {
     if (select.value) entityPicker.onSelect(select.value);
@@ -1199,10 +1204,10 @@ export class SkillEditorStep {
               this.commitEntries((next) => {
                 const current = next[index];
                 if (!current) return;
-                current.unlockLevel = Math.max(0, Math.round(unlockLevel));
+                current.unlockLevel = unlockLevel;
               }, { rerender: false });
             },
-            { min: 0, step: 1 },
+            {},
           ),
         ),
       );
@@ -1786,8 +1791,6 @@ export class SkillEditorStep {
           ),
         ),
       );
-      const valueMin = trigger.kind === 'time' ? 0.1 : 1;
-      const valueStep = trigger.kind === 'time' ? 0.1 : 1;
       grid.appendChild(
         createFieldRow(
           SKILL_TRIGGER_VALUE_LABELS[trigger.kind],
@@ -1796,15 +1799,11 @@ export class SkillEditorStep {
             (value) => {
               setActive((current) => {
                 const kind = resolveSkillTrigger(current).kind;
-                const nextValue =
-                  kind === 'time'
-                    ? Math.max(0.1, value)
-                    : Math.max(1, Math.round(value));
-                current.trigger = { kind, value: nextValue };
+                current.trigger = { kind, value };
                 delete current.interval;
               }, { rerender: false });
             },
-            { min: valueMin, step: valueStep },
+            {},
           ),
         ),
       );
@@ -2120,7 +2119,7 @@ export class SkillEditorStep {
                     ({
                       ...prev,
                       targetShape,
-                      hitDurationSec: hitDurationSec > 0 ? hitDurationSec : 1,
+                      hitDurationSec,
                     }) as SkillEffectDef,
                 ),
               { min: 0.1, step: 0.1 },
@@ -2141,7 +2140,7 @@ export class SkillEditorStep {
                   ({
                     ...prev,
                     targetShape: 'aoe',
-                    aoeRadiusPx: aoeRadiusPx > 0 ? aoeRadiusPx : 70,
+                    aoeRadiusPx,
                   }) as SkillEffectDef,
               ),
             { min: 1, step: 10 },
@@ -2161,7 +2160,7 @@ export class SkillEditorStep {
                   ({
                     ...prev,
                     targetShape: 'multiLock',
-                    hitCount: Math.max(2, Math.round(hitCount)),
+                    hitCount,
                   }) as SkillEffectDef,
               ),
             { min: 2, step: 1 },
@@ -2181,7 +2180,7 @@ export class SkillEditorStep {
                   ({
                     ...prev,
                     targetShape: 'chain',
-                    chainCount: Math.max(1, Math.round(chainCount)),
+                    chainCount,
                   }) as SkillEffectDef,
               ),
             { min: 1, step: 1 },
@@ -2199,8 +2198,7 @@ export class SkillEditorStep {
                   ({
                     ...prev,
                     targetShape: 'chain',
-                    chainMaxDistancePx:
-                      chainMaxDistancePx > 0 ? chainMaxDistancePx : 80,
+                    chainMaxDistancePx,
                   }) as SkillEffectDef,
               ),
             { min: 1, step: 10 },
@@ -2220,8 +2218,7 @@ export class SkillEditorStep {
                   ({
                     ...prev,
                     targetShape: 'scatter',
-                    scatterSpreadRadiusPx:
-                      scatterSpreadRadiusPx > 0 ? scatterSpreadRadiusPx : 70,
+                    scatterSpreadRadiusPx,
                   }) as SkillEffectDef,
               ),
             { min: 1, step: 10 },
@@ -2239,7 +2236,7 @@ export class SkillEditorStep {
                   ({
                     ...prev,
                     targetShape: 'scatter',
-                    scatterRadiusPx: scatterRadiusPx > 0 ? scatterRadiusPx : 70,
+                    scatterRadiusPx,
                   }) as SkillEffectDef,
               ),
             { min: 1, step: 10 },
@@ -2257,7 +2254,7 @@ export class SkillEditorStep {
                   ({
                     ...prev,
                     targetShape: 'scatter',
-                    scatterHitCount: Math.max(2, Math.round(scatterHitCount)),
+                    scatterHitCount,
                   }) as SkillEffectDef,
               ),
             { min: 2, step: 1 },
@@ -2275,8 +2272,7 @@ export class SkillEditorStep {
                   ({
                     ...prev,
                     targetShape: 'scatter',
-                    scatterDurationSec:
-                      scatterDurationSec > 0 ? scatterDurationSec : 1,
+                    scatterDurationSec,
                   }) as SkillEffectDef,
               ),
             { min: 0.1, step: 0.1 },
@@ -2294,7 +2290,7 @@ export class SkillEditorStep {
                   ({
                     ...prev,
                     targetShape: 'scatter',
-                    scatterSpreadRate: Math.min(1, Math.max(0, scatterSpreadRate)),
+                    scatterSpreadRate,
                   }) as SkillEffectDef,
               ),
             { min: 0, step: 0.1 },

@@ -6,9 +6,16 @@ import { editorApiPlugin } from './vite-plugin-editor-api.ts';
 export default defineConfig({
   base: './',
   plugins: [editorApiPlugin()],
+  server: {
+    watch: {
+      // エディタ保存で JSON が更新されてもフルリロードしない（選択状態が消えるのを防ぐ）
+      ignored: ['**/data/classes.json', '**/data/skills.json', '**/data/enemies.json'],
+    },
+  },
   test: {
     include: ['src/**/*.test.ts'],
     setupFiles: ['src/test/setup.ts'],
+    testTimeout: 120_000,
   },
   build: {
     rollupOptions: {

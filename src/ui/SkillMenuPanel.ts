@@ -262,21 +262,32 @@ export class SkillMenuPanel {
     label: string,
     iconUrl?: string
   ): HTMLElement {
-    const iconWrap = document.createElement("span");
-    iconWrap.className = "skill-menu-tab-icon";
+    const iconWrap = document.createElement("div");
+    iconWrap.className =
+      "skill-menu-tab-icon pixel-icon-frame pixel-icon-frame--24";
+    iconWrap.title = label;
+
+    const resolvedUrl = iconUrl
+      ? iconUrl
+      : preset
+        ? getClassIconUrl(resolveClassIconKey(preset))
+        : "";
+
+    if (!resolvedUrl) {
+      iconWrap.classList.add("skill-menu-tab-icon--empty");
+      iconWrap.setAttribute("aria-hidden", "true");
+      return iconWrap;
+    }
+
     const img = document.createElement("img");
-    img.className = "skill-menu-tab-icon-img";
+    img.className =
+      "skill-menu-tab-icon-img pixel-icon-img pixel-icon-img--24";
     img.width = 24;
     img.height = 24;
     img.alt = "";
     img.decoding = "async";
-    if (iconUrl) {
-      img.src = iconUrl;
-    } else if (preset) {
-      img.src = getClassIconUrl(resolveClassIconKey(preset));
-    }
+    img.src = resolvedUrl;
     img.setAttribute("aria-hidden", "true");
-    iconWrap.title = label;
     iconWrap.appendChild(img);
     return iconWrap;
   }
@@ -733,7 +744,8 @@ export class SkillMenuPanel {
     name: string,
     description: string,
     classId: string,
-    preset?: ClassPreset
+    preset?: ClassPreset,
+    options?: { showEpithet?: boolean }
   ): HTMLElement {
     const row = document.createElement("button");
     row.type = "button";
@@ -749,7 +761,8 @@ export class SkillMenuPanel {
     const text = document.createElement("div");
     text.className = "skill-menu-picker-row-text";
 
-    if (preset?.epithetEn) {
+    const showEpithet = options?.showEpithet ?? true;
+    if (showEpithet && preset?.epithetEn) {
       const epithetEl = document.createElement("div");
       epithetEl.className = "skill-menu-class-slot-epithet";
       epithetEl.textContent = preset.epithetEn;
@@ -776,7 +789,9 @@ export class SkillMenuPanel {
     classPreset?: ClassPreset,
     skill?: ActiveSkillDef
   ): HTMLElement {
-    const row = this.createClassPickerRow(name, description, "", classPreset);
+    const row = this.createClassPickerRow(name, description, "", classPreset, {
+      showEpithet: false,
+    });
     delete row.dataset.classId;
     row.dataset.skillId = skillId;
 

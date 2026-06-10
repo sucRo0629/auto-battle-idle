@@ -206,7 +206,7 @@ export class ClassEditorStep {
       if (options?.rerender) {
         this.render();
       } else if (options?.updatePreview) {
-        this.updatePreview();
+        preserveScrollDuring(() => this.updatePreview());
       }
     };
 
@@ -232,8 +232,10 @@ export class ClassEditorStep {
         const opt = createEl("option") as HTMLOptionElement;
         opt.value = cls.id;
         opt.textContent = `${cls.displayName} (${cls.id})`;
-        if (cls.id === selectedClassId) opt.selected = true;
         select.appendChild(opt);
+      }
+      if (selectedClassId && classes.some((cls) => cls.id === selectedClassId)) {
+        select.value = selectedClassId;
       }
       select.addEventListener("change", () => {
         if (select.value) onSelectClass(select.value);
@@ -349,9 +351,9 @@ export class ClassEditorStep {
           (rangePx) => {
             commitDraft((next) => {
               next.class.traits.rangePx = rangePx;
-            }, { rerender: true });
+            });
           },
-          { min: 0 }
+          {}
         )
       )
     );
@@ -429,7 +431,7 @@ export class ClassEditorStep {
               { updatePreview: true }
             );
           },
-          { min: 1 }
+          {}
         )
       )
     );
@@ -446,7 +448,7 @@ export class ClassEditorStep {
               { updatePreview: true }
             );
           },
-          { min: 0 }
+          {}
         )
       )
     );
@@ -463,7 +465,7 @@ export class ClassEditorStep {
               { updatePreview: true }
             );
           },
-          { min: 0 }
+          {}
         )
       )
     );

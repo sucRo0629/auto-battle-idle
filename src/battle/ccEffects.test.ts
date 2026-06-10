@@ -66,12 +66,12 @@ describe('ccEffects', () => {
     expect(target.statusEffects[0]?.remainingSec).toBe(2);
   });
 
-  it('applyKnockbackToTarget pushes enemy left and ally right', () => {
+  it('applyKnockbackToTarget pushes each side toward rear', () => {
     const enemy = mockUnit({ id: 'enemy', isEnemy: true, battleX: 150 });
     const ally = mockUnit({ id: 'ally', battleX: 200 });
     applyKnockbackToTarget(enemy, 40);
     applyKnockbackToTarget(ally, 40);
-    expect(enemy.battleX).toBe(110);
-    expect(ally.battleX).toBe(240);
+    expect(enemy.battleX).toBe(190);
+    expect(ally.battleX).toBe(160);
   });
 });
