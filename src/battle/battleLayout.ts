@@ -11,7 +11,6 @@ import {
   resolveMaxEffectiveRangePx,
 } from './combatPosition.ts';
 import {
-  APPROACH_SPEED,
   CANVAS_W,
   ENGAGED_VISUAL_TUNING,
   PARTY_FORMATION_LEFT_ANCHOR,
@@ -20,7 +19,7 @@ import {
   PLAYER_ROW_SPACING,
   PLAYER_VISUAL_MIN_GAP,
   ROW_X,
-  SCROLL_SPEED,
+  MOVE_SPEED,
   SPRITE_GAP,
   SPRITE_WIDTH,
   engagedFrontLineGap,
@@ -1122,7 +1121,7 @@ export function tickCompensatedFormationReset(
   state: CompensatedFormationResetState,
   combatCameraX: number = 0,
   deltaTime: number,
-  spacingSpeed: number = APPROACH_SPEED,
+  spacingSpeed: number = MOVE_SPEED,
 ): { phase: FormationRestorePhase; combatCameraX: number } {
   const players = state.players ?? state.allies ?? [];
   const living = players.filter((p) => p.isAlive);
@@ -1130,13 +1129,13 @@ export function tickCompensatedFormationReset(
     return { phase: state.phase, combatCameraX: 0 };
   }
 
-  const marchStep = SCROLL_SPEED * deltaTime;
+  const moveStep = MOVE_SPEED * deltaTime;
   const spacingStep = spacingSpeed * deltaTime;
   const targets = resolveFormationScreenTargets(living);
   const { leadIds, trailIds } = getFormationRestoreGroups(living);
 
   for (const player of living) {
-    player.battleX += marchStep;
+    player.battleX += moveStep;
   }
 
   const correctPlayerTowardTarget = (player: FormationRestoreUnit): void => {
@@ -1271,7 +1270,7 @@ export function applyFormationMarchTick(
     unit.battleX = (ideals.get(unit.id) ?? unit.battleX) + marchOrigin;
   }
 
-  anchor.battleX += SCROLL_SPEED * deltaTime;
+  anchor.battleX += MOVE_SPEED * deltaTime;
   marchOrigin = anchor.battleX - anchorIdeal;
   for (const unit of living) {
     unit.battleX = (ideals.get(unit.id) ?? unit.battleX) + marchOrigin;
@@ -1281,7 +1280,7 @@ export function applyFormationMarchTick(
 export function applyStaggeredFormationMarchRestore(
   state: StaggeredFormationRestoreState,
   deltaTime: number,
-  spacingSpeed: number = APPROACH_SPEED,
+  spacingSpeed: number = MOVE_SPEED,
   placements?: FormationMarchPlacementInput[],
 ): FormationRestorePhase {
   const players = restorePlayers(state);
@@ -1294,11 +1293,11 @@ export function applyStaggeredFormationMarchRestore(
     return state.phase;
   }
 
-  const marchStep = SCROLL_SPEED * deltaTime;
+  const moveStep = MOVE_SPEED * deltaTime;
   const spacingStep = spacingSpeed * deltaTime;
 
   for (const player of living) {
-    player.battleX += marchStep;
+    player.battleX += moveStep;
   }
 
   const anchors = resolveFormationRestoreAnchors(living);

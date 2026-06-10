@@ -12,7 +12,7 @@ import {
   TICK_DT,
   waitForEngaged,
 } from './test/battleFieldSpec.harness.ts';
-import { CANVAS_W, SCROLL_SPEED } from './battleConstants.ts';
+import { CANVAS_W, MOVE_SPEED } from './battleConstants.ts';
 import { isMeleeRangePx } from './types.ts';
 import { SPRITE_WIDTH } from '../battle/battleConstants.ts';
 
@@ -356,7 +356,7 @@ describe('battle-field transition spec (T-*)', () => {
         const prev = before.allies.find((a) => a.id === ally?.id);
         if (!ally || !prev) continue;
         const deltaX = ally.battleX - prev.battleX;
-        const expected = SCROLL_SPEED * 2 * TICK_DT;
+        const expected = MOVE_SPEED * 2 * TICK_DT;
         expect(deltaX).toBeCloseTo(expected, 4);
         return;
       }

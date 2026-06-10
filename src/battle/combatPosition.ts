@@ -18,16 +18,12 @@ import {
   SPRITE_WIDTH,
   resolveEnemyMarchEngageGap,
   resolveEnemySpawnBattleX,
-  SCROLL_SPEED,
-  APPROACH_SPEED,
 } from './battleConstants.ts';
 import {
   computePartyFormationBattleX,
   type PartyFormationUnit,
 } from './partyFormation.ts';
 import { resolveSkillRangePx } from './skills/rangeUtils.ts';
-
-export { SCROLL_SPEED, APPROACH_SPEED };
 
 const ROW_ORDER: FormationRow[] = ['front', 'middle', 'back'];
 

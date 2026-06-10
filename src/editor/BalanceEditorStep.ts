@@ -15,6 +15,7 @@ import type {
   Role,
 } from '../battle/types.ts';
 import { CONFIGURABLE_RANGE_PX_MAX } from '../battle/rangeLimits.ts';
+import levelCurvesJson from '../../data/levelCurves.json';
 import {
   computeBasicAttackDps,
   formatBasicAttackDps,

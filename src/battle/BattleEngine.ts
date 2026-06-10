@@ -11,7 +11,6 @@ import { getEffectiveAttackSpeedMultiplier } from "./combatMath.ts";
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
-  APPROACH_SPEED as BATTLE_APPROACH_SPEED,
   leadingRowContactPlayer,
   getEnemyContactX,
   getMeleeEnemyContactX,
@@ -20,7 +19,6 @@ import {
   resolveMaxEffectiveRangePx,
   isMeleeUnit,
   resolveAttackBattleX,
-  SCROLL_SPEED,
   updateUnitApproach,
   capEngagedEnemyApproachBattleX,
   syncAllFieldX,
@@ -39,6 +37,7 @@ import {
 } from "./resolveApproachBattleX.ts";
 import {
   CANVAS_W as BATTLE_CANVAS_W,
+  MOVE_SPEED,
   SPRITE_GAP,
   engagedMinBodyGap,
 } from "./battleConstants.ts";
@@ -107,7 +106,7 @@ import { BATTLE_ENEMY_MARCH_VISIBLE_MAX_X } from "./battleConstants.ts";
 import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 
 const RESTART_DELAY_SEC = 3;
-const VICTORY_EXIT_SPEED = SCROLL_SPEED * 2;
+const VICTORY_EXIT_SPEED = MOVE_SPEED * 2;
 const OVERLAY_TICK_SEC = 1;
 /** 敵死亡演出（アニメ + ホールド）後に Victory / 次 Wave へ遷移 */
 const ENEMY_DEATH_SETTLE_DELAY_SEC =
@@ -408,7 +407,7 @@ export class BattleEngine {
     }
   }
 
-  private advanceWorldOffset(deltaTime: number, speed: number = SCROLL_SPEED): void {
+  private advanceWorldOffset(deltaTime: number, speed: number = MOVE_SPEED): void {
     this.worldOffsetX += speed * deltaTime;
   }
 
@@ -450,7 +449,7 @@ export class BattleEngine {
     const frozenMeleeContactX =
       meleeContact === null ? this.engagedLastMeleeContactX : null;
 
-    const approachStep = BATTLE_APPROACH_SPEED * deltaTime;
+    const moveStep = MOVE_SPEED * deltaTime;
 
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
@@ -472,7 +471,7 @@ export class BattleEngine {
         this.gameData,
         { frozenMeleeContactX },
       );
-      updateUnitApproach(ally, target, approachStep);
+      updateUnitApproach(ally, target, moveStep);
     }
 
     for (const enemy of this.enemies) {
@@ -498,7 +497,7 @@ export class BattleEngine {
           this.gameData,
         ),
       );
-      updateUnitApproach(enemy, target, approachStep);
+      updateUnitApproach(enemy, target, moveStep);
     }
   }
 
@@ -857,7 +856,7 @@ export class BattleEngine {
   }
 
   private tickPartyDeploy(deltaTime: number): void {
-    const step = BATTLE_APPROACH_SPEED * deltaTime;
+    const step = MOVE_SPEED * deltaTime;
     let allSettled = true;
     for (const ally of this.players) {
       if (!ally.isAlive) continue;

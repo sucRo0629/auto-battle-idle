@@ -17,10 +17,8 @@ export const SPAWN_X_MAX = CANVAS_W / 2;
 export const SPRITE_WIDTH = SPRITE_LAYOUT_SIZE;
 export const SPRITE_GAP = 38;
 
-/** 非戦闘時: 背景スクロール・進軍速度（px/秒） — Victory 退場パララックス用 */
-export const SCROLL_SPEED = 160;
-/** 接敵後: 攻撃可能位置への接近速度（px/秒） */
-export const APPROACH_SPEED = 200;
+/** 戦闘中のユニット移動速度（px/秒） */
+export const MOVE_SPEED = 120;
 
 /** 画面内とみなす battleX の前方上限 */
 export const BATTLE_ENEMY_VISIBLE_MAX_X = CANVAS_W + 32;
@@ -37,7 +35,7 @@ export const ENGAGED_VISUAL_TUNING = {
   bodyClearancePx: -20,
   frontLineGapPx: 0,
   leadingRowAdvanceT: 0.8,
-  engageMoveSpeedPxPerSec: APPROACH_SPEED,
+  engageMoveSpeedPxPerSec: MOVE_SPEED,
 } as const;
 
 export function engagedMinBodyGap(): number {

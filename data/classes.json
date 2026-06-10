@@ -48,7 +48,7 @@
       "rangePx": 5
     },
     "maxHp": 200,
-    "atk": 13,
+    "atk": 12,
     "def": 20,
     "reg": 10,
     "jobTier": 1,
@@ -84,7 +84,7 @@
       "rangePx": 5
     },
     "maxHp": 190,
-    "atk": 26,
+    "atk": 18,
     "def": 12,
     "reg": 0,
     "jobTier": 1,
@@ -161,7 +161,7 @@
       "rangePx": 5
     },
     "maxHp": 100,
-    "atk": 32,
+    "atk": 20,
     "def": 8,
     "reg": 0,
     "jobTier": 1,
@@ -182,7 +182,7 @@
     ],
     "growthTier": {
       "maxHp": 1,
-      "atk": 3,
+      "atk": 2,
       "def": 1
     }
   },
@@ -271,7 +271,7 @@
       "rangePx": 240
     },
     "maxHp": 88,
-    "atk": 28,
+    "atk": 33,
     "def": 5,
     "reg": 0,
     "jobTier": 1,
@@ -306,7 +306,7 @@
       "rangePx": 180
     },
     "maxHp": 96,
-    "atk": 18,
+    "atk": 21,
     "def": 8,
     "reg": 0,
     "jobTier": 1,
@@ -455,7 +455,7 @@
       "damageType": "magic"
     },
     "maxHp": 105,
-    "atk": 12,
+    "atk": 15,
     "def": 11,
     "reg": 10,
     "jobTier": 1,
@@ -490,7 +490,7 @@
       "rangePx": 90
     },
     "maxHp": 95,
-    "atk": 10,
+    "atk": 12,
     "def": 12,
     "reg": 15,
     "jobTier": 1,
@@ -525,7 +525,7 @@
       "rangePx": 70
     },
     "maxHp": 98,
-    "atk": 14,
+    "atk": 17,
     "def": 9,
     "reg": 10,
     "jobTier": 1,
