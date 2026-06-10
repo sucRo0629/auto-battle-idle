@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { ActiveSkillDef, CombatantState, GameData, SkillCooldown } from '../types.ts';
-import { resolveMoveBattleX } from '../combatPosition.ts';
 import { SkillExecutor } from './SkillExecutor.ts';
 import {
   buildSkillSequence,
@@ -300,47 +299,5 @@ describe('skillSequence', () => {
     runner.beginUse('actor', 1);
     runner.clearForActor('actor');
     expect(runner.isActorBusy('actor')).toBe(false);
-  });
-});
-
-describe('resolveMoveBattleX', () => {
-  const basicData = makeGameData({
-    basic: {
-      id: 'basic',
-      name: 'basic',
-      interval: 2,
-      effect: [
-        {
-          target: { kind: "distance", side: "enemy", order: "nearest" },
-          type: 'damage',
-          damageType: 'physical',
-          amount: { kind: 'atkBased', atkScale: 1 },
-        },
-      ],
-    },
-  });
-
-  it('engage places ally at enemy contact range', () => {
-    const actor = mockUnit({ id: 'a', battleX: 200 });
-    const enemy = mockUnit({ id: 'e', isEnemy: true, battleX: 60 });
-    const x = resolveMoveBattleX(
-      actor,
-      enemy,
-      { type: 'move', target: { kind: "distance", side: "enemy", order: "nearest" }, moveDurationSec: 0.2, moveMode: 'engage' },
-      basicData,
-    );
-    expect(x).toBe(60);
-  });
-
-  it('toAnchor snaps to ally position', () => {
-    const actor = mockUnit({ id: 'a', battleX: 40 });
-    const ally = mockUnit({ id: 'ally', battleX: 215 });
-    const x = resolveMoveBattleX(
-      actor,
-      ally,
-      { type: 'move', target: { kind: "distance", side: "ally", order: "nearest" }, moveDurationSec: 0.2, moveMode: 'toAnchor' },
-      basicData,
-    );
-    expect(x).toBe(215);
   });
 });

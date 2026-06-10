@@ -5,6 +5,7 @@ import type {
   MoveSkillEffect,
   Role,
 } from './types.ts';
+import { isMeleeRangePx } from './types.ts';
 import {
   BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
   BATTLE_ENEMY_VISIBLE_MAX_X,
@@ -65,7 +66,7 @@ export function isMeleeUnit(
   unit: CombatantState,
   gameData: GameData,
 ): boolean {
-  return resolveMaxEffectiveRangePx(unit, gameData) <= 0;
+  return isMeleeRangePx(resolveMaxEffectiveRangePx(unit, gameData));
 }
 
 export function getBattleX(unit: CombatantState): number {
@@ -85,7 +86,7 @@ export function getMeleeEnemyContactX(
   gameData: GameData,
 ): number | null {
   const living = enemies.filter(
-    (e) => e.isAlive && resolveMaxEffectiveRangePx(e, gameData) <= 0,
+    (e) => e.isAlive && isMeleeUnit(e, gameData),
   );
   if (living.length === 0) return null;
   return Math.min(...living.map((e) => e.battleX));
@@ -141,15 +142,24 @@ export function resolvePlayerFormationBattleX(
 /** @deprecated getPlayerContactX */
 export const getAllyContactX = getPlayerContactX;
 
+function pickLeadingRowContact(
+  frontLine: CombatantState[],
+): CombatantState {
+  return frontLine.reduce((best, player) =>
+    player.battleX > best.battleX ? player : best,
+  );
+}
+
 export function leadingRowContactPlayer(
   players: CombatantState[],
 ): CombatantState | null {
   const frontLine = livingPlayersOnLeadingRow(players);
   if (frontLine.length === 0) return null;
-  return frontLine.reduce((best, player) =>
-    player.battleX > best.battleX ? player : best,
-  );
+  return pickLeadingRowContact(frontLine);
 }
+
+/** @deprecated leadingRowContactPlayer と同一（R1-fix: battleX 単一） */
+export const leadingRowVisualContactPlayer = leadingRowContactPlayer;
 
 /** @deprecated leadingRowContactPlayer */
 export const leadingRowContactAlly = leadingRowContactPlayer;
@@ -157,11 +167,11 @@ export const leadingRowContactAlly = leadingRowContactPlayer;
 export function getBattleContactPlayerVisual(
   players: CombatantState[],
   gameData: GameData,
-): { visualX: number; rangePx: number } | null {
+): { battleX: number; rangePx: number } | null {
   const contact = leadingRowContactPlayer(players);
   if (!contact) return null;
   return {
-    visualX: contact.visualX,
+    battleX: contact.battleX,
     rangePx: resolveMaxEffectiveRangePx(contact, gameData),
   };
 }
@@ -169,34 +179,25 @@ export function getBattleContactPlayerVisual(
 /** @deprecated getBattleContactPlayerVisual */
 export const getBattleContactAllyVisual = getBattleContactPlayerVisual;
 
-export function getBattleVisualOffset(players: CombatantState[]): number | null {
-  const contact = leadingRowContactPlayer(players);
-  if (!contact) return null;
-  return contact.visualX - contact.battleX;
+/** R1-fix: snapshot 互換のため visualX を battleX に同期 */
+export function syncFieldX(unit: CombatantState): void {
+  unit.visualX = unit.battleX;
+}
+
+export function syncAllFieldX(units: CombatantState[]): void {
+  for (const unit of units) {
+    syncFieldX(unit);
+  }
 }
 
 export function getEngagedFrontEnemyVisualAnchor(
   players: CombatantState[],
   enemies: CombatantState[],
-  battleVisualOffset?: number | null,
+  _battleVisualOffset?: number | null,
 ): number | null {
   const frontEnemyBattleX = getEnemyContactX(enemies);
-  const offset = battleVisualOffset ?? getBattleVisualOffset(players);
-  if (frontEnemyBattleX === null || offset === null) return null;
-  return frontEnemyBattleX + offset;
-}
-
-export function syncEnemyVisualToBattleContact(
-  players: CombatantState[],
-  enemies: CombatantState[],
-): void {
-  const contact = leadingRowContactPlayer(players);
-  if (!contact) return;
-  const offset = contact.visualX - contact.battleX;
-  for (const enemy of enemies) {
-    if (!enemy.isAlive) continue;
-    enemy.visualX = enemy.battleX + offset;
-  }
+  if (frontEnemyBattleX === null) return null;
+  return frontEnemyBattleX - engagedMinBodyGap();
 }
 
 export function isEnemyVisibleOnScreen(enemy: CombatantState): boolean {
@@ -244,7 +245,7 @@ function capRangedApproachBehindMelee(
   gameData: GameData,
   approachX: number,
 ): number {
-  if (resolveMaxEffectiveRangePx(enemy, gameData) <= 0) return approachX;
+  if (isMeleeUnit(enemy, gameData)) return approachX;
   const rearCap = resolveRangedRearBattleXCap(enemies, gameData);
   if (rearCap === null) return approachX;
   return Math.max(approachX, rearCap);
@@ -321,18 +322,24 @@ export function resolveMoveBattleX(
   return anchor.battleX - range;
 }
 
-/** プレイヤー: contact − range / 敵: contact + range（近接は standoff 幅を挟む） */
+/** プレイヤー: 近接帯 contact − standoff − range / 遠隔 contact − range。敵: contact + range（近接は standoff） */
 export function resolveAttackBattleX(
   unit: CombatantState,
   contactX: number,
   gameData: GameData,
 ): number {
   const range = resolveMaxEffectiveRangePx(unit, gameData);
-  if (range <= 0) {
-    const standoff = engagedMinBodyGap();
-    return unit.isEnemy ? contactX + standoff : contactX - standoff;
+  if (unit.isEnemy) {
+    if (isMeleeRangePx(range)) {
+      const standoff = engagedMinBodyGap();
+      return contactX + standoff;
+    }
+    return contactX + range;
   }
-  return unit.isEnemy ? contactX + range : contactX - range;
+  if (isMeleeRangePx(range)) {
+    return contactX - engagedMinBodyGap() - range;
+  }
+  return contactX - range;
 }
 
 export function moveTowardX(
@@ -399,6 +406,14 @@ export function updateUnitApproach(
 ): void {
   if (!unit.isAlive) return;
   unit.battleX = moveTowardX(unit.battleX, targetBattleX, approachStep);
+}
+
+/** 接敵中: 敵の自動接近は左（battleX 減少）のみ — 遠隔の右逃げを防ぐ */
+export function capEngagedEnemyApproachBattleX(
+  enemy: CombatantState,
+  approachX: number,
+): number {
+  return Math.min(approachX, enemy.battleX);
 }
 
 export function assignInitialPlayerBattleX(

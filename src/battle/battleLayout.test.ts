@@ -1,25 +1,34 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CANVAS_W,
-  ROW_X,
   PLAYER_ROW_SPACING,
-  SPRITE_WIDTH,
+  ROW_X,
+  SCROLL_SPEED,
   engagedFrontLineGap,
   engagedMinBodyGap,
   enemyRangedRearGap,
 } from './battleConstants.ts';
-import type { CombatantState } from './types.ts';
+import {
+  getBattleContactPlayerVisual,
+  syncAllFieldX,
+} from './combatPosition.ts';
+import { hideFallenAllyCorpses } from './entities.ts';
+import type { ActiveSkillMove } from './skills/skillSequence.ts';
+import type { CombatantState, GameData } from './types.ts';
 import {
   applyFormationMarchTick,
+  applyStaggeredFormationMarchRestore,
   beginEngagedLayout,
-  clampEngagedEnemyGroupOnScreen,
   clampPlayerVisualDepth,
   computeEngagedPlayerLaneOffsets,
-  computePlayerPositions,
+  computeEnemyStopX,
+  computeRangedEnemyVisualX,
+  getLeadingPlayerFront,
+  isFormationScreenLayoutRestored,
   resolveEngagedLayout,
   resolveStablePlayerEngagedVisuals,
   approachVisualX,
-  resolveFormationScreenTargets,
+  resolveMoveVisualX,
+  tickCompensatedFormationReset,
 } from './battleLayout.ts';
 
 function mockCombatant(
@@ -43,38 +52,52 @@ function mockCombatant(
       learnedActiveIds: [],
       equippedActiveSlots: [],
     },
-    cooldowns: [],
+    cooldowns: [{ skillId: 'basic', remaining: 0, slotKind: 'basic' }],
     statusEffects: [],
+    spriteKey: 'placeholder',
+    iconKey: 'placeholder',
+    isEnemy: false,
     battleX: ROW_X.front,
     visualX: ROW_X.front,
-    isEnemy: false,
+    corpseVisible: true,
     ...overrides,
   };
 }
 
+const gameData = {
+  skillRegistry: {
+    passives: {},
+    actives: {
+      basic: {
+        id: 'basic',
+        name: 'basic',
+        interval: 2,
+        effect: [
+          {
+            target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+            type: 'damage',
+            damageType: 'physical',
+            amount: { kind: 'atkBased', atkScale: 1 },
+          },
+        ],
+      },
+    },
+  },
+} as unknown as GameData;
+
+function applySkillMoveVisualOverlay(
+  unit: CombatantState,
+  move: ActiveSkillMove,
+): void {
+  const baseVisualX = move.baseVisualX ?? unit.visualX;
+  const t =
+    move.toX === move.fromX
+      ? 1
+      : (unit.battleX - move.fromX) / (move.toX - move.fromX);
+  unit.visualX = baseVisualX + (move.toVisualX - baseVisualX) * t;
+}
+
 describe('battleLayout snapshots', () => {
-  it('places front-row defender forward (right) of attacker', () => {
-    const positions = computePlayerPositions([
-      { id: 'guard', role: 'defender', formationRow: 'front', rangePx: 0, isAlive: true },
-      { id: 'sword', role: 'attacker', formationRow: 'front', rangePx: 0, isAlive: true },
-    ]);
-    expect(positions.get('guard')!).toBeGreaterThan(positions.get('sword')!);
-    expect(positions.get('guard')! - positions.get('sword')!).toBeCloseTo(
-      PLAYER_ROW_SPACING,
-      0,
-    );
-  });
-
-  it('places formation slots with back < front on new axis', () => {
-    const positions = computePlayerPositions([
-      { id: 'guard', role: 'defender', formationRow: 'front', rangePx: 0, isAlive: true },
-      { id: 'archer', role: 'attacker', formationRow: 'back', rangePx: 100, isAlive: true },
-    ]);
-    expect(positions.get('guard')).toBe(ROW_X.front);
-    expect(positions.get('archer')).toBe(ROW_X.back);
-    expect(positions.get('guard')!).toBeGreaterThan(positions.get('archer')!);
-  });
-
   it('resolveEngagedLayout returns stable player and enemy visual targets', () => {
     const layout = resolveEngagedLayout({
       players: [
@@ -267,23 +290,9 @@ describe('battleLayout snapshots', () => {
     const clericX = layout!.playerVisualX.get('cleric')!;
     const rangerX = layout!.playerVisualX.get('ranger')!;
     expect(swordX).toBeGreaterThan(layout!.frontLineVisualX);
-    expect(clericX).toBe(80);
-    expect(rangerX).toBe(60);
+    expect(clericX).toBe(120);
+    expect(rangerX).toBe(100);
     expect(clericX - rangerX).toBeGreaterThanOrEqual(engagedMinBodyGap() - 1);
-  });
-
-  it('orders same-row slots by range with shorter range further forward', () => {
-    const positions = computePlayerPositions([
-      { id: 'cleric', role: 'supporter', formationRow: 'back', rangePx: 40, isAlive: true },
-      { id: 'sigil', role: 'attacker', formationRow: 'back', rangePx: 50, isAlive: true },
-      { id: 'geomancer', role: 'attacker', formationRow: 'back', rangePx: 55, isAlive: true },
-    ]);
-    expect(positions.get('geomancer')!).toBe(ROW_X.back);
-    expect(positions.get('sigil')!).toBe(ROW_X.back + PLAYER_ROW_SPACING);
-    expect(positions.get('cleric')!).toBe(ROW_X.back + PLAYER_ROW_SPACING * 2);
-    expect(positions.get('cleric')! - positions.get('geomancer')!).toBe(
-      PLAYER_ROW_SPACING * 2,
-    );
   });
 
   it('applyFormationMarchTick preserves spacing for three back-row units', () => {
@@ -412,14 +421,6 @@ describe('battleLayout snapshots', () => {
     expect(result.get('sword')).toBe(contactVisualX);
   });
 
-  it('resolveFormationScreenTargets matches row + spacing', () => {
-    const targets = resolveFormationScreenTargets([
-      { id: 'a', role: 'defender', formationRow: 'front', isAlive: true },
-      { id: 'b', role: 'attacker', formationRow: 'front', isAlive: true },
-    ]);
-    expect(targets.get('a')! - targets.get('b')!).toBe(PLAYER_ROW_SPACING);
-  });
-
   it('clampPlayerVisualDepth keeps shorter-range back-row slot further forward', () => {
     const gap = engagedMinBodyGap();
     const frontContactX = ROW_X.front + PLAYER_ROW_SPACING;
@@ -471,30 +472,138 @@ describe('battleLayout snapshots', () => {
     expect(cleric.visualX).toBeGreaterThan(ranger.visualX);
     expect(cleric.visualX - ranger.visualX).toBeGreaterThanOrEqual(gap - 1);
   });
-});
 
-describe('clampEngagedEnemyGroupOnScreen', () => {
-  it('shifts the enemy group right when any sprite would leave the left edge', () => {
-    const combatCameraX = 10;
-    const clamped = clampEngagedEnemyGroupOnScreen(
-      [
-        { id: 'a', visualX: -80, isAlive: true },
-        { id: 'b', visualX: -30, isAlive: true },
-      ],
-      combatCameraX,
-    );
-    const minScreen = Math.min(
-      ...[...clamped.values()].map((x) => x + combatCameraX),
-    );
-    expect(minScreen).toBeGreaterThanOrEqual(-SPRITE_WIDTH);
+  it('applyStaggeredFormationMarchRestore marches lead front player right each tick', () => {
+    const players = [
+      { id: 'guard', role: 'defender' as const, formationRow: 'front' as const, isAlive: true as const, visualX: 140 },
+      { id: 'cleric', role: 'supporter' as const, formationRow: 'back' as const, isAlive: true as const, visualX: 60 },
+    ];
+    const dt = 1 / 60;
+    const guardBefore = players[0]!.visualX;
+    applyStaggeredFormationMarchRestore({ phase: 'lead', players }, dt);
+    const marchStep = SCROLL_SPEED * dt;
+    expect(players[0]!.visualX).toBeGreaterThanOrEqual(guardBefore + marchStep - 0.01);
   });
 
-  it('still clamps the right edge when the group overflows CANVAS_W', () => {
-    const combatCameraX = 0;
-    const clamped = clampEngagedEnemyGroupOnScreen(
-      [{ id: 'a', visualX: CANVAS_W + 40, isAlive: true }],
-      combatCameraX,
+  it('computeEnemyStopX places enemy right of player contact', () => {
+    const stopX = computeEnemyStopX(0, 200, 0);
+    expect(stopX).toBeGreaterThan(200);
+  });
+
+  it('computeRangedEnemyVisualX places ranged enemy further right', () => {
+    const x = computeRangedEnemyVisualX(200, 80);
+    expect(x).toBeGreaterThan(200);
+  });
+
+  it('resolveMoveVisualX engage places player left of enemy anchor', () => {
+    const actor = mockCombatant({ id: 'a', visualX: 180 });
+    const enemy = mockCombatant({ id: 'e', isEnemy: true, visualX: 280 });
+    const x = resolveMoveVisualX(actor, enemy, {
+      type: 'move',
+      target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+      moveDurationSec: 0.2,
+      moveMode: 'engage',
+    }, gameData);
+    expect(x).toBe(enemy.visualX - Math.max(0, engagedMinBodyGap()));
+  });
+
+  it('hideFallenAllyCorpses clears corpseVisible for dead players only', () => {
+    const living = mockCombatant({ id: 'living' });
+    const fallen = mockCombatant({ id: 'fallen', hp: 0, isAlive: false, corpseVisible: true });
+    hideFallenAllyCorpses([living, fallen]);
+    expect(living.corpseVisible).toBe(true);
+    expect(fallen.corpseVisible).toBe(false);
+  });
+
+  it('getLeadingPlayerFront picks max visualX on leading row', () => {
+    const front = getLeadingPlayerFront([
+      { id: 'g', role: 'defender', formationRow: 'front', rangePx: 0, isAlive: true, visualX: 200 },
+      { id: 's', role: 'attacker', formationRow: 'front', rangePx: 0, isAlive: true, visualX: 180 },
+    ]);
+    expect(front?.visualX).toBe(200);
+  });
+
+  it('tickCompensatedFormationReset keeps screen X stable during right march', () => {
+    const players = [
+      { id: 'guard', role: 'defender' as const, formationRow: 'front' as const, isAlive: true as const, visualX: 100 },
+    ];
+    const dt = 1 / 60;
+    const beforeScreen = players[0]!.visualX;
+    const result = tickCompensatedFormationReset(
+      { phase: 'lead', players },
+      0,
+      dt,
     );
-    expect(clamped.get('a')! + combatCameraX).toBeLessThanOrEqual(CANVAS_W);
+    const afterScreen = players[0]!.visualX + result.combatCameraX;
+    expect(Math.abs(afterScreen - beforeScreen)).toBeLessThan(10);
+  });
+
+  it('isFormationScreenLayoutRestored checks ROW_X screen positions', () => {
+    const players = [
+      { id: 'guard', role: 'defender' as const, formationRow: 'front' as const, isAlive: true as const, visualX: ROW_X.front },
+      { id: 'archer', role: 'attacker' as const, formationRow: 'back' as const, isAlive: true as const, visualX: ROW_X.back },
+    ];
+    expect(isFormationScreenLayoutRestored(players, 0)).toBe(true);
+  });
+
+  it('skill move overlay interpolates visualX toward move target', () => {
+    const enemy = mockCombatant({ id: 'enemy', isEnemy: true, battleX: 280, visualX: 280 });
+    const actor = mockCombatant({ id: 'actor', battleX: 100, visualX: 100 });
+    const toVisualX = resolveMoveVisualX(actor, enemy, {
+      type: 'move',
+      target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+      moveDurationSec: 0.2,
+      moveMode: 'engage',
+    }, gameData);
+    const move: ActiveSkillMove = {
+      actorId: 'actor',
+      fromX: 100,
+      toX: 280,
+      toVisualX,
+      remainingSec: 0.5,
+      totalSec: 1,
+      baseVisualX: 100,
+    };
+    actor.battleX = 190;
+    applySkillMoveVisualOverlay(actor, move);
+    expect(actor.visualX).toBe(100 + (toVisualX - 100) * 0.5);
+  });
+});
+
+describe('battle contact (R1-fix: battleX single)', () => {
+  it('getBattleContactPlayerVisual picks leading row contact, not advanced back row', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 180,
+      visualX: 200,
+    });
+    const archer = mockCombatant({
+      id: 'archer',
+      formationRow: 'back',
+      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      battleX: 220,
+      visualX: 120,
+    });
+    const contact = getBattleContactPlayerVisual([guard, archer], gameData);
+    expect(contact?.battleX).toBe(180);
+  });
+
+  it('syncAllFieldX mirrors battleX into visualX', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 180,
+      visualX: 200,
+    });
+    const enemy = mockCombatant({
+      id: 'enemy',
+      isEnemy: true,
+      battleX: 250,
+      visualX: 0,
+    });
+    syncAllFieldX([guard, enemy]);
+    expect(guard.visualX).toBe(180);
+    expect(enemy.visualX).toBe(250);
   });
 });

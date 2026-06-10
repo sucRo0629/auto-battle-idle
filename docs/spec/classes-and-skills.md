@@ -111,7 +111,7 @@
 
 | フィールド | 省略時 |
 |------------|--------|
-| `rangePx` | `0` |
+| `rangePx` | `0`（近接帯 0〜24。25 以上 = 遠隔帯） |
 | `damageType` | `physical` |
 | `basicAttackVfx` | `deriveBasicAttackVfxFromTraits()`（magic→orb / physical+rangePx≥25→arrow / それ以外→slash） |
 
@@ -124,7 +124,9 @@
 | **通常攻撃**（合成 basic） | effect に書かない（`actor.traits.rangePx`） |
 | アクティブ等 | 任意。省略時 = `actor.traits.rangePx` |
 
-`traits.rangePx >= 25` で遠隔攻撃（`rangedAttackingEnemy`）。`traits.damageType === 'magic'` で `magicAttackingEnemy`。
+`traits.rangePx >= 25` で遠隔攻撃（`rangedAttackingEnemy`）。`0〜24` は近接帯（slash VFX、停止位置は §battle-field 2.5）。`traits.damageType === 'magic'` で `magicAttackingEnemy`。
+
+**一次職 `rangePx`（参考）：** 双短剣/闘技 0、鉄衛/護法 5、剣術 8、槍術 24、魔法 30、物理レンジ 40。
 
 ## クラスステータスと成長（Phase 4）
 

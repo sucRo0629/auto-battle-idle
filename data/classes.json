@@ -6,7 +6,9 @@
     "epithetEn": "Guardian",
     "flavorJa": "鉄壁となり、最も危険な敵の矛先を受け止める",
     "formationRow": "front",
-    "traits": {},
+    "traits": {
+      "rangePx": 5
+    },
     "maxHp": 235,
     "atk": 11,
     "def": 26,
@@ -42,7 +44,9 @@
     "epithetEn": "Paladin",
     "flavorJa": "聖なる防護と小さな癒しで、前線を守り抜く",
     "formationRow": "front",
-    "traits": {},
+    "traits": {
+      "rangePx": 5
+    },
     "maxHp": 200,
     "atk": 13,
     "def": 20,
@@ -119,7 +123,9 @@
     "epithetEn": "Swordsman",
     "flavorJa": "研ぎ澄まされた剣技で、近接戦の要となる",
     "formationRow": "front",
-    "traits": {},
+    "traits": {
+      "rangePx": 8
+    },
     "maxHp": 165,
     "atk": 30,
     "def": 14,
@@ -219,7 +225,7 @@
     "flavorJa": "遠くの脅威を先に射落とす迎撃の弓",
     "formationRow": "back",
     "traits": {
-      "rangePx": 50
+      "rangePx": 40
     },
     "maxHp": 92,
     "atk": 20,
@@ -254,7 +260,7 @@
     "flavorJa": "最も遠い獲物だけを狙い、一矢で沈める",
     "formationRow": "back",
     "traits": {
-      "rangePx": 50
+      "rangePx": 40
     },
     "maxHp": 88,
     "atk": 28,
@@ -289,7 +295,7 @@
     "flavorJa": "罠と毒で追い詰め、獲物を仕留める",
     "formationRow": "back",
     "traits": {
-      "rangePx": 50
+      "rangePx": 40
     },
     "maxHp": 96,
     "atk": 18,
@@ -324,7 +330,7 @@
     "flavorJa": "魔力を一点に集め、魔防の薄い敵を穿つ",
     "formationRow": "back",
     "traits": {
-      "rangePx": 50,
+      "rangePx": 30,
       "damageType": "magic"
     },
     "maxHp": 80,
@@ -361,7 +367,7 @@
     "flavorJa": "符が敵から敵へ跳ね、連鎖の術式を織る",
     "formationRow": "back",
     "traits": {
-      "rangePx": 50,
+      "rangePx": 30,
       "damageType": "magic"
     },
     "maxHp": 78,
@@ -396,7 +402,7 @@
     "flavorJa": "地面に法陣を描き、踏み込んだ者を焼き尽くす",
     "formationRow": "back",
     "traits": {
-      "rangePx": 50,
+      "rangePx": 30,
       "damageType": "magic"
     },
     "maxHp": 72,
@@ -433,7 +439,7 @@
     "flavorJa": "前線に立ち、味方全体をやさしく癒し続ける",
     "formationRow": "back",
     "traits": {
-      "rangePx": 40,
+      "rangePx": 30,
       "basicAttackVfx": {
         "preset": "orb"
       },

@@ -16,8 +16,23 @@ import {
 } from './test/battleFieldSpec.harness.ts';
 
 describe('battle-field architecture spec (A-*)', { timeout: LONG_BATTLE_TIMEOUT_MS }, () => {
+  it('R1-fix-01: Engaged snapshots keep battleX === visualX', () => {
+    const engine = createStage1Engine();
+    reachWave1Engage(engine);
+
+    for (let t = 0; t < 900; t++) {
+      engine.tick(TICK_DT);
+      const snap = engine.getSnapshot();
+      if (!snap.engaged || snap.waveIndex !== 0) break;
+      for (const unit of [...snap.allies, ...snap.enemies]) {
+        if (unit.hp <= 0) continue;
+        expect(unit.visualX).toBe(unit.battleX);
+      }
+    }
+  });
+
   it(
-    'A-L1-01: Engaged ticks do not call resolveEngagedLayout (L1 single layout)',
+    'A-L1-01: Engaged ticks do not call resolveEngagedLayout (layout bake on events only)',
     () => {
       const engine = createStage1Engine();
       reachWave1Engage(engine);

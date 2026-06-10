@@ -11,7 +11,6 @@ import {
   assignInitialPlayerBattleX,
   resolveEnemyMarchCapX,
   getPlayerContactX,
-  getBattleContactPlayerVisual,
   getEnemyContactX,
   getMeleeEnemyContactX,
   isEnemyVisibleOnScreen,
@@ -22,7 +21,6 @@ import {
   resolveEngageLineX,
   separateByGap,
   shouldStartApproach,
-  syncEnemyVisualToBattleContact,
   updateUnitApproach,
 } from './combatPosition.ts';
 import { isWithinSkillRange } from './skills/rangeUtils.ts';
@@ -397,42 +395,5 @@ describe('combatPosition', () => {
         gameData,
       ),
     ).toBe(300);
-  });
-});
-
-describe('battle contact visual sync', () => {
-  it('getBattleContactPlayerVisual picks leading row contact, not advanced back row', () => {
-    const guard = mockCombatant({
-      id: 'guard',
-      formationRow: 'front',
-      battleX: 180,
-      visualX: 200,
-    });
-    const archer = mockCombatant({
-      id: 'archer',
-      formationRow: 'back',
-      traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
-      battleX: 220,
-      visualX: 120,
-    });
-    const contact = getBattleContactPlayerVisual([guard, archer], gameData);
-    expect(contact?.visualX).toBe(200);
-  });
-
-  it('syncEnemyVisualToBattleContact maps enemy battleX through contact offset', () => {
-    const guard = mockCombatant({
-      id: 'guard',
-      formationRow: 'front',
-      battleX: 180,
-      visualX: 200,
-    });
-    const enemy = mockCombatant({
-      id: 'enemy',
-      isEnemy: true,
-      battleX: 250,
-      visualX: 0,
-    });
-    syncEnemyVisualToBattleContact([guard], [enemy]);
-    expect(enemy.visualX).toBe(270);
   });
 });

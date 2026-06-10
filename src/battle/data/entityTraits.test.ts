@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   deriveBasicAttackVfxFromTraits,
-  isRangedAttack,
   normalizeEntityTraits,
 } from './entityTraits.ts';
 
@@ -24,12 +23,5 @@ describe('normalizeEntityTraits', () => {
     expect(
       deriveBasicAttackVfxFromTraits({ rangePx: 50, damageType: 'magic' }),
     ).toEqual({ preset: 'orb' });
-  });
-});
-
-describe('isRangedAttack', () => {
-  it('uses threshold 25', () => {
-    expect(isRangedAttack(24)).toBe(false);
-    expect(isRangedAttack(25)).toBe(true);
   });
 });

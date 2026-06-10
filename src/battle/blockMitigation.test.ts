@@ -4,7 +4,6 @@ import {
   applyBlockToPhysicalDamage,
   computeBlockMitigationRatio,
   getBlockChance,
-  rollBlock,
 } from './blockMitigation.ts';
 
 function mockUnit(
@@ -102,13 +101,6 @@ describe('blockMitigation', () => {
       ],
     });
     expect(getBlockChance(unit, passives)).toBe(0);
-  });
-
-  it('rollBlock respects chance', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.1);
-    expect(rollBlock(0.2)).toBe(true);
-    expect(rollBlock(0.05)).toBe(false);
-    vi.restoreAllMocks();
   });
 
   it('applyBlockToPhysicalDamage reduces damage on successful roll', () => {

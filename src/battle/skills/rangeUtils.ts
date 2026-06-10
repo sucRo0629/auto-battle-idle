@@ -1,4 +1,5 @@
 import type { CombatantState, SkillEffectDef, TargetSpec } from '../types.ts';
+import { isMeleeRangePx } from '../types.ts';
 import { engagedMinBodyGap } from '../battleConstants.ts';
 import { getBattleX } from '../combatPosition.ts';
 import { getTargetPool, isMultiTargetSpec } from './targetSpec.ts';
@@ -21,13 +22,12 @@ export function isWithinSkillRange(
 ): boolean {
   if (actor.id === target.id) return true;
   const dist = battleDistance(actor, target);
-  if (rangePx <= 0) {
-    const reach = engagedMinBodyGap();
+  if (isMeleeRangePx(rangePx)) {
+    const reach = engagedMinBodyGap() + rangePx;
     return dist <= 0 && dist >= -reach;
   }
   return dist <= rangePx;
 }
-
 export function resolveSkillRangePx(
   actor: CombatantState,
   effect: Pick<SkillEffectDef, 'range'>,

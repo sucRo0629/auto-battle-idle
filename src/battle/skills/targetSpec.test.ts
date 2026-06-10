@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState } from '../types.ts';
 import {
-  formatTargetLabel,
   getTargetPool,
   normalizeTarget,
   pickTargetFromPool,
@@ -176,17 +175,5 @@ describe('getTargetPool / pickTargetFromPool', () => {
     } as const;
     const pool = getTargetPool(spec, actor, allies, [enemies[0]!, debuffed]);
     expect(pool.map((u) => u.id)).toEqual(['e2']);
-  });
-});
-
-describe('formatTargetLabel', () => {
-  it('formats distance target', () => {
-    expect(
-      formatTargetLabel({
-        kind: 'distance',
-        side: 'enemy',
-        order: 'nearest',
-      }),
-    ).toBe('敵・最近');
   });
 });

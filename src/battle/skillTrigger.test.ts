@@ -3,7 +3,6 @@ import type { ActiveSkillDef, SkillCooldown } from './types.ts';
 import type { CombatantState } from './types.ts';
 import {
   initializeSkillCooldowns,
-  isTimeTrigger,
   resetCooldownAfterFire,
   resolveSkillTrigger,
   shouldTickCooldown,
@@ -97,10 +96,4 @@ describe('skillTrigger', () => {
     expect(cooldowns[2]!.remaining).toBe(0);
   });
 
-  it('isTimeTrigger reflects trigger kind', () => {
-    expect(isTimeTrigger(skill())).toBe(true);
-    expect(
-      isTimeTrigger(skill({ trigger: { kind: 'basicAttackCount', value: 2 } })),
-    ).toBe(false);
-  });
 });

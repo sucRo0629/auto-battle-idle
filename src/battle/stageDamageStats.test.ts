@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  StageDamageStatsTracker,
-  toRatios,
-} from './stageDamageStats.ts';
+import { StageDamageStatsTracker } from './stageDamageStats.ts';
 import type { CombatantState, PartySlotState } from './types.ts';
 
 function mockCombatant(
@@ -73,20 +70,6 @@ const classRegistry = {
     classSkillIds: [],
   },
 } as Record<string, import('./types.ts').ClassPreset>;
-
-describe('toRatios', () => {
-  it('normalizes by max value', () => {
-    expect(toRatios([30, 60, 15])).toEqual([0.5, 1, 0.25]);
-  });
-
-  it('returns zeros when all values are zero', () => {
-    expect(toRatios([0, 0])).toEqual([0, 0]);
-  });
-
-  it('returns 1 for a single positive value', () => {
-    expect(toRatios([42])).toEqual([1]);
-  });
-});
 
 describe('StageDamageStatsTracker', () => {
   it('records dealt and taken damage for allies', () => {

@@ -1,4 +1,5 @@
 import type { CombatantState, GameData, TargetSpec } from './types.ts';
+import { isMeleeRangePx } from './types.ts';
 import { getPassiveDefs } from './combatMath.ts';
 import { SPRITE_GAP } from './battleConstants.ts';
 import {
@@ -64,10 +65,12 @@ function capBackRowToFormationDepth(
 function capFrontRowBeforeEnemyContact(
   player: CombatantState,
   enemies: CombatantState[],
+  gameData: GameData,
   approachX: number,
 ): number {
   if (player.formationRow === 'back') return approachX;
-  const enemyContact = getEnemyContactX(enemies);
+  const meleeContact = getMeleeEnemyContactX(enemies, gameData);
+  const enemyContact = meleeContact ?? getEnemyContactX(enemies);
   if (enemyContact === null) return approachX;
   const maxForward = enemyContact - engagedMinBodyGap();
   return Math.min(approachX, maxForward);
@@ -100,7 +103,7 @@ export function resolvePlayerApproachBattleX(
         approachX = resolveAttackBattleX(player, contact, gameData);
       }
     }
-    return capFrontRowBeforeEnemyContact(player, enemies, approachX);
+    return capFrontRowBeforeEnemyContact(player, enemies, gameData, approachX);
   }
 
   const target = resolvePlayerPriorityTarget(
@@ -144,7 +147,7 @@ export function resolveEnemyBasicAttackTarget(
     enemies,
   });
   let pool = getTargetPool(spec, enemy, players, enemies);
-  if (resolveMaxEffectiveRangePx(enemy, gameData) <= 0) {
+  if (isMeleeRangePx(resolveMaxEffectiveRangePx(enemy, gameData))) {
     const contact = getPlayerContactX(players);
     if (contact !== null) {
       pool = pool.filter((player) => player.battleX >= contact - SPRITE_GAP);
@@ -172,7 +175,7 @@ export function resolveEnemyApproachBattleX(
     ? resolveAttackBattleX(enemy, target.battleX, gameData)
     : resolveAttackBattleX(enemy, contact, gameData);
 
-  if (resolveMaxEffectiveRangePx(enemy, gameData) > 0) {
+  if (!isMeleeRangePx(resolveMaxEffectiveRangePx(enemy, gameData))) {
     const rearCap = resolveRangedRearBattleXCap(enemies, gameData);
     if (rearCap !== null) {
       approachX = Math.max(approachX, rearCap);

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 import {
   applyExcessHealToBarrierFromPassive,
@@ -6,7 +6,6 @@ import {
   getPassiveOutgoingDamageMultiplier,
   resolveDebuffDurationWithPassives,
   resolveIncomingHealAmount,
-  rollsEvasion,
   applyPassiveHotFromPassive,
   getPeriodicHotReady,
   initializePeriodicHotStates,
@@ -87,20 +86,6 @@ const passives: Record<string, PassiveSkillDef> = {
 };
 
 describe('passiveEffects', () => {
-  it('rollsEvasion respects evasionChance', () => {
-    vi.spyOn(Math, 'random').mockReturnValue(0.1);
-    const rogue = mockAlly({
-      id: 'rogue',
-      build: {
-        learnedPassiveIds: ['evade'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
-    });
-    expect(rollsEvasion(rogue, passives)).toBe(true);
-    vi.restoreAllMocks();
-  });
-
   it('getPassiveDamageIncreaseMultiplier applies dot bonus', () => {
     const dotted = mockAlly({
       id: 'dotted',

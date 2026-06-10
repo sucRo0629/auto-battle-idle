@@ -69,8 +69,8 @@ export function tickCombatCamera(
   );
 }
 
-/** combatCameraX を visualX へ戻し screen X を維持したままカメラを 0 にする */
-export function bakeCombatCameraIntoVisualX(
+/** combatCameraX を battleX へ戻し screen X を維持したままカメラを 0 にする */
+export function bakeCombatCameraIntoBattleX(
   players: CombatantState[],
   enemies: CombatantState[],
   combatCameraX: number,
@@ -78,9 +78,27 @@ export function bakeCombatCameraIntoVisualX(
 ): number {
   if (combatCameraX === 0) return 0;
   for (const unit of [...players, ...enemies]) {
-    if (filter(unit)) unit.visualX += combatCameraX;
+    if (filter(unit)) {
+      unit.battleX += combatCameraX;
+      unit.visualX = unit.battleX;
+    }
   }
   return 0;
+}
+
+/** @deprecated bakeCombatCameraIntoBattleX */
+export function bakeCombatCameraIntoVisualX(
+  players: CombatantState[],
+  enemies: CombatantState[],
+  combatCameraX: number,
+  filter: (unit: CombatantState) => boolean,
+): number {
+  return bakeCombatCameraIntoBattleX(
+    players,
+    enemies,
+    combatCameraX,
+    filter,
+  );
 }
 
 export function resetCameraFocus(frontRowX: number = ROW_X.front): {

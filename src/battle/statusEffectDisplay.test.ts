@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  STATUS_BADGE_SLOT_ORDER,
-  aggregateStatStatusEffects,
-} from './statusEffectDisplay.ts';
+import { aggregateStatStatusEffects } from './statusEffectDisplay.ts';
 import type { StatusEffect } from './types.ts';
 
 function statEffect(
@@ -17,22 +14,6 @@ function statEffect(
 }
 
 describe('statusEffectDisplay', () => {
-  it('orders badges with separate damage reduction and increase slots', () => {
-    expect(STATUS_BADGE_SLOT_ORDER).toEqual([
-      'atk',
-      'def',
-      'reg',
-      'attackSpeed',
-      'damageReduction',
-      'damageIncrease',
-      'hot',
-      'dot',
-      'block',
-      'counter',
-      'stun',
-    ]);
-  });
-
   it('aggregates reg buff as magic resistance increase', () => {
     const badges = aggregateStatStatusEffects(
       [

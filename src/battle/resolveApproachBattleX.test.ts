@@ -167,6 +167,64 @@ describe('resolvePlayerApproachBattleX', () => {
     expect(approachX).toBe(280 - engagedMinBodyGap());
   });
 
+  it('melee band: shorter range stops further forward than longer range', () => {
+    const guardian = mockCombatant({
+      id: 'guardian',
+      role: 'defender',
+      formationRow: 'front',
+      battleX: 220,
+      traits: { rangePx: 5, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const warrior = mockCombatant({
+      id: 'warrior',
+      role: 'attacker',
+      formationRow: 'front',
+      battleX: 178,
+      traits: { rangePx: 8, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const frontMelee = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 280,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+      cooldowns: [],
+    });
+
+    const guardianX = resolvePlayerApproachBattleX(
+      guardian,
+      [guardian, warrior],
+      [frontMelee],
+      gameData,
+    );
+    const warriorX = resolvePlayerApproachBattleX(
+      warrior,
+      [guardian, warrior],
+      [frontMelee],
+      gameData,
+    );
+
+    expect(guardianX).toBe(280 - engagedMinBodyGap() - 5);
+    expect(warriorX).toBe(280 - engagedMinBodyGap() - 8);
+    expect(guardianX - warriorX).toBe(3);
+  });
+
   it('falls back to front contact when no ranged enemies exist', () => {
     const archer = mockCombatant({ id: 'archer' });
     const frontMelee = mockCombatant({

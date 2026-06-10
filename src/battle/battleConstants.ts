@@ -41,13 +41,15 @@ export const BATTLE_ENEMY_MARCH_VISIBLE_MAX_X = CANVAS_W + 200;
 export const BATTLE_ENEMY_VISIBLE_MAX_X = CANVAS_W + 32;
 /** 進軍中スプライト表示の後方（左）下限 */
 export const BATTLE_ENEMY_MARCH_VISIBLE_MIN_X = -40;
+/** 接敵中: 味方 screenX の左端下限（I-§4.1-03b） */
+export const BATTLE_ALLY_VISIBLE_MIN_SCREEN_X = -18;
 
 /** 接敵ビジュアル調整 */
 export const ENGAGED_VISUAL_TUNING = {
   bodyClearancePx: -20,
   frontLineGapPx: 0,
   leadingRowAdvanceT: 0.8,
-  engageMoveSpeedPxPerSec: 100,
+  engageMoveSpeedPxPerSec: APPROACH_SPEED,
 } as const;
 
 export function engagedMinBodyGap(): number {
