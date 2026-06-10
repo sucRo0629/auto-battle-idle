@@ -10,7 +10,7 @@ import { isMeleeRangePx } from './types.ts';
 import {
   BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
   BATTLE_ENEMY_VISIBLE_MAX_X,
-  CANVAS_W,
+  resolvePartyDeployTravelPx,
   engagedMinBodyGap,
   enemyRangedRearGap,
   PARTY_FORMATION_SLOT_SPACING,
@@ -571,7 +571,7 @@ export function placePartyOffScreenForDeploy(
     if (!player.isAlive) continue;
     const target = targets.get(player.id);
     if (target === undefined) continue;
-    player.battleX = target - CANVAS_W;
+    player.battleX = target - resolvePartyDeployTravelPx();
     player.visualX = player.battleX;
   }
 }
@@ -598,7 +598,7 @@ export function resolveEnemyDeployTargets(
 
 /** EnemyDeploy: 目標より右外へ一括オフセット */
 export function enemyDeployOffScreenBattleX(targetBattleX: number): number {
-  return targetBattleX + CANVAS_W;
+  return targetBattleX + resolvePartyDeployTravelPx();
 }
 
 /** EnemyDeploy: 右外からの開始 battleX */

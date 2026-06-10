@@ -5,6 +5,7 @@ import {
   SPRITE_GAP,
   engagedMinBodyGap,
   enemyRangedRearGap,
+  resolvePartyDeployTravelPx,
 } from './battleConstants.ts';
 import {
   assignInitialPlayerBattleX,
@@ -103,8 +104,10 @@ const gameData = {
 } as unknown as GameData;
 
 describe('combatPosition', () => {
-  it('enemyDeployOffScreenBattleX shifts right by canvas width', () => {
-    expect(enemyDeployOffScreenBattleX(360)).toBe(360 + 480);
+  it('enemyDeployOffScreenBattleX shifts right by speed-scaled deploy travel', () => {
+    expect(enemyDeployOffScreenBattleX(360)).toBe(
+      360 + resolvePartyDeployTravelPx(),
+    );
   });
 
   it('resolveEnemyDeployTargets applies spawn offset and gap', () => {

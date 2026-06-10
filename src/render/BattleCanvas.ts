@@ -178,9 +178,12 @@ export class BattleCanvas implements IBattleRenderer {
           this.resetDeathVisuals(enemy.id);
         }
         if (isDead && !this.deathPlayback.shouldShow(enemy.id)) continue;
+        const marchPhase =
+          snapshot.partyDeployActive || snapshot.waveAnnouncementActive;
         if (
           !isDead &&
           !snapshot.engaged &&
+          !marchPhase &&
           enemy.battleX > BATTLE_ENEMY_MARCH_VISIBLE_MAX_X
         ) {
           continue;
@@ -219,10 +222,12 @@ export class BattleCanvas implements IBattleRenderer {
       if (!isDead) {
         this.resetDeathVisuals(ally.id);
       }
+      const marchPhase =
+        snapshot.partyDeployActive || snapshot.waveAnnouncementActive;
       if (
         !isDead &&
         !snapshot.engaged &&
-        (snapshot.partyDeployActive || snapshot.waveAnnouncementActive) &&
+        !marchPhase &&
         ally.battleX < BATTLE_ALLY_MARCH_VISIBLE_MIN_X
       ) {
         continue;

@@ -37,7 +37,8 @@ import {
 } from "./resolveApproachBattleX.ts";
 import {
   CANVAS_W as BATTLE_CANVAS_W,
-  MOVE_SPEED,
+  MOVE_PX_PER_SEC,
+  moveDeltaPx,
   SPRITE_GAP,
   engagedMinBodyGap,
 } from "./battleConstants.ts";
@@ -107,7 +108,7 @@ import { BATTLE_ENEMY_MARCH_VISIBLE_MAX_X } from "./battleConstants.ts";
 import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 
 const RESTART_DELAY_SEC = 3;
-const VICTORY_EXIT_SPEED = MOVE_SPEED * 2;
+const VICTORY_EXIT_PX_PER_SEC = MOVE_PX_PER_SEC * 2;
 const OVERLAY_TICK_SEC = 1;
 /** 敵死亡演出（アニメ + ホールド）後に Victory / 次 Wave へ遷移 */
 const ENEMY_DEATH_SETTLE_DELAY_SEC =
@@ -151,6 +152,8 @@ export class BattleEngine {
   private postDeploySettleDelaySec: number | null = null;
   /** 各 Wave 開始: 味方が左外から初期位置へ移動中 */
   private partyDeployActive = false;
+  /** PartyDeploy 配置済み・Wave 表示待ち */
+  private partyDeployPrepared = false;
   /** PartyDeploy 到達済み（接敵ゲート待ち） */
   private partyDeploySettled = false;
   private partyDeployTargets = new Map<string, number>();
@@ -410,16 +413,19 @@ export class BattleEngine {
     }
   }
 
-  private advanceWorldOffset(deltaTime: number, speed: number = MOVE_SPEED): void {
-    this.worldOffsetX += speed * deltaTime;
+  private advanceWorldOffset(
+    deltaTime: number,
+    pxPerSec: number = MOVE_PX_PER_SEC,
+  ): void {
+    this.worldOffsetX += moveDeltaPx(pxPerSec, deltaTime);
   }
 
   private updateVictoryExitMarch(
     deltaTime: number,
     livingOnly = false,
   ): void {
-    const step = VICTORY_EXIT_SPEED * deltaTime;
-    this.advanceWorldOffset(deltaTime, VICTORY_EXIT_SPEED);
+    const step = moveDeltaPx(VICTORY_EXIT_PX_PER_SEC, deltaTime);
+    this.advanceWorldOffset(deltaTime, VICTORY_EXIT_PX_PER_SEC);
     for (const ally of this.players) {
       if (livingOnly && !ally.isAlive) continue;
       ally.battleX += step;
@@ -452,7 +458,7 @@ export class BattleEngine {
     const frozenMeleeContactX =
       meleeContact === null ? this.engagedLastMeleeContactX : null;
 
-    const moveStep = MOVE_SPEED * deltaTime;
+    const moveStep = moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
 
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
@@ -716,6 +722,7 @@ export class BattleEngine {
     this.pendingNextWaveIndex = null;
     this.waveExitMarchActive = false;
     this.partyDeployActive = false;
+    this.partyDeployPrepared = false;
     this.partyDeploySettled = false;
     this.partyDeployTargets.clear();
     this.enemyDeployTargets.clear();
@@ -728,6 +735,7 @@ export class BattleEngine {
     this.pendingDeployWaveIndex = null;
     this.postAnnouncementEngageDelaySec = null;
     this.postDeploySettleDelaySec = null;
+    this.partyDeployPrepared = false;
   }
 
   private shouldSuppressCombatSkills(): boolean {
@@ -814,6 +822,9 @@ export class BattleEngine {
     if (!this.waveAnnouncementActive) return;
     const prevMs = this.waveAnnouncementElapsedMs;
     this.waveAnnouncementElapsedMs += deltaTime * 1000;
+    if (prevMs <= 0 && this.waveAnnouncementElapsedMs > 0) {
+      this.tryStartPartyDeployMovement();
+    }
     if (
       prevMs < ANNOUNCEMENT_FADE_OUT_START_MS &&
       this.waveAnnouncementElapsedMs >= ANNOUNCEMENT_FADE_OUT_START_MS
@@ -824,6 +835,15 @@ export class BattleEngine {
       this.waveAnnouncementActive = false;
       this.waveAnnouncementElapsedMs = ANNOUNCEMENT_TOTAL_MS;
     }
+  }
+
+  /** Wave オーバーレイ表示開始と同時に PartyDeploy 移動を開始 */
+  private tryStartPartyDeployMovement(): void {
+    if (!this.partyDeployPrepared || this.partyDeployActive || this.partyDeploySettled) {
+      return;
+    }
+    if (this.waveAnnouncementElapsedMs <= 0) return;
+    this.partyDeployActive = true;
   }
 
   private tickPostAnnouncementEngageDelay(deltaTime: number): void {
@@ -863,12 +883,14 @@ export class BattleEngine {
     this.enemyDeployTargets = resolveEnemyDeployTargets(this.enemies);
     placePartyOffScreenForDeploy(this.players, this.partyDeployTargets);
     placeEnemiesOffScreenForDeploy(this.enemies, this.enemyDeployTargets);
-    this.partyDeployActive = true;
+    this.partyDeployPrepared = true;
+    this.partyDeployActive = false;
     this.partyDeploySettled = false;
+    this.tryStartPartyDeployMovement();
   }
 
   private tickPartyDeploy(deltaTime: number): void {
-    const step = MOVE_SPEED * deltaTime;
+    const step = moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
     let allSettled = true;
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
@@ -902,6 +924,7 @@ export class BattleEngine {
 
   private beginEngaged(): void {
     this.partyDeployActive = false;
+    this.partyDeployPrepared = false;
     this.partyDeploySettled = false;
     this.partyDeployTargets.clear();
     this.enemyDeployTargets.clear();

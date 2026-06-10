@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   ANNOUNCEMENT_FADE_OUT_START_MS,
   ANNOUNCEMENT_TOTAL_MS,
+  PARTY_DEPLOY_TARGET_DURATION_SEC,
   POST_ANNOUNCEMENT_ENGAGE_START_MS,
   POST_DEPLOY_SETTLE_DELAY_SEC,
 } from '../render/announcementOverlayTiming.ts';
-import { CANVAS_W, MOVE_SPEED } from './battleConstants.ts';
+import { CANVAS_W } from './battleConstants.ts';
 import { createStage1Engine, TICK_DT } from './test/battleFieldSpec.harness.ts';
 
 function msToTicks(ms: number): number {
@@ -13,11 +14,12 @@ function msToTicks(ms: number): number {
 }
 
 describe('BattleEngine wave announcement', () => {
-  it('starts PartyDeploy concurrently with wave announcement', () => {
+  it('prepares PartyDeploy with wave announcement before movement starts', () => {
     const engine = createStage1Engine();
     const snap = engine.getSnapshot();
     expect(snap.waveAnnouncementActive).toBe(true);
-    expect(snap.partyDeployActive).toBe(true);
+    expect(snap.waveAnnouncementElapsedMs).toBe(0);
+    expect(snap.partyDeployActive).toBe(false);
     expect(snap.engaged).toBe(false);
     expect(snap.enemies.length).toBeGreaterThan(0);
     expect(snap.runtimePhase).toBe('WaveAnnouncement');
@@ -28,6 +30,20 @@ describe('BattleEngine wave announcement', () => {
       expect(ally.battleX).toBeLessThan(0);
       expect(ally.battleX).toBeLessThan(CANVAS_W);
     }
+  });
+
+  it('starts PartyDeploy movement when wave overlay becomes visible', () => {
+    const engine = createStage1Engine();
+    const allyBefore = engine.getSnapshot().allies.find((a) => a.hp > 0);
+    expect(allyBefore).toBeDefined();
+
+    engine.tick(TICK_DT);
+    const snap = engine.getSnapshot();
+    expect(snap.waveAnnouncementElapsedMs).toBeGreaterThan(0);
+    expect(snap.partyDeployActive).toBe(true);
+
+    const allyAfter = snap.allies.find((a) => a.id === allyBefore!.id);
+    expect(allyAfter!.battleX).toBeGreaterThan(allyBefore!.battleX);
   });
 
   it('does not engage before fade-out start + 250ms', () => {
@@ -41,7 +57,7 @@ describe('BattleEngine wave announcement', () => {
 
   it('engages after deploy settle + post-deploy delay when announcement gate passed', () => {
     const engine = createStage1Engine();
-    const deployFinishMs = (CANVAS_W / MOVE_SPEED) * 1000;
+    const deployFinishMs = PARTY_DEPLOY_TARGET_DURATION_SEC * 1000;
     const engageStartMs =
       deployFinishMs +
       POST_DEPLOY_SETTLE_DELAY_SEC * 1000;
@@ -56,7 +72,7 @@ describe('BattleEngine wave announcement', () => {
 
   it('waits after deploy settles before engaging', () => {
     const engine = createStage1Engine();
-    const deployFinishMs = (CANVAS_W / MOVE_SPEED) * 1000;
+    const deployFinishMs = PARTY_DEPLOY_TARGET_DURATION_SEC * 1000;
     const deployFinishTicks = msToTicks(deployFinishMs);
     let sawSettled = false;
     for (let i = 0; i < deployFinishTicks + 30; i++) {

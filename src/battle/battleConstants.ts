@@ -1,4 +1,5 @@
 import type { FormationRow } from './types.ts';
+import { PARTY_DEPLOY_TARGET_DURATION_SEC } from '../render/announcementOverlayTiming.ts';
 import { SPRITE_LAYOUT_SIZE } from '../render/spriteLayout.ts';
 
 /** 戦闘キャンバス幅（px） */
@@ -17,8 +18,23 @@ export const SPAWN_X_MAX = CANVAS_W / 2;
 export const SPRITE_WIDTH = SPRITE_LAYOUT_SIZE;
 export const SPRITE_GAP = 38;
 
-/** 戦闘中のユニット移動速度（px/秒） */
-export const MOVE_SPEED = 120;
+/** 1秒あたりの戦闘移動量（px）。120 なら 1秒で 120px 進む。 */
+export const MOVE_PX_PER_SEC = 120;
+
+/** deltaTime（秒）分の移動量（px） */
+export function moveDeltaPx(
+  pxPerSec: number,
+  deltaSec: number,
+): number {
+  return pxPerSec * deltaSec;
+}
+
+/** PartyDeploy 進軍距離（px）— 速度変更時も配置完了が告知 fade-out 開始に揃う */
+export function resolvePartyDeployTravelPx(
+  pxPerSec: number = MOVE_PX_PER_SEC,
+): number {
+  return pxPerSec * PARTY_DEPLOY_TARGET_DURATION_SEC;
+}
 
 /** 画面内とみなす battleX の前方上限 */
 export const BATTLE_ENEMY_VISIBLE_MAX_X = CANVAS_W + 32;
@@ -35,7 +51,7 @@ export const ENGAGED_VISUAL_TUNING = {
   bodyClearancePx: -20,
   frontLineGapPx: 0,
   leadingRowAdvanceT: 0.8,
-  engageMoveSpeedPxPerSec: MOVE_SPEED,
+  engageMoveSpeedPxPerSec: MOVE_PX_PER_SEC,
 } as const;
 
 export function engagedMinBodyGap(): number {

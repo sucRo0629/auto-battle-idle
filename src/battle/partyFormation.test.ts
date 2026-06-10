@@ -9,6 +9,7 @@ import {
   comparePartyFormationSlot,
   computePartyFormationBattleX,
   partyDeployOffScreenBattleX,
+  resolvePartyDeployOffscreenOffset,
 } from './partyFormation.ts';
 
 describe('partyFormation', () => {
@@ -55,7 +56,9 @@ describe('partyFormation', () => {
     expect(resolveEnemySpawnBattleX(-10)).toBe(240);
   });
 
-  it('partyDeployOffScreenBattleX shifts left by canvas width', () => {
-    expect(partyDeployOffScreenBattleX(52)).toBe(52 - 480);
+  it('partyDeployOffScreenBattleX shifts left by speed-scaled deploy travel', () => {
+    expect(partyDeployOffScreenBattleX(52)).toBe(
+      52 - resolvePartyDeployOffscreenOffset(),
+    );
   });
 });

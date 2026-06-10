@@ -14,3 +14,7 @@ export const POST_ANNOUNCEMENT_ENGAGE_START_MS =
 
 /** PartyDeploy 到達後、接敵開始までの待機（秒） */
 export const POST_DEPLOY_SETTLE_DELAY_SEC = 1;
+
+/** PartyDeploy: 移動開始から配置完了までの目標時間（秒）— 告知 fade-out 開始に同期 */
+export const PARTY_DEPLOY_TARGET_DURATION_SEC =
+  ANNOUNCEMENT_FADE_OUT_START_MS / 1000;

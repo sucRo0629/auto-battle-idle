@@ -1,6 +1,6 @@
 import type { DamageType, Role } from './types.ts';
 import {
-  CANVAS_W,
+  resolvePartyDeployTravelPx,
   PARTY_FORMATION_LEFT_ANCHOR,
   PARTY_FORMATION_SLOT_SPACING,
 } from './battleConstants.ts';
@@ -41,11 +41,15 @@ export function computePartyFormationBattleX(
   return positions;
 }
 
-/** PartyDeploy: 目標位置より左外へ一括オフセット */
-export const PARTY_DEPLOY_OFFSCREEN_OFFSET = CANVAS_W;
+/** PartyDeploy: 目標位置より左外へ一括オフセット（px） */
+export function resolvePartyDeployOffscreenOffset(
+  pxPerSec?: number,
+): number {
+  return resolvePartyDeployTravelPx(pxPerSec);
+}
 
 export function partyDeployOffScreenBattleX(targetBattleX: number): number {
-  return targetBattleX - PARTY_DEPLOY_OFFSCREEN_OFFSET;
+  return targetBattleX - resolvePartyDeployTravelPx();
 }
 
 /** 隊列の最大奥行き（遠隔敵 cap 用） */

@@ -19,7 +19,8 @@ import {
   PLAYER_ROW_SPACING,
   PLAYER_VISUAL_MIN_GAP,
   ROW_X,
-  MOVE_SPEED,
+  MOVE_PX_PER_SEC,
+  moveDeltaPx,
   SPRITE_GAP,
   SPRITE_WIDTH,
   engagedFrontLineGap,
@@ -1121,7 +1122,7 @@ export function tickCompensatedFormationReset(
   state: CompensatedFormationResetState,
   combatCameraX: number = 0,
   deltaTime: number,
-  spacingSpeed: number = MOVE_SPEED,
+  spacingPxPerSec: number = MOVE_PX_PER_SEC,
 ): { phase: FormationRestorePhase; combatCameraX: number } {
   const players = state.players ?? state.allies ?? [];
   const living = players.filter((p) => p.isAlive);
@@ -1129,8 +1130,8 @@ export function tickCompensatedFormationReset(
     return { phase: state.phase, combatCameraX: 0 };
   }
 
-  const moveStep = MOVE_SPEED * deltaTime;
-  const spacingStep = spacingSpeed * deltaTime;
+  const moveStep = moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
+  const spacingStep = moveDeltaPx(spacingPxPerSec, deltaTime);
   const targets = resolveFormationScreenTargets(living);
   const { leadIds, trailIds } = getFormationRestoreGroups(living);
 
@@ -1270,7 +1271,7 @@ export function applyFormationMarchTick(
     unit.battleX = (ideals.get(unit.id) ?? unit.battleX) + marchOrigin;
   }
 
-  anchor.battleX += MOVE_SPEED * deltaTime;
+  anchor.battleX += moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
   marchOrigin = anchor.battleX - anchorIdeal;
   for (const unit of living) {
     unit.battleX = (ideals.get(unit.id) ?? unit.battleX) + marchOrigin;
@@ -1280,7 +1281,7 @@ export function applyFormationMarchTick(
 export function applyStaggeredFormationMarchRestore(
   state: StaggeredFormationRestoreState,
   deltaTime: number,
-  spacingSpeed: number = MOVE_SPEED,
+  spacingPxPerSec: number = MOVE_PX_PER_SEC,
   placements?: FormationMarchPlacementInput[],
 ): FormationRestorePhase {
   const players = restorePlayers(state);
@@ -1293,8 +1294,8 @@ export function applyStaggeredFormationMarchRestore(
     return state.phase;
   }
 
-  const moveStep = MOVE_SPEED * deltaTime;
-  const spacingStep = spacingSpeed * deltaTime;
+  const moveStep = moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
+  const spacingStep = moveDeltaPx(spacingPxPerSec, deltaTime);
 
   for (const player of living) {
     player.battleX += moveStep;

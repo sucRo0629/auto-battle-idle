@@ -120,7 +120,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | `RANGED_ATTACK_THRESHOLD_PX`（50） | 遠隔帯境界。`rangePx <= 50` = 近接帯（0〜50） |
 | `MELEE_RANGE_MAX_PX`（50） | 近接帯上限 |
 | `CONFIGURABLE_RANGE_PX_MAX` | `traits.rangePx` / `effect.range` の設定上限（`CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`） |
-| `MOVE_SPEED`（120） | 戦闘中ユニット移動（進軍・接敵接近・PartyDeploy・隊形復帰、px/s）。Victory 退場は `MOVE_SPEED × 2` |
+| `MOVE_PX_PER_SEC`（120） | 1秒あたりの戦闘移動量（px）。進軍・接敵接近・PartyDeploy・隊形復帰に使用。Victory 退場は `MOVE_PX_PER_SEC × 2` |
 
 `formationRow` は Y 描画・ターゲット用。X 深度の正本は射程順一列（`partyFormation.ts`）。
 
