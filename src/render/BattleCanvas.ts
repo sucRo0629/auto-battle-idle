@@ -1,6 +1,5 @@
 import type { BattleSnapshot, SkillVfxDef } from "../battle/types.ts";
 import { BuffGlowManager, drawSpriteWithBuffGlow } from "./buffGlowEffect.ts";
-import { drawSpriteWithDamageEffect } from "./damageEffect.ts";
 import {
   getPlaceholderSpriteYOffset,
   beginDeathPlaceholder,
@@ -8,7 +7,10 @@ import {
   getDeathPlaceholderTransform,
 } from "./placeholderSpriteAnim.ts";
 import { hasSpriteSheetAnimation } from "./spriteSheetRegistry.ts";
-import { drawSpriteFrameAtFootAnchor } from "./spriteFrameDraw.ts";
+import {
+  drawSkillAnimAtFootAnchor,
+  drawSpriteFrameAtFootAnchor,
+} from "./spriteFrameDraw.ts";
 import {
   getSheetCellSize,
   SPRITE_LAYOUT_SIZE,
@@ -77,6 +79,8 @@ export class BattleCanvas implements IBattleRenderer {
   private layouts: CombatantLayout[] = [];
   private theme!: BattleHudTheme;
   private worldOffsetX = 0;
+  private lastBattleX = new Map<string, number>();
+  private isMarching = new Map<string, boolean>();
 
   mount(container: HTMLElement): void {
     this.theme = readBattleHudTheme(container);
@@ -99,8 +103,8 @@ export class BattleCanvas implements IBattleRenderer {
     this.worldOffsetX = offsetX;
   }
 
-  playAnim(combatantId: string, state: AnimState): void {
-    this.animator.setAnim(combatantId, state);
+  playAnim(combatantId: string, state: AnimState, spriteKey?: string): void {
+    this.animator.setAnim(combatantId, state, spriteKey);
     if (state === "death") {
       const layout = this.layouts.find((l) => l.id === combatantId);
       this.deathPlayback.trigger(combatantId, {
@@ -108,6 +112,10 @@ export class BattleCanvas implements IBattleRenderer {
       });
       beginDeathPlaceholder(combatantId);
     }
+  }
+
+  playSkillAnim(combatantId: string, skillAnimKey: string): void {
+    this.animator.setSkillAnim(combatantId, skillAnimKey);
   }
 
   playAttackEffect(
@@ -174,6 +182,7 @@ export class BattleCanvas implements IBattleRenderer {
         ) {
           continue;
         }
+        this.syncMovementAnim(enemy.id, enemy.battleX, !isDead);
         const animState = this.animator.getState(enemy.id);
         layouts.push({
           id: enemy.id,
@@ -190,6 +199,9 @@ export class BattleCanvas implements IBattleRenderer {
           isAlive: !isDead,
           anim: animState.anim,
           animFrame: animState.frame,
+          attackSheetKey: animState.attackSheetKey,
+          skillAnimKey: animState.skillAnimKey,
+          skillAnimFrame: animState.skillAnimFrame,
           statusEffects: enemy.statusEffects,
         });
       }
@@ -212,6 +224,7 @@ export class BattleCanvas implements IBattleRenderer {
       ) {
         continue;
       }
+      this.syncMovementAnim(ally.id, ally.battleX, ally.hp > 0);
       const animState = this.animator.getState(ally.id);
       layouts.push({
         id: ally.id,
@@ -229,6 +242,9 @@ export class BattleCanvas implements IBattleRenderer {
         isAlive: ally.hp > 0,
         anim: animState.anim,
         animFrame: animState.frame,
+        attackSheetKey: animState.attackSheetKey,
+        skillAnimKey: animState.skillAnimKey,
+        skillAnimFrame: animState.skillAnimFrame,
         statusEffects: ally.statusEffects,
       });
     }
@@ -245,6 +261,42 @@ export class BattleCanvas implements IBattleRenderer {
     this.waveAnnouncementElapsedMs = snapshot.waveAnnouncementActive
       ? snapshot.waveAnnouncementElapsedMs
       : 0;
+  }
+
+  private syncMovementAnim(
+    combatantId: string,
+    battleX: number,
+    isAlive: boolean,
+  ): void {
+    const prevX = this.lastBattleX.get(combatantId);
+    const moved =
+      isAlive &&
+      prevX !== undefined &&
+      Math.abs(battleX - prevX) > 0.01;
+    const wasMoving = this.isMarching.get(combatantId) ?? false;
+
+    this.lastBattleX.set(combatantId, battleX);
+
+    if (!isAlive) {
+      this.isMarching.set(combatantId, false);
+      return;
+    }
+
+    if (this.animator.blocksAutoMove(combatantId)) {
+      this.isMarching.set(combatantId, moved);
+      return;
+    }
+
+    const animState = this.animator.getState(combatantId);
+    if (moved) {
+      if (!wasMoving || animState.anim === "idle") {
+        this.animator.setAnim(combatantId, "move");
+      }
+    } else if (wasMoving && animState.anim === "move") {
+      this.animator.setAnim(combatantId, "idle");
+    }
+
+    this.isMarching.set(combatantId, moved);
   }
 
   /** リスポーン等で HP が回復したユニットの死亡演出を解除 */
@@ -385,9 +437,16 @@ export class BattleCanvas implements IBattleRenderer {
   ): void {
     const { ctx } = this;
     const size = SPRITE_SIZE * scale;
-    const offsetY = hasSpriteSheetAnimation(layout.spriteKey, layout.anim)
-      ? 0
-      : getPlaceholderSpriteYOffset(layout, scale);
+    const showingSkillAnim = layout.skillAnimKey !== null;
+    const offsetY =
+      showingSkillAnim ||
+      hasSpriteSheetAnimation(
+        layout.spriteKey,
+        layout.anim,
+        layout.attackSheetKey,
+      )
+        ? 0
+        : getPlaceholderSpriteYOffset(layout, scale);
 
     const deathTransform =
       layout.anim === "death" &&
@@ -438,6 +497,18 @@ export class BattleCanvas implements IBattleRenderer {
       anchorFootX: number,
       anchorFootY: number,
     ) => {
+      if (layout.skillAnimKey) {
+        drawSkillAnimAtFootAnchor(
+          targetCtx,
+          layout.skillAnimKey,
+          layout.skillAnimFrame,
+          anchorFootX,
+          anchorFootY,
+          scale,
+        );
+        return;
+      }
+
       drawSpriteFrameAtFootAnchor(
         targetCtx,
         layout.spriteKey,
@@ -449,6 +520,7 @@ export class BattleCanvas implements IBattleRenderer {
         size,
         scale,
         placeholderColor,
+        layout.attackSheetKey,
       );
     };
 
@@ -467,19 +539,6 @@ export class BattleCanvas implements IBattleRenderer {
 
     if (layout.anim === "death") {
       drawLocalSprite(ctx);
-    } else if (layout.anim === "hurt") {
-      drawSpriteWithDamageEffect(
-        ctx,
-        tintBufferSize,
-        size,
-        (bufferCtx) => {
-          drawAtFoot(bufferCtx, tintBufferSize / 2, tintBufferSize);
-        },
-        this.theme.hurtTintStrength,
-        this.theme.hurtTintR,
-        this.theme.hurtTintG,
-        this.theme.hurtTintB,
-      );
     } else if (buffGlow > 0) {
       drawSpriteWithBuffGlow(
         ctx,

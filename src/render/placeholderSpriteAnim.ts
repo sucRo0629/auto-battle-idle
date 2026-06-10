@@ -57,7 +57,7 @@ export function getPlaceholderSpriteYOffset(
     return Math.sin(layout.animFrame * 0.8) * IDLE_BOB_AMPLITUDE;
   }
 
-  if (layout.anim === "attack" || layout.anim === "dash") {
+  if (layout.anim === "attack" || layout.anim === "move") {
     const def = ANIM_DEFS[layout.anim];
     const progress = (layout.animFrame + 0.5) / def.frames;
     return -Math.sin(progress * Math.PI) * ATTACK_BOUNCE_HEIGHT * scale;

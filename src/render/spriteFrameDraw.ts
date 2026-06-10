@@ -4,14 +4,16 @@ import {
   type AnimState,
 } from "./SpriteRegistry.ts";
 import {
+  getSkillAnimImage,
+} from "./skillAnimRegistry.ts";
+import {
   getSpriteSheetImage,
   hasSpriteSheetAnimation,
 } from "./spriteSheetRegistry.ts";
-import { getSheetCellSize } from "./spriteLayout.ts";
+import { getSheetCellSize, SPRITE_SHEET_CELL_SIZE } from "./spriteLayout.ts";
 
 /**
- * 足元中央 (footX, footY) を基準にスプライトを描画。
- * シートコマは layout より大きくてよい（上・左右にはみ出す）。
+ * 足元中央 (footX, footY) を基準に entity スプライトを描画。
  */
 export function drawSpriteFrameAtFootAnchor(
   ctx: CanvasRenderingContext2D,
@@ -24,9 +26,12 @@ export function drawSpriteFrameAtFootAnchor(
   layoutH: number,
   scale: number,
   placeholderColor?: string,
+  attackSheetKey = "attack",
 ): void {
-  if (hasSpriteSheetAnimation(spriteKey, anim)) {
-    const sheet = getSpriteSheetImage(spriteKey, anim);
+  const entitySheetKey = anim === "attack" ? attackSheetKey : anim;
+
+  if (hasSpriteSheetAnimation(spriteKey, anim, attackSheetKey)) {
+    const sheet = getSpriteSheetImage(spriteKey, entitySheetKey);
     if (sheet) {
       const cellSize = getSheetCellSize(spriteKey);
       const def = ANIM_DEFS[anim];
@@ -65,6 +70,37 @@ export function drawSpriteFrameAtFootAnchor(
     ctx.fillStyle = placeholderColor;
     ctx.fillRect(footX - layoutW / 2, footY - layoutH, layoutW, layoutH);
   }
+}
+
+export function drawSkillAnimAtFootAnchor(
+  ctx: CanvasRenderingContext2D,
+  skillAnimKey: string,
+  frame: number,
+  footX: number,
+  footY: number,
+  scale: number,
+): void {
+  const sheet = getSkillAnimImage(skillAnimKey);
+  if (!sheet) return;
+
+  const cellSize = SPRITE_SHEET_CELL_SIZE;
+  const frameCount = Math.max(1, Math.floor(sheet.width / cellSize));
+  const clampedFrame = Math.min(Math.max(0, frame), frameCount - 1);
+  const srcX = clampedFrame * cellSize;
+  const drawW = cellSize * scale;
+  const drawH = cellSize * scale;
+
+  ctx.drawImage(
+    sheet,
+    srcX,
+    0,
+    cellSize,
+    cellSize,
+    footX - drawW / 2,
+    footY - drawH,
+    drawW,
+    drawH,
+  );
 }
 
 /**

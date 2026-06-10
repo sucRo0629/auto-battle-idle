@@ -14,6 +14,7 @@ import {
   resolveEffectPresentation,
   shouldPlayActorAnim,
 } from "../render/skillVfx/resolveEffectPresentation.ts";
+import { resolveSkillAnimKey } from "../render/skillAnimRegistry.ts";
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
 import { BattleCanvas } from "../render/BattleCanvas.ts";
 import { PartyHudPanel } from "./PartyHudPanel.ts";
@@ -215,15 +216,25 @@ export class BattleView {
             effectKind: event.effect,
           }
         );
-        if (
+        const skillAnimKey = resolveSkillAnimKey(
+          event.skillId,
+          event.effectIndex ?? 0,
+        );
+        if (skillAnimKey) {
+          this.canvas.playSkillAnim(event.actorId, skillAnimKey);
+        } else if (
           presentation.anim &&
           shouldPlayActorAnim(
             presentation.anim,
             actor?.rangePx ?? 0,
-            event.slotKind
+            event.slotKind,
           )
         ) {
-          this.canvas.playAnim(event.actorId, presentation.anim);
+          this.canvas.playAnim(
+            event.actorId,
+            presentation.anim,
+            actor?.spriteKey,
+          );
         }
         if (presentation.vfx) {
           this.canvas.playAttackEffect(
@@ -237,8 +248,6 @@ export class BattleView {
       this.canvas.showEvadePopup(event.targetId);
     } else if (event.type === "block") {
       this.canvas.showBlockPopup(event.targetId);
-    } else if (event.type === "hurt") {
-      this.canvas.playAnim(event.targetId, "hurt");
     } else if (event.type === "death") {
       this.canvas.playAnim(event.targetId, "death");
     } else if (event.type === "battleEnd") {

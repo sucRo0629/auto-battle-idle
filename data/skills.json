@@ -529,7 +529,6 @@
           "type": "move",
           "moveMode": "behindTarget",
           "moveDurationSec": 0.3,
-          "anim": "dash",
           "target": {
             "kind": "distance",
             "side": "enemy",

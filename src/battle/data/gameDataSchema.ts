@@ -67,21 +67,30 @@ export const MOVE_MODE_LABELS: Record<import("../types.ts").MoveMode, string> =
 export const SKILL_EFFECT_ANIM_IDS = [
   "idle",
   "attack",
+  "death",
+  "none",
+] as const satisfies readonly SkillEffectAnimId[];
+
+/** JSON 読み込み互換（エディタ選択肢には出さない） */
+export const LEGACY_SKILL_EFFECT_ANIM_IDS = [
+  "dash",
   "heal",
   "hurt",
-  "death",
-  "dash",
-  "none",
+] as const satisfies readonly SkillEffectAnimId[];
+
+export const ALL_SKILL_EFFECT_ANIM_IDS = [
+  ...SKILL_EFFECT_ANIM_IDS,
+  ...LEGACY_SKILL_EFFECT_ANIM_IDS,
 ] as const satisfies readonly SkillEffectAnimId[];
 
 export const SKILL_EFFECT_ANIM_LABELS: Record<SkillEffectAnimId, string> = {
   idle: "待機",
   attack: "攻撃",
-  heal: "回復",
-  hurt: "被弾",
   death: "死亡",
-  dash: "突進",
   none: "なし",
+  dash: "（非推奨）",
+  heal: "（非推奨）",
+  hurt: "（非推奨）",
 };
 
 export const RESOURCE_AMOUNT_KINDS = [

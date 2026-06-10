@@ -14,19 +14,33 @@ export interface EffectPresentation {
   vfx: SkillVfxDef | null;
 }
 
+const LEGACY_ANIM_MAP: Partial<Record<SkillEffectAnimId, SkillEffectAnimId>> = {
+  dash: "none",
+  heal: "none",
+  hurt: "none",
+};
+
 function defaultAnimForEffect(effect: SkillEffectDef): SkillEffectAnimId {
   switch (effect.type) {
     case "move":
-      return "dash";
+      return "none";
     case "damage":
     case "dot":
       return "attack";
     case "heal":
     case "hot":
-      return "heal";
+      return "none";
     default:
       return "none";
   }
+}
+
+function normalizeEffectAnim(
+  anim: SkillEffectAnimId | undefined,
+  effect: SkillEffectDef,
+): SkillEffectAnimId {
+  const raw = anim ?? defaultAnimForEffect(effect);
+  return LEGACY_ANIM_MAP[raw] ?? raw;
 }
 
 function supportsVfx(effect: SkillEffectDef): boolean {
@@ -44,8 +58,9 @@ export function resolveEffectPresentation(
   skillDef: ActiveSkillDef | undefined,
   ctx: SkillVfxContext,
 ): EffectPresentation {
-  const animId = effectDef.anim ?? defaultAnimForEffect(effectDef);
-  const anim = animId === "none" ? null : (animId as AnimState);
+  const animId = normalizeEffectAnim(effectDef.anim, effectDef);
+  const anim =
+    animId === "none" ? null : (animId as AnimState);
 
   let vfx: SkillVfxDef | null = null;
   if (supportsVfx(effectDef)) {

@@ -4,9 +4,13 @@ import {
   hasEntitySpriteAsset,
   SPRITE_URLS,
 } from './spriteAssets.ts';
+import { preloadSkillAnims } from './skillAnimRegistry.ts';
 import { preloadSpriteSheets } from './spriteSheetRegistry.ts';
 
-export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death' | 'dash';
+export type AnimState = 'idle' | 'attack' | 'move' | 'death';
+
+/** entity / skill スプライトアニメ共通 fps */
+export const SHARED_ANIM_FPS = 8;
 
 export interface SpriteAnimDef {
   frames: number;
@@ -17,12 +21,10 @@ export interface SpriteAnimDef {
 export { ENEMY_DEFAULT_SPRITE_KEY, hasEntitySpriteAsset };
 
 export const ANIM_DEFS: Record<AnimState, SpriteAnimDef> = {
-  idle: { frames: 4, fps: 6, loop: true },
-  attack: { frames: 4, fps: 12, loop: false },
-  dash: { frames: 4, fps: 12, loop: false },
-  heal: { frames: 3, fps: 10, loop: false },
-  hurt: { frames: 2, fps: 10, loop: false },
-  death: { frames: 3, fps: 8, loop: false },
+  idle: { frames: 4, fps: SHARED_ANIM_FPS, loop: true },
+  attack: { frames: 4, fps: SHARED_ANIM_FPS, loop: false },
+  move: { frames: 4, fps: SHARED_ANIM_FPS, loop: true },
+  death: { frames: 3, fps: SHARED_ANIM_FPS, loop: false },
 };
 
 const spriteImages = new Map<string, HTMLImageElement>();
@@ -44,6 +46,7 @@ export function preloadSprites(): Promise<void> {
         spriteImages.set(key, await loadImage(url));
       }),
       preloadSpriteSheets(),
+      preloadSkillAnims(),
     ]).then(() => {});
   }
   return preloadPromise;

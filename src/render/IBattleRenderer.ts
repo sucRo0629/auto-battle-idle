@@ -1,4 +1,4 @@
-export type AnimState = 'idle' | 'attack' | 'heal' | 'hurt' | 'death' | 'dash';
+export type AnimState = 'idle' | 'attack' | 'move' | 'death';
 
 import type { Role, StatusEffect, SkillVfxDef } from '../battle/types.ts';
 
@@ -18,6 +18,9 @@ export interface CombatantLayout {
   isAlive: boolean;
   anim: AnimState;
   animFrame: number;
+  attackSheetKey: string;
+  skillAnimKey: string | null;
+  skillAnimFrame: number;
   statusEffects: StatusEffect[];
 }
 
@@ -25,7 +28,8 @@ export interface IBattleRenderer {
   mount(container: HTMLElement): void;
   setCombatants(layout: CombatantLayout[]): void;
   setWorldOffset(offsetX: number): void;
-  playAnim(combatantId: string, state: AnimState): void;
+  playAnim(combatantId: string, state: AnimState, spriteKey?: string): void;
+  playSkillAnim(combatantId: string, skillAnimKey: string): void;
   playAttackEffect(
     actorId: string,
     targetId: string,

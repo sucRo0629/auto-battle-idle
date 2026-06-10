@@ -470,15 +470,18 @@ export interface SkillVfxDef {
   durationMs?: number;
 }
 
-/** effect ごとのスプライトアニメ。none = 再生なし */
+/** effect ごとの entity スプライトアニメ。none = 再生なし（スキルアニメ PNG 優先） */
 export type SkillEffectAnimId =
   | "idle"
   | "attack"
-  | "heal"
-  | "hurt"
   | "death"
+  | "none"
+  /** @deprecated 読み込み互換。none として正規化 */
   | "dash"
-  | "none";
+  /** @deprecated 読み込み互換。none として正規化 */
+  | "heal"
+  /** @deprecated 読み込み互換。none として正規化 */
+  | "hurt";
 
 interface SkillEffectCommon {
   target: TargetSpec;

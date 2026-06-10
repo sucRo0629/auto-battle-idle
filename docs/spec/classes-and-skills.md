@@ -358,10 +358,10 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `scatterRadiusPx` / `scatterHitCount` / `scatterDurationSec` | `scatter` 必須（`scatterRadiusPx` = 乱打半径・命中判定） |
 | `scatterSpreadRate` | `scatter` 任意（0〜1。0 = anchor 中心固定。着弾 offset = `scatterSpreadRadiusPx × rate`） |
 | `range` | 命中判定・VFX 共用（px）。省略時 = `actor.traits.rangePx` |
-| `anim` | 任意。スプライトアニメ（`idle` / `attack` / `dash` / `heal` / `none` 等）。未指定 = effect 種別の既定 |
+| `anim` | 任意。entity スプライトアニメ（`idle` / `attack` / `none` 等）。未指定 = effect 種別の既定。突進・回復は **スキルアニメ PNG** を優先 |
 | `vfx` | 任意。effect 単位の VFX プリセット。未指定 = スキル `vfx` → 種別既定（damage/heal 等） |
 
-**move を含むスキル:** シーケンスの各 step 発火時に、その effect の `anim` / `vfx` で演出する（例: 突進 `dash` → 斬撃 `attack`+`slash` → 帰還 `idle`）。
+**move を含むスキル:** シーケンスの各 step 発火時に、スキルアニメ PNG（`sheets/skills/{skillId}_{index}.png`）→ `anim` / `vfx` の順で演出（例: 突進 `_0` → 斬撃 `_1`+`slash`）。
 
 ### ResourceAmountSpec（`damage` / `heal` / `hot` / `barrier`）
 

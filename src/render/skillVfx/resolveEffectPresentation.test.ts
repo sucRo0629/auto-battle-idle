@@ -21,7 +21,7 @@ const ctx = {
 };
 
 describe('resolveEffectPresentation', () => {
-  it('defaults move to dash without vfx', () => {
+  it('defaults move to none without vfx', () => {
     const effect: MoveSkillEffect = {
       type: 'move',
       target: { kind: "distance", side: "enemy", order: "nearest" },
@@ -31,8 +31,36 @@ describe('resolveEffectPresentation', () => {
       ...ctx,
       effectKind: 'move',
     });
-    expect(result.anim).toBe('dash');
+    expect(result.anim).toBeNull();
     expect(result.vfx).toBeNull();
+  });
+
+  it('defaults heal to none', () => {
+    const result = resolveEffectPresentation(
+      'test_skill',
+      {
+        type: 'heal',
+        target: { kind: 'mostDamagedAlly' },
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      skill,
+      { ...ctx, effectKind: 'heal' },
+    );
+    expect(result.anim).toBeNull();
+  });
+
+  it('maps legacy dash anim to none', () => {
+    const effect: MoveSkillEffect = {
+      type: 'move',
+      target: { kind: "distance", side: "enemy", order: "nearest" },
+      moveDurationSec: 0.25,
+      anim: 'dash',
+    };
+    const result = resolveEffectPresentation('test_skill', effect, skill, {
+      ...ctx,
+      effectKind: 'move',
+    });
+    expect(result.anim).toBeNull();
   });
 
   it('uses effect anim override', () => {
@@ -106,6 +134,6 @@ describe('shouldPlayActorAnim', () => {
     expect(shouldPlayActorAnim('attack', 55, 'basic')).toBe(false);
     expect(shouldPlayActorAnim('attack', 50, 'basic')).toBe(true);
     expect(shouldPlayActorAnim('attack', 55, 'active')).toBe(true);
-    expect(shouldPlayActorAnim('dash', 0, 'active')).toBe(true);
+    expect(shouldPlayActorAnim('move', 0, 'active')).toBe(true);
   });
 });
