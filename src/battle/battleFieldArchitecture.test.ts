@@ -1,8 +1,7 @@
 /**
  * battle-field.md structural invariants (L1, §4.2, §4.6).
  *
- * Tests marked it.fails document spec violations in the current implementation.
- * Flip to it() when battleDisplay rebuild makes them pass.
+ * A-L1-01 enforces L1: no per-tick resolveEngagedLayout during Engaged.
  */
 import { describe, expect, it } from 'vitest';
 import { __testOnlyBattleLayout } from './battleLayout.ts';
@@ -17,7 +16,7 @@ import {
 } from './test/battleFieldSpec.harness.ts';
 
 describe('battle-field architecture spec (A-*)', { timeout: LONG_BATTLE_TIMEOUT_MS }, () => {
-  it.fails(
+  it(
     'A-L1-01: Engaged ticks do not call resolveEngagedLayout (L1 single layout)',
     () => {
       const engine = createStage1Engine();

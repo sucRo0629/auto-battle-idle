@@ -38,8 +38,6 @@ import {
   COMBAT_CAMERA_CENTER_X,
   ROW_X,
   SPRITE_GAP,
-  ENGAGED_VISUAL_TUNING,
-  enemyRangedRearGap,
   engagedMinBodyGap,
 } from "./battleConstants.ts";
 import { moveTowardX } from "./battleCamera.ts";
@@ -76,11 +74,9 @@ import {
   tickAllyThreatDecay,
 } from "./threat.ts";
 import { deathAnimDurationMs } from "../render/deathPlayback.ts";
+import { EngageDisplayState } from "./battleDisplay.ts";
 import {
   applyStaggeredFormationMarchRestore,
-  approachVisualX,
-  beginEngagedLayout,
-  clampEngagedEnemyGroupOnScreen,
   computePlayerPositions,
   getFrontEnemyX,
   getLeadingPlayerFormationRow,
@@ -89,7 +85,6 @@ import {
   separateEngagedSprites,
   snapFormationScreenLayout,
   tickCompensatedFormationReset,
-  tickEngagedRearVisuals,
   type EngagedLayoutResult,
   type FormationRestorePhase,
 } from "./battleLayout.ts";
@@ -154,22 +149,7 @@ export class BattleEngine {
   private formationRestorePhase: FormationRestorePhase = "lead";
   /** Victory 退出前: 隊列復帰完了（exit march の切替振動防止） */
   private victoryFormationReady = false;
-  /** 最前線列の生存メンバー変化検知（レーン再固定用） */
-  private engagedLeadingRowSignature: string | null = null;
-  /** 接敵中: 後列の画面 X を固定（カメラパン補正用） */
-  private engagedRearFrozenScreenX = new Map<string, number>();
-  /** 接敵開始時の visualX − battleX（前列 battleX 単一経路用） */
-  private engagedFrontVisualOffsets = new Map<string, number>();
-  /** 接敵開始時の visualX − battleX（敵 battleX 単一経路用） */
-  private engagedEnemyVisualOffsets = new Map<string, number>();
-  /** 接敵直後のビジュアル安定フレーム（rear-gap 即時スナップ抑制） */
-  private engagedVisualSettleTicks = 0;
-  /** 接敵中: 敵 visual 目標（layout+clamp を1回だけ解決し固定） */
-  private engagedEnemyLayoutTargets = new Map<string, number>();
-  private engagedEnemyLayoutTargetsReady = false;
-  /** 接敵中: 敵の画面 X を固定（カメラパン補正用） */
-  private engagedEnemyFrozenScreenX = new Map<string, number>();
-  private engagedEnemyVisualFrozen = false;
+  private readonly engageDisplay = new EngageDisplayState();
   /** 近接敵の生存構成変化検知（奥行きスロット再固定用） */
   private engagedMeleeEnemySignature: string | null = null;
   private restartTimer = 0;
@@ -603,34 +583,14 @@ export class BattleEngine {
   }
 
   private clearEngagedVisualState(): void {
-    this.engagedLeadingRowSignature = null;
     this.engagedMeleeEnemySignature = null;
-    this.engagedRearFrozenScreenX.clear();
-    this.engagedFrontVisualOffsets.clear();
-    this.engagedEnemyVisualOffsets.clear();
-    this.engagedVisualSettleTicks = 0;
-    this.engagedEnemyLayoutTargets.clear();
-    this.engagedEnemyLayoutTargetsReady = false;
-    this.engagedEnemyFrozenScreenX.clear();
-    this.engagedEnemyVisualFrozen = false;
+    this.engageDisplay.clear();
     for (const unit of [...this.players, ...this.enemies]) {
       unit.engagedVisualLaneX = undefined;
       unit.engagedMeleeVisualSlot = undefined;
       unit.engagedVisualTargetPlayerId = undefined;
       unit.engagedVisualTargetAllyId = undefined;
     }
-  }
-
-  private getEngagedLeadingRowSignature(): string | null {
-    const inputs = this.getAllyPlacementInputs().filter((ally) => ally.isAlive);
-    const leadingRow = getLeadingPlayerFormationRow(inputs);
-    if (leadingRow === null) return null;
-    const ids = inputs
-      .filter((ally) => ally.formationRow === leadingRow)
-      .map((ally) => ally.id)
-      .sort()
-      .join(",");
-    return `${leadingRow}:${ids}`;
   }
 
   private getEngagedMeleeEnemySignature(): string | null {
@@ -704,176 +664,6 @@ export class BattleEngine {
     });
   }
 
-  /** 接敵開始時: 遠距離敵の狙い味方だけ固定（ターゲット切替のちらつき防止） */
-  private freezeEngagedRangedTargets(): void {
-    for (const enemy of this.enemies) {
-      if (!enemy.isAlive) continue;
-      if (resolveMaxEffectiveRangePx(enemy, this.gameData) <= 0) continue;
-      const target = resolveEnemyBasicAttackTarget(
-        enemy,
-        this.players,
-        this.enemies,
-        this.gameData,
-      );
-      enemy.engagedVisualTargetPlayerId = target?.id;
-      enemy.engagedVisualTargetAllyId = target?.id;
-    }
-  }
-
-  /** 接敵中: 前列 visualX は battleX + 固定オフセットのみ（layout 補間と競合しない） */
-  private applyEngagedFrontVisualsFromBattle(
-    deltaTime: number,
-    leadingRow: FormationRow | null,
-  ): void {
-    if (leadingRow === null) return;
-    const moveStep = ENGAGED_VISUAL_TUNING.engageMoveSpeedPxPerSec * deltaTime;
-    const frontUnits = this.players.filter(
-      (ally) =>
-        this.isOnBattlefield(ally) &&
-        ally.isAlive &&
-        ally.formationRow === leadingRow,
-    );
-    if (frontUnits.length === 0) return;
-
-    for (const ally of frontUnits) {
-      const offset = this.engagedFrontVisualOffsets.get(ally.id) ?? 0;
-      const target = ally.battleX + offset;
-      // 接敵中前列: 画面右方向へのみ補間（knockback による左 drift を防ぐ）
-      if (target > ally.visualX) {
-        ally.visualX = approachVisualX(ally.visualX, target, moveStep);
-      }
-    }
-
-    const separated = separateEngagedSprites(
-      frontUnits.map((ally) => ({
-        id: ally.id,
-        visualX: ally.visualX,
-        isAlive: true as const,
-      })),
-    );
-    for (const ally of frontUnits) {
-      const x = separated.get(ally.id);
-      if (x !== undefined) {
-        ally.visualX = x;
-      }
-    }
-  }
-  /** 接敵中: 敵 visual は固定 layout 目標へ補間後に画面 X 固定。前列は battleX 経路 */
-  private applyEngagedVisualLayoutFromBattle(deltaTime: number): void {
-    const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
-    const leadingRow = getLeadingPlayerFormationRow(placementInputs);
-    this.applyEngagedFrontVisualsFromBattle(deltaTime, leadingRow);
-
-    if (this.engagedEnemyVisualFrozen) return;
-
-    const moveStep = ENGAGED_VISUAL_TUNING.engageMoveSpeedPxPerSec * deltaTime;
-
-    if (this.engagedVisualSettleTicks > 0) {
-      const layout = this.resolveCurrentEngagedLayout();
-      if (layout === null) return;
-      for (const enemy of this.enemies) {
-        if (!enemy.isAlive) continue;
-        const offset = this.engagedEnemyVisualOffsets.get(enemy.id);
-        const battleTarget =
-          offset !== undefined ? enemy.battleX + offset : undefined;
-        const layoutTarget = layout.enemyVisualX.get(enemy.id);
-        const target = battleTarget ?? layoutTarget;
-        if (target !== undefined) {
-          enemy.visualX = approachVisualX(enemy.visualX, target, moveStep);
-        }
-      }
-      return;
-    }
-
-    if (!this.engagedEnemyLayoutTargetsReady) {
-      this.resolveEngagedEnemyLayoutTargets();
-    }
-
-    let allSettled = true;
-    for (const enemy of this.enemies) {
-      if (!enemy.isAlive) continue;
-      const target = this.engagedEnemyLayoutTargets.get(enemy.id);
-      if (target === undefined) continue;
-      const next = approachVisualX(enemy.visualX, target, moveStep);
-      enemy.visualX = next;
-      if (Math.abs(next - target) > 0.5) {
-        allSettled = false;
-      }
-    }
-
-    if (allSettled) {
-      this.freezeEngagedEnemyScreenPositions();
-      this.engagedEnemyVisualFrozen = true;
-    }
-  }
-
-  /** layout + clamp を1回だけ解決し、以降の tick で再計算しない */
-  private resolveEngagedEnemyLayoutTargets(): void {
-    const layout = this.resolveCurrentEngagedLayout();
-    if (layout === null) return;
-
-    const ideals = this.enemies
-      .filter((enemy) => enemy.isAlive)
-      .map((enemy) => ({
-        id: enemy.id,
-        visualX: layout.enemyVisualX.get(enemy.id) ?? enemy.visualX,
-        isAlive: true as const,
-      }));
-    const clamped = clampEngagedEnemyGroupOnScreen(ideals, this.combatCameraX);
-
-    let maxMeleeVisualX = Number.NEGATIVE_INFINITY;
-    for (const enemy of this.enemies) {
-      if (!enemy.isAlive || resolveMaxEffectiveRangePx(enemy, this.gameData) > 0) {
-        continue;
-      }
-      const x = clamped.get(enemy.id);
-      if (x !== undefined) {
-        maxMeleeVisualX = Math.max(maxMeleeVisualX, x);
-      }
-    }
-
-    this.engagedEnemyLayoutTargets.clear();
-    const rangedRearCap = Number.isFinite(maxMeleeVisualX)
-      ? maxMeleeVisualX + enemyRangedRearGap()
-      : null;
-    for (const enemy of this.enemies) {
-      if (!enemy.isAlive) continue;
-      let x = clamped.get(enemy.id);
-      if (x === undefined) continue;
-      if (
-        rangedRearCap !== null &&
-        resolveMaxEffectiveRangePx(enemy, this.gameData) > 0 &&
-        x < rangedRearCap
-      ) {
-        x = rangedRearCap;
-      }
-      this.engagedEnemyLayoutTargets.set(enemy.id, x);
-    }
-    this.engagedEnemyLayoutTargetsReady = true;
-  }
-
-  private freezeEngagedEnemyScreenPositions(): void {
-    this.engagedEnemyFrozenScreenX.clear();
-    for (const enemy of this.enemies) {
-      if (!enemy.isAlive) continue;
-      this.engagedEnemyFrozenScreenX.set(
-        enemy.id,
-        enemy.visualX + this.combatCameraX,
-      );
-    }
-  }
-
-  /** 接敵中: カメラパン後も敵の画面 X を維持 */
-  private maintainEngagedEnemyScreenFreeze(): void {
-    if (!this.engagedEnemyVisualFrozen) return;
-    for (const enemy of this.enemies) {
-      if (!enemy.isAlive) continue;
-      const frozenScreen = this.engagedEnemyFrozenScreenX.get(enemy.id);
-      if (frozenScreen === undefined) continue;
-      enemy.visualX = frozenScreen - this.combatCameraX;
-    }
-  }
-
   private resolveEngagedRangedTargetPlayer(
     enemy: CombatantState,
   ): CombatantState | undefined {
@@ -898,103 +688,63 @@ export class BattleEngine {
     return target;
   }
 
-  /** 接敵開始: カメラ焼き込み + 後列画面 X 記録。前列・敵はスナップしない */
+  /** 接敵開始: layout を1回だけ解決し screenAnchor を確定 */
   private setupEngagedCombat(): void {
     const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
     const leadingRow = getLeadingPlayerFormationRow(placementInputs);
     const contact = leadingRowContactPlayer(this.players);
 
-    const layout = beginEngagedLayout({
-      allies: this.players
-        .filter((ally) => this.isOnBattlefield(ally) && ally.isAlive)
-        .map((ally) => ({
-          id: ally.id,
-          formationRow: ally.formationRow,
-          visualX: ally.visualX,
-          isAlive: true as const,
-        })),
+    this.freezeEngagedMeleeVisualSlots();
+    const layout = this.resolveCurrentEngagedLayout();
+    if (layout === null) return;
+
+    const camera = this.engageDisplay.begin({
+      players: this.players,
+      enemies: this.enemies,
       combatCameraX: this.combatCameraX,
       leadingRow,
       contactVisualX: contact?.visualX ?? null,
+      isOnField: (unit) => this.isOnBattlefield(unit),
+      layout,
+      gameData: this.gameData,
     });
-
-    for (const ally of this.players) {
-      if (!ally.isAlive) continue;
-      if (leadingRow !== null && ally.formationRow === leadingRow) continue;
-      const visualX = layout.allyVisualX.get(ally.id);
-      if (visualX !== undefined) {
-        ally.visualX = visualX;
-      }
-    }
-    this.engagedFrontVisualOffsets.clear();
-    if (leadingRow !== null) {
-      for (const ally of this.players) {
-        if (!ally.isAlive || ally.formationRow !== leadingRow) continue;
-        this.engagedFrontVisualOffsets.set(ally.id, ally.visualX - ally.battleX);
-      }
-    }
-    this.combatCameraX = layout.combatCameraX;
-    this.cameraFocusLineX = layout.cameraFocusLineX;
-    this.engagedRearFrozenScreenX.clear();
-    for (const [id, screenX] of layout.engageRearScreenX) {
-      this.engagedRearFrozenScreenX.set(id, screenX);
-    }
-
-    this.engagedEnemyVisualOffsets.clear();
-    for (const enemy of this.enemies) {
-      if (!enemy.isAlive) continue;
-      this.engagedEnemyVisualOffsets.set(
-        enemy.id,
-        enemy.visualX - enemy.battleX,
-      );
-    }
-
-    this.freezeEngagedRangedTargets();
-    this.freezeEngagedMeleeVisualSlots();
-    this.engagedLeadingRowSignature = this.getEngagedLeadingRowSignature();
+    this.combatCameraX = camera.combatCameraX;
+    this.cameraFocusLineX = camera.cameraFocusLineX;
     this.engagedMeleeEnemySignature = this.getEngagedMeleeEnemySignature();
-    this.engagedVisualSettleTicks = 2;
   }
 
   private updateEngagedVisualMovement(deltaTime: number): void {
-    const allySignature = this.getEngagedLeadingRowSignature();
-    if (
-      allySignature !== null &&
-      allySignature !== this.engagedLeadingRowSignature
-    ) {
-      this.engagedLeadingRowSignature = allySignature;
-      const placementInputs = this.getPlayerPlacementInputs().filter(
-        (p) => p.isAlive,
-      );
-      const leadingRow = getLeadingPlayerFormationRow(placementInputs);
-      if (leadingRow !== null) {
-        for (const ally of this.players) {
-          if (!ally.isAlive || ally.formationRow !== leadingRow) continue;
-          if (!this.engagedFrontVisualOffsets.has(ally.id)) {
-            this.engagedFrontVisualOffsets.set(
-              ally.id,
-              ally.visualX - ally.battleX,
-            );
-          }
-        }
-      }
-    }
+    const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
+    const leadingRow = getLeadingPlayerFormationRow(placementInputs);
+
     const meleeSignature = this.getEngagedMeleeEnemySignature();
     if (meleeSignature !== this.engagedMeleeEnemySignature) {
       if (meleeSignature !== null) {
         this.freezeEngagedMeleeVisualSlots();
-      } else {
-        this.engagedMeleeEnemySignature = null;
+        const layout = this.resolveCurrentEngagedLayout();
+        if (layout !== null) {
+          this.engageDisplay.recomputeEnemyTargets(
+            layout,
+            this.enemies,
+            this.combatCameraX,
+            this.gameData,
+          );
+        }
       }
-      this.engagedEnemyVisualFrozen = false;
-      this.engagedEnemyFrozenScreenX.clear();
-      this.engagedEnemyLayoutTargetsReady = false;
-      this.engagedEnemyLayoutTargets.clear();
+      this.engagedMeleeEnemySignature = meleeSignature;
     }
-    this.applyEngagedVisualLayoutFromBattle(deltaTime);
-    if (this.engagedVisualSettleTicks > 0) {
-      this.engagedVisualSettleTicks -= 1;
-    }
+
+    this.engageDisplay.tick(
+      {
+        players: this.players,
+        enemies: this.enemies,
+        combatCameraX: this.combatCameraX,
+        leadingRow,
+        isOnField: (unit) => this.isOnBattlefield(unit),
+        gameData: this.gameData,
+      },
+      deltaTime,
+    );
   }
 
   private applySkillMoveVisualOverlay(): void {
@@ -1025,21 +775,6 @@ export class BattleEngine {
       if (ally.battleX > maxForward) {
         ally.battleX = maxForward;
       }
-    }
-  }
-
-  /** 接敵中: カメラパン後も後列の画面 X を維持 */
-  private maintainEngagedRearScreenFreeze(): void {
-    if (this.engagedRearFrozenScreenX.size === 0) return;
-    for (const ally of this.players) {
-      if (!this.isOnBattlefield(ally) || !ally.isAlive) continue;
-      const frozenScreen = this.engagedRearFrozenScreenX.get(ally.id);
-      if (frozenScreen === undefined) continue;
-      ally.visualX = tickEngagedRearVisuals(
-        ally.visualX,
-        frozenScreen,
-        this.combatCameraX,
-      );
     }
   }
 
@@ -1577,8 +1312,6 @@ export class BattleEngine {
       this.updateEngagedVisualMovement(deltaTime);
       this.applySkillMoveVisualOverlay();
       this.updateCombatCamera(deltaTime);
-      this.maintainEngagedRearScreenFreeze();
-      this.maintainEngagedEnemyScreenFreeze();
       this.tickStatusAndCooldowns(deltaTime);
       // 敵→味方の順でスキル解決し、同 tick 内で付与したバリア等が描画前に消費されないようにする
       this.runUnitSkills(this.enemies);
