@@ -75,16 +75,8 @@ export class EngageDisplayState {
       contactVisualX: input.contactVisualX,
     });
 
-    for (const player of input.players) {
-      if (!player.isAlive) continue;
-      if (input.leadingRow !== null && player.formationRow === input.leadingRow) {
-        continue;
-      }
-      const visualX = layout.allyVisualX.get(player.id);
-      if (visualX !== undefined) {
-        player.visualX = visualX;
-      }
-    }
+  // 後列 visualX は接敵開始時に書き換えない（Wave 2 接敵ジャンプ防止）。
+  // screenAnchor のみ記録し、以降は camera 補正で維持する。
 
     this.frontBattleOffsets.clear();
     if (input.leadingRow !== null) {
@@ -95,8 +87,18 @@ export class EngageDisplayState {
     }
 
     this.rearScreenAnchors.clear();
-    for (const [id, screenX] of layout.engageRearScreenX) {
-      this.rearScreenAnchors.set(id, screenX);
+    for (const player of input.players) {
+      if (!player.isAlive || !input.isOnField(player)) continue;
+      if (
+        input.leadingRow !== null &&
+        player.formationRow === input.leadingRow
+      ) {
+        continue;
+      }
+      this.rearScreenAnchors.set(
+        player.id,
+        player.visualX + input.combatCameraX,
+      );
     }
 
     this.freezeRangedTargets(input.players, input.enemies, input.gameData);
@@ -130,11 +132,19 @@ export class EngageDisplayState {
 
   tick(input: EngageDisplayTickInput, deltaTime: number): void {
     this.syncLeadingRowOffsets(input);
-
     this.tickFrontRowVisuals(input, deltaTime);
     this.tickEnemyVisuals(input, deltaTime);
-    this.maintainRearScreenFreeze(input.players, input.combatCameraX, input.isOnField);
-    this.maintainEnemyScreenFreeze(input.enemies, input.combatCameraX);
+  }
+
+  /** カメラ更新後に呼ぶ: 凍結済み screenAnchor を維持 */
+  applyScreenFreeze(
+    players: CombatantState[],
+    enemies: CombatantState[],
+    combatCameraX: number,
+    isOnField: (unit: CombatantState) => boolean,
+  ): void {
+    this.maintainRearScreenFreeze(players, combatCameraX, isOnField);
+    this.maintainEnemyScreenFreeze(enemies, combatCameraX);
   }
 
   private freezeRangedTargets(

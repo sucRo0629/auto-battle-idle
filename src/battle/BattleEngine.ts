@@ -150,8 +150,6 @@ export class BattleEngine {
   /** Victory 退出前: 隊列復帰完了（exit march の切替振動防止） */
   private victoryFormationReady = false;
   private readonly engageDisplay = new EngageDisplayState();
-  /** 近接敵の生存構成変化検知（奥行きスロット再固定用） */
-  private engagedMeleeEnemySignature: string | null = null;
   private restartTimer = 0;
   private periodicDispelStates = new Map<string, PeriodicDispelPassiveState[]>();
   private periodicHotStates = new Map<string, PeriodicHotPassiveState[]>();
@@ -554,12 +552,9 @@ export class BattleEngine {
     if (enemyContact === null || playerContact === null) return;
 
     const approachStep = BATTLE_APPROACH_SPEED * deltaTime;
-    const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
-    const leadingRow = getLeadingPlayerFormationRow(placementInputs);
 
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
-      if (leadingRow !== null && ally.formationRow !== leadingRow) continue;
       if (this.skillSequenceRunner.isActorBusy(ally.id)) continue;
       const target = resolvePlayerApproachBattleX(
         ally,
@@ -583,7 +578,6 @@ export class BattleEngine {
   }
 
   private clearEngagedVisualState(): void {
-    this.engagedMeleeEnemySignature = null;
     this.engageDisplay.clear();
     for (const unit of [...this.players, ...this.enemies]) {
       unit.engagedVisualLaneX = undefined;
@@ -591,18 +585,6 @@ export class BattleEngine {
       unit.engagedVisualTargetPlayerId = undefined;
       unit.engagedVisualTargetAllyId = undefined;
     }
-  }
-
-  private getEngagedMeleeEnemySignature(): string | null {
-    const ids = this.enemies
-      .filter(
-        (enemy) =>
-          enemy.isAlive &&
-          resolveMaxEffectiveRangePx(enemy, this.gameData) <= 0,
-      )
-      .map((enemy) => enemy.id)
-      .sort();
-    return ids.length > 0 ? ids.join(",") : null;
   }
 
   /** 接敵開始時: 進軍順（battleX）で近接敵の奥行きスロットを固定 */
@@ -622,7 +604,6 @@ export class BattleEngine {
     melee.forEach((enemy, slot) => {
       enemy.engagedMeleeVisualSlot = slot;
     });
-    this.engagedMeleeEnemySignature = this.getEngagedMeleeEnemySignature();
   }
 
   private resolveCurrentEngagedLayout(): EngagedLayoutResult | null {
@@ -710,29 +691,11 @@ export class BattleEngine {
     });
     this.combatCameraX = camera.combatCameraX;
     this.cameraFocusLineX = camera.cameraFocusLineX;
-    this.engagedMeleeEnemySignature = this.getEngagedMeleeEnemySignature();
   }
 
   private updateEngagedVisualMovement(deltaTime: number): void {
     const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
     const leadingRow = getLeadingPlayerFormationRow(placementInputs);
-
-    const meleeSignature = this.getEngagedMeleeEnemySignature();
-    if (meleeSignature !== this.engagedMeleeEnemySignature) {
-      if (meleeSignature !== null) {
-        this.freezeEngagedMeleeVisualSlots();
-        const layout = this.resolveCurrentEngagedLayout();
-        if (layout !== null) {
-          this.engageDisplay.recomputeEnemyTargets(
-            layout,
-            this.enemies,
-            this.combatCameraX,
-            this.gameData,
-          );
-        }
-      }
-      this.engagedMeleeEnemySignature = meleeSignature;
-    }
 
     this.engageDisplay.tick(
       {
@@ -1312,6 +1275,12 @@ export class BattleEngine {
       this.updateEngagedVisualMovement(deltaTime);
       this.applySkillMoveVisualOverlay();
       this.updateCombatCamera(deltaTime);
+      this.engageDisplay.applyScreenFreeze(
+        this.players,
+        this.enemies,
+        this.combatCameraX,
+        (unit) => this.isOnBattlefield(unit),
+      );
       this.tickStatusAndCooldowns(deltaTime);
       // 敵→味方の順でスキル解決し、同 tick 内で付与したバリア等が描画前に消費されないようにする
       this.runUnitSkills(this.enemies);
