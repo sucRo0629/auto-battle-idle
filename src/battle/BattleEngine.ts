@@ -100,6 +100,7 @@ import {
   ANNOUNCEMENT_FADE_OUT_START_MS,
   ANNOUNCEMENT_TOTAL_MS,
   POST_ANNOUNCEMENT_ENGAGE_DELAY_SEC,
+  POST_DEPLOY_SETTLE_DELAY_SEC,
 } from "../render/announcementOverlayTiming.ts";
 import type { BattlePhase, BattleSnapshot, CombatantState, FormationRow, GameData, PartySlotState, PendingSkillHit, SkillCooldown, SkillTriggerKind, StatusEffect } from "./types.ts";
 import { BATTLE_ENEMY_MARCH_VISIBLE_MAX_X } from "./battleConstants.ts";
@@ -146,6 +147,8 @@ export class BattleEngine {
   private pendingDeployWaveIndex: number | null = null;
   /** fade-out 開始後の接敵待機（null = 未開始） */
   private postAnnouncementEngageDelaySec: number | null = null;
+  /** PartyDeploy 到達後の接敵待機（null = 未到達 or 消費済み） */
+  private postDeploySettleDelaySec: number | null = null;
   /** 各 Wave 開始: 味方が左外から初期位置へ移動中 */
   private partyDeployActive = false;
   /** PartyDeploy 到達済み（接敵ゲート待ち） */
@@ -724,6 +727,7 @@ export class BattleEngine {
     this.waveAnnouncementElapsedMs = 0;
     this.pendingDeployWaveIndex = null;
     this.postAnnouncementEngageDelaySec = null;
+    this.postDeploySettleDelaySec = null;
   }
 
   private shouldSuppressCombatSkills(): boolean {
@@ -799,6 +803,7 @@ export class BattleEngine {
     this.waveAnnouncementActive = true;
     this.waveAnnouncementElapsedMs = 0;
     this.postAnnouncementEngageDelaySec = null;
+    this.postDeploySettleDelaySec = null;
     this.partyDeploySettled = false;
     this.engaged = false;
     this.clearEngagedVisualState();
@@ -822,11 +827,16 @@ export class BattleEngine {
   }
 
   private tickPostAnnouncementEngageDelay(deltaTime: number): void {
-    if (this.postAnnouncementEngageDelaySec === null) return;
-    if (this.postAnnouncementEngageDelaySec > 0) {
+    if (this.postAnnouncementEngageDelaySec !== null && this.postAnnouncementEngageDelaySec > 0) {
       this.postAnnouncementEngageDelaySec -= deltaTime;
       if (this.postAnnouncementEngageDelaySec < 0) {
         this.postAnnouncementEngageDelaySec = 0;
+      }
+    }
+    if (this.postDeploySettleDelaySec !== null && this.postDeploySettleDelaySec > 0) {
+      this.postDeploySettleDelaySec -= deltaTime;
+      if (this.postDeploySettleDelaySec < 0) {
+        this.postDeploySettleDelaySec = 0;
       }
     }
     this.tryCompleteWaveStart();
@@ -836,6 +846,8 @@ export class BattleEngine {
     if (!this.partyDeploySettled || this.engaged) return;
     if (this.postAnnouncementEngageDelaySec === null) return;
     if (this.postAnnouncementEngageDelaySec > 0) return;
+    if (this.postDeploySettleDelaySec === null) return;
+    if (this.postDeploySettleDelaySec > 0) return;
     this.beginEngaged();
   }
 
@@ -881,6 +893,9 @@ export class BattleEngine {
     if (allSettled) {
       this.partyDeployActive = false;
       this.partyDeploySettled = true;
+      if (this.postDeploySettleDelaySec === null) {
+        this.postDeploySettleDelaySec = POST_DEPLOY_SETTLE_DELAY_SEC;
+      }
       this.tryCompleteWaveStart();
     }
   }
@@ -891,6 +906,7 @@ export class BattleEngine {
     this.partyDeployTargets.clear();
     this.enemyDeployTargets.clear();
     this.postAnnouncementEngageDelaySec = null;
+    this.postDeploySettleDelaySec = null;
     this.pendingDeployWaveIndex = null;
     this.engaged = true;
     this.setupEngagedCombat();

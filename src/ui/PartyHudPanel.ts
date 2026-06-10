@@ -11,6 +11,7 @@ import {
 import {
   drawStatusBadgeRow,
   orderBadgesForDraw,
+  statusBadgeOutlinePad,
   statusBadgeRowWidth,
 } from '../render/statusBadgeRenderer.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
@@ -199,16 +200,19 @@ export class PartyHudPanel {
       theme.statusBadgeArrowOverlap,
     );
     const badgeH = theme.statusBadgeIconSize * scale;
+    const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
+    const canvasW = rowW + outlinePad * 2;
+    const canvasH = badgeH + outlinePad * 2;
 
-    canvas.width = rowW;
-    canvas.height = badgeH;
+    canvas.width = canvasW;
+    canvas.height = canvasH;
     canvas.hidden = false;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, rowW, badgeH);
-    drawStatusBadgeRow(ctx, rowW / 2, 0, drawItems, scale, {
+    ctx.clearRect(0, 0, canvasW, canvasH);
+    drawStatusBadgeRow(ctx, outlinePad + rowW / 2, outlinePad, drawItems, scale, {
       buffColor: theme.statusBuffColor,
       debuffColor: theme.statusDebuffColor,
       iconSize: theme.statusBadgeIconSize,

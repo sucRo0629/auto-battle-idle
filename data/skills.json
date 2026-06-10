@@ -159,7 +159,7 @@
     },
     {
       "id": "df_guardian_passive_1",
-      "name": "守勢",
+      "name": "ブロッキング",
       "effect": "block",
       "targetRuleOverride": {
         "kind": "stat",
@@ -167,7 +167,7 @@
         "stat": "atk",
         "order": "highest"
       },
-      "blockChance": 0.15
+      "blockChance": 0.2
     },
     {
       "id": "df_guardian_passive_2",

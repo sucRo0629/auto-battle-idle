@@ -91,6 +91,16 @@ export interface StatusBadgeTheme {
   ) => string;
 }
 
+/** 縁取りがキャンバス端で切れないよう確保する余白（px） */
+export function statusBadgeOutlinePad(
+  outlineWidth: number,
+  scale = 1,
+): number {
+  const widthPx = outlineWidth * scale;
+  if (widthPx <= 0) return 0;
+  return Math.ceil(widthPx) + 1;
+}
+
 /** 1px 刻みの周囲リング。不透明ピクセルのシルエットに沿った縁取り用 */
 export function generateOutlineOffsets(
   width: number,
@@ -145,7 +155,7 @@ function drawSilhouetteOutline(
   const offsets = generateOutlineOffsets(outlineWidth);
   if (offsets.length === 0) return;
 
-  const pad = Math.ceil(outlineWidth) + 1;
+  const pad = statusBadgeOutlinePad(outlineWidth);
   const bufferW = Math.ceil(width + pad * 2);
   const bufferH = Math.ceil(height + pad * 2);
   const bufferCtx = getOutlineBuffer(bufferW, bufferH);
@@ -302,6 +312,12 @@ function drawStatusIcon(
       );
     }
     return;
+  }
+
+  const pad = statusBadgeOutlinePad(outlineWidthPx);
+  if (pad > 0) {
+    ctx.fillStyle = theme.iconOutlineColor;
+    ctx.fillRect(x - pad, y - pad, size + pad * 2, size + pad * 2);
   }
 
   ctx.fillStyle = color;

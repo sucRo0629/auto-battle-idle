@@ -57,10 +57,15 @@ export function getPlaceholderSpriteYOffset(
     return Math.sin(layout.animFrame * 0.8) * IDLE_BOB_AMPLITUDE;
   }
 
-  if (layout.anim === "attack" || layout.anim === "move") {
+  if (layout.anim === "attack") {
     const def = ANIM_DEFS[layout.anim];
     const progress = (layout.animFrame + 0.5) / def.frames;
     return -Math.sin(progress * Math.PI) * ATTACK_BOUNCE_HEIGHT * scale;
+  }
+
+  // move は足元固定（シート未設定時も上下に跳ねさせない）
+  if (layout.anim === "move") {
+    return 0;
   }
 
   return 0;
