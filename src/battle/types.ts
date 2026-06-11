@@ -713,7 +713,9 @@ export interface BarrierSkillEffect extends SkillEffectCommon {
 export interface DotSkillEffect extends SkillEffectCommon {
   type: "dot";
   durationSec: number;
-  powerMultiplier: number;
+  amount?: ResourceAmountSpec;
+  /** @deprecated amount 未指定時の後方互換 */
+  powerMultiplier?: number;
   damageType?: DamageType;
 }
 
@@ -820,7 +822,7 @@ export interface ActiveSkillDef {
   allowedClassIds?: ClassId[];
   /** 未指定時は role / attackRange 等からプレースホルダー VFX を自動選択 */
   vfx?: SkillVfxDef;
-  /** 発動硬直（秒）。省略/0 = 即時。アニメ長に合わせて設定 */
+  /** 停止時間（秒）。省略/0 = 即時。アニメ長に合わせて設定 */
   useDurationSec?: number;
 }
 
@@ -908,6 +910,8 @@ export interface CombatantSnapshot {
   threat?: number;
   baseThreat?: number;
   partySlotIndex?: number;
+  /** 味方のみ: 停止時間（useDurationSec）中 */
+  useLocked?: boolean;
   statusEffects: StatusEffect[];
   activeCooldowns: {
     skillId: string;
@@ -915,6 +919,8 @@ export interface CombatantSnapshot {
     triggerKind: SkillTriggerKind;
     triggerValue: number;
     slotIndex: number;
+    activeEffectRemaining?: number;
+    activeEffectTotal?: number;
   }[];
 }
 

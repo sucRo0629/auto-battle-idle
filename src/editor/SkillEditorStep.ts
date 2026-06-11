@@ -108,6 +108,8 @@ const STAT_LABELS: Record<StatusEffectStat, string> = {
   attackSpeed: '攻撃速度',
 };
 
+const DEFAULT_DOT_DURATION_SEC = 5;
+
 function defaultResourceAmount(atkScale = 1): ResourceAmountSpec {
   return { kind: 'atkBased', atkScale };
 }
@@ -595,6 +597,33 @@ function effectTypeToCategory(type: SkillEffectDef['type']): EditorActiveEffectC
   return 'damage';
 }
 
+function withDebuffDotDefaults(
+  effect: Extract<SkillEffectDef, { type: 'debuff' }>,
+): Extract<SkillEffectDef, { type: 'debuff' }> {
+  return {
+    ...effect,
+    durationSec:
+      effect.durationSec ?? effect.debuffDurationSec ?? DEFAULT_DOT_DURATION_SEC,
+    amount: effect.amount ?? normalizeEffectAmount(effect),
+    damageType: effect.damageType ?? 'physical',
+  };
+}
+
+function withEditorEffectDefaults(effect: SkillEffectDef): SkillEffectDef {
+  const normalized = normalizeLegacyEffect(effect);
+  if (normalized.type === 'debuff' && normalized.debuffSubKind === 'dot') {
+    return withDebuffDotDefaults(normalized);
+  }
+  return normalized;
+}
+
+function editorEffectNeedsDefaultSync(
+  before: SkillEffectDef,
+  after: SkillEffectDef,
+): boolean {
+  return JSON.stringify(before) !== JSON.stringify(after);
+}
+
 function normalizeLegacyEffect(effect: SkillEffectDef): SkillEffectDef {
   if (effect.type === 'hot') {
     return {
@@ -606,14 +635,11 @@ function normalizeLegacyEffect(effect: SkillEffectDef): SkillEffectDef {
     } as SkillEffectDef;
   }
   if (effect.type === 'dot') {
-    return {
+    return withDebuffDotDefaults({
       ...effect,
       type: 'debuff',
       debuffSubKind: 'dot',
-      durationSec: effect.durationSec,
-      powerMultiplier: effect.powerMultiplier,
-      damageType: effect.damageType,
-    } as SkillEffectDef;
+    } as Extract<SkillEffectDef, { type: 'debuff' }>);
   }
   if (effect.type === 'stun') {
     return {
@@ -1067,9 +1093,10 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
     case 'dot':
       return {
         target,
-        type: 'dot',
-        durationSec: 5,
-        powerMultiplier: 0.2,
+        type: 'debuff',
+        debuffSubKind: 'dot',
+        durationSec: DEFAULT_DOT_DURATION_SEC,
+        amount: defaultResourceAmount(0.2),
         damageType: 'physical',
       };
     case 'barrier':
@@ -2254,7 +2281,7 @@ export class SkillEditorStep {
       );
       grid.appendChild(
         createFieldRow(
-          '発動時間（秒）',
+          '停止時間（秒）',
           createNumberInput(
             active.useDurationSec ?? 0,
             (value) => {
@@ -2274,7 +2301,7 @@ export class SkillEditorStep {
         createEl(
           'p',
           'editor-hint',
-          '0 = 即時。硬直中は全スキル発動不可（効果は即時適用）。参考: attack/dash 0.33s、heal 0.30s',
+          '0 = 即時。停止中は全スキル発動不可（効果は即時適用）。時間・被攻撃条件のアクティブ CD は停止。参考: attack/dash 0.33s、heal 0.30s',
         ),
       );
     }
@@ -2465,7 +2492,10 @@ export class SkillEditorStep {
     isBasicAttack = false,
     sequenceContext?: { effectIndex: number; effectCount: number },
   ): void {
-    const normalizedEffect = normalizeLegacyEffect(effect);
+    const normalizedEffect = withEditorEffectDefaults(effect);
+    if (editorEffectNeedsDefaultSync(effect, normalizedEffect)) {
+      onUpdate(normalizedEffect, { rerender: false });
+    }
     const { patch: patchEffect, get: getEffect } = patchEffectState(
       normalizedEffect,
       onUpdate,
@@ -2830,7 +2860,7 @@ export class SkillEditorStep {
     const detailGrid = appendGrid(parent);
     detailGrid.classList.add('editor-subgrid');
 
-    switch (effect.type) {
+    switch (normalizedEffect.type) {
       case 'damage':
         if (!isBasicAttack) {
           detailGrid.appendChild(
@@ -3060,45 +3090,70 @@ export class SkillEditorStep {
           createFieldRow(
             'デバフ種別',
             createSelect(
-              effect.debuffSubKind ?? 'stat',
+              (normalizedEffect.type === 'debuff'
+                ? normalizedEffect.debuffSubKind
+                : undefined) ?? 'stat',
               DEBUFF_SUB_KINDS.map((value) => ({
                 value,
                 label: DEBUFF_SUB_KIND_LABELS[value],
               })),
               (debuffSubKind) =>
                 patchEffect(
-                  (prev) => ({ ...prev, debuffSubKind }) as SkillEffectDef,
+                  (prev) => {
+                    const next = { ...prev, debuffSubKind } as SkillEffectDef;
+                    if (debuffSubKind === 'dot' && prev.type === 'debuff') {
+                      return withDebuffDotDefaults({
+                        ...next,
+                        debuffSubKind: 'dot',
+                      });
+                    }
+                    return next;
+                  },
                   { rerender: true },
                 ),
             ),
           ),
         );
-        if (effect.debuffSubKind === 'dot') {
+        if (
+          normalizedEffect.type === 'debuff' &&
+          normalizedEffect.debuffSubKind === 'dot'
+        ) {
           detailGrid.appendChild(
             createFieldRow(
               '秒数',
               createNumberInput(
-                effect.durationSec ?? 5,
+                normalizedEffect.durationSec ?? DEFAULT_DOT_DURATION_SEC,
                 (durationSec) =>
                   patchEffect((prev) => ({ ...prev, durationSec }) as SkillEffectDef),
                 { min: 0.1, step: 0.5 },
               ),
             ),
           );
+          appendResourceAmountFields(
+            detailGrid,
+            normalizeEffectAmount(effect),
+            (amount, options) =>
+              patchEffect((prev) => ({ ...prev, amount }) as SkillEffectDef, options),
+          );
           detailGrid.appendChild(
             createFieldRow(
-              '威力倍率',
-              createNumberInput(
-                effect.powerMultiplier ?? 0.2,
-                (powerMultiplier) =>
-                  patchEffect((prev) => ({ ...prev, powerMultiplier }) as SkillEffectDef),
-                { step: 0.01 },
+              'ダメージ種',
+              createSelect(
+                effect.damageType ?? 'physical',
+                DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
+                (damageType) =>
+                  patchEffect(
+                    (prev) => ({ ...prev, damageType }) as SkillEffectDef,
+                  ),
               ),
             ),
           );
           break;
         }
-        if (effect.debuffSubKind === 'stun') {
+        if (
+          normalizedEffect.type === 'debuff' &&
+          normalizedEffect.debuffSubKind === 'stun'
+        ) {
           detailGrid.appendChild(
             createFieldRow(
               '秒数',
@@ -3209,21 +3264,14 @@ export class SkillEditorStep {
           createFieldRow(
             '秒数',
             createNumberInput(
-              effect.durationSec,
+              normalizedEffect.durationSec ?? DEFAULT_DOT_DURATION_SEC,
               (durationSec) => patchEffect((prev) => ({ ...prev, durationSec })),
               { min: 0.1, step: 0.5 },
             ),
           ),
         );
-        detailGrid.appendChild(
-          createFieldRow(
-            '威力倍率',
-            createNumberInput(
-              effect.powerMultiplier,
-              (powerMultiplier) => patchEffect((prev) => ({ ...prev, powerMultiplier })),
-              { step: 0.01 },
-            ),
-          ),
+        appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
+          patchEffect((prev) => ({ ...prev, amount }), options),
         );
         detailGrid.appendChild(
           createFieldRow(

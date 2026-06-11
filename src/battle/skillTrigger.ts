@@ -15,6 +15,37 @@ export function isTimeTrigger(skill: ActiveSkillDef): boolean {
   return resolveSkillTrigger(skill).kind === 'time';
 }
 
+export function isPausableActiveTriggerKind(kind: SkillTriggerKind): boolean {
+  return kind === 'time' || kind === 'hitsTaken';
+}
+
+export function isPausableActiveTrigger(skill: ActiveSkillDef): boolean {
+  return isPausableActiveTriggerKind(resolveSkillTrigger(skill).kind);
+}
+
+export interface CooldownPauseContext {
+  isActorUseLocked(actorId: string): boolean;
+  getActiveEffectRemaining(actorId: string, slotIndex: number): number;
+}
+
+/** 停止時間・効果持続中は time / hitsTaken の active CD 進行を止める */
+export function shouldPauseActiveCooldown(
+  actorId: string,
+  cd: SkillCooldown,
+  skill: ActiveSkillDef,
+  ctx: CooldownPauseContext,
+): boolean {
+  if (cd.slotKind !== 'active') return false;
+  if (!isPausableActiveTrigger(skill)) return false;
+
+  const slotIndex = cd.slotIndex ?? 0;
+  if (ctx.getActiveEffectRemaining(actorId, slotIndex) > 0) {
+    return true;
+  }
+
+  return ctx.isActorUseLocked(actorId) && cd.remaining > 0;
+}
+
 export function isCountTriggerKind(kind: SkillTriggerKind): boolean {
   return kind === 'basicAttackCount' || kind === 'hitsTaken';
 }

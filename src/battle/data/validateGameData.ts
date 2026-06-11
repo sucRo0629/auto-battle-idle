@@ -198,6 +198,19 @@ export function normalizeActiveSkillEffectForEditor(
   effect: SkillEffectDef,
 ): SkillEffectDef {
   const normalized = normalizeSkillEffect(effect);
+  if (normalized.type === 'debuff' && normalized.debuffSubKind === 'dot') {
+    const amount =
+      normalized.amount ??
+      (normalized.powerMultiplier !== undefined
+        ? { kind: 'atkBased' as const, atkScale: normalized.powerMultiplier }
+        : { kind: 'atkBased' as const, atkScale: 0.2 });
+    return {
+      ...normalized,
+      durationSec: normalized.durationSec ?? 5,
+      amount,
+      damageType: normalized.damageType ?? 'physical',
+    };
+  }
   if (normalized.type !== 'buff') return normalized;
 
   const subKind = normalized.buffSubKind ?? 'stat';
@@ -441,6 +454,10 @@ function parseEffectAmount(
 ): ResourceAmountSpec {
   if (obj.amount !== undefined) {
     return parseResourceAmountSpec(obj.amount, `${context}.amount`);
+  }
+  const legacyScale = obj.powerMultiplier;
+  if (typeof legacyScale === 'number') {
+    return { kind: 'atkBased', atkScale: legacyScale };
   }
   invalidField(context, 'amount', `is required for ${label}`);
 }
@@ -1281,7 +1298,7 @@ function parseCounterResponseEntry(
     return {
       kind,
       durationSec,
-      powerMultiplier: amount.atkScale,
+      powerMultiplier: amount.atkScale!,
       ...(damageType !== undefined ? { damageType } : {}),
       ...combatModifiers,
     };
@@ -1364,12 +1381,17 @@ function normalizeSkillEffect(effect: SkillEffectDef | LegacyHotSkillEffect): Sk
     };
   }
   if (effect.type === 'dot') {
+    const amount =
+      effect.amount ??
+      (effect.powerMultiplier !== undefined
+        ? { kind: 'atkBased' as const, atkScale: effect.powerMultiplier }
+        : undefined);
     return {
       ...effect,
       type: 'debuff',
       debuffSubKind: 'dot',
       durationSec: effect.durationSec,
-      powerMultiplier: effect.powerMultiplier,
+      ...(amount !== undefined ? { amount } : {}),
       ...(effect.damageType !== undefined ? { damageType: effect.damageType } : {}),
     };
   }
@@ -1636,7 +1658,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...combatModifiers,
       type: 'dot',
       durationSec,
-      powerMultiplier: amount.atkScale,
+      amount,
       ...(damageType !== undefined ? { damageType } : {}),
       ...sequenceTiming,
       ...presentation,
@@ -1838,7 +1860,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       type,
       debuffSubKind,
       durationSec,
-      powerMultiplier: amount.atkScale,
+      amount,
       ...(damageType !== undefined ? { damageType } : {}),
       ...sequenceTiming,
       ...presentation,

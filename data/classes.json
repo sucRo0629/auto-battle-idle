@@ -62,11 +62,11 @@
       "rangePx": 5
     },
     "maxHp": 200,
-    "atk": 12,
-    "def": 18,
+    "atk": 15,
+    "def": 20,
     "reg": 10,
     "jobTier": 1,
-    "attackSpeedTier": "normal",
+    "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "df_paladin_basic_attack",
     "passiveIds": [
       "df_paladin_passive_1",
@@ -118,7 +118,7 @@
     "def": 16,
     "reg": 0,
     "jobTier": 1,
-    "attackSpeedTier": "somewhatFast",
+    "attackSpeedTier": "normal",
     "basicAttackSkillId": "df_duelist_basic_attack",
     "passiveIds": [
       "df_duelist_passive_1",
@@ -143,6 +143,12 @@
           "df_duelist_passive_3",
           "df_duelist_active_3"
         ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "df_duelist_active_4"
+        ]
       }
     ],
     "growthTier": {
@@ -166,15 +172,16 @@
     "def": 14,
     "reg": 0,
     "jobTier": 1,
-    "attackSpeedTier": "normal",
+    "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "at_warrior_basic_attack",
     "skills": [
       {
         "level": 0,
         "skillIds": [
+          "at_warrior_passive_1",
+          "at_warrior_passive_2",
           "at_warrior_active_1",
-          "at_warrior_active_2",
-          "at_warrior_passive_1"
+          "at_warrior_active_2"
         ]
       }
     ],
@@ -184,7 +191,8 @@
       "def": 2
     },
     "passiveIds": [
-      "at_warrior_passive_1"
+      "at_warrior_passive_1",
+      "at_warrior_passive_2"
     ]
   },
   {
