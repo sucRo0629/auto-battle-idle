@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { engagedMinBodyGap } from './battleConstants.ts';
 import {
   applyCounterRetaliation,
   applyPassiveCounterRetaliation,
@@ -85,7 +86,11 @@ function counterStatus(
 describe('isCounterInTriggerRange', () => {
   it('allows melee contact when counter range is 0', () => {
     const victim = mockCombatant({ battleX: 100 });
-    const attacker = mockCombatant({ id: 'atk', isEnemy: true, battleX: 100 });
+    const attacker = mockCombatant({
+      id: 'atk',
+      isEnemy: true,
+      battleX: 100 + engagedMinBodyGap(),
+    });
     const effect = counterStatus(
       [{ kind: 'damage', amount: { kind: 'flat', flatAmount: 5 } }],
       { counterRangePx: 0 },
@@ -95,7 +100,16 @@ describe('isCounterInTriggerRange', () => {
 
   it('rejects ranged attacker when counter range is 0', () => {
     const victim = mockCombatant({ battleX: 100 });
-    const attacker = mockCombatant({ id: 'atk', isEnemy: true, battleX: 50 });
+    const attacker = mockCombatant({
+      id: 'atk',
+      isEnemy: true,
+      battleX: 200,
+      traits: {
+        rangePx: 100,
+        damageType: 'physical',
+        basicAttackVfx: { preset: 'slash' },
+      },
+    });
     const effect = counterStatus(
       [{ kind: 'damage', amount: { kind: 'flat', flatAmount: 5 } }],
       { counterRangePx: 0 },
@@ -223,7 +237,12 @@ describe('applyCounterRetaliation', () => {
       id: 'attacker',
       hp: 100,
       isEnemy: true,
-      battleX: 50,
+      battleX: 200,
+      traits: {
+        rangePx: 100,
+        damageType: 'physical',
+        basicAttackVfx: { preset: 'slash' },
+      },
     });
     const emit = vi.fn();
 
@@ -365,7 +384,12 @@ describe('applyPassiveCounterRetaliation', () => {
       id: 'attacker',
       hp: 100,
       isEnemy: true,
-      battleX: 50,
+      battleX: 200,
+      traits: {
+        rangePx: 100,
+        damageType: 'physical',
+        basicAttackVfx: { preset: 'slash' },
+      },
     });
     const emit = vi.fn();
 

@@ -2850,15 +2850,15 @@ export class SkillEditorStep {
         appendDamageIncreaseFields(
           detailGrid,
           effect.damageIncrease,
-          (damageIncrease) => {
-            patchEffect((prev) => ({ ...prev, damageIncrease }), { rerender: true });
+          (damageIncrease, options) => {
+            patchEffect((prev) => ({ ...prev, damageIncrease }), options);
           },
         );
         appendDefenseIgnoreFields(
           detailGrid,
           effect.defenseIgnore,
-          (defenseIgnore) => {
-            patchEffect((prev) => ({ ...prev, defenseIgnore }), { rerender: true });
+          (defenseIgnore, options) => {
+            patchEffect((prev) => ({ ...prev, defenseIgnore }), options);
           },
         );
         break;
@@ -2921,8 +2921,8 @@ export class SkillEditorStep {
         appendDamageIncreaseFields(
           detailGrid,
           effect.damageIncrease,
-          (damageIncrease) => {
-            patchEffect((prev) => ({ ...prev, damageIncrease }), { rerender: true });
+          (damageIncrease, options) => {
+            patchEffect((prev) => ({ ...prev, damageIncrease }), options);
           },
         );
         break;
@@ -3238,15 +3238,15 @@ export class SkillEditorStep {
         appendDamageIncreaseFields(
           detailGrid,
           effect.damageIncrease,
-          (damageIncrease) => {
-            patchEffect((prev) => ({ ...prev, damageIncrease }), { rerender: true });
+          (damageIncrease, options) => {
+            patchEffect((prev) => ({ ...prev, damageIncrease }), options);
           },
         );
         appendDefenseIgnoreFields(
           detailGrid,
           effect.defenseIgnore,
-          (defenseIgnore) => {
-            patchEffect((prev) => ({ ...prev, defenseIgnore }), { rerender: true });
+          (defenseIgnore, options) => {
+            patchEffect((prev) => ({ ...prev, defenseIgnore }), options);
           },
         );
         break;

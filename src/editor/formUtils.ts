@@ -206,8 +206,11 @@ export function createNumberInput(
     step?: number;
   },
 ): HTMLInputElement {
-  const input = createEl('input', 'editor-input') as HTMLInputElement;
-  input.type = 'number';
+  const input = createEl('input', 'editor-input editor-decimal-input') as HTMLInputElement;
+  input.type = 'text';
+  input.inputMode =
+    options?.step !== undefined && options.step < 1 ? 'decimal' : 'numeric';
+  input.autocomplete = 'off';
   const showEmpty =
     options?.emptyWhen !== undefined && value === options.emptyWhen;
   input.value = showEmpty ? '' : String(value);
@@ -215,10 +218,6 @@ export function createNumberInput(
   if (options?.field) input.dataset.field = options.field;
   if (options?.placeholder) input.placeholder = options.placeholder;
   if (options?.readonly) input.readOnly = true;
-  if (options?.min !== undefined) input.min = String(options.min);
-  if (options?.max !== undefined) input.max = String(options.max);
-  input.step =
-    options?.step !== undefined ? String(options.step) : 'any';
   const displayValue = () =>
     options?.emptyWhen !== undefined && value === options.emptyWhen
       ? ''
@@ -237,18 +236,23 @@ export function createNumberInput(
       input.value = displayValue();
       return;
     }
-    onInput(parsed);
+    let next = parsed;
+    if (options?.min !== undefined && next < options.min) next = options.min;
+    if (options?.max !== undefined && next > options.max) next = options.max;
+    onInput(next);
+    input.value =
+      options?.emptyWhen !== undefined && next === options.emptyWhen
+        ? ''
+        : String(next);
   };
-  input.addEventListener('input', () => {
-    if (options?.readonly) return;
-    const raw = input.value.trim();
-    if (raw === '') return;
-    const parsed = Number(raw);
-    if (Number.isNaN(parsed)) return;
-    onInput(parsed);
-  });
   input.addEventListener('blur', commit);
   input.addEventListener('change', commit);
+  input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      input.blur();
+    }
+  });
   return input;
 }
 

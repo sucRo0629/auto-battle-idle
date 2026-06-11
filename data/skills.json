@@ -318,7 +318,7 @@
         },
         {
           "kind": "stun",
-          "durationSec": 3
+          "durationSec": 1.5
         },
         {
           "kind": "knockback",

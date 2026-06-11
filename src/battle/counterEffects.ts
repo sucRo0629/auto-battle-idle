@@ -12,7 +12,7 @@ import {
 import {
   stripPassivesAurasFromSource,
 } from './passiveEffects.ts';
-import { battleDistance } from './skills/rangeUtils.ts';
+import { isWithinSkillRange } from './skills/rangeUtils.ts';
 import type {
   CombatantState,
   CounterResponseDef,
@@ -85,7 +85,7 @@ export function isCounterInTriggerRange(
   if (attacker.id === victim.id) return false;
   const rangePx =
     counterEffect.counterRangePx ?? victim.traits.rangePx;
-  return battleDistance(attacker, victim) <= rangePx;
+  return isWithinSkillRange(attacker, victim, rangePx);
 }
 
 function isPassiveCounterInRange(
@@ -95,7 +95,7 @@ function isPassiveCounterInRange(
 ): boolean {
   if (attacker.id === victim.id) return false;
   const rangePx = passive.counterRange ?? victim.traits.rangePx;
-  return battleDistance(attacker, victim) <= rangePx;
+  return isWithinSkillRange(attacker, victim, rangePx);
 }
 
 function emitCounterSkillEvent(

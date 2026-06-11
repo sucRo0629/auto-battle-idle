@@ -84,7 +84,10 @@ export function appendDebuffFilterCheckboxes(
 function appendDamageIncreaseConditionFields(
   parent: HTMLElement,
   condition: DamageIncreaseCondition,
-  onChange: (condition: DamageIncreaseCondition) => void,
+  onChange: (
+    condition: DamageIncreaseCondition,
+    options?: CombatFieldChangeOptions,
+  ) => void,
   onRemove: () => void,
 ): void {
   const card = createEl('div', 'editor-condition-card');
@@ -99,9 +102,9 @@ function appendDamageIncreaseConditionFields(
         })),
         (kind) => {
           if (kind === 'debuff') {
-            onChange({ kind, tags: ['def'] });
+            onChange({ kind, tags: ['def'] }, { rerender: true });
           } else {
-            onChange({ kind: 'targetHp', maxHpRatio: 0.5 });
+            onChange({ kind: 'targetHp', maxHpRatio: 0.5 }, { rerender: true });
           }
         },
       ),
@@ -111,7 +114,7 @@ function appendDamageIncreaseConditionFields(
   if (condition.kind === 'debuff') {
     card.appendChild(createEl('p', 'editor-hint', '対象デバフ（いずれか）'));
     appendDebuffFilterCheckboxes(card, condition.tags, (tags) => {
-      onChange({ ...condition, tags });
+      onChange({ ...condition, tags }, { rerender: false });
     });
     card.appendChild(
       createFieldRow(
@@ -123,10 +126,13 @@ function appendDamageIncreaseConditionFields(
             { value: 'true', label: 'はい' },
           ],
           (value) => {
-            onChange({
-              ...condition,
-              selfAppliedOnly: value === 'true' || undefined,
-            });
+            onChange(
+              {
+                ...condition,
+                selfAppliedOnly: value === 'true' || undefined,
+              },
+              { rerender: false },
+            );
           },
         ),
       ),
@@ -137,7 +143,7 @@ function appendDamageIncreaseConditionFields(
         '対象HP残り割合以下',
         createNumberInput(
           condition.maxHpRatio,
-          (maxHpRatio) => onChange({ ...condition, maxHpRatio }),
+          (maxHpRatio) => onChange({ ...condition, maxHpRatio }, { rerender: false }),
           { min: 0, max: 1, step: 0.01 },
         ),
       ),
@@ -150,10 +156,15 @@ function appendDamageIncreaseConditionFields(
   parent.appendChild(card);
 }
 
+type CombatFieldChangeOptions = { rerender?: boolean };
+
 export function appendDamageIncreaseFields(
   parent: HTMLElement,
   spec: DamageIncreaseSpec | undefined,
-  onChange: (spec: DamageIncreaseSpec | undefined) => void,
+  onChange: (
+    spec: DamageIncreaseSpec | undefined,
+    options?: CombatFieldChangeOptions,
+  ) => void,
   options?: { title?: string },
 ): void {
   const section = createEl('div', 'editor-subsection');
@@ -166,7 +177,9 @@ export function appendDamageIncreaseFields(
   enabledInput.type = 'checkbox';
   enabledInput.checked = Boolean(spec);
   enabledInput.addEventListener('change', () => {
-    onChange(enabledInput.checked ? defaultDamageIncrease() : undefined);
+    onChange(enabledInput.checked ? defaultDamageIncrease() : undefined, {
+      rerender: true,
+    });
   });
   enabledRow.appendChild(createEl('label', undefined, '有効'));
   enabledRow.appendChild(enabledInput);
@@ -182,7 +195,7 @@ export function appendDamageIncreaseFields(
       '倍率 scale',
       createNumberInput(
         spec.scale,
-        (scale) => onChange({ ...spec, scale }),
+        (scale) => onChange({ ...spec, scale }, { rerender: false }),
         { step: 0.01 },
       ),
     ),
@@ -193,10 +206,10 @@ export function appendDamageIncreaseFields(
     appendDamageIncreaseConditionFields(
       conditionsWrap,
       condition,
-      (next) => {
+      (next, changeOptions) => {
         const conditions = [...spec.conditions];
         conditions[index] = next;
-        onChange({ ...spec, conditions });
+        onChange({ ...spec, conditions }, changeOptions);
       },
       () => {
         const conditions = spec.conditions.filter((_, i) => i !== index);
@@ -204,6 +217,7 @@ export function appendDamageIncreaseFields(
           conditions.length > 0
             ? { ...spec, conditions }
             : { ...spec, conditions: [{ kind: 'debuff', tags: ['def'] }] },
+          { rerender: false },
         );
       },
     );
@@ -211,10 +225,13 @@ export function appendDamageIncreaseFields(
   section.appendChild(conditionsWrap);
   section.appendChild(
     createActionButton('増加条件を追加', 'editor-btn editor-btn-small', () => {
-      onChange({
-        ...spec,
-        conditions: [...spec.conditions, { kind: 'debuff', tags: ['def'] }],
-      });
+      onChange(
+        {
+          ...spec,
+          conditions: [...spec.conditions, { kind: 'debuff', tags: ['def'] }],
+        },
+        { rerender: false },
+      );
     }),
   );
   parent.appendChild(section);
@@ -223,7 +240,10 @@ export function appendDamageIncreaseFields(
 export function appendDefenseIgnoreFields(
   parent: HTMLElement,
   spec: DefenseIgnoreSpec | undefined,
-  onChange: (spec: DefenseIgnoreSpec | undefined) => void,
+  onChange: (
+    spec: DefenseIgnoreSpec | undefined,
+    options?: CombatFieldChangeOptions,
+  ) => void,
 ): void {
   const section = createEl('div', 'editor-subsection');
   section.appendChild(createEl('h4', 'editor-subsection-title', '防御無視'));
@@ -233,7 +253,9 @@ export function appendDefenseIgnoreFields(
   enabledInput.type = 'checkbox';
   enabledInput.checked = Boolean(spec);
   enabledInput.addEventListener('change', () => {
-    onChange(enabledInput.checked ? defaultDefenseIgnore() : undefined);
+    onChange(enabledInput.checked ? defaultDefenseIgnore() : undefined, {
+      rerender: true,
+    });
   });
   enabledRow.appendChild(createEl('label', undefined, '有効'));
   enabledRow.appendChild(enabledInput);
@@ -251,11 +273,11 @@ export function appendDefenseIgnoreFields(
   defEnableInput.checked = defEnabled;
   defEnableInput.addEventListener('change', () => {
     if (defEnableInput.checked) {
-      onChange({ ...spec, def: { mode: 'percent', amount: 0.2 } });
+      onChange({ ...spec, def: { mode: 'percent', amount: 0.2 } }, { rerender: true });
     } else {
       const next = { ...spec };
       delete next.def;
-      onChange(Object.keys(next).length > 1 ? next : undefined);
+      onChange(Object.keys(next).length > 1 ? next : undefined, { rerender: true });
     }
   });
   defEnableRow.appendChild(createEl('label', undefined, 'DEF 無視'));
@@ -273,10 +295,13 @@ export function appendDefenseIgnoreFields(
             label: DEFENSE_IGNORE_DEF_MODE_LABELS[mode],
           })),
           (mode) => {
-            onChange({
-              ...spec,
-              def: { mode: mode as 'flat' | 'percent', amount: spec.def!.amount },
-            });
+            onChange(
+              {
+                ...spec,
+                def: { mode: mode as 'flat' | 'percent', amount: spec.def!.amount },
+              },
+              { rerender: false },
+            );
           },
         ),
       ),
@@ -287,7 +312,7 @@ export function appendDefenseIgnoreFields(
         createNumberInput(
           spec.def.amount,
           (amount) => {
-            onChange({ ...spec, def: { ...spec.def!, amount } });
+            onChange({ ...spec, def: { ...spec.def!, amount } }, { rerender: false });
           },
           { step: 0.01 },
         ),
@@ -302,11 +327,11 @@ export function appendDefenseIgnoreFields(
   regEnableInput.checked = regEnabled;
   regEnableInput.addEventListener('change', () => {
     if (regEnableInput.checked) {
-      onChange({ ...spec, reg: { percent: 0.2 } });
+      onChange({ ...spec, reg: { percent: 0.2 } }, { rerender: true });
     } else {
       const next = { ...spec };
       delete next.reg;
-      onChange(next.def || next.reg ? next : undefined);
+      onChange(next.def || next.reg ? next : undefined, { rerender: true });
     }
   });
   regEnableRow.appendChild(createEl('label', undefined, '耐魔無視'));
@@ -320,7 +345,7 @@ export function appendDefenseIgnoreFields(
         createNumberInput(
           spec.reg.percent,
           (percent) => {
-            onChange({ ...spec, reg: { percent } });
+            onChange({ ...spec, reg: { percent } }, { rerender: false });
           },
           { min: 0, max: 1, step: 0.01 },
         ),
@@ -868,11 +893,11 @@ export function appendPassiveDamageIncreaseFields(
   appendDamageIncreaseFields(
     parent,
     passive.specialEffect,
-    (specialEffect) => {
+    (specialEffect, options) => {
       patchPassive((current) => {
         current.specialEffectApplyTo ??= 'damage';
         current.specialEffect = specialEffect;
-      }, { rerender: true });
+      }, options);
     },
   );
 }
@@ -885,10 +910,10 @@ export function appendPassiveDefenseIgnoreFields(
     options?: { rerender?: boolean },
   ) => void,
 ): void {
-  appendDefenseIgnoreFields(parent, passive.defenseIgnore, (defenseIgnore) => {
+  appendDefenseIgnoreFields(parent, passive.defenseIgnore, (defenseIgnore, options) => {
     patchPassive((current) => {
       current.defenseIgnore = defenseIgnore;
-    }, { rerender: true });
+    }, options);
   });
 }
 
@@ -1205,10 +1230,10 @@ export function appendPassiveSpecialEffectFields(
   appendDamageIncreaseFields(
     parent,
     passive.specialEffect,
-    (specialEffect) => {
+    (specialEffect, options) => {
       patchPassive((current) => {
         current.specialEffect = specialEffect;
-      }, { rerender: true });
+      }, options);
     },
     { title: '特効効果' },
   );

@@ -181,7 +181,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | 項目 | 挙動 |
 |------|------|
 | 付与対象 | 常に自身（`target: self`） |
-| 射程 | `battleDistance(attacker, victim) <= (counter.range ?? 持有者 traits.rangePx)`。`range: 0` は近接接触のみ（遠距離は不発） |
+| 射程 | `isWithinSkillRange(attacker, victim, counter.range ?? 持有者 traits.rangePx)`（スキル射程と同じ近接帯判定）。`range: 0` は近接接触のみ（遠距離は不発） |
 | レスポンス | `damage` / `debuff` / `dot` / `stun` / `knockback` から 1 種別以上。被攻撃 1 回で選択種別を同時適用 |
 | トリガー | 直接 `damage` および DoT tick |
 | 非トリガー | 回避・0 ダメージ・反撃ダメージ（連鎖反撃なし）・射程外 |
