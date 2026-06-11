@@ -35,7 +35,11 @@ export interface IBattleRenderer {
     targetId: string,
     vfx: SkillVfxDef,
   ): void;
-  showDamagePopup(targetId: string, amount: number): void;
+  showDamagePopup(
+    targetId: string,
+    amount: number,
+    variant?: 'damage' | 'dot',
+  ): void;
   showHealPopup(targetId: string, amount: number): void;
   showEvadePopup(targetId: string): void;
   showBlockPopup(targetId: string): void;

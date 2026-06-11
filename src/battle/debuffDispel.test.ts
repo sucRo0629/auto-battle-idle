@@ -80,4 +80,54 @@ describe('debuffDispel', () => {
     expect(target.statusEffects).toHaveLength(1);
     expect(target.statusEffects[0]!.id).toBe('short');
   });
+
+  it('removes strongest debuffs first when dispelPriority is strongest', () => {
+    const target = unit([
+      {
+        id: 'weak',
+        kind: 'debuff',
+        stat: 'def',
+        multiplier: 0.9,
+        durationSec: 10,
+        remainingSec: 10,
+      },
+      {
+        id: 'strong',
+        kind: 'debuff',
+        stat: 'atk',
+        multiplier: 0.5,
+        durationSec: 3,
+        remainingSec: 3,
+      },
+    ]);
+    expect(
+      dispelDebuffsOnTarget(target, 1, ['def', 'atk'], undefined, 'strongest'),
+    ).toBe(1);
+    expect(target.statusEffects).toHaveLength(1);
+    expect(target.statusEffects[0]!.id).toBe('weak');
+  });
+
+  it('removes attackSpeed debuffs when tagged', () => {
+    const target = unit([
+      {
+        id: 'spd',
+        kind: 'debuff',
+        stat: 'attackSpeed',
+        multiplier: 0.85,
+        durationSec: 10,
+        remainingSec: 10,
+      },
+      {
+        id: 'def',
+        kind: 'debuff',
+        stat: 'def',
+        multiplier: 0.8,
+        durationSec: 5,
+        remainingSec: 5,
+      },
+    ]);
+    expect(dispelDebuffsOnTarget(target, 0, ['attackSpeed'])).toBe(1);
+    expect(target.statusEffects).toHaveLength(1);
+    expect(target.statusEffects[0]!.id).toBe('def');
+  });
 });

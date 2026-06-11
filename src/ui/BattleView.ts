@@ -187,7 +187,11 @@ export class BattleView {
       if (event.effect === "damage" || event.effect === "dot") {
         if (event.amount !== undefined) {
           this.pushLog(`${slotLabel} → ${event.amount} dmg`);
-          this.canvas.showDamagePopup(event.targetId, event.amount);
+          this.canvas.showDamagePopup(
+            event.targetId,
+            event.amount,
+            event.effect === "dot" ? "dot" : "damage",
+          );
         }
       } else if (event.effect === "heal") {
         if (event.amount !== undefined) {

@@ -320,6 +320,9 @@ export type StatusEffectStat =
 /** デバフフィルタタグ（gameDataSchema.DEBUFF_FILTER_TAGS と同期） */
 export type DebuffFilterTag = StatusEffectStat | "dot" | "stun";
 
+/** デバフ解除の優先順位（dispelCount > 0 のとき） */
+export type DispelPriority = "longest" | "strongest";
+
 export type DamageIncreaseCondition =
   | {
       kind: "debuff";
@@ -494,6 +497,7 @@ export interface PassiveSkillDef {
   dispelTargetRule?: TargetSpec;
   dispelTags?: DebuffFilterTag[];
   dispelCount?: number;
+  dispelPriority?: DispelPriority;
   /** counter: 反撃内容 */
   counterResponses?: CounterResponseDef[];
   /** counter: 反撃発動射程（px）。未指定 = 持有者 traits.rangePx */
@@ -666,6 +670,7 @@ export interface HealSkillEffect extends SkillEffectCommon {
   durationSec?: number;
   dispelTags?: DebuffFilterTag[];
   dispelCount?: number;
+  dispelPriority?: DispelPriority;
 }
 
 export interface BuffSkillEffect extends SkillEffectCommon {
@@ -740,6 +745,7 @@ export interface DispelSkillEffect extends SkillEffectCommon {
   type: "dispel";
   dispelTags?: DebuffFilterTag[];
   dispelCount: number;
+  dispelPriority?: DispelPriority;
 }
 
 export interface BlockSkillEffect extends SkillEffectCommon {

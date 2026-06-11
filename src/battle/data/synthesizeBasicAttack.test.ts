@@ -1,9 +1,35 @@
 import { describe, expect, it } from 'vitest';
+import type { ActiveSkillDef } from '../types.ts';
 import { normalizeEntityTraits } from './entityTraits.ts';
 import {
   defaultBasicAttackId,
   synthesizeBasicAttackSkill,
 } from './synthesizeBasicAttack.ts';
+import { sanitizeBasicAttackSkillForJson } from './validateGameData.ts';
+
+describe('sanitizeBasicAttackSkillForJson', () => {
+  it('removes trait-owned fields from basic attack JSON', () => {
+    const skill: ActiveSkillDef = {
+      id: 'sp_cleric_basic_attack',
+      name: 'sp_cleric_basic_attack',
+      trigger: { kind: 'time', value: 2 },
+      vfx: { preset: 'orb' },
+      effect: [
+        {
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          type: 'damage',
+          damageType: 'magic',
+          range: 90,
+          amount: { kind: 'atkBased', atkScale: 0.5 },
+        },
+      ],
+    };
+    const sanitized = sanitizeBasicAttackSkillForJson(skill);
+    expect(sanitized.vfx).toBeUndefined();
+    expect(sanitized.effect[0]).not.toHaveProperty('damageType');
+    expect(sanitized.effect[0]).not.toHaveProperty('range');
+  });
+});
 
 describe('synthesizeBasicAttackSkill', () => {
   it('synthesizes ally basic with frontEnemy', () => {
@@ -58,6 +84,43 @@ describe('synthesizeBasicAttackSkill', () => {
       expect(effect.hitCount).toBe(2);
       expect(effect.hitDurationSec).toBe(0.2);
       expect(effect.amount.atkScale).toBe(0.5);
+    }
+  });
+
+  it('preserves heal override from JSON', () => {
+    const skill = synthesizeBasicAttackSkill({
+      entityId: 'sp_cleric',
+      isEnemy: false,
+      traits: normalizeEntityTraits({ rangePx: 50 }),
+      attackSpeedTier: 'normal',
+      jsonOverride: {
+        id: 'sp_cleric_basic_attack',
+        name: 'sp_cleric_basic_attack',
+        trigger: { kind: 'time', value: 2 },
+        effect: [
+          {
+            target: {
+              kind: 'stat',
+              side: 'ally',
+              stat: 'hp',
+              order: 'ratio',
+            },
+            type: 'heal',
+            healSubKind: 'instant',
+            amount: { kind: 'atkBased', atkScale: 0.5 },
+          },
+        ],
+      },
+    });
+    expect(skill.effect[0]?.type).toBe('heal');
+    if (skill.effect[0]?.type === 'heal') {
+      expect(skill.effect[0].target).toEqual({
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+      });
+      expect(skill.effect[0].amount?.atkScale).toBe(0.5);
     }
   });
 

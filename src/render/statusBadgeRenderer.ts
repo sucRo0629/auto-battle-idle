@@ -8,7 +8,12 @@ import { getStatusIconImage } from './StatusIconRegistry.ts';
 export const STATUS_BADGE_GAP = 0;
 
 function statusBadgeUsesTint(category: StatusDisplayCategory): boolean {
-  return category === 'atk' || category === 'def' || category === 'reg';
+  return (
+    category === 'atk' ||
+    category === 'def' ||
+    category === 'reg' ||
+    category === 'attackSpeed'
+  );
 }
 
 export function statusBadgeWidth(scale: number, iconSize: number): number {

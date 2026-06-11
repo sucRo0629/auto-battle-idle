@@ -129,8 +129,12 @@ export class BattleCanvas implements IBattleRenderer {
     this.attackEffects.spawn(actorId, targetId, vfx);
   }
 
-  showDamagePopup(targetId: string, amount: number): void {
-    this.damagePopups.spawn(targetId, amount, "damage");
+  showDamagePopup(
+    targetId: string,
+    amount: number,
+    variant: "damage" | "dot" = "damage",
+  ): void {
+    this.damagePopups.spawn(targetId, amount, variant);
   }
 
   showHealPopup(targetId: string, amount: number): void {

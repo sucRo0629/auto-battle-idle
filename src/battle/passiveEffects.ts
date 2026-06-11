@@ -709,6 +709,7 @@ export function firePeriodicPassivesForTrigger(
             passive.dispelCount ?? 0,
             passive.dispelTags,
             source.id,
+            passive.dispelPriority,
           );
         }
       }

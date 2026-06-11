@@ -25,6 +25,34 @@ function basicAttackEntry(
   };
 }
 
+describe('collectSkillsFromDrafts basic attack', () => {
+  it('strips damageType from basic attack damage effects on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'sp_cleric_basic_attack', kind: 'active' },
+        active: {
+          id: 'sp_cleric_basic_attack',
+          name: 'sp_cleric_basic_attack',
+          trigger: { kind: 'time', value: 2 },
+          effect: [
+            {
+              target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+              type: 'damage',
+              damageType: 'magic',
+              amount: { kind: 'atkBased', atkScale: 0.5 },
+            },
+          ],
+        },
+      },
+    ];
+
+    const { actives } = collectSkillsFromDrafts(entries);
+    const effect = actives[0]?.effect[0];
+    expect(effect?.type).toBe('damage');
+    expect(effect).not.toHaveProperty('damageType');
+  });
+});
+
 describe('collectSkillsFromDrafts heal HoT', () => {
   it('keeps healSubKind hot and fills default durationSec on save', () => {
     const entries: SkillDraftEntry[] = [

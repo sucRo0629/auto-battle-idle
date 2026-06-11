@@ -7,6 +7,7 @@ import {
   BUFF_SUB_KIND_LABELS,
   DEBUFF_FILTER_TAG_LABELS,
   DEBUFF_SUB_KIND_LABELS,
+  DISPEL_PRIORITY_LABELS,
   HEAL_SUB_KIND_LABELS,
   SPECIAL_EFFECT_APPLY_TO_LABELS,
   TARGET_SHAPE_LABELS,
@@ -23,6 +24,7 @@ import type {
   ResourceAmountSpec,
   SkillEffectDef,
   SkillTriggerKind,
+  DispelPriority,
   StatusEffectStat,
   TargetSpec,
 } from "../battle/types.ts";
@@ -63,6 +65,13 @@ function formatTarget(
   fallback: TargetSpec
 ): string {
   return formatTargetLabel(spec ?? fallback);
+}
+
+function formatDispelPriorityLabel(
+  priority: DispelPriority | undefined,
+): string {
+  if (!priority || priority === "longest") return "";
+  return ` ${DISPEL_PRIORITY_LABELS[priority]}優先`;
 }
 
 function formatPercent(value: number): string {
@@ -319,7 +328,7 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
             ? effect.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join("・")
             : "全デバフ";
         extras.push(
-          `${HEAL_SUB_KIND_LABELS.dispel} ${tags} ×${effect.dispelCount ?? 0}`
+          `${HEAL_SUB_KIND_LABELS.dispel} ${tags} ×${effect.dispelCount ?? 0}${formatDispelPriorityLabel(effect.dispelPriority)}`
         );
       } else {
         extras.push(
@@ -438,7 +447,9 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
         effect.dispelTags && effect.dispelTags.length > 0
           ? effect.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join("・")
           : "全デバフ";
-      extras.push(`${tags} ×${effect.dispelCount}`);
+      extras.push(
+        `${tags} ×${effect.dispelCount}${formatDispelPriorityLabel(effect.dispelPriority)}`
+      );
       break;
     }
     case "block":
@@ -552,7 +563,7 @@ function formatPassiveEffect(
             : `${def.intervalSec ?? 0}s毎`;
       return `定期デバフ解除 ${triggerLabel}（${tags} ×${
         def.dispelCount ?? 1
-      }）${target}`;
+      }${formatDispelPriorityLabel(def.dispelPriority)}）${target}`;
     }
     case "damageTakenToHeal":
       return `被ダメの ${formatPercent(def.ratio ?? 0)} を即時回復`;

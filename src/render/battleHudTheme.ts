@@ -45,6 +45,8 @@ export interface BattleHudTheme {
   popupFontFamily: string;
   popupDamageFill: string;
   popupDamageStroke: string;
+  popupDotFill: string;
+  popupDotStroke: string;
   popupHealFill: string;
   popupHealStroke: string;
   sceneSkyFill: string;
@@ -100,6 +102,7 @@ export interface BattleHudTheme {
   statusIconAtk: string;
   statusIconDef: string;
   statusIconReg: string;
+  statusIconAttackSpeed: string;
   statusIconDamageReduction: string;
   statusIconDamageIncrease: string;
   statusIconHot: string;
@@ -195,7 +198,7 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     statusDebuffColor: readString(style, '--status-debuff-color', '#a855f7'),
     statusBadgeIconSize: readNumber(style, '--status-badge-icon-size', 8),
     statusBadgeOverlap: readNumber(style, '--status-badge-overlap', 0),
-    popupFontSize: readNumber(style, '--popup-font-size', 18),
+    popupFontSize: readNumber(style, '--popup-font-size', 20),
     popupOutlineWidth: readNumber(style, '--popup-outline-width', 1),
     popupFontFamily: readString(
       style,
@@ -204,6 +207,8 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     ),
     popupDamageFill: readString(style, '--popup-damage-fill', '#ffffff'),
     popupDamageStroke: readString(style, '--popup-damage-stroke', '#000000'),
+    popupDotFill: readString(style, '--popup-dot-fill', '#ff3333'),
+    popupDotStroke: readString(style, '--popup-dot-stroke', '#000000'),
     popupHealFill: readString(style, '--popup-heal-fill', '#2ecc71'),
     popupHealStroke: readString(style, '--popup-heal-stroke', '#1a3d24'),
     sceneSkyFill: readString(style, '--scene-sky-fill', '#87ceeb'),
@@ -287,6 +292,11 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     statusIconAtk: readString(style, '--status-icon-atk', '#c0392b'),
     statusIconDef: readString(style, '--status-icon-def', '#2980b9'),
     statusIconReg: readString(style, '--status-icon-reg', '#9b59b6'),
+    statusIconAttackSpeed: readString(
+      style,
+      '--status-icon-attack-speed',
+      '#1abc9c',
+    ),
     statusIconDamageReduction: readString(
       style,
       '--status-icon-damage-reduction',
@@ -350,7 +360,7 @@ export function resolveStatusIconFallbackColor(
     atk: theme.statusIconAtk,
     def: theme.statusIconDef,
     reg: theme.statusIconReg,
-    attackSpeed: theme.statusIconAtk,
+    attackSpeed: theme.statusIconAttackSpeed,
     damageReduction: theme.statusIconDamageReduction,
     damageIncrease: theme.statusIconDamageIncrease,
     hot: theme.statusIconHot,

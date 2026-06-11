@@ -132,7 +132,6 @@
         "skillIds": [
           "df_duelist_passive_1",
           "df_duelist_passive_2",
-          "df_duelist_passive_4",
           "df_duelist_active_1",
           "df_duelist_active_2"
         ]
@@ -140,13 +139,14 @@
       {
         "level": 10,
         "skillIds": [
-          "df_duelist_passive_3",
+          "df_duelist_passive_4",
           "df_duelist_active_3"
         ]
       },
       {
         "level": 20,
         "skillIds": [
+          "df_duelist_passive_3",
           "df_duelist_active_4"
         ]
       }
@@ -513,8 +513,8 @@
       {
         "level": 0,
         "skillIds": [
-          "sp_cleric_active_1",
-          "sp_cleric_active_2"
+          "sp_cleric_passive_1",
+          "sp_cleric_active_1"
         ]
       }
     ],
@@ -545,14 +545,16 @@
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "sp_abjurer_basic_attack",
     "passiveIds": [
-      "passive_heal_barrier"
+      "sp_abjurer_passive_1",
+      "sp_abjurer_passive_2"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "sp_abjurer_active_1",
-          "sp_abjurer_active_2"
+          "sp_abjurer_passive_1",
+          "sp_abjurer_passive_2",
+          "sp_abjurer_active_1"
         ]
       }
     ],
@@ -580,12 +582,13 @@
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "sp_alchemist_basic_attack",
     "passiveIds": [
-      "passive_alchemist_hot"
+      "sp_alchemist_passive_1"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
+          "sp_alchemist_passive_1",
           "sp_alchemist_active_1",
           "sp_alchemist_active_2"
         ]

@@ -1386,6 +1386,7 @@ export class BattleEngine {
             passive.dispelCount ?? 0,
             passive.dispelTags,
             actor.id,
+            passive.dispelPriority,
           );
         }
       }

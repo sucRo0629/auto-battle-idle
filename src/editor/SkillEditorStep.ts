@@ -32,7 +32,10 @@ import {
   TARGET_SHAPE_OPTIONS,
   VFX_PRESET_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
-import { normalizePassiveSkillForEditor } from '../battle/data/validateGameData.ts';
+import {
+  normalizePassiveSkillForEditor,
+  stripBasicAttackTraitFieldsFromEffect,
+} from '../battle/data/validateGameData.ts';
 import {
   activeEffectHasAmount,
   getActiveEffectAmountSpec,
@@ -662,6 +665,9 @@ function normalizeLegacyEffect(effect: SkillEffectDef): SkillEffectDef {
       healSubKind: 'dispel',
       dispelTags: effect.dispelTags,
       dispelCount: effect.dispelCount,
+      ...(effect.dispelPriority
+        ? { dispelPriority: effect.dispelPriority }
+        : {}),
     } as SkillEffectDef;
   }
   if (effect.type === 'barrier') {
@@ -725,6 +731,7 @@ function applyActiveHealSubKindChange(
       delete next.durationSec;
       delete next.dispelTags;
       delete next.dispelCount;
+      delete next.dispelPriority;
       return next;
     }
   }
@@ -1093,6 +1100,10 @@ function appendEffectPresentationFields(
       }),
     );
   }
+}
+
+function defaultBasicAttackEffect(type: SkillEffectKind): SkillEffectDef {
+  return stripBasicAttackTraitFieldsFromEffect(defaultEffect(type));
 }
 
 function defaultEffect(type: SkillEffectKind): SkillEffectDef {
@@ -2423,7 +2434,9 @@ export class SkillEditorStep {
     effectsSection.appendChild(
       createButton('+ 効果を追加', 'editor-btn editor-btn-small', () => {
         setActive((current) => {
-          current.effect.push(defaultEffect('damage'));
+          current.effect.push(
+            idReadonly ? defaultBasicAttackEffect('damage') : defaultEffect('damage'),
+          );
         }, { rerender: true });
       }),
     );
@@ -2551,9 +2564,12 @@ export class SkillEditorStep {
             label: EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS[value],
           })),
           (category) =>
-            patchEffect(defaultEffect(categoryToEffectType(category)), {
-              rerender: true,
-            }),
+            patchEffect(
+              isBasicAttack
+                ? defaultBasicAttackEffect(categoryToEffectType(category))
+                : defaultEffect(categoryToEffectType(category)),
+              { rerender: true },
+            ),
         ),
       ),
     );
@@ -2959,17 +2975,27 @@ export class SkillEditorStep {
               ...(healEffect as Extract<SkillEffectDef, { type: 'heal' }>),
               type: 'dispel',
               dispelCount: healEffect.dispelCount ?? 0,
+              dispelPriority: healEffect.dispelPriority,
             },
             (next) => {
-              if (typeof next === 'function') return;
-              patchEffect(
-                (prev) =>
-                  ({
-                    ...prev,
-                    dispelTags: (next as Extract<SkillEffectDef, { type: 'dispel' }>).dispelTags,
-                    dispelCount: (next as Extract<SkillEffectDef, { type: 'dispel' }>).dispelCount,
-                  }) as SkillEffectDef,
-              );
+              patchEffect((prev) => {
+                if (prev.type !== 'heal') return prev;
+                const dispelView = {
+                  ...prev,
+                  type: 'dispel' as const,
+                  dispelCount: prev.dispelCount ?? 0,
+                  dispelPriority: prev.dispelPriority,
+                };
+                const updated =
+                  typeof next === 'function' ? next(dispelView) : next;
+                if (updated.type !== 'dispel') return prev;
+                return {
+                  ...prev,
+                  dispelTags: updated.dispelTags,
+                  dispelCount: updated.dispelCount,
+                  dispelPriority: updated.dispelPriority,
+                };
+              });
             },
           );
           break;

@@ -85,11 +85,13 @@
   --hud-icon-frame: #1a1a1a;
   --status-buff-color: #e6b422;
   --status-debuff-color: #a855f7;
-  --popup-font-size: 18;
-  --popup-outline-width: 1;
+  --popup-font-size: 32;
+  --popup-outline-width: 2;
   --popup-font-family: 'Segoe UI', system-ui, sans-serif;
   --popup-damage-fill: #ffffff;
   --popup-damage-stroke: #000000;
+  --popup-dot-fill: #ff3333;
+  --popup-dot-stroke: #000000;
   --popup-heal-fill: #40ff90;
   --popup-heal-stroke: #000000;
   --scene-sky-fill: #87ceeb;
@@ -147,6 +149,7 @@
   --status-icon-atk: #c0392b;
   --status-icon-def: #2980b9;
   --status-icon-reg: #9b59b6;
+  --status-icon-attack-speed: #1abc9c;
   --status-icon-damage-reduction: #27ae60;
   --status-icon-damage-increase: #d35400;
   --status-icon-hot: #27ae60;

@@ -33,6 +33,7 @@ import type {
   TargetShape,
   TargetSpec,
   DebuffFilterTag,
+  DispelPriority,
   DamageIncreaseCondition,
   CounterResponseDef,
   CounterResponseKind,
@@ -75,6 +76,7 @@ import {
   VALID_REG_VALUES,
   VFX_PRESETS,
   DEBUFF_FILTER_TAG_OPTIONS,
+  DISPEL_PRIORITIES,
   BUFF_FILTER_TAG_OPTIONS,
   DAMAGE_INCREASE_CONDITION_KINDS,
   DEFENSE_IGNORE_DEF_MODES,
@@ -114,6 +116,7 @@ const GROWTH_TIERS = new Set<GrowthTier>([1, 2, 3]);
 const GROWTH_PRESET_KEYS = new Set<GrowthPresetKey>(['attacker', 'caster']);
 const JOB_TIERS_SET = new Set<number>(JOB_TIERS);
 const DEBUFF_FILTER_TAGS_SET = new Set<string>(DEBUFF_FILTER_TAG_OPTIONS);
+const DISPEL_PRIORITIES_SET = new Set<string>(DISPEL_PRIORITIES);
 const DAMAGE_INCREASE_CONDITION_KINDS_SET = new Set<string>(
   DAMAGE_INCREASE_CONDITION_KINDS,
 );
@@ -875,6 +878,21 @@ function parseSkillVfx(
   };
 }
 
+function parseDispelPriority(
+  raw: unknown,
+  context: string,
+): DispelPriority | undefined {
+  if (raw === undefined) return undefined;
+  if (typeof raw !== 'string' || !DISPEL_PRIORITIES_SET.has(raw)) {
+    invalidField(
+      context,
+      'dispelPriority',
+      `must be one of ${[...DISPEL_PRIORITIES_SET].join(', ')}`,
+    );
+  }
+  return raw as DispelPriority;
+}
+
 function parseDebuffFilterTags(
   raw: unknown,
   context: string,
@@ -1367,6 +1385,9 @@ function normalizeSkillEffect(effect: SkillEffectDef | LegacyHotSkillEffect): Sk
       healSubKind: 'dispel',
       dispelCount: effect.dispelCount,
       ...(effect.dispelTags ? { dispelTags: effect.dispelTags } : {}),
+      ...(effect.dispelPriority
+        ? { dispelPriority: effect.dispelPriority }
+        : {}),
     };
   }
   if (effect.type === 'barrier') {
@@ -1510,6 +1531,10 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         `${context}.dispelTags`,
         false,
       );
+      const dispelPriority = parseDispelPriority(
+        obj.dispelPriority,
+        `${context}.dispelPriority`,
+      );
       return normalizeSkillEffect({
         target,
         ...targetShapeFields,
@@ -1518,6 +1543,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         healSubKind,
         dispelCount,
         ...(dispelTags !== undefined ? { dispelTags } : {}),
+        ...(dispelPriority !== undefined ? { dispelPriority } : {}),
         ...sequenceTiming,
         ...presentation,
         ...(range !== undefined ? { range } : {}),
@@ -1746,6 +1772,10 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       `${context}.dispelTags`,
       false,
     );
+    const dispelPriority = parseDispelPriority(
+      obj.dispelPriority,
+      `${context}.dispelPriority`,
+    );
     return normalizeSkillEffect({
       target,
       ...targetShapeFields,
@@ -1753,6 +1783,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       type: 'dispel',
       dispelCount,
       ...(dispelTags !== undefined ? { dispelTags } : {}),
+      ...(dispelPriority !== undefined ? { dispelPriority } : {}),
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
@@ -2202,6 +2233,10 @@ function requirePassiveEffectParams(
         `${context}.dispelTags`,
         false,
       );
+      const dispelPriority = parseDispelPriority(
+        obj.dispelPriority,
+        `${context}.dispelPriority`,
+      );
       return {
         ...base,
         ...parsePassivePeriodicTriggerFields(obj, context, {
@@ -2213,6 +2248,7 @@ function requirePassiveEffectParams(
         ),
         dispelCount,
         ...(dispelTags !== undefined ? { dispelTags } : {}),
+        ...(dispelPriority !== undefined ? { dispelPriority } : {}),
       };
     }
     case 'heal': {
@@ -2544,6 +2580,27 @@ function isBasicAttackSkillId(skillId: string, entityIds: Set<string>): boolean 
     if (skillId === defaultBasicAttackId(entityId)) return true;
   }
   return false;
+}
+
+/** 通常攻撃 JSON から traits 由来のフィールドを除去（エディタ保存・ロード用） */
+export function stripBasicAttackTraitFieldsFromEffect(
+  effect: SkillEffectDef,
+): SkillEffectDef {
+  const next = { ...effect };
+  delete (next as { damageType?: unknown }).damageType;
+  delete (next as { range?: unknown }).range;
+  delete (next as { vfx?: unknown }).vfx;
+  return next;
+}
+
+export function sanitizeBasicAttackSkillForJson(
+  skill: ActiveSkillDef,
+): ActiveSkillDef {
+  const { vfx: _vfx, ...rest } = skill;
+  return {
+    ...rest,
+    effect: skill.effect.map(stripBasicAttackTraitFieldsFromEffect),
+  };
 }
 
 function validateBasicAttackJsonOverride(
@@ -3192,9 +3249,11 @@ function validateReferences(
     ...classes.map((cls) => cls.id),
     ...enemies.map((enemy) => enemy.id),
   ]);
-  for (const skill of actives) {
+  for (let i = 0; i < actives.length; i++) {
+    const skill = actives[i]!;
     if (!isBasicAttackSkillId(skill.id, entityIds)) continue;
-    validateBasicAttackJsonOverride(skill, `actives id=${skill.id}`);
+    actives[i] = sanitizeBasicAttackSkillForJson(skill);
+    validateBasicAttackJsonOverride(actives[i]!, `actives id=${skill.id}`);
   }
 
   for (const stage of stages) {

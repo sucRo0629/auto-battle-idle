@@ -58,7 +58,7 @@ export function synthesizeBasicAttackSkill(params: {
   const primaryEffect =
     overrideEffect?.type === 'damage'
       ? { ...overrideEffect, amount }
-      : synthesizedDamageEffect(amount);
+      : overrideEffect ?? synthesizedDamageEffect(amount);
 
   const merged: ActiveSkillDef = {
     ...synthesized,

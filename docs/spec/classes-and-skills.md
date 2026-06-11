@@ -271,10 +271,11 @@ interface CharacterBuild {
 
 ### デバフ解除（`dispel` effect / `periodicDispel` passive）
 
-| フィールド    | 説明                                                     |
-| ------------- | -------------------------------------------------------- |
-| `dispelCount` | `0` = 対象タグすべて、`N>0` = `remainingSec` 降順で N 件 |
-| `dispelTags`  | 未指定 = 全デバフタグ                                    |
+| フィールド        | 説明                                                                                          |
+| ----------------- | --------------------------------------------------------------------------------------------- |
+| `dispelCount`     | `0` = 対象タグすべて、`N>0` = 優先度に従い N 件                                             |
+| `dispelTags`      | 未指定 = 全デバフタグ（`atk` / `def` / `reg` / `damageTaken` / `attackSpeed` / `dot` / `stun`） |
+| `dispelPriority`  | 未指定 = `longest`（最長）。`strongest` = 効果量最大を優先                                    |
 
 ### ブロック / 回避（`buff` effect、`buffSubKind`）
 

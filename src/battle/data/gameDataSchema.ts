@@ -10,6 +10,7 @@ import type {
   BuffFilterTag,
   BuffTargetKind,
   DebuffFilterTag,
+  DispelPriority,
   DamageIncreaseCondition,
   HealSubKind,
   PassiveEffectKind,
@@ -476,9 +477,20 @@ export const DEBUFF_FILTER_TAGS = [
   { id: "def" as const, label: "DEFデバフ" },
   { id: "reg" as const, label: "耐魔デバフ" },
   { id: "damageTaken" as const, label: "被ダメデバフ" },
+  { id: "attackSpeed" as const, label: "SPDデバフ" },
   { id: "dot" as const, label: "DoT" },
   { id: "stun" as const, label: "スタン" },
 ] as const satisfies readonly { id: DebuffFilterTag; label: string }[];
+
+export const DISPEL_PRIORITIES = [
+  "longest",
+  "strongest",
+] as const satisfies readonly DispelPriority[];
+
+export const DISPEL_PRIORITY_LABELS: Record<DispelPriority, string> = {
+  longest: "最長",
+  strongest: "最大",
+};
 
 export const DEBUFF_FILTER_TAG_OPTIONS: DebuffFilterTag[] =
   DEBUFF_FILTER_TAGS.map((entry) => entry.id);

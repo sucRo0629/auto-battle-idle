@@ -10,7 +10,13 @@ import type {
   StatusEffectStat,
 } from './types.ts';
 
-const STAT_TAGS = new Set<StatusEffectStat>(['atk', 'def', 'reg', 'damageTaken']);
+const STAT_TAGS = new Set<StatusEffectStat>([
+  'atk',
+  'def',
+  'reg',
+  'damageTaken',
+  'attackSpeed',
+]);
 
 export function isDebuffFilterTag(value: string): value is DebuffFilterTag {
   return (DEBUFF_FILTER_TAG_OPTIONS as readonly string[]).includes(value);

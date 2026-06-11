@@ -3,6 +3,8 @@ import {
   DAMAGE_INCREASE_CONDITION_KIND_LABELS,
   DAMAGE_INCREASE_CONDITION_KINDS,
   DEBUFF_FILTER_TAGS,
+  DISPEL_PRIORITIES,
+  DISPEL_PRIORITY_LABELS,
   DEFENSE_IGNORE_DEF_MODE_LABELS,
   DEFENSE_IGNORE_DEF_MODES,
   HEAL_SUB_KINDS,
@@ -30,6 +32,7 @@ import type {
   DamageIncreaseCondition,
   DamageIncreaseSpec,
   DebuffFilterTag,
+  DispelPriority,
   DefenseIgnoreSpec,
   PassiveSkillDef,
   ResourceAmountSpec,
@@ -378,6 +381,29 @@ export function appendDispelEffectFields(
       ),
     ),
   );
+  parent.appendChild(
+    createFieldRow(
+      '解除優先度',
+      createSelect(
+        effect.dispelPriority ?? 'longest',
+        DISPEL_PRIORITIES.map((value) => ({
+          value,
+          label: DISPEL_PRIORITY_LABELS[value],
+        })),
+        (dispelPriority: DispelPriority) => {
+          patchEffect((prev) =>
+            prev.type === 'dispel'
+              ? {
+                  ...prev,
+                  dispelPriority:
+                    dispelPriority === 'longest' ? undefined : dispelPriority,
+                }
+              : prev,
+          );
+        },
+      ),
+    ),
+  );
   parent.appendChild(createEl('p', 'editor-hint', '解除対象デバフ（未選択=すべて）'));
   appendDebuffFilterCheckboxes(
     parent,
@@ -629,6 +655,24 @@ export function appendPassiveDispelFields(
           });
         },
         { min: 0, step: 1 },
+      ),
+    ),
+  );
+  parent.appendChild(
+    createFieldRow(
+      '解除優先度',
+      createSelect(
+        passive.dispelPriority ?? 'longest',
+        DISPEL_PRIORITIES.map((value) => ({
+          value,
+          label: DISPEL_PRIORITY_LABELS[value],
+        })),
+        (dispelPriority: DispelPriority) => {
+          patchPassive((current) => {
+            current.dispelPriority =
+              dispelPriority === 'longest' ? undefined : dispelPriority;
+          });
+        },
       ),
     ),
   );

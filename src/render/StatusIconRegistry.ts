@@ -1,6 +1,7 @@
 import atkIconUrl from "../assets/status-icons/atk.png";
 import defIconUrl from "../assets/status-icons/def.png";
 import regIconUrl from "../assets/status-icons/reg.png";
+import attackSpeedIconUrl from "../assets/status-icons/attackSpeed.png";
 import damageReductionIconUrl from "../assets/status-icons/damageReduction.png";
 import damageIncreaseIconUrl from "../assets/status-icons/damageIncrease.png";
 import hotIconUrl from "../assets/status-icons/hot.png";
@@ -18,6 +19,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   atk: atkIconUrl,
   def: defIconUrl,
   reg: regIconUrl,
+  attackSpeed: attackSpeedIconUrl,
   damageReduction: damageReductionIconUrl,
   damageIncrease: damageIncreaseIconUrl,
   hot: hotIconUrl,

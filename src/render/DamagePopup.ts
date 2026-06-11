@@ -4,24 +4,34 @@ import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
 
 const POPUP_DURATION_MS = 800;
 const FADE_IN_END = 0.15;
-const FADE_OUT_START = 0.5;
-const ZOOM_IN_END = 0.35;
-const START_SCALE = 0.4;
+const ZOOM_IN_END = 0.2;
+/** 拡大フェーズの 5 倍の長さで縮小する */
+const ZOOM_OUT_END = ZOOM_IN_END * 5;
+const START_SCALE = 0.3;
 const END_SCALE = 1;
-const ORIGIN_Y_JITTER = 16;
+const ORIGIN_JITTER_X = 20;
+const ORIGIN_JITTER_Y = 20;
+const DOT_FALL_DELAY_MIN_MS = 80;
+const DOT_FALL_DELAY_MAX_MS = 240;
+const DOT_FALL_DISTANCE = 52;
 
-type PopupKind = "damage" | "heal";
+type PopupKind = "damage" | "dot" | "heal";
 
 function easeOutCubic(t: number): number {
   return 1 - (1 - t) ** 3;
+}
+
+function easeInQuad(t: number): number {
+  return t * t;
 }
 
 function popupAlpha(progress: number): number {
   if (progress < FADE_IN_END) {
     return progress / FADE_IN_END;
   }
-  if (progress > FADE_OUT_START) {
-    return 1 - (progress - FADE_OUT_START) / (1 - FADE_OUT_START);
+  if (progress >= ZOOM_IN_END) {
+    const t = Math.min(1, (progress - ZOOM_IN_END) / ZOOM_OUT_END);
+    return 1 - easeInQuad(t);
   }
   return 1;
 }
@@ -31,11 +41,24 @@ function popupScale(progress: number): number {
     const t = easeOutCubic(progress / ZOOM_IN_END);
     return START_SCALE + t * (END_SCALE - START_SCALE);
   }
-  if (progress > FADE_OUT_START) {
-    const t = (progress - FADE_OUT_START) / (1 - FADE_OUT_START);
-    return END_SCALE + t * 0.15;
+  const zoomOutEnd = ZOOM_IN_END + ZOOM_OUT_END;
+  if (progress < zoomOutEnd) {
+    const t = easeOutCubic((progress - ZOOM_IN_END) / ZOOM_OUT_END);
+    return END_SCALE + t * (START_SCALE - END_SCALE);
   }
-  return END_SCALE;
+  return START_SCALE;
+}
+
+function dotFallOffsetY(
+  elapsedMs: number,
+  delayMs: number,
+  speedFactor: number
+): number {
+  const fallElapsed = elapsedMs - delayMs;
+  if (fallElapsed <= 0) return 0;
+  const fallDuration = Math.max(1, POPUP_DURATION_MS - delayMs);
+  const progress = Math.min(1, fallElapsed / fallDuration);
+  return easeInQuad(progress) * DOT_FALL_DISTANCE * speedFactor;
 }
 
 interface PopupEntry {
@@ -43,7 +66,10 @@ interface PopupEntry {
   amount: number;
   kind: PopupKind;
   elapsedMs: number;
+  offsetX: number;
   offsetY: number;
+  dotFallDelayMs: number;
+  dotFallSpeed: number;
 }
 
 export class DamagePopupManager {
@@ -55,7 +81,14 @@ export class DamagePopupManager {
       amount,
       kind,
       elapsedMs: 0,
-      offsetY: (Math.random() - 0.5) * ORIGIN_Y_JITTER,
+      offsetX: (Math.random() - 0.5) * ORIGIN_JITTER_X,
+      offsetY: (Math.random() - 0.5) * ORIGIN_JITTER_Y,
+      dotFallDelayMs:
+        kind === "dot"
+          ? DOT_FALL_DELAY_MIN_MS +
+            Math.random() * (DOT_FALL_DELAY_MAX_MS - DOT_FALL_DELAY_MIN_MS)
+          : 0,
+      dotFallSpeed: kind === "dot" ? 0.75 + Math.random() * 0.5 : 1,
     });
   }
 
@@ -71,7 +104,7 @@ export class DamagePopupManager {
     layouts: CombatantLayout[],
     spriteSize: number,
     scale: number,
-    theme: BattleHudTheme,
+    theme: BattleHudTheme
   ): void {
     for (const popup of this.popups) {
       const layout = layouts.find((l) => l.id === popup.targetId);
@@ -81,16 +114,30 @@ export class DamagePopupManager {
       const alpha = popupAlpha(progress);
       const popupScaleValue = popupScale(progress);
       const bob = getPlaceholderSpriteYOffset(layout, scale);
-      const centerX = layout.x + spriteSize / 2;
-      const centerY = layout.y + bob + spriteSize / 2 + popup.offsetY;
+      const fallY =
+        popup.kind === "dot"
+          ? dotFallOffsetY(
+              popup.elapsedMs,
+              popup.dotFallDelayMs,
+              popup.dotFallSpeed
+            )
+          : 0;
+      const centerX = layout.x + spriteSize / 2 + popup.offsetX;
+      const centerY = layout.y + bob + spriteSize / 2 + popup.offsetY + fallY;
 
       const text =
         popup.kind === "heal" ? `${popup.amount}` : String(popup.amount);
       const fill =
-        popup.kind === "heal" ? theme.popupHealFill : theme.popupDamageFill;
+        popup.kind === "heal"
+          ? theme.popupHealFill
+          : popup.kind === "dot"
+          ? theme.popupDotFill
+          : theme.popupDamageFill;
       const stroke =
         popup.kind === "heal"
           ? theme.popupHealStroke
+          : popup.kind === "dot"
+          ? theme.popupDotStroke
           : theme.popupDamageStroke;
       ctx.save();
       ctx.translate(centerX, centerY);

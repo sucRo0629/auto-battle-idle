@@ -500,6 +500,7 @@ export class SkillExecutor {
           effectDef.dispelCount ?? 0,
           effectDef.dispelTags,
           actor.id,
+          effectDef.dispelPriority,
         );
         if (removed <= 0) return false;
         this.emit({
@@ -873,6 +874,7 @@ export class SkillExecutor {
         effectDef.dispelCount,
         effectDef.dispelTags,
         actor.id,
+        effectDef.dispelPriority,
       );
       if (removed <= 0) return false;
       this.emit({

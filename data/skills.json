@@ -318,7 +318,7 @@
         },
         {
           "kind": "stun",
-          "durationSec": 1.5
+          "durationSec": 1
         },
         {
           "kind": "knockback",
@@ -440,6 +440,87 @@
           "mode": "percent",
           "amount": 0.2
         }
+      }
+    },
+    {
+      "id": "sp_abjurer_passive_1",
+      "name": "備える系",
+      "effect": "buff",
+      "barrierScale": 0.5,
+      "buffSubKind": "barrier",
+      "buffTargetRule": {
+        "kind": "stat",
+        "side": "ally",
+        "stat": "hp",
+        "order": "highest"
+      },
+      "buffStat": "atk",
+      "buffMultiplier": 1.2,
+      "barrierAmount": {
+        "kind": "atkBased",
+        "atkScale": 1
+      },
+      "periodicTrigger": "stageStart"
+    },
+    {
+      "id": "sp_abjurer_passive_2",
+      "name": "sp_abjurer_passive_2",
+      "effect": "excessHealToBarrier",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "healSubKind": "hot",
+      "hotTargetRule": {
+        "kind": "self"
+      },
+      "hotAmount": {
+        "kind": "atkBased",
+        "atkScale": 0.05
+      },
+      "periodicTrigger": "interval",
+      "intervalSec": 5,
+      "hotDurationSec": 0,
+      "specialEffectApplyTo": "damage",
+      "specialEffect": {
+        "scale": 1.2,
+        "conditions": [
+          {
+            "kind": "debuff",
+            "tags": [
+              "def"
+            ]
+          }
+        ]
+      },
+      "buffSubKind": "stat",
+      "buffTargetRule": {
+        "kind": "stat",
+        "side": "ally",
+        "stat": "hp",
+        "order": "highest"
+      },
+      "buffStat": "damageTaken",
+      "buffMultiplier": 0.95,
+      "barrierScale": 1.5,
+      "excessHealSources": [
+        "outgoing",
+        "incoming"
+      ]
+    },
+    {
+      "id": "sp_alchemist_passive_1",
+      "name": "薬草の香り",
+      "effect": "heal",
+      "healSubKind": "hot",
+      "hotTargetRule": {
+        "kind": "all",
+        "side": "ally"
+      },
+      "hotAmount": {
+        "kind": "percentMaxHp",
+        "percentOfMaxHp": 0.005
       }
     }
   ],
@@ -665,8 +746,8 @@
       "id": "df_duelist_active_2",
       "name": "体力温存",
       "trigger": {
-        "kind": "time",
-        "value": 12
+        "kind": "hitsTaken",
+        "value": 10
       },
       "effect": [
         {
@@ -678,7 +759,7 @@
           "buffStat": "atk",
           "buffMultiplier": 1.2,
           "buffDurationSec": 5,
-          "ratio": 0.05
+          "ratio": 0.02
         },
         {
           "target": {
@@ -754,14 +835,43 @@
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 2.2
+            "atkScale": 1.15
           },
           "targetShape": "single",
           "target": {
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
+          },
+          "damageIncrease": {
+            "scale": 1.2,
+            "conditions": [
+              {
+                "kind": "debuff",
+                "tags": [
+                  "dot"
+                ]
+              }
+            ]
           }
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "debuff",
+          "debuffSubKind": "dot",
+          "debuffStat": "def",
+          "debuffMultiplier": 0.8,
+          "debuffDurationSec": 5,
+          "durationSec": 20,
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.05
+          },
+          "damageType": "physical"
         }
       ]
     },
@@ -1287,24 +1397,22 @@
       "name": "癒しの光",
       "trigger": {
         "kind": "time",
-        "value": 6
+        "value": 5
       },
       "effect": [
         {
           "type": "heal",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1
-          },
-          "vfx": {
-            "preset": "orb"
+            "atkScale": 1.1
           },
           "target": {
             "kind": "stat",
             "side": "ally",
             "stat": "hp",
             "order": "ratio"
-          }
+          },
+          "healSubKind": "instant"
         },
         {
           "target": {
@@ -1324,7 +1432,8 @@
       ],
       "vfx": {
         "preset": "healRise"
-      }
+      },
+      "useDurationSec": 0.3
     },
     {
       "id": "sp_cleric_active_2",
@@ -1369,17 +1478,31 @@
     },
     {
       "id": "sp_abjurer_active_1",
-      "name": "結界",
+      "name": "結界（仮",
       "trigger": {
         "kind": "time",
-        "value": 9
+        "value": 5
       },
       "effect": [
+        {
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
+          },
+          "type": "heal",
+          "healSubKind": "instant",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.7
+          }
+        },
         {
           "type": "buff",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.5
+            "atkScale": 1.3
           },
           "target": {
             "kind": "stat",
@@ -1389,7 +1512,11 @@
           },
           "buffSubKind": "barrier"
         }
-      ]
+      ],
+      "useDurationSec": 0.3,
+      "vfx": {
+        "preset": "orb"
+      }
     },
     {
       "id": "sp_abjurer_active_2",
@@ -1409,21 +1536,60 @@
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
-          }
+          },
+          "debuffSubKind": "stat"
         }
       ]
     },
     {
       "id": "sp_alchemist_active_1",
-      "name": "攻性薬",
+      "name": "毒霧",
       "trigger": {
         "kind": "time",
-        "value": 9
+        "value": 8
+      },
+      "effect": [
+        {
+          "type": "debuff",
+          "debuffStat": "attackSpeed",
+          "debuffMultiplier": 0.85,
+          "debuffDurationSec": 10,
+          "targetShape": "aoe",
+          "aoeRadiusPx": 60,
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "debuffSubKind": "stat"
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "debuff",
+          "debuffSubKind": "stat",
+          "debuffStat": "atk",
+          "debuffMultiplier": 0.85,
+          "debuffDurationSec": 10,
+          "targetShape": "aoe",
+          "aoeRadiusPx": 60
+        }
+      ]
+    },
+    {
+      "id": "sp_alchemist_active_2",
+      "name": "薬",
+      "trigger": {
+        "kind": "basicAttackCount",
+        "value": 4
       },
       "effect": [
         {
           "type": "buff",
-          "buffStat": "atk",
+          "buffStat": "attackSpeed",
           "buffMultiplier": 1.15,
           "buffDurationSec": 8,
           "target": {
@@ -1431,30 +1597,23 @@
             "side": "ally",
             "stat": "hp",
             "order": "ratio"
-          }
-        }
-      ]
-    },
-    {
-      "id": "sp_alchemist_active_2",
-      "name": "毒霧",
-      "trigger": {
-        "kind": "time",
-        "value": 10
-      },
-      "effect": [
+          },
+          "buffSubKind": "stat"
+        },
         {
-          "type": "debuff",
-          "debuffStat": "def",
-          "debuffMultiplier": 0.85,
-          "debuffDurationSec": 6,
-          "targetShape": "aoe",
-          "aoeRadiusPx": 60,
           "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
-          }
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
+          },
+          "type": "heal",
+          "healSubKind": "hot",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.15
+          },
+          "durationSec": 8
         }
       ]
     },
@@ -1716,6 +1875,50 @@
           "debuffStat": "damageTaken",
           "debuffMultiplier": 1.5,
           "debuffDurationSec": 6
+        }
+      ]
+    },
+    {
+      "id": "sp_abjurer_basic_attack",
+      "name": "sp_abjurer_basic_attack",
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "sp_alchemist_basic_attack",
+      "name": "sp_alchemist_basic_attack",
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
         }
       ]
     }
