@@ -870,6 +870,8 @@ export interface SkillRegistry {
 }
 
 export interface GameData {
+  /** classes.json の配列順（バランス表・編成クラス一覧の並び） */
+  classOrder: ClassId[];
   classRegistry: Record<ClassId, ClassPreset>;
   skillRegistry: SkillRegistry;
   enemyRegistry: Record<string, EnemyTemplate>;

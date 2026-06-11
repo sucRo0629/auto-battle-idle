@@ -4,7 +4,6 @@ import { assertConfigurableRangePx } from '../battle/rangeLimits.ts';
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
-  ClassId,
   EnemyTemplate,
   EntityTraits,
   GrowthTierSet,
@@ -224,19 +223,7 @@ export function validateClassStatsForSave(cls: ClassPresetBeforeEnrich): void {
   );
 }
 
-/** 既存クラス選択プルダウンと同じ並び（classes.json の配列順） */
-export function compareByClassListOrder(
-  aId: ClassId,
-  bId: ClassId,
-  classOrder: readonly ClassId[],
-): number {
-  const aIndex = classOrder.indexOf(aId);
-  const bIndex = classOrder.indexOf(bId);
-  if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
-  if (aIndex !== -1) return -1;
-  if (bIndex !== -1) return 1;
-  return aId.localeCompare(bId);
-}
+export { compareByClassListOrder } from '../battle/data/classListOrder.ts';
 
 export function createBalanceRowsFromClasses(
   classes: ClassPresetBeforeEnrich[],

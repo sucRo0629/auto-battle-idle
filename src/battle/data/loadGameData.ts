@@ -54,8 +54,10 @@ export function loadGameData(): GameData {
     parties: partiesJson,
   });
 
+  const classes = parsed.classes as ClassPreset[];
   return {
-    classRegistry: indexById(parsed.classes as ClassPreset[]),
+    classOrder: classes.map((cls) => cls.id),
+    classRegistry: indexById(classes),
     skillRegistry: {
       passives: indexById(parsed.passives),
       actives: indexById(parsed.actives),

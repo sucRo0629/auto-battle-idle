@@ -1,3 +1,4 @@
+import { sortClassIdsByListOrder } from '../battle/data/classListOrder.ts';
 import type {
   ClassId,
   GameData,
@@ -56,6 +57,7 @@ export function getAssignableClassIds(
   party: PartySlotState[],
   unlockedClassIds: ClassId[],
   slotIndex: number,
+  classOrder: readonly ClassId[],
 ): ClassId[] {
   const usedElsewhere = new Set<ClassId>();
   party.forEach((member, index) => {
@@ -63,7 +65,8 @@ export function getAssignableClassIds(
       usedElsewhere.add(member.classId);
     }
   });
-  return unlockedClassIds.filter((id) => !usedElsewhere.has(id));
+  const assignable = unlockedClassIds.filter((id) => !usedElsewhere.has(id));
+  return sortClassIdsByListOrder(assignable, classOrder);
 }
 
 export function buildDefaultUnlockedClassIds(
