@@ -1,3 +1,4 @@
+import { isUnitStunned } from '../ccEffects.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -76,7 +77,7 @@ export function buildSkillSequence(
       enemies,
       _gameData,
     );
-    if (!anchor) return null;
+    if (!anchor) continue;
 
     steps.push({
       applyAtBattleSec: applyAt,
@@ -97,6 +98,8 @@ export function buildSkillSequence(
       applyAt += waitAfterSec;
     }
   }
+
+  if (steps.length === 0) return null;
 
   return {
     actorId: actor.id,
@@ -204,6 +207,10 @@ export class SkillSequenceRunner {
     for (const move of this.activeMoves) {
       const unit = units.find((u) => u.id === move.actorId);
       if (!unit?.isAlive) continue;
+      if (isUnitStunned(unit)) {
+        kept.push(move);
+        continue;
+      }
 
       move.remainingSec = Math.max(0, move.remainingSec - deltaTime);
       const progress =

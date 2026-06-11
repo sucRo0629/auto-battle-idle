@@ -93,13 +93,13 @@ export class SkillExecutor {
     cd: SkillCooldown,
     allies: CombatantState[],
     enemies: CombatantState[],
-  ): void {
-    if (!actor.isAlive || cd.remaining > 0) return;
-    if (isUnitStunned(actor)) return;
-    if (this.deps.getSequenceRunner().isActorBusy(actor.id)) return;
+  ): boolean {
+    if (!actor.isAlive || cd.remaining > 0) return false;
+    if (isUnitStunned(actor)) return false;
+    if (this.deps.getSequenceRunner().isActorBusy(actor.id)) return false;
 
     const skill = this.gameData.skillRegistry.actives[cd.skillId];
-    if (!skill || skill.effect.length === 0) return;
+    if (!skill || skill.effect.length === 0) return false;
 
     const passives = getPassiveDefs(
       actor,
@@ -117,10 +117,10 @@ export class SkillExecutor {
         this.deps.getBattleTimeSec(),
         cd,
       );
-      if (!sequence) return;
+      if (!sequence) return false;
       this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
       this.deps.getSequenceRunner().schedule(sequence);
-      return;
+      return true;
     }
 
     let appliedAny = false;
@@ -196,7 +196,9 @@ export class SkillExecutor {
       if (cd.slotKind === 'basic') {
         this.deps.onBasicAttackExecuted?.(actor.id);
       }
+      return true;
     }
+    return false;
   }
 
   applyScheduledStep(
@@ -233,6 +235,8 @@ export class SkillExecutor {
             this.gameData,
           );
     if (!target?.isAlive) return;
+
+    if (step.effectDef.type === 'move' && isUnitStunned(actor)) return;
 
     if (step.effectDef.type === 'move') {
       this.applyMoveEffect(

@@ -495,6 +495,7 @@ export class BattleEngine {
 
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
+      if (isUnitStunned(ally)) continue;
       if (this.skillSequenceRunner.isActorInSkillMotion(ally.id)) continue;
       if (
         shouldSkipEngagedAutoApproach(
@@ -513,6 +514,7 @@ export class BattleEngine {
 
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
+      if (isUnitStunned(enemy)) continue;
       if (this.skillSequenceRunner.isActorInSkillMotion(enemy.id)) continue;
       if (
         shouldSkipEngagedAutoApproach(
@@ -1558,13 +1560,13 @@ export class BattleEngine {
             actives,
           )[0];
           if (readyActive) {
-            this.executor.tryExecute(
+            const fired = this.executor.tryExecute(
               actor,
               readyActive,
               this.players,
               this.enemies,
             );
-            continue;
+            if (fired) continue;
           }
         }
 

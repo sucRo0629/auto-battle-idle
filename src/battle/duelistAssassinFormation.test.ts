@@ -239,6 +239,49 @@ describe('duelist + assassin front row', () => {
     expect(assassinApproachAfter).toBeGreaterThanOrEqual(duelistApproachBefore);
   });
 
+  it('fires shadow blade solo after duelist dies without stalling', () => {
+    const engine = createDuelistAssassinEngine();
+    engine.startBattle();
+    reachWave1Engage(engine);
+    const internal = asBattleEngineInternals(engine);
+
+    for (let t = 0; t < 240; t++) {
+      engine.tick(TICK_DT);
+    }
+
+    const duelist = internal.players.find((p) => p.name === '闘技士')!;
+    duelist.hp = 0;
+    duelist.isAlive = false;
+
+    const assassin = internal.players.find((p) => p.name === '双刃士')!;
+    const active2 = assassin.cooldowns.find(
+      (cd) => cd.skillId === 'at_assassin_active_2',
+    )!;
+    active2.remaining = 0;
+
+    const enemyHpBefore = internal.enemies
+      .filter((e) => e.isAlive)
+      .reduce((sum, e) => sum + e.hp, 0);
+
+    let progressed = false;
+    for (let t = 0; t < 360; t++) {
+      engine.tick(TICK_DT);
+      if (internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)) {
+        progressed = true;
+        break;
+      }
+      const hpNow = internal.enemies
+        .filter((e) => e.isAlive)
+        .reduce((sum, e) => sum + e.hp, 0);
+      if (hpNow < enemyHpBefore) {
+        progressed = true;
+        break;
+      }
+    }
+
+    expect(progressed).toBe(true);
+  });
+
   it('assassin keeps attacking after duelist dies (manual)', () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
@@ -305,6 +348,7 @@ describe('duelist + assassin front row', () => {
 
     let duelistDeathTick = -1;
     let enemyHpAtDuelistDeath = 0;
+    let assassinAttacked = false;
 
     for (let t = 0; t < 12_000; t++) {
       engine.tick(TICK_DT);
@@ -326,21 +370,14 @@ describe('duelist + assassin front row', () => {
       ) {
         duelistDeathTick = t;
         enemyHpAtDuelistDeath = livingEnemies.reduce((sum, e) => sum + e.hp, 0);
+        continue;
       }
-    }
 
-    expect(duelistDeathTick).toBeGreaterThan(0);
-
-    let assassinAttacked = false;
-    for (let t = duelistDeathTick; t < duelistDeathTick + 600; t++) {
-      engine.tick(TICK_DT);
-      const snap = engine.getSnapshot();
-      if (!snap.engaged || snap.waveIndex !== 0) continue;
+      if (duelistDeathTick < 0 || snap.waveIndex !== 0) continue;
 
       const assassinUnit = internal.players.find(
         (p) => p.name === '双刃士' && p.isAlive,
       );
-      const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
       if (!assassinUnit || livingEnemies.length === 0) break;
 
       const hpNow = livingEnemies.reduce((sum, e) => sum + e.hp, 0);
@@ -359,8 +396,11 @@ describe('duelist + assassin front row', () => {
         assassinAttacked = true;
         break;
       }
+
+      if (t - duelistDeathTick >= 600) break;
     }
 
+    expect(duelistDeathTick).toBeGreaterThan(0);
     expect(assassinAttacked).toBe(true);
   });
 });

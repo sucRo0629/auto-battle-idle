@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { applyStunToTarget } from '../ccEffects.ts';
 import type { ActiveSkillDef, CombatantState, GameData, SkillCooldown } from '../types.ts';
 import { SkillExecutor } from './SkillExecutor.ts';
 import {
@@ -225,6 +226,66 @@ describe('skillSequence', () => {
     ]);
   });
 
+  it('skips return-to-ally move when actor is the only living ally', () => {
+    const skill: ActiveSkillDef = {
+      id: 'backstab',
+      name: 'backstab',
+      trigger: { kind: 'basicAttackCount', value: 14 },
+      effect: [
+        {
+          type: 'buff',
+          buffSubKind: 'evasion',
+          buffStat: 'atk',
+          buffMultiplier: 1.2,
+          buffDurationSec: 1.5,
+          target: { kind: 'self' },
+        },
+        {
+          type: 'move',
+          moveMode: 'behindTarget',
+          moveDurationSec: 0.3,
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          behindOffsetPx: 10,
+        },
+        {
+          type: 'damage',
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 1 },
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          waitAfterSec: 0.5,
+        },
+        {
+          type: 'move',
+          moveMode: 'toAnchor',
+          moveDurationSec: 0.25,
+          target: { kind: 'distance', side: 'ally', order: 'nearest' },
+        },
+      ],
+    };
+    const actor = mockUnit({ id: 'assassin', battleX: 220 });
+    const enemy = mockUnit({ id: 'enemy', isEnemy: true, battleX: 260 });
+    const cd: SkillCooldown = {
+      skillId: 'backstab',
+      remaining: 0,
+      slotKind: 'active',
+    };
+
+    const sequence = buildSkillSequence(
+      skill,
+      actor,
+      [actor],
+      [enemy],
+      makeGameData({ backstab: skill }),
+      [],
+      0,
+      cd,
+    );
+
+    expect(sequence).not.toBeNull();
+    expect(sequence!.steps).toHaveLength(3);
+    expect(sequence!.steps.every((step) => step.effectDef.type !== 'move' || step.effectDef.moveMode !== 'toAnchor')).toBe(true);
+  });
+
   it('interpolates battleX during move', () => {
     const runner = new SkillSequenceRunner();
     const actor = mockUnit({ id: 'actor', battleX: 100 });
@@ -244,6 +305,26 @@ describe('skillSequence', () => {
     runner.tickMoves(0.5, [actor]);
     expect(actor.battleX).toBe(50);
     expect(runner.getActiveMoves()).toHaveLength(0);
+  });
+
+  it('pauses skill move while actor is stunned', () => {
+    const runner = new SkillSequenceRunner();
+    const actor = mockUnit({ id: 'actor', battleX: 100 });
+    applyStunToTarget(actor, 2, { skillId: 'bash', sourceId: 'ally' });
+    runner.startMove({
+      actorId: 'actor',
+      fromX: 100,
+      toX: 50,
+      toVisualX: 50,
+      remainingSec: 1,
+      totalSec: 1,
+      baseVisualX: 100,
+    });
+
+    runner.tickMoves(0.5, [actor]);
+    expect(actor.battleX).toBe(100);
+    expect(runner.getActiveMoves()).toHaveLength(1);
+    expect(runner.getActiveMoves()[0]?.remainingSec).toBe(1);
   });
 
   it('applies damage after move completes within range', () => {

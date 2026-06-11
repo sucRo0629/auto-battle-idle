@@ -234,7 +234,7 @@
     },
     {
       "id": "df_duelist_passive_2",
-      "name": "不屈",
+      "name": "不屈の闘士",
       "effect": "selfHpRatioBuff",
       "targetRuleOverride": {
         "kind": "distance",
@@ -247,7 +247,7 @@
     },
     {
       "id": "df_duelist_passive_3",
-      "name": "滾る闘志",
+      "name": "闘士は流血で滾る",
       "effect": "selfHpRatioBuff",
       "buffStat": "atk",
       "buffMultiplierMax": 1.3,
@@ -305,7 +305,7 @@
     },
     {
       "id": "df_duelist_passive_4",
-      "name": "後の先",
+      "name": "出鼻挫き",
       "effect": "counter",
       "counterResponses": [
         {
@@ -318,7 +318,11 @@
         },
         {
           "kind": "stun",
-          "durationSec": 1.2
+          "durationSec": 3
+        },
+        {
+          "kind": "knockback",
+          "distancePx": 15
         }
       ],
       "counterRange": 0,
@@ -571,20 +575,19 @@
     },
     {
       "id": "df_paladin_active_2",
-      "name": "形なき盾",
+      "name": "聖盾",
       "trigger": {
-        "kind": "time",
+        "kind": "hitsTaken",
         "value": 12
       },
       "effect": [
         {
           "target": {
-            "kind": "all",
-            "side": "ally"
+            "kind": "self"
           },
           "type": "buff",
-          "buffSubKind": "barrier",
-          "buffStat": "atk",
+          "buffSubKind": "stat",
+          "buffStat": "reg",
           "buffMultiplier": 1.2,
           "buffDurationSec": 5,
           "amount": {
@@ -592,8 +595,30 @@
             "percentOfMaxHp": 0.1,
             "maxHpRef": "self"
           }
+        },
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "buff",
+          "buffSubKind": "stat",
+          "buffStat": "def",
+          "buffMultiplier": 1.2,
+          "buffDurationSec": 5
+        },
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "buff",
+          "buffSubKind": "damageTakenToHeal",
+          "buffStat": "atk",
+          "buffMultiplier": 1.2,
+          "buffDurationSec": 5,
+          "ratio": 0.1
         }
-      ]
+      ],
+      "useDurationSec": 5
     },
     {
       "id": "df_duelist_active_1",
@@ -636,7 +661,17 @@
           "buffStat": "atk",
           "buffMultiplier": 1.2,
           "buffDurationSec": 5,
-          "ratio": 0.1
+          "ratio": 0.05
+        },
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "debuff",
+          "debuffSubKind": "stat",
+          "debuffStat": "atk",
+          "debuffMultiplier": 0.8,
+          "debuffDurationSec": 5
         }
       ]
     },
@@ -1569,7 +1604,7 @@
       "name": "隙撃ち",
       "trigger": {
         "kind": "basicAttackCount",
-        "value": 5
+        "value": 8
       },
       "effect": [
         {
@@ -1593,14 +1628,25 @@
                 "tags": [
                   "def",
                   "stun",
-                  "reg",
                   "damageTaken",
-                  "dot",
                   "atk"
                 ]
               }
             ]
           }
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "debuff",
+          "debuffSubKind": "stun",
+          "debuffStat": "def",
+          "debuffMultiplier": 0.8,
+          "debuffDurationSec": 5,
+          "durationSec": 3
         }
       ]
     },
