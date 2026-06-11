@@ -10,6 +10,7 @@ import {
   resolveSkillTrigger,
   shouldTickCooldown,
   tickCountTriggerCooldowns,
+  tickPendingBasicAttackCountCharges,
 } from './skillTrigger.ts';
 
 function skill(overrides: Partial<ActiveSkillDef> = {}): ActiveSkillDef {
@@ -144,6 +145,20 @@ describe('skillTrigger', () => {
     expect(cooldowns[0]!.remaining).toBe(1);
     expect(cooldowns[1]!.remaining).toBe(2);
     expect(cooldowns[2]!.remaining).toBe(0);
+  });
+
+  it('tickPendingBasicAttackCountCharges applies at most one charge per actor per tick', () => {
+    const queue = [
+      { actorId: 'a', applyAtBattleSec: 0 },
+      { actorId: 'a', applyAtBattleSec: 0 },
+      { actorId: 'b', applyAtBattleSec: 0 },
+    ];
+    const charged: string[] = [];
+    const remaining = tickPendingBasicAttackCountCharges(queue, 0, (actorId) => {
+      charged.push(actorId);
+    });
+    expect(charged).toEqual(['a', 'b']);
+    expect(remaining).toEqual([{ actorId: 'a', applyAtBattleSec: 0 }]);
   });
 
 });

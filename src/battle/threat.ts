@@ -1,20 +1,44 @@
 import { currentHpRatio } from "./combatMath.ts";
+import { getBattleX } from "./combatPosition.ts";
 import type { CombatantState } from "./types.ts";
 
 /** maxHp 係数（statComponent = floor(maxHp×a + def×b)） */
 export const THREAT_STAT_HP_WEIGHT = 0.1;
 /** def 係数 */
 export const THREAT_STAT_DEF_WEIGHT = 2;
-/** 与ダメ・被ダメ 1 につき threat 増加（defender / supporter / 被ダメ） */
+/** 与ダメ・被ダメ 1 につき threat 増加（全ロール共通） */
 export const THREAT_DAMAGE_SCALE = 0.5;
-/** attacker が与ダメしたときの threat 増加係数 */
-export const THREAT_DAMAGE_SCALE_ATTACKER_DEALT = 0.3;
+/** defender の baseThreat 倍率（statComponent + pressure 適用後） */
+export const THREAT_BASE_DEFENDER_MULTIPLIER = 1.2;
 /** debuff 付与成功時の基本 threat */
 export const THREAT_DEBUFF_APPLY = 15;
 /** 秒あたり baseThreat 方向への減衰量 */
 export const THREAT_DECAY_PER_SEC = 20;
-/** 敵ターゲット抽選: threat^N で重み付け（N>1 で低ヘイトの当選率を下げる） */
-export const THREAT_TARGET_WEIGHT_EXPONENT = 5;
+
+export function resolveThreatValue(unit: CombatantState): number {
+  return unit.threat ?? unit.baseThreat ?? 0;
+}
+
+/** 敵デフォルトターゲット: ヘイト最大（同率は前線 battleX → id） */
+export function compareThreatTargetPriority(
+  a: CombatantState,
+  b: CombatantState,
+): number {
+  const threatDiff = resolveThreatValue(b) - resolveThreatValue(a);
+  if (threatDiff !== 0) return threatDiff;
+  const xDiff = getBattleX(b) - getBattleX(a);
+  if (xDiff !== 0) return xDiff;
+  return a.id.localeCompare(b.id);
+}
+
+export function pickHighestThreatAlly(
+  pool: CombatantState[],
+): CombatantState | null {
+  if (pool.length === 0) return null;
+  return pool.reduce((best, unit) =>
+    compareThreatTargetPriority(best, unit) > 0 ? unit : best,
+  );
+}
 
 export function computeThreatStatComponent(unit: CombatantState): number {
   return Math.floor(
@@ -45,7 +69,11 @@ export function computeAllyBaseThreat(
 ): number {
   const statComponent = computeThreatStatComponent(ally);
   const pressureBonus = computeFrontRowPressureBonus(ally, allies);
-  return statComponent + pressureBonus;
+  let base = statComponent + pressureBonus;
+  if (ally.role === "defender") {
+    base = Math.floor(base * THREAT_BASE_DEFENDER_MULTIPLIER);
+  }
+  return base;
 }
 
 export function initializeAllyThreat(allies: CombatantState[]): void {
@@ -83,11 +111,7 @@ export function applyThreatFromDamage(
   amount: number
 ): void {
   if (amount <= 0) return;
-  const actorScale =
-    !actor.isEnemy && actor.role === "attacker"
-      ? THREAT_DAMAGE_SCALE_ATTACKER_DEALT
-      : THREAT_DAMAGE_SCALE;
-  const actorGain = Math.floor(amount * actorScale);
+  const actorGain = Math.floor(amount * THREAT_DAMAGE_SCALE);
   const targetGain = Math.floor(amount * THREAT_DAMAGE_SCALE);
   if (!actor.isEnemy && actor.isAlive && actorGain > 0) {
     actor.threat = (actor.threat ?? actor.baseThreat ?? 0) + actorGain;
@@ -103,26 +127,3 @@ export function applyThreatFromDebuffApply(actor: CombatantState): void {
     (actor.threat ?? actor.baseThreat ?? 0) + THREAT_DEBUFF_APPLY;
 }
 
-function threatTargetWeight(threat: number): number {
-  const value = Math.max(threat, 1);
-  return Math.pow(value, THREAT_TARGET_WEIGHT_EXPONENT);
-}
-
-export function pickThreatWeightedAlly(
-  pool: CombatantState[],
-  random: () => number = Math.random
-): CombatantState | null {
-  if (pool.length === 0) return null;
-  if (pool.length === 1) return pool[0]!;
-
-  const weights = pool.map((ally) => threatTargetWeight(ally.threat ?? 1));
-  const total = weights.reduce((sum, weight) => sum + weight, 0);
-  if (total <= 0) return pool[0]!;
-
-  let roll = random() * total;
-  for (let i = 0; i < pool.length; i++) {
-    roll -= weights[i]!;
-    if (roll <= 0) return pool[i]!;
-  }
-  return pool[pool.length - 1]!;
-}

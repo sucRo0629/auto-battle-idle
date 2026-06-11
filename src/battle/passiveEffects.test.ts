@@ -330,7 +330,7 @@ describe('passiveEffects', () => {
     expect(ally.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
   });
 
-  it('syncBuffAuras applies block overlay on self without atk badge', () => {
+  it('syncBuffAuras applies block overlay on self without status badges', () => {
     const blockPassives = {
       ...passives,
       df_guardian_passive_1: {
@@ -360,7 +360,7 @@ describe('passiveEffects', () => {
       def: guard.def,
       reg: guard.reg,
     });
-    expect(badges.map((badge) => badge.category)).toEqual(['block']);
+    expect(badges).toEqual([]);
   });
 
   it('syncDamageReductionAuras applies damageTaken reduction to selected targets', () => {
@@ -485,13 +485,14 @@ describe('passiveEffects', () => {
       },
     };
     syncSelfHpRatioBuffAuras([warrior], [], lowHpPassives);
+    const atkEffect = warrior.statusEffects.find((e) => e.stat === 'atk');
+    expect(atkEffect?.multiplier).toBeCloseTo(1.5, 5);
     const badges = aggregateStatStatusEffects(warrior.statusEffects, {
       atk: warrior.atk,
       def: warrior.def,
       reg: warrior.reg,
     });
-    const atkBadge = badges.find((b) => b.category === 'atk');
-    expect(atkBadge?.netMul).toBeCloseTo(1.5, 5);
+    expect(badges.find((b) => b.category === 'atk')).toBeUndefined();
   });
 
   it('tickPeriodicHotStates fires on interval wrap', () => {

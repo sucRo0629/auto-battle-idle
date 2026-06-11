@@ -27,18 +27,18 @@
     },
     {
       "id": "passive_target_lowest_hp",
-      "name": "仕留めの眼",
+      "name": "手負い狩り",
       "effect": "targetRuleOverride",
       "targetRuleOverride": {
         "kind": "stat",
         "side": "enemy",
         "stat": "hp",
-        "order": "lowest"
+        "order": "ratio"
       }
     },
     {
       "id": "passive_evasion",
-      "name": "影歩",
+      "name": "影の歩み",
       "effect": "buff",
       "buffSubKind": "evasion",
       "chance": 0.18,
@@ -371,13 +371,13 @@
       "name": "防御専念",
       "trigger": {
         "kind": "hitsTaken",
-        "value": 10
+        "value": 15
       },
       "effect": [
         {
           "type": "buff",
           "buffStat": "def",
-          "buffMultiplier": 1.8,
+          "buffMultiplier": 1.1,
           "buffDurationSec": 5,
           "targetShape": "single",
           "target": {
@@ -389,13 +389,12 @@
           "target": {
             "kind": "self"
           },
-          "type": "heal",
-          "durationSec": 5,
-          "amount": {
-            "kind": "defBased",
-            "defScale": 0.8
-          },
-          "healSubKind": "hot"
+          "type": "buff",
+          "buffSubKind": "block",
+          "buffStat": "atk",
+          "buffMultiplier": 1.2,
+          "buffDurationSec": 5,
+          "chance": 1
         }
       ],
       "useDurationSec": 5
@@ -571,68 +570,10 @@
     },
     {
       "id": "at_assassin_active_1",
-      "name": "バックスタブ",
+      "name": "引き裂き",
       "trigger": {
-        "kind": "time",
-        "value": 3
-      },
-      "effect": [
-        {
-          "type": "move",
-          "moveMode": "behindTarget",
-          "moveDurationSec": 0.3,
-          "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
-          },
-          "range": 100,
-          "behindOffsetPx": 10
-        },
-        {
-          "targetShape": "single",
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 0.5
-          },
-          "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
-          },
-          "damageIncrease": {
-            "scale": 5,
-            "conditions": [
-              {
-                "kind": "targetHp",
-                "maxHpRatio": 0.25
-              }
-            ]
-          },
-          "waitAfterSec": 1
-        },
-        {
-          "target": {
-            "kind": "distance",
-            "side": "ally",
-            "order": "nearest"
-          },
-          "type": "move",
-          "moveMode": "toAnchor",
-          "moveDurationSec": 0.25,
-          "range": 100
-        }
-      ],
-      "useDurationSec": 1.1
-    },
-    {
-      "id": "at_assassin_active_2",
-      "name": "仕留め",
-      "trigger": {
-        "kind": "time",
-        "value": 10
+        "kind": "basicAttackCount",
+        "value": 8
       },
       "effect": [
         {
@@ -650,6 +591,65 @@
           }
         }
       ]
+    },
+    {
+      "id": "at_assassin_active_2",
+      "name": "影の刃",
+      "trigger": {
+        "kind": "basicAttackCount",
+        "value": 14
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "buff",
+          "buffSubKind": "evasion",
+          "buffStat": "atk",
+          "buffMultiplier": 1.2,
+          "buffDurationSec": 1.5,
+          "chance": 1
+        },
+        {
+          "type": "move",
+          "moveMode": "behindTarget",
+          "moveDurationSec": 0.3,
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "range": 100,
+          "behindOffsetPx": 10
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          },
+          "waitAfterSec": 0.5
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "ally",
+            "order": "nearest"
+          },
+          "type": "move",
+          "moveMode": "toAnchor",
+          "moveDurationSec": 0.25,
+          "range": 100
+        }
+      ],
+      "useDurationSec": 1.1
     },
     {
       "id": "at_lancer_active_1",
@@ -1438,8 +1438,11 @@
           "type": "damage",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1
-          }
+            "atkScale": 0.5
+          },
+          "targetShape": "single",
+          "hitCount": 2,
+          "hitDurationSec": 0.2
         }
       ]
     }

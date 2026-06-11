@@ -1,5 +1,8 @@
 import { isMeleeUnit } from './combatPosition.ts';
-import { resolveEnemyBasicAttackTarget } from './resolveApproachBattleX.ts';
+import {
+  resolveEnemyAttackTargetPlayer,
+  resolveEnemyChaseTargetPlayer,
+} from './resolveApproachBattleX.ts';
 import type { CombatantState, FormationRow, GameData } from './types.ts';
 
 /**
@@ -37,7 +40,8 @@ export class EngagedCompositionTracker {
       if (!enemy.isAlive) continue;
       if (isMeleeUnit(enemy, gameData)) continue;
       const target =
-        resolveEnemyBasicAttackTarget(enemy, players, enemies, gameData) ??
+        resolveEnemyAttackTargetPlayer(enemy, players, enemies, gameData) ??
+        resolveEnemyChaseTargetPlayer(enemy, players, enemies, gameData) ??
         undefined;
       if (target) {
         enemy.engagedVisualTargetPlayerId = target.id;

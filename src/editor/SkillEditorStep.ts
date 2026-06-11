@@ -24,6 +24,8 @@ import {
   SKILL_TRIGGER_KIND_OPTIONS,
   SKILL_TRIGGER_VALUE_LABELS,
   STATUS_EFFECT_STAT_OPTIONS,
+  TARGET_RULE_OVERRIDE_APPLY_TO_LABELS,
+  TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS,
   TARGET_SHAPE_LABELS,
   TARGET_SHAPE_OPTIONS,
   VFX_PRESET_OPTIONS,
@@ -397,6 +399,7 @@ function appendCounterEffectFields(
 function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
   switch (passive.effect) {
     case 'targetRuleOverride':
+      passive.targetRuleOverrideApplyTo ??= 'enemy';
       passive.targetRuleOverride ??= {
         kind: 'distance',
         side: 'enemy',
@@ -1492,6 +1495,23 @@ export class SkillEditorStep {
 
     switch (passive.effect) {
       case 'targetRuleOverride':
+        effectGrid.appendChild(
+          createFieldRow(
+            '適用スコープ',
+            createSelect(
+              passive.targetRuleOverrideApplyTo ?? 'enemy',
+              TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS.map((value) => ({
+                value,
+                label: TARGET_RULE_OVERRIDE_APPLY_TO_LABELS[value],
+              })),
+              (targetRuleOverrideApplyTo) => {
+                this.patchPassive(index, (current) => {
+                  current.targetRuleOverrideApplyTo = targetRuleOverrideApplyTo;
+                }, { rerender: true });
+              },
+            ),
+          ),
+        );
         appendTargetSpecFields(
           effectGrid,
           passive.targetRuleOverride ?? {

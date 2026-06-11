@@ -102,7 +102,7 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 | ----------------- | ------------------------------------------------------- |
 | **basic**         | 常に **時間**（`remaining -= deltaTime × basicCooldownRate`） |
 | **active（時間）**    | `remaining -= deltaTime × ∏ passive.activeCooldownRate` |
-| **active（攻撃回数）**  | 使用者の通常攻撃が命中するたび `remaining--`（`remaining > 0` のときのみ） |
+| **active（攻撃回数）**  | 通常攻撃のダメージ発生ごとに、全 `basicAttackCount` アクティブがそれぞれ `remaining--`（多段は各ダメージごと。攻撃枠単位ではまとめない。回避時は進まない。`remaining > 0` のときのみ） |
 | **active（被攻撃回数）** | 使用者が `hurt` になるたび `remaining--`（`remaining > 0` のときのみ） |
 
 
@@ -116,7 +116,7 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 
 | フェーズ | 条件 | 攻撃回数 | 被攻撃回数 | HUD ゲージ |
 | -------- | ---- | -------- | ---------- | ---------- |
-| 充填中 | `remaining > 0` | 通常攻撃命中ごとに `remaining--` | `hurt` ごとに `remaining--` | `1 - remaining/N` |
+| 充填中 | `remaining > 0` | 通常攻撃ダメージごとに全 basicAttackCount アクティブが `remaining--`（多段は各ダメージ、回避時は進まない） | `hurt` ごとに `remaining--` | `1 - remaining/N` |
 | 準備完了 | `remaining === 0` | 発動しない | 発動しない | **100%（Max）** |
 | 消費 | 準備完了後の N+1 回目 | **通常攻撃の代わりに**アクティブ発動 → `remaining = N` にリセット | **N+1 回目の被弾**でアクティブ発動（ダメージは通常通り）→ リセット | 0% に戻る |
 
@@ -130,31 +130,33 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 
 ## ヘイト（Threat）
 
-味方のみランタイムで `threat` / `baseThreat` を保持。敵の `closestAlly` ターゲットは **ヘイト加重抽選**（実装：`src/battle/threat.ts`）。
+味方のみランタイムで `threat` / `baseThreat` を保持。敵のデフォルトターゲット（`targetRuleOverride` なし・`distance/enemy/nearest`）は **射程内でヘイト最大の味方**（実装：`src/battle/threat.ts` の `pickHighestThreatAlly`）。
 
 ### baseThreat（戦闘開始・前列圧力更新時）
 
 ```
 statComponent = floor(maxHp × 0.1 + def × 2)
 baseThreat = statComponent + frontRowPressureBonus
+defender のみ baseThreat = floor(baseThreat × 1.2)
 ```
 
 - `frontRowPressureBonus` — **前列**味方のみ。他前列の `1 - hp/maxHp` の最大値 × 自 statComponent（床が削れたほどタンクの基礎ヘイト上昇）
+- `defender` ロール — `statComponent + frontRowPressureBonus` の合計に `× 1.2`（`floor`）を適用
 
 ### 変動と減衰
 
 
 | イベント        | 変化                                                                  |
 | ----------- | ------------------------------------------------------------------- |
-| 与ダメ（actor）   | 味方 actor に加算。`attacker` は `floor(damage × 0.3)`、それ以外は `floor(damage × 0.5)` |
+| 与ダメ（actor）   | 味方 actor に `floor(damage × 0.5)` を加算（全ロール共通） |
 | 被ダメ（target）  | 味方 target に `floor(damage × 0.5)` を加算                                      |
 | debuff 付与成功 | actor に `+15` 固定                                                    |
 | 毎 tick      | `threat > baseThreat` なら `threat -= 20 × deltaTime`、下限 `baseThreat` |
 
 
-### 敵ターゲット抽選
+### 敵ターゲット選定
 
-`pickThreatWeightedAlly`: 重み = `max(threat, 1) ^ 5`。高ヘイトほど当たりやすい（指数 5 で低ヘイトの当選率を抑制）。
+`pickHighestThreatAlly`: 生存味方のうち射程内プールから `threat ?? baseThreat ?? 0` が最大の 1 体を選ぶ（決定論的）。同率タイは `battleX` が大きい方（前線側）→ `id` 辞書順。ヘイト 2 位以降が選ばれることはない。
 
 ## ステータス効果
 
@@ -198,7 +200,7 @@ baseThreat = statComponent + frontRowPressureBonus
 
 ## ターゲット解決
 
-1. パッシブを集約 → `targetRuleOverride` を適用（配列の後ろが優先）
+1. effect のターゲット陣営（`spec.side` 等）と一致する `targetRuleOverrideApplyTo` を持つパッシブのみ `targetRuleOverride` を適用（`kind: self` は除外。配列の後ろが優先）。通常攻撃・接近は敵向けスコープ
 2. スキル `range`（未指定 = 使用者射程）で **攻撃可能プール** を絞り込み
 3. 各 effect の `targetShape` に従い **発動 tick で全 hit を一括解決**（`resolveEffectResolution`）
 4. `scatter` / `pierce`（`pierceDurationSec` あり）は `pendingHitQueue` で **適用のみ時間分散**（再ターゲットなし）

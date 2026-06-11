@@ -1,18 +1,12 @@
 import type { CombatantState, GameData, TargetSpec } from './types.ts';
-import { isMeleeRangePx } from './types.ts';
 import { getPassiveDefs } from './combatMath.ts';
-import { SPRITE_GAP } from './battleConstants.ts';
 import {
-  getPlayerContactX,
   getEnemyContactX,
   getMeleeEnemyContactX,
   resolveApproachAttackBattleX,
   resolveAttackBattleX,
-  resolveMaxEffectiveRangePx,
   resolveApproachRangePx,
-  leadingRowContactPlayer,
 } from './combatPosition.ts';
-import { engagedMinBodyGap } from './battleConstants.ts';
 import { pickTargetFromPool, resolveTargetSpec } from './skills/targeting.ts';
 import { getEffectTarget, getTargetPool } from './skills/targetSpec.ts';
 import { getAttackablePool } from './skills/rangeUtils.ts';
@@ -29,21 +23,82 @@ function resolveBasicAttackTarget(
   return { kind: 'distance', side: 'enemy', order: 'nearest' };
 }
 
-function resolvePlayerPriorityTarget(
+function resolveUnitTargetSpec(
+  unit: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): TargetSpec {
+  const passives = getPassiveDefs(unit, gameData.skillRegistry.passives);
+  const defaultSpec = resolveBasicAttackTarget(unit, gameData);
+  return resolveTargetSpec(passives, defaultSpec, {
+    actor: unit,
+    allies: players,
+    enemies,
+    applyScope: 'enemy',
+  });
+}
+
+/** 味方: attacker/supporter の chase（敵編成の奥 = battleX 最大） */
+export function resolvePlayerChaseTargetEnemy(
   player: CombatantState,
   players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
 ): CombatantState | null {
-  const passives = getPassiveDefs(player, gameData.skillRegistry.passives);
-  const defaultSpec = resolveBasicAttackTarget(player, gameData);
-  const spec = resolveTargetSpec(passives, defaultSpec, {
-    actor: player,
-    allies: players,
-    enemies,
-  });
+  const spec = resolveUnitTargetSpec(player, players, enemies, gameData);
   const pool = getTargetPool(spec, player, players, enemies);
   return pickTargetFromPool(spec, player, pool);
+}
+
+/** 味方: 射程内の攻撃対象（停止判定・攻撃と同じプール） */
+export function resolvePlayerAttackTargetEnemy(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): CombatantState | null {
+  const spec = resolveUnitTargetSpec(player, players, enemies, gameData);
+  const range = resolveApproachRangePx(player, gameData);
+  const pool = getAttackablePool(spec, player, players, enemies, range);
+  if (pool.length === 0) return null;
+  return pickTargetFromPool(spec, player, pool);
+}
+
+/** 敵: 全生存プレイヤーからヘイト最大を chase（毎 tick 再評価） */
+export function resolveEnemyChaseTargetPlayer(
+  enemy: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): CombatantState | null {
+  const spec = resolveUnitTargetSpec(enemy, players, enemies, gameData);
+  const pool = getTargetPool(spec, enemy, players, enemies);
+  return pickTargetFromPool(spec, enemy, pool);
+}
+
+/** 敵: 射程内プレイヤーからヘイト最大（停止・攻撃） */
+export function resolveEnemyAttackTargetPlayer(
+  enemy: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): CombatantState | null {
+  const spec = resolveUnitTargetSpec(enemy, players, enemies, gameData);
+  const range = resolveApproachRangePx(enemy, gameData);
+  const pool = getAttackablePool(spec, enemy, players, enemies, range);
+  if (pool.length === 0) return null;
+  return pickTargetFromPool(spec, enemy, pool);
+}
+
+/** @deprecated resolveEnemyAttackTargetPlayer を使用 */
+export function resolveEnemyBasicAttackTarget(
+  enemy: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): CombatantState | null {
+  return resolveEnemyAttackTargetPlayer(enemy, players, enemies, gameData);
 }
 
 function capForwardAfterMeleeWipe(
@@ -56,7 +111,6 @@ function capForwardAfterMeleeWipe(
   if (getMeleeEnemyContactX(enemies, gameData) !== null) {
     return approachX;
   }
-  // 近接全滅後: 後方敵接触点ジャンプによる後列の一斉右追いを防ぐ（後退は許可）
   if (approachX > player.battleX) {
     return player.battleX;
   }
@@ -104,6 +158,36 @@ function capFrontRowBeforeEnemyContact(
   return Math.min(approachX, maxForward);
 }
 
+function resolveDefenderApproachBattleX(
+  player: CombatantState,
+  enemies: CombatantState[],
+  gameData: GameData,
+  contact: number,
+): number {
+  const meleeContact = getMeleeEnemyContactX(enemies, gameData);
+  const chaseContact = meleeContact ?? getEnemyContactX(enemies) ?? contact;
+  return resolveApproachAttackBattleX(player, chaseContact, gameData);
+}
+
+function resolveNonDefenderApproachBattleX(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  contact: number,
+): number {
+  const chase = resolvePlayerChaseTargetEnemy(
+    player,
+    players,
+    enemies,
+    gameData,
+  );
+  if (chase) {
+    return resolveApproachAttackBattleX(player, chase.battleX, gameData);
+  }
+  return resolveApproachAttackBattleX(player, contact, gameData);
+}
+
 export interface PlayerApproachOptions {
   /** 近接全滅直前の最前線 battleX（後方敵への接触点ジャンプ抑制） */
   frozenMeleeContactX?: number | null;
@@ -124,51 +208,23 @@ export function resolvePlayerApproachBattleX(
   );
   if (contact === null) return player.battleX;
 
-  if (player.formationRow !== 'back') {
-    let approachX: number;
-    const meleeContact = getMeleeEnemyContactX(enemies, gameData);
-    if (meleeContact !== null) {
-      approachX = resolveApproachAttackBattleX(player, meleeContact, gameData);
-    } else {
-      const target = resolvePlayerPriorityTarget(
-        player,
-        players,
-        enemies,
-        gameData,
-      );
-      if (target) {
-        approachX = resolveApproachAttackBattleX(
+  const approachX =
+    player.role === 'defender'
+      ? resolveDefenderApproachBattleX(player, enemies, gameData, contact)
+      : resolveNonDefenderApproachBattleX(
           player,
-          target.battleX,
+          players,
+          enemies,
           gameData,
+          contact,
         );
-      } else {
-        approachX = resolveApproachAttackBattleX(player, contact, gameData);
-      }
-    }
+
+  if (player.formationRow !== 'back') {
     return capFrontRowBeforeEnemyContact(
       player,
       enemies,
       gameData,
       approachX,
-    );
-  }
-
-  const target = resolvePlayerPriorityTarget(
-    player,
-    players,
-    enemies,
-    gameData,
-  );
-  if (target) {
-    return capBackRowRangeStop(
-      player,
-      capForwardAfterMeleeWipe(
-        player,
-        enemies,
-        gameData,
-        resolveApproachAttackBattleX(player, target.battleX, gameData),
-      ),
     );
   }
 
@@ -178,52 +234,9 @@ export function resolvePlayerApproachBattleX(
       player,
       enemies,
       gameData,
-      resolveApproachAttackBattleX(player, contact, gameData),
+      approachX,
     ),
   );
-}
-
-export function resolveEnemyBasicAttackTarget(
-  enemy: CombatantState,
-  players: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-): CombatantState | null {
-  const passives = getPassiveDefs(enemy, gameData.skillRegistry.passives);
-  const defaultSpec = resolveBasicAttackTarget(enemy, gameData);
-  const spec = resolveTargetSpec(passives, defaultSpec, {
-    actor: enemy,
-    allies: players,
-    enemies,
-  });
-  let pool = getTargetPool(spec, enemy, players, enemies);
-  if (isMeleeRangePx(resolveMaxEffectiveRangePx(enemy, gameData))) {
-    const contact = getPlayerContactX(players);
-    if (contact !== null) {
-      pool = pool.filter((player) => player.battleX >= contact - SPRITE_GAP);
-    }
-  }
-  return pickTargetFromPool(spec, enemy, pool);
-}
-
-/** 自動接近用: 前衛より後方のターゲットは前衛接触点へ（遠隔が後列追いで戦線ごと左流れするのを防ぐ） */
-function resolveEnemyApproachTargetPlayer(
-  enemy: CombatantState,
-  players: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-): CombatantState | null {
-  const target = resolveEnemyBasicAttackTarget(
-    enemy,
-    players,
-    enemies,
-    gameData,
-  );
-  if (target === null) return null;
-  const contact = getPlayerContactX(players);
-  if (contact === null) return target;
-  if (target.battleX >= contact - SPRITE_GAP) return target;
-  return leadingRowContactPlayer(players) ?? target;
 }
 
 export function resolveEnemyApproachBattleX(
@@ -232,56 +245,35 @@ export function resolveEnemyApproachBattleX(
   enemies: CombatantState[],
   gameData: GameData,
 ): number {
-  const contact = getPlayerContactX(players);
-  if (contact === null) return enemy.battleX;
-
-  const target = resolveEnemyApproachTargetPlayer(
+  const chase = resolveEnemyChaseTargetPlayer(
     enemy,
     players,
     enemies,
     gameData,
   );
-  let approachX = target
-    ? resolveEnemyMeleeStopBattleX(enemy, target, gameData)
-    : resolveAttackBattleX(enemy, contact, gameData);
-
-  // 遠隔: 攻撃可能位置へ接近（rearCap は layout 用。ここで引き止めると射程内に入れない）
-  return approachX;
-}
-
-/** 近接敵: プレイヤー武器 reach を含めた停止位置（contact 追従ドリフト防止） */
-function resolveEnemyMeleeStopBattleX(
-  enemy: CombatantState,
-  targetPlayer: CombatantState,
-  gameData: GameData,
-): number {
-  const enemyRange = resolveMaxEffectiveRangePx(enemy, gameData);
-  if (!isMeleeRangePx(enemyRange)) {
-    return resolveAttackBattleX(enemy, targetPlayer.battleX, gameData);
+  if (!chase) {
+    const contact = players.filter((p) => p.isAlive);
+    if (contact.length === 0) return enemy.battleX;
+    const frontX = Math.max(...contact.map((p) => p.battleX));
+    return resolveAttackBattleX(enemy, frontX, gameData);
   }
-  const playerRange = resolveMaxEffectiveRangePx(targetPlayer, gameData);
-  const playerReach = isMeleeRangePx(playerRange) ? playerRange : 0;
-  return targetPlayer.battleX + engagedMinBodyGap() + playerReach;
+  return resolveApproachAttackBattleX(enemy, chase.battleX, gameData);
 }
 
-/** 接敵中: 接近停止射程（通常攻撃 or 使用可能な短い装備アクティブ）内に届くなら自動接近を止める */
+/** 接敵中: 射程内に攻撃対象がいれば自動接近を止める */
 export function shouldSkipEngagedAutoApproach(
   unit: CombatantState,
   players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
 ): boolean {
-  const passives = getPassiveDefs(unit, gameData.skillRegistry.passives);
-  const spec = resolveTargetSpec(
-    passives,
-    resolveBasicAttackTarget(unit, gameData),
-    {
-      actor: unit,
-      allies: players,
-      enemies,
-    },
+  if (unit.isEnemy) {
+    return (
+      resolveEnemyAttackTargetPlayer(unit, players, enemies, gameData) !==
+      null
+    );
+  }
+  return (
+    resolvePlayerAttackTargetEnemy(unit, players, enemies, gameData) !== null
   );
-  const range = resolveApproachRangePx(unit, gameData);
-  const pool = getAttackablePool(spec, unit, players, enemies, range);
-  return pool.some((opponent) => opponent.isAlive);
 }

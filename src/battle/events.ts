@@ -15,6 +15,7 @@ export type BattleEvent =
       statusLabel?: string;
       hitIndex?: number;
     }
+  | { type: 'basicAttackCountCharged'; actorId: string }
   | { type: 'hurt'; targetId: string }
   | { type: 'evade'; targetId: string }
   | { type: 'block'; targetId: string }

@@ -38,7 +38,7 @@ describe("behindTarget move", () => {
     const assassin = internal.players.find((p) => p.name === "双刃士")!;
     const enemy = internal.enemies.find((e) => e.isAlive)!;
     const activeCd = assassin.cooldowns.find(
-      (cd) => cd.skillId === "at_assassin_active_1"
+      (cd) => cd.skillId === "at_assassin_active_2"
     );
     expect(activeCd).toBeDefined();
     activeCd!.remaining = 0;
@@ -77,7 +77,7 @@ describe("behindTarget move", () => {
     const assassin = internal.players.find((p) => p.name === "双刃士")!;
     const enemy = internal.enemies.find((e) => e.isAlive)!;
     const activeCd = assassin.cooldowns.find(
-      (cd) => cd.skillId === "at_assassin_active_1"
+      (cd) => cd.skillId === "at_assassin_active_2"
     );
     activeCd!.remaining = 0;
 
@@ -109,7 +109,7 @@ describe("behindTarget move", () => {
     const assassin = internal.players.find((p) => p.name === "双刃士")!;
     const enemy = internal.enemies.find((e) => e.isAlive)!;
     const activeCd = assassin.cooldowns.find(
-      (cd) => cd.skillId === "at_assassin_active_1"
+      (cd) => cd.skillId === "at_assassin_active_2"
     );
     activeCd!.remaining = 0;
 

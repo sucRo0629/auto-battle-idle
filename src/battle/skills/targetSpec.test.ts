@@ -153,7 +153,7 @@ describe('getTargetPool / pickTargetFromPool', () => {
     const pool = getTargetPool(spec, enemyActor, [guard, healer], [enemyActor]);
     expect(pool.map((u) => u.id).sort()).toEqual(['guard', 'healer']);
     const picked = pickTargetFromPool(spec, enemyActor, pool);
-    expect(['guard', 'healer']).toContain(picked?.id);
+    expect(picked?.id).toBe('guard');
   });
 
   it('filters by debuff status', () => {

@@ -1,4 +1,11 @@
-import type { BattleSnapshot, SkillTriggerKind, StatusEffect } from '../battle/types.ts';
+import type {
+  BattleSnapshot,
+  ClassPreset,
+  PartySlotState,
+  SkillTriggerKind,
+  StatusEffect,
+} from '../battle/types.ts';
+import { PARTY_SLOT_COUNT } from '../battle/types.ts';
 
 export interface PartyHudMeta {
   displayName: string;
@@ -27,15 +34,38 @@ export interface PartyHudEntry {
   }[];
 }
 
+export function buildPartyHudMetaBySlot(
+  party: PartySlotState[],
+  classRegistry: Record<string, ClassPreset>,
+): (PartyHudMeta | null)[] {
+  return Array.from({ length: PARTY_SLOT_COUNT }, (_, slotIndex) => {
+    const member = party[slotIndex];
+    if (!member) return null;
+    const preset = classRegistry[member.classId];
+    return {
+      displayName: preset?.displayName ?? member.classId,
+      epithetEn: preset?.epithetEn,
+      level: member.progress.level,
+    };
+  });
+}
+
 export function buildPartyHudEntries(
   snapshot: BattleSnapshot,
-  partyMeta: PartyHudMeta[] = [],
-): PartyHudEntry[] {
-  return snapshot.allies.map((ally, index) => {
-    const meta = partyMeta[index];
+  partyMetaBySlot: (PartyHudMeta | null)[] = [],
+): (PartyHudEntry | null)[] {
+  return Array.from({ length: PARTY_SLOT_COUNT }, (_, slotIndex) => {
+    const meta = partyMetaBySlot[slotIndex];
+    if (!meta) return null;
+
+    const ally = snapshot.allies.find(
+      (unit) => unit.partySlotIndex === slotIndex,
+    );
+    if (!ally) return null;
+
     return {
-      displayName: meta?.displayName ?? ally.name,
-      level: meta?.level ?? 1,
+      displayName: meta.displayName,
+      level: meta.level,
       iconKey: ally.iconKey,
       hp: ally.hp,
       maxHp: ally.maxHp,

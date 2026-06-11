@@ -42,10 +42,20 @@ export function tickPendingHits(
   battleSec: number,
   onApply: (hit: PendingSkillHit) => void,
 ): PendingSkillHit[] {
+  const appliedActors = new Set<string>();
   const remaining: PendingSkillHit[] = [];
-  for (const hit of queue) {
+  const sorted = [...queue].sort(
+    (a, b) => a.applyAtBattleSec - b.applyAtBattleSec,
+  );
+
+  for (const hit of sorted) {
     if (hit.applyAtBattleSec <= battleSec) {
+      if (appliedActors.has(hit.actorId)) {
+        remaining.push(hit);
+        continue;
+      }
       onApply(hit);
+      appliedActors.add(hit.actorId);
     } else {
       remaining.push(hit);
     }

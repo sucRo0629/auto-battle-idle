@@ -217,10 +217,28 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 ### 4.4 自動接近（`battleX`）
 
-- プレイヤー前衛（`formationRow !== 'back'`）：生存近接敵がいればその前線を基準。いなければ優先ターゲット基準（`resolvePlayerApproachBattleX`）
-- プレイヤー後衛：優先ターゲット基準
-- 敵：ターゲット基準 + 近接前線 cap
-- **スキル `move` 中・シーケンス busy 中**の actor は自動接近対象外
+接近（chase）と攻撃停止（attack）は **別プール** で解決する（`resolveApproachBattleX.ts`）。
+
+| 側 | chase（毎 tick 再評価） | attack / 停止判定 |
+|----|-------------------------|-------------------|
+| 敵 | 全生存プレイヤーからヘイト最大（`resolveEnemyChaseTargetPlayer`） | 射程内プレイヤーからヘイト最大（`resolveEnemyAttackTargetPlayer`） |
+| 味方（defender） | 敵最前線（近接前線 → なければ最前敵） | 同上プールで射程内なら停止 |
+| 味方（attacker / supporter） | ターゲット spec の敵プールから **奥**（`battleX` 最大） | 射程内の敵から spec 順 |
+
+**停止 X：** chase 対象の `battleX` に対し `resolveApproachAttackBattleX`（§2.5 と同じ射程式）。敵は `capEngagedEnemyApproachBattleX` により左（`battleX` 減少）のみ。
+
+**自動接近スキップ：** `shouldSkipEngagedAutoApproach` — attack プールに 1 体でもいれば接近しない（射程内で攻撃待機）。
+
+**味方の追加 cap：**
+
+- 前衛（`formationRow !== 'back'`）：敵最前線より右へ過進軍しない（`capFrontRowBeforeEnemyContact`）
+- 後衛：近接敵全滅後は右追いジャンプを抑止（`capForwardAfterMeleeWipe`）。近接敵生存中は敵接触点を `frozenMeleeContactX` で凍結可能
+
+**敵の追い替え：** 近接が後列ヘイトへ追いかけている間も、毎 tick でヘイト 1 位を chase 対象にする（スティッキー chase ID なし）。射程内に入ったら attack プールで停止・攻撃。
+
+**遠隔敵の表示凍結：** 接敵開始時 `engagedVisualTargetPlayerId` は attack プール → なければ chase（`battleDisplay.freezeRangedTargets`）。接敵中の攻撃ターゲット解決とは独立。
+
+**スキル `move` 中・シーケンス busy 中**の actor は自動接近対象外。
 
 ### 4.5 スキル `move`
 

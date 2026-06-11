@@ -197,7 +197,7 @@ interface CharacterBuild {
 | `trigger.value`  | 条件の閾値 N。ステージ開始時 `remaining = N`（ゲージ未充填）。カウントトリガーは N 回のイベントで `remaining === 0`（ゲージ Max）となり、N+1 回目で発動・`remaining = N` にリセット。時間トリガーは 0 到達で即発動 |
 | `useDurationSec` | optional。発動硬直（秒）。省略 / `0` = 即時。アニメ長に合わせて設定（詳細は [combat.md](combat.md)）                                                                                                               |
 
-- `basicAttackCount` — ステージ開始時 `remaining = value`（未充填）。**通常攻撃が命中するたび** `remaining--`（`remaining > 0` のとき）。N 回目でゲージ Max（発動せず）、**N+1 回目の通常攻撃枠でアクティブ発動**（通常攻撃の代わり）
+- `basicAttackCount` — ステージ開始時 `remaining = value`（未充填）。**通常攻撃のダメージが発生するたび**、装備中の全 `basicAttackCount` アクティブがそれぞれ `remaining--`（`remaining > 0` のとき。多段通常攻撃はダメージごとにカウントし、攻撃枠単位ではまとめない。回避時は進まない）。2段通常攻撃なら1回の攻撃枠で各スキルとも2カウント（例: 8必要なら 1,2 → 3,4 → …）。N 回目でゲージ Max（発動せず）、**N+1 回目の通常攻撃枠でアクティブ発動**（通常攻撃の代わり）
 - `hitsTaken` — 被ダメ（`hurt`）のたび `remaining--`（`remaining > 0` のとき）。N 回目でゲージ Max（発動せず）、**N+1 回目の被弾でアクティブ発動**（ダメージは通常通り）
 - **通常攻撃** は従来どおり JSON の `interval`（時間のみ）+ `attackSpeedTier` / SPD
 - レガシー JSON の `interval` はアクティブでも `trigger: { kind: "time", value: interval }` として読み込む
@@ -228,7 +228,7 @@ interface CharacterBuild {
 
 | effect                | 主なフィールド                                                             | 挙動                                                                                                                                                                           |
 | --------------------- | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `targetRuleOverride`  | `targetRuleOverride`                                                       | 味方の攻撃 anchor ルールを上書き（複数時は配列の後ろ優先）                                                                                                                     |
+| `targetRuleOverride`  | `targetRuleOverride`, `targetRuleOverrideApplyTo?` (`enemy` / `ally`)      | effect のターゲット陣営とスコープが一致するときだけ `targetRuleOverride` で上書き（`enemy` = 敵向け effect・通常攻撃・接近、`ally` = 味方向け effect。`kind: self` は常に除外。複数時は配列の後ろ優先） |
 | `specialEffect`       | `specialEffectApplyTo`, `specialEffect`                                    | 条件付き特効倍率。`damage` = 与ダメ、`heal` = 被回復（直接 heal のみ、HoT 非対象）。`conditions: []` は無条件で `scale` 適用                                                   |
 | `buff`                | `buffSubKind`, `buffTargetRule`, `chance?`, `buffStat?` 等                 | 戦闘開始時に対象へ常時バフ aura を同期。`buffSubKind`: `stat` / `barrier` / `block` / `evasion`                                                                                |
 | `debuff`              | `debuffSubKind`, `debuffTargetRule`, `debuffStat?` 等                      | 戦闘開始時に対象へ常時デバフ aura を同期。`debuffSubKind`: `stat` / `dot` / `stun`                                                                                             |
@@ -327,7 +327,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 
 | `kind`       | 説明                                                                                                                                 |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest）。味方 actor + enemy/nearest = 最前線敵。敵 actor + ally/nearest = ヘイト加重味方   |
+| `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest）。味方 actor + enemy/nearest = 最前線敵。敵 actor + enemy/nearest = 射程内でヘイト最大の味方（`side: "enemy"` は敵視点でプレイヤー陣営を指す）   |
 | `stat`       | `side` + `stat`（hp/atk/def/reg）+ `order`（highest/lowest/ratio）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方） |
 | `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。フィルタ後 anchor は最前線           |
 | `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR）。フィルタ後 anchor は最前線                                                    |

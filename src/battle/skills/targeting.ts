@@ -28,6 +28,8 @@ import {
   orderPoolByTarget,
   pickTargetFromPool as pickTargetFromPoolSpec,
   resolveTargetSpec,
+  targetSpecFaction,
+  type TargetRuleContext,
 } from './targetSpec.ts';
 
 export {
@@ -35,6 +37,7 @@ export {
   getEffectTarget,
   normalizeTarget,
   resolveTargetSpec,
+  targetSpecFaction,
 } from './targetSpec.ts';
 
 export type { TargetRuleContext } from './targetSpec.ts';
@@ -128,35 +131,36 @@ function hasDamagedHealCandidate(
   return candidates.some((unit) => unit.hp < unit.maxHp);
 }
 
-function isAllyTargetSpec(spec: TargetSpec): boolean {
-  switch (spec.kind) {
-    case 'self':
-      return true;
-    case 'distance':
-    case 'stat':
-    case 'all':
-      return spec.side === 'ally';
-    default:
-      return false;
+function hasScopedTargetRuleOverride(
+  passives: PassiveSkillDef[],
+  faction: 'enemy' | 'ally',
+  context: TargetRuleContext,
+): boolean {
+  for (let i = passives.length - 1; i >= 0; i--) {
+    const passive = passives[i]!;
+    if (passive.effect !== 'targetRuleOverride' || !passive.targetRuleOverride) {
+      continue;
+    }
+    if ((passive.targetRuleOverrideApplyTo ?? 'enemy') !== faction) continue;
+    const pool = getTargetPool(
+      passive.targetRuleOverride,
+      context.actor,
+      context.allies,
+      context.enemies,
+    );
+    if (pool.length > 0) return true;
   }
+  return false;
 }
 
-function shouldApplyTargetRuleOverride(effect: SkillEffectDef, defaultSpec: TargetSpec): boolean {
-  // targetRuleOverride は攻撃 anchor 専用（classes-and-skills.md）。自己対象・サポート effect は上書きしない
-  if (defaultSpec.kind === 'self') return false;
-  // toAnchor 等の味方向け move は帰還先を固定（仕留めの眼などで敵に化けない）
-  if (effect.type === 'move' && isAllyTargetSpec(defaultSpec)) return false;
-  switch (effect.type) {
-    case 'barrier':
-    case 'heal':
-    case 'hot':
-    case 'dispel':
-    case 'buff':
-    case 'block':
-      return false;
-    default:
-      return true;
-  }
+function shouldApplyTargetRuleOverride(
+  defaultSpec: TargetSpec,
+  passives: PassiveSkillDef[],
+  context: TargetRuleContext,
+): boolean {
+  const faction = targetSpecFaction(defaultSpec, context.actor);
+  if (faction === 'self') return false;
+  return hasScopedTargetRuleOverride(passives, faction, context);
 }
 
 export function resolveEffectTargetSpec(
@@ -168,8 +172,16 @@ export function resolveEffectTargetSpec(
 ): TargetSpec {
   const defaultSpec = getEffectTarget(effect);
   if (!passives || passives.length === 0) return defaultSpec;
-  if (!shouldApplyTargetRuleOverride(effect, defaultSpec)) return defaultSpec;
-  return resolveTargetSpec(passives, defaultSpec, { actor, allies, enemies });
+  const context: TargetRuleContext = { actor, allies, enemies };
+  if (!shouldApplyTargetRuleOverride(defaultSpec, passives, context)) {
+    return defaultSpec;
+  }
+  const faction = targetSpecFaction(defaultSpec, actor);
+  if (faction === 'self') return defaultSpec;
+  return resolveTargetSpec(passives, defaultSpec, {
+    ...context,
+    applyScope: faction,
+  });
 }
 
 /** move は射程外でも anchor を選ぶ */

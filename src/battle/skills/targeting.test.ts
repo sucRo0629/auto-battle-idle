@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import type { CombatantState, DamageSkillEffect, GameData, SkillEffectDef, TargetRule } from '../types.ts';
+import type {
+  CombatantState,
+  DamageSkillEffect,
+  GameData,
+  PassiveSkillDef,
+  SkillEffectDef,
+  TargetRule,
+} from '../types.ts';
 import { normalizeTarget } from './targetSpec.ts';
 import { applyPowerStep } from './powerStep.ts';
 import {
@@ -11,6 +18,7 @@ import { engagedMinBodyGap } from '../battleConstants.ts';
 import {
   resolveEffectAnchor,
   resolveEffectResolution,
+  resolveEffectTargetSpec,
   resolveEffectTargets,
 } from './targeting.ts';
 
@@ -393,7 +401,7 @@ describe('resolveEffectTargets', () => {
     expect(anchor?.id).toBe('near');
   });
 
-  it('toAnchor ally move ignores targetRuleOverride passive', () => {
+  it('toAnchor ally move ignores enemy-scoped targetRuleOverride', () => {
     const actor = mockUnit('actor', 150);
     const allyNear = mockUnit('near', 120);
     const enemy = mockUnit('enemy', 280, { isEnemy: true });
@@ -574,5 +582,142 @@ describe('heal / hot withhold when no damaged allies', () => {
       gameData,
     );
     expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('ally-damaged');
+  });
+});
+
+describe('targetRuleOverride apply scope', () => {
+  const gameData = mockGameData(120);
+  const actor = mockUnit('actor', 200);
+  const enemyHighHp = mockUnit('e-high', 180, { isEnemy: true, hp: 80 });
+  const enemyLowHp = mockUnit('e-low', 140, { isEnemy: true, hp: 20 });
+  const enemies = [enemyHighHp, enemyLowHp];
+
+  const enemyLowestHpPassive: PassiveSkillDef = {
+    id: 'passive_target_lowest_hp',
+    name: '手負い狩り',
+    effect: 'targetRuleOverride',
+    targetRuleOverrideApplyTo: 'enemy',
+    targetRuleOverride: {
+      kind: 'stat',
+      side: 'enemy',
+      stat: 'hp',
+      order: 'lowest',
+    },
+  };
+
+  it('enemy scope overrides enemy-facing damage to lowest HP', () => {
+    const resolution = resolveEffectResolution(
+      damageEffect({ range: 120 }, 'frontEnemy'),
+      actor,
+      [actor],
+      enemies,
+      gameData,
+      Math.random,
+      [enemyLowestHpPassive],
+    );
+    expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('e-low');
+  });
+
+  it('ally-scoped override does not apply to enemy-facing damage', () => {
+    const allyScopePassive: PassiveSkillDef = {
+      ...enemyLowestHpPassive,
+      targetRuleOverrideApplyTo: 'ally',
+      targetRuleOverride: {
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+      },
+    };
+    const resolution = resolveEffectResolution(
+      damageEffect({ range: 120 }, 'frontEnemy'),
+      actor,
+      [actor],
+      enemies,
+      gameData,
+      Math.random,
+      [allyScopePassive],
+    );
+    expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('e-high');
+  });
+
+  it('self-target buff ignores enemy-scoped override', () => {
+    const spec = resolveEffectTargetSpec(
+      {
+        type: 'buff',
+        buffSubKind: 'evasion',
+        chance: 1,
+        buffDurationSec: 2,
+        target: { kind: 'self' },
+      },
+      actor,
+      [actor],
+      enemies,
+      [enemyLowestHpPassive],
+    );
+    expect(spec).toEqual({ kind: 'self' });
+  });
+
+  it('ally scope overrides ally-facing heal target', () => {
+    const healer = mockUnit('healer', 200);
+    const allyDamaged = mockUnit('ally-damaged', 180, { hp: 25, maxHp: 100 });
+    const allyHealthy = mockUnit('ally-healthy', 220, { hp: 95, maxHp: 100 });
+    const allyScopePassive: PassiveSkillDef = {
+      id: 'passive_heal_lowest',
+      name: '要援護',
+      effect: 'targetRuleOverride',
+      targetRuleOverrideApplyTo: 'ally',
+      targetRuleOverride: {
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+      },
+    };
+    const resolution = resolveEffectResolution(
+      {
+        type: 'heal',
+        target: { kind: 'distance', side: 'ally', order: 'nearest' },
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      healer,
+      [healer, allyDamaged, allyHealthy],
+      enemies,
+      gameData,
+      Math.random,
+      [allyScopePassive],
+    );
+    expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('ally-damaged');
+  });
+
+  it('ally scope overrides toAnchor return move anchor', () => {
+    const allyNear = mockUnit('near', 170, { hp: 90, maxHp: 100 });
+    const allyDamaged = mockUnit('damaged', 250, { hp: 15, maxHp: 100 });
+    const allyScopePassive: PassiveSkillDef = {
+      id: 'passive_return_damaged',
+      name: '要援護帰還',
+      effect: 'targetRuleOverride',
+      targetRuleOverrideApplyTo: 'ally',
+      targetRuleOverride: {
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+      },
+    };
+    const anchor = resolveEffectAnchor(
+      {
+        type: 'move',
+        moveMode: 'toAnchor',
+        target: { kind: 'distance', side: 'ally', order: 'nearest' },
+        moveDurationSec: 0.2,
+      },
+      actor,
+      [actor, allyNear, allyDamaged],
+      enemies,
+      gameData,
+      [allyScopePassive],
+    );
+    expect(anchor?.id).toBe('damaged');
   });
 });

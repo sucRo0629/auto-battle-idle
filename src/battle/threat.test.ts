@@ -1,28 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState } from './types.ts';
 import {
+  THREAT_BASE_DEFENDER_MULTIPLIER,
   THREAT_DAMAGE_SCALE,
-  THREAT_DAMAGE_SCALE_ATTACKER_DEALT,
-  THREAT_TARGET_WEIGHT_EXPONENT,
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
   computeAllyBaseThreat,
   initializeAllyThreat,
-  pickThreatWeightedAlly,
+  pickHighestThreatAlly,
   tickAllyThreatDecay,
 } from './threat.ts';
-
-function threatPickShare(
-  allies: CombatantState[],
-  targetId: string,
-): number {
-  const weights = allies.map((ally) =>
-    Math.pow(Math.max(ally.threat ?? 1, 1), THREAT_TARGET_WEIGHT_EXPONENT),
-  );
-  const total = weights.reduce((sum, weight) => sum + weight, 0);
-  const index = allies.findIndex((ally) => ally.id === targetId);
-  return weights[index]! / total;
-}
 
 function mockAlly(
   overrides: Partial<CombatantState> & { id: string },
@@ -65,7 +52,19 @@ describe('threat', () => {
       def: 20,
     });
     const base = computeAllyBaseThreat(tank, [tank]);
-    expect(base).toBe(Math.floor(200 * 0.1 + 20 * 2));
+    const raw = Math.floor(200 * 0.1 + 20 * 2);
+    expect(base).toBe(Math.floor(raw * THREAT_BASE_DEFENDER_MULTIPLIER));
+  });
+
+  it('does not apply defender base multiplier to non-defender roles', () => {
+    const attacker = mockAlly({
+      id: 'attacker',
+      role: 'attacker',
+      maxHp: 165,
+      def: 14,
+    });
+    const base = computeAllyBaseThreat(attacker, [attacker]);
+    expect(base).toBe(Math.floor(165 * 0.1 + 14 * 2));
   });
 
   it('adds front-row pressure when another front ally is damaged', () => {
@@ -91,13 +90,40 @@ describe('threat', () => {
     expect(warriorBaseWithPressure).toBeGreaterThan(warriorBaseAlone);
   });
 
-  it('pickThreatWeightedAlly strongly favors higher threat (power-5 weights)', () => {
+  it('pickHighestThreatAlly selects max threat', () => {
     const tank = mockAlly({ id: 'tank', threat: 150, baseThreat: 150 });
     const healer = mockAlly({ id: 'healer', threat: 50, baseThreat: 50 });
-    expect(pickThreatWeightedAlly([tank, healer], () => 0.89)?.id).toBe('tank');
-    expect(pickThreatWeightedAlly([tank, healer], () => 0.998)?.id).toBe(
-      'healer',
-    );
+    expect(pickHighestThreatAlly([tank, healer])?.id).toBe('tank');
+    expect(pickHighestThreatAlly([healer, tank])?.id).toBe('tank');
+  });
+
+  it('pickHighestThreatAlly breaks threat ties by frontline battleX then id', () => {
+    const front = mockAlly({
+      id: 'b-front',
+      threat: 100,
+      baseThreat: 100,
+      battleX: 220,
+    });
+    const back = mockAlly({
+      id: 'a-back',
+      threat: 100,
+      baseThreat: 100,
+      battleX: 180,
+    });
+    expect(pickHighestThreatAlly([back, front])?.id).toBe('b-front');
+    const left = mockAlly({
+      id: 'a-left',
+      threat: 100,
+      baseThreat: 100,
+      battleX: 220,
+    });
+    const right = mockAlly({
+      id: 'b-right',
+      threat: 100,
+      baseThreat: 100,
+      battleX: 220,
+    });
+    expect(pickHighestThreatAlly([right, left])?.id).toBe('a-left');
   });
 
   it('applyThreatFromDamage increases ally threat on deal and take', () => {
@@ -116,7 +142,7 @@ describe('threat', () => {
     );
   });
 
-  it('applyThreatFromDamage uses lower scale when attacker deals damage', () => {
+  it('applyThreatFromDamage uses same scale when attacker deals damage', () => {
     const attacker = mockAlly({
       id: 'swordsman',
       role: 'attacker',
@@ -131,7 +157,7 @@ describe('threat', () => {
     });
     applyThreatFromDamage(attacker, enemy, 63);
     expect(attacker.threat).toBe(
-      44 + Math.floor(63 * THREAT_DAMAGE_SCALE_ATTACKER_DEALT),
+      44 + Math.floor(63 * THREAT_DAMAGE_SCALE),
     );
   });
 
@@ -161,7 +187,7 @@ describe('threat', () => {
     expect(allies[1]!.threat).toBe(allies[1]!.baseThreat);
   });
 
-  it('demo party start concentrates enemy hits on guardian', () => {
+  it('demo party start targets guardian as highest threat', () => {
     const allies = [
       mockAlly({
         id: 'guardian',
@@ -196,12 +222,10 @@ describe('threat', () => {
       }),
     ];
     initializeAllyThreat(allies);
-    expect(threatPickShare(allies, 'guardian')).toBeGreaterThan(0.85);
-    expect(threatPickShare(allies, 'swordsman')).toBeLessThan(0.1);
-    expect(threatPickShare(allies, 'ranger')).toBeLessThan(0.05);
+    expect(pickHighestThreatAlly(allies)?.id).toBe('guardian');
   });
 
-  it('guardian keeps top threat after swordsman burst damage', () => {
+  it('guardian keeps top threat after a light swordsman hit', () => {
     const guardian = mockAlly({
       id: 'guardian',
       maxHp: 235,
@@ -227,5 +251,33 @@ describe('threat', () => {
     });
     applyThreatFromDamage(swordsman, enemy, 63);
     expect(guardian.threat!).toBeGreaterThan(swordsman.threat!);
+  });
+
+  it('swordsman can overtake guardian threat after a strong burst', () => {
+    const guardian = mockAlly({
+      id: 'guardian',
+      maxHp: 235,
+      def: 26,
+      hp: 235,
+      formationRow: 'front',
+    });
+    const swordsman = mockAlly({
+      id: 'swordsman',
+      role: 'attacker',
+      maxHp: 165,
+      def: 14,
+      hp: 165,
+      formationRow: 'front',
+    });
+    initializeAllyThreat([guardian, swordsman]);
+    const enemy = mockAlly({
+      id: 'enemy',
+      isEnemy: true,
+      threat: undefined,
+      baseThreat: undefined,
+    });
+    applyThreatFromDamage(swordsman, enemy, 100);
+    expect(swordsman.threat!).toBeGreaterThan(guardian.threat!);
+    expect(pickHighestThreatAlly([guardian, swordsman])?.id).toBe('swordsman');
   });
 });

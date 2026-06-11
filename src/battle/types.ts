@@ -410,6 +410,8 @@ export type PassiveEffectKind =
   | "healReceivedIncrease"
   | "extendSelfAppliedDebuff";
 
+export type TargetRuleOverrideApplyTo = "enemy" | "ally";
+
 export interface PassiveSkillDef {
   id: string;
   name: string;
@@ -417,6 +419,8 @@ export interface PassiveSkillDef {
   iconKey?: string;
   effect: PassiveEffectKind;
   targetRuleOverride?: TargetSpec;
+  /** targetRuleOverride の適用スコープ。未指定 = enemy */
+  targetRuleOverrideApplyTo?: TargetRuleOverrideApplyTo;
   /** buff: block / evasion / counter / defenseIgnore 用（0–1） */
   chance?: number;
   ratio?: number;

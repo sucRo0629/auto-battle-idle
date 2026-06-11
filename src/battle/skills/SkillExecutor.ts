@@ -24,8 +24,8 @@ import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
 import { grantCounterStatus } from '../counterEffects.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
 import {
+  chargeBasicAttackCountOnHit,
   resetCooldownAfterFire,
-  tickCountTriggerCooldowns,
 } from '../skillTrigger.ts';
 import type {
   ActiveSkillDef,
@@ -52,11 +52,10 @@ import {
   type SkillSequenceRunner,
   skillHasMoveEffect,
 } from './skillSequence.ts';
-import { getEffectTarget } from './targetSpec.ts';
 import {
   resolutionHasTargets,
   resolveEffectResolution,
-  resolveTargetSpec,
+  resolveEffectTargetSpec,
 } from './targeting.ts';
 
 export interface SkillExecutorDeps {
@@ -65,6 +64,7 @@ export interface SkillExecutorDeps {
   getAllCombatants: () => CombatantState[];
   getSequenceRunner: () => SkillSequenceRunner;
   onBasicAttackExecuted?: (actorId: string) => void;
+  onBasicAttackCountCharged?: (actorId: string) => void;
   onDamageApplied?: (
     actor: CombatantState,
     target: CombatantState,
@@ -191,11 +191,6 @@ export class SkillExecutor {
       this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
       resetCooldownAfterFire(cd, skill);
       if (cd.slotKind === 'basic') {
-        tickCountTriggerCooldowns(
-          actor.cooldowns,
-          this.gameData.skillRegistry.actives,
-          'basicAttackCount',
-        );
         this.deps.onBasicAttackExecuted?.(actor.id);
       }
     }
@@ -216,12 +211,13 @@ export class SkillExecutor {
       actor,
       this.gameData.skillRegistry.passives,
     );
-    const defaultSpec = getEffectTarget(step.effectDef);
-    const spec = resolveTargetSpec(passives, defaultSpec, {
+    const spec = resolveEffectTargetSpec(
+      step.effectDef,
       actor,
       allies,
       enemies,
-    });
+      passives,
+    );
     const target =
       step.effectDef.type === 'move'
         ? findCombatantById(step.targetId, allies, enemies)
@@ -294,6 +290,11 @@ export class SkillExecutor {
       all.filter((unit) => !unit.isEnemy),
       all.filter((unit) => unit.isEnemy),
     ];
+  }
+
+  private chargeBasicAttackCountForHit(actor: CombatantState): void {
+    chargeBasicAttackCountOnHit(actor, this.gameData.skillRegistry.actives);
+    this.deps.onBasicAttackCountCharged?.(actor.id);
   }
 
   private applyMoveEffect(
@@ -393,6 +394,9 @@ export class SkillExecutor {
         attackKind: 'damage',
       });
       const { lethal } = damageResult;
+      if (cd.slotKind === 'basic') {
+        this.chargeBasicAttackCountForHit(actor);
+      }
       this.emit({
         type: 'skill',
         actorId: actor.id,

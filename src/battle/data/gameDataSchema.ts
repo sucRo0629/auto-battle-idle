@@ -514,6 +514,19 @@ export const TARGET_SPEC_KIND_LABELS: Record<TargetSpecKind, string> = {
   all: "全体",
 };
 
+export const TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS = [
+  "enemy",
+  "ally",
+] as const;
+
+export const TARGET_RULE_OVERRIDE_APPLY_TO_LABELS: Record<
+  (typeof TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS)[number],
+  string
+> = {
+  enemy: "敵向け effect",
+  ally: "味方向け effect",
+};
+
 export const TARGET_SIDE_OPTIONS = ["ally", "enemy"] as const;
 export const TARGET_DISTANCE_ORDER_OPTIONS = ["nearest", "farthest"] as const;
 export const TARGET_STAT_OPTIONS = ["hp", "atk", "def", "reg"] as const;

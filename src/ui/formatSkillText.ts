@@ -506,12 +506,15 @@ function formatPassiveEffect(
     counterChance?: number;
   };
   switch (effect) {
-    case "targetRuleOverride":
-      return `ターゲット → ${formatTarget(def.targetRuleOverride, {
+    case "targetRuleOverride": {
+      const scope = def.targetRuleOverrideApplyTo ?? "enemy";
+      const scopeLabel = scope === "ally" ? "味方向け" : "敵向け";
+      return `${scopeLabel}ターゲット → ${formatTarget(def.targetRuleOverride, {
         kind: "distance",
-        side: "enemy",
+        side: scope,
         order: "nearest",
       })}`;
+    }
     case "evasionChance":
       return `回避 +${formatPercent(legacy.evasionChance ?? 0)}`;
     case "block":

@@ -76,6 +76,7 @@ import {
   DAMAGE_INCREASE_CONDITION_KINDS,
   DEFENSE_IGNORE_DEF_MODES,
   COUNTER_RESPONSE_KINDS,
+  TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS,
 } from './gameDataSchema.ts';
 import { normalizeTarget } from '../skills/targetSpec.ts';
 import {
@@ -125,6 +126,9 @@ const SPECIAL_EFFECT_APPLY_TO_SET = new Set<
 const BUFF_TARGET_KINDS_SET = new Set<import('../types.ts').BuffTargetKind>(
   BUFF_TARGET_KINDS,
 );
+const TARGET_RULE_OVERRIDE_APPLY_TO_SET = new Set<
+  import('../types.ts').TargetRuleOverrideApplyTo
+>(TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS);
 
 const LEGACY_PASSIVE_EFFECT_ALIASES: Record<string, PassiveEffectKind> = {
   healAppliesBarrier: 'excessHealToBarrier',
@@ -1824,14 +1828,27 @@ function requirePassiveEffectParams(
   };
 
   switch (effect) {
-    case 'targetRuleOverride':
+    case 'targetRuleOverride': {
+      const targetRuleOverrideApplyTo =
+        obj.targetRuleOverrideApplyTo === undefined
+          ? undefined
+          : requireEnum(
+              obj,
+              'targetRuleOverrideApplyTo',
+              context,
+              TARGET_RULE_OVERRIDE_APPLY_TO_SET,
+            );
       return {
         ...base,
         targetRuleOverride: parseTargetSpec(
           obj.targetRuleOverride ?? obj.target,
           `${context}.targetRuleOverride`,
         ),
+        ...(targetRuleOverrideApplyTo !== undefined
+          ? { targetRuleOverrideApplyTo }
+          : {}),
       };
+    }
     case 'specialEffect': {
       const specialEffectApplyTo =
         obj.specialEffectApplyTo === undefined

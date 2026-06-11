@@ -55,16 +55,18 @@ export function synthesizeBasicAttackSkill(params: {
 
   if (!jsonOverride) return synthesized;
 
+  const primaryEffect =
+    overrideEffect?.type === 'damage'
+      ? { ...overrideEffect, amount }
+      : synthesizedDamageEffect(amount);
+
   const merged: ActiveSkillDef = {
     ...synthesized,
     id,
     name: jsonOverride.name ?? synthesized.name,
     trigger: jsonOverride.trigger ?? synthesized.trigger,
     iconKey: jsonOverride.iconKey,
-    effect: [
-      synthesizedDamageEffect(amount),
-      ...jsonOverride.effect.slice(1),
-    ],
+    effect: [primaryEffect, ...jsonOverride.effect.slice(1)],
   };
 
   return merged;

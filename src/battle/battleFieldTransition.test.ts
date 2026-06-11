@@ -59,6 +59,15 @@ function createStage1FastMeleeWipeEngine(): BattleEngine {
   return engine;
 }
 
+function partyResourceTotal(
+  snap: ReturnType<BattleEngine['getSnapshot']>,
+): number {
+  return snap.allies.reduce(
+    (sum, ally) => sum + Math.max(0, ally.hp) + Math.max(0, ally.barrierHp ?? 0),
+    0,
+  );
+}
+
 function isRangedOnlyWave1(snap: ReturnType<BattleEngine['getSnapshot']>) {
   if (snap.waveIndex !== 0 || !snap.engaged) return false;
   const living = snap.enemies.filter((e) => e.hp > 0);
@@ -229,14 +238,21 @@ describe('battle-field transition spec (T-*)', () => {
   });
 
   it('T-melee-wipe-01: ranged enemies advance or attack after all melee die', () => {
-    const engine = createStage1Wave1MeleeFirstDeathEngine();
+    let rangedHit = false;
+    const engine = createStage1Wave1MeleeFirstDeathEngine({
+      onDamageApplied: (actor, _target, amount) => {
+        if (actor.isEnemy && actor.name === 'test_ranged' && amount > 0) {
+          rangedHit = true;
+        }
+      },
+    });
     waitForEngaged(engine);
 
     let meleeWipeTick = -1;
     let rangedStartX = 0;
     let rangedEndX = 0;
-    let playerHpDrop = false;
-    let hpAtWipe = 0;
+    let partyResourceDrop = false;
+    let resourcesAtWipe = 0;
 
     for (let i = 0; i < 120_000; i++) {
       const snap = engine.getSnapshot();
@@ -246,15 +262,17 @@ describe('battle-field transition spec (T-*)', () => {
       const ranged = snap.enemies.find(
         (e) => e.hp > 0 && e.name === 'test_ranged',
       );
-      const playerHp = snap.allies.reduce((s, a) => s + Math.max(0, a.hp), 0);
+      const partyResources = partyResourceTotal(snap);
       if (meleeWipeTick < 0 && livingMelee.length === 0 && ranged) {
         meleeWipeTick = i;
         rangedStartX = ranged.battleX;
-        hpAtWipe = playerHp;
+        resourcesAtWipe = partyResources;
       }
       if (meleeWipeTick >= 0 && ranged) {
         rangedEndX = ranged.battleX;
-        if (playerHp < hpAtWipe) playerHpDrop = true;
+        if (partyResources < resourcesAtWipe) {
+          partyResourceDrop = true;
+        }
       }
       if (meleeWipeTick >= 0 && i - meleeWipeTick > 300) break;
       engine.tick(TICK_DT);
@@ -262,7 +280,7 @@ describe('battle-field transition spec (T-*)', () => {
 
     expect(meleeWipeTick).toBeGreaterThan(0);
     expect(
-      rangedStartX - rangedEndX > 10 || playerHpDrop,
+      rangedStartX - rangedEndX > 10 || rangedHit || partyResourceDrop,
     ).toBe(true);
   });
 

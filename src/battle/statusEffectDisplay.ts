@@ -53,6 +53,11 @@ export interface StatBadgeBaseStats {
   reg: number;
 }
 
+/** パッシブオーラ同期で付与された効果（HUD バッジ非表示・戦闘計算は対象） */
+export function isPassiveAuraStatusEffect(effect: StatusEffect): boolean {
+  return effect.id.startsWith('passive_');
+}
+
 function effectsForCategory(
   effects: StatusEffect[],
   category: StatusDisplayCategory,
@@ -216,21 +221,28 @@ export function aggregateStatStatusEffects(
   effects: StatusEffect[],
   baseStats: StatBadgeBaseStats,
 ): AggregatedCategoryEffect[] {
+  const displayEffects = effects.filter(
+    (effect) => !isPassiveAuraStatusEffect(effect),
+  );
   const result: AggregatedCategoryEffect[] = [];
 
   for (const category of ['atk', 'def', 'reg'] as const) {
     const badge = aggregateStatCategory(
-      effects,
+      displayEffects,
       category,
       baseStats[category],
     );
     if (badge) result.push(badge);
   }
 
-  const attackSpeedBadge = aggregateStatCategory(effects, 'attackSpeed', 1);
+  const attackSpeedBadge = aggregateStatCategory(
+    displayEffects,
+    'attackSpeed',
+    1,
+  );
   if (attackSpeedBadge) result.push(attackSpeedBadge);
 
-  const damageTakenBadge = aggregateDamageTakenCategory(effects);
+  const damageTakenBadge = aggregateDamageTakenCategory(displayEffects);
   if (damageTakenBadge) result.push(damageTakenBadge);
 
   for (const category of [
@@ -241,7 +253,7 @@ export function aggregateStatStatusEffects(
     'counter',
     'stun',
   ] as const) {
-    const badge = aggregateOverlayCategory(effects, category);
+    const badge = aggregateOverlayCategory(displayEffects, category);
     if (badge) result.push(badge);
   }
 

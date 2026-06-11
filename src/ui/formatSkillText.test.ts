@@ -20,7 +20,7 @@ describe('formatPassiveDescription', () => {
           order: 'highest',
         },
       } satisfies PassiveSkillDef,
-      fragments: ['ターゲット', '敵', 'ATK最高'],
+      fragments: ['敵向けターゲット', '敵', 'ATK最高'],
     },
     {
       name: 'damage taken to heal',

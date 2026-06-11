@@ -88,6 +88,33 @@ describe('statusEffectDisplay', () => {
     expect(badges[0]?.kind).toBe('buff');
   });
 
+  it('hides passive aura status effects from badges', () => {
+    const badges = aggregateStatStatusEffects(
+      [
+        {
+          id: 'passive_buff_guard_block_block',
+          kind: 'buff',
+          overlay: 'block',
+          blockChance: 0.2,
+          multiplier: 1,
+          durationSec: 99999,
+          remainingSec: 99999,
+        },
+        {
+          id: 'passive_dmg_reduction_tank_guard',
+          kind: 'buff',
+          stat: 'damageTaken',
+          multiplier: 0.8,
+          durationSec: 99999,
+          remainingSec: 99999,
+        },
+      ],
+      { atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges).toEqual([]);
+  });
+
   it('aggregates stun overlay', () => {
     const badges = aggregateStatStatusEffects(
       [

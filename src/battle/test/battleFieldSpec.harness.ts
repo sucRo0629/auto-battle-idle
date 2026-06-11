@@ -3,7 +3,7 @@
  * Maps spec section IDs (F-*, A-*, I-*) to reusable engine fixtures and assertions.
  */
 import { expect } from 'vitest';
-import { BattleEngine } from '../BattleEngine.ts';
+import { BattleEngine, type BattleEngineOptions } from '../BattleEngine.ts';
 import { loadGameData } from '../data/loadGameData.ts';
 import { loadLevelCurves } from '../../progression/levelGrowth.ts';
 import levelCurvesJson from '../../../data/levelCurves.json';
@@ -70,7 +70,9 @@ export function createStage1Engine(options?: { reliableWaveClear?: boolean }) {
   return engine;
 }
 
-export function createStage1Wave1MeleeFirstDeathEngine() {
+export function createStage1Wave1MeleeFirstDeathEngine(
+  options?: BattleEngineOptions,
+) {
   const gameData = structuredClone(loadGameData());
   const stage1_1 = gameData.enemyRegistry.stage1_1;
   const melee = gameData.enemyRegistry.test_enemy;
@@ -89,6 +91,7 @@ export function createStage1Wave1MeleeFirstDeathEngine() {
     levelCurves,
     () => save.party,
     () => save.stageProgress.currentStageId,
+    options,
   );
   engine.startBattle();
   return engine;

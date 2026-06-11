@@ -99,3 +99,43 @@ export function tickCountTriggerCooldowns(
     chargeCountTrigger(cd, skill);
   }
 }
+
+/** 通常攻撃ヒット1回分で、全 basicAttackCount アクティブを1カウント充填 */
+export function chargeBasicAttackCountOnHit(
+  actor: CombatantState,
+  actives: Record<string, ActiveSkillDef>,
+): void {
+  tickCountTriggerCooldowns(actor.cooldowns, actives, 'basicAttackCount');
+}
+
+export interface PendingBasicAttackCountCharge {
+  applyAtBattleSec: number;
+  actorId: string;
+}
+
+/** ヒットタイミングに合わせて basicAttackCount を充填（1 tick あたり actor 1 回まで） */
+export function tickPendingBasicAttackCountCharges(
+  queue: PendingBasicAttackCountCharge[],
+  battleSec: number,
+  onCharge: (actorId: string) => void,
+): PendingBasicAttackCountCharge[] {
+  const chargedActors = new Set<string>();
+  const remaining: PendingBasicAttackCountCharge[] = [];
+  const sorted = [...queue].sort(
+    (a, b) => a.applyAtBattleSec - b.applyAtBattleSec,
+  );
+
+  for (const entry of sorted) {
+    if (entry.applyAtBattleSec <= battleSec) {
+      if (chargedActors.has(entry.actorId)) {
+        remaining.push(entry);
+        continue;
+      }
+      onCharge(entry.actorId);
+      chargedActors.add(entry.actorId);
+    } else {
+      remaining.push(entry);
+    }
+  }
+  return remaining;
+}

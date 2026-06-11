@@ -31,7 +31,8 @@ import {
 import {
   resolvePlayerApproachBattleX,
   resolveEnemyApproachBattleX,
-  resolveEnemyBasicAttackTarget,
+  resolveEnemyAttackTargetPlayer,
+  resolveEnemyChaseTargetPlayer,
   shouldSkipEngagedAutoApproach,
 } from "./resolveApproachBattleX.ts";
 import {
@@ -196,6 +197,9 @@ export class BattleEngine {
       getAllCombatants: () => [...this.players, ...this.enemies],
       getSequenceRunner: () => this.skillSequenceRunner,
       onBasicAttackExecuted: () => {},
+      onBasicAttackCountCharged: (actorId) => {
+        this.emit({ type: 'basicAttackCountCharged', actorId });
+      },
       onDamageApplied: (actor, target, amount, meta) => {
         this.handleDamageThreat(actor, target, amount, meta);
       },
@@ -593,12 +597,19 @@ export class BattleEngine {
       : undefined;
     if (!target) {
       target =
-        resolveEnemyBasicAttackTarget(
+        resolveEnemyAttackTargetPlayer(
           enemy,
           this.players,
           this.enemies,
           this.gameData,
-        ) ?? undefined;
+        ) ??
+        resolveEnemyChaseTargetPlayer(
+          enemy,
+          this.players,
+          this.enemies,
+          this.gameData,
+        ) ??
+        undefined;
       if (target) {
         enemy.engagedVisualTargetPlayerId = target.id;
         enemy.engagedVisualTargetAllyId = target.id;

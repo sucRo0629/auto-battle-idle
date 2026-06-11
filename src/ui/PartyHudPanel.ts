@@ -48,7 +48,7 @@ export class PartyHudPanel {
     parent.appendChild(root);
   }
 
-  update(entries: PartyHudEntry[]): void {
+  update(entries: (PartyHudEntry | null)[]): void {
     this.theme = readBattleHudTheme(this.themeHost);
 
     for (let i = 0; i < this.slots.length; i++) {

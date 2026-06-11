@@ -3,10 +3,12 @@ import type { CombatantState, GameData } from './types.ts';
 import {
   engagedMinBodyGap,
 } from './battleConstants.ts';
+import { getAttackablePool, isWithinSkillRange } from './skills/rangeUtils.ts';
 import {
   resolvePlayerApproachBattleX,
   resolveEnemyApproachBattleX,
-  resolveEnemyBasicAttackTarget,
+  resolveEnemyAttackTargetPlayer,
+  resolveEnemyChaseTargetPlayer,
 } from './resolveApproachBattleX.ts';
 
 function mockCombatant(
@@ -725,8 +727,60 @@ describe('resolvePlayerApproachBattleX', () => {
   });
 });
 
-describe('resolveEnemyBasicAttackTarget', () => {
-  it('melee enemies skip back row units beyond front contact reach', () => {
+describe('resolveEnemyChaseTargetPlayer', () => {
+  it('picks highest-threat player from all living allies', () => {
+    const tank = mockCombatant({
+      id: 'tank',
+      formationRow: 'front',
+      battleX: 200,
+      threat: 120,
+      baseThreat: 120,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const striker = mockCombatant({
+      id: 'striker',
+      formationRow: 'front',
+      battleX: 210,
+      threat: 40,
+      baseThreat: 40,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 250,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    const target = resolveEnemyChaseTargetPlayer(
+      meleeEnemy,
+      [tank, striker],
+      [meleeEnemy],
+      gameData,
+    );
+
+    expect(target?.id).toBe('tank');
+  });
+
+  it('chases high-threat back row beyond front contact', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
@@ -743,6 +797,8 @@ describe('resolveEnemyBasicAttackTarget', () => {
       id: 'enchanter',
       formationRow: 'back',
       battleX: 80,
+      threat: 200,
+      baseThreat: 200,
       traits: { rangePx: 55, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
       cooldowns: [],
       build: {
@@ -764,18 +820,180 @@ describe('resolveEnemyBasicAttackTarget', () => {
       },
     });
 
-    const target = resolveEnemyBasicAttackTarget(
+    const target = resolveEnemyChaseTargetPlayer(
       meleeEnemy,
       [guard, enchanter],
       [meleeEnemy],
       gameData,
     );
 
-    expect(target?.id).toBe('guard');
+    expect(target?.id).toBe('enchanter');
+  });
+
+  it('re-targets chase when a different ally becomes top threat', () => {
+    const tank = mockCombatant({
+      id: 'tank',
+      formationRow: 'front',
+      battleX: 200,
+      threat: 150,
+      baseThreat: 150,
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const striker = mockCombatant({
+      id: 'striker',
+      formationRow: 'back',
+      battleX: 80,
+      threat: 200,
+      baseThreat: 200,
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 250,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    expect(
+      resolveEnemyChaseTargetPlayer(
+        meleeEnemy,
+        [tank, striker],
+        [meleeEnemy],
+        gameData,
+      )?.id,
+    ).toBe('striker');
+
+    tank.threat = 300;
+    expect(
+      resolveEnemyChaseTargetPlayer(
+        meleeEnemy,
+        [tank, striker],
+        [meleeEnemy],
+        gameData,
+      )?.id,
+    ).toBe('tank');
+  });
+});
+
+describe('resolveEnemyAttackTargetPlayer', () => {
+  it('picks highest-threat player among in-range pool only', () => {
+    const tank = mockCombatant({
+      id: 'tank',
+      formationRow: 'front',
+      battleX: 200,
+      threat: 120,
+      baseThreat: 120,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const striker = mockCombatant({
+      id: 'striker',
+      formationRow: 'front',
+      battleX: 210,
+      threat: 40,
+      baseThreat: 40,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 200 + engagedMinBodyGap(),
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    const target = resolveEnemyAttackTargetPlayer(
+      meleeEnemy,
+      [tank, striker],
+      [meleeEnemy],
+      gameData,
+    );
+
+    expect(target?.id).toBe('tank');
   });
 });
 
 describe('resolveEnemyApproachBattleX', () => {
+  it('melee stop X matches attack range for chase target', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 200,
+      threat: 100,
+      baseThreat: 100,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 300,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    const approachX = resolveEnemyApproachBattleX(
+      meleeEnemy,
+      [guard],
+      [meleeEnemy],
+      gameData,
+    );
+
+    expect(approachX).toBe(200 + engagedMinBodyGap());
+    meleeEnemy.battleX = approachX;
+    const spec = {
+      kind: 'distance' as const,
+      side: 'enemy' as const,
+      order: 'nearest' as const,
+    };
+    expect(
+      getAttackablePool(spec, meleeEnemy, [guard], [meleeEnemy], 0),
+    ).toHaveLength(1);
+    expect(isWithinSkillRange(meleeEnemy, guard, 0)).toBe(true);
+  });
+
   it('stops at skill range from closest player', () => {
     const rangedEnemy = mockCombatant({
       id: 'enemy',

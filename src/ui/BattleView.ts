@@ -20,7 +20,7 @@ import { BattleCanvas } from "../render/BattleCanvas.ts";
 import { PartyHudPanel } from "./PartyHudPanel.ts";
 import {
   buildPartyHudEntries,
-  type PartyHudMeta,
+  buildPartyHudMetaBySlot,
 } from "./partyHudTypes.ts";
 import { BattleStatsOverlay } from "./BattleStatsOverlay.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
@@ -169,6 +169,17 @@ export class BattleView {
     this.engine.onEvent((event) => this.onBattleEvent(event));
   }
 
+  private refreshPartyHud(): void {
+    const snapshot = this.engine.getSnapshot();
+    const save = this.getSave();
+    this.partyHud.update(
+      buildPartyHudEntries(
+        snapshot,
+        buildPartyHudMetaBySlot(save.party, this.gameData.classRegistry),
+      ),
+    );
+  }
+
   private onBattleEvent(event: BattleEvent): void {
     if (event.type === "skill") {
       const slotLabel =
@@ -244,6 +255,8 @@ export class BattleView {
           );
         }
       }
+    } else if (event.type === "basicAttackCountCharged") {
+      this.refreshPartyHud();
     } else if (event.type === "evade") {
       this.canvas.showEvadePopup(event.targetId);
     } else if (event.type === "block") {
@@ -318,20 +331,14 @@ export class BattleView {
     const waveNum = snapshot.waveIndex + 1;
     const waveTotal = snapshot.waveCount;
     const stageLabel = `${stageName}  Wave ${waveNum}/${waveTotal}`;
-    const partyMeta: PartyHudMeta[] = save.party
-      .filter((member): member is NonNullable<typeof member> => member !== null)
-      .map((member) => {
-        const preset = this.gameData.classRegistry[member.classId];
-        return {
-          displayName: preset?.displayName ?? member.classId,
-          epithetEn: preset?.epithetEn,
-          level: member.progress.level,
-        };
-      });
-
     this.stageLabelEl.textContent = stageLabel;
     this.canvas.syncFromSnapshot(snapshot);
-    this.partyHud.update(buildPartyHudEntries(snapshot, partyMeta));
+    this.partyHud.update(
+      buildPartyHudEntries(
+        snapshot,
+        buildPartyHudMetaBySlot(save.party, this.gameData.classRegistry),
+      ),
+    );
     this.canvas.tick(deltaMs);
     this.debugMenu.updateThreatDisplay();
     this.debugMenu.updateExpDisplay();

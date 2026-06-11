@@ -30,6 +30,37 @@ describe('synthesizeBasicAttackSkill', () => {
     expect(skill.effect[0]?.target).toEqual({ kind: "distance", side: "enemy", order: "nearest" });
   });
 
+  it('merges multi-hit fields from JSON override', () => {
+    const skill = synthesizeBasicAttackSkill({
+      entityId: 'at_assassin',
+      isEnemy: false,
+      traits: normalizeEntityTraits({ rangePx: 5 }),
+      attackSpeedTier: 'fast',
+      jsonOverride: {
+        id: 'at_assassin_basic_attack',
+        name: 'at_assassin_basic_attack',
+        trigger: { kind: 'time', value: 2 },
+        effect: [
+          {
+            target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+            type: 'damage',
+            amount: { kind: 'atkBased', atkScale: 0.5 },
+            targetShape: 'single',
+            hitCount: 2,
+            hitDurationSec: 0.2,
+          },
+        ],
+      },
+    });
+    const effect = skill.effect[0];
+    expect(effect?.type).toBe('damage');
+    if (effect?.type === 'damage') {
+      expect(effect.hitCount).toBe(2);
+      expect(effect.hitDurationSec).toBe(0.2);
+      expect(effect.amount.atkScale).toBe(0.5);
+    }
+  });
+
   it('merges atkScale override from JSON', () => {
     const skill = synthesizeBasicAttackSkill({
       entityId: 'at_sorcerer',

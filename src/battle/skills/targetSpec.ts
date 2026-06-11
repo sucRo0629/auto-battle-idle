@@ -7,7 +7,10 @@ import {
 } from "../combatMath.ts";
 import { getBattleX } from "../combatPosition.ts";
 import { hasMatchingStatus } from "../statusMatching.ts";
-import { pickThreatWeightedAlly } from "../threat.ts";
+import {
+  compareThreatTargetPriority,
+  pickHighestThreatAlly,
+} from "../threat.ts";
 import type {
   BuffFilterTag,
   CombatantState,
@@ -15,6 +18,7 @@ import type {
   PassiveSkillDef,
   TargetDistanceOrder,
   TargetRule,
+  TargetRuleOverrideApplyTo,
   TargetSide,
   TargetSpec,
   TargetStat,
@@ -208,6 +212,23 @@ export interface TargetRuleContext {
   actor: CombatantState;
   allies: CombatantState[];
   enemies: CombatantState[];
+  /** 指定時は一致スコープの targetRuleOverride のみ適用 */
+  applyScope?: TargetRuleOverrideApplyTo;
+}
+
+/** effect target の適用スコープ（spec.side は actor 視点。自己対象は self） */
+export function targetSpecFaction(
+  spec: TargetSpec,
+  _actor: CombatantState,
+): TargetRuleOverrideApplyTo | "self" {
+  if (spec.kind === "self") return "self";
+  if (spec.kind === "distance" || spec.kind === "stat" || spec.kind === "all") {
+    return spec.side;
+  }
+  if (spec.kind === "attackType" || spec.kind === "status") {
+    return spec.side ?? "enemy";
+  }
+  return "enemy";
 }
 
 /** パッシブ targetRuleOverride は候補がいるときだけ適用（射手排除など） */
@@ -217,8 +238,15 @@ export function resolveTargetSpec(
   context?: TargetRuleContext
 ): TargetSpec {
   for (let i = passives.length - 1; i >= 0; i--) {
-    const override = passives[i].targetRuleOverride;
-    if (!override) continue;
+    const passive = passives[i]!;
+    if (passive.effect !== "targetRuleOverride" || !passive.targetRuleOverride) {
+      continue;
+    }
+    const scope = passive.targetRuleOverrideApplyTo ?? "enemy";
+    if (context?.applyScope !== undefined && scope !== context.applyScope) {
+      continue;
+    }
+    const override = passive.targetRuleOverride;
     if (context) {
       const pool = getTargetPool(
         override,
@@ -362,7 +390,7 @@ export function pickTargetFromPool(
       spec.side === "enemy" &&
       spec.order === "nearest"
     ) {
-      return pickThreatWeightedAlly(pool);
+      return pickHighestThreatAlly(pool);
     }
     return pool[0] ?? null;
   }
@@ -432,7 +460,7 @@ export function orderPoolByTarget(
     spec.side === "enemy" &&
     spec.order === "nearest"
   ) {
-    return copy.sort((a, b) => (b.threat ?? 0) - (a.threat ?? 0));
+    return copy.sort(compareThreatTargetPriority);
   }
 
   if (spec.kind === "distance" && spec.side === "ally") {
