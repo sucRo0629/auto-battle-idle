@@ -23,6 +23,7 @@ const member: PartyMemberState = {
 };
 
 const gameData = {
+  classOrder: [],
   classRegistry: {},
   skillRegistry: { passives: {}, actives: {} },
   enemyRegistry: {},

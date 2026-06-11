@@ -39,6 +39,7 @@ function damageEffect(
 
 function mockGameData(basicRange = 50): GameData {
   return {
+    classOrder: [],
     classRegistry: {},
     skillRegistry: {
       passives: {},

@@ -15,6 +15,18 @@ export interface SkillAmountContext {
   passiveAmountField?: PassiveAmountField;
 }
 
+export function isPassiveSkillAmountOverrideTarget(
+  passive: PassiveSkillDef,
+): boolean {
+  return inferPassiveAmountField(passive) !== undefined;
+}
+
+export function isActiveSkillAmountOverrideTarget(
+  active: ActiveSkillDef,
+): boolean {
+  return active.effect.some((effect) => activeEffectHasAmount(effect));
+}
+
 export function inferPassiveAmountField(
   passive: PassiveSkillDef,
 ): PassiveAmountField | undefined {

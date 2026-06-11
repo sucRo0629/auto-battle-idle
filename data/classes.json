@@ -19,22 +19,22 @@
     "passiveIds": [
       "df_guardian_passive_1",
       "df_guardian_passive_2",
-      "df_guardian_passive_3"
+      "df_guardian_passive_4"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
           "df_guardian_passive_1",
+          "df_guardian_passive_2",
           "df_guardian_active_1",
-          "df_guardian_active_2",
-          "df_guardian_passive_2"
+          "df_guardian_active_2"
         ]
       },
       {
-        "level": 10,
+        "level": 20,
         "skillIds": [
-          "df_guardian_passive_3"
+          "df_guardian_passive_4"
         ]
       }
     ],
@@ -119,8 +119,13 @@
         "level": 10,
         "skillIds": [
           "df_duelist_passive_3",
-          "df_duelist_passive_4",
           "df_duelist_active_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "df_duelist_passive_4"
         ]
       }
     ],

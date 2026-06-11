@@ -642,7 +642,8 @@ export class SkillMenuPanel {
     for (const classId of getAssignableClassIds(
       this.draftParty,
       this.unlockedClassIds,
-      this.selectedIndex
+      this.selectedIndex,
+      this.gameData.classOrder,
     )) {
       const preset = this.gameData.classRegistry[classId];
       list.appendChild(

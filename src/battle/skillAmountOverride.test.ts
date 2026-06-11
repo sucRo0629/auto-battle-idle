@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { CombatantState, PassiveSkillDef } from './types.ts';
-import { resolveEffectiveAmountSpec } from './skillAmountOverride.ts';
+import type { ActiveSkillDef, CombatantState, PassiveSkillDef } from './types.ts';
+import {
+  isActiveSkillAmountOverrideTarget,
+  isPassiveSkillAmountOverrideTarget,
+  resolveEffectiveAmountSpec,
+} from './skillAmountOverride.ts';
 import { resolveDamage } from './combatMath.ts';
 import {
   applyPassiveBarrierFromPassive,
@@ -103,6 +107,66 @@ const passives: Record<string, PassiveSkillDef> = {
     amount: { kind: 'flat', flatAmount: 50 },
   },
 };
+
+describe('skillAmountOverride targets', () => {
+  it('isPassiveSkillAmountOverrideTarget accepts hot and barrier passives', () => {
+    expect(
+      isPassiveSkillAmountOverrideTarget(passives.hot_passive),
+    ).toBe(true);
+    expect(
+      isPassiveSkillAmountOverrideTarget(passives.barrier_passive),
+    ).toBe(true);
+  });
+
+  it('isPassiveSkillAmountOverrideTarget rejects block and counter passives', () => {
+    const blockPassive: PassiveSkillDef = {
+      id: 'block',
+      name: 'Block',
+      effect: 'buff',
+      buffSubKind: 'block',
+      chance: 0.1,
+      buffTargetRule: { kind: 'self' },
+    };
+    const counterPassive: PassiveSkillDef = {
+      id: 'counter',
+      name: 'Counter',
+      effect: 'counter',
+      chance: 0.2,
+      counterResponses: [],
+    };
+    expect(isPassiveSkillAmountOverrideTarget(blockPassive)).toBe(false);
+    expect(isPassiveSkillAmountOverrideTarget(counterPassive)).toBe(false);
+  });
+
+  it('isActiveSkillAmountOverrideTarget accepts damage and rejects stun-only', () => {
+    const damageActive: ActiveSkillDef = {
+      id: 'damage',
+      name: 'Damage',
+      trigger: { kind: 'cooldown', value: 5 },
+      effect: [
+        {
+          type: 'damage',
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          amount: { kind: 'atkBased', atkScale: 1 },
+        },
+      ],
+    };
+    const stunActive: ActiveSkillDef = {
+      id: 'stun',
+      name: 'Stun',
+      trigger: { kind: 'cooldown', value: 5 },
+      effect: [
+        {
+          type: 'stun',
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          durationSec: 2,
+        },
+      ],
+    };
+    expect(isActiveSkillAmountOverrideTarget(damageActive)).toBe(true);
+    expect(isActiveSkillAmountOverrideTarget(stunActive)).toBe(false);
+  });
+});
 
 describe('resolveEffectiveAmountSpec', () => {
   it('returns override amount when target skill matches', () => {

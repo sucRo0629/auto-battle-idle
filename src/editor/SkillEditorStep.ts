@@ -38,6 +38,8 @@ import {
   getActiveEffectAmountSpec,
   getPassiveAmountSpec,
   inferPassiveAmountField,
+  isActiveSkillAmountOverrideTarget,
+  isPassiveSkillAmountOverrideTarget,
 } from '../battle/skillAmountOverride.ts';
 import type {
   ActiveSkillDef,
@@ -1905,8 +1907,10 @@ export class SkillEditorStep {
         break;
       case 'skillAmountOverride': {
         const entries = this.options.getEntries();
+        const targetSkillId = passive.targetSkillId ?? '';
         const skillOptions = entries.flatMap((entry) => {
           if (entry.passive) {
+            if (!isPassiveSkillAmountOverrideTarget(entry.passive)) return [];
             return [
               {
                 value: entry.passive.id,
@@ -1915,6 +1919,7 @@ export class SkillEditorStep {
             ];
           }
           if (entry.active) {
+            if (!isActiveSkillAmountOverrideTarget(entry.active)) return [];
             return [
               {
                 value: entry.active.id,
@@ -1924,7 +1929,24 @@ export class SkillEditorStep {
           }
           return [];
         });
-        const targetSkillId = passive.targetSkillId ?? '';
+        if (
+          targetSkillId &&
+          !skillOptions.some((option) => option.value === targetSkillId)
+        ) {
+          const staleEntry = entries.find(
+            (entry) =>
+              entry.passive?.id === targetSkillId ||
+              entry.active?.id === targetSkillId,
+          );
+          const staleSkill = staleEntry?.passive ?? staleEntry?.active;
+          if (staleSkill) {
+            const kind = staleEntry?.passive ? 'パッシブ' : 'アクティブ';
+            skillOptions.unshift({
+              value: targetSkillId,
+              label: `[上書き不可] [${kind}] ${staleSkill.name} (${targetSkillId})`,
+            });
+          }
+        }
         const targetEntry = entries.find(
           (entry) =>
             entry.passive?.id === targetSkillId ||

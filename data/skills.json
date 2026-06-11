@@ -247,24 +247,11 @@
     },
     {
       "id": "df_duelist_passive_3",
-      "name": "チャンスメイク",
-      "effect": "counter",
-      "counterResponses": [
-        {
-          "kind": "damage",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 0.5
-          },
-          "damageType": "physical"
-        },
-        {
-          "kind": "stun",
-          "durationSec": 1
-        }
-      ],
-      "counterRange": 0,
-      "chance": 0.2
+      "name": "滾る闘志",
+      "effect": "selfHpRatioBuff",
+      "buffStat": "atk",
+      "buffMultiplierMax": 1.5,
+      "maxBuffAtHpRatio": 0.5
     },
     {
       "id": "df_paladin_passive_1",
@@ -308,14 +295,48 @@
     },
     {
       "id": "df_duelist_passive_4",
-      "name": "滾る闘志",
-      "effect": "selfHpRatioBuff",
-      "buffStat": "atk",
-      "buffMultiplierMax": 1.5,
-      "maxBuffAtHpRatio": 0.5
+      "name": "後の先",
+      "effect": "counter",
+      "counterResponses": [
+        {
+          "kind": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.8
+          },
+          "damageType": "physical"
+        },
+        {
+          "kind": "stun",
+          "durationSec": 1.2
+        }
+      ],
+      "counterRange": 0,
+      "chance": 0.2,
+      "counterChance": 0.2
     },
     {
       "id": "df_guardian_passive_3",
+      "name": "息入れ",
+      "effect": "heal",
+      "healSubKind": "hot",
+      "specialEffectApplyTo": "heal",
+      "specialEffect": {
+        "scale": 1.2,
+        "conditions": []
+      },
+      "hotTargetRule": {
+        "kind": "self"
+      },
+      "hotAmount": {
+        "kind": "atkBased",
+        "atkScale": 0.25
+      },
+      "intervalSec": 10,
+      "hotDurationSec": 5
+    },
+    {
+      "id": "df_guardian_passive_4",
       "name": "息入れ",
       "effect": "heal",
       "healSubKind": "hot",
