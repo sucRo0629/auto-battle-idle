@@ -1,4 +1,9 @@
-import type { CombatantState, GameData, TargetSpec } from './types.ts';
+import type {
+  CombatantState,
+  GameData,
+  SkillEffectDef,
+  TargetSpec,
+} from './types.ts';
 import { getPassiveDefs } from './combatMath.ts';
 import {
   getEnemyContactX,
@@ -10,24 +15,125 @@ import {
   resolveFormationRangePx,
 } from './combatPosition.ts';
 import { pickTargetFromPool, resolveTargetSpec } from './skills/targeting.ts';
-import { getEffectTarget, getTargetPool } from './skills/targetSpec.ts';
-import { getAttackablePool } from './skills/rangeUtils.ts';
+import {
+  getEffectTarget,
+  getTargetPool,
+  targetSpecFaction,
+} from './skills/targetSpec.ts';
+import { getAttackablePool, isWithinSkillRange } from './skills/rangeUtils.ts';
 import { applyFormationRowApproachSpacing } from './battleLayout.ts';
 import {
   compareFormationRowSlot,
   computePartyFormationBattleX,
 } from './partyFormation.ts';
 
+function resolveBasicAttackEffect(
+  unit: CombatantState,
+  gameData: GameData,
+): SkillEffectDef | undefined {
+  const basicCd = unit.cooldowns.find((cd) => cd.slotKind === 'basic');
+  const skillId = basicCd?.skillId;
+  const skill = skillId ? gameData.skillRegistry.actives[skillId] : undefined;
+  return skill?.effect.find((entry) => entry.type !== 'move');
+}
+
 function resolveBasicAttackTarget(
   unit: CombatantState,
   gameData: GameData,
 ): TargetSpec {
-  const basicCd = unit.cooldowns.find((cd) => cd.slotKind === 'basic');
-  const skillId = basicCd?.skillId;
-  const skill = skillId ? gameData.skillRegistry.actives[skillId] : undefined;
-  const effect = skill?.effect[0];
+  const effect = resolveBasicAttackEffect(unit, gameData);
   if (effect) return getEffectTarget(effect);
   return { kind: 'distance', side: 'enemy', order: 'nearest' };
+}
+
+function isAllyHealBasicAttack(
+  unit: CombatantState,
+  gameData: GameData,
+): boolean {
+  const effect = resolveBasicAttackEffect(unit, gameData);
+  if (!effect || effect.type !== 'heal') return false;
+  return targetSpecFaction(getEffectTarget(effect), unit) === 'ally';
+}
+
+function resolveAllyHealBasicTargetSpec(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): TargetSpec {
+  const effect = resolveBasicAttackEffect(player, gameData);
+  if (!effect) return resolveBasicAttackTarget(player, gameData);
+  const passives = getPassiveDefs(player, gameData.skillRegistry.passives);
+  const defaultSpec = getEffectTarget(effect);
+  return resolveTargetSpec(passives, defaultSpec, {
+    actor: player,
+    allies: players,
+    enemies,
+    applyScope: 'ally',
+  });
+}
+
+function livingPlayers(players: CombatantState[]): CombatantState[] {
+  return players.filter((player) => player.isAlive);
+}
+
+function livingAllyCount(players: CombatantState[]): number {
+  return livingPlayers(players).length;
+}
+
+/** 射程内に負傷味方がいれば回復通常攻撃の停止対象 */
+function resolveDamagedAllyHealTarget(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): CombatantState | null {
+  if (!isAllyHealBasicAttack(player, gameData)) return null;
+  const spec = resolveAllyHealBasicTargetSpec(
+    player,
+    players,
+    enemies,
+    gameData,
+  );
+  const range = resolveApproachRangePx(
+    player,
+    gameData,
+    livingAllyCount(players),
+  );
+  const pool = getAttackablePool(spec, player, players, enemies, range);
+  const damaged = pool.filter((unit) => unit.isAlive && unit.hp < unit.maxHp);
+  if (damaged.length === 0) return null;
+  return pickTargetFromPool(spec, player, damaged);
+}
+
+/** 射程外の負傷味方（接近目標） */
+function resolveOutOfRangeDamagedAllyHealTarget(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): CombatantState | null {
+  if (!isAllyHealBasicAttack(player, gameData)) return null;
+  const spec = resolveAllyHealBasicTargetSpec(
+    player,
+    players,
+    enemies,
+    gameData,
+  );
+  const range = resolveApproachRangePx(
+    player,
+    gameData,
+    livingAllyCount(players),
+  );
+  const pool = getTargetPool(spec, player, players, enemies);
+  const outOfRange = pool.filter(
+    (unit) =>
+      unit.isAlive &&
+      unit.hp < unit.maxHp &&
+      !isWithinSkillRange(player, unit, range),
+  );
+  if (outOfRange.length === 0) return null;
+  return pickTargetFromPool(spec, player, outOfRange);
 }
 
 function resolveUnitTargetSpec(
@@ -66,7 +172,11 @@ export function resolvePlayerAttackTargetEnemy(
   gameData: GameData,
 ): CombatantState | null {
   const spec = resolveUnitTargetSpec(player, players, enemies, gameData);
-  const range = resolveApproachRangePx(player, gameData);
+  const range = resolveApproachRangePx(
+    player,
+    gameData,
+    livingAllyCount(players),
+  );
   const pool = getAttackablePool(spec, player, players, enemies, range);
   if (pool.length === 0) return null;
   return pickTargetFromPool(spec, player, pool);
@@ -110,12 +220,24 @@ export function resolveEnemyBasicAttackTarget(
 
 function capForwardAfterMeleeWipe(
   player: CombatantState,
+  players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
   approachX: number,
 ): number {
   if (player.formationRow !== 'back') return approachX;
   if (getMeleeEnemyContactX(enemies, gameData) !== null) {
+    return approachX;
+  }
+  if (
+    approachX > player.battleX &&
+    resolveOutOfRangeDamagedAllyHealTarget(
+      player,
+      players,
+      enemies,
+      gameData,
+    )
+  ) {
     return approachX;
   }
   if (approachX > player.battleX) {
@@ -149,6 +271,7 @@ function capBackRowRangeStop(
 /** 前列は敵最前線より左（rear 側）に留める — battleX 過進軍防止 */
 function capFrontRowBeforeEnemyContact(
   player: CombatantState,
+  players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
   approachX: number,
@@ -161,19 +284,51 @@ function capFrontRowBeforeEnemyContact(
     player,
     enemyContact,
     gameData,
+    livingAllyCount(players),
   );
   return Math.min(approachX, maxForward);
 }
 
 function resolveDefenderApproachBattleX(
   player: CombatantState,
+  players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
   contact: number,
 ): number {
   const meleeContact = getMeleeEnemyContactX(enemies, gameData);
   const chaseContact = meleeContact ?? getEnemyContactX(enemies) ?? contact;
-  return resolveApproachAttackBattleX(player, chaseContact, gameData);
+  return resolveApproachAttackBattleX(
+    player,
+    chaseContact,
+    gameData,
+    livingAllyCount(players),
+  );
+}
+
+function resolveEnemyBasedApproachBattleX(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  contact: number,
+): number {
+  const allyCount = livingAllyCount(players);
+  const chase = resolvePlayerChaseTargetEnemy(
+    player,
+    players,
+    enemies,
+    gameData,
+  );
+  if (chase) {
+    return resolveApproachAttackBattleX(
+      player,
+      chase.battleX,
+      gameData,
+      allyCount,
+    );
+  }
+  return resolveApproachAttackBattleX(player, contact, gameData, allyCount);
 }
 
 function resolveNonDefenderApproachBattleX(
@@ -183,16 +338,37 @@ function resolveNonDefenderApproachBattleX(
   gameData: GameData,
   contact: number,
 ): number {
-  const chase = resolvePlayerChaseTargetEnemy(
+  if (isAllyHealBasicAttack(player, gameData)) {
+    const outOfRange = resolveOutOfRangeDamagedAllyHealTarget(
+      player,
+      players,
+      enemies,
+      gameData,
+    );
+    if (outOfRange) {
+      const range = resolveApproachRangePx(
+        player,
+        gameData,
+        livingAllyCount(players),
+      );
+      const neededX = outOfRange.battleX - range;
+      const enemyStopX = resolveEnemyBasedApproachBattleX(
+        player,
+        players,
+        enemies,
+        gameData,
+        contact,
+      );
+      return Math.max(player.battleX, Math.min(neededX, enemyStopX));
+    }
+  }
+  return resolveEnemyBasedApproachBattleX(
     player,
     players,
     enemies,
     gameData,
+    contact,
   );
-  if (chase) {
-    return resolveApproachAttackBattleX(player, chase.battleX, gameData);
-  }
-  return resolveApproachAttackBattleX(player, contact, gameData);
 }
 
 export interface PlayerApproachOptions {
@@ -220,7 +396,13 @@ function resolveIndividualPlayerApproachBattleX(
 ): number {
   let approachX =
     player.role === 'defender'
-      ? resolveDefenderApproachBattleX(player, enemies, gameData, contact)
+      ? resolveDefenderApproachBattleX(
+          player,
+          players,
+          enemies,
+          gameData,
+          contact,
+        )
       : resolveNonDefenderApproachBattleX(
           player,
           players,
@@ -232,6 +414,7 @@ function resolveIndividualPlayerApproachBattleX(
   if (player.formationRow !== 'back') {
     approachX = capFrontRowBeforeEnemyContact(
       player,
+      players,
       enemies,
       gameData,
       approachX,
@@ -243,6 +426,7 @@ function resolveIndividualPlayerApproachBattleX(
     player,
     capForwardAfterMeleeWipe(
       player,
+      players,
       enemies,
       gameData,
       approachX,
@@ -404,6 +588,11 @@ export function shouldSkipEngagedAutoApproach(
     return (
       resolveEnemyAttackTargetPlayer(unit, players, enemies, gameData) !==
       null
+    );
+  }
+  if (isAllyHealBasicAttack(unit, gameData)) {
+    return (
+      resolveDamagedAllyHealTarget(unit, players, enemies, gameData) !== null
     );
   }
   return (

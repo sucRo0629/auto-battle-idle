@@ -46,4 +46,18 @@ describe('resolveSkillRangePx', () => {
     const actor = mockActor(40);
     expect(resolveSkillRangePx(actor, {})).toBe(40);
   });
+
+  it('extends ally-targeted heal range to party formation depth', () => {
+    const actor = mockActor(90);
+    expect(
+      resolveSkillRangePx(
+        actor,
+        {
+          type: 'heal',
+          target: { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' },
+        },
+        4,
+      ),
+    ).toBe(96);
+  });
 });

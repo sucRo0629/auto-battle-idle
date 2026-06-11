@@ -245,7 +245,11 @@ export function resolveEffectResolution(
     };
   }
 
-  const rangePx = resolveSkillRangePx(actor, effect);
+  const rangePx = resolveSkillRangePx(
+    actor,
+    effect,
+    livingAllies(allies).length,
+  );
   const attackablePool = getAttackablePool(spec, actor, allies, enemies, rangePx);
   const shape: TargetShape = effect.targetShape ?? 'single';
   const basePower = getBaseAtkScale(effect);

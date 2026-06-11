@@ -98,7 +98,8 @@ describe('melee wipe ally slide', () => {
       maxTicksAfterWipe: 600,
     });
     expect(meleeWipeTick).toBeGreaterThan(0);
-    expect(maxRightDrift).toBeLessThan(80);
+    // 回復通常攻撃のヒーラーが負傷味方へ前進するため、わずかに許容幅を広げる
+    expect(maxRightDrift).toBeLessThan(90);
   });
 
   it('wave 1 fast melee death: no major left drift after all melee die', () => {

@@ -2,7 +2,8 @@ import type { CombatantState, SkillEffectDef, TargetSpec } from '../types.ts';
 import { isMeleeRangePx } from '../types.ts';
 import { engagedMinBodyGap } from '../battleConstants.ts';
 import { getBattleX } from '../combatPosition.ts';
-import { getTargetPool, isMultiTargetSpec } from './targetSpec.ts';
+import { partyFormationDepthPx } from '../partyFormation.ts';
+import { getEffectTarget, getTargetPool, isMultiTargetSpec, targetSpecFaction } from './targetSpec.ts';
 
 /** 味方→敵 / 敵→味方の 1D 距離（px） */
 export function battleDistance(
@@ -28,11 +29,29 @@ export function isWithinSkillRange(
   }
   return Math.abs(dist) <= rangePx;
 }
+const DEFAULT_PARTY_SIZE_FOR_HEAL_RANGE = 5;
+
+function isAllyTargetedHealEffect(
+  effect: Pick<SkillEffectDef, 'type' | 'target' | 'targetRule'>,
+  actor: CombatantState,
+): boolean {
+  if (effect.type !== 'heal') return false;
+  const spec = getEffectTarget(effect as SkillEffectDef);
+  return targetSpecFaction(spec, actor) === 'ally';
+}
+
+/** 味方回復はパーティ奥行きまで届くよう射程を底上げ */
 export function resolveSkillRangePx(
   actor: CombatantState,
-  effect: Pick<SkillEffectDef, 'range'>,
+  effect: Pick<SkillEffectDef, 'range' | 'type' | 'target' | 'targetRule'>,
+  livingAllyCount: number = DEFAULT_PARTY_SIZE_FOR_HEAL_RANGE,
 ): number {
-  return effect.range ?? actor.traits.rangePx;
+  const base = effect.range ?? actor.traits.rangePx;
+  if (!isAllyTargetedHealEffect(effect, actor)) return base;
+  const partyDepth = partyFormationDepthPx(
+    Math.max(1, livingAllyCount),
+  );
+  return Math.max(base, partyDepth);
 }
 
 export function getAttackablePool(

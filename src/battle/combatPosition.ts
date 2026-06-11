@@ -296,13 +296,14 @@ export function resolveMaxEffectiveRangePx(
 export function resolveBasicAttackRangePx(
   unit: CombatantState,
   gameData: GameData,
+  livingAllyCount?: number,
 ): number {
   const basicCd = unit.cooldowns.find((cd) => cd.slotKind === 'basic');
   const skillId = basicCd?.skillId;
   const skill = skillId ? gameData.skillRegistry.actives[skillId] : undefined;
   const effect = skill?.effect.find((e) => e.type !== 'move');
   if (effect && effect.type !== 'counter') {
-    return resolveSkillRangePx(unit, effect);
+    return resolveSkillRangePx(unit, effect, livingAllyCount);
   }
   return unit.traits.rangePx;
 }
@@ -354,8 +355,9 @@ export function resolveMinReadyEquippedActiveRangePx(
 export function resolveApproachRangePx(
   unit: CombatantState,
   gameData: GameData,
+  livingAllyCount?: number,
 ): number {
-  const basic = resolveBasicAttackRangePx(unit, gameData);
+  const basic = resolveBasicAttackRangePx(unit, gameData, livingAllyCount);
   const minReadyActive = resolveMinReadyEquippedActiveRangePx(unit, gameData);
   if (minReadyActive !== null && minReadyActive < basic) {
     return minReadyActive;
@@ -367,9 +369,10 @@ export function resolveApproachAttackBattleX(
   unit: CombatantState,
   contactX: number,
   gameData: GameData,
+  livingAllyCount?: number,
 ): number {
-  const basicRange = resolveBasicAttackRangePx(unit, gameData);
-  const rangePx = resolveApproachRangePx(unit, gameData);
+  const basicRange = resolveBasicAttackRangePx(unit, gameData, livingAllyCount);
+  const rangePx = resolveApproachRangePx(unit, gameData, livingAllyCount);
   const stopX =
     !unit.isEnemy && !isMeleeRangePx(basicRange)
       ? contactX - rangePx
