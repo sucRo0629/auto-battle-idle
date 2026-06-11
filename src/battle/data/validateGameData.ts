@@ -598,6 +598,18 @@ function parseOptionalNonNegativeNumber(
   return value;
 }
 
+function parseOptionalWaitAfterSec(
+  obj: Record<string, unknown>,
+  context: string,
+): Partial<Pick<SkillEffectDef, 'waitAfterSec'>> {
+  const value = obj.waitAfterSec;
+  if (value === undefined) return {};
+  if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) {
+    invalidField(context, 'waitAfterSec', 'must be a positive number');
+  }
+  return { waitAfterSec: value };
+}
+
 function parseOptionalPowerStep(
   obj: Record<string, unknown>,
   context: string,
@@ -1117,6 +1129,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
   const targetShapeFields = parseTargetShapeFields(obj, context);
   const presentation = parseOptionalEffectPresentation(obj, context);
   const combatModifiers = parseOptionalEffectCombatModifiers(obj, context);
+  const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
 
   if (type === 'damage') {
     const damageType =
@@ -1131,6 +1144,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       type,
       ...(damageType !== undefined ? { damageType } : {}),
       amount,
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1144,6 +1158,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...combatModifiers,
       type,
       amount,
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1171,6 +1186,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...(typeof obj.buffFlatBonus === 'number'
         ? { buffFlatBonus: obj.buffFlatBonus }
         : {}),
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1186,6 +1202,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       type: 'hot',
       durationSec,
       amount,
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1204,6 +1221,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       type: 'barrier',
       amount,
       ...(typeof barrierStack === 'boolean' ? { barrierStack } : {}),
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1227,6 +1245,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       durationSec,
       powerMultiplier: amount.atkScale,
       ...(damageType !== undefined ? { damageType } : {}),
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1243,6 +1262,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...combatModifiers,
       type: 'stun',
       durationSec,
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1259,6 +1279,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...combatModifiers,
       type: 'knockback',
       distancePx,
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1285,6 +1306,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       moveDurationSec,
       ...(moveMode !== undefined ? { moveMode } : {}),
       ...(behindOffsetPx !== undefined ? { behindOffsetPx } : {}),
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1307,6 +1329,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       type: 'dispel',
       dispelCount,
       ...(dispelTags !== undefined ? { dispelTags } : {}),
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1330,6 +1353,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       type: 'counter',
       responses,
       durationSec,
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1351,6 +1375,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       type: 'block',
       blockChance,
       durationSec,
+      ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
     };
@@ -1381,6 +1406,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     ...(typeof obj.debuffFlatBonus === 'number'
       ? { debuffFlatBonus: obj.debuffFlatBonus }
       : {}),
+    ...sequenceTiming,
     ...presentation,
     ...(range !== undefined ? { range } : {}),
   };

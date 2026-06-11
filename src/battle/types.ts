@@ -513,6 +513,8 @@ interface SkillEffectCommon {
   scatterDurationSec?: number;
   /** 0〜1。0 = anchor 中心固定 */
   scatterSpreadRate?: number;
+  /** move 含むスキル: この effect 適用後、次 effect までの待機秒（正数） */
+  waitAfterSec?: number;
   type: SkillEffectKind;
   /** 命中判定・VFX 共用（px）。未指定 = actor.traits.rangePx */
   range?: number;

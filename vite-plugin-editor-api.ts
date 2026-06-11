@@ -35,29 +35,36 @@ const LOAD_GAME_DATA_MODULE = path.resolve(
   'src/battle/data/loadGameData.ts',
 );
 
-/** エディタ保存後、watch 対象外の JSON をゲーム側の import キャッシュから外す */
-function invalidateGameDataModules(
+/** Vite moduleGraph が使う形式（絶対パス + `/` 区切り）に揃える */
+function toModuleGraphFilePath(filePath: string): string {
+  return path.resolve(filePath).replace(/\\/g, '/');
+}
+
+/**
+ * エディタ保存後、watch 対象外の JSON をゲーム側へ HMR 反映する。
+ * invalidateModule だけではクライアントに更新が届かないため reloadModule を使う。
+ */
+async function reloadGameDataModules(
   server: ViteDevServer | undefined,
   writtenFiles: string[],
-): void {
+): Promise<void> {
   if (!server) return;
 
-  const visited = new Set<ModuleNode>();
-  const invalidateTree = (mod: ModuleNode): void => {
-    if (visited.has(mod)) return;
-    visited.add(mod);
-    server.moduleGraph.invalidateModule(mod);
-    for (const importer of mod.importers) {
-      invalidateTree(importer);
-    }
-  };
+  const files = [
+    ...new Set([
+      ...writtenFiles.map(toModuleGraphFilePath),
+      toModuleGraphFilePath(LOAD_GAME_DATA_MODULE),
+    ]),
+  ];
 
-  const files = [...new Set([...writtenFiles, LOAD_GAME_DATA_MODULE])];
+  const reloaded = new Set<ModuleNode>();
   for (const filePath of files) {
     const mods = server.moduleGraph.getModulesByFile(filePath);
     if (!mods) continue;
     for (const mod of mods) {
-      invalidateTree(mod);
+      if (reloaded.has(mod)) continue;
+      reloaded.add(mod);
+      await server.reloadModule(mod);
     }
   }
 }
@@ -148,7 +155,10 @@ interface ClassStatsBulkBody {
   patches: ClassStatsPatchBody[];
 }
 
-function applyClassBundle(body: ClassBundleBody, server?: ViteDevServer): void {
+async function applyClassBundle(
+  body: ClassBundleBody,
+  server?: ViteDevServer,
+): Promise<void> {
   const classes = readJsonFile(READ_FILES.classes) as ClassPresetBeforeEnrich[];
   const skillsRoot = readJsonFile(READ_FILES.skills) as {
     passives: PassiveSkillDef[];
@@ -167,10 +177,13 @@ function applyClassBundle(body: ClassBundleBody, server?: ViteDevServer): void {
 
   writeJsonFile(READ_FILES.classes, nextClasses);
   writeJsonFile(READ_FILES.skills, nextSkills);
-  invalidateGameDataModules(server, [READ_FILES.classes, READ_FILES.skills]);
+  await reloadGameDataModules(server, [READ_FILES.classes, READ_FILES.skills]);
 }
 
-function applyClassStatsBulk(body: ClassStatsBulkBody, server?: ViteDevServer): void {
+async function applyClassStatsBulk(
+  body: ClassStatsBulkBody,
+  server?: ViteDevServer,
+): Promise<void> {
   if (!Array.isArray(body.patches) || body.patches.length === 0) {
     throw new Error('patches must be a non-empty array');
   }
@@ -214,10 +227,13 @@ function applyClassStatsBulk(body: ClassStatsBulkBody, server?: ViteDevServer): 
   });
 
   writeJsonFile(READ_FILES.classes, nextClasses);
-  invalidateGameDataModules(server, [READ_FILES.classes]);
+  await reloadGameDataModules(server, [READ_FILES.classes]);
 }
 
-function applyEnemyBundle(body: EnemyBundleBody, server?: ViteDevServer): void {
+async function applyEnemyBundle(
+  body: EnemyBundleBody,
+  server?: ViteDevServer,
+): Promise<void> {
   const enemies = readJsonFile(READ_FILES.enemies) as EnemyTemplate[];
   const skillsRoot = readJsonFile(READ_FILES.skills) as {
     passives: PassiveSkillDef[];
@@ -236,7 +252,7 @@ function applyEnemyBundle(body: EnemyBundleBody, server?: ViteDevServer): void {
 
   writeJsonFile(READ_FILES.enemies, nextEnemies);
   writeJsonFile(READ_FILES.skills, nextSkills);
-  invalidateGameDataModules(server, [READ_FILES.enemies, READ_FILES.skills]);
+  await reloadGameDataModules(server, [READ_FILES.enemies, READ_FILES.skills]);
 }
 
 export function editorApiPlugin(): Plugin {
@@ -268,19 +284,19 @@ export function editorApiPlugin(): Plugin {
 
           if (req.method === 'PUT' && url.pathname === '/__editor/class-bundle') {
             const body = JSON.parse(await readBody(req)) as ClassBundleBody;
-            applyClassBundle(body, server);
+            await applyClassBundle(body, server);
             sendJson(res, 200, { ok: true });
             return;
           }
           if (req.method === 'PUT' && url.pathname === '/__editor/class-stats-bulk') {
             const body = JSON.parse(await readBody(req)) as ClassStatsBulkBody;
-            applyClassStatsBulk(body, server);
+            await applyClassStatsBulk(body, server);
             sendJson(res, 200, { ok: true });
             return;
           }
           if (req.method === 'PUT' && url.pathname === '/__editor/enemy-bundle') {
             const body = JSON.parse(await readBody(req)) as EnemyBundleBody;
-            applyEnemyBundle(body, server);
+            await applyEnemyBundle(body, server);
             sendJson(res, 200, { ok: true });
             return;
           }

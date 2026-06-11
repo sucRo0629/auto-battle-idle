@@ -127,9 +127,24 @@ function hasDamagedHealCandidate(
   return candidates.some((unit) => unit.hp < unit.maxHp);
 }
 
+function isAllyTargetSpec(spec: TargetSpec): boolean {
+  switch (spec.kind) {
+    case 'self':
+      return true;
+    case 'distance':
+    case 'stat':
+    case 'all':
+      return spec.side === 'ally';
+    default:
+      return false;
+  }
+}
+
 function shouldApplyTargetRuleOverride(effect: SkillEffectDef, defaultSpec: TargetSpec): boolean {
   // targetRuleOverride は攻撃 anchor 専用（classes-and-skills.md）。自己対象・サポート effect は上書きしない
   if (defaultSpec.kind === 'self') return false;
+  // toAnchor 等の味方向け move は帰還先を固定（仕留めの眼などで敵に化けない）
+  if (effect.type === 'move' && isAllyTargetSpec(defaultSpec)) return false;
   switch (effect.type) {
     case 'barrier':
     case 'heal':
@@ -143,7 +158,7 @@ function shouldApplyTargetRuleOverride(effect: SkillEffectDef, defaultSpec: Targ
   }
 }
 
-function resolveEffectTargetSpec(
+export function resolveEffectTargetSpec(
   effect: SkillEffectDef,
   actor: CombatantState,
   allies: CombatantState[],

@@ -206,7 +206,7 @@
       "effect": "selfHpRatioBuff",
       "buffStat": "atk",
       "buffMultiplierMax": 1.5,
-      "maxBuffAtHpRatio": 0.6
+      "maxBuffAtHpRatio": 0.5
     },
     {
       "id": "df_duelist_passive_2",
@@ -246,6 +246,50 @@
         }
       ],
       "counterRange": 0
+    },
+    {
+      "id": "df_paladin_passive_1",
+      "name": "ブロッキング",
+      "effect": "block",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "damageIncrease": {
+        "scale": 1.2,
+        "conditions": [
+          {
+            "kind": "targetHp",
+            "maxHpRatio": 0.5
+          }
+        ]
+      },
+      "ratio": 0.1,
+      "percent": 0.2,
+      "blockChance": 0.1
+    },
+    {
+      "id": "df_paladin_passive_2",
+      "name": "聖盾",
+      "effect": "excessHealToBarrier",
+      "ratio": 0.1,
+      "barrierScale": 1,
+      "excessHealSources": [
+        "outgoing",
+        "incoming"
+      ]
+    },
+    {
+      "id": "at_warrior_passive_1",
+      "name": "武器受け",
+      "effect": "block",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "blockChance": 0.5
     }
   ],
   "actives": [
@@ -346,7 +390,7 @@
           "type": "buff",
           "buffStat": "def",
           "buffMultiplier": 1.8,
-          "buffDurationSec": 4,
+          "buffDurationSec": 5,
           "targetShape": "single",
           "target": {
             "kind": "self"
@@ -358,14 +402,14 @@
             "kind": "self"
           },
           "type": "hot",
-          "durationSec": 4,
+          "durationSec": 5,
           "amount": {
-            "kind": "percentMaxHp",
-            "percentOfMaxHp": 0.01
+            "kind": "defBased",
+            "defScale": 0.8
           }
         }
       ],
-      "useDurationSec": 4
+      "useDurationSec": 5
     },
     {
       "id": "df_paladin_active_1",
@@ -425,22 +469,24 @@
           "debuffStat": "atk",
           "debuffMultiplier": 0.8,
           "debuffDurationSec": 5,
-          "targetShape": "single",
+          "targetShape": "pierce",
           "target": {
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
-          }
+          },
+          "range": 10
         },
         {
           "type": "stun",
           "durationSec": 1.2,
-          "targetShape": "single",
+          "targetShape": "pierce",
           "target": {
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
-          }
+          },
+          "range": 10
         }
       ]
     },
@@ -448,8 +494,8 @@
       "id": "df_duelist_active_2",
       "name": "隙撃ち",
       "trigger": {
-        "kind": "time",
-        "value": 10
+        "kind": "basicAttackCount",
+        "value": 5
       },
       "effect": [
         {
@@ -464,6 +510,22 @@
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
+          },
+          "damageIncrease": {
+            "scale": 1.1,
+            "conditions": [
+              {
+                "kind": "debuff",
+                "tags": [
+                  "def",
+                  "stun",
+                  "reg",
+                  "damageTaken",
+                  "dot",
+                  "atk"
+                ]
+              }
+            ]
           }
         }
       ]
@@ -481,7 +543,7 @@
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 2.1
+            "atkScale": 2
           },
           "targetShape": "single",
           "target": {
@@ -519,10 +581,10 @@
     },
     {
       "id": "at_assassin_active_1",
-      "name": "背刺",
+      "name": "バックスタブ",
       "trigger": {
         "kind": "time",
-        "value": 9
+        "value": 3
       },
       "effect": [
         {
@@ -533,24 +595,47 @@
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
-          }
+          },
+          "range": 100,
+          "behindOffsetPx": 10
         },
         {
-          "targetShape": "multiLock",
-          "hitCount": 3,
+          "targetShape": "single",
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.7
+            "atkScale": 0.5
           },
           "target": {
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
-          }
+          },
+          "damageIncrease": {
+            "scale": 5,
+            "conditions": [
+              {
+                "kind": "targetHp",
+                "maxHpRatio": 0.25
+              }
+            ]
+          },
+          "waitAfterSec": 1
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "ally",
+            "order": "nearest"
+          },
+          "type": "move",
+          "moveMode": "toAnchor",
+          "moveDurationSec": 0.25,
+          "range": 100
         }
-      ]
+      ],
+      "useDurationSec": 1.1
     },
     {
       "id": "at_assassin_active_2",
@@ -1299,6 +1384,50 @@
     {
       "id": "at_lancer_basic_attack",
       "name": "at_lancer_basic_attack",
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "at_warrior_basic_attack",
+      "name": "at_warrior_basic_attack",
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "at_assassin_basic_attack",
+      "name": "at_assassin_basic_attack",
       "trigger": {
         "kind": "time",
         "value": 2

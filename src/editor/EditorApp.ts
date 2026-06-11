@@ -491,7 +491,7 @@ export class EditorApp {
             this.classSkillEntries = [];
           }
           if (this.classSkillEntries.length !== prevCount) {
-            this.render();
+            this.refreshSkillEditor();
           }
         },
         onDisplayNameChange: (displayName: string) => {

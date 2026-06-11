@@ -1,33 +1,120 @@
+const EDITOR_ROOT_SELECTOR = '#editor-app';
+
+interface ScrollContainerSnapshot {
+  path: string;
+  scrollTop: number;
+  scrollLeft: number;
+}
+
+interface EditorScrollSnapshot {
+  scrollX: number;
+  scrollY: number;
+  containers: ScrollContainerSnapshot[];
+}
+
 interface FocusRestoreState {
-  selector: string;
+  inputIndex: number;
   selectionStart: number | null;
   selectionEnd: number | null;
 }
 
+function getEditorInputs(): Array<HTMLInputElement | HTMLTextAreaElement> {
+  const root = document.querySelector(EDITOR_ROOT_SELECTOR);
+  if (!root) return [];
+  return [
+    ...root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+      'input.editor-input, textarea.editor-input',
+    ),
+  ];
+}
+
+function elementPathFromEditorRoot(el: Element): string | null {
+  const root = document.querySelector(EDITOR_ROOT_SELECTOR);
+  if (!root || !root.contains(el)) return null;
+  const parts: string[] = [];
+  let node: Element | null = el;
+  while (node && node !== root) {
+    const parent = node.parentElement;
+    if (!parent) return null;
+    const index = [...parent.children].indexOf(node);
+    if (index < 0) return null;
+    parts.unshift(`${node.tagName.toLowerCase()}:nth-child(${index + 1})`);
+    node = parent;
+  }
+  return parts.join(' > ');
+}
+
+function isScrollableElement(el: HTMLElement): boolean {
+  const { overflow, overflowX, overflowY } = getComputedStyle(el);
+  return [overflow, overflowX, overflowY].some(
+    (value) => value === 'auto' || value === 'scroll',
+  );
+}
+
+function captureScrollContainers(from: Element | null): ScrollContainerSnapshot[] {
+  const snapshots: ScrollContainerSnapshot[] = [];
+  const seen = new Set<string>();
+  let el: Element | null = from;
+  while (el) {
+    if (el instanceof HTMLElement && isScrollableElement(el)) {
+      const path = elementPathFromEditorRoot(el);
+      if (path && !seen.has(path)) {
+        seen.add(path);
+        snapshots.push({
+          path,
+          scrollTop: el.scrollTop,
+          scrollLeft: el.scrollLeft,
+        });
+      }
+    }
+    el = el.parentElement;
+  }
+  return snapshots;
+}
+
+function captureEditorScroll(from: Element | null): EditorScrollSnapshot {
+  return {
+    scrollX: window.scrollX,
+    scrollY: window.scrollY,
+    containers: captureScrollContainers(from),
+  };
+}
+
+function restoreEditorScroll(snapshot: EditorScrollSnapshot): void {
+  window.scrollTo(snapshot.scrollX, snapshot.scrollY);
+  const root = document.querySelector(EDITOR_ROOT_SELECTOR);
+  if (!root) return;
+  for (const container of snapshot.containers) {
+    const el = root.querySelector<HTMLElement>(container.path);
+    if (!el) continue;
+    el.scrollTop = container.scrollTop;
+    el.scrollLeft = container.scrollLeft;
+  }
+}
+
 function buildFocusRestoreState(): FocusRestoreState | null {
   const active = document.activeElement;
-  if (!(active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement)) {
+  if (
+    !(active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement) ||
+    !active.classList.contains('editor-input')
+  ) {
     return null;
   }
-  const parts: string[] = [`input.editor-input`];
-  if (active.id) {
-    parts.push(`#${CSS.escape(active.id)}`);
-  }
-  if (active.dataset.field) {
-    parts.push(`[data-field="${CSS.escape(active.dataset.field)}"]`);
-  }
+  const inputIndex = getEditorInputs().indexOf(active);
+  if (inputIndex < 0) return null;
   return {
-    selector: parts.join(''),
+    inputIndex,
     selectionStart: active.selectionStart,
     selectionEnd: active.selectionEnd,
   };
 }
 
-function restoreFocusState(state: FocusRestoreState | null): void {
+function restoreFocusState(
+  state: FocusRestoreState | null,
+  scrollSnapshot: EditorScrollSnapshot,
+): void {
   if (!state) return;
-  const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
-    state.selector,
-  );
+  const input = getEditorInputs()[state.inputIndex];
   if (!input) return;
   input.focus({ preventScroll: true });
   if (
@@ -37,14 +124,32 @@ function restoreFocusState(state: FocusRestoreState | null): void {
   ) {
     input.setSelectionRange(state.selectionStart, state.selectionEnd);
   }
+  restoreEditorScroll(scrollSnapshot);
 }
 
-/** DOM 再構築後もフォーカス入力を維持する */
+/** blur 待ちの数値入力・スキル ID などを保存前に確定する */
+export function flushPendingEditorInputs(): void {
+  const active = document.activeElement;
+  if (
+    active instanceof HTMLInputElement ||
+    active instanceof HTMLTextAreaElement
+  ) {
+    active.blur();
+  }
+}
+
+/** DOM 再構築後もスクロール位置とフォーカス入力を維持する */
 export function preserveScrollDuring(fn: () => void): void {
   const focusState = buildFocusRestoreState();
+  const scrollSnapshot = captureEditorScroll(document.activeElement);
   fn();
+  const restore = () => {
+    restoreEditorScroll(scrollSnapshot);
+    restoreFocusState(focusState, scrollSnapshot);
+  };
   requestAnimationFrame(() => {
-    restoreFocusState(focusState);
+    restore();
+    requestAnimationFrame(restore);
   });
 }
 
@@ -68,12 +173,18 @@ export function createLabel(text: string, forId?: string): HTMLLabelElement {
 export function createTextInput(
   value: string,
   onInput: (value: string) => void,
-  options?: { id?: string; placeholder?: string; readonly?: boolean },
+  options?: {
+    id?: string;
+    field?: string;
+    placeholder?: string;
+    readonly?: boolean;
+  },
 ): HTMLInputElement {
   const input = createEl('input', 'editor-input') as HTMLInputElement;
   input.type = 'text';
   input.value = value;
   if (options?.id) input.id = options.id;
+  if (options?.field) input.dataset.field = options.field;
   if (options?.placeholder) input.placeholder = options.placeholder;
   if (options?.readonly) input.readOnly = true;
   input.addEventListener('input', () => onInput(input.value));
@@ -85,6 +196,7 @@ export function createNumberInput(
   onInput: (value: number) => void,
   options?: {
     id?: string;
+    field?: string;
     readonly?: boolean;
     /** この値のとき input を空表示（省略値用） */
     emptyWhen?: number;
@@ -102,6 +214,7 @@ export function createNumberInput(
     options?.emptyWhen !== undefined && value === options.emptyWhen;
   input.value = showEmpty ? '' : String(value);
   if (options?.id) input.id = options.id;
+  if (options?.field) input.dataset.field = options.field;
   if (options?.placeholder) input.placeholder = options.placeholder;
   if (options?.readonly) input.readOnly = true;
   const displayValue = () =>
@@ -124,6 +237,14 @@ export function createNumberInput(
     }
     onInput(parsed);
   };
+  input.addEventListener('input', () => {
+    if (options?.readonly) return;
+    const raw = input.value.trim();
+    if (raw === '') return;
+    const parsed = Number(raw);
+    if (Number.isNaN(parsed)) return;
+    onInput(parsed);
+  });
   input.addEventListener('blur', commit);
   input.addEventListener('change', commit);
   return input;
@@ -190,7 +311,10 @@ export function createActionButton(
   className: string,
   onClick: () => void,
 ): HTMLButtonElement {
-  const button = createButton(label, className, onClick);
+  const button = createButton(label, className, () => {
+    flushPendingEditorInputs();
+    onClick();
+  });
   button.addEventListener('mousedown', (event) => {
     event.preventDefault();
   });

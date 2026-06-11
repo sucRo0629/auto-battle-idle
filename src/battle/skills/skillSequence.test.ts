@@ -98,6 +98,133 @@ describe('skillSequence', () => {
     expect(sequence!.steps[2]!.targetId).toBe('ally');
   });
 
+  it('toAnchor ally step keeps ally anchor when targetRuleOverride passive is equipped', () => {
+    const skill: ActiveSkillDef = {
+      id: 'backstab',
+      name: 'backstab',
+      trigger: { kind: 'time', value: 3 },
+      effect: [
+        {
+          type: 'move',
+          moveMode: 'behindTarget',
+          moveDurationSec: 0.3,
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          behindOffsetPx: 10,
+        },
+        {
+          type: 'damage',
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 0.5 },
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        },
+        {
+          type: 'move',
+          moveMode: 'toAnchor',
+          moveDurationSec: 0.3,
+          target: { kind: 'distance', side: 'ally', order: 'nearest' },
+        },
+      ],
+    };
+    const actor = mockUnit({ id: 'assassin', battleX: 220 });
+    const ally = mockUnit({ id: 'warrior', battleX: 180 });
+    const enemy = mockUnit({ id: 'enemy', isEnemy: true, battleX: 260 });
+    const cd: SkillCooldown = {
+      skillId: 'backstab',
+      remaining: 0,
+      slotKind: 'active',
+    };
+    const gameData = {
+      skillRegistry: {
+        passives: {
+          passive_target_lowest_hp: {
+            id: 'passive_target_lowest_hp',
+            name: '仕留めの眼',
+            effect: 'targetRuleOverride',
+            targetRuleOverride: {
+              kind: 'stat',
+              side: 'enemy',
+              stat: 'hp',
+              order: 'lowest',
+            },
+          },
+        },
+        actives: { backstab: skill },
+      },
+    } as unknown as GameData;
+    const passives = [gameData.skillRegistry.passives.passive_target_lowest_hp];
+
+    const sequence = buildSkillSequence(
+      skill,
+      actor,
+      [actor, ally],
+      [enemy],
+      gameData,
+      passives,
+      5,
+      cd,
+    );
+
+    expect(sequence).not.toBeNull();
+    expect(sequence!.steps[0]!.targetId).toBe('enemy');
+    expect(sequence!.steps[2]!.targetId).toBe('warrior');
+  });
+
+  it('waitAfterSec delays the next effect in move sequences', () => {
+    const skill: ActiveSkillDef = {
+      id: 'backstab',
+      name: 'backstab',
+      trigger: { kind: 'time', value: 3 },
+      effect: [
+        {
+          type: 'move',
+          moveMode: 'behindTarget',
+          moveDurationSec: 0.3,
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          behindOffsetPx: 10,
+        },
+        {
+          type: 'damage',
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 0.5 },
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          waitAfterSec: 0.2,
+        },
+        {
+          type: 'move',
+          moveMode: 'toAnchor',
+          moveDurationSec: 0.3,
+          target: { kind: 'distance', side: 'ally', order: 'nearest' },
+        },
+      ],
+    };
+    const actor = mockUnit({ id: 'assassin', battleX: 220 });
+    const ally = mockUnit({ id: 'warrior', battleX: 180 });
+    const enemy = mockUnit({ id: 'enemy', isEnemy: true, battleX: 260 });
+    const cd: SkillCooldown = {
+      skillId: 'backstab',
+      remaining: 0,
+      slotKind: 'active',
+    };
+
+    const sequence = buildSkillSequence(
+      skill,
+      actor,
+      [actor, ally],
+      [enemy],
+      makeGameData({ backstab: skill }),
+      [],
+      0,
+      cd,
+    );
+
+    expect(sequence).not.toBeNull();
+    expect(sequence!.steps.map((s) => s.applyAtBattleSec)).toEqual([
+      0,
+      0.3,
+      0.5,
+    ]);
+  });
+
   it('interpolates battleX during move', () => {
     const runner = new SkillSequenceRunner();
     const actor = mockUnit({ id: 'actor', battleX: 100 });

@@ -9,7 +9,10 @@ import type {
 import type { GameData } from '../types.ts';
 import { resolveSkillTrigger } from '../skillTrigger.ts';
 import { getEffectTarget, getTargetPool } from './targetSpec.ts';
-import { pickTargetFromPool, resolveTargetSpec } from './targeting.ts';
+import {
+  pickTargetFromPool,
+  resolveEffectTargetSpec,
+} from './targeting.ts';
 
 export interface ActiveSkillMove {
   actorId: string;
@@ -58,12 +61,13 @@ export function buildSkillSequence(
 
   for (let i = 0; i < skill.effect.length; i++) {
     const effectDef = skill.effect[i]!;
-    const defaultSpec = getEffectTarget(effectDef);
-    const spec = resolveTargetSpec(passives, defaultSpec, {
+    const spec = resolveEffectTargetSpec(
+      effectDef,
       actor,
       allies,
       enemies,
-    });
+      passives,
+    );
     const anchor = resolveSequenceStepAnchor(
       effectDef,
       spec,
@@ -87,6 +91,10 @@ export function buildSkillSequence(
 
     if (effectDef.type === 'move') {
       applyAt += effectDef.moveDurationSec;
+    }
+    const waitAfterSec = effectDef.waitAfterSec;
+    if (waitAfterSec !== undefined && waitAfterSec > 0) {
+      applyAt += waitAfterSec;
     }
   }
 

@@ -401,6 +401,45 @@ describe('resolveEffectTargets', () => {
     expect(anchor?.id).toBe('near');
   });
 
+  it('toAnchor ally move ignores targetRuleOverride passive', () => {
+    const actor = mockUnit('actor', 150);
+    const allyNear = mockUnit('near', 120);
+    const enemy = mockUnit('enemy', 280, { isEnemy: true });
+    const dataWithPassive: GameData = {
+      ...gameData,
+      skillRegistry: {
+        ...gameData.skillRegistry,
+        passives: {
+          passive_target_lowest_hp: {
+            id: 'passive_target_lowest_hp',
+            name: '仕留めの眼',
+            effect: 'targetRuleOverride',
+            targetRuleOverride: {
+              kind: 'stat',
+              side: 'enemy',
+              stat: 'hp',
+              order: 'lowest',
+            },
+          },
+        },
+      },
+    };
+    const anchor = resolveEffectAnchor(
+      {
+        type: 'move',
+        moveMode: 'toAnchor',
+        target: { kind: 'distance', side: 'ally', order: 'nearest' },
+        moveDurationSec: 0.2,
+      },
+      actor,
+      [actor, allyNear],
+      [enemy],
+      dataWithPassive,
+      [dataWithPassive.skillRegistry.passives.passive_target_lowest_hp],
+    );
+    expect(anchor?.id).toBe('near');
+  });
+
   it('aoe heal: mostDamagedAlly anchor plus radius on allies', () => {
     const healer = mockUnit('healer', 180);
     const allyDamaged = mockUnit('ally-a', 200, { hp: 40, maxHp: 100 });

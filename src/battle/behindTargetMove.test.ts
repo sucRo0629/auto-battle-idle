@@ -1,0 +1,157 @@
+import { describe, expect, it } from 'vitest';
+import levelCurvesJson from '../../data/levelCurves.json';
+import { BattleEngine } from './BattleEngine.ts';
+import { resolveAttackBattleX } from './combatPosition.ts';
+import { loadGameData } from './data/loadGameData.ts';
+import { loadLevelCurves } from '../progression/levelGrowth.ts';
+import { createDefaultSave } from '../progression/victoryRewards.ts';
+import { createMemberFromClass } from '../progression/partyCompose.ts';
+import { reachWave2Engage, TICK_DT } from './test/battleFieldSpec.harness.ts';
+
+type InternalEngine = BattleEngine & {
+  players: Array<{
+    id: string;
+    name: string;
+    battleX: number;
+    formationRow: string;
+    cooldowns: Array<{ remaining: number; slotKind: string; skillId: string }>;
+  }>;
+  enemies: Array<{
+    id: string;
+    battleX: number;
+    isAlive: boolean;
+  }>;
+  gameData: ReturnType<typeof loadGameData>;
+  skillSequenceRunner: {
+    isActorInSkillMotion: (id: string) => boolean;
+  };
+};
+
+function createAssassinFrontEngine(): BattleEngine {
+  const gameData = structuredClone(loadGameData());
+  const save = createDefaultSave(gameData, 'demo');
+  save.stageProgress.currentStageId = '1';
+  save.party[0] = createMemberFromClass('at_assassin', gameData);
+  for (const slot of save.party) {
+    if (slot) slot.progress.level = 10;
+  }
+  const engine = new BattleEngine(
+    gameData,
+    loadLevelCurves(levelCurvesJson),
+    () => save.party,
+    () => save.stageProgress.currentStageId,
+  );
+  engine.startBattle();
+  return engine;
+}
+
+describe('behindTarget move', () => {
+  it('moves past engage clamp while backstab skill motion is active', () => {
+    const engine = createAssassinFrontEngine();
+    reachWave2Engage(engine);
+    const internal = engine as unknown as InternalEngine;
+    const assassin = internal.players.find((p) => p.name === '双短剣')!;
+    const enemy = internal.enemies.find((e) => e.isAlive)!;
+    const activeCd = assassin.cooldowns.find(
+      (cd) => cd.skillId === 'at_assassin_active_1',
+    );
+    expect(activeCd).toBeDefined();
+    activeCd!.remaining = 0;
+
+    const engageMax = resolveAttackBattleX(
+      assassin as never,
+      enemy.battleX,
+      internal.gameData,
+    );
+    let sawSkillMotion = false;
+    let maxXDuringMotion = assassin.battleX;
+
+    for (let t = 0; t < 600; t++) {
+      engine.tick(TICK_DT);
+      if (internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)) {
+        sawSkillMotion = true;
+        maxXDuringMotion = Math.max(maxXDuringMotion, assassin.battleX);
+      }
+      if (sawSkillMotion && !internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)) {
+        break;
+      }
+    }
+
+    expect(sawSkillMotion).toBe(true);
+    expect(maxXDuringMotion).toBeGreaterThan(engageMax + 1);
+    expect(maxXDuringMotion).toBeGreaterThanOrEqual(enemy.battleX + 8);
+  });
+
+  it('returns toward nearest ally after backstab toAnchor step', () => {
+    const engine = createAssassinFrontEngine();
+    reachWave2Engage(engine);
+    const internal = engine as unknown as InternalEngine;
+    const assassin = internal.players.find((p) => p.name === '双短剣')!;
+    const enemy = internal.enemies.find((e) => e.isAlive)!;
+    const activeCd = assassin.cooldowns.find(
+      (cd) => cd.skillId === 'at_assassin_active_1',
+    );
+    activeCd!.remaining = 0;
+
+    const engageMax = resolveAttackBattleX(
+      assassin as never,
+      enemy.battleX,
+      internal.gameData,
+    );
+    let peakX = assassin.battleX;
+    let returnedTowardEngage = false;
+
+    for (let t = 0; t < 900; t++) {
+      engine.tick(TICK_DT);
+      peakX = Math.max(peakX, assassin.battleX);
+      if (peakX > engageMax + 5 && assassin.battleX <= engageMax + 2) {
+        returnedTowardEngage = true;
+        break;
+      }
+    }
+
+    expect(peakX).toBeGreaterThan(engageMax + 5);
+    expect(returnedTowardEngage).toBe(true);
+  });
+
+  it('waits after damage before starting return move', () => {
+    const engine = createAssassinFrontEngine();
+    reachWave2Engage(engine);
+    const internal = engine as unknown as InternalEngine;
+    const assassin = internal.players.find((p) => p.name === '双短剣')!;
+    const enemy = internal.enemies.find((e) => e.isAlive)!;
+    const activeCd = assassin.cooldowns.find(
+      (cd) => cd.skillId === 'at_assassin_active_1',
+    );
+    activeCd!.remaining = 0;
+
+    const engageMax = resolveAttackBattleX(
+      assassin as never,
+      enemy.battleX,
+      internal.gameData,
+    );
+    let peakX = assassin.battleX;
+    let peakTick = -1;
+    let returnStartTick = -1;
+
+    for (let t = 0; t < 120; t++) {
+      engine.tick(TICK_DT);
+      if (assassin.battleX > peakX + 0.5) {
+        peakX = assassin.battleX;
+        peakTick = t;
+      }
+      if (
+        peakTick >= 0 &&
+        returnStartTick < 0 &&
+        assassin.battleX < peakX - 3
+      ) {
+        returnStartTick = t;
+        break;
+      }
+    }
+
+    expect(peakX).toBeGreaterThan(engageMax + 5);
+    expect(returnStartTick).toBeGreaterThan(peakTick);
+    expect(returnStartTick - peakTick).toBeGreaterThanOrEqual(8);
+  });
+});

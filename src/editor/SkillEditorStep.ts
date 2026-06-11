@@ -647,6 +647,45 @@ function appendResourceAmountFields(
   );
 }
 
+function appendEffectSequenceTimingFields(
+  parent: HTMLElement,
+  effect: SkillEffectDef,
+  patchEffect: (patch: EffectPatch, options?: { rerender?: boolean }) => void,
+  isLastEffect: boolean,
+): void {
+  if (isLastEffect) return;
+
+  const section = createSection('シーケンス（タイミング）');
+  parent.appendChild(section);
+  section.appendChild(
+    createEl(
+      'p',
+      'editor-hint',
+      'move を含むスキル: この effect 適用後、次の effect まで待機する秒数です。',
+    ),
+  );
+  const grid = appendGrid(section);
+  grid.appendChild(
+    createFieldRow(
+      '次の効果まで待機（秒）',
+      createNumberInput(
+        effect.waitAfterSec ?? 0,
+        (waitAfterSec) =>
+          patchEffect((prev) => {
+            const next = { ...prev } as SkillEffectDef;
+            if (waitAfterSec <= 0) {
+              delete next.waitAfterSec;
+            } else {
+              next.waitAfterSec = waitAfterSec;
+            }
+            return next;
+          }),
+        { min: 0, step: 0.05 },
+      ),
+    ),
+  );
+}
+
 function appendEffectPresentationFields(
   parent: HTMLElement,
   effect: SkillEffectDef,
@@ -1873,6 +1912,12 @@ export class SkillEditorStep {
         },
         showPerEffectPresentation,
         idReadonly,
+        showPerEffectPresentation
+          ? {
+              effectIndex,
+              effectCount: active.effect.length,
+            }
+          : undefined,
       );
       effectsSection.appendChild(block);
     });
@@ -1984,6 +2029,7 @@ export class SkillEditorStep {
     onUpdate: (effect: SkillEffectDef, options?: { rerender?: boolean }) => void,
     showPerEffectPresentation = false,
     isBasicAttack = false,
+    sequenceContext?: { effectIndex: number; effectCount: number },
   ): void {
     const { patch: patchEffect, get: getEffect } = patchEffectState(effect, onUpdate);
     const grid = appendGrid(parent);
@@ -2673,6 +2719,15 @@ export class SkillEditorStep {
         }
         break;
       }
+    }
+
+    if (sequenceContext) {
+      appendEffectSequenceTimingFields(
+        parent,
+        effect,
+        patchEffect,
+        sequenceContext.effectIndex >= sequenceContext.effectCount - 1,
+      );
     }
 
     if (!isBasicAttack && effectSupportsPresentationFields(effect)) {

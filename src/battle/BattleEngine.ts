@@ -659,6 +659,7 @@ export class BattleEngine {
     if (leadingRow === null) return;
     for (const ally of this.players) {
       if (!ally.isAlive || ally.formationRow !== leadingRow) continue;
+      if (this.skillSequenceRunner.isActorInSkillMotion(ally.id)) continue;
       if (
         shouldSkipEngagedAutoApproach(
           ally,
