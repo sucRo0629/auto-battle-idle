@@ -414,7 +414,7 @@ export const TARGET_DISTANCE_ORDER_LABELS: Record<
   "nearest" | "farthest",
   string
 > = {
-  nearest: "最近",
+  nearest: "至近",
   farthest: "最遠",
 };
 
@@ -423,7 +423,7 @@ export const TARGET_STAT_LABELS: Record<"hp" | "atk" | "def" | "reg", string> =
     hp: "HP",
     atk: "ATK",
     def: "DEF",
-    reg: "耐魔",
+    reg: "REG",
   };
 
 export const TARGET_STAT_ORDER_LABELS: Record<

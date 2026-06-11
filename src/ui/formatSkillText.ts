@@ -1,12 +1,12 @@
 import {
   defaultTargetForEffectType,
   formatTargetLabel,
-} from '../battle/skills/targetSpec.ts';
-import { resolveSkillTrigger } from '../battle/skillTrigger.ts';
+} from "../battle/skills/targetSpec.ts";
+import { resolveSkillTrigger } from "../battle/skillTrigger.ts";
 import {
   DEBUFF_FILTER_TAG_LABELS,
   TARGET_SHAPE_LABELS,
-} from '../battle/data/gameDataSchema.ts';
+} from "../battle/data/gameDataSchema.ts";
 import type {
   ActiveSkillDef,
   CounterResponseDef,
@@ -19,33 +19,37 @@ import type {
   SkillTriggerKind,
   StatusEffectStat,
   TargetSpec,
-} from '../battle/types.ts';
-import { asStatusEffectStatList } from '../battle/types.ts';
+} from "../battle/types.ts";
+import { asStatusEffectStatList } from "../battle/types.ts";
 
 const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
-  physical: '物理',
-  magic: '魔法',
+  physical: "物理",
+  magic: "魔法",
 };
 
 const STATUS_STAT_SHORT: Record<StatusEffectStat, string> = {
-  atk: 'ATK',
-  def: 'DEF',
-  reg: '耐魔',
-  damageTaken: '被ダメ',
+  atk: "ATK",
+  def: "DEF",
+  reg: "REG",
+  damageTaken: "被ダメ",
+  attackSpeed: "SPD",
 };
 
 function formatTriggerLabel(kind: SkillTriggerKind, value: number): string {
   switch (kind) {
-    case 'time':
+    case "time":
       return `${value}s`;
-    case 'basicAttackCount':
+    case "basicAttackCount":
       return `${value}攻撃`;
-    case 'hitsTaken':
-      return `被攻撃${value}回`;
+    case "hitsTaken":
+      return `${value}被攻撃`;
   }
 }
 
-function formatTarget(spec: TargetSpec | undefined, fallback: TargetSpec): string {
+function formatTarget(
+  spec: TargetSpec | undefined,
+  fallback: TargetSpec
+): string {
   return formatTargetLabel(spec ?? fallback);
 }
 
@@ -55,129 +59,154 @@ function formatPercent(value: number): string {
 
 function formatAtkScale(scale: number | undefined): string {
   const s = scale ?? 1;
-  if (s === 1) return 'ATK';
+  if (s === 1) return "ATK";
   return `ATK×${s}`;
 }
 
 function formatDefScale(scale: number | undefined): string {
   const s = scale ?? 1;
-  if (s === 1) return 'DEF';
+  if (s === 1) return "DEF";
   return `DEF×${s}`;
 }
 
 function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
-  if (!amount) return '—';
+  if (!amount) return "—";
   switch (amount.kind) {
-    case 'atkBased': {
+    case "atkBased": {
       const scale = amount.atkScale ?? 1;
       const offset = amount.atkOffset ?? 0;
       if (offset === 0) return formatAtkScale(scale);
-      const sign = offset > 0 ? '+' : '';
+      const sign = offset > 0 ? "+" : "";
       return `(ATK${sign}${offset})×${scale}`;
     }
-    case 'defBased': {
+    case "defBased": {
       const scale = amount.defScale ?? 1;
       const offset = amount.defOffset ?? 0;
       if (offset === 0) return formatDefScale(scale);
-      const sign = offset > 0 ? '+' : '';
+      const sign = offset > 0 ? "+" : "";
       return `(DEF${sign}${offset})×${scale}`;
     }
-    case 'flat':
+    case "flat":
       return `固定${amount.flatAmount ?? 0}`;
-    case 'percentMaxHp':
+    case "percentMaxHp":
       return `maxHp×${formatPercent(amount.percentOfMaxHp ?? 0)}`;
   }
 }
 
 function formatStatusStats(
-  stat: StatusEffectStat | StatusEffectStat[] | undefined,
+  stat: StatusEffectStat | StatusEffectStat[] | undefined
 ): string {
   return asStatusEffectStatList(stat)
     .map((s) => STATUS_STAT_SHORT[s])
-    .join('・');
+    .join("・");
 }
 
-function formatStatModifier(
+function formatFlatBonus(flat: number): string {
+  if (flat > 0) return `+ ${flat}`;
+  if (flat < 0) return `- ${Math.abs(flat)}`;
+  return "0";
+}
+
+function formatStatWithModifier(
+  stat: StatusEffectStat,
   multiplier: number | undefined,
-  flatBonus: number | undefined,
+  flatBonus: number | undefined
 ): string {
-  const parts: string[] = [];
-  if (multiplier !== undefined && multiplier !== 1) {
-    parts.push(`×${multiplier}`);
-  }
-  if (flatBonus !== undefined && flatBonus !== 0) {
-    const sign = flatBonus > 0 ? '+' : '';
-    parts.push(`${sign}${flatBonus}`);
-  }
-  return parts.length > 0 ? parts.join(' ') : '—';
+  const label = STATUS_STAT_SHORT[stat];
+  const mul = multiplier ?? 1;
+  const flat = flatBonus ?? 0;
+
+  if (mul === 1 && flat === 0) return label;
+  if (flat === 0) return `${label} ×${mul}`;
+  if (mul === 1) return `${label} ${formatFlatBonus(flat)}`;
+  return `( ${label} ${formatFlatBonus(flat)} ) ×${mul}`;
 }
 
-function formatDamageIncreaseCondition(condition: DamageIncreaseCondition): string {
+function formatStatsWithModifier(
+  stat: StatusEffectStat | StatusEffectStat[] | undefined,
+  multiplier: number | undefined,
+  flatBonus: number | undefined
+): string {
+  const stats = asStatusEffectStatList(stat);
+  if (stats.length === 0) return "—";
+  return stats
+    .map((s) => formatStatWithModifier(s, multiplier, flatBonus))
+    .join("・");
+}
+
+function formatDamageIncreaseCondition(
+  condition: DamageIncreaseCondition
+): string {
   switch (condition.kind) {
-    case 'debuff': {
-      const tags = condition.tags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join('・');
-      const prefix = condition.selfAppliedOnly ? '自分付与の' : '';
+    case "debuff": {
+      const tags = condition.tags
+        .map((t) => DEBUFF_FILTER_TAG_LABELS[t])
+        .join("・");
+      const prefix = condition.selfAppliedOnly ? "自分付与の" : "";
       return `${prefix}${tags}`;
     }
-    case 'targetHp':
+    case "targetHp":
       return `対象HP${formatPercent(condition.maxHpRatio)}以下`;
   }
 }
 
 function formatDamageIncreaseSpec(
-  spec: PassiveSkillDef['damageIncrease'] | SkillEffectDef['damageIncrease'],
+  spec: PassiveSkillDef["damageIncrease"] | SkillEffectDef["damageIncrease"]
 ): string {
-  if (!spec) return '';
-  const cond = spec.conditions.map(formatDamageIncreaseCondition).join('・');
+  if (!spec) return "";
+  const cond = spec.conditions.map(formatDamageIncreaseCondition).join("・");
   const base = `特効×${spec.scale}`;
   return cond ? `${base}（${cond}）` : base;
 }
 
 function formatDefenseIgnoreSpec(
-  spec: PassiveSkillDef['defenseIgnore'] | SkillEffectDef['defenseIgnore'],
+  spec: PassiveSkillDef["defenseIgnore"] | SkillEffectDef["defenseIgnore"]
 ): string {
-  if (!spec) return '';
+  if (!spec) return "";
   const parts: string[] = [];
   if (spec.def) {
     parts.push(
-      spec.def.mode === 'flat'
+      spec.def.mode === "flat"
         ? `DEF無視${spec.def.amount}`
-        : `DEF無視${formatPercent(spec.def.amount)}`,
+        : `DEF無視${formatPercent(spec.def.amount)}`
     );
   }
   if (spec.reg) {
     parts.push(`耐魔無視${formatPercent(spec.reg.percent)}`);
   }
-  return parts.join(' ');
+  return parts.join(" ");
 }
 
 function formatTargetShape(effect: SkillEffectDef): string {
-  const shape = effect.targetShape ?? 'single';
+  const shape = effect.targetShape ?? "single";
   const parts: string[] = [TARGET_SHAPE_LABELS[shape]];
 
   switch (shape) {
-    case 'aoe':
+    case "aoe":
       if (effect.aoeRadiusPx !== undefined) {
         parts.push(`±${effect.aoeRadiusPx}px`);
       }
       break;
-    case 'single':
-    case 'multiLock':
+    case "single":
+    case "multiLock":
       if (effect.hitCount !== undefined && effect.hitCount > 1) {
         parts.push(`×${effect.hitCount}`);
       }
       break;
-    case 'pierce':
-      if (effect.pierceDurationSec !== undefined && effect.pierceDurationSec > 0) {
+    case "pierce":
+      if (
+        effect.pierceDurationSec !== undefined &&
+        effect.pierceDurationSec > 0
+      ) {
         parts.push(`${effect.pierceDurationSec}s`);
       }
       break;
-    case 'chain':
+    case "chain":
       if (effect.chainCount !== undefined) {
         parts.push(`×${effect.chainCount}`);
       }
       break;
-    case 'scatter':
+    case "scatter":
       if (effect.scatterHitCount !== undefined) {
         parts.push(`×${effect.scatterHitCount}`);
       }
@@ -187,25 +216,27 @@ function formatTargetShape(effect: SkillEffectDef): string {
       break;
   }
 
-  return parts.join(' ');
+  return parts.join(" ");
 }
 
 function formatCounterResponse(response: CounterResponseDef): string {
   switch (response.kind) {
-    case 'damage': {
+    case "damage": {
       const dmgType = response.damageType
         ? DAMAGE_TYPE_LABELS[response.damageType]
-        : '';
+        : "";
       const amount = formatResourceAmount(response.amount);
       return dmgType ? `${dmgType}${amount}` : amount;
     }
-    case 'debuff':
-      return `デバフ${formatStatusStats(response.debuffStat)} ${response.debuffDurationSec}s`;
-    case 'dot':
+    case "debuff":
+      return `デバフ${formatStatusStats(response.debuffStat)} ${
+        response.debuffDurationSec
+      }s`;
+    case "dot":
       return `DoT×${response.powerMultiplier} ${response.durationSec}s`;
-    case 'stun':
+    case "stun":
       return `スタン${response.durationSec}s`;
-    case 'knockback':
+    case "knockback":
       return `ノック${response.distancePx}px`;
   }
 }
@@ -213,16 +244,16 @@ function formatCounterResponse(response: CounterResponseDef): string {
 function formatActiveEffectDetail(effect: SkillEffectDef): string {
   const target = formatTarget(
     effect.target,
-    defaultTargetForEffectType(effect.type),
+    defaultTargetForEffectType(effect.type)
   );
   const shape = formatTargetShape(effect);
   const extras: string[] = [];
 
   switch (effect.type) {
-    case 'damage': {
+    case "damage": {
       const dmgType = effect.damageType
         ? DAMAGE_TYPE_LABELS[effect.damageType]
-        : '';
+        : "";
       const amount = formatResourceAmount(effect.amount);
       const power = dmgType ? `${dmgType} ${amount}` : amount;
       extras.push(power);
@@ -232,28 +263,36 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       if (ign) extras.push(ign);
       break;
     }
-    case 'heal':
+    case "heal":
       extras.push(formatResourceAmount(effect.amount));
       break;
-    case 'buff':
+    case "buff":
       extras.push(
-        `${formatStatusStats(effect.buffStat)} ${formatStatModifier(effect.buffMultiplier, effect.buffFlatBonus)} ${effect.buffDurationSec}s`,
+        `${formatStatsWithModifier(
+          effect.buffStat,
+          effect.buffMultiplier,
+          effect.buffFlatBonus
+        )} ${effect.buffDurationSec}s`
       );
       break;
-    case 'debuff':
+    case "debuff":
       extras.push(
-        `${formatStatusStats(effect.debuffStat)} ${formatStatModifier(effect.debuffMultiplier, effect.debuffFlatBonus)} ${effect.debuffDurationSec}s`,
+        `${formatStatsWithModifier(
+          effect.debuffStat,
+          effect.debuffMultiplier,
+          effect.debuffFlatBonus
+        )} ${effect.debuffDurationSec}s`
       );
       break;
-    case 'hot':
+    case "hot":
       extras.push(
-        `${formatResourceAmount(effect.amount)} ${effect.durationSec}s`,
+        `${formatResourceAmount(effect.amount)} ${effect.durationSec}s`
       );
       break;
-    case 'dot': {
+    case "dot": {
       const dmgType = effect.damageType
         ? DAMAGE_TYPE_LABELS[effect.damageType]
-        : '';
+        : "";
       const power = dmgType
         ? `${dmgType} ×${effect.powerMultiplier}`
         : `×${effect.powerMultiplier}`;
@@ -264,50 +303,47 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       if (ign) extras.push(ign);
       break;
     }
-    case 'barrier': {
-      const stack = effect.barrierStack ? '加算' : '置換';
+    case "barrier": {
+      const stack = effect.barrierStack ? "加算" : "置換";
       extras.push(`${formatResourceAmount(effect.amount)}（${stack}）`);
       break;
     }
-    case 'move': {
+    case "move": {
       const mode =
-        effect.moveMode === 'behindTarget'
-          ? '背後'
-          : effect.moveMode === 'toAnchor'
-            ? 'アンカー'
-            : '接敵';
+        effect.moveMode === "behindTarget"
+          ? "背後"
+          : effect.moveMode === "toAnchor"
+          ? "アンカー"
+          : "接敵";
       extras.push(`${mode} ${effect.moveDurationSec}s`);
       break;
     }
-    case 'stun':
+    case "stun":
       extras.push(`${effect.durationSec}s`);
       break;
-    case 'knockback':
+    case "knockback":
       extras.push(`${effect.distancePx}px`);
       break;
-    case 'dispel': {
+    case "dispel": {
       const tags =
         effect.dispelTags && effect.dispelTags.length > 0
-          ? effect.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join('・')
-          : '全デバフ';
+          ? effect.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join("・")
+          : "全デバフ";
       extras.push(`${tags} ×${effect.dispelCount}`);
       break;
     }
-    case 'block':
-      extras.push(`${formatPercent(effect.blockChance)} ${effect.durationSec}s`);
-      break;
-    case 'counter': {
-      const responseParts = effect.responses.map(formatCounterResponse);
-      const range =
-        effect.range !== undefined ? `射程${effect.range}` : '';
+    case "block":
       extras.push(
-        [
-          responseParts.join(' / '),
-          `${effect.durationSec}s`,
-          range,
-        ]
+        `${formatPercent(effect.blockChance)} ${effect.durationSec}s`
+      );
+      break;
+    case "counter": {
+      const responseParts = effect.responses.map(formatCounterResponse);
+      const range = effect.range !== undefined ? `射程${effect.range}` : "";
+      extras.push(
+        [responseParts.join(" / "), `${effect.durationSec}s`, range]
           .filter(Boolean)
-          .join(' '),
+          .join(" ")
       );
       break;
     }
@@ -318,117 +354,133 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
   }
 
   const kindLabel = formatEffectKindLabel(effect.type);
-  const detail = extras.filter(Boolean).join(' ');
+  const detail = extras.filter(Boolean).join(" ");
   return `${kindLabel} ${detail} → ${target} / ${shape}`.trim();
 }
 
-function formatEffectKindLabel(kind: SkillEffectDef['type']): string {
+function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
   switch (kind) {
-    case 'damage':
-      return 'ダメージ';
-    case 'heal':
-      return '回復';
-    case 'buff':
-      return 'バフ';
-    case 'debuff':
-      return 'デバフ';
-    case 'hot':
-      return 'HoT';
-    case 'dot':
-      return 'DoT';
-    case 'barrier':
-      return 'バリア';
-    case 'move':
-      return '移動';
-    case 'stun':
-      return 'スタン';
-    case 'knockback':
-      return 'ノックバック';
-    case 'dispel':
-      return 'デバフ解除';
-    case 'block':
-      return 'ブロック';
+    case "damage":
+      return "ダメージ";
+    case "heal":
+      return "回復";
+    case "buff":
+      return "バフ";
+    case "debuff":
+      return "デバフ";
+    case "hot":
+      return "HoT";
+    case "dot":
+      return "DoT";
+    case "barrier":
+      return "バリア";
+    case "move":
+      return "移動";
+    case "stun":
+      return "スタン";
+    case "knockback":
+      return "ノックバック";
+    case "dispel":
+      return "デバフ解除";
+    case "block":
+      return "ブロック";
+    default:
+      return kind;
   }
 }
 
-function formatPassiveEffect(effect: PassiveEffectKind, def: PassiveSkillDef): string {
+function formatPassiveEffect(
+  effect: PassiveEffectKind,
+  def: PassiveSkillDef
+): string {
   switch (effect) {
-    case 'targetRuleOverride':
-      return `ターゲット → ${formatTarget(def.targetRuleOverride, { kind: 'distance', side: 'enemy', order: 'nearest' })}`;
-    case 'evasionChance':
+    case "targetRuleOverride":
+      return `ターゲット → ${formatTarget(def.targetRuleOverride, {
+        kind: "distance",
+        side: "enemy",
+        order: "nearest",
+      })}`;
+    case "evasionChance":
       return `回避 +${formatPercent(def.evasionChance ?? 0)}`;
-    case 'block':
+    case "block":
       return `ブロック ${formatPercent(def.blockChance ?? 0)}`;
-    case 'damageIncrease':
-      return formatDamageIncreaseSpec(def.damageIncrease) || '特効ダメージ';
-    case 'damageReduction':
-      return `被ダメ軽減 ${formatPercent(def.damageReductionPercent ?? 0)} → ${formatTarget(def.damageReductionTargetRule, { kind: 'self' })}`;
-    case 'defenseIgnore':
-      return formatDefenseIgnoreSpec(def.defenseIgnore) || '防御無視';
-    case 'periodicDispel': {
+    case "damageIncrease":
+      return formatDamageIncreaseSpec(def.damageIncrease) || "特効ダメージ";
+    case "damageReduction":
+      return `被ダメ軽減 ${formatPercent(
+        def.damageReductionPercent ?? 0
+      )} → ${formatTarget(def.damageReductionTargetRule, { kind: "self" })}`;
+    case "defenseIgnore":
+      return formatDefenseIgnoreSpec(def.defenseIgnore) || "防御無視";
+    case "periodicDispel": {
       const tags =
         def.dispelTags && def.dispelTags.length > 0
-          ? def.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join('・')
-          : '全デバフ';
+          ? def.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join("・")
+          : "全デバフ";
       const target = def.dispelTargetRule
-        ? ` → ${formatTarget(def.dispelTargetRule, { kind: 'self' })}`
-        : '';
-      return `定期デバフ解除 ${def.intervalSec ?? 0}s（${tags} ×${def.dispelCount ?? 1}）${target}`;
+        ? ` → ${formatTarget(def.dispelTargetRule, { kind: "self" })}`
+        : "";
+      return `定期デバフ解除 ${def.intervalSec ?? 0}s（${tags} ×${
+        def.dispelCount ?? 1
+      }）${target}`;
     }
-    case 'damageTakenToHeal':
+    case "damageTakenToHeal":
       return `被ダメの ${formatPercent(def.ratio ?? 0)} を即時回復`;
-    case 'healReceivedIncrease':
+    case "healReceivedIncrease":
       return `被回復 +${formatPercent(def.percent ?? 0)}`;
-    case 'hot': {
+    case "hot": {
       const interval = def.intervalSec ?? 0;
       const duration = def.hotDurationSec ?? 0;
-      const durationLabel = duration <= 0 ? '無限' : `${duration}s`;
-      const amount = def.hotAmount
-        ? formatResourceAmount(def.hotAmount)
-        : '—';
-      return `HoT ${interval}s毎 ${amount} → ${formatTarget(def.hotTargetRule, { kind: 'self' })}（${durationLabel}）`;
+      const durationLabel = duration <= 0 ? "無限" : `${duration}s`;
+      const amount = def.hotAmount ? formatResourceAmount(def.hotAmount) : "—";
+      return `HoT ${interval}s毎 ${amount} → ${formatTarget(def.hotTargetRule, {
+        kind: "self",
+      })}（${durationLabel}）`;
     }
-    case 'excessHealToBarrier': {
-      const sourceLabels = (def.excessHealSources ?? ['outgoing']).map((s) =>
-        s === 'outgoing' ? '与' : '被',
+    case "excessHealToBarrier": {
+      const sourceLabels = (def.excessHealSources ?? ["outgoing"]).map((s) =>
+        s === "outgoing" ? "与" : "被"
       );
-      return `余剰回復バリア ×${def.barrierScale ?? 1}（${sourceLabels.join('・')}）`;
+      return `余剰回復バリア ×${def.barrierScale ?? 1}（${sourceLabels.join(
+        "・"
+      )}）`;
     }
-    case 'selfHpRatioBuff': {
-      const stat = formatStatusStats(def.buffStat);
-      const maxParts: string[] = [];
-      if (def.buffMultiplierMax !== undefined) {
-        maxParts.push(`×${def.buffMultiplierMax}`);
-      }
-      if (def.buffFlatBonusMax !== undefined) {
-        maxParts.push(`+${def.buffFlatBonusMax}`);
-      }
-      const maxLabel = maxParts.length > 0 ? maxParts.join(' ') : '—';
+    case "selfHpRatioBuff": {
+      const statsLabel = formatStatsWithModifier(
+        def.buffStat,
+        def.buffMultiplierMax,
+        def.buffFlatBonusMax
+      );
       const ratio = formatPercent(def.maxBuffAtHpRatio ?? 0);
-      return `自HP比例 ${stat} ${maxLabel}（${ratio}以下で最大）`;
+      return `自HP比例バフ ${statsLabel}（残HP${ratio}以下時最大）`;
     }
-    case 'extendSelfAppliedDebuff': {
+    case "extendSelfAppliedDebuff": {
       const parts = [`付与デバフ +${def.extendSec ?? 0}s`];
-      if (def.durationMultiplier !== undefined && def.durationMultiplier !== 1) {
+      if (
+        def.durationMultiplier !== undefined &&
+        def.durationMultiplier !== 1
+      ) {
         parts.push(`時間×${def.durationMultiplier}`);
       }
-      return parts.join(' ');
+      return parts.join(" ");
     }
-    case 'aoeCrowdBonus':
-      return `密集 +${def.perExtraTargetScale ?? 0}/体（上限 ${def.maxExtraTargets ?? 0}）`;
-    case 'counterChance': {
+    case "aoeCrowdBonus":
+      return `密集 +${def.perExtraTargetScale ?? 0}/体（上限 ${
+        def.maxExtraTargets ?? 0
+      }）`;
+    case "counterChance": {
       const responseParts = (def.counterResponses ?? []).map(
-        formatCounterResponse,
+        formatCounterResponse
       );
       const range =
-        def.counterRange !== undefined ? `射程${def.counterRange}` : '';
+        def.counterRange !== undefined ? `射程${def.counterRange}` : "";
       return [
         `被攻撃時 ${formatPercent(def.counterChance ?? 0)} で反撃`,
-        responseParts.join(' / '),
+        responseParts.join(" / "),
         range,
       ]
         .filter(Boolean)
-        .join(' ');
+        .join(" ");
     }
     default:
       return effect;
@@ -441,6 +493,6 @@ export function formatPassiveDescription(def: PassiveSkillDef): string {
 
 export function formatActiveDescription(def: ActiveSkillDef): string {
   const trigger = resolveSkillTrigger(def);
-  const effects = def.effect.map(formatActiveEffectDetail).join(' / ');
-  return `${formatTriggerLabel(trigger.kind, trigger.value)} / ${effects}`;
+  const effects = def.effect.map(formatActiveEffectDetail).join(" / ");
+  return `${formatTriggerLabel(trigger.kind, trigger.value)}毎 / ${effects}`;
 }

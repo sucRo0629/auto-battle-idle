@@ -127,6 +127,34 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('物理 ATK×0.7');
   });
 
+  it('formats buff with flat bonus before multiplier', () => {
+    const def: ActiveSkillDef = {
+      id: 'df_guardian_active_2',
+      name: '防御専念',
+      trigger: { kind: 'hitsTaken', value: 10 },
+      effect: [
+        {
+          type: 'buff',
+          buffStat: 'def',
+          buffMultiplier: 1.8,
+          buffFlatBonus: 10,
+          buffDurationSec: 4,
+          target: { kind: 'self' },
+        },
+        {
+          type: 'hot',
+          durationSec: 4,
+          amount: { kind: 'percentMaxHp', percentOfMaxHp: 0.01 },
+          target: { kind: 'self' },
+        },
+      ],
+    };
+    const desc = formatActiveDescription(def);
+    expect(desc).toContain('10被攻撃毎');
+    expect(desc).toContain('( DEF + 10 ) ×1.8');
+    expect(desc).toContain('HoT maxHp×1%');
+  });
+
   it('formats pierce damage', () => {
     const def: ActiveSkillDef = {
       id: 'at_lancer_active_1',
