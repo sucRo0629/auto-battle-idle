@@ -759,21 +759,6 @@
           "debuffDurationSec": 5,
           "targetShape": "aoe",
           "aoeRadiusPx": 100
-        },
-        {
-          "target": {
-            "kind": "stat",
-            "side": "ally",
-            "stat": "hp",
-            "order": "highest"
-          },
-          "type": "buff",
-          "buffSubKind": "stat",
-          "buffStat": "atk",
-          "buffMultiplier": 1.2,
-          "buffDurationSec": 5,
-          "targetShape": "aoe",
-          "aoeRadiusPx": 100
         }
       ]
     },
@@ -932,7 +917,7 @@
         {
           "type": "move",
           "moveMode": "behindTarget",
-          "moveDurationSec": 0.3,
+          "moveDurationSec": 0.2,
           "target": {
             "kind": "distance",
             "side": "enemy",
@@ -954,17 +939,6 @@
             "atkScale": 1
           },
           "waitAfterSec": 0.5
-        },
-        {
-          "target": {
-            "kind": "distance",
-            "side": "ally",
-            "order": "nearest"
-          },
-          "type": "move",
-          "moveMode": "toAnchor",
-          "moveDurationSec": 0.25,
-          "range": 100
         }
       ]
     },
@@ -1633,7 +1607,10 @@
             "stat": "hp",
             "order": "ratio"
           },
-          "buffSubKind": "stat"
+          "buffSubKind": "stat",
+          "targetShape": "chain",
+          "chainCount": 3,
+          "chainMaxDistancePx": 80
         },
         {
           "target": {
