@@ -820,8 +820,7 @@
           "moveDurationSec": 0.25,
           "range": 100
         }
-      ],
-      "useDurationSec": 1.1
+      ]
     },
     {
       "id": "at_lancer_active_1",
