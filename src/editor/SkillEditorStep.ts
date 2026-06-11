@@ -51,6 +51,7 @@ import type {
   MaxHpReference,
   PassiveSkillDef,
   ResourceAmountSpec,
+  HealSubKind,
   SkillEffectAnimId,
   SkillEffectDef,
   SkillEffectKind,
@@ -609,8 +610,13 @@ function withDebuffDotDefaults(
   };
 }
 
+const DEFAULT_HOT_DURATION_SEC = 5;
+
 function withEditorEffectDefaults(effect: SkillEffectDef): SkillEffectDef {
   const normalized = normalizeLegacyEffect(effect);
+  if (normalized.type === 'heal' && (normalized.healSubKind ?? 'instant') === 'hot') {
+    return applyActiveHealSubKindChange(normalized, 'hot');
+  }
   if (normalized.type === 'debuff' && normalized.debuffSubKind === 'dot') {
     return withDebuffDotDefaults(normalized);
   }
@@ -689,6 +695,40 @@ function normalizeEffectAmount(effect: {
 }
 
 type EffectPatch = SkillEffectDef | ((prev: SkillEffectDef) => SkillEffectDef);
+
+function applyActiveHealSubKindChange(
+  prev: SkillEffectDef,
+  healSubKind: HealSubKind,
+): Extract<SkillEffectDef, { type: 'heal' }> {
+  const base = {
+    ...(prev.type === 'heal' ? prev : { ...prev, type: 'heal' as const }),
+    type: 'heal' as const,
+    healSubKind,
+  };
+  switch (healSubKind) {
+    case 'hot':
+      return {
+        ...base,
+        durationSec: base.durationSec ?? DEFAULT_HOT_DURATION_SEC,
+        amount: base.amount ?? defaultResourceAmount(),
+      };
+    case 'dispel':
+      return {
+        ...base,
+        dispelCount: base.dispelCount ?? 0,
+      };
+    case 'instant': {
+      const next = {
+        ...base,
+        amount: base.amount ?? defaultResourceAmount(),
+      };
+      delete next.durationSec;
+      delete next.dispelTags;
+      delete next.dispelCount;
+      return next;
+    }
+  }
+}
 
 function applyActiveBuffSubKindChange(
   prev: SkillEffectDef,
@@ -2892,31 +2932,33 @@ export class SkillEditorStep {
           },
         );
         break;
-      case 'heal':
+      case 'heal': {
+        const healEffect = getEffect();
+        const healSubKind = (healEffect.healSubKind ?? 'instant') as HealSubKind;
         detailGrid.appendChild(
           createFieldRow(
             '回復種別',
             createSelect(
-              effect.healSubKind ?? 'instant',
+              healSubKind,
               HEAL_SUB_KINDS.map((value) => ({
                 value,
                 label: HEAL_SUB_KIND_LABELS[value],
               })),
-              (healSubKind) =>
+              (nextHealSubKind) =>
                 patchEffect(
-                  (prev) => ({ ...prev, healSubKind }) as SkillEffectDef,
+                  (prev) => applyActiveHealSubKindChange(prev, nextHealSubKind),
                   { rerender: true },
                 ),
             ),
           ),
         );
-        if ((effect.healSubKind ?? 'instant') === 'dispel') {
+        if (healSubKind === 'dispel') {
           appendDispelEffectFields(
             detailGrid,
             {
-              ...(effect as Extract<SkillEffectDef, { type: 'heal' }>),
+              ...(healEffect as Extract<SkillEffectDef, { type: 'heal' }>),
               type: 'dispel',
-              dispelCount: effect.dispelCount ?? 0,
+              dispelCount: healEffect.dispelCount ?? 0,
             },
             (next) => {
               if (typeof next === 'function') return;
@@ -2932,12 +2974,12 @@ export class SkillEditorStep {
           );
           break;
         }
-        if ((effect.healSubKind ?? 'instant') === 'hot') {
+        if (healSubKind === 'hot') {
           detailGrid.appendChild(
             createFieldRow(
               '秒数',
               createNumberInput(
-                effect.durationSec ?? 5,
+                healEffect.durationSec ?? DEFAULT_HOT_DURATION_SEC,
                 (durationSec) =>
                   patchEffect((prev) => ({ ...prev, durationSec }) as SkillEffectDef),
                 { min: 0.1, step: 0.5 },
@@ -2945,17 +2987,21 @@ export class SkillEditorStep {
             ),
           );
         }
-        appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
-          patchEffect((prev) => ({ ...prev, amount }), options),
+        appendResourceAmountFields(
+          detailGrid,
+          normalizeEffectAmount(healEffect),
+          (amount, options) =>
+            patchEffect((prev) => ({ ...prev, amount }), options),
         );
         appendDamageIncreaseFields(
           detailGrid,
-          effect.damageIncrease,
+          healEffect.damageIncrease,
           (damageIncrease, options) => {
             patchEffect((prev) => ({ ...prev, damageIncrease }), options);
           },
         );
         break;
+      }
       case 'buff':
         detailGrid.appendChild(
           createFieldRow(

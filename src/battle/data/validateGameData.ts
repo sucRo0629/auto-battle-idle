@@ -211,6 +211,15 @@ export function normalizeActiveSkillEffectForEditor(
       damageType: normalized.damageType ?? 'physical',
     };
   }
+  if (normalized.type === 'heal' && (normalized.healSubKind ?? 'instant') === 'hot') {
+    return {
+      ...normalized,
+      durationSec: normalized.durationSec ?? 5,
+      amount:
+        normalized.amount ??
+        ({ kind: 'atkBased' as const, atkScale: 1 }),
+    };
+  }
   if (normalized.type !== 'buff') return normalized;
 
   const subKind = normalized.buffSubKind ?? 'stat';

@@ -5,6 +5,7 @@ import {
   buildClassSkillsFromEntries,
   classDraftFromPreset,
   classStatsEqual,
+  collectSkillsFromDrafts,
   defaultBasicAttackId,
   initClassSkillEntriesFromPreset,
   resyncEnemyBasicAttackEntry,
@@ -23,6 +24,36 @@ function basicAttackEntry(
     active,
   };
 }
+
+describe('collectSkillsFromDrafts heal HoT', () => {
+  it('keeps healSubKind hot and fills default durationSec on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'test_heal_hot', kind: 'active' },
+        active: {
+          id: 'test_heal_hot',
+          name: 'HoT Test',
+          trigger: { kind: 'time', value: 5 },
+          effect: [
+            {
+              type: 'heal',
+              healSubKind: 'hot',
+              amount: { kind: 'atkBased', atkScale: 0.5 },
+              target: { kind: 'self' },
+            },
+          ],
+        },
+      },
+    ];
+
+    const { actives } = collectSkillsFromDrafts(entries);
+    const heal = actives[0]?.effect[0];
+    expect(heal?.type).toBe('heal');
+    if (heal?.type !== 'heal') return;
+    expect(heal.healSubKind).toBe('hot');
+    expect(heal.durationSec).toBe(5);
+  });
+});
 
 describe('classStatsEqual', () => {
   const base: ClassPresetBeforeEnrich = {

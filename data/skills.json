@@ -594,8 +594,8 @@
       "id": "df_paladin_active_2",
       "name": "聖盾",
       "trigger": {
-        "kind": "time",
-        "value": 10
+        "kind": "hitsTaken",
+        "value": 8
       },
       "effect": [
         {
@@ -634,14 +634,15 @@
             "atkScale": 1
           }
         }
-      ]
+      ],
+      "useDurationSec": 3
     },
     {
       "id": "df_duelist_active_1",
       "name": "砂かけ",
       "trigger": {
         "kind": "time",
-        "value": 8
+        "value": 10
       },
       "effect": [
         {
@@ -664,8 +665,8 @@
       "id": "df_duelist_active_2",
       "name": "体力温存",
       "trigger": {
-        "kind": "hitsTaken",
-        "value": 10
+        "kind": "time",
+        "value": 8
       },
       "effect": [
         {
