@@ -171,7 +171,7 @@
     },
     {
       "id": "df_guardian_passive_2",
-      "name": "守りの備え",
+      "name": "復帰力",
       "effect": "healReceivedIncrease",
       "targetRuleOverride": {
         "kind": "distance",
@@ -317,21 +317,20 @@
     },
     {
       "id": "df_guardian_active_1",
-      "name": "体力増強",
+      "name": "防御強化",
       "trigger": {
         "kind": "time",
-        "value": 10
+        "value": 8
       },
       "effect": [
         {
           "target": {
             "kind": "self"
           },
-          "type": "barrier",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          }
+          "type": "buff",
+          "buffStat": "def",
+          "buffMultiplier": 1.2,
+          "buffDurationSec": 5
         }
       ]
     },
@@ -339,19 +338,20 @@
       "id": "df_guardian_active_2",
       "name": "防御専念",
       "trigger": {
-        "kind": "time",
-        "value": 8
+        "kind": "hitsTaken",
+        "value": 10
       },
       "effect": [
         {
           "type": "buff",
           "buffStat": "def",
-          "buffMultiplier": 1.5,
+          "buffMultiplier": 1.8,
           "buffDurationSec": 4,
           "targetShape": "single",
           "target": {
             "kind": "self"
-          }
+          },
+          "buffFlatBonus": 10
         },
         {
           "target": {

@@ -263,8 +263,7 @@ export class SkillMenuPanel {
     iconUrl?: string
   ): HTMLElement {
     const iconWrap = document.createElement("div");
-    iconWrap.className =
-      "skill-menu-tab-icon pixel-icon-frame pixel-icon-frame--24";
+    iconWrap.className = "skill-menu-tab-icon";
     iconWrap.title = label;
 
     const resolvedUrl = iconUrl
@@ -280,8 +279,7 @@ export class SkillMenuPanel {
     }
 
     const img = document.createElement("img");
-    img.className =
-      "skill-menu-tab-icon-img pixel-icon-img pixel-icon-img--24";
+    img.className = "skill-menu-tab-icon-img";
     img.width = 24;
     img.height = 24;
     img.alt = "";
@@ -729,8 +727,13 @@ export class SkillMenuPanel {
   private createCancelPickerRow(): HTMLElement {
     const row = document.createElement("button");
     row.type = "button";
-    row.className = "skill-menu-picker-row";
+    row.className = "skill-menu-picker-row skill-menu-picker-row--icon";
     row.dataset.pickerAction = "cancel";
+
+    row.appendChild(this.createIconWrap(undefined, ""));
+
+    const text = document.createElement("div");
+    text.className = "skill-menu-picker-row-text";
 
     const nameEl = document.createElement("div");
     nameEl.className = "skill-menu-skill-name";
@@ -740,7 +743,8 @@ export class SkillMenuPanel {
     descEl.className = "skill-menu-skill-desc";
     descEl.textContent = "変更せず戻る";
 
-    row.append(nameEl, descEl);
+    text.append(nameEl, descEl);
+    row.appendChild(text);
     return row;
   }
 

@@ -8,6 +8,11 @@
   position: fixed;
   inset: 0;
   z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: none;
 }
 
 .meta-menu-overlay--window {
@@ -41,19 +46,19 @@
   border: none;
   background: rgba(8, 10, 18, 0.55);
   cursor: pointer;
+  pointer-events: auto;
 }
 
 .meta-menu-window {
-  position: fixed;
-  top: 50%;
-  left: 50%;
+  position: relative;
   z-index: 1;
-  transform: translate(-50%, -50%);
+  flex: 0 0 auto;
   width: min(520px, calc(100vw - 32px));
   max-height: min(70vh, 560px);
   display: flex;
   flex-direction: column;
   overflow: visible;
+  pointer-events: auto;
   border: 1px solid var(--canvas-border-color);
   border-radius: 10px;
   background: rgba(22, 33, 62, 0.98);

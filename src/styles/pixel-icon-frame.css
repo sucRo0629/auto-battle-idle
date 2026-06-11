@@ -13,8 +13,7 @@
   display: block;
   flex: none;
   box-sizing: content-box;
-  object-fit: none;
-  object-position: center;
+  /* 24×24 ネイティブをそのまま描画（object-fit: none は高 DPI で崩れやすい） */
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }

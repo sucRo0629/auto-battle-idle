@@ -1,0 +1,47 @@
+---
+description: パーティ設定・HUD の 24px ピクセルアイコン表示。同箇所の再発崩れ防止。
+globs: src/styles/pixel-icon-frame.css,src/styles/skill-menu-panel.css,src/styles/meta-menu-overlay.css,src/ui/SkillMenuPanel.ts,src/styles/battle-view.css,src/ui/PartyHudPanel.ts
+alwaysApply: false
+---
+
+# 24px ピクセルアイコン表示（再発注意）
+
+パーティ設定（`SkillMenuPanel`）と Party HUD のクラス/スキルアイコンは、**同じ不具合が何度も再発**している。ここを触るときは表示確認を必須とする。
+
+## 根本原因（再発パターン）
+
+1. **モーダルの `transform` + `image-rendering: pixelated`（最重要）**
+   - `.meta-menu-window` を `transform: translate(-50%, -50%)` で中央寄せすると、内側の 24px アイコンが **上半分だけ欠ける**（Chromium / Windows で再現）
+   - **中央寄せは overlay の flex（`align-items` / `justify-content: center`）で行い、window に transform を付けない**
+   - `meta-menu-overlay.css` を参照
+
+2. **グローバル `box-sizing: border-box`**（`app-base.css`）の影響
+   - 24px 枠は `content-box` + 24×24 を前提
+   - 枠に `border: 1px` を足すと **実サイズ 26×26** になり、36px 行などで切れる
+   - **枠線は `border` ではなく `box-shadow: inset 0 0 0 1px …` または `outline` を使う**
+
+3. **空の `<img>` を出さない**
+   - URL がないときは `img` なし + `.skill-menu-tab-icon--empty`（破線プレースホルダー）
+
+4. **等倍 24×24 のみ**
+   - `width/height: 24px` + `image-rendering: pixelated`
+   - スキルメニューは `.skill-menu-tab-icon-img` で `object-fit: none; object-position: 0 0`（transform なし前提）
+   - 2倍拡大（`scale(2)` / 48px CSS サイズ）は使わない
+
+5. **スタイルの分担**
+   - **スキルメニュー**: `skill-menu-panel.css` の `.skill-menu-tab-icon` / `.skill-menu-tab-icon-img` を正とする（`pixel-icon-frame` とは分離）
+   - **Party HUD**: `pixel-icon-frame.css` + `battle-view.css` の `.party-hud-icon-wrap`
+
+6. **スキルピッカー行**
+   - `.skill-menu-picker-row--icon` は **CSS Grid**（`24px 1fr`）
+   - 「キャンセル」行も空アイコン付き `--icon` レイアウトに揃える
+
+7. **スキルスロット（button）**
+   - `line-height: 0` + `appearance: none` でアイコン縦ズレを防ぐ
+   - 内側 `.skill-menu-tab-icon` は `border` / `box-shadow` なし（外枠スロットが枠線担当）
+
+## 触る前のチェック
+
+- クラス設定行・スキルスロット・ピッカー行・Party HUD の **4 箇所以上** で目視確認
+- DevTools で `.skill-menu-tab-icon` / `.party-hud-icon-wrap` が **24×24**（border 込みで 26px になっていないか）を確認
+- `.meta-menu-window` に `transform` が付いていないか確認

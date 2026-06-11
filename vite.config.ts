@@ -8,7 +8,8 @@ export default defineConfig({
   plugins: [editorApiPlugin()],
   server: {
     watch: {
-      // エディタ保存で JSON が更新されてもフルリロードしない（選択状態が消えるのを防ぐ）
+      // エディタ保存で JSON が更新されてもエディタ画面はフルリロードしない（選択状態が消えるのを防ぐ）。
+      // ゲーム側の import キャッシュは vite-plugin-editor-api が保存後に明示的に無効化する。
       ignored: ['**/data/classes.json', '**/data/skills.json', '**/data/enemies.json'],
     },
   },

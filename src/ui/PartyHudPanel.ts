@@ -18,6 +18,7 @@ import type { PartyHudEntry } from './partyHudTypes.ts';
 
 interface SlotElements {
   root: HTMLElement;
+  labelRow: HTMLElement;
   label: HTMLElement;
   icon: HTMLImageElement;
   hpFill: HTMLElement;
@@ -70,9 +71,13 @@ export class PartyHudPanel {
     const root = document.createElement('div');
     root.className = 'party-hud-slot';
 
+    const labelRow = document.createElement('div');
+    labelRow.className = 'party-hud-label-row';
+    root.appendChild(labelRow);
+
     const label = document.createElement('div');
     label.className = 'party-hud-label';
-    root.appendChild(label);
+    labelRow.appendChild(label);
 
     const body = document.createElement('div');
     body.className = 'party-hud-body';
@@ -110,7 +115,7 @@ export class PartyHudPanel {
     const statusCanvas = document.createElement('canvas');
     statusCanvas.className = 'party-hud-status-badges';
     statusCanvas.hidden = true;
-    hpTrack.appendChild(statusCanvas);
+    labelRow.appendChild(statusCanvas);
 
     const recastRow = document.createElement('div');
     recastRow.className = 'party-hud-recast-row';
@@ -127,7 +132,16 @@ export class PartyHudPanel {
       recastFills.push(fill);
     }
 
-    return { root, label, icon, hpFill, barrierLayer, statusCanvas, recastFills };
+    return {
+      root,
+      labelRow,
+      label,
+      icon,
+      hpFill,
+      barrierLayer,
+      statusCanvas,
+      recastFills,
+    };
   }
 
   private updateSlot(slot: SlotElements, entry: PartyHudEntry): void {

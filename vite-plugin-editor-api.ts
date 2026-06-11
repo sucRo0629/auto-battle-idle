@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { Plugin } from 'vite';
+import type { ModuleNode, Plugin, ViteDevServer } from 'vite';
 import { parseAndValidateGameDataJson } from './src/battle/data/validateGameData.ts';
 import type {
   ActiveSkillDef,
@@ -28,6 +28,38 @@ function readJsonFile(filePath: string): unknown {
 
 function writeJsonFile(filePath: string, data: unknown): void {
   fs.writeFileSync(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
+}
+
+const LOAD_GAME_DATA_MODULE = path.resolve(
+  process.cwd(),
+  'src/battle/data/loadGameData.ts',
+);
+
+/** エディタ保存後、watch 対象外の JSON をゲーム側の import キャッシュから外す */
+function invalidateGameDataModules(
+  server: ViteDevServer | undefined,
+  writtenFiles: string[],
+): void {
+  if (!server) return;
+
+  const visited = new Set<ModuleNode>();
+  const invalidateTree = (mod: ModuleNode): void => {
+    if (visited.has(mod)) return;
+    visited.add(mod);
+    server.moduleGraph.invalidateModule(mod);
+    for (const importer of mod.importers) {
+      invalidateTree(importer);
+    }
+  };
+
+  const files = [...new Set([...writtenFiles, LOAD_GAME_DATA_MODULE])];
+  for (const filePath of files) {
+    const mods = server.moduleGraph.getModulesByFile(filePath);
+    if (!mods) continue;
+    for (const mod of mods) {
+      invalidateTree(mod);
+    }
+  }
 }
 
 function loadValidationPayload(): {
@@ -116,7 +148,7 @@ interface ClassStatsBulkBody {
   patches: ClassStatsPatchBody[];
 }
 
-function applyClassBundle(body: ClassBundleBody): void {
+function applyClassBundle(body: ClassBundleBody, server?: ViteDevServer): void {
   const classes = readJsonFile(READ_FILES.classes) as ClassPresetBeforeEnrich[];
   const skillsRoot = readJsonFile(READ_FILES.skills) as {
     passives: PassiveSkillDef[];
@@ -135,9 +167,10 @@ function applyClassBundle(body: ClassBundleBody): void {
 
   writeJsonFile(READ_FILES.classes, nextClasses);
   writeJsonFile(READ_FILES.skills, nextSkills);
+  invalidateGameDataModules(server, [READ_FILES.classes, READ_FILES.skills]);
 }
 
-function applyClassStatsBulk(body: ClassStatsBulkBody): void {
+function applyClassStatsBulk(body: ClassStatsBulkBody, server?: ViteDevServer): void {
   if (!Array.isArray(body.patches) || body.patches.length === 0) {
     throw new Error('patches must be a non-empty array');
   }
@@ -181,9 +214,10 @@ function applyClassStatsBulk(body: ClassStatsBulkBody): void {
   });
 
   writeJsonFile(READ_FILES.classes, nextClasses);
+  invalidateGameDataModules(server, [READ_FILES.classes]);
 }
 
-function applyEnemyBundle(body: EnemyBundleBody): void {
+function applyEnemyBundle(body: EnemyBundleBody, server?: ViteDevServer): void {
   const enemies = readJsonFile(READ_FILES.enemies) as EnemyTemplate[];
   const skillsRoot = readJsonFile(READ_FILES.skills) as {
     passives: PassiveSkillDef[];
@@ -202,6 +236,7 @@ function applyEnemyBundle(body: EnemyBundleBody): void {
 
   writeJsonFile(READ_FILES.enemies, nextEnemies);
   writeJsonFile(READ_FILES.skills, nextSkills);
+  invalidateGameDataModules(server, [READ_FILES.enemies, READ_FILES.skills]);
 }
 
 export function editorApiPlugin(): Plugin {
@@ -233,19 +268,19 @@ export function editorApiPlugin(): Plugin {
 
           if (req.method === 'PUT' && url.pathname === '/__editor/class-bundle') {
             const body = JSON.parse(await readBody(req)) as ClassBundleBody;
-            applyClassBundle(body);
+            applyClassBundle(body, server);
             sendJson(res, 200, { ok: true });
             return;
           }
           if (req.method === 'PUT' && url.pathname === '/__editor/class-stats-bulk') {
             const body = JSON.parse(await readBody(req)) as ClassStatsBulkBody;
-            applyClassStatsBulk(body);
+            applyClassStatsBulk(body, server);
             sendJson(res, 200, { ok: true });
             return;
           }
           if (req.method === 'PUT' && url.pathname === '/__editor/enemy-bundle') {
             const body = JSON.parse(await readBody(req)) as EnemyBundleBody;
-            applyEnemyBundle(body);
+            applyEnemyBundle(body, server);
             sendJson(res, 200, { ok: true });
             return;
           }
