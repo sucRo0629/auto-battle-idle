@@ -153,6 +153,7 @@
   --status-icon-dot: #8e44ad;
   --status-icon-block: #7f8c8d;
   --status-icon-stun: #f1c40f;
+  --status-icon-damage-taken-to-heal: #16a085;
 }
 
 .battle-canvas-frame {

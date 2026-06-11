@@ -115,6 +115,28 @@ describe('statusEffectDisplay', () => {
     expect(badges).toEqual([]);
   });
 
+  it('aggregates damageTakenToHeal overlay', () => {
+    const badges = aggregateStatStatusEffects(
+      [
+        {
+          id: 'damageTakenToHeal',
+          kind: 'buff',
+          overlay: 'damageTakenToHeal',
+          ratio: 0.25,
+          multiplier: 1,
+          durationSec: 5,
+          remainingSec: 5,
+        },
+      ],
+      { atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges.map((badge) => badge.category)).toEqual([
+      'damageTakenToHeal',
+    ]);
+    expect(badges[0]?.kind).toBe('buff');
+  });
+
   it('aggregates stun overlay', () => {
     const badges = aggregateStatStatusEffects(
       [

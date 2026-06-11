@@ -1,32 +1,34 @@
-import type { StatusEffect } from './types.ts';
+import type { StatusEffect } from "./types.ts";
 
 export type StatusDisplayCategory =
-  | 'atk'
-  | 'def'
-  | 'reg'
-  | 'attackSpeed'
-  | 'damageReduction'
-  | 'damageIncrease'
-  | 'hot'
-  | 'dot'
-  | 'evasion'
-  | 'block'
-  | 'counter'
-  | 'stun';
+  | "atk"
+  | "def"
+  | "reg"
+  | "attackSpeed"
+  | "damageReduction"
+  | "damageIncrease"
+  | "hot"
+  | "dot"
+  | "evasion"
+  | "block"
+  | "counter"
+  | "stun"
+  | "damageTakenToHeal";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
-  'atk',
-  'def',
-  'reg',
-  'attackSpeed',
-  'damageReduction',
-  'damageIncrease',
-  'hot',
-  'dot',
-  'evasion',
-  'block',
-  'counter',
-  'stun',
+  "atk",
+  "def",
+  "reg",
+  "attackSpeed",
+  "damageReduction",
+  "damageIncrease",
+  "hot",
+  "damageTakenToHeal",
+  "dot",
+  "evasion",
+  "block",
+  "counter",
+  "stun",
 ];
 
 export const STATUS_BADGE_SLOT_COUNT = STATUS_BADGE_SLOT_ORDER.length;
@@ -42,7 +44,7 @@ export interface AggregatedCategoryEffect {
   category: StatusDisplayCategory;
   netFlat: number;
   netMul: number;
-  kind: 'buff' | 'debuff';
+  kind: "buff" | "debuff";
   /** 1 = 残り時間満タン / 0 = 切れ */
   remainingRatio: number;
 }
@@ -55,59 +57,63 @@ export interface StatBadgeBaseStats {
 
 /** パッシブオーラ同期で付与された効果（HUD バッジ非表示・戦闘計算は対象） */
 export function isPassiveAuraStatusEffect(effect: StatusEffect): boolean {
-  return effect.id.startsWith('passive_');
+  return effect.id.startsWith("passive_");
 }
 
 function effectsForCategory(
   effects: StatusEffect[],
-  category: StatusDisplayCategory,
+  category: StatusDisplayCategory
 ): StatusEffect[] {
-  if (category === 'hot') {
-    return effects.filter((effect) => effect.overlay === 'hot');
+  if (category === "hot") {
+    return effects.filter((effect) => effect.overlay === "hot");
   }
-  if (category === 'dot') {
-    return effects.filter((effect) => effect.overlay === 'dot');
+  if (category === "dot") {
+    return effects.filter((effect) => effect.overlay === "dot");
   }
-  if (category === 'atk') {
-    return effects.filter((effect) => effect.stat === 'atk');
+  if (category === "atk") {
+    return effects.filter((effect) => effect.stat === "atk");
   }
-  if (category === 'def') {
-    return effects.filter((effect) => effect.stat === 'def');
+  if (category === "def") {
+    return effects.filter((effect) => effect.stat === "def");
   }
-  if (category === 'reg') {
-    return effects.filter((effect) => effect.stat === 'reg');
+  if (category === "reg") {
+    return effects.filter((effect) => effect.stat === "reg");
   }
-  if (category === 'attackSpeed') {
-    return effects.filter((effect) => effect.stat === 'attackSpeed');
+  if (category === "attackSpeed") {
+    return effects.filter((effect) => effect.stat === "attackSpeed");
   }
-  if (category === 'damageReduction' || category === 'damageIncrease') {
-    return effects.filter((effect) => effect.stat === 'damageTaken');
+  if (category === "damageReduction" || category === "damageIncrease") {
+    return effects.filter((effect) => effect.stat === "damageTaken");
   }
-  if (category === 'block') {
-    return effects.filter((effect) => effect.overlay === 'block');
+  if (category === "block") {
+    return effects.filter((effect) => effect.overlay === "block");
   }
-  if (category === 'evasion') {
-    return effects.filter((effect) => effect.overlay === 'evasion');
+  if (category === "evasion") {
+    return effects.filter((effect) => effect.overlay === "evasion");
   }
-  if (category === 'counter') {
-    return effects.filter((effect) => effect.overlay === 'counter');
+  if (category === "counter") {
+    return effects.filter((effect) => effect.overlay === "counter");
   }
-  if (category === 'stun') {
-    return effects.filter((effect) => effect.overlay === 'stun');
+  if (category === "stun") {
+    return effects.filter((effect) => effect.overlay === "stun");
+  }
+  if (category === "damageTakenToHeal") {
+    return effects.filter((effect) => effect.overlay === "damageTakenToHeal");
   }
   return [];
 }
 
 export function categoryRemainingRatio(
   effects: StatusEffect[],
-  category: StatusDisplayCategory,
+  category: StatusDisplayCategory
 ): number {
   const relevant = effectsForCategory(effects, category);
   if (relevant.length === 0) return 1;
 
   let minRatio = 1;
   for (const effect of relevant) {
-    const duration = effect.durationSec > 0 ? effect.durationSec : effect.remainingSec;
+    const duration =
+      effect.durationSec > 0 ? effect.durationSec : effect.remainingSec;
     if (duration <= 0) continue;
     const ratio = Math.max(0, Math.min(1, effect.remainingSec / duration));
     minRatio = Math.min(minRatio, ratio);
@@ -117,8 +123,8 @@ export function categoryRemainingRatio(
 
 function aggregateStatCategory(
   effects: StatusEffect[],
-  category: 'atk' | 'def' | 'reg' | 'attackSpeed',
-  base: number,
+  category: "atk" | "def" | "reg" | "attackSpeed",
+  base: number
 ): AggregatedCategoryEffect | null {
   const agg = aggregateStatEffects(effects, category);
   const kind = statEffectKind(base, category, agg);
@@ -135,7 +141,14 @@ function aggregateStatCategory(
 
 function aggregateOverlayCategory(
   effects: StatusEffect[],
-  category: 'hot' | 'dot' | 'evasion' | 'block' | 'counter' | 'stun',
+  category:
+    | "hot"
+    | "dot"
+    | "evasion"
+    | "block"
+    | "counter"
+    | "stun"
+    | "damageTakenToHeal"
 ): AggregatedCategoryEffect | null {
   const relevant = effectsForCategory(effects, category);
   if (relevant.length === 0) return null;
@@ -145,19 +158,20 @@ function aggregateOverlayCategory(
     netFlat: 0,
     netMul: 1,
     kind:
-      category === 'hot' ||
-      category === 'evasion' ||
-      category === 'block' ||
-      category === 'counter'
-        ? 'buff'
-        : 'debuff',
+      category === "hot" ||
+      category === "evasion" ||
+      category === "block" ||
+      category === "counter" ||
+      category === "damageTakenToHeal"
+        ? "buff"
+        : "debuff",
     remainingRatio: categoryRemainingRatio(effects, category),
   };
 }
 
 export function aggregateStatEffects(
   effects: StatusEffect[],
-  stat: StatusEffect['stat'],
+  stat: StatusEffect["stat"]
 ): StatAggregation {
   let netFlat = 0;
   let netMul = 1;
@@ -165,7 +179,7 @@ export function aggregateStatEffects(
   for (const effect of effects) {
     if (effect.stat !== stat) continue;
     const flat = effect.flatBonus ?? 0;
-    netFlat += effect.kind === 'buff' ? flat : -flat;
+    netFlat += effect.kind === "buff" ? flat : -flat;
     netMul *= effect.multiplier;
   }
 
@@ -174,14 +188,14 @@ export function aggregateStatEffects(
 
 export function computeEffectiveStat(
   base: number,
-  aggregation: StatAggregation,
+  aggregation: StatAggregation
 ): number {
   return Math.max(0, (base + aggregation.netFlat) * aggregation.netMul);
 }
 
 export function isStatNeutral(
   base: number,
-  aggregation: StatAggregation,
+  aggregation: StatAggregation
 ): boolean {
   const effective = computeEffectiveStat(base, aggregation);
   return Math.abs(effective - base) < NEUTRAL_EPSILON;
@@ -189,56 +203,56 @@ export function isStatNeutral(
 
 export function statEffectKind(
   base: number,
-  stat: NonNullable<StatusEffect['stat']>,
-  aggregation: StatAggregation,
-): 'buff' | 'debuff' | null {
+  stat: NonNullable<StatusEffect["stat"]>,
+  aggregation: StatAggregation
+): "buff" | "debuff" | null {
   if (isStatNeutral(base, aggregation)) return null;
 
   const effective = computeEffectiveStat(base, aggregation);
-  if (stat === 'damageTaken') {
-    return effective < base ? 'buff' : 'debuff';
+  if (stat === "damageTaken") {
+    return effective < base ? "buff" : "debuff";
   }
-  return effective > base ? 'buff' : 'debuff';
+  return effective > base ? "buff" : "debuff";
 }
 
 function aggregateDamageTakenCategory(
-  effects: StatusEffect[],
+  effects: StatusEffect[]
 ): AggregatedCategoryEffect | null {
-  const agg = aggregateStatEffects(effects, 'damageTaken');
-  const kind = statEffectKind(1, 'damageTaken', agg);
+  const agg = aggregateStatEffects(effects, "damageTaken");
+  const kind = statEffectKind(1, "damageTaken", agg);
   if (!kind) return null;
 
   return {
-    category: kind === 'buff' ? 'damageReduction' : 'damageIncrease',
+    category: kind === "buff" ? "damageReduction" : "damageIncrease",
     netFlat: agg.netFlat,
     netMul: agg.netMul,
     kind,
-    remainingRatio: categoryRemainingRatio(effects, 'damageReduction'),
+    remainingRatio: categoryRemainingRatio(effects, "damageReduction"),
   };
 }
 
 export function aggregateStatStatusEffects(
   effects: StatusEffect[],
-  baseStats: StatBadgeBaseStats,
+  baseStats: StatBadgeBaseStats
 ): AggregatedCategoryEffect[] {
   const displayEffects = effects.filter(
-    (effect) => !isPassiveAuraStatusEffect(effect),
+    (effect) => !isPassiveAuraStatusEffect(effect)
   );
   const result: AggregatedCategoryEffect[] = [];
 
-  for (const category of ['atk', 'def', 'reg'] as const) {
+  for (const category of ["atk", "def", "reg"] as const) {
     const badge = aggregateStatCategory(
       displayEffects,
       category,
-      baseStats[category],
+      baseStats[category]
     );
     if (badge) result.push(badge);
   }
 
   const attackSpeedBadge = aggregateStatCategory(
     displayEffects,
-    'attackSpeed',
-    1,
+    "attackSpeed",
+    1
   );
   if (attackSpeedBadge) result.push(attackSpeedBadge);
 
@@ -246,12 +260,13 @@ export function aggregateStatStatusEffects(
   if (damageTakenBadge) result.push(damageTakenBadge);
 
   for (const category of [
-    'hot',
-    'dot',
-    'evasion',
-    'block',
-    'counter',
-    'stun',
+    "hot",
+    "dot",
+    "evasion",
+    "block",
+    "counter",
+    "stun",
+    "damageTakenToHeal",
   ] as const) {
     const badge = aggregateOverlayCategory(displayEffects, category);
     if (badge) result.push(badge);
@@ -261,7 +276,7 @@ export function aggregateStatStatusEffects(
 }
 
 export function isCategoryEffectVisible(
-  agg: AggregatedCategoryEffect,
+  agg: AggregatedCategoryEffect
 ): boolean {
-  return agg.kind === 'buff' || agg.kind === 'debuff';
+  return agg.kind === "buff" || agg.kind === "debuff";
 }
