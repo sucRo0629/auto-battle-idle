@@ -17,6 +17,8 @@ import {
 } from '../battle/data/gameDataSchema.ts';
 import { formatTargetLabel, normalizeTarget } from '../battle/skills/targetSpec.ts';
 import type {
+  BuffSubKind,
+  DebuffSubKind,
   BuffFilterTag,
   DamageIncreaseCondition,
   DamageIncreaseSpec,
@@ -24,9 +26,11 @@ import type {
   DefenseIgnoreSpec,
   PassiveSkillDef,
   ResourceAmountSpec,
+  SkillEffectDef,
+  SpecialEffectApplyTo,
   TargetSpec,
-  TargetSpecKind,
 } from '../battle/types.ts';
+import type { TargetSpecKind } from '../battle/data/gameDataSchema.ts';
 import {
   createActionButton,
   createEl,
@@ -89,10 +93,8 @@ function appendDamageIncreaseConditionFields(
         (kind) => {
           if (kind === 'debuff') {
             onChange({ kind, tags: ['def'] });
-          } else if (kind === 'targetHp') {
-            onChange({ kind, maxHpRatio: 0.5 });
           } else {
-            onChange({ kind, maxHpRatio: 0.5, mode: 'threshold' });
+            onChange({ kind: 'targetHp', maxHpRatio: 0.5 });
           }
         },
       ),
@@ -133,47 +135,6 @@ function appendDamageIncreaseConditionFields(
         ),
       ),
     );
-  } else {
-    card.appendChild(
-      createFieldRow(
-        '自身HP残り割合',
-        createNumberInput(
-          condition.maxHpRatio,
-          (maxHpRatio) => onChange({ ...condition, maxHpRatio }),
-          { min: 0, max: 1, step: 0.01 },
-        ),
-      ),
-    );
-    card.appendChild(
-      createFieldRow(
-        '判定モード',
-        createSelect(
-          condition.mode ?? 'threshold',
-          [
-            { value: 'threshold', label: '閾値（以下で倍率適用）' },
-            { value: 'scaling', label: 'スケーリング（欠損HP比例）' },
-          ],
-          (mode) => {
-            onChange({
-              ...condition,
-              mode: mode as 'threshold' | 'scaling',
-            });
-          },
-        ),
-      ),
-    );
-    if ((condition.mode ?? 'threshold') === 'scaling') {
-      card.appendChild(
-        createFieldRow(
-          'maxMul',
-          createNumberInput(
-            condition.maxMul ?? 1.5,
-            (maxMul) => onChange({ ...condition, maxMul }),
-            { step: 0.01 },
-          ),
-        ),
-      );
-    }
   }
 
   card.appendChild(
@@ -186,9 +147,12 @@ export function appendDamageIncreaseFields(
   parent: HTMLElement,
   spec: DamageIncreaseSpec | undefined,
   onChange: (spec: DamageIncreaseSpec | undefined) => void,
+  options?: { title?: string },
 ): void {
   const section = createEl('div', 'editor-subsection');
-  section.appendChild(createEl('h4', 'editor-subsection-title', '特効ダメージ'));
+  section.appendChild(
+    createEl('h4', 'editor-subsection-title', options?.title ?? '特効ダメージ'),
+  );
 
   const enabledRow = createEl('div', 'editor-field editor-field-checkbox');
   const enabledInput = createEl('input') as HTMLInputElement;
@@ -568,6 +532,8 @@ function defaultTargetForKind(kind: TargetSpecKind): TargetSpec {
       return { kind: 'attackType', physical: true };
     case 'status':
       return { kind: 'status', side: 'enemy', debuffTags: ['def'] };
+    default:
+      return { kind: 'self' };
   }
 }
 
@@ -796,10 +762,11 @@ export function appendPassiveDamageIncreaseFields(
 ): void {
   appendDamageIncreaseFields(
     parent,
-    passive.damageIncrease,
-    (damageIncrease) => {
+    passive.specialEffect,
+    (specialEffect) => {
       patchPassive((current) => {
-        current.damageIncrease = damageIncrease;
+        current.specialEffectApplyTo ??= 'damage';
+        current.specialEffect = specialEffect;
       }, { rerender: true });
     },
   );
@@ -818,4 +785,283 @@ export function appendPassiveDefenseIgnoreFields(
       current.defenseIgnore = defenseIgnore;
     }, { rerender: true });
   });
+}
+
+const PASSIVE_BUFF_SUB_KIND_OPTIONS: Array<{ value: BuffSubKind; label: string }> = [
+  { value: 'stat', label: 'ステータス' },
+  { value: 'block', label: 'ブロック' },
+  { value: 'evasion', label: '回避' },
+  { value: 'barrier', label: 'バリア' },
+];
+
+const PASSIVE_DEBUFF_SUB_KIND_OPTIONS: Array<{ value: DebuffSubKind; label: string }> = [
+  { value: 'stat', label: 'ステータス' },
+  { value: 'dot', label: 'DoT' },
+  { value: 'stun', label: 'スタン' },
+];
+
+const PASSIVE_SPECIAL_APPLY_TO_OPTIONS: Array<{
+  value: SpecialEffectApplyTo;
+  label: string;
+}> = [
+  { value: 'damage', label: 'ダメージ' },
+  { value: 'heal', label: '回復' },
+];
+
+export function appendPassiveBuffFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean },
+  ) => void,
+): void {
+  parent.appendChild(
+    createFieldRow(
+      'バフ種別',
+      createSelect(
+        passive.buffSubKind ?? 'stat',
+        PASSIVE_BUFF_SUB_KIND_OPTIONS,
+        (buffSubKind) => {
+          patchPassive((current) => {
+            current.buffSubKind = buffSubKind;
+            current.buffTargetRule ??= { kind: 'self' };
+          }, { rerender: true });
+        },
+      ),
+    ),
+  );
+  appendTargetSpecFields(
+    parent,
+    passive.buffTargetRule ?? { kind: 'self' },
+    (buffTargetRule) => {
+      patchPassive((current) => {
+        current.buffTargetRule = buffTargetRule;
+      }, { rerender: true });
+    },
+  );
+
+  const subKind = passive.buffSubKind ?? 'stat';
+  if (subKind === 'block' || subKind === 'evasion') {
+    parent.appendChild(
+      createFieldRow(
+        '確率 (0–1)',
+        createNumberInput(
+          passive.chance ?? 0.1,
+          (chance) => {
+            patchPassive((current) => {
+              current.chance = chance;
+            });
+          },
+          { min: 0, max: 1, step: 0.01 },
+        ),
+      ),
+    );
+    return;
+  }
+  if (subKind === 'barrier') {
+    parent.appendChild(
+      createEl(
+        'p',
+        'editor-hint',
+        'バリア付与は現行パッシブでは量定義を持たないため、target/chance のみ保持します。',
+      ),
+    );
+    return;
+  }
+
+  parent.appendChild(
+    createFieldRow(
+      '対象ステ',
+      createSelect(
+        Array.isArray(passive.buffStat)
+          ? passive.buffStat[0] ?? 'atk'
+          : passive.buffStat ?? 'atk',
+        [
+          { value: 'atk', label: '攻撃' },
+          { value: 'def', label: '防御' },
+          { value: 'reg', label: '耐魔' },
+          { value: 'damageTaken', label: '被ダメ' },
+          { value: 'attackSpeed', label: '攻撃速度' },
+          { value: 'block', label: 'ブロック' },
+          { value: 'evasion', label: '回避' },
+        ],
+        (buffStat) => {
+          patchPassive((current) => {
+            current.buffStat = buffStat;
+          });
+        },
+      ),
+    ),
+  );
+  parent.appendChild(
+    createFieldRow(
+      '倍率',
+      createNumberInput(
+        passive.buffMultiplier ?? 1.1,
+        (buffMultiplier) => {
+          patchPassive((current) => {
+            current.buffMultiplier = buffMultiplier;
+          });
+        },
+        { step: 0.01 },
+      ),
+    ),
+  );
+  parent.appendChild(
+    createFieldRow(
+      '固定値',
+      createNumberInput(
+        passive.buffFlatBonus ?? 0,
+        (buffFlatBonus) => {
+          patchPassive((current) => {
+            current.buffFlatBonus = buffFlatBonus || undefined;
+          });
+        },
+        { step: 1 },
+      ),
+    ),
+  );
+}
+
+export function appendPassiveDebuffFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean },
+  ) => void,
+): void {
+  parent.appendChild(
+    createFieldRow(
+      'デバフ種別',
+      createSelect(
+        passive.debuffSubKind ?? 'stat',
+        PASSIVE_DEBUFF_SUB_KIND_OPTIONS,
+        (debuffSubKind) => {
+          patchPassive((current) => {
+            current.debuffSubKind = debuffSubKind;
+            current.debuffTargetRule ??= {
+              kind: 'distance',
+              side: 'enemy',
+              order: 'nearest',
+            };
+          }, { rerender: true });
+        },
+      ),
+    ),
+  );
+  appendTargetSpecFields(
+    parent,
+    passive.debuffTargetRule ?? {
+      kind: 'distance',
+      side: 'enemy',
+      order: 'nearest',
+    },
+    (debuffTargetRule) => {
+      patchPassive((current) => {
+        current.debuffTargetRule = debuffTargetRule;
+      }, { rerender: true });
+    },
+  );
+
+  const subKind = passive.debuffSubKind ?? 'stat';
+  if (subKind === 'stun') {
+    parent.appendChild(
+      createEl('p', 'editor-hint', 'スタン時間は現行パッシブ型で未保持です。'),
+    );
+    return;
+  }
+  if (subKind === 'dot') {
+    parent.appendChild(
+      createEl('p', 'editor-hint', 'DoT詳細はアクティブ効果側で設定してください。'),
+    );
+    return;
+  }
+
+  parent.appendChild(
+    createFieldRow(
+      '対象ステ',
+      createSelect(
+        Array.isArray(passive.debuffStat)
+          ? passive.debuffStat[0] ?? 'atk'
+          : passive.debuffStat ?? 'atk',
+        [
+          { value: 'atk', label: '攻撃' },
+          { value: 'def', label: '防御' },
+          { value: 'reg', label: '耐魔' },
+          { value: 'damageTaken', label: '被ダメ' },
+          { value: 'attackSpeed', label: '攻撃速度' },
+        ],
+        (debuffStat) => {
+          patchPassive((current) => {
+            current.debuffStat = debuffStat;
+          });
+        },
+      ),
+    ),
+  );
+  parent.appendChild(
+    createFieldRow(
+      '倍率',
+      createNumberInput(
+        passive.debuffMultiplier ?? 0.9,
+        (debuffMultiplier) => {
+          patchPassive((current) => {
+            current.debuffMultiplier = debuffMultiplier;
+          });
+        },
+        { step: 0.01 },
+      ),
+    ),
+  );
+  parent.appendChild(
+    createFieldRow(
+      '固定値',
+      createNumberInput(
+        passive.debuffFlatBonus ?? 0,
+        (debuffFlatBonus) => {
+          patchPassive((current) => {
+            current.debuffFlatBonus = debuffFlatBonus || undefined;
+          });
+        },
+        { step: 1 },
+      ),
+    ),
+  );
+}
+
+export function appendPassiveSpecialEffectFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean },
+  ) => void,
+): void {
+  parent.appendChild(
+    createFieldRow(
+      '適用先',
+      createSelect(
+        passive.specialEffectApplyTo ?? 'damage',
+        PASSIVE_SPECIAL_APPLY_TO_OPTIONS,
+        (specialEffectApplyTo) => {
+          patchPassive((current) => {
+            current.specialEffectApplyTo = specialEffectApplyTo;
+            current.specialEffect ??= defaultDamageIncrease();
+          }, { rerender: true });
+        },
+      ),
+    ),
+  );
+  appendDamageIncreaseFields(
+    parent,
+    passive.specialEffect,
+    (specialEffect) => {
+      patchPassive((current) => {
+        current.specialEffect = specialEffect;
+      }, { rerender: true });
+    },
+    { title: '特効効果' },
+  );
 }

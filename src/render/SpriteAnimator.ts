@@ -48,7 +48,7 @@ export class SpriteAnimator {
 
   isSkillAnimActive(combatantId: string): boolean {
     const state = this.states.get(combatantId);
-    return state?.skillAnimKey !== null && !state.skillAnimFinished;
+    return state != null && state.skillAnimKey !== null && !state.skillAnimFinished;
   }
 
   blocksAutoMove(combatantId: string): boolean {

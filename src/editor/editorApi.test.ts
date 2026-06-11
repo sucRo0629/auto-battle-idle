@@ -15,7 +15,7 @@ import {
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 
 function basicAttackEntry(
-  enemyId: string,
+  _enemyId: string,
   active: ActiveSkillDef,
 ): SkillDraftEntry {
   return {
@@ -54,14 +54,18 @@ describe('class passive unlock levels', () => {
       {
         id: 'test_cls_passive_lv0',
         name: 'P0',
-        effect: 'evasionChance',
-        evasionChance: 0.1,
+        effect: 'buff',
+        buffSubKind: 'evasion',
+        chance: 0.1,
+        buffTargetRule: { kind: 'self' },
       },
       {
         id: 'test_cls_passive_lv3',
         name: 'P3',
-        effect: 'evasionChance',
-        evasionChance: 0.2,
+        effect: 'buff',
+        buffSubKind: 'evasion',
+        chance: 0.2,
+        buffTargetRule: { kind: 'self' },
       },
     ],
     actives: [

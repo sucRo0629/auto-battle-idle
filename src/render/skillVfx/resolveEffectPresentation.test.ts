@@ -40,7 +40,7 @@ describe('resolveEffectPresentation', () => {
       'test_skill',
       {
         type: 'heal',
-        target: { kind: 'mostDamagedAlly' },
+        target: { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' },
         amount: { kind: 'atkBased', atkScale: 1 },
       },
       skill,

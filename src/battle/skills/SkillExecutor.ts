@@ -15,7 +15,6 @@ import {
 } from '../ccEffects.ts';
 import {
   applyExcessHealToBarrierFromPassive,
-  resolveDebuffDurationWithPassives,
   rollsEvasion,
   stripPassivesAurasFromSource,
   type PassiveDamageContext,
@@ -424,14 +423,71 @@ export class SkillExecutor {
     }
 
     if (effectDef.type === 'heal') {
+      if ((effectDef.healSubKind ?? 'instant') === 'hot') {
+        const amountSpec =
+          effectDef.amount ??
+          ({ kind: 'flat', flatAmount: 0 } as const);
+        const duration = effectDef.durationSec ?? 0;
+        if (duration <= 0) return false;
+        const appliedAt = Date.now();
+        target.statusEffects.push({
+          id: `${skill.id}_hot_${appliedAt}`,
+          kind: 'buff',
+          overlay: 'hot',
+          multiplier: 1,
+          durationSec: duration,
+          remainingSec: duration,
+          amount: amountSpec,
+          sourceId: actor.id,
+          skillId: skill.id,
+          tickSec: 1,
+        });
+        this.emit({
+          type: 'skill',
+          actorId: actor.id,
+          targetId: target.id,
+          skillId: skill.id,
+          skillName: skill.name,
+          slotKind: cd.slotKind,
+          effect: 'hot',
+          effectIndex,
+          statusLabel: 'hot',
+          range: effectDef.range,
+          ...(hitIndex !== undefined ? { hitIndex } : {}),
+        });
+        return true;
+      }
+      if ((effectDef.healSubKind ?? 'instant') === 'dispel') {
+        const removed = dispelDebuffsOnTarget(
+          target,
+          effectDef.dispelCount ?? 0,
+          effectDef.dispelTags,
+          actor.id,
+        );
+        if (removed <= 0) return false;
+        this.emit({
+          type: 'skill',
+          actorId: actor.id,
+          targetId: target.id,
+          skillId: skill.id,
+          skillName: skill.name,
+          slotKind: cd.slotKind,
+          effect: 'dispel',
+          effectIndex,
+          amount: removed,
+          range: effectDef.range,
+          ...(hitIndex !== undefined ? { hitIndex } : {}),
+        });
+        return true;
+      }
       const amount = resolveHealAmount(
         actor,
         target,
-        effectDef.amount,
+        effectDef.amount ?? ({ kind: 'flat', flatAmount: 0 } as const),
         this.gameData.skillRegistry.passives,
         {
           atkScaleOverride: powerMultiplierOverride,
-          effectDamageIncrease: effectDef.damageIncrease,
+          effectSpecialIncrease: effectDef.damageIncrease,
         },
       );
       if (amount <= 0) return false;
@@ -469,36 +525,152 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'barrier') {
-      const grant = resolveResourceAmount(
-        actor,
-        target,
-        effectDef.amount,
-        this.gameData.skillRegistry.passives,
-        powerMultiplierOverride,
-      );
-      if (grant <= 0) return false;
-      applyBarrierToTarget(target, grant, effectDef.barrierStack ?? false);
-      this.emit({
-        type: 'skill',
-        actorId: actor.id,
-        targetId: target.id,
-        skillId: skill.id,
-        skillName: skill.name,
-        slotKind: cd.slotKind,
-        effect: 'barrier',
-        effectIndex,
-        amount: grant,
-        range: effectDef.range,
-        ...(hitIndex !== undefined ? { hitIndex } : {}),
-      });
-      return true;
-    }
-
     if (effectDef.type === 'buff' || effectDef.type === 'debuff') {
+      if (effectDef.type === 'buff') {
+        const subKind = effectDef.buffSubKind ?? 'stat';
+        if (subKind === 'barrier') {
+          const amountSpec =
+            effectDef.amount ??
+            ({ kind: 'flat', flatAmount: 0 } as const);
+          const grant = resolveResourceAmount(
+            actor,
+            target,
+            amountSpec,
+            this.gameData.skillRegistry.passives,
+            powerMultiplierOverride,
+          );
+          if (grant <= 0) return false;
+          applyBarrierToTarget(target, grant, effectDef.barrierStack ?? false);
+          this.emit({
+            type: 'skill',
+            actorId: actor.id,
+            targetId: target.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            slotKind: cd.slotKind,
+            effect: 'barrier',
+            effectIndex,
+            amount: grant,
+            range: effectDef.range,
+            ...(hitIndex !== undefined ? { hitIndex } : {}),
+          });
+          return true;
+        }
+        if (subKind === 'block' || subKind === 'evasion') {
+          const chance = effectDef.chance ?? 0;
+          const duration = effectDef.buffDurationSec ?? 0;
+          if (chance <= 0 || duration <= 0) return false;
+          const appliedAt = Date.now();
+          target.statusEffects.push({
+            id: `${skill.id}_${subKind}_${appliedAt}`,
+            kind: 'buff',
+            overlay: subKind,
+            ...(subKind === 'block'
+              ? { blockChance: chance }
+              : { evasionChance: chance }),
+            multiplier: 1,
+            durationSec: duration,
+            remainingSec: duration,
+            sourceId: actor.id,
+            skillId: skill.id,
+          });
+          this.emit({
+            type: 'skill',
+            actorId: actor.id,
+            targetId: target.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            slotKind: cd.slotKind,
+            effect: subKind === 'block' ? 'block' : 'buff',
+            effectIndex,
+            statusLabel: subKind,
+            range: effectDef.range,
+            ...(hitIndex !== undefined ? { hitIndex } : {}),
+          });
+          return true;
+        }
+      }
+      if (effectDef.type === 'debuff') {
+        const subKind = effectDef.debuffSubKind ?? 'stat';
+        if (subKind === 'dot') {
+          const duration = effectDef.durationSec ?? 0;
+          const power = effectDef.powerMultiplier ?? 0;
+          if (duration <= 0 || power <= 0) return false;
+          const appliedAt = Date.now();
+          target.statusEffects.push({
+            id: `${skill.id}_dot_${appliedAt}`,
+            kind: 'debuff',
+            overlay: 'dot',
+            multiplier: 1,
+            durationSec: duration,
+            remainingSec: duration,
+            powerMultiplier: power,
+            sourceId: actor.id,
+            skillId: skill.id,
+            damageType: resolveSkillDamageType(actor, effectDef),
+            damageIncrease: effectDef.damageIncrease,
+            defenseIgnore: effectDef.defenseIgnore,
+            tickSec: 1,
+          });
+          this.emit({
+            type: 'skill',
+            actorId: actor.id,
+            targetId: target.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            slotKind: cd.slotKind,
+            effect: 'dot',
+            effectIndex,
+            statusLabel: 'dot',
+            range: effectDef.range,
+            ...(hitIndex !== undefined ? { hitIndex } : {}),
+          });
+          return true;
+        }
+        if (subKind === 'stun') {
+          const duration = effectDef.durationSec ?? 0;
+          if (duration <= 0) return false;
+          const applied = applyStunToTarget(target, duration, {
+            skillId: skill.id,
+            sourceId: actor.id,
+          });
+          if (!applied) return false;
+          this.emit({
+            type: 'skill',
+            actorId: actor.id,
+            targetId: target.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            slotKind: cd.slotKind,
+            effect: 'stun',
+            effectIndex,
+            statusLabel: 'stun',
+            range: effectDef.range,
+            ...(hitIndex !== undefined ? { hitIndex } : {}),
+          });
+          return true;
+        }
+      }
       const isBuff = effectDef.type === 'buff';
       const stats = asStatusEffectStatList(
-        isBuff ? effectDef.buffStat : effectDef.debuffStat,
+        isBuff
+          ? (Array.isArray(effectDef.buffStat)
+              ? effectDef.buffStat.filter(
+                  (stat): stat is 'atk' | 'def' | 'reg' | 'damageTaken' | 'attackSpeed' =>
+                    stat === 'atk' ||
+                    stat === 'def' ||
+                    stat === 'reg' ||
+                    stat === 'damageTaken' ||
+                    stat === 'attackSpeed',
+                )
+              : effectDef.buffStat === 'atk' ||
+                  effectDef.buffStat === 'def' ||
+                  effectDef.buffStat === 'reg' ||
+                  effectDef.buffStat === 'damageTaken' ||
+                  effectDef.buffStat === 'attackSpeed'
+                ? [effectDef.buffStat]
+                : [])
+          : effectDef.debuffStat,
       );
       const multiplier = isBuff
         ? effectDef.buffMultiplier
@@ -509,13 +681,6 @@ export class SkillExecutor {
       let duration = isBuff
         ? effectDef.buffDurationSec
         : effectDef.debuffDurationSec;
-      if (!isBuff && !actor.isEnemy) {
-        duration = resolveDebuffDurationWithPassives(
-          actor,
-          duration,
-          this.gameData.skillRegistry.passives,
-        );
-      }
       if (
         stats.length === 0 ||
         (multiplier === undefined && flatBonus === undefined)
@@ -525,6 +690,7 @@ export class SkillExecutor {
 
       const statusLabels: string[] = [];
       const appliedAt = Date.now();
+      if (duration === undefined) return false;
 
       for (let i = 0; i < stats.length; i++) {
         const stat = stats[i]!;

@@ -9,7 +9,22 @@ import { loadLevelCurves } from '../../progression/levelGrowth.ts';
 import levelCurvesJson from '../../../data/levelCurves.json';
 import { createDefaultSave } from '../../progression/victoryRewards.ts';
 import { SPRITE_WIDTH } from '../battleConstants.ts';
-import type { CombatantSnapshot } from '../types.ts';
+import type { SkillSequenceRunner } from '../skills/skillSequence.ts';
+import type { CombatantSnapshot, CombatantState, GameData, SkillTriggerKind } from '../types.ts';
+
+/** private フィールドへのアクセス用（`BattleEngine & {...}` は never になるため unknown 経由） */
+export type BattleEngineInternals = {
+  players: CombatantState[];
+  enemies: CombatantState[];
+  gameData: GameData;
+  skillSequenceRunner: SkillSequenceRunner;
+  runUnitSkills?: (actors: CombatantState[]) => void;
+  tickCountTriggers?: (unitId: string, kind: SkillTriggerKind) => void;
+};
+
+export function asBattleEngineInternals(engine: BattleEngine): BattleEngineInternals {
+  return engine as unknown as BattleEngineInternals;
+}
 
 export const LONG_BATTLE_TIMEOUT_MS = 60_000;
 export const SCREEN_MIN_X = -18;
@@ -200,7 +215,6 @@ export function reachWave2Engage(engine: BattleEngine): BattleSnapshot {
   throw new Error('wave 2 engagement did not occur');
 }
 
-const ROW_ORDER = ['front', 'middle', 'back'] as const;
 
 /** Snapshot 版: R1-fix 後は常に 0（battleX === visualX） */
 export function battleVisualOffsetFromSnapshot(
@@ -264,7 +278,7 @@ export function assertEngagedEnemyScreenStable(
     if (engagedTicks <= skipAfterEngage) continue;
 
     for (const enemy of snap.enemies.filter((e) => e.hp > 0)) {
-      const sx = screenX(enemy, snap.combatCameraX);
+      const sx = screenX(enemy, 0);
       const prev = prevScreenX.get(enemy.id);
       if (prev !== undefined) {
         maxJump = Math.max(maxJump, Math.abs(sx - prev));
@@ -317,11 +331,11 @@ export function assertEngagedDeathVisualStability(
       prevLivingScreenX.clear();
       prevLivingSignature = signature;
       for (const enemy of living) {
-        prevLivingScreenX.set(enemy.id, screenX(enemy, snap.combatCameraX));
+        prevLivingScreenX.set(enemy.id, screenX(enemy, 0));
       }
     } else {
       for (const enemy of living) {
-        const sx = screenX(enemy, snap.combatCameraX);
+        const sx = screenX(enemy, 0);
         const prev = prevLivingScreenX.get(enemy.id);
         if (prev !== undefined) {
           maxLivingJump = Math.max(maxLivingJump, Math.abs(sx - prev));
@@ -334,7 +348,7 @@ export function assertEngagedDeathVisualStability(
       // ウェーブ全滅後の settle bake は対象外
       if (living.length === 0) continue;
 
-      const sx = screenX(enemy, snap.combatCameraX);
+      const sx = screenX(enemy, 0);
       if (!deathTick.has(enemy.id)) {
         deathTick.set(enemy.id, i);
         corpsePrevScreenX.set(enemy.id, sx);
@@ -379,7 +393,7 @@ export function assertFirstEnemyDeathCorpseStable(
     const living = snap.enemies.filter((e) => e.hp > 0);
     for (const enemy of snap.enemies.filter((e) => e.hp <= 0)) {
       if (living.length === 0) continue;
-      const sx = screenX(enemy, snap.combatCameraX);
+      const sx = screenX(enemy, 0);
       if (firstDeathTick === null) {
         firstDeathTick = i;
         corpsePrevScreenX.set(enemy.id, sx);
@@ -426,8 +440,8 @@ export function assertWaveWipeCorpseNoJump(
         (e) => e.id === enemy.id && e.hp > 0,
       );
       if (!livingBefore) continue;
-      const beforeSx = screenX(livingBefore, before.combatCameraX);
-      const afterSx = screenX(enemy, after.combatCameraX);
+      const beforeSx = screenX(livingBefore, 0);
+      const afterSx = screenX(enemy, 0);
       expect(Math.abs(afterSx - beforeSx)).toBeLessThanOrEqual(maxJump);
     }
     return;
@@ -461,10 +475,10 @@ export function assertNoFrontOvertake(
     if (livingEnemies.length === 0 || frontAllies.length === 0) continue;
 
     const maxEnemyScreen = Math.max(
-      ...livingEnemies.map((e) => screenX(e, snap.combatCameraX) + SPRITE_WIDTH),
+      ...livingEnemies.map((e) => screenX(e, 0) + SPRITE_WIDTH),
     );
     const maxFrontAllyScreen = Math.max(
-      ...frontAllies.map((a) => screenX(a, snap.combatCameraX) + SPRITE_WIDTH),
+      ...frontAllies.map((a) => screenX(a, 0) + SPRITE_WIDTH),
     );
     maxOvertake = Math.max(maxOvertake, maxFrontAllyScreen - maxEnemyScreen);
   }
@@ -486,7 +500,7 @@ export function measureMaxAllyScreenJump(
     if (shouldTrack(before)) {
       tracking = true;
       for (const ally of before.allies.filter((a) => a.hp > 0)) {
-        prevScreenX.set(ally.id, screenX(ally, before.combatCameraX));
+        prevScreenX.set(ally.id, screenX(ally, 0));
       }
     }
     engine.tick(TICK_DT);
@@ -494,7 +508,7 @@ export function measureMaxAllyScreenJump(
 
     if (tracking && shouldTrack(after)) {
       for (const ally of after.allies.filter((a) => a.hp > 0)) {
-        const sx = screenX(ally, after.combatCameraX);
+        const sx = screenX(ally, 0);
         const prev = prevScreenX.get(ally.id);
         if (prev !== undefined) {
           maxJump = Math.max(maxJump, Math.abs(sx - prev));

@@ -17,7 +17,7 @@ vi.mock('./spriteAssets.ts', () => ({
 const testTraits = {
   rangePx: 0,
   damageType: 'physical' as const,
-  basicAttackVfx: { preset: 'melee_slash' as const },
+  basicAttackVfx: { preset: 'slash' as const },
 };
 
 const defenderPreset = {
@@ -37,7 +37,7 @@ const rangedEnemy = {
   traits: {
     rangePx: 55,
     damageType: 'physical' as const,
-    basicAttackVfx: { preset: 'ranged_arrow' as const },
+    basicAttackVfx: { preset: 'arrow' as const },
   },
 };
 

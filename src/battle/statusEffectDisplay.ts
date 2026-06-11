@@ -9,6 +9,7 @@ export type StatusDisplayCategory =
   | 'damageIncrease'
   | 'hot'
   | 'dot'
+  | 'evasion'
   | 'block'
   | 'counter'
   | 'stun';
@@ -22,6 +23,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   'damageIncrease',
   'hot',
   'dot',
+  'evasion',
   'block',
   'counter',
   'stun',
@@ -79,6 +81,9 @@ function effectsForCategory(
   if (category === 'block') {
     return effects.filter((effect) => effect.overlay === 'block');
   }
+  if (category === 'evasion') {
+    return effects.filter((effect) => effect.overlay === 'evasion');
+  }
   if (category === 'counter') {
     return effects.filter((effect) => effect.overlay === 'counter');
   }
@@ -125,7 +130,7 @@ function aggregateStatCategory(
 
 function aggregateOverlayCategory(
   effects: StatusEffect[],
-  category: 'hot' | 'dot' | 'block' | 'counter' | 'stun',
+  category: 'hot' | 'dot' | 'evasion' | 'block' | 'counter' | 'stun',
 ): AggregatedCategoryEffect | null {
   const relevant = effectsForCategory(effects, category);
   if (relevant.length === 0) return null;
@@ -135,7 +140,10 @@ function aggregateOverlayCategory(
     netFlat: 0,
     netMul: 1,
     kind:
-      category === 'hot' || category === 'block' || category === 'counter'
+      category === 'hot' ||
+      category === 'evasion' ||
+      category === 'block' ||
+      category === 'counter'
         ? 'buff'
         : 'debuff',
     remainingRatio: categoryRemainingRatio(effects, category),
@@ -225,7 +233,14 @@ export function aggregateStatStatusEffects(
   const damageTakenBadge = aggregateDamageTakenCategory(effects);
   if (damageTakenBadge) result.push(damageTakenBadge);
 
-  for (const category of ['hot', 'dot', 'block', 'counter', 'stun'] as const) {
+  for (const category of [
+    'hot',
+    'dot',
+    'evasion',
+    'block',
+    'counter',
+    'stun',
+  ] as const) {
     const badge = aggregateOverlayCategory(effects, category);
     if (badge) result.push(badge);
   }

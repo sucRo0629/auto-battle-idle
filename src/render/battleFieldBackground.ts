@@ -3,7 +3,6 @@ import grassTileUrl from '../assets/background/grass_tile.png';
 import type { BattleHudTheme } from './battleHudTheme.ts';
 
 const SKY_PARALLAX = 0.35;
-const GRASS_PARALLAX = 1.0;
 /** Pixels sky extends below the ground line to soften the horizon seam. */
 const SKY_HORIZON_OVERLAP_PX = 3;
 /** Height of the post-draw haze gradient straddling the ground line. */

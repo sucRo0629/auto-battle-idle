@@ -2,27 +2,36 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from './data/loadGameData.ts';
 import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
-import { createDefaultSave } from '../progression/victoryRewards.ts';
-import { createAlliesFromPartyState, createEnemiesForStage } from './entities.ts';
+import { createAlliesFromPartyState } from './entities.ts';
+import { createEnemiesForStage } from './entities.ts';
 import { SkillExecutor } from './skills/SkillExecutor.ts';
 import { SkillSequenceRunner } from './skills/skillSequence.ts';
 
 describe('barrier application', () => {
-  it('guardian can gain barrier during battle', () => {
+  it('abjurer can grant barrier during battle', () => {
     const gameData = loadGameData();
     const levelCurves = loadLevelCurves(levelCurvesJson);
-    const save = createDefaultSave(gameData, 'demo');
     const allies = createAlliesFromPartyState(
       gameData,
-      save.party,
+      [
+        {
+          classId: 'sp_abjurer',
+          progress: { level: 1, exp: 0 },
+          build: {
+            learnedPassiveIds: [],
+            learnedActiveIds: ['sp_abjurer_active_1', 'sp_abjurer_active_2'],
+            equippedActiveSlots: ['sp_abjurer_active_1'],
+          },
+        },
+      ],
       levelCurves,
     );
-    const guardian = allies[0];
-    expect(guardian?.classId).toBe('df_guardian');
+    const abjurer = allies[0];
+    expect(abjurer?.classId).toBe('sp_abjurer');
 
     const enemies = createEnemiesForStage(gameData, '1', 0);
-    const barrierCd = guardian!.cooldowns.find(
-      (cd) => cd.skillId === 'df_guardian_active_1',
+    const barrierCd = abjurer!.cooldowns.find(
+      (cd) => cd.skillId === 'sp_abjurer_active_1',
     );
     expect(barrierCd).toBeDefined();
     barrierCd!.remaining = 0;
@@ -44,9 +53,9 @@ describe('barrier application', () => {
       },
     );
 
-    executor.tryExecute(guardian!, barrierCd!, allies, enemies);
+    executor.tryExecute(abjurer!, barrierCd!, allies, enemies);
 
     expect(barrierEvent).toBe(true);
-    expect(guardian!.barrierHp).toBeGreaterThan(0);
+    expect(abjurer!.barrierHp).toBeGreaterThan(0);
   });
 });

@@ -1,5 +1,4 @@
 import { SPRITE_SHEET_CELL_SIZE } from "./spriteLayout.ts";
-import { SHARED_ANIM_FPS } from "./SpriteRegistry.ts";
 
 const skillModules = import.meta.glob<string>(
   "../assets/sprites/sheets/skills/*.png",

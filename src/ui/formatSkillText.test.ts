@@ -45,24 +45,30 @@ describe('formatPassiveDescription', () => {
       fragments: ['自HP比例', 'ATK', '×1.5', '60%以下'],
     },
     {
-      name: 'extend debuff',
-      def: {
-        id: 'passive_extend_debuff',
-        name: '毒延長',
-        effect: 'extendSelfAppliedDebuff',
-        extendSec: 2,
-      } satisfies PassiveSkillDef,
-      fragments: ['付与デバフ', '+2s'],
-    },
-    {
-      name: 'evasion chance',
+      name: 'passive buff evasion',
       def: {
         id: 'passive_evasion',
         name: '影歩',
-        effect: 'evasionChance',
-        evasionChance: 0.18,
+        effect: 'buff',
+        buffSubKind: 'evasion',
+        chance: 0.18,
+        buffTargetRule: { kind: 'self' },
       } satisfies PassiveSkillDef,
-      fragments: ['回避', '18%'],
+      fragments: ['バフ', '回避', '18%'],
+    },
+    {
+      name: 'special effect damage',
+      def: {
+        id: 'passive_damage_vs_dot',
+        name: '追い狩り',
+        effect: 'specialEffect',
+        specialEffectApplyTo: 'damage',
+        specialEffect: {
+          scale: 1.3,
+          conditions: [{ kind: 'debuff', tags: ['dot'], selfAppliedOnly: true }],
+        },
+      } satisfies PassiveSkillDef,
+      fragments: ['特効', 'ダメージ', '×1.3'],
     },
   ])('$name', ({ def, fragments }) => {
     const desc = formatPassiveDescription(def);

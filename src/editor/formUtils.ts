@@ -21,11 +21,11 @@ interface FocusRestoreState {
 function getEditorInputs(): Array<HTMLInputElement | HTMLTextAreaElement> {
   const root = document.querySelector(EDITOR_ROOT_SELECTOR);
   if (!root) return [];
-  return [
-    ...root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+  return Array.from(
+    root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
       'input.editor-input, textarea.editor-input',
     ),
-  ];
+  );
 }
 
 function elementPathFromEditorRoot(el: Element): string | null {
@@ -34,9 +34,9 @@ function elementPathFromEditorRoot(el: Element): string | null {
   const parts: string[] = [];
   let node: Element | null = el;
   while (node && node !== root) {
-    const parent = node.parentElement;
+    const parent: HTMLElement | null = node.parentElement;
     if (!parent) return null;
-    const index = [...parent.children].indexOf(node);
+    const index = Array.from(parent.children).indexOf(node);
     if (index < 0) return null;
     parts.unshift(`${node.tagName.toLowerCase()}:nth-child(${index + 1})`);
     node = parent;

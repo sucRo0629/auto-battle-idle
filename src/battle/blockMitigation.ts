@@ -1,4 +1,4 @@
-import { getEffectiveAtk, getPassiveDefs } from './combatMath.ts';
+import { getEffectiveAtk } from './combatMath.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 
 const BLOCK_ATK_BASE_RATIO = 0.25;
@@ -6,14 +6,9 @@ const BLOCK_ATK_DIVISOR = 100;
 
 export function getBlockChance(
   defender: CombatantState,
-  passives: Record<string, PassiveSkillDef>,
+  _passives: Record<string, PassiveSkillDef>,
 ): number {
   let chance = 0;
-
-  for (const passive of getPassiveDefs(defender, passives)) {
-    if (passive.effect !== 'block') continue;
-    chance += passive.blockChance ?? 0;
-  }
 
   for (const effect of defender.statusEffects) {
     if (effect.remainingSec <= 0) continue;

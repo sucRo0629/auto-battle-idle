@@ -14,7 +14,7 @@ import type { BalanceClassRow } from './editorApi.ts';
 function row(
   id: string,
   role: ClassPresetBeforeEnrich['role'],
-  jobTier = 1,
+  jobTier: ClassPresetBeforeEnrich['jobTier'] = 1,
 ): BalanceClassRow {
   const current: ClassPresetBeforeEnrich = {
     id,

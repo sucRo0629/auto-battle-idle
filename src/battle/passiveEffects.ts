@@ -30,32 +30,42 @@ export interface PassiveDamageContext {
 
 export function rollsEvasion(
   target: CombatantState,
-  passives: Record<string, PassiveSkillDef>,
+  _passives: Record<string, PassiveSkillDef>,
 ): boolean {
-  const defs = getPassiveDefs(target, passives);
   let chance = 0;
-  for (const passive of defs) {
-    if (passive.effect === 'evasionChance') {
-      chance += passive.evasionChance ?? 0;
-    }
+  for (const effect of target.statusEffects) {
+    if (effect.remainingSec <= 0) continue;
+    if (effect.overlay !== 'evasion') continue;
+    chance += effect.evasionChance ?? 0;
   }
   if (chance <= 0) return false;
   return Math.random() < Math.min(1, chance);
 }
 
+/** @deprecated use getPassiveSpecialEffectMultiplier('damage', ...) */
 export function getPassiveDamageIncreaseMultiplier(
+  attacker: CombatantState,
+  target: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  return getPassiveSpecialEffectMultiplier('damage', attacker, target, passives);
+}
+
+export function getPassiveSpecialEffectMultiplier(
+  applyTo: 'damage' | 'heal',
   attacker: CombatantState,
   target: CombatantState,
   passives: Record<string, PassiveSkillDef>,
 ): number {
   let mul = 1;
   for (const passive of getPassiveDefs(attacker, passives)) {
-    if (passive.effect !== 'damageIncrease' || !passive.damageIncrease) continue;
-    mul *= resolveDamageIncreaseMultiplier(
-      attacker,
-      target,
-      passive.damageIncrease,
-    );
+    if (
+      passive.effect === 'specialEffect' &&
+      passive.specialEffectApplyTo === applyTo &&
+      passive.specialEffect
+    ) {
+      mul *= resolveDamageIncreaseMultiplier(attacker, target, passive.specialEffect);
+    }
   }
   return mul;
 }
@@ -91,7 +101,7 @@ export function resolveEffectDamageIncreaseMultiplier(
   statusIncrease: DamageIncreaseSpec | undefined,
   passives: Record<string, PassiveSkillDef>,
 ): number {
-  let mul = getPassiveDamageIncreaseMultiplier(attacker, target, passives);
+  let mul = getPassiveSpecialEffectMultiplier('damage', attacker, target, passives);
   if (effectIncrease) {
     mul *= resolveDamageIncreaseMultiplier(attacker, target, effectIncrease);
   }
@@ -107,13 +117,8 @@ export function resolveIncomingHealAmount(
   passives: Record<string, PassiveSkillDef>,
 ): number {
   if (baseAmount <= 0) return 0;
-  let percentSum = 0;
-  for (const passive of getPassiveDefs(target, passives)) {
-    if (passive.effect !== 'healReceivedIncrease') continue;
-    percentSum += passive.percent ?? 0;
-  }
-  if (percentSum === 0) return baseAmount;
-  return Math.floor(Math.max(0, baseAmount * (1 + percentSum)));
+  const mul = getPassiveSpecialEffectMultiplier('heal', target, target, passives);
+  return Math.floor(Math.max(0, baseAmount * mul));
 }
 
 export function applyDamageTakenToHeal(
@@ -171,24 +176,6 @@ export function applyExcessHealToBarrierFromPassive(
   return applyBarrierToTarget(target, grant, false);
 }
 
-export function resolveDebuffDurationWithPassives(
-  actor: CombatantState,
-  durationSec: number,
-  passives: Record<string, PassiveSkillDef>,
-): number {
-  let duration = durationSec;
-  for (const passive of getPassiveDefs(actor, passives)) {
-    if (passive.effect !== 'extendSelfAppliedDebuff') continue;
-    if (passive.extendSec !== undefined) {
-      duration += passive.extendSec;
-    }
-    if (passive.durationMultiplier !== undefined) {
-      duration *= passive.durationMultiplier;
-    }
-  }
-  return duration;
-}
-
 export function syncHotAuras(
   allies: CombatantState[],
   enemies: CombatantState[],
@@ -215,7 +202,7 @@ export function syncHotAuras(
   }
 }
 
-export function syncBlockAuras(
+export function syncBuffAuras(
   allies: CombatantState[],
   enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
@@ -223,22 +210,108 @@ export function syncBlockAuras(
   const units = [...allies, ...enemies];
   for (const unit of units) {
     unit.statusEffects = unit.statusEffects.filter(
-      (effect) => !effect.id.startsWith('passive_block_'),
+      (effect) => !effect.id.startsWith('passive_buff_'),
     );
   }
 
-  for (const unit of units) {
-    if (!unit.isAlive) continue;
-    for (const passive of getPassiveDefs(unit, passives)) {
-      if (passive.effect !== 'block') continue;
-      const blockChance = passive.blockChance ?? 0;
-      if (blockChance <= 0) continue;
-      unit.statusEffects.push(
-        createPassiveBlockEffect(unit, passive.id, blockChance),
+  for (const source of units) {
+    if (!source.isAlive) continue;
+    for (const passive of getPassiveDefs(source, passives)) {
+      if (passive.effect !== 'buff') continue;
+      const subKind = passive.buffSubKind ?? 'stat';
+      const targetSpec = passive.buffTargetRule ?? { kind: 'self' as const };
+      const targets = pickTargets(targetSpec, source, allies, enemies);
+      if (subKind === 'block' || subKind === 'evasion') {
+        const chance = passive.chance ?? 0;
+        if (chance <= 0) continue;
+        for (const target of targets) {
+          target.statusEffects.push(
+            createPassiveOverlayBuffEffect(
+              source,
+              passive.id,
+              subKind,
+              chance,
+            ),
+          );
+        }
+        continue;
+      }
+      const stats = asStatusEffectStatList(
+        passive.buffStat as StatusEffectStat | StatusEffectStat[] | undefined,
       );
+      const multiplier = passive.buffMultiplier;
+      const flatBonus = passive.buffFlatBonus;
+      if (stats.length === 0 || (multiplier === undefined && flatBonus === undefined)) {
+        continue;
+      }
+      for (const target of targets) {
+        for (let i = 0; i < stats.length; i++) {
+          const stat = stats[i]!;
+          target.statusEffects.push(
+            createPassiveStatBuffEffect(
+              source,
+              passive.id,
+              stat,
+              i,
+              multiplier,
+              flatBonus,
+            ),
+          );
+        }
+      }
     }
   }
 }
+
+export function syncDebuffAuras(
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+): void {
+  const units = [...allies, ...enemies];
+  for (const unit of units) {
+    unit.statusEffects = unit.statusEffects.filter(
+      (effect) => !effect.id.startsWith('passive_debuff_'),
+    );
+  }
+
+  for (const source of units) {
+    if (!source.isAlive) continue;
+    for (const passive of getPassiveDefs(source, passives)) {
+      if (passive.effect !== 'debuff') continue;
+      const targetSpec = passive.debuffTargetRule ?? {
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      };
+      const targets = pickTargets(targetSpec, source, allies, enemies);
+      const stats = asStatusEffectStatList(passive.debuffStat);
+      const multiplier = passive.debuffMultiplier;
+      const flatBonus = passive.debuffFlatBonus;
+      if (stats.length === 0 || (multiplier === undefined && flatBonus === undefined)) {
+        continue;
+      }
+      for (const target of targets) {
+        for (let i = 0; i < stats.length; i++) {
+          const stat = stats[i]!;
+          target.statusEffects.push({
+            id: `passive_debuff_${source.id}_${passive.id}_${stat}_${i}`,
+            kind: 'debuff',
+            stat,
+            multiplier: multiplier ?? 1,
+            ...(flatBonus !== undefined ? { flatBonus: Math.abs(flatBonus) } : {}),
+            sourceId: source.id,
+            durationSec: PASSIVE_AURA_DURATION_SEC,
+            remainingSec: PASSIVE_AURA_DURATION_SEC,
+          });
+        }
+      }
+    }
+  }
+}
+
+export const syncBlockAuras = syncBuffAuras;
+export const syncEvasionAuras = syncBuffAuras;
 
 export function syncDamageReductionAuras(
   allies: CombatantState[],
@@ -269,18 +342,41 @@ export function syncDamageReductionAuras(
   }
 }
 
-function createPassiveBlockEffect(
+function createPassiveOverlayBuffEffect(
   source: CombatantState,
   passiveId: string,
-  blockChance: number,
+  subKind: 'block' | 'evasion',
+  chance: number,
 ): StatusEffect {
   return {
-    id: `passive_block_${source.id}_${passiveId}`,
+    id: `passive_buff_${source.id}_${passiveId}_${subKind}`,
     kind: 'buff',
-    overlay: 'block',
-    blockChance,
+    overlay: subKind,
+    ...(subKind === 'block'
+      ? { blockChance: chance }
+      : { evasionChance: chance }),
     sourceId: source.id,
     multiplier: 1,
+    durationSec: PASSIVE_AURA_DURATION_SEC,
+    remainingSec: PASSIVE_AURA_DURATION_SEC,
+  };
+}
+
+function createPassiveStatBuffEffect(
+  source: CombatantState,
+  passiveId: string,
+  stat: StatusEffectStat,
+  index: number,
+  multiplier?: number,
+  flatBonus?: number,
+): StatusEffect {
+  return {
+    id: `passive_buff_${source.id}_${passiveId}_${stat}_${index}`,
+    kind: 'buff',
+    stat,
+    multiplier: multiplier ?? 1,
+    ...(flatBonus !== undefined ? { flatBonus: Math.abs(flatBonus) } : {}),
+    sourceId: source.id,
     durationSec: PASSIVE_AURA_DURATION_SEC,
     remainingSec: PASSIVE_AURA_DURATION_SEC,
   };
@@ -356,7 +452,24 @@ export function syncSelfHpRatioBuffAuras(
       const t = resolveSelfHpRatioBuffScale(unit, maxBuffAtHpRatio);
       if (t <= 0) continue;
 
-      const stats = asStatusEffectStatList(passive.buffStat);
+      const stats = asStatusEffectStatList(
+        Array.isArray(passive.buffStat)
+          ? passive.buffStat.filter(
+              (stat): stat is StatusEffectStat =>
+                stat === 'atk' ||
+                stat === 'def' ||
+                stat === 'reg' ||
+                stat === 'damageTaken' ||
+                stat === 'attackSpeed',
+            )
+          : passive.buffStat === 'atk' ||
+              passive.buffStat === 'def' ||
+              passive.buffStat === 'reg' ||
+              passive.buffStat === 'damageTaken' ||
+              passive.buffStat === 'attackSpeed'
+            ? passive.buffStat
+            : undefined,
+      );
       if (stats.length === 0) continue;
 
       for (const stat of stats) {
@@ -455,9 +568,19 @@ export function stripPassivesAurasFromSource(
         effect.sourceId !== sourceId ||
         (!effect.id.startsWith('passive_hot_') &&
           !effect.id.startsWith('passive_dmg_reduction_') &&
-          !effect.id.startsWith('passive_block_')),
+          !effect.id.startsWith('passive_block_') &&
+          !effect.id.startsWith('passive_buff_') &&
+          !effect.id.startsWith('passive_debuff_')),
     );
   }
+}
+
+export function resolveOutgoingHealSpecialMultiplier(
+  actor: CombatantState,
+  target: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  return getPassiveSpecialEffectMultiplier('heal', actor, target, passives);
 }
 
 export function countDamageTargetsInResolution(

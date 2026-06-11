@@ -9,12 +9,12 @@ import {
   resolveEnemyApproachBattleX,
 } from './resolveApproachBattleX.ts';
 import {
+  asBattleEngineInternals,
   createStage1Engine,
   reachWave1Engage,
   reachWave2Engage,
   TICK_DT,
 } from './test/battleFieldSpec.harness.ts';
-import type { BattleEngine } from './BattleEngine.ts';
 
 const SETTLED_PX = 0.5;
 const gameData = loadGameData();
@@ -37,10 +37,7 @@ describe('rear row attack during approach', () => {
   it('ally back row attacks while front row is still approaching', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
-    const internal = engine as unknown as BattleEngine & {
-      players: Parameters<typeof resolvePlayerApproachBattleX>[1];
-      enemies: Parameters<typeof resolvePlayerApproachBattleX>[2];
-    };
+    const internal = asBattleEngineInternals(engine);
 
     const front = internal.players.filter(
       (p) => p.isAlive && p.formationRow === 'front',
@@ -78,10 +75,7 @@ describe('rear row attack during approach', () => {
   it('wave 2: archer damages ranged enemy while front row still approaching', () => {
     const engine = createStage1Engine();
     reachWave2Engage(engine);
-    const internal = engine as unknown as BattleEngine & {
-      players: Parameters<typeof resolvePlayerApproachBattleX>[1];
-      enemies: Parameters<typeof resolvePlayerApproachBattleX>[2];
-    };
+    const internal = asBattleEngineInternals(engine);
 
     const front = internal.players.filter(
       (p) => p.isAlive && p.formationRow === 'front',

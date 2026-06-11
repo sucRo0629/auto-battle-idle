@@ -39,7 +39,8 @@ export function resolveDamageIncreaseMultiplier(
   target: CombatantState,
   spec: DamageIncreaseSpec | undefined,
 ): number {
-  if (!spec || spec.conditions.length === 0) return 1;
+  if (!spec) return 1;
+  if (spec.conditions.length === 0) return spec.scale;
 
   let mul = 1;
   for (const condition of spec.conditions) {

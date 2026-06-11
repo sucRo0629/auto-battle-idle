@@ -67,6 +67,7 @@ describe('BattleEngine out-of-combat ticking', () => {
       kind: 'debuff',
       overlay: 'dot',
       sourceId: guardian.id,
+      multiplier: 1,
       amount: { kind: 'flat', flatAmount: 1 },
       remainingSec: 3,
       durationSec: 3,

@@ -1,9 +1,7 @@
 import type {
   CombatantState,
-  FormationRow,
   GameData,
   MoveSkillEffect,
-  Role,
   SkillCooldown,
 } from './types.ts';
 import { isMeleeRangePx } from './types.ts';
@@ -13,9 +11,7 @@ import {
   resolvePartyDeployTravelPx,
   engagedMinBodyGap,
   enemyRangedRearGap,
-  PARTY_FORMATION_SLOT_SPACING,
   SPRITE_GAP,
-  SPRITE_WIDTH,
   resolveEnemyMarchEngageGap,
   resolveEnemySpawnBattleX,
 } from './battleConstants.ts';
@@ -25,44 +21,8 @@ import {
 } from './partyFormation.ts';
 import { resolveSkillRangePx } from './skills/rangeUtils.ts';
 
-const ROW_ORDER: FormationRow[] = ['front', 'middle', 'back'];
-
-/** Front row: lower order = left/rear; defender is most forward (right). */
-const FRONT_ROW_ROLE_ORDER: Record<Role, number> = {
-  attacker: 0,
-  defender: 1,
-  supporter: 2,
-};
-
-const BACK_ROW_ROLE_ORDER: Record<Role, number> = {
-  supporter: 0,
-  attacker: 1,
-  defender: 2,
-};
-
-function rowRoleOrder(row: FormationRow, role: Role): number {
-  if (row === 'front') return FRONT_ROW_ROLE_ORDER[role];
-  if (row === 'back') return BACK_ROW_ROLE_ORDER[role];
-  return FRONT_ROW_ROLE_ORDER[role];
-}
-
-/** 隊形スロット整列用（traits.rangePx。スキル最大射程とは別） */
 export function resolveFormationRangePx(unit: CombatantState): number {
   return unit.traits.rangePx;
-}
-
-function compareFormationBattleSlot(
-  row: FormationRow,
-  a: CombatantState,
-  b: CombatantState,
-  _gameData?: GameData,
-): number {
-  const rangeA = resolveFormationRangePx(a);
-  const rangeB = resolveFormationRangePx(b);
-  if (rangeA !== rangeB) return rangeB - rangeA;
-  const roleDelta = rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role);
-  if (roleDelta !== 0) return roleDelta;
-  return a.id.localeCompare(b.id);
 }
 
 export function isMeleeUnit(
@@ -221,7 +181,7 @@ export function syncDeadEnemyCorpseBattleX(
 }
 
 export function getEngagedFrontEnemyVisualAnchor(
-  players: CombatantState[],
+  _players: CombatantState[],
   enemies: CombatantState[],
   _battleVisualOffset?: number | null,
 ): number | null {

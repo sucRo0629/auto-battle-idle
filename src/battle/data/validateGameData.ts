@@ -30,7 +30,6 @@ import type {
   TargetRule,
   TargetShape,
   TargetSpec,
-  BuffFilterTag,
   DebuffFilterTag,
   DamageIncreaseCondition,
   CounterResponseDef,
@@ -59,16 +58,21 @@ import {
   RESOURCE_AMOUNT_KINDS,
   ROLES,
   SKILL_EFFECT_KINDS,
+  HEAL_SUB_KINDS,
+  BUFF_SUB_KINDS,
+  DEBUFF_SUB_KINDS,
+  SPECIAL_EFFECT_APPLY_TO_OPTIONS,
+  BUFF_TARGET_KINDS,
   STATUS_EFFECT_STATS,
   TARGET_RULES,
   MOVE_MODES,
   ALL_SKILL_EFFECT_ANIM_IDS,
-  SKILL_EFFECT_ANIM_IDS,
   SKILL_TRIGGER_KINDS,
   TARGET_SHAPES,
   VALID_REG_VALUES,
   VFX_PRESETS,
   DEBUFF_FILTER_TAG_OPTIONS,
+  BUFF_FILTER_TAG_OPTIONS,
   DAMAGE_INCREASE_CONDITION_KINDS,
   DEFENSE_IGNORE_DEF_MODES,
   COUNTER_RESPONSE_KINDS,
@@ -78,7 +82,6 @@ import {
   isBuffFilterTag,
   isDebuffFilterTag,
 } from '../statusMatching.ts';
-import { BUFF_FILTER_TAG_OPTIONS } from './gameDataSchema.ts';
 
 const ROLES_SET = new Set<Role>(ROLES);
 const FORMATION_ROWS_SET = new Set<FormationRow>(FORMATION_ROWS);
@@ -103,20 +106,80 @@ const GROWTH_TIERS = new Set<GrowthTier>([1, 2, 3]);
 const GROWTH_PRESET_KEYS = new Set<GrowthPresetKey>(['attacker', 'caster']);
 const JOB_TIERS_SET = new Set<number>(JOB_TIERS);
 const DEBUFF_FILTER_TAGS_SET = new Set<string>(DEBUFF_FILTER_TAG_OPTIONS);
-const BUFF_FILTER_TAGS_SET = new Set<string>(BUFF_FILTER_TAG_OPTIONS);
 const DAMAGE_INCREASE_CONDITION_KINDS_SET = new Set<string>(
   DAMAGE_INCREASE_CONDITION_KINDS,
 );
 const DEFENSE_IGNORE_DEF_MODES_SET = new Set<string>(DEFENSE_IGNORE_DEF_MODES);
+const HEAL_SUB_KINDS_SET = new Set<import('../types.ts').HealSubKind>(
+  HEAL_SUB_KINDS,
+);
+const BUFF_SUB_KINDS_SET = new Set<import('../types.ts').BuffSubKind>(
+  BUFF_SUB_KINDS,
+);
+const DEBUFF_SUB_KINDS_SET = new Set<import('../types.ts').DebuffSubKind>(
+  DEBUFF_SUB_KINDS,
+);
+const SPECIAL_EFFECT_APPLY_TO_SET = new Set<
+  import('../types.ts').SpecialEffectApplyTo
+>(SPECIAL_EFFECT_APPLY_TO_OPTIONS);
+const BUFF_TARGET_KINDS_SET = new Set<import('../types.ts').BuffTargetKind>(
+  BUFF_TARGET_KINDS,
+);
 
 const LEGACY_PASSIVE_EFFECT_ALIASES: Record<string, PassiveEffectKind> = {
   healAppliesBarrier: 'excessHealToBarrier',
   partyHotAura: 'hot',
+  evasionChance: 'buff',
+  block: 'buff',
+  counterChance: 'counter',
+  damageIncrease: 'specialEffect',
+  healReceivedIncrease: 'specialEffect',
 };
+
+/** エディタ表示・保存前に旧 effect 名を新 taxonomy へ正規化 */
+export function normalizePassiveSkillForEditor(
+  passive: PassiveSkillDef,
+): PassiveSkillDef {
+  const effectRaw = passive.effect;
+  const normalizedEffect = LEGACY_PASSIVE_EFFECT_ALIASES[effectRaw];
+  if (!normalizedEffect) return passive;
+
+  const next: PassiveSkillDef = { ...passive, effect: normalizedEffect };
+  if (effectRaw === 'evasionChance') {
+    next.buffSubKind = 'evasion';
+    next.chance = passive.evasionChance ?? passive.chance;
+  } else if (effectRaw === 'block') {
+    next.buffSubKind = 'block';
+    next.chance = passive.blockChance ?? passive.chance;
+    next.buffTargetRule =
+      passive.buffTargetRule ??
+      passive.targetRuleOverride ??
+      ({ kind: 'self' } as const);
+  } else if (effectRaw === 'counterChance') {
+    next.chance = passive.counterChance ?? passive.chance;
+  } else if (effectRaw === 'damageIncrease') {
+    next.specialEffectApplyTo = 'damage';
+    next.specialEffect = passive.damageIncrease ?? passive.specialEffect;
+  } else if (effectRaw === 'healReceivedIncrease') {
+    const percent = passive.percent ?? 0;
+    next.specialEffectApplyTo = 'heal';
+    next.specialEffect = passive.specialEffect ?? {
+      scale: 1 + percent,
+      conditions: [{ kind: 'targetHp', maxHpRatio: 1 }],
+    };
+  }
+  return next;
+}
 
 const REMOVED_PASSIVE_EFFECTS = new Set([
   'damageVsDotTarget',
   'selfLowHpDamageScale',
+  'extendSelfAppliedDebuff',
+  'damageIncrease',
+  'healReceivedIncrease',
+  'evasionChance',
+  'block',
+  'counterChance',
 ]);
 const RESOURCE_AMOUNT_KINDS_SET = new Set<ResourceAmountKind>(
   RESOURCE_AMOUNT_KINDS,
@@ -319,7 +382,7 @@ function parseEffectAmount(
   if (obj.amount !== undefined) {
     return parseResourceAmountSpec(obj.amount, `${context}.amount`);
   }
-  missingField(context, 'amount', `is required for ${label}`);
+  invalidField(context, 'amount', `is required for ${label}`);
 }
 
 function parseOptionalRepeatedHitFields(
@@ -742,6 +805,25 @@ function parseDamageIncreaseSpec(
   return { scale, conditions };
 }
 
+function parseSpecialEffectSpec(
+  raw: unknown,
+  context: string,
+): DamageIncreaseSpec {
+  const obj = requireRecord(raw, context);
+  const scale = requireNumber(obj, 'scale', context);
+  if (scale <= 0) {
+    invalidField(context, 'scale', 'must be a positive number');
+  }
+  const conditionsRaw = obj.conditions;
+  if (!Array.isArray(conditionsRaw)) {
+    invalidField(context, 'conditions', 'must be an array');
+  }
+  const conditions = conditionsRaw.map((entry, index) =>
+    parseDamageIncreaseCondition(entry, `${context}.conditions[${index}]`),
+  );
+  return { scale, conditions };
+}
+
 function parseDefenseIgnoreSpec(
   raw: unknown,
   context: string,
@@ -1118,6 +1200,75 @@ function parseCounterEffectResponses(
   invalidField(context, 'responses', 'is required');
 }
 
+function normalizeSkillEffect(effect: SkillEffectDef): SkillEffectDef {
+  if (effect.type === 'hot') {
+    return {
+      ...effect,
+      type: 'heal',
+      healSubKind: 'hot',
+      amount: effect.amount,
+      durationSec: effect.durationSec,
+    };
+  }
+  if (effect.type === 'dispel') {
+    return {
+      ...effect,
+      type: 'heal',
+      healSubKind: 'dispel',
+      dispelCount: effect.dispelCount,
+      ...(effect.dispelTags ? { dispelTags: effect.dispelTags } : {}),
+    };
+  }
+  if (effect.type === 'barrier') {
+    return {
+      ...effect,
+      type: 'buff',
+      buffSubKind: 'barrier',
+      amount: effect.amount,
+      ...(effect.barrierStack !== undefined
+        ? { barrierStack: effect.barrierStack }
+        : {}),
+    };
+  }
+  if (effect.type === 'block') {
+    return {
+      ...effect,
+      type: 'buff',
+      buffSubKind: 'block',
+      chance: effect.blockChance,
+      buffDurationSec: effect.durationSec,
+    };
+  }
+  if (effect.type === 'dot') {
+    return {
+      ...effect,
+      type: 'debuff',
+      debuffSubKind: 'dot',
+      durationSec: effect.durationSec,
+      powerMultiplier: effect.powerMultiplier,
+      ...(effect.damageType !== undefined ? { damageType: effect.damageType } : {}),
+    };
+  }
+  if (effect.type === 'stun') {
+    return {
+      ...effect,
+      type: 'debuff',
+      debuffSubKind: 'stun',
+      durationSec: effect.durationSec,
+    };
+  }
+  if (effect.type === 'heal' && effect.healSubKind === undefined) {
+    return { ...effect, healSubKind: 'instant' };
+  }
+  if (effect.type === 'buff' && effect.buffSubKind === undefined) {
+    return { ...effect, buffSubKind: 'stat' };
+  }
+  if (effect.type === 'debuff' && effect.debuffSubKind === undefined) {
+    return { ...effect, debuffSubKind: 'stat' };
+  }
+  return effect;
+}
+
 export function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
   const obj = requireRecord(entry, context);
   const type = requireEnum(obj, 'type', context, SKILL_EFFECTS);
@@ -1137,7 +1288,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         ? undefined
         : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
     const amount = parseEffectAmount(obj, context, 'damage');
-    return {
+    return normalizeSkillEffect({
       target,
       ...targetShapeFields,
       ...combatModifiers,
@@ -1147,55 +1298,141 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'heal') {
-    const amount = parseEffectAmount(obj, context, 'heal');
-    return {
+    const healSubKind =
+      obj.healSubKind === undefined
+        ? 'instant'
+        : requireEnum(obj, 'healSubKind', context, HEAL_SUB_KINDS_SET);
+    if (healSubKind === 'hot') {
+      const durationSec = requireNumber(obj, 'durationSec', context);
+      const amount = parseEffectAmount(obj, context, 'heal hot');
+      return normalizeSkillEffect({
+        target,
+        ...targetShapeFields,
+        ...combatModifiers,
+        type,
+        healSubKind,
+        amount,
+        durationSec,
+        ...sequenceTiming,
+        ...presentation,
+        ...(range !== undefined ? { range } : {}),
+      });
+    }
+    if (healSubKind === 'dispel') {
+      const dispelCount = requireNumber(obj, 'dispelCount', context);
+      if (dispelCount < 0) {
+        invalidField(context, 'dispelCount', 'must be a non-negative number');
+      }
+      const dispelTags = parseDebuffFilterTags(
+        obj.dispelTags,
+        `${context}.dispelTags`,
+        false,
+      );
+      return normalizeSkillEffect({
+        target,
+        ...targetShapeFields,
+        ...combatModifiers,
+        type,
+        healSubKind,
+        dispelCount,
+        ...(dispelTags !== undefined ? { dispelTags } : {}),
+        ...sequenceTiming,
+        ...presentation,
+        ...(range !== undefined ? { range } : {}),
+      });
+    }
+    return normalizeSkillEffect({
       target,
       ...targetShapeFields,
       ...combatModifiers,
       type,
-      amount,
+      healSubKind,
+      amount: parseEffectAmount(obj, context, 'heal'),
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'buff') {
-    const buffStat = requireStatusEffectStat(obj, 'buffStat', context);
+    const buffSubKind =
+      obj.buffSubKind === undefined
+        ? 'stat'
+        : requireEnum(obj, 'buffSubKind', context, BUFF_SUB_KINDS_SET);
+    if (buffSubKind === 'stat') {
+      const buffStat = requireStatusEffectStat(obj, 'buffStat', context);
+      const buffDurationSec = requireNumber(obj, 'buffDurationSec', context);
+      requireBuffOrDebuffModifier(
+        obj,
+        context,
+        'buffMultiplier',
+        'buffFlatBonus',
+      );
+      return normalizeSkillEffect({
+        target,
+        ...targetShapeFields,
+        ...combatModifiers,
+        type,
+        buffSubKind,
+        buffStat,
+        buffDurationSec,
+        ...(typeof obj.buffMultiplier === 'number'
+          ? { buffMultiplier: obj.buffMultiplier }
+          : {}),
+        ...(typeof obj.buffFlatBonus === 'number'
+          ? { buffFlatBonus: obj.buffFlatBonus }
+          : {}),
+        ...sequenceTiming,
+        ...presentation,
+        ...(range !== undefined ? { range } : {}),
+      });
+    }
+    if (buffSubKind === 'barrier') {
+      const amount = parseEffectAmount(obj, context, 'barrier');
+      const barrierStack = obj.barrierStack;
+      if (barrierStack !== undefined && typeof barrierStack !== 'boolean') {
+        invalidField(context, 'barrierStack', 'must be a boolean');
+      }
+      return normalizeSkillEffect({
+        target,
+        ...targetShapeFields,
+        ...combatModifiers,
+        type,
+        buffSubKind,
+        amount,
+        ...(typeof barrierStack === 'boolean' ? { barrierStack } : {}),
+        ...sequenceTiming,
+        ...presentation,
+        ...(range !== undefined ? { range } : {}),
+      });
+    }
+    const chance = requireNumber(obj, 'chance', context);
+    if (chance < 0 || chance > 1) {
+      invalidField(context, 'chance', 'must be between 0 and 1');
+    }
     const buffDurationSec = requireNumber(obj, 'buffDurationSec', context);
-    requireBuffOrDebuffModifier(
-      obj,
-      context,
-      'buffMultiplier',
-      'buffFlatBonus',
-    );
-    return {
+    return normalizeSkillEffect({
       target,
       ...targetShapeFields,
       ...combatModifiers,
       type,
-      buffStat,
+      buffSubKind,
+      chance,
       buffDurationSec,
-      ...(typeof obj.buffMultiplier === 'number'
-        ? { buffMultiplier: obj.buffMultiplier }
-        : {}),
-      ...(typeof obj.buffFlatBonus === 'number'
-        ? { buffFlatBonus: obj.buffFlatBonus }
-        : {}),
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'hot') {
     const durationSec = requireNumber(obj, 'durationSec', context);
     const amount = parseEffectAmount(obj, context, 'hot');
-    return {
+    return normalizeSkillEffect({
       target,
       ...targetShapeFields,
       ...combatModifiers,
@@ -1205,7 +1442,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'barrier') {
@@ -1214,7 +1451,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     if (barrierStack !== undefined && typeof barrierStack !== 'boolean') {
       invalidField(context, 'barrierStack', 'must be a boolean');
     }
-    return {
+    return normalizeSkillEffect({
       target,
       ...targetShapeFields,
       ...combatModifiers,
@@ -1224,7 +1461,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'dot') {
@@ -1237,7 +1474,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       obj.damageType === undefined
         ? undefined
         : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
-    return {
+    return normalizeSkillEffect({
       target,
       ...targetShapeFields,
       ...combatModifiers,
@@ -1248,7 +1485,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'stun') {
@@ -1256,7 +1493,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     if (durationSec <= 0) {
       invalidField(context, 'durationSec', 'must be a positive number');
     }
-    return {
+    return normalizeSkillEffect({
       target,
       ...targetShapeFields,
       ...combatModifiers,
@@ -1265,7 +1502,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'knockback') {
@@ -1273,7 +1510,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     if (distancePx <= 0) {
       invalidField(context, 'distancePx', 'must be a positive number');
     }
-    return {
+    return normalizeSkillEffect({
       target,
       ...targetShapeFields,
       ...combatModifiers,
@@ -1282,7 +1519,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'move') {
@@ -1300,7 +1537,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       moveMode = requireEnum(obj, 'moveMode', context, MOVE_MODES_SET);
     }
     const behindOffsetPx = parseOptionalNumber(obj, 'behindOffsetPx', context);
-    return {
+    return normalizeSkillEffect({
       target,
       type: 'move',
       moveDurationSec,
@@ -1309,7 +1546,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'dispel') {
@@ -1322,7 +1559,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       `${context}.dispelTags`,
       false,
     );
-    return {
+    return normalizeSkillEffect({
       target,
       ...targetShapeFields,
       ...combatModifiers,
@@ -1332,7 +1569,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'counter') {
@@ -1348,15 +1585,26 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       invalidField(context, 'durationSec', 'must be a positive number');
     }
     const responses = parseCounterEffectResponses(obj, context);
-    return {
+    return normalizeSkillEffect({
       target: { kind: 'self' },
       type: 'counter',
+      ...(obj.chance !== undefined
+        ? {
+            chance: (() => {
+              const chance = requireNumber(obj, 'chance', context);
+              if (chance < 0 || chance > 1) {
+                invalidField(context, 'chance', 'must be between 0 and 1');
+              }
+              return chance;
+            })(),
+          }
+        : {}),
       responses,
       durationSec,
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type === 'block') {
@@ -1368,7 +1616,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     if (durationSec <= 0) {
       invalidField(context, 'durationSec', 'must be a positive number');
     }
-    return {
+    return normalizeSkillEffect({
       target,
       ...targetShapeFields,
       ...combatModifiers,
@@ -1378,38 +1626,84 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
-    };
+    });
   }
 
   if (type !== 'debuff') {
     invalidField(context, 'type', `unsupported effect type ${type}`);
   }
 
-  const debuffStat = requireStatusEffectStat(obj, 'debuffStat', context);
-  const debuffDurationSec = requireNumber(obj, 'debuffDurationSec', context);
-  requireBuffOrDebuffModifier(
-    obj,
-    context,
-    'debuffMultiplier',
-    'debuffFlatBonus',
-  );
-  return {
+  const debuffSubKind =
+    obj.debuffSubKind === undefined
+      ? 'stat'
+      : requireEnum(obj, 'debuffSubKind', context, DEBUFF_SUB_KINDS_SET);
+  if (debuffSubKind === 'stat') {
+    const debuffStat = requireStatusEffectStat(obj, 'debuffStat', context);
+    const debuffDurationSec = requireNumber(obj, 'debuffDurationSec', context);
+    requireBuffOrDebuffModifier(
+      obj,
+      context,
+      'debuffMultiplier',
+      'debuffFlatBonus',
+    );
+    return normalizeSkillEffect({
+      target,
+      ...targetShapeFields,
+      ...combatModifiers,
+      type,
+      debuffSubKind,
+      debuffStat,
+      debuffDurationSec,
+      ...(typeof obj.debuffMultiplier === 'number'
+        ? { debuffMultiplier: obj.debuffMultiplier }
+        : {}),
+      ...(typeof obj.debuffFlatBonus === 'number'
+        ? { debuffFlatBonus: obj.debuffFlatBonus }
+        : {}),
+      ...sequenceTiming,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    });
+  }
+  if (debuffSubKind === 'dot') {
+    const durationSec = requireNumber(obj, 'durationSec', context);
+    const amount = parseEffectAmount(obj, context, 'debuff dot');
+    if (amount.kind !== 'atkBased' || amount.atkScale === undefined) {
+      invalidField(context, 'amount', 'debuff dot requires atkBased amount');
+    }
+    const damageType =
+      obj.damageType === undefined
+        ? undefined
+        : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
+    return normalizeSkillEffect({
+      target,
+      ...targetShapeFields,
+      ...combatModifiers,
+      type,
+      debuffSubKind,
+      durationSec,
+      powerMultiplier: amount.atkScale,
+      ...(damageType !== undefined ? { damageType } : {}),
+      ...sequenceTiming,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    });
+  }
+  const durationSec = requireNumber(obj, 'durationSec', context);
+  if (durationSec <= 0) {
+    invalidField(context, 'durationSec', 'must be a positive number');
+  }
+  return normalizeSkillEffect({
     target,
     ...targetShapeFields,
     ...combatModifiers,
     type,
-    debuffStat,
-    debuffDurationSec,
-    ...(typeof obj.debuffMultiplier === 'number'
-      ? { debuffMultiplier: obj.debuffMultiplier }
-      : {}),
-    ...(typeof obj.debuffFlatBonus === 'number'
-      ? { debuffFlatBonus: obj.debuffFlatBonus }
-      : {}),
+    debuffSubKind,
+    durationSec,
     ...sequenceTiming,
     ...presentation,
     ...(range !== undefined ? { range } : {}),
-  };
+  });
 }
 
 function requireStringArray(
@@ -1538,35 +1832,25 @@ function requirePassiveEffectParams(
           `${context}.targetRuleOverride`,
         ),
       };
-    case 'evasionChance':
+    case 'specialEffect': {
+      const specialEffectApplyTo =
+        obj.specialEffectApplyTo === undefined
+          ? 'damage'
+          : requireEnum(
+              obj,
+              'specialEffectApplyTo',
+              context,
+              SPECIAL_EFFECT_APPLY_TO_SET,
+            );
       return {
         ...base,
-        evasionChance: requireNumber(obj, 'evasionChance', context),
-      };
-    case 'block': {
-      const blockChance = requireNumber(obj, 'blockChance', context);
-      if (blockChance < 0 || blockChance > 1) {
-        invalidField(context, 'blockChance', 'must be between 0 and 1');
-      }
-      const targetRuleOverride = parseOptionalPassiveTarget(
-        obj,
-        'targetRuleOverride',
-        context,
-      );
-      return {
-        ...base,
-        blockChance,
-        ...(targetRuleOverride !== undefined ? { targetRuleOverride } : {}),
-      };
-    }
-    case 'damageIncrease':
-      return {
-        ...base,
-        damageIncrease: parseDamageIncreaseSpec(
-          obj.damageIncrease,
-          `${context}.damageIncrease`,
+        specialEffectApplyTo,
+        specialEffect: parseSpecialEffectSpec(
+          obj.specialEffect,
+          `${context}.specialEffect`,
         ),
       };
+    }
     case 'defenseIgnore':
       return {
         ...base,
@@ -1575,6 +1859,94 @@ function requirePassiveEffectParams(
           `${context}.defenseIgnore`,
         ),
       };
+    case 'buff': {
+      const buffSubKind =
+        obj.buffSubKind === undefined
+          ? 'stat'
+          : requireEnum(obj, 'buffSubKind', context, BUFF_SUB_KINDS_SET);
+      const buffTargetRule = parseOptionalPassiveTarget(
+        obj,
+        'buffTargetRule',
+        context,
+      );
+      if (buffSubKind === 'block' || buffSubKind === 'evasion') {
+        const chance = requireNumber(obj, 'chance', context);
+        if (chance < 0 || chance > 1) {
+          invalidField(context, 'chance', 'must be between 0 and 1');
+        }
+        return {
+          ...base,
+          buffSubKind,
+          chance,
+          ...(buffTargetRule !== undefined ? { buffTargetRule } : {}),
+        };
+      }
+      if (buffSubKind !== 'stat') {
+        invalidField(context, 'buffSubKind', 'passive buff supports stat/block/evasion');
+      }
+      const buffStatRaw = obj.buffStat;
+      if (buffStatRaw === undefined) {
+        missingField(context, 'buffStat');
+      }
+      const buffStatEntries = Array.isArray(buffStatRaw) ? buffStatRaw : [buffStatRaw];
+      const buffStat = buffStatEntries.map((entry, index) => {
+        const value = String(entry);
+        if (typeof entry !== 'string' || !BUFF_TARGET_KINDS_SET.has(value as import('../types.ts').BuffTargetKind)) {
+          invalidField(
+            context,
+            `buffStat[${index}]`,
+            `must be one of ${[...BUFF_TARGET_KINDS_SET].join(', ')}`,
+          );
+        }
+        return value;
+      }) as PassiveSkillDef['buffStat'];
+      requireBuffOrDebuffModifier(
+        obj,
+        context,
+        'buffMultiplier',
+        'buffFlatBonus',
+      );
+      return {
+        ...base,
+        buffSubKind,
+        buffStat,
+        ...(typeof obj.buffMultiplier === 'number'
+          ? { buffMultiplier: obj.buffMultiplier }
+          : {}),
+        ...(typeof obj.buffFlatBonus === 'number'
+          ? { buffFlatBonus: obj.buffFlatBonus }
+          : {}),
+        ...(buffTargetRule !== undefined ? { buffTargetRule } : {}),
+      };
+    }
+    case 'debuff': {
+      const debuffTargetRule: TargetSpec =
+        parseOptionalPassiveTarget(obj, 'debuffTargetRule', context) ?? {
+          kind: 'distance',
+          side: 'enemy',
+          order: 'nearest',
+        };
+      return {
+        ...base,
+        debuffTargetRule,
+        debuffStat: requireStatusEffectStat(obj, 'debuffStat', context),
+        ...(() => {
+          requireBuffOrDebuffModifier(
+            obj,
+            context,
+            'debuffMultiplier',
+            'debuffFlatBonus',
+          );
+          return {};
+        })(),
+        ...(typeof obj.debuffMultiplier === 'number'
+          ? { debuffMultiplier: obj.debuffMultiplier }
+          : {}),
+        ...(typeof obj.debuffFlatBonus === 'number'
+          ? { debuffFlatBonus: obj.debuffFlatBonus }
+          : {}),
+      };
+    }
     case 'periodicDispel': {
       const intervalSec = requireNumber(obj, 'intervalSec', context);
       if (intervalSec <= 0) {
@@ -1654,26 +2026,6 @@ function requirePassiveEffectParams(
         ...(excessHealSources !== undefined ? { excessHealSources } : {}),
       };
     }
-    case 'extendSelfAppliedDebuff': {
-      const extendSec = parseOptionalNumber(obj, 'extendSec', context);
-      const durationMultiplier = parseOptionalNumber(
-        obj,
-        'durationMultiplier',
-        context,
-      );
-      if (extendSec === undefined && durationMultiplier === undefined) {
-        invalidField(
-          context,
-          'extendSec',
-          'or durationMultiplier is required',
-        );
-      }
-      return {
-        ...base,
-        ...(extendSec !== undefined ? { extendSec } : {}),
-        ...(durationMultiplier !== undefined ? { durationMultiplier } : {}),
-      };
-    }
     case 'aoeCrowdBonus':
       return {
         ...base,
@@ -1684,17 +2036,10 @@ function requirePassiveEffectParams(
         ),
         maxExtraTargets: requireNumber(obj, 'maxExtraTargets', context),
       };
-    case 'healReceivedIncrease': {
-      const percent = requireNumber(obj, 'percent', context);
-      if (percent < 0) {
-        invalidField(context, 'percent', 'must be a non-negative number');
-      }
-      return { ...base, percent };
-    }
-    case 'counterChance': {
-      const counterChance = requireNumber(obj, 'counterChance', context);
-      if (counterChance < 0 || counterChance > 1) {
-        invalidField(context, 'counterChance', 'must be between 0 and 1');
+    case 'counter': {
+      const chance = requireNumber(obj, 'chance', context);
+      if (chance < 0 || chance > 1) {
+        invalidField(context, 'chance', 'must be between 0 and 1');
       }
       const responseSource =
         obj.counterResponses !== undefined
@@ -1710,7 +2055,7 @@ function requirePassiveEffectParams(
       }
       return {
         ...base,
-        counterChance,
+        chance,
         counterResponses,
         ...(counterRange !== undefined ? { counterRange } : {}),
       };
@@ -1762,6 +2107,8 @@ function requirePassiveEffectParams(
         ...(buffFlatBonusMax !== undefined ? { buffFlatBonusMax } : {}),
       };
     }
+    default:
+      invalidField(context, 'effect', `unsupported passive effect ${effect}`);
   }
 }
 
@@ -2086,16 +2433,45 @@ function parsePassives(raw: unknown): PassiveSkillDef[] {
     const context = `passives[${index}]`;
     const obj = requireRecord(entry, context);
     const effectRaw = requireString(obj, 'effect', context);
-    if (REMOVED_PASSIVE_EFFECTS.has(effectRaw)) {
+    const normalizedEffect =
+      LEGACY_PASSIVE_EFFECT_ALIASES[effectRaw] ?? effectRaw;
+    const effectObj: Record<string, unknown> = {
+      ...obj,
+      effect: normalizedEffect,
+    };
+
+    if (REMOVED_PASSIVE_EFFECTS.has(normalizedEffect)) {
       invalidField(
         context,
         'effect',
-        `${effectRaw} was removed; migrate to damageIncrease or excessHealToBarrier`,
+        `${effectRaw} was removed; migrate to specialEffect/buff/debuff/counter as needed`,
       );
     }
-    const normalizedEffect =
-      LEGACY_PASSIVE_EFFECT_ALIASES[effectRaw] ?? effectRaw;
-    const effectObj = { ...obj, effect: normalizedEffect };
+
+    if (effectRaw !== normalizedEffect) {
+      if (effectRaw === 'evasionChance') {
+        effectObj.buffSubKind = 'evasion';
+        effectObj.chance = obj.evasionChance;
+      } else if (effectRaw === 'block') {
+        effectObj.buffSubKind = 'block';
+        effectObj.chance = obj.blockChance;
+        effectObj.buffTargetRule =
+          obj.targetRuleOverride ?? obj.targetRule ?? obj.target;
+      } else if (effectRaw === 'counterChance') {
+        effectObj.chance = obj.counterChance;
+      } else if (effectRaw === 'damageIncrease') {
+        effectObj.specialEffectApplyTo = 'damage';
+        effectObj.specialEffect = obj.damageIncrease;
+      } else if (effectRaw === 'healReceivedIncrease') {
+        const percent = requireNumber(obj, 'percent', context);
+        effectObj.specialEffectApplyTo = 'heal';
+        effectObj.specialEffect = {
+          scale: 1 + percent,
+          conditions: [{ kind: 'targetHp', maxHpRatio: 1 }],
+        };
+      }
+    }
+
     const effect = requireEnum(
       effectObj,
       'effect',

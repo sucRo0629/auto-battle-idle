@@ -548,7 +548,7 @@ export class BattleCanvas implements IBattleRenderer {
     };
 
     const tintBufferSize = Math.ceil(
-      Math.max(size, getSheetCellSize(layout.spriteKey) * scale),
+      Math.max(size, getSheetCellSize(layout.spriteKey, layout.anim) * scale),
     );
 
     const buffGlow = this.buffGlows.getIntensity(

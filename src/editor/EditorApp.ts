@@ -1,4 +1,5 @@
 import type { AttackSpeedTier, EnemyTemplate } from '../battle/types.ts';
+import { normalizePassiveSkillForEditor } from '../battle/data/validateGameData.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 import type { BalanceDisplayMode } from './balanceReference.ts';
 import { BalanceEditorStep } from './BalanceEditorStep.ts';
@@ -200,7 +201,10 @@ export class EditorApp {
       ]);
       this.classes = classes;
       this.enemies = enemies;
-      this.skills = skills;
+      this.skills = {
+        ...skills,
+        passives: skills.passives.map(normalizePassiveSkillForEditor),
+      };
       this.syncBalanceRowsFromClasses();
       this.restoreDraftsAfterLoad();
       this.render();

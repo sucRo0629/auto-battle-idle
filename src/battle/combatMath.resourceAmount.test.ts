@@ -111,10 +111,9 @@ describe('resolveResourceAmount', () => {
 });
 
 describe('resolveHealAmount', () => {
-  const actor = mockCombatant({ atk: 100 });
   const target = mockCombatant({ hp: 50, maxHp: 100 });
 
-  it('applies passive and effect damageIncrease before healReceivedIncrease', () => {
+  it('applies effect special increase and incoming heal specialEffect', () => {
     const healer = mockCombatant({
       atk: 100,
       build: {
@@ -136,8 +135,9 @@ describe('resolveHealAmount', () => {
       healBoost: {
         id: 'healBoost',
         name: 'HealBoost',
-        effect: 'healReceivedIncrease',
-        percent: 0.25,
+        effect: 'specialEffect',
+        specialEffectApplyTo: 'heal',
+        specialEffect: { scale: 1.25, conditions: [] },
       },
     };
     const amount = resolveHealAmount(
@@ -146,7 +146,7 @@ describe('resolveHealAmount', () => {
       { kind: 'flat', flatAmount: 10 },
       passives,
       {
-        effectDamageIncrease: {
+        effectSpecialIncrease: {
           scale: 1.5,
           conditions: [{ kind: 'targetHp', maxHpRatio: 1 }],
         },

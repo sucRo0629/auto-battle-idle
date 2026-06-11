@@ -9,7 +9,6 @@ import {
   resolveApproachAttackBattleX,
   resolveAttackBattleX,
   resolveMaxEffectiveRangePx,
-  resolveBasicAttackRangePx,
   resolveApproachRangePx,
   leadingRowContactPlayer,
 } from './combatPosition.ts';

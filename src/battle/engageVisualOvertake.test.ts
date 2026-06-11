@@ -14,7 +14,6 @@ import {
   createStage1Wave1MeleeFirstDeathEngine,
   createStage1Wave2MeleeOnlyEngine,
   reachWave1Engage,
-  screenX,
   TICK_DT,
   waitForEngaged,
 } from './test/battleFieldSpec.harness.ts';

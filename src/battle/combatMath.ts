@@ -16,6 +16,7 @@ import {
 import {
   getPassiveOutgoingDamageMultiplier,
   resolveEffectDamageIncreaseMultiplier,
+  resolveOutgoingHealSpecialMultiplier,
   resolveIncomingHealAmount,
   type PassiveDamageContext,
 } from './passiveEffects.ts';
@@ -23,6 +24,7 @@ import {
   aggregateStatEffects,
   computeEffectiveStat,
 } from './statusEffectDisplay.ts';
+import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
 
 export function getPassiveDefs(
   combatant: CombatantState,
@@ -107,7 +109,7 @@ export function resolveResourceAmount(
 
 export interface HealResolveOptions {
   atkScaleOverride?: number;
-  effectDamageIncrease?: DamageIncreaseSpec;
+  effectSpecialIncrease?: DamageIncreaseSpec;
 }
 
 /** 直接 heal 用。damageIncrease（パッシブ + effect）→ healReceivedIncrease の順。HoT 非対象。 */
@@ -118,13 +120,10 @@ export function resolveHealAmount(
   passives: Record<string, PassiveSkillDef>,
   options: HealResolveOptions = {},
 ): number {
-  const increaseMul = resolveEffectDamageIncreaseMultiplier(
-    actor,
-    target,
-    options.effectDamageIncrease,
-    undefined,
-    passives,
-  );
+  const increaseMul = resolveOutgoingHealSpecialMultiplier(actor, target, passives);
+  const effectMul = options.effectSpecialIncrease
+    ? resolveDamageIncreaseMultiplier(actor, target, options.effectSpecialIncrease)
+    : 1;
   const baseAmount = Math.floor(
     resolvePowerAmount(
       actor,
@@ -132,7 +131,9 @@ export function resolveHealAmount(
       amount,
       passives,
       options.atkScaleOverride,
-    ) * increaseMul,
+    ) *
+      increaseMul *
+      effectMul,
   );
   return resolveIncomingHealAmount(target, baseAmount, passives);
 }
@@ -263,7 +264,7 @@ export function resolveDamage(
   effect: DamageSkillEffect,
   passives: Record<string, PassiveSkillDef>,
   atkScaleOverride?: number,
-  passiveContext: PassiveDamageContext = {},
+  passiveContext?: PassiveDamageContext,
 ): number;
 export function resolveDamage(
   attacker: CombatantState,
@@ -319,7 +320,7 @@ export function resolveDamage(
     options.statusDefenseIgnore,
   ];
 
-  const damageType: DamageType = effect.damageType;
+  const damageType: DamageType = effect.damageType ?? attacker.traits.damageType;
   const effectiveDef = applyDefenseIgnoreToDef(
     getEffectiveDef(target),
     ignoreSpecs,

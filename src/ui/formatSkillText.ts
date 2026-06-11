@@ -4,12 +4,18 @@ import {
 } from "../battle/skills/targetSpec.ts";
 import { resolveSkillTrigger } from "../battle/skillTrigger.ts";
 import {
+  BUFF_SUB_KIND_LABELS,
   DEBUFF_FILTER_TAG_LABELS,
+  DEBUFF_SUB_KIND_LABELS,
+  HEAL_SUB_KIND_LABELS,
+  SPECIAL_EFFECT_APPLY_TO_LABELS,
   TARGET_SHAPE_LABELS,
 } from "../battle/data/gameDataSchema.ts";
 import type {
   ActiveSkillDef,
+  BuffTargetKind,
   CounterResponseDef,
+  DamageIncreaseSpec,
   DamageIncreaseCondition,
   DamageType,
   PassiveSkillDef,
@@ -151,12 +157,40 @@ function formatDamageIncreaseCondition(
 }
 
 function formatDamageIncreaseSpec(
-  spec: PassiveSkillDef["damageIncrease"] | SkillEffectDef["damageIncrease"]
+  spec: DamageIncreaseSpec | undefined
 ): string {
   if (!spec) return "";
   const cond = spec.conditions.map(formatDamageIncreaseCondition).join("・");
   const base = `特効×${spec.scale}`;
   return cond ? `${base}（${cond}）` : base;
+}
+
+function formatSpecialEffectSpec(
+  applyTo: PassiveSkillDef["specialEffectApplyTo"] | undefined,
+  spec: DamageIncreaseSpec | undefined
+): string {
+  if (!spec) return "";
+  const head = `特効(${SPECIAL_EFFECT_APPLY_TO_LABELS[applyTo ?? "damage"]})`;
+  const body = formatDamageIncreaseSpec(spec);
+  return body ? `${head} ${body}` : head;
+}
+
+function formatBuffTargetStats(
+  stat: BuffTargetKind | BuffTargetKind[] | undefined,
+  multiplier: number | undefined,
+  flatBonus: number | undefined
+): string {
+  const list = Array.isArray(stat) ? stat : stat ? [stat] : [];
+  const stats = list.filter(
+    (entry): entry is StatusEffectStat =>
+      entry === "atk" ||
+      entry === "def" ||
+      entry === "reg" ||
+      entry === "damageTaken" ||
+      entry === "attackSpeed"
+  );
+  if (stats.length === 0) return "—";
+  return formatStatsWithModifier(stats, multiplier, flatBonus);
 }
 
 function formatDefenseIgnoreSpec(
@@ -264,25 +298,92 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       break;
     }
     case "heal":
-      extras.push(formatResourceAmount(effect.amount));
+      if (effect.healSubKind === "hot") {
+        extras.push(
+          `${HEAL_SUB_KIND_LABELS.hot} ${formatResourceAmount(effect.amount)} ${
+            effect.durationSec ?? 0
+          }s`
+        );
+      } else if (effect.healSubKind === "dispel") {
+        const tags =
+          effect.dispelTags && effect.dispelTags.length > 0
+            ? effect.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join("・")
+            : "全デバフ";
+        extras.push(
+          `${HEAL_SUB_KIND_LABELS.dispel} ${tags} ×${effect.dispelCount ?? 0}`
+        );
+      } else {
+        extras.push(
+          `${HEAL_SUB_KIND_LABELS[effect.healSubKind ?? "instant"]} ${formatResourceAmount(
+            effect.amount
+          )}`
+        );
+      }
+      const healInc = formatSpecialEffectSpec("heal", effect.damageIncrease);
+      if (healInc) extras.push(healInc);
       break;
     case "buff":
-      extras.push(
-        `${formatStatsWithModifier(
+      if (effect.buffSubKind === "barrier") {
+        const stack = effect.barrierStack ? "加算" : "置換";
+        extras.push(
+          `${BUFF_SUB_KIND_LABELS.barrier} ${formatResourceAmount(
+            effect.amount
+          )}（${stack}）`
+        );
+      } else if (effect.buffSubKind === "block") {
+        extras.push(
+          `${BUFF_SUB_KIND_LABELS.block} ${formatPercent(effect.chance ?? 0)} ${
+            effect.buffDurationSec ?? 0
+          }s`
+        );
+      } else if (effect.buffSubKind === "evasion") {
+        extras.push(
+          `${BUFF_SUB_KIND_LABELS.evasion} ${formatPercent(effect.chance ?? 0)} ${
+            effect.buffDurationSec ?? 0
+          }s`
+        );
+      } else {
+        const statLabel = formatBuffTargetStats(
           effect.buffStat,
           effect.buffMultiplier,
           effect.buffFlatBonus
-        )} ${effect.buffDurationSec}s`
-      );
+        );
+        extras.push(
+          `${BUFF_SUB_KIND_LABELS[effect.buffSubKind ?? "stat"]} ${statLabel} ${
+            effect.buffDurationSec ?? 0
+          }s`
+        );
+      }
       break;
     case "debuff":
-      extras.push(
-        `${formatStatsWithModifier(
+      if (effect.debuffSubKind === "dot") {
+        const dmgType = effect.damageType
+          ? DAMAGE_TYPE_LABELS[effect.damageType]
+          : "";
+        const power = dmgType
+          ? `${dmgType} ×${effect.powerMultiplier ?? 0}`
+          : `×${effect.powerMultiplier ?? 0}`;
+        extras.push(
+          `${DEBUFF_SUB_KIND_LABELS.dot} ${power} ${effect.durationSec ?? 0}s`
+        );
+        const inc = formatDamageIncreaseSpec(effect.damageIncrease);
+        if (inc) extras.push(inc);
+        const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);
+        if (ign) extras.push(ign);
+      } else if (effect.debuffSubKind === "stun") {
+        extras.push(`${DEBUFF_SUB_KIND_LABELS.stun} ${effect.durationSec ?? 0}s`);
+      } else {
+        const statLabel = formatStatsWithModifier(
           effect.debuffStat,
           effect.debuffMultiplier,
           effect.debuffFlatBonus
-        )} ${effect.debuffDurationSec}s`
-      );
+        );
+        extras.push(
+          `${DEBUFF_SUB_KIND_LABELS[effect.debuffSubKind ?? "stat"]} ${statLabel} ${
+            effect.debuffDurationSec ?? 0
+          }s`
+        );
+      }
       break;
     case "hot":
       extras.push(
@@ -384,6 +485,8 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
       return "デバフ解除";
     case "block":
       return "ブロック";
+    case "counter":
+      return "反撃";
     default:
       return kind;
   }
@@ -393,6 +496,15 @@ function formatPassiveEffect(
   effect: PassiveEffectKind,
   def: PassiveSkillDef
 ): string {
+  const legacy = def as PassiveSkillDef & {
+    evasionChance?: number;
+    blockChance?: number;
+    damageIncrease?: DamageIncreaseSpec;
+    percent?: number;
+    extendSec?: number;
+    durationMultiplier?: number;
+    counterChance?: number;
+  };
   switch (effect) {
     case "targetRuleOverride":
       return `ターゲット → ${formatTarget(def.targetRuleOverride, {
@@ -401,11 +513,13 @@ function formatPassiveEffect(
         order: "nearest",
       })}`;
     case "evasionChance":
-      return `回避 +${formatPercent(def.evasionChance ?? 0)}`;
+      return `回避 +${formatPercent(legacy.evasionChance ?? 0)}`;
     case "block":
-      return `ブロック ${formatPercent(def.blockChance ?? 0)}`;
+      return `ブロック ${formatPercent(legacy.blockChance ?? 0)}`;
     case "damageIncrease":
-      return formatDamageIncreaseSpec(def.damageIncrease) || "特効ダメージ";
+      return (
+        formatSpecialEffectSpec("damage", legacy.damageIncrease) || "特効ダメージ"
+      );
     case "damageReduction":
       return `被ダメ軽減 ${formatPercent(
         def.damageReductionPercent ?? 0
@@ -426,8 +540,18 @@ function formatPassiveEffect(
     }
     case "damageTakenToHeal":
       return `被ダメの ${formatPercent(def.ratio ?? 0)} を即時回復`;
+    case "specialEffect":
+      return (
+        formatSpecialEffectSpec(def.specialEffectApplyTo, def.specialEffect) ||
+        "特効効果"
+      );
     case "healReceivedIncrease":
-      return `被回復 +${formatPercent(def.percent ?? 0)}`;
+      return (
+        formatSpecialEffectSpec("heal", {
+          scale: 1 + (legacy.percent ?? 0),
+          conditions: [{ kind: "targetHp", maxHpRatio: 1 }],
+        }) || `被回復 +${formatPercent(legacy.percent ?? 0)}`
+      );
     case "hot": {
       const interval = def.intervalSec ?? 0;
       const duration = def.hotDurationSec ?? 0;
@@ -447,20 +571,54 @@ function formatPassiveEffect(
     }
     case "selfHpRatioBuff": {
       const statsLabel = formatStatsWithModifier(
-        def.buffStat,
+        (def.buffStat as StatusEffectStat | StatusEffectStat[] | undefined) ??
+          undefined,
         def.buffMultiplierMax,
         def.buffFlatBonusMax
       );
       const ratio = formatPercent(def.maxBuffAtHpRatio ?? 0);
       return `自HP比例バフ ${statsLabel}（残HP${ratio}以下時最大）`;
     }
+    case "buff": {
+      const target = formatTarget(def.buffTargetRule, { kind: "self" });
+      if (def.buffSubKind === "block") {
+        return `バフ ${BUFF_SUB_KIND_LABELS.block} ${formatPercent(
+          def.chance ?? 0
+        )} → ${target}`;
+      }
+      if (def.buffSubKind === "evasion") {
+        return `バフ ${BUFF_SUB_KIND_LABELS.evasion} ${formatPercent(
+          def.chance ?? 0
+        )} → ${target}`;
+      }
+      if (def.buffSubKind === "barrier") {
+        return `バフ ${BUFF_SUB_KIND_LABELS.barrier} → ${target}`;
+      }
+      return `バフ ${formatBuffTargetStats(
+        def.buffStat,
+        def.buffMultiplier,
+        def.buffFlatBonus
+      )} → ${target}`;
+    }
+    case "debuff": {
+      const target = formatTarget(def.debuffTargetRule, {
+        kind: "distance",
+        side: "enemy",
+        order: "nearest",
+      });
+      return `デバフ ${formatStatsWithModifier(
+        def.debuffStat,
+        def.debuffMultiplier,
+        def.debuffFlatBonus
+      )} → ${target}`;
+    }
     case "extendSelfAppliedDebuff": {
-      const parts = [`付与デバフ +${def.extendSec ?? 0}s`];
+      const parts = [`付与デバフ +${legacy.extendSec ?? 0}s`];
       if (
-        def.durationMultiplier !== undefined &&
-        def.durationMultiplier !== 1
+        legacy.durationMultiplier !== undefined &&
+        legacy.durationMultiplier !== 1
       ) {
-        parts.push(`時間×${def.durationMultiplier}`);
+        parts.push(`時間×${legacy.durationMultiplier}`);
       }
       return parts.join(" ");
     }
@@ -468,6 +626,7 @@ function formatPassiveEffect(
       return `密集 +${def.perExtraTargetScale ?? 0}/体（上限 ${
         def.maxExtraTargets ?? 0
       }）`;
+    case "counter":
     case "counterChance": {
       const responseParts = (def.counterResponses ?? []).map(
         formatCounterResponse
@@ -475,7 +634,7 @@ function formatPassiveEffect(
       const range =
         def.counterRange !== undefined ? `射程${def.counterRange}` : "";
       return [
-        `被攻撃時 ${formatPercent(def.counterChance ?? 0)} で反撃`,
+        `被攻撃時 ${formatPercent(def.chance ?? legacy.counterChance ?? 0)} で反撃`,
         responseParts.join(" / "),
         range,
       ]

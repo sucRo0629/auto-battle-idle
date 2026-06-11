@@ -45,9 +45,14 @@ export function getPassiveDefenseIgnoreSpec(
   attacker: CombatantState,
   passives: Record<string, PassiveSkillDef>,
 ): DefenseIgnoreSpec | undefined {
-  const specs = getPassiveDefs(attacker, passives)
-    .filter((passive) => passive.effect === 'defenseIgnore')
-    .map((passive) => passive.defenseIgnore);
+  const specs: Array<DefenseIgnoreSpec | undefined> = [];
+  for (const passive of getPassiveDefs(attacker, passives)) {
+    if (passive.effect !== 'defenseIgnore') continue;
+    const chance = passive.chance ?? 1;
+    if (chance > 0 && Math.random() <= Math.min(1, chance)) {
+      specs.push(passive.defenseIgnore);
+    }
+  }
   if (specs.length === 0) return undefined;
   return mergeDefenseIgnoreSpecs(specs);
 }

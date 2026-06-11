@@ -13,13 +13,14 @@ import levelCurvesJson from '../../data/levelCurves.json';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
 import { SkillExecutor } from './skills/SkillExecutor.ts';
 import { SkillSequenceRunner } from './skills/skillSequence.ts';
+import {
+  asBattleEngineInternals,
+  type BattleEngineInternals,
+} from './test/battleFieldSpec.harness.ts';
 
-type EngineInternals = BattleEngine & {
-  players: CombatantState[];
-  enemies: CombatantState[];
+type EngineInternals = BattleEngineInternals & {
   runUnitSkills: (actors: CombatantState[]) => void;
   tickCountTriggers: (unitId: string, kind: SkillTriggerKind) => void;
-  skillSequenceRunner: SkillSequenceRunner;
 };
 
 function mockUnit(
@@ -75,9 +76,9 @@ function createTestEngine(actives: Record<string, ActiveSkillDef>): {
     levelCurves,
     () => save.party,
     () => save.stageProgress.currentStageId,
-  ) as EngineInternals;
+  );
   engine.startBattle();
-  return { engine, gameData };
+  return { engine: asBattleEngineInternals(engine) as EngineInternals, gameData };
 }
 
 function trackSkillFires(engine: BattleEngine): string[] {
@@ -203,7 +204,7 @@ describe('count trigger consumption', () => {
     engine.players = [actor];
     engine.enemies = [];
 
-    const fired = trackSkillFires(engine);
+    const fired = trackSkillFires(engine as unknown as BattleEngine);
 
     for (let i = 0; i < 3; i++) {
       engine.tickCountTriggers(actor.id, 'hitsTaken');
@@ -247,7 +248,7 @@ describe('count trigger consumption', () => {
     engine.players = [actor];
     engine.enemies = [];
 
-    const fired = trackSkillFires(engine);
+    const fired = trackSkillFires(engine as unknown as BattleEngine);
 
     engine.skillSequenceRunner.beginUse('actor', 1);
     engine.tickCountTriggers(actor.id, 'hitsTaken');
@@ -286,7 +287,7 @@ describe('count trigger consumption', () => {
     engine.players = [actor];
     engine.enemies = [];
 
-    const fired = trackSkillFires(engine);
+    const fired = trackSkillFires(engine as unknown as BattleEngine);
 
     engine.runUnitSkills([actor]);
 

@@ -159,7 +159,7 @@
   {
     "id": "at_assassin",
     "role": "attacker",
-    "displayName": "双短剣",
+    "displayName": "双刃士",
     "epithetEn": "Assassin",
     "flavorJa": "敵の背後へ忍び込み、二刃で仕留める影",
     "formationRow": "front",
@@ -540,8 +540,7 @@
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "sp_alchemist_basic_attack",
     "passiveIds": [
-      "passive_alchemist_hot",
-      "passive_extend_debuff"
+      "passive_alchemist_hot"
     ],
     "skills": [
       {

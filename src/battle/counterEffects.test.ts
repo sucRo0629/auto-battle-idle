@@ -17,8 +17,8 @@ const passives: Record<string, PassiveSkillDef> = {};
 const counterChancePassive: PassiveSkillDef = {
   id: 'passive_counter_chance',
   name: '確率反撃',
-  effect: 'counterChance',
-  counterChance: 0.5,
+  effect: 'counter',
+  chance: 0.5,
   counterRange: 100,
   counterResponses: [
     { kind: 'damage', amount: { kind: 'flat', flatAmount: 25 } },
@@ -81,10 +81,6 @@ function counterStatus(
   };
 }
 
-const callbacks = {
-  emit: vi.fn(),
-  getAllCombatants: () => [] as CombatantState[],
-};
 
 describe('isCounterInTriggerRange', () => {
   it('allows melee contact when counter range is 0', () => {

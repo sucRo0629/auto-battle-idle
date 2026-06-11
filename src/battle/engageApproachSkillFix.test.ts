@@ -9,43 +9,23 @@ import { createDefaultSave } from '../progression/victoryRewards.ts';
 import { isRangedAttack } from './data/entityTraits.ts';
 import { shouldSkipEngagedAutoApproach } from './resolveApproachBattleX.ts';
 import {
+  asBattleEngineInternals,
   createStage1Engine,
   reachWave2Engage,
   TICK_DT,
 } from './test/battleFieldSpec.harness.ts';
 
-type InternalEngine = BattleEngine & {
-  players: Array<{
-    id: string;
-    name: string;
-    battleX: number;
-    visualX: number;
-    hp: number;
-    isAlive: boolean;
-    formationRow: string;
-    cooldowns: Array<{ remaining: number; slotKind: string; skillId: string }>;
-  }>;
-  enemies: Array<{
-    id: string;
-    name: string;
-    battleX: number;
-    visualX: number;
-    hp: number;
-    isAlive: boolean;
-    cooldowns: Array<{ remaining: number; slotKind: string }>;
-  }>;
-  skillSequenceRunner: {
-    isActorBusy: (id: string) => boolean;
-    isActorInSkillMotion: (id: string) => boolean;
-  };
-};
-
 describe('engage approach skill fixes', () => {
   it('wave2: iron guard approaches while active useDuration lock is active', () => {
     const engine = createStage1Engine();
     reachWave2Engage(engine);
-    const internal = engine as unknown as InternalEngine;
+    const internal = asBattleEngineInternals(engine);
     const iron = internal.players.find((p) => p.name === '鉄衛士')!;
+    for (const enemy of internal.enemies) {
+      if (!enemy.isAlive) continue;
+      enemy.battleX = iron.battleX + 200;
+    }
+    internal.skillSequenceRunner.beginUse(iron.id, 2);
     const startX = iron.battleX;
 
     let movedWhileUseLocked = false;
@@ -66,7 +46,7 @@ describe('engage approach skill fixes', () => {
   it('ally back row attacks from formation depth when enemy enters range', () => {
     const engine = createStage1Engine();
     reachWave2Engage(engine);
-    const internal = engine as unknown as InternalEngine;
+    const internal = asBattleEngineInternals(engine);
     const archer = internal.players.find((p) => p.name === '弓術士')!;
     const front = internal.players.filter(
       (p) => p.isAlive && p.formationRow === 'front',
@@ -111,7 +91,7 @@ describe('engage approach skill fixes', () => {
   it('ally back row attacks while front row is still approaching', () => {
     const engine = createStage1Engine();
     reachWave2Engage(engine);
-    const internal = engine as unknown as InternalEngine;
+    const internal = asBattleEngineInternals(engine);
 
     for (const unit of internal.players) {
       if (!unit.isAlive || unit.formationRow !== 'front') continue;
@@ -159,7 +139,7 @@ describe('engage approach skill fixes', () => {
     );
     engine.startBattle();
     reachWave2Engage(engine);
-    const internal = engine as unknown as InternalEngine;
+    const internal = asBattleEngineInternals(engine);
 
     for (const unit of internal.players) {
       if (!unit.isAlive || unit.formationRow !== 'front') continue;

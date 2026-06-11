@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { CombatantState, GameData } from './types.ts';
 import {
   engagedMinBodyGap,
-  enemyRangedRearGap,
 } from './battleConstants.ts';
 import {
   resolvePlayerApproachBattleX,
@@ -298,7 +297,7 @@ describe('resolvePlayerApproachBattleX', () => {
       id: 'enchanter',
       formationRow: 'back',
       battleX: 60,
-      traits: { rangePx: 55, damageType: 'magic', basicAttackVfx: { preset: 'magic' } },
+      traits: { rangePx: 55, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
       build: {
         learnedPassiveIds: [],
@@ -662,13 +661,6 @@ describe('resolvePlayerApproachBattleX', () => {
       traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });
-    const melee = mockCombatant({
-      id: 'melee',
-      isEnemy: true,
-      battleX: 200,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
-      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
-    });
     const ranged = mockCombatant({
       id: 'ranged',
       isEnemy: true,
@@ -751,7 +743,7 @@ describe('resolveEnemyBasicAttackTarget', () => {
       id: 'enchanter',
       formationRow: 'back',
       battleX: 80,
-      traits: { rangePx: 55, damageType: 'magic', basicAttackVfx: { preset: 'magic' } },
+      traits: { rangePx: 55, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
       cooldowns: [],
       build: {
         learnedPassiveIds: [],

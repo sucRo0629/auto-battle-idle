@@ -14,8 +14,10 @@ const registry: SkillRegistry = {
     cls_passive_lv5: {
       id: 'cls_passive_lv5',
       name: 'Passive5',
-      effect: 'evasionChance',
-      evasionChance: 0.1,
+      effect: 'buff',
+      buffSubKind: 'evasion',
+      chance: 0.1,
+      buffTargetRule: { kind: 'self' },
     },
   },
   actives: {

@@ -2,12 +2,10 @@ import type {
   CombatantState,
   FormationRow,
   GameData,
-  MoveSkillEffect,
   Role,
 } from './types.ts';
 import { isMeleeRangePx } from './types.ts';
 import {
-  resolveFormationRangePx,
   resolveMaxEffectiveRangePx,
 } from './combatPosition.ts';
 import {
@@ -21,7 +19,6 @@ import {
   ROW_X,
   MOVE_PX_PER_SEC,
   moveDeltaPx,
-  SPRITE_GAP,
   SPRITE_WIDTH,
   engagedFrontLineGap,
   engagedMinBodyGap,
@@ -29,12 +26,17 @@ import {
   enemyRangedRearGap,
 } from './battleConstants.ts';
 import {
-  comparePartyFormationSlot,
   computePartyFormationBattleX,
   partyFormationDepthPx,
   type PartyFormationUnit,
 } from './partyFormation.ts';
 import type { DamageType } from './types.ts';
+
+/** Placement row sort input; rangePx defaults to 0 when omitted. */
+type FormationSlotUnit = Pick<
+  PlayerPlacementInput,
+  'id' | 'role' | 'formationRow' | 'isAlive'
+> & { rangePx?: number };
 
 export interface PlayerPlacementInput {
   id: string;
@@ -114,10 +116,6 @@ function prefersLeftOnOverlap(row: FormationRow, role: Role): boolean {
 
 function livingPlayers(players: PlayerPlacementInput[]): PlayerPlacementInput[] {
   return players.filter((p) => p.isAlive);
-}
-
-function rowDepthOffset(from: FormationRow, to: FormationRow): number {
-  return ROW_X[to] - ROW_X[from];
 }
 
 function resolvePairOverlap(
@@ -522,7 +520,7 @@ export function resolveStablePlayerEngagedVisuals(
     engagedVisualLaneX?: number;
   }>,
   contactBattleX: number,
-  battleVisualOffset: number,
+  _battleVisualOffset: number,
   leadingRow: FormationRow | null = null,
   useAbsoluteRear: boolean = false,
 ): Map<string, number> {
@@ -960,16 +958,8 @@ function restorePlayers(
 }
 
 function formationSlotInRow(
-  player: Pick<
-    PlayerPlacementInput,
-    'id' | 'role' | 'formationRow' | 'isAlive' | 'rangePx'
-  >,
-  rowPlayers: Array<
-    Pick<
-      PlayerPlacementInput,
-      'id' | 'role' | 'formationRow' | 'isAlive' | 'rangePx'
-    >
-  >,
+  player: FormationSlotUnit,
+  rowPlayers: FormationSlotUnit[],
 ): number {
   const row = player.formationRow;
   const sorted = sortPlayersInFormationRow(
@@ -988,12 +978,7 @@ function formationSlotInRow(
 }
 
 export function getFormationRestoreGroups(
-  players: Array<
-    Pick<
-      PlayerPlacementInput,
-      'id' | 'role' | 'formationRow' | 'isAlive' | 'rangePx'
-    >
-  >,
+  players: FormationSlotUnit[],
 ): FormationRestoreGroups {
   const living = players.filter((p) => p.isAlive);
   const leadIds = new Set<string>();
@@ -1061,12 +1046,7 @@ export function isFormationSpacingRestored(
 }
 
 export function resolveFormationScreenTargets(
-  players: Array<
-    Pick<
-      PlayerPlacementInput,
-      'id' | 'role' | 'formationRow' | 'isAlive' | 'rangePx'
-    > & { rangePx?: number }
-  >,
+  players: FormationSlotUnit[],
 ): Map<string, number> {
   const living = players.filter((p) => p.isAlive);
   return computePlayerPositions(
@@ -1120,7 +1100,7 @@ export interface CompensatedFormationResetState {
 
 export function tickCompensatedFormationReset(
   state: CompensatedFormationResetState,
-  combatCameraX: number = 0,
+  _combatCameraX: number = 0,
   deltaTime: number,
   spacingPxPerSec: number = MOVE_PX_PER_SEC,
 ): { phase: FormationRestorePhase; combatCameraX: number } {

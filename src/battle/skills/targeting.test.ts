@@ -29,15 +29,6 @@ function damageEffect(
   } as SkillEffectDef;
 }
 
-function moveEffect(fields: Record<string, unknown>, rule: TargetRule) {
-  return {
-    type: 'move',
-    moveDurationSec: 0.2,
-    target: normalizeTarget(rule),
-    ...fields,
-  } as SkillEffectDef;
-}
-
 function mockGameData(basicRange = 50): GameData {
   return {
     classRegistry: {},
@@ -77,6 +68,7 @@ function mockUnit(
     def?: number;
     reg?: number;
     rangePx?: number;
+    formationRow?: CombatantState['formationRow'];
   } = {},
 ): CombatantState {
   const maxHp = opts.maxHp ?? 100;
@@ -92,7 +84,7 @@ function mockUnit(
     isAlive: hp > 0,
     role: opts.isEnemy ? 'attacker' : 'attacker',
     classId: opts.isEnemy ? 'test_enemy' : 'at_sorcerer',
-    formationRow: 'back',
+    formationRow: opts.formationRow ?? 'back',
     traits: {
       rangePx: opts.rangePx ?? 55,
       damageType: 'physical',
@@ -454,7 +446,7 @@ describe('resolveEffectTargets', () => {
         amount: { kind: 'atkBased', atkScale: 1 },
         targetShape: 'aoe',
         aoeRadiusPx: 50,
-      },
+      } as SkillEffectDef,
       healer,
       party,
       enemies,
@@ -478,12 +470,12 @@ describe('resolveEffectTargets', () => {
       remainingSec: 5,
     });
     const clean = mockUnit('clean', 280, { isEnemy: true });
-    const effect = {
-      type: 'damage' as const,
-      target: { kind: "status", side: "enemy", debuffTags: ["def"] } as const,
-      targetDebuffFilter: ['def'] as const,
-      damageType: 'physical' as const,
-      amount: { kind: 'flat' as const, flatAmount: 10 },
+    const effect: SkillEffectDef = {
+      type: 'damage',
+      target: { kind: 'status', side: 'enemy', debuffTags: ['def'] },
+      targetDebuffFilter: ['def'],
+      damageType: 'physical',
+      amount: { kind: 'flat', flatAmount: 10 },
     };
     const anchor = resolveEffectAnchor(
       effect,

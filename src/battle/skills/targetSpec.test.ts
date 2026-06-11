@@ -20,6 +20,7 @@ function mockUnit(
     damageType?: 'physical' | 'magic';
     statusEffects?: CombatantState['statusEffects'];
     barrierHp?: number;
+    threat?: number;
   } = {},
 ): CombatantState {
   const maxHp = opts.maxHp ?? 100;
@@ -55,6 +56,7 @@ function mockUnit(
     battleX,
     visualX: battleX,
     corpseVisible: true,
+    ...(opts.threat !== undefined ? { threat: opts.threat } : {}),
   };
 }
 
@@ -172,7 +174,7 @@ describe('getTargetPool / pickTargetFromPool', () => {
       kind: 'status',
       side: 'enemy',
       debuffTags: ['def'],
-    } as const;
+    } as const satisfies import('../types.ts').TargetSpec;
     const pool = getTargetPool(spec, actor, allies, [enemies[0]!, debuffed]);
     expect(pool.map((u) => u.id)).toEqual(['e2']);
   });

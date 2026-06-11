@@ -4,17 +4,17 @@ import {
   applyExcessHealToBarrierFromPassive,
   getPassiveDamageIncreaseMultiplier,
   getPassiveOutgoingDamageMultiplier,
-  resolveDebuffDurationWithPassives,
   resolveIncomingHealAmount,
   applyPassiveHotFromPassive,
   getPeriodicHotReady,
   initializePeriodicHotStates,
   syncHotAuras,
-  syncBlockAuras,
+  syncBuffAuras,
   syncDamageReductionAuras,
   syncSelfHpRatioBuffAuras,
   resolveSelfHpRatioBuffScale,
   tickPeriodicHotStates,
+  rollsEvasion,
 } from './passiveEffects.ts';
 import { aggregateStatStatusEffects } from './statusEffectDisplay.ts';
 
@@ -58,14 +58,17 @@ const passives: Record<string, PassiveSkillDef> = {
   evade: {
     id: 'evade',
     name: 'Evade',
-    effect: 'evasionChance',
-    evasionChance: 1,
+    effect: 'buff',
+    buffSubKind: 'evasion',
+    chance: 1,
+    buffTargetRule: { kind: 'self' },
   },
   dotBonus: {
     id: 'dotBonus',
     name: 'DotBonus',
-    effect: 'damageIncrease',
-    damageIncrease: {
+    effect: 'specialEffect',
+    specialEffectApplyTo: 'damage',
+    specialEffect: {
       scale: 2,
       conditions: [{ kind: 'debuff', tags: ['dot'] }],
     },
@@ -128,8 +131,9 @@ describe('passiveEffects', () => {
       healBoost: {
         id: 'healBoost',
         name: 'HealBoost',
-        effect: 'healReceivedIncrease',
-        percent: 0.25,
+        effect: 'specialEffect',
+        specialEffectApplyTo: 'heal',
+        specialEffect: { scale: 1.25, conditions: [] },
       },
     };
     expect(resolveIncomingHealAmount(target, 100, healPassives)).toBe(125);
@@ -150,17 +154,19 @@ describe('passiveEffects', () => {
       a: {
         id: 'a',
         name: 'A',
-        effect: 'healReceivedIncrease',
-        percent: 0.1,
+        effect: 'specialEffect',
+        specialEffectApplyTo: 'heal',
+        specialEffect: { scale: 1.1, conditions: [] },
       },
       b: {
         id: 'b',
         name: 'B',
-        effect: 'healReceivedIncrease',
-        percent: 0.15,
+        effect: 'specialEffect',
+        specialEffectApplyTo: 'heal',
+        specialEffect: { scale: 1.15, conditions: [] },
       },
     };
-    expect(resolveIncomingHealAmount(target, 100, healPassives)).toBe(125);
+    expect(resolveIncomingHealAmount(target, 100, healPassives)).toBe(126);
   });
 
   it('applyExcessHealToBarrierFromPassive converts overheal and replaces barrier', () => {
@@ -226,24 +232,18 @@ describe('passiveEffects', () => {
     ).toBe(1);
   });
 
-  it('resolveDebuffDurationWithPassives extends duration', () => {
-    const extendPassives: Record<string, PassiveSkillDef> = {
-      extend: {
-        id: 'extend',
-        name: 'Extend',
-        effect: 'extendSelfAppliedDebuff',
-        extendSec: 2,
-      },
-    };
-    const actor = mockAlly({
-      id: 'actor',
-      build: {
-        learnedPassiveIds: ['extend'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
+  it('rollsEvasion uses evasion overlay from status effects', () => {
+    const unit = mockAlly({ id: 'unit' });
+    unit.statusEffects.push({
+      id: 'evasion_buff',
+      kind: 'buff',
+      overlay: 'evasion',
+      evasionChance: 1,
+      multiplier: 1,
+      durationSec: 5,
+      remainingSec: 5,
     });
-    expect(resolveDebuffDurationWithPassives(actor, 4, extendPassives)).toBe(6);
+    expect(rollsEvasion(unit, {})).toBe(true);
   });
 
   it('syncHotAuras applies hot overlay to the selected target only', () => {
@@ -330,14 +330,16 @@ describe('passiveEffects', () => {
     expect(ally.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
   });
 
-  it('syncBlockAuras applies block overlay on self without atk badge', () => {
+  it('syncBuffAuras applies block overlay on self without atk badge', () => {
     const blockPassives = {
       ...passives,
       df_guardian_passive_1: {
         id: 'df_guardian_passive_1',
         name: '守勢',
-        effect: 'block' as const,
-        blockChance: 0.15,
+        effect: 'buff' as const,
+        buffSubKind: 'block' as const,
+        chance: 0.15,
+        buffTargetRule: { kind: 'self' as const },
       },
     };
     const guard = mockAlly({
@@ -348,7 +350,7 @@ describe('passiveEffects', () => {
         equippedActiveSlots: [],
       },
     });
-    syncBlockAuras([guard], [], blockPassives);
+    syncBuffAuras([guard], [], blockPassives);
     const blockEffect = guard.statusEffects.find((e) => e.overlay === 'block');
     expect(blockEffect?.blockChance).toBe(0.15);
     expect(blockEffect?.stat).toBeUndefined();
@@ -404,7 +406,7 @@ describe('passiveEffects', () => {
         name: 'Aura',
         effect: 'hot' as const,
         hotTargetRule: { kind: 'self' as const },
-        hotAmount: { kind: 'flat', flatAmount: 2 },
+        hotAmount: { kind: 'flat' as const, flatAmount: 2 },
         hotDurationSec: 8,
       },
     };
@@ -427,7 +429,7 @@ describe('passiveEffects', () => {
         name: 'Aura',
         effect: 'hot' as const,
         hotTargetRule: { kind: 'self' as const },
-        hotAmount: { kind: 'flat', flatAmount: 2 },
+        hotAmount: { kind: 'flat' as const, flatAmount: 2 },
         intervalSec: 5,
       },
     };
@@ -444,7 +446,7 @@ describe('passiveEffects', () => {
   });
 
   it('resolveSelfHpRatioBuffScale scales from full HP to max ratio', () => {
-    const unit = mockAlly({ hp: 100, maxHp: 100 });
+    const unit = mockAlly({ id: 'unit', hp: 100, maxHp: 100 });
     expect(resolveSelfHpRatioBuffScale(unit, 0)).toBe(0);
     unit.hp = 50;
     expect(resolveSelfHpRatioBuffScale(unit, 0)).toBeCloseTo(0.5, 5);
@@ -453,7 +455,7 @@ describe('passiveEffects', () => {
   });
 
   it('resolveSelfHpRatioBuffScale ignores barrierHp', () => {
-    const unit = mockAlly({ hp: 100, maxHp: 100, barrierHp: 80 });
+    const unit = mockAlly({ id: 'unit', hp: 100, maxHp: 100, barrierHp: 80 });
     expect(resolveSelfHpRatioBuffScale(unit, 0)).toBe(0);
     unit.hp = 50;
     unit.barrierHp = 100;
@@ -499,7 +501,7 @@ describe('passiveEffects', () => {
         name: 'Aura',
         effect: 'hot' as const,
         hotTargetRule: { kind: 'self' as const },
-        hotAmount: { kind: 'flat', flatAmount: 2 },
+        hotAmount: { kind: 'flat' as const, flatAmount: 2 },
         intervalSec: 3,
       },
     };

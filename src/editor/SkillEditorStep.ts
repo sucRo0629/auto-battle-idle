@@ -1,18 +1,25 @@
 import {
   ATTACK_SPEED_TIER_LABELS,
   ATTACK_SPEED_TIER_OPTIONS,
+  BUFF_SUB_KIND_LABELS,
+  BUFF_SUB_KINDS,
+  DEBUFF_SUB_KIND_LABELS,
+  DEBUFF_SUB_KINDS,
   DAMAGE_TYPE_OPTIONS,
+  EDITOR_ACTIVE_EFFECT_CATEGORIES,
+  EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS,
+  EDITOR_PASSIVE_EFFECT_KIND_OPTIONS,
+  HEAL_SUB_KIND_LABELS,
+  HEAL_SUB_KINDS,
   MOVE_MODE_LABELS,
   MOVE_MODES,
   PASSIVE_EFFECT_KIND_LABELS,
-  PASSIVE_EFFECT_KIND_OPTIONS,
   COUNTER_RESPONSE_KIND_LABELS,
   COUNTER_RESPONSE_KINDS,
   RESOURCE_AMOUNT_KIND_LABELS,
   RESOURCE_AMOUNT_KIND_OPTIONS,
   SKILL_EFFECT_ANIM_LABELS,
   SKILL_EFFECT_ANIM_OPTIONS,
-  SKILL_EFFECT_KIND_OPTIONS,
   SKILL_TRIGGER_KIND_LABELS,
   SKILL_TRIGGER_KIND_OPTIONS,
   SKILL_TRIGGER_VALUE_LABELS,
@@ -21,6 +28,7 @@ import {
   TARGET_SHAPE_OPTIONS,
   VFX_PRESET_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
+import { normalizePassiveSkillForEditor } from '../battle/data/validateGameData.ts';
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
@@ -28,14 +36,12 @@ import type {
   CounterResponseKind,
   CounterSkillEffect,
   MoveSkillEffect,
-  PassiveEffectKind,
   PassiveSkillDef,
   ResourceAmountSpec,
   SkillEffectAnimId,
   SkillEffectDef,
   SkillEffectKind,
   SkillTriggerKind,
-  SkillVfxDef,
   SkillVfxPresetId,
   StatusEffectStat,
   TargetShape,
@@ -58,9 +64,12 @@ import {
   appendDamageIncreaseFields,
   appendPassiveDamageIncreaseFields,
   appendPassiveDefenseIgnoreFields,
+  appendPassiveDebuffFields,
   appendPassiveDispelFields,
   appendPassiveDamageReductionFields,
   appendPassiveHotFields,
+  appendPassiveBuffFields,
+  appendPassiveSpecialEffectFields,
   appendTargetSpecFields,
 } from './skillEditorCombatFields.ts';
 import {
@@ -75,22 +84,6 @@ import {
   createTextInput,
   preserveScrollDuring,
 } from './formUtils.ts';
-
-const EFFECT_KIND_LABELS: Record<SkillEffectKind, string> = {
-  damage: 'ダメージ',
-  heal: '回復',
-  buff: 'バフ',
-  debuff: 'デバフ',
-  hot: 'HOT',
-  dot: 'DOT',
-  barrier: 'バリア',
-  move: '移動',
-  stun: 'スタン',
-  knockback: 'ノックバック',
-  dispel: 'デバフ解除',
-  block: 'ブロック付与',
-  counter: '反撃',
-};
 
 const STAT_LABELS: Record<StatusEffectStat, string> = {
   atk: '攻撃',
@@ -417,7 +410,9 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.blockChance ??= 0.15;
       break;
     case 'damageIncrease':
-      passive.damageIncrease ??= {
+    case 'specialEffect':
+      passive.specialEffectApplyTo ??= 'damage';
+      passive.specialEffect ??= {
         scale: 1.2,
         conditions: [{ kind: 'debuff', tags: ['def'] }],
       };
@@ -463,9 +458,27 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.percent ??= 0.2;
       break;
     case 'counterChance':
+    case 'counter':
       passive.counterChance ??= 0.3;
+      passive.chance ??= passive.counterChance;
       passive.counterResponses ??= [defaultCounterResponse('damage')];
       passive.counterRange ??= 0;
+      break;
+    case 'buff':
+      passive.buffSubKind ??= 'stat';
+      passive.buffTargetRule ??= { kind: 'self' };
+      passive.buffStat ??= 'atk';
+      passive.buffMultiplier ??= 1.2;
+      break;
+    case 'debuff':
+      passive.debuffSubKind ??= 'stat';
+      passive.debuffTargetRule ??= {
+        kind: 'distance',
+        side: 'enemy',
+        order: 'nearest',
+      };
+      passive.debuffStat ??= 'atk';
+      passive.debuffMultiplier ??= 0.9;
       break;
   }
 }
@@ -474,6 +487,7 @@ function passiveToCounterEffect(passive: PassiveSkillDef): CounterSkillEffect {
   return {
     type: 'counter',
     target: { kind: 'self' },
+    chance: passive.chance ?? passive.counterChance,
     durationSec: 5,
     range: passive.counterRange,
     responses: passive.counterResponses ?? [defaultCounterResponse('damage')],
@@ -486,6 +500,87 @@ function applyCounterEffectToPassive(
 ): void {
   passive.counterRange = effect.range;
   passive.counterResponses = effect.responses;
+  if (effect.chance !== undefined) {
+    passive.chance = effect.chance;
+    passive.counterChance = effect.chance;
+  }
+}
+
+type EditorActiveEffectCategory =
+  (typeof EDITOR_ACTIVE_EFFECT_CATEGORIES)[number];
+
+function categoryToEffectType(category: EditorActiveEffectCategory): SkillEffectKind {
+  return category;
+}
+
+function effectTypeToCategory(type: SkillEffectDef['type']): EditorActiveEffectCategory {
+  if ((EDITOR_ACTIVE_EFFECT_CATEGORIES as readonly string[]).includes(type)) {
+    return type as EditorActiveEffectCategory;
+  }
+  if (type === 'hot') return 'heal';
+  if (type === 'dot' || type === 'stun' || type === 'dispel' || type === 'block') {
+    return 'debuff';
+  }
+  if (type === 'barrier') return 'buff';
+  return 'damage';
+}
+
+function normalizeLegacyEffect(effect: SkillEffectDef): SkillEffectDef {
+  if (effect.type === 'hot') {
+    return {
+      ...effect,
+      type: 'heal',
+      healSubKind: 'hot',
+      amount: effect.amount,
+      durationSec: effect.durationSec,
+    } as SkillEffectDef;
+  }
+  if (effect.type === 'dot') {
+    return {
+      ...effect,
+      type: 'debuff',
+      debuffSubKind: 'dot',
+      durationSec: effect.durationSec,
+      powerMultiplier: effect.powerMultiplier,
+      damageType: effect.damageType,
+    } as SkillEffectDef;
+  }
+  if (effect.type === 'stun') {
+    return {
+      ...effect,
+      type: 'debuff',
+      debuffSubKind: 'stun',
+      durationSec: effect.durationSec,
+    } as SkillEffectDef;
+  }
+  if (effect.type === 'dispel') {
+    return {
+      ...effect,
+      type: 'heal',
+      healSubKind: 'dispel',
+      dispelTags: effect.dispelTags,
+      dispelCount: effect.dispelCount,
+    } as SkillEffectDef;
+  }
+  if (effect.type === 'barrier') {
+    return {
+      ...effect,
+      type: 'buff',
+      buffSubKind: 'barrier',
+      amount: effect.amount,
+      barrierStack: effect.barrierStack,
+    } as SkillEffectDef;
+  }
+  if (effect.type === 'block') {
+    return {
+      ...effect,
+      type: 'buff',
+      buffSubKind: 'block',
+      chance: effect.blockChance,
+      buffDurationSec: effect.durationSec,
+    } as SkillEffectDef;
+  }
+  return effect;
 }
 
 function normalizeEffectAmount(effect: {
@@ -809,11 +904,17 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         amount: defaultResourceAmount(),
       };
     case 'heal':
-      return { target, type: 'heal', amount: defaultResourceAmount() };
+      return {
+        target,
+        type: 'heal',
+        healSubKind: 'instant',
+        amount: defaultResourceAmount(),
+      };
     case 'buff':
       return {
         target,
         type: 'buff',
+        buffSubKind: 'stat',
         buffStat: 'atk',
         buffMultiplier: 1.2,
         buffDurationSec: 5,
@@ -822,6 +923,7 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
       return {
         target,
         type: 'debuff',
+        debuffSubKind: 'stat',
         debuffStat: 'def',
         debuffMultiplier: 0.8,
         debuffDurationSec: 5,
@@ -867,6 +969,7 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
       return {
         target: { kind: 'self' },
         type: 'counter',
+        chance: 0.3,
         responses: [defaultCounterResponse('damage')],
         durationSec: 5,
         range: 0,
@@ -1315,6 +1418,19 @@ export class SkillEditorStep {
   private renderPassive(parent: HTMLElement, index: number, idReadonly: boolean): void {
     const passive = this.options.getEntries()[index]?.passive;
     if (!passive) return;
+
+    const normalizedPassive = normalizePassiveSkillForEditor(passive);
+    if (normalizedPassive.effect !== passive.effect) {
+      this.patchPassive(
+        index,
+        (current) => {
+          Object.assign(current, normalizedPassive);
+        },
+        { rerender: true },
+      );
+      return;
+    }
+
     const grid = appendGrid(parent);
     grid.appendChild(
       createFieldRow(
@@ -1357,7 +1473,7 @@ export class SkillEditorStep {
         '効果種別',
         createSelect(
           passive.effect,
-          PASSIVE_EFFECT_KIND_OPTIONS.map((value) => ({
+          EDITOR_PASSIVE_EFFECT_KIND_OPTIONS.map((value) => ({
             value,
             label: PASSIVE_EFFECT_KIND_LABELS[value],
           })),
@@ -1391,34 +1507,12 @@ export class SkillEditorStep {
         );
         break;
       case 'evasionChance':
-        effectGrid.appendChild(
-          createFieldRow(
-            '回避率 (0–1)',
-            createNumberInput(
-              passive.evasionChance ?? 0,
-              (evasionChance) => {
-                this.patchPassive(index, (current) => {
-                  current.evasionChance = evasionChance;
-                }, { rerender: false });
-              },
-              { min: 0, step: 0.01 },
-            ),
-          ),
-        );
-        break;
       case 'block':
         effectGrid.appendChild(
-          createFieldRow(
-            'ブロック率 (0–1)',
-            createNumberInput(
-              passive.blockChance ?? 0,
-              (blockChance) => {
-                this.patchPassive(index, (current) => {
-                  current.blockChance = blockChance;
-                }, { rerender: false });
-              },
-              { min: 0, max: 1, step: 0.01 },
-            ),
+          createEl(
+            'p',
+            'editor-hint',
+            '旧パッシブ種別です。新規作成は「バフ（evasion/block）」を使用してください。',
           ),
         );
         break;
@@ -1455,17 +1549,10 @@ export class SkillEditorStep {
         break;
       case 'healReceivedIncrease':
         effectGrid.appendChild(
-          createFieldRow(
-            '増加率 (0–1)',
-            createNumberInput(
-              passive.percent ?? 0,
-              (percent) => {
-                this.patchPassive(index, (current) => {
-                  current.percent = percent;
-                }, { rerender: false });
-              },
-              { min: 0, step: 0.01 },
-            ),
+          createEl(
+            'p',
+            'editor-hint',
+            '旧パッシブ種別です。新規作成は「特効効果（applyTo=heal）」を使用してください。',
           ),
         );
         break;
@@ -1518,7 +1605,7 @@ export class SkillEditorStep {
               } else {
                 currentSources.delete(source);
               }
-              const next = [...currentSources];
+              const next = [...currentSources] as Array<'outgoing' | 'incoming'>;
               current.excessHealSources =
                 next.length > 0 ? next : ['outgoing'];
             }, { rerender: false });
@@ -1595,32 +1682,10 @@ export class SkillEditorStep {
         break;
       case 'extendSelfAppliedDebuff':
         effectGrid.appendChild(
-          createFieldRow(
-            'extendSec（任意）',
-            createNumberInput(
-              passive.extendSec ?? 0,
-              (extendSec) => {
-                this.patchPassive(index, (current) => {
-                  current.extendSec = extendSec || undefined;
-                }, { rerender: false });
-              },
-              { step: 0.1 },
-            ),
-          ),
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            'durationMultiplier（任意）',
-            createNumberInput(
-              passive.durationMultiplier ?? 1,
-              (durationMultiplier) => {
-                this.patchPassive(index, (current) => {
-                  current.durationMultiplier =
-                    durationMultiplier === 1 ? undefined : durationMultiplier;
-                }, { rerender: false });
-              },
-              { step: 0.01 },
-            ),
+          createEl(
+            'p',
+            'editor-hint',
+            '旧パッシブ種別です。新規作成は非推奨（互換表示のみ）。',
           ),
         );
         break;
@@ -1654,15 +1719,17 @@ export class SkillEditorStep {
           ),
         );
         break;
+      case 'counter':
       case 'counterChance':
         effectGrid.appendChild(
           createFieldRow(
             '発動確率 (0–1)',
             createNumberInput(
-              passive.counterChance ?? 0,
-              (counterChance) => {
+              passive.chance ?? passive.counterChance ?? 0,
+              (chance) => {
                 this.patchPassive(index, (current) => {
-                  current.counterChance = counterChance;
+                  current.chance = chance;
+                  current.counterChance = chance;
                 }, { rerender: false });
               },
               { min: 0, max: 1, step: 0.01 },
@@ -1686,6 +1753,21 @@ export class SkillEditorStep {
           },
           { showDuration: false },
         );
+        break;
+      case 'specialEffect':
+        appendPassiveSpecialEffectFields(effectGrid, passive, (mutate, options) => {
+          this.patchPassive(index, mutate, options);
+        });
+        break;
+      case 'buff':
+        appendPassiveBuffFields(effectGrid, passive, (mutate, options) => {
+          this.patchPassive(index, mutate, options);
+        });
+        break;
+      case 'debuff':
+        appendPassiveDebuffFields(effectGrid, passive, (mutate, options) => {
+          this.patchPassive(index, mutate, options);
+        });
         break;
     }
 
@@ -1892,6 +1974,32 @@ export class SkillEditorStep {
       effectHeader.appendChild(
         createEl('span', 'editor-effect-label', `効果 ${effectIndex + 1}`),
       );
+      if (effectIndex > 0) {
+        effectHeader.appendChild(
+          createButton('↑', 'editor-btn editor-btn-small', () => {
+            setActive((current) => {
+              const next = [...current.effect];
+              const tmp = next[effectIndex - 1];
+              next[effectIndex - 1] = next[effectIndex]!;
+              next[effectIndex] = tmp!;
+              current.effect = next;
+            }, { rerender: true });
+          }),
+        );
+      }
+      if (effectIndex < active.effect.length - 1) {
+        effectHeader.appendChild(
+          createButton('↓', 'editor-btn editor-btn-small', () => {
+            setActive((current) => {
+              const next = [...current.effect];
+              const tmp = next[effectIndex + 1];
+              next[effectIndex + 1] = next[effectIndex]!;
+              next[effectIndex] = tmp!;
+              current.effect = next;
+            }, { rerender: true });
+          }),
+        );
+      }
       if (active.effect.length > 1) {
         effectHeader.appendChild(
           createButton('削除', 'editor-btn editor-btn-small', () => {
@@ -1965,7 +2073,10 @@ export class SkillEditorStep {
               if (value.length === 0) {
                 current.vfx = undefined;
               } else {
-                current.vfx = { ...current.vfx, preset: value };
+                current.vfx = {
+                  ...current.vfx,
+                  preset: value as SkillVfxPresetId,
+                };
               }
             }, { rerender: value.length === 0 });
           },
@@ -2027,26 +2138,33 @@ export class SkillEditorStep {
     parent: HTMLElement,
     effect: SkillEffectDef,
     onUpdate: (effect: SkillEffectDef, options?: { rerender?: boolean }) => void,
-    showPerEffectPresentation = false,
+    _showPerEffectPresentation = false,
     isBasicAttack = false,
     sequenceContext?: { effectIndex: number; effectCount: number },
   ): void {
-    const { patch: patchEffect, get: getEffect } = patchEffectState(effect, onUpdate);
+    const normalizedEffect = normalizeLegacyEffect(effect);
+    const { patch: patchEffect, get: getEffect } = patchEffectState(
+      normalizedEffect,
+      onUpdate,
+    );
     const grid = appendGrid(parent);
     grid.appendChild(
       createFieldRow(
         '種別',
         createSelect(
-          effect.type,
-          SKILL_EFFECT_KIND_OPTIONS.map((value) => ({
+          effectTypeToCategory(normalizedEffect.type),
+          EDITOR_ACTIVE_EFFECT_CATEGORIES.map((value) => ({
             value,
-            label: EFFECT_KIND_LABELS[value],
+            label: EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS[value],
           })),
-          (type) => patchEffect(defaultEffect(type), { rerender: true }),
+          (category) =>
+            patchEffect(defaultEffect(categoryToEffectType(category)), {
+              rerender: true,
+            }),
         ),
       ),
     );
-    if (effect.type === 'counter') {
+    if (normalizedEffect.type === 'counter') {
       grid.appendChild(
         createEl('p', 'editor-hint', '付与対象: 自身（固定）'),
       );
@@ -2057,9 +2175,9 @@ export class SkillEditorStep {
         });
       });
     }
-    const isMove = effect.type === 'move';
-    const isCounter = effect.type === 'counter';
-    const targetShape: TargetShape = effect.targetShape ?? 'single';
+    const isMove = normalizedEffect.type === 'move';
+    const isCounter = normalizedEffect.type === 'counter';
+    const targetShape: TargetShape = normalizedEffect.targetShape ?? 'single';
     if (!isMove && !isCounter) {
       grid.appendChild(
         createFieldRow(
@@ -2422,6 +2540,58 @@ export class SkillEditorStep {
         );
         break;
       case 'heal':
+        detailGrid.appendChild(
+          createFieldRow(
+            '回復種別',
+            createSelect(
+              effect.healSubKind ?? 'instant',
+              HEAL_SUB_KINDS.map((value) => ({
+                value,
+                label: HEAL_SUB_KIND_LABELS[value],
+              })),
+              (healSubKind) =>
+                patchEffect(
+                  (prev) => ({ ...prev, healSubKind }) as SkillEffectDef,
+                  { rerender: true },
+                ),
+            ),
+          ),
+        );
+        if ((effect.healSubKind ?? 'instant') === 'dispel') {
+          appendDispelEffectFields(
+            detailGrid,
+            {
+              ...(effect as Extract<SkillEffectDef, { type: 'heal' }>),
+              type: 'dispel',
+              dispelCount: effect.dispelCount ?? 0,
+            },
+            (next) => {
+              if (typeof next === 'function') return;
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    dispelTags: (next as Extract<SkillEffectDef, { type: 'dispel' }>).dispelTags,
+                    dispelCount: (next as Extract<SkillEffectDef, { type: 'dispel' }>).dispelCount,
+                  }) as SkillEffectDef,
+              );
+            },
+          );
+          break;
+        }
+        if ((effect.healSubKind ?? 'instant') === 'hot') {
+          detailGrid.appendChild(
+            createFieldRow(
+              '秒数',
+              createNumberInput(
+                effect.durationSec ?? 5,
+                (durationSec) =>
+                  patchEffect((prev) => ({ ...prev, durationSec }) as SkillEffectDef),
+                { min: 0.1, step: 0.5 },
+              ),
+            ),
+          );
+        }
         appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
           patchEffect((prev) => ({ ...prev, amount }), options),
         );
@@ -2436,14 +2606,67 @@ export class SkillEditorStep {
       case 'buff':
         detailGrid.appendChild(
           createFieldRow(
+            'バフ種別',
+            createSelect(
+              effect.buffSubKind ?? 'stat',
+              BUFF_SUB_KINDS.map((value) => ({
+                value,
+                label: BUFF_SUB_KIND_LABELS[value],
+              })),
+              (buffSubKind) =>
+                patchEffect(
+                  (prev) => ({ ...prev, buffSubKind }) as SkillEffectDef,
+                  { rerender: true },
+                ),
+            ),
+          ),
+        );
+        if (effect.buffSubKind === 'block' || effect.buffSubKind === 'evasion') {
+          detailGrid.appendChild(
+            createFieldRow(
+              '確率 (0–1)',
+              createNumberInput(
+                effect.chance ?? 0.2,
+                (chance) => patchEffect((prev) => ({ ...prev, chance }) as SkillEffectDef),
+                { min: 0, max: 1, step: 0.01 },
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              '秒数',
+              createNumberInput(
+                effect.buffDurationSec ?? 5,
+                (buffDurationSec) =>
+                  patchEffect((prev) => ({ ...prev, buffDurationSec }) as SkillEffectDef),
+                { min: 0.1, step: 0.5 },
+              ),
+            ),
+          );
+          break;
+        }
+        if (effect.buffSubKind === 'barrier') {
+          appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
+            patchEffect((prev) => ({ ...prev, amount }) as SkillEffectDef, options),
+          );
+          break;
+        }
+        detailGrid.appendChild(
+          createFieldRow(
             '対象ステ',
             createSelect(
-              Array.isArray(effect.buffStat) ? effect.buffStat[0]! : effect.buffStat,
+              Array.isArray(effect.buffStat)
+                ? effect.buffStat[0]!
+                : (effect.buffStat ?? 'atk'),
               STATUS_EFFECT_STAT_OPTIONS.map((value) => ({
                 value,
                 label: STAT_LABELS[value],
               })),
-              (buffStat) => patchEffect((prev) => ({ ...prev, buffStat })),
+              (buffStat) =>
+                patchEffect(
+                  (prev) =>
+                    prev.type === 'buff' ? { ...prev, buffStat } : prev,
+                ),
             ),
           ),
         );
@@ -2475,8 +2698,11 @@ export class SkillEditorStep {
           createFieldRow(
             '秒数',
             createNumberInput(
-              effect.buffDurationSec,
-              (buffDurationSec) => patchEffect((prev) => ({ ...prev, buffDurationSec })),
+              effect.buffDurationSec ?? 5,
+              (buffDurationSec) =>
+                patchEffect((prev) =>
+                  prev.type === 'buff' ? { ...prev, buffDurationSec } : prev,
+                ),
               { min: 0.1, step: 0.5 },
             ),
           ),
@@ -2485,16 +2711,76 @@ export class SkillEditorStep {
       case 'debuff':
         detailGrid.appendChild(
           createFieldRow(
+            'デバフ種別',
+            createSelect(
+              effect.debuffSubKind ?? 'stat',
+              DEBUFF_SUB_KINDS.map((value) => ({
+                value,
+                label: DEBUFF_SUB_KIND_LABELS[value],
+              })),
+              (debuffSubKind) =>
+                patchEffect(
+                  (prev) => ({ ...prev, debuffSubKind }) as SkillEffectDef,
+                  { rerender: true },
+                ),
+            ),
+          ),
+        );
+        if (effect.debuffSubKind === 'dot') {
+          detailGrid.appendChild(
+            createFieldRow(
+              '秒数',
+              createNumberInput(
+                effect.durationSec ?? 5,
+                (durationSec) =>
+                  patchEffect((prev) => ({ ...prev, durationSec }) as SkillEffectDef),
+                { min: 0.1, step: 0.5 },
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              '威力倍率',
+              createNumberInput(
+                effect.powerMultiplier ?? 0.2,
+                (powerMultiplier) =>
+                  patchEffect((prev) => ({ ...prev, powerMultiplier }) as SkillEffectDef),
+                { step: 0.01 },
+              ),
+            ),
+          );
+          break;
+        }
+        if (effect.debuffSubKind === 'stun') {
+          detailGrid.appendChild(
+            createFieldRow(
+              '秒数',
+              createNumberInput(
+                effect.durationSec ?? 1,
+                (durationSec) =>
+                  patchEffect((prev) => ({ ...prev, durationSec }) as SkillEffectDef),
+                { min: 0.1, step: 0.5 },
+              ),
+            ),
+          );
+          break;
+        }
+        detailGrid.appendChild(
+          createFieldRow(
             '対象ステ',
             createSelect(
               Array.isArray(effect.debuffStat)
                 ? effect.debuffStat[0]!
-                : effect.debuffStat,
+                : (effect.debuffStat ?? 'atk'),
               STATUS_EFFECT_STAT_OPTIONS.map((value) => ({
                 value,
                 label: STAT_LABELS[value],
               })),
-              (debuffStat) => patchEffect((prev) => ({ ...prev, debuffStat })),
+              (debuffStat) =>
+                patchEffect(
+                  (prev) =>
+                    prev.type === 'debuff' ? { ...prev, debuffStat } : prev,
+                ),
             ),
           ),
         );
@@ -2513,9 +2799,11 @@ export class SkillEditorStep {
           createFieldRow(
             '秒数',
             createNumberInput(
-              effect.debuffDurationSec,
+              effect.debuffDurationSec ?? 5,
               (debuffDurationSec) =>
-                patchEffect((prev) => ({ ...prev, debuffDurationSec })),
+                patchEffect((prev) =>
+                  prev.type === 'debuff' ? { ...prev, debuffDurationSec } : prev,
+                ),
               { min: 0.1, step: 0.5 },
             ),
           ),
@@ -2669,6 +2957,19 @@ export class SkillEditorStep {
                 prev.type === 'counter' ? patch(prev) : prev,
               options,
             ),
+        );
+        detailGrid.appendChild(
+          createFieldRow(
+            '発動確率 (0–1)',
+            createNumberInput(
+              effect.chance ?? 1,
+              (chance) =>
+                patchEffect((prev) =>
+                  prev.type === 'counter' ? { ...prev, chance } : prev,
+                ),
+              { min: 0, max: 1, step: 0.01 },
+            ),
+          ),
         );
         break;
       case 'move': {

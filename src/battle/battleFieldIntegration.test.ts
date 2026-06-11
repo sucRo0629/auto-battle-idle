@@ -10,7 +10,6 @@ import { createDefaultSave } from '../progression/victoryRewards.ts';
 import {
   LONG_BATTLE_TIMEOUT_MS,
   SCREEN_MAX_X,
-  SCREEN_MIN_X,
   SPRITE_WIDTH,
   TICK_DT,
   createStage1Engine,

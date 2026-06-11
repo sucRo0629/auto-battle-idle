@@ -62,6 +62,10 @@ function matchesBuffTag(effect: StatusEffect, tag: BuffFilterTag): boolean {
     return effect.overlay === 'block';
   }
 
+  if (tag === 'evasion') {
+    return effect.overlay === 'evasion';
+  }
+
   return false;
 }
 

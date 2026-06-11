@@ -357,6 +357,7 @@ export function resolveStatusIconFallbackColor(
     damageIncrease: theme.statusIconDamageIncrease,
     hot: theme.statusIconHot,
     dot: theme.statusIconDot,
+    evasion: theme.statusIconBlock,
     block: theme.statusIconBlock,
     counter: theme.statusIconCounter,
     stun: theme.statusIconStun,

@@ -1,13 +1,17 @@
 import type {
   AttackRange,
   AttackSpeedTier,
+  BuffSubKind,
   DamageType,
+  DebuffSubKind,
   FormationRow,
   GrowthPresetKey,
   GrowthTier,
   BuffFilterTag,
+  BuffTargetKind,
   DebuffFilterTag,
   DamageIncreaseCondition,
+  HealSubKind,
   PassiveEffectKind,
   Role,
   ResourceAmountKind,
@@ -15,6 +19,7 @@ import type {
   SkillEffectKind,
   SkillTriggerKind,
   SkillVfxPresetId,
+  SpecialEffectApplyTo,
   StatusEffectStat,
   TargetRule,
   TargetShape,
@@ -199,38 +204,132 @@ export const POWER_STEP_MODES = [
 
 export const PASSIVE_EFFECT_KINDS = [
   "targetRuleOverride",
-  "evasionChance",
   "damageTakenToHeal",
   "hot",
   "excessHealToBarrier",
-  "extendSelfAppliedDebuff",
   "aoeCrowdBonus",
-  "damageIncrease",
+  "specialEffect",
   "defenseIgnore",
   "periodicDispel",
-  "block",
-  "healReceivedIncrease",
   "damageReduction",
-  "counterChance",
+  "buff",
+  "debuff",
+  "counter",
   "selfHpRatioBuff",
 ] as const satisfies readonly PassiveEffectKind[];
 
-export const PASSIVE_EFFECT_KIND_LABELS: Record<PassiveEffectKind, string> = {
+export const PASSIVE_EFFECT_KIND_LABELS: Record<
+  (typeof PASSIVE_EFFECT_KINDS)[number],
+  string
+> = {
   targetRuleOverride: "ターゲット上書き",
-  evasionChance: "回避率",
   damageTakenToHeal: "被ダメ回復",
   hot: "HoT",
   excessHealToBarrier: "余剰回復バリア変換",
-  extendSelfAppliedDebuff: "デバフ延長",
   aoeCrowdBonus: "密集ボーナス",
-  damageIncrease: "特効ダメージ",
+  specialEffect: "特効効果",
   defenseIgnore: "防御無視",
   periodicDispel: "デバフ解除",
-  block: "ブロック",
-  healReceivedIncrease: "被回復量増加",
   damageReduction: "ダメージ軽減",
-  counterChance: "確率反撃",
+  buff: "バフ",
+  debuff: "デバフ",
+  counter: "反撃",
   selfHpRatioBuff: "自HP割合バフ",
+};
+
+export const HEAL_SUB_KINDS = [
+  "instant",
+  "hot",
+  "dispel",
+] as const satisfies readonly HealSubKind[];
+
+export const HEAL_SUB_KIND_LABELS: Record<HealSubKind, string> = {
+  instant: "即時回復",
+  hot: "HoT",
+  dispel: "デバフ解除",
+};
+
+export const BUFF_SUB_KINDS = [
+  "stat",
+  "barrier",
+  "block",
+  "evasion",
+] as const satisfies readonly BuffSubKind[];
+
+export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
+  stat: "ステータス",
+  barrier: "バリア",
+  block: "ブロック",
+  evasion: "回避",
+};
+
+export const DEBUFF_SUB_KINDS = [
+  "stat",
+  "dot",
+  "stun",
+] as const satisfies readonly DebuffSubKind[];
+
+export const DEBUFF_SUB_KIND_LABELS: Record<DebuffSubKind, string> = {
+  stat: "ステータス",
+  dot: "DoT",
+  stun: "スタン",
+};
+
+export const BUFF_TARGET_KINDS = [
+  "atk",
+  "def",
+  "reg",
+  "damageTaken",
+  "attackSpeed",
+  "evasion",
+  "block",
+] as const satisfies readonly BuffTargetKind[];
+
+export const BUFF_TARGET_KIND_LABELS: Record<BuffTargetKind, string> = {
+  atk: "攻撃",
+  def: "防御",
+  reg: "耐魔",
+  damageTaken: "被ダメ",
+  attackSpeed: "攻撃速度",
+  evasion: "回避率",
+  block: "ブロック",
+};
+
+export const SPECIAL_EFFECT_APPLY_TO_OPTIONS = [
+  "damage",
+  "heal",
+] as const satisfies readonly SpecialEffectApplyTo[];
+
+export const SPECIAL_EFFECT_APPLY_TO_LABELS: Record<
+  SpecialEffectApplyTo,
+  string
+> = {
+  damage: "ダメージ",
+  heal: "回復",
+};
+
+/** エディタ top-level（レガシー hot/dot 等は正規化で吸収） */
+export const EDITOR_ACTIVE_EFFECT_CATEGORIES = [
+  "damage",
+  "heal",
+  "buff",
+  "debuff",
+  "counter",
+  "move",
+  "knockback",
+] as const;
+
+export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
+  (typeof EDITOR_ACTIVE_EFFECT_CATEGORIES)[number],
+  string
+> = {
+  damage: "ダメージ",
+  heal: "回復",
+  buff: "バフ",
+  debuff: "デバフ",
+  counter: "反撃",
+  move: "移動",
+  knockback: "ノックバック",
 };
 export const STATUS_EFFECT_STATS = [
   "atk",
@@ -295,7 +394,7 @@ export const ROLE_OPTIONS: Role[] = [...ROLES];
 export const FORMATION_ROW_OPTIONS: FormationRow[] = [...FORMATION_ROWS];
 export const ATTACK_RANGE_OPTIONS: AttackRange[] = [...ATTACK_RANGES];
 export const SKILL_EFFECT_KIND_OPTIONS: SkillEffectKind[] = [
-  ...SKILL_EFFECT_KINDS,
+  ...EDITOR_ACTIVE_EFFECT_CATEGORIES,
 ];
 export const SKILL_EFFECT_ANIM_OPTIONS: SkillEffectAnimId[] = [
   ...SKILL_EFFECT_ANIM_IDS,
@@ -332,6 +431,27 @@ export const TARGET_SHAPE_OPTIONS: TargetShape[] = [...TARGET_SHAPES];
 export const PASSIVE_EFFECT_KIND_OPTIONS: PassiveEffectKind[] = [
   ...PASSIVE_EFFECT_KINDS,
 ];
+
+/** エディタ「効果種別」ドロップダウン（新 taxonomy を先頭に並べる） */
+export const EDITOR_PASSIVE_EFFECT_KINDS = [
+  "specialEffect",
+  "buff",
+  "debuff",
+  "counter",
+  "hot",
+  "periodicDispel",
+  "damageTakenToHeal",
+  "excessHealToBarrier",
+  "damageReduction",
+  "defenseIgnore",
+  "selfHpRatioBuff",
+  "targetRuleOverride",
+  "aoeCrowdBonus",
+] as const satisfies readonly (typeof PASSIVE_EFFECT_KINDS)[number][];
+
+export const EDITOR_PASSIVE_EFFECT_KIND_OPTIONS: (typeof EDITOR_PASSIVE_EFFECT_KINDS)[number][] =
+  [...EDITOR_PASSIVE_EFFECT_KINDS];
+
 export const STATUS_EFFECT_STAT_OPTIONS: StatusEffectStat[] = [
   ...STATUS_EFFECT_STATS,
 ];
@@ -362,6 +482,7 @@ export const BUFF_FILTER_TAGS = [
   { id: "damageTaken" as const, label: "被ダメバフ" },
   { id: "hot" as const, label: "HoT" },
   { id: "block" as const, label: "ブロック" },
+  { id: "evasion" as const, label: "回避" },
 ] as const satisfies readonly { id: BuffFilterTag; label: string }[];
 
 export const BUFF_FILTER_TAG_OPTIONS: BuffFilterTag[] = BUFF_FILTER_TAGS.map(

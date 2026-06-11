@@ -105,8 +105,9 @@ function resolveAoeHitTargets(
 
 function getBaseAtkScale(effect: SkillEffectDef): number | undefined {
   if (effect.type === 'damage' || effect.type === 'heal') {
-    if (effect.amount.kind === 'atkBased') {
-      return effect.amount.atkScale ?? 1;
+    const amount = effect.amount;
+    if (amount?.kind === 'atkBased') {
+      return amount.atkScale ?? 1;
     }
   }
   return undefined;
@@ -202,7 +203,7 @@ export function resolveEffectResolution(
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
-  gameData: GameData,
+  _gameData: GameData,
   rand: () => number = Math.random,
   passives?: PassiveSkillDef[],
 ): SkillEffectResolution | null {

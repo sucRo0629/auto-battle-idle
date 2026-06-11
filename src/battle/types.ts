@@ -143,7 +143,7 @@ export type TargetStat = "hp" | "atk" | "def" | "reg";
 export type TargetStatOrder = "highest" | "lowest" | "ratio";
 
 /** バフフィルタタグ（gameDataSchema.BUFF_FILTER_TAGS と同期） */
-export type BuffFilterTag = StatusEffectStat | "hot" | "block";
+export type BuffFilterTag = StatusEffectStat | "hot" | "block" | "evasion";
 
 export type TargetSpec =
   | { kind: "self" }
@@ -264,7 +264,7 @@ export interface StatusEffect {
   /** buff/debuff 用（stat 系） */
   stat?: StatusEffectStat;
   /** HoT/DoT/CC バッジ用 */
-  overlay?: "hot" | "dot" | "stun" | "block" | "counter";
+  overlay?: "hot" | "dot" | "stun" | "block" | "counter" | "evasion";
   /** HoT tick 量（ResourceAmountSpec） */
   amount?: ResourceAmountSpec;
   /** HoT/DoT tick 量（旧 JSON 互換） */
@@ -284,8 +284,10 @@ export interface StatusEffect {
   /** DoT tick 用: 付与スキル effect からコピー */
   damageIncrease?: DamageIncreaseSpec;
   defenseIgnore?: DefenseIgnoreSpec;
-  /** 一時ブロック付与（アクティブ block 効果） */
+  /** 一時ブロック付与 */
   blockChance?: number;
+  /** 回避率付与 */
+  evasionChance?: number;
   /** 反撃 overlay: 発動時に攻撃者へ適用するレスポンス一覧 */
   responses?: CounterResponseDef[];
   /** 反撃 overlay: この射程内の攻撃のみ反撃発動（未指定 = 持有者 traits.rangePx） */
@@ -314,6 +316,17 @@ export interface DamageIncreaseSpec {
   scale: number;
   conditions: DamageIncreaseCondition[];
 }
+
+/** パッシブ特効効果（DamageIncreaseSpec と同型） */
+export type SpecialEffectSpec = DamageIncreaseSpec;
+
+export type SpecialEffectApplyTo = "damage" | "heal";
+
+export type HealSubKind = "instant" | "hot" | "dispel";
+export type BuffSubKind = "stat" | "barrier" | "block" | "evasion";
+export type DebuffSubKind = "stat" | "dot" | "stun";
+
+export type BuffTargetKind = StatusEffectStat | "evasion" | "block";
 
 export interface DefenseIgnoreDefSpec {
   mode: "flat" | "percent";
@@ -377,20 +390,25 @@ export interface CombatantState extends Combatant {
 
 export type PassiveEffectKind =
   | "targetRuleOverride"
-  | "evasionChance"
   | "damageTakenToHeal"
   | "hot"
   | "excessHealToBarrier"
-  | "extendSelfAppliedDebuff"
   | "aoeCrowdBonus"
-  | "damageIncrease"
+  | "specialEffect"
   | "defenseIgnore"
   | "periodicDispel"
-  | "block"
-  | "healReceivedIncrease"
   | "damageReduction"
+  | "buff"
+  | "debuff"
+  | "counter"
+  | "selfHpRatioBuff"
+  /** @deprecated 読み込み互換 */
+  | "evasionChance"
+  | "block"
   | "counterChance"
-  | "selfHpRatioBuff";
+  | "damageIncrease"
+  | "healReceivedIncrease"
+  | "extendSelfAppliedDebuff";
 
 export interface PassiveSkillDef {
   id: string;
@@ -399,8 +417,8 @@ export interface PassiveSkillDef {
   iconKey?: string;
   effect: PassiveEffectKind;
   targetRuleOverride?: TargetSpec;
-  evasionChance?: number;
-  blockChance?: number;
+  /** buff: block / evasion / counter / defenseIgnore 用（0–1） */
+  chance?: number;
   ratio?: number;
   hotAmount?: ResourceAmountSpec;
   hotTargetRule?: TargetSpec;
@@ -410,26 +428,30 @@ export interface PassiveSkillDef {
   damageReductionPercent?: number;
   damageReductionTargetRule?: TargetSpec;
   barrierScale?: number;
-  extendSec?: number;
-  durationMultiplier?: number;
   perExtraTargetScale?: number;
   maxExtraTargets?: number;
-  damageIncrease?: DamageIncreaseSpec;
+  specialEffectApplyTo?: SpecialEffectApplyTo;
+  specialEffect?: SpecialEffectSpec;
   defenseIgnore?: DefenseIgnoreSpec;
+  buffSubKind?: BuffSubKind;
+  buffTargetRule?: TargetSpec;
+  buffMultiplier?: number;
+  buffFlatBonus?: number;
+  debuffSubKind?: DebuffSubKind;
+  debuffTargetRule?: TargetSpec;
+  debuffStat?: StatusEffectStat | StatusEffectStat[];
+  debuffMultiplier?: number;
+  debuffFlatBonus?: number;
   intervalSec?: number;
   dispelTargetRule?: TargetSpec;
   dispelTags?: DebuffFilterTag[];
   dispelCount?: number;
-  /** healReceivedIncrease: 受ける回復・HoT 量の加算割合（0.2 = +20%） */
-  percent?: number;
-  /** counterChance: 被攻撃時の反撃発動確率（0〜1） */
-  counterChance?: number;
-  /** counterChance: 反撃内容（アクティブ counter の responses と同型） */
+  /** counter: 反撃内容 */
   counterResponses?: CounterResponseDef[];
-  /** counterChance: 反撃発動射程（px）。未指定 = 持有者 traits.rangePx */
+  /** counter: 反撃発動射程（px）。未指定 = 持有者 traits.rangePx */
   counterRange?: number;
-  /** selfHpRatioBuff: バフ対象 stat（自身固定） */
-  buffStat?: StatusEffectStat | StatusEffectStat[];
+  /** buff / selfHpRatioBuff: 対象 stat */
+  buffStat?: BuffTargetKind | BuffTargetKind[];
   /** selfHpRatioBuff: 最大倍率（満タン時は 1 = 中立） */
   buffMultiplierMax?: number;
   /** selfHpRatioBuff: 最大固定加算 */
@@ -438,6 +460,19 @@ export interface PassiveSkillDef {
   maxBuffAtHpRatio?: number;
   /** excessHealToBarrier: 余剰変換の対象（未指定 = outgoing のみ） */
   excessHealSources?: Array<"outgoing" | "incoming">;
+  /** @deprecated 読み込み互換（正規化後は buff + chance） */
+  evasionChance?: number;
+  /** @deprecated 読み込み互換（正規化後は buff + chance） */
+  blockChance?: number;
+  /** @deprecated 読み込み互換（正規化後は counter + chance） */
+  counterChance?: number;
+  /** @deprecated 読み込み互換（正規化後は specialEffect） */
+  damageIncrease?: DamageIncreaseSpec;
+  /** @deprecated 読み込み互換 */
+  extendSec?: number;
+  durationMultiplier?: number;
+  /** @deprecated 読み込み互換（正規化後は specialEffect heal） */
+  percent?: number;
 }
 
 export type SkillEffectKind =
@@ -571,23 +606,35 @@ export interface DamageSkillEffect extends SkillEffectCommon {
 
 export interface HealSkillEffect extends SkillEffectCommon {
   type: "heal";
-  amount: ResourceAmountSpec;
+  healSubKind?: HealSubKind;
+  amount?: ResourceAmountSpec;
+  durationSec?: number;
+  dispelTags?: DebuffFilterTag[];
+  dispelCount?: number;
 }
 
 export interface BuffSkillEffect extends SkillEffectCommon {
   type: "buff";
-  buffStat: StatusEffectStat | StatusEffectStat[];
+  buffSubKind?: BuffSubKind;
+  buffStat?: BuffTargetKind | BuffTargetKind[];
   buffMultiplier?: number;
   buffFlatBonus?: number;
-  buffDurationSec: number;
+  buffDurationSec?: number;
+  chance?: number;
+  amount?: ResourceAmountSpec;
+  barrierStack?: boolean;
 }
 
 export interface DebuffSkillEffect extends SkillEffectCommon {
   type: "debuff";
-  debuffStat: StatusEffectStat | StatusEffectStat[];
+  debuffSubKind?: DebuffSubKind;
+  debuffStat?: StatusEffectStat | StatusEffectStat[];
   debuffMultiplier?: number;
   debuffFlatBonus?: number;
-  debuffDurationSec: number;
+  debuffDurationSec?: number;
+  durationSec?: number;
+  powerMultiplier?: number;
+  damageType?: DamageType;
 }
 
 export interface HotSkillEffect extends SkillEffectCommon {
@@ -678,6 +725,7 @@ export type CounterResponseDef =
 
 export interface CounterSkillEffect extends SkillEffectCommon {
   type: "counter";
+  chance?: number;
   responses: CounterResponseDef[];
   durationSec: number;
 }

@@ -1,4 +1,4 @@
-import { isMeleeUnit, resolveMaxEffectiveRangePx } from './combatPosition.ts';
+import { isMeleeUnit } from './combatPosition.ts';
 import { resolveEnemyBasicAttackTarget } from './resolveApproachBattleX.ts';
 import type { CombatantState, FormationRow, GameData } from './types.ts';
 

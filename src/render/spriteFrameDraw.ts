@@ -10,7 +10,11 @@ import {
   getSpriteSheetImage,
   hasSpriteSheetAnimation,
 } from "./spriteSheetRegistry.ts";
-import { getSheetCellSize, SPRITE_SHEET_CELL_SIZE } from "./spriteLayout.ts";
+import {
+  getSheetCellHeight,
+  getSheetCellWidth,
+  SPRITE_SHEET_CELL_SIZE,
+} from "./spriteLayout.ts";
 
 /**
  * 足元中央 (footX, footY) を基準に entity スプライトを描画。
@@ -33,18 +37,19 @@ export function drawSpriteFrameAtFootAnchor(
   if (hasSpriteSheetAnimation(spriteKey, anim, attackSheetKey)) {
     const sheet = getSpriteSheetImage(spriteKey, entitySheetKey);
     if (sheet) {
-      const cellSize = getSheetCellSize(spriteKey);
+      const cellW = getSheetCellWidth(spriteKey, anim);
+      const cellH = getSheetCellHeight(spriteKey);
       const def = ANIM_DEFS[anim];
       const clampedFrame = Math.min(Math.max(0, frame), def.frames - 1);
-      const srcX = clampedFrame * cellSize;
-      const drawW = cellSize * scale;
-      const drawH = cellSize * scale;
+      const srcX = clampedFrame * cellW;
+      const drawW = cellW * scale;
+      const drawH = cellH * scale;
       ctx.drawImage(
         sheet,
         srcX,
         0,
-        cellSize,
-        cellSize,
+        cellW,
+        cellH,
         footX - drawW / 2,
         footY - drawH,
         drawW,

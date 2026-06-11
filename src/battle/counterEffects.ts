@@ -10,7 +10,6 @@ import {
   resolveResourceAmount,
 } from './combatMath.ts';
 import {
-  resolveDebuffDurationWithPassives,
   stripPassivesAurasFromSource,
 } from './passiveEffects.ts';
 import { battleDistance } from './skills/rangeUtils.ts';
@@ -173,7 +172,7 @@ function applyCounterDebuffResponse(
   attacker: CombatantState,
   response: Extract<CounterResponseDef, { kind: 'debuff' }>,
   counterEffect: Pick<StatusEffect, 'skillId'>,
-  passives: Record<string, PassiveSkillDef>,
+  _passives: Record<string, PassiveSkillDef>,
   callbacks: CounterRetaliationCallbacks,
 ): void {
   const stats = asStatusEffectStatList(response.debuffStat);
@@ -186,14 +185,7 @@ function applyCounterDebuffResponse(
     return;
   }
 
-  let duration = response.debuffDurationSec;
-  if (!victim.isEnemy) {
-    duration = resolveDebuffDurationWithPassives(
-      victim,
-      duration,
-      passives,
-    );
-  }
+  const duration = response.debuffDurationSec;
 
   const appliedAt = Date.now();
   const skillId = counterEffect.skillId ?? 'counter';
@@ -380,8 +372,8 @@ export function applyPassiveCounterRetaliation(
   if (ctx.attackKind !== 'damage' && ctx.attackKind !== 'dot') return;
 
   for (const passive of getPassiveDefs(victim, passives)) {
-    if (passive.effect !== 'counterChance') continue;
-    const chance = passive.counterChance ?? 0;
+    if (passive.effect !== 'counter') continue;
+    const chance = passive.chance ?? 0;
     const responses = passive.counterResponses;
     if (chance <= 0 || !responses?.length) continue;
     if (!isPassiveCounterInRange(passive, victim, attacker)) continue;

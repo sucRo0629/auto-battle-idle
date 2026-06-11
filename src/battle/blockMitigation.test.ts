@@ -39,20 +39,7 @@ function mockUnit(
   };
 }
 
-const passives: Record<string, PassiveSkillDef> = {
-  block15: {
-    id: 'block15',
-    name: 'Block15',
-    effect: 'block',
-    blockChance: 0.15,
-  },
-  block30: {
-    id: 'block30',
-    name: 'Block30',
-    effect: 'block',
-    blockChance: 0.3,
-  },
-};
+const passives: Record<string, PassiveSkillDef> = {};
 
 describe('blockMitigation', () => {
   it('computeBlockMitigationRatio uses 0.25 + atk/100 capped at 1', () => {
@@ -62,20 +49,33 @@ describe('blockMitigation', () => {
     expect(computeBlockMitigationRatio(mockUnit({ id: 'd', atk: 200 }))).toBe(1);
   });
 
-  it('getBlockChance sums passives and status effects capped at 1', () => {
+  it('getBlockChance sums block status effects capped at 1', () => {
     const unit = mockUnit({
       id: 'u',
-      build: {
-        learnedPassiveIds: ['block15', 'block30'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
       statusEffects: [
+        {
+          id: 'passive',
+          kind: 'buff',
+          overlay: 'block',
+          blockChance: 0.15,
+          multiplier: 1,
+          durationSec: 99999,
+          remainingSec: 99999,
+        },
         {
           id: 'temp',
           kind: 'buff',
           overlay: 'block',
           blockChance: 0.5,
+          multiplier: 1,
+          durationSec: 5,
+          remainingSec: 5,
+        },
+        {
+          id: 'extra',
+          kind: 'buff',
+          overlay: 'block',
+          blockChance: 0.3,
           multiplier: 1,
           durationSec: 5,
           remainingSec: 5,
@@ -108,11 +108,17 @@ describe('blockMitigation', () => {
     const defender = mockUnit({
       id: 'd',
       atk: 100,
-      build: {
-        learnedPassiveIds: ['block15'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
+      statusEffects: [
+        {
+          id: 'block',
+          kind: 'buff',
+          overlay: 'block',
+          blockChance: 0.15,
+          multiplier: 1,
+          durationSec: 99999,
+          remainingSec: 99999,
+        },
+      ],
     });
     const result = applyBlockToPhysicalDamage(defender, 80, passives);
     expect(result.didBlock).toBe(true);
@@ -125,11 +131,17 @@ describe('blockMitigation', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.99);
     const defender = mockUnit({
       id: 'd',
-      build: {
-        learnedPassiveIds: ['block15'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
+      statusEffects: [
+        {
+          id: 'block',
+          kind: 'buff',
+          overlay: 'block',
+          blockChance: 0.15,
+          multiplier: 1,
+          durationSec: 99999,
+          remainingSec: 99999,
+        },
+      ],
     });
     const result = applyBlockToPhysicalDamage(defender, 80, passives);
     expect(result.didBlock).toBe(false);

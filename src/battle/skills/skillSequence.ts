@@ -8,7 +8,7 @@ import type {
 } from '../types.ts';
 import type { GameData } from '../types.ts';
 import { resolveSkillTrigger } from '../skillTrigger.ts';
-import { getEffectTarget, getTargetPool } from './targetSpec.ts';
+import { getTargetPool } from './targetSpec.ts';
 import {
   pickTargetFromPool,
   resolveEffectTargetSpec,
@@ -123,7 +123,7 @@ export function resolveSequenceStepAnchor(
   actor: CombatantState,
   allies: CombatantState[],
   enemies: CombatantState[],
-  gameData: GameData,
+  _gameData: GameData,
 ): CombatantState | null {
   if (effect.type === 'move') {
     const pool = getTargetPool(spec, actor, allies, enemies);

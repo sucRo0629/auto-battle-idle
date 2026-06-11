@@ -11,7 +11,6 @@ import { getEffectiveAttackSpeedMultiplier } from "./combatMath.ts";
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
-  leadingRowContactPlayer,
   getEnemyContactX,
   getMeleeEnemyContactX,
   getPlayerContactX,
@@ -39,7 +38,6 @@ import {
   CANVAS_W as BATTLE_CANVAS_W,
   MOVE_PX_PER_SEC,
   moveDeltaPx,
-  SPRITE_GAP,
   engagedMinBodyGap,
 } from "./battleConstants.ts";
 import { isUnitStunned } from "./ccEffects.ts";
@@ -57,7 +55,8 @@ import {
   initializePeriodicDispelStates,
   initializePeriodicHotStates,
   syncHotAuras,
-  syncBlockAuras,
+  syncBuffAuras,
+  syncDebuffAuras,
   syncDamageReductionAuras,
   syncSelfHpRatioBuffAuras,
   tickPeriodicDispelStates,
@@ -103,8 +102,7 @@ import {
   POST_ANNOUNCEMENT_ENGAGE_DELAY_SEC,
   POST_DEPLOY_SETTLE_DELAY_SEC,
 } from "../render/announcementOverlayTiming.ts";
-import type { BattlePhase, BattleSnapshot, CombatantState, FormationRow, GameData, PartySlotState, PendingSkillHit, SkillCooldown, SkillTriggerKind, StatusEffect } from "./types.ts";
-import { BATTLE_ENEMY_MARCH_VISIBLE_MAX_X } from "./battleConstants.ts";
+import type { BattlePhase, BattleSnapshot, CombatantState, GameData, PartySlotState, PendingSkillHit, SkillCooldown, SkillTriggerKind, StatusEffect } from "./types.ts";
 import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 
 const RESTART_DELAY_SEC = 3;
@@ -145,7 +143,6 @@ export class BattleEngine {
   /** Wave 開始: 告知オーバーレイ（PartyDeploy と同時進行） */
   private waveAnnouncementActive = false;
   private waveAnnouncementElapsedMs = 0;
-  private pendingDeployWaveIndex: number | null = null;
   /** fade-out 開始後の接敵待機（null = 未開始） */
   private postAnnouncementEngageDelaySec: number | null = null;
   /** PartyDeploy 到達後の接敵待機（null = 未到達 or 消費済み） */
@@ -232,7 +229,7 @@ export class BattleEngine {
     }
     if (amount > 0 && meta?.attackKind) {
       const counterCallbacks = {
-        emit: (event: Parameters<typeof this.emit>[0]) => this.emit(event),
+        emit: (event: Parameters<BattleEventListener>[0]) => this.emit(event),
         getAllCombatants: () => [...this.players, ...this.enemies],
         onDamageApplied: (
           counterActor: CombatantState,
@@ -339,7 +336,8 @@ export class BattleEngine {
     const actives = this.gameData.skillRegistry.actives;
     initializeAllyThreat(this.players);
     syncHotAuras(this.players, this.enemies, passives);
-    syncBlockAuras(this.players, this.enemies, passives);
+    syncBuffAuras(this.players, this.enemies, passives);
+    syncDebuffAuras(this.players, this.enemies, passives);
     syncDamageReductionAuras(this.players, this.enemies, passives);
     syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
     this.periodicDispelStates.clear();
@@ -374,18 +372,6 @@ export class BattleEngine {
       }));
   }
 
-  private getLivingAllyLineInputs() {
-    return this.players
-      .filter((a) => a.isAlive)
-      .map((a) => ({
-        id: a.id,
-        role: a.role,
-        formationRow: a.formationRow,
-        rangePx: resolveFormationRangePx(a),
-        isAlive: true as const,
-        battleX: a.battleX,
-      }));
-  }
 
   private clampEnemyFieldOnScreen(battleX: number): number {
     if (battleX > BATTLE_CANVAS_W) return BATTLE_CANVAS_W;
@@ -733,7 +719,6 @@ export class BattleEngine {
   private clearWaveAnnouncement(): void {
     this.waveAnnouncementActive = false;
     this.waveAnnouncementElapsedMs = 0;
-    this.pendingDeployWaveIndex = null;
     this.postAnnouncementEngageDelaySec = null;
     this.postDeploySettleDelaySec = null;
     this.partyDeployPrepared = false;
@@ -808,7 +793,6 @@ export class BattleEngine {
   /** Wave 告知 + PartyDeploy 同時開始 */
   private beginWaveAnnouncement(waveIndex: number): void {
     this.waveIndex = waveIndex;
-    this.pendingDeployWaveIndex = waveIndex;
     this.waveAnnouncementActive = true;
     this.waveAnnouncementElapsedMs = 0;
     this.postAnnouncementEngageDelaySec = null;
@@ -931,7 +915,6 @@ export class BattleEngine {
     this.enemyDeployTargets.clear();
     this.postAnnouncementEngageDelaySec = null;
     this.postDeploySettleDelaySec = null;
-    this.pendingDeployWaveIndex = null;
     this.engaged = true;
     this.setupEngagedCombat();
     if (!this.enemies.some((enemy) => enemy.isAlive)) {
