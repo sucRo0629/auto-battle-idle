@@ -201,15 +201,13 @@ export function createNumberInput(
     /** この値のとき input を空表示（省略値用） */
     emptyWhen?: number;
     placeholder?: string;
-    /** 互換用。DOM には反映せず、保存時バリデーションで検証する */
     min?: number;
     max?: number;
     step?: number;
   },
 ): HTMLInputElement {
   const input = createEl('input', 'editor-input') as HTMLInputElement;
-  input.type = 'text';
-  input.inputMode = 'decimal';
+  input.type = 'number';
   const showEmpty =
     options?.emptyWhen !== undefined && value === options.emptyWhen;
   input.value = showEmpty ? '' : String(value);
@@ -217,6 +215,10 @@ export function createNumberInput(
   if (options?.field) input.dataset.field = options.field;
   if (options?.placeholder) input.placeholder = options.placeholder;
   if (options?.readonly) input.readOnly = true;
+  if (options?.min !== undefined) input.min = String(options.min);
+  if (options?.max !== undefined) input.max = String(options.max);
+  input.step =
+    options?.step !== undefined ? String(options.step) : 'any';
   const displayValue = () =>
     options?.emptyWhen !== undefined && value === options.emptyWhen
       ? ''

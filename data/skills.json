@@ -250,7 +250,7 @@
       "name": "滾る闘志",
       "effect": "selfHpRatioBuff",
       "buffStat": "atk",
-      "buffMultiplierMax": 1.5,
+      "buffMultiplierMax": 1.3,
       "maxBuffAtHpRatio": 0.5
     },
     {
@@ -402,13 +402,24 @@
     },
     {
       "id": "df_paladin_passive_4",
-      "name": "df_paladin_passive_4",
-      "effect": "targetRuleOverride",
+      "name": "護法の陣",
+      "effect": "damageReduction",
       "targetRuleOverride": {
         "kind": "distance",
         "side": "enemy",
         "order": "nearest"
-      }
+      },
+      "buffSubKind": "stat",
+      "buffTargetRule": {
+        "kind": "self"
+      },
+      "buffStat": "atk",
+      "buffMultiplier": 1.2,
+      "damageReductionTargetRule": {
+        "kind": "all",
+        "side": "ally"
+      },
+      "damageReductionPercent": 0.1
     }
   ],
   "actives": [
@@ -625,7 +636,7 @@
           "buffStat": "atk",
           "buffMultiplier": 1.2,
           "buffDurationSec": 5,
-          "ratio": 0.5
+          "ratio": 0.1
         }
       ]
     },

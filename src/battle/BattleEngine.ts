@@ -230,11 +230,25 @@ export class BattleEngine {
     meta?: {
       attackKind: CounterAttackKind;
       isCounterDamage?: boolean;
+      hpDamage?: number;
     },
   ): void {
     applyThreatFromDamage(actor, target, amount);
-    if (!target.isEnemy && target.isAlive && amount > 0) {
-      applyDamageTakenToHeal(target, amount);
+    const hpDamageForHeal = meta?.hpDamage ?? amount;
+    if (!target.isEnemy && target.isAlive && hpDamageForHeal > 0) {
+      const healed = applyDamageTakenToHeal(target, hpDamageForHeal);
+      if (healed > 0) {
+        this.emit({
+          type: "skill",
+          actorId: target.id,
+          targetId: target.id,
+          skillId: "",
+          skillName: "被ダメ回復",
+          effect: "heal",
+          amount: healed,
+          statusLabel: "damageTakenToHeal",
+        });
+      }
     }
     if (amount > 0 && meta?.attackKind) {
       const counterCallbacks = {
@@ -247,6 +261,7 @@ export class BattleEngine {
           counterMeta?: {
             attackKind: CounterAttackKind;
             isCounterDamage?: boolean;
+            hpDamage?: number;
           },
         ) => {
           this.handleDamageThreat(
@@ -1448,6 +1463,7 @@ export class BattleEngine {
         damageResult.hpDamage + damageResult.barrierDamage;
       this.handleDamageThreat(source, target, appliedDamage, {
         attackKind: "dot",
+        hpDamage: damageResult.hpDamage,
       });
       const { lethal } = damageResult;
       this.emit({

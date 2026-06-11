@@ -37,7 +37,11 @@ export interface CounterRetaliationCallbacks {
     actor: CombatantState,
     target: CombatantState,
     amount: number,
-    meta?: { attackKind: CounterAttackKind; isCounterDamage?: boolean },
+    meta?: {
+      attackKind: CounterAttackKind;
+      isCounterDamage?: boolean;
+      hpDamage?: number;
+    },
   ) => void;
   getSkillName?: (skillId: string) => string;
   onUnitDied?: (unit: CombatantState) => void;
@@ -143,6 +147,7 @@ function applyCounterDamageResponse(
   callbacks.onDamageApplied?.(victim, attacker, appliedCounter, {
     attackKind: 'damage',
     isCounterDamage: true,
+    hpDamage: damageResult.hpDamage,
   });
 
   emitCounterSkillEvent(

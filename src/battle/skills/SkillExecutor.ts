@@ -73,6 +73,7 @@ export interface SkillExecutorDeps {
     meta?: {
       attackKind: 'damage' | 'dot';
       isCounterDamage?: boolean;
+      hpDamage?: number;
     },
   ) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
@@ -406,6 +407,7 @@ export class SkillExecutor {
         damageResult.hpDamage + damageResult.barrierDamage;
       this.deps.onDamageApplied?.(actor, target, appliedDamage, {
         attackKind: 'damage',
+        hpDamage: damageResult.hpDamage,
       });
       const { lethal } = damageResult;
       if (cd.slotKind === 'basic') {
