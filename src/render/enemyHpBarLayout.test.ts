@@ -22,7 +22,7 @@ describe('computeEnemyHpBarTops', () => {
 
     const frontTop = tops.get('front')!;
     const rearTop = tops.get('rear')!;
-    expect(frontTop).toBe(defaultEnemyHpBarTop(baseY, scale));
+    expect(frontTop).toBe(defaultEnemyHpBarTop(baseY, scale, spriteSize));
     expect(rearTop).toBeLessThan(frontTop);
     expect(frontTop - rearTop).toBeCloseTo(
       ENEMY_HP_BAR_STACK_OVERLAP * scale,

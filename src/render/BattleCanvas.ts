@@ -594,7 +594,7 @@ export class BattleCanvas implements IBattleRenderer {
     const barW = ENEMY_HP_BAR_W * scale;
     const barH = ENEMY_HP_BAR_H * scale;
     const x = spriteX + (spriteW - barW) / 2;
-    const y = barTop ?? defaultEnemyHpBarTop(spriteY, scale);
+    const y = barTop ?? defaultEnemyHpBarTop(spriteY, scale, SPRITE_SIZE);
 
     ctx.fillStyle = this.theme.barTrack;
     ctx.fillRect(x, y, barW, barH);
@@ -639,6 +639,7 @@ export class BattleCanvas implements IBattleRenderer {
         drawItems,
         scale,
         this.theme.statusBadgeIconSize,
+        this.theme.statusIconOutlineWidth,
         this.theme.statusBadgeOverlap,
       );
       rowWidthById.set(layout.id, rowWidth);
@@ -646,8 +647,6 @@ export class BattleCanvas implements IBattleRenderer {
         id: layout.id,
         x: layout.x,
         y: layout.y,
-        isEnemy: layout.isEnemy,
-        hpBarTop: layout.isEnemy ? enemyBarTops.get(layout.id) : undefined,
       });
     }
 

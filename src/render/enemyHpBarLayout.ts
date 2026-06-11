@@ -1,6 +1,6 @@
 export const ENEMY_HP_BAR_W = 48;
 export const ENEMY_HP_BAR_H = 6;
-export const ENEMY_HP_BAR_ABOVE_SPRITE = 4;
+export const ENEMY_HP_BAR_BELOW_SPRITE = 4;
 /** スタック時に下のバーと重ねる高さ（半分重ね = barH / 2） */
 export const ENEMY_HP_BAR_STACK_OVERLAP = ENEMY_HP_BAR_H / 2;
 
@@ -17,9 +17,13 @@ export interface EnemyHpBarLayoutInput {
   y: number;
 }
 
-export function defaultEnemyHpBarTop(spriteY: number, scale: number): number {
-  const barH = ENEMY_HP_BAR_H * scale;
-  return spriteY - barH - ENEMY_HP_BAR_ABOVE_SPRITE * scale;
+export function defaultEnemyHpBarTop(
+  spriteY: number,
+  scale: number,
+  spriteSize: number,
+): number {
+  const spriteH = spriteSize * scale;
+  return spriteY + spriteH + ENEMY_HP_BAR_BELOW_SPRITE * scale;
 }
 
 export function enemyHpBarRect(
@@ -62,7 +66,7 @@ export function computeEnemyHpBarTops(
   const stackOverlap = ENEMY_HP_BAR_STACK_OVERLAP * scale;
 
   for (const layout of sorted) {
-    let top = defaultEnemyHpBarTop(layout.y, scale);
+    let top = defaultEnemyHpBarTop(layout.y, scale, spriteSize);
     for (const placedBar of placed) {
       const candidate = enemyHpBarRect(layout.x, top, scale, spriteSize);
       if (hpBarRectsOverlapHorizontally(candidate, placedBar)) {

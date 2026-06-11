@@ -209,6 +209,7 @@ export class PartyHudPanel {
       drawItems,
       scale,
       theme.statusBadgeIconSize,
+      theme.statusIconOutlineWidth,
       theme.statusBadgeOverlap,
     );
     const badgeH = theme.statusBadgeIconSize * scale;

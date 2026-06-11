@@ -582,7 +582,8 @@
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "sp_alchemist_basic_attack",
     "passiveIds": [
-      "sp_alchemist_passive_1"
+      "sp_alchemist_passive_1",
+      "sp_alchemist_passive_2"
     ],
     "skills": [
       {
@@ -590,7 +591,8 @@
         "skillIds": [
           "sp_alchemist_passive_1",
           "sp_alchemist_active_1",
-          "sp_alchemist_active_2"
+          "sp_alchemist_active_2",
+          "sp_alchemist_passive_2"
         ]
       }
     ],

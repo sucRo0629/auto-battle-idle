@@ -74,7 +74,7 @@ export class CombatReactionPopupManager {
     scale: number,
     theme: BattleHudTheme,
   ): void {
-    const fontSize = Math.max(8, Math.round(theme.headerFontSize));
+    const fontSize = Math.max(8, Math.round(theme.headerFontSize)) + 4;
 
     for (const popup of this.popups) {
       const layout = layouts.find((l) => l.id === popup.targetId);
@@ -93,7 +93,7 @@ export class CombatReactionPopupManager {
       ctx.translate(centerX, centerY);
       ctx.scale(popupScaleValue, popupScaleValue);
       ctx.globalAlpha = alpha;
-      ctx.font = `${fontSize}px ${theme.fontFamily}`;
+      ctx.font = `bold ${fontSize}px ${theme.fontFamily}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
       ctx.lineJoin = "round";

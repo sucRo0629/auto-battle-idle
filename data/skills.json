@@ -522,6 +522,26 @@
         "kind": "percentMaxHp",
         "percentOfMaxHp": 0.005
       }
+    },
+    {
+      "id": "sp_alchemist_passive_2",
+      "name": "sp_alchemist_passive_2",
+      "effect": "periodicDispel",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "periodicTrigger": "interval",
+      "intervalSec": 5,
+      "dispelTargetRule": {
+        "kind": "all",
+        "side": "ally"
+      },
+      "dispelCount": 1,
+      "dispelTags": [
+        "dot"
+      ]
     }
   ],
   "actives": [
@@ -1623,14 +1643,16 @@
       "effect": [
         {
           "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
           },
-          "type": "damage",
+          "type": "heal",
+          "healSubKind": "instant",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1
+            "atkScale": 0.3
           }
         }
       ],

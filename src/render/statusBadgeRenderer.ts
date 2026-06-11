@@ -20,22 +20,32 @@ export function statusBadgeWidth(scale: number, iconSize: number): number {
   return iconSize * scale;
 }
 
+/** 隣接アイコン原点間の横 stride（縁取りはみ出し分を含む） */
+export function statusBadgeStride(
+  scale: number,
+  iconSize: number,
+  outlineWidth: number,
+  rowOverlap = 0,
+): number {
+  const badgeW = statusBadgeWidth(scale, iconSize);
+  const outlinePad = statusBadgeOutlinePad(outlineWidth, scale);
+  const gap = STATUS_BADGE_GAP * scale;
+  const overlapPx = rowOverlap * scale;
+  return badgeW + gap + outlinePad * 2 - overlapPx;
+}
+
 export function statusBadgeRowWidth(
   badges: ReadonlyArray<Pick<StatusBadgeDrawItem, 'category'>>,
   scale: number,
   iconSize: number,
+  outlineWidth: number,
   rowOverlap = 0,
 ): number {
   if (badges.length <= 0) return 0;
-  const gap = STATUS_BADGE_GAP * scale;
-  const overlapPx = rowOverlap * scale;
   const badgeW = statusBadgeWidth(scale, iconSize);
-  let total = 0;
-  for (let i = 0; i < badges.length; i++) {
-    total += badgeW;
-    if (i > 0) total += gap - overlapPx;
-  }
-  return total;
+  if (badges.length === 1) return badgeW;
+  const stride = statusBadgeStride(scale, iconSize, outlineWidth, rowOverlap);
+  return badgeW + (badges.length - 1) * stride;
 }
 
 export interface StatusBadgeDrawItem {
@@ -178,20 +188,23 @@ export function drawStatusBadgeRow(
 ): void {
   if (badges.length === 0) return;
 
-  const gap = STATUS_BADGE_GAP * scale;
-  const overlapPx = theme.rowOverlap * scale;
   const rowW = statusBadgeRowWidth(
     badges,
     scale,
     theme.iconSize,
+    theme.iconOutlineWidth,
     theme.rowOverlap,
   );
   let x = centerX - rowW / 2;
 
   for (const badge of badges) {
-    const badgeW = statusBadgeWidth(scale, theme.iconSize);
     drawStatusBadge(ctx, x, top, badge, scale, theme);
-    x += badgeW + gap - overlapPx;
+    x += statusBadgeStride(
+      scale,
+      theme.iconSize,
+      theme.iconOutlineWidth,
+      theme.rowOverlap,
+    );
   }
 }
 
@@ -350,16 +363,21 @@ function drawPlainImage(
     outlineColor,
     outlineWidth,
   );
-  ctx.drawImage(image, x, y, width, height);
+
+  const bufferW = Math.ceil(width);
+  const bufferH = Math.ceil(height);
+  const bufferCtx = getTintBuffer(bufferW, bufferH);
+  bufferCtx.drawImage(image, 0, 0, bufferW, bufferH);
   drawRemainingDarkOverlay(
-    ctx,
-    x,
-    y,
-    width,
-    height,
+    bufferCtx,
+    0,
+    0,
+    bufferW,
+    bufferH,
     remainingRatio,
     overlayColor,
   );
+  ctx.drawImage(tintBuffer!, 0, 0, bufferW, bufferH, x, y, width, height);
 }
 
 function drawTintedImage(
@@ -396,15 +414,15 @@ function drawTintedImage(
   bufferCtx.fillRect(0, 0, bufferW, bufferH);
   bufferCtx.globalCompositeOperation = 'source-over';
 
-  const elapsedRatio = 1 - Math.max(0, Math.min(1, remainingRatio));
-  if (elapsedRatio > 0) {
-    const darkH = bufferH * elapsedRatio;
-    bufferCtx.save();
-    bufferCtx.globalCompositeOperation = 'source-atop';
-    bufferCtx.fillStyle = overlayColor;
-    bufferCtx.fillRect(0, 0, bufferW, darkH);
-    bufferCtx.restore();
-  }
+  drawRemainingDarkOverlay(
+    bufferCtx,
+    0,
+    0,
+    bufferW,
+    bufferH,
+    remainingRatio,
+    overlayColor,
+  );
 
   ctx.drawImage(tintBuffer!, 0, 0, bufferW, bufferH, x, y, width, height);
 }

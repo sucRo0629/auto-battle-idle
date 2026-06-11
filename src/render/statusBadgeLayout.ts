@@ -2,10 +2,7 @@ import {
   STATUS_BADGE_GAP,
   STATUS_BADGE_H,
 } from './formationLayout.ts';
-import {
-  defaultEnemyHpBarTop,
-  hpBarRectsOverlapHorizontally,
-} from './enemyHpBarLayout.ts';
+import { hpBarRectsOverlapHorizontally } from './enemyHpBarLayout.ts';
 
 export { STATUS_BADGE_GAP, STATUS_BADGE_H };
 
@@ -13,8 +10,6 @@ export interface StatusBadgeLayoutInput {
   id: string;
   x: number;
   y: number;
-  isEnemy: boolean;
-  hpBarTop?: number;
 }
 
 export interface StatusBadgeRect {
@@ -28,10 +23,7 @@ export function defaultStatusBadgeTop(
   input: StatusBadgeLayoutInput,
   scale: number,
 ): number {
-  const anchorTop = input.isEnemy
-    ? (input.hpBarTop ?? defaultEnemyHpBarTop(input.y, scale))
-    : input.y;
-  return anchorTop - STATUS_BADGE_GAP * scale - STATUS_BADGE_H * scale;
+  return input.y - STATUS_BADGE_GAP * scale - STATUS_BADGE_H * scale;
 }
 
 export function statusBadgeRect(
