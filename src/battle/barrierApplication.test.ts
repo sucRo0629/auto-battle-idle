@@ -58,4 +58,50 @@ describe('barrier application', () => {
     expect(barrierEvent).toBe(true);
     expect(abjurer!.barrierHp).toBeGreaterThan(0);
   });
+
+  it('stacks barrier on repeated grants', () => {
+    const gameData = loadGameData();
+    const levelCurves = loadLevelCurves(levelCurvesJson);
+    const allies = createAlliesFromPartyState(
+      gameData,
+      [
+        {
+          classId: 'sp_abjurer',
+          progress: { level: 1, exp: 0 },
+          build: {
+            learnedPassiveIds: [],
+            learnedActiveIds: ['sp_abjurer_active_1'],
+            equippedActiveSlots: ['sp_abjurer_active_1'],
+          },
+        },
+      ],
+      levelCurves,
+    );
+    const abjurer = allies[0]!;
+    const enemies = createEnemiesForStage(gameData, '1', 0);
+    const barrierCd = abjurer.cooldowns.find(
+      (cd) => cd.skillId === 'sp_abjurer_active_1',
+    )!;
+    barrierCd.remaining = 0;
+
+    const runner = new SkillSequenceRunner();
+    const executor = new SkillExecutor(
+      gameData,
+      () => {},
+      {
+        getBattleTimeSec: () => 0,
+        enqueuePendingHits: () => {},
+        getAllCombatants: () => [...allies, ...enemies],
+        getSequenceRunner: () => runner,
+      },
+    );
+
+    executor.tryExecute(abjurer, barrierCd, allies, enemies);
+    const firstBarrier = abjurer.barrierHp;
+    expect(firstBarrier).toBeGreaterThan(0);
+
+    barrierCd.remaining = 0;
+    executor.tryExecute(abjurer, barrierCd, allies, enemies);
+    expect(abjurer.barrierHp).toBeGreaterThan(firstBarrier);
+  });
 });

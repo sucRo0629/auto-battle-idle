@@ -45,7 +45,6 @@ export const SKILL_EFFECT_KINDS = [
   "heal",
   "buff",
   "debuff",
-  "hot",
   "dot",
   "barrier",
   "move",
@@ -110,6 +109,19 @@ export const RESOURCE_AMOUNT_KIND_LABELS: Record<ResourceAmountKind, string> = {
   defBased: "DEF 四則",
   flat: "固定値",
   percentMaxHp: "maxHp 割合",
+};
+
+export const MAX_HP_REFERENCES = [
+  "self",
+  "target",
+] as const satisfies readonly import("../types.ts").MaxHpReference[];
+
+export const MAX_HP_REF_LABELS: Record<
+  import("../types.ts").MaxHpReference,
+  string
+> = {
+  self: "自身",
+  target: "対象",
 };
 
 export const COUNTER_RESPONSE_KINDS = [
@@ -204,8 +216,7 @@ export const POWER_STEP_MODES = [
 
 export const PASSIVE_EFFECT_KINDS = [
   "targetRuleOverride",
-  "damageTakenToHeal",
-  "hot",
+  "heal",
   "excessHealToBarrier",
   "aoeCrowdBonus",
   "specialEffect",
@@ -216,6 +227,7 @@ export const PASSIVE_EFFECT_KINDS = [
   "debuff",
   "counter",
   "selfHpRatioBuff",
+  "skillAmountOverride",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -223,8 +235,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   string
 > = {
   targetRuleOverride: "ターゲット上書き",
-  damageTakenToHeal: "被ダメ回復",
-  hot: "HoT",
+  heal: "回復",
   excessHealToBarrier: "余剰回復バリア変換",
   aoeCrowdBonus: "密集ボーナス",
   specialEffect: "特効効果",
@@ -235,6 +246,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   debuff: "デバフ",
   counter: "反撃",
   selfHpRatioBuff: "自HP割合バフ",
+  skillAmountOverride: "スキル効果量上書き",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -254,6 +266,7 @@ export const BUFF_SUB_KINDS = [
   "barrier",
   "block",
   "evasion",
+  "damageTakenToHeal",
 ] as const satisfies readonly BuffSubKind[];
 
 export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
@@ -261,6 +274,7 @@ export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
   barrier: "バリア",
   block: "ブロック",
   evasion: "回避",
+  damageTakenToHeal: "被ダメ回復",
 };
 
 export const DEBUFF_SUB_KINDS = [
@@ -438,15 +452,15 @@ export const EDITOR_PASSIVE_EFFECT_KINDS = [
   "buff",
   "debuff",
   "counter",
-  "hot",
+  "heal",
   "periodicDispel",
-  "damageTakenToHeal",
   "excessHealToBarrier",
   "damageReduction",
   "defenseIgnore",
   "selfHpRatioBuff",
   "targetRuleOverride",
   "aoeCrowdBonus",
+  "skillAmountOverride",
 ] as const satisfies readonly (typeof PASSIVE_EFFECT_KINDS)[number][];
 
 export const EDITOR_PASSIVE_EFFECT_KIND_OPTIONS: (typeof EDITOR_PASSIVE_EFFECT_KINDS)[number][] =

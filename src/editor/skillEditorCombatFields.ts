@@ -5,6 +5,8 @@ import {
   DEBUFF_FILTER_TAGS,
   DEFENSE_IGNORE_DEF_MODE_LABELS,
   DEFENSE_IGNORE_DEF_MODES,
+  HEAL_SUB_KINDS,
+  HEAL_SUB_KIND_LABELS,
   TARGET_DISTANCE_ORDER_LABELS,
   TARGET_DISTANCE_ORDER_OPTIONS,
   TARGET_SIDE_LABELS,
@@ -16,6 +18,11 @@ import {
   TARGET_STAT_ORDER_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
 import { formatTargetLabel, normalizeTarget } from '../battle/skills/targetSpec.ts';
+import {
+  PASSIVE_PERIODIC_TRIGGER_LABELS,
+  resolvePassivePeriodicTrigger,
+  usesHotAuraMode,
+} from '../battle/passivePeriodicTrigger.ts';
 import type {
   BuffSubKind,
   DebuffSubKind,
@@ -393,7 +400,106 @@ export function appendPassiveDamageReductionFields(
   );
 }
 
-export function appendPassiveHotFields(
+type PassivePeriodicEditorMode =
+  | 'aura'
+  | 'interval'
+  | 'stageStart'
+  | 'waveStart';
+
+function resolvePassivePeriodicEditorMode(
+  passive: PassiveSkillDef,
+  allowAura: boolean,
+): PassivePeriodicEditorMode {
+  if (allowAura && usesHotAuraMode(passive)) return 'aura';
+  const trigger = resolvePassivePeriodicTrigger(passive);
+  if (trigger === 'stageStart' || trigger === 'waveStart') return trigger;
+  return 'interval';
+}
+
+function appendPassivePeriodicTriggerFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean },
+  ) => void,
+  options: { allowAura?: boolean } = {},
+): void {
+  const allowAura = options.allowAura ?? false;
+  const mode = resolvePassivePeriodicEditorMode(passive, allowAura);
+  const choices: Array<{ value: PassivePeriodicEditorMode; label: string }> = [
+    ...(allowAura ? [{ value: 'aura' as const, label: '常時 aura' }] : []),
+    { value: 'interval', label: PASSIVE_PERIODIC_TRIGGER_LABELS.interval },
+    { value: 'stageStart', label: PASSIVE_PERIODIC_TRIGGER_LABELS.stageStart },
+    { value: 'waveStart', label: PASSIVE_PERIODIC_TRIGGER_LABELS.waveStart },
+  ];
+
+  parent.appendChild(
+    createFieldRow(
+      '発動条件',
+      createSelect(mode, choices, (nextMode) => {
+        patchPassive((current) => {
+          delete current.periodicTrigger;
+          delete current.intervalSec;
+          if (nextMode === 'interval') {
+            current.periodicTrigger = 'interval';
+            current.intervalSec = 5;
+          } else if (nextMode === 'stageStart' || nextMode === 'waveStart') {
+            current.periodicTrigger = nextMode;
+          }
+        }, { rerender: true });
+      }),
+    ),
+  );
+
+  if (mode === 'interval') {
+    parent.appendChild(
+      createFieldRow(
+        '発動間隔 (秒)',
+        createNumberInput(
+          passive.intervalSec ?? 5,
+          (intervalSec) => {
+            patchPassive((current) => {
+              current.periodicTrigger = 'interval';
+              current.intervalSec = intervalSec;
+            });
+          },
+          { min: 0.1, step: 0.1 },
+        ),
+      ),
+    );
+  }
+}
+
+export function appendPassiveBarrierFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean },
+  ) => void,
+  appendResourceAmountFields: (
+    grid: HTMLElement,
+    amount: ResourceAmountSpec,
+    onUpdate: (
+      amount: ResourceAmountSpec,
+      options?: { rerender?: boolean },
+    ) => void,
+  ) => void,
+): void {
+  appendPassivePeriodicTriggerFields(parent, passive, patchPassive);
+  appendResourceAmountFields(
+    parent,
+    passive.barrierAmount ?? { kind: 'defBased', defScale: 0.5 },
+    (amount, options) => {
+      patchPassive((current) => {
+        current.barrierAmount = amount;
+      }, options);
+    },
+  );
+}
+
+export function appendPassiveHealFields(
   parent: HTMLElement,
   passive: PassiveSkillDef,
   patchPassive: (
@@ -411,18 +517,30 @@ export function appendPassiveHotFields(
 ): void {
   parent.appendChild(
     createFieldRow(
-      '発動間隔 (秒)',
-      createNumberInput(
-        passive.intervalSec ?? 5,
-        (intervalSec) => {
+      '回復種別',
+      createSelect(
+        passive.healSubKind ?? 'hot',
+        HEAL_SUB_KINDS.map((value) => ({
+          value,
+          label: HEAL_SUB_KIND_LABELS[value],
+        })),
+        (healSubKind) => {
           patchPassive((current) => {
-            current.intervalSec = intervalSec;
-          });
+            current.healSubKind = healSubKind;
+          }, { rerender: true });
         },
-        { min: 0.1, step: 0.1 },
       ),
     ),
   );
+  if ((passive.healSubKind ?? 'hot') !== 'hot') {
+    parent.appendChild(
+      createEl('p', 'editor-hint', 'パッシブ回復は HoT のみ対応しています。'),
+    );
+    return;
+  }
+  appendPassivePeriodicTriggerFields(parent, passive, patchPassive, {
+    allowAura: true,
+  });
   parent.appendChild(
     createFieldRow(
       '効果時間 (秒, 0=無限)',
@@ -449,10 +567,10 @@ export function appendPassiveHotFields(
   appendResourceAmountFields(
     parent,
     passive.hotAmount ?? { kind: 'atkBased', atkScale: 0.05 },
-    (amount) => {
+    (amount, options) => {
       patchPassive((current) => {
         current.hotAmount = amount;
-      });
+      }, options);
     },
   );
 }
@@ -465,20 +583,7 @@ export function appendPassiveDispelFields(
     options?: { rerender?: boolean },
   ) => void,
 ): void {
-  parent.appendChild(
-    createFieldRow(
-      '解除間隔 (秒)',
-      createNumberInput(
-        passive.intervalSec ?? 5,
-        (intervalSec) => {
-          patchPassive((current) => {
-            current.intervalSec = intervalSec;
-          });
-        },
-        { min: 0.1, step: 0.1 },
-      ),
-    ),
-  );
+  appendPassivePeriodicTriggerFields(parent, passive, patchPassive);
   appendTargetSpecFields(
     parent,
     passive.dispelTargetRule ?? { kind: 'self' },
@@ -791,6 +896,7 @@ const PASSIVE_BUFF_SUB_KIND_OPTIONS: Array<{ value: BuffSubKind; label: string }
   { value: 'stat', label: 'ステータス' },
   { value: 'block', label: 'ブロック' },
   { value: 'evasion', label: '回避' },
+  { value: 'damageTakenToHeal', label: '被ダメ回復' },
   { value: 'barrier', label: 'バリア' },
 ];
 
@@ -815,6 +921,14 @@ export function appendPassiveBuffFields(
     mutate: (current: PassiveSkillDef) => void,
     options?: { rerender?: boolean },
   ) => void,
+  appendResourceAmountFields?: (
+    grid: HTMLElement,
+    amount: ResourceAmountSpec,
+    onUpdate: (
+      amount: ResourceAmountSpec,
+      options?: { rerender?: boolean },
+    ) => void,
+  ) => void,
 ): void {
   parent.appendChild(
     createFieldRow(
@@ -826,6 +940,14 @@ export function appendPassiveBuffFields(
           patchPassive((current) => {
             current.buffSubKind = buffSubKind;
             current.buffTargetRule ??= { kind: 'self' };
+            if (buffSubKind === 'damageTakenToHeal') {
+              current.ratio ??= 0.1;
+            } else if (buffSubKind === 'block' || buffSubKind === 'evasion') {
+              current.chance ??= 0.1;
+            } else if (buffSubKind === 'barrier') {
+              current.barrierAmount ??= { kind: 'defBased', defScale: 0.5 };
+              current.periodicTrigger ??= 'stageStart';
+            }
           }, { rerender: true });
         },
       ),
@@ -859,13 +981,39 @@ export function appendPassiveBuffFields(
     );
     return;
   }
-  if (subKind === 'barrier') {
+  if (subKind === 'damageTakenToHeal') {
     parent.appendChild(
-      createEl(
-        'p',
-        'editor-hint',
-        'バリア付与は現行パッシブでは量定義を持たないため、target/chance のみ保持します。',
+      createFieldRow(
+        'ratio',
+        createNumberInput(
+          passive.ratio ?? 0.1,
+          (ratio) => {
+            patchPassive((current) => {
+              current.ratio = ratio;
+            });
+          },
+          { min: 0, max: 1, step: 0.01 },
+        ),
       ),
+    );
+    return;
+  }
+  if (subKind === 'barrier') {
+    if (!appendResourceAmountFields) {
+      parent.appendChild(
+        createEl(
+          'p',
+          'editor-hint',
+          'バリア量フィールドを表示できません（リソース量エディタ未接続）。',
+        ),
+      );
+      return;
+    }
+    appendPassiveBarrierFields(
+      parent,
+      passive,
+      patchPassive,
+      appendResourceAmountFields,
     );
     return;
   }

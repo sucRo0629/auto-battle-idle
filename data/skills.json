@@ -14,8 +14,12 @@
     {
       "id": "passive_damage_taken_heal",
       "name": "聖なる吸収",
-      "effect": "damageTakenToHeal",
-      "ratio": 0.1
+      "effect": "buff",
+      "buffSubKind": "damageTakenToHeal",
+      "ratio": 0.1,
+      "buffTargetRule": {
+        "kind": "self"
+      }
     },
     {
       "id": "passive_self_low_hp_dmg",
@@ -132,7 +136,8 @@
     {
       "id": "passive_alchemist_hot",
       "name": "薬草の香り",
-      "effect": "hot",
+      "effect": "heal",
+      "healSubKind": "hot",
       "hotTargetRule": {
         "kind": "stat",
         "side": "ally",
@@ -156,18 +161,18 @@
     },
     {
       "id": "df_guardian_passive_1",
-      "name": "ブロッキング",
+      "name": "盾受け",
       "effect": "buff",
       "buffSubKind": "block",
-      "chance": 0.2,
+      "chance": 0.1,
       "buffTargetRule": {
         "kind": "self"
       }
     },
     {
       "id": "df_guardian_passive_2",
-      "name": "調息",
-      "effect": "hot",
+      "name": "防御態勢",
+      "effect": "buff",
       "specialEffectApplyTo": "heal",
       "specialEffect": {
         "scale": 1.2,
@@ -177,12 +182,21 @@
         "kind": "self"
       },
       "hotAmount": {
-        "kind": "defBased",
-        "defScale": 1,
-        "atkScale": 0.1
+        "kind": "atkBased",
+        "atkScale": 0.25
       },
-      "intervalSec": 5,
-      "hotDurationSec": 3
+      "hotDurationSec": 3,
+      "buffSubKind": "barrier",
+      "buffTargetRule": {
+        "kind": "self"
+      },
+      "buffStat": "atk",
+      "buffMultiplier": 1.2,
+      "barrierAmount": {
+        "kind": "defBased",
+        "defScale": 1
+      },
+      "periodicTrigger": "waveStart"
     },
     {
       "id": "sp_cleric_passive_1",
@@ -206,11 +220,17 @@
     },
     {
       "id": "df_duelist_passive_1",
-      "name": "滾る闘志",
-      "effect": "selfHpRatioBuff",
+      "name": "ブロッキング",
+      "effect": "buff",
       "buffStat": "atk",
       "buffMultiplierMax": 1.5,
-      "maxBuffAtHpRatio": 0.5
+      "maxBuffAtHpRatio": 0.5,
+      "buffSubKind": "block",
+      "buffTargetRule": {
+        "kind": "self"
+      },
+      "buffMultiplier": 1.2,
+      "chance": 0.1
     },
     {
       "id": "df_duelist_passive_2",
@@ -222,8 +242,8 @@
         "order": "nearest"
       },
       "buffStat": "def",
-      "buffMultiplierMax": 1.5,
-      "maxBuffAtHpRatio": 0.4
+      "buffMultiplierMax": 1.6,
+      "maxBuffAtHpRatio": 0.5
     },
     {
       "id": "df_duelist_passive_3",
@@ -261,13 +281,20 @@
     {
       "id": "df_paladin_passive_2",
       "name": "聖盾",
-      "effect": "excessHealToBarrier",
+      "effect": "buff",
       "ratio": 0.1,
       "barrierScale": 1,
       "excessHealSources": [
         "outgoing",
         "incoming"
-      ]
+      ],
+      "buffSubKind": "stat",
+      "buffTargetRule": {
+        "kind": "all",
+        "side": "ally"
+      },
+      "buffStat": "damageTaken",
+      "buffMultiplier": 0.95
     },
     {
       "id": "at_warrior_passive_1",
@@ -278,6 +305,34 @@
       "buffTargetRule": {
         "kind": "self"
       }
+    },
+    {
+      "id": "df_duelist_passive_4",
+      "name": "滾る闘志",
+      "effect": "selfHpRatioBuff",
+      "buffStat": "atk",
+      "buffMultiplierMax": 1.5,
+      "maxBuffAtHpRatio": 0.5
+    },
+    {
+      "id": "df_guardian_passive_3",
+      "name": "息入れ",
+      "effect": "heal",
+      "healSubKind": "hot",
+      "specialEffectApplyTo": "heal",
+      "specialEffect": {
+        "scale": 1.2,
+        "conditions": []
+      },
+      "hotTargetRule": {
+        "kind": "self"
+      },
+      "hotAmount": {
+        "kind": "atkBased",
+        "atkScale": 0.25
+      },
+      "intervalSec": 10,
+      "hotDurationSec": 5
     }
   ],
   "actives": [
@@ -362,7 +417,8 @@
           "type": "buff",
           "buffStat": "def",
           "buffMultiplier": 1.2,
-          "buffDurationSec": 5
+          "buffDurationSec": 5,
+          "buffSubKind": "stat"
         }
       ]
     },
@@ -374,17 +430,6 @@
         "value": 15
       },
       "effect": [
-        {
-          "type": "buff",
-          "buffStat": "def",
-          "buffMultiplier": 1.1,
-          "buffDurationSec": 5,
-          "targetShape": "single",
-          "target": {
-            "kind": "self"
-          },
-          "buffFlatBonus": 10
-        },
         {
           "target": {
             "kind": "self"
@@ -404,7 +449,7 @@
       "name": "手当",
       "trigger": {
         "kind": "time",
-        "value": 8
+        "value": 5
       },
       "effect": [
         {
@@ -427,20 +472,39 @@
     },
     {
       "id": "df_paladin_active_2",
-      "name": "聖盾",
+      "name": "守護のヴェール",
       "trigger": {
         "kind": "time",
         "value": 11
       },
       "effect": [
         {
-          "type": "buff",
-          "buffStat": "def",
-          "buffMultiplier": 1.25,
-          "buffDurationSec": 6,
           "target": {
-            "kind": "self"
+            "kind": "all",
+            "side": "ally"
+          },
+          "type": "buff",
+          "buffSubKind": "barrier",
+          "buffStat": "atk",
+          "buffMultiplier": 1.2,
+          "buffDurationSec": 5,
+          "amount": {
+            "kind": "defBased",
+            "defScale": 1.2
           }
+        },
+        {
+          "target": {
+            "kind": "all",
+            "side": "ally"
+          },
+          "type": "heal",
+          "healSubKind": "instant",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          },
+          "range": 100
         }
       ]
     },
@@ -463,59 +527,30 @@
             "side": "enemy",
             "order": "nearest"
           },
-          "range": 10
-        },
-        {
-          "type": "debuff",
-          "durationSec": 1.2,
-          "targetShape": "pierce",
-          "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
-          },
-          "range": 10,
-          "debuffSubKind": "stun"
+          "range": 30,
+          "debuffSubKind": "stat"
         }
       ]
     },
     {
       "id": "df_duelist_active_2",
-      "name": "隙撃ち",
+      "name": "体力温存",
       "trigger": {
-        "kind": "basicAttackCount",
-        "value": 5
+        "kind": "hitsTaken",
+        "value": 10
       },
       "effect": [
         {
-          "type": "damage",
-          "damageType": "physical",
+          "target": {
+            "kind": "self"
+          },
+          "type": "heal",
+          "healSubKind": "hot",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.8
+            "atkScale": 0.25
           },
-          "targetShape": "single",
-          "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
-          },
-          "damageIncrease": {
-            "scale": 1.1,
-            "conditions": [
-              {
-                "kind": "debuff",
-                "tags": [
-                  "def",
-                  "stun",
-                  "reg",
-                  "damageTaken",
-                  "dot",
-                  "atk"
-                ]
-              }
-            ]
-          }
+          "durationSec": 3
         }
       ]
     },
@@ -668,7 +703,6 @@
             "atkScale": 1.1
           },
           "pierceDurationSec": 0.2,
-          "range": 10,
           "target": {
             "kind": "distance",
             "side": "enemy",
@@ -719,7 +753,6 @@
             "atkScale": 0.65,
             "atkOffset": 5
           },
-          "range": 50,
           "vfx": {
             "preset": "arrow"
           },
@@ -746,7 +779,6 @@
             "kind": "atkBased",
             "atkScale": 1.3
           },
-          "range": 50,
           "vfx": {
             "preset": "arrow",
             "arc": true
@@ -1443,6 +1475,68 @@
           "targetShape": "single",
           "hitCount": 2,
           "hitDurationSec": 0.2
+        }
+      ]
+    },
+    {
+      "id": "df_duelist_active_3",
+      "name": "隙撃ち",
+      "trigger": {
+        "kind": "basicAttackCount",
+        "value": 5
+      },
+      "effect": [
+        {
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1.05
+          },
+          "targetShape": "single",
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "damageIncrease": {
+            "scale": 2,
+            "conditions": [
+              {
+                "kind": "debuff",
+                "tags": [
+                  "def",
+                  "stun",
+                  "reg",
+                  "damageTaken",
+                  "dot",
+                  "atk"
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "at_ranger_basic_attack",
+      "name": "at_ranger_basic_attack",
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
         }
       ]
     }

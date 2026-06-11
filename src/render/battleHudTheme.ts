@@ -39,8 +39,6 @@ export interface BattleHudTheme {
   statusBuffColor: string;
   statusDebuffColor: string;
   statusBadgeIconSize: number;
-  statusBadgeArrowWidth: number;
-  statusBadgeArrowOverlap: number;
   statusBadgeOverlap: number;
   popupFontSize: number;
   popupOutlineWidth: number;
@@ -195,12 +193,6 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     statusBuffColor: readString(style, '--status-buff-color', '#e6b422'),
     statusDebuffColor: readString(style, '--status-debuff-color', '#a855f7'),
     statusBadgeIconSize: readNumber(style, '--status-badge-icon-size', 8),
-    statusBadgeArrowWidth: readNumber(style, '--status-badge-arrow-width', 3),
-    statusBadgeArrowOverlap: readNumber(
-      style,
-      '--status-badge-arrow-overlap',
-      2,
-    ),
     statusBadgeOverlap: readNumber(style, '--status-badge-overlap', 0),
     popupFontSize: readNumber(style, '--popup-font-size', 18),
     popupOutlineWidth: readNumber(style, '--popup-outline-width', 1),

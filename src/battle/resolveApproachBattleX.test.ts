@@ -681,6 +681,85 @@ describe('resolvePlayerApproachBattleX', () => {
     expect(stop).toBe(80);
   });
 
+  it('front row survivor inherits forward depth when same-range tank falls', () => {
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      battleX: 300,
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const duelist = mockCombatant({
+      id: 'duelist',
+      role: 'defender',
+      formationRow: 'front',
+      battleX: 220,
+      isAlive: false,
+      traits: { rangePx: 5, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const assassin = mockCombatant({
+      id: 'assassin',
+      role: 'attacker',
+      formationRow: 'front',
+      battleX: 200,
+      traits: { rangePx: 5, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const players = [duelist, assassin];
+
+    const assassinX = resolvePlayerApproachBattleX(
+      assassin,
+      players,
+      [meleeEnemy],
+      gameData as unknown as GameData,
+    );
+    const soloForwardStop = 300 - engagedMinBodyGap() - 5 + 3;
+    expect(assassinX).toBe(soloForwardStop);
+  });
+
+  it('same-range front row melee separates defender forward of attacker', () => {
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      battleX: 300,
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const duelist = mockCombatant({
+      id: 'duelist',
+      role: 'defender',
+      formationRow: 'front',
+      battleX: 100,
+      traits: { rangePx: 5, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const assassin = mockCombatant({
+      id: 'assassin',
+      role: 'attacker',
+      formationRow: 'front',
+      battleX: 100,
+      traits: { rangePx: 5, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const players = [duelist, assassin];
+
+    const duelistX = resolvePlayerApproachBattleX(
+      duelist,
+      players,
+      [meleeEnemy],
+      gameData as unknown as GameData,
+    );
+    const assassinX = resolvePlayerApproachBattleX(
+      assassin,
+      players,
+      [meleeEnemy],
+      gameData as unknown as GameData,
+    );
+
+    expect(duelistX).toBeGreaterThan(assassinX);
+  });
+
   it('front row melee allies approach to per-unit range stop', () => {
     const meleeEnemy = mockCombatant({
       id: 'melee',

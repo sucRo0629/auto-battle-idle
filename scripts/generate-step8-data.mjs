@@ -30,7 +30,7 @@ const magicHit = (scale = 1, extra = {}) => ({
 
 const passives = [
   { id: 'passive_target_highest_atk', name: '脅威の標的', effect: 'targetRuleOverride', targetRuleOverride: 'highestAtkEnemy' },
-  { id: 'passive_damage_taken_heal', name: '聖なる吸収', effect: 'damageTakenToHeal', ratio: 0.12 },
+  { id: 'passive_damage_taken_heal', name: '聖なる吸収', effect: 'buff', buffSubKind: 'damageTakenToHeal', ratio: 0.12, buffTargetRule: { kind: 'self' } },
   { id: 'passive_self_low_hp_dmg', name: '背水の刃', effect: 'selfHpRatioBuff', buffStat: 'atk', buffMultiplierMax: 2, maxBuffAtHpRatio: 0 },
   { id: 'passive_target_lowest_hp', name: '仕留めの眼', effect: 'targetRuleOverride', targetRuleOverride: 'lowestHpEnemy' },
   { id: 'passive_evasion', name: '影歩', effect: 'evasionChance', evasionChance: 0.18 },

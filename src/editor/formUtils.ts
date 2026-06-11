@@ -250,6 +250,30 @@ export function createNumberInput(
   return input;
 }
 
+export function createRadioGroup<T extends string>(
+  value: T,
+  options: { value: T; label: string }[],
+  onChange: (value: T) => void,
+  groupName: string,
+): HTMLElement {
+  const wrap = createEl('div', 'editor-radio-group');
+  for (const option of options) {
+    const row = createEl('label', 'editor-radio-option');
+    const input = createEl('input') as HTMLInputElement;
+    input.type = 'radio';
+    input.name = groupName;
+    input.value = option.value;
+    input.checked = option.value === value;
+    input.addEventListener('change', () => {
+      if (input.checked) onChange(option.value);
+    });
+    row.appendChild(input);
+    row.appendChild(document.createTextNode(option.label));
+    wrap.appendChild(row);
+  }
+  return wrap;
+}
+
 export function createSelect<T extends string | number>(
   value: T,
   options: { value: T; label: string }[],

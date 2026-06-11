@@ -209,9 +209,7 @@ export class PartyHudPanel {
       drawItems,
       scale,
       theme.statusBadgeIconSize,
-      theme.statusBadgeArrowWidth,
       theme.statusBadgeOverlap,
-      theme.statusBadgeArrowOverlap,
     );
     const badgeH = theme.statusBadgeIconSize * scale;
     const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
@@ -230,8 +228,6 @@ export class PartyHudPanel {
       buffColor: theme.statusBuffColor,
       debuffColor: theme.statusDebuffColor,
       iconSize: theme.statusBadgeIconSize,
-      arrowWidth: theme.statusBadgeArrowWidth,
-      arrowOverlap: theme.statusBadgeArrowOverlap,
       rowOverlap: theme.statusBadgeOverlap,
       overlayColor: theme.statusBadgeOverlay,
       iconOutlineColor: theme.statusIconOutlineColor,

@@ -10,6 +10,8 @@ import {
 import { pickTargetFromPool, resolveTargetSpec } from './skills/targeting.ts';
 import { getEffectTarget, getTargetPool } from './skills/targetSpec.ts';
 import { getAttackablePool } from './skills/rangeUtils.ts';
+import { resolveFrontRowSameRangeMeleeDepthPx } from './battleLayout.ts';
+import { resolveFormationRangePx } from './combatPosition.ts';
 
 function resolveBasicAttackTarget(
   unit: CombatantState,
@@ -208,7 +210,7 @@ export function resolvePlayerApproachBattleX(
   );
   if (contact === null) return player.battleX;
 
-  const approachX =
+  let approachX =
     player.role === 'defender'
       ? resolveDefenderApproachBattleX(player, enemies, gameData, contact)
       : resolveNonDefenderApproachBattleX(
@@ -220,12 +222,34 @@ export function resolvePlayerApproachBattleX(
         );
 
   if (player.formationRow !== 'back') {
-    return capFrontRowBeforeEnemyContact(
+    approachX = capFrontRowBeforeEnemyContact(
       player,
       enemies,
       gameData,
       approachX,
     );
+    if (player.formationRow === 'front') {
+      const depthInputs = players
+        .filter((unit) => unit.isAlive || unit.corpseVisible)
+        .map((unit) => ({
+          id: unit.id,
+          role: unit.role,
+          formationRow: unit.formationRow,
+          rangePx: resolveFormationRangePx(unit),
+          isAlive: unit.isAlive,
+        }));
+      approachX += resolveFrontRowSameRangeMeleeDepthPx(
+        {
+          id: player.id,
+          role: player.role,
+          formationRow: player.formationRow,
+          rangePx: resolveFormationRangePx(player),
+          isAlive: true,
+        },
+        depthInputs,
+      );
+    }
+    return approachX;
   }
 
   return capBackRowRangeStop(

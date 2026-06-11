@@ -97,6 +97,18 @@ describe('resolveResourceAmount', () => {
     ).toBe(10);
   });
 
+  it('resolves percentMaxHp from self maxHp when maxHpRef is self', () => {
+    const bulkyActor = mockCombatant({ atk: 20, maxHp: 200 });
+    expect(
+      resolveResourceAmount(
+        bulkyActor,
+        target,
+        { kind: 'percentMaxHp', percentOfMaxHp: 0.1, maxHpRef: 'self' },
+        passives,
+      ),
+    ).toBe(20);
+  });
+
   it('uses atkScaleOverride', () => {
     expect(
       resolveResourceAmount(
@@ -237,16 +249,16 @@ describe('applyDamageToTarget', () => {
 });
 
 describe('applyBarrierToTarget', () => {
-  it('replaces barrier by default', () => {
+  it('stacks barrier by default', () => {
+    const target = mockCombatant({ barrierHp: 40 });
+    applyBarrierToTarget(target, 25);
+    expect(target.barrierHp).toBe(65);
+  });
+
+  it('replaces barrier when barrierStack is false', () => {
     const target = mockCombatant({ barrierHp: 40 });
     applyBarrierToTarget(target, 25, false);
     expect(target.barrierHp).toBe(25);
-  });
-
-  it('stacks barrier when enabled', () => {
-    const target = mockCombatant({ barrierHp: 40 });
-    applyBarrierToTarget(target, 25, true);
-    expect(target.barrierHp).toBe(65);
   });
 });
 

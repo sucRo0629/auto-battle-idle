@@ -3,49 +3,31 @@ import {
   STATUS_BADGE_SLOT_ORDER,
   type StatusDisplayCategory,
 } from '../battle/statusEffectDisplay.ts';
-import {
-  getStatusArrowImage,
-  getStatusIconImage,
-} from './StatusIconRegistry.ts';
+import { getStatusIconImage } from './StatusIconRegistry.ts';
 
 export const STATUS_BADGE_GAP = 0;
 
-export function statusBadgeUsesArrow(category: StatusDisplayCategory): boolean {
+function statusBadgeUsesTint(category: StatusDisplayCategory): boolean {
   return category === 'atk' || category === 'def' || category === 'reg';
 }
 
-export function statusBadgeWidth(
-  category: StatusDisplayCategory,
-  scale: number,
-  iconSize: number,
-  arrowWidth: number,
-  arrowOverlap = 0,
-): number {
-  const iconW = iconSize * scale;
-  if (!statusBadgeUsesArrow(category)) return iconW;
-  return iconW + arrowWidth * scale - arrowOverlap * scale;
+export function statusBadgeWidth(scale: number, iconSize: number): number {
+  return iconSize * scale;
 }
 
 export function statusBadgeRowWidth(
   badges: ReadonlyArray<Pick<StatusBadgeDrawItem, 'category'>>,
   scale: number,
   iconSize: number,
-  arrowWidth: number,
   rowOverlap = 0,
-  arrowOverlap = 0,
 ): number {
   if (badges.length <= 0) return 0;
   const gap = STATUS_BADGE_GAP * scale;
   const overlapPx = rowOverlap * scale;
+  const badgeW = statusBadgeWidth(scale, iconSize);
   let total = 0;
   for (let i = 0; i < badges.length; i++) {
-    total += statusBadgeWidth(
-      badges[i].category,
-      scale,
-      iconSize,
-      arrowWidth,
-      arrowOverlap,
-    );
+    total += badgeW;
     if (i > 0) total += gap - overlapPx;
   }
   return total;
@@ -79,8 +61,6 @@ export interface StatusBadgeTheme {
   buffColor: string;
   debuffColor: string;
   iconSize: number;
-  arrowWidth: number;
-  arrowOverlap: number;
   rowOverlap: number;
   overlayColor: string;
   iconOutlineColor: string;
@@ -199,20 +179,12 @@ export function drawStatusBadgeRow(
     badges,
     scale,
     theme.iconSize,
-    theme.arrowWidth,
     theme.rowOverlap,
-    theme.arrowOverlap,
   );
   let x = centerX - rowW / 2;
 
   for (const badge of badges) {
-    const badgeW = statusBadgeWidth(
-      badge.category,
-      scale,
-      theme.iconSize,
-      theme.arrowWidth,
-      theme.arrowOverlap,
-    );
+    const badgeW = statusBadgeWidth(scale, theme.iconSize);
     drawStatusBadge(ctx, x, top, badge, scale, theme);
     x += badgeW + gap - overlapPx;
   }
@@ -228,43 +200,20 @@ function drawStatusBadge(
 ): void {
   const accentColor =
     badge.kind === 'buff' ? theme.buffColor : theme.debuffColor;
-  const usesArrow = statusBadgeUsesArrow(badge.category);
 
   ctx.save();
 
   const iconSize = theme.iconSize * scale;
-  const arrowWidth = theme.arrowWidth * scale;
-  const arrowOverlap = theme.arrowOverlap * scale;
-  const iconX = x;
-  const iconY = y;
   drawStatusIcon(
     ctx,
     badge.category,
-    iconX,
-    iconY,
+    x,
+    y,
     iconSize,
     accentColor,
     badge.remainingRatio,
     theme,
   );
-
-  if (usesArrow) {
-    const arrowX = iconX + iconSize - arrowOverlap;
-    const outlineWidthPx = theme.iconOutlineWidth * scale;
-    drawStatusArrow(
-      ctx,
-      arrowX,
-      iconY,
-      arrowWidth,
-      iconSize,
-      badge.kind === 'buff',
-      accentColor,
-      badge.remainingRatio,
-      theme.overlayColor,
-      theme.iconOutlineColor,
-      outlineWidthPx,
-    );
-  }
 
   ctx.restore();
 }
@@ -283,7 +232,7 @@ function drawStatusIcon(
   const outlineWidthPx =
     theme.iconOutlineWidth * (size / Math.max(1, theme.iconSize));
   if (image) {
-    if (!statusBadgeUsesArrow(category)) {
+    if (!statusBadgeUsesTint(category)) {
       drawPlainImage(
         ctx,
         image,
@@ -453,65 +402,4 @@ function drawTintedImage(
   }
 
   ctx.drawImage(tintBuffer!, 0, 0, bufferW, bufferH, x, y, width, height);
-}
-
-function drawStatusArrow(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  isUp: boolean,
-  color: string,
-  remainingRatio: number,
-  overlayColor: string,
-  outlineColor: string,
-  outlineWidth: number,
-): void {
-  const image = getStatusArrowImage(isUp ? 'up' : 'down');
-  if (image) {
-    drawTintedImage(
-      ctx,
-      image,
-      x,
-      y,
-      width,
-      height,
-      color,
-      remainingRatio,
-      overlayColor,
-      outlineColor,
-      outlineWidth,
-    );
-    return;
-  }
-
-  const halfH = width * 0.35;
-  const baseInset = halfH * 0.5;
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  if (isUp) {
-    const baseY = y + height;
-    const tipY = baseY - halfH - baseInset;
-    ctx.moveTo(x + width / 2, tipY);
-    ctx.lineTo(x + width, baseY - baseInset);
-    ctx.lineTo(x, baseY - baseInset);
-  } else {
-    const baseY = y;
-    const tipY = baseY + halfH + baseInset;
-    ctx.moveTo(x + width / 2, tipY);
-    ctx.lineTo(x + width, baseY + baseInset);
-    ctx.lineTo(x, baseY + baseInset);
-  }
-  ctx.closePath();
-  ctx.fill();
-  drawRemainingDarkOverlay(
-    ctx,
-    x,
-    y,
-    width,
-    height,
-    remainingRatio,
-    overlayColor,
-  );
 }

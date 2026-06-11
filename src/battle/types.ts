@@ -175,6 +175,9 @@ export type TargetShape =
 
 export type PowerStepMode = "multiply" | "divide";
 
+/** percentMaxHp — 参照する maxHp の主体 */
+export type MaxHpReference = "self" | "target";
+
 /** heal / hot / barrier 共用の効果量種別 */
 export type ResourceAmountKind =
   | "atkBased"
@@ -194,8 +197,10 @@ export interface ResourceAmountSpec {
   defScale?: number;
   /** flat */
   flatAmount?: number;
-  /** 0〜1、percentMaxHp — 対象 maxHp 基準 */
+  /** 0〜1、percentMaxHp — 自身 or 対象の maxHp 基準 */
   percentOfMaxHp?: number;
+  /** percentMaxHp — 参照する maxHp。未指定 = target（後方互換） */
+  maxHpRef?: MaxHpReference;
 }
 
 export interface Combatant extends CombatStats {
@@ -264,7 +269,16 @@ export interface StatusEffect {
   /** buff/debuff 用（stat 系） */
   stat?: StatusEffectStat;
   /** HoT/DoT/CC バッジ用 */
-  overlay?: "hot" | "dot" | "stun" | "block" | "counter" | "evasion";
+  overlay?:
+    | "hot"
+    | "dot"
+    | "stun"
+    | "block"
+    | "counter"
+    | "evasion"
+    | "damageTakenToHeal";
+  /** damageTakenToHeal overlay: 被ダメの回復割合（0.1 = 10%） */
+  ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */
   amount?: ResourceAmountSpec;
   /** HoT/DoT tick 量（旧 JSON 互換） */
@@ -272,6 +286,8 @@ export interface StatusEffect {
   /** HoT/DoT 付与者 */
   sourceId?: string;
   skillId?: string;
+  /** 付与元スキル effect の index（DoT/HoT tick 上書き用） */
+  effectIndex?: number;
   damageType?: DamageType;
   /** 次 tick までの残秒（1 秒間隔） */
   tickSec?: number;
@@ -323,7 +339,12 @@ export type SpecialEffectSpec = DamageIncreaseSpec;
 export type SpecialEffectApplyTo = "damage" | "heal";
 
 export type HealSubKind = "instant" | "hot" | "dispel";
-export type BuffSubKind = "stat" | "barrier" | "block" | "evasion";
+export type BuffSubKind =
+  | "stat"
+  | "barrier"
+  | "block"
+  | "evasion"
+  | "damageTakenToHeal";
 export type DebuffSubKind = "stat" | "dot" | "stun";
 
 export type BuffTargetKind = StatusEffectStat | "evasion" | "block";
@@ -391,7 +412,7 @@ export interface CombatantState extends Combatant {
 export type PassiveEffectKind =
   | "targetRuleOverride"
   | "damageTakenToHeal"
-  | "hot"
+  | "heal"
   | "excessHealToBarrier"
   | "aoeCrowdBonus"
   | "specialEffect"
@@ -402,15 +423,30 @@ export type PassiveEffectKind =
   | "debuff"
   | "counter"
   | "selfHpRatioBuff"
+  | "skillAmountOverride"
   /** @deprecated 読み込み互換 */
   | "evasionChance"
   | "block"
   | "counterChance"
   | "damageIncrease"
   | "healReceivedIncrease"
-  | "extendSelfAppliedDebuff";
+  | "extendSelfAppliedDebuff"
+  /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
+  | "hot";
+
+export function isPassiveHot(passive: PassiveSkillDef): boolean {
+  if (passive.effect === "heal") {
+    return (passive.healSubKind ?? "hot") === "hot";
+  }
+  return passive.effect === "hot";
+}
 
 export type TargetRuleOverrideApplyTo = "enemy" | "ally";
+
+export type PassivePeriodicTriggerKind = "interval" | "stageStart" | "waveStart";
+
+/** skillAmountOverride — パッシブ側 amount フィールドの上書き対象 */
+export type PassiveAmountField = "hotAmount" | "barrierAmount";
 
 export interface PassiveSkillDef {
   id: string;
@@ -418,6 +454,8 @@ export interface PassiveSkillDef {
   /** 未指定時は所属クラス role からプレースホルダー。PNG は assets/skill-icons/{iconKey}.png */
   iconKey?: string;
   effect: PassiveEffectKind;
+  /** heal パッシブの種別。未指定時 hot（パッシブ heal は HoT のみ） */
+  healSubKind?: HealSubKind;
   targetRuleOverride?: TargetSpec;
   /** targetRuleOverride の適用スコープ。未指定 = enemy */
   targetRuleOverrideApplyTo?: TargetRuleOverrideApplyTo;
@@ -425,6 +463,10 @@ export interface PassiveSkillDef {
   chance?: number;
   ratio?: number;
   hotAmount?: ResourceAmountSpec;
+  /** buff + barrier: 付与量 */
+  barrierAmount?: ResourceAmountSpec;
+  /** buff + barrier: true で既存バリアに加算 */
+  barrierStack?: boolean;
   hotTargetRule?: TargetSpec;
   /** hot: 付与 HoT の効果時間（秒）。0 または未指定 = 無限 */
   hotDurationSec?: number;
@@ -447,6 +489,8 @@ export interface PassiveSkillDef {
   debuffMultiplier?: number;
   debuffFlatBonus?: number;
   intervalSec?: number;
+  /** hot / periodicDispel: 定期発動条件。未指定かつ intervalSec あり = interval。hot で両方未指定 = 常時 aura */
+  periodicTrigger?: PassivePeriodicTriggerKind;
   dispelTargetRule?: TargetSpec;
   dispelTags?: DebuffFilterTag[];
   dispelCount?: number;
@@ -477,6 +521,14 @@ export interface PassiveSkillDef {
   durationMultiplier?: number;
   /** @deprecated 読み込み互換（正規化後は specialEffect heal） */
   percent?: number;
+  /** skillAmountOverride: 上書き対象スキル ID（actives または passives） */
+  targetSkillId?: string;
+  /** skillAmountOverride: アクティブ effect の index（未指定 = amount 持ち effect すべて） */
+  effectIndex?: number;
+  /** skillAmountOverride: パッシブ amount フィールド（未指定 = 対象パッシブから自動） */
+  passiveAmountField?: PassiveAmountField;
+  /** skillAmountOverride: 上書き後の効果量 */
+  amount?: ResourceAmountSpec;
 }
 
 export type SkillEffectKind =
@@ -484,7 +536,6 @@ export type SkillEffectKind =
   | "heal"
   | "buff"
   | "debuff"
-  | "hot"
   | "dot"
   | "barrier"
   | "move"
@@ -625,6 +676,8 @@ export interface BuffSkillEffect extends SkillEffectCommon {
   buffFlatBonus?: number;
   buffDurationSec?: number;
   chance?: number;
+  /** damageTakenToHeal: 被ダメの回復割合（0.1 = 10%） */
+  ratio?: number;
   amount?: ResourceAmountSpec;
   barrierStack?: boolean;
 }
@@ -637,10 +690,13 @@ export interface DebuffSkillEffect extends SkillEffectCommon {
   debuffFlatBonus?: number;
   debuffDurationSec?: number;
   durationSec?: number;
+  /** DoT 用（ResourceAmountSpec）。未指定時は powerMultiplier */
+  amount?: ResourceAmountSpec;
   powerMultiplier?: number;
   damageType?: DamageType;
 }
 
+/** @deprecated 読み込み互換。正規化後は HealSkillEffect + healSubKind: hot */
 export interface HotSkillEffect extends SkillEffectCommon {
   type: "hot";
   durationSec: number;
@@ -739,7 +795,6 @@ export type SkillEffectDef =
   | HealSkillEffect
   | BuffSkillEffect
   | DebuffSkillEffect
-  | HotSkillEffect
   | DotSkillEffect
   | BarrierSkillEffect
   | MoveSkillEffect
@@ -748,6 +803,9 @@ export type SkillEffectDef =
   | DispelSkillEffect
   | BlockSkillEffect
   | CounterSkillEffect;
+
+/** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
+export type LegacyHotSkillEffect = HotSkillEffect;
 
 export interface ActiveSkillDef {
   id: string;

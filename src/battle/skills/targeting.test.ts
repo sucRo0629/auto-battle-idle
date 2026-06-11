@@ -311,7 +311,12 @@ describe('resolveEffectTargets', () => {
     expect(ids).toEqual(['e3', 'e2', 'e1']);
   });
 
-  it('pierce: orders front to back', () => {
+  it('pierce: orders front to back for ally attacking forward (+X)', () => {
+    const forwardActor = mockUnit('ally', 100);
+    const front = mockUnit('e1', 130, { isEnemy: true, hp: 80 });
+    const mid = mockUnit('e2', 160, { isEnemy: true, hp: 50 });
+    const back = mockUnit('e3', 190, { isEnemy: true, hp: 30 });
+    const forwardEnemies = [front, mid, back];
     const effect: DamageSkillEffect = {
       targetShape: 'pierce',
       range: fullSkillRange,
@@ -322,13 +327,37 @@ describe('resolveEffectTargets', () => {
     };
     const resolution = resolveEffectResolution(
       effect,
-      actor,
-      allies,
-      enemies,
+      forwardActor,
+      [forwardActor],
+      forwardEnemies,
       gameData,
     );
     const ids = resolution?.waves[0]?.targets.map((t) => t.unit.id);
-    expect(ids).toEqual(['e3', 'e2', 'e1']);
+    expect(ids).toEqual(['e1', 'e2', 'e3']);
+  });
+
+  it('pierce: orders front to back for enemy attacking backward (-X)', () => {
+    const enemyActor = mockUnit('enemy', 200, { isEnemy: true });
+    const playerFront = mockUnit('p1', 180);
+    const playerMid = mockUnit('p2', 140);
+    const playerBack = mockUnit('p3', 100);
+    const effect: DamageSkillEffect = {
+      targetShape: 'pierce',
+      range: fullSkillRange,
+      type: 'damage',
+      target: { kind: "distance", side: "enemy", order: "nearest" },
+      damageType: 'physical',
+      amount: { kind: 'atkBased', atkScale: 1 },
+    };
+    const resolution = resolveEffectResolution(
+      effect,
+      enemyActor,
+      [playerFront, playerMid, playerBack],
+      [enemyActor],
+      gameData,
+    );
+    const ids = resolution?.waves[0]?.targets.map((t) => t.unit.id);
+    expect(ids).toEqual(['p1', 'p2', 'p3']);
   });
 
   it('scatter: uses deterministic random', () => {
@@ -531,7 +560,8 @@ describe('heal / hot withhold when no damaged allies', () => {
 
     const resolution = resolveEffectResolution(
       {
-        type: 'hot',
+        type: 'heal',
+        healSubKind: 'hot',
         target: ratioAllyTarget,
         amount: { kind: 'atkBased', atkScale: 0.2 },
         durationSec: 5,
@@ -571,7 +601,8 @@ describe('heal / hot withhold when no damaged allies', () => {
 
     const resolution = resolveEffectResolution(
       {
-        type: 'hot',
+        type: 'heal',
+        healSubKind: 'hot',
         target: ratioAllyTarget,
         amount: { kind: 'atkBased', atkScale: 0.2 },
         durationSec: 5,
@@ -582,6 +613,38 @@ describe('heal / hot withhold when no damaged allies', () => {
       gameData,
     );
     expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('ally-damaged');
+  });
+
+  it('resolves heal at full HP when the skill also grants barrier', () => {
+    const healer = mockUnit('healer', 200);
+    const ally = mockUnit('ally', 180);
+    const party = [healer, ally];
+    const skillEffects = [
+      {
+        type: 'buff',
+        buffSubKind: 'barrier',
+        target: { kind: 'all', side: 'ally' },
+        amount: { kind: 'flat', flatAmount: 20 },
+      },
+      {
+        type: 'heal',
+        target: ratioAllyTarget,
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+    ] as SkillEffectDef[];
+
+    const resolution = resolveEffectResolution(
+      skillEffects[1]!,
+      healer,
+      party,
+      [],
+      gameData,
+      Math.random,
+      undefined,
+      skillEffects,
+    );
+    expect(resolution).not.toBeNull();
+    expect(resolution?.waves[0]?.targets[0]?.unit.isAlive).toBe(true);
   });
 });
 

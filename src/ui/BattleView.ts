@@ -189,10 +189,13 @@ export class BattleView {
           this.pushLog(`${slotLabel} → ${event.amount} dmg`);
           this.canvas.showDamagePopup(event.targetId, event.amount);
         }
-      } else if (event.effect === "heal" || event.effect === "hot") {
+      } else if (event.effect === "heal") {
         if (event.amount !== undefined) {
           this.pushLog(`${slotLabel} → +${event.amount} HP`);
           this.canvas.showHealPopup(event.targetId, event.amount);
+        } else if (event.statusLabel === "hot") {
+          this.pushLog(`${slotLabel} → HoT`);
+          this.canvas.showBuffGlow(event.targetId);
         }
       } else if (event.effect === "barrier") {
         if (event.amount !== undefined) {

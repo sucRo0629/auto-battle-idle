@@ -635,9 +635,7 @@ export class BattleCanvas implements IBattleRenderer {
         drawItems,
         scale,
         this.theme.statusBadgeIconSize,
-        this.theme.statusBadgeArrowWidth,
         this.theme.statusBadgeOverlap,
-        this.theme.statusBadgeArrowOverlap,
       );
       rowWidthById.set(layout.id, rowWidth);
       badgeInputs.push({
@@ -675,8 +673,6 @@ export class BattleCanvas implements IBattleRenderer {
         buffColor: this.theme.statusBuffColor,
         debuffColor: this.theme.statusDebuffColor,
         iconSize: this.theme.statusBadgeIconSize,
-        arrowWidth: this.theme.statusBadgeArrowWidth,
-        arrowOverlap: this.theme.statusBadgeArrowOverlap,
         rowOverlap: this.theme.statusBadgeOverlap,
         overlayColor: this.theme.statusBadgeOverlay,
         iconOutlineColor: this.theme.statusIconOutlineColor,

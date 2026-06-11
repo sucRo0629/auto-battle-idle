@@ -9,12 +9,9 @@ import blockIconUrl from "../assets/status-icons/block.png";
 import stunIconUrl from "../assets/status-icons/stun.png";
 import evasionIconUrl from "../assets/status-icons/evasion.png";
 import counterIconUrl from "../assets/status-icons/counter.png";
-import arrowUpUrl from "../assets/status-icons/arrow_up.png";
-import arrowDownUrl from "../assets/status-icons/arrow_down.png";
 import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
 
 export type { StatusDisplayCategory };
-export type StatusArrowKind = "up" | "down";
 
 const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   atk: atkIconUrl,
@@ -30,13 +27,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   counter: counterIconUrl,
 };
 
-const ARROW_URLS: Record<StatusArrowKind, string> = {
-  up: arrowUpUrl,
-  down: arrowDownUrl,
-};
-
 const iconImages = new Map<StatusDisplayCategory, HTMLImageElement>();
-const arrowImages = new Map<StatusArrowKind, HTMLImageElement>();
 let preloadPromise: Promise<void> | null = null;
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -50,14 +41,11 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 
 export function preloadStatusIcons(): Promise<void> {
   if (!preloadPromise) {
-    preloadPromise = Promise.all([
-      ...Object.entries(ICON_URLS).map(async ([key, url]) => {
+    preloadPromise = Promise.all(
+      Object.entries(ICON_URLS).map(async ([key, url]) => {
         iconImages.set(key as StatusDisplayCategory, await loadImage(url));
       }),
-      ...Object.entries(ARROW_URLS).map(async ([key, url]) => {
-        arrowImages.set(key as StatusArrowKind, await loadImage(url));
-      }),
-    ]).then(() => {});
+    ).then(() => {});
   }
   return preloadPromise;
 }
@@ -66,12 +54,6 @@ export function getStatusIconImage(
   category: StatusDisplayCategory
 ): HTMLImageElement | undefined {
   return iconImages.get(category);
-}
-
-export function getStatusArrowImage(
-  kind: StatusArrowKind
-): HTMLImageElement | undefined {
-  return arrowImages.get(kind);
 }
 
 void preloadStatusIcons();

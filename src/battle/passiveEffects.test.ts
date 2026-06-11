@@ -5,9 +5,14 @@ import {
   getPassiveDamageIncreaseMultiplier,
   getPassiveOutgoingDamageMultiplier,
   resolveIncomingHealAmount,
+  applyPassiveBarrierFromPassive,
   applyPassiveHotFromPassive,
+  firePeriodicPassivesForTrigger,
+  getPeriodicBarrierReady,
   getPeriodicHotReady,
+  initializePeriodicBarrierStates,
   initializePeriodicHotStates,
+  tickPeriodicBarrierStates,
   syncHotAuras,
   syncBuffAuras,
   syncDamageReductionAuras,
@@ -76,7 +81,8 @@ const passives: Record<string, PassiveSkillDef> = {
   aura: {
     id: 'aura',
     name: 'Aura',
-    effect: 'hot',
+    effect: 'heal',
+    healSubKind: 'hot',
     hotTargetRule: { kind: "self" },
     hotAmount: { kind: 'flat', flatAmount: 2 },
   },
@@ -404,7 +410,8 @@ describe('passiveEffects', () => {
       aura: {
         id: 'aura',
         name: 'Aura',
-        effect: 'hot' as const,
+        effect: 'heal' as const,
+        healSubKind: 'hot' as const,
         hotTargetRule: { kind: 'self' as const },
         hotAmount: { kind: 'flat' as const, flatAmount: 2 },
         hotDurationSec: 8,
@@ -416,10 +423,152 @@ describe('passiveEffects', () => {
       periodicHotPassives.aura,
       [healer],
       [],
+      periodicHotPassives,
     );
     const hot = healer.statusEffects.find((e) => e.overlay === 'hot');
     expect(hot?.durationSec).toBe(8);
     expect(hot?.remainingSec).toBe(8);
+  });
+
+  it('syncHotAuras skips passives with stageStart trigger', () => {
+    const periodicHotPassives = {
+      aura: {
+        id: 'aura',
+        name: 'Aura',
+        effect: 'heal' as const,
+        healSubKind: 'hot' as const,
+        hotTargetRule: { kind: 'self' as const },
+        hotAmount: { kind: 'flat' as const, flatAmount: 2 },
+        periodicTrigger: 'stageStart' as const,
+      },
+    };
+    const healer = mockAlly({
+      id: 'healer',
+      build: {
+        learnedPassiveIds: ['aura'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    syncHotAuras([healer], [], periodicHotPassives);
+    expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
+  });
+
+  it('applyPassiveBarrierFromPassive grants barrier to target', () => {
+    const barrierPassives = {
+      shield: {
+        id: 'shield',
+        name: 'Shield',
+        effect: 'buff' as const,
+        buffSubKind: 'barrier' as const,
+        buffTargetRule: { kind: 'self' as const },
+        barrierAmount: { kind: 'flat' as const, flatAmount: 25 },
+        periodicTrigger: 'stageStart' as const,
+      },
+    };
+    const guard = mockAlly({
+      id: 'guard',
+      def: 30,
+      build: {
+        learnedPassiveIds: ['shield'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    applyPassiveBarrierFromPassive(
+      guard,
+      barrierPassives.shield,
+      [guard],
+      [],
+      barrierPassives,
+    );
+    expect(guard.barrierHp).toBe(25);
+  });
+
+  it('firePeriodicPassivesForTrigger applies barrier on waveStart', () => {
+    const barrierPassives = {
+      shield: {
+        id: 'shield',
+        name: 'Shield',
+        effect: 'buff' as const,
+        buffSubKind: 'barrier' as const,
+        buffTargetRule: { kind: 'self' as const },
+        barrierAmount: { kind: 'flat' as const, flatAmount: 12 },
+        periodicTrigger: 'waveStart' as const,
+      },
+    };
+    const guard = mockAlly({
+      id: 'guard',
+      build: {
+        learnedPassiveIds: ['shield'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    firePeriodicPassivesForTrigger(
+      'waveStart',
+      [guard],
+      [guard],
+      [],
+      barrierPassives,
+    );
+    expect(guard.barrierHp).toBe(12);
+  });
+
+  it('tickPeriodicBarrierStates fires on interval wrap', () => {
+    const barrierPassives = {
+      shield: {
+        id: 'shield',
+        name: 'Shield',
+        effect: 'buff' as const,
+        buffSubKind: 'barrier' as const,
+        buffTargetRule: { kind: 'self' as const },
+        barrierAmount: { kind: 'flat' as const, flatAmount: 8 },
+        periodicTrigger: 'interval' as const,
+        intervalSec: 4,
+      },
+    };
+    const guard = mockAlly({
+      id: 'guard',
+      build: {
+        learnedPassiveIds: ['shield'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const states = initializePeriodicBarrierStates(guard, barrierPassives);
+    const after = tickPeriodicBarrierStates(states, barrierPassives, 0.1);
+    expect(getPeriodicBarrierReady(states, after)).toEqual(['shield']);
+  });
+
+  it('firePeriodicPassivesForTrigger applies hot on stageStart', () => {
+    const periodicHotPassives = {
+      aura: {
+        id: 'aura',
+        name: 'Aura',
+        effect: 'heal' as const,
+        healSubKind: 'hot' as const,
+        hotTargetRule: { kind: 'self' as const },
+        hotAmount: { kind: 'flat' as const, flatAmount: 2 },
+        periodicTrigger: 'stageStart' as const,
+      },
+    };
+    const healer = mockAlly({
+      id: 'healer',
+      build: {
+        learnedPassiveIds: ['aura'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    firePeriodicPassivesForTrigger(
+      'stageStart',
+      [healer],
+      [healer],
+      [],
+      periodicHotPassives,
+    );
+    expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
   });
 
   it('syncHotAuras skips passives with intervalSec', () => {
@@ -427,7 +576,8 @@ describe('passiveEffects', () => {
       aura: {
         id: 'aura',
         name: 'Aura',
-        effect: 'hot' as const,
+        effect: 'heal' as const,
+        healSubKind: 'hot' as const,
         hotTargetRule: { kind: 'self' as const },
         hotAmount: { kind: 'flat' as const, flatAmount: 2 },
         intervalSec: 5,
@@ -500,7 +650,8 @@ describe('passiveEffects', () => {
       aura: {
         id: 'aura',
         name: 'Aura',
-        effect: 'hot' as const,
+        effect: 'heal' as const,
+        healSubKind: 'hot' as const,
         hotTargetRule: { kind: 'self' as const },
         hotAmount: { kind: 'flat' as const, flatAmount: 2 },
         intervalSec: 3,

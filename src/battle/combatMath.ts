@@ -20,6 +20,7 @@ import {
   resolveIncomingHealAmount,
   type PassiveDamageContext,
 } from './passiveEffects.ts';
+import { resolveEffectiveAmountSpec } from './skillAmountOverride.ts';
 import {
   aggregateStatEffects,
   computeEffectiveStat,
@@ -90,10 +91,11 @@ export function resolvePowerAmount(
     }
     case 'flat':
       return Math.floor(Math.max(0, spec.flatAmount ?? 0));
-    case 'percentMaxHp':
-      return Math.floor(
-        Math.max(0, target.maxHp * (spec.percentOfMaxHp ?? 0)),
-      );
+    case 'percentMaxHp': {
+      const ref = spec.maxHpRef ?? 'target';
+      const maxHp = ref === 'self' ? actor.maxHp : target.maxHp;
+      return Math.floor(Math.max(0, maxHp * (spec.percentOfMaxHp ?? 0)));
+    }
   }
 }
 
@@ -144,9 +146,20 @@ export function resolveHotAmountFromStatus(
   effect: StatusEffect,
   passives: Record<string, PassiveSkillDef>,
 ): number {
-  const spec =
+  const baseSpec =
     effect.amount ??
     ({ kind: 'atkBased', atkScale: effect.powerMultiplier ?? 1 } satisfies ResourceAmountSpec);
+  const spec =
+    effect.skillId !== undefined
+      ? resolveEffectiveAmountSpec(source, passives, baseSpec, {
+          skillId: effect.skillId,
+          ...(effect.effectIndex !== undefined
+            ? { effectIndex: effect.effectIndex }
+            : effect.id.startsWith('passive_hot_')
+              ? { passiveAmountField: 'hotAmount' as const }
+              : {}),
+        })
+      : baseSpec;
   return resolveResourceAmount(source, target, spec, passives);
 }
 
@@ -162,9 +175,16 @@ export function resolveDotAmountFromStatus(
   effect: StatusEffect,
   passives: Record<string, PassiveSkillDef>,
 ): number {
-  const spec =
+  const baseSpec =
     effect.amount ??
     ({ kind: 'atkBased', atkScale: effect.powerMultiplier ?? 1 } satisfies ResourceAmountSpec);
+  const spec =
+    effect.skillId !== undefined
+      ? resolveEffectiveAmountSpec(source, passives, baseSpec, {
+          skillId: effect.skillId,
+          ...(effect.effectIndex !== undefined ? { effectIndex: effect.effectIndex } : {}),
+        })
+      : baseSpec;
   return resolveDotTick(
     source,
     target,
@@ -188,12 +208,17 @@ export function applyHealToTarget(
   return target.hp - before;
 }
 
+/** 未指定時は加算（`barrierStack: false` のみ置換） */
+export function resolveBarrierStack(barrierStack?: boolean): boolean {
+  return barrierStack !== false;
+}
+
 export function applyBarrierToTarget(
   target: CombatantState,
   grant: number,
-  stack: boolean,
+  stack?: boolean,
 ): number {
-  if (stack) {
+  if (resolveBarrierStack(stack)) {
     target.barrierHp += grant;
   } else {
     target.barrierHp = grant;

@@ -12,6 +12,7 @@ import type {
   GrowthTierSet,
   PartyDef,
   PassiveEffectKind,
+  PassivePeriodicTriggerKind,
   PassiveSkillDef,
   MoveMode,
   ResourceAmountKind,
@@ -20,6 +21,7 @@ import type {
   SkillEffectAnimId,
   SkillEffectDef,
   SkillEffectKind,
+  LegacyHotSkillEffect,
   SkillTrigger,
   SkillTriggerKind,
   SkillRegistry,
@@ -48,6 +50,7 @@ import {
   defaultBasicAttackId,
   synthesizeBasicAttackSkill,
 } from './synthesizeBasicAttack.ts';
+import { PASSIVE_PERIODIC_TRIGGER_KINDS } from '../passivePeriodicTrigger.ts';
 
 import {
   ATTACK_SPEED_TIERS,
@@ -79,6 +82,10 @@ import {
   TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS,
 } from './gameDataSchema.ts';
 import { normalizeTarget } from '../skills/targetSpec.ts';
+import {
+  activeEffectHasAmount,
+  inferPassiveAmountField,
+} from '../skillAmountOverride.ts';
 import {
   isBuffFilterTag,
   isDebuffFilterTag,
@@ -132,18 +139,24 @@ const TARGET_RULE_OVERRIDE_APPLY_TO_SET = new Set<
 
 const LEGACY_PASSIVE_EFFECT_ALIASES: Record<string, PassiveEffectKind> = {
   healAppliesBarrier: 'excessHealToBarrier',
-  partyHotAura: 'hot',
+  partyHotAura: 'heal',
+  hot: 'heal',
   evasionChance: 'buff',
   block: 'buff',
   counterChance: 'counter',
   damageIncrease: 'specialEffect',
   healReceivedIncrease: 'specialEffect',
+  damageTakenToHeal: 'buff',
 };
 
 /** エディタ表示・保存前に旧 effect 名を新 taxonomy へ正規化 */
 export function normalizePassiveSkillForEditor(
   passive: PassiveSkillDef,
 ): PassiveSkillDef {
+  if (passive.effect === 'hot') {
+    return { ...passive, effect: 'heal', healSubKind: 'hot' };
+  }
+
   const effectRaw = passive.effect;
   const normalizedEffect = LEGACY_PASSIVE_EFFECT_ALIASES[effectRaw];
   if (!normalizedEffect) return passive;
@@ -171,8 +184,38 @@ export function normalizePassiveSkillForEditor(
       scale: 1 + percent,
       conditions: [{ kind: 'targetHp', maxHpRatio: 1 }],
     };
+  } else if (effectRaw === 'damageTakenToHeal') {
+    next.buffSubKind = 'damageTakenToHeal';
+    next.buffTargetRule = passive.buffTargetRule ?? { kind: 'self' };
+  } else if (String(effectRaw) === 'partyHotAura') {
+    next.healSubKind = 'hot';
   }
   return next;
+}
+
+/** 保存前に UI デフォルト表示のみで未設定の buff フィールドを埋める */
+export function normalizeActiveSkillEffectForEditor(
+  effect: SkillEffectDef,
+): SkillEffectDef {
+  const normalized = normalizeSkillEffect(effect);
+  if (normalized.type !== 'buff') return normalized;
+
+  const subKind = normalized.buffSubKind ?? 'stat';
+  if (subKind === 'damageTakenToHeal') {
+    return {
+      ...normalized,
+      ratio: normalized.ratio ?? 0.1,
+      buffDurationSec: normalized.buffDurationSec ?? 5,
+    };
+  }
+  if (subKind === 'block' || subKind === 'evasion') {
+    return {
+      ...normalized,
+      chance: normalized.chance ?? 0.2,
+      buffDurationSec: normalized.buffDurationSec ?? 5,
+    };
+  }
+  return normalized;
 }
 
 const REMOVED_PASSIVE_EFFECTS = new Set([
@@ -184,6 +227,7 @@ const REMOVED_PASSIVE_EFFECTS = new Set([
   'evasionChance',
   'block',
   'counterChance',
+  'damageTakenToHeal',
 ]);
 const RESOURCE_AMOUNT_KINDS_SET = new Set<ResourceAmountKind>(
   RESOURCE_AMOUNT_KINDS,
@@ -375,7 +419,19 @@ function parseResourceAmountSpec(
   if (percentOfMaxHp < 0 || percentOfMaxHp > 1) {
     invalidField(context, 'percentOfMaxHp', 'must be between 0 and 1');
   }
-  return { kind, percentOfMaxHp };
+  const spec: ResourceAmountSpec = { kind, percentOfMaxHp };
+  if (obj.maxHpRef !== undefined) {
+    const maxHpRef = requireEnum(
+      obj,
+      'maxHpRef',
+      context,
+      new Set(['self', 'target'] as const),
+    );
+    if (maxHpRef !== 'target') {
+      spec.maxHpRef = maxHpRef;
+    }
+  }
+  return spec;
 }
 
 function parseEffectAmount(
@@ -650,6 +706,70 @@ function parseOptionalPositiveNumber(
     invalidField(context, key, 'must be a positive number');
   }
   return { [key]: value };
+}
+
+const PASSIVE_PERIODIC_TRIGGER_KINDS_SET = new Set<string>(
+  PASSIVE_PERIODIC_TRIGGER_KINDS,
+);
+
+function parsePassivePeriodicTriggerFields(
+  obj: Record<string, unknown>,
+  context: string,
+  options: { requireTriggerOrInterval?: boolean } = {},
+): Pick<PassiveSkillDef, 'periodicTrigger' | 'intervalSec'> {
+  const periodicTriggerRaw = obj.periodicTrigger;
+  let periodicTrigger: PassivePeriodicTriggerKind | undefined;
+  if (periodicTriggerRaw !== undefined) {
+    periodicTrigger = requireEnum(
+      obj,
+      'periodicTrigger',
+      context,
+      PASSIVE_PERIODIC_TRIGGER_KINDS_SET,
+    ) as PassivePeriodicTriggerKind;
+  }
+
+  const intervalSecValue = obj.intervalSec;
+  let intervalSec: number | undefined;
+  if (intervalSecValue !== undefined) {
+    if (
+      typeof intervalSecValue !== 'number' ||
+      Number.isNaN(intervalSecValue) ||
+      intervalSecValue <= 0
+    ) {
+      invalidField(context, 'intervalSec', 'must be a positive number');
+    }
+    intervalSec = intervalSecValue;
+  }
+
+  if (
+    periodicTrigger === 'stageStart' ||
+    periodicTrigger === 'waveStart'
+  ) {
+    if (intervalSec !== undefined) {
+      invalidField(
+        context,
+        'intervalSec',
+        'must not be set when periodicTrigger is stageStart or waveStart',
+      );
+    }
+    return { periodicTrigger };
+  }
+
+  if (periodicTrigger === 'interval') {
+    if (intervalSec === undefined) {
+      missingField(context, 'intervalSec');
+    }
+    return { periodicTrigger, intervalSec };
+  }
+
+  if (intervalSec !== undefined) {
+    return { intervalSec };
+  }
+
+  if (options.requireTriggerOrInterval) {
+    missingField(context, 'intervalSec or periodicTrigger');
+  }
+  return {};
 }
 
 function parseOptionalNonNegativeNumber(
@@ -1204,7 +1324,7 @@ function parseCounterEffectResponses(
   invalidField(context, 'responses', 'is required');
 }
 
-function normalizeSkillEffect(effect: SkillEffectDef): SkillEffectDef {
+function normalizeSkillEffect(effect: SkillEffectDef | LegacyHotSkillEffect): SkillEffectDef {
   if (effect.type === 'hot') {
     return {
       ...effect,
@@ -1275,6 +1395,29 @@ function normalizeSkillEffect(effect: SkillEffectDef): SkillEffectDef {
 
 export function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
   const obj = requireRecord(entry, context);
+  const typeRaw = requireString(obj, 'type', context);
+  if (typeRaw === 'hot') {
+    const durationSec = requireNumber(obj, 'durationSec', context);
+    const amount = parseEffectAmount(obj, context, 'hot');
+    const target = parseEffectTarget(obj, context);
+    const range = parseOptionalRange(obj, context);
+    const targetShapeFields = parseTargetShapeFields(obj, context);
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const combatModifiers = parseOptionalEffectCombatModifiers(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    return normalizeSkillEffect({
+      target,
+      ...targetShapeFields,
+      ...combatModifiers,
+      type: 'heal',
+      healSubKind: 'hot',
+      durationSec,
+      amount,
+      ...sequenceTiming,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    });
+  }
   const type = requireEnum(obj, 'type', context, SKILL_EFFECTS);
   const target =
     type === 'counter'
@@ -1414,6 +1557,31 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         ...(range !== undefined ? { range } : {}),
       });
     }
+    if (buffSubKind === 'damageTakenToHeal') {
+      const ratio =
+        obj.ratio === undefined
+          ? 0.1
+          : requireNumber(obj, 'ratio', context);
+      if (ratio < 0 || ratio > 1) {
+        invalidField(context, 'ratio', 'must be between 0 and 1');
+      }
+      const buffDurationSec =
+        obj.buffDurationSec === undefined
+          ? 5
+          : requireNumber(obj, 'buffDurationSec', context);
+      return normalizeSkillEffect({
+        target,
+        ...targetShapeFields,
+        ...combatModifiers,
+        type,
+        buffSubKind,
+        ratio,
+        buffDurationSec,
+        ...sequenceTiming,
+        ...presentation,
+        ...(range !== undefined ? { range } : {}),
+      });
+    }
     const chance = requireNumber(obj, 'chance', context);
     if (chance < 0 || chance > 1) {
       invalidField(context, 'chance', 'must be between 0 and 1');
@@ -1427,22 +1595,6 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       buffSubKind,
       chance,
       buffDurationSec,
-      ...sequenceTiming,
-      ...presentation,
-      ...(range !== undefined ? { range } : {}),
-    });
-  }
-
-  if (type === 'hot') {
-    const durationSec = requireNumber(obj, 'durationSec', context);
-    const amount = parseEffectAmount(obj, context, 'hot');
-    return normalizeSkillEffect({
-      target,
-      ...targetShapeFields,
-      ...combatModifiers,
-      type: 'hot',
-      durationSec,
-      amount,
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
@@ -1898,8 +2050,53 @@ function requirePassiveEffectParams(
           ...(buffTargetRule !== undefined ? { buffTargetRule } : {}),
         };
       }
+      if (buffSubKind === 'damageTakenToHeal') {
+        const ratio = requireNumber(obj, 'ratio', context);
+        if (ratio < 0 || ratio > 1) {
+          invalidField(context, 'ratio', 'must be between 0 and 1');
+        }
+        return {
+          ...base,
+          buffSubKind,
+          ratio,
+          buffTargetRule: parseTargetSpec(
+            obj.buffTargetRule ?? 'self',
+            `${context}.buffTargetRule`,
+          ),
+        };
+      }
+      if (buffSubKind === 'barrier') {
+        const amountSource = obj.barrierAmount ?? obj.amount;
+        const barrierAmount = parseResourceAmountSpec(
+          amountSource,
+          `${context}.barrierAmount`,
+        );
+        const barrierStack = obj.barrierStack;
+        if (barrierStack !== undefined && typeof barrierStack !== 'boolean') {
+          invalidField(context, 'barrierStack', 'must be a boolean');
+        }
+        const periodicFields = parsePassivePeriodicTriggerFields(obj, context);
+        return {
+          ...base,
+          buffSubKind,
+          barrierAmount,
+          buffTargetRule: parseTargetSpec(
+            obj.buffTargetRule ?? 'self',
+            `${context}.buffTargetRule`,
+          ),
+          ...(typeof barrierStack === 'boolean' ? { barrierStack } : {}),
+          ...(periodicFields.periodicTrigger === undefined &&
+          periodicFields.intervalSec === undefined
+            ? { periodicTrigger: 'stageStart' as const }
+            : periodicFields),
+        };
+      }
       if (buffSubKind !== 'stat') {
-        invalidField(context, 'buffSubKind', 'passive buff supports stat/block/evasion');
+        invalidField(
+          context,
+          'buffSubKind',
+          'passive buff supports stat/block/evasion/damageTakenToHeal/barrier',
+        );
       }
       const buffStatRaw = obj.buffStat;
       if (buffStatRaw === undefined) {
@@ -1965,10 +2162,6 @@ function requirePassiveEffectParams(
       };
     }
     case 'periodicDispel': {
-      const intervalSec = requireNumber(obj, 'intervalSec', context);
-      if (intervalSec <= 0) {
-        invalidField(context, 'intervalSec', 'must be a positive number');
-      }
       const dispelCount = requireNumber(obj, 'dispelCount', context);
       if (dispelCount < 0) {
         invalidField(context, 'dispelCount', 'must be a non-negative number');
@@ -1980,7 +2173,9 @@ function requirePassiveEffectParams(
       );
       return {
         ...base,
-        intervalSec,
+        ...parsePassivePeriodicTriggerFields(obj, context, {
+          requireTriggerOrInterval: true,
+        }),
         dispelTargetRule: parseTargetSpec(
           obj.dispelTargetRule ?? 'self',
           `${context}.dispelTargetRule`,
@@ -1989,9 +2184,18 @@ function requirePassiveEffectParams(
         ...(dispelTags !== undefined ? { dispelTags } : {}),
       };
     }
-    case 'damageTakenToHeal':
-      return { ...base, ratio: requireNumber(obj, 'ratio', context) };
-    case 'hot': {
+    case 'heal': {
+      const healSubKind =
+        obj.healSubKind === undefined
+          ? ('hot' as const)
+          : requireEnum(obj, 'healSubKind', context, HEAL_SUB_KINDS_SET);
+      if (healSubKind !== 'hot') {
+        invalidField(
+          context,
+          'healSubKind',
+          'passive heal currently supports hot only',
+        );
+      }
       const amountSource = obj.hotAmount ?? obj.partyHotAuraAmount;
       const targetSource = obj.hotTargetRule ?? obj.partyHotTargetRule;
       const hotDurationSec = parseOptionalNonNegativeNumber(
@@ -2001,6 +2205,7 @@ function requirePassiveEffectParams(
       );
       return {
         ...base,
+        healSubKind: 'hot',
         hotAmount: parseResourceAmountSpec(
           amountSource,
           `${context}.hotAmount`,
@@ -2009,7 +2214,7 @@ function requirePassiveEffectParams(
           targetSource ?? 'self',
           `${context}.hotTargetRule`,
         ),
-        ...parseOptionalPositiveNumber(obj, context, 'intervalSec'),
+        ...parsePassivePeriodicTriggerFields(obj, context),
         ...(hotDurationSec !== undefined ? { hotDurationSec } : {}),
       };
     }
@@ -2122,6 +2327,49 @@ function requirePassiveEffectParams(
         maxBuffAtHpRatio,
         ...(buffMultiplierMax !== undefined ? { buffMultiplierMax } : {}),
         ...(buffFlatBonusMax !== undefined ? { buffFlatBonusMax } : {}),
+      };
+    }
+    case 'skillAmountOverride': {
+      const targetSkillId = requireString(obj, 'targetSkillId', context);
+      const amount = parseResourceAmountSpec(
+        obj.amount,
+        `${context}.amount`,
+      );
+      const effectIndexRaw = parseOptionalNumber(obj, 'effectIndex', context);
+      if (
+        effectIndexRaw !== undefined &&
+        (!Number.isInteger(effectIndexRaw) || effectIndexRaw < 0)
+      ) {
+        invalidField(context, 'effectIndex', 'must be a non-negative integer');
+      }
+      const passiveAmountFieldRaw = obj.passiveAmountField;
+      let passiveAmountField: PassiveSkillDef['passiveAmountField'];
+      if (passiveAmountFieldRaw !== undefined) {
+        if (
+          passiveAmountFieldRaw !== 'hotAmount' &&
+          passiveAmountFieldRaw !== 'barrierAmount'
+        ) {
+          invalidField(
+            context,
+            'passiveAmountField',
+            'must be hotAmount or barrierAmount',
+          );
+        }
+        passiveAmountField = passiveAmountFieldRaw;
+      }
+      if (effectIndexRaw !== undefined && passiveAmountField !== undefined) {
+        invalidField(
+          context,
+          'effectIndex',
+          'cannot be used with passiveAmountField',
+        );
+      }
+      return {
+        ...base,
+        targetSkillId,
+        amount,
+        ...(effectIndexRaw !== undefined ? { effectIndex: effectIndexRaw } : {}),
+        ...(passiveAmountField !== undefined ? { passiveAmountField } : {}),
       };
     }
     default:
@@ -2486,6 +2734,15 @@ function parsePassives(raw: unknown): PassiveSkillDef[] {
           scale: 1 + percent,
           conditions: [{ kind: 'targetHp', maxHpRatio: 1 }],
         };
+      } else if (effectRaw === 'damageTakenToHeal') {
+        effectObj.buffSubKind = 'damageTakenToHeal';
+        effectObj.buffTargetRule = obj.buffTargetRule ?? { kind: 'self' };
+      } else if (
+        effectRaw === 'hot' ||
+        effectRaw === 'partyHotAura' ||
+        normalizedEffect === 'heal'
+      ) {
+        effectObj.healSubKind = obj.healSubKind ?? 'hot';
       }
     }
 
@@ -2787,6 +3044,48 @@ function validateReferences(
   const passiveIds = new Set(passives.map((p) => p.id));
   const activeIds = new Set(actives.map((a) => a.id));
   const enemyIds = new Set(enemies.map((e) => e.id));
+  const passiveById = new Map(passives.map((p) => [p.id, p] as const));
+  const activeById = new Map(actives.map((a) => [a.id, a] as const));
+
+  for (const passive of passives) {
+    if (passive.effect !== 'skillAmountOverride') continue;
+    const ctx = `passive skillAmountOverride id=${passive.id}`;
+    const targetId = passive.targetSkillId;
+    if (!targetId) {
+      throw new Error(`Missing targetSkillId: ${ctx}`);
+    }
+    const active = activeById.get(targetId);
+    const targetPassive = passiveById.get(targetId);
+    if (!active && !targetPassive) {
+      throw new Error(`Unknown targetSkillId "${targetId}": ${ctx}`);
+    }
+    if (active) {
+      if (passive.passiveAmountField !== undefined) {
+        throw new Error(
+          `passiveAmountField is not allowed for active target: ${ctx}`,
+        );
+      }
+      if (passive.effectIndex !== undefined) {
+        const effect = active.effect[passive.effectIndex];
+        if (!effect || !activeEffectHasAmount(effect)) {
+          throw new Error(
+            `effect[${passive.effectIndex}] is not amount-bearing: ${ctx}`,
+          );
+        }
+      } else if (!active.effect.some((effect) => activeEffectHasAmount(effect))) {
+        throw new Error(`active has no amount-bearing effects: ${ctx}`);
+      }
+    } else if (targetPassive) {
+      if (passive.effectIndex !== undefined) {
+        throw new Error(`effectIndex is not allowed for passive target: ${ctx}`);
+      }
+      const field =
+        passive.passiveAmountField ?? inferPassiveAmountField(targetPassive);
+      if (!field) {
+        throw new Error(`passive target has no amount field: ${ctx}`);
+      }
+    }
+  }
 
   const classById = new Map(classes.map((cls) => [cls.id, cls] as const));
 

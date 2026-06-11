@@ -22,6 +22,7 @@ import {
 import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
 import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
 import { grantCounterStatus } from '../counterEffects.ts';
+import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
 import {
   chargeBasicAttackCountOnHit,
@@ -132,6 +133,7 @@ export class SkillExecutor {
         this.gameData,
         Math.random,
         passives,
+        skill.effect,
       );
       if (!resolutionHasTargets(resolution)) continue;
 
@@ -363,11 +365,23 @@ export class SkillExecutor {
         this.emit({ type: 'evade', targetId: target.id });
         return false;
       }
+      const passives = this.gameData.skillRegistry.passives;
+      const damageEffect = {
+        ...effectDef,
+        amount: resolveEffectiveAmountSpecForActiveEffect(
+          actor,
+          passives,
+          skill,
+          effectDef,
+          effectIndex,
+          effectDef.amount,
+        ),
+      };
       const amount = resolveDamage(
         actor,
         target,
-        effectDef,
-        this.gameData.skillRegistry.passives,
+        damageEffect,
+        passives,
         {
           atkScaleOverride: powerMultiplierOverride,
           passiveContext: damageContext,
@@ -428,9 +442,18 @@ export class SkillExecutor {
 
     if (effectDef.type === 'heal') {
       if ((effectDef.healSubKind ?? 'instant') === 'hot') {
-        const amountSpec =
+        const passives = this.gameData.skillRegistry.passives;
+        const baseSpec =
           effectDef.amount ??
           ({ kind: 'flat', flatAmount: 0 } as const);
+        const amountSpec = resolveEffectiveAmountSpecForActiveEffect(
+          actor,
+          passives,
+          skill,
+          effectDef,
+          effectIndex,
+          baseSpec,
+        );
         const duration = effectDef.durationSec ?? 0;
         if (duration <= 0) return false;
         const appliedAt = Date.now();
@@ -444,6 +467,7 @@ export class SkillExecutor {
           amount: amountSpec,
           sourceId: actor.id,
           skillId: skill.id,
+          effectIndex,
           tickSec: 1,
         });
         this.emit({
@@ -453,7 +477,7 @@ export class SkillExecutor {
           skillId: skill.id,
           skillName: skill.name,
           slotKind: cd.slotKind,
-          effect: 'hot',
+          effect: 'heal',
           effectIndex,
           statusLabel: 'hot',
           range: effectDef.range,
@@ -484,18 +508,26 @@ export class SkillExecutor {
         });
         return true;
       }
+      const passives = this.gameData.skillRegistry.passives;
+      const healAmountSpec = resolveEffectiveAmountSpecForActiveEffect(
+        actor,
+        passives,
+        skill,
+        effectDef,
+        effectIndex,
+        effectDef.amount ?? ({ kind: 'flat', flatAmount: 0 } as const),
+      );
       const amount = resolveHealAmount(
         actor,
         target,
-        effectDef.amount ?? ({ kind: 'flat', flatAmount: 0 } as const),
-        this.gameData.skillRegistry.passives,
+        healAmountSpec,
+        passives,
         {
           atkScaleOverride: powerMultiplierOverride,
           effectSpecialIncrease: effectDef.damageIncrease,
         },
       );
       if (amount <= 0) return false;
-      const passives = this.gameData.skillRegistry.passives;
       applyExcessHealToBarrierFromPassive(
         actor,
         target,
@@ -533,18 +565,25 @@ export class SkillExecutor {
       if (effectDef.type === 'buff') {
         const subKind = effectDef.buffSubKind ?? 'stat';
         if (subKind === 'barrier') {
-          const amountSpec =
+          const passives = this.gameData.skillRegistry.passives;
+          const amountSpec = resolveEffectiveAmountSpecForActiveEffect(
+            actor,
+            passives,
+            skill,
+            effectDef,
+            effectIndex,
             effectDef.amount ??
-            ({ kind: 'flat', flatAmount: 0 } as const);
+              ({ kind: 'flat', flatAmount: 0 } as const),
+          );
           const grant = resolveResourceAmount(
             actor,
             target,
             amountSpec,
-            this.gameData.skillRegistry.passives,
+            passives,
             powerMultiplierOverride,
           );
           if (grant <= 0) return false;
-          applyBarrierToTarget(target, grant, effectDef.barrierStack ?? false);
+          applyBarrierToTarget(target, grant);
           this.emit({
             type: 'skill',
             actorId: actor.id,
@@ -593,13 +632,61 @@ export class SkillExecutor {
           });
           return true;
         }
+        if (subKind === 'damageTakenToHeal') {
+          const ratio = effectDef.ratio ?? 0;
+          const duration = effectDef.buffDurationSec ?? 0;
+          if (ratio <= 0 || duration <= 0) return false;
+          const appliedAt = Date.now();
+          target.statusEffects.push({
+            id: `${skill.id}_damageTakenToHeal_${appliedAt}`,
+            kind: 'buff',
+            overlay: 'damageTakenToHeal',
+            ratio,
+            multiplier: 1,
+            durationSec: duration,
+            remainingSec: duration,
+            sourceId: actor.id,
+            skillId: skill.id,
+          });
+          this.emit({
+            type: 'skill',
+            actorId: actor.id,
+            targetId: target.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            slotKind: cd.slotKind,
+            effect: 'buff',
+            effectIndex,
+            statusLabel: 'damageTakenToHeal',
+            range: effectDef.range,
+            ...(hitIndex !== undefined ? { hitIndex } : {}),
+          });
+          return true;
+        }
       }
       if (effectDef.type === 'debuff') {
         const subKind = effectDef.debuffSubKind ?? 'stat';
         if (subKind === 'dot') {
           const duration = effectDef.durationSec ?? 0;
-          const power = effectDef.powerMultiplier ?? 0;
-          if (duration <= 0 || power <= 0) return false;
+          const passives = this.gameData.skillRegistry.passives;
+          const baseSpec =
+            effectDef.amount ??
+            (effectDef.powerMultiplier !== undefined &&
+            effectDef.powerMultiplier > 0
+              ? ({
+                  kind: 'atkBased',
+                  atkScale: effectDef.powerMultiplier,
+                } as const)
+              : undefined);
+          if (duration <= 0 || baseSpec === undefined) return false;
+          const amountSpec = resolveEffectiveAmountSpecForActiveEffect(
+            actor,
+            passives,
+            skill,
+            effectDef,
+            effectIndex,
+            baseSpec,
+          );
           const appliedAt = Date.now();
           target.statusEffects.push({
             id: `${skill.id}_dot_${appliedAt}`,
@@ -608,9 +695,10 @@ export class SkillExecutor {
             multiplier: 1,
             durationSec: duration,
             remainingSec: duration,
-            powerMultiplier: power,
+            amount: amountSpec,
             sourceId: actor.id,
             skillId: skill.id,
+            effectIndex,
             damageType: resolveSkillDamageType(actor, effectDef),
             damageIncrease: effectDef.damageIncrease,
             defenseIgnore: effectDef.defenseIgnore,
@@ -847,28 +935,21 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'hot' || effectDef.type === 'dot') {
-      const overlay = effectDef.type;
+    if (effectDef.type === 'dot') {
       const appliedAt = Date.now();
       target.statusEffects.push({
-        id: `${skill.id}_${overlay}_${appliedAt}`,
-        kind: overlay === 'hot' ? 'buff' : 'debuff',
-        overlay,
+        id: `${skill.id}_dot_${appliedAt}`,
+        kind: 'debuff',
+        overlay: 'dot',
         multiplier: 1,
         durationSec: effectDef.durationSec,
         remainingSec: effectDef.durationSec,
-        ...(overlay === 'hot'
-          ? { amount: effectDef.amount }
-          : { powerMultiplier: effectDef.powerMultiplier }),
+        powerMultiplier: effectDef.powerMultiplier,
         sourceId: actor.id,
         skillId: skill.id,
-        ...(overlay === 'dot'
-          ? {
-              damageType: resolveSkillDamageType(actor, effectDef),
-              damageIncrease: effectDef.damageIncrease,
-              defenseIgnore: effectDef.defenseIgnore,
-            }
-          : {}),
+        damageType: resolveSkillDamageType(actor, effectDef),
+        damageIncrease: effectDef.damageIncrease,
+        defenseIgnore: effectDef.defenseIgnore,
         tickSec: 1,
       });
       this.emit({
@@ -878,9 +959,9 @@ export class SkillExecutor {
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: effectDef.type,
+        effect: 'dot',
         effectIndex,
-        statusLabel: overlay,
+        statusLabel: 'dot',
         range: effectDef.range,
         ...(hitIndex !== undefined ? { hitIndex } : {}),
       });

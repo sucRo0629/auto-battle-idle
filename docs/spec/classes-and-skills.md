@@ -238,9 +238,10 @@ interface CharacterBuild {
 | `periodicDispel`      | `intervalSec`, `dispelTargetRule`, `dispelCount`, `dispelTags?`            | 一定間隔でデバフ解除                                                                                                                                                           |
 | `aoeCrowdBonus`       | `perExtraTargetScale`, `maxExtraTargets`                                   | `aoe` / `scatter` の追加ヒット数ボーナス                                                                                                                                       |
 | `damageTakenToHeal`   | `ratio`                                                                    | HP に入った最終ダメージの `ratio` 割合を即時回復（バリア吸収後。ATK 基準ではない）                                                                                             |
-| `hot`                 | `hotAmount`, `hotTargetRule`, `intervalSec?`, `hotDurationSec?`            | `intervalSec` 指定時はその間隔で HoT 付与。未指定時は戦闘開始時に常時 HoT。`hotDurationSec` は付与 HoT の持続（0=無限）                                                        |
+| `heal`                | `healSubKind`, `hotAmount`, `hotTargetRule`, `intervalSec?`, `hotDurationSec?` | `healSubKind: hot` — `intervalSec` 指定時はその間隔で HoT 付与。未指定時は戦闘開始時に常時 HoT。`hotDurationSec` は付与 HoT の持続（0=無限） |
 | `excessHealToBarrier` | `barrierScale`, `excessHealSources?`                                       | 回復が maxHp を超過した分をバリアに変換（**上書き**）。`outgoing`（与回復）/ `incoming`（被回復）を複数選択可。未指定 = `outgoing` のみ。直接 `heal` のみ                      |
 | `selfHpRatioBuff`     | `buffStat`, `buffMultiplierMax?` / `buffFlatBonusMax?`, `maxBuffAtHpRatio` | 自身 HP 割合（`hp/maxHp`。バリア非含有）に応じた常時バフ（対象・形状は自身単体固定）。満タン時は中立、指定 HP 割合以下で最大                                                   |
+| `skillAmountOverride` | `targetSkillId`, `amount`, `effectIndex?`, `passiveAmountField?`           | 指定スキル（アクティブ / 取得済みパッシブ）の `ResourceAmountSpec` を完全上書き。アクティブは `effectIndex` 省略で amount 持ち effect すべて。パッシブは `hotAmount` / `barrierAmount`。複数時は `learnedPassiveIds` の後方優先。反撃 `counterResponses` は対象外 |
 
 **ブロック / 回避（`buff` + `buffSubKind`）:** `block` / `evasion` は `chance`（0〜1）を `StatusEffect`（`overlay: block` / `evasion`）として同期。複数ソースは加算（上限 1）。ブロックは DEF 適用後の物理直接ダメージのみ判定。回避は直接 `damage` のみ（DoT 非対象）。
 
@@ -376,14 +377,15 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `amount.atkOffset` / `atkScale` | `atkBased` 用（加減 net / 倍率 net。未指定: offset=0, scale=1）                                  |
 | `amount.defOffset` / `defScale` | `defBased` 用（加減 net / 倍率 net。未指定: offset=0, scale=1）。参照は **使用者 effective DEF** |
 | `amount.flatAmount`             | `flat` 必須                                                                                      |
-| `amount.percentOfMaxHp`         | `percentMaxHp` 必須（0〜1、**対象 maxHp** 基準）                                                 |
+| `amount.percentOfMaxHp`         | `percentMaxHp` 必須（0〜1）                                                                      |
+| `amount.maxHpRef`               | `percentMaxHp` 任意 — `self`（自身 maxHp）／未指定・`target`（対象 maxHp。既定）                 |
 | `powerMultiplier`               | **旧 JSON 互換** — `amount` 未指定時は `atkBased` + `atkScale` として読む                        |
 
 ### barrier 専用
 
 | フィールド     | 説明                                                          |
 | -------------- | ------------------------------------------------------------- |
-| `barrierStack` | `true` = 既存 `barrierHp` に加算。未指定/`false` = 新量で置換 |
+| `barrierStack` | 未指定 = 既存 `barrierHp` に加算（既定）。`false` = 新量で置換 |
 
 ### move 専用
 

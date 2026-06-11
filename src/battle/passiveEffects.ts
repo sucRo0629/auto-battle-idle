@@ -2,9 +2,19 @@ import {
   applyBarrierToTarget,
   currentHpRatio,
   getPassiveDefs,
+  resolveResourceAmount,
 } from './combatMath.ts';
+import { dispelDebuffsOnTarget } from './debuffDispel.ts';
+import {
+  isPassiveBarrierBuff,
+  resolvePassiveBarrierTrigger,
+  resolvePassivePeriodicTrigger,
+  usesHotAuraMode,
+  usesIntervalPeriodicTrigger,
+} from './passivePeriodicTrigger.ts';
 import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
 import { pickTargets } from './skills/targeting.ts';
+import { resolveEffectivePassiveAmountSpec } from './skillAmountOverride.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -17,7 +27,7 @@ import type {
   StatusEffectStat,
   TargetShape,
 } from './types.ts';
-import { asStatusEffectStatList } from './types.ts';
+import { asStatusEffectStatList, isPassiveHot } from './types.ts';
 
 const PASSIVE_AURA_DURATION_SEC = 99999;
 
@@ -124,14 +134,13 @@ export function resolveIncomingHealAmount(
 export function applyDamageTakenToHeal(
   target: CombatantState,
   damage: number,
-  passives: Record<string, PassiveSkillDef>,
 ): number {
   if (!target.isAlive || damage <= 0) return 0;
-  const defs = getPassiveDefs(target, passives);
   let heal = 0;
-  for (const passive of defs) {
-    if (passive.effect !== 'damageTakenToHeal') continue;
-    heal += Math.floor(damage * (passive.ratio ?? 0));
+  for (const effect of target.statusEffects) {
+    if (effect.remainingSec <= 0) continue;
+    if (effect.overlay !== 'damageTakenToHeal') continue;
+    heal += Math.floor(damage * (effect.ratio ?? 0));
   }
   if (heal <= 0) return 0;
   const before = target.hp;
@@ -191,13 +200,13 @@ export function syncHotAuras(
     if (!source.isAlive) continue;
     for (const passive of getPassiveDefs(source, passives)) {
       if (
-        passive.effect !== 'hot' ||
+        !isPassiveHot(passive) ||
         !passive.hotAmount ||
-        passive.intervalSec !== undefined
+        !usesHotAuraMode(passive)
       ) {
         continue;
       }
-      applyPassiveHotFromPassive(source, passive, allies, enemies);
+      applyPassiveHotFromPassive(source, passive, allies, enemies, passives);
     }
   }
 }
@@ -219,6 +228,7 @@ export function syncBuffAuras(
     for (const passive of getPassiveDefs(source, passives)) {
       if (passive.effect !== 'buff') continue;
       const subKind = passive.buffSubKind ?? 'stat';
+      if (subKind === 'barrier') continue;
       const targetSpec = passive.buffTargetRule ?? { kind: 'self' as const };
       const targets = pickTargets(targetSpec, source, allies, enemies);
       if (subKind === 'block' || subKind === 'evasion') {
@@ -232,6 +242,16 @@ export function syncBuffAuras(
               subKind,
               chance,
             ),
+          );
+        }
+        continue;
+      }
+      if (subKind === 'damageTakenToHeal') {
+        const ratio = passive.ratio ?? 0;
+        if (ratio <= 0) continue;
+        for (const target of targets) {
+          target.statusEffects.push(
+            createPassiveDamageTakenToHealEffect(source, passive.id, ratio),
           );
         }
         continue;
@@ -355,6 +375,23 @@ function createPassiveOverlayBuffEffect(
     ...(subKind === 'block'
       ? { blockChance: chance }
       : { evasionChance: chance }),
+    sourceId: source.id,
+    multiplier: 1,
+    durationSec: PASSIVE_AURA_DURATION_SEC,
+    remainingSec: PASSIVE_AURA_DURATION_SEC,
+  };
+}
+
+function createPassiveDamageTakenToHealEffect(
+  source: CombatantState,
+  passiveId: string,
+  ratio: number,
+): StatusEffect {
+  return {
+    id: `passive_buff_${source.id}_${passiveId}_damageTakenToHeal`,
+    kind: 'buff',
+    overlay: 'damageTakenToHeal',
+    ratio,
     sourceId: source.id,
     multiplier: 1,
     durationSec: PASSIVE_AURA_DURATION_SEC,
@@ -513,17 +550,54 @@ function passiveHotEffectId(sourceId: string, passiveId: string): string {
   return `passive_hot_${sourceId}_${passiveId}`;
 }
 
+export function applyPassiveBarrierFromPassive(
+  source: CombatantState,
+  passive: PassiveSkillDef,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+): void {
+  if (!isPassiveBarrierBuff(passive) || !passive.barrierAmount) return;
+  const spec = passive.buffTargetRule ?? { kind: 'self' as const };
+  const targets = pickTargets(spec, source, allies, enemies);
+  const barrierAmount = resolveEffectivePassiveAmountSpec(
+    source,
+    passives,
+    passive.id,
+    'barrierAmount',
+    passive.barrierAmount,
+  );
+  for (const target of targets) {
+    const grant = resolveResourceAmount(
+      source,
+      target,
+      barrierAmount,
+      passives,
+    );
+    if (grant <= 0) continue;
+    applyBarrierToTarget(target, grant);
+  }
+}
+
 export function applyPassiveHotFromPassive(
   source: CombatantState,
   passive: PassiveSkillDef,
   allies: CombatantState[],
   enemies: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
 ): void {
-  if (passive.effect !== 'hot' || !passive.hotAmount) return;
+  if (!isPassiveHot(passive) || !passive.hotAmount) return;
   const spec = passive.hotTargetRule ?? { kind: 'self' as const };
   const targets = pickTargets(spec, source, allies, enemies);
   const durationSec = resolvePassiveHotDurationSec(passive.hotDurationSec);
   const effectId = passiveHotEffectId(source.id, passive.id);
+  const hotAmount = resolveEffectivePassiveAmountSpec(
+    source,
+    passives,
+    passive.id,
+    'hotAmount',
+    passive.hotAmount,
+  );
   for (const target of targets) {
     target.statusEffects = target.statusEffects.filter(
       (effect) => effect.id !== effectId,
@@ -532,7 +606,7 @@ export function applyPassiveHotFromPassive(
       createPassiveHotEffect(
         source,
         passive.id,
-        passive.hotAmount,
+        hotAmount,
         durationSec,
       ),
     );
@@ -551,6 +625,7 @@ function createPassiveHotEffect(
     overlay: 'hot',
     amount,
     sourceId: source.id,
+    skillId: passiveId,
     multiplier: 1,
     durationSec,
     remainingSec: durationSec,
@@ -596,12 +671,61 @@ export interface PeriodicDispelPassiveState {
   remainingSec: number;
 }
 
+export function firePeriodicPassivesForTrigger(
+  trigger: 'stageStart' | 'waveStart',
+  units: CombatantState[],
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+): void {
+  for (const source of units) {
+    if (!source.isAlive) continue;
+    for (const passive of getPassiveDefs(source, passives)) {
+      const periodicTrigger = isPassiveBarrierBuff(passive)
+        ? resolvePassiveBarrierTrigger(passive)
+        : resolvePassivePeriodicTrigger(passive);
+      if (periodicTrigger !== trigger) continue;
+
+      if (isPassiveHot(passive) && passive.hotAmount) {
+        applyPassiveHotFromPassive(source, passive, allies, enemies, passives);
+        continue;
+      }
+      if (isPassiveBarrierBuff(passive) && passive.barrierAmount) {
+        applyPassiveBarrierFromPassive(
+          source,
+          passive,
+          allies,
+          enemies,
+          passives,
+        );
+        continue;
+      }
+      if (passive.effect === 'periodicDispel') {
+        const spec = passive.dispelTargetRule ?? { kind: 'self' as const };
+        const targets = pickTargets(spec, source, allies, enemies);
+        for (const target of targets) {
+          dispelDebuffsOnTarget(
+            target,
+            passive.dispelCount ?? 0,
+            passive.dispelTags,
+            source.id,
+          );
+        }
+      }
+    }
+  }
+}
+
 export function initializePeriodicDispelStates(
   unit: CombatantState,
   passives: Record<string, PassiveSkillDef>,
 ): PeriodicDispelPassiveState[] {
   return getPassiveDefs(unit, passives)
-    .filter((passive) => passive.effect === 'periodicDispel')
+    .filter(
+      (passive) =>
+        passive.effect === 'periodicDispel' &&
+        usesIntervalPeriodicTrigger(passive),
+    )
     .map((passive) => ({
       passiveId: passive.id,
       remainingSec: passive.intervalSec ?? 1,
@@ -632,6 +756,25 @@ export function getPeriodicDispelReady(
 }
 
 export type PeriodicHotPassiveState = PeriodicDispelPassiveState;
+export type PeriodicBarrierPassiveState = PeriodicDispelPassiveState;
+
+export function initializePeriodicBarrierStates(
+  unit: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): PeriodicBarrierPassiveState[] {
+  return getPassiveDefs(unit, passives)
+    .filter(
+      (passive) =>
+        isPassiveBarrierBuff(passive) && usesIntervalPeriodicTrigger(passive),
+    )
+    .map((passive) => ({
+      passiveId: passive.id,
+      remainingSec: 0,
+    }));
+}
+
+export const tickPeriodicBarrierStates = tickPeriodicHotStates;
+export const getPeriodicBarrierReady = getPeriodicHotReady;
 
 export function initializePeriodicHotStates(
   unit: CombatantState,
@@ -640,7 +783,7 @@ export function initializePeriodicHotStates(
   return getPassiveDefs(unit, passives)
     .filter(
       (passive) =>
-        passive.effect === 'hot' && passive.intervalSec !== undefined,
+        isPassiveHot(passive) && usesIntervalPeriodicTrigger(passive),
     )
     .map((passive) => ({
       passiveId: passive.id,

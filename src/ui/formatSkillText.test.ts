@@ -27,10 +27,12 @@ describe('formatPassiveDescription', () => {
       def: {
         id: 'passive_damage_taken_heal',
         name: '聖なる吸収',
-        effect: 'damageTakenToHeal',
+        effect: 'buff',
+        buffSubKind: 'damageTakenToHeal',
         ratio: 0.1,
+        buffTargetRule: { kind: 'self' },
       } satisfies PassiveSkillDef,
-      fragments: ['被ダメの', '10%', '即時回復'],
+      fragments: ['被ダメ回復', '10%'],
     },
     {
       name: 'self HP ratio buff',
@@ -148,7 +150,8 @@ describe('formatActiveDescription', () => {
           target: { kind: 'self' },
         },
         {
-          type: 'hot',
+          type: 'heal',
+          healSubKind: 'hot',
           durationSec: 4,
           amount: { kind: 'percentMaxHp', percentOfMaxHp: 0.01 },
           target: { kind: 'self' },
@@ -159,6 +162,40 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('10被攻撃毎');
     expect(desc).toContain('( DEF + 10 ) ×1.8');
     expect(desc).toContain('HoT maxHp×1%');
+  });
+
+  it('formats percentMaxHp with self reference', () => {
+    const def: ActiveSkillDef = {
+      id: 'test_self_maxhp',
+      name: '自己割合回復',
+      trigger: { kind: 'time', value: 5 },
+      effect: [
+        {
+          type: 'heal',
+          amount: {
+            kind: 'percentMaxHp',
+            percentOfMaxHp: 0.01,
+            maxHpRef: 'self',
+          },
+          target: { kind: 'self' },
+        },
+      ],
+    };
+    const desc = formatActiveDescription(def);
+    expect(desc).toContain('自身maxHp×1%');
+  });
+
+  it('formats skillAmountOverride passive', () => {
+    const def: PassiveSkillDef = {
+      id: 'passive_override',
+      name: '強化',
+      effect: 'skillAmountOverride',
+      targetSkillId: 'at_warrior_active_1',
+      amount: { kind: 'atkBased', atkScale: 2.5 },
+    };
+    const desc = formatPassiveDescription(def);
+    expect(desc).toContain('at_warrior_active_1');
+    expect(desc).toContain('ATK×2.5');
   });
 
   it('formats pierce damage', () => {

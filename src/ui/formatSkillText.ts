@@ -27,6 +27,12 @@ import type {
   TargetSpec,
 } from "../battle/types.ts";
 import { asStatusEffectStatList } from "../battle/types.ts";
+import {
+  PASSIVE_PERIODIC_TRIGGER_LABELS,
+  resolvePassiveBarrierTrigger,
+  resolvePassivePeriodicTrigger,
+  usesHotAuraMode,
+} from "../battle/passivePeriodicTrigger.ts";
 
 const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
   physical: "物理",
@@ -94,8 +100,11 @@ function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
     }
     case "flat":
       return `固定${amount.flatAmount ?? 0}`;
-    case "percentMaxHp":
-      return `maxHp×${formatPercent(amount.percentOfMaxHp ?? 0)}`;
+    case "percentMaxHp": {
+      const prefix =
+        amount.maxHpRef === "self" ? "自身maxHp" : "maxHp";
+      return `${prefix}×${formatPercent(amount.percentOfMaxHp ?? 0)}`;
+    }
   }
 }
 
@@ -324,11 +333,10 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       break;
     case "buff":
       if (effect.buffSubKind === "barrier") {
-        const stack = effect.barrierStack ? "加算" : "置換";
         extras.push(
           `${BUFF_SUB_KIND_LABELS.barrier} ${formatResourceAmount(
             effect.amount
-          )}（${stack}）`
+          )}`
         );
       } else if (effect.buffSubKind === "block") {
         extras.push(
@@ -341,6 +349,12 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
           `${BUFF_SUB_KIND_LABELS.evasion} ${formatPercent(effect.chance ?? 0)} ${
             effect.buffDurationSec ?? 0
           }s`
+        );
+      } else if (effect.buffSubKind === "damageTakenToHeal") {
+        extras.push(
+          `${BUFF_SUB_KIND_LABELS.damageTakenToHeal} ${formatPercent(
+            effect.ratio ?? 0
+          )} ${effect.buffDurationSec ?? 0}s`
         );
       } else {
         const statLabel = formatBuffTargetStats(
@@ -385,11 +399,6 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
         );
       }
       break;
-    case "hot":
-      extras.push(
-        `${formatResourceAmount(effect.amount)} ${effect.durationSec}s`
-      );
-      break;
     case "dot": {
       const dmgType = effect.damageType
         ? DAMAGE_TYPE_LABELS[effect.damageType]
@@ -405,8 +414,7 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       break;
     }
     case "barrier": {
-      const stack = effect.barrierStack ? "加算" : "置換";
-      extras.push(`${formatResourceAmount(effect.amount)}（${stack}）`);
+      extras.push(formatResourceAmount(effect.amount));
       break;
     }
     case "move": {
@@ -469,8 +477,6 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
       return "バフ";
     case "debuff":
       return "デバフ";
-    case "hot":
-      return "HoT";
     case "dot":
       return "DoT";
     case "barrier":
@@ -537,7 +543,14 @@ function formatPassiveEffect(
       const target = def.dispelTargetRule
         ? ` → ${formatTarget(def.dispelTargetRule, { kind: "self" })}`
         : "";
-      return `定期デバフ解除 ${def.intervalSec ?? 0}s（${tags} ×${
+      const trigger = resolvePassivePeriodicTrigger(def);
+      const triggerLabel =
+        trigger === "interval"
+          ? `${def.intervalSec ?? 0}s毎`
+          : trigger
+            ? PASSIVE_PERIODIC_TRIGGER_LABELS[trigger]
+            : `${def.intervalSec ?? 0}s毎`;
+      return `定期デバフ解除 ${triggerLabel}（${tags} ×${
         def.dispelCount ?? 1
       }）${target}`;
     }
@@ -555,14 +568,26 @@ function formatPassiveEffect(
           conditions: [{ kind: "targetHp", maxHpRatio: 1 }],
         }) || `被回復 +${formatPercent(legacy.percent ?? 0)}`
       );
-    case "hot": {
-      const interval = def.intervalSec ?? 0;
+    case "hot":
+    case "heal": {
+      if (def.effect === "heal" && (def.healSubKind ?? "hot") !== "hot") {
+        return HEAL_SUB_KIND_LABELS[def.healSubKind ?? "instant"];
+      }
       const duration = def.hotDurationSec ?? 0;
       const durationLabel = duration <= 0 ? "無限" : `${duration}s`;
       const amount = def.hotAmount ? formatResourceAmount(def.hotAmount) : "—";
-      return `HoT ${interval}s毎 ${amount} → ${formatTarget(def.hotTargetRule, {
-        kind: "self",
-      })}（${durationLabel}）`;
+      const target = formatTarget(def.hotTargetRule, { kind: "self" });
+      if (usesHotAuraMode(def)) {
+        return `常時 HoT ${amount} → ${target}（${durationLabel}）`;
+      }
+      const trigger = resolvePassivePeriodicTrigger(def);
+      const triggerLabel =
+        trigger === "interval"
+          ? `${def.intervalSec ?? 0}s毎`
+          : trigger
+            ? PASSIVE_PERIODIC_TRIGGER_LABELS[trigger]
+            : `${def.intervalSec ?? 0}s毎`;
+      return `HoT ${triggerLabel} ${amount} → ${target}（${durationLabel}）`;
     }
     case "excessHealToBarrier": {
       const sourceLabels = (def.excessHealSources ?? ["outgoing"]).map((s) =>
@@ -594,8 +619,21 @@ function formatPassiveEffect(
           def.chance ?? 0
         )} → ${target}`;
       }
+      if (def.buffSubKind === "damageTakenToHeal") {
+        return `バフ ${BUFF_SUB_KIND_LABELS.damageTakenToHeal} ${formatPercent(
+          def.ratio ?? 0
+        )} → ${target}`;
+      }
       if (def.buffSubKind === "barrier") {
-        return `バフ ${BUFF_SUB_KIND_LABELS.barrier} → ${target}`;
+        const amount = def.barrierAmount
+          ? formatResourceAmount(def.barrierAmount)
+          : "—";
+        const trigger = resolvePassiveBarrierTrigger(def);
+        const triggerLabel =
+          trigger === "interval"
+            ? `${def.intervalSec ?? 0}s毎`
+            : PASSIVE_PERIODIC_TRIGGER_LABELS[trigger];
+        return `バフ ${BUFF_SUB_KIND_LABELS.barrier} ${triggerLabel} ${amount} → ${target}`;
       }
       return `バフ ${formatBuffTargetStats(
         def.buffStat,
@@ -629,6 +667,17 @@ function formatPassiveEffect(
       return `密集 +${def.perExtraTargetScale ?? 0}/体（上限 ${
         def.maxExtraTargets ?? 0
       }）`;
+    case "skillAmountOverride": {
+      const target = def.targetSkillId ?? "—";
+      const amount = def.amount ? formatResourceAmount(def.amount) : "—";
+      const scope =
+        def.effectIndex !== undefined
+          ? `（効果${def.effectIndex + 1}）`
+          : def.passiveAmountField
+            ? `（${def.passiveAmountField}）`
+            : "";
+      return `「${target}」の効果量${scope} → ${amount}`;
+    }
     case "counter":
     case "counterChance": {
       const responseParts = (def.counterResponses ?? []).map(

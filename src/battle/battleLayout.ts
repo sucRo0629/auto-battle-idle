@@ -6,6 +6,7 @@ import type {
 } from './types.ts';
 import { isMeleeRangePx } from './types.ts';
 import {
+  resolveFormationRangePx,
   resolveMaxEffectiveRangePx,
 } from './combatPosition.ts';
 import {
@@ -67,6 +68,9 @@ const FRONT_ROW_ROLE_ORDER: Record<Role, number> = {
   supporter: 2,
 };
 
+/** 同射程前列近接の停止深度（range 差 3px と同程度） */
+export const FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX = 3;
+
 const BACK_ROW_ROLE_ORDER: Record<Role, number> = {
   supporter: 0,
   attacker: 1,
@@ -106,6 +110,54 @@ function sortPlayersInFormationRow(
   players: PlayerPlacementInput[],
 ): PlayerPlacementInput[] {
   return [...players].sort((a, b) => compareFormationSlot(row, a, b));
+}
+
+/** 前列近接の深度計算用（戦死直後の味方死体スロットを含む inputs を渡す） */
+export function buildFrontRowMeleeDepthPlacementInputs(
+  players: PlayerPlacementInput[],
+): PlayerPlacementInput[] {
+  return players.filter(
+    (unit) => unit.formationRow === 'front' && isMeleeRangePx(unit.rangePx),
+  );
+}
+
+/**
+ * 同射程の前列近接: 隊形スロット順で停止 battleX を右（前）へずらす。
+ * 同帯のタンク戦死後は生存者が最前線スロットの深度を継承する。
+ */
+export function resolveFrontRowSameRangeMeleeDepthPx(
+  player: PlayerPlacementInput,
+  players: PlayerPlacementInput[],
+): number {
+  if (player.formationRow !== 'front' || !player.isAlive) return 0;
+  if (!isMeleeRangePx(player.rangePx)) return 0;
+
+  const formationMeleeFront = buildFrontRowMeleeDepthPlacementInputs(players);
+  const livingMeleeFront = livingPlayers(formationMeleeFront);
+  if (livingMeleeFront.length === 0) return 0;
+
+  const sameRangeFormation = formationMeleeFront.filter(
+    (unit) => unit.rangePx === player.rangePx,
+  );
+  const sameRangeLiving = livingPlayers(sameRangeFormation);
+  if (sameRangeLiving.length === 0) return 0;
+
+  if (
+    sameRangeLiving.length === 1 &&
+    sameRangeFormation.length >= 2
+  ) {
+    return (sameRangeFormation.length - 1) * FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX;
+  }
+
+  if (livingMeleeFront.length < 2) return 0;
+
+  const sameRangeLivingOnly = sameRangeLiving;
+  if (sameRangeLivingOnly.length < 2) return 0;
+
+  const sorted = sortPlayersInFormationRow('front', sameRangeLivingOnly);
+  const slot = sorted.findIndex((unit) => unit.id === player.id);
+  if (slot < 0) return 0;
+  return slot * FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX;
 }
 
 function prefersLeftOnOverlap(row: FormationRow, role: Role): boolean {
@@ -821,6 +873,24 @@ export function resolveEngagedFormationOverlaps(
   );
 
   if (allMeleeBand) {
+    const placements = frontUnits.map((p) => ({
+      id: p.id,
+      role: p.role,
+      formationRow: p.formationRow,
+      rangePx: resolveFormationRangePx(p),
+      isAlive: true as const,
+    }));
+    const sorted = sortPlayersInFormationRow(leadingRow, placements);
+    const minGap = FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX;
+    for (let i = 1; i < sorted.length; i++) {
+      const rear = frontUnits.find((p) => p.id === sorted[i - 1]!.id);
+      const front = frontUnits.find((p) => p.id === sorted[i]!.id);
+      if (!rear || !front) continue;
+      const minFrontX = rear.battleX + minGap;
+      if (front.battleX < minFrontX) {
+        front.battleX = minFrontX;
+      }
+    }
     return;
   }
 

@@ -1,4 +1,5 @@
 import { normalizeEntityTraits } from '../battle/data/entityTraits.ts';
+import { normalizeActiveSkillEffectForEditor } from '../battle/data/validateGameData.ts';
 import { assertConfigurableRangePx } from '../battle/rangeLimits.ts';
 import type {
   ActiveSkillDef,
@@ -845,7 +846,12 @@ export function collectSkillsFromDrafts(entries: SkillDraftEntry[]): {
   const actives: ActiveSkillDef[] = [];
   for (const entry of entries) {
     if (entry.passive) passives.push(entry.passive);
-    if (entry.active) actives.push(entry.active);
+    if (entry.active) {
+      actives.push({
+        ...entry.active,
+        effect: entry.active.effect.map(normalizeActiveSkillEffectForEditor),
+      });
+    }
   }
   return { passives, actives };
 }

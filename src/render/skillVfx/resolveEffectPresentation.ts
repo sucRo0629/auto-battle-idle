@@ -47,8 +47,8 @@ function supportsVfx(effect: SkillEffectDef): boolean {
   return (
     effect.type === "damage" ||
     effect.type === "dot" ||
-    effect.type === "heal" ||
-    effect.type === "hot"
+    (effect.type === "heal" &&
+      (effect.healSubKind ?? "instant") !== "dispel")
   );
 }
 

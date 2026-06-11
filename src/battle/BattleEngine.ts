@@ -50,9 +50,13 @@ import {
 import {
   applyDamageTakenToHeal,
   resolveIncomingHealAmount,
+  applyPassiveBarrierFromPassive,
   applyPassiveHotFromPassive,
+  firePeriodicPassivesForTrigger,
+  getPeriodicBarrierReady,
   getPeriodicDispelReady,
   getPeriodicHotReady,
+  initializePeriodicBarrierStates,
   initializePeriodicDispelStates,
   initializePeriodicHotStates,
   syncHotAuras,
@@ -60,8 +64,10 @@ import {
   syncDebuffAuras,
   syncDamageReductionAuras,
   syncSelfHpRatioBuffAuras,
+  tickPeriodicBarrierStates,
   tickPeriodicDispelStates,
   tickPeriodicHotStates,
+  type PeriodicBarrierPassiveState,
   type PeriodicDispelPassiveState,
   type PeriodicHotPassiveState,
 } from "./passiveEffects.ts";
@@ -81,6 +87,7 @@ import {
   resolveEngagedLayout,
   applyEngagedFormationToBattleX,
   resolveEngagedFormationOverlaps,
+  resolveFrontRowSameRangeMeleeDepthPx,
   type EngagedLayoutResult,
 } from "./battleLayout.ts";
 import { SPRITE_WIDTH } from "./battleConstants.ts";
@@ -104,6 +111,7 @@ import {
   POST_DEPLOY_SETTLE_DELAY_SEC,
 } from "../render/announcementOverlayTiming.ts";
 import type { BattlePhase, BattleSnapshot, CombatantState, GameData, PartySlotState, PendingSkillHit, SkillCooldown, SkillTriggerKind, StatusEffect } from "./types.ts";
+import { isPassiveHot } from "./types.ts";
 import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 
 const RESTART_DELAY_SEC = 3;
@@ -159,12 +167,15 @@ export class BattleEngine {
   private engaged = false;
   /** 近接敵が生存していた最後の前線 battleX（近接全滅後の接触点ジャンプ抑制） */
   private engagedLastMeleeContactX: number | null = null;
+  /** 接敵中に到達した味方最前線 battleX（前列戦死時の layout アンカー維持） */
+  private engagedFrontLineAnchor: number | null = null;
   /** Victory 退出開始済み */
   private victoryFormationReady = false;
   private readonly engagedComposition = new EngagedCompositionTracker();
   private restartTimer = 0;
   private periodicDispelStates = new Map<string, PeriodicDispelPassiveState[]>();
   private periodicHotStates = new Map<string, PeriodicHotPassiveState[]>();
+  private periodicBarrierStates = new Map<string, PeriodicBarrierPassiveState[]>();
   private readonly listeners = new Set<BattleEventListener>();
   private readonly executor: SkillExecutor;
   private readonly skillSequenceRunner = new SkillSequenceRunner();
@@ -225,11 +236,7 @@ export class BattleEngine {
   ): void {
     applyThreatFromDamage(actor, target, amount);
     if (!target.isEnemy && target.isAlive && amount > 0) {
-      applyDamageTakenToHeal(
-        target,
-        amount,
-        this.gameData.skillRegistry.passives,
-      );
+      applyDamageTakenToHeal(target, amount);
     }
     if (amount > 0 && meta?.attackKind) {
       const counterCallbacks = {
@@ -344,8 +351,16 @@ export class BattleEngine {
     syncDebuffAuras(this.players, this.enemies, passives);
     syncDamageReductionAuras(this.players, this.enemies, passives);
     syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
+    firePeriodicPassivesForTrigger(
+      'stageStart',
+      [...this.players, ...this.enemies],
+      this.players,
+      this.enemies,
+      passives,
+    );
     this.periodicDispelStates.clear();
     this.periodicHotStates.clear();
+    this.periodicBarrierStates.clear();
     for (const unit of [...this.players, ...this.enemies]) {
       initializeSkillCooldowns(unit, actives);
       const dispelStates = initializePeriodicDispelStates(unit, passives);
@@ -355,6 +370,10 @@ export class BattleEngine {
       const hotStates = initializePeriodicHotStates(unit, passives);
       if (hotStates.length > 0) {
         this.periodicHotStates.set(unit.id, hotStates);
+      }
+      const barrierStates = initializePeriodicBarrierStates(unit, passives);
+      if (barrierStates.length > 0) {
+        this.periodicBarrierStates.set(unit.id, barrierStates);
       }
     }
   }
@@ -440,6 +459,11 @@ export class BattleEngine {
     const playerContact = getPlayerContactX(this.players);
     if (enemyContact === null || playerContact === null) return;
 
+    this.engagedFrontLineAnchor =
+      this.engagedFrontLineAnchor === null
+        ? playerContact
+        : Math.max(this.engagedFrontLineAnchor, playerContact);
+
     const meleeContact = getMeleeEnemyContactX(this.enemies, this.gameData);
     if (meleeContact !== null) {
       this.engagedLastMeleeContactX = meleeContact;
@@ -502,6 +526,7 @@ export class BattleEngine {
 
   private clearEngagedVisualState(): void {
     this.engagedLastMeleeContactX = null;
+    this.engagedFrontLineAnchor = null;
     this.engagedComposition.clear();
     for (const unit of [...this.players, ...this.enemies]) {
       unit.engagedVisualLaneX = undefined;
@@ -557,7 +582,8 @@ export class BattleEngine {
         battleX: enemy.battleX,
         engagedMeleeVisualSlot: enemy.engagedMeleeVisualSlot,
       })),
-      playerContactBattleX: playerContact,
+      playerContactBattleX:
+        this.engagedFrontLineAnchor ?? playerContact,
       battleVisualOffset: 0,
       frontEnemyVisualAnchor: engageAnchor,
       resolveRangedTargetBattleX: (enemyId: string) => {
@@ -667,11 +693,27 @@ export class BattleEngine {
       ) {
         continue;
       }
-      const maxForward = resolveAttackBattleX(
-        ally,
-        meleeContact,
-        this.gameData,
-      );
+      const depthInputs = this.players
+        .filter((unit) => unit.isAlive || unit.corpseVisible)
+        .map((unit) => ({
+          id: unit.id,
+          role: unit.role,
+          formationRow: unit.formationRow,
+          rangePx: resolveFormationRangePx(unit),
+          isAlive: unit.isAlive,
+        }));
+      const maxForward =
+        resolveAttackBattleX(ally, meleeContact, this.gameData) +
+        resolveFrontRowSameRangeMeleeDepthPx(
+          {
+            id: ally.id,
+            role: ally.role,
+            formationRow: ally.formationRow,
+            rangePx: resolveFormationRangePx(ally),
+            isAlive: true,
+          },
+          depthInputs,
+        );
       if (ally.battleX > maxForward) {
         ally.battleX = maxForward;
       }
@@ -697,12 +739,8 @@ export class BattleEngine {
       this.freezeEngagedMeleeVisualSlots();
     }
 
-    // 敵 battleX は接敵開始 bake のみ。構成変化時の snap は living 敵スライド・死体ずれの原因になる。
-    if (!leadingChanged) return;
-
-    const layout = this.resolveEngagedLayoutForEvent();
-    if (layout === null) return;
-    this.applyEngagedFormationLayout(layout, { enemies: false });
+    // 敵・味方とも接敵開始 bake + 自動接近に委ねる。
+    // 構成変化時の player snap は前列戦死後の左スライドの原因になる。
   }
 
   private clearPendingVictory(): void {
@@ -875,6 +913,13 @@ export class BattleEngine {
     this.engaged = false;
     this.clearEngagedVisualState();
     this.spawnWaveEnemies();
+    firePeriodicPassivesForTrigger(
+      'waveStart',
+      [...this.players, ...this.enemies],
+      this.players,
+      this.enemies,
+      this.gameData.skillRegistry.passives,
+    );
     this.partyDeployTargets = resolvePartyDeployTargets(this.players);
     this.enemyDeployTargets = resolveEnemyDeployTargets(this.enemies);
     placePartyOffScreenForDeploy(this.players, this.partyDeployTargets);
@@ -1226,6 +1271,7 @@ export class BattleEngine {
     if (!options?.suppressPeriodic) {
       this.tickPeriodicDispels(deltaTime);
       this.tickPeriodicHots(deltaTime);
+      this.tickPeriodicBarriers(deltaTime);
     }
     this.tickCooldowns(this.players, deltaTime);
     this.tickCooldowns(this.enemies, deltaTime);
@@ -1267,12 +1313,37 @@ export class BattleEngine {
       const readyIds = getPeriodicHotReady(before, after);
       for (const passiveId of readyIds) {
         const passive = passives[passiveId];
-        if (!passive || passive.effect !== 'hot') continue;
+        if (!passive || !isPassiveHot(passive)) continue;
         applyPassiveHotFromPassive(
           actor,
           passive,
           this.players,
           this.enemies,
+          passives,
+        );
+      }
+    }
+  }
+
+  private tickPeriodicBarriers(deltaTime: number): void {
+    const passives = this.gameData.skillRegistry.passives;
+    for (const actor of [...this.players, ...this.enemies]) {
+      if (!actor.isAlive) continue;
+      const before = this.periodicBarrierStates.get(actor.id);
+      if (!before || before.length === 0) continue;
+
+      const after = tickPeriodicBarrierStates(before, passives, deltaTime);
+      this.periodicBarrierStates.set(actor.id, after);
+      const readyIds = getPeriodicBarrierReady(before, after);
+      for (const passiveId of readyIds) {
+        const passive = passives[passiveId];
+        if (!passive || passive.buffSubKind !== 'barrier') continue;
+        applyPassiveBarrierFromPassive(
+          actor,
+          passive,
+          this.players,
+          this.enemies,
+          passives,
         );
       }
     }
@@ -1372,7 +1443,8 @@ export class BattleEngine {
         targetId: target.id,
         skillId: effect.skillId ?? "",
         skillName,
-        effect: "hot",
+        effect: "heal",
+        statusLabel: "hot",
         amount: healed,
       });
       return;

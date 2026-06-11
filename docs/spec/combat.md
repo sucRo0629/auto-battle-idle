@@ -44,7 +44,7 @@
 
 **原則:** 回復後の HP は `min(maxHp, hp + amount)` — 超過分は切り捨て。
 
-**アクティブ heal / hot の発動保留:** 射程内の対象候補（`self` のときは自身）に **欠損 HP（`hp < maxHp`）の味方が 1 人もいない場合は発動しない**（CD 進行なし）。パッシブ由来の HoT aura / 定期 tick は対象外。`target` の `order: ratio` で同率タイのときはプール先頭が選ばれる（実 HP のタイブレークなし）— 保留ルール適用後、全員満タン時には通常到達しない。
+**アクティブ heal / hot の発動保留:** 射程内の対象候補（`self` のときは自身）に **欠損 HP（`hp < maxHp`）の味方が 1 人もいない場合は発動しない**（CD 進行なし）。**同一スキルにバリア付与 effect がある場合は例外** — 対象が満タンでも heal / hot を解決する。パッシブ由来の HoT aura / 定期 tick は対象外。`target` の `order: ratio` で同率タイのときはプール先頭が選ばれる（実 HP のタイブレークなし）— 保留ルール適用後、全員満タン時には通常到達しない。
 
 **余剰回復バリア変換**（パッシブ `excessHealToBarrier`）: 試行回復量のうち maxHp 超過分 × `barrierScale` を **バリア上書き**（`barrierStack` なし）。
 
@@ -59,7 +59,7 @@ heal / HoT / barrier / **damage** は `**ResourceAmountSpec`**（`amount`）で�
 | -------------- | ----------------------------------------------------------------------------------------- |
 | `atkBased`（既定） | `floor(max(0, (effectiveAtk + healBonus + atkOffset) × atkScale))`（damage は healBonus なし） |
 | `flat`         | `floor(max(0, flatAmount + healBonus))`                                                   |
-| `percentMaxHp` | `floor(max(0, target.maxHp × percentOfMaxHp + healBonus))`                                |
+| `percentMaxHp` | `floor(max(0, ref.maxHp × percentOfMaxHp + healBonus))` — `ref` は `maxHpRef`: `self` → 使用者、`target` または未指定 → 対象 |
 
 
 - `healBonus` — 使用者パッシブ `healBonus` の合算
@@ -74,8 +74,8 @@ heal / HoT / barrier / **damage** は `**ResourceAmountSpec`**（`amount`）で�
 | 項目        | 仕様                               |
 | --------- | -------------------------------- |
 | 付与量       | `ResourceAmountSpec`（heal と同式）   |
-| 非スタック（既定） | 新量で **置換**（既存残量は捨てる）             |
-| 継ぎ足し      | `barrierStack: true` で既存に加算      |
+| 加算（既定）    | 既存 `barrierHp` に **加算**                  |
+| 置換         | `barrierStack: false` で新量に **置換**（既存残量は捨てる） |
 | 持続        | 時間切れなし — **ダメージで消費されるまで維持**      |
 | 死亡        | `hp ≤ 0` のみ（バリアだけ残っても HP 0 なら死亡） |
 | リスポーン     | HP 全回復と同時に `barrierHp = 0`       |
@@ -211,7 +211,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | `single`    | 攻撃可能プールから 1 体。`hitCount >= 2` なら同一対象へ N 回（`hitDurationSec` で分散）                      |
 | `aoe`       | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散）                     |
 | `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打）                  |
-| `pierce`    | 射線上の敵を手前→奥。`pierceDurationSec` で適用分散可                                                |
+| `pierce`    | 射線上の敵を手前→奥（味方は +X 方向、敵は −X 方向）。`pierceDurationSec` で適用分散可 |
 | `chain`     | anchor から同陣営へ距離内で連鎖                                                                  |
 | `scatter`   | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
 

@@ -116,6 +116,19 @@ function getBaseAtkScale(effect: SkillEffectDef): number | undefined {
   return undefined;
 }
 
+export function isBarrierEffect(effect: SkillEffectDef): boolean {
+  return (
+    effect.type === 'barrier' ||
+    (effect.type === 'buff' && effect.buffSubKind === 'barrier')
+  );
+}
+
+export function skillHasBarrierEffect(
+  effects: readonly SkillEffectDef[],
+): boolean {
+  return effects.some(isBarrierEffect);
+}
+
 /** アクティブ heal / hot: 射程内候補に欠損 HP の味方がいなければ発動保留 */
 function hasDamagedHealCandidate(
   spec: TargetSpec,
@@ -218,6 +231,7 @@ export function resolveEffectResolution(
   _gameData: GameData,
   rand: () => number = Math.random,
   passives?: PassiveSkillDef[],
+  allSkillEffects?: readonly SkillEffectDef[],
 ): SkillEffectResolution | null {
   const spec = resolveEffectTargetSpec(effect, actor, allies, enemies, passives);
 
@@ -235,8 +249,13 @@ export function resolveEffectResolution(
   const shape: TargetShape = effect.targetShape ?? 'single';
   const basePower = getBaseAtkScale(effect);
 
+  const skipHealWithhold =
+    allSkillEffects !== undefined &&
+    skillHasBarrierEffect(allSkillEffects);
   if (
-    (effect.type === 'heal' || effect.type === 'hot') &&
+    effect.type === 'heal' &&
+    (effect.healSubKind ?? 'instant') !== 'dispel' &&
+    !skipHealWithhold &&
     !hasDamagedHealCandidate(spec, actor, attackablePool)
   ) {
     return null;
@@ -404,13 +423,21 @@ function resolvePierceHitTargets(
   effect: SkillEffectDef,
 ): SkillHitTarget[] {
   const actorX = getBattleX(actor);
-  const minX = actorX - rangePx;
   const inLine = attackablePool
     .filter((unit) => {
       const x = getBattleX(unit);
-      return x <= actorX && x >= minX;
+      if (actor.isEnemy) {
+        const minX = actorX - rangePx;
+        return x <= actorX && x >= minX;
+      }
+      const maxX = actorX + rangePx;
+      return x >= actorX && x <= maxX;
     })
-    .sort((a, b) => getBattleX(b) - getBattleX(a));
+    .sort((a, b) =>
+      actor.isEnemy
+        ? getBattleX(b) - getBattleX(a)
+        : getBattleX(a) - getBattleX(b),
+    );
 
   const step = pierceStepFields(effect);
   const base = basePowerMultiplier ?? 1;

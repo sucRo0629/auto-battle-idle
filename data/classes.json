@@ -18,16 +18,23 @@
     "basicAttackSkillId": "df_guardian_basic_attack",
     "passiveIds": [
       "df_guardian_passive_1",
-      "df_guardian_passive_2"
+      "df_guardian_passive_2",
+      "df_guardian_passive_3"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
           "df_guardian_passive_1",
-          "df_guardian_passive_2",
           "df_guardian_active_1",
-          "df_guardian_active_2"
+          "df_guardian_active_2",
+          "df_guardian_passive_2"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "df_guardian_passive_3"
         ]
       }
     ],
@@ -62,8 +69,8 @@
       {
         "level": 0,
         "skillIds": [
-          "df_paladin_passive_2",
           "df_paladin_passive_1",
+          "df_paladin_passive_2",
           "df_paladin_active_1",
           "df_paladin_active_2"
         ]
@@ -83,26 +90,27 @@
     "flavorJa": "搦め手で敵を弱らせ、隙に致命の一撃を繰り出す",
     "formationRow": "front",
     "traits": {
-      "rangePx": 5
+      "rangePx": 10
     },
-    "maxHp": 190,
-    "atk": 18,
-    "def": 12,
+    "maxHp": 180,
+    "atk": 19,
+    "def": 16,
     "reg": 0,
     "jobTier": 1,
-    "attackSpeedTier": "normal",
+    "attackSpeedTier": "somewhatFast",
     "basicAttackSkillId": "df_duelist_basic_attack",
     "passiveIds": [
+      "df_duelist_passive_1",
       "df_duelist_passive_2",
       "df_duelist_passive_3",
-      "df_duelist_passive_1"
+      "df_duelist_passive_4"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
+          "df_duelist_passive_1",
           "df_duelist_passive_2",
-          "df_duelist_passive_3",
           "df_duelist_active_1",
           "df_duelist_active_2"
         ]
@@ -110,7 +118,9 @@
       {
         "level": 10,
         "skillIds": [
-          "df_duelist_passive_1"
+          "df_duelist_passive_3",
+          "df_duelist_passive_4",
+          "df_duelist_active_3"
         ]
       }
     ],
@@ -257,6 +267,7 @@
       {
         "level": 0,
         "skillIds": [
+          "passive_target_ranged_attacking",
           "at_ranger_active_1",
           "at_ranger_active_2"
         ]

@@ -16,6 +16,8 @@ import {
   PASSIVE_EFFECT_KIND_LABELS,
   COUNTER_RESPONSE_KIND_LABELS,
   COUNTER_RESPONSE_KINDS,
+  MAX_HP_REF_LABELS,
+  MAX_HP_REFERENCES,
   RESOURCE_AMOUNT_KIND_LABELS,
   RESOURCE_AMOUNT_KIND_OPTIONS,
   SKILL_EFFECT_ANIM_LABELS,
@@ -31,6 +33,12 @@ import {
   VFX_PRESET_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
 import { normalizePassiveSkillForEditor } from '../battle/data/validateGameData.ts';
+import {
+  activeEffectHasAmount,
+  getActiveEffectAmountSpec,
+  getPassiveAmountSpec,
+  inferPassiveAmountField,
+} from '../battle/skillAmountOverride.ts';
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
@@ -38,6 +46,7 @@ import type {
   CounterResponseKind,
   CounterSkillEffect,
   MoveSkillEffect,
+  MaxHpReference,
   PassiveSkillDef,
   ResourceAmountSpec,
   SkillEffectAnimId,
@@ -69,7 +78,7 @@ import {
   appendPassiveDebuffFields,
   appendPassiveDispelFields,
   appendPassiveDamageReductionFields,
-  appendPassiveHotFields,
+  appendPassiveHealFields,
   appendPassiveBuffFields,
   appendPassiveSpecialEffectFields,
   appendTargetSpecFields,
@@ -81,6 +90,7 @@ import {
   createEl,
   createFieldRow,
   createNumberInput,
+  createRadioGroup,
   createSection,
   createSelect,
   createTextInput,
@@ -101,6 +111,47 @@ function defaultResourceAmount(atkScale = 1): ResourceAmountSpec {
 
 function defaultDefResourceAmount(defScale = 1): ResourceAmountSpec {
   return { kind: 'defBased', defScale };
+}
+
+function formatAmountPreview(spec: ResourceAmountSpec | undefined): string {
+  if (!spec) return '—';
+  switch (spec.kind) {
+    case 'atkBased':
+      return `ATK×${spec.atkScale ?? 1}`;
+    case 'defBased':
+      return `DEF×${spec.defScale ?? 1}`;
+    case 'flat':
+      return `固定 ${spec.flatAmount ?? 0}`;
+    case 'percentMaxHp':
+      return `maxHP ${((spec.percentOfMaxHp ?? 0) * 100).toFixed(0)}%`;
+  }
+}
+
+function resolveSkillAmountOverrideOriginal(
+  entries: SkillDraftEntry[],
+  targetSkillId: string,
+  effectIndex?: number,
+  passiveAmountField?: PassiveSkillDef['passiveAmountField'],
+): ResourceAmountSpec | undefined {
+  const entry = entries.find(
+    (item) =>
+      item.passive?.id === targetSkillId || item.active?.id === targetSkillId,
+  );
+  if (!entry?.active && !entry?.passive) return undefined;
+  if (entry.active) {
+    if (effectIndex !== undefined) {
+      const effect = entry.active.effect[effectIndex];
+      return effect ? getActiveEffectAmountSpec(effect) : undefined;
+    }
+    for (const effect of entry.active.effect) {
+      const spec = getActiveEffectAmountSpec(effect);
+      if (spec) return spec;
+    }
+    return undefined;
+  }
+  const field =
+    passiveAmountField ?? inferPassiveAmountField(entry.passive!);
+  return field ? getPassiveAmountSpec(entry.passive!, field) : undefined;
 }
 
 function defaultCounterResponse(kind: CounterResponseKind): CounterResponseDef {
@@ -424,16 +475,16 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.defenseIgnore ??= { def: { mode: 'percent', amount: 0.2 } };
       break;
     case 'periodicDispel':
+      passive.periodicTrigger ??= 'interval';
       passive.intervalSec ??= 5;
       passive.dispelTargetRule ??= { kind: 'self' };
       passive.dispelCount ??= 0;
       break;
-    case 'damageTakenToHeal':
-      passive.ratio ??= 0.1;
-      break;
-    case 'hot':
+    case 'heal':
+      passive.healSubKind ??= 'hot';
       passive.hotTargetRule ??= { kind: 'self' };
       passive.hotAmount ??= { kind: 'atkBased', atkScale: 0.05 };
+      passive.periodicTrigger ??= 'interval';
       passive.intervalSec ??= 5;
       passive.hotDurationSec ??= 0;
       break;
@@ -454,6 +505,10 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.perExtraTargetScale ??= 0.1;
       passive.maxExtraTargets ??= 4;
       break;
+    case 'skillAmountOverride':
+      passive.targetSkillId ??= '';
+      passive.amount ??= defaultResourceAmount(1);
+      break;
     case 'extendSelfAppliedDebuff':
       passive.extendSec ??= 2;
       break;
@@ -470,8 +525,17 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case 'buff':
       passive.buffSubKind ??= 'stat';
       passive.buffTargetRule ??= { kind: 'self' };
-      passive.buffStat ??= 'atk';
-      passive.buffMultiplier ??= 1.2;
+      if (passive.buffSubKind === 'damageTakenToHeal') {
+        passive.ratio ??= 0.1;
+      } else if (passive.buffSubKind === 'block' || passive.buffSubKind === 'evasion') {
+        passive.chance ??= 0.1;
+      } else if (passive.buffSubKind === 'barrier') {
+        passive.barrierAmount ??= { kind: 'defBased', defScale: 0.5 };
+        passive.periodicTrigger ??= 'stageStart';
+      } else {
+        passive.buffStat ??= 'atk';
+        passive.buffMultiplier ??= 1.2;
+      }
       break;
     case 'debuff':
       passive.debuffSubKind ??= 'stat';
@@ -597,6 +661,45 @@ function normalizeEffectAmount(effect: {
 
 type EffectPatch = SkillEffectDef | ((prev: SkillEffectDef) => SkillEffectDef);
 
+function applyActiveBuffSubKindChange(
+  prev: SkillEffectDef,
+  buffSubKind: import('../battle/types.ts').BuffSubKind,
+): SkillEffectDef {
+  if (prev.type !== 'buff') {
+    return { ...prev, buffSubKind } as SkillEffectDef;
+  }
+  const base = { ...prev, buffSubKind };
+  switch (buffSubKind) {
+    case 'damageTakenToHeal':
+      return {
+        ...base,
+        ratio: prev.ratio ?? 0.1,
+        buffDurationSec: prev.buffDurationSec ?? 5,
+      };
+    case 'block':
+    case 'evasion':
+      return {
+        ...base,
+        chance: prev.chance ?? 0.2,
+        buffDurationSec: prev.buffDurationSec ?? 5,
+      };
+    case 'stat':
+      return {
+        ...base,
+        buffStat: prev.buffStat ?? 'atk',
+        buffMultiplier: prev.buffMultiplier ?? 1.2,
+        buffDurationSec: prev.buffDurationSec ?? 5,
+      };
+    case 'barrier':
+      return {
+        ...base,
+        amount: prev.amount ?? defaultResourceAmount(),
+      };
+    default:
+      return base;
+  }
+}
+
 function patchEffectState(
   initial: SkillEffectDef,
   onUpdate: (effect: SkillEffectDef, options?: { rerender?: boolean }) => void,
@@ -612,6 +715,17 @@ function patchEffectState(
       onUpdate(current, options);
     },
   };
+}
+
+function patchPercentMaxHpRef(
+  prev: ResourceAmountSpec,
+  maxHpRef: MaxHpReference,
+): ResourceAmountSpec {
+  if (maxHpRef === 'target') {
+    const { maxHpRef: _, ...rest } = prev;
+    return rest;
+  }
+  return { ...prev, maxHpRef };
 }
 
 function appendResourceAmountFields(
@@ -658,6 +772,7 @@ function appendResourceAmountFields(
               () => ({
                 kind,
                 percentOfMaxHp: current.percentOfMaxHp ?? 0.1,
+                ...(current.maxHpRef === 'self' ? { maxHpRef: 'self' as const } : {}),
               }),
               { rerender: true },
             );
@@ -729,6 +844,21 @@ function appendResourceAmountFields(
     return;
   }
 
+  const maxHpRef = amount.maxHpRef ?? 'target';
+  grid.appendChild(
+    createFieldRow(
+      '参照',
+      createRadioGroup(
+        maxHpRef,
+        MAX_HP_REFERENCES.map((value) => ({
+          value,
+          label: MAX_HP_REF_LABELS[value],
+        })),
+        (next) => patchAmount((prev) => patchPercentMaxHpRef(prev, next)),
+        `maxHpRef-${crypto.randomUUID()}`,
+      ),
+    ),
+  );
   grid.appendChild(
     createFieldRow(
       'maxHp 割合 (%)',
@@ -930,13 +1060,6 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         debuffStat: 'def',
         debuffMultiplier: 0.8,
         debuffDurationSec: 5,
-      };
-    case 'hot':
-      return {
-        target,
-        type: 'hot',
-        durationSec: 5,
-        amount: defaultResourceAmount(0.2),
       };
     case 'dot':
       return {
@@ -1551,22 +1674,6 @@ export class SkillEditorStep {
           this.patchPassive(index, mutate, options);
         });
         break;
-      case 'damageTakenToHeal':
-        effectGrid.appendChild(
-          createFieldRow(
-            'ratio',
-            createNumberInput(
-              passive.ratio ?? 0,
-              (ratio) => {
-                this.patchPassive(index, (current) => {
-                  current.ratio = ratio;
-                }, { rerender: false });
-              },
-              { step: 0.01 },
-            ),
-          ),
-        );
-        break;
       case 'healReceivedIncrease':
         effectGrid.appendChild(
           createEl(
@@ -1576,8 +1683,8 @@ export class SkillEditorStep {
           ),
         );
         break;
-      case 'hot':
-        appendPassiveHotFields(
+      case 'heal':
+        appendPassiveHealFields(
           effectGrid,
           passive,
           (mutate, options) => {
@@ -1780,15 +1887,131 @@ export class SkillEditorStep {
         });
         break;
       case 'buff':
-        appendPassiveBuffFields(effectGrid, passive, (mutate, options) => {
-          this.patchPassive(index, mutate, options);
-        });
+        appendPassiveBuffFields(
+          effectGrid,
+          passive,
+          (mutate, options) => {
+            this.patchPassive(index, mutate, options);
+          },
+          (grid, amount, onUpdate) => {
+            appendResourceAmountFields(grid, amount, onUpdate);
+          },
+        );
         break;
       case 'debuff':
         appendPassiveDebuffFields(effectGrid, passive, (mutate, options) => {
           this.patchPassive(index, mutate, options);
         });
         break;
+      case 'skillAmountOverride': {
+        const entries = this.options.getEntries();
+        const skillOptions = entries.flatMap((entry) => {
+          if (entry.passive) {
+            return [
+              {
+                value: entry.passive.id,
+                label: `[パッシブ] ${entry.passive.name} (${entry.passive.id})`,
+              },
+            ];
+          }
+          if (entry.active) {
+            return [
+              {
+                value: entry.active.id,
+                label: `[アクティブ] ${entry.active.name} (${entry.active.id})`,
+              },
+            ];
+          }
+          return [];
+        });
+        const targetSkillId = passive.targetSkillId ?? '';
+        const targetEntry = entries.find(
+          (entry) =>
+            entry.passive?.id === targetSkillId ||
+            entry.active?.id === targetSkillId,
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '対象スキル',
+            createSelect(
+              targetSkillId,
+              skillOptions,
+              (nextTargetSkillId) => {
+                this.patchPassive(index, (current) => {
+                  current.targetSkillId = nextTargetSkillId;
+                  delete current.effectIndex;
+                  delete current.passiveAmountField;
+                }, { rerender: true });
+              },
+            ),
+          ),
+        );
+        if (targetEntry?.active) {
+          const amountEffects = targetEntry.active.effect
+            .map((effect, effectIndex) => ({ effect, effectIndex }))
+            .filter(({ effect }) => activeEffectHasAmount(effect));
+          if (amountEffects.length > 1) {
+            const effectIndex = passive.effectIndex;
+            effectGrid.appendChild(
+              createFieldRow(
+                '対象 effect',
+                createSelect(
+                  effectIndex === undefined ? -1 : effectIndex,
+                  [
+                    { value: -1, label: 'すべて' },
+                    ...amountEffects.map(({ effect, effectIndex: idx }) => ({
+                      value: idx,
+                      label: `効果 ${idx + 1} (${effect.type})`,
+                    })),
+                  ],
+                  (selected) => {
+                    this.patchPassive(index, (current) => {
+                      if (selected < 0) {
+                        delete current.effectIndex;
+                      } else {
+                        current.effectIndex = selected;
+                      }
+                    }, { rerender: true });
+                  },
+                ),
+              ),
+            );
+          }
+        } else if (targetEntry?.passive) {
+          const inferred = inferPassiveAmountField(targetEntry.passive);
+          if (inferred) {
+            effectGrid.appendChild(
+              createEl(
+                'p',
+                'editor-hint',
+                `対象フィールド: ${inferred}`,
+              ),
+            );
+          }
+        }
+        const originalAmount = resolveSkillAmountOverrideOriginal(
+          entries,
+          targetSkillId,
+          passive.effectIndex,
+          passive.passiveAmountField,
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '元の効果量（読み取り専用）',
+            createEl('span', 'editor-readonly-value', formatAmountPreview(originalAmount)),
+          ),
+        );
+        appendResourceAmountFields(
+          effectGrid,
+          passive.amount ?? defaultResourceAmount(1),
+          (amount, options) => {
+            this.patchPassive(index, (current) => {
+              current.amount = amount;
+            }, options);
+          },
+        );
+        break;
+      }
     }
 
     parent.appendChild(
@@ -2635,7 +2858,7 @@ export class SkillEditorStep {
               })),
               (buffSubKind) =>
                 patchEffect(
-                  (prev) => ({ ...prev, buffSubKind }) as SkillEffectDef,
+                  (prev) => applyActiveBuffSubKindChange(prev, buffSubKind),
                   { rerender: true },
                 ),
             ),
@@ -2648,6 +2871,30 @@ export class SkillEditorStep {
               createNumberInput(
                 effect.chance ?? 0.2,
                 (chance) => patchEffect((prev) => ({ ...prev, chance }) as SkillEffectDef),
+                { min: 0, max: 1, step: 0.01 },
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              '秒数',
+              createNumberInput(
+                effect.buffDurationSec ?? 5,
+                (buffDurationSec) =>
+                  patchEffect((prev) => ({ ...prev, buffDurationSec }) as SkillEffectDef),
+                { min: 0.1, step: 0.5 },
+              ),
+            ),
+          );
+          break;
+        }
+        if (effect.buffSubKind === 'damageTakenToHeal') {
+          detailGrid.appendChild(
+            createFieldRow(
+              'ratio',
+              createNumberInput(
+                effect.ratio ?? 0.1,
+                (ratio) => patchEffect((prev) => ({ ...prev, ratio }) as SkillEffectDef),
                 { min: 0, max: 1, step: 0.01 },
               ),
             ),
@@ -2853,21 +3100,6 @@ export class SkillEditorStep {
           ),
         );
         break;
-      case 'hot':
-        detailGrid.appendChild(
-          createFieldRow(
-            '秒数',
-            createNumberInput(
-              effect.durationSec,
-              (durationSec) => patchEffect((prev) => ({ ...prev, durationSec })),
-              { min: 0.1, step: 0.5 },
-            ),
-          ),
-        );
-        appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
-          patchEffect((prev) => ({ ...prev, amount }), options),
-        );
-        break;
       case 'barrier':
         appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
           patchEffect((prev) => ({ ...prev, amount }), options),
@@ -2878,11 +3110,11 @@ export class SkillEditorStep {
             const label = createEl('label');
             const input = document.createElement('input');
             input.type = 'checkbox';
-            input.checked = effect.barrierStack ?? false;
+            input.checked = effect.barrierStack !== false;
             input.addEventListener('change', () => {
               patchEffect((prev) => ({
                 ...prev,
-                barrierStack: input.checked ? true : undefined,
+                barrierStack: input.checked ? undefined : false,
               }));
             });
             label.appendChild(input);
@@ -3062,7 +3294,6 @@ function effectSupportsPresentationFields(effect: SkillEffectDef): boolean {
     effect.type === 'move' ||
     effect.type === 'damage' ||
     effect.type === 'dot' ||
-    effect.type === 'heal' ||
-    effect.type === 'hot'
+    effect.type === 'heal'
   );
 }

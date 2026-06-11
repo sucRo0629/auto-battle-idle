@@ -551,7 +551,6 @@ export function formatTargetLabel(spec: TargetSpec): string {
 export function defaultTargetForEffectType(type: string): TargetSpec {
   switch (type) {
     case "heal":
-    case "hot":
     case "barrier":
     case "dispel":
       return { kind: "stat", side: "ally", stat: "hp", order: "ratio" };
