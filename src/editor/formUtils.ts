@@ -312,6 +312,84 @@ export function createSection(title: string): HTMLElement {
   return section;
 }
 
+export interface CollapsibleSectionOptions {
+  id: string;
+  title: string;
+  summaryExtra?: HTMLElement | string;
+  summaryActions?: HTMLElement;
+  expandedState: Map<string, boolean>;
+  className?: string;
+  dataAttrs?: Record<string, string>;
+  onToggle?: (open: boolean) => void;
+}
+
+/** 折りたたみセクション（展開状態は expandedState Map で永続化） */
+export function createCollapsibleSection(
+  options: CollapsibleSectionOptions,
+): { details: HTMLDetailsElement; body: HTMLElement } {
+  const {
+    id,
+    title,
+    summaryExtra,
+    summaryActions,
+    expandedState,
+    className,
+    dataAttrs,
+    onToggle,
+  } = options;
+
+  const details = createEl('details', 'editor-collapsible-details');
+  if (className) details.classList.add(className);
+  if (dataAttrs) {
+    for (const [key, value] of Object.entries(dataAttrs)) {
+      details.dataset[key] = value;
+    }
+  }
+
+  const isOpen = expandedState.get(id) ?? false;
+  details.open = isOpen;
+
+  const summary = createEl('summary', 'editor-collapsible-summary');
+  summary.appendChild(createEl('span', 'editor-collapsible-summary-label', title));
+
+  if (summaryExtra !== undefined) {
+    const extraEl =
+      typeof summaryExtra === 'string'
+        ? createEl('span', 'editor-collapsible-summary-desc', summaryExtra)
+        : summaryExtra;
+    if (typeof summaryExtra !== 'string') {
+      extraEl.classList.add('editor-collapsible-summary-desc');
+    }
+    summary.appendChild(extraEl);
+  }
+
+  if (summaryActions) {
+    const actionsWrap = createEl('span', 'editor-collapsible-summary-actions');
+    actionsWrap.appendChild(summaryActions);
+    summary.appendChild(actionsWrap);
+    for (const button of Array.from(actionsWrap.querySelectorAll('button'))) {
+      button.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation();
+      });
+      button.addEventListener('mousedown', (event: MouseEvent) => {
+        event.preventDefault();
+      });
+    }
+  }
+
+  details.appendChild(summary);
+
+  const body = createEl('div', 'editor-collapsible-body');
+  details.appendChild(body);
+
+  details.addEventListener('toggle', () => {
+    expandedState.set(id, details.open);
+    onToggle?.(details.open);
+  });
+
+  return { details, body };
+}
+
 export function appendGrid(parent: HTMLElement): HTMLElement {
   const grid = createEl('div', 'editor-grid');
   parent.appendChild(grid);

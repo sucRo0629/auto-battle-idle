@@ -337,6 +337,30 @@ describe('resolveEffectTargets', () => {
     expect(ids).toEqual(['e1', 'e2', 'e3']);
   });
 
+  it('pierce: hits contact enemy from melee standoff stop position', () => {
+    const gap = engagedMinBodyGap();
+    const contact = 130;
+    const range = 50;
+    const actor = mockUnit('lancer', contact - gap - range, { rangePx: range });
+    const front = mockUnit('e1', contact, { isEnemy: true, hp: 80 });
+    const effect: DamageSkillEffect = {
+      targetShape: 'pierce',
+      type: 'damage',
+      target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+      damageType: 'physical',
+      amount: { kind: 'atkBased', atkScale: 1 },
+    };
+    const resolution = resolveEffectResolution(
+      effect,
+      actor,
+      [actor],
+      [front],
+      gameData,
+    );
+    const ids = resolution?.waves[0]?.targets.map((t) => t.unit.id);
+    expect(ids).toEqual(['e1']);
+  });
+
   it('pierce: orders front to back for enemy attacking backward (-X)', () => {
     const enemyActor = mockUnit('enemy', 200, { isEnemy: true });
     const playerFront = mockUnit('p1', 180);

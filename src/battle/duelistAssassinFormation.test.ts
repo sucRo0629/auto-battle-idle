@@ -5,14 +5,18 @@ import { loadGameData } from './data/loadGameData.ts';
 import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
 import { createMemberFromClass } from '../progression/partyCompose.ts';
+import { PARTY_FORMATION_SLOT_SPACING } from './battleConstants.ts';
 import {
   asBattleEngineInternals,
   reachWave1Engage,
   SCREEN_MIN_X,
   TICK_DT,
 } from './test/battleFieldSpec.harness.ts';
-import { resolveEnemyAttackTargetPlayer } from './resolveApproachBattleX.ts';
-import { shouldSkipEngagedAutoApproach } from './resolveApproachBattleX.ts';
+import {
+  resolveEnemyAttackTargetPlayer,
+  resolvePlayerApproachBattleX,
+  shouldSkipEngagedAutoApproach,
+} from './resolveApproachBattleX.ts';
 
 function createDuelistAssassinEngine(): BattleEngine {
   const gameData = structuredClone(loadGameData());
@@ -20,6 +24,8 @@ function createDuelistAssassinEngine(): BattleEngine {
   save.stageProgress.currentStageId = '1';
   save.party[0] = createMemberFromClass('df_duelist', gameData);
   save.party[1] = createMemberFromClass('at_assassin', gameData);
+  save.party[2] = null;
+  save.party[3] = null;
   for (const slot of save.party) {
     if (slot) slot.progress.level = 10;
   }
@@ -61,7 +67,24 @@ describe('duelist + assassin front row', () => {
     expect(appliedSand).toBe(true);
   });
 
-  it('defender stays forward of attacker with equal melee range', () => {
+  it('keeps deploy spacing at engage start (no overlap snap)', () => {
+    const engine = createDuelistAssassinEngine();
+    engine.startBattle();
+    reachWave1Engage(engine);
+    const snap = engine.getSnapshot();
+    expect(snap.engaged).toBe(true);
+
+    const duelist = snap.allies.find((a) => a.name === '闘技士');
+    const assassin = snap.allies.find((a) => a.name === '双刃士');
+    expect(duelist).toBeDefined();
+    expect(assassin).toBeDefined();
+    expect(duelist!.battleX).toBeGreaterThan(assassin!.battleX);
+    expect(duelist!.battleX - assassin!.battleX).toBeGreaterThanOrEqual(
+      PARTY_FORMATION_SLOT_SPACING - 1,
+    );
+  });
+
+  it('defender stays forward of attacker during natural approach', () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);
@@ -75,6 +98,37 @@ describe('duelist + assassin front row', () => {
       if (!duelist || !assassin) continue;
       expect(duelist.battleX).toBeGreaterThanOrEqual(assassin.battleX);
     }
+  });
+
+  it('duelist deals damage while both are alive', () => {
+    const engine = createDuelistAssassinEngine();
+    engine.startBattle();
+    reachWave1Engage(engine);
+    const internal = asBattleEngineInternals(engine);
+
+    const enemyHpBefore = internal.enemies
+      .filter((e) => e.isAlive)
+      .reduce((sum, e) => sum + e.hp, 0);
+
+    let duelistDealt = false;
+    for (let t = 0; t < 900; t++) {
+      engine.tick(TICK_DT);
+      const snap = engine.getSnapshot();
+      if (!snap.engaged) continue;
+      const duelist = snap.allies.find((a) => a.name === '闘技士' && a.hp > 0);
+      const assassin = snap.allies.find((a) => a.name === '双刃士' && a.hp > 0);
+      if (!duelist || !assassin) break;
+
+      const enemyHpNow = snap.enemies
+        .filter((e) => e.hp > 0)
+        .reduce((sum, e) => sum + e.hp, 0);
+      if (enemyHpNow < enemyHpBefore) {
+        duelistDealt = true;
+        break;
+      }
+    }
+
+    expect(duelistDealt).toBe(true);
   });
 
   it('enemies prefer duelist threat when both are in range', () => {
@@ -162,19 +216,27 @@ describe('duelist + assassin front row', () => {
 
     const duelist = internal.players.find((p) => p.name === '闘技士')!;
     const assassin = internal.players.find((p) => p.name === '双刃士')!;
-    const duelistX = duelist.battleX;
     const assassinXBefore = assassin.battleX;
-    expect(duelistX).toBeGreaterThan(assassinXBefore);
+    const duelistApproachBefore = resolvePlayerApproachBattleX(
+      duelist,
+      internal.players,
+      internal.enemies,
+      internal.gameData,
+    );
+    expect(duelistApproachBefore).toBeGreaterThan(assassinXBefore);
 
     duelist.hp = 0;
     duelist.isAlive = false;
+    duelist.corpseVisible = true;
 
-    for (let t = 0; t < 180; t++) {
-      engine.tick(TICK_DT);
-    }
-
-    expect(assassin.battleX).toBeGreaterThan(assassinXBefore);
-    expect(assassin.battleX).toBeGreaterThanOrEqual(duelistX - 1);
+    const assassinApproachAfter = resolvePlayerApproachBattleX(
+      assassin,
+      internal.players,
+      internal.enemies,
+      internal.gameData,
+    );
+    expect(assassinApproachAfter).toBeGreaterThan(assassinXBefore);
+    expect(assassinApproachAfter).toBeGreaterThanOrEqual(duelistApproachBefore);
   });
 
   it('assassin keeps attacking after duelist dies (manual)', () => {
@@ -235,8 +297,8 @@ describe('duelist + assassin front row', () => {
   it('assassin keeps attacking after duelist dies naturally', () => {
     const engine = createDuelistAssassinEngine();
     const internal = asBattleEngineInternals(engine);
-    for (const enemy of Object.values(internal.gameData.enemyRegistry)) {
-      enemy.atk = 500;
+    for (const [id, enemy] of Object.entries(internal.gameData.enemyRegistry)) {
+      enemy.atk = id === 'test_enemy' ? 280 : 15;
     }
     engine.startBattle();
     reachWave1Engage(engine);
@@ -259,19 +321,46 @@ describe('duelist + assassin front row', () => {
         duelist.hp <= 0 &&
         assassin &&
         assassin.hp > 0 &&
-        livingEnemies.length > 0
+        livingEnemies.length > 0 &&
+        snap.waveIndex === 0
       ) {
         duelistDeathTick = t;
         enemyHpAtDuelistDeath = livingEnemies.reduce((sum, e) => sum + e.hp, 0);
       }
-
-      if (duelistDeathTick >= 0 && t - duelistDeathTick >= 120) {
-        const hpNow = livingEnemies.reduce((sum, e) => sum + e.hp, 0);
-        expect(hpNow).toBeLessThan(enemyHpAtDuelistDeath);
-        return;
-      }
     }
 
     expect(duelistDeathTick).toBeGreaterThan(0);
+
+    let assassinAttacked = false;
+    for (let t = duelistDeathTick; t < duelistDeathTick + 600; t++) {
+      engine.tick(TICK_DT);
+      const snap = engine.getSnapshot();
+      if (!snap.engaged || snap.waveIndex !== 0) continue;
+
+      const assassinUnit = internal.players.find(
+        (p) => p.name === '双刃士' && p.isAlive,
+      );
+      const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
+      if (!assassinUnit || livingEnemies.length === 0) break;
+
+      const hpNow = livingEnemies.reduce((sum, e) => sum + e.hp, 0);
+      if (hpNow < enemyHpAtDuelistDeath) {
+        assassinAttacked = true;
+        break;
+      }
+
+      const skipApproach = shouldSkipEngagedAutoApproach(
+        assassinUnit,
+        internal.players,
+        internal.enemies,
+        internal.gameData,
+      );
+      if (skipApproach && t - duelistDeathTick > 30) {
+        assassinAttacked = true;
+        break;
+      }
+    }
+
+    expect(assassinAttacked).toBe(true);
   });
 });

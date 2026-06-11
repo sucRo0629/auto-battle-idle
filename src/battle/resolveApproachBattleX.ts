@@ -4,14 +4,19 @@ import {
   getEnemyContactX,
   getMeleeEnemyContactX,
   resolveApproachAttackBattleX,
+  resolveApproachFormationRangePx,
   resolveAttackBattleX,
   resolveApproachRangePx,
+  resolveFormationRangePx,
 } from './combatPosition.ts';
 import { pickTargetFromPool, resolveTargetSpec } from './skills/targeting.ts';
 import { getEffectTarget, getTargetPool } from './skills/targetSpec.ts';
 import { getAttackablePool } from './skills/rangeUtils.ts';
-import { resolveFrontRowSameRangeMeleeDepthPx } from './battleLayout.ts';
-import { resolveFormationRangePx } from './combatPosition.ts';
+import { applyFormationRowApproachSpacing } from './battleLayout.ts';
+import {
+  compareFormationRowSlot,
+  computePartyFormationBattleX,
+} from './partyFormation.ts';
 
 function resolveBasicAttackTarget(
   unit: CombatantState,
@@ -195,21 +200,24 @@ export interface PlayerApproachOptions {
   frozenMeleeContactX?: number | null;
 }
 
-export function resolvePlayerApproachBattleX(
+function toPlacementInput(unit: CombatantState) {
+  return {
+    id: unit.id,
+    role: unit.role,
+    formationRow: unit.formationRow,
+    rangePx: resolveApproachFormationRangePx(unit),
+    isAlive: unit.isAlive,
+  };
+}
+
+/** 列内スペーシング前の個別接近目標 X */
+function resolveIndividualPlayerApproachBattleX(
   player: CombatantState,
   players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
-  options: PlayerApproachOptions = {},
+  contact: number,
 ): number {
-  const frozenMeleeContactX = options.frozenMeleeContactX ?? null;
-  const contact = resolveApproachEnemyContact(
-    enemies,
-    gameData,
-    frozenMeleeContactX,
-  );
-  if (contact === null) return player.battleX;
-
   let approachX =
     player.role === 'defender'
       ? resolveDefenderApproachBattleX(player, enemies, gameData, contact)
@@ -228,27 +236,6 @@ export function resolvePlayerApproachBattleX(
       gameData,
       approachX,
     );
-    if (player.formationRow === 'front') {
-      const depthInputs = players
-        .filter((unit) => unit.isAlive || unit.corpseVisible)
-        .map((unit) => ({
-          id: unit.id,
-          role: unit.role,
-          formationRow: unit.formationRow,
-          rangePx: resolveFormationRangePx(unit),
-          isAlive: unit.isAlive,
-        }));
-      approachX += resolveFrontRowSameRangeMeleeDepthPx(
-        {
-          id: player.id,
-          role: player.role,
-          formationRow: player.formationRow,
-          rangePx: resolveFormationRangePx(player),
-          isAlive: true,
-        },
-        depthInputs,
-      );
-    }
     return approachX;
   }
 
@@ -261,6 +248,128 @@ export function resolvePlayerApproachBattleX(
       approachX,
     ),
   );
+}
+
+/** 全味方の接敵目標 battleX（列内スペーシング適用済み） */
+export function resolveAllPlayerApproachBattleX(
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  options: PlayerApproachOptions = {},
+): Map<string, number> {
+  const frozenMeleeContactX = options.frozenMeleeContactX ?? null;
+  const contact = resolveApproachEnemyContact(
+    enemies,
+    gameData,
+    frozenMeleeContactX,
+  );
+  if (contact === null) {
+    return new Map(players.map((p) => [p.id, p.battleX]));
+  }
+
+  const baseApproach = new Map<string, number>();
+  for (const player of players) {
+    baseApproach.set(
+      player.id,
+      resolveIndividualPlayerApproachBattleX(
+        player,
+        players,
+        enemies,
+        gameData,
+        contact,
+      ),
+    );
+  }
+
+  const spacingInputs = players.map(toPlacementInput);
+
+  const spaced = applyFormationRowApproachSpacing(baseApproach, spacingInputs);
+  applyFormationMarchFollow(spaced, players);
+  return spaced;
+}
+
+/**
+ * 進軍中: 列リーダーが停止位置に達するまで、後方ユニットは
+ * PartyDeploy と同じ相対オフセットを維持（同速で隊列を保つ）。
+ */
+function applyFormationMarchFollow(
+  targets: Map<string, number>,
+  players: CombatantState[],
+): void {
+  const living = players.filter((p) => p.isAlive);
+  if (living.length < 2) return;
+
+  const formation = computePartyFormationBattleX(
+    living.map((p) => ({
+      id: p.id,
+      role: p.role,
+      rangePx: resolveFormationRangePx(p),
+      damageType: p.traits.damageType,
+      formationRow: p.formationRow,
+    })),
+  );
+
+  const rows = new Set(living.map((p) => p.formationRow));
+  for (const row of rows) {
+    const rowUnits = living.filter((p) => p.formationRow === row);
+    if (rowUnits.length < 2) continue;
+
+    const sorted = [...rowUnits].sort((a, b) =>
+      compareFormationRowSlot(
+        row,
+        {
+          id: a.id,
+          role: a.role,
+          rangePx: resolveFormationRangePx(a),
+          damageType: a.traits.damageType,
+          formationRow: a.formationRow,
+        },
+        {
+          id: b.id,
+          role: b.role,
+          rangePx: resolveFormationRangePx(b),
+          damageType: b.traits.damageType,
+          formationRow: b.formationRow,
+        },
+      ),
+    );
+    const leader = sorted[sorted.length - 1]!;
+    const leaderTarget = targets.get(leader.id);
+    const leaderFormX = formation.get(leader.id);
+    if (leaderTarget === undefined || leaderFormX === undefined) continue;
+    if (leader.battleX >= leaderTarget - 0.5) continue;
+
+    for (const unit of sorted.slice(0, -1)) {
+      const unitFormX = formation.get(unit.id);
+      if (unitFormX === undefined) continue;
+
+      const deployGap = leaderFormX - unitFormX;
+      const currentGap = leader.battleX - unit.battleX;
+      if (Math.abs(currentGap - deployGap) > 2) continue;
+
+      const followTarget = leaderTarget + (unitFormX - leaderFormX);
+      const spaced = targets.get(unit.id);
+      if (spaced !== undefined && spaced > followTarget) {
+        targets.set(unit.id, followTarget);
+      }
+    }
+  }
+}
+
+export function resolvePlayerApproachBattleX(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  options: PlayerApproachOptions = {},
+): number {
+  const all = resolveAllPlayerApproachBattleX(
+    players,
+    enemies,
+    gameData,
+    options,
+  );
+  return all.get(player.id) ?? player.battleX;
 }
 
 export function resolveEnemyApproachBattleX(

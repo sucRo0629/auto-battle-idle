@@ -19,6 +19,7 @@
     "passiveIds": [
       "df_guardian_passive_1",
       "df_guardian_passive_2",
+      "df_guardian_passive_3",
       "df_guardian_passive_4"
     ],
     "skills": [
@@ -29,6 +30,12 @@
           "df_guardian_passive_2",
           "df_guardian_active_1",
           "df_guardian_active_2"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "df_guardian_passive_3"
         ]
       },
       {
@@ -63,7 +70,9 @@
     "basicAttackSkillId": "df_paladin_basic_attack",
     "passiveIds": [
       "df_paladin_passive_1",
-      "df_paladin_passive_2"
+      "df_paladin_passive_2",
+      "df_paladin_passive_3",
+      "df_paladin_passive_4"
     ],
     "skills": [
       {
@@ -73,6 +82,18 @@
           "df_paladin_passive_2",
           "df_paladin_active_1",
           "df_paladin_active_2"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "df_paladin_passive_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "df_paladin_passive_4"
         ]
       }
     ],

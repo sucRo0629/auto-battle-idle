@@ -6,8 +6,8 @@ import type {
 } from './types.ts';
 import { isMeleeRangePx } from './types.ts';
 import {
+  resolveApproachFormationRangePx,
   resolveFormationRangePx,
-  resolveMaxEffectiveRangePx,
 } from './combatPosition.ts';
 import {
   CANVAS_W,
@@ -27,6 +27,7 @@ import {
   enemyRangedRearGap,
 } from './battleConstants.ts';
 import {
+  compareFormationRowSlot,
   computePartyFormationBattleX,
   partyFormationDepthPx,
   type PartyFormationUnit,
@@ -61,21 +62,11 @@ export type AllyPositionOptions = PlayerPositionOptions;
 
 const ROW_ORDER: FormationRow[] = ['front', 'middle', 'back'];
 
-/** Front row: lower order = left/rear; defender is most forward (right). */
-const FRONT_ROW_ROLE_ORDER: Record<Role, number> = {
-  attacker: 0,
-  defender: 1,
-  supporter: 2,
-};
-
 /** 同射程前列近接の停止深度（range 差 3px と同程度） */
 export const FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX = 3;
 
-const BACK_ROW_ROLE_ORDER: Record<Role, number> = {
-  supporter: 0,
-  attacker: 1,
-  defender: 2,
-};
+/** 接敵深度の列内ステップ（px） */
+export const FORMATION_DEPTH_STEP_PX = FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX;
 
 interface Placement {
   id: string;
@@ -85,24 +76,24 @@ interface Placement {
   x: number;
 }
 
-function rowRoleOrder(row: FormationRow, role: Role): number {
-  if (row === 'front') return FRONT_ROW_ROLE_ORDER[role];
-  if (row === 'back') return BACK_ROW_ROLE_ORDER[role];
-  return FRONT_ROW_ROLE_ORDER[role];
-}
-
-/** 同一列内: 射程が短いほど前方（右）、長いほど後方（左）。同射程は role 順 */
 function compareFormationSlot(
   row: FormationRow,
   a: PlayerPlacementInput,
   b: PlayerPlacementInput,
 ): number {
-  if (a.rangePx !== b.rangePx) {
-    return b.rangePx - a.rangePx;
-  }
-  const roleDelta = rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role);
-  if (roleDelta !== 0) return roleDelta;
-  return a.id.localeCompare(b.id);
+  return compareFormationRowSlot(row, toPartyFormationUnit(a), toPartyFormationUnit(b));
+}
+
+function toPartyFormationUnit(
+  input: PlayerPlacementInput,
+): PartyFormationUnit {
+  return {
+    id: input.id,
+    role: input.role,
+    rangePx: input.rangePx,
+    damageType: input.damageType ?? 'physical',
+    formationRow: input.formationRow,
+  };
 }
 
 function sortPlayersInFormationRow(
@@ -112,52 +103,78 @@ function sortPlayersInFormationRow(
   return [...players].sort((a, b) => compareFormationSlot(row, a, b));
 }
 
-/** 前列近接の深度計算用（戦死直後の味方死体スロットを含む inputs を渡す） */
-export function buildFrontRowMeleeDepthPlacementInputs(
+/**
+ * 接敵: 同一 formationRow 内で baseApproach を列ソート順に積み上げ、
+ * 各ユニットを max(自身の base, 前スロット + DEPTH) に揃える。
+ * 死体スロットはチェーン維持用に含める（戦死後の前線継承）。
+ */
+export function applyFormationRowApproachSpacing(
+  baseApproachById: Map<string, number>,
   players: PlayerPlacementInput[],
-): PlayerPlacementInput[] {
-  return players.filter(
-    (unit) => unit.formationRow === 'front' && isMeleeRangePx(unit.rangePx),
-  );
+): Map<string, number> {
+  const result = new Map<string, number>();
+  const rows = new Set(players.map((p) => p.formationRow));
+
+  for (const row of rows) {
+    const rowFormation = players.filter((p) => p.formationRow === row);
+    if (rowFormation.length === 0) continue;
+
+    const living = livingPlayers(rowFormation);
+    if (living.length === 1 && rowFormation.length >= 2) {
+      const sorted = sortPlayersInFormationRow(row, rowFormation);
+      const unit = living[0]!;
+      const ownBase = baseApproachById.get(unit.id);
+      if (ownBase !== undefined) {
+        let prevX = Number.NEGATIVE_INFINITY;
+        let forwardmostX = ownBase;
+        for (const input of sorted) {
+          const unitBase = baseApproachById.get(input.id) ?? forwardmostX;
+          const x =
+            prevX === Number.NEGATIVE_INFINITY
+              ? unitBase
+              : Math.max(unitBase, prevX + FORMATION_DEPTH_STEP_PX);
+          forwardmostX = x;
+          prevX = x;
+        }
+        result.set(unit.id, forwardmostX);
+      }
+      continue;
+    }
+
+    const sorted = sortPlayersInFormationRow(row, rowFormation);
+    let prevX = Number.NEGATIVE_INFINITY;
+
+    for (const input of sorted) {
+      const base = baseApproachById.get(input.id);
+      if (base === undefined) continue;
+
+      if (!input.isAlive) {
+        if (prevX !== Number.NEGATIVE_INFINITY) {
+          prevX += FORMATION_DEPTH_STEP_PX;
+        }
+        continue;
+      }
+
+      const x =
+        prevX === Number.NEGATIVE_INFINITY
+          ? base
+          : Math.max(base, prevX + FORMATION_DEPTH_STEP_PX);
+      result.set(input.id, x);
+      prevX = x;
+    }
+  }
+
+  return result;
 }
 
-/**
- * 同射程の前列近接: 隊形スロット順で停止 battleX を右（前）へずらす。
- * 同帯のタンク戦死後は生存者が最前線スロットの深度を継承する。
- */
+/** @deprecated applyFormationRowApproachSpacing を使用 */
 export function resolveFrontRowSameRangeMeleeDepthPx(
   player: PlayerPlacementInput,
   players: PlayerPlacementInput[],
 ): number {
-  if (player.formationRow !== 'front' || !player.isAlive) return 0;
-  if (!isMeleeRangePx(player.rangePx)) return 0;
-
-  const formationMeleeFront = buildFrontRowMeleeDepthPlacementInputs(players);
-  const livingMeleeFront = livingPlayers(formationMeleeFront);
-  if (livingMeleeFront.length === 0) return 0;
-
-  const sameRangeFormation = formationMeleeFront.filter(
-    (unit) => unit.rangePx === player.rangePx,
-  );
-  const sameRangeLiving = livingPlayers(sameRangeFormation);
-  if (sameRangeLiving.length === 0) return 0;
-
-  if (
-    sameRangeLiving.length === 1 &&
-    sameRangeFormation.length >= 2
-  ) {
-    return (sameRangeFormation.length - 1) * FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX;
-  }
-
-  if (livingMeleeFront.length < 2) return 0;
-
-  const sameRangeLivingOnly = sameRangeLiving;
-  if (sameRangeLivingOnly.length < 2) return 0;
-
-  const sorted = sortPlayersInFormationRow('front', sameRangeLivingOnly);
-  const slot = sorted.findIndex((unit) => unit.id === player.id);
-  if (slot < 0) return 0;
-  return slot * FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX;
+  const base = new Map<string, number>([[player.id, 0]]);
+  const spaced = applyFormationRowApproachSpacing(base, players);
+  return spaced.get(player.id) ?? 0;
 }
 
 function prefersLeftOnOverlap(row: FormationRow, role: Role): boolean {
@@ -280,12 +297,7 @@ export const getLeadingAllyFront = getLeadingPlayerFront;
 function toFormationUnits(
   players: PlayerPlacementInput[],
 ): PartyFormationUnit[] {
-  return players.map((p) => ({
-    id: p.id,
-    role: p.role,
-    rangePx: p.rangePx,
-    damageType: p.damageType ?? 'physical',
-  }));
+  return players.map((p) => toPartyFormationUnit(p));
 }
 
 function buildFormationPlacements(
@@ -869,7 +881,7 @@ export function resolveEngagedFormationOverlaps(
   if (frontUnits.length < 2) return;
 
   const allMeleeBand = frontUnits.every((p) =>
-    isMeleeRangePx(resolveMaxEffectiveRangePx(p, gameData)),
+    isMeleeRangePx(resolveApproachFormationRangePx(p)),
   );
 
   if (allMeleeBand) {

@@ -44,6 +44,7 @@ import {
 import {
   appendGrid,
   createActionButton,
+  createCollapsibleSection,
   createEl,
   createFieldRow,
   createNumberInput,
@@ -149,6 +150,7 @@ export interface ClassEditorStepOptions {
   saving?: boolean;
   hidePicker?: boolean;
   hideSave?: boolean;
+  sectionExpandedState?: Map<string, boolean>;
 }
 
 export class ClassEditorStep {
@@ -249,9 +251,23 @@ export class ClassEditorStep {
       this.container.appendChild(picker);
     }
 
-    const identity = createSection("基本");
-    this.container.appendChild(identity);
-    const identityGrid = appendGrid(identity);
+    const sectionExpandedState =
+      this.options.sectionExpandedState ?? new Map<string, boolean>();
+
+    const basicSummary = [
+      ROLE_LABELS[draft.class.role],
+      ROW_LABELS[draft.class.formationRow],
+      `射程${draft.class.traits.rangePx ?? 0}px`,
+      draft.class.traits.damageType ?? "physical",
+    ].join(" · ");
+    const { details: basicDetails, body: basicBody } = createCollapsibleSection({
+      id: "class-basic",
+      title: "基本",
+      summaryExtra: basicSummary,
+      expandedState: sectionExpandedState,
+    });
+    this.container.appendChild(basicDetails);
+    const identityGrid = appendGrid(basicBody);
     if (!hidePicker) {
       identityGrid.appendChild(
         createFieldRow(
@@ -415,16 +431,22 @@ export class ClassEditorStep {
       )
     );
 
-    const statsSection = createSection("Lv1 ステータス");
-    this.container.appendChild(statsSection);
-    statsSection.appendChild(
+    const statsSummary = `HP ${draft.class.maxHp} ATK ${draft.class.atk} DEF ${draft.class.def} REG ${draft.class.reg}`;
+    const { details: statsDetails, body: statsBody } = createCollapsibleSection({
+      id: "class-stats",
+      title: "Lv1 ステータス",
+      summaryExtra: statsSummary,
+      expandedState: sectionExpandedState,
+    });
+    this.container.appendChild(statsDetails);
+    statsBody.appendChild(
       createEl(
         "p",
         "editor-hint",
         "maxHp / atk / def は Lv1 基準値。reg と攻撃速度は Lv とともに変化しません。"
       )
     );
-    const statsGrid = appendGrid(statsSection);
+    const statsGrid = appendGrid(statsBody);
     statsGrid.appendChild(
       createFieldRow(
         "maxHp",
@@ -494,16 +516,31 @@ export class ClassEditorStep {
     ensureClassGrowthFields(draft.class);
     const growthTier = draft.class.growthTier!;
 
-    const growthSection = createSection("成長段階（LvUP 加算）");
-    this.container.appendChild(growthSection);
-    growthSection.appendChild(
+    const growthSummaryParts = [
+      `HP:${GROWTH_TIER_LABELS[growthTier.maxHp]}`,
+      `ATK:${GROWTH_TIER_LABELS[growthTier.atk]}`,
+      `DEF:${GROWTH_TIER_LABELS[growthTier.def]}`,
+    ];
+    if (draft.class.role === "attacker") {
+      const presetKey: GrowthPresetKey =
+        draft.class.growthPresetKey === "caster" ? "caster" : "attacker";
+      growthSummaryParts.push(GROWTH_PRESET_KEY_LABELS[presetKey]);
+    }
+    const { details: growthDetails, body: growthBody } = createCollapsibleSection({
+      id: "class-growth",
+      title: "成長段階（LvUP 加算）",
+      summaryExtra: growthSummaryParts.join(" · "),
+      expandedState: sectionExpandedState,
+    });
+    this.container.appendChild(growthDetails);
+    growthBody.appendChild(
       createEl(
         "p",
         "editor-hint",
         "低・中・高は levelCurves.json の growthPresets から実数を解決します。"
       )
     );
-    const growthGrid = appendGrid(growthSection);
+    const growthGrid = appendGrid(growthBody);
     growthGrid.appendChild(
       growthTierField("HP 成長", growthTier.maxHp, (maxHp) => {
         commitDraft(
@@ -566,7 +603,7 @@ export class ClassEditorStep {
         )
       );
       if (presetKey === "caster") {
-        growthSection.appendChild(
+        growthBody.appendChild(
           createEl(
             "p",
             "editor-hint",
@@ -576,9 +613,15 @@ export class ClassEditorStep {
       }
     }
 
-    const speedSection = createSection("攻撃速度（基本攻撃 CD）");
-    this.container.appendChild(speedSection);
-    const speedGrid = appendGrid(speedSection);
+    const speedTier = draft.class.attackSpeedTier ?? "normal";
+    const { details: speedDetails, body: speedBody } = createCollapsibleSection({
+      id: "class-speed",
+      title: "攻撃速度（基本攻撃 CD）",
+      summaryExtra: ATTACK_SPEED_TIER_LABELS[speedTier],
+      expandedState: sectionExpandedState,
+    });
+    this.container.appendChild(speedDetails);
+    const speedGrid = appendGrid(speedBody);
     speedGrid.appendChild(
       createFieldRow(
         "SPD 段階",
@@ -601,6 +644,7 @@ export class ClassEditorStep {
     );
 
     const previewSection = createSection("プレビュー");
+    previewSection.classList.add("editor-panel-preview-emphasis");
     this.container.appendChild(previewSection);
     this.previewHost = previewSection;
     renderGrowthPreview(previewSection, draft);

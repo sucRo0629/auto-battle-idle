@@ -1,4 +1,4 @@
-import type { DamageType, Role } from './types.ts';
+import type { DamageType, FormationRow, Role } from './types.ts';
 import {
   resolvePartyDeployTravelPx,
   PARTY_FORMATION_LEFT_ANCHOR,
@@ -10,20 +10,65 @@ export interface PartyFormationUnit {
   role: Role;
   rangePx: number;
   damageType: DamageType;
+  formationRow?: FormationRow;
 }
 
-/** 射程降順（長い＝左）。同射程は物理アタッカーを左 */
+const FRONT_ROW_ROLE_ORDER: Record<Role, number> = {
+  attacker: 0,
+  defender: 1,
+  supporter: 2,
+};
+
+const BACK_ROW_ROLE_ORDER: Record<Role, number> = {
+  supporter: 0,
+  attacker: 1,
+  defender: 2,
+};
+
+/** デプロイ列ソート: 後列ほど左（奥）、前列ほど右（前） */
+const FORMATION_ROW_DEPLOY_ORDER: Record<FormationRow, number> = {
+  back: 0,
+  middle: 1,
+  front: 2,
+};
+
+function rowRoleOrder(row: FormationRow, role: Role): number {
+  if (row === 'front') return FRONT_ROW_ROLE_ORDER[role];
+  if (row === 'back') return BACK_ROW_ROLE_ORDER[role];
+  return FRONT_ROW_ROLE_ORDER[role];
+}
+
+/**
+ * 同一 formationRow 内の前後順（左=後方、右=前方）。
+ * 接敵深度・PartyDeploy で共通。
+ */
+export function compareFormationRowSlot(
+  row: FormationRow,
+  a: PartyFormationUnit,
+  b: PartyFormationUnit,
+): number {
+  if (row === 'front') {
+    const roleDelta = rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role);
+    if (roleDelta !== 0) return roleDelta;
+    if (a.rangePx !== b.rangePx) return b.rangePx - a.rangePx;
+    return a.id.localeCompare(b.id);
+  }
+  if (a.rangePx !== b.rangePx) return b.rangePx - a.rangePx;
+  const roleDelta = rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role);
+  if (roleDelta !== 0) return roleDelta;
+  return a.id.localeCompare(b.id);
+}
+
 export function comparePartyFormationSlot(
   a: PartyFormationUnit,
   b: PartyFormationUnit,
 ): number {
-  if (a.rangePx !== b.rangePx) return b.rangePx - a.rangePx;
-  const aPhysAtk =
-    a.damageType === 'physical' && a.role === 'attacker';
-  const bPhysAtk =
-    b.damageType === 'physical' && b.role === 'attacker';
-  if (aPhysAtk !== bPhysAtk) return aPhysAtk ? -1 : 1;
-  return a.id.localeCompare(b.id);
+  const rowA = a.formationRow ?? 'front';
+  const rowB = b.formationRow ?? 'front';
+  const rowDelta =
+    FORMATION_ROW_DEPLOY_ORDER[rowA] - FORMATION_ROW_DEPLOY_ORDER[rowB];
+  if (rowDelta !== 0) return rowDelta;
+  return compareFormationRowSlot(rowA, a, b);
 }
 
 /** 生存味方の理想 battleX（左端 20px、32px 間隔） */

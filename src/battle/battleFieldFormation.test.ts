@@ -29,23 +29,23 @@ describe('battle-field formation spec (F-*)', () => {
     );
   });
 
-  it('F-3.3-02: same range physical attacker is left of magic', () => {
+  it('F-3.3-02: same range back row sorts supporter left of attacker', () => {
     const positions = computePlayerPositions([
       { id: 'cleric', role: 'supporter', formationRow: 'back', rangePx: 50, damageType: 'magic', isAlive: true },
       { id: 'ranger', role: 'attacker', formationRow: 'back', rangePx: 50, damageType: 'physical', isAlive: true },
     ]);
-    expect(positions.get('ranger')!).toBeLessThan(positions.get('cleric')!);
+    expect(positions.get('cleric')!).toBeLessThan(positions.get('ranger')!);
   });
 
-  it('F-3.3-03: left anchor is 20px with 32px slot spacing', () => {
+  it('F-3.3-03: left anchor is 20px with 32px slot spacing (back to front)', () => {
     const positions = computePlayerPositions([
       { id: 'a', role: 'attacker', formationRow: 'front', rangePx: 100, isAlive: true },
       { id: 'b', role: 'attacker', formationRow: 'middle', rangePx: 80, isAlive: true },
       { id: 'c', role: 'attacker', formationRow: 'back', rangePx: 60, isAlive: true },
     ]);
-    expect(positions.get('a')).toBe(PARTY_FORMATION_LEFT_ANCHOR);
+    expect(positions.get('c')).toBe(PARTY_FORMATION_LEFT_ANCHOR);
     expect(positions.get('b')).toBe(PARTY_FORMATION_LEFT_ANCHOR + PARTY_FORMATION_SLOT_SPACING);
-    expect(positions.get('c')).toBe(PARTY_FORMATION_LEFT_ANCHOR + 2 * PARTY_FORMATION_SLOT_SPACING);
+    expect(positions.get('a')).toBe(PARTY_FORMATION_LEFT_ANCHOR + 2 * PARTY_FORMATION_SLOT_SPACING);
   });
 
   it('F-3.3-04: resolveOverlaps enforces PLAYER_VISUAL_MIN_GAP', () => {

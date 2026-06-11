@@ -89,6 +89,7 @@ import {
   appendGrid,
   createActionButton,
   createButton,
+  createCollapsibleSection,
   createEl,
   createFieldRow,
   createNumberInput,
@@ -1117,6 +1118,7 @@ export interface SkillEditorClassIdentity {
   displayName: string;
   onClassIdChange: (classId: string) => void;
   onDisplayNameChange: (displayName: string) => void;
+  sectionExpandedState?: Map<string, boolean>;
 }
 
 export interface SkillEditorStepOptions {
@@ -1174,32 +1176,52 @@ export function renderClassIdentity(
   container: HTMLElement,
   classIdentity: SkillEditorClassIdentity,
 ): void {
+  const summaryText = [classIdentity.classId, classIdentity.displayName]
+    .filter((part) => part.trim().length > 0)
+    .join(' / ');
+
+  const renderFields = (parent: HTMLElement) => {
+    const grid = appendGrid(parent);
+    grid.appendChild(
+      createFieldRow(
+        'classId',
+        createTextInput(classIdentity.classId, (classId) => {
+          classIdentity.onClassIdChange(classId);
+        }),
+      ),
+    );
+    grid.appendChild(
+      createFieldRow(
+        '表示名',
+        createTextInput(classIdentity.displayName, (displayName) => {
+          classIdentity.onDisplayNameChange(displayName);
+        }),
+      ),
+    );
+    parent.appendChild(
+      createEl(
+        'p',
+        'editor-hint',
+        'classId 確定後、通常攻撃（{classId}_basic_attack）を自動追加します。',
+      ),
+    );
+  };
+
+  if (classIdentity.sectionExpandedState) {
+    const { details, body } = createCollapsibleSection({
+      id: 'class-identity',
+      title: 'クラス ID',
+      summaryExtra: summaryText || '—',
+      expandedState: classIdentity.sectionExpandedState,
+    });
+    renderFields(body);
+    container.appendChild(details);
+    return;
+  }
+
   const identity = createSection('クラス ID');
   container.appendChild(identity);
-  const grid = appendGrid(identity);
-  grid.appendChild(
-    createFieldRow(
-      'classId',
-      createTextInput(classIdentity.classId, (classId) => {
-        classIdentity.onClassIdChange(classId);
-      }),
-    ),
-  );
-  grid.appendChild(
-    createFieldRow(
-      '表示名',
-      createTextInput(classIdentity.displayName, (displayName) => {
-        classIdentity.onDisplayNameChange(displayName);
-      }),
-    ),
-  );
-  identity.appendChild(
-    createEl(
-      'p',
-      'editor-hint',
-      'classId 確定後、通常攻撃（{classId}_basic_attack）を自動追加します。',
-    ),
-  );
+  renderFields(identity);
 }
 
 function skillCardTitle(entry: SkillDraftEntry, idReadonly: boolean): string {
@@ -1212,9 +1234,30 @@ function skillCardTitle(entry: SkillDraftEntry, idReadonly: boolean): string {
   return entry.ref.kind === 'passive' ? 'パッシブ' : 'アクティブ';
 }
 
+type SkillEntryKind = 'passive' | 'active' | 'basic';
+
+function skillEntryKind(
+  entry: SkillDraftEntry,
+  idReadonly: boolean,
+): SkillEntryKind {
+  if (idReadonly) return 'basic';
+  return entry.ref.kind === 'passive' ? 'passive' : 'active';
+}
+
+function skillExpansionKey(entry: SkillDraftEntry, index: number): string {
+  const id = entry.ref.skillId?.trim();
+  return id || `index:${index}`;
+}
+
+const SKILL_KIND_LABELS: Record<SkillEntryKind, string> = {
+  passive: 'パッシブ',
+  active: 'アクティブ',
+  basic: '通常攻撃',
+};
+
 export class SkillEditorStep {
   private container: HTMLElement;
-  private basicAttackExpanded = false;
+  private skillExpandedState = new Map<string, boolean>();
 
   constructor(
     container: HTMLElement,
@@ -1227,6 +1270,10 @@ export class SkillEditorStep {
   update(options: SkillEditorStepOptions): void {
     this.options = options;
     this.render();
+  }
+
+  expandSkill(skillId: string): void {
+    this.skillExpandedState.set(skillId, true);
   }
 
   private commitEntries(
@@ -1369,41 +1416,14 @@ export class SkillEditorStep {
   ): void {
     if (indices.length === 0) return;
 
-    const section = createEl(
-      'section',
-      'editor-skill-section editor-basic-attack-section',
-    );
-
-    const details = createEl('details', 'editor-basic-attack-details');
-    details.open = this.basicAttackExpanded;
-    details.addEventListener('toggle', () => {
-      this.basicAttackExpanded = details.open;
-    });
-
-    const summary = createEl('summary', 'editor-basic-attack-summary');
-    summary.appendChild(
-      createEl('span', 'editor-basic-attack-summary-label', '通常攻撃'),
-    );
-
-    const descriptions = indices
-      .map((index) => {
-        const entry = entries[index]!;
-        return entry.active
-          ? formatActiveDescription(entry.active)
-          : entry.ref.skillId;
-      })
-      .join(' / ');
-    summary.appendChild(
-      createEl('span', 'editor-basic-attack-summary-desc', descriptions),
-    );
-    details.appendChild(summary);
+    const section = createSection('通常攻撃');
+    section.classList.add('editor-skill-section');
 
     const list = createEl('div', 'editor-skill-list');
     for (const index of indices) {
-      this.renderEntryCard(list, entries[index]!, index, { hideTitle: true });
+      this.renderCollapsibleSkillEntry(list, entries[index]!, index);
     }
-    details.appendChild(list);
-    section.appendChild(details);
+    section.appendChild(list);
     this.container.appendChild(section);
   }
 
@@ -1423,7 +1443,7 @@ export class SkillEditorStep {
       list.appendChild(createEl('p', 'editor-hint', emptyHint));
     } else {
       for (const index of indices) {
-        this.renderEntryCard(list, entries[index]!, index);
+        this.renderCollapsibleSkillEntry(list, entries[index]!, index);
       }
     }
     section.appendChild(list);
@@ -1441,29 +1461,69 @@ export class SkillEditorStep {
     this.container.appendChild(section);
   }
 
-  private renderEntryCard(
+  private renderCollapsibleSkillEntry(
     parent: HTMLElement,
     entry: SkillDraftEntry,
     index: number,
-    cardOptions?: { hideTitle?: boolean },
   ): void {
     const idReadonly = this.options.isIdReadonly?.(entry) ?? false;
-    const card = cardOptions?.hideTitle
-      ? createEl('div', 'editor-skill-card')
-      : createSection(skillCardTitle(entry, idReadonly));
-    if (!cardOptions?.hideTitle) {
-      card.classList.add('editor-skill-card');
+    const kind = skillEntryKind(entry, idReadonly);
+    const title = skillCardTitle(entry, idReadonly);
+    const skill = entry.passive ?? entry.active;
+
+    const summaryExtra = createEl('span');
+    summaryExtra.appendChild(
+      createEl('span', 'editor-skill-summary-badge', SKILL_KIND_LABELS[kind]),
+    );
+
+    const metaParts: string[] = [];
+    if (skill?.id?.trim()) metaParts.push(skill.id.trim());
+    if (!idReadonly) {
+      const unlockLevel = entry.unlockLevel ?? 0;
+      metaParts.push(unlockLevel === 0 ? '初期習得' : `Lv${unlockLevel}習得`);
+    }
+    if (metaParts.length > 0) {
+      summaryExtra.appendChild(
+        createEl('span', 'editor-collapsible-summary-meta', metaParts.join(' · ')),
+      );
     }
 
+    const description = entry.passive
+      ? formatPassiveDescription(entry.passive)
+      : entry.active
+        ? formatActiveDescription(entry.active)
+        : entry.ref.skillId;
+    summaryExtra.appendChild(
+      createEl('span', 'editor-collapsible-summary-desc', description),
+    );
+
+    let summaryActions: HTMLElement | undefined;
     if (!idReadonly && this.options.onRemoveSkill) {
-      const removeBtn = createButton('削除', 'editor-btn editor-btn-small', () => {
+      summaryActions = createButton('削除', 'editor-btn editor-btn-small', () => {
         this.options.onRemoveSkill?.(index);
       });
-      removeBtn.style.float = 'right';
-      const cardTitle = card.querySelector('.editor-section-title');
-      if (cardTitle) cardTitle.appendChild(removeBtn);
     }
 
+    const { details, body } = createCollapsibleSection({
+      id: skillExpansionKey(entry, index),
+      title,
+      summaryExtra,
+      summaryActions,
+      expandedState: this.skillExpandedState,
+      className: 'editor-skill-details',
+      dataAttrs: { kind },
+    });
+    body.classList.add('editor-skill-body', 'editor-skill-card');
+    this.renderEntryCardBody(body, entry, index, idReadonly);
+    parent.appendChild(details);
+  }
+
+  private renderEntryCardBody(
+    card: HTMLElement,
+    entry: SkillDraftEntry,
+    index: number,
+    idReadonly: boolean,
+  ): void {
     if (!idReadonly) {
       const unlockGrid = appendGrid(card);
       unlockGrid.appendChild(
@@ -1493,8 +1553,6 @@ export class SkillEditorStep {
     if (entry.active) {
       this.renderActive(card, index, idReadonly);
     }
-
-    parent.appendChild(card);
   }
 
   private createSkillIdInput(

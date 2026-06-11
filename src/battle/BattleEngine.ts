@@ -17,7 +17,6 @@ import {
   resolveFormationRangePx,
   resolveMaxEffectiveRangePx,
   isMeleeUnit,
-  resolveAttackBattleX,
   updateUnitApproach,
   capEngagedEnemyApproachBattleX,
   syncAllFieldX,
@@ -29,7 +28,7 @@ import {
   placeEnemiesOffScreenForDeploy,
 } from "./combatPosition.ts";
 import {
-  resolvePlayerApproachBattleX,
+  resolveAllPlayerApproachBattleX,
   resolveEnemyApproachBattleX,
   resolveEnemyAttackTargetPlayer,
   resolveEnemyChaseTargetPlayer,
@@ -87,7 +86,6 @@ import {
   resolveEngagedLayout,
   applyEngagedFormationToBattleX,
   resolveEngagedFormationOverlaps,
-  resolveFrontRowSameRangeMeleeDepthPx,
   type EngagedLayoutResult,
 } from "./battleLayout.ts";
 import { SPRITE_WIDTH } from "./battleConstants.ts";
@@ -473,6 +471,12 @@ export class BattleEngine {
       meleeContact === null ? this.engagedLastMeleeContactX : null;
 
     const moveStep = moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
+    const playerApproachTargets = resolveAllPlayerApproachBattleX(
+      this.players,
+      this.enemies,
+      this.gameData,
+      { frozenMeleeContactX },
+    );
 
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
@@ -487,13 +491,8 @@ export class BattleEngine {
       ) {
         continue;
       }
-      const target = resolvePlayerApproachBattleX(
-        ally,
-        this.players,
-        this.enemies,
-        this.gameData,
-        { frozenMeleeContactX },
-      );
+      const target = playerApproachTargets.get(ally.id);
+      if (target === undefined) continue;
       updateUnitApproach(ally, target, moveStep);
     }
 
@@ -672,7 +671,7 @@ export class BattleEngine {
     }
   }
 
-  /** 接敵中: 前列 battleX が射程内停止位置を越えないよう clamp（近接前線のみ） */
+  /** 接敵中: 前列 battleX が接近目標を越えないよう clamp（近接前線のみ） */
   private clampEngagedFrontRowBattleX(): void {
     const meleeContact = getMeleeEnemyContactX(this.enemies, this.gameData);
     if (meleeContact === null) return;
@@ -680,6 +679,13 @@ export class BattleEngine {
     const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
     const leadingRow = getLeadingPlayerFormationRow(placementInputs);
     if (leadingRow === null) return;
+
+    const approachTargets = resolveAllPlayerApproachBattleX(
+      this.players,
+      this.enemies,
+      this.gameData,
+    );
+
     for (const ally of this.players) {
       if (!ally.isAlive || ally.formationRow !== leadingRow) continue;
       if (this.skillSequenceRunner.isActorInSkillMotion(ally.id)) continue;
@@ -693,28 +699,8 @@ export class BattleEngine {
       ) {
         continue;
       }
-      const depthInputs = this.players
-        .filter((unit) => unit.isAlive || unit.corpseVisible)
-        .map((unit) => ({
-          id: unit.id,
-          role: unit.role,
-          formationRow: unit.formationRow,
-          rangePx: resolveFormationRangePx(unit),
-          isAlive: unit.isAlive,
-        }));
-      const maxForward =
-        resolveAttackBattleX(ally, meleeContact, this.gameData) +
-        resolveFrontRowSameRangeMeleeDepthPx(
-          {
-            id: ally.id,
-            role: ally.role,
-            formationRow: ally.formationRow,
-            rangePx: resolveFormationRangePx(ally),
-            isAlive: true,
-          },
-          depthInputs,
-        );
-      if (ally.battleX > maxForward) {
+      const maxForward = approachTargets.get(ally.id);
+      if (maxForward !== undefined && ally.battleX > maxForward) {
         ally.battleX = maxForward;
       }
     }

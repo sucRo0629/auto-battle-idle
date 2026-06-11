@@ -32,12 +32,21 @@
   border-bottom: 1px solid #2d3a4f;
 }
 
-.editor-panel-class,
+.editor-panel-class {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 0;
+}
+
 .editor-panel-enemy {
   margin-bottom: 0;
 }
 
 .editor-panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-bottom: 0;
   padding-bottom: 20px;
 }
@@ -193,42 +202,45 @@
 .editor-skill-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .editor-skill-list .editor-skill-card {
   margin-bottom: 0;
 }
 
-.editor-basic-attack-section {
-  margin-bottom: 16px;
+.editor-panel-preview-emphasis {
+  margin-top: 4px;
 }
 
-.editor-basic-attack-details {
+/* --- collapsible sections (class settings + skills) --- */
+
+.editor-collapsible-details {
   padding: 10px 14px;
   border: 1px solid #2d3a4f;
   border-radius: 8px;
   background: rgba(22, 33, 62, 0.6);
 }
 
-.editor-basic-attack-summary {
+.editor-collapsible-summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px 10px;
   cursor: pointer;
   list-style: none;
   user-select: none;
 }
 
-.editor-basic-attack-summary::-webkit-details-marker {
+.editor-collapsible-summary::-webkit-details-marker {
   display: none;
 }
 
-.editor-basic-attack-summary::marker {
+.editor-collapsible-summary::marker {
   content: '';
 }
 
-.editor-basic-attack-summary::before {
+.editor-collapsible-summary::before {
   content: '▶';
   flex-shrink: 0;
   font-size: 0.7rem;
@@ -236,17 +248,17 @@
   transition: transform 0.15s ease;
 }
 
-.editor-basic-attack-details[open] .editor-basic-attack-summary::before {
+.editor-collapsible-details[open] > .editor-collapsible-summary::before {
   transform: rotate(90deg);
 }
 
-.editor-basic-attack-summary-label {
+.editor-collapsible-summary-label {
   flex-shrink: 0;
   font-weight: 600;
   font-size: 0.95rem;
 }
 
-.editor-basic-attack-summary-desc {
+.editor-collapsible-summary-desc {
   flex: 1;
   min-width: 0;
   font-size: 0.85rem;
@@ -254,10 +266,54 @@
   line-height: 1.4;
 }
 
-.editor-basic-attack-details[open] .editor-skill-list {
+.editor-collapsible-summary-meta {
+  font-size: 0.8rem;
+  color: #7a8a9e;
+}
+
+.editor-collapsible-summary-actions {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.editor-collapsible-body {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid #2d3a4f;
+}
+
+/* --- skill cards --- */
+
+.editor-skill-details {
+  border-left-width: 3px;
+  border-left-style: solid;
+}
+
+.editor-skill-details[data-kind='passive'] {
+  border-left-color: #3d8a5c;
+}
+
+.editor-skill-details[data-kind='active'] {
+  border-left-color: #4a7cff;
+}
+
+.editor-skill-details[data-kind='basic'] {
+  border-left-color: #6a7588;
+}
+
+.editor-skill-summary-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: rgba(45, 58, 79, 0.8);
+  color: #b8c6d8;
+}
+
+.editor-skill-body .editor-section {
+  border-color: rgba(45, 58, 79, 0.65);
+  background: rgba(15, 20, 32, 0.45);
 }
 
 .editor-section-actions {

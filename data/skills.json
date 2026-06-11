@@ -220,7 +220,7 @@
     },
     {
       "id": "df_duelist_passive_1",
-      "name": "ブロッキング",
+      "name": "盾受け",
       "effect": "buff",
       "buffStat": "atk",
       "buffMultiplierMax": 1.5,
@@ -255,7 +255,7 @@
     },
     {
       "id": "df_paladin_passive_1",
-      "name": "ブロッキング",
+      "name": "盾受け",
       "effect": "buff",
       "ratio": 0.1,
       "percent": 0.2,
@@ -267,8 +267,8 @@
     },
     {
       "id": "df_paladin_passive_2",
-      "name": "聖盾",
-      "effect": "buff",
+      "name": "癒しの心得",
+      "effect": "specialEffect",
       "ratio": 0.1,
       "barrierScale": 1,
       "excessHealSources": [
@@ -281,7 +281,17 @@
         "side": "ally"
       },
       "buffStat": "damageTaken",
-      "buffMultiplier": 0.95
+      "buffMultiplier": 0.95,
+      "specialEffectApplyTo": "heal",
+      "specialEffect": {
+        "scale": 1.2,
+        "conditions": [
+          {
+            "kind": "targetHp",
+            "maxHpRatio": 0.5
+          }
+        ]
+      }
     },
     {
       "id": "at_warrior_passive_1",
@@ -317,8 +327,8 @@
     },
     {
       "id": "df_guardian_passive_3",
-      "name": "息入れ",
-      "effect": "heal",
+      "name": "大盾使い",
+      "effect": "buff",
       "healSubKind": "hot",
       "specialEffectApplyTo": "heal",
       "specialEffect": {
@@ -333,7 +343,19 @@
         "atkScale": 0.25
       },
       "intervalSec": 10,
-      "hotDurationSec": 5
+      "hotDurationSec": 5,
+      "targetSkillId": "df_guardian_passive_2",
+      "amount": {
+        "kind": "atkBased",
+        "atkScale": 1
+      },
+      "buffSubKind": "block",
+      "buffTargetRule": {
+        "kind": "self"
+      },
+      "buffStat": "atk",
+      "buffMultiplier": 1.2,
+      "chance": 0.1
     },
     {
       "id": "df_guardian_passive_4",
@@ -354,6 +376,39 @@
       },
       "intervalSec": 10,
       "hotDurationSec": 5
+    },
+    {
+      "id": "df_paladin_passive_3",
+      "name": "形なき盾",
+      "effect": "buff",
+      "ratio": 0.1,
+      "barrierScale": 1,
+      "excessHealSources": [
+        "outgoing",
+        "incoming"
+      ],
+      "buffSubKind": "barrier",
+      "buffTargetRule": {
+        "kind": "all",
+        "side": "ally"
+      },
+      "buffStat": "damageTaken",
+      "buffMultiplier": 0.9,
+      "barrierAmount": {
+        "kind": "defBased",
+        "defScale": 1
+      },
+      "periodicTrigger": "waveStart"
+    },
+    {
+      "id": "df_paladin_passive_4",
+      "name": "df_paladin_passive_4",
+      "effect": "targetRuleOverride",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      }
     }
   ],
   "actives": [
@@ -438,7 +493,7 @@
           "type": "buff",
           "buffStat": "def",
           "buffMultiplier": 1.2,
-          "buffDurationSec": 5,
+          "buffDurationSec": 4,
           "buffSubKind": "stat"
         }
       ]
@@ -456,14 +511,24 @@
             "kind": "self"
           },
           "type": "buff",
+          "buffSubKind": "stat",
+          "buffStat": "def",
+          "buffMultiplier": 1.5,
+          "buffDurationSec": 6
+        },
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "buff",
           "buffSubKind": "block",
           "buffStat": "atk",
           "buffMultiplier": 1.2,
-          "buffDurationSec": 5,
-          "chance": 1
+          "buffDurationSec": 6,
+          "chance": 0.8
         }
       ],
-      "useDurationSec": 5
+      "useDurationSec": 6
     },
     {
       "id": "df_paladin_active_1",
@@ -487,16 +552,18 @@
             "side": "ally",
             "stat": "hp",
             "order": "ratio"
-          }
+          },
+          "healSubKind": "instant",
+          "range": 50
         }
       ]
     },
     {
       "id": "df_paladin_active_2",
-      "name": "守護のヴェール",
+      "name": "形なき盾",
       "trigger": {
         "kind": "time",
-        "value": 11
+        "value": 12
       },
       "effect": [
         {
@@ -510,22 +577,10 @@
           "buffMultiplier": 1.2,
           "buffDurationSec": 5,
           "amount": {
-            "kind": "defBased",
-            "defScale": 1.2
+            "kind": "percentMaxHp",
+            "percentOfMaxHp": 0.1,
+            "maxHpRef": "self"
           }
-        },
-        {
-          "target": {
-            "kind": "all",
-            "side": "ally"
-          },
-          "type": "heal",
-          "healSubKind": "instant",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1
-          },
-          "range": 100
         }
       ]
     },
@@ -565,13 +620,12 @@
           "target": {
             "kind": "self"
           },
-          "type": "heal",
-          "healSubKind": "hot",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 0.25
-          },
-          "durationSec": 3
+          "type": "buff",
+          "buffSubKind": "damageTakenToHeal",
+          "buffStat": "atk",
+          "buffMultiplier": 1.2,
+          "buffDurationSec": 5,
+          "ratio": 0.5
         }
       ]
     },

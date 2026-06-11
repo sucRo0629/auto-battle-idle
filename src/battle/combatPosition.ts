@@ -25,6 +25,11 @@ export function resolveFormationRangePx(unit: CombatantState): number {
   return unit.traits.rangePx;
 }
 
+/** 接敵停止・隊形 clamp・melee 帯判定（traits 攻撃射程のみ。回復等のスキル range は含めない） */
+export function resolveApproachFormationRangePx(unit: CombatantState): number {
+  return unit.traits.rangePx;
+}
+
 export function isMeleeUnit(
   unit: CombatantState,
   gameData: GameData,
@@ -81,6 +86,7 @@ function toPartyFormationUnits(
       role: p.role,
       rangePx: resolveFormationRangePx(p),
       damageType: p.traits.damageType,
+      formationRow: p.formationRow,
     }));
 }
 

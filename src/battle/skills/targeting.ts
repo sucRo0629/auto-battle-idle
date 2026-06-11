@@ -17,6 +17,7 @@ import {
 } from './powerStep.ts';
 import { getBattleX } from '../combatPosition.ts';
 import {
+  battleDistance,
   getAttackablePool,
   resolveSkillRangePx,
 } from './rangeUtils.ts';
@@ -418,21 +419,12 @@ function resolveMultiLockHitTargets(
 function resolvePierceHitTargets(
   actor: CombatantState,
   attackablePool: CombatantState[],
-  rangePx: number,
+  _rangePx: number,
   basePowerMultiplier: number | undefined,
   effect: SkillEffectDef,
 ): SkillHitTarget[] {
-  const actorX = getBattleX(actor);
   const inLine = attackablePool
-    .filter((unit) => {
-      const x = getBattleX(unit);
-      if (actor.isEnemy) {
-        const minX = actorX - rangePx;
-        return x <= actorX && x >= minX;
-      }
-      const maxX = actorX + rangePx;
-      return x >= actorX && x <= maxX;
-    })
+    .filter((unit) => battleDistance(actor, unit) <= 0)
     .sort((a, b) =>
       actor.isEnemy
         ? getBattleX(b) - getBattleX(a)

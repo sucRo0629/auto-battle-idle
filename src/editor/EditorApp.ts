@@ -84,6 +84,7 @@ export class EditorApp {
   private enemyStep: EnemyEditorStep | null = null;
   private skillStep: SkillEditorStep | null = null;
   private balanceStep: BalanceEditorStep | null = null;
+  private classSectionExpandedState = new Map<string, boolean>();
 
   private statusEl!: HTMLElement;
   private contentEl!: HTMLElement;
@@ -283,7 +284,10 @@ export class EditorApp {
       renderEntityPicker(headerHost, classOptions.entityPicker);
     }
     if (classOptions.classIdentity) {
-      renderClassIdentity(headerHost, classOptions.classIdentity);
+      renderClassIdentity(headerHost, {
+        ...classOptions.classIdentity,
+        sectionExpandedState: this.classSectionExpandedState,
+      });
     }
 
     this.classStep = new ClassEditorStep(classHost, {
@@ -298,6 +302,7 @@ export class EditorApp {
       saving: this.saving,
       hidePicker: true,
       hideSave: true,
+      sectionExpandedState: this.classSectionExpandedState,
     });
 
     this.skillStep = new SkillEditorStep(skillsHost, {
@@ -611,6 +616,7 @@ export class EditorApp {
       unlockLevel: 0,
     }));
     this.classSkillEntries = [...this.classSkillEntries, ...built];
+    this.skillStep?.expandSkill(skillId);
     this.refreshSkillEditor();
   }
 
@@ -623,6 +629,7 @@ export class EditorApp {
     const skillId = nextClassSkillId(enemyId, kind, this.enemySkillEntries);
     const built = buildSkillDrafts([{ skillId, kind }], this.skills);
     this.enemySkillEntries = [...this.enemySkillEntries, ...built];
+    this.skillStep?.expandSkill(skillId);
     this.refreshSkillEditor();
   }
 
