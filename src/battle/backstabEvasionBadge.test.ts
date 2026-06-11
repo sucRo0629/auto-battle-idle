@@ -6,8 +6,11 @@ import { syncBuffAuras } from './passiveEffects.ts';
 import { loadGameData } from './data/loadGameData.ts';
 import { aggregateStatStatusEffects } from './statusEffectDisplay.ts';
 import { SkillExecutor } from './skills/SkillExecutor.ts';
-import { buildSkillSequence } from './skills/skillSequence.ts';
-import type { CombatantState, SkillSequenceRunner } from './types.ts';
+import {
+  buildSkillSequence,
+  type SkillSequenceRunner,
+} from './skills/skillSequence.ts';
+import type { CombatantState } from './types.ts';
 import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
 import { createMemberFromClass } from '../progression/partyCompose.ts';
@@ -90,12 +93,17 @@ describe('backstab evasion buff badge', () => {
       schedule: () => {},
       startMove: () => {},
       tickUseLocks: () => {},
+      tickActiveEffectGauges: () => {},
       tickMoves: () => {},
       tickSequences: () => {},
       beginUse: () => {},
+      beginActiveEffectGauge: () => {},
       getActiveMoves: () => [],
       isActorInSkillMotion: () => false,
+      isActorUseLocked: () => false,
       isActorBusy: () => false,
+      getActiveEffectRemaining: () => 0,
+      getActiveEffectGauge: () => undefined,
       clearAll: () => {},
       clearForActor: () => {},
     } satisfies SkillSequenceRunner;

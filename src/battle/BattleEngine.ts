@@ -98,6 +98,7 @@ import {
   initializeSkillCooldowns,
   isCountTriggerReady,
   resolveSkillTrigger,
+  shouldPauseActiveCooldown,
   shouldTickCooldown,
   tickCountTriggerCooldowns,
 } from "./skillTrigger.ts";
@@ -1142,6 +1143,7 @@ export class BattleEngine {
             threat: c.threat,
             baseThreat: c.baseThreat,
             partySlotIndex: c.partySlotIndex,
+            useLocked: this.skillSequenceRunner.isActorUseLocked(c.id),
           }),
       statusEffects: c.statusEffects.map((effect) => ({ ...effect })),
       activeCooldowns: c.cooldowns
@@ -1151,12 +1153,22 @@ export class BattleEngine {
           const trigger = skill
             ? resolveSkillTrigger(skill)
             : { kind: "time" as const, value: 1 };
+          const slotIndex = cd.slotIndex ?? 0;
+          const effectGauge = c.isEnemy
+            ? undefined
+            : this.skillSequenceRunner.getActiveEffectGauge(c.id, slotIndex);
           return {
             skillId: cd.skillId,
             remaining: cd.remaining,
             triggerKind: trigger.kind,
             triggerValue: trigger.value,
-            slotIndex: cd.slotIndex ?? 0,
+            slotIndex,
+            ...(effectGauge
+              ? {
+                  activeEffectRemaining: effectGauge.remainingSec,
+                  activeEffectTotal: effectGauge.totalSec,
+                }
+              : {}),
           };
         }),
     };
@@ -1298,6 +1310,7 @@ export class BattleEngine {
   private tickSkillSequences(deltaTime: number): void {
     const units = [...this.players, ...this.enemies];
     this.skillSequenceRunner.tickUseLocks(deltaTime);
+    this.skillSequenceRunner.tickActiveEffectGauges(deltaTime);
     this.skillSequenceRunner.tickMoves(deltaTime, units);
     this.skillSequenceRunner.tickSequences(this.battleTimeSec, (step) => {
       this.executor.applyScheduledStep(step, this.players, this.enemies);
@@ -1511,6 +1524,16 @@ export class BattleEngine {
         if (cd.remaining <= 0) continue;
         const skill = this.gameData.skillRegistry.actives[cd.skillId];
         if (!skill || !shouldTickCooldown(skill, cd.slotKind)) continue;
+        if (
+          shouldPauseActiveCooldown(
+            unit.id,
+            cd,
+            skill,
+            this.skillSequenceRunner,
+          )
+        ) {
+          continue;
+        }
         const speedMul =
           cd.slotKind === "active" ? 1 : getEffectiveAttackSpeedMultiplier(unit);
         const rate = cd.slotKind === "active" ? 1 : basicRate * speedMul;
@@ -1539,7 +1562,16 @@ export class BattleEngine {
       if (!skill || resolveSkillTrigger(skill).kind !== "hitsTaken") continue;
 
       if (cd.remaining > 0) {
-        chargeCountTrigger(cd, skill);
+        if (
+          !shouldPauseActiveCooldown(
+            unit.id,
+            cd,
+            skill,
+            this.skillSequenceRunner,
+          )
+        ) {
+          chargeCountTrigger(cd, skill);
+        }
       } else if (canConsume) {
         this.executor.tryExecute(unit, cd, this.players, this.enemies);
       }

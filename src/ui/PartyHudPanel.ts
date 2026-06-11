@@ -249,15 +249,44 @@ export class PartyHudPanel {
       if (!cd) {
         fill.style.width = '0%';
         fill.dataset.state = 'empty';
+        delete fill.dataset.pausedMax;
+        continue;
+      }
+
+      const activeEffectRemaining = cd.activeEffectRemaining ?? 0;
+      const activeEffectTotal = cd.activeEffectTotal ?? 0;
+      if (activeEffectRemaining > 0 && activeEffectTotal > 0) {
+        const ratio = Math.max(
+          0,
+          Math.min(1, activeEffectRemaining / activeEffectTotal),
+        );
+        fill.style.width = `${ratio * 100}%`;
+        fill.dataset.state = 'active';
+        delete fill.dataset.pausedMax;
         continue;
       }
 
       const ready = cd.remaining <= 0;
-      const ratio = ready
+      const chargeRatio = ready
         ? 1
         : Math.max(0, Math.min(1, 1 - cd.remaining / cd.triggerValue));
-      fill.style.width = `${ratio * 100}%`;
+      const pausable =
+        cd.triggerKind === 'time' || cd.triggerKind === 'hitsTaken';
+
+      if (entry.useLocked && pausable) {
+        fill.style.width = `${chargeRatio * 100}%`;
+        fill.dataset.state = 'paused';
+        if (ready) {
+          fill.dataset.pausedMax = 'true';
+        } else {
+          delete fill.dataset.pausedMax;
+        }
+        continue;
+      }
+
+      fill.style.width = `${chargeRatio * 100}%`;
       fill.dataset.state = ready ? 'ready' : 'charging';
+      delete fill.dataset.pausedMax;
     }
   }
 }

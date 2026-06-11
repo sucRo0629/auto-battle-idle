@@ -4,6 +4,8 @@ import type { ActiveSkillDef, CombatantState, GameData, SkillCooldown } from '..
 import { SkillExecutor } from './SkillExecutor.ts';
 import {
   buildSkillSequence,
+  resolveActiveEffectGaugeDurationSec,
+  resolveMaxSelfBuffEffectDurationSec,
   SkillSequenceRunner,
 } from './skillSequence.ts';
 
@@ -510,5 +512,182 @@ describe('skillSequence', () => {
     runner.beginUse('actor', 1);
     runner.clearForActor('actor');
     expect(runner.isActorBusy('actor')).toBe(false);
+  });
+
+  it('resolveMaxSelfBuffEffectDurationSec returns max self buff seconds', () => {
+    expect(
+      resolveMaxSelfBuffEffectDurationSec({
+        id: 'buff_combo',
+        name: 'buff_combo',
+        trigger: { kind: 'time', value: 12 },
+        effect: [
+          {
+            type: 'buff',
+            buffStat: 'def',
+            buffMultiplier: 1.5,
+            buffDurationSec: 6,
+            target: { kind: 'self' },
+          },
+          {
+            type: 'buff',
+            buffStat: 'atk',
+            buffMultiplier: 1.2,
+            buffDurationSec: 4,
+            target: { kind: 'self' },
+          },
+        ],
+      }),
+    ).toBe(6);
+  });
+
+  it('resolveMaxSelfBuffEffectDurationSec ignores enemy debuffs', () => {
+    expect(
+      resolveMaxSelfBuffEffectDurationSec({
+        id: 'enemy_debuff',
+        name: 'enemy_debuff',
+        trigger: { kind: 'time', value: 8 },
+        effect: [
+          {
+            type: 'debuff',
+            debuffStat: 'atk',
+            debuffMultiplier: 0.8,
+            debuffDurationSec: 5,
+            target: {
+              kind: 'distance',
+              side: 'enemy',
+              order: 'nearest',
+            },
+          },
+        ],
+      }),
+    ).toBe(0);
+  });
+
+  it('resolveMaxSelfBuffEffectDurationSec uses self buff only in mixed skill', () => {
+    expect(
+      resolveMaxSelfBuffEffectDurationSec({
+        id: 'mixed',
+        name: 'mixed',
+        trigger: { kind: 'hitsTaken', value: 10 },
+        effect: [
+          {
+            type: 'buff',
+            buffSubKind: 'damageTakenToHeal',
+            buffStat: 'atk',
+            buffMultiplier: 1.2,
+            buffDurationSec: 5,
+            ratio: 0.05,
+            target: { kind: 'self' },
+          },
+          {
+            type: 'debuff',
+            debuffStat: 'atk',
+            debuffMultiplier: 0.8,
+            debuffDurationSec: 5,
+            target: { kind: 'self' },
+          },
+        ],
+      }),
+    ).toBe(5);
+  });
+
+  it('resolveMaxSelfBuffEffectDurationSec returns 0 for self debuff only', () => {
+    expect(
+      resolveMaxSelfBuffEffectDurationSec({
+        id: 'self_debuff',
+        name: 'self_debuff',
+        trigger: { kind: 'time', value: 15 },
+        effect: [
+          {
+            type: 'debuff',
+            debuffStat: 'damageTaken',
+            debuffMultiplier: 1.5,
+            debuffDurationSec: 6,
+            target: { kind: 'self' },
+          },
+        ],
+      }),
+    ).toBe(0);
+  });
+
+  it('resolveActiveEffectGaugeDurationSec requires useDurationSec', () => {
+    expect(
+      resolveActiveEffectGaugeDurationSec({
+        id: 'buff_only',
+        name: 'buff_only',
+        trigger: { kind: 'hitsTaken', value: 10 },
+        effect: [
+          {
+            type: 'buff',
+            buffStat: 'def',
+            buffMultiplier: 1.5,
+            buffDurationSec: 5,
+            target: { kind: 'self' },
+          },
+        ],
+      }),
+    ).toBe(0);
+
+    expect(
+      resolveActiveEffectGaugeDurationSec({
+        id: 'guard',
+        name: 'guard',
+        trigger: { kind: 'hitsTaken', value: 8 },
+        useDurationSec: 5,
+        effect: [
+          {
+            type: 'buff',
+            buffStat: 'def',
+            buffMultiplier: 1.5,
+            buffDurationSec: 5,
+            target: { kind: 'self' },
+          },
+        ],
+      }),
+    ).toBe(5);
+
+    expect(
+      resolveActiveEffectGaugeDurationSec({
+        id: 'backstab',
+        name: 'backstab',
+        trigger: { kind: 'time', value: 9 },
+        useDurationSec: 1.1,
+        effect: [
+          {
+            type: 'damage',
+            damageType: 'physical',
+            amount: { kind: 'atkBased', atkScale: 1 },
+            target: {
+              kind: 'distance',
+              side: 'enemy',
+              order: 'nearest',
+            },
+          },
+        ],
+      }),
+    ).toBe(1.1);
+  });
+
+  it('beginActiveEffectGauge ticks down via tickActiveEffectGauges', () => {
+    const runner = new SkillSequenceRunner();
+    runner.beginActiveEffectGauge('actor', 0, 2);
+    expect(runner.getActiveEffectRemaining('actor', 0)).toBe(2);
+    expect(runner.getActiveEffectGauge('actor', 0)?.totalSec).toBe(2);
+
+    runner.tickActiveEffectGauges(0.75);
+    expect(runner.getActiveEffectRemaining('actor', 0)).toBeCloseTo(1.25);
+
+    runner.tickActiveEffectGauges(1.25);
+    expect(runner.getActiveEffectRemaining('actor', 0)).toBe(0);
+    expect(runner.getActiveEffectGauge('actor', 0)).toBeUndefined();
+  });
+
+  it('isActorUseLocked is true only during use duration lock', () => {
+    const runner = new SkillSequenceRunner();
+    runner.beginUse('actor', 0.5);
+    expect(runner.isActorUseLocked('actor')).toBe(true);
+    expect(runner.isActorInSkillMotion('actor')).toBe(false);
+    runner.tickUseLocks(0.5);
+    expect(runner.isActorUseLocked('actor')).toBe(false);
   });
 });

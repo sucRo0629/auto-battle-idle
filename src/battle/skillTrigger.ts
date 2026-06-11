@@ -25,10 +25,9 @@ export function isPausableActiveTrigger(skill: ActiveSkillDef): boolean {
 
 export interface CooldownPauseContext {
   isActorUseLocked(actorId: string): boolean;
-  getActiveEffectRemaining(actorId: string, slotIndex: number): number;
 }
 
-/** 停止時間・効果持続中は time / hitsTaken の active CD 進行を止める */
+/** 停止時間中のみ time / hitsTaken の active CD 進行を止める */
 export function shouldPauseActiveCooldown(
   actorId: string,
   cd: SkillCooldown,
@@ -37,12 +36,6 @@ export function shouldPauseActiveCooldown(
 ): boolean {
   if (cd.slotKind !== 'active') return false;
   if (!isPausableActiveTrigger(skill)) return false;
-
-  const slotIndex = cd.slotIndex ?? 0;
-  if (ctx.getActiveEffectRemaining(actorId, slotIndex) > 0) {
-    return true;
-  }
-
   return ctx.isActorUseLocked(actorId) && cd.remaining > 0;
 }
 

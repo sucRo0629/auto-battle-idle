@@ -48,6 +48,7 @@ import { resolveSkillDamageType } from './damageTypeUtils.ts';
 import {
   buildSkillSequence,
   type PendingSkillStep,
+  resolveActiveEffectGaugeDurationSec,
   resolveSequenceStepAnchor,
   resolveUseDurationSec,
   type SkillSequenceRunner,
@@ -119,6 +120,7 @@ export class SkillExecutor {
       );
       if (!sequence) return false;
       this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
+      this.beginActiveEffectGaugeIfNeeded(actor.id, cd, skill);
       this.deps.getSequenceRunner().schedule(sequence);
       return true;
     }
@@ -192,6 +194,7 @@ export class SkillExecutor {
 
     if (appliedAny) {
       this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
+      this.beginActiveEffectGaugeIfNeeded(actor.id, cd, skill);
       resetCooldownAfterFire(cd, skill);
       if (cd.slotKind === 'basic') {
         this.deps.onBasicAttackExecuted?.(actor.id);
@@ -987,6 +990,19 @@ export class SkillExecutor {
     if (duration > 0) {
       this.deps.getSequenceRunner().beginUse(actorId, duration);
     }
+  }
+
+  private beginActiveEffectGaugeIfNeeded(
+    actorId: string,
+    cd: SkillCooldown,
+    skill: ActiveSkillDef,
+  ): void {
+    if (cd.slotKind !== 'active') return;
+    const totalSec = resolveActiveEffectGaugeDurationSec(skill);
+    if (totalSec <= 0) return;
+    this.deps
+      .getSequenceRunner()
+      .beginActiveEffectGauge(actorId, cd.slotIndex ?? 0, totalSec);
   }
 }
 

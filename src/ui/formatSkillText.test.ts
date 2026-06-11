@@ -198,6 +198,28 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('ATK×2.5');
   });
 
+  it('includes stop duration when useDurationSec is set', () => {
+    const def: ActiveSkillDef = {
+      id: 'test_stop',
+      name: '防御専念',
+      trigger: { kind: 'time', value: 12 },
+      useDurationSec: 6,
+      effect: [
+        {
+          type: 'buff',
+          buffStat: 'def',
+          buffMultiplier: 1.5,
+          buffDurationSec: 6,
+          target: { kind: 'self' },
+        },
+      ],
+    };
+    const desc = formatActiveDescription(def);
+    expect(desc).toContain('12s毎');
+    expect(desc).toContain('停止6s');
+    expect(desc).toContain('バフ');
+  });
+
   it('formats pierce damage', () => {
     const def: ActiveSkillDef = {
       id: 'at_lancer_active_1',

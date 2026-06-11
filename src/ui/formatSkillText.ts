@@ -704,6 +704,11 @@ export function formatPassiveDescription(def: PassiveSkillDef): string {
 
 export function formatActiveDescription(def: ActiveSkillDef): string {
   const trigger = resolveSkillTrigger(def);
+  const headerParts = [`${formatTriggerLabel(trigger.kind, trigger.value)}毎`];
+  const stopSec = def.useDurationSec ?? 0;
+  if (stopSec > 0) {
+    headerParts.push(`停止${stopSec}s`);
+  }
   const effects = def.effect.map(formatActiveEffectDetail).join(" / ");
-  return `${formatTriggerLabel(trigger.kind, trigger.value)}毎 / ${effects}`;
+  return `${headerParts.join(" / ")} / ${effects}`;
 }

@@ -124,7 +124,7 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 
 1 tick あたりの実行順（1ユニット）：basic（準備完了カウント active があればそちらを優先）→ active 枠0 → active 枠1
 
-**発動硬直（`useDurationSec`）:** アクティブのみ optional（省略 / `0` = 即時・現状同等）。発動成功時に `SkillSequenceRunner.beginUse` で硬直を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。効果適用タイミングは変更なし（即時 / spread は pending キュー）。硬直中も時間 CD は進行（スタンと同様）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。
+**停止時間（`useDurationSec`）:** アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**`useDurationSec > 0` のスキル発動後の停止中のみ**、time / hitsTaken のアクティブ CD 進行を停止する（`basicAttackCount` は通常攻撃停止のため実質影響小）。Party HUD: 停止中は `paused`（黄）。**`useDurationSec > 0` のスキルのみ**、発動直後は効果残りを Max 色ゲージの減衰（`active`）で表示する（秒数は自身向けバフ系 effect の最大、なければ `useDurationSec`。**CD カウントは止めない**）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。
 
 **スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、通常攻撃・アクティブは発動しない。`basicAttackCount` / `hitsTaken` トリガーもスタン中は進まない（命中・被弾が起きないため）。
 

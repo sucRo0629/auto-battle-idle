@@ -9,7 +9,7 @@ import type {
 } from '../types.ts';
 import type { GameData } from '../types.ts';
 import { resolveSkillTrigger } from '../skillTrigger.ts';
-import { getTargetPool } from './targetSpec.ts';
+import { getEffectTarget, getTargetPool } from './targetSpec.ts';
 import {
   pickTargetFromPool,
   resolveEffectTargetSpec,
@@ -166,10 +166,37 @@ function resolveEffectDurationSec(effect: SkillEffectDef): number {
   return candidates.length === 0 ? 0 : Math.max(...candidates);
 }
 
-/** 効果定義に含まれる秒数の最大（発動中ゲージ・CD 停止の基準） */
-export function resolveMaxEffectDurationSec(skill: ActiveSkillDef): number {
-  if (skill.effect.length === 0) return 0;
-  return Math.max(0, ...skill.effect.map(resolveEffectDurationSec));
+const SELF_EFFECT_GAUGE_EXCLUDED_TYPES = new Set<SkillEffectDef['type']>([
+  'debuff',
+  'dot',
+  'stun',
+  'damage',
+]);
+
+function effectQualifiesForSelfEffectGauge(effect: SkillEffectDef): boolean {
+  if (getEffectTarget(effect).kind !== 'self') return false;
+  if (SELF_EFFECT_GAUGE_EXCLUDED_TYPES.has(effect.type)) return false;
+  return resolveEffectDurationSec(effect) > 0;
+}
+
+/** 自身向けバフ系 effect の秒数最大 */
+export function resolveMaxSelfBuffEffectDurationSec(
+  skill: ActiveSkillDef,
+): number {
+  const durations = skill.effect
+    .filter(effectQualifiesForSelfEffectGauge)
+    .map(resolveEffectDurationSec);
+  return durations.length === 0 ? 0 : Math.max(...durations);
+}
+
+/** 停止時間設定スキルの HUD 効果ゲージ秒数（表示専用。CD は停止しない） */
+export function resolveActiveEffectGaugeDurationSec(
+  skill: ActiveSkillDef,
+): number {
+  const stopSec = resolveUseDurationSec(skill);
+  if (stopSec <= 0) return 0;
+  const selfBuffSec = resolveMaxSelfBuffEffectDurationSec(skill);
+  return selfBuffSec > 0 ? selfBuffSec : stopSec;
 }
 
 interface ActiveEffectGauge {

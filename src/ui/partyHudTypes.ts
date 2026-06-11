@@ -24,6 +24,7 @@ export interface PartyHudEntry {
   def: number;
   reg: number;
   isAlive: boolean;
+  useLocked: boolean;
   statusEffects: StatusEffect[];
   activeCooldowns: {
     skillId: string;
@@ -31,6 +32,8 @@ export interface PartyHudEntry {
     triggerKind: SkillTriggerKind;
     triggerValue: number;
     slotIndex: number;
+    activeEffectRemaining?: number;
+    activeEffectTotal?: number;
   }[];
 }
 
@@ -74,6 +77,7 @@ export function buildPartyHudEntries(
       def: ally.def,
       reg: ally.reg,
       isAlive: ally.hp > 0,
+      useLocked: ally.useLocked ?? false,
       statusEffects: ally.statusEffects,
       activeCooldowns: ally.activeCooldowns,
     };

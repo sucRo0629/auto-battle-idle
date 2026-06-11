@@ -79,6 +79,9 @@
   --hud-skill-recast-track: #2a2a35;
   --hud-skill-recast-charging: #5a6270;
   --hud-skill-recast-ready: #9aa3b0;
+  --hud-skill-recast-paused-tint: #b8a030;
+  --hud-skill-recast-paused-mix: 38;
+  --hud-skill-recast-paused-max-mix: 58;
   --hud-icon-frame: #1a1a1a;
   --status-buff-color: #e6b422;
   --status-debuff-color: #a855f7;
@@ -312,6 +315,28 @@
 
 .party-hud-recast-fill[data-state='ready'] {
   background: var(--hud-skill-recast-ready);
+}
+
+.party-hud-recast-fill[data-state='active'] {
+  background: var(--hud-skill-recast-ready);
+}
+
+.party-hud-recast-fill[data-state='paused'] {
+  background: color-mix(
+    in srgb,
+    var(--hud-skill-recast-paused-tint)
+      calc(var(--hud-skill-recast-paused-mix) * 1%),
+    var(--hud-skill-recast-charging)
+  );
+}
+
+.party-hud-recast-fill[data-state='paused'][data-paused-max] {
+  background: color-mix(
+    in srgb,
+    var(--hud-skill-recast-paused-tint)
+      calc(var(--hud-skill-recast-paused-max-mix) * 1%),
+    var(--hud-skill-recast-ready)
+  );
 }
 
 .battle-stage-label {

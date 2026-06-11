@@ -8,10 +8,12 @@ import {
   isCountTriggerReady,
   resetCooldownAfterFire,
   resolveSkillTrigger,
+  shouldPauseActiveCooldown,
   shouldTickCooldown,
   tickCountTriggerCooldowns,
   tickPendingBasicAttackCountCharges,
 } from './skillTrigger.ts';
+import type { CooldownPauseContext } from './skillTrigger.ts';
 
 function skill(overrides: Partial<ActiveSkillDef> = {}): ActiveSkillDef {
   return {
@@ -37,6 +39,76 @@ describe('skillTrigger', () => {
         skill({ trigger: { kind: 'basicAttackCount', value: 3 } }),
       ),
     ).toEqual({ kind: 'basicAttackCount', value: 3 });
+  });
+
+  function mockPauseCtx(
+    overrides: Partial<CooldownPauseContext> = {},
+  ): CooldownPauseContext {
+    return {
+      isActorUseLocked: () => false,
+      ...overrides,
+    };
+  }
+
+  it('shouldPauseActiveCooldown during use lock for charging time/hitsTaken', () => {
+    const timeCd: SkillCooldown = {
+      skillId: 't',
+      remaining: 3,
+      slotKind: 'active',
+      slotIndex: 0,
+    };
+    expect(
+      shouldPauseActiveCooldown(
+        'actor',
+        timeCd,
+        skill(),
+        mockPauseCtx({ isActorUseLocked: () => true }),
+      ),
+    ).toBe(true);
+
+    const hitsCd: SkillCooldown = {
+      skillId: 'h',
+      remaining: 2,
+      slotKind: 'active',
+      slotIndex: 1,
+    };
+    expect(
+      shouldPauseActiveCooldown(
+        'actor',
+        hitsCd,
+        skill({ trigger: { kind: 'hitsTaken', value: 4 } }),
+        mockPauseCtx({ isActorUseLocked: () => true }),
+      ),
+    ).toBe(true);
+  });
+
+  it('shouldPauseActiveCooldown skips use lock when already ready', () => {
+    const cd: SkillCooldown = {
+      skillId: 't',
+      remaining: 0,
+      slotKind: 'active',
+      slotIndex: 0,
+    };
+    expect(
+      shouldPauseActiveCooldown(
+        'actor',
+        cd,
+        skill(),
+        mockPauseCtx({ isActorUseLocked: () => true }),
+      ),
+    ).toBe(false);
+  });
+
+  it('shouldPauseActiveCooldown does not pause during active effect without use lock', () => {
+    const cd: SkillCooldown = {
+      skillId: 't',
+      remaining: 8,
+      slotKind: 'active',
+      slotIndex: 0,
+    };
+    expect(
+      shouldPauseActiveCooldown('actor', cd, skill(), mockPauseCtx()),
+    ).toBe(false);
   });
 
   it('shouldTickCooldown is true only for time actives and all basics', () => {
