@@ -13,41 +13,12 @@ import type {
   PassiveSkillDef,
   ResourceAmountSpec,
 } from './types.ts';
+import { mockCombatant as mockCombatantBase } from './testFixtures.ts';
 
 const passives = {};
 
-function mockCombatant(
-  overrides: Partial<CombatantState> = {},
-): CombatantState {
-  return {
-    id: 'unit',
-    name: 'Unit',
-    hp: 50,
-    maxHp: 100,
-    barrierHp: 0,
-    atk: 20,
-    def: 5,
-    reg: 0,
-    isAlive: true,
-    role: 'supporter',
-    classId: 'test',
-    formationRow: 'back',
-    traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
-    build: {
-      learnedPassiveIds: [],
-      learnedActiveIds: [],
-      equippedActiveSlots: [],
-    },
-    cooldowns: [],
-    statusEffects: [],
-    spriteKey: 'placeholder',
-    iconKey: 'placeholder',
-    isEnemy: false,
-    battleX: 0,
-    visualX: 0,
-    corpseVisible: true,
-    ...overrides,
-  };
+function mockCombatant(overrides: Partial<CombatantState> = {}): CombatantState {
+  return mockCombatantBase(overrides, 'supporter');
 }
 
 describe('resolveResourceAmount', () => {

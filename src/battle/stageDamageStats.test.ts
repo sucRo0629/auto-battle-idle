@@ -2,38 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { StageDamageStatsTracker } from './stageDamageStats.ts';
 import type { CombatantState, PartySlotState } from './types.ts';
 
-function mockCombatant(
-  overrides: Partial<CombatantState> = {},
-): CombatantState {
-  return {
-    id: 'unit',
-    name: 'Unit',
-    hp: 50,
-    maxHp: 100,
-    barrierHp: 0,
-    atk: 20,
-    def: 5,
-    reg: 0,
-    isAlive: true,
-    role: 'attacker',
-    classId: 'swordsman',
-    formationRow: 'front',
-    traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
-    build: {
-      learnedPassiveIds: [],
-      learnedActiveIds: [],
-      equippedActiveSlots: [],
-    },
-    cooldowns: [],
-    statusEffects: [],
-    spriteKey: 'swordsman',
-    iconKey: 'swordsman',
-    isEnemy: false,
-    battleX: 0,
-    visualX: 0,
-    corpseVisible: true,
-    ...overrides,
-  };
+import { mockCombatant as mockCombatantBase } from './testFixtures.ts';
+
+function mockCombatant(overrides: Partial<CombatantState> = {}): CombatantState {
+  return mockCombatantBase(overrides, 'stageTracker');
 }
 
 const classRegistry = {

@@ -15,37 +15,10 @@ import {
   resolveEngagedLayout,
 } from './battleLayout.ts';
 
-function mockCombatant(
-  overrides: Partial<CombatantState> & { id: string },
-): CombatantState {
-  return {
-    name: overrides.id,
-    hp: 100,
-    maxHp: 100,
-    barrierHp: 0,
-    atk: 10,
-    def: 5,
-    reg: 0,
-    isAlive: true,
-    role: 'attacker',
-    classId: 'test',
-    formationRow: 'front',
-    traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
-    build: {
-      learnedPassiveIds: [],
-      learnedActiveIds: [],
-      equippedActiveSlots: [],
-    },
-    cooldowns: [{ skillId: 'basic', remaining: 0, slotKind: 'basic' }],
-    statusEffects: [],
-    spriteKey: 'placeholder',
-    iconKey: 'placeholder',
-    isEnemy: false,
-    battleX: 180,
-    visualX: 180,
-    corpseVisible: true,
-    ...overrides,
-  };
+import { mockCombatant as mockCombatantBase } from './testFixtures.ts';
+
+function mockCombatant(overrides: Partial<CombatantState> & { id: string }): CombatantState {
+  return mockCombatantBase(overrides, 'meleeFront');
 }
 
 const gameData = {

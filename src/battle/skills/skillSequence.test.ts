@@ -12,37 +12,13 @@ import {
 } from './skillSequence.ts';
 import { getEffectTarget } from './targetSpec.ts';
 
-function mockUnit(
-  overrides: Partial<CombatantState> & { id: string },
-): CombatantState {
-  return {
-    name: overrides.id,
-    hp: 100,
-    maxHp: 100,
-    barrierHp: 0,
-    atk: 20,
-    def: 5,
-    reg: 0,
-    isAlive: true,
-    role: 'attacker',
-    classId: 'test',
-    formationRow: 'front',
-    traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
-    build: {
-      learnedPassiveIds: [],
-      learnedActiveIds: [],
-      equippedActiveSlots: [],
-    },
-    cooldowns: [{ skillId: 'basic', remaining: 0, slotKind: 'basic' }],
-    statusEffects: [],
-    spriteKey: 'placeholder',
-    iconKey: 'placeholder',
-    isEnemy: false,
-    battleX: 200,
-    visualX: 200,
-    corpseVisible: true,
-    ...overrides,
-  };
+import { mockCombatant } from '../testFixtures.ts';
+
+function mockUnit(overrides: Partial<CombatantState> & { id: string }): CombatantState {
+  return mockCombatant(
+    { atk: 20, battleX: 200, visualX: 200, ...overrides },
+    'meleeFront',
+  );
 }
 
 function makeGameData(skills: Record<string, ActiveSkillDef>): GameData {

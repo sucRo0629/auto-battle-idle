@@ -15,6 +15,7 @@ import type {
   PassiveSkillDef,
   StatusEffect,
 } from './types.ts';
+import { mockCombatant as mockCombatantBase } from './testFixtures.ts';
 
 const passives: Record<string, PassiveSkillDef> = {};
 
@@ -29,42 +30,8 @@ const counterChancePassive: PassiveSkillDef = {
   ],
 };
 
-function mockCombatant(
-  overrides: Partial<CombatantState> = {},
-): CombatantState {
-  return {
-    id: 'unit',
-    name: 'Unit',
-    hp: 100,
-    maxHp: 100,
-    barrierHp: 0,
-    atk: 20,
-    def: 10,
-    reg: 0,
-    isAlive: true,
-    role: 'defender',
-    classId: 'test',
-    formationRow: 'front',
-    traits: {
-      rangePx: 0,
-      damageType: 'physical',
-      basicAttackVfx: { preset: 'slash' },
-    },
-    build: {
-      learnedPassiveIds: [],
-      learnedActiveIds: [],
-      equippedActiveSlots: [],
-    },
-    cooldowns: [],
-    statusEffects: [],
-    spriteKey: 'placeholder',
-    iconKey: 'placeholder',
-    isEnemy: false,
-    battleX: 0,
-    visualX: 0,
-    corpseVisible: true,
-    ...overrides,
-  };
+function mockCombatant(overrides: Partial<CombatantState> = {}): CombatantState {
+  return mockCombatantBase(overrides, 'counterDefender');
 }
 
 function counterStatus(
