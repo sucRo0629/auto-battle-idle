@@ -4036,26 +4036,36 @@ export class SkillEditorStep {
                 label: MOVE_MODE_LABELS[value],
               })),
               (moveMode) =>
-                patchEffect((prev) => ({ ...(prev as MoveSkillEffect), moveMode })),
+                patchEffect(
+                  (prev) => ({ ...(prev as MoveSkillEffect), moveMode }),
+                  { rerender: true },
+                ),
             ),
           ),
         );
-        if ((moveEffect.moveMode ?? 'engage') === 'toAnchor') {
+        if ((moveEffect.moveMode ?? 'engage') !== 'toAnchor') {
           detailGrid.appendChild(
-            createFieldRow(
-              'アンカーオフセット px（−=味方側、+=敵背後）',
-              createNumberInput(
-                moveEffect.anchorOffsetPx ?? 0,
-                (anchorOffsetPx) =>
-                  patchEffect((prev) => ({
-                    ...(prev as MoveSkillEffect),
-                    anchorOffsetPx: anchorOffsetPx !== 0 ? anchorOffsetPx : undefined,
-                  })),
-                { step: 10 },
-              ),
+            createEl(
+              'p',
+              'editor-hint',
+              'アンカーオフセットは「アンカー座標へ」モードでのみ有効です。',
             ),
           );
         }
+        detailGrid.appendChild(
+          createFieldRow(
+            'アンカーオフセット px（−=味方側、+=敵背後）',
+            createNumberInput(
+              moveEffect.anchorOffsetPx ?? 0,
+              (anchorOffsetPx) =>
+                patchEffect((prev) => ({
+                  ...(prev as MoveSkillEffect),
+                  anchorOffsetPx: anchorOffsetPx !== 0 ? anchorOffsetPx : undefined,
+                })),
+              { step: 10 },
+            ),
+          ),
+        );
         break;
       }
     }
