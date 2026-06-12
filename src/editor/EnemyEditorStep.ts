@@ -14,6 +14,7 @@ import type {
 import {
   CONFIGURABLE_RANGE_PX_MAX,
   configurableRangeHintJa,
+  parseConfigurableRangePxInput,
 } from '../battle/rangeLimits.ts';
 import {
   createEmptyEnemyDraft,
@@ -231,7 +232,16 @@ export class EnemyEditorStep {
               next.enemy.traits.rangePx = rangePx;
             });
           },
-          { min: 0, max: CONFIGURABLE_RANGE_PX_MAX, step: 1 },
+          {
+            min: 0,
+            max: CONFIGURABLE_RANGE_PX_MAX,
+            step: 1,
+            parseInput: (raw) =>
+              parseConfigurableRangePxInput(
+                raw,
+                draft.enemy.traits?.rangePx ?? 0,
+              ),
+          },
         ),
       ),
     );

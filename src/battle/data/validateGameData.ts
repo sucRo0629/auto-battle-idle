@@ -420,6 +420,24 @@ function parseOptionalBoolean(
   return value;
 }
 
+function parseCounterAttackRangeBandFields(
+  obj: Record<string, unknown>,
+  context: string,
+): { counterMelee?: boolean; counterRanged?: boolean } {
+  const counterMelee = obj.counterMelee === true ? true : undefined;
+  const counterRanged = obj.counterRanged === true ? true : undefined;
+  if (obj.counterMelee !== undefined && obj.counterMelee !== true) {
+    invalidField(context, 'counterMelee', 'must be true when set');
+  }
+  if (obj.counterRanged !== undefined && obj.counterRanged !== true) {
+    invalidField(context, 'counterRanged', 'must be true when set');
+  }
+  return {
+    ...(counterMelee ? { counterMelee } : {}),
+    ...(counterRanged ? { counterRanged } : {}),
+  };
+}
+
 function parseResourceAmountSpec(
   raw: unknown,
   context: string,
@@ -1954,6 +1972,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
+      ...parseCounterAttackRangeBandFields(obj, context),
     });
   }
 
@@ -2479,6 +2498,7 @@ function requirePassiveEffectParams(
         chance,
         counterResponses,
         ...(counterRange !== undefined ? { counterRange } : {}),
+        ...parseCounterAttackRangeBandFields(obj, context),
       };
     }
     case 'selfHpRatioBuff': {

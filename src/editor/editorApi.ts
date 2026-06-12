@@ -13,6 +13,7 @@ import type {
   GrowthTierSet,
   PassiveSkillDef,
   Role,
+  SkillRegistry,
 } from '../battle/types.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 
@@ -55,6 +56,20 @@ export function ensureClassGrowthFields(cls: ClassPresetBeforeEnrich): void {
 export interface SkillsJson {
   passives: PassiveSkillDef[];
   actives: ActiveSkillDef[];
+}
+
+export function buildSkillRegistryFromSkillsJson(
+  skills: SkillsJson,
+): SkillRegistry {
+  const passives: SkillRegistry['passives'] = {};
+  for (const passive of skills.passives) {
+    passives[passive.id] = passive;
+  }
+  const actives: SkillRegistry['actives'] = {};
+  for (const active of skills.actives) {
+    actives[active.id] = active;
+  }
+  return { passives, actives };
 }
 
 export type SkillSlotKind = 'passive' | 'active';

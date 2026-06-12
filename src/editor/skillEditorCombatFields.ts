@@ -53,6 +53,7 @@ import type {
   SpecialEffectApplyTo,
   TargetSpec,
 } from '../battle/types.ts';
+import { RANGED_ATTACK_MIN_PX } from '../battle/types.ts';
 import type { TargetSpecKind } from '../battle/data/gameDataSchema.ts';
 import {
   createActionButton,
@@ -925,6 +926,13 @@ export function appendTargetSpecFields(
       attackRow.appendChild(row);
     }
     wrap.appendChild(attackRow);
+    wrap.appendChild(
+      createEl(
+        'p',
+        'editor-hint',
+        `遠隔 = traits.rangePx が遠隔帯（${RANGED_ATTACK_MIN_PX} 以上）。射程 px の大小ではなく帯で判定します。`,
+      ),
+    );
   }
 
   if (normalized.kind === 'status') {

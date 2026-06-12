@@ -18,6 +18,7 @@ import { pickTargetFromPool, resolveTargetSpec } from './skills/targeting.ts';
 import {
   getEffectTarget,
   getTargetPool,
+  resolveApproachTargetSpec,
   targetSpecFaction,
 } from './skills/targetSpec.ts';
 import { getAttackablePool, isWithinSkillRange } from './skills/rangeUtils.ts';
@@ -144,7 +145,9 @@ function resolveUnitTargetSpec(
   gameData: GameData,
 ): TargetSpec {
   const passives = getPassiveDefs(unit, gameData.skillRegistry.passives);
-  const defaultSpec = resolveBasicAttackTarget(unit, gameData);
+  const defaultSpec = resolveApproachTargetSpec(
+    resolveBasicAttackTarget(unit, gameData),
+  );
   return resolveTargetSpec(passives, defaultSpec, {
     actor: unit,
     allies: players,

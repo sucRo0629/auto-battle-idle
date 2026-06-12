@@ -12,9 +12,11 @@ import {
 import {
   stripPassivesAurasFromSource,
 } from './passiveEffects.ts';
+import { isRangedAttack } from './data/entityTraits.ts';
 import { isWithinSkillRange } from './skills/rangeUtils.ts';
 import type {
   CombatantState,
+  CounterAttackRangeBandFilter,
   CounterResponseDef,
   DamageType,
   PassiveSkillDef,
@@ -28,6 +30,8 @@ export interface CounterRetaliationContext {
   attackKind: CounterAttackKind;
   appliedDamage: number;
   isCounterDamage?: boolean;
+  /** 被攻撃の実効射程（px）。未指定時は帯フィルタを適用しない */
+  attackRangePx?: number;
 }
 
 export interface CounterRetaliationCallbacks {
@@ -52,8 +56,27 @@ export interface GrantCounterStatusParams {
   responses: CounterResponseDef[];
   durationSec: number;
   range?: number;
+  counterMelee?: boolean;
+  counterRanged?: boolean;
   skillId: string;
   sourceId?: string;
+}
+
+export function matchesCounterAttackRangeBand(
+  attackRangePx: number | undefined,
+  filter: CounterAttackRangeBandFilter,
+): boolean {
+  const { counterMelee, counterRanged } = filter;
+  if (!counterMelee && !counterRanged) return true;
+  if (attackRangePx === undefined) return true;
+  const rangeFilters: boolean[] = [];
+  if (counterMelee) {
+    rangeFilters.push(!isRangedAttack(attackRangePx));
+  }
+  if (counterRanged) {
+    rangeFilters.push(isRangedAttack(attackRangePx));
+  }
+  return rangeFilters.some((value) => value);
 }
 
 export function grantCounterStatus(
@@ -67,6 +90,8 @@ export function grantCounterStatus(
     overlay: 'counter',
     responses: params.responses,
     counterRangePx: params.range,
+    ...(params.counterMelee ? { counterMelee: true } : {}),
+    ...(params.counterRanged ? { counterRanged: true } : {}),
     multiplier: 1,
     durationSec: params.durationSec,
     remainingSec: params.durationSec,
@@ -382,6 +407,14 @@ export function applyPassiveCounterRetaliation(
     const responses = passive.counterResponses;
     if (chance <= 0 || !responses?.length) continue;
     if (!isPassiveCounterInRange(passive, victim, attacker)) continue;
+    if (
+      !matchesCounterAttackRangeBand(ctx.attackRangePx, {
+        counterMelee: passive.counterMelee,
+        counterRanged: passive.counterRanged,
+      })
+    ) {
+      continue;
+    }
     if (Math.random() >= chance) continue;
 
     const counterRef = { skillId: passive.id };
@@ -421,6 +454,14 @@ export function applyCounterRetaliation(
 
   for (const counterEffect of counters) {
     if (!isCounterInTriggerRange(counterEffect, victim, attacker)) continue;
+    if (
+      !matchesCounterAttackRangeBand(ctx.attackRangePx, {
+        counterMelee: counterEffect.counterMelee,
+        counterRanged: counterEffect.counterRanged,
+      })
+    ) {
+      continue;
+    }
 
     for (const response of counterEffect.responses!) {
       applyCounterResponse(

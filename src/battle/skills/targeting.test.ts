@@ -95,7 +95,7 @@ function mockUnit(
     classId: opts.isEnemy ? 'test_enemy' : 'at_sorcerer',
     formationRow: opts.formationRow ?? 'back',
     traits: {
-      rangePx: opts.rangePx ?? 55,
+      rangePx: opts.rangePx ?? 100,
       damageType: 'physical',
       basicAttackVfx: { preset: 'arrow', arc: true },
     },
@@ -172,7 +172,7 @@ describe('resolveEffectTargets', () => {
   });
 
   it('excludes enemies outside skill range', () => {
-    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single', range: 95 }, 'lowestHpEnemy'), actor, allies, enemies, gameData);
+    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single', range: 101 }, 'lowestHpEnemy'), actor, allies, enemies, gameData);
     expect(targets.map((t) => t.id)).toEqual(['e3']);
   });
 
@@ -214,7 +214,7 @@ describe('resolveEffectTargets', () => {
   it('multiLock: round-robin repeats when hits exceed pool size', () => {
     const targets = resolveEffectTargets(
       damageEffect(
-        { targetShape: 'multiLock', hitCount: 3, range: 70 },
+        { targetShape: 'multiLock', hitCount: 3, range: fullSkillRange },
         'lowestHpEnemy',
       ),
       actor,

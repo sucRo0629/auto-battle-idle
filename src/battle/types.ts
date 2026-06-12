@@ -1,13 +1,15 @@
 export type Role = "defender" | "attacker" | "supporter";
 export type ClassId = string;
 export type FormationRow = "front" | "middle" | "back";
-/** 遠隔攻撃とみなす traits.rangePx の境界（px）。`> RANGED_ATTACK_THRESHOLD_PX` が遠隔帯 */
-export const RANGED_ATTACK_THRESHOLD_PX = 50;
-/** 近接帯の上限（px）。rangePx <= RANGED_ATTACK_THRESHOLD_PX */
-export const MELEE_RANGE_MAX_PX = RANGED_ATTACK_THRESHOLD_PX;
+/** 遠隔帯の下限（px）。`rangePx >= RANGED_ATTACK_MIN_PX` が遠隔帯 */
+export const RANGED_ATTACK_MIN_PX = 100;
+/** 近接帯の上限（px）。rangePx < RANGED_ATTACK_MIN_PX */
+export const MELEE_RANGE_MAX_PX = RANGED_ATTACK_MIN_PX - 1;
+/** @deprecated 互換用。近接帯上限 = MELEE_RANGE_MAX_PX */
+export const RANGED_ATTACK_THRESHOLD_PX = MELEE_RANGE_MAX_PX;
 
 export function isMeleeRangePx(rangePx: number): boolean {
-  return rangePx <= RANGED_ATTACK_THRESHOLD_PX;
+  return rangePx < RANGED_ATTACK_MIN_PX;
 }
 
 /** @deprecated traits.rangePx を使用 */
@@ -346,6 +348,16 @@ export interface StatusEffect {
   responses?: CounterResponseDef[];
   /** 反撃 overlay: この射程内の攻撃のみ反撃発動（未指定 = 持有者 traits.rangePx） */
   counterRangePx?: number;
+  /** 反撃 overlay: 近接帯の攻撃のみ反撃（未指定かつ counterRanged も未指定 = 全区間） */
+  counterMelee?: boolean;
+  /** 反撃 overlay: 遠隔帯の攻撃のみ反撃 */
+  counterRanged?: boolean;
+}
+
+/** 反撃対象の近接／遠隔帯フィルタ（OR。両方未指定 = 全区間） */
+export interface CounterAttackRangeBandFilter {
+  counterMelee?: boolean;
+  counterRanged?: boolean;
 }
 
 export type StatusEffectStat =
@@ -541,6 +553,10 @@ export interface PassiveSkillDef {
   counterResponses?: CounterResponseDef[];
   /** counter: 反撃発動射程（px）。未指定 = 持有者 traits.rangePx */
   counterRange?: number;
+  /** counter: 近接帯の攻撃のみ反撃（未指定かつ counterRanged も未指定 = 全区間） */
+  counterMelee?: boolean;
+  /** counter: 遠隔帯の攻撃のみ反撃 */
+  counterRanged?: boolean;
   /** buff / selfHpRatioBuff: 対象 stat */
   buffStat?: BuffTargetKind | BuffTargetKind[];
   /** selfHpRatioBuff: 最大倍率（満タン時は 1 = 中立） */
@@ -859,6 +875,8 @@ export interface CounterSkillEffect extends SkillEffectCommon {
   chance?: number;
   responses: CounterResponseDef[];
   durationSec: number;
+  counterMelee?: boolean;
+  counterRanged?: boolean;
 }
 
 export type SkillEffectDef =

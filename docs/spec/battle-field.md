@@ -59,7 +59,7 @@
 
 - **`battleX` が唯一の横位置正本。** ロジックと描画は同じ値を参照する
 - 隊形スペーシングは `battleX` に直接反映（§3.3 スロット ideal を battle 座標として使用）
-- 近接帯（`rangePx` 0〜50）は **`contact - engagedMinBodyGap() - rangePx`** で奥行き分離。同射程のみ接触線共有可（L10）。混成前列・後列は `resolveOverlaps` で間隔確保
+- 近接帯（`rangePx` 0〜99）は **`contact - engagedMinBodyGap() - rangePx`** で奥行き分離。同射程のみ接触線共有可（L10）。混成前列・後列は `resolveOverlaps` で間隔確保
 - `visualX` は **snapshot 互換ミラー**（`battleX` と同値。layout ロジックは参照しない）
 - `src/render` は `battleX`（= `screenX`）のみ参照し、戦闘ルールを持たない
 
@@ -88,8 +88,8 @@ BattlePhase 判定
 
 ```
 effectiveRangePx = effect.range ?? actor.traits.rangePx
-近接帯（rangePx <= 50）命中: battleDistance <= 0 かつ battleDistance >= -(engagedMinBodyGap() + rangePx)
-遠隔帯（rangePx > 50）命中: battleDistance <= effectiveRangePx
+近接帯（rangePx < 100）命中: battleDistance <= 0 かつ battleDistance >= -(engagedMinBodyGap() + rangePx)
+遠隔帯（rangePx >= 100）命中: battleDistance <= effectiveRangePx
 ```
 
 **攻撃可能 `battleX`（プレイヤー → 敵・近接帯）：** `target.battleX - engagedMinBodyGap() - rangePx`  
@@ -117,8 +117,8 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | `PARTY_FORMATION_SLOT_SPACING`（32） | 味方隊列スロット間隔 |
 | `SPAWN_X_MAX`（240） | 敵 `spawnX` 上限（中心からの右オフセット） |
 | `PLAYER_VISUAL_MIN_GAP` | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`） |
-| `RANGED_ATTACK_THRESHOLD_PX`（50） | 遠隔帯境界。`rangePx <= 50` = 近接帯（0〜50） |
-| `MELEE_RANGE_MAX_PX`（50） | 近接帯上限 |
+| `RANGED_ATTACK_MIN_PX`（100） | 遠隔帯下限。`rangePx < 100` = 近接帯（0〜99） |
+| `MELEE_RANGE_MAX_PX`（99） | 近接帯上限 |
 | `CONFIGURABLE_RANGE_PX_MAX` | `traits.rangePx` / `effect.range` の設定上限（`CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`） |
 | `MOVE_PX_PER_SEC`（120） | 1秒あたりの戦闘移動量（px）。進軍・接敵接近・PartyDeploy・隊形復帰に使用。Victory 退場は `MOVE_PX_PER_SEC × 2` |
 
@@ -175,7 +175,7 @@ HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に
 3. **`formationRow`** — Y 描画・スキルターゲット用（`classes.json`）。X 深度には使わない
 4. **overlap 解消** — §4.2（接敵時プレイヤー必須）
 
-**近接判定（統一）：** `isMeleeUnit(u) := isMeleeRangePx(resolveMaxEffectiveRangePx(u))`（`< RANGED_ATTACK_THRESHOLD_PX`）
+**近接判定（統一）：** `isMeleeUnit(u) := isMeleeRangePx(resolveMaxEffectiveRangePx(u))`（`< RANGED_ATTACK_MIN_PX`）
 
 ### 3.4 Wave ライフサイクル
 
@@ -319,7 +319,7 @@ HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に
 | **R1-fix** | **`battleX` 単一座標。** `visualX` 廃止。描画 = ロジック |
 | L2 | 単一 `FormationReset`（Wave 1 は背景・時間差分のみ） |
 | L5 | `engagedVisualTargetPlayerId` を layout で必ず参照 |
-| L6 | `isMeleeRangePx(resolveMaxEffectiveRangePx(u))` を唯一の近接判定（`<= 50`） |
+| L6 | `isMeleeRangePx(resolveMaxEffectiveRangePx(u))` を唯一の近接判定（`< 100`） |
 | L7 | モジュール分割 + 一方向 import |
 | L8 | 軸反転を座標系として一括適用 |
 | L9 | layout snapshot 単体テストへ置換 |

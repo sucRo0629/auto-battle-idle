@@ -313,12 +313,19 @@
     },
     {
       "id": "at_warrior_passive_1",
-      "name": "武器受け",
-      "effect": "buff",
+      "name": "大物狙い",
+      "effect": "targetRuleOverride",
       "buffSubKind": "block",
       "chance": 0.07,
       "buffTargetRule": {
         "kind": "self"
+      },
+      "targetRuleOverrideApplyTo": "enemy",
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "hp",
+        "order": "highest"
       }
     },
     {
@@ -542,6 +549,63 @@
       "dispelTags": [
         "dot"
       ]
+    },
+    {
+      "id": "at_lancer_passive_1",
+      "name": "牽制",
+      "effect": "debuff",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "perExtraTargetScale": 0.1,
+      "maxExtraTargets": 4,
+      "specialEffectApplyTo": "damage",
+      "specialEffect": {
+        "scale": 1.2,
+        "conditions": [
+          {
+            "kind": "debuff",
+            "tags": [
+              "def"
+            ]
+          }
+        ]
+      },
+      "debuffSubKind": "stat",
+      "debuffTargetRule": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "debuffStat": "atk",
+      "debuffMultiplier": 0.9
+    },
+    {
+      "id": "at_ranger_passive_1",
+      "name": "射手排除",
+      "effect": "targetRuleOverride",
+      "targetRuleOverride": {
+        "kind": "attackType",
+        "ranged": true
+      }
+    },
+    {
+      "id": "at_ranger_passive_2",
+      "name": "速射の技",
+      "effect": "buff",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "buffSubKind": "stat",
+      "buffTargetRule": {
+        "kind": "self"
+      },
+      "buffStat": "attackSpeed",
+      "buffMultiplier": 1.25
     }
   ],
   "actives": [
@@ -820,6 +884,14 @@
             "order": "nearest"
           }
         }
+      ],
+      "firePolicy": "smart",
+      "fireConditions": [
+        {
+          "kind": "targetHp",
+          "maxHpRatio": 0.5,
+          "compare": "gte"
+        }
       ]
     },
     {
@@ -971,7 +1043,7 @@
       "name": "貫突",
       "trigger": {
         "kind": "time",
-        "value": 9
+        "value": 8
       },
       "effect": [
         {
@@ -980,7 +1052,7 @@
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.1
+            "atkScale": 1.2
           },
           "pierceDurationSec": 0.2,
           "target": {
@@ -996,10 +1068,10 @@
     },
     {
       "id": "at_lancer_active_2",
-      "name": "突き刺し",
+      "name": "足払い",
       "trigger": {
         "kind": "time",
-        "value": 11
+        "value": 10
       },
       "effect": [
         {
@@ -1007,34 +1079,60 @@
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.6
+            "atkScale": 0.6
           },
-          "targetShape": "single",
+          "targetShape": "pierce",
           "target": {
             "kind": "distance",
             "side": "enemy",
-            "order": "nearest"
+            "order": "selfOrigin"
           }
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "selfOrigin"
+          },
+          "type": "debuff",
+          "debuffSubKind": "stun",
+          "debuffStat": "def",
+          "debuffMultiplier": 0.8,
+          "debuffDurationSec": 5,
+          "targetShape": "pierce",
+          "durationSec": 3
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "selfOrigin"
+          },
+          "type": "debuff",
+          "debuffSubKind": "stat",
+          "debuffStat": "def",
+          "debuffMultiplier": 0.8,
+          "debuffDurationSec": 5,
+          "targetShape": "pierce"
         }
       ]
     },
     {
       "id": "at_ranger_active_1",
-      "name": "速射",
+      "name": "連射",
       "trigger": {
         "kind": "basicAttackCount",
-        "value": 4
+        "value": 5
       },
       "effect": [
         {
-          "targetShape": "multiLock",
-          "hitCount": 2,
+          "targetShape": "single",
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.65,
-            "atkOffset": 5
+            "atkScale": 1.25,
+            "atkOffset": 0
           },
           "vfx": {
             "preset": "arrow"
@@ -1043,7 +1141,9 @@
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
-          }
+          },
+          "hitCount": 2,
+          "hitDurationSec": 0.25
         }
       ]
     },
@@ -2016,18 +2116,17 @@
       },
       "effect": [
         {
-          "targetShape": "aoe",
-          "aoeRadiusPx": 50,
+          "targetShape": "pierce",
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.7
+            "atkScale": 0.45
           },
           "target": {
             "kind": "distance",
             "side": "enemy",
-            "order": "nearest"
+            "order": "selfOrigin"
           }
         }
       ],
@@ -2035,7 +2134,7 @@
       "fireConditions": [
         {
           "kind": "enemyCount",
-          "min": 1,
+          "min": 2,
           "scope": "inRange"
         }
       ]

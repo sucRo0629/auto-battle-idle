@@ -104,6 +104,7 @@ export interface SkillExecutorDeps {
       attackKind: 'damage' | 'dot';
       isCounterDamage?: boolean;
       hpDamage?: number;
+      attackRangePx?: number;
     },
   ) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
@@ -518,6 +519,7 @@ export class SkillExecutor {
       this.deps.onDamageApplied?.(actor, target, appliedDamage, {
         attackKind: 'damage',
         hpDamage: damageResult.hpDamage,
+        attackRangePx: effectDef.range ?? actor.traits.rangePx,
       });
       const { lethal } = damageResult;
       if (cd.slotKind === 'basic') {
@@ -1030,6 +1032,8 @@ export class SkillExecutor {
         responses: effectDef.responses,
         durationSec: effectDef.durationSec,
         range: effectDef.range,
+        counterMelee: effectDef.counterMelee,
+        counterRanged: effectDef.counterRanged,
         skillId: skill.id,
         sourceId: actor.id,
       });

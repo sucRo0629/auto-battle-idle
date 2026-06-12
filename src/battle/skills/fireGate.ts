@@ -1,3 +1,4 @@
+import { resolveMaxEffectiveRangePx } from '../combatPosition.ts';
 import { currentHpRatio, matchesHpRatioThreshold } from '../combatMath.ts';
 import { hasMatchingDebuff } from '../debuffMatching.ts';
 import type {
@@ -8,6 +9,7 @@ import type {
   PassiveSkillDef,
   SkillCooldown,
 } from '../types.ts';
+import { isWithinSkillRange } from './rangeUtils.ts';
 import { getTargetPool } from './targetSpec.ts';
 import { pickTargetFromPool, resolveEffectTargetSpec } from './targeting.ts';
 import {
@@ -63,9 +65,9 @@ function countSkillTargets(ctx: FireGateContext): number {
 }
 
 function enemiesInActorRange(ctx: FireGateContext): CombatantState[] {
-  const rangePx = ctx.actor.traits.rangePx;
-  return livingUnits(ctx.enemies).filter(
-    (enemy) => Math.abs(enemy.battleX - ctx.actor.battleX) <= rangePx,
+  const rangePx = resolveMaxEffectiveRangePx(ctx.actor, ctx.gameData);
+  return livingUnits(ctx.enemies).filter((enemy) =>
+    isWithinSkillRange(ctx.actor, enemy, rangePx),
   );
 }
 

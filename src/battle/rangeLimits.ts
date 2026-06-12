@@ -3,17 +3,46 @@ import {
   PARTY_FORMATION_LEFT_ANCHOR,
 } from './battleConstants.ts';
 import {
+  isMeleeRangePx,
   MELEE_RANGE_MAX_PX,
-  RANGED_ATTACK_THRESHOLD_PX,
+  RANGED_ATTACK_MIN_PX,
 } from './types.ts';
 
 /** traits.rangePx / スキル effect.range の設定上限（px）。左端隊列アンカーからキャンバス右端まで。 */
 export const CONFIGURABLE_RANGE_PX_MAX =
   CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR;
 
+/** traits.rangePx の近接帯 / 遠隔帯ラベル */
+export function formatRangeBandJa(rangePx: number): string {
+  return isMeleeRangePx(rangePx) ? '近接帯' : '遠隔帯';
+}
+
 /** エディタ補足・バリデーション文言用 */
 export function configurableRangeHintJa(): string {
-  return `0〜${CONFIGURABLE_RANGE_PX_MAX} px（近接帯 0〜${MELEE_RANGE_MAX_PX}、${RANGED_ATTACK_THRESHOLD_PX + 1} 以上=遠隔帯）`;
+  return (
+    `0〜${CONFIGURABLE_RANGE_PX_MAX} px（近接帯 0〜${MELEE_RANGE_MAX_PX}、遠隔帯 ${RANGED_ATTACK_MIN_PX} 以上）` +
+    '。+数値で traits.rangePx に加算'
+  );
+}
+
+/** 射程 px 入力: 絶対値、または +delta で baseRangePx に加算 */
+export function parseConfigurableRangePxInput(
+  raw: string,
+  baseRangePx: number,
+): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+
+  const plusMatch = trimmed.match(/^\+\s*(\d+(?:\.\d+)?)$/);
+  if (plusMatch) {
+    const delta = Number(plusMatch[1]);
+    if (!Number.isFinite(delta)) return null;
+    return baseRangePx + delta;
+  }
+
+  const absolute = Number(trimmed);
+  if (!Number.isFinite(absolute)) return null;
+  return absolute;
 }
 
 export function assertConfigurableRangePx(label: string, value: number): void {

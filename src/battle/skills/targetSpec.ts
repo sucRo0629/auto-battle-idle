@@ -385,6 +385,18 @@ export function isSelfOriginSpec(spec: TargetSpec): boolean {
   return spec.kind === "distance" && spec.order === "selfOrigin";
 }
 
+/** 自動接近・接敵停止用。selfOrigin は貫通の着弾基準であり追跡対象ではない */
+export function resolveApproachTargetSpec(spec: TargetSpec): TargetSpec {
+  if (
+    spec.kind === "distance" &&
+    spec.side === "enemy" &&
+    spec.order === "selfOrigin"
+  ) {
+    return { kind: "distance", side: "enemy", order: "nearest" };
+  }
+  return spec;
+}
+
 export function applyIncludeSelfFilter(
   spec: TargetSpec,
   actor: CombatantState,

@@ -250,6 +250,7 @@ export class BattleEngine {
       attackKind: CounterAttackKind;
       isCounterDamage?: boolean;
       hpDamage?: number;
+      attackRangePx?: number;
     },
   ): void {
     applyThreatFromDamage(actor, target, amount);
@@ -307,6 +308,7 @@ export class BattleEngine {
         attackKind: meta.attackKind,
         appliedDamage: amount,
         isCounterDamage: meta.isCounterDamage,
+        attackRangePx: meta.attackRangePx,
       };
       applyPassiveCounterRetaliation(
         target,
@@ -1624,6 +1626,7 @@ export class BattleEngine {
       this.handleDamageThreat(source, target, appliedDamage, {
         attackKind: "dot",
         hpDamage: damageResult.hpDamage,
+        attackRangePx: source.traits.rangePx,
       });
       const { lethal } = damageResult;
       this.emit({
@@ -1727,7 +1730,7 @@ export class BattleEngine {
           chargeCountTrigger(cd, skill);
         }
       } else if (canConsumeHitsTaken) {
-        this.executor.tryExecute(unit, cd, this.players, this.enemies);
+        this.tryExecuteActiveWithFireGate(unit, cd);
       }
     }
   }
@@ -1761,7 +1764,7 @@ export class BattleEngine {
     cd: SkillCooldown,
   ): boolean {
     const skill = this.gameData.skillRegistry.actives[cd.skillId];
-    if (!skill || isCountTriggerSkill(skill)) return false;
+    if (!skill) return false;
     const ctx = this.buildFireGateContext(unit, skill, cd);
     if (!shouldFireActiveSkill(ctx)) return false;
     return this.executor.tryExecute(unit, cd, this.players, this.enemies);
@@ -1784,12 +1787,7 @@ export class BattleEngine {
             actives,
           )[0];
           if (readyActive) {
-            const fired = this.executor.tryExecute(
-              actor,
-              readyActive,
-              this.players,
-              this.enemies,
-            );
+            const fired = this.tryExecuteActiveWithFireGate(actor, readyActive);
             if (fired) continue;
             if (this.skillSequenceRunner.isActorBusy(actor.id)) continue;
           }
@@ -1806,10 +1804,11 @@ export class BattleEngine {
               getPassiveDefs(actor, this.gameData.skillRegistry.passives),
               actor.build.learnedActiveIds,
             ) &&
-            this.tryExecuteActiveWithFireGate(actor, cd)
+            !this.skillSequenceRunner.isActorBusy(actor.id)
           ) {
-            continue;
+            this.tryExecuteActiveWithFireGate(actor, cd);
           }
+          continue;
         }
 
         if (cd.remaining > 0) continue;

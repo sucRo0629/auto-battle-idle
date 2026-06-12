@@ -120,7 +120,7 @@ describe('battleLayout snapshots', () => {
           id: 'archer',
           role: 'attacker',
           formationRow: 'back',
-          rangePx: 55,
+          rangePx: 100,
           isAlive: true,
           battleX: 60,
           engagedVisualLaneX: -120,
@@ -137,7 +137,7 @@ describe('battleLayout snapshots', () => {
         {
           id: 'ranged',
           isAlive: true,
-          rangePx: 55,
+          rangePx: 100,
           battleX: 320,
         },
       ],
@@ -186,7 +186,7 @@ describe('battleLayout snapshots', () => {
         {
           id: 'ranged',
           isAlive: true,
-          rangePx: 55,
+          rangePx: 100,
           battleX: 320,
         },
       ],
@@ -283,7 +283,7 @@ describe('battle contact (R1-fix: battleX single)', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       battleX: 220,
       visualX: 120,
     });

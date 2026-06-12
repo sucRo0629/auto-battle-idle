@@ -750,10 +750,16 @@ function formatPassiveEffect(
       );
       const range =
         def.counterRange !== undefined ? `射程${def.counterRange}` : "";
+      const bandParts: string[] = [];
+      if (def.counterMelee) bandParts.push("近接");
+      if (def.counterRanged) bandParts.push("遠隔");
+      const band =
+        bandParts.length > 0 ? `対象${bandParts.join("・")}` : "";
       return [
         `被攻撃時 ${formatPercent(def.chance ?? legacy.counterChance ?? 0)} で反撃`,
         responseParts.join(" / "),
         range,
+        band,
       ]
         .filter(Boolean)
         .join(" ");

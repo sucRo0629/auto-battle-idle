@@ -11,6 +11,7 @@ import {
   applyEnemyCustomBasicAttackInterval,
   buildClassPresetFromDraft,
   buildEnemyFromDraft,
+  buildSkillRegistryFromSkillsJson,
   buildSkillDrafts,
   collectSkillsFromDrafts,
   createBalanceRowsFromClasses,
@@ -297,6 +298,9 @@ export class EditorApp {
 
     this.classStep = new ClassEditorStep(classHost, {
       getDraft: () => this.classDraft,
+      getPreviewClassPreset: () =>
+        buildClassPresetFromDraft(this.classDraft, this.classSkillEntries),
+      getSkillRegistry: () => buildSkillRegistryFromSkillsJson(this.skills),
       classes: this.classes,
       selectedClassId: this.selectedClassId,
       onDraftChange: (draft) => {
@@ -325,6 +329,7 @@ export class EditorApp {
 
     this.balanceStep = new BalanceEditorStep(host, {
       getRows: () => this.balanceRows,
+      getSkillRegistry: () => buildSkillRegistryFromSkillsJson(this.skills),
       getClassOrder: () => this.classes.map((cls) => cls.id),
       displayMode: this.balanceDisplayMode,
       onDisplayModeChange: (mode) => {
@@ -471,6 +476,7 @@ export class EditorApp {
       getEntries: () => this.classSkillEntries,
       onChange: (next: SkillDraftEntry[]) => {
         this.classSkillEntries = next;
+        this.classStep?.updatePreview();
       },
       isIdReadonly: (entry: SkillDraftEntry) =>
         entry.ref.kind === 'active' &&
@@ -518,6 +524,7 @@ export class EditorApp {
       },
       onSave: () => void this.saveClass(),
       saving: this.saving,
+      getTraitsRangePx: () => this.classDraft.class.traits.rangePx ?? 0,
     };
   }
 
@@ -562,6 +569,7 @@ export class EditorApp {
       },
       onSave: () => void this.saveEnemy(),
       saving: this.saving,
+      getTraitsRangePx: () => this.enemyDraft.enemy.traits?.rangePx ?? 0,
     };
   }
 
@@ -731,6 +739,9 @@ export class EditorApp {
 
       this.classStep?.update({
         getDraft: () => this.classDraft,
+        getPreviewClassPreset: () =>
+          buildClassPresetFromDraft(this.classDraft, this.classSkillEntries),
+        getSkillRegistry: () => buildSkillRegistryFromSkillsJson(this.skills),
         classes: this.classes,
         selectedClassId: this.selectedClassId,
         onDraftChange: (draft) => {

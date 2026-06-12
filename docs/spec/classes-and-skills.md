@@ -111,9 +111,9 @@
 
 | フィールド       | 省略時                                                                                        |
 | ---------------- | --------------------------------------------------------------------------------------------- |
-| `rangePx`        | `0`（近接帯 0〜50。51 以上 = 遠隔帯）                                                         |
+| `rangePx`        | `0`（近接帯 0〜99、遠隔帯 100 以上）                                                         |
 | `damageType`     | `physical`                                                                                    |
-| `basicAttackVfx` | `deriveBasicAttackVfxFromTraits()`（magic→orb / physical+rangePx>50→arrow / それ以外 →slash） |
+| `basicAttackVfx` | `deriveBasicAttackVfxFromTraits()`（magic→orb / physical+rangePx>=100→arrow / それ以外 →slash） |
 
 `basicAttackSkillId` は省略可（`{entityId}_basic_attack`）。通常攻撃スキルはロード時に合成。`skills.json` に同名 ID があれば `name` / `atkScale` / `interval` 等のみ上書き可（`range` / `damageType` / `vfx` は traits 正）。
 
@@ -124,9 +124,9 @@
 | **通常攻撃**（合成 basic） | effect に書かない（`actor.traits.rangePx`） |
 | アクティブ等               | 任意。省略時 = `actor.traits.rangePx`       |
 
-**設定上限:** `traits.rangePx` および `effect.range` は `0〜CONFIGURABLE_RANGE_PX_MAX` px（`rangeLimits.ts`: `CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`）。近接帯・遠隔帯の境界は `RANGED_ATTACK_THRESHOLD_PX`（50）— 詳細は [battle-field.md §2.6](./battle-field.md#26-定数単一正本battleconstantsts-または-typests)。
+**設定上限:** `traits.rangePx` および `effect.range` は `0〜CONFIGURABLE_RANGE_PX_MAX` px（`rangeLimits.ts`: `CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`）。近接帯・遠隔帯の境界は `RANGED_ATTACK_MIN_PX`（100）— 詳細は [battle-field.md §2.6](./battle-field.md#26-定数単一正本battleconstantsts-または-typests)。
 
-`traits.rangePx > RANGED_ATTACK_THRESHOLD_PX` で遠隔攻撃（`rangedAttackingEnemy`）。`0〜MELEE_RANGE_MAX_PX` は近接帯（slash VFX、停止位置は §battle-field 2.5）。`traits.damageType === 'magic'` で `magicAttackingEnemy`。
+`traits.rangePx >= RANGED_ATTACK_MIN_PX` で遠隔攻撃（`rangedAttackingEnemy`）。`0〜MELEE_RANGE_MAX_PX` は近接帯（slash VFX、停止位置は §battle-field 2.5）。`traits.damageType === 'magic'` で `magicAttackingEnemy`。
 
 **一次職 `rangePx`（参考）：** 双刃士/闘技 0、鉄衛/護法 5、剣術 8、槍術 24、魔法 30、物理レンジ 40。
 
@@ -308,7 +308,7 @@ interface CharacterBuild {
 | `responses[]`           | 反撃時に攻撃者へ適用する内容（**1 種別以上必須**）。各要素の `kind`: `damage` / `debuff` / `dot` / `stun` / `knockback` |
 | `responses[].amount` 等 | 種別ごとに通常 effect と同型のフィールド（`damage` は `amount` + `damageType?`、`debuff` は `debuffStat` 等）           |
 | `durationSec`           | 反撃状態の持続（秒）                                                                                                    |
-| `range`                 | optional。反撃発動の射程（px）。この距離以内の攻撃のみ反撃。`0` = 近接接触のみ（遠距離攻撃は不発）                      |
+| `range`                 | optional。反撃発動の射程（px）。この距離以内の攻撃のみ反撃。`0` = 近接接触のみ（遠隔帯攻撃は不発）                      |
 | `targetShape`           | **`multiLock` 禁止**（その他の形状も付与は自身のみのため実質未使用）                                                    |
 
 アクティブ `counter` は `StatusEffect`（`overlay: counter`, `responses`, `counterRangePx?`）を付与。バフ/デバフフィルタタグには含めない。詳細は [combat.md](combat.md) の反撃節。

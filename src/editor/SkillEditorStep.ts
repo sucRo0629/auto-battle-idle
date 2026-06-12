@@ -50,6 +50,7 @@ import {
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
+  CounterAttackRangeBandFilter,
   CounterResponseDef,
   CounterResponseKind,
   CounterSkillEffect,
@@ -66,8 +67,13 @@ import type {
   StatusEffectStat,
   TargetShape,
   PowerStepMode,
+  RANGED_ATTACK_MIN_PX,
 } from '../battle/types.ts';
-import { CONFIGURABLE_RANGE_PX_MAX, configurableRangeHintJa } from '../battle/rangeLimits.ts';
+import {
+  CONFIGURABLE_RANGE_PX_MAX,
+  configurableRangeHintJa,
+  parseConfigurableRangePxInput,
+} from '../battle/rangeLimits.ts';
 import {
   defaultTargetForEffectType,
   getEffectTarget,
@@ -227,6 +233,47 @@ function findCounterResponse<T extends CounterResponseKind>(
   );
 }
 
+function appendCounterAttackRangeBandFields(
+  parent: HTMLElement,
+  filter: CounterAttackRangeBandFilter,
+  onChange: (next: CounterAttackRangeBandFilter) => void,
+): void {
+  const row = createEl('div', 'editor-debuff-tag-checkboxes');
+  for (const [key, label] of [
+    ['counterMelee', '近接'],
+    ['counterRanged', '遠隔'],
+  ] as const) {
+    const fieldRow = createEl('div', 'editor-field editor-field-checkbox');
+    const input = createEl('input') as HTMLInputElement;
+    input.type = 'checkbox';
+    input.checked = filter[key] === true;
+    input.addEventListener('change', () => {
+      const next: CounterAttackRangeBandFilter = {
+        ...filter,
+        [key]: input.checked ? true : undefined,
+      };
+      if (!next.counterMelee && !next.counterRanged) {
+        delete next.counterMelee;
+        delete next.counterRanged;
+      }
+      onChange(next);
+    });
+    fieldRow.appendChild(createEl('label', undefined, label));
+    fieldRow.appendChild(input);
+    row.appendChild(fieldRow);
+  }
+  parent.appendChild(
+    createFieldRow('反撃可能対象', row),
+  );
+  parent.appendChild(
+    createEl(
+      'p',
+      'editor-hint',
+      `未選択 = 全区間。遠隔 = 実効射程が遠隔帯（${RANGED_ATTACK_MIN_PX} px 以上）。`,
+    ),
+  );
+}
+
 function appendCounterEffectFields(
   parent: HTMLElement,
   effect: CounterSkillEffect,
@@ -234,9 +281,10 @@ function appendCounterEffectFields(
     patch: (prev: CounterSkillEffect) => CounterSkillEffect,
     options?: { rerender?: boolean },
   ) => void,
-  options?: { showDuration?: boolean },
+  options?: { showDuration?: boolean; traitsRangePx?: number },
 ): void {
   const showDuration = options?.showDuration ?? true;
+  const traitsRangePx = options?.traitsRangePx ?? 0;
   const grid = appendGrid(parent);
   grid.appendChild(
     createEl(
@@ -257,9 +305,28 @@ function appendCounterEffectFields(
             ...prev,
             range,
           })),
-        { min: 0, max: CONFIGURABLE_RANGE_PX_MAX, step: 1 },
+        {
+          min: 0,
+          max: CONFIGURABLE_RANGE_PX_MAX,
+          step: 1,
+          parseInput: (raw) =>
+            parseConfigurableRangePxInput(raw, traitsRangePx),
+        },
       ),
     ),
+  );
+  appendCounterAttackRangeBandFields(
+    grid,
+    {
+      counterMelee: effect.counterMelee,
+      counterRanged: effect.counterRanged,
+    },
+    (next) =>
+      patchEffect((prev) => ({
+        ...prev,
+        counterMelee: next.counterMelee,
+        counterRanged: next.counterRanged,
+      })),
   );
   if (showDuration) {
     grid.appendChild(
@@ -575,6 +642,8 @@ function passiveToCounterEffect(passive: PassiveSkillDef): CounterSkillEffect {
     chance: passive.chance ?? passive.counterChance,
     durationSec: 5,
     range: passive.counterRange,
+    counterMelee: passive.counterMelee,
+    counterRanged: passive.counterRanged,
     responses: passive.counterResponses ?? [defaultCounterResponse('damage')],
   };
 }
@@ -584,6 +653,8 @@ function applyCounterEffectToPassive(
   effect: CounterSkillEffect,
 ): void {
   passive.counterRange = effect.range;
+  passive.counterMelee = effect.counterMelee;
+  passive.counterRanged = effect.counterRanged;
   passive.counterResponses = effect.responses;
   if (effect.chance !== undefined) {
     passive.chance = effect.chance;
@@ -1226,6 +1297,8 @@ export interface SkillEditorStepOptions {
     get: () => AttackSpeedTier;
     onChange: (tier: AttackSpeedTier) => void;
   };
+  /** +数値 射程入力の加算基準（traits.rangePx） */
+  getTraitsRangePx?: () => number;
 }
 
 export function renderEntityPicker(
@@ -1360,6 +1433,10 @@ export class SkillEditorStep {
 
   expandSkill(skillId: string): void {
     this.skillExpandedState.set(skillId, true);
+  }
+
+  private resolveTraitsRangePx(): number {
+    return this.options.getTraitsRangePx?.() ?? 0;
   }
 
   private commitEntries(
@@ -2024,7 +2101,10 @@ export class SkillEditorStep {
               options,
             );
           },
-          { showDuration: false },
+          {
+            showDuration: false,
+            traitsRangePx: this.resolveTraitsRangePx(),
+          },
         );
         break;
       case 'specialEffect':
@@ -2647,12 +2727,10 @@ export class SkillEditorStep {
     if (!isMove && !isCounter) {
       const shapeSelect = createSelect(
         effectTargetKind === 'self' ? 'single' : targetShape,
-        TARGET_SHAPE_OPTIONS.filter((value) => value !== 'multiLock').map(
-          (value) => ({
-            value,
-            label: TARGET_SHAPE_LABELS[value],
-          }),
-        ),
+        TARGET_SHAPE_OPTIONS.map((value) => ({
+          value,
+          label: TARGET_SHAPE_LABELS[value],
+        })),
         (shape) => {
           patchEffect((prev) => {
             const next: SkillEffectDef = { ...prev, targetShape: shape };
@@ -2724,6 +2802,13 @@ export class SkillEditorStep {
       } else {
         grid.appendChild(
           createFieldRow('ターゲット形状', shapeSelect),
+        );
+        grid.appendChild(
+          createEl(
+            'p',
+            'editor-hint',
+            '単体×N: 同一対象への連続ヒット（ヒット時間で分散）。マルチロック×N: 攻撃可能プールへラウンドロビン（複数対象・1体のみなら同一連打）。',
+          ),
         );
       }
     } else {
@@ -3112,7 +3197,16 @@ export class SkillEditorStep {
                 ...prev,
                 range: range > 0 ? range : undefined,
               } as SkillEffectDef)),
-            { min: 0, max: CONFIGURABLE_RANGE_PX_MAX, step: 10 },
+            {
+              min: 0,
+              max: CONFIGURABLE_RANGE_PX_MAX,
+              step: 10,
+              parseInput: (raw) =>
+                parseConfigurableRangePxInput(
+                  raw,
+                  this.resolveTraitsRangePx(),
+                ),
+            },
           ),
         ),
       );
@@ -3617,6 +3711,7 @@ export class SkillEditorStep {
                 prev.type === 'counter' ? patch(prev) : prev,
               options,
             ),
+          { traitsRangePx: this.resolveTraitsRangePx() },
         );
         detailGrid.appendChild(
           createFieldRow(

@@ -84,7 +84,7 @@ describe('shouldSkipEngagedAutoApproach', () => {
       id: 'farRanged',
       isEnemy: true,
       battleX: 500,
-      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });
 
@@ -104,7 +104,7 @@ describe('shouldSkipEngagedAutoApproach', () => {
       id: 'ranged',
       isEnemy: true,
       battleX: 210,
-      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });
 

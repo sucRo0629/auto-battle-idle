@@ -57,9 +57,9 @@ describe('engage visual sync & overtaking', () => {
     expect(front.length).toBeGreaterThanOrEqual(2);
     const sorted = [...front].sort((a, b) => a.battleX - b.battleX);
     const gap = sorted[1]!.battleX - sorted[0]!.battleX;
-    // L10: 剣術士(8) は 鉄衛士(5) より左 — rangePx 差（3px）+ 接近中の誤差
-    expect(gap).toBeGreaterThanOrEqual(3);
-    expect(gap).toBeLessThanOrEqual(10);
+    // L10: 剣術士(30) は 鉄衛士(10) より左 — rangePx 差 + 接近中の誤差
+    expect(gap).toBeGreaterThanOrEqual(10);
+    expect(gap).toBeLessThanOrEqual(30);
   });
 
   it('stage 1: front allies never pass living enemies on screen', () => {

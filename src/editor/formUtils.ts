@@ -204,6 +204,8 @@ export function createNumberInput(
     min?: number;
     max?: number;
     step?: number;
+    /** 確定時の数値解釈（未指定時は Number(raw)） */
+    parseInput?: (raw: string) => number | null;
   },
 ): HTMLInputElement {
   const input = createEl('input', 'editor-input editor-decimal-input') as HTMLInputElement;
@@ -231,8 +233,14 @@ export function createNumberInput(
       input.value = displayValue();
       return;
     }
-    const parsed = Number(raw);
-    if (Number.isNaN(parsed)) {
+    let parsed: number | null;
+    if (options?.parseInput) {
+      parsed = options.parseInput(raw);
+    } else {
+      const absolute = Number(raw);
+      parsed = Number.isNaN(absolute) ? null : absolute;
+    }
+    if (parsed === null) {
       input.value = displayValue();
       return;
     }

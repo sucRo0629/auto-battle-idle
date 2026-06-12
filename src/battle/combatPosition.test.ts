@@ -163,7 +163,7 @@ describe('combatPosition', () => {
     const enemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
-      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
       battleX: 300,
     });
@@ -194,7 +194,7 @@ describe('combatPosition', () => {
     });
     const bow = mockCombatant({
       id: 'bow',
-      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       formationRow: 'back',
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
@@ -210,7 +210,7 @@ describe('combatPosition', () => {
   it('approach range follows skill effect range', () => {
     const bow = mockCombatant({
       id: 'bow',
-      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
     expect(resolveMaxEffectiveRangePx(bow, gameData)).toBe(100);
@@ -249,7 +249,7 @@ describe('combatPosition', () => {
       id: 'b',
       formationRow: 'back',
       role: 'attacker',
-      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
     });
     assignInitialPlayerBattleX([front, back]);
     expect(front.battleX).toBeGreaterThan(back.battleX);
@@ -266,7 +266,7 @@ describe('combatPosition', () => {
       id: 'ranger',
       formationRow: 'back',
       role: 'attacker',
-      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
     });
     assignInitialPlayerBattleX([cleric, ranger]);
     expect(cleric.battleX).toBeGreaterThan(ranger.battleX);
@@ -337,7 +337,7 @@ describe('combatPosition', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { rangePx: 55, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
       battleX: 220,
     });
     expect(getPlayerContactX([guard, archer])).toBe(220);

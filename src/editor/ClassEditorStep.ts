@@ -22,15 +22,24 @@ import type {
 import {
   CONFIGURABLE_RANGE_PX_MAX,
   configurableRangeHintJa,
+  formatRangeBandJa,
+  parseConfigurableRangePxInput,
 } from "../battle/rangeLimits.ts";
 import levelCurvesJson from "../../data/levelCurves.json";
+import {
+  computeBasicAttackDps,
+  computeEffectiveBasicAttackIntervalSec,
+  formatBasicAttackDps,
+} from "../progression/basicAttackPreview.ts";
 import {
   computeStatsAtLevel,
   getBasicCooldownRate,
   loadLevelCurves,
   resolveStatGrowth,
 } from "../progression/levelGrowth.ts";
+import { computePreviewCombatStats } from "../progression/passiveStatPreview.ts";
 import type { ClassPresetBeforeEnrich } from "../progression/skillUnlocks.ts";
+import type { SkillRegistry } from "../battle/types.ts";
 import {
   type ClassDraft,
   type DraftChangeOptions,
@@ -88,60 +97,122 @@ function growthTierField(
   );
 }
 
-function renderGrowthPreview(parent: HTMLElement, draft: ClassDraft): void {
-  ensureClassGrowthFields(draft.class);
-  const growth = resolveStatGrowth(draft.class, LEVEL_CURVES);
-  const lv10 = computeStatsAtLevel(
-    {
-      maxHp: draft.class.maxHp,
-      atk: draft.class.atk,
-      def: draft.class.def,
-      reg: draft.class.reg,
-    },
-    draft.class,
-    PREVIEW_LEVEL,
-    LEVEL_CURVES
-  );
-  const speedTier = draft.class.attackSpeedTier ?? "normal";
+function formatPreviewStatLine(
+  label: string,
+  base: number,
+  effective: number,
+  perLevel: number,
+): string {
+  if (effective !== base) {
+    return `${label}: ${effective}（基礎 ${base}、+${perLevel}/Lv、パッシブ込）`;
+  }
+  return `${label}: ${base}（+${perLevel}/Lv）`;
+}
+
+function renderGrowthPreview(
+  parent: HTMLElement,
+  classPreset: ClassPresetBeforeEnrich,
+  skillRegistry?: SkillRegistry,
+): void {
+  ensureClassGrowthFields(classPreset);
+  const growth = resolveStatGrowth(classPreset, LEVEL_CURVES);
+  const preview = skillRegistry
+    ? computePreviewCombatStats(
+        classPreset,
+        PREVIEW_LEVEL,
+        LEVEL_CURVES,
+        skillRegistry,
+      )
+    : null;
+  const baseStats =
+    preview?.base ??
+    computeStatsAtLevel(
+      {
+        maxHp: classPreset.maxHp,
+        atk: classPreset.atk,
+        def: classPreset.def,
+        reg: classPreset.reg,
+      },
+      classPreset,
+      PREVIEW_LEVEL,
+      LEVEL_CURVES,
+    );
+  const lv10 = preview?.effective ?? baseStats;
+
+  const speedTier = classPreset.attackSpeedTier ?? "normal";
   const cdRate = getBasicCooldownRate(speedTier, LEVEL_CURVES);
-  const effectiveCd = DEFAULT_BASIC_INTERVAL_SEC / cdRate;
+  const attackSpeedMul = preview?.attackSpeedMultiplier ?? 1;
+  const effectiveCd = computeEffectiveBasicAttackIntervalSec(
+    speedTier,
+    LEVEL_CURVES,
+    DEFAULT_BASIC_INTERVAL_SEC,
+    attackSpeedMul,
+  );
+  const basicDps = computeBasicAttackDps(
+    lv10.atk,
+    speedTier,
+    LEVEL_CURVES,
+    attackSpeedMul,
+  );
 
   const box = createEl("div", "editor-preview");
   box.appendChild(
     createEl(
       "p",
       "editor-preview-title",
-      `Lv${PREVIEW_LEVEL} 試算（Lv1 + 成長 × ${PREVIEW_LEVEL - 1}）`
-    )
+      `Lv${PREVIEW_LEVEL} 試算（Lv1 + 成長 × ${PREVIEW_LEVEL - 1}）`,
+    ),
   );
   const list = createEl("ul", "editor-preview-list");
-  for (const [label, total, perLevel] of [
-    ["HP", lv10.maxHp, growth.maxHp],
-    ["ATK", lv10.atk, growth.atk],
-    ["DEF", lv10.def, growth.def],
+  for (const [label, effective, perLevel, base] of [
+    ["HP", lv10.maxHp, growth.maxHp, baseStats?.maxHp ?? lv10.maxHp],
+    ["ATK", lv10.atk, growth.atk, baseStats?.atk ?? lv10.atk],
+    ["DEF", lv10.def, growth.def, baseStats?.def ?? lv10.def],
   ] as const) {
     const item = createEl("li");
-    item.textContent = `${label}: ${total}（+${perLevel}/Lv）`;
+    item.textContent = formatPreviewStatLine(label, base, effective, perLevel);
+    list.appendChild(item);
+  }
+  if (preview && lv10.reg !== (baseStats?.reg ?? lv10.reg)) {
+    const item = createEl("li");
+    item.textContent = formatPreviewStatLine(
+      "REG",
+      baseStats?.reg ?? lv10.reg,
+      lv10.reg,
+      0,
+    );
     list.appendChild(item);
   }
   box.appendChild(list);
-  box.appendChild(
-    createEl(
-      "p",
-      "editor-preview-note",
-      `攻撃速度: ${
-        ATTACK_SPEED_TIER_LABELS[speedTier]
-      } — 基本攻撃 CD 係数 ${cdRate.toFixed(3)}` +
-        `（interval ${DEFAULT_BASIC_INTERVAL_SEC}s 想定 → 約 ${effectiveCd.toFixed(
-          2
-        )}s/発）`
-    )
-  );
+
+  let speedNote =
+    `攻撃速度: ${ATTACK_SPEED_TIER_LABELS[speedTier]}` +
+    ` — 基本攻撃 CD 係数 ${cdRate.toFixed(3)}`;
+  if (attackSpeedMul !== 1) {
+    speedNote += ` × パッシブ ${attackSpeedMul.toFixed(3)}`;
+  }
+  speedNote +=
+    `（interval ${DEFAULT_BASIC_INTERVAL_SEC}s 想定 → 約 ${effectiveCd.toFixed(2)}s/発` +
+    `、基本攻撃 DPS ${formatBasicAttackDps(basicDps)}）`;
+  box.appendChild(createEl("p", "editor-preview-note", speedNote));
+
+  if (preview?.hasPassiveStatModifiers) {
+    box.appendChild(
+      createEl(
+        "p",
+        "editor-preview-note",
+        "パッシブ: Lv 時点で習得済みの自身向け stat バフを満HP想定で反映（HP比率バフ・味方全体バフは除く）。",
+      ),
+    );
+  }
+
   parent.appendChild(box);
 }
 
 export interface ClassEditorStepOptions {
   getDraft: () => ClassDraft;
+  getPreviewClassPreset?: () => ClassPresetBeforeEnrich;
+  getSkillRegistry?: () => SkillRegistry;
   classes: ClassPresetBeforeEnrich[];
   selectedClassId: string;
   onDraftChange: (draft: ClassDraft, options?: DraftChangeOptions) => void;
@@ -173,11 +244,17 @@ export class ClassEditorStep {
     this.previewHost = null;
   }
 
-  private updatePreview(): void {
+  updatePreview(): void {
     if (!this.previewHost) return;
     const contentStart = this.previewHost.querySelector(".editor-preview");
     if (contentStart) contentStart.remove();
-    renderGrowthPreview(this.previewHost, this.options.getDraft());
+    const classPreset =
+      this.options.getPreviewClassPreset?.() ?? this.options.getDraft().class;
+    renderGrowthPreview(
+      this.previewHost,
+      classPreset,
+      this.options.getSkillRegistry?.(),
+    );
   }
 
   private render(): void {
@@ -257,7 +334,7 @@ export class ClassEditorStep {
     const basicSummary = [
       ROLE_LABELS[draft.class.role],
       ROW_LABELS[draft.class.formationRow],
-      `射程${draft.class.traits.rangePx ?? 0}px`,
+      `射程${draft.class.traits.rangePx ?? 0}px（${formatRangeBandJa(draft.class.traits.rangePx ?? 0)}）`,
       draft.class.traits.damageType ?? "physical",
     ].join(" · ");
     const { details: basicDetails, body: basicBody } = createCollapsibleSection({
@@ -373,7 +450,16 @@ export class ClassEditorStep {
               next.class.traits.rangePx = rangePx;
             });
           },
-          { min: 0, max: CONFIGURABLE_RANGE_PX_MAX, step: 1 },
+          {
+            min: 0,
+            max: CONFIGURABLE_RANGE_PX_MAX,
+            step: 1,
+            parseInput: (raw) =>
+              parseConfigurableRangePxInput(
+                raw,
+                draft.class.traits.rangePx ?? 0,
+              ),
+          },
         )
       )
     );
@@ -647,7 +733,13 @@ export class ClassEditorStep {
     previewSection.classList.add("editor-panel-preview-emphasis");
     this.container.appendChild(previewSection);
     this.previewHost = previewSection;
-    renderGrowthPreview(previewSection, draft);
+    const previewClassPreset =
+      this.options.getPreviewClassPreset?.() ?? draft.class;
+    renderGrowthPreview(
+      previewSection,
+      previewClassPreset,
+      this.options.getSkillRegistry?.(),
+    );
 
     if (!hideSave) {
       const actions = createEl("div", "editor-actions");

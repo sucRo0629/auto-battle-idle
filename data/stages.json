@@ -7,15 +7,23 @@
         "enemies": [
           {
             "templateId": "test_dummy",
+            "spawnX": 0
+          },
+          {
+            "templateId": "test_dummy",
+            "spawnX": 10
+          },
+          {
+            "templateId": "test_dummy",
+            "spawnX": 50
+          },
+          {
+            "templateId": "test_dummy",
             "spawnX": 100
           },
           {
             "templateId": "test_dummy",
             "spawnX": 120
-          },
-          {
-            "templateId": "test_dummy",
-            "spawnX": 140
           }
         ]
       }

@@ -4,6 +4,7 @@ import {
   getTargetPool,
   normalizeTarget,
   pickTargetFromPool,
+  resolveApproachTargetSpec,
 } from './targetSpec.ts';
 
 function mockUnit(
@@ -76,6 +77,20 @@ describe('normalizeTarget', () => {
       kind: 'status',
       side: 'enemy',
       debuffTags: ['def'],
+    });
+  });
+
+  it('resolveApproachTargetSpec maps enemy selfOrigin to nearest', () => {
+    expect(
+      resolveApproachTargetSpec({
+        kind: 'distance',
+        side: 'enemy',
+        order: 'selfOrigin',
+      }),
+    ).toEqual({
+      kind: 'distance',
+      side: 'enemy',
+      order: 'nearest',
     });
   });
 
@@ -154,7 +169,7 @@ describe('getTargetPool / pickTargetFromPool', () => {
   });
 
   it('filters ranged attackers', () => {
-    const rangedEnemy = mockUnit('e3', 60, { isEnemy: true, rangePx: 55 });
+    const rangedEnemy = mockUnit('e3', 60, { isEnemy: true, rangePx: 100 });
     const poolEnemies = [...enemies, rangedEnemy];
     const spec = { kind: 'attackType', ranged: true } as const;
     const pool = getTargetPool(spec, actor, allies, poolEnemies);

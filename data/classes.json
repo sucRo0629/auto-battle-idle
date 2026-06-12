@@ -7,7 +7,7 @@
     "flavorJa": "鉄壁となり、最も危険な敵の矛先を受け止める",
     "formationRow": "front",
     "traits": {
-      "rangePx": 5
+      "rangePx": 10
     },
     "maxHp": 235,
     "atk": 11,
@@ -59,7 +59,7 @@
     "flavorJa": "聖なる防護と小さな癒しで、前線を守り抜く",
     "formationRow": "front",
     "traits": {
-      "rangePx": 5
+      "rangePx": 10
     },
     "maxHp": 200,
     "atk": 15,
@@ -111,7 +111,7 @@
     "flavorJa": "搦め手で敵を弱らせ、隙に致命の一撃を繰り出す",
     "formationRow": "front",
     "traits": {
-      "rangePx": 5
+      "rangePx": 10
     },
     "maxHp": 180,
     "atk": 19,
@@ -165,7 +165,7 @@
     "flavorJa": "研ぎ澄まされた剣技で、近接戦の要となる",
     "formationRow": "front",
     "traits": {
-      "rangePx": 10
+      "rangePx": 30
     },
     "maxHp": 165,
     "atk": 30,
@@ -180,12 +180,7 @@
         "skillIds": [
           "at_warrior_passive_1",
           "at_warrior_passive_2",
-          "at_warrior_active_1"
-        ]
-      },
-      {
-        "level": 20,
-        "skillIds": [
+          "at_warrior_active_1",
           "at_warrior_active_4"
         ]
       }
@@ -208,7 +203,7 @@
     "flavorJa": "敵の背後へ忍び込み、二刃で仕留める影",
     "formationRow": "front",
     "traits": {
-      "rangePx": 5,
+      "rangePx": 10,
       "basicAttackVfx": {
         "preset": "slash"
       }
@@ -249,7 +244,7 @@
     "flavorJa": "長槍の一突きで、どんな巨体も貫く",
     "formationRow": "front",
     "traits": {
-      "rangePx": 50,
+      "rangePx": 70,
       "basicAttackVfx": {
         "preset": "impale"
       }
@@ -261,14 +256,11 @@
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_lancer_basic_attack",
-    "passiveIds": [
-      "passive_target_highest_hp"
-    ],
+    "passiveIds": [],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "passive_target_highest_hp",
           "at_lancer_active_1",
           "at_lancer_active_2"
         ]
@@ -288,7 +280,7 @@
     "flavorJa": "遠くの脅威を先に射落とす迎撃の弓",
     "formationRow": "back",
     "traits": {
-      "rangePx": 180
+      "rangePx": 200
     },
     "maxHp": 92,
     "atk": 20,
@@ -298,15 +290,16 @@
     "attackSpeedTier": "fast",
     "basicAttackSkillId": "at_ranger_basic_attack",
     "passiveIds": [
-      "passive_target_ranged_attacking"
+      "at_ranger_passive_1",
+      "at_ranger_passive_2"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "passive_target_ranged_attacking",
-          "at_ranger_active_1",
-          "at_ranger_active_2"
+          "at_ranger_passive_1",
+          "at_ranger_passive_2",
+          "at_ranger_active_1"
         ]
       }
     ],
@@ -324,7 +317,7 @@
     "flavorJa": "最も遠い獲物だけを狙い、一矢で沈める",
     "formationRow": "back",
     "traits": {
-      "rangePx": 240
+      "rangePx": 400
     },
     "maxHp": 88,
     "atk": 33,
@@ -359,7 +352,7 @@
     "flavorJa": "罠と毒で追い詰め、獲物を仕留める",
     "formationRow": "back",
     "traits": {
-      "rangePx": 180
+      "rangePx": 220
     },
     "maxHp": 96,
     "atk": 21,
@@ -545,7 +538,7 @@
     "flavorJa": "結界と弱体化で、味方への一撃をそらす",
     "formationRow": "middle",
     "traits": {
-      "rangePx": 90
+      "rangePx": 100
     },
     "maxHp": 95,
     "atk": 12,
@@ -582,7 +575,7 @@
     "flavorJa": "薬草と毒で戦場を操り、敵の弱点を長く灼く",
     "formationRow": "middle",
     "traits": {
-      "rangePx": 70
+      "rangePx": 90
     },
     "maxHp": 98,
     "atk": 17,

@@ -14,7 +14,10 @@ import type {
   GrowthTier,
   Role,
 } from '../battle/types.ts';
-import { CONFIGURABLE_RANGE_PX_MAX } from '../battle/rangeLimits.ts';
+import {
+  CONFIGURABLE_RANGE_PX_MAX,
+  parseConfigurableRangePxInput,
+} from '../battle/rangeLimits.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
 import {
   computeBasicAttackDps,
@@ -25,7 +28,9 @@ import {
   loadLevelCurves,
   resolveStatGrowth,
 } from '../progression/levelGrowth.ts';
+import { computePreviewCombatStats } from '../progression/passiveStatPreview.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
+import type { SkillRegistry } from '../battle/types.ts';
 import {
   BALANCE_DISPLAY_MODE_OPTIONS,
   BALANCE_RANGE_COLUMN_HINT,
@@ -57,7 +62,10 @@ const ROLE_LABELS: Record<Role, string> = {
   supporter: '支援',
 };
 
-function computeRowDerived(cls: ClassPresetBeforeEnrich): {
+function computeRowDerived(
+  cls: ClassPresetBeforeEnrich,
+  skillRegistry?: SkillRegistry,
+): {
   growth: { maxHp: number; atk: number; def: number };
   lv10: { maxHp: number; atk: number; def: number };
   lv1Dps: number;
@@ -65,23 +73,44 @@ function computeRowDerived(cls: ClassPresetBeforeEnrich): {
 } {
   ensureClassGrowthFields(cls);
   const growth = resolveStatGrowth(cls, LEVEL_CURVES);
-  const lv10 = computeStatsAtLevel(
-    {
-      maxHp: cls.maxHp,
-      atk: cls.atk,
-      def: cls.def,
-      reg: cls.reg,
-    },
-    cls,
-    PREVIEW_LEVEL,
-    LEVEL_CURVES,
-  );
   const attackSpeedTier = cls.attackSpeedTier ?? 'normal';
+  const lv1Preview = skillRegistry
+    ? computePreviewCombatStats(cls, 1, LEVEL_CURVES, skillRegistry)
+    : null;
+  const lv10Preview = skillRegistry
+    ? computePreviewCombatStats(cls, PREVIEW_LEVEL, LEVEL_CURVES, skillRegistry)
+    : null;
+  const baseAtLevel = (level: number) =>
+    computeStatsAtLevel(
+      {
+        maxHp: cls.maxHp,
+        atk: cls.atk,
+        def: cls.def,
+        reg: cls.reg,
+      },
+      cls,
+      level,
+      LEVEL_CURVES,
+    );
+  const lv1Atk = lv1Preview?.effective.atk ?? cls.atk;
+  const lv10 = lv10Preview?.effective ?? baseAtLevel(PREVIEW_LEVEL);
+  const lv1AttackSpeedMul = lv1Preview?.attackSpeedMultiplier ?? 1;
+  const lv10AttackSpeedMul = lv10Preview?.attackSpeedMultiplier ?? 1;
   return {
     growth,
     lv10,
-    lv1Dps: computeBasicAttackDps(cls.atk, attackSpeedTier, LEVEL_CURVES),
-    lv10Dps: computeBasicAttackDps(lv10.atk, attackSpeedTier, LEVEL_CURVES),
+    lv1Dps: computeBasicAttackDps(
+      lv1Atk,
+      attackSpeedTier,
+      LEVEL_CURVES,
+      lv1AttackSpeedMul,
+    ),
+    lv10Dps: computeBasicAttackDps(
+      lv10.atk,
+      attackSpeedTier,
+      LEVEL_CURVES,
+      lv10AttackSpeedMul,
+    ),
   };
 }
 
@@ -93,6 +122,7 @@ const ROLE_SECTION_HINTS: Record<Role, string> = {
 
 export interface BalanceEditorStepOptions {
   getRows: () => BalanceClassRow[];
+  getSkillRegistry?: () => SkillRegistry;
   /** 既存クラス選択プルダウンと同じ classId 並び */
   getClassOrder: () => ClassId[];
   displayMode: BalanceDisplayMode;
@@ -136,7 +166,10 @@ export class BalanceEditorStep {
     );
     if (!tr) return;
 
-    const derived = computeRowDerived(row.current);
+    const derived = computeRowDerived(
+      row.current,
+      this.options.getSkillRegistry?.(),
+    );
     tr.classList.toggle('is-dirty', isBalanceRowDirty(row));
 
     this.setCellText(tr, 'growth-hp', `+${derived.growth.maxHp}/Lv`);
@@ -267,7 +300,7 @@ export class BalanceEditorStep {
       createEl(
         'p',
         'editor-hint editor-balance-global-hint',
-        `Lv${PREVIEW_LEVEL} 試算列は Lv1 + 成長 × ${PREVIEW_LEVEL - 1} です。DPS = floor(ATK) ÷ 実効基本攻撃 interval（2s ÷ SPD 係数）。基本攻撃のみ。未保存の行は色付きで表示されます。${BALANCE_RANGE_COLUMN_HINT}`,
+        `Lv${PREVIEW_LEVEL} 試算列は Lv1 + 成長 × ${PREVIEW_LEVEL - 1} に、Lv 時点の自身向けパッシブ stat バフ（満HP想定）を反映します。DPS = floor(ATK) ÷ 実効基本攻撃 interval（2s ÷ SPD 係数 × パッシブ攻撃速度）。基本攻撃のみ。未保存の行は色付きで表示されます。${BALANCE_RANGE_COLUMN_HINT}`,
       ),
     );
 
@@ -419,7 +452,10 @@ export class BalanceEditorStep {
     const cls = row.current;
     ensureClassGrowthFields(cls);
     const growthTier = cls.growthTier!;
-    const derived = computeRowDerived(cls);
+    const derived = computeRowDerived(
+      cls,
+      this.options.getSkillRegistry?.(),
+    );
 
     const tr = createEl('tr') as HTMLTableRowElement;
     tr.dataset.classId = cls.id;
@@ -470,7 +506,13 @@ export class BalanceEditorStep {
           });
         },
         true,
-        { min: 0, max: CONFIGURABLE_RANGE_PX_MAX, step: 1 },
+        {
+          min: 0,
+          max: CONFIGURABLE_RANGE_PX_MAX,
+          step: 1,
+          parseInput: (raw) =>
+            parseConfigurableRangePxInput(raw, cls.traits.rangePx ?? 0),
+        },
       ),
     );
 
@@ -576,6 +618,7 @@ export class BalanceEditorStep {
       min?: number;
       max?: number;
       step?: number;
+      parseInput?: (raw: string) => number | null;
     },
   ): HTMLTableCellElement {
     const cell = createEl('td', compact ? 'num col-compact' : 'num');

@@ -1,8 +1,8 @@
 import type { DamageType, EntityTraits, NormalizedEntityTraits, SkillVfxDef } from '../types.ts';
-import { RANGED_ATTACK_THRESHOLD_PX } from '../types.ts';
+import { RANGED_ATTACK_MIN_PX } from '../types.ts';
 
 export function isRangedAttack(rangePx: number): boolean {
-  return rangePx > RANGED_ATTACK_THRESHOLD_PX;
+  return rangePx >= RANGED_ATTACK_MIN_PX;
 }
 
 export function deriveBasicAttackVfxFromTraits(traits: {

@@ -14,15 +14,15 @@ describe('normalizeEntityTraits', () => {
     });
   });
 
-  it('derives slash for physical at melee threshold', () => {
+  it('derives slash for physical below ranged band', () => {
     expect(
-      normalizeEntityTraits({ rangePx: 50 }).basicAttackVfx,
+      normalizeEntityTraits({ rangePx: 99 }).basicAttackVfx,
     ).toEqual({ preset: 'slash' });
   });
 
-  it('derives arrow for physical ranged', () => {
+  it('derives arrow for physical ranged band', () => {
     expect(
-      normalizeEntityTraits({ rangePx: 55 }).basicAttackVfx,
+      normalizeEntityTraits({ rangePx: 100 }).basicAttackVfx,
     ).toEqual({ preset: 'arrow', arc: true });
   });
 

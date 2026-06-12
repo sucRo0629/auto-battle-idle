@@ -4,7 +4,9 @@ import {
   applyCounterRetaliation,
   applyPassiveCounterRetaliation,
   isCounterInTriggerRange,
+  matchesCounterAttackRangeBand,
 } from './counterEffects.ts';
+import { RANGED_ATTACK_MIN_PX } from './types.ts';
 import { parseSkillEffect } from './data/validateGameData.ts';
 import type {
   CombatantState,
@@ -406,6 +408,109 @@ describe('applyPassiveCounterRetaliation', () => {
   });
 });
 
+describe('matchesCounterAttackRangeBand', () => {
+  it('allows all bands when filter is empty', () => {
+    expect(matchesCounterAttackRangeBand(0, {})).toBe(true);
+    expect(matchesCounterAttackRangeBand(RANGED_ATTACK_MIN_PX, {})).toBe(true);
+  });
+
+  it('filters melee and ranged attacks with OR semantics', () => {
+    expect(
+      matchesCounterAttackRangeBand(40, { counterMelee: true }),
+    ).toBe(true);
+    expect(
+      matchesCounterAttackRangeBand(RANGED_ATTACK_MIN_PX, {
+        counterMelee: true,
+      }),
+    ).toBe(false);
+    expect(
+      matchesCounterAttackRangeBand(RANGED_ATTACK_MIN_PX, {
+        counterRanged: true,
+      }),
+    ).toBe(true);
+    expect(
+      matchesCounterAttackRangeBand(40, {
+        counterMelee: true,
+        counterRanged: true,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe('applyCounterRetaliation range band filter', () => {
+  it('skips retaliation when incoming attack band is excluded', () => {
+    const victim = mockCombatant({
+      id: 'victim',
+      battleX: 100,
+      statusEffects: [
+        counterStatus(
+          [{ kind: 'damage', amount: { kind: 'flat', flatAmount: 20 } }],
+          { counterRangePx: 200, counterMelee: true },
+        ),
+      ],
+    });
+    const attacker = mockCombatant({
+      id: 'attacker',
+      hp: 100,
+      def: 0,
+      isEnemy: true,
+      battleX: 150,
+    });
+    const emit = vi.fn();
+
+    applyCounterRetaliation(
+      victim,
+      attacker,
+      {
+        attackKind: 'damage',
+        appliedDamage: 10,
+        attackRangePx: RANGED_ATTACK_MIN_PX,
+      },
+      passives,
+      { emit, getAllCombatants: () => [victim, attacker] },
+    );
+
+    expect(attacker.hp).toBe(100);
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('retaliates when incoming attack band matches melee-only filter', () => {
+    const victim = mockCombatant({
+      id: 'victim',
+      battleX: 100,
+      statusEffects: [
+        counterStatus(
+          [{ kind: 'damage', amount: { kind: 'flat', flatAmount: 20 } }],
+          { counterRangePx: 200, counterMelee: true },
+        ),
+      ],
+    });
+    const attacker = mockCombatant({
+      id: 'attacker',
+      hp: 100,
+      def: 0,
+      isEnemy: true,
+      battleX: 150,
+    });
+    const emit = vi.fn();
+
+    applyCounterRetaliation(
+      victim,
+      attacker,
+      {
+        attackKind: 'damage',
+        appliedDamage: 10,
+        attackRangePx: 40,
+      },
+      passives,
+      { emit, getAllCombatants: () => [victim, attacker] },
+    );
+
+    expect(attacker.hp).toBe(80);
+    expect(emit).toHaveBeenCalled();
+  });
+});
+
 describe('parseSkillEffect counter', () => {
   it('normalizes target to self and parses responses', () => {
     const effect = parseSkillEffect(
@@ -442,6 +547,24 @@ describe('parseSkillEffect counter', () => {
         'test',
       ),
     ).toThrow();
+  });
+
+  it('parses counterMelee and counterRanged flags', () => {
+    const effect = parseSkillEffect(
+      {
+        type: 'counter',
+        durationSec: 5,
+        counterMelee: true,
+        responses: [
+          { kind: 'damage', amount: { kind: 'flat', flatAmount: 1 } },
+        ],
+      },
+      'test',
+    );
+    expect(effect.type).toBe('counter');
+    if (effect.type !== 'counter') return;
+    expect(effect.counterMelee).toBe(true);
+    expect(effect.counterRanged).toBeUndefined();
   });
 
   it('rejects multiLock targetShape', () => {

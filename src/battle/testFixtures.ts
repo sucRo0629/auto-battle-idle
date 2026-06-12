@@ -8,7 +8,7 @@ export function mockMeleeTraits(): NormalizedEntityTraits {
   };
 }
 
-export function mockRangedTraits(rangePx = 55): NormalizedEntityTraits {
+export function mockRangedTraits(rangePx = 100): NormalizedEntityTraits {
   return {
     rangePx,
     damageType: 'physical',

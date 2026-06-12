@@ -248,13 +248,7 @@ describe('heal basic attack approach', () => {
   });
 
   it('does not skip approach while a wounded ally is out of heal range', () => {
-    const cleric = mockHealCleric(20, {
-      traits: {
-        rangePx: 90,
-        damageType: 'magic',
-        basicAttackVfx: { preset: 'orb' },
-      },
-    });
+    const cleric = mockHealCleric(20);
     const guardian = mockGuardian(200, 25);
     const players = [cleric, guardian];
     const rangedEnemy = {
@@ -306,7 +300,7 @@ describe('heal basic attack approach', () => {
       [rangedEnemy],
       gameData,
     );
-    expect(approachX).toBeGreaterThanOrEqual(200 - 90);
+    expect(approachX).toBeGreaterThanOrEqual(200 - 128);
   });
 });
 

@@ -22,6 +22,10 @@ describe('basicAttackPreview', () => {
     expect(computeBasicAttackDps(10, 'fast', LEVEL_CURVES)).toBe(6.25);
   });
 
+  it('applies passive attack speed multiplier to DPS', () => {
+    expect(computeBasicAttackDps(10, 'normal', LEVEL_CURVES, 1.25)).toBe(6.25);
+  });
+
   it('returns zero DPS when atk is zero', () => {
     expect(computeBasicAttackDps(0, 'normal', LEVEL_CURVES)).toBe(0);
   });

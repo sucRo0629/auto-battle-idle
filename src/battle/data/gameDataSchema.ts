@@ -193,7 +193,7 @@ export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
   lowestHpEnemy: "HP最低の敵",
   mostDamagedAlly: "最もダメージを受けた味方",
   self: "自身",
-  rangedAttackingEnemy: "遠距離攻撃の敵",
+  rangedAttackingEnemy: "遠隔帯の敵",
   magicAttackingEnemy: "魔法攻撃の敵",
   highestAtkEnemy: "ATK最高の敵",
   lowestDefEnemy: "DEF最低の敵",
