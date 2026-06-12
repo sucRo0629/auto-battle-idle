@@ -10,6 +10,7 @@ describe('normalizeEntityTraits', () => {
       rangePx: 0,
       damageType: 'physical',
       basicAttackVfx: { preset: 'slash' },
+      stationary: false,
     });
   });
 

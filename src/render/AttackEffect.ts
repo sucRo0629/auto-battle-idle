@@ -1,6 +1,10 @@
 import type { SkillVfxDef, SkillVfxPresetId } from "../battle/types.ts";
 import type { CombatantLayout } from "./IBattleRenderer.ts";
 import type { BattleHudTheme } from "./battleHudTheme.ts";
+import {
+  CHAIN_LIGHTNING_FADE_OUT_MS,
+  chainSegmentFadeAlpha,
+} from "./chainFade.ts";
 import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
 
 const PRESET_DURATION_MS: Record<SkillVfxPresetId, number> = {
@@ -9,12 +13,14 @@ const PRESET_DURATION_MS: Record<SkillVfxPresetId, number> = {
   orb: 380,
   arrow: 420,
   healRise: 520,
-  chainLightning: 400,
+  chainLightning: 760,
   impale: 350,
 };
 
 const HEAL_RISE_LINE_COUNT = 6;
 const CHAIN_LIGHTNING_TAIL_COUNT = 5;
+
+export { CHAIN_LIGHTNING_FADE_OUT_MS } from "./chainFade.ts";
 
 interface EffectEntry {
   sourceId: string;
@@ -22,6 +28,24 @@ interface EffectEntry {
   spec: SkillVfxDef;
   elapsedMs: number;
   durationMs: number;
+  /** 同一連鎖攻撃のセグメントを 1 本ずつ表示するためのグループ ID */
+  chainGroupId?: string;
+  /** 次セグメントで置き換えられた後のフェードアウト経過 ms */
+  fadeOutElapsedMs?: number;
+  /** 連鎖 1 体目 segment: 先端に符を描く */
+  showTalisman?: boolean;
+  /** 連鎖 segment: 命中と同時に完結形を表示（トラベルアニメなし） */
+  chainInstantHit?: boolean;
+  /** staged chain: 飛行フェーズの ms */
+  travelDurationMs?: number;
+}
+
+export interface AttackEffectSpawnOptions {
+  chainGroupId?: string;
+  showTalisman?: boolean;
+  chainInstantHit?: boolean;
+  travelDurationMs?: number;
+  segmentDurationMs?: number;
 }
 
 function durationForSpec(spec: SkillVfxDef): number {
@@ -62,21 +86,68 @@ function getCombatantFoot(
 export class AttackEffectManager {
   private effects: EffectEntry[] = [];
 
-  spawn(sourceId: string, targetId: string, spec: SkillVfxDef): void {
+  spawn(
+    sourceId: string,
+    targetId: string,
+    spec: SkillVfxDef,
+    options?: AttackEffectSpawnOptions,
+  ): void {
+    const chainGroupId = options?.chainGroupId;
+    if (spec.preset === "chainLightning" && chainGroupId) {
+      for (const effect of this.effects) {
+        if (
+          effect.spec.preset === "chainLightning" &&
+          effect.chainGroupId === chainGroupId &&
+          effect.fadeOutElapsedMs === undefined
+        ) {
+          effect.fadeOutElapsedMs = 0;
+        }
+      }
+    }
+    const segmentDurationMs =
+      options?.segmentDurationMs ?? durationForSpec(spec);
+    const travelDurationMs =
+      options?.travelDurationMs ?? segmentDurationMs;
     this.effects.push({
       sourceId,
       targetId,
       spec,
       elapsedMs: 0,
-      durationMs: durationForSpec(spec),
+      durationMs: segmentDurationMs,
+      travelDurationMs,
+      ...(chainGroupId ? { chainGroupId } : {}),
+      ...(options?.showTalisman ? { showTalisman: true } : {}),
+      ...(options?.chainInstantHit ? { chainInstantHit: true } : {}),
     });
+  }
+
+  fadeLatestChainSegment(chainGroupId: string): void {
+    const segments = this.effects.filter(
+      (effect) =>
+        effect.spec.preset === "chainLightning" &&
+        effect.chainGroupId === chainGroupId &&
+        effect.fadeOutElapsedMs === undefined,
+    );
+    const latest = segments[segments.length - 1];
+    if (latest) {
+      latest.fadeOutElapsedMs = 0;
+    }
   }
 
   tick(deltaMs: number): void {
     for (const effect of this.effects) {
-      effect.elapsedMs += deltaMs;
+      if (effect.fadeOutElapsedMs !== undefined) {
+        effect.fadeOutElapsedMs += deltaMs;
+      } else {
+        effect.elapsedMs += deltaMs;
+      }
     }
-    this.effects = this.effects.filter((e) => e.elapsedMs < e.durationMs);
+    this.effects = this.effects.filter((e) => {
+      if (e.fadeOutElapsedMs !== undefined) {
+        return e.fadeOutElapsedMs < CHAIN_LIGHTNING_FADE_OUT_MS;
+      }
+      return e.elapsedMs < e.durationMs;
+    });
   }
 
   draw(
@@ -91,21 +162,26 @@ export class AttackEffectManager {
       const target = layouts.find((l) => l.id === effect.targetId);
       if (!source || !target) continue;
 
-      const progress = Math.min(1, effect.elapsedMs / effect.durationMs);
+      const travelDurationMs = effect.travelDurationMs ?? effect.durationMs;
+      const travelProgress =
+        effect.fadeOutElapsedMs !== undefined ||
+        (effect.chainInstantHit && !effect.showTalisman)
+          ? 1
+          : Math.min(1, effect.elapsedMs / travelDurationMs);
       const start = getCombatantCenter(source, spriteSize, scale);
       const end = getCombatantCenter(target, spriteSize, scale);
 
       switch (effect.spec.preset) {
         case "healRise": {
           const foot = getCombatantFoot(target, spriteSize, scale);
-          this.drawHealRise(ctx, foot, progress, spriteSize, theme);
+          this.drawHealRise(ctx, foot, travelProgress, spriteSize, theme);
           break;
         }
         case "slash":
-          this.drawSlashSwing(ctx, start, end, progress, theme);
+          this.drawSlashSwing(ctx, start, end, travelProgress, theme);
           break;
         case "slashHit":
-          this.drawSlashHit(ctx, start, end, progress, theme);
+          this.drawSlashHit(ctx, start, end, travelProgress, theme);
           break;
         case "orb":
           this.drawOrb(
@@ -113,7 +189,7 @@ export class AttackEffectManager {
             start.x,
             end.x,
             getCombatantBaseCenterY(target, spriteSize),
-            progress,
+            travelProgress,
             theme,
           );
           break;
@@ -122,17 +198,30 @@ export class AttackEffectManager {
             ctx,
             start,
             end,
-            progress,
+            travelProgress,
             scale,
             theme,
             effect.spec.arc ?? false,
           );
           break;
         case "chainLightning":
-          this.drawChainLightning(ctx, start, end, progress, theme);
+          this.drawChainLightning(
+            ctx,
+            start,
+            end,
+            travelProgress,
+            theme,
+            {
+              fadeOutElapsedMs: effect.fadeOutElapsedMs,
+              showTalisman: effect.showTalisman,
+              chainInstantHit: effect.chainInstantHit,
+              elapsedMs: effect.elapsedMs,
+              durationMs: effect.durationMs,
+            },
+          );
           break;
         case "impale":
-          this.drawImpale(ctx, start, end, progress, scale, theme);
+          this.drawImpale(ctx, start, end, travelProgress, scale, theme);
           break;
       }
     }
@@ -329,24 +418,54 @@ export class AttackEffectManager {
     ctx.restore();
   }
 
-  /** 連鎖：直線雷（玉＋尾） */
+  /** 連鎖：直線雷（玉＋尾）。1 体目は符のみ（使用者→ターゲット）、以降は命中同期の完結 segment */
   private drawChainLightning(
     ctx: CanvasRenderingContext2D,
     start: { x: number; y: number },
     end: { x: number; y: number },
     progress: number,
     theme: BattleHudTheme,
+    opts: {
+      fadeOutElapsedMs?: number;
+      showTalisman?: boolean;
+      chainInstantHit?: boolean;
+      elapsedMs: number;
+      durationMs: number;
+    },
   ): void {
+    const beamAngle = Math.atan2(end.y - start.y, end.x - start.x);
+    const fade = opts.chainInstantHit
+      ? chainLightningFadeAlpha(progress, opts.fadeOutElapsedMs)
+      : chainSegmentFadeAlpha(
+          opts.elapsedMs,
+          opts.durationMs,
+          opts.fadeOutElapsedMs,
+        );
+
+    if (opts.showTalisman) {
+      const headX = start.x + (end.x - start.x) * progress;
+      const headY = start.y + (end.y - start.y) * progress;
+      this.drawChainTalisman(ctx, headX, headY, beamAngle, fade);
+      return;
+    }
+
     const headX = start.x + (end.x - start.x) * progress;
     const headY = start.y + (end.y - start.y) * progress;
-    const fade = 1 - progress * progress;
 
     ctx.save();
     ctx.lineCap = "round";
 
     ctx.globalAlpha = fade * theme.attackChainLightningGlowAlpha;
     ctx.strokeStyle = theme.attackChainLightningGlow;
-    ctx.lineWidth = 5;
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(headX, headY);
+    ctx.stroke();
+
+    ctx.globalAlpha = fade * 0.35;
+    ctx.strokeStyle = "rgba(0, 0, 0, 0.35)";
+    ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(headX, headY);
@@ -367,7 +486,7 @@ export class AttackEffectManager {
       const tx = start.x + (end.x - start.x) * tailT;
       const ty = start.y + (end.y - start.y) * tailT;
       const segLen = tailSpan * (1 - slot) * 0.35;
-      const angle = Math.atan2(end.y - start.y, end.x - start.x);
+      const angle = beamAngle;
       const perp = angle + Math.PI / 2;
       const jitter = (i % 2 === 0 ? 1 : -1) * 3;
 
@@ -397,6 +516,35 @@ export class AttackEffectManager {
     ctx.beginPath();
     ctx.arc(headX - 1, headY - 1, 1.5, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.restore();
+  }
+
+  /** 連鎖 1 体目: 先端の下に符（紙札）プレースホルダー */
+  private drawChainTalisman(
+    ctx: CanvasRenderingContext2D,
+    headX: number,
+    headY: number,
+    beamAngle: number,
+    fade: number,
+  ): void {
+    const talismanW = 11;
+    const talismanH = 15;
+
+    ctx.save();
+    ctx.translate(headX, headY);
+    ctx.rotate(beamAngle);
+    ctx.globalAlpha = fade;
+
+    ctx.fillStyle = "#f5e6c8";
+    ctx.fillRect(-talismanW / 2, -talismanH / 2, talismanW, talismanH);
+    ctx.strokeStyle = "#c0392b";
+    ctx.lineWidth = 1;
+    ctx.strokeRect(-talismanW / 2, -talismanH / 2, talismanW, talismanH);
+    ctx.beginPath();
+    ctx.moveTo(0, -talismanH / 2 + 2);
+    ctx.lineTo(0, talismanH / 2 - 2);
+    ctx.stroke();
 
     ctx.restore();
   }

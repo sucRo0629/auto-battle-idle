@@ -44,6 +44,7 @@ import {
   buildPendingHitsFromResolution,
   findCombatantById,
 } from './pendingSkillHits.ts';
+import { usesStagedChainVfx } from './resolveEffectVfxPreset.ts';
 import { resolveSkillDamageType } from './damageTypeUtils.ts';
 import {
   buildSkillSequence,
@@ -63,10 +64,19 @@ import {
 function skillHitEventFields(
   hitIndex?: number,
   vfxSourceId?: string,
-): { hitIndex?: number; vfxSourceId?: string } {
+  isLastChainSegment?: boolean,
+  stagedChainVfx?: boolean,
+): {
+  hitIndex?: number;
+  vfxSourceId?: string;
+  isLastChainSegment?: boolean;
+  stagedChainVfx?: boolean;
+} {
   return {
     ...(hitIndex !== undefined ? { hitIndex } : {}),
     ...(vfxSourceId !== undefined ? { vfxSourceId } : {}),
+    ...(isLastChainSegment ? { isLastChainSegment: true } : {}),
+    ...(stagedChainVfx ? { stagedChainVfx: true } : {}),
   };
 }
 
@@ -158,6 +168,12 @@ export class SkillExecutor {
 
       const spread = resolution!.spreadDurationSec;
       if (spread !== undefined && spread > 0) {
+        const stagedChainVfx = usesStagedChainVfx(
+          skill,
+          effectDef,
+          actor,
+          cd.slotKind,
+        );
         const pending = buildPendingHitsFromResolution(
           resolution!,
           this.deps.getBattleTimeSec(),
@@ -165,6 +181,7 @@ export class SkillExecutor {
           skill,
           effectDef,
           cd,
+          { stagedChainVfx, effectIndex },
         );
         if (pending.length > 0) {
           this.deps.enqueuePendingHits(pending);
@@ -301,7 +318,12 @@ export class SkillExecutor {
       slotKind: hit.slotKind,
     };
 
-    const effectIndex = skill.effect.findIndex((def) => def === hit.effectDef);
+    const effectIndex =
+      hit.effectIndex >= 0 ? hit.effectIndex : 0;
+    const isLastChainSegment =
+      hit.segmentCount !== undefined &&
+      hit.hitIndex === hit.segmentCount - 1;
+    const stagedChainVfx = hit.travelDurationSec !== undefined;
     for (const entry of hit.targets) {
       const target = findCombatantById(entry.targetId, allies, enemies);
       if (!target?.isAlive) continue;
@@ -311,10 +333,13 @@ export class SkillExecutor {
         skill,
         hit.effectDef,
         cd,
-        effectIndex >= 0 ? effectIndex : 0,
+        effectIndex,
         entry.powerMultiplierOverride,
         hit.hitIndex,
         hit.vfxSourceId,
+        {},
+        isLastChainSegment,
+        stagedChainVfx,
       );
     }
   }
@@ -389,6 +414,8 @@ export class SkillExecutor {
     hitIndex?: number,
     vfxSourceId?: string,
     damageContext: PassiveDamageContext = {},
+    isLastChainSegment?: boolean,
+    stagedChainVfx?: boolean,
   ): boolean {
     if (effectDef.type === 'move') {
       return false;
@@ -457,7 +484,7 @@ export class SkillExecutor {
         effectIndex,
         amount: finalDamage,
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId),
+        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
       });
       this.emit({ type: 'hurt', targetId: target.id });
       if (lethal) {
@@ -516,7 +543,7 @@ export class SkillExecutor {
           effectIndex,
           statusLabel: 'hot',
           range: effectDef.range,
-          ...skillHitEventFields(hitIndex, vfxSourceId),
+          ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
         });
         return true;
       }
@@ -540,7 +567,7 @@ export class SkillExecutor {
           effectIndex,
           amount: removed,
           range: effectDef.range,
-          ...skillHitEventFields(hitIndex, vfxSourceId),
+          ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
         });
         return true;
       }
@@ -592,7 +619,7 @@ export class SkillExecutor {
         effectIndex,
         amount,
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId),
+        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
       });
       return true;
     }
@@ -631,7 +658,7 @@ export class SkillExecutor {
             effectIndex,
             amount: grant,
             range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId),
+            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
           });
           return true;
         }
@@ -664,7 +691,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: subKind,
             range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId),
+            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
           });
           return true;
         }
@@ -695,7 +722,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: 'damageTakenToHeal',
             range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId),
+            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
           });
           return true;
         }
@@ -751,7 +778,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: 'dot',
             range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId),
+            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
           });
           return true;
         }
@@ -774,7 +801,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: 'stun',
             range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId),
+            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
           });
           return true;
         }
@@ -846,7 +873,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: statusLabels.join(', '),
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId),
+        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
       });
       if (!isBuff && actor.isEnemy === false && target.isEnemy) {
         this.deps.onDebuffApplied?.(actor);
@@ -871,7 +898,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'stun',
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId),
+        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
       });
       return true;
     }
@@ -889,7 +916,7 @@ export class SkillExecutor {
         effect: 'knockback',
         effectIndex,
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId),
+        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
       });
       return true;
     }
@@ -914,7 +941,7 @@ export class SkillExecutor {
         effectIndex,
         amount: removed,
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId),
+        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
       });
       return true;
     }
@@ -943,7 +970,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'block',
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId),
+        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
       });
       return true;
     }
@@ -967,7 +994,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'counter',
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId),
+        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
       });
       return true;
     }
@@ -1000,7 +1027,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'dot',
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId),
+        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
       });
       return true;
     }

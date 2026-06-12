@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyStunToTarget } from '../ccEffects.ts';
+import { resolveAttackBattleX } from '../combatPosition.ts';
 import type { ActiveSkillDef, CombatantState, GameData, SkillCooldown } from '../types.ts';
 import { SkillExecutor } from './SkillExecutor.ts';
 import {
@@ -386,7 +387,7 @@ describe('skillSequence', () => {
       executor.applyScheduledStep(step, [actor], [enemy]);
     });
 
-    expect(actor.battleX).toBe(50);
+    expect(actor.battleX).toBe(resolveAttackBattleX(actor, enemy.battleX, data));
     expect(events.length).toBe(1);
     expect(enemy.hp).toBeLessThan(100);
   });

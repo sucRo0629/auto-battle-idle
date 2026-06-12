@@ -1,6 +1,8 @@
 export type AnimState = 'idle' | 'attack' | 'move' | 'death';
 
 import type { Role, StatusEffect, SkillVfxDef } from '../battle/types.ts';
+import type { AttackEffectSpawnOptions } from './AttackEffect.ts';
+import type { CurseMarkSpawnOptions } from './curseMarkEffect.ts';
 
 export interface CombatantLayout {
   id: string;
@@ -34,7 +36,11 @@ export interface IBattleRenderer {
     actorId: string,
     targetId: string,
     vfx: SkillVfxDef,
+    options?: AttackEffectSpawnOptions,
   ): void;
+  playCurseMark(targetId: string, options?: CurseMarkSpawnOptions): void;
+  fadeCurseMark(targetId: string): void;
+  fadeLatestChainSegment(chainGroupId: string): void;
   showDamagePopup(
     targetId: string,
     amount: number,

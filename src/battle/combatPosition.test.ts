@@ -361,7 +361,7 @@ describe('combatPosition', () => {
         { type: 'move', target: { kind: "distance", side: "enemy", order: "nearest" }, moveDurationSec: 0.2, moveMode: 'engage' },
         gameData,
       ),
-    ).toBe(280);
+    ).toBe(resolveAttackBattleX(sword, enemy.battleX, gameData));
     expect(
       resolveMoveBattleX(
         spear,
@@ -369,7 +369,7 @@ describe('combatPosition', () => {
         { type: 'move', target: { kind: "distance", side: "enemy", order: "nearest" }, moveDurationSec: 0.2, moveMode: 'engage' },
         gameData,
       ),
-    ).toBe(250);
+    ).toBe(resolveAttackBattleX(spear, enemy.battleX, gameData));
     expect(
       resolveMoveBattleX(
         sword,

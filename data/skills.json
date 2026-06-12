@@ -581,7 +581,12 @@
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
-          }
+          },
+          "targetShape": "chain",
+          "chainCount": 3,
+          "chainMaxDistancePx": 80,
+          "chainPowerStepMultiplier": 0.85,
+          "chainPowerStepMode": "multiply"
         }
       ],
       "trigger": {
@@ -893,7 +898,10 @@
           },
           "damageType": "physical"
         }
-      ]
+      ],
+      "vfx": {
+        "preset": "slash"
+      }
     },
     {
       "id": "at_assassin_active_2",
@@ -924,7 +932,7 @@
             "order": "nearest"
           },
           "range": 100,
-          "behindOffsetPx": 10
+          "behindOffsetPx": 32
         },
         {
           "target": {
@@ -938,9 +946,22 @@
             "kind": "atkBased",
             "atkScale": 1
           },
-          "waitAfterSec": 0.5
+          "waitAfterSec": 1.5
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "move",
+          "moveMode": "engage",
+          "moveDurationSec": 0.25
         }
-      ]
+      ],
+      "vfx": {
+        "preset": "slash"
+      }
     },
     {
       "id": "at_lancer_active_1",
@@ -1288,20 +1309,19 @@
       "name": "連符",
       "trigger": {
         "kind": "time",
-        "value": 9
+        "value": 8
       },
       "effect": [
         {
           "targetShape": "chain",
-          "chainCount": 3,
-          "chainMaxDistancePx": 5,
+          "chainCount": 4,
+          "chainMaxDistancePx": 80,
           "type": "damage",
           "damageType": "magic",
           "amount": {
             "kind": "atkBased",
             "atkScale": 0.75
           },
-          "range": 50,
           "vfx": {
             "preset": "chainLightning"
           },
@@ -1310,6 +1330,22 @@
             "side": "enemy",
             "order": "nearest"
           }
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "debuff",
+          "debuffSubKind": "stun",
+          "debuffStat": "def",
+          "debuffMultiplier": 0.8,
+          "debuffDurationSec": 5,
+          "durationSec": 0.2,
+          "targetShape": "chain",
+          "chainCount": 4,
+          "chainMaxDistancePx": 80
         }
       ]
     },
@@ -1340,7 +1376,10 @@
             "order": "nearest"
           }
         }
-      ]
+      ],
+      "vfx": {
+        "preset": "orb"
+      }
     },
     {
       "id": "at_geomancer_active_1",

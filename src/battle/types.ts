@@ -32,6 +32,8 @@ export interface EntityTraits {
   rangePx?: number;
   damageType?: DamageType;
   basicAttackVfx?: SkillVfxDef;
+  /** 接敵後も spawn 位置を維持（訓練用ダミー等） */
+  stationary?: boolean;
 }
 
 /** ロード後の正規化済み traits（戦闘用・PC/敵共通） */
@@ -39,6 +41,8 @@ export interface NormalizedEntityTraits {
   rangePx: number;
   damageType: DamageType;
   basicAttackVfx: SkillVfxDef;
+  /** 省略時は false（接敵後も移動する） */
+  stationary?: boolean;
 }
 
 /** @deprecated EntityTraits / NormalizedEntityTraits に置換 */
@@ -612,6 +616,8 @@ interface SkillEffectCommon {
   chainMaxDistancePx?: number;
   chainPowerStepMultiplier?: number;
   chainPowerStepMode?: PowerStepMode;
+  /** chain 時: hit 分散秒（未指定 = 0.15×chainCount + 0.5 秒を 2 体以上命中時に自動適用） */
+  chainDurationSec?: number;
   /** scatter 時必須: 命中判定半径（乱打半径） */
   scatterRadiusPx?: number;
   /** scatter 任意: 着弾位置の分散半径（±px）。未指定 = scatterRadiusPx */
@@ -664,11 +670,20 @@ export interface PendingSkillHit {
   skillId: string;
   skillName: string;
   effectDef: SkillEffectDef;
+  effectIndex: number;
   slotKind: SkillSlotKind;
   hitIndex: number;
   /** chain/pierce 等: VFX セグメント起点 */
   vfxSourceId?: string;
   targets: PendingSkillHitTarget[];
+  /** staged chain: 飛行 VFX 開始時刻 */
+  vfxStartAtBattleSec?: number;
+  /** staged chain: 1 レグの飛行時間（秒） */
+  travelDurationSec?: number;
+  /** staged chain: セグメント総数 */
+  segmentCount?: number;
+  /** tick 用: VFX 開始済み */
+  vfxSpawned?: boolean;
 }
 
 export interface DamageSkillEffect extends SkillEffectCommon {

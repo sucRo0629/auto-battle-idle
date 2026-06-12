@@ -394,7 +394,6 @@ export function resolveMoveBattleX(
   gameData: GameData,
 ): number {
   const mode = effect.moveMode ?? 'engage';
-  const range = resolveMaxEffectiveRangePx(actor, gameData);
 
   if (mode === 'toAnchor') {
     return anchor.battleX;
@@ -404,13 +403,13 @@ export function resolveMoveBattleX(
     if (mode === 'behindTarget') {
       return anchor.battleX - (effect.behindOffsetPx ?? 0);
     }
-    return anchor.battleX + range;
+    return resolveAttackBattleX(actor, anchor.battleX, gameData);
   }
 
   if (mode === 'behindTarget') {
     return anchor.battleX + (effect.behindOffsetPx ?? 0);
   }
-  return anchor.battleX - range;
+  return resolveAttackBattleX(actor, anchor.battleX, gameData);
 }
 
 /** プレイヤー: 近接帯 contact − standoff − range / 遠隔 contact − range。敵: contact + range（近接は standoff） */

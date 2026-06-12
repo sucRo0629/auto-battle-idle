@@ -59,6 +59,8 @@
     "exp": 0,
     "basicAttackSkillId": "test_dummy_basic_attack",
     "attackSpeedTier": "normal",
-    "traits": {}
+    "traits": {
+      "stationary": true
+    }
   }
 ]

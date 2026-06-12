@@ -21,6 +21,7 @@ import {
   targetSpecFaction,
 } from './skills/targetSpec.ts';
 import { getAttackablePool, isWithinSkillRange } from './skills/rangeUtils.ts';
+import { isStationaryUnit } from './data/entityTraits.ts';
 import { applyFormationRowApproachSpacing } from './battleLayout.ts';
 import {
   compareFormationRowSlot,
@@ -584,6 +585,7 @@ export function shouldSkipEngagedAutoApproach(
   enemies: CombatantState[],
   gameData: GameData,
 ): boolean {
+  if (isStationaryUnit(unit)) return true;
   if (unit.isEnemy) {
     return (
       resolveEnemyAttackTargetPlayer(unit, players, enemies, gameData) !==

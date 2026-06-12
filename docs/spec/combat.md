@@ -203,7 +203,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 1. effect のターゲット陣営（`spec.side` 等）と一致する `targetRuleOverrideApplyTo` を持つパッシブのみ `targetRuleOverride` を適用（`kind: self` は除外。配列の後ろが優先）。通常攻撃・接近は敵向けスコープ
 2. スキル `range`（未指定 = 使用者射程）で **攻撃可能プール** を絞り込み
 3. 各 effect の `targetShape` に従い **発動 tick で全 hit を一括解決**（`resolveEffectResolution`）
-4. `scatter` / `pierce`（`pierceDurationSec` あり）は `pendingHitQueue` で **適用のみ時間分散**（再ターゲットなし）
+4. `scatter` / `pierce`（`pierceDurationSec` あり）/ `chain`（2 体以上命中時、既定または `chainDurationSec`）は `pendingHitQueue` で **適用のみ時間分散**（再ターゲットなし）
 
 
 | 形状          | 挙動                                                                                   |
@@ -212,7 +212,9 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | `aoe`       | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散）                     |
 | `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打）                  |
 | `pierce`    | **`order: selfOrigin` 必須**。使用者の向き（味方 +X / 敵 −X）へ `range` px の前方セグメント内を手前→奥に命中。`piercePowerStepMultiplier` で威力減衰、`pierceDurationSec` で適用分散可 |
-| `chain`     | anchor から同陣営へ距離内で連鎖                                                                  |
+| `chain`     | anchor から同陣営へ距離内で連鎖。直前 hop と同じユニットには飛ばない。範囲内に未命中がいれば最も近い未命中を優先（全員命中済みなら再訪問可）。`chainPowerStepMultiplier` で威力減衰、`chainDurationSec`（未指定時 `0.15×chainCount+0.5` 秒）で **スキル発動から最終命中まで** の総時間分散 |
+
+`chain` + VFX `chainLightning`（符術士など）では、各レグ = `chainDurationSec ÷ 跳数` 秒。1 跳目は符が飛んでから着弾（封＋ダメージ）、以降は前ターゲットから雷線が伸びて着弾。封のフェードアウトは雷線セグメントと同期（320ms）。
 | `scatter`   | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
 
 

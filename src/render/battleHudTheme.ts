@@ -260,17 +260,17 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     attackChainLightningCore: readString(
       style,
       '--attack-chain-lightning-core',
-      '#e8f4ff',
+      '#fff9c4',
     ),
     attackChainLightningGlow: readString(
       style,
       '--attack-chain-lightning-glow',
-      '#5dade2',
+      '#5b6cff',
     ),
     attackChainLightningTail: readString(
       style,
       '--attack-chain-lightning-tail',
-      '#a9cce3',
+      '#8fa8ff',
     ),
     attackChainLightningCoreAlpha: readNumber(
       style,
@@ -280,12 +280,12 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     attackChainLightningGlowAlpha: readNumber(
       style,
       '--attack-chain-lightning-glow-alpha',
-      0.55,
+      0.80,
     ),
     attackChainLightningTailAlpha: readNumber(
       style,
       '--attack-chain-lightning-tail-alpha',
-      0.75,
+      0.85,
     ),
     attackImpaleShaft: readString(style, '--attack-impale-shaft', '#b8c4ce'),
     attackImpaleTip: readString(style, '--attack-impale-tip', '#5d6d7e'),

@@ -203,7 +203,10 @@
     "flavorJa": "敵の背後へ忍び込み、二刃で仕留める影",
     "formationRow": "front",
     "traits": {
-      "rangePx": 5
+      "rangePx": 5,
+      "basicAttackVfx": {
+        "preset": "slash"
+      }
     },
     "maxHp": 100,
     "atk": 20,
@@ -425,7 +428,10 @@
     "formationRow": "back",
     "traits": {
       "rangePx": 150,
-      "damageType": "magic"
+      "damageType": "magic",
+      "basicAttackVfx": {
+        "preset": "chainLightning"
+      }
     },
     "maxHp": 78,
     "atk": 22,
@@ -439,8 +445,7 @@
       {
         "level": 0,
         "skillIds": [
-          "at_enchanter_active_1",
-          "at_enchanter_active_2"
+          "at_enchanter_active_1"
         ]
       }
     ],

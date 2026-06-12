@@ -404,6 +404,19 @@ function parseOptionalNumber(
   return value;
 }
 
+function parseOptionalBoolean(
+  obj: Record<string, unknown>,
+  key: string,
+  context: string,
+): boolean | undefined {
+  const value = obj[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== 'boolean') {
+    invalidField(context, key, 'must be a boolean');
+  }
+  return value;
+}
+
 function parseResourceAmountSpec(
   raw: unknown,
   context: string,
@@ -513,6 +526,7 @@ function parseTargetShapeFields(
     | 'chainMaxDistancePx'
     | 'chainPowerStepMultiplier'
     | 'chainPowerStepMode'
+    | 'chainDurationSec'
     | 'scatterRadiusPx'
     | 'scatterSpreadRadiusPx'
     | 'scatterHitCount'
@@ -538,6 +552,7 @@ function parseTargetShapeFields(
     'chainMaxDistancePx',
     'chainPowerStepMultiplier',
     'chainPowerStepMode',
+    'chainDurationSec',
     'scatterRadiusPx',
     'scatterSpreadRadiusPx',
     'scatterHitCount',
@@ -589,6 +604,7 @@ function parseTargetShapeFields(
       'chainMaxDistancePx',
       'chainPowerStepMultiplier',
       'chainPowerStepMode',
+      'chainDurationSec',
     ] as const) {
       if (obj[key] !== undefined) {
         invalidField(context, key, 'only allowed when targetShape is chain');
@@ -679,6 +695,7 @@ function parseTargetShapeFields(
         'chainPowerStepMultiplier',
         'chainPowerStepMode',
       ),
+      ...parseOptionalPositiveNumber(obj, context, 'chainDurationSec'),
     };
   }
 
@@ -2589,6 +2606,10 @@ function parseEntityTraits(
   const basicAttackVfx = parseSkillVfx(obj.basicAttackVfx, `${context}.basicAttackVfx`);
   if (basicAttackVfx !== undefined) {
     traits.basicAttackVfx = basicAttackVfx;
+  }
+  const stationary = parseOptionalBoolean(obj, 'stationary', context);
+  if (stationary !== undefined) {
+    traits.stationary = stationary;
   }
   return traits;
 }

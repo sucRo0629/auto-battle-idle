@@ -25,7 +25,7 @@ export function normalizeEntityTraits(
   const damageType = raw?.damageType ?? 'physical';
   const basicAttackVfx =
     raw?.basicAttackVfx ?? deriveBasicAttackVfxFromTraits({ rangePx, damageType });
-  return { rangePx, damageType, basicAttackVfx };
+  return { rangePx, damageType, basicAttackVfx, stationary: raw?.stationary ?? false };
 }
 
 export function copyNormalizedTraits(
@@ -35,5 +35,10 @@ export function copyNormalizedTraits(
     rangePx: traits.rangePx,
     damageType: traits.damageType,
     basicAttackVfx: { ...traits.basicAttackVfx },
+    stationary: traits.stationary,
   };
+}
+
+export function isStationaryUnit(unit: { traits: NormalizedEntityTraits }): boolean {
+  return unit.traits.stationary === true;
 }

@@ -961,21 +961,21 @@ function appendEffectSequenceTimingFields(
   patchEffect: (patch: EffectPatch, options?: { rerender?: boolean }) => void,
   isLastEffect: boolean,
 ): void {
-  if (isLastEffect) return;
-
   const section = createSection('シーケンス（タイミング）');
   parent.appendChild(section);
   section.appendChild(
     createEl(
       'p',
       'editor-hint',
-      'move を含むスキル: この effect 適用後、次の effect まで待機する秒数です。',
+      isLastEffect
+        ? 'move を含むスキル: 最終 effect 適用後、スキルモーションを維持する秒数です（接敵 clamp による即座の復帰を防ぐ）。'
+        : 'move を含むスキル: この effect 適用後、次の effect まで待機する秒数です。',
     ),
   );
   const grid = appendGrid(section);
   grid.appendChild(
     createFieldRow(
-      '次の効果まで待機（秒）',
+      isLastEffect ? '適用後の待機（秒）' : '次の効果まで待機（秒）',
       createNumberInput(
         effect.waitAfterSec ?? 0,
         (waitAfterSec) =>
@@ -2600,6 +2600,7 @@ export class SkillEditorStep {
               delete next.chainMaxDistancePx;
               delete next.chainPowerStepMultiplier;
               delete next.chainPowerStepMode;
+              delete next.chainDurationSec;
               delete next.scatterRadiusPx;
               delete next.scatterSpreadRadiusPx;
               delete next.scatterHitCount;
@@ -2638,6 +2639,7 @@ export class SkillEditorStep {
             delete next.chainMaxDistancePx;
             delete next.chainPowerStepMultiplier;
             delete next.chainPowerStepMode;
+            delete next.chainDurationSec;
             delete next.scatterRadiusPx;
             delete next.scatterSpreadRadiusPx;
             delete next.scatterHitCount;
@@ -2836,6 +2838,75 @@ export class SkillEditorStep {
                   }) as SkillEffectDef,
               ),
             { min: 1, step: 10 },
+          ),
+        ),
+      );
+      grid.appendChild(
+        createFieldRow(
+          '威力減衰倍率（任意）',
+          createNumberInput(
+            effect.chainPowerStepMultiplier ?? 0,
+            (chainPowerStepMultiplier) =>
+              patchEffect(
+                (prev) => {
+                  const next: SkillEffectDef = {
+                    ...prev,
+                    targetShape: 'chain',
+                  };
+                  if (chainPowerStepMultiplier > 0) {
+                    next.chainPowerStepMultiplier = chainPowerStepMultiplier;
+                    next.chainPowerStepMode =
+                      prev.chainPowerStepMode ?? 'multiply';
+                  } else {
+                    delete next.chainPowerStepMultiplier;
+                    delete next.chainPowerStepMode;
+                  }
+                  return next;
+                },
+              ),
+            { min: 0, step: 0.05, emptyWhen: 0, placeholder: '未設定' },
+          ),
+        ),
+      );
+      if ((effect.chainPowerStepMultiplier ?? 0) > 0) {
+        grid.appendChild(
+          createFieldRow(
+            '減衰方式',
+            createSelect(
+              effect.chainPowerStepMode ?? 'multiply',
+              POWER_STEP_MODES.map((value) => ({
+                value,
+                label: POWER_STEP_MODE_LABELS[value],
+              })),
+              (chainPowerStepMode) =>
+                patchEffect(
+                  (prev) =>
+                    ({
+                      ...prev,
+                      targetShape: 'chain',
+                      chainPowerStepMode: chainPowerStepMode as PowerStepMode,
+                    }) as SkillEffectDef,
+                ),
+            ),
+          ),
+        );
+      }
+      grid.appendChild(
+        createFieldRow(
+          '連鎖時間（秒・任意）',
+          createNumberInput(
+            effect.chainDurationSec ?? 0,
+            (chainDurationSec) =>
+              patchEffect(
+                (prev) =>
+                  ({
+                    ...prev,
+                    targetShape: 'chain',
+                    chainDurationSec:
+                      chainDurationSec > 0 ? chainDurationSec : undefined,
+                  }) as SkillEffectDef,
+              ),
+            { min: 0, step: 0.1, placeholder: '自動' },
           ),
         ),
       );

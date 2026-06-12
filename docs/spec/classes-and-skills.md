@@ -361,6 +361,8 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `hitCount`                                                   | `multiLock` 必須（整数 ≥ 2）。`single` / `aoe` 任意（整数 ≥ 2、省略=1）                                                              |
 | `hitDurationSec`                                             | `single` / `aoe` で `hitCount >= 2` 時必須。全ヒットを均等分散                                                                       |
 | `chainCount` / `chainMaxDistancePx`                          | `chain` 必須                                                                                                                         |
+| `chainPowerStepMultiplier` / `chainPowerStepMode`          | `chain` 任意。跳ごとの威力減衰（`multiply` / `divide`）                                                                              |
+| `chainDurationSec`                                           | `chain` 任意。複数命中の適用時間分散（秒）。未指定 = `0.15 × chainCount` 秒（2 体以上命中時）                                        |
 | `scatterSpreadRadiusPx`                                      | `scatter` 任意。着弾位置の分散半径（±px）。未指定 = `scatterRadiusPx`                                                                |
 | `scatterRadiusPx` / `scatterHitCount` / `scatterDurationSec` | `scatter` 必須（`scatterRadiusPx` = 乱打半径・命中判定）                                                                             |
 | `scatterSpreadRate`                                          | `scatter` 任意（0〜1。0 = anchor 中心固定。着弾 offset = `scatterSpreadRadiusPx × rate`）                                            |
@@ -420,7 +422,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 }
 ```
 
-**連鎖（chain）** — anchor から近傍の同陣営へ:
+**連鎖（chain）** — anchor から近傍の同陣営へ。次 hop は **直前 hop と別ユニット** のみ。範囲内に **未命中** がいれば最も近い未命中を優先（A→B→C→A は可、A→A→… は不可。一直線 3 体なら A→B→C になりやすい）:
 
 ```json
 {

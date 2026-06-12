@@ -22,7 +22,8 @@ import {
   groundLineY,
   battleCanvasHeight,
 } from "./formationLayout.ts";
-import { AttackEffectManager } from "./AttackEffect.ts";
+import { AttackEffectManager, type AttackEffectSpawnOptions } from "./AttackEffect.ts";
+import { CurseMarkEffectManager, type CurseMarkSpawnOptions } from "./curseMarkEffect.ts";
 import { CombatReactionPopupManager } from "./CombatReactionPopup.ts";
 import { DamagePopupManager } from "./DamagePopup.ts";
 import {
@@ -69,6 +70,7 @@ export class BattleCanvas implements IBattleRenderer {
   private ctx!: CanvasRenderingContext2D;
   private animator = new SpriteAnimator();
   private attackEffects = new AttackEffectManager();
+  private curseMarks = new CurseMarkEffectManager();
   private damagePopups = new DamagePopupManager();
   private combatReactionPopups = new CombatReactionPopupManager();
   private buffGlows = new BuffGlowManager();
@@ -126,8 +128,21 @@ export class BattleCanvas implements IBattleRenderer {
     actorId: string,
     targetId: string,
     vfx: SkillVfxDef,
+    options?: AttackEffectSpawnOptions,
   ): void {
-    this.attackEffects.spawn(actorId, targetId, vfx);
+    this.attackEffects.spawn(actorId, targetId, vfx, options);
+  }
+
+  playCurseMark(targetId: string, options?: CurseMarkSpawnOptions): void {
+    this.curseMarks.spawn(targetId, options);
+  }
+
+  fadeCurseMark(targetId: string): void {
+    this.curseMarks.fadeOut(targetId);
+  }
+
+  fadeLatestChainSegment(chainGroupId: string): void {
+    this.attackEffects.fadeLatestChainSegment(chainGroupId);
   }
 
   showDamagePopup(
@@ -159,6 +174,7 @@ export class BattleCanvas implements IBattleRenderer {
       this.animator.tick(layout.id, deltaMs);
     }
     this.attackEffects.tick(deltaMs);
+    this.curseMarks.tick(deltaMs);
     this.damagePopups.tick(deltaMs);
     this.combatReactionPopups.tick(deltaMs);
     this.buffGlows.tick(deltaMs);
@@ -383,6 +399,13 @@ export class BattleCanvas implements IBattleRenderer {
     this.drawStatusBadges(enemyBarTops, SPRITE_SCALE);
 
     this.attackEffects.draw(
+      this.ctx,
+      this.layouts,
+      SPRITE_SIZE * SPRITE_SCALE,
+      SPRITE_SCALE,
+      this.theme,
+    );
+    this.curseMarks.draw(
       this.ctx,
       this.layouts,
       SPRITE_SIZE * SPRITE_SCALE,

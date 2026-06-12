@@ -26,7 +26,9 @@ import {
   placePartyOffScreenForDeploy,
   resolveEnemyDeployTargets,
   placeEnemiesOffScreenForDeploy,
+  assignInitialPlayerBattleX,
 } from "./combatPosition.ts";
+import { waveHasTrainingDummy } from "./trainingStage.ts";
 import {
   resolveAllPlayerApproachBattleX,
   resolveEnemyApproachBattleX,
@@ -163,6 +165,8 @@ export class BattleEngine {
   private partyDeploySettled = false;
   private partyDeployTargets = new Map<string, number>();
   private enemyDeployTargets = new Map<string, number>();
+  /** 訓練ステージ: 配置済み・接敵待ち（startBattle / respawn 時に即接敵） */
+  private trainingWaveReadyToEngage = false;
   private engaged = false;
   /** 近接敵が生存していた最後の前線 battleX（近接全滅後の接触点ジャンプ抑制） */
   private engagedLastMeleeContactX: number | null = null;
@@ -311,6 +315,7 @@ export class BattleEngine {
 
   private reloadBattlefield(): void {
     resetEntityIdCounter();
+    this.trainingWaveReadyToEngage = false;
     this.pendingHitQueue = [];
     this.skillSequenceRunner.clearAll();
     this.battleTimeSec = 0;
@@ -843,8 +848,49 @@ export class BattleEngine {
     }
   }
 
+  /** 訓練用ダミー Wave: 告知・進軍を省略し最終配置のまま接敵待ち */
+  private prepareTrainingWave(waveIndex: number): void {
+    this.waveIndex = waveIndex;
+    this.waveAnnouncementActive = false;
+    this.waveAnnouncementElapsedMs = 0;
+    this.postAnnouncementEngageDelaySec = null;
+    this.postDeploySettleDelaySec = null;
+    this.partyDeployPrepared = false;
+    this.partyDeployActive = false;
+    this.partyDeploySettled = false;
+    this.partyDeployTargets.clear();
+    this.enemyDeployTargets.clear();
+    this.pendingNextWaveIndex = null;
+    this.engaged = false;
+    this.clearEngagedVisualState();
+    hideFallenAllyCorpses(this.players);
+    this.spawnWaveEnemies();
+    assignInitialPlayerBattleX(this.players);
+    syncAllFieldX(this.players);
+    firePeriodicPassivesForTrigger(
+      'waveStart',
+      [...this.players, ...this.enemies],
+      this.players,
+      this.enemies,
+      this.gameData.skillRegistry.passives,
+    );
+    this.trainingWaveReadyToEngage = true;
+    this.tryBeginTrainingEngage();
+  }
+
+  private tryBeginTrainingEngage(): void {
+    if (!this.trainingWaveReadyToEngage || this.engaged) return;
+    if (this.phase !== 'running') return;
+    this.trainingWaveReadyToEngage = false;
+    this.beginEngaged();
+  }
+
   /** Wave 告知 + PartyDeploy 同時開始 */
   private beginWaveAnnouncement(waveIndex: number): void {
+    if (waveHasTrainingDummy(this.gameData, this.stageId, waveIndex)) {
+      this.prepareTrainingWave(waveIndex);
+      return;
+    }
     this.waveIndex = waveIndex;
     this.waveAnnouncementActive = true;
     this.waveAnnouncementElapsedMs = 0;
@@ -1046,6 +1092,7 @@ export class BattleEngine {
   startBattle(): void {
     this.phase = "running";
     this.restartTimer = 0;
+    this.tryBeginTrainingEngage();
   }
 
   restartBattle(): void {
@@ -1057,6 +1104,7 @@ export class BattleEngine {
     this.worldOffsetX = 0;
     this.restartTimer = 0;
     this.phase = "running";
+    this.tryBeginTrainingEngage();
   }
 
   syncPartyBuilds(): void {
@@ -1303,8 +1351,28 @@ export class BattleEngine {
     this.pendingHitQueue = tickPendingHits(
       this.pendingHitQueue,
       this.battleTimeSec,
-      (hit) => this.executor.applyPendingHit(hit),
+      {
+        onApply: (hit) => this.executor.applyPendingHit(hit),
+        onVfxStart: (hit) => this.emitChainSegmentVfx(hit),
+      },
     );
+  }
+
+  private emitChainSegmentVfx(hit: PendingSkillHit): void {
+    const targetId = hit.targets[0]?.targetId;
+    if (!targetId || hit.travelDurationSec === undefined) return;
+    this.emit({
+      type: 'chainSegmentVfx',
+      actorId: hit.actorId,
+      targetId,
+      skillId: hit.skillId,
+      slotKind: hit.slotKind,
+      effectIndex: hit.effectIndex,
+      hitIndex: hit.hitIndex,
+      ...(hit.vfxSourceId !== undefined ? { vfxSourceId: hit.vfxSourceId } : {}),
+      travelDurationSec: hit.travelDurationSec,
+      segmentCount: hit.segmentCount ?? 1,
+    });
   }
 
   private tickSkillSequences(deltaTime: number): void {
@@ -1672,5 +1740,6 @@ export class BattleEngine {
     this.worldOffsetX = 0;
     this.engaged = false;
     this.phase = "running";
+    this.tryBeginTrainingEngage();
   }
 }

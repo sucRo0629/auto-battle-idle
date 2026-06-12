@@ -178,6 +178,10 @@ export function advanceUntil(
 export function reachWave1Engage(
   engine: BattleEngine,
 ): { preEngage: BattleSnapshot; engageSnap: BattleSnapshot } {
+  const initial = engine.getSnapshot();
+  if (initial.waveIndex === 0 && initial.engaged) {
+    return { preEngage: initial, engageSnap: initial };
+  }
   let preEngage: BattleSnapshot | null = null;
   for (let i = 0; i < 20_000; i++) {
     const before = engine.getSnapshot();

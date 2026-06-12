@@ -310,6 +310,154 @@ describe('resolveEffectTargets', () => {
     );
     const ids = resolution?.waves.map((w) => w.targets[0]?.unit.id);
     expect(ids).toEqual(['e3', 'e2', 'e1']);
+    expect(ids?.every((id, i) => i === 0 || id !== ids[i - 1])).toBe(true);
+    expect(resolution?.spreadDurationSec).toBeCloseTo(0.95);
+    expect(resolution?.waves).toHaveLength(3);
+  });
+
+  it('chain: allows revisiting after all others were hit', () => {
+    const chainActor = mockUnit('ally', 50);
+    const chainEnemies = [
+      mockUnit('eA', 100, { isEnemy: true, hp: 10 }),
+      mockUnit('eB', 140, { isEnemy: true, hp: 50 }),
+      mockUnit('eC', 180, { isEnemy: true, hp: 50 }),
+    ];
+    const resolution = resolveEffectResolution(
+      {
+        targetShape: 'chain',
+        chainCount: 4,
+        chainMaxDistancePx: 60,
+        range: fullSkillRange,
+        type: 'damage',
+        target: { kind: 'stat', side: 'enemy', stat: 'hp', order: 'lowest' },
+        damageType: 'magic',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      chainActor,
+      [chainActor],
+      chainEnemies,
+      gameData,
+    );
+    const ids = resolution?.waves.map((w) => w.targets[0]?.unit.id);
+    expect(ids).toEqual(['eA', 'eB', 'eC', 'eB']);
+    expect(new Set(ids).size).toBeLessThan(ids!.length);
+  });
+
+  it('chain: prefers unhit targets in range over revisits', () => {
+    const chainActor = mockUnit('ally', 50);
+    const chainEnemies = [
+      mockUnit('eA', 100, { isEnemy: true, hp: 50 }),
+      mockUnit('eB', 140, { isEnemy: true, hp: 50 }),
+      mockUnit('eC', 180, { isEnemy: true, hp: 50 }),
+    ];
+    const resolution = resolveEffectResolution(
+      {
+        targetShape: 'chain',
+        chainCount: 3,
+        chainMaxDistancePx: 80,
+        range: fullSkillRange,
+        type: 'damage',
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        damageType: 'magic',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      chainActor,
+      [chainActor],
+      chainEnemies,
+      gameData,
+    );
+    const ids = resolution?.waves.map((w) => w.targets[0]?.unit.id);
+    // 至近 = 最前線（最大 battleX）。range 120 では eC が届かず eB 起点となり B→A→C になる
+    expect(ids).toEqual(['eB', 'eA', 'eC']);
+  });
+
+  it('chain: never picks the same target on consecutive hops', () => {
+    const resolution = resolveEffectResolution(
+      {
+        targetShape: 'chain',
+        chainCount: 5,
+        chainMaxDistancePx: 60,
+        range: fullSkillRange,
+        type: 'damage',
+        target: { kind: 'stat', side: 'enemy', stat: 'hp', order: 'lowest' },
+        damageType: 'magic',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      actor,
+      allies,
+      enemies,
+      gameData,
+    );
+    const chainIds = resolution?.waves.map((w) => w.targets[0]?.unit.id) ?? [];
+    expect(
+      chainIds.every((id, i) => i === 0 || id !== chainIds[i - 1]),
+    ).toBe(true);
+  });
+
+  it('chain: stops early when only the current target is in range', () => {
+    const loneEnemy = [mockUnit('e1', 100, { isEnemy: true, hp: 50 })];
+    const resolution = resolveEffectResolution(
+      {
+        targetShape: 'chain',
+        chainCount: 4,
+        chainMaxDistancePx: 60,
+        range: fullSkillRange,
+        type: 'damage',
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        damageType: 'magic',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      actor,
+      allies,
+      loneEnemy,
+      gameData,
+    );
+    expect(resolution?.waves).toHaveLength(1);
+    expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('e1');
+  });
+
+  it('chain: uses explicit chainDurationSec when set', () => {
+    const resolution = resolveEffectResolution(
+      {
+        targetShape: 'chain',
+        chainCount: 3,
+        chainMaxDistancePx: 60,
+        chainDurationSec: 0.9,
+        range: fullSkillRange,
+        type: 'damage',
+        target: { kind: "stat", side: "enemy", stat: "hp", order: "lowest" },
+        damageType: 'magic',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      actor,
+      allies,
+      enemies,
+      gameData,
+    );
+    expect(resolution?.spreadDurationSec).toBe(0.9);
+    expect(resolution?.waves).toHaveLength(3);
+  });
+
+  it('chain: single target has no spread', () => {
+    const loneEnemy = [mockUnit('e1', 200, { isEnemy: true, hp: 50 })];
+    const resolution = resolveEffectResolution(
+      {
+        targetShape: 'chain',
+        chainCount: 3,
+        chainMaxDistancePx: 60,
+        range: fullSkillRange,
+        type: 'damage',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
+        damageType: 'magic',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      actor,
+      allies,
+      loneEnemy,
+      gameData,
+    );
+    expect(resolution?.spreadDurationSec).toBeUndefined();
+    expect(resolution?.waves).toHaveLength(1);
   });
 
   it('pierce: orders front to back for ally attacking forward (+X)', () => {

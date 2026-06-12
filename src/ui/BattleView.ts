@@ -13,7 +13,6 @@ import {
 import {
   resolveEffectPresentation,
   shouldPlayActorAnim,
-  usesSegmentVfxSource,
 } from "../render/skillVfx/resolveEffectPresentation.ts";
 import { resolveSkillAnimKey } from "../render/skillAnimRegistry.ts";
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
@@ -181,6 +180,48 @@ export class BattleView {
     );
   }
 
+  private handleChainSegmentVfx(
+    event: Extract<BattleEvent, { type: "chainSegmentVfx" }>,
+  ): void {
+    const snapshot = this.engine.getSnapshot();
+    const actor = [...snapshot.allies, ...snapshot.enemies].find(
+      (c) => c.id === event.actorId,
+    );
+    const skillDef = this.gameData.skillRegistry.actives[event.skillId];
+    const effectDef = skillDef?.effect[event.effectIndex];
+    if (!effectDef) return;
+
+    const presentation = resolveEffectPresentation(
+      event.skillId,
+      effectDef,
+      skillDef,
+      {
+        role: actor?.role,
+        rangePx: actor?.rangePx ?? 0,
+        damageType: actor?.damageType ?? "physical",
+        basicAttackVfx: actor?.basicAttackVfx,
+        slotKind: event.slotKind,
+        effectKind: effectDef.type,
+        targetShape: effectDef.targetShape,
+      },
+    );
+    if (!presentation.vfx) return;
+
+    const sourceId = event.vfxSourceId ?? event.actorId;
+    const chainGroupId = `${event.actorId}:${event.skillId}:${event.effectIndex}`;
+    const travelDurationMs = Math.round(event.travelDurationSec * 1000);
+    const segmentDurationMs = Math.round(
+      event.travelDurationSec * event.segmentCount * 1000,
+    );
+
+    this.canvas.playAttackEffect(sourceId, event.targetId, presentation.vfx, {
+      chainGroupId,
+      showTalisman: event.hitIndex === 0,
+      travelDurationMs,
+      segmentDurationMs,
+    });
+  }
+
   private onBattleEvent(event: BattleEvent): void {
     if (event.type === "skill") {
       const slotLabel =
@@ -257,15 +298,53 @@ export class BattleView {
           );
         }
         if (presentation.vfx) {
-          const sourceId =
-            usesSegmentVfxSource(presentation.vfx.preset)
-              ? (event.vfxSourceId ?? event.actorId)
-              : event.actorId;
-          this.canvas.playAttackEffect(
-            sourceId,
-            event.targetId,
-            presentation.vfx
-          );
+          const sourceId = event.vfxSourceId ?? event.actorId;
+          const isChainLightning = presentation.vfx.preset === "chainLightning";
+          const isChainEffect = effectDef.targetShape === "chain";
+          const chainGroupId = isChainLightning
+            ? `${event.actorId}:${event.skillId}:${event.effectIndex ?? 0}`
+            : undefined;
+          const skipStagedChainVfx =
+            event.stagedChainVfx === true && isChainLightning && isChainEffect;
+          if (!skipStagedChainVfx) {
+            this.canvas.playAttackEffect(
+              sourceId,
+              event.targetId,
+              presentation.vfx,
+              {
+                chainGroupId,
+                showTalisman:
+                  isChainLightning &&
+                  isChainEffect &&
+                  (event.hitIndex ?? 0) === 0,
+                chainInstantHit:
+                  isChainLightning &&
+                  isChainEffect &&
+                  (event.hitIndex ?? 0) !== 0,
+              },
+            );
+          }
+          if (
+            isChainLightning &&
+            isChainEffect &&
+            (event.effect === "damage" || event.effect === "dot")
+          ) {
+            if (event.stagedChainVfx) {
+              if (
+                (event.hitIndex ?? 0) >= 1 &&
+                event.vfxSourceId !== undefined
+              ) {
+                this.canvas.fadeCurseMark(event.vfxSourceId);
+              }
+              this.canvas.playCurseMark(event.targetId, { staged: true });
+              if (event.isLastChainSegment && chainGroupId) {
+                this.canvas.fadeLatestChainSegment(chainGroupId);
+                this.canvas.fadeCurseMark(event.targetId);
+              }
+            } else {
+              this.canvas.playCurseMark(event.targetId);
+            }
+          }
         }
         if (presentation.hitVfx) {
           this.canvas.playAttackEffect(
@@ -275,6 +354,8 @@ export class BattleView {
           );
         }
       }
+    } else if (event.type === "chainSegmentVfx") {
+      this.handleChainSegmentVfx(event);
     } else if (event.type === "basicAttackCountCharged") {
       this.refreshPartyHud();
     } else if (event.type === "evade") {

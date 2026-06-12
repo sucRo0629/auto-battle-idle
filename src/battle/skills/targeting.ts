@@ -45,6 +45,9 @@ export {
 
 export type { TargetRuleContext } from './targetSpec.ts';
 
+/** 連鎖デフォルト spread に加算する秒数（跳び間隔を読み取りやすくする） */
+const DEFAULT_CHAIN_SPREAD_EXTRA_SEC = 0.5;
+
 function livingAllies(allies: CombatantState[]): CombatantState[] {
   return allies.filter((a) => a.isAlive);
 }
@@ -395,12 +398,25 @@ export function resolveEffectResolution(
       effect,
     );
     if (targets.length === 0) return null;
-    return {
-      waves: targets.map((entry, hitIndex) => ({
-        hitIndex,
-        targets: [entry],
-      })),
-    };
+
+    const waves = targets.map((entry, hitIndex) => ({
+      hitIndex,
+      targets: [entry],
+    }));
+    if (waves.length <= 1) {
+      return { waves };
+    }
+
+    const explicitDuration = effect.chainDurationSec;
+    const duration =
+      explicitDuration !== undefined && explicitDuration > 0
+        ? explicitDuration
+        : 0.15 * count + DEFAULT_CHAIN_SPREAD_EXTRA_SEC;
+
+    if (duration > 0) {
+      return { spreadDurationSec: duration, waves };
+    }
+    return { waves };
   }
 
   if (shape === 'scatter') {
@@ -494,6 +510,20 @@ function resolvePierceHitTargets(
   return applyIncludeSelfFilter(spec, actor, targets);
 }
 
+function pickChainNextTarget(
+  candidates: CombatantState[],
+  currentX: number,
+  hitIds: ReadonlySet<string>,
+): CombatantState {
+  const unhit = candidates.filter((unit) => !hitIds.has(unit.id));
+  const pool = unhit.length > 0 ? unhit : candidates;
+  return pool.reduce((a, b) =>
+    Math.abs(getBattleX(a) - currentX) <= Math.abs(getBattleX(b) - currentX)
+      ? a
+      : b,
+  );
+}
+
 function resolveChainHitTargets(
   spec: TargetSpec,
   actor: CombatantState,
@@ -525,7 +555,6 @@ function resolveChainHitTargets(
     });
     if (i >= chainCount - 1) break;
 
-    const hitIds = new Set(result.map((entry) => entry.unit.id));
     const currentX = getBattleX(current);
     const sameFaction: CombatantState[] = current.isEnemy
       ? livingEnemies(enemies)
@@ -533,16 +562,13 @@ function resolveChainHitTargets(
     const candidates = sameFaction.filter(
       (unit) =>
         unit.isAlive &&
-        !hitIds.has(unit.id) &&
+        unit.id !== current.id &&
         Math.abs(getBattleX(unit) - currentX) <= chainMaxDistancePx,
     );
     if (candidates.length === 0) break;
 
-    current = candidates.reduce((a, b) =>
-      Math.abs(getBattleX(a) - currentX) <= Math.abs(getBattleX(b) - currentX)
-        ? a
-        : b,
-    );
+    const hitIds = new Set(result.map((entry) => entry.unit.id));
+    current = pickChainNextTarget(candidates, currentX, hitIds);
   }
 
   return result;
