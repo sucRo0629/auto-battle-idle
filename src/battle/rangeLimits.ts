@@ -25,6 +25,16 @@ export function configurableRangeHintJa(): string {
   );
 }
 
+/** エディタ: 反撃可能対象の近接／遠隔帯補足 */
+export function counterAttackRangeBandEditorHintJa(): string {
+  return `未選択 = 全区間。遠隔 = 実効射程が遠隔帯（${RANGED_ATTACK_MIN_PX} px 以上）。`;
+}
+
+/** エディタ: target.attackType の遠隔帯補足 */
+export function attackTypeRangedBandEditorHintJa(): string {
+  return `遠隔 = traits.rangePx が遠隔帯（${RANGED_ATTACK_MIN_PX} 以上）。射程 px の大小ではなく帯で判定します。`;
+}
+
 /** 射程 px 入力: 絶対値、または +delta で baseRangePx に加算 */
 export function parseConfigurableRangePxInput(
   raw: string,

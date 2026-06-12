@@ -4,9 +4,11 @@ import {
   PARTY_FORMATION_LEFT_ANCHOR,
 } from './battleConstants.ts';
 import {
+  attackTypeRangedBandEditorHintJa,
   CONFIGURABLE_RANGE_PX_MAX,
   assertConfigurableRangePx,
   configurableRangeHintJa,
+  counterAttackRangeBandEditorHintJa,
   formatRangeBandJa,
   parseConfigurableRangePxInput,
 } from './rangeLimits.ts';
@@ -21,6 +23,12 @@ describe('rangeLimits', () => {
 
   it('hint references the same max constant', () => {
     expect(configurableRangeHintJa()).toContain(String(CONFIGURABLE_RANGE_PX_MAX));
+  });
+
+  it('editor band hints reference RANGED_ATTACK_MIN_PX', () => {
+    const threshold = String(RANGED_ATTACK_MIN_PX);
+    expect(counterAttackRangeBandEditorHintJa()).toContain(threshold);
+    expect(attackTypeRangedBandEditorHintJa()).toContain(threshold);
   });
 
   it('hint describes bands with ranged minimum px', () => {

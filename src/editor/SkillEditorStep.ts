@@ -67,11 +67,11 @@ import type {
   StatusEffectStat,
   TargetShape,
   PowerStepMode,
-  RANGED_ATTACK_MIN_PX,
 } from '../battle/types.ts';
 import {
   CONFIGURABLE_RANGE_PX_MAX,
   configurableRangeHintJa,
+  counterAttackRangeBandEditorHintJa,
   parseConfigurableRangePxInput,
 } from '../battle/rangeLimits.ts';
 import {
@@ -266,11 +266,7 @@ function appendCounterAttackRangeBandFields(
     createFieldRow('反撃可能対象', row),
   );
   parent.appendChild(
-    createEl(
-      'p',
-      'editor-hint',
-      `未選択 = 全区間。遠隔 = 実効射程が遠隔帯（${RANGED_ATTACK_MIN_PX} px 以上）。`,
-    ),
+    createEl('p', 'editor-hint', counterAttackRangeBandEditorHintJa()),
   );
 }
 
