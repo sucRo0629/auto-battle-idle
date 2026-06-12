@@ -1,6 +1,6 @@
 export type Role = "defender" | "attacker" | "supporter";
 export type ClassId = string;
-export type FormationRow = "front" | "middle" | "back";
+export type FormationRow = "front" | "back";
 /** 遠隔帯の下限（px）。`rangePx >= RANGED_ATTACK_MIN_PX` が遠隔帯 */
 export const RANGED_ATTACK_MIN_PX = 100;
 /** 近接帯の上限（px）。rangePx < RANGED_ATTACK_MIN_PX */

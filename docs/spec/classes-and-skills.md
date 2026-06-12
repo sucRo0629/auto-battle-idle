@@ -31,7 +31,7 @@
 | ----------- | ----------------------------------------------------- |
 | `defender`  | 前列タンク + 軽い支援（buff/heal 可）                 |
 | `attacker`  | ダメージディーラー（近接/遠隔はクラス traits で決定） |
-| `supporter` | 回復・支援（中列/後列が典型）                         |
+| `supporter` | 回復・支援（後列が典型）                         |
 
 `classId` 命名：`{rolePrefix}_{englishSlug}`
 
@@ -84,7 +84,7 @@
 | -------------- | ------ | --------- | ------ | ---- | ----------------------- | --------------------- |
 | `sp_cleric`    | 療養師 | Cleric    | back   | 遠隔 | `sp_cleric_passive_1`（低 HP 味方への回復量増） | `sp_cleric_active_1` のみ |
 | `sp_abjurer`   | 結界師 | Abjurer   | back   | 遠隔 | Lv0: `passive_1`（Wave 開始バリア）+ `passive_2`（余剰回復→バリア）／Lv10: `passive_3`（前衛被ダメ軽減） | `sp_abjurer_active_1` のみ |
-| `sp_alchemist` | 薬草師 | Alchemist | middle | 遠隔 | 弱 HoT + 自 debuff 延長 | `sp_alchemist_active_1`（`active_2` は基本性能確定まで保留） |
+| `sp_alchemist` | 薬草師 | Alchemist | back   | 遠隔 | 弱 HoT + 自 debuff 延長 | `sp_alchemist_active_1`（`active_2` は基本性能確定まで保留） |
 
 スキル表示名はデータ上 **ID と同一の仮名**（例: `sp_abjurer_active_1`）。正式名称は後日決定。
 
@@ -103,7 +103,7 @@
 
 ## 配置
 
-`formationRow` で列を決定：`front` → `middle` → `back`（左＝敵側）。
+`formationRow` で列を決定：`front` → `back`（左＝敵側）。
 
 同一列内の横並び順はパーティ **配列順**。
 

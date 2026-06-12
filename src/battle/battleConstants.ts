@@ -104,8 +104,7 @@ export function resolveEnemySpawnBattleX(spawnOffset: number): number {
 /** @deprecated engage layout 移行中の互換（配置正本は partyFormation） */
 export const ROW_X: Record<FormationRow, number> = {
   back: PARTY_FORMATION_LEFT_ANCHOR,
-  middle: PARTY_FORMATION_LEFT_ANCHOR + PARTY_FORMATION_SLOT_SPACING,
-  front: PARTY_FORMATION_LEFT_ANCHOR + PARTY_FORMATION_SLOT_SPACING * 2,
+  front: PARTY_FORMATION_LEFT_ANCHOR + PARTY_FORMATION_SLOT_SPACING,
 };
 /** @deprecated */
 export const PLAYER_ROW_SPACING = PARTY_FORMATION_SLOT_SPACING;
@@ -113,6 +112,6 @@ export const PLAYER_ROW_SPACING = PARTY_FORMATION_SLOT_SPACING;
 export const ALLY_ROW_SPACING = PLAYER_ROW_SPACING;
 /** @deprecated */
 export const PLAYER_FORMATION_DEPTH =
-  PARTY_FORMATION_SLOT_SPACING * 2;
+  PARTY_FORMATION_SLOT_SPACING;
 /** @deprecated */
 export const ALLY_FORMATION_BACK_DEPTH = PLAYER_FORMATION_DEPTH;

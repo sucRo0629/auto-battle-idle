@@ -20,7 +20,7 @@ function row(
     id,
     role,
     displayName: id,
-    formationRow: role === 'supporter' ? 'middle' : role === 'attacker' ? 'back' : 'front',
+    formationRow: role === 'supporter' ? 'back' : role === 'attacker' ? 'back' : 'front',
     traits: { rangePx: role === 'attacker' ? 50 : 0 },
     maxHp: 100,
     atk: 10,

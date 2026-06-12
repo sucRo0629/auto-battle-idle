@@ -60,7 +60,7 @@ export interface PlayerPositionOptions {
 /** @deprecated PlayerPositionOptions */
 export type AllyPositionOptions = PlayerPositionOptions;
 
-const ROW_ORDER: FormationRow[] = ['front', 'middle', 'back'];
+const ROW_ORDER: FormationRow[] = ['front', 'back'];
 
 /** 同射程前列近接の停止深度（range 差 3px と同程度） */
 export const FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX = 3;

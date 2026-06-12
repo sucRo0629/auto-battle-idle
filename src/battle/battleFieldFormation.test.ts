@@ -39,9 +39,9 @@ describe('battle-field formation spec (F-*)', () => {
 
   it('F-3.3-03: left anchor is 20px with 32px slot spacing (back to front)', () => {
     const positions = computePlayerPositions([
-      { id: 'a', role: 'attacker', formationRow: 'front', rangePx: 100, isAlive: true },
-      { id: 'b', role: 'attacker', formationRow: 'middle', rangePx: 80, isAlive: true },
-      { id: 'c', role: 'attacker', formationRow: 'back', rangePx: 60, isAlive: true },
+      { id: 'a', role: 'attacker', formationRow: 'front', rangePx: 60, isAlive: true },
+      { id: 'b', role: 'attacker', formationRow: 'back', rangePx: 80, isAlive: true },
+      { id: 'c', role: 'attacker', formationRow: 'back', rangePx: 100, isAlive: true },
     ]);
     expect(positions.get('c')).toBe(PARTY_FORMATION_LEFT_ANCHOR);
     expect(positions.get('b')).toBe(PARTY_FORMATION_LEFT_ANCHOR + PARTY_FORMATION_SLOT_SPACING);

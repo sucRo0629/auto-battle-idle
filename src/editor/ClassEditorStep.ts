@@ -71,7 +71,6 @@ const ROLE_LABELS: Record<Role, string> = {
 
 const ROW_LABELS: Record<FormationRow, string> = {
   front: "前列",
-  middle: "中列",
   back: "後列",
 };
 

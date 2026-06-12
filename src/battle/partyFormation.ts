@@ -28,8 +28,7 @@ const BACK_ROW_ROLE_ORDER: Record<Role, number> = {
 /** デプロイ列ソート: 後列ほど左（奥）、前列ほど右（前） */
 const FORMATION_ROW_DEPLOY_ORDER: Record<FormationRow, number> = {
   back: 0,
-  middle: 1,
-  front: 2,
+  front: 1,
 };
 
 function rowRoleOrder(row: FormationRow, role: Role): number {

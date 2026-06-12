@@ -37,7 +37,6 @@ export const ROLES = [
 ] as const satisfies readonly Role[];
 export const FORMATION_ROWS = [
   "front",
-  "middle",
   "back",
 ] as const satisfies readonly FormationRow[];
 export const ATTACK_RANGES = [

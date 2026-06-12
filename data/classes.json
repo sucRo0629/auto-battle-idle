@@ -257,7 +257,12 @@
       {
         "level": 0,
         "skillIds": [
-          "at_lancer_passive_1",
+          "at_lancer_passive_1"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
           "at_lancer_active_1",
           "at_lancer_active_2"
         ]
@@ -568,7 +573,7 @@
     "role": "supporter",
     "displayName": "薬草師",
     "epithetEn": "Alchemist",
-    "formationRow": "middle",
+    "formationRow": "back",
     "traits": {
       "rangePx": 90
     },
@@ -581,8 +586,7 @@
     "basicAttackSkillId": "sp_alchemist_basic_attack",
     "passiveIds": [
       "sp_alchemist_passive_1",
-      "sp_alchemist_passive_2",
-      "sp_alchemist_passive_3"
+      "sp_alchemist_passive_2"
     ],
     "skills": [
       {
@@ -590,7 +594,6 @@
         "skillIds": [
           "sp_alchemist_passive_1",
           "sp_alchemist_passive_2",
-          "sp_alchemist_passive_3",
           "sp_alchemist_active_1",
           "sp_alchemist_active_2"
         ]

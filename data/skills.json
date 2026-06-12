@@ -322,24 +322,19 @@
       "name": "薬草の香り",
       "effect": "heal",
       "healSubKind": "hot",
-      "hotTargetRule": {
-        "kind": "all",
-        "side": "ally"
-      },
       "hotAmount": {
         "kind": "percentMaxHp",
         "percentOfMaxHp": 0.005
+      },
+      "hotTargetRule": {
+        "kind": "all",
+        "side": "ally"
       }
     },
     {
       "id": "sp_alchemist_passive_2",
       "name": "sp_alchemist_passive_2",
       "effect": "periodicDispel",
-      "targetRuleOverride": {
-        "kind": "distance",
-        "side": "enemy",
-        "order": "nearest"
-      },
       "periodicTrigger": "interval",
       "intervalSec": 5,
       "dispelTargetRule": {
@@ -361,28 +356,6 @@
         "stat": "def",
         "order": "lowest"
       },
-      "perExtraTargetScale": 0.1,
-      "maxExtraTargets": 4,
-      "specialEffectApplyTo": "damage",
-      "specialEffect": {
-        "scale": 1.2,
-        "conditions": [
-          {
-            "kind": "debuff",
-            "tags": [
-              "def"
-            ]
-          }
-        ]
-      },
-      "debuffSubKind": "stat",
-      "debuffTargetRule": {
-        "kind": "distance",
-        "side": "enemy",
-        "order": "nearest"
-      },
-      "debuffStat": "atk",
-      "debuffMultiplier": 0.9,
       "targetRuleOverrideApplyTo": "enemy"
     },
     {
