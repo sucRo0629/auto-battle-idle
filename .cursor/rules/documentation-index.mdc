@@ -1,0 +1,28 @@
+---
+description: 分割ドキュメントの読み方 — タスクに必要な spec だけ開く（トークン節約）
+globs: docs/**,data/**,src/battle/**,src/**/loadGameData.ts,src/**/types.ts
+alwaysApply: false
+---
+
+# ドキュメントの分割読み（トークン節約）
+
+**全 spec を一括で読まない。** タスクに関係する 1〜2 ファイルだけ開く。索引は [docs/README.md](../../docs/README.md)。
+
+## コードパス → 読む doc
+
+| 触るコード / データ | 読む doc のみ |
+|---------------------|---------------|
+| `data/classes.json`, `data/skills.json`, スキル UI | `docs/spec/classes-and-skills.md` |
+| `data/levelCurves.json`, ステ計算, `growthTier` | `docs/spec/stats.md` |
+| `src/battle/combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット | `docs/spec/combat.md` |
+| `battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `BattleCanvas.ts` | `docs/spec/battle-field.md` |
+| `data/stages.json`, セーブ, EXP, LvUP | `docs/spec/progression.md` |
+| フェーズ計画・完了マーク・次の作業 | `docs/plans/phase-roadmap.md` |
+
+ロードマップ（`docs/plans/`）は **Phase やマイルストーンの議論時だけ** 読む。バグ修正・数値調整だけなら spec のみで足りる。
+
+## 新規 doc を増やすとき
+
+- 1 トピック = 1 ファイル（例：`combat.md` と `battle-field.md` は分離済み）。
+- 200 行を超えて **独立した章** が増えたら、新ファイルに切り出し `docs/spec/README.md` の表に 1 行追加。
+- 巨大な単一 README にまとめない。

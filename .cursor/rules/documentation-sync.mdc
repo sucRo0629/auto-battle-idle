@@ -1,0 +1,29 @@
+---
+description: 仕様・データ変更時は対応する docs を同タスク内で更新する
+alwaysApply: true
+---
+
+# 仕様変更とドキュメント同期
+
+ゲームルール・データ形状・フェーズ計画を**追加・変更したら、同じ作業内で**対応ドキュメントを更新する。コードだけ直して docs を残さない。
+
+## 更新先の決め方
+
+索引は [docs/spec/README.md](../../docs/spec/README.md) と [docs/README.md](../../docs/README.md) の「コード ↔ ドキュメント対応表」を正とする。
+
+| 変更の種類 | 更新する doc |
+|------------|--------------|
+| ステータス・Lv 成長・growthPresets | `docs/spec/stats.md` |
+| ダメージ・回復・CD・バフ/デバフ・ターゲット | `docs/spec/combat.md` |
+| 座標・隊形・Wave・接敵・描画 | `docs/spec/battle-field.md` |
+| クラス・ロール・スキル JSON スキーマ・用語 | `docs/spec/classes-and-skills.md` |
+| EXP・セーブ・ステージ進行・Phase 別機能 | `docs/spec/progression.md` |
+| フェーズ状態・ロードマップ・作業順 | `docs/plans/phase-roadmap.md`（必要なら `master-work-order.md`） |
+
+`data/*.json` を変えたときは、**数値の転記一覧は書かない**（正本は JSON）。**ルール・意図・スキーマ・用語**が変わった部分だけ doc に反映する（[spec/README.md](../../docs/spec/README.md) の方針に従う）。
+
+## 書き方
+
+- **分割を維持** — 1 ファイルに統合しない。他トピックはリンク `[combat.md](combat.md)` で参照。
+- **重複禁止** — 同じルールを複数ファイルにコピーしない。1 箇所を正本にし、他はリンクのみ。
+- **実装パス** — 各 spec 先頭の「実装：」行が古ければ、移動・リネームに合わせて更新する。
