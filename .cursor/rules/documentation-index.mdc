@@ -21,6 +21,16 @@ alwaysApply: false
 
 ロードマップ（`docs/plans/`）は **Phase やマイルストーンの議論時だけ** 読む。バグ修正・数値調整だけなら spec のみで足りる。
 
+## JSON（トークン節約）
+
+| ファイル | 触り方 |
+|----------|--------|
+| `skills.json`, `classes.json` | **全文 Read 禁止**。Grep / diff / `classes-and-skills.md`。詳細は [data-json-lightweight.mdc](../.cursor/rules/data-json-lightweight.mdc) |
+| `enemies.json`, `levelCurves.json`, `parties.json` | 小さい — 必要なら全文可 |
+| `stages.json` | ステージ ID で Grep |
+
+スキーマは doc より `src/battle/types.ts` / `gameDataSchema.ts` が型の正本。
+
 ## 新規 doc を増やすとき
 
 - 1 トピック = 1 ファイル（例：`combat.md` と `battle-field.md` は分離済み）。

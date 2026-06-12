@@ -1,0 +1,42 @@
+---
+description: data/*.json は全文読まない — Grep・型・spec でトークン節約
+globs: data/**,src/battle/data/**,src/editor/**,vite-plugin-editor-api.ts
+alwaysApply: false
+---
+
+# JSON データの読み方（トークン節約）
+
+`skills.json`（~2000 行）・`classes.json`（~600 行）は **全文 Read 禁止**。`.cursorignore` で索引から除外済み。
+
+## 読む順序
+
+1. **スキーマ・ルール** — `docs/spec/classes-and-skills.md`（effect 定義）／`src/battle/types.ts`／`gameDataSchema.ts`
+2. **1 エントリだけ** — Grep `"id": "<skillOrClassId>"` でヒット行 ±30 行、または Read の `offset`/`limit`
+3. **変更内容** — `git diff data/<file>.json`（差分のみ）
+
+## ファイル別
+
+| ファイル | 目安 | 触り方 |
+|----------|------|--------|
+| `skills.json` | ~2000 | ID で Grep。`passives` / `actives` 配列全体を開かない |
+| `classes.json` | ~600 | `"id": "<classId>"` で Grep。全クラス一覧は spec / `classOrder` |
+| `enemies.json` | ~65 | 必要なら全文可 |
+| `stages.json` | ~100 | `"id": "<stageId>"` で Grep |
+| `levelCurves.json` | ~30 | 全文可 |
+| `parties.json` | ~40 | 全文可 |
+
+## ID の Grep 例
+
+- クラス: `"id": "warrior"` / `"id": "df_guardian"`
+- スキル: `"id": "warrior_basic_attack"` / `"id": "sp_cleric_active_1"`
+- クラス配下をざっくり: Grep pattern `"id": "warrior_`（プレフィックス）
+
+## 編集時
+
+- **数値・名称だけ** — JSON のみ変更。spec 転記は不要（正本は JSON）
+- **新フィールド・effect 種・スキーマ変更** — `docs/spec/classes-and-skills.md` を同タスクで更新
+
+## 禁止
+
+- タスクに無関係な JSON を「把握のため」全文 Read
+- spec にスキル一覧・数値表を転記（トークン二重消費）

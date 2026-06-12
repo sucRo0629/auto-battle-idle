@@ -1,0 +1,4 @@
+# 巨大 JSON — 全文索引・@ 参照から除外（必要時は Grep / 部分 Read）
+# 読み方: .cursor/rules/data-json-lightweight.mdc / docs/README.md
+data/skills.json
+data/classes.json

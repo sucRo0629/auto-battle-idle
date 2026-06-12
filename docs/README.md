@@ -18,6 +18,18 @@
 | `data/stages.json`, セーブ, EXP, LvUP | [spec/progression.md](spec/progression.md) |
 | フェーズ・作業順 | [plans/phase-roadmap.md](plans/phase-roadmap.md) |
 
+## JSON の読み方（トークン節約）
+
+| ファイル | 行数目安 | AI / エージェント向け |
+|----------|----------|------------------------|
+| `skills.json` | ~2000 | 全文読まない。`.cursorignore` 除外。ID で Grep |
+| `classes.json` | ~600 | 同上 |
+| その他 `data/*.json` | ~100 以下 | 必要なら全文可 |
+
+- スキーマ・effect 定義 → [spec/classes-and-skills.md](spec/classes-and-skills.md)
+- 型の正本 → `src/battle/types.ts`, `src/battle/data/gameDataSchema.ts`
+- ルール詳細 → `.cursor/rules/data-json-lightweight.mdc`
+
 ## クイックリンク
 
 | トピック | ファイル |

@@ -11,7 +11,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2b** | 戦闘計算（`combatMath` 等） | **完了** |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除 | **完了** |
 | **3** | Lvアップ時スキル習得、アクティブセット2枠目 | **完了** |
-| **4** | 一次職マスタ + スキル説明；4a データ **完了** / 4b 説明自動生成 | **4b が次** |
+| **4** | 一次職マスタ + スキル説明；4a データ **完了** / 4b 説明自動生成 / **4c JSON 分割** | **4b が次** |
 | **5** | 本番スプライトアニメーション（クラス別ドット絵） | 未着手 |
 | **6** | スキル VFX（スキル別設定・新プリセット） | 未着手（Phase 5 後） |
 | **7** | バランス調整（数値チューニング全般） | 未着手 |
@@ -110,6 +110,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** で一次職 JSON 
 |-------------|------|------|
 | **4a** | 一次職 15 種・スキル JSON・GUI・validate・`epithetEn` データ | **完了** |
 | **4b** | スキル説明の自動生成（`formatSkillText`）調整・エディタプレビュー | **次** |
+| **4c** | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率） | **未着手**（4b と並行可） |
 
 ### 一次職 / 二次職（設計方針）
 
@@ -184,6 +185,43 @@ Phase 4 では `jobTier: 1` を付与しても **ゲームロジックは転職�
 
 - 手書き `description` フィールドの JSON 追加（将来必要なら別フェーズ）
 - 戦闘ログ・Canvas HUD への説明文表示（ツールチップ / エディタプレビューのみ）
+
+### 4c — 巨大 JSON の分割（開発効率）
+
+**背景：** 4a 完了時点で `skills.json` は ~2000 行、`classes.json` は ~600 行。AI エージェントのトークン消費・Git 差分・エディタ全体読み込みが重い。暫定対策として `.cursorignore` と [data-json-lightweight.mdc](../../.cursor/rules/data-json-lightweight.mdc) で **全文 Read 禁止** を運用中。本フェーズで **物理分割** し、必要ファイルだけ開ける形にする。
+
+**目標レイアウト（案）**
+
+```
+data/
+  skills/
+    passives.json              # 共有パッシブ配列（現 passives[]）
+    actives/
+      df_guardian.json         # クラス ID プレフィックス単位（15 ファイル想定）
+      at_swordsman.json
+      …
+  classes.json                 # Phase 4c では据え置き可（~600 行。必要なら 4c 後半で classes/ 分割）
+```
+
+- ランタイムの `GameData.skillRegistry` 形状は **変更しない**（`loadGameData` が分割ファイルをマージして従来と同じ `{ passives, actives }` を組み立てる）。
+- エディタ API は **論理上 1 マスタ** のまま（保存時に分割ファイルへ書き戻す、または GUI をファイル単位編集に変更）。
+
+**スコープ**
+
+- `loadGameData.ts` — 分割 JSON の import / マージ
+- `validateGameData.ts` — 入力をマージ後に現行と同じ検証
+- `vite-plugin-editor-api.ts` / `EditorApp` — 読み書きパス・HMR 対象の更新
+- 既存テスト・`npm run dev` / エディタ保存フローの回帰確認
+- `.cursorignore` — `data/skills.json` 単体除外 → `data/skills/actives/*.json` 等へ移行（触るクラス分だけ索引）
+- `docs/README.md` の JSON 読み方表を分割後パスに更新
+
+**4c スコープ外**
+
+- スキル数値・ID のバランス変更（**Phase 7**）
+- `classes.json` の 15 分割（効果が小さいため任意。4c 完了後に別タスク可）
+- ステージ・敵 JSON の分割（行数が少なく優先度低）
+
+**タイミング：** 4a でスキーマが固まったあと。**4b と並行** してよい（説明文生成はマージ後の型・validate に依存するだけ）。
 
 ### スコープ外（Phase 4）
 
@@ -294,6 +332,8 @@ Phase 3（スキル習得 + セット2枠目）
 Phase 4a（一次職マスタ + GUI）  ← 次
     ↓
 Phase 4b（スキル説明自動生成）
+    ↓
+Phase 4c（JSON 分割・開発効率）  ← 4b と並行可
     ↓
 Phase 5（本番スプライトアニメ）  ← 4 と並行も可（見た目のみ）
     ↓
