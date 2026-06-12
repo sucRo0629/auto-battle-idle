@@ -48,5 +48,17 @@
     "traits": {
       "rangePx": 100
     }
+  },
+  {
+    "id": "test_dummy",
+    "displayName": "訓練用ダミー",
+    "maxHp": 9999999,
+    "atk": 0,
+    "def": 0,
+    "reg": 0,
+    "exp": 0,
+    "basicAttackSkillId": "test_dummy_basic_attack",
+    "attackSpeedTier": "normal",
+    "traits": {}
   }
 ]

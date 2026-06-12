@@ -1,4 +1,5 @@
 import type { AttackSpeedTier, EnemyTemplate } from '../battle/types.ts';
+import { DEFAULT_BASIC_ATTACK_INTERVAL_SEC } from '../battle/data/synthesizeBasicAttack.ts';
 import { normalizePassiveSkillForEditor } from '../battle/data/validateGameData.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 import type { BalanceDisplayMode } from './balanceReference.ts';
@@ -6,6 +7,8 @@ import { BalanceEditorStep } from './BalanceEditorStep.ts';
 import { ClassEditorStep, loadClassDraftById } from './ClassEditorStep.ts';
 import { EnemyEditorStep, loadEnemyDraftById } from './EnemyEditorStep.ts';
 import {
+  applyEnemyAttackSpeedTier,
+  applyEnemyCustomBasicAttackInterval,
   buildClassPresetFromDraft,
   buildEnemyFromDraft,
   buildSkillDrafts,
@@ -27,6 +30,8 @@ import {
   isEnemyBasicAttackEntry,
   nextClassSkillId,
   resyncEnemyBasicAttackEntry,
+  resolveEnemyAttackSpeedSelect,
+  resolveEnemyBasicAttackInterval,
   saveClassBundle,
   saveClassStatsBulk,
   saveEnemyBundle,
@@ -413,12 +418,13 @@ export class EditorApp {
           this.refreshSkillEditor();
         }
       },
-      onSelectEnemy: (enemyId) => this.selectEnemy(enemyId),
+      onSelectEnemy: (enemyId) => void this.selectEnemy(enemyId),
       onSave: () => void this.saveEnemy(),
       saving: this.saving,
       hidePicker: true,
       hideSkillIds: true,
       hideSave: true,
+      attackSpeed: this.buildEnemyAttackSpeedOptions(),
     });
 
     this.skillStep = new SkillEditorStep(skillsHost, {
@@ -524,13 +530,6 @@ export class EditorApp {
       },
       isIdReadonly: (entry: SkillDraftEntry) =>
         isEnemyBasicAttackEntry(entry, enemyId),
-      basicAttackSpeedTier: {
-        get: (): AttackSpeedTier =>
-          this.enemyDraft.enemy.attackSpeedTier ?? 'normal',
-        onChange: (tier: AttackSpeedTier) => {
-          this.enemyDraft.enemy.attackSpeedTier = tier;
-        },
-      },
       onSkillIdChange: (oldId: string, newId: string, kind: SkillSlotKind) => {
         if (
           kind === 'active' &&
@@ -559,10 +558,55 @@ export class EditorApp {
           label: `${enemy.displayName} (${enemy.id})`,
         })),
         selectedId: this.selectedEnemyId,
-        onSelect: (enemyId: string) => this.selectEnemy(enemyId),
+        onSelect: (enemyId: string) => void this.selectEnemy(enemyId),
       },
       onSave: () => void this.saveEnemy(),
       saving: this.saving,
+    };
+  }
+
+  private buildEnemyAttackSpeedOptions() {
+    const enemyId = () => this.enemyDraft.enemy.id.trim();
+    const tier = () => this.enemyDraft.enemy.attackSpeedTier ?? 'normal';
+    return {
+      getSelect: () =>
+        resolveEnemyAttackSpeedSelect(
+          this.enemySkillEntries,
+          enemyId(),
+          tier(),
+        ),
+      getCustomInterval: () =>
+        resolveEnemyBasicAttackInterval(this.enemySkillEntries, enemyId()),
+      onTierChange: (nextTier: AttackSpeedTier) => {
+        this.enemyDraft.enemy.attackSpeedTier = nextTier;
+        this.enemySkillEntries = applyEnemyAttackSpeedTier(
+          this.enemySkillEntries,
+          enemyId(),
+        );
+        this.refreshSkillEditor();
+      },
+      onSelectCustom: () => {
+        const interval = resolveEnemyBasicAttackInterval(
+          this.enemySkillEntries,
+          enemyId(),
+        );
+        const nextInterval =
+          interval === DEFAULT_BASIC_ATTACK_INTERVAL_SEC ? 10 : interval;
+        this.enemySkillEntries = applyEnemyCustomBasicAttackInterval(
+          this.enemySkillEntries,
+          enemyId(),
+          nextInterval,
+        );
+        this.refreshSkillEditor();
+      },
+      onCustomIntervalChange: (intervalSec: number) => {
+        this.enemySkillEntries = applyEnemyCustomBasicAttackInterval(
+          this.enemySkillEntries,
+          enemyId(),
+          intervalSec,
+        );
+        this.refreshSkillEditor();
+      },
     };
   }
 
@@ -587,15 +631,28 @@ export class EditorApp {
     this.render();
   }
 
-  private selectEnemy(enemyId: string): void {
-    this.selectedEnemyId = enemyId;
-    this.enemyDraft = loadEnemyDraftById(this.enemies, enemyId);
-    this.enemySkillEntries = initEnemySkillEntriesFromPreset(
-      this.enemyDraft.enemy,
-      this.skills,
-    );
-    this.persistSession();
-    this.render();
+  private async selectEnemy(enemyId: string): Promise<void> {
+    try {
+      const [enemies, skills] = await Promise.all([fetchEnemies(), fetchSkills()]);
+      this.enemies = enemies;
+      this.skills = {
+        ...skills,
+        passives: skills.passives.map(normalizePassiveSkillForEditor),
+      };
+      this.selectedEnemyId = enemyId;
+      this.enemyDraft = loadEnemyDraftById(this.enemies, enemyId);
+      this.enemySkillEntries = initEnemySkillEntriesFromPreset(
+        this.enemyDraft.enemy,
+        this.skills,
+      );
+      this.persistSession();
+      this.render();
+    } catch (error) {
+      this.setStatus(
+        error instanceof Error ? error.message : '敵データの読み込みに失敗しました',
+        true,
+      );
+    }
   }
 
   private addClassSkill(kind: SkillSlotKind): void {

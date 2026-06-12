@@ -1,5 +1,19 @@
 [
   {
+    "id": "test",
+    "displayName": "test",
+    "waves": [
+      {
+        "enemies": [
+          {
+            "templateId": "test_dummy",
+            "spawnX": 100
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "1",
     "displayName": "Stage 1",
     "waves": [

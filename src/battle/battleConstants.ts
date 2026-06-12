@@ -48,9 +48,12 @@ export const BATTLE_ENEMY_MARCH_VISIBLE_MAX_X = CANVAS_W + 200;
 
 /** 接敵ビジュアル調整 */
 export const ENGAGED_VISUAL_TUNING = {
-  bodyClearancePx: -20,
+  /** 0 = レイアウト箱同士が接する。負値は意図的重なり */
+  bodyClearancePx: 0,
+  /** 0 = engagedMinBodyGap を味方最前列↔敵最前列 gap に使用 */
   frontLineGapPx: 0,
-  leadingRowAdvanceT: 0.8,
+  /** 接敵時に前列が敵側へ寄るブレンド率（低いほど隊形を維持） */
+  leadingRowAdvanceT: 0.65,
   engageMoveSpeedPxPerSec: MOVE_PX_PER_SEC,
 } as const;
 

@@ -1,4 +1,5 @@
 import { normalizeEntityTraits } from '../battle/data/entityTraits.ts';
+import { DEFAULT_BASIC_ATTACK_INTERVAL_SEC } from '../battle/data/synthesizeBasicAttack.ts';
 import {
   normalizeActiveSkillEffectForEditor,
   sanitizeBasicAttackSkillForJson,
@@ -109,7 +110,104 @@ export async function fetchSkills(): Promise<SkillsJson> {
 }
 
 export async function fetchEnemies(): Promise<EnemyTemplate[]> {
-  return fetchJson('/__editor/enemies');
+  const raw = await fetchJson<EnemyTemplateDraft[] | EnemyTemplate[]>('/__editor/enemies');
+  return raw.map((entry) => normalizeEnemyTemplateForEditor(entry));
+}
+
+export const ENEMY_ATTACK_SPEED_CUSTOM = 'custom' as const;
+
+export type EnemyAttackSpeedSelect =
+  | AttackSpeedTier
+  | typeof ENEMY_ATTACK_SPEED_CUSTOM;
+
+export function normalizeEnemyTemplateForEditor(
+  raw: EnemyTemplate | EnemyTemplateDraft,
+): EnemyTemplate {
+  const id = (raw.id ?? '').trim();
+  const basicAttackSkillId =
+    (raw.basicAttackSkillId ?? '').trim() || (id ? defaultBasicAttackId(id) : '');
+  return {
+    id: raw.id,
+    displayName: raw.displayName,
+    maxHp: raw.maxHp,
+    atk: raw.atk,
+    def: raw.def,
+    reg: raw.reg,
+    exp: raw.exp,
+    basicAttackSkillId,
+    traits: normalizeEntityTraits(raw.traits),
+    attackSpeedTier: raw.attackSpeedTier ?? 'normal',
+    ...(raw.passiveSkillIds !== undefined
+      ? { passiveSkillIds: raw.passiveSkillIds }
+      : {}),
+    ...(raw.activeSkillIds !== undefined ? { activeSkillIds: raw.activeSkillIds } : {}),
+  };
+}
+
+export function getEnemyBasicAttackEntry(
+  entries: SkillDraftEntry[],
+  enemyId: string,
+): SkillDraftEntry | undefined {
+  return entries.find((entry) => isEnemyBasicAttackEntry(entry, enemyId));
+}
+
+export function resolveEnemyBasicAttackInterval(
+  entries: SkillDraftEntry[],
+  enemyId: string,
+): number {
+  const entry = getEnemyBasicAttackEntry(entries, enemyId);
+  const trigger = entry?.active?.trigger;
+  if (trigger?.kind === 'time') return trigger.value;
+  return DEFAULT_BASIC_ATTACK_INTERVAL_SEC;
+}
+
+export function isEnemyCustomBasicAttackInterval(
+  entries: SkillDraftEntry[],
+  enemyId: string,
+): boolean {
+  return (
+    resolveEnemyBasicAttackInterval(entries, enemyId) !==
+    DEFAULT_BASIC_ATTACK_INTERVAL_SEC
+  );
+}
+
+export function resolveEnemyAttackSpeedSelect(
+  entries: SkillDraftEntry[],
+  enemyId: string,
+  tier: AttackSpeedTier,
+): EnemyAttackSpeedSelect {
+  if (isEnemyCustomBasicAttackInterval(entries, enemyId)) {
+    return ENEMY_ATTACK_SPEED_CUSTOM;
+  }
+  return tier;
+}
+
+export function applyEnemyAttackSpeedTier(
+  entries: SkillDraftEntry[],
+  enemyId: string,
+): SkillDraftEntry[] {
+  const next = structuredClone(entries);
+  const entry = getEnemyBasicAttackEntry(next, enemyId);
+  if (!entry?.active) return next;
+  entry.active.trigger = {
+    kind: 'time',
+    value: DEFAULT_BASIC_ATTACK_INTERVAL_SEC,
+  };
+  delete entry.active.interval;
+  return next;
+}
+
+export function applyEnemyCustomBasicAttackInterval(
+  entries: SkillDraftEntry[],
+  enemyId: string,
+  intervalSec: number,
+): SkillDraftEntry[] {
+  const next = structuredClone(entries);
+  const entry = getEnemyBasicAttackEntry(next, enemyId);
+  if (!entry?.active) return next;
+  entry.active.trigger = { kind: 'time', value: intervalSec };
+  delete entry.active.interval;
+  return next;
 }
 
 export async function saveClassBundle(payload: {
@@ -473,7 +571,7 @@ export function initEnemySkillEntriesFromPreset(
   if (!enemyId) return [];
 
   const basicAttackSkillId =
-    template.basicAttackSkillId.trim() || defaultBasicAttackId(enemyId);
+    (template.basicAttackSkillId ?? '').trim() || defaultBasicAttackId(enemyId);
   const refs: SkillSlotRef[] = [
     { skillId: basicAttackSkillId, kind: 'active' },
   ];
@@ -671,17 +769,12 @@ export function createEmptyEnemyDraft(): EnemyDraft {
 }
 
 export function enemyDraftFromTemplate(template: EnemyTemplate): EnemyDraft {
-  const enemy = structuredClone(template);
-  if (enemy.id.trim() && !enemy.basicAttackSkillId.trim()) {
-    enemy.basicAttackSkillId = defaultBasicAttackId(enemy.id.trim());
-  }
-  if (!enemy.attackSpeedTier) {
-    enemy.attackSpeedTier = 'normal';
-  }
+  const normalized = normalizeEnemyTemplateForEditor(template);
+  const enemy = structuredClone(normalized);
   return {
     enemy,
-    passiveIds: [...(template.passiveSkillIds ?? [])],
-    activeIds: [...(template.activeSkillIds ?? [])],
+    passiveIds: [...(normalized.passiveSkillIds ?? [])],
+    activeIds: [...(normalized.activeSkillIds ?? [])],
   };
 }
 
@@ -858,7 +951,8 @@ export function collectEnemySkillRefs(draft: EnemyDraft): SkillSlotRef[] {
 
   if (enemyId) {
     const basicId =
-      draft.enemy.basicAttackSkillId.trim() || defaultBasicAttackId(enemyId);
+      (draft.enemy.basicAttackSkillId ?? '').trim() ||
+      defaultBasicAttackId(enemyId);
     refs.push({ skillId: basicId, kind: 'active' });
     seen.add(basicId);
   } else {

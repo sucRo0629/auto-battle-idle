@@ -231,7 +231,7 @@ describe('battleLayout snapshots', () => {
           formationRow: 'back',
           rangePx: 100,
           isAlive: true,
-          battleX: 100,
+          battleX: 88,
         },
       ],
       enemies: [

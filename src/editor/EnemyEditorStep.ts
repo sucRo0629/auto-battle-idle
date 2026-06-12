@@ -1,9 +1,12 @@
 import {
+  ATTACK_SPEED_TIER_LABELS,
+  ATTACK_SPEED_TIER_OPTIONS,
   DAMAGE_TYPE_OPTIONS,
   REG_OPTIONS,
   VFX_PRESET_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
 import type {
+  AttackSpeedTier,
   DamageType,
   EnemyTemplate,
   SkillVfxPresetId,
@@ -14,7 +17,9 @@ import {
 } from '../battle/rangeLimits.ts';
 import {
   createEmptyEnemyDraft,
+  ENEMY_ATTACK_SPEED_CUSTOM,
   enemyDraftFromTemplate,
+  type EnemyAttackSpeedSelect,
   type EnemyDraft,
   type DraftChangeOptions,
 } from './editorApi.ts';
@@ -42,6 +47,13 @@ export interface EnemyEditorStepOptions {
   hidePicker?: boolean;
   hideSkillIds?: boolean;
   hideSave?: boolean;
+  attackSpeed?: {
+    getSelect: () => EnemyAttackSpeedSelect;
+    getCustomInterval: () => number;
+    onTierChange: (tier: AttackSpeedTier) => void;
+    onSelectCustom: () => void;
+    onCustomIntervalChange: (intervalSec: number) => void;
+  };
 }
 
 export class EnemyEditorStep {
@@ -74,6 +86,7 @@ export class EnemyEditorStep {
       hidePicker,
       hideSkillIds,
       hideSave,
+      attackSpeed,
     } = this.options;
     const draft = getDraft();
     this.container.replaceChildren();
@@ -265,6 +278,59 @@ export class EnemyEditorStep {
         ),
       ),
     );
+
+    if (attackSpeed) {
+      const speedSection = createSection('攻撃速度（基本攻撃 CD）');
+      this.container.appendChild(speedSection);
+      const speedGrid = appendGrid(speedSection);
+      const speedSelect = attackSpeed.getSelect();
+      speedGrid.appendChild(
+        createFieldRow(
+          'SPD 段階',
+          createSelect(
+            speedSelect,
+            [
+              ...ATTACK_SPEED_TIER_OPTIONS.map((value) => ({
+                value,
+                label: ATTACK_SPEED_TIER_LABELS[value],
+              })),
+              { value: ENEMY_ATTACK_SPEED_CUSTOM, label: '任意' },
+            ],
+            (value) => {
+              if (value === ENEMY_ATTACK_SPEED_CUSTOM) {
+                attackSpeed.onSelectCustom();
+                this.render();
+                return;
+              }
+              attackSpeed.onTierChange(value as AttackSpeedTier);
+              this.render();
+            },
+          ),
+        ),
+      );
+      if (speedSelect === ENEMY_ATTACK_SPEED_CUSTOM) {
+        speedGrid.appendChild(
+          createFieldRow(
+            '発動間隔 (秒)',
+            createNumberInput(
+              attackSpeed.getCustomInterval(),
+              (intervalSec) => {
+                attackSpeed.onCustomIntervalChange(intervalSec);
+              },
+              { min: 0.1, step: 0.1 },
+            ),
+          ),
+        );
+      } else {
+        speedGrid.appendChild(
+          createEl(
+            'p',
+            'editor-hint',
+            '通常攻撃の間隔は SPD 段階とスキル interval から決まります。',
+          ),
+        );
+      }
+    }
 
     if (!hideSkillIds) {
       const passiveSection = createSection('パッシブスキル ID');
