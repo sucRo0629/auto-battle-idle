@@ -286,7 +286,8 @@
     "basicAttackSkillId": "at_ranger_basic_attack",
     "passiveIds": [
       "at_ranger_passive_1",
-      "at_ranger_passive_2"
+      "at_ranger_passive_2",
+      "at_ranger_passive_3"
     ],
     "skills": [
       {
@@ -294,7 +295,8 @@
         "skillIds": [
           "at_ranger_passive_1",
           "at_ranger_passive_2",
-          "at_ranger_active_1"
+          "at_ranger_active_1",
+          "at_ranger_passive_3"
         ]
       }
     ],

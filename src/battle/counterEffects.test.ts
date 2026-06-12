@@ -5,6 +5,7 @@ import {
   applyPassiveCounterRetaliation,
   isCounterInTriggerRange,
   matchesCounterAttackRangeBand,
+  resolveCounterRangePx,
 } from './counterEffects.ts';
 import { RANGED_ATTACK_MIN_PX } from './types.ts';
 import { parseSkillEffect } from './data/validateGameData.ts';
@@ -86,7 +87,28 @@ function counterStatus(
 
 
 describe('isCounterInTriggerRange', () => {
-  it('allows melee contact when counter range is 0', () => {
+  it('uses traits.rangePx when counter range is 0', () => {
+    const victim = mockCombatant({
+      battleX: 100,
+      traits: {
+        rangePx: 80,
+        damageType: 'physical',
+        basicAttackVfx: { preset: 'slash' },
+      },
+    });
+    const attacker = mockCombatant({
+      id: 'atk',
+      isEnemy: true,
+      battleX: 150,
+    });
+    const effect = counterStatus(
+      [{ kind: 'damage', amount: { kind: 'flat', flatAmount: 5 } }],
+      { counterRangePx: 0 },
+    );
+    expect(isCounterInTriggerRange(effect, victim, attacker)).toBe(true);
+  });
+
+  it('allows melee contact when counter range is 0 and traits.rangePx is 0', () => {
     const victim = mockCombatant({ battleX: 100 });
     const attacker = mockCombatant({
       id: 'atk',
@@ -100,7 +122,7 @@ describe('isCounterInTriggerRange', () => {
     expect(isCounterInTriggerRange(effect, victim, attacker)).toBe(true);
   });
 
-  it('rejects ranged attacker when counter range is 0', () => {
+  it('rejects ranged attacker when counter range is 0 and traits.rangePx is 0', () => {
     const victim = mockCombatant({ battleX: 100 });
     const attacker = mockCombatant({
       id: 'atk',
@@ -117,6 +139,21 @@ describe('isCounterInTriggerRange', () => {
       { counterRangePx: 0 },
     );
     expect(isCounterInTriggerRange(effect, victim, attacker)).toBe(false);
+  });
+});
+
+describe('resolveCounterRangePx', () => {
+  it('falls back to traits.rangePx for undefined and 0', () => {
+    const victim = mockCombatant({
+      traits: {
+        rangePx: 120,
+        damageType: 'physical',
+        basicAttackVfx: { preset: 'arrow', arc: true },
+      },
+    });
+    expect(resolveCounterRangePx(undefined, victim)).toBe(120);
+    expect(resolveCounterRangePx(0, victim)).toBe(120);
+    expect(resolveCounterRangePx(50, victim)).toBe(50);
   });
 });
 

@@ -422,6 +422,56 @@
       },
       "buffStat": "attackSpeed",
       "buffMultiplier": 1.25
+    },
+    {
+      "id": "at_ranger_passive_3",
+      "name": "応射",
+      "effect": "counter",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "buffSubKind": "stat",
+      "buffTargetRule": {
+        "kind": "self"
+      },
+      "buffStat": "atk",
+      "buffMultiplier": 1.2,
+      "defenseIgnore": {
+        "def": {
+          "mode": "percent",
+          "amount": 0.2
+        }
+      },
+      "specialEffectApplyTo": "damage",
+      "specialEffect": {
+        "scale": 1.2,
+        "conditions": [
+          {
+            "kind": "debuff",
+            "tags": [
+              "def"
+            ]
+          }
+        ]
+      },
+      "counterChance": 0.33,
+      "chance": 0.33,
+      "counterResponses": [
+        {
+          "kind": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1,
+            "defOffset": 0,
+            "defScale": 1
+          },
+          "damageType": "physical"
+        }
+      ],
+      "counterRange": 0,
+      "counterRanged": true
     }
   ],
   "actives": [

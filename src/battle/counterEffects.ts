@@ -79,6 +79,17 @@ export function matchesCounterAttackRangeBand(
   return rangeFilters.some((value) => value);
 }
 
+/** 反撃射程: 未指定または 0 のときは持有者 traits.rangePx */
+export function resolveCounterRangePx(
+  configuredRange: number | undefined,
+  victim: CombatantState,
+): number {
+  if (configuredRange !== undefined && configuredRange !== 0) {
+    return configuredRange;
+  }
+  return victim.traits.rangePx;
+}
+
 export function grantCounterStatus(
   unit: CombatantState,
   params: GrantCounterStatusParams,
@@ -108,8 +119,10 @@ export function isCounterInTriggerRange(
   attacker: CombatantState,
 ): boolean {
   if (attacker.id === victim.id) return false;
-  const rangePx =
-    counterEffect.counterRangePx ?? victim.traits.rangePx;
+  const rangePx = resolveCounterRangePx(
+    counterEffect.counterRangePx,
+    victim,
+  );
   return isWithinSkillRange(attacker, victim, rangePx);
 }
 
@@ -119,7 +132,7 @@ function isPassiveCounterInRange(
   attacker: CombatantState,
 ): boolean {
   if (attacker.id === victim.id) return false;
-  const rangePx = passive.counterRange ?? victim.traits.rangePx;
+  const rangePx = resolveCounterRangePx(passive.counterRange, victim);
   return isWithinSkillRange(attacker, victim, rangePx);
 }
 
