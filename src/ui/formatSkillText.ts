@@ -412,6 +412,30 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
             effect.ratio ?? 0
           )} ${effect.buffDurationSec ?? 0}s`
         );
+      } else if (effect.buffSubKind === "basicAttackTransform") {
+        const parts: string[] = [BUFF_SUB_KIND_LABELS.basicAttackTransform];
+        if (effect.hitCountMultiplier !== undefined) {
+          parts.push(`通常攻撃hit×${effect.hitCountMultiplier}`);
+        }
+        if (effect.primaryEffectOverride !== undefined) {
+          parts.push("通常攻撃置換");
+        }
+        if (effect.primaryPatch !== undefined) {
+          const patchParts: string[] = [];
+          if (effect.primaryPatch.damageType !== undefined) {
+            patchParts.push(DAMAGE_TYPE_LABELS[effect.primaryPatch.damageType]);
+          }
+          if (effect.primaryPatch.amount?.atkScale !== undefined) {
+            patchParts.push(`ATK×${effect.primaryPatch.amount.atkScale}`);
+          }
+          if (patchParts.length > 0) {
+            parts.push(patchParts.join(" "));
+          }
+        }
+        if (effect.appendEffects !== undefined && effect.appendEffects.length > 0) {
+          parts.push(`+${effect.appendEffects.length}効果`);
+        }
+        extras.push(`${parts.join(" ")} ${effect.buffDurationSec ?? 0}s`);
       } else {
         const statLabel = formatBuffTargetStats(
           effect.buffStat,

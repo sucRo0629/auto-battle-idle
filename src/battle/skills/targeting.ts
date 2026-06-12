@@ -147,7 +147,24 @@ function hasDamagedHealCandidate(
   spec: TargetSpec,
   actor: CombatantState,
   attackablePool: CombatantState[],
+  effect?: SkillEffectDef,
 ): boolean {
+  if (
+    effect?.targetShape === 'aoe' &&
+    effect.aoeRadiusPx !== undefined &&
+    effect.aoeRadiusPx > 0 &&
+    (isSelfOriginSpec(spec) || spec.kind === 'self')
+  ) {
+    const anchorX = getBattleX(actor);
+    return attackablePool
+      .filter(
+        (unit) =>
+          unit.isAlive &&
+          Math.abs(getBattleX(unit) - anchorX) <= effect.aoeRadiusPx!,
+      )
+      .some((unit) => unit.hp < unit.maxHp);
+  }
+
   const candidates =
     spec.kind === 'self'
       ? actor.isAlive
@@ -273,7 +290,7 @@ export function resolveEffectResolution(
     effect.type === 'heal' &&
     (effect.healSubKind ?? 'instant') !== 'dispel' &&
     !skipHealWithhold &&
-    !hasDamagedHealCandidate(spec, actor, attackablePool)
+    !hasDamagedHealCandidate(spec, actor, attackablePool, effect)
   ) {
     return null;
   }

@@ -316,7 +316,8 @@ export interface StatusEffect {
     | "block"
     | "counter"
     | "evasion"
-    | "damageTakenToHeal";
+    | "damageTakenToHeal"
+    | "basicAttackTransform";
   /** damageTakenToHeal overlay: 被ダメの回復割合（0.1 = 10%） */
   ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */
@@ -352,6 +353,8 @@ export interface StatusEffect {
   counterMelee?: boolean;
   /** 反撃 overlay: 遠隔帯の攻撃のみ反撃 */
   counterRanged?: boolean;
+  /** basicAttackTransform overlay: 通常攻撃変形 spec（付与時コピー） */
+  basicAttackTransform?: BasicAttackTransformSpec;
 }
 
 /** 反撃対象の近接／遠隔帯フィルタ（OR。両方未指定 = 全区間） */
@@ -397,7 +400,29 @@ export type BuffSubKind =
   | "barrier"
   | "block"
   | "evasion"
-  | "damageTakenToHeal";
+  | "damageTakenToHeal"
+  | "basicAttackTransform";
+
+/** 通常攻撃変形 — primary effect への部分パッチ */
+export interface BasicAttackTransformPrimaryPatch {
+  damageType?: DamageType;
+  amount?: Partial<ResourceAmountSpec>;
+  target?: TargetSpec;
+  targetShape?: TargetShape;
+  aoeRadiusPx?: number;
+}
+
+/** 通常攻撃変形 spec（バフ持続中に basic skill へマージ） */
+export interface BasicAttackTransformSpec {
+  /** 既存 primary effect の hitCount に乗算 */
+  hitCountMultiplier?: number;
+  /** primary effect を丸ごと差し替え */
+  primaryEffectOverride?: SkillEffectDef;
+  /** primary への部分パッチ */
+  primaryPatch?: BasicAttackTransformPrimaryPatch;
+  /** primary の後に追加する effect */
+  appendEffects?: SkillEffectDef[];
+}
 export type DebuffSubKind = "stat" | "dot" | "stun";
 
 export type BuffTargetKind = StatusEffectStat | "evasion" | "block";
@@ -764,6 +789,11 @@ export interface BuffSkillEffect extends SkillEffectCommon {
   ratio?: number;
   amount?: ResourceAmountSpec;
   barrierStack?: boolean;
+  /** basicAttackTransform */
+  hitCountMultiplier?: number;
+  primaryEffectOverride?: SkillEffectDef;
+  primaryPatch?: BasicAttackTransformPrimaryPatch;
+  appendEffects?: SkillEffectDef[];
 }
 
 export interface DebuffSkillEffect extends SkillEffectCommon {

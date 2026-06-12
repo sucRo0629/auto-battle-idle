@@ -1,6 +1,8 @@
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
+  BasicAttackTransformPrimaryPatch,
+  BasicAttackTransformSpec,
   ClassPreset,
   ClassSkillUnlock,
   DamageType,
@@ -240,6 +242,12 @@ export function normalizeActiveSkillEffectForEditor(
     return {
       ...normalized,
       chance: normalized.chance ?? 0.2,
+      buffDurationSec: normalized.buffDurationSec ?? 5,
+    };
+  }
+  if (subKind === 'basicAttackTransform') {
+    return {
+      ...normalized,
       buffDurationSec: normalized.buffDurationSec ?? 5,
     };
   }
@@ -1595,6 +1603,130 @@ function normalizeEffectTargetForShape(effect: SkillEffectDef): SkillEffectDef {
   };
 }
 
+function parsePartialResourceAmount(
+  raw: unknown,
+  context: string,
+): Partial<ResourceAmountSpec> {
+  const obj = requireRecord(raw, context);
+  const patch: Partial<ResourceAmountSpec> = {};
+  if (obj.kind !== undefined) {
+    patch.kind = requireEnum(obj, 'kind', context, RESOURCE_AMOUNT_KINDS_SET);
+  }
+  const atkOffset = parseOptionalNumber(obj, 'atkOffset', context);
+  const atkScale = parseOptionalNumber(obj, 'atkScale', context);
+  const defOffset = parseOptionalNumber(obj, 'defOffset', context);
+  const defScale = parseOptionalNumber(obj, 'defScale', context);
+  const flatAmount = parseOptionalNumber(obj, 'flatAmount', context);
+  const percentOfMaxHp = parseOptionalNumber(obj, 'percentOfMaxHp', context);
+  if (atkOffset !== undefined) patch.atkOffset = atkOffset;
+  if (atkScale !== undefined) patch.atkScale = atkScale;
+  if (defOffset !== undefined) patch.defOffset = defOffset;
+  if (defScale !== undefined) patch.defScale = defScale;
+  if (flatAmount !== undefined) patch.flatAmount = flatAmount;
+  if (percentOfMaxHp !== undefined) {
+    if (percentOfMaxHp < 0 || percentOfMaxHp > 1) {
+      invalidField(context, 'percentOfMaxHp', 'must be between 0 and 1');
+    }
+    patch.percentOfMaxHp = percentOfMaxHp;
+  }
+  if (obj.maxHpRef !== undefined) {
+    patch.maxHpRef = requireEnum(
+      obj,
+      'maxHpRef',
+      context,
+      new Set(['self', 'target'] as const),
+    );
+  }
+  if (Object.keys(patch).length === 0) {
+    invalidField(context, 'amount patch', 'must specify at least one field');
+  }
+  return patch;
+}
+
+function parseBasicAttackPrimaryPatch(
+  raw: unknown,
+  context: string,
+): BasicAttackTransformPrimaryPatch {
+  const obj = requireRecord(raw, context);
+  const patch: BasicAttackTransformPrimaryPatch = {};
+  if (obj.damageType !== undefined) {
+    patch.damageType = requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
+  }
+  if (obj.amount !== undefined) {
+    patch.amount = parsePartialResourceAmount(obj.amount, `${context}.amount`);
+  }
+  if (obj.target !== undefined) {
+    patch.target = parseTargetSpec(obj.target, `${context}.target`);
+  }
+  if (obj.targetShape !== undefined) {
+    patch.targetShape = requireEnum(obj, 'targetShape', context, TARGET_SHAPES_SET);
+  }
+  const aoeRadiusPx = parseOptionalNumber(obj, 'aoeRadiusPx', context);
+  if (aoeRadiusPx !== undefined) patch.aoeRadiusPx = aoeRadiusPx;
+  if (Object.keys(patch).length === 0) {
+    invalidField(context, 'primaryPatch', 'must specify at least one field');
+  }
+  return patch;
+}
+
+function parseBasicAttackTransformFields(
+  obj: Record<string, unknown>,
+  context: string,
+): BasicAttackTransformSpec {
+  const spec: BasicAttackTransformSpec = {};
+  const hitCountMultiplier = parseOptionalNumber(
+    obj,
+    'hitCountMultiplier',
+    context,
+  );
+  if (hitCountMultiplier !== undefined) {
+    if (hitCountMultiplier <= 0) {
+      invalidField(context, 'hitCountMultiplier', 'must be a positive number');
+    }
+    spec.hitCountMultiplier = hitCountMultiplier;
+  }
+  if (obj.primaryEffectOverride !== undefined) {
+    spec.primaryEffectOverride = parseSkillEffect(
+      obj.primaryEffectOverride,
+      `${context}.primaryEffectOverride`,
+    );
+    if (spec.primaryEffectOverride.type === 'move') {
+      invalidField(
+        context,
+        'primaryEffectOverride',
+        'move effects are not allowed',
+      );
+    }
+  }
+  if (obj.primaryPatch !== undefined) {
+    spec.primaryPatch = parseBasicAttackPrimaryPatch(
+      obj.primaryPatch,
+      `${context}.primaryPatch`,
+    );
+  }
+  if (obj.appendEffects !== undefined) {
+    if (!Array.isArray(obj.appendEffects) || obj.appendEffects.length === 0) {
+      invalidField(context, 'appendEffects', 'must be a non-empty array');
+    }
+    spec.appendEffects = obj.appendEffects.map((entry, index) =>
+      parseSkillEffect(entry, `${context}.appendEffects[${index}]`),
+    );
+  }
+  if (
+    spec.hitCountMultiplier === undefined &&
+    spec.primaryEffectOverride === undefined &&
+    spec.primaryPatch === undefined &&
+    (spec.appendEffects === undefined || spec.appendEffects.length === 0)
+  ) {
+    invalidField(
+      context,
+      'basicAttackTransform',
+      'must specify hitCountMultiplier, primaryEffectOverride, primaryPatch, or appendEffects',
+    );
+  }
+  return spec;
+}
+
 export function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {
   const obj = requireRecord(entry, context);
   const typeRaw = requireString(obj, 'type', context);
@@ -1784,6 +1916,33 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         buffSubKind,
         ratio,
         buffDurationSec,
+        ...sequenceTiming,
+        ...presentation,
+        ...(range !== undefined ? { range } : {}),
+      });
+    }
+    if (buffSubKind === 'basicAttackTransform') {
+      const buffDurationSec = requireNumber(obj, 'buffDurationSec', context);
+      const transform = parseBasicAttackTransformFields(obj, context);
+      return normalizeSkillEffect({
+        target,
+        ...targetShapeFields,
+        ...combatModifiers,
+        type,
+        buffSubKind,
+        buffDurationSec,
+        ...(transform.hitCountMultiplier !== undefined
+          ? { hitCountMultiplier: transform.hitCountMultiplier }
+          : {}),
+        ...(transform.primaryEffectOverride !== undefined
+          ? { primaryEffectOverride: transform.primaryEffectOverride }
+          : {}),
+        ...(transform.primaryPatch !== undefined
+          ? { primaryPatch: transform.primaryPatch }
+          : {}),
+        ...(transform.appendEffects !== undefined
+          ? { appendEffects: transform.appendEffects }
+          : {}),
         ...sequenceTiming,
         ...presentation,
         ...(range !== undefined ? { range } : {}),

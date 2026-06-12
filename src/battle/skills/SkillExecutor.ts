@@ -23,6 +23,8 @@ import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
 import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
 import { grantCounterStatus } from '../counterEffects.ts';
 import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
+import { resolveEffectiveBasicAttackSkill } from '../resolveEffectiveBasicAttack.ts';
+import { basicAttackTransformSpecFromBuffEffect } from '../resolveEffectiveBasicAttack.ts';
 import { resolveMoveBattleX } from '../combatPosition.ts';
 import {
   chargeBasicAttackCountOnHit,
@@ -128,8 +130,12 @@ export class SkillExecutor {
     if (!actor.isAlive) return false;
     if (isUnitStunned(actor)) return false;
 
-    const skill = this.gameData.skillRegistry.actives[cd.skillId];
-    if (!skill || skill.effect.length === 0) return false;
+    const baseSkill = this.gameData.skillRegistry.actives[cd.skillId];
+    if (!baseSkill || baseSkill.effect.length === 0) return false;
+    const skill =
+      cd.slotKind === 'basic'
+        ? resolveEffectiveBasicAttackSkill(actor, baseSkill)
+        : baseSkill;
 
     const passives = getPassiveDefs(
       actor,
@@ -773,6 +779,37 @@ export class SkillExecutor {
             effect: 'buff',
             effectIndex,
             statusLabel: 'damageTakenToHeal',
+            range: effectDef.range,
+            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+          });
+          return true;
+        }
+        if (subKind === 'basicAttackTransform') {
+          const duration = effectDef.buffDurationSec ?? 0;
+          const transformSpec = basicAttackTransformSpecFromBuffEffect(effectDef);
+          if (duration <= 0 || !transformSpec) return false;
+          const appliedAt = Date.now();
+          target.statusEffects.push({
+            id: `${skill.id}_basicAttackTransform_${appliedAt}`,
+            kind: 'buff',
+            overlay: 'basicAttackTransform',
+            multiplier: 1,
+            durationSec: duration,
+            remainingSec: duration,
+            sourceId: actor.id,
+            skillId: skill.id,
+            basicAttackTransform: structuredClone(transformSpec),
+          });
+          this.emit({
+            type: 'skill',
+            actorId: actor.id,
+            targetId: target.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            slotKind: cd.slotKind,
+            effect: 'buff',
+            effectIndex,
+            statusLabel: 'basicAttackTransform',
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
           });

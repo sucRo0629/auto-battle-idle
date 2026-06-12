@@ -185,6 +185,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | 種別     | 定義方法                                                                                                                                           |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | buff   | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec`                                                                           |
+| 通常攻撃変形 | `effect: "buff"` + `buffSubKind: "basicAttackTransform"` — バフ持続中のみ通常攻撃 effect を実行時マージ（下記） |
 | debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                   |
 | スタン    | `effect: "stun"` + `durationSec` — `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可（CD は進行）                                     |
 | 反撃    | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記 |
@@ -212,6 +213,20 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 - buff/debuff `multiplier` — 乗算
 - buff/debuff `flatBonus` — 代数和（buff `+` / debuff `-`）
 - buff/debuff / CC `remainingSec` — **長い方**を採用（短い効果は上書き）
+
+### 通常攻撃変形（`basicAttackTransform`）
+
+アクティブ `buff` の `buffSubKind: "basicAttackTransform"`。自身（`target: self`）へ付与し、**バフ持続中のみ**通常攻撃（`slotKind: basic`）の effect を実行時にマージする。
+
+| 項目 | 挙動 |
+|------|------|
+| 有効期間 | `buffDurationSec`（`remainingSec` 減衰）。**use lock / presentation lock 中は通常攻撃停止**（既存仕様）。lock 解除後〜バフ切れまで変形 |
+| スタック | 複数付与時は **最新 1 件のみ**有効 |
+| `hitCountMultiplier` | 既存 primary effect の `hitCount`（未指定 = 1）に乗算 |
+| `primaryEffectOverride` | primary（先頭 non-move effect）を丸ごと差し替え |
+| `primaryPatch` | primary への部分上書き（`damageType` / `amount.atkScale` 等） |
+| `appendEffects` | primary の後に effect を追加（例: ダメージ + 自分中心 AoE heal） |
+| `basicAttackCount` | 変形後も **damage ヒットのみ**充填。heal 化すると充填停止 |
 
 毎 tick：`remainingSec -= deltaTime`、0 以下で除去。
 

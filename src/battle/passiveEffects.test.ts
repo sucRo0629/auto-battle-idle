@@ -339,9 +339,9 @@ describe('passiveEffects', () => {
   it('syncBuffAuras applies block overlay on self without status badges', () => {
     const blockPassives = {
       ...passives,
-      df_guardian_passive_1: {
-        id: 'df_guardian_passive_1',
-        name: '守勢',
+      defender_passive_1: {
+        id: 'defender_passive_1',
+        name: '盾受け',
         effect: 'buff' as const,
         buffSubKind: 'block' as const,
         chance: 0.15,
@@ -351,7 +351,7 @@ describe('passiveEffects', () => {
     const guard = mockAlly({
       id: 'guard',
       build: {
-        learnedPassiveIds: ['df_guardian_passive_1'],
+        learnedPassiveIds: ['defender_passive_1'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },

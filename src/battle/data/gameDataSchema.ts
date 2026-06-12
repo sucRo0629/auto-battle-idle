@@ -276,6 +276,7 @@ export const BUFF_SUB_KINDS = [
   "block",
   "evasion",
   "damageTakenToHeal",
+  "basicAttackTransform",
 ] as const satisfies readonly BuffSubKind[];
 
 export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
@@ -284,6 +285,7 @@ export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
   block: "ブロック",
   evasion: "回避",
   damageTakenToHeal: "被ダメ回復",
+  basicAttackTransform: "通常攻撃変形",
 };
 
 export const DEBUFF_SUB_KINDS = [

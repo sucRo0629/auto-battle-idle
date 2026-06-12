@@ -847,6 +847,15 @@ function applyActiveBuffSubKindChange(
         ...base,
         amount: prev.amount ?? defaultResourceAmount(),
       };
+    case 'basicAttackTransform':
+      return {
+        ...base,
+        buffDurationSec: prev.buffDurationSec ?? 5,
+        hitCountMultiplier: prev.hitCountMultiplier,
+        primaryPatch: prev.primaryPatch,
+        primaryEffectOverride: prev.primaryEffectOverride,
+        appendEffects: prev.appendEffects,
+      };
     default:
       return base;
   }
@@ -3387,6 +3396,104 @@ export class SkillEditorStep {
                 (buffDurationSec) =>
                   patchEffect((prev) => ({ ...prev, buffDurationSec }) as SkillEffectDef),
                 { min: 0.1, step: 0.5 },
+              ),
+            ),
+          );
+          break;
+        }
+        if (effect.buffSubKind === 'basicAttackTransform') {
+          detailGrid.appendChild(
+            createFieldRow(
+              '通常攻撃 hit 倍率',
+              createNumberInput(
+                effect.hitCountMultiplier ?? 1,
+                (hitCountMultiplier) =>
+                  patchEffect(
+                    (prev) =>
+                      prev.type === 'buff'
+                        ? {
+                            ...prev,
+                            hitCountMultiplier:
+                              hitCountMultiplier > 1 ? hitCountMultiplier : undefined,
+                          }
+                        : prev,
+                  ),
+                { min: 1, step: 0.5 },
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              '秒数',
+              createNumberInput(
+                effect.buffDurationSec ?? 5,
+                (buffDurationSec) =>
+                  patchEffect((prev) => ({ ...prev, buffDurationSec }) as SkillEffectDef),
+                { min: 0.1, step: 0.5 },
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              'primary damageType',
+              createSelect(
+                effect.primaryPatch?.damageType ?? '',
+                [
+                  { value: '', label: '（変更なし）' },
+                  ...DAMAGE_TYPE_OPTIONS.map((value) => ({
+                    value,
+                    label: value,
+                  })),
+                ],
+                (damageType) =>
+                  patchEffect((prev) => {
+                    if (prev.type !== 'buff') return prev;
+                    const primaryPatch = { ...(prev.primaryPatch ?? {}) };
+                    if (damageType === '') {
+                      delete primaryPatch.damageType;
+                    } else {
+                      primaryPatch.damageType = damageType as import('../battle/types.ts').DamageType;
+                    }
+                    return {
+                      ...prev,
+                      primaryPatch:
+                        Object.keys(primaryPatch).length > 0 ? primaryPatch : undefined,
+                    };
+                  }),
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              'primary atkScale',
+              createNumberInput(
+                effect.primaryPatch?.amount?.atkScale ?? 1,
+                (atkScale) =>
+                  patchEffect((prev) => {
+                    if (prev.type !== 'buff') return prev;
+                    const primaryPatch = { ...(prev.primaryPatch ?? {}) };
+                    if (atkScale === 1) {
+                      if (primaryPatch.amount) {
+                        const { atkScale: _, ...restAmount } = primaryPatch.amount;
+                        primaryPatch.amount =
+                          Object.keys(restAmount).length > 0 ? restAmount : undefined;
+                      }
+                    } else {
+                      primaryPatch.amount = {
+                        ...(primaryPatch.amount ?? {}),
+                        atkScale,
+                      };
+                    }
+                    return {
+                      ...prev,
+                      primaryPatch:
+                        Object.keys(primaryPatch).length > 0 ||
+                        primaryPatch.amount !== undefined
+                          ? primaryPatch
+                          : undefined,
+                    };
+                  }),
+                { min: 0, step: 0.05 },
               ),
             ),
           );

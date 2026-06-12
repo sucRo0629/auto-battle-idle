@@ -300,6 +300,18 @@ interface CharacterBuild {
 
 アクティブは `type: buff` + `buffSubKind` で `StatusEffect`（`overlay: block` / `evasion`）を付与。パッシブは `syncBuffAuras` で常時同期。旧 `type: block` / パッシブ `block` は読み込み時に正規化。
 
+### 通常攻撃変形（`buff` effect、`buffSubKind: "basicAttackTransform"`）
+
+| フィールド                | 説明                                                                 |
+| ------------------------- | -------------------------------------------------------------------- |
+| `buffDurationSec`         | 変形持続（秒）。`target: self` 推奨                                  |
+| `hitCountMultiplier`      | optional。既存 primary の `hitCount` に乗算                        |
+| `primaryEffectOverride`   | optional。primary effect を丸ごと差し替え（例: damage → ally heal） |
+| `primaryPatch`            | optional。`damageType` / `amount.atkScale` / `target` 等の部分上書き |
+| `appendEffects`           | optional。primary の後に追加する effect 配列                         |
+
+バフ持続中のみ通常攻撃を実行時マージ。スキル発動アニメ（use lock / presentation lock）中は従来どおり通常攻撃停止。詳細は [combat.md](combat.md) の通常攻撃変形節。
+
 ### 反撃（`counter` effect）
 
 | フィールド              | 説明                                                                                                                    |

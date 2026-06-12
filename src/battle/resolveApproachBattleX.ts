@@ -28,6 +28,7 @@ import {
   compareFormationRowSlot,
   computePartyFormationBattleX,
 } from './partyFormation.ts';
+import { resolveEffectiveBasicAttackSkill } from './resolveEffectiveBasicAttack.ts';
 
 function resolveBasicAttackEffect(
   unit: CombatantState,
@@ -35,8 +36,10 @@ function resolveBasicAttackEffect(
 ): SkillEffectDef | undefined {
   const basicCd = unit.cooldowns.find((cd) => cd.slotKind === 'basic');
   const skillId = basicCd?.skillId;
-  const skill = skillId ? gameData.skillRegistry.actives[skillId] : undefined;
-  return skill?.effect.find((entry) => entry.type !== 'move');
+  const baseSkill = skillId ? gameData.skillRegistry.actives[skillId] : undefined;
+  if (!baseSkill) return undefined;
+  const skill = resolveEffectiveBasicAttackSkill(unit, baseSkill);
+  return skill.effect.find((entry) => entry.type !== 'move');
 }
 
 function resolveBasicAttackTarget(

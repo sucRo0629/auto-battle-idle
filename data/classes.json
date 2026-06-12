@@ -17,7 +17,7 @@
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "df_guardian_basic_attack",
     "passiveIds": [
-      "df_guardian_passive_1",
+      "defender_passive_1",
       "df_guardian_passive_2",
       "df_guardian_passive_3",
       "df_guardian_passive_4"
@@ -26,7 +26,7 @@
       {
         "level": 0,
         "skillIds": [
-          "df_guardian_passive_1",
+          "defender_passive_1",
           "df_guardian_passive_2",
           "df_guardian_active_1",
           "df_guardian_active_2"
@@ -69,7 +69,7 @@
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "df_paladin_basic_attack",
     "passiveIds": [
-      "df_paladin_passive_1",
+      "defender_passive_1",
       "df_paladin_passive_2",
       "df_paladin_passive_3",
       "df_paladin_passive_4"
@@ -78,7 +78,7 @@
       {
         "level": 0,
         "skillIds": [
-          "df_paladin_passive_1",
+          "defender_passive_1",
           "df_paladin_passive_2",
           "df_paladin_active_1",
           "df_paladin_active_2"
@@ -121,7 +121,7 @@
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "df_duelist_basic_attack",
     "passiveIds": [
-      "df_duelist_passive_1",
+      "defender_passive_1",
       "df_duelist_passive_2",
       "df_duelist_passive_3",
       "df_duelist_passive_4"
@@ -130,7 +130,7 @@
       {
         "level": 0,
         "skillIds": [
-          "df_duelist_passive_1",
+          "defender_passive_1",
           "df_duelist_passive_2",
           "df_duelist_active_1",
           "df_duelist_active_2"
@@ -215,16 +215,11 @@
     "jobTier": 1,
     "attackSpeedTier": "fast",
     "basicAttackSkillId": "at_assassin_basic_attack",
-    "passiveIds": [
-      "passive_evasion",
-      "passive_target_lowest_hp"
-    ],
+    "passiveIds": [],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "passive_evasion",
-          "passive_target_lowest_hp",
           "at_assassin_active_1",
           "at_assassin_active_2"
         ]
@@ -326,9 +321,7 @@
     "jobTier": 1,
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "at_sniper_basic_attack",
-    "passiveIds": [
-      "passive_target_farthest"
-    ],
+    "passiveIds": [],
     "skills": [
       {
         "level": 0,
@@ -361,9 +354,7 @@
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_hunter_basic_attack",
-    "passiveIds": [
-      "passive_damage_vs_dot"
-    ],
+    "passiveIds": [],
     "skills": [
       {
         "level": 0,
@@ -397,14 +388,11 @@
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "at_sorcerer_basic_attack",
-    "passiveIds": [
-      "passive_target_lowest_reg"
-    ],
+    "passiveIds": [],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "passive_target_lowest_reg",
           "at_sorcerer_active_1",
           "at_sorcerer_active_2"
         ]
@@ -472,9 +460,7 @@
     "jobTier": 1,
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "at_geomancer_basic_attack",
-    "passiveIds": [
-      "passive_aoe_crowd_bonus"
-    ],
+    "passiveIds": [],
     "skills": [
       {
         "level": 0,
