@@ -75,6 +75,14 @@ export interface BattleHudTheme {
   attackOrbHighlightAlpha: number;
   attackArrowShaft: string;
   attackArrowTip: string;
+  attackChainLightningCore: string;
+  attackChainLightningGlow: string;
+  attackChainLightningTail: string;
+  attackChainLightningCoreAlpha: number;
+  attackChainLightningGlowAlpha: number;
+  attackChainLightningTailAlpha: number;
+  attackImpaleShaft: string;
+  attackImpaleTip: string;
   statusBadgeOverlay: string;
   statusIconOutlineColor: string;
   statusIconOutlineWidth: number;
@@ -249,6 +257,38 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     ),
     attackArrowShaft: readString(style, '--attack-arrow-shaft', '#c8a165'),
     attackArrowTip: readString(style, '--attack-arrow-tip', '#8b6914'),
+    attackChainLightningCore: readString(
+      style,
+      '--attack-chain-lightning-core',
+      '#e8f4ff',
+    ),
+    attackChainLightningGlow: readString(
+      style,
+      '--attack-chain-lightning-glow',
+      '#5dade2',
+    ),
+    attackChainLightningTail: readString(
+      style,
+      '--attack-chain-lightning-tail',
+      '#a9cce3',
+    ),
+    attackChainLightningCoreAlpha: readNumber(
+      style,
+      '--attack-chain-lightning-core-alpha',
+      0.95,
+    ),
+    attackChainLightningGlowAlpha: readNumber(
+      style,
+      '--attack-chain-lightning-glow-alpha',
+      0.55,
+    ),
+    attackChainLightningTailAlpha: readNumber(
+      style,
+      '--attack-chain-lightning-tail-alpha',
+      0.75,
+    ),
+    attackImpaleShaft: readString(style, '--attack-impale-shaft', '#b8c4ce'),
+    attackImpaleTip: readString(style, '--attack-impale-tip', '#5d6d7e'),
     statusBadgeOverlay: readString(
       style,
       '--status-badge-overlay',

@@ -3,7 +3,12 @@ import { isMeleeRangePx } from '../types.ts';
 import { engagedMinBodyGap } from '../battleConstants.ts';
 import { getBattleX } from '../combatPosition.ts';
 import { partyFormationDepthPx } from '../partyFormation.ts';
-import { getEffectTarget, getTargetPool, isMultiTargetSpec, targetSpecFaction } from './targetSpec.ts';
+import {
+  getEffectTarget,
+  getTargetPool,
+  isMultiTargetSpec,
+  targetSpecFaction,
+} from './targetSpec.ts';
 
 /** 味方→敵 / 敵→味方の 1D 距離（px） */
 export function battleDistance(
@@ -14,6 +19,29 @@ export function battleDistance(
   return actor.isEnemy
     ? getBattleX(target) - getBattleX(actor)
     : getBattleX(actor) - getBattleX(target);
+}
+
+/** 向き前方への距離（正 = 前方） */
+export function forwardDistancePx(
+  actor: CombatantState,
+  target: CombatantState,
+): number {
+  return -battleDistance(actor, target);
+}
+
+/** 使用者の向いている方向の前方セグメント内か */
+export function isInForwardSegment(
+  actor: CombatantState,
+  target: CombatantState,
+  rangePx: number,
+): boolean {
+  if (actor.id === target.id) return true;
+  const forward = forwardDistancePx(actor, target);
+  if (forward < 0) return false;
+  if (isMeleeRangePx(rangePx)) {
+    return forward <= engagedMinBodyGap() + rangePx;
+  }
+  return forward <= rangePx;
 }
 
 export function isWithinSkillRange(
@@ -40,6 +68,15 @@ function isAllyTargetedHealEffect(
   return targetSpecFaction(spec, actor) === 'ally';
 }
 
+function isAllyTargetedBuffEffect(
+  effect: Pick<SkillEffectDef, 'type' | 'target' | 'targetRule'>,
+  actor: CombatantState,
+): boolean {
+  if (effect.type !== 'buff') return false;
+  const spec = getEffectTarget(effect as SkillEffectDef);
+  return targetSpecFaction(spec, actor) === 'ally';
+}
+
 /** 味方回復はパーティ奥行きまで届くよう射程を底上げ */
 export function resolveSkillRangePx(
   actor: CombatantState,
@@ -47,7 +84,12 @@ export function resolveSkillRangePx(
   livingAllyCount: number = DEFAULT_PARTY_SIZE_FOR_HEAL_RANGE,
 ): number {
   const base = effect.range ?? actor.traits.rangePx;
-  if (!isAllyTargetedHealEffect(effect, actor)) return base;
+  if (
+    !isAllyTargetedHealEffect(effect, actor) &&
+    !isAllyTargetedBuffEffect(effect, actor)
+  ) {
+    return base;
+  }
   const partyDepth = partyFormationDepthPx(
     Math.max(1, livingAllyCount),
   );

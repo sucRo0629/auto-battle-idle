@@ -21,20 +21,34 @@ export function buildPendingHitsFromResolution(
   const waves = resolution.waves.filter((wave) => wave.targets.length > 0);
   if (waves.length === 0) return [];
 
-  return waves.map((wave) => ({
-    applyAtBattleSec:
-      battleSec + (spread * wave.hitIndex) / Math.max(waves.length, 1),
-    actorId,
-    skillId: skill.id,
-    skillName: skill.name,
-    effectDef,
-    slotKind: cd.slotKind,
-    hitIndex: wave.hitIndex,
-    targets: wave.targets.map((entry) => ({
-      targetId: entry.unit.id,
-      powerMultiplierOverride: entry.powerMultiplierOverride,
-    })),
-  }));
+  const segmentShape =
+    effectDef.targetShape === 'chain' || effectDef.targetShape === 'pierce';
+  let segmentSourceId = actorId;
+
+  return waves.map((wave) => {
+    const hit: PendingSkillHit = {
+      applyAtBattleSec:
+        battleSec + (spread * wave.hitIndex) / Math.max(waves.length, 1),
+      actorId,
+      skillId: skill.id,
+      skillName: skill.name,
+      effectDef,
+      slotKind: cd.slotKind,
+      hitIndex: wave.hitIndex,
+      targets: wave.targets.map((entry) => ({
+        targetId: entry.unit.id,
+        powerMultiplierOverride: entry.powerMultiplierOverride,
+      })),
+    };
+    if (segmentShape) {
+      hit.vfxSourceId = segmentSourceId;
+      const firstTarget = wave.targets[0];
+      if (firstTarget) {
+        segmentSourceId = firstTarget.unit.id;
+      }
+    }
+    return hit;
+  });
 }
 
 export function tickPendingHits(

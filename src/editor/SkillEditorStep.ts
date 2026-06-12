@@ -30,6 +30,9 @@ import {
   TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS,
   TARGET_SHAPE_LABELS,
   TARGET_SHAPE_OPTIONS,
+  POWER_STEP_MODE_LABELS,
+  POWER_STEP_MODES,
+  VFX_PRESET_LABELS,
   VFX_PRESET_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
 import {
@@ -62,6 +65,7 @@ import type {
   SkillVfxPresetId,
   StatusEffectStat,
   TargetShape,
+  PowerStepMode,
 } from '../battle/types.ts';
 import { CONFIGURABLE_RANGE_PX_MAX, configurableRangeHintJa } from '../battle/rangeLimits.ts';
 import {
@@ -1034,10 +1038,9 @@ function appendEffectPresentationFields(
         (preset || '') as SkillVfxPresetId | '',
         [
           { value: '', label: '— スキル既定 / なし —' },
-          { value: 'slash' as SkillVfxPresetId, label: 'slash' },
-          ...VFX_PRESET_OPTIONS.filter((v) => v !== 'slash').map((value) => ({
+          ...VFX_PRESET_OPTIONS.map((value) => ({
             value,
-            label: value,
+            label: VFX_PRESET_LABELS[value],
           })),
         ],
         (value) => {
@@ -2465,10 +2468,9 @@ export class SkillEditorStep {
           (preset || '') as SkillVfxPresetId | '',
           [
             { value: '', label: '— 既定（role/射程）—' },
-            { value: 'slash' as SkillVfxPresetId, label: 'slash' },
-            ...VFX_PRESET_OPTIONS.filter((v) => v !== 'slash').map((value) => ({
+            ...VFX_PRESET_OPTIONS.map((value) => ({
               value,
-              label: value,
+              label: VFX_PRESET_LABELS[value],
             })),
           ],
           (value) => {
@@ -2578,29 +2580,53 @@ export class SkillEditorStep {
         createEl('p', 'editor-hint', '付与対象: 自身（固定）'),
       );
     } else {
-      appendTargetSpecFields(grid, getEffectTarget(effect), (target) => {
-        patchEffect((prev) => ({ ...prev, target }) as SkillEffectDef, {
-          rerender: true,
-        });
-      });
+      const effectTarget = getEffectTarget(effect);
+      const lockSelfOrigin = (normalizedEffect.targetShape ?? 'single') === 'pierce';
+      appendTargetSpecFields(
+        grid,
+        effectTarget,
+        (target) => {
+          patchEffect((prev) => {
+            const next: SkillEffectDef = { ...prev, target };
+            if (target.kind === 'self' && (next.targetShape ?? 'single') !== 'single') {
+              next.targetShape = 'single';
+              delete next.aoeRadiusPx;
+              delete next.hitCount;
+              delete next.hitDurationSec;
+              delete next.piercePowerStepMultiplier;
+              delete next.piercePowerStepMode;
+              delete next.pierceDurationSec;
+              delete next.chainCount;
+              delete next.chainMaxDistancePx;
+              delete next.chainPowerStepMultiplier;
+              delete next.chainPowerStepMode;
+              delete next.scatterRadiusPx;
+              delete next.scatterSpreadRadiusPx;
+              delete next.scatterHitCount;
+              delete next.scatterDurationSec;
+              delete next.scatterSpreadRate;
+            }
+            return next;
+          }, { rerender: true });
+        },
+        { lockSelfOrigin },
+      );
     }
     const isMove = normalizedEffect.type === 'move';
     const isCounter = normalizedEffect.type === 'counter';
+    const effectTargetKind = getEffectTarget(effect).kind;
     const targetShape: TargetShape = normalizedEffect.targetShape ?? 'single';
     if (!isMove && !isCounter) {
-      grid.appendChild(
-        createFieldRow(
-          'ターゲット形状',
-          createSelect(
-            targetShape,
-            TARGET_SHAPE_OPTIONS.filter((value) => value !== 'multiLock').map(
-              (value) => ({
-                value,
-                label: TARGET_SHAPE_LABELS[value],
-              }),
-            ),
-            (shape) => {
-            patchEffect((prev) => {
+      const shapeSelect = createSelect(
+        effectTargetKind === 'self' ? 'single' : targetShape,
+        TARGET_SHAPE_OPTIONS.filter((value) => value !== 'multiLock').map(
+          (value) => ({
+            value,
+            label: TARGET_SHAPE_LABELS[value],
+          }),
+        ),
+        (shape) => {
+          patchEffect((prev) => {
             const next: SkillEffectDef = { ...prev, targetShape: shape };
             delete next.aoeRadiusPx;
             delete next.hitCount;
@@ -2630,13 +2656,47 @@ export class SkillEditorStep {
               next.scatterHitCount = 3;
               next.scatterDurationSec = 1;
               next.scatterSpreadRate = 1;
+            } else if (shape === 'pierce') {
+              const currentTarget = getEffectTarget(next);
+              const side =
+                currentTarget.kind === 'distance'
+                  ? currentTarget.side
+                  : currentTarget.kind === 'all' || currentTarget.kind === 'stat'
+                    ? currentTarget.side
+                    : 'enemy';
+              const includeSelf =
+                currentTarget.kind === 'distance' &&
+                currentTarget.includeSelf === true
+                  ? true
+                  : undefined;
+              next.target = {
+                kind: 'distance',
+                side,
+                order: 'selfOrigin',
+                ...(includeSelf !== undefined ? { includeSelf } : {}),
+              };
             }
             return next;
-            }, { rerender: true });
-          },
-        ),
-      ),
+          }, { rerender: true });
+        },
       );
+      if (effectTargetKind === 'self') {
+        shapeSelect.disabled = true;
+        grid.appendChild(
+          createFieldRow('ターゲット形状', shapeSelect),
+        );
+        grid.appendChild(
+          createEl(
+            'p',
+            'editor-hint',
+            '種別が自身のときは単体のみ。周囲・貫通は距離・自身起点を使用してください。',
+          ),
+        );
+      } else {
+        grid.appendChild(
+          createFieldRow('ターゲット形状', shapeSelect),
+        );
+      }
     } else {
       grid.appendChild(
         createEl('p', 'editor-hint', '移動効果は単体（single）のみ。ターゲットは移動先の基準（anchor）です。'),
@@ -2873,6 +2933,56 @@ export class SkillEditorStep {
       );
     }
     if (!isMove && targetShape === 'pierce') {
+      grid.appendChild(
+        createFieldRow(
+          '威力減衰倍率（任意）',
+          createNumberInput(
+            effect.piercePowerStepMultiplier ?? 0,
+            (piercePowerStepMultiplier) =>
+              patchEffect(
+                (prev) => {
+                  const next: SkillEffectDef = {
+                    ...prev,
+                    targetShape: 'pierce',
+                  };
+                  if (piercePowerStepMultiplier > 0) {
+                    next.piercePowerStepMultiplier = piercePowerStepMultiplier;
+                    next.piercePowerStepMode =
+                      prev.piercePowerStepMode ?? 'multiply';
+                  } else {
+                    delete next.piercePowerStepMultiplier;
+                    delete next.piercePowerStepMode;
+                  }
+                  return next;
+                },
+              ),
+            { min: 0, step: 0.05, emptyWhen: 0, placeholder: '未設定' },
+          ),
+        ),
+      );
+      if ((effect.piercePowerStepMultiplier ?? 0) > 0) {
+        grid.appendChild(
+          createFieldRow(
+            '減衰方式',
+            createSelect(
+              effect.piercePowerStepMode ?? 'multiply',
+              POWER_STEP_MODES.map((value) => ({
+                value,
+                label: POWER_STEP_MODE_LABELS[value],
+              })),
+              (piercePowerStepMode) =>
+                patchEffect(
+                  (prev) =>
+                    ({
+                      ...prev,
+                      targetShape: 'pierce',
+                      piercePowerStepMode: piercePowerStepMode as PowerStepMode,
+                    }) as SkillEffectDef,
+                ),
+            ),
+          ),
+        );
+      }
       grid.appendChild(
         createFieldRow(
           '貫通時間（秒・任意）',

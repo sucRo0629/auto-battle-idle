@@ -1092,12 +1092,14 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
       obj,
       'order',
       context,
-      new Set(['nearest', 'farthest']),
+      new Set(['nearest', 'farthest', 'selfOrigin']),
     );
+    const includeSelf = obj.includeSelf === true ? true : undefined;
     return {
       kind: 'distance',
       side,
-      order: order as 'nearest' | 'farthest',
+      order: order as 'nearest' | 'farthest' | 'selfOrigin',
+      ...(includeSelf !== undefined ? { includeSelf } : {}),
     };
   }
   if (kind === 'stat') {
@@ -1442,7 +1444,34 @@ function normalizeSkillEffect(effect: SkillEffectDef | LegacyHotSkillEffect): Sk
   if (effect.type === 'debuff' && effect.debuffSubKind === undefined) {
     return { ...effect, debuffSubKind: 'stat' };
   }
-  return effect;
+  return normalizeEffectTargetForShape(effect);
+}
+
+function normalizeEffectTargetForShape(effect: SkillEffectDef): SkillEffectDef {
+  if (effect.type === 'counter' || effect.type === 'move') return effect;
+  const shape = effect.targetShape ?? 'single';
+  if (shape !== 'pierce') return effect;
+
+  const current = effect.target ?? { kind: 'distance' as const, side: 'enemy' as const, order: 'nearest' as const };
+  const side =
+    current.kind === 'distance'
+      ? current.side
+      : current.kind === 'all' || current.kind === 'stat'
+        ? current.side
+        : 'enemy';
+  const includeSelf =
+    current.kind === 'distance' && current.includeSelf === true
+      ? true
+      : undefined;
+  return {
+    ...effect,
+    target: {
+      kind: 'distance',
+      side,
+      order: 'selfOrigin',
+      ...(includeSelf !== undefined ? { includeSelf } : {}),
+    },
+  };
 }
 
 export function parseSkillEffect(entry: unknown, context: string): SkillEffectDef {

@@ -16,6 +16,7 @@ import type {
   CombatantState,
   DebuffFilterTag,
   PassiveSkillDef,
+  SkillHitTarget,
   TargetDistanceOrder,
   TargetRule,
   TargetRuleOverrideApplyTo,
@@ -105,11 +106,19 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
     const order = raw.order;
     if (
       (side !== "ally" && side !== "enemy") ||
-      (order !== "nearest" && order !== "farthest")
+      (order !== "nearest" &&
+        order !== "farthest" &&
+        order !== "selfOrigin")
     ) {
       throw new Error("Invalid target.distance fields");
     }
-    return { kind: "distance", side, order };
+    const includeSelf = raw.includeSelf === true ? true : undefined;
+    return {
+      kind: "distance",
+      side,
+      order,
+      ...(includeSelf !== undefined ? { includeSelf } : {}),
+    };
   }
   if (kind === "stat") {
     const side = raw.side;
@@ -225,7 +234,10 @@ export function targetSpecFaction(
   if (spec.kind === "distance" || spec.kind === "stat" || spec.kind === "all") {
     return spec.side;
   }
-  if (spec.kind === "attackType" || spec.kind === "status") {
+  if (spec.kind === "attackType") {
+    return "enemy";
+  }
+  if (spec.kind === "status") {
     return spec.side ?? "enemy";
   }
   return "enemy";
@@ -369,6 +381,21 @@ export function isMultiTargetSpec(spec: TargetSpec): boolean {
   return spec.kind === "all";
 }
 
+export function isSelfOriginSpec(spec: TargetSpec): boolean {
+  return spec.kind === "distance" && spec.order === "selfOrigin";
+}
+
+export function applyIncludeSelfFilter(
+  spec: TargetSpec,
+  actor: CombatantState,
+  targets: SkillHitTarget[],
+): SkillHitTarget[] {
+  if (spec.kind !== "distance" || spec.side !== "ally" || spec.includeSelf === true) {
+    return targets;
+  }
+  return targets.filter((entry) => entry.unit.id !== actor.id);
+}
+
 export function pickTargetFromPool(
   spec: TargetSpec,
   actor: CombatantState,
@@ -377,6 +404,10 @@ export function pickTargetFromPool(
   if (pool.length === 0) return null;
 
   if (spec.kind === "self") {
+    return actor.isAlive ? actor : null;
+  }
+
+  if (spec.kind === "distance" && spec.order === "selfOrigin") {
     return actor.isAlive ? actor : null;
   }
 
@@ -508,6 +539,7 @@ const SIDE_LABELS: Record<TargetSide, string> = {
 const DISTANCE_ORDER_LABELS: Record<TargetDistanceOrder, string> = {
   nearest: "至近",
   farthest: "最遠",
+  selfOrigin: "自身起点",
 };
 
 const STAT_LABELS: Record<TargetStat, string> = {

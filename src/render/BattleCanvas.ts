@@ -57,6 +57,7 @@ import { WaveOverlay } from "./WaveOverlay.ts";
 import { DeathPlaybackManager } from "./deathPlayback.ts";
 import { drawBattleFieldBackground } from "./battleFieldBackground.ts";
 import { layoutHpBarBarrier } from "./hpBarBarrierLayout.ts";
+import { sortForSpriteDraw } from "./spriteDrawOrder.ts";
 
 const CANVAS_W = 480;
 const CANVAS_H = battleCanvasHeight(1);
@@ -356,10 +357,12 @@ export class BattleCanvas implements IBattleRenderer {
       SPRITE_SIZE
     );
 
-    const enemyLayouts = this.layouts
-      .filter((layout) => layout.isEnemy)
-      .sort((a, b) => b.x - a.x);
-    const allyLayouts = this.layouts.filter((layout) => !layout.isEnemy);
+    const enemyLayouts = sortForSpriteDraw(
+      this.layouts.filter((layout) => layout.isEnemy),
+    );
+    const allyLayouts = sortForSpriteDraw(
+      this.layouts.filter((layout) => !layout.isEnemy),
+    );
 
     for (const layout of enemyLayouts) {
       this.drawSprite(layout, layout.x, layout.y, SPRITE_SCALE);

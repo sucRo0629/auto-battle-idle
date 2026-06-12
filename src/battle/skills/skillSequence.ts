@@ -45,6 +45,8 @@ export interface ActiveSkillSequence {
   cd: SkillCooldown;
   steps: PendingSkillStep[];
   nextStepIndex: number;
+  /** 最終 step 適用後の waitAfterSec 待機（完了まで isActorInSkillMotion を維持） */
+  tailWaitUntilBattleSec?: number;
 }
 
 export function buildSkillSequence(
@@ -385,17 +387,37 @@ export class SkillSequenceRunner {
     const kept: ActiveSkillSequence[] = [];
 
     for (const sequence of this.sequences) {
+      if (sequence.tailWaitUntilBattleSec !== undefined) {
+        if (battleTimeSec < sequence.tailWaitUntilBattleSec) {
+          kept.push(sequence);
+          continue;
+        }
+        sequence.cd.remaining = sequence.skillInterval;
+        continue;
+      }
+
       while (sequence.nextStepIndex < sequence.steps.length) {
         const step = sequence.steps[sequence.nextStepIndex]!;
         if (step.applyAtBattleSec > battleTimeSec) break;
 
         applyStep(step);
         sequence.nextStepIndex += 1;
+
+        if (sequence.nextStepIndex >= sequence.steps.length) {
+          const waitAfterSec = step.effectDef.waitAfterSec;
+          if (waitAfterSec !== undefined && waitAfterSec > 0) {
+            sequence.tailWaitUntilBattleSec = battleTimeSec + waitAfterSec;
+          } else {
+            sequence.cd.remaining = sequence.skillInterval;
+          }
+          break;
+        }
       }
 
-      if (sequence.nextStepIndex >= sequence.steps.length) {
-        sequence.cd.remaining = sequence.skillInterval;
-      } else {
+      if (
+        sequence.nextStepIndex < sequence.steps.length ||
+        sequence.tailWaitUntilBattleSec !== undefined
+      ) {
         kept.push(sequence);
       }
     }

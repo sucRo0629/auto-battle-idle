@@ -124,6 +124,26 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 `formationRow` は Y 描画・ターゲット用。X 深度の正本は射程順一列（`partyFormation.ts`）。
 
+### 2.7 スプライト描画順（重なり）
+
+Canvas 2D の描画順（先に描いた方が下層）で重なりを決める。実装：`src/render/spriteDrawOrder.ts` → `BattleCanvas.ts`。
+
+| 優先 | ルール | 意味 |
+|------|--------|------|
+| 1 | **敵を先に描画** | プレイヤー側スプライトが敵より手前（上） |
+| 2 | **同一陣営内は後方を先に描画** | 手前に立つユニットが後方ユニットより上 |
+
+**後方の定義（陣営ごとの battleX 向き）：**
+
+| 陣営 | 後方（下層） | 前方（上層） |
+|------|--------------|--------------|
+| プレイヤー側 | 小さい `battleX`（画面左） | 大きい `battleX`（敵寄り） |
+| 敵 | 大きい `battleX`（画面右・退却側） | 小さい `battleX`（プレイヤー寄り） |
+
+ソートキー `factionBackDepth`：`isEnemy ? -battleX : battleX` の昇順。同深度は `id` 辞書順。
+
+HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に別レイヤーで描画（本節の対象外）。
+
 ---
 
 ## 3. Wave・フィールド構造
@@ -262,6 +282,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | `BattleEngine.ts` | BattlePhase FSM、tick 順序のオーケストレーション |
 | `formationLayout.ts` | `groundY`、HUD 余白、`CANVAS_W` 等 **キャンバス定数のみ** |
 | `BattleCanvas.ts` | snapshot → 描画 |
+| `spriteDrawOrder.ts` | スプライト重なり順（§2.7） |
 
 **依存方向：** `battleLayout` → `combatPosition` / `battleConstants`（一方向）。`combatPosition` → `formationLayout` **禁止**。
 

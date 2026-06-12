@@ -962,10 +962,13 @@
           "target": {
             "kind": "distance",
             "side": "enemy",
-            "order": "nearest"
+            "order": "selfOrigin"
           }
         }
-      ]
+      ],
+      "vfx": {
+        "preset": "impale"
+      }
     },
     {
       "id": "at_lancer_active_2",
@@ -1096,8 +1099,7 @@
           "range": 50,
           "pierceDurationSec": 0.15,
           "vfx": {
-            "preset": "arrow",
-            "arc": true
+            "preset": "impale"
           },
           "target": {
             "kind": "distance",
@@ -1301,7 +1303,7 @@
           },
           "range": 50,
           "vfx": {
-            "preset": "orb"
+            "preset": "chainLightning"
           },
           "target": {
             "kind": "distance",
@@ -1731,13 +1733,14 @@
           "target": {
             "kind": "distance",
             "side": "enemy",
-            "order": "nearest"
+            "order": "selfOrigin"
           },
           "type": "damage",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1
-          }
+            "atkScale": 0.95
+          },
+          "targetShape": "pierce"
         }
       ]
     },

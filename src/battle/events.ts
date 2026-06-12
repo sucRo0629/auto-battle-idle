@@ -14,6 +14,8 @@ export type BattleEvent =
       range?: number;
       statusLabel?: string;
       hitIndex?: number;
+      /** chain/pierce 等: VFX セグメントの起点（未指定時は actorId） */
+      vfxSourceId?: string;
     }
   | { type: 'basicAttackCountCharged'; actorId: string }
   | { type: 'hurt'; targetId: string }

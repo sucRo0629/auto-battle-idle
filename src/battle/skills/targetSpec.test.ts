@@ -78,6 +78,22 @@ describe('normalizeTarget', () => {
       debuffTags: ['def'],
     });
   });
+
+  it('parses distance selfOrigin with includeSelf', () => {
+    expect(
+      normalizeTarget({
+        kind: 'distance',
+        side: 'ally',
+        order: 'selfOrigin',
+        includeSelf: true,
+      }),
+    ).toEqual({
+      kind: 'distance',
+      side: 'ally',
+      order: 'selfOrigin',
+      includeSelf: true,
+    });
+  });
 });
 
 describe('getTargetPool / pickTargetFromPool', () => {

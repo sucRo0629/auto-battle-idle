@@ -741,10 +741,16 @@ function appendStatusTagCheckboxes(
   parent.appendChild(buffWrap);
 }
 
+export interface AppendTargetSpecFieldsOptions {
+  /** 貫通形状時: 距離を自身起点に固定 */
+  lockSelfOrigin?: boolean;
+}
+
 export function appendTargetSpecFields(
   parent: HTMLElement,
   target: TargetSpec,
   onChange: (target: TargetSpec) => void,
+  options?: AppendTargetSpecFieldsOptions,
 ): void {
   const wrap = createEl('div', 'editor-target-spec-fields');
   const normalized = normalizeTarget(target);
@@ -765,19 +771,29 @@ export function appendTargetSpecFields(
   );
 
   if (normalized.kind === 'distance') {
-    wrap.appendChild(
-      createFieldRow(
-        '距離',
-        createSelect(
-          normalized.order,
-          TARGET_DISTANCE_ORDER_OPTIONS.map((value) => ({
-            value,
-            label: TARGET_DISTANCE_ORDER_LABELS[value],
-          })),
-          (order) => onChange({ ...normalized, order }),
-        ),
-      ),
+    const order =
+      options?.lockSelfOrigin === true ? 'selfOrigin' : normalized.order;
+    const distanceSelect = createSelect(
+      order,
+      TARGET_DISTANCE_ORDER_OPTIONS.map((value) => ({
+        value,
+        label: TARGET_DISTANCE_ORDER_LABELS[value],
+      })),
+      (nextOrder) => onChange({ ...normalized, order: nextOrder }),
     );
+    if (options?.lockSelfOrigin === true) {
+      distanceSelect.disabled = true;
+    }
+    wrap.appendChild(createFieldRow('距離', distanceSelect));
+    if (options?.lockSelfOrigin === true) {
+      wrap.appendChild(
+        createEl(
+          'p',
+          'editor-hint',
+          '貫通は常に自身起点。使用者の向いている方向に、射程分の直線範囲で命中します。',
+        ),
+      );
+    }
     wrap.appendChild(
       createFieldRow(
         '対象側',
@@ -791,6 +807,30 @@ export function appendTargetSpecFields(
         ),
       ),
     );
+    if (normalized.side === 'ally') {
+      const includeRow = createEl('div', 'editor-field editor-field-checkbox');
+      const includeInput = createEl('input') as HTMLInputElement;
+      includeInput.type = 'checkbox';
+      includeInput.checked = normalized.includeSelf === true;
+      includeInput.addEventListener('change', () => {
+        onChange({
+          ...normalized,
+          includeSelf: includeInput.checked ? true : undefined,
+        });
+      });
+      includeRow.appendChild(createEl('label', undefined, '自身を対象に含める'));
+      includeRow.appendChild(includeInput);
+      wrap.appendChild(includeRow);
+      if (order === 'selfOrigin') {
+        wrap.appendChild(
+          createEl(
+            'p',
+            'editor-hint',
+            '自身起点では「自身を含める」を ON にすると使用者にも効果が及びます。',
+          ),
+        );
+      }
+    }
   }
 
   if (normalized.kind === 'stat') {

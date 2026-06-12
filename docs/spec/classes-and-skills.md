@@ -329,7 +329,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 
 | `kind`       | 説明                                                                                                                                 |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest）。味方 actor + enemy/nearest = 最前線敵。敵 actor + enemy/nearest = 射程内でヘイト最大の味方（`side: "enemy"` は敵視点でプレイヤー陣営を指す）   |
+| `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest/**selfOrigin**）。`selfOrigin` = 使用者位置・向きを効果範囲の起点とする（aoe / pierce / single）。`includeSelf`（任意）= 味方 side 時、最終対象に使用者を含める（既定 false） |
 | `stat`       | `side` + `stat`（hp/atk/def/reg）+ `order`（highest/lowest/ratio）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方） |
 | `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。フィルタ後 anchor は最前線           |
 | `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR）。フィルタ後 anchor は最前線                                                    |
@@ -364,7 +364,9 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `scatterSpreadRadiusPx`                                      | `scatter` 任意。着弾位置の分散半径（±px）。未指定 = `scatterRadiusPx`                                                                |
 | `scatterRadiusPx` / `scatterHitCount` / `scatterDurationSec` | `scatter` 必須（`scatterRadiusPx` = 乱打半径・命中判定）                                                                             |
 | `scatterSpreadRate`                                          | `scatter` 任意（0〜1。0 = anchor 中心固定。着弾 offset = `scatterSpreadRadiusPx × rate`）                                            |
-| `range`                                                      | 命中判定・VFX 共用（px）。省略時 = `actor.traits.rangePx`                                                                            |
+| `piercePowerStepMultiplier` / `piercePowerStepMode`          | `pierce` 任意。命中ごとの威力減衰（`multiply` / `divide`）                                                                          |
+| `pierceDurationSec`                                          | `pierce` 任意。複数命中の適用時間分散（秒）                                                                                          |
+| `range`                                                      | 命中判定・VFX 共用（px）。省略時 = `actor.traits.rangePx`。`pierce` + `selfOrigin` では向き前方の効果距離                           |
 | `anim`                                                       | 任意。entity スプライトアニメ（`idle` / `attack` / `none` 等）。未指定 = effect 種別の既定。突進・回復は **スキルアニメ PNG** を優先 |
 | `vfx`                                                        | 任意。effect 単位の VFX プリセット。未指定 = スキル `vfx` → 種別既定（damage/heal 等）                                               |
 

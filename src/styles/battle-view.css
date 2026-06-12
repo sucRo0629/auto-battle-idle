@@ -120,6 +120,14 @@
   --attack-orb-highlight-alpha: 0.45;
   --attack-arrow-shaft: #c8a165;
   --attack-arrow-tip: #8b6914;
+  --attack-chain-lightning-core: #e8f4ff;
+  --attack-chain-lightning-glow: #5dade2;
+  --attack-chain-lightning-tail: #a9cce3;
+  --attack-chain-lightning-core-alpha: 0.95;
+  --attack-chain-lightning-glow-alpha: 0.55;
+  --attack-chain-lightning-tail-alpha: 0.75;
+  --attack-impale-shaft: #b8c4ce;
+  --attack-impale-tip: #5d6d7e;
   --status-badge-icon-size: 8;
   --status-badge-overlap: 0;
   --status-badge-overlay: rgba(0, 0, 0, 0.55);

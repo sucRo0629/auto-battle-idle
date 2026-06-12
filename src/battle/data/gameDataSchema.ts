@@ -149,9 +149,12 @@ export const DAMAGE_TYPES = [
 ] as const satisfies readonly DamageType[];
 export const VFX_PRESETS = [
   "slash",
+  "slashHit",
   "orb",
   "arrow",
   "healRise",
+  "chainLightning",
+  "impale",
 ] as const satisfies readonly SkillVfxPresetId[];
 export const TARGET_RULES = [
   "closestAlly",
@@ -441,6 +444,16 @@ export const RESOURCE_AMOUNT_KIND_OPTIONS: ResourceAmountKind[] = [
 ];
 export const DAMAGE_TYPE_OPTIONS: DamageType[] = [...DAMAGE_TYPES];
 export const VFX_PRESET_OPTIONS: SkillVfxPresetId[] = [...VFX_PRESETS];
+
+export const VFX_PRESET_LABELS: Record<SkillVfxPresetId, string> = {
+  slash: "slash（攻撃スイング）",
+  slashHit: "slashHit（ダメージ）",
+  orb: "orb",
+  arrow: "arrow",
+  healRise: "healRise",
+  chainLightning: "chainLightning（連鎖雷）",
+  impale: "impale（貫通）",
+};
 export const TARGET_RULE_OPTIONS: TargetRule[] = [...TARGET_RULES];
 export const TARGET_SHAPE_OPTIONS: TargetShape[] = [...TARGET_SHAPES];
 export const PASSIVE_EFFECT_KIND_OPTIONS: PassiveEffectKind[] = [
@@ -554,7 +567,11 @@ export const TARGET_RULE_OVERRIDE_APPLY_TO_LABELS: Record<
 };
 
 export const TARGET_SIDE_OPTIONS = ["ally", "enemy"] as const;
-export const TARGET_DISTANCE_ORDER_OPTIONS = ["nearest", "farthest"] as const;
+export const TARGET_DISTANCE_ORDER_OPTIONS = [
+  "nearest",
+  "farthest",
+  "selfOrigin",
+] as const;
 export const TARGET_STAT_OPTIONS = ["hp", "atk", "def", "reg"] as const;
 export const TARGET_STAT_ORDER_OPTIONS = [
   "highest",
@@ -571,11 +588,20 @@ export const TARGET_SIDE_LABELS: Record<
 };
 
 export const TARGET_DISTANCE_ORDER_LABELS: Record<
-  "nearest" | "farthest",
+  "nearest" | "farthest" | "selfOrigin",
   string
 > = {
   nearest: "至近",
   farthest: "最遠",
+  selfOrigin: "自身起点",
+};
+
+export const POWER_STEP_MODE_LABELS: Record<
+  import("../types.ts").PowerStepMode,
+  string
+> = {
+  multiply: "累乗",
+  divide: "累除",
 };
 
 export const TARGET_STAT_LABELS: Record<"hp" | "atk" | "def" | "reg", string> =

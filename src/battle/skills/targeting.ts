@@ -17,14 +17,16 @@ import {
 } from './powerStep.ts';
 import { getBattleX } from '../combatPosition.ts';
 import {
-  battleDistance,
   getAttackablePool,
+  isInForwardSegment,
   resolveSkillRangePx,
 } from './rangeUtils.ts';
 import {
+  applyIncludeSelfFilter,
   getEffectTarget,
   getTargetPool,
   isMultiTargetSpec,
+  isSelfOriginSpec,
   normalizeTarget,
   orderPoolByTarget,
   pickTargetFromPool as pickTargetFromPoolSpec,
@@ -98,6 +100,13 @@ function resolveAoeHitTargets(
   attackablePool: CombatantState[],
   aoeRadiusPx: number,
 ): SkillHitTarget[] {
+  if (isSelfOriginSpec(spec)) {
+    const anchorX = getBattleX(actor);
+    return attackablePool
+      .filter((unit) => Math.abs(getBattleX(unit) - anchorX) <= aoeRadiusPx)
+      .map((unit) => ({ unit }));
+  }
+
   const anchor = pickTargetFromPoolSpec(spec, actor, attackablePool);
   if (!anchor) return [];
 
@@ -267,6 +276,19 @@ export function resolveEffectResolution(
   }
 
   if (shape === 'single') {
+    if (isSelfOriginSpec(spec)) {
+      if (!actor.isAlive) return null;
+      const targets = applyIncludeSelfFilter(spec, actor, [{ unit: actor }]);
+      if (targets.length === 0) return null;
+      const hits = effect.hitCount;
+      if (hits === undefined || hits < 2) {
+        return { waves: [{ hitIndex: 0, targets }] };
+      }
+      const duration = effect.hitDurationSec;
+      if (duration === undefined || duration <= 0) return null;
+      return resolveRepeatedHitWaves(targets, hits, duration);
+    }
+
     if (isMultiTargetSpec(spec)) {
       const targets = attackablePool
         .filter((unit) => unit.isAlive)
@@ -286,7 +308,12 @@ export function resolveEffectResolution(
     const hits = effect.hitCount;
     if (hits === undefined || hits < 2) {
       return {
-        waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
+        waves: [
+          {
+            hitIndex: 0,
+            targets: applyIncludeSelfFilter(spec, actor, [{ unit: target }]),
+          },
+        ],
       };
     }
     const duration = effect.hitDurationSec;
@@ -297,7 +324,11 @@ export function resolveEffectResolution(
   if (shape === 'aoe') {
     const radius = effect.aoeRadiusPx;
     if (radius === undefined || radius <= 0) return null;
-    const targets = resolveAoeHitTargets(spec, actor, attackablePool, radius);
+    const targets = applyIncludeSelfFilter(
+      spec,
+      actor,
+      resolveAoeHitTargets(spec, actor, attackablePool, radius),
+    );
     if (targets.length === 0) return null;
     const hits = effect.hitCount;
     if (hits === undefined || hits < 2) {
@@ -323,8 +354,10 @@ export function resolveEffectResolution(
 
   if (shape === 'pierce') {
     const targets = resolvePierceHitTargets(
+      spec,
       actor,
-      attackablePool,
+      allies,
+      enemies,
       rangePx,
       basePower,
       effect,
@@ -421,14 +454,29 @@ function resolveMultiLockHitTargets(
 }
 
 function resolvePierceHitTargets(
+  spec: TargetSpec,
   actor: CombatantState,
-  attackablePool: CombatantState[],
-  _rangePx: number,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  rangePx: number,
   basePowerMultiplier: number | undefined,
   effect: SkillEffectDef,
 ): SkillHitTarget[] {
-  const inLine = attackablePool
-    .filter((unit) => battleDistance(actor, unit) <= 0)
+  const side =
+    spec.kind === 'distance'
+      ? spec.side
+      : spec.kind === 'stat' || spec.kind === 'all'
+        ? spec.side
+        : 'enemy';
+  const pool = getTargetPool(
+    { kind: 'distance', side, order: 'selfOrigin' },
+    actor,
+    allies,
+    enemies,
+  ).filter((unit) => unit.isAlive);
+
+  const inSegment = pool
+    .filter((unit) => isInForwardSegment(actor, unit, rangePx))
     .sort((a, b) =>
       actor.isEnemy
         ? getBattleX(b) - getBattleX(a)
@@ -437,12 +485,13 @@ function resolvePierceHitTargets(
 
   const step = pierceStepFields(effect);
   const base = basePowerMultiplier ?? 1;
-  return inLine.map((unit, index) => ({
+  const targets = inSegment.map((unit, index) => ({
     unit,
     powerMultiplierOverride: step
       ? applyPowerStep(base, index, step)
       : undefined,
   }));
+  return applyIncludeSelfFilter(spec, actor, targets);
 }
 
 function resolveChainHitTargets(

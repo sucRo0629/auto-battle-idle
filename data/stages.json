@@ -8,6 +8,14 @@
           {
             "templateId": "test_dummy",
             "spawnX": 100
+          },
+          {
+            "templateId": "test_dummy",
+            "spawnX": 120
+          },
+          {
+            "templateId": "test_dummy",
+            "spawnX": 140
           }
         ]
       }

@@ -8,6 +8,7 @@ import { createDefaultSave } from "../progression/victoryRewards.ts";
 import { createMemberFromClass } from "../progression/partyCompose.ts";
 import {
   asBattleEngineInternals,
+  reachWave1Engage,
   reachWave2Engage,
   TICK_DT,
 } from "./test/battleFieldSpec.harness.ts";
@@ -16,6 +17,24 @@ function createAssassinFrontEngine(): BattleEngine {
   const gameData = structuredClone(loadGameData());
   const save = createDefaultSave(gameData, "demo");
   save.stageProgress.currentStageId = "1";
+  save.party[0] = createMemberFromClass("at_assassin", gameData);
+  for (const slot of save.party) {
+    if (slot) slot.progress.level = 10;
+  }
+  const engine = new BattleEngine(
+    gameData,
+    loadLevelCurves(levelCurvesJson),
+    () => save.party,
+    () => save.stageProgress.currentStageId
+  );
+  engine.startBattle();
+  return engine;
+}
+
+function createAssassinTestDummyEngine(): BattleEngine {
+  const gameData = structuredClone(loadGameData());
+  const save = createDefaultSave(gameData, "demo");
+  save.stageProgress.currentStageId = "test";
   save.party[0] = createMemberFromClass("at_assassin", gameData);
   for (const slot of save.party) {
     if (slot) slot.progress.level = 10;
@@ -102,7 +121,7 @@ describe("behindTarget move", () => {
     expect(returnedTowardEngage).toBe(true);
   });
 
-  it("waits after damage before starting return move", () => {
+  it("waits after damage before engage clamp pulls actor back", () => {
     const engine = createAssassinFrontEngine();
     reachWave2Engage(engine);
     const internal = asBattleEngineInternals(engine);
@@ -140,6 +159,39 @@ describe("behindTarget move", () => {
 
     expect(peakX).toBeGreaterThan(engageMax + 5);
     expect(returnStartTick).toBeGreaterThan(peakTick);
-    expect(returnStartTick - peakTick).toBeGreaterThanOrEqual(8);
+    expect(returnStartTick - peakTick).toBeGreaterThanOrEqual(28);
+  });
+
+  it("stays behind training dummy through damage waitAfterSec", () => {
+    const engine = createAssassinTestDummyEngine();
+    reachWave1Engage(engine);
+    const internal = asBattleEngineInternals(engine);
+
+    const assassin = internal.players.find((p) => p.name === "双刃士")!;
+    const dummy = internal.enemies.find((e) => e.isAlive)!;
+    const activeCd = assassin.cooldowns.find(
+      (cd) => cd.skillId === "at_assassin_active_2"
+    );
+    expect(activeCd).toBeDefined();
+    activeCd!.remaining = 0;
+
+    let behindDuringWait = false;
+    for (let t = 0; t < 900; t++) {
+      engine.tick(TICK_DT);
+      if (
+        internal.skillSequenceRunner.isActorInSkillMotion(assassin.id) &&
+        assassin.battleX >= dummy.battleX + 8
+      ) {
+        behindDuringWait = true;
+      }
+      if (
+        behindDuringWait &&
+        !internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)
+      ) {
+        break;
+      }
+    }
+
+    expect(behindDuringWait).toBe(true);
   });
 });

@@ -13,6 +13,7 @@ import {
 import {
   resolveEffectPresentation,
   shouldPlayActorAnim,
+  usesSegmentVfxSource,
 } from "../render/skillVfx/resolveEffectPresentation.ts";
 import { resolveSkillAnimKey } from "../render/skillAnimRegistry.ts";
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
@@ -232,6 +233,7 @@ export class BattleView {
             basicAttackVfx: actor?.basicAttackVfx,
             slotKind: event.slotKind,
             effectKind: event.effect,
+            targetShape: effectDef.targetShape,
           }
         );
         const skillAnimKey = resolveSkillAnimKey(
@@ -255,10 +257,21 @@ export class BattleView {
           );
         }
         if (presentation.vfx) {
+          const sourceId =
+            usesSegmentVfxSource(presentation.vfx.preset)
+              ? (event.vfxSourceId ?? event.actorId)
+              : event.actorId;
+          this.canvas.playAttackEffect(
+            sourceId,
+            event.targetId,
+            presentation.vfx
+          );
+        }
+        if (presentation.hitVfx) {
           this.canvas.playAttackEffect(
             event.actorId,
             event.targetId,
-            presentation.vfx
+            presentation.hitVfx
           );
         }
       }

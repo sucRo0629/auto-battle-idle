@@ -6,12 +6,14 @@ import type {
   SkillVfxDef,
 } from "../../battle/types.ts";
 import type { AnimState } from "../SpriteRegistry.ts";
+import { resolveDefaultHitVfx } from "./defaultPresets.ts";
 import { resolveSkillVfx } from "./resolveSkillVfx.ts";
 import type { SkillVfxContext } from "./types.ts";
 
 export interface EffectPresentation {
   anim: AnimState | null;
   vfx: SkillVfxDef | null;
+  hitVfx?: SkillVfxDef | null;
 }
 
 const LEGACY_ANIM_MAP: Partial<Record<SkillEffectAnimId, SkillEffectAnimId>> = {
@@ -52,6 +54,14 @@ function supportsVfx(effect: SkillEffectDef): boolean {
   );
 }
 
+function resolveHitVfx(
+  vfx: SkillVfxDef | null,
+  ctx: SkillVfxContext,
+): SkillVfxDef | null {
+  if (!vfx) return null;
+  return resolveDefaultHitVfx(ctx, vfx);
+}
+
 export function resolveEffectPresentation(
   skillId: string,
   effectDef: SkillEffectDef,
@@ -71,7 +81,9 @@ export function resolveEffectPresentation(
     }
   }
 
-  return { anim, vfx };
+  const hitVfx = resolveHitVfx(vfx, ctx);
+
+  return { anim, vfx, hitVfx };
 }
 
 export function shouldPlayActorAnim(
@@ -83,4 +95,9 @@ export function shouldPlayActorAnim(
     return false;
   }
   return true;
+}
+
+/** chainLightning / impale はセグメント起点を vfxSourceId から取る */
+export function usesSegmentVfxSource(preset: SkillVfxDef["preset"]): boolean {
+  return preset === "chainLightning" || preset === "impale";
 }

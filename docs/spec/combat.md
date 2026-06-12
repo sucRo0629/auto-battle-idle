@@ -211,7 +211,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | `single`    | 攻撃可能プールから 1 体。`hitCount >= 2` なら同一対象へ N 回（`hitDurationSec` で分散）                      |
 | `aoe`       | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散）                     |
 | `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打）                  |
-| `pierce`    | 射線上の敵を手前→奥（味方は +X 方向、敵は −X 方向）。`pierceDurationSec` で適用分散可 |
+| `pierce`    | **`order: selfOrigin` 必須**。使用者の向き（味方 +X / 敵 −X）へ `range` px の前方セグメント内を手前→奥に命中。`piercePowerStepMultiplier` で威力減衰、`pierceDurationSec` で適用分散可 |
 | `chain`     | anchor から同陣営へ距離内で連鎖                                                                  |
 | `scatter`   | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
 

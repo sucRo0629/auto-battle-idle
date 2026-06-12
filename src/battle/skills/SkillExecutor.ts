@@ -60,6 +60,22 @@ import {
   resolveEffectTargetSpec,
 } from './targeting.ts';
 
+function skillHitEventFields(
+  hitIndex?: number,
+  vfxSourceId?: string,
+): { hitIndex?: number; vfxSourceId?: string } {
+  return {
+    ...(hitIndex !== undefined ? { hitIndex } : {}),
+    ...(vfxSourceId !== undefined ? { vfxSourceId } : {}),
+  };
+}
+
+function usesSegmentVfxSource(
+  targetShape: SkillEffectDef['targetShape'],
+): boolean {
+  return targetShape === 'chain' || targetShape === 'pierce';
+}
+
 export interface SkillExecutorDeps {
   getBattleTimeSec: () => number;
   enqueuePendingHits: (hits: PendingSkillHit[]) => void;
@@ -171,8 +187,12 @@ export class SkillExecutor {
         targetShape: effectDef.targetShape,
       };
 
+      let segmentSourceId = actor.id;
       for (const wave of resolution!.waves) {
         for (const { unit, powerMultiplierOverride } of wave.targets) {
+          const vfxSourceId = usesSegmentVfxSource(effectDef.targetShape)
+            ? segmentSourceId
+            : undefined;
           if (
             this.applyEffect(
               actor,
@@ -183,10 +203,14 @@ export class SkillExecutor {
               effectIndex,
               powerMultiplierOverride,
               wave.hitIndex,
+              vfxSourceId,
               damageContext,
             )
           ) {
             appliedAny = true;
+          }
+          if (usesSegmentVfxSource(effectDef.targetShape)) {
+            segmentSourceId = unit.id;
           }
         }
       }
@@ -290,6 +314,7 @@ export class SkillExecutor {
         effectIndex >= 0 ? effectIndex : 0,
         entry.powerMultiplierOverride,
         hit.hitIndex,
+        hit.vfxSourceId,
       );
     }
   }
@@ -362,6 +387,7 @@ export class SkillExecutor {
     effectIndex: number,
     powerMultiplierOverride?: number,
     hitIndex?: number,
+    vfxSourceId?: string,
     damageContext: PassiveDamageContext = {},
   ): boolean {
     if (effectDef.type === 'move') {
@@ -431,7 +457,7 @@ export class SkillExecutor {
         effectIndex,
         amount: finalDamage,
         range: effectDef.range,
-        ...(hitIndex !== undefined ? { hitIndex } : {}),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       this.emit({ type: 'hurt', targetId: target.id });
       if (lethal) {
@@ -490,7 +516,7 @@ export class SkillExecutor {
           effectIndex,
           statusLabel: 'hot',
           range: effectDef.range,
-          ...(hitIndex !== undefined ? { hitIndex } : {}),
+          ...skillHitEventFields(hitIndex, vfxSourceId),
         });
         return true;
       }
@@ -514,7 +540,7 @@ export class SkillExecutor {
           effectIndex,
           amount: removed,
           range: effectDef.range,
-          ...(hitIndex !== undefined ? { hitIndex } : {}),
+          ...skillHitEventFields(hitIndex, vfxSourceId),
         });
         return true;
       }
@@ -566,7 +592,7 @@ export class SkillExecutor {
         effectIndex,
         amount,
         range: effectDef.range,
-        ...(hitIndex !== undefined ? { hitIndex } : {}),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -605,7 +631,7 @@ export class SkillExecutor {
             effectIndex,
             amount: grant,
             range: effectDef.range,
-            ...(hitIndex !== undefined ? { hitIndex } : {}),
+            ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
@@ -638,7 +664,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: subKind,
             range: effectDef.range,
-            ...(hitIndex !== undefined ? { hitIndex } : {}),
+            ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
@@ -669,7 +695,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: 'damageTakenToHeal',
             range: effectDef.range,
-            ...(hitIndex !== undefined ? { hitIndex } : {}),
+            ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
@@ -725,7 +751,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: 'dot',
             range: effectDef.range,
-            ...(hitIndex !== undefined ? { hitIndex } : {}),
+            ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
@@ -748,7 +774,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: 'stun',
             range: effectDef.range,
-            ...(hitIndex !== undefined ? { hitIndex } : {}),
+            ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
@@ -820,7 +846,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: statusLabels.join(', '),
         range: effectDef.range,
-        ...(hitIndex !== undefined ? { hitIndex } : {}),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       if (!isBuff && actor.isEnemy === false && target.isEnemy) {
         this.deps.onDebuffApplied?.(actor);
@@ -845,7 +871,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'stun',
         range: effectDef.range,
-        ...(hitIndex !== undefined ? { hitIndex } : {}),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -863,7 +889,7 @@ export class SkillExecutor {
         effect: 'knockback',
         effectIndex,
         range: effectDef.range,
-        ...(hitIndex !== undefined ? { hitIndex } : {}),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -888,7 +914,7 @@ export class SkillExecutor {
         effectIndex,
         amount: removed,
         range: effectDef.range,
-        ...(hitIndex !== undefined ? { hitIndex } : {}),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -917,7 +943,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'block',
         range: effectDef.range,
-        ...(hitIndex !== undefined ? { hitIndex } : {}),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -941,7 +967,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'counter',
         range: effectDef.range,
-        ...(hitIndex !== undefined ? { hitIndex } : {}),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -974,7 +1000,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'dot',
         range: effectDef.range,
-        ...(hitIndex !== undefined ? { hitIndex } : {}),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }

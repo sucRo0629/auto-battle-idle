@@ -808,4 +808,113 @@ describe('targetRuleOverride apply scope', () => {
     );
     expect(anchor?.id).toBe('damaged');
   });
+
+  it('selfOrigin aoe buff: hits allies within radius of actor', () => {
+    const caster = mockUnit('caster', 200);
+    const allyNear = mockUnit('ally-near', 230);
+    const allyFar = mockUnit('ally-far', 320);
+    const party = [caster, allyNear, allyFar];
+
+    const targets = resolveEffectTargets(
+      {
+        type: 'buff',
+        buffSubKind: 'stat',
+        buffStat: 'atk',
+        buffMultiplier: 1.2,
+        buffDurationSec: 5,
+        target: {
+          kind: 'distance',
+          side: 'ally',
+          order: 'selfOrigin',
+          includeSelf: true,
+        },
+        targetShape: 'aoe',
+        aoeRadiusPx: 50,
+      } as SkillEffectDef,
+      caster,
+      party,
+      enemies,
+      gameData,
+    );
+    const ids = targets.map((t) => t.id);
+    expect(ids).toContain('caster');
+    expect(ids).toContain('ally-near');
+    expect(ids).not.toContain('ally-far');
+  });
+
+  it('selfOrigin aoe: excludes caster when includeSelf is false', () => {
+    const caster = mockUnit('caster', 200);
+    const allyNear = mockUnit('ally-near', 230);
+    const party = [caster, allyNear];
+
+    const targets = resolveEffectTargets(
+      {
+        type: 'buff',
+        buffSubKind: 'stat',
+        buffStat: 'atk',
+        buffMultiplier: 1.2,
+        buffDurationSec: 5,
+        target: {
+          kind: 'distance',
+          side: 'ally',
+          order: 'selfOrigin',
+        },
+        targetShape: 'aoe',
+        aoeRadiusPx: 50,
+      } as SkillEffectDef,
+      caster,
+      party,
+      enemies,
+      gameData,
+    );
+    const ids = targets.map((t) => t.id);
+    expect(ids).not.toContain('caster');
+    expect(ids).toContain('ally-near');
+  });
+
+  it('pierce: excludes enemies beyond forward range segment', () => {
+    const actor = mockUnit('ally', 100, { rangePx: 80 });
+    const inRange = mockUnit('e1', 150, { isEnemy: true });
+    const outOfRange = mockUnit('e2', 220, { isEnemy: true });
+    const effect: DamageSkillEffect = {
+      targetShape: 'pierce',
+      range: 80,
+      type: 'damage',
+      target: { kind: 'distance', side: 'enemy', order: 'selfOrigin' },
+      damageType: 'physical',
+      amount: { kind: 'atkBased', atkScale: 1 },
+    };
+    const resolution = resolveEffectResolution(
+      effect,
+      actor,
+      [actor],
+      [inRange, outOfRange],
+      gameData,
+    );
+    const ids = resolution?.waves[0]?.targets.map((t) => t.unit.id);
+    expect(ids).toEqual(['e1']);
+  });
+
+  it('pierce: excludes units behind actor', () => {
+    const actor = mockUnit('ally', 200, { rangePx: 120 });
+    const behind = mockUnit('e-behind', 150, { isEnemy: true });
+    const front = mockUnit('e-front', 250, { isEnemy: true });
+    const effect: DamageSkillEffect = {
+      targetShape: 'pierce',
+      range: 120,
+      type: 'damage',
+      target: { kind: 'distance', side: 'enemy', order: 'selfOrigin' },
+      damageType: 'physical',
+      amount: { kind: 'atkBased', atkScale: 1 },
+    };
+    const resolution = resolveEffectResolution(
+      effect,
+      actor,
+      [actor],
+      [behind, front],
+      gameData,
+    );
+    const ids = resolution?.waves[0]?.targets.map((t) => t.unit.id);
+    expect(ids).toEqual(['e-front']);
+  });
 });

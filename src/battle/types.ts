@@ -138,7 +138,7 @@ export type TargetRule =
   | "allEnemies";
 
 export type TargetSide = "ally" | "enemy";
-export type TargetDistanceOrder = "nearest" | "farthest";
+export type TargetDistanceOrder = "nearest" | "farthest" | "selfOrigin";
 export type TargetStat = "hp" | "atk" | "def" | "reg";
 export type TargetStatOrder = "highest" | "lowest" | "ratio";
 
@@ -148,7 +148,13 @@ export type BuffFilterTag = StatusEffectStat | "hot" | "block" | "evasion";
 export type TargetSpec =
   | { kind: "self" }
   | { kind: "all"; side: TargetSide }
-  | { kind: "distance"; side: TargetSide; order: TargetDistanceOrder }
+  | {
+      kind: "distance";
+      side: TargetSide;
+      order: TargetDistanceOrder;
+      /** 味方 side 時、最終対象に使用者を含める（既定 false） */
+      includeSelf?: boolean;
+    }
   | { kind: "stat"; side: TargetSide; stat: TargetStat; order: TargetStatOrder }
   | {
       kind: "attackType";
@@ -553,7 +559,14 @@ export type MoveMode = "engage" | "toAnchor" | "behindTarget";
 export type DamageType = "physical" | "magic";
 
 /** スキル演出プリセット ID（render 層が描画。将来 skills.json の vfx で指定） */
-export type SkillVfxPresetId = "slash" | "orb" | "arrow" | "healRise";
+export type SkillVfxPresetId =
+  | "slash"
+  | "slashHit"
+  | "orb"
+  | "arrow"
+  | "healRise"
+  | "chainLightning"
+  | "impale";
 
 /** スキルごとの演出定義（skills.json に optional で載せる想定） */
 export interface SkillVfxDef {
@@ -653,6 +666,8 @@ export interface PendingSkillHit {
   effectDef: SkillEffectDef;
   slotKind: SkillSlotKind;
   hitIndex: number;
+  /** chain/pierce 等: VFX セグメント起点 */
+  vfxSourceId?: string;
   targets: PendingSkillHitTarget[];
 }
 

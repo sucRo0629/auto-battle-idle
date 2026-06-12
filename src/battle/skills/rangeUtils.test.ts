@@ -60,4 +60,22 @@ describe('resolveSkillRangePx', () => {
       ),
     ).toBe(96);
   });
+
+  it('extends ally-targeted buff range to party formation depth', () => {
+    const actor = mockActor(90);
+    expect(
+      resolveSkillRangePx(
+        actor,
+        {
+          type: 'buff',
+          target: {
+            kind: 'distance',
+            side: 'ally',
+            order: 'selfOrigin',
+          },
+        },
+        4,
+      ),
+    ).toBe(96);
+  });
 });

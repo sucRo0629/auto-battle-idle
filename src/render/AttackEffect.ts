@@ -5,15 +5,19 @@ import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
 
 const PRESET_DURATION_MS: Record<SkillVfxPresetId, number> = {
   slash: 320,
+  slashHit: 320,
   orb: 380,
   arrow: 420,
   healRise: 520,
+  chainLightning: 400,
+  impale: 350,
 };
 
 const HEAL_RISE_LINE_COUNT = 6;
+const CHAIN_LIGHTNING_TAIL_COUNT = 5;
 
 interface EffectEntry {
-  actorId: string;
+  sourceId: string;
   targetId: string;
   spec: SkillVfxDef;
   elapsedMs: number;
@@ -58,9 +62,9 @@ function getCombatantFoot(
 export class AttackEffectManager {
   private effects: EffectEntry[] = [];
 
-  spawn(actorId: string, targetId: string, spec: SkillVfxDef): void {
+  spawn(sourceId: string, targetId: string, spec: SkillVfxDef): void {
     this.effects.push({
-      actorId,
+      sourceId,
       targetId,
       spec,
       elapsedMs: 0,
@@ -83,12 +87,12 @@ export class AttackEffectManager {
     theme: BattleHudTheme,
   ): void {
     for (const effect of this.effects) {
-      const actor = layouts.find((l) => l.id === effect.actorId);
+      const source = layouts.find((l) => l.id === effect.sourceId);
       const target = layouts.find((l) => l.id === effect.targetId);
-      if (!actor || !target) continue;
+      if (!source || !target) continue;
 
       const progress = Math.min(1, effect.elapsedMs / effect.durationMs);
-      const start = getCombatantCenter(actor, spriteSize, scale);
+      const start = getCombatantCenter(source, spriteSize, scale);
       const end = getCombatantCenter(target, spriteSize, scale);
 
       switch (effect.spec.preset) {
@@ -98,7 +102,10 @@ export class AttackEffectManager {
           break;
         }
         case "slash":
-          this.drawSlash(ctx, start, end, progress, theme);
+          this.drawSlashSwing(ctx, start, end, progress, theme);
+          break;
+        case "slashHit":
+          this.drawSlashHit(ctx, start, end, progress, theme);
           break;
         case "orb":
           this.drawOrb(
@@ -121,12 +128,63 @@ export class AttackEffectManager {
             effect.spec.arc ?? false,
           );
           break;
+        case "chainLightning":
+          this.drawChainLightning(ctx, start, end, progress, theme);
+          break;
+        case "impale":
+          this.drawImpale(ctx, start, end, progress, scale, theme);
+          break;
       }
     }
   }
 
-  /** 前衛：ターゲット位置で斬撃ラインを描画 */
-  private drawSlash(
+  /** 近接：使用者の前方に半月型スイング弧 */
+  private drawSlashSwing(
+    ctx: CanvasRenderingContext2D,
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    progress: number,
+    theme: BattleHudTheme,
+  ): void {
+    const angle = Math.atan2(end.y - start.y, end.x - start.x);
+    const alpha = 1 - progress * progress;
+    const radius = (12 + progress * 10) * (0.55 + progress * 0.45);
+    const forwardOffset = 14 + progress * 4;
+    const cx = start.x + Math.cos(angle) * forwardOffset;
+    const cy = start.y + Math.sin(angle) * forwardOffset;
+    const arcStart = angle - Math.PI / 2;
+    const arcEnd = angle + Math.PI / 2;
+
+    ctx.save();
+    ctx.lineCap = "round";
+
+    ctx.globalAlpha = alpha * 0.4;
+    ctx.fillStyle = theme.attackSlashSecondary;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, arcStart, arcEnd);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.globalAlpha = alpha * 0.55;
+    ctx.strokeStyle = theme.attackSlashSecondary;
+    ctx.lineWidth = theme.attackSlashSecondaryWidth + 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, arcStart, arcEnd);
+    ctx.stroke();
+
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = theme.attackSlashPrimary;
+    ctx.lineWidth = theme.attackSlashPrimaryWidth + 1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius * 0.82, arcStart + 0.12, arcEnd - 0.12);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /** 近接：対象位置のヒット斬撃 */
+  private drawSlashHit(
     ctx: CanvasRenderingContext2D,
     start: { x: number; y: number },
     end: { x: number; y: number },
@@ -268,6 +326,117 @@ export class AttackEffectManager {
 
     ctx.fillStyle = theme.attackArrowTip;
     ctx.fillRect(arrowLen / 2 - 2 * scale, -arrowW / 2, 2 * scale, arrowW);
+    ctx.restore();
+  }
+
+  /** 連鎖：直線雷（玉＋尾） */
+  private drawChainLightning(
+    ctx: CanvasRenderingContext2D,
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    progress: number,
+    theme: BattleHudTheme,
+  ): void {
+    const headX = start.x + (end.x - start.x) * progress;
+    const headY = start.y + (end.y - start.y) * progress;
+    const fade = 1 - progress * progress;
+
+    ctx.save();
+    ctx.lineCap = "round";
+
+    ctx.globalAlpha = fade * theme.attackChainLightningGlowAlpha;
+    ctx.strokeStyle = theme.attackChainLightningGlow;
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(headX, headY);
+    ctx.stroke();
+
+    ctx.globalAlpha = fade * theme.attackChainLightningCoreAlpha;
+    ctx.strokeStyle = theme.attackChainLightningCore;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(headX, headY);
+    ctx.stroke();
+
+    const tailSpan = 28;
+    for (let i = 0; i < CHAIN_LIGHTNING_TAIL_COUNT; i++) {
+      const slot = (i + 1) / (CHAIN_LIGHTNING_TAIL_COUNT + 1);
+      const tailT = Math.max(0, progress - slot * 0.12);
+      const tx = start.x + (end.x - start.x) * tailT;
+      const ty = start.y + (end.y - start.y) * tailT;
+      const segLen = tailSpan * (1 - slot) * 0.35;
+      const angle = Math.atan2(end.y - start.y, end.x - start.x);
+      const perp = angle + Math.PI / 2;
+      const jitter = (i % 2 === 0 ? 1 : -1) * 3;
+
+      ctx.globalAlpha = fade * theme.attackChainLightningTailAlpha * (1 - slot);
+      ctx.strokeStyle = theme.attackChainLightningTail;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(
+        tx + Math.cos(perp) * jitter,
+        ty + Math.sin(perp) * jitter,
+      );
+      ctx.lineTo(
+        tx + Math.cos(angle) * segLen + Math.cos(perp) * jitter * 0.5,
+        ty + Math.sin(angle) * segLen + Math.sin(perp) * jitter * 0.5,
+      );
+      ctx.stroke();
+    }
+
+    ctx.globalAlpha = fade * theme.attackChainLightningCoreAlpha;
+    ctx.fillStyle = theme.attackChainLightningCore;
+    ctx.beginPath();
+    ctx.arc(headX, headY, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = theme.attackChainLightningGlow;
+    ctx.beginPath();
+    ctx.arc(headX - 1, headY - 1, 1.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  /** 貫通：大型矢状 */
+  private drawImpale(
+    ctx: CanvasRenderingContext2D,
+    start: { x: number; y: number },
+    end: { x: number; y: number },
+    progress: number,
+    scale: number,
+    theme: BattleHudTheme,
+  ): void {
+    const pos = {
+      x: start.x + (end.x - start.x) * progress,
+      y: start.y + (end.y - start.y) * progress,
+    };
+    const prevT = Math.max(0, progress - 0.05);
+    const prev = {
+      x: start.x + (end.x - start.x) * prevT,
+      y: start.y + (end.y - start.y) * prevT,
+    };
+    const angle = Math.atan2(pos.y - prev.y, pos.x - prev.x);
+    const arrowLen = 24 * scale;
+    const arrowW = 12 * scale;
+    const tipLen = 10 * scale;
+
+    ctx.save();
+    ctx.translate(pos.x, pos.y);
+    ctx.rotate(angle);
+    ctx.fillStyle = theme.attackImpaleShaft;
+    ctx.fillRect(-arrowLen / 2, -arrowW / 2, arrowLen - tipLen, arrowW);
+
+    ctx.fillStyle = theme.attackImpaleTip;
+    ctx.beginPath();
+    ctx.moveTo(arrowLen / 2, 0);
+    ctx.lineTo(arrowLen / 2 - tipLen, -arrowW / 2);
+    ctx.lineTo(arrowLen / 2 - tipLen, arrowW / 2);
+    ctx.closePath();
+    ctx.fill();
     ctx.restore();
   }
 }

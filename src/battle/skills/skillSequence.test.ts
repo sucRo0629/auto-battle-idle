@@ -391,6 +391,75 @@ describe('skillSequence', () => {
     expect(enemy.hp).toBeLessThan(100);
   });
 
+  it('tailWaitAfterSec keeps actor in skill motion until wait elapses', () => {
+    const runner = new SkillSequenceRunner();
+    const actor = mockUnit({ id: 'actor', battleX: 220 });
+    const enemy = mockUnit({ id: 'enemy', isEnemy: true, battleX: 260 });
+    const skill: ActiveSkillDef = {
+      id: 'backstab',
+      name: 'backstab',
+      trigger: { kind: 'time', value: 3 },
+      effect: [
+        {
+          type: 'move',
+          moveMode: 'behindTarget',
+          moveDurationSec: 0.2,
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          behindOffsetPx: 10,
+        },
+        {
+          type: 'damage',
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 1 },
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          waitAfterSec: 0.5,
+        },
+      ],
+    };
+    const cd: SkillCooldown = {
+      skillId: 'backstab',
+      remaining: 0,
+      slotKind: 'active',
+    };
+    const data = makeGameData({ backstab: skill });
+    const sequence = buildSkillSequence(
+      skill,
+      actor,
+      [actor],
+      [enemy],
+      data,
+      [],
+      0,
+      cd,
+    )!;
+
+    const executor = new SkillExecutor(data, () => {}, {
+      getBattleTimeSec: () => 0,
+      enqueuePendingHits: () => {},
+      getAllCombatants: () => [actor, enemy],
+      getSequenceRunner: () => runner,
+    });
+
+    runner.schedule(sequence);
+    runner.tickSequences(0, (step) => {
+      executor.applyScheduledStep(step, [actor], [enemy]);
+    });
+    runner.tickMoves(0.2, [actor, enemy]);
+    runner.tickSequences(0.2, (step) => {
+      executor.applyScheduledStep(step, [actor], [enemy]);
+    });
+
+    expect(runner.isActorInSkillMotion('actor')).toBe(true);
+    expect(cd.remaining).toBe(0);
+
+    runner.tickSequences(0.69, () => {});
+    expect(runner.isActorInSkillMotion('actor')).toBe(true);
+
+    runner.tickSequences(0.7, () => {});
+    expect(runner.isActorInSkillMotion('actor')).toBe(false);
+    expect(cd.remaining).toBe(3);
+  });
+
   it('returns actor near closestAlly after 3-step flank', () => {
     const runner = new SkillSequenceRunner();
     const actor = mockUnit({ id: 'actor', battleX: 200 });

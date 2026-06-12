@@ -93,6 +93,58 @@ describe('resolveEffectPresentation', () => {
     );
     expect(result.anim).toBe('attack');
     expect(result.vfx?.preset).toBe('slash');
+    expect(result.hitVfx?.preset).toBe('slashHit');
+  });
+
+  it('defaults melee damage to slash swing with slashHit', () => {
+    const result = resolveEffectPresentation(
+      'test_skill',
+      {
+        type: 'damage',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      { ...skill, vfx: undefined },
+      ctx,
+    );
+    expect(result.vfx?.preset).toBe('slash');
+    expect(result.hitVfx?.preset).toBe('slashHit');
+  });
+
+  it('defaults pierce damage to impale without hit vfx', () => {
+    const result = resolveEffectPresentation(
+      'test_skill',
+      {
+        type: 'damage',
+        targetShape: 'pierce',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      { ...skill, vfx: undefined },
+      { ...ctx, targetShape: 'pierce' },
+    );
+    expect(result.vfx?.preset).toBe('impale');
+    expect(result.hitVfx).toBeNull();
+  });
+
+  it('defaults chain damage to chainLightning', () => {
+    const result = resolveEffectPresentation(
+      'test_skill',
+      {
+        type: 'damage',
+        targetShape: 'chain',
+        chainCount: 3,
+        chainMaxDistancePx: 80,
+        target: { kind: "distance", side: "enemy", order: "nearest" },
+        damageType: 'magic',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      { ...skill, vfx: undefined },
+      { ...ctx, effectKind: 'damage', targetShape: 'chain' },
+    );
+    expect(result.vfx?.preset).toBe('chainLightning');
   });
 
   it('falls back to skill vfx when effect vfx is unset', () => {
