@@ -3,6 +3,7 @@ import { DEFAULT_BASIC_ATTACK_INTERVAL_SEC } from '../battle/data/synthesizeBasi
 import {
   normalizeActiveSkillEffectForEditor,
   sanitizeBasicAttackSkillForJson,
+  sanitizePassiveSkillForJson,
 } from '../battle/data/validateGameData.ts';
 import { assertConfigurableRangePx } from '../battle/rangeLimits.ts';
 import type {
@@ -943,7 +944,7 @@ export function collectSkillsFromDrafts(entries: SkillDraftEntry[]): {
   const passives: PassiveSkillDef[] = [];
   const actives: ActiveSkillDef[] = [];
   for (const entry of entries) {
-    if (entry.passive) passives.push(entry.passive);
+    if (entry.passive) passives.push(sanitizePassiveSkillForJson(entry.passive));
     if (entry.active) {
       const active = {
         ...entry.active,

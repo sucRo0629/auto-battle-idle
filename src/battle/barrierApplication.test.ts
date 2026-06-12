@@ -19,7 +19,7 @@ describe('barrier application', () => {
           progress: { level: 1, exp: 0 },
           build: {
             learnedPassiveIds: [],
-            learnedActiveIds: ['sp_abjurer_active_1', 'sp_abjurer_active_2'],
+            learnedActiveIds: ['sp_abjurer_active_1'],
             equippedActiveSlots: ['sp_abjurer_active_1'],
           },
         },

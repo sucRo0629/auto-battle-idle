@@ -1275,7 +1275,7 @@ export class BattleEngine {
                 passives,
                 c.build.learnedActiveIds,
               )
-            : 1;
+            : 0;
           const fireGateCtx =
             skill && !c.isEnemy
               ? this.buildFireGateContext(c, skill, cd)

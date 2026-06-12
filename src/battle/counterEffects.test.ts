@@ -621,3 +621,39 @@ describe('parseSkillEffect counter', () => {
     ).toThrow(/multiLock/);
   });
 });
+
+describe('parseSkillEffect move', () => {
+  it('normalizes legacy behindTarget + behindOffsetPx to toAnchor + anchorOffsetPx', () => {
+    const effect = parseSkillEffect(
+      {
+        type: 'move',
+        moveMode: 'behindTarget',
+        behindOffsetPx: 32,
+        moveDurationSec: 0.2,
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+      },
+      'test',
+    );
+    expect(effect.type).toBe('move');
+    if (effect.type !== 'move') return;
+    expect(effect.moveMode).toBe('toAnchor');
+    expect(effect.anchorOffsetPx).toBe(32);
+    expect('behindOffsetPx' in effect).toBe(false);
+  });
+
+  it('omits anchorOffsetPx when zero', () => {
+    const effect = parseSkillEffect(
+      {
+        type: 'move',
+        moveMode: 'toAnchor',
+        anchorOffsetPx: 0,
+        moveDurationSec: 0.2,
+        target: { kind: 'distance', side: 'ally', order: 'nearest' },
+      },
+      'test',
+    );
+    expect(effect.type).toBe('move');
+    if (effect.type !== 'move') return;
+    expect(effect.anchorOffsetPx).toBeUndefined();
+  });
+});

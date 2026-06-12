@@ -343,7 +343,7 @@ describe('combatPosition', () => {
     expect(getPlayerContactX([guard, archer])).toBe(220);
   });
 
-  it('resolveMoveBattleX engage and behindTarget', () => {
+  it('resolveMoveBattleX engage and toAnchor offset', () => {
     const sword = mockCombatant({
       id: 'sword',
       cooldowns: [{ skillId: 'basic', remaining: 0, slotKind: 'basic' }],
@@ -378,12 +378,26 @@ describe('combatPosition', () => {
           type: 'move',
           target: { kind: "distance", side: "enemy", order: "nearest" },
           moveDurationSec: 0.2,
-          moveMode: 'behindTarget',
-          behindOffsetPx: 20,
+          moveMode: 'toAnchor',
+          anchorOffsetPx: 20,
         },
         gameData,
       ),
     ).toBe(300);
+    expect(
+      resolveMoveBattleX(
+        sword,
+        enemy,
+        {
+          type: 'move',
+          target: { kind: "distance", side: "enemy", order: "nearest" },
+          moveDurationSec: 0.2,
+          moveMode: 'toAnchor',
+          anchorOffsetPx: -16,
+        },
+        gameData,
+      ),
+    ).toBe(264);
   });
 
   it('resolveApproachRangePx uses shorter equipped active range when ready', () => {

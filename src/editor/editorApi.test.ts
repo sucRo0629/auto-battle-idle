@@ -63,7 +63,7 @@ describe('collectSkillsFromDrafts basic attack', () => {
           firePolicy: 'smart',
           fireConditions: [{ kind: 'waveStart' }],
           fireTimeoutSec: 4,
-          maxCharges: 2,
+          maxCharges: 1,
           effect: [
             {
               target: { kind: 'distance', side: 'enemy', order: 'nearest' },
@@ -81,8 +81,67 @@ describe('collectSkillsFromDrafts basic attack', () => {
       firePolicy: 'smart',
       fireConditions: [{ kind: 'waveStart' }],
       fireTimeoutSec: 4,
-      maxCharges: 2,
+      maxCharges: 1,
     });
+  });
+});
+
+describe('collectSkillsFromDrafts passive sanitize', () => {
+  it('strips orphan fields from excessHealToBarrier passive on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'sp_abjurer_passive_2', kind: 'passive' },
+        passive: {
+          id: 'sp_abjurer_passive_2',
+          name: 'sp_abjurer_passive_2',
+          effect: 'excessHealToBarrier',
+          barrierScale: 1.5,
+          excessHealSources: ['outgoing', 'incoming'],
+          targetRuleOverride: {
+            kind: 'distance',
+            side: 'enemy',
+            order: 'nearest',
+          },
+          hotAmount: { kind: 'atkBased', atkScale: 0.05 },
+        },
+      },
+    ];
+
+    const { passives } = collectSkillsFromDrafts(entries);
+    expect(passives[0]).toEqual({
+      id: 'sp_abjurer_passive_2',
+      name: 'sp_abjurer_passive_2',
+      effect: 'excessHealToBarrier',
+      barrierScale: 1.5,
+      excessHealSources: ['outgoing', 'incoming'],
+    });
+  });
+
+  it('strips targetRuleOverride from specialEffect heal passive on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'sp_cleric_passive_1', kind: 'passive' },
+        passive: {
+          id: 'sp_cleric_passive_1',
+          name: 'sp_cleric_passive_1',
+          effect: 'specialEffect',
+          specialEffectApplyTo: 'heal',
+          specialEffect: {
+            scale: 1.5,
+            conditions: [{ kind: 'targetHp', maxHpRatio: 0.5 }],
+          },
+          targetRuleOverride: {
+            kind: 'distance',
+            side: 'enemy',
+            order: 'nearest',
+          },
+        },
+      },
+    ];
+
+    const { passives } = collectSkillsFromDrafts(entries);
+    expect(passives[0]).not.toHaveProperty('targetRuleOverride');
+    expect(passives[0]?.effect).toBe('specialEffect');
   });
 });
 

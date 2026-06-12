@@ -57,19 +57,18 @@ export const SKILL_EFFECT_KINDS = [
   "dispel",
   "block",
   "counter",
+  "basicAttackTransform",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [
   "engage",
   "toAnchor",
-  "behindTarget",
 ] as const satisfies readonly import("../types.ts").MoveMode[];
 
 export const MOVE_MODE_LABELS: Record<import("../types.ts").MoveMode, string> =
   {
     engage: "接敵（射程内）",
     toAnchor: "アンカー座標へ",
-    behindTarget: "敵の背後",
   };
 
 export const SKILL_EFFECT_ANIM_IDS = [
@@ -276,7 +275,6 @@ export const BUFF_SUB_KINDS = [
   "block",
   "evasion",
   "damageTakenToHeal",
-  "basicAttackTransform",
 ] as const satisfies readonly BuffSubKind[];
 
 export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
@@ -285,7 +283,6 @@ export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
   block: "ブロック",
   evasion: "回避",
   damageTakenToHeal: "被ダメ回復",
-  basicAttackTransform: "通常攻撃変形",
 };
 
 export const DEBUFF_SUB_KINDS = [
@@ -340,6 +337,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORIES = [
   "buff",
   "debuff",
   "counter",
+  "basicAttackTransform",
   "move",
   "knockback",
 ] as const;
@@ -353,6 +351,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   buff: "バフ",
   debuff: "デバフ",
   counter: "反撃",
+  basicAttackTransform: "通常攻撃変形",
   move: "移動",
   knockback: "ノックバック",
 };

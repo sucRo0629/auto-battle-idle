@@ -272,9 +272,9 @@ export class PartyHudPanel {
         continue;
       }
 
-      const maxCharges = cd.maxCharges ?? 1;
+      const maxCharges = cd.maxCharges ?? 0;
       const storedCharges = cd.storedCharges ?? 0;
-      if (maxCharges > 1 && storedCharges > 0) {
+      if (maxCharges > 0 && storedCharges > 0) {
         for (let pip = 0; pip < storedCharges; pip++) {
           const el = document.createElement('div');
           el.className = 'party-hud-recast-stock-pip';

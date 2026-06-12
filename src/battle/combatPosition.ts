@@ -396,19 +396,16 @@ export function resolveMoveBattleX(
   const mode = effect.moveMode ?? 'engage';
 
   if (mode === 'toAnchor') {
-    return anchor.battleX;
+    const offset = effect.anchorOffsetPx ?? 0;
+    return actor.isEnemy
+      ? anchor.battleX - offset
+      : anchor.battleX + offset;
   }
 
   if (actor.isEnemy) {
-    if (mode === 'behindTarget') {
-      return anchor.battleX - (effect.behindOffsetPx ?? 0);
-    }
     return resolveAttackBattleX(actor, anchor.battleX, gameData);
   }
 
-  if (mode === 'behindTarget') {
-    return anchor.battleX + (effect.behindOffsetPx ?? 0);
-  }
   return resolveAttackBattleX(actor, anchor.battleX, gameData);
 }
 

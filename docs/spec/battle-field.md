@@ -82,7 +82,7 @@ BattlePhase 判定
 | 接敵（`Engaged`） | 射程ベース接近（§4.4 `resolvePlayerApproachBattleX`） | 左のみ・射程ベース接近（§4.4 `resolveEnemyApproachBattleX`） |
 | スキル `move` 中 | シーケンスが正本 | 同左 |
 
-**スコープ外：** 敵がプレイヤー背後へ回る AI / 敵 `move`（後列狙い）。プレイヤー側の `behindTarget` 等スキル `move` は §4.4 で維持。
+**スコープ外：** 敵がプレイヤー背後へ回る AI / 敵 `move`（後列狙い）。プレイヤー側の `toAnchor`（正オフセット）等スキル `move` は §4.4 で維持。
 
 ### 2.5 攻撃位置・move（新軸）
 
@@ -102,8 +102,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | mode | 目標 `battleX` |
 |------|----------------|
 | `engage` | `anchor.battleX - range`（敵の手前＝後方側） |
-| `behindTarget` | `anchor.battleX + behindOffsetPx`（敵の背後＝より前方） |
-| `toAnchor` | `anchor.battleX` |
+| `toAnchor` | `anchor.battleX + anchorOffsetPx`（未指定=0。−=味方側、+=敵背後） |
 
 **ノックバック：** 各陣営の **後方** へ押す。プレイヤーは `-X`（左）、敵は `+X`（右）。敵は `battleX` が進軍表示下限未満にならない。
 
@@ -263,7 +262,7 @@ HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に
 ### 4.5 スキル `move`
 
 - `battleX` — `SkillSequenceRunner` が線形補間（正本・描画も同値）
-- 敵背後へのプレイヤー `behindTarget` はスコープ内。敵のプレイヤー背後移動はスコープ外
+- 敵背後へのプレイヤー `toAnchor`（正オフセット）はスコープ内。敵のプレイヤー背後移動はスコープ外
 
 ### 4.6 非接敵 tick
 
@@ -334,7 +333,7 @@ HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に
 | 対象 | 含む |
 |------|------|
 | 敵のプレイヤー背後移動 | **いいえ** |
-| プレイヤー `move`（`behindTarget` 等） | **はい** |
+| プレイヤー `move`（`toAnchor` 正オフセット等） | **はい** |
 
 ---
 

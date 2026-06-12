@@ -12,8 +12,9 @@
     },
     {
       "id": "df_guardian_passive_2",
-      "name": "防御態勢",
+      "name": "大盾使い",
       "effect": "buff",
+      "healSubKind": "hot",
       "specialEffectApplyTo": "heal",
       "specialEffect": {
         "scale": 1.2,
@@ -26,18 +27,20 @@
         "kind": "atkBased",
         "atkScale": 0.25
       },
-      "hotDurationSec": 3,
-      "buffSubKind": "barrier",
+      "intervalSec": 10,
+      "hotDurationSec": 5,
+      "targetSkillId": "df_guardian_passive_2",
+      "amount": {
+        "kind": "atkBased",
+        "atkScale": 1
+      },
+      "buffSubKind": "block",
       "buffTargetRule": {
         "kind": "self"
       },
       "buffStat": "atk",
       "buffMultiplier": 1.2,
-      "barrierAmount": {
-        "kind": "defBased",
-        "defScale": 0.5
-      },
-      "periodicTrigger": "waveStart"
+      "chance": 0.1
     },
     {
       "id": "sp_cleric_passive_1",
@@ -48,7 +51,7 @@
         "side": "enemy",
         "order": "nearest"
       },
-      "specialEffectApplyTo": "damage",
+      "specialEffectApplyTo": "heal",
       "specialEffect": {
         "scale": 1.5,
         "conditions": [
@@ -101,7 +104,7 @@
     },
     {
       "id": "df_paladin_passive_2",
-      "name": "癒しの心得",
+      "name": "治癒の心得",
       "effect": "specialEffect",
       "ratio": 0.1,
       "barrierScale": 1,
@@ -125,7 +128,18 @@
             "maxHpRatio": 0.5
           }
         ]
-      }
+      },
+      "healSubKind": "hot",
+      "hotTargetRule": {
+        "kind": "self"
+      },
+      "hotAmount": {
+        "kind": "atkBased",
+        "atkScale": 0.2
+      },
+      "hotDurationSec": 3,
+      "periodicTrigger": "interval",
+      "intervalSec": 10
     },
     {
       "id": "at_warrior_passive_1",
@@ -154,9 +168,8 @@
     },
     {
       "id": "df_guardian_passive_3",
-      "name": "大盾使い",
+      "name": "防御態勢",
       "effect": "buff",
-      "healSubKind": "hot",
       "specialEffectApplyTo": "heal",
       "specialEffect": {
         "scale": 1.2,
@@ -169,20 +182,18 @@
         "kind": "atkBased",
         "atkScale": 0.25
       },
-      "intervalSec": 10,
-      "hotDurationSec": 5,
-      "targetSkillId": "df_guardian_passive_2",
-      "amount": {
-        "kind": "atkBased",
-        "atkScale": 1
-      },
-      "buffSubKind": "block",
+      "hotDurationSec": 3,
+      "buffSubKind": "barrier",
       "buffTargetRule": {
         "kind": "self"
       },
       "buffStat": "atk",
       "buffMultiplier": 1.2,
-      "chance": 0.1
+      "barrierAmount": {
+        "kind": "defBased",
+        "defScale": 0.5
+      },
+      "periodicTrigger": "waveStart"
     },
     {
       "id": "df_guardian_passive_4",
@@ -267,9 +278,8 @@
     },
     {
       "id": "sp_abjurer_passive_1",
-      "name": "備える系",
+      "name": "sp_abjurer_passive_1",
       "effect": "buff",
-      "barrierScale": 0.5,
       "buffSubKind": "barrier",
       "buffTargetRule": {
         "kind": "stat",
@@ -277,60 +287,35 @@
         "stat": "hp",
         "order": "highest"
       },
-      "buffStat": "atk",
-      "buffMultiplier": 1.2,
       "barrierAmount": {
         "kind": "atkBased",
-        "atkScale": 1
+        "atkScale": 1.5
       },
-      "periodicTrigger": "stageStart"
+      "periodicTrigger": "waveStart"
     },
     {
       "id": "sp_abjurer_passive_2",
       "name": "sp_abjurer_passive_2",
       "effect": "excessHealToBarrier",
-      "targetRuleOverride": {
-        "kind": "distance",
-        "side": "enemy",
-        "order": "nearest"
-      },
-      "healSubKind": "hot",
-      "hotTargetRule": {
-        "kind": "self"
-      },
-      "hotAmount": {
-        "kind": "atkBased",
-        "atkScale": 0.05
-      },
-      "periodicTrigger": "interval",
-      "intervalSec": 5,
-      "hotDurationSec": 0,
-      "specialEffectApplyTo": "damage",
-      "specialEffect": {
-        "scale": 1.2,
-        "conditions": [
-          {
-            "kind": "debuff",
-            "tags": [
-              "def"
-            ]
-          }
-        ]
-      },
-      "buffSubKind": "stat",
-      "buffTargetRule": {
-        "kind": "stat",
-        "side": "ally",
-        "stat": "hp",
-        "order": "highest"
-      },
-      "buffStat": "damageTaken",
-      "buffMultiplier": 0.95,
       "barrierScale": 1.5,
       "excessHealSources": [
         "outgoing",
         "incoming"
       ]
+    },
+    {
+      "id": "sp_abjurer_passive_3",
+      "name": "sp_abjurer_passive_3",
+      "effect": "buff",
+      "buffSubKind": "stat",
+      "buffStat": "damageTaken",
+      "buffMultiplier": 0.95,
+      "buffTargetRule": {
+        "kind": "stat",
+        "side": "ally",
+        "stat": "hp",
+        "order": "highest"
+      }
     },
     {
       "id": "sp_alchemist_passive_1",
@@ -368,12 +353,13 @@
     },
     {
       "id": "at_lancer_passive_1",
-      "name": "牽制",
-      "effect": "debuff",
+      "name": "at_lancer_passive_1",
+      "effect": "targetRuleOverride",
       "targetRuleOverride": {
-        "kind": "distance",
+        "kind": "stat",
         "side": "enemy",
-        "order": "nearest"
+        "stat": "def",
+        "order": "lowest"
       },
       "perExtraTargetScale": 0.1,
       "maxExtraTargets": 4,
@@ -396,7 +382,8 @@
         "order": "nearest"
       },
       "debuffStat": "atk",
-      "debuffMultiplier": 0.9
+      "debuffMultiplier": 0.9,
+      "targetRuleOverrideApplyTo": "enemy"
     },
     {
       "id": "at_ranger_passive_1",
@@ -472,6 +459,55 @@
       ],
       "counterRange": 0,
       "counterRanged": true
+    },
+    {
+      "id": "at_assassin_passive_1",
+      "name": "手負い狩り",
+      "effect": "targetRuleOverride",
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "hp",
+        "order": "ratio"
+      }
+    },
+    {
+      "id": "at_assassin_passive_2",
+      "name": "影の歩み",
+      "effect": "buff",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      },
+      "healSubKind": "hot",
+      "hotTargetRule": {
+        "kind": "self"
+      },
+      "hotAmount": {
+        "kind": "atkBased",
+        "atkScale": 0.05
+      },
+      "periodicTrigger": "interval",
+      "intervalSec": 5,
+      "hotDurationSec": 0,
+      "buffSubKind": "evasion",
+      "buffTargetRule": {
+        "kind": "self"
+      },
+      "buffStat": "atk",
+      "buffMultiplier": 1.2,
+      "chance": 0.2
+    },
+    {
+      "id": "sp_alchemist_passive_3",
+      "name": "sp_alchemist_passive_3",
+      "effect": "targetRuleOverride",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "nearest"
+      }
     }
   ],
   "actives": [
@@ -581,7 +617,7 @@
           "type": "buff",
           "buffSubKind": "stat",
           "buffStat": "def",
-          "buffMultiplier": 1.5,
+          "buffMultiplier": 1.25,
           "buffDurationSec": 5
         },
         {
@@ -593,14 +629,14 @@
           "buffStat": "atk",
           "buffMultiplier": 1.2,
           "buffDurationSec": 5,
-          "chance": 0.8
+          "chance": 0.5
         }
       ],
       "useDurationSec": 5
     },
     {
       "id": "df_paladin_active_1",
-      "name": "手当",
+      "name": "光の剣",
       "trigger": {
         "kind": "time",
         "value": 5
@@ -610,7 +646,7 @@
           "type": "heal",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.1
+            "atkScale": 1.25
           },
           "vfx": {
             "preset": "healRise"
@@ -623,8 +659,25 @@
           },
           "healSubKind": "instant",
           "range": 50
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "damageType": "magic",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
         }
-      ]
+      ],
+      "vfx": {
+        "preset": "slash"
+      },
+      "maxCharges": 1
     },
     {
       "id": "df_paladin_active_2",
@@ -664,14 +717,21 @@
             "kind": "self"
           },
           "type": "heal",
-          "healSubKind": "instant",
+          "healSubKind": "hot",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1
-          }
+            "atkScale": 0.85
+          },
+          "durationSec": 5
         }
       ],
-      "useDurationSec": 3
+      "firePolicy": "smart",
+      "fireConditions": [
+        {
+          "kind": "selfHp",
+          "maxHpRatio": 0.7
+        }
+      ]
     },
     {
       "id": "df_duelist_active_1",
@@ -755,7 +815,7 @@
       "fireConditions": [
         {
           "kind": "targetHp",
-          "maxHpRatio": 0.5,
+          "maxHpRatio": 0.3,
           "compare": "gte"
         }
       ]
@@ -769,19 +829,26 @@
       },
       "effect": [
         {
-          "targetShape": "aoe",
-          "aoeRadiusPx": 50,
+          "targetShape": "pierce",
           "type": "damage",
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.7
+            "atkScale": 0.45
           },
           "target": {
             "kind": "distance",
             "side": "enemy",
-            "order": "nearest"
+            "order": "selfOrigin"
           }
+        }
+      ],
+      "firePolicy": "smart",
+      "fireConditions": [
+        {
+          "kind": "enemyCount",
+          "min": 2,
+          "scope": "inRange"
         }
       ]
     },
@@ -862,7 +929,7 @@
         },
         {
           "type": "move",
-          "moveMode": "behindTarget",
+          "moveMode": "toAnchor",
           "moveDurationSec": 0.2,
           "target": {
             "kind": "distance",
@@ -870,7 +937,7 @@
             "order": "nearest"
           },
           "range": 100,
-          "behindOffsetPx": 32,
+          "anchorOffsetPx": 32,
           "waitAfterSec": 0.2
         },
         {
@@ -906,12 +973,22 @@
     },
     {
       "id": "at_lancer_active_1",
-      "name": "貫突",
+      "name": "踏み込み突き",
       "trigger": {
         "kind": "time",
         "value": 8
       },
       "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "move",
+          "moveMode": "engage",
+          "moveDurationSec": 0.25
+        },
         {
           "targetShape": "pierce",
           "type": "damage",
@@ -1015,29 +1092,19 @@
     },
     {
       "id": "at_ranger_active_2",
-      "name": "貫矢",
+      "name": "連ね矢",
       "trigger": {
         "kind": "time",
         "value": 10
       },
       "effect": [
         {
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 1.3
-          },
-          "vfx": {
-            "preset": "arrow",
-            "arc": true
-          },
-          "targetShape": "single",
           "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
-          }
+            "kind": "self"
+          },
+          "type": "basicAttackTransform",
+          "buffDurationSec": 5,
+          "hitCountMultiplier": 2
         }
       ]
     },
@@ -1416,14 +1483,14 @@
       "name": "癒しの光",
       "trigger": {
         "kind": "time",
-        "value": 5
+        "value": 8
       },
       "effect": [
         {
           "type": "heal",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.1
+            "atkScale": 1.2
           },
           "target": {
             "kind": "stat",
@@ -1441,10 +1508,10 @@
             "order": "ratio"
           },
           "type": "heal",
-          "durationSec": 3,
+          "durationSec": 5,
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.3
+            "atkScale": 0.1
           },
           "healSubKind": "hot"
         }
@@ -1497,10 +1564,10 @@
     },
     {
       "id": "sp_abjurer_active_1",
-      "name": "結界（仮",
+      "name": "sp_abjurer_active_1",
       "trigger": {
         "kind": "time",
-        "value": 5
+        "value": 8
       },
       "effect": [
         {
@@ -1514,14 +1581,14 @@
           "healSubKind": "instant",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.7
+            "atkScale": 0.35
           }
         },
         {
           "type": "buff",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.3
+            "atkScale": 1.9
           },
           "target": {
             "kind": "stat",
@@ -1538,63 +1605,51 @@
       }
     },
     {
-      "id": "sp_abjurer_active_2",
-      "name": "弱体符",
+      "id": "sp_alchemist_active_1",
+      "name": "霧",
       "trigger": {
         "kind": "time",
         "value": 10
       },
       "effect": [
         {
-          "type": "debuff",
-          "debuffStat": "atk",
-          "debuffMultiplier": 0.8,
-          "debuffDurationSec": 5,
-          "targetShape": "single",
           "target": {
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
           },
-          "debuffSubKind": "stat"
-        }
-      ]
-    },
-    {
-      "id": "sp_alchemist_active_1",
-      "name": "毒霧",
-      "trigger": {
-        "kind": "time",
-        "value": 8
-      },
-      "effect": [
-        {
-          "type": "debuff",
-          "debuffStat": "attackSpeed",
-          "debuffMultiplier": 0.85,
-          "debuffDurationSec": 10,
-          "targetShape": "aoe",
-          "aoeRadiusPx": 60,
-          "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
+          "type": "damage",
+          "damageType": "magic",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.2
           },
-          "debuffSubKind": "stat"
+          "targetShape": "scatter",
+          "scatterRadiusPx": 50,
+          "scatterSpreadRadiusPx": 100,
+          "scatterHitCount": 5,
+          "scatterDurationSec": 5,
+          "scatterSpreadRate": 1
         },
         {
           "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
           },
-          "type": "debuff",
-          "debuffSubKind": "stat",
-          "debuffStat": "atk",
-          "debuffMultiplier": 0.85,
-          "debuffDurationSec": 10,
-          "targetShape": "aoe",
-          "aoeRadiusPx": 60
+          "type": "heal",
+          "healSubKind": "instant",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.3
+          },
+          "targetShape": "scatter",
+          "scatterRadiusPx": 50,
+          "scatterSpreadRadiusPx": 100,
+          "scatterHitCount": 5,
+          "scatterDurationSec": 5,
+          "scatterSpreadRate": 1
         }
       ]
     },
@@ -1654,7 +1709,7 @@
           "healSubKind": "instant",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.5
+            "atkScale": 1
           }
         }
       ],
@@ -1676,7 +1731,7 @@
           "type": "damage",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.85
+            "atkScale": 1
           }
         }
       ],
@@ -1922,7 +1977,21 @@
           "healSubKind": "instant",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.5
+            "atkScale": 0.55
+          }
+        },
+        {
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
+          },
+          "type": "buff",
+          "buffSubKind": "barrier",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.55
           }
         }
       ]
@@ -1946,7 +2015,7 @@
           "healSubKind": "instant",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.5
+            "atkScale": 1
           }
         }
       ]
@@ -2004,6 +2073,48 @@
           "scope": "inRange"
         }
       ]
+    },
+    {
+      "id": "df_paladin_active_3",
+      "name": "治療専念",
+      "trigger": {
+        "kind": "time",
+        "value": 8
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "basicAttackTransform",
+          "buffDurationSec": 4,
+          "primaryEffectOverride": {
+            "type": "heal",
+            "healSubKind": "instant",
+            "target": {
+              "kind": "stat",
+              "side": "ally",
+              "stat": "hp",
+              "order": "ratio"
+            },
+            "amount": {
+              "kind": "atkBased",
+              "atkScale": 1.5
+            }
+          },
+          "range": 60
+        }
+      ],
+      "firePolicy": "smart",
+      "fireConditions": [
+        {
+          "kind": "targetHp",
+          "maxHpRatio": 0.7
+        }
+      ],
+      "vfx": {
+        "preset": "healRise"
+      }
     }
   ]
 }

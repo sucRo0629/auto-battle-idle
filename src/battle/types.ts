@@ -400,8 +400,7 @@ export type BuffSubKind =
   | "barrier"
   | "block"
   | "evasion"
-  | "damageTakenToHeal"
-  | "basicAttackTransform";
+  | "damageTakenToHeal";
 
 /** 通常攻撃変形 — primary effect への部分パッチ */
 export interface BasicAttackTransformPrimaryPatch {
@@ -631,9 +630,10 @@ export type SkillEffectKind =
   | "knockback"
   | "dispel"
   | "block"
-  | "counter";
+  | "counter"
+  | "basicAttackTransform";
 
-export type MoveMode = "engage" | "toAnchor" | "behindTarget";
+export type MoveMode = "engage" | "toAnchor";
 export type DamageType = "physical" | "magic";
 
 /** スキル演出プリセット ID（render 層が描画。将来 skills.json の vfx で指定） */
@@ -789,7 +789,11 @@ export interface BuffSkillEffect extends SkillEffectCommon {
   ratio?: number;
   amount?: ResourceAmountSpec;
   barrierStack?: boolean;
-  /** basicAttackTransform */
+}
+
+export interface BasicAttackTransformSkillEffect extends SkillEffectCommon {
+  type: "basicAttackTransform";
+  buffDurationSec?: number;
   hitCountMultiplier?: number;
   primaryEffectOverride?: SkillEffectDef;
   primaryPatch?: BasicAttackTransformPrimaryPatch;
@@ -837,7 +841,8 @@ export interface MoveSkillEffect extends SkillEffectCommon {
   type: "move";
   moveDurationSec: number;
   moveMode?: MoveMode;
-  behindOffsetPx?: number;
+  /** toAnchor 時: anchor からの px（−=味方側、+=敵背後）。未指定=0 */
+  anchorOffsetPx?: number;
 }
 
 export interface StunSkillEffect extends SkillEffectCommon {
@@ -921,7 +926,8 @@ export type SkillEffectDef =
   | KnockbackSkillEffect
   | DispelSkillEffect
   | BlockSkillEffect
-  | CounterSkillEffect;
+  | CounterSkillEffect
+  | BasicAttackTransformSkillEffect;
 
 /** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
 export type LegacyHotSkillEffect = HotSkillEffect;

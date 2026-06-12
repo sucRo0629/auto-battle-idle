@@ -74,7 +74,7 @@ function assassinBasicSkill(): ActiveSkillDef {
 }
 
 function transformActive(
-  spec: ActiveSkillDef['effect'][number] & { type: 'buff' },
+  spec: Extract<ActiveSkillDef['effect'][number], { type: 'basicAttackTransform' }>,
 ): ActiveSkillDef {
   return {
     id: 'transform_active',
@@ -326,8 +326,7 @@ describe('basicAttackTransform', () => {
     });
     const enemy = mockEnemy();
     const active = transformActive({
-      type: 'buff',
-      buffSubKind: 'basicAttackTransform',
+      type: 'basicAttackTransform',
       buffDurationSec: 5,
       target: { kind: 'self' },
       primaryPatch: { amount: { atkScale: 1.1 } },
@@ -462,8 +461,7 @@ describe('basicAttackTransform', () => {
     });
     const enemy = mockEnemy();
     const active = transformActive({
-      type: 'buff',
-      buffSubKind: 'basicAttackTransform',
+      type: 'basicAttackTransform',
       buffDurationSec: 6,
       target: { kind: 'self' },
       hitCountMultiplier: 3,

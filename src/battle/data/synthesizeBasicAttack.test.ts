@@ -124,6 +124,51 @@ describe('synthesizeBasicAttackSkill', () => {
     }
   });
 
+  it('merges heal and barrier effects from JSON override', () => {
+    const skill = synthesizeBasicAttackSkill({
+      entityId: 'sp_abjurer',
+      isEnemy: false,
+      traits: normalizeEntityTraits({ rangePx: 100 }),
+      attackSpeedTier: 'slow',
+      jsonOverride: {
+        id: 'sp_abjurer_basic_attack',
+        name: 'sp_abjurer_basic_attack',
+        trigger: { kind: 'time', value: 2 },
+        effect: [
+          {
+            target: {
+              kind: 'stat',
+              side: 'ally',
+              stat: 'hp',
+              order: 'ratio',
+            },
+            type: 'heal',
+            healSubKind: 'instant',
+            amount: { kind: 'atkBased', atkScale: 0.55 },
+          },
+          {
+            target: {
+              kind: 'stat',
+              side: 'ally',
+              stat: 'hp',
+              order: 'ratio',
+            },
+            type: 'buff',
+            buffSubKind: 'barrier',
+            amount: { kind: 'atkBased', atkScale: 0.55 },
+          },
+        ],
+      },
+    });
+    expect(skill.effect).toHaveLength(2);
+    expect(skill.effect[0]?.type).toBe('heal');
+    expect(skill.effect[1]?.type).toBe('buff');
+    if (skill.effect[1]?.type === 'buff') {
+      expect(skill.effect[1].buffSubKind).toBe('barrier');
+      expect(skill.effect[1].amount?.atkScale).toBe(0.55);
+    }
+  });
+
   it('merges atkScale override from JSON', () => {
     const skill = synthesizeBasicAttackSkill({
       entityId: 'at_sorcerer',

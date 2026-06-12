@@ -135,13 +135,13 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 
 Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `periodicTrigger: waveStart`** を使用（味方 CD は Wave 跨ぎ維持のため初期チャージは廃案）。
 
-**多段チャージ（`maxCharges` / `storedCharges`）:** `maxCharges` 省略 = 1（既存同等・ストック UI なし）。`maxCharges > 1` かつ smart 保留時、CD Max 後に 2 段目チャージを開始し `storedCharges` に確定ストック。パッシブ `skillPropertyOverride.maxChargesBonus` で実効上限を加算（`GLOBAL_MAX_CHARGES_CAP = 5`）。
+**多段チャージ（`maxCharges` / `storedCharges`）:** `maxCharges` 省略 = **0**（保持なし・ストック UI なし）。`maxCharges > 0` かつ smart 保留時、CD Max 後に 2 段目チャージを開始し `storedCharges` に確定ストック（上限 0〜3）。パッシブ `skillPropertyOverride.maxChargesBonus` で実効上限を加算（`GLOBAL_MAX_CHARGES_CAP = 3`）。
 
 **演出ロック（`presentationLock`）:** VFX 終了まで **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。**CD チャージは止めない**。`useDurationSec > 0` は従来どおり全スキル停止 + time/hitsTaken CD 一時停止。
 
 **停止時間（`useDurationSec`）:** アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**`useDurationSec > 0` のスキル発動後の停止中のみ**、time / hitsTaken のアクティブ CD 進行を停止する（`basicAttackCount` は通常攻撃停止のため実質影響小）。Party HUD: 停止中は `paused`（黄）。**`useDurationSec > 0` のスキルのみ**、発動直後は効果残りを Max 色ゲージの減衰（`active`）で表示する（秒数は自身向けバフ系 effect の最大、なければ `useDurationSec`。**CD カウントは止めない**）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。
 
-**Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 5px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。
+**Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 3px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。
 
 **スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、通常攻撃・アクティブは発動しない。`basicAttackCount` / `hitsTaken` トリガーもスタン中は進まない（命中・被弾が起きないため）。
 
@@ -185,7 +185,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | 種別     | 定義方法                                                                                                                                           |
 | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | buff   | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec`                                                                           |
-| 通常攻撃変形 | `effect: "buff"` + `buffSubKind: "basicAttackTransform"` — バフ持続中のみ通常攻撃 effect を実行時マージ（下記） |
+| 通常攻撃変形 | `effect: "basicAttackTransform"` + `buffDurationSec` 等 — バフ持続中のみ通常攻撃 effect を実行時マージ（下記）。付与対象は自身固定 |
 | debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                   |
 | スタン    | `effect: "stun"` + `durationSec` — `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可（CD は進行）                                     |
 | 反撃    | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記 |
@@ -216,7 +216,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 
 ### 通常攻撃変形（`basicAttackTransform`）
 
-アクティブ `buff` の `buffSubKind: "basicAttackTransform"`。自身（`target: self`）へ付与し、**バフ持続中のみ**通常攻撃（`slotKind: basic`）の effect を実行時にマージする。
+アクティブ effect の `type: "basicAttackTransform"`。自身へ付与し、**バフ持続中のみ**通常攻撃（`slotKind: basic`）の effect を実行時にマージする。
 
 | 項目 | 挙動 |
 |------|------|

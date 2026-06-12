@@ -1648,16 +1648,16 @@ export function appendActiveFireGateFields(
 
   section.appendChild(
     createFieldRow(
-      `多段チャージ上限 (1–${GLOBAL_MAX_CHARGES_CAP}, 1=省略)`,
+      `多段チャージ上限 (0–${GLOBAL_MAX_CHARGES_CAP}, 0=省略)`,
       createNumberInput(
-        active.maxCharges ?? 1,
+        active.maxCharges ?? 0,
         (value) => {
           onChange((current) => {
-            if (value <= 1) delete current.maxCharges;
+            if (value <= 0) delete current.maxCharges;
             else current.maxCharges = Math.min(GLOBAL_MAX_CHARGES_CAP, value);
           }, { rerender: false });
         },
-        { min: 1, max: GLOBAL_MAX_CHARGES_CAP, step: 1 },
+        { min: 0, max: GLOBAL_MAX_CHARGES_CAP, step: 1 },
       ),
     ),
   );

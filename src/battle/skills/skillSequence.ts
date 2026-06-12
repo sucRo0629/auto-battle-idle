@@ -156,6 +156,11 @@ function resolveEffectDurationSec(effect: SkillEffectDef): number {
         candidates.push(effect.buffDurationSec);
       }
       break;
+    case 'basicAttackTransform':
+      if (effect.buffDurationSec !== undefined) {
+        candidates.push(effect.buffDurationSec);
+      }
+      break;
     case 'debuff':
       if (effect.debuffDurationSec !== undefined) {
         candidates.push(effect.debuffDurationSec);

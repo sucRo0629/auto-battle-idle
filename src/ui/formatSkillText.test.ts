@@ -112,7 +112,8 @@ describe('formatActiveDescription', () => {
       effect: [
         {
           type: 'move',
-          moveMode: 'behindTarget',
+          moveMode: 'toAnchor',
+          anchorOffsetPx: 32,
           moveDurationSec: 0.3,
           target: { kind: 'distance', side: 'enemy', order: 'nearest' },
         },
@@ -129,7 +130,7 @@ describe('formatActiveDescription', () => {
     const desc = formatActiveDescription(def);
     expect(desc).toContain('9s');
     expect(desc).toContain('移動');
-    expect(desc).toContain('背後');
+    expect(desc).toContain('アンカー +32px');
     expect(desc).toContain('マルチロック');
     expect(desc).toContain('×3');
     expect(desc).toContain('物理 ATK×0.7');
@@ -249,7 +250,7 @@ describe('formatActiveDescription', () => {
       firePolicy: 'smart',
       fireConditions: [{ kind: 'enemyCount', min: 2 }],
       fireTimeoutSec: 5,
-      maxCharges: 3,
+      maxCharges: 2,
       effect: [
         {
           type: 'damage',
@@ -263,7 +264,7 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('smart:');
     expect(desc).toContain('敵数≥2');
     expect(desc).toContain('待機上限5s');
-    expect(desc).toContain('ストック上限3');
+    expect(desc).toContain('ストック上限2');
   });
 
   it('formats skillPropertyOverride passive', () => {

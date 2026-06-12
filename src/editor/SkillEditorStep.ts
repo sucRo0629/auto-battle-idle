@@ -677,6 +677,40 @@ function effectTypeToCategory(type: SkillEffectDef['type']): EditorActiveEffectC
   return 'damage';
 }
 
+const BASIC_ATTACK_EFFECT_CATEGORIES = ['damage', 'heal', 'barrier'] as const;
+type BasicAttackEffectCategory = (typeof BASIC_ATTACK_EFFECT_CATEGORIES)[number];
+
+const BASIC_ATTACK_EFFECT_CATEGORY_LABELS: Record<BasicAttackEffectCategory, string> = {
+  damage: 'ダメージ',
+  heal: '回復',
+  barrier: 'バリア',
+};
+
+function defaultBasicAttackEffectForCategory(
+  category: BasicAttackEffectCategory,
+): SkillEffectDef {
+  if (category === 'barrier') {
+    return stripBasicAttackTraitFieldsFromEffect({
+      target: {
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+      },
+      type: 'buff',
+      buffSubKind: 'barrier',
+      amount: defaultResourceAmount(),
+    });
+  }
+  return defaultBasicAttackEffect(category);
+}
+
+function basicAttackEffectToCategory(effect: SkillEffectDef): BasicAttackEffectCategory {
+  if (effect.type === 'heal') return 'heal';
+  if (effect.type === 'buff' && effect.buffSubKind === 'barrier') return 'barrier';
+  return 'damage';
+}
+
 function withDebuffDotDefaults(
   effect: Extract<SkillEffectDef, { type: 'debuff' }>,
 ): Extract<SkillEffectDef, { type: 'debuff' }> {
@@ -764,7 +798,221 @@ function normalizeLegacyEffect(effect: SkillEffectDef): SkillEffectDef {
       buffDurationSec: effect.durationSec,
     } as SkillEffectDef;
   }
+  if (
+    effect.type === 'buff' &&
+    effect.buffSubKind === 'basicAttackTransform'
+  ) {
+    const { buffSubKind: _sub, type: _type, ...rest } = effect;
+    return {
+      ...rest,
+      type: 'basicAttackTransform',
+      target: { kind: 'self' },
+    } as SkillEffectDef;
+  }
   return effect;
+}
+
+function resolveBasicAttackPrimaryContentMode(
+  effect: Extract<SkillEffectDef, { type: 'basicAttackTransform' }>,
+): 'inherit' | 'damage' | 'heal' {
+  const override = effect.primaryEffectOverride;
+  if (!override) return 'inherit';
+  if (override.type === 'heal') return 'heal';
+  if (override.type === 'damage') return 'damage';
+  return 'inherit';
+}
+
+function appendBasicAttackTransformFields(
+  detailGrid: HTMLElement,
+  effect: Extract<SkillEffectDef, { type: 'basicAttackTransform' }>,
+  patchEffect: (
+    patch: SkillEffectDef | ((prev: SkillEffectDef) => SkillEffectDef),
+    options?: { rerender?: boolean },
+  ) => void,
+): void {
+  detailGrid.appendChild(
+    createFieldRow(
+      '秒数',
+      createNumberInput(
+        effect.buffDurationSec ?? 5,
+        (buffDurationSec) =>
+          patchEffect((prev) =>
+            prev.type === 'basicAttackTransform'
+              ? { ...prev, buffDurationSec, target: { kind: 'self' } }
+              : prev,
+          ),
+        { min: 0.1, step: 0.5 },
+      ),
+    ),
+  );
+  detailGrid.appendChild(
+    createFieldRow(
+      '攻撃回数（2以上・省略=1）',
+      createNumberInput(
+        effect.hitCountMultiplier ?? 1,
+        (hitCountMultiplier) =>
+          patchEffect((prev) =>
+            prev.type === 'basicAttackTransform'
+              ? {
+                  ...prev,
+                  target: { kind: 'self' },
+                  hitCountMultiplier:
+                    hitCountMultiplier > 1 ? hitCountMultiplier : undefined,
+                }
+              : prev,
+          ),
+        { min: 1, step: 0.5 },
+      ),
+    ),
+  );
+  const primaryMode = resolveBasicAttackPrimaryContentMode(effect);
+  detailGrid.appendChild(
+    createFieldRow(
+      '通常攻撃の内容',
+      createSelect(
+        primaryMode,
+        [
+          { value: 'inherit', label: '変更なし（パッチのみ）' },
+          { value: 'damage', label: 'ダメージ' },
+          { value: 'heal', label: '回復' },
+        ],
+        (mode) =>
+          patchEffect((prev) => {
+            if (prev.type !== 'basicAttackTransform') return prev;
+            if (mode === 'inherit') {
+              const { primaryEffectOverride: _, ...rest } = prev;
+              return { ...rest, target: { kind: 'self' } };
+            }
+            if (mode === 'damage') {
+              return {
+                ...prev,
+                target: { kind: 'self' },
+                primaryEffectOverride: {
+                  type: 'damage',
+                  target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+                  amount: defaultResourceAmount(),
+                },
+              };
+            }
+            return {
+              ...prev,
+              target: { kind: 'self' },
+              primaryEffectOverride: {
+                type: 'heal',
+                healSubKind: 'instant',
+                target: {
+                  kind: 'stat',
+                  side: 'ally',
+                  stat: 'hp',
+                  order: 'ratio',
+                },
+                amount: defaultResourceAmount(0.5),
+              },
+            };
+          }, { rerender: true }),
+      ),
+    ),
+  );
+  if (primaryMode === 'inherit') {
+    detailGrid.appendChild(
+      createFieldRow(
+        'primary damageType',
+        createSelect(
+          effect.primaryPatch?.damageType ?? '',
+          [
+            { value: '', label: '（変更なし）' },
+            ...DAMAGE_TYPE_OPTIONS.map((value) => ({
+              value,
+              label: value,
+            })),
+          ],
+          (damageType) =>
+            patchEffect((prev) => {
+              if (prev.type !== 'basicAttackTransform') return prev;
+              const primaryPatch = { ...(prev.primaryPatch ?? {}) };
+              if (damageType === '') {
+                delete primaryPatch.damageType;
+              } else {
+                primaryPatch.damageType =
+                  damageType as import('../battle/types.ts').DamageType;
+              }
+              return {
+                ...prev,
+                target: { kind: 'self' },
+                primaryPatch:
+                  Object.keys(primaryPatch).length > 0 ? primaryPatch : undefined,
+              };
+            }),
+        ),
+      ),
+    );
+  }
+  if (primaryMode === 'inherit') {
+    detailGrid.appendChild(
+      createFieldRow(
+        'primary atkScale',
+        createNumberInput(
+          effect.primaryPatch?.amount?.atkScale ?? 1,
+          (atkScale) =>
+            patchEffect((prev) => {
+              if (prev.type !== 'basicAttackTransform') return prev;
+              const primaryPatch = { ...(prev.primaryPatch ?? {}) };
+              if (atkScale === 1) {
+                if (primaryPatch.amount) {
+                  const { atkScale: _, ...restAmount } = primaryPatch.amount;
+                  primaryPatch.amount =
+                    Object.keys(restAmount).length > 0 ? restAmount : undefined;
+                }
+              } else {
+                primaryPatch.amount = {
+                  ...(primaryPatch.amount ?? {}),
+                  atkScale,
+                };
+              }
+              return {
+                ...prev,
+                target: { kind: 'self' },
+                primaryPatch:
+                  Object.keys(primaryPatch).length > 0 ||
+                  primaryPatch.amount !== undefined
+                    ? primaryPatch
+                    : undefined,
+              };
+            }),
+          { min: 0, step: 0.05 },
+        ),
+      ),
+    );
+  } else {
+    const overrideDefaultAtkScale = primaryMode === 'heal' ? 0.5 : 1;
+    detailGrid.appendChild(
+      createFieldRow(
+        'primary atkScale',
+        createNumberInput(
+          effect.primaryEffectOverride?.amount?.atkScale ?? overrideDefaultAtkScale,
+          (atkScale) =>
+            patchEffect((prev) => {
+              if (prev.type !== 'basicAttackTransform') return prev;
+              const override = prev.primaryEffectOverride;
+              if (!override) return prev;
+              return {
+                ...prev,
+                target: { kind: 'self' },
+                primaryEffectOverride: {
+                  ...override,
+                  amount: {
+                    ...(override.amount ?? defaultResourceAmount(overrideDefaultAtkScale)),
+                    kind: 'atkBased',
+                    atkScale,
+                  },
+                },
+              };
+            }),
+          { min: 0, step: 0.05 },
+        ),
+      ),
+    );
+  }
 }
 
 function normalizeEffectAmount(effect: {
@@ -846,15 +1094,6 @@ function applyActiveBuffSubKindChange(
       return {
         ...base,
         amount: prev.amount ?? defaultResourceAmount(),
-      };
-    case 'basicAttackTransform':
-      return {
-        ...base,
-        buffDurationSec: prev.buffDurationSec ?? 5,
-        hitCountMultiplier: prev.hitCountMultiplier,
-        primaryPatch: prev.primaryPatch,
-        primaryEffectOverride: prev.primaryEffectOverride,
-        appendEffects: prev.appendEffects,
       };
     default:
       return base;
@@ -1264,6 +1503,13 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         responses: [defaultCounterResponse('damage')],
         durationSec: 5,
         range: 0,
+      };
+    case 'basicAttackTransform':
+      return {
+        target: { kind: 'self' },
+        type: 'basicAttackTransform',
+        buffDurationSec: 5,
+        hitCountMultiplier: 2,
       };
   }
 }
@@ -2550,7 +2796,9 @@ export class SkillEditorStep {
       createButton('+ 効果を追加', 'editor-btn editor-btn-small', () => {
         setActive((current) => {
           current.effect.push(
-            idReadonly ? defaultBasicAttackEffect('damage') : defaultEffect('damage'),
+            idReadonly
+              ? defaultBasicAttackEffectForCategory('heal')
+              : defaultEffect('damage'),
           );
         }, { rerender: true });
       }),
@@ -2668,26 +2916,37 @@ export class SkillEditorStep {
       onUpdate,
     );
     const grid = appendGrid(parent);
+    const categoryOptions = isBasicAttack
+      ? BASIC_ATTACK_EFFECT_CATEGORIES
+      : EDITOR_ACTIVE_EFFECT_CATEGORIES;
+    const selectedCategory = isBasicAttack
+      ? basicAttackEffectToCategory(normalizedEffect)
+      : effectTypeToCategory(normalizedEffect.type);
+    const categoryLabels = isBasicAttack
+      ? BASIC_ATTACK_EFFECT_CATEGORY_LABELS
+      : EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS;
     grid.appendChild(
       createFieldRow(
         '種別',
         createSelect(
-          effectTypeToCategory(normalizedEffect.type),
-          EDITOR_ACTIVE_EFFECT_CATEGORIES.map((value) => ({
+          selectedCategory,
+          categoryOptions.map((value) => ({
             value,
-            label: EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS[value],
+            label: categoryLabels[value as keyof typeof categoryLabels],
           })),
           (category) =>
             patchEffect(
               isBasicAttack
-                ? defaultBasicAttackEffect(categoryToEffectType(category))
-                : defaultEffect(categoryToEffectType(category)),
+                ? defaultBasicAttackEffectForCategory(
+                    category as BasicAttackEffectCategory,
+                  )
+                : defaultEffect(categoryToEffectType(category as EditorActiveEffectCategory)),
               { rerender: true },
             ),
         ),
       ),
     );
-    if (normalizedEffect.type === 'counter') {
+    if (normalizedEffect.type === 'counter' || normalizedEffect.type === 'basicAttackTransform') {
       grid.appendChild(
         createEl('p', 'editor-hint', '付与対象: 自身（固定）'),
       );
@@ -2727,9 +2986,10 @@ export class SkillEditorStep {
     }
     const isMove = normalizedEffect.type === 'move';
     const isCounter = normalizedEffect.type === 'counter';
+    const isBasicAttackTransform = normalizedEffect.type === 'basicAttackTransform';
     const effectTargetKind = getEffectTarget(effect).kind;
     const targetShape: TargetShape = normalizedEffect.targetShape ?? 'single';
-    if (!isMove && !isCounter) {
+    if (!isMove && !isCounter && !isBasicAttackTransform) {
       const shapeSelect = createSelect(
         effectTargetKind === 'self' ? 'single' : targetShape,
         TARGET_SHAPE_OPTIONS.map((value) => ({
@@ -2821,7 +3081,7 @@ export class SkillEditorStep {
         createEl('p', 'editor-hint', '移動効果は単体（single）のみ。ターゲットは移動先の基準（anchor）です。'),
       );
     }
-    if (!isMove && (targetShape === 'single' || targetShape === 'aoe')) {
+    if (!isMove && !isBasicAttackTransform && (targetShape === 'single' || targetShape === 'aoe')) {
       grid.appendChild(
         createFieldRow(
           '攻撃回数（2以上・省略=1）',
@@ -3336,6 +3596,15 @@ export class SkillEditorStep {
         break;
       }
       case 'buff':
+        if (
+          isBasicAttack &&
+          (effect.buffSubKind === 'barrier' || effect.buffSubKind === undefined)
+        ) {
+          appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
+            patchEffect((prev) => ({ ...prev, amount, buffSubKind: 'barrier' }) as SkillEffectDef, options),
+          );
+          break;
+        }
         detailGrid.appendChild(
           createFieldRow(
             'バフ種別',
@@ -3396,104 +3665,6 @@ export class SkillEditorStep {
                 (buffDurationSec) =>
                   patchEffect((prev) => ({ ...prev, buffDurationSec }) as SkillEffectDef),
                 { min: 0.1, step: 0.5 },
-              ),
-            ),
-          );
-          break;
-        }
-        if (effect.buffSubKind === 'basicAttackTransform') {
-          detailGrid.appendChild(
-            createFieldRow(
-              '通常攻撃 hit 倍率',
-              createNumberInput(
-                effect.hitCountMultiplier ?? 1,
-                (hitCountMultiplier) =>
-                  patchEffect(
-                    (prev) =>
-                      prev.type === 'buff'
-                        ? {
-                            ...prev,
-                            hitCountMultiplier:
-                              hitCountMultiplier > 1 ? hitCountMultiplier : undefined,
-                          }
-                        : prev,
-                  ),
-                { min: 1, step: 0.5 },
-              ),
-            ),
-          );
-          detailGrid.appendChild(
-            createFieldRow(
-              '秒数',
-              createNumberInput(
-                effect.buffDurationSec ?? 5,
-                (buffDurationSec) =>
-                  patchEffect((prev) => ({ ...prev, buffDurationSec }) as SkillEffectDef),
-                { min: 0.1, step: 0.5 },
-              ),
-            ),
-          );
-          detailGrid.appendChild(
-            createFieldRow(
-              'primary damageType',
-              createSelect(
-                effect.primaryPatch?.damageType ?? '',
-                [
-                  { value: '', label: '（変更なし）' },
-                  ...DAMAGE_TYPE_OPTIONS.map((value) => ({
-                    value,
-                    label: value,
-                  })),
-                ],
-                (damageType) =>
-                  patchEffect((prev) => {
-                    if (prev.type !== 'buff') return prev;
-                    const primaryPatch = { ...(prev.primaryPatch ?? {}) };
-                    if (damageType === '') {
-                      delete primaryPatch.damageType;
-                    } else {
-                      primaryPatch.damageType = damageType as import('../battle/types.ts').DamageType;
-                    }
-                    return {
-                      ...prev,
-                      primaryPatch:
-                        Object.keys(primaryPatch).length > 0 ? primaryPatch : undefined,
-                    };
-                  }),
-              ),
-            ),
-          );
-          detailGrid.appendChild(
-            createFieldRow(
-              'primary atkScale',
-              createNumberInput(
-                effect.primaryPatch?.amount?.atkScale ?? 1,
-                (atkScale) =>
-                  patchEffect((prev) => {
-                    if (prev.type !== 'buff') return prev;
-                    const primaryPatch = { ...(prev.primaryPatch ?? {}) };
-                    if (atkScale === 1) {
-                      if (primaryPatch.amount) {
-                        const { atkScale: _, ...restAmount } = primaryPatch.amount;
-                        primaryPatch.amount =
-                          Object.keys(restAmount).length > 0 ? restAmount : undefined;
-                      }
-                    } else {
-                      primaryPatch.amount = {
-                        ...(primaryPatch.amount ?? {}),
-                        atkScale,
-                      };
-                    }
-                    return {
-                      ...prev,
-                      primaryPatch:
-                        Object.keys(primaryPatch).length > 0 ||
-                        primaryPatch.amount !== undefined
-                          ? primaryPatch
-                          : undefined,
-                    };
-                  }),
-                { min: 0, step: 0.05 },
               ),
             ),
           );
@@ -3830,6 +4001,15 @@ export class SkillEditorStep {
           ),
         );
         break;
+      case 'basicAttackTransform':
+        if (normalizedEffect.type === 'basicAttackTransform') {
+          appendBasicAttackTransformFields(
+            detailGrid,
+            normalizedEffect,
+            patchEffect,
+          );
+        }
+        break;
       case 'move': {
         const moveEffect = effect as MoveSkillEffect;
         detailGrid.appendChild(
@@ -3860,18 +4040,18 @@ export class SkillEditorStep {
             ),
           ),
         );
-        if ((moveEffect.moveMode ?? 'engage') === 'behindTarget') {
+        if ((moveEffect.moveMode ?? 'engage') === 'toAnchor') {
           detailGrid.appendChild(
             createFieldRow(
-              '背後オフセット px',
+              'アンカーオフセット px（−=味方側、+=敵背後）',
               createNumberInput(
-                moveEffect.behindOffsetPx ?? 0,
-                (behindOffsetPx) =>
+                moveEffect.anchorOffsetPx ?? 0,
+                (anchorOffsetPx) =>
                   patchEffect((prev) => ({
                     ...(prev as MoveSkillEffect),
-                    behindOffsetPx: behindOffsetPx > 0 ? behindOffsetPx : undefined,
+                    anchorOffsetPx: anchorOffsetPx !== 0 ? anchorOffsetPx : undefined,
                   })),
-                { min: 0, step: 10 },
+                { step: 10 },
               ),
             ),
           );

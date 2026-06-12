@@ -7,6 +7,7 @@ import {
   BUFF_SUB_KIND_LABELS,
   DEBUFF_FILTER_TAG_LABELS,
   DEBUFF_SUB_KIND_LABELS,
+  EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS,
   DISPEL_PRIORITY_LABELS,
   FIRE_CONDITION_KIND_LABELS,
   HEAL_SUB_KIND_LABELS,
@@ -412,30 +413,6 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
             effect.ratio ?? 0
           )} ${effect.buffDurationSec ?? 0}s`
         );
-      } else if (effect.buffSubKind === "basicAttackTransform") {
-        const parts: string[] = [BUFF_SUB_KIND_LABELS.basicAttackTransform];
-        if (effect.hitCountMultiplier !== undefined) {
-          parts.push(`通常攻撃hit×${effect.hitCountMultiplier}`);
-        }
-        if (effect.primaryEffectOverride !== undefined) {
-          parts.push("通常攻撃置換");
-        }
-        if (effect.primaryPatch !== undefined) {
-          const patchParts: string[] = [];
-          if (effect.primaryPatch.damageType !== undefined) {
-            patchParts.push(DAMAGE_TYPE_LABELS[effect.primaryPatch.damageType]);
-          }
-          if (effect.primaryPatch.amount?.atkScale !== undefined) {
-            patchParts.push(`ATK×${effect.primaryPatch.amount.atkScale}`);
-          }
-          if (patchParts.length > 0) {
-            parts.push(patchParts.join(" "));
-          }
-        }
-        if (effect.appendEffects !== undefined && effect.appendEffects.length > 0) {
-          parts.push(`+${effect.appendEffects.length}効果`);
-        }
-        extras.push(`${parts.join(" ")} ${effect.buffDurationSec ?? 0}s`);
       } else {
         const statLabel = formatBuffTargetStats(
           effect.buffStat,
@@ -449,6 +426,44 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
         );
       }
       break;
+    case "basicAttackTransform": {
+      const parts: string[] = [
+        EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS.basicAttackTransform,
+      ];
+      if (effect.hitCountMultiplier !== undefined) {
+        parts.push(`${effect.hitCountMultiplier}回`);
+      }
+      if (effect.primaryEffectOverride !== undefined) {
+        const overrideParts: string[] = [
+          effect.primaryEffectOverride.type === "heal"
+            ? "通常攻撃→回復"
+            : "通常攻撃置換",
+        ];
+        if (effect.primaryEffectOverride.amount?.atkScale !== undefined) {
+          overrideParts.push(
+            `ATK×${effect.primaryEffectOverride.amount.atkScale}`,
+          );
+        }
+        parts.push(overrideParts.join(" "));
+      }
+      if (effect.primaryPatch !== undefined) {
+        const patchParts: string[] = [];
+        if (effect.primaryPatch.damageType !== undefined) {
+          patchParts.push(DAMAGE_TYPE_LABELS[effect.primaryPatch.damageType]);
+        }
+        if (effect.primaryPatch.amount?.atkScale !== undefined) {
+          patchParts.push(`ATK×${effect.primaryPatch.amount.atkScale}`);
+        }
+        if (patchParts.length > 0) {
+          parts.push(patchParts.join(" "));
+        }
+      }
+      if (effect.appendEffects !== undefined && effect.appendEffects.length > 0) {
+        parts.push(`+${effect.appendEffects.length}効果`);
+      }
+      extras.push(`${parts.join(" ")} ${effect.buffDurationSec ?? 0}s`);
+      break;
+    }
     case "debuff":
       if (effect.debuffSubKind === "dot") {
         const dmgType = effect.damageType
@@ -499,10 +514,10 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
     }
     case "move": {
       const mode =
-        effect.moveMode === "behindTarget"
-          ? "背後"
-          : effect.moveMode === "toAnchor"
-          ? "アンカー"
+        effect.moveMode === "toAnchor"
+          ? effect.anchorOffsetPx !== undefined && effect.anchorOffsetPx !== 0
+            ? `アンカー ${effect.anchorOffsetPx > 0 ? "+" : ""}${effect.anchorOffsetPx}px`
+            : "アンカー"
           : "接敵";
       extras.push(`${mode} ${effect.moveDurationSec}s`);
       break;
@@ -811,7 +826,7 @@ export function formatActiveDescription(def: ActiveSkillDef): string {
       headerParts.push(`待機上限${def.fireTimeoutSec}s`);
     }
   }
-  if ((def.maxCharges ?? 1) > 1) {
+  if ((def.maxCharges ?? 0) > 0) {
     headerParts.push(`ストック上限${def.maxCharges}`);
   }
   const effects = def.effect.map(formatActiveEffectDetail).join(" / ");

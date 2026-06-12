@@ -4,7 +4,6 @@
     "role": "defender",
     "displayName": "鉄衛士",
     "epithetEn": "Guardian",
-    "flavorJa": "鉄壁となり、最も危険な敵の矛先を受け止める",
     "formationRow": "front",
     "traits": {
       "rangePx": 10
@@ -56,12 +55,11 @@
     "role": "defender",
     "displayName": "護法士",
     "epithetEn": "Paladin",
-    "flavorJa": "聖なる防護と小さな癒しで、前線を守り抜く",
     "formationRow": "front",
     "traits": {
       "rangePx": 10
     },
-    "maxHp": 200,
+    "maxHp": 220,
     "atk": 15,
     "def": 20,
     "reg": 10,
@@ -108,7 +106,6 @@
     "role": "defender",
     "displayName": "闘技士",
     "epithetEn": "Gladiator",
-    "flavorJa": "搦め手で敵を弱らせ、隙に致命の一撃を繰り出す",
     "formationRow": "front",
     "traits": {
       "rangePx": 10
@@ -162,7 +159,6 @@
     "role": "attacker",
     "displayName": "剣術士",
     "epithetEn": "Swordsman",
-    "flavorJa": "研ぎ澄まされた剣技で、近接戦の要となる",
     "formationRow": "front",
     "traits": {
       "rangePx": 30
@@ -181,7 +177,7 @@
           "at_warrior_passive_1",
           "at_warrior_passive_2",
           "at_warrior_active_1",
-          "at_warrior_active_4"
+          "at_warrior_active_2"
         ]
       }
     ],
@@ -200,7 +196,6 @@
     "role": "attacker",
     "displayName": "双刃士",
     "epithetEn": "Assassin",
-    "flavorJa": "敵の背後へ忍び込み、二刃で仕留める影",
     "formationRow": "front",
     "traits": {
       "rangePx": 10,
@@ -215,13 +210,18 @@
     "jobTier": 1,
     "attackSpeedTier": "fast",
     "basicAttackSkillId": "at_assassin_basic_attack",
-    "passiveIds": [],
+    "passiveIds": [
+      "at_assassin_passive_1",
+      "at_assassin_passive_2"
+    ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
+          "at_assassin_passive_1",
           "at_assassin_active_1",
-          "at_assassin_active_2"
+          "at_assassin_active_2",
+          "at_assassin_passive_2"
         ]
       }
     ],
@@ -236,7 +236,6 @@
     "role": "attacker",
     "displayName": "槍術士",
     "epithetEn": "Lancer",
-    "flavorJa": "長槍の一突きで、どんな巨体も貫く",
     "formationRow": "front",
     "traits": {
       "rangePx": 70,
@@ -251,11 +250,14 @@
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_lancer_basic_attack",
-    "passiveIds": [],
+    "passiveIds": [
+      "at_lancer_passive_1"
+    ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
+          "at_lancer_passive_1",
           "at_lancer_active_1",
           "at_lancer_active_2"
         ]
@@ -272,7 +274,6 @@
     "role": "attacker",
     "displayName": "弓術士",
     "epithetEn": "Ranger",
-    "flavorJa": "遠くの脅威を先に射落とす迎撃の弓",
     "formationRow": "back",
     "traits": {
       "rangePx": 200
@@ -296,6 +297,12 @@
           "at_ranger_passive_1",
           "at_ranger_passive_2",
           "at_ranger_active_1",
+          "at_ranger_active_2"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
           "at_ranger_passive_3"
         ]
       }
@@ -311,7 +318,6 @@
     "role": "attacker",
     "displayName": "狙撃士",
     "epithetEn": "Sniper",
-    "flavorJa": "最も遠い獲物だけを狙い、一矢で沈める",
     "formationRow": "back",
     "traits": {
       "rangePx": 400
@@ -344,7 +350,6 @@
     "role": "attacker",
     "displayName": "狩猟士",
     "epithetEn": "Hunter",
-    "flavorJa": "罠と毒で追い詰め、獲物を仕留める",
     "formationRow": "back",
     "traits": {
       "rangePx": 220
@@ -377,7 +382,6 @@
     "role": "attacker",
     "displayName": "魔術士",
     "epithetEn": "Sorcerer",
-    "flavorJa": "魔力を一点に集め、魔防の薄い敵を穿つ",
     "formationRow": "back",
     "traits": {
       "rangePx": 150,
@@ -412,7 +416,6 @@
     "role": "attacker",
     "displayName": "符術士",
     "epithetEn": "Enchanter",
-    "flavorJa": "符が敵から敵へ跳ね、連鎖の術式を織る",
     "formationRow": "back",
     "traits": {
       "rangePx": 150,
@@ -449,7 +452,6 @@
     "role": "attacker",
     "displayName": "法陣師",
     "epithetEn": "Geomancer",
-    "flavorJa": "地面に法陣を描き、踏み込んだ者を焼き尽くす",
     "formationRow": "back",
     "traits": {
       "rangePx": 110,
@@ -484,7 +486,6 @@
     "role": "supporter",
     "displayName": "療養師",
     "epithetEn": "Cleric",
-    "flavorJa": "前線に立ち、味方全体をやさしく癒し続ける",
     "formationRow": "back",
     "traits": {
       "rangePx": 128,
@@ -523,13 +524,13 @@
     "role": "supporter",
     "displayName": "結界師",
     "epithetEn": "Abjurer",
-    "flavorJa": "結界と弱体化で、味方への一撃をそらす",
-    "formationRow": "middle",
+    "flavorJa": "癒しの余りを結界に変え、味方をダメージから守る",
+    "formationRow": "back",
     "traits": {
       "rangePx": 100
     },
     "maxHp": 95,
-    "atk": 12,
+    "atk": 14,
     "def": 12,
     "reg": 15,
     "jobTier": 1,
@@ -537,7 +538,8 @@
     "basicAttackSkillId": "sp_abjurer_basic_attack",
     "passiveIds": [
       "sp_abjurer_passive_1",
-      "sp_abjurer_passive_2"
+      "sp_abjurer_passive_2",
+      "sp_abjurer_passive_3"
     ],
     "skills": [
       {
@@ -546,6 +548,12 @@
           "sp_abjurer_passive_1",
           "sp_abjurer_passive_2",
           "sp_abjurer_active_1"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "sp_abjurer_passive_3"
         ]
       }
     ],
@@ -560,7 +568,6 @@
     "role": "supporter",
     "displayName": "薬草師",
     "epithetEn": "Alchemist",
-    "flavorJa": "薬草と毒で戦場を操り、敵の弱点を長く灼く",
     "formationRow": "middle",
     "traits": {
       "rangePx": 90
@@ -574,7 +581,8 @@
     "basicAttackSkillId": "sp_alchemist_basic_attack",
     "passiveIds": [
       "sp_alchemist_passive_1",
-      "sp_alchemist_passive_2"
+      "sp_alchemist_passive_2",
+      "sp_alchemist_passive_3"
     ],
     "skills": [
       {
@@ -582,6 +590,7 @@
         "skillIds": [
           "sp_alchemist_passive_1",
           "sp_alchemist_passive_2",
+          "sp_alchemist_passive_3",
           "sp_alchemist_active_1",
           "sp_alchemist_active_2"
         ]

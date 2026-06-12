@@ -245,9 +245,10 @@ export function normalizeActiveSkillEffectForEditor(
       buffDurationSec: normalized.buffDurationSec ?? 5,
     };
   }
-  if (subKind === 'basicAttackTransform') {
+  if (normalized.type === 'basicAttackTransform') {
     return {
       ...normalized,
+      target: { kind: 'self' },
       buffDurationSec: normalized.buffDurationSec ?? 5,
     };
   }
@@ -1567,6 +1568,20 @@ function normalizeSkillEffect(effect: SkillEffectDef | LegacyHotSkillEffect): Sk
   if (effect.type === 'heal' && effect.healSubKind === undefined) {
     return { ...effect, healSubKind: 'instant' };
   }
+  if (
+    effect.type === 'buff' &&
+    effect.buffSubKind === 'basicAttackTransform'
+  ) {
+    const { buffSubKind: _sub, type: _type, ...rest } = effect;
+    return normalizeSkillEffect({
+      ...rest,
+      type: 'basicAttackTransform',
+      target: { kind: 'self' },
+    });
+  }
+  if (effect.type === 'basicAttackTransform') {
+    return { ...effect, target: { kind: 'self' } };
+  }
   if (effect.type === 'buff' && effect.buffSubKind === undefined) {
     return { ...effect, buffSubKind: 'stat' };
   }
@@ -1577,7 +1592,13 @@ function normalizeSkillEffect(effect: SkillEffectDef | LegacyHotSkillEffect): Sk
 }
 
 function normalizeEffectTargetForShape(effect: SkillEffectDef): SkillEffectDef {
-  if (effect.type === 'counter' || effect.type === 'move') return effect;
+  if (
+    effect.type === 'counter' ||
+    effect.type === 'basicAttackTransform' ||
+    effect.type === 'move'
+  ) {
+    return effect;
+  }
   const shape = effect.targetShape ?? 'single';
   if (shape !== 'pierce') return effect;
 
@@ -1754,7 +1775,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
   }
   const type = requireEnum(obj, 'type', context, SKILL_EFFECTS);
   const target =
-    type === 'counter'
+    type === 'counter' || type === 'basicAttackTransform'
       ? ({ kind: 'self' } satisfies TargetSpec)
       : parseEffectTarget(obj, context);
   const range = parseOptionalRange(obj, context);
@@ -1845,6 +1866,30 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
   }
 
   if (type === 'buff') {
+    if (obj.buffSubKind === 'basicAttackTransform') {
+      const buffDurationSec = requireNumber(obj, 'buffDurationSec', context);
+      const transform = parseBasicAttackTransformFields(obj, context);
+      return normalizeSkillEffect({
+        target: { kind: 'self' },
+        ...combatModifiers,
+        type: 'basicAttackTransform',
+        buffDurationSec,
+        ...(transform.hitCountMultiplier !== undefined
+          ? { hitCountMultiplier: transform.hitCountMultiplier }
+          : {}),
+        ...(transform.primaryEffectOverride !== undefined
+          ? { primaryEffectOverride: transform.primaryEffectOverride }
+          : {}),
+        ...(transform.primaryPatch !== undefined
+          ? { primaryPatch: transform.primaryPatch }
+          : {}),
+        ...(transform.appendEffects !== undefined
+          ? { appendEffects: transform.appendEffects }
+          : {}),
+        ...sequenceTiming,
+        ...presentation,
+      });
+    }
     const buffSubKind =
       obj.buffSubKind === undefined
         ? 'stat'
@@ -1916,33 +1961,6 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         buffSubKind,
         ratio,
         buffDurationSec,
-        ...sequenceTiming,
-        ...presentation,
-        ...(range !== undefined ? { range } : {}),
-      });
-    }
-    if (buffSubKind === 'basicAttackTransform') {
-      const buffDurationSec = requireNumber(obj, 'buffDurationSec', context);
-      const transform = parseBasicAttackTransformFields(obj, context);
-      return normalizeSkillEffect({
-        target,
-        ...targetShapeFields,
-        ...combatModifiers,
-        type,
-        buffSubKind,
-        buffDurationSec,
-        ...(transform.hitCountMultiplier !== undefined
-          ? { hitCountMultiplier: transform.hitCountMultiplier }
-          : {}),
-        ...(transform.primaryEffectOverride !== undefined
-          ? { primaryEffectOverride: transform.primaryEffectOverride }
-          : {}),
-        ...(transform.primaryPatch !== undefined
-          ? { primaryPatch: transform.primaryPatch }
-          : {}),
-        ...(transform.appendEffects !== undefined
-          ? { appendEffects: transform.appendEffects }
-          : {}),
         ...sequenceTiming,
         ...presentation,
         ...(range !== undefined ? { range } : {}),
@@ -2056,15 +2074,42 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     const moveModeRaw = obj.moveMode;
     let moveMode: MoveMode | undefined;
     if (moveModeRaw !== undefined) {
-      moveMode = requireEnum(obj, 'moveMode', context, MOVE_MODES_SET);
+      const modeStr = requireString(obj, 'moveMode', context);
+      if (modeStr === 'behindTarget') {
+        moveMode = 'toAnchor';
+      } else if (!MOVE_MODES_SET.has(modeStr as MoveMode)) {
+        invalidField(
+          context,
+          'moveMode',
+          `must be one of ${[...MOVE_MODES_SET, 'behindTarget'].join(', ')}`,
+        );
+      } else {
+        moveMode = modeStr as MoveMode;
+      }
     }
-    const behindOffsetPx = parseOptionalNumber(obj, 'behindOffsetPx', context);
+    const legacyBehindOffsetPx = parseOptionalNumber(
+      obj,
+      'behindOffsetPx',
+      context,
+    );
+    const anchorOffsetPxRaw = parseOptionalNumber(
+      obj,
+      'anchorOffsetPx',
+      context,
+    );
+    const anchorOffsetPx =
+      anchorOffsetPxRaw ?? legacyBehindOffsetPx ?? undefined;
+    if (moveMode === undefined && anchorOffsetPx !== undefined) {
+      moveMode = 'toAnchor';
+    }
     return normalizeSkillEffect({
       target,
       type: 'move',
       moveDurationSec,
       ...(moveMode !== undefined ? { moveMode } : {}),
-      ...(behindOffsetPx !== undefined ? { behindOffsetPx } : {}),
+      ...(anchorOffsetPx !== undefined && anchorOffsetPx !== 0
+        ? { anchorOffsetPx }
+        : {}),
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
@@ -2132,6 +2177,31 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...presentation,
       ...(range !== undefined ? { range } : {}),
       ...parseCounterAttackRangeBandFields(obj, context),
+    });
+  }
+
+  if (type === 'basicAttackTransform') {
+    const buffDurationSec = requireNumber(obj, 'buffDurationSec', context);
+    const transform = parseBasicAttackTransformFields(obj, context);
+    return normalizeSkillEffect({
+      target: { kind: 'self' },
+      ...combatModifiers,
+      type: 'basicAttackTransform',
+      buffDurationSec,
+      ...(transform.hitCountMultiplier !== undefined
+        ? { hitCountMultiplier: transform.hitCountMultiplier }
+        : {}),
+      ...(transform.primaryEffectOverride !== undefined
+        ? { primaryEffectOverride: transform.primaryEffectOverride }
+        : {}),
+      ...(transform.primaryPatch !== undefined
+        ? { primaryPatch: transform.primaryPatch }
+        : {}),
+      ...(transform.appendEffects !== undefined
+        ? { appendEffects: transform.appendEffects }
+        : {}),
+      ...sequenceTiming,
+      ...presentation,
     });
   }
 
@@ -2944,6 +3014,17 @@ export function sanitizeBasicAttackSkillForJson(
   };
 }
 
+/** パッシブ JSON から effect 種別に無関係なフィールドを除去（エディタ保存用） */
+export function sanitizePassiveSkillForJson(
+  passive: PassiveSkillDef,
+): PassiveSkillDef {
+  return requirePassiveEffectParams(
+    passive as unknown as Record<string, unknown>,
+    passive.effect,
+    `passiveSkill(${passive.id})`,
+  );
+}
+
 function validateBasicAttackJsonOverride(
   skill: ActiveSkillDef,
   context: string,
@@ -3284,16 +3365,18 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
     if (maxChargesRaw !== undefined) {
       if (
         !Number.isInteger(maxChargesRaw) ||
-        maxChargesRaw < 1 ||
+        maxChargesRaw < 0 ||
         maxChargesRaw > GLOBAL_MAX_CHARGES_CAP
       ) {
         invalidField(
           context,
           'maxCharges',
-          `must be an integer from 1 to ${GLOBAL_MAX_CHARGES_CAP}`,
+          `must be an integer from 0 to ${GLOBAL_MAX_CHARGES_CAP}`,
         );
       }
-      maxCharges = maxChargesRaw;
+      if (maxChargesRaw > 0) {
+        maxCharges = maxChargesRaw;
+      }
     }
     if (firePolicy === 'smart' && !fireConditions?.length) {
       invalidField(

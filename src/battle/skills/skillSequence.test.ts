@@ -10,6 +10,7 @@ import {
   resolveSequenceWallClockSec,
   SkillSequenceRunner,
 } from './skillSequence.ts';
+import { getEffectTarget } from './targetSpec.ts';
 
 function mockUnit(
   overrides: Partial<CombatantState> & { id: string },
@@ -111,10 +112,10 @@ describe('skillSequence', () => {
       effect: [
         {
           type: 'move',
-          moveMode: 'behindTarget',
+          moveMode: 'toAnchor',
           moveDurationSec: 0.3,
           target: { kind: 'distance', side: 'enemy', order: 'nearest' },
-          behindOffsetPx: 10,
+          anchorOffsetPx: 10,
         },
         {
           type: 'damage',
@@ -182,10 +183,10 @@ describe('skillSequence', () => {
       effect: [
         {
           type: 'move',
-          moveMode: 'behindTarget',
+          moveMode: 'toAnchor',
           moveDurationSec: 0.3,
           target: { kind: 'distance', side: 'enemy', order: 'nearest' },
-          behindOffsetPx: 10,
+          anchorOffsetPx: 10,
         },
         {
           type: 'damage',
@@ -246,10 +247,10 @@ describe('skillSequence', () => {
         },
         {
           type: 'move',
-          moveMode: 'behindTarget',
+          moveMode: 'toAnchor',
           moveDurationSec: 0.3,
           target: { kind: 'distance', side: 'enemy', order: 'nearest' },
-          behindOffsetPx: 10,
+          anchorOffsetPx: 10,
         },
         {
           type: 'damage',
@@ -287,7 +288,16 @@ describe('skillSequence', () => {
 
     expect(sequence).not.toBeNull();
     expect(sequence!.steps).toHaveLength(3);
-    expect(sequence!.steps.every((step) => step.effectDef.type !== 'move' || step.effectDef.moveMode !== 'toAnchor')).toBe(true);
+    const moveSteps = sequence!.steps.filter((step) => step.effectDef.type === 'move');
+    expect(moveSteps).toHaveLength(1);
+    expect(getEffectTarget(moveSteps[0]!.effectDef).side).toBe('enemy');
+    expect(
+      sequence!.steps.every(
+        (step) =>
+          step.effectDef.type !== 'move' ||
+          getEffectTarget(step.effectDef).side !== 'ally',
+      ),
+    ).toBe(true);
   });
 
   it('interpolates battleX during move', () => {
@@ -404,10 +414,10 @@ describe('skillSequence', () => {
       effect: [
         {
           type: 'move',
-          moveMode: 'behindTarget',
+          moveMode: 'toAnchor',
           moveDurationSec: 0.2,
           target: { kind: 'distance', side: 'enemy', order: 'nearest' },
-          behindOffsetPx: 10,
+          anchorOffsetPx: 10,
         },
         {
           type: 'damage',
@@ -588,7 +598,7 @@ describe('skillSequence', () => {
         },
         {
           type: 'move',
-          moveMode: 'behindTarget',
+          moveMode: 'toAnchor',
           moveDurationSec: 0.2,
           waitAfterSec: 0.2,
           target: { kind: 'distance', side: 'enemy', order: 'nearest' },

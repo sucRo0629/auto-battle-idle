@@ -5,10 +5,10 @@ import type {
 } from '../types.ts';
 import { resolveSkillTrigger } from '../skillTrigger.ts';
 
-export const GLOBAL_MAX_CHARGES_CAP = 5;
+export const GLOBAL_MAX_CHARGES_CAP = 3;
 
 export function resolveBaseMaxCharges(skill: ActiveSkillDef): number {
-  return skill.maxCharges ?? 1;
+  return skill.maxCharges ?? 0;
 }
 
 export function resolveEffectiveMaxCharges(
@@ -36,7 +36,7 @@ export function resolveEffectiveMaxCharges(
   }
   return Math.min(
     GLOBAL_MAX_CHARGES_CAP,
-    Math.max(1, resolveBaseMaxCharges(skill) + bonus),
+    Math.max(0, resolveBaseMaxCharges(skill) + bonus),
   );
 }
 
@@ -53,7 +53,7 @@ export function hasAvailableActiveCharge(
   if (cd.slotKind !== 'active') return cd.remaining <= 0;
   const max = resolveEffectiveMaxCharges(skill, passives, learnedActiveIds);
   const stored = cd.storedCharges ?? 0;
-  if (max <= 1) return cd.remaining <= 0;
+  if (max <= 0) return cd.remaining <= 0;
   return stored > 0 || cd.remaining <= 0;
 }
 
@@ -64,9 +64,9 @@ export function bankReadyChargeIfPossible(
   learnedActiveIds?: string[],
 ): boolean {
   const max = resolveEffectiveMaxCharges(skill, passives, learnedActiveIds);
-  if (max <= 1) return false;
+  if (max <= 0) return false;
   const stored = cd.storedCharges ?? 0;
-  if (1 + stored >= max) return false;
+  if (stored >= max) return false;
   cd.storedCharges = stored + 1;
   cd.remaining = resolveSkillTrigger(skill).value;
   return true;
@@ -80,15 +80,16 @@ export function consumeActiveChargeOnFire(
 ): void {
   const max = resolveEffectiveMaxCharges(skill, passives, learnedActiveIds);
   cd.fireHoldSinceSec = undefined;
-  if (max <= 1) {
+  if (max <= 0) {
     cd.remaining = resolveSkillTrigger(skill).value;
     return;
   }
   const stored = cd.storedCharges ?? 0;
   if (stored > 0) {
     cd.storedCharges = stored - 1;
+  } else {
+    cd.remaining = resolveSkillTrigger(skill).value;
   }
-  cd.remaining = resolveSkillTrigger(skill).value;
 }
 
 export function isFireTimeoutExpired(

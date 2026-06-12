@@ -1,7 +1,6 @@
 import type {
   ActiveSkillDef,
   BasicAttackTransformSpec,
-  BuffSkillEffect,
   CombatantState,
   ResourceAmountSpec,
   SkillEffectDef,
@@ -67,10 +66,10 @@ function applyHitCountMultiplier(
   return next;
 }
 
-export function basicAttackTransformSpecFromBuffEffect(
-  effect: BuffSkillEffect,
+export function basicAttackTransformSpecFromEffect(
+  effect: SkillEffectDef,
 ): BasicAttackTransformSpec | undefined {
-  if (effect.buffSubKind !== 'basicAttackTransform') return undefined;
+  if (effect.type !== 'basicAttackTransform') return undefined;
   const spec: BasicAttackTransformSpec = {};
   if (effect.hitCountMultiplier !== undefined) {
     spec.hitCountMultiplier = effect.hitCountMultiplier;

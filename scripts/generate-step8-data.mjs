@@ -122,7 +122,7 @@ addActive('at_warrior_active_2', '薙ぎ払い', { kind: 'time', value: 11 }, [
 ]);
 
 addActive('at_assassin_active_1', '背刺', { kind: 'time', value: 9 }, [
-  { type: 'move', targetRule: 'frontEnemy', moveMode: 'behindTarget', moveDurationSec: 0.3, anim: 'dash' },
+  { type: 'move', targetRule: 'frontEnemy', moveMode: 'toAnchor', anchorOffsetPx: 32, moveDurationSec: 0.3, anim: 'dash' },
   { targetRule: 'frontEnemy', targetShape: 'multiLock', hitCount: 3, type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 0.7 } },
 ]);
 addActive('at_assassin_active_2', '仕留め', { kind: 'time', value: 10 }, [
@@ -202,9 +202,6 @@ addActive('sp_cleric_active_2', '鼓舞', { kind: 'time', value: 10 }, [
 
 addActive('sp_abjurer_active_1', '結界', { kind: 'time', value: 9 }, [
   { targetRule: 'mostDamagedAlly', type: 'barrier', amount: { kind: 'atkBased', atkScale: 1.5 } },
-]);
-addActive('sp_abjurer_active_2', '弱体符', { kind: 'time', value: 10 }, [
-  { targetRule: 'frontEnemy', type: 'debuff', debuffStat: 'atk', debuffMultiplier: 0.8, debuffDurationSec: 5, targetShape: 'single' },
 ]);
 
 addActive('sp_alchemist_active_1', '攻性薬', { kind: 'time', value: 9 }, [

@@ -49,7 +49,7 @@ function createAssassinTestDummyEngine(): BattleEngine {
   return engine;
 }
 
-describe("behindTarget move", () => {
+describe("toAnchor offset move", () => {
   it("moves past engage clamp while backstab skill motion is active", () => {
     const engine = createAssassinFrontEngine();
     reachWave2Engage(engine);
