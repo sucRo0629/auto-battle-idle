@@ -9,18 +9,23 @@ import type {
 } from '../battle/types.ts';
 import { resolveLearnedSkills } from './skillUnlocks.ts';
 
-export const MAX_ACTIVE_SLOTS = 2;
+export const MAX_ACTIVE_SLOTS = 4;
 
 export function cloneBuild(build: CharacterBuild): CharacterBuild {
   return structuredClone(build);
 }
 
-/** アクティブセット枠の解放数（現状は初回から MAX_ACTIVE_SLOTS まで） */
+/** 段階解放: Lv0=2, Lv15=3, 二次職/Lv30=4 */
 export function getUnlockedActiveSlotCount(
-  _member: PartyMemberState,
-  _gameData: GameData,
+  member: PartyMemberState,
+  gameData: GameData,
 ): number {
-  return MAX_ACTIVE_SLOTS;
+  const preset = gameData.classRegistry[member.classId];
+  const level = member.progress.level;
+  const jobTier = preset?.jobTier ?? 1;
+  if (jobTier >= 2 || level >= 30) return Math.min(4, MAX_ACTIVE_SLOTS);
+  if (level >= 15) return Math.min(3, MAX_ACTIVE_SLOTS);
+  return Math.min(2, MAX_ACTIVE_SLOTS);
 }
 
 /** セット枠配列を最大長に正規化する */

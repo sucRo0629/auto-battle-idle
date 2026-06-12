@@ -240,4 +240,42 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('貫通');
     expect(desc).toContain('物理 ATK×1.1');
   });
+
+  it('formats smart fire gate and maxCharges', () => {
+    const def: ActiveSkillDef = {
+      id: 'test_smart',
+      name: '条件技',
+      trigger: { kind: 'time', value: 8 },
+      firePolicy: 'smart',
+      fireConditions: [{ kind: 'enemyCount', min: 2 }],
+      fireTimeoutSec: 5,
+      maxCharges: 3,
+      effect: [
+        {
+          type: 'damage',
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 1 },
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        },
+      ],
+    };
+    const desc = formatActiveDescription(def);
+    expect(desc).toContain('smart:');
+    expect(desc).toContain('敵数≥2');
+    expect(desc).toContain('待機上限5s');
+    expect(desc).toContain('ストック上限3');
+  });
+
+  it('formats skillPropertyOverride passive', () => {
+    const def: PassiveSkillDef = {
+      id: 'passive_charge_bonus',
+      name: 'チャージ強化',
+      effect: 'skillPropertyOverride',
+      maxChargesBonus: 1,
+      skillPropertyTargetSkillIds: ['at_warrior_active_1'],
+    };
+    const desc = formatPassiveDescription(def);
+    expect(desc).toContain('maxCharges +1');
+    expect(desc).toContain('at_warrior_active_1');
+  });
 });

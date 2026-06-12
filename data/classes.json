@@ -111,7 +111,7 @@
     "flavorJa": "搦め手で敵を弱らせ、隙に致命の一撃を繰り出す",
     "formationRow": "front",
     "traits": {
-      "rangePx": 10
+      "rangePx": 5
     },
     "maxHp": 180,
     "atk": 19,
@@ -180,8 +180,13 @@
         "skillIds": [
           "at_warrior_passive_1",
           "at_warrior_passive_2",
-          "at_warrior_active_1",
-          "at_warrior_active_2"
+          "at_warrior_active_1"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "at_warrior_active_4"
         ]
       }
     ],

@@ -53,7 +53,9 @@ describe('duelist + assassin front row', () => {
       for (const enemy of internal.enemies) {
         if (!enemy.isAlive) continue;
         const hasAtkDebuff = enemy.statusEffects.some(
-          (fx) => fx.kind === 'debuff' && fx.stat === 'atk',
+          (fx) =>
+            fx.kind === 'debuff' &&
+            (fx.stat === 'atk' || fx.stat === 'attackSpeed'),
         );
         const hasStun = enemy.statusEffects.some((fx) => fx.overlay === 'stun');
         if (hasAtkDebuff || hasStun) {

@@ -230,11 +230,39 @@ export interface SkillTrigger {
   value: number;
 }
 
+export type FirePolicy = "immediate" | "smart";
+
+/** HP 割合条件の比較。省略時 `lte`（以下）。 */
+export type HpRatioCompare = "lte" | "gte";
+
+export type FireCondition =
+  | {
+      kind: "debuff";
+      tags: DebuffFilterTag[];
+      selfAppliedOnly?: boolean;
+    }
+  | { kind: "targetHp"; maxHpRatio: number; compare?: HpRatioCompare }
+  | { kind: "minTargets"; count: number }
+  | { kind: "selfHp"; maxHpRatio: number; compare?: HpRatioCompare }
+  | { kind: "allyDamaged" }
+  | { kind: "waveStart" }
+  | { kind: "waveEnd" }
+  | {
+      kind: "enemyCount";
+      min?: number;
+      max?: number;
+      scope?: "living" | "inRange";
+    };
+
 export interface SkillCooldown {
   skillId: string;
   remaining: number;
   slotKind: SkillSlotKind;
   slotIndex?: number;
+  /** 多段チャージ: 確定ストック数（戦闘開始 0） */
+  storedCharges?: number;
+  /** smart 発動待ち開始時刻（fireTimeoutSec 用） */
+  fireHoldSinceSec?: number;
 }
 
 export interface CharacterBuild {
@@ -437,6 +465,7 @@ export type PassiveEffectKind =
   | "counter"
   | "selfHpRatioBuff"
   | "skillAmountOverride"
+  | "skillPropertyOverride"
   /** @deprecated 読み込み互換 */
   | "evasionChance"
   | "block"
@@ -543,6 +572,10 @@ export interface PassiveSkillDef {
   passiveAmountField?: PassiveAmountField;
   /** skillAmountOverride: 上書き後の効果量 */
   amount?: ResourceAmountSpec;
+  /** skillPropertyOverride: maxCharges 加算（対象スキル） */
+  maxChargesBonus?: number;
+  /** skillPropertyOverride: 対象アクティブ ID（未指定 = 全習得アクティブ） */
+  skillPropertyTargetSkillIds?: string[];
 }
 
 export type SkillEffectKind =
@@ -860,6 +893,14 @@ export interface ActiveSkillDef {
   vfx?: SkillVfxDef;
   /** 停止時間（秒）。省略/0 = 即時。アニメ長に合わせて設定 */
   useDurationSec?: number;
+  /** 発動ゲート。省略 = immediate */
+  firePolicy?: FirePolicy;
+  /** firePolicy=smart 時の AND 条件 */
+  fireConditions?: FireCondition[];
+  /** smart 発動待ちの最大秒（経過後は条件無視で発動） */
+  fireTimeoutSec?: number;
+  /** 多段チャージ上限。省略 = 1 */
+  maxCharges?: number;
 }
 
 export interface EnemyTemplate extends CombatStats {
@@ -955,6 +996,9 @@ export interface CombatantSnapshot {
     triggerKind: SkillTriggerKind;
     triggerValue: number;
     slotIndex: number;
+    storedCharges?: number;
+    maxCharges?: number;
+    fireHold?: boolean;
     activeEffectRemaining?: number;
     activeEffectTotal?: number;
   }[];

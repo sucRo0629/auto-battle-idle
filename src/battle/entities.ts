@@ -21,6 +21,11 @@ import {
   computeStatsAtLevel,
   type LevelCurvesConfig,
 } from '../progression/levelGrowth.ts';
+import { resolveBattleActiveSkillIds } from '../progression/battleActiveSkills.ts';
+import {
+  getUnlockedActiveSlotCount,
+  MAX_ACTIVE_SLOTS,
+} from '../progression/skillBuild.ts';
 
 let idCounter = 0;
 
@@ -36,21 +41,21 @@ export function resetEntityIdCounter(): void {
 export function createCooldowns(
   basicSkillId: string,
   build: CharacterBuild,
+  activeSkillIds: string[],
 ): SkillCooldown[] {
   const cooldowns: SkillCooldown[] = [
     { skillId: basicSkillId, remaining: 0, slotKind: 'basic' },
   ];
-  for (let i = 0; i < build.equippedActiveSlots.length; i++) {
-    const skillId = build.equippedActiveSlots[i];
-    if (skillId) {
-      cooldowns.push({
-        skillId,
-        remaining: 0,
-        slotKind: 'active',
-        slotIndex: i,
-      });
-    }
-  }
+  activeSkillIds.forEach((skillId, index) => {
+    if (!skillId) return;
+    cooldowns.push({
+      skillId,
+      remaining: 0,
+      slotKind: 'active',
+      slotIndex: index,
+      storedCharges: 0,
+    });
+  });
   return cooldowns;
 }
 
@@ -58,7 +63,15 @@ export function createAllyFromMember(
   member: PartyMemberDef | PartyMemberState,
   classPreset: ClassPreset,
   curves?: LevelCurvesConfig,
+  gameData?: GameData,
 ): CombatantState {
+  const activeSkillIds =
+    gameData && 'progress' in member
+      ? resolveBattleActiveSkillIds(
+          member.build,
+          getUnlockedActiveSlotCount(member, gameData),
+        )
+      : member.build.learnedActiveIds.slice(0, MAX_ACTIVE_SLOTS);
   const stats =
     curves && 'progress' in member
       ? computeStatsAtLevel(
@@ -89,7 +102,11 @@ export function createAllyFromMember(
     hp: stats.maxHp,
     barrierHp: 0,
     isAlive: true,
-    cooldowns: createCooldowns(classPreset.basicAttackSkillId, member.build),
+    cooldowns: createCooldowns(
+      classPreset.basicAttackSkillId,
+      member.build,
+      activeSkillIds,
+    ),
     statusEffects: [],
     spriteKey: resolveClassSpriteKey(classPreset),
     iconKey: resolveClassIconKey(classPreset),
@@ -117,7 +134,7 @@ export function createAlliesFromPartyState(
       throw new Error(`Class not found: ${member.classId}`);
     }
     allies.push({
-      ...createAllyFromMember(member, preset, curves),
+      ...createAllyFromMember(member, preset, curves, gameData),
       partySlotIndex: slotIndex,
     });
   });
@@ -152,7 +169,11 @@ export function createEnemyFromTemplate(
     learnedActiveIds: [...activeSkillIds],
     equippedActiveSlots: [...activeSkillIds],
   };
-  const cooldowns = createCooldowns(template.basicAttackSkillId, build);
+  const cooldowns = createCooldowns(
+    template.basicAttackSkillId,
+    build,
+    activeSkillIds,
+  );
   return {
     id: nextId(template.id),
     name: template.displayName,

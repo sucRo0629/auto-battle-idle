@@ -121,6 +121,30 @@ export function resolveUseDurationSec(skill: ActiveSkillDef): number {
   return skill.useDurationSec ?? 0;
 }
 
+/** move シーケンスの実時間（最終 step 発火 + tail wait / 最終 move） */
+export function resolveSequenceWallClockSec(skill: ActiveSkillDef): number {
+  if (!skillHasMoveEffect(skill)) return 0;
+  let applyAt = 0;
+  let lastStepFireAt = 0;
+  let lastTailSec = 0;
+  for (const effect of skill.effect) {
+    lastStepFireAt = applyAt;
+    if (effect.type === 'move') {
+      applyAt += effect.moveDurationSec;
+    }
+    const waitAfterSec = effect.waitAfterSec;
+    if (waitAfterSec !== undefined && waitAfterSec > 0) {
+      lastTailSec = waitAfterSec;
+      applyAt += waitAfterSec;
+    } else if (effect.type === 'move') {
+      lastTailSec = effect.moveDurationSec;
+    } else {
+      lastTailSec = 0;
+    }
+  }
+  return lastStepFireAt + lastTailSec;
+}
+
 function resolveEffectDurationSec(effect: SkillEffectDef): number {
   const candidates: number[] = [];
   switch (effect.type) {
@@ -227,6 +251,7 @@ export class SkillSequenceRunner {
   private sequences: ActiveSkillSequence[] = [];
   private activeMoves: ActiveSkillMove[] = [];
   private useLockRemainingSec = new Map<string, number>();
+  private presentationLockRemainingSec = new Map<string, number>();
   private activeEffectGauges = new Map<string, ActiveEffectGauge>();
 
   private activeEffectKey(actorId: string, slotIndex: number): string {
@@ -247,6 +272,14 @@ export class SkillSequenceRunner {
 
   isActorUseLocked(actorId: string): boolean {
     return (this.useLockRemainingSec.get(actorId) ?? 0) > 0;
+  }
+
+  isBasicAttackBlocked(actorId: string): boolean {
+    return (
+      this.isActorUseLocked(actorId) ||
+      this.isActorInSkillMotion(actorId) ||
+      (this.presentationLockRemainingSec.get(actorId) ?? 0) > 0
+    );
   }
 
   isActorBusy(actorId: string): boolean {
@@ -300,6 +333,15 @@ export class SkillSequenceRunner {
     this.useLockRemainingSec.set(actorId, Math.max(current, durationSec));
   }
 
+  beginPresentationLock(actorId: string, durationSec: number): void {
+    if (durationSec <= 0) return;
+    const current = this.presentationLockRemainingSec.get(actorId) ?? 0;
+    this.presentationLockRemainingSec.set(
+      actorId,
+      Math.max(current, durationSec),
+    );
+  }
+
   schedule(sequence: ActiveSkillSequence): void {
     this.sequences.push(sequence);
   }
@@ -312,6 +354,7 @@ export class SkillSequenceRunner {
     this.sequences = [];
     this.activeMoves = [];
     this.useLockRemainingSec.clear();
+    this.presentationLockRemainingSec.clear();
     this.activeEffectGauges.clear();
   }
 
@@ -321,6 +364,7 @@ export class SkillSequenceRunner {
       (move) => move.actorId !== actorId,
     );
     this.useLockRemainingSec.delete(actorId);
+    this.presentationLockRemainingSec.delete(actorId);
     const prefix = `${actorId}:`;
     for (const key of [...this.activeEffectGauges.keys()]) {
       if (key.startsWith(prefix)) {
@@ -347,6 +391,14 @@ export class SkillSequenceRunner {
         this.useLockRemainingSec.delete(actorId);
       } else {
         this.useLockRemainingSec.set(actorId, next);
+      }
+    }
+    for (const [actorId, remaining] of this.presentationLockRemainingSec) {
+      const next = remaining - deltaTime;
+      if (next <= 0) {
+        this.presentationLockRemainingSec.delete(actorId);
+      } else {
+        this.presentationLockRemainingSec.set(actorId, next);
       }
     }
   }

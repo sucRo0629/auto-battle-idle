@@ -13,7 +13,7 @@ export interface BuildPendingHitsOptions {
 }
 
 export interface TickPendingHitsCallbacks {
-  onApply: (hit: PendingSkillHit) => void;
+  onApply: (hit: PendingSkillHit) => void | boolean;
   onVfxStart?: (hit: PendingSkillHit) => void;
 }
 
@@ -95,7 +95,9 @@ export function tickPendingHits(
 
   for (const hit of sorted) {
     if (hit.applyAtBattleSec <= battleSec) {
-      onApply(hit);
+      if (onApply(hit) === false) {
+        remaining.push(hit);
+      }
     } else {
       remaining.push(hit);
     }

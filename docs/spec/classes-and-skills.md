@@ -165,11 +165,12 @@ passiveIds?: string[]; // クラス固有パッシブ（skills.json passives へ
 | ----------- | ------- | --------------------------------------------------------- | ------------------ |
 | **basic**   | 1       | `ClassPreset.basicAttackSkillId`                          | 非表示             |
 | **passive** | 0〜複数 | `ClassPreset.passiveIds` → `learnedPassiveIds` に自動反映 | 将来               |
-| **active**  | 最大 2  | `build.equippedActiveSlots[]`                             | HUD リキャストバー |
+| **active**  | 最大 4  | `build.learnedActiveIds`（習得即戦闘参加） | HUD 2×2 リキャスト |
 
 - 基本攻撃も `skills.json` の `actives` に定義し、`slotKind: 'basic'` で実行。
 - 基本攻撃 ID をセット枠（`equippedActiveSlots`）に入れない。
-- 15 一次職は Lv0 でアクティブ 2 種を習得（`skills[].level: 0` に 2 ID）。戦闘エンジンは最大 2 枠を処理する。
+- 15 一次職は Lv0 でアクティブ 2 種を習得（`skills[].level: 0` に 2 ID）。戦闘エンジンは **習得済みアクティブを最大 4 枠まで**自動参加（段階解放: Lv0=2 / Lv15=3 / 二次職・Lv30=4）。
+- **`equippedActiveSlots`** — スキルメニュー（テスト・バランス用）のみ。本番戦闘の参加判定には使わない。
 
 ### LvUP 習得データ
 
@@ -181,13 +182,13 @@ passiveIds?: string[]; // クラス固有パッシブ（skills.json passives へ
 ```typescript
 interface CharacterBuild {
   learnedPassiveIds: string[]; // すべて同時発動
-  learnedActiveIds: string[]; // 習得プール（Phase 3+ で LvUP 時に増加）
-  equippedActiveSlots: string[]; // セット済みアクティブ。Phase 7 まで標準は長さ1相当（配列は最大2に正規化）
+  learnedActiveIds: string[]; // 習得プール（最大 4。LvUP で増加）
+  equippedActiveSlots: string[]; // テスト用セット枠（SkillMenuPanel）。戦闘参加には未使用
 }
 ```
 
 - **パッシブ：** `learnedPassiveIds` の全 ID が同時に有効（枠上限なし）
-- **アクティブ：** セット枠に入っているスキルのみ、発動条件を満たしたときに自動発動
+- **アクティブ：** `learnedActiveIds` のうち解放枠数までが戦闘に自動参加し、発動条件を満たしたときに自動発動
 
 ### アクティブの発動条件（`trigger`）
 
@@ -196,6 +197,18 @@ interface CharacterBuild {
 | `trigger.kind`   | `time`（秒）／`basicAttackCount`（通常攻撃回数）／`hitsTaken`（被攻撃回数）                                                                                                                                        |
 | `trigger.value`  | 条件の閾値 N。ステージ開始時 `remaining = N`（ゲージ未充填）。カウントトリガーは N 回のイベントで `remaining === 0`（ゲージ Max）となり、N+1 回目で発動・`remaining = N` にリセット。時間トリガーは 0 到達で即発動 |
 | `useDurationSec` | optional。停止時間（秒）。省略 / `0` = 即時。アニメ長に合わせて設定（詳細は [combat.md](combat.md)）                                                                                                               |
+| `firePolicy`       | optional。`immediate`（既定）／`smart`（条件成立まで発動保留）                                                                                              |
+| `fireConditions`   | `firePolicy: smart` 時の AND 条件（[combat.md](combat.md)）                                                                                                 |
+| `fireTimeoutSec`   | smart 保留の最大秒。経過後は条件無視で発動                                                                                                                    |
+| `maxCharges`       | optional。多段チャージ上限。省略 = **1**（既存スキル互換）                                                                                                  |
+
+### パッシブ `skillPropertyOverride`（多段チャージ）
+
+| フィールド                       | 説明                                           |
+| -------------------------------- | ---------------------------------------------- |
+| `effect: skillPropertyOverride`  | 対象アクティブの属性を上書き                   |
+| `maxChargesBonus`                | 対象スキルの `maxCharges` 加算（上限 5 でクリップ） |
+| `skillPropertyTargetSkillIds`    | optional。対象アクティブ ID（未指定 = 習得アクティブ全体） |
 
 - `basicAttackCount` — ステージ開始時 `remaining = value`（未充填）。**通常攻撃のダメージが発生するたび**、装備中の全 `basicAttackCount` アクティブがそれぞれ `remaining--`（`remaining > 0` のとき。多段通常攻撃はダメージごとにカウントし、攻撃枠単位ではまとめない。回避時は進まない）。2段通常攻撃なら1回の攻撃枠で各スキルとも2カウント（例: 8必要なら 1,2 → 3,4 → …）。N 回目でゲージ Max（発動せず）、**N+1 回目の通常攻撃枠でアクティブ発動**（通常攻撃の代わり）
 - `hitsTaken` — 被ダメ（`hurt`）のたび `remaining--`（`remaining > 0` のとき）。N 回目でゲージ Max（発動せず）、**N+1 回目の被弾でアクティブ発動**（ダメージは通常通り）

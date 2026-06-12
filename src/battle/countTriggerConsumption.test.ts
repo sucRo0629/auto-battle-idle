@@ -100,8 +100,8 @@ function createExecutor(
     getBattleTimeSec?: () => number;
     onSkillFire?: (skillId: string) => void;
   },
+  runner = new SkillSequenceRunner(),
 ): SkillExecutor {
-  const runner = new SkillSequenceRunner();
   const executor = new SkillExecutor(
     gameData,
     (event) => {
@@ -168,13 +168,15 @@ describe('count trigger consumption', () => {
     engine.enemies = [enemy];
 
     const fired: string[] = [];
+    const runner = new SkillSequenceRunner();
     const executor = createExecutor(gameData, [actor, enemy], {
       onSkillFire: (skillId) => fired.push(skillId),
-    });
+    }, runner);
     (engine as unknown as { executor: SkillExecutor }).executor = executor;
 
     for (let i = 0; i < 3; i++) {
       executor.tryExecute(actor, basicCd, [actor], [enemy]);
+      runner.tickUseLocks(1);
     }
 
     expect(activeCd.remaining).toBe(0);

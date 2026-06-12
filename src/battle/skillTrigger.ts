@@ -98,6 +98,10 @@ export function initializeSkillCooldowns(
     const skill = actives[cd.skillId];
     if (!skill) continue;
     cd.remaining = resolveSkillTrigger(skill).value;
+    if (cd.slotKind === 'active') {
+      cd.storedCharges = 0;
+      cd.fireHoldSinceSec = undefined;
+    }
   }
 }
 

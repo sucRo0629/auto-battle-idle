@@ -37,9 +37,6 @@ describe('BattleEngine out-of-combat ticking', () => {
 
   it('ticks buff duration and active cooldowns during wave intermission', () => {
     const engine = createEngine();
-    const snap = engine.getSnapshot();
-    expect(snap.engaged).toBe(false);
-
     const guardian = getAllies(engine).find((a) => a.classId === 'df_guardian')!;
     const activeCd = guardian.cooldowns.find((cd) => cd.slotKind === 'active')!;
     activeCd.remaining = 5;

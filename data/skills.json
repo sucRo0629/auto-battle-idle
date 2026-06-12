@@ -932,7 +932,8 @@
             "order": "nearest"
           },
           "range": 100,
-          "behindOffsetPx": 32
+          "behindOffsetPx": 32,
+          "waitAfterSec": 0.2
         },
         {
           "target": {
@@ -944,9 +945,9 @@
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1
+            "atkScale": 1.5
           },
-          "waitAfterSec": 1.5
+          "waitAfterSec": 0.5
         },
         {
           "target": {
@@ -956,12 +957,14 @@
           },
           "type": "move",
           "moveMode": "engage",
-          "moveDurationSec": 0.25
+          "moveDurationSec": 0.25,
+          "waitAfterSec": 0.25
         }
       ],
       "vfx": {
         "preset": "slash"
-      }
+      },
+      "useDurationSec": 2
     },
     {
       "id": "at_lancer_active_1",
@@ -2001,6 +2004,39 @@
             "kind": "atkBased",
             "atkScale": 0
           }
+        }
+      ]
+    },
+    {
+      "id": "at_warrior_active_4",
+      "name": "薙ぎ払い",
+      "trigger": {
+        "kind": "time",
+        "value": 8
+      },
+      "effect": [
+        {
+          "targetShape": "aoe",
+          "aoeRadiusPx": 50,
+          "type": "damage",
+          "damageType": "physical",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.7
+          },
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          }
+        }
+      ],
+      "firePolicy": "smart",
+      "fireConditions": [
+        {
+          "kind": "enemyCount",
+          "min": 1,
+          "scope": "inRange"
         }
       ]
     }

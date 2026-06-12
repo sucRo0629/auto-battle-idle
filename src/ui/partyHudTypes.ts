@@ -32,6 +32,9 @@ export interface PartyHudEntry {
     triggerKind: SkillTriggerKind;
     triggerValue: number;
     slotIndex: number;
+    storedCharges?: number;
+    maxCharges?: number;
+    fireHold?: boolean;
     activeEffectRemaining?: number;
     activeEffectTotal?: number;
   }[];

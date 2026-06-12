@@ -7,6 +7,14 @@ import {
   DISPEL_PRIORITY_LABELS,
   DEFENSE_IGNORE_DEF_MODE_LABELS,
   DEFENSE_IGNORE_DEF_MODES,
+  ENEMY_COUNT_SCOPE_LABELS,
+  ENEMY_COUNT_SCOPES,
+  FIRE_CONDITION_KIND_LABELS,
+  FIRE_CONDITION_KIND_OPTIONS,
+  FIRE_POLICY_LABELS,
+  FIRE_POLICY_OPTIONS,
+  HP_RATIO_COMPARE_LABELS,
+  HP_RATIO_COMPARE_OPTIONS,
   HEAL_SUB_KINDS,
   HEAL_SUB_KIND_LABELS,
   TARGET_DISTANCE_ORDER_LABELS,
@@ -19,6 +27,7 @@ import {
   TARGET_STAT_OPTIONS,
   TARGET_STAT_ORDER_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
+import { GLOBAL_MAX_CHARGES_CAP } from '../battle/skills/chargeBank.ts';
 import { formatTargetLabel, normalizeTarget } from '../battle/skills/targetSpec.ts';
 import {
   PASSIVE_PERIODIC_TRIGGER_LABELS,
@@ -26,6 +35,7 @@ import {
   usesHotAuraMode,
 } from '../battle/passivePeriodicTrigger.ts';
 import type {
+  ActiveSkillDef,
   BuffSubKind,
   DebuffSubKind,
   BuffFilterTag,
@@ -34,6 +44,9 @@ import type {
   DebuffFilterTag,
   DispelPriority,
   DefenseIgnoreSpec,
+  FireCondition,
+  FireConditionKind,
+  FirePolicy,
   PassiveSkillDef,
   ResourceAmountSpec,
   SkillEffectDef,
@@ -1321,4 +1334,389 @@ export function appendPassiveSpecialEffectFields(
     },
     { title: '特効効果' },
   );
+}
+
+function appendFireHpRatioFields(
+  parent: HTMLElement,
+  condition: { maxHpRatio: number; compare?: 'lte' | 'gte' },
+  onChange: (next: { maxHpRatio: number; compare?: 'lte' | 'gte' }) => void,
+): void {
+  const compare = condition.compare ?? 'lte';
+  parent.appendChild(
+    createFieldRow(
+      '比較',
+      createSelect(
+        compare,
+        HP_RATIO_COMPARE_OPTIONS.map((value) => ({
+          value,
+          label: HP_RATIO_COMPARE_LABELS[value],
+        })),
+        (value) => {
+          onChange({
+            maxHpRatio: condition.maxHpRatio,
+            compare: value === 'lte' ? undefined : 'gte',
+          });
+        },
+      ),
+    ),
+  );
+  parent.appendChild(
+    createFieldRow(
+      'HP残り割合',
+      createNumberInput(
+        condition.maxHpRatio,
+        (maxHpRatio) => onChange({ ...condition, maxHpRatio }),
+        { min: 0, max: 1, step: 0.01 },
+      ),
+    ),
+  );
+}
+
+function defaultFireCondition(kind: FireConditionKind): FireCondition {
+  switch (kind) {
+    case 'debuff':
+      return { kind, tags: ['def'] };
+    case 'targetHp':
+    case 'selfHp':
+      return { kind, maxHpRatio: 0.5 };
+    case 'minTargets':
+      return { kind, count: 2 };
+    case 'enemyCount':
+      return { kind, min: 1 };
+    case 'allyDamaged':
+    case 'waveStart':
+    case 'waveEnd':
+      return { kind };
+  }
+}
+
+function appendFireConditionFields(
+  parent: HTMLElement,
+  condition: FireCondition,
+  onChange: (
+    condition: FireCondition,
+    options?: CombatFieldChangeOptions,
+  ) => void,
+  onRemove: () => void,
+): void {
+  const card = createEl('div', 'editor-condition-card');
+  card.appendChild(
+    createFieldRow(
+      '条件種別',
+      createSelect(
+        condition.kind,
+        FIRE_CONDITION_KIND_OPTIONS.map((kind) => ({
+          value: kind,
+          label: FIRE_CONDITION_KIND_LABELS[kind],
+        })),
+        (kind) => {
+          onChange(defaultFireCondition(kind as FireConditionKind), {
+            rerender: true,
+          });
+        },
+      ),
+    ),
+  );
+
+  switch (condition.kind) {
+    case 'debuff':
+      card.appendChild(createEl('p', 'editor-hint', '対象デバフ（いずれか）'));
+      appendDebuffFilterCheckboxes(card, condition.tags, (tags) => {
+        onChange({ ...condition, tags }, { rerender: false });
+      });
+      card.appendChild(
+        createFieldRow(
+          '自分付与のみ',
+          createSelect(
+            condition.selfAppliedOnly ? 'true' : 'false',
+            [
+              { value: 'false', label: 'いいえ' },
+              { value: 'true', label: 'はい' },
+            ],
+            (value) => {
+              onChange(
+                {
+                  ...condition,
+                  selfAppliedOnly: value === 'true' || undefined,
+                },
+                { rerender: false },
+              );
+            },
+          ),
+        ),
+      );
+      break;
+    case 'targetHp':
+    case 'selfHp':
+      appendFireHpRatioFields(card, condition, (next) =>
+        onChange({ ...condition, ...next }, { rerender: false }),
+      );
+      break;
+    case 'minTargets':
+      card.appendChild(
+        createFieldRow(
+          '最小ターゲット数',
+          createNumberInput(
+            condition.count,
+            (count) => onChange({ ...condition, count }, { rerender: false }),
+            { min: 1, step: 1 },
+          ),
+        ),
+      );
+      break;
+    case 'enemyCount': {
+      const min = condition.min;
+      const max = condition.max;
+      card.appendChild(
+        createFieldRow(
+          '最小敵数（省略可）',
+          createNumberInput(
+            min ?? 0,
+            (value) => {
+              onChange(
+                {
+                  ...condition,
+                  min: value > 0 ? value : undefined,
+                },
+                { rerender: false },
+              );
+            },
+            { min: 0, step: 1 },
+          ),
+        ),
+      );
+      card.appendChild(
+        createFieldRow(
+          '最大敵数（省略可）',
+          createNumberInput(
+            max ?? 0,
+            (value) => {
+              onChange(
+                {
+                  ...condition,
+                  max: value > 0 ? value : undefined,
+                },
+                { rerender: false },
+              );
+            },
+            { min: 0, step: 1 },
+          ),
+        ),
+      );
+      card.appendChild(
+        createFieldRow(
+          'カウント範囲',
+          createSelect(
+            condition.scope ?? 'living',
+            ENEMY_COUNT_SCOPES.map((value) => ({
+              value,
+              label: ENEMY_COUNT_SCOPE_LABELS[value],
+            })),
+            (scope) => {
+              onChange(
+                {
+                  ...condition,
+                  scope: scope === 'living' ? undefined : scope,
+                },
+                { rerender: false },
+              );
+            },
+          ),
+        ),
+      );
+      break;
+    }
+    case 'allyDamaged':
+    case 'waveStart':
+    case 'waveEnd':
+      break;
+  }
+
+  card.appendChild(
+    createActionButton('条件を削除', 'editor-btn editor-btn-small', onRemove),
+  );
+  parent.appendChild(card);
+}
+
+export function appendActiveFireGateFields(
+  parent: HTMLElement,
+  active: ActiveSkillDef,
+  onChange: (
+    mutate: (current: ActiveSkillDef) => void,
+    options?: CombatFieldChangeOptions,
+  ) => void,
+): void {
+  const section = createEl('div', 'editor-subsection');
+  section.appendChild(createEl('h4', 'editor-subsection-title', '発動ゲート / 多段チャージ'));
+
+  const firePolicy: FirePolicy = active.firePolicy ?? 'immediate';
+  section.appendChild(
+    createFieldRow(
+      '発動ポリシー',
+      createSelect(
+        firePolicy,
+        FIRE_POLICY_OPTIONS.map((value) => ({
+          value,
+          label: FIRE_POLICY_LABELS[value],
+        })),
+        (nextPolicy) => {
+          onChange((current) => {
+            if (nextPolicy === 'immediate') {
+              delete current.firePolicy;
+              delete current.fireConditions;
+              delete current.fireTimeoutSec;
+            } else {
+              current.firePolicy = 'smart';
+              current.fireConditions ??= [{ kind: 'enemyCount', min: 1 }];
+            }
+          }, { rerender: true });
+        },
+      ),
+    ),
+  );
+
+  if (firePolicy === 'smart') {
+    const conditions = active.fireConditions ?? [{ kind: 'enemyCount', min: 1 }];
+    const conditionsWrap = createEl('div', 'editor-conditions-list');
+    conditions.forEach((condition, index) => {
+      appendFireConditionFields(
+        conditionsWrap,
+        condition,
+        (next, changeOptions) => {
+          onChange((current) => {
+            const nextConditions = [...(current.fireConditions ?? conditions)];
+            nextConditions[index] = next;
+            current.fireConditions = nextConditions;
+          }, changeOptions);
+        },
+        () => {
+          onChange((current) => {
+            const nextConditions = (current.fireConditions ?? conditions).filter(
+              (_, i) => i !== index,
+            );
+            current.fireConditions =
+              nextConditions.length > 0
+                ? nextConditions
+                : [{ kind: 'enemyCount', min: 1 }];
+          }, { rerender: false });
+        },
+      );
+    });
+    section.appendChild(conditionsWrap);
+    section.appendChild(
+      createActionButton('発動条件を追加', 'editor-btn editor-btn-small', () => {
+        onChange((current) => {
+          current.firePolicy = 'smart';
+          current.fireConditions = [
+            ...(current.fireConditions ?? conditions),
+            { kind: 'enemyCount', min: 1 },
+          ];
+        }, { rerender: false });
+      }),
+    );
+    section.appendChild(
+      createFieldRow(
+        '発動待ち上限 (秒, 省略=無限)',
+        createNumberInput(
+          active.fireTimeoutSec ?? 0,
+          (value) => {
+            onChange((current) => {
+              if (value <= 0) delete current.fireTimeoutSec;
+              else current.fireTimeoutSec = value;
+            }, { rerender: false });
+          },
+          { min: 0, step: 0.1 },
+        ),
+      ),
+    );
+    section.appendChild(
+      createEl(
+        'p',
+        'editor-hint',
+        'smart: 条件未成立時はストック処理（多段チャージ）または fireHold。Wave 開始効果はパッシブ waveStart を推奨。',
+      ),
+    );
+  }
+
+  section.appendChild(
+    createFieldRow(
+      `多段チャージ上限 (1–${GLOBAL_MAX_CHARGES_CAP}, 1=省略)`,
+      createNumberInput(
+        active.maxCharges ?? 1,
+        (value) => {
+          onChange((current) => {
+            if (value <= 1) delete current.maxCharges;
+            else current.maxCharges = Math.min(GLOBAL_MAX_CHARGES_CAP, value);
+          }, { rerender: false });
+        },
+        { min: 1, max: GLOBAL_MAX_CHARGES_CAP, step: 1 },
+      ),
+    ),
+  );
+
+  parent.appendChild(section);
+}
+
+export function appendPassiveSkillPropertyOverrideFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  activeSkillOptions: Array<{ value: string; label: string }>,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean },
+  ) => void,
+): void {
+  parent.appendChild(
+    createFieldRow(
+      'maxCharges 加算',
+      createNumberInput(
+        passive.maxChargesBonus ?? 1,
+        (maxChargesBonus) => {
+          patchPassive((current) => {
+            current.maxChargesBonus = Math.max(1, Math.floor(maxChargesBonus));
+          });
+        },
+        { min: 1, max: GLOBAL_MAX_CHARGES_CAP, step: 1 },
+      ),
+    ),
+  );
+
+  parent.appendChild(
+    createEl(
+      'p',
+      'editor-hint',
+      'Wave 開始時の開幕効果はパッシブ periodicTrigger: waveStart を使用してください。',
+    ),
+  );
+
+  if (activeSkillOptions.length === 0) {
+    parent.appendChild(
+      createEl('p', 'editor-hint', '対象アクティブスキルがありません。'),
+    );
+    return;
+  }
+
+  const selected = new Set(passive.skillPropertyTargetSkillIds ?? []);
+  parent.appendChild(createEl('p', 'editor-hint', '対象アクティブ（未選択=全習得アクティブ）'));
+  const wrap = createEl('div', 'editor-debuff-tag-checkboxes');
+  for (const option of activeSkillOptions) {
+    const row = createEl('div', 'editor-field editor-field-checkbox');
+    const input = createEl('input') as HTMLInputElement;
+    input.type = 'checkbox';
+    input.checked = selected.has(option.value);
+    input.addEventListener('change', () => {
+      patchPassive((current) => {
+        const next = new Set(current.skillPropertyTargetSkillIds ?? []);
+        if (input.checked) next.add(option.value);
+        else next.delete(option.value);
+        const ids = [...next];
+        if (ids.length === 0) delete current.skillPropertyTargetSkillIds;
+        else current.skillPropertyTargetSkillIds = ids;
+      }, { rerender: false });
+    });
+    row.appendChild(createEl('label', undefined, option.label));
+    row.appendChild(input);
+    wrap.appendChild(row);
+  }
+  parent.appendChild(wrap);
 }

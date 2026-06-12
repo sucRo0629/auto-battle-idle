@@ -103,11 +103,11 @@ interface ClassSkillUnlock {
 - 新アクティブの自動セットはしない（スキルセット UI でプレイヤーが選ぶ）。
 - 習得エントリは `classes.json` の各クラス `skills[]` に定義する。
 
-### アクティブセット 2 枠目
+### アクティブ枠（最大 4）
 
-- セット枠（`equippedActiveSlots`）の配列・UI・HUD は最大 2 枠に対応（Phase 3 で基盤完成）。
-- **Phase 7 までの標準プレイは 1 枠のみ**（`getUnlockedActiveSlotCount` → 1）。2 枠目は UI 上ロック表示。
-- 2 枠目の解放条件と、UI / 戦闘側の未解放枠チェックは **Phase 7** でまとめて実装する（Phase 3〜6 では戦闘エンジンはセット済みスロットをそのまま参照）。
+- 戦闘参加は **`learnedActiveIds`**（習得即参加）。`equippedActiveSlots` はスキルメニュー（テスト用）のみ。
+- 段階解放: Lv0=2 / Lv15=3 / 二次職・Lv30=4（`getUnlockedActiveSlotCount`）。
+- Party HUD: 2×2 リキャスト + 多段チャージストックピップ（`maxCharges > 1` 時）。
 
 ### 習得済みビルドの永続化
 

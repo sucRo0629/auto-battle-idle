@@ -7,6 +7,7 @@ import {
   buildSkillSequence,
   resolveActiveEffectGaugeDurationSec,
   resolveMaxSelfBuffEffectDurationSec,
+  resolveSequenceWallClockSec,
   SkillSequenceRunner,
 } from './skillSequence.ts';
 
@@ -547,6 +548,68 @@ describe('skillSequence', () => {
     runner.tickMoves(1, [actor]);
     expect(actor.battleX).toBe(100);
     expect(runner.isActorBusy('actor')).toBe(false);
+  });
+
+  it('blocks basic attack during skill motion even after useDuration lock expires', () => {
+    const runner = new SkillSequenceRunner();
+    const actor = mockUnit({ id: 'actor', battleX: 200 });
+    runner.beginUse('actor', 0.2);
+    runner.startMove({
+      actorId: 'actor',
+      fromX: 200,
+      toX: 100,
+      toVisualX: 150,
+      remainingSec: 0.5,
+      totalSec: 0.5,
+      baseVisualX: 210,
+    });
+
+    runner.tickUseLocks(0.2);
+    expect(runner.isActorUseLocked('actor')).toBe(false);
+    expect(runner.isActorInSkillMotion('actor')).toBe(true);
+    expect(runner.isBasicAttackBlocked('actor')).toBe(true);
+
+    runner.tickMoves(0.5, [actor]);
+    expect(runner.isBasicAttackBlocked('actor')).toBe(false);
+  });
+
+  it('resolveSequenceWallClockSec covers final move tail wait', () => {
+    const skill: ActiveSkillDef = {
+      id: 'shadow',
+      name: 'shadow',
+      trigger: { kind: 'basicAttackCount', value: 14 },
+      useDurationSec: 1,
+      effect: [
+        {
+          type: 'buff',
+          target: { kind: 'self' },
+          buffSubKind: 'evasion',
+          buffDurationSec: 1.5,
+        },
+        {
+          type: 'move',
+          moveMode: 'behindTarget',
+          moveDurationSec: 0.2,
+          waitAfterSec: 0.2,
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        },
+        {
+          type: 'damage',
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 1.5 },
+          waitAfterSec: 0.5,
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        },
+        {
+          type: 'move',
+          moveMode: 'engage',
+          moveDurationSec: 0.25,
+          waitAfterSec: 0.25,
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        },
+      ],
+    };
+    expect(resolveSequenceWallClockSec(skill)).toBeCloseTo(1.15, 5);
   });
 
   it('beginUse marks actor busy until tickUseLocks elapses', () => {

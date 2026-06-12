@@ -122,9 +122,26 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 
 ステージ開始時は `remaining = trigger.value`（ゲージ未充填）。カウントトリガーは `remaining === 0` でも active 枠から自動発動せず、上記の消費イベントを待つ。
 
-1 tick あたりの実行順（1ユニット）：basic（準備完了カウント active があればそちらを優先）→ active 枠0 → active 枠1
+1 tick あたりの実行順（1ユニット）：active 枠0→1→2→3 → basic（準備完了カウント active があれば basic 枠処理時にそちらを優先）
+
+**発動ゲート（`firePolicy` / `fireConditions`）:** `trigger` がチャージ、`firePolicy` / `fireConditions` が発動可否。省略時 `immediate`（既存互換）。`smart` + 条件未成立 → ストック処理（多段チャージ）または `fireHold`（HUD 点滅）。`fireTimeoutSec` 経過後は条件無視で発動。
+
+| kind | 成立条件 |
+| ---- | -------- |
+| `waveStart` | PartyDeploy 開始〜接敵（`beginEngaged`）まで |
+| `waveEnd` | 敵全滅 settle〜次 Wave deploy まで |
+| `enemyCount` | 生存敵数（`scope: living`）または射程内敵数（`inRange`） |
+| `targetHp` / `debuff` / `minTargets` / `selfHp` / `allyDamaged` | 各 kind の閾値・タグ |
+
+Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `periodicTrigger: waveStart`** を使用（味方 CD は Wave 跨ぎ維持のため初期チャージは廃案）。
+
+**多段チャージ（`maxCharges` / `storedCharges`）:** `maxCharges` 省略 = 1（既存同等・ストック UI なし）。`maxCharges > 1` かつ smart 保留時、CD Max 後に 2 段目チャージを開始し `storedCharges` に確定ストック。パッシブ `skillPropertyOverride.maxChargesBonus` で実効上限を加算（`GLOBAL_MAX_CHARGES_CAP = 5`）。
+
+**演出ロック（`presentationLock`）:** VFX 終了まで **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。**CD チャージは止めない**。`useDurationSec > 0` は従来どおり全スキル停止 + time/hitsTaken CD 一時停止。
 
 **停止時間（`useDurationSec`）:** アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**`useDurationSec > 0` のスキル発動後の停止中のみ**、time / hitsTaken のアクティブ CD 進行を停止する（`basicAttackCount` は通常攻撃停止のため実質影響小）。Party HUD: 停止中は `paused`（黄）。**`useDurationSec > 0` のスキルのみ**、発動直後は効果残りを Max 色ゲージの減衰（`active`）で表示する（秒数は自身向けバフ系 effect の最大、なければ `useDurationSec`。**CD カウントは止めない**）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。
+
+**Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 5px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。
 
 **スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、通常攻撃・アクティブは発動しない。`basicAttackCount` / `hitsTaken` トリガーもスタン中は進まない（命中・被弾が起きないため）。
 

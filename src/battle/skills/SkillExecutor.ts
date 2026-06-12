@@ -28,6 +28,8 @@ import {
   chargeBasicAttackCountOnHit,
   resetCooldownAfterFire,
 } from '../skillTrigger.ts';
+import { consumeActiveChargeOnFire, hasAvailableActiveCharge } from './chargeBank.ts';
+import { resolvePresentationLockSec } from './presentationLock.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -51,6 +53,7 @@ import {
   type PendingSkillStep,
   resolveActiveEffectGaugeDurationSec,
   resolveSequenceStepAnchor,
+  resolveSequenceWallClockSec,
   resolveUseDurationSec,
   type SkillSequenceRunner,
   skillHasMoveEffect,
@@ -121,9 +124,8 @@ export class SkillExecutor {
     allies: CombatantState[],
     enemies: CombatantState[],
   ): boolean {
-    if (!actor.isAlive || cd.remaining > 0) return false;
+    if (!actor.isAlive) return false;
     if (isUnitStunned(actor)) return false;
-    if (this.deps.getSequenceRunner().isActorBusy(actor.id)) return false;
 
     const skill = this.gameData.skillRegistry.actives[cd.skillId];
     if (!skill || skill.effect.length === 0) return false;
@@ -132,6 +134,28 @@ export class SkillExecutor {
       actor,
       this.gameData.skillRegistry.passives,
     );
+
+    if (
+      cd.slotKind === 'active' &&
+      !hasAvailableActiveCharge(
+        cd,
+        skill,
+        passives,
+        actor.build.learnedActiveIds,
+      )
+    ) {
+      return false;
+    }
+    if (cd.slotKind !== 'active' && cd.remaining > 0) return false;
+    if (cd.slotKind === 'active' && cd.remaining > 0 && (cd.storedCharges ?? 0) <= 0) {
+      return false;
+    }
+
+    const runner = this.deps.getSequenceRunner();
+    if (runner.isActorBusy(actor.id)) return false;
+    if (cd.slotKind === 'basic' && runner.isBasicAttackBlocked(actor.id)) {
+      return false;
+    }
 
     if (skillHasMoveEffect(skill)) {
       const sequence = buildSkillSequence(
@@ -147,6 +171,7 @@ export class SkillExecutor {
       if (!sequence) return false;
       this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
       this.beginActiveEffectGaugeIfNeeded(actor.id, cd, skill);
+      this.beginPresentationLockIfNeeded(actor, skill, cd.slotKind);
       this.deps.getSequenceRunner().schedule(sequence);
       return true;
     }
@@ -236,7 +261,17 @@ export class SkillExecutor {
     if (appliedAny) {
       this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
       this.beginActiveEffectGaugeIfNeeded(actor.id, cd, skill);
-      resetCooldownAfterFire(cd, skill);
+      this.beginPresentationLockIfNeeded(actor, skill, cd.slotKind);
+      if (cd.slotKind === 'active') {
+        consumeActiveChargeOnFire(
+          cd,
+          skill,
+          passives,
+          actor.build.learnedActiveIds,
+        );
+      } else {
+        resetCooldownAfterFire(cd, skill);
+      }
       if (cd.slotKind === 'basic') {
         this.deps.onBasicAttackExecuted?.(actor.id);
       }
@@ -304,13 +339,22 @@ export class SkillExecutor {
     );
   }
 
-  applyPendingHit(hit: PendingSkillHit): void {
+  applyPendingHit(hit: PendingSkillHit): boolean {
     const [allies, enemies] = this.splitCombatants();
     const actor = findCombatantById(hit.actorId, allies, enemies);
-    if (!actor?.isAlive) return;
+    if (!actor?.isAlive) return false;
+
+    const runner = this.deps.getSequenceRunner();
+    // 多段通常攻撃の pending は presentationLock 中も続行。他スキル硬直・シーケンス中のみ停止。
+    if (
+      runner.isActorUseLocked(actor.id) ||
+      runner.isActorInSkillMotion(actor.id)
+    ) {
+      return false;
+    }
 
     const skill = this.gameData.skillRegistry.actives[hit.skillId];
-    if (!skill) return;
+    if (!skill) return false;
 
     const cd: SkillCooldown = {
       skillId: hit.skillId,
@@ -324,24 +368,30 @@ export class SkillExecutor {
       hit.segmentCount !== undefined &&
       hit.hitIndex === hit.segmentCount - 1;
     const stagedChainVfx = hit.travelDurationSec !== undefined;
+    let appliedAny = false;
     for (const entry of hit.targets) {
       const target = findCombatantById(entry.targetId, allies, enemies);
       if (!target?.isAlive) continue;
-      this.applyEffect(
-        actor,
-        target,
-        skill,
-        hit.effectDef,
-        cd,
-        effectIndex,
-        entry.powerMultiplierOverride,
-        hit.hitIndex,
-        hit.vfxSourceId,
-        {},
-        isLastChainSegment,
-        stagedChainVfx,
-      );
+      if (
+        this.applyEffect(
+          actor,
+          target,
+          skill,
+          hit.effectDef,
+          cd,
+          effectIndex,
+          entry.powerMultiplierOverride,
+          hit.hitIndex,
+          hit.vfxSourceId,
+          {},
+          isLastChainSegment,
+          stagedChainVfx,
+        )
+      ) {
+        appliedAny = true;
+      }
     }
+    return appliedAny;
   }
 
   private splitCombatants(): [CombatantState[], CombatantState[]] {
@@ -1035,16 +1085,27 @@ export class SkillExecutor {
     return false;
   }
 
+  private beginPresentationLockIfNeeded(
+    actor: CombatantState,
+    skill: ActiveSkillDef,
+    slotKind: SkillSlotKind,
+  ): void {
+    const duration = resolvePresentationLockSec(skill, actor, slotKind);
+    if (duration > 0) {
+      this.deps.getSequenceRunner().beginPresentationLock(actor.id, duration);
+    }
+  }
+
   private beginSkillUseIfActive(
     actorId: string,
     skill: ActiveSkillDef,
     slotKind: SkillSlotKind,
   ): void {
     if (slotKind === 'basic') return;
-    const duration = resolveUseDurationSec(skill);
-    if (duration > 0) {
-      this.deps.getSequenceRunner().beginUse(actorId, duration);
-    }
+    const useSec = resolveUseDurationSec(skill);
+    if (useSec <= 0) return;
+    const duration = Math.max(useSec, resolveSequenceWallClockSec(skill));
+    this.deps.getSequenceRunner().beginUse(actorId, duration);
   }
 
   private beginActiveEffectGaugeIfNeeded(

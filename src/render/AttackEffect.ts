@@ -6,16 +6,7 @@ import {
   chainSegmentFadeAlpha,
 } from "./chainFade.ts";
 import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
-
-const PRESET_DURATION_MS: Record<SkillVfxPresetId, number> = {
-  slash: 320,
-  slashHit: 320,
-  orb: 380,
-  arrow: 420,
-  healRise: 520,
-  chainLightning: 760,
-  impale: 350,
-};
+import { PRESET_DURATION_MS } from "./skillVfx/presetDurations.ts";
 
 const HEAL_RISE_LINE_COUNT = 6;
 const CHAIN_LIGHTNING_TAIL_COUNT = 5;

@@ -96,8 +96,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 - LvUP 時、`classes.json` の `skills[]`（レベル別 `skillIds`）から `learnedPassiveIds` / `learnedActiveIds` を再計算（`resolveLearnedSkills`, `reconcileMemberBuild`）
 - 勝利報酬・セーブロード・デバッグ Lv 変更時に習得リストを同期；LvUP ログに新スキル名を表示
-- アクティブセット **最大2枠の基盤**（`MAX_ACTIVE_SLOTS = 2`）：`equippedActiveSlots` 配列・`SkillMenuPanel` の2枠 UI・`BattleCanvas` の複数 CD バー
-- **プレイ可能な標準は Phase 7 まで1枠**（`getUnlockedActiveSlotCount` は常に 1）。2枠目の解放条件・UI / 戦闘側チェックは **Phase 7** で追加
+- アクティブ **最大4枠**（`MAX_ACTIVE_SLOTS = 4`）：習得即参加（`learnedActiveIds`）。段階解放 Lv0=2 / Lv15=3 / 二次職・Lv30=4。`equippedActiveSlots` は SkillMenuPanel テスト用
 - 新アクティブ習得時は自動セットしない（スキルメニューでプレイヤーが選ぶ）
 - セーブに `CharacterBuild` を含め、ロード時 `reconcilePartyBuilds` でレベルと整合
 

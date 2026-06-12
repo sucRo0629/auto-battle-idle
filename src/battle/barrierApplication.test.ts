@@ -101,6 +101,7 @@ describe('barrier application', () => {
     expect(firstBarrier).toBeGreaterThan(0);
 
     barrierCd.remaining = 0;
+    runner.tickUseLocks(0.31);
     executor.tryExecute(abjurer, barrierCd, allies, enemies);
     expect(abjurer.barrierHp).toBeGreaterThan(firstBarrier);
   });

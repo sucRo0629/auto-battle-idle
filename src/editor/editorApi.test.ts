@@ -51,6 +51,39 @@ describe('collectSkillsFromDrafts basic attack', () => {
     expect(effect?.type).toBe('damage');
     expect(effect).not.toHaveProperty('damageType');
   });
+
+  it('preserves fire gate and charge fields on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'test_smart_active', kind: 'active' },
+        active: {
+          id: 'test_smart_active',
+          name: 'Smart Active',
+          trigger: { kind: 'time', value: 8 },
+          firePolicy: 'smart',
+          fireConditions: [{ kind: 'waveStart' }],
+          fireTimeoutSec: 4,
+          maxCharges: 2,
+          effect: [
+            {
+              target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+              type: 'damage',
+              damageType: 'physical',
+              amount: { kind: 'atkBased', atkScale: 1 },
+            },
+          ],
+        },
+      },
+    ];
+
+    const { actives } = collectSkillsFromDrafts(entries);
+    expect(actives[0]).toMatchObject({
+      firePolicy: 'smart',
+      fireConditions: [{ kind: 'waveStart' }],
+      fireTimeoutSec: 4,
+      maxCharges: 2,
+    });
+  });
 });
 
 describe('collectSkillsFromDrafts heal HoT', () => {

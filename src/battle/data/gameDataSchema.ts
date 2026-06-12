@@ -12,6 +12,9 @@ import type {
   DebuffFilterTag,
   DispelPriority,
   DamageIncreaseCondition,
+  FireCondition,
+  FirePolicy,
+  HpRatioCompare,
   HealSubKind,
   PassiveEffectKind,
   Role,
@@ -232,6 +235,7 @@ export const PASSIVE_EFFECT_KINDS = [
   "counter",
   "selfHpRatioBuff",
   "skillAmountOverride",
+  "skillPropertyOverride",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -251,6 +255,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   counter: "反撃",
   selfHpRatioBuff: "自HP割合バフ",
   skillAmountOverride: "スキル効果量上書き",
+  skillPropertyOverride: "スキル属性上書き",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -439,6 +444,66 @@ export const SKILL_TRIGGER_VALUE_LABELS: Record<SkillTriggerKind, string> = {
 export const SKILL_TRIGGER_KIND_OPTIONS: SkillTriggerKind[] = [
   ...SKILL_TRIGGER_KINDS,
 ];
+
+export type FireConditionKind = FireCondition['kind'];
+
+export const FIRE_POLICIES = [
+  'immediate',
+  'smart',
+] as const satisfies readonly FirePolicy[];
+
+export const FIRE_POLICY_LABELS: Record<FirePolicy, string> = {
+  immediate: '即時発動',
+  smart: '条件発動 (smart)',
+};
+
+export const FIRE_POLICY_OPTIONS: FirePolicy[] = [...FIRE_POLICIES];
+
+export const FIRE_CONDITION_KINDS = [
+  'targetHp',
+  'debuff',
+  'minTargets',
+  'selfHp',
+  'allyDamaged',
+  'waveStart',
+  'waveEnd',
+  'enemyCount',
+] as const satisfies readonly FireConditionKind[];
+
+export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
+  targetHp: '対象HP割合',
+  debuff: 'デバフ',
+  minTargets: '最小ターゲット数',
+  selfHp: '自身HP割合',
+  allyDamaged: '味方被ダメ',
+  waveStart: 'Wave開始フェーズ',
+  waveEnd: 'Wave終了フェーズ',
+  enemyCount: '敵数',
+};
+
+export const FIRE_CONDITION_KIND_OPTIONS: FireConditionKind[] = [
+  ...FIRE_CONDITION_KINDS,
+];
+
+export const HP_RATIO_COMPARES = ['lte', 'gte'] as const satisfies readonly HpRatioCompare[];
+
+export const HP_RATIO_COMPARE_LABELS: Record<HpRatioCompare, string> = {
+  lte: '以下',
+  gte: '以上',
+};
+
+export const HP_RATIO_COMPARE_OPTIONS = [...HP_RATIO_COMPARES];
+
+export const ENEMY_COUNT_SCOPES = ['living', 'inRange'] as const;
+
+export const ENEMY_COUNT_SCOPE_LABELS: Record<
+  (typeof ENEMY_COUNT_SCOPES)[number],
+  string
+> = {
+  living: '生存敵全体',
+  inRange: '射程内',
+};
+
 export const RESOURCE_AMOUNT_KIND_OPTIONS: ResourceAmountKind[] = [
   ...RESOURCE_AMOUNT_KINDS,
 ];
@@ -475,6 +540,7 @@ export const EDITOR_PASSIVE_EFFECT_KINDS = [
   "targetRuleOverride",
   "aoeCrowdBonus",
   "skillAmountOverride",
+  "skillPropertyOverride",
 ] as const satisfies readonly (typeof PASSIVE_EFFECT_KINDS)[number][];
 
 export const EDITOR_PASSIVE_EFFECT_KIND_OPTIONS: (typeof EDITOR_PASSIVE_EFFECT_KINDS)[number][] =

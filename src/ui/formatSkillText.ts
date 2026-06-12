@@ -8,6 +8,7 @@ import {
   DEBUFF_FILTER_TAG_LABELS,
   DEBUFF_SUB_KIND_LABELS,
   DISPEL_PRIORITY_LABELS,
+  FIRE_CONDITION_KIND_LABELS,
   HEAL_SUB_KIND_LABELS,
   SPECIAL_EFFECT_APPLY_TO_LABELS,
   TARGET_SHAPE_LABELS,
@@ -19,6 +20,7 @@ import type {
   DamageIncreaseSpec,
   DamageIncreaseCondition,
   DamageType,
+  FireCondition,
   PassiveSkillDef,
   PassiveEffectKind,
   ResourceAmountSpec,
@@ -58,6 +60,51 @@ function formatTriggerLabel(kind: SkillTriggerKind, value: number): string {
     case "hitsTaken":
       return `${value}被攻撃`;
   }
+}
+
+function formatFireConditionSummary(condition: FireCondition): string {
+  switch (condition.kind) {
+    case "debuff": {
+      const tags = condition.tags
+        .map((tag) => DEBUFF_FILTER_TAG_LABELS[tag] ?? tag)
+        .join("/");
+      return condition.selfAppliedOnly
+        ? `自付与デバフ:${tags}`
+        : `デバフ:${tags}`;
+    }
+    case "targetHp": {
+      const op = condition.compare === "gte" ? "≥" : "≤";
+      return `対象HP${op}${Math.round(condition.maxHpRatio * 100)}%`;
+    }
+    case "selfHp": {
+      const op = condition.compare === "gte" ? "≥" : "≤";
+      return `自HP${op}${Math.round(condition.maxHpRatio * 100)}%`;
+    }
+    case "minTargets":
+      return `対象≥${condition.count}`;
+    case "allyDamaged":
+      return "味方被ダメ";
+    case "waveStart":
+      return FIRE_CONDITION_KIND_LABELS.waveStart;
+    case "waveEnd":
+      return FIRE_CONDITION_KIND_LABELS.waveEnd;
+    case "enemyCount": {
+      const parts: string[] = [];
+      if (condition.min !== undefined) parts.push(`≥${condition.min}`);
+      if (condition.max !== undefined) parts.push(`≤${condition.max}`);
+      const range = parts.length > 0 ? parts.join("") : "任意";
+      const scope =
+        condition.scope === "inRange" ? "射程内" : "生存";
+      return `敵数${range}(${scope})`;
+    }
+  }
+}
+
+function formatFireConditionsSummary(
+  conditions: FireCondition[] | undefined,
+): string {
+  if (!conditions || conditions.length === 0) return "";
+  return conditions.map(formatFireConditionSummary).join(" & ");
 }
 
 function formatTarget(
@@ -689,6 +736,13 @@ function formatPassiveEffect(
             : "";
       return `「${target}」の効果量${scope} → ${amount}`;
     }
+    case "skillPropertyOverride": {
+      const bonus = def.maxChargesBonus ?? 1;
+      const targets = def.skillPropertyTargetSkillIds;
+      const targetLabel =
+        targets && targets.length > 0 ? targets.join(", ") : "全アクティブ";
+      return `maxCharges +${bonus} → ${targetLabel}`;
+    }
     case "counter":
     case "counterChance": {
       const responseParts = (def.counterResponses ?? []).map(
@@ -719,6 +773,16 @@ export function formatActiveDescription(def: ActiveSkillDef): string {
   const stopSec = def.useDurationSec ?? 0;
   if (stopSec > 0) {
     headerParts.push(`停止${stopSec}s`);
+  }
+  if ((def.firePolicy ?? "immediate") === "smart") {
+    const condSummary = formatFireConditionsSummary(def.fireConditions);
+    headerParts.push(condSummary ? `smart: ${condSummary}` : "smart");
+    if (def.fireTimeoutSec !== undefined && def.fireTimeoutSec > 0) {
+      headerParts.push(`待機上限${def.fireTimeoutSec}s`);
+    }
+  }
+  if ((def.maxCharges ?? 1) > 1) {
+    headerParts.push(`ストック上限${def.maxCharges}`);
   }
   const effects = def.effect.map(formatActiveEffectDetail).join(" / ");
   return `${headerParts.join(" / ")} / ${effects}`;

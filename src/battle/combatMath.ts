@@ -4,6 +4,7 @@ import type {
   DamageSkillEffect,
   DamageType,
   DefenseIgnoreSpec,
+  HpRatioCompare,
   PassiveSkillDef,
   ResourceAmountSpec,
   StatusEffect,
@@ -60,6 +61,14 @@ export function getDamageTakenMultiplier(combatant: CombatantState): number {
 export function currentHpRatio(unit: CombatantState): number {
   if (unit.maxHp <= 0) return 0;
   return unit.hp / unit.maxHp;
+}
+
+export function matchesHpRatioThreshold(
+  ratio: number,
+  threshold: number,
+  compare: HpRatioCompare = "lte",
+): boolean {
+  return compare === "gte" ? ratio >= threshold : ratio <= threshold;
 }
 
 export function getEffectiveAttackSpeedMultiplier(

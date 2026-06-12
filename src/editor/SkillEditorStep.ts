@@ -91,6 +91,8 @@ import {
   appendPassiveHealFields,
   appendPassiveBuffFields,
   appendPassiveSpecialEffectFields,
+  appendActiveFireGateFields,
+  appendPassiveSkillPropertyOverrideFields,
   appendTargetSpecFields,
 } from './skillEditorCombatFields.ts';
 import {
@@ -521,6 +523,9 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case 'skillAmountOverride':
       passive.targetSkillId ??= '';
       passive.amount ??= defaultResourceAmount(1);
+      break;
+    case 'skillPropertyOverride':
+      passive.maxChargesBonus ??= 1;
       break;
     case 'extendSelfAppliedDebuff':
       passive.extendSec ??= 2;
@@ -2173,6 +2178,27 @@ export class SkillEditorStep {
         );
         break;
       }
+      case 'skillPropertyOverride': {
+        const entries = this.options.getEntries();
+        const activeSkillOptions = entries.flatMap((entry) => {
+          if (!entry.active || entry.ref.kind !== 'active') return [];
+          return [
+            {
+              value: entry.active.id,
+              label: `${entry.active.name} (${entry.active.id})`,
+            },
+          ];
+        });
+        appendPassiveSkillPropertyOverrideFields(
+          effectGrid,
+          passive,
+          activeSkillOptions,
+          (mutate, options) => {
+            this.patchPassive(index, mutate, options);
+          },
+        );
+        break;
+      }
     }
 
     parent.appendChild(
@@ -2355,9 +2381,10 @@ export class SkillEditorStep {
         createEl(
           'p',
           'editor-hint',
-          '0 = 即時。停止中は全スキル発動不可（効果は即時適用）。時間・被攻撃条件のアクティブ CD は停止。参考: attack/dash 0.33s、heal 0.30s',
+          '0 = 即時。useDurationSec > 0 のとき全スキル busy + time/hitsTaken CD 停止。0 のとき VFX 長から presentationLock（通常攻撃のみ停止、CD 継続）。',
         ),
       );
+      appendActiveFireGateFields(grid, active, setActive);
     }
 
     parent.appendChild(

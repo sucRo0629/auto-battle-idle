@@ -7,7 +7,7 @@ import {
   hideFallenAllyCorpses,
   resetEntityIdCounter,
 } from "./entities.ts";
-import { getEffectiveAttackSpeedMultiplier } from "./combatMath.ts";
+import { getEffectiveAttackSpeedMultiplier, getPassiveDefs } from "./combatMath.ts";
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
@@ -99,11 +99,25 @@ import {
   findReadyCountTriggerCooldowns,
   initializeSkillCooldowns,
   isCountTriggerReady,
+  isCountTriggerSkill,
+  isTimeTrigger,
   resolveSkillTrigger,
   shouldPauseActiveCooldown,
   shouldTickCooldown,
   tickCountTriggerCooldowns,
 } from "./skillTrigger.ts";
+import {
+  bankReadyChargeIfPossible,
+  hasAvailableActiveCharge,
+  resolveEffectiveMaxCharges,
+  resolveFirePolicy,
+} from "./skills/chargeBank.ts";
+import {
+  isActiveFireHold,
+  shouldFireActiveSkill,
+  type FireGateContext,
+} from "./skills/fireGate.ts";
+import { resolveBattleActiveSkillIdsForMember } from "../progression/battleActiveSkills.ts";
 import { resolveRuntimeBattlePhase } from "./battlePhase.ts";
 import {
   ANNOUNCEMENT_FADE_OUT_START_MS,
@@ -782,6 +796,43 @@ export class BattleEngine {
     this.partyDeployPrepared = false;
   }
 
+  private isWaveStartPhase(): boolean {
+    return (
+      this.partyDeployPrepared ||
+      this.partyDeployActive ||
+      (this.partyDeploySettled && !this.engaged)
+    );
+  }
+
+  private isWaveEndPhase(): boolean {
+    return (
+      this.isPostCombatSettling() ||
+      this.waveExitMarchActive
+    );
+  }
+
+  private buildFireGateContext(
+    actor: CombatantState,
+    skill: import("./types.ts").ActiveSkillDef,
+    cd?: SkillCooldown,
+  ): FireGateContext {
+    return {
+      actor,
+      allies: this.players,
+      enemies: this.enemies,
+      skill,
+      passives: getPassiveDefs(
+        actor,
+        this.gameData.skillRegistry.passives,
+      ),
+      gameData: this.gameData,
+      battleTimeSec: this.battleTimeSec,
+      cd,
+      isWaveStartPhase: this.isWaveStartPhase(),
+      isWaveEndPhase: this.isWaveEndPhase(),
+    };
+  }
+
   private shouldSuppressCombatSkills(): boolean {
     return (
       this.waveAnnouncementActive ||
@@ -1121,7 +1172,15 @@ export class BattleEngine {
       if (!preset) continue;
 
       ally.build = structuredClone(member.build);
-      ally.cooldowns = createCooldowns(preset.basicAttackSkillId, member.build);
+      const activeSkillIds = resolveBattleActiveSkillIdsForMember(
+        member,
+        this.gameData,
+      );
+      ally.cooldowns = createCooldowns(
+        preset.basicAttackSkillId,
+        member.build,
+        activeSkillIds,
+      );
       initializeSkillCooldowns(ally, this.gameData.skillRegistry.actives);
     }
   }
@@ -1205,12 +1264,29 @@ export class BattleEngine {
           const effectGauge = c.isEnemy
             ? undefined
             : this.skillSequenceRunner.getActiveEffectGauge(c.id, slotIndex);
+          const passives = c.isEnemy
+            ? []
+            : getPassiveDefs(c, this.gameData.skillRegistry.passives);
+          const maxCharges = skill
+            ? resolveEffectiveMaxCharges(
+                skill,
+                passives,
+                c.build.learnedActiveIds,
+              )
+            : 1;
+          const fireGateCtx =
+            skill && !c.isEnemy
+              ? this.buildFireGateContext(c, skill, cd)
+              : null;
           return {
             skillId: cd.skillId,
             remaining: cd.remaining,
             triggerKind: trigger.kind,
             triggerValue: trigger.value,
             slotIndex,
+            storedCharges: cd.storedCharges ?? 0,
+            maxCharges,
+            fireHold: fireGateCtx ? isActiveFireHold(fireGateCtx) : false,
             ...(effectGauge
               ? {
                   activeEffectRemaining: effectGauge.remainingSec,
@@ -1251,7 +1327,6 @@ export class BattleEngine {
     if (this.waveAnnouncementActive) {
       this.tickWaveAnnouncement(deltaTime);
     }
-    this.tickPendingHitQueue();
     if (!this.shouldSuppressCombatSkills()) {
       this.tickSkillSequences(deltaTime);
     }
@@ -1307,6 +1382,7 @@ export class BattleEngine {
       this.tickStatusAndCooldowns(deltaTime);
       this.runUnitSkills(this.enemies);
       this.runUnitSkills(this.players);
+      this.tickPendingHitQueue();
       const leadingRowInputs = this.getPlayerPlacementInputs().filter(
         (p) => p.isAlive,
       );
@@ -1603,10 +1679,19 @@ export class BattleEngine {
         ) {
           continue;
         }
+        const prevRemaining = cd.remaining;
         const speedMul =
           cd.slotKind === "active" ? 1 : getEffectiveAttackSpeedMultiplier(unit);
         const rate = cd.slotKind === "active" ? 1 : basicRate * speedMul;
         cd.remaining = Math.max(0, cd.remaining - deltaTime * rate);
+        if (
+          cd.slotKind === "active" &&
+          prevRemaining > 0 &&
+          cd.remaining <= 0 &&
+          isTimeTrigger(skill)
+        ) {
+          this.handleActiveTimeChargeComplete(unit, cd, skill);
+        }
       }
     }
   }
@@ -1623,7 +1708,7 @@ export class BattleEngine {
 
     if (isUnitStunned(unit)) return;
 
-    const canConsume = !this.skillSequenceRunner.isActorBusy(unit.id);
+    const canConsumeHitsTaken = !this.skillSequenceRunner.isActorBusy(unit.id);
 
     for (const cd of unit.cooldowns) {
       if (cd.slotKind !== "active") continue;
@@ -1641,10 +1726,45 @@ export class BattleEngine {
         ) {
           chargeCountTrigger(cd, skill);
         }
-      } else if (canConsume) {
+      } else if (canConsumeHitsTaken) {
         this.executor.tryExecute(unit, cd, this.players, this.enemies);
       }
     }
+  }
+
+  private handleActiveTimeChargeComplete(
+    unit: CombatantState,
+    cd: SkillCooldown,
+    skill: import("./types.ts").ActiveSkillDef,
+  ): void {
+    const ctx = this.buildFireGateContext(unit, skill, cd);
+    if (resolveFirePolicy(skill) !== "smart" || shouldFireActiveSkill(ctx)) {
+      return;
+    }
+    if (cd.fireHoldSinceSec === undefined) {
+      cd.fireHoldSinceSec = this.battleTimeSec;
+    }
+    const passives = getPassiveDefs(
+      unit,
+      this.gameData.skillRegistry.passives,
+    );
+    bankReadyChargeIfPossible(
+      cd,
+      skill,
+      passives,
+      unit.build.learnedActiveIds,
+    );
+  }
+
+  private tryExecuteActiveWithFireGate(
+    unit: CombatantState,
+    cd: SkillCooldown,
+  ): boolean {
+    const skill = this.gameData.skillRegistry.actives[cd.skillId];
+    if (!skill || isCountTriggerSkill(skill)) return false;
+    const ctx = this.buildFireGateContext(unit, skill, cd);
+    if (!shouldFireActiveSkill(ctx)) return false;
+    return this.executor.tryExecute(unit, cd, this.players, this.enemies);
   }
 
   private runUnitSkills(actors: CombatantState[]): void {
@@ -1652,9 +1772,12 @@ export class BattleEngine {
 
     for (const actor of actors) {
       if (!actor.isAlive || isUnitStunned(actor)) continue;
-      const ordered = this.orderCooldowns(actor.cooldowns);
+      const ordered = this.orderUnitSkillCooldowns(actor.cooldowns);
       for (const cd of ordered) {
         if (cd.slotKind === "basic" && cd.remaining <= 0) {
+          if (this.skillSequenceRunner.isBasicAttackBlocked(actor.id)) {
+            continue;
+          }
           const readyActive = findReadyCountTriggerCooldowns(
             actor,
             "basicAttackCount",
@@ -1668,25 +1791,48 @@ export class BattleEngine {
               this.enemies,
             );
             if (fired) continue;
+            if (this.skillSequenceRunner.isActorBusy(actor.id)) continue;
+          }
+        }
+
+        const skill = actives[cd.skillId];
+        if (skill && isCountTriggerReady(cd, skill)) continue;
+
+        if (cd.slotKind === "active" && skill && !isCountTriggerSkill(skill)) {
+          if (
+            hasAvailableActiveCharge(
+              cd,
+              skill,
+              getPassiveDefs(actor, this.gameData.skillRegistry.passives),
+              actor.build.learnedActiveIds,
+            ) &&
+            this.tryExecuteActiveWithFireGate(actor, cd)
+          ) {
+            continue;
           }
         }
 
         if (cd.remaining > 0) continue;
 
-        const skill = actives[cd.skillId];
-        if (skill && isCountTriggerReady(cd, skill)) continue;
+        if (
+          this.skillSequenceRunner.isActorBusy(actor.id) ||
+          (cd.slotKind === "basic" &&
+            this.skillSequenceRunner.isBasicAttackBlocked(actor.id))
+        ) {
+          continue;
+        }
 
         this.executor.tryExecute(actor, cd, this.players, this.enemies);
       }
     }
   }
 
-  private orderCooldowns(cooldowns: SkillCooldown[]): SkillCooldown[] {
-    const basic = cooldowns.filter((c) => c.slotKind === "basic");
+  private orderUnitSkillCooldowns(cooldowns: SkillCooldown[]): SkillCooldown[] {
     const active = cooldowns
       .filter((c) => c.slotKind === "active")
       .sort((a, b) => (a.slotIndex ?? 0) - (b.slotIndex ?? 0));
-    return [...basic, ...active];
+    const basic = cooldowns.filter((c) => c.slotKind === "basic");
+    return [...active, ...basic];
   }
 
   private checkBattleEnd(): void {

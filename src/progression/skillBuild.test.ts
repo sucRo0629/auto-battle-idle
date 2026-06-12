@@ -59,9 +59,9 @@ const starterClassPreset = {
 } as ClassPreset;
 
 describe('skillBuild', () => {
-  it('unlocks both active slots from the start', () => {
-    expect(getUnlockedActiveSlotCount(member, gameData)).toBe(MAX_ACTIVE_SLOTS);
-    expect(MAX_ACTIVE_SLOTS).toBe(2);
+  it('unlocks two active slots at level 1', () => {
+    expect(getUnlockedActiveSlotCount(member, gameData)).toBe(2);
+    expect(MAX_ACTIVE_SLOTS).toBe(4);
   });
 
   it('normalizeActiveSlots pads to MAX_ACTIVE_SLOTS', () => {
@@ -86,7 +86,12 @@ describe('skillBuild', () => {
 
     expect(slotMember.build.learnedPassiveIds).toContain('passive_a');
     expect(slotMember.build.learnedActiveIds).toEqual(['active_1', 'active_2']);
-    expect(slotMember.build.equippedActiveSlots).toEqual(['active_1', 'active_2']);
+    expect(slotMember.build.equippedActiveSlots).toEqual([
+      'active_1',
+      'active_2',
+      '',
+      '',
+    ]);
   });
 
   it('reconcileMemberBuild strips equipped actives above current level', () => {

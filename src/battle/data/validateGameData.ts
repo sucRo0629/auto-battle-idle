@@ -35,6 +35,8 @@ import type {
   DebuffFilterTag,
   DispelPriority,
   DamageIncreaseCondition,
+  FireCondition,
+  FirePolicy,
   CounterResponseDef,
   CounterResponseKind,
   DamageIncreaseSpec,
@@ -52,6 +54,7 @@ import {
   synthesizeBasicAttackSkill,
 } from './synthesizeBasicAttack.ts';
 import { PASSIVE_PERIODIC_TRIGGER_KINDS } from '../passivePeriodicTrigger.ts';
+import { GLOBAL_MAX_CHARGES_CAP } from '../skills/chargeBank.ts';
 
 import {
   ATTACK_SPEED_TIERS,
@@ -969,6 +972,89 @@ function parseDamageIncreaseCondition(
   }
 
   invalidField(context, 'kind', `unsupported condition kind: ${kind}`);
+}
+
+function parseFireCondition(raw: unknown, context: string): FireCondition {
+  const obj = requireRecord(raw, context);
+  const kind = requireString(obj, 'kind', context);
+
+  if (kind === 'debuff') {
+    const tags = parseDebuffFilterTags(obj.tags, `${context}.tags`, true)!;
+    return {
+      kind,
+      tags,
+      ...(obj.selfAppliedOnly !== undefined
+        ? { selfAppliedOnly: requireBoolean(obj, 'selfAppliedOnly', context) }
+        : {}),
+    };
+  }
+  if (kind === 'targetHp' || kind === 'selfHp') {
+    const maxHpRatio = requireNumber(obj, 'maxHpRatio', context);
+    if (maxHpRatio < 0 || maxHpRatio > 1) {
+      invalidField(context, 'maxHpRatio', 'must be between 0 and 1');
+    }
+    const compareRaw = obj.compare;
+    let compare: 'lte' | 'gte' | undefined;
+    if (compareRaw !== undefined) {
+      if (compareRaw !== 'lte' && compareRaw !== 'gte') {
+        invalidField(context, 'compare', 'must be lte or gte');
+      }
+      compare = compareRaw;
+    }
+    return {
+      kind,
+      maxHpRatio,
+      ...(compare === 'gte' ? { compare } : {}),
+    };
+  }
+  if (kind === 'minTargets') {
+    const count = requireNumber(obj, 'count', context);
+    if (!Number.isInteger(count) || count < 1) {
+      invalidField(context, 'count', 'must be a positive integer');
+    }
+    return { kind, count };
+  }
+  if (kind === 'allyDamaged') return { kind: 'allyDamaged' };
+  if (kind === 'waveStart') return { kind: 'waveStart' };
+  if (kind === 'waveEnd') return { kind: 'waveEnd' };
+  if (kind === 'enemyCount') {
+    const min = parseOptionalNumber(obj, 'min', context);
+    const max = parseOptionalNumber(obj, 'max', context);
+    if (min !== undefined && (!Number.isInteger(min) || min < 0)) {
+      invalidField(context, 'min', 'must be a non-negative integer');
+    }
+    if (max !== undefined && (!Number.isInteger(max) || max < 0)) {
+      invalidField(context, 'max', 'must be a non-negative integer');
+    }
+    const scopeRaw = obj.scope;
+    let scope: 'living' | 'inRange' | undefined;
+    if (scopeRaw !== undefined) {
+      if (scopeRaw !== 'living' && scopeRaw !== 'inRange') {
+        invalidField(context, 'scope', 'must be living or inRange');
+      }
+      scope = scopeRaw;
+    }
+    return {
+      kind: 'enemyCount',
+      ...(min !== undefined ? { min } : {}),
+      ...(max !== undefined ? { max } : {}),
+      ...(scope !== undefined ? { scope } : {}),
+    };
+  }
+  invalidField(context, 'kind', `unsupported fire condition kind: ${kind}`);
+}
+
+function parseFireConditions(
+  raw: unknown,
+  context: string,
+): FireCondition[] | undefined {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw) || raw.length === 0) {
+    invalidField(context, 'fireConditions', 'must be a non-empty array');
+  }
+  return raw.map((entry, index) =>
+    parseFireCondition(entry, `${context}[${index}]`),
+  );
 }
 
 function parseDamageIncreaseSpec(
@@ -2485,6 +2571,32 @@ function requirePassiveEffectParams(
         ...(passiveAmountField !== undefined ? { passiveAmountField } : {}),
       };
     }
+    case 'skillPropertyOverride': {
+      const maxChargesBonus = requireNumber(obj, 'maxChargesBonus', context);
+      if (!Number.isInteger(maxChargesBonus) || maxChargesBonus < 1) {
+        invalidField(
+          context,
+          'maxChargesBonus',
+          'must be a positive integer',
+        );
+      }
+      const targetIdsRaw = obj.skillPropertyTargetSkillIds;
+      const skillPropertyTargetSkillIds =
+        targetIdsRaw === undefined
+          ? undefined
+          : requireStringArray(
+              obj,
+              'skillPropertyTargetSkillIds',
+              context,
+            );
+      return {
+        ...base,
+        maxChargesBonus,
+        ...(skillPropertyTargetSkillIds !== undefined
+          ? { skillPropertyTargetSkillIds }
+          : {}),
+      };
+    }
     default:
       invalidField(context, 'effect', `unsupported passive effect ${effect}`);
   }
@@ -2974,6 +3086,43 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
     const vfx = parseSkillVfx(obj.vfx, `${context}.vfx`);
     const iconKey = parseOptionalIconKey(obj, context);
     const useDurationSec = parseOptionalUseDurationSec(obj, context);
+    const firePolicyRaw = obj.firePolicy;
+    let firePolicy: FirePolicy | undefined;
+    if (firePolicyRaw !== undefined) {
+      if (firePolicyRaw !== 'immediate' && firePolicyRaw !== 'smart') {
+        invalidField(context, 'firePolicy', 'must be immediate or smart');
+      }
+      firePolicy = firePolicyRaw;
+    }
+    const fireConditions = parseFireConditions(obj.fireConditions, `${context}.fireConditions`);
+    const fireTimeoutSec = parseOptionalNonNegativeNumber(
+      obj,
+      'fireTimeoutSec',
+      context,
+    );
+    const maxChargesRaw = parseOptionalNumber(obj, 'maxCharges', context);
+    let maxCharges: number | undefined;
+    if (maxChargesRaw !== undefined) {
+      if (
+        !Number.isInteger(maxChargesRaw) ||
+        maxChargesRaw < 1 ||
+        maxChargesRaw > GLOBAL_MAX_CHARGES_CAP
+      ) {
+        invalidField(
+          context,
+          'maxCharges',
+          `must be an integer from 1 to ${GLOBAL_MAX_CHARGES_CAP}`,
+        );
+      }
+      maxCharges = maxChargesRaw;
+    }
+    if (firePolicy === 'smart' && !fireConditions?.length) {
+      invalidField(
+        context,
+        'fireConditions',
+        'required when firePolicy is smart',
+      );
+    }
 
     return {
       id,
@@ -2986,6 +3135,10 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
       ...(vfx !== undefined ? { vfx } : {}),
       ...(iconKey !== undefined ? { iconKey } : {}),
       ...(useDurationSec !== undefined ? { useDurationSec } : {}),
+      ...(firePolicy !== undefined ? { firePolicy } : {}),
+      ...(fireConditions !== undefined ? { fireConditions } : {}),
+      ...(fireTimeoutSec !== undefined ? { fireTimeoutSec } : {}),
+      ...(maxCharges !== undefined ? { maxCharges } : {}),
     };
   });
 }

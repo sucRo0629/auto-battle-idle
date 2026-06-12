@@ -16,6 +16,12 @@ import {
 } from '../render/statusBadgeRenderer.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
 
+interface RecastCellElements {
+  cell: HTMLElement;
+  fill: HTMLElement;
+  stockPips: HTMLElement;
+}
+
 interface SlotElements {
   root: HTMLElement;
   labelRow: HTMLElement;
@@ -24,7 +30,7 @@ interface SlotElements {
   hpFill: HTMLElement;
   barrierLayer: HTMLElement;
   statusCanvas: HTMLCanvasElement;
-  recastFills: HTMLElement[];
+  recastCells: RecastCellElements[];
 }
 
 export class PartyHudPanel {
@@ -117,19 +123,28 @@ export class PartyHudPanel {
     statusCanvas.hidden = true;
     labelRow.appendChild(statusCanvas);
 
-    const recastRow = document.createElement('div');
-    recastRow.className = 'party-hud-recast-row';
-    bars.appendChild(recastRow);
+    const recastGrid = document.createElement('div');
+    recastGrid.className = 'party-hud-recast-grid';
+    bars.appendChild(recastGrid);
 
-    const recastFills: HTMLElement[] = [];
+    const recastCells: RecastCellElements[] = [];
     for (let slot = 0; slot < MAX_ACTIVE_SLOTS; slot++) {
+      const cell = document.createElement('div');
+      cell.className = 'party-hud-recast-cell';
+
       const track = document.createElement('div');
-      track.className = 'party-hud-recast-track';
+      track.className = 'party-hud-recast-fill-track';
       const fill = document.createElement('div');
       fill.className = 'party-hud-recast-fill';
       track.appendChild(fill);
-      recastRow.appendChild(track);
-      recastFills.push(fill);
+      cell.appendChild(track);
+
+      const stockPips = document.createElement('div');
+      stockPips.className = 'party-hud-recast-stock-pips';
+      cell.appendChild(stockPips);
+
+      recastGrid.appendChild(cell);
+      recastCells.push({ cell, fill, stockPips });
     }
 
     return {
@@ -140,7 +155,7 @@ export class PartyHudPanel {
       hpFill,
       barrierLayer,
       statusCanvas,
-      recastFills,
+      recastCells,
     };
   }
 
@@ -163,7 +178,7 @@ export class PartyHudPanel {
 
     this.updateHpBar(slot, entry);
     this.updateStatusBadges(slot, entry);
-    this.updateRecastBars(slot, entry);
+    this.updateRecastGrid(slot, entry);
   }
 
   private updateHpBar(slot: SlotElements, entry: PartyHudEntry): void {
@@ -239,20 +254,38 @@ export class PartyHudPanel {
     });
   }
 
-  private updateRecastBars(slot: SlotElements, entry: PartyHudEntry): void {
+  private updateRecastGrid(slot: SlotElements, entry: PartyHudEntry): void {
     const bySlot = new Map(
       entry.activeCooldowns.map((cd) => [cd.slotIndex, cd] as const),
     );
 
-    for (let i = 0; i < slot.recastFills.length; i++) {
-      const fill = slot.recastFills[i];
+    for (let i = 0; i < slot.recastCells.length; i++) {
+      const { cell, fill, stockPips } = slot.recastCells[i];
       const cd = bySlot.get(i);
+      stockPips.replaceChildren();
+
       if (!cd) {
         fill.style.width = '0%';
         fill.dataset.state = 'empty';
         delete fill.dataset.pausedMax;
+        cell.classList.remove('party-hud-recast-cell--fire-hold');
         continue;
       }
+
+      const maxCharges = cd.maxCharges ?? 1;
+      const storedCharges = cd.storedCharges ?? 0;
+      if (maxCharges > 1 && storedCharges > 0) {
+        for (let pip = 0; pip < storedCharges; pip++) {
+          const el = document.createElement('div');
+          el.className = 'party-hud-recast-stock-pip';
+          stockPips.appendChild(el);
+        }
+      }
+
+      cell.classList.toggle(
+        'party-hud-recast-cell--fire-hold',
+        cd.fireHold === true,
+      );
 
       const activeEffectRemaining = cd.activeEffectRemaining ?? 0;
       const activeEffectTotal = cd.activeEffectTotal ?? 0;

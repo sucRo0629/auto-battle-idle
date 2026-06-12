@@ -158,6 +158,26 @@ describe('buildPendingHitsFromResolution staged chain', () => {
     expect(queue).toHaveLength(0);
   });
 
+  it('keeps due hits in queue when onApply returns false', () => {
+    const hits = buildPendingHitsFromResolution(
+      { spreadDurationSec: 0.2, waves: [{ hitIndex: 0, targets: [{ unit: { id: 'e1' } as never, powerMultiplierOverride: undefined }] }] },
+      0,
+      'actor1',
+      skill,
+      effectDef,
+      { skillId: skill.id, remaining: 0, slotKind: 'basic' },
+    );
+    const onApply = vi.fn(() => false);
+
+    let queue = tickPendingHits(hits, 0, { onApply });
+    expect(onApply).toHaveBeenCalledTimes(1);
+    expect(queue).toHaveLength(1);
+
+    onApply.mockReturnValue(true);
+    queue = tickPendingHits(queue, 0, { onApply });
+    expect(queue).toHaveLength(0);
+  });
+
   it('applies all due hops in a single tick', () => {
     const hits = buildPendingHitsFromResolution(
       { spreadDurationSec: 0.9, waves },

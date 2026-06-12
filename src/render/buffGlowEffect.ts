@@ -40,7 +40,7 @@ function getSpriteBuffer(size: number): CanvasRenderingContext2D {
   spriteBuffer.width = size;
   spriteBuffer.height = size;
 
-  const ctx = spriteBuffer.getContext('2d');
+  const ctx = spriteBuffer.getContext('2d', { willReadFrequently: true });
   if (!ctx) throw new Error('Canvas 2D unavailable');
 
   ctx.clearRect(0, 0, size, size);

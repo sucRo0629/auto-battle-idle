@@ -113,4 +113,56 @@ describe('skillUseDuration', () => {
     executor.tryExecute(actor, basicCd, [actor], [enemy]);
     expect(basicHits).toBe(1);
   });
+
+  it('blocks spread basic pending hits while actor is skill-busy', () => {
+    const runner = new SkillSequenceRunner();
+    const actor = mockUnit({ id: 'actor', battleX: 200 });
+    const enemy = mockUnit({ id: 'enemy', isEnemy: true, battleX: 200, hp: 100 });
+    const basicSkill: ActiveSkillDef = {
+      id: 'basic',
+      name: 'basic',
+      trigger: { kind: 'time', value: 2 },
+      effect: [
+        {
+          type: 'damage',
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 1 },
+          hitCount: 2,
+          hitDurationSec: 0.2,
+        },
+      ],
+    };
+    const data: GameData = {
+      skillRegistry: {
+        passives: {},
+        actives: { basic: basicSkill },
+      },
+    } as unknown as GameData;
+    const basicCd: SkillCooldown = {
+      skillId: 'basic',
+      remaining: 0,
+      slotKind: 'basic',
+    };
+    actor.cooldowns = [basicCd];
+
+    const pending: import('../types.ts').PendingSkillHit[] = [];
+    const executor = new SkillExecutor(data, () => {}, {
+      getBattleTimeSec: () => 0,
+      enqueuePendingHits: (hits) => pending.push(...hits),
+      getAllCombatants: () => [actor, enemy],
+      getSequenceRunner: () => runner,
+    });
+
+    executor.tryExecute(actor, basicCd, [actor], [enemy]);
+    expect(pending).toHaveLength(2);
+
+    expect(executor.applyPendingHit(pending[0]!)).toBe(true);
+    const hpAfterFirst = enemy.hp;
+    expect(hpAfterFirst).toBeLessThan(100);
+
+    runner.beginUse('actor', 1);
+    expect(executor.applyPendingHit(pending[1]!)).toBe(false);
+    expect(enemy.hp).toBe(hpAfterFirst);
+  });
 });

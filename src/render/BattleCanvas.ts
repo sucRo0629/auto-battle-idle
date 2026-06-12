@@ -85,7 +85,6 @@ export class BattleCanvas implements IBattleRenderer {
   private lastBattleX = new Map<string, number>();
   private isMarching = new Map<string, boolean>();
   private marchIdleHoldFrames = new Map<string, number>();
-
   private static readonly MARCH_IDLE_HOLD_FRAMES = 4;
 
   mount(container: HTMLElement): void {
