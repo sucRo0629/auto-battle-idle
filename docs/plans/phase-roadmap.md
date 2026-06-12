@@ -134,7 +134,7 @@ Phase 4 では `jobTier: 1` を付与しても **ゲームロジックは転職�
 
 ### 一次職マスタ（15 種・完了）
 
-ロスター全表は [classes-and-skills.md](../spec/classes-and-skills.md) を正とする。`displayName`（漢字）+ `epithetEn`（英語肩書き）+ `flavorJa` を `classes.json` に保持。デモ編成は `parties.json`（鉄衛士 / 剣術士 / 療養師 / 弓術士）。
+ロスター全表は [classes-and-skills.md](../spec/classes-and-skills.md) を正とする。`displayName`（漢字）+ `epithetEn`（英語肩書き）を `classes.json` に保持。デモ編成は `parties.json`（鉄衛士 / 剣術士 / 療養師 / 弓術士）。
 
 - 旧デモ 4 クラス（Bulwark 等）は削除済み
 - `epithetEn` の 2 段ルビ UI は master-work-order Phase 3c

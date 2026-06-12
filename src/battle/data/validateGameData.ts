@@ -3113,10 +3113,6 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       obj.epithetEn === undefined
         ? undefined
         : requireString(obj, 'epithetEn', context);
-    const flavorJa =
-      obj.flavorJa === undefined
-        ? undefined
-        : requireString(obj, 'flavorJa', context);
     const formationRow = requireEnum(obj, 'formationRow', context, FORMATION_ROWS_SET);
     const traitsRaw = parseEntityTraits(obj.traits, `${context}.traits`);
     const maxHp = requireNumber(obj, 'maxHp', context);
@@ -3180,7 +3176,6 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       role,
       displayName,
       ...(epithetEn !== undefined ? { epithetEn } : {}),
-      ...(flavorJa !== undefined ? { flavorJa } : {}),
       formationRow,
       traits: traitsRaw,
       maxHp,

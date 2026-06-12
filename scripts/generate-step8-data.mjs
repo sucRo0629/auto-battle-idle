@@ -62,21 +62,21 @@ function addActive(id, name, trigger, effect, vfx) {
 }
 
 const classes = [
-  { id: 'df_guardian', displayName: '鉄衛士', epithetEn: 'Guardian', flavorJa: '鉄壁となり、最も危険な敵の矛先を受け止める', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'somewhatSlow', maxHp: 235, atk: 11, def: 26, reg: 0, growthTier: { maxHp: 3, atk: 1, def: 3 }, passiveIds: ['passive_target_highest_atk'] },
-  { id: 'df_paladin', displayName: '護法士', epithetEn: 'Paladin', flavorJa: '聖なる防護と小さな癒しで、前線を守り抜く', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 200, atk: 13, def: 20, reg: 15, growthTier: { maxHp: 2, atk: 1, def: 2 }, passiveIds: ['passive_damage_taken_heal'] },
-  { id: 'df_duelist', displayName: '闘技士', epithetEn: 'Gladiator', flavorJa: '搦め手で敵を弱らせ、隙に致命の一撃を繰り出す', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'fast', maxHp: 190, atk: 26, def: 12, reg: 0, growthTier: { maxHp: 2, atk: 3, def: 1 }, passiveIds: ['passive_self_low_hp_dmg'] },
-  { id: 'at_warrior', displayName: '剣術士', epithetEn: 'Swordsman', flavorJa: '研ぎ澄まされた剣技で、近接戦の要となる', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 165, atk: 30, def: 14, reg: 0, growthTier: { maxHp: 2, atk: 3, def: 2 }, passiveIds: [] },
-  { id: 'at_assassin', displayName: '双刃士', epithetEn: 'Assassin', flavorJa: '敵の背後へ忍び込み、二刃で仕留める影', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'fast', maxHp: 100, atk: 32, def: 8, reg: 0, growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_target_lowest_hp', 'passive_evasion'] },
-  { id: 'at_lancer', displayName: '槍術士', epithetEn: 'Lancer', flavorJa: '長槍の一突きで、どんな巨体も貫く', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'somewhatSlow', maxHp: 150, atk: 24, def: 14, reg: 0, growthTier: { maxHp: 2, atk: 2, def: 2 }, passiveIds: ['passive_target_highest_hp'] },
-  { id: 'at_ranger', displayName: '弓術士', epithetEn: 'Ranger', flavorJa: '遠くの脅威を先に射落とす迎撃の弓', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'fast', maxHp: 92, atk: 20, def: 6, reg: 0, growthTier: { maxHp: 1, atk: 2, def: 1 }, passiveIds: ['passive_target_ranged_attacking'] },
-  { id: 'at_sniper', displayName: '狙撃士', epithetEn: 'Sniper', flavorJa: '最も遠い獲物だけを狙い、一矢で沈める', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'slow', maxHp: 88, atk: 28, def: 5, reg: 0, growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_target_farthest'] },
-  { id: 'at_hunter', displayName: '狩猟士', epithetEn: 'Hunter', flavorJa: '罠と毒で追い詰め、獲物を仕留める', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'normal', maxHp: 96, atk: 18, def: 8, reg: 0, growthTier: { maxHp: 2, atk: 2, def: 1 }, passiveIds: ['passive_damage_vs_dot'] },
-  { id: 'at_sorcerer', displayName: '魔術士', epithetEn: 'Sorcerer', flavorJa: '魔力を一点に集め、魔防の薄い敵を穿つ', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'somewhatSlow', maxHp: 80, atk: 26, def: 5, reg: 20, growthPresetKey: 'caster', growthTier: { maxHp: 2, atk: 3, def: 1 }, passiveIds: ['passive_target_lowest_reg'] },
-  { id: 'at_enchanter', displayName: '符術士', epithetEn: 'Enchanter', flavorJa: '符が敵から敵へ跳ね、連鎖の術式を織る', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'normal', maxHp: 78, atk: 22, def: 6, reg: 15, growthPresetKey: 'caster', growthTier: { maxHp: 2, atk: 2, def: 1 }, passiveIds: ['passive_target_lowest_def'] },
-  { id: 'at_geomancer', displayName: '法陣師', epithetEn: 'Geomancer', flavorJa: '地面に法陣を描き、踏み込んだ者を焼き尽くす', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'somewhatSlow', maxHp: 72, atk: 24, def: 4, reg: 10, growthPresetKey: 'caster', growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_aoe_crowd_bonus'] },
-  { id: 'sp_cleric', displayName: '療養師', epithetEn: 'Cleric', flavorJa: '前線に立ち、味方全体をやさしく癒し続ける', role: 'supporter', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'slow', maxHp: 105, atk: 12, def: 11, reg: 10, growthTier: { maxHp: 2, atk: 1, def: 2 }, passiveIds: [] },
-  { id: 'sp_abjurer', displayName: '結界師', epithetEn: 'Abjurer', flavorJa: '結界と弱体化で、味方への一撃をそらす', role: 'supporter', formationRow: 'middle', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 95, atk: 10, def: 12, reg: 10, growthTier: { maxHp: 2, atk: 1, def: 2 }, passiveIds: ['passive_heal_barrier'] },
-  { id: 'sp_alchemist', displayName: '薬草師', epithetEn: 'Alchemist', flavorJa: '薬草と毒で戦場を操り、敵の弱点を長く灼く', role: 'supporter', formationRow: 'middle', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 98, atk: 14, def: 9, reg: 10, growthTier: { maxHp: 2, atk: 2, def: 1 }, passiveIds: ['passive_alchemist_hot'] },
+  { id: 'df_guardian', displayName: '鉄衛士', epithetEn: 'Guardian', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'somewhatSlow', maxHp: 235, atk: 11, def: 26, reg: 0, growthTier: { maxHp: 3, atk: 1, def: 3 }, passiveIds: ['passive_target_highest_atk'] },
+  { id: 'df_paladin', displayName: '護法士', epithetEn: 'Paladin', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 200, atk: 13, def: 20, reg: 15, growthTier: { maxHp: 2, atk: 1, def: 2 }, passiveIds: ['passive_damage_taken_heal'] },
+  { id: 'df_duelist', displayName: '闘技士', epithetEn: 'Gladiator', role: 'defender', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'fast', maxHp: 190, atk: 26, def: 12, reg: 0, growthTier: { maxHp: 2, atk: 3, def: 1 }, passiveIds: ['passive_self_low_hp_dmg'] },
+  { id: 'at_warrior', displayName: '剣術士', epithetEn: 'Swordsman', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 165, atk: 30, def: 14, reg: 0, growthTier: { maxHp: 2, atk: 3, def: 2 }, passiveIds: [] },
+  { id: 'at_assassin', displayName: '双刃士', epithetEn: 'Assassin', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'fast', maxHp: 100, atk: 32, def: 8, reg: 0, growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_target_lowest_hp', 'passive_evasion'] },
+  { id: 'at_lancer', displayName: '槍術士', epithetEn: 'Lancer', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'somewhatSlow', maxHp: 150, atk: 24, def: 14, reg: 0, growthTier: { maxHp: 2, atk: 2, def: 2 }, passiveIds: ['passive_target_highest_hp'] },
+  { id: 'at_ranger', displayName: '弓術士', epithetEn: 'Ranger', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'fast', maxHp: 92, atk: 20, def: 6, reg: 0, growthTier: { maxHp: 1, atk: 2, def: 1 }, passiveIds: ['passive_target_ranged_attacking'] },
+  { id: 'at_sniper', displayName: '狙撃士', epithetEn: 'Sniper', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'slow', maxHp: 88, atk: 28, def: 5, reg: 0, growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_target_farthest'] },
+  { id: 'at_hunter', displayName: '狩猟士', epithetEn: 'Hunter', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'normal', maxHp: 96, atk: 18, def: 8, reg: 0, growthTier: { maxHp: 2, atk: 2, def: 1 }, passiveIds: ['passive_damage_vs_dot'] },
+  { id: 'at_sorcerer', displayName: '魔術士', epithetEn: 'Sorcerer', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'somewhatSlow', maxHp: 80, atk: 26, def: 5, reg: 20, growthPresetKey: 'caster', growthTier: { maxHp: 2, atk: 3, def: 1 }, passiveIds: ['passive_target_lowest_reg'] },
+  { id: 'at_enchanter', displayName: '符術士', epithetEn: 'Enchanter', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'normal', maxHp: 78, atk: 22, def: 6, reg: 15, growthPresetKey: 'caster', growthTier: { maxHp: 2, atk: 2, def: 1 }, passiveIds: ['passive_target_lowest_def'] },
+  { id: 'at_geomancer', displayName: '法陣師', epithetEn: 'Geomancer', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'somewhatSlow', maxHp: 72, atk: 24, def: 4, reg: 10, growthPresetKey: 'caster', growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_aoe_crowd_bonus'] },
+  { id: 'sp_cleric', displayName: '療養師', epithetEn: 'Cleric', role: 'supporter', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'slow', maxHp: 105, atk: 12, def: 11, reg: 10, growthTier: { maxHp: 2, atk: 1, def: 2 }, passiveIds: [] },
+  { id: 'sp_abjurer', displayName: '結界師', epithetEn: 'Abjurer', role: 'supporter', formationRow: 'middle', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 95, atk: 10, def: 12, reg: 10, growthTier: { maxHp: 2, atk: 1, def: 2 }, passiveIds: ['passive_heal_barrier'] },
+  { id: 'sp_alchemist', displayName: '薬草師', epithetEn: 'Herbalist', role: 'supporter', formationRow: 'middle', attackRange: 'melee', attackSpeedTier: 'normal', maxHp: 98, atk: 14, def: 9, reg: 10, growthTier: { maxHp: 2, atk: 2, def: 1 }, passiveIds: ['passive_alchemist_hot'] },
 ];
 
 const magicClassIds = new Set(['at_sorcerer', 'at_enchanter', 'at_geomancer']);
@@ -207,9 +207,6 @@ addActive('sp_abjurer_active_1', '結界', { kind: 'time', value: 9 }, [
 addActive('sp_alchemist_active_1', '攻性薬', { kind: 'time', value: 9 }, [
   { targetRule: 'mostDamagedAlly', type: 'buff', buffStat: 'atk', buffMultiplier: 1.15, buffDurationSec: 8 },
 ]);
-addActive('sp_alchemist_active_2', '毒霧', { kind: 'time', value: 10 }, [
-  { targetRule: 'frontEnemy', type: 'debuff', debuffStat: 'def', debuffMultiplier: 0.85, debuffDurationSec: 6, targetShape: 'aoe', aoeRadiusPx: 60 },
-]);
 
 const legacy = JSON.parse(fs.readFileSync('data/skills.json', 'utf8')).actives.filter(
   (s) => s.id.startsWith('test_') || s.id.startsWith('stage1_'),
@@ -221,7 +218,6 @@ const classesJson = classes.map((cls) => ({
   role: cls.role,
   displayName: cls.displayName,
   epithetEn: cls.epithetEn,
-  flavorJa: cls.flavorJa,
   formationRow: cls.formationRow,
   traits: { attackRange: cls.attackRange },
   maxHp: cls.maxHp,

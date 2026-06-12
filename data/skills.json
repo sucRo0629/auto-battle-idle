@@ -319,12 +319,12 @@
     },
     {
       "id": "sp_alchemist_passive_1",
-      "name": "薬草の香り",
+      "name": "sp_alchemist_passive_1",
       "effect": "heal",
       "healSubKind": "hot",
       "hotAmount": {
         "kind": "percentMaxHp",
-        "percentOfMaxHp": 0.005
+        "percentOfMaxHp": 0.004
       },
       "hotTargetRule": {
         "kind": "all",
@@ -334,17 +334,18 @@
     {
       "id": "sp_alchemist_passive_2",
       "name": "sp_alchemist_passive_2",
-      "effect": "periodicDispel",
-      "periodicTrigger": "interval",
-      "intervalSec": 5,
-      "dispelTargetRule": {
-        "kind": "all",
-        "side": "ally"
-      },
-      "dispelCount": 1,
-      "dispelTags": [
-        "dot"
-      ]
+      "effect": "buff",
+      "buffSubKind": "stat",
+      "buffStat": [
+        "def"
+      ],
+      "buffMultiplier": 1.1,
+      "buffTargetRule": {
+        "kind": "stat",
+        "side": "ally",
+        "stat": "hp",
+        "order": "highest"
+      }
     },
     {
       "id": "at_lancer_passive_1",
@@ -474,13 +475,18 @@
     },
     {
       "id": "sp_alchemist_passive_3",
-      "name": "sp_alchemist_passive_3",
-      "effect": "targetRuleOverride",
-      "targetRuleOverride": {
-        "kind": "distance",
-        "side": "enemy",
-        "order": "nearest"
-      }
+      "name": "sp_alchemist_passive_2",
+      "effect": "periodicDispel",
+      "periodicTrigger": "interval",
+      "intervalSec": 5,
+      "dispelTargetRule": {
+        "kind": "all",
+        "side": "ally"
+      },
+      "dispelCount": 1,
+      "dispelTags": [
+        "dot"
+      ]
     }
   ],
   "actives": [
@@ -959,8 +965,9 @@
             "order": "nearest"
           },
           "type": "move",
-          "moveMode": "engage",
-          "moveDurationSec": 0.25
+          "moveMode": "toAnchor",
+          "moveDurationSec": 0.25,
+          "anchorOffsetPx": -32
         },
         {
           "targetShape": "pierce",
@@ -968,9 +975,8 @@
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.2
+            "atkScale": 1.1
           },
-          "pierceDurationSec": 0.2,
           "target": {
             "kind": "distance",
             "side": "enemy",
@@ -1579,7 +1585,7 @@
     },
     {
       "id": "sp_alchemist_active_1",
-      "name": "霧",
+      "name": "sp_alchemist_active_1",
       "trigger": {
         "kind": "time",
         "value": 10
@@ -1587,83 +1593,29 @@
       "effect": [
         {
           "target": {
+            "kind": "all",
+            "side": "ally"
+          },
+          "type": "heal",
+          "healSubKind": "hot",
+          "durationSec": 8,
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.35
+          },
+          "targetShape": "single"
+        },
+        {
+          "target": {
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
           },
-          "type": "damage",
-          "damageType": "magic",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 0.2
-          },
-          "targetShape": "scatter",
-          "scatterRadiusPx": 50,
-          "scatterSpreadRadiusPx": 100,
-          "scatterHitCount": 5,
-          "scatterDurationSec": 5,
-          "scatterSpreadRate": 1
-        },
-        {
-          "target": {
-            "kind": "stat",
-            "side": "ally",
-            "stat": "hp",
-            "order": "ratio"
-          },
-          "type": "heal",
-          "healSubKind": "instant",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 0.3
-          },
-          "targetShape": "scatter",
-          "scatterRadiusPx": 50,
-          "scatterSpreadRadiusPx": 100,
-          "scatterHitCount": 5,
-          "scatterDurationSec": 5,
-          "scatterSpreadRate": 1
-        }
-      ]
-    },
-    {
-      "id": "sp_alchemist_active_2",
-      "name": "薬",
-      "trigger": {
-        "kind": "basicAttackCount",
-        "value": 4
-      },
-      "effect": [
-        {
-          "type": "buff",
-          "buffStat": "attackSpeed",
-          "buffMultiplier": 1.15,
-          "buffDurationSec": 8,
-          "target": {
-            "kind": "stat",
-            "side": "ally",
-            "stat": "hp",
-            "order": "ratio"
-          },
-          "buffSubKind": "stat",
-          "targetShape": "chain",
-          "chainCount": 3,
-          "chainMaxDistancePx": 80
-        },
-        {
-          "target": {
-            "kind": "stat",
-            "side": "ally",
-            "stat": "hp",
-            "order": "ratio"
-          },
-          "type": "heal",
-          "healSubKind": "hot",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 0.15
-          },
-          "durationSec": 8
+          "type": "debuff",
+          "debuffSubKind": "stat",
+          "debuffStat": "atk",
+          "debuffMultiplier": 0.85,
+          "debuffDurationSec": 7
         }
       ]
     },
@@ -1988,7 +1940,7 @@
           "healSubKind": "instant",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1
+            "atkScale": 0.55
           }
         }
       ]

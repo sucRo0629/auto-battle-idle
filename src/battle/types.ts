@@ -96,8 +96,6 @@ export interface ClassPreset extends CombatStats {
   displayName: string;
   /** 英語職名（UI ルビ上段。表示リファクタ時に使用） */
   epithetEn?: string;
-  /** 1行フレーバーテキスト */
-  flavorJa?: string;
   formationRow: FormationRow;
   traits: NormalizedEntityTraits;
   /** 未指定時は `{id}_basic_attack` */

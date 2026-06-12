@@ -54,7 +54,7 @@
 
 ### 一次職マスタ（15 種）
 
-表示名の英語肩書きは `epithetEn`、一行フレーバーは `flavorJa`（UI 表示は Phase 3c 以降。データのみ先行投入）。
+表示名の英語肩書きは `epithetEn`（UI 表示は Phase 3c 以降）。
 
 #### defender（`df_`）
 
@@ -84,11 +84,30 @@
 | -------------- | ------ | --------- | ------ | ---- | ----------------------- | --------------------- |
 | `sp_cleric`    | 療養師 | Cleric    | back   | 遠隔 | `sp_cleric_passive_1`（低 HP 味方への回復量増） | `sp_cleric_active_1` のみ |
 | `sp_abjurer`   | 結界師 | Abjurer   | back   | 遠隔 | Lv0: `passive_1`（Wave 開始バリア）+ `passive_2`（余剰回復→バリア）／Lv10: `passive_3`（前衛被ダメ軽減） | `sp_abjurer_active_1` のみ |
-| `sp_alchemist` | 薬草師 | Alchemist | back   | 遠隔 | 弱 HoT + 自 debuff 延長 | `sp_alchemist_active_1`（`active_2` は基本性能確定まで保留） |
+| `sp_alchemist` | 薬草師 | Herbalist | back   | 遠隔 | Lv0: `passive_1`（常時 HoT aura）／`passive_2`・`passive_3` は未配線 | `sp_alchemist_active_1` のみ（範囲 HoT + 敵 atk debuff） |
 
 スキル表示名はデータ上 **ID と同一の仮名**（例: `sp_abjurer_active_1`）。正式名称は後日決定。
 
-**サポーター共通:** 通常攻撃・パッシブ・`active_1` の基本性能が固まるまで **`active_2` は設計・習得しない**（薬草師の現行 `active_2` 配線は別プランで整理）。療養師・結界師の回復力順位: 療養師 ≈ 結界師 **＞** 薬草師（バフ／デバフ分のため）。
+**サポーター共通（Lv0）**
+
+| ルール | 内容 |
+| ------ | ---- |
+| **`active_2`** | 基本性能確定まで **習得・配線しない**（Lv20 枝候補として保留） |
+| **味方火力 buff** | Lv0 **禁止**（例: `atk` / `attackSpeed` buff） |
+| **敵被ダメ debuff** | Lv0 **禁止**（例: 敵 `def`↓、`damageTaken`↑） |
+| **敵 atk debuff** | **薬草師 Lv0 のみ可**（sustain 遅延。DPS 強化ではない） |
+
+**三サポ Lv0 役割分担**
+
+| クラス | Lv0 主軸 |
+| ------ | -------- |
+| `sp_cleric` | 純回復 + 低 HP heal 特化 |
+| `sp_abjurer` | バリア + 少量回復 |
+| `sp_alchemist` | **HoT 二段**（passive aura + active 範囲 HoT）+ **敵 atk debuff** |
+
+**回復力順位:** 療養師 ≈ 結界師 **＞ 薬草師**（instant/burst heal は意図的に劣る。sustain は HoT 二段 + debuff で補う）。バランス目標: 鉄衛 + 薬草師 90 秒 sim で実効 HP は cleric 比 **上限 75%**。
+
+**薬草師（Herbalist）設計メモ:** 参照は Perfumer（常時 HoT + active 範囲 HoT）+ Mulberry（Lv10+ 味方 `def` / `reg` buff）。Lv0 では毒 DoT・scatter 与ダメ・AK 呪癒師型（通常攻撃 dmg+heal 同時）は載せない。狩猟士（罠 + DoT 毒）との差: 薬草師 = HoT sustain + 与ダメ debuff（毒 DoT なし）。
 
 ### デモ編成（`parties.json` demo）
 
@@ -156,7 +175,6 @@ growthTier: GrowthTierSet;
 growthPresetKey?: "attacker" | "caster"; // 魔術系（at_sorcerer 等）の成長合成
 attackSpeedTier?: AttackSpeedTier;       // 未指定 = normal
 epithetEn?: string;   // 英語肩書き（UI 未接続）
-flavorJa?: string;    // 一行フレーバー
 passiveIds?: string[]; // クラス固有パッシブ（skills.json passives への参照）
 ```
 

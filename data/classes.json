@@ -257,14 +257,8 @@
       {
         "level": 0,
         "skillIds": [
-          "at_lancer_passive_1"
-        ]
-      },
-      {
-        "level": 10,
-        "skillIds": [
-          "at_lancer_active_1",
-          "at_lancer_active_2"
+          "at_lancer_passive_1",
+          "at_lancer_active_1"
         ]
       }
     ],
@@ -529,7 +523,6 @@
     "role": "supporter",
     "displayName": "結界師",
     "epithetEn": "Abjurer",
-    "flavorJa": "癒しの余りを結界に変え、味方をダメージから守る",
     "formationRow": "back",
     "traits": {
       "rangePx": 100
@@ -572,7 +565,7 @@
     "id": "sp_alchemist",
     "role": "supporter",
     "displayName": "薬草師",
-    "epithetEn": "Alchemist",
+    "epithetEn": "Herbalist",
     "formationRow": "back",
     "traits": {
       "rangePx": 90
@@ -586,7 +579,8 @@
     "basicAttackSkillId": "sp_alchemist_basic_attack",
     "passiveIds": [
       "sp_alchemist_passive_1",
-      "sp_alchemist_passive_2"
+      "sp_alchemist_passive_2",
+      "sp_alchemist_passive_3"
     ],
     "skills": [
       {
@@ -594,8 +588,13 @@
         "skillIds": [
           "sp_alchemist_passive_1",
           "sp_alchemist_passive_2",
-          "sp_alchemist_active_1",
-          "sp_alchemist_active_2"
+          "sp_alchemist_active_1"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "sp_alchemist_passive_3"
         ]
       }
     ],

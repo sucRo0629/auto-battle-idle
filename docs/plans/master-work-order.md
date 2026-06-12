@@ -42,7 +42,7 @@ flowchart LR
 ## Phase 2（完了）
 
 - `stun` / `knockback` 効果 + BattleEngine 行動スキップ
-- `epithetEn` / `flavorJa` を `classes.json` に追加（UI は 3c）
+- `epithetEn` を `classes.json` に追加（UI は 3c）
 - 15 一次職（`df_` / `at_` / `sp_`）+ `parties.json` 更新
 - [`docs/spec/combat.md`](../spec/combat.md) ヘイト・CC 節
 - [`docs/spec/classes-and-skills.md`](../spec/classes-and-skills.md) 15 職マスタ

@@ -383,21 +383,6 @@ export class ClassEditorStep {
           })
         )
       );
-      identityGrid.appendChild(
-        createFieldRow(
-          "背景文 (flavorJa)",
-          createTextInput(draft.class.flavorJa ?? "", (flavorJa) => {
-            commitDraft((next) => {
-              const trimmed = flavorJa.trim();
-              if (trimmed) {
-                next.class.flavorJa = trimmed;
-              } else {
-                delete next.class.flavorJa;
-              }
-            });
-          })
-        )
-      );
     }
     identityGrid.appendChild(
       createFieldRow(
