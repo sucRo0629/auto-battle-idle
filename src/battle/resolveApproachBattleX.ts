@@ -1,7 +1,6 @@
 import type {
   CombatantState,
   GameData,
-  SkillEffectDef,
   TargetSpec,
 } from './types.ts';
 import { getPassiveDefs } from './combatMath.ts';
@@ -19,28 +18,19 @@ import {
   getEffectTarget,
   getTargetPool,
   resolveApproachTargetSpec,
-  targetSpecFaction,
 } from './skills/targetSpec.ts';
 import { getAttackablePool, isWithinSkillRange } from './skills/rangeUtils.ts';
 import { isStationaryUnit } from './data/entityTraits.ts';
 import { applyFormationRowApproachSpacing } from './battleLayout.ts';
+import { FORMATION_DEPTH_STEP_PX } from './battleLayout.ts';
 import {
   compareFormationRowSlot,
   computePartyFormationBattleX,
 } from './partyFormation.ts';
-import { resolveEffectiveBasicAttackSkill } from './resolveEffectiveBasicAttack.ts';
-
-function resolveBasicAttackEffect(
-  unit: CombatantState,
-  gameData: GameData,
-): SkillEffectDef | undefined {
-  const basicCd = unit.cooldowns.find((cd) => cd.slotKind === 'basic');
-  const skillId = basicCd?.skillId;
-  const baseSkill = skillId ? gameData.skillRegistry.actives[skillId] : undefined;
-  if (!baseSkill) return undefined;
-  const skill = resolveEffectiveBasicAttackSkill(unit, baseSkill);
-  return skill.effect.find((entry) => entry.type !== 'move');
-}
+import {
+  isAllyHealBasicAttack,
+  resolveBasicAttackEffect,
+} from './allyHealBasicAttack.ts';
 
 function resolveBasicAttackTarget(
   unit: CombatantState,
@@ -49,15 +39,6 @@ function resolveBasicAttackTarget(
   const effect = resolveBasicAttackEffect(unit, gameData);
   if (effect) return getEffectTarget(effect);
   return { kind: 'distance', side: 'enemy', order: 'nearest' };
-}
-
-function isAllyHealBasicAttack(
-  unit: CombatantState,
-  gameData: GameData,
-): boolean {
-  const effect = resolveBasicAttackEffect(unit, gameData);
-  if (!effect || effect.type !== 'heal') return false;
-  return targetSpecFaction(getEffectTarget(effect), unit) === 'ally';
 }
 
 function resolveAllyHealBasicTargetSpec(
@@ -247,7 +228,7 @@ function capForwardAfterMeleeWipe(
   ) {
     return approachX;
   }
-  if (approachX > player.battleX) {
+  if (approachX !== player.battleX) {
     return player.battleX;
   }
   return approachX;
@@ -393,6 +374,34 @@ function toPlacementInput(unit: CombatantState) {
   };
 }
 
+function capFrontRowSupporterBehindDefenders(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  contact: number,
+  approachX: number,
+): number {
+  if (player.formationRow !== 'front' || player.role !== 'supporter') {
+    return approachX;
+  }
+  let maxDefenderX = Number.NEGATIVE_INFINITY;
+  for (const ally of players) {
+    if (!ally.isAlive) continue;
+    if (ally.formationRow !== 'front' || ally.role !== 'defender') continue;
+    const defX = resolveDefenderApproachBattleX(
+      ally,
+      players,
+      enemies,
+      gameData,
+      contact,
+    );
+    maxDefenderX = Math.max(maxDefenderX, defX);
+  }
+  if (maxDefenderX === Number.NEGATIVE_INFINITY) return approachX;
+  return Math.min(approachX, maxDefenderX - FORMATION_DEPTH_STEP_PX);
+}
+
 /** 列内スペーシング前の個別接近目標 X */
 function resolveIndividualPlayerApproachBattleX(
   player: CombatantState,
@@ -417,6 +426,15 @@ function resolveIndividualPlayerApproachBattleX(
           gameData,
           contact,
         );
+
+  approachX = capFrontRowSupporterBehindDefenders(
+    player,
+    players,
+    enemies,
+    gameData,
+    contact,
+    approachX,
+  );
 
   if (player.formationRow !== 'back') {
     approachX = capFrontRowBeforeEnemyContact(
@@ -476,6 +494,51 @@ export function resolveAllPlayerApproachBattleX(
 
   const spaced = applyFormationRowApproachSpacing(baseApproach, spacingInputs);
   applyFormationMarchFollow(spaced, players);
+
+  // #region agent log
+  const debugPlayers = players.filter(
+    (p) =>
+      p.isAlive &&
+      (p.classId === 'sp_alchemist' || p.classId === 'df_guardian'),
+  );
+  if (debugPlayers.length >= 2) {
+    fetch('http://127.0.0.1:7541/ingest/180ac9f2-daf7-4294-9ba1-9703f79153b8', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': '96f866',
+      },
+      body: JSON.stringify({
+        sessionId: '96f866',
+        runId: 'pre-fix',
+        hypothesisId: 'H1-H5',
+        location: 'resolveApproachBattleX.ts:resolveAllPlayerApproachBattleX',
+        message: 'approach targets guardian vs alchemist',
+        data: {
+          enemyContact: contact,
+          units: debugPlayers.map((p) => ({
+            id: p.id,
+            classId: p.classId,
+            role: p.role,
+            formationRow: p.formationRow,
+            battleX: p.battleX,
+            traitsRangePx: p.traits.rangePx,
+            baseApproachX: baseApproach.get(p.id),
+            spacedApproachX: spaced.get(p.id),
+            approachRangePx: resolveApproachRangePx(
+              p,
+              gameData,
+              livingAllyCount(players),
+            ),
+            basicRangePx: resolveApproachFormationRangePx(p),
+          })),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
+
   return spaced;
 }
 
@@ -541,7 +604,7 @@ function applyFormationMarchFollow(
       const followTarget = leaderTarget + (unitFormX - leaderFormX);
       const spaced = targets.get(unit.id);
       if (spaced !== undefined && spaced > followTarget) {
-        targets.set(unit.id, followTarget);
+        targets.set(unit.id, Math.max(followTarget, unit.battleX));
       }
     }
   }

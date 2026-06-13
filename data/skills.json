@@ -1407,7 +1407,7 @@
           "type": "heal",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.2
+            "atkScale": 1.25
           },
           "target": {
             "kind": "stat",
@@ -1505,7 +1505,7 @@
           "type": "buff",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 2
+            "atkScale": 1.9
           },
           "target": {
             "kind": "stat",
@@ -1531,8 +1531,10 @@
       "effect": [
         {
           "target": {
-            "kind": "all",
-            "side": "ally"
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
           },
           "type": "heal",
           "healSubKind": "hot",
@@ -1541,7 +1543,8 @@
             "kind": "atkBased",
             "atkScale": 0.35
           },
-          "targetShape": "single"
+          "targetShape": "aoe",
+          "aoeRadiusPx": 70
         },
         {
           "target": {
@@ -1553,7 +1556,9 @@
           "debuffSubKind": "stat",
           "debuffStat": "atk",
           "debuffMultiplier": 0.85,
-          "debuffDurationSec": 7
+          "debuffDurationSec": 7,
+          "targetShape": "aoe",
+          "aoeRadiusPx": 70
         }
       ]
     },
@@ -1875,11 +1880,12 @@
             "order": "ratio"
           },
           "type": "heal",
-          "healSubKind": "instant",
+          "healSubKind": "hot",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.55
-          }
+            "atkScale": 0.11
+          },
+          "durationSec": 5
         }
       ]
     },

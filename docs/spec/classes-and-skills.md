@@ -154,13 +154,13 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | `sp_abjurer`   | バリアヒーラー    | barrier + 少量 direct heal + 余剰回復 → バリア                            | **barrier** + **`damageTaken` 軽減**（Lv10 `passive_3`） |
 | `sp_alchemist` | HoT + debuff サポ | **HoT 二段**（`passive_1` aura + `active_1` 範囲 HoT）+ **敵 atk debuff** | Lv0: debuff + HoT／Lv10+: 味方 `def` / `reg` buff 候補   |
 
-**薬草師（Herbalist）参照:** Perfumer（常時 HoT + active 範囲 HoT）+ Mulberry（Lv10+ 味方 `def` / `reg` buff）。Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士（罠 + DoT 毒）との差: 薬草師 = HoT sustain + 与ダメ debuff（毒 DoT なし）。
+**薬草師（Herbalist）参照:** Perfumer（常時 HoT + active 範囲 HoT）+ Mulberry（Lv10+ 味方 `def` / `reg` buff）。Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士（罠 + DoT 毒）との差: 薬草師 = HoT sustain + 与ダメ debuff（毒 DoT なし）。`active_1` の敵 debuff effect は後列から届くよう `effect.range` を `CONFIGURABLE_RANGE_PX_MAX`（460 px）に設定する。
 
 **バランス目標:** 鉄衛 + 薬草師 90 秒 sim で実効 HP は cleric 比 **上限 75%**。
 
 ### 未決・TBD
 
-- 薬草師: 第 3 sustain 要素、`passive_2` 本設計、debuff 延長（エンジン未実装）
+- 薬草師: 第 3 sustain 要素、`passive_2` 本設計
 - 全サポ: `active_2` / Lv20 `passive_4` の具体設計
 - 療養師: `sp_cleric_active_2` は skills.json に下書きがあっても **未配線**（Lv20 候補メモのみ）
 - 結界師: `sp_abjurer_active_2` は **廃止済み**

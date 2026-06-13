@@ -19,10 +19,12 @@ import { getBattleX } from '../combatPosition.ts';
 import {
   getAttackablePool,
   isInForwardSegment,
+  isWithinSkillRange,
   resolveSkillRangePx,
 } from './rangeUtils.ts';
 import {
   applyIncludeSelfFilter,
+  filterSelectablePool,
   getEffectTarget,
   getTargetPool,
   isMultiTargetSpec,
@@ -272,6 +274,14 @@ export function resolveEffectResolution(
     const target = pickTargetFromPoolSpec(spec, actor, pool, {
       moveAnchor: true,
     });
+    const rangePx = resolveSkillRangePx(
+      actor,
+      effect,
+      livingAllies(allies).length,
+    );
+    // #region agent log
+    fetch('http://127.0.0.1:7541/ingest/180ac9f2-daf7-4294-9ba1-9703f79153b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'78c6df'},body:JSON.stringify({sessionId:'78c6df',runId:'pre-fix',hypothesisId:'H2-H3',location:'targeting.ts:resolveEffectResolution',message:'move anchor resolved',data:{actorId:actor.id,actorX:actor.battleX,poolSize:pool.length,targetId:target?.id,targetX:target?.battleX,rangePx,inRange:target?isWithinSkillRange(actor,target,rangePx):null,moveMode:effect.moveMode??'engage'},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!target) return null;
     return {
       waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
@@ -480,9 +490,10 @@ function resolveMultiLockHitTargets(
   attackablePool: CombatantState[],
   hitCount: number,
 ): SkillHitTarget[] {
-  if (attackablePool.length === 0) return [];
+  const selectable = filterSelectablePool(spec, attackablePool);
+  if (selectable.length === 0) return [];
 
-  const ordered = orderPoolByTarget(spec, actor, attackablePool);
+  const ordered = orderPoolByTarget(spec, actor, selectable);
   const targets: SkillHitTarget[] = [];
   for (let i = 0; i < hitCount; i++) {
     targets.push({ unit: ordered[i % ordered.length]! });

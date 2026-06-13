@@ -114,6 +114,52 @@ describe('resolveEffectTargets', () => {
     expect(targets.every((t) => t.id === 'solo')).toBe(true);
   });
 
+  it('multiLock ally hp ratio: ignores full-HP allies', () => {
+    const caster = mockUnit('caster', 200);
+    const damaged = mockUnit('damaged', 180, { hp: 40, maxHp: 100 });
+    const healthy = mockUnit('healthy', 220, { hp: 100, maxHp: 100 });
+    const party = [caster, damaged, healthy];
+
+    const targets = resolveEffectTargets(
+      {
+        type: 'buff',
+        buffSubKind: 'barrier',
+        target: { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' },
+        targetShape: 'multiLock',
+        hitCount: 2,
+        amount: { kind: 'flat', flatAmount: 10 },
+      } as SkillEffectDef,
+      caster,
+      party,
+      [],
+      gameData,
+    );
+    expect(targets).toHaveLength(2);
+    expect(targets.every((t) => t.id === 'damaged')).toBe(true);
+  });
+
+  it('multiLock ally hp ratio: no targets when every ally is full HP', () => {
+    const caster = mockUnit('caster', 200);
+    const healthy1 = mockUnit('h1', 180, { hp: 100, maxHp: 100 });
+    const healthy2 = mockUnit('h2', 220, { hp: 100, maxHp: 100 });
+
+    const targets = resolveEffectTargets(
+      {
+        type: 'buff',
+        buffSubKind: 'barrier',
+        target: { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' },
+        targetShape: 'multiLock',
+        hitCount: 2,
+        amount: { kind: 'flat', flatAmount: 10 },
+      } as SkillEffectDef,
+      caster,
+      [caster, healthy1, healthy2],
+      [],
+      gameData,
+    );
+    expect(targets).toHaveLength(0);
+  });
+
   it('single: repeated hits on same target with duration', () => {
     const resolution = resolveEffectResolution(
       {

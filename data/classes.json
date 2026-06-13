@@ -571,7 +571,7 @@
     "role": "supporter",
     "displayName": "薬草師",
     "epithetEn": "Herbalist",
-    "formationRow": "back",
+    "formationRow": "front",
     "traits": {
       "rangePx": 90
     },

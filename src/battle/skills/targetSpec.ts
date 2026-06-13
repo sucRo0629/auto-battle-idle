@@ -512,6 +512,22 @@ export function pickTargetFromPool(
   return pool[0] ?? null;
 }
 
+/** ally HP 割合最低: 満タン（hp >= maxHp）の味方は対象プールから除外 */
+export function filterSelectablePool(
+  spec: TargetSpec,
+  pool: CombatantState[],
+): CombatantState[] {
+  if (
+    spec.kind === "stat" &&
+    spec.side === "ally" &&
+    spec.stat === "hp" &&
+    spec.order === "ratio"
+  ) {
+    return pool.filter((unit) => unit.isAlive && unit.hp < unit.maxHp);
+  }
+  return pool;
+}
+
 export function orderPoolByTarget(
   spec: TargetSpec,
   actor: CombatantState,

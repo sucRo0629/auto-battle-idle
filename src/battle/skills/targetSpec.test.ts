@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState } from '../types.ts';
 import {
+  filterSelectablePool,
   getTargetPool,
   normalizeTarget,
   pickTargetFromPool,
@@ -166,6 +167,21 @@ describe('getTargetPool / pickTargetFromPool', () => {
     const lowHp = mockUnit('wounded', 180, { hp: 30, maxHp: 100 });
     const pool = getTargetPool(spec, actor, [fullHpWithBarrier, lowHp], enemies);
     expect(pickTargetFromPool(spec, actor, pool)?.id).toBe('wounded');
+  });
+
+  it('filterSelectablePool excludes full-HP allies for hp ratio spec', () => {
+    const spec = {
+      kind: 'stat',
+      side: 'ally',
+      stat: 'hp',
+      order: 'ratio',
+    } as const;
+    const damaged = mockUnit('wounded', 180, { hp: 30, maxHp: 100 });
+    const healthy = mockUnit('healthy', 200, { hp: 100, maxHp: 100 });
+    const pool = getTargetPool(spec, actor, [damaged, healthy], enemies);
+    expect(filterSelectablePool(spec, pool).map((u) => u.id)).toEqual([
+      'wounded',
+    ]);
   });
 
   it('filters ranged attackers', () => {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   applyBarrierToTarget,
   applyDamageToTarget,
@@ -271,6 +271,44 @@ describe('resolveDamage defenseIgnore', () => {
     );
     const baseline = resolveDamage(attacker, magicTarget, magicEffect, {});
     expect(withIgnore).toBeGreaterThan(baseline);
+  });
+
+  it('skips defense ignore when chance roll fails', () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    const baseline = resolveDamage(attacker, target, baseEffect, {});
+    const withFailedChance = resolveDamage(
+      attacker,
+      target,
+      baseEffect,
+      {},
+      {
+        effectDefenseIgnore: {
+          chance: 0.5,
+          def: { mode: 'flat', amount: 50 },
+        },
+      },
+    );
+    expect(withFailedChance).toBe(baseline);
+    randomSpy.mockRestore();
+  });
+
+  it('applies defense ignore when chance roll succeeds', () => {
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    const baseline = resolveDamage(attacker, target, baseEffect, {});
+    const withSucceededChance = resolveDamage(
+      attacker,
+      target,
+      baseEffect,
+      {},
+      {
+        effectDefenseIgnore: {
+          chance: 0.5,
+          def: { mode: 'flat', amount: 50 },
+        },
+      },
+    );
+    expect(withSucceededChance).toBeGreaterThan(baseline);
+    randomSpy.mockRestore();
   });
 
   it('reg buff increases magic mitigation and reg debuff weakens it', () => {

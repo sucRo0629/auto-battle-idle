@@ -123,6 +123,15 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 `formationRow` は Y 描画・ターゲット用。X 深度の正本は射程順一列（`partyFormation.ts`）。
 
+**同一 `formationRow` 内の X 深度（左＝後方、右＝前方）：**
+
+| 列 | ロール順（左→右） |
+|----|-------------------|
+| `front` | supporter → attacker → defender |
+| `back` | supporter → attacker → defender |
+
+前列の supporter は defender より後方スロットに配置される。接敵接近では supporter の停止 X を前列 defender の手前に cap する（`resolveApproachBattleX.ts`）。
+
 ### 2.7 スプライト描画順（重なり）
 
 Canvas 2D の描画順（先に描いた方が下層）で重なりを決める。実装：`src/render/spriteDrawOrder.ts` → `BattleCanvas.ts`。

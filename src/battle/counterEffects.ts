@@ -51,6 +51,7 @@ export interface CounterRetaliationCallbacks {
   getSkillName?: (skillId: string) => string;
   onUnitDied?: (unit: CombatantState) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
+  onTargetReceivedDebuff?: (target: CombatantState) => void;
 }
 
 export interface GrantCounterStatusParams {
@@ -254,6 +255,7 @@ function applyCounterDebuffResponse(
   if (!victim.isEnemy && attacker.isEnemy) {
     callbacks.onDebuffApplied?.(victim);
   }
+  callbacks.onTargetReceivedDebuff?.(attacker);
 
   emitCounterSkillEvent(
     callbacks,
@@ -293,6 +295,8 @@ function applyCounterDotResponse(
     tickSec: 1,
   });
 
+  callbacks.onTargetReceivedDebuff?.(attacker);
+
   emitCounterSkillEvent(
     callbacks,
     victim,
@@ -321,6 +325,8 @@ function applyCounterStunResponse(
     { actives },
   );
   if (!applied) return;
+
+  callbacks.onTargetReceivedDebuff?.(attacker);
 
   emitCounterSkillEvent(
     callbacks,

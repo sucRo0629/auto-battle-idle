@@ -25,7 +25,15 @@ import { grantCounterStatus } from '../counterEffects.ts';
 import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
 import { resolveEffectiveBasicAttackSkill } from '../resolveEffectiveBasicAttack.ts';
 import { basicAttackTransformSpecFromEffect } from '../resolveEffectiveBasicAttack.ts';
-import { resolveMoveBattleX } from '../combatPosition.ts';
+import {
+  resolveAttackBattleX,
+  resolveMoveBattleX,
+} from '../combatPosition.ts';
+import {
+  battleDistance,
+  isWithinSkillRange,
+  resolveSkillRangePx,
+} from './rangeUtils.ts';
 import {
   chargeBasicAttackCountOnHit,
   resetCooldownAfterFire,
@@ -108,6 +116,7 @@ export interface SkillExecutorDeps {
     },
   ) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
+  onTargetReceivedDebuff?: (target: CombatantState) => void;
   onHealApplied?: (target: CombatantState) => void;
   onUnitDied?: (unit: CombatantState) => void;
 }
@@ -433,6 +442,12 @@ export class SkillExecutor {
   ): void {
     const toX = resolveMoveBattleX(actor, anchor, effectDef, this.gameData);
     const fromX = actor.battleX;
+    const rangePx = resolveSkillRangePx(actor, effectDef);
+    const moveDeltaPx = Math.abs(toX - fromX);
+    const engageToX = resolveAttackBattleX(actor, anchor.battleX, this.gameData, rangePx);
+    // #region agent log
+    fetch('http://127.0.0.1:7541/ingest/180ac9f2-daf7-4294-9ba1-9703f79153b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'78c6df'},body:JSON.stringify({sessionId:'78c6df',runId:'pre-fix',hypothesisId:'H1-H4',location:'SkillExecutor.ts:applyMoveEffect',message:'lancer move applied',data:{skillId:skill.id,actorId:actor.id,classId:actor.classId,fromX,toX,moveDeltaPx,rangePx,traitsRangePx:actor.traits.rangePx,moveMode:effectDef.moveMode??'engage',anchorOffsetPx:effectDef.anchorOffsetPx,anchorId:anchor.id,anchorX:anchor.battleX,engageToX,inRange:isWithinSkillRange(actor,anchor,rangePx),battleDist:battleDistance(actor,anchor)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (fromX === toX) {
       this.emit({
         type: 'skill',
@@ -879,6 +894,7 @@ export class SkillExecutor {
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
           });
+          this.deps.onTargetReceivedDebuff?.(target);
           return true;
         }
         if (subKind === 'stun') {
@@ -907,6 +923,7 @@ export class SkillExecutor {
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
           });
+          this.deps.onTargetReceivedDebuff?.(target);
           return true;
         }
       }
@@ -982,6 +999,9 @@ export class SkillExecutor {
       if (!isBuff && actor.isEnemy === false && target.isEnemy) {
         this.deps.onDebuffApplied?.(actor);
       }
+      if (!isBuff) {
+        this.deps.onTargetReceivedDebuff?.(target);
+      }
       return true;
     }
 
@@ -1009,6 +1029,7 @@ export class SkillExecutor {
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
       });
+      this.deps.onTargetReceivedDebuff?.(target);
       return true;
     }
 

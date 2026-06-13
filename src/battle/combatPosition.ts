@@ -20,6 +20,9 @@ import {
   type PartyFormationUnit,
 } from './partyFormation.ts';
 import { resolveSkillRangePx } from './skills/rangeUtils.ts';
+import { isAllyHealBasicAttack } from './allyHealBasicAttack.ts';
+import { getEffectTarget, targetSpecFaction } from './skills/targetSpec.ts';
+import type { SkillEffectDef } from './types.ts';
 
 export function resolveFormationRangePx(unit: CombatantState): number {
   return unit.traits.rangePx;
@@ -332,22 +335,56 @@ export function isEquippedActiveSkillReady(cd: SkillCooldown): boolean {
   return cd.slotKind === 'active' && cd.remaining <= 0;
 }
 
+function activeEffectNeedsEnemyProximity(
+  unit: CombatantState,
+  effect: SkillEffectDef,
+): boolean {
+  if (effect.type === 'move') return false;
+  const faction = targetSpecFaction(getEffectTarget(effect), unit);
+  return faction === 'enemy';
+}
+
 /** 使用可能な装備アクティブの最短射程（move 効果は除外） */
 export function resolveMinReadyEquippedActiveRangePx(
   unit: CombatantState,
   gameData: GameData,
 ): number | null {
   let min: number | null = null;
+  const effectRanges: Array<{ skillId: string; type: string; range: number }> =
+    [];
   for (const cd of unit.cooldowns) {
     if (!isEquippedActiveSkillReady(cd)) continue;
     const skill = gameData.skillRegistry.actives[cd.skillId];
     if (!skill) continue;
     for (const effect of skill.effect) {
-      if (effect.type === 'move') continue;
+      if (!activeEffectNeedsEnemyProximity(unit, effect)) continue;
       const range = resolveSkillRangePx(unit, effect);
+      effectRanges.push({ skillId: cd.skillId, type: effect.type, range });
       min = min === null ? range : Math.min(min, range);
     }
   }
+
+  // #region agent log
+  if (unit.classId === 'sp_alchemist' && effectRanges.length > 0) {
+    fetch('http://127.0.0.1:7541/ingest/180ac9f2-daf7-4294-9ba1-9703f79153b8', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Debug-Session-Id': '96f866',
+      },
+      body: JSON.stringify({
+        sessionId: '96f866',
+        runId: 'pre-fix',
+        hypothesisId: 'H2',
+        location: 'combatPosition.ts:resolveMinReadyEquippedActiveRangePx',
+        message: 'alchemist ready active effect ranges',
+        data: { formationRow: unit.formationRow, effectRanges, minReadyRange: min },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
+
   return min;
 }
 
@@ -365,6 +402,16 @@ export function resolveApproachRangePx(
   return basic;
 }
 
+function usesRangedApproachStop(
+  unit: CombatantState,
+  basicRange: number,
+  gameData: GameData,
+): boolean {
+  if (unit.isEnemy) return !isMeleeRangePx(basicRange);
+  if (isAllyHealBasicAttack(unit, gameData)) return true;
+  return !isMeleeRangePx(basicRange);
+}
+
 export function resolveApproachAttackBattleX(
   unit: CombatantState,
   contactX: number,
@@ -373,15 +420,10 @@ export function resolveApproachAttackBattleX(
 ): number {
   const basicRange = resolveBasicAttackRangePx(unit, gameData, livingAllyCount);
   const rangePx = resolveApproachRangePx(unit, gameData, livingAllyCount);
-  const stopX =
-    !unit.isEnemy && !isMeleeRangePx(basicRange)
-      ? contactX - rangePx
-      : resolveAttackBattleX(unit, contactX, gameData, rangePx);
-  if (
-    !unit.isEnemy &&
-    !isMeleeRangePx(basicRange) &&
-    stopX < unit.battleX
-  ) {
+  const stopX = usesRangedApproachStop(unit, basicRange, gameData)
+    ? contactX - rangePx
+    : resolveAttackBattleX(unit, contactX, gameData, rangePx);
+  if (!unit.isEnemy && stopX < unit.battleX) {
     return unit.battleX;
   }
   return stopX;
@@ -397,9 +439,13 @@ export function resolveMoveBattleX(
 
   if (mode === 'toAnchor') {
     const offset = effect.anchorOffsetPx ?? 0;
-    return actor.isEnemy
+    const toX = actor.isEnemy
       ? anchor.battleX - offset
       : anchor.battleX + offset;
+    // #region agent log
+    fetch('http://127.0.0.1:7541/ingest/180ac9f2-daf7-4294-9ba1-9703f79153b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'78c6df'},body:JSON.stringify({sessionId:'78c6df',runId:'pre-fix',hypothesisId:'H1',location:'combatPosition.ts:resolveMoveBattleX',message:'toAnchor destination',data:{actorId:actor.id,fromX:actor.battleX,toX,anchorX:anchor.battleX,offset,moveDeltaPx:Math.abs(toX-actor.battleX)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    return toX;
   }
 
   if (actor.isEnemy) {

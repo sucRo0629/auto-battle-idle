@@ -13,6 +13,7 @@ import {
   applyDefenseIgnoreToDef,
   applyDefenseIgnoreToReg,
   getPassiveDefenseIgnoreSpec,
+  rollDefenseIgnoreSpec,
 } from './defenseIgnore.ts';
 import {
   getPassiveOutgoingDamageMultiplier,
@@ -350,8 +351,10 @@ export function resolveDamage(
 
   const ignoreSpecs = [
     getPassiveDefenseIgnoreSpec(attacker, passives),
-    options.effectDefenseIgnore ?? effect.defenseIgnore,
-    options.statusDefenseIgnore,
+    rollDefenseIgnoreSpec(
+      options.effectDefenseIgnore ?? effect.defenseIgnore,
+    ),
+    rollDefenseIgnoreSpec(options.statusDefenseIgnore),
   ];
 
   const damageType: DamageType = effect.damageType ?? attacker.traits.damageType;
