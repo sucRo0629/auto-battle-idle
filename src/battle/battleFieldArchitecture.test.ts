@@ -45,7 +45,7 @@ describe('battle-field architecture spec (A-*)', { timeout: LONG_BATTLE_TIMEOUT_
     },
   );
 
-  it('A-§4.6-01: Engaged ally screenX per-tick delta stays bounded (Wave 1)', () => {
+  it('A-§4.6-01: Engaged ally battleX per-tick delta stays bounded (Wave 1)', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
 

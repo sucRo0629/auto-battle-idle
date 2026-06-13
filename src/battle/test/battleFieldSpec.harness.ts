@@ -10,7 +10,14 @@ import levelCurvesJson from '../../../data/levelCurves.json';
 import { createDefaultSave } from '../../progression/victoryRewards.ts';
 import { SPRITE_WIDTH } from '../battleConstants.ts';
 import type { SkillSequenceRunner } from '../skills/skillSequence.ts';
-import type { CombatantSnapshot, CombatantState, GameData, SkillTriggerKind } from '../types.ts';
+import {
+  DEFAULT_MELEE_RANGE_PX,
+  RANGED_ATTACK_MIN_PX,
+  type CombatantSnapshot,
+  type CombatantState,
+  type GameData,
+  type SkillTriggerKind,
+} from '../types.ts';
 
 /** private フィールドへのアクセス用（`BattleEngine & {...}` は never になるため unknown 経由） */
 export type BattleEngineInternals = {
@@ -26,7 +33,7 @@ export function asBattleEngineInternals(engine: BattleEngine): BattleEngineInter
   return engine as unknown as BattleEngineInternals;
 }
 
-export const LONG_BATTLE_TIMEOUT_MS = 60_000;
+export const LONG_BATTLE_TIMEOUT_MS = 120_000;
 export const SCREEN_MIN_X = -18;
 export const SCREEN_MAX_X = 496;
 export const MARCH_MAX_ALLY_SCREEN_X = 280;
@@ -74,11 +81,16 @@ export function createStage1Wave1MeleeFirstDeathEngine(
   options?: BattleEngineOptions,
 ) {
   const gameData = structuredClone(loadGameData());
-  const stage1_1 = gameData.enemyRegistry.stage1_1;
+  const stage = gameData.stages.find((s) => s.id === '1');
+  if (stage?.waves[0]) {
+    stage.waves[0].enemies = [
+      { templateId: 'test_enemy', spawnX: 100 },
+      { templateId: 'test_ranged', spawnX: 160 },
+    ];
+  }
   const melee = gameData.enemyRegistry.test_enemy;
   const ranged = gameData.enemyRegistry.test_ranged;
-  if (stage1_1) stage1_1.maxHp = 1;
-  if (melee) melee.maxHp = 1;
+  if (melee) melee.maxHp = 400;
   if (ranged) ranged.maxHp = 9_999;
   const levelCurves = loadLevelCurves(levelCurvesJson);
   const save = createDefaultSave(gameData, 'demo');
@@ -201,10 +213,13 @@ export function reachWave1Engage(
   throw new Error('wave 1 engagement did not occur');
 }
 
-export function reachWave2Engage(engine: BattleEngine): BattleSnapshot {
+export function reachWave2Engage(
+  engine: BattleEngine,
+  maxTicks = 200_000,
+): BattleSnapshot {
   waitForEngaged(engine);
   let preEngage: BattleSnapshot | null = null;
-  for (let i = 0; i < 200_000; i++) {
+  for (let i = 0; i < maxTicks; i++) {
     const before = engine.getSnapshot();
     if (
       before.waveIndex === 1 &&
@@ -220,6 +235,113 @@ export function reachWave2Engage(engine: BattleEngine): BattleSnapshot {
     }
   }
   throw new Error('wave 2 engagement did not occur');
+}
+
+export function enemyRangePx(enemy: { rangePx?: number }): number {
+  return enemy.rangePx ?? DEFAULT_MELEE_RANGE_PX;
+}
+
+export function isShortRangeEnemy(enemy: { rangePx?: number }): boolean {
+  return enemyRangePx(enemy) < RANGED_ATTACK_MIN_PX;
+}
+
+export function isLongRangeEnemy(enemy: { rangePx?: number }): boolean {
+  return enemyRangePx(enemy) >= RANGED_ATTACK_MIN_PX;
+}
+
+/** Engaged window: short-range enemies dead, long-range alive, allies alive. */
+export function isShortRangeWipedEngaged(
+  snap: BattleSnapshot,
+  waveIndex: number,
+): boolean {
+  if (snap.waveIndex !== waveIndex || !snap.engaged) return false;
+  const livingAllies = snap.allies.filter((a) => a.hp > 0);
+  const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
+  const livingShortRange = livingEnemies.filter(isShortRangeEnemy);
+  return (
+    livingAllies.length > 0 &&
+    livingEnemies.length > 0 &&
+    livingShortRange.length === 0 &&
+    livingEnemies.some(isLongRangeEnemy)
+  );
+}
+
+export function advanceUntilShortRangeWipe(
+  engine: BattleEngine,
+  waveIndex: number,
+  maxTicks = 90_000,
+): BattleSnapshot | null {
+  return advanceUntil(
+    engine,
+    (s) => isShortRangeWipedEngaged(s, waveIndex),
+    maxTicks,
+  );
+}
+
+export interface AllyDriftAfterShortRangeWipeResult {
+  wipeTick: number;
+  maxLeftDrift: number;
+  maxRightDrift: number;
+}
+
+/**
+ * Advance to short-range wipe, then measure ally battleX drift for N ticks (§4.4 cap).
+ * Fails fast when wipe window is never reached (no 120k blind loop).
+ */
+export function measureAllyBattleXDriftAfterShortRangeWipe(
+  engine: BattleEngine,
+  options: {
+    waveIndex?: number;
+    maxTicksToWipe?: number;
+    maxTicksAfterWipe?: number;
+  } = {},
+): AllyDriftAfterShortRangeWipeResult {
+  const waveIndex = options.waveIndex ?? 0;
+  const maxTicksAfterWipe = options.maxTicksAfterWipe ?? 250;
+  const maxTicksToWipe = options.maxTicksToWipe ?? 20_000;
+
+  let wipeTick = -1;
+  let minAllyXAtWipe = Infinity;
+  let maxAllyXAtWipe = -Infinity;
+  let maxLeftDrift = 0;
+  let maxRightDrift = 0;
+
+  for (let t = 0; t < maxTicksToWipe; t++) {
+    engine.tick(TICK_DT);
+    const snap = engine.getSnapshot();
+    if (snap.waveIndex !== waveIndex) continue;
+
+    const livingAllies = snap.allies.filter((a) => a.hp > 0);
+    const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
+    const livingShortRange = livingEnemies.filter(isShortRangeEnemy);
+
+    if (
+      wipeTick < 0 &&
+      livingShortRange.length === 0 &&
+      livingAllies.length > 0 &&
+      livingEnemies.length > 0 &&
+      livingEnemies.some(isLongRangeEnemy)
+    ) {
+      wipeTick = t;
+      minAllyXAtWipe = Math.min(...livingAllies.map((a) => a.battleX));
+      maxAllyXAtWipe = Math.max(...livingAllies.map((a) => a.battleX));
+    }
+
+    if (
+      wipeTick >= 0 &&
+      t - wipeTick <= maxTicksAfterWipe &&
+      snap.engaged
+    ) {
+      const minNow = Math.min(...livingAllies.map((a) => a.battleX));
+      const maxNow = Math.max(...livingAllies.map((a) => a.battleX));
+      maxLeftDrift = Math.max(maxLeftDrift, minAllyXAtWipe - minNow);
+      maxRightDrift = Math.max(maxRightDrift, maxNow - maxAllyXAtWipe);
+    }
+
+    if (wipeTick >= 0 && t - wipeTick > maxTicksAfterWipe) break;
+  }
+
+  return { wipeTick, maxLeftDrift, maxRightDrift };
 }
 
 

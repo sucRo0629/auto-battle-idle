@@ -9,6 +9,7 @@ import levelCurvesJson from '../../data/levelCurves.json';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
 import {
   LONG_BATTLE_TIMEOUT_MS,
+  MARCH_MAX_ALLY_SCREEN_X,
   SCREEN_MAX_X,
   SPRITE_WIDTH,
   TICK_DT,
@@ -22,22 +23,29 @@ const allyScreenX = screenX;
 const enemyScreenX = screenX;
 
 describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_MS }, () => {
-  it('I-§4.1-01: PartyDeploy runs before engage on wave start', () => {
+  it('I-§4.1-01: pre-engage PartyDeploy keeps allies on the left side of screen', () => {
     const engine = createStage1Engine();
     let sawDeploy = false;
+    let sawLeftSideAlly = false;
     for (let i = 0; i < 8000; i++) {
       engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (snap.partyDeployActive) {
         sawDeploy = true;
         expect(snap.engaged).toBe(false);
+        for (const ally of snap.allies.filter((a) => a.hp > 0)) {
+          if (allyScreenX(ally) <= MARCH_MAX_ALLY_SCREEN_X) {
+            sawLeftSideAlly = true;
+          }
+        }
       }
       if (snap.engaged) break;
     }
     expect(sawDeploy).toBe(true);
+    expect(sawLeftSideAlly).toBe(true);
   });
 
-  it('I-§4.1-03b: Wave 1 engage first 15s all allies stay roughly on screen', () => {
+  it('I-§4.1-03b: Wave 1 engaged first 15s — living allies stay on screen (battleX)', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
 
@@ -53,7 +61,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
     }
   });
 
-  it('I-§4.1-07: Wave 1 engage enemies stay on screen with stable per-tick delta', () => {
+  it('I-§4.1-07: Wave 1 engaged — enemies stay on screen with stable per-tick battleX delta', () => {
     const engine = createStage1Engine();
     reachWave1Engage(engine);
 
@@ -79,7 +87,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
     expect(maxSingleTickDelta).toBeLessThanOrEqual(32);
   });
 
-  it('I-§4.1-06a: Victory wipe max single-tick ally screen jump stays under 15px', () => {
+  it('I-§4.1-06a: victory / wipe transition — ally battleX single-tick jump bounded', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     waitForEngaged(engine);
 
@@ -157,7 +165,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
     expect(maxSingleTickJump).toBeLessThanOrEqual(32);
   });
 
-  it('I-§4.1-05: Wave 1 clear to Wave 2 PartyDeploy — ally screen jump stays bounded', () => {
+  it('I-§4.1-05: Wave 1 clear → Wave 2 PartyDeploy — ally battleX jump bounded', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
 
     let ticksAfterWave1Clear = 0;
@@ -211,7 +219,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
     expect(maxJump).toBeLessThanOrEqual(500);
   });
 
-  it('I-§4.1-06b: Wave 2 enemy wipe tick — ally screen jump stays under 20px', () => {
+  it('I-§4.1-06b: Wave 2 enemy wipe tick — ally battleX jump stays under 20px', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     waitForEngaged(engine);
 
@@ -248,7 +256,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
     expect(maxWipeJump).toBeLessThanOrEqual(20);
   });
 
-  it('I-Victory-01: allies start on-screen before exit march', () => {
+  it('I-Victory-01: allies on-screen (battleX) before exit march', () => {
     const gameData = loadGameData();
     const stage1 = gameData.stages.find((s) => s.id === '1');
     if (stage1) {
@@ -294,7 +302,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
     expect.fail('victory did not occur');
   });
 
-  it('I-Victory-03: victory preserves pre-wipe engaged ally positions (no ROW_X snap)', () => {
+  it('I-Victory-03: victory preserves pre-wipe engaged ally battleX (no formation snap)', () => {
     const engine = createStage1Engine({ reliableWaveClear: true });
     waitForEngaged(engine);
 
@@ -328,7 +336,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
     expect.fail('victory did not occur');
   });
 
-  it('I-Victory-02: allies march off-screen to the right', () => {
+  it('I-Victory-02: allies march off-screen to the right (+battleX)', () => {
     const gameData = loadGameData();
     const stage1 = gameData.stages.find((s) => s.id === '1');
     if (stage1?.waves[0]) {
@@ -364,14 +372,14 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
     expect(victorySnap).not.toBeNull();
 
     const startX = Math.min(
-      ...victorySnap!.allies.filter((a) => a.hp > 0).map((a) => a.visualX),
+      ...victorySnap!.allies.filter((a) => a.hp > 0).map((a) => a.battleX),
     );
     for (let i = 0; i < 120; i++) {
       engine.tick(TICK_DT);
     }
     const later = engine.getSnapshot();
     const laterX = Math.min(
-      ...later.allies.filter((a) => a.hp > 0).map((a) => a.visualX),
+      ...later.allies.filter((a) => a.hp > 0).map((a) => a.battleX),
     );
     expect(laterX).toBeGreaterThan(startX);
   });
