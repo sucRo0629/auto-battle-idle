@@ -1,6 +1,6 @@
-import { PLACEHOLDER_SPRITE_KEYS } from '../battle/classVisuals.ts';
-import type { StatusDisplayCategory } from '../battle/statusEffectDisplay.ts';
-import { ENEMY_DEFAULT_SPRITE_KEY } from './SpriteRegistry.ts';
+import { PLACEHOLDER_SPRITE_KEYS } from "../battle/classVisuals.ts";
+import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
+import { ENEMY_DEFAULT_SPRITE_KEY } from "./SpriteRegistry.ts";
 
 export interface BattleHudTheme {
   iconSize: number;
@@ -99,7 +99,6 @@ export interface BattleHudTheme {
   spriteAttackerMelee: string;
   spriteSupporter: string;
   spriteAttackerRanged: string;
-  spriteSlime: string;
   spriteEnemyDefault: string;
   spriteDefault: string;
   iconDefender: string;
@@ -124,7 +123,7 @@ export interface BattleHudTheme {
 function readNumber(
   style: CSSStyleDeclaration,
   name: string,
-  fallback: number,
+  fallback: number
 ): number {
   const raw = style.getPropertyValue(name).trim();
   if (!raw) return fallback;
@@ -135,7 +134,7 @@ function readNumber(
 function readString(
   style: CSSStyleDeclaration,
   name: string,
-  fallback: string,
+  fallback: string
 ): string {
   const raw = style.getPropertyValue(name).trim();
   return raw || fallback;
@@ -145,233 +144,260 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
   const style = getComputedStyle(host);
 
   return {
-    iconSize: readNumber(style, '--hud-icon-size', 24),
-    barW: readNumber(style, '--hud-bar-w', 80),
-    iconBarGap: readNumber(style, '--hud-icon-bar-gap', 4),
-    barSkillGap: readNumber(style, '--hud-bar-skill-gap', 2),
-    bottomMargin: readNumber(style, '--hud-bottom-margin', 5),
-    offsetY: readNumber(style, '--hud-offset-y', 0),
+    iconSize: readNumber(style, "--hud-icon-size", 24),
+    barW: readNumber(style, "--hud-bar-w", 80),
+    iconBarGap: readNumber(style, "--hud-icon-bar-gap", 4),
+    barSkillGap: readNumber(style, "--hud-bar-skill-gap", 2),
+    bottomMargin: readNumber(style, "--hud-bottom-margin", 5),
+    offsetY: readNumber(style, "--hud-offset-y", 0),
     backdropColor: readString(
       style,
-      '--hud-backdrop-color',
-      'rgba(0, 0, 0, 0.45)',
+      "--hud-backdrop-color",
+      "rgba(0, 0, 0, 0.45)"
     ),
-    backdropPadX: readNumber(style, '--hud-backdrop-pad-x', 6),
-    backdropPadY: readNumber(style, '--hud-backdrop-pad-y', 4),
+    backdropPadX: readNumber(style, "--hud-backdrop-pad-x", 6),
+    backdropPadY: readNumber(style, "--hud-backdrop-pad-y", 4),
     backdropPadBottom: readNumber(
       style,
-      '--hud-backdrop-pad-bottom',
-      readNumber(style, '--hud-backdrop-pad-y', 4),
+      "--hud-backdrop-pad-bottom",
+      readNumber(style, "--hud-backdrop-pad-y", 4)
     ),
-    headerFontSize: readNumber(style, '--hud-header-font-size', 9),
-    expBarH: readNumber(style, '--hud-exp-bar-h', 4),
-    headerBlockGap: readNumber(style, '--hud-header-block-gap', 2),
-    expHpGap: readNumber(style, '--hud-exp-hp-gap', 2),
-    recastBarH: readNumber(style, '--hud-recast-bar-h', 3),
-    recastGap: readNumber(style, '--hud-recast-gap', 1),
+    headerFontSize: readNumber(style, "--hud-header-font-size", 9),
+    expBarH: readNumber(style, "--hud-exp-bar-h", 4),
+    headerBlockGap: readNumber(style, "--hud-header-block-gap", 2),
+    expHpGap: readNumber(style, "--hud-exp-hp-gap", 2),
+    recastBarH: readNumber(style, "--hud-recast-bar-h", 3),
+    recastGap: readNumber(style, "--hud-recast-gap", 1),
     fontFamily: readString(
       style,
-      '--hud-font-family',
-      "'Segoe UI', system-ui, sans-serif",
+      "--hud-font-family",
+      "'Segoe UI', system-ui, sans-serif"
     ),
-    iconBorder: readString(style, '--hud-icon-border', '#4a5568'),
-    nameColor: readString(style, '--hud-name-color', '#ffffff'),
-    epithetColor: readString(style, '--hud-epithet-color', 'rgba(255,255,255,0.65)'),
-    expBarFill: readString(style, '--hud-exp-bar-fill', '#f5a623'),
-    hpBarFill: readString(style, '--hud-hp-bar-fill', '#2ecc71'),
-    barrierFill: readString(style, '--hud-barrier-fill', '#7bed9f'),
+    iconBorder: readString(style, "--hud-icon-border", "#4a5568"),
+    nameColor: readString(style, "--hud-name-color", "#ffffff"),
+    epithetColor: readString(
+      style,
+      "--hud-epithet-color",
+      "rgba(255,255,255,0.65)"
+    ),
+    expBarFill: readString(style, "--hud-exp-bar-fill", "#f5a623"),
+    hpBarFill: readString(style, "--hud-hp-bar-fill", "#2ecc71"),
+    barrierFill: readString(style, "--hud-barrier-fill", "#7bed9f"),
     barrierOverflowFill: readString(
       style,
-      '--hud-barrier-overflow-fill',
-      '#d5f5e3',
+      "--hud-barrier-overflow-fill",
+      "#d5f5e3"
     ),
-    enemyHpBarFill: readString(style, '--hud-enemy-hp-bar-fill', '#e74c3c'),
-    enemyBarrierFill: readString(style, '--enemy-barrier-fill', '#ff8a80'),
+    enemyHpBarFill: readString(style, "--hud-enemy-hp-bar-fill", "#e74c3c"),
+    enemyBarrierFill: readString(style, "--enemy-barrier-fill", "#ff8a80"),
     enemyBarrierOverflowFill: readString(
       style,
-      '--enemy-barrier-overflow-fill',
-      '#ffcdd2',
+      "--enemy-barrier-overflow-fill",
+      "#ffcdd2"
     ),
-    barBorder: readString(style, '--hud-bar-border', '#1a1a1a'),
-    barTrack: readString(style, '--hud-bar-track', '#333333'),
-    skillRecastTrack: readString(style, '--hud-skill-recast-track', '#2a2a35'),
+    barBorder: readString(style, "--hud-bar-border", "#1a1a1a"),
+    barTrack: readString(style, "--hud-bar-track", "#333333"),
+    skillRecastTrack: readString(style, "--hud-skill-recast-track", "#2a2a35"),
     skillRecastCharging: readString(
       style,
-      '--hud-skill-recast-charging',
-      '#5a6270',
+      "--hud-skill-recast-charging",
+      "#5a6270"
     ),
-    skillRecastReady: readString(style, '--hud-skill-recast-ready', '#9aa3b0'),
-    iconFrame: readString(style, '--hud-icon-frame', '#1a1a1a'),
-    statusBuffColor: readString(style, '--status-buff-color', '#e6b422'),
-    statusDebuffColor: readString(style, '--status-debuff-color', '#a855f7'),
-    statusBadgeIconSize: readNumber(style, '--status-badge-icon-size', 8),
-    statusBadgeOverlap: readNumber(style, '--status-badge-overlap', 0),
-    popupFontSize: readNumber(style, '--popup-font-size', 20),
-    popupOutlineWidth: readNumber(style, '--popup-outline-width', 1),
+    skillRecastReady: readString(style, "--hud-skill-recast-ready", "#9aa3b0"),
+    iconFrame: readString(style, "--hud-icon-frame", "#1a1a1a"),
+    statusBuffColor: readString(style, "--status-buff-color", "#e6b422"),
+    statusDebuffColor: readString(style, "--status-debuff-color", "#a855f7"),
+    statusBadgeIconSize: readNumber(style, "--status-badge-icon-size", 8),
+    statusBadgeOverlap: readNumber(style, "--status-badge-overlap", 0),
+    popupFontSize: readNumber(style, "--popup-font-size", 20),
+    popupOutlineWidth: readNumber(style, "--popup-outline-width", 1),
     popupFontFamily: readString(
       style,
-      '--popup-font-family',
-      "'Segoe UI', system-ui, sans-serif",
+      "--popup-font-family",
+      "'Segoe UI', system-ui, sans-serif"
     ),
-    popupDamageFill: readString(style, '--popup-damage-fill', '#ffffff'),
-    popupDamageStroke: readString(style, '--popup-damage-stroke', '#000000'),
-    popupDotFill: readString(style, '--popup-dot-fill', '#ff3333'),
-    popupDotStroke: readString(style, '--popup-dot-stroke', '#000000'),
-    popupHealFill: readString(style, '--popup-heal-fill', '#2ecc71'),
-    popupHealStroke: readString(style, '--popup-heal-stroke', '#1a3d24'),
-    sceneSkyFill: readString(style, '--scene-sky-fill', '#87ceeb'),
-    sceneGroundFill: readString(style, '--scene-ground-fill', '#4aa83f'),
-    sceneGroundStroke: readString(style, '--scene-ground-stroke', '#2d3a4f'),
-    sceneGroundStrokeWidth: readNumber(style, '--scene-ground-stroke-width', 2),
-    deadAlpha: readNumber(style, '--dead-alpha', 0.35),
-    enemyHpBarOutline: readString(style, '--enemy-hp-bar-outline', '#000000'),
-    enemyHpBarOutlineWidth: readNumber(style, '--enemy-hp-bar-outline-width', 1),
-    victoryFontSize: readNumber(style, '--victory-font-size', 48),
-    victoryFill: readString(style, '--victory-fill', '#ffffff'),
-    victoryStroke: readString(style, '--victory-stroke', 'rgba(0, 0, 0, 0.65)'),
-    victoryOutlineWidth: readNumber(style, '--victory-outline-width', 3),
-    attackSlashPrimary: readString(style, '--attack-slash-primary', '#ffffff'),
-    attackSlashSecondary: readString(style, '--attack-slash-secondary', '#8ecfff'),
-    attackSlashPrimaryWidth: readNumber(style, '--attack-slash-primary-width', 3),
+    popupDamageFill: readString(style, "--popup-damage-fill", "#ffffff"),
+    popupDamageStroke: readString(style, "--popup-damage-stroke", "#000000"),
+    popupDotFill: readString(style, "--popup-dot-fill", "#ff3333"),
+    popupDotStroke: readString(style, "--popup-dot-stroke", "#000000"),
+    popupHealFill: readString(style, "--popup-heal-fill", "#2ecc71"),
+    popupHealStroke: readString(style, "--popup-heal-stroke", "#1a3d24"),
+    sceneSkyFill: readString(style, "--scene-sky-fill", "#87ceeb"),
+    sceneGroundFill: readString(style, "--scene-ground-fill", "#4aa83f"),
+    sceneGroundStroke: readString(style, "--scene-ground-stroke", "#2d3a4f"),
+    sceneGroundStrokeWidth: readNumber(style, "--scene-ground-stroke-width", 2),
+    deadAlpha: readNumber(style, "--dead-alpha", 0.35),
+    enemyHpBarOutline: readString(style, "--enemy-hp-bar-outline", "#000000"),
+    enemyHpBarOutlineWidth: readNumber(
+      style,
+      "--enemy-hp-bar-outline-width",
+      1
+    ),
+    victoryFontSize: readNumber(style, "--victory-font-size", 48),
+    victoryFill: readString(style, "--victory-fill", "#ffffff"),
+    victoryStroke: readString(style, "--victory-stroke", "rgba(0, 0, 0, 0.65)"),
+    victoryOutlineWidth: readNumber(style, "--victory-outline-width", 3),
+    attackSlashPrimary: readString(style, "--attack-slash-primary", "#ffffff"),
+    attackSlashSecondary: readString(
+      style,
+      "--attack-slash-secondary",
+      "#8ecfff"
+    ),
+    attackSlashPrimaryWidth: readNumber(
+      style,
+      "--attack-slash-primary-width",
+      3
+    ),
     attackSlashSecondaryWidth: readNumber(
       style,
-      '--attack-slash-secondary-width',
-      2,
+      "--attack-slash-secondary-width",
+      2
     ),
-    attackHealPrimary: readString(style, '--attack-heal-primary', '#2ecc71'),
-    attackHealSecondary: readString(style, '--attack-heal-secondary', '#7bed9f'),
-    attackHealPrimaryWidth: readNumber(style, '--attack-heal-primary-width', 2.5),
+    attackHealPrimary: readString(style, "--attack-heal-primary", "#2ecc71"),
+    attackHealSecondary: readString(
+      style,
+      "--attack-heal-secondary",
+      "#7bed9f"
+    ),
+    attackHealPrimaryWidth: readNumber(
+      style,
+      "--attack-heal-primary-width",
+      2.5
+    ),
     attackHealSecondaryWidth: readNumber(
       style,
-      '--attack-heal-secondary-width',
-      2,
+      "--attack-heal-secondary-width",
+      2
     ),
-    attackHealPeakAlpha: readNumber(style, '--attack-heal-peak-alpha', 0.95),
-    attackOrbFill: readString(style, '--attack-orb-fill', '#74b9ff'),
-    attackOrbHighlight: readString(style, '--attack-orb-highlight', '#ffffff'),
-    attackOrbAlpha: readNumber(style, '--attack-orb-alpha', 0.85),
+    attackHealPeakAlpha: readNumber(style, "--attack-heal-peak-alpha", 0.95),
+    attackOrbFill: readString(style, "--attack-orb-fill", "#74b9ff"),
+    attackOrbHighlight: readString(style, "--attack-orb-highlight", "#ffffff"),
+    attackOrbAlpha: readNumber(style, "--attack-orb-alpha", 0.85),
     attackOrbHighlightAlpha: readNumber(
       style,
-      '--attack-orb-highlight-alpha',
-      0.45,
+      "--attack-orb-highlight-alpha",
+      0.45
     ),
-    attackArrowShaft: readString(style, '--attack-arrow-shaft', '#c8a165'),
-    attackArrowTip: readString(style, '--attack-arrow-tip', '#8b6914'),
+    attackArrowShaft: readString(style, "--attack-arrow-shaft", "#c8a165"),
+    attackArrowTip: readString(style, "--attack-arrow-tip", "#8b6914"),
     attackChainLightningCore: readString(
       style,
-      '--attack-chain-lightning-core',
-      '#fff9c4',
+      "--attack-chain-lightning-core",
+      "#fff9c4"
     ),
     attackChainLightningGlow: readString(
       style,
-      '--attack-chain-lightning-glow',
-      '#5b6cff',
+      "--attack-chain-lightning-glow",
+      "#5b6cff"
     ),
     attackChainLightningTail: readString(
       style,
-      '--attack-chain-lightning-tail',
-      '#8fa8ff',
+      "--attack-chain-lightning-tail",
+      "#8fa8ff"
     ),
     attackChainLightningCoreAlpha: readNumber(
       style,
-      '--attack-chain-lightning-core-alpha',
-      0.95,
+      "--attack-chain-lightning-core-alpha",
+      0.95
     ),
     attackChainLightningGlowAlpha: readNumber(
       style,
-      '--attack-chain-lightning-glow-alpha',
-      0.80,
+      "--attack-chain-lightning-glow-alpha",
+      0.8
     ),
     attackChainLightningTailAlpha: readNumber(
       style,
-      '--attack-chain-lightning-tail-alpha',
-      0.85,
+      "--attack-chain-lightning-tail-alpha",
+      0.85
     ),
-    attackImpaleShaft: readString(style, '--attack-impale-shaft', '#b8c4ce'),
-    attackImpaleTip: readString(style, '--attack-impale-tip', '#5d6d7e'),
+    attackImpaleShaft: readString(style, "--attack-impale-shaft", "#b8c4ce"),
+    attackImpaleTip: readString(style, "--attack-impale-tip", "#5d6d7e"),
     statusBadgeOverlay: readString(
       style,
-      '--status-badge-overlay',
-      'rgba(0, 0, 0, 0.55)',
+      "--status-badge-overlay",
+      "rgba(0, 0, 0, 0.55)"
     ),
     statusIconOutlineColor: readString(
       style,
-      '--status-icon-outline-color',
-      '#000000',
+      "--status-icon-outline-color",
+      "#000000"
     ),
-    statusIconOutlineWidth: readNumber(style, '--status-icon-outline-width', 1),
+    statusIconOutlineWidth: readNumber(style, "--status-icon-outline-width", 1),
     statusIconFallbackAlpha: readNumber(
       style,
-      '--status-icon-fallback-alpha',
-      0.35,
+      "--status-icon-fallback-alpha",
+      0.35
     ),
-    hurtTintR: readNumber(style, '--hurt-tint-r', 255),
-    hurtTintG: readNumber(style, '--hurt-tint-g', 0),
-    hurtTintB: readNumber(style, '--hurt-tint-b', 0),
-    hurtTintStrength: readNumber(style, '--hurt-tint-strength', 0.35),
-    buffGlowR: readNumber(style, '--buff-glow-r', 255),
-    buffGlowG: readNumber(style, '--buff-glow-g', 255),
-    buffGlowB: readNumber(style, '--buff-glow-b', 255),
-    buffGlowPeak: readNumber(style, '--buff-glow-peak', 0.55),
-    spriteDefender: readString(style, '--sprite-defender', '#4a90d9'),
-    spriteAttackerMelee: readString(style, '--sprite-attacker-melee', '#e67e22'),
-    spriteSupporter: readString(style, '--sprite-supporter', '#2ecc71'),
+    hurtTintR: readNumber(style, "--hurt-tint-r", 255),
+    hurtTintG: readNumber(style, "--hurt-tint-g", 0),
+    hurtTintB: readNumber(style, "--hurt-tint-b", 0),
+    hurtTintStrength: readNumber(style, "--hurt-tint-strength", 0.35),
+    buffGlowR: readNumber(style, "--buff-glow-r", 255),
+    buffGlowG: readNumber(style, "--buff-glow-g", 255),
+    buffGlowB: readNumber(style, "--buff-glow-b", 255),
+    buffGlowPeak: readNumber(style, "--buff-glow-peak", 0.55),
+    spriteDefender: readString(style, "--sprite-defender", "#4a90d9"),
+    spriteAttackerMelee: readString(
+      style,
+      "--sprite-attacker-melee",
+      "#e67e22"
+    ),
+    spriteSupporter: readString(style, "--sprite-supporter", "#2ecc71"),
     spriteAttackerRanged: readString(
       style,
-      '--sprite-attacker-ranged',
-      '#e74c3c',
+      "--sprite-attacker-ranged",
+      "#e74c3c"
     ),
-    spriteSlime: readString(style, '--sprite-slime', '#9b59b6'),
-    spriteEnemyDefault: readString(style, '--sprite-enemy-default', '#888888'),
-    spriteDefault: readString(style, '--sprite-default', '#888888'),
-    iconDefender: readString(style, '--icon-defender', '#2c5f9e'),
-    iconAttackerMelee: readString(style, '--icon-attacker-melee', '#c0392b'),
-    iconSupporter: readString(style, '--icon-supporter', '#1e8449'),
-    iconAttackerRanged: readString(style, '--icon-attacker-ranged', '#922b21'),
-    iconDefault: readString(style, '--icon-default', '#888888'),
-    statusIconAtk: readString(style, '--status-icon-atk', '#c0392b'),
-    statusIconDef: readString(style, '--status-icon-def', '#2980b9'),
-    statusIconReg: readString(style, '--status-icon-reg', '#9b59b6'),
+    spriteEnemyDefault: readString(style, "--sprite-enemy-default", "#888888"),
+    spriteDefault: readString(style, "--sprite-default", "#888888"),
+    iconDefender: readString(style, "--icon-defender", "#2c5f9e"),
+    iconAttackerMelee: readString(style, "--icon-attacker-melee", "#c0392b"),
+    iconSupporter: readString(style, "--icon-supporter", "#1e8449"),
+    iconAttackerRanged: readString(style, "--icon-attacker-ranged", "#922b21"),
+    iconDefault: readString(style, "--icon-default", "#888888"),
+    statusIconAtk: readString(style, "--status-icon-atk", "#c0392b"),
+    statusIconDef: readString(style, "--status-icon-def", "#2980b9"),
+    statusIconReg: readString(style, "--status-icon-reg", "#9b59b6"),
     statusIconAttackSpeed: readString(
       style,
-      '--status-icon-attack-speed',
-      '#1abc9c',
+      "--status-icon-attack-speed",
+      "#1abc9c"
     ),
     statusIconDamageReduction: readString(
       style,
-      '--status-icon-damage-reduction',
-      '#27ae60',
+      "--status-icon-damage-reduction",
+      "#27ae60"
     ),
     statusIconDamageIncrease: readString(
       style,
-      '--status-icon-damage-increase',
-      '#d35400',
+      "--status-icon-damage-increase",
+      "#d35400"
     ),
-    statusIconHot: readString(style, '--status-icon-hot', '#27ae60'),
-    statusIconDot: readString(style, '--status-icon-dot', '#8e44ad'),
-    statusIconBlock: readString(style, '--status-icon-block', '#7f8c8d'),
-    statusIconCounter: readString(style, '--status-icon-counter', '#e67e22'),
-    statusIconStun: readString(style, '--status-icon-stun', '#f1c40f'),
+    statusIconHot: readString(style, "--status-icon-hot", "#27ae60"),
+    statusIconDot: readString(style, "--status-icon-dot", "#8e44ad"),
+    statusIconBlock: readString(style, "--status-icon-block", "#7f8c8d"),
+    statusIconCounter: readString(style, "--status-icon-counter", "#e67e22"),
+    statusIconStun: readString(style, "--status-icon-stun", "#f1c40f"),
     statusIconDamageTakenToHeal: readString(
       style,
-      '--status-icon-damage-taken-to-heal',
-      '#16a085',
+      "--status-icon-damage-taken-to-heal",
+      "#16a085"
     ),
   };
 }
 
 export function resolveSpritePlaceholderColor(
   spriteKey: string,
-  theme: BattleHudTheme,
+  theme: BattleHudTheme
 ): string {
   const colors: Record<string, string> = {
     [PLACEHOLDER_SPRITE_KEYS.defender]: theme.spriteDefender,
     [PLACEHOLDER_SPRITE_KEYS.supporter]: theme.spriteSupporter,
     [PLACEHOLDER_SPRITE_KEYS.attackerGeneral]: theme.spriteAttackerMelee,
     [PLACEHOLDER_SPRITE_KEYS.attackerMelee]: theme.spriteAttackerMelee,
-    [PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical]: theme.spriteAttackerRanged,
+    [PLACEHOLDER_SPRITE_KEYS.attackerRangedPhysical]:
+      theme.spriteAttackerRanged,
     [PLACEHOLDER_SPRITE_KEYS.attackerRangedMagic]: theme.spriteAttackerRanged,
-    slime: theme.spriteSlime,
     [ENEMY_DEFAULT_SPRITE_KEY]: theme.spriteEnemyDefault,
   };
   return colors[spriteKey] ?? theme.spriteDefault;
@@ -379,7 +405,7 @@ export function resolveSpritePlaceholderColor(
 
 export function resolveClassIconPlaceholderColor(
   iconKey: string,
-  theme: BattleHudTheme,
+  theme: BattleHudTheme
 ): string {
   const colors: Record<string, string> = {
     [PLACEHOLDER_SPRITE_KEYS.defender]: theme.iconDefender,
@@ -394,7 +420,7 @@ export function resolveClassIconPlaceholderColor(
 
 export function resolveStatusIconFallbackColor(
   category: StatusDisplayCategory,
-  theme: BattleHudTheme,
+  theme: BattleHudTheme
 ): string {
   const colors: Record<StatusDisplayCategory, string> = {
     atk: theme.statusIconAtk,

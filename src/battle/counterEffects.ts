@@ -15,6 +15,7 @@ import {
 import { isRangedAttack } from './data/entityTraits.ts';
 import { isWithinSkillRange } from './skills/rangeUtils.ts';
 import type {
+  ActiveSkillDef,
   CombatantState,
   CounterAttackRangeBandFilter,
   CounterResponseDef,
@@ -306,13 +307,19 @@ function applyCounterStunResponse(
   attacker: CombatantState,
   response: Extract<CounterResponseDef, { kind: 'stun' }>,
   counterEffect: Pick<StatusEffect, 'skillId'>,
+  actives: Record<string, ActiveSkillDef>,
   callbacks: CounterRetaliationCallbacks,
 ): void {
   const skillId = counterEffect.skillId ?? 'counter';
-  const applied = applyStunToTarget(attacker, response.durationSec, {
-    skillId,
-    sourceId: victim.id,
-  });
+  const applied = applyStunToTarget(
+    attacker,
+    response.durationSec,
+    {
+      skillId,
+      sourceId: victim.id,
+    },
+    { actives },
+  );
   if (!applied) return;
 
   emitCounterSkillEvent(
@@ -349,6 +356,7 @@ function applyCounterResponse(
   response: CounterResponseDef,
   counterEffect: Pick<StatusEffect, 'skillId'>,
   passives: Record<string, PassiveSkillDef>,
+  actives: Record<string, ActiveSkillDef>,
   callbacks: CounterRetaliationCallbacks,
 ): void {
   switch (response.kind) {
@@ -387,6 +395,7 @@ function applyCounterResponse(
         attacker,
         response,
         counterEffect,
+        actives,
         callbacks,
       );
       break;
@@ -407,6 +416,7 @@ export function applyPassiveCounterRetaliation(
   attacker: CombatantState,
   ctx: CounterRetaliationContext,
   passives: Record<string, PassiveSkillDef>,
+  actives: Record<string, ActiveSkillDef>,
   callbacks: CounterRetaliationCallbacks,
 ): void {
   if (ctx.isCounterDamage) return;
@@ -438,6 +448,7 @@ export function applyPassiveCounterRetaliation(
         response,
         counterRef,
         passives,
+        actives,
         callbacks,
       );
     }
@@ -449,6 +460,7 @@ export function applyCounterRetaliation(
   attacker: CombatantState,
   ctx: CounterRetaliationContext,
   passives: Record<string, PassiveSkillDef>,
+  actives: Record<string, ActiveSkillDef>,
   callbacks: CounterRetaliationCallbacks,
 ): void {
   if (ctx.isCounterDamage) return;
@@ -483,6 +495,7 @@ export function applyCounterRetaliation(
         response,
         counterEffect,
         passives,
+        actives,
         callbacks,
       );
     }

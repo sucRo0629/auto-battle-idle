@@ -57,6 +57,7 @@ import {
 } from './synthesizeBasicAttack.ts';
 import { PASSIVE_PERIODIC_TRIGGER_KINDS } from '../passivePeriodicTrigger.ts';
 import { GLOBAL_MAX_CHARGES_CAP } from '../skills/chargeBank.ts';
+import { STUN_MAX_DURATION_SEC } from '../ccEffects.ts';
 
 import {
   ATTACK_SPEED_TIERS,
@@ -287,6 +288,24 @@ function requireRecord(value: unknown, context: string): Record<string, unknown>
     throw new Error(`Expected object: ${context}`);
   }
   return value;
+}
+
+function requireStunDurationSec(
+  obj: Record<string, unknown>,
+  context: string,
+): number {
+  const durationSec = requireNumber(obj, 'durationSec', context);
+  if (durationSec <= 0) {
+    invalidField(context, 'durationSec', 'must be a positive number');
+  }
+  if (durationSec > STUN_MAX_DURATION_SEC) {
+    invalidField(
+      context,
+      'durationSec',
+      `must be at most ${STUN_MAX_DURATION_SEC}`,
+    );
+  }
+  return durationSec;
 }
 
 function requireString(
@@ -1464,10 +1483,7 @@ function parseCounterResponseEntry(
   }
 
   if (kind === 'stun') {
-    const durationSec = requireNumber(obj, 'durationSec', context);
-    if (durationSec <= 0) {
-      invalidField(context, 'durationSec', 'must be a positive number');
-    }
+    const durationSec = requireStunDurationSec(obj, context);
     return { kind, durationSec };
   }
 
@@ -2029,10 +2045,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
   }
 
   if (type === 'stun') {
-    const durationSec = requireNumber(obj, 'durationSec', context);
-    if (durationSec <= 0) {
-      invalidField(context, 'durationSec', 'must be a positive number');
-    }
+    const durationSec = requireStunDurationSec(obj, context);
     return normalizeSkillEffect({
       target,
       ...targetShapeFields,
@@ -2287,21 +2300,21 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...(range !== undefined ? { range } : {}),
     });
   }
-  const durationSec = requireNumber(obj, 'durationSec', context);
-  if (durationSec <= 0) {
-    invalidField(context, 'durationSec', 'must be a positive number');
+  if (debuffSubKind === 'stun') {
+    const durationSec = requireStunDurationSec(obj, context);
+    return normalizeSkillEffect({
+      target,
+      ...targetShapeFields,
+      ...combatModifiers,
+      type,
+      debuffSubKind,
+      durationSec,
+      ...sequenceTiming,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    });
   }
-  return normalizeSkillEffect({
-    target,
-    ...targetShapeFields,
-    ...combatModifiers,
-    type,
-    debuffSubKind,
-    durationSec,
-    ...sequenceTiming,
-    ...presentation,
-    ...(range !== undefined ? { range } : {}),
-  });
+  invalidField(context, 'debuffSubKind', `unsupported debuff sub kind ${debuffSubKind}`);
 }
 
 function requireStringArray(

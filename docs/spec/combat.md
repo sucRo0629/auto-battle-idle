@@ -187,7 +187,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | buff   | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec`                                                                           |
 | 通常攻撃変形 | `effect: "basicAttackTransform"` + `buffDurationSec` 等 — バフ持続中のみ通常攻撃 effect を実行時マージ（下記）。付与対象は自身固定 |
 | debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                   |
-| スタン    | `effect: "stun"` + `durationSec` — `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可（CD は進行）                                     |
+| スタン    | `effect: "stun"` + `durationSec`（**上限 5 秒**）— `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可。**付与成功時**に対象の通常攻撃 CD を満タンにリセット。スタン中は **time トリガーアクティブ CD 停止**（基本攻撃 CD は進行） |
 | 反撃    | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記 |
 | デバフ解除  | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `dispelPriority` に従い N 件（`longest` = 残り時間最長、`strongest` = 効果量最大。未指定は `longest`）。対象タグに `attackSpeed`（SPDデバフ）可。パッシブ `periodicDispel` は `intervalSec` ごとに `dispelTargetRule` で対象選択 |
 | ノックバック | `effect: "knockback"` + `distancePx` — 各陣営の **後方** へ即時移動（プレイヤーは左 `-X`、敵は右 `+X`）。敵は進軍表示下限未満にならない。詳細は [battle-field.md](battle-field.md) §2.5 |

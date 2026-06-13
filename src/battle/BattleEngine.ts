@@ -315,6 +315,7 @@ export class BattleEngine {
         actor,
         counterCtx,
         this.gameData.skillRegistry.passives,
+        this.gameData.skillRegistry.actives,
         counterCallbacks,
       );
       applyCounterRetaliation(
@@ -322,6 +323,7 @@ export class BattleEngine {
         actor,
         counterCtx,
         this.gameData.skillRegistry.passives,
+        this.gameData.skillRegistry.actives,
         counterCallbacks,
       );
     }
@@ -1672,6 +1674,9 @@ export class BattleEngine {
         if (cd.remaining <= 0) continue;
         const skill = this.gameData.skillRegistry.actives[cd.skillId];
         if (!skill || !shouldTickCooldown(skill, cd.slotKind)) continue;
+        if (isUnitStunned(unit) && cd.slotKind === "active") {
+          continue;
+        }
         if (
           shouldPauseActiveCooldown(
             unit.id,

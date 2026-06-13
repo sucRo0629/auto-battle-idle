@@ -10,6 +10,7 @@ import {
 import { RANGED_ATTACK_MIN_PX } from './types.ts';
 import { parseSkillEffect } from './data/validateGameData.ts';
 import type {
+  ActiveSkillDef,
   CombatantState,
   CounterResponseDef,
   PassiveSkillDef,
@@ -18,6 +19,15 @@ import type {
 import { mockCombatant as mockCombatantBase } from './testFixtures.ts';
 
 const passives: Record<string, PassiveSkillDef> = {};
+
+const actives: Record<string, ActiveSkillDef> = {
+  test_basic: {
+    id: 'test_basic',
+    name: 'test_basic',
+    trigger: { kind: 'time', value: 2 },
+    effect: [],
+  },
+};
 
 const counterChancePassive: PassiveSkillDef = {
   id: 'passive_counter_chance',
@@ -152,6 +162,7 @@ describe('applyCounterRetaliation', () => {
       attacker,
       { attackKind: 'damage', appliedDamage: 10 },
       passives,
+      actives,
       { emit, getAllCombatants: () => [victim, attacker] },
     );
 
@@ -176,6 +187,9 @@ describe('applyCounterRetaliation', () => {
       def: 0,
       isEnemy: true,
       battleX: 100,
+      cooldowns: [
+        { skillId: 'test_basic', remaining: 0, slotKind: 'basic' },
+      ],
     });
     const emit = vi.fn();
 
@@ -184,11 +198,15 @@ describe('applyCounterRetaliation', () => {
       attacker,
       { attackKind: 'damage', appliedDamage: 10 },
       passives,
+      actives,
       { emit, getAllCombatants: () => [victim, attacker] },
     );
 
     expect(attacker.hp).toBe(90);
     expect(attacker.statusEffects.some((e) => e.overlay === 'stun')).toBe(true);
+    expect(
+      attacker.cooldowns.find((cd) => cd.slotKind === 'basic')?.remaining,
+    ).toBe(2);
   });
 
   it('applies debuff response to attacker', () => {
@@ -218,6 +236,7 @@ describe('applyCounterRetaliation', () => {
       attacker,
       { attackKind: 'damage', appliedDamage: 10 },
       passives,
+      actives,
       { emit, getAllCombatants: () => [victim, attacker] },
     );
 
@@ -257,6 +276,7 @@ describe('applyCounterRetaliation', () => {
       attacker,
       { attackKind: 'damage', appliedDamage: 10 },
       passives,
+      actives,
       { emit, getAllCombatants: () => [victim, attacker] },
     );
 
@@ -291,6 +311,7 @@ describe('applyCounterRetaliation', () => {
       attacker,
       { attackKind: 'damage', appliedDamage: 10, isCounterDamage: true },
       passives,
+      actives,
       { emit, getAllCombatants: () => [victim, attacker] },
     );
 
@@ -330,6 +351,7 @@ describe('applyPassiveCounterRetaliation', () => {
       attacker,
       { attackKind: 'damage', appliedDamage: 10 },
       registry,
+      actives,
       { emit, getAllCombatants: () => [victim, attacker] },
     );
 
@@ -362,6 +384,7 @@ describe('applyPassiveCounterRetaliation', () => {
       attacker,
       { attackKind: 'damage', appliedDamage: 10 },
       registry,
+      actives,
       { emit, getAllCombatants: () => [victim, attacker] },
     );
 
@@ -404,6 +427,7 @@ describe('applyPassiveCounterRetaliation', () => {
       attacker,
       { attackKind: 'damage', appliedDamage: 10 },
       registry,
+      actives,
       { emit, getAllCombatants: () => [victim, attacker] },
     );
 
@@ -471,6 +495,7 @@ describe('applyCounterRetaliation range band filter', () => {
         attackRangePx: RANGED_ATTACK_MIN_PX,
       },
       passives,
+      actives,
       { emit, getAllCombatants: () => [victim, attacker] },
     );
 
@@ -507,6 +532,7 @@ describe('applyCounterRetaliation range band filter', () => {
         attackRangePx: 40,
       },
       passives,
+      actives,
       { emit, getAllCombatants: () => [victim, attacker] },
     );
 

@@ -875,10 +875,15 @@ export class SkillExecutor {
         if (subKind === 'stun') {
           const duration = effectDef.durationSec ?? 0;
           if (duration <= 0) return false;
-          const applied = applyStunToTarget(target, duration, {
-            skillId: skill.id,
-            sourceId: actor.id,
-          });
+          const applied = applyStunToTarget(
+            target,
+            duration,
+            {
+              skillId: skill.id,
+              sourceId: actor.id,
+            },
+            { actives: this.gameData.skillRegistry.actives },
+          );
           if (!applied) return false;
           this.emit({
             type: 'skill',
@@ -972,10 +977,15 @@ export class SkillExecutor {
     }
 
     if (effectDef.type === 'stun') {
-      const applied = applyStunToTarget(target, effectDef.durationSec, {
-        skillId: skill.id,
-        sourceId: actor.id,
-      });
+      const applied = applyStunToTarget(
+        target,
+        effectDef.durationSec,
+        {
+          skillId: skill.id,
+          sourceId: actor.id,
+        },
+        { actives: this.gameData.skillRegistry.actives },
+      );
       if (!applied) return false;
       this.emit({
         type: 'skill',

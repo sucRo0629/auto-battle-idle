@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState } from './types.ts';
 import {
+  STUN_MAX_DURATION_SEC,
   applyKnockbackToTarget,
   applyStunToTarget,
+  clampStunDurationSec,
   isUnitStunned,
+  resetBasicCooldownOnStun,
 } from './ccEffects.ts';
 
 function mockUnit(
@@ -27,7 +30,13 @@ function mockUnit(
       learnedActiveIds: [],
       equippedActiveSlots: [],
     },
-    cooldowns: [],
+    cooldowns: [
+      {
+        skillId: 'test_basic',
+        remaining: 0,
+        slotKind: 'basic',
+      },
+    ],
     statusEffects: [],
     spriteKey: 'placeholder',
     iconKey: 'placeholder',
@@ -39,12 +48,21 @@ function mockUnit(
   };
 }
 
+const actives = {
+  test_basic: {
+    id: 'test_basic',
+    name: 'test_basic',
+    trigger: { kind: 'time' as const, value: 2 },
+    effect: [],
+  },
+};
+
 describe('ccEffects', () => {
   it('applyStunToTarget adds cc status and isUnitStunned returns true', () => {
     const target = mockUnit({ id: 'enemy', isEnemy: true });
-    expect(applyStunToTarget(target, 1.2, { skillId: 'bash', sourceId: 'ally' })).toBe(
-      true,
-    );
+    expect(
+      applyStunToTarget(target, 1.2, { skillId: 'bash', sourceId: 'ally' }),
+    ).toBe(true);
     expect(isUnitStunned(target)).toBe(true);
     expect(target.statusEffects[0]?.kind).toBe('cc');
     expect(target.statusEffects[0]?.overlay).toBe('stun');
@@ -64,6 +82,39 @@ describe('ccEffects', () => {
     applyStunToTarget(target, 2, { skillId: 'a', sourceId: 'ally' });
     applyStunToTarget(target, 0.5, { skillId: 'b', sourceId: 'ally' });
     expect(target.statusEffects[0]?.remainingSec).toBe(2);
+  });
+
+  it('clampStunDurationSec caps at STUN_MAX_DURATION_SEC', () => {
+    expect(clampStunDurationSec(7)).toBe(STUN_MAX_DURATION_SEC);
+    expect(clampStunDurationSec(3)).toBe(3);
+    expect(STUN_MAX_DURATION_SEC).toBe(5);
+  });
+
+  it('applyStunToTarget clamps duration to STUN_MAX_DURATION_SEC', () => {
+    const target = mockUnit({ id: 'enemy', isEnemy: true });
+    applyStunToTarget(target, 8, { skillId: 'bash', sourceId: 'ally' });
+    expect(target.statusEffects[0]?.remainingSec).toBe(5);
+  });
+
+  it('resetBasicCooldownOnStun sets basic remaining to trigger value', () => {
+    const target = mockUnit({ id: 'enemy', isEnemy: true });
+    const basicCd = target.cooldowns.find((cd) => cd.slotKind === 'basic')!;
+    basicCd.remaining = 0;
+    resetBasicCooldownOnStun(target, actives);
+    expect(basicCd.remaining).toBe(2);
+  });
+
+  it('applyStunToTarget resets basic cooldown when actives provided', () => {
+    const target = mockUnit({ id: 'enemy', isEnemy: true });
+    const basicCd = target.cooldowns.find((cd) => cd.slotKind === 'basic')!;
+    basicCd.remaining = 0;
+    applyStunToTarget(
+      target,
+      1,
+      { skillId: 'bash', sourceId: 'ally' },
+      { actives },
+    );
+    expect(basicCd.remaining).toBe(2);
   });
 
   it('applyKnockbackToTarget pushes each side toward rear', () => {
