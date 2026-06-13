@@ -264,7 +264,7 @@ describe('resolveEnemyApproachBattleX', () => {
       gameData,
     );
 
-    expect(approachX).toBe(200 + engagedMinBodyGap());
+    expect(approachX).toBe(200 + 0);
     meleeEnemy.battleX = approachX;
     const spec = {
       kind: 'distance' as const,

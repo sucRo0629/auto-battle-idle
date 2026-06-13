@@ -6,7 +6,6 @@ import type {
 import { getPassiveDefs } from './combatMath.ts';
 import {
   getEnemyContactX,
-  getMeleeEnemyContactX,
   resolveApproachAttackBattleX,
   resolveApproachFormationRangePx,
   resolveAttackBattleX,
@@ -206,15 +205,22 @@ export function resolveEnemyBasicAttackTarget(
   return resolveEnemyAttackTargetPlayer(enemy, players, enemies, gameData);
 }
 
-function capForwardAfterMeleeWipe(
+/** 後衛: 敵前線が凍結点より奥へ退いたあと、右追いジャンプを抑止（§4.4） */
+function capForwardAfterFrontContactJump(
   player: CombatantState,
   players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
   approachX: number,
+  frozenFrontContactX: number | null,
 ): number {
   if (player.formationRow !== 'back') return approachX;
-  if (getMeleeEnemyContactX(enemies, gameData) !== null) {
+  const front = getEnemyContactX(enemies);
+  if (
+    front === null ||
+    frozenFrontContactX === null ||
+    front <= frozenFrontContactX
+  ) {
     return approachX;
   }
   if (
@@ -228,7 +234,7 @@ function capForwardAfterMeleeWipe(
   ) {
     return approachX;
   }
-  if (approachX !== player.battleX) {
+  if (approachX > player.battleX) {
     return player.battleX;
   }
   return approachX;
@@ -236,15 +242,12 @@ function capForwardAfterMeleeWipe(
 
 function resolveApproachEnemyContact(
   enemies: CombatantState[],
-  gameData: GameData,
-  frozenMeleeContactX: number | null,
+  frozenFrontContactX: number | null,
 ): number | null {
-  const meleeContact = getMeleeEnemyContactX(enemies, gameData);
-  if (meleeContact !== null) return meleeContact;
   const front = getEnemyContactX(enemies);
   if (front === null) return null;
-  if (frozenMeleeContactX !== null && front > frozenMeleeContactX) {
-    return frozenMeleeContactX;
+  if (frozenFrontContactX !== null && front > frozenFrontContactX) {
+    return frozenFrontContactX;
   }
   return front;
 }
@@ -260,17 +263,14 @@ function capBackRowRangeStop(
 function capFrontRowBeforeEnemyContact(
   player: CombatantState,
   players: CombatantState[],
-  enemies: CombatantState[],
   gameData: GameData,
+  contact: number,
   approachX: number,
 ): number {
   if (player.formationRow === 'back') return approachX;
-  const meleeContact = getMeleeEnemyContactX(enemies, gameData);
-  const enemyContact = meleeContact ?? getEnemyContactX(enemies);
-  if (enemyContact === null) return approachX;
   const maxForward = resolveApproachAttackBattleX(
     player,
-    enemyContact,
+    contact,
     gameData,
     livingAllyCount(players),
   );
@@ -280,15 +280,12 @@ function capFrontRowBeforeEnemyContact(
 function resolveDefenderApproachBattleX(
   player: CombatantState,
   players: CombatantState[],
-  enemies: CombatantState[],
   gameData: GameData,
   contact: number,
 ): number {
-  const meleeContact = getMeleeEnemyContactX(enemies, gameData);
-  const chaseContact = meleeContact ?? getEnemyContactX(enemies) ?? contact;
   return resolveApproachAttackBattleX(
     player,
-    chaseContact,
+    contact,
     gameData,
     livingAllyCount(players),
   );
@@ -326,6 +323,7 @@ function resolveNonDefenderApproachBattleX(
   gameData: GameData,
   contact: number,
 ): number {
+  const allyCount = livingAllyCount(players);
   if (isAllyHealBasicAttack(player, gameData)) {
     const outOfRange = resolveOutOfRangeDamagedAllyHealTarget(
       player,
@@ -334,12 +332,12 @@ function resolveNonDefenderApproachBattleX(
       gameData,
     );
     if (outOfRange) {
-      const range = resolveApproachRangePx(
+      const healStop = resolveApproachAttackBattleX(
         player,
+        outOfRange.battleX,
         gameData,
-        livingAllyCount(players),
+        allyCount,
       );
-      const neededX = outOfRange.battleX - range;
       const enemyStopX = resolveEnemyBasedApproachBattleX(
         player,
         players,
@@ -347,7 +345,7 @@ function resolveNonDefenderApproachBattleX(
         gameData,
         contact,
       );
-      return Math.max(player.battleX, Math.min(neededX, enemyStopX));
+      return Math.min(healStop, enemyStopX);
     }
   }
   return resolveEnemyBasedApproachBattleX(
@@ -360,7 +358,7 @@ function resolveNonDefenderApproachBattleX(
 }
 
 export interface PlayerApproachOptions {
-  /** 近接全滅直前の最前線 battleX（後方敵への接触点ジャンプ抑制） */
+  /** 敵前線凍結 battleX（前線退避後の後衛ジャンプ抑制。§4.4） */
   frozenMeleeContactX?: number | null;
 }
 
@@ -392,7 +390,6 @@ function capFrontRowSupporterBehindDefenders(
     const defX = resolveDefenderApproachBattleX(
       ally,
       players,
-      enemies,
       gameData,
       contact,
     );
@@ -409,13 +406,13 @@ function resolveIndividualPlayerApproachBattleX(
   enemies: CombatantState[],
   gameData: GameData,
   contact: number,
+  frozenFrontContactX: number | null,
 ): number {
   let approachX =
     player.role === 'defender'
       ? resolveDefenderApproachBattleX(
           player,
           players,
-          enemies,
           gameData,
           contact,
         )
@@ -440,8 +437,8 @@ function resolveIndividualPlayerApproachBattleX(
     approachX = capFrontRowBeforeEnemyContact(
       player,
       players,
-      enemies,
       gameData,
+      contact,
       approachX,
     );
     return approachX;
@@ -449,12 +446,13 @@ function resolveIndividualPlayerApproachBattleX(
 
   return capBackRowRangeStop(
     player,
-    capForwardAfterMeleeWipe(
+    capForwardAfterFrontContactJump(
       player,
       players,
       enemies,
       gameData,
       approachX,
+      frozenFrontContactX,
     ),
   );
 }
@@ -466,12 +464,8 @@ export function resolveAllPlayerApproachBattleX(
   gameData: GameData,
   options: PlayerApproachOptions = {},
 ): Map<string, number> {
-  const frozenMeleeContactX = options.frozenMeleeContactX ?? null;
-  const contact = resolveApproachEnemyContact(
-    enemies,
-    gameData,
-    frozenMeleeContactX,
-  );
+  const frozenFrontContactX = options.frozenMeleeContactX ?? null;
+  const contact = resolveApproachEnemyContact(enemies, frozenFrontContactX);
   if (contact === null) {
     return new Map(players.map((p) => [p.id, p.battleX]));
   }
@@ -486,6 +480,7 @@ export function resolveAllPlayerApproachBattleX(
         enemies,
         gameData,
         contact,
+        frozenFrontContactX,
       ),
     );
   }
@@ -494,50 +489,6 @@ export function resolveAllPlayerApproachBattleX(
 
   const spaced = applyFormationRowApproachSpacing(baseApproach, spacingInputs);
   applyFormationMarchFollow(spaced, players);
-
-  // #region agent log
-  const debugPlayers = players.filter(
-    (p) =>
-      p.isAlive &&
-      (p.classId === 'sp_alchemist' || p.classId === 'df_guardian'),
-  );
-  if (debugPlayers.length >= 2) {
-    fetch('http://127.0.0.1:7541/ingest/180ac9f2-daf7-4294-9ba1-9703f79153b8', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Debug-Session-Id': '96f866',
-      },
-      body: JSON.stringify({
-        sessionId: '96f866',
-        runId: 'pre-fix',
-        hypothesisId: 'H1-H5',
-        location: 'resolveApproachBattleX.ts:resolveAllPlayerApproachBattleX',
-        message: 'approach targets guardian vs alchemist',
-        data: {
-          enemyContact: contact,
-          units: debugPlayers.map((p) => ({
-            id: p.id,
-            classId: p.classId,
-            role: p.role,
-            formationRow: p.formationRow,
-            battleX: p.battleX,
-            traitsRangePx: p.traits.rangePx,
-            baseApproachX: baseApproach.get(p.id),
-            spacedApproachX: spaced.get(p.id),
-            approachRangePx: resolveApproachRangePx(
-              p,
-              gameData,
-              livingAllyCount(players),
-            ),
-            basicRangePx: resolveApproachFormationRangePx(p),
-          })),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
 
   return spaced;
 }

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { GameData } from './types.ts';
-import { engagedMinBodyGap } from './battleConstants.ts';
 import { resolvePlayerApproachBattleX } from './resolveApproachBattleX.ts';
 import { mockApproachCombatant as mockCombatant, mockApproachGameData } from './testFixtures.ts';
 
@@ -45,7 +44,7 @@ describe('resolvePlayerApproachBattleX', () => {
     expect(approachX).toBeGreaterThan(280 - 100);
   });
 
-  it('front row uses melee contact even with ranged passive', () => {
+  it('front row uses front enemy contact with effectiveRangePx stop', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
@@ -89,7 +88,7 @@ describe('resolvePlayerApproachBattleX', () => {
       gameData,
     );
 
-    expect(approachX).toBe(280 - engagedMinBodyGap());
+    expect(approachX).toBe(280 - 0);
   });
 
   it('melee band: front row separates by rangePx depth (L10)', () => {
@@ -145,8 +144,8 @@ describe('resolvePlayerApproachBattleX', () => {
       gameData,
     );
 
-    const guardianStop = 280 - engagedMinBodyGap() - 5;
-    const warriorStop = 280 - engagedMinBodyGap() - 8;
+    const guardianStop = 280 - 5;
+    const warriorStop = 280 - 8;
     expect(guardianX).toBe(guardianStop);
     expect(warriorX).toBe(warriorStop);
     expect(guardianX - warriorX).toBe(3);
@@ -649,7 +648,7 @@ describe('resolvePlayerApproachBattleX', () => {
       [meleeEnemy],
       gameData as unknown as GameData,
     );
-    const soloForwardStop = 300 - engagedMinBodyGap() - 5 + 3;
+    const soloForwardStop = 300 - 5 + 3;
     expect(assassinX).toBe(soloForwardStop);
   });
 
