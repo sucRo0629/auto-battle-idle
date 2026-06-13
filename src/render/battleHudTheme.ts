@@ -85,6 +85,7 @@ export interface BattleHudTheme {
   attackImpaleTip: string;
   statusBadgeOverlay: string;
   statusIconOutlineColor: string;
+  statusPassiveIconOutlineColor: string;
   statusIconOutlineWidth: number;
   statusIconFallbackAlpha: number;
   hurtTintR: number;
@@ -321,6 +322,11 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
       style,
       "--status-icon-outline-color",
       "#000000"
+    ),
+    statusPassiveIconOutlineColor: readString(
+      style,
+      "--status-icon-passive-outline-color",
+      "#3e9a9c"
     ),
     statusIconOutlineWidth: readNumber(style, "--status-icon-outline-width", 1),
     statusIconFallbackAlpha: readNumber(

@@ -384,6 +384,35 @@ describe('passiveEffects', () => {
     expect(badges).toEqual([]);
   });
 
+  it('syncBuffAuras replaces block aura instead of stacking duplicates', () => {
+    const blockPassives = {
+      ...passives,
+      defender_passive_1: {
+        id: 'defender_passive_1',
+        name: '盾受け',
+        effect: 'buff' as const,
+        buffSubKind: 'block' as const,
+        chance: 0.15,
+        buffTargetRule: { kind: 'self' as const },
+      },
+    };
+    const guard = mockAlly({
+      id: 'guard',
+      build: {
+        learnedPassiveIds: ['defender_passive_1'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    syncBuffAuras([guard], [], blockPassives, mockTargetingGameData());
+    syncBuffAuras([guard], [], blockPassives, mockTargetingGameData());
+
+    const blockEffects = guard.statusEffects.filter((e) => e.overlay === 'block');
+    expect(blockEffects).toHaveLength(1);
+    expect(blockEffects[0]?.id.startsWith('passive_buff_aura_')).toBe(true);
+  });
+
   it('syncDamageReductionAuras applies damageTaken reduction to selected targets', () => {
     const reductionPassives = {
       ...passives,

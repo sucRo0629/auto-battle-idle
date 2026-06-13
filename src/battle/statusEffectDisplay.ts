@@ -55,9 +55,178 @@ export interface StatBadgeBaseStats {
   reg: number;
 }
 
+export interface StatusEffectBadgeDisplay {
+  category: StatusDisplayCategory;
+  kind: "buff" | "debuff";
+  remainingRatio: number;
+  isPassive: boolean;
+}
+
 /** パッシブオーラ同期で付与された効果（HUD バッジ非表示・戦闘計算は対象） */
 export function isPassiveAuraStatusEffect(effect: StatusEffect): boolean {
   return effect.id.startsWith("passive_");
+}
+
+function isPassiveDisplayedStatusEffect(effect: StatusEffect): boolean {
+  return isPassiveAuraStatusEffect(effect);
+}
+
+function statusEffectRemainingRatio(effect: StatusEffect): number {
+  const duration =
+    effect.durationSec > 0 ? effect.durationSec : effect.remainingSec;
+  if (duration <= 0) return 1;
+  return Math.max(0, Math.min(1, effect.remainingSec / duration));
+}
+
+function effectKindFromEffectiveStat(
+  base: number,
+  effective: number,
+  reversed = false,
+): "buff" | "debuff" | null {
+  if (Math.abs(effective - base) < NEUTRAL_EPSILON) return null;
+  if (reversed) {
+    return effective < base ? "buff" : "debuff";
+  }
+  return effective > base ? "buff" : "debuff";
+}
+
+function statusEffectBadgeForStat(
+  effect: StatusEffect,
+  base: number,
+  category: "atk" | "def" | "reg" | "attackSpeed",
+): StatusEffectBadgeDisplay | null {
+  const agg = aggregateStatEffects([effect], category);
+  const kind = effectKindFromEffectiveStat(base, computeEffectiveStat(base, agg));
+  if (!kind) return null;
+  return {
+    category,
+    kind,
+    remainingRatio: statusEffectRemainingRatio(effect),
+    isPassive: isPassiveDisplayedStatusEffect(effect),
+  };
+}
+
+function statusEffectBadgeForDamageTaken(
+  effect: StatusEffect,
+): StatusEffectBadgeDisplay | null {
+  const agg = aggregateStatEffects([effect], "damageTaken");
+  const effective = computeEffectiveStat(1, agg);
+  const kind = effectKindFromEffectiveStat(1, effective, true);
+  if (!kind) return null;
+  return {
+    category: effective < 1 ? "damageReduction" : "damageIncrease",
+    kind,
+    remainingRatio: statusEffectRemainingRatio(effect),
+    isPassive: isPassiveDisplayedStatusEffect(effect),
+  };
+}
+
+function statusEffectBadgeForOverlay(
+  effect: StatusEffect,
+): StatusEffectBadgeDisplay | null {
+  switch (effect.overlay) {
+    case "hot":
+      return {
+        category: "hot",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "dot":
+      return {
+        category: "dot",
+        kind: "debuff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "evasion":
+      return {
+        category: "evasion",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "block":
+      return {
+        category: "block",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "counter":
+      return {
+        category: "counter",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "stun":
+      return {
+        category: "stun",
+        kind: "debuff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "damageTakenToHeal":
+      return {
+        category: "damageTakenToHeal",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    default:
+      return null;
+  }
+}
+
+function statusEffectBadgeForEffect(
+  effect: StatusEffect,
+  baseStats: StatBadgeBaseStats,
+): StatusEffectBadgeDisplay | null {
+  if (effect.stat === "atk") {
+    return statusEffectBadgeForStat(effect, baseStats.atk, "atk");
+  }
+  if (effect.stat === "def") {
+    return statusEffectBadgeForStat(effect, baseStats.def, "def");
+  }
+  if (effect.stat === "reg") {
+    return statusEffectBadgeForStat(effect, baseStats.reg, "reg");
+  }
+  if (effect.stat === "attackSpeed") {
+    return statusEffectBadgeForStat(effect, 1, "attackSpeed");
+  }
+  if (effect.stat === "damageTaken") {
+    return statusEffectBadgeForDamageTaken(effect);
+  }
+  return statusEffectBadgeForOverlay(effect);
+}
+
+export function collectStatusEffectBadgeDisplays(
+  effects: StatusEffect[],
+  baseStats: StatBadgeBaseStats,
+): StatusEffectBadgeDisplay[] {
+  return effects
+    .map((effect, index) => ({
+      effect,
+      index,
+      badge: statusEffectBadgeForEffect(effect, baseStats),
+    }))
+    .filter(
+      (
+        entry,
+      ): entry is {
+        effect: StatusEffect;
+        index: number;
+        badge: StatusEffectBadgeDisplay;
+      } => entry.badge !== null,
+    )
+    .sort((a, b) => {
+      if (a.badge.isPassive !== b.badge.isPassive) {
+        return a.badge.isPassive ? -1 : 1;
+      }
+      return a.index - b.index;
+    })
+    .map((entry) => entry.badge);
 }
 
 function effectsForCategory(

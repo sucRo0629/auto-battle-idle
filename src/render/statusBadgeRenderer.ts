@@ -1,6 +1,5 @@
-import type { AggregatedCategoryEffect } from '../battle/statusEffectDisplay.ts';
 import {
-  STATUS_BADGE_SLOT_ORDER,
+  type StatusEffectBadgeDisplay,
   type StatusDisplayCategory,
 } from '../battle/statusEffectDisplay.ts';
 import { getStatusIconImage } from './StatusIconRegistry.ts';
@@ -48,28 +47,100 @@ export function statusBadgeRowWidth(
   return badgeW + (badges.length - 1) * stride;
 }
 
-export interface StatusBadgeDrawItem {
-  category: StatusDisplayCategory;
-  kind: 'buff' | 'debuff';
-  remainingRatio: number;
+export type StatusBadgeDrawItem = StatusEffectBadgeDisplay;
+
+export interface StatusBadgeBlockLayout {
+  passiveRows: StatusBadgeDrawItem[][];
+  passiveBlockWidth: number;
+  totalWidth: number;
+  totalHeight: number;
+  isMultilinePassive: boolean;
 }
 
 export function orderBadgesForDraw(
-  badges: AggregatedCategoryEffect[],
+  badges: StatusBadgeDrawItem[],
 ): StatusBadgeDrawItem[] {
-  const byCategory = new Map(
-    badges.map((badge) => [badge.category, badge] as const),
-  );
-
-  return STATUS_BADGE_SLOT_ORDER.flatMap((category) => {
-    const badge = byCategory.get(category);
-    if (!badge || !isCategoryEffectVisible(badge)) return [];
-    return [{ category, kind: badge.kind, remainingRatio: badge.remainingRatio }];
-  });
+  return badges.slice();
 }
 
-function isCategoryEffectVisible(agg: AggregatedCategoryEffect): boolean {
-  return agg.kind === 'buff' || agg.kind === 'debuff';
+function chunkBadges(
+  badges: StatusBadgeDrawItem[],
+  size: number,
+): StatusBadgeDrawItem[][] {
+  if (badges.length === 0) return [];
+  const rows: StatusBadgeDrawItem[][] = [];
+  for (let i = 0; i < badges.length; i += size) {
+    rows.push(badges.slice(i, i + size));
+  }
+  return rows;
+}
+
+export function measureStatusBadgeBlock(
+  badges: StatusBadgeDrawItem[],
+  scale: number,
+  iconSize: number,
+  outlineWidth: number,
+  rowOverlap = 0,
+): StatusBadgeBlockLayout {
+  const passiveRows = chunkBadges(badges, 4);
+  const rowHeight = iconSize * scale;
+  const rowGap = Math.max(1, scale);
+  const passiveRowWidths = passiveRows.map((row) =>
+    statusBadgeRowWidth(row, scale, iconSize, outlineWidth, rowOverlap),
+  );
+  const passiveBlockWidth =
+    passiveRowWidths.length > 0 ? Math.max(...passiveRowWidths) : 0;
+  const totalWidth = passiveBlockWidth;
+  const totalHeight = passiveRows.length > 0
+    ? rowHeight * passiveRows.length + rowGap * (passiveRows.length - 1)
+    : rowHeight;
+
+  return {
+    passiveRows,
+    passiveBlockWidth,
+    totalWidth,
+    totalHeight,
+    isMultilinePassive: passiveRows.length > 1,
+  };
+}
+
+export function drawStatusBadgeBlock(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  top: number,
+  badges: StatusBadgeDrawItem[],
+  scale: number,
+  theme: StatusBadgeTheme,
+): StatusBadgeBlockLayout {
+  const layout = measureStatusBadgeBlock(
+    badges,
+    scale,
+    theme.iconSize,
+    theme.iconOutlineWidth,
+    theme.rowOverlap,
+  );
+
+  if (layout.totalWidth <= 0) return layout;
+
+  const rowHeight = theme.iconSize * scale;
+  const rowGap = Math.max(1, scale);
+  const left = centerX - layout.totalWidth / 2;
+
+  let passiveTop =
+    top + Math.max(0, layout.passiveRows.length - 1) * (rowHeight + rowGap);
+  for (const row of layout.passiveRows) {
+    const rowW = statusBadgeRowWidth(
+      row,
+      scale,
+      theme.iconSize,
+      theme.iconOutlineWidth,
+      theme.rowOverlap,
+    );
+    drawStatusBadgeRow(ctx, left + rowW / 2, passiveTop, row, scale, theme);
+    passiveTop -= rowHeight + rowGap;
+  }
+
+  return layout;
 }
 
 export interface StatusBadgeTheme {
@@ -79,6 +150,7 @@ export interface StatusBadgeTheme {
   rowOverlap: number;
   overlayColor: string;
   iconOutlineColor: string;
+  passiveIconOutlineColor: string;
   iconOutlineWidth: number;
   iconFallbackAlpha: number;
   resolveIconFallbackColor: (
@@ -218,6 +290,9 @@ function drawStatusBadge(
 ): void {
   const accentColor =
     badge.kind === 'buff' ? theme.buffColor : theme.debuffColor;
+  const outlineColor = badge.isPassive
+    ? theme.passiveIconOutlineColor
+    : theme.iconOutlineColor;
 
   ctx.save();
 
@@ -231,6 +306,7 @@ function drawStatusBadge(
     accentColor,
     badge.remainingRatio,
     theme,
+    outlineColor,
   );
 
   ctx.restore();
@@ -245,6 +321,7 @@ function drawStatusIcon(
   color: string,
   remainingRatio: number,
   theme: StatusBadgeTheme,
+  outlineColor: string,
 ): void {
   const image = getStatusIconImage(category);
   const outlineWidthPx =
@@ -260,7 +337,7 @@ function drawStatusIcon(
         size,
         remainingRatio,
         theme.overlayColor,
-        theme.iconOutlineColor,
+        outlineColor,
         outlineWidthPx,
       );
     } else {
@@ -274,7 +351,7 @@ function drawStatusIcon(
         color,
         remainingRatio,
         theme.overlayColor,
-        theme.iconOutlineColor,
+        outlineColor,
         outlineWidthPx,
       );
     }
@@ -283,7 +360,7 @@ function drawStatusIcon(
 
   const pad = statusBadgeOutlinePad(outlineWidthPx);
   if (pad > 0) {
-    ctx.fillStyle = theme.iconOutlineColor;
+    ctx.fillStyle = outlineColor;
     ctx.fillRect(x - pad, y - pad, size + pad * 2, size + pad * 2);
   }
 

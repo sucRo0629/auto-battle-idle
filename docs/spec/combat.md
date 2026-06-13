@@ -181,7 +181,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 
 対象ステ：`atk`, `def`, `reg`（耐魔）, `damageTaken`, `attackSpeed`（攻撃速度。基本攻撃 CD 回復倍率に適用）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
 
-**HUD バッジ表示順：** `atk` → `def` → `reg` → `attackSpeed` → `damageReduction` → `damageIncrease` → `hot` → `dot` → `block` → `counter` → `stun`。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン（矢印なし・原色）。
+**HUD バッジ表示:** 1 つの `StatusEffect` を 1 つのバッジとして描画する。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。パッシブ効果は常駐表示として扱い、`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン（矢印なし・原色）。
 
 
 | 種別     | 定義方法                                                                                                                                           |

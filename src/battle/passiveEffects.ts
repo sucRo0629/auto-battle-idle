@@ -513,7 +513,7 @@ function createPassiveOverlayBuffEffect(
   durationSec: number = PASSIVE_AURA_DURATION_SEC,
 ): StatusEffect {
   return {
-    id: `passive_buff_${source.id}_${passiveId}_${subKind}`,
+    id: `passive_buff_aura_${source.id}_${passiveId}_${subKind}`,
     kind: 'buff',
     overlay: subKind,
     ...(subKind === 'block'
@@ -532,7 +532,7 @@ function createPassiveDamageTakenToHealEffect(
   ratio: number,
 ): StatusEffect {
   return {
-    id: `passive_buff_${source.id}_${passiveId}_damageTakenToHeal`,
+    id: `passive_buff_aura_${source.id}_${passiveId}_damageTakenToHeal`,
     kind: 'buff',
     overlay: 'damageTakenToHeal',
     ratio,
@@ -552,7 +552,7 @@ function createPassiveStatBuffEffect(
   flatBonus?: number,
 ): StatusEffect {
   return {
-    id: `passive_buff_${source.id}_${passiveId}_${stat}_${index}`,
+    id: `passive_buff_aura_${source.id}_${passiveId}_${stat}_${index}`,
     kind: 'buff',
     stat,
     multiplier: multiplier ?? 1,

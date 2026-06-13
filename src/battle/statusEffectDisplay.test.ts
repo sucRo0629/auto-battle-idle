@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { aggregateStatStatusEffects } from './statusEffectDisplay.ts';
+import {
+  aggregateStatStatusEffects,
+  collectStatusEffectBadgeDisplays,
+} from './statusEffectDisplay.ts';
 import type { StatusEffect } from './types.ts';
 
 function statEffect(
@@ -113,6 +116,32 @@ describe('statusEffectDisplay', () => {
     );
 
     expect(badges).toEqual([]);
+  });
+
+  it('collects one badge per status effect and keeps passives on the left', () => {
+    const badges = collectStatusEffectBadgeDisplays(
+      [
+        statEffect({
+          id: 'passive_buff_guard_block_block',
+          kind: 'buff',
+          overlay: 'block',
+          blockChance: 0.2,
+        }),
+        statEffect({
+          id: 'vuln',
+          kind: 'debuff',
+          stat: 'damageTaken',
+          multiplier: 1.5,
+        }),
+      ],
+      { atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges).toHaveLength(2);
+    expect(badges[0]?.isPassive).toBe(true);
+    expect(badges[0]?.category).toBe('block');
+    expect(badges[1]?.isPassive).toBe(false);
+    expect(badges[1]?.category).toBe('damageIncrease');
   });
 
   it('aggregates damageTakenToHeal overlay', () => {

@@ -22,25 +22,26 @@ export interface StatusBadgeRect {
 export function defaultStatusBadgeTop(
   input: StatusBadgeLayoutInput,
   scale: number,
+  rowHeight = STATUS_BADGE_H * scale,
 ): number {
-  return input.y - STATUS_BADGE_GAP * scale - STATUS_BADGE_H * scale;
+  return input.y - STATUS_BADGE_GAP * scale - rowHeight;
 }
 
 export function statusBadgeRect(
   spriteX: number,
   badgeTop: number,
   rowWidth: number,
+  rowHeight: number,
   scale: number,
   spriteSize: number,
 ): StatusBadgeRect {
   const spriteW = spriteSize * scale;
   const left = spriteX + (spriteW - rowWidth) / 2;
-  const height = STATUS_BADGE_H * scale;
   return {
     left,
     top: badgeTop,
     right: left + rowWidth,
-    bottom: badgeTop + height,
+    bottom: badgeTop + rowHeight,
   };
 }
 
@@ -50,31 +51,42 @@ export function computeStatusBadgeTops(
   rowWidthById: Map<string, number>,
   scale: number,
   spriteSize: number,
+  rowHeightById: Map<string, number> = new Map(),
 ): Map<string, number> {
   const placed: StatusBadgeRect[] = [];
   const tops = new Map<string, number>();
   const sorted = [...units].sort((a, b) => b.x - a.x);
-  const stackOverlap = (STATUS_BADGE_H * scale) / 2;
 
   for (const unit of sorted) {
     const rowWidth = rowWidthById.get(unit.id) ?? 0;
     if (rowWidth <= 0) continue;
+    const rowHeight = rowHeightById.get(unit.id) ?? STATUS_BADGE_H * scale;
 
-    let top = defaultStatusBadgeTop(unit, scale);
+    let top = defaultStatusBadgeTop(unit, scale, rowHeight);
     for (const placedBadge of placed) {
       const candidate = statusBadgeRect(
         unit.x,
         top,
         rowWidth,
+        rowHeight,
         scale,
         spriteSize,
       );
       if (hpBarRectsOverlapHorizontally(candidate, placedBadge)) {
-        top = Math.min(top, placedBadge.top - stackOverlap);
+        const placedHeight = placedBadge.bottom - placedBadge.top;
+        const overlap = Math.max(rowHeight, placedHeight) / 2;
+        top = Math.min(top, placedBadge.top - overlap);
       }
     }
 
-    const rect = statusBadgeRect(unit.x, top, rowWidth, scale, spriteSize);
+    const rect = statusBadgeRect(
+      unit.x,
+      top,
+      rowWidth,
+      rowHeight,
+      scale,
+      spriteSize,
+    );
     tops.set(unit.id, top);
     placed.push(rect);
   }

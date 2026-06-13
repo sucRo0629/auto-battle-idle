@@ -1,4 +1,4 @@
-import { aggregateStatStatusEffects } from '../battle/statusEffectDisplay.ts';
+import { collectStatusEffectBadgeDisplays } from '../battle/statusEffectDisplay.ts';
 import { MAX_ACTIVE_SLOTS } from '../progression/skillBuild.ts';
 import { layoutHpBarBarrier } from '../render/hpBarBarrierLayout.ts';
 import { getClassIconUrl } from '../render/IconRegistry.ts';
@@ -9,10 +9,10 @@ import {
   type BattleHudTheme,
 } from '../render/battleHudTheme.ts';
 import {
-  drawStatusBadgeRow,
+  drawStatusBadgeBlock,
+  measureStatusBadgeBlock,
   orderBadgesForDraw,
   statusBadgeOutlinePad,
-  statusBadgeRowWidth,
 } from '../render/statusBadgeRenderer.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
 
@@ -205,7 +205,7 @@ export class PartyHudPanel {
   }
 
   private updateStatusBadges(slot: SlotElements, entry: PartyHudEntry): void {
-    const badges = aggregateStatStatusEffects(entry.statusEffects, {
+    const badges = collectStatusEffectBadgeDisplays(entry.statusEffects, {
       atk: entry.atk,
       def: entry.def,
       reg: entry.reg,
@@ -220,17 +220,16 @@ export class PartyHudPanel {
 
     const theme = this.theme;
     const scale = 1;
-    const rowW = statusBadgeRowWidth(
+    const badgeLayout = measureStatusBadgeBlock(
       drawItems,
       scale,
       theme.statusBadgeIconSize,
       theme.statusIconOutlineWidth,
       theme.statusBadgeOverlap,
     );
-    const badgeH = theme.statusBadgeIconSize * scale;
     const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
-    const canvasW = rowW + outlinePad * 2;
-    const canvasH = badgeH + outlinePad * 2;
+    const canvasW = badgeLayout.totalWidth + outlinePad * 2;
+    const canvasH = badgeLayout.totalHeight + outlinePad * 2;
 
     canvas.width = canvasW;
     canvas.height = canvasH;
@@ -240,18 +239,26 @@ export class PartyHudPanel {
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvasW, canvasH);
-    drawStatusBadgeRow(ctx, outlinePad + rowW / 2, outlinePad, drawItems, scale, {
-      buffColor: theme.statusBuffColor,
-      debuffColor: theme.statusDebuffColor,
-      iconSize: theme.statusBadgeIconSize,
-      rowOverlap: theme.statusBadgeOverlap,
-      overlayColor: theme.statusBadgeOverlay,
-      iconOutlineColor: theme.statusIconOutlineColor,
-      iconOutlineWidth: theme.statusIconOutlineWidth,
-      iconFallbackAlpha: theme.statusIconFallbackAlpha,
-      resolveIconFallbackColor: (category) =>
-        resolveStatusIconFallbackColor(category, theme),
-    });
+    drawStatusBadgeBlock(
+      ctx,
+      outlinePad + badgeLayout.totalWidth / 2,
+      outlinePad,
+      drawItems,
+      scale,
+      {
+        buffColor: theme.statusBuffColor,
+        debuffColor: theme.statusDebuffColor,
+        iconSize: theme.statusBadgeIconSize,
+        rowOverlap: theme.statusBadgeOverlap,
+        overlayColor: theme.statusBadgeOverlay,
+        iconOutlineColor: theme.statusIconOutlineColor,
+        passiveIconOutlineColor: theme.statusPassiveIconOutlineColor,
+        iconOutlineWidth: theme.statusIconOutlineWidth,
+        iconFallbackAlpha: theme.statusIconFallbackAlpha,
+        resolveIconFallbackColor: (category) =>
+          resolveStatusIconFallbackColor(category, theme),
+      },
+    );
   }
 
   private updateRecastGrid(slot: SlotElements, entry: PartyHudEntry): void {

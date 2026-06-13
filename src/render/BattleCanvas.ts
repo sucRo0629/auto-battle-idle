@@ -32,15 +32,15 @@ import {
   ENEMY_HP_BAR_H,
   ENEMY_HP_BAR_W,
 } from "./enemyHpBarLayout.ts";
-import { aggregateStatStatusEffects } from "../battle/statusEffectDisplay.ts";
+import { collectStatusEffectBadgeDisplays } from "../battle/statusEffectDisplay.ts";
 import {
   computeStatusBadgeTops,
   type StatusBadgeLayoutInput,
 } from "./statusBadgeLayout.ts";
 import {
-  drawStatusBadgeRow,
+  measureStatusBadgeBlock,
+  drawStatusBadgeBlock,
   orderBadgesForDraw,
-  statusBadgeRowWidth,
 } from "./statusBadgeRenderer.ts";
 import type {
   AnimState,
@@ -400,7 +400,7 @@ export class BattleCanvas implements IBattleRenderer {
       this.drawSprite(layout, layout.x, layout.y, SPRITE_SCALE);
     }
 
-    this.drawStatusBadges(enemyBarTops, SPRITE_SCALE);
+    this.drawStatusBadges(SPRITE_SCALE);
 
     if (this.verifyModeEnabled) {
       this.drawVerifyModeCoordinates();
@@ -677,17 +677,15 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.restore();
   }
 
-  private drawStatusBadges(
-    enemyBarTops: Map<string, number>,
-    scale: number,
-  ): void {
+  private drawStatusBadges(scale: number): void {
     const badgeInputs: StatusBadgeLayoutInput[] = [];
     const rowWidthById = new Map<string, number>();
+    const rowHeightById = new Map<string, number>();
 
     for (const layout of this.layouts) {
       if (layout.isEnemy && !layout.isAlive) continue;
 
-      const badges = aggregateStatStatusEffects(layout.statusEffects, {
+      const badges = collectStatusEffectBadgeDisplays(layout.statusEffects, {
         atk: layout.atk,
         def: layout.def,
         reg: layout.reg,
@@ -695,14 +693,15 @@ export class BattleCanvas implements IBattleRenderer {
       const drawItems = orderBadgesForDraw(badges);
       if (drawItems.length === 0) continue;
 
-      const rowWidth = statusBadgeRowWidth(
+      const badgeLayout = measureStatusBadgeBlock(
         drawItems,
         scale,
         this.theme.statusBadgeIconSize,
         this.theme.statusIconOutlineWidth,
         this.theme.statusBadgeOverlap,
       );
-      rowWidthById.set(layout.id, rowWidth);
+      rowWidthById.set(layout.id, badgeLayout.totalWidth);
+      rowHeightById.set(layout.id, badgeLayout.totalHeight);
       badgeInputs.push({
         id: layout.id,
         x: layout.x,
@@ -715,12 +714,13 @@ export class BattleCanvas implements IBattleRenderer {
       rowWidthById,
       scale,
       SPRITE_SIZE,
+      rowHeightById,
     );
 
     for (const layout of this.layouts) {
       if (layout.isEnemy && !layout.isAlive) continue;
 
-      const badges = aggregateStatStatusEffects(layout.statusEffects, {
+      const badges = collectStatusEffectBadgeDisplays(layout.statusEffects, {
         atk: layout.atk,
         def: layout.def,
         reg: layout.reg,
@@ -732,13 +732,14 @@ export class BattleCanvas implements IBattleRenderer {
       const spriteW = SPRITE_SIZE * scale;
       const centerX = layout.x + spriteW / 2;
 
-      drawStatusBadgeRow(this.ctx, centerX, top, drawItems, scale, {
+      drawStatusBadgeBlock(this.ctx, centerX, top, drawItems, scale, {
         buffColor: this.theme.statusBuffColor,
         debuffColor: this.theme.statusDebuffColor,
         iconSize: this.theme.statusBadgeIconSize,
         rowOverlap: this.theme.statusBadgeOverlap,
         overlayColor: this.theme.statusBadgeOverlay,
         iconOutlineColor: this.theme.statusIconOutlineColor,
+        passiveIconOutlineColor: this.theme.statusPassiveIconOutlineColor,
         iconOutlineWidth: this.theme.statusIconOutlineWidth,
         iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
         resolveIconFallbackColor: (category) =>
