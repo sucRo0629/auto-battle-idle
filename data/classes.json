@@ -168,7 +168,7 @@
       {
         "level": 0,
         "skillIds": [
-          "at_warrior_passive_1",
+          "at_passive_1",
           "at_warrior_passive_2",
           "at_warrior_active_1",
           "at_warrior_active_2"
@@ -181,7 +181,7 @@
       "def": 2
     },
     "passiveIds": [
-      "at_warrior_passive_1",
+      "at_passive_1",
       "at_warrior_passive_2"
     ]
   },
@@ -326,13 +326,15 @@
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "at_sniper_basic_attack",
     "passiveIds": [
-      "at_sniper_passive_1"
+      "at_passive_1",
+      "at_sniper_passive_3"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "at_sniper_passive_1",
+          "at_passive_1",
+          "at_sniper_passive_3",
           "at_sniper_active_1",
           "at_sniper_active_2"
         ]
@@ -360,13 +362,16 @@
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_hunter_basic_attack",
-    "passiveIds": [],
+    "passiveIds": [
+      "at_hunter_passive_1"
+    ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
           "at_hunter_active_1",
-          "at_hunter_active_2"
+          "at_hunter_active_2",
+          "at_hunter_passive_1"
         ]
       }
     ],
@@ -463,11 +468,14 @@
     "jobTier": 1,
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "at_geomancer_basic_attack",
-    "passiveIds": [],
+    "passiveIds": [
+      "at_geomancer_passive_1"
+    ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
+          "at_geomancer_passive_1",
           "at_geomancer_active_1",
           "at_geomancer_active_2"
         ]

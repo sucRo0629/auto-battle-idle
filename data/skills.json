@@ -389,26 +389,27 @@
     },
     {
       "id": "at_sniper_passive_1",
-      "name": "重い一撃",
-      "effect": "defenseIgnore",
-      "defenseIgnore": {
-        "def": {
-          "mode": "percent",
-          "amount": 0.3
-        }
-      }
+      "name": "大物狙い",
+      "effect": "targetRuleOverride",
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "hp",
+        "order": "highest"
+      },
+      "targetRuleOverrideApplyTo": "enemy"
     },
     {
       "id": "at_sniper_passive_2",
-      "name": "精密射",
-      "effect": "defenseIgnore",
-      "defenseIgnore": {
-        "chance": 0.2,
-        "def": {
-          "mode": "percent",
-          "amount": 1
-        }
-      }
+      "name": "大物狙い",
+      "effect": "targetRuleOverride",
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "hp",
+        "order": "highest"
+      },
+      "targetRuleOverrideApplyTo": "enemy"
     },
     {
       "id": "sp_abjurer_passive_4",
@@ -447,6 +448,54 @@
         "side": "ally",
         "order": "nearest"
       }
+    },
+    {
+      "id": "at_sniper_passive_3",
+      "name": "岩穿ち",
+      "effect": "defenseIgnore",
+      "defenseIgnore": {
+        "def": {
+          "mode": "percent",
+          "amount": 0.3
+        }
+      }
+    },
+    {
+      "id": "at_passive_1",
+      "name": "大物喰い",
+      "effect": "targetRuleOverride",
+      "targetRuleOverride": {
+        "kind": "stat",
+        "side": "enemy",
+        "stat": "hp",
+        "order": "highest"
+      },
+      "targetRuleOverrideApplyTo": "enemy"
+    },
+    {
+      "id": "at_hunter_passive_1",
+      "name": "追い込み",
+      "effect": "specialEffect",
+      "specialEffectApplyTo": "damage",
+      "specialEffect": {
+        "scale": 1.2,
+        "conditions": [
+          {
+            "kind": "debuff",
+            "tags": [
+              "def",
+              "reg"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "at_geomancer_passive_1",
+      "name": "at_geomancer_passive_1",
+      "effect": "aoeCrowdBonus",
+      "perExtraTargetScale": 0.05,
+      "maxExtraTargets": 5
     }
   ],
   "actives": [
@@ -507,13 +556,15 @@
           "type": "damage",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.85
+            "atkScale": 0.6
           },
           "target": {
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
-          }
+          },
+          "targetShape": "aoe",
+          "aoeRadiusPx": 50
         }
       ],
       "trigger": {
@@ -1058,38 +1109,47 @@
     },
     {
       "id": "at_sniper_active_1",
-      "name": "精密射",
+      "name": "引き絞り",
       "trigger": {
         "kind": "time",
         "value": 10
       },
       "effect": [
         {
-          "type": "damage",
-          "damageType": "physical",
-          "amount": {
-            "kind": "atkBased",
-            "atkScale": 2
-          },
-          "vfx": {
-            "preset": "arrow",
-            "arc": true
-          },
-          "targetShape": "single",
           "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "nearest"
-          }
+            "kind": "self"
+          },
+          "type": "buff",
+          "buffSubKind": "stat",
+          "buffStat": "atk",
+          "buffMultiplier": 1.5,
+          "buffDurationSec": 8
+        },
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "debuff",
+          "debuffSubKind": "stat",
+          "debuffStat": "attackSpeed",
+          "debuffMultiplier": 0.7,
+          "debuffDurationSec": 8
+        }
+      ],
+      "firePolicy": "smart",
+      "fireConditions": [
+        {
+          "kind": "targetHp",
+          "maxHpRatio": 0.7
         }
       ]
     },
     {
       "id": "at_sniper_active_2",
-      "name": "貫通矢",
+      "name": "貫く一射",
       "trigger": {
         "kind": "time",
-        "value": 12
+        "value": 20
       },
       "effect": [
         {
@@ -1098,9 +1158,8 @@
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.2
+            "atkScale": 1.5
           },
-          "range": 460,
           "pierceDurationSec": 0.5,
           "vfx": {
             "preset": "impale"
@@ -1110,6 +1169,14 @@
             "side": "enemy",
             "order": "selfOrigin"
           }
+        }
+      ],
+      "useDurationSec": 3,
+      "firePolicy": "smart",
+      "fireConditions": [
+        {
+          "kind": "enemyCount",
+          "min": 3
         }
       ]
     },
@@ -1226,7 +1293,8 @@
             "kind": "distance",
             "side": "enemy",
             "order": "nearest"
-          }
+          },
+          "debuffSubKind": "stat"
         }
       ]
     },
@@ -1377,12 +1445,11 @@
             "kind": "atkBased",
             "atkScale": 1.1
           },
-          "range": 50,
           "vfx": {
             "preset": "orb"
           },
           "targetShape": "aoe",
-          "aoeRadiusPx": 90,
+          "aoeRadiusPx": 100,
           "target": {
             "kind": "distance",
             "side": "enemy",
@@ -1406,7 +1473,6 @@
             "kind": "atkBased",
             "atkScale": 0.7
           },
-          "range": 50,
           "vfx": {
             "preset": "orb"
           },
@@ -2096,6 +2162,28 @@
     {
       "id": "test_to_ranged_basic_attack",
       "name": "test_to_ranged_basic_attack",
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "at_hunter_basic_attack",
+      "name": "at_hunter_basic_attack",
       "trigger": {
         "kind": "time",
         "value": 2
