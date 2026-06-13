@@ -503,6 +503,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 - `targetShape` は **single のみ**（Phase 1）
 - `toAnchor` は任意 side の `target` + `anchorOffsetPx` で位置決定（offset 0 = anchor 座標そのもの）
 - `engage` は敵向け `target` が一般的（射程内へ自動計算）
+- move の `target` で `order: nearest` / `farthest` を指定した場合、anchor は **使用者との battleX 距離**で選ぶ（自動接近 chase の「編成奥 = max battleX」とは別）
 - move を含むスキルは effect 列を **順序実行**（移動完了後に次 effect）。CD はシーケンス全 step 完了後にリセット
 
 ### targetShape の JSON 例（スキーマ参考・具体 ID は未固定）

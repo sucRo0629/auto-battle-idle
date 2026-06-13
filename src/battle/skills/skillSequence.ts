@@ -246,7 +246,7 @@ export function resolveSequenceStepAnchor(
 ): CombatantState | null {
   if (effect.type === 'move') {
     const pool = getTargetPool(spec, actor, allies, enemies);
-    return pickTargetFromPool(spec, actor, pool);
+    return pickTargetFromPool(spec, actor, pool, { moveAnchor: true });
   }
   const pool = getTargetPool(spec, actor, allies, enemies);
   return pickTargetFromPool(spec, actor, pool);

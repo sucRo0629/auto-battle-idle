@@ -408,10 +408,30 @@ export function applyIncludeSelfFilter(
   return targets.filter((entry) => entry.unit.id !== actor.id);
 }
 
+export type PickTargetOptions = {
+  /** move anchor: 至近/最遠は使用者との battleX 距離（接近 chase の編成奥選択と分離） */
+  moveAnchor?: boolean;
+};
+
+function pickEnemyByActorDistance(
+  actor: CombatantState,
+  pool: CombatantState[],
+  order: "nearest" | "farthest",
+): CombatantState {
+  const actorX = getBattleX(actor);
+  return pool.reduce((a, b) => {
+    const da = Math.abs(getBattleX(a) - actorX);
+    const db = Math.abs(getBattleX(b) - actorX);
+    if (order === "nearest") return da <= db ? a : b;
+    return da >= db ? a : b;
+  });
+}
+
 export function pickTargetFromPool(
   spec: TargetSpec,
   actor: CombatantState,
-  pool: CombatantState[]
+  pool: CombatantState[],
+  options?: PickTargetOptions,
 ): CombatantState | null {
   if (pool.length === 0) return null;
 
@@ -457,6 +477,11 @@ export function pickTargetFromPool(
   }
 
   if (spec.kind === "distance" && spec.side === "enemy") {
+    if (options?.moveAnchor) {
+      if (spec.order === "nearest" || spec.order === "farthest") {
+        return pickEnemyByActorDistance(actor, pool, spec.order);
+      }
+    }
     if (spec.order === "nearest") {
       return pool.reduce((a, b) => (getBattleX(a) >= getBattleX(b) ? a : b));
     }

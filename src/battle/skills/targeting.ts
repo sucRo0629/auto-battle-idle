@@ -32,6 +32,7 @@ import {
   pickTargetFromPool as pickTargetFromPoolSpec,
   resolveTargetSpec,
   targetSpecFaction,
+  type PickTargetOptions,
   type TargetRuleContext,
 } from './targetSpec.ts';
 
@@ -60,12 +61,13 @@ export function pickTargetFromPool(
   specOrRule: TargetSpec | TargetRule,
   actor: CombatantState,
   pool: CombatantState[],
+  options?: PickTargetOptions,
 ): CombatantState | null {
   const spec =
     typeof specOrRule === 'string'
       ? normalizeTarget(specOrRule)
       : specOrRule;
-  return pickTargetFromPoolSpec(spec, actor, pool);
+  return pickTargetFromPoolSpec(spec, actor, pool, options);
 }
 
 export function isMultiTargetRule(rule: TargetRule): boolean {
@@ -239,7 +241,7 @@ export function resolveEffectAnchor(
   const spec = resolveEffectTargetSpec(effect, actor, allies, enemies, passives);
   if (effect.type === 'move') {
     const pool = getTargetPool(spec, actor, allies, enemies);
-    return pickTargetFromPoolSpec(spec, actor, pool);
+    return pickTargetFromPoolSpec(spec, actor, pool, { moveAnchor: true });
   }
   const resolution = resolveEffectResolution(
     effect,
@@ -267,7 +269,9 @@ export function resolveEffectResolution(
 
   if (effect.type === 'move') {
     const pool = getTargetPool(spec, actor, allies, enemies);
-    const target = pickTargetFromPoolSpec(spec, actor, pool);
+    const target = pickTargetFromPoolSpec(spec, actor, pool, {
+      moveAnchor: true,
+    });
     if (!target) return null;
     return {
       waves: [{ hitIndex: 0, targets: [{ unit: target }] }],

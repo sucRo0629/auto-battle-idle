@@ -250,15 +250,13 @@
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_lancer_basic_attack",
-    "passiveIds": [
-      "at_lancer_passive_1"
-    ],
+    "passiveIds": [],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "at_lancer_passive_1",
-          "at_lancer_active_1"
+          "at_lancer_active_1",
+          "at_lancer_active_2"
         ]
       }
     ],
@@ -505,8 +503,8 @@
         "level": 0,
         "skillIds": [
           "sp_cleric_passive_1",
-          "sp_cleric_active_1",
-          "sp_cleric_passive_2"
+          "sp_cleric_passive_2",
+          "sp_cleric_active_1"
         ]
       }
     ],
@@ -546,8 +544,8 @@
         "level": 0,
         "skillIds": [
           "sp_abjurer_passive_1",
-          "sp_abjurer_active_1",
-          "sp_abjurer_passive_2"
+          "sp_abjurer_passive_2",
+          "sp_abjurer_active_1"
         ]
       },
       {

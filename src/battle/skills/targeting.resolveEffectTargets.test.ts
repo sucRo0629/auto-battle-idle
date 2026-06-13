@@ -458,6 +458,26 @@ describe('resolveEffectTargets', () => {
     expect(resolution?.waves[1]?.targets).toHaveLength(0);
   });
 
+  it('move nearest enemy anchor uses actor distance not formation depth', () => {
+    const actor = mockUnit('lancer', 100);
+    const front = mockUnit('near', 240, { isEnemy: true });
+    const rear = mockUnit('far', 360, { isEnemy: true });
+    const anchor = resolveEffectAnchor(
+      {
+        type: 'move',
+        moveMode: 'toAnchor',
+        moveDurationSec: 0.25,
+        anchorOffsetPx: -32,
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+      },
+      actor,
+      [actor],
+      [front, rear],
+      gameData,
+    );
+    expect(anchor?.id).toBe('near');
+  });
+
   it('closestAlly for ally actor picks nearest ally by battleX', () => {
     const actor = mockUnit('actor', 150);
     const allyNear = mockUnit('near', 120);

@@ -273,7 +273,7 @@
     },
     {
       "id": "sp_abjurer_passive_1",
-      "name": "sp_abjurer_passive_1",
+      "name": "守りの備え",
       "effect": "buff",
       "buffSubKind": "barrier",
       "barrierAmount": {
@@ -290,7 +290,7 @@
     },
     {
       "id": "sp_abjurer_passive_2",
-      "name": "sp_abjurer_passive_2",
+      "name": "時刻む防護",
       "effect": "buff",
       "buffSubKind": "barrier",
       "barrierAmount": {
@@ -308,7 +308,7 @@
     },
     {
       "id": "sp_abjurer_passive_3",
-      "name": "sp_abjurer_passive_3",
+      "name": "常の庇護",
       "effect": "buff",
       "buffSubKind": "stat",
       "buffStat": [
@@ -324,7 +324,7 @@
     },
     {
       "id": "sp_alchemist_passive_1",
-      "name": "sp_alchemist_passive_1",
+      "name": "薬効の香り",
       "effect": "heal",
       "healSubKind": "hot",
       "hotAmount": {
@@ -338,7 +338,7 @@
     },
     {
       "id": "sp_alchemist_passive_2",
-      "name": "sp_alchemist_passive_2",
+      "name": "守り薬",
       "effect": "buff",
       "buffSubKind": "stat",
       "buffStat": [
@@ -480,7 +480,7 @@
     },
     {
       "id": "sp_alchemist_passive_3",
-      "name": "sp_alchemist_passive_2",
+      "name": "毒消し",
       "effect": "periodicDispel",
       "periodicTrigger": "interval",
       "intervalSec": 5,
@@ -495,7 +495,7 @@
     },
     {
       "id": "sp_cleric_passive_2",
-      "name": "sp_cleric_passive_2",
+      "name": "生気重ね",
       "effect": "excessHealToBarrier",
       "barrierScale": 1,
       "excessHealSources": [
@@ -996,6 +996,16 @@
             "side": "enemy",
             "order": "selfOrigin"
           }
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "selfOrigin"
+          },
+          "type": "knockback",
+          "distancePx": 30,
+          "targetShape": "pierce"
         }
       ],
       "vfx": {
@@ -1557,7 +1567,7 @@
     },
     {
       "id": "sp_abjurer_active_1",
-      "name": "sp_abjurer_active_1",
+      "name": "盾添え",
       "trigger": {
         "kind": "time",
         "value": 8
@@ -1599,7 +1609,7 @@
     },
     {
       "id": "sp_alchemist_active_1",
-      "name": "sp_alchemist_active_1",
+      "name": "薬粉撒き",
       "trigger": {
         "kind": "time",
         "value": 10
