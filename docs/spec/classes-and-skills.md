@@ -179,7 +179,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 | フィールド       | 省略時                                                                                          |
 | ---------------- | ----------------------------------------------------------------------------------------------- |
-| `rangePx`        | `0`（近接帯 0〜99、遠隔帯 100 以上）                                                            |
+| `rangePx`        | `0`（分類用: 0〜99 は近接帯、100 以上は遠隔帯）                                                  |
 | `damageType`     | `physical`                                                                                      |
 | `basicAttackVfx` | `deriveBasicAttackVfxFromTraits()`（magic→orb / physical+rangePx>=100→arrow / それ以外 →slash） |
 
@@ -192,9 +192,11 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | **通常攻撃**（合成 basic） | effect に書かない（`actor.traits.rangePx`） |
 | アクティブ等               | 任意。省略時 = `actor.traits.rangePx`       |
 
-**設定上限:** `traits.rangePx` および `effect.range` は `0〜CONFIGURABLE_RANGE_PX_MAX` px（`rangeLimits.ts`: `CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`）。近接帯・遠隔帯の境界は `RANGED_ATTACK_MIN_PX`（100）— 詳細は [battle-field.md §2.6](./battle-field.md#26-定数単一正本battleconstantsts-または-typests)。
+**設定上限:** `traits.rangePx` および `effect.range` は `0〜CONFIGURABLE_RANGE_PX_MAX` px（`rangeLimits.ts`: `CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`）。
 
-`traits.rangePx >= RANGED_ATTACK_MIN_PX` で遠隔攻撃（`rangedAttackingEnemy`）。`0〜MELEE_RANGE_MAX_PX` は近接帯（slash VFX、停止位置は §battle-field 2.5）。`traits.damageType === 'magic'` で `magicAttackingEnemy`。
+分類用途では `RANGED_ATTACK_MIN_PX`（100）を使う。`traits.rangePx >= RANGED_ATTACK_MIN_PX` で遠隔攻撃（`rangedAttackingEnemy`）とし、`traits.damageType === 'magic'` で `magicAttackingEnemy`。
+
+距離用途では [battle-field.md §2.5](./battle-field.md#25-攻撃位置move新軸) の `effectiveRangePx` 共通式を使う。`0〜MELEE_RANGE_MAX_PX` は近接帯（slash VFX）で、停止位置や移動量の計算に 100px 境界は使わない。
 
 **一次職 `rangePx`（参考）：** 双刃士/闘技 0、鉄衛/護法 5、剣術 8、槍術 24、魔法 30、物理レンジ 40。
 
