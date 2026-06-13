@@ -180,6 +180,15 @@
   line-height: 0;
 }
 
+.battle-x-debug-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
 .party-hud-panel {
   position: relative;
   z-index: 1;

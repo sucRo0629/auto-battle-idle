@@ -23,6 +23,7 @@ import {
   buildPartyHudMetaBySlot,
 } from "./partyHudTypes.ts";
 import { BattleStatsOverlay } from "./BattleStatsOverlay.ts";
+import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 import type { PartyMemberProgress } from "./PartyMemberStatsDisplay.ts";
 
@@ -51,6 +52,7 @@ export class BattleView {
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
   private readonly debugMenu: DebugMenuPanel;
+  private readonly battleXDebugCanvas: BattleXDebugCanvas;
   private statsOverlay: BattleStatsOverlay | null = null;
   private readonly verifyModeControls?: VerifyModeControls;
 
@@ -157,6 +159,12 @@ export class BattleView {
       },
     });
     this.debugMenu.mount(this.root);
+
+    this.battleXDebugCanvas = new BattleXDebugCanvas();
+    this.battleXDebugCanvas.mount(this.root);
+    this.battleXDebugCanvas.setVisible(
+      verifyModeControls?.isVerifyMode() ?? false,
+    );
 
     container.appendChild(this.root);
 
@@ -437,6 +445,7 @@ export class BattleView {
     const stageLabel = `${stageName}  Wave ${waveNum}/${waveTotal}`;
     this.stageLabelEl.textContent = stageLabel;
     this.canvas.syncFromSnapshot(snapshot);
+    this.battleXDebugCanvas.syncFromSnapshot(snapshot);
     this.partyHud.update(
       buildPartyHudEntries(
         snapshot,
@@ -444,6 +453,7 @@ export class BattleView {
       ),
     );
     this.canvas.tick(deltaMs);
+    this.battleXDebugCanvas.tick(deltaMs);
     this.debugMenu.updateThreatDisplay();
     this.debugMenu.updateExpDisplay();
     this.debugMenu.updateDamageDisplay();
@@ -504,6 +514,7 @@ export class BattleView {
     this.statsOverlay?.destroy();
     this.statsOverlay = null;
     this.canvas.destroy();
+    this.battleXDebugCanvas.destroy();
     this.partyHud.destroy();
     this.debugMenu.destroy();
     this.root.remove();
@@ -512,6 +523,7 @@ export class BattleView {
   syncVerifyModeToggle(enabled: boolean): void {
     this.verifyModeInput.checked = enabled;
     this.canvas.setVerifyModeEnabled(enabled);
+    this.battleXDebugCanvas.setVisible(enabled);
     this.debugMenu.refresh();
   }
 }
