@@ -9,7 +9,9 @@
     "exp": 0,
     "basicAttackSkillId": "test_enemy_basic_attack",
     "attackSpeedTier": "normal",
-    "traits": {}
+    "traits": {
+      "rangePx": 30
+    }
   },
   {
     "id": "test_enemy_elite",
@@ -21,7 +23,9 @@
     "exp": 0,
     "basicAttackSkillId": "test_enemy_elite_basic_attack",
     "attackSpeedTier": "normal",
-    "traits": {}
+    "traits": {
+      "rangePx": 30
+    }
   },
   {
     "id": "stage1_1",
@@ -33,7 +37,9 @@
     "exp": 0,
     "basicAttackSkillId": "stage1_1_basic_attack",
     "attackSpeedTier": "somewhatSlow",
-    "traits": {}
+    "traits": {
+      "rangePx": 30
+    }
   },
   {
     "id": "test_ranged",
@@ -60,6 +66,7 @@
     "basicAttackSkillId": "test_dummy_basic_attack",
     "attackSpeedTier": "normal",
     "traits": {
+      "rangePx": 0,
       "stationary": true
     }
   },
