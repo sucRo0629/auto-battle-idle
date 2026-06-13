@@ -1,6 +1,4 @@
 import type { CombatantState, SkillEffectDef, TargetSpec } from '../types.ts';
-import { isMeleeRangePx } from '../types.ts';
-import { engagedMinBodyGap } from '../battleConstants.ts';
 import { getBattleX } from '../combatPosition.ts';
 import { partyFormationDepthPx } from '../partyFormation.ts';
 import {
@@ -38,9 +36,6 @@ export function isInForwardSegment(
   if (actor.id === target.id) return true;
   const forward = forwardDistancePx(actor, target);
   if (forward < 0) return false;
-  if (isMeleeRangePx(rangePx)) {
-    return forward <= engagedMinBodyGap() + rangePx;
-  }
   return forward <= rangePx;
 }
 
@@ -50,12 +45,7 @@ export function isWithinSkillRange(
   rangePx: number,
 ): boolean {
   if (actor.id === target.id) return true;
-  const dist = battleDistance(actor, target);
-  if (isMeleeRangePx(rangePx)) {
-    const reach = engagedMinBodyGap() + rangePx;
-    return dist <= 0 && dist >= -reach;
-  }
-  return Math.abs(dist) <= rangePx;
+  return battleDistance(actor, target) <= rangePx;
 }
 const DEFAULT_PARTY_SIZE_FOR_HEAL_RANGE = 5;
 

@@ -20,7 +20,6 @@ import {
   type PartyFormationUnit,
 } from './partyFormation.ts';
 import { resolveSkillRangePx } from './skills/rangeUtils.ts';
-import { isAllyHealBasicAttack } from './allyHealBasicAttack.ts';
 import { getEffectTarget, targetSpecFaction } from './skills/targetSpec.ts';
 import type { SkillEffectDef } from './types.ts';
 
@@ -402,27 +401,14 @@ export function resolveApproachRangePx(
   return basic;
 }
 
-function usesRangedApproachStop(
-  unit: CombatantState,
-  basicRange: number,
-  gameData: GameData,
-): boolean {
-  if (unit.isEnemy) return !isMeleeRangePx(basicRange);
-  if (isAllyHealBasicAttack(unit, gameData)) return true;
-  return !isMeleeRangePx(basicRange);
-}
-
 export function resolveApproachAttackBattleX(
   unit: CombatantState,
   contactX: number,
   gameData: GameData,
   livingAllyCount?: number,
 ): number {
-  const basicRange = resolveBasicAttackRangePx(unit, gameData, livingAllyCount);
   const rangePx = resolveApproachRangePx(unit, gameData, livingAllyCount);
-  const stopX = usesRangedApproachStop(unit, basicRange, gameData)
-    ? contactX - rangePx
-    : resolveAttackBattleX(unit, contactX, gameData, rangePx);
+  const stopX = resolveAttackBattleX(unit, contactX, gameData, rangePx);
   if (!unit.isEnemy && stopX < unit.battleX) {
     return unit.battleX;
   }
@@ -463,7 +449,7 @@ export function resolveMoveBattleX(
   return resolveAttackBattleX(actor, anchor.battleX, gameData);
 }
 
-/** プレイヤー: 近接帯 contact − standoff − range / 遠隔 contact − range。敵: contact + range（近接は standoff） */
+/** プレイヤー: target.battleX − effectiveRangePx / 敵: target.battleX + effectiveRangePx */
 export function resolveAttackBattleX(
   unit: CombatantState,
   contactX: number,
@@ -471,17 +457,7 @@ export function resolveAttackBattleX(
   rangePx?: number,
 ): number {
   const range = rangePx ?? resolveMaxEffectiveRangePx(unit, gameData);
-  if (unit.isEnemy) {
-    if (isMeleeRangePx(range)) {
-      const standoff = engagedMinBodyGap();
-      return contactX + standoff;
-    }
-    return contactX + range;
-  }
-  if (isMeleeRangePx(range)) {
-    return contactX - engagedMinBodyGap() - range;
-  }
-  return contactX - range;
+  return unit.isEnemy ? contactX + range : contactX - range;
 }
 
 export function moveTowardX(

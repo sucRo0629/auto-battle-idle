@@ -3,7 +3,6 @@ import type { CombatantState, GameData } from './types.ts';
 import {
   BATTLE_ENEMY_VISIBLE_MAX_X,
   SPRITE_GAP,
-  engagedMinBodyGap,
   enemyRangedRearGap,
   resolvePartyDeployTravelPx,
 } from './battleConstants.ts';
@@ -173,12 +172,8 @@ describe('combatPosition', () => {
       formationRow: 'back',
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
-    expect(resolveAttackBattleX(sword, contactX, gameData)).toBe(
-      contactX - engagedMinBodyGap(),
-    );
-    expect(resolveAttackBattleX(spear, contactX, gameData)).toBe(
-      contactX - engagedMinBodyGap() - 30,
-    );
+    expect(resolveAttackBattleX(sword, contactX, gameData)).toBe(contactX);
+    expect(resolveAttackBattleX(spear, contactX, gameData)).toBe(contactX - 30);
     expect(resolveAttackBattleX(bow, contactX, gameData)).toBe(150);
   });
 
@@ -270,8 +265,7 @@ describe('combatPosition', () => {
     expect(getMeleeEnemyContactX([ranged], gameData)).toBeNull();
   });
 
-  it('melee player and enemy stay within melee range at standoff gap', () => {
-    const standoff = engagedMinBodyGap();
+  it('melee player and enemy converge to shared battleX within range 0', () => {
     const player = mockCombatant({
       id: 'paladin',
       formationRow: 'front',
@@ -298,7 +292,7 @@ describe('combatPosition', () => {
       );
     }
 
-    expect(enemy.battleX - player.battleX).toBeCloseTo(standoff, 0);
+    expect(enemy.battleX).toBeCloseTo(player.battleX, 0);
     expect(isWithinSkillRange(player, enemy, 0)).toBe(true);
     expect(isWithinSkillRange(enemy, player, 0)).toBe(true);
   });
