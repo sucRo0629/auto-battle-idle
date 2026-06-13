@@ -14,7 +14,7 @@
 | `data/classes.json`, `data/skills.json`, スキル UI | [spec/classes-and-skills.md](spec/classes-and-skills.md) |
 | `data/levelCurves.json`, ステ計算 | [spec/stats.md](spec/stats.md) |
 | `combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット | [spec/combat.md](spec/combat.md) |
-| `battleLayout.ts`, `combatPosition.ts`, 描画 | [spec/battle-field.md](spec/battle-field.md) |
+| `battleLayout.ts`, `combatPosition.ts`, `SpriteAnimator`, `IBattleRenderer`, 描画 | [spec/battle-field.md](spec/battle-field.md) |
 | `data/stages.json`, セーブ, EXP, LvUP | [spec/progression.md](spec/progression.md) |
 | フェーズ・作業順 | [plans/phase-roadmap.md](plans/phase-roadmap.md) |
 
