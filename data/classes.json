@@ -488,7 +488,7 @@
       },
       "damageType": "magic"
     },
-    "maxHp": 105,
+    "maxHp": 100,
     "atk": 15,
     "def": 11,
     "reg": 10,
@@ -524,7 +524,7 @@
     "traits": {
       "rangePx": 100
     },
-    "maxHp": 95,
+    "maxHp": 100,
     "atk": 14,
     "def": 12,
     "reg": 15,
@@ -575,7 +575,7 @@
     "traits": {
       "rangePx": 80
     },
-    "maxHp": 98,
+    "maxHp": 100,
     "atk": 17,
     "def": 9,
     "reg": 10,
