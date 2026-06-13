@@ -128,6 +128,88 @@ describe('battleLayout snapshots', () => {
     expect(rangedX - meleeX).toBeGreaterThanOrEqual(enemyRangedRearGap() - 1);
   });
 
+  it('L10: same effectiveRangePx enemies share contact stop line', () => {
+    const layout = resolveEngagedLayout({
+      players: [
+        {
+          id: 'guard',
+          role: 'defender',
+          formationRow: 'front',
+          rangePx: 0,
+          isAlive: true,
+          battleX: 180,
+          engagedVisualLaneX: 0,
+        },
+      ],
+      enemies: [
+        {
+          id: 'contact-a',
+          isAlive: true,
+          rangePx: 0,
+          battleX: 250,
+          engagedMeleeVisualSlot: 0,
+        },
+        {
+          id: 'contact-b',
+          isAlive: true,
+          rangePx: 0,
+          battleX: 260,
+          engagedMeleeVisualSlot: 1,
+        },
+      ],
+      playerContactBattleX: 180,
+      battleVisualOffset: 20,
+      frontEnemyVisualAnchor: 270,
+      resolveRangedTargetBattleX: () => null,
+    });
+
+    expect(layout).not.toBeNull();
+    expect(layout!.enemyBattleX.get('contact-a')).toBe(
+      layout!.enemyBattleX.get('contact-b'),
+    );
+  });
+
+  it('L10: different effectiveRangePx enemies separate by px depth', () => {
+    const layout = resolveEngagedLayout({
+      players: [
+        {
+          id: 'guard',
+          role: 'defender',
+          formationRow: 'front',
+          rangePx: 0,
+          isAlive: true,
+          battleX: 180,
+          engagedVisualLaneX: 0,
+        },
+      ],
+      enemies: [
+        {
+          id: 'short',
+          isAlive: true,
+          rangePx: 0,
+          battleX: 250,
+          engagedMeleeVisualSlot: 0,
+        },
+        {
+          id: 'mid',
+          isAlive: true,
+          rangePx: 30,
+          battleX: 260,
+          engagedMeleeVisualSlot: 0,
+        },
+      ],
+      playerContactBattleX: 180,
+      battleVisualOffset: 20,
+      frontEnemyVisualAnchor: 270,
+      resolveRangedTargetBattleX: () => null,
+    });
+
+    expect(layout).not.toBeNull();
+    const shortX = layout!.enemyBattleX.get('short')!;
+    const midX = layout!.enemyBattleX.get('mid')!;
+    expect(midX - shortX).toBe(30);
+  });
+
   it('resolveEngagedLayout keeps ranged behind rearmost melee slot', () => {
     const layout = resolveEngagedLayout({
       players: [

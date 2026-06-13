@@ -4,7 +4,7 @@ import type {
   GameData,
   Role,
 } from './types.ts';
-import { isMeleeRangePx } from './types.ts';
+import { RANGED_ATTACK_MIN_PX } from './types.ts';
 import {
   resolveApproachFormationRangePx,
   resolveFormationRangePx,
@@ -23,7 +23,6 @@ import {
   SPRITE_WIDTH,
   engagedFrontLineGap,
   engagedMinBodyGap,
-  engagedStandoffGap,
   enemyRangedRearGap,
 } from './battleConstants.ts';
 import {
@@ -67,6 +66,11 @@ export const FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX = 3;
 
 /** 接敵深度の列内ステップ（px） */
 export const FORMATION_DEPTH_STEP_PX = FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX;
+
+/** 接敵 layout: effectiveRangePx が遠隔帯（formation depth + 凍結ターゲット） */
+export function isEngagedFormationRangePx(effectiveRangePx: number): boolean {
+  return effectiveRangePx >= RANGED_ATTACK_MIN_PX;
+}
 
 interface Placement {
   id: string;
@@ -460,30 +464,42 @@ export function separateEngagedSprites(
   return separateSpritesByGap(units, engagedMinBodyGap());
 }
 
-function resolveEngagedMeleeEnemyVisuals(
+function compareEngagedContactEnemyOrder(
+  a: EngagedLayoutEnemyInput,
+  b: EngagedLayoutEnemyInput,
+): number {
+  if (a.rangePx !== b.rangePx) return a.rangePx - b.rangePx;
+  const slotA = a.engagedMeleeVisualSlot ?? 0;
+  const slotB = b.engagedMeleeVisualSlot ?? 0;
+  if (slotA !== slotB) return slotA - slotB;
+  return a.battleX - b.battleX;
+}
+
+/** 接敵: 同一 effectiveRangePx は同停止線、差分 px で奥行き（§4.2 / L10） */
+function resolveEngagedContactEnemyVisuals(
   enemies: EngagedLayoutEnemyInput[],
   frontLineTargetX: number,
 ): Map<string, number> {
-  const melee = enemies
-    .filter((e) => e.isAlive && isMeleeRangePx(e.rangePx))
-    .sort((a, b) => a.battleX - b.battleX);
+  const contact = enemies
+    .filter((e) => e.isAlive && !isEngagedFormationRangePx(e.rangePx))
+    .sort(compareEngagedContactEnemyOrder);
+  if (contact.length === 0) return new Map();
+
+  const minRangePx = Math.min(...contact.map((e) => e.rangePx));
   const positions = new Map<string, number>();
-  melee.forEach((enemy) => {
-    positions.set(enemy.id, frontLineTargetX);
-  });
+  for (const enemy of contact) {
+    positions.set(enemy.id, frontLineTargetX + (enemy.rangePx - minRangePx));
+  }
   return positions;
 }
 
+/** §2.5: 敵停止 X = target.battleX + effectiveRangePx（L10: body gap 加算なし） */
 export function computeEnemyStopX(
   enemyRangePx: number,
   targetPlayerX: number,
-  targetPlayerRangePx: number,
+  _targetPlayerRangePx: number,
 ): number {
-  if (!isMeleeRangePx(enemyRangePx)) {
-    return targetPlayerX + Math.max(enemyRangePx, engagedMinBodyGap());
-  }
-  const gap = engagedStandoffGap(targetPlayerRangePx, enemyRangePx);
-  return targetPlayerX + gap;
+  return targetPlayerX + enemyRangePx;
 }
 
 export function computeRangedEnemyBattleX(
@@ -512,6 +528,7 @@ export interface EngagedLayoutEnemyInput {
   isAlive: boolean;
   rangePx: number;
   battleX: number;
+  /** legacy: engagedVisualSlot — 接敵開始時に固定する射程 px 奥行きスロット */
   engagedMeleeVisualSlot?: number;
 }
 
@@ -728,7 +745,7 @@ export function computeEngagedLayout(
     }
   }
   const enemyFrontTargetX = frontRowMaxBattleX + frontLineGap;
-  const meleePositions = resolveEngagedMeleeEnemyVisuals(
+  const contactPositions = resolveEngagedContactEnemyVisuals(
     ctx.enemies,
     enemyFrontTargetX,
   );
@@ -758,7 +775,7 @@ export function computeEngagedLayout(
   const enemyBattleX = new Map<string, number>();
   for (const enemy of ctx.enemies) {
     if (!enemy.isAlive) continue;
-    if (!isMeleeRangePx(enemy.rangePx)) {
+    if (isEngagedFormationRangePx(enemy.rangePx)) {
       const targetX = ctx.resolveRangedTargetBattleX(enemy.id);
       if (targetX === null) continue;
       const rangeStopX = computeEnemyStopX(enemy.rangePx, targetX, 0);
@@ -773,9 +790,9 @@ export function computeEngagedLayout(
       );
       continue;
     }
-    const meleeX = meleePositions.get(enemy.id);
-    if (meleeX !== undefined) {
-      enemyBattleX.set(enemy.id, meleeX);
+    const contactX = contactPositions.get(enemy.id);
+    if (contactX !== undefined) {
+      enemyBattleX.set(enemy.id, contactX);
     }
   }
 
@@ -783,7 +800,7 @@ export function computeEngagedLayout(
     [...enemyBattleX.entries()]
       .filter(([id]) => {
         const enemy = ctx.enemies.find((e) => e.id === id);
-        return enemy !== undefined && !isMeleeRangePx(enemy.rangePx);
+        return enemy !== undefined && isEngagedFormationRangePx(enemy.rangePx);
       })
       .map(([id, x]) => ({
         id,
@@ -796,18 +813,18 @@ export function computeEngagedLayout(
     enemyBattleX.set(id, x);
   }
 
-  let maxMeleeBattleX = Number.NEGATIVE_INFINITY;
+  let maxContactBattleX = Number.NEGATIVE_INFINITY;
   for (const enemy of ctx.enemies) {
-    if (!enemy.isAlive || !isMeleeRangePx(enemy.rangePx)) continue;
-    const meleeX = enemyBattleX.get(enemy.id);
-    if (meleeX !== undefined) {
-      maxMeleeBattleX = Math.max(maxMeleeBattleX, meleeX);
+    if (!enemy.isAlive || isEngagedFormationRangePx(enemy.rangePx)) continue;
+    const contactX = enemyBattleX.get(enemy.id);
+    if (contactX !== undefined) {
+      maxContactBattleX = Math.max(maxContactBattleX, contactX);
     }
   }
-  if (Number.isFinite(maxMeleeBattleX)) {
-    const rangedRearCap = maxMeleeBattleX + enemyRangedRearGap();
+  if (Number.isFinite(maxContactBattleX)) {
+    const rangedRearCap = maxContactBattleX + enemyRangedRearGap();
     for (const enemy of ctx.enemies) {
-      if (!enemy.isAlive || isMeleeRangePx(enemy.rangePx)) continue;
+      if (!enemy.isAlive || !isEngagedFormationRangePx(enemy.rangePx)) continue;
       const ideal = enemyBattleX.get(enemy.id);
       if (ideal === undefined) continue;
       enemyBattleX.set(enemy.id, Math.max(ideal, rangedRearCap));
@@ -880,11 +897,11 @@ export function resolveEngagedFormationOverlaps(
   );
   if (frontUnits.length < 2) return;
 
-  const allMeleeBand = frontUnits.every((p) =>
-    isMeleeRangePx(resolveApproachFormationRangePx(p)),
+  const allContactBand = frontUnits.every(
+    (p) => resolveApproachFormationRangePx(p) < RANGED_ATTACK_MIN_PX,
   );
 
-  if (allMeleeBand) {
+  if (allContactBand) {
     const placements = frontUnits.map((p) => ({
       id: p.id,
       role: p.role,
@@ -1277,18 +1294,22 @@ export function computeEngagedEnemyPositions(
 
   const ideals = living.map((enemy) => {
     const target = targetPlayerForEnemy(enemy.id);
+    const rangeStopX =
+      target === null
+        ? enemy.battleX
+        : computeEnemyStopX(enemy.rangePx, target.x, target.rangePx);
     const idealX =
       target === null
         ? enemy.battleX
-        : !isMeleeRangePx(enemy.rangePx)
+        : isEngagedFormationRangePx(enemy.rangePx)
           ? Math.max(
-              computeEnemyStopX(enemy.rangePx, target.x, target.rangePx),
+              rangeStopX,
               computeRangedEnemyBattleX(
                 target.x,
                 target.referenceBackRowPlayerX,
               ),
             )
-          : computeEnemyStopX(0, target.x, target.rangePx);
+          : rangeStopX;
     return {
       id: enemy.id,
       battleX: idealX,
