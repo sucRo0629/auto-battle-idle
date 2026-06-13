@@ -364,6 +364,15 @@ export class BattleEngine {
     );
   }
 
+  private syncContinuousPassiveAuras(): void {
+    const passives = this.gameData.skillRegistry.passives;
+    syncHotAuras(this.players, this.enemies, passives, this.gameData);
+    syncBuffAuras(this.players, this.enemies, passives, this.gameData);
+    syncDebuffAuras(this.players, this.enemies, passives, this.gameData);
+    syncDamageReductionAuras(this.players, this.enemies, passives, this.gameData);
+    syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
+  }
+
   private handlePassiveDispelOnDebuffReceived(target: CombatantState): void {
     handlePassiveDispelOnDebuffReceived(
       target,
@@ -378,11 +387,7 @@ export class BattleEngine {
     const passives = this.gameData.skillRegistry.passives;
     const actives = this.gameData.skillRegistry.actives;
     initializeAllyThreat(this.players);
-    syncHotAuras(this.players, this.enemies, passives, this.gameData);
-    syncBuffAuras(this.players, this.enemies, passives, this.gameData);
-    syncDebuffAuras(this.players, this.enemies, passives, this.gameData);
-    syncDamageReductionAuras(this.players, this.enemies, passives, this.gameData);
-    syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
+    this.syncContinuousPassiveAuras();
     resetPassiveDispelTriggerLimits(
       [...this.players, ...this.enemies],
       passives,
@@ -1391,6 +1396,7 @@ export class BattleEngine {
   /** DoT/HoT・バフ/デバフ持続・CD を接敵状態に関係なく進める */
   private tickStatusAndCooldowns(deltaTime: number): void {
     this.tickStatusEffects(deltaTime);
+    this.syncContinuousPassiveAuras();
     this.tickCooldowns(this.players, deltaTime);
     this.tickCooldowns(this.enemies, deltaTime);
   }

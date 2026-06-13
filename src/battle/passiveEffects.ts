@@ -37,6 +37,38 @@ import type {
 import { asStatusEffectStatList, isPassiveHot } from './types.ts';
 
 const PASSIVE_AURA_DURATION_SEC = 99999;
+const PASSIVE_HOT_AURA_PREFIX = 'passive_hot_aura_';
+const PASSIVE_BUFF_AURA_PREFIX = 'passive_buff_aura_';
+const PASSIVE_DEBUFF_AURA_PREFIX = 'passive_debuff_aura_';
+
+function snapshotEffectsByPrefix(
+  units: CombatantState[],
+  prefix: string,
+): Map<string, Map<string, StatusEffect>> {
+  const snapshot = new Map<string, Map<string, StatusEffect>>();
+  for (const unit of units) {
+    const effects = unit.statusEffects.filter((effect) =>
+      effect.id.startsWith(prefix),
+    );
+    if (effects.length > 0) {
+      snapshot.set(unit.id, new Map(effects.map((effect) => [effect.id, effect])));
+    }
+    unit.statusEffects = unit.statusEffects.filter(
+      (effect) => !effect.id.startsWith(prefix),
+    );
+  }
+  return snapshot;
+}
+
+function restoreAuraTickState(
+  effect: StatusEffect,
+  previous?: StatusEffect,
+): StatusEffect {
+  if (previous?.tickSec !== undefined) {
+    effect.tickSec = previous.tickSec;
+  }
+  return effect;
+}
 
 export interface PassiveDamageContext {
   skill?: ActiveSkillDef;
@@ -198,11 +230,10 @@ export function syncHotAuras(
   passives: Record<string, PassiveSkillDef>,
   gameData: GameData,
 ): void {
-  for (const ally of allies) {
-    ally.statusEffects = ally.statusEffects.filter(
-      (effect) => !effect.id.startsWith('passive_hot_'),
-    );
-  }
+  const previousEffects = snapshotEffectsByPrefix(
+    allies,
+    PASSIVE_HOT_AURA_PREFIX,
+  );
 
   for (const source of allies) {
     if (!source.isAlive) continue;
@@ -221,6 +252,8 @@ export function syncHotAuras(
         enemies,
         passives,
         gameData,
+        PASSIVE_HOT_AURA_PREFIX,
+        previousEffects,
       );
     }
   }
@@ -233,11 +266,7 @@ export function syncBuffAuras(
   gameData: GameData,
 ): void {
   const units = [...allies, ...enemies];
-  for (const unit of units) {
-    unit.statusEffects = unit.statusEffects.filter(
-      (effect) => !effect.id.startsWith('passive_buff_'),
-    );
-  }
+  snapshotEffectsByPrefix(units, PASSIVE_BUFF_AURA_PREFIX);
 
   for (const source of units) {
     if (!source.isAlive) continue;
@@ -251,7 +280,7 @@ export function syncBuffAuras(
         passives,
         gameData,
         PASSIVE_AURA_DURATION_SEC,
-        'passive_buff_',
+        PASSIVE_BUFF_AURA_PREFIX,
       );
     }
   }
@@ -353,11 +382,7 @@ export function syncDebuffAuras(
   gameData: GameData,
 ): void {
   const units = [...allies, ...enemies];
-  for (const unit of units) {
-    unit.statusEffects = unit.statusEffects.filter(
-      (effect) => !effect.id.startsWith('passive_debuff_'),
-    );
-  }
+  snapshotEffectsByPrefix(units, PASSIVE_DEBUFF_AURA_PREFIX);
 
   for (const source of units) {
     if (!source.isAlive) continue;
@@ -371,7 +396,7 @@ export function syncDebuffAuras(
         passives,
         gameData,
         PASSIVE_AURA_DURATION_SEC,
-        'passive_debuff_',
+        PASSIVE_DEBUFF_AURA_PREFIX,
       );
     }
   }
@@ -665,8 +690,12 @@ function resolvePassiveHotDurationSec(hotDurationSec: number | undefined): numbe
   return hotDurationSec;
 }
 
-function passiveHotEffectId(sourceId: string, passiveId: string): string {
-  return `passive_hot_${sourceId}_${passiveId}`;
+function passiveHotEffectId(
+  sourceId: string,
+  passiveId: string,
+  idPrefix = 'passive_hot_periodic_',
+): string {
+  return `${idPrefix}${sourceId}_${passiveId}`;
 }
 
 export function applyPassiveBarrierFromPassive(
@@ -711,6 +740,8 @@ export function applyPassiveHotFromPassive(
   enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
   gameData: GameData,
+  idPrefix = 'passive_hot_periodic_',
+  previousEffectsByTarget?: Map<string, Map<string, StatusEffect>>,
 ): void {
   if (!isPassiveHot(passive) || !passive.hotAmount) return;
   const targets = resolvePassiveHotTargets(
@@ -721,7 +752,7 @@ export function applyPassiveHotFromPassive(
     gameData,
   );
   const durationSec = resolvePassiveHotDurationSec(passive.hotDurationSec);
-  const effectId = passiveHotEffectId(source.id, passive.id);
+  const effectId = passiveHotEffectId(source.id, passive.id, idPrefix);
   const hotAmount = resolveEffectivePassiveAmountSpec(
     source,
     passives,
@@ -733,12 +764,16 @@ export function applyPassiveHotFromPassive(
     target.statusEffects = target.statusEffects.filter(
       (effect) => effect.id !== effectId,
     );
+    const previousEffect = previousEffectsByTarget?.get(target.id)?.get(effectId);
     target.statusEffects.push(
-      createPassiveHotEffect(
-        source,
-        passive.id,
-        hotAmount,
-        durationSec,
+      restoreAuraTickState(
+        createPassiveHotEffect(
+          source,
+          passive.id,
+          hotAmount,
+          durationSec,
+        ),
+        previousEffect,
       ),
     );
   }
@@ -749,9 +784,10 @@ function createPassiveHotEffect(
   passiveId: string,
   amount: ResourceAmountSpec,
   durationSec: number = PASSIVE_AURA_DURATION_SEC,
+  idPrefix = 'passive_hot_periodic_',
 ): StatusEffect {
   return {
-    id: passiveHotEffectId(source.id, passiveId),
+    id: passiveHotEffectId(source.id, passiveId, idPrefix),
     kind: 'buff',
     overlay: 'hot',
     amount,

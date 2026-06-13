@@ -241,6 +241,9 @@ export function resolveEffectAnchor(
   passives?: PassiveSkillDef[],
 ): CombatantState | null {
   const spec = resolveEffectTargetSpec(effect, actor, allies, enemies, passives);
+  if (isSelfOriginSpec(spec)) {
+    return actor.isAlive ? actor : null;
+  }
   if (effect.type === 'move') {
     const pool = getTargetPool(spec, actor, allies, enemies);
     return pickTargetFromPoolSpec(spec, actor, pool, { moveAnchor: true });

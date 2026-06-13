@@ -113,4 +113,53 @@ describe('passiveBuffBridge', () => {
       false,
     );
   });
+
+  it('syncBuffAuras re-evaluates selfOrigin aoe targets after movement', () => {
+    const source = mockUnit({
+      id: 'src',
+      battleX: 100,
+      build: {
+        learnedPassiveIds: ['aura'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const nearAlly = mockUnit({ id: 'near', battleX: 118 });
+    const farAlly = mockUnit({ id: 'far', battleX: 180 });
+    const passives: Record<string, PassiveSkillDef> = {
+      aura: {
+        id: 'aura',
+        name: 'Aura',
+        effect: 'buff',
+        buffTargetRule: { kind: 'distance', side: 'ally', order: 'selfOrigin' },
+        buffTargetShape: 'aoe',
+        buffRange: 120,
+        buffAoeRadiusPx: 20,
+        buffStat: 'def',
+        buffMultiplier: 1.2,
+      },
+    };
+    const gameData = mockTargetingGameData();
+
+    syncBuffAuras([source, nearAlly, farAlly], [], passives, gameData);
+    expect(source.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      true,
+    );
+    expect(nearAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      true,
+    );
+    expect(farAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      false,
+    );
+
+    source.battleX = 160;
+    source.visualX = 160;
+    syncBuffAuras([source, nearAlly, farAlly], [], passives, gameData);
+    expect(nearAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      false,
+    );
+    expect(farAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      true,
+    );
+  });
 });

@@ -109,4 +109,49 @@ describe('passiveDebuffBridge', () => {
     expect(near.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(true);
     expect(far.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(false);
   });
+
+  it('syncDebuffAuras re-evaluates selfOrigin pierce targets after movement', () => {
+    const source = mockUnit({
+      id: 'src',
+      battleX: 100,
+      build: {
+        learnedPassiveIds: ['aura'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const near = mockUnit({ id: 'near', battleX: 120, isEnemy: true });
+    const far = mockUnit({ id: 'far', battleX: 170, isEnemy: true });
+    const passives: Record<string, PassiveSkillDef> = {
+      aura: {
+        id: 'aura',
+        name: 'Aura',
+        effect: 'debuff',
+        debuffTargetRule: { kind: 'distance', side: 'enemy', order: 'selfOrigin' },
+        debuffTargetShape: 'pierce',
+        debuffRange: 30,
+        debuffStat: 'atk',
+        debuffMultiplier: 0.8,
+      },
+    };
+    const gameData = mockTargetingGameData();
+
+    syncDebuffAuras([source], [near, far], passives, gameData);
+    expect(near.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(
+      true,
+    );
+    expect(far.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(
+      false,
+    );
+
+    source.battleX = 150;
+    source.visualX = 150;
+    syncDebuffAuras([source], [near, far], passives, gameData);
+    expect(near.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(
+      false,
+    );
+    expect(far.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(
+      true,
+    );
+  });
 });

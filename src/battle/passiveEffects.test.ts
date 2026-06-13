@@ -270,6 +270,26 @@ describe('passiveEffects', () => {
     expect(ally.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
   });
 
+  it('syncHotAuras preserves hot tick progress when resynced', () => {
+    const healer = mockAlly({
+      id: 'healer',
+      role: 'supporter',
+      build: {
+        learnedPassiveIds: ['aura'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    syncHotAuras([healer], [], passives, mockTargetingGameData());
+    const hot = healer.statusEffects.find((e) => e.overlay === 'hot');
+    expect(hot).toBeDefined();
+    if (!hot) return;
+    hot.tickSec = 0.35;
+    syncHotAuras([healer], [], passives, mockTargetingGameData());
+    const refreshed = healer.statusEffects.find((e) => e.overlay === 'hot');
+    expect(refreshed?.tickSec).toBeCloseTo(0.35, 5);
+  });
+
   it('syncHotAuras respects hotTargetRule', () => {
     const passivesWithAllyTarget = {
       ...passives,

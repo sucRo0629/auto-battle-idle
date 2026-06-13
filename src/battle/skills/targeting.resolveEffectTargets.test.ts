@@ -524,6 +524,40 @@ describe('resolveEffectTargets', () => {
     expect(anchor?.id).toBe('near');
   });
 
+  it('selfOrigin anchor resolves to actor for aoe and pierce', () => {
+    const caster = mockUnit('caster', 200);
+    const enemyNear = mockUnit('enemy-near', 230, { isEnemy: true });
+    const aoeAnchor = resolveEffectAnchor(
+      {
+        type: 'damage',
+        targetShape: 'aoe',
+        aoeRadiusPx: 50,
+        target: { kind: 'distance', side: 'enemy', order: 'selfOrigin' },
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      } as SkillEffectDef,
+      caster,
+      [caster],
+      [enemyNear],
+      gameData,
+    );
+    const pierceAnchor = resolveEffectAnchor(
+      {
+        type: 'damage',
+        targetShape: 'pierce',
+        target: { kind: 'distance', side: 'enemy', order: 'selfOrigin' },
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      } as SkillEffectDef,
+      caster,
+      [caster],
+      [enemyNear],
+      gameData,
+    );
+    expect(aoeAnchor?.id).toBe('caster');
+    expect(pierceAnchor?.id).toBe('caster');
+  });
+
   it('pierce selfOrigin after lunge stop hits front enemy not actor', () => {
     const gap = engagedMinBodyGap();
     const contact = 240;

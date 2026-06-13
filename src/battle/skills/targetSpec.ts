@@ -410,6 +410,9 @@ export function applyIncludeSelfFilter(
   actor: CombatantState,
   targets: SkillHitTarget[],
 ): SkillHitTarget[] {
+  if (spec.kind === "self") {
+    return targets;
+  }
   if (distanceSpecIncludesSelf(spec)) {
     return targets;
   }
