@@ -118,6 +118,8 @@ export class BattleXDebugCanvas {
 
     for (const unit of units) {
       const x = this.clamp(unit.battleX, 6, CANVAS_W - 6);
+      this.drawRangeBand(ctx, unit, y);
+
       ctx.fillStyle = unit.isEnemy ? "#ff8f8f" : "#8fd3ff";
       ctx.beginPath();
       ctx.arc(x, y, DOT_RADIUS, 0, Math.PI * 2);
@@ -140,6 +142,35 @@ export class BattleXDebugCanvas {
       ctx.strokeText(xText, x, xY);
       ctx.fillText(xText, x, xY);
     }
+  }
+
+  private drawRangeBand(
+    ctx: CanvasRenderingContext2D,
+    unit: CombatantSnapshot,
+    y: number,
+  ): void {
+    const rangePx = Math.max(0, unit.rangePx);
+    if (rangePx <= 0) return;
+
+    const bandTop = y - 5;
+    const bandHeight = 10;
+    const rawStart = unit.isEnemy ? unit.battleX - rangePx : unit.battleX;
+    const rawEnd = unit.isEnemy ? unit.battleX : unit.battleX + rangePx;
+    const start = this.clamp(rawStart, 0, CANVAS_W);
+    const end = this.clamp(rawEnd, 0, CANVAS_W);
+    const width = end - start;
+    if (width <= 0) return;
+
+    ctx.save();
+    ctx.fillStyle = unit.isEnemy
+      ? "rgba(255, 143, 143, 0.18)"
+      : "rgba(143, 211, 255, 0.18)";
+    ctx.fillRect(start, bandTop, width, bandHeight);
+    ctx.strokeStyle = unit.isEnemy
+      ? "rgba(255, 143, 143, 0.35)"
+      : "rgba(143, 211, 255, 0.35)";
+    ctx.strokeRect(start, bandTop, width, bandHeight);
+    ctx.restore();
   }
 
   private sortByBattleX(units: CombatantSnapshot[]): CombatantSnapshot[] {
