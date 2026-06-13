@@ -162,4 +162,69 @@ describe('passiveBuffBridge', () => {
       true,
     );
   });
+
+  it('at_lancer_passive_2 anchors aoe on the lancer instead of the nearest ally', () => {
+    const source = mockUnit({
+      id: 'lancer',
+      battleX: 100,
+      build: {
+        learnedPassiveIds: ['at_lancer_passive_2'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const nearAlly = mockUnit({ id: 'near', battleX: 118 });
+    const midAlly = mockUnit({ id: 'mid', battleX: 140 });
+    const farAlly = mockUnit({ id: 'far', battleX: 180 });
+    const passives: Record<string, PassiveSkillDef> = {
+      at_lancer_passive_2: {
+        id: 'at_lancer_passive_2',
+        name: '槍術士の援護',
+        effect: 'buff',
+        buffTargetRule: { kind: 'distance', side: 'ally', order: 'selfOrigin' },
+        buffTargetShape: 'aoe',
+        buffRange: 100,
+        buffAoeRadiusPx: 25,
+        buffStat: 'def',
+        buffMultiplier: 1.15,
+      },
+    };
+    const gameData = mockTargetingGameData();
+
+    const initialTargets = resolvePassiveBuffTargets(
+      source,
+      passives.at_lancer_passive_2,
+      [source, nearAlly, midAlly, farAlly],
+      [],
+      gameData,
+    );
+    expect(initialTargets.map((unit) => unit.id).sort()).toEqual(['lancer', 'near']);
+
+    syncBuffAuras([source, nearAlly, midAlly, farAlly], [], passives, gameData);
+    expect(source.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      true,
+    );
+    expect(nearAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      true,
+    );
+    expect(midAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      false,
+    );
+    expect(farAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      false,
+    );
+
+    source.battleX = 150;
+    source.visualX = 150;
+    syncBuffAuras([source, nearAlly, midAlly, farAlly], [], passives, gameData);
+    expect(nearAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      false,
+    );
+    expect(midAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      true,
+    );
+    expect(farAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
+      false,
+    );
+  });
 });

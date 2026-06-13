@@ -582,6 +582,38 @@ describe('resolveEffectTargets', () => {
     expect(ids).toEqual(['near']);
   });
 
+  it('aoe selfOrigin keeps the actor as anchor instead of the nearest ally', () => {
+    const caster = mockUnit('caster', 200);
+    const allyNear = mockUnit('ally-near', 220);
+    const allyMid = mockUnit('ally-mid', 240);
+    const allyFar = mockUnit('ally-far', 280);
+    const targets = resolveEffectTargets(
+      {
+        type: 'buff',
+        buffSubKind: 'stat',
+        buffStat: 'atk',
+        buffMultiplier: 1.2,
+        buffDurationSec: 5,
+        target: {
+          kind: 'distance',
+          side: 'ally',
+          order: 'selfOrigin',
+        },
+        targetShape: 'aoe',
+        aoeRadiusPx: 25,
+      } as SkillEffectDef,
+      caster,
+      [caster, allyNear, allyMid, allyFar],
+      enemies,
+      gameData,
+    );
+    const ids = targets.map((t) => t.id);
+    expect(ids).toContain('caster');
+    expect(ids).toContain('ally-near');
+    expect(ids).not.toContain('ally-mid');
+    expect(ids).not.toContain('ally-far');
+  });
+
   it('closestAlly for ally actor picks nearest ally by battleX', () => {
     const actor = mockUnit('actor', 150);
     const allyNear = mockUnit('near', 120);

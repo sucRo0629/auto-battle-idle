@@ -620,6 +620,100 @@ describe('passiveEffects', () => {
     expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
   });
 
+  it('continuous lancer aura syncs immediately while waveStart passive waits for the trigger', () => {
+    const passives = {
+      at_lancer_passive_2: {
+        id: 'at_lancer_passive_2',
+        name: '槍術士の援護',
+        effect: 'buff' as const,
+        buffSubKind: 'stat' as const,
+        buffTargetRule: { kind: 'distance' as const, side: 'ally' as const, order: 'selfOrigin' as const },
+        buffTargetShape: 'aoe' as const,
+        buffRange: 100,
+        buffAoeRadiusPx: 25,
+        buffStat: 'def',
+        buffMultiplier: 1.1,
+      },
+      at_lancer_passive_2_periodic: {
+        id: 'at_lancer_passive_2_periodic',
+        name: '槍術士の援護(周期)',
+        effect: 'buff' as const,
+        buffSubKind: 'stat' as const,
+        buffTargetRule: { kind: 'distance' as const, side: 'ally' as const, order: 'selfOrigin' as const },
+        buffTargetShape: 'aoe' as const,
+        buffRange: 100,
+        buffAoeRadiusPx: 25,
+        buffStat: 'def',
+        buffMultiplier: 1.25,
+        buffDurationSec: 5,
+        periodicTrigger: 'waveStart' as const,
+      },
+    };
+    const lancer = mockAlly({
+      id: 'lancer',
+      role: 'attacker',
+      battleX: 100,
+      visualX: 100,
+      build: {
+        learnedPassiveIds: ['at_lancer_passive_2', 'at_lancer_passive_2_periodic'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const ally = mockAlly({
+      id: 'ally',
+      battleX: 118,
+      visualX: 118,
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const farAlly = mockAlly({
+      id: 'far',
+      battleX: 180,
+      visualX: 180,
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    syncBuffAuras([lancer, ally, farAlly], [], passives, mockTargetingGameData());
+    expect(
+      lancer.statusEffects.some((e) => e.stat === 'def' && e.multiplier === 1.1),
+    ).toBe(true);
+    expect(
+      lancer.statusEffects.some((e) => e.stat === 'def' && e.multiplier === 1.25),
+    ).toBe(false);
+    expect(
+      ally.statusEffects.some((e) => e.stat === 'def' && e.multiplier === 1.1),
+    ).toBe(true);
+    expect(
+      ally.statusEffects.some((e) => e.stat === 'def' && e.multiplier === 1.25),
+    ).toBe(false);
+
+    firePeriodicPassivesForTrigger(
+      'waveStart',
+      [lancer, ally, farAlly],
+      [lancer, ally, farAlly],
+      [],
+      passives,
+      mockTargetingGameData(),
+    );
+    expect(
+      lancer.statusEffects.some((e) => e.stat === 'def' && e.multiplier === 1.25),
+    ).toBe(true);
+    expect(
+      ally.statusEffects.some((e) => e.stat === 'def' && e.multiplier === 1.25),
+    ).toBe(true);
+    expect(
+      farAlly.statusEffects.some((e) => e.stat === 'def' && e.multiplier === 1.25),
+    ).toBe(false);
+  });
+
   it('resolveSelfHpRatioBuffScale scales from full HP to max ratio', () => {
     const unit = mockAlly({ id: 'unit', hp: 100, maxHp: 100 });
     expect(resolveSelfHpRatioBuffScale(unit, 0)).toBe(0);

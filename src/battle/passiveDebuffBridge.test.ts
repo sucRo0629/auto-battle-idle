@@ -154,4 +154,62 @@ describe('passiveDebuffBridge', () => {
       true,
     );
   });
+
+  it('at_lancer_passive_1 picks the in-range enemy before and after re-evaluation', () => {
+    const source = mockUnit({
+      id: 'lancer',
+      battleX: 100,
+      build: {
+        learnedPassiveIds: ['at_lancer_passive_1'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const enemyNear = mockUnit({ id: 'enemy-near', battleX: 175, isEnemy: true });
+    const enemyFar = mockUnit({ id: 'enemy-far', battleX: 132, isEnemy: true });
+    const passives: Record<string, PassiveSkillDef> = {
+      at_lancer_passive_1: {
+        id: 'at_lancer_passive_1',
+        name: '槍術士の印',
+        effect: 'debuff',
+        debuffTargetRule: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        debuffTargetShape: 'aoe',
+        debuffRange: 100,
+        debuffAoeRadiusPx: 12,
+        debuffStat: 'atk',
+        debuffMultiplier: 0.8,
+      },
+    };
+    const gameData = mockTargetingGameData();
+
+    const initialTargets = resolvePassiveDebuffTargets(
+      source,
+      passives.at_lancer_passive_1,
+      [source],
+      [enemyNear, enemyFar],
+      gameData,
+    );
+    expect(initialTargets.map((unit) => unit.id)).toEqual(['enemy-near']);
+
+    syncDebuffAuras([source], [enemyNear, enemyFar], passives, gameData);
+    expect(enemyNear.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(
+      true,
+    );
+    expect(enemyFar.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(
+      false,
+    );
+
+    enemyNear.battleX = 122;
+    enemyNear.visualX = 122;
+    enemyFar.battleX = 170;
+    enemyFar.visualX = 170;
+
+    syncDebuffAuras([source], [enemyNear, enemyFar], passives, gameData);
+    expect(enemyNear.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(
+      false,
+    );
+    expect(enemyFar.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(
+      true,
+    );
+  });
 });
