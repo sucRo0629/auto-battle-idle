@@ -1,0 +1,293 @@
+import {
+  TARGET_SHAPE_LABELS,
+  TARGET_SHAPE_OPTIONS,
+} from '../battle/data/gameDataSchema.ts';
+import {
+  CONFIGURABLE_RANGE_PX_MAX,
+  configurableRangeHintJa,
+  parseConfigurableRangePxInput,
+} from '../battle/rangeLimits.ts';
+import { getEffectTarget } from '../battle/skills/targetSpec.ts';
+import type { SkillEffectDef, TargetShape, TargetSpec } from '../battle/types.ts';
+import { createEl, createFieldRow, createNumberInput, createSelect } from './formUtils.ts';
+
+type TargetingEffect = Pick<
+  SkillEffectDef,
+  | 'targetShape'
+  | 'range'
+  | 'aoeRadiusPx'
+  | 'hitCount'
+  | 'hitDurationSec'
+  | 'piercePowerStepMultiplier'
+  | 'piercePowerStepMode'
+  | 'pierceDurationSec'
+  | 'chainCount'
+  | 'chainMaxDistancePx'
+  | 'chainPowerStepMultiplier'
+  | 'chainPowerStepMode'
+  | 'chainDurationSec'
+  | 'scatterRadiusPx'
+  | 'scatterSpreadRadiusPx'
+  | 'scatterHitCount'
+  | 'scatterDurationSec'
+  | 'scatterSpreadRate'
+> & {
+  target?: TargetSpec;
+  targetRule?: import('../battle/types.ts').TargetRule;
+};
+
+export function appendSkillEffectTargetingFields(
+  parent: HTMLElement,
+  effect: TargetingEffect,
+  patchEffect: (
+    mutate: (prev: TargetingEffect) => TargetingEffect,
+    options?: { rerender?: boolean },
+  ) => void,
+  options: { traitsRangePx: number },
+): void {
+  const effectTargetKind = getEffectTarget(effect).kind;
+  const targetShape: TargetShape = effect.targetShape ?? 'single';
+
+  const shapeSelect = createSelect(
+    effectTargetKind === 'self' ? 'single' : targetShape,
+    TARGET_SHAPE_OPTIONS.map((value) => ({
+      value,
+      label: TARGET_SHAPE_LABELS[value],
+    })),
+    (shape) => {
+      patchEffect((prev) => {
+        const next: TargetingEffect = { ...prev, targetShape: shape };
+        delete next.aoeRadiusPx;
+        delete next.hitCount;
+        delete next.hitDurationSec;
+        delete next.piercePowerStepMultiplier;
+        delete next.piercePowerStepMode;
+        delete next.pierceDurationSec;
+        delete next.chainCount;
+        delete next.chainMaxDistancePx;
+        delete next.chainPowerStepMultiplier;
+        delete next.chainPowerStepMode;
+        delete next.chainDurationSec;
+        delete next.scatterRadiusPx;
+        delete next.scatterSpreadRadiusPx;
+        delete next.scatterHitCount;
+        delete next.scatterDurationSec;
+        delete next.scatterSpreadRate;
+        if (shape === 'aoe') {
+          next.aoeRadiusPx = 70;
+        } else if (shape === 'multiLock') {
+          next.hitCount = 3;
+        } else if (shape === 'chain') {
+          next.chainCount = 3;
+          next.chainMaxDistancePx = 80;
+        } else if (shape === 'scatter') {
+          next.scatterRadiusPx = 70;
+          next.scatterSpreadRadiusPx = 70;
+          next.scatterHitCount = 3;
+          next.scatterDurationSec = 1;
+          next.scatterSpreadRate = 1;
+        }
+        return next;
+      }, { rerender: true });
+    },
+  );
+  if (effectTargetKind === 'self') {
+    shapeSelect.disabled = true;
+  }
+  parent.appendChild(createFieldRow('ターゲット形状', shapeSelect));
+
+  if (targetShape === 'single' || targetShape === 'aoe') {
+    parent.appendChild(
+      createFieldRow(
+        '攻撃回数（2以上・省略=1）',
+        createNumberInput(
+          effect.hitCount ?? 0,
+          (hitCount) => {
+            const rounded = Math.round(hitCount);
+            if (rounded < 2) {
+              patchEffect((prev) => {
+                const next = { ...prev, targetShape };
+                delete next.hitCount;
+                delete next.hitDurationSec;
+                return next;
+              }, { rerender: true });
+              return;
+            }
+            patchEffect(
+              (prev) => ({
+                ...prev,
+                targetShape,
+                hitCount: rounded,
+                hitDurationSec: prev.hitDurationSec ?? 1,
+              }),
+              { rerender: (effect.hitCount ?? 0) < 2 },
+            );
+          },
+          { min: 2, step: 1, emptyWhen: 0, placeholder: '1（省略）' },
+        ),
+      ),
+    );
+    if ((effect.hitCount ?? 0) >= 2) {
+      parent.appendChild(
+        createFieldRow(
+          '攻撃時間（秒）',
+          createNumberInput(
+            effect.hitDurationSec ?? 1,
+            (hitDurationSec) =>
+              patchEffect((prev) => ({ ...prev, targetShape, hitDurationSec })),
+            { min: 0.1, step: 0.1 },
+          ),
+        ),
+      );
+    }
+  }
+
+  if (targetShape === 'aoe') {
+    parent.appendChild(
+      createFieldRow(
+        '範囲半径 px',
+        createNumberInput(
+          effect.aoeRadiusPx ?? 70,
+          (aoeRadiusPx) =>
+            patchEffect((prev) => ({ ...prev, targetShape: 'aoe', aoeRadiusPx })),
+          { min: 1, step: 10 },
+        ),
+      ),
+    );
+  }
+
+  if (targetShape === 'multiLock') {
+    parent.appendChild(
+      createFieldRow(
+        'ヒット回数',
+        createNumberInput(
+          effect.hitCount ?? 3,
+          (hitCount) =>
+            patchEffect((prev) => ({
+              ...prev,
+              targetShape: 'multiLock',
+              hitCount,
+            })),
+          { min: 2, step: 1 },
+        ),
+      ),
+    );
+  }
+
+  if (targetShape === 'chain') {
+    parent.appendChild(
+      createFieldRow(
+        '連鎖回数',
+        createNumberInput(
+          effect.chainCount ?? 3,
+          (chainCount) =>
+            patchEffect((prev) => ({ ...prev, targetShape: 'chain', chainCount })),
+          { min: 1, step: 1 },
+        ),
+      ),
+    );
+    parent.appendChild(
+      createFieldRow(
+        '連鎖最大距離 px',
+        createNumberInput(
+          effect.chainMaxDistancePx ?? 80,
+          (chainMaxDistancePx) =>
+            patchEffect((prev) => ({
+              ...prev,
+              targetShape: 'chain',
+              chainMaxDistancePx,
+            })),
+          { min: 1, step: 10 },
+        ),
+      ),
+    );
+  }
+
+  if (targetShape === 'scatter') {
+    parent.appendChild(
+      createFieldRow(
+        '乱打半径 px',
+        createNumberInput(
+          effect.scatterRadiusPx ?? 70,
+          (scatterRadiusPx) =>
+            patchEffect((prev) => ({
+              ...prev,
+              targetShape: 'scatter',
+              scatterRadiusPx,
+            })),
+          { min: 1, step: 10 },
+        ),
+      ),
+    );
+    parent.appendChild(
+      createFieldRow(
+        'ヒット回数',
+        createNumberInput(
+          effect.scatterHitCount ?? 3,
+          (scatterHitCount) =>
+            patchEffect((prev) => ({
+              ...prev,
+              targetShape: 'scatter',
+              scatterHitCount,
+            })),
+          { min: 2, step: 1 },
+        ),
+      ),
+    );
+    parent.appendChild(
+      createFieldRow(
+        '乱打時間（秒）',
+        createNumberInput(
+          effect.scatterDurationSec ?? 1,
+          (scatterDurationSec) =>
+            patchEffect((prev) => ({
+              ...prev,
+              targetShape: 'scatter',
+              scatterDurationSec,
+            })),
+          { min: 0.1, step: 0.1 },
+        ),
+      ),
+    );
+  }
+
+  if (targetShape === 'pierce') {
+    parent.appendChild(
+      createFieldRow(
+        '貫通時間（秒・0=即時）',
+        createNumberInput(
+          effect.pierceDurationSec ?? 0,
+          (pierceDurationSec) =>
+            patchEffect((prev) => ({
+              ...prev,
+              targetShape: 'pierce',
+              pierceDurationSec: pierceDurationSec > 0 ? pierceDurationSec : undefined,
+            })),
+          { min: 0, step: 0.1 },
+        ),
+      ),
+    );
+  }
+
+  parent.appendChild(
+    createFieldRow(
+      '射程 px（省略時=traits.rangePx）',
+      createNumberInput(
+        effect.range ?? 0,
+        (range) =>
+          patchEffect((prev) => ({
+            ...prev,
+            range: range > 0 ? range : undefined,
+          })),
+        {
+          min: 0,
+          max: CONFIGURABLE_RANGE_PX_MAX,
+          step: 10,
+          parseInput: (raw) =>
+            parseConfigurableRangePxInput(raw, options.traitsRangePx),
+        },
+      ),
+    ),
+  );
+  parent.appendChild(createEl('p', 'editor-hint', configurableRangeHintJa()));
+}

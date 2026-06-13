@@ -59,6 +59,24 @@ describe('formatPassiveDescription', () => {
       fragments: ['バフ', '回避', '18%'],
     },
     {
+      name: 'passive hot fractional percent max hp',
+      def: {
+        id: 'sp_alchemist_passive_1',
+        name: '薬効の香り',
+        effect: 'heal',
+        healSubKind: 'hot',
+        hotAmount: {
+          kind: 'percentMaxHp',
+          percentOfMaxHp: 0.004,
+        },
+        hotTargetRule: {
+          kind: 'all',
+          side: 'ally',
+        },
+      } satisfies PassiveSkillDef,
+      fragments: ['常時 HoT maxHp×0.4%', '味方全員'],
+    },
+    {
       name: 'special effect damage',
       def: {
         id: 'passive_damage_vs_dot',
@@ -278,5 +296,49 @@ describe('formatActiveDescription', () => {
     const desc = formatPassiveDescription(def);
     expect(desc).toContain('maxCharges +1');
     expect(desc).toContain('at_warrior_active_1');
+  });
+
+  it('formats counter passive with slash-separated summary', () => {
+    const def: PassiveSkillDef = {
+      id: 'at_ranger_passive_3',
+      name: '応射',
+      effect: 'counter',
+      chance: 0.33,
+      counterRange: 0,
+      counterRanged: true,
+      counterResponses: [
+        {
+          kind: 'damage',
+          amount: { kind: 'atkBased', atkScale: 1 },
+          damageType: 'physical',
+        },
+      ],
+    };
+    const desc = formatPassiveDescription(def);
+    expect(desc).toBe(
+      '被攻撃時 33% で反撃 / 物理ATK / 射程+0 / 対象遠隔',
+    );
+  });
+
+  it('formats active counter range 0 as 射程+0', () => {
+    const def: ActiveSkillDef = {
+      id: 'active_counter',
+      name: '反撃態勢',
+      trigger: { kind: 'time', value: 12 },
+      effect: [
+        {
+          type: 'counter',
+          range: 0,
+          durationSec: 5,
+          responses: [
+            { kind: 'damage', amount: { kind: 'atkBased', atkScale: 0.8 } },
+          ],
+          target: { kind: 'self' },
+        },
+      ],
+    };
+    const desc = formatActiveDescription(def);
+    expect(desc).toContain('射程+0');
+    expect(desc).not.toContain('射程0');
   });
 });

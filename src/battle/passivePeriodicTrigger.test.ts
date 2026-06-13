@@ -1,10 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { PassiveSkillDef } from './types.ts';
 import {
   resolvePassiveBarrierTrigger,
   resolvePassivePeriodicTrigger,
+  resolvePassiveTriggerChance,
+  rollPassiveTriggerChance,
   usesHotAuraMode,
   usesIntervalPeriodicTrigger,
+  usesPassiveTriggerChance,
 } from './passivePeriodicTrigger.ts';
 
 function hotPassive(
@@ -28,11 +31,11 @@ describe('passivePeriodicTrigger', () => {
     expect(usesIntervalPeriodicTrigger(passive)).toBe(false);
   });
 
-  it('treats legacy intervalSec as interval trigger', () => {
+  it('ignores legacy intervalSec (removed trigger kind)', () => {
     const passive = hotPassive({ intervalSec: 5 });
-    expect(resolvePassivePeriodicTrigger(passive)).toBe('interval');
-    expect(usesHotAuraMode(passive)).toBe(false);
-    expect(usesIntervalPeriodicTrigger(passive)).toBe(true);
+    expect(resolvePassivePeriodicTrigger(passive)).toBeUndefined();
+    expect(usesHotAuraMode(passive)).toBe(true);
+    expect(usesIntervalPeriodicTrigger(passive)).toBe(false);
   });
 
   it('defaults passive barrier trigger to stageStart', () => {
@@ -57,5 +60,44 @@ describe('passivePeriodicTrigger', () => {
         hotPassive({ periodicTrigger: 'waveStart' }),
       ),
     ).toBe('waveStart');
+  });
+
+  it('usesPassiveTriggerChance excludes block/evasion/counter', () => {
+    expect(
+      usesPassiveTriggerChance({
+        id: 'x',
+        name: 'X',
+        effect: 'buff',
+        buffSubKind: 'block',
+      }),
+    ).toBe(false);
+    expect(
+      usesPassiveTriggerChance({
+        id: 'x',
+        name: 'X',
+        effect: 'counter',
+        chance: 0.5,
+      }),
+    ).toBe(false);
+    expect(usesPassiveTriggerChance(hotPassive())).toBe(true);
+  });
+
+  it('resolvePassiveTriggerChance defaults to 1', () => {
+    expect(resolvePassiveTriggerChance(hotPassive())).toBe(1);
+    expect(
+      resolvePassiveTriggerChance(
+        hotPassive({ periodicTrigger: 'stageStart', chance: 0.4 }),
+      ),
+    ).toBe(0.4);
+  });
+
+  it('rollPassiveTriggerChance respects configured chance', () => {
+    const passive = hotPassive({
+      periodicTrigger: 'stageStart',
+      chance: 0,
+    });
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    expect(rollPassiveTriggerChance(passive)).toBe(false);
+    randomSpy.mockRestore();
   });
 });

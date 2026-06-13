@@ -553,8 +553,7 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.defenseIgnore ??= { def: { mode: 'percent', amount: 0.2 } };
       break;
     case 'periodicDispel':
-      passive.periodicTrigger ??= 'interval';
-      passive.intervalSec ??= 5;
+      passive.periodicTrigger ??= 'waveStart';
       passive.dispelTargetRule ??= { kind: 'self' };
       passive.dispelCount ??= 0;
       break;
@@ -562,8 +561,6 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.healSubKind ??= 'hot';
       passive.hotTargetRule ??= { kind: 'self' };
       passive.hotAmount ??= { kind: 'atkBased', atkScale: 0.05 };
-      passive.periodicTrigger ??= 'interval';
-      passive.intervalSec ??= 5;
       passive.hotDurationSec ??= 0;
       break;
     case 'damageReduction':
@@ -2144,9 +2141,14 @@ export class SkillEditorStep {
         });
         break;
       case 'periodicDispel':
-        appendPassiveDispelFields(effectGrid, passive, (mutate, options) => {
-          this.patchPassive(index, mutate, options);
-        });
+        appendPassiveDispelFields(
+          effectGrid,
+          passive,
+          (mutate, options) => {
+            this.patchPassive(index, mutate, options);
+          },
+          { traitsRangePx: this.resolveTraitsRangePx() },
+        );
         break;
       case 'healReceivedIncrease':
         effectGrid.appendChild(
@@ -2167,12 +2169,18 @@ export class SkillEditorStep {
           (grid, amount, onUpdate) => {
             appendResourceAmountFields(grid, amount, onUpdate);
           },
+          { traitsRangePx: this.resolveTraitsRangePx() },
         );
         break;
       case 'damageReduction':
-        appendPassiveDamageReductionFields(effectGrid, passive, (mutate, options) => {
-          this.patchPassive(index, mutate, options);
-        });
+        appendPassiveDamageReductionFields(
+          effectGrid,
+          passive,
+          (mutate, options) => {
+            this.patchPassive(index, mutate, options);
+          },
+          { traitsRangePx: this.resolveTraitsRangePx() },
+        );
         break;
       case 'excessHealToBarrier':
         effectGrid.appendChild(
@@ -2373,12 +2381,18 @@ export class SkillEditorStep {
           (grid, amount, onUpdate) => {
             appendResourceAmountFields(grid, amount, onUpdate);
           },
+          { traitsRangePx: this.resolveTraitsRangePx() },
         );
         break;
       case 'debuff':
-        appendPassiveDebuffFields(effectGrid, passive, (mutate, options) => {
-          this.patchPassive(index, mutate, options);
-        });
+        appendPassiveDebuffFields(
+          effectGrid,
+          passive,
+          (mutate, options) => {
+            this.patchPassive(index, mutate, options);
+          },
+          { traitsRangePx: this.resolveTraitsRangePx() },
+        );
         break;
       case 'skillAmountOverride': {
         const entries = this.options.getEntries();

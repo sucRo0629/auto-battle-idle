@@ -1,3 +1,23 @@
+import {
+  remapEffectTargetingToPassiveBuff,
+  remapPassiveBuffTargetingToEffect,
+} from '../passiveBuffBridge.ts';
+import {
+  remapEffectTargetingToPassiveDamageReduction,
+  remapPassiveDamageReductionTargetingToEffect,
+} from '../passiveDamageReductionBridge.ts';
+import {
+  remapEffectTargetingToPassiveHot,
+  remapPassiveHotTargetingToEffect,
+} from '../passiveHotBridge.ts';
+import {
+  remapEffectTargetingToPassiveDebuff,
+  remapPassiveDebuffTargetingToEffect,
+} from '../passiveDebuffBridge.ts';
+import {
+  remapEffectTargetingToPassiveDispel,
+  remapPassiveDispelTargetingToEffect,
+} from '../passiveDispelBridge.ts';
 import type {
   ActiveSkillDef,
   AttackSpeedTier,
@@ -55,7 +75,7 @@ import {
   defaultBasicAttackId,
   synthesizeBasicAttackSkill,
 } from './synthesizeBasicAttack.ts';
-import { PASSIVE_PERIODIC_TRIGGER_KINDS } from '../passivePeriodicTrigger.ts';
+import { PASSIVE_DISPEL_TRIGGER_KINDS } from '../passivePeriodicTrigger.ts';
 import { GLOBAL_MAX_CHARGES_CAP } from '../skills/chargeBank.ts';
 import { STUN_MAX_DURATION_SEC } from '../ccEffects.ts';
 
@@ -420,6 +440,111 @@ function parseOptionalRange(
     );
   }
   return rangePx;
+}
+
+function parsePassiveHotRange(
+  obj: Record<string, unknown>,
+  context: string,
+): number | undefined {
+  if (obj.hotRange === undefined) return undefined;
+  return parseOptionalRange({ range: obj.hotRange }, context);
+}
+
+function parsePassiveHotTargetingFields(
+  obj: Record<string, unknown>,
+  context: string,
+): Partial<PassiveSkillDef> {
+  const remapped = remapPassiveHotTargetingToEffect(obj);
+  const shapeFields = parseTargetShapeFields(remapped, context);
+  const hotRange = parsePassiveHotRange(obj, context);
+  return {
+    ...remapEffectTargetingToPassiveHot(shapeFields),
+    ...(hotRange !== undefined ? { hotRange } : {}),
+  };
+}
+
+function parsePassiveDamageReductionRange(
+  obj: Record<string, unknown>,
+  context: string,
+): number | undefined {
+  if (obj.damageReductionRange === undefined) return undefined;
+  return parseOptionalRange({ range: obj.damageReductionRange }, context);
+}
+
+function parsePassiveDamageReductionTargetingFields(
+  obj: Record<string, unknown>,
+  context: string,
+): Partial<PassiveSkillDef> {
+  const remapped = remapPassiveDamageReductionTargetingToEffect(obj);
+  const shapeFields = parseTargetShapeFields(remapped, context);
+  const damageReductionRange = parsePassiveDamageReductionRange(obj, context);
+  return {
+    ...remapEffectTargetingToPassiveDamageReduction(shapeFields),
+    ...(damageReductionRange !== undefined ? { damageReductionRange } : {}),
+  };
+}
+
+function parsePassiveBuffRange(
+  obj: Record<string, unknown>,
+  context: string,
+): number | undefined {
+  if (obj.buffRange === undefined) return undefined;
+  return parseOptionalRange({ range: obj.buffRange }, context);
+}
+
+function parsePassiveBuffTargetingFields(
+  obj: Record<string, unknown>,
+  context: string,
+): Partial<PassiveSkillDef> {
+  const remapped = remapPassiveBuffTargetingToEffect(obj);
+  const shapeFields = parseTargetShapeFields(remapped, context);
+  const buffRange = parsePassiveBuffRange(obj, context);
+  return {
+    ...remapEffectTargetingToPassiveBuff(shapeFields),
+    ...(buffRange !== undefined ? { buffRange } : {}),
+  };
+}
+
+function parsePassiveDebuffRange(
+  obj: Record<string, unknown>,
+  context: string,
+): number | undefined {
+  if (obj.debuffRange === undefined) return undefined;
+  return parseOptionalRange({ range: obj.debuffRange }, context);
+}
+
+function parsePassiveDebuffTargetingFields(
+  obj: Record<string, unknown>,
+  context: string,
+): Partial<PassiveSkillDef> {
+  const remapped = remapPassiveDebuffTargetingToEffect(obj);
+  const shapeFields = parseTargetShapeFields(remapped, context);
+  const debuffRange = parsePassiveDebuffRange(obj, context);
+  return {
+    ...remapEffectTargetingToPassiveDebuff(shapeFields),
+    ...(debuffRange !== undefined ? { debuffRange } : {}),
+  };
+}
+
+function parsePassiveDispelRange(
+  obj: Record<string, unknown>,
+  context: string,
+): number | undefined {
+  if (obj.dispelRange === undefined) return undefined;
+  return parseOptionalRange({ range: obj.dispelRange }, context);
+}
+
+function parsePassiveDispelTargetingFields(
+  obj: Record<string, unknown>,
+  context: string,
+): Partial<PassiveSkillDef> {
+  const remapped = remapPassiveDispelTargetingToEffect(obj);
+  const shapeFields = parseTargetShapeFields(remapped, context);
+  const dispelRange = parsePassiveDispelRange(obj, context);
+  return {
+    ...remapEffectTargetingToPassiveDispel(shapeFields),
+    ...(dispelRange !== undefined ? { dispelRange } : {}),
+  };
 }
 
 function parseOptionalNumber(
@@ -803,15 +928,29 @@ function parseOptionalPositiveNumber(
   return { [key]: value };
 }
 
-const PASSIVE_PERIODIC_TRIGGER_KINDS_SET = new Set<string>(
-  PASSIVE_PERIODIC_TRIGGER_KINDS,
-);
+function normalizeLegacyPassivePeriodicFields(
+  obj: Record<string, unknown>,
+): void {
+  if (obj.periodicTrigger === 'interval') {
+    delete obj.periodicTrigger;
+  }
+  delete obj.intervalSec;
+}
 
 function parsePassivePeriodicTriggerFields(
   obj: Record<string, unknown>,
   context: string,
-  options: { requireTriggerOrInterval?: boolean } = {},
-): Pick<PassiveSkillDef, 'periodicTrigger' | 'intervalSec'> {
+  options: {
+    requireTrigger?: boolean;
+    allowedKinds?: readonly PassivePeriodicTriggerKind[];
+  } = {},
+): Pick<PassiveSkillDef, 'periodicTrigger'> {
+  normalizeLegacyPassivePeriodicFields(obj);
+
+  const allowedKinds =
+    options.allowedKinds ?? (['stageStart', 'waveStart'] as const);
+  const allowedSet = new Set<string>(allowedKinds);
+
   const periodicTriggerRaw = obj.periodicTrigger;
   let periodicTrigger: PassivePeriodicTriggerKind | undefined;
   if (periodicTriggerRaw !== undefined) {
@@ -819,52 +958,15 @@ function parsePassivePeriodicTriggerFields(
       obj,
       'periodicTrigger',
       context,
-      PASSIVE_PERIODIC_TRIGGER_KINDS_SET,
+      allowedSet,
     ) as PassivePeriodicTriggerKind;
   }
 
-  const intervalSecValue = obj.intervalSec;
-  let intervalSec: number | undefined;
-  if (intervalSecValue !== undefined) {
-    if (
-      typeof intervalSecValue !== 'number' ||
-      Number.isNaN(intervalSecValue) ||
-      intervalSecValue <= 0
-    ) {
-      invalidField(context, 'intervalSec', 'must be a positive number');
-    }
-    intervalSec = intervalSecValue;
+  if (options.requireTrigger && periodicTrigger === undefined) {
+    missingField(context, 'periodicTrigger');
   }
 
-  if (
-    periodicTrigger === 'stageStart' ||
-    periodicTrigger === 'waveStart'
-  ) {
-    if (intervalSec !== undefined) {
-      invalidField(
-        context,
-        'intervalSec',
-        'must not be set when periodicTrigger is stageStart or waveStart',
-      );
-    }
-    return { periodicTrigger };
-  }
-
-  if (periodicTrigger === 'interval') {
-    if (intervalSec === undefined) {
-      missingField(context, 'intervalSec');
-    }
-    return { periodicTrigger, intervalSec };
-  }
-
-  if (intervalSec !== undefined) {
-    return { intervalSec };
-  }
-
-  if (options.requireTriggerOrInterval) {
-    missingField(context, 'intervalSec or periodicTrigger');
-  }
-  return {};
+  return periodicTrigger !== undefined ? { periodicTrigger } : {};
 }
 
 function parseOptionalNonNegativeNumber(
@@ -1147,6 +1249,13 @@ function parseDefenseIgnoreSpec(
 ): DefenseIgnoreSpec {
   const obj = requireRecord(raw, context);
   const result: DefenseIgnoreSpec = {};
+  if (obj.chance !== undefined) {
+    const chance = requireNumber(obj, 'chance', context);
+    if (chance < 0 || chance > 1) {
+      invalidField(context, 'chance', 'must be between 0 and 1');
+    }
+    result.chance = chance;
+  }
   if (obj.def !== undefined) {
     const defObj = requireRecord(obj.def, `${context}.def`);
     const mode = requireEnum(
@@ -2493,16 +2602,26 @@ function requirePassiveEffectParams(
         'buffTargetRule',
         context,
       );
+      const targetingFields = parsePassiveBuffTargetingFields(obj, context);
       if (buffSubKind === 'block' || buffSubKind === 'evasion') {
         const chance = requireNumber(obj, 'chance', context);
         if (chance < 0 || chance > 1) {
           invalidField(context, 'chance', 'must be between 0 and 1');
         }
+        const periodicFields = parsePassivePeriodicTriggerFields(obj, context);
+        const buffDurationSec = parseOptionalNonNegativeNumber(
+          obj,
+          'buffDurationSec',
+          context,
+        );
         return {
           ...base,
           buffSubKind,
           chance,
+          ...targetingFields,
+          ...periodicFields,
           ...(buffTargetRule !== undefined ? { buffTargetRule } : {}),
+          ...(buffDurationSec !== undefined ? { buffDurationSec } : {}),
         };
       }
       if (buffSubKind === 'damageTakenToHeal') {
@@ -2510,14 +2629,23 @@ function requirePassiveEffectParams(
         if (ratio < 0 || ratio > 1) {
           invalidField(context, 'ratio', 'must be between 0 and 1');
         }
+        const periodicFields = parsePassivePeriodicTriggerFields(obj, context);
+        const buffDurationSec = parseOptionalNonNegativeNumber(
+          obj,
+          'buffDurationSec',
+          context,
+        );
         return {
           ...base,
           buffSubKind,
           ratio,
+          ...targetingFields,
+          ...periodicFields,
           buffTargetRule: parseTargetSpec(
             obj.buffTargetRule ?? 'self',
             `${context}.buffTargetRule`,
           ),
+          ...(buffDurationSec !== undefined ? { buffDurationSec } : {}),
         };
       }
       if (buffSubKind === 'barrier') {
@@ -2535,13 +2663,13 @@ function requirePassiveEffectParams(
           ...base,
           buffSubKind,
           barrierAmount,
+          ...targetingFields,
           buffTargetRule: parseTargetSpec(
             obj.buffTargetRule ?? 'self',
             `${context}.buffTargetRule`,
           ),
           ...(typeof barrierStack === 'boolean' ? { barrierStack } : {}),
-          ...(periodicFields.periodicTrigger === undefined &&
-          periodicFields.intervalSec === undefined
+          ...(periodicFields.periodicTrigger === undefined
             ? { periodicTrigger: 'stageStart' as const }
             : periodicFields),
         };
@@ -2575,10 +2703,18 @@ function requirePassiveEffectParams(
         'buffMultiplier',
         'buffFlatBonus',
       );
+      const periodicFields = parsePassivePeriodicTriggerFields(obj, context);
+      const buffDurationSec = parseOptionalNonNegativeNumber(
+        obj,
+        'buffDurationSec',
+        context,
+      );
       return {
         ...base,
         buffSubKind,
         buffStat,
+        ...targetingFields,
+        ...periodicFields,
         ...(typeof obj.buffMultiplier === 'number'
           ? { buffMultiplier: obj.buffMultiplier }
           : {}),
@@ -2586,34 +2722,110 @@ function requirePassiveEffectParams(
           ? { buffFlatBonus: obj.buffFlatBonus }
           : {}),
         ...(buffTargetRule !== undefined ? { buffTargetRule } : {}),
+        ...(buffDurationSec !== undefined ? { buffDurationSec } : {}),
       };
     }
     case 'debuff': {
+      const debuffSubKind =
+        obj.debuffSubKind === undefined
+          ? ('stat' as const)
+          : requireEnum(obj, 'debuffSubKind', context, DEBUFF_SUB_KINDS_SET);
       const debuffTargetRule: TargetSpec =
         parseOptionalPassiveTarget(obj, 'debuffTargetRule', context) ?? {
           kind: 'distance',
           side: 'enemy',
           order: 'nearest',
         };
+      const targetingFields = parsePassiveDebuffTargetingFields(obj, context);
+      const periodicFields = parsePassivePeriodicTriggerFields(obj, context);
+
+      if (debuffSubKind === 'stat') {
+        const debuffDurationSec = parseOptionalNonNegativeNumber(
+          obj,
+          'debuffDurationSec',
+          context,
+        );
+        return {
+          ...base,
+          debuffSubKind,
+          debuffTargetRule,
+          ...targetingFields,
+          ...periodicFields,
+          debuffStat: requireStatusEffectStat(obj, 'debuffStat', context),
+          ...(() => {
+            requireBuffOrDebuffModifier(
+              obj,
+              context,
+              'debuffMultiplier',
+              'debuffFlatBonus',
+            );
+            return {};
+          })(),
+          ...(typeof obj.debuffMultiplier === 'number'
+            ? { debuffMultiplier: obj.debuffMultiplier }
+            : {}),
+          ...(typeof obj.debuffFlatBonus === 'number'
+            ? { debuffFlatBonus: obj.debuffFlatBonus }
+            : {}),
+          ...(debuffDurationSec !== undefined ? { debuffDurationSec } : {}),
+        };
+      }
+
+      if (debuffSubKind === 'dot') {
+        const debuffDotDurationSec = requireNumber(
+          obj,
+          'debuffDotDurationSec',
+          context,
+        );
+        const amount = parseResourceAmountSpec(
+          obj.debuffDotAmount ?? obj.amount,
+          `${context}.debuffDotAmount`,
+        );
+        if (amount.kind !== 'atkBased' || amount.atkScale === undefined) {
+          invalidField(
+            context,
+            'debuffDotAmount',
+            'debuff dot requires atkBased amount',
+          );
+        }
+        const damageType =
+          obj.debuffDotDamageType === undefined
+            ? undefined
+            : requireEnum(obj, 'debuffDotDamageType', context, DAMAGE_TYPES_SET);
+        return {
+          ...base,
+          debuffSubKind,
+          debuffTargetRule,
+          ...targetingFields,
+          ...periodicFields,
+          debuffDotDurationSec,
+          debuffDotAmount: amount,
+          ...(damageType !== undefined ? { debuffDotDamageType: damageType } : {}),
+        };
+      }
+
+      const debuffStunDurationSec = requireNumber(
+        obj,
+        'debuffStunDurationSec',
+        context,
+      );
+      if (debuffStunDurationSec <= 0) {
+        invalidField(context, 'debuffStunDurationSec', 'must be a positive number');
+      }
+      if (debuffStunDurationSec > STUN_MAX_DURATION_SEC) {
+        invalidField(
+          context,
+          'debuffStunDurationSec',
+          `must be at most ${STUN_MAX_DURATION_SEC}`,
+        );
+      }
       return {
         ...base,
+        debuffSubKind,
         debuffTargetRule,
-        debuffStat: requireStatusEffectStat(obj, 'debuffStat', context),
-        ...(() => {
-          requireBuffOrDebuffModifier(
-            obj,
-            context,
-            'debuffMultiplier',
-            'debuffFlatBonus',
-          );
-          return {};
-        })(),
-        ...(typeof obj.debuffMultiplier === 'number'
-          ? { debuffMultiplier: obj.debuffMultiplier }
-          : {}),
-        ...(typeof obj.debuffFlatBonus === 'number'
-          ? { debuffFlatBonus: obj.debuffFlatBonus }
-          : {}),
+        ...targetingFields,
+        ...periodicFields,
+        debuffStunDurationSec,
       };
     }
     case 'periodicDispel': {
@@ -2630,18 +2842,29 @@ function requirePassiveEffectParams(
         obj.dispelPriority,
         `${context}.dispelPriority`,
       );
+      const dispelTriggerLimit = parseOptionalNonNegativeNumber(
+        obj,
+        'dispelTriggerLimit',
+        context,
+      );
+      const periodicFields = parsePassivePeriodicTriggerFields(obj, context, {
+        allowedKinds: PASSIVE_DISPEL_TRIGGER_KINDS,
+      });
+      const targetingFields = parsePassiveDispelTargetingFields(obj, context);
       return {
         ...base,
-        ...parsePassivePeriodicTriggerFields(obj, context, {
-          requireTriggerOrInterval: true,
-        }),
+        ...(periodicFields.periodicTrigger === undefined
+          ? { periodicTrigger: 'waveStart' as const }
+          : periodicFields),
         dispelTargetRule: parseTargetSpec(
           obj.dispelTargetRule ?? 'self',
           `${context}.dispelTargetRule`,
         ),
+        ...targetingFields,
         dispelCount,
         ...(dispelTags !== undefined ? { dispelTags } : {}),
         ...(dispelPriority !== undefined ? { dispelPriority } : {}),
+        ...(dispelTriggerLimit !== undefined ? { dispelTriggerLimit } : {}),
       };
     }
     case 'heal': {
@@ -2663,6 +2886,7 @@ function requirePassiveEffectParams(
         'hotDurationSec',
         context,
       );
+      const targetingFields = parsePassiveHotTargetingFields(obj, context);
       return {
         ...base,
         healSubKind: 'hot',
@@ -2674,6 +2898,7 @@ function requirePassiveEffectParams(
           targetSource ?? 'self',
           `${context}.hotTargetRule`,
         ),
+        ...targetingFields,
         ...parsePassivePeriodicTriggerFields(obj, context),
         ...(hotDurationSec !== undefined ? { hotDurationSec } : {}),
       };
@@ -2687,9 +2912,14 @@ function requirePassiveEffectParams(
           'must be between 0 and 1',
         );
       }
+      const targetingFields = parsePassiveDamageReductionTargetingFields(
+        obj,
+        context,
+      );
       return {
         ...base,
         damageReductionPercent: percent,
+        ...targetingFields,
         damageReductionTargetRule: parseTargetSpec(
           obj.damageReductionTargetRule ?? 'self',
           `${context}.damageReductionTargetRule`,
@@ -3230,6 +3460,8 @@ function parsePassives(raw: unknown): PassiveSkillDef[] {
         `${effectRaw} was removed; migrate to specialEffect/buff/debuff/counter as needed`,
       );
     }
+
+    normalizeLegacyPassivePeriodicFields(effectObj);
 
     if (effectRaw !== normalizedEffect) {
       if (effectRaw === 'evasionChance') {

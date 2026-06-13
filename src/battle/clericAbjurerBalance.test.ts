@@ -64,6 +64,7 @@ describe('cleric vs abjurer balance (iron guard + supporter, stage 1 wave 1)', (
       allies,
       [],
       gameData.skillRegistry.passives,
+      gameData,
     );
 
     expect(guardian.barrierHp).toBe(Math.floor(abjurer.atk * 1.5));

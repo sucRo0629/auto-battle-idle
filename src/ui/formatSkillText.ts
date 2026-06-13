@@ -37,7 +37,36 @@ import {
   resolvePassiveBarrierTrigger,
   resolvePassivePeriodicTrigger,
   usesHotAuraMode,
+  usesPassiveTriggerChance,
 } from "../battle/passivePeriodicTrigger.ts";
+import type { PassivePeriodicTriggerKind } from "../battle/passivePeriodicTrigger.ts";
+import { passiveBuffToEffectDef } from "../battle/passiveBuffBridge.ts";
+import { passiveDebuffToEffectDef } from "../battle/passiveDebuffBridge.ts";
+import { passiveDamageReductionToEffectDef } from "../battle/passiveDamageReductionBridge.ts";
+import { passiveDispelToEffectDef } from "../battle/passiveDispelBridge.ts";
+import { passiveHotToEffectDef } from "../battle/passiveHotBridge.ts";
+
+function formatPassiveTriggerLabel(
+  trigger: PassivePeriodicTriggerKind | undefined,
+  fallback = "—"
+): string {
+  if (trigger === undefined) return fallback;
+  return PASSIVE_PERIODIC_TRIGGER_LABELS[trigger];
+}
+
+function formatPassiveTriggerSummary(
+  passive: PassiveSkillDef,
+  trigger: PassivePeriodicTriggerKind | undefined,
+  fallback = "常時"
+): string {
+  const triggerLabel = formatPassiveTriggerLabel(trigger, fallback);
+  if (!usesPassiveTriggerChance(passive)) return triggerLabel;
+  const chance = passive.chance;
+  if (chance !== undefined && chance < 1) {
+    return `${triggerLabel} ${formatPercent(chance)}`;
+  }
+  return triggerLabel;
+}
 
 const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
   physical: "物理",
@@ -94,15 +123,14 @@ function formatFireConditionSummary(condition: FireCondition): string {
       if (condition.min !== undefined) parts.push(`≥${condition.min}`);
       if (condition.max !== undefined) parts.push(`≤${condition.max}`);
       const range = parts.length > 0 ? parts.join("") : "任意";
-      const scope =
-        condition.scope === "inRange" ? "射程内" : "生存";
+      const scope = condition.scope === "inRange" ? "射程内" : "生存";
       return `敵数${range}(${scope})`;
     }
   }
 }
 
 function formatFireConditionsSummary(
-  conditions: FireCondition[] | undefined,
+  conditions: FireCondition[] | undefined
 ): string {
   if (!conditions || conditions.length === 0) return "";
   return conditions.map(formatFireConditionSummary).join(" & ");
@@ -116,14 +144,20 @@ function formatTarget(
 }
 
 function formatDispelPriorityLabel(
-  priority: DispelPriority | undefined,
+  priority: DispelPriority | undefined
 ): string {
   if (!priority || priority === "longest") return "";
   return ` ${DISPEL_PRIORITY_LABELS[priority]}優先`;
 }
 
 function formatPercent(value: number): string {
-  return `${Math.round(value * 100)}%`;
+  const pct = value * 100;
+  const roundedInt = Math.round(pct);
+  if (Math.abs(pct - roundedInt) < 1e-9) {
+    return `${roundedInt}%`;
+  }
+  const roundedOne = Math.round(pct * 10) / 10;
+  return `${roundedOne}%`;
 }
 
 function formatAtkScale(scale: number | undefined): string {
@@ -158,8 +192,7 @@ function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
     case "flat":
       return `固定${amount.flatAmount ?? 0}`;
     case "percentMaxHp": {
-      const prefix =
-        amount.maxHpRef === "self" ? "自身maxHp" : "maxHp";
+      const prefix = amount.maxHpRef === "self" ? "自身maxHp" : "maxHp";
       return `${prefix}×${formatPercent(amount.percentOfMaxHp ?? 0)}`;
     }
   }
@@ -274,6 +307,9 @@ function formatDefenseIgnoreSpec(
   if (spec.reg) {
     parts.push(`耐魔無視${formatPercent(spec.reg.percent)}`);
   }
+  if (spec.chance !== undefined && spec.chance < 1) {
+    parts.unshift(`${formatPercent(spec.chance)}で`);
+  }
   return parts.join(" ");
 }
 
@@ -317,6 +353,12 @@ function formatTargetShape(effect: SkillEffectDef): string {
   }
 
   return parts.join(" ");
+}
+
+/** 反撃射程: 0 / 未指定 = 持有者 traits.rangePx（エディタ +0 と同義） */
+function formatCounterRangeSummary(range: number | undefined): string {
+  if (range === undefined || range === 0) return "射程+0";
+  return `射程${range}`;
 }
 
 function formatCounterResponse(response: CounterResponseDef): string {
@@ -373,16 +415,20 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       } else if (effect.healSubKind === "dispel") {
         const tags =
           effect.dispelTags && effect.dispelTags.length > 0
-            ? effect.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join("・")
+            ? effect.dispelTags
+                .map((t) => DEBUFF_FILTER_TAG_LABELS[t])
+                .join("・")
             : "全デバフ";
         extras.push(
-          `${HEAL_SUB_KIND_LABELS.dispel} ${tags} ×${effect.dispelCount ?? 0}${formatDispelPriorityLabel(effect.dispelPriority)}`
+          `${HEAL_SUB_KIND_LABELS.dispel} ${tags} ×${
+            effect.dispelCount ?? 0
+          }${formatDispelPriorityLabel(effect.dispelPriority)}`
         );
       } else {
         extras.push(
-          `${HEAL_SUB_KIND_LABELS[effect.healSubKind ?? "instant"]} ${formatResourceAmount(
-            effect.amount
-          )}`
+          `${
+            HEAL_SUB_KIND_LABELS[effect.healSubKind ?? "instant"]
+          } ${formatResourceAmount(effect.amount)}`
         );
       }
       const healInc = formatSpecialEffectSpec("heal", effect.damageIncrease);
@@ -403,9 +449,9 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
         );
       } else if (effect.buffSubKind === "evasion") {
         extras.push(
-          `${BUFF_SUB_KIND_LABELS.evasion} ${formatPercent(effect.chance ?? 0)} ${
-            effect.buffDurationSec ?? 0
-          }s`
+          `${BUFF_SUB_KIND_LABELS.evasion} ${formatPercent(
+            effect.chance ?? 0
+          )} ${effect.buffDurationSec ?? 0}s`
         );
       } else if (effect.buffSubKind === "damageTakenToHeal") {
         extras.push(
@@ -441,7 +487,7 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
         ];
         if (effect.primaryEffectOverride.amount?.atkScale !== undefined) {
           overrideParts.push(
-            `ATK×${effect.primaryEffectOverride.amount.atkScale}`,
+            `ATK×${effect.primaryEffectOverride.amount.atkScale}`
           );
         }
         parts.push(overrideParts.join(" "));
@@ -458,7 +504,10 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
           parts.push(patchParts.join(" "));
         }
       }
-      if (effect.appendEffects !== undefined && effect.appendEffects.length > 0) {
+      if (
+        effect.appendEffects !== undefined &&
+        effect.appendEffects.length > 0
+      ) {
         parts.push(`+${effect.appendEffects.length}効果`);
       }
       extras.push(`${parts.join(" ")} ${effect.buffDurationSec ?? 0}s`);
@@ -480,7 +529,9 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
         const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);
         if (ign) extras.push(ign);
       } else if (effect.debuffSubKind === "stun") {
-        extras.push(`${DEBUFF_SUB_KIND_LABELS.stun} ${effect.durationSec ?? 0}s`);
+        extras.push(
+          `${DEBUFF_SUB_KIND_LABELS.stun} ${effect.durationSec ?? 0}s`
+        );
       } else {
         const statLabel = formatStatsWithModifier(
           effect.debuffStat,
@@ -488,9 +539,9 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
           effect.debuffFlatBonus
         );
         extras.push(
-          `${DEBUFF_SUB_KIND_LABELS[effect.debuffSubKind ?? "stat"]} ${statLabel} ${
-            effect.debuffDurationSec ?? 0
-          }s`
+          `${
+            DEBUFF_SUB_KIND_LABELS[effect.debuffSubKind ?? "stat"]
+          } ${statLabel} ${effect.debuffDurationSec ?? 0}s`
         );
       }
       break;
@@ -516,7 +567,9 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       const mode =
         effect.moveMode === "toAnchor"
           ? effect.anchorOffsetPx !== undefined && effect.anchorOffsetPx !== 0
-            ? `アンカー ${effect.anchorOffsetPx > 0 ? "+" : ""}${effect.anchorOffsetPx}px`
+            ? `アンカー ${effect.anchorOffsetPx > 0 ? "+" : ""}${
+                effect.anchorOffsetPx
+              }px`
             : "アンカー"
           : "接敵";
       extras.push(`${mode} ${effect.moveDurationSec}s`);
@@ -534,7 +587,9 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
           ? effect.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join("・")
           : "全デバフ";
       extras.push(
-        `${tags} ×${effect.dispelCount}${formatDispelPriorityLabel(effect.dispelPriority)}`
+        `${tags} ×${effect.dispelCount}${formatDispelPriorityLabel(
+          effect.dispelPriority
+        )}`
       );
       break;
     }
@@ -545,9 +600,12 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       break;
     case "counter": {
       const responseParts = effect.responses.map(formatCounterResponse);
-      const range = effect.range !== undefined ? `射程${effect.range}` : "";
       extras.push(
-        [responseParts.join(" / "), `${effect.durationSec}s`, range]
+        [
+          responseParts.join(" / "),
+          `${effect.durationSec}s`,
+          formatCounterRangeSummary(effect.range),
+        ]
           .filter(Boolean)
           .join(" ")
       );
@@ -555,7 +613,7 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
     }
   }
 
-  if (effect.range !== undefined) {
+  if (effect.range !== undefined && effect.type !== "counter") {
     extras.push(`射程${effect.range}px`);
   }
 
@@ -624,12 +682,21 @@ function formatPassiveEffect(
       return `ブロック ${formatPercent(legacy.blockChance ?? 0)}`;
     case "damageIncrease":
       return (
-        formatSpecialEffectSpec("damage", legacy.damageIncrease) || "特効ダメージ"
+        formatSpecialEffectSpec("damage", legacy.damageIncrease) ||
+        "特効ダメージ"
       );
     case "damageReduction":
       return `被ダメ軽減 ${formatPercent(
         def.damageReductionPercent ?? 0
-      )} → ${formatTarget(def.damageReductionTargetRule, { kind: "self" })}`;
+      )} → ${formatTarget(def.damageReductionTargetRule, { kind: "self" })}（${[
+        formatTargetShape(passiveDamageReductionToEffectDef(def)),
+        def.damageReductionRange !== undefined
+          ? `${def.damageReductionRange}px`
+          : null,
+        "常時",
+      ]
+        .filter(Boolean)
+        .join(" · ")}）`;
     case "defenseIgnore":
       return formatDefenseIgnoreSpec(def.defenseIgnore) || "防御無視";
     case "periodicDispel": {
@@ -640,16 +707,24 @@ function formatPassiveEffect(
       const target = def.dispelTargetRule
         ? ` → ${formatTarget(def.dispelTargetRule, { kind: "self" })}`
         : "";
+      const dispelMeta = [
+        formatTargetShape(passiveDispelToEffectDef(def)),
+        def.dispelRange !== undefined ? `${def.dispelRange}px` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      const metaSuffix = dispelMeta ? ` · ${dispelMeta}` : "";
       const trigger = resolvePassivePeriodicTrigger(def);
-      const triggerLabel =
-        trigger === "interval"
-          ? `${def.intervalSec ?? 0}s毎`
-          : trigger
-            ? PASSIVE_PERIODIC_TRIGGER_LABELS[trigger]
-            : `${def.intervalSec ?? 0}s毎`;
-      return `定期デバフ解除 ${triggerLabel}（${tags} ×${
+      const triggerLabel = formatPassiveTriggerSummary(def, trigger);
+      const limitLabel =
+        def.dispelTriggerLimit !== undefined && def.dispelTriggerLimit > 0
+          ? ` · ${def.dispelTriggerLimit}回/Wave`
+          : "";
+      return `デバフ解除 ${triggerLabel}（${tags} ×${
         def.dispelCount ?? 1
-      }${formatDispelPriorityLabel(def.dispelPriority)}）${target}`;
+      }${formatDispelPriorityLabel(
+        def.dispelPriority
+      )}${limitLabel}）${target}${metaSuffix}`;
     }
     case "damageTakenToHeal":
       return `被ダメの ${formatPercent(def.ratio ?? 0)} を即時回復`;
@@ -674,17 +749,19 @@ function formatPassiveEffect(
       const durationLabel = duration <= 0 ? "無限" : `${duration}s`;
       const amount = def.hotAmount ? formatResourceAmount(def.hotAmount) : "—";
       const target = formatTarget(def.hotTargetRule, { kind: "self" });
+      const hotMeta = [
+        formatTargetShape(passiveHotToEffectDef(def)),
+        def.hotRange !== undefined ? `${def.hotRange}px` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      const metaSuffix = hotMeta ? ` · ${hotMeta}` : "";
       if (usesHotAuraMode(def)) {
-        return `常時 HoT ${amount} → ${target}（${durationLabel}）`;
+        return `常時 HoT ${amount} → ${target}（${durationLabel}${metaSuffix}）`;
       }
       const trigger = resolvePassivePeriodicTrigger(def);
-      const triggerLabel =
-        trigger === "interval"
-          ? `${def.intervalSec ?? 0}s毎`
-          : trigger
-            ? PASSIVE_PERIODIC_TRIGGER_LABELS[trigger]
-            : `${def.intervalSec ?? 0}s毎`;
-      return `HoT ${triggerLabel} ${amount} → ${target}（${durationLabel}）`;
+      const triggerLabel = formatPassiveTriggerSummary(def, trigger);
+      return `HoT ${triggerLabel} ${amount} → ${target}（${durationLabel}${metaSuffix}）`;
     }
     case "excessHealToBarrier": {
       const sourceLabels = (def.excessHealSources ?? ["outgoing"]).map((s) =>
@@ -705,50 +782,90 @@ function formatPassiveEffect(
       return `自HP比例バフ ${statsLabel}（残HP${ratio}以下時最大）`;
     }
     case "buff": {
+      const effectView = passiveBuffToEffectDef(def);
       const target = formatTarget(def.buffTargetRule, { kind: "self" });
+      const shape = formatTargetShape(effectView);
+      const range = def.buffRange !== undefined ? `${def.buffRange}px` : null;
+      const metaParts = [shape, range];
       if (def.buffSubKind === "block") {
+        const triggerLabel = formatPassiveTriggerLabel(
+          resolvePassivePeriodicTrigger(def),
+          "常時"
+        );
+        metaParts.push(triggerLabel);
         return `バフ ${BUFF_SUB_KIND_LABELS.block} ${formatPercent(
           def.chance ?? 0
-        )} → ${target}`;
+        )} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
       }
       if (def.buffSubKind === "evasion") {
+        const triggerLabel = formatPassiveTriggerLabel(
+          resolvePassivePeriodicTrigger(def),
+          "常時"
+        );
+        metaParts.push(triggerLabel);
         return `バフ ${BUFF_SUB_KIND_LABELS.evasion} ${formatPercent(
           def.chance ?? 0
-        )} → ${target}`;
+        )} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
       }
       if (def.buffSubKind === "damageTakenToHeal") {
+        const triggerLabel = formatPassiveTriggerSummary(
+          def,
+          resolvePassivePeriodicTrigger(def),
+          "常時"
+        );
+        metaParts.push(triggerLabel);
         return `バフ ${BUFF_SUB_KIND_LABELS.damageTakenToHeal} ${formatPercent(
           def.ratio ?? 0
-        )} → ${target}`;
+        )} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
       }
       if (def.buffSubKind === "barrier") {
         const amount = def.barrierAmount
           ? formatResourceAmount(def.barrierAmount)
           : "—";
-        const trigger = resolvePassiveBarrierTrigger(def);
-        const triggerLabel =
-          trigger === "interval"
-            ? `${def.intervalSec ?? 0}s毎`
-            : PASSIVE_PERIODIC_TRIGGER_LABELS[trigger];
-        return `バフ ${BUFF_SUB_KIND_LABELS.barrier} ${triggerLabel} ${amount} → ${target}`;
+        const triggerLabel = formatPassiveTriggerSummary(
+          def,
+          resolvePassiveBarrierTrigger(def)
+        );
+        metaParts.push(triggerLabel);
+        return `バフ ${
+          BUFF_SUB_KIND_LABELS.barrier
+        } ${triggerLabel} ${amount} → ${target}（${metaParts
+          .filter(Boolean)
+          .join(" · ")}）`;
       }
+      const triggerLabel = formatPassiveTriggerSummary(
+        def,
+        resolvePassivePeriodicTrigger(def),
+        "常時"
+      );
+      metaParts.push(triggerLabel);
       return `バフ ${formatBuffTargetStats(
         def.buffStat,
         def.buffMultiplier,
         def.buffFlatBonus
-      )} → ${target}`;
+      )} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
     }
     case "debuff": {
+      const effectView = passiveDebuffToEffectDef(def);
       const target = formatTarget(def.debuffTargetRule, {
         kind: "distance",
         side: "enemy",
         order: "nearest",
       });
+      const shape = formatTargetShape(effectView);
+      const range =
+        def.debuffRange !== undefined ? `${def.debuffRange}px` : null;
+      const triggerLabel = formatPassiveTriggerSummary(
+        def,
+        resolvePassivePeriodicTrigger(def),
+        "常時"
+      );
+      const meta = [shape, range, triggerLabel].filter(Boolean).join(" · ");
       return `デバフ ${formatStatsWithModifier(
         def.debuffStat,
         def.debuffMultiplier,
         def.debuffFlatBonus
-      )} → ${target}`;
+      )} → ${target}${meta ? `（${meta}）` : ""}`;
     }
     case "extendSelfAppliedDebuff": {
       const parts = [`付与デバフ +${legacy.extendSec ?? 0}s`];
@@ -771,8 +888,8 @@ function formatPassiveEffect(
         def.effectIndex !== undefined
           ? `（効果${def.effectIndex + 1}）`
           : def.passiveAmountField
-            ? `（${def.passiveAmountField}）`
-            : "";
+          ? `（${def.passiveAmountField}）`
+          : "";
       return `「${target}」の効果量${scope} → ${amount}`;
     }
     case "skillPropertyOverride": {
@@ -787,21 +904,21 @@ function formatPassiveEffect(
       const responseParts = (def.counterResponses ?? []).map(
         formatCounterResponse
       );
-      const range =
-        def.counterRange !== undefined ? `射程${def.counterRange}` : "";
+      const range = formatCounterRangeSummary(def.counterRange);
       const bandParts: string[] = [];
       if (def.counterMelee) bandParts.push("近接");
       if (def.counterRanged) bandParts.push("遠隔");
-      const band =
-        bandParts.length > 0 ? `対象${bandParts.join("・")}` : "";
+      const band = bandParts.length > 0 ? `対象${bandParts.join("・")}` : "";
       return [
-        `被攻撃時 ${formatPercent(def.chance ?? legacy.counterChance ?? 0)} で反撃`,
+        `被攻撃時 ${formatPercent(
+          def.chance ?? legacy.counterChance ?? 0
+        )} で反撃`,
         responseParts.join(" / "),
         range,
         band,
       ]
         .filter(Boolean)
-        .join(" ");
+        .join(" / ");
     }
     default:
       return effect;

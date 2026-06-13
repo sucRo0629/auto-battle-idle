@@ -14,33 +14,11 @@
       "id": "df_guardian_passive_2",
       "name": "大盾使い",
       "effect": "buff",
-      "healSubKind": "hot",
-      "specialEffectApplyTo": "heal",
-      "specialEffect": {
-        "scale": 1.2,
-        "conditions": []
-      },
-      "hotTargetRule": {
-        "kind": "self"
-      },
-      "hotAmount": {
-        "kind": "atkBased",
-        "atkScale": 0.25
-      },
-      "intervalSec": 10,
-      "hotDurationSec": 5,
-      "targetSkillId": "df_guardian_passive_2",
-      "amount": {
-        "kind": "atkBased",
-        "atkScale": 1
-      },
       "buffSubKind": "block",
+      "chance": 0.1,
       "buffTargetRule": {
         "kind": "self"
-      },
-      "buffStat": "atk",
-      "buffMultiplier": 1.2,
-      "chance": 0.1
+      }
     },
     {
       "id": "sp_cleric_passive_1",
@@ -61,31 +39,27 @@
       "id": "df_duelist_passive_2",
       "name": "不屈の闘士",
       "effect": "selfHpRatioBuff",
-      "targetRuleOverride": {
-        "kind": "distance",
-        "side": "enemy",
-        "order": "nearest"
-      },
       "buffStat": "def",
-      "buffMultiplierMax": 1.6,
-      "maxBuffAtHpRatio": 0.5
+      "maxBuffAtHpRatio": 0.5,
+      "buffMultiplierMax": 1.6
     },
     {
       "id": "df_duelist_passive_3",
       "name": "出鼻挫き",
       "effect": "counter",
+      "chance": 0.2,
       "counterResponses": [
         {
           "kind": "damage",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.8
+            "atkScale": 1
           },
           "damageType": "physical"
         },
         {
           "kind": "stun",
-          "durationSec": 1
+          "durationSec": 1.5
         },
         {
           "kind": "knockback",
@@ -93,27 +67,12 @@
         }
       ],
       "counterRange": 0,
-      "chance": 0.2,
-      "counterChance": 0.2,
       "counterMelee": true
     },
     {
       "id": "df_paladin_passive_2",
       "name": "治癒の心得",
       "effect": "specialEffect",
-      "ratio": 0.1,
-      "barrierScale": 1,
-      "excessHealSources": [
-        "outgoing",
-        "incoming"
-      ],
-      "buffSubKind": "stat",
-      "buffTargetRule": {
-        "kind": "all",
-        "side": "ally"
-      },
-      "buffStat": "damageTaken",
-      "buffMultiplier": 0.95,
       "specialEffectApplyTo": "heal",
       "specialEffect": {
         "scale": 1.2,
@@ -123,70 +82,39 @@
             "maxHpRatio": 0.5
           }
         ]
-      },
-      "healSubKind": "hot",
-      "hotTargetRule": {
-        "kind": "self"
-      },
-      "hotAmount": {
-        "kind": "atkBased",
-        "atkScale": 0.2
-      },
-      "hotDurationSec": 3,
-      "periodicTrigger": "interval",
-      "intervalSec": 10
+      }
     },
     {
       "id": "at_warrior_passive_1",
       "name": "大物狙い",
       "effect": "targetRuleOverride",
-      "buffSubKind": "block",
-      "chance": 0.07,
-      "buffTargetRule": {
-        "kind": "self"
-      },
-      "targetRuleOverrideApplyTo": "enemy",
       "targetRuleOverride": {
         "kind": "stat",
         "side": "enemy",
         "stat": "hp",
         "order": "highest"
-      }
+      },
+      "targetRuleOverrideApplyTo": "enemy"
     },
     {
       "id": "df_duelist_passive_4",
       "name": "闘士は流血で滾る",
       "effect": "selfHpRatioBuff",
       "buffStat": "atk",
-      "buffMultiplierMax": 2,
-      "maxBuffAtHpRatio": 0.1
+      "maxBuffAtHpRatio": 0.1,
+      "buffMultiplierMax": 2
     },
     {
       "id": "df_guardian_passive_3",
       "name": "防御態勢",
       "effect": "buff",
-      "specialEffectApplyTo": "heal",
-      "specialEffect": {
-        "scale": 1.2,
-        "conditions": []
-      },
-      "hotTargetRule": {
-        "kind": "self"
-      },
-      "hotAmount": {
-        "kind": "atkBased",
-        "atkScale": 0.25
-      },
-      "hotDurationSec": 3,
       "buffSubKind": "barrier",
-      "buffTargetRule": {
-        "kind": "self"
-      },
-      "buffStat": "atk",
-      "buffMultiplier": 1.2,
       "barrierAmount": {
         "kind": "defBased",
         "defScale": 0.5
+      },
+      "buffTargetRule": {
+        "kind": "self"
       },
       "periodicTrigger": "waveStart"
     },
@@ -214,23 +142,15 @@
       "id": "df_paladin_passive_3",
       "name": "形なき盾",
       "effect": "buff",
-      "ratio": 0.1,
-      "barrierScale": 1,
-      "excessHealSources": [
-        "outgoing",
-        "incoming"
-      ],
       "buffSubKind": "barrier",
-      "buffTargetRule": {
-        "kind": "all",
-        "side": "ally"
-      },
-      "buffStat": "damageTaken",
-      "buffMultiplier": 0.9,
       "barrierAmount": {
         "kind": "percentMaxHp",
         "percentOfMaxHp": 0.1,
         "maxHpRef": "self"
+      },
+      "buffTargetRule": {
+        "kind": "all",
+        "side": "ally"
       },
       "periodicTrigger": "waveStart"
     },
@@ -238,32 +158,16 @@
       "id": "df_paladin_passive_4",
       "name": "護法の陣",
       "effect": "damageReduction",
-      "targetRuleOverride": {
-        "kind": "distance",
-        "side": "enemy",
-        "order": "nearest"
-      },
-      "buffSubKind": "stat",
-      "buffTargetRule": {
-        "kind": "self"
-      },
-      "buffStat": "atk",
-      "buffMultiplier": 1.2,
+      "damageReductionPercent": 0.05,
       "damageReductionTargetRule": {
         "kind": "all",
         "side": "ally"
-      },
-      "damageReductionPercent": 0.1
+      }
     },
     {
       "id": "at_warrior_passive_2",
       "name": "骨断ち",
       "effect": "defenseIgnore",
-      "targetRuleOverride": {
-        "kind": "distance",
-        "side": "enemy",
-        "order": "nearest"
-      },
       "defenseIgnore": {
         "def": {
           "mode": "percent",
@@ -273,7 +177,23 @@
     },
     {
       "id": "sp_abjurer_passive_1",
-      "name": "守りの備え",
+      "name": "常の庇護",
+      "effect": "buff",
+      "buffSubKind": "stat",
+      "buffStat": [
+        "damageTaken"
+      ],
+      "buffMultiplier": 0.95,
+      "buffTargetRule": {
+        "kind": "stat",
+        "side": "ally",
+        "stat": "hp",
+        "order": "highest"
+      }
+    },
+    {
+      "id": "sp_abjurer_passive_2",
+      "name": "備えあれば",
       "effect": "buff",
       "buffSubKind": "barrier",
       "barrierAmount": {
@@ -289,38 +209,19 @@
       "periodicTrigger": "waveStart"
     },
     {
-      "id": "sp_abjurer_passive_2",
-      "name": "時刻む防護",
+      "id": "sp_abjurer_passive_3",
+      "name": "憂い無し",
       "effect": "buff",
       "buffSubKind": "barrier",
       "barrierAmount": {
         "kind": "atkBased",
-        "atkScale": 0.7
+        "atkScale": 1
       },
       "buffTargetRule": {
-        "kind": "stat",
-        "side": "ally",
-        "stat": "hp",
-        "order": "ratio"
+        "kind": "all",
+        "side": "ally"
       },
-      "periodicTrigger": "interval",
-      "intervalSec": 10
-    },
-    {
-      "id": "sp_abjurer_passive_3",
-      "name": "常の庇護",
-      "effect": "buff",
-      "buffSubKind": "stat",
-      "buffStat": [
-        "damageTaken"
-      ],
-      "buffMultiplier": 0.95,
-      "buffTargetRule": {
-        "kind": "stat",
-        "side": "ally",
-        "stat": "hp",
-        "order": "highest"
-      }
+      "periodicTrigger": "waveStart"
     },
     {
       "id": "sp_alchemist_passive_1",
@@ -454,36 +355,17 @@
       "id": "at_assassin_passive_2",
       "name": "影の歩み",
       "effect": "buff",
-      "targetRuleOverride": {
-        "kind": "distance",
-        "side": "enemy",
-        "order": "nearest"
-      },
-      "healSubKind": "hot",
-      "hotTargetRule": {
-        "kind": "self"
-      },
-      "hotAmount": {
-        "kind": "atkBased",
-        "atkScale": 0.05
-      },
-      "periodicTrigger": "interval",
-      "intervalSec": 5,
-      "hotDurationSec": 0,
       "buffSubKind": "evasion",
+      "chance": 0.2,
       "buffTargetRule": {
         "kind": "self"
-      },
-      "buffStat": "atk",
-      "buffMultiplier": 1.2,
-      "chance": 0.2
+      }
     },
     {
       "id": "sp_alchemist_passive_3",
       "name": "毒消し",
       "effect": "periodicDispel",
-      "periodicTrigger": "interval",
-      "intervalSec": 5,
+      "periodicTrigger": "onDebuffReceived",
       "dispelTargetRule": {
         "kind": "all",
         "side": "ally"
@@ -491,7 +373,8 @@
       "dispelCount": 1,
       "dispelTags": [
         "dot"
-      ]
+      ],
+      "dispelTriggerLimit": 3
     },
     {
       "id": "sp_cleric_passive_2",
@@ -501,6 +384,39 @@
       "excessHealSources": [
         "outgoing"
       ]
+    },
+    {
+      "id": "at_sniper_passive_1",
+      "name": "重い一撃",
+      "effect": "defenseIgnore",
+      "defenseIgnore": {
+        "def": {
+          "mode": "percent",
+          "amount": 0.3
+        }
+      }
+    },
+    {
+      "id": "at_sniper_passive_2",
+      "name": "精密射",
+      "effect": "defenseIgnore",
+      "defenseIgnore": {
+        "chance": 0.2,
+        "def": {
+          "mode": "percent",
+          "amount": 1
+        }
+      }
+    },
+    {
+      "id": "sp_abjurer_passive_4",
+      "name": "守護結界",
+      "effect": "damageReduction",
+      "damageReductionPercent": 0.9,
+      "damageReductionTargetRule": {
+        "kind": "all",
+        "side": "ally"
+      }
     }
   ],
   "actives": [
@@ -786,7 +702,7 @@
       "name": "叩き付け",
       "trigger": {
         "kind": "basicAttackCount",
-        "value": 4
+        "value": 5
       },
       "effect": [
         {
@@ -794,7 +710,7 @@
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.6
+            "atkScale": 1.8
           },
           "targetShape": "single",
           "target": {
@@ -802,6 +718,15 @@
             "side": "enemy",
             "order": "nearest"
           }
+        },
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "knockback",
+          "distancePx": 30
         }
       ],
       "firePolicy": "smart",
@@ -867,7 +792,7 @@
             "order": "nearest"
           },
           "damageIncrease": {
-            "scale": 1.2,
+            "scale": 1.3,
             "conditions": [
               {
                 "kind": "debuff",
@@ -889,7 +814,7 @@
           "debuffStat": "def",
           "debuffMultiplier": 0.8,
           "debuffDurationSec": 5,
-          "durationSec": 20,
+          "durationSec": 10,
           "amount": {
             "kind": "atkBased",
             "atkScale": 0.05
@@ -1116,7 +1041,6 @@
             "kind": "atkBased",
             "atkScale": 2
           },
-          "range": 50,
           "vfx": {
             "preset": "arrow",
             "arc": true
@@ -1146,15 +1070,15 @@
             "kind": "atkBased",
             "atkScale": 1.2
           },
-          "range": 50,
-          "pierceDurationSec": 0.15,
+          "range": 460,
+          "pierceDurationSec": 0.5,
           "vfx": {
             "preset": "impale"
           },
           "target": {
             "kind": "distance",
             "side": "enemy",
-            "order": "nearest"
+            "order": "selfOrigin"
           }
         }
       ]
@@ -1581,7 +1505,7 @@
           "type": "buff",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.9
+            "atkScale": 2
           },
           "target": {
             "kind": "stat",
@@ -2054,6 +1978,86 @@
       "vfx": {
         "preset": "healRise"
       }
+    },
+    {
+      "id": "df_guardian_active_3",
+      "name": "息入れ",
+      "trigger": {
+        "kind": "time",
+        "value": 10
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "self"
+          },
+          "type": "heal",
+          "healSubKind": "hot",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.25
+          },
+          "durationSec": 5
+        }
+      ],
+      "firePolicy": "smart",
+      "fireConditions": [
+        {
+          "kind": "selfHp",
+          "maxHpRatio": 0.8
+        }
+      ]
+    },
+    {
+      "id": "at_sniper_basic_attack",
+      "name": "at_sniper_basic_attack",
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
+        }
+      ]
+    },
+    {
+      "id": "sp_abjurer_active_2",
+      "name": "双璧の護り",
+      "trigger": {
+        "kind": "time",
+        "value": 10
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
+          },
+          "type": "buff",
+          "buffSubKind": "barrier",
+          "buffStat": "atk",
+          "buffMultiplier": 1.2,
+          "buffDurationSec": 5,
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 0.5
+          },
+          "targetShape": "multiLock",
+          "hitCount": 2
+        }
+      ]
     }
   ]
 }

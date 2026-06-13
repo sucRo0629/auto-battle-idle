@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { mockTargetingGameData } from './testFixtures.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 import {
   applyExcessHealToBarrierFromPassive,
@@ -8,17 +9,11 @@ import {
   applyPassiveBarrierFromPassive,
   applyPassiveHotFromPassive,
   firePeriodicPassivesForTrigger,
-  getPeriodicBarrierReady,
-  getPeriodicHotReady,
-  initializePeriodicBarrierStates,
-  initializePeriodicHotStates,
-  tickPeriodicBarrierStates,
   syncHotAuras,
   syncBuffAuras,
   syncDamageReductionAuras,
   syncSelfHpRatioBuffAuras,
   resolveSelfHpRatioBuffScale,
-  tickPeriodicHotStates,
   rollsEvasion,
 } from './passiveEffects.ts';
 import { aggregateStatStatusEffects } from './statusEffectDisplay.ts';
@@ -270,7 +265,7 @@ describe('passiveEffects', () => {
         equippedActiveSlots: [],
       },
     });
-    syncHotAuras([healer, ally], [], passives);
+    syncHotAuras([healer, ally], [], passives, mockTargetingGameData());
     expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
     expect(ally.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
   });
@@ -302,7 +297,7 @@ describe('passiveEffects', () => {
         equippedActiveSlots: [],
       },
     });
-    syncHotAuras([healer, ally], [], passivesWithAllyTarget);
+    syncHotAuras([healer, ally], [], passivesWithAllyTarget, mockTargetingGameData());
     expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
     expect(ally.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
   });
@@ -331,7 +326,7 @@ describe('passiveEffects', () => {
         equippedActiveSlots: [],
       },
     });
-    syncHotAuras([healer, ally], [], passivesWithPartyHot);
+    syncHotAuras([healer, ally], [], passivesWithPartyHot, mockTargetingGameData());
     expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
     expect(ally.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
   });
@@ -356,7 +351,7 @@ describe('passiveEffects', () => {
         equippedActiveSlots: [],
       },
     });
-    syncBuffAuras([guard], [], blockPassives);
+    syncBuffAuras([guard], [], blockPassives, mockTargetingGameData());
     const blockEffect = guard.statusEffects.find((e) => e.overlay === 'block');
     expect(blockEffect?.blockChance).toBe(0.15);
     expect(blockEffect?.stat).toBeUndefined();
@@ -396,7 +391,7 @@ describe('passiveEffects', () => {
         equippedActiveSlots: [],
       },
     });
-    syncDamageReductionAuras([tank, ally], [], reductionPassives);
+    syncDamageReductionAuras([tank, ally], [], reductionPassives, mockTargetingGameData());
     const tankMul = tank.statusEffects.find((e) => e.stat === 'damageTaken')
       ?.multiplier;
     const allyMul = ally.statusEffects.find((e) => e.stat === 'damageTaken')
@@ -424,6 +419,7 @@ describe('passiveEffects', () => {
       [healer],
       [],
       periodicHotPassives,
+      mockTargetingGameData(),
     );
     const hot = healer.statusEffects.find((e) => e.overlay === 'hot');
     expect(hot?.durationSec).toBe(8);
@@ -450,7 +446,7 @@ describe('passiveEffects', () => {
         equippedActiveSlots: [],
       },
     });
-    syncHotAuras([healer], [], periodicHotPassives);
+    syncHotAuras([healer], [], periodicHotPassives, mockTargetingGameData());
     expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
   });
 
@@ -481,6 +477,7 @@ describe('passiveEffects', () => {
       [guard],
       [],
       barrierPassives,
+      mockTargetingGameData(),
     );
     expect(guard.barrierHp).toBe(25);
   });
@@ -511,34 +508,41 @@ describe('passiveEffects', () => {
       [guard],
       [],
       barrierPassives,
+      mockTargetingGameData(),
     );
     expect(guard.barrierHp).toBe(12);
   });
 
-  it('tickPeriodicBarrierStates fires on interval wrap', () => {
-    const barrierPassives = {
-      shield: {
-        id: 'shield',
-        name: 'Shield',
-        effect: 'buff' as const,
-        buffSubKind: 'barrier' as const,
-        buffTargetRule: { kind: 'self' as const },
-        barrierAmount: { kind: 'flat' as const, flatAmount: 8 },
-        periodicTrigger: 'interval' as const,
-        intervalSec: 4,
+  it('firePeriodicPassivesForTrigger skips hot when trigger chance fails', () => {
+    const periodicHotPassives = {
+      aura: {
+        id: 'aura',
+        name: 'Aura',
+        effect: 'heal' as const,
+        healSubKind: 'hot' as const,
+        hotTargetRule: { kind: 'self' as const },
+        hotAmount: { kind: 'flat' as const, flatAmount: 2 },
+        periodicTrigger: 'stageStart' as const,
+        chance: 0,
       },
     };
-    const guard = mockAlly({
-      id: 'guard',
+    const healer = mockAlly({
+      id: 'healer',
       build: {
-        learnedPassiveIds: ['shield'],
+        learnedPassiveIds: ['aura'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
     });
-    const states = initializePeriodicBarrierStates(guard, barrierPassives);
-    const after = tickPeriodicBarrierStates(states, barrierPassives, 0.1);
-    expect(getPeriodicBarrierReady(states, after)).toEqual(['shield']);
+    firePeriodicPassivesForTrigger(
+      'stageStart',
+      [healer],
+      [healer],
+      [],
+      periodicHotPassives,
+      mockTargetingGameData(),
+    );
+    expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
   });
 
   it('firePeriodicPassivesForTrigger applies hot on stageStart', () => {
@@ -567,11 +571,12 @@ describe('passiveEffects', () => {
       [healer],
       [],
       periodicHotPassives,
+      mockTargetingGameData(),
     );
     expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
   });
 
-  it('syncHotAuras skips passives with intervalSec', () => {
+  it('syncHotAuras treats legacy intervalSec-only passives as aura mode', () => {
     const periodicHotPassives = {
       aura: {
         id: 'aura',
@@ -591,8 +596,8 @@ describe('passiveEffects', () => {
         equippedActiveSlots: [],
       },
     });
-    syncHotAuras([healer], [], periodicHotPassives);
-    expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(false);
+    syncHotAuras([healer], [], periodicHotPassives, mockTargetingGameData());
+    expect(healer.statusEffects.some((e) => e.overlay === 'hot')).toBe(true);
   });
 
   it('resolveSelfHpRatioBuffScale scales from full HP to max ratio', () => {
@@ -643,31 +648,5 @@ describe('passiveEffects', () => {
       reg: warrior.reg,
     });
     expect(badges.find((b) => b.category === 'atk')).toBeUndefined();
-  });
-
-  it('tickPeriodicHotStates fires on interval wrap', () => {
-    const periodicHotPassives = {
-      aura: {
-        id: 'aura',
-        name: 'Aura',
-        effect: 'heal' as const,
-        healSubKind: 'hot' as const,
-        hotTargetRule: { kind: 'self' as const },
-        hotAmount: { kind: 'flat' as const, flatAmount: 2 },
-        intervalSec: 3,
-      },
-    };
-    const healer = mockAlly({
-      id: 'healer',
-      build: {
-        learnedPassiveIds: ['aura'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
-    });
-    const states = initializePeriodicHotStates(healer, periodicHotPassives);
-    const before = states;
-    const after = tickPeriodicHotStates(before, periodicHotPassives, 0.1);
-    expect(getPeriodicHotReady(before, after)).toEqual(['aura']);
   });
 });

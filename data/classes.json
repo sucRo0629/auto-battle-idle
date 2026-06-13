@@ -18,8 +18,7 @@
     "passiveIds": [
       "defender_passive_1",
       "df_guardian_passive_2",
-      "df_guardian_passive_3",
-      "df_guardian_passive_4"
+      "df_guardian_passive_3"
     ],
     "skills": [
       {
@@ -34,13 +33,8 @@
       {
         "level": 10,
         "skillIds": [
-          "df_guardian_passive_3"
-        ]
-      },
-      {
-        "level": 20,
-        "skillIds": [
-          "df_guardian_passive_4"
+          "df_guardian_passive_3",
+          "df_guardian_active_3"
         ]
       }
     ],
@@ -219,9 +213,9 @@
         "level": 0,
         "skillIds": [
           "at_assassin_passive_1",
+          "at_assassin_passive_2",
           "at_assassin_active_1",
-          "at_assassin_active_2",
-          "at_assassin_passive_2"
+          "at_assassin_active_2"
         ]
       }
     ],
@@ -326,11 +320,14 @@
     "jobTier": 1,
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "at_sniper_basic_attack",
-    "passiveIds": [],
+    "passiveIds": [
+      "at_sniper_passive_1"
+    ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
+          "at_sniper_passive_1",
           "at_sniper_active_1",
           "at_sniper_active_2"
         ]
@@ -537,7 +534,8 @@
     "passiveIds": [
       "sp_abjurer_passive_1",
       "sp_abjurer_passive_2",
-      "sp_abjurer_passive_3"
+      "sp_abjurer_passive_3",
+      "sp_abjurer_passive_4"
     ],
     "skills": [
       {
@@ -551,7 +549,14 @@
       {
         "level": 10,
         "skillIds": [
-          "sp_abjurer_passive_3"
+          "sp_abjurer_passive_3",
+          "sp_abjurer_active_2"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "sp_abjurer_passive_4"
         ]
       }
     ],

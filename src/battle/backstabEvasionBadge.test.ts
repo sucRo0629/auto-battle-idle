@@ -131,12 +131,23 @@ describe('backstab evasion buff badge', () => {
 
   it('shows evasion badge for active buff while hiding passive evasion aura', () => {
     const gameData = loadGameData();
+    const evasionPassives = {
+      ...gameData.skillRegistry.passives,
+      passive_evasion: {
+        id: 'passive_evasion',
+        name: '影歩',
+        effect: 'buff' as const,
+        buffSubKind: 'evasion' as const,
+        chance: 0.18,
+        buffTargetRule: { kind: 'self' as const },
+      },
+    };
     const actor = mockUnit({ id: 'assassin', battleX: 220 });
     const ally = mockUnit({ id: 'ally', battleX: 180 });
     const enemy = mockUnit({ id: 'enemy', isEnemy: true, battleX: 260 });
     actor.build.learnedPassiveIds = ['passive_evasion'];
 
-    syncBuffAuras([actor, ally], [enemy], gameData.skillRegistry.passives);
+    syncBuffAuras([actor, ally], [enemy], evasionPassives, gameData);
 
     const passiveEvasion = actor.statusEffects.find((e) => e.overlay === 'evasion');
     expect(passiveEvasion?.id.startsWith('passive_')).toBe(true);

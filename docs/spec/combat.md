@@ -5,7 +5,7 @@
 ## 物理ダメージ
 
 1. `baseDamage = floor(resolvePowerAmount(amount) × crowdBonus × damageIncreaseMul)`（`damageIncrease` はパッシブ + effect + DoT status の乗算）
-2. `effectiveDef = applyDefenseIgnore(getEffectiveDef(target))`（DEF 無視: flat 減算 → percent 減算、パッシブ + effect 合算）
+2. `effectiveDef = applyDefenseIgnore(getEffectiveDef(target))`（DEF 無視: flat 減算 → percent 減算、パッシブ + effect 合算。各 `defenseIgnore` の `chance` を毎回判定し、失敗したソースは合算から除外）
 3. `afterSubtract = baseDamage - effectiveDef`
 4. `afterSubtract <= 0` なら `afterDefense = 0`、
   それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
@@ -28,7 +28,7 @@
 ## 魔法ダメージ
 
 1. 上記と同じ `baseDamage`
-2. `effectiveReg = applyDefenseIgnore(getEffectiveReg(target))`（REG percent 無視）
+2. `effectiveReg = applyDefenseIgnore(getEffectiveReg(target))`（REG percent 無視。`chance` 判定は DEF と同様）
 3. `afterDefense = floor(baseDamage × 100 / (100 + effectiveReg))`
 4. `final = max(1, floor(afterDefense × damageTakenMul))`
 
@@ -189,7 +189,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                   |
 | スタン    | `effect: "stun"` + `durationSec`（**上限 5 秒**）— `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可。**付与成功時**に対象の通常攻撃 CD を満タンにリセット。スタン中は **time トリガーアクティブ CD 停止**（基本攻撃 CD は進行） |
 | 反撃    | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記 |
-| デバフ解除  | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `dispelPriority` に従い N 件（`longest` = 残り時間最長、`strongest` = 効果量最大。未指定は `longest`）。対象タグに `attackSpeed`（SPDデバフ）可。パッシブ `periodicDispel` は `intervalSec` ごとに `dispelTargetRule` で対象選択 |
+| デバフ解除  | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `dispelPriority` に従い N 件（`longest` = 残り時間最長、`strongest` = 効果量最大。未指定は `longest`）。対象タグに `attackSpeed`（SPDデバフ）可。パッシブ `periodicDispel` は `stageStart` / `waveStart` / `onDebuffReceived` で `dispelTargetRule` + 形状・射程（接頭辞 `dispel`、[classes-and-skills.md](classes-and-skills.md)）で対象選択。`dispelTriggerLimit` = Wave 内発動回数上限 |
 | ノックバック | `effect: "knockback"` + `distancePx` — 各陣営の **後方** へ即時移動（プレイヤーは左 `-X`、敵は右 `+X`）。敵は進軍表示下限未満にならない。詳細は [battle-field.md](battle-field.md) §2.5 |
 
 ### 反撃（`counter`）
@@ -199,7 +199,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | 項目 | 挙動 |
 |------|------|
 | 付与対象 | 常に自身（`target: self`） |
-| 射程 | `isWithinSkillRange(attacker, victim, counter.range ?? 持有者 traits.rangePx)`（スキル射程と同じ近接帯判定）。`range: 0` は近接接触のみ（遠隔帯は不発） |
+| 射程 | `resolveCounterRangePx(counter.range, 持有者)` — 未指定・`0` = 持有者 `traits.rangePx`。正の値は絶対 px。`isWithinSkillRange` で判定（スキル射程と同じ近接帯ルール） |
 | レスポンス | `damage` / `debuff` / `dot` / `stun` / `knockback` から 1 種別以上。被攻撃 1 回で選択種別を同時適用 |
 | トリガー | 直接 `damage` および DoT tick |
 | 非トリガー | 回避・0 ダメージ・反撃ダメージ（連鎖反撃なし）・射程外 |
@@ -242,7 +242,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | ----------- | ------------------------------------------------------------------------------------ |
 | `single`    | 攻撃可能プールから 1 体。`hitCount >= 2` なら同一対象へ N 回（`hitDurationSec` で分散）                      |
 | `aoe`       | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散）                     |
-| `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打）                  |
+| `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打）。味方 HP 割合最低（`order: ratio`）のとき満タン味方はプールから除外                  |
 | `pierce`    | **`order: selfOrigin` 必須**。使用者の向き（味方 +X / 敵 −X）へ `range` px の前方セグメント内を手前→奥に命中。`piercePowerStepMultiplier` で威力減衰、`pierceDurationSec` で適用分散可 |
 | `chain`     | anchor から同陣営へ距離内で連鎖。直前 hop と同じユニットには飛ばない。範囲内に未命中がいれば最も近い未命中を優先（全員命中済みなら再訪問可）。`chainPowerStepMultiplier` で威力減衰、`chainDurationSec`（未指定時 `0.15×chainCount+0.5` 秒）で **スキル発動から最終命中まで** の総時間分散 |
 

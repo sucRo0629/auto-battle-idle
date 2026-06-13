@@ -24,7 +24,7 @@ export {
   BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
   BATTLE_ENEMY_MARCH_VISIBLE_MIN_X,
   BATTLE_ENEMY_VISIBLE_MAX_X,
-} from './battleConstants.ts';
+} from "./battleConstants.ts";
 
 /** @deprecated 演出用。ロジックには使わない */
 export const DEFAULT_MELEE_RANGE_PX = 45;
@@ -434,12 +434,14 @@ export interface DefenseIgnoreRegSpec {
 }
 
 export interface DefenseIgnoreSpec {
+  /** 発動確率（0–1）。未指定 = 1 */
+  chance?: number;
   def?: DefenseIgnoreDefSpec;
   reg?: DefenseIgnoreRegSpec;
 }
 
 export function asStatusEffectStatList(
-  stat: StatusEffectStat | StatusEffectStat[] | undefined,
+  stat: StatusEffectStat | StatusEffectStat[] | undefined
 ): StatusEffectStat[] {
   if (!stat) return [];
   return Array.isArray(stat) ? stat : [stat];
@@ -482,6 +484,8 @@ export interface CombatantState extends Combatant {
   threat?: number;
   /** 味方のみ: 減衰の目標ヘイト */
   baseThreat?: number;
+  /** periodicDispel: Wave 内の残り発動回数（passiveId → 残数） */
+  passiveDispelRemainingTriggers?: Record<string, number>;
 }
 
 export type PassiveEffectKind =
@@ -519,7 +523,10 @@ export function isPassiveHot(passive: PassiveSkillDef): boolean {
 
 export type TargetRuleOverrideApplyTo = "enemy" | "ally";
 
-export type PassivePeriodicTriggerKind = "interval" | "stageStart" | "waveStart";
+export type PassivePeriodicTriggerKind =
+  | "stageStart"
+  | "waveStart"
+  | "onDebuffReceived";
 
 /** skillAmountOverride — パッシブ側 amount フィールドの上書き対象 */
 export type PassiveAmountField = "hotAmount" | "barrierAmount";
@@ -535,7 +542,7 @@ export interface PassiveSkillDef {
   targetRuleOverride?: TargetSpec;
   /** targetRuleOverride の適用スコープ。未指定 = enemy */
   targetRuleOverrideApplyTo?: TargetRuleOverrideApplyTo;
-  /** buff: block / evasion / counter / defenseIgnore 用（0–1） */
+  /** block/evasion/counter: 効果率・反撃率。Stage/Wave 開始パッシブ: 発動確率（未指定=1） */
   chance?: number;
   ratio?: number;
   hotAmount?: ResourceAmountSpec;
@@ -544,11 +551,48 @@ export interface PassiveSkillDef {
   /** buff + barrier: true で既存バリアに加算 */
   barrierStack?: boolean;
   hotTargetRule?: TargetSpec;
+  /** アクティブ effect.targetShape に対応 */
+  hotTargetShape?: TargetShape;
+  hotRange?: number;
+  hotAoeRadiusPx?: number;
+  hotHitCount?: number;
+  hotHitDurationSec?: number;
+  hotPiercePowerStepMultiplier?: number;
+  hotPiercePowerStepMode?: PowerStepMode;
+  hotPierceDurationSec?: number;
+  hotChainCount?: number;
+  hotChainMaxDistancePx?: number;
+  hotChainPowerStepMultiplier?: number;
+  hotChainPowerStepMode?: PowerStepMode;
+  hotChainDurationSec?: number;
+  hotScatterRadiusPx?: number;
+  hotScatterSpreadRadiusPx?: number;
+  hotScatterHitCount?: number;
+  hotScatterDurationSec?: number;
+  hotScatterSpreadRate?: number;
   /** hot: 付与 HoT の効果時間（秒）。0 または未指定 = 無限 */
   hotDurationSec?: number;
   /** damageReduction: 被ダメ軽減率（0.2 = 20% 軽減） */
   damageReductionPercent?: number;
   damageReductionTargetRule?: TargetSpec;
+  damageReductionTargetShape?: TargetShape;
+  damageReductionRange?: number;
+  damageReductionAoeRadiusPx?: number;
+  damageReductionHitCount?: number;
+  damageReductionHitDurationSec?: number;
+  damageReductionPiercePowerStepMultiplier?: number;
+  damageReductionPiercePowerStepMode?: PowerStepMode;
+  damageReductionPierceDurationSec?: number;
+  damageReductionChainCount?: number;
+  damageReductionChainMaxDistancePx?: number;
+  damageReductionChainPowerStepMultiplier?: number;
+  damageReductionChainPowerStepMode?: PowerStepMode;
+  damageReductionChainDurationSec?: number;
+  damageReductionScatterRadiusPx?: number;
+  damageReductionScatterSpreadRadiusPx?: number;
+  damageReductionScatterHitCount?: number;
+  damageReductionScatterDurationSec?: number;
+  damageReductionScatterSpreadRate?: number;
   barrierScale?: number;
   perExtraTargetScale?: number;
   maxExtraTargets?: number;
@@ -557,20 +601,94 @@ export interface PassiveSkillDef {
   defenseIgnore?: DefenseIgnoreSpec;
   buffSubKind?: BuffSubKind;
   buffTargetRule?: TargetSpec;
+  /** アクティブ effect.targetShape に対応 */
+  buffTargetShape?: TargetShape;
+  /** アクティブ effect.range に対応 */
+  buffRange?: number;
+  /** アクティブ effect.aoeRadiusPx に対応 */
+  buffAoeRadiusPx?: number;
+  buffHitCount?: number;
+  buffHitDurationSec?: number;
+  buffPiercePowerStepMultiplier?: number;
+  buffPiercePowerStepMode?: PowerStepMode;
+  buffPierceDurationSec?: number;
+  buffChainCount?: number;
+  buffChainMaxDistancePx?: number;
+  buffChainPowerStepMultiplier?: number;
+  buffChainPowerStepMode?: PowerStepMode;
+  buffChainDurationSec?: number;
+  buffScatterRadiusPx?: number;
+  buffScatterSpreadRadiusPx?: number;
+  buffScatterHitCount?: number;
+  buffScatterDurationSec?: number;
+  buffScatterSpreadRate?: number;
   buffMultiplier?: number;
   buffFlatBonus?: number;
+  /** stat buff 持続（秒）。aura 未指定時は無限、定期発動時は必須 */
+  buffDurationSec?: number;
   debuffSubKind?: DebuffSubKind;
   debuffTargetRule?: TargetSpec;
+  /** アクティブ effect.targetShape に対応 */
+  debuffTargetShape?: TargetShape;
+  /** アクティブ effect.range に対応 */
+  debuffRange?: number;
+  /** アクティブ effect.aoeRadiusPx に対応 */
+  debuffAoeRadiusPx?: number;
+  debuffHitCount?: number;
+  debuffHitDurationSec?: number;
+  debuffPiercePowerStepMultiplier?: number;
+  debuffPiercePowerStepMode?: PowerStepMode;
+  debuffPierceDurationSec?: number;
+  debuffChainCount?: number;
+  debuffChainMaxDistancePx?: number;
+  debuffChainPowerStepMultiplier?: number;
+  debuffChainPowerStepMode?: PowerStepMode;
+  debuffChainDurationSec?: number;
+  debuffScatterRadiusPx?: number;
+  debuffScatterSpreadRadiusPx?: number;
+  debuffScatterHitCount?: number;
+  debuffScatterDurationSec?: number;
+  debuffScatterSpreadRate?: number;
   debuffStat?: StatusEffectStat | StatusEffectStat[];
   debuffMultiplier?: number;
   debuffFlatBonus?: number;
+  /** stat debuff 持続（秒）。aura 未指定時は無限、定期発動時は必須 */
+  debuffDurationSec?: number;
+  /** dot debuff 持続（秒） */
+  debuffDotDurationSec?: number;
+  debuffDotAmount?: ResourceAmountSpec;
+  debuffDotDamageType?: DamageType;
+  /** stun debuff 持続（秒） */
+  debuffStunDurationSec?: number;
+  /** @deprecated 時間間隔トリガーは廃止。読み込み時に除去される。 */
   intervalSec?: number;
-  /** hot / periodicDispel: 定期発動条件。未指定かつ intervalSec あり = interval。hot で両方未指定 = 常時 aura */
+  /** hot / buff / debuff / periodicDispel: Stage/Wave 開始時発動。未指定 = 常時（barrier は未指定 = stageStart） */
   periodicTrigger?: PassivePeriodicTriggerKind;
   dispelTargetRule?: TargetSpec;
+  /** アクティブ effect.targetShape に対応 */
+  dispelTargetShape?: TargetShape;
+  dispelRange?: number;
+  dispelAoeRadiusPx?: number;
+  dispelHitCount?: number;
+  dispelHitDurationSec?: number;
+  dispelPiercePowerStepMultiplier?: number;
+  dispelPiercePowerStepMode?: PowerStepMode;
+  dispelPierceDurationSec?: number;
+  dispelChainCount?: number;
+  dispelChainMaxDistancePx?: number;
+  dispelChainPowerStepMultiplier?: number;
+  dispelChainPowerStepMode?: PowerStepMode;
+  dispelChainDurationSec?: number;
+  dispelScatterRadiusPx?: number;
+  dispelScatterSpreadRadiusPx?: number;
+  dispelScatterHitCount?: number;
+  dispelScatterDurationSec?: number;
+  dispelScatterSpreadRate?: number;
   dispelTags?: DebuffFilterTag[];
   dispelCount?: number;
   dispelPriority?: DispelPriority;
+  /** periodicDispel: 1 Wave 内の発動上限。未指定 = 無制限 */
+  dispelTriggerLimit?: number;
   /** counter: 反撃内容 */
   counterResponses?: CounterResponseDef[];
   /** counter: 反撃発動射程（px）。未指定 = 持有者 traits.rangePx */
@@ -1012,7 +1130,7 @@ export interface GameData {
 
 export type BattlePhase = "idle" | "running" | "victory" | "defeat";
 
-export type { RuntimeBattlePhase } from './battlePhase.ts';
+export type { RuntimeBattlePhase } from "./battlePhase.ts";
 
 export interface CombatantSnapshot {
   id: string;
@@ -1059,7 +1177,7 @@ export interface CombatantSnapshot {
 export interface BattleSnapshot {
   phase: BattlePhase;
   /** 戦闘フィールド FSM（battle-field.md §4.1） */
-  runtimePhase: import('./battlePhase.ts').RuntimeBattlePhase;
+  runtimePhase: import("./battlePhase.ts").RuntimeBattlePhase;
   engaged: boolean;
   /** 0-based。表示は +1 */
   waveIndex: number;

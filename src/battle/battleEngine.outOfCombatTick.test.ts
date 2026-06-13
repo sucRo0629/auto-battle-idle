@@ -76,37 +76,4 @@ describe('BattleEngine out-of-combat ticking', () => {
     const dot = guardian.statusEffects.find((e) => e.id === 'test_dot');
     expect(dot?.remainingSec).toBeCloseTo(2.5, 5);
   });
-
-  it('does not advance periodic HoT during wave advance death delay', () => {
-    const engine = createEngine();
-    for (let i = 0; i < 20_000; i++) {
-      engine.tick(1 / 60);
-      if (engine.getSnapshot().engaged) break;
-    }
-    expect(engine.getSnapshot().engaged).toBe(true);
-
-    const cleric = getAllies(engine).find((a) => a.classId === 'sp_cleric')!;
-
-    const internal = engine as unknown as {
-      beginEnemyWipeSettle: (hasNextWave: boolean) => void;
-      pendingNextWaveIndex: number | null;
-      enemies: CombatantState[];
-      periodicHotStates: Map<string, { passiveId: string; remainingSec: number }[]>;
-    };
-    for (const enemy of internal.enemies) {
-      enemy.isAlive = false;
-    }
-    internal.periodicHotStates.set(cleric.id, [
-      { passiveId: 'sp_cleric_passive_1', remainingSec: 5 },
-    ]);
-    internal.pendingNextWaveIndex = 1;
-    (engine as unknown as { partyDeployActive: boolean }).partyDeployActive =
-      false;
-    internal.beginEnemyWipeSettle(true);
-
-    const before = internal.periodicHotStates.get(cleric.id)![0]!.remainingSec;
-    engine.tick(0.5);
-    const after = internal.periodicHotStates.get(cleric.id)![0]!.remainingSec;
-    expect(after).toBe(before);
-  });
 });

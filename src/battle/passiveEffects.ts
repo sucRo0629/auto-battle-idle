@@ -5,20 +5,27 @@ import {
   resolveResourceAmount,
 } from './combatMath.ts';
 import { dispelDebuffsOnTarget } from './debuffDispel.ts';
+import { resolvePassiveDebuffTargets } from './passiveDebuffBridge.ts';
+import { resolvePassiveBuffTargets } from './passiveBuffBridge.ts';
+import { resolvePassiveDamageReductionTargets } from './passiveDamageReductionBridge.ts';
+import { resolvePassiveHotTargets } from './passiveHotBridge.ts';
+import { resolvePassiveDispelTargets } from './passiveDispelBridge.ts';
 import {
   isPassiveBarrierBuff,
   resolvePassiveBarrierTrigger,
   resolvePassivePeriodicTrigger,
+  rollPassiveTriggerChance,
+  usesBuffAuraMode,
+  usesDebuffAuraMode,
   usesHotAuraMode,
-  usesIntervalPeriodicTrigger,
 } from './passivePeriodicTrigger.ts';
 import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
-import { pickTargets } from './skills/targeting.ts';
 import { resolveEffectivePassiveAmountSpec } from './skillAmountOverride.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
   DamageIncreaseSpec,
+  GameData,
   PassiveSkillDef,
   ResourceAmountSpec,
   SkillCooldown,
@@ -189,6 +196,7 @@ export function syncHotAuras(
   allies: CombatantState[],
   enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
+  gameData: GameData,
 ): void {
   for (const ally of allies) {
     ally.statusEffects = ally.statusEffects.filter(
@@ -206,7 +214,14 @@ export function syncHotAuras(
       ) {
         continue;
       }
-      applyPassiveHotFromPassive(source, passive, allies, enemies, passives);
+      applyPassiveHotFromPassive(
+        source,
+        passive,
+        allies,
+        enemies,
+        passives,
+        gameData,
+      );
     }
   }
 }
@@ -215,6 +230,7 @@ export function syncBuffAuras(
   allies: CombatantState[],
   enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
+  gameData: GameData,
 ): void {
   const units = [...allies, ...enemies];
   for (const unit of units) {
@@ -226,59 +242,106 @@ export function syncBuffAuras(
   for (const source of units) {
     if (!source.isAlive) continue;
     for (const passive of getPassiveDefs(source, passives)) {
-      if (passive.effect !== 'buff') continue;
-      const subKind = passive.buffSubKind ?? 'stat';
-      if (subKind === 'barrier') continue;
-      const targetSpec = passive.buffTargetRule ?? { kind: 'self' as const };
-      const targets = pickTargets(targetSpec, source, allies, enemies);
-      if (subKind === 'block' || subKind === 'evasion') {
-        const chance = passive.chance ?? 0;
-        if (chance <= 0) continue;
-        for (const target of targets) {
-          target.statusEffects.push(
-            createPassiveOverlayBuffEffect(
-              source,
-              passive.id,
-              subKind,
-              chance,
-            ),
-          );
-        }
-        continue;
-      }
-      if (subKind === 'damageTakenToHeal') {
-        const ratio = passive.ratio ?? 0;
-        if (ratio <= 0) continue;
-        for (const target of targets) {
-          target.statusEffects.push(
-            createPassiveDamageTakenToHealEffect(source, passive.id, ratio),
-          );
-        }
-        continue;
-      }
-      const stats = asStatusEffectStatList(
-        passive.buffStat as StatusEffectStat | StatusEffectStat[] | undefined,
+      if (passive.effect !== 'buff' || !usesBuffAuraMode(passive)) continue;
+      applyPassiveBuffFromPassive(
+        source,
+        passive,
+        allies,
+        enemies,
+        passives,
+        gameData,
+        PASSIVE_AURA_DURATION_SEC,
+        'passive_buff_',
       );
-      const multiplier = passive.buffMultiplier;
-      const flatBonus = passive.buffFlatBonus;
-      if (stats.length === 0 || (multiplier === undefined && flatBonus === undefined)) {
-        continue;
-      }
-      for (const target of targets) {
-        for (let i = 0; i < stats.length; i++) {
-          const stat = stats[i]!;
-          target.statusEffects.push(
-            createPassiveStatBuffEffect(
-              source,
-              passive.id,
-              stat,
-              i,
-              multiplier,
-              flatBonus,
-            ),
-          );
-        }
-      }
+    }
+  }
+}
+
+function applyPassiveBuffOverlayToTarget(
+  source: CombatantState,
+  target: CombatantState,
+  passive: PassiveSkillDef,
+  subKind: 'block' | 'evasion',
+  durationSec: number,
+): void {
+  const chance = passive.chance ?? 0;
+  if (chance <= 0) return;
+  target.statusEffects.push(
+    createPassiveOverlayBuffEffect(
+      source,
+      passive.id,
+      subKind,
+      chance,
+      durationSec,
+    ),
+  );
+}
+
+export function applyPassiveBuffFromPassive(
+  source: CombatantState,
+  passive: PassiveSkillDef,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  _passives: Record<string, PassiveSkillDef>,
+  gameData: GameData,
+  durationSec: number,
+  idPrefix = 'passive_buff_periodic_',
+): void {
+  if (passive.effect !== 'buff') return;
+  const subKind = passive.buffSubKind ?? 'stat';
+  if (subKind === 'barrier') return;
+
+  const targets = resolvePassiveBuffTargets(
+    source,
+    passive,
+    allies,
+    enemies,
+    gameData,
+  );
+
+  if (subKind === 'block' || subKind === 'evasion') {
+    for (const target of targets) {
+      applyPassiveBuffOverlayToTarget(source, target, passive, subKind, durationSec);
+    }
+    return;
+  }
+
+  if (subKind === 'damageTakenToHeal') {
+    const ratio = passive.ratio ?? 0;
+    if (ratio <= 0) return;
+    for (const target of targets) {
+      target.statusEffects.push(
+        createPassiveDamageTakenToHealEffect(source, passive.id, ratio),
+      );
+    }
+    return;
+  }
+
+  const stats = asStatusEffectStatList(
+    passive.buffStat as StatusEffectStat | StatusEffectStat[] | undefined,
+  );
+  const multiplier = passive.buffMultiplier;
+  const flatBonus = passive.buffFlatBonus;
+  if (stats.length === 0 || (multiplier === undefined && flatBonus === undefined)) {
+    return;
+  }
+
+  for (const target of targets) {
+    for (let i = 0; i < stats.length; i++) {
+      const stat = stats[i]!;
+      target.statusEffects.push({
+        ...createPassiveStatBuffEffect(
+          source,
+          passive.id,
+          stat,
+          i,
+          multiplier,
+          flatBonus,
+        ),
+        id: `${idPrefix}${source.id}_${passive.id}_${stat}_${i}`,
+        durationSec,
+        remainingSec: durationSec,
+      });
     }
   }
 }
@@ -287,6 +350,7 @@ export function syncDebuffAuras(
   allies: CombatantState[],
   enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
+  gameData: GameData,
 ): void {
   const units = [...allies, ...enemies];
   for (const unit of units) {
@@ -298,35 +362,83 @@ export function syncDebuffAuras(
   for (const source of units) {
     if (!source.isAlive) continue;
     for (const passive of getPassiveDefs(source, passives)) {
-      if (passive.effect !== 'debuff') continue;
-      const targetSpec = passive.debuffTargetRule ?? {
-        kind: 'distance',
-        side: 'enemy',
-        order: 'nearest',
-      };
-      const targets = pickTargets(targetSpec, source, allies, enemies);
-      const stats = asStatusEffectStatList(passive.debuffStat);
-      const multiplier = passive.debuffMultiplier;
-      const flatBonus = passive.debuffFlatBonus;
-      if (stats.length === 0 || (multiplier === undefined && flatBonus === undefined)) {
-        continue;
-      }
-      for (const target of targets) {
-        for (let i = 0; i < stats.length; i++) {
-          const stat = stats[i]!;
-          target.statusEffects.push({
-            id: `passive_debuff_${source.id}_${passive.id}_${stat}_${i}`,
-            kind: 'debuff',
-            stat,
-            multiplier: multiplier ?? 1,
-            ...(flatBonus !== undefined ? { flatBonus: Math.abs(flatBonus) } : {}),
-            sourceId: source.id,
-            durationSec: PASSIVE_AURA_DURATION_SEC,
-            remainingSec: PASSIVE_AURA_DURATION_SEC,
-          });
-        }
-      }
+      if (passive.effect !== 'debuff' || !usesDebuffAuraMode(passive)) continue;
+      applyPassiveDebuffFromPassive(
+        source,
+        passive,
+        allies,
+        enemies,
+        passives,
+        gameData,
+        PASSIVE_AURA_DURATION_SEC,
+        'passive_debuff_',
+      );
     }
+  }
+}
+
+function applyPassiveStatDebuffToTarget(
+  source: CombatantState,
+  target: CombatantState,
+  passive: PassiveSkillDef,
+  durationSec: number,
+  idPrefix: string,
+  onDebuffReceived?: (target: CombatantState) => void,
+): void {
+  const subKind = passive.debuffSubKind ?? 'stat';
+  if (subKind !== 'stat') return;
+  const stats = asStatusEffectStatList(passive.debuffStat);
+  const multiplier = passive.debuffMultiplier;
+  const flatBonus = passive.debuffFlatBonus;
+  if (stats.length === 0 || (multiplier === undefined && flatBonus === undefined)) {
+    return;
+  }
+  for (let i = 0; i < stats.length; i++) {
+    const stat = stats[i]!;
+    target.statusEffects.push({
+      id: `${idPrefix}${source.id}_${passive.id}_${stat}_${i}`,
+      kind: 'debuff',
+      stat,
+      multiplier: multiplier ?? 1,
+      ...(flatBonus !== undefined ? { flatBonus: Math.abs(flatBonus) } : {}),
+      sourceId: source.id,
+      durationSec,
+      remainingSec: durationSec,
+    });
+  }
+  if (idPrefix !== 'passive_debuff_') {
+    onDebuffReceived?.(target);
+  }
+}
+
+export function applyPassiveDebuffFromPassive(
+  source: CombatantState,
+  passive: PassiveSkillDef,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+  gameData: GameData,
+  durationSec: number,
+  idPrefix = 'passive_debuff_periodic_',
+): void {
+  if (passive.effect !== 'debuff') return;
+  const subKind = passive.debuffSubKind ?? 'stat';
+  if (subKind !== 'stat') return;
+  const targets = resolvePassiveDebuffTargets(
+    source,
+    passive,
+    allies,
+    enemies,
+    gameData,
+  );
+  for (const target of targets) {
+    applyPassiveStatDebuffToTarget(
+      source,
+      target,
+      passive,
+      durationSec,
+      idPrefix,
+    );
   }
 }
 
@@ -337,6 +449,7 @@ export function syncDamageReductionAuras(
   allies: CombatantState[],
   enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
+  gameData: GameData,
 ): void {
   const units = [...allies, ...enemies];
   for (const unit of units) {
@@ -351,8 +464,13 @@ export function syncDamageReductionAuras(
       if (passive.effect !== 'damageReduction') continue;
       const percent = passive.damageReductionPercent ?? 0;
       if (percent <= 0) continue;
-      const spec = passive.damageReductionTargetRule ?? { kind: 'self' as const };
-      const targets = pickTargets(spec, source, allies, enemies);
+      const targets = resolvePassiveDamageReductionTargets(
+        source,
+        passive,
+        allies,
+        enemies,
+        gameData,
+      );
       for (const target of targets) {
         target.statusEffects.push(
           createPassiveDamageReductionEffect(source, passive.id, percent),
@@ -367,6 +485,7 @@ function createPassiveOverlayBuffEffect(
   passiveId: string,
   subKind: 'block' | 'evasion',
   chance: number,
+  durationSec: number = PASSIVE_AURA_DURATION_SEC,
 ): StatusEffect {
   return {
     id: `passive_buff_${source.id}_${passiveId}_${subKind}`,
@@ -377,8 +496,8 @@ function createPassiveOverlayBuffEffect(
       : { evasionChance: chance }),
     sourceId: source.id,
     multiplier: 1,
-    durationSec: PASSIVE_AURA_DURATION_SEC,
-    remainingSec: PASSIVE_AURA_DURATION_SEC,
+    durationSec,
+    remainingSec: durationSec,
   };
 }
 
@@ -556,10 +675,16 @@ export function applyPassiveBarrierFromPassive(
   allies: CombatantState[],
   enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
+  gameData: GameData,
 ): void {
   if (!isPassiveBarrierBuff(passive) || !passive.barrierAmount) return;
-  const spec = passive.buffTargetRule ?? { kind: 'self' as const };
-  const targets = pickTargets(spec, source, allies, enemies);
+  const targets = resolvePassiveBuffTargets(
+    source,
+    passive,
+    allies,
+    enemies,
+    gameData,
+  );
   const barrierAmount = resolveEffectivePassiveAmountSpec(
     source,
     passives,
@@ -585,10 +710,16 @@ export function applyPassiveHotFromPassive(
   allies: CombatantState[],
   enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
+  gameData: GameData,
 ): void {
   if (!isPassiveHot(passive) || !passive.hotAmount) return;
-  const spec = passive.hotTargetRule ?? { kind: 'self' as const };
-  const targets = pickTargets(spec, source, allies, enemies);
+  const targets = resolvePassiveHotTargets(
+    source,
+    passive,
+    allies,
+    enemies,
+    gameData,
+  );
   const durationSec = resolvePassiveHotDurationSec(passive.hotDurationSec);
   const effectId = passiveHotEffectId(source.id, passive.id);
   const hotAmount = resolveEffectivePassiveAmountSpec(
@@ -633,6 +764,121 @@ function createPassiveHotEffect(
   };
 }
 
+export function applyPassiveDispelFromPassive(
+  source: CombatantState,
+  passive: PassiveSkillDef,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  options?: { onlyTarget?: CombatantState },
+): void {
+  if (passive.effect !== 'periodicDispel') return;
+  const targets = resolvePassiveDispelTargets(
+    source,
+    passive,
+    allies,
+    enemies,
+    gameData,
+  );
+  const onlyTarget = options?.onlyTarget;
+  for (const target of targets) {
+    if (onlyTarget !== undefined && target.id !== onlyTarget.id) continue;
+    dispelDebuffsOnTarget(
+      target,
+      passive.dispelCount ?? 0,
+      passive.dispelTags,
+      source.id,
+      passive.dispelPriority,
+    );
+  }
+}
+
+export function resetPassiveDispelTriggerLimits(
+  units: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+): void {
+  for (const unit of units) {
+    let remaining: Record<string, number> | undefined;
+    for (const passive of getPassiveDefs(unit, passives)) {
+      if (passive.effect !== 'periodicDispel') continue;
+      const limit = passive.dispelTriggerLimit;
+      if (limit === undefined) continue;
+      remaining ??= {};
+      remaining[passive.id] = limit;
+    }
+    if (remaining !== undefined) {
+      unit.passiveDispelRemainingTriggers = remaining;
+    } else {
+      delete unit.passiveDispelRemainingTriggers;
+    }
+  }
+}
+
+function hasPassiveDispelTriggerRemaining(
+  source: CombatantState,
+  passive: PassiveSkillDef,
+): boolean {
+  const limit = passive.dispelTriggerLimit;
+  if (limit === undefined) return true;
+  const remaining =
+    source.passiveDispelRemainingTriggers?.[passive.id] ?? limit;
+  return remaining > 0;
+}
+
+function consumePassiveDispelTrigger(
+  source: CombatantState,
+  passive: PassiveSkillDef,
+): void {
+  const limit = passive.dispelTriggerLimit;
+  if (limit === undefined) return;
+  const current =
+    source.passiveDispelRemainingTriggers?.[passive.id] ?? limit;
+  if (source.passiveDispelRemainingTriggers === undefined) {
+    source.passiveDispelRemainingTriggers = {};
+  }
+  source.passiveDispelRemainingTriggers[passive.id] = Math.max(0, current - 1);
+}
+
+export function handlePassiveDispelOnDebuffReceived(
+  debuffTarget: CombatantState,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+  gameData: GameData,
+): void {
+  const allUnits = [...allies, ...enemies];
+  for (const source of allUnits) {
+    if (!source.isAlive) continue;
+    for (const passive of getPassiveDefs(source, passives)) {
+      if (passive.effect !== 'periodicDispel') continue;
+      if (resolvePassivePeriodicTrigger(passive) !== 'onDebuffReceived') {
+        continue;
+      }
+      if (!hasPassiveDispelTriggerRemaining(source, passive)) continue;
+
+      const targets = resolvePassiveDispelTargets(
+        source,
+        passive,
+        allies,
+        enemies,
+        gameData,
+      );
+      if (!targets.some((target) => target.id === debuffTarget.id)) continue;
+      if (!rollPassiveTriggerChance(passive)) continue;
+
+      applyPassiveDispelFromPassive(
+        source,
+        passive,
+        allies,
+        enemies,
+        gameData,
+        { onlyTarget: debuffTarget },
+      );
+      consumePassiveDispelTrigger(source, passive);
+    }
+  }
+}
+
 export function stripPassivesAurasFromSource(
   sourceId: string,
   units: CombatantState[],
@@ -666,17 +912,13 @@ export function countDamageTargetsInResolution(
   return waves.reduce((sum, wave) => sum + wave.targets.length, 0);
 }
 
-export interface PeriodicDispelPassiveState {
-  passiveId: string;
-  remainingSec: number;
-}
-
 export function firePeriodicPassivesForTrigger(
   trigger: 'stageStart' | 'waveStart',
   units: CombatantState[],
   allies: CombatantState[],
   enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
+  gameData: GameData,
 ): void {
   for (const source of units) {
     if (!source.isAlive) continue;
@@ -685,9 +927,17 @@ export function firePeriodicPassivesForTrigger(
         ? resolvePassiveBarrierTrigger(passive)
         : resolvePassivePeriodicTrigger(passive);
       if (periodicTrigger !== trigger) continue;
+      if (!rollPassiveTriggerChance(passive)) continue;
 
       if (isPassiveHot(passive) && passive.hotAmount) {
-        applyPassiveHotFromPassive(source, passive, allies, enemies, passives);
+        applyPassiveHotFromPassive(
+          source,
+          passive,
+          allies,
+          enemies,
+          passives,
+          gameData,
+        );
         continue;
       }
       if (isPassiveBarrierBuff(passive) && passive.barrierAmount) {
@@ -697,136 +947,59 @@ export function firePeriodicPassivesForTrigger(
           allies,
           enemies,
           passives,
+          gameData,
+        );
+        continue;
+      }
+      if (
+        passive.effect === 'buff' &&
+        !usesBuffAuraMode(passive) &&
+        !isPassiveBarrierBuff(passive) &&
+        resolvePassivePeriodicTrigger(passive) === trigger
+      ) {
+        const durationSec = passive.buffDurationSec ?? 0;
+        if (durationSec <= 0) continue;
+        applyPassiveBuffFromPassive(
+          source,
+          passive,
+          allies,
+          enemies,
+          passives,
+          gameData,
+          durationSec,
         );
         continue;
       }
       if (passive.effect === 'periodicDispel') {
-        const spec = passive.dispelTargetRule ?? { kind: 'self' as const };
-        const targets = pickTargets(spec, source, allies, enemies);
-        for (const target of targets) {
-          dispelDebuffsOnTarget(
-            target,
-            passive.dispelCount ?? 0,
-            passive.dispelTags,
-            source.id,
-            passive.dispelPriority,
-          );
-        }
+        if (!hasPassiveDispelTriggerRemaining(source, passive)) continue;
+        if (!rollPassiveTriggerChance(passive)) continue;
+        applyPassiveDispelFromPassive(
+          source,
+          passive,
+          allies,
+          enemies,
+          gameData,
+        );
+        consumePassiveDispelTrigger(source, passive);
+        continue;
+      }
+      if (
+        passive.effect === 'debuff' &&
+        !usesDebuffAuraMode(passive) &&
+        resolvePassivePeriodicTrigger(passive) === trigger
+      ) {
+        const durationSec = passive.debuffDurationSec ?? 0;
+        if (durationSec <= 0) continue;
+        applyPassiveDebuffFromPassive(
+          source,
+          passive,
+          allies,
+          enemies,
+          passives,
+          gameData,
+          durationSec,
+        );
       }
     }
   }
-}
-
-export function initializePeriodicDispelStates(
-  unit: CombatantState,
-  passives: Record<string, PassiveSkillDef>,
-): PeriodicDispelPassiveState[] {
-  return getPassiveDefs(unit, passives)
-    .filter(
-      (passive) =>
-        passive.effect === 'periodicDispel' &&
-        usesIntervalPeriodicTrigger(passive),
-    )
-    .map((passive) => ({
-      passiveId: passive.id,
-      remainingSec: passive.intervalSec ?? 1,
-    }));
-}
-
-export function tickPeriodicDispelStates(
-  states: PeriodicDispelPassiveState[],
-  passives: Record<string, PassiveSkillDef>,
-  deltaTime: number,
-): PeriodicDispelPassiveState[] {
-  return states.map((state) => {
-    const passive = passives[state.passiveId];
-    const interval = passive?.intervalSec ?? 1;
-    let remainingSec = state.remainingSec - deltaTime;
-    if (remainingSec <= 0) {
-      remainingSec = interval;
-    }
-    return { ...state, remainingSec };
-  });
-}
-
-export function getPeriodicDispelReady(
-  before: PeriodicDispelPassiveState[],
-  after: PeriodicDispelPassiveState[],
-): string[] {
-  return getPeriodicPassiveReady(before, after);
-}
-
-export type PeriodicHotPassiveState = PeriodicDispelPassiveState;
-export type PeriodicBarrierPassiveState = PeriodicDispelPassiveState;
-
-export function initializePeriodicBarrierStates(
-  unit: CombatantState,
-  passives: Record<string, PassiveSkillDef>,
-): PeriodicBarrierPassiveState[] {
-  return getPassiveDefs(unit, passives)
-    .filter(
-      (passive) =>
-        isPassiveBarrierBuff(passive) && usesIntervalPeriodicTrigger(passive),
-    )
-    .map((passive) => ({
-      passiveId: passive.id,
-      remainingSec: 0,
-    }));
-}
-
-export const tickPeriodicBarrierStates = tickPeriodicHotStates;
-export const getPeriodicBarrierReady = getPeriodicHotReady;
-
-export function initializePeriodicHotStates(
-  unit: CombatantState,
-  passives: Record<string, PassiveSkillDef>,
-): PeriodicHotPassiveState[] {
-  return getPassiveDefs(unit, passives)
-    .filter(
-      (passive) =>
-        isPassiveHot(passive) && usesIntervalPeriodicTrigger(passive),
-    )
-    .map((passive) => ({
-      passiveId: passive.id,
-      remainingSec: 0,
-    }));
-}
-
-export function tickPeriodicHotStates(
-  states: PeriodicHotPassiveState[],
-  passives: Record<string, PassiveSkillDef>,
-  deltaTime: number,
-): PeriodicHotPassiveState[] {
-  return states.map((state) => {
-    const passive = passives[state.passiveId];
-    const interval = passive?.intervalSec ?? 1;
-    let remainingSec = state.remainingSec - deltaTime;
-    if (remainingSec <= 0) {
-      remainingSec = interval;
-    }
-    return { ...state, remainingSec };
-  });
-}
-
-export function getPeriodicHotReady(
-  before: PeriodicHotPassiveState[],
-  after: PeriodicHotPassiveState[],
-): string[] {
-  return getPeriodicPassiveReady(before, after);
-}
-
-function getPeriodicPassiveReady(
-  before: PeriodicDispelPassiveState[],
-  after: PeriodicDispelPassiveState[],
-): string[] {
-  const ready: string[] = [];
-  for (let i = 0; i < after.length; i++) {
-    const prev = before[i];
-    const next = after[i];
-    if (!prev || !next) continue;
-    if (next.remainingSec > prev.remainingSec) {
-      ready.push(next.passiveId);
-    }
-  }
-  return ready;
 }

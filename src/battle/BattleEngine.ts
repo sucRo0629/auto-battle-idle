@@ -51,29 +51,15 @@ import {
 import {
   applyDamageTakenToHeal,
   resolveIncomingHealAmount,
-  applyPassiveBarrierFromPassive,
-  applyPassiveHotFromPassive,
   firePeriodicPassivesForTrigger,
-  getPeriodicBarrierReady,
-  getPeriodicDispelReady,
-  getPeriodicHotReady,
-  initializePeriodicBarrierStates,
-  initializePeriodicDispelStates,
-  initializePeriodicHotStates,
+  handlePassiveDispelOnDebuffReceived,
+  resetPassiveDispelTriggerLimits,
   syncHotAuras,
   syncBuffAuras,
   syncDebuffAuras,
   syncDamageReductionAuras,
   syncSelfHpRatioBuffAuras,
-  tickPeriodicBarrierStates,
-  tickPeriodicDispelStates,
-  tickPeriodicHotStates,
-  type PeriodicBarrierPassiveState,
-  type PeriodicDispelPassiveState,
-  type PeriodicHotPassiveState,
 } from "./passiveEffects.ts";
-import { dispelDebuffsOnTarget } from "./debuffDispel.ts";
-import { pickTargets } from "./skills/targeting.ts";
 import {
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
@@ -126,7 +112,6 @@ import {
   POST_DEPLOY_SETTLE_DELAY_SEC,
 } from "../render/announcementOverlayTiming.ts";
 import type { BattlePhase, BattleSnapshot, CombatantState, GameData, PartySlotState, PendingSkillHit, SkillCooldown, SkillTriggerKind, StatusEffect } from "./types.ts";
-import { isPassiveHot } from "./types.ts";
 import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 
 const RESTART_DELAY_SEC = 3;
@@ -190,9 +175,6 @@ export class BattleEngine {
   private victoryFormationReady = false;
   private readonly engagedComposition = new EngagedCompositionTracker();
   private restartTimer = 0;
-  private periodicDispelStates = new Map<string, PeriodicDispelPassiveState[]>();
-  private periodicHotStates = new Map<string, PeriodicHotPassiveState[]>();
-  private periodicBarrierStates = new Map<string, PeriodicBarrierPassiveState[]>();
   private readonly listeners = new Set<BattleEventListener>();
   private readonly executor: SkillExecutor;
   private readonly skillSequenceRunner = new SkillSequenceRunner();
@@ -233,6 +215,9 @@ export class BattleEngine {
       },
       onDebuffApplied: (actor) => {
         applyThreatFromDebuffApply(actor);
+      },
+      onTargetReceivedDebuff: (target) => {
+        this.handlePassiveDispelOnDebuffReceived(target);
       },
       onHealApplied: () => {
         this.refreshSelfHpRatioBuffAuras();
@@ -302,6 +287,9 @@ export class BattleEngine {
         },
         onDebuffApplied: (counterActor: CombatantState) => {
           applyThreatFromDebuffApply(counterActor);
+        },
+        onTargetReceivedDebuff: (debuffTarget: CombatantState) => {
+          this.handlePassiveDispelOnDebuffReceived(debuffTarget);
         },
       };
       const counterCtx = {
@@ -379,39 +367,39 @@ export class BattleEngine {
     );
   }
 
+  private handlePassiveDispelOnDebuffReceived(target: CombatantState): void {
+    handlePassiveDispelOnDebuffReceived(
+      target,
+      this.players,
+      this.enemies,
+      this.gameData.skillRegistry.passives,
+      this.gameData,
+    );
+  }
+
   private initBattlePassiveState(): void {
     const passives = this.gameData.skillRegistry.passives;
     const actives = this.gameData.skillRegistry.actives;
     initializeAllyThreat(this.players);
-    syncHotAuras(this.players, this.enemies, passives);
-    syncBuffAuras(this.players, this.enemies, passives);
-    syncDebuffAuras(this.players, this.enemies, passives);
-    syncDamageReductionAuras(this.players, this.enemies, passives);
+    syncHotAuras(this.players, this.enemies, passives, this.gameData);
+    syncBuffAuras(this.players, this.enemies, passives, this.gameData);
+    syncDebuffAuras(this.players, this.enemies, passives, this.gameData);
+    syncDamageReductionAuras(this.players, this.enemies, passives, this.gameData);
     syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
+    resetPassiveDispelTriggerLimits(
+      [...this.players, ...this.enemies],
+      passives,
+    );
     firePeriodicPassivesForTrigger(
       'stageStart',
       [...this.players, ...this.enemies],
       this.players,
       this.enemies,
       passives,
+      this.gameData,
     );
-    this.periodicDispelStates.clear();
-    this.periodicHotStates.clear();
-    this.periodicBarrierStates.clear();
     for (const unit of [...this.players, ...this.enemies]) {
       initializeSkillCooldowns(unit, actives);
-      const dispelStates = initializePeriodicDispelStates(unit, passives);
-      if (dispelStates.length > 0) {
-        this.periodicDispelStates.set(unit.id, dispelStates);
-      }
-      const hotStates = initializePeriodicHotStates(unit, passives);
-      if (hotStates.length > 0) {
-        this.periodicHotStates.set(unit.id, hotStates);
-      }
-      const barrierStates = initializePeriodicBarrierStates(unit, passives);
-      if (barrierStates.length > 0) {
-        this.periodicBarrierStates.set(unit.id, barrierStates);
-      }
     }
   }
 
@@ -922,12 +910,17 @@ export class BattleEngine {
     this.spawnWaveEnemies();
     assignInitialPlayerBattleX(this.players);
     syncAllFieldX(this.players);
+    resetPassiveDispelTriggerLimits(
+      [...this.players, ...this.enemies],
+      this.gameData.skillRegistry.passives,
+    );
     firePeriodicPassivesForTrigger(
       'waveStart',
       [...this.players, ...this.enemies],
       this.players,
       this.enemies,
       this.gameData.skillRegistry.passives,
+      this.gameData,
     );
     this.trainingWaveReadyToEngage = true;
     this.tryBeginTrainingEngage();
@@ -1018,12 +1011,17 @@ export class BattleEngine {
     this.engaged = false;
     this.clearEngagedVisualState();
     this.spawnWaveEnemies();
+    resetPassiveDispelTriggerLimits(
+      [...this.players, ...this.enemies],
+      this.gameData.skillRegistry.passives,
+    );
     firePeriodicPassivesForTrigger(
       'waveStart',
       [...this.players, ...this.enemies],
       this.players,
       this.enemies,
       this.gameData.skillRegistry.passives,
+      this.gameData,
     );
     this.partyDeployTargets = resolvePartyDeployTargets(this.players);
     this.enemyDeployTargets = resolveEnemyDeployTargets(this.enemies);
@@ -1336,7 +1334,7 @@ export class BattleEngine {
     }
     if (this.pendingVictoryTimer > 0) {
       this.tickPostCombatSettle(deltaTime);
-      this.tickStatusAndCooldowns(deltaTime, { suppressPeriodic: true });
+      this.tickStatusAndCooldowns(deltaTime);
       return;
     }
     if (this.pendingDefeatTimer > 0) {
@@ -1350,13 +1348,13 @@ export class BattleEngine {
     }
     if (this.isPostCombatSettling()) {
       this.tickPostCombatSettle(deltaTime);
-      this.tickStatusAndCooldowns(deltaTime, { suppressPeriodic: true });
+      this.tickStatusAndCooldowns(deltaTime);
       syncDeadEnemyCorpseBattleX(this.enemies);
       return;
     }
     if (this.waveExitMarchActive) {
       this.tickWaveExitMarch(deltaTime);
-      this.tickStatusAndCooldowns(deltaTime, { suppressPeriodic: true });
+      this.tickStatusAndCooldowns(deltaTime);
       return;
     }
     if (
@@ -1376,7 +1374,7 @@ export class BattleEngine {
         this.checkBattleEnd();
         if (this.isPostCombatSettling()) {
           this.tickPostCombatSettle(deltaTime);
-          this.tickStatusAndCooldowns(deltaTime, { suppressPeriodic: true });
+          this.tickStatusAndCooldowns(deltaTime);
         }
         return;
       }
@@ -1406,16 +1404,8 @@ export class BattleEngine {
   }
 
   /** DoT/HoT・バフ/デバフ持続・CD を接敵状態に関係なく進める */
-  private tickStatusAndCooldowns(
-    deltaTime: number,
-    options?: { suppressPeriodic?: boolean },
-  ): void {
+  private tickStatusAndCooldowns(deltaTime: number): void {
     this.tickStatusEffects(deltaTime);
-    if (!options?.suppressPeriodic) {
-      this.tickPeriodicDispels(deltaTime);
-      this.tickPeriodicHots(deltaTime);
-      this.tickPeriodicBarriers(deltaTime);
-    }
     this.tickCooldowns(this.players, deltaTime);
     this.tickCooldowns(this.enemies, deltaTime);
   }
@@ -1463,82 +1453,6 @@ export class BattleEngine {
     this.skillSequenceRunner.tickSequences(this.battleTimeSec, (step) => {
       this.executor.applyScheduledStep(step, this.players, this.enemies);
     });
-  }
-
-  private tickPeriodicHots(deltaTime: number): void {
-    const passives = this.gameData.skillRegistry.passives;
-    for (const actor of this.players) {
-      if (!actor.isAlive) continue;
-      const before = this.periodicHotStates.get(actor.id);
-      if (!before || before.length === 0) continue;
-
-      const after = tickPeriodicHotStates(before, passives, deltaTime);
-      this.periodicHotStates.set(actor.id, after);
-      const readyIds = getPeriodicHotReady(before, after);
-      for (const passiveId of readyIds) {
-        const passive = passives[passiveId];
-        if (!passive || !isPassiveHot(passive)) continue;
-        applyPassiveHotFromPassive(
-          actor,
-          passive,
-          this.players,
-          this.enemies,
-          passives,
-        );
-      }
-    }
-  }
-
-  private tickPeriodicBarriers(deltaTime: number): void {
-    const passives = this.gameData.skillRegistry.passives;
-    for (const actor of [...this.players, ...this.enemies]) {
-      if (!actor.isAlive) continue;
-      const before = this.periodicBarrierStates.get(actor.id);
-      if (!before || before.length === 0) continue;
-
-      const after = tickPeriodicBarrierStates(before, passives, deltaTime);
-      this.periodicBarrierStates.set(actor.id, after);
-      const readyIds = getPeriodicBarrierReady(before, after);
-      for (const passiveId of readyIds) {
-        const passive = passives[passiveId];
-        if (!passive || passive.buffSubKind !== 'barrier') continue;
-        applyPassiveBarrierFromPassive(
-          actor,
-          passive,
-          this.players,
-          this.enemies,
-          passives,
-        );
-      }
-    }
-  }
-
-  private tickPeriodicDispels(deltaTime: number): void {
-    const passives = this.gameData.skillRegistry.passives;
-    for (const actor of [...this.players, ...this.enemies]) {
-      if (!actor.isAlive) continue;
-      const before = this.periodicDispelStates.get(actor.id);
-      if (!before || before.length === 0) continue;
-
-      const after = tickPeriodicDispelStates(before, passives, deltaTime);
-      this.periodicDispelStates.set(actor.id, after);
-      const readyIds = getPeriodicDispelReady(before, after);
-      for (const passiveId of readyIds) {
-        const passive = passives[passiveId];
-        if (!passive || passive.effect !== 'periodicDispel') continue;
-        const spec = passive.dispelTargetRule ?? { kind: 'self' as const };
-        const targets = pickTargets(spec, actor, this.players, this.enemies);
-        for (const target of targets) {
-          dispelDebuffsOnTarget(
-            target,
-            passive.dispelCount ?? 0,
-            passive.dispelTags,
-            actor.id,
-            passive.dispelPriority,
-          );
-        }
-      }
-    }
   }
 
   private tickStatusEffects(deltaTime: number): void {

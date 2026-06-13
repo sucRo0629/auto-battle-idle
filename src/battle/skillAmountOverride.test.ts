@@ -10,6 +10,7 @@ import {
   applyPassiveBarrierFromPassive,
   applyPassiveHotFromPassive,
 } from './passiveEffects.ts';
+import { mockTargetingGameData } from './testFixtures.ts';
 import { resolveHotAmountFromStatus } from './combatMath.ts';
 
 function mockUnit(
@@ -296,6 +297,7 @@ describe('skillAmountOverride integration', () => {
       [healer],
       [],
       passives,
+      mockTargetingGameData(),
     );
     const hot = healer.statusEffects.find((e) => e.overlay === 'hot');
     expect(hot?.amount).toEqual({ kind: 'flat', flatAmount: 12 });
@@ -318,6 +320,7 @@ describe('skillAmountOverride integration', () => {
       [unit],
       [],
       passives,
+      mockTargetingGameData(),
     );
     expect(unit.barrierHp).toBe(20);
   });
