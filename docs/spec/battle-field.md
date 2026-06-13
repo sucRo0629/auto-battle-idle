@@ -102,7 +102,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | mode | 目標 `battleX` |
 |------|----------------|
 | `engage` | `anchor.battleX - range`（敵の手前＝後方側） |
-| `toAnchor` | `anchor.battleX + anchorOffsetPx`（未指定=0。−=味方側、+=敵背後） |
+| `toAnchor` | `anchor.battleX + anchorOffsetPx`（未指定=0。−=味方側、+=敵背後）。**敵／味方など敵対 anchor へ向かう場合**は 1 回の移動量を `effect.range`（未指定=`traits.rangePx`）で上限 |
 
 **ノックバック：** 各陣営の **後方** へ押す。プレイヤーは `-X`（左）、敵は `+X`（右）。敵は `battleX` が進軍表示下限未満にならない。
 

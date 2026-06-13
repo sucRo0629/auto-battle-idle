@@ -358,7 +358,7 @@ describe('combatPosition', () => {
         },
         gameData,
       ),
-    ).toBe(300);
+    ).toBe(180);
     expect(
       resolveMoveBattleX(
         sword,
@@ -372,7 +372,56 @@ describe('combatPosition', () => {
         },
         gameData,
       ),
-    ).toBe(264);
+    ).toBe(180);
+  });
+
+  it('resolveMoveBattleX caps hostile toAnchor at effect range (lancer lunge)', () => {
+    const lancer = mockCombatant({
+      id: 'lancer',
+      battleX: 54,
+      traits: {
+        rangePx: 70,
+        damageType: 'physical',
+        basicAttackVfx: { preset: 'impale' },
+      },
+    });
+    const enemy = mockCombatant({ id: 'e', isEnemy: true, battleX: 338 });
+    expect(
+      resolveMoveBattleX(
+        lancer,
+        enemy,
+        {
+          type: 'move',
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          moveDurationSec: 0.25,
+          moveMode: 'toAnchor',
+          anchorOffsetPx: -32,
+        },
+        gameData,
+      ),
+    ).toBe(124);
+  });
+
+  it('resolveMoveBattleX does not cap friendly toAnchor return moves', () => {
+    const actor = mockCombatant({
+      id: 'actor',
+      battleX: 70,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+    });
+    const ally = mockCombatant({ id: 'ally', battleX: 210 });
+    expect(
+      resolveMoveBattleX(
+        actor,
+        ally,
+        {
+          type: 'move',
+          target: { kind: 'distance', side: 'ally', order: 'nearest' },
+          moveDurationSec: 0.1,
+          moveMode: 'toAnchor',
+        },
+        gameData,
+      ),
+    ).toBe(210);
   });
 
   it('resolveApproachRangePx uses shorter equipped active range when ready', () => {

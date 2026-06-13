@@ -515,6 +515,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `moveDurationSec` | 補間秒（必須・正数）                                             |
 | `moveMode`        | `engage`（接敵・射程内）／`toAnchor`（anchor 座標 + オフセット） |
 | `anchorOffsetPx`  | `toAnchor` 時、anchor からの px（−=味方側、+=敵背後）。未指定=0  |
+| `range`           | `toAnchor` で敵対 anchor へ向かう移動の 1 回上限 px（未指定=`traits.rangePx`）。味方 anchor への帰還等は上限なし |
 
 - `targetShape` は **single のみ**（Phase 1）
 - `toAnchor` は任意 side の `target` + `anchorOffsetPx` で位置決定（offset 0 = anchor 座標そのもの）

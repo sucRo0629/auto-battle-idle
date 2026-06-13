@@ -439,11 +439,19 @@ export function resolveMoveBattleX(
 
   if (mode === 'toAnchor') {
     const offset = effect.anchorOffsetPx ?? 0;
-    const toX = actor.isEnemy
+    const idealToX = actor.isEnemy
       ? anchor.battleX - offset
       : anchor.battleX + offset;
+    const hostileAnchor = actor.isEnemy !== anchor.isEnemy;
+    const toX = hostileAnchor
+      ? moveTowardX(
+          actor.battleX,
+          idealToX,
+          resolveSkillRangePx(actor, effect),
+        )
+      : idealToX;
     // #region agent log
-    fetch('http://127.0.0.1:7541/ingest/180ac9f2-daf7-4294-9ba1-9703f79153b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'78c6df'},body:JSON.stringify({sessionId:'78c6df',runId:'pre-fix',hypothesisId:'H1',location:'combatPosition.ts:resolveMoveBattleX',message:'toAnchor destination',data:{actorId:actor.id,fromX:actor.battleX,toX,anchorX:anchor.battleX,offset,moveDeltaPx:Math.abs(toX-actor.battleX)},timestamp:Date.now()})}).catch(()=>{});
+    fetch('http://127.0.0.1:7541/ingest/180ac9f2-daf7-4294-9ba1-9703f79153b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'78c6df'},body:JSON.stringify({sessionId:'78c6df',runId:'post-fix',hypothesisId:'H1',location:'combatPosition.ts:resolveMoveBattleX',message:'toAnchor destination',data:{actorId:actor.id,fromX:actor.battleX,idealToX,toX,anchorX:anchor.battleX,offset,hostileAnchor,moveCapPx:hostileAnchor?resolveSkillRangePx(actor,effect):null,moveDeltaPx:Math.abs(toX-actor.battleX)},timestamp:Date.now()})}).catch(()=>{});
     // #endregion
     return toX;
   }

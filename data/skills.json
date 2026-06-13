@@ -894,7 +894,7 @@
       "name": "踏み込み突き",
       "trigger": {
         "kind": "time",
-        "value": 8
+        "value": 10
       },
       "effect": [
         {
@@ -914,7 +914,7 @@
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 1.1
+            "atkScale": 0.8
           },
           "target": {
             "kind": "distance",
@@ -932,7 +932,7 @@
       "name": "足払い",
       "trigger": {
         "kind": "time",
-        "value": 10
+        "value": 14
       },
       "effect": [
         {
@@ -940,7 +940,7 @@
           "damageType": "physical",
           "amount": {
             "kind": "atkBased",
-            "atkScale": 0.6
+            "atkScale": 0.5
           },
           "targetShape": "pierce",
           "target": {
