@@ -240,6 +240,8 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 3. 各 effect の `targetShape` に従い **発動 tick で全 hit を一括解決**（`resolveEffectResolution`）
 4. `scatter` / `pierce`（`pierceDurationSec` あり）/ `chain`（2 体以上命中時、既定または `chainDurationSec`）は `pendingHitQueue` で **適用のみ時間分散**（再ターゲットなし）
 
+`distance` の `order: selfOrigin` は「使用者自身を起点にした範囲」を表す。`side: ally` では使用者自身も対象に含め、`side: enemy` では使用者自身を含めない。
+
 
 | 形状          | 挙動                                                                                   |
 | ----------- | ------------------------------------------------------------------------------------ |

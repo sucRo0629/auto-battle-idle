@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DamageSkillEffect, PassiveSkillDef } from '../types.ts';
+import { resolvePassiveBuffTargets } from '../passiveBuffBridge.ts';
+import { resolvePassiveDebuffTargets } from '../passiveDebuffBridge.ts';
 import {
   resolveEffectAnchor,
   resolveEffectResolution,
@@ -193,7 +195,6 @@ describe('targetRuleOverride apply scope', () => {
           kind: 'distance',
           side: 'ally',
           order: 'selfOrigin',
-          includeSelf: true,
         },
         targetShape: 'aoe',
         aoeRadiusPx: 50,
@@ -209,12 +210,43 @@ describe('targetRuleOverride apply scope', () => {
     expect(ids).not.toContain('ally-far');
   });
 
-  it('selfOrigin aoe: excludes caster when includeSelf is false', () => {
+  it('selfOrigin aoe enemy targets exclude caster and hit the front enemy', () => {
     const caster = mockUnit('caster', 200);
-    const allyNear = mockUnit('ally-near', 230);
-    const party = [caster, allyNear];
+    const enemyNear = mockUnit('enemy-near', 230, { isEnemy: true });
+    const enemyFar = mockUnit('enemy-far', 320, { isEnemy: true });
+    const enemiesInFront = [enemyNear, enemyFar];
 
     const targets = resolveEffectTargets(
+      {
+        type: 'damage',
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+        target: {
+          kind: 'distance',
+          side: 'enemy',
+          order: 'selfOrigin',
+        },
+        targetShape: 'aoe',
+        aoeRadiusPx: 50,
+      } as SkillEffectDef,
+      caster,
+      [caster],
+      enemiesInFront,
+      gameData,
+    );
+    const ids = targets.map((t) => t.id);
+    expect(ids).not.toContain('caster');
+    expect(ids).toContain('enemy-near');
+    expect(ids).not.toContain('enemy-far');
+  });
+
+  it('active and passive ally selfOrigin aoe resolve the same targets', () => {
+    const caster = mockUnit('caster', 200);
+    const allyNear = mockUnit('ally-near', 230);
+    const allyFar = mockUnit('ally-far', 320);
+    const party = [caster, allyNear, allyFar];
+
+    const activeTargets = resolveEffectTargets(
       {
         type: 'buff',
         buffSubKind: 'stat',
@@ -234,9 +266,84 @@ describe('targetRuleOverride apply scope', () => {
       enemies,
       gameData,
     );
-    const ids = targets.map((t) => t.id);
-    expect(ids).not.toContain('caster');
-    expect(ids).toContain('ally-near');
+    const passiveTargets = resolvePassiveBuffTargets(
+      caster,
+      {
+        id: 'passive_ally_self_origin',
+        name: '味方自身起点',
+        effect: 'buff',
+        buffSubKind: 'stat',
+        buffTargetRule: {
+          kind: 'distance',
+          side: 'ally',
+          order: 'selfOrigin',
+        },
+        buffTargetShape: 'aoe',
+        buffAoeRadiusPx: 50,
+        buffStat: 'atk',
+        buffMultiplier: 1.2,
+        buffDurationSec: 5,
+      },
+      party,
+      enemies,
+      gameData,
+    );
+    expect(passiveTargets.map((t) => t.id).sort()).toEqual(
+      activeTargets.map((t) => t.id).sort(),
+    );
+    expect(activeTargets.map((t) => t.id)).toContain('caster');
+  });
+
+  it('active and passive enemy selfOrigin aoe resolve the same targets', () => {
+    const caster = mockUnit('caster', 200);
+    const enemyNear = mockUnit('enemy-near', 230, { isEnemy: true });
+    const enemyFar = mockUnit('enemy-far', 320, { isEnemy: true });
+    const enemiesInFront = [enemyNear, enemyFar];
+
+    const activeTargets = resolveEffectTargets(
+      {
+        type: 'damage',
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+        target: {
+          kind: 'distance',
+          side: 'enemy',
+          order: 'selfOrigin',
+        },
+        targetShape: 'aoe',
+        aoeRadiusPx: 50,
+      } as SkillEffectDef,
+      caster,
+      [caster],
+      enemiesInFront,
+      gameData,
+    );
+    const passiveTargets = resolvePassiveDebuffTargets(
+      caster,
+      {
+        id: 'passive_enemy_self_origin',
+        name: '敵自身起点',
+        effect: 'debuff',
+        debuffSubKind: 'stat',
+        debuffTargetRule: {
+          kind: 'distance',
+          side: 'enemy',
+          order: 'selfOrigin',
+        },
+        debuffTargetShape: 'aoe',
+        debuffAoeRadiusPx: 50,
+        debuffStat: 'atk',
+        debuffMultiplier: 0.8,
+        debuffDurationSec: 5,
+      },
+      [caster],
+      enemiesInFront,
+      gameData,
+    );
+    expect(passiveTargets.map((t) => t.id).sort()).toEqual(
+      activeTargets.map((t) => t.id).sort(),
+    );
+    expect(activeTargets.map((t) => t.id)).not.toContain('caster');
   });
 
   it('pierce: excludes enemies beyond forward range segment', () => {

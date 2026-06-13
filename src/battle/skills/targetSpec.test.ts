@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState } from '../types.ts';
 import {
+  applyIncludeSelfFilter,
   filterSelectablePool,
   getTargetPool,
+  orderPoolByTarget,
   normalizeTarget,
   pickTargetFromPool,
   resolveApproachTargetSpec,
+  distanceSpecIncludesSelf,
 } from './targetSpec.ts';
 
 function mockUnit(
@@ -110,6 +113,21 @@ describe('normalizeTarget', () => {
       includeSelf: true,
     });
   });
+
+  it('treats ally selfOrigin as self-including and enemy selfOrigin as self-excluding', () => {
+    const allySpec = {
+      kind: 'distance',
+      side: 'ally',
+      order: 'selfOrigin',
+    } as const;
+    const enemySpec = {
+      kind: 'distance',
+      side: 'enemy',
+      order: 'selfOrigin',
+    } as const;
+    expect(distanceSpecIncludesSelf(allySpec)).toBe(true);
+    expect(distanceSpecIncludesSelf(enemySpec)).toBe(false);
+  });
 });
 
 describe('getTargetPool / pickTargetFromPool', () => {
@@ -201,6 +219,30 @@ describe('getTargetPool / pickTargetFromPool', () => {
     expect(pool.map((u) => u.id).sort()).toEqual(['guard', 'healer']);
     const picked = pickTargetFromPool(spec, enemyActor, pool);
     expect(picked?.id).toBe('guard');
+  });
+
+  it('ally selfOrigin keeps the actor in target ordering', () => {
+    const spec = {
+      kind: 'distance',
+      side: 'ally',
+      order: 'selfOrigin',
+    } as const;
+    const pool = getTargetPool(spec, actor, allies, enemies);
+    expect(pickTargetFromPool(spec, actor, pool)?.id).toBe('a1');
+    expect(orderPoolByTarget(spec, actor, pool).map((u) => u.id)[0]).toBe('a1');
+  });
+
+  it('enemy selfOrigin never keeps the actor in target filtering', () => {
+    const spec = {
+      kind: 'distance',
+      side: 'enemy',
+      order: 'selfOrigin',
+    } as const;
+    const targets = applyIncludeSelfFilter(spec, actor, [
+      { unit: actor },
+      { unit: enemies[0]! },
+    ]);
+    expect(targets.map((entry) => entry.unit.id)).toEqual(['e1']);
   });
 
   it('enemy distance/enemy/farthest picks farthest player ally by battleX distance', () => {

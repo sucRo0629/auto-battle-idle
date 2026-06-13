@@ -446,7 +446,7 @@
       "buffTargetRule": {
         "kind": "distance",
         "side": "ally",
-        "order": "nearest"
+        "order": "selfOrigin"
       }
     },
     {

@@ -31,6 +31,7 @@ import {
 import { GLOBAL_MAX_CHARGES_CAP } from "../battle/skills/chargeBank.ts";
 import {
   formatTargetLabel,
+  distanceSpecIncludesSelf,
   normalizeTarget,
 } from "../battle/skills/targetSpec.ts";
 import {
@@ -1022,7 +1023,8 @@ export function appendTargetSpecFields(
       const includeRow = createEl("div", "editor-field editor-field-checkbox");
       const includeInput = createEl("input") as HTMLInputElement;
       includeInput.type = "checkbox";
-      includeInput.checked = normalized.includeSelf === true;
+      includeInput.checked = distanceSpecIncludesSelf(normalized);
+      includeInput.disabled = order === "selfOrigin";
       includeInput.addEventListener("change", () => {
         onChange({
           ...normalized,
@@ -1039,7 +1041,7 @@ export function appendTargetSpecFields(
           createEl(
             "p",
             "editor-hint",
-            "自身起点では「自身を含める」を ON にすると使用者にも効果が及びます。"
+            "自身起点では使用者自身を自動で含めます。敵側の自身起点では使用者自身は含めません。"
           )
         );
       }

@@ -385,6 +385,14 @@ export function isSelfOriginSpec(spec: TargetSpec): boolean {
   return spec.kind === "distance" && spec.order === "selfOrigin";
 }
 
+export function distanceSpecIncludesSelf(spec: TargetSpec): boolean {
+  return (
+    spec.kind === "distance" &&
+    spec.side === "ally" &&
+    (spec.order === "selfOrigin" || spec.includeSelf === true)
+  );
+}
+
 /** 自動接近・接敵停止用。selfOrigin は貫通の着弾基準であり追跡対象ではない */
 export function resolveApproachTargetSpec(spec: TargetSpec): TargetSpec {
   if (
@@ -402,7 +410,7 @@ export function applyIncludeSelfFilter(
   actor: CombatantState,
   targets: SkillHitTarget[],
 ): SkillHitTarget[] {
-  if (spec.kind !== "distance" || spec.side !== "ally" || spec.includeSelf === true) {
+  if (distanceSpecIncludesSelf(spec)) {
     return targets;
   }
   return targets.filter((entry) => entry.unit.id !== actor.id);
@@ -460,17 +468,19 @@ export function pickTargetFromPool(
   }
 
   if (spec.kind === "distance" && spec.side === "ally") {
-    const others = pool.filter((unit) => unit.id !== actor.id);
-    if (others.length === 0) return null;
+    const selectable = distanceSpecIncludesSelf(spec)
+      ? pool
+      : pool.filter((unit) => unit.id !== actor.id);
+    if (selectable.length === 0) return null;
     const actorX = getBattleX(actor);
     if (spec.order === "nearest") {
-      return others.reduce((a, b) =>
+      return selectable.reduce((a, b) =>
         Math.abs(getBattleX(a) - actorX) <= Math.abs(getBattleX(b) - actorX)
           ? a
           : b
       );
     }
-    return others.reduce((a, b) =>
+    return selectable.reduce((a, b) =>
       Math.abs(getBattleX(a) - actorX) >= Math.abs(getBattleX(b) - actorX)
         ? a
         : b
@@ -564,10 +574,13 @@ export function orderPoolByTarget(
 
   if (spec.kind === "distance" && spec.side === "ally") {
     const actorX = getBattleX(actor);
-    const others = copy.filter((unit) => unit.id !== actor.id);
-    const sorted = others.sort((a, b) => {
+    const selectable = distanceSpecIncludesSelf(spec)
+      ? copy
+      : copy.filter((unit) => unit.id !== actor.id);
+    const sorted = selectable.sort((a, b) => {
       const da = Math.abs(getBattleX(a) - actorX);
       const db = Math.abs(getBattleX(b) - actorX);
+      if (spec.order === "selfOrigin") return da - db;
       return spec.order === "nearest" ? da - db : db - da;
     });
     return sorted;
