@@ -78,6 +78,8 @@
 | `at_enchanter` | 符術士 | Enchanter | back  | 遠隔魔法 | 最低 DEF 狙い       | 連符（chain）／爆符                                  |
 | `at_geomancer` | 法陣師 | Geomancer | back  | 遠隔魔法 | 密集時 AoE ボーナス | 大法陣／小法陣                                       |
 
+※ `at_lancer_passive_1` は常時パッシブとして扱う。対象が自身以外で、後から範囲内に入るケースがあるため、戦闘中に定期的な再評価を前提にする。`at_lancer_passive_2` はアクター自身をアンカーにした範囲バフとして扱う。
+
 #### supporter（`sp_`）
 
 | classId        | 表示名 | epithetEn | 列   | 射程 | パッシブ                                                                                                   | アクティブ（Lv0）                                        |
@@ -440,6 +442,18 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR）。フィルタ後 anchor は最前線                                                                                                                                             |
 | `self`       | 自身                                                                                                                                                                                                                          |
 | `all`        | `side` で味方全員 / 敵全員（射程無視）                                                                                                                                                                                        |
+
+### アンカーの意味
+
+- `nearest` / `farthest` は「どの対象を選ぶか」の距離順で、`selfOrigin` は「どこを起点に形状を解くか」のアンカー指定。
+- `selfOrigin` は `aoe` / `pierce` / `chain` の幾何解決に使う。`single` では単一対象選択の起点に留まり、`self` と同義ではない。
+- `includeSelf` は `distance.side: ally` の最終対象に自分を含めるかだけを制御し、アンカーの意味は変えない。
+
+### パッシブのターゲット解決
+
+- パッシブは `TargetSpec` を active と同じルールで解決するが、`periodicTrigger` の有無で再評価タイミングが変わる。
+- `periodicTrigger` 省略の常時パッシブは、対象を一度固定せず、戦闘中に定期的に再評価する前提とする。対象が後から範囲内に入るなら、その都度有効化される。
+- `target: self` は常に自身単体、`distance.order: selfOrigin` は自身をアンカーにした範囲解決であり、役割が異なる。
 
 ### 旧 `targetRule` との対応（読み込み互換）
 
