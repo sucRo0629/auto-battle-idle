@@ -6,7 +6,7 @@
     "epithetEn": "Guardian",
     "formationRow": "front",
     "traits": {
-      "rangePx": 10
+      "rangePx": 30
     },
     "maxHp": 235,
     "atk": 11,
@@ -51,7 +51,7 @@
     "epithetEn": "Paladin",
     "formationRow": "front",
     "traits": {
-      "rangePx": 10
+      "rangePx": 30
     },
     "maxHp": 220,
     "atk": 15,
@@ -102,7 +102,7 @@
     "epithetEn": "Gladiator",
     "formationRow": "front",
     "traits": {
-      "rangePx": 10
+      "rangePx": 30
     },
     "maxHp": 180,
     "atk": 19,
@@ -192,7 +192,7 @@
     "epithetEn": "Assassin",
     "formationRow": "front",
     "traits": {
-      "rangePx": 10,
+      "rangePx": 30,
       "basicAttackVfx": {
         "preset": "slash"
       }
