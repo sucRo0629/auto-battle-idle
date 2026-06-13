@@ -244,11 +244,16 @@
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_lancer_basic_attack",
-    "passiveIds": [],
+    "passiveIds": [
+      "at_lancer_passive_1",
+      "at_lancer_passive_2"
+    ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
+          "at_lancer_passive_1",
+          "at_lancer_passive_2",
           "at_lancer_active_1",
           "at_lancer_active_2"
         ]

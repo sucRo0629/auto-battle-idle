@@ -255,15 +255,17 @@
     },
     {
       "id": "at_lancer_passive_1",
-      "name": "at_lancer_passive_1",
-      "effect": "targetRuleOverride",
-      "targetRuleOverride": {
-        "kind": "stat",
+      "name": "牽制",
+      "effect": "debuff",
+      "debuffSubKind": "stat",
+      "debuffTargetRule": {
+        "kind": "distance",
         "side": "enemy",
-        "stat": "def",
-        "order": "lowest"
+        "order": "selfOrigin"
       },
-      "targetRuleOverrideApplyTo": "enemy"
+      "debuffTargetShape": "pierce",
+      "debuffStat": "atk",
+      "debuffMultiplier": 0.9
     },
     {
       "id": "at_ranger_passive_1",
@@ -428,6 +430,23 @@
         "order": "farthest"
       },
       "targetRuleOverrideApplyTo": "enemy"
+    },
+    {
+      "id": "at_lancer_passive_2",
+      "name": "連携",
+      "effect": "buff",
+      "buffSubKind": "stat",
+      "buffStat": [
+        "atk"
+      ],
+      "buffTargetShape": "aoe",
+      "buffAoeRadiusPx": 70,
+      "buffMultiplier": 1.05,
+      "buffTargetRule": {
+        "kind": "distance",
+        "side": "ally",
+        "order": "nearest"
+      }
     }
   ],
   "actives": [
