@@ -31,7 +31,7 @@ stat(Lv) = Lv1 基準値 + 加算値 × (Lv - 1)
 | `levelCurves.json` — `growthPresets` | ロール別マスタ表（段階 → LvUP 1 回あたりの加算） |
 | `levelCurves.json` — `expPerLevel` | LvUP に必要な EXP（`expPerLevel × 現在 Lv`） |
 
-旧 `statGrowth.byClass` は **廃止**。一次職（`jobTier: 1`）は `growthTier` 必須。
+旧 `statGrowth.byClass` は **廃止**。プレイ可能クラスは `growthTier` 必須。
 
 ### growthPresets（3 種）
 

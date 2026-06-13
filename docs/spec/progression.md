@@ -106,7 +106,7 @@ interface ClassSkillUnlock {
 ### アクティブ枠（最大 4）
 
 - 戦闘参加は **`learnedActiveIds`**（習得即参加）。`equippedActiveSlots` はスキルメニュー（テスト用）のみ。
-- 段階解放: Lv0=2 / Lv15=3 / 二次職・Lv30=4（`getUnlockedActiveSlotCount`）。
+- 段階解放: Lv0=2 / Lv15=3 / Lv30=4（`getUnlockedActiveSlotCount`）。
 - Party HUD: 2×2 リキャスト + 多段チャージストックピップ（`maxCharges > 0` 時）。
 
 ### 習得済みビルドの永続化
@@ -115,11 +115,10 @@ interface ClassSkillUnlock {
 
 ---
 
-## Phase 4 — 一次職マスタ
+## Phase 4 — クラスマスタ
 
-Phase 3 の習得機構 + キャラクターデータ GUI で **一次職 5 種**（衛士・剣士・弓士・術師・薬師）を確定する。
+Phase 3 の習得機構 + キャラクターデータ GUI で **クラス 15 種**を確定する。
 
-- 二次職・転職は **Phase 7 以降**（`jobTier` / `promotion` は Phase 4 で JSON 予約のみ可）
 - 数値・習得タイミングの最終調整は **Phase 7**
 - スキル説明の自動生成調整は **Phase 4b**（[phase-roadmap.md](../plans/phase-roadmap.md)）
 
@@ -137,18 +136,20 @@ Phase 3 の習得機構 + キャラクターデータ GUI で **一次職 5 種*
 
 ---
 
-## Phase 5 — 本番スプライトアニメーション
+## Phase 5 — 本番スプライトアニメーション + 編集ツール
 
 進行・育成とは独立した **見た目フェーズ**（Phase 4 以降）。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
 
 - クラス別・敵別の本番ドット絵スプライトシート
 - Phase 1 の `SpriteAnimator` / イベント連動は維持、`SpriteRegistry` とアセットのみ差し替え
+- スプライトアニメーション編集ツール作成
 
 ---
 
-## Phase 6 — スキル VFX
+## Phase 6 — スキル VFX + 編集ツール
 
 Phase 5 完了後。`skills.json` の `vfx` フィールドでスキル別エフェクトをデータ駆動化。
+- VFX 編集ツール作成
 
 ---
 

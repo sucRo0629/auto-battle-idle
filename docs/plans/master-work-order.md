@@ -17,7 +17,7 @@
 | Phase | 状態 | 内容 |
 |-------|------|------|
 | 1 | 完了 | passiveIds 分離、ヘイト制、コアパッシブ |
-| **2** | **完了** | stun/knockback、`epithetEn` データ、15 一次職、`traits.rangePx`、仕様書 |
+| **2** | **完了** | stun/knockback、`epithetEn` データ、15 クラス、`traits.rangePx`、仕様書 |
 | **3a** | **完了** | 接敵定数 4 項目化、弓士のみ生存距離修正 |
 | **3b** | **完了** | `resolveEngagedLayout` 一本化 |
 | **3c** | 部分完了 | `epithetEn` UI（バトル HUD・統計・スキルメニュー）。スプライト本番化は Phase 5 |
@@ -29,7 +29,7 @@
 ```mermaid
 flowchart LR
   subgraph done [完了]
-    P2[Phase2 CC+15職]
+    P2[Phase2 CC+15クラス]
   end
   subgraph next [次]
     B1[3a 接敵小PR]
@@ -43,9 +43,9 @@ flowchart LR
 
 - `stun` / `knockback` 効果 + BattleEngine 行動スキップ
 - `epithetEn` を `classes.json` に追加（UI は 3c）
-- 15 一次職（`df_` / `at_` / `sp_`）+ `parties.json` 更新
+- 15 クラス（`df_` / `at_` / `sp_`）+ `parties.json` 更新
 - [`docs/spec/combat.md`](../spec/combat.md) ヘイト・CC 節
-- [`docs/spec/classes-and-skills.md`](../spec/classes-and-skills.md) 15 職マスタ
+- [`docs/spec/classes-and-skills.md`](../spec/classes-and-skills.md) 15 クラスマスタ
 
 ## Phase 3a: 接敵小 PR
 

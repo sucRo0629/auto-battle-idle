@@ -4,22 +4,22 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 
 ## 概要
 
-| Phase | ゴール | 状態 |
-|-------|--------|------|
-| **1** | 戦闘コアデモ（自動戦闘 + Canvas 表示・プレースホルダー） | **完了** |
-| **2a** | 放置 MVP：セーブ・ステージ進行・個別Lv（ステのみ） | **完了** |
-| **2b** | 戦闘計算（`combatMath` 等） | **完了** |
-| **2c** | JSON 駆動クラス、ビルドのハードコード排除 | **完了** |
-| **3** | Lvアップ時スキル習得、アクティブセット2枠目 | **完了** |
-| **4** | 一次職マスタ + スキル説明；4a データ **完了** / 4b 説明自動生成 / **4c JSON 分割** | **4b が次** |
-| **5** | 本番スプライトアニメーション（クラス別ドット絵） | 未着手 |
-| **6** | スキル VFX（スキル別設定・新プリセット） | 未着手（Phase 5 後） |
-| **7** | バランス調整（数値チューニング全般） | 未着手 |
-| **8** | globalExp、強化ツリー、オフライン報酬、Electron | 未着手 |
+| Phase  | ゴール                                                                               | 状態                 |
+| ------ | ------------------------------------------------------------------------------------ | -------------------- |
+| **1**  | 戦闘コアデモ（自動戦闘 + Canvas 表示・プレースホルダー）                             | **完了**             |
+| **2a** | 放置 MVP：セーブ・ステージ進行・個別 Lv（ステのみ）                                  | **完了**             |
+| **2b** | 戦闘計算（`combatMath` 等）                                                          | **完了**             |
+| **2c** | JSON 駆動クラス、ビルドのハードコード排除                                            | **完了**             |
+| **3**  | Lv アップ時スキル習得、アクティブセット 2 枠目                                       | **完了**             |
+| **4**  | クラスマスタ + スキル説明；4a データ **完了** / 4b 説明自動生成 / **4c JSON 分割**   | **4b が次**          |
+| **5**  | 本番スプライトアニメーション + 編集ツール作成                                       | 未着手               |
+| **6**  | スキル VFX + 編集ツール作成（スキル別設定・新プリセット）                             | 未着手（Phase 5 後） |
+| **7**  | バランス調整（数値チューニング全般）                                                 | 未着手               |
+| **8**  | globalExp、強化ツリー、オフライン報酬、Electron                                      | 未着手               |
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
-**開発優先:** **Phase 4b（スキル説明自動生成）** を次に完成させる。一次職 15 種のデータ投入（旧 4a）は完了済み（[classes-and-skills.md](../spec/classes-and-skills.md)）。接敵ビジュアル整理は [master-work-order.md](./master-work-order.md) Phase 3a/3b を参照。globalExp / 強化ツリー / Electron は Phase 8。
+**開発優先:** **Phase 4b（スキル説明自動生成）** を次に完成させる。デモ編成は最新の `parties.json` 構成に更新済み（[classes-and-skills.md](../spec/classes-and-skills.md)）。接敵ビジュアル整理は [master-work-order.md](./master-work-order.md) Phase 3a/3b を参照。globalExp / 強化ツリー / Electron は Phase 8。
 
 ---
 
@@ -32,26 +32,26 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 - Vite vanilla-ts プロジェクト（`base: './'`）
 - JSON ゲームデータ：`data/classes.json`, `skills.json`, `enemies.json`, `stages.json`, `parties.json`
 - 戦闘ロジック：`BattleEngine`, `SkillExecutor`, `targeting`, `combatMath`, `validateGameData`
-- 3ロール、4デモクラス、4人編成、`stage_1` に test_enemy × 2
-- スキル枠：**basic**（非表示・常時稼働）+ **セットアクティブ1枠**（HUD に CD 表示）
+- 3 ロール、4 人編成（鉄衛士 / 剣術士 / 療養師 / 弓術士）、`stage_1` に test_enemy × 2
+- スキル枠：**basic**（非表示・常時稼働）+ **セットアクティブ 1 枠**（HUD に CD 表示）
 - パッシブはすべて同時発動；`snipe` でターゲットルールを `lowestHpEnemy` に上書き
 - ステータス効果：`atk`, `def`, `damageTaken` への buff / debuff
-- Victory / Defeat → 3秒待機 → HP全回復 → 再スポーン（Phase 2 でセーブ連動の進行ルールを追加）
+- Victory / Defeat → 3 秒待機 → HP 全回復 → 再スポーン（Phase 2 でセーブ連動の進行ルールを追加）
 - Canvas 2D：**アニメーション基盤**（`SpriteAnimator`、イベント連動、近接突進/遠隔弾、ダメージポップアップ）
 - **プレースホルダースプライト**（ロール別色分け PNG。本番ドット絵は Phase 5）
-- **プレースホルダー戦闘 VFX**（slash / orb / arrow / healRise の4種。role / attackRange から自動選択。`render/skillVfx/` に解決基盤のみ。**スキル別 `vfx` 設定・新プリセット追加は Phase 6**）
-- buff VFX：対象スプライトの白い光（約0.8秒）
+- **プレースホルダー戦闘 VFX**（slash / orb / arrow / healRise の 4 種。role / attackRange から自動選択。`render/skillVfx/` に解決基盤のみ。**スキル別 `vfx` 設定・新プリセット追加は Phase 6**）
+- buff VFX：対象スプライトの白い光（約 0.8 秒）
 - Canvas UI：ステージ名（左上）、パーティ HUD（クラス名 / Exp / HP / スキル CD）
 - バトルログ：**console のみ**（DOM ログは意図的に未実装）
 
 ### デモ編成
 
-| クラス | ロール | セットアクティブ | パッシブ |
-|--------|--------|----------------|----------|
-| Bulwark | defender | Iron Guard（buff） | Thick Skin |
-| Berserker | attacker | Slash | Brute |
-| Cleric | supporter | Heal | Gentle Touch |
-| Hawkeye | attacker | Arrow | Snipe |
+| classId       | 表示名 |
+| ------------- | ------ |
+| `df_guardian` | 鉄衛士 |
+| `at_warrior`  | 剣術士 |
+| `sp_cleric`   | 療養師 |
+| `at_ranger`   | 弓術士 |
 
 ### アーキテクチャ
 
@@ -90,78 +90,42 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ## Phase 3 — スキル・戦闘拡張（完了）
 
-**ゴール：** LvUP でスキルプールが増え、セットアクティブを最大2枠まで扱える。ビルドはセーブに永続化。
+**ゴール：** LvUP でスキルプールが増え、セットアクティブを最大 2 枠まで扱える。ビルドはセーブに永続化。
 
 ### 実装済み
 
 - LvUP 時、`classes.json` の `skills[]`（レベル別 `skillIds`）から `learnedPassiveIds` / `learnedActiveIds` を再計算（`resolveLearnedSkills`, `reconcileMemberBuild`）
 - 勝利報酬・セーブロード・デバッグ Lv 変更時に習得リストを同期；LvUP ログに新スキル名を表示
-- アクティブ **最大4枠**（`MAX_ACTIVE_SLOTS = 4`）：習得即参加（`learnedActiveIds`）。段階解放 Lv0=2 / Lv15=3 / 二次職・Lv30=4。`equippedActiveSlots` は SkillMenuPanel テスト用
+- アクティブ **最大 4 枠**（`MAX_ACTIVE_SLOTS = 4`）：習得即参加（`learnedActiveIds`）。段階解放 Lv0=2 / Lv15=3 / Lv30=4。`equippedActiveSlots` は SkillMenuPanel テスト用
 - 新アクティブ習得時は自動セットしない（スキルメニューでプレイヤーが選ぶ）
 - セーブに `CharacterBuild` を含め、ロード時 `reconcilePartyBuilds` でレベルと整合
 
 ---
 
-## Phase 4 — 一次職マスタ + スキル
+## Phase 4 — クラスマスタ + スキル
 
-Phase 3 の習得機構 + **キャラクターデータ GUI** で一次職 JSON を確定。**クラス転職（2次職）は Phase 7 以降**。
+Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON を確定する。**一次職 / 二次職の区別は廃止**し、`jobTier` / `promotion` / `promotesFrom` の予約は行わない。
 
-| サブフェーズ | 内容 | 状態 |
-|-------------|------|------|
-| **4a** | 一次職 15 種・スキル JSON・GUI・validate・`epithetEn` データ | **完了** |
-| **4b** | スキル説明の自動生成（`formatSkillText`）調整・エディタプレビュー | **次** |
-| **4c** | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率） | **未着手**（4b と並行可） |
+| サブフェーズ | 内容                                                                 | 状態                      |
+| ------------ | -------------------------------------------------------------------- | ------------------------- |
+| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ        | **完了**                  |
+| **4b**       | スキル説明の自動生成（`formatSkillText`）調整・エディタプレビュー    | **次**                    |
+| **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率） | **未着手**（4b と並行可） |
 
-### 一次職 / 二次職（設計方針）
+### クラスマスタ（完了）
 
-| 概念 | Phase 4 | Phase 7 以降 |
-|------|---------|--------------|
-| **一次職** | プレイ開始〜育成の基本クラス（15 種・`df_` / `at_` / `sp_`） | 転職元として維持 |
-| **二次職** | データ上の予約フィールドのみ（未使用） | 一定 Lv で一次職から**複数候補へ分化**；転職 UI・セーブ反映 |
-| **表示名** | **漢字2文字**（`displayName`） | 二次職も同方針 |
-
-将来 JSON（Phase 7 で本番化）の想定:
-
-```typescript
-jobTier: 1 | 2;           // Phase 4 では全クラス jobTier: 1
-promotion?: {             // 一次職のみ（Phase 7 で使用）
-  minLevel: number;
-  targetClassIds: string[];  // 二次職候補（複数 = 分化）
-};
-promotesFrom?: string;    // 二次職のみ：元の一次職 classId
-```
-
-Phase 4 では `jobTier: 1` を付与しても **ゲームロジックは転職しない**（フィールドは validate のみ）。
-
-### 一次職マスタ（15 種・完了）
-
-ロスター全表は [classes-and-skills.md](../spec/classes-and-skills.md) を正とする。`displayName`（漢字）+ `epithetEn`（英語肩書き）を `classes.json` に保持。デモ編成は `parties.json`（鉄衛士 / 剣術士 / 療養師 / 弓術士）。
+ロスター全表は [classes-and-skills.md](../spec/classes-and-skills.md) を正とする。`displayName`（漢字）+ `epithetEn`（英語肩書き）を `classes.json` に保持し、デモ編成は `parties.json` の最新構成（鉄衛士 / 剣術士 / 療養師 / 弓術士）とする。
 
 - 旧デモ 4 クラス（Bulwark 等）は削除済み
 - `epithetEn` の 2 段ルビ UI は master-work-order Phase 3c
 - 数値バランスの最終版は Phase 7
 
-### 二次職名称メモ（Phase 7 設計用・未実装）
+### 4a — クラスデータ + GUI（完了）
 
-一次職から分化する **上位職候補**（漢字2文字方針）。バランス・分化数と合わせて Phase 7 で確定。
-
-| 一次職 | 二次職候補（メモ） |
-|--------|-------------------|
-| 衛士 | **鉄衛**（重装タンク系） |
-| 剣士 | **武者**、**剣客** |
-| 弓士 | （未定。狙撃 等を Phase 7 で検討） |
-| 術師 | （未定） |
-| 薬師 | **法師**（僧侶寄り・回復/支援上位） |
-
-- 鉄衛・武者・剣客・法師は一次職名より「上位」トーンで二次職向き。
-
-### 4a — 一次職データ + GUI（完了）
-
-- 15 一次職を `classes.json` + `skills.json` に投入済み
+- 15 クラスを `classes.json` + `skills.json` に投入済み
 - **ステータス・成長** — Lv1 基準 + `growthTier`（低/中/高）+ `levelCurves.growthPresets` + `attackSpeedPresets`；術師は `growthPresetKey: caster`；`ClassEditorStep` 成長 UI + Lv10 プレビュー（[stats.md](../spec/stats.md)）
 - **複数ターゲットスキル**（`targetShape` 等）— 実装検証用 WIP データ。**仕様書へのスキル一覧転記はマスタ確定後**
 - キャラクターデータ GUI で編集・保存
-- `jobTier` 等の予約フィールドを型・validate に追加（動作は Phase 7）
 - `validateGameData` 整合確認
 
 ### 4b — スキル説明自動生成の調整
@@ -176,10 +140,10 @@ Phase 4 では `jobTier: 1` を付与しても **ゲームロジックは転職�
 **4b スコープ**
 
 - `formatActiveDescription`：威力倍率、`damageType`（物理/魔法）、`targetRule`（日本語ラベル）、`targetShape`（単体 / 範囲 / マルチロック・`hitCount`）、buff/debuff/HoT/DoT の対象ステ・倍率・持続
-- `formatPassiveDescription`：`targetRuleOverride` 等を日本語ラベル化；既存パッシブ5種の表示確認
-- 複数 effect を持つアクティブは区切り（` / ` 等）で列挙
+- `formatPassiveDescription`：`targetRuleOverride` 等を日本語ラベル化；既存パッシブ 5 種の表示確認
+- 複数 effect を持つアクティブは区切り（`/` 等）で列挙
 - スキルエディタ GUI に**自動生成プレビュー**を表示（保存 JSON には書かない）
-- 一次職スキル全件でツールチップ・プレビューを目視確認
+- クラススキル全件でツールチップ・プレビューを目視確認
 
 **4b スコープ外**
 
@@ -225,13 +189,12 @@ data/
 
 ### スコープ外（Phase 4）
 
-- **二次職クラス追加・転職処理・転職 UI**
 - ステージ編集 GUI（キャラ確定後）
 - スキル VFX 本番化（**Phase 6**）
 
 ---
 
-## Phase 5 — 本番スプライトアニメーション
+## Phase 5 — 本番スプライトアニメーション + 編集ツール
 
 Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント連動）はそのまま活かし、**見た目のアセットを本番化**する。Phase 4（デモマスタ）以降、Phase 5 と並行も可。
 
@@ -241,16 +204,17 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 - `idle` / `attack` / `heal` / `hurt` / `death` のフレームアニメ（横並びシート）
 - `SpriteRegistry.ts` をプレースホルダーから本番 PNG 定義へ差し替え
 - `classes.json`・`enemies.json` の `spriteKey` を本番アセットに紐付け
-- 一次職5種 + 敵分を最低限カバー
-- **将来:** データ編集 GUI 第3弾で `spriteKey` / `iconKey` ごとの PNG アップロード・プレビュー（Phase 5 と連動）
+- クラス 5 種 + 敵分を最低限カバー
+- スプライトアニメーション編集ツール作成（フレーム編集、プレビュー、書き出し）
+- **将来:** データ編集 GUI 第 3 弾で `spriteKey` / `iconKey` ごとの PNG アップロード・プレビュー（Phase 5 と連動）
 
 ### Phase 1 との境界
 
-| 項目 | Phase 1（済） | Phase 5 |
-|------|---------------|---------|
-| アニメ状態機械 | あり | 変更なし |
-| スプライト素材 | ロール別プレースホルダー | クラス別本番ドット絵 |
-| 差し替え単位 | `render/` の Registry / アセットパス | 同上（battle ロジックは触らない） |
+| 項目           | Phase 1（済）                        | Phase 5                           |
+| -------------- | ------------------------------------ | --------------------------------- |
+| アニメ状態機械 | あり                                 | 変更なし                          |
+| スプライト素材 | ロール別プレースホルダー             | クラス別本番ドット絵              |
+| 差し替え単位   | `render/` の Registry / アセットパス | 同上（battle ロジックは触らない） |
 
 ### スコープ外（Phase 5）
 
@@ -259,7 +223,7 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 
 ---
 
-## Phase 6 — スキル VFX
+## Phase 6 — スキル VFX + 編集ツール
 
 Phase 1 の Canvas プレースホルダー VFX を、スキル単位で差し替え・拡張する。**Phase 5（本番キャラスプライト）完了後**に着手。
 
@@ -269,14 +233,15 @@ Phase 1 の Canvas プレースホルダー VFX を、スキル単位で差し�
 - スキルごとの `preset` / `arc` / `durationMs` 指定（通常攻撃含む）
 - 新プリセット追加（Canvas `draw*` または将来のエフェクトスプライト）
 - 開発用 `SKILL_VFX_OVERRIDES` からデータ駆動へ移行
+- VFX編集ツール作成（プリセット編集、タイムライン、プレビュー）
 
 ### Phase 1 との境界
 
-| 項目 | Phase 1（済） | Phase 6 |
-|------|---------------|---------|
-| 解決 | `resolveSkillVfx` + ロール/射程フォールバック | スキル ID ごとに `vfx` 指定 |
-| 描画 | 4種プレースホルダー | 追加・差し替え |
-| battle ロジック | 変更なし | 変更なし |
+| 項目            | Phase 1（済）                                 | Phase 6                     |
+| --------------- | --------------------------------------------- | --------------------------- |
+| 解決            | `resolveSkillVfx` + ロール/射程フォールバック | スキル ID ごとに `vfx` 指定 |
+| 描画            | 4 種プレースホルダー                          | 追加・差し替え              |
+| battle ロジック | 変更なし                                      | 変更なし                    |
 
 ### スコープ外（Phase 6）
 
@@ -286,29 +251,28 @@ Phase 1 の Canvas プレースホルダー VFX を、スキル単位で差し�
 
 ## Phase 7 — バランス調整
 
-Phase 3〜6（および Phase 4 のデモマスタ）で機能・コンテンツ・見た目が揃ったあとに、ゲーム全体の数値をチューニングする。
+Phase 3〜6（および Phase 4 のクラスマスタ）で機能・コンテンツ・見た目が揃ったあとに、ゲーム全体の数値をチューニングする。
 
 ### スコープ
 
 - [combat.md](../spec/combat.md) との突き合わせ・検証
-- 敵 `exp`、**growthPresets 表**・一次職 `growthTier` 割当、LvUP ペース
-- 一次職5種の Lv1 基礎ステ・スキル威力（具体スキルはマスタ確定後）
+- 敵 `exp`、**growthPresets 表**・クラス `growthTier` 割当、LvUP ペース
+- クラス 5 種の Lv1 基礎ステ・スキル威力（具体スキルはマスタ確定後）
 - ステージ難易度カーブ（敵ステ・ウェーブ構成）
 - Phase 3 以降のスキル習得・強化ツリーとの整合
-- **クラス転職（二次職）**: 一定 Lv で一次職から複数二次職へ分化；`promotion` データ本番化、転職 UI、セーブの `classId` 更新、習得スキル整合
-- **アクティブセット2枠目**の解放条件を決定・実装（ステージマイルストーン / Lv / クラス別等）
+- **アクティブセット 2 枠目**の解放条件を決定・実装（ステージマイルストーン / Lv / クラス別等）
   - `getUnlockedActiveSlotCount` に本番ロジックを実装
   - **UI**（スキルメニューの枠ロック）と**戦闘**（`createCooldowns` / `reconcileMemberBuild` 等）の両方で未解放枠を無効化
 
 ### スコープ外（Phase 7）
 
-- 三次職以降の拡張（二次職までを本番化対象とする）
+- 職階追加の再導入
 
 ---
 
 ## Phase 8 — メタ・デスクトップ
 
-Phase 7（バランス調整）完了後に着手。一次職マスタ・数値チューニングが揃ってからパーティ全体メタとデスクトップシェルを本番化する。
+Phase 7（バランス調整）完了後に着手。クラスマスタ・数値チューニングが揃ってからパーティ全体メタとデスクトップシェルを本番化する。
 
 - 勝利・オフライン時間から **globalExp** 付与
 - 強化ツリー（`enhancementTree.json`）：パーティ永続のステノード
@@ -329,15 +293,15 @@ Phase 2c（JSON クラス + 成長曲線）
     ↓
 Phase 3（スキル習得 + セット2枠目）
     ↓
-Phase 4a（一次職マスタ + GUI）  ← 次
+Phase 4a（クラスマスタ + GUI）  ← 次
     ↓
 Phase 4b（スキル説明自動生成）
     ↓
 Phase 4c（JSON 分割・開発効率）  ← 4b と並行可
     ↓
-Phase 5（本番スプライトアニメ）  ← 4 と並行も可（見た目のみ）
+Phase 5（本番スプライトアニメ + 編集ツール）  ← 4 と並行も可（見た目のみ）
     ↓
-Phase 6（スキル VFX：スキル別設定・新プリセット）
+Phase 6（スキル VFX + 編集ツール）
     ↓
 Phase 7（バランス調整）
     ↓

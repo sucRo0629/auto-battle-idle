@@ -32,7 +32,7 @@
 3. `afterDefense = floor(baseDamage × 100 / (100 + effectiveReg))`
 4. `final = max(1, floor(afterDefense × damageTakenMul))`
 
-一次職マスタ（`at_sorcerer` / `at_enchanter` / `at_geomancer` 等）は `damageType: "magic"` を使用。敵の `reg` が 0 のときも上式で最低 1 ダメージ。
+クラスマスタ（`at_sorcerer` / `at_enchanter` / `at_geomancer` 等）は `damageType: "magic"` を使用。敵の `reg` が 0 のときも上式で最低 1 ダメージ。
 
 ## 攻撃速度と基本攻撃
 

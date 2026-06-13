@@ -2,7 +2,7 @@
 
 ゲームデータは `data/*.json`。型とローダー：`src/battle/types.ts`, `loadGameData.ts`
 
-**スキルマスタ：** `data/classes.json`（15 一次職）と `data/skills.json`（共有パッシブ 21 + クラス別 basic/active）が本番マスタ。数値バランスは調整対象だが、ID・形状・パッシブ種別はこの仕様に従う。
+**スキルマスタ：** `data/classes.json`（15 クラス）と `data/skills.json`（共有パッシブ 21 + クラス別 basic/active）が本番マスタ。数値バランスは調整対象だが、ID・形状・パッシブ種別はこの仕様に従う。
 
 ## 用語（スキル vs 装備）
 
@@ -43,16 +43,16 @@
 
 例：`df_guardian`, `at_ranger`, `sp_cleric`
 
-## 職階（一次職 / 二次職）
+## クラス区分
 
-| 職階       | `jobTier` | 現状                     | Phase 7 以降                           |
-| ---------- | --------- | ------------------------ | -------------------------------------- |
-| **一次職** | `1`       | プレイ可能 15 種（下表） | 転職元                                 |
-| **二次職** | `2`       | 未定義（JSON 予約のみ）  | 一定 Lv で一次職から**複数候補へ分化** |
+| 区分         | 現状                     | 備考 |
+| ------------ | ------------------------ | ---- |
+| **プレイ可能** | 15 種（下表）            | `data/classes.json` に定義 |
+| **予約フィールド** | なし                  | `jobTier` / `promotion` / `promotesFrom` は廃止 |
 
-転職条件・候補は `classes.json` の `promotion`（Phase 7 で本番化）。現フェーズでは転職ロジックは実装しない。
+クラス ID と表示名、ロール、射程、スキル習得は `classes.json` を正とする。将来の追加クラスは同じ形式で拡張する。
 
-### 一次職マスタ（15 種）
+### クラスマスタ（15 種）
 
 表示名の英語肩書きは `epithetEn`（UI 表示は Phase 3c 以降）。
 
@@ -99,9 +99,9 @@
 
 未編成の残り 11 クラスは `DEFAULT_ROSTER_EXTRAS.demo` でアンロック（編成画面から選択可）。
 
-詳細な設計方針・Lv 習得表・TBD は **§一次職サポ設計方針** を正とする。実装履歴の詳細は Cursor プラン（結界師バリアヒーラー化・薬草師データ固め）も参照可。
+詳細な設計方針・Lv 習得表・TBD は **§クラスサポ設計方針** を正とする。実装履歴の詳細は Cursor プラン（結界師バリアヒーラー化・薬草師データ固め）も参照可。
 
-## 一次職サポ設計方針
+## クラスサポ設計方針
 
 ### 共通ルール
 
@@ -200,11 +200,11 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 距離用途では [battle-field.md §2.5](./battle-field.md#25-攻撃位置move新軸) の `effectiveRangePx` 共通式を使う。`0〜MELEE_RANGE_MAX_PX` は近接帯（slash VFX）で、停止位置や移動量の計算に 100px 境界は使わない。
 
-**一次職 `rangePx`（参考）：** 双刃士/闘技 0、鉄衛/護法 5、剣術 8、槍術 24、魔法 30、物理レンジ 40。
+**クラス `rangePx`（参考）：** 双刃士/闘技 0、鉄衛/護法 5、剣術 8、槍術 24、魔法 30、物理レンジ 40。
 
 ## クラスステータスと成長（Phase 4）
 
-`classes.json` の `ClassPreset` に加え、一次職は次を定義する。
+`classes.json` の `ClassPreset` に加え、各クラスは次を定義する。
 
 ```typescript
 type GrowthTier = 1 | 2 | 3; // UI: 低 / 中 / 高
@@ -240,8 +240,8 @@ passiveIds?: string[]; // クラス固有パッシブ（skills.json passives へ
 
 - 基本攻撃も `skills.json` の `actives` に定義し、`slotKind: 'basic'` で実行。
 - 基本攻撃 ID をセット枠（`equippedActiveSlots`）に入れない。
-- **defender / attacker:** Lv0 でアクティブ 2 種を習得（`skills[].level: 0` に 2 active ID）。**supporter:** Lv0 で **`active_1` のみ**（`active_2` は Lv20 枝候補。詳細は §一次職サポ設計方針）。
-- 戦闘エンジンは **習得済みアクティブを最大 4 枠まで**自動参加（段階解放: Lv0=2 / Lv15=3 / 二次職・Lv30=4）。
+- **defender / attacker:** Lv0 でアクティブ 2 種を習得（`skills[].level: 0` に 2 active ID）。**supporter:** Lv0 で **`active_1` のみ**（`active_2` は Lv20 枝候補。詳細は §クラスサポ設計方針）。
+- 戦闘エンジンは **習得済みアクティブを最大 4 枠まで**自動参加（段階解放: Lv0=2 / Lv15=3 / Lv30=4）。
 - **`equippedActiveSlots`** — スキルメニュー（テスト・バランス用）のみ。本番戦闘の参加判定には使わない。
 
 ### LvUP 習得データ
@@ -419,7 +419,7 @@ interface CharacterBuild {
 
 **旧 JSON 互換:** トップレベル `amount` のみの場合は `responses: [{ kind: "damage", amount, damageType? }]` に昇格。
 
-レガシー合成（未使用の一次職データに残る場合）:
+レガシー合成（未使用の旧クラスデータに残る場合）:
 
 | 効果                    | 合成ルール            |
 | ----------------------- | --------------------- |
