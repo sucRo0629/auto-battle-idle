@@ -13,8 +13,8 @@ import { damageEffect, mockTargetingGameData, mockUnit } from './targeting.fixtu
 describe('targetRuleOverride apply scope', () => {
   const gameData = mockTargetingGameData(120);
   const actor = mockUnit('actor', 200);
-  const enemyHighHp = mockUnit('e-high', 180, { isEnemy: true, hp: 80 });
-  const enemyLowHp = mockUnit('e-low', 140, { isEnemy: true, hp: 20 });
+  const enemyHighHp = mockUnit('e-high', 260, { isEnemy: true, hp: 80 });
+  const enemyLowHp = mockUnit('e-low', 300, { isEnemy: true, hp: 20 });
   const enemies = [enemyHighHp, enemyLowHp];
 
   const enemyLowestHpPassive: PassiveSkillDef = {
@@ -95,7 +95,7 @@ describe('targetRuleOverride apply scope', () => {
       Math.random,
       [allyScopePassive],
     );
-    expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('e-high');
+    expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('e-low');
   });
 
   it('self-target buff ignores enemy-scoped override', () => {

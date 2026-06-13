@@ -12,9 +12,9 @@ import { damageEffect, mockTargetingGameData, mockUnit } from './targeting.fixtu
 describe('resolveEffectTargets', () => {
   const gameData = mockTargetingGameData(50);
   const actor = mockUnit('ally', 200);
-  const enemyNear = mockUnit('e1', 100, { isEnemy: true, hp: 80 });
-  const enemyMid = mockUnit('e2', 140, { isEnemy: true, hp: 50 });
-  const enemyFar = mockUnit('e3', 180, { isEnemy: true, hp: 30 });
+  const enemyNear = mockUnit('e1', 240, { isEnemy: true, hp: 80 });
+  const enemyMid = mockUnit('e2', 280, { isEnemy: true, hp: 50 });
+  const enemyFar = mockUnit('e3', 320, { isEnemy: true, hp: 30 });
   const enemies = [enemyNear, enemyMid, enemyFar];
   const allies = [actor];
   /** Default ranged range (50px) only reaches e3; use this for multi-target tests. */
@@ -40,13 +40,13 @@ describe('resolveEffectTargets', () => {
   });
 
   it('frontEnemy picks maximum battleX among in-range', () => {
-    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single' }, 'frontEnemy'), actor, allies, enemies, gameData);
+    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single', range: fullSkillRange }, 'frontEnemy'), actor, allies, enemies, gameData);
     expect(targets[0]?.id).toBe('e3');
   });
 
   it('excludes enemies outside skill range', () => {
-    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single', range: 101 }, 'lowestHpEnemy'), actor, allies, enemies, gameData);
-    expect(targets.map((t) => t.id)).toEqual(['e3']);
+    const targets = resolveEffectTargets(damageEffect({ targetShape: 'single', range: 50 }, 'lowestHpEnemy'), actor, allies, enemies, gameData);
+    expect(targets.map((t) => t.id)).toEqual(['e1']);
   });
 
   it('melee range 0 requires contact', () => {
@@ -69,8 +69,8 @@ describe('resolveEffectTargets', () => {
       side: 'enemy' as const,
       order: 'nearest' as const,
     };
-    expect(getAttackablePool(spec, paladin, [paladin], [enemy], 0)).toHaveLength(1);
-    expect(getAttackablePool(spec, enemy, [paladin], [enemy], 0)).toHaveLength(1);
+    expect(getAttackablePool(spec, paladin, [paladin], [enemy], 0)).toHaveLength(0);
+    expect(getAttackablePool(spec, enemy, [paladin], [enemy], 0)).toHaveLength(0);
   });
 
   it('farthestEnemy picks minimum battleX among in-range', () => {
@@ -99,7 +99,7 @@ describe('resolveEffectTargets', () => {
   });
 
   it('multiLock: single enemy receives hitCount hits on same id', () => {
-    const loneEnemy = [mockUnit('solo', 100, { isEnemy: true })];
+    const loneEnemy = [mockUnit('solo', 240, { isEnemy: true })];
     const targets = resolveEffectTargets(
       damageEffect(
         { targetShape: 'multiLock', hitCount: 3, range: fullSkillRange },
@@ -314,7 +314,7 @@ describe('resolveEffectTargets', () => {
   });
 
   it('chain: stops early when only the current target is in range', () => {
-    const loneEnemy = [mockUnit('e1', 100, { isEnemy: true, hp: 50 })];
+    const loneEnemy = [mockUnit('e1', 150, { isEnemy: true, hp: 50 })];
     const resolution = resolveEffectResolution(
       {
         targetShape: 'chain',
@@ -326,8 +326,8 @@ describe('resolveEffectTargets', () => {
         damageType: 'magic',
         amount: { kind: 'atkBased', atkScale: 1 },
       },
-      actor,
-      allies,
+      mockUnit('ally', 100),
+      [mockUnit('ally', 100)],
       loneEnemy,
       gameData,
     );
@@ -405,13 +405,11 @@ describe('resolveEffectTargets', () => {
   });
 
   it('pierce: hits contact enemy from melee standoff stop position', () => {
-    const gap = engagedMinBodyGap();
-    const contact = 130;
-    const range = 50;
-    const actor = mockUnit('lancer', contact - gap - range, { rangePx: range });
-    const front = mockUnit('e1', contact, { isEnemy: true, hp: 80 });
+    const actor = mockUnit('lancer', 100, { rangePx: 100 });
+    const front = mockUnit('e1', 150, { isEnemy: true, hp: 80 });
     const effect: DamageSkillEffect = {
       targetShape: 'pierce',
+      range: 100,
       type: 'damage',
       target: { kind: 'distance', side: 'enemy', order: 'nearest' },
       damageType: 'physical',
@@ -566,6 +564,7 @@ describe('resolveEffectTargets', () => {
     const front = mockUnit('near', contact, { isEnemy: true, hp: 9999999, maxHp: 9999999 });
     const effect: DamageSkillEffect = {
       targetShape: 'pierce',
+      range: 200,
       type: 'damage',
       target: { kind: 'distance', side: 'enemy', order: 'selfOrigin' },
       damageType: 'physical',

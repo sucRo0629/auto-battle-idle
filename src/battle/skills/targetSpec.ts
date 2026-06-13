@@ -503,14 +503,17 @@ export function pickTargetFromPool(
   }
 
   if (spec.kind === "stat") {
+    const selectable =
+      spec.side === "ally" ? pool.filter((unit) => unit.id !== actor.id) : pool;
+    if (selectable.length === 0) return null;
     const pickHigher = spec.order === "highest";
     const pickLower = spec.order === "lowest" || spec.order === "ratio";
     if (spec.stat === "hp" && spec.order === "ratio") {
-      return pool.reduce((a, b) =>
+      return selectable.reduce((a, b) =>
         currentHpRatio(a) <= currentHpRatio(b) ? a : b
       );
     }
-    return pool.reduce((a, b) => {
+    return selectable.reduce((a, b) => {
       const av = compareStat(a, spec.stat);
       const bv = compareStat(b, spec.stat);
       if (pickHigher) return av >= bv ? a : b;
@@ -598,10 +601,18 @@ export function orderPoolByTarget(
 
   if (spec.kind === "stat") {
     if (spec.stat === "hp" && spec.order === "ratio") {
-      return copy.sort((a, b) => currentHpRatio(a) - currentHpRatio(b));
+      const selectable =
+        spec.side === "ally"
+          ? copy.filter((unit) => unit.id !== actor.id)
+          : copy;
+      return selectable.sort((a, b) => currentHpRatio(a) - currentHpRatio(b));
     }
     const desc = spec.order === "highest";
-    return copy.sort((a, b) => {
+    const selectable =
+      spec.side === "ally"
+        ? copy.filter((unit) => unit.id !== actor.id)
+        : copy;
+    return selectable.sort((a, b) => {
       const av = compareStat(a, spec.stat);
       const bv = compareStat(b, spec.stat);
       return desc ? bv - av : av - bv;
