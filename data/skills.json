@@ -1226,7 +1226,6 @@
             "kind": "atkBased",
             "atkScale": 1.4
           },
-          "range": 50,
           "vfx": {
             "preset": "orb"
           },
@@ -1254,7 +1253,6 @@
             "kind": "atkBased",
             "atkScale": 1.1
           },
-          "range": 50,
           "vfx": {
             "preset": "orb"
           },
