@@ -445,9 +445,6 @@ export class SkillExecutor {
     const rangePx = resolveSkillRangePx(actor, effectDef);
     const moveDeltaPx = Math.abs(toX - fromX);
     const engageToX = resolveAttackBattleX(actor, anchor.battleX, this.gameData, rangePx);
-    // #region agent log
-    fetch('http://127.0.0.1:7541/ingest/180ac9f2-daf7-4294-9ba1-9703f79153b8',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'78c6df'},body:JSON.stringify({sessionId:'78c6df',runId:'post-fix',hypothesisId:'H1-H4',location:'SkillExecutor.ts:applyMoveEffect',message:'lancer move applied',data:{skillId:skill.id,actorId:actor.id,classId:actor.classId,fromX,toX,moveDeltaPx,rangePx,traitsRangePx:actor.traits.rangePx,moveMode:effectDef.moveMode??'engage',anchorOffsetPx:effectDef.anchorOffsetPx,anchorId:anchor.id,anchorX:anchor.battleX,engageToX,inRange:isWithinSkillRange(actor,anchor,rangePx),battleDist:battleDistance(actor,anchor)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (fromX === toX) {
       this.emit({
         type: 'skill',

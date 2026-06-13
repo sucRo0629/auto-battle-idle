@@ -83,38 +83,6 @@ export function computePartyFormationBattleX(
     );
   });
 
-  // #region agent log
-  const hasAlchemist = units.some((u) => u.id.includes('alchemist') || u.role === 'supporter');
-  const hasGuardian = units.some((u) => u.role === 'defender');
-  if (hasAlchemist && hasGuardian && units.length >= 2) {
-    fetch('http://127.0.0.1:7541/ingest/180ac9f2-daf7-4294-9ba1-9703f79153b8', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Debug-Session-Id': '96f866',
-      },
-      body: JSON.stringify({
-        sessionId: '96f866',
-        runId: 'pre-fix',
-        hypothesisId: 'H1',
-        location: 'partyFormation.ts:computePartyFormationBattleX',
-        message: 'formation slot order',
-        data: {
-          sorted: sorted.map((u, slot) => ({
-            slot,
-            id: u.id,
-            role: u.role,
-            formationRow: u.formationRow,
-            rangePx: u.rangePx,
-            battleX: positions.get(u.id),
-          })),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
-
   return positions;
 }
 
