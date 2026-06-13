@@ -46,11 +46,6 @@
       "id": "sp_cleric_passive_1",
       "name": "救命の心得",
       "effect": "specialEffect",
-      "targetRuleOverride": {
-        "kind": "distance",
-        "side": "enemy",
-        "order": "nearest"
-      },
       "specialEffectApplyTo": "heal",
       "specialEffect": {
         "scale": 1.5,
@@ -281,34 +276,44 @@
       "name": "sp_abjurer_passive_1",
       "effect": "buff",
       "buffSubKind": "barrier",
+      "barrierAmount": {
+        "kind": "atkBased",
+        "atkScale": 1.5
+      },
       "buffTargetRule": {
         "kind": "stat",
         "side": "ally",
         "stat": "hp",
         "order": "highest"
       },
-      "barrierAmount": {
-        "kind": "atkBased",
-        "atkScale": 1.5
-      },
       "periodicTrigger": "waveStart"
     },
     {
       "id": "sp_abjurer_passive_2",
       "name": "sp_abjurer_passive_2",
-      "effect": "excessHealToBarrier",
-      "barrierScale": 1.5,
-      "excessHealSources": [
-        "outgoing",
-        "incoming"
-      ]
+      "effect": "buff",
+      "buffSubKind": "barrier",
+      "barrierAmount": {
+        "kind": "atkBased",
+        "atkScale": 0.7
+      },
+      "buffTargetRule": {
+        "kind": "stat",
+        "side": "ally",
+        "stat": "hp",
+        "order": "ratio"
+      },
+      "periodicTrigger": "interval",
+      "intervalSec": 10
     },
     {
       "id": "sp_abjurer_passive_3",
       "name": "sp_abjurer_passive_3",
       "effect": "buff",
       "buffSubKind": "stat",
-      "buffStat": "damageTaken",
+      "buffStat": [
+        "damageTaken"
+      ],
       "buffMultiplier": 0.95,
       "buffTargetRule": {
         "kind": "stat",
@@ -486,6 +491,15 @@
       "dispelCount": 1,
       "dispelTags": [
         "dot"
+      ]
+    },
+    {
+      "id": "sp_cleric_passive_2",
+      "name": "sp_cleric_passive_2",
+      "effect": "excessHealToBarrier",
+      "barrierScale": 1,
+      "excessHealSources": [
+        "outgoing"
       ]
     }
   ],

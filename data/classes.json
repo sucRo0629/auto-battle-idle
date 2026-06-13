@@ -505,7 +505,8 @@
         "level": 0,
         "skillIds": [
           "sp_cleric_passive_1",
-          "sp_cleric_active_1"
+          "sp_cleric_active_1",
+          "sp_cleric_passive_2"
         ]
       }
     ],
@@ -515,7 +516,8 @@
       "def": 2
     },
     "passiveIds": [
-      "sp_cleric_passive_1"
+      "sp_cleric_passive_1",
+      "sp_cleric_passive_2"
     ]
   },
   {
@@ -544,8 +546,8 @@
         "level": 0,
         "skillIds": [
           "sp_abjurer_passive_1",
-          "sp_abjurer_passive_2",
-          "sp_abjurer_active_1"
+          "sp_abjurer_active_1",
+          "sp_abjurer_passive_2"
         ]
       },
       {
