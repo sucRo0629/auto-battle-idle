@@ -268,6 +268,7 @@ HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に
 ### 4.5 スキル `move`
 
 - `battleX` — `SkillSequenceRunner` が線形補間（正本・描画も同値）
+- `effectiveRangePx` — `resolveMaxEffectiveRangePx(unit, gameData)`（debug / 検証用の実効射程）
 - 敵背後へのプレイヤー `toAnchor`（正オフセット）はスコープ内。敵のプレイヤー背後移動はスコープ外
 
 ### 4.6 非接敵 tick

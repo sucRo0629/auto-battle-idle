@@ -1143,6 +1143,8 @@ export interface CombatantSnapshot {
   reg: number;
   role?: Role;
   rangePx: number;
+  /** 現在の実効射程（effect.range も含めた最大値） */
+  effectiveRangePx: number;
   damageType: DamageType;
   basicAttackVfx: SkillVfxDef;
   spriteKey: string;

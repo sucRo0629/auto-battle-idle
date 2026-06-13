@@ -1237,6 +1237,7 @@ export class BattleEngine {
       reg: c.reg,
       role: c.isEnemy ? undefined : c.role,
       rangePx: c.traits.rangePx,
+      effectiveRangePx: resolveMaxEffectiveRangePx(c, this.gameData),
       damageType: c.traits.damageType,
       basicAttackVfx: c.traits.basicAttackVfx,
       spriteKey: c.spriteKey,
