@@ -573,7 +573,7 @@
     "epithetEn": "Herbalist",
     "formationRow": "front",
     "traits": {
-      "rangePx": 90
+      "rangePx": 80
     },
     "maxHp": 98,
     "atk": 17,

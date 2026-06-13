@@ -448,12 +448,13 @@ export function pickTargetFromPool(
   }
 
   if (actor.isEnemy) {
-    if (
-      spec.kind === "distance" &&
-      spec.side === "enemy" &&
-      spec.order === "nearest"
-    ) {
-      return pickHighestThreatAlly(pool);
+    if (spec.kind === "distance" && spec.side === "enemy") {
+      if (spec.order === "nearest" && !options?.moveAnchor) {
+        return pickHighestThreatAlly(pool);
+      }
+      if (spec.order === "nearest" || spec.order === "farthest") {
+        return pickEnemyByActorDistance(actor, pool, spec.order);
+      }
     }
     return pool[0] ?? null;
   }
@@ -545,6 +546,20 @@ export function orderPoolByTarget(
     spec.order === "nearest"
   ) {
     return copy.sort(compareThreatTargetPriority);
+  }
+
+  if (
+    actor.isEnemy &&
+    spec.kind === "distance" &&
+    spec.side === "enemy" &&
+    spec.order === "farthest"
+  ) {
+    const actorX = getBattleX(actor);
+    return copy.sort((a, b) => {
+      const da = Math.abs(getBattleX(a) - actorX);
+      const db = Math.abs(getBattleX(b) - actorX);
+      return db - da;
+    });
   }
 
   if (spec.kind === "distance" && spec.side === "ally") {

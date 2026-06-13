@@ -62,5 +62,28 @@
     "traits": {
       "stationary": true
     }
+  },
+  {
+    "id": "test_to_ranged",
+    "displayName": "遠隔狙い",
+    "maxHp": 100,
+    "atk": 10,
+    "def": 5,
+    "reg": 0,
+    "exp": 1,
+    "basicAttackSkillId": "test_to_ranged_basic_attack",
+    "traits": {
+      "rangePx": 300,
+      "damageType": "physical",
+      "basicAttackVfx": {
+        "preset": "arrow",
+        "arc": true
+      },
+      "stationary": false
+    },
+    "attackSpeedTier": "normal",
+    "passiveSkillIds": [
+      "test_to_ranged_passive_1"
+    ]
   }
 ]

@@ -417,6 +417,17 @@
         "kind": "all",
         "side": "ally"
       }
+    },
+    {
+      "id": "test_to_ranged_passive_1",
+      "name": "test_to_ranged_passive_1",
+      "effect": "targetRuleOverride",
+      "targetRuleOverride": {
+        "kind": "distance",
+        "side": "enemy",
+        "order": "farthest"
+      },
+      "targetRuleOverrideApplyTo": "enemy"
     }
   ],
   "actives": [
@@ -2062,6 +2073,28 @@
           },
           "targetShape": "multiLock",
           "hitCount": 2
+        }
+      ]
+    },
+    {
+      "id": "test_to_ranged_basic_attack",
+      "name": "test_to_ranged_basic_attack",
+      "trigger": {
+        "kind": "time",
+        "value": 2
+      },
+      "effect": [
+        {
+          "target": {
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
+          },
+          "type": "damage",
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1
+          }
         }
       ]
     }

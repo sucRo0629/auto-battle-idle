@@ -41,6 +41,38 @@ describe('targetRuleOverride apply scope', () => {
     expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('e-low');
   });
 
+  it('enemy actor override picks farthest player ally over highest threat', () => {
+    const enemyActor = mockUnit('e1', 400, { isEnemy: true });
+    const front = mockUnit('front', 350, { threat: 100 });
+    const back = mockUnit('back', 200, { threat: 10 });
+    const farthestPassive: PassiveSkillDef = {
+      id: 'passive_farthest',
+      name: '狙撃',
+      effect: 'targetRuleOverride',
+      targetRuleOverrideApplyTo: 'enemy',
+      targetRuleOverride: {
+        kind: 'distance',
+        side: 'enemy',
+        order: 'farthest',
+      },
+    };
+    const resolution = resolveEffectResolution(
+      {
+        type: 'damage',
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        amount: { kind: 'atkBased', atkScale: 1 },
+        range: 400,
+      },
+      enemyActor,
+      [front, back],
+      [enemyActor],
+      gameData,
+      Math.random,
+      [farthestPassive],
+    );
+    expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('back');
+  });
+
   it('ally-scoped override does not apply to enemy-facing damage', () => {
     const allyScopePassive: PassiveSkillDef = {
       ...enemyLowestHpPassive,

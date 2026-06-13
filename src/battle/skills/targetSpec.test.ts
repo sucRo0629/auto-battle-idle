@@ -203,6 +203,16 @@ describe('getTargetPool / pickTargetFromPool', () => {
     expect(picked?.id).toBe('guard');
   });
 
+  it('enemy distance/enemy/farthest picks farthest player ally by battleX distance', () => {
+    const enemyActor = mockUnit('e1', 400, { isEnemy: true });
+    const front = mockUnit('front', 350, { threat: 100 });
+    const back = mockUnit('back', 200, { threat: 10 });
+    const spec = { kind: 'distance', side: 'enemy', order: 'farthest' } as const;
+    const pool = getTargetPool(spec, enemyActor, [front, back], [enemyActor]);
+    const picked = pickTargetFromPool(spec, enemyActor, pool);
+    expect(picked?.id).toBe('back');
+  });
+
   it('filters by debuff status', () => {
     const debuffed = mockUnit('e2', 40, {
       isEnemy: true,

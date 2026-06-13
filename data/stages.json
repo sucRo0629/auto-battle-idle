@@ -30,6 +30,24 @@
     ]
   },
   {
+    "id": "ranged_test",
+    "displayName": "ranged_test",
+    "waves": [
+      {
+        "enemies": [
+          {
+            "templateId": "test_dummy",
+            "spawnX": 0
+          },
+          {
+            "templateId": "test_to_ranged",
+            "spawnX": 100
+          }
+        ]
+      }
+    ]
+  },
+  {
     "id": "1",
     "displayName": "Stage 1",
     "waves": [
@@ -60,7 +78,7 @@
             "spawnX": 160
           },
           {
-            "templateId": "test_ranged",
+            "templateId": "test_to_ranged",
             "spawnX": 220
           }
         ]

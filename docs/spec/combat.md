@@ -175,6 +175,8 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 
 `pickHighestThreatAlly`: 生存味方のうち射程内プールから `threat ?? baseThreat ?? 0` が最大の 1 体を選ぶ（決定論的）。同率タイは `battleX` が大きい方（前線側）→ `id` 辞書順。ヘイト 2 位以降が選ばれることはない。
 
+`targetRuleOverride` 等で `distance/enemy/farthest`（または `nearest` + `moveAnchor`）に上書きされた場合は、敵 actor も使用者との `battleX` 距離で至近/最遠を選ぶ（ヘイトは使わない）。
+
 ## ステータス効果
 
 対象ステ：`atk`, `def`, `reg`（耐魔）, `damageTaken`, `attackSpeed`（攻撃速度。基本攻撃 CD 回復倍率に適用）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
