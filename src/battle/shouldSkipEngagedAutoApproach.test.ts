@@ -112,4 +112,23 @@ describe('shouldSkipEngagedAutoApproach', () => {
       shouldSkipEngagedAutoApproach(archer, [archer], [rangedEnemy], gameData),
     ).toBe(true);
   });
+
+  it('skips archer when test_ranged is in attack range', () => {
+    const archer = mockUnit({ id: 'archer', battleX: 180 });
+    const testRanged = mockUnit({
+      id: 'test_ranged',
+      isEnemy: true,
+      battleX: 210,
+      traits: {
+        rangePx: 100,
+        damageType: 'physical',
+        basicAttackVfx: { preset: 'arrow', arc: true },
+      },
+      cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
+    });
+
+    expect(
+      shouldSkipEngagedAutoApproach(archer, [archer], [testRanged], gameData),
+    ).toBe(true);
+  });
 });

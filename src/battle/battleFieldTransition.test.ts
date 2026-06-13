@@ -176,7 +176,7 @@ describe(
       expect(maxJump).toBeLessThanOrEqual(8);
     });
 
-    it('T-§4.4-02: enemy with rangePx 100 battleX never increases after short-range wipe', () => {
+    it('T-§4.4-02: enemy with rangePx 100 does not freeze after short-range wipe', () => {
       const engine = createStage1FastMeleeWipeEngine();
 
       const wiped = advanceUntil(
@@ -188,6 +188,7 @@ describe(
 
       let prevBattleX: number | null = null;
       let sawLongRange = false;
+      let sawBattleXChange = false;
 
       for (let i = 0; i < 600; i++) {
         engine.tick(TICK_DT);
@@ -200,12 +201,15 @@ describe(
         if (!longRange) continue;
         sawLongRange = true;
         if (prevBattleX !== null) {
-          expect(longRange.battleX).toBeLessThanOrEqual(prevBattleX + 0.01);
+          if (Math.abs(longRange.battleX - prevBattleX) > 0.5) {
+            sawBattleXChange = true;
+          }
         }
         prevBattleX = longRange.battleX;
       }
 
       expect(sawLongRange).toBe(true);
+      expect(sawBattleXChange).toBe(true);
     });
 
     it('T-deploy-01: enemies start off-screen right during PartyDeploy', () => {
@@ -289,6 +293,38 @@ describe(
       expect(
         longRangeStartX - longRangeEndX > 10 || longRangeHit || partyResourceDrop,
       ).toBe(true);
+    });
+
+    it('T-§4.4-04: after front melee dies, allies keep advancing toward test_ranged', () => {
+      const engine = createStage1Wave1MeleeFirstDeathEngine();
+      waitForEngaged(engine);
+
+      const wiped = advanceUntil(
+        engine,
+        (snap) => isShortRangeWipedEngaged(snap, 0),
+        90_000,
+      );
+      expect(wiped).not.toBeNull();
+
+      const startMaxAllyX = Math.max(
+        ...wiped!.allies.filter((a) => a.hp > 0).map((a) => a.battleX),
+      );
+      let advanced = false;
+
+      for (let i = 0; i < 180; i++) {
+        engine.tick(TICK_DT);
+        const snap = engine.getSnapshot();
+        if (snap.waveIndex !== 0 || !snap.engaged) continue;
+        const currentMaxAllyX = Math.max(
+          ...snap.allies.filter((a) => a.hp > 0).map((a) => a.battleX),
+        );
+        if (currentMaxAllyX > startMaxAllyX + 0.5) {
+          advanced = true;
+          break;
+        }
+      }
+
+      expect(advanced).toBe(true);
     });
 
     it('T-wave2-01: front row per-unit approach stop battleX on wave 2 engage', () => {

@@ -12,7 +12,6 @@ import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
   getEnemyContactX,
-  getMeleeEnemyContactX,
   getPlayerContactX,
   resolveFormationRangePx,
   resolveMaxEffectiveRangePx,
@@ -167,8 +166,6 @@ export class BattleEngine {
   /** 訓練ステージ: 配置済み・接敵待ち（startBattle / respawn 時に即接敵） */
   private trainingWaveReadyToEngage = false;
   private engaged = false;
-  /** 近接敵が生存していた最後の前線 battleX（近接全滅後の接触点ジャンプ抑制） */
-  private engagedLastMeleeContactX: number | null = null;
   /** 接敵中に到達した味方最前線 battleX（前列戦死時の layout アンカー維持） */
   private engagedFrontLineAnchor: number | null = null;
   /** Victory 退出開始済み */
@@ -489,20 +486,11 @@ export class BattleEngine {
         ? playerContact
         : Math.max(this.engagedFrontLineAnchor, playerContact);
 
-    const meleeContact = getMeleeEnemyContactX(this.enemies, this.gameData);
-    if (meleeContact !== null) {
-      this.engagedLastMeleeContactX = meleeContact;
-    }
-
-    const frozenMeleeContactX =
-      meleeContact === null ? this.engagedLastMeleeContactX : null;
-
     const moveStep = moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
     const playerApproachTargets = resolveAllPlayerApproachBattleX(
       this.players,
       this.enemies,
       this.gameData,
-      { frozenMeleeContactX },
     );
 
     for (const ally of this.players) {
@@ -553,7 +541,6 @@ export class BattleEngine {
   }
 
   private clearEngagedVisualState(): void {
-    this.engagedLastMeleeContactX = null;
     this.engagedFrontLineAnchor = null;
     this.engagedComposition.clear();
     for (const unit of [...this.players, ...this.enemies]) {
@@ -702,9 +689,6 @@ export class BattleEngine {
 
   /** 接敵中: 前列 battleX が接近目標を越えないよう clamp（近接前線のみ） */
   private clampEngagedFrontRowBattleX(): void {
-    const meleeContact = getMeleeEnemyContactX(this.enemies, this.gameData);
-    if (meleeContact === null) return;
-
     const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
     const leadingRow = getLeadingPlayerFormationRow(placementInputs);
     if (leadingRow === null) return;

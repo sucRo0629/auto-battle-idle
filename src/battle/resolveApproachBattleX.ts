@@ -205,60 +205,6 @@ export function resolveEnemyBasicAttackTarget(
   return resolveEnemyAttackTargetPlayer(enemy, players, enemies, gameData);
 }
 
-/** 後衛: 敵前線が凍結点より奥へ退いたあと、右追いジャンプを抑止（§4.4） */
-function capForwardAfterFrontContactJump(
-  player: CombatantState,
-  players: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-  approachX: number,
-  frozenFrontContactX: number | null,
-): number {
-  if (player.formationRow !== 'back') return approachX;
-  const front = getEnemyContactX(enemies);
-  if (
-    front === null ||
-    frozenFrontContactX === null ||
-    front <= frozenFrontContactX
-  ) {
-    return approachX;
-  }
-  if (
-    approachX > player.battleX &&
-    resolveOutOfRangeDamagedAllyHealTarget(
-      player,
-      players,
-      enemies,
-      gameData,
-    )
-  ) {
-    return approachX;
-  }
-  if (approachX > player.battleX) {
-    return player.battleX;
-  }
-  return approachX;
-}
-
-function resolveApproachEnemyContact(
-  enemies: CombatantState[],
-  frozenFrontContactX: number | null,
-): number | null {
-  const front = getEnemyContactX(enemies);
-  if (front === null) return null;
-  if (frozenFrontContactX !== null && front > frozenFrontContactX) {
-    return frozenFrontContactX;
-  }
-  return front;
-}
-
-function capBackRowRangeStop(
-  _player: CombatantState,
-  rangeStopX: number,
-): number {
-  return rangeStopX;
-}
-
 /** 前列は敵最前線より左（rear 側）に留める — battleX 過進軍防止 */
 function capFrontRowBeforeEnemyContact(
   player: CombatantState,
@@ -357,11 +303,6 @@ function resolveNonDefenderApproachBattleX(
   );
 }
 
-export interface PlayerApproachOptions {
-  /** 敵前線凍結 battleX（前線退避後の後衛ジャンプ抑制。§4.4） */
-  frozenMeleeContactX?: number | null;
-}
-
 function toPlacementInput(unit: CombatantState) {
   return {
     id: unit.id,
@@ -406,7 +347,6 @@ function resolveIndividualPlayerApproachBattleX(
   enemies: CombatantState[],
   gameData: GameData,
   contact: number,
-  frozenFrontContactX: number | null,
 ): number {
   let approachX =
     player.role === 'defender'
@@ -444,17 +384,7 @@ function resolveIndividualPlayerApproachBattleX(
     return approachX;
   }
 
-  return capBackRowRangeStop(
-    player,
-    capForwardAfterFrontContactJump(
-      player,
-      players,
-      enemies,
-      gameData,
-      approachX,
-      frozenFrontContactX,
-    ),
-  );
+  return approachX;
 }
 
 /** 全味方の接敵目標 battleX（列内スペーシング適用済み） */
@@ -462,10 +392,8 @@ export function resolveAllPlayerApproachBattleX(
   players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
-  options: PlayerApproachOptions = {},
 ): Map<string, number> {
-  const frozenFrontContactX = options.frozenMeleeContactX ?? null;
-  const contact = resolveApproachEnemyContact(enemies, frozenFrontContactX);
+  const contact = getEnemyContactX(enemies);
   if (contact === null) {
     return new Map(players.map((p) => [p.id, p.battleX]));
   }
@@ -480,7 +408,6 @@ export function resolveAllPlayerApproachBattleX(
         enemies,
         gameData,
         contact,
-        frozenFrontContactX,
       ),
     );
   }
@@ -566,14 +493,8 @@ export function resolvePlayerApproachBattleX(
   players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
-  options: PlayerApproachOptions = {},
 ): number {
-  const all = resolveAllPlayerApproachBattleX(
-    players,
-    enemies,
-    gameData,
-    options,
-  );
+  const all = resolveAllPlayerApproachBattleX(players, enemies, gameData);
   return all.get(player.id) ?? player.battleX;
 }
 

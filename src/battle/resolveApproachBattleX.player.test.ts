@@ -589,7 +589,7 @@ describe('resolvePlayerApproachBattleX', () => {
     expect(stop).toBe(280 - 200);
   });
 
-  it('does not lunge right after enemy melee wipe when rear ranged remains', () => {
+  it('approaches test_ranged when melee contact is gone', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
@@ -610,9 +610,8 @@ describe('resolvePlayerApproachBattleX', () => {
       [archer],
       [ranged],
       gameData,
-      { frozenMeleeContactX: 200 },
     );
-    expect(stop).toBe(80);
+    expect(stop).toBe(220);
   });
 
   it('front row survivor inherits forward depth when same-range tank falls', () => {

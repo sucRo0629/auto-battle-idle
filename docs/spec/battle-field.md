@@ -241,22 +241,22 @@ HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に
 
 ### 4.4 自動接近（`battleX`）
 
-接近（chase）と攻撃停止（attack）は **別プール** で解決する（`resolveApproachBattleX.ts`）。
+接近（chase）と攻撃停止（attack）は **同じ target 判定系** を共有し、停止距離だけ `effectiveRangePx` で解く（`resolveApproachBattleX.ts`）。
+`getMeleeEnemyContactX` は表示や旧互換 helper 用で、接近停止の正本ではない。
 
 | 側                           | chase（毎 tick 再評価）                                           | attack / 停止判定                                                  |
 | ---------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------ |
 | 敵                           | 全生存プレイヤーからヘイト最大（`resolveEnemyChaseTargetPlayer`） | 射程内プレイヤーからヘイト最大（`resolveEnemyAttackTargetPlayer`） |
-| 味方（defender）             | 敵最前線（前線ユニット → なければ最前敵）                         | 同上プールで `effectiveRangePx` 内なら停止                         |
-| 味方（attacker / supporter） | ターゲット spec の敵プールから **奥**（`battleX` 最大）           | 射程内の敵から spec 順                                             |
+| 味方（defender）             | 敵全体の接触点を基準に前進                                        | attack プールで `effectiveRangePx` 内なら停止                      |
+| 味方（attacker / supporter） | ターゲット spec の敵プールから **奥**（`battleX` 最大）           | 同じ attack プールで `effectiveRangePx` 内なら停止                |
 
 **停止 X：** chase 対象の `battleX` に対し `resolveApproachAttackBattleX`（§2.5 と同じ射程式）。敵は `capEngagedEnemyApproachBattleX` により左（`battleX` 減少）のみ。
 
-**自動接近スキップ：** `shouldSkipEngagedAutoApproach` — attack プールに 1 体でもいれば接近しない（射程内で攻撃待機）。
+**自動接近スキップ：** `shouldSkipEngagedAutoApproach` — attack プールに 1 体でもいれば接近しない（射程内で攻撃待機）。`test_ranged` も通常の attack プールとして扱う。
 
 **味方の追加 cap：**
 
-- 前衛（`formationRow !== 'back'`）：敵最前線より右へ過進軍しない（`capFrontRowBeforeEnemyContact`）
-- 後衛：前線ユニット全滅後は右追いジャンプを抑止（`capForwardAfterMeleeWipe`）。前線ユニット生存中は敵接触点を `frozenMeleeContactX` で凍結可能
+- 前衛（`formationRow !== 'back'`）：敵全体の接触点より右へ過進軍しない（`capFrontRowBeforeEnemyContact`）
 - 接近ターゲットの row-order clamp は前衛 / 後衛で共通で、`applyFormationRowApproachSpacing` の後に `capApproachFormationOrder` で適用する
 
 **敵の追い替え：** 前線ユニットが後列ヘイトへ追いかけている間も、毎 tick でヘイト 1 位を chase 対象にする（スティッキー chase ID なし）。射程内に入ったら attack プールで停止・攻撃。
