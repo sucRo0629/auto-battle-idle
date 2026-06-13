@@ -1,9 +1,13 @@
 import type { BattleSnapshot, CombatantSnapshot } from "../battle/types.ts";
 
 const CANVAS_W = 480;
-const CANVAS_H = 157;
+const MIN_CANVAS_H = 157;
 const DOT_RADIUS = 4;
 const LABEL_FONT = "11px 'Segoe UI', system-ui, sans-serif";
+const FIRST_LANE_Y = 72;
+const LANE_STEP = 36;
+const LABEL_Y_OFFSET = 24;
+const BOTTOM_PADDING = 20;
 
 export class BattleXDebugCanvas {
   private canvas: HTMLCanvasElement | null = null;
@@ -14,7 +18,7 @@ export class BattleXDebugCanvas {
   mount(parent: HTMLElement): void {
     this.canvas = document.createElement("canvas");
     this.canvas.width = CANVAS_W;
-    this.canvas.height = CANVAS_H;
+    this.canvas.height = MIN_CANVAS_H;
     this.canvas.className = "battle-x-debug-canvas";
     this.canvas.hidden = !this.visible;
     parent.appendChild(this.canvas);
@@ -56,9 +60,16 @@ export class BattleXDebugCanvas {
     const { canvas, ctx, snapshot } = this;
     if (!canvas || !ctx || !snapshot) return;
 
+    const units = [
+      ...this.sortByBattleX(snapshot.allies),
+      ...this.sortByBattleX(snapshot.enemies),
+    ].sort((a, b) => a.battleX - b.battleX);
+    this.ensureCanvasHeight(canvas, units.length);
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "rgba(14, 18, 28, 0.96)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = false;
 
     ctx.save();
     ctx.font = LABEL_FONT;
@@ -66,15 +77,8 @@ export class BattleXDebugCanvas {
     ctx.lineWidth = 1;
 
     this.drawHeader(ctx);
-    this.drawAxis(ctx);
-    this.drawUnits(
-      ctx,
-      [
-        ...this.sortByBattleX(snapshot.allies),
-        ...this.sortByBattleX(snapshot.enemies),
-      ].sort((a, b) => a.battleX - b.battleX),
-      72,
-    );
+    this.drawAxis(ctx, canvas.height);
+    this.drawUnits(ctx, units);
 
     ctx.restore();
   }
@@ -86,20 +90,28 @@ export class BattleXDebugCanvas {
     ctx.fillText("raw battleX by combatant id", 110, 14);
   }
 
-  private drawAxis(ctx: CanvasRenderingContext2D): void {
+  private drawAxis(ctx: CanvasRenderingContext2D, canvasHeight: number): void {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
     ctx.beginPath();
     ctx.moveTo(0, 32);
     ctx.lineTo(CANVAS_W, 32);
     ctx.stroke();
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.28)";
     ctx.fillStyle = "#72809a";
     ctx.textAlign = "center";
+    ctx.lineWidth = 1;
+
+    // Y axis line: draw a crisp 1px line from top to bottom of the plotted area.
+    ctx.beginPath();
+    ctx.moveTo(0.5, 28);
+    ctx.lineTo(0.5, canvasHeight - 8);
+    ctx.stroke();
+
     for (const x of [0, 120, 240, 360, 480]) {
       ctx.beginPath();
       ctx.moveTo(x, 28);
-      ctx.lineTo(x, CANVAS_H - 8);
+      ctx.lineTo(x, canvasHeight - 8);
       ctx.stroke();
       ctx.fillText(String(x), x, 24);
     }
@@ -108,15 +120,15 @@ export class BattleXDebugCanvas {
   private drawUnits(
     ctx: CanvasRenderingContext2D,
     units: CombatantSnapshot[],
-    y: number,
   ): void {
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(CANVAS_W, y);
-    ctx.stroke();
+    for (const [index, unit] of units.entries()) {
+      const y = FIRST_LANE_Y + index * LANE_STEP;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(CANVAS_W, y);
+      ctx.stroke();
 
-    for (const unit of units) {
       const x = this.clamp(unit.battleX, 6, CANVAS_W - 6);
       this.drawRangeBand(ctx, unit, y, unit.effectiveRangePx, "effective");
       this.drawRangeBand(ctx, unit, y, unit.rangePx, "base");
@@ -132,7 +144,7 @@ export class BattleXDebugCanvas {
       const idText = unit.id;
       const xText = String(Math.round(unit.battleX));
       const idY = y + 12;
-      const xY = y + 24;
+      const xY = y + LABEL_Y_OFFSET;
 
       ctx.textAlign = "center";
       ctx.lineWidth = 3;
@@ -186,12 +198,26 @@ export class BattleXDebugCanvas {
         : unit.isEnemy
           ? "rgba(255, 143, 143, 0.40)"
           : "rgba(143, 211, 255, 0.40)";
-    ctx.strokeRect(start, bandTop, width, bandHeight);
+    const tipX = this.clamp(end, 0, CANVAS_W - 1);
+    ctx.fillRect(tipX, bandTop, 1, bandHeight);
     ctx.restore();
   }
 
   private sortByBattleX(units: CombatantSnapshot[]): CombatantSnapshot[] {
     return [...units].sort((a, b) => a.battleX - b.battleX);
+  }
+
+  private ensureCanvasHeight(
+    canvas: HTMLCanvasElement,
+    unitCount: number,
+  ): void {
+    const requiredHeight = Math.max(
+      MIN_CANVAS_H,
+      FIRST_LANE_Y + Math.max(0, unitCount - 1) * LANE_STEP + LABEL_Y_OFFSET + BOTTOM_PADDING,
+    );
+    if (canvas.height !== requiredHeight) {
+      canvas.height = requiredHeight;
+    }
   }
 
   private clamp(value: number, min: number, max: number): number {
