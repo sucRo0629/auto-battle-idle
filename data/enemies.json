@@ -70,7 +70,7 @@
     "atk": 10,
     "def": 5,
     "reg": 0,
-    "exp": 1,
+    "exp": 0,
     "basicAttackSkillId": "test_to_ranged_basic_attack",
     "traits": {
       "rangePx": 300,
