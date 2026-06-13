@@ -379,6 +379,99 @@ describe('skillSequence', () => {
     expect(enemy.hp).toBeLessThan(100);
   });
 
+  it('move sequence pierce selfOrigin does not damage actor', () => {
+    const runner = new SkillSequenceRunner();
+    const actor = mockUnit({
+      id: 'lancer',
+      battleX: 100,
+      hp: 150,
+      maxHp: 150,
+      traits: { rangePx: 70, damageType: 'physical', basicAttackVfx: { preset: 'impale' } },
+    });
+    const near = mockUnit({ id: 'near', isEnemy: true, battleX: 240, hp: 9999999, maxHp: 9999999 });
+    const far = mockUnit({ id: 'far', isEnemy: true, battleX: 360, hp: 9999999, maxHp: 9999999 });
+    const skill: ActiveSkillDef = {
+      id: 'lunge',
+      name: '踏み込み突き',
+      trigger: { kind: 'time', value: 8 },
+      effect: [
+        {
+          type: 'move',
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          moveMode: 'toAnchor',
+          moveDurationSec: 0.25,
+          anchorOffsetPx: -32,
+        },
+        {
+          targetShape: 'pierce',
+          type: 'damage',
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 1.1 },
+          target: { kind: 'distance', side: 'enemy', order: 'selfOrigin' },
+        },
+        {
+          type: 'knockback',
+          distancePx: 30,
+          targetShape: 'pierce',
+          target: { kind: 'distance', side: 'enemy', order: 'selfOrigin' },
+        },
+      ],
+    };
+    const cd: SkillCooldown = { skillId: 'lunge', remaining: 0, slotKind: 'active' };
+    const data = makeGameData({ lunge: skill });
+    const sequence = buildSkillSequence(
+      skill,
+      actor,
+      [actor],
+      [near, far],
+      data,
+      [],
+      0,
+      cd,
+    )!;
+
+    const damageTargets: string[] = [];
+    const executor = new SkillExecutor(data, (event) => {
+      if (event.type === 'skill' && event.effect === 'damage' && event.targetId) {
+        damageTargets.push(event.targetId);
+      }
+    }, {
+      getBattleTimeSec: () => 0,
+      enqueuePendingHits: () => {},
+      getAllCombatants: () => [actor, near, far],
+      getSequenceRunner: () => runner,
+    });
+
+    const runSequence = () => {
+      const seq = buildSkillSequence(
+        skill,
+        actor,
+        [actor],
+        [near, far],
+        data,
+        [],
+        0,
+        { ...cd },
+      )!;
+      runner.schedule(seq);
+      runner.tickSequences(0, (step) => {
+        executor.applyScheduledStep(step, [actor], [near, far]);
+      });
+      runner.tickMoves(0.25, [actor, near, far]);
+      runner.tickSequences(0.25, (step) => {
+        executor.applyScheduledStep(step, [actor], [near, far]);
+      });
+    };
+
+    runSequence();
+    expect(actor.hp).toBe(150);
+    expect(damageTargets).not.toContain('lancer');
+
+    runSequence();
+    expect(actor.hp).toBe(150);
+    expect(damageTargets.filter((id) => id === 'lancer')).toHaveLength(0);
+  });
+
   it('tailWaitAfterSec keeps actor in skill motion until wait elapses', () => {
     const runner = new SkillSequenceRunner();
     const actor = mockUnit({ id: 'actor', battleX: 220 });

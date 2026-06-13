@@ -478,6 +478,30 @@ describe('resolveEffectTargets', () => {
     expect(anchor?.id).toBe('near');
   });
 
+  it('pierce selfOrigin after lunge stop hits front enemy not actor', () => {
+    const gap = engagedMinBodyGap();
+    const contact = 240;
+    const range = 70;
+    const actor = mockUnit('lancer', contact - gap - range, { rangePx: range });
+    const front = mockUnit('near', contact, { isEnemy: true, hp: 9999999, maxHp: 9999999 });
+    const effect: DamageSkillEffect = {
+      targetShape: 'pierce',
+      type: 'damage',
+      target: { kind: 'distance', side: 'enemy', order: 'selfOrigin' },
+      damageType: 'physical',
+      amount: { kind: 'atkBased', atkScale: 1.1 },
+    };
+    const resolution = resolveEffectResolution(
+      effect,
+      actor,
+      [actor],
+      [front],
+      gameData,
+    );
+    const ids = resolution?.waves[0]?.targets.map((t) => t.unit.id);
+    expect(ids).toEqual(['near']);
+  });
+
   it('closestAlly for ally actor picks nearest ally by battleX', () => {
     const actor = mockUnit('actor', 150);
     const allyNear = mockUnit('near', 120);

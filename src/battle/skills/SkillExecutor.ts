@@ -54,7 +54,6 @@ import {
   buildSkillSequence,
   type PendingSkillStep,
   resolveActiveEffectGaugeDurationSec,
-  resolveSequenceStepAnchor,
   resolveSequenceWallClockSec,
   resolveUseDurationSec,
   type SkillSequenceRunner,
@@ -63,7 +62,6 @@ import {
 import {
   resolutionHasTargets,
   resolveEffectResolution,
-  resolveEffectTargetSpec,
 } from './targeting.ts';
 
 function skillHitEventFields(
@@ -185,83 +183,19 @@ export class SkillExecutor {
 
     let appliedAny = false;
     for (let effectIndex = 0; effectIndex < skill.effect.length; effectIndex++) {
-      const effectDef = skill.effect[effectIndex]!;
-      const resolution = resolveEffectResolution(
-        effectDef,
-        actor,
-        allies,
-        enemies,
-        this.gameData,
-        Math.random,
-        passives,
-        skill.effect,
-      );
-      if (!resolutionHasTargets(resolution)) continue;
-
-      const spread = resolution!.spreadDurationSec;
-      if (spread !== undefined && spread > 0) {
-        const stagedChainVfx = usesStagedChainVfx(
-          skill,
-          effectDef,
+      if (
+        this.applyResolvedEffectStep(
           actor,
-          cd.slotKind,
-        );
-        const pending = buildPendingHitsFromResolution(
-          resolution!,
-          this.deps.getBattleTimeSec(),
-          actor.id,
+          allies,
+          enemies,
           skill,
-          effectDef,
+          skill.effect[effectIndex]!,
+          effectIndex,
           cd,
-          { stagedChainVfx, effectIndex },
-        );
-        if (pending.length > 0) {
-          this.deps.enqueuePendingHits(pending);
-          appliedAny = true;
-        }
-        continue;
-      }
-
-      const crowdHitCount =
-        effectDef.type === 'damage'
-          ? resolution!.waves.reduce(
-              (sum, wave) => sum + wave.targets.length,
-              0,
-            )
-          : undefined;
-      const damageContext: PassiveDamageContext = {
-        skill,
-        slotKind: cd.slotKind,
-        crowdHitCount,
-        targetShape: effectDef.targetShape,
-      };
-
-      let segmentSourceId = actor.id;
-      for (const wave of resolution!.waves) {
-        for (const { unit, powerMultiplierOverride } of wave.targets) {
-          const vfxSourceId = usesSegmentVfxSource(effectDef.targetShape)
-            ? segmentSourceId
-            : undefined;
-          if (
-            this.applyEffect(
-              actor,
-              unit,
-              skill,
-              effectDef,
-              cd,
-              effectIndex,
-              powerMultiplierOverride,
-              wave.hitIndex,
-              vfxSourceId,
-              damageContext,
-            )
-          ) {
-            appliedAny = true;
-          }
-          if (usesSegmentVfxSource(effectDef.targetShape)) {
-            segmentSourceId = unit.id;
-          }
-        }
+          passives,
+        )
+      ) {
+        appliedAny = true;
       }
     }
 
@@ -287,6 +221,97 @@ export class SkillExecutor {
     return false;
   }
 
+  private applyResolvedEffectStep(
+    actor: CombatantState,
+    allies: CombatantState[],
+    enemies: CombatantState[],
+    skill: ActiveSkillDef,
+    effectDef: SkillEffectDef,
+    effectIndex: number,
+    cd: SkillCooldown,
+    passives: ReturnType<typeof getPassiveDefs>,
+  ): boolean {
+    const resolution = resolveEffectResolution(
+      effectDef,
+      actor,
+      allies,
+      enemies,
+      this.gameData,
+      Math.random,
+      passives,
+      skill.effect,
+    );
+    if (!resolutionHasTargets(resolution)) return false;
+
+    const spread = resolution!.spreadDurationSec;
+    if (spread !== undefined && spread > 0) {
+      const stagedChainVfx = usesStagedChainVfx(
+        skill,
+        effectDef,
+        actor,
+        cd.slotKind,
+      );
+      const pending = buildPendingHitsFromResolution(
+        resolution!,
+        this.deps.getBattleTimeSec(),
+        actor.id,
+        skill,
+        effectDef,
+        cd,
+        { stagedChainVfx, effectIndex },
+      );
+      if (pending.length > 0) {
+        this.deps.enqueuePendingHits(pending);
+        return true;
+      }
+      return false;
+    }
+
+    const crowdHitCount =
+      effectDef.type === 'damage'
+        ? resolution!.waves.reduce(
+            (sum, wave) => sum + wave.targets.length,
+            0,
+          )
+        : undefined;
+    const damageContext: PassiveDamageContext = {
+      skill,
+      slotKind: cd.slotKind,
+      crowdHitCount,
+      targetShape: effectDef.targetShape,
+    };
+
+    let appliedAny = false;
+    let segmentSourceId = actor.id;
+    for (const wave of resolution!.waves) {
+      for (const { unit, powerMultiplierOverride } of wave.targets) {
+        const vfxSourceId = usesSegmentVfxSource(effectDef.targetShape)
+          ? segmentSourceId
+          : undefined;
+        if (
+          this.applyEffect(
+            actor,
+            unit,
+            skill,
+            effectDef,
+            cd,
+            effectIndex,
+            powerMultiplierOverride,
+            wave.hitIndex,
+            vfxSourceId,
+            damageContext,
+          )
+        ) {
+          appliedAny = true;
+        }
+        if (usesSegmentVfxSource(effectDef.targetShape)) {
+          segmentSourceId = unit.id;
+        }
+      }
+    }
+    return appliedAny;
+  }
+
   applyScheduledStep(
     step: PendingSkillStep,
     allies: CombatantState[],
@@ -302,29 +327,11 @@ export class SkillExecutor {
       actor,
       this.gameData.skillRegistry.passives,
     );
-    const spec = resolveEffectTargetSpec(
-      step.effectDef,
-      actor,
-      allies,
-      enemies,
-      passives,
-    );
-    const target =
-      step.effectDef.type === 'move'
-        ? findCombatantById(step.targetId, allies, enemies)
-        : resolveSequenceStepAnchor(
-            step.effectDef,
-            spec,
-            actor,
-            allies,
-            enemies,
-            this.gameData,
-          );
-    if (!target?.isAlive) return;
-
-    if (step.effectDef.type === 'move' && isUnitStunned(actor)) return;
 
     if (step.effectDef.type === 'move') {
+      const target = findCombatantById(step.targetId, allies, enemies);
+      if (!target?.isAlive) return;
+      if (isUnitStunned(actor)) return;
       this.applyMoveEffect(
         actor,
         target,
@@ -336,13 +343,15 @@ export class SkillExecutor {
       return;
     }
 
-    this.applyEffect(
+    this.applyResolvedEffectStep(
       actor,
-      target,
+      allies,
+      enemies,
       skill,
       step.effectDef,
-      step.cd,
       step.effectIndex,
+      step.cd,
+      passives,
     );
   }
 

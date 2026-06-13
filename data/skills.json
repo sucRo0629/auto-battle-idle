@@ -996,16 +996,6 @@
             "side": "enemy",
             "order": "selfOrigin"
           }
-        },
-        {
-          "target": {
-            "kind": "distance",
-            "side": "enemy",
-            "order": "selfOrigin"
-          },
-          "type": "knockback",
-          "distancePx": 30,
-          "targetShape": "pierce"
         }
       ],
       "vfx": {
