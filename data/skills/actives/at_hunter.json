@@ -1,0 +1,142 @@
+[
+  {
+    "id": "at_hunter_active_1",
+    "name": "毒罠",
+    "trigger": {
+      "kind": "time",
+      "value": 9
+    },
+    "effect": [
+      {
+        "targetShape": "scatter",
+        "scatterRadiusPx": 70,
+        "scatterSpreadRadiusPx": 90,
+        "scatterHitCount": 3,
+        "scatterDurationSec": 0.6,
+        "scatterSpreadRate": 0.4,
+        "range": 50,
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.35
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      },
+      {
+        "targetShape": "scatter",
+        "scatterRadiusPx": 70,
+        "scatterSpreadRadiusPx": 90,
+        "scatterHitCount": 3,
+        "scatterDurationSec": 0.6,
+        "scatterSpreadRate": 0.4,
+        "range": 50,
+        "type": "debuff",
+        "durationSec": 6,
+        "damageType": "physical",
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.18
+        },
+        "debuffSubKind": "dot"
+      }
+    ]
+  },
+  {
+    "id": "at_hunter_active_2",
+    "name": "拘束罠",
+    "trigger": {
+      "kind": "time",
+      "value": 11
+    },
+    "effect": [
+      {
+        "targetShape": "scatter",
+        "scatterRadiusPx": 70,
+        "scatterSpreadRadiusPx": 90,
+        "scatterHitCount": 3,
+        "scatterDurationSec": 0.6,
+        "scatterSpreadRate": 0.4,
+        "range": 50,
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.25
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      },
+      {
+        "targetShape": "scatter",
+        "scatterRadiusPx": 70,
+        "scatterSpreadRadiusPx": 90,
+        "scatterHitCount": 3,
+        "scatterDurationSec": 0.6,
+        "scatterSpreadRate": 0.4,
+        "range": 50,
+        "type": "debuff",
+        "durationSec": 1,
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "debuffSubKind": "stun"
+      },
+      {
+        "targetShape": "scatter",
+        "scatterRadiusPx": 70,
+        "scatterSpreadRadiusPx": 90,
+        "scatterHitCount": 3,
+        "scatterDurationSec": 0.6,
+        "scatterSpreadRate": 0.4,
+        "range": 50,
+        "type": "debuff",
+        "debuffStat": "atk",
+        "debuffMultiplier": 0.85,
+        "debuffDurationSec": 4,
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "debuffSubKind": "stat"
+      }
+    ]
+  },
+  {
+    "id": "at_hunter_basic_attack",
+    "name": "at_hunter_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ]
+  }
+]

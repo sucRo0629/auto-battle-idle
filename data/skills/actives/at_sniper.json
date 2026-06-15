@@ -1,0 +1,97 @@
+[
+  {
+    "id": "at_sniper_active_1",
+    "name": "引き絞り",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "atk",
+        "buffMultiplier": 1.5,
+        "buffDurationSec": 8
+      },
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stat",
+        "debuffStat": "attackSpeed",
+        "debuffMultiplier": 0.7,
+        "debuffDurationSec": 8
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.7
+      }
+    ]
+  },
+  {
+    "id": "at_sniper_active_2",
+    "name": "貫く一射",
+    "trigger": {
+      "kind": "time",
+      "value": 20
+    },
+    "effect": [
+      {
+        "targetShape": "pierce",
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.5
+        },
+        "pierceDurationSec": 0.5,
+        "vfx": {
+          "preset": "impale"
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        }
+      }
+    ],
+    "useDurationSec": 3,
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "enemyCount",
+        "min": 3
+      }
+    ]
+  },
+  {
+    "id": "at_sniper_basic_attack",
+    "name": "at_sniper_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,161 @@
+[
+  {
+    "id": "df_duelist_active_1",
+    "name": "戦叫び",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stat",
+        "debuffStat": "attackSpeed",
+        "debuffMultiplier": 0.8,
+        "debuffDurationSec": 5,
+        "targetShape": "aoe",
+        "aoeRadiusPx": 100
+      }
+    ]
+  },
+  {
+    "id": "df_duelist_active_2",
+    "name": "体力温存",
+    "trigger": {
+      "kind": "hitsTaken",
+      "value": 10
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "buff",
+        "buffSubKind": "damageTakenToHeal",
+        "buffStat": "atk",
+        "buffMultiplier": 1.2,
+        "buffDurationSec": 5,
+        "ratio": 0.02
+      },
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stat",
+        "debuffStat": "attackSpeed",
+        "debuffMultiplier": 0.5,
+        "debuffDurationSec": 5
+      }
+    ]
+  },
+  {
+    "id": "df_duelist_basic_attack",
+    "name": "df_duelist_basic_attack",
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ],
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    }
+  },
+  {
+    "id": "df_duelist_active_3",
+    "name": "隙撃ち",
+    "trigger": {
+      "kind": "basicAttackCount",
+      "value": 8
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.05
+        },
+        "targetShape": "single",
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "damageIncrease": {
+          "scale": 1.5,
+          "conditions": [
+            {
+              "kind": "debuff",
+              "tags": [
+                "def",
+                "stun",
+                "damageTaken",
+                "atk"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stun",
+        "debuffStat": "def",
+        "debuffMultiplier": 0.8,
+        "debuffDurationSec": 5,
+        "durationSec": 3
+      }
+    ]
+  },
+  {
+    "id": "df_duelist_active_4",
+    "name": "血気煽り",
+    "trigger": {
+      "kind": "time",
+      "value": 15
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "all",
+          "side": "enemy"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stat",
+        "debuffStat": "atk",
+        "debuffMultiplier": 0.8,
+        "debuffDurationSec": 6
+      },
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stat",
+        "debuffStat": "damageTaken",
+        "debuffMultiplier": 1.5,
+        "debuffDurationSec": 6
+      }
+    ]
+  }
+]

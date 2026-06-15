@@ -11,7 +11,7 @@
 
 | 触るコード / データ | 読む・更新する doc |
 |---------------------|-------------------|
-| `data/classes.json`, `data/skills.json`, スキル UI | [spec/classes-and-skills.md](spec/classes-and-skills.md) |
+| `data/classes.json`, `data/skills/`, スキル UI | [spec/classes-and-skills.md](spec/classes-and-skills.md) |
 | `data/levelCurves.json`, ステ計算 | [spec/stats.md](spec/stats.md) |
 | `combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット | [spec/combat.md](spec/combat.md) |
 | `battleLayout.ts`, `combatPosition.ts`, `SpriteAnimator`, `IBattleRenderer`, 描画 | [spec/battle-field.md](spec/battle-field.md) |
@@ -22,8 +22,9 @@
 
 | ファイル | 行数目安 | AI / エージェント向け |
 |----------|----------|------------------------|
-| `skills.json` | ~2000 | 全文読まない。`.cursorignore` 除外。ID で Grep |
-| `classes.json` | ~600 | 同上 |
+| `data/skills/passives.json` | ~400 | 共有パッシブのみ。必要なら全文可 |
+| `data/skills/actives/<stem>.json` | ~30–150 / ファイル | **触るクラス分だけ** Read / Grep（例: `df_guardian.json`） |
+| `classes.json` | ~600 | 全文読まない。`.cursorignore` 除外。ID で Grep |
 | その他 `data/*.json` | ~100 以下 | 必要なら全文可 |
 
 - スキーマ・effect 定義 → [spec/classes-and-skills.md](spec/classes-and-skills.md)

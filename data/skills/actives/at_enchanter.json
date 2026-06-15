@@ -1,0 +1,106 @@
+[
+  {
+    "id": "at_enchanter_basic_attack",
+    "name": "魔弾",
+    "effect": [
+      {
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.85
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "targetShape": "chain",
+        "chainCount": 3,
+        "chainMaxDistancePx": 80,
+        "chainPowerStepMultiplier": 0.85,
+        "chainPowerStepMode": "multiply"
+      }
+    ],
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    }
+  },
+  {
+    "id": "at_enchanter_active_1",
+    "name": "連符",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "targetShape": "chain",
+        "chainCount": 4,
+        "chainMaxDistancePx": 80,
+        "type": "damage",
+        "damageType": "magic",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.75
+        },
+        "vfx": {
+          "preset": "chainLightning"
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stun",
+        "debuffStat": "def",
+        "debuffMultiplier": 0.8,
+        "debuffDurationSec": 5,
+        "durationSec": 0.2,
+        "targetShape": "chain",
+        "chainCount": 4,
+        "chainMaxDistancePx": 80
+      }
+    ]
+  },
+  {
+    "id": "at_enchanter_active_2",
+    "name": "爆符",
+    "trigger": {
+      "kind": "time",
+      "value": 11
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "magic",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.2
+        },
+        "range": 50,
+        "vfx": {
+          "preset": "orb"
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 55,
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      }
+    ],
+    "vfx": {
+      "preset": "orb"
+    }
+  }
+]

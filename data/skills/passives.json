@@ -1,0 +1,499 @@
+[
+  {
+    "id": "defender_passive_1",
+    "name": "盾受け",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.1,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
+    "id": "df_guardian_passive_2",
+    "name": "大盾使い",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.1,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
+    "id": "sp_cleric_passive_1",
+    "name": "救命の心得",
+    "effect": "specialEffect",
+    "specialEffectApplyTo": "heal",
+    "specialEffect": {
+      "scale": 1.5,
+      "conditions": [
+        {
+          "kind": "targetHp",
+          "maxHpRatio": 0.5
+        }
+      ]
+    }
+  },
+  {
+    "id": "df_duelist_passive_2",
+    "name": "不屈の闘士",
+    "effect": "selfHpRatioBuff",
+    "buffStat": "def",
+    "maxBuffAtHpRatio": 0.5,
+    "buffMultiplierMax": 1.6
+  },
+  {
+    "id": "df_duelist_passive_3",
+    "name": "出鼻挫き",
+    "effect": "counter",
+    "chance": 0.2,
+    "counterResponses": [
+      {
+        "kind": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        },
+        "damageType": "physical"
+      },
+      {
+        "kind": "stun",
+        "durationSec": 1.5
+      },
+      {
+        "kind": "knockback",
+        "distancePx": 15
+      }
+    ],
+    "counterRange": 0,
+    "counterMelee": true
+  },
+  {
+    "id": "df_paladin_passive_2",
+    "name": "治癒の心得",
+    "effect": "specialEffect",
+    "specialEffectApplyTo": "heal",
+    "specialEffect": {
+      "scale": 1.2,
+      "conditions": [
+        {
+          "kind": "targetHp",
+          "maxHpRatio": 0.5
+        }
+      ]
+    }
+  },
+  {
+    "id": "at_warrior_passive_1",
+    "name": "大物狙い",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "hp",
+      "order": "highest"
+    },
+    "targetRuleOverrideApplyTo": "enemy"
+  },
+  {
+    "id": "df_duelist_passive_4",
+    "name": "闘士は流血で滾る",
+    "effect": "selfHpRatioBuff",
+    "buffStat": "atk",
+    "maxBuffAtHpRatio": 0.1,
+    "buffMultiplierMax": 2
+  },
+  {
+    "id": "df_guardian_passive_3",
+    "name": "防御態勢",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "defBased",
+      "defScale": 0.5
+    },
+    "buffTargetRule": {
+      "kind": "self"
+    },
+    "periodicTrigger": "waveStart"
+  },
+  {
+    "id": "df_guardian_passive_4",
+    "name": "息入れ",
+    "effect": "heal",
+    "healSubKind": "hot",
+    "specialEffectApplyTo": "heal",
+    "specialEffect": {
+      "scale": 1.2,
+      "conditions": []
+    },
+    "hotTargetRule": {
+      "kind": "self"
+    },
+    "hotAmount": {
+      "kind": "atkBased",
+      "atkScale": 0.25
+    },
+    "intervalSec": 10,
+    "hotDurationSec": 5
+  },
+  {
+    "id": "df_paladin_passive_3",
+    "name": "形なき盾",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "percentMaxHp",
+      "percentOfMaxHp": 0.1,
+      "maxHpRef": "self"
+    },
+    "buffTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    },
+    "periodicTrigger": "waveStart"
+  },
+  {
+    "id": "df_paladin_passive_4",
+    "name": "護法の陣",
+    "effect": "damageReduction",
+    "damageReductionPercent": 0.05,
+    "damageReductionTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    }
+  },
+  {
+    "id": "at_warrior_passive_2",
+    "name": "骨断ち",
+    "effect": "defenseIgnore",
+    "defenseIgnore": {
+      "def": {
+        "mode": "percent",
+        "amount": 0.2
+      }
+    }
+  },
+  {
+    "id": "sp_abjurer_passive_1",
+    "name": "常の庇護",
+    "effect": "buff",
+    "buffSubKind": "stat",
+    "buffStat": [
+      "damageTaken"
+    ],
+    "buffMultiplier": 0.95,
+    "buffTargetRule": {
+      "kind": "stat",
+      "side": "ally",
+      "stat": "hp",
+      "order": "highest"
+    }
+  },
+  {
+    "id": "sp_abjurer_passive_2",
+    "name": "備えあれば",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "atkBased",
+      "atkScale": 1.5
+    },
+    "buffTargetRule": {
+      "kind": "stat",
+      "side": "ally",
+      "stat": "hp",
+      "order": "highest"
+    },
+    "periodicTrigger": "waveStart"
+  },
+  {
+    "id": "sp_abjurer_passive_3",
+    "name": "憂い無し",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "atkBased",
+      "atkScale": 1
+    },
+    "buffTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    },
+    "periodicTrigger": "waveStart"
+  },
+  {
+    "id": "sp_alchemist_passive_1",
+    "name": "薬効の香り",
+    "effect": "heal",
+    "healSubKind": "hot",
+    "hotAmount": {
+      "kind": "percentMaxHp",
+      "percentOfMaxHp": 0.004
+    },
+    "hotTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    }
+  },
+  {
+    "id": "sp_alchemist_passive_2",
+    "name": "守り薬",
+    "effect": "buff",
+    "buffSubKind": "stat",
+    "buffStat": [
+      "def"
+    ],
+    "buffMultiplier": 1.1,
+    "buffTargetRule": {
+      "kind": "stat",
+      "side": "ally",
+      "stat": "hp",
+      "order": "highest"
+    }
+  },
+  {
+    "id": "at_lancer_passive_1",
+    "name": "牽制",
+    "effect": "debuff",
+    "debuffSubKind": "stat",
+    "debuffTargetRule": {
+      "kind": "distance",
+      "side": "enemy",
+      "order": "selfOrigin"
+    },
+    "debuffTargetShape": "pierce",
+    "debuffStat": "atk",
+    "debuffMultiplier": 0.9
+  },
+  {
+    "id": "at_ranger_passive_1",
+    "name": "射手排除",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "attackType",
+      "ranged": true
+    }
+  },
+  {
+    "id": "at_ranger_passive_2",
+    "name": "速射の技",
+    "effect": "buff",
+    "targetRuleOverride": {
+      "kind": "distance",
+      "side": "enemy",
+      "order": "nearest"
+    },
+    "buffSubKind": "stat",
+    "buffTargetRule": {
+      "kind": "self"
+    },
+    "buffStat": "attackSpeed",
+    "buffMultiplier": 1.25
+  },
+  {
+    "id": "at_ranger_passive_3",
+    "name": "応射",
+    "effect": "counter",
+    "targetRuleOverride": {
+      "kind": "distance",
+      "side": "enemy",
+      "order": "nearest"
+    },
+    "buffSubKind": "stat",
+    "buffTargetRule": {
+      "kind": "self"
+    },
+    "buffStat": "atk",
+    "buffMultiplier": 1.2,
+    "defenseIgnore": {
+      "def": {
+        "mode": "percent",
+        "amount": 0.2
+      }
+    },
+    "specialEffectApplyTo": "damage",
+    "specialEffect": {
+      "scale": 1.2,
+      "conditions": [
+        {
+          "kind": "debuff",
+          "tags": [
+            "def"
+          ]
+        }
+      ]
+    },
+    "counterChance": 0.33,
+    "chance": 0.33,
+    "counterResponses": [
+      {
+        "kind": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1,
+          "defOffset": 0,
+          "defScale": 1
+        },
+        "damageType": "physical"
+      }
+    ],
+    "counterRange": 0,
+    "counterRanged": true
+  },
+  {
+    "id": "at_assassin_passive_1",
+    "name": "手負い狩り",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "hp",
+      "order": "ratio"
+    }
+  },
+  {
+    "id": "at_assassin_passive_2",
+    "name": "影の歩み",
+    "effect": "buff",
+    "buffSubKind": "evasion",
+    "chance": 0.2,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
+    "id": "sp_alchemist_passive_3",
+    "name": "毒消し",
+    "effect": "periodicDispel",
+    "periodicTrigger": "onDebuffReceived",
+    "dispelTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    },
+    "dispelCount": 1,
+    "dispelTags": [
+      "dot"
+    ],
+    "dispelTriggerLimit": 3
+  },
+  {
+    "id": "sp_cleric_passive_2",
+    "name": "生気重ね",
+    "effect": "excessHealToBarrier",
+    "barrierScale": 1,
+    "excessHealSources": [
+      "outgoing"
+    ]
+  },
+  {
+    "id": "at_sniper_passive_1",
+    "name": "大物狙い",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "hp",
+      "order": "highest"
+    },
+    "targetRuleOverrideApplyTo": "enemy"
+  },
+  {
+    "id": "at_sniper_passive_2",
+    "name": "大物狙い",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "hp",
+      "order": "highest"
+    },
+    "targetRuleOverrideApplyTo": "enemy"
+  },
+  {
+    "id": "sp_abjurer_passive_4",
+    "name": "守護結界",
+    "effect": "damageReduction",
+    "damageReductionPercent": 0.9,
+    "damageReductionTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    }
+  },
+  {
+    "id": "test_to_ranged_passive_1",
+    "name": "test_to_ranged_passive_1",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "distance",
+      "side": "enemy",
+      "order": "farthest"
+    },
+    "targetRuleOverrideApplyTo": "enemy"
+  },
+  {
+    "id": "at_lancer_passive_2",
+    "name": "連携",
+    "effect": "buff",
+    "buffSubKind": "stat",
+    "buffStat": [
+      "atk"
+    ],
+    "buffTargetShape": "aoe",
+    "buffAoeRadiusPx": 70,
+    "buffMultiplier": 1.05,
+    "buffTargetRule": {
+      "kind": "distance",
+      "side": "ally",
+      "order": "selfOrigin"
+    }
+  },
+  {
+    "id": "at_sniper_passive_3",
+    "name": "岩穿ち",
+    "effect": "defenseIgnore",
+    "defenseIgnore": {
+      "def": {
+        "mode": "percent",
+        "amount": 0.3
+      }
+    }
+  },
+  {
+    "id": "at_passive_1",
+    "name": "大物喰い",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "hp",
+      "order": "highest"
+    },
+    "targetRuleOverrideApplyTo": "enemy"
+  },
+  {
+    "id": "at_hunter_passive_1",
+    "name": "追い込み",
+    "effect": "specialEffect",
+    "specialEffectApplyTo": "damage",
+    "specialEffect": {
+      "scale": 1.2,
+      "conditions": [
+        {
+          "kind": "debuff",
+          "tags": [
+            "def",
+            "reg"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "id": "at_geomancer_passive_1",
+    "name": "at_geomancer_passive_1",
+    "effect": "aoeCrowdBonus",
+    "perExtraTargetScale": 0.05,
+    "maxExtraTargets": 5
+  }
+]

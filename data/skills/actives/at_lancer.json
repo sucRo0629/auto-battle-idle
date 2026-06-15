@@ -1,0 +1,114 @@
+[
+  {
+    "id": "at_lancer_active_1",
+    "name": "踏み込み突き",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "move",
+        "moveMode": "toAnchor",
+        "moveDurationSec": 0.25,
+        "anchorOffsetPx": -32
+      },
+      {
+        "targetShape": "pierce",
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.8
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        }
+      }
+    ],
+    "vfx": {
+      "preset": "impale"
+    }
+  },
+  {
+    "id": "at_lancer_active_2",
+    "name": "足払い",
+    "trigger": {
+      "kind": "time",
+      "value": 14
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.5
+        },
+        "targetShape": "pierce",
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        }
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stun",
+        "debuffStat": "def",
+        "debuffMultiplier": 0.8,
+        "debuffDurationSec": 5,
+        "targetShape": "pierce",
+        "durationSec": 3
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stat",
+        "debuffStat": "def",
+        "debuffMultiplier": 0.8,
+        "debuffDurationSec": 5,
+        "targetShape": "pierce"
+      }
+    ]
+  },
+  {
+    "id": "at_lancer_basic_attack",
+    "name": "at_lancer_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.95
+        },
+        "targetShape": "pierce"
+      }
+    ]
+  }
+]

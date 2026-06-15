@@ -22,7 +22,7 @@ alwaysApply: true
 
 `data/*.json` を変えたときは、**数値の転記一覧は書かない**（正本は JSON）。**ルール・意図・スキーマ・用語**が変わった部分だけ doc に反映する（[spec/README.md](../../docs/spec/README.md) の方針に従う）。
 
-**JSON 全文を Read しない** — `skills.json` / `classes.json` は Grep・diff・spec で触る（[data-json-lightweight.mdc](data-json-lightweight.mdc)）。
+**JSON 全文を Read しない** — `data/skills/` / `classes.json` は Grep・diff・spec で触る（[data-json-lightweight.mdc](data-json-lightweight.mdc)）。
 
 ## 書き方
 

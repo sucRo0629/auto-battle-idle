@@ -1,0 +1,165 @@
+[
+  {
+    "id": "df_paladin_active_1",
+    "name": "光の剣",
+    "trigger": {
+      "kind": "time",
+      "value": 5
+    },
+    "effect": [
+      {
+        "type": "heal",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.25
+        },
+        "vfx": {
+          "preset": "healRise"
+        },
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "healSubKind": "instant",
+        "range": 50
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "damageType": "magic",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ],
+    "vfx": {
+      "preset": "slash"
+    },
+    "maxCharges": 1
+  },
+  {
+    "id": "df_paladin_active_2",
+    "name": "聖盾",
+    "trigger": {
+      "kind": "hitsTaken",
+      "value": 8
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "reg",
+        "buffMultiplier": 1.2,
+        "buffDurationSec": 5,
+        "amount": {
+          "kind": "percentMaxHp",
+          "percentOfMaxHp": 0.1,
+          "maxHpRef": "self"
+        }
+      },
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "damageTaken",
+        "buffMultiplier": 0.9,
+        "buffDurationSec": 5
+      },
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "heal",
+        "healSubKind": "hot",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.85
+        },
+        "durationSec": 5
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "selfHp",
+        "maxHpRatio": 0.7
+      }
+    ]
+  },
+  {
+    "id": "df_paladin_basic_attack",
+    "name": "df_paladin_basic_attack",
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ],
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    }
+  },
+  {
+    "id": "df_paladin_active_3",
+    "name": "治療専念",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "basicAttackTransform",
+        "buffDurationSec": 4,
+        "primaryEffectOverride": {
+          "type": "heal",
+          "healSubKind": "instant",
+          "target": {
+            "kind": "stat",
+            "side": "ally",
+            "stat": "hp",
+            "order": "ratio"
+          },
+          "amount": {
+            "kind": "atkBased",
+            "atkScale": 1.5
+          }
+        },
+        "range": 60
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.7
+      }
+    ],
+    "vfx": {
+      "preset": "healRise"
+    }
+  }
+]

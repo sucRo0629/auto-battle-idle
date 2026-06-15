@@ -1,0 +1,79 @@
+[
+  {
+    "id": "at_sorcerer_basic_attack",
+    "name": "魔弾",
+    "effect": [
+      {
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.85
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      }
+    ],
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    }
+  },
+  {
+    "id": "at_sorcerer_active_1",
+    "name": "魔弾",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "magic",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.4
+        },
+        "vfx": {
+          "preset": "orb"
+        },
+        "targetShape": "single",
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      }
+    ]
+  },
+  {
+    "id": "at_sorcerer_active_2",
+    "name": "集中砲",
+    "trigger": {
+      "kind": "time",
+      "value": 11
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "magic",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.1
+        },
+        "vfx": {
+          "preset": "orb"
+        },
+        "targetShape": "multiLock",
+        "hitCount": 2,
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      }
+    ]
+  }
+]

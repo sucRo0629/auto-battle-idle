@@ -97,7 +97,7 @@ sheets/skills/{skillId}.png
 sheets/skills/{skillId}_{effectIndex}.png
 ```
 
-- `{skillId}` … `data/skills.json` の active スキル ID
+- `{skillId}` … `data/skills/actives/` の active スキル ID
 - `{effectIndex}` … 0 始まり。複数 effect スキル（move → damage 等）でステップごとに別 PNG
 - 解決順: `{skillId}_{index}.png` → `{skillId}.png`
 - PNG 仕様・fps は entity シートと同じ。コマ数 = 幅 ÷ 48

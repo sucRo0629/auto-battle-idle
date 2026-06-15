@@ -1,0 +1,146 @@
+[
+  {
+    "id": "at_assassin_active_1",
+    "name": "引き裂き",
+    "trigger": {
+      "kind": "basicAttackCount",
+      "value": 8
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.15
+        },
+        "targetShape": "single",
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "damageIncrease": {
+          "scale": 1.3,
+          "conditions": [
+            {
+              "kind": "debuff",
+              "tags": [
+                "dot"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "debuff",
+        "debuffSubKind": "dot",
+        "debuffStat": "def",
+        "debuffMultiplier": 0.8,
+        "debuffDurationSec": 5,
+        "durationSec": 10,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.05
+        },
+        "damageType": "physical"
+      }
+    ],
+    "vfx": {
+      "preset": "slash"
+    }
+  },
+  {
+    "id": "at_assassin_active_2",
+    "name": "影の刃",
+    "trigger": {
+      "kind": "basicAttackCount",
+      "value": 14
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "buff",
+        "buffSubKind": "evasion",
+        "buffStat": "atk",
+        "buffMultiplier": 1.2,
+        "buffDurationSec": 1.5,
+        "chance": 1
+      },
+      {
+        "type": "move",
+        "moveMode": "toAnchor",
+        "moveDurationSec": 0.2,
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "range": 100,
+        "anchorOffsetPx": 32,
+        "waitAfterSec": 0.2
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.5
+        },
+        "waitAfterSec": 0.5
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "move",
+        "moveMode": "engage",
+        "moveDurationSec": 0.25,
+        "waitAfterSec": 0.25
+      }
+    ],
+    "vfx": {
+      "preset": "slash"
+    },
+    "useDurationSec": 2
+  },
+  {
+    "id": "at_assassin_basic_attack",
+    "name": "at_assassin_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.5
+        },
+        "targetShape": "single",
+        "hitCount": 2,
+        "hitDurationSec": 0.2
+      }
+    ]
+  }
+]

@@ -1,9 +1,11 @@
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const path = join(root, 'data/skills.json');
+const skillsDir = join(root, 'data/skills');
+const passivesPath = join(skillsDir, 'passives.json');
+const activesDir = join(skillsDir, 'actives');
 
 const DEBUFF_TAGS = ['atk', 'def', 'reg', 'damageTaken', 'dot', 'stun'];
 
@@ -89,20 +91,25 @@ function migrateActive(active) {
   return next;
 }
 
-const data = JSON.parse(readFileSync(path, 'utf8'));
-if (Array.isArray(data.passives)) {
-  data.passives = data.passives.map(migratePassive);
-} else if (data.passives) {
-  for (const [id, passive] of Object.entries(data.passives)) {
-    data.passives[id] = migratePassive(passive);
+function migratePassivesFile() {
+  const passives = JSON.parse(readFileSync(passivesPath, 'utf8'));
+  if (!Array.isArray(passives)) {
+    throw new Error('passives.json must be an array');
+  }
+  writeFileSync(passivesPath, `${JSON.stringify(passives.map(migratePassive), null, 2)}\n`, 'utf8');
+}
+
+function migrateActiveFiles() {
+  for (const name of readdirSync(activesDir).filter((entry) => entry.endsWith('.json'))) {
+    const filePath = join(activesDir, name);
+    const actives = JSON.parse(readFileSync(filePath, 'utf8'));
+    if (!Array.isArray(actives)) {
+      throw new Error(`${filePath} must be an array`);
+    }
+    writeFileSync(filePath, `${JSON.stringify(actives.map(migrateActive), null, 2)}\n`, 'utf8');
   }
 }
-if (Array.isArray(data.actives)) {
-  data.actives = data.actives.map(migrateActive);
-} else if (data.actives) {
-  for (const [id, active] of Object.entries(data.actives)) {
-    data.actives[id] = migrateActive(active);
-  }
-}
-writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
-console.log('Migrated', path);
+
+migratePassivesFile();
+migrateActiveFiles();
+console.log('Migrated', skillsDir);

@@ -6,7 +6,7 @@ alwaysApply: false
 
 # JSON データの読み方（トークン節約）
 
-`skills.json`（~2000 行）・`classes.json`（~600 行）は **全文 Read 禁止**。`.cursorignore` で索引から除外済み。
+`data/skills/`（`passives.json` + `actives/*.json`）・`classes.json`（~600 行）は **全文 Read 禁止**（`classes.json` のみ `.cursorignore` 除外）。スキルは **触るクラス分の active ファイルだけ** 開く。
 
 ## 読む順序
 
@@ -18,7 +18,8 @@ alwaysApply: false
 
 | ファイル | 目安 | 触り方 |
 |----------|------|--------|
-| `skills.json` | ~2000 | ID で Grep。`passives` / `actives` 配列全体を開かない |
+| `data/skills/passives.json` | ~400 | 共有パッシブ。必要なら全文可 |
+| `data/skills/actives/<stem>.json` | ~30–150 | **触るクラス分だけ**（例: `df_guardian.json`）。ID で Grep も可 |
 | `classes.json` | ~600 | `"id": "<classId>"` で Grep。全クラス一覧は spec / `classOrder` |
 | `enemies.json` | ~65 | 必要なら全文可 |
 | `stages.json` | ~100 | `"id": "<stageId>"` で Grep |

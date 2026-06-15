@@ -1,0 +1,129 @@
+[
+  {
+    "id": "at_warrior_active_1",
+    "name": "叩き付け",
+    "trigger": {
+      "kind": "basicAttackCount",
+      "value": 5
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.8
+        },
+        "targetShape": "single",
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "knockback",
+        "distancePx": 30
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.3,
+        "compare": "gte"
+      }
+    ]
+  },
+  {
+    "id": "at_warrior_active_2",
+    "name": "薙ぎ払い",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "targetShape": "pierce",
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.45
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        }
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "enemyCount",
+        "min": 2,
+        "scope": "inRange"
+      }
+    ]
+  },
+  {
+    "id": "at_warrior_basic_attack",
+    "name": "at_warrior_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "at_warrior_active_4",
+    "name": "薙ぎ払い",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "targetShape": "pierce",
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.45
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        }
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "enemyCount",
+        "min": 2,
+        "scope": "inRange"
+      }
+    ]
+  }
+]

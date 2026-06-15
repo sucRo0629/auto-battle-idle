@@ -1,0 +1,68 @@
+[
+  {
+    "id": "sp_alchemist_active_1",
+    "name": "薬粉撒き",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "heal",
+        "healSubKind": "hot",
+        "durationSec": 8,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.35
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 70
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stat",
+        "debuffStat": "atk",
+        "debuffMultiplier": 0.85,
+        "debuffDurationSec": 7,
+        "targetShape": "aoe",
+        "aoeRadiusPx": 70
+      }
+    ]
+  },
+  {
+    "id": "sp_alchemist_basic_attack",
+    "name": "sp_alchemist_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "heal",
+        "healSubKind": "hot",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.11
+        },
+        "durationSec": 5
+      }
+    ]
+  }
+]

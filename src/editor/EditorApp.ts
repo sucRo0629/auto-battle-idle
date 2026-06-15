@@ -161,7 +161,7 @@ export class EditorApp {
       createEl(
         'p',
         'editor-subtitle',
-        'classes.json / skills.json / enemies.json を編集します。保存後はゲームを再読み込みしてください。',
+        'classes.json / data/skills/ / enemies.json を編集します。保存後はゲームを再読み込みしてください。',
       ),
     );
     this.root.appendChild(header);

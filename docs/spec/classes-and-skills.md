@@ -2,7 +2,7 @@
 
 ゲームデータは `data/*.json`。型とローダー：`src/battle/types.ts`, `loadGameData.ts`
 
-**スキルマスタ：** `data/classes.json`（15 クラス）と `data/skills.json`（共有パッシブ 21 + クラス別 basic/active）が本番マスタ。数値バランスは調整対象だが、ID・形状・パッシブ種別はこの仕様に従う。
+**スキルマスタ：** `data/classes.json`（15 クラス）と `data/skills/`（`passives.json` + `actives/<stem>.json`。共有パッシブ + クラス別 basic/active）が本番マスタ。数値バランスは調整対象だが、ID・形状・パッシブ種別はこの仕様に従う。
 
 ## 用語（スキル vs 装備）
 

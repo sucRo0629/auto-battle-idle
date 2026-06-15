@@ -10,12 +10,15 @@ import type {
 } from './src/battle/types.ts';
 import type { ClassPresetBeforeEnrich } from './src/progression/skillUnlocks.ts';
 import { ensureClassGrowthFields } from './src/editor/editorApi.ts';
+import {
+  readSkillsRoot,
+  upsertSkillsToFiles,
+} from './src/battle/data/skillsJsonFs.ts';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 
 const READ_FILES = {
   classes: path.join(DATA_DIR, 'classes.json'),
-  skills: path.join(DATA_DIR, 'skills.json'),
   enemies: path.join(DATA_DIR, 'enemies.json'),
   stages: path.join(DATA_DIR, 'stages.json'),
   parties: path.join(DATA_DIR, 'parties.json'),
@@ -78,7 +81,7 @@ function loadValidationPayload(): {
 } {
   return {
     classes: readJsonFile(READ_FILES.classes),
-    skills: readJsonFile(READ_FILES.skills),
+    skills: readSkillsRoot(),
     enemies: readJsonFile(READ_FILES.enemies),
     stages: readJsonFile(READ_FILES.stages),
     parties: readJsonFile(READ_FILES.parties),
@@ -95,22 +98,6 @@ function upsertById<T extends { id: string }>(list: T[], item: T): T[] {
   const next = [...list];
   next[index] = item;
   return next;
-}
-
-function upsertSkills(
-  skillsRoot: { passives: PassiveSkillDef[]; actives: ActiveSkillDef[] },
-  passives: PassiveSkillDef[],
-  actives: ActiveSkillDef[],
-): { passives: PassiveSkillDef[]; actives: ActiveSkillDef[] } {
-  let nextPassives = skillsRoot.passives;
-  let nextActives = skillsRoot.actives;
-  for (const passive of passives) {
-    nextPassives = upsertById(nextPassives, passive);
-  }
-  for (const active of actives) {
-    nextActives = upsertById(nextActives, active);
-  }
-  return { passives: nextPassives, actives: nextActives };
 }
 
 async function readBody(req: IncomingMessage): Promise<string> {
@@ -160,24 +147,28 @@ async function applyClassBundle(
   server?: ViteDevServer,
 ): Promise<void> {
   const classes = readJsonFile(READ_FILES.classes) as ClassPresetBeforeEnrich[];
-  const skillsRoot = readJsonFile(READ_FILES.skills) as {
-    passives: PassiveSkillDef[];
-    actives: ActiveSkillDef[];
-  };
+  const skillsRoot = readSkillsRoot();
 
   const nextClasses = upsertById(classes, body.class);
-  const nextSkills = upsertSkills(skillsRoot, body.passives, body.actives);
+  const nextPassives = body.passives.reduce(
+    (list, passive) => upsertById(list, passive),
+    skillsRoot.passives,
+  );
+  const nextActives = body.actives.reduce(
+    (list, active) => upsertById(list, active),
+    skillsRoot.actives,
+  );
 
   const validationBase = loadValidationPayload();
   validateAll({
     ...validationBase,
     classes: nextClasses,
-    skills: nextSkills,
+    skills: { passives: nextPassives, actives: nextActives },
   });
 
   writeJsonFile(READ_FILES.classes, nextClasses);
-  writeJsonFile(READ_FILES.skills, nextSkills);
-  await reloadGameDataModules(server, [READ_FILES.classes, READ_FILES.skills]);
+  const writtenSkillFiles = upsertSkillsToFiles(body.passives, body.actives);
+  await reloadGameDataModules(server, [READ_FILES.classes, ...writtenSkillFiles]);
 }
 
 async function applyClassStatsBulk(
@@ -235,24 +226,28 @@ async function applyEnemyBundle(
   server?: ViteDevServer,
 ): Promise<void> {
   const enemies = readJsonFile(READ_FILES.enemies) as EnemyTemplate[];
-  const skillsRoot = readJsonFile(READ_FILES.skills) as {
-    passives: PassiveSkillDef[];
-    actives: ActiveSkillDef[];
-  };
+  const skillsRoot = readSkillsRoot();
 
   const nextEnemies = upsertById(enemies, body.enemy);
-  const nextSkills = upsertSkills(skillsRoot, body.passives, body.actives);
+  const nextPassives = body.passives.reduce(
+    (list, passive) => upsertById(list, passive),
+    skillsRoot.passives,
+  );
+  const nextActives = body.actives.reduce(
+    (list, active) => upsertById(list, active),
+    skillsRoot.actives,
+  );
 
   const validationBase = loadValidationPayload();
   validateAll({
     ...validationBase,
     enemies: nextEnemies,
-    skills: nextSkills,
+    skills: { passives: nextPassives, actives: nextActives },
   });
 
   writeJsonFile(READ_FILES.enemies, nextEnemies);
-  writeJsonFile(READ_FILES.skills, nextSkills);
-  await reloadGameDataModules(server, [READ_FILES.enemies, READ_FILES.skills]);
+  const writtenSkillFiles = upsertSkillsToFiles(body.passives, body.actives);
+  await reloadGameDataModules(server, [READ_FILES.enemies, ...writtenSkillFiles]);
 }
 
 export function editorApiPlugin(): Plugin {
@@ -274,7 +269,7 @@ export function editorApiPlugin(): Plugin {
             return;
           }
           if (req.method === 'GET' && url.pathname === '/__editor/skills') {
-            sendJson(res, 200, readJsonFile(READ_FILES.skills));
+            sendJson(res, 200, readSkillsRoot());
             return;
           }
           if (req.method === 'GET' && url.pathname === '/__editor/enemies') {

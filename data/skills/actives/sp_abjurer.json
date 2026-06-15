@@ -1,0 +1,111 @@
+[
+  {
+    "id": "sp_abjurer_active_1",
+    "name": "盾添え",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "heal",
+        "healSubKind": "instant",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.35
+        }
+      },
+      {
+        "type": "buff",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.9
+        },
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "buffSubKind": "barrier"
+      }
+    ],
+    "useDurationSec": 0.3,
+    "vfx": {
+      "preset": "orb"
+    }
+  },
+  {
+    "id": "sp_abjurer_basic_attack",
+    "name": "sp_abjurer_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "heal",
+        "healSubKind": "instant",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.55
+        }
+      },
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "buff",
+        "buffSubKind": "barrier",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.55
+        }
+      }
+    ]
+  },
+  {
+    "id": "sp_abjurer_active_2",
+    "name": "双璧の護り",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "buff",
+        "buffSubKind": "barrier",
+        "buffStat": "atk",
+        "buffMultiplier": 1.2,
+        "buffDurationSec": 5,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.5
+        },
+        "targetShape": "multiLock",
+        "hitCount": 2
+      }
+    ]
+  }
+]

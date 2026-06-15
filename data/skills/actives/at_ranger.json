@@ -1,0 +1,72 @@
+[
+  {
+    "id": "at_ranger_active_1",
+    "name": "連射",
+    "trigger": {
+      "kind": "basicAttackCount",
+      "value": 5
+    },
+    "effect": [
+      {
+        "targetShape": "single",
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.25,
+          "atkOffset": 0
+        },
+        "vfx": {
+          "preset": "arrow"
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "hitCount": 2,
+        "hitDurationSec": 0.25
+      }
+    ]
+  },
+  {
+    "id": "at_ranger_active_2",
+    "name": "連ね矢",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "basicAttackTransform",
+        "buffDurationSec": 5,
+        "hitCountMultiplier": 2
+      }
+    ]
+  },
+  {
+    "id": "at_ranger_basic_attack",
+    "name": "at_ranger_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ]
+  }
+]

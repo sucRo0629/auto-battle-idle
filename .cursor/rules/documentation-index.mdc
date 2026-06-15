@@ -12,7 +12,7 @@ alwaysApply: false
 
 | 触るコード / データ | 読む doc のみ |
 |---------------------|---------------|
-| `data/classes.json`, `data/skills.json`, スキル UI | `docs/spec/classes-and-skills.md` |
+| `data/classes.json`, `data/skills/`, スキル UI | `docs/spec/classes-and-skills.md` |
 | `data/levelCurves.json`, ステ計算, `growthTier` | `docs/spec/stats.md` |
 | `src/battle/combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット | `docs/spec/combat.md` |
 | `battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `BattleCanvas.ts` | `docs/spec/battle-field.md` |
@@ -25,7 +25,7 @@ alwaysApply: false
 
 | ファイル | 触り方 |
 |----------|--------|
-| `skills.json`, `classes.json` | **全文 Read 禁止**。Grep / diff / `classes-and-skills.md`。詳細は [data-json-lightweight.mdc](../.cursor/rules/data-json-lightweight.mdc) |
+| `data/skills/`, `classes.json` | スキルは **触るクラス分の active ファイルだけ**。`classes.json` は Grep / diff / `classes-and-skills.md`。詳細は [data-json-lightweight.mdc](../.cursor/rules/data-json-lightweight.mdc) |
 | `enemies.json`, `levelCurves.json`, `parties.json` | 小さい — 必要なら全文可 |
 | `stages.json` | ステージ ID で Grep |
 

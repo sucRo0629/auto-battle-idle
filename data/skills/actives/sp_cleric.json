@@ -1,0 +1,110 @@
+[
+  {
+    "id": "sp_cleric_active_1",
+    "name": "癒しの光",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "type": "heal",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.25
+        },
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "healSubKind": "instant"
+      },
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "heal",
+        "durationSec": 5,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.1
+        },
+        "healSubKind": "hot"
+      }
+    ],
+    "vfx": {
+      "preset": "healRise"
+    },
+    "useDurationSec": 0.3
+  },
+  {
+    "id": "sp_cleric_active_2",
+    "name": "広域治療",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
+        },
+        "type": "heal",
+        "durationSec": 10,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.5
+        },
+        "targetShape": "single",
+        "healSubKind": "hot"
+      },
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
+        },
+        "type": "heal",
+        "durationSec": 5,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.2
+        },
+        "healSubKind": "hot"
+      }
+    ],
+    "vfx": {
+      "preset": "orb",
+      "arc": true
+    }
+  },
+  {
+    "id": "sp_cleric_basic_attack",
+    "name": "sp_cleric_basic_attack",
+    "effect": [
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "heal",
+        "healSubKind": "instant",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ],
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    }
+  }
+]

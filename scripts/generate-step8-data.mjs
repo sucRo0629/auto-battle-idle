@@ -208,7 +208,21 @@ addActive('sp_alchemist_active_1', '攻性薬', { kind: 'time', value: 9 }, [
   { targetRule: 'mostDamagedAlly', type: 'buff', buffStat: 'atk', buffMultiplier: 1.15, buffDurationSec: 8 },
 ]);
 
-const legacy = JSON.parse(fs.readFileSync('data/skills.json', 'utf8')).actives.filter(
+function getActiveFileStem(skillId) {
+  const parts = skillId.split('_');
+  return `${parts[0]}_${parts[1]}`;
+}
+
+function readLegacyActives() {
+  const activesDir = 'data/skills/actives';
+  if (!fs.existsSync(activesDir)) return [];
+  return fs
+    .readdirSync(activesDir)
+    .filter((name) => name.endsWith('.json'))
+    .flatMap((name) => JSON.parse(fs.readFileSync(`${activesDir}/${name}`, 'utf8')));
+}
+
+const legacy = readLegacyActives().filter(
   (s) => s.id.startsWith('test_') || s.id.startsWith('stage1_'),
 );
 for (const s of legacy) actives.push(s);
@@ -233,6 +247,21 @@ const classesJson = classes.map((cls) => ({
   ...(cls.growthPresetKey ? { growthPresetKey: cls.growthPresetKey } : {}),
 }));
 
-fs.writeFileSync('data/skills.json', `${JSON.stringify({ passives, actives }, null, 2)}\n`);
+const skillsDir = 'data/skills';
+const activesDir = `${skillsDir}/actives`;
+fs.mkdirSync(activesDir, { recursive: true });
+fs.writeFileSync(`${skillsDir}/passives.json`, `${JSON.stringify(passives, null, 2)}\n`);
+
+const activesByStem = new Map();
+for (const active of actives) {
+  const stem = getActiveFileStem(active.id);
+  const bucket = activesByStem.get(stem) ?? [];
+  bucket.push(active);
+  activesByStem.set(stem, bucket);
+}
+for (const [stem, bucket] of activesByStem) {
+  fs.writeFileSync(`${activesDir}/${stem}.json`, `${JSON.stringify(bucket, null, 2)}\n`);
+}
+
 fs.writeFileSync('data/classes.json', `${JSON.stringify(classesJson, null, 2)}\n`);
 console.log('passives', passives.length, 'actives', actives.length, 'classes', classesJson.length);

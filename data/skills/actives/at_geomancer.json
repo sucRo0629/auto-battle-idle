@@ -1,0 +1,85 @@
+[
+  {
+    "id": "at_geomancer_basic_attack",
+    "name": "魔弾",
+    "effect": [
+      {
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.6
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 50
+      }
+    ],
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    }
+  },
+  {
+    "id": "at_geomancer_active_1",
+    "name": "大法陣",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "magic",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.1
+        },
+        "vfx": {
+          "preset": "orb"
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 100,
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      }
+    ]
+  },
+  {
+    "id": "at_geomancer_active_2",
+    "name": "小法陣",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "magic",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.7
+        },
+        "vfx": {
+          "preset": "orb"
+        },
+        "targetShape": "scatter",
+        "scatterRadiusPx": 60,
+        "scatterHitCount": 2,
+        "scatterDurationSec": 0.4,
+        "scatterSpreadRate": 0.3,
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      }
+    ]
+  }
+]
