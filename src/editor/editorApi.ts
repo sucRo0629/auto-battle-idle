@@ -376,6 +376,14 @@ export async function saveEnemyBundle(payload: {
   });
 }
 
+export async function savePresentationSkill(active: ActiveSkillDef): Promise<void> {
+  await fetchJson('/__editor/presentation-skill', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ active }),
+  });
+}
+
 export function defaultBasicAttackId(classId: string): string {
   return `${classId}_basic_attack`;
 }

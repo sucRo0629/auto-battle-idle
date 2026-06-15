@@ -6,7 +6,9 @@
 
 **実装状況（PR1）:** `entityAnimLayout.json` + `src/render/entityAtlas.ts` で body atlas 描画済み。未配置時は旧 `sheets/{entityId}/` または静止画フォールバック。
 
-**実装状況（PR2）:** スキル strip **64×48**（`SKILL_ANIM_CELL_WIDTH`）、`animStartFrame` 再生スキップ（`skillAnimPlayback.ts` + `SpriteAnimator`）。演出ラボは未着手。
+**実装状況（PR2）:** スキル strip **64×48**（`SKILL_ANIM_CELL_WIDTH`）、`animStartFrame` 再生スキップ（`skillAnimPlayback.ts` + `SpriteAnimator`）。
+
+**実装状況（PR3）:** 演出ラボ MVP — `presentation-lab.html` + `PresentationPreviewRunner`（`resolveEffectPresentation` → `BattleCanvas`）。JSON 保存は `PUT /__editor/presentation-skill`。
 
 ---
 

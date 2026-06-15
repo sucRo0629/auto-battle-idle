@@ -1,0 +1,133 @@
+import type {
+  ActiveSkillDef,
+  DamageType,
+  Role,
+  SkillEffectDef,
+  SkillSlotKind,
+  SkillVfxDef,
+} from '../battle/types.ts';
+import { resolvePresentationLockSec } from '../battle/skills/presentationLock.ts';
+import { resolveUseDurationSec } from '../battle/skills/skillSequence.ts';
+import { SHARED_ANIM_FPS } from '../render/SpriteRegistry.ts';
+import { resolveSkillAnimKey } from '../render/skillAnimRegistry.ts';
+import { resolveSkillAnimPlayback } from '../render/skillAnimPlayback.ts';
+import { resolveEffectPresentation } from '../render/skillVfx/resolveEffectPresentation.ts';
+import { resolvePresetDurationMs } from '../render/skillVfx/presetDurations.ts';
+import type { SkillVfxContext } from '../render/skillVfx/types.ts';
+export interface PreviewEntity {
+  entityId: string;
+  role?: Role;
+  rangePx: number;
+  damageType: DamageType;
+  basicAttackVfx?: SkillVfxDef;
+  isEnemy: boolean;
+}
+
+export interface PresentationTimeline {
+  bodyPlaybackFrames: number | null;
+  bodyPlaybackSec: number | null;
+  vfxPreset: string | null;
+  vfxSec: number | null;
+  moveDurationSec: number | null;
+  presentationLockSec: number;
+  useDurationSec: number;
+}
+
+function previewActorStub(entity: PreviewEntity): {
+  role: NonNullable<PreviewEntity['role']>;
+  traits: {
+    rangePx: number;
+    damageType: PreviewEntity['damageType'];
+    basicAttackVfx: NonNullable<PreviewEntity['basicAttackVfx']>;
+  };
+} {
+  return {
+    role: entity.role ?? 'attacker',
+    traits: {
+      rangePx: entity.rangePx,
+      damageType: entity.damageType,
+      basicAttackVfx: entity.basicAttackVfx ?? { preset: 'slash' },
+    },
+  };
+}
+
+function effectKindForTimeline(effect: SkillEffectDef): SkillVfxContext['effectKind'] {
+  if (effect.type === 'move') return 'move';
+  return effect.type;
+}
+
+export function buildSkillVfxContext(
+  entity: PreviewEntity,
+  slotKind: SkillSlotKind,
+  effect: SkillEffectDef,
+): SkillVfxContext {
+  return {
+    role: entity.role,
+    rangePx: entity.rangePx,
+    damageType: entity.damageType,
+    basicAttackVfx: entity.basicAttackVfx,
+    slotKind,
+    effectKind: effectKindForTimeline(effect),
+    targetShape: effect.targetShape,
+  };
+}
+
+export function computePresentationTimeline(
+  skill: ActiveSkillDef,
+  effectIndex: number,
+  entity: PreviewEntity,
+  slotKind: SkillSlotKind,
+): PresentationTimeline {
+  const effect = skill.effect[effectIndex];
+  if (!effect) {
+    return {
+      bodyPlaybackFrames: null,
+      bodyPlaybackSec: null,
+      vfxPreset: null,
+      vfxSec: null,
+      moveDurationSec: null,
+      presentationLockSec: 0,
+      useDurationSec: resolveUseDurationSec(skill),
+    };
+  }
+
+  const ctx = buildSkillVfxContext(entity, slotKind, effect);
+  const presentation = resolveEffectPresentation(skill.id, effect, skill, ctx);
+
+  let bodyPlaybackFrames: number | null = null;
+  let bodyPlaybackSec: number | null = null;
+  const skillAnimKey = resolveSkillAnimKey(skill.id, effectIndex);
+  if (skillAnimKey) {
+    const playback = resolveSkillAnimPlayback(skillAnimKey, effect.animStartFrame);
+    bodyPlaybackFrames = playback.playbackFrameCount;
+    bodyPlaybackSec = playback.playbackFrameCount / SHARED_ANIM_FPS;
+  }
+
+  let vfxPreset: string | null = null;
+  let vfxSec: number | null = null;
+  if (presentation.vfx) {
+    vfxPreset = presentation.vfx.preset;
+    vfxSec =
+      resolvePresetDurationMs(
+        presentation.vfx.preset,
+        presentation.vfx.durationMs,
+      ) / 1000;
+  }
+
+  const actorStub = previewActorStub(entity);
+  const presentationLockSec = resolvePresentationLockSec(
+    skill,
+    actorStub as Parameters<typeof resolvePresentationLockSec>[1],
+    slotKind,
+  );
+
+  return {
+    bodyPlaybackFrames,
+    bodyPlaybackSec,
+    vfxPreset,
+    vfxSec,
+    moveDurationSec: effect.type === 'move' ? effect.moveDurationSec : null,
+    presentationLockSec,
+    useDurationSec: resolveUseDurationSec(skill),
+  };
+}

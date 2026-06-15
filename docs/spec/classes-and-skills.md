@@ -216,7 +216,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 ### 演出解決（コード）
 
-Battle イベント → `resolveEffectPresentation` → skill anim 優先 → VFX。タイミングは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は Phase 5 **演出調整ツール**（Canvas プレビュー + VFX 統合）。
+Battle イベント → `resolveEffectPresentation` → skill anim 優先 → VFX。タイミングは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。
 
 ### 射程
 

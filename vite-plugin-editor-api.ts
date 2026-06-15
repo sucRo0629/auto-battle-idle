@@ -126,6 +126,10 @@ interface EnemyBundleBody {
   actives: ActiveSkillDef[];
 }
 
+interface PresentationSkillBody {
+  active: ActiveSkillDef;
+}
+
 interface ClassStatsPatchBody {
   id: string;
   maxHp: number;
@@ -250,6 +254,23 @@ async function applyEnemyBundle(
   await reloadGameDataModules(server, [READ_FILES.enemies, ...writtenSkillFiles]);
 }
 
+async function applyPresentationSkill(
+  body: PresentationSkillBody,
+  server?: ViteDevServer,
+): Promise<void> {
+  const skillsRoot = readSkillsRoot();
+  const nextActives = upsertById(skillsRoot.actives, body.active);
+
+  const validationBase = loadValidationPayload();
+  validateAll({
+    ...validationBase,
+    skills: { passives: skillsRoot.passives, actives: nextActives },
+  });
+
+  const writtenSkillFiles = upsertSkillsToFiles([], [body.active]);
+  await reloadGameDataModules(server, writtenSkillFiles);
+}
+
 export function editorApiPlugin(): Plugin {
   return {
     name: 'editor-api',
@@ -292,6 +313,12 @@ export function editorApiPlugin(): Plugin {
           if (req.method === 'PUT' && url.pathname === '/__editor/enemy-bundle') {
             const body = JSON.parse(await readBody(req)) as EnemyBundleBody;
             await applyEnemyBundle(body, server);
+            sendJson(res, 200, { ok: true });
+            return;
+          }
+          if (req.method === 'PUT' && url.pathname === '/__editor/presentation-skill') {
+            const body = JSON.parse(await readBody(req)) as PresentationSkillBody;
+            await applyPresentationSkill(body, server);
             sendJson(res, 200, { ok: true });
             return;
           }

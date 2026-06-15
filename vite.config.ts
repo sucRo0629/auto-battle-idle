@@ -24,6 +24,7 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         menu: resolve(__dirname, 'menu.html'),
         editor: resolve(__dirname, 'editor.html'),
+        presentationLab: resolve(__dirname, 'presentation-lab.html'),
       },
     },
   },

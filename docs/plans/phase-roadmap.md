@@ -205,6 +205,14 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 - JSON 書き戻し（`data/skills/actives/` 等）。BattleEngine 全体は回さない薄いランナー
 - SkillEditorStep から「演出プレビューを開く」連携（任意）
 
+**実装済み（演出ラボ MVP / PR3）**
+
+- `presentation-lab.html` — Vite 別エントリ（`npm run dev` → `/presentation-lab.html`）
+- `src/presentation/PresentationPreviewRunner.ts` — 擬似 2 体配置 + `BattleCanvas.play*`
+- `src/presentation/PresentationLabApp.ts` — classId / enemyId・skill・effect 選択、▶ / ↺、JSON 編集・保存
+- `PUT /__editor/presentation-skill` — `skillsJsonFs` upsert + validate
+- SkillEditorStep effect 演出セクションから演出ラボ deep link（任意）
+
 ### 進め方
 
 1. インフラ — `entityAnimLayout.json`、body atlas 描画、スキル strip 64px、`animStartFrame`

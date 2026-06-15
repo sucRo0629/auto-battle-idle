@@ -1315,6 +1315,12 @@ function appendEffectPresentationFields(
   parent: HTMLElement,
   effect: SkillEffectDef,
   patchEffect: (patch: EffectPatch, options?: { rerender?: boolean }) => void,
+  labLink?: {
+    entityKind: 'class' | 'enemy';
+    entityId: string;
+    skillId: string;
+    effectIndex: number;
+  },
 ): void {
   const section = createSection('演出（この effect）');
   parent.appendChild(section);
@@ -1419,6 +1425,23 @@ function appendEffectPresentationFields(
         }, { rerender: true });
       }),
     );
+  }
+
+  if (labLink) {
+    const linkRow = createEl('p', 'presentation-lab-open-link');
+    const link = createEl('a') as HTMLAnchorElement;
+    const params = new URLSearchParams({
+      entityKind: labLink.entityKind,
+      entityId: labLink.entityId,
+      skillId: labLink.skillId,
+      effectIndex: String(labLink.effectIndex),
+    });
+    link.href = `presentation-lab.html?${params.toString()}`;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = '演出ラボでプレビュー';
+    linkRow.appendChild(link);
+    section.appendChild(linkRow);
   }
 }
 
@@ -2802,6 +2825,7 @@ export class SkillEditorStep {
               effectCount: active.effect.length,
             }
           : undefined,
+        active.id,
       );
       effectsSection.appendChild(block);
     });
@@ -2920,6 +2944,7 @@ export class SkillEditorStep {
     _showPerEffectPresentation = false,
     isBasicAttack = false,
     sequenceContext?: { effectIndex: number; effectCount: number },
+    skillId?: string,
   ): void {
     const normalizedEffect = withEditorEffectDefaults(effect);
     if (editorEffectNeedsDefaultSync(effect, normalizedEffect)) {
@@ -4094,7 +4119,22 @@ export class SkillEditorStep {
     }
 
     if (!isBasicAttack && effectSupportsPresentationFields(effect)) {
-      appendEffectPresentationFields(parent, effect, patchEffect);
+      const entityId =
+        this.options.classIdentity?.classId.trim() ||
+        this.options.entityPicker?.selectedId ||
+        '';
+      const labLink =
+        entityId && skillId && sequenceContext
+          ? {
+              entityKind: (this.options.classIdentity ? 'class' : 'enemy') as
+                | 'class'
+                | 'enemy',
+              entityId,
+              skillId,
+              effectIndex: sequenceContext.effectIndex,
+            }
+          : undefined;
+      appendEffectPresentationFields(parent, effect, patchEffect, labLink);
     }
   }
 }
