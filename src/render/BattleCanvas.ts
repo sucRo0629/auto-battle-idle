@@ -82,7 +82,6 @@ export class BattleCanvas implements IBattleRenderer {
   private layouts: CombatantLayout[] = [];
   private theme!: BattleHudTheme;
   private worldOffsetX = 0;
-  private lastBattleX = new Map<string, number>();
   private isMarching = new Map<string, boolean>();
   private marchIdleHoldFrames = new Map<string, number>();
   private verifyModeEnabled = false;
@@ -213,7 +212,7 @@ export class BattleCanvas implements IBattleRenderer {
         ) {
           continue;
         }
-        this.syncMovementAnim(enemy.id, enemy.battleX, !isDead);
+        this.syncMovementAnim(enemy.id, enemy.bodyAnimMarching, !isDead);
         const animState = this.animator.getState(enemy.id);
         layouts.push({
           id: enemy.id,
@@ -257,7 +256,7 @@ export class BattleCanvas implements IBattleRenderer {
       ) {
         continue;
       }
-      this.syncMovementAnim(ally.id, ally.battleX, ally.hp > 0);
+      this.syncMovementAnim(ally.id, ally.bodyAnimMarching, ally.hp > 0);
       const animState = this.animator.getState(ally.id);
       layouts.push({
         id: ally.id,
@@ -298,17 +297,10 @@ export class BattleCanvas implements IBattleRenderer {
 
   private syncMovementAnim(
     combatantId: string,
-    battleX: number,
+    bodyAnimMarching: boolean,
     isAlive: boolean,
   ): void {
-    const prevX = this.lastBattleX.get(combatantId);
-    const moved =
-      isAlive &&
-      prevX !== undefined &&
-      Math.abs(battleX - prevX) > 0.01;
-    const wasMoving = this.isMarching.get(combatantId) ?? false;
-
-    this.lastBattleX.set(combatantId, battleX);
+    const wasMarching = this.isMarching.get(combatantId) ?? false;
 
     if (!isAlive) {
       this.isMarching.set(combatantId, false);
@@ -317,20 +309,20 @@ export class BattleCanvas implements IBattleRenderer {
     }
 
     if (this.animator.blocksAutoMove(combatantId)) {
-      this.isMarching.set(combatantId, moved);
+      this.isMarching.set(combatantId, bodyAnimMarching);
       return;
     }
 
     const animState = this.animator.getState(combatantId);
-    if (moved) {
+    if (bodyAnimMarching) {
       this.marchIdleHoldFrames.set(
         combatantId,
         BattleCanvas.MARCH_IDLE_HOLD_FRAMES,
       );
-      if (!wasMoving || animState.anim === "idle") {
+      if (!wasMarching || animState.anim === "idle") {
         this.animator.setAnim(combatantId, "move");
       }
-    } else if (wasMoving && animState.anim === "move") {
+    } else if (animState.anim === "move") {
       const hold = this.marchIdleHoldFrames.get(combatantId) ?? 0;
       if (hold > 0) {
         this.marchIdleHoldFrames.set(combatantId, hold - 1);
@@ -340,7 +332,11 @@ export class BattleCanvas implements IBattleRenderer {
       }
     }
 
-    this.isMarching.set(combatantId, moved || (this.marchIdleHoldFrames.get(combatantId) ?? 0) > 0);
+    this.isMarching.set(
+      combatantId,
+      bodyAnimMarching ||
+        (this.marchIdleHoldFrames.get(combatantId) ?? 0) > 0,
+    );
   }
 
   /** リスポーン等で HP が回復したユニットの死亡演出を解除 */

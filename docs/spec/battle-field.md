@@ -1,6 +1,6 @@
 # 戦闘フィールド（位置・移動・描画）
 
-実装：`src/battle/battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `BattleEngine.ts`
+実装：`src/battle/battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `bodyAnimMarching.ts`, `BattleEngine.ts`
 描画：`src/render/BattleCanvas.ts`（`screenX = battleX`）
 
 本ドキュメントは **横 1 軸のバトルライン** における座標・隊形・Wave・接敵・描画の設計正本。ダメージ/CD/脅威等は [combat.md](combat.md) を参照。
@@ -149,6 +149,14 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 ソートキー `factionBackDepth`：`isEnemy ? -battleX : battleX` の昇順。同深度は `id` 辞書順。
 
 HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に別レイヤーで描画（本節の対象外）。
+
+### 2.8 entity body アニメ（idle / move）
+
+`BattleEngine` がスナップショット各ユニットに `bodyAnimMarching` を付与し、`BattleCanvas` が `move` / `idle` を切り替える。判定正本は `src/battle/bodyAnimMarching.ts`（`battleX` のフレーム差分や overlap 微調整は使わない）。
+
+| `bodyAnimMarching === true` | PartyDeploy 目標へ未着、接敵自動接近中、スキル `move` 実行中、Wave 間/Victory 退場 march |
+| --------------------------- | ----------------------------------------------------------------------------------------- |
+| `false`                     | 配置完了待ち、射程内で自動接近停止、死亡、その他静止                                       |
 
 ---
 

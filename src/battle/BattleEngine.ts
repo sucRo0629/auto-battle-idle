@@ -29,6 +29,11 @@ import {
 } from "./combatPosition.ts";
 import { waveHasTrainingDummy } from "./trainingStage.ts";
 import {
+  BODY_ANIM_APPROACH_SETTLED_PX,
+  resolveCombatantBodyAnimMarching,
+  type BodyAnimMarchingContext,
+} from "./bodyAnimMarching.ts";
+import {
   resolveAllPlayerApproachBattleX,
   resolveEnemyApproachBattleX,
   resolveEnemyAttackTargetPlayer,
@@ -122,8 +127,6 @@ const ENEMY_DEATH_SETTLE_DELAY_SEC =
 /** 味方死亡演出（アニメ + ホールド）後に Defeat へ遷移 */
 const ALLY_DEATH_DEFEAT_DELAY_SEC =
   (deathAnimDurationMs() + 500) / 1000;
-/** 接近完了判定（battleX と目標の差） */
-const ENGAGED_APPROACH_SETTLED_PX = 0.5;
 
 export interface BattleEngineOptions {
   onDamageApplied?: (
@@ -1031,7 +1034,7 @@ export class BattleEngine {
       if (target === undefined) continue;
       updateUnitApproach(ally, target, step);
       ally.visualX = ally.battleX;
-      if (Math.abs(ally.battleX - target) > ENGAGED_APPROACH_SETTLED_PX) {
+      if (Math.abs(ally.battleX - target) > BODY_ANIM_APPROACH_SETTLED_PX) {
         allSettled = false;
       }
     }
@@ -1041,7 +1044,7 @@ export class BattleEngine {
       if (target === undefined) continue;
       updateUnitApproach(enemy, target, step);
       enemy.visualX = enemy.battleX;
-      if (Math.abs(enemy.battleX - target) > ENGAGED_APPROACH_SETTLED_PX) {
+      if (Math.abs(enemy.battleX - target) > BODY_ANIM_APPROACH_SETTLED_PX) {
         allSettled = false;
       }
     }
@@ -1214,6 +1217,34 @@ export class BattleEngine {
     };
   }
 
+  private buildBodyAnimMarchingContext(): BodyAnimMarchingContext {
+    return {
+      phase: this.phase,
+      engaged: this.engaged,
+      partyDeployActive: this.partyDeployActive,
+      partyDeploySettled: this.partyDeploySettled,
+      waveExitMarchActive: this.waveExitMarchActive,
+      victoryExitMarchActive:
+        this.phase === 'victory' &&
+        !this.hasFallenAllies() &&
+        !this.areAlliesOffScreen(),
+      partyDeployTargets: this.partyDeployTargets,
+      enemyDeployTargets: this.enemyDeployTargets,
+      players: this.players,
+      enemies: this.enemies,
+      gameData: this.gameData,
+      isActorInSkillMotion: (actorId) =>
+        this.skillSequenceRunner.isActorInSkillMotion(actorId),
+    };
+  }
+
+  private resolveBodyAnimMarching(unit: CombatantState): boolean {
+    return resolveCombatantBodyAnimMarching(
+      unit,
+      this.buildBodyAnimMarchingContext(),
+    );
+  }
+
   private toSnapshot(c: CombatantState) {
     return {
       id: c.id,
@@ -1235,6 +1266,7 @@ export class BattleEngine {
       isEnemy: c.isEnemy,
       battleX: c.battleX,
       visualX: c.battleX,
+      bodyAnimMarching: this.resolveBodyAnimMarching(c),
       corpseVisible: c.isEnemy ? undefined : c.corpseVisible,
       ...(c.isEnemy
         ? {}

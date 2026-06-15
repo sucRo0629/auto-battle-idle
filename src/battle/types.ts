@@ -1153,6 +1153,8 @@ export interface CombatantSnapshot {
   isEnemy: boolean;
   battleX: number;
   visualX: number;
+  /** entity body の move 再生（自動接近・PartyDeploy・スキル move 等） */
+  bodyAnimMarching: boolean;
   /** 味方のみ: フィールド上に death スプライトを描くか */
   corpseVisible?: boolean;
   /** 味方のみ: デバッグ用ヘイト */

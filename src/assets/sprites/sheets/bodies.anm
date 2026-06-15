@@ -6,11 +6,11 @@ ANIME_VERSION=1
 PATTERN_NAME=idle
 
 	FRAME_NUMBER=1
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\idle_template.edg
-		WIN_TITLE=idle_template.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
 		SRC_X=0
 		SRC_Y=0
-		LAYER_NUM=1
+		LAYER_NUM=0
 		WIDTH=48
 		HEIGHT=48
 		DEST_X=0
@@ -21,11 +21,11 @@ PATTERN_NAME=idle
 		CKEY_NUM=0
 
 	FRAME_NUMBER=2
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\idle_template.edg
-		WIN_TITLE=idle_template.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
 		SRC_X=48
 		SRC_Y=0
-		LAYER_NUM=1
+		LAYER_NUM=0
 		WIDTH=48
 		HEIGHT=48
 		DEST_X=0
@@ -36,11 +36,11 @@ PATTERN_NAME=idle
 		CKEY_NUM=0
 
 	FRAME_NUMBER=3
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\idle_template.edg
-		WIN_TITLE=idle_template.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
 		SRC_X=96
 		SRC_Y=0
-		LAYER_NUM=1
+		LAYER_NUM=0
 		WIDTH=48
 		HEIGHT=48
 		DEST_X=0
@@ -51,11 +51,139 @@ PATTERN_NAME=idle
 		CKEY_NUM=0
 
 	FRAME_NUMBER=4
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\idle_template.edg
-		WIN_TITLE=idle_template.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
 		SRC_X=144
 		SRC_Y=0
-		LAYER_NUM=1
+		LAYER_NUM=0
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+
+;--------------------------
+PATTERN_NAME=move
+
+	FRAME_NUMBER=1
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
+		SRC_X=0
+		SRC_Y=48
+		LAYER_NUM=0
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+	FRAME_NUMBER=2
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
+		SRC_X=48
+		SRC_Y=48
+		LAYER_NUM=0
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+	FRAME_NUMBER=3
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
+		SRC_X=96
+		SRC_Y=48
+		LAYER_NUM=0
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+	FRAME_NUMBER=4
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
+		SRC_X=144
+		SRC_Y=48
+		LAYER_NUM=0
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+
+;--------------------------
+PATTERN_NAME=death
+
+	FRAME_NUMBER=1
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
+		SRC_X=0
+		SRC_Y=96
+		LAYER_NUM=0
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+	FRAME_NUMBER=2
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
+		SRC_X=48
+		SRC_Y=96
+		LAYER_NUM=0
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+	FRAME_NUMBER=3
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
+		SRC_X=96
+		SRC_Y=96
+		LAYER_NUM=0
+		WIDTH=48
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+	FRAME_NUMBER=4
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\bodies_template.edg
+		WIN_TITLE=bodies_template.edg
+		SRC_X=144
+		SRC_Y=96
+		LAYER_NUM=0
 		WIDTH=48
 		HEIGHT=48
 		DEST_X=0
