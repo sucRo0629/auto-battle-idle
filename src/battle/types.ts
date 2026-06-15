@@ -831,6 +831,11 @@ interface SkillEffectCommon {
   animLoopFrame?: number;
   /** アウトロ開始コマ。未指定時は animLoopFrame + 1 */
   animOutroStartFrame?: number;
+  /**
+   * スキル strip 内の効果適用コマ（絶対 index）。省略 = 即時。
+   * 遅延秒 = max(0, applyFrame - animStartFrame) / 8
+   */
+  applyFrame?: number;
   /** 未指定時はスキル vfx → 既定プリセット（damage/heal 等のみ） */
   vfx?: SkillVfxDef;
   /** @deprecated target.kind==="status" に統合。読み込み専用 */

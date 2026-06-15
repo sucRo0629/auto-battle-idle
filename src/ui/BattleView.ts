@@ -194,6 +194,52 @@ export class BattleView {
     );
   }
 
+  private playSkillBodyAnim(
+    actorId: string,
+    skillId: string,
+    effectIndex: number,
+    slotKind: 'basic' | 'active' | undefined,
+  ): void {
+    const snapshot = this.engine.getSnapshot();
+    const actor = [...snapshot.allies, ...snapshot.enemies].find(
+      (c) => c.id === actorId,
+    );
+    const skillDef = this.gameData.skillRegistry.actives[skillId];
+    const effectDef = skillDef?.effect[effectIndex];
+    if (!skillDef || !effectDef) return;
+
+    const presentation = resolveEffectPresentation(
+      skillId,
+      effectDef,
+      skillDef,
+      {
+        role: actor?.role,
+        rangePx: actor?.rangePx ?? 0,
+        damageType: actor?.damageType ?? 'physical',
+        basicAttackVfx: actor?.basicAttackVfx,
+        slotKind,
+        effectKind: effectDef.type,
+        targetShape: effectDef.targetShape,
+      },
+    );
+    const skillAnimKey = resolveSkillAnimKey(skillId, effectIndex);
+    if (skillAnimKey) {
+      const holdSec =
+        actor !== undefined
+          ? resolveSkillAnimHoldSec(skillDef, actor, slotKind ?? 'active')
+          : 0;
+      this.canvas.playSkillAnim(
+        actorId,
+        skillAnimKey,
+        toSkillAnimPlaybackOptions(effectDef, holdSec),
+      );
+      return;
+    }
+    if (presentation.anim && slotKind !== 'basic') {
+      this.canvas.playAnim(actorId, presentation.anim, actor?.spriteKey);
+    }
+  }
+
   private handleChainSegmentVfx(
     event: Extract<BattleEvent, { type: "chainSegmentVfx" }>,
   ): void {
@@ -237,6 +283,15 @@ export class BattleView {
   }
 
   private onBattleEvent(event: BattleEvent): void {
+    if (event.type === 'skillWindup') {
+      this.playSkillBodyAnim(
+        event.actorId,
+        event.skillId,
+        event.effectIndex,
+        event.slotKind,
+      );
+      return;
+    }
     if (event.type === "skill") {
       const slotLabel =
         event.slotKind === "basic" ? "通常攻撃" : event.skillName;
@@ -295,7 +350,8 @@ export class BattleView {
           event.skillId,
           event.effectIndex ?? 0,
         );
-        if (skillAnimKey) {
+        const skipBodyAnim = effectDef.applyFrame !== undefined;
+        if (skillAnimKey && !skipBodyAnim) {
           const holdSec = skillDef && actor
             ? resolveSkillAnimHoldSec(
                 skillDef,
@@ -308,7 +364,7 @@ export class BattleView {
             skillAnimKey,
             toSkillAnimPlaybackOptions(effectDef, holdSec),
           );
-        } else if (presentation.anim && event.slotKind !== "basic") {
+        } else if (presentation.anim && event.slotKind !== "basic" && !skipBodyAnim) {
           this.canvas.playAnim(
             event.actorId,
             presentation.anim,

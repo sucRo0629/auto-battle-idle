@@ -5,6 +5,7 @@ import type { CombatantLayout } from '../render/IBattleRenderer.ts';
 import { resolveSkillAnimKey } from '../render/skillAnimRegistry.ts';
 import {
   resolveSkillAnimHoldSec,
+  resolveEffectApplyDelaySec,
   toSkillAnimPlaybackOptions,
 } from '../render/skillAnimPlayback.ts';
 import { resolveEffectPresentation } from '../render/skillVfx/resolveEffectPresentation.ts';
@@ -42,6 +43,7 @@ export class PresentationPreviewRunner {
   private canvas: BattleCanvas;
   private rafId: number | null = null;
   private lastTs = 0;
+  private applyDelayTimeoutId: ReturnType<typeof setTimeout> | null = null;
   private readonly groundY: number;
   private actor: PreviewEntity | null = null;
   private target: PreviewEntity | null = null;
@@ -127,23 +129,46 @@ export class PresentationPreviewRunner {
       );
     }
 
-    if (presentation.vfx) {
-      this.canvas.playAttackEffect(
-        PREVIEW_ACTOR_ID,
-        PREVIEW_TARGET_ID,
-        presentation.vfx,
+    const applyDelaySec = resolveEffectApplyDelaySec(
+      request.skill.id,
+      request.effectIndex,
+      effect,
+    );
+    const spawnHitEffects = (): void => {
+      if (presentation.vfx) {
+        this.canvas.playAttackEffect(
+          PREVIEW_ACTOR_ID,
+          PREVIEW_TARGET_ID,
+          presentation.vfx,
+        );
+      }
+      if (presentation.hitVfx) {
+        this.canvas.playAttackEffect(
+          PREVIEW_ACTOR_ID,
+          PREVIEW_TARGET_ID,
+          presentation.hitVfx,
+        );
+      }
+      if (effect.type === 'damage' || effect.type === 'dot') {
+        this.canvas.showDamagePopup(PREVIEW_TARGET_ID, 99, 'damage');
+      } else if (effect.type === 'heal') {
+        this.canvas.showHealPopup(PREVIEW_TARGET_ID, 99);
+      }
+    };
+
+    if (applyDelaySec > 0) {
+      this.clearApplyDelayTimeout();
+      this.applyDelayTimeoutId = setTimeout(
+        spawnHitEffects,
+        Math.round(applyDelaySec * 1000),
       );
-    }
-    if (presentation.hitVfx) {
-      this.canvas.playAttackEffect(
-        PREVIEW_ACTOR_ID,
-        PREVIEW_TARGET_ID,
-        presentation.hitVfx,
-      );
+    } else {
+      spawnHitEffects();
     }
   }
 
   reset(): void {
+    this.clearApplyDelayTimeout();
     this.resetCanvas();
     this.applyIdleLayouts();
   }
@@ -167,8 +192,15 @@ export class PresentationPreviewRunner {
   }
 
   destroy(): void {
+    this.clearApplyDelayTimeout();
     this.stop();
     this.canvas.destroy();
+  }
+
+  private clearApplyDelayTimeout(): void {
+    if (this.applyDelayTimeoutId === null) return;
+    clearTimeout(this.applyDelayTimeoutId);
+    this.applyDelayTimeoutId = null;
   }
 
   private resetCanvas(): void {

@@ -12,6 +12,7 @@ import { resolveSkillAnimKey } from '../render/skillAnimRegistry.ts';
 import {
   getSkillAnimIntroSec,
   getSkillAnimOutroSec,
+  resolveEffectApplyDelaySec,
   resolveSkillAnimPlayback,
 } from '../render/skillAnimPlayback.ts';
 import { resolveEffectPresentation } from '../render/skillVfx/resolveEffectPresentation.ts';
@@ -35,6 +36,7 @@ export interface PresentationTimeline {
   vfxPreset: string | null;
   vfxSec: number | null;
   moveDurationSec: number | null;
+  applyDelaySec: number;
   presentationLockSec: number;
   useDurationSec: number;
 }
@@ -95,6 +97,7 @@ export function computePresentationTimeline(
       vfxPreset: null,
       vfxSec: null,
       moveDurationSec: null,
+      applyDelaySec: 0,
       presentationLockSec: 0,
       useDurationSec: resolveUseDurationSec(skill),
     };
@@ -110,6 +113,7 @@ export function computePresentationTimeline(
     slotKind,
   );
   const useDurationSec = resolveUseDurationSec(skill);
+  const applyDelaySec = resolveEffectApplyDelaySec(skill.id, effectIndex, effect);
   const holdSec =
     useDurationSec > 0 ? useDurationSec : presentationLockSec;
 
@@ -150,6 +154,7 @@ export function computePresentationTimeline(
     vfxPreset,
     vfxSec,
     moveDurationSec: effect.type === 'move' ? effect.moveDurationSec : null,
+    applyDelaySec,
     presentationLockSec,
     useDurationSec,
   };

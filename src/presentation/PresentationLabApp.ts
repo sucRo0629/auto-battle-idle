@@ -74,6 +74,17 @@ function formatSec(sec: number | null): string {
   return `${sec.toFixed(2)}s`;
 }
 
+function appendHintLines(
+  parent: HTMLElement,
+  lines: Array<[string, string]>,
+): void {
+  for (const [label, text] of lines) {
+    const hint = createEl('p', 'presentation-lab-hint');
+    hint.textContent = `${label}: ${text}`;
+    parent.appendChild(hint);
+  }
+}
+
 export class PresentationLabApp {
   private classes: ClassPresetBeforeEnrich[] = [];
   private enemies: EnemyTemplate[] = [];
@@ -451,10 +462,48 @@ export class PresentationLabApp {
       ),
     );
 
+    grid.appendChild(
+      createFieldRow(
+        'applyFrame',
+        createNumberInput(effect.applyFrame ?? -1, (value) => {
+          this.patchEffect((draft) => {
+            if (value < 0) {
+              delete draft.applyFrame;
+            } else {
+              draft.applyFrame = Math.floor(value);
+            }
+          });
+        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=即時' }),
+      ),
+    );
+
+    const applyHint = createEl('p', 'presentation-lab-hint');
+    applyHint.textContent =
+      'applyFrame = strip 内の効果適用コマ（絶対）。animStartFrame 以降。8 FPS（1 コマ = 0.125 秒）。body は即再生、VFX・ダメージは apply コマ。';
+    grid.appendChild(applyHint);
+
     const phaseHint = createEl('p', 'presentation-lab-hint');
     phaseHint.textContent =
       'animLoopFrame を指定すると intro（start〜introEnd）→ hold（loop）→ outro（outroStart〜終端）の 3 段再生。hold 時間は useDurationSec または presentationLock。introEnd / outroStart 省略時は loop / loop+1。';
     grid.appendChild(phaseHint);
+    appendHintLines(grid, [
+      [
+        'useDurationSec',
+        '発動後にそのユニットを busy にする時間。`time` / `hitsTaken` のアクティブ CD 進行も止めたいときに使う。',
+      ],
+      [
+        'applyFrame',
+        'body を先に見せて、効果の発生だけ遅らせたいときのコマ位置。ダメージ / 回復 / VFX の適用タイミングをずらす。',
+      ],
+      [
+        'moveDurationSec',
+        'move ステップの移動補間秒。battleX の位置移動を何秒で終えるかを決める。',
+      ],
+      [
+        'vfx.durationMs',
+        'VFX 1 本の表示時間。body の再生や presentationLock の長さを決める基準にもなる。',
+      ],
+    ]);
 
     if (effect.type === 'move') {
       grid.appendChild(
@@ -544,6 +593,7 @@ export class PresentationLabApp {
     mutator(effect);
     this.markDirty();
     this.renderForm();
+    this.refreshTimeline();
   }
 
   private refreshTimeline(): void {
@@ -585,6 +635,13 @@ export class PresentationLabApp {
         timeline.moveDurationSec,
       ),
       this.timelineItem(
+        'applyFrame',
+        timeline.applyDelaySec > 0
+          ? `delay ${formatSec(timeline.applyDelaySec)}`
+          : '—',
+        timeline.applyDelaySec > 0 ? timeline.applyDelaySec : null,
+      ),
+      this.timelineItem(
         'presentationLock',
         formatSec(timeline.presentationLockSec),
         timeline.presentationLockSec,
@@ -596,12 +653,23 @@ export class PresentationLabApp {
       ),
     );
     this.timelineHost.appendChild(list);
+    appendHintLines(this.timelineHost, [
+      [
+        'body playback',
+        'body strip の見た目上の再生時間。intro / hold / outro を含む。`useDurationSec` があればその値、なければ `presentationLock` まで伸びる。',
+      ],
+      [
+        'presentationLock',
+        'VFX が終わるまで通常攻撃だけ止める見た目用のロック。CD チャージは止めない。',
+      ],
+    ]);
 
     const track = createEl('div', 'presentation-lab-timeline-track');
     const maxSec = Math.max(
       timeline.bodyPlaybackSec ?? 0,
       timeline.vfxSec ?? 0,
       timeline.moveDurationSec ?? 0,
+      timeline.applyDelaySec,
       timeline.presentationLockSec,
       timeline.useDurationSec,
       0.5,
@@ -712,6 +780,11 @@ function buildTimelineSegments(
   }
   return [
     ...segments,
+    {
+      label: 'apply',
+      sec: timeline.applyDelaySec,
+      color: '#e74c3c',
+    },
     { label: 'VFX', sec: timeline.vfxSec ?? 0, color: '#e6a23c' },
     {
       label: 'move',

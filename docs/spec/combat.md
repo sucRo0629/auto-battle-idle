@@ -238,7 +238,8 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 1. effect のターゲット陣営（`spec.side` 等）と一致する `targetRuleOverrideApplyTo` を持つパッシブのみ `targetRuleOverride` を適用（`kind: self` は除外。配列の後ろが優先）。通常攻撃・接近は敵向けスコープ
 2. スキル `range`（未指定 = 使用者射程）で **攻撃可能プール** を絞り込み
 3. 各 effect の `targetShape` に従い **発動 tick で全 hit を一括解決**（`resolveEffectResolution`）
-4. `scatter` / `pierce`（`pierceDurationSec` あり）/ `chain`（2 体以上命中時、既定または `chainDurationSec`）は `pendingHitQueue` で **適用のみ時間分散**（再ターゲットなし）
+4. `applyFrame` 指定時は **適用のみ遅延**（body は `skillWindup` で即再生、ダメージ等は pending キュー）。`hitCount >= 2` の `hitDurationSec` 分散は 1 ヒット目を `applyFrame` 基準に加算
+5. `scatter` / `pierce`（`pierceDurationSec` あり）/ `chain`（2 体以上命中時、既定または `chainDurationSec`）は `pendingHitQueue` で **適用のみ時間分散**（再ターゲットなし）
 
 **常時パッシブの再評価:** `periodicTrigger` 省略のパッシブは、対象を一度固定して終わりにはしない。対象が自分以外で、位置移動や新規侵入によって範囲内外が変わるものは、戦闘中に定期的に再評価して対象集合を同期する。
 
@@ -304,7 +305,7 @@ VFX パラメータ調整・Canvas プレビューは **Phase 5 演出調整ツ�
 
 | イベント          | 演出 |
 | ------------- | --- |
-| ダメージ（通常攻撃含む） | skill strip（あれば）+ VFX + ダメージポップアップ。strip なし basic は **VFX のみ** |
+| ダメージ（通常攻撃含む） | skill strip（あれば）+ VFX + ダメージポップアップ。`applyFrame` あり時は strip を先に再生し VFX・ポップアップは apply コマ |
 | ダメージ（active） | skill strip + VFX |
 | 回復            | skill strip または VFX + 緑ポップアップ |
 | buff / debuff | 対象の白い光（約0.8秒） |

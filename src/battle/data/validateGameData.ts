@@ -1524,6 +1524,7 @@ function parseOptionalEffectPresentation(
   | 'animIntroEndFrame'
   | 'animLoopFrame'
   | 'animOutroStartFrame'
+  | 'applyFrame'
   | 'vfx'
 > {
   const result: Pick<
@@ -1533,6 +1534,7 @@ function parseOptionalEffectPresentation(
     | 'animIntroEndFrame'
     | 'animLoopFrame'
     | 'animOutroStartFrame'
+    | 'applyFrame'
     | 'vfx'
   > = {};
   if (obj.anim !== undefined) {
@@ -1583,6 +1585,14 @@ function parseOptionalEffectPresentation(
     result.animOutroStartFrame = animOutroStartFrameRaw;
   }
 
+  const applyFrameRaw = parseOptionalNumber(obj, 'applyFrame', context);
+  if (applyFrameRaw !== undefined) {
+    if (!Number.isInteger(applyFrameRaw) || applyFrameRaw < 0) {
+      invalidField(context, 'applyFrame', 'must be a non-negative integer');
+    }
+    result.applyFrame = applyFrameRaw;
+  }
+
   const startFrame = result.animStartFrame ?? 0;
   const introEnd = result.animIntroEndFrame ?? result.animLoopFrame;
   const loopFrame = result.animLoopFrame;
@@ -1626,6 +1636,14 @@ function parseOptionalEffectPresentation(
         'must be > animIntroEndFrame',
       );
     }
+  }
+
+  if (result.applyFrame !== undefined && result.applyFrame < startFrame) {
+    invalidField(
+      context,
+      'applyFrame',
+      'must be >= animStartFrame',
+    );
   }
 
   const vfx = parseSkillVfx(obj.vfx, `${context}.vfx`);

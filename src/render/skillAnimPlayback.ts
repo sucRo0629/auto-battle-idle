@@ -2,7 +2,7 @@ import type { ActiveSkillDef, CombatantState, DamageType, Role, SkillEffectDef, 
 import { resolvePresentationLockSec } from '../battle/skills/presentationLock.ts';
 import { resolveUseDurationSec } from '../battle/skills/skillSequence.ts';
 import { SHARED_ANIM_FPS } from './SpriteRegistry.ts';
-import { getSkillAnimFrameCount } from './skillAnimRegistry.ts';
+import { getSkillAnimFrameCount, resolveSkillAnimKey } from './skillAnimRegistry.ts';
 
 /** strip 内の再生開始コマ（default 0）。先頭 idle 参照コマ skip 時は 1 等 */
 export function normalizeAnimStartFrame(
@@ -12,6 +12,29 @@ export function normalizeAnimStartFrame(
   const raw = startFrame ?? 0;
   if (!Number.isFinite(raw) || raw < 0) return 0;
   return Math.min(Math.floor(raw), Math.max(0, stripFrameCount - 1));
+}
+
+export type EffectApplyFrameFields = Pick<
+  SkillEffectDef,
+  'applyFrame' | 'animStartFrame'
+>;
+
+/** applyFrame から発動起点までの遅延秒。省略 / 再生開始以前 = 0 */
+export function resolveEffectApplyDelaySec(
+  skillId: string,
+  effectIndex: number,
+  effect: EffectApplyFrameFields,
+): number {
+  if (effect.applyFrame === undefined) return 0;
+  const skillAnimKey = resolveSkillAnimKey(skillId, effectIndex);
+  const playbackStartFrame = skillAnimKey
+    ? normalizeAnimStartFrame(
+        effect.animStartFrame,
+        getSkillAnimStripFrameCount(skillAnimKey),
+      )
+    : 0;
+  const delayFrames = Math.max(0, effect.applyFrame - playbackStartFrame);
+  return delayFrames / SHARED_ANIM_FPS;
 }
 
 function clampAnimFrame(frame: number, stripFrameCount: number): number {

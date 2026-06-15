@@ -12,6 +12,7 @@ import {
   normalizeAnimStartFrame,
   resolveSkillAnimPhaseConfig,
   resolveSkillAnimPlayback,
+  resolveEffectApplyDelaySec,
 } from './skillAnimPlayback.ts';
 
 function mockImage(width: number): HTMLImageElement {
@@ -96,5 +97,19 @@ describe('skillAnimPlayback', () => {
       stripFrameCount: 6,
       holdSec: 1,
     });
+  });
+
+  it('resolves apply delay from strip frame offset', () => {
+    __registerSkillAnimForTest('hit_skill', mockImage(256));
+    expect(
+      resolveEffectApplyDelaySec('hit_skill', 0, {
+        animStartFrame: 1,
+        applyFrame: 3,
+      }),
+    ).toBe(0.25);
+    expect(
+      resolveEffectApplyDelaySec('hit_skill', 0, { applyFrame: 2 }),
+    ).toBe(0.25);
+    expect(resolveEffectApplyDelaySec('hit_skill', 0, {})).toBe(0);
   });
 });

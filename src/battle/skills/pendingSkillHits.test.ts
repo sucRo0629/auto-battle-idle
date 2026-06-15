@@ -197,3 +197,47 @@ describe('buildPendingHitsFromResolution staged chain', () => {
     expect(queue).toHaveLength(0);
   });
 });
+
+describe('buildPendingHitsFromResolution applyFrame base delay', () => {
+  const effectDef = {
+    type: 'damage',
+    target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+    damageType: 'physical',
+    amount: { kind: 'atkBased', atkScale: 1 },
+    animStartFrame: 1,
+    applyFrame: 3,
+  } as SkillEffectDef;
+
+  it('schedules a single hit after baseDelaySec without spread', () => {
+    const hits = buildPendingHitsFromResolution(
+      { waves: [{ hitIndex: 0, targets: [{ unit: { id: 'e1' } as never }] }] },
+      2,
+      'actor1',
+      skill,
+      effectDef,
+      { skillId: skill.id, remaining: 0, slotKind: 'basic' },
+      { baseDelaySec: 0.25 },
+    );
+    expect(hits).toHaveLength(1);
+    expect(hits[0]?.applyAtBattleSec).toBe(2.25);
+  });
+
+  it('adds baseDelaySec before spread hits', () => {
+    const hits = buildPendingHitsFromResolution(
+      {
+        spreadDurationSec: 0.4,
+        waves: [
+          { hitIndex: 0, targets: [{ unit: { id: 'e1' } as never }] },
+          { hitIndex: 1, targets: [{ unit: { id: 'e1' } as never }] },
+        ],
+      },
+      0,
+      'actor1',
+      skill,
+      { ...effectDef, hitCount: 2, hitDurationSec: 0.4 },
+      { skillId: skill.id, remaining: 0, slotKind: 'basic' },
+      { baseDelaySec: 0.25 },
+    );
+    expect(hits.map((hit) => hit.applyAtBattleSec)).toEqual([0.25, 0.45]);
+  });
+});

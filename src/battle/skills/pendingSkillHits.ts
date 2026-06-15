@@ -10,6 +10,8 @@ import type {
 export interface BuildPendingHitsOptions {
   stagedChainVfx?: boolean;
   effectIndex?: number;
+  /** applyFrame 等による全ヒット共通の先頭遅延（秒） */
+  baseDelaySec?: number;
 }
 
 export interface TickPendingHitsCallbacks {
@@ -26,8 +28,10 @@ export function buildPendingHitsFromResolution(
   cd: SkillCooldown,
   options?: BuildPendingHitsOptions,
 ): PendingSkillHit[] {
-  const spread = resolution.spreadDurationSec;
-  if (spread === undefined || spread <= 0) return [];
+  const spread = resolution.spreadDurationSec ?? 0;
+  const baseDelaySec = Math.max(0, options?.baseDelaySec ?? 0);
+  const hasSpread = spread > 0;
+  if (!hasSpread && baseDelaySec <= 0) return [];
 
   const waves = resolution.waves.filter((wave) => wave.targets.length > 0);
   if (waves.length === 0) return [];
@@ -40,9 +44,16 @@ export function buildPendingHitsFromResolution(
 
   return waves.map((wave) => {
     const hitIndex = wave.hitIndex;
-    const applyAtBattleSec = stagedChainVfx
-      ? battleSec + (hitIndex + 1) * travelSec!
-      : battleSec + (spread * hitIndex) / Math.max(waves.length, 1);
+    let applyAtBattleSec: number;
+    if (hasSpread) {
+      applyAtBattleSec = stagedChainVfx
+        ? battleSec + baseDelaySec + (hitIndex + 1) * travelSec!
+        : battleSec +
+          baseDelaySec +
+          (spread * hitIndex) / Math.max(waves.length, 1);
+    } else {
+      applyAtBattleSec = battleSec + baseDelaySec;
+    }
 
     const hit: PendingSkillHit = {
       applyAtBattleSec,
@@ -59,7 +70,7 @@ export function buildPendingHitsFromResolution(
       })),
       ...(stagedChainVfx
         ? {
-            vfxStartAtBattleSec: battleSec + hitIndex * travelSec!,
+            vfxStartAtBattleSec: battleSec + baseDelaySec + hitIndex * travelSec!,
             travelDurationSec: travelSec,
             segmentCount: waves.length,
           }

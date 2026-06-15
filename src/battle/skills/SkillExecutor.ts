@@ -40,6 +40,7 @@ import {
 } from '../skillTrigger.ts';
 import { consumeActiveChargeOnFire, hasAvailableActiveCharge } from './chargeBank.ts';
 import { resolvePresentationLockSec } from './presentationLock.ts';
+import { resolveEffectApplyDelaySec } from '../../render/skillAnimPlayback.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -252,8 +253,16 @@ export class SkillExecutor {
     );
     if (!resolutionHasTargets(resolution)) return false;
 
+    const applyDelaySec = resolveEffectApplyDelaySec(
+      skill.id,
+      effectIndex,
+      effectDef,
+    );
     const spread = resolution!.spreadDurationSec;
-    if (spread !== undefined && spread > 0) {
+    if (
+      (spread !== undefined && spread > 0) ||
+      applyDelaySec > 0
+    ) {
       const stagedChainVfx = usesStagedChainVfx(
         skill,
         effectDef,
@@ -267,9 +276,12 @@ export class SkillExecutor {
         skill,
         effectDef,
         cd,
-        { stagedChainVfx, effectIndex },
+        { stagedChainVfx, effectIndex, baseDelaySec: applyDelaySec },
       );
       if (pending.length > 0) {
+        if (applyDelaySec > 0) {
+          this.emitSkillWindup(actor, skill, effectIndex, cd, resolution!);
+        }
         this.deps.enqueuePendingHits(pending);
         return true;
       }
@@ -319,6 +331,26 @@ export class SkillExecutor {
       }
     }
     return appliedAny;
+  }
+
+  private emitSkillWindup(
+    actor: CombatantState,
+    skill: ActiveSkillDef,
+    effectIndex: number,
+    cd: SkillCooldown,
+    resolution: NonNullable<ReturnType<typeof resolveEffectResolution>>,
+  ): void {
+    const firstTarget = resolution.waves[0]?.targets[0]?.unit;
+    if (!firstTarget) return;
+    this.emit({
+      type: 'skillWindup',
+      actorId: actor.id,
+      targetId: firstTarget.id,
+      skillId: skill.id,
+      skillName: skill.name,
+      slotKind: cd.slotKind,
+      effectIndex,
+    });
   }
 
   applyScheduledStep(

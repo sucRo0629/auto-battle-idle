@@ -2,6 +2,15 @@ import type { SkillEffectKind } from './types.ts';
 
 export type BattleEvent =
   | {
+      type: 'skillWindup';
+      actorId: string;
+      targetId: string;
+      skillId: string;
+      skillName: string;
+      slotKind?: 'basic' | 'active';
+      effectIndex: number;
+    }
+  | {
       type: 'skill';
       actorId: string;
       targetId: string;
