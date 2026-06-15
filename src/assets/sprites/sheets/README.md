@@ -4,7 +4,7 @@
 **ルール・JSON フィールド:** [docs/spec/classes-and-skills.md](../../../../docs/spec/classes-and-skills.md#スプライト演出アセット)  
 **フェーズ計画:** [docs/plans/phase-roadmap.md](../../../../docs/plans/phase-roadmap.md) Phase 5 / 6
 
-> **注:** 以下は **目標仕様**（Phase 5 実装前）。現行コードは旧 `sheets/{entityId}/idle.png` 等の分割配置のまま。移行時に本 README を正とする。
+**実装状況（PR1）:** `entityAnimLayout.json` + `src/render/entityAtlas.ts` で body atlas 描画済み。未配置時は旧 `sheets/{entityId}/` または静止画フォールバック。スキル strip（64px）・演出ラボは未着手。
 
 ---
 

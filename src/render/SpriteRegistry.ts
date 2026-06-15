@@ -4,6 +4,10 @@ import {
   hasEntitySpriteAsset,
   SPRITE_URLS,
 } from './spriteAssets.ts';
+import {
+  getEntityAnimSpriteDef,
+  preloadEntityBodies,
+} from './entityAtlas.ts';
 import { preloadSkillAnims } from './skillAnimRegistry.ts';
 import { preloadSpriteSheets } from './spriteSheetRegistry.ts';
 
@@ -21,10 +25,10 @@ export interface SpriteAnimDef {
 export { ENEMY_DEFAULT_SPRITE_KEY, hasEntitySpriteAsset };
 
 export const ANIM_DEFS: Record<AnimState, SpriteAnimDef> = {
-  idle: { frames: 4, fps: SHARED_ANIM_FPS, loop: true },
+  idle: getEntityAnimSpriteDef('idle'),
   attack: { frames: 4, fps: SHARED_ANIM_FPS, loop: false },
-  move: { frames: 4, fps: SHARED_ANIM_FPS, loop: true },
-  death: { frames: 3, fps: SHARED_ANIM_FPS, loop: false },
+  move: getEntityAnimSpriteDef('move'),
+  death: getEntityAnimSpriteDef('death'),
 };
 
 const spriteImages = new Map<string, HTMLImageElement>();
@@ -45,6 +49,7 @@ export function preloadSprites(): Promise<void> {
       ...Object.entries(SPRITE_URLS).map(async ([key, url]) => {
         spriteImages.set(key, await loadImage(url));
       }),
+      preloadEntityBodies(),
       preloadSpriteSheets(),
       preloadSkillAnims(),
     ]).then(() => {});

@@ -3,7 +3,7 @@ ANIME_VERSION=1
 
 
 ;--------------------------
-PATTERN_NAME=noname000
+PATTERN_NAME=idle
 
 	FRAME_NUMBER=1
 		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\idle_template.edg

@@ -4,6 +4,7 @@ import attackerRangedPlaceholderUrl from "../assets/sprites/attacker_ranged_plac
 import supporterPlaceholderUrl from "../assets/sprites/supporter_placeholder.png";
 import enemyDefaultUrl from "../assets/sprites/enemy_default.png";
 import { PLACEHOLDER_SPRITE_KEYS } from "../battle/classVisuals.ts";
+import { hasEntityBodyAtlas } from "./entityAtlas.ts";
 import { hasSpriteSheetKey } from "./spriteSheetRegistry.ts";
 
 export const ENEMY_DEFAULT_SPRITE_KEY = "enemy_default";
@@ -44,8 +45,9 @@ for (const [path, url] of Object.entries(entitySpriteModules)) {
   }
 }
 
-/** `{entityId}.png` または `sheets/{entityId}/` が登録済みか（レガシー共有キーは除く） */
+/** `{entityId}.png` / `sheets/bodies/{entityId}.png` / `sheets/{entityId}/` が登録済みか（レガシー共有キーは除く） */
 export function hasEntitySpriteAsset(entityId: string): boolean {
+  if (hasEntityBodyAtlas(entityId)) return true;
   if (hasSpriteSheetKey(entityId)) return true;
   return entityId in SPRITE_URLS && !LEGACY_SPRITE_KEYS.has(entityId);
 }

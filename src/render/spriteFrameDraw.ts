@@ -4,6 +4,12 @@ import {
   type AnimState,
 } from "./SpriteRegistry.ts";
 import {
+  getEntityBodyImage,
+  getEntityFrameRect,
+  hasEntityBodyAtlas,
+  type EntityBodyAnim,
+} from "./entityAtlas.ts";
+import {
   getSkillAnimImage,
 } from "./skillAnimRegistry.ts";
 import {
@@ -15,6 +21,18 @@ import {
   getSheetCellWidth,
   SPRITE_SHEET_CELL_SIZE,
 } from "./spriteLayout.ts";
+
+/** body atlas または旧 `sheets/{id}/{anim}.png` が idle/move/death 用にあるか */
+export function hasEntityAnimSheet(
+  spriteKey: string,
+  anim: AnimState,
+  attackSheetKey = "attack",
+): boolean {
+  if (anim === "idle" || anim === "move" || anim === "death") {
+    if (hasEntityBodyAtlas(spriteKey)) return true;
+  }
+  return hasSpriteSheetAnimation(spriteKey, anim, attackSheetKey);
+}
 
 /**
  * 足元中央 (footX, footY) を基準に entity スプライトを描画。
@@ -33,6 +51,27 @@ export function drawSpriteFrameAtFootAnchor(
   attackSheetKey = "attack",
 ): void {
   const entitySheetKey = anim === "attack" ? attackSheetKey : anim;
+
+  if (anim !== "attack" && hasEntityBodyAtlas(spriteKey)) {
+    const sheet = getEntityBodyImage(spriteKey);
+    if (sheet) {
+      const rect = getEntityFrameRect(spriteKey, anim as EntityBodyAnim, frame);
+      const drawW = rect.sw * scale;
+      const drawH = rect.sh * scale;
+      ctx.drawImage(
+        sheet,
+        rect.sx,
+        rect.sy,
+        rect.sw,
+        rect.sh,
+        footX - drawW / 2,
+        footY - drawH,
+        drawW,
+        drawH,
+      );
+      return;
+    }
+  }
 
   if (hasSpriteSheetAnimation(spriteKey, anim, attackSheetKey)) {
     const sheet = getSpriteSheetImage(spriteKey, entitySheetKey);

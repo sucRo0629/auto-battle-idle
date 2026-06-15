@@ -6,7 +6,7 @@ import {
   clearDeathPlaceholder,
   getDeathPlaceholderTransform,
 } from "./placeholderSpriteAnim.ts";
-import { hasSpriteSheetAnimation } from "./spriteSheetRegistry.ts";
+import { hasEntityAnimSheet } from "./spriteFrameDraw.ts";
 import {
   drawSkillAnimAtFootAnchor,
   drawSpriteFrameAtFootAnchor,
@@ -497,7 +497,7 @@ export class BattleCanvas implements IBattleRenderer {
     const showingSkillAnim = layout.skillAnimKey !== null;
     const offsetY =
       showingSkillAnim ||
-      hasSpriteSheetAnimation(
+      hasEntityAnimSheet(
         layout.spriteKey,
         layout.anim,
         layout.attackSheetKey,
@@ -507,7 +507,7 @@ export class BattleCanvas implements IBattleRenderer {
 
     const deathTransform =
       layout.anim === "death" &&
-      !hasSpriteSheetAnimation(layout.spriteKey, "death")
+      !hasEntityAnimSheet(layout.spriteKey, "death")
         ? getDeathPlaceholderTransform(layout.id, layout)
         : null;
     const deathAlpha = this.deathPlayback.isActive(layout.id)
