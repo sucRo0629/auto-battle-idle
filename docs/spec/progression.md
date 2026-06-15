@@ -96,7 +96,7 @@ interface ClassSkillUnlock {
   level: number; // この Lv 以上で習得
   skillIds: string[];
 }
-// classes.json の skills[] に定義。種別は skills.json から解決
+// classes.json の skills[] に定義。種別は data/skills/ から解決
 ```
 
 - LvUP 時、`resolveLearnedSkills` が該当 `skillIds` を `learnedPassiveIds` / `learnedActiveIds` に反映。
@@ -120,7 +120,7 @@ interface ClassSkillUnlock {
 Phase 3 の習得機構 + キャラクターデータ GUI で **クラス 15 種**を確定する。
 
 - 数値・習得タイミングの最終調整は **Phase 7**
-- スキル説明の自動生成調整は **Phase 4b**（[phase-roadmap.md](../plans/phase-roadmap.md)）
+- スキル説明（`formatSkillText`）は **データ PR ごと** に同梱（Phase 4b）。一括 polish は Phase 7 前
 
 ### ステータス・成長（Phase 4a）
 
@@ -136,20 +136,19 @@ Phase 3 の習得機構 + キャラクターデータ GUI で **クラス 15 種
 
 ---
 
-## Phase 5 — 本番スプライトアニメーション + 編集ツール
+## Phase 5 — 演出アセット + 演出調整ツール
 
-進行・育成とは独立した **見た目フェーズ**（Phase 4 以降）。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
+進行・育成とは独立。**確定 classId / enemyId から順次** PNG とタイミングを載せる。詳細は [phase-roadmap.md](../plans/phase-roadmap.md)。
 
-- クラス別・敵別の本番ドット絵スプライトシート
-- Phase 1 の `SpriteAnimator` / イベント連動は維持、`SpriteRegistry` とアセットのみ差し替え
-- スプライトアニメーション編集ツール作成
+- `data/entityAnimLayout.json` + `sheets/bodies/{id}.png`（idle/move/death、味方・敵共通レイアウト）
+- 通常攻撃・全 active = `sheets/skills/*.png`（64×48 strip）。遠隔 basic も弓引き PNG で body 可
+- **演出調整ツール** — Canvas プレビュー + VFX / タイミング調整
 
 ---
 
-## Phase 6 — スキル VFX + 編集ツール
+## Phase 6 — VFX 描画拡張
 
-Phase 5 完了後。`skills.json` の `vfx` フィールドでスキル別エフェクトをデータ駆動化。
-- VFX 編集ツール作成
+Phase 5 の演出ラボで VFX **調整** は済とする。Phase 6 は **新 Canvas preset の描画実装** とデータ本番化の残り。
 
 ---
 

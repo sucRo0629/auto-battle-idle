@@ -298,15 +298,18 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 ## 演出（render 層）
 
-Phase 1 はプレースホルダー VFX のみ。**スキル別 `vfx` 設定・新プリセット追加は Phase 6**（[phase-roadmap.md](../plans/phase-roadmap.md)）。
+VFX パラメータ調整・Canvas プレビューは **Phase 5 演出調整ツール**。新 Canvas preset の **描画追加** は **Phase 6**（[phase-roadmap.md](../plans/phase-roadmap.md)）。
 
+**body アセット:** entity は `sheets/bodies/{id}.png`（idle/move/death）。攻撃 body は **全スキル strip**（64×48、`{id}_basic_attack` 含む）。詳細は [classes-and-skills.md](classes-and-skills.md#スプライト演出アセット)。
 
-| イベント          | VFX                                                             |
-| ------------- | --------------------------------------------------------------- |
-| ダメージ          | attack / hurt アニメ、ダメージポップアップ、近接/遠隔プレースホルダー（slash / orb / arrow） |
-| 回復            | heal アニメ、緑ポップアップ、healRise プレースホルダー                              |
-| buff / debuff | 対象の白い光（約0.8秒）                                                   |
-| スタン（CC）       | オーバーレイ `stun`（`stun` バッジ表示）                                     |
+| イベント          | 演出 |
+| ------------- | --- |
+| ダメージ（通常攻撃含む） | skill strip（あれば）+ VFX + ダメージポップアップ。strip なし basic は **VFX のみ** |
+| ダメージ（active） | skill strip + VFX |
+| 回復            | skill strip または VFX + 緑ポップアップ |
+| buff / debuff | 対象の白い光（約0.8秒） |
+| スタン（CC）       | オーバーレイ `stun` |
+| 死亡          | entity death 行（body atlas） |
 
 
 ロジックは `BattleEvent` を発火；`BattleView` が `BattleCanvas` を駆動。`render/` に戦闘ルールは置かない。

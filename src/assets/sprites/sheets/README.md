@@ -1,147 +1,141 @@
-# スプライトシート
+# スプライト・アニメーションアセット
 
-`{entityId}` フォルダに、アニメーション種別ごとの横並び PNG を置く（クラスは `classId`、敵は `enemyId` と一致）。
+**レイアウト正本:** `data/entityAnimLayout.json`（全 entity 共通の格子定義）。  
+**ルール・JSON フィールド:** [docs/spec/classes-and-skills.md](../../../../docs/spec/classes-and-skills.md#スプライト演出アセット)  
+**フェーズ計画:** [docs/plans/phase-roadmap.md](../../../../docs/plans/phase-roadmap.md) Phase 5 / 6
 
-## 配置
+> **注:** 以下は **目標仕様**（Phase 5 実装前）。現行コードは旧 `sheets/{entityId}/idle.png` 等の分割配置のまま。移行時に本 README を正とする。
+
+---
+
+## 配置概要
 
 ```
-sheets/
-  df_guardian/
-    idle.png
-    move.png
-    attack.png
-    attack_2.png
-    death.png
-  skills/
-    sp_cleric_active_1.png
-    at_assassin_active_1_0.png
-    at_assassin_active_1_1.png
-  stage1_1/
-    idle.png
-    death.png
+data/
+  entityAnimLayout.json          # idle / move / death の行・コマ数（全員共通）
+
+src/assets/sprites/
+  sheets/
+    bodies/
+      df_guardian.png            # 味方 classId
+      stage1_1.png               # 敵 enemyId（同形式）
+    skills/
+      df_guardian_basic_attack.png
+      at_ranger_basic_attack.png
+      at_assassin_active_1_0.png
+      at_assassin_active_1_1.png
+  sprites/
+    {entityId}.png               # 静止画フォールバック（32×32、任意）
 ```
 
-- **entityId** … クラス / 敵テンプレートの `id` と一致（例: `df_guardian`, `stage1_1`）
-- **entity ファイル名** … `idle` / `move` / `attack` / `attack_2` … / `death`（拡張子 `.png`）
-- 旧 `dash.png` は `move.png` にリネーム（`dash.png` も読み込み時 `move` として互換）
+| 種別 | パス | 内容 |
+|------|------|------|
+| **entity 本体** | `sheets/bodies/{classId\|enemyId}.png` | **1 枚**。idle / move / death のみ（attack は含めない） |
+| **スキル body** | `sheets/skills/{skillId}.png` または `{skillId}_{effectIndex}.png` | 通常攻撃・全 active 共通。**64×48** 横 strip |
+| **スキル VFX** | JSON の `vfx`（Canvas プリセット） | body PNG とは別レイヤ。Phase 6 で新 preset 追加 |
 
-## PNG 仕様
+味方・敵とも **同じ `entityAnimLayout.json`**。`spriteKey` 未指定時は entity の `id` をキーとする。
+
+---
+
+## entity 本体（`sheets/bodies/{id}.png`）
+
+### 共通レイアウト（`entityAnimLayout.json`）
+
+| 行 | anim | コマ数 | 1 コマ | ループ |
+|----|------|--------|--------|--------|
+| 0 | idle | 4 | 48×48 | ○ |
+| 1 | move | 4 | 48×48 | ○ |
+| 2 | death | 3 | 48×48 | × |
+
+- **fps:** 8（全 anim 共通）
+- **足元アンコ:** 各コマの **下辺中央** = 地面（layout 32px 箱の中央下）
+- **attack は entity に含めない** — 振り・弓引き等はすべて **スキル PNG**（`{id}_basic_attack` 含む）
+
+PNG サイズ例: 幅 `max(4×48, 3×48) = 192px`、高さ `3×48 = 144px`（3 行）。
+
+---
+
+## スキル body（`sheets/skills/*.png`）
+
+### 共通仕様（通常攻撃 + 全 active）
 
 | 項目 | 値 |
 |------|-----|
-| 1コマサイズ | **48 × 48 px**（idle / move / death。`spriteLayout.ts` で変更可） |
-| attack 1コマ | **64 × 48 px**（横幅のみ広い。振りなど左右にはみ出し用） |
+| 1 コマ | **64 × 48 px**（幅 64・高さ 48） |
 | 並べ方 | 左から右へ横一列 |
-| 総幅 | idle 等: `48 × コマ数` / attack: `64 × コマ数` |
-| **足元アンカー** | 各コマの **下辺中央** を地面位置に揃える |
-| **fps** | **8**（idle / move / attack / death / スキルアニメ共通） |
+| コマ数 | 幅 ÷ 64（JSON の `animStartFrame` を除いた再生分） |
+| fps | 8 |
 
-隊形・当たりの占有幅は **32px** のまま。描画だけ 48px コマを使い、上・左右にはみ出してよい。
+### ファイル名
 
-### アンカーのイメージ
+| パターン | 用途 |
+|----------|------|
+| `{skillId}.png` | 単 effect / フォールバック |
+| `{skillId}_{effectIndex}.png` | 多 effect（0 始まり）。解決順: index 付き → 無 index |
+| `{classId\|enemyId}_basic_attack.png` | 通常攻撃 body（近接の振り・**遠隔の弓引き** 等） |
 
-```
-     ┌──────── 64px ────────┐
-     │   （攻撃の振り等）     │
-     │        ┌──┐          │
-     │        │体│          │
-     │        └──┘          │
-     └──────────●───────────┘  ← 下辺中央 = 地面（全コマ同じ位置）
-            layout 32px
-         （中央で重なる）
-```
+### 先頭 idle 参照コマ（任意）
 
-コマ数は `src/render/SpriteRegistry.ts` の `ANIM_DEFS` に合わせる（スキルアニメは PNG 幅から自動算出）。
+制作時、strip の **0 コマ目** に entity idle 0 と同じ絵を入れて位置合わせしてよい。  
+再生時は effect の **`animStartFrame`**（default `0`、idle 入りなら `1`）でスキップする。  
+演出ラボのプレビューでも 0 コマは「参照」、再生は `animStartFrame` から。
 
-| anim | コマ数 | fps | ループ | 用途 |
-|------|--------|-----|--------|------|
-| idle | 4 | 8 | あり | 待機 |
-| move | 4 | 8 | あり | 接敵・wave march 等の通常移動 |
-| attack | 4 | 8 | なし | 通常攻撃 body（**256 × 48 px** = 64×4） |
-| death | 3 | 8 | なし（最終コマで停止） | 死亡 |
+### 通常攻撃（basic）
 
-### attack バリアント
+- 戦闘上は `{entityId}_basic_attack` スキル（`data/skills/actives/`）
+- **PNG あり** → skill anim 再生 + VFX（`basicAttackVfx` / effect `vfx`）
+- **PNG なし** → body なし・**VFX のみ**（近接 slash / 遠隔 arrow / 魔法 orb 等）
+- **遠隔**も近接と同様。弓引き PNG を置けば body 再生する（「遠隔だから body 無し」は廃止）
 
-- `attack.png` のみ … 常にその 1 枚
-- `attack_2.png` 以上もある … 再生時に均等ランダム
-- 命名: `attack.png`, `attack_2.png`, `attack_3.png` …
-
-### 例: slime の death（3コマ）
-
-- 画像サイズ: **144 × 48 px**
-- 左コマ … 倒れ始め、中央 … 途中、右 … 倒れた状態
-
-### キャラごとにコマサイズを変える
-
-`src/render/spriteLayout.ts` の `SHEET_CELL_OVERRIDES` に spriteKey を追加:
-
-```typescript
-const SHEET_CELL_OVERRIDES = {
-  boss_dragon: 64,
-};
-```
-
-## 動作（entity）
-
-- シート PNG を置くと、その anim だけ自動登録（コード変更不要）
-- 未配置の anim は静止画（`sprites/{entityId}.png`）またはプレースホルダー演出
-- death シートがある場合、回転プレースホルダーは使われない
-- `heal` / `hurt` entity シートは不要（回復・被弾はスキルアニメ / popup 等）
-
-## スキルアニメーション
-
-**配置:**
+### 例（背刺）
 
 ```
-sheets/skills/{skillId}.png
-sheets/skills/{skillId}_{effectIndex}.png
+sheets/skills/at_assassin_active_1_0.png   # move ステップ
+sheets/skills/at_assassin_active_1_1.png   # damage ステップ
 ```
 
-- `{skillId}` … `data/skills/actives/` の active スキル ID
-- `{effectIndex}` … 0 始まり。複数 effect スキル（move → damage 等）でステップごとに別 PNG
-- 解決順: `{skillId}_{index}.png` → `{skillId}.png`
-- PNG 仕様・fps は entity シートと同じ。コマ数 = 幅 ÷ 48
+---
 
-**例（背刺）:**
+## スキル VFX（Canvas プリセット）
 
-```
-sheets/skills/at_assassin_active_1_0.png   # move ステップ（突進演出）
-sheets/skills/at_assassin_active_1_1.png   # damage ステップ（背刺）
-```
-
-**追加手順:**
-
-1. 上記パスに PNG を配置
-2. 必要なら `skills.json` の `effect.anim` で entity anim を上書き（`attack` / `none` 等）
-3. dev サーバー再起動で glob 自動登録
-
-突進・回復・特殊攻撃は entity `move` / `heal` ではなくスキルアニメ PNG で表現する。
-
-## スキル VFX
-
-### 現状（仮・Canvas プリセット）
-
-JSON で指定。PNG 不要。
+JSON で指定。PNG 不要（Phase 6 で新 preset の `draw*` 追加）。
 
 | 設定場所 | フィールド |
 |----------|-----------|
-| `skills.json` effect | `vfx.preset`, `arc`, `durationMs` |
-| `skills.json` skill | `vfx` |
-| `classes.json` / `enemies.json` traits | `basicAttackVfx` |
+| effect | `vfx.preset`, `arc`, `durationMs` |
+| skill | `vfx` |
+| traits | `basicAttackVfx` |
 
-プリセット ID: `slash` / `orb` / `arrow` / `healRise`
+解決: `basicAttackVfx` → `effect.vfx` → `skill.vfx` → ロール/射程既定（`resolveSkillVfx`）。
 
-解決優先度: `basicAttackVfx` → `effect.vfx` → `skill.vfx` → ロール/射程既定
+**演出調整ツール（Phase 5）** で body PNG・VFX・`useDurationSec` / `durationMs` を **同一 Canvas プレビュー** で調整する（Phase 6 用の別 VFX エディタは作らない）。
 
-### 本番（Phase 6 予定・PNG Canvas アニメ）
+---
 
-`sheets/vfx/{vfxId}.png` を配置し、JSON でモード指定する想定:
+## 静止画フォールバック
 
-- **projectile** … 矢 PNG を放物線で飛ばす
-- **groundOverlay** … スキル指定位置に毒沼等を地面オーバーレイ
+`sprites/{entityId}.png` — **32×32 px**。body atlas 未配置時の静止表示。
 
-量産・軌道確認のため **VFX プレビュー用エディタ step** を Phase 6 で検討。現フェーズでは上記仮プリセットを維持。
+---
 
-## 静止画（シートなし）
+## 確定クラス / 敵から順次
 
-`sprites/{entityId}.png` は **32 × 32 px**。足元中央を layout 箱の下辺中央に合わせて描画。
+4a マスタ全件の一括投入ではなく、**確定した classId / enemyId から**:
+
+1. `bodies/{id}.png`
+2. `skills/{id}_basic_attack.png`
+3. 各 active の `skills/{skillId}_*.png`
+4. JSON の `animStartFrame` / `vfx` / タイミング（演出ラボ）
+
+4b 説明文はスキル JSON 変更 PR と同梱（Phase 7 前の一括仕上げは不要）。
+
+---
+
+## 旧配置（移行予定・非推奨）
+
+```
+sheets/{entityId}/idle.png | move.png | attack.png | death.png
+```
+
+attack 64px を entity フォルダに置く方式は **廃止方向**。スキル strip に統一する。

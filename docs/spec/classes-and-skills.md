@@ -185,7 +185,37 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | `damageType`     | `physical`                                                                                      |
 | `basicAttackVfx` | `deriveBasicAttackVfxFromTraits()`（magic→orb / physical+rangePx>=100→arrow / それ以外 →slash） |
 
-`basicAttackSkillId` は省略可（`{entityId}_basic_attack`）。通常攻撃スキルはロード時に合成。`skills.json` に同名 ID があれば `name` / `atkScale` / `interval` 等のみ上書き可（`range` / `damageType` / `vfx` は traits 正）。
+`basicAttackSkillId` は省略可（`{entityId}_basic_attack`）。通常攻撃スキルはロード時に合成。`data/skills/actives/` に同名 ID があれば `name` / `atkScale` / `interval` 等のみ上書き可（`range` / `damageType` / `vfx` は traits 正）。
+
+## スプライト・演出アセット
+
+アセットパス・寸法の詳細は [sheets/README.md](../../src/assets/sprites/sheets/README.md)。フェーズ計画は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 5 / 6。
+
+### entity 本体（idle / move / death）
+
+- **1 枚 PNG / entity:** `sheets/bodies/{classId|enemyId}.png`
+- **レイアウト正本:** `data/entityAnimLayout.json` — 味方・敵 **共通**（idle 4 / move 4 / death 3 コマ、各 48×48、fps 8）
+- **attack は entity に含めない** — 振り・弓引き等はすべてスキル strip
+
+### スキル body（通常攻撃 + 全 active）
+
+- **配置:** `sheets/skills/{skillId}.png` または `{skillId}_{effectIndex}.png`
+- **1 コマ:** 64×48 px（横 strip）。通常攻撃 `{entityId}_basic_attack` も同規格
+- **解決:** `resolveSkillAnimKey` → あれば **skill anim**。entity `attack` フォールバックは使わない（本番）
+- **先頭 idle 参照コマ:** strip 0 コマ目に entity idle 0 と同絵を入れてよい。再生は effect **`animStartFrame`**（default `0`、idle 入りなら `1`）から（**Phase 5 実装予定**）
+
+### 通常攻撃の見た目
+
+| 条件 | body | VFX |
+|------|------|-----|
+| `sheets/skills/{id}_basic_attack.png` **あり** | skill anim 再生 | `basicAttackVfx` / effect `vfx` |
+| PNG **なし** | なし | `basicAttackVfx` 等（slash / arrow / orb） |
+
+**遠隔**（`rangePx >= RANGED_ATTACK_MIN_PX`）も同じ。弓引き PNG を置けば body 再生する。未配置時のみ VFX のみ。
+
+### 演出解決（コード）
+
+Battle イベント → `resolveEffectPresentation` → skill anim 優先 → VFX。タイミングは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は Phase 5 **演出調整ツール**（Canvas プレビュー + VFX 統合）。
 
 ### 射程
 
@@ -238,7 +268,7 @@ passiveIds?: string[]; // クラス固有パッシブ（skills.json passives へ
 | **passive** | 0〜複数 | `ClassPreset.passiveIds` → `learnedPassiveIds` に自動反映 | 将来               |
 | **active**  | 最大 4  | `build.learnedActiveIds`（習得即戦闘参加）                | HUD 2×2 リキャスト |
 
-- 基本攻撃も `skills.json` の `actives` に定義し、`slotKind: 'basic'` で実行。
+- 基本攻撃も `data/skills/actives/` に `{entityId}_basic_attack` として定義し、`slotKind: 'basic'` で実行。
 - 基本攻撃 ID をセット枠（`equippedActiveSlots`）に入れない。
 - **defender / attacker:** Lv0 でアクティブ 2 種を習得（`skills[].level: 0` に 2 active ID）。**supporter:** Lv0 で **`active_1` のみ**（`active_2` は Lv20 枝候補。詳細は §クラスサポ設計方針）。
 - 戦闘エンジンは **習得済みアクティブを最大 4 枠まで**自動参加（段階解放: Lv0=2 / Lv15=3 / Lv30=4）。
@@ -309,7 +339,7 @@ interface CharacterBuild {
 
 ### パッシブ効果（`PassiveEffectKind`）
 
-共有パッシブは `skills.json` の `passives[]` に定義し、クラスは `passiveIds` で参照する。
+共有パッシブは `data/skills/passives.json` に定義し、クラスは `passiveIds` で参照する。
 
 | effect               | 主なフィールド                                                                                                                                              | 挙動                                                                                                                                                                                                                                        |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -468,7 +498,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `debuffedEnemy` + `targetDebuffFilter` | `{ "kind": "status", "side": "enemy", "debuffTags": [...] }`           |
 | `allAllies` / `allEnemies`             | `{ "kind": "all", "side": "ally" \| "enemy" }`                         |
 
-## effect 共通フィールド（`skills.json`）
+## effect 共通フィールド（`data/skills/`）
 
 | フィールド                                                   | 説明                                                                                                                                 |
 | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
@@ -488,8 +518,9 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `piercePowerStepMultiplier` / `piercePowerStepMode`          | `pierce` 任意。命中ごとの威力減衰（`multiply` / `divide`）                                                                           |
 | `pierceDurationSec`                                          | `pierce` 任意。複数命中の適用時間分散（秒）                                                                                          |
 | `range`                                                      | 命中判定・VFX 共用（px）。省略時 = `actor.traits.rangePx`。`pierce` + `selfOrigin` では向き前方の効果距離                            |
-| `anim`                                                       | 任意。entity スプライトアニメ（`idle` / `attack` / `none` 等）。未指定 = effect 種別の既定。突進・回復は **スキルアニメ PNG** を優先 |
-| `vfx`                                                        | 任意。effect 単位の VFX プリセット。未指定 = スキル `vfx` → 種別既定（damage/heal 等）                                               |
+| `anim`                                                       | 任意。スキル PNG 未配置時の entity anim フォールバック（本番では **skill strip 優先**）。`none` で body 抑制 |
+| `animStartFrame`                                             | 任意（**Phase 5 実装予定**）。スキル strip 内の再生開始コマ。先頭 idle 参照コマを skip するとき `1` |
+| `vfx`                                                        | 任意。effect 単位の VFX プリセット。未指定 = スキル `vfx` → 種別既定（damage/heal 等）               |
 
 **パッシブ `debuff`:** 上記 `target` / `targetShape` / `range` / 形状別フィールドと同型の項目を **`debuff` 接頭辞**で保持（例: `target` → `debuffTargetRule`、`targetShape` → `debuffTargetShape`、`range` → `debuffRange`、`aoeRadiusPx` → `debuffAoeRadiusPx`）。変換は `passiveDebuffBridge.ts`。発動タイミングは **常時**（未指定）または **`periodicTrigger: stageStart` / `waveStart`**。Stage/Wave 開始時は `chance`（0〜1、未指定=1）で発動確率を判定。アクティブの `trigger`（`basicAttackCount` 等）や `fireConditions` は使わない。
 
@@ -503,7 +534,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 
 **パッシブ `periodicDispel`:** **`dispel` 接頭辞**（`dispelTargetRule` / `dispelTargetShape` / `dispelRange` 等）。変換は `passiveDispelBridge.ts`。発動タイミングは **`stageStart` / `waveStart` / `onDebuffReceived`**（未指定 = `waveStart`）。`chance` で発動確率を指定可。`dispelTriggerLimit` で Wave 内の発動回数を制限。
 
-**move を含むスキル:** シーケンスの各 step 発火時に、スキルアニメ PNG（`sheets/skills/{skillId}_{index}.png`）→ `anim` / `vfx` の順で演出（例: 突進 `_0` → 斬撃 `_1`+`slash`）。
+**move を含むスキル:** 各 step 発火時にスキル strip（64×48、`sheets/skills/{skillId}_{index}.png`）→ VFX。entity `move` / `attack` シートは使わない（[§スプライト・演出アセット](#スプライト演出アセット)）。
 
 ### ResourceAmountSpec（`damage` / `heal` / `hot` / `barrier`）
 

@@ -11,5 +11,5 @@
 | [stats.md](stats.md) | 基礎ステ（Lv1）、成長段階、growthPresets、SPD（attackSpeedTier） |
 | [combat.md](combat.md) | ダメージ、回復、CD、ステータス効果 |
 | [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン） |
-| [classes-and-skills.md](classes-and-skills.md) | ロール、クラス、スキル JSON スキーマ |
+| [classes-and-skills.md](classes-and-skills.md) | ロール、クラス、スキル JSON スキーマ、**スプライト・演出アセット** |
 | [progression.md](progression.md) | EXP、レベル、セーブ、Phase 2〜8 |

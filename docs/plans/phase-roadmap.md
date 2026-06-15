@@ -11,15 +11,15 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2b** | 戦闘計算（`combatMath` 等）                                                          | **完了**             |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                            | **完了**             |
 | **3**  | Lv アップ時スキル習得、アクティブセット 2 枠目                                       | **完了**             |
-| **4**  | クラスマスタ + スキル説明；4a データ **完了** / 4b 説明自動生成 / **4c JSON 分割**   | **4c 完了 → 4b が次** |
-| **5**  | 本番スプライトアニメーション + 編集ツール作成                                       | 未着手               |
-| **6**  | スキル VFX + 編集ツール作成（スキル別設定・新プリセット）                             | 未着手（Phase 5 後） |
+| **4**  | クラスマスタ + スキル説明；4a **完了** / 4c **完了** / 4b 説明（データ PR 同梱）     | **4a+4c 完了**        |
+| **5**  | 演出アセット + **演出調整ツール**（Canvas プレビュー・VFX 調整含む）               | **次**（確定クラス順次） |
+| **6**  | VFX **描画**拡張（新 Canvas preset・データ本番化の残り）                             | 未着手（Phase 5 と並行可） |
 | **7**  | バランス調整（数値チューニング全般）                                                 | 未着手               |
 | **8**  | globalExp、強化ツリー、オフライン報酬、Electron                                      | 未着手               |
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
-**開発優先:** **Phase 4b（スキル説明自動生成）** を次に完成させる（**4c JSON 分割は完了**）。デモ編成は最新の `parties.json` 構成に更新済み（[classes-and-skills.md](../spec/classes-and-skills.md)）。接敵ビジュアル整理は [master-work-order.md](./master-work-order.md) Phase 3a/3b を参照。globalExp / 強化ツリー / Electron は Phase 8。
+**開発優先:** **Phase 5（演出アセット + 演出調整ツール）** — 4a で確定したクラス / 敵から **順次** アニメ・VFX を実装。4b（`formatSkillText`）はスキル JSON 変更 PR ごとに同梱（Phase 7 前の一括仕上げ）。4c JSON 分割は **完了**。接敵ビジュアルは [master-work-order.md](./master-work-order.md) Phase 3a/3b。globalExp / 強化ツリー / Electron は Phase 8。
 
 ---
 
@@ -30,7 +30,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 ### 実装済み
 
 - Vite vanilla-ts プロジェクト（`base: './'`）
-- JSON ゲームデータ：`data/classes.json`, `skills.json`, `enemies.json`, `stages.json`, `parties.json`
+- JSON ゲームデータ：`data/classes.json`, `data/skills/`, `enemies.json`, `stages.json`, `parties.json`
 - 戦闘ロジック：`BattleEngine`, `SkillExecutor`, `targeting`, `combatMath`, `validateGameData`
 - 3 ロール、4 人編成（鉄衛士 / 剣術士 / 療養師 / 弓術士）、`stage_1` に test_enemy × 2
 - スキル枠：**basic**（非表示・常時稼働）+ **セットアクティブ 1 枠**（HUD に CD 表示）
@@ -110,7 +110,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 | ------------ | -------------------------------------------------------------------- | ------------------------- |
 | **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ        | **完了**                  |
 | **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率） | **完了**              |
-| **4b**       | スキル説明の自動生成（`formatSkillText`）調整・エディタプレビュー    | **次**                |
+| **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7 前 polish | **随時**（コア済）    |
 
 ### クラスマスタ（完了）
 
@@ -122,33 +122,23 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 
 ### 4a — クラスデータ + GUI（完了）
 
-- 15 クラスを `classes.json` + `skills.json` に投入済み
+- 15 クラスを `classes.json` + `data/skills/` に投入済み
 - **ステータス・成長** — Lv1 基準 + `growthTier`（低/中/高）+ `levelCurves.growthPresets` + `attackSpeedPresets`；術師は `growthPresetKey: caster`；`ClassEditorStep` 成長 UI + Lv10 プレビュー（[stats.md](../spec/stats.md)）
 - **複数ターゲットスキル**（`targetShape` 等）— 実装検証用 WIP データ。**仕様書へのスキル一覧転記はマスタ確定後**
 - キャラクターデータ GUI で編集・保存
 - `validateGameData` 整合確認
 
-### 4b — スキル説明自動生成の調整
+### 4b — スキル説明自動生成（随時）
 
-スキル JSON に `description` フィールドは持たず、UI は `src/ui/formatSkillText.ts` から説明文を組み立てる（`SkillMenuPanel` のツールチップ等）。Phase 4a で増える effect 種別・ターゲット形状に合わせて文言を拡張する。
+スキル JSON に `description` フィールドは持たず、UI は `src/ui/formatSkillText.ts` から説明文を組み立てる（`SkillMenuPanel` ツールチップ・`SkillEditorStep` テキストプレビュー）。
 
-**現状（Phase 3 時点）**
-
-- アクティブ：`CD {interval}s / {効果種別}` のみ（例：`CD 3s / ダメージ`）
-- パッシブ：倍率・ボーナス等の数値は出るが、`targetRuleOverride` は英語 enum のまま
-
-**4b スコープ**
-
-- `formatActiveDescription`：威力倍率、`damageType`（物理/魔法）、`targetRule`（日本語ラベル）、`targetShape`（単体 / 範囲 / マルチロック・`hitCount`）、buff/debuff/HoT/DoT の対象ステ・倍率・持続
-- `formatPassiveDescription`：`targetRuleOverride` 等を日本語ラベル化；既存パッシブ 5 種の表示確認
-- 複数 effect を持つアクティブは区切り（`/` 等）で列挙
-- スキルエディタ GUI に**自動生成プレビュー**を表示（保存 JSON には書かない）
-- クラススキル全件でツールチップ・プレビューを目視確認
+**方針:** コア（自動生成 + エディタプレビュー）は **既に稼働**。新 effect / ターゲット形状を足す **データ PR ごと** に `formatSkillText` とテストを同梱。全クラス目視の仕上げは **Phase 7 前** でよい。
 
 **4b スコープ外**
 
-- 手書き `description` フィールドの JSON 追加（将来必要なら別フェーズ）
-- 戦闘ログ・Canvas HUD への説明文表示（ツールチップ / エディタプレビューのみ）
+- 手書き `description` フィールドの JSON 追加
+- 戦闘ログ・Canvas HUD への説明文表示
+- Canvas 演出プレビュー（**Phase 5 演出調整ツール**）
 
 ### 4c — 巨大 JSON の分割（開発効率）— **完了**
 
@@ -190,62 +180,66 @@ data/
 ### スコープ外（Phase 4）
 
 - ステージ編集 GUI（キャラ確定後）
-- スキル VFX 本番化（**Phase 6**）
+- 演出アセット本番化・演出調整ツール（**Phase 5**）
 
 ---
 
-## Phase 5 — 本番スプライトアニメーション + 編集ツール
+## Phase 5 — 演出アセット + 演出調整ツール
 
-Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント連動）はそのまま活かし、**見た目のアセットを本番化**する。Phase 4（デモマスタ）以降、Phase 5 と並行も可。
+Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント連動）は維持。**確定した classId / enemyId から順次** 本番 PNG とタイミングを載せる。アセット規約は [classes-and-skills.md](../spec/classes-and-skills.md#スプライト演出アセット) と [sheets/README.md](../../src/assets/sprites/sheets/README.md)。
 
-### スコープ
+### アセット仕様（目標）
 
-- クラス別・敵別の **本番スプライトシート**（`classId` / `spriteKey` 単位）
-- `idle` / `attack` / `heal` / `hurt` / `death` のフレームアニメ（横並びシート）
-- `SpriteRegistry.ts` をプレースホルダーから本番 PNG 定義へ差し替え
-- `classes.json`・`enemies.json` の `spriteKey` を本番アセットに紐付け
-- クラス 5 種 + 敵分を最低限カバー
-- スプライトアニメーション編集ツール作成（フレーム編集、プレビュー、書き出し）
-- **将来:** データ編集 GUI 第 3 弾で `spriteKey` / `iconKey` ごとの PNG アップロード・プレビュー（Phase 5 と連動）
+| 種別 | 配置 | 内容 |
+|------|------|------|
+| entity 本体 | `sheets/bodies/{classId\|enemyId}.png` **1 枚** | idle / move / death のみ（48×48）。レイアウト正本 `data/entityAnimLayout.json`（味方・敵共通） |
+| スキル body | `sheets/skills/{skillId}[_index].png` | **通常攻撃 + 全 active**。64×48 横 strip。attack は entity に含めない |
+| 先頭 idle | strip 0 コマ目任意 | entity idle 0 と同絵で位置合わせ可 → effect `animStartFrame: 1` で再生スキップ |
+| 遠隔通常攻撃 | `{id}_basic_attack.png` | **弓引き PNG を置けば skill anim**。未配置時は VFX のみ |
+
+### 演出調整ツール（スコープ）
+
+- **Canvas プレビュー必須** — 1 スキル / 1 effect の isolated 再生（本番と同じ `resolveEffectPresentation` → `BattleCanvas` 経路）
+- **VFX パラメータ調整を統合** — `vfx.preset` / `durationMs` / `useDurationSec` / `moveDurationSec`（Phase 6 用の別 VFX エディタは作らない）
+- タイムライン表示（body strip / VFX / presentationLock / useDurationSec）
+- JSON 書き戻し（`data/skills/actives/` 等）。BattleEngine 全体は回さない薄いランナー
+- SkillEditorStep から「演出プレビューを開く」連携（任意）
+
+### 進め方
+
+1. インフラ — `entityAnimLayout.json`、body atlas 描画、スキル strip 64px、`animStartFrame`
+2. 演出調整ツール MVP（プレースホルダー PNG でもタイミング調整可）
+3. 確定クラス / 敵ごと — `bodies/` → `basic_attack` → 各 active → 演出ラボで詰め → 本番 battle 目視
 
 ### Phase 1 との境界
 
-| 項目           | Phase 1（済）                        | Phase 5                           |
-| -------------- | ------------------------------------ | --------------------------------- |
-| アニメ状態機械 | あり                                 | 変更なし                          |
-| スプライト素材 | ロール別プレースホルダー             | クラス別本番ドット絵              |
-| 差し替え単位   | `render/` の Registry / アセットパス | 同上（battle ロジックは触らない） |
+| 項目 | Phase 1（済） | Phase 5 |
+|------|---------------|---------|
+| アニメ状態機械 | あり | 変更最小（atlas / skill strip 解決追加） |
+| entity 素材 | ロール別プレースホルダー | `bodies/{id}.png` + スキル strip |
+| battle ロジック | — | **触らない** |
 
 ### スコープ外（Phase 5）
 
-- PixiJS への描画層移行（将来検討）
-- スキルごとの VFX 設定・新プリセット追加（**Phase 6**）
+- PixiJS 描画層移行
+- 新 VFX Canvas preset の **描画実装**（**Phase 6**）
+- 全 15 クラス一括完成（**確定分から順次**で可）
 
 ---
 
-## Phase 6 — スキル VFX + 編集ツール
+## Phase 6 — VFX 描画拡張
 
-Phase 1 の Canvas プレースホルダー VFX を、スキル単位で差し替え・拡張する。**Phase 5（本番キャラスプライト）完了後**に着手。
+Phase 5 の演出調整ツールで **VFX パラメータ編集・プレビューは済** とする。Phase 6 は **描画エンジン側** の拡張。
 
 ### スコープ
 
-- `skills.json` の `vfx` フィールドを本番データに反映（`ActiveSkillDef.vfx`）
-- スキルごとの `preset` / `arc` / `durationMs` 指定（通常攻撃含む）
-- 新プリセット追加（Canvas `draw*` または将来のエフェクトスプライト）
-- 開発用 `SKILL_VFX_OVERRIDES` からデータ駆動へ移行
-- VFX編集ツール作成（プリセット編集、タイムライン、プレビュー）
-
-### Phase 1 との境界
-
-| 項目            | Phase 1（済）                                 | Phase 6                     |
-| --------------- | --------------------------------------------- | --------------------------- |
-| 解決            | `resolveSkillVfx` + ロール/射程フォールバック | スキル ID ごとに `vfx` 指定 |
-| 描画            | 4 種プレースホルダー                          | 追加・差し替え              |
-| battle ロジック | 変更なし                                      | 変更なし                    |
+- 新 Canvas preset 追加（`draw*` 等）
+- `data/skills/` の `vfx` 本番データ移行の残り・`SKILL_VFX_OVERRIDES` 廃止
+- 将来: VFX 専用 PNG（`sheets/vfx/`）— 必要になったら
 
 ### スコープ外（Phase 6）
 
-- スキル専用エフェクトスプライトシート（量産アセット。必要なら更に後続）
+- VFX 専用編集ツール（**Phase 5 演出ラボに統合済**）
 
 ---
 
@@ -295,13 +289,13 @@ Phase 3（スキル習得 + セット2枠目）
     ↓
 Phase 4a（クラスマスタ + GUI）  ← 完了
     ↓
-Phase 4c（JSON 分割・開発効率）  ← 完了
+Phase 4c（JSON 分割）  ← 完了
     ↓
-Phase 4b（スキル説明自動生成）  ← 次
+Phase 4b（formatSkillText）  ← データ PR 随時
     ↓
-Phase 5（本番スプライトアニメ + 編集ツール）  ← 4 と並行も可（見た目のみ）
+Phase 5（演出アセット + 演出調整ツール）  ← **次**（確定クラス順次）
     ↓
-Phase 6（スキル VFX + 編集ツール）
+Phase 6（VFX 描画拡張）  ← 5 と並行可
     ↓
 Phase 7（バランス調整）
     ↓
