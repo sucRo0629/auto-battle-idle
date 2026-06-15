@@ -1,0 +1,82 @@
+;EDGE用アニメーションデータ
+ANIME_VERSION=1
+
+
+;--------------------------
+PATTERN_NAME=noname000
+
+	FRAME_NUMBER=1
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\df_guardian_basic_attack.edg
+		WIN_TITLE=df_guardian_basic_attack.edg
+		SRC_X=0
+		SRC_Y=0
+		LAYER_NUM=0
+		WIDTH=64
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+	FRAME_NUMBER=2
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\df_guardian_basic_attack.edg
+		WIN_TITLE=df_guardian_basic_attack.edg
+		SRC_X=64
+		SRC_Y=0
+		LAYER_NUM=0
+		WIDTH=64
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+	FRAME_NUMBER=3
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\df_guardian_basic_attack.edg
+		WIN_TITLE=df_guardian_basic_attack.edg
+		SRC_X=128
+		SRC_Y=0
+		LAYER_NUM=0
+		WIDTH=64
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+	FRAME_NUMBER=4
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\df_guardian_basic_attack.edg
+		WIN_TITLE=df_guardian_basic_attack.edg
+		SRC_X=192
+		SRC_Y=0
+		LAYER_NUM=0
+		WIDTH=64
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
+	FRAME_NUMBER=5
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\df_guardian_basic_attack.edg
+		WIN_TITLE=df_guardian_basic_attack.edg
+		SRC_X=256
+		SRC_Y=0
+		LAYER_NUM=1
+		WIDTH=64
+		HEIGHT=48
+		DEST_X=0
+		DEST_Y=0
+		DELAY=150
+		LAYER_ADD=1
+		CKEY_ENABLE=1
+		CKEY_NUM=0
+
