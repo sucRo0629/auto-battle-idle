@@ -3,6 +3,10 @@ import { BattleCanvas } from '../render/BattleCanvas.ts';
 import { battleCanvasHeight, groundY } from '../render/formationLayout.ts';
 import type { CombatantLayout } from '../render/IBattleRenderer.ts';
 import { resolveSkillAnimKey } from '../render/skillAnimRegistry.ts';
+import {
+  resolveSkillAnimHoldSec,
+  toSkillAnimPlaybackOptions,
+} from '../render/skillAnimPlayback.ts';
 import { resolveEffectPresentation } from '../render/skillVfx/resolveEffectPresentation.ts';
 import {
   buildSkillVfxContext,
@@ -109,10 +113,11 @@ export class PresentationPreviewRunner {
     );
 
     if (skillAnimKey) {
+      const holdSec = resolveSkillAnimHoldSec(request.skill, actor, slotKind);
       this.canvas.playSkillAnim(
         PREVIEW_ACTOR_ID,
         skillAnimKey,
-        effect.animStartFrame,
+        toSkillAnimPlaybackOptions(effect, holdSec),
       );
     } else if (presentation.anim && slotKind !== 'basic') {
       this.canvas.playAnim(

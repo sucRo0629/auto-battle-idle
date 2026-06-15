@@ -1517,8 +1517,24 @@ function parseOptionalEffectCombatModifiers(
 function parseOptionalEffectPresentation(
   obj: Record<string, unknown>,
   context: string,
-): Pick<SkillEffectDef, 'anim' | 'animStartFrame' | 'vfx'> {
-  const result: Pick<SkillEffectDef, 'anim' | 'animStartFrame' | 'vfx'> = {};
+): Pick<
+  SkillEffectDef,
+  | 'anim'
+  | 'animStartFrame'
+  | 'animIntroEndFrame'
+  | 'animLoopFrame'
+  | 'animOutroStartFrame'
+  | 'vfx'
+> {
+  const result: Pick<
+    SkillEffectDef,
+    | 'anim'
+    | 'animStartFrame'
+    | 'animIntroEndFrame'
+    | 'animLoopFrame'
+    | 'animOutroStartFrame'
+    | 'vfx'
+  > = {};
   if (obj.anim !== undefined) {
     result.anim = requireEnum(obj, 'anim', context, SKILL_EFFECT_ANIM_IDS_SET);
   }
@@ -1529,6 +1545,89 @@ function parseOptionalEffectPresentation(
     }
     result.animStartFrame = animStartFrameRaw;
   }
+  const animIntroEndFrameRaw = parseOptionalNumber(
+    obj,
+    'animIntroEndFrame',
+    context,
+  );
+  if (animIntroEndFrameRaw !== undefined) {
+    if (!Number.isInteger(animIntroEndFrameRaw) || animIntroEndFrameRaw < 0) {
+      invalidField(
+        context,
+        'animIntroEndFrame',
+        'must be a non-negative integer',
+      );
+    }
+    result.animIntroEndFrame = animIntroEndFrameRaw;
+  }
+  const animLoopFrameRaw = parseOptionalNumber(obj, 'animLoopFrame', context);
+  if (animLoopFrameRaw !== undefined) {
+    if (!Number.isInteger(animLoopFrameRaw) || animLoopFrameRaw < 0) {
+      invalidField(context, 'animLoopFrame', 'must be a non-negative integer');
+    }
+    result.animLoopFrame = animLoopFrameRaw;
+  }
+  const animOutroStartFrameRaw = parseOptionalNumber(
+    obj,
+    'animOutroStartFrame',
+    context,
+  );
+  if (animOutroStartFrameRaw !== undefined) {
+    if (!Number.isInteger(animOutroStartFrameRaw) || animOutroStartFrameRaw < 0) {
+      invalidField(
+        context,
+        'animOutroStartFrame',
+        'must be a non-negative integer',
+      );
+    }
+    result.animOutroStartFrame = animOutroStartFrameRaw;
+  }
+
+  const startFrame = result.animStartFrame ?? 0;
+  const introEnd = result.animIntroEndFrame ?? result.animLoopFrame;
+  const loopFrame = result.animLoopFrame;
+  const outroStart =
+    result.animOutroStartFrame ??
+    (loopFrame !== undefined ? loopFrame + 1 : undefined);
+
+  if (result.animIntroEndFrame !== undefined && loopFrame === undefined) {
+    invalidField(
+      context,
+      'animIntroEndFrame',
+      'requires animLoopFrame',
+    );
+  }
+  if (result.animOutroStartFrame !== undefined && loopFrame === undefined) {
+    invalidField(
+      context,
+      'animOutroStartFrame',
+      'requires animLoopFrame',
+    );
+  }
+  if (loopFrame !== undefined) {
+    if (introEnd !== undefined && introEnd < startFrame) {
+      invalidField(
+        context,
+        'animIntroEndFrame',
+        'must be >= animStartFrame',
+      );
+    }
+    if (loopFrame > (introEnd ?? loopFrame)) {
+      invalidField(
+        context,
+        'animLoopFrame',
+        'must be <= animIntroEndFrame',
+      );
+    }
+    if (outroStart !== undefined && outroStart <= (introEnd ?? loopFrame)) {
+      invalidField(
+        context,
+        'animOutroStartFrame',
+        'must be > animIntroEndFrame',
+      );
+    }
+  }
+
   const vfx = parseSkillVfx(obj.vfx, `${context}.vfx`);
   if (vfx !== undefined) {
     result.vfx = vfx;

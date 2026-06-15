@@ -3,6 +3,7 @@ export type AnimState = 'idle' | 'attack' | 'move' | 'death';
 import type { Role, StatusEffect, SkillVfxDef } from '../battle/types.ts';
 import type { AttackEffectSpawnOptions } from './AttackEffect.ts';
 import type { CurseMarkSpawnOptions } from './curseMarkEffect.ts';
+import type { SkillAnimPlaybackOptions } from './skillAnimPlayback.ts';
 
 export interface CombatantLayout {
   id: string;
@@ -34,7 +35,7 @@ export interface IBattleRenderer {
   playSkillAnim(
     combatantId: string,
     skillAnimKey: string,
-    animStartFrame?: number,
+    playback?: SkillAnimPlaybackOptions,
   ): void;
   playAttackEffect(
     actorId: string,

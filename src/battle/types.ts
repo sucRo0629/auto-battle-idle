@@ -825,6 +825,12 @@ interface SkillEffectCommon {
   anim?: SkillEffectAnimId;
   /** スキル strip 内の再生開始コマ。先頭 idle 参照コマ skip 時は 1 等 */
   animStartFrame?: number;
+  /** イントロ最終コマ（inclusive）。未指定時は animLoopFrame */
+  animIntroEndFrame?: number;
+  /** スキル中にループ表示するコマ。指定時は intro / hold / outro の 3 段再生 */
+  animLoopFrame?: number;
+  /** アウトロ開始コマ。未指定時は animLoopFrame + 1 */
+  animOutroStartFrame?: number;
   /** 未指定時はスキル vfx → 既定プリセット（damage/heal 等のみ） */
   vfx?: SkillVfxDef;
   /** @deprecated target.kind==="status" に統合。読み込み専用 */

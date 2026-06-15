@@ -14,6 +14,10 @@ import {
   resolveEffectPresentation,
 } from "../render/skillVfx/resolveEffectPresentation.ts";
 import { resolveSkillAnimKey } from "../render/skillAnimRegistry.ts";
+import {
+  resolveSkillAnimHoldSec,
+  toSkillAnimPlaybackOptions,
+} from "../render/skillAnimPlayback.ts";
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
 import { BattleCanvas } from "../render/BattleCanvas.ts";
 import { PartyHudPanel } from "./PartyHudPanel.ts";
@@ -292,10 +296,17 @@ export class BattleView {
           event.effectIndex ?? 0,
         );
         if (skillAnimKey) {
+          const holdSec = skillDef && actor
+            ? resolveSkillAnimHoldSec(
+                skillDef,
+                actor,
+                event.slotKind ?? 'active',
+              )
+            : 0;
           this.canvas.playSkillAnim(
             event.actorId,
             skillAnimKey,
-            effectDef.animStartFrame,
+            toSkillAnimPlaybackOptions(effectDef, holdSec),
           );
         } else if (presentation.anim && event.slotKind !== "basic") {
           this.canvas.playAnim(

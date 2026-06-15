@@ -404,6 +404,58 @@ export class PresentationLabApp {
       ),
     );
 
+    grid.appendChild(
+      createFieldRow(
+        'animLoopFrame',
+        createNumberInput(effect.animLoopFrame ?? -1, (value) => {
+          this.patchEffect((draft) => {
+            if (value < 0) {
+              delete draft.animLoopFrame;
+              delete draft.animIntroEndFrame;
+              delete draft.animOutroStartFrame;
+            } else {
+              draft.animLoopFrame = Math.floor(value);
+            }
+          });
+        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '3段再生時必須' }),
+      ),
+    );
+
+    grid.appendChild(
+      createFieldRow(
+        'animIntroEndFrame',
+        createNumberInput(effect.animIntroEndFrame ?? -1, (value) => {
+          this.patchEffect((draft) => {
+            if (value < 0) {
+              delete draft.animIntroEndFrame;
+            } else {
+              draft.animIntroEndFrame = Math.floor(value);
+            }
+          });
+        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=loop' }),
+      ),
+    );
+
+    grid.appendChild(
+      createFieldRow(
+        'animOutroStartFrame',
+        createNumberInput(effect.animOutroStartFrame ?? -1, (value) => {
+          this.patchEffect((draft) => {
+            if (value < 0) {
+              delete draft.animOutroStartFrame;
+            } else {
+              draft.animOutroStartFrame = Math.floor(value);
+            }
+          });
+        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=loop+1' }),
+      ),
+    );
+
+    const phaseHint = createEl('p', 'presentation-lab-hint');
+    phaseHint.textContent =
+      'animLoopFrame を指定すると intro（start〜introEnd）→ hold（loop）→ outro（outroStart〜終端）の 3 段再生。hold 時間は useDurationSec または presentationLock。introEnd / outroStart 省略時は loop / loop+1。';
+    grid.appendChild(phaseHint);
+
     if (effect.type === 'move') {
       grid.appendChild(
         createFieldRow(
@@ -514,7 +566,9 @@ export class PresentationLabApp {
       this.timelineItem(
         'body playback',
         timeline.bodyPlaybackFrames !== null
-          ? `${timeline.bodyPlaybackFrames} frames (${formatSec(timeline.bodyPlaybackSec)})`
+          ? timeline.bodyIntroSec !== null
+            ? `intro ${formatSec(timeline.bodyIntroSec)} + hold ${formatSec(timeline.bodyHoldSec)} + outro ${formatSec(timeline.bodyOutroSec)} (${timeline.bodyPlaybackFrames} frames linear)`
+            : `${timeline.bodyPlaybackFrames} frames (${formatSec(timeline.bodyPlaybackSec)})`
           : '—',
         timeline.bodyPlaybackSec,
       ),
@@ -623,12 +677,41 @@ export class PresentationLabApp {
 function buildTimelineSegments(
   timeline: PresentationTimeline,
 ): { label: string; sec: number; color: string }[] {
-  return [
-    {
-      label: 'body',
-      sec: timeline.bodyPlaybackSec ?? 0,
+  const segments: { label: string; sec: number; color: string }[] = [];
+  if (timeline.bodyIntroSec !== null && timeline.bodyIntroSec > 0) {
+    segments.push({
+      label: 'intro',
+      sec: timeline.bodyIntroSec,
       color: '#4a90d9',
-    },
+    });
+  }
+  if (timeline.bodyHoldSec !== null && timeline.bodyHoldSec > 0) {
+    segments.push({
+      label: 'hold',
+      sec: timeline.bodyHoldSec,
+      color: '#3a7bc8',
+    });
+  }
+  if (timeline.bodyOutroSec !== null && timeline.bodyOutroSec > 0) {
+    segments.push({
+      label: 'outro',
+      sec: timeline.bodyOutroSec,
+      color: '#2d6bb3',
+    });
+  }
+  if (
+    segments.length === 0 &&
+    timeline.bodyPlaybackSec !== null &&
+    timeline.bodyPlaybackSec > 0
+  ) {
+    segments.push({
+      label: 'body',
+      sec: timeline.bodyPlaybackSec,
+      color: '#4a90d9',
+    });
+  }
+  return [
+    ...segments,
     { label: 'VFX', sec: timeline.vfxSec ?? 0, color: '#e6a23c' },
     {
       label: 'move',

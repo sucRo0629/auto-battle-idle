@@ -16,6 +16,7 @@ import {
   SPRITE_LAYOUT_SIZE,
 } from "./spriteLayout.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
+import type { SkillAnimPlaybackOptions } from "./skillAnimPlayback.ts";
 import { BATTLE_ALLY_MARCH_VISIBLE_MIN_X, BATTLE_ENEMY_MARCH_VISIBLE_MAX_X } from "../battle/battleConstants.ts";
 import {
   groundY,
@@ -126,9 +127,9 @@ export class BattleCanvas implements IBattleRenderer {
   playSkillAnim(
     combatantId: string,
     skillAnimKey: string,
-    animStartFrame?: number,
+    playback?: SkillAnimPlaybackOptions,
   ): void {
-    this.animator.setSkillAnim(combatantId, skillAnimKey, animStartFrame);
+    this.animator.setSkillAnim(combatantId, skillAnimKey, playback);
   }
 
   playAttackEffect(
@@ -180,6 +181,7 @@ export class BattleCanvas implements IBattleRenderer {
     for (const layout of this.layouts) {
       this.animator.tick(layout.id, deltaMs);
     }
+    this.syncLayoutAnimStates();
     this.attackEffects.tick(deltaMs);
     this.curseMarks.tick(deltaMs);
     this.damagePopups.tick(deltaMs);
@@ -192,6 +194,21 @@ export class BattleCanvas implements IBattleRenderer {
 
   destroy(): void {
     this.canvas.remove();
+  }
+
+  /** setCombatants 経路では syncFromSnapshot が無いため、描画前に animator を layouts へ反映 */
+  private syncLayoutAnimStates(): void {
+    this.layouts = this.layouts.map((layout) => {
+      const animState = this.animator.getState(layout.id);
+      return {
+        ...layout,
+        anim: animState.anim,
+        animFrame: animState.frame,
+        attackSheetKey: animState.attackSheetKey,
+        skillAnimKey: animState.skillAnimKey,
+        skillAnimFrame: animState.skillAnimFrame,
+      };
+    });
   }
 
   syncFromSnapshot(snapshot: BattleSnapshot): void {

@@ -1,3 +1,7 @@
+import type { ActiveSkillDef, CombatantState, DamageType, Role, SkillEffectDef, SkillSlotKind, SkillVfxDef } from '../battle/types.ts';
+import { resolvePresentationLockSec } from '../battle/skills/presentationLock.ts';
+import { resolveUseDurationSec } from '../battle/skills/skillSequence.ts';
+import { SHARED_ANIM_FPS } from './SpriteRegistry.ts';
 import { getSkillAnimFrameCount } from './skillAnimRegistry.ts';
 
 /** strip 内の再生開始コマ（default 0）。先頭 idle 参照コマ skip 時は 1 等 */
@@ -10,12 +14,17 @@ export function normalizeAnimStartFrame(
   return Math.min(Math.floor(raw), Math.max(0, stripFrameCount - 1));
 }
 
+function clampAnimFrame(frame: number, stripFrameCount: number): number {
+  if (!Number.isFinite(frame) || frame < 0) return 0;
+  return Math.min(Math.floor(frame), Math.max(0, stripFrameCount - 1));
+}
+
 /** strip 全体のコマ数（幅 ÷ 64） */
 export function getSkillAnimStripFrameCount(skillAnimKey: string): number {
   return getSkillAnimFrameCount(skillAnimKey);
 }
 
-/** startFrame から終端までの再生コマ数 */
+/** startFrame から終端までの再生コマ数（線形再生用） */
 export function getSkillAnimPlaybackFrameCount(
   stripFrameCount: number,
   startFrame: number,
@@ -23,22 +32,168 @@ export function getSkillAnimPlaybackFrameCount(
   return Math.max(1, stripFrameCount - startFrame);
 }
 
+export interface SkillAnimPlaybackOptions {
+  animStartFrame?: number;
+  animIntroEndFrame?: number;
+  animLoopFrame?: number;
+  animOutroStartFrame?: number;
+  holdSec?: number;
+}
+
+export interface SkillAnimPhaseConfig {
+  startFrame: number;
+  introEndFrame: number;
+  loopFrame: number;
+  outroStartFrame: number;
+  stripFrameCount: number;
+  holdSec: number;
+}
+
+export type SkillAnimPhaseFields = Pick<
+  SkillEffectDef,
+  'animStartFrame' | 'animIntroEndFrame' | 'animLoopFrame' | 'animOutroStartFrame'
+>;
+
+export function isPhasedSkillAnim(
+  fields: SkillAnimPhaseFields,
+): fields is SkillAnimPhaseFields & { animLoopFrame: number } {
+  return fields.animLoopFrame !== undefined;
+}
+
+export function toSkillAnimPlaybackOptions(
+  effect: SkillAnimPhaseFields,
+  holdSec: number,
+): SkillAnimPlaybackOptions {
+  return {
+    animStartFrame: effect.animStartFrame,
+    animIntroEndFrame: effect.animIntroEndFrame,
+    animLoopFrame: effect.animLoopFrame,
+    animOutroStartFrame: effect.animOutroStartFrame,
+    holdSec,
+  };
+}
+
+export interface SkillAnimHoldActor {
+  role?: Role;
+  rangePx: number;
+  damageType: DamageType;
+  basicAttackVfx?: SkillVfxDef;
+}
+
+export function resolveSkillAnimHoldSec(
+  skill: ActiveSkillDef,
+  actor: SkillAnimHoldActor,
+  slotKind: SkillSlotKind,
+): number {
+  const useSec = resolveUseDurationSec(skill);
+  if (useSec > 0) return useSec;
+  const actorStub = {
+    role: actor.role ?? 'attacker',
+    traits: {
+      rangePx: actor.rangePx,
+      damageType: actor.damageType,
+      basicAttackVfx: actor.basicAttackVfx ?? { preset: 'slash' },
+    },
+  } as CombatantState;
+  return resolvePresentationLockSec(skill, actorStub, slotKind);
+}
+
+export function resolveSkillAnimPhaseConfig(
+  skillAnimKey: string,
+  options: SkillAnimPlaybackOptions,
+): SkillAnimPhaseConfig | null {
+  if (options.animLoopFrame === undefined) return null;
+
+  const stripFrameCount = getSkillAnimStripFrameCount(skillAnimKey);
+  if (stripFrameCount <= 0) return null;
+
+  const startFrame = normalizeAnimStartFrame(
+    options.animStartFrame,
+    stripFrameCount,
+  );
+  const loopFrame = clampAnimFrame(options.animLoopFrame, stripFrameCount);
+  const introEndFrame = clampAnimFrame(
+    options.animIntroEndFrame ?? loopFrame,
+    stripFrameCount,
+  );
+  const outroStartFrame = clampAnimFrame(
+    options.animOutroStartFrame ?? loopFrame + 1,
+    stripFrameCount,
+  );
+
+  const orderedIntroEnd = Math.max(startFrame, introEndFrame);
+  const orderedLoop = Math.min(loopFrame, orderedIntroEnd);
+  const orderedOutroStart = Math.max(
+    orderedIntroEnd + 1,
+    outroStartFrame,
+  );
+
+  return {
+    startFrame,
+    introEndFrame: orderedIntroEnd,
+    loopFrame: orderedLoop,
+    outroStartFrame: Math.min(orderedOutroStart, stripFrameCount - 1),
+    stripFrameCount,
+    holdSec: Math.max(0, options.holdSec ?? 0),
+  };
+}
+
+export function getSkillAnimIntroSec(config: SkillAnimPhaseConfig): number {
+  const frameSteps = Math.max(0, config.introEndFrame - config.startFrame);
+  return frameSteps / SHARED_ANIM_FPS;
+}
+
+export function getSkillAnimOutroSec(config: SkillAnimPhaseConfig): number {
+  const frameSteps = Math.max(
+    0,
+    config.stripFrameCount - 1 - config.outroStartFrame,
+  );
+  return frameSteps / SHARED_ANIM_FPS;
+}
+
+export function getSkillAnimPhasedTotalSec(
+  config: SkillAnimPhaseConfig,
+): number {
+  return (
+    getSkillAnimIntroSec(config) +
+    config.holdSec +
+    getSkillAnimOutroSec(config)
+  );
+}
+
 export function resolveSkillAnimPlayback(
   skillAnimKey: string,
-  animStartFrame?: number,
+  fields: SkillAnimPhaseFields = {},
+  holdSec = 0,
 ): {
   startFrame: number;
   stripFrameCount: number;
   playbackFrameCount: number;
+  phased: SkillAnimPhaseConfig | null;
+  totalPlaybackSec: number;
 } {
   const stripFrameCount = getSkillAnimStripFrameCount(skillAnimKey);
-  const startFrame = normalizeAnimStartFrame(animStartFrame, stripFrameCount);
+  const startFrame = normalizeAnimStartFrame(
+    fields.animStartFrame,
+    stripFrameCount,
+  );
+  const phased = resolveSkillAnimPhaseConfig(skillAnimKey, {
+    ...fields,
+    holdSec,
+  });
+  const playbackFrameCount = getSkillAnimPlaybackFrameCount(
+    stripFrameCount,
+    startFrame,
+  );
+  const totalPlaybackSec = phased
+    ? getSkillAnimPhasedTotalSec(phased)
+    : playbackFrameCount / SHARED_ANIM_FPS;
+
   return {
     startFrame,
     stripFrameCount,
-    playbackFrameCount: getSkillAnimPlaybackFrameCount(
-      stripFrameCount,
-      startFrame,
-    ),
+    playbackFrameCount,
+    phased,
+    totalPlaybackSec,
   };
 }

@@ -8,9 +8,12 @@ import type {
 } from '../battle/types.ts';
 import { resolvePresentationLockSec } from '../battle/skills/presentationLock.ts';
 import { resolveUseDurationSec } from '../battle/skills/skillSequence.ts';
-import { SHARED_ANIM_FPS } from '../render/SpriteRegistry.ts';
 import { resolveSkillAnimKey } from '../render/skillAnimRegistry.ts';
-import { resolveSkillAnimPlayback } from '../render/skillAnimPlayback.ts';
+import {
+  getSkillAnimIntroSec,
+  getSkillAnimOutroSec,
+  resolveSkillAnimPlayback,
+} from '../render/skillAnimPlayback.ts';
 import { resolveEffectPresentation } from '../render/skillVfx/resolveEffectPresentation.ts';
 import { resolvePresetDurationMs } from '../render/skillVfx/presetDurations.ts';
 import type { SkillVfxContext } from '../render/skillVfx/types.ts';
@@ -26,6 +29,9 @@ export interface PreviewEntity {
 export interface PresentationTimeline {
   bodyPlaybackFrames: number | null;
   bodyPlaybackSec: number | null;
+  bodyIntroSec: number | null;
+  bodyHoldSec: number | null;
+  bodyOutroSec: number | null;
   vfxPreset: string | null;
   vfxSec: number | null;
   moveDurationSec: number | null;
@@ -83,6 +89,9 @@ export function computePresentationTimeline(
     return {
       bodyPlaybackFrames: null,
       bodyPlaybackSec: null,
+      bodyIntroSec: null,
+      bodyHoldSec: null,
+      bodyOutroSec: null,
       vfxPreset: null,
       vfxSec: null,
       moveDurationSec: null,
@@ -94,13 +103,31 @@ export function computePresentationTimeline(
   const ctx = buildSkillVfxContext(entity, slotKind, effect);
   const presentation = resolveEffectPresentation(skill.id, effect, skill, ctx);
 
+  const actorStub = previewActorStub(entity);
+  const presentationLockSec = resolvePresentationLockSec(
+    skill,
+    actorStub as Parameters<typeof resolvePresentationLockSec>[1],
+    slotKind,
+  );
+  const useDurationSec = resolveUseDurationSec(skill);
+  const holdSec =
+    useDurationSec > 0 ? useDurationSec : presentationLockSec;
+
   let bodyPlaybackFrames: number | null = null;
   let bodyPlaybackSec: number | null = null;
+  let bodyIntroSec: number | null = null;
+  let bodyHoldSec: number | null = null;
+  let bodyOutroSec: number | null = null;
   const skillAnimKey = resolveSkillAnimKey(skill.id, effectIndex);
   if (skillAnimKey) {
-    const playback = resolveSkillAnimPlayback(skillAnimKey, effect.animStartFrame);
+    const playback = resolveSkillAnimPlayback(skillAnimKey, effect, holdSec);
     bodyPlaybackFrames = playback.playbackFrameCount;
-    bodyPlaybackSec = playback.playbackFrameCount / SHARED_ANIM_FPS;
+    bodyPlaybackSec = playback.totalPlaybackSec;
+    if (playback.phased) {
+      bodyIntroSec = getSkillAnimIntroSec(playback.phased);
+      bodyHoldSec = playback.phased.holdSec;
+      bodyOutroSec = getSkillAnimOutroSec(playback.phased);
+    }
   }
 
   let vfxPreset: string | null = null;
@@ -114,20 +141,16 @@ export function computePresentationTimeline(
       ) / 1000;
   }
 
-  const actorStub = previewActorStub(entity);
-  const presentationLockSec = resolvePresentationLockSec(
-    skill,
-    actorStub as Parameters<typeof resolvePresentationLockSec>[1],
-    slotKind,
-  );
-
   return {
     bodyPlaybackFrames,
     bodyPlaybackSec,
+    bodyIntroSec,
+    bodyHoldSec,
+    bodyOutroSec,
     vfxPreset,
     vfxSec,
     moveDurationSec: effect.type === 'move' ? effect.moveDurationSec : null,
     presentationLockSec,
-    useDurationSec: resolveUseDurationSec(skill),
+    useDurationSec,
   };
 }
