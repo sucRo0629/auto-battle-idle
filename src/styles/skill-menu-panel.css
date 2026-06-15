@@ -244,38 +244,59 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  box-sizing: content-box;
+  flex: 0 0 auto;
   width: 48px;
   height: 48px;
   overflow: hidden;
+  line-height: 0;
+  font-size: 0;
 }
 
 .skill-menu-tab-sprite--empty {
-  border: 1px dashed var(--canvas-border-color);
+  outline: 1px dashed var(--canvas-border-color);
+  outline-offset: -1px;
   border-radius: 4px;
   opacity: 0.45;
 }
 
 .skill-menu-tab-sprite-img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center bottom;
+  display: block;
+  flex: none;
+  box-sizing: content-box;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
 
-@keyframes skill-menu-sprite-idle-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-2px);
+/* sheets/bodies/{id}.png idle — steps(N) の終点は cellWidth×N（4 コマ → -192px） */
+.skill-menu-tab-sprite-frame--body-atlas {
+  display: block;
+  flex: none;
+  box-sizing: content-box;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  background-repeat: no-repeat;
+  background-position: 0 0;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  animation: skill-menu-body-idle-frames var(--body-atlas-idle-duration, 0.5s)
+    steps(var(--body-atlas-idle-steps, 4)) infinite;
+}
+
+@keyframes skill-menu-body-idle-frames {
+  to {
+    background-position: var(--body-atlas-idle-shift, -192px) 0;
   }
 }
 
-.skill-menu-tab-sprite-img--idle {
-  animation: skill-menu-sprite-idle-bob 1.3s ease-in-out infinite;
+/* 静止画フォールバック（32×32 等） */
+.skill-menu-tab-sprite-img--static {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  object-position: center bottom;
 }
 
 .skill-menu-class-slot-text {

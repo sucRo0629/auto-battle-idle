@@ -90,6 +90,10 @@ export function hasEntityBodyAtlas(spriteKey: string): boolean {
   return bodyUrls.has(spriteKey) || bodyImages.has(spriteKey);
 }
 
+export function getEntityBodyUrl(spriteKey: string): string | undefined {
+  return bodyUrls.get(spriteKey);
+}
+
 export function getEntityBodyImage(
   spriteKey: string,
 ): HTMLImageElement | undefined {

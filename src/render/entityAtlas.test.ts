@@ -3,6 +3,7 @@ import {
   __registerEntityBodyForTest,
   __resetEntityAtlasForTest,
   getEntityAnimSpriteDef,
+  getEntityBodyUrl,
   getEntityFrameRect,
   hasEntityBodyAtlas,
 } from './entityAtlas.ts';
@@ -63,6 +64,8 @@ describe('entityAtlas layout', () => {
     expect(hasEntityBodyAtlas('df_guardian')).toBe(false);
     __registerEntityBodyForTest('df_guardian', mockImage(192, 144));
     expect(hasEntityBodyAtlas('df_guardian')).toBe(true);
+    expect(getEntityBodyUrl('df_guardian')).toBe('test://');
+    expect(getEntityBodyUrl('missing')).toBeUndefined();
   });
 });
 

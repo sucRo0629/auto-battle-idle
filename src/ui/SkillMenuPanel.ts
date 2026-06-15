@@ -14,6 +14,12 @@ import type {
   PartySlotState,
 } from "../battle/types.ts";
 import { getClassIconUrl, getSkillIconUrlForSkill } from "../render/IconRegistry.ts";
+import {
+  getEntityAnimLayout,
+  getEntityAnimSpriteDef,
+  getEntityBodyUrl,
+  hasEntityBodyAtlas,
+} from "../render/entityAtlas.ts";
 import { getSpriteUrl } from "../render/SpriteRegistry.ts";
 import {
   createMemberFromClass,
@@ -228,7 +234,7 @@ export class SkillMenuPanel {
     });
   }
 
-  /** 編成枠タブ上部。クラスごとの仮スプライト（将来は本番スプライトアニメに差し替え） */
+  /** 編成枠タブ上部。body atlas があれば idle コマ送り、なければ静止画 */
   private createTabCharacterDisplay(
     preset: ClassPreset | undefined,
     label: string
@@ -242,15 +248,38 @@ export class SkillMenuPanel {
       spriteWrap.classList.add("skill-menu-tab-sprite--empty");
       spriteWrap.setAttribute("aria-hidden", "true");
     } else {
-      const img = document.createElement("img");
-      img.className =
-        "skill-menu-tab-sprite-img skill-menu-tab-sprite-img--idle";
-      img.alt = "";
-      img.decoding = "async";
-      img.src = getSpriteUrl(resolveClassSpriteKey(preset));
-      img.setAttribute("aria-hidden", "true");
+      const bodyUrl = hasEntityBodyAtlas(preset.id)
+        ? getEntityBodyUrl(preset.id)
+        : undefined;
+      if (bodyUrl) {
+        const layout = getEntityAnimLayout();
+        const idle = getEntityAnimSpriteDef("idle");
+        const frame = document.createElement("span");
+        frame.className =
+          "skill-menu-tab-sprite-frame skill-menu-tab-sprite-frame--body-atlas";
+        frame.setAttribute("aria-hidden", "true");
+        frame.style.backgroundImage = `url("${bodyUrl}")`;
+        frame.style.setProperty(
+          "--body-atlas-idle-shift",
+          `${-layout.cellWidth * idle.frames}px`,
+        );
+        frame.style.setProperty("--body-atlas-idle-steps", String(idle.frames));
+        frame.style.setProperty(
+          "--body-atlas-idle-duration",
+          `${idle.frames / idle.fps}s`,
+        );
+        spriteWrap.appendChild(frame);
+      } else {
+        const img = document.createElement("img");
+        img.className =
+          "skill-menu-tab-sprite-img skill-menu-tab-sprite-img--static";
+        img.alt = "";
+        img.decoding = "async";
+        img.src = getSpriteUrl(resolveClassSpriteKey(preset));
+        img.setAttribute("aria-hidden", "true");
+        spriteWrap.appendChild(img);
+      }
       spriteWrap.title = label;
-      spriteWrap.appendChild(img);
     }
 
     character.appendChild(spriteWrap);
