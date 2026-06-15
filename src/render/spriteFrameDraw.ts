@@ -19,7 +19,8 @@ import {
 import {
   getSheetCellHeight,
   getSheetCellWidth,
-  SPRITE_SHEET_CELL_SIZE,
+  SKILL_ANIM_CELL_HEIGHT,
+  SKILL_ANIM_CELL_WIDTH,
 } from "./spriteLayout.ts";
 
 /** body atlas または旧 `sheets/{id}/{anim}.png` が idle/move/death 用にあるか */
@@ -127,19 +128,20 @@ export function drawSkillAnimAtFootAnchor(
   const sheet = getSkillAnimImage(skillAnimKey);
   if (!sheet) return;
 
-  const cellSize = SPRITE_SHEET_CELL_SIZE;
-  const frameCount = Math.max(1, Math.floor(sheet.width / cellSize));
+  const cellW = SKILL_ANIM_CELL_WIDTH;
+  const cellH = SKILL_ANIM_CELL_HEIGHT;
+  const frameCount = Math.max(1, Math.floor(sheet.width / cellW));
   const clampedFrame = Math.min(Math.max(0, frame), frameCount - 1);
-  const srcX = clampedFrame * cellSize;
-  const drawW = cellSize * scale;
-  const drawH = cellSize * scale;
+  const srcX = clampedFrame * cellW;
+  const drawW = cellW * scale;
+  const drawH = cellH * scale;
 
   ctx.drawImage(
     sheet,
     srcX,
     0,
-    cellSize,
-    cellSize,
+    cellW,
+    cellH,
     footX - drawW / 2,
     footY - drawH,
     drawW,

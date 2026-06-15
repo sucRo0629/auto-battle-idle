@@ -27,8 +27,8 @@ describe('skillAnimRegistry', () => {
     );
   });
 
-  it('derives frame count from png width', () => {
-    __registerSkillAnimForTest('sp_cleric_active_1', mockImage(144));
+  it('derives frame count from png width (64px cells)', () => {
+    __registerSkillAnimForTest('sp_cleric_active_1', mockImage(192));
     expect(getSkillAnimFrameCount('sp_cleric_active_1')).toBe(3);
   });
 });

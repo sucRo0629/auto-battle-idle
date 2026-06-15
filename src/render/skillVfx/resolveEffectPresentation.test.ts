@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import type { ActiveSkillDef, MoveSkillEffect } from '../../battle/types.ts';
 import {
   resolveEffectPresentation,
-  shouldPlayActorAnim,
 } from './resolveEffectPresentation.ts';
 
 const skill: ActiveSkillDef = {
@@ -178,14 +177,5 @@ describe('resolveEffectPresentation', () => {
     );
     expect(result.anim).toBeNull();
     expect(result.vfx).toBeNull();
-  });
-});
-
-describe('shouldPlayActorAnim', () => {
-  it('skips ranged basic attack anim', () => {
-    expect(shouldPlayActorAnim('attack', 100, 'basic')).toBe(false);
-    expect(shouldPlayActorAnim('attack', 99, 'basic')).toBe(true);
-    expect(shouldPlayActorAnim('attack', 100, 'active')).toBe(true);
-    expect(shouldPlayActorAnim('move', 0, 'active')).toBe(true);
   });
 });

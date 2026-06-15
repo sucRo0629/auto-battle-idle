@@ -123,8 +123,12 @@ export class BattleCanvas implements IBattleRenderer {
     }
   }
 
-  playSkillAnim(combatantId: string, skillAnimKey: string): void {
-    this.animator.setSkillAnim(combatantId, skillAnimKey);
+  playSkillAnim(
+    combatantId: string,
+    skillAnimKey: string,
+    animStartFrame?: number,
+  ): void {
+    this.animator.setSkillAnim(combatantId, skillAnimKey, animStartFrame);
   }
 
   playAttackEffect(

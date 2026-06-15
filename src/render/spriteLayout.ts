@@ -7,6 +7,10 @@ export const SPRITE_SHEET_CELL_SIZE = 48;
 /** attack シートのみ 1 コマ横幅（高さは SPRITE_SHEET_CELL_SIZE） */
 export const ATTACK_SHEET_CELL_WIDTH = 64;
 
+/** スキル strip 1 コマ（通常攻撃 + 全 active 共通） */
+export const SKILL_ANIM_CELL_WIDTH = 64;
+export const SKILL_ANIM_CELL_HEIGHT = 48;
+
 /** spriteKey ごとのシートコマサイズ上書き */
 const SHEET_CELL_OVERRIDES: Readonly<Record<string, number>> = {};
 
@@ -31,6 +35,7 @@ export function spriteSheetMaxOverflowTop(): number {
   const sizes = [
     SPRITE_SHEET_CELL_SIZE,
     ATTACK_SHEET_CELL_WIDTH,
+    SKILL_ANIM_CELL_HEIGHT,
     ...Object.values(SHEET_CELL_OVERRIDES),
   ];
   const maxCell = Math.max(...sizes);

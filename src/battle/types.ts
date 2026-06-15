@@ -823,6 +823,8 @@ interface SkillEffectCommon {
   range?: number;
   /** 未指定時は effect 種別の既定アニメ。none = スプライトアニメなし */
   anim?: SkillEffectAnimId;
+  /** スキル strip 内の再生開始コマ。先頭 idle 参照コマ skip 時は 1 等 */
+  animStartFrame?: number;
   /** 未指定時はスキル vfx → 既定プリセット（damage/heal 等のみ） */
   vfx?: SkillVfxDef;
   /** @deprecated target.kind==="status" に統合。読み込み専用 */

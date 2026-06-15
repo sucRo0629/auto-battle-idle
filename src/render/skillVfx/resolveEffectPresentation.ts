@@ -1,4 +1,3 @@
-import { isRangedAttack } from "../../battle/data/entityTraits.ts";
 import type {
   ActiveSkillDef,
   SkillEffectAnimId,
@@ -84,17 +83,6 @@ export function resolveEffectPresentation(
   const hitVfx = resolveHitVfx(vfx, ctx);
 
   return { anim, vfx, hitVfx };
-}
-
-export function shouldPlayActorAnim(
-  anim: AnimState,
-  rangePx: number,
-  slotKind: "basic" | "active" | undefined,
-): boolean {
-  if (anim === "attack" && isRangedAttack(rangePx) && slotKind === "basic") {
-    return false;
-  }
-  return true;
 }
 
 /** chainLightning / impale はセグメント起点を vfxSourceId から取る */

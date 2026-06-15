@@ -1517,10 +1517,17 @@ function parseOptionalEffectCombatModifiers(
 function parseOptionalEffectPresentation(
   obj: Record<string, unknown>,
   context: string,
-): Pick<SkillEffectDef, 'anim' | 'vfx'> {
-  const result: Pick<SkillEffectDef, 'anim' | 'vfx'> = {};
+): Pick<SkillEffectDef, 'anim' | 'animStartFrame' | 'vfx'> {
+  const result: Pick<SkillEffectDef, 'anim' | 'animStartFrame' | 'vfx'> = {};
   if (obj.anim !== undefined) {
     result.anim = requireEnum(obj, 'anim', context, SKILL_EFFECT_ANIM_IDS_SET);
+  }
+  const animStartFrameRaw = parseOptionalNumber(obj, 'animStartFrame', context);
+  if (animStartFrameRaw !== undefined) {
+    if (!Number.isInteger(animStartFrameRaw) || animStartFrameRaw < 0) {
+      invalidField(context, 'animStartFrame', 'must be a non-negative integer');
+    }
+    result.animStartFrame = animStartFrameRaw;
   }
   const vfx = parseSkillVfx(obj.vfx, `${context}.vfx`);
   if (vfx !== undefined) {

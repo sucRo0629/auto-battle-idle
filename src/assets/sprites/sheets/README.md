@@ -4,7 +4,9 @@
 **ルール・JSON フィールド:** [docs/spec/classes-and-skills.md](../../../../docs/spec/classes-and-skills.md#スプライト演出アセット)  
 **フェーズ計画:** [docs/plans/phase-roadmap.md](../../../../docs/plans/phase-roadmap.md) Phase 5 / 6
 
-**実装状況（PR1）:** `entityAnimLayout.json` + `src/render/entityAtlas.ts` で body atlas 描画済み。未配置時は旧 `sheets/{entityId}/` または静止画フォールバック。スキル strip（64px）・演出ラボは未着手。
+**実装状況（PR1）:** `entityAnimLayout.json` + `src/render/entityAtlas.ts` で body atlas 描画済み。未配置時は旧 `sheets/{entityId}/` または静止画フォールバック。
+
+**実装状況（PR2）:** スキル strip **64×48**（`SKILL_ANIM_CELL_WIDTH`）、`animStartFrame` 再生スキップ（`skillAnimPlayback.ts` + `SpriteAnimator`）。演出ラボは未着手。
 
 ---
 

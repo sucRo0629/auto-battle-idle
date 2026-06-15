@@ -203,7 +203,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 - **配置:** `sheets/skills/{skillId}.png` または `{skillId}_{effectIndex}.png`
 - **1 コマ:** 64×48 px（横 strip）。通常攻撃 `{entityId}_basic_attack` も同規格
 - **解決:** `resolveSkillAnimKey` → あれば **skill anim**。entity `attack` フォールバックは使わない（本番）
-- **先頭 idle 参照コマ:** strip 0 コマ目に entity idle 0 と同絵を入れてよい。再生は effect **`animStartFrame`**（default `0`、idle 入りなら `1`）から（**Phase 5 実装予定**）
+- **先頭 idle 参照コマ:** strip 0 コマ目に entity idle 0 と同絵を入れてよい。再生は effect **`animStartFrame`**（default `0`、idle 入りなら `1`）から（**実装済み:** `skillAnimPlayback.ts` / `SpriteAnimator`）
 
 ### 通常攻撃の見た目
 
@@ -520,7 +520,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `pierceDurationSec`                                          | `pierce` 任意。複数命中の適用時間分散（秒）                                                                                          |
 | `range`                                                      | 命中判定・VFX 共用（px）。省略時 = `actor.traits.rangePx`。`pierce` + `selfOrigin` では向き前方の効果距離                            |
 | `anim`                                                       | 任意。スキル PNG 未配置時の entity anim フォールバック（本番では **skill strip 優先**）。`none` で body 抑制 |
-| `animStartFrame`                                             | 任意（**Phase 5 実装予定**）。スキル strip 内の再生開始コマ。先頭 idle 参照コマを skip するとき `1` |
+| `animStartFrame`                                             | 任意。スキル strip 内の再生開始コマ。先頭 idle 参照コマを skip するとき `1`（**実装済み**） |
 | `vfx`                                                        | 任意。effect 単位の VFX プリセット。未指定 = スキル `vfx` → 種別既定（damage/heal 等）               |
 
 **パッシブ `debuff`:** 上記 `target` / `targetShape` / `range` / 形状別フィールドと同型の項目を **`debuff` 接頭辞**で保持（例: `target` → `debuffTargetRule`、`targetShape` → `debuffTargetShape`、`range` → `debuffRange`、`aoeRadiusPx` → `debuffAoeRadiusPx`）。変換は `passiveDebuffBridge.ts`。発動タイミングは **常時**（未指定）または **`periodicTrigger: stageStart` / `waveStart`**。Stage/Wave 開始時は `chance`（0〜1、未指定=1）で発動確率を判定。アクティブの `trigger`（`basicAttackCount` 等）や `fireConditions` は使わない。

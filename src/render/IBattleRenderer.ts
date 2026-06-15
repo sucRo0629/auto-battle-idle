@@ -31,7 +31,11 @@ export interface IBattleRenderer {
   setCombatants(layout: CombatantLayout[]): void;
   setWorldOffset(offsetX: number): void;
   playAnim(combatantId: string, state: AnimState, spriteKey?: string): void;
-  playSkillAnim(combatantId: string, skillAnimKey: string): void;
+  playSkillAnim(
+    combatantId: string,
+    skillAnimKey: string,
+    animStartFrame?: number,
+  ): void;
   playAttackEffect(
     actorId: string,
     targetId: string,

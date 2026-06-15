@@ -5,6 +5,7 @@ import {
 } from './SpriteRegistry.ts';
 import { pickRandomAttackVariant } from './spriteSheetRegistry.ts';
 import { getSkillAnimFrameCount } from './skillAnimRegistry.ts';
+import { normalizeAnimStartFrame } from './skillAnimPlayback.ts';
 
 export interface AnimatorState {
   anim: AnimState;
@@ -13,6 +14,7 @@ export interface AnimatorState {
   finished: boolean;
   attackSheetKey: string;
   skillAnimKey: string | null;
+  skillAnimStartFrame: number;
   skillAnimFrame: number;
   skillAnimElapsed: number;
   skillAnimFinished: boolean;
@@ -31,6 +33,7 @@ export class SpriteAnimator {
       finished: false,
       attackSheetKey: 'attack',
       skillAnimKey: null,
+      skillAnimStartFrame: 0,
       skillAnimFrame: 0,
       skillAnimElapsed: 0,
       skillAnimFinished: false,
@@ -72,18 +75,26 @@ export class SpriteAnimator {
     }
   }
 
-  setSkillAnim(combatantId: string, skillAnimKey: string | null): void {
+  setSkillAnim(
+    combatantId: string,
+    skillAnimKey: string | null,
+    animStartFrame = 0,
+  ): void {
     const state = this.getState(combatantId);
     if (skillAnimKey === null) {
       state.skillAnimKey = null;
+      state.skillAnimStartFrame = 0;
       state.skillAnimFrame = 0;
       state.skillAnimElapsed = 0;
       state.skillAnimFinished = false;
       return;
     }
 
+    const stripFrames = getSkillAnimFrameCount(skillAnimKey);
+    const startFrame = normalizeAnimStartFrame(animStartFrame, stripFrames);
     state.skillAnimKey = skillAnimKey;
-    state.skillAnimFrame = 0;
+    state.skillAnimStartFrame = startFrame;
+    state.skillAnimFrame = startFrame;
     state.skillAnimElapsed = 0;
     state.skillAnimFinished = false;
   }

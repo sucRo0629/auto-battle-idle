@@ -1,4 +1,4 @@
-import { SPRITE_SHEET_CELL_SIZE } from "./spriteLayout.ts";
+import { SKILL_ANIM_CELL_WIDTH } from "./spriteLayout.ts";
 
 const skillModules = import.meta.glob<string>(
   "../assets/sprites/sheets/skills/*.png",
@@ -61,7 +61,7 @@ export function getSkillAnimImage(key: string): HTMLImageElement | undefined {
 export function getSkillAnimFrameCount(key: string): number {
   const img = skillImages.get(key);
   if (!img || img.width <= 0) return 1;
-  return Math.max(1, Math.floor(img.width / SPRITE_SHEET_CELL_SIZE));
+  return Math.max(1, Math.floor(img.width / SKILL_ANIM_CELL_WIDTH));
 }
 
 export function __registerSkillAnimForTest(

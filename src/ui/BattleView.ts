@@ -12,7 +12,6 @@ import {
 } from "../progression/stageProgression.ts";
 import {
   resolveEffectPresentation,
-  shouldPlayActorAnim,
 } from "../render/skillVfx/resolveEffectPresentation.ts";
 import { resolveSkillAnimKey } from "../render/skillAnimRegistry.ts";
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
@@ -293,15 +292,12 @@ export class BattleView {
           event.effectIndex ?? 0,
         );
         if (skillAnimKey) {
-          this.canvas.playSkillAnim(event.actorId, skillAnimKey);
-        } else if (
-          presentation.anim &&
-          shouldPlayActorAnim(
-            presentation.anim,
-            actor?.rangePx ?? 0,
-            event.slotKind,
-          )
-        ) {
+          this.canvas.playSkillAnim(
+            event.actorId,
+            skillAnimKey,
+            effectDef.animStartFrame,
+          );
+        } else if (presentation.anim && event.slotKind !== "basic") {
           this.canvas.playAnim(
             event.actorId,
             presentation.anim,
