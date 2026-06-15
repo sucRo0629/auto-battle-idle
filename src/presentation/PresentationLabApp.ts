@@ -592,6 +592,7 @@ export class PresentationLabApp {
     if (!effect) return;
     mutator(effect);
     this.markDirty();
+    this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
     this.renderForm();
     this.refreshTimeline();
   }
