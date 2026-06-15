@@ -318,7 +318,7 @@ export class PresentationLabApp {
       this.refreshTimeline();
     });
 
-    const playBtn = createActionButton('▶ 再生', () => {
+    const playBtn = createActionButton('▶ 再生', 'editor-btn', () => {
       if (!this.skillDraft || !this.previewTarget) return;
       this.runner.play({
         skill: this.skillDraft,
@@ -330,15 +330,15 @@ export class PresentationLabApp {
     });
     playBtn.classList.add('presentation-lab-play-btn');
 
-    const resetBtn = createButton('↺ リセット', () => {
+    const resetBtn = createButton('↺ リセット', 'editor-btn', () => {
       this.runner.reset();
     });
 
-    const reloadBtn = createButton('再読込', () => {
+    const reloadBtn = createButton('再読込', 'editor-btn', () => {
       void this.reloadFromServer();
     });
 
-    const saveBtn = createActionButton('JSON 保存', () => {
+    const saveBtn = createActionButton('JSON 保存', 'editor-btn', () => {
       void this.saveDraft();
     });
     saveBtn.disabled = !this.dirty;
