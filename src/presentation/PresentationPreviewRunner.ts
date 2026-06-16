@@ -10,6 +10,11 @@ import {
 } from '../render/skillAnimPlayback.ts';
 import { resolveEffectPresentation } from '../render/skillVfx/resolveEffectPresentation.ts';
 import {
+  PREVIEW_ENEMY_ANCHOR_X,
+  PREVIEW_PLAYER_ANCHOR_X,
+  type PreviewBattleLayout,
+} from './previewLayout.ts';
+import {
   buildSkillVfxContext,
   computePresentationTimeline,
   type PresentationTimeline,
@@ -20,8 +25,11 @@ export type { PreviewEntity } from './presentationTimeline.ts';
 
 const PREVIEW_ACTOR_ID = 'preview_actor';
 const PREVIEW_TARGET_ID = 'preview_target';
-const PREVIEW_ALLY_X = 140;
-const PREVIEW_ENEMY_X = 340;
+const DEFAULT_PREVIEW_LAYOUT: PreviewBattleLayout = {
+  actorX: PREVIEW_PLAYER_ANCHOR_X,
+  targetX: PREVIEW_ENEMY_ANCHOR_X,
+  rangePx: PREVIEW_ENEMY_ANCHOR_X - PREVIEW_PLAYER_ANCHOR_X,
+};
 const SPRITE_SCALE = 1;
 
 function resolvePreviewSlotKind(
@@ -47,6 +55,7 @@ export class PresentationPreviewRunner {
   private readonly groundY: number;
   private actor: PreviewEntity | null = null;
   private target: PreviewEntity | null = null;
+  private layout: PreviewBattleLayout = DEFAULT_PREVIEW_LAYOUT;
 
   constructor(private readonly host: HTMLElement) {
     this.groundY = groundY(battleCanvasHeight(SPRITE_SCALE), SPRITE_SCALE);
@@ -59,9 +68,14 @@ export class PresentationPreviewRunner {
     return canvas;
   }
 
-  setEntities(actor: PreviewEntity, target: PreviewEntity): void {
+  setEntities(
+    actor: PreviewEntity,
+    target: PreviewEntity,
+    layout: PreviewBattleLayout,
+  ): void {
     this.actor = actor;
     this.target = target;
+    this.layout = layout;
     this.applyIdleLayouts();
   }
 
@@ -213,8 +227,8 @@ export class PresentationPreviewRunner {
     const target = this.target;
     if (!actor || !target) return;
     this.canvas.setCombatants([
-      this.toLayout(PREVIEW_ACTOR_ID, actor, PREVIEW_ALLY_X),
-      this.toLayout(PREVIEW_TARGET_ID, target, PREVIEW_ENEMY_X),
+      this.toLayout(PREVIEW_ACTOR_ID, actor, this.layout.actorX),
+      this.toLayout(PREVIEW_TARGET_ID, target, this.layout.targetX),
     ]);
   }
 

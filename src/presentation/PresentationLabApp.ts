@@ -27,6 +27,10 @@ import {
 } from '../editor/formUtils.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 import { PresentationPreviewRunner } from './PresentationPreviewRunner.ts';
+import {
+  resolvePreviewBattleLayout,
+  resolvePreviewBattleLayoutFallback,
+} from './previewLayout.ts';
 import type { PreviewEntity } from './presentationTimeline.ts';
 import type { PresentationTimeline } from './presentationTimeline.ts';
 
@@ -221,6 +225,40 @@ export class PresentationLabApp {
 
   private syncPreviewEntities(): void {
     const actor = this.currentEntityTraits();
+    const target = this.buildPreviewTarget(actor);
+    const effect = this.currentEffect();
+    const layout =
+      effect !== null
+        ? resolvePreviewBattleLayout(actor, effect)
+        : resolvePreviewBattleLayoutFallback(actor);
+    this.previewTarget = target;
+    this.runner.setEntities(actor, target, layout);
+  }
+
+  private buildPreviewTarget(actor: PreviewEntity): PreviewEntity {
+    if (actor.isEnemy) {
+      const cls = this.classes[0];
+      if (cls) {
+        const traits = normalizeEntityTraits(cls.traits);
+        return {
+          entityId: cls.id,
+          role: cls.role,
+          rangePx: traits.rangePx,
+          damageType: traits.damageType,
+          basicAttackVfx: traits.basicAttackVfx,
+          isEnemy: false,
+        };
+      }
+      return {
+        entityId: 'df_guardian',
+        role: 'defender',
+        rangePx: 0,
+        damageType: 'physical',
+        basicAttackVfx: { preset: 'slash' },
+        isEnemy: false,
+      };
+    }
+
     const target: PreviewEntity = {
       entityId: 'stage1_1',
       rangePx: 0,
@@ -236,8 +274,7 @@ export class PresentationLabApp {
       target.damageType = traits.damageType;
       target.basicAttackVfx = traits.basicAttackVfx;
     }
-    this.previewTarget = target;
-    this.runner.setEntities(actor, target);
+    return target;
   }
 
   private currentSlotKind(): 'basic' | 'active' {
@@ -316,6 +353,7 @@ export class PresentationLabApp {
       this.effectIndex = 0;
       this.loadSkillDraft();
       this.renderForm();
+      this.syncPreviewEntities();
       this.refreshTimeline();
     });
 
@@ -326,6 +364,7 @@ export class PresentationLabApp {
     const effectSelect = createSelect(String(this.effectIndex), effectOptions, (value) => {
       this.effectIndex = Number.parseInt(value, 10);
       this.renderForm();
+      this.syncPreviewEntities();
       this.refreshTimeline();
     });
 
