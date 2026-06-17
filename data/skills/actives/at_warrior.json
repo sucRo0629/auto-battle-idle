@@ -21,15 +21,6 @@
           "order": "nearest"
         },
         "applyFrame": 5
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "knockback",
-        "distancePx": 30
       }
     ],
     "firePolicy": "smart",
@@ -56,7 +47,7 @@
         "damageType": "physical",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.45
+          "atkScale": 0.5
         },
         "target": {
           "kind": "distance",
@@ -64,14 +55,6 @@
           "order": "selfOrigin"
         },
         "applyFrame": 3
-      }
-    ],
-    "firePolicy": "smart",
-    "fireConditions": [
-      {
-        "kind": "enemyCount",
-        "min": 2,
-        "scope": "inRange"
       }
     ],
     "useDurationSec": 0.88
