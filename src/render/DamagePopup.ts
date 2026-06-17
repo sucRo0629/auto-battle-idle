@@ -1,12 +1,16 @@
 import type { CombatantLayout } from "./IBattleRenderer.ts";
 import type { BattleHudTheme } from "./battleHudTheme.ts";
-import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
+import {
+  computeDamagePopupBaseAnchorY,
+  computeDamagePopupTops,
+  type DamagePopupLayoutInput,
+} from "./damagePopupLayout.ts";
 
 const POPUP_DURATION_MS = 800;
 const FADE_IN_END = 0.15;
 const ZOOM_IN_END = 0.2;
 /** 拡大フェーズの 5 倍の長さで縮小する */
-const ZOOM_OUT_END = ZOOM_IN_END * 5;
+const ZOOM_OUT_END = ZOOM_IN_END * 3;
 const START_SCALE = 0.3;
 const END_SCALE = 1;
 const ORIGIN_JITTER_X = 20;
@@ -106,14 +110,17 @@ export class DamagePopupManager {
     scale: number,
     theme: BattleHudTheme
   ): void {
-    for (const popup of this.popups) {
+    const drawable: {
+      popup: PopupEntry;
+      layout: CombatantLayout;
+      index: number;
+      fallY: number;
+    }[] = [];
+
+    for (let index = 0; index < this.popups.length; index++) {
+      const popup = this.popups[index]!;
       const layout = layouts.find((l) => l.id === popup.targetId);
       if (!layout) continue;
-
-      const progress = popup.elapsedMs / POPUP_DURATION_MS;
-      const alpha = popupAlpha(progress);
-      const popupScaleValue = popupScale(progress);
-      const bob = getPlaceholderSpriteYOffset(layout, scale);
       const fallY =
         popup.kind === "dot"
           ? dotFallOffsetY(
@@ -122,8 +129,49 @@ export class DamagePopupManager {
               popup.dotFallSpeed
             )
           : 0;
+      drawable.push({ popup, layout, index, fallY });
+    }
+
+    if (drawable.length === 0) return;
+
+    ctx.font = `${theme.popupFontSize}px ${theme.popupFontFamily}`;
+    const textHeight = theme.popupFontSize;
+
+    const baseAnchorYById = new Map<number, number>();
+    const layoutInputs: DamagePopupLayoutInput[] = [];
+
+    for (const { popup, layout, index, fallY } of drawable) {
       const centerX = layout.x + spriteSize / 2 + popup.offsetX;
-      const centerY = layout.y + bob + spriteSize / 2 + popup.offsetY + fallY;
+      const text =
+        popup.kind === "heal" ? `${popup.amount}` : String(popup.amount);
+      const textWidth = ctx.measureText(text).width;
+      const baseAnchorY = computeDamagePopupBaseAnchorY(
+        layout,
+        spriteSize,
+        scale,
+        popup.offsetY,
+        fallY
+      );
+
+      baseAnchorYById.set(index, baseAnchorY);
+      layoutInputs.push({
+        id: index,
+        layoutX: layout.x,
+        elapsedMs: popup.elapsedMs,
+        centerX,
+        textWidth,
+        textHeight,
+      });
+    }
+
+    const anchorYById = computeDamagePopupTops(layoutInputs, baseAnchorYById);
+
+    for (const { popup, layout, index } of drawable) {
+      const progress = popup.elapsedMs / POPUP_DURATION_MS;
+      const alpha = popupAlpha(progress);
+      const popupScaleValue = popupScale(progress);
+      const centerX = layout.x + spriteSize / 2 + popup.offsetX;
+      const anchorY = anchorYById.get(index)!;
 
       const text =
         popup.kind === "heal" ? `${popup.amount}` : String(popup.amount);
@@ -140,12 +188,11 @@ export class DamagePopupManager {
           ? theme.popupDotStroke
           : theme.popupDamageStroke;
       ctx.save();
-      ctx.translate(centerX, centerY);
+      ctx.translate(centerX, anchorY);
       ctx.scale(popupScaleValue, popupScaleValue);
       ctx.globalAlpha = alpha;
-      ctx.font = `${theme.popupFontSize}px ${theme.popupFontFamily}`;
       ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
+      ctx.textBaseline = "bottom";
       ctx.lineJoin = "round";
       ctx.miterLimit = 2;
       ctx.strokeStyle = stroke;
