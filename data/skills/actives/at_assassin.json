@@ -43,10 +43,10 @@
         "debuffStat": "def",
         "debuffMultiplier": 0.8,
         "debuffDurationSec": 5,
-        "durationSec": 10,
+        "durationSec": 5,
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.05
+          "atkScale": 0.3
         },
         "damageType": "physical"
       }

@@ -13,8 +13,8 @@
     },
     "maxHp": 235,
     "atk": 11,
-    "def": 26,
-    "reg": 5,
+    "def": 27,
+    "reg": 0,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "df_guardian_basic_attack",
@@ -58,7 +58,7 @@
     },
     "maxHp": 220,
     "atk": 15,
-    "def": 20,
+    "def": 22,
     "reg": 10,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
@@ -109,7 +109,7 @@
     },
     "maxHp": 180,
     "atk": 19,
-    "def": 16,
+    "def": 18,
     "reg": 0,
     "jobTier": 1,
     "attackSpeedTier": "normal",
@@ -165,7 +165,7 @@
     },
     "maxHp": 165,
     "atk": 30,
-    "def": 14,
+    "def": 16,
     "reg": 0,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
@@ -204,15 +204,16 @@
       }
     },
     "maxHp": 100,
-    "atk": 20,
-    "def": 8,
-    "reg": 0,
+    "atk": 27,
+    "def": 9,
+    "reg": 5,
     "jobTier": 1,
     "attackSpeedTier": "fast",
     "basicAttackSkillId": "at_assassin_basic_attack",
     "passiveIds": [
       "at_assassin_passive_1",
-      "at_assassin_passive_2"
+      "at_assassin_passive_2",
+      "at_assassin_passive_3"
     ],
     "skills": [
       {
@@ -223,11 +224,17 @@
           "at_assassin_active_1",
           "at_assassin_active_2"
         ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "at_assassin_passive_3"
+        ]
       }
     ],
     "growthTier": {
       "maxHp": 1,
-      "atk": 2,
+      "atk": 3,
       "def": 1
     }
   },
