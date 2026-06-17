@@ -159,7 +159,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ソートキーはまず陣営で分け、味方同士は `allyRoleBackDepth`（0〜3 の昇順）、敵同士は `rangePx` の降順（長い方が下層）、同一帯内は `factionBackDepth`：`isEnemy ? -battleX : battleX` の昇順。同深度は `id` 辞書順。
 
-HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に別レイヤーで描画（本節の対象外）。
+HP バー（敵のみ）・ステータスバッジ（敵のみ。味方はパーティ HUD）・攻撃 VFX はスプライト描画後に別レイヤーで描画（本節の対象外）。
 
 ### 2.8 entity body アニメ（idle / move）
 

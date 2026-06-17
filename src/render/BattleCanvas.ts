@@ -706,7 +706,7 @@ export class BattleCanvas implements IBattleRenderer {
     const rowHeightById = new Map<string, number>();
 
     for (const layout of this.layouts) {
-      if (layout.isEnemy && !layout.isAlive) continue;
+      if (!layout.isEnemy || !layout.isAlive) continue;
 
       const badges = collectStatusEffectBadgeDisplays(layout.statusEffects, {
         atk: layout.atk,
@@ -741,7 +741,7 @@ export class BattleCanvas implements IBattleRenderer {
     );
 
     for (const layout of this.layouts) {
-      if (layout.isEnemy && !layout.isAlive) continue;
+      if (!layout.isEnemy || !layout.isAlive) continue;
 
       const badges = collectStatusEffectBadgeDisplays(layout.statusEffects, {
         atk: layout.atk,
