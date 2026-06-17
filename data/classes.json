@@ -198,7 +198,7 @@
     "epithetEn": "Assassin",
     "formationRow": "front",
     "traits": {
-      "rangePx": 5,
+      "rangePx": 30,
       "basicAttackVfx": {
         "preset": "slash"
       }
