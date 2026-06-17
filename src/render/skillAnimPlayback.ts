@@ -89,6 +89,29 @@ export function isPhasedSkillAnim(
   return fields.animLoopFrame !== undefined;
 }
 
+function hasSkillBodyAnimFields(fields: SkillAnimPhaseFields): boolean {
+  return (
+    fields.animStartFrame !== undefined ||
+    fields.animIntroEndFrame !== undefined ||
+    fields.animLoopFrame !== undefined ||
+    fields.animLoopEndFrame !== undefined ||
+    fields.animOutroStartFrame !== undefined
+  );
+}
+
+/** 多 effect スキルでは body strip を持つ effect の anim フィールドを正本とする */
+export function resolveSkillBodyAnimFields(
+  skill: ActiveSkillDef,
+  effectIndex: number,
+): SkillAnimPhaseFields {
+  const current = skill.effect[effectIndex];
+  if (current && hasSkillBodyAnimFields(current)) return current;
+  for (const effect of skill.effect) {
+    if (hasSkillBodyAnimFields(effect)) return effect;
+  }
+  return current ?? skill.effect[0] ?? {};
+}
+
 export function toSkillAnimPlaybackOptions(
   effect: SkillAnimPhaseFields,
   holdSec: number,

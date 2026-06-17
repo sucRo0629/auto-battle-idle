@@ -132,6 +132,10 @@ export class BattleCanvas implements IBattleRenderer {
     this.animator.setSkillAnim(combatantId, skillAnimKey, playback);
   }
 
+  isSkillAnimActive(combatantId: string, skillAnimKey?: string): boolean {
+    return this.animator.isSkillAnimActive(combatantId, skillAnimKey);
+  }
+
   playAttackEffect(
     actorId: string,
     targetId: string,

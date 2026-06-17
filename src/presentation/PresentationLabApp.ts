@@ -353,6 +353,7 @@ export class PresentationLabApp {
       this.skillId = value;
       this.effectIndex = 0;
       this.loadSkillDraft();
+      this.renderToolbar(toolbar);
       this.renderForm();
       this.syncPreviewEntities();
       this.refreshTimeline();

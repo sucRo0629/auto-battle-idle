@@ -16,6 +16,7 @@ import {
 import { resolveSkillAnimKey } from "../render/skillAnimRegistry.ts";
 import {
   resolveSkillAnimHoldSec,
+  resolveSkillBodyAnimFields,
   toSkillAnimPlaybackOptions,
 } from "../render/skillAnimPlayback.ts";
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
@@ -199,6 +200,7 @@ export class BattleView {
     skillId: string,
     effectIndex: number,
     slotKind: 'basic' | 'active' | undefined,
+    options?: { restartIfPlaying?: boolean },
   ): void {
     const snapshot = this.engine.getSnapshot();
     const actor = [...snapshot.allies, ...snapshot.enemies].find(
@@ -224,6 +226,12 @@ export class BattleView {
     );
     const skillAnimKey = resolveSkillAnimKey(skillId, effectIndex);
     if (skillAnimKey) {
+      if (
+        options?.restartIfPlaying !== true &&
+        this.canvas.isSkillAnimActive(actorId, skillAnimKey)
+      ) {
+        return;
+      }
       const holdSec =
         actor !== undefined
           ? resolveSkillAnimHoldSec(skillDef, actor, slotKind ?? 'active')
@@ -231,7 +239,10 @@ export class BattleView {
       this.canvas.playSkillAnim(
         actorId,
         skillAnimKey,
-        toSkillAnimPlaybackOptions(effectDef, holdSec),
+        toSkillAnimPlaybackOptions(
+          resolveSkillBodyAnimFields(skillDef, effectIndex),
+          holdSec,
+        ),
       );
       return;
     }
@@ -289,6 +300,7 @@ export class BattleView {
         event.skillId,
         event.effectIndex,
         event.slotKind,
+        { restartIfPlaying: true },
       );
       return;
     }
@@ -346,23 +358,13 @@ export class BattleView {
             targetShape: effectDef.targetShape,
           }
         );
-        const skillAnimKey = resolveSkillAnimKey(
-          event.skillId,
-          event.effectIndex ?? 0,
-        );
         const skipBodyAnim = effectDef.applyFrame !== undefined;
-        if (skillAnimKey && !skipBodyAnim) {
-          const holdSec = skillDef && actor
-            ? resolveSkillAnimHoldSec(
-                skillDef,
-                actor,
-                event.slotKind ?? 'active',
-              )
-            : 0;
-          this.canvas.playSkillAnim(
+        if (!skipBodyAnim && skillDef) {
+          this.playSkillBodyAnim(
             event.actorId,
-            skillAnimKey,
-            toSkillAnimPlaybackOptions(effectDef, holdSec),
+            event.skillId,
+            event.effectIndex ?? 0,
+            event.slotKind,
           );
         } else if (presentation.anim && event.slotKind !== "basic" && !skipBodyAnim) {
           this.canvas.playAnim(

@@ -129,4 +129,14 @@ describe('SpriteAnimator phased skill anim', () => {
     expect(state.skillAnimFinished).toBe(true);
     expect(state.skillAnimFrame).toBe(3);
   });
+
+  it('matches isSkillAnimActive against the playing strip key', () => {
+    __registerSkillAnimForTest('cast_skill', mockImage(128));
+    const animator = new SpriteAnimator();
+    animator.setSkillAnim('actor', 'cast_skill', { holdSec: 1, animLoopFrame: 1 });
+
+    expect(animator.isSkillAnimActive('actor')).toBe(true);
+    expect(animator.isSkillAnimActive('actor', 'cast_skill')).toBe(true);
+    expect(animator.isSkillAnimActive('actor', 'other_skill')).toBe(false);
+  });
 });

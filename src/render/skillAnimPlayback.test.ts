@@ -13,6 +13,7 @@ import {
   resolveSkillAnimPhaseConfig,
   resolveSkillAnimPlayback,
   resolveEffectApplyDelaySec,
+  resolveSkillBodyAnimFields,
 } from './skillAnimPlayback.ts';
 
 function mockImage(width: number): HTMLImageElement {
@@ -153,5 +154,28 @@ describe('skillAnimPlayback', () => {
       resolveEffectApplyDelaySec('hit_skill', 0, { applyFrame: 2 }),
     ).toBe(0.25);
     expect(resolveEffectApplyDelaySec('hit_skill', 0, {})).toBe(0);
+  });
+
+  it('falls back to the effect that owns body anim fields', () => {
+    const skill = {
+      id: 'multi_effect',
+      name: 'Multi',
+      trigger: { kind: 'time', value: 1 },
+      effect: [
+        {
+          type: 'buff',
+          target: { kind: 'self' },
+          animLoopFrame: 2,
+          animIntroEndFrame: 1,
+        },
+        {
+          type: 'buff',
+          target: { kind: 'self' },
+        },
+      ],
+    } as const;
+
+    expect(resolveSkillBodyAnimFields(skill, 0).animLoopFrame).toBe(2);
+    expect(resolveSkillBodyAnimFields(skill, 1).animLoopFrame).toBe(2);
   });
 });
