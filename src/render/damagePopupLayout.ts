@@ -1,4 +1,5 @@
 import type { CombatantLayout } from "./IBattleRenderer.ts";
+import { spriteDrawY } from "./spriteVisualDepth.ts";
 import {
   hpBarRectsOverlapHorizontally,
   type HpBarRect,
@@ -49,7 +50,7 @@ export function defaultDamagePopupAnchorY(
 export function computeDamagePopupBaseAnchorY(
   layout: Pick<
     CombatantLayout,
-    "y" | "spriteKey" | "skillAnimKey" | "anim" | "animFrame"
+    "y" | "depthOffsetY" | "spriteKey" | "skillAnimKey" | "anim" | "animFrame"
   >,
   spriteSize: number,
   scale: number,
@@ -58,7 +59,12 @@ export function computeDamagePopupBaseAnchorY(
 ): number {
   const bob = getPlaceholderSpriteYOffset(layout, scale);
   const drawH = computeSpriteDrawHeight(layout, scale);
-  const headTopY = computeSpriteHeadTopY(layout.y, bob, spriteSize, drawH);
+  const headTopY = computeSpriteHeadTopY(
+    spriteDrawY(layout),
+    bob,
+    spriteSize,
+    drawH,
+  );
   return defaultDamagePopupAnchorY(headTopY, scale, offsetY, fallY);
 }
 

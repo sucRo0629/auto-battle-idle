@@ -60,6 +60,10 @@ import { DeathPlaybackManager } from "./deathPlayback.ts";
 import { drawBattleFieldBackground } from "./battleFieldBackground.ts";
 import { layoutHpBarBarrier } from "./hpBarBarrierLayout.ts";
 import { sortForSpriteDraw } from "./spriteDrawOrder.ts";
+import {
+  applyVisualDepthOffsets,
+  spriteDrawY,
+} from "./spriteVisualDepth.ts";
 
 const CANVAS_W = 480;
 const CANVAS_H = battleCanvasHeight(1);
@@ -103,6 +107,7 @@ export class BattleCanvas implements IBattleRenderer {
 
   setCombatants(layout: CombatantLayout[]): void {
     this.layouts = layout;
+    applyVisualDepthOffsets(this.layouts, SPRITE_SCALE);
   }
 
   setVerifyModeEnabled(enabled: boolean): void {
@@ -309,6 +314,15 @@ export class BattleCanvas implements IBattleRenderer {
     }
 
     this.layouts = layouts;
+    const enemyDepthReference = canShowEnemies
+      ? snapshot.enemies.map((enemy) => ({
+          id: enemy.id,
+          x: enemy.battleX,
+          isEnemy: true as const,
+          rangePx: enemy.rangePx,
+        }))
+      : undefined;
+    applyVisualDepthOffsets(layouts, SPRITE_SCALE, { enemyDepthReference });
     this.worldOffsetX = snapshot.worldOffsetX;
     this.victoryOverlay.syncPhase(
       snapshot.phase,
@@ -395,7 +409,11 @@ export class BattleCanvas implements IBattleRenderer {
     const enemyBarTops = computeEnemyHpBarTops(
       this.layouts
         .filter((layout) => layout.isEnemy && layout.isAlive)
-        .map((layout) => ({ id: layout.id, x: layout.x, y: layout.y })),
+        .map((layout) => ({
+          id: layout.id,
+          x: layout.x,
+          y: spriteDrawY(layout),
+        })),
       SPRITE_SCALE,
       SPRITE_SIZE
     );
@@ -408,19 +426,20 @@ export class BattleCanvas implements IBattleRenderer {
     );
 
     for (const layout of enemyLayouts) {
-      this.drawSprite(layout, layout.x, layout.y, SPRITE_SCALE);
+      const spriteY = spriteDrawY(layout);
+      this.drawSprite(layout, layout.x, spriteY, SPRITE_SCALE);
       if (layout.isAlive) {
         this.drawHpBar(
           layout,
           layout.x,
-          layout.y,
+          spriteY,
           SPRITE_SCALE,
           enemyBarTops.get(layout.id)
         );
       }
     }
     for (const layout of allyLayouts) {
-      this.drawSprite(layout, layout.x, layout.y, SPRITE_SCALE);
+      this.drawSprite(layout, layout.x, spriteDrawY(layout), SPRITE_SCALE);
     }
 
     this.drawStatusBadges(SPRITE_SCALE);
@@ -728,7 +747,7 @@ export class BattleCanvas implements IBattleRenderer {
       badgeInputs.push({
         id: layout.id,
         x: layout.x,
-        y: layout.y,
+        y: spriteDrawY(layout),
       });
     }
 

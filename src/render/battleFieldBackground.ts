@@ -1,6 +1,8 @@
 import skyTileUrl from '../assets/background/sky_tile.png';
 import grassTileUrl from '../assets/background/grass_tile.png';
 import type { BattleHudTheme } from './battleHudTheme.ts';
+import { GRASS_BAND_H } from './formationLayout.ts';
+import { MAX_VISUAL_DEPTH_RISE } from './spriteVisualDepth.ts';
 
 const SKY_PARALLAX = 0.35;
 /** Pixels sky extends below the ground line to soften the horizon seam. */
@@ -41,6 +43,17 @@ export function wrapScrollOffset(offsetPx: number, tileW: number): number {
   if (tileW <= 0) return 0;
   const snapped = Math.floor(offsetPx);
   return (((-snapped) % tileW) + tileW) % tileW;
+}
+
+/** 水平地面。奥行き最大分だけ草帯を上へ延長する */
+export function staticGrassBandLayout(
+  groundLineY: number,
+  depthRise: number = MAX_VISUAL_DEPTH_RISE,
+): { grassTop: number; grassHeight: number } {
+  return {
+    grassTop: groundLineY - depthRise,
+    grassHeight: GRASS_BAND_H + depthRise,
+  };
 }
 
 function drawTiledBand(
@@ -101,6 +114,7 @@ export function drawBattleFieldBackground(
   options: BattleFieldBackgroundDrawOptions,
 ): void {
   const { canvasW, canvasH, groundLineY, worldOffsetX, theme } = options;
+  const { grassTop, grassHeight } = staticGrassBandLayout(groundLineY);
 
   if (skyTile && skyTile.complete && skyTile.naturalWidth > 0) {
     const skyScroll = wrapScrollOffset(
@@ -130,14 +144,14 @@ export function drawBattleFieldBackground(
       ctx,
       grassTile,
       0,
-      groundLineY,
+      grassTop,
       canvasW,
-      canvasH - groundLineY,
+      grassHeight,
       grassScroll,
     );
   } else {
     ctx.fillStyle = theme.sceneGroundFill;
-    ctx.fillRect(0, groundLineY, canvasW, canvasH - groundLineY);
+    ctx.fillRect(0, grassTop, canvasW, grassHeight);
   }
 
   drawHorizonBlend(ctx, canvasW, groundLineY);

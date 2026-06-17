@@ -4,6 +4,7 @@ import {
   SPRITE_LAYOUT_SIZE,
   spriteSheetMaxOverflowTop,
 } from './spriteLayout.ts';
+import { VISUAL_DEPTH_TOP_PAD_PX } from './spriteVisualDepth.ts';
 
 export { CANVAS_W, SPRITE_GAP, SPRITE_WIDTH } from '../battle/battleConstants.ts';
 
@@ -15,7 +16,7 @@ export const GRASS_BAND_H = 12;
 export const BATTLE_GROUND_MARGIN = GRASS_BAND_H;
 const BASE_BATTLE_TOP_PAD = 43;
 export const BATTLE_TOP_PAD =
-  BASE_BATTLE_TOP_PAD + spriteSheetMaxOverflowTop();
+  BASE_BATTLE_TOP_PAD + spriteSheetMaxOverflowTop() + VISUAL_DEPTH_TOP_PAD_PX;
 export const STATUS_BADGE_H = 8;
 export const STATUS_BADGE_GAP = 2;
 

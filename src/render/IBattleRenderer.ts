@@ -8,7 +8,10 @@ import type { SkillAnimPlaybackOptions } from './skillAnimPlayback.ts';
 export interface CombatantLayout {
   id: string;
   x: number;
+  /** 足元アンカー（地面ライン）。battleX に対応 */
   y: number;
+  /** 擬似奥行き: スプライトを上へずらす px（スケール変更なし） */
+  depthOffsetY?: number;
   spriteKey: string;
   hp: number;
   maxHp: number;

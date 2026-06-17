@@ -159,9 +159,23 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ソートキーはまず陣営で分け、味方同士は `allyRoleBackDepth`（0〜3 の昇順）、敵同士は `rangePx` の降順（長い方が下層）、同一帯内は `factionBackDepth`：`isEnemy ? -battleX : battleX` の昇順。同深度は `id` 辞書順。
 
-HP バー（敵のみ）・ステータスバッジ（敵のみ。味方はパーティ HUD）・攻撃 VFX はスプライト描画後に別レイヤーで描画（本節の対象外）。
+### 2.8 擬似奥行き（Y オフセット）
 
-### 2.8 entity body アニメ（idle / move）
+同一 `battleX` 付近でスプライトが重ならないよう、**描画のみ** Y をずらす。`battleX`（戦闘正本）は変えない。スケールは変えずドット絵の等倍を維持する。
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 足元アンカー | `layout.y` = `groundY`（全員共通） |
+| 奥行き | `depthOffsetY` — `spriteDrawOrder` と同じ並びで陣営内に割当（奥ほど大きい） |
+| 敵の正本 | Wave 内の全敵（倒れた敵含む `snapshot.enemies`）。生存敵の Y は撃破後も変わらない |
+| 描画 Y | `spriteDrawY = layout.y - depthOffsetY` |
+| 段幅 | `VISUAL_DEPTH_STEP_PX`（10px × スプライト scale） |
+
+実装：`src/render/spriteVisualDepth.ts`（`assignVisualDepthOffsets`）→ `BattleCanvas.ts`、VFX・ポップアップは `spriteDrawY` を参照。§2.7 の描画順と同一キーで深度を決める。
+
+**背景（§2.8 続き）：** 地面は水平のまま固定。草タイル帯は `MAX_VISUAL_DEPTH_RISE`（最大オフセット 30px + 余白 10px = 40px）だけ上へ延長し、最大奥行きユニットの足元が草の上端に乗らないよう余白を確保。パララックス（`worldOffsetX`）のみ動的。キャンバス上端は `VISUAL_DEPTH_TOP_PAD_PX`（30px）を追加。
+
+### 2.9 entity body アニメ（idle / move）
 
 `BattleEngine` がスナップショット各ユニットに `bodyAnimMarching` を付与し、`BattleCanvas` が `move` / `idle` を切り替える。判定正本は `src/battle/bodyAnimMarching.ts`（`battleX` のフレーム差分や overlap 微調整は使わない）。
 
@@ -175,7 +189,7 @@ HP バー（敵のみ）・ステータスバッジ（敵のみ。味方はパ�
 
 ### 3.1 マップ
 
-**2D マップは存在しない。** 横 1 軸のバトルラインのみ。Y は `formationRow` 由来の描画オフセット。
+**2D マップは存在しない。** 横 1 軸のバトルラインのみ。Y は §2.8 の擬似奥行きオフセット（`formationRow` はターゲット等の論理区分）。
 
 ### 3.2 データ
 
@@ -309,6 +323,8 @@ HP バー（敵のみ）・ステータスバッジ（敵のみ。味方はパ�
 | `formationLayout.ts`                       | `groundY`、HUD 余白、`CANVAS_W` 等 **キャンバス定数のみ**                               |
 | `BattleCanvas.ts`                          | snapshot → 描画                                                                         |
 | `spriteDrawOrder.ts`                       | スプライト重なり順（§2.7）                                                              |
+| `spriteVisualDepth.ts`                     | 擬似奥行き Y オフセット（§2.8）                                                         |
+| `battleFieldBackground.ts`                 | 空・草タイル描画（水平地面＋草帯の固定延長）                                            |
 
 **依存方向：** `battleLayout` → `combatPosition` / `battleConstants`（一方向）。`combatPosition` → `formationLayout` **禁止**。
 

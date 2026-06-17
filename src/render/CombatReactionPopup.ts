@@ -1,6 +1,7 @@
 import type { CombatantLayout } from "./IBattleRenderer.ts";
 import type { BattleHudTheme } from "./battleHudTheme.ts";
 import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
+import { spriteDrawY } from "./spriteVisualDepth.ts";
 
 const POPUP_DURATION_MS = 800;
 const FADE_IN_END = 0.15;
@@ -85,7 +86,7 @@ export class CombatReactionPopupManager {
       const popupScaleValue = popupScale(progress);
       const bob = getPlaceholderSpriteYOffset(layout, scale);
       const centerX = layout.x + spriteSize / 2;
-      const centerY = layout.y + bob + HEAD_LABEL_OFFSET_Y;
+      const centerY = spriteDrawY(layout) + bob + HEAD_LABEL_OFFSET_Y;
 
       const text = REACTION_TEXT[popup.kind];
 

@@ -5,6 +5,7 @@ import {
   chainLightningFadeAlpha,
 } from "./chainFade.ts";
 import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
+import { spriteDrawY } from "./spriteVisualDepth.ts";
 
 const CURSE_MARK_DURATION_MS = 620;
 const STAGED_FADE_IN_END = 0.12;
@@ -117,7 +118,7 @@ export class CurseMarkEffectManager {
         : legacyMarkScale(mark.elapsedMs / CURSE_MARK_DURATION_MS);
       const bob = getPlaceholderSpriteYOffset(layout, scale);
       const centerX = layout.x + spriteSize / 2;
-      const centerY = layout.y + bob + spriteSize / 2;
+      const centerY = spriteDrawY(layout) + bob + spriteSize / 2;
 
       ctx.save();
       ctx.translate(centerX, centerY);

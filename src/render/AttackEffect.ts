@@ -1,6 +1,7 @@
 import type { SkillVfxDef, SkillVfxPresetId } from "../battle/types.ts";
 import type { CombatantLayout } from "./IBattleRenderer.ts";
 import type { BattleHudTheme } from "./battleHudTheme.ts";
+import { spriteDrawY } from "./spriteVisualDepth.ts";
 import {
   CHAIN_LIGHTNING_FADE_OUT_MS,
   chainSegmentFadeAlpha,
@@ -51,7 +52,7 @@ function getCombatantCenter(
   const bob = getPlaceholderSpriteYOffset(layout, scale);
   return {
     x: layout.x + spriteSize / 2,
-    y: layout.y + bob + spriteSize / 2,
+    y: spriteDrawY(layout) + bob + spriteSize / 2,
   };
 }
 
@@ -59,7 +60,7 @@ function getCombatantBaseCenterY(
   layout: CombatantLayout,
   spriteSize: number
 ): number {
-  return layout.y + spriteSize / 2;
+  return spriteDrawY(layout) + spriteSize / 2;
 }
 
 function getCombatantFoot(
@@ -70,7 +71,7 @@ function getCombatantFoot(
   const bob = getPlaceholderSpriteYOffset(layout, scale);
   return {
     x: layout.x + spriteSize / 2,
-    y: layout.y + bob + spriteSize,
+    y: spriteDrawY(layout) + bob + spriteSize,
   };
 }
 
