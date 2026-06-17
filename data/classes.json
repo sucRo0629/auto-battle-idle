@@ -158,7 +158,10 @@
     "epithetEn": "Swordsman",
     "formationRow": "front",
     "traits": {
-      "rangePx": 30
+      "rangePx": 30,
+      "basicAttackVfx": {
+        "preset": "slashHit"
+      }
     },
     "maxHp": 165,
     "atk": 30,

@@ -90,7 +90,8 @@
         "amount": {
           "kind": "atkBased",
           "atkScale": 1
-        }
+        },
+        "applyFrame": 3
       }
     ]
   },
