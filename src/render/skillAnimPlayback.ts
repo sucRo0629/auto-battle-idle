@@ -145,7 +145,7 @@ export function resolveSkillAnimHoldSec(
     traits: {
       rangePx: actor.rangePx,
       damageType: actor.damageType,
-      basicAttackVfx: actor.basicAttackVfx ?? { preset: 'slash' },
+      basicAttackVfx: actor.basicAttackVfx,
     },
   } as CombatantState;
   return resolvePresentationLockSec(skill, actorStub, slotKind);

@@ -7,7 +7,7 @@ import type {
   TargetShape,
 } from "../../battle/types.ts";
 
-/** resolveSkillVfx に渡す実行時コンテキスト（BattleEvent + スナップショット由来） */
+/** VFX 解決に渡す実行時コンテキスト（BattleEvent + スナップショット由来） */
 export interface SkillVfxContext {
   role?: Role;
   rangePx: number;

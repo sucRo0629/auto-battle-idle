@@ -42,7 +42,7 @@ function previewEntityToActorStub(entity: PreviewEntity): CombatantState {
     traits: {
       rangePx: entity.rangePx,
       damageType: entity.damageType,
-      basicAttackVfx: entity.basicAttackVfx ?? { preset: 'slash' },
+      basicAttackVfx: entity.basicAttackVfx,
     },
     build: {
       learnedPassiveIds: [],

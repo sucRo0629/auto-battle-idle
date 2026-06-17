@@ -90,7 +90,7 @@ PNG サイズ例: 幅 `max(4×48, 3×48) = 192px`、高さ `3×48 = 144px`（3 �
 
 - 戦闘上は `{entityId}_basic_attack` スキル（`data/skills/actives/`）
 - **PNG あり** → skill anim 再生 + VFX（`basicAttackVfx` / effect `vfx`）
-- **PNG なし** → body なし・**VFX のみ**（近接 slash / 遠隔 arrow / 魔法 orb 等）
+- **PNG なし** → body なし・**VFX のみ**（明示 preset のみ）
 - **遠隔**も近接と同様。弓引き PNG を置けば body 再生する（「遠隔だから body 無し」は廃止）
 
 ### 例（背刺）
@@ -112,7 +112,7 @@ JSON で指定。PNG 不要（Phase 6 で新 preset の `draw*` 追加）。
 | skill | `vfx` |
 | traits | `basicAttackVfx` |
 
-解決: `basicAttackVfx` → `effect.vfx` → `skill.vfx` → ロール/射程既定（`resolveSkillVfx`）。
+解決: `basicAttackVfx` → `effect.vfx` → `skill.vfx` → なし。
 
 **演出調整ツール（Phase 5）** で body PNG・VFX・`useDurationSec` / `durationMs` を **同一 Canvas プレビュー** で調整する（Phase 6 用の別 VFX エディタは作らない）。
 

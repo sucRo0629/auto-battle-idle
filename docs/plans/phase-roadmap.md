@@ -39,7 +39,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 - Victory / Defeat → 3 秒待機 → HP 全回復 → 再スポーン（Phase 2 でセーブ連動の進行ルールを追加）
 - Canvas 2D：**アニメーション基盤**（`SpriteAnimator`、イベント連動、近接突進/遠隔弾、ダメージポップアップ）
 - **プレースホルダースプライト**（ロール別色分け PNG。本番ドット絵は Phase 5）
-- **プレースホルダー戦闘 VFX**（slash / orb / arrow / healRise の 4 種。role / attackRange から自動選択。`render/skillVfx/` に解決基盤のみ。**スキル別 `vfx` 設定・新プリセット追加は Phase 6**）
+- **プレースホルダー戦闘 VFX**（slash / orb / arrow / healRise の 4 種。明示 preset のみ表示。`render/skillVfx/` に解決基盤のみ。**スキル別 `vfx` 設定・新プリセット追加は Phase 6**）
 - buff VFX：対象スプライトの白い光（約 0.8 秒）
 - Canvas UI：ステージ名（左上）、パーティ HUD（クラス名 / Exp / HP / スキル CD）
 - バトルログ：**console のみ**（DOM ログは意図的に未実装）

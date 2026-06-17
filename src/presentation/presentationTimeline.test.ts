@@ -59,7 +59,7 @@ describe('computePresentationTimeline', () => {
     expect(damageTimeline.vfxSec).toBe(0.5);
   });
 
-  it('reports no vfx when effect vfx preset is unset (lab mode)', () => {
+  it('falls back to skill vfx when effect vfx preset is unset', () => {
     const skill: ActiveSkillDef = {
       id: 'test_damage',
       name: 'Damage',
@@ -75,8 +75,8 @@ describe('computePresentationTimeline', () => {
     };
 
     const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
-    expect(timeline.vfxPreset).toBeNull();
-    expect(timeline.vfxSec).toBeNull();
+    expect(timeline.vfxPreset).toBe('orb');
+    expect(timeline.vfxSec).toBeGreaterThan(0);
   });
 
   it('uses skill useDurationSec when set', () => {

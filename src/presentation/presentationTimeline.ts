@@ -46,7 +46,7 @@ function previewActorStub(entity: PreviewEntity): {
   traits: {
     rangePx: number;
     damageType: PreviewEntity['damageType'];
-    basicAttackVfx: NonNullable<PreviewEntity['basicAttackVfx']>;
+    basicAttackVfx?: SkillVfxDef;
   };
 } {
   return {
@@ -54,7 +54,7 @@ function previewActorStub(entity: PreviewEntity): {
     traits: {
       rangePx: entity.rangePx,
       damageType: entity.damageType,
-      basicAttackVfx: entity.basicAttackVfx ?? { preset: 'slash' },
+      basicAttackVfx: entity.basicAttackVfx,
     },
   };
 }
@@ -104,9 +104,7 @@ export function computePresentationTimeline(
   }
 
   const ctx = buildSkillVfxContext(entity, slotKind, effect);
-  const presentation = resolveEffectPresentation(skill.id, effect, skill, ctx, {
-    effectVfxOnly: true,
-  });
+  const presentation = resolveEffectPresentation(effect, skill, ctx);
 
   const actorStub = previewActorStub(entity);
   const presentationLockSec = resolvePresentationLockSec(

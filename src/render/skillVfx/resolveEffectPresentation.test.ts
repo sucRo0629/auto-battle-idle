@@ -19,6 +19,11 @@ const ctx = {
   effectKind: 'damage' as const,
 };
 
+const basicCtx = {
+  ...ctx,
+  slotKind: 'basic' as const,
+};
+
 describe('resolveEffectPresentation', () => {
   it('defaults move to none without vfx', () => {
     const effect: MoveSkillEffect = {
@@ -26,7 +31,7 @@ describe('resolveEffectPresentation', () => {
       target: { kind: "distance", side: "enemy", order: "nearest" },
       moveDurationSec: 0.25,
     };
-    const result = resolveEffectPresentation('test_skill', effect, skill, {
+    const result = resolveEffectPresentation(effect, skill, {
       ...ctx,
       effectKind: 'move',
     });
@@ -36,7 +41,6 @@ describe('resolveEffectPresentation', () => {
 
   it('defaults heal to none', () => {
     const result = resolveEffectPresentation(
-      'test_skill',
       {
         type: 'heal',
         target: { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' },
@@ -55,7 +59,7 @@ describe('resolveEffectPresentation', () => {
       moveDurationSec: 0.25,
       anim: 'dash',
     };
-    const result = resolveEffectPresentation('test_skill', effect, skill, {
+    const result = resolveEffectPresentation(effect, skill, {
       ...ctx,
       effectKind: 'move',
     });
@@ -70,7 +74,7 @@ describe('resolveEffectPresentation', () => {
       moveDurationSec: 0.3,
       anim: 'idle',
     };
-    const result = resolveEffectPresentation('test_skill', effect, skill, {
+    const result = resolveEffectPresentation(effect, skill, {
       ...ctx,
       effectKind: 'move',
     });
@@ -79,7 +83,6 @@ describe('resolveEffectPresentation', () => {
 
   it('uses effect vfx override before skill vfx', () => {
     const result = resolveEffectPresentation(
-      'test_skill',
       {
         type: 'damage',
         target: { kind: "distance", side: "enemy", order: "nearest" },
@@ -95,9 +98,38 @@ describe('resolveEffectPresentation', () => {
     expect(result.hitVfx?.preset).toBe('slashHit');
   });
 
-  it('defaults melee damage to slash swing with slashHit', () => {
+  it('uses explicit basicAttackVfx for basic attacks', () => {
     const result = resolveEffectPresentation(
-      'test_skill',
+      {
+        type: 'damage',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      { ...skill, vfx: undefined },
+      { ...basicCtx, basicAttackVfx: { preset: 'slash' } },
+    );
+    expect(result.vfx?.preset).toBe('slash');
+    expect(result.hitVfx?.preset).toBe('slashHit');
+  });
+
+  it('returns no VFX for basic attacks without basicAttackVfx', () => {
+    const result = resolveEffectPresentation(
+      {
+        type: 'damage',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      skill,
+      { ...basicCtx, basicAttackVfx: undefined },
+    );
+    expect(result.vfx).toBeNull();
+    expect(result.hitVfx).toBeNull();
+  });
+
+  it('does not default melee damage to a VFX', () => {
+    const result = resolveEffectPresentation(
       {
         type: 'damage',
         target: { kind: "distance", side: "enemy", order: "nearest" },
@@ -107,13 +139,12 @@ describe('resolveEffectPresentation', () => {
       { ...skill, vfx: undefined },
       ctx,
     );
-    expect(result.vfx?.preset).toBe('slash');
-    expect(result.hitVfx?.preset).toBe('slashHit');
+    expect(result.vfx).toBeNull();
+    expect(result.hitVfx).toBeNull();
   });
 
-  it('defaults pierce damage to impale without hit vfx', () => {
+  it('does not default pierce damage to a VFX', () => {
     const result = resolveEffectPresentation(
-      'test_skill',
       {
         type: 'damage',
         targetShape: 'pierce',
@@ -124,13 +155,12 @@ describe('resolveEffectPresentation', () => {
       { ...skill, vfx: undefined },
       { ...ctx, targetShape: 'pierce' },
     );
-    expect(result.vfx?.preset).toBe('impale');
+    expect(result.vfx).toBeNull();
     expect(result.hitVfx).toBeNull();
   });
 
-  it('defaults chain damage to chainLightning', () => {
+  it('does not default chain damage to a VFX', () => {
     const result = resolveEffectPresentation(
-      'test_skill',
       {
         type: 'damage',
         targetShape: 'chain',
@@ -143,12 +173,12 @@ describe('resolveEffectPresentation', () => {
       { ...skill, vfx: undefined },
       { ...ctx, effectKind: 'damage', targetShape: 'chain' },
     );
-    expect(result.vfx?.preset).toBe('chainLightning');
+    expect(result.vfx).toBeNull();
+    expect(result.hitVfx).toBeNull();
   });
 
-  it('falls back to skill vfx when effect vfx is unset', () => {
+  it('uses skill vfx when effect vfx is unset', () => {
     const result = resolveEffectPresentation(
-      'test_skill',
       {
         type: 'damage',
         target: { kind: "distance", side: "enemy", order: "nearest" },
@@ -161,26 +191,23 @@ describe('resolveEffectPresentation', () => {
     expect(result.vfx?.preset).toBe('orb');
   });
 
-  it('skips vfx fallback in presentation lab when effect vfx is unset', () => {
+  it('uses no VFX when neither effect nor skill preset is set', () => {
     const result = resolveEffectPresentation(
-      'test_skill',
       {
         type: 'damage',
         target: { kind: "distance", side: "enemy", order: "nearest" },
         damageType: 'physical',
         amount: { kind: 'atkBased', atkScale: 1 },
       },
-      skill,
+      { ...skill, vfx: undefined },
       ctx,
-      { effectVfxOnly: true },
     );
     expect(result.vfx).toBeNull();
     expect(result.hitVfx).toBeNull();
   });
 
-  it('uses effect vfx in presentation lab when preset is set', () => {
+  it('uses explicit effect vfx in presentation lab when preset is set', () => {
     const result = resolveEffectPresentation(
-      'test_skill',
       {
         type: 'damage',
         target: { kind: "distance", side: "enemy", order: "nearest" },
@@ -190,14 +217,12 @@ describe('resolveEffectPresentation', () => {
       },
       skill,
       ctx,
-      { effectVfxOnly: true },
     );
     expect(result.vfx?.preset).toBe('slash');
   });
 
   it('returns none anim as null', () => {
     const result = resolveEffectPresentation(
-      'test_skill',
       {
         type: 'buff',
         target: { kind: "self" },

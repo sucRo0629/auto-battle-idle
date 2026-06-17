@@ -6,18 +6,12 @@ import type {
 } from "../../battle/types.ts";
 import type { AnimState } from "../SpriteRegistry.ts";
 import { resolveDefaultHitVfx } from "./defaultPresets.ts";
-import { resolveSkillVfx } from "./resolveSkillVfx.ts";
 import type { SkillVfxContext } from "./types.ts";
 
 export interface EffectPresentation {
   anim: AnimState | null;
   vfx: SkillVfxDef | null;
   hitVfx?: SkillVfxDef | null;
-}
-
-export interface ResolveEffectPresentationOptions {
-  /** 演出ラボ: effect.vfx.preset のみを VFX 源とする（スキル / 通常攻撃既定へフォールバックしない） */
-  effectVfxOnly?: boolean;
 }
 
 const LEGACY_ANIM_MAP: Partial<Record<SkillEffectAnimId, SkillEffectAnimId>> = {
@@ -66,38 +60,30 @@ function resolveHitVfx(
   return resolveDefaultHitVfx(ctx, vfx);
 }
 
-function resolveEffectVfx(
-  skillId: string,
+function resolveExplicitVfx(
   effectDef: SkillEffectDef,
   skillDef: ActiveSkillDef | undefined,
   ctx: SkillVfxContext,
-  options?: ResolveEffectPresentationOptions,
 ): SkillVfxDef | null {
   if (!supportsVfx(effectDef)) return null;
-
-  if (options?.effectVfxOnly) {
-    return effectDef.vfx?.preset ? effectDef.vfx : null;
+  if (ctx.slotKind === "basic") {
+    return ctx.basicAttackVfx?.preset ? ctx.basicAttackVfx : null;
   }
-
-  if (ctx.slotKind === "basic" && ctx.basicAttackVfx) {
-    return ctx.basicAttackVfx;
-  }
-
-  return effectDef.vfx ?? resolveSkillVfx(skillId, ctx, skillDef?.vfx);
+  if (effectDef.vfx?.preset) return effectDef.vfx;
+  if (skillDef?.vfx?.preset) return skillDef.vfx;
+  return null;
 }
 
 export function resolveEffectPresentation(
-  skillId: string,
   effectDef: SkillEffectDef,
   skillDef: ActiveSkillDef | undefined,
   ctx: SkillVfxContext,
-  options?: ResolveEffectPresentationOptions,
 ): EffectPresentation {
   const animId = normalizeEffectAnim(effectDef.anim, effectDef);
   const anim =
     animId === "none" ? null : (animId as AnimState);
 
-  const vfx = resolveEffectVfx(skillId, effectDef, skillDef, ctx, options);
+  const vfx = resolveExplicitVfx(effectDef, skillDef, ctx);
 
   const hitVfx = resolveHitVfx(vfx, ctx);
 

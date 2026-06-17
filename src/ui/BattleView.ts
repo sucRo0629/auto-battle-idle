@@ -211,7 +211,6 @@ export class BattleView {
     if (!skillDef || !effectDef) return;
 
     const presentation = resolveEffectPresentation(
-      skillId,
       effectDef,
       skillDef,
       {
@@ -263,7 +262,6 @@ export class BattleView {
     if (!effectDef) return;
 
     const presentation = resolveEffectPresentation(
-      event.skillId,
       effectDef,
       skillDef,
       {
@@ -345,7 +343,6 @@ export class BattleView {
       const effectDef = skillDef?.effect[event.effectIndex ?? 0];
       if (effectDef) {
         const presentation = resolveEffectPresentation(
-          event.skillId,
           effectDef,
           skillDef,
           {

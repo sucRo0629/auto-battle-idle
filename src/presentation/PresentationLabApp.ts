@@ -255,7 +255,6 @@ export class PresentationLabApp {
         role: 'defender',
         rangePx: 0,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'slash' },
         isEnemy: false,
       };
     }
@@ -264,7 +263,6 @@ export class PresentationLabApp {
       entityId: 'stage1_1',
       rangePx: 0,
       damageType: 'physical',
-      basicAttackVfx: { preset: 'slash' },
       isEnemy: true,
     };
     const fallbackEnemy = this.enemies[0];

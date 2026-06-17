@@ -42,7 +42,7 @@ export interface EntityTraits {
 export interface NormalizedEntityTraits {
   rangePx: number;
   damageType: DamageType;
-  basicAttackVfx: SkillVfxDef;
+  basicAttackVfx?: SkillVfxDef;
   /** 省略時は false（接敵後も移動する） */
   stationary?: boolean;
 }
@@ -838,7 +838,7 @@ interface SkillEffectCommon {
    * 遅延秒 = max(0, applyFrame - animStartFrame) / 8
    */
   applyFrame?: number;
-  /** 未指定時はスキル vfx → 既定プリセット（damage/heal 等のみ） */
+  /** 未指定時は skill vfx を使う。どちらも未設定なら VFX なし */
   vfx?: SkillVfxDef;
   /** @deprecated target.kind==="status" に統合。読み込み専用 */
   targetDebuffFilter?: DebuffFilterTag[];
@@ -1074,7 +1074,7 @@ export interface ActiveSkillDef {
   interval?: number;
   effect: SkillEffectDef[];
   allowedClassIds?: ClassId[];
-  /** 未指定時は role / attackRange 等からプレースホルダー VFX を自動選択 */
+  /** 未指定時は VFX なし */
   vfx?: SkillVfxDef;
   /** 停止時間（秒）。省略/0 = 即時。アニメ長に合わせて設定 */
   useDurationSec?: number;
@@ -1161,7 +1161,7 @@ export interface CombatantSnapshot {
   /** 現在の実効射程（effect.range も含めた最大値） */
   effectiveRangePx: number;
   damageType: DamageType;
-  basicAttackVfx: SkillVfxDef;
+  basicAttackVfx?: SkillVfxDef;
   spriteKey: string;
   iconKey: string;
   formationRow: FormationRow;

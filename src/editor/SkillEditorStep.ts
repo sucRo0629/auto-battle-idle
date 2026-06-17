@@ -2865,7 +2865,7 @@ export class SkillEditorStep {
         createSelect(
           (preset || '') as SkillVfxPresetId | '',
           [
-            { value: '', label: '— 既定（role/射程）—' },
+            { value: '', label: '— なし —' },
             ...VFX_PRESET_OPTIONS.map((value) => ({
               value,
               label: VFX_PRESET_LABELS[value],

@@ -473,7 +473,7 @@ export class ClassEditorStep {
         createSelect(
           draft.class.traits.basicAttackVfx?.preset ?? "",
           [
-            { value: "", label: "（traits から自動）" },
+            { value: "", label: "— なし —" },
             ...VFX_PRESET_OPTIONS.map((value) => ({
               value,
               label: value,

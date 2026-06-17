@@ -29,7 +29,7 @@ const skill = {
 } as ActiveSkillDef;
 
 describe('resolveEffectVfxPreset', () => {
-  it('uses basicAttackVfx preset for basic slot', () => {
+  it('uses explicit basicAttackVfx preset for basic slot', () => {
     expect(
       resolveEffectVfxPreset(skill, chainEffect, actor, 'basic'),
     ).toBe('chainLightning');
@@ -45,7 +45,29 @@ describe('resolveEffectVfxPreset', () => {
     ).toBe('orb');
   });
 
-  it('detects staged chain for enchanter chain lightning', () => {
+  it('returns null when active slot has no explicit VFX', () => {
+    expect(
+      resolveEffectVfxPreset(
+        { ...skill, effect: [{ ...chainEffect, vfx: undefined }] },
+        { ...chainEffect, vfx: undefined },
+        { ...actor, traits: { ...actor.traits, basicAttackVfx: undefined } },
+        'active',
+      ),
+    ).toBeNull();
+  });
+
+  it('returns null for basic slot when basicAttackVfx is unset', () => {
+    expect(
+      resolveEffectVfxPreset(
+        skill,
+        chainEffect,
+        { ...actor, traits: { ...actor.traits, basicAttackVfx: undefined } },
+        'basic',
+      ),
+    ).toBeNull();
+  });
+
+  it('detects staged chain only for explicit chain lightning', () => {
     expect(
       usesStagedChainVfx(skill, chainEffect, actor, 'basic'),
     ).toBe(true);
@@ -55,6 +77,14 @@ describe('resolveEffectVfxPreset', () => {
         { ...chainEffect, type: 'buff', buffStat: 'attackSpeed' } as SkillEffectDef,
         actor,
         'basic',
+      ),
+    ).toBe(false);
+    expect(
+      usesStagedChainVfx(
+        skill,
+        { ...chainEffect, vfx: undefined },
+        { ...actor, traits: { ...actor.traits, basicAttackVfx: undefined } },
+        'active',
       ),
     ).toBe(false);
   });

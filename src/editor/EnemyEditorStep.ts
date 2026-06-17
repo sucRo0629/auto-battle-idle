@@ -269,7 +269,7 @@ export class EnemyEditorStep {
         createSelect(
           draft.enemy.traits?.basicAttackVfx?.preset ?? '',
           [
-            { value: '', label: '（traits から自動）' },
+            { value: '', label: '— なし —' },
             ...VFX_PRESET_OPTIONS.map((value) => ({ value, label: value })),
           ],
           (preset) => {
