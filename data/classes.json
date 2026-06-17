@@ -158,7 +158,7 @@
     "epithetEn": "Swordsman",
     "formationRow": "front",
     "traits": {
-      "rangePx": 30,
+      "rangePx": 45,
       "basicAttackVfx": {
         "preset": "slashHit"
       }
@@ -198,7 +198,7 @@
     "epithetEn": "Assassin",
     "formationRow": "front",
     "traits": {
-      "rangePx": 30,
+      "rangePx": 35,
       "basicAttackVfx": {
         "preset": "slash"
       }
@@ -238,7 +238,7 @@
     "epithetEn": "Lancer",
     "formationRow": "front",
     "traits": {
-      "rangePx": 70,
+      "rangePx": 80,
       "basicAttackVfx": {
         "preset": "impale"
       }
@@ -278,7 +278,7 @@
     "epithetEn": "Ranger",
     "formationRow": "back",
     "traits": {
-      "rangePx": 200
+      "rangePx": 300
     },
     "maxHp": 92,
     "atk": 20,
@@ -359,7 +359,7 @@
     "epithetEn": "Hunter",
     "formationRow": "back",
     "traits": {
-      "rangePx": 220
+      "rangePx": 300
     },
     "maxHp": 96,
     "atk": 21,
