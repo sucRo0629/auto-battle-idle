@@ -608,6 +608,72 @@ describe('skillSequence', () => {
     expect(cd.remaining).toBe(8);
   });
 
+  it('re-resolves engage move anchor when build-time target died', () => {
+    const runner = new SkillSequenceRunner();
+    const actor = mockUnit({ id: 'actor', battleX: 220 });
+    const enemyWasTarget = mockUnit({
+      id: 'was',
+      isEnemy: true,
+      battleX: 80,
+      hp: 0,
+      isAlive: false,
+    });
+    const enemyAlive = mockUnit({
+      id: 'alive',
+      isEnemy: true,
+      battleX: 50,
+      hp: 100,
+    });
+    const skill: ActiveSkillDef = {
+      id: 'shadow_return',
+      name: 'shadow_return',
+      trigger: { kind: 'time', value: 8 },
+      effect: [
+        {
+          type: 'move',
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          moveMode: 'engage',
+          moveDurationSec: 0.2,
+        },
+      ],
+    };
+    const cd: SkillCooldown = {
+      skillId: 'shadow_return',
+      remaining: 0,
+      slotKind: 'active',
+    };
+    const data = makeGameData({ shadow_return: skill });
+    const sequence = buildSkillSequence(
+      skill,
+      actor,
+      [actor],
+      [{ ...enemyWasTarget, hp: 100, isAlive: true }, enemyAlive],
+      data,
+      [],
+      0,
+      cd,
+    )!;
+    const engageStep = sequence.steps[0]!;
+    expect(engageStep.targetId).toBe('was');
+
+    const executor = new SkillExecutor(data, () => {}, {
+      getBattleTimeSec: () => 0,
+      enqueuePendingHits: () => {},
+      getAllCombatants: () => [actor, enemyWasTarget, enemyAlive],
+      getSequenceRunner: () => runner,
+    });
+
+    executor.applyScheduledStep(
+      engageStep,
+      [actor],
+      [enemyWasTarget, enemyAlive],
+    );
+
+    const expectedX = resolveAttackBattleX(actor, enemyAlive.battleX, data);
+    expect(runner.getActiveMoves()).toHaveLength(1);
+    expect(runner.getActiveMoves()[0]!.toX).toBe(expectedX);
+  });
+
   it('marks actor busy during skill move so engine can skip auto-approach', () => {
     const runner = new SkillSequenceRunner();
     const actor = mockUnit({ id: 'actor', battleX: 200 });

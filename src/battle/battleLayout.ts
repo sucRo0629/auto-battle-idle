@@ -897,10 +897,15 @@ export function resolveEngagedFormationOverlaps(
   leadingRow: FormationRow | null,
   isOnField: (unit: CombatantState) => boolean,
   gameData: GameData,
+  isInSkillMotion?: (id: string) => boolean,
 ): void {
   if (leadingRow === null) return;
   const frontUnits = players.filter(
-    (p) => isOnField(p) && p.isAlive && p.formationRow === leadingRow,
+    (p) =>
+      isOnField(p) &&
+      p.isAlive &&
+      p.formationRow === leadingRow &&
+      !(isInSkillMotion?.(p.id) ?? false),
   );
   if (frontUnits.length < 2) return;
 

@@ -12,6 +12,7 @@ import { hideFallenAllyCorpses } from './entities.ts';
 import type { CombatantState, GameData } from './types.ts';
 import {
   getLeadingPlayerFront,
+  resolveEngagedFormationOverlaps,
   resolveEngagedLayout,
 } from './battleLayout.ts';
 
@@ -362,5 +363,77 @@ describe('battle contact (R1-fix: battleX single)', () => {
     syncAllFieldX([guard, enemy]);
     expect(guard.visualX).toBe(180);
     expect(enemy.visualX).toBe(250);
+  });
+});
+
+describe('resolveEngagedFormationOverlaps', () => {
+  function meleeUnit(
+    overrides: Partial<CombatantState> & { id: string; rangePx: number },
+  ): CombatantState {
+    const { rangePx, ...rest } = overrides;
+    return mockCombatant({
+      formationRow: 'front',
+      traits: {
+        rangePx,
+        damageType: 'physical',
+        basicAttackVfx: { preset: 'slash' },
+      },
+      ...rest,
+    });
+  }
+
+  it('excludes skill-motion units so allies are not pulled by temporary battleX', () => {
+    const assassin = meleeUnit({
+      id: 'as',
+      role: 'attacker',
+      rangePx: 15,
+      battleX: 250,
+    });
+    const guardian = meleeUnit({
+      id: 'guard',
+      role: 'defender',
+      rangePx: 10,
+      battleX: 120,
+    });
+    const guardianX = guardian.battleX;
+
+    resolveEngagedFormationOverlaps(
+      [assassin, guardian],
+      'front',
+      () => true,
+      gameData,
+      (id) => id === 'as',
+    );
+    expect(guardian.battleX).toBe(guardianX);
+  });
+
+  it('still resolves overlap among non-motion allies when one unit is in skill motion', () => {
+    const warrior = meleeUnit({
+      id: 'war',
+      role: 'attacker',
+      rangePx: 30,
+      battleX: 80,
+    });
+    const guardian = meleeUnit({
+      id: 'guard',
+      role: 'defender',
+      rangePx: 10,
+      battleX: 82,
+    });
+    const assassin = meleeUnit({
+      id: 'as',
+      role: 'attacker',
+      rangePx: 5,
+      battleX: 250,
+    });
+
+    resolveEngagedFormationOverlaps(
+      [warrior, guardian, assassin],
+      'front',
+      () => true,
+      gameData,
+      (id) => id === 'as',
+    );
+    expect(guardian.battleX).toBeGreaterThanOrEqual(warrior.battleX + 3);
   });
 });

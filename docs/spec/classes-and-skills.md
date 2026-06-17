@@ -586,6 +586,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 - `engage` は敵向け `target` が一般的（射程内へ自動計算）
 - move の `target` で `order: nearest` / `farthest` を指定した場合、anchor は **使用者との battleX 距離**で選ぶ（自動接近 chase の「編成奥 = max battleX」とは別）
 - move を含むスキルは effect 列を **順序実行**（移動完了後に次 effect）。CD はシーケンス全 step 完了後にリセット
+- シーケンス `move` step 適用時、build 時の `targetId` が死亡済みなら **effect の `target` spec を再解決**して anchor を取り直す（影の刃の帰還 `engage` 等）
 
 ### targetShape の JSON 例（スキーマ参考・具体 ID は未固定）
 

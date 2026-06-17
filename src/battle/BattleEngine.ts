@@ -1417,6 +1417,7 @@ export class BattleEngine {
         engagedLeadingRow,
         (unit) => this.isOnBattlefield(unit),
         this.gameData,
+        (id) => this.skillSequenceRunner.isActorInSkillMotion(id),
       );
       syncAllFieldX([...this.players, ...this.enemies]);
       syncDeadEnemyCorpseBattleX(this.enemies);

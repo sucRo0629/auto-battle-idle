@@ -63,6 +63,7 @@ import {
   buildSkillSequence,
   type PendingSkillStep,
   resolveActiveEffectGaugeDurationSec,
+  resolveSequenceStepAnchor,
   resolveSequenceWallClockSec,
   resolveUseDurationSec,
   type SkillSequenceRunner,
@@ -71,6 +72,7 @@ import {
 import {
   resolutionHasTargets,
   resolveEffectResolution,
+  resolveEffectTargetSpec,
 } from './targeting.ts';
 
 function skillHitEventFields(
@@ -370,9 +372,26 @@ export class SkillExecutor {
     );
 
     if (step.effectDef.type === 'move') {
-      const target = findCombatantById(step.targetId, allies, enemies);
-      if (!target?.isAlive) return;
       if (isUnitStunned(actor)) return;
+      let target = findCombatantById(step.targetId, allies, enemies);
+      if (!target?.isAlive) {
+        const spec = resolveEffectTargetSpec(
+          step.effectDef,
+          actor,
+          allies,
+          enemies,
+          passives,
+        );
+        target = resolveSequenceStepAnchor(
+          step.effectDef,
+          spec,
+          actor,
+          allies,
+          enemies,
+          this.gameData,
+        );
+      }
+      if (!target?.isAlive) return;
       this.applyMoveEffect(
         actor,
         target,

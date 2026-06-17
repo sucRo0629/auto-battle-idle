@@ -297,7 +297,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 **遠隔敵の表示凍結：** 接敵開始時 `engagedVisualTargetPlayerId` は attack プール → なければ chase（`battleDisplay.freezeRangedTargets`）。接敵中の攻撃ターゲット解決とは独立。
 
-**スキル `move` 中・シーケンス busy 中**の actor は自動接近対象外。
+**スキル `move` 中・シーケンス busy 中**の actor は自動接近対象外。接敵中の `resolveEngagedFormationOverlaps` でも **スキルモーション中ユニットは overlap 対象から除外**（一時的な `battleX` で味方を引っ張らない）。
 
 ### 4.5 スキル `move`
 
