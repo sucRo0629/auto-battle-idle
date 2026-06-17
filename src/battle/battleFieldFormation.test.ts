@@ -32,12 +32,12 @@ describe('battle-field formation spec (F-*)', () => {
     );
   });
 
-  it('F-3.3-02: same range back row sorts supporter left of attacker', () => {
+  it('F-3.3-02: same range back row sorts attacker left of supporter', () => {
     const positions = computePlayerPositions([
       { id: 'cleric', role: 'supporter', formationRow: 'back', rangePx: 50, damageType: 'magic', isAlive: true },
       { id: 'ranger', role: 'attacker', formationRow: 'back', rangePx: 50, damageType: 'physical', isAlive: true },
     ]);
-    expect(positions.get('cleric')!).toBeLessThan(positions.get('ranger')!);
+    expect(positions.get('ranger')!).toBeLessThan(positions.get('cleric')!);
   });
 
   it('F-3.3-03: left anchor is 20px with 32px slot spacing (back to front)', () => {

@@ -47,6 +47,15 @@ describe('partyFormation', () => {
     );
   });
 
+  it('sorts back row by role before range (attacker left of supporter)', () => {
+    const units = [
+      { id: 'sp_cleric', role: 'supporter' as const, rangePx: 128, damageType: 'magic' as const, formationRow: 'back' as const },
+      { id: 'at_ranger', role: 'attacker' as const, rangePx: 50, damageType: 'physical' as const, formationRow: 'back' as const },
+    ];
+    const sorted = [...units].sort(comparePartyFormationSlot);
+    expect(sorted.map((u) => u.id)).toEqual(['at_ranger', 'sp_cleric']);
+  });
+
   it('assigns 5-slot party with 32px spacing from anchor 20', () => {
     const units = Array.from({ length: 5 }, (_, i) => ({
       id: `u${i}`,

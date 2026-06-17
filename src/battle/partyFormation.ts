@@ -20,8 +20,8 @@ const FRONT_ROW_ROLE_ORDER: Record<Role, number> = {
 };
 
 const BACK_ROW_ROLE_ORDER: Record<Role, number> = {
-  supporter: 0,
-  attacker: 1,
+  attacker: 0,
+  supporter: 1,
   defender: 2,
 };
 
@@ -46,15 +46,9 @@ export function compareFormationRowSlot(
   a: PartyFormationUnit,
   b: PartyFormationUnit,
 ): number {
-  if (row === 'front') {
-    const roleDelta = rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role);
-    if (roleDelta !== 0) return roleDelta;
-    if (a.rangePx !== b.rangePx) return b.rangePx - a.rangePx;
-    return a.id.localeCompare(b.id);
-  }
-  if (a.rangePx !== b.rangePx) return b.rangePx - a.rangePx;
   const roleDelta = rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role);
   if (roleDelta !== 0) return roleDelta;
+  if (a.rangePx !== b.rangePx) return b.rangePx - a.rangePx;
   return a.id.localeCompare(b.id);
 }
 

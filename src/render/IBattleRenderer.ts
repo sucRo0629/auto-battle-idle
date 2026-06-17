@@ -17,6 +17,7 @@ export interface CombatantLayout {
   def: number;
   reg: number;
   role?: Role;
+  rangePx?: number;
   isEnemy: boolean;
   isAlive: boolean;
   anim: AnimState;

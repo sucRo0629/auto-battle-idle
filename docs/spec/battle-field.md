@@ -126,9 +126,9 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | 列      | ロール順（左 → 右）             |
 | ------- | ------------------------------- |
 | `front` | supporter → attacker → defender |
-| `back`  | supporter → attacker → defender |
+| `back`  | attacker → supporter → defender |
 
-前列の supporter は defender より後方スロットに配置される。接敵接近では supporter の停止 X を前列 defender の手前に cap する（`resolveApproachBattleX.ts`）。
+前列の supporter は defender より後方スロットに配置される。後列では attacker を supporter より前に置く。接敵接近では supporter の停止 X を前列 defender の手前に cap する（`resolveApproachBattleX.ts`）。
 
 ### 2.7 スプライト描画順（重なり）
 
@@ -137,7 +137,18 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | 優先 | ルール                         | 意味                                     |
 | ---- | ------------------------------ | ---------------------------------------- |
 | 1    | **敵を先に描画**               | プレイヤー側スプライトが敵より手前（上） |
-| 2    | **同一陣営内は後方を先に描画** | 手前に立つユニットが後方ユニットより上   |
+| 2    | **味方はロール帯で重なり**     | 下表の順で手前に重なる（上→下）          |
+| 3    | **敵内は射程が長い方を先に描画** | 射程の短い敵ほど上に重なる               |
+| 4    | **同一帯内は後方を先に描画**   | 手前に立つユニットが後方ユニットより上   |
+
+**味方のロール帯（手前＝上層 → 奥＝下層）：**
+
+| 手前（上） | ロール帯           | 判定                                      |
+| ---------- | ------------------ | ----------------------------------------- |
+| 1          | 近接アタッカー     | `role === "attacker"` かつ `rangePx < 100` |
+| 2          | 遠隔アタッカー     | `role === "attacker"` かつ `rangePx >= 100` |
+| 3          | ディフェンダー     | `role === "defender"`                     |
+| 4          | サポーター         | `role === "supporter"`                    |
 
 **後方の定義（陣営ごとの battleX 向き）：**
 
@@ -146,7 +157,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | プレイヤー側 | 小さい `battleX`（画面左）         | 大きい `battleX`（敵寄り）         |
 | 敵           | 大きい `battleX`（画面右・退却側） | 小さい `battleX`（プレイヤー寄り） |
 
-ソートキー `factionBackDepth`：`isEnemy ? -battleX : battleX` の昇順。同深度は `id` 辞書順。
+ソートキーはまず陣営で分け、味方同士は `allyRoleBackDepth`（0〜3 の昇順）、敵同士は `rangePx` の降順（長い方が下層）、同一帯内は `factionBackDepth`：`isEnemy ? -battleX : battleX` の昇順。同深度は `id` 辞書順。
 
 HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に別レイヤーで描画（本節の対象外）。
 
