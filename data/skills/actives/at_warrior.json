@@ -60,7 +60,8 @@
           "kind": "distance",
           "side": "enemy",
           "order": "selfOrigin"
-        }
+        },
+        "applyFrame": 2
       }
     ],
     "firePolicy": "smart",
@@ -92,38 +93,6 @@
           "atkScale": 1
         },
         "applyFrame": 3
-      }
-    ]
-  },
-  {
-    "id": "at_warrior_active_4",
-    "name": "薙ぎ払い",
-    "trigger": {
-      "kind": "time",
-      "value": 8
-    },
-    "effect": [
-      {
-        "targetShape": "pierce",
-        "type": "damage",
-        "damageType": "physical",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.45
-        },
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "selfOrigin"
-        }
-      }
-    ],
-    "firePolicy": "smart",
-    "fireConditions": [
-      {
-        "kind": "enemyCount",
-        "min": 2,
-        "scope": "inRange"
       }
     ]
   }
