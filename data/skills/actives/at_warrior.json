@@ -19,7 +19,8 @@
           "kind": "distance",
           "side": "enemy",
           "order": "nearest"
-        }
+        },
+        "applyFrame": 5
       },
       {
         "target": {
@@ -38,7 +39,8 @@
         "maxHpRatio": 0.3,
         "compare": "gte"
       }
-    ]
+    ],
+    "useDurationSec": 1.13
   },
   {
     "id": "at_warrior_active_2",
@@ -61,7 +63,7 @@
           "side": "enemy",
           "order": "selfOrigin"
         },
-        "applyFrame": 2
+        "applyFrame": 3
       }
     ],
     "firePolicy": "smart",
@@ -71,7 +73,8 @@
         "min": 2,
         "scope": "inRange"
       }
-    ]
+    ],
+    "useDurationSec": 0.88
   },
   {
     "id": "at_warrior_basic_attack",
