@@ -54,6 +54,11 @@ export class CombatReactionPopupManager {
   private popups: ReactionEntry[] = [];
 
   spawn(targetId: string, kind: CombatReactionKind): void {
+    const hasActive = this.popups.some(
+      (popup) => popup.targetId === targetId && popup.kind === kind,
+    );
+    if (hasActive) return;
+
     this.popups.push({
       targetId,
       kind,

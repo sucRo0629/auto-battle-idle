@@ -29,9 +29,9 @@
 
 | ロール      | 役割                                                  |
 | ----------- | ----------------------------------------------------- |
-| `defender`  | 前列タンク + 軽い支援（buff/heal 可）                 |
-| `attacker`  | ダメージディーラー（近接/遠隔はクラス traits で決定） |
-| `supporter` | 回復・支援（後列が典型）                              |
+| `defender`  | 前列タンク + 軽い支援（buff/heal 可）                                      |
+| `attacker`  | ダメージディーラー。近接帯（`rangePx < 100`）は前列、遠隔帯は後列が既定 |
+| `supporter` | 回復・支援（後列が典型）                                                   |
 
 `classId` 命名：`{rolePrefix}_{englishSlug}`
 
@@ -169,9 +169,19 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 ## 配置
 
-`formationRow` で列を決定：`front` → `back`（左＝敵側）。
+`formationRow` で列を決定：`front` → `back`（左＝敵側）。正本は `classes.json` の各クラス `formationRow`。
 
-同一列内の横並び順はパーティ **配列順**。
+**列の既定：**
+
+| ロール      | `formationRow`                                                                 |
+| ----------- | ------------------------------------------------------------------------------ |
+| `defender`  | `front`                                                                        |
+| `attacker`  | 近接帯（`rangePx < 100`）→ `front`、遠隔帯（`rangePx >= 100`）→ `back`         |
+| `supporter` | `back`                                                                         |
+
+敵のデフォルトターゲットは射程内でヘイト最大（[combat.md](combat.md) の Threat 節）。近接アタッカーが前列にいても、ディフェンダーがヘイトを引きつける想定。
+
+同一 `formationRow` 内の X 深度（左＝後方、右＝前方）は [battle-field.md](battle-field.md) §2.6（`partyFormation.ts` のロール順）を正とする。
 
 味方の heal / move 向け `closestAlly` は **battleX 距離**が最小の味方。敵の `closestAlly` は **ヘイト加重抽選**（[combat.md](combat.md) の Threat 節）。
 
