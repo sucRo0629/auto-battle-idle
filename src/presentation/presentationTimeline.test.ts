@@ -59,6 +59,26 @@ describe('computePresentationTimeline', () => {
     expect(damageTimeline.vfxSec).toBe(0.5);
   });
 
+  it('reports no vfx when effect vfx preset is unset (lab mode)', () => {
+    const skill: ActiveSkillDef = {
+      id: 'test_damage',
+      name: 'Damage',
+      trigger: { kind: 'manual' },
+      vfx: { preset: 'orb' },
+      effect: [
+        {
+          type: 'damage',
+          target: { rule: 'frontEnemy' },
+          amount: { kind: 'atkScale', scale: 1 },
+        },
+      ],
+    };
+
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
+    expect(timeline.vfxPreset).toBeNull();
+    expect(timeline.vfxSec).toBeNull();
+  });
+
   it('uses skill useDurationSec when set', () => {
     const skill: ActiveSkillDef = {
       id: 'test_use',

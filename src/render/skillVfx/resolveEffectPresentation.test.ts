@@ -161,6 +161,40 @@ describe('resolveEffectPresentation', () => {
     expect(result.vfx?.preset).toBe('orb');
   });
 
+  it('skips vfx fallback in presentation lab when effect vfx is unset', () => {
+    const result = resolveEffectPresentation(
+      'test_skill',
+      {
+        type: 'damage',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      skill,
+      ctx,
+      { effectVfxOnly: true },
+    );
+    expect(result.vfx).toBeNull();
+    expect(result.hitVfx).toBeNull();
+  });
+
+  it('uses effect vfx in presentation lab when preset is set', () => {
+    const result = resolveEffectPresentation(
+      'test_skill',
+      {
+        type: 'damage',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+        vfx: { preset: 'slash' },
+      },
+      skill,
+      ctx,
+      { effectVfxOnly: true },
+    );
+    expect(result.vfx?.preset).toBe('slash');
+  });
+
   it('returns none anim as null', () => {
     const result = resolveEffectPresentation(
       'test_skill',

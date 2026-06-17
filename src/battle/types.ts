@@ -827,9 +827,11 @@ interface SkillEffectCommon {
   animStartFrame?: number;
   /** イントロ最終コマ（inclusive）。未指定時は animLoopFrame */
   animIntroEndFrame?: number;
-  /** スキル中にループ表示するコマ。指定時は intro / hold / outro の 3 段再生 */
+  /** ループ開始コマ（inclusive）。指定時は intro / hold / outro の 3 段再生 */
   animLoopFrame?: number;
-  /** アウトロ開始コマ。未指定時は animLoopFrame + 1 */
+  /** ループ終了コマ（inclusive）。未指定時は animLoopFrame */
+  animLoopEndFrame?: number;
+  /** アウトロ開始コマ。未指定時は (animLoopEndFrame ?? animLoopFrame) + 1 */
   animOutroStartFrame?: number;
   /**
    * スキル strip 内の効果適用コマ（絶対 index）。省略 = 即時。

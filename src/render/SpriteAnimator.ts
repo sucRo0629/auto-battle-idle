@@ -28,6 +28,7 @@ export interface AnimatorState {
   skillAnimPhase: SkillAnimPhase | null;
   skillAnimIntroEndFrame: number;
   skillAnimLoopFrame: number;
+  skillAnimLoopEndFrame: number;
   skillAnimOutroStartFrame: number;
   skillAnimHoldSec: number;
   skillAnimHoldElapsed: number;
@@ -54,6 +55,7 @@ export class SpriteAnimator {
       skillAnimPhase: null,
       skillAnimIntroEndFrame: 0,
       skillAnimLoopFrame: 0,
+      skillAnimLoopEndFrame: 0,
       skillAnimOutroStartFrame: 0,
       skillAnimHoldSec: 0,
       skillAnimHoldElapsed: 0,
@@ -132,6 +134,7 @@ export class SpriteAnimator {
       state.skillAnimPhase = 'intro';
       state.skillAnimIntroEndFrame = phased.introEndFrame;
       state.skillAnimLoopFrame = phased.loopFrame;
+      state.skillAnimLoopEndFrame = phased.loopEndFrame;
       state.skillAnimOutroStartFrame = phased.outroStartFrame;
       state.skillAnimHoldSec = phased.holdSec;
     } else {
@@ -205,6 +208,7 @@ export class SpriteAnimator {
           state.skillAnimFrame = state.skillAnimLoopFrame;
           state.skillAnimPhase = 'loop';
           state.skillAnimHoldElapsed = 0;
+          state.skillAnimElapsed = 0;
           if (state.skillAnimHoldSec <= 0) {
             this.beginSkillAnimOutro(state, frames);
           }
@@ -216,6 +220,17 @@ export class SpriteAnimator {
 
     if (state.skillAnimPhase === 'loop') {
       state.skillAnimHoldElapsed += deltaSec;
+      if (state.skillAnimLoopEndFrame > state.skillAnimLoopFrame) {
+        state.skillAnimElapsed += deltaSec;
+        while (state.skillAnimElapsed >= frameDuration) {
+          state.skillAnimElapsed -= frameDuration;
+          if (state.skillAnimFrame < state.skillAnimLoopEndFrame) {
+            state.skillAnimFrame += 1;
+          } else {
+            state.skillAnimFrame = state.skillAnimLoopFrame;
+          }
+        }
+      }
       if (state.skillAnimHoldElapsed >= state.skillAnimHoldSec) {
         this.beginSkillAnimOutro(state, frames);
       }

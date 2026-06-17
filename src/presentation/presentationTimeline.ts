@@ -104,7 +104,9 @@ export function computePresentationTimeline(
   }
 
   const ctx = buildSkillVfxContext(entity, slotKind, effect);
-  const presentation = resolveEffectPresentation(skill.id, effect, skill, ctx);
+  const presentation = resolveEffectPresentation(skill.id, effect, skill, ctx, {
+    effectVfxOnly: true,
+  });
 
   const actorStub = previewActorStub(entity);
   const presentationLockSec = resolvePresentationLockSec(

@@ -33,6 +33,7 @@ import {
 } from './previewLayout.ts';
 import type { PreviewEntity } from './presentationTimeline.ts';
 import type { PresentationTimeline } from './presentationTimeline.ts';
+import { validatePresentationSkillSave } from './presentationSaveValidation.ts';
 
 type EntityKind = 'class' | 'enemy';
 
@@ -456,33 +457,43 @@ export class PresentationLabApp {
 
     grid.appendChild(
       createFieldRow(
+        'animIntroEndFrame',
+        createNumberInput(effect.animIntroEndFrame ?? -1, (value) => {
+          this.patchEffect((draft) => {
+            if (value < 0) delete draft.animIntroEndFrame;
+            else draft.animIntroEndFrame = Math.floor(value);
+          });
+        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=loop開始' }),
+      ),
+    );
+
+    grid.appendChild(
+      createFieldRow(
         'animLoopFrame',
         createNumberInput(effect.animLoopFrame ?? -1, (value) => {
           this.patchEffect((draft) => {
             if (value < 0) {
               delete draft.animLoopFrame;
+              delete draft.animLoopEndFrame;
               delete draft.animIntroEndFrame;
               delete draft.animOutroStartFrame;
             } else {
               draft.animLoopFrame = Math.floor(value);
             }
           });
-        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '3段再生時必須' }),
+        }, { emptyWhen: -1, step: 1, min: 0, placeholder: 'ループ開始' }),
       ),
     );
 
     grid.appendChild(
       createFieldRow(
-        'animIntroEndFrame',
-        createNumberInput(effect.animIntroEndFrame ?? -1, (value) => {
+        'animLoopEndFrame',
+        createNumberInput(effect.animLoopEndFrame ?? -1, (value) => {
           this.patchEffect((draft) => {
-            if (value < 0) {
-              delete draft.animIntroEndFrame;
-            } else {
-              draft.animIntroEndFrame = Math.floor(value);
-            }
+            if (value < 0) delete draft.animLoopEndFrame;
+            else draft.animLoopEndFrame = Math.floor(value);
           });
-        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=loop' }),
+        }, { emptyWhen: -1, step: 1, min: 0, placeholder: 'ループ終了（省略=開始）' }),
       ),
     );
 
@@ -497,7 +508,7 @@ export class PresentationLabApp {
               draft.animOutroStartFrame = Math.floor(value);
             }
           });
-        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=loop+1' }),
+        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=loop終了+1' }),
       ),
     );
 
@@ -523,7 +534,7 @@ export class PresentationLabApp {
 
     const phaseHint = createEl('p', 'presentation-lab-hint');
     phaseHint.textContent =
-      'animLoopFrame を指定すると intro（start〜introEnd）→ hold（loop）→ outro（outroStart〜終端）の 3 段再生。hold 時間は useDurationSec または presentationLock。introEnd / outroStart 省略時は loop / loop+1。';
+      'animLoopFrame を指定すると intro（start〜introEnd）→ hold（loop開始〜loop終了をループ）→ outro（outroStart〜終端）の 3 段再生。hold 時間は useDurationSec または presentationLock。introEnd 省略時は loop開始、outroStart 省略時は loop終了+1。';
     grid.appendChild(phaseHint);
     appendHintLines(grid, [
       [
@@ -566,7 +577,7 @@ export class PresentationLabApp {
         createSelect(
           preset,
           [
-            { value: '', label: '— スキル既定 —' },
+            { value: '', label: '— なし —' },
             ...VFX_PRESET_OPTIONS.map((value) => ({
               value,
               label: VFX_PRESET_LABELS[value],
@@ -588,25 +599,31 @@ export class PresentationLabApp {
       ),
     );
 
+    const vfxPreset = effect.vfx?.preset;
     grid.appendChild(
       createFieldRow(
         'vfx.durationMs',
         createNumberInput(effect.vfx?.durationMs ?? 0, (value) => {
           this.patchEffect((draft) => {
-            if (!draft.vfx && value <= 0) return;
-            const next = { ...(draft.vfx ?? {}) };
+            if (!draft.vfx?.preset) return;
             if (value <= 0) {
+              const next = { ...draft.vfx };
               delete next.durationMs;
-            } else {
-              next.durationMs = Math.floor(value);
+              draft.vfx = next;
+              return;
             }
-            if (Object.keys(next).length === 0) {
-              delete draft.vfx;
-            } else if ('preset' in next || value > 0) {
-              draft.vfx = next as NonNullable<typeof draft.vfx>;
-            }
+            draft.vfx = {
+              ...draft.vfx,
+              durationMs: Math.floor(value),
+            };
           });
-        }, { emptyWhen: 0, step: 10, min: 0 }),
+        }, {
+          emptyWhen: 0,
+          step: 10,
+          min: 0,
+          readonly: !vfxPreset,
+          placeholder: vfxPreset ? undefined : 'なし',
+        }),
       ),
     );
 
@@ -762,6 +779,11 @@ export class PresentationLabApp {
 
   private async saveDraft(): Promise<void> {
     if (!this.skillDraft) return;
+    const validationError = validatePresentationSkillSave(this.skillDraft);
+    if (validationError) {
+      this.setStatus(validationError, true);
+      return;
+    }
     try {
       await savePresentationSkill(this.skillDraft);
       this.skills = await fetchSkills();

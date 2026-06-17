@@ -6,7 +6,7 @@
 
 **実装状況（PR1）:** `entityAnimLayout.json` + `src/render/entityAtlas.ts` で body atlas 描画済み。未配置時は旧 `sheets/{entityId}/` または静止画フォールバック。
 
-**実装状況（PR2）:** スキル strip **64×48**（`SKILL_ANIM_CELL_WIDTH`）、`animStartFrame` 再生スキップ + **3 段再生**（`animLoopFrame` / `animIntroEndFrame` / `animOutroStartFrame` — `skillAnimPlayback.ts` + `SpriteAnimator`）。
+**実装状況（PR2）:** スキル strip **64×48**（`SKILL_ANIM_CELL_WIDTH`）、`animStartFrame` 再生スキップ + **3 段再生**（`animLoopFrame` / `animLoopEndFrame` / `animIntroEndFrame` / `animOutroStartFrame` — `skillAnimPlayback.ts` + `SpriteAnimator`）。
 
 **実装状況（PR3）:** 演出ラボ MVP — `presentation-lab.html` + `PresentationPreviewRunner`（`resolveEffectPresentation` → `BattleCanvas`）。JSON 保存は `PUT /__editor/presentation-skill`。
 
@@ -83,7 +83,7 @@ PNG サイズ例: 幅 `max(4×48, 3×48) = 192px`、高さ `3×48 = 144px`（3 �
 
 制作時、strip の **0 コマ目** に entity idle 0 と同じ絵を入れて位置合わせしてよい。  
 再生時は effect の **`animStartFrame`**（default `0`、idle 入りなら `1`）でスキップする。  
-**3 段再生:** `animLoopFrame` 指定時 — intro（`animStartFrame`〜`animIntroEndFrame`）→ hold（`animLoopFrame` を `useDurationSec` / presentationLock までループ）→ outro（`animOutroStartFrame`〜終端）。  
+**3 段再生:** `animLoopFrame` 指定時 — intro（`animStartFrame`〜`animIntroEndFrame`）→ hold（`animLoopFrame`〜`animLoopEndFrame` を `useDurationSec` / presentationLock までループ）→ outro（`animOutroStartFrame`〜終端）。  
 演出ラボのプレビューでも 0 コマは「参照」、再生は `animStartFrame` から。
 
 ### 通常攻撃（basic）

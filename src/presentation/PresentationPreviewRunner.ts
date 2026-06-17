@@ -122,6 +122,7 @@ export class PresentationPreviewRunner {
       effect,
       request.skill,
       ctx,
+      { effectVfxOnly: true },
     );
     const skillAnimKey = resolveSkillAnimKey(
       request.skill.id,

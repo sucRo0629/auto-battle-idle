@@ -15,6 +15,11 @@ export interface EffectPresentation {
   hitVfx?: SkillVfxDef | null;
 }
 
+export interface ResolveEffectPresentationOptions {
+  /** 演出ラボ: effect.vfx.preset のみを VFX 源とする（スキル / 通常攻撃既定へフォールバックしない） */
+  effectVfxOnly?: boolean;
+}
+
 const LEGACY_ANIM_MAP: Partial<Record<SkillEffectAnimId, SkillEffectAnimId>> = {
   dash: "none",
   heal: "none",
@@ -61,24 +66,38 @@ function resolveHitVfx(
   return resolveDefaultHitVfx(ctx, vfx);
 }
 
+function resolveEffectVfx(
+  skillId: string,
+  effectDef: SkillEffectDef,
+  skillDef: ActiveSkillDef | undefined,
+  ctx: SkillVfxContext,
+  options?: ResolveEffectPresentationOptions,
+): SkillVfxDef | null {
+  if (!supportsVfx(effectDef)) return null;
+
+  if (options?.effectVfxOnly) {
+    return effectDef.vfx?.preset ? effectDef.vfx : null;
+  }
+
+  if (ctx.slotKind === "basic" && ctx.basicAttackVfx) {
+    return ctx.basicAttackVfx;
+  }
+
+  return effectDef.vfx ?? resolveSkillVfx(skillId, ctx, skillDef?.vfx);
+}
+
 export function resolveEffectPresentation(
   skillId: string,
   effectDef: SkillEffectDef,
   skillDef: ActiveSkillDef | undefined,
   ctx: SkillVfxContext,
+  options?: ResolveEffectPresentationOptions,
 ): EffectPresentation {
   const animId = normalizeEffectAnim(effectDef.anim, effectDef);
   const anim =
     animId === "none" ? null : (animId as AnimState);
 
-  let vfx: SkillVfxDef | null = null;
-  if (supportsVfx(effectDef)) {
-    if (ctx.slotKind === "basic" && ctx.basicAttackVfx) {
-      vfx = ctx.basicAttackVfx;
-    } else {
-      vfx = effectDef.vfx ?? resolveSkillVfx(skillId, ctx, skillDef?.vfx);
-    }
-  }
+  const vfx = resolveEffectVfx(skillId, effectDef, skillDef, ctx, options);
 
   const hitVfx = resolveHitVfx(vfx, ctx);
 

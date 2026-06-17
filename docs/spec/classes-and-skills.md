@@ -204,7 +204,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 - **1 コマ:** 64×48 px（横 strip）。通常攻撃 `{entityId}_basic_attack` も同規格
 - **解決:** `resolveSkillAnimKey` → あれば **skill anim**。entity `attack` フォールバックは使わない（本番）
 - **先頭 idle 参照コマ:** strip 0 コマ目に entity idle 0 と同絵を入れてよい。再生は effect **`animStartFrame`**（default `0`、idle 入りなら `1`）から（**実装済み:** `skillAnimPlayback.ts` / `SpriteAnimator`）
-- **3 段再生（intro / hold / outro）:** effect に **`animLoopFrame`** を指定すると有効。`animIntroEndFrame`（省略時 = loop）、`animOutroStartFrame`（省略時 = loop + 1）。hold 時間は `useDurationSec` または `presentationLockSec`（`skillAnimPlayback.ts`）
+- **3 段再生（intro / hold / outro）:** effect に **`animLoopFrame`** を指定すると有効。`animIntroEndFrame`（省略時 = loop 開始）、`animLoopEndFrame`（省略時 = loop 開始）、`animOutroStartFrame`（省略時 = loop 終了 + 1）。hold 中は loop 開始〜終了コマをループ。hold 時間は `useDurationSec` または `presentationLockSec`（`skillAnimPlayback.ts`）
 
 ### 通常攻撃の見た目
 
@@ -217,7 +217,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 ### 演出解決（コード）
 
-Battle イベント → `resolveEffectPresentation` → skill anim 優先 → VFX。タイミングは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。
+Battle イベント → `resolveEffectPresentation` → skill anim 優先 → VFX。タイミングは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。演出ラボのプレビュー／タイムラインは `effectVfxOnly` で **effect `vfx.preset` 未指定時は VFX なし**（本番バトルは従来どおりスキル既定へフォールバック）。
 
 ### 射程
 
@@ -522,9 +522,10 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `range`                                                      | 命中判定・VFX 共用（px）。省略時 = `actor.traits.rangePx`。`pierce` + `selfOrigin` では向き前方の効果距離                            |
 | `anim`                                                       | 任意。スキル PNG 未配置時の entity anim フォールバック（本番では **skill strip 優先**）。`none` で body 抑制 |
 | `animStartFrame`                                             | 任意。スキル strip 内の再生開始コマ。先頭 idle 参照コマを skip するとき `1`（**実装済み**） |
-| `animLoopFrame`                                              | 任意。指定時は intro → hold（このコマをループ）→ outro の 3 段再生（**実装済み**） |
+| `animLoopFrame`                                              | 任意。ループ開始コマ。指定時は intro → hold（開始〜終了をループ）→ outro の 3 段再生（**実装済み**） |
+| `animLoopEndFrame`                                           | 任意。ループ終了コマ（inclusive）。省略時は `animLoopFrame` |
 | `animIntroEndFrame`                                          | 任意。イントロ最終コマ（inclusive）。省略時は `animLoopFrame` |
-| `animOutroStartFrame`                                        | 任意。アウトロ開始コマ。省略時は `animLoopFrame + 1` |
+| `animOutroStartFrame`                                        | 任意。アウトロ開始コマ。省略時は `(animLoopEndFrame ?? animLoopFrame) + 1` |
 | `applyFrame`                                                 | 任意。strip 内の**効果適用コマ**（絶対 index）。省略 = 即時。遅延秒 = `max(0, applyFrame - animStartFrame) / 8`。body は発動直後、VFX・ダメージは apply コマ（`skillWindup` → pending） |
 | `vfx`                                                        | 任意。effect 単位の VFX プリセット。未指定 = スキル `vfx` → 種別既定（damage/heal 等）               |
 

@@ -1523,6 +1523,7 @@ function parseOptionalEffectPresentation(
   | 'animStartFrame'
   | 'animIntroEndFrame'
   | 'animLoopFrame'
+  | 'animLoopEndFrame'
   | 'animOutroStartFrame'
   | 'applyFrame'
   | 'vfx'
@@ -1533,6 +1534,7 @@ function parseOptionalEffectPresentation(
     | 'animStartFrame'
     | 'animIntroEndFrame'
     | 'animLoopFrame'
+    | 'animLoopEndFrame'
     | 'animOutroStartFrame'
     | 'applyFrame'
     | 'vfx'
@@ -1569,6 +1571,21 @@ function parseOptionalEffectPresentation(
     }
     result.animLoopFrame = animLoopFrameRaw;
   }
+  const animLoopEndFrameRaw = parseOptionalNumber(
+    obj,
+    'animLoopEndFrame',
+    context,
+  );
+  if (animLoopEndFrameRaw !== undefined) {
+    if (!Number.isInteger(animLoopEndFrameRaw) || animLoopEndFrameRaw < 0) {
+      invalidField(
+        context,
+        'animLoopEndFrame',
+        'must be a non-negative integer',
+      );
+    }
+    result.animLoopEndFrame = animLoopEndFrameRaw;
+  }
   const animOutroStartFrameRaw = parseOptionalNumber(
     obj,
     'animOutroStartFrame',
@@ -1596,14 +1613,22 @@ function parseOptionalEffectPresentation(
   const startFrame = result.animStartFrame ?? 0;
   const introEnd = result.animIntroEndFrame ?? result.animLoopFrame;
   const loopFrame = result.animLoopFrame;
+  const loopEnd = result.animLoopEndFrame ?? loopFrame;
   const outroStart =
     result.animOutroStartFrame ??
-    (loopFrame !== undefined ? loopFrame + 1 : undefined);
+    (loopFrame !== undefined ? (loopEnd ?? loopFrame) + 1 : undefined);
 
   if (result.animIntroEndFrame !== undefined && loopFrame === undefined) {
     invalidField(
       context,
       'animIntroEndFrame',
+      'requires animLoopFrame',
+    );
+  }
+  if (result.animLoopEndFrame !== undefined && loopFrame === undefined) {
+    invalidField(
+      context,
+      'animLoopEndFrame',
       'requires animLoopFrame',
     );
   }
@@ -1622,14 +1647,21 @@ function parseOptionalEffectPresentation(
         'must be >= animStartFrame',
       );
     }
-    if (loopFrame > (introEnd ?? loopFrame)) {
+    if (loopFrame < (introEnd ?? loopFrame)) {
       invalidField(
         context,
         'animLoopFrame',
-        'must be <= animIntroEndFrame',
+        'must be >= animIntroEndFrame',
       );
     }
-    if (outroStart !== undefined && outroStart <= (introEnd ?? loopFrame)) {
+    if (loopEnd !== undefined && loopEnd < loopFrame) {
+      invalidField(
+        context,
+        'animLoopEndFrame',
+        'must be >= animLoopFrame',
+      );
+    }
+    if (outroStart !== undefined && outroStart <= (loopEnd ?? introEnd ?? loopFrame)) {
       invalidField(
         context,
         'animOutroStartFrame',

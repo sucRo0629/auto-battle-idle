@@ -71,6 +71,7 @@ describe('skillAnimPlayback', () => {
       startFrame: 1,
       introEndFrame: 3,
       loopFrame: 3,
+      loopEndFrame: 3,
       outroStartFrame: 4,
       stripFrameCount: 6,
       holdSec: 2,
@@ -93,7 +94,48 @@ describe('skillAnimPlayback', () => {
       startFrame: 1,
       introEndFrame: 2,
       loopFrame: 2,
+      loopEndFrame: 2,
       outroStartFrame: 3,
+      stripFrameCount: 6,
+      holdSec: 1,
+    });
+  });
+
+  it('resolves intro and loop on separate frame ranges', () => {
+    __registerSkillAnimForTest('phased_skill', mockImage(448));
+    const phased = resolveSkillAnimPhaseConfig('phased_skill', {
+      animStartFrame: 1,
+      animIntroEndFrame: 2,
+      animLoopFrame: 3,
+      animLoopEndFrame: 5,
+      animOutroStartFrame: 6,
+      holdSec: 1,
+    });
+    expect(phased).toEqual({
+      startFrame: 1,
+      introEndFrame: 2,
+      loopFrame: 3,
+      loopEndFrame: 5,
+      outroStartFrame: 6,
+      stripFrameCount: 7,
+      holdSec: 1,
+    });
+  });
+
+  it('resolves loop end frame and defaults outro after loop range', () => {
+    __registerSkillAnimForTest('phased_skill', mockImage(384));
+    const phased = resolveSkillAnimPhaseConfig('phased_skill', {
+      animStartFrame: 1,
+      animLoopFrame: 2,
+      animLoopEndFrame: 4,
+      holdSec: 1,
+    });
+    expect(phased).toEqual({
+      startFrame: 1,
+      introEndFrame: 2,
+      loopFrame: 2,
+      loopEndFrame: 4,
+      outroStartFrame: 5,
       stripFrameCount: 6,
       holdSec: 1,
     });

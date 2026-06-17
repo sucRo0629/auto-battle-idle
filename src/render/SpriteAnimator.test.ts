@@ -81,6 +81,44 @@ describe('SpriteAnimator phased skill anim', () => {
     expect(state.skillAnimFrame).toBe(3);
   });
 
+  it('cycles loop start through loop end during hold', () => {
+    __registerSkillAnimForTest('cast_skill', mockImage(384));
+    const animator = new SpriteAnimator();
+    animator.setSkillAnim('actor', 'cast_skill', {
+      animStartFrame: 1,
+      animIntroEndFrame: 2,
+      animLoopFrame: 2,
+      animLoopEndFrame: 3,
+      animOutroStartFrame: 4,
+      holdSec: 1,
+    });
+
+    animator.tick('actor', FRAME_MS);
+    let state = animator.getState('actor');
+    expect(state.skillAnimPhase).toBe('intro');
+    expect(state.skillAnimFrame).toBe(2);
+
+    animator.tick('actor', FRAME_MS);
+    state = animator.getState('actor');
+    expect(state.skillAnimPhase).toBe('loop');
+    expect(state.skillAnimFrame).toBe(2);
+
+    animator.tick('actor', FRAME_MS);
+    state = animator.getState('actor');
+    expect(state.skillAnimPhase).toBe('loop');
+    expect(state.skillAnimFrame).toBe(3);
+
+    animator.tick('actor', FRAME_MS);
+    state = animator.getState('actor');
+    expect(state.skillAnimPhase).toBe('loop');
+    expect(state.skillAnimFrame).toBe(2);
+
+    animator.tick('actor', 1000);
+    state = animator.getState('actor');
+    expect(state.skillAnimPhase).toBe('outro');
+    expect(state.skillAnimFrame).toBe(4);
+  });
+
   it('keeps linear playback when animLoopFrame is omitted', () => {
     __registerSkillAnimForTest('linear_skill', mockImage(256));
     const animator = new SpriteAnimator();

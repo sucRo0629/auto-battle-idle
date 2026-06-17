@@ -59,6 +59,7 @@ export interface SkillAnimPlaybackOptions {
   animStartFrame?: number;
   animIntroEndFrame?: number;
   animLoopFrame?: number;
+  animLoopEndFrame?: number;
   animOutroStartFrame?: number;
   holdSec?: number;
 }
@@ -67,6 +68,7 @@ export interface SkillAnimPhaseConfig {
   startFrame: number;
   introEndFrame: number;
   loopFrame: number;
+  loopEndFrame: number;
   outroStartFrame: number;
   stripFrameCount: number;
   holdSec: number;
@@ -74,7 +76,11 @@ export interface SkillAnimPhaseConfig {
 
 export type SkillAnimPhaseFields = Pick<
   SkillEffectDef,
-  'animStartFrame' | 'animIntroEndFrame' | 'animLoopFrame' | 'animOutroStartFrame'
+  | 'animStartFrame'
+  | 'animIntroEndFrame'
+  | 'animLoopFrame'
+  | 'animLoopEndFrame'
+  | 'animOutroStartFrame'
 >;
 
 export function isPhasedSkillAnim(
@@ -91,6 +97,7 @@ export function toSkillAnimPlaybackOptions(
     animStartFrame: effect.animStartFrame,
     animIntroEndFrame: effect.animIntroEndFrame,
     animLoopFrame: effect.animLoopFrame,
+    animLoopEndFrame: effect.animLoopEndFrame,
     animOutroStartFrame: effect.animOutroStartFrame,
     holdSec,
   };
@@ -135,19 +142,24 @@ export function resolveSkillAnimPhaseConfig(
     stripFrameCount,
   );
   const loopFrame = clampAnimFrame(options.animLoopFrame, stripFrameCount);
+  const loopEndFrame = clampAnimFrame(
+    options.animLoopEndFrame ?? loopFrame,
+    stripFrameCount,
+  );
   const introEndFrame = clampAnimFrame(
     options.animIntroEndFrame ?? loopFrame,
     stripFrameCount,
   );
   const outroStartFrame = clampAnimFrame(
-    options.animOutroStartFrame ?? loopFrame + 1,
+    options.animOutroStartFrame ?? loopEndFrame + 1,
     stripFrameCount,
   );
 
   const orderedIntroEnd = Math.max(startFrame, introEndFrame);
-  const orderedLoop = Math.min(loopFrame, orderedIntroEnd);
+  const orderedLoop = Math.max(loopFrame, orderedIntroEnd);
+  const orderedLoopEnd = Math.max(orderedLoop, loopEndFrame);
   const orderedOutroStart = Math.max(
-    orderedIntroEnd + 1,
+    orderedLoopEnd + 1,
     outroStartFrame,
   );
 
@@ -155,6 +167,7 @@ export function resolveSkillAnimPhaseConfig(
     startFrame,
     introEndFrame: orderedIntroEnd,
     loopFrame: orderedLoop,
+    loopEndFrame: orderedLoopEnd,
     outroStartFrame: Math.min(orderedOutroStart, stripFrameCount - 1),
     stripFrameCount,
     holdSec: Math.max(0, options.holdSec ?? 0),
