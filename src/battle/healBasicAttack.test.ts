@@ -7,6 +7,7 @@ import { createDefaultSave } from '../progression/victoryRewards.ts';
 import {
   PARTY_FORMATION_LEFT_ANCHOR,
   PARTY_FORMATION_SLOT_SPACING,
+  engagedMinBodyGap,
 } from './battleConstants.ts';
 import { resolveEffectResolution } from './skills/targeting.ts';
 import {
@@ -302,9 +303,77 @@ describe('heal basic attack approach', () => {
     );
     expect(approachX).toBeGreaterThanOrEqual(200 - 128);
   });
+
+  it('does not chase deepest enemy when all allies are healthy', () => {
+    const cleric = mockHealCleric(80);
+    const guardian = mockGuardian(234, 235);
+    const players = [cleric, guardian];
+    const frontEnemy = {
+      ...mockGuardian(234, 100),
+      id: 'front',
+      isEnemy: true,
+      role: 'attacker' as const,
+      classId: 'test_enemy',
+      formationRow: 'front' as const,
+    };
+    const deepEnemy = {
+      ...frontEnemy,
+      id: 'deep',
+      battleX: 364,
+      visualX: 364,
+    };
+
+    const approachX = resolvePlayerApproachBattleX(
+      cleric,
+      players,
+      [frontEnemy, deepEnemy],
+      gameData,
+    );
+    expect(approachX).toBe(80);
+    expect(approachX).toBeLessThan(guardian.battleX);
+  });
 });
 
 describe('BattleEngine heal basic attack', () => {
+  it('demo party stage 1-2: cleric does not advance past front row', () => {
+    for (const stageId of ['1', '2'] as const) {
+      const gameData = structuredClone(loadGameData());
+      const levelCurves = loadLevelCurves(levelCurvesJson);
+      const save = createDefaultSave(gameData, 'demo');
+      save.stageProgress.currentStageId = stageId;
+
+      const engine = new BattleEngine(
+        gameData,
+        levelCurves,
+        () => save.party,
+        () => save.stageProgress.currentStageId,
+      );
+      engine.startBattle();
+      waitForEngaged(engine);
+
+      let minGapFromFront = Infinity;
+
+      for (let t = 0; t < 20_000; t++) {
+        engine.tick(TICK_DT);
+        const snap = engine.getSnapshot();
+        if (!snap.engaged) continue;
+
+        const internal = asBattleEngineInternals(engine);
+        const cleric = internal.players.find(
+          (p) => p.classId === 'sp_cleric' && p.isAlive,
+        );
+        if (!cleric) break;
+
+        const frontX = Math.max(
+          ...internal.players.filter((p) => p.isAlive).map((p) => p.battleX),
+        );
+        minGapFromFront = Math.min(minGapFromFront, frontX - cleric.battleX);
+      }
+
+      expect(minGapFromFront).toBeGreaterThanOrEqual(engagedMinBodyGap() - 1);
+    }
+  });
+
   it('fires cleric basic heal when a front ally is damaged', () => {
     const gameData = structuredClone(loadGameData());
     const levelCurves = loadLevelCurves(levelCurvesJson);

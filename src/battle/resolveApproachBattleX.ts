@@ -293,6 +293,7 @@ function resolveNonDefenderApproachBattleX(
       );
       return Math.min(healStop, enemyStopX);
     }
+    return player.battleX;
   }
   return resolveEnemyBasedApproachBattleX(
     player,

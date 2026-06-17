@@ -257,6 +257,7 @@ HP バー・ステータスバッジ・攻撃 VFX はスプライト描画後に
 | 敵                           | 全生存プレイヤーからヘイト最大（`resolveEnemyChaseTargetPlayer`） | 射程内プレイヤーからヘイト最大（`resolveEnemyAttackTargetPlayer`） |
 | 味方（defender）             | 敵全体の接触点を基準に前進                                        | attack プールで `effectiveRangePx` 内なら停止                      |
 | 味方（attacker / supporter） | ターゲット spec の敵プールから **奥**（`battleX` 最大）           | 同じ attack プールで `effectiveRangePx` 内なら停止                |
+| 味方（ally-heal 通常攻撃の supporter） | 射程外の負傷味方へ接近。全員健康なら **現位置維持**（敵 chase しない） | 射程内の負傷味方がいれば停止（`shouldSkipEngagedAutoApproach`）   |
 
 **停止 X：** chase 対象の `battleX` に対し `resolveApproachAttackBattleX`（§2.5 と同じ射程式）。敵は `capEngagedEnemyApproachBattleX` により左（`battleX` 減少）のみ。
 
