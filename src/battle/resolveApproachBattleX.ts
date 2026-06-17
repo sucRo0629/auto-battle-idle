@@ -25,6 +25,7 @@ import { FORMATION_DEPTH_STEP_PX } from './battleLayout.ts';
 import {
   compareFormationRowSlot,
   computePartyFormationBattleX,
+  isMeleeFormationSlot,
 } from './partyFormation.ts';
 import {
   isAllyHealBasicAttack,
@@ -314,7 +315,23 @@ function toPlacementInput(unit: CombatantState) {
   };
 }
 
-function capFrontRowSupporterBehindDefenders(
+function toMeleeFormationSlot(unit: CombatantState): {
+  id: string;
+  role: CombatantState['role'];
+  rangePx: number;
+  damageType: CombatantState['traits']['damageType'];
+  formationRow: CombatantState['formationRow'];
+} {
+  return {
+    id: unit.id,
+    role: unit.role,
+    rangePx: resolveApproachFormationRangePx(unit),
+    damageType: unit.traits.damageType,
+    formationRow: unit.formationRow,
+  };
+}
+
+function capFrontRowSupporterBehindMeleeFront(
   player: CombatantState,
   players: CombatantState[],
   enemies: CombatantState[],
@@ -325,20 +342,25 @@ function capFrontRowSupporterBehindDefenders(
   if (player.formationRow !== 'front' || player.role !== 'supporter') {
     return approachX;
   }
-  let maxDefenderX = Number.NEGATIVE_INFINITY;
+  let maxMeleeFrontX = Number.NEGATIVE_INFINITY;
   for (const ally of players) {
     if (!ally.isAlive) continue;
-    if (ally.formationRow !== 'front' || ally.role !== 'defender') continue;
-    const defX = resolveDefenderApproachBattleX(
-      ally,
-      players,
-      gameData,
-      contact,
-    );
-    maxDefenderX = Math.max(maxDefenderX, defX);
+    if (ally.formationRow !== 'front') continue;
+    if (!isMeleeFormationSlot(toMeleeFormationSlot(ally))) continue;
+    const meleeX =
+      ally.role === 'defender'
+        ? resolveDefenderApproachBattleX(ally, players, gameData, contact)
+        : resolveEnemyBasedApproachBattleX(
+            ally,
+            players,
+            enemies,
+            gameData,
+            contact,
+          );
+    maxMeleeFrontX = Math.max(maxMeleeFrontX, meleeX);
   }
-  if (maxDefenderX === Number.NEGATIVE_INFINITY) return approachX;
-  return Math.min(approachX, maxDefenderX - FORMATION_DEPTH_STEP_PX);
+  if (maxMeleeFrontX === Number.NEGATIVE_INFINITY) return approachX;
+  return Math.min(approachX, maxMeleeFrontX - FORMATION_DEPTH_STEP_PX);
 }
 
 /** 列内スペーシング前の個別接近目標 X */
@@ -365,7 +387,7 @@ function resolveIndividualPlayerApproachBattleX(
           contact,
         );
 
-  approachX = capFrontRowSupporterBehindDefenders(
+  approachX = capFrontRowSupporterBehindMeleeFront(
     player,
     players,
     enemies,

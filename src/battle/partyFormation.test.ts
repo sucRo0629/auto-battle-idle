@@ -13,7 +13,7 @@ import {
 } from './partyFormation.ts';
 
 describe('partyFormation', () => {
-  it('sorts front row by role then range (defender right of attacker)', () => {
+  it('sorts front row melee band by range then id (not role)', () => {
     const units = [
       { id: 'b', role: 'attacker' as const, rangePx: 50, damageType: 'magic' as const, formationRow: 'front' as const },
       { id: 'a', role: 'attacker' as const, rangePx: 50, damageType: 'physical' as const, formationRow: 'front' as const },
@@ -23,14 +23,14 @@ describe('partyFormation', () => {
     expect(sorted.map((u) => u.id)).toEqual(['a', 'b', 'c']);
   });
 
-  it('orders duelist forward of assassin on deploy (role over range)', () => {
+  it('orders shorter-range melee forward of longer-range on deploy', () => {
     const units = [
       { id: 'df_duelist', role: 'defender' as const, rangePx: 10, damageType: 'physical' as const, formationRow: 'front' as const },
       { id: 'at_assassin', role: 'attacker' as const, rangePx: 5, damageType: 'physical' as const, formationRow: 'front' as const },
     ];
     const positions = computePartyFormationBattleX(units);
-    expect(positions.get('at_assassin')!).toBeLessThan(positions.get('df_duelist')!);
-    expect(positions.get('df_duelist')! - positions.get('at_assassin')!).toBe(
+    expect(positions.get('df_duelist')!).toBeLessThan(positions.get('at_assassin')!);
+    expect(positions.get('at_assassin')! - positions.get('df_duelist')!).toBe(
       PARTY_FORMATION_SLOT_SPACING,
     );
   });
@@ -45,6 +45,25 @@ describe('partyFormation', () => {
     expect(positions.get('df_guardian')! - positions.get('at_warrior')!).toBe(
       PARTY_FORMATION_SLOT_SPACING,
     );
+  });
+
+  it('orders front row melee trio swordsman / iron guard / duelist by range', () => {
+    const units = [
+      { id: 'at_warrior', role: 'attacker' as const, rangePx: 8, damageType: 'physical' as const, formationRow: 'front' as const },
+      { id: 'df_guardian', role: 'defender' as const, rangePx: 5, damageType: 'physical' as const, formationRow: 'front' as const },
+      { id: 'at_assassin', role: 'attacker' as const, rangePx: 0, damageType: 'physical' as const, formationRow: 'front' as const },
+    ];
+    const sorted = [...units].sort(comparePartyFormationSlot);
+    expect(sorted.map((u) => u.id)).toEqual(['at_warrior', 'df_guardian', 'at_assassin']);
+  });
+
+  it('same-range melee front row uses id only (role does not invert depth)', () => {
+    const units = [
+      { id: 'z_defender', role: 'defender' as const, rangePx: 5, damageType: 'physical' as const, formationRow: 'front' as const },
+      { id: 'a_attacker', role: 'attacker' as const, rangePx: 5, damageType: 'physical' as const, formationRow: 'front' as const },
+    ];
+    const sorted = [...units].sort(comparePartyFormationSlot);
+    expect(sorted.map((u) => u.id)).toEqual(['a_attacker', 'z_defender']);
   });
 
   it('sorts back row by role before range (attacker left of supporter)', () => {

@@ -181,7 +181,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 敵のデフォルトターゲットは射程内でヘイト最大（[combat.md](combat.md) の Threat 節）。近接アタッカーが前列にいても、ディフェンダーがヘイトを引きつける想定。
 
-同一 `formationRow` 内の X 深度（左＝後方、右＝前方）は [battle-field.md](battle-field.md) §2.6（`partyFormation.ts` のロール順）を正とする。
+同一 `formationRow` 内の X 深度（左＝後方、右＝前方）は [battle-field.md](battle-field.md) §2.6（`partyFormation.ts` の近接帯深度）を正とする。
 
 味方の heal / move 向け `closestAlly` は **battleX 距離**が最小の味方。敵の `closestAlly` は **ヘイト加重抽選**（[combat.md](combat.md) の Threat 節）。
 

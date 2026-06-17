@@ -181,10 +181,14 @@ export function resolveFrontRowSameRangeMeleeDepthPx(
   return spaced.get(player.id) ?? 0;
 }
 
-function prefersLeftOnOverlap(row: FormationRow, role: Role): boolean {
-  if (row === 'front') return role === 'attacker';
-  if (row === 'back') return role === 'supporter';
-  return false;
+function placementToFormationUnit(p: Placement): PartyFormationUnit {
+  return {
+    id: p.id,
+    role: p.role,
+    rangePx: p.rangePx,
+    damageType: 'physical',
+    formationRow: p.formationRow,
+  };
 }
 
 function livingPlayers(players: PlayerPlacementInput[]): PlayerPlacementInput[] {
@@ -201,8 +205,11 @@ function resolvePairOverlap(
 
   if (
     sameRow &&
-    prefersLeftOnOverlap(sameRow, right.role) &&
-    !prefersLeftOnOverlap(sameRow, left.role)
+    compareFormationRowSlot(
+      sameRow,
+      placementToFormationUnit(right),
+      placementToFormationUnit(left),
+    ) > 0
   ) {
     const swapX = left.x;
     left.x = minXForRight;

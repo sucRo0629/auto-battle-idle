@@ -123,12 +123,12 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 **同一 `formationRow` 内の X 深度（左＝後方、右＝前方）：**
 
-| 列      | ロール順（左 → 右）             |
-| ------- | ------------------------------- |
-| `front` | supporter → attacker → defender |
-| `back`  | attacker → supporter → defender |
+| 列      | 深度ルール（左 → 右）                                                                 |
+| ------- | ------------------------------------------------------------------------------------- |
+| `front` | 近接帯の attacker/defender を最前帯（右）。帯内は `rangePx` 降順 → 同値は `id` 順。それ以外（supporter・前列遠隔など）は後方帯（左） |
+| `back`  | ロール順: attacker → supporter → defender → `rangePx` 降順 → `id` 順（従来どおり）   |
 
-前列の supporter は defender より後方スロットに配置される。後列では attacker を supporter より前に置く。接敵接近では supporter の停止 X を前列 defender の手前に cap する（`resolveApproachBattleX.ts`）。
+前列の supporter は近接最前帯（attacker/defender かつ `rangePx < RANGED_ATTACK_MIN_PX`）の手前に留める。接敵接近では supporter の停止 X をその最前帯の手前に cap する（`resolveApproachBattleX.ts` の `capFrontRowSupporterBehindMeleeFront`）。
 
 ### 2.7 スプライト描画順（重なり）
 

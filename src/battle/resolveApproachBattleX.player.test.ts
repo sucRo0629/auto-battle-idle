@@ -651,7 +651,7 @@ describe('resolvePlayerApproachBattleX', () => {
     expect(assassinX).toBe(soloForwardStop);
   });
 
-  it('same-range front row melee separates defender forward of attacker', () => {
+  it('same-range front row melee separates by id not role', () => {
     const meleeEnemy = mockCombatant({
       id: 'melee',
       isEnemy: true,
@@ -690,7 +690,7 @@ describe('resolvePlayerApproachBattleX', () => {
       gameData as unknown as GameData,
     );
 
-    expect(duelistX).toBeGreaterThan(assassinX);
+    expect(assassinX).toBeLessThan(duelistX);
   });
 
   it('front row melee allies approach to per-unit range stop', () => {

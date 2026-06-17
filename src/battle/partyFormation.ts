@@ -1,4 +1,5 @@
 import type { DamageType, FormationRow, Role } from './types.ts';
+import { RANGED_ATTACK_MIN_PX } from './types.ts';
 import {
   resolvePartyDeployTravelPx,
   PARTY_FORMATION_LEFT_ANCHOR,
@@ -13,12 +14,6 @@ export interface PartyFormationUnit {
   formationRow?: FormationRow;
 }
 
-const FRONT_ROW_ROLE_ORDER: Record<Role, number> = {
-  supporter: 0,
-  attacker: 1,
-  defender: 2,
-};
-
 const BACK_ROW_ROLE_ORDER: Record<Role, number> = {
   attacker: 0,
   supporter: 1,
@@ -31,23 +26,37 @@ const FORMATION_ROW_DEPLOY_ORDER: Record<FormationRow, number> = {
   front: 1,
 };
 
-function rowRoleOrder(row: FormationRow, role: Role): number {
-  if (row === 'front') return FRONT_ROW_ROLE_ORDER[role];
-  if (row === 'back') return BACK_ROW_ROLE_ORDER[role];
-  return FRONT_ROW_ROLE_ORDER[role];
+/** 前列の近接最前帯: attacker/defender かつ rangePx < RANGED_ATTACK_MIN_PX */
+export function isMeleeFormationSlot(unit: PartyFormationUnit): boolean {
+  return (
+    unit.rangePx < RANGED_ATTACK_MIN_PX &&
+    (unit.role === 'attacker' || unit.role === 'defender')
+  );
 }
 
 /**
  * 同一 formationRow 内の前後順（左=後方、右=前方）。
  * 接敵深度・PartyDeploy で共通。
+ *
+ * front: 近接 attacker/defender を最前帯、帯内は rangePx 降順 → id。
+ * back: ロール順（attacker → supporter → defender）→ rangePx → id（従来どおり）。
  */
 export function compareFormationRowSlot(
   row: FormationRow,
   a: PartyFormationUnit,
   b: PartyFormationUnit,
 ): number {
-  const roleDelta = rowRoleOrder(row, a.role) - rowRoleOrder(row, b.role);
-  if (roleDelta !== 0) return roleDelta;
+  if (row === 'back') {
+    const roleDelta = BACK_ROW_ROLE_ORDER[a.role] - BACK_ROW_ROLE_ORDER[b.role];
+    if (roleDelta !== 0) return roleDelta;
+    if (a.rangePx !== b.rangePx) return b.rangePx - a.rangePx;
+    return a.id.localeCompare(b.id);
+  }
+
+  const bandA = isMeleeFormationSlot(a) ? 1 : 0;
+  const bandB = isMeleeFormationSlot(b) ? 1 : 0;
+  const bandDelta = bandA - bandB;
+  if (bandDelta !== 0) return bandDelta;
   if (a.rangePx !== b.rangePx) return b.rangePx - a.rangePx;
   return a.id.localeCompare(b.id);
 }

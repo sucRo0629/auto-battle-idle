@@ -86,7 +86,7 @@ describe('duelist + assassin front row', () => {
     );
   });
 
-  it('defender stays forward of attacker during natural approach', () => {
+  it('shorter-range melee stays forward of longer-range during natural approach', () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);
