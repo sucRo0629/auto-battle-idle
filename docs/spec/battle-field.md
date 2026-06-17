@@ -291,7 +291,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 **味方の追加 cap：**
 
 - 前衛（`formationRow !== 'back'`）：敵全体の接触点より右へ過進軍しない（`capFrontRowBeforeEnemyContact`）
-- 接近ターゲットの row-order clamp は前衛 / 後衛で共通で、`applyFormationRowApproachSpacing` の後に `capApproachFormationOrder` で適用する
+- 接近ターゲットの row-order clamp は前衛 / 後衛で共通で、`applyFormationRowApproachSpacing` の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
 
 **敵の追い替え：** 前線ユニットが後列ヘイトへ追いかけている間も、毎 tick でヘイト 1 位を chase 対象にする（スティッキー chase ID なし）。射程内に入ったら attack プールで停止・攻撃。
 

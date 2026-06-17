@@ -388,6 +388,26 @@ function resolveIndividualPlayerApproachBattleX(
   return approachX;
 }
 
+/**
+ * spacing 後: supporter の個別接近意図を連鎖で上書きしない。
+ * 後列 attacker の深追い chase が heal supporter の現位置維持を引きずらない。
+ */
+function capApproachFormationOrder(
+  targets: Map<string, number>,
+  individualBases: Map<string, number>,
+  players: CombatantState[],
+): void {
+  for (const player of players) {
+    if (!player.isAlive || player.role !== 'supporter') continue;
+    const base = individualBases.get(player.id);
+    const spaced = targets.get(player.id);
+    if (base === undefined || spaced === undefined) continue;
+    if (spaced > base) {
+      targets.set(player.id, base);
+    }
+  }
+}
+
 /** 全味方の接敵目標 battleX（列内スペーシング適用済み） */
 export function resolveAllPlayerApproachBattleX(
   players: CombatantState[],
@@ -416,6 +436,7 @@ export function resolveAllPlayerApproachBattleX(
   const spacingInputs = players.map(toPlacementInput);
 
   const spaced = applyFormationRowApproachSpacing(baseApproach, spacingInputs);
+  capApproachFormationOrder(spaced, baseApproach, players);
   applyFormationMarchFollow(spaced, players);
 
   return spaced;

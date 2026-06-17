@@ -3,6 +3,7 @@ import { BattleEngine } from './BattleEngine.ts';
 import { loadGameData } from './data/loadGameData.ts';
 import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
+import { createMemberFromClass } from '../progression/partyCompose.ts';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
 import {
   PARTY_FORMATION_LEFT_ANCHOR,
@@ -17,6 +18,7 @@ import {
 import {
   shouldSkipEngagedAutoApproach,
   resolvePlayerApproachBattleX,
+  resolveAllPlayerApproachBattleX,
 } from './resolveApproachBattleX.ts';
 import type { CombatantState, GameData } from './types.ts';
 import {
@@ -65,6 +67,88 @@ function mockHealCleric(
     visualX: battleX,
     corpseVisible: true,
     ...overrides,
+  };
+}
+
+function mockSorcerer(battleX: number): CombatantState {
+  return {
+    id: 'sorcerer',
+    name: '魔術士',
+    hp: 80,
+    maxHp: 80,
+    atk: 26,
+    def: 5,
+    reg: 20,
+    isAlive: true,
+    role: 'attacker',
+    classId: 'at_sorcerer',
+    formationRow: 'back',
+    traits: {
+      rangePx: 30,
+      damageType: 'magic',
+      basicAttackVfx: { preset: 'orb' },
+    },
+    build: {
+      learnedPassiveIds: [],
+      learnedActiveIds: [],
+      equippedActiveSlots: [],
+    },
+    cooldowns: [
+      {
+        skillId: 'at_sorcerer_basic_attack',
+        remaining: 0,
+        slotKind: 'basic',
+      },
+    ],
+    statusEffects: [],
+    barrierHp: 0,
+    spriteKey: 'placeholder',
+    iconKey: 'placeholder',
+    isEnemy: false,
+    battleX,
+    visualX: battleX,
+    corpseVisible: true,
+  };
+}
+
+function mockMeleeEnemy(battleX: number, id = 'enemy'): CombatantState {
+  return {
+    id,
+    name: 'enemy',
+    hp: 100,
+    maxHp: 100,
+    atk: 10,
+    def: 5,
+    reg: 0,
+    isAlive: true,
+    role: 'attacker' as const,
+    classId: 'test_enemy',
+    formationRow: 'front' as const,
+    traits: {
+      rangePx: 0,
+      damageType: 'physical' as const,
+      basicAttackVfx: { preset: 'slash' as const },
+    },
+    build: {
+      learnedPassiveIds: [],
+      learnedActiveIds: [],
+      equippedActiveSlots: [],
+    },
+    cooldowns: [
+      {
+        skillId: 'test_enemy_basic_attack',
+        remaining: 0,
+        slotKind: 'basic' as const,
+      },
+    ],
+    statusEffects: [],
+    barrierHp: 0,
+    spriteKey: 'placeholder',
+    iconKey: 'placeholder',
+    isEnemy: true,
+    battleX,
+    visualX: battleX,
+    corpseVisible: true,
   };
 }
 
@@ -332,6 +416,36 @@ describe('heal basic attack approach', () => {
     expect(approachX).toBe(80);
     expect(approachX).toBeLessThan(guardian.battleX);
   });
+
+  it('healthy cleric is not pulled forward by back-row caster spacing chain', () => {
+    const cleric = mockHealCleric(
+      PARTY_FORMATION_LEFT_ANCHOR + PARTY_FORMATION_SLOT_SPACING,
+    );
+    const sorcerer = mockSorcerer(PARTY_FORMATION_LEFT_ANCHOR);
+    const guardian = mockGuardian(
+      PARTY_FORMATION_LEFT_ANCHOR + PARTY_FORMATION_SLOT_SPACING * 3,
+      235,
+    );
+    const players = [sorcerer, cleric, guardian];
+    const enemies = [
+      mockMeleeEnemy(320, 'near'),
+      mockMeleeEnemy(400, 'deep'),
+    ];
+
+    const allTargets = resolveAllPlayerApproachBattleX(
+      players,
+      enemies,
+      gameData,
+    );
+    const clericTarget = allTargets.get(cleric.id);
+    const sorcererTarget = allTargets.get(sorcerer.id);
+
+    expect(clericTarget).toBe(cleric.battleX);
+    expect(sorcererTarget).toBeGreaterThan(cleric.battleX + 50);
+    expect(
+      resolvePlayerApproachBattleX(cleric, players, enemies, gameData),
+    ).toBe(cleric.battleX);
+  });
 });
 
 describe('BattleEngine heal basic attack', () => {
@@ -341,6 +455,46 @@ describe('BattleEngine heal basic attack', () => {
       const levelCurves = loadLevelCurves(levelCurvesJson);
       const save = createDefaultSave(gameData, 'demo');
       save.stageProgress.currentStageId = stageId;
+
+      const engine = new BattleEngine(
+        gameData,
+        levelCurves,
+        () => save.party,
+        () => save.stageProgress.currentStageId,
+      );
+      engine.startBattle();
+      waitForEngaged(engine);
+
+      let minGapFromFront = Infinity;
+
+      for (let t = 0; t < 20_000; t++) {
+        engine.tick(TICK_DT);
+        const snap = engine.getSnapshot();
+        if (!snap.engaged) continue;
+
+        const internal = asBattleEngineInternals(engine);
+        const cleric = internal.players.find(
+          (p) => p.classId === 'sp_cleric' && p.isAlive,
+        );
+        if (!cleric) break;
+
+        const frontX = Math.max(
+          ...internal.players.filter((p) => p.isAlive).map((p) => p.battleX),
+        );
+        minGapFromFront = Math.min(minGapFromFront, frontX - cleric.battleX);
+      }
+
+      expect(minGapFromFront).toBeGreaterThanOrEqual(engagedMinBodyGap() - 1);
+    }
+  });
+
+  it('cleric with sorcerer on stage 1-2: does not advance past front row', () => {
+    for (const stageId of ['1', '2'] as const) {
+      const gameData = structuredClone(loadGameData());
+      const levelCurves = loadLevelCurves(levelCurvesJson);
+      const save = createDefaultSave(gameData, 'demo');
+      save.stageProgress.currentStageId = stageId;
+      save.party[3] = createMemberFromClass('at_sorcerer', gameData);
 
       const engine = new BattleEngine(
         gameData,
