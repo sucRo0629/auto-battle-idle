@@ -1,0 +1,175 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => {
+  const canvasInstance = {
+    mount: vi.fn(),
+    setVerifyModeEnabled: vi.fn(),
+    setCombatants: vi.fn(),
+    setWorldOffset: vi.fn(),
+    playAnim: vi.fn(),
+    playSkillAnim: vi.fn(),
+    isSkillAnimActive: vi.fn(() => false),
+    playAttackEffect: vi.fn(),
+    playCurseMark: vi.fn(),
+    fadeCurseMark: vi.fn(),
+    fadeLatestChainSegment: vi.fn(),
+    showDamagePopup: vi.fn(),
+    showHealPopup: vi.fn(),
+    showEvadePopup: vi.fn(),
+    showBlockPopup: vi.fn(),
+    showBuffGlow: vi.fn(),
+    tick: vi.fn(),
+    destroy: vi.fn(),
+    syncFromSnapshot: vi.fn(),
+  };
+
+  return {
+    canvasInstance,
+    BattleCanvas: vi.fn().mockImplementation(() => canvasInstance),
+  };
+});
+
+vi.mock("../styles/battle-view.css", () => ({}));
+
+vi.mock("../render/BattleCanvas.ts", () => ({
+  BattleCanvas: mocks.BattleCanvas,
+}));
+
+vi.mock("../render/skillPresentation.ts", () => ({
+  buildSkillPresentationContext: vi.fn(),
+  playSkillBody: vi.fn(() => ({})),
+  playSkillHitFeedback: vi.fn((canvas, request) => {
+    if (request.amount === undefined) return;
+    if (request.kind === "heal" || request.effect.type === "heal") {
+      canvas.showHealPopup(request.targetId, request.amount);
+      return;
+    }
+    if (request.effect.type === "damage" || request.effect.type === "dot") {
+      canvas.showDamagePopup(
+        request.targetId,
+        request.amount,
+        request.kind === "dot" || request.effect.type === "dot"
+          ? "dot"
+          : "damage",
+      );
+    }
+  }),
+  resolveSkillPresentation: vi.fn(() => ({})),
+}));
+
+vi.mock("../ui/BattleXDebugCanvas.ts", () => ({
+  BattleXDebugCanvas: vi.fn().mockImplementation(() => ({
+    mount: vi.fn(),
+    setVisible: vi.fn(),
+    syncFromSnapshot: vi.fn(),
+  })),
+}));
+
+vi.mock("../ui/PartyHudPanel.ts", () => ({
+  PartyHudPanel: vi.fn().mockImplementation(() => ({
+    mount: vi.fn(),
+    update: vi.fn(),
+  })),
+}));
+
+vi.mock("../ui/DebugMenuPanel.ts", () => ({
+  DebugMenuPanel: vi.fn().mockImplementation(() => ({
+    mount: vi.fn(),
+    refresh: vi.fn(),
+  })),
+}));
+
+import { BattleView } from "./BattleView.ts";
+
+function createFakeElement() {
+  return {
+    className: "",
+    textContent: "",
+    checked: false,
+    disabled: false,
+    type: "",
+    style: {},
+    appendChild: vi.fn(),
+    append: vi.fn(),
+    addEventListener: vi.fn(),
+    setAttribute: vi.fn(),
+    remove: vi.fn(),
+  };
+}
+
+describe("BattleView", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it("shows a damage popup only once per skill damage event", () => {
+    let emitEvent: (event: any) => void = () => {};
+    const engine = {
+      onEvent: vi.fn((listener: (event: any) => void) => {
+        emitEvent = listener;
+      }),
+      getSnapshot: vi.fn(() => ({
+        allies: [{ id: "actor-1" }],
+        enemies: [{ id: "target-1" }],
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: {
+        actives: {
+          skill_1: {
+            id: "skill_1",
+            name: "Dummy Attack",
+            effect: [{ type: "damage" }],
+          },
+        },
+      },
+      classRegistry: {},
+      stages: [],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+    }));
+    const verifyModeControls = {
+      isVerifyMode: () => false,
+      onVerifyModeChange: vi.fn(),
+      onOpenMetaMenu: vi.fn(),
+    };
+
+    vi.stubGlobal("document", {
+      createElement: () => createFakeElement(),
+    });
+
+    const container = createFakeElement();
+
+    new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+      verifyModeControls,
+    );
+
+    emitEvent({
+      type: "skill",
+      actorId: "actor-1",
+      targetId: "target-1",
+      skillId: "skill_1",
+      skillName: "Dummy Attack",
+      effect: "damage",
+      amount: 42,
+      effectIndex: 0,
+      slotKind: "basic",
+    });
+
+    expect(mocks.canvasInstance.showDamagePopup).toHaveBeenCalledTimes(1);
+    expect(mocks.canvasInstance.showDamagePopup).toHaveBeenCalledWith(
+      "target-1",
+      42,
+      "damage",
+    );
+  });
+});
