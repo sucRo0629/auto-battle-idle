@@ -416,6 +416,54 @@ interface CharacterBuild {
 | 4. `id` の role プレフィックス（`df_*` / `at_*` / `sp_*`、レガシー `defender_*` 等） | 同上                                             |
 | 5. 上記いずれも不可                                                                  | `supporter_placeholder`                          |
 
+### バフ・デバフ・HoT・バリア仕様一覧
+
+戦闘中にユニットに付与される、または常時適用されるステータス効果（StatusEffect）および持続効果の一覧と仕様です。詳細な計算式や挙動は `docs/spec/combat.md` を参照してください。
+
+#### 1. バフ（Buff）
+味方のステータスを強化、または特殊な防御効果を付与する効果です。
+
+| サブ種別 (`buffSubKind`) | 対象・効果 | 主なパラメータ | 重複・スタックルール | 備考 |
+| :--- | :--- | :--- | :--- | :--- |
+| `stat` | ステータス（`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の上昇 | `buffStat`<br>`buffMultiplier`<br>`buffFlatBonus` | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。 | `damageTaken` の減少（被ダメ軽減）や `attackSpeed`（攻撃速度）の上昇もこれに含みます。 |
+| `barrier` | ダメージを身代わりに受けるバリアを付与 | `ResourceAmountSpec` | 既定は `barrierHp` に加算。`barrierStack: false` で新量に置換。 | 持続時間制限なし（消費されるまで維持）。詳細は後述の「バリア」参照。 |
+| `block` | 物理直接ダメージのブロック率を上昇 | `chance`（0〜1） | 複数ソースは加算（上限 1.0）。 | 成功時、DEF適用後の物理直接ダメージを一定割合カット。DoTは対象外。 |
+| `evasion` | 直接ダメージ（物理/魔法）の回避率を上昇 | `chance`（0〜1） | 複数ソースは加算（上限 1.0）。 | 成功時、直接ダメージを完全に無効化。DoTは対象外。 |
+| `damageTakenToHeal` | 被ダメージ時にその一部を即時回復 | `ratio`（0〜1） | 複数ソースは加算（上限 1.0）。 | バリア吸収後の実被ダメージに対して適用（使用者ATK基準ではない）。 |
+
+* **通常攻撃変形 (`basicAttackTransform`)**: 自身に付与する特殊バフ。バフ持続中、通常攻撃（`slotKind: basic`）の性能を上書き・追加効果をマージします（複数付与時は最新1件のみ有効）。
+
+#### 2. デバフ（Debuff）
+敵のステータスを弱体化、または行動を阻害する効果です。
+
+| サブ種別 (`debuffSubKind`) | 対象・効果 | 主なパラメータ | 重複・スタックルール | 備考 |
+| :--- | :--- | :--- | :--- | :--- |
+| `stat` | ステータス（`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の低下 | `debuffStat`<br>`debuffMultiplier`<br>`debuffFlatBonus` | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。 | `damageTaken` の増加（被ダメUP）や `attackSpeed` の低下（スロウ）もこれに含みます。 |
+| `dot` | 持続ダメージ（Damage over Time）を付与 | `ResourceAmountSpec` | 同一効果は持続時間の長い方を優先。 | 1秒ごとにダメージを再計算（付与時のATKバフ等の変動をリアルタイムに反映）。 |
+| `stun` | 行動不能（CC）状態にする | `durationSec`（上限5秒） | 持続時間の長い方を優先。 | 通常攻撃・アクティブ発動不可。付与成功時に対象の通常攻撃CDをリセット。時間CDは停止。 |
+
+#### 3. 持続回復（HoT - Heal over Time）
+時間経過とともに味方のHPを継続的に回復する効果です。
+
+| 定義方法 | 対象・効果 | 主なパラメータ | 重複・スタックルール | 備考 |
+| :--- | :--- | :--- | :--- | :--- |
+| **アクティブ** (`type: heal`, `healSubKind: hot`) | 対象にHoT状態を付与し、持続回復を行う | `ResourceAmountSpec`<br>`durationSec` | 同一効果は持続時間の長い方を優先。 | 1秒ごとに回復量を再計算（使用者のリアルタイムなATK変動を反映）。 |
+| **パッシブ** (`effect: heal`, `healSubKind: hot`) | 常時、またはStage/Wave開始時にHoTを適用 | `ResourceAmountSpec`<br>`hotDurationSec`（0=無限） | パッシブの対象解決ルールに従い同期。 | 薬草師の「常時HoT aura」などがこれに該当します。 |
+
+* **被回復量増加**: 対象がパッシブ `healReceivedIncrease` を持っている場合、直接回復だけでなく HoT の毎秒 tick 回復量も `floor(量 × (1 + percent合算))` で増加します。
+
+#### 4. バリア（Barrier）
+HPとは別の `barrierHp` プールを作成し、ダメージを肩代わりする効果です。
+
+| 項目 | 仕様 | 備考 |
+| :--- | :--- | :--- |
+| **付与方法** | ・アクティブ: `type: barrier` または `effect: buff`（`buffSubKind: barrier`）<br>・パッシブ: `effect: buff`（`buffSubKind: barrier`） | 効果量は `ResourceAmountSpec`（healと同式）で決定されます。 |
+| **スタック** | 既定は既存の `barrierHp` に**加算**。`barrierStack: false` で新量に**置換**（既存残量は破棄）。 | maxHp を超えていくらでも付与可能です。 |
+| **持続時間** | 時間切れなし。**ダメージで消費されるまで維持**されます。 | ステージクリアやWave跨ぎでも維持されます。 |
+| **ダメージ吸収** | 被ダメージ時、HPより先にバリアが消費されます（直接ダメージ・DoT共通）。 | `barrierHp` が減少し、バリアで防ぎきれなかった超過分のみがHPから減ります。 |
+| **HP割合の参照** | HP割合（`hp / maxHp`）の計算時, `barrierHp` は**含めません**。 | 満タンHP＋大バリアでもHP割合は 1.0 となります。 |
+| **余剰回復変換** | パッシブ `excessHealToBarrier` により、直接回復の超過分をバリアに変換。 | 変換されたバリアは**置換**（`barrierStack: false`）として適用されます。 |
+
 ### パッシブ効果（`PassiveEffectKind`）
 
 共有パッシブは `data/skills/passives.json` に定義し、クラスは `passiveIds` で参照する。
