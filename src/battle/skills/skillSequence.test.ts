@@ -785,6 +785,48 @@ describe('skillSequence', () => {
     expect(runner.isActorBusy('actor')).toBe(false);
   });
 
+  it('beginAnimLock blocks active fire without setting use lock and expires via tickAnimLocks', () => {
+    const runner = new SkillSequenceRunner();
+    const actor = mockUnit({ id: 'actor', battleX: 200 });
+    const enemy = mockUnit({ id: 'enemy', isEnemy: true, battleX: 200, hp: 100 });
+    const skill: ActiveSkillDef = {
+      id: 'burst',
+      name: 'burst',
+      trigger: { kind: 'time', value: 5 },
+      effect: [
+        {
+          type: 'damage',
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          damageType: 'physical',
+          amount: { kind: 'atkBased', atkScale: 1 },
+        },
+      ],
+    };
+    const cd: SkillCooldown = {
+      skillId: 'burst',
+      remaining: 0,
+      slotKind: 'active',
+    };
+    const data = makeGameData({ burst: skill });
+    const executor = new SkillExecutor(data, () => {}, {
+      getBattleTimeSec: () => 0,
+      enqueuePendingHits: () => {},
+      getAllCombatants: () => [actor, enemy],
+      getSequenceRunner: () => runner,
+    });
+
+    runner.beginAnimLock('actor', 0.4);
+    expect(runner.isActorUseLocked('actor')).toBe(false);
+    expect(runner.isActorBusy('actor')).toBe(true);
+    expect(runner.isBasicAttackBlocked('actor')).toBe(true);
+    expect(executor.tryExecute(actor, cd, [actor], [enemy])).toBe(false);
+
+    runner.tickAnimLocks(0.4);
+    expect(runner.isActorBusy('actor')).toBe(false);
+    expect(runner.isBasicAttackBlocked('actor')).toBe(false);
+    expect(executor.tryExecute(actor, cd, [actor], [enemy])).toBe(true);
+  });
+
   it('clearForActor removes use lock', () => {
     const runner = new SkillSequenceRunner();
     runner.beginUse('actor', 1);

@@ -1472,6 +1472,7 @@ export class BattleEngine {
   private tickSkillSequences(deltaTime: number): void {
     const units = [...this.players, ...this.enemies];
     this.skillSequenceRunner.tickUseLocks(deltaTime);
+    this.skillSequenceRunner.tickAnimLocks(deltaTime);
     this.skillSequenceRunner.tickActiveEffectGauges(deltaTime);
     this.skillSequenceRunner.tickMoves(deltaTime, units);
     this.skillSequenceRunner.tickSequences(this.battleTimeSec, (step) => {

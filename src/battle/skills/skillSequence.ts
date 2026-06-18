@@ -14,6 +14,10 @@ import {
   pickTargetFromPool,
   resolveEffectTargetSpec,
 } from './targeting.ts';
+import {
+  resolveSkillBodyAnimFields,
+  resolveSkillBodyPlaybackSec,
+} from '../../render/skillAnimPlayback.ts';
 
 export interface ActiveSkillMove {
   actorId: string;
@@ -257,6 +261,7 @@ export class SkillSequenceRunner {
   private activeMoves: ActiveSkillMove[] = [];
   private useLockRemainingSec = new Map<string, number>();
   private presentationLockRemainingSec = new Map<string, number>();
+  private animLockRemainingSec = new Map<string, number>();
   private activeEffectGauges = new Map<string, ActiveEffectGauge>();
 
   private activeEffectKey(actorId: string, slotIndex: number): string {
@@ -283,12 +288,21 @@ export class SkillSequenceRunner {
     return (
       this.isActorUseLocked(actorId) ||
       this.isActorInSkillMotion(actorId) ||
-      (this.presentationLockRemainingSec.get(actorId) ?? 0) > 0
+      (this.presentationLockRemainingSec.get(actorId) ?? 0) > 0 ||
+      this.isActorAnimLocked(actorId)
     );
   }
 
   isActorBusy(actorId: string): boolean {
-    return this.isActorUseLocked(actorId) || this.isActorInSkillMotion(actorId);
+    return (
+      this.isActorUseLocked(actorId) ||
+      this.isActorInSkillMotion(actorId) ||
+      this.isActorAnimLocked(actorId)
+    );
+  }
+
+  isActorAnimLocked(actorId: string): boolean {
+    return (this.animLockRemainingSec.get(actorId) ?? 0) > 0;
   }
 
   getActiveEffectRemaining(actorId: string, slotIndex: number): number {
@@ -347,6 +361,12 @@ export class SkillSequenceRunner {
     );
   }
 
+  beginAnimLock(actorId: string, durationSec: number): void {
+    if (durationSec <= 0) return;
+    const current = this.animLockRemainingSec.get(actorId) ?? 0;
+    this.animLockRemainingSec.set(actorId, Math.max(current, durationSec));
+  }
+
   schedule(sequence: ActiveSkillSequence): void {
     this.sequences.push(sequence);
   }
@@ -360,6 +380,7 @@ export class SkillSequenceRunner {
     this.activeMoves = [];
     this.useLockRemainingSec.clear();
     this.presentationLockRemainingSec.clear();
+    this.animLockRemainingSec.clear();
     this.activeEffectGauges.clear();
   }
 
@@ -370,6 +391,7 @@ export class SkillSequenceRunner {
     );
     this.useLockRemainingSec.delete(actorId);
     this.presentationLockRemainingSec.delete(actorId);
+    this.animLockRemainingSec.delete(actorId);
     const prefix = `${actorId}:`;
     for (const key of [...this.activeEffectGauges.keys()]) {
       if (key.startsWith(prefix)) {
@@ -404,6 +426,17 @@ export class SkillSequenceRunner {
         this.presentationLockRemainingSec.delete(actorId);
       } else {
         this.presentationLockRemainingSec.set(actorId, next);
+      }
+    }
+  }
+
+  tickAnimLocks(deltaTime: number): void {
+    for (const [actorId, remaining] of this.animLockRemainingSec) {
+      const next = remaining - deltaTime;
+      if (next <= 0) {
+        this.animLockRemainingSec.delete(actorId);
+      } else {
+        this.animLockRemainingSec.set(actorId, next);
       }
     }
   }
@@ -480,5 +513,18 @@ export class SkillSequenceRunner {
     }
 
     this.sequences = kept;
+  }
+
+  beginSkillAnimLockIfNeeded(
+    actorId: string,
+    skill: ActiveSkillDef,
+    effectIndex: number,
+  ): void {
+    const bodyPlaybackSec = resolveSkillBodyPlaybackSec(
+      skill.id,
+      effectIndex,
+      resolveSkillBodyAnimFields(skill, effectIndex),
+    );
+    this.beginAnimLock(actorId, bodyPlaybackSec);
   }
 }

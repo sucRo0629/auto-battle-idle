@@ -5,6 +5,7 @@ import { loadLevelCurves } from '../progression/levelGrowth.ts';
 import levelCurvesJson from '../../data/levelCurves.json';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
 import type { CombatantState } from './types.ts';
+import { SkillSequenceRunner } from './skills/skillSequence.ts';
 
 function createEngine() {
   const gameData = loadGameData();
@@ -75,5 +76,21 @@ describe('BattleEngine out-of-combat ticking', () => {
 
     const dot = guardian.statusEffects.find((e) => e.id === 'test_dot');
     expect(dot?.remainingSec).toBeCloseTo(2.5, 5);
+  });
+
+  it('continues ticking active cooldowns while an actor is anim-locked', () => {
+    const engine = createEngine();
+    const guardian = getAllies(engine).find((a) => a.classId === 'df_guardian')!;
+    const activeCd = guardian.cooldowns.find((cd) => cd.slotKind === 'active')!;
+    activeCd.remaining = 5;
+    const runner = (engine as unknown as {
+      skillSequenceRunner: SkillSequenceRunner;
+    }).skillSequenceRunner;
+
+    runner.beginAnimLock(guardian.id, 1);
+    engine.tick(1);
+
+    expect(activeCd.remaining).toBeCloseTo(4, 5);
+    expect(runner.isActorUseLocked(guardian.id)).toBe(false);
   });
 });

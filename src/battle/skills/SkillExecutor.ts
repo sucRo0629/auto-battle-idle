@@ -189,6 +189,7 @@ export class SkillExecutor {
       this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
       this.beginActiveEffectGaugeIfNeeded(actor.id, cd, skill);
       this.beginPresentationLockIfNeeded(actor, skill, cd.slotKind);
+      this.beginSkillAnimLockIfNeeded(actor.id, skill);
       this.deps.getSequenceRunner().schedule(sequence);
       return true;
     }
@@ -215,6 +216,7 @@ export class SkillExecutor {
       this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
       this.beginActiveEffectGaugeIfNeeded(actor.id, cd, skill);
       this.beginPresentationLockIfNeeded(actor, skill, cd.slotKind);
+      this.beginSkillAnimLockIfNeeded(actor.id, skill);
       if (cd.slotKind === 'active') {
         consumeActiveChargeOnFire(
           cd,
@@ -1246,6 +1248,13 @@ export class SkillExecutor {
     this.deps
       .getSequenceRunner()
       .beginActiveEffectGauge(actorId, cd.slotIndex ?? 0, totalSec);
+  }
+
+  private beginSkillAnimLockIfNeeded(
+    actorId: string,
+    skill: ActiveSkillDef,
+  ): void {
+    this.deps.getSequenceRunner().beginSkillAnimLockIfNeeded(actorId, skill, 0);
   }
 }
 
