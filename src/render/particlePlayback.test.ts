@@ -70,6 +70,54 @@ describe('particlePlayback', () => {
     });
   });
 
+  it('resolves heal_minor defaults from preset registry', () => {
+    const resolved = resolveParticleSpawnOptions({ preset: 'heal_minor' });
+    expect(resolved.presetId).toBe('heal_minor');
+    expect(resolved.count).toBe(2);
+    expect(resolved.durationSec).toBe(0.4);
+    expect(resolved.delaySec).toBe(0);
+    expect(resolved.tint).toBe('#72f0a0');
+    expect(resolved.preset.kind).toBe('particles');
+    expect(resolved.preset.ring).toBeUndefined();
+    expect(resolved.preset.particles).toMatchObject({
+      shape: 'cross',
+      vyMin: -38,
+      vyMax: -20,
+      vxSpread: 0.06,
+      spawnXSpread: 5,
+      spawnYMin: -2,
+      spawnYMax: 3,
+      lifeMinSec: 0.28,
+      lifeMaxSec: 0.42,
+      sizeMin: 3,
+      sizeMax: 5,
+    });
+  });
+
+  it('resolves heal_minor defaults from preset registry', () => {
+    const resolved = resolveParticleSpawnOptions({ preset: 'heal_minor' });
+    expect(resolved.presetId).toBe('heal_minor');
+    expect(resolved.count).toBe(2);
+    expect(resolved.durationSec).toBe(0.4);
+    expect(resolved.delaySec).toBe(0);
+    expect(resolved.tint).toBe('#72f0a0');
+    expect(resolved.preset.kind).toBe('particles');
+    expect(resolved.preset.ring).toBeUndefined();
+    expect(resolved.preset.particles).toMatchObject({
+      shape: 'cross',
+      vyMin: -38,
+      vyMax: -20,
+      vxSpread: 0.06,
+      spawnXSpread: 5,
+      spawnYMin: -2,
+      spawnYMax: 3,
+      lifeMinSec: 0.28,
+      lifeMaxSec: 0.42,
+      sizeMin: 3,
+      sizeMax: 5,
+    });
+  });
+
   it('applies JSON overrides', () => {
     expect(
       resolveParticleSpawnOptions({

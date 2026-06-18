@@ -47,7 +47,7 @@ const DEFAULT_RING: RingPresetParams = {
   lineWidth: 1.5,
 };
 
-const DEFAULT_HEAL_PARTICLES: ParticlesPresetParams = {
+const DEFAULT_HEAL_NORMAL_PARTICLES: ParticlesPresetParams = {
   shape: "cross",
   vyMin: -54,
   vyMax: -28,
@@ -61,18 +61,41 @@ const DEFAULT_HEAL_PARTICLES: ParticlesPresetParams = {
   sizeMax: 10,
 };
 
-const HEAL_PARTICLE_PRESET: ParticlePresetDef = {
+const HEAL_NORMAL_PARTICLE_PRESET: ParticlePresetDef = {
   kind: "composite",
   durationSec: 0.75,
   defaultCount: 4,
   defaultTint: "#5ce88a",
   ring: DEFAULT_RING,
-  particles: DEFAULT_HEAL_PARTICLES,
+  particles: DEFAULT_HEAL_NORMAL_PARTICLES,
+};
+
+const HEAL_MINOR_PARTICLES: ParticlesPresetParams = {
+  shape: "cross",
+  vyMin: -38,
+  vyMax: -20,
+  vxSpread: 0.06,
+  spawnXSpread: 5,
+  spawnYMin: -2,
+  spawnYMax: 3,
+  lifeMinSec: 0.28,
+  lifeMaxSec: 0.42,
+  sizeMin: 3,
+  sizeMax: 5,
+};
+
+const HEAL_MINOR_PARTICLE_PRESET: ParticlePresetDef = {
+  kind: "particles",
+  durationSec: 0.4,
+  defaultCount: 2,
+  defaultTint: "#72f0a0",
+  particles: HEAL_MINOR_PARTICLES,
 };
 
 export const PARTICLE_PRESET_DEFS: Record<ParticlePresetId, ParticlePresetDef> =
   {
-    heal_normal: HEAL_PARTICLE_PRESET,
+    heal_normal: HEAL_NORMAL_PARTICLE_PRESET,
+    heal_minor: HEAL_MINOR_PARTICLE_PRESET,
   };
 
 /** @deprecated use PARTICLE_PRESET_DEFS */

@@ -184,6 +184,7 @@ export const VFX_PARTICLE_DEF_FIELD_KEYS = [
 /** パーティクル preset ID（`particlePresets.ts` と同期） */
 export const PARTICLE_PRESET_IDS = [
   "heal_normal",
+  "heal_minor",
 ] as const;
 
 /** SkillVfxDef の JSON キー（traits.basicAttackVfx / effect.vfx 等） */
