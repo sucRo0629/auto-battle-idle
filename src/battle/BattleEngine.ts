@@ -73,6 +73,7 @@ import { deathAnimDurationMs } from "../render/deathPlayback.ts";
 import { EngagedCompositionTracker } from "./battleDisplay.ts";
 import {
   getLeadingPlayerFormationRow,
+  computeEngagedLayout,
   resolveEngagedLayout,
   applyEngagedFormationToBattleX,
   resolveEngagePlayerVisualAnchor,
@@ -677,7 +678,7 @@ export class BattleEngine {
     return target;
   }
 
-  /** 接敵開始: 敵 layout 目標を記録（段階接近） */
+  /** 接敵開始: 凍結・署名のみ（位置は deploy 終点のまま自動接近へ） */
   private setupEngagedCombat(): void {
     const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
     const leadingRow = getLeadingPlayerFormationRow(placementInputs);
@@ -688,12 +689,6 @@ export class BattleEngine {
       this.enemies,
       this.gameData,
     );
-
-    const layout = this.resolveEngagedLayoutForEvent();
-    if (layout === null) return;
-
-    this.applyEngagedFormationLayout(layout);
-    syncAllFieldX([...this.players, ...this.enemies]);
 
     this.engagedComposition.initSignatures(
       this.players,
@@ -920,11 +915,14 @@ export class BattleEngine {
     this.clearEngagedVisualState();
     hideFallenAllyCorpses(this.players);
     this.spawnWaveEnemies();
-    const deployTargets = this.resolveWaveDeployTargetMaps();
-    this.applyDeployTargetsToUnits(
-      deployTargets.partyDeployTargets,
-      deployTargets.enemyDeployTargets,
-    );
+    const partyTargets = resolvePartyDeployTargets(this.players);
+    const enemyTargets = resolveEnemyDeployTargets(this.enemies);
+    this.applyDeployTargetsToUnits(partyTargets, enemyTargets);
+    const layout = this.resolveEngagedLayoutForEvent();
+    if (layout !== null) {
+      this.applyEngagedFormationLayout(layout);
+      syncAllFieldX([...this.players, ...this.enemies]);
+    }
     resetPassiveDispelTriggerLimits(
       [...this.players, ...this.enemies],
       this.gameData.skillRegistry.passives,
@@ -1018,7 +1016,7 @@ export class BattleEngine {
     this.beginEngaged();
   }
 
-  /** PartyDeploy 目標: 味方は隊形、敵は spawn（接敵 layout は beginEngaged で bake） */
+  /** PartyDeploy 目標: 味方=隊形アンカー、敵=spawn（接敵は告知終了後に自動接近） */
   private resolveWaveDeployTargetMaps(): {
     partyDeployTargets: Map<string, number>;
     enemyDeployTargets: Map<string, number>;

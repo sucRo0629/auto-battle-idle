@@ -76,7 +76,7 @@ describe(
   'battle-field transition spec (T-* / §4.3–§4.4)',
   { timeout: LONG_BATTLE_TIMEOUT_MS },
   () => {
-    it('T-engage-01: engage start applies layout snap from spawn deploy positions', () => {
+    it('T-engage-01: engage start does not warp battleX (deploy end positions kept)', () => {
       const engine = createStage1Engine();
 
       for (let i = 0; i < 5000; i++) {
@@ -84,46 +84,49 @@ describe(
         engine.tick(TICK_DT);
         const after = engine.getSnapshot();
         if (!before.engaged && after.engaged) {
-          const spawnTargets = resolveEnemyDeployTargets(
-            enemySpawnDeployInputs(engine),
-          );
-          let sawSpawnDeploy = false;
-          for (const enemy of before.enemies.filter((e) => e.hp > 0)) {
-            const spawnX = spawnTargets.get(enemy.id);
-            expect(spawnX).toBeDefined();
-            if (
-              Math.abs(enemy.battleX - spawnX!) <=
-              BODY_ANIM_APPROACH_SETTLED_PX + 1
-            ) {
-              sawSpawnDeploy = true;
-            }
-          }
-          expect(sawSpawnDeploy).toBe(true);
-
-          const frontEnemyBefore = before.enemies
-            .filter((e) => e.hp > 0)
-            .reduce((best, enemy) =>
-              enemy.battleX < best.battleX ? enemy : best,
+          for (const unit of [
+            ...before.allies.filter((a) => a.hp > 0),
+            ...before.enemies.filter((e) => e.hp > 0),
+          ]) {
+            const afterUnit = [...after.allies, ...after.enemies].find(
+              (u) => u.id === unit.id,
             );
-          const frontEnemyAfter = after.enemies.find(
-            (e) => e.id === frontEnemyBefore.id,
-          );
-          expect(frontEnemyAfter).toBeDefined();
-          expect(frontEnemyAfter!.battleX).toBeLessThan(
-            frontEnemyBefore.battleX - 8,
-          );
+            expect(afterUnit).toBeDefined();
+            expect(Math.abs(afterUnit!.battleX - unit.battleX)).toBeLessThanOrEqual(
+              8,
+            );
+          }
           return;
         }
       }
       expect.fail('engage did not start');
     });
 
-    it('T-engage-02: PartyDeploy enemies march left only toward spawn, not past target', () => {
+    it('T-engage-03: PartyDeploy ends with enemies at spawn targets', () => {
+      const engine = createStage1Engine();
+      const spawnTargets = resolveEnemyDeployTargets(
+        asBattleEngineInternals(engine).enemies,
+      );
+
+      for (let i = 0; i < 5000; i++) {
+        const before = engine.getSnapshot();
+        engine.tick(TICK_DT);
+        const after = engine.getSnapshot();
+        if (before.partyDeployActive && !after.partyDeployActive) {
+          for (const enemy of after.enemies.filter((e) => e.hp > 0)) {
+            const target = spawnTargets.get(enemy.id);
+            expect(target).toBeDefined();
+            expect(Math.abs(enemy.battleX - target!)).toBeLessThanOrEqual(8);
+          }
+          return;
+        }
+      }
+      expect.fail('PartyDeploy did not finish');
+    });
+
+    it('T-engage-02: PartyDeploy enemies march left only, not past target', () => {
       const engine = createStage1Engine();
 
-      const spawnTargets = resolveEnemyDeployTargets(
-        enemySpawnDeployInputs(engine),
-      );
       const prevX = new Map<string, number>();
 
       for (let i = 0; i < 5000; i++) {
@@ -135,12 +138,6 @@ describe(
         }
 
         for (const enemy of snap.enemies.filter((e) => e.hp > 0)) {
-          const target = spawnTargets.get(enemy.id);
-          expect(target).toBeDefined();
-          expect(enemy.battleX).toBeGreaterThanOrEqual(
-            target! - BODY_ANIM_APPROACH_SETTLED_PX - 1,
-          );
-
           const prev = prevX.get(enemy.id);
           if (prev !== undefined) {
             expect(enemy.battleX).toBeLessThanOrEqual(prev + 0.01);

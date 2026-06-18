@@ -216,8 +216,8 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ### 3.4 Wave ライフサイクル
 
-1. **`WaveAnnouncement` + `PartyDeploy`（同時）** — Wave 告知オーバーレイ表示と同時に、味方を画面左外から **隊形初期位置**（§3.3）へ、敵を画面右外から **spawn 位置**（§3.2 `spawnX`）へ移動。接敵 layout は `beginEngaged` で 1 回 bake
-2. **接敵** — 告知 fade-out 開始から 250ms 経過 **かつ** PartyDeploy 到達後に `Engaged`（`applyEngagedFormationToBattleX` で隊形・接触帯へ配置）
+1. **`WaveAnnouncement` + `PartyDeploy`（同時）** — Wave 告知表示中に、味方を画面左外から **隊形アンカー** へ、敵を画面右外から **spawn 位置** へ移動
+2. **接敵** — 告知 fade-out 開始から 250ms 経過 **かつ** PartyDeploy 到達後に `Engaged`（**layout bake なし**。味方・敵とも deploy 終点から自動接近で接敵）
 3. 敵全滅 → 死亡演出 → `PostCombatSettle`
 4. 次 Wave あり → `VictoryExit` と同様の右退場（`worldOffsetX` パララックス）→ Wave 告知 + PartyDeploy（同時）
 5. ステージクリア → `VictoryExit`（接敵終了時の `battleX` を維持し右退場のみ）
@@ -236,8 +236,8 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | Phase                | 概要                                                                         |
 | -------------------- | ---------------------------------------------------------------------------- |
 | `WaveAnnouncement`   | 各 Wave 開始。告知オーバーレイ（Victory 同様の fade/hold/fade）              |
-| `PartyDeploy`        | 告知と **同時**。味方左外 → 隊形初期位置、敵右外 → spawn 位置                    |
-| `Engaged`            | 告知 fade-out 開始 + 250ms かつ Deploy 到達後。自動接近・スキル              |
+| `PartyDeploy`        | 告知と **同時**。味方左外 → 隊形アンカー、敵右外 → spawn 位置（接敵接近はまだ行わない） |
+| `Engaged`            | 告知 fade-out 開始 + 250ms かつ Deploy 到達後。味方・敵とも自動接近・スキル開始 |
 | `PostCombatSettle`   | 敵全滅後の死亡演出待ち                                                       |
 | `VictoryExit`        | Wave 間・ステージクリア。位置維持のまま右退場（`worldOffsetX` パララックス） |
 | `Defeat` / `Respawn` | 既存 combat フローに準拠                                                     |
@@ -253,7 +253,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 2. 接敵アンカーへ前衛を配置（§2.5: 敵接触 − 最前列最短 `effectiveRangePx`。`engagedMinBodyGap` は加算しない）
 3. 敵接触帯: 味方最前列 `battleX` + 接触帯最短 `effectiveRangePx`（body gap 加算なし）
 4. resolveOverlaps(PLAYER_VISUAL_MIN_GAP) on battleX  ← 味方同士・敵同士の overlap のみ
-5. `BattleEngine.setupEngagedCombat` / 構成変化時に `applyEngagedFormationToBattleX` を実行
+5. `maybeRecomputeEngagedLayout`（前列死亡・構成変化時）のみ `applyEngagedFormationToBattleX` を実行。Wave 接敵開始（`setupEngagedCombat`）では bake しない
 ```
 
 **禁止：**
@@ -269,7 +269,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ### 4.3 接敵開始
 
-**正本：** Wave 告知と PartyDeploy が同時開始。接敵（`engaged = true`）は **告知 fade-out 開始 + 250ms** 経過 **かつ** 全ユニットが deploy 目標に到達した時点。
+**正本：** Wave 告知と PartyDeploy が同時開始。接敵（`engaged = true`）は **告知 fade-out 開始 + 250ms** 経過 **かつ** 全ユニットが deploy 目標に到達した時点。接敵開始フレームでは `battleX` を layout で上書きせず、自動接近（§4.4）で味方・敵とも接敵する。
 
 敵左進軍・standoff cap による接敵トリガーは廃止。
 
@@ -342,12 +342,12 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 - 接敵中の layout 収束フラグ（`engagedEnemyLayoutTargets`）と combat approach の二重分岐
 - `battleLayout` が `visualX` を正本として layout bake と approach が乖離
 - 後衛が隊形深度 cap で射程停止より前方へ引きずられる問題
+- **接敵開始時のワープ** — `setupEngagedCombat` で layout bake せず deploy 終点のまま `Engaged` へ遷移。接敵接近は自動接近のみ（§3.4・§4.3）
 
 **監視中：**
 
 - 前列死亡・Wave 跨ぎ時のワープ（layout snap と approach の競合）
 - 混成前列の overlap 補正タイミング
-- 接敵開始時の layout bake（deploy 終点 spawn と接敵接触帯の差による 1 回スナップ）
 
 ### 6.2 根本原因
 
