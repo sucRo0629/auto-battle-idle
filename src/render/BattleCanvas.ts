@@ -317,14 +317,14 @@ export class BattleCanvas implements IBattleRenderer {
       }
     }
 
-    for (const ally of snapshot.allies) {
-      const isDead = ally.hp <= 0;
-      if (isDead && ally.corpseVisible === false) {
-        this.resetDeathVisuals(ally.id);
+    for (const player of snapshot.allies) {
+      const isDead = player.hp <= 0;
+      if (isDead && player.corpseVisible === false) {
+        this.resetDeathVisuals(player.id);
         continue;
       }
       if (!isDead) {
-        this.resetDeathVisuals(ally.id);
+        this.resetDeathVisuals(player.id);
       }
       const marchPhase =
         snapshot.partyDeployActive || snapshot.waveAnnouncementActive;
@@ -332,33 +332,33 @@ export class BattleCanvas implements IBattleRenderer {
         !isDead &&
         !snapshot.engaged &&
         !marchPhase &&
-        ally.battleX < BATTLE_ALLY_MARCH_VISIBLE_MIN_X
+        player.battleX < BATTLE_ALLY_MARCH_VISIBLE_MIN_X
       ) {
         continue;
       }
-      this.syncMovementAnim(ally.id, ally.bodyAnimMarching, ally.hp > 0);
-      const animState = this.animator.getState(ally.id);
+      this.syncMovementAnim(player.id, player.bodyAnimMarching, player.hp > 0);
+      const animState = this.animator.getState(player.id);
       layouts.push({
-        id: ally.id,
-        x: ally.battleX,
+        id: player.id,
+        x: player.battleX,
         y,
-        spriteKey: ally.spriteKey,
-        hp: ally.hp,
-        maxHp: ally.maxHp,
-        barrierHp: ally.barrierHp,
-        atk: ally.atk,
-        def: ally.def,
-        reg: ally.reg,
-        role: ally.role,
+        spriteKey: player.spriteKey,
+        hp: player.hp,
+        maxHp: player.maxHp,
+        barrierHp: player.barrierHp,
+        atk: player.atk,
+        def: player.def,
+        reg: player.reg,
+        role: player.role,
         isEnemy: false,
-          rangePx: ally.rangePx,
-        isAlive: ally.hp > 0,
+          rangePx: player.rangePx,
+        isAlive: player.hp > 0,
         anim: animState.anim,
         animFrame: animState.frame,
         attackSheetKey: animState.attackSheetKey,
         skillAnimKey: animState.skillAnimKey,
         skillAnimFrame: animState.skillAnimFrame,
-        statusEffects: ally.statusEffects,
+        statusEffects: player.statusEffects,
       });
     }
 
@@ -470,7 +470,7 @@ export class BattleCanvas implements IBattleRenderer {
     const enemyLayouts = sortForSpriteDraw(
       this.layouts.filter((layout) => layout.isEnemy),
     );
-    const allyLayouts = sortForSpriteDraw(
+    const playerLayouts = sortForSpriteDraw(
       this.layouts.filter((layout) => !layout.isEnemy),
     );
 
@@ -490,7 +490,7 @@ export class BattleCanvas implements IBattleRenderer {
         );
       }
     }
-    for (const layout of allyLayouts) {
+    for (const layout of playerLayouts) {
       this.drawSprite(layout, layout.x, spriteDrawY(layout), SPRITE_SCALE);
     }
 

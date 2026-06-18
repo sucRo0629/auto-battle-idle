@@ -48,16 +48,12 @@ export interface PlayerPlacementInput {
   isAlive: boolean;
 }
 
-/** @deprecated PlayerPlacementInput */
-export type AllyPlacementInput = PlayerPlacementInput;
 
 export interface PlayerPositionOptions {
   engaged?: boolean;
   frontEnemyX?: number;
 }
 
-/** @deprecated PlayerPositionOptions */
-export type AllyPositionOptions = PlayerPositionOptions;
 
 const ROW_ORDER: FormationRow[] = ['front', 'back'];
 
@@ -287,8 +283,6 @@ export function getLeadingPlayerFormationRow(
   return null;
 }
 
-/** @deprecated getLeadingPlayerFormationRow */
-export const getLeadingAllyFormationRow = getLeadingPlayerFormationRow;
 
 export function isBackRowOnlyFormation(
   players: PlayerPlacementInput[],
@@ -329,8 +323,6 @@ export function getLeadingPlayerFront(
   return { battleX: front.battleX, rangePx: front.rangePx };
 }
 
-/** @deprecated getLeadingPlayerFront */
-export const getLeadingAllyFront = getLeadingPlayerFront;
 
 function toFormationUnits(
   players: PlayerPlacementInput[],
@@ -398,8 +390,6 @@ export function computePlayerPositions(
   return new Map(placements.map((p) => [p.id, p.x]));
 }
 
-/** @deprecated computePlayerPositions */
-export const computeAllyPositions = computePlayerPositions;
 
 export function computeEngagedPlayerLaneOffsets(
   players: PlayerPlacementInput[],
@@ -437,8 +427,6 @@ export function computeEngagedPlayerLaneOffsets(
   return lanes;
 }
 
-/** @deprecated computeEngagedPlayerLaneOffsets */
-export const computeEngagedAllyLaneOffsets = computeEngagedPlayerLaneOffsets;
 
 function separateSpritesByGap(
   units: Array<{ id: string; battleX: number; isAlive: boolean }>,
@@ -554,8 +542,6 @@ export interface EngagedLayoutPlayerInput extends PlayerPlacementInput {
   engagedVisualLaneX?: number;
 }
 
-/** @deprecated EngagedLayoutPlayerInput */
-export type EngagedLayoutAllyInput = EngagedLayoutPlayerInput;
 
 export interface EngagedLayoutEnemyInput {
   id: string;
@@ -568,12 +554,8 @@ export interface EngagedLayoutEnemyInput {
 
 export interface EngagedLayoutContext {
   players?: EngagedLayoutPlayerInput[];
-  /** @deprecated players を使用 */
-  allies?: EngagedLayoutPlayerInput[];
   enemies: EngagedLayoutEnemyInput[];
   playerContactBattleX?: number | null;
-  /** @deprecated playerContactBattleX */
-  allyContactBattleX?: number | null;
   battleVisualOffset: number;
   frontEnemyVisualAnchor: number | null;
   resolveRangedTargetBattleX: (enemyId: string) => number | null;
@@ -581,18 +563,16 @@ export interface EngagedLayoutContext {
 
 export interface EngagedLayoutResult {
   playerBattleX: Map<string, number>;
-  /** @deprecated playerBattleX */
-  allyBattleX: Map<string, number>;
   enemyBattleX: Map<string, number>;
   frontLineBattleX: number;
 }
 
 function layoutPlayers(ctx: EngagedLayoutContext): EngagedLayoutPlayerInput[] {
-  return ctx.players ?? ctx.allies ?? [];
+  return ctx.players ?? [];
 }
 
 function layoutPlayerContact(ctx: EngagedLayoutContext): number | null {
-  return ctx.playerContactBattleX ?? ctx.allyContactBattleX ?? null;
+  return ctx.playerContactBattleX ?? null;
 }
 
 export function resolveEngagedContactBattleX(
@@ -663,8 +643,6 @@ export function resolveStablePlayerEngagedVisuals(
   return result;
 }
 
-/** @deprecated resolveStablePlayerEngagedVisuals */
-export const resolveStableAllyEngagedVisuals = resolveStablePlayerEngagedVisuals;
 
 /** Vitest 専用: resolveEngagedLayout の呼び出し回数（spec A-L1-01） */
 let resolveEngagedLayoutCallCount = 0;
@@ -864,7 +842,6 @@ export function computeEngagedLayout(
 
   return {
     playerBattleX,
-    allyBattleX: playerBattleX,
     enemyBattleX,
     frontLineBattleX,
   };
@@ -1005,8 +982,6 @@ export function approachPlayerVisualX(
   return approachVisualX(current, target, maxDelta);
 }
 
-/** @deprecated */
-export const approachAllyVisualX = approachPlayerVisualX;
 
 export function approachEnemyVisualX(
   current: number,
@@ -1082,14 +1057,12 @@ export interface FormationRestoreAnchors {
 export interface StaggeredFormationRestoreState {
   phase: FormationRestorePhase;
   players?: FormationRestoreUnit[];
-  /** @deprecated players */
-  allies?: FormationRestoreUnit[];
 }
 
 function restorePlayers(
   state: StaggeredFormationRestoreState,
 ): FormationRestoreUnit[] {
-  return state.players ?? state.allies ?? [];
+  return state.players ?? [];
 }
 
 function formationSlotInRow(
@@ -1229,8 +1202,6 @@ export function snapFormationScreenLayout(
 export interface CompensatedFormationResetState {
   phase: FormationRestorePhase;
   players?: FormationRestoreUnit[];
-  /** @deprecated players */
-  allies?: FormationRestoreUnit[];
 }
 
 export function tickCompensatedFormationReset(
@@ -1239,7 +1210,7 @@ export function tickCompensatedFormationReset(
   deltaTime: number,
   spacingPxPerSec: number = MOVE_PX_PER_SEC,
 ): { phase: FormationRestorePhase; combatCameraX: number } {
-  const players = state.players ?? state.allies ?? [];
+  const players = state.players ?? [];
   const living = players.filter((p) => p.isAlive);
   if (living.length === 0) {
     return { phase: state.phase, combatCameraX: 0 };
@@ -1305,8 +1276,6 @@ export function computeEngagedPlayerTargets(
   });
 }
 
-/** @deprecated computeEngagedPlayerTargets */
-export const computeEngagedAllyTargets = computeEngagedPlayerTargets;
 
 export interface EngagedEnemyTargetPlayer {
   x: number;
@@ -1479,7 +1448,7 @@ export interface BeginEngagedLayoutUnit {
 }
 
 export interface BeginEngagedLayoutInput {
-  allies: BeginEngagedLayoutUnit[];
+  players: BeginEngagedLayoutUnit[];
   combatCameraX: number;
   leadingRow: FormationRow | null;
   contactBattleX: number | null;
@@ -1489,8 +1458,7 @@ export interface BeginEngagedLayoutResult {
   combatCameraX: number;
   engageRearScreenX: Map<string, number>;
   cameraFocusLineX: number;
-  /** @deprecated playerBattleX */
-  allyBattleX: Map<string, number>;
+  playerBattleX: Map<string, number>;
 }
 
 /** 接敵開始: 後列の battleX を記録（カメラ廃止後は screenX = battleX） */
@@ -1500,14 +1468,14 @@ export function beginEngagedLayout(
   const engageRearScreenX = new Map<string, number>();
   const playerBattleXMap = new Map<string, number>();
 
-  for (const ally of input.allies) {
-    if (!ally.isAlive) continue;
-    playerBattleXMap.set(ally.id, ally.battleX);
+  for (const player of input.players) {
+    if (!player.isAlive) continue;
+    playerBattleXMap.set(player.id, player.battleX);
     if (
       input.leadingRow !== null &&
-      ally.formationRow !== input.leadingRow
+      player.formationRow !== input.leadingRow
     ) {
-      engageRearScreenX.set(ally.id, ally.battleX);
+      engageRearScreenX.set(player.id, player.battleX);
     }
   }
 
@@ -1520,7 +1488,7 @@ export function beginEngagedLayout(
     combatCameraX: 0,
     engageRearScreenX,
     cameraFocusLineX,
-    allyBattleX: playerBattleXMap,
+    playerBattleX: playerBattleXMap,
   };
 }
 

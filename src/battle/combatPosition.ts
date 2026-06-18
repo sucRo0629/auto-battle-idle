@@ -111,8 +111,6 @@ export function resolvePlayerFormationBattleX(
   return contact + (ideal - rightmostIdeal);
 }
 
-/** @deprecated getPlayerContactX */
-export const getAllyContactX = getPlayerContactX;
 
 function pickLeadingRowContact(
   frontLine: CombatantState[],
@@ -148,8 +146,6 @@ export function getBattleContactPlayerVisual(
   };
 }
 
-/** @deprecated getBattleContactPlayerVisual */
-export const getBattleContactAllyVisual = getBattleContactPlayerVisual;
 
 /** R1-fix: snapshot 互換のため visualX を battleX に同期 */
 export function syncFieldX(unit: CombatantState): void {
@@ -597,5 +593,3 @@ export function placeEnemiesOffScreenForDeploy(
   }
 }
 
-/** @deprecated assignInitialPlayerBattleX */
-export const assignInitialAllyBattleX = assignInitialPlayerBattleX;

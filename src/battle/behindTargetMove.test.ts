@@ -89,7 +89,7 @@ describe("toAnchor offset move", () => {
     expect(maxXDuringMotion).toBeGreaterThanOrEqual(enemy.battleX + 8);
   });
 
-  it("returns toward nearest ally after backstab toAnchor step", () => {
+  it("returns toward nearest player after backstab toAnchor step", () => {
     const engine = createAssassinFrontEngine();
     reachWave2Engage(engine);
     const internal = asBattleEngineInternals(engine);

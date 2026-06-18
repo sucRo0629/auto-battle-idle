@@ -514,7 +514,7 @@ export const FIRE_CONDITION_KINDS = [
   "debuff",
   "minTargets",
   "selfHp",
-  "allyDamaged",
+  "playerDamaged",
   "waveStart",
   "waveEnd",
   "enemyCount",
@@ -525,7 +525,7 @@ export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
   debuff: "デバフ",
   minTargets: "最小ターゲット数",
   selfHp: "自身HP割合",
-  allyDamaged: "味方被ダメ",
+  playerDamaged: "味方被ダメ",
   waveStart: "Wave開始フェーズ",
   waveEnd: "Wave終了フェーズ",
   enemyCount: "敵数",
@@ -664,17 +664,17 @@ export const TARGET_SPEC_KIND_LABELS: Record<TargetSpecKind, string> = {
   all: "全体",
 };
 
-export const TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS = ["enemy", "ally"] as const;
+export const TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS = ["enemy", "player"] as const;
 
 export const TARGET_RULE_OVERRIDE_APPLY_TO_LABELS: Record<
   (typeof TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS)[number],
   string
 > = {
   enemy: "敵向け effect",
-  ally: "味方向け effect",
+  player: "味方向け effect",
 };
 
-export const TARGET_SIDE_OPTIONS = ["ally", "enemy"] as const;
+export const TARGET_SIDE_OPTIONS = ["player", "enemy"] as const;
 export const TARGET_DISTANCE_ORDER_OPTIONS = [
   "nearest",
   "farthest",
@@ -688,10 +688,10 @@ export const TARGET_STAT_ORDER_OPTIONS = [
 ] as const;
 
 export const TARGET_SIDE_LABELS: Record<
-  TargetSpec["kind"] extends never ? never : "ally" | "enemy",
+  TargetSpec["kind"] extends never ? never : "player" | "enemy",
   string
 > = {
-  ally: "味方",
+  player: "味方",
   enemy: "敵",
 };
 

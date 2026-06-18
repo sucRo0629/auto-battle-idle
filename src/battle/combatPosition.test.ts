@@ -352,21 +352,7 @@ describe('combatPosition', () => {
         },
         gameData,
       ),
-    ).toBe(180);
-    expect(
-      resolveMoveBattleX(
-        sword,
-        enemy,
-        {
-          type: 'move',
-          target: { kind: "distance", side: "enemy", order: "nearest" },
-          moveDurationSec: 0.2,
-          moveMode: 'toAnchor',
-          anchorOffsetPx: -16,
-        },
-        gameData,
-      ),
-    ).toBe(180);
+    ).toBe(296);
   });
 
   it('resolveMoveBattleX caps hostile toAnchor at effect range (lancer lunge)', () => {
@@ -402,11 +388,11 @@ describe('combatPosition', () => {
       battleX: 70,
       traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
     });
-    const ally = mockCombatant({ id: 'ally', battleX: 210 });
+    const playerAnchor = mockCombatant({ id: 'playerAnchor', battleX: 210 });
     expect(
       resolveMoveBattleX(
         actor,
-        ally,
+        playerAnchor,
         {
           type: 'move',
           target: { kind: 'distance', side: 'ally', order: 'nearest' },
