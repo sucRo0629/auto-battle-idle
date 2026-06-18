@@ -22,6 +22,27 @@ describe('ParticlePlaybackManager', () => {
     expect(manager.has('heal-1')).toBe(false);
   });
 
+  it('spawns spark_burst with the preset particle count and duration', () => {
+    const manager = new ParticlePlaybackManager();
+    const preset = getParticlePresetDef('spark_burst');
+    manager.spawn(
+      'spark-1',
+      { x: 100, y: 200 },
+      'front',
+      { preset: 'spark_burst' },
+      preset,
+    );
+
+    const emitter = (
+      manager as unknown as {
+        emitters: Map<string, { particles: unknown[]; durationSec: number }>;
+      }
+    ).emitters.get('spark-1');
+
+    expect(emitter?.particles).toHaveLength(8);
+    expect(emitter?.durationSec).toBe(0.32);
+  });
+
   it('ignores inactive particle defs', () => {
     const manager = new ParticlePlaybackManager();
     const preset = getParticlePresetDef('heal_holy_light');

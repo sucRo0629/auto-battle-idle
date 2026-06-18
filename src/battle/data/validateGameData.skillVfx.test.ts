@@ -60,7 +60,7 @@ describe('parseSkillVfx', () => {
   it('rejects unknown particle preset', () => {
     expect(() =>
       parseSkillVfx(
-        { particles: { preset: 'spark_burst' } },
+        { particles: { preset: 'not_a_preset' } },
         'effect[0].vfx',
       ),
     ).toThrow(/effect\[0\]\.vfx\.particles/);

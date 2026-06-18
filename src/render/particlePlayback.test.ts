@@ -67,6 +67,28 @@ describe('particlePlayback', () => {
     });
   });
 
+  it('resolves spark_burst defaults from preset registry', () => {
+    const resolved = resolveParticleSpawnOptions({ preset: 'spark_burst' });
+    expect(resolved.presetId).toBe('spark_burst');
+    expect(resolved.count).toBe(8);
+    expect(resolved.durationSec).toBe(0.32);
+    expect(resolved.tint).toBe('#fff4c2');
+    expect(resolved.preset.kind).toBe('particles');
+    expect(resolved.preset.particles).toMatchObject({
+      shape: 'dot',
+      vyMin: -52,
+      vyMax: -26,
+      vxSpread: 0.12,
+      spawnXSpread: 6,
+      spawnYMin: -2,
+      spawnYMax: 3,
+      lifeMinSec: 0.2,
+      lifeMaxSec: 0.4,
+      sizeMin: 1.4,
+      sizeMax: 2.6,
+    });
+  });
+
   it('applies JSON overrides', () => {
     expect(
       resolveParticleSpawnOptions({
