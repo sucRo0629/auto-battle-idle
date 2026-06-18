@@ -26,8 +26,21 @@
             "placement": {
               "anchor": "target",
               "layer": "front"
+            },
+            "enabled": true
+          },
+          "enabled": true
+        },
+        "vfx": {
+          "particles": {
+            "preset": "heal_holy_light",
+            "enabled": false,
+            "placement": {
+              "anchor": "target",
+              "layer": "front"
             }
-          }
+          },
+          "enabled": false
         }
       },
       {
@@ -45,6 +58,9 @@
         },
         "healSubKind": "hot",
         "hitVfx": {
+          "enabled": false
+        },
+        "vfx": {
           "enabled": false
         }
       }
