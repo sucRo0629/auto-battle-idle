@@ -30,8 +30,7 @@
         "maxHpRatio": 0.3,
         "compare": "gte"
       }
-    ],
-    "useDurationSec": 1.13
+    ]
   },
   {
     "id": "at_warrior_active_2",
@@ -56,8 +55,7 @@
         },
         "applyFrame": 3
       }
-    ],
-    "useDurationSec": 0.88
+    ]
   },
   {
     "id": "at_warrior_basic_attack",
