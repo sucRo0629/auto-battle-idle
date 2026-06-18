@@ -25,7 +25,7 @@ type SkillIconSource = Pick<
 
 const RANGED_PHYSICAL_ATTACKER_SKILL_PREFIXES = [
   'at_ranger_',
-  'at_sniper_',
+  'at_ballista_',
   'at_hunter_',
   'attacker_kyushi_',
 ] as const;

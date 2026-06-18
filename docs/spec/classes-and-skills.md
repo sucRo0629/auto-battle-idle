@@ -72,7 +72,7 @@
 | `at_assassin`  | 双刃士 | Assassin  | front | 近接     | 最低 HP 比率狙い + 回避                  | 引き裂き／影の刃               |
 | `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 前方 pierce ATK debuff + 近傍 ATK aura   | 踏み込み突き／足払い           |
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff               | 連射／連ね矢                   |
-| `at_sniper`    | 狙撃士 | Sniper    | back  | 遠隔物理 | 最高 HP 狙い + DEF 無視                  | 引き絞り／貫く一射             |
+| `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 最高 HP 狙い + DEF 無視                  | 引き絞り／貫く一射             |
 | `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | デバフ対象への与ダメ増                   | 毒罠／拘束罠                   |
 | `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | —（Lv0 パッシブなし）                    | 魔弾／集中砲                   |
 | `at_enchanter` | 符術士 | Enchanter | back  | 遠隔魔法 | —（Lv0 パッシブなし）                    | **Lv0: `active_1`（連符）のみ** |

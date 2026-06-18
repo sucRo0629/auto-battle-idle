@@ -14,7 +14,7 @@ export const DEFAULT_ROSTER_EXTRAS: Record<string, ClassId[]> = {
     'df_duelist',
     'at_assassin',
     'at_lancer',
-    'at_sniper',
+    'at_ballista',
     'at_hunter',
     'at_sorcerer',
     'at_enchanter',

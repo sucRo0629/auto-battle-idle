@@ -69,7 +69,7 @@ const classes = [
   { id: 'at_assassin', displayName: '双刃士', epithetEn: 'Assassin', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'fast', maxHp: 100, atk: 32, def: 8, reg: 0, growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_target_lowest_hp', 'passive_evasion'] },
   { id: 'at_lancer', displayName: '槍術士', epithetEn: 'Lancer', role: 'attacker', formationRow: 'front', attackRange: 'melee', attackSpeedTier: 'somewhatSlow', maxHp: 150, atk: 24, def: 14, reg: 0, growthTier: { maxHp: 2, atk: 2, def: 2 }, passiveIds: ['passive_target_highest_hp'] },
   { id: 'at_ranger', displayName: '弓術士', epithetEn: 'Ranger', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'fast', maxHp: 92, atk: 20, def: 6, reg: 0, growthTier: { maxHp: 1, atk: 2, def: 1 }, passiveIds: ['passive_target_ranged_attacking'] },
-  { id: 'at_sniper', displayName: '狙撃士', epithetEn: 'Sniper', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'slow', maxHp: 88, atk: 28, def: 5, reg: 0, growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_target_farthest'] },
+  { id: 'at_ballista', displayName: '弩砲士', epithetEn: 'Ballista', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'slow', maxHp: 88, atk: 28, def: 5, reg: 0, growthTier: { maxHp: 1, atk: 3, def: 1 }, passiveIds: ['passive_target_farthest'] },
   { id: 'at_hunter', displayName: '狩猟士', epithetEn: 'Hunter', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'normal', maxHp: 96, atk: 18, def: 8, reg: 0, growthTier: { maxHp: 2, atk: 2, def: 1 }, passiveIds: ['passive_damage_vs_dot'] },
   { id: 'at_sorcerer', displayName: '魔術士', epithetEn: 'Sorcerer', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'somewhatSlow', maxHp: 80, atk: 26, def: 5, reg: 20, growthPresetKey: 'caster', growthTier: { maxHp: 2, atk: 3, def: 1 }, passiveIds: ['passive_target_lowest_reg'] },
   { id: 'at_enchanter', displayName: '符術士', epithetEn: 'Enchanter', role: 'attacker', formationRow: 'back', attackRange: 'ranged', attackSpeedTier: 'normal', maxHp: 78, atk: 22, def: 6, reg: 15, growthPresetKey: 'caster', growthTier: { maxHp: 2, atk: 2, def: 1 }, passiveIds: ['passive_target_lowest_def'] },
@@ -143,10 +143,10 @@ addActive('at_ranger_active_2', '貫矢', { kind: 'time', value: 10 }, [
   rangedHit(1.3, { targetShape: 'single' }),
 ]);
 
-addActive('at_sniper_active_1', '精密射', { kind: 'time', value: 10 }, [
+addActive('at_ballista_active_1', '精密射', { kind: 'time', value: 10 }, [
   rangedHit(2, { targetShape: 'single' }),
 ]);
-addActive('at_sniper_active_2', '貫通矢', { kind: 'time', value: 12 }, [
+addActive('at_ballista_active_2', '貫通矢', { kind: 'time', value: 12 }, [
   { targetRule: 'frontEnemy', targetShape: 'pierce', type: 'damage', damageType: 'physical', amount: { kind: 'atkBased', atkScale: 1.2 }, range: 50, pierceDurationSec: 0.15, vfx: { preset: 'impale' } },
 ]);
 

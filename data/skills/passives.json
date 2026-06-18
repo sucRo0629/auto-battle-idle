@@ -387,7 +387,7 @@
     ]
   },
   {
-    "id": "at_sniper_passive_1",
+    "id": "at_ballista_passive_1",
     "name": "大物狙い",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
@@ -399,7 +399,7 @@
     "targetRuleOverrideApplyTo": "enemy"
   },
   {
-    "id": "at_sniper_passive_2",
+    "id": "at_ballista_passive_2",
     "name": "大物狙い",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
@@ -449,7 +449,7 @@
     }
   },
   {
-    "id": "at_sniper_passive_3",
+    "id": "at_ballista_passive_3",
     "name": "岩穿ち",
     "effect": "defenseIgnore",
     "defenseIgnore": {

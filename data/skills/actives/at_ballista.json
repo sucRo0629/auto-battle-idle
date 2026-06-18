@@ -1,6 +1,6 @@
 [
   {
-    "id": "at_sniper_active_1",
+    "id": "at_ballista_active_1",
     "name": "引き絞り",
     "trigger": {
       "kind": "time",
@@ -37,7 +37,7 @@
     ]
   },
   {
-    "id": "at_sniper_active_2",
+    "id": "at_ballista_active_2",
     "name": "貫く一射",
     "trigger": {
       "kind": "time",
@@ -73,8 +73,8 @@
     ]
   },
   {
-    "id": "at_sniper_basic_attack",
-    "name": "at_sniper_basic_attack",
+    "id": "at_ballista_basic_attack",
+    "name": "at_ballista_basic_attack",
     "trigger": {
       "kind": "time",
       "value": 2
