@@ -51,6 +51,61 @@ describe("playSkillHitFeedback", () => {
     );
   });
 
+  it("passes sourceId, targetId, and vfx placement to playSkillVfx", () => {
+    __registerVfxAnimForTest("placement_skill_0_vfx", mockImage(128));
+    __registerVfxAnimForTest("placement_skill_0_vfx_hit", mockImage(128));
+    const canvas = {
+      playSkillVfx: vi.fn(),
+      showDamagePopup: vi.fn(),
+      showHealPopup: vi.fn(),
+    };
+    const effect = { type: "damage" } as never;
+    const mainPlacement = { anchor: "between" as const, layer: "behind" as const };
+    const hitPlacement = {
+      anchor: "footTarget" as const,
+      offsetX: 6,
+      layer: "front" as const,
+    };
+    const presentation = {
+      vfx: { placement: mainPlacement },
+      hitVfx: { placement: hitPlacement },
+    } as never;
+
+    playSkillHitFeedback(canvas, {
+      sourceId: "ally-7",
+      targetId: "enemy-3",
+      presentation,
+      effect,
+      skillId: "placement_skill",
+      effectIndex: 0,
+      hitIndex: 1,
+    });
+
+    expect(canvas.playSkillVfx).toHaveBeenCalledTimes(2);
+    expect(canvas.playSkillVfx.mock.calls[0]).toEqual([
+      expect.stringMatching(/^ally-7:enemy-3:placement_skill:0:1:main:/),
+      "ally-7",
+      "enemy-3",
+      { placement: mainPlacement },
+      expect.objectContaining({
+        skillId: "placement_skill",
+        effectIndex: 0,
+        kind: "main",
+      }),
+    ]);
+    expect(canvas.playSkillVfx.mock.calls[1]).toEqual([
+      expect.stringMatching(/^ally-7:enemy-3:placement_skill:0:1:hit:/),
+      "ally-7",
+      "enemy-3",
+      { placement: hitPlacement },
+      expect.objectContaining({
+        skillId: "placement_skill",
+        effectIndex: 0,
+        kind: "hit",
+      }),
+    ]);
+  });
+
   it("skips main VFX but still spawns hit VFX on later hits", () => {
     __registerVfxAnimForTest("test_skill_0_vfx_hit", mockImage(128));
     const canvas = {

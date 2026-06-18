@@ -193,7 +193,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | ---------------- | ----------------------------------------------------------------------------------------------- |
 | `rangePx`        | `0`（分類用: 0〜99 は近接帯、100 以上は遠隔帯）                                                  |
 | `damageType`     | `physical`                                                                                      |
-| `basicAttackVfx` | なし。PNG VFX 用 `enabled` / `placement` があるとき battle VFX に使う |
+| `basicAttackVfx` | 省略時は未設定。**通常攻撃（`slotKind: basic`）専用**の PNG VFX 定義。`enabled` / `placement` / strip フェーズをここに書く。effect `vfx` や `skill.vfx` にはフォールバックしない |
 
 `basicAttackSkillId` は省略可（`{entityId}_basic_attack`）。通常攻撃スキルはロード時に合成。`data/skills/actives/` に同名 ID があれば `name` / `atkScale` / `interval` 等のみ上書き可（`range` / `damageType` / `vfx` は traits 正）。
 
@@ -232,14 +232,29 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 | 条件 | body | VFX |
 |------|------|-----|
-| `sheets/skills/{id}_basic_attack.png` **あり** | skill anim 再生 | `basicAttackVfx` / effect `vfx` |
+| `sheets/skills/{id}_basic_attack.png` **あり** | skill anim 再生 | `traits.basicAttackVfx`（effect `vfx` は使わない） |
 | PNG **なし** | なし | VFX PNG 未配置のため演出なし |
 
 **遠隔**（`rangePx >= RANGED_ATTACK_MIN_PX`）も同じ。弓引き PNG を置けば body 再生する。VFX strip も `sheets/vfx/` に配置する。
 
 ### 演出解決（コード）
 
-Battle イベント → `resolveSkillPresentation` / `resolveEffectPresentation` → skill anim 優先 → VFX。`resolveEffectPresentation` は戦闘 / ラボで共通し、`effectVfxOnly` を既定で有効にして `effect.vfx` 未指定時に `skill.vfx` へはフォールバックしない（`basicAttackVfx` は通常攻撃のみ）。body 再生秒数は `resolveSkillBodyPlaybackSec` を戦闘 / ラボで共通使用し、残りの表示ロックは [combat.md](combat.md) の `presentationLock` / `animLock`。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。
+**ラボ保存 JSON = 実戦正本。** 演出ラボ（`presentation-lab.html`）で編集・保存した `data/skills/actives/*.json` および `classes.json` / `enemies.json` の `traits.basicAttackVfx` が、そのまま戦闘の見た目・タイミングの正本。ラボ専用の上書き JSON や別解決経路は持たない。
+
+Battle イベント → `resolveSkillPresentation` / `resolveEffectPresentation` → skill anim 優先 → VFX。戦闘（`BattleView` / `SkillExecutor`）とラボ（`PresentationPreviewRunner` / `computePresentationTimeline`）は次を**同一関数**で共有する:
+
+| 用途 | 共有関数 |
+| ---- | -------- |
+| VFX 解決 | `resolveSkillPresentation`（内部で `resolveEffectPresentation`） |
+| コンテキスト構築 | `buildSkillPresentationContext`（ラボは `buildSkillVfxContext` — 同一フィールド） |
+| 命中遅延 | `resolveEffectApplyDelaySec`（`applyFrame` → 秒） |
+| ヒット VFX 再生 | `playSkillHitFeedback` |
+| body 再生秒数 | `resolveSkillBodyPlaybackSec` |
+| 表示ロック秒数 | `resolvePresentationLockSec`（タイムライン表示用） |
+
+**`effectVfxOnly` ポリシー（戦闘・ラボ共通、既定 `true`）:** アクティブ等（`slotKind !== 'basic'`）では **effect に明示した `vfx` / `hitVfx` のみ**再生する。`skill.vfx` へのフォールバックはしない（レガシー JSON の skill 直下 `vfx` は新規演出では使わない）。**通常攻撃**（`slotKind: basic`）は effect `vfx` を見ず **`traits.basicAttackVfx` のみ**（未設定なら VFX なし）。`presentationLock` の秒数計算だけ `effectVfxOnly: false` で skill 直下 `vfx` を含めうる（[combat.md](combat.md) 参照）。
+
+調整 UI は **演出ラボ**（`PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。同一 skill JSON に対し `vfxSec` / `applyDelaySec` は `presentationTimeline.test.ts` で戦闘 resolver との一致をテスト固定する。
 
 ### 射程
 

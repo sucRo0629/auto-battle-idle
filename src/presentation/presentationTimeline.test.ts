@@ -1,14 +1,27 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ActiveSkillDef } from '../battle/types.ts';
+import { resolvePresentationLockSec } from '../battle/skills/presentationLock.ts';
 import {
   __registerSkillAnimForTest,
   __resetSkillAnimsForTest,
 } from '../render/skillAnimRegistry.ts';
 import {
+  resolveEffectApplyDelaySec,
+} from '../render/skillAnimPlayback.ts';
+import {
+  buildSkillPresentationContext,
+  resolveSkillPresentation,
+} from '../render/skillPresentation.ts';
+import {
   __registerVfxAnimForTest,
   __resetVfxAnimsForTest,
 } from '../render/vfxAnimRegistry.ts';
-import { computePresentationTimeline } from './presentationTimeline.ts';
+import { resolveVfxPlaybackSec } from '../render/vfxAnimPlayback.ts';
+import { resolveVfxAnimKey } from '../render/vfxAnimRegistry.ts';
+import {
+  buildSkillVfxContext,
+  computePresentationTimeline,
+} from './presentationTimeline.ts';
 
 function mockImage(width: number): HTMLImageElement {
   return { width, height: 64 } as HTMLImageElement;
@@ -140,5 +153,136 @@ describe('computePresentationTimeline', () => {
     const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
     expect(timeline.useDurationSec).toBe(1.2);
     expect(timeline.presentationLockSec).toBe(0);
+  });
+
+  it('reports applyDelaySec from applyFrame on the body strip', () => {
+    __registerSkillAnimForTest('apply_frame', { width: 256, height: 48 } as HTMLImageElement);
+    const skill: ActiveSkillDef = {
+      id: 'apply_frame',
+      name: 'Apply Frame',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'damage',
+          target: { rule: 'frontEnemy' },
+          amount: { kind: 'atkScale', scale: 1 },
+          animStartFrame: 1,
+          applyFrame: 3,
+        },
+      ],
+    };
+
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
+    const expectedDelay = resolveEffectApplyDelaySec(
+      skill.id,
+      0,
+      skill.effect[0]!,
+    );
+    expect(expectedDelay).toBe(0.25);
+    expect(timeline.applyDelaySec).toBe(expectedDelay);
+  });
+
+  it('reports PNG vfxSec and hitVfxSec from registered strips', () => {
+    __registerVfxAnimForTest('vfx_timing_0_vfx', mockImage(320));
+    __registerVfxAnimForTest('vfx_timing_0_vfx_hit', mockImage(192));
+    const skill: ActiveSkillDef = {
+      id: 'vfx_timing',
+      name: 'VFX Timing',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'damage',
+          target: { rule: 'frontEnemy' },
+          amount: { kind: 'atkScale', scale: 1 },
+          vfx: {},
+          hitVfx: {},
+        },
+      ],
+    };
+    const effect = skill.effect[0]!;
+    const ctx = buildSkillVfxContext(previewEntity, 'active', effect, skill.id, 0);
+    const presentation = resolveSkillPresentation(skill, effect, ctx);
+
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
+    const mainKey = resolveVfxAnimKey(skill.id, 0, 'main');
+    const hitKey = resolveVfxAnimKey(skill.id, 0, 'hit');
+
+    expect(mainKey).toBe('vfx_timing_0_vfx');
+    expect(hitKey).toBe('vfx_timing_0_vfx_hit');
+    expect(timeline.vfxSec).toBe(resolveVfxPlaybackSec(presentation.vfx!, mainKey!));
+    expect(timeline.hitVfxSec).toBe(resolveVfxPlaybackSec(presentation.hitVfx!, hitKey!));
+    expect(timeline.vfxSec).toBe(0.625);
+    expect(timeline.hitVfxSec).toBe(0.375);
+  });
+
+  it('matches battle presentationLockSec for the same skill JSON', () => {
+    __registerSkillAnimForTest('lock_parity', { width: 256, height: 48 } as HTMLImageElement);
+    __registerVfxAnimForTest('lock_parity_0_vfx', mockImage(320));
+    const skill: ActiveSkillDef = {
+      id: 'lock_parity',
+      name: 'Lock Parity',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'damage',
+          target: { rule: 'frontEnemy' },
+          amount: { kind: 'atkScale', scale: 1 },
+          vfx: {},
+        },
+      ],
+    };
+    const actorStub = {
+      role: previewEntity.role,
+      traits: {
+        rangePx: previewEntity.rangePx,
+        damageType: previewEntity.damageType,
+        basicAttackVfx: previewEntity.basicAttackVfx,
+      },
+    };
+
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
+    expect(timeline.presentationLockSec).toBe(
+      resolvePresentationLockSec(skill, actorStub as never, 'active'),
+    );
+    expect(timeline.presentationLockSec).toBe(0.625);
+  });
+
+  it('lab and battle resolvers agree on vfxSec and applyDelay for the same JSON', () => {
+    __registerSkillAnimForTest('parity_skill', { width: 256, height: 48 } as HTMLImageElement);
+    __registerVfxAnimForTest('parity_skill_0_vfx', mockImage(256));
+    const skill: ActiveSkillDef = {
+      id: 'parity_skill',
+      name: 'Parity',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'damage',
+          target: { rule: 'frontEnemy' },
+          amount: { kind: 'atkScale', scale: 1 },
+          animStartFrame: 1,
+          applyFrame: 2,
+          vfx: {},
+        },
+      ],
+    };
+    const effect = skill.effect[0]!;
+    const slotKind = 'active' as const;
+
+    const labCtx = buildSkillVfxContext(previewEntity, slotKind, effect, skill.id, 0);
+    const battleCtx = buildSkillPresentationContext(
+      previewEntity,
+      slotKind,
+      effect,
+      skill.id,
+      0,
+    );
+    expect(battleCtx).toEqual(labCtx);
+
+    const presentation = resolveSkillPresentation(skill, effect, battleCtx);
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, slotKind);
+    const mainKey = resolveVfxAnimKey(skill.id, 0, 'main');
+
+    expect(timeline.applyDelaySec).toBe(resolveEffectApplyDelaySec(skill.id, 0, effect));
+    expect(timeline.vfxSec).toBe(resolveVfxPlaybackSec(presentation.vfx!, mainKey!));
   });
 });
