@@ -36,21 +36,9 @@
           "kind": "self"
         },
         "type": "buff",
-        "buffSubKind": "damageTakenToHeal",
-        "buffStat": "atk",
-        "buffMultiplier": 1.2,
-        "buffDurationSec": 5,
-        "ratio": 0.02
-      },
-      {
-        "target": {
-          "kind": "self"
-        },
-        "type": "debuff",
-        "debuffSubKind": "stat",
-        "debuffStat": "attackSpeed",
-        "debuffMultiplier": 0.5,
-        "debuffDurationSec": 5
+        "buffSubKind": "damageDelay",
+        "ratio": 0.5,
+        "buffDurationSec": 5
       }
     ]
   },

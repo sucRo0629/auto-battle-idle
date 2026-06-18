@@ -119,7 +119,7 @@ export interface BattleHudTheme {
   statusIconCounter: string;
   statusIconStun: string;
   statusIconMoveLock: string;
-  statusIconDamageTakenToHeal: string;
+  statusIconDamageDelay: string;
 }
 
 function readNumber(
@@ -386,9 +386,9 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     statusIconCounter: readString(style, "--status-icon-counter", "#e67e22"),
     statusIconStun: readString(style, "--status-icon-stun", "#f1c40f"),
     statusIconMoveLock: readString(style, "--status-icon-move-lock", "#e67e22"),
-    statusIconDamageTakenToHeal: readString(
+    statusIconDamageDelay: readString(
       style,
-      "--status-icon-damage-taken-to-heal",
+      "--status-icon-damage-delay",
       "#16a085"
     ),
   };
@@ -444,7 +444,7 @@ export function resolveStatusIconFallbackColor(
     counter: theme.statusIconCounter,
     stun: theme.statusIconStun,
     moveLock: theme.statusIconMoveLock,
-    damageTakenToHeal: theme.statusIconDamageTakenToHeal,
+    damageDelay: theme.statusIconDamageDelay,
   };
   return colors[category];
 }

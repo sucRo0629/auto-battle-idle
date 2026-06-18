@@ -600,7 +600,7 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case 'buff':
       passive.buffSubKind ??= 'stat';
       passive.buffTargetRule ??= { kind: 'self' };
-      if (passive.buffSubKind === 'damageTakenToHeal') {
+      if (passive.buffSubKind === 'damageDelay') {
         passive.ratio ??= 0.1;
       } else if (passive.buffSubKind === 'block' || passive.buffSubKind === 'evasion') {
         passive.chance ??= 0.1;
@@ -1064,7 +1064,7 @@ function applyActiveBuffSubKindChange(
   }
   const base = { ...prev, buffSubKind };
   switch (buffSubKind) {
-    case 'damageTakenToHeal':
+    case 'damageDelay':
       return {
         ...base,
         ratio: prev.ratio ?? 0.1,
@@ -3591,7 +3591,7 @@ export class SkillEditorStep {
           );
           break;
         }
-        if (effect.buffSubKind === 'damageTakenToHeal') {
+        if (effect.buffSubKind === 'damageDelay') {
           detailGrid.appendChild(
             createFieldRow(
               'ratio',

@@ -3,8 +3,8 @@ import {
   applyKnockbackToTarget,
   applyStunToTarget,
 } from './ccEffects.ts';
+import { applyIncomingDamage } from './damageDelay.ts';
 import {
-  applyDamageToTarget,
   applyDefenseMitigation,
   getPassiveDefs,
   resolveResourceAmount,
@@ -179,9 +179,12 @@ function applyCounterDamageResponse(
   const mitigated = applyDefenseMitigation(rawAmount, attacker, damageType);
   if (mitigated <= 0) return;
 
-  const damageResult = applyDamageToTarget(attacker, mitigated);
+  const incoming = applyIncomingDamage(attacker, mitigated);
+  const { damageResult } = incoming;
   const appliedCounter =
-    damageResult.hpDamage + damageResult.barrierDamage;
+    damageResult.hpDamage +
+    damageResult.barrierDamage +
+    incoming.delayedDamage;
   if (appliedCounter <= 0) return;
 
   callbacks.onDamageApplied?.(victim, attacker, appliedCounter, {

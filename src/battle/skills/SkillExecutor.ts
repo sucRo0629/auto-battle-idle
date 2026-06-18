@@ -1,7 +1,7 @@
 import type { BattleEventListener } from '../events.ts';
+import { applyIncomingDamage } from '../damageDelay.ts';
 import {
   applyBarrierToTarget,
-  applyDamageToTarget,
   applyHealToTarget,
   getPassiveDefs,
   resolveDamage,
@@ -618,9 +618,12 @@ export class SkillExecutor {
           this.emit({ type: 'block', targetId: target.id });
         }
       }
-      const damageResult = applyDamageToTarget(target, finalDamage);
+      const incoming = applyIncomingDamage(target, finalDamage);
+      const { damageResult } = incoming;
       const appliedDamage =
-        damageResult.hpDamage + damageResult.barrierDamage;
+        damageResult.hpDamage +
+        damageResult.barrierDamage +
+        incoming.delayedDamage;
       this.deps.onDamageApplied?.(actor, target, appliedDamage, {
         attackKind: 'damage',
         hpDamage: damageResult.hpDamage,
@@ -884,15 +887,15 @@ export class SkillExecutor {
           });
           return true;
         }
-        if (subKind === 'damageTakenToHeal') {
+        if (subKind === 'damageDelay') {
           const ratio = effectDef.ratio ?? 0;
           const duration = effectDef.buffDurationSec ?? 0;
           if (ratio <= 0 || duration <= 0) return false;
           const appliedAt = Date.now();
           target.statusEffects.push({
-            id: `${skill.id}_damageTakenToHeal_${appliedAt}`,
+            id: `${skill.id}_damageDelay_${appliedAt}`,
             kind: 'buff',
-            overlay: 'damageTakenToHeal',
+            overlay: 'damageDelay',
             ratio,
             multiplier: 1,
             durationSec: duration,
@@ -909,7 +912,7 @@ export class SkillExecutor {
             slotKind: cd.slotKind,
             effect: 'buff',
             effectIndex,
-            statusLabel: 'damageTakenToHeal',
+            statusLabel: 'damageDelay',
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId),
           });

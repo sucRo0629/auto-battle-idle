@@ -892,11 +892,9 @@ describe('skillSequence', () => {
         effect: [
           {
             type: 'buff',
-            buffSubKind: 'damageTakenToHeal',
-            buffStat: 'atk',
-            buffMultiplier: 1.2,
+            buffSubKind: 'damageDelay',
             buffDurationSec: 5,
-            ratio: 0.05,
+            ratio: 0.5,
             target: { kind: 'self' },
           },
           {

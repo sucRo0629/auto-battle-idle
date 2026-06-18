@@ -429,7 +429,7 @@ interface CharacterBuild {
 | `barrier` | ダメージを身代わりに受けるバリアを付与 | `ResourceAmountSpec` | 既定は `barrierHp` に加算。`barrierStack: false` で新量に置換。 | 持続時間制限なし（消費されるまで維持）。詳細は後述の「バリア」参照。 |
 | `block` | 物理直接ダメージのブロック率を上昇 | `chance`（0〜1） | 複数ソースは加算（上限 1.0）。 | 成功時、DEF適用後の物理直接ダメージを一定割合カット。DoTは対象外。 |
 | `evasion` | 直接ダメージ（物理/魔法）の回避率を上昇 | `chance`（0〜1） | 複数ソースは加算（上限 1.0）。 | 成功時、直接ダメージを完全に無効化。DoTは対象外。 |
-| `damageTakenToHeal` | 被ダメージ時にその一部を即時回復 | `ratio`（0〜1） | 複数ソースは加算（上限 1.0）。 | バリア吸収後の実被ダメージに対して適用（使用者ATK基準ではない）。 |
+| `damageDelay` | 一部ダメージ後払い | `ratio`, `buffDurationSec` | 複数ソースは `ratio` 加算（上限 1.0）。遅延プールは加算。 | 軽減ではない。Block 後の確定ダメージを分割し、遅延分は DEF/REG/Barrier/Block/Evasion を再適用しない。詳細は [combat.md](combat.md)。 |
 
 * **通常攻撃変形 (`basicAttackTransform`)**: 自身に付与する特殊バフ。バフ持続中、通常攻撃（`slotKind: basic`）の性能を上書き・追加効果をマージします（複数付与時は最新1件のみ有効）。
 
@@ -472,7 +472,7 @@ HPとは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `targetRuleOverride` | `targetRuleOverride`, `targetRuleOverrideApplyTo?` (`enemy` / `ally`)                                                                                       | effect のターゲット陣営とスコープが一致するときだけ `targetRuleOverride` で上書き（`enemy` = 敵向け effect・通常攻撃・接近、`ally` = 味方向け effect。`kind: self` は常に除外。複数時は配列の後ろ優先）                                     |
 | `specialEffect`      | `specialEffectApplyTo`, `specialEffect`                                                                                                                     | 条件付き特効倍率。`damage` = 与ダメ、`heal` = 被回復（直接 heal のみ、HoT 非対象）。`conditions: []` は無条件で `scale` 適用                                                                                                                |
-| `buff`               | `buffSubKind`, `buffTargetRule`, `buffTargetShape?`, `buffRange?`, 形状別フィールド, `chance?`, `buffStat?`, `ratio?`, `periodicTrigger?` 等 | **常時**（未指定時。barrier は除く）または **Stage/Wave 開始時**（`stageStart` / `waveStart`）。ターゲット形状・射程はアクティブ `buff` effect と同型（接頭辞 `buff`）。`buffSubKind`: `stat` / `barrier` / `block` / `evasion` / `damageTakenToHeal` |
+| `buff`               | `buffSubKind`, `buffTargetRule`, `buffTargetShape?`, `buffRange?`, 形状別フィールド, `chance?`, `buffStat?`, `ratio?`, `periodicTrigger?` 等 | **常時**（未指定時。barrier は除く）または **Stage/Wave 開始時**（`stageStart` / `waveStart`）。ターゲット形状・射程はアクティブ `buff` effect と同型（接頭辞 `buff`）。`buffSubKind`: `stat` / `barrier` / `block` / `evasion` / `damageDelay` |
 | `debuff`             | `debuffSubKind`, `debuffTargetRule`, `debuffTargetShape?`, `debuffRange?`, 形状別フィールド（`debuffAoeRadiusPx` 等）, `debuffStat?`, `periodicTrigger?` 等 | **常時**（未指定時）または **Stage/Wave 開始時**（`stageStart` / `waveStart`）。ターゲット形状・射程はアクティブ `debuff` effect と同型（接頭辞 `debuff`）。`debuffSubKind`: `stat` / `dot` / `stun` |
 | `counter`            | `chance`, `counterResponses[]`, `counterRange?`                                                                                                             | 常時受付。被 `damage` / `dot` で HP に入ったダメージがあるたび、射程内なら `chance` を判定し、成功時に `counterResponses` を攻撃者へ直接適用（反撃 StatusEffect は付与しない） |
 | `damageReduction`    | `damageReductionPercent`, `damageReductionTargetRule`, `damageReductionTargetShape?`, `damageReductionRange?`, 形状別フィールド                              | 対象に常時被ダメ軽減を付与（戦闘開始時同期）。ターゲット形状・射程はアクティブ effect と同型（接頭辞 `damageReduction`） |
@@ -487,11 +487,11 @@ HPとは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 
 **スタン（`stun` / `debuffSubKind: stun` / counter `kind: stun`）:** `durationSec` **上限 5 秒**。付与成功時に対象の通常攻撃 CD を満タンにリセット。スタン中は time トリガーアクティブ CD 停止（基本攻撃 CD は進行）。詳細は [combat.md](combat.md) のスタン行。
 
-**ブロック / 回避 / 被ダメ回復（`buff` + `buffSubKind`）:** `block` / `evasion` は `chance`（0〜1）を `StatusEffect`（`overlay: block` / `evasion`）として同期。`damageTakenToHeal` は `ratio`（被ダメの即時回復割合。バリア吸収後。ATK 基準ではない）を `overlay: damageTakenToHeal` で付与。複数ソースは加算（上限 1）。ブロックは DEF 適用後の物理直接ダメージのみ判定。回避は直接 `damage` のみ（DoT 非対象）。`counter` の `chance` は被攻撃時の反撃確率。上記以外の Stage/Wave 開始パッシブは同じ `chance` フィールドで **発動確率**（未指定=1）。
+**ブロック / 回避 / ダメージ遅延（`buff` + `buffSubKind`）:** `block` / `evasion` は `chance`（0〜1）を `StatusEffect`（`overlay: block` / `evasion`）として同期。`damageDelay` は `ratio` + `buffDurationSec` を `overlay: damageDelay` で付与。被ダメ時に確定ダメージの一部を後払いプールへ送り、持続中は 1 秒ごとに HP へ tick（軽減ではなくタイミングのみ遅延）。複数ソースの `ratio` は加算（上限 1）。ブロックは DEF 適用後の物理直接ダメージのみ判定。回避は直接 `damage` のみ（DoT 非対象）。`counter` の `chance` は被攻撃時の反撃確率。上記以外の Stage/Wave 開始パッシブは同じ `chance` フィールドで **発動確率**（未指定=1）。
 
 **パッシブ発動タイミング（`periodicTrigger`）:** エディタでは「発動タイミング」。`buff` / `debuff` / `heal`（HoT）/ barrier で **常時**（未指定）または **`stageStart` / `waveStart`**。`periodicDispel` は **`stageStart` / `waveStart` / `onDebuffReceived`（対象がデバフを受けた時）**。Stage/Wave 開始時および `onDebuffReceived` では `chance` で発動確率をロール（`block` / `evasion` / `counter` は除外）。`periodicDispel` の **`dispelTriggerLimit`** は **1 Wave 内の発動回数上限**（未指定 = 無制限）。`onDebuffReceived` では効果対象にデバフ付与のたび 1 回判定し、**確率成功時のみ発動回数を消費**（失敗時は消費せず、同一イベントで再判定もしない）。
 
-**読み込み互換（正規化）:** `evasionChance` → `buff`+`evasion`、`block`+`blockChance` → `buff`+`block`、`counterChance` → `counter`、`damageIncrease` / `healReceivedIncrease` → `specialEffect`、`damageTakenToHeal`（旧 top-level effect）→ `buff`+`damageTakenToHeal`、`hot` / `partyHotAura` → `heal`+`hot`、`extendSelfAppliedDebuff` は削除（データから除去済み）
+**読み込み互換（正規化）:** `evasionChance` → `buff`+`evasion`、`block`+`blockChance` → `buff`+`block`、`counterChance` → `counter`、`damageIncrease` / `healReceivedIncrease` → `specialEffect`、`hot` / `partyHotAura` → `heal`+`hot`、`extendSelfAppliedDebuff` / `damageTakenToHeal` は削除（データから除去済み）
 
 **移行（削除済み）:** `selfLowHpDamageScale` → `selfHpRatioBuff`、`damageVsDotTarget` → `specialEffect`（`debuff` + `dot`）、`healAppliesBarrier` → `excessHealToBarrier`、`damageIncrease` の `selfHp` 条件 → `selfHpRatioBuff`
 
@@ -525,16 +525,18 @@ HPとは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `dispelPriority` | 未指定 = `longest`（最長）。`strongest` = 効果量最大を優先                                      |
 | `dispelTriggerLimit` | パッシブ `periodicDispel` のみ。1 Wave 内の発動回数上限（未指定 = 無制限）              |
 
-### ブロック / 回避 / 被ダメ回復（`buff` effect、`buffSubKind`）
+### ブロック / 回避 / ダメージ遅延（`buff` effect、`buffSubKind`）
 
 | フィールド        | 説明                                                                 |
 | ----------------- | -------------------------------------------------------------------- |
-| `buffSubKind`     | `block` / `evasion` / `damageTakenToHeal` / `stat` / `barrier`       |
+| `buffSubKind`     | `block` / `evasion` / `damageDelay` / `stat` / `barrier`       |
 | `chance`          | `block` / `evasion` 用。0〜1。複数ソースは加算（上限 1）             |
-| `ratio`           | `damageTakenToHeal` 用。被ダメの回復割合（0.12 = 12%）               |
+| `ratio`           | `damageDelay` 用。後払いにする被ダメ割合（0.5 = 50%）               |
 | `buffDurationSec` | 付与 buff の持続（秒）                                               |
 
-アクティブは `type: buff` + `buffSubKind` で `StatusEffect` を付与（`overlay: block` / `evasion` / `damageTakenToHeal` 等）。パッシブは `syncBuffAuras` で常時同期。旧 `type: block` / パッシブ `block` / 旧 top-level `damageTakenToHeal` は読み込み時に正規化。
+アクティブは `type: buff` + `buffSubKind` で `StatusEffect` を付与（`overlay: block` / `evasion` / `damageDelay` 等）。パッシブは `syncBuffAuras` で常時同期。旧 `type: block` / パッシブ `block` は読み込み時に正規化。
+
+**闘技士 `df_duelist_active_2`（体力温存）:** 受けたダメージの一部を後払いにする（`damageDelay`）。総被ダメージ量は変化しない。
 
 ### 通常攻撃変形（`basicAttackTransform` effect）
 

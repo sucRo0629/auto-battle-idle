@@ -315,9 +315,9 @@ export interface StatusEffect {
     | "block"
     | "counter"
     | "evasion"
-    | "damageTakenToHeal"
+    | "damageDelay"
     | "basicAttackTransform";
-  /** damageTakenToHeal overlay: 被ダメの回復割合（0.1 = 10%） */
+  /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */
   amount?: ResourceAmountSpec;
@@ -399,7 +399,7 @@ export type BuffSubKind =
   | "barrier"
   | "block"
   | "evasion"
-  | "damageTakenToHeal";
+  | "damageDelay";
 
 /** 通常攻撃変形 — primary effect への部分パッチ */
 export interface BasicAttackTransformPrimaryPatch {
@@ -487,11 +487,14 @@ export interface CombatantState extends Combatant {
   baseThreat?: number;
   /** periodicDispel: Wave 内の残り発動回数（passiveId → 残数） */
   passiveDispelRemainingTriggers?: Record<string, number>;
+  /** damageDelay: 後払いダメージプール */
+  delayedDamagePool?: number;
+  /** damageDelay tick 用（1 秒間隔） */
+  damageDelayTickSec?: number;
 }
 
 export type PassiveEffectKind =
   | "targetRuleOverride"
-  | "damageTakenToHeal"
   | "heal"
   | "excessHealToBarrier"
   | "aoeCrowdBonus"
@@ -938,7 +941,7 @@ export interface BuffSkillEffect extends SkillEffectCommon {
   buffFlatBonus?: number;
   buffDurationSec?: number;
   chance?: number;
-  /** damageTakenToHeal: 被ダメの回復割合（0.1 = 10%） */
+  /** damageDelay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
   amount?: ResourceAmountSpec;
   barrierStack?: boolean;

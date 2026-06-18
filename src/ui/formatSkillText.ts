@@ -454,9 +454,9 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
             effect.chance ?? 0
           )} ${effect.buffDurationSec ?? 0}s`
         );
-      } else if (effect.buffSubKind === "damageTakenToHeal") {
+      } else if (effect.buffSubKind === "damageDelay") {
         extras.push(
-          `${BUFF_SUB_KIND_LABELS.damageTakenToHeal} ${formatPercent(
+          `${BUFF_SUB_KIND_LABELS.damageDelay} ${formatPercent(
             effect.ratio ?? 0
           )} ${effect.buffDurationSec ?? 0}s`
         );
@@ -729,8 +729,6 @@ function formatPassiveEffect(
         def.dispelPriority
       )}${limitLabel}）${target}${metaSuffix}`;
     }
-    case "damageTakenToHeal":
-      return `被ダメの ${formatPercent(def.ratio ?? 0)} を即時回復`;
     case "specialEffect":
       return (
         formatSpecialEffectSpec(def.specialEffectApplyTo, def.specialEffect) ||
@@ -810,14 +808,14 @@ function formatPassiveEffect(
           def.chance ?? 0
         )} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
       }
-      if (def.buffSubKind === "damageTakenToHeal") {
+      if (def.buffSubKind === "damageDelay") {
         const triggerLabel = formatPassiveTriggerSummary(
           def,
           resolvePassivePeriodicTrigger(def),
           "常時"
         );
         metaParts.push(triggerLabel);
-        return `バフ ${BUFF_SUB_KIND_LABELS.damageTakenToHeal} ${formatPercent(
+        return `バフ ${BUFF_SUB_KIND_LABELS.damageDelay} ${formatPercent(
           def.ratio ?? 0
         )} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
       }

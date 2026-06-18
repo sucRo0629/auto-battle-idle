@@ -185,7 +185,6 @@ const LEGACY_PASSIVE_EFFECT_ALIASES: Record<string, PassiveEffectKind> = {
   counterChance: 'counter',
   damageIncrease: 'specialEffect',
   healReceivedIncrease: 'specialEffect',
-  damageTakenToHeal: 'buff',
 };
 
 /** エディタ表示・保存前に旧 effect 名を新 taxonomy へ正規化 */
@@ -223,9 +222,6 @@ export function normalizePassiveSkillForEditor(
       scale: 1 + percent,
       conditions: [{ kind: 'targetHp', maxHpRatio: 1 }],
     };
-  } else if (effectRaw === 'damageTakenToHeal') {
-    next.buffSubKind = 'damageTakenToHeal';
-    next.buffTargetRule = passive.buffTargetRule ?? { kind: 'self' };
   } else if (String(effectRaw) === 'partyHotAura') {
     next.healSubKind = 'hot';
   }
@@ -262,10 +258,10 @@ export function normalizeActiveSkillEffectForEditor(
   if (normalized.type !== 'buff') return normalized;
 
   const subKind = normalized.buffSubKind ?? 'stat';
-  if (subKind === 'damageTakenToHeal') {
+  if (subKind === 'damageDelay') {
     return {
       ...normalized,
-      ratio: normalized.ratio ?? 0.1,
+      ratio: normalized.ratio ?? 0.5,
       buffDurationSec: normalized.buffDurationSec ?? 5,
     };
   }
@@ -2328,10 +2324,10 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         ...(range !== undefined ? { range } : {}),
       });
     }
-    if (buffSubKind === 'damageTakenToHeal') {
+    if (buffSubKind === 'damageDelay') {
       const ratio =
         obj.ratio === undefined
-          ? 0.1
+          ? 0.5
           : requireNumber(obj, 'ratio', context);
       if (ratio < 0 || ratio > 1) {
         invalidField(context, 'ratio', 'must be between 0 and 1');
@@ -2886,7 +2882,7 @@ function requirePassiveEffectParams(
           ...(buffDurationSec !== undefined ? { buffDurationSec } : {}),
         };
       }
-      if (buffSubKind === 'damageTakenToHeal') {
+      if (buffSubKind === 'damageDelay') {
         const ratio = requireNumber(obj, 'ratio', context);
         if (ratio < 0 || ratio > 1) {
           invalidField(context, 'ratio', 'must be between 0 and 1');
@@ -2940,7 +2936,7 @@ function requirePassiveEffectParams(
         invalidField(
           context,
           'buffSubKind',
-          'passive buff supports stat/block/evasion/damageTakenToHeal/barrier',
+          'passive buff supports stat/block/evasion/damageDelay/barrier',
         );
       }
       const buffStatRaw = obj.buffStat;
@@ -3746,9 +3742,6 @@ function parsePassives(raw: unknown): PassiveSkillDef[] {
           scale: 1 + percent,
           conditions: [{ kind: 'targetHp', maxHpRatio: 1 }],
         };
-      } else if (effectRaw === 'damageTakenToHeal') {
-        effectObj.buffSubKind = 'damageTakenToHeal';
-        effectObj.buffTargetRule = obj.buffTargetRule ?? { kind: 'self' };
       } else if (
         effectRaw === 'hot' ||
         effectRaw === 'partyHotAura' ||

@@ -323,7 +323,7 @@ export const BUFF_SUB_KINDS = [
   "barrier",
   "block",
   "evasion",
-  "damageTakenToHeal",
+  "damageDelay",
 ] as const satisfies readonly BuffSubKind[];
 
 export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
@@ -331,7 +331,7 @@ export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
   barrier: "バリア",
   block: "ブロック",
   evasion: "回避",
-  damageTakenToHeal: "被ダメ回復",
+  damageDelay: "ダメージ遅延",
 };
 
 export const DEBUFF_SUB_KINDS = [

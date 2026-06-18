@@ -343,7 +343,7 @@ describe('duelist + assassin front row', () => {
     const engine = createDuelistAssassinEngine();
     const internal = asBattleEngineInternals(engine);
     for (const [id, enemy] of Object.entries(internal.gameData.enemyRegistry)) {
-      enemy.atk = id === 'test_enemy' ? 280 : 15;
+      enemy.atk = id === 'test_enemy' ? 800 : 15;
     }
     engine.startBattle();
     reachWave1Engage(engine);

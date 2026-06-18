@@ -1,5 +1,4 @@
 import type { BattleEventListener } from "./events.ts";
-import { resolveDotAmountFromStatus, resolveHotAmountFromStatus, applyDamageToTarget, applyHealToTarget } from "./combatMath.ts";
 import {
   createAlliesFromPartyState,
   createCooldowns,
@@ -7,7 +6,20 @@ import {
   hideFallenAllyCorpses,
   resetEntityIdCounter,
 } from "./entities.ts";
-import { getEffectiveAttackSpeedMultiplier, getPassiveDefs } from "./combatMath.ts";
+import {
+  applyDamageToTarget,
+  applyHealToTarget,
+  getEffectiveAttackSpeedMultiplier,
+  getPassiveDefs,
+  resolveDotAmountFromStatus,
+  resolveHotAmountFromStatus,
+} from "./combatMath.ts";
+import {
+  applyDelayedDamageTick,
+  computeDamageDelayTickAmount,
+  getDamageDelayRemainingSec,
+  hasActiveDamageDelay,
+} from "./damageDelay.ts";
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
@@ -51,11 +63,11 @@ import {
   type CounterAttackKind,
 } from "./counterEffects.ts";
 import {
-  applyDamageTakenToHeal,
   resolveIncomingHealAmount,
   firePeriodicPassivesForTrigger,
   handlePassiveDispelOnDebuffReceived,
   resetPassiveDispelTriggerLimits,
+  stripPassivesAurasFromSource,
   syncHotAuras,
   syncBuffAuras,
   syncDebuffAuras,
@@ -239,22 +251,6 @@ export class BattleEngine {
     },
   ): void {
     applyThreatFromDamage(actor, target, amount);
-    const hpDamageForHeal = meta?.hpDamage ?? amount;
-    if (!target.isEnemy && target.isAlive && hpDamageForHeal > 0) {
-      const healed = applyDamageTakenToHeal(target, hpDamageForHeal);
-      if (healed > 0) {
-        this.emit({
-          type: "skill",
-          actorId: target.id,
-          targetId: target.id,
-          skillId: "",
-          skillName: "被ダメ回復",
-          effect: "heal",
-          amount: healed,
-          statusLabel: "damageTakenToHeal",
-        });
-      }
-    }
     if (amount > 0 && meta?.attackKind) {
       const counterCallbacks = {
         emit: (event: Parameters<BattleEventListener>[0]) => this.emit(event),
@@ -1556,6 +1552,56 @@ export class BattleEngine {
       }
 
       unit.statusEffects = kept;
+      this.tickDelayedDamage(unit, deltaTime);
+    }
+  }
+
+  private tickDelayedDamage(unit: CombatantState, deltaTime: number): void {
+    const pool = unit.delayedDamagePool ?? 0;
+    if (pool <= 0 || !unit.isAlive) return;
+
+    if (!hasActiveDamageDelay(unit.statusEffects)) {
+      this.applyConfirmedDelayedDamage(unit, pool);
+      unit.delayedDamagePool = 0;
+      unit.damageDelayTickSec = undefined;
+      return;
+    }
+
+    if (unit.damageDelayTickSec === undefined) {
+      unit.damageDelayTickSec = OVERLAY_TICK_SEC;
+    }
+    unit.damageDelayTickSec -= deltaTime;
+
+    while (
+      unit.damageDelayTickSec <= 0 &&
+      (unit.delayedDamagePool ?? 0) > 0 &&
+      unit.isAlive &&
+      hasActiveDamageDelay(unit.statusEffects)
+    ) {
+      const currentPool = unit.delayedDamagePool ?? 0;
+      const remainingSec = getDamageDelayRemainingSec(unit.statusEffects);
+      const tickAmount = computeDamageDelayTickAmount(currentPool, remainingSec);
+      this.applyConfirmedDelayedDamage(unit, tickAmount);
+      unit.damageDelayTickSec += OVERLAY_TICK_SEC;
+    }
+  }
+
+  private applyConfirmedDelayedDamage(
+    unit: CombatantState,
+    amount: number,
+  ): void {
+    const damageResult = applyDelayedDamageTick(unit, amount);
+    if (damageResult.hpDamage <= 0) return;
+
+    this.emit({ type: "hurt", targetId: unit.id });
+    if (damageResult.lethal) {
+      unit.isAlive = false;
+      if (!unit.isEnemy) {
+        stripPassivesAurasFromSource(unit.id, [...this.players, ...this.enemies]);
+      }
+      this.skillSequenceRunner.clearForActor(unit.id);
+      this.noteEnemyCorpseAnchor(unit);
+      this.emit({ type: "death", targetId: unit.id });
     }
   }
 

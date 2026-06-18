@@ -339,15 +339,15 @@
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "at_ballista_basic_attack",
     "passiveIds": [
-      "at_passive_1",
-      "at_ballista_passive_3"
+      "at_ballista_passive_3",
+      "at_passive_1"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "at_passive_1",
           "at_ballista_passive_3",
+          "at_passive_1",
           "at_ballista_active_1",
           "at_ballista_active_2"
         ]

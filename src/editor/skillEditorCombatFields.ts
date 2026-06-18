@@ -1229,7 +1229,7 @@ const PASSIVE_BUFF_SUB_KIND_OPTIONS: Array<{
   { value: "stat", label: "ステータス" },
   { value: "block", label: "ブロック" },
   { value: "evasion", label: "回避" },
-  { value: "damageTakenToHeal", label: "被ダメ回復" },
+  { value: "damageDelay", label: "ダメージ遅延" },
   { value: "barrier", label: "バリア" },
 ];
 
@@ -1278,7 +1278,7 @@ export function appendPassiveBuffFields(
             (current) => {
               current.buffSubKind = buffSubKind;
               current.buffTargetRule ??= { kind: "self" };
-              if (buffSubKind === "damageTakenToHeal") {
+              if (buffSubKind === "damageDelay") {
                 current.ratio ??= 0.1;
               } else if (buffSubKind === "block" || buffSubKind === "evasion") {
                 current.chance ??= 0.1;
@@ -1377,7 +1377,7 @@ export function appendPassiveBuffFields(
     );
     return;
   }
-  if (subKind === "damageTakenToHeal") {
+  if (subKind === "damageDelay") {
     parent.appendChild(
       createFieldRow(
         "ratio",

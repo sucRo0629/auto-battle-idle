@@ -144,13 +144,13 @@ describe('statusEffectDisplay', () => {
     expect(badges[1]?.category).toBe('damageIncrease');
   });
 
-  it('aggregates damageTakenToHeal overlay', () => {
+  it('aggregates damageDelay overlay', () => {
     const badges = aggregateStatStatusEffects(
       [
         {
-          id: 'damageTakenToHeal',
+          id: 'damageDelay',
           kind: 'buff',
-          overlay: 'damageTakenToHeal',
+          overlay: 'damageDelay',
           ratio: 0.25,
           multiplier: 1,
           durationSec: 5,
@@ -160,9 +160,7 @@ describe('statusEffectDisplay', () => {
       { atk: 10, def: 10, reg: 0 },
     );
 
-    expect(badges.map((badge) => badge.category)).toEqual([
-      'damageTakenToHeal',
-    ]);
+    expect(badges.map((badge) => badge.category)).toEqual(['damageDelay']);
     expect(badges[0]?.kind).toBe('buff');
   });
 

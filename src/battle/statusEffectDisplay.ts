@@ -14,7 +14,7 @@ export type StatusDisplayCategory =
   | "counter"
   | "stun"
   | "moveLock"
-  | "damageTakenToHeal";
+  | "damageDelay";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "atk",
@@ -24,7 +24,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "damageReduction",
   "damageIncrease",
   "hot",
-  "damageTakenToHeal",
+  "damageDelay",
   "dot",
   "evasion",
   "block",
@@ -176,9 +176,9 @@ function statusEffectBadgeForOverlay(
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
       };
-    case "damageTakenToHeal":
+    case "damageDelay":
       return {
-        category: "damageTakenToHeal",
+        category: "damageDelay",
         kind: "buff",
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
@@ -278,8 +278,8 @@ function effectsForCategory(
   if (category === "moveLock") {
     return effects.filter((effect) => effect.overlay === "moveLock");
   }
-  if (category === "damageTakenToHeal") {
-    return effects.filter((effect) => effect.overlay === "damageTakenToHeal");
+  if (category === "damageDelay") {
+    return effects.filter((effect) => effect.overlay === "damageDelay");
   }
   return [];
 }
@@ -330,7 +330,7 @@ function aggregateOverlayCategory(
     | "counter"
     | "stun"
     | "moveLock"
-    | "damageTakenToHeal"
+    | "damageDelay"
 ): AggregatedCategoryEffect | null {
   const relevant = effectsForCategory(effects, category);
   if (relevant.length === 0) return null;
@@ -344,7 +344,7 @@ function aggregateOverlayCategory(
       category === "evasion" ||
       category === "block" ||
       category === "counter" ||
-      category === "damageTakenToHeal"
+      category === "damageDelay"
         ? "buff"
         : "debuff",
     remainingRatio: categoryRemainingRatio(effects, category),
@@ -449,7 +449,7 @@ export function aggregateStatStatusEffects(
     "counter",
     "stun",
     "moveLock",
-    "damageTakenToHeal",
+    "damageDelay",
   ] as const) {
     const badge = aggregateOverlayCategory(displayEffects, category);
     if (badge) result.push(badge);

@@ -506,7 +506,7 @@
       "conditions": [
         {
           "kind": "targetHp",
-          "maxHpRatio": 0.5
+          "maxHpRatio": 0.25
         }
       ]
     }

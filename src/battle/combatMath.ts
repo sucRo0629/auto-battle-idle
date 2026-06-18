@@ -284,6 +284,23 @@ export function applyDamageToTarget(
   };
 }
 
+/** 確定済みダメージを HP のみに適用（Barrier / DEF 等は再適用しない） */
+export function applyConfirmedHpDamage(
+  target: CombatantState,
+  amount: number,
+): DamageApplicationResult {
+  if (amount <= 0) {
+    return { hpDamage: 0, barrierDamage: 0, lethal: false };
+  }
+  const hpBefore = target.hp;
+  target.hp = Math.max(0, target.hp - amount);
+  return {
+    hpDamage: hpBefore - target.hp,
+    barrierDamage: 0,
+    lethal: target.hp <= 0,
+  };
+}
+
 export interface DamageResolveOptions {
   atkScaleOverride?: number;
   passiveContext?: PassiveDamageContext;

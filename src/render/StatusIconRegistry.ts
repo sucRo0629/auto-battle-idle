@@ -10,7 +10,7 @@ import blockIconUrl from "../assets/status-icons/block.png";
 import stunIconUrl from "../assets/status-icons/stun.png";
 import evasionIconUrl from "../assets/status-icons/evasion.png";
 import counterIconUrl from "../assets/status-icons/counter.png";
-import damageTakenToHealIconUrl from "../assets/status-icons/damageTakenToHeal.png";
+import damageDelayIconUrl from "../assets/status-icons/damageDelay.png";
 import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
 
 export type { StatusDisplayCategory };
@@ -29,7 +29,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   moveLock: stunIconUrl,
   evasion: evasionIconUrl,
   counter: counterIconUrl,
-  damageTakenToHeal: damageTakenToHealIconUrl,
+  damageDelay: damageDelayIconUrl,
 };
 
 const iconImages = new Map<StatusDisplayCategory, HTMLImageElement>();

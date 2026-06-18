@@ -170,23 +170,6 @@ export function resolveIncomingHealAmount(
   return Math.floor(Math.max(0, baseAmount * mul));
 }
 
-export function applyDamageTakenToHeal(
-  target: CombatantState,
-  damage: number,
-): number {
-  if (!target.isAlive || damage <= 0) return 0;
-  let heal = 0;
-  for (const effect of target.statusEffects) {
-    if (effect.remainingSec <= 0) continue;
-    if (effect.overlay !== 'damageTakenToHeal') continue;
-    heal += Math.floor(damage * (effect.ratio ?? 0));
-  }
-  if (heal <= 0) return 0;
-  const before = target.hp;
-  target.hp = Math.min(target.maxHp, target.hp + heal);
-  return target.hp - before;
-}
-
 export type ExcessHealSource = 'outgoing' | 'incoming';
 
 function passiveExcessHealSources(
@@ -331,17 +314,6 @@ export function applyPassiveBuffFromPassive(
   if (subKind === 'block' || subKind === 'evasion') {
     for (const target of targets) {
       applyPassiveBuffOverlayToTarget(source, target, passive, subKind, durationSec);
-    }
-    return;
-  }
-
-  if (subKind === 'damageTakenToHeal') {
-    const ratio = passive.ratio ?? 0;
-    if (ratio <= 0) return;
-    for (const target of targets) {
-      target.statusEffects.push(
-        createPassiveDamageTakenToHealEffect(source, passive.id, ratio),
-      );
     }
     return;
   }
@@ -523,23 +495,6 @@ function createPassiveOverlayBuffEffect(
     multiplier: 1,
     durationSec,
     remainingSec: durationSec,
-  };
-}
-
-function createPassiveDamageTakenToHealEffect(
-  source: CombatantState,
-  passiveId: string,
-  ratio: number,
-): StatusEffect {
-  return {
-    id: `passive_buff_aura_${source.id}_${passiveId}_damageTakenToHeal`,
-    kind: 'buff',
-    overlay: 'damageTakenToHeal',
-    ratio,
-    sourceId: source.id,
-    multiplier: 1,
-    durationSec: PASSIVE_AURA_DURATION_SEC,
-    remainingSec: PASSIVE_AURA_DURATION_SEC,
   };
 }
 

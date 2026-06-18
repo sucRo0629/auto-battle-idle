@@ -1,7 +1,7 @@
 [
   {
     "id": "at_ballista_active_1",
-    "name": "引き絞り",
+    "name": "重撃態勢",
     "trigger": {
       "kind": "time",
       "value": 10

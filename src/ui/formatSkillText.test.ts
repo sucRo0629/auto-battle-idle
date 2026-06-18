@@ -23,16 +23,16 @@ describe('formatPassiveDescription', () => {
       fragments: ['敵向けターゲット', '敵', 'ATK最高'],
     },
     {
-      name: 'damage taken to heal',
+      name: 'damage delay',
       def: {
-        id: 'passive_damage_taken_heal',
-        name: '聖なる吸収',
+        id: 'test_damage_delay',
+        name: '体力温存',
         effect: 'buff',
-        buffSubKind: 'damageTakenToHeal',
-        ratio: 0.1,
+        buffSubKind: 'damageDelay',
+        ratio: 0.5,
         buffTargetRule: { kind: 'self' },
       } satisfies PassiveSkillDef,
-      fragments: ['被ダメ回復', '10%'],
+      fragments: ['ダメージ遅延', '50%'],
     },
     {
       name: 'self HP ratio buff',
