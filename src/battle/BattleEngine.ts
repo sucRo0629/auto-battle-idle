@@ -678,7 +678,10 @@ export class BattleEngine {
     return target;
   }
 
-  /** 接敵開始: 凍結・署名のみ（位置は deploy 終点のまま自動接近へ） */
+  /**
+ * layout bake のタイミング: しない
+ * 実装箇所: setupEngagedCombat（凍結・署名のみ）
+ */
   private setupEngagedCombat(): void {
     const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
     const leadingRow = getLeadingPlayerFormationRow(placementInputs);
@@ -736,7 +739,10 @@ export class BattleEngine {
     }
   }
 
-  /** 近接/前列構成変化時: formation を battleX へ1回再 bake */
+  /**
+ * layout bake のタイミング: する
+ * 実装箇所: maybeRecomputeEngagedLayout → applyEngagedFormationLayout（部分適用可）
+ */
   private maybeRecomputeEngagedLayout(): void {
     const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
     const leadingRow = getLeadingPlayerFormationRow(placementInputs);
@@ -898,7 +904,10 @@ export class BattleEngine {
     }
   }
 
-  /** 訓練用ダミー Wave: 告知・進軍を省略し最終配置のまま接敵待ち */
+  /**
+ * layout bake のタイミング: する
+ * 実装箇所: prepareTrainingWave → resolveEngagedLayoutForEvent + applyEngagedFormationLayout
+ */
   private prepareTrainingWave(waveIndex: number): void {
     this.waveIndex = waveIndex;
     this.waveAnnouncementActive = false;

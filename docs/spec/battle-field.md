@@ -246,7 +246,13 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ### 4.2 `applyEngagedFormationToBattleX`（R1-fix + L10）
 
-**呼び出しタイミング：** 接敵開始・前列死亡・構成変化（毎 tick 不可）
+**`layout bake` のタイミング：** 接敵開始・前列死亡・構成変化（毎 tick 不可）。`layout bake` の詳細は以下の通り。
+
+| タイミング           | layout bake | 実装箇所                                                         |
+| -------------------- | ----------- | ---------------------------------------------------------------- |
+| 通常 Wave 接敵開始   | しない      | `setupEngagedCombat`（凍結・署名のみ）                           |
+| 訓練ステージ         | する        | `prepareTrainingWave` → `resolveEngagedLayoutForEvent` + `applyEngagedFormationLayout` |
+| 接敵中の構成変化     | する        | `maybeRecomputeEngagedLayout` → `applyEngagedFormationLayout`（部分適用可） |
 
 ```
 1. スロット ideal battleX（§3.3）
@@ -269,7 +275,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ### 4.3 接敵開始
 
-**正本：** Wave 告知と PartyDeploy が同時開始。接敵（`engaged = true`）は **告知 fade-out 開始 + 250ms** 経過 **かつ** 全ユニットが deploy 目標に到達した時点。接敵開始フレームでは `battleX` を layout で上書きせず、自動接近（§4.4）で味方・敵とも接敵する。
+**正本：** Wave 告知と PartyDeploy が同時開始。接敵（`engaged = true`）は **告知 fade-out 開始 + 250ms** 経過 **かつ** 全ユニットが deploy 目標に到達した時点。接敵開始フレームでは `battleX` を layout で上書きせず、自動接近（§4.4）で味方・敵とも接敵する。なお、`layout bake` の詳細は[§4.2](#42-layout-bake)を参照。
 
 敵左進軍・standoff cap による接敵トリガーは廃止。
 
