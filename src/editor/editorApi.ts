@@ -15,6 +15,7 @@ import type {
   PassiveSkillDef,
   Role,
   SkillRegistry,
+  SkillVfxDef,
 } from '../battle/types.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 
@@ -376,11 +377,27 @@ export async function saveEnemyBundle(payload: {
   });
 }
 
-export async function savePresentationSkill(active: ActiveSkillDef): Promise<void> {
+export async function savePresentationSkill(
+  active: ActiveSkillDef,
+  entityPatch?: {
+    entityKind: 'class' | 'enemy';
+    entityId: string;
+    basicAttackVfx: SkillVfxDef;
+  },
+): Promise<void> {
   await fetchJson('/__editor/presentation-skill', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ active }),
+    body: JSON.stringify({
+      active,
+      ...(entityPatch
+        ? {
+            entityKind: entityPatch.entityKind,
+            entityId: entityPatch.entityId,
+            basicAttackVfx: entityPatch.basicAttackVfx,
+          }
+        : {}),
+    }),
   });
 }
 

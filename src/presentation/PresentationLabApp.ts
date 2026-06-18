@@ -1,8 +1,13 @@
 import { normalizeEntityTraits } from '../battle/data/entityTraits.ts';
 import type {
   ActiveSkillDef,
+  AnimPhaseFields,
   EnemyTemplate,
   SkillEffectDef,
+  SkillVfxDef,
+  VfxAnchor,
+  VfxLayer,
+  VfxPlacement,
 } from '../battle/types.ts';
 import {
   fetchClasses,
@@ -21,14 +26,22 @@ import {
   createSelect,
 } from '../editor/formUtils.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
-import { PresentationPreviewRunner } from './PresentationPreviewRunner.ts';
+import { resolveSkillAnimKey, hasSkillAnimKey } from '../render/skillAnimRegistry.ts';
+import { resolveVfxAnimKey, hasVfxAnimKey } from '../render/vfxAnimRegistry.ts';
+import {
+  PresentationPreviewRunner,
+  type PreviewPlayMode,
+} from './PresentationPreviewRunner.ts';
 import {
   resolvePreviewBattleLayout,
   resolvePreviewBattleLayoutFallback,
 } from './previewLayout.ts';
 import type { PreviewEntity } from './presentationTimeline.ts';
 import type { PresentationTimeline } from './presentationTimeline.ts';
-import { validatePresentationSkillSave } from './presentationSaveValidation.ts';
+import {
+  validateBasicAttackVfxSave,
+  validatePresentationSkillSave,
+} from './presentationSaveValidation.ts';
 
 type EntityKind = 'class' | 'enemy';
 
@@ -95,7 +108,9 @@ export class PresentationLabApp {
   private skillId = '';
   private effectIndex = 0;
   private skillDraft: ActiveSkillDef | null = null;
+  private basicAttackVfxDraft: SkillVfxDef | undefined = undefined;
   private dirty = false;
+  private entityTraitsDirty = false;
   private previewTarget: PreviewEntity | null = null;
 
   private readonly runner: PresentationPreviewRunner;
@@ -171,6 +186,7 @@ export class PresentationLabApp {
     }
 
     this.loadSkillDraft();
+    this.loadEntityTraitsDraft();
     if (
       query.effectIndex !== undefined &&
       Number.isFinite(query.effectIndex) &&
@@ -195,6 +211,23 @@ export class PresentationLabApp {
     this.dirty = false;
   }
 
+  private loadEntityTraitsDraft(): void {
+    if (this.entityKind === 'class') {
+      const cls = this.classes.find((entry) => entry.id === this.entityId);
+      const traits = normalizeEntityTraits(cls?.traits);
+      this.basicAttackVfxDraft = traits.basicAttackVfx
+        ? structuredClone(traits.basicAttackVfx)
+        : undefined;
+    } else {
+      const enemy = this.enemies.find((entry) => entry.id === this.entityId);
+      const traits = normalizeEntityTraits(enemy?.traits);
+      this.basicAttackVfxDraft = traits.basicAttackVfx
+        ? structuredClone(traits.basicAttackVfx)
+        : undefined;
+    }
+    this.entityTraitsDirty = false;
+  }
+
   private currentEntityTraits(): PreviewEntity {
     if (this.entityKind === 'class') {
       const cls = this.classes.find((entry) => entry.id === this.entityId);
@@ -204,7 +237,7 @@ export class PresentationLabApp {
         role: cls?.role,
         rangePx: traits.rangePx,
         damageType: traits.damageType,
-        basicAttackVfx: traits.basicAttackVfx,
+        basicAttackVfx: this.basicAttackVfxDraft ?? traits.basicAttackVfx,
         isEnemy: false,
       };
     }
@@ -214,7 +247,7 @@ export class PresentationLabApp {
       entityId: this.entityId,
       rangePx: traits.rangePx,
       damageType: traits.damageType,
-      basicAttackVfx: traits.basicAttackVfx,
+      basicAttackVfx: this.basicAttackVfxDraft ?? traits.basicAttackVfx,
       isEnemy: true,
     };
   }
@@ -285,6 +318,14 @@ export class PresentationLabApp {
     this.setStatus('未保存の変更があります');
   }
 
+  private markEntityTraitsDirty(): void {
+    this.entityTraitsDirty = true;
+    this.dirty = true;
+    this.syncPreviewEntities();
+    this.refreshTimeline();
+    this.setStatus('未保存の変更があります');
+  }
+
   private setStatus(message: string, isError = false): void {
     this.statusEl.textContent = message;
     this.statusEl.classList.toggle('presentation-lab-status-error', isError);
@@ -292,6 +333,9 @@ export class PresentationLabApp {
 
   private renderToolbar(toolbar: HTMLElement): void {
     toolbar.replaceChildren();
+
+    const selectsRow = createEl('div', 'presentation-lab-toolbar-selects');
+    const actionsRow = createEl('div', 'presentation-lab-toolbar-actions');
 
     const entityKindSelect = createSelect(
       this.entityKind,
@@ -308,6 +352,7 @@ export class PresentationLabApp {
         this.skillId = skills[0]?.id ?? '';
         this.effectIndex = 0;
         this.loadSkillDraft();
+        this.loadEntityTraitsDraft();
         this.renderToolbar(toolbar);
         this.renderForm();
         this.syncPreviewEntities();
@@ -332,6 +377,7 @@ export class PresentationLabApp {
       this.skillId = skills[0]?.id ?? '';
       this.effectIndex = 0;
       this.loadSkillDraft();
+      this.loadEntityTraitsDraft();
       this.renderToolbar(toolbar);
       this.renderForm();
       this.syncPreviewEntities();
@@ -363,7 +409,14 @@ export class PresentationLabApp {
       this.refreshTimeline();
     });
 
-    const playBtn = createActionButton('▶ 再生', 'editor-btn', () => {
+    selectsRow.append(
+      createFieldRow('種別', entityKindSelect),
+      createFieldRow('entity', entitySelect),
+      createFieldRow('skill', skillSelect),
+      createFieldRow('effect', effectSelect),
+    );
+
+    const play = (mode: PreviewPlayMode): void => {
       if (!this.skillDraft || !this.previewTarget) return;
       this.runner.play({
         skill: this.skillDraft,
@@ -371,9 +424,16 @@ export class PresentationLabApp {
         actor: this.currentEntityTraits(),
         target: this.previewTarget,
         slotKind: this.currentSlotKind(),
+        mode,
       });
-    });
-    playBtn.classList.add('presentation-lab-play-btn');
+    };
+
+    const playAllBtn = createActionButton('▶ 全体', 'editor-btn', () => play('full'));
+    playAllBtn.classList.add('presentation-lab-play-btn');
+    const playBodyBtn = createActionButton('▶ bodyのみ', 'editor-btn', () => play('body'));
+    playBodyBtn.classList.add('presentation-lab-play-btn');
+    const playVfxBtn = createActionButton('▶ VFXのみ', 'editor-btn', () => play('vfx'));
+    playVfxBtn.classList.add('presentation-lab-play-btn');
 
     const resetBtn = createButton('↺ リセット', 'editor-btn', () => {
       this.runner.reset();
@@ -388,16 +448,8 @@ export class PresentationLabApp {
     });
     saveBtn.disabled = !this.dirty;
 
-    toolbar.append(
-      createFieldRow('種別', entityKindSelect),
-      createFieldRow('entity', entitySelect),
-      createFieldRow('skill', skillSelect),
-      createFieldRow('effect', effectSelect),
-      playBtn,
-      resetBtn,
-      reloadBtn,
-      saveBtn,
-    );
+    actionsRow.append(playAllBtn, playBodyBtn, playVfxBtn, resetBtn, reloadBtn, saveBtn);
+    toolbar.append(selectsRow, actionsRow);
   }
 
   private renderForm(): void {
@@ -411,85 +463,184 @@ export class PresentationLabApp {
       return;
     }
 
+    const columns = createEl('div', 'presentation-lab-form-columns');
+    const isBasic = this.currentSlotKind() === 'basic';
+    const bodyAnimKey = resolveSkillAnimKey(skill.id, this.effectIndex);
+
+    columns.appendChild(
+      this.buildBodySection(effect, bodyAnimKey),
+      this.buildVfxSection(skill, effect, isBasic),
+      this.buildCommonSection(skill, effect),
+    );
+
+    const labLink = createEl('p', 'presentation-lab-hint');
+    labLink.textContent =
+      '保存先: data/skills/actives/（該当 stem ファイルへ upsert）。通常攻撃 VFX は classes.json / enemies.json の traits.basicAttackVfx';
+
+    this.formHost.append(columns, labLink);
+  }
+
+  private buildBodySection(
+    effect: SkillEffectDef,
+    bodyAnimKey: string | null,
+  ): HTMLElement {
     const section = createEl('section', 'presentation-lab-section');
     const heading = createEl('h2', 'presentation-lab-section-title');
-    heading.textContent = '演出パラメータ';
+    heading.textContent = 'Body アニメ';
+    section.appendChild(heading);
+
+    appendAssetState(
+      section,
+      'body animKey',
+      bodyAnimKey,
+      bodyAnimKey !== null && hasSkillAnimKey(bodyAnimKey),
+    );
+
+    const grid = createEl('div', 'editor-grid');
+    section.appendChild(grid);
+    appendAnimPhaseFields(grid, effect, (mutator) => {
+      this.patchEffect((draft) => mutator(draft));
+    });
+
+    const phaseHint = createEl('p', 'presentation-lab-hint');
+    phaseHint.textContent =
+      'animLoopFrame を指定すると intro → hold → outro の 3 段再生。hold 時間は resolveSkillBodyPlaybackSec が決める。';
+    grid.appendChild(phaseHint);
+
+    return section;
+  }
+
+  private buildVfxSection(
+    skill: ActiveSkillDef,
+    effect: SkillEffectDef,
+    isBasic: boolean,
+  ): HTMLElement {
+    const section = createEl('section', 'presentation-lab-section');
+    const heading = createEl('h2', 'presentation-lab-section-title');
+    heading.textContent = isBasic ? 'VFX（traits.basicAttackVfx）' : 'VFX';
+    section.appendChild(heading);
+
+    const mainVfxKey = resolveVfxAnimKey(skill.id, this.effectIndex, 'main');
+    appendAssetState(
+      section,
+      'main vfxKey',
+      mainVfxKey,
+      mainVfxKey !== null && hasVfxAnimKey(mainVfxKey),
+    );
+
+    const mainGrid = createEl('div', 'editor-grid');
+    section.appendChild(mainGrid);
+
+    if (isBasic) {
+      const vfx = this.basicAttackVfxDraft ?? {};
+      appendVfxEnabledRow(mainGrid, 'PNG VFX 有効', vfx.enabled !== false, (enabled) => {
+        this.patchBasicAttackVfx((draft) => {
+          draft.enabled = enabled;
+        });
+      });
+      appendAnimPhaseFields(mainGrid, vfx, (mutator) => {
+        this.patchBasicAttackVfx(mutator);
+      });
+      appendVfxPlacementFields(
+        mainGrid,
+        vfx.placement,
+        (mutator) => {
+          this.patchBasicAttackVfx((draft) => {
+            const placement = { anchor: 'target' as VfxAnchor, ...draft.placement };
+            mutator(placement);
+            draft.placement = placement;
+          });
+        },
+        () => {
+          this.patchBasicAttackVfx((draft) => {
+            delete draft.placement;
+          });
+        },
+      );
+    } else {
+      const vfx = effect.vfx ?? {};
+      appendVfxEnabledRow(mainGrid, 'vfx.enabled', vfx.enabled !== false, (enabled) => {
+        this.patchEffectVfx('vfx', (draft) => {
+          draft.enabled = enabled;
+        });
+      });
+      appendAnimPhaseFields(mainGrid, vfx, (mutator) => {
+        this.patchEffectVfx('vfx', mutator);
+      });
+      appendVfxPlacementFields(
+        mainGrid,
+        vfx.placement,
+        (mutator) => {
+          this.patchEffectVfx('vfx', (draft) => {
+            const placement = { anchor: 'target' as VfxAnchor, ...draft.placement };
+            mutator(placement);
+            draft.placement = placement;
+          });
+        },
+        () => {
+          this.patchEffectVfx('vfx', (draft) => {
+            delete draft.placement;
+          });
+        },
+      );
+    }
+
+    if (effect.type === 'damage' || effect.type === 'dot') {
+      const hitHeading = createEl('h3', 'presentation-lab-section-title');
+      hitHeading.textContent = 'hitVfx';
+      section.appendChild(hitHeading);
+
+      const hitVfxKey = resolveVfxAnimKey(skill.id, this.effectIndex, 'hit');
+      appendAssetState(
+        section,
+        'hit vfxKey',
+        hitVfxKey,
+        hitVfxKey !== null && hasVfxAnimKey(hitVfxKey),
+      );
+
+      const hitGrid = createEl('div', 'editor-grid');
+      section.appendChild(hitGrid);
+      const hitVfx = effect.hitVfx ?? {};
+      appendVfxEnabledRow(hitGrid, 'hitVfx.enabled', hitVfx.enabled !== false, (enabled) => {
+        this.patchEffectVfx('hitVfx', (draft) => {
+          draft.enabled = enabled;
+        });
+      });
+      appendAnimPhaseFields(hitGrid, hitVfx, (mutator) => {
+        this.patchEffectVfx('hitVfx', mutator);
+      });
+      appendVfxPlacementFields(
+        hitGrid,
+        hitVfx.placement,
+        (mutator) => {
+          this.patchEffectVfx('hitVfx', (draft) => {
+            const placement = { anchor: 'footTarget' as VfxAnchor, ...draft.placement };
+            mutator(placement);
+            draft.placement = placement;
+          });
+        },
+        () => {
+          this.patchEffectVfx('hitVfx', (draft) => {
+            delete draft.placement;
+          });
+        },
+      );
+    }
+
+    return section;
+  }
+
+  private buildCommonSection(
+    skill: ActiveSkillDef,
+    effect: SkillEffectDef,
+  ): HTMLElement {
+    const section = createEl('section', 'presentation-lab-section presentation-lab-form-span-all');
+    const heading = createEl('h2', 'presentation-lab-section-title');
+    heading.textContent = '共通';
     section.appendChild(heading);
 
     const grid = createEl('div', 'editor-grid');
     section.appendChild(grid);
-
-    grid.appendChild(
-      createFieldRow(
-        'animStartFrame',
-        createNumberInput(effect.animStartFrame ?? 0, (value) => {
-          this.patchEffect((draft) => {
-            if (value <= 0) {
-              delete draft.animStartFrame;
-            } else {
-              draft.animStartFrame = Math.floor(value);
-            }
-          });
-        }, { emptyWhen: 0, step: 1, min: 0 }),
-      ),
-    );
-
-    grid.appendChild(
-      createFieldRow(
-        'animIntroEndFrame',
-        createNumberInput(effect.animIntroEndFrame ?? -1, (value) => {
-          this.patchEffect((draft) => {
-            if (value < 0) delete draft.animIntroEndFrame;
-            else draft.animIntroEndFrame = Math.floor(value);
-          });
-        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=loop開始' }),
-      ),
-    );
-
-    grid.appendChild(
-      createFieldRow(
-        'animLoopFrame',
-        createNumberInput(effect.animLoopFrame ?? -1, (value) => {
-          this.patchEffect((draft) => {
-            if (value < 0) {
-              delete draft.animLoopFrame;
-              delete draft.animLoopEndFrame;
-              delete draft.animIntroEndFrame;
-              delete draft.animOutroStartFrame;
-            } else {
-              draft.animLoopFrame = Math.floor(value);
-            }
-          });
-        }, { emptyWhen: -1, step: 1, min: 0, placeholder: 'ループ開始' }),
-      ),
-    );
-
-    grid.appendChild(
-      createFieldRow(
-        'animLoopEndFrame',
-        createNumberInput(effect.animLoopEndFrame ?? -1, (value) => {
-          this.patchEffect((draft) => {
-            if (value < 0) delete draft.animLoopEndFrame;
-            else draft.animLoopEndFrame = Math.floor(value);
-          });
-        }, { emptyWhen: -1, step: 1, min: 0, placeholder: 'ループ終了（省略=開始）' }),
-      ),
-    );
-
-    grid.appendChild(
-      createFieldRow(
-        'animOutroStartFrame',
-        createNumberInput(effect.animOutroStartFrame ?? -1, (value) => {
-          this.patchEffect((draft) => {
-            if (value < 0) {
-              delete draft.animOutroStartFrame;
-            } else {
-              draft.animOutroStartFrame = Math.floor(value);
-            }
-          });
-        }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=loop終了+1' }),
-      ),
-    );
 
     grid.appendChild(
       createFieldRow(
@@ -505,26 +656,6 @@ export class PresentationLabApp {
         }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=即時' }),
       ),
     );
-
-    const applyHint = createEl('p', 'presentation-lab-hint');
-    applyHint.textContent =
-      'applyFrame = strip 内の効果適用コマ（絶対）。animStartFrame 以降。8 FPS（1 コマ = 0.125 秒）。body は即再生、VFX・ダメージは apply コマ。';
-    grid.appendChild(applyHint);
-
-    const phaseHint = createEl('p', 'presentation-lab-hint');
-    phaseHint.textContent =
-      'animLoopFrame を指定すると intro（start〜introEnd）→ hold（loop開始〜loop終了をループ）→ outro（outroStart〜終端）の 3 段再生。hold 時間は resolveSkillBodyPlaybackSec が決める。introEnd 省略時は loop開始、outroStart 省略時は loop終了+1。';
-    grid.appendChild(phaseHint);
-    appendHintLines(grid, [
-      [
-        'applyFrame',
-        'body を先に見せて、効果の発生だけ遅らせたいときのコマ位置。ダメージ / 回復 / VFX の適用タイミングをずらす。',
-      ],
-      [
-        'moveDurationSec',
-        'move ステップの移動補間秒。battleX の位置移動を何秒で終えるかを決める。',
-      ],
-    ]);
 
     if (effect.type === 'move') {
       grid.appendChild(
@@ -543,37 +674,56 @@ export class PresentationLabApp {
 
     grid.appendChild(
       createFieldRow(
-        'vfx.enabled',
-        (() => {
-          const row = createEl('div', 'presentation-lab-field presentation-lab-field-checkbox');
-          const input = createEl('input') as HTMLInputElement;
-          input.type = 'checkbox';
-          input.checked = effect.vfx?.enabled !== false;
-          input.addEventListener('change', () => {
-            this.patchEffect((draft) => {
-              if (!input.checked) {
-                draft.vfx = { ...(draft.vfx ?? {}), enabled: false };
-                return;
-              }
-              if (draft.vfx) {
-                draft.vfx = { ...draft.vfx, enabled: true };
-              } else {
-                draft.vfx = { enabled: true };
-              }
-            });
+        'useDurationSec',
+        createNumberInput(skill.useDurationSec ?? 0, (value) => {
+          this.patchSkill((draft) => {
+            if (value <= 0) {
+              delete draft.useDurationSec;
+            } else {
+              draft.useDurationSec = value;
+            }
           });
-          row.appendChild(createEl('label', undefined, 'PNG VFX 有効'));
-          row.appendChild(input);
-          return row;
-        })(),
+        }, { emptyWhen: 0, step: 0.05, min: 0, placeholder: '0 = 即時' }),
       ),
     );
 
-    const labLink = createEl('p', 'presentation-lab-hint');
-    labLink.textContent =
-      '保存先: data/skills/actives/（該当 stem ファイルへ upsert）';
+    appendHintLines(grid, [
+      [
+        'applyFrame',
+        'body を先に見せて、効果の発生だけ遅らせたいときのコマ位置。VFX・ダメージは apply コマ（8 FPS）。',
+      ],
+      [
+        'useDurationSec',
+        '詠唱など body hold 延長。CD は止めない。',
+      ],
+    ]);
 
-    this.formHost.append(section, labLink);
+    return section;
+  }
+
+  private patchBasicAttackVfx(mutator: (draft: SkillVfxDef) => void): void {
+    const draft = { ...(this.basicAttackVfxDraft ?? {}) };
+    mutator(draft);
+    this.basicAttackVfxDraft = draft;
+    this.markEntityTraitsDirty();
+    this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
+    this.renderForm();
+  }
+
+  private patchEffectVfx(
+    which: 'vfx' | 'hitVfx',
+    mutator: (draft: SkillVfxDef) => void,
+  ): void {
+    this.patchEffect((effect) => {
+      const current = which === 'vfx' ? effect.vfx : effect.hitVfx;
+      const draft = { ...(current ?? {}) };
+      mutator(draft);
+      if (which === 'vfx') {
+        effect.vfx = draft;
+      } else {
+        effect.hitVfx = draft;
+      }
+    });
   }
 
   private patchSkill(mutator: (draft: ActiveSkillDef) => void): void {
@@ -582,6 +732,7 @@ export class PresentationLabApp {
     this.markDirty();
     this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
     this.renderForm();
+    this.refreshTimeline();
   }
 
   private patchEffect(mutator: (draft: SkillEffectDef) => void): void {
@@ -698,11 +849,20 @@ export class PresentationLabApp {
 
   private async reloadFromServer(): Promise<void> {
     try {
-      this.skills = await fetchSkills();
+      const [classes, enemies, skills] = await Promise.all([
+        fetchClasses(),
+        fetchEnemies(),
+        fetchSkills(),
+      ]);
+      this.classes = classes;
+      this.enemies = enemies;
+      this.skills = skills;
       this.loadSkillDraft();
+      this.loadEntityTraitsDraft();
       this.dirty = false;
       this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
       this.renderForm();
+      this.syncPreviewEntities();
       this.refreshTimeline();
       this.setStatus('サーバーから再読込しました');
     } catch (error) {
@@ -720,10 +880,34 @@ export class PresentationLabApp {
       this.setStatus(validationError, true);
       return;
     }
+    if (this.entityTraitsDirty) {
+      const traitsError = validateBasicAttackVfxSave(this.basicAttackVfxDraft ?? {});
+      if (traitsError) {
+        this.setStatus(traitsError, true);
+        return;
+      }
+    }
     try {
-      await savePresentationSkill(this.skillDraft);
-      this.skills = await fetchSkills();
+      await savePresentationSkill(
+        this.skillDraft,
+        this.entityTraitsDirty
+          ? {
+              entityKind: this.entityKind,
+              entityId: this.entityId,
+              basicAttackVfx: this.basicAttackVfxDraft ?? {},
+            }
+          : undefined,
+      );
+      const [classes, enemies, skills] = await Promise.all([
+        fetchClasses(),
+        fetchEnemies(),
+        fetchSkills(),
+      ]);
+      this.classes = classes;
+      this.enemies = enemies;
+      this.skills = skills;
       this.loadSkillDraft();
+      this.loadEntityTraitsDraft();
       this.dirty = false;
       this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
       this.setStatus('保存しました');
@@ -738,6 +922,190 @@ export class PresentationLabApp {
   destroy(): void {
     this.runner.destroy();
   }
+}
+
+const VFX_ANCHOR_OPTIONS: { value: VfxAnchor; label: string }[] = [
+  { value: 'actor', label: 'actor' },
+  { value: 'target', label: 'target' },
+  { value: 'between', label: 'between' },
+  { value: 'footActor', label: 'footActor' },
+  { value: 'footTarget', label: 'footTarget' },
+];
+
+const VFX_LAYER_OPTIONS: { value: VfxLayer; label: string }[] = [
+  { value: 'behind', label: 'behind' },
+  { value: 'front', label: 'front' },
+];
+
+function appendAssetState(
+  parent: HTMLElement,
+  label: string,
+  key: string | null,
+  hasAsset: boolean,
+): void {
+  const row = createEl('p', 'presentation-lab-asset-state');
+  const status = hasAsset ? 'PNG あり' : 'PNG なし';
+  row.textContent = `${label}: ${key ?? '—'} (${status})`;
+  parent.appendChild(row);
+}
+
+function appendAnimPhaseFields(
+  grid: HTMLElement,
+  fields: AnimPhaseFields,
+  patch: (mutator: (draft: AnimPhaseFields) => void) => void,
+): void {
+  grid.appendChild(
+    createFieldRow(
+      'animStartFrame',
+      createNumberInput(fields.animStartFrame ?? 0, (value) => {
+        patch((draft) => {
+          if (value <= 0) delete draft.animStartFrame;
+          else draft.animStartFrame = Math.floor(value);
+        });
+      }, { emptyWhen: 0, step: 1, min: 0 }),
+    ),
+  );
+  grid.appendChild(
+    createFieldRow(
+      'animIntroEndFrame',
+      createNumberInput(fields.animIntroEndFrame ?? -1, (value) => {
+        patch((draft) => {
+          if (value < 0) delete draft.animIntroEndFrame;
+          else draft.animIntroEndFrame = Math.floor(value);
+        });
+      }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=loop開始' }),
+    ),
+  );
+  grid.appendChild(
+    createFieldRow(
+      'animLoopFrame',
+      createNumberInput(fields.animLoopFrame ?? -1, (value) => {
+        patch((draft) => {
+          if (value < 0) {
+            delete draft.animLoopFrame;
+            delete draft.animLoopEndFrame;
+            delete draft.animIntroEndFrame;
+            delete draft.animOutroStartFrame;
+          } else {
+            draft.animLoopFrame = Math.floor(value);
+          }
+        });
+      }, { emptyWhen: -1, step: 1, min: 0, placeholder: 'ループ開始' }),
+    ),
+  );
+  grid.appendChild(
+    createFieldRow(
+      'animLoopEndFrame',
+      createNumberInput(fields.animLoopEndFrame ?? -1, (value) => {
+        patch((draft) => {
+          if (value < 0) delete draft.animLoopEndFrame;
+          else draft.animLoopEndFrame = Math.floor(value);
+        });
+      }, { emptyWhen: -1, step: 1, min: 0, placeholder: 'ループ終了（省略=開始）' }),
+    ),
+  );
+  grid.appendChild(
+    createFieldRow(
+      'animOutroStartFrame',
+      createNumberInput(fields.animOutroStartFrame ?? -1, (value) => {
+        patch((draft) => {
+          if (value < 0) delete draft.animOutroStartFrame;
+          else draft.animOutroStartFrame = Math.floor(value);
+        });
+      }, { emptyWhen: -1, step: 1, min: 0, placeholder: '省略=loop終了+1' }),
+    ),
+  );
+}
+
+function appendVfxPlacementFields(
+  grid: HTMLElement,
+  placement: VfxPlacement | undefined,
+  patchPlacement: (mutator: (placement: VfxPlacement) => void) => void,
+  clearPlacement?: () => void,
+): void {
+  grid.appendChild(
+    createFieldRow(
+      'placement.anchor',
+      createSelect(placement?.anchor ?? '', [
+        { value: '', label: '— 既定 —' },
+        ...VFX_ANCHOR_OPTIONS,
+      ], (value) => {
+        if (!value) {
+          clearPlacement?.();
+          return;
+        }
+        patchPlacement((p) => {
+          p.anchor = value as VfxAnchor;
+        });
+      }),
+    ),
+  );
+  grid.appendChild(
+    createFieldRow(
+      'placement.offsetX',
+      createNumberInput(placement?.offsetX ?? 0, (value) => {
+        patchPlacement((p) => {
+          if (value === 0) delete p.offsetX;
+          else p.offsetX = Math.floor(value);
+        });
+      }, { emptyWhen: 0, step: 1 }),
+    ),
+  );
+  grid.appendChild(
+    createFieldRow(
+      'placement.offsetY',
+      createNumberInput(placement?.offsetY ?? 0, (value) => {
+        patchPlacement((p) => {
+          if (value === 0) delete p.offsetY;
+          else p.offsetY = Math.floor(value);
+        });
+      }, { emptyWhen: 0, step: 1 }),
+    ),
+  );
+  grid.appendChild(
+    createFieldRow(
+      'placement.layer',
+      createSelect(placement?.layer ?? '', [
+        { value: '', label: '— 既定 —' },
+        ...VFX_LAYER_OPTIONS,
+      ], (value) => {
+        if (!value) {
+          patchPlacement((p) => {
+            delete p.layer;
+          });
+          return;
+        }
+        patchPlacement((p) => {
+          p.layer = value as VfxLayer;
+        });
+      }),
+    ),
+  );
+}
+
+function appendVfxEnabledRow(
+  grid: HTMLElement,
+  label: string,
+  enabled: boolean,
+  onChange: (enabled: boolean) => void,
+): void {
+  grid.appendChild(
+    createFieldRow(
+      label,
+      (() => {
+        const row = createEl('div', 'presentation-lab-field presentation-lab-field-checkbox');
+        const input = createEl('input') as HTMLInputElement;
+        input.type = 'checkbox';
+        input.checked = enabled;
+        input.addEventListener('change', () => {
+          onChange(input.checked);
+        });
+        row.appendChild(createEl('label', undefined, label));
+        row.appendChild(input);
+        return row;
+      })(),
+    ),
+  );
 }
 
 function buildTimelineSegments(

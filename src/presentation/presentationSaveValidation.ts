@@ -1,4 +1,8 @@
-import type { ActiveSkillDef, SkillEffectDef } from '../battle/types.ts';
+import type {
+  ActiveSkillDef,
+  SkillEffectDef,
+  SkillVfxDef,
+} from '../battle/types.ts';
 import type { SkillAnimPhaseFields } from '../render/skillAnimPlayback.ts';
 
 function validateAnimPhaseFields(
@@ -57,11 +61,35 @@ function validateAnimPhaseFields(
   return null;
 }
 
+function validateSkillVfxDef(
+  vfx: SkillVfxDef,
+  label: string,
+): string | null {
+  return validateAnimPhaseFields(vfx, label);
+}
+
 function validateEffectPresentation(
   effect: SkillEffectDef,
   label: string,
 ): string | null {
-  return validateAnimPhaseFields(effect, label);
+  const bodyError = validateAnimPhaseFields(effect, label);
+  if (bodyError) return bodyError;
+  if (effect.vfx) {
+    const vfxError = validateSkillVfxDef(effect.vfx, `${label}.vfx`);
+    if (vfxError) return vfxError;
+  }
+  if (effect.hitVfx) {
+    const hitVfxError = validateSkillVfxDef(effect.hitVfx, `${label}.hitVfx`);
+    if (hitVfxError) return hitVfxError;
+  }
+  return null;
+}
+
+/** traits.basicAttackVfx 保存前検証 */
+export function validateBasicAttackVfxSave(
+  vfx: SkillVfxDef,
+): string | null {
+  return validateSkillVfxDef(vfx, 'traits.basicAttackVfx');
 }
 
 /** 演出ラボ保存前のクライアント検証（サーバー validateGameData と同じ制約） */

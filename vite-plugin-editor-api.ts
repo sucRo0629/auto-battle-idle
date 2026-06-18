@@ -7,7 +7,8 @@ import type {
   ActiveSkillDef,
   EnemyTemplate,
   PassiveSkillDef,
-} from './src/battle/types.ts';
+  SkillVfxDef,
+} from '../battle/types.ts';
 import type { ClassPresetBeforeEnrich } from './src/progression/skillUnlocks.ts';
 import { ensureClassGrowthFields } from './src/editor/editorApi.ts';
 import {
@@ -128,6 +129,9 @@ interface EnemyBundleBody {
 
 interface PresentationSkillBody {
   active: ActiveSkillDef;
+  entityKind?: 'class' | 'enemy';
+  entityId?: string;
+  basicAttackVfx?: SkillVfxDef;
 }
 
 interface ClassStatsPatchBody {
@@ -262,13 +266,57 @@ async function applyPresentationSkill(
   const nextActives = upsertById(skillsRoot.actives, body.active);
 
   const validationBase = loadValidationPayload();
+  let nextClasses = validationBase.classes as ClassPresetBeforeEnrich[];
+  let nextEnemies = validationBase.enemies as EnemyTemplate[];
+  const reloadFiles: string[] = [];
+
+  if (
+    body.entityKind &&
+    body.entityId &&
+    body.basicAttackVfx !== undefined
+  ) {
+    if (body.entityKind === 'class') {
+      nextClasses = (nextClasses as ClassPresetBeforeEnrich[]).map((cls) => {
+        if (cls.id !== body.entityId) return cls;
+        return {
+          ...cls,
+          traits: {
+            ...cls.traits,
+            basicAttackVfx: body.basicAttackVfx,
+          },
+        };
+      });
+      reloadFiles.push(READ_FILES.classes);
+    } else {
+      nextEnemies = (nextEnemies as EnemyTemplate[]).map((enemy) => {
+        if (enemy.id !== body.entityId) return enemy;
+        return {
+          ...enemy,
+          traits: {
+            ...enemy.traits,
+            basicAttackVfx: body.basicAttackVfx,
+          },
+        };
+      });
+      reloadFiles.push(READ_FILES.enemies);
+    }
+  }
+
   validateAll({
     ...validationBase,
+    classes: nextClasses,
+    enemies: nextEnemies,
     skills: { passives: skillsRoot.passives, actives: nextActives },
   });
 
   const writtenSkillFiles = upsertSkillsToFiles([], [body.active]);
-  await reloadGameDataModules(server, writtenSkillFiles);
+  if (reloadFiles.includes(READ_FILES.classes)) {
+    writeJsonFile(READ_FILES.classes, nextClasses);
+  }
+  if (reloadFiles.includes(READ_FILES.enemies)) {
+    writeJsonFile(READ_FILES.enemies, nextEnemies);
+  }
+  await reloadGameDataModules(server, [...reloadFiles, ...writtenSkillFiles]);
 }
 
 export function editorApiPlugin(): Plugin {

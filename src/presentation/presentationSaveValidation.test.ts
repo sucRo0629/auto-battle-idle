@@ -64,7 +64,7 @@ describe('validatePresentationSkillSave', () => {
     expect(validatePresentationSkillSave(skill)).toBeNull();
   });
 
-  it('rejects animOutroStartFrame on or before loop end', () => {
+  it('rejects animOutroStartFrame on or before loop end on body', () => {
     const skill = buffSkill([
       {
         target: { kind: 'self' },
@@ -80,5 +80,25 @@ describe('validatePresentationSkillSave', () => {
       },
     ]);
     expect(validatePresentationSkillSave(skill)).toMatch(/animOutroStartFrame/);
+  });
+
+  it('rejects invalid vfx animLoopFrame on effect', () => {
+    const skill = buffSkill([
+      {
+        target: { kind: 'self' },
+        type: 'buff',
+        buffSubKind: 'stat',
+        buffStat: 'def',
+        buffMultiplier: 1.2,
+        buffDurationSec: 5,
+        vfx: {
+          animLoopFrame: 2,
+          animIntroEndFrame: 2,
+          animLoopEndFrame: 3,
+          animOutroStartFrame: 3,
+        },
+      },
+    ]);
+    expect(validatePresentationSkillSave(skill)).toMatch(/effect\[0\]\.vfx.*animOutroStartFrame/);
   });
 });

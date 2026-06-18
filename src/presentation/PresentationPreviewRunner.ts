@@ -14,8 +14,10 @@ import {
   type PreviewEntity,
 } from './presentationTimeline.ts';
 import {
+  buildSkillPresentationContext,
   playSkillBody,
   playSkillHitFeedback,
+  resolveSkillPresentation,
 } from '../render/skillPresentation.ts';
 
 export type { PreviewEntity } from './presentationTimeline.ts';
@@ -36,12 +38,15 @@ function resolvePreviewSlotKind(
   return skillId.trim() === `${entityId.trim()}_basic_attack` ? 'basic' : 'active';
 }
 
+export type PreviewPlayMode = 'full' | 'body' | 'vfx';
+
 export interface PreviewPlayRequest {
   skill: ActiveSkillDef;
   effectIndex: number;
   actor: PreviewEntity;
   target: PreviewEntity;
   slotKind?: SkillSlotKind;
+  mode?: PreviewPlayMode;
 }
 
 export class PresentationPreviewRunner {
@@ -109,19 +114,35 @@ export class PresentationPreviewRunner {
     const slotKind =
       request.slotKind ??
       resolvePreviewSlotKind(request.skill.id, actor.entityId);
+    const mode = request.mode ?? 'full';
 
     this.resetCanvas();
     this.applyIdleLayouts();
 
-    const presentation = playSkillBody(
-      this.canvas,
-      PREVIEW_ACTOR_ID,
+    const presentation = resolveSkillPresentation(
       request.skill,
-      request.effectIndex,
-      actor,
-      slotKind,
+      effect,
+      buildSkillPresentationContext(
+        actor,
+        slotKind,
+        effect,
+        request.skill.id,
+        request.effectIndex,
+      ),
     );
-    if (!presentation) return;
+
+    if (mode !== 'vfx') {
+      playSkillBody(
+        this.canvas,
+        PREVIEW_ACTOR_ID,
+        request.skill,
+        request.effectIndex,
+        actor,
+        slotKind,
+      );
+    }
+
+    if (mode === 'body') return;
 
     const applyDelaySec = resolveEffectApplyDelaySec(
       request.skill.id,
