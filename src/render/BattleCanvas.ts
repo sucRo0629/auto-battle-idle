@@ -89,7 +89,6 @@ export class BattleCanvas implements IBattleRenderer {
   private worldOffsetX = 0;
   private isMarching = new Map<string, boolean>();
   private marchIdleHoldFrames = new Map<string, number>();
-  private verifyModeEnabled = false;
   private static readonly MARCH_IDLE_HOLD_FRAMES = 4;
 
   mount(container: HTMLElement): void {
@@ -108,10 +107,6 @@ export class BattleCanvas implements IBattleRenderer {
   setCombatants(layout: CombatantLayout[]): void {
     this.layouts = layout;
     applyVisualDepthOffsets(this.layouts, SPRITE_SCALE);
-  }
-
-  setVerifyModeEnabled(enabled: boolean): void {
-    this.verifyModeEnabled = enabled;
   }
 
   setWorldOffset(offsetX: number): void {
@@ -448,10 +443,6 @@ export class BattleCanvas implements IBattleRenderer {
 
     this.drawStatusBadges(SPRITE_SCALE);
 
-    if (this.verifyModeEnabled) {
-      this.drawVerifyModeCoordinates();
-    }
-
     this.attackEffects.draw(
       this.ctx,
       this.layouts,
@@ -695,32 +686,6 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.strokeStyle = this.theme.enemyHpBarOutline;
     ctx.lineWidth = this.theme.enemyHpBarOutlineWidth;
     ctx.strokeRect(x - 0.5, y - 0.5, barW + 1, barH + 1);
-  }
-
-  private drawVerifyModeCoordinates(): void {
-    const { ctx } = this;
-    const scale = SPRITE_SCALE;
-    const size = SPRITE_SIZE * scale;
-    const fontSize = Math.max(8, Math.round(this.theme.headerFontSize));
-
-    ctx.save();
-    ctx.font = `${fontSize}px ${this.theme.fontFamily}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(0, 0, 0, 0.85)";
-
-    for (const layout of this.layouts) {
-      const text = String(Math.round(layout.x));
-      const textX = layout.x + size / 2;
-      const textY = layout.y + size + 2;
-
-      ctx.strokeText(text, textX, textY);
-      ctx.fillStyle = layout.isEnemy ? "#ffb4b4" : "#b4d4ff";
-      ctx.fillText(text, textX, textY);
-    }
-
-    ctx.restore();
   }
 
   private drawStatusBadges(scale: number): void {

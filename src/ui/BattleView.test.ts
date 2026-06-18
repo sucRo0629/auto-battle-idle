@@ -3,7 +3,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => {
   const canvasInstance = {
     mount: vi.fn(),
-    setVerifyModeEnabled: vi.fn(),
     setCombatants: vi.fn(),
     setWorldOffset: vi.fn(),
     playAnim: vi.fn(),

@@ -171,9 +171,6 @@ export class BattleView {
 
     this.canvas = new BattleCanvas();
     this.canvas.mount(canvasWrap);
-    this.canvas.setVerifyModeEnabled(
-      verifyModeControls?.isVerifyMode() ?? false,
-    );
 
     this.partyHud = new PartyHudPanel(this.canvasHost);
     this.partyHud.mount(canvasFrame);
@@ -523,7 +520,6 @@ export class BattleView {
 
   syncVerifyModeToggle(enabled: boolean): void {
     this.verifyModeInput.checked = enabled;
-    this.canvas.setVerifyModeEnabled(enabled);
     this.battleXDebugCanvas.setVisible(enabled);
     this.debugMenu.refresh();
   }
