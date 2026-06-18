@@ -53,6 +53,11 @@ function supportsVfx(effect: SkillEffectDef): boolean {
   );
 }
 
+/** main `vfx` / `hitVfx` 編集対象（演出ラボ hitVfx セクション表示と同条件） */
+export function supportsSkillEffectVfx(effect: SkillEffectDef): boolean {
+  return supportsVfx(effect);
+}
+
 export function isParticleVfxActive(
   particles: VfxParticleDef | null | undefined,
 ): particles is VfxParticleDef {
@@ -86,10 +91,10 @@ function resolveHitVfx(
   effectDef: SkillEffectDef,
   ctx: SkillVfxContext,
 ): SkillVfxDef | null {
+  if (isVfxDefActive(effectDef.hitVfx)) return effectDef.hitVfx!;
   if (ctx.effectKind !== "damage" && ctx.effectKind !== "dot") {
     return null;
   }
-  if (isVfxDefActive(effectDef.hitVfx)) return effectDef.hitVfx!;
   const { skillId, effectIndex } = ctx;
   if (skillId === undefined || effectIndex === undefined) return null;
   if (resolveVfxAnimKey(skillId, effectIndex, "hit")) {

@@ -128,6 +128,27 @@ describe('resolveEffectPresentation', () => {
     expect(result.hitVfx).toEqual(hitVfx);
   });
 
+  it('uses explicit heal hitVfx with particles', () => {
+    const hitVfx = {
+      particles: {
+        preset: 'heal_holy_light' as const,
+        placement: { anchor: 'footTarget' as const, layer: 'front' as const },
+      },
+    };
+    const result = resolveEffectPresentation(
+      {
+        type: 'heal',
+        target: { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' },
+        amount: { kind: 'atkBased', atkScale: 1 },
+        hitVfx,
+      },
+      skill,
+      { ...ctx, effectKind: 'heal' },
+    );
+    expect(result.vfx).toBeNull();
+    expect(result.hitVfx).toEqual(hitVfx);
+  });
+
   it('uses explicit basicAttackVfx for basic attacks', () => {
     __registerVfxAnimForTest('test_skill_0_vfx_hit', mockImage(128));
     const result = resolveEffectPresentation(

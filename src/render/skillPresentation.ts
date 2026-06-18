@@ -8,11 +8,13 @@ import type {
 } from "../battle/types.ts";
 import type { BattleCanvas } from "./BattleCanvas.ts";
 import { resolveSkillAnimKey } from "./skillAnimRegistry.ts";
+import { isParticleDefActive } from "./particlePlayback.ts";
 import {
   isVfxDefActive,
   resolveEffectPresentation,
   type EffectPresentation,
 } from "./skillVfx/resolveEffectPresentation.ts";
+import { resolveVfxAnimKey } from "./vfxAnimRegistry.ts";
 import type { SkillVfxContext } from "./skillVfx/types.ts";
 import {
   resolveSkillAnimHoldSec,
@@ -143,6 +145,32 @@ export function playSkillBody(
   return presentation;
 }
 
+function resolveHitVfxForFeedback(
+  presentation: EffectPresentation,
+  options: {
+    skillId: string;
+    effectIndex: number;
+    skipMainVfx: boolean;
+  },
+): SkillVfxDef | null {
+  if (isVfxDefActive(presentation.hitVfx)) return presentation.hitVfx!;
+  if (!isVfxDefActive(presentation.vfx)) return null;
+
+  const mainPlayed =
+    !options.skipMainVfx && isVfxDefActive(presentation.vfx);
+  if (!mainPlayed) return presentation.vfx!;
+
+  const mainVfxKey = resolveVfxAnimKey(
+    options.skillId,
+    options.effectIndex,
+    "main",
+  );
+  if (!mainVfxKey && isParticleDefActive(presentation.vfx!.particles)) {
+    return null;
+  }
+  return presentation.vfx!;
+}
+
 export function playSkillHitFeedback(
   canvas: Pick<
     BattleCanvas,
@@ -180,11 +208,11 @@ export function playSkillHitFeedback(
     );
   }
 
-  const hitVfx = isVfxDefActive(presentation.hitVfx)
-    ? presentation.hitVfx
-    : isVfxDefActive(presentation.vfx)
-      ? presentation.vfx
-      : null;
+  const hitVfx = resolveHitVfxForFeedback(presentation, {
+    skillId,
+    effectIndex,
+    skipMainVfx: request.skipMainVfx ?? false,
+  });
   if (hitVfx) {
     canvas.playSkillVfx(
       buildVfxInstanceId(

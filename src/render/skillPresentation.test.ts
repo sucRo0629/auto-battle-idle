@@ -236,7 +236,7 @@ describe("playSkillHitFeedback", () => {
     expect(canvas.showDamagePopup).toHaveBeenCalledTimes(2);
   });
 
-  it("spawns main VFX for particles-only heal vfx", () => {
+  it("spawns main VFX once for particles-only heal vfx", () => {
     const canvas = {
       playSkillVfx: vi.fn(),
       showDamagePopup: vi.fn(),
@@ -259,11 +259,49 @@ describe("playSkillHitFeedback", () => {
       hitIndex: 0,
     });
 
-    expect(canvas.playSkillVfx).toHaveBeenCalledTimes(2);
+    expect(canvas.playSkillVfx).toHaveBeenCalledTimes(1);
     expect(canvas.playSkillVfx.mock.calls[0]?.[3]).toEqual(
       expect.objectContaining({
         particles: { preset: "heal_holy_light" },
       }),
     );
+    expect(canvas.playSkillVfx.mock.calls[0]?.[4]).toEqual(
+      expect.objectContaining({ kind: "main" }),
+    );
+  });
+
+  it("spawns hitVfx particles once for heal hit feedback", () => {
+    const canvas = {
+      playSkillVfx: vi.fn(),
+      showDamagePopup: vi.fn(),
+      showHealPopup: vi.fn(),
+    };
+    const effect = { type: "heal" } as never;
+    const presentation = {
+      hitVfx: {
+        particles: {
+          preset: "heal_holy_light",
+          placement: { anchor: "footTarget", layer: "front" },
+        },
+      },
+    } as never;
+
+    playSkillHitFeedback(canvas, {
+      sourceId: "cleric",
+      targetId: "guardian",
+      presentation,
+      effect,
+      skillId: "sp_cleric_active_1",
+      effectIndex: 0,
+      hitIndex: 0,
+      amount: 42,
+      kind: "heal",
+    });
+
+    expect(canvas.playSkillVfx).toHaveBeenCalledTimes(1);
+    expect(canvas.playSkillVfx.mock.calls[0]?.[4]).toEqual(
+      expect.objectContaining({ kind: "hit" }),
+    );
+    expect(canvas.showHealPopup).toHaveBeenCalledWith("guardian", 42);
   });
 });

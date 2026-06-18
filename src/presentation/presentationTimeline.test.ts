@@ -251,6 +251,44 @@ describe('computePresentationTimeline', () => {
     expect(timeline.presentationLockSec).toBe(1.2);
   });
 
+  it('reports hitParticleSec for heal hitVfx particles', () => {
+    const skill: ActiveSkillDef = {
+      id: 'sp_cleric_active_1',
+      name: '癒しの光',
+      trigger: { kind: 'time', value: 8 },
+      effect: [
+        {
+          type: 'heal',
+          target: { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' },
+          amount: { kind: 'atkBased', atkScale: 1.25 },
+          healSubKind: 'instant',
+          hitVfx: {
+            particles: {
+              preset: 'heal_holy_light',
+              placement: { anchor: 'footTarget', layer: 'front' },
+            },
+          },
+        },
+      ],
+    };
+
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
+    const effect = skill.effect[0]!;
+    const presentation = resolveSkillPresentation(
+      skill,
+      effect,
+      buildSkillVfxContext(previewEntity, 'active', effect, skill.id, 0),
+    );
+
+    expect(timeline.vfxSec).toBeNull();
+    expect(timeline.particleSec).toBeNull();
+    expect(timeline.hitParticleSec).toBe(
+      resolveParticlePlaybackSec(presentation.hitVfx!.particles!),
+    );
+    expect(timeline.hitParticleSec).toBe(0.75);
+    expect(timeline.presentationLockSec).toBe(0.75);
+  });
+
   it('matches battle presentationLockSec for the same skill JSON', () => {
     __registerSkillAnimForTest('lock_parity', { width: 256, height: 48 } as HTMLImageElement);
     __registerVfxAnimForTest('lock_parity_0_vfx', mockImage(320));

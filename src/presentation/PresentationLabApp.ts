@@ -29,6 +29,7 @@ import {
 } from '../editor/formUtils.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 import { resolveSkillAnimKey, hasSkillAnimKey } from '../render/skillAnimRegistry.ts';
+import { supportsSkillEffectVfx } from '../render/skillVfx/resolveEffectPresentation.ts';
 import { resolveVfxAnimKey, hasVfxAnimKey } from '../render/vfxAnimRegistry.ts';
 import {
   PresentationPreviewRunner,
@@ -472,7 +473,7 @@ export class PresentationLabApp {
     const isBasic = this.currentSlotKind() === 'basic';
     const bodyAnimKey = resolveSkillAnimKey(skill.id, this.effectIndex);
 
-    columns.appendChild(
+    columns.append(
       this.buildBodySection(effect, bodyAnimKey),
       this.buildVfxSection(skill, effect, isBasic),
       this.buildCommonSection(skill, effect),
@@ -612,7 +613,7 @@ export class PresentationLabApp {
       });
     }
 
-    if (effect.type === 'damage' || effect.type === 'dot') {
+    if (supportsSkillEffectVfx(effect)) {
       const hitHeading = createEl('h3', 'presentation-lab-section-title');
       hitHeading.textContent = 'hitVfx';
       section.appendChild(hitHeading);

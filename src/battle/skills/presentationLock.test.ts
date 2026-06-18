@@ -153,4 +153,24 @@ describe('resolvePresentationLockSec', () => {
 
     expect(resolvePresentationLockSec(skill, actor, 'active')).toBe(0.75);
   });
+
+  it('includes heal hitVfx particles in presentation lock', () => {
+    const skill: ActiveSkillDef = {
+      id: 'lock_heal_hit_particle',
+      name: 'Lock Heal Hit Particle',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'heal',
+          target: { rule: 'mostDamagedAlly' },
+          amount: { kind: 'atkScale', scale: 1 },
+          hitVfx: {
+            particles: { preset: 'heal_holy_light' },
+          },
+        },
+      ],
+    };
+
+    expect(resolvePresentationLockSec(skill, actor, 'active')).toBe(0.75);
+  });
 });
