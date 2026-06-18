@@ -24,6 +24,14 @@ import {
   battleCanvasHeight,
 } from "./formationLayout.ts";
 import { AttackEffectManager, type AttackEffectSpawnOptions } from "./AttackEffect.ts";
+import { VfxPlaybackManager } from "./VfxPlaybackManager.ts";
+import { resolveVfxAnimKey } from "./vfxAnimRegistry.ts";
+import {
+  resolveVfxLayer,
+  resolveVfxPlacement,
+  toVfxPlaybackOptions,
+} from "./vfxAnimPlayback.ts";
+import { resolveVfxWorldPosition } from "./vfxPlacement.ts";
 import { CurseMarkEffectManager, type CurseMarkSpawnOptions } from "./curseMarkEffect.ts";
 import { CombatReactionPopupManager } from "./CombatReactionPopup.ts";
 import { DamagePopupManager } from "./DamagePopup.ts";
@@ -47,6 +55,7 @@ import type {
   AnimState,
   CombatantLayout,
   IBattleRenderer,
+  type PlaySkillVfxOptions,
 } from "./IBattleRenderer.ts";
 import {
   readBattleHudTheme,
@@ -75,6 +84,7 @@ export class BattleCanvas implements IBattleRenderer {
   private ctx!: CanvasRenderingContext2D;
   private animator = new SpriteAnimator();
   private attackEffects = new AttackEffectManager();
+  private vfxPlayback = new VfxPlaybackManager();
   private curseMarks = new CurseMarkEffectManager();
   private damagePopups = new DamagePopupManager();
   private combatReactionPopups = new CombatReactionPopupManager();
@@ -145,6 +155,45 @@ export class BattleCanvas implements IBattleRenderer {
     this.attackEffects.spawn(actorId, targetId, vfx, options);
   }
 
+  playSkillVfx(
+    instanceId: string,
+    actorId: string,
+    targetId: string,
+    vfx: SkillVfxDef,
+    options: PlaySkillVfxOptions,
+  ): void {
+    if (vfx.enabled === false) return;
+
+    const kind = options.kind ?? "main";
+    const vfxKey = resolveVfxAnimKey(
+      options.skillId,
+      options.effectIndex,
+      kind,
+    );
+    if (!vfxKey) return;
+
+    const source = this.layouts.find((layout) => layout.id === actorId);
+    const target = this.layouts.find((layout) => layout.id === targetId);
+    if (!source || !target) return;
+
+    const placement = resolveVfxPlacement(vfx, kind);
+    const worldPos = resolveVfxWorldPosition(
+      placement,
+      source,
+      target,
+      SPRITE_SIZE * SPRITE_SCALE,
+    );
+    const layer = resolveVfxLayer(placement);
+
+    this.vfxPlayback.spawn(
+      instanceId,
+      vfxKey,
+      worldPos,
+      toVfxPlaybackOptions(vfx, options),
+      layer,
+    );
+  }
+
   playCurseMark(targetId: string, options?: CurseMarkSpawnOptions): void {
     this.curseMarks.spawn(targetId, options);
   }
@@ -191,6 +240,7 @@ export class BattleCanvas implements IBattleRenderer {
     }
     this.syncLayoutAnimStates();
     this.attackEffects.tick(deltaMs);
+    this.vfxPlayback.tick(deltaMs);
     this.curseMarks.tick(deltaMs);
     this.damagePopups.tick(deltaMs);
     this.combatReactionPopups.tick(deltaMs);
@@ -424,6 +474,8 @@ export class BattleCanvas implements IBattleRenderer {
       this.layouts.filter((layout) => !layout.isEnemy),
     );
 
+    this.vfxPlayback.draw(this.ctx, "behind", SPRITE_SCALE);
+
     for (const layout of enemyLayouts) {
       const spriteY = spriteDrawY(layout);
       this.drawSprite(layout, layout.x, spriteY, SPRITE_SCALE);
@@ -440,6 +492,8 @@ export class BattleCanvas implements IBattleRenderer {
     for (const layout of allyLayouts) {
       this.drawSprite(layout, layout.x, spriteDrawY(layout), SPRITE_SCALE);
     }
+
+    this.vfxPlayback.draw(this.ctx, "front", SPRITE_SCALE);
 
     this.drawStatusBadges(SPRITE_SCALE);
 

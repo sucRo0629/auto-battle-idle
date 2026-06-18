@@ -144,13 +144,11 @@ export function resolveSkillAnimHoldSec(
   return resolvePresentationLockSec(skill, actorStub, slotKind);
 }
 
-export function resolveSkillAnimPhaseConfig(
-  skillAnimKey: string,
+export function resolveAnimPhaseConfig(
+  stripFrameCount: number,
   options: SkillAnimPlaybackOptions,
 ): SkillAnimPhaseConfig | null {
   if (options.animLoopFrame === undefined) return null;
-
-  const stripFrameCount = getSkillAnimStripFrameCount(skillAnimKey);
   if (stripFrameCount <= 0) return null;
 
   const startFrame = normalizeAnimStartFrame(
@@ -190,6 +188,16 @@ export function resolveSkillAnimPhaseConfig(
   };
 }
 
+export function resolveSkillAnimPhaseConfig(
+  skillAnimKey: string,
+  options: SkillAnimPlaybackOptions,
+): SkillAnimPhaseConfig | null {
+  return resolveAnimPhaseConfig(
+    getSkillAnimStripFrameCount(skillAnimKey),
+    options,
+  );
+}
+
 export function getSkillAnimIntroSec(config: SkillAnimPhaseConfig): number {
   const frameSteps = Math.max(0, config.introEndFrame - config.startFrame);
   return frameSteps / SHARED_ANIM_FPS;
@@ -213,8 +221,8 @@ export function getSkillAnimPhasedTotalSec(
   );
 }
 
-export function resolveSkillAnimPlayback(
-  skillAnimKey: string,
+export function resolveAnimPlayback(
+  stripFrameCount: number,
   fields: SkillAnimPhaseFields = {},
   holdSec = 0,
 ): {
@@ -224,12 +232,11 @@ export function resolveSkillAnimPlayback(
   phased: SkillAnimPhaseConfig | null;
   totalPlaybackSec: number;
 } {
-  const stripFrameCount = getSkillAnimStripFrameCount(skillAnimKey);
   const startFrame = normalizeAnimStartFrame(
     fields.animStartFrame,
     stripFrameCount,
   );
-  const phased = resolveSkillAnimPhaseConfig(skillAnimKey, {
+  const phased = resolveAnimPhaseConfig(stripFrameCount, {
     ...fields,
     holdSec,
   });
@@ -248,6 +255,18 @@ export function resolveSkillAnimPlayback(
     phased,
     totalPlaybackSec,
   };
+}
+
+export function resolveSkillAnimPlayback(
+  skillAnimKey: string,
+  fields: SkillAnimPhaseFields = {},
+  holdSec = 0,
+): ReturnType<typeof resolveAnimPlayback> {
+  return resolveAnimPlayback(
+    getSkillAnimStripFrameCount(skillAnimKey),
+    fields,
+    holdSec,
+  );
 }
 
 export interface SkillBodyPlaybackOptions {

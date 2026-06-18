@@ -13,6 +13,9 @@ import {
   getSkillAnimImage,
 } from "./skillAnimRegistry.ts";
 import {
+  getVfxAnimImage,
+} from "./vfxAnimRegistry.ts";
+import {
   getSpriteSheetImage,
   hasSpriteSheetAnimation,
 } from "./spriteSheetRegistry.ts";
@@ -21,6 +24,8 @@ import {
   getSheetCellWidth,
   SKILL_ANIM_CELL_HEIGHT,
   SKILL_ANIM_CELL_WIDTH,
+  VFX_ANIM_CELL_HEIGHT,
+  VFX_ANIM_CELL_WIDTH,
 } from "./spriteLayout.ts";
 
 /** body atlas または旧 `sheets/{id}/{anim}.png` が idle/move/death 用にあるか */
@@ -130,6 +135,39 @@ export function drawSkillAnimAtFootAnchor(
 
   const cellW = SKILL_ANIM_CELL_WIDTH;
   const cellH = SKILL_ANIM_CELL_HEIGHT;
+  const frameCount = Math.max(1, Math.floor(sheet.width / cellW));
+  const clampedFrame = Math.min(Math.max(0, frame), frameCount - 1);
+  const srcX = clampedFrame * cellW;
+  const drawW = cellW * scale;
+  const drawH = cellH * scale;
+
+  ctx.drawImage(
+    sheet,
+    srcX,
+    0,
+    cellW,
+    cellH,
+    footX - drawW / 2,
+    footY - drawH,
+    drawW,
+    drawH,
+  );
+}
+
+/** VFX strip 1 コマ（64×64）を足元中央アンカーへ描画 */
+export function drawVfxFrameAtAnchor(
+  ctx: CanvasRenderingContext2D,
+  vfxKey: string,
+  frame: number,
+  footX: number,
+  footY: number,
+  scale: number,
+): void {
+  const sheet = getVfxAnimImage(vfxKey);
+  if (!sheet) return;
+
+  const cellW = VFX_ANIM_CELL_WIDTH;
+  const cellH = VFX_ANIM_CELL_HEIGHT;
   const frameCount = Math.max(1, Math.floor(sheet.width / cellW));
   const clampedFrame = Math.min(Math.max(0, frame), frameCount - 1);
   const srcX = clampedFrame * cellW;

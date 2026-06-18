@@ -4,6 +4,13 @@ import type { Role, StatusEffect, SkillVfxDef } from '../battle/types.ts';
 import type { AttackEffectSpawnOptions } from './AttackEffect.ts';
 import type { CurseMarkSpawnOptions } from './curseMarkEffect.ts';
 import type { SkillAnimPlaybackOptions } from './skillAnimPlayback.ts';
+import type { VfxPlaybackKind } from './vfxAnimPlayback.ts';
+
+export interface PlaySkillVfxOptions extends SkillAnimPlaybackOptions {
+  skillId: string;
+  effectIndex: number;
+  kind?: VfxPlaybackKind;
+}
 
 export interface CombatantLayout {
   id: string;
@@ -46,6 +53,13 @@ export interface IBattleRenderer {
     targetId: string,
     vfx: SkillVfxDef,
     options?: AttackEffectSpawnOptions,
+  ): void;
+  playSkillVfx(
+    instanceId: string,
+    actorId: string,
+    targetId: string,
+    vfx: SkillVfxDef,
+    options: PlaySkillVfxOptions,
   ): void;
   playCurseMark(targetId: string, options?: CurseMarkSpawnOptions): void;
   fadeCurseMark(targetId: string): void;

@@ -242,9 +242,8 @@ Phase 5 の演出調整ツールで **タイミング・placement 編集・プ�
 ### スコープ（インフラ済み）
 
 - **型・レジストリ（済）:** `SkillVfxDef`（`placement` / `AnimPhaseFields` / `hitVfx`）、`VFX_ANIM_CELL_*` 64×64、`vfxAnimRegistry.ts`
-- **描画:** `BattleCanvas` で `sheets/vfx/*.png` を `placement` に従い描画。`AttackEffect.ts`（Canvas preset）廃止
-- `data/skills/` の `vfx` 本番データ移行（`preset` → PNG + `placement`）・`SKILL_VFX_OVERRIDES` 廃止
-- `gameDataSchema` の `VFX_PRESETS` 削除
+- **再生・描画（済）:** `vfxAnimPlayback.ts` / `vfxPlacement.ts` / `VfxPlaybackManager.ts` / `BattleCanvas.playSkillVfx`（`layer` behind → entities → front）。BattleView / SkillExecutor 配線と `AttackEffect.ts` 廃止は別 PR
+- **描画（残）:** `data/skills/` の `vfx` 本番データ移行（`preset` → PNG + `placement`）・`SKILL_VFX_OVERRIDES` 廃止・`gameDataSchema` の `VFX_PRESETS` 削除
 
 ### スコープ外（Phase 6）
 

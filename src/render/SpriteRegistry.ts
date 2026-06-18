@@ -9,6 +9,7 @@ import {
   preloadEntityBodies,
 } from './entityAtlas.ts';
 import { preloadSkillAnims } from './skillAnimRegistry.ts';
+import { preloadVfxAnims } from './vfxAnimRegistry.ts';
 import { preloadSpriteSheets } from './spriteSheetRegistry.ts';
 
 export type AnimState = 'idle' | 'attack' | 'move' | 'death';
@@ -52,6 +53,7 @@ export function preloadSprites(): Promise<void> {
       preloadEntityBodies(),
       preloadSpriteSheets(),
       preloadSkillAnims(),
+      preloadVfxAnims(),
     ]).then(() => {});
   }
   return preloadPromise;
