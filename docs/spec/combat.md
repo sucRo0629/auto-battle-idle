@@ -137,11 +137,11 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 **多段チャージ（`maxCharges` / `storedCharges`）:** `maxCharges` 省略 = **0**（保持なし・ストック UI なし）。`maxCharges > 0` かつ smart 保留時、CD Max 後に 2 段目チャージを開始し `storedCharges` に確定ストック（上限 0〜3）。パッシブ `skillPropertyOverride.maxChargesBonus` で実効上限を加算（`GLOBAL_MAX_CHARGES_CAP = 3`）。
 
-**演出ロック（`presentationLock`）:** VFX 終了まで **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。**CD チャージは止めない**。
-
-**body anim lock（`animLock`）:** body strip の再生時間だけ `SkillSequenceRunner.beginAnimLock` で保持し、`isActorBusy` / `isBasicAttackBlocked` で **他スキル発動を停止**する。`presentationLock` と同様に **CD 進行は止めない**。`useDurationSec` とは別レーンで、`paused`（黄）は `useLock` のみを指す。つまり `useDurationSec` は「発動後もそのユニットを止めたい」場合の明示ロック、`animLock` は「body strip の間だけ自動的に止める」ためのロック、`presentationLock` は「VFX 中の basic だけ止める」ための演出ロック。
-
-**停止時間（`useDurationSec`）:** アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**CD 進行は止めない**。Party HUD: 停止中は `paused`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。`useDurationSec` の表示ゲージは発動後ロックを示す用途で、CD とは独立。
+| レーン | 役割 |
+| --- | --- |
+| `presentationLock` | VFX 終了まで **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。**CD チャージは止めない**。 |
+| `animLock` | body strip の再生時間だけ `SkillSequenceRunner.beginAnimLock` で保持し、`isActorBusy` / `isBasicAttackBlocked` で **他スキル発動を停止**する。`presentationLock` と同様に **CD 進行は止めない**。body 再生を止める用途はここで自動付与する。 |
+| `useDurationSec` | アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。**詠唱など、発動後に明示ロックが必要な場合のみ使う**。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**CD 進行は止めない**。Party HUD: 停止中は `paused`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。`useDurationSec` の表示ゲージは発動後ロックを示す用途で、CD とは独立。 |
 
 **Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 3px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。
 

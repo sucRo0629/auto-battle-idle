@@ -2749,7 +2749,7 @@ export class SkillEditorStep {
         createEl(
           'p',
           'editor-hint',
-          '0 = 即時。useDurationSec > 0 のとき全スキル busy + time/hitsTaken CD 停止。0 のとき VFX 長から presentationLock（通常攻撃のみ停止、CD 継続）。',
+          '0 = 即時。アニメ保護は body strip 再生中の自動 animLock。useDurationSec は詠唱など、発動後に明示ロックが必要な場合のみ使う（CD は止めない）。',
         ),
       );
       appendActiveFireGateFields(grid, active, setActive);

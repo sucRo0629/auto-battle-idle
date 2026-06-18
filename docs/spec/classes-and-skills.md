@@ -227,7 +227,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 ### 演出解決（コード）
 
-Battle イベント → `resolveSkillPresentation` / `resolveEffectPresentation` → skill anim 優先 → VFX。body 再生秒数は `resolveSkillBodyPlaybackSec` を戦闘 / ラボで共通使用し、残りの表示ロックは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。本番バトルと演出ラボは `effectVfxOnly` を既定で有効にし、`effect.vfx` が未指定のときは `skill.vfx` へフォールバックしない（`basicAttackVfx` は通常攻撃のみ）。
+Battle イベント → `resolveSkillPresentation` / `resolveEffectPresentation` → skill anim 優先 → VFX。`resolveEffectPresentation` は戦闘 / ラボで共通し、`effectVfxOnly` を既定で有効にして `effect.vfx` 未指定時に `skill.vfx` へはフォールバックしない（`basicAttackVfx` は通常攻撃のみ）。body 再生秒数は `resolveSkillBodyPlaybackSec` を戦闘 / ラボで共通使用し、残りの表示ロックは [combat.md](combat.md) の `presentationLock` / `animLock` / `useDurationSec`。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。
 
 ### 射程
 
@@ -310,7 +310,7 @@ interface CharacterBuild {
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `trigger.kind`   | `time`（秒）／`basicAttackCount`（通常攻撃回数）／`hitsTaken`（被攻撃回数）                                                                                                                                        |
 | `trigger.value`  | 条件の閾値 N。ステージ開始時 `remaining = N`（ゲージ未充填）。カウントトリガーは N 回のイベントで `remaining === 0`（ゲージ Max）となり、N+1 回目で発動・`remaining = N` にリセット。時間トリガーは 0 到達で即発動 |
-| `useDurationSec` | optional。発動後ロック時間（秒）。省略 / `0` = 即時。発動後はそのユニットの他スキル発動を止めるが、CD 進行は止めない（詳細は [combat.md](combat.md)）                                                         |
+| `useDurationSec` | optional。発動後ロック時間（秒）。省略 / `0` = 即時。**詠唱など、発動後に明示ロックが必要な場合のみ使う**。発動後はそのユニットの他スキル発動を止めるが、CD 進行は止めない（詳細は [combat.md](combat.md)）                                                         |
 | `firePolicy`     | optional。`immediate`（既定）／`smart`（条件成立まで発動保留）                                                                                                                                                     |
 | `fireConditions` | `firePolicy: smart` 時の AND 条件（[combat.md](combat.md)）                                                                                                                                                        |
 | `fireTimeoutSec` | smart 保留の最大秒。経過後は条件無視で発動                                                                                                                                                                         |
@@ -434,7 +434,7 @@ interface CharacterBuild {
 
 旧形式 `type: "buff"` + `buffSubKind: "basicAttackTransform"` は読み込み時に正規化される。
 
-バフ持続中のみ通常攻撃を実行時マージ。スキル発動アニメ（use lock / presentation lock）中は従来どおり通常攻撃停止。詳細は [combat.md](combat.md) の通常攻撃変形節。
+バフ持続中のみ通常攻撃を実行時マージ。スキル発動アニメ中は従来どおり通常攻撃停止。`animLock` / `presentationLock` / `useDurationSec` の役割分担は [combat.md](combat.md) を参照。
 
 ### 反撃（`counter` effect）
 
