@@ -9,7 +9,6 @@ import {
   BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
   BATTLE_ENEMY_VISIBLE_MAX_X,
   resolvePartyDeployTravelPx,
-  engagedMinBodyGap,
   enemyRangedRearGap,
   SPRITE_GAP,
   resolveEnemyMarchEngageGap,
@@ -189,13 +188,23 @@ export function syncDeadEnemyCorpseBattleX(
 }
 
 export function getEngagedFrontEnemyVisualAnchor(
-  _players: CombatantState[],
+  players: CombatantState[],
   enemies: CombatantState[],
   _battleVisualOffset?: number | null,
 ): number | null {
   const frontEnemyBattleX = getEnemyContactX(enemies);
   if (frontEnemyBattleX === null) return null;
-  return frontEnemyBattleX - engagedMinBodyGap();
+  const living = players.filter((p) => p.isAlive);
+  if (living.length === 0) return frontEnemyBattleX;
+
+  const hasFront = living.some((p) => p.formationRow === 'front');
+  const contactPlayers = hasFront
+    ? living.filter((p) => p.formationRow === 'front')
+    : living;
+  const minFrontRange = Math.min(
+    ...contactPlayers.map((p) => resolveApproachFormationRangePx(p)),
+  );
+  return frontEnemyBattleX - minFrontRange;
 }
 
 export function isEnemyVisibleOnScreen(enemy: CombatantState): boolean {

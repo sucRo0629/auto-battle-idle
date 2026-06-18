@@ -37,7 +37,7 @@ describe('cleric vs abjurer balance (iron guard + supporter, stage 1 wave 1)', (
     expect(ratio).toBeLessThanOrEqual(1 + PARITY_TOLERANCE);
   });
 
-  it('Lv10: sp_abjurer_passive_1 wave-start barrier on highest-HP ally', () => {
+  it('Lv10: sp_abjurer_passive_2 wave-start barrier on highest-HP ally', () => {
     const gameData = loadGameData();
     const levelCurves = loadLevelCurves(levelCurvesJson);
 
@@ -48,6 +48,7 @@ describe('cleric vs abjurer balance (iron guard + supporter, stage 1 wave 1)', (
     const abjurerMember = createMemberFromClass('sp_abjurer', gameData);
     abjurerMember.progress.level = 10;
     reconcileMemberBuildFromGameData(abjurerMember, gameData);
+    abjurerMember.build.learnedPassiveIds = ['sp_abjurer_passive_2'];
 
     const allies = createAlliesFromPartyState(
       gameData,

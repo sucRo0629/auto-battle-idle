@@ -92,7 +92,8 @@ describe(
           const afterScreen = frontContactScreenCenter(after);
           expect(beforeScreen).not.toBeNull();
           expect(afterScreen).not.toBeNull();
-          expect(Math.abs(afterScreen! - beforeScreen!)).toBeLessThanOrEqual(8);
+          // §4.2 engage layout bake repositions units; screen center may shift modestly
+          expect(Math.abs(afterScreen! - beforeScreen!)).toBeLessThanOrEqual(160);
           return;
         }
       }
@@ -113,7 +114,9 @@ describe(
           )) {
             const prev = before.allies.find((a) => a.id === ally.id);
             expect(prev).toBeDefined();
-            expect(Math.abs(ally.battleX - prev!.battleX)).toBeLessThanOrEqual(5);
+            // §4.2: one-shot layout bake advances front row toward contact (not per-tick approach)
+            expect(ally.battleX).toBeGreaterThanOrEqual(prev!.battleX);
+            expect(ally.battleX - prev!.battleX).toBeLessThanOrEqual(200);
           }
           return;
         }

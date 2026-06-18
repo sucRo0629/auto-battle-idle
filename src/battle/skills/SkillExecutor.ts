@@ -27,6 +27,7 @@ import { resolveEffectiveBasicAttackSkill } from '../resolveEffectiveBasicAttack
 import { basicAttackTransformSpecFromEffect } from '../resolveEffectiveBasicAttack.ts';
 import {
   resolveAttackBattleX,
+  resolveApproachRangePx,
   resolveMoveBattleX,
 } from '../combatPosition.ts';
 import {
@@ -67,6 +68,7 @@ import {
   resolveUseDurationSec,
   type SkillSequenceRunner,
   skillHasMoveEffect,
+  resolveSequenceStepAnchor,
 } from './skillSequence.ts';
 import {
   resolutionHasTargets,
@@ -115,6 +117,41 @@ export interface SkillExecutorDeps {
   onTargetReceivedDebuff?: (target: CombatantState) => void;
   onHealApplied?: (target: CombatantState) => void;
   onUnitDied?: (unit: CombatantState) => void;
+}
+
+function shouldDeferUntilHostileToAnchorInRange(
+  actor: CombatantState,
+  skill: ActiveSkillDef,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  passives: ReturnType<typeof getPassiveDefs>,
+): boolean {
+  for (const effectDef of skill.effect) {
+    if (effectDef.type !== 'move') continue;
+    if ((effectDef.moveMode ?? 'engage') !== 'toAnchor') continue;
+    const spec = resolveEffectTargetSpec(
+      effectDef,
+      actor,
+      allies,
+      enemies,
+      passives,
+    );
+    const anchor = resolveSequenceStepAnchor(
+      effectDef,
+      spec,
+      actor,
+      allies,
+      enemies,
+      gameData,
+    );
+    if (!anchor || anchor.isEnemy === actor.isEnemy) continue;
+    const range = resolveApproachRangePx(actor, gameData);
+    if (!isWithinSkillRange(actor, anchor, range)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export class SkillExecutor {
@@ -168,6 +205,18 @@ export class SkillExecutor {
     }
 
     if (skillHasMoveEffect(skill)) {
+      if (
+        shouldDeferUntilHostileToAnchorInRange(
+          actor,
+          skill,
+          allies,
+          enemies,
+          this.gameData,
+          passives,
+        )
+      ) {
+        return false;
+      }
       const sequence = buildSkillSequence(
         skill,
         actor,

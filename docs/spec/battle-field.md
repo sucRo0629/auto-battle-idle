@@ -250,9 +250,10 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ```
 1. スロット ideal battleX（§3.3）
-2. 接敵アンカーへ前衛を配置
-3. resolveOverlaps(PLAYER_VISUAL_MIN_GAP) on battleX  ← プレイヤー必須
-4. 敵: overlap 解消は表示重なりの調整だけに使う。射程停止や range 加算には使わない
+2. 接敵アンカーへ前衛を配置（§2.5: 敵接触 − 最前列最短 `effectiveRangePx`。`engagedMinBodyGap` は加算しない）
+3. 敵接触帯: 味方最前列 `battleX` + 接触帯最短 `effectiveRangePx`（body gap 加算なし）
+4. resolveOverlaps(PLAYER_VISUAL_MIN_GAP) on battleX  ← 味方同士・敵同士の overlap のみ
+5. `BattleEngine.setupEngagedCombat` / 構成変化時に `applyEngagedFormationToBattleX` を実行
 ```
 
 **禁止：**
@@ -298,6 +299,8 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 **遠隔敵の表示凍結：** 接敵開始時 `engagedVisualTargetPlayerId` は attack プール → なければ chase（`battleDisplay.freezeRangedTargets`）。接敵中の攻撃ターゲット解決とは独立。
 
 **スキル `move` 中・シーケンス busy 中**の actor は自動接近対象外。接敵中の `resolveEngagedFormationOverlaps` でも **スキルモーション中ユニットは overlap 対象から除外**（一時的な `battleX` で味方を引っ張らない）。
+
+**敵対 `toAnchor` スキル:** 自動接近で anchor が通常攻撃射程内に入るまで発動を保留（`SkillExecutor`）。射程内発動後の背後移動は `effect.range` で 1 ステップ上限（§2.5）。
 
 ### 4.5 スキル `move`
 

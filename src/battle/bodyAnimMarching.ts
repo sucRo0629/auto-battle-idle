@@ -1,12 +1,19 @@
 import { isUnitStunned } from './ccEffects.ts';
 import {
   capEngagedEnemyApproachBattleX,
+  resolveApproachRangePx,
 } from './combatPosition.ts';
+import {
+  MOVE_PX_PER_SEC,
+  engagedMinBodyGap,
+  moveDeltaPx,
+} from './battleConstants.ts';
 import {
   resolveAllPlayerApproachBattleX,
   resolveEnemyApproachBattleX,
   shouldSkipEngagedAutoApproach,
 } from './resolveApproachBattleX.ts';
+import { isWithinSkillRange } from './skills/rangeUtils.ts';
 import type {
   BattlePhase,
   CombatantState,
@@ -50,6 +57,25 @@ function resolveDeployMarching(
   return isApproachingTarget(unit.battleX, target);
 }
 
+function isWithinApproachAnimSettleRange(
+  unit: CombatantState,
+  ctx: BodyAnimMarchingContext,
+): boolean {
+  const range = resolveApproachRangePx(unit, ctx.gameData);
+  const step = moveDeltaPx(MOVE_PX_PER_SEC, 1 / 60);
+  const overlapTolerance = Math.max(0, engagedMinBodyGap() - range);
+  const tolerance = BODY_ANIM_APPROACH_SETTLED_PX + step + overlapTolerance;
+  const opponents = unit.isEnemy
+    ? ctx.players.filter((p) => p.isAlive)
+    : ctx.enemies.filter((e) => e.isAlive);
+  for (const target of opponents) {
+    if (isWithinSkillRange(unit, target, range + tolerance)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function resolveEngagedMarching(
   unit: CombatantState,
   ctx: BodyAnimMarchingContext,
@@ -65,6 +91,9 @@ function resolveEngagedMarching(
       ctx.gameData,
     )
   ) {
+    return false;
+  }
+  if (isWithinApproachAnimSettleRange(unit, ctx)) {
     return false;
   }
 

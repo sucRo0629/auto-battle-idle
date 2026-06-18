@@ -248,6 +248,33 @@ export function resolveOverlaps(
   }
 }
 
+/** 接敵アンカー: 最前列の最短射程分だけ敵接触点より後方（body gap は加算しない） */
+export function resolveEngagePlayerVisualAnchor(
+  players: PlayerPlacementInput[],
+  enemyContact: number,
+): number {
+  const living = livingPlayers(players);
+  if (living.length === 0) return enemyContact;
+
+  const leadingRow = getLeadingPlayerFormationRow(living);
+  const contactPlayers =
+    leadingRow !== null
+      ? living.filter((p) => p.formationRow === leadingRow)
+      : living;
+  const minFrontRange = Math.min(...contactPlayers.map((p) => p.rangePx));
+  return enemyContact - minFrontRange;
+}
+
+function minContactEnemyRangePx(
+  enemies: EngagedLayoutEnemyInput[],
+): number {
+  const contact = enemies.filter(
+    (e) => e.isAlive && !isEngagedFormationRangePx(e.rangePx),
+  );
+  if (contact.length === 0) return 0;
+  return Math.min(...contact.map((e) => e.rangePx));
+}
+
 export function getLeadingPlayerFormationRow(
   players: PlayerPlacementInput[],
 ): FormationRow | null {
@@ -338,8 +365,8 @@ function buildEngagedPlacements(
   }
 
   const advanceT = ENGAGED_VISUAL_TUNING.leadingRowAdvanceT;
-  const frontLineGap = engagedFrontLineGap();
-  const engageAnchorX = frontEnemyBattleX - frontLineGap;
+  // §2.5: cross-faction anchor uses effectiveRangePx, not body gap
+  const engageAnchorX = frontEnemyBattleX;
   const rightmostX = Math.max(...placements.map((p) => p.x));
 
   for (const placement of placements) {
@@ -740,7 +767,6 @@ export function computeEngagedLayout(
     }
   }
 
-  const frontLineGap = engagedFrontLineGap();
   let frontRowMaxBattleX = frontLineBattleX;
   if (leadingRow !== null) {
     for (const player of living) {
@@ -751,7 +777,8 @@ export function computeEngagedLayout(
       }
     }
   }
-  const enemyFrontTargetX = frontRowMaxBattleX + frontLineGap;
+  const enemyFrontTargetX =
+    frontRowMaxBattleX + minContactEnemyRangePx(ctx.enemies);
   const contactPositions = resolveEngagedContactEnemyVisuals(
     ctx.enemies,
     enemyFrontTargetX,
@@ -791,10 +818,7 @@ export function computeEngagedLayout(
         referenceBackRowPlayerX,
       );
       const rangedStopX = Math.max(rangeStopX, formationStopX);
-      enemyBattleX.set(
-        enemy.id,
-        backRowOnly ? rangedStopX + frontLineGap : rangedStopX,
-      );
+      enemyBattleX.set(enemy.id, rangedStopX);
       continue;
     }
     const contactX = contactPositions.get(enemy.id);

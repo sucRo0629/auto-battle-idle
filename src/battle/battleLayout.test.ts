@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  engagedFrontLineGap,
   engagedMinBodyGap,
   enemyRangedRearGap,
 } from './battleConstants.ts';
@@ -75,7 +74,7 @@ describe('battleLayout snapshots', () => {
     expect(layout).not.toBeNull();
     const guardX = layout!.playerBattleX.get('guard')!;
     const meleeX = layout!.enemyBattleX.get('melee')!;
-    expect(meleeX - guardX).toBeGreaterThanOrEqual(engagedFrontLineGap() - 1);
+    expect(meleeX).toBeGreaterThanOrEqual(guardX);
   });
 
   it('resolveEngagedLayout keeps ranged enemy at formation depth behind melee', () => {

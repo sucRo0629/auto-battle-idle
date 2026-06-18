@@ -44,7 +44,6 @@ import {
   CANVAS_W as BATTLE_CANVAS_W,
   MOVE_PX_PER_SEC,
   moveDeltaPx,
-  engagedMinBodyGap,
 } from "./battleConstants.ts";
 import { isUnitStunned } from "./ccEffects.ts";
 import {
@@ -77,6 +76,7 @@ import {
   getLeadingPlayerFormationRow,
   resolveEngagedLayout,
   applyEngagedFormationToBattleX,
+  resolveEngagePlayerVisualAnchor,
   resolveEngagedFormationOverlaps,
   type EngagedLayoutResult,
 } from "./battleLayout.ts";
@@ -585,7 +585,18 @@ export class BattleEngine {
     const playerContact = getPlayerContactX(this.players);
     if (enemyContact === null || playerContact === null) return null;
 
-    const engageAnchor = enemyContact - engagedMinBodyGap();
+    const engageAnchor = resolveEngagePlayerVisualAnchor(
+      this.players
+        .filter((ally) => this.isOnBattlefield(ally))
+        .map((ally) => ({
+          id: ally.id,
+          role: ally.role,
+          formationRow: ally.formationRow,
+          rangePx: resolveFormationRangePx(ally),
+          isAlive: ally.isAlive,
+        })),
+      enemyContact,
+    );
 
     return {
       allies: this.players
@@ -679,7 +690,11 @@ export class BattleEngine {
       this.gameData,
     );
 
-    if (this.resolveEngagedLayoutForEvent() === null) return;
+    const layout = this.resolveEngagedLayoutForEvent();
+    if (layout === null) return;
+
+    this.applyEngagedFormationLayout(layout);
+    syncAllFieldX([...this.players, ...this.enemies]);
 
     this.engagedComposition.initSignatures(
       this.players,
@@ -746,8 +761,14 @@ export class BattleEngine {
       this.freezeEngagedMeleeVisualSlots();
     }
 
-    // 敵・味方とも接敵開始 bake + 自動接近に委ねる。
-    // 構成変化時の player snap は前列戦死後の左スライドの原因になる。
+    const layout = this.resolveEngagedLayoutForEvent();
+    if (layout !== null) {
+      this.applyEngagedFormationLayout(layout, {
+        players: leadingChanged,
+        enemies: meleeChanged,
+      });
+      syncAllFieldX([...this.players, ...this.enemies]);
+    }
   }
 
   private clearPendingVictory(): void {
