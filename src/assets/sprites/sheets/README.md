@@ -44,6 +44,8 @@ src/assets/sprites/
 | **スキル body** | `sheets/skills/{skillId}.png` または `{skillId}_{effectIndex}.png` | 通常攻撃・全 active 共通。**64×48** 横 strip |
 | **スキル VFX** | `sheets/vfx/{skillId}_vfx.png` 等 | main / hit 用 PNG。**64×64** 横 strip。JSON `vfx` / `hitVfx` / `basicAttackVfx` |
 
+PNG strip は主形・モーション・命中シルエットを担い、particles はその上に重ねる発光や余韻を担う。回復や祝福のように着弾点を強調したい演出は `hitVfx` 側に particles を置き、`vfx` の strip は必要最小限にすると、絵と粒子を独立して調整しやすい。
+
 味方・敵とも **同じ `entityAnimLayout.json`**。`spriteKey` 未指定時は entity の `id` をキーとする。
 
 ---

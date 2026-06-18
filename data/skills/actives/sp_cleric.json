@@ -19,7 +19,16 @@
           "stat": "hp",
           "order": "ratio"
         },
-        "healSubKind": "instant"
+        "healSubKind": "instant",
+        "hitVfx": {
+          "particles": {
+            "preset": "heal_holy_light",
+            "placement": {
+              "anchor": "footTarget",
+              "layer": "front"
+            }
+          }
+        }
       },
       {
         "target": {
@@ -37,9 +46,6 @@
         "healSubKind": "hot"
       }
     ],
-    "vfx": {
-      "enabled": true
-    },
     "useDurationSec": 0.3
   },
   {
@@ -77,10 +83,7 @@
         },
         "healSubKind": "hot"
       }
-    ],
-    "vfx": {
-      "enabled": true
-    }
+    ]
   },
   {
     "id": "sp_cleric_basic_attack",
