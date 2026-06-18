@@ -1,4 +1,4 @@
-import { isUnitStunned } from './ccEffects.ts';
+import { isUnitMovementBlocked } from './ccEffects.ts';
 import {
   capEngagedEnemyApproachBattleX,
   resolveApproachRangePx,
@@ -81,7 +81,7 @@ function resolveEngagedMarching(
   ctx: BodyAnimMarchingContext,
 ): boolean {
   if (!unit.isAlive) return false;
-  if (isUnitStunned(unit)) return false;
+  if (isUnitMovementBlocked(unit)) return false;
   if (ctx.isActorInSkillMotion(unit.id)) return true;
   if (
     shouldSkipEngagedAutoApproach(

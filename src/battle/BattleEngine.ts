@@ -44,7 +44,7 @@ import {
   MOVE_PX_PER_SEC,
   moveDeltaPx,
 } from "./battleConstants.ts";
-import { isUnitStunned } from "./ccEffects.ts";
+import { isUnitMovementBlocked, isUnitStunned } from "./ccEffects.ts";
 import {
   applyCounterRetaliation,
   applyPassiveCounterRetaliation,
@@ -503,7 +503,7 @@ export class BattleEngine {
 
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
-      if (isUnitStunned(ally)) continue;
+      if (isUnitMovementBlocked(ally)) continue;
       if (this.skillSequenceRunner.isActorInSkillMotion(ally.id)) continue;
       if (
         shouldSkipEngagedAutoApproach(
@@ -522,7 +522,7 @@ export class BattleEngine {
 
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
-      if (isUnitStunned(enemy)) continue;
+      if (isUnitMovementBlocked(enemy)) continue;
       if (this.skillSequenceRunner.isActorInSkillMotion(enemy.id)) continue;
       if (
         shouldSkipEngagedAutoApproach(

@@ -104,7 +104,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | `engage`   | `anchor.battleX - effectiveRangePx`（敵の手前＝後方側）                                                                                                                    |
 | `toAnchor` | `anchor.battleX + anchorOffsetPx`（未指定=0。−=味方側、+=敵背後）。**敵／味方など敵対 anchor へ向かう場合**は 1 回の移動量を `effectiveRangePx` で上限 |
 
-**ノックバック：** 各陣営の **後方** へ押す。プレイヤーは `-X`（左）、敵は `+X`（右）。敵は `battleX` が進軍表示下限未満にならない。
+**ノックバック：** 各陣営の **後方** へ押す。プレイヤーは `-X`（左）、敵は `+X`（右）。敵は `battleX` が進軍表示下限未満にならない。成功時は **移動硬直 1.5 秒**（攻撃は可能・接近とスキル `move` のみ停止）。実装：`ccEffects.ts` の `KNOCKBACK_MOVE_LOCK_SEC`。
 
 ### 2.6 定数（単一正本：`battleConstants.ts` / `types.ts` / `rangeLimits.ts`）
 

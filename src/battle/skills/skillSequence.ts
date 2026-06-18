@@ -1,4 +1,4 @@
-import { isUnitStunned } from '../ccEffects.ts';
+import { isUnitMovementBlocked } from '../ccEffects.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -463,7 +463,7 @@ export class SkillSequenceRunner {
     for (const move of this.activeMoves) {
       const unit = units.find((u) => u.id === move.actorId);
       if (!unit?.isAlive) continue;
-      if (isUnitStunned(unit)) {
+      if (isUnitMovementBlocked(unit)) {
         kept.push(move);
         continue;
       }

@@ -3,6 +3,7 @@ import {
   formatTargetLabel,
 } from "../battle/skills/targetSpec.ts";
 import { resolveSkillTrigger } from "../battle/skillTrigger.ts";
+import { KNOCKBACK_MOVE_LOCK_SEC } from "../battle/ccEffects.ts";
 import {
   BUFF_SUB_KIND_LABELS,
   DEBUFF_FILTER_TAG_LABELS,
@@ -379,7 +380,7 @@ function formatCounterResponse(response: CounterResponseDef): string {
     case "stun":
       return `スタン${response.durationSec}s`;
     case "knockback":
-      return `ノック${response.distancePx}px`;
+      return `ノック${response.distancePx}px+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`;
   }
 }
 
@@ -579,7 +580,9 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       extras.push(`${effect.durationSec}s`);
       break;
     case "knockback":
-      extras.push(`${effect.distancePx}px`);
+      extras.push(
+        `${effect.distancePx}px+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`,
+      );
       break;
     case "dispel": {
       const tags =

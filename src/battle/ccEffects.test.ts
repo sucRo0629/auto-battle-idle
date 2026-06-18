@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState } from './types.ts';
 import {
+  KNOCKBACK_MOVE_LOCK_SEC,
   STUN_MAX_DURATION_SEC,
   applyKnockbackToTarget,
   applyStunToTarget,
   clampStunDurationSec,
+  isUnitMovementLocked,
   isUnitStunned,
   resetBasicCooldownOnStun,
 } from './ccEffects.ts';
@@ -124,5 +126,24 @@ describe('ccEffects', () => {
     applyKnockbackToTarget(ally, 40);
     expect(enemy.battleX).toBe(190);
     expect(ally.battleX).toBe(160);
+  });
+
+  it('applyKnockbackToTarget applies move lock without stun', () => {
+    const target = mockUnit({ id: 'enemy', isEnemy: true, battleX: 150 });
+    applyKnockbackToTarget(target, 20, { skillId: 'push', sourceId: 'ally' });
+    expect(isUnitMovementLocked(target)).toBe(true);
+    expect(isUnitStunned(target)).toBe(false);
+    expect(target.statusEffects[0]?.overlay).toBe('moveLock');
+    expect(target.statusEffects[0]?.remainingSec).toBe(KNOCKBACK_MOVE_LOCK_SEC);
+  });
+
+  it('applyKnockbackToTarget keeps longer move lock when re-applied', () => {
+    const target = mockUnit({ id: 'enemy', isEnemy: true, battleX: 150 });
+    applyKnockbackToTarget(target, 10, { skillId: 'a', sourceId: 'ally' });
+    const effect = target.statusEffects.find((e) => e.overlay === 'moveLock');
+    if (effect) effect.remainingSec = 0.5;
+    applyKnockbackToTarget(target, 10, { skillId: 'b', sourceId: 'ally' });
+    expect(target.statusEffects.filter((e) => e.overlay === 'moveLock')).toHaveLength(1);
+    expect(target.statusEffects[0]?.remainingSec).toBe(KNOCKBACK_MOVE_LOCK_SEC);
   });
 });

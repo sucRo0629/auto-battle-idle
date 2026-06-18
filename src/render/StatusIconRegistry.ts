@@ -26,6 +26,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   dot: dotIconUrl,
   block: blockIconUrl,
   stun: stunIconUrl,
+  moveLock: stunIconUrl,
   evasion: evasionIconUrl,
   counter: counterIconUrl,
   damageTakenToHeal: damageTakenToHealIconUrl,

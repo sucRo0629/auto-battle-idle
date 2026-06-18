@@ -13,6 +13,7 @@ export type StatusDisplayCategory =
   | "block"
   | "counter"
   | "stun"
+  | "moveLock"
   | "damageTakenToHeal";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
@@ -29,6 +30,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "block",
   "counter",
   "stun",
+  "moveLock",
 ];
 
 export const STATUS_BADGE_SLOT_COUNT = STATUS_BADGE_SLOT_ORDER.length;
@@ -167,6 +169,13 @@ function statusEffectBadgeForOverlay(
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
       };
+    case "moveLock":
+      return {
+        category: "moveLock",
+        kind: "debuff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
     case "damageTakenToHeal":
       return {
         category: "damageTakenToHeal",
@@ -266,6 +275,9 @@ function effectsForCategory(
   if (category === "stun") {
     return effects.filter((effect) => effect.overlay === "stun");
   }
+  if (category === "moveLock") {
+    return effects.filter((effect) => effect.overlay === "moveLock");
+  }
   if (category === "damageTakenToHeal") {
     return effects.filter((effect) => effect.overlay === "damageTakenToHeal");
   }
@@ -317,6 +329,7 @@ function aggregateOverlayCategory(
     | "block"
     | "counter"
     | "stun"
+    | "moveLock"
     | "damageTakenToHeal"
 ): AggregatedCategoryEffect | null {
   const relevant = effectsForCategory(effects, category);
@@ -435,6 +448,7 @@ export function aggregateStatStatusEffects(
     "block",
     "counter",
     "stun",
+    "moveLock",
     "damageTakenToHeal",
   ] as const) {
     const badge = aggregateOverlayCategory(displayEffects, category);

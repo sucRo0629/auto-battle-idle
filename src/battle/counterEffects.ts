@@ -344,7 +344,10 @@ function applyCounterKnockbackResponse(
   counterEffect: Pick<StatusEffect, 'skillId'>,
   callbacks: CounterRetaliationCallbacks,
 ): void {
-  const applied = applyKnockbackToTarget(attacker, response.distancePx);
+  const applied = applyKnockbackToTarget(attacker, response.distancePx, {
+    skillId: counterEffect.skillId ?? 'counter',
+    sourceId: victim.id,
+  });
   if (!applied) return;
 
   emitCounterSkillEvent(

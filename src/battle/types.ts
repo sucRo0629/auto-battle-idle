@@ -311,6 +311,7 @@ export interface StatusEffect {
     | "hot"
     | "dot"
     | "stun"
+    | "moveLock"
     | "block"
     | "counter"
     | "evasion"

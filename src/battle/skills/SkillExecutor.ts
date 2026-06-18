@@ -1109,7 +1109,10 @@ export class SkillExecutor {
     }
 
     if (effectDef.type === 'knockback') {
-      const applied = applyKnockbackToTarget(target, effectDef.distancePx);
+      const applied = applyKnockbackToTarget(target, effectDef.distancePx, {
+        skillId: skill.id,
+        sourceId: actor.id,
+      });
       if (!applied) return false;
       this.emit({
         type: 'skill',
