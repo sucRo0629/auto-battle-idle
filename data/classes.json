@@ -323,10 +323,10 @@
     }
   },
   {
-    "id": "at_sniper",
+    "id": "at_ballista",
     "role": "attacker",
-    "displayName": "狙撃士",
-    "epithetEn": "Sniper",
+    "displayName": "弩砲士",
+    "epithetEn": "Ballista",
     "formationRow": "back",
     "traits": {
       "rangePx": 400
@@ -337,19 +337,19 @@
     "reg": 0,
     "jobTier": 1,
     "attackSpeedTier": "slow",
-    "basicAttackSkillId": "at_sniper_basic_attack",
+    "basicAttackSkillId": "at_ballista_basic_attack",
     "passiveIds": [
       "at_passive_1",
-      "at_sniper_passive_3"
+      "at_ballista_passive_3"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
           "at_passive_1",
-          "at_sniper_passive_3",
-          "at_sniper_active_1",
-          "at_sniper_active_2"
+          "at_ballista_passive_3",
+          "at_ballista_active_1",
+          "at_ballista_active_2"
         ]
       }
     ],
