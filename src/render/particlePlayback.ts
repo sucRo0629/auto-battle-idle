@@ -1,17 +1,19 @@
 import type { VfxParticleDef } from '../battle/types.ts';
+import { isParticlePresetId } from './particlePresets.ts';
 import {
-  getParticlePresetConfig,
-  isParticlePresetId,
-  type ParticlePresetId,
-} from './particlePresets.ts';
+  resolveParticleSpawn,
+  type ResolvedParticleSpawn,
+} from './particlePresetResolve.ts';
 
-export type { ParticlePresetId };
+export type { ParticlePresetId } from './particlePresets.ts';
+export type { ResolvedParticleSpawn } from './particlePresetResolve.ts';
+export { mergeParticleDefWithPreset, resolveParticleSpawn } from './particlePresetResolve.ts';
 
-export interface ParticleSpawnOptions {
-  count?: number;
-  durationSec?: number;
-  tint?: string;
-}
+/** @deprecated use ResolvedParticleSpawn */
+export type ParticleSpawnOptions = Pick<
+  ResolvedParticleSpawn,
+  'count' | 'durationSec' | 'tint'
+> & { presetId?: ResolvedParticleSpawn['presetId'] };
 
 export function isParticleDefActive(
   particles: VfxParticleDef | null | undefined,
@@ -25,15 +27,12 @@ export function isParticleDefActive(
 
 export function resolveParticleSpawnOptions(
   particles: VfxParticleDef,
-): Required<ParticleSpawnOptions> & { presetId: ParticlePresetId } {
-  const presetId = particles.preset as ParticlePresetId;
-  const config = getParticlePresetConfig(presetId);
-  return {
-    presetId,
-    count: particles.count ?? config.defaultCount,
-    durationSec: particles.durationSec ?? config.durationSec,
-    tint: particles.tint ?? config.defaultTint,
-  };
+): ResolvedParticleSpawn {
+  const resolved = resolveParticleSpawn(particles);
+  if (!resolved) {
+    throw new Error(`Unknown particle preset: ${particles.preset}`);
+  }
+  return resolved;
 }
 
 export function resolveParticlePlaybackSec(

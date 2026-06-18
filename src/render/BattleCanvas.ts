@@ -31,10 +31,8 @@ import {
   resolveVfxPlacement,
   toVfxPlaybackOptions,
 } from "./vfxAnimPlayback.ts";
-import {
-  isParticleDefActive,
-  resolveParticleSpawnOptions,
-} from "./particlePlayback.ts";
+import { isParticleDefActive } from "./particlePlayback.ts";
+import { getParticlePresetDef } from "./particlePresets.ts";
 import { resolveVfxWorldPosition } from "./vfxPlacement.ts";
 import { CombatReactionPopupManager } from "./CombatReactionPopup.ts";
 import { DamagePopupManager } from "./DamagePopup.ts";
@@ -198,17 +196,13 @@ export class BattleCanvas implements IBattleRenderer {
         SPRITE_SIZE * SPRITE_SCALE,
       );
       const particleLayer = resolveVfxLayer(particlePlacement);
-      const particleOptions = resolveParticleSpawnOptions(vfx.particles);
+      const presetDef = getParticlePresetDef(vfx.particles.preset);
       this.particlePlayback.spawn(
         `${instanceId}:particles`,
-        particleOptions.presetId,
         particleWorldPos,
-        {
-          count: particleOptions.count,
-          durationSec: particleOptions.durationSec,
-          tint: particleOptions.tint,
-        },
         particleLayer,
+        vfx.particles,
+        presetDef,
       );
     }
   }

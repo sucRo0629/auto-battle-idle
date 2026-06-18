@@ -1,8 +1,18 @@
-import type { VfxLayer } from '../battle/types.ts';
-import type { ParticlePresetId, ParticleSpawnOptions } from './particlePlayback.ts';
-import { isParticlePresetId } from './particlePresets.ts';
+import type { VfxLayer, VfxParticleDef } from '../battle/types.ts';
+import { isParticleDefActive } from './particlePlayback.ts';
+import { mergeParticleDefWithPreset } from './particlePresetResolve.ts';
+import type {
+  ParticlePresetDef,
+  ParticleShape,
+  ParticlesPresetParams,
+  RingPresetParams,
+} from './particlePresets.ts';
 
-interface CrossParticle {
+export const MAX_PARTICLE_EMITTERS = 32;
+export const MAX_PARTICLES_PER_EMITTER = 64;
+export const MAX_TOTAL_PARTICLES = 256;
+
+interface Particle {
   x: number;
   y: number;
   vx: number;
@@ -10,18 +20,20 @@ interface CrossParticle {
   lifeSec: number;
   maxLifeSec: number;
   size: number;
+  shape: ParticleShape;
+  crossVertical: boolean;
 }
 
 interface ParticleEmitter {
   instanceId: string;
-  presetId: ParticlePresetId;
   worldX: number;
   worldY: number;
   layer: VfxLayer;
   elapsedSec: number;
   durationSec: number;
   tint: string;
-  particles: CrossParticle[];
+  ring: RingPresetParams | null;
+  particles: Particle[];
   finished: boolean;
 }
 
@@ -39,48 +51,86 @@ function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
 }
 
-function spawnHealHolyLightParticles(count: number): CrossParticle[] {
-  const particles: CrossParticle[] = [];
-  for (let i = 0; i < count; i += 1) {
-    const verticalArm = i % 2 === 0;
-    const x = verticalArm ? rand(-3, 3) : rand(-14, 14);
-    const y = verticalArm ? rand(-10, 2) : rand(-3, 3);
+function countActiveParticles(emitters: Iterable<ParticleEmitter>): number {
+  let total = 0;
+  for (const emitter of emitters) {
+    total += emitter.particles.length;
+  }
+  return total;
+}
+
+function createParticles(
+  config: ParticlesPresetParams,
+  count: number,
+  remainingBudget: number,
+): Particle[] {
+  const cappedCount = Math.min(
+    Math.max(1, Math.floor(count)),
+    MAX_PARTICLES_PER_EMITTER,
+    remainingBudget,
+  );
+  const particles: Particle[] = [];
+  for (let i = 0; i < cappedCount; i += 1) {
+    const crossVertical = config.shape === 'cross' ? i % 2 === 0 : false;
+    const x =
+      config.shape === 'cross' && crossVertical
+        ? rand(-3, 3)
+        : rand(-config.spawnXSpread, config.spawnXSpread);
+    const y =
+      config.shape === 'cross' && crossVertical
+        ? rand(config.spawnYMin, config.spawnYMax)
+        : rand(-3, 3);
     particles.push({
       x,
       y,
-      vx: rand(-0.15, 0.15),
-      vy: rand(-42, -24),
+      vx: rand(-config.vxSpread, config.vxSpread),
+      vy: rand(config.vyMin, config.vyMax),
       lifeSec: 0,
-      maxLifeSec: rand(0.45, 0.75),
-      size: rand(1.5, 3.5),
+      maxLifeSec: rand(config.lifeMinSec, config.lifeMaxSec),
+      size: rand(config.sizeMin, config.sizeMax),
+      shape: config.shape,
+      crossVertical,
     });
   }
   return particles;
 }
 
-function drawExpandingRing(
+function drawRing(
   ctx: CanvasRenderingContext2D,
   worldX: number,
   worldY: number,
   elapsedSec: number,
   tint: string,
+  config: RingPresetParams,
 ): void {
   const { r, g, b } = parseTint(tint);
-  const ringStartSec = 0.04;
-  const ringEndSec = 0.42;
-  if (elapsedSec < ringStartSec || elapsedSec > ringEndSec + 0.18) return;
+  const tailSec = config.fadeSec;
+  if (
+    elapsedSec < config.ringStartSec ||
+    elapsedSec > config.ringEndSec + tailSec
+  ) {
+    return;
+  }
 
   const t = Math.min(
     1,
-    Math.max(0, (elapsedSec - ringStartSec) / (ringEndSec - ringStartSec)),
+    Math.max(
+      0,
+      (elapsedSec - config.ringStartSec) /
+        (config.ringEndSec - config.ringStartSec),
+    ),
   );
-  const radius = 6 + t * 30;
-  const fadeT = Math.min(1, Math.max(0, (elapsedSec - ringEndSec) / 0.18));
+  const radius =
+    config.startRadius + t * (config.endRadius - config.startRadius);
+  const fadeT = Math.min(
+    1,
+    Math.max(0, (elapsedSec - config.ringEndSec) / tailSec),
+  );
   const alpha = (1 - fadeT) * (0.55 + (1 - t) * 0.35);
 
   ctx.save();
   ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  ctx.lineWidth = 2;
+  ctx.lineWidth = config.lineWidth;
   ctx.beginPath();
   ctx.arc(worldX, worldY, radius, 0, Math.PI * 2);
   ctx.stroke();
@@ -92,24 +142,53 @@ function drawExpandingRing(
   ctx.restore();
 }
 
-function drawCrossParticles(
+function drawParticle(
+  ctx: CanvasRenderingContext2D,
+  emitter: ParticleEmitter,
+  particle: Particle,
+  scale: number,
+  rgb: { r: number; g: number; b: number },
+): void {
+  const lifeT = particle.lifeSec / particle.maxLifeSec;
+  if (lifeT >= 1) return;
+
+  const alpha = 1 - lifeT * lifeT;
+  const size = particle.size * scale;
+  const px = emitter.worldX + particle.x * scale;
+  const py = emitter.worldY + particle.y * scale;
+  const { r, g, b } = rgb;
+
+  ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
+
+  if (particle.shape === 'circle') {
+    ctx.beginPath();
+    ctx.arc(px, py, size / 2, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  if (particle.shape === 'cross') {
+    const arm = size * 1.4;
+    const thickness = Math.max(1, size * 0.45);
+    if (particle.crossVertical) {
+      ctx.fillRect(px - thickness / 2, py - arm / 2, thickness, arm);
+    } else {
+      ctx.fillRect(px - arm / 2, py - thickness / 2, arm, thickness);
+    }
+    return;
+  }
+
+  ctx.fillRect(px - size / 2, py - size / 2, size, size);
+}
+
+function drawParticles(
   ctx: CanvasRenderingContext2D,
   emitter: ParticleEmitter,
   scale: number,
 ): void {
-  const { r, g, b } = parseTint(emitter.tint);
+  const rgb = parseTint(emitter.tint);
   for (const particle of emitter.particles) {
-    const lifeT = particle.lifeSec / particle.maxLifeSec;
-    if (lifeT >= 1) continue;
-    const alpha = 1 - lifeT * lifeT;
-    const size = particle.size * scale;
-    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    ctx.fillRect(
-      emitter.worldX + particle.x * scale - size / 2,
-      emitter.worldY + particle.y * scale - size / 2,
-      size,
-      size,
-    );
+    drawParticle(ctx, emitter, particle, scale, rgb);
   }
 }
 
@@ -118,31 +197,40 @@ export class ParticlePlaybackManager {
 
   spawn(
     instanceId: string,
-    presetId: string,
     worldPos: { x: number; y: number },
-    options: ParticleSpawnOptions = {},
-    layer: VfxLayer = 'front',
+    layer: VfxLayer,
+    def: VfxParticleDef,
+    presetDefaults: ParticlePresetDef,
   ): void {
-    if (!isParticlePresetId(presetId)) return;
+    if (!isParticleDefActive(def)) return;
+    if (this.emitters.size >= MAX_PARTICLE_EMITTERS) return;
 
-    const durationSec = options.durationSec ?? 0.8;
-    const count = Math.max(1, Math.floor(options.count ?? 12));
-    const tint = options.tint ?? '#ffffff';
+    const resolved = mergeParticleDefWithPreset(def, presetDefaults);
+    const ring =
+      presetDefaults.kind === 'ring' || presetDefaults.kind === 'composite'
+        ? (presetDefaults.ring ?? null)
+        : null;
+    const particleConfig =
+      presetDefaults.kind === 'particles' ||
+      presetDefaults.kind === 'composite'
+        ? (presetDefaults.particles ?? null)
+        : null;
 
-    const particles =
-      presetId === 'heal_holy_light'
-        ? spawnHealHolyLightParticles(count)
-        : [];
+    const remainingBudget =
+      MAX_TOTAL_PARTICLES - countActiveParticles(this.emitters.values());
+    const particles = particleConfig
+      ? createParticles(particleConfig, resolved.count, remainingBudget)
+      : [];
 
     this.emitters.set(instanceId, {
       instanceId,
-      presetId,
       worldX: worldPos.x,
       worldY: worldPos.y,
       layer,
       elapsedSec: 0,
-      durationSec,
-      tint,
+      durationSec: resolved.durationSec,
+      tint: resolved.tint,
+      ring,
       particles,
       finished: false,
     });
@@ -187,15 +275,18 @@ export class ParticlePlaybackManager {
   ): void {
     for (const emitter of this.emitters.values()) {
       if (emitter.layer !== layer || emitter.finished) continue;
-      if (emitter.presetId === 'heal_holy_light') {
-        drawExpandingRing(
+      if (emitter.ring) {
+        drawRing(
           ctx,
           emitter.worldX,
           emitter.worldY,
           emitter.elapsedSec,
           emitter.tint,
+          emitter.ring,
         );
-        drawCrossParticles(ctx, emitter, scale);
+      }
+      if (emitter.particles.length > 0) {
+        drawParticles(ctx, emitter, scale);
       }
     }
   }
