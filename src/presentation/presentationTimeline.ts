@@ -14,9 +14,11 @@ import {
   resolveEffectApplyDelaySec,
   resolveSkillBodyPlayback,
 } from '../render/skillAnimPlayback.ts';
-import { resolvePresetDurationMs } from '../render/skillVfx/presetDurations.ts';
+import { resolveVfxAnimKey } from '../render/vfxAnimRegistry.ts';
+import { resolveVfxPlaybackSec } from '../render/vfxAnimPlayback.ts';
 import type { SkillVfxContext } from '../render/skillVfx/types.ts';
 import { resolveSkillPresentation } from '../render/skillPresentation.ts';
+
 export interface PreviewEntity {
   entityId: string;
   role?: Role;
@@ -32,8 +34,9 @@ export interface PresentationTimeline {
   bodyIntroSec: number | null;
   bodyHoldSec: number | null;
   bodyOutroSec: number | null;
-  vfxPreset: string | null;
+  vfxKey: string | null;
   vfxSec: number | null;
+  hitVfxSec: number | null;
   moveDurationSec: number | null;
   applyDelaySec: number;
   presentationLockSec: number;
@@ -67,6 +70,8 @@ export function buildSkillVfxContext(
   entity: PreviewEntity,
   slotKind: SkillSlotKind,
   effect: SkillEffectDef,
+  skillId: string,
+  effectIndex: number,
 ): SkillVfxContext {
   return {
     role: entity.role,
@@ -77,6 +82,8 @@ export function buildSkillVfxContext(
     effectKind: effectKindForTimeline(effect),
     targetShape: effect.targetShape,
     effectVfxOnly: true,
+    skillId,
+    effectIndex,
   };
 }
 
@@ -94,8 +101,9 @@ export function computePresentationTimeline(
       bodyIntroSec: null,
       bodyHoldSec: null,
       bodyOutroSec: null,
-      vfxPreset: null,
+      vfxKey: null,
       vfxSec: null,
+      hitVfxSec: null,
       moveDurationSec: null,
       applyDelaySec: 0,
       presentationLockSec: 0,
@@ -103,7 +111,7 @@ export function computePresentationTimeline(
     };
   }
 
-  const ctx = buildSkillVfxContext(entity, slotKind, effect);
+  const ctx = buildSkillVfxContext(entity, slotKind, effect, skill.id, effectIndex);
   const presentation = resolveSkillPresentation(skill, effect, ctx);
 
   const actorStub = previewActorStub(entity);
@@ -133,15 +141,20 @@ export function computePresentationTimeline(
     }
   }
 
-  let vfxPreset: string | null = null;
+  let vfxKey: string | null = null;
   let vfxSec: number | null = null;
-  if (presentation.vfx?.preset) {
-    vfxPreset = presentation.vfx.preset;
-    vfxSec =
-      resolvePresetDurationMs(
-        presentation.vfx.preset,
-        presentation.vfx.durationMs,
-      ) / 1000;
+  let hitVfxSec: number | null = null;
+  if (presentation.vfx) {
+    vfxKey = resolveVfxAnimKey(skill.id, effectIndex, 'main');
+    if (vfxKey) {
+      vfxSec = resolveVfxPlaybackSec(presentation.vfx, vfxKey);
+    }
+  }
+  if (presentation.hitVfx) {
+    const hitKey = resolveVfxAnimKey(skill.id, effectIndex, 'hit');
+    if (hitKey) {
+      hitVfxSec = resolveVfxPlaybackSec(presentation.hitVfx, hitKey);
+    }
   }
 
   return {
@@ -150,8 +163,9 @@ export function computePresentationTimeline(
     bodyIntroSec,
     bodyHoldSec,
     bodyOutroSec,
-    vfxPreset,
+    vfxKey,
     vfxSec,
+    hitVfxSec,
     moveDurationSec: effect.type === 'move' ? effect.moveDurationSec : null,
     applyDelaySec,
     presentationLockSec,

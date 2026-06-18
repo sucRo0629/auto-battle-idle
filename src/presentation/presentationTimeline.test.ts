@@ -4,20 +4,29 @@ import {
   __registerSkillAnimForTest,
   __resetSkillAnimsForTest,
 } from '../render/skillAnimRegistry.ts';
+import {
+  __registerVfxAnimForTest,
+  __resetVfxAnimsForTest,
+} from '../render/vfxAnimRegistry.ts';
 import { computePresentationTimeline } from './presentationTimeline.ts';
+
+function mockImage(width: number): HTMLImageElement {
+  return { width, height: 64 } as HTMLImageElement;
+}
 
 const previewEntity = {
   entityId: 'df_guardian',
   role: 'defender' as const,
   rangePx: 0,
   damageType: 'physical' as const,
-  basicAttackVfx: { preset: 'slash' as const },
+  basicAttackVfx: {},
   isEnemy: false,
 };
 
 describe('computePresentationTimeline', () => {
   afterEach(() => {
     __resetSkillAnimsForTest();
+    __resetVfxAnimsForTest();
   });
 
   it('includes body playback when skill strip exists', () => {
@@ -41,6 +50,7 @@ describe('computePresentationTimeline', () => {
 
   it('ignores presentationLock when resolving body playback sec', () => {
     __registerSkillAnimForTest('test_body', { width: 256, height: 48 } as HTMLImageElement);
+    __registerVfxAnimForTest('test_body_0_vfx', mockImage(320));
     const skill: ActiveSkillDef = {
       id: 'test_body',
       name: 'Body',
@@ -52,18 +62,19 @@ describe('computePresentationTimeline', () => {
           amount: { kind: 'atkScale', scale: 1 },
           animStartFrame: 0,
           animLoopFrame: 1,
-          vfx: { preset: 'slash', durationMs: 500 },
+          vfx: {},
         },
       ],
     };
 
     const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
-    expect(timeline.presentationLockSec).toBe(0.5);
+    expect(timeline.presentationLockSec).toBe(0.625);
     expect(timeline.bodyPlaybackSec).toBe(0.25);
     expect(timeline.bodyHoldSec).toBe(0);
   });
 
   it('reports move duration for move effects', () => {
+    __registerVfxAnimForTest('test_move_1_vfx', mockImage(320));
     const skill: ActiveSkillDef = {
       id: 'test_move',
       name: 'Move',
@@ -78,7 +89,7 @@ describe('computePresentationTimeline', () => {
           type: 'damage',
           target: { rule: 'frontEnemy' },
           amount: { kind: 'atkScale', scale: 1 },
-          vfx: { preset: 'slash', durationMs: 500 },
+          vfx: {},
         },
       ],
     };
@@ -87,8 +98,8 @@ describe('computePresentationTimeline', () => {
     expect(moveTimeline.moveDurationSec).toBe(0.4);
 
     const damageTimeline = computePresentationTimeline(skill, 1, previewEntity, 'active');
-    expect(damageTimeline.vfxPreset).toBe('slash');
-    expect(damageTimeline.vfxSec).toBe(0.5);
+    expect(damageTimeline.vfxKey).toBe('test_move_1_vfx');
+    expect(damageTimeline.vfxSec).toBe(0.625);
   });
 
   it('suppresses skill vfx fallback when effectVfxOnly is enabled', () => {
@@ -96,7 +107,7 @@ describe('computePresentationTimeline', () => {
       id: 'test_damage',
       name: 'Damage',
       trigger: { kind: 'manual' },
-      vfx: { preset: 'orb' },
+      vfx: {},
       effect: [
         {
           type: 'damage',
@@ -107,7 +118,7 @@ describe('computePresentationTimeline', () => {
     };
 
     const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
-    expect(timeline.vfxPreset).toBeNull();
+    expect(timeline.vfxKey).toBeNull();
     expect(timeline.vfxSec).toBeNull();
   });
 

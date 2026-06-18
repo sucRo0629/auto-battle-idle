@@ -661,8 +661,8 @@ export class PresentationLabApp {
       ),
       this.timelineItem(
         'VFX',
-        timeline.vfxPreset
-          ? `${timeline.vfxPreset} (${formatSec(timeline.vfxSec)})`
+        timeline.vfxKey
+          ? `${timeline.vfxKey} (${formatSec(timeline.vfxSec)})`
           : '—',
         timeline.vfxSec,
       ),

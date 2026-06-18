@@ -19,4 +19,7 @@ export interface SkillVfxContext {
   targetShape?: TargetShape;
   /** false のときのみ skill.vfx へのフォールバックを許可する */
   effectVfxOnly?: boolean;
+  /** PNG 命名解決（hitVfx 等）用 */
+  skillId?: string;
+  effectIndex?: number;
 }

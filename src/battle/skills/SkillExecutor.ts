@@ -57,7 +57,7 @@ import {
   buildPendingHitsFromResolution,
   findCombatantById,
 } from './pendingSkillHits.ts';
-import { usesStagedChainVfx } from './resolveEffectVfxPreset.ts';
+import { usesStagedChainVfx } from './resolveEffectHasVfx.ts';
 import { resolveSkillDamageType } from './damageTypeUtils.ts';
 import {
   buildSkillSequence,
@@ -272,6 +272,7 @@ export class SkillExecutor {
         effectDef,
         actor,
         cd.slotKind,
+        effectIndex,
       );
       const pending = buildPendingHitsFromResolution(
         resolution!,

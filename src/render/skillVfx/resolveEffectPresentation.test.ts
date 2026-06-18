@@ -1,14 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { ActiveSkillDef, MoveSkillEffect } from '../../battle/types.ts';
 import {
-  resolveEffectPresentation,
-} from './resolveEffectPresentation.ts';
+  __registerVfxAnimForTest,
+  __resetVfxAnimsForTest,
+} from '../vfxAnimRegistry.ts';
+import { resolveEffectPresentation } from './resolveEffectPresentation.ts';
+
+function mockImage(width: number): HTMLImageElement {
+  return { width, height: 64 } as HTMLImageElement;
+}
 
 const skill: ActiveSkillDef = {
   id: 'test_skill',
   name: 'test',
   trigger: { kind: 'time', value: 5 },
-  vfx: { preset: 'orb' },
+  vfx: {},
   effect: [],
 };
 
@@ -17,6 +23,8 @@ const ctx = {
   damageType: 'physical' as const,
   slotKind: 'active' as const,
   effectKind: 'damage' as const,
+  skillId: 'test_skill',
+  effectIndex: 0,
 };
 
 const basicCtx = {
@@ -25,6 +33,10 @@ const basicCtx = {
 };
 
 describe('resolveEffectPresentation', () => {
+  afterEach(() => {
+    __resetVfxAnimsForTest();
+  });
+
   it('defaults move to none without vfx', () => {
     const effect: MoveSkillEffect = {
       type: 'move',
@@ -82,23 +94,42 @@ describe('resolveEffectPresentation', () => {
   });
 
   it('uses effect vfx override before skill vfx', () => {
+    __registerVfxAnimForTest('test_skill_0_vfx_hit', mockImage(192));
     const result = resolveEffectPresentation(
       {
         type: 'damage',
         target: { kind: "distance", side: "enemy", order: "nearest" },
         damageType: 'physical',
         amount: { kind: 'atkBased', atkScale: 1 },
-        vfx: { preset: 'slash' },
+        vfx: {},
       },
       skill,
       ctx,
     );
     expect(result.anim).toBe('attack');
-    expect(result.vfx?.preset).toBe('slash');
-    expect(result.hitVfx?.preset).toBe('slashHit');
+    expect(result.vfx).toEqual({});
+    expect(result.hitVfx).toEqual({});
+  });
+
+  it('uses explicit hitVfx JSON', () => {
+    const hitVfx = { placement: { anchor: 'footTarget' as const } };
+    const result = resolveEffectPresentation(
+      {
+        type: 'damage',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+        vfx: {},
+        hitVfx,
+      },
+      skill,
+      ctx,
+    );
+    expect(result.hitVfx).toEqual(hitVfx);
   });
 
   it('uses explicit basicAttackVfx for basic attacks', () => {
+    __registerVfxAnimForTest('test_skill_0_vfx_hit', mockImage(128));
     const result = resolveEffectPresentation(
       {
         type: 'damage',
@@ -107,10 +138,10 @@ describe('resolveEffectPresentation', () => {
         amount: { kind: 'atkBased', atkScale: 1 },
       },
       { ...skill, vfx: undefined },
-      { ...basicCtx, basicAttackVfx: { preset: 'slash' } },
+      { ...basicCtx, basicAttackVfx: {} },
     );
-    expect(result.vfx?.preset).toBe('slash');
-    expect(result.hitVfx?.preset).toBe('slashHit');
+    expect(result.vfx).toEqual({});
+    expect(result.hitVfx).toEqual({});
   });
 
   it('returns no VFX for basic attacks without basicAttackVfx', () => {
@@ -222,19 +253,19 @@ describe('resolveEffectPresentation', () => {
     expect(result.hitVfx).toBeNull();
   });
 
-  it('uses explicit effect vfx in presentation lab when preset is set', () => {
+  it('uses explicit effect vfx in presentation lab when vfx is set', () => {
     const result = resolveEffectPresentation(
       {
         type: 'damage',
         target: { kind: "distance", side: "enemy", order: "nearest" },
         damageType: 'physical',
         amount: { kind: 'atkBased', atkScale: 1 },
-        vfx: { preset: 'slash' },
+        vfx: {},
       },
       skill,
       ctx,
     );
-    expect(result.vfx?.preset).toBe('slash');
+    expect(result.vfx).toEqual({});
   });
 
   it('returns none anim as null', () => {

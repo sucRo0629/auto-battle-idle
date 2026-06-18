@@ -5,7 +5,7 @@ import type {
   SkillVfxDef,
 } from "../../battle/types.ts";
 import type { AnimState } from "../SpriteRegistry.ts";
-import { resolveDefaultHitVfx } from "./defaultPresets.ts";
+import { resolveVfxAnimKey } from "../vfxAnimRegistry.ts";
 import type { SkillVfxContext } from "./types.ts";
 
 export interface EffectPresentation {
@@ -51,12 +51,10 @@ function supportsVfx(effect: SkillEffectDef): boolean {
   );
 }
 
-function resolveHitVfx(
-  vfx: SkillVfxDef | null,
-  ctx: SkillVfxContext,
-): SkillVfxDef | null {
-  if (!vfx) return null;
-  return resolveDefaultHitVfx(ctx, vfx);
+export function isVfxDefActive(
+  vfx: SkillVfxDef | null | undefined,
+): vfx is SkillVfxDef {
+  return vfx != null && vfx.enabled !== false;
 }
 
 function resolveExplicitVfx(
@@ -66,11 +64,27 @@ function resolveExplicitVfx(
 ): SkillVfxDef | null {
   if (!supportsVfx(effectDef)) return null;
   if (ctx.slotKind === "basic") {
-    return ctx.basicAttackVfx?.preset ? ctx.basicAttackVfx : null;
+    return isVfxDefActive(ctx.basicAttackVfx) ? ctx.basicAttackVfx! : null;
   }
-  if (effectDef.vfx?.preset) return effectDef.vfx;
+  if (isVfxDefActive(effectDef.vfx)) return effectDef.vfx!;
   if (ctx.effectVfxOnly !== false) return null;
-  if (skillDef?.vfx?.preset) return skillDef.vfx;
+  if (isVfxDefActive(skillDef?.vfx)) return skillDef!.vfx!;
+  return null;
+}
+
+function resolveHitVfx(
+  effectDef: SkillEffectDef,
+  ctx: SkillVfxContext,
+): SkillVfxDef | null {
+  if (ctx.effectKind !== "damage" && ctx.effectKind !== "dot") {
+    return null;
+  }
+  if (isVfxDefActive(effectDef.hitVfx)) return effectDef.hitVfx!;
+  const { skillId, effectIndex } = ctx;
+  if (skillId === undefined || effectIndex === undefined) return null;
+  if (resolveVfxAnimKey(skillId, effectIndex, "hit")) {
+    return {};
+  }
   return null;
 }
 
@@ -84,13 +98,7 @@ export function resolveEffectPresentation(
     animId === "none" ? null : (animId as AnimState);
 
   const vfx = resolveExplicitVfx(effectDef, skillDef, ctx);
-
-  const hitVfx = resolveHitVfx(vfx, ctx);
+  const hitVfx = resolveHitVfx(effectDef, ctx);
 
   return { anim, vfx, hitVfx };
-}
-
-/** chainLightning / impale はセグメント起点を vfxSourceId から取る */
-export function usesSegmentVfxSource(preset: SkillVfxDef["preset"]): boolean {
-  return preset === "chainLightning" || preset === "impale";
 }

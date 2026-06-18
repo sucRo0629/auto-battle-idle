@@ -262,7 +262,13 @@ export class BattleView {
           : resolveSkillPresentation(
               skillDef,
               effectDef,
-              buildSkillPresentationContext(actor, slotKind, effectDef),
+              buildSkillPresentationContext(
+                actor,
+                slotKind,
+                effectDef,
+                skillDef.id,
+                event.effectIndex ?? 0,
+              ),
             );
         if (!presentation) return;
         const isChainLightning =
@@ -345,7 +351,13 @@ export class BattleView {
       const presentation = resolveSkillPresentation(
         skillDef,
         effectDef,
-        buildSkillPresentationContext(actor, slotKind, effectDef),
+        buildSkillPresentationContext(
+          actor,
+          slotKind,
+          effectDef,
+          skillDef.id,
+          event.effectIndex,
+        ),
       );
       if (!presentation.vfx) return;
 

@@ -55,6 +55,8 @@ export function buildSkillPresentationContext(
   actor: SkillPresentationActor | undefined,
   slotKind: SkillSlotKind,
   effect: SkillEffectDef,
+  skillId: string,
+  effectIndex: number,
 ): SkillVfxContext {
   return {
     role: actor?.role,
@@ -65,6 +67,8 @@ export function buildSkillPresentationContext(
     effectKind: effectKindForPresentation(effect),
     targetShape: effect.targetShape,
     effectVfxOnly: true,
+    skillId,
+    effectIndex,
   };
 }
 
@@ -97,7 +101,7 @@ export function playSkillBody(
   const presentation = resolveSkillPresentation(
     skill,
     effect,
-    buildSkillPresentationContext(actor, slotKind, effect),
+    buildSkillPresentationContext(actor, slotKind, effect, skill.id, effectIndex),
   );
   const skillAnimKey = resolveSkillAnimKey(skill.id, effectIndex);
   if (skillAnimKey) {
