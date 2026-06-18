@@ -39,34 +39,34 @@ export interface ParticlePresetDef {
 }
 
 const DEFAULT_RING: RingPresetParams = {
-  startRadius: 6,
-  endRadius: 36,
-  ringStartSec: 0.04,
-  ringEndSec: 0.42,
-  fadeSec: 0.18,
-  lineWidth: 2,
+  startRadius: 4,
+  endRadius: 30,
+  ringStartSec: 0,
+  ringEndSec: 0.35,
+  fadeSec: 0.06,
+  lineWidth: 1.5,
 };
 
 const DEFAULT_HEAL_PARTICLES: ParticlesPresetParams = {
   shape: 'cross',
-  vyMin: -42,
-  vyMax: -24,
-  vxSpread: 0.15,
-  spawnXSpread: 14,
-  spawnYMin: -10,
-  spawnYMax: 2,
-  lifeMinSec: 0.45,
-  lifeMaxSec: 0.75,
-  sizeMin: 1.5,
-  sizeMax: 3.5,
+  vyMin: -54,
+  vyMax: -28,
+  vxSpread: 0.08,
+  spawnXSpread: 8,
+  spawnYMin: -2,
+  spawnYMax: 4,
+  lifeMinSec: 0.42,
+  lifeMaxSec: 0.7,
+  sizeMin: 1.8,
+  sizeMax: 3.2,
 };
 
 export const PARTICLE_PRESET_DEFS: Record<ParticlePresetId, ParticlePresetDef> = {
   heal_holy_light: {
     kind: 'composite',
-    durationSec: 0.8,
-    defaultCount: 12,
-    defaultTint: '#ffe066',
+    durationSec: 0.75,
+    defaultCount: 10,
+    defaultTint: '#e8fff1',
     ring: DEFAULT_RING,
     particles: DEFAULT_HEAL_PARTICLES,
   },
