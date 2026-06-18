@@ -632,36 +632,38 @@ export class PresentationLabApp {
           draft.enabled = enabled;
         });
       });
-      appendAnimPhaseFields(mainGrid, vfx, (mutator) => {
-        this.patchBasicAttackVfx(mutator);
-      });
-      appendVfxPlacementFields(
-        mainGrid,
-        vfx.placement,
-        (mutator) => {
-          this.patchBasicAttackVfx((draft) => {
-            const placement = { anchor: 'target' as VfxAnchor, ...draft.placement };
-            mutator(placement);
-            draft.placement = placement;
-          });
-        },
-        () => {
-          this.patchBasicAttackVfx((draft) => {
-            delete draft.placement;
-          });
-        },
-      );
-      appendParticleFields(mainGrid, vfx.particles, (mutator) => {
-        this.patchBasicAttackVfx((draft) => {
-          const current = { preset: PARTICLE_PRESET_IDS[0], ...draft.particles };
-          mutator(current);
-          draft.particles = current;
+      if (vfx.enabled !== false) {
+        appendAnimPhaseFields(mainGrid, vfx, (mutator) => {
+          this.patchBasicAttackVfx(mutator);
         });
-      }, () => {
-        this.patchBasicAttackVfx((draft) => {
-          delete draft.particles;
+        appendVfxPlacementFields(
+          mainGrid,
+          vfx.placement,
+          (mutator) => {
+            this.patchBasicAttackVfx((draft) => {
+              const placement = { anchor: 'target' as VfxAnchor, ...draft.placement };
+              mutator(placement);
+              draft.placement = placement;
+            });
+          },
+          () => {
+            this.patchBasicAttackVfx((draft) => {
+              delete draft.placement;
+            });
+          },
+        );
+        appendParticleFields(mainGrid, vfx.particles, (mutator) => {
+          this.patchBasicAttackVfx((draft) => {
+            const current = { preset: PARTICLE_PRESET_IDS[0], ...draft.particles };
+            mutator(current);
+            draft.particles = current;
+          });
+        }, () => {
+          this.patchBasicAttackVfx((draft) => {
+            delete draft.particles;
+          });
         });
-      });
+      }
     } else {
       const vfx = effect.vfx ?? {};
       appendVfxEnabledRow(mainGrid, 'vfx.enabled', vfx.enabled !== false, (enabled) => {
@@ -669,36 +671,38 @@ export class PresentationLabApp {
           draft.enabled = enabled;
         });
       });
-      appendAnimPhaseFields(mainGrid, vfx, (mutator) => {
-        this.patchEffectVfx('vfx', mutator);
-      });
-      appendVfxPlacementFields(
-        mainGrid,
-        vfx.placement,
-        (mutator) => {
-          this.patchEffectVfx('vfx', (draft) => {
-            const placement = { anchor: 'target' as VfxAnchor, ...draft.placement };
-            mutator(placement);
-            draft.placement = placement;
-          });
-        },
-        () => {
-          this.patchEffectVfx('vfx', (draft) => {
-            delete draft.placement;
-          });
-        },
-      );
-      appendParticleFields(mainGrid, vfx.particles, (mutator) => {
-        this.patchEffectVfx('vfx', (draft) => {
-          const current = { preset: PARTICLE_PRESET_IDS[0], ...draft.particles };
-          mutator(current);
-          draft.particles = current;
+      if (vfx.enabled !== false) {
+        appendAnimPhaseFields(mainGrid, vfx, (mutator) => {
+          this.patchEffectVfx('vfx', mutator);
         });
-      }, () => {
-        this.patchEffectVfx('vfx', (draft) => {
-          delete draft.particles;
+        appendVfxPlacementFields(
+          mainGrid,
+          vfx.placement,
+          (mutator) => {
+            this.patchEffectVfx('vfx', (draft) => {
+              const placement = { anchor: 'target' as VfxAnchor, ...draft.placement };
+              mutator(placement);
+              draft.placement = placement;
+            });
+          },
+          () => {
+            this.patchEffectVfx('vfx', (draft) => {
+              delete draft.placement;
+            });
+          },
+        );
+        appendParticleFields(mainGrid, vfx.particles, (mutator) => {
+          this.patchEffectVfx('vfx', (draft) => {
+            const current = { preset: PARTICLE_PRESET_IDS[0], ...draft.particles };
+            mutator(current);
+            draft.particles = current;
+          });
+        }, () => {
+          this.patchEffectVfx('vfx', (draft) => {
+            delete draft.particles;
+          });
         });
-      });
+      }
     }
 
     if (supportsSkillEffectVfx(effect)) {
@@ -722,36 +726,38 @@ export class PresentationLabApp {
           draft.enabled = enabled;
         });
       });
-      appendAnimPhaseFields(hitGrid, hitVfx, (mutator) => {
-        this.patchEffectVfx('hitVfx', mutator);
-      });
-      appendVfxPlacementFields(
-        hitGrid,
-        hitVfx.placement,
-        (mutator) => {
-          this.patchEffectVfx('hitVfx', (draft) => {
-            const placement = { anchor: 'footTarget' as VfxAnchor, ...draft.placement };
-            mutator(placement);
-            draft.placement = placement;
-          });
-        },
-        () => {
-          this.patchEffectVfx('hitVfx', (draft) => {
-            delete draft.placement;
-          });
-        },
-      );
-      appendParticleFields(hitGrid, hitVfx.particles, (mutator) => {
-        this.patchEffectVfx('hitVfx', (draft) => {
-          const current = { preset: PARTICLE_PRESET_IDS[0], ...draft.particles };
-          mutator(current);
-          draft.particles = current;
+      if (hitVfx.enabled !== false) {
+        appendAnimPhaseFields(hitGrid, hitVfx, (mutator) => {
+          this.patchEffectVfx('hitVfx', mutator);
         });
-      }, () => {
-        this.patchEffectVfx('hitVfx', (draft) => {
-          delete draft.particles;
+        appendVfxPlacementFields(
+          hitGrid,
+          hitVfx.placement,
+          (mutator) => {
+            this.patchEffectVfx('hitVfx', (draft) => {
+              const placement = { anchor: 'footTarget' as VfxAnchor, ...draft.placement };
+              mutator(placement);
+              draft.placement = placement;
+            });
+          },
+          () => {
+            this.patchEffectVfx('hitVfx', (draft) => {
+              delete draft.placement;
+            });
+          },
+        );
+        appendParticleFields(hitGrid, hitVfx.particles, (mutator) => {
+          this.patchEffectVfx('hitVfx', (draft) => {
+            const current = { preset: PARTICLE_PRESET_IDS[0], ...draft.particles };
+            mutator(current);
+            draft.particles = current;
+          });
+        }, () => {
+          this.patchEffectVfx('hitVfx', (draft) => {
+            delete draft.particles;
+          });
         });
-      });
+      }
     }
 
     return section;
@@ -1241,15 +1247,10 @@ function appendParticleFields(
       patchParticles((draft) => {
         draft.enabled = false;
       });
-    } else {
-      patchParticles((draft) => {
-        draft.preset = PARTICLE_PRESET_IDS[0];
-        draft.enabled = true;
-      });
     }
   });
 
-  if (!particles) return;
+  if (!particles || particles.enabled === false) return;
 
   grid.appendChild(
     createFieldRow(
