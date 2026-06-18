@@ -39,9 +39,13 @@ export interface SkillHitFeedbackRequest {
   effect: SkillEffectDef;
   amount?: number;
   kind?: "damage" | "dot" | "heal";
+  popupDedupeKey?: string;
   skipMainVfx?: boolean;
   vfxOptions?: AttackEffectSpawnOptions;
 }
+
+const DAMAGE_POPUP_DEDUPE_WINDOW_MS = 50;
+const recentDamagePopupTimes = new Map<string, number>();
 
 function effectKindForPresentation(effect: SkillEffectDef): SkillVfxContext["effectKind"] {
   return effect.type === "move" ? "move" : effect.type;
@@ -147,6 +151,22 @@ export function playSkillHitFeedback(
   }
 
   if (effect.type === "damage" || effect.type === "dot") {
+    if (request.popupDedupeKey) {
+      const now = performance.now();
+      for (const [key, lastShownAt] of recentDamagePopupTimes) {
+        if (now - lastShownAt > DAMAGE_POPUP_DEDUPE_WINDOW_MS) {
+          recentDamagePopupTimes.delete(key);
+        }
+      }
+      const lastShownAt = recentDamagePopupTimes.get(request.popupDedupeKey);
+      if (
+        lastShownAt !== undefined &&
+        now - lastShownAt <= DAMAGE_POPUP_DEDUPE_WINDOW_MS
+      ) {
+        return;
+      }
+      recentDamagePopupTimes.set(request.popupDedupeKey, now);
+    }
     canvas.showDamagePopup(
       targetId,
       amount,

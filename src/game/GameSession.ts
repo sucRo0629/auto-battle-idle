@@ -28,6 +28,7 @@ import {
   applyStageRollbackOnDefeat,
   computeStageExpReward,
   getStageById,
+  resolveKnownStageId,
   resolveVictoryNextStageId,
 } from '../progression/stageProgression.ts';
 import {
@@ -67,10 +68,17 @@ export class GameSession {
     this.loopStageId = this.verifyMode ? getDebugLoopStageId() : null;
     this.loopWaveIndex = this.verifyMode ? getDebugLoopWaveIndex() : null;
     this.save = this.loadSaveForMode(this.verifyMode);
+
     if (this.verifyMode && this.loopStageId) {
-      this.save.stageProgress.currentStageId = this.loopStageId;
-      this.sanitizeLoopWaveIndex();
+      const loopStage = getStageById(this.gameData.stages, this.loopStageId);
+      if (loopStage) {
+        this.save.stageProgress.currentStageId = this.loopStageId;
+        this.sanitizeLoopWaveIndex();
+      } else {
+        this.clearLoopStageSelection();
+      }
     }
+
     this.stageDamageStats.resetForStage(
       this.save.stageProgress.currentStageId,
     );
@@ -165,13 +173,21 @@ export class GameSession {
     this.loopStageId = enabled ? getDebugLoopStageId() : null;
     this.loopWaveIndex = enabled ? getDebugLoopWaveIndex() : null;
     this.save = this.loadSaveForMode(enabled);
+
     if (enabled && this.loopStageId) {
-      this.save.stageProgress.currentStageId = this.loopStageId;
-      this.sanitizeLoopWaveIndex();
+      const loopStage = getStageById(this.gameData.stages, this.loopStageId);
+      if (loopStage) {
+        this.save.stageProgress.currentStageId = this.loopStageId;
+        this.sanitizeLoopWaveIndex();
+      } else {
+        this.clearLoopStageSelection();
+      }
     }
+
     this.stageDamageStats.resetForStage(
       this.save.stageProgress.currentStageId,
     );
+
     this.engine.restartBattle();
     this.persistSave();
     this.view.syncVerifyModeToggle(enabled);
@@ -314,6 +330,13 @@ export class GameSession {
     const loaded = this.saveManager.load(storageKey);
     const save = loaded ?? createDefaultSave(this.gameData, partyId);
     reconcilePartyBuilds(save.party, this.gameData);
+    const resolvedStageId = resolveKnownStageId(
+      this.gameData.stages,
+      save.stageProgress.currentStageId,
+    );
+    if (resolvedStageId !== null) {
+      save.stageProgress.currentStageId = resolvedStageId;
+    }
     this.saveManager.save(save, storageKey);
     return save;
   }
@@ -414,6 +437,13 @@ export class GameSession {
       this.loopWaveIndex = null;
       setDebugLoopWaveIndex(null);
     }
+  }
+
+  private clearLoopStageSelection(): void {
+    this.loopStageId = null;
+    this.loopWaveIndex = null;
+    setDebugLoopStageId(null);
+    setDebugLoopWaveIndex(null);
   }
 
   private persistSave(): void {

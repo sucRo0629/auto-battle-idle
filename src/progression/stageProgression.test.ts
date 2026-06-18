@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { StageDef } from '../battle/types.ts';
 import {
   getNextStageId,
+  resolveKnownStageId,
   resolveVictoryNextStageId,
 } from './stageProgression.ts';
 
@@ -23,5 +24,15 @@ describe('resolveVictoryNextStageId', () => {
     expect(resolveVictoryNextStageId(stages, '2', undefined)).toBe(
       getNextStageId(stages, '2'),
     );
+  });
+});
+
+describe('resolveKnownStageId', () => {
+  it('returns the requested stage when it exists', () => {
+    expect(resolveKnownStageId(stages, '2')).toBe('2');
+  });
+
+  it('falls back to the first stage when the requested stage is missing', () => {
+    expect(resolveKnownStageId(stages, 'test_counter')).toBe('1');
   });
 });

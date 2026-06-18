@@ -287,6 +287,19 @@ export class BattleView {
                 : event.effect === "heal"
                   ? "heal"
                   : undefined,
+          popupDedupeKey:
+            event.amount !== undefined &&
+            (event.effect === "damage" || event.effect === "dot")
+              ? [
+                  event.vfxSourceId ?? event.actorId,
+                  event.targetId,
+                  event.skillId,
+                  event.effectIndex ?? 0,
+                  event.hitIndex ?? -1,
+                  event.effect,
+                  event.amount,
+                ].join(":")
+              : undefined,
           skipMainVfx: skipStagedChainVfx,
           vfxOptions: isChainLightning
             ? {

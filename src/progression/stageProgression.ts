@@ -1,5 +1,12 @@
 import type { GameData, SaveGameState, StageDef } from '../battle/types.ts';
 
+export function resolveKnownStageId(
+  stages: StageDef[],
+  stageId: string,
+): string | null {
+  return stages.find((stage) => stage.id === stageId)?.id ?? stages[0]?.id ?? null;
+}
+
 export function resolveVictoryNextStageId(
   stages: StageDef[],
   currentStageId: string,
