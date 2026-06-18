@@ -752,7 +752,37 @@ export type SkillEffectKind =
 export type MoveMode = "engage" | "toAnchor";
 export type DamageType = "physical" | "magic";
 
-/** スキル演出プリセット ID（render 層が描画。将来 skills.json の vfx で指定） */
+/** strip / VFX PNG 共通の再生フェーズ（絶対コマ index） */
+export interface AnimPhaseFields {
+  /** 再生開始コマ。先頭 idle 参照コマ skip 時は 1 等 */
+  animStartFrame?: number;
+  /** イントロ最終コマ（inclusive）。未指定時は animLoopFrame */
+  animIntroEndFrame?: number;
+  /** ループ開始コマ（inclusive）。指定時は intro / hold / outro の 3 段再生 */
+  animLoopFrame?: number;
+  /** ループ終了コマ（inclusive）。未指定時は animLoopFrame */
+  animLoopEndFrame?: number;
+  /** アウトロ開始コマ。未指定時は (animLoopEndFrame ?? animLoopFrame) + 1 */
+  animOutroStartFrame?: number;
+}
+
+export type VfxAnchor =
+  | "actor"
+  | "target"
+  | "between"
+  | "footActor"
+  | "footTarget";
+
+export type VfxLayer = "behind" | "front";
+
+export interface VfxPlacement {
+  anchor: VfxAnchor;
+  offsetX?: number;
+  offsetY?: number;
+  layer?: VfxLayer;
+}
+
+/** @deprecated Canvas プリセット ID。PNG VFX（`sheets/vfx/`）移行完了後に削除 */
 export type SkillVfxPresetId =
   | "slash"
   | "slashHit"
@@ -762,12 +792,16 @@ export type SkillVfxPresetId =
   | "chainLightning"
   | "impale";
 
-/** スキルごとの演出定義（skills.json に optional で載せる想定） */
-export interface SkillVfxDef {
-  preset: SkillVfxPresetId;
-  /** arrow プリセット: 放物線軌道 */
+/** スキル VFX 定義（skills.json / traits.basicAttackVfx）。PNG strip 正本 */
+export interface SkillVfxDef extends AnimPhaseFields {
+  /** false で VFX 抑制。省略 = 有効 */
+  enabled?: boolean;
+  placement?: VfxPlacement;
+  /** @deprecated Canvas preset。移行中は既存 JSON 互換 */
+  preset?: SkillVfxPresetId;
+  /** @deprecated preset=arrow 用 */
   arc?: boolean;
-  /** 演出時間（ms）。未指定時はプリセット既定 */
+  /** @deprecated preset 既定時間の上書き（ms） */
   durationMs?: number;
 }
 
@@ -784,7 +818,7 @@ export type SkillEffectAnimId =
   /** @deprecated 読み込み互換。none として正規化 */
   | "hurt";
 
-interface SkillEffectCommon {
+interface SkillEffectCommon extends AnimPhaseFields {
   target: TargetSpec;
   /** @deprecated 読み込み専用。正規化後は target のみ使用 */
   targetRule?: TargetRule;
@@ -823,16 +857,6 @@ interface SkillEffectCommon {
   range?: number;
   /** 未指定時は effect 種別の既定アニメ。none = スプライトアニメなし */
   anim?: SkillEffectAnimId;
-  /** スキル strip 内の再生開始コマ。先頭 idle 参照コマ skip 時は 1 等 */
-  animStartFrame?: number;
-  /** イントロ最終コマ（inclusive）。未指定時は animLoopFrame */
-  animIntroEndFrame?: number;
-  /** ループ開始コマ（inclusive）。指定時は intro / hold / outro の 3 段再生 */
-  animLoopFrame?: number;
-  /** ループ終了コマ（inclusive）。未指定時は animLoopFrame */
-  animLoopEndFrame?: number;
-  /** アウトロ開始コマ。未指定時は (animLoopEndFrame ?? animLoopFrame) + 1 */
-  animOutroStartFrame?: number;
   /**
    * スキル strip 内の効果適用コマ（絶対 index）。省略 = 即時。
    * 遅延秒 = max(0, applyFrame - animStartFrame) / 8
@@ -840,6 +864,8 @@ interface SkillEffectCommon {
   applyFrame?: number;
   /** 未指定時は skill vfx を使う。どちらも未設定なら VFX なし */
   vfx?: SkillVfxDef;
+  /** 命中時 VFX（main `vfx` とは別 PNG）。未指定 = 解決層の既定 */
+  hitVfx?: SkillVfxDef;
   /** @deprecated target.kind==="status" に統合。読み込み専用 */
   targetDebuffFilter?: DebuffFilterTag[];
   /** damage / heal / dot 用（HoT tick 非対象） */

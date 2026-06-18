@@ -28,6 +28,8 @@ import type {
   TargetRule,
   TargetShape,
   TargetSpec,
+  VfxAnchor,
+  VfxLayer,
 } from "../types.ts";
 
 export const ROLES = [
@@ -148,6 +150,7 @@ export const DAMAGE_TYPES = [
   "physical",
   "magic",
 ] as const satisfies readonly DamageType[];
+/** @deprecated Canvas VFX プリセット。PNG VFX（`sheets/vfx/`）正本化後に削除予定 */
 export const VFX_PRESETS = [
   "slash",
   "slashHit",
@@ -157,6 +160,17 @@ export const VFX_PRESETS = [
   "chainLightning",
   "impale",
 ] as const satisfies readonly SkillVfxPresetId[];
+export const VFX_ANCHORS = [
+  "actor",
+  "target",
+  "between",
+  "footActor",
+  "footTarget",
+] as const satisfies readonly VfxAnchor[];
+export const VFX_LAYERS = [
+  "behind",
+  "front",
+] as const satisfies readonly VfxLayer[];
 export const TARGET_RULES = [
   "closestAlly",
   "frontEnemy",
@@ -508,8 +522,12 @@ export const RESOURCE_AMOUNT_KIND_OPTIONS: ResourceAmountKind[] = [
   ...RESOURCE_AMOUNT_KINDS,
 ];
 export const DAMAGE_TYPE_OPTIONS: DamageType[] = [...DAMAGE_TYPES];
+/** @deprecated Canvas VFX 移行中。エディタ互換用 */
 export const VFX_PRESET_OPTIONS: SkillVfxPresetId[] = [...VFX_PRESETS];
+export const VFX_ANCHOR_OPTIONS: VfxAnchor[] = [...VFX_ANCHORS];
+export const VFX_LAYER_OPTIONS: VfxLayer[] = [...VFX_LAYERS];
 
+/** @deprecated Canvas VFX 移行中 */
 export const VFX_PRESET_LABELS: Record<SkillVfxPresetId, string> = {
   slash: "slash（攻撃スイング）",
   slashHit: "slashHit（ダメージ）",

@@ -8,6 +8,8 @@
 
 **実装状況（PR2）:** スキル strip **64×48**（`SKILL_ANIM_CELL_WIDTH`）、`animStartFrame` 再生スキップ + **3 段再生**（`animLoopFrame` / `animLoopEndFrame` / `animIntroEndFrame` / `animOutroStartFrame` — `skillAnimPlayback.ts` + `SpriteAnimator`）。
 
+**実装状況（VFX 型・レジストリ）:** VFX strip **64×64**（`VFX_ANIM_CELL_WIDTH` / `VFX_ANIM_CELL_HEIGHT`）、`vfxAnimRegistry.ts`（`sheets/vfx/*.png` 登録・キー解決・コマ数）。描画は Phase 6 で Canvas から PNG へ切替。
+
 **実装状況（PR3）:** 演出ラボ MVP — `presentation-lab.html` + `PresentationPreviewRunner`（`resolveEffectPresentation` → `BattleCanvas`）。JSON 保存は `PUT /__editor/presentation-skill`。
 
 ---
@@ -28,6 +30,10 @@ src/assets/sprites/
       at_ranger_basic_attack.png
       at_assassin_active_1_0.png
       at_assassin_active_1_1.png
+    vfx/
+      df_guardian_basic_attack_vfx.png
+      at_assassin_active_1_0_vfx.png
+      at_assassin_active_1_0_vfx_hit.png
   sprites/
     {entityId}.png               # 静止画フォールバック（32×32、任意）
 ```
@@ -36,7 +42,7 @@ src/assets/sprites/
 |------|------|------|
 | **entity 本体** | `sheets/bodies/{classId\|enemyId}.png` | **1 枚**。idle / move / death のみ（attack は含めない） |
 | **スキル body** | `sheets/skills/{skillId}.png` または `{skillId}_{effectIndex}.png` | 通常攻撃・全 active 共通。**64×48** 横 strip |
-| **スキル VFX** | JSON の `vfx`（Canvas プリセット） | body PNG とは別レイヤ。Phase 6 で新 preset 追加 |
+| **スキル VFX** | `sheets/vfx/{skillId}_vfx.png` 等 | main / hit 用 PNG。**64×64** 横 strip。JSON `vfx` / `hitVfx` |
 
 味方・敵とも **同じ `entityAnimLayout.json`**。`spriteKey` 未指定時は entity の `id` をキーとする。
 
@@ -102,19 +108,56 @@ sheets/skills/at_assassin_active_1_1.png   # damage ステップ
 
 ---
 
-## スキル VFX（Canvas プリセット）
+## スキル VFX（`sheets/vfx/*.png`）
 
-JSON で指定。PNG 不要（Phase 6 で新 preset の `draw*` 追加）。
+### 共通仕様
+
+| 項目 | 値 |
+|------|-----|
+| 1 コマ | **64 × 64 px**（`VFX_ANIM_CELL_WIDTH` / `VFX_ANIM_CELL_HEIGHT`） |
+| 並べ方 | 左から右へ横一列 |
+| コマ数 | 幅 ÷ 64 |
+| fps | 8（body と同じ） |
+
+### ファイル名
+
+| パターン | 用途 |
+|----------|------|
+| `{skillId}_vfx.png` | 単 effect / フォールバック（main） |
+| `{skillId}_{effectIndex}_vfx.png` | 多 effect（0 始まり）。解決順: index 付き → 無 index |
+| `{skillId}_vfx_hit.png` / `{skillId}_{effectIndex}_vfx_hit.png` | 命中 VFX（`hitVfx`） |
+| `{classId\|enemyId}_basic_attack_vfx.png` | 通常攻撃 main VFX |
+
+実装: `resolveVfxAnimKey(skillId, effectIndex, 'main' | 'hit')`（`vfxAnimRegistry.ts`）。
+
+### JSON（`SkillVfxDef`）
+
+| フィールド | 説明 |
+|-----------|------|
+| `enabled` | 省略 = 有効。`false` で抑制 |
+| `placement.anchor` | `actor` / `target` / `between` / `footActor` / `footTarget` |
+| `placement.offsetX` / `offsetY` | アンカーからの px ずれ |
+| `placement.layer` | `behind` / `front` |
+| `animStartFrame` 〜 | body と同型（VFX strip 内の絶対コマ） |
+| `preset` / `arc` / `durationMs` | **deprecated** — Canvas 移行中のフォールバック |
+
+effect **`hitVfx`** は main `vfx` とは別オブジェクト（別 PNG・別 placement 可）。
+
+**演出調整ツール（Phase 5）** で body PNG・VFX（移行中は Canvas preset）・タイミングを **同一 Canvas プレビュー** で調整する。
+
+---
+
+## スキル VFX（Canvas プリセット・移行中）
+
+JSON で `vfx.preset` を指定した場合のみ Canvas 描画（`AttackEffect.ts`）。PNG 配置後は廃止予定。
 
 | 設定場所 | フィールド |
 |----------|-----------|
-| effect | `vfx.preset`, `arc`, `durationMs` |
+| effect | `vfx` / `hitVfx` |
 | skill | `vfx` |
 | traits | `basicAttackVfx` |
 
-解決: `basicAttackVfx` → `effect.vfx` → `skill.vfx` → なし。
-
-**演出調整ツール（Phase 5）** で body PNG・VFX・`durationMs` を **同一 Canvas プレビュー** で調整する（Phase 6 用の別 VFX エディタは作らない）。
+解決: `basicAttackVfx` → `effect.vfx` → `skill.vfx` → なし（`effectVfxOnly` 既定時は effect のみ）。
 
 ---
 
@@ -131,7 +174,8 @@ JSON で指定。PNG 不要（Phase 6 で新 preset の `draw*` 追加）。
 1. `bodies/{id}.png`
 2. `skills/{id}_basic_attack.png`
 3. 各 active の `skills/{skillId}_*.png`
-4. JSON の `animStartFrame` / `animLoopFrame` / `vfx` / タイミング（演出ラボ）
+4. `sheets/vfx/{skillId}_vfx*.png`（任意）
+5. JSON の `animStartFrame` / `animLoopFrame` / `vfx` / `hitVfx` / タイミング（演出ラボ）
 
 4b 説明文はスキル JSON 変更 PR と同梱（Phase 7 前の一括仕上げは不要）。
 

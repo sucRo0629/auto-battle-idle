@@ -11,6 +11,10 @@ export const ATTACK_SHEET_CELL_WIDTH = 64;
 export const SKILL_ANIM_CELL_WIDTH = 64;
 export const SKILL_ANIM_CELL_HEIGHT = 48;
 
+/** VFX strip 1 コマ（`sheets/vfx/*.png`） */
+export const VFX_ANIM_CELL_WIDTH = 64;
+export const VFX_ANIM_CELL_HEIGHT = 64;
+
 /** spriteKey ごとのシートコマサイズ上書き */
 const SHEET_CELL_OVERRIDES: Readonly<Record<string, number>> = {};
 
@@ -36,6 +40,7 @@ export function spriteSheetMaxOverflowTop(): number {
     SPRITE_SHEET_CELL_SIZE,
     ATTACK_SHEET_CELL_WIDTH,
     SKILL_ANIM_CELL_HEIGHT,
+    VFX_ANIM_CELL_HEIGHT,
     ...Object.values(SHEET_CELL_OVERRIDES),
   ];
   const maxCell = Math.max(...sizes);

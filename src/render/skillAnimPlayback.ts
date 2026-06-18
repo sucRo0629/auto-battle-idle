@@ -1,4 +1,4 @@
-import type { ActiveSkillDef, CombatantState, DamageType, Role, SkillEffectDef, SkillSlotKind, SkillVfxDef } from '../battle/types.ts';
+import type { ActiveSkillDef, CombatantState, DamageType, Role, SkillEffectDef, SkillSlotKind, SkillVfxDef, AnimPhaseFields } from '../battle/types.ts';
 import { resolvePresentationLockSec } from '../battle/skills/presentationLock.ts';
 import { resolveUseDurationSec } from '../battle/skills/skillSequence.ts';
 import { SHARED_ANIM_FPS } from './SpriteRegistry.ts';
@@ -74,14 +74,7 @@ export interface SkillAnimPhaseConfig {
   holdSec: number;
 }
 
-export type SkillAnimPhaseFields = Pick<
-  SkillEffectDef,
-  | 'animStartFrame'
-  | 'animIntroEndFrame'
-  | 'animLoopFrame'
-  | 'animLoopEndFrame'
-  | 'animOutroStartFrame'
->;
+export type SkillAnimPhaseFields = AnimPhaseFields;
 
 export function isPhasedSkillAnim(
   fields: SkillAnimPhaseFields,

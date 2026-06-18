@@ -135,7 +135,7 @@ export function computePresentationTimeline(
 
   let vfxPreset: string | null = null;
   let vfxSec: number | null = null;
-  if (presentation.vfx) {
+  if (presentation.vfx?.preset) {
     vfxPreset = presentation.vfx.preset;
     vfxSec =
       resolvePresetDurationMs(

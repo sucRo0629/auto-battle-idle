@@ -1,4 +1,4 @@
-import type { SkillVfxDef, SkillVfxPresetId } from "../battle/types.ts";
+import type { SkillVfxDef } from "../battle/types.ts";
 import type { CombatantLayout } from "./IBattleRenderer.ts";
 import type { BattleHudTheme } from "./battleHudTheme.ts";
 import { spriteDrawY } from "./spriteVisualDepth.ts";
@@ -41,7 +41,9 @@ export interface AttackEffectSpawnOptions {
 }
 
 function durationForSpec(spec: SkillVfxDef): number {
-  return spec.durationMs ?? PRESET_DURATION_MS[spec.preset];
+  if (spec.durationMs !== undefined) return spec.durationMs;
+  if (spec.preset !== undefined) return PRESET_DURATION_MS[spec.preset];
+  return 0;
 }
 
 function getCombatantCenter(
@@ -214,6 +216,8 @@ export class AttackEffectManager {
           break;
         case "impale":
           this.drawImpale(ctx, start, end, travelProgress, scale, theme);
+          break;
+        default:
           break;
       }
     }

@@ -54,6 +54,10 @@ import type {
   TargetRule,
   TargetShape,
   TargetSpec,
+  VfxAnchor,
+  VfxLayer,
+  VfxPlacement,
+  AnimPhaseFields,
   DebuffFilterTag,
   DispelPriority,
   DamageIncreaseCondition,
@@ -101,6 +105,8 @@ import {
   TARGET_SHAPES,
   VALID_REG_VALUES,
   VFX_PRESETS,
+  VFX_ANCHORS,
+  VFX_LAYERS,
   DEBUFF_FILTER_TAG_OPTIONS,
   DISPEL_PRIORITIES,
   BUFF_FILTER_TAG_OPTIONS,
@@ -128,6 +134,8 @@ const COUNTER_RESPONSE_KINDS_SET = new Set<CounterResponseKind>(
 );
 const DAMAGE_TYPES_SET = new Set<DamageType>(DAMAGE_TYPES);
 const VFX_PRESETS_SET = new Set<SkillVfxPresetId>(VFX_PRESETS);
+const VFX_ANCHORS_SET = new Set<VfxAnchor>(VFX_ANCHORS);
+const VFX_LAYERS_SET = new Set<VfxLayer>(VFX_LAYERS);
 const TARGET_RULES_SET = new Set<TargetRule>(TARGET_RULES);
 const TARGET_SHAPES_SET = new Set<TargetShape>(TARGET_SHAPES);
 const MOVE_MODES_SET = new Set<MoveMode>(MOVE_MODES);
@@ -1019,13 +1027,109 @@ function parseOptionalPowerStep(
   return result;
 }
 
+function parseOptionalAnimPhaseFields(
+  obj: Record<string, unknown>,
+  context: string,
+): AnimPhaseFields {
+  const result: AnimPhaseFields = {};
+  const animStartFrameRaw = parseOptionalNumber(obj, 'animStartFrame', context);
+  if (animStartFrameRaw !== undefined) {
+    if (!Number.isInteger(animStartFrameRaw) || animStartFrameRaw < 0) {
+      invalidField(context, 'animStartFrame', 'must be a non-negative integer');
+    }
+    result.animStartFrame = animStartFrameRaw;
+  }
+  const animIntroEndFrameRaw = parseOptionalNumber(
+    obj,
+    'animIntroEndFrame',
+    context,
+  );
+  if (animIntroEndFrameRaw !== undefined) {
+    if (!Number.isInteger(animIntroEndFrameRaw) || animIntroEndFrameRaw < 0) {
+      invalidField(
+        context,
+        'animIntroEndFrame',
+        'must be a non-negative integer',
+      );
+    }
+    result.animIntroEndFrame = animIntroEndFrameRaw;
+  }
+  const animLoopFrameRaw = parseOptionalNumber(obj, 'animLoopFrame', context);
+  if (animLoopFrameRaw !== undefined) {
+    if (!Number.isInteger(animLoopFrameRaw) || animLoopFrameRaw < 0) {
+      invalidField(context, 'animLoopFrame', 'must be a non-negative integer');
+    }
+    result.animLoopFrame = animLoopFrameRaw;
+  }
+  const animLoopEndFrameRaw = parseOptionalNumber(
+    obj,
+    'animLoopEndFrame',
+    context,
+  );
+  if (animLoopEndFrameRaw !== undefined) {
+    if (!Number.isInteger(animLoopEndFrameRaw) || animLoopEndFrameRaw < 0) {
+      invalidField(
+        context,
+        'animLoopEndFrame',
+        'must be a non-negative integer',
+      );
+    }
+    result.animLoopEndFrame = animLoopEndFrameRaw;
+  }
+  const animOutroStartFrameRaw = parseOptionalNumber(
+    obj,
+    'animOutroStartFrame',
+    context,
+  );
+  if (animOutroStartFrameRaw !== undefined) {
+    if (!Number.isInteger(animOutroStartFrameRaw) || animOutroStartFrameRaw < 0) {
+      invalidField(
+        context,
+        'animOutroStartFrame',
+        'must be a non-negative integer',
+      );
+    }
+    result.animOutroStartFrame = animOutroStartFrameRaw;
+  }
+  return result;
+}
+
+function parseVfxPlacement(
+  raw: unknown,
+  context: string,
+): VfxPlacement | undefined {
+  if (raw === undefined) return undefined;
+  const obj = requireRecord(raw, context);
+  const anchor = requireEnum(obj, 'anchor', context, VFX_ANCHORS_SET);
+  const offsetX = parseOptionalNumber(obj, 'offsetX', context);
+  const offsetY = parseOptionalNumber(obj, 'offsetY', context);
+  const layer =
+    obj.layer === undefined
+      ? undefined
+      : requireEnum(obj, 'layer', context, VFX_LAYERS_SET);
+  return {
+    anchor,
+    ...(offsetX !== undefined ? { offsetX } : {}),
+    ...(offsetY !== undefined ? { offsetY } : {}),
+    ...(layer !== undefined ? { layer } : {}),
+  };
+}
+
 function parseSkillVfx(
   raw: unknown,
   context: string,
 ): SkillVfxDef | undefined {
   if (raw === undefined) return undefined;
   const obj = requireRecord(raw, context);
-  const preset = requireEnum(obj, 'preset', context, VFX_PRESETS_SET);
+  const enabled = obj.enabled;
+  if (enabled !== undefined && typeof enabled !== 'boolean') {
+    invalidField(context, 'enabled', 'must be a boolean');
+  }
+  const placement = parseVfxPlacement(obj.placement, `${context}.placement`);
+  const preset =
+    obj.preset === undefined
+      ? undefined
+      : requireEnum(obj, 'preset', context, VFX_PRESETS_SET);
   const arc = obj.arc;
   if (arc !== undefined && typeof arc !== 'boolean') {
     invalidField(context, 'arc', 'must be a boolean');
@@ -1039,8 +1143,12 @@ function parseSkillVfx(
   ) {
     invalidField(context, 'durationMs', 'must be a positive number');
   }
+  const animPhase = parseOptionalAnimPhaseFields(obj, context);
   return {
-    preset,
+    ...animPhase,
+    ...(typeof enabled === 'boolean' ? { enabled } : {}),
+    ...(placement !== undefined ? { placement } : {}),
+    ...(preset !== undefined ? { preset } : {}),
     ...(typeof arc === 'boolean' ? { arc } : {}),
     ...(typeof durationMs === 'number' ? { durationMs } : {}),
   };
@@ -1527,6 +1635,7 @@ function parseOptionalEffectPresentation(
   | 'animOutroStartFrame'
   | 'applyFrame'
   | 'vfx'
+  | 'hitVfx'
 > {
   const result: Pick<
     SkillEffectDef,
@@ -1538,69 +1647,12 @@ function parseOptionalEffectPresentation(
     | 'animOutroStartFrame'
     | 'applyFrame'
     | 'vfx'
+    | 'hitVfx'
   > = {};
   if (obj.anim !== undefined) {
     result.anim = requireEnum(obj, 'anim', context, SKILL_EFFECT_ANIM_IDS_SET);
   }
-  const animStartFrameRaw = parseOptionalNumber(obj, 'animStartFrame', context);
-  if (animStartFrameRaw !== undefined) {
-    if (!Number.isInteger(animStartFrameRaw) || animStartFrameRaw < 0) {
-      invalidField(context, 'animStartFrame', 'must be a non-negative integer');
-    }
-    result.animStartFrame = animStartFrameRaw;
-  }
-  const animIntroEndFrameRaw = parseOptionalNumber(
-    obj,
-    'animIntroEndFrame',
-    context,
-  );
-  if (animIntroEndFrameRaw !== undefined) {
-    if (!Number.isInteger(animIntroEndFrameRaw) || animIntroEndFrameRaw < 0) {
-      invalidField(
-        context,
-        'animIntroEndFrame',
-        'must be a non-negative integer',
-      );
-    }
-    result.animIntroEndFrame = animIntroEndFrameRaw;
-  }
-  const animLoopFrameRaw = parseOptionalNumber(obj, 'animLoopFrame', context);
-  if (animLoopFrameRaw !== undefined) {
-    if (!Number.isInteger(animLoopFrameRaw) || animLoopFrameRaw < 0) {
-      invalidField(context, 'animLoopFrame', 'must be a non-negative integer');
-    }
-    result.animLoopFrame = animLoopFrameRaw;
-  }
-  const animLoopEndFrameRaw = parseOptionalNumber(
-    obj,
-    'animLoopEndFrame',
-    context,
-  );
-  if (animLoopEndFrameRaw !== undefined) {
-    if (!Number.isInteger(animLoopEndFrameRaw) || animLoopEndFrameRaw < 0) {
-      invalidField(
-        context,
-        'animLoopEndFrame',
-        'must be a non-negative integer',
-      );
-    }
-    result.animLoopEndFrame = animLoopEndFrameRaw;
-  }
-  const animOutroStartFrameRaw = parseOptionalNumber(
-    obj,
-    'animOutroStartFrame',
-    context,
-  );
-  if (animOutroStartFrameRaw !== undefined) {
-    if (!Number.isInteger(animOutroStartFrameRaw) || animOutroStartFrameRaw < 0) {
-      invalidField(
-        context,
-        'animOutroStartFrame',
-        'must be a non-negative integer',
-      );
-    }
-    result.animOutroStartFrame = animOutroStartFrameRaw;
-  }
+  Object.assign(result, parseOptionalAnimPhaseFields(obj, context));
 
   const applyFrameRaw = parseOptionalNumber(obj, 'applyFrame', context);
   if (applyFrameRaw !== undefined) {
@@ -1681,6 +1733,10 @@ function parseOptionalEffectPresentation(
   const vfx = parseSkillVfx(obj.vfx, `${context}.vfx`);
   if (vfx !== undefined) {
     result.vfx = vfx;
+  }
+  const hitVfx = parseSkillVfx(obj.hitVfx, `${context}.hitVfx`);
+  if (hitVfx !== undefined) {
+    result.hitVfx = hitVfx;
   }
   return result;
 }
