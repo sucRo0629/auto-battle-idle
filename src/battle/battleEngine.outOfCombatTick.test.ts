@@ -93,4 +93,46 @@ describe('BattleEngine out-of-combat ticking', () => {
     expect(activeCd.remaining).toBeCloseTo(4, 5);
     expect(runner.isActorUseLocked(guardian.id)).toBe(false);
   });
+
+  it('pauses basic and active cooldowns while an actor is use-locked', () => {
+    const engine = createEngine();
+    const guardian = getAllies(engine).find((a) => a.classId === 'df_guardian')!;
+    const basicCd = guardian.cooldowns.find((cd) => cd.slotKind === 'basic')!;
+    const activeCd = guardian.cooldowns.find((cd) => cd.slotKind === 'active')!;
+    basicCd.remaining = 2;
+    activeCd.remaining = 5;
+    const runner = (engine as unknown as {
+      skillSequenceRunner: SkillSequenceRunner;
+    }).skillSequenceRunner;
+
+    runner.beginUse(guardian.id, 1);
+    engine.tick(0.5);
+
+    expect(basicCd.remaining).toBeCloseTo(2, 5);
+    expect(activeCd.remaining).toBeCloseTo(5, 5);
+    expect(runner.isActorUseLocked(guardian.id)).toBe(true);
+  });
+
+  it('pauses hitsTaken charge progression while an actor is use-locked', () => {
+    const engine = createEngine();
+    const guardian = getAllies(engine).find((a) => a.classId === 'df_guardian')!;
+    const hitsTakenCd = guardian.cooldowns.find(
+      (cd) => cd.skillId === 'df_guardian_active_2',
+    )!;
+    hitsTakenCd.remaining = 2;
+    const runner = (engine as unknown as {
+      skillSequenceRunner: SkillSequenceRunner;
+    }).skillSequenceRunner;
+    const tickCountTriggers = (
+      engine as unknown as {
+        tickCountTriggers: (unitId: string, kind: 'hitsTaken') => void;
+      }
+    ).tickCountTriggers.bind(engine);
+
+    runner.beginUse(guardian.id, 1);
+    tickCountTriggers(guardian.id, 'hitsTaken');
+
+    expect(hitsTakenCd.remaining).toBe(2);
+    expect(runner.isActorUseLocked(guardian.id)).toBe(true);
+  });
 });

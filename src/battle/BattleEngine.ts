@@ -1591,6 +1591,7 @@ export class BattleEngine {
   private tickCooldowns(units: CombatantState[], deltaTime: number): void {
     for (const unit of units) {
       if (!unit.isAlive) continue;
+      if (this.skillSequenceRunner.isActorUseLocked(unit.id)) continue;
       let basicRate = 1;
       if (unit.isEnemy) {
         const enemyTemplate = this.gameData.enemyRegistry[unit.classId];
@@ -1616,14 +1617,6 @@ export class BattleEngine {
         if (isUnitStunned(unit) && cd.slotKind === "active") {
           continue;
         }
-        if (
-          shouldPauseActiveCooldown(
-            cd,
-            skill,
-          )
-        ) {
-          continue;
-        }
         const prevRemaining = cd.remaining;
         const speedMul =
           cd.slotKind === "active" ? 1 : getEffectiveAttackSpeedMultiplier(unit);
@@ -1644,6 +1637,7 @@ export class BattleEngine {
   private tickCountTriggers(unitId: string, kind: SkillTriggerKind): void {
     const unit = [...this.players, ...this.enemies].find((u) => u.id === unitId);
     if (!unit?.isAlive) return;
+    if (this.skillSequenceRunner.isActorUseLocked(unit.id)) return;
     const actives = this.gameData.skillRegistry.actives;
 
     if (kind !== "hitsTaken") {

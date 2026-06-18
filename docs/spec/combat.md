@@ -141,7 +141,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 | --- | --- |
 | `presentationLock` | VFX 終了まで **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。**CD チャージは止めない**。 |
 | `animLock` | body strip の再生時間だけ `SkillSequenceRunner.beginAnimLock` で保持し、`isActorBusy` / `isBasicAttackBlocked` で **他スキル発動を停止**する。`presentationLock` と同様に **CD 進行は止めない**。body 再生を止める用途はここで自動付与する。 |
-| `useDurationSec` | アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。**詠唱など、発動後に明示ロックが必要な場合のみ使う**。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**CD 進行は止めない**。Party HUD: 停止中は `paused`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。`useDurationSec` の表示ゲージは発動後ロックを示す用途で、CD とは独立。 |
+| `useDurationSec` | アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。**詠唱など、発動後に明示ロックが必要な場合のみ使う**。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**停止中はそのユニットの全スキル CD 進行を停止する**。Party HUD: 停止中は `paused`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。`useDurationSec` の表示ゲージは発動後ロックを示す用途で、CD とは独立。 |
 
 **Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 3px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。
 

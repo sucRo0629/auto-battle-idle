@@ -311,10 +311,7 @@ export class PartyHudPanel {
       const chargeRatio = ready
         ? 1
         : Math.max(0, Math.min(1, 1 - cd.remaining / cd.triggerValue));
-      const pausable =
-        cd.triggerKind === 'time' || cd.triggerKind === 'hitsTaken';
-
-      if (entry.useLocked && pausable) {
+      if (entry.useLocked) {
         fill.style.width = `${chargeRatio * 100}%`;
         fill.dataset.state = 'paused';
         if (ready) {
