@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { engagedMinBodyGap } from './battleConstants.ts';
 import { getAttackablePool, isWithinSkillRange } from './skills/rangeUtils.ts';
 import {
   resolveEnemyApproachBattleX,
@@ -207,7 +206,7 @@ describe('resolveEnemyAttackTargetPlayer', () => {
     const meleeEnemy = mockCombatant({
       id: 'melee',
       isEnemy: true,
-      battleX: 200 + engagedMinBodyGap(),
+      battleX: 200,
       traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
       build: {

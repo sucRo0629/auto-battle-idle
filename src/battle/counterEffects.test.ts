@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { engagedMinBodyGap } from './battleConstants.ts';
 import {
   applyCounterRetaliation,
   applyPassiveCounterRetaliation,
@@ -90,7 +89,7 @@ describe('isCounterInTriggerRange', () => {
     const attacker = mockCombatant({
       id: 'atk',
       isEnemy: true,
-      battleX: 100 + engagedMinBodyGap(),
+      battleX: 100,
     });
     const effect = counterStatus(
       [{ kind: 'damage', amount: { kind: 'flat', flatAmount: 5 } }],

@@ -138,12 +138,11 @@ describe('runUnitSkills fire gate', () => {
 
   it('fires smart active when inRange enemy count meets min', () => {
     const engine = createEngine({ nagihara: nagiharaSkill });
-    const gap = engagedMinBodyGap();
     const contact = 200;
     const range = 30;
     const actor = mockUnit({
       id: 'hero',
-      battleX: contact - gap - range,
+      battleX: contact - range,
       traits: {
         rangePx: range,
         damageType: 'physical',
@@ -153,7 +152,7 @@ describe('runUnitSkills fire gate', () => {
     const enemyA = mockUnit({
       id: 'nearA',
       isEnemy: true,
-      battleX: contact - gap,
+      battleX: contact - 15,
       classId: 'test_enemy',
     });
     const enemyB = mockUnit({
@@ -190,11 +189,19 @@ describe('runUnitSkills fire gate', () => {
 
     const internals = asBattleEngineInternals(engine);
     const warrior = internals.players.find((p) => p.classId === 'at_warrior');
-    const skill = internals.gameData.skillRegistry.actives.at_warrior_active_4;
+    const skill = internals.gameData.skillRegistry.actives.at_warrior_active_2;
     expect(warrior).toBeDefined();
+    expect(skill).toBeDefined();
+    skill!.firePolicy = nagiharaSkill.firePolicy;
+    skill!.fireConditions = nagiharaSkill.fireConditions;
     expect(skill?.fireConditions).toEqual([
       { kind: 'enemyCount', min: 2, scope: 'inRange' },
     ]);
+
+    const contactX = warrior!.battleX;
+    for (const enemy of internals.enemies.filter((unit) => unit.isAlive)) {
+      enemy.battleX = contactX;
+    }
 
     const ctx = {
       actor: warrior!,

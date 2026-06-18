@@ -148,7 +148,7 @@ describe('basicAttackTransform', () => {
     const ally = mockUnit({
       id: 'ally',
       hp: 40,
-      battleX: 180,
+      battleX: 200,
       cooldowns: [
         { skillId: 'at_assassin_basic_attack', remaining: 0, slotKind: 'basic' },
         {
@@ -179,10 +179,13 @@ describe('basicAttackTransform', () => {
     });
     const healer = mockUnit({
       id: 'healer',
-      battleX: 160,
+      hp: 25,
+      maxHp: 100,
+      battleX: 200,
       cooldowns: [{ skillId: 'dummy_basic', remaining: 2, slotKind: 'basic' }],
     });
     const enemy = mockEnemy();
+    enemy.battleX = 200;
     const countActive: ActiveSkillDef = {
       id: 'count_active',
       name: 'count',
@@ -235,7 +238,7 @@ describe('basicAttackTransform', () => {
     const countAfter = ally.cooldowns.find((cd) => cd.skillId === 'count_active')!.remaining;
 
     expect(healFired).toBe(true);
-    expect(ally.hp).toBeGreaterThan(40);
+    expect(healer.hp).toBeGreaterThan(25);
     expect(countAfter).toBe(countBefore);
   });
 
