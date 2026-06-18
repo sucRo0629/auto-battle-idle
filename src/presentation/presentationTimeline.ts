@@ -14,9 +14,9 @@ import {
   resolveEffectApplyDelaySec,
   resolveSkillBodyPlayback,
 } from '../render/skillAnimPlayback.ts';
-import { resolveEffectPresentation } from '../render/skillVfx/resolveEffectPresentation.ts';
 import { resolvePresetDurationMs } from '../render/skillVfx/presetDurations.ts';
 import type { SkillVfxContext } from '../render/skillVfx/types.ts';
+import { resolveSkillPresentation } from '../render/skillPresentation.ts';
 export interface PreviewEntity {
   entityId: string;
   role?: Role;
@@ -104,7 +104,7 @@ export function computePresentationTimeline(
   }
 
   const ctx = buildSkillVfxContext(entity, slotKind, effect);
-  const presentation = resolveEffectPresentation(effect, skill, ctx);
+  const presentation = resolveSkillPresentation(skill, effect, ctx);
 
   const actorStub = previewActorStub(entity);
   const presentationLockSec = resolvePresentationLockSec(

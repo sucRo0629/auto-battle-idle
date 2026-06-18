@@ -28,7 +28,6 @@ function defaultAnimForEffect(effect: SkillEffectDef): SkillEffectAnimId {
     case "dot":
       return "attack";
     case "heal":
-    case "hot":
       return "none";
     default:
       return "none";
@@ -70,7 +69,7 @@ function resolveExplicitVfx(
     return ctx.basicAttackVfx?.preset ? ctx.basicAttackVfx : null;
   }
   if (effectDef.vfx?.preset) return effectDef.vfx;
-  if (ctx.effectVfxOnly) return null;
+  if (ctx.effectVfxOnly !== false) return null;
   if (skillDef?.vfx?.preset) return skillDef.vfx;
   return null;
 }

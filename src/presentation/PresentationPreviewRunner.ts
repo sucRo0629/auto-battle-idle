@@ -2,24 +2,21 @@ import type { ActiveSkillDef, SkillSlotKind } from '../battle/types.ts';
 import { BattleCanvas } from '../render/BattleCanvas.ts';
 import { battleCanvasHeight, groundY } from '../render/formationLayout.ts';
 import type { CombatantLayout } from '../render/IBattleRenderer.ts';
-import { resolveSkillAnimKey } from '../render/skillAnimRegistry.ts';
-import {
-  resolveSkillAnimHoldSec,
-  resolveEffectApplyDelaySec,
-  toSkillAnimPlaybackOptions,
-} from '../render/skillAnimPlayback.ts';
-import { resolveEffectPresentation } from '../render/skillVfx/resolveEffectPresentation.ts';
+import { resolveEffectApplyDelaySec } from '../render/skillAnimPlayback.ts';
 import {
   PREVIEW_ENEMY_ANCHOR_X,
   PREVIEW_PLAYER_ANCHOR_X,
   type PreviewBattleLayout,
 } from './previewLayout.ts';
 import {
-  buildSkillVfxContext,
   computePresentationTimeline,
   type PresentationTimeline,
   type PreviewEntity,
 } from './presentationTimeline.ts';
+import {
+  playSkillBody,
+  playSkillHitFeedback,
+} from '../render/skillPresentation.ts';
 
 export type { PreviewEntity } from './presentationTimeline.ts';
 
@@ -116,28 +113,15 @@ export class PresentationPreviewRunner {
     this.resetCanvas();
     this.applyIdleLayouts();
 
-    const ctx = buildSkillVfxContext(actor, slotKind, effect);
-    ctx.effectVfxOnly = true;
-    const presentation = resolveEffectPresentation(effect, request.skill, ctx);
-    const skillAnimKey = resolveSkillAnimKey(
-      request.skill.id,
+    const presentation = playSkillBody(
+      this.canvas,
+      PREVIEW_ACTOR_ID,
+      request.skill,
       request.effectIndex,
+      actor,
+      slotKind,
     );
-
-    if (skillAnimKey) {
-      const holdSec = resolveSkillAnimHoldSec(request.skill, actor, slotKind);
-      this.canvas.playSkillAnim(
-        PREVIEW_ACTOR_ID,
-        skillAnimKey,
-        toSkillAnimPlaybackOptions(effect, holdSec),
-      );
-    } else if (presentation.anim && slotKind !== 'basic') {
-      this.canvas.playAnim(
-        PREVIEW_ACTOR_ID,
-        presentation.anim,
-        actor.entityId,
-      );
-    }
+    if (!presentation) return;
 
     const applyDelaySec = resolveEffectApplyDelaySec(
       request.skill.id,
@@ -145,25 +129,24 @@ export class PresentationPreviewRunner {
       effect,
     );
     const spawnHitEffects = (): void => {
-      if (presentation.vfx) {
-        this.canvas.playAttackEffect(
-          PREVIEW_ACTOR_ID,
-          PREVIEW_TARGET_ID,
-          presentation.vfx,
-        );
-      }
-      if (presentation.hitVfx) {
-        this.canvas.playAttackEffect(
-          PREVIEW_ACTOR_ID,
-          PREVIEW_TARGET_ID,
-          presentation.hitVfx,
-        );
-      }
-      if (effect.type === 'damage' || effect.type === 'dot') {
-        this.canvas.showDamagePopup(PREVIEW_TARGET_ID, 99, 'damage');
-      } else if (effect.type === 'heal') {
-        this.canvas.showHealPopup(PREVIEW_TARGET_ID, 99);
-      }
+      playSkillHitFeedback(this.canvas, {
+        sourceId: PREVIEW_ACTOR_ID,
+        targetId: PREVIEW_TARGET_ID,
+        presentation,
+        effect,
+        amount:
+          effect.type === 'damage' || effect.type === 'dot' || effect.type === 'heal'
+            ? 99
+            : undefined,
+        kind:
+          effect.type === 'damage'
+            ? 'damage'
+            : effect.type === 'dot'
+              ? 'dot'
+              : effect.type === 'heal'
+                ? 'heal'
+                : undefined,
+      });
     };
 
     if (applyDelaySec > 0) {

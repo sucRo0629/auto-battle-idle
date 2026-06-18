@@ -177,7 +177,7 @@ describe('resolveEffectPresentation', () => {
     expect(result.hitVfx).toBeNull();
   });
 
-  it('uses skill vfx when effect vfx is unset', () => {
+  it('does not default skill vfx when effect vfx is unset', () => {
     const result = resolveEffectPresentation(
       {
         type: 'damage',
@@ -188,7 +188,8 @@ describe('resolveEffectPresentation', () => {
       skill,
       ctx,
     );
-    expect(result.vfx?.preset).toBe('orb');
+    expect(result.vfx).toBeNull();
+    expect(result.hitVfx).toBeNull();
   });
 
   it('suppresses skill vfx fallback when effectVfxOnly is set', () => {

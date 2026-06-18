@@ -227,7 +227,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 ### 演出解決（コード）
 
-Battle イベント → `resolveEffectPresentation` → skill anim 優先 → VFX。body 再生秒数は `resolveSkillBodyPlaybackSec` を戦闘 / ラボで共通使用し、残りの表示ロックは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。本番バトルと演出ラボは `effectVfxOnly: true` を使い、`effect.vfx` が未指定のときは `skill.vfx` へフォールバックしない（`basicAttackVfx` は通常攻撃のみ）。
+Battle イベント → `resolveSkillPresentation` / `resolveEffectPresentation` → skill anim 優先 → VFX。body 再生秒数は `resolveSkillBodyPlaybackSec` を戦闘 / ラボで共通使用し、残りの表示ロックは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。本番バトルと演出ラボは `effectVfxOnly` を既定で有効にし、`effect.vfx` が未指定のときは `skill.vfx` へフォールバックしない（`basicAttackVfx` は通常攻撃のみ）。
 
 ### 射程
 
