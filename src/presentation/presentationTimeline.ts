@@ -14,6 +14,7 @@ import {
   resolveEffectApplyDelaySec,
   resolveSkillBodyPlayback,
 } from '../render/skillAnimPlayback.ts';
+import { isParticleDefActive, resolveParticlePlaybackSec } from '../render/particlePlayback.ts';
 import { resolveVfxAnimKey } from '../render/vfxAnimRegistry.ts';
 import { resolveVfxPlaybackSec } from '../render/vfxAnimPlayback.ts';
 import type { SkillVfxContext } from '../render/skillVfx/types.ts';
@@ -36,7 +37,9 @@ export interface PresentationTimeline {
   bodyOutroSec: number | null;
   vfxKey: string | null;
   vfxSec: number | null;
+  particleSec: number | null;
   hitVfxSec: number | null;
+  hitParticleSec: number | null;
   moveDurationSec: number | null;
   applyDelaySec: number;
   presentationLockSec: number;
@@ -64,6 +67,11 @@ function previewActorStub(entity: PreviewEntity): {
 function effectKindForTimeline(effect: SkillEffectDef): SkillVfxContext['effectKind'] {
   if (effect.type === 'move') return 'move';
   return effect.type;
+}
+
+function particlePlaybackSec(vfx: SkillVfxDef | null | undefined): number | null {
+  if (!isParticleDefActive(vfx?.particles)) return null;
+  return resolveParticlePlaybackSec(vfx.particles);
 }
 
 export function buildSkillVfxContext(
@@ -103,7 +111,9 @@ export function computePresentationTimeline(
       bodyOutroSec: null,
       vfxKey: null,
       vfxSec: null,
+      particleSec: null,
       hitVfxSec: null,
+      hitParticleSec: null,
       moveDurationSec: null,
       applyDelaySec: 0,
       presentationLockSec: 0,
@@ -143,18 +153,22 @@ export function computePresentationTimeline(
 
   let vfxKey: string | null = null;
   let vfxSec: number | null = null;
+  let particleSec: number | null = null;
   let hitVfxSec: number | null = null;
+  let hitParticleSec: number | null = null;
   if (presentation.vfx) {
     vfxKey = resolveVfxAnimKey(skill.id, effectIndex, 'main');
     if (vfxKey) {
       vfxSec = resolveVfxPlaybackSec(presentation.vfx, vfxKey);
     }
+    particleSec = particlePlaybackSec(presentation.vfx);
   }
   if (presentation.hitVfx) {
     const hitKey = resolveVfxAnimKey(skill.id, effectIndex, 'hit');
     if (hitKey) {
       hitVfxSec = resolveVfxPlaybackSec(presentation.hitVfx, hitKey);
     }
+    hitParticleSec = particlePlaybackSec(presentation.hitVfx);
   }
 
   return {
@@ -165,7 +179,9 @@ export function computePresentationTimeline(
     bodyOutroSec,
     vfxKey,
     vfxSec,
+    particleSec,
     hitVfxSec,
+    hitParticleSec,
     moveDurationSec: effect.type === 'move' ? effect.moveDurationSec : null,
     applyDelaySec,
     presentationLockSec,

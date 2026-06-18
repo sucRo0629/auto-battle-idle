@@ -16,6 +16,7 @@ import {
   __registerVfxAnimForTest,
   __resetVfxAnimsForTest,
 } from '../render/vfxAnimRegistry.ts';
+import { resolveParticlePlaybackSec } from '../render/particlePlayback.ts';
 import { resolveVfxPlaybackSec } from '../render/vfxAnimPlayback.ts';
 import { resolveVfxAnimKey } from '../render/vfxAnimRegistry.ts';
 import {
@@ -211,8 +212,43 @@ describe('computePresentationTimeline', () => {
     expect(hitKey).toBe('vfx_timing_0_vfx_hit');
     expect(timeline.vfxSec).toBe(resolveVfxPlaybackSec(presentation.vfx!, mainKey!));
     expect(timeline.hitVfxSec).toBe(resolveVfxPlaybackSec(presentation.hitVfx!, hitKey!));
+    expect(timeline.particleSec).toBeNull();
+    expect(timeline.hitParticleSec).toBeNull();
     expect(timeline.vfxSec).toBe(0.625);
     expect(timeline.hitVfxSec).toBe(0.375);
+  });
+
+  it('reports particleSec when only particles are active', () => {
+    const skill: ActiveSkillDef = {
+      id: 'particle_only',
+      name: 'Particle Only',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'heal',
+          target: { rule: 'mostDamagedAlly' },
+          amount: { kind: 'atkScale', scale: 1 },
+          vfx: {
+            particles: {
+              preset: 'heal_holy_light',
+              durationSec: 1.2,
+            },
+          },
+        },
+      ],
+    };
+
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
+    const effect = skill.effect[0]!;
+    const presentation = resolveSkillPresentation(
+      skill,
+      effect,
+      buildSkillVfxContext(previewEntity, 'active', effect, skill.id, 0),
+    );
+
+    expect(timeline.vfxSec).toBeNull();
+    expect(timeline.particleSec).toBe(resolveParticlePlaybackSec(presentation.vfx!.particles!));
+    expect(timeline.presentationLockSec).toBe(1.2);
   });
 
   it('matches battle presentationLockSec for the same skill JSON', () => {
@@ -245,6 +281,40 @@ describe('computePresentationTimeline', () => {
       resolvePresentationLockSec(skill, actorStub as never, 'active'),
     );
     expect(timeline.presentationLockSec).toBe(0.625);
+  });
+
+  it('combines PNG and particle timing in presentationLock and timeline', () => {
+    __registerVfxAnimForTest('particle_combo_0_vfx', mockImage(320));
+    const skill: ActiveSkillDef = {
+      id: 'particle_combo',
+      name: 'Particle Combo',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'damage',
+          target: { rule: 'frontEnemy' },
+          amount: { kind: 'atkScale', scale: 1 },
+          vfx: {
+            particles: {
+              preset: 'heal_holy_light',
+              durationSec: 1.2,
+            },
+          },
+        },
+      ],
+    };
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
+    const effect = skill.effect[0]!;
+    const presentation = resolveSkillPresentation(
+      skill,
+      effect,
+      buildSkillVfxContext(previewEntity, 'active', effect, skill.id, 0),
+    );
+    const mainKey = resolveVfxAnimKey(skill.id, 0, 'main');
+
+    expect(timeline.vfxSec).toBe(resolveVfxPlaybackSec(presentation.vfx!, mainKey!));
+    expect(timeline.particleSec).toBe(resolveParticlePlaybackSec(presentation.vfx!.particles!));
+    expect(timeline.presentationLockSec).toBe(1.2);
   });
 
   it('lab and battle resolvers agree on vfxSec and applyDelay for the same JSON', () => {

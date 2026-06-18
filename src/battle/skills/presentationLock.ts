@@ -39,6 +39,11 @@ function buildLockVfxContext(
   };
 }
 
+function particlePlaybackSec(vfx: SkillVfxDef | null | undefined): number {
+  if (!isParticleDefActive(vfx?.particles)) return 0;
+  return resolveParticlePlaybackSec(vfx.particles);
+}
+
 function vfxPlaybackSec(
   skillId: string,
   effectIndex: number,
@@ -51,9 +56,7 @@ function vfxPlaybackSec(
   if (key) {
     sec = Math.max(sec, resolveVfxPlaybackSec(vfx, key));
   }
-  if (isParticleDefActive(vfx.particles)) {
-    sec = Math.max(sec, resolveParticlePlaybackSec(vfx.particles));
-  }
+  sec = Math.max(sec, particlePlaybackSec(vfx));
   return sec;
 }
 

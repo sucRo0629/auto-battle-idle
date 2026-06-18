@@ -201,7 +201,7 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 
 - **Canvas プレビュー必須** — 1 スキル / 1 effect の isolated 再生（本番と同じ `resolveEffectPresentation` → `BattleCanvas` 経路）
 - **VFX パラメータ調整を統合** — `vfx.placement` / `animStartFrame` 等 / `moveDurationSec`（別 VFX エディタは作らない）
-- タイムライン表示（body strip / VFX / presentationLock）
+- タイムライン表示（body strip / VFX / particles / presentationLock）
 - JSON 書き戻し（`data/skills/actives/` 等）。BattleEngine 全体は回さない薄いランナー
 - SkillEditorStep から「演出プレビューを開く」連携（任意）
 

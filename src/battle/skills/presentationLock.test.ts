@@ -151,6 +151,6 @@ describe('resolvePresentationLockSec', () => {
       ],
     };
 
-    expect(resolvePresentationLockSec(skill, actor, 'active')).toBe(0.8);
+    expect(resolvePresentationLockSec(skill, actor, 'active')).toBe(0.75);
   });
 });

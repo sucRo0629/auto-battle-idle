@@ -818,6 +818,16 @@ export class PresentationLabApp {
         timeline.vfxSec,
       ),
       this.timelineItem(
+        'particle',
+        formatSec(timeline.particleSec),
+        timeline.particleSec,
+      ),
+      this.timelineItem(
+        'hitParticle',
+        formatSec(timeline.hitParticleSec),
+        timeline.hitParticleSec,
+      ),
+      this.timelineItem(
         'moveDurationSec',
         formatSec(timeline.moveDurationSec),
         timeline.moveDurationSec,
@@ -851,6 +861,8 @@ export class PresentationLabApp {
     const maxSec = Math.max(
       timeline.bodyPlaybackSec ?? 0,
       timeline.vfxSec ?? 0,
+        timeline.particleSec ?? 0,
+        timeline.hitParticleSec ?? 0,
       timeline.moveDurationSec ?? 0,
       timeline.applyDelaySec,
       timeline.presentationLockSec,
@@ -1279,6 +1291,12 @@ function buildTimelineSegments(
       color: '#e74c3c',
     },
     { label: 'VFX', sec: timeline.vfxSec ?? 0, color: '#e6a23c' },
+    { label: 'particle', sec: timeline.particleSec ?? 0, color: '#f5b041' },
+    {
+      label: 'hitParticle',
+      sec: timeline.hitParticleSec ?? 0,
+      color: '#f0c674',
+    },
     {
       label: 'move',
       sec: timeline.moveDurationSec ?? 0,

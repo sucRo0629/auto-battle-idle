@@ -6,6 +6,7 @@ import {
   playSkillHitFeedback,
   resolveSkillPresentation,
 } from '../render/skillPresentation.ts';
+import { resolveParticlePlaybackSec } from '../render/particlePlayback.ts';
 import { buildSkillVfxContext, computePresentationTimeline } from './presentationTimeline.ts';
 
 /**
@@ -97,5 +98,38 @@ describe('presentation lab / battle parity', () => {
 
     expect(timeline.applyDelaySec).toBe(previewDelay);
     expect(timeline.applyDelaySec).toBe(0.25);
+  });
+
+  it('timeline particleSec matches the resolved particle playback duration', () => {
+    const particleSkill: ActiveSkillDef = {
+      ...skill,
+      id: 'parity_particles',
+      effect: [
+        {
+          ...skill.effect[0]!,
+          vfx: {
+            particles: {
+              preset: 'heal_holy_light',
+              durationSec: 0.8,
+            },
+          },
+        },
+      ],
+    };
+    const effect = particleSkill.effect[0]!;
+    const ctx = buildSkillPresentationContext(
+      previewEntity,
+      'active',
+      effect,
+      particleSkill.id,
+      0,
+    );
+    const presentation = resolveSkillPresentation(particleSkill, effect, ctx);
+    const timeline = computePresentationTimeline(particleSkill, 0, previewEntity, 'active');
+
+    expect(timeline.particleSec).toBe(
+      resolveParticlePlaybackSec(presentation.vfx!.particles!),
+    );
+    expect(timeline.particleSec).toBe(0.8);
   });
 });
