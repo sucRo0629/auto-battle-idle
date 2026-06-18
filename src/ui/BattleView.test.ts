@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => {
     showHealPopup: vi.fn(),
     showEvadePopup: vi.fn(),
     showBlockPopup: vi.fn(),
+    showCounterPopup: vi.fn(),
     showBuffGlow: vi.fn(),
     tick: vi.fn(),
     destroy: vi.fn(),
@@ -170,6 +171,73 @@ describe("BattleView", () => {
       "target-1",
       42,
       "damage",
+    );
+  });
+
+  it("shows a counter popup for counter skill events", () => {
+    let emitEvent: (event: any) => void = () => {};
+    const engine = {
+      onEvent: vi.fn((listener: (event: any) => void) => {
+        emitEvent = listener;
+      }),
+      getSnapshot: vi.fn(() => ({
+        allies: [{ id: "actor-1" }],
+        enemies: [{ id: "target-1" }],
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: {
+        actives: {
+          counter_1: {
+            id: "counter_1",
+            name: "Counter",
+            effect: [{ type: "counter" }],
+          },
+        },
+      },
+      classRegistry: {},
+      stages: [],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+    }));
+    const verifyModeControls = {
+      isVerifyMode: () => false,
+      onVerifyModeChange: vi.fn(),
+      onOpenMetaMenu: vi.fn(),
+    };
+
+    vi.stubGlobal("document", {
+      createElement: () => createFakeElement(),
+    });
+
+    const container = createFakeElement();
+
+    new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+      verifyModeControls,
+    );
+
+    emitEvent({
+      type: "skill",
+      actorId: "actor-1",
+      targetId: "target-1",
+      skillId: "counter_1",
+      skillName: "Counter",
+      effect: "counter",
+      effectIndex: 0,
+      slotKind: "active",
+    });
+
+    expect(mocks.canvasInstance.showCounterPopup).toHaveBeenCalledTimes(1);
+    expect(mocks.canvasInstance.showCounterPopup).toHaveBeenCalledWith(
+      "actor-1",
     );
   });
 });

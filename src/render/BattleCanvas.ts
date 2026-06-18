@@ -182,6 +182,10 @@ export class BattleCanvas implements IBattleRenderer {
     this.combatReactionPopups.spawn(targetId, "block");
   }
 
+  showCounterPopup(targetId: string): void {
+    this.combatReactionPopups.spawn(targetId, "counter");
+  }
+
   showBuffGlow(targetId: string): void {
     this.buffGlows.trigger(targetId);
   }

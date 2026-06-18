@@ -216,6 +216,9 @@ export class BattleView {
     if (event.type === "skill") {
       const slotLabel =
         event.slotKind === "basic" ? "通常攻撃" : event.skillName;
+      if (event.effect === "counter") {
+        this.canvas.showCounterPopup(event.actorId);
+      }
       if (event.effect === "damage" || event.effect === "dot") {
         if (event.amount !== undefined) {
           this.pushLog(`${slotLabel} → ${event.amount} dmg`);
