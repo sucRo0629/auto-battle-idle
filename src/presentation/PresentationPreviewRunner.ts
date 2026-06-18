@@ -117,6 +117,7 @@ export class PresentationPreviewRunner {
     this.applyIdleLayouts();
 
     const ctx = buildSkillVfxContext(actor, slotKind, effect);
+    ctx.effectVfxOnly = true;
     const presentation = resolveEffectPresentation(effect, request.skill, ctx);
     const skillAnimKey = resolveSkillAnimKey(
       request.skill.id,

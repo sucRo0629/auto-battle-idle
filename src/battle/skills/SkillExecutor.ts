@@ -421,11 +421,8 @@ export class SkillExecutor {
     if (!actor?.isAlive) return false;
 
     const runner = this.deps.getSequenceRunner();
-    // 多段通常攻撃の pending は presentationLock 中も続行。他スキル硬直・シーケンス中のみ停止。
-    if (
-      runner.isActorUseLocked(actor.id) ||
-      runner.isActorInSkillMotion(actor.id)
-    ) {
+    // pending は同一スキルの applyFrame / spread を優先し、実移動中のみ停止。
+    if (runner.isActorInSkillMotion(actor.id)) {
       return false;
     }
 

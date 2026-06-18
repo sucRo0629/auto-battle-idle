@@ -221,6 +221,7 @@ export class BattleView {
         slotKind,
         effectKind: effectDef.type,
         targetShape: effectDef.targetShape,
+        effectVfxOnly: true,
       },
     );
     const skillAnimKey = resolveSkillAnimKey(skillId, effectIndex);
@@ -272,6 +273,7 @@ export class BattleView {
         slotKind: event.slotKind,
         effectKind: effectDef.type,
         targetShape: effectDef.targetShape,
+        effectVfxOnly: true,
       },
     );
     if (!presentation.vfx) return;
@@ -353,6 +355,7 @@ export class BattleView {
             slotKind: event.slotKind,
             effectKind: event.effect,
             targetShape: effectDef.targetShape,
+            effectVfxOnly: true,
           }
         );
         const skipBodyAnim = effectDef.applyFrame !== undefined;

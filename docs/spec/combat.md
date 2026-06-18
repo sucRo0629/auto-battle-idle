@@ -137,9 +137,9 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 **多段チャージ（`maxCharges` / `storedCharges`）:** `maxCharges` 省略 = **0**（保持なし・ストック UI なし）。`maxCharges > 0` かつ smart 保留時、CD Max 後に 2 段目チャージを開始し `storedCharges` に確定ストック（上限 0〜3）。パッシブ `skillPropertyOverride.maxChargesBonus` で実効上限を加算（`GLOBAL_MAX_CHARGES_CAP = 3`）。
 
-**演出ロック（`presentationLock`）:** VFX 終了まで **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。**CD チャージは止めない**。`useDurationSec > 0` は従来どおり全スキル停止 + time/hitsTaken CD 一時停止。
+**演出ロック（`presentationLock`）:** VFX 終了まで **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。**CD チャージは止めない**。
 
-**停止時間（`useDurationSec`）:** アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**`useDurationSec > 0` のスキル発動後の停止中のみ**、time / hitsTaken のアクティブ CD 進行を停止する（`basicAttackCount` は通常攻撃停止のため実質影響小）。Party HUD: 停止中は `paused`（黄）。**`useDurationSec > 0` のスキルのみ**、発動直後は効果残りを Max 色ゲージの減衰（`active`）で表示する（秒数は自身向けバフ系 effect の最大、なければ `useDurationSec`。**CD カウントは止めない**）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。
+**停止時間（`useDurationSec`）:** アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**CD 進行は止めない**。Party HUD: 停止中は `paused`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。`useDurationSec` の表示ゲージは発動後ロックを示す用途で、CD とは独立。
 
 **Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 3px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。
 

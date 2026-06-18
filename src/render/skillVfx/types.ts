@@ -17,4 +17,6 @@ export interface SkillVfxContext {
   slotKind?: SkillSlotKind;
   effectKind: SkillEffectKind;
   targetShape?: TargetShape;
+  /** true のとき skill.vfx へのフォールバックを抑制する */
+  effectVfxOnly?: boolean;
 }

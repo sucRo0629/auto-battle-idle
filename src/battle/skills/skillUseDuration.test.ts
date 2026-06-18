@@ -114,7 +114,7 @@ describe('skillUseDuration', () => {
     expect(basicHits).toBe(1);
   });
 
-  it('blocks spread basic pending hits while actor is skill-busy', () => {
+  it('still applies spread pending hits from the same skill while use-locked', () => {
     const runner = new SkillSequenceRunner();
     const actor = mockUnit({ id: 'actor', battleX: 200 });
     const enemy = mockUnit({ id: 'enemy', isEnemy: true, battleX: 200, hp: 100 });
@@ -162,7 +162,7 @@ describe('skillUseDuration', () => {
     expect(hpAfterFirst).toBeLessThan(100);
 
     runner.beginUse('actor', 1);
-    expect(executor.applyPendingHit(pending[1]!)).toBe(false);
-    expect(enemy.hp).toBe(hpAfterFirst);
+    expect(executor.applyPendingHit(pending[1]!)).toBe(true);
+    expect(enemy.hp).toBeLessThan(hpAfterFirst);
   });
 });

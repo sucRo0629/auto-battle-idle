@@ -13,7 +13,6 @@ import {
   tickCountTriggerCooldowns,
   tickPendingBasicAttackCountCharges,
 } from './skillTrigger.ts';
-import type { CooldownPauseContext } from './skillTrigger.ts';
 
 function skill(overrides: Partial<ActiveSkillDef> = {}): ActiveSkillDef {
   return {
@@ -41,16 +40,7 @@ describe('skillTrigger', () => {
     ).toEqual({ kind: 'basicAttackCount', value: 3 });
   });
 
-  function mockPauseCtx(
-    overrides: Partial<CooldownPauseContext> = {},
-  ): CooldownPauseContext {
-    return {
-      isActorUseLocked: () => false,
-      ...overrides,
-    };
-  }
-
-  it('shouldPauseActiveCooldown during use lock for charging time/hitsTaken', () => {
+  it('shouldPauseActiveCooldown does not pause active cooldowns during use lock', () => {
     const timeCd: SkillCooldown = {
       skillId: 't',
       remaining: 3,
@@ -58,13 +48,8 @@ describe('skillTrigger', () => {
       slotIndex: 0,
     };
     expect(
-      shouldPauseActiveCooldown(
-        'actor',
-        timeCd,
-        skill(),
-        mockPauseCtx({ isActorUseLocked: () => true }),
-      ),
-    ).toBe(true);
+      shouldPauseActiveCooldown(timeCd, skill()),
+    ).toBe(false);
 
     const hitsCd: SkillCooldown = {
       skillId: 'h',
@@ -74,15 +59,13 @@ describe('skillTrigger', () => {
     };
     expect(
       shouldPauseActiveCooldown(
-        'actor',
         hitsCd,
         skill({ trigger: { kind: 'hitsTaken', value: 4 } }),
-        mockPauseCtx({ isActorUseLocked: () => true }),
       ),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it('shouldPauseActiveCooldown skips use lock when already ready', () => {
+  it('shouldPauseActiveCooldown stays false when ready', () => {
     const cd: SkillCooldown = {
       skillId: 't',
       remaining: 0,
@@ -90,12 +73,7 @@ describe('skillTrigger', () => {
       slotIndex: 0,
     };
     expect(
-      shouldPauseActiveCooldown(
-        'actor',
-        cd,
-        skill(),
-        mockPauseCtx({ isActorUseLocked: () => true }),
-      ),
+      shouldPauseActiveCooldown(cd, skill()),
     ).toBe(false);
   });
 
@@ -107,7 +85,7 @@ describe('skillTrigger', () => {
       slotIndex: 0,
     };
     expect(
-      shouldPauseActiveCooldown('actor', cd, skill(), mockPauseCtx()),
+      shouldPauseActiveCooldown(cd, skill()),
     ).toBe(false);
   });
 

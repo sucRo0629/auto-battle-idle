@@ -23,20 +23,14 @@ export function isPausableActiveTrigger(skill: ActiveSkillDef): boolean {
   return isPausableActiveTriggerKind(resolveSkillTrigger(skill).kind);
 }
 
-export interface CooldownPauseContext {
-  isActorUseLocked(actorId: string): boolean;
-}
-
-/** 停止時間中のみ time / hitsTaken の active CD 進行を止める */
+/** use lock は CD を止めず、time / hitsTaken の active も継続進行する */
 export function shouldPauseActiveCooldown(
-  actorId: string,
   cd: SkillCooldown,
   skill: ActiveSkillDef,
-  ctx: CooldownPauseContext,
 ): boolean {
   if (cd.slotKind !== 'active') return false;
   if (!isPausableActiveTrigger(skill)) return false;
-  return ctx.isActorUseLocked(actorId) && cd.remaining > 0;
+  return false;
 }
 
 export function isCountTriggerKind(kind: SkillTriggerKind): boolean {

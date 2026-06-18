@@ -191,6 +191,21 @@ describe('resolveEffectPresentation', () => {
     expect(result.vfx?.preset).toBe('orb');
   });
 
+  it('suppresses skill vfx fallback when effectVfxOnly is set', () => {
+    const result = resolveEffectPresentation(
+      {
+        type: 'damage',
+        target: { kind: "distance", side: "enemy", order: "nearest" },
+        damageType: 'physical',
+        amount: { kind: 'atkBased', atkScale: 1 },
+      },
+      skill,
+      { ...ctx, effectVfxOnly: true },
+    );
+    expect(result.vfx).toBeNull();
+    expect(result.hitVfx).toBeNull();
+  });
+
   it('uses no VFX when neither effect nor skill preset is set', () => {
     const result = resolveEffectPresentation(
       {

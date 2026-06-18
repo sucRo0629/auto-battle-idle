@@ -77,6 +77,7 @@ export function buildSkillVfxContext(
     slotKind,
     effectKind: effectKindForTimeline(effect),
     targetShape: effect.targetShape,
+    effectVfxOnly: true,
   };
 }
 

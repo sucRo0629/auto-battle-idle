@@ -70,6 +70,7 @@ function resolveExplicitVfx(
     return ctx.basicAttackVfx?.preset ? ctx.basicAttackVfx : null;
   }
   if (effectDef.vfx?.preset) return effectDef.vfx;
+  if (ctx.effectVfxOnly) return null;
   if (skillDef?.vfx?.preset) return skillDef.vfx;
   return null;
 }

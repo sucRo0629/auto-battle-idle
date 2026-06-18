@@ -1617,10 +1617,8 @@ export class BattleEngine {
         }
         if (
           shouldPauseActiveCooldown(
-            unit.id,
             cd,
             skill,
-            this.skillSequenceRunner,
           )
         ) {
           continue;
@@ -1664,10 +1662,8 @@ export class BattleEngine {
       if (cd.remaining > 0) {
         if (
           !shouldPauseActiveCooldown(
-            unit.id,
             cd,
             skill,
-            this.skillSequenceRunner,
           )
         ) {
           chargeCountTrigger(cd, skill);

@@ -227,7 +227,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 ### 演出解決（コード）
 
-Battle イベント → `resolveEffectPresentation` → skill anim 優先 → VFX。タイミングは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。本番バトルと演出ラボは同じ解決ルールで、`basicAttackVfx` / `effect.vfx` / `skill.vfx` が未指定なら VFX を出さない。
+Battle イベント → `resolveEffectPresentation` → skill anim 優先 → VFX。タイミングは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。本番バトルと演出ラボは `effectVfxOnly: true` を使い、`effect.vfx` が未指定のときは `skill.vfx` へフォールバックしない（`basicAttackVfx` は通常攻撃のみ）。
 
 ### 射程
 
@@ -310,7 +310,7 @@ interface CharacterBuild {
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `trigger.kind`   | `time`（秒）／`basicAttackCount`（通常攻撃回数）／`hitsTaken`（被攻撃回数）                                                                                                                                        |
 | `trigger.value`  | 条件の閾値 N。ステージ開始時 `remaining = N`（ゲージ未充填）。カウントトリガーは N 回のイベントで `remaining === 0`（ゲージ Max）となり、N+1 回目で発動・`remaining = N` にリセット。時間トリガーは 0 到達で即発動 |
-| `useDurationSec` | optional。停止時間（秒）。省略 / `0` = 即時。アニメ長に合わせて設定（詳細は [combat.md](combat.md)）                                                                                                               |
+| `useDurationSec` | optional。発動後ロック時間（秒）。省略 / `0` = 即時。発動後はそのユニットの他スキル発動を止めるが、CD 進行は止めない（詳細は [combat.md](combat.md)）                                                         |
 | `firePolicy`     | optional。`immediate`（既定）／`smart`（条件成立まで発動保留）                                                                                                                                                     |
 | `fireConditions` | `firePolicy: smart` 時の AND 条件（[combat.md](combat.md)）                                                                                                                                                        |
 | `fireTimeoutSec` | smart 保留の最大秒。経過後は条件無視で発動                                                                                                                                                                         |
