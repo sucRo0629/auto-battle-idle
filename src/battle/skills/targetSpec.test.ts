@@ -170,6 +170,18 @@ describe('getTargetPool / pickTargetFromPool', () => {
     expect(pickTargetFromPool(spec, actor, pool)?.id).toBe('a2');
   });
 
+  it('falls back to self for ally stat target when alone in party', () => {
+    const spec = {
+      kind: 'stat',
+      side: 'ally',
+      stat: 'hp',
+      order: 'ratio',
+    } as const;
+    const solo = mockUnit('solo', 200);
+    const pool = getTargetPool(spec, solo, [solo], []);
+    expect(pickTargetFromPool(spec, solo, pool)?.id).toBe('solo');
+  });
+
   it('ignores barrierHp when picking ally by hp ratio', () => {
     const spec = {
       kind: 'stat',
@@ -243,6 +255,18 @@ describe('getTargetPool / pickTargetFromPool', () => {
       { unit: enemies[0]! },
     ]);
     expect(targets.map((entry) => entry.unit.id)).toEqual(['e1']);
+  });
+
+  it('keeps self-only ally target when no other allies exist', () => {
+    const spec = {
+      kind: 'stat',
+      side: 'ally',
+      stat: 'hp',
+      order: 'ratio',
+    } as const;
+    const solo = mockUnit('solo', 200);
+    const targets = applyIncludeSelfFilter(spec, solo, [{ unit: solo }]);
+    expect(targets.map((entry) => entry.unit.id)).toEqual(['solo']);
   });
 
   it('enemy distance/enemy/farthest picks farthest player ally by battleX distance', () => {

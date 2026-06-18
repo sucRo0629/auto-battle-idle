@@ -416,13 +416,30 @@ export function applyIncludeSelfFilter(
   if (distanceSpecIncludesSelf(spec)) {
     return targets;
   }
-  return targets.filter((entry) => entry.unit.id !== actor.id);
+  const filtered = targets.filter((entry) => entry.unit.id !== actor.id);
+  if (filtered.length === 0 && targets.length > 0) {
+    return targets;
+  }
+  return filtered;
 }
 
 export type PickTargetOptions = {
   /** move anchor: 至近/最遠は使用者との battleX 距離（接近 chase の編成奥選択と分離） */
   moveAnchor?: boolean;
 };
+
+/** 味方対象で自身を除いた後に候補が空なら、単独パーティ時は自身にフォールバック */
+function allySelectableExcludingSelf(
+  pool: CombatantState[],
+  actor: CombatantState,
+): CombatantState[] {
+  const others = pool.filter((unit) => unit.id !== actor.id);
+  if (others.length > 0) return others;
+  if (actor.isAlive && pool.some((unit) => unit.id === actor.id)) {
+    return [actor];
+  }
+  return [];
+}
 
 function pickEnemyByActorDistance(
   actor: CombatantState,
@@ -473,7 +490,7 @@ export function pickTargetFromPool(
   if (spec.kind === "distance" && spec.side === "ally") {
     const selectable = distanceSpecIncludesSelf(spec)
       ? pool
-      : pool.filter((unit) => unit.id !== actor.id);
+      : allySelectableExcludingSelf(pool, actor);
     if (selectable.length === 0) return null;
     const actorX = getBattleX(actor);
     if (spec.order === "nearest") {
@@ -504,7 +521,9 @@ export function pickTargetFromPool(
 
   if (spec.kind === "stat") {
     const selectable =
-      spec.side === "ally" ? pool.filter((unit) => unit.id !== actor.id) : pool;
+      spec.side === "ally"
+        ? allySelectableExcludingSelf(pool, actor)
+        : pool;
     if (selectable.length === 0) return null;
     const pickHigher = spec.order === "highest";
     const pickLower = spec.order === "lowest" || spec.order === "ratio";
