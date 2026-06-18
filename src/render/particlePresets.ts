@@ -61,20 +61,6 @@ const DEFAULT_HEAL_PARTICLES: ParticlesPresetParams = {
   sizeMax: 10,
 };
 
-const DEFAULT_SPARK_BURST_PARTICLES: ParticlesPresetParams = {
-  shape: "dot",
-  vyMin: -52,
-  vyMax: -26,
-  vxSpread: 0.12,
-  spawnXSpread: 6,
-  spawnYMin: -2,
-  spawnYMax: 3,
-  lifeMinSec: 0.2,
-  lifeMaxSec: 0.4,
-  sizeMin: 1.4,
-  sizeMax: 2.6,
-};
-
 export const PARTICLE_PRESET_DEFS: Record<ParticlePresetId, ParticlePresetDef> =
   {
     heal_holy_light: {
@@ -84,13 +70,6 @@ export const PARTICLE_PRESET_DEFS: Record<ParticlePresetId, ParticlePresetDef> =
       defaultTint: "#5ce88a",
       ring: DEFAULT_RING,
       particles: DEFAULT_HEAL_PARTICLES,
-    },
-    spark_burst: {
-      kind: "particles",
-      durationSec: 0.32,
-      defaultCount: 8,
-      defaultTint: "#fff4c2",
-      particles: DEFAULT_SPARK_BURST_PARTICLES,
     },
   };
 

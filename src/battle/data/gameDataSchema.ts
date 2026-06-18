@@ -182,7 +182,7 @@ export const VFX_PARTICLE_DEF_FIELD_KEYS = [
 ] as const;
 
 /** パーティクル preset ID（`particlePresets.ts` と同期） */
-export const PARTICLE_PRESET_IDS = ["heal_holy_light", "spark_burst"] as const;
+export const PARTICLE_PRESET_IDS = ["heal_holy_light"] as const;
 
 /** SkillVfxDef の JSON キー（traits.basicAttackVfx / effect.vfx 等） */
 export const SKILL_VFX_DEF_FIELD_KEYS = [
@@ -487,63 +487,66 @@ export const SKILL_TRIGGER_KIND_OPTIONS: SkillTriggerKind[] = [
   ...SKILL_TRIGGER_KINDS,
 ];
 
-export type FireConditionKind = FireCondition['kind'];
+export type FireConditionKind = FireCondition["kind"];
 
 export const FIRE_POLICIES = [
-  'immediate',
-  'smart',
+  "immediate",
+  "smart",
 ] as const satisfies readonly FirePolicy[];
 
 export const FIRE_POLICY_LABELS: Record<FirePolicy, string> = {
-  immediate: '即時発動',
-  smart: '条件発動 (smart)',
+  immediate: "即時発動",
+  smart: "条件発動 (smart)",
 };
 
 export const FIRE_POLICY_OPTIONS: FirePolicy[] = [...FIRE_POLICIES];
 
 export const FIRE_CONDITION_KINDS = [
-  'targetHp',
-  'debuff',
-  'minTargets',
-  'selfHp',
-  'allyDamaged',
-  'waveStart',
-  'waveEnd',
-  'enemyCount',
+  "targetHp",
+  "debuff",
+  "minTargets",
+  "selfHp",
+  "allyDamaged",
+  "waveStart",
+  "waveEnd",
+  "enemyCount",
 ] as const satisfies readonly FireConditionKind[];
 
 export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
-  targetHp: '対象HP割合',
-  debuff: 'デバフ',
-  minTargets: '最小ターゲット数',
-  selfHp: '自身HP割合',
-  allyDamaged: '味方被ダメ',
-  waveStart: 'Wave開始フェーズ',
-  waveEnd: 'Wave終了フェーズ',
-  enemyCount: '敵数',
+  targetHp: "対象HP割合",
+  debuff: "デバフ",
+  minTargets: "最小ターゲット数",
+  selfHp: "自身HP割合",
+  allyDamaged: "味方被ダメ",
+  waveStart: "Wave開始フェーズ",
+  waveEnd: "Wave終了フェーズ",
+  enemyCount: "敵数",
 };
 
 export const FIRE_CONDITION_KIND_OPTIONS: FireConditionKind[] = [
   ...FIRE_CONDITION_KINDS,
 ];
 
-export const HP_RATIO_COMPARES = ['lte', 'gte'] as const satisfies readonly HpRatioCompare[];
+export const HP_RATIO_COMPARES = [
+  "lte",
+  "gte",
+] as const satisfies readonly HpRatioCompare[];
 
 export const HP_RATIO_COMPARE_LABELS: Record<HpRatioCompare, string> = {
-  lte: '以下',
-  gte: '以上',
+  lte: "以下",
+  gte: "以上",
 };
 
 export const HP_RATIO_COMPARE_OPTIONS = [...HP_RATIO_COMPARES];
 
-export const ENEMY_COUNT_SCOPES = ['living', 'inRange'] as const;
+export const ENEMY_COUNT_SCOPES = ["living", "inRange"] as const;
 
 export const ENEMY_COUNT_SCOPE_LABELS: Record<
   (typeof ENEMY_COUNT_SCOPES)[number],
   string
 > = {
-  living: '生存敵全体',
-  inRange: '射程内',
+  living: "生存敵全体",
+  inRange: "射程内",
 };
 
 export const RESOURCE_AMOUNT_KIND_OPTIONS: ResourceAmountKind[] = [
@@ -653,10 +656,7 @@ export const TARGET_SPEC_KIND_LABELS: Record<TargetSpecKind, string> = {
   all: "全体",
 };
 
-export const TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS = [
-  "enemy",
-  "ally",
-] as const;
+export const TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS = ["enemy", "ally"] as const;
 
 export const TARGET_RULE_OVERRIDE_APPLY_TO_LABELS: Record<
   (typeof TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS)[number],
