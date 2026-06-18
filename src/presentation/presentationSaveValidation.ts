@@ -3,6 +3,7 @@ import type {
   SkillEffectDef,
   SkillVfxDef,
 } from '../battle/types.ts';
+import { DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS } from '../battle/data/gameDataSchema.ts';
 import type { SkillAnimPhaseFields } from '../render/skillAnimPlayback.ts';
 
 function validateAnimPhaseFields(
@@ -65,6 +66,11 @@ function validateSkillVfxDef(
   vfx: SkillVfxDef,
   label: string,
 ): string | null {
+  for (const key of DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS) {
+    if (key in vfx && (vfx as Record<string, unknown>)[key] !== undefined) {
+      return `${label}.${key} は廃止されました（Canvas preset VFX）`;
+    }
+  }
   return validateAnimPhaseFields(vfx, label);
 }
 

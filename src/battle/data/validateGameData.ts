@@ -105,6 +105,7 @@ import {
   VALID_REG_VALUES,
   VFX_ANCHORS,
   VFX_LAYERS,
+  DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS,
   DEBUFF_FILTER_TAG_OPTIONS,
   DISPEL_PRIORITIES,
   BUFF_FILTER_TAG_OPTIONS,
@@ -1112,12 +1113,28 @@ function parseVfxPlacement(
   };
 }
 
-function parseSkillVfx(
+function rejectDeprecatedSkillVfxFields(
+  obj: Record<string, unknown>,
+  context: string,
+): void {
+  for (const key of DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS) {
+    if (obj[key] !== undefined) {
+      invalidField(
+        context,
+        key,
+        'is deprecated (Canvas preset VFX was removed)',
+      );
+    }
+  }
+}
+
+export function parseSkillVfx(
   raw: unknown,
   context: string,
 ): SkillVfxDef | undefined {
   if (raw === undefined) return undefined;
   const obj = requireRecord(raw, context);
+  rejectDeprecatedSkillVfxFields(obj, context);
   const enabled = obj.enabled;
   if (enabled !== undefined && typeof enabled !== 'boolean') {
     invalidField(context, 'enabled', 'must be a boolean');

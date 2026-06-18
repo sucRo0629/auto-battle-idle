@@ -160,6 +160,30 @@ export const VFX_LAYERS = [
   "behind",
   "front",
 ] as const satisfies readonly VfxLayer[];
+
+/** AnimPhaseFields の JSON キー（body strip / SkillVfxDef 共通） */
+export const ANIM_PHASE_FIELD_KEYS = [
+  "animStartFrame",
+  "animIntroEndFrame",
+  "animLoopFrame",
+  "animLoopEndFrame",
+  "animOutroStartFrame",
+] as const;
+
+/** SkillVfxDef の JSON キー（traits.basicAttackVfx / effect.vfx 等） */
+export const SKILL_VFX_DEF_FIELD_KEYS = [
+  "enabled",
+  "placement",
+  ...ANIM_PHASE_FIELD_KEYS,
+] as const;
+
+/** Phase 6 で廃止した Canvas preset VFX キー（validateGameData で拒否） */
+export const DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS = [
+  "preset",
+  "arc",
+  "durationMs",
+] as const;
+
 export const TARGET_RULES = [
   "closestAlly",
   "frontEnemy",

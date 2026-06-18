@@ -109,7 +109,7 @@ export class PresentationLabApp {
   private effectIndex = 0;
   private skillDraft: ActiveSkillDef | null = null;
   private basicAttackVfxDraft: SkillVfxDef | undefined = undefined;
-  private dirty = false;
+  private skillDirty = false;
   private entityTraitsDirty = false;
   private previewTarget: PreviewEntity | null = null;
 
@@ -208,7 +208,7 @@ export class PresentationLabApp {
   private loadSkillDraft(): void {
     const skill = this.skills.actives.find((entry) => entry.id === this.skillId);
     this.skillDraft = skill ? cloneSkill(skill) : null;
-    this.dirty = false;
+    this.skillDirty = false;
   }
 
   private loadEntityTraitsDraft(): void {
@@ -312,15 +312,18 @@ export class PresentationLabApp {
     return this.skillDraft?.effect[this.effectIndex] ?? null;
   }
 
+  private hasUnsavedChanges(): boolean {
+    return this.skillDirty || this.entityTraitsDirty;
+  }
+
   private markDirty(): void {
-    this.dirty = true;
+    this.skillDirty = true;
     this.refreshTimeline();
     this.setStatus('未保存の変更があります');
   }
 
   private markEntityTraitsDirty(): void {
     this.entityTraitsDirty = true;
-    this.dirty = true;
     this.syncPreviewEntities();
     this.refreshTimeline();
     this.setStatus('未保存の変更があります');
@@ -446,7 +449,7 @@ export class PresentationLabApp {
     const saveBtn = createActionButton('JSON 保存', 'editor-btn', () => {
       void this.saveDraft();
     });
-    saveBtn.disabled = !this.dirty;
+    saveBtn.disabled = !this.hasUnsavedChanges();
 
     actionsRow.append(playAllBtn, playBodyBtn, playVfxBtn, resetBtn, reloadBtn, saveBtn);
     toolbar.append(selectsRow, actionsRow);
@@ -859,7 +862,6 @@ export class PresentationLabApp {
       this.skills = skills;
       this.loadSkillDraft();
       this.loadEntityTraitsDraft();
-      this.dirty = false;
       this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
       this.renderForm();
       this.syncPreviewEntities();
@@ -880,7 +882,8 @@ export class PresentationLabApp {
       this.setStatus(validationError, true);
       return;
     }
-    if (this.entityTraitsDirty) {
+    const isBasic = this.currentSlotKind() === 'basic';
+    if (this.entityTraitsDirty && isBasic) {
       const traitsError = validateBasicAttackVfxSave(this.basicAttackVfxDraft ?? {});
       if (traitsError) {
         this.setStatus(traitsError, true);
@@ -890,7 +893,7 @@ export class PresentationLabApp {
     try {
       await savePresentationSkill(
         this.skillDraft,
-        this.entityTraitsDirty
+        this.entityTraitsDirty && isBasic
           ? {
               entityKind: this.entityKind,
               entityId: this.entityId,
@@ -908,7 +911,6 @@ export class PresentationLabApp {
       this.skills = skills;
       this.loadSkillDraft();
       this.loadEntityTraitsDraft();
-      this.dirty = false;
       this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
       this.setStatus('保存しました');
     } catch (error) {

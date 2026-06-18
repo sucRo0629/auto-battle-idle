@@ -127,11 +127,15 @@ interface EnemyBundleBody {
   actives: ActiveSkillDef[];
 }
 
+interface PresentationTraitsPatch {
+  entityKind: 'class' | 'enemy';
+  entityId: string;
+  basicAttackVfx: SkillVfxDef;
+}
+
 interface PresentationSkillBody {
   active: ActiveSkillDef;
-  entityKind?: 'class' | 'enemy';
-  entityId?: string;
-  basicAttackVfx?: SkillVfxDef;
+  traitsPatch?: PresentationTraitsPatch;
 }
 
 interface ClassStatsPatchBody {
@@ -270,31 +274,28 @@ async function applyPresentationSkill(
   let nextEnemies = validationBase.enemies as EnemyTemplate[];
   const reloadFiles: string[] = [];
 
-  if (
-    body.entityKind &&
-    body.entityId &&
-    body.basicAttackVfx !== undefined
-  ) {
-    if (body.entityKind === 'class') {
+  const traitsPatch = body.traitsPatch;
+  if (traitsPatch) {
+    if (traitsPatch.entityKind === 'class') {
       nextClasses = (nextClasses as ClassPresetBeforeEnrich[]).map((cls) => {
-        if (cls.id !== body.entityId) return cls;
+        if (cls.id !== traitsPatch.entityId) return cls;
         return {
           ...cls,
           traits: {
             ...cls.traits,
-            basicAttackVfx: body.basicAttackVfx,
+            basicAttackVfx: traitsPatch.basicAttackVfx,
           },
         };
       });
       reloadFiles.push(READ_FILES.classes);
     } else {
       nextEnemies = (nextEnemies as EnemyTemplate[]).map((enemy) => {
-        if (enemy.id !== body.entityId) return enemy;
+        if (enemy.id !== traitsPatch.entityId) return enemy;
         return {
           ...enemy,
           traits: {
             ...enemy.traits,
-            basicAttackVfx: body.basicAttackVfx,
+            basicAttackVfx: traitsPatch.basicAttackVfx,
           },
         };
       });

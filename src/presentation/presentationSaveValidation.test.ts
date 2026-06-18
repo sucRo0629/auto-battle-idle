@@ -64,6 +64,21 @@ describe('validatePresentationSkillSave', () => {
     expect(validatePresentationSkillSave(skill)).toBeNull();
   });
 
+  it('rejects deprecated vfx preset field', () => {
+    const skill = buffSkill([
+      {
+        target: { kind: 'self' },
+        type: 'buff',
+        buffSubKind: 'stat',
+        buffStat: 'def',
+        buffMultiplier: 1.2,
+        buffDurationSec: 5,
+        vfx: { preset: 'slash' } as ActiveSkillDef['effect'][number],
+      },
+    ]);
+    expect(validatePresentationSkillSave(skill)).toMatch(/preset/);
+  });
+
   it('rejects animOutroStartFrame on or before loop end on body', () => {
     const skill = buffSkill([
       {

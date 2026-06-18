@@ -377,26 +377,22 @@ export async function saveEnemyBundle(payload: {
   });
 }
 
+export type PresentationSkillTraitsPatch = {
+  entityKind: 'class' | 'enemy';
+  entityId: string;
+  basicAttackVfx: SkillVfxDef;
+};
+
 export async function savePresentationSkill(
   active: ActiveSkillDef,
-  entityPatch?: {
-    entityKind: 'class' | 'enemy';
-    entityId: string;
-    basicAttackVfx: SkillVfxDef;
-  },
+  traitsPatch?: PresentationSkillTraitsPatch,
 ): Promise<void> {
   await fetchJson('/__editor/presentation-skill', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       active,
-      ...(entityPatch
-        ? {
-            entityKind: entityPatch.entityKind,
-            entityId: entityPatch.entityId,
-            basicAttackVfx: entityPatch.basicAttackVfx,
-          }
-        : {}),
+      ...(traitsPatch ? { traitsPatch } : {}),
     }),
   });
 }
