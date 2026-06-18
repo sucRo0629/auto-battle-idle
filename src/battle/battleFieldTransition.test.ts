@@ -17,19 +17,16 @@ import {
   reachWave2Engage,
   screenX,
   waitForEngaged,
+  asBattleEngineInternals,
 } from './test/battleFieldSpec.harness.ts';
 import { CANVAS_W, MOVE_PX_PER_SEC } from './battleConstants.ts';
-import { SPRITE_WIDTH } from '../battle/battleConstants.ts';
+import { BODY_ANIM_APPROACH_SETTLED_PX } from './bodyAnimMarching.ts';
+import { resolveEnemyDeployTargets } from './combatPosition.ts';
 
-function frontContactScreenCenter(
-  snap: ReturnType<BattleEngine['getSnapshot']>,
-): number | null {
-  const front = snap.allies.filter((a) => a.hp > 0 && a.formationRow === 'front');
-  if (front.length === 0) return null;
-  const contact = front.reduce((best, ally) =>
-    ally.battleX > best.battleX ? ally : best,
-  );
-  return contact.battleX + SPRITE_WIDTH / 2;
+function enemySpawnDeployInputs(engine: BattleEngine) {
+  return asBattleEngineInternals(engine).enemies
+    .filter((e) => e.isAlive)
+    .map((e) => ({ id: e.id, spawnX: e.spawnX, isAlive: true as const }));
 }
 
 function createStage1FastMeleeWipeEngine(): BattleEngine {
@@ -79,49 +76,79 @@ describe(
   'battle-field transition spec (T-* / §4.3–§4.4)',
   { timeout: LONG_BATTLE_TIMEOUT_MS },
   () => {
-    it('T-engage-01: engage start preserves front contact screen center (no camera snap)', () => {
+    it('T-engage-01: engage start applies layout snap from spawn deploy positions', () => {
       const engine = createStage1Engine();
-      engine.startBattle();
 
       for (let i = 0; i < 5000; i++) {
         const before = engine.getSnapshot();
         engine.tick(TICK_DT);
         const after = engine.getSnapshot();
         if (!before.engaged && after.engaged) {
-          const beforeScreen = frontContactScreenCenter(before);
-          const afterScreen = frontContactScreenCenter(after);
-          expect(beforeScreen).not.toBeNull();
-          expect(afterScreen).not.toBeNull();
-          // §4.2 engage layout bake repositions units; screen center may shift modestly
-          expect(Math.abs(afterScreen! - beforeScreen!)).toBeLessThanOrEqual(160);
+          const spawnTargets = resolveEnemyDeployTargets(
+            enemySpawnDeployInputs(engine),
+          );
+          let sawSpawnDeploy = false;
+          for (const enemy of before.enemies.filter((e) => e.hp > 0)) {
+            const spawnX = spawnTargets.get(enemy.id);
+            expect(spawnX).toBeDefined();
+            if (
+              Math.abs(enemy.battleX - spawnX!) <=
+              BODY_ANIM_APPROACH_SETTLED_PX + 1
+            ) {
+              sawSpawnDeploy = true;
+            }
+          }
+          expect(sawSpawnDeploy).toBe(true);
+
+          const frontEnemyBefore = before.enemies
+            .filter((e) => e.hp > 0)
+            .reduce((best, enemy) =>
+              enemy.battleX < best.battleX ? enemy : best,
+            );
+          const frontEnemyAfter = after.enemies.find(
+            (e) => e.id === frontEnemyBefore.id,
+          );
+          expect(frontEnemyAfter).toBeDefined();
+          expect(frontEnemyAfter!.battleX).toBeLessThan(
+            frontEnemyBefore.battleX - 8,
+          );
           return;
         }
       }
       expect.fail('engage did not start');
     });
 
-    it('T-engage-02: engage start does not snap front row battleX toward enemy', () => {
+    it('T-engage-02: PartyDeploy enemies march left only toward spawn, not past target', () => {
       const engine = createStage1Engine();
-      engine.startBattle();
+
+      const spawnTargets = resolveEnemyDeployTargets(
+        enemySpawnDeployInputs(engine),
+      );
+      const prevX = new Map<string, number>();
 
       for (let i = 0; i < 5000; i++) {
-        const before = engine.getSnapshot();
-        engine.tick(TICK_DT);
-        const after = engine.getSnapshot();
-        if (!before.engaged && after.engaged) {
-          for (const ally of after.allies.filter(
-            (a) => a.hp > 0 && a.formationRow === 'front',
-          )) {
-            const prev = before.allies.find((a) => a.id === ally.id);
-            expect(prev).toBeDefined();
-            // §4.2: one-shot layout bake advances front row toward contact (not per-tick approach)
-            expect(ally.battleX).toBeGreaterThanOrEqual(prev!.battleX);
-            expect(ally.battleX - prev!.battleX).toBeLessThanOrEqual(200);
-          }
-          return;
+        const snap = engine.getSnapshot();
+        if (!snap.partyDeployActive) {
+          if (snap.engaged) break;
+          engine.tick(TICK_DT);
+          continue;
         }
+
+        for (const enemy of snap.enemies.filter((e) => e.hp > 0)) {
+          const target = spawnTargets.get(enemy.id);
+          expect(target).toBeDefined();
+          expect(enemy.battleX).toBeGreaterThanOrEqual(
+            target! - BODY_ANIM_APPROACH_SETTLED_PX - 1,
+          );
+
+          const prev = prevX.get(enemy.id);
+          if (prev !== undefined) {
+            expect(enemy.battleX).toBeLessThanOrEqual(prev + 0.01);
+          }
+          prevX.set(enemy.id, enemy.battleX);
+        }
+        engine.tick(TICK_DT);
       }
-      expect.fail('engage did not start');
     });
 
     it('T-L1-02: resolveEngagedLayout only on engage and composition change', () => {

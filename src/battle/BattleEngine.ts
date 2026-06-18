@@ -25,7 +25,6 @@ import {
   placePartyOffScreenForDeploy,
   resolveEnemyDeployTargets,
   placeEnemiesOffScreenForDeploy,
-  assignInitialPlayerBattleX,
 } from "./combatPosition.ts";
 import { waveHasTrainingDummy } from "./trainingStage.ts";
 import {
@@ -921,8 +920,11 @@ export class BattleEngine {
     this.clearEngagedVisualState();
     hideFallenAllyCorpses(this.players);
     this.spawnWaveEnemies();
-    assignInitialPlayerBattleX(this.players);
-    syncAllFieldX(this.players);
+    const deployTargets = this.resolveWaveDeployTargetMaps();
+    this.applyDeployTargetsToUnits(
+      deployTargets.partyDeployTargets,
+      deployTargets.enemyDeployTargets,
+    );
     resetPassiveDispelTriggerLimits(
       [...this.players, ...this.enemies],
       this.gameData.skillRegistry.passives,
@@ -1016,6 +1018,37 @@ export class BattleEngine {
     this.beginEngaged();
   }
 
+  /** PartyDeploy 目標: 味方は隊形、敵は spawn（接敵 layout は beginEngaged で bake） */
+  private resolveWaveDeployTargetMaps(): {
+    partyDeployTargets: Map<string, number>;
+    enemyDeployTargets: Map<string, number>;
+  } {
+    return {
+      partyDeployTargets: resolvePartyDeployTargets(this.players),
+      enemyDeployTargets: resolveEnemyDeployTargets(this.enemies),
+    };
+  }
+
+  private applyDeployTargetsToUnits(
+    partyDeployTargets: Map<string, number>,
+    enemyDeployTargets: Map<string, number>,
+  ): void {
+    for (const ally of this.players) {
+      if (!ally.isAlive) continue;
+      const x = partyDeployTargets.get(ally.id);
+      if (x === undefined) continue;
+      ally.battleX = x;
+      ally.visualX = x;
+    }
+    for (const enemy of this.enemies) {
+      if (!enemy.isAlive) continue;
+      const x = enemyDeployTargets.get(enemy.id);
+      if (x === undefined) continue;
+      enemy.battleX = x;
+      enemy.visualX = x;
+    }
+  }
+
   /** Wave 開始: 敵 spawn + 味方・敵を画面外から配置 */
   private prepareWaveDeploy(waveIndex: number): void {
     hideFallenAllyCorpses(this.players);
@@ -1036,8 +1069,9 @@ export class BattleEngine {
       this.gameData.skillRegistry.passives,
       this.gameData,
     );
-    this.partyDeployTargets = resolvePartyDeployTargets(this.players);
-    this.enemyDeployTargets = resolveEnemyDeployTargets(this.enemies);
+    const deployTargets = this.resolveWaveDeployTargetMaps();
+    this.partyDeployTargets = deployTargets.partyDeployTargets;
+    this.enemyDeployTargets = deployTargets.enemyDeployTargets;
     placePartyOffScreenForDeploy(this.players, this.partyDeployTargets);
     placeEnemiesOffScreenForDeploy(this.enemies, this.enemyDeployTargets);
     this.partyDeployPrepared = true;
