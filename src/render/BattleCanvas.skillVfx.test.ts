@@ -58,7 +58,7 @@ describe('BattleCanvas.playSkillVfx', () => {
       'actor',
       'target',
       {
-        particles: { preset: 'heal_holy_light' },
+        particles: { preset: 'heal_normal' },
         placement: { anchor: 'footTarget', layer: 'front' },
       },
       { skillId: 'heal_only', effectIndex: 0, kind: 'main' },
@@ -69,10 +69,10 @@ describe('BattleCanvas.playSkillVfx', () => {
     expect(particleSpawn.mock.calls[0]?.[0]).toBe('inst-1:particles');
     expect(particleSpawn.mock.calls[0]?.[2]).toBe('front');
     expect(particleSpawn.mock.calls[0]?.[3]).toEqual({
-      preset: 'heal_holy_light',
+      preset: 'heal_normal',
     });
     expect(particleSpawn.mock.calls[0]?.[4]).toEqual(
-      getParticlePresetDef('heal_holy_light'),
+      getParticlePresetDef('heal_normal'),
     );
   });
 
@@ -92,7 +92,7 @@ describe('BattleCanvas.playSkillVfx', () => {
       'actor',
       'target',
       {
-        particles: { preset: 'heal_holy_light' },
+        particles: { preset: 'heal_normal' },
         placement: { anchor: 'footActor', layer: 'behind' },
       },
       { skillId: 'combo_skill', effectIndex: 0, kind: 'main' },
@@ -121,7 +121,7 @@ describe('BattleCanvas.playSkillVfx', () => {
       {
         placement: { anchor: 'footActor', layer: 'behind' },
         particles: {
-          preset: 'heal_holy_light',
+          preset: 'heal_normal',
           placement: { anchor: 'footTarget', layer: 'front' },
         },
       },

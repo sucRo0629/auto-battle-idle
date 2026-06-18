@@ -131,7 +131,7 @@ describe('resolveEffectPresentation', () => {
   it('uses explicit heal hitVfx with particles', () => {
     const hitVfx = {
       particles: {
-        preset: 'heal_holy_light' as const,
+        preset: 'heal_normal' as const,
         placement: { anchor: 'footTarget' as const, layer: 'front' as const },
       },
     };

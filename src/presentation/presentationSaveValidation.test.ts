@@ -75,7 +75,7 @@ describe('validatePresentationSkillSave', () => {
         buffDurationSec: 5,
         vfx: {
           particles: {
-            preset: 'heal_holy_light',
+            preset: 'heal_normal',
             placement: { anchor: 'target' },
             delaySec: 0.2,
           },

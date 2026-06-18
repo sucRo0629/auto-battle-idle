@@ -6,14 +6,14 @@ import {
 import { getParticlePresetDef } from './particlePresets.ts';
 
 describe('ParticlePlaybackManager', () => {
-  it('spawns heal_holy_light and removes after duration', () => {
+  it('spawns heal_normal and removes after duration', () => {
     const manager = new ParticlePlaybackManager();
-    const preset = getParticlePresetDef('heal_holy_light');
+    const preset = getParticlePresetDef('heal_normal');
     manager.spawn(
       'heal-1',
       { x: 100, y: 200 },
       'front',
-      { preset: 'heal_holy_light', durationSec: 0.2, count: 8, tint: '#ffe066' },
+      { preset: 'heal_normal', durationSec: 0.2, count: 8, tint: '#ffe066' },
       preset,
     );
     expect(manager.has('heal-1')).toBe(true);
@@ -24,12 +24,12 @@ describe('ParticlePlaybackManager', () => {
 
   it('waits for delaySec before advancing particles', () => {
     const manager = new ParticlePlaybackManager();
-    const preset = getParticlePresetDef('heal_holy_light');
+    const preset = getParticlePresetDef('heal_normal');
     manager.spawn(
       'heal-delay',
       { x: 100, y: 200 },
       'front',
-      { preset: 'heal_holy_light', delaySec: 0.2, durationSec: 0.3 },
+      { preset: 'heal_normal', delaySec: 0.2, durationSec: 0.3 },
       preset,
     );
 
@@ -49,30 +49,9 @@ describe('ParticlePlaybackManager', () => {
     expect(emitter?.particles[0]?.lifeSec ?? 0).toBeGreaterThan(0);
   });
 
-  it('spawns spark_burst with the preset particle count and duration', () => {
-    const manager = new ParticlePlaybackManager();
-    const preset = getParticlePresetDef('spark_burst');
-    manager.spawn(
-      'spark-1',
-      { x: 100, y: 200 },
-      'front',
-      { preset: 'spark_burst' },
-      preset,
-    );
-
-    const emitter = (
-      manager as unknown as {
-        emitters: Map<string, { particles: unknown[]; durationSec: number }>;
-      }
-    ).emitters.get('spark-1');
-
-    expect(emitter?.particles).toHaveLength(8);
-    expect(emitter?.durationSec).toBe(0.32);
-  });
-
   it('ignores inactive particle defs', () => {
     const manager = new ParticlePlaybackManager();
-    const preset = getParticlePresetDef('heal_holy_light');
+    const preset = getParticlePresetDef('heal_normal');
     manager.spawn(
       'x',
       { x: 0, y: 0 },
@@ -85,12 +64,12 @@ describe('ParticlePlaybackManager', () => {
 
   it('remove() drops an emitter immediately', () => {
     const manager = new ParticlePlaybackManager();
-    const preset = getParticlePresetDef('heal_holy_light');
+    const preset = getParticlePresetDef('heal_normal');
     manager.spawn(
       'heal-1',
       { x: 0, y: 0 },
       'front',
-      { preset: 'heal_holy_light' },
+      { preset: 'heal_normal' },
       preset,
     );
     manager.remove('heal-1');
@@ -99,13 +78,13 @@ describe('ParticlePlaybackManager', () => {
 
   it('caps simultaneous emitters', () => {
     const manager = new ParticlePlaybackManager();
-    const preset = getParticlePresetDef('heal_holy_light');
+    const preset = getParticlePresetDef('heal_normal');
     for (let i = 0; i < MAX_PARTICLE_EMITTERS + 5; i += 1) {
       manager.spawn(
         `e-${i}`,
         { x: 0, y: 0 },
         'front',
-        { preset: 'heal_holy_light' },
+        { preset: 'heal_normal' },
         preset,
       );
     }

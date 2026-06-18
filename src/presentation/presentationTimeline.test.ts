@@ -230,7 +230,7 @@ describe('computePresentationTimeline', () => {
           amount: { kind: 'atkScale', scale: 1 },
           vfx: {
             particles: {
-              preset: 'heal_holy_light',
+              preset: 'heal_normal',
               durationSec: 1.2,
             },
           },
@@ -264,7 +264,7 @@ describe('computePresentationTimeline', () => {
           healSubKind: 'instant',
           hitVfx: {
             particles: {
-              preset: 'heal_holy_light',
+              preset: 'heal_normal',
               placement: { anchor: 'footTarget', layer: 'front' },
             },
           },
@@ -334,7 +334,7 @@ describe('computePresentationTimeline', () => {
           amount: { kind: 'atkScale', scale: 1 },
           vfx: {
             particles: {
-              preset: 'heal_holy_light',
+              preset: 'heal_normal',
               durationSec: 1.2,
             },
           },
@@ -367,7 +367,7 @@ describe('computePresentationTimeline', () => {
           amount: { kind: 'atkScale', scale: 1 },
           vfx: {
             particles: {
-              preset: 'heal_holy_light',
+              preset: 'heal_normal',
               durationSec: 1,
               delaySec: 0.25,
             },

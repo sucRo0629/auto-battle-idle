@@ -245,7 +245,7 @@ describe("playSkillHitFeedback", () => {
     const effect = { type: "heal" } as never;
     const presentation = {
       vfx: {
-        particles: { preset: "heal_holy_light" },
+        particles: { preset: "heal_normal" },
       },
     } as never;
 
@@ -262,7 +262,7 @@ describe("playSkillHitFeedback", () => {
     expect(canvas.playSkillVfx).toHaveBeenCalledTimes(1);
     expect(canvas.playSkillVfx.mock.calls[0]?.[3]).toEqual(
       expect.objectContaining({
-        particles: { preset: "heal_holy_light" },
+        particles: { preset: "heal_normal" },
       }),
     );
     expect(canvas.playSkillVfx.mock.calls[0]?.[4]).toEqual(
@@ -280,7 +280,7 @@ describe("playSkillHitFeedback", () => {
     const presentation = {
       hitVfx: {
         particles: {
-          preset: "heal_holy_light",
+          preset: "heal_normal",
           placement: { anchor: "footTarget", layer: "front" },
         },
       },

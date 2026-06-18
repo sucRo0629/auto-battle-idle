@@ -109,7 +109,7 @@ describe('presentation lab / battle parity', () => {
           ...skill.effect[0]!,
           vfx: {
             particles: {
-              preset: 'heal_holy_light',
+              preset: 'heal_normal',
               durationSec: 0.8,
             },
           },

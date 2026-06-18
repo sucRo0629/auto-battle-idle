@@ -61,16 +61,18 @@ const DEFAULT_HEAL_PARTICLES: ParticlesPresetParams = {
   sizeMax: 10,
 };
 
+const HEAL_PARTICLE_PRESET: ParticlePresetDef = {
+  kind: "composite",
+  durationSec: 0.75,
+  defaultCount: 4,
+  defaultTint: "#5ce88a",
+  ring: DEFAULT_RING,
+  particles: DEFAULT_HEAL_PARTICLES,
+};
+
 export const PARTICLE_PRESET_DEFS: Record<ParticlePresetId, ParticlePresetDef> =
   {
-    heal_holy_light: {
-      kind: "composite",
-      durationSec: 0.75,
-      defaultCount: 4,
-      defaultTint: "#5ce88a",
-      ring: DEFAULT_RING,
-      particles: DEFAULT_HEAL_PARTICLES,
-    },
+    heal_normal: HEAL_PARTICLE_PRESET,
   };
 
 /** @deprecated use PARTICLE_PRESET_DEFS */

@@ -41,7 +41,7 @@ describe('parseSkillVfx', () => {
       parseSkillVfx(
         {
           particles: {
-            preset: 'heal_holy_light',
+            preset: 'heal_normal',
             placement: { anchor: 'footTarget', layer: 'front' },
             count: 16,
             durationSec: 1.25,
@@ -53,7 +53,7 @@ describe('parseSkillVfx', () => {
       ),
     ).toEqual({
       particles: {
-        preset: 'heal_holy_light',
+        preset: 'heal_normal',
         placement: { anchor: 'footTarget', layer: 'front' },
         count: 16,
         durationSec: 1.25,
@@ -75,7 +75,7 @@ describe('parseSkillVfx', () => {
   it('rejects invalid particle tint', () => {
     expect(() =>
       parseSkillVfx(
-        { particles: { preset: 'heal_holy_light', tint: 'gold' } },
+        { particles: { preset: 'heal_normal', tint: 'gold' } },
         'effect[0].vfx',
       ),
     ).toThrow(/tint.*effect\[0\]\.vfx\.particles/);
@@ -84,7 +84,7 @@ describe('parseSkillVfx', () => {
   it('rejects negative particle delay', () => {
     expect(() =>
       parseSkillVfx(
-        { particles: { preset: 'heal_holy_light', delaySec: -0.1 } },
+        { particles: { preset: 'heal_normal', delaySec: -0.1 } },
         'effect[0].vfx',
       ),
     ).toThrow(/delaySec.*effect\[0\]\.vfx\.particles/);

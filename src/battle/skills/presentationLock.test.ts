@@ -123,7 +123,7 @@ describe('resolvePresentationLockSec', () => {
           amount: { kind: 'atkScale', scale: 1 },
           vfx: {
             particles: {
-              preset: 'heal_holy_light',
+              preset: 'heal_normal',
               durationSec: 1.2,
             },
           },
@@ -145,7 +145,7 @@ describe('resolvePresentationLockSec', () => {
           target: { rule: 'mostDamagedAlly' },
           amount: { kind: 'atkScale', scale: 1 },
           vfx: {
-            particles: { preset: 'heal_holy_light' },
+            particles: { preset: 'heal_normal' },
           },
         },
       ],
@@ -165,7 +165,7 @@ describe('resolvePresentationLockSec', () => {
           target: { rule: 'mostDamagedAlly' },
           amount: { kind: 'atkScale', scale: 1 },
           hitVfx: {
-            particles: { preset: 'heal_holy_light' },
+            particles: { preset: 'heal_normal' },
           },
         },
       ],

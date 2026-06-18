@@ -182,7 +182,9 @@ export const VFX_PARTICLE_DEF_FIELD_KEYS = [
 ] as const;
 
 /** パーティクル preset ID（`particlePresets.ts` と同期） */
-export const PARTICLE_PRESET_IDS = ["heal_holy_light"] as const;
+export const PARTICLE_PRESET_IDS = [
+  "heal_normal",
+] as const;
 
 /** SkillVfxDef の JSON キー（traits.basicAttackVfx / effect.vfx 等） */
 export const SKILL_VFX_DEF_FIELD_KEYS = [
