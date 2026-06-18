@@ -48,6 +48,13 @@ import {
 
 type EntityKind = 'class' | 'enemy';
 
+interface LabSelection {
+  entityKind: EntityKind;
+  entityId: string;
+  skillId: string;
+  effectIndex: number;
+}
+
 interface LabQuery {
   entityKind?: EntityKind;
   entityId?: string;
@@ -169,6 +176,81 @@ export class PresentationLabApp {
     }
   }
 
+  private captureSelection(): LabSelection {
+    return {
+      entityKind: this.entityKind,
+      entityId: this.entityId,
+      skillId: this.skillId,
+      effectIndex: this.effectIndex,
+    };
+  }
+
+  private restoreSelection(selection: LabSelection): void {
+    this.entityKind = selection.entityKind;
+    this.entityId = selection.entityId;
+    this.skillId = selection.skillId;
+    this.effectIndex = selection.effectIndex;
+    this.reconcileSelection();
+  }
+
+  /** 再取得後も entity / skill / effect の選択を維持（無効な値だけ補正） */
+  private reconcileSelection(): void {
+    const entities = this.entityKind === 'class' ? this.classes : this.enemies;
+    if (!this.entityId || !entities.some((entry) => entry.id === this.entityId)) {
+      this.entityId = entities[0]?.id ?? '';
+    }
+
+    const skillOptions = this.currentSkillOptions();
+    if (!this.skillId || !skillOptions.some((skill) => skill.id === this.skillId)) {
+      this.skillId = skillOptions[0]?.id ?? '';
+    }
+
+    const skill = this.skills.actives.find((entry) => entry.id === this.skillId);
+    const effectCount = skill?.effect.length ?? 0;
+    if (effectCount <= 0) {
+      this.effectIndex = 0;
+      return;
+    }
+    if (this.effectIndex < 0 || this.effectIndex >= effectCount) {
+      this.effectIndex = Math.min(Math.max(this.effectIndex, 0), effectCount - 1);
+    }
+  }
+
+  private syncLabQueryToUrl(): void {
+    if (!this.entityId) return;
+    const params = new URLSearchParams({
+      entityKind: this.entityKind,
+      entityId: this.entityId,
+      skillId: this.skillId,
+      effectIndex: String(this.effectIndex),
+    });
+    const next = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(null, '', next);
+  }
+
+  private getToolbar(): HTMLElement {
+    const toolbar = this.root.querySelector('.presentation-lab-toolbar');
+    if (!toolbar) {
+      throw new Error('.presentation-lab-toolbar not found');
+    }
+    return toolbar as HTMLElement;
+  }
+
+  private refreshAfterDataReload(): void {
+    this.reconcileSelection();
+    this.loadSkillDraft();
+    this.loadEntityTraitsDraft();
+    this.renderToolbar(this.getToolbar());
+    this.renderForm();
+    this.syncPreviewEntities();
+    this.refreshTimeline();
+    this.syncLabQueryToUrl();
+  }
+
+  private onSelectionChanged(): void {
+    this.syncLabQueryToUrl();
+  }
+
   private applyInitialSelection(query: LabQuery): void {
     if (query.entityKind && query.entityId) {
       this.entityKind = query.entityKind;
@@ -201,6 +283,8 @@ export class PresentationLabApp {
     } else {
       this.effectIndex = 0;
     }
+    this.reconcileSelection();
+    this.syncLabQueryToUrl();
   }
 
   private currentSkillOptions(): ActiveSkillDef[] {
@@ -359,6 +443,7 @@ export class PresentationLabApp {
         this.effectIndex = 0;
         this.loadSkillDraft();
         this.loadEntityTraitsDraft();
+        this.onSelectionChanged();
         this.renderToolbar(toolbar);
         this.renderForm();
         this.syncPreviewEntities();
@@ -384,6 +469,7 @@ export class PresentationLabApp {
       this.effectIndex = 0;
       this.loadSkillDraft();
       this.loadEntityTraitsDraft();
+      this.onSelectionChanged();
       this.renderToolbar(toolbar);
       this.renderForm();
       this.syncPreviewEntities();
@@ -398,6 +484,7 @@ export class PresentationLabApp {
       this.skillId = value;
       this.effectIndex = 0;
       this.loadSkillDraft();
+      this.onSelectionChanged();
       this.renderToolbar(toolbar);
       this.renderForm();
       this.syncPreviewEntities();
@@ -410,6 +497,7 @@ export class PresentationLabApp {
     }));
     const effectSelect = createSelect(String(this.effectIndex), effectOptions, (value) => {
       this.effectIndex = Number.parseInt(value, 10);
+      this.onSelectionChanged();
       this.renderForm();
       this.syncPreviewEntities();
       this.refreshTimeline();
@@ -745,7 +833,7 @@ export class PresentationLabApp {
     mutator(draft);
     this.basicAttackVfxDraft = draft;
     this.markEntityTraitsDirty();
-    this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
+    this.renderToolbar(this.getToolbar());
     this.renderForm();
   }
 
@@ -769,7 +857,7 @@ export class PresentationLabApp {
     if (!this.skillDraft) return;
     mutator(this.skillDraft);
     this.markDirty();
-    this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
+    this.renderToolbar(this.getToolbar());
     this.renderForm();
     this.refreshTimeline();
   }
@@ -780,7 +868,7 @@ export class PresentationLabApp {
     if (!effect) return;
     mutator(effect);
     this.markDirty();
-    this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
+    this.renderToolbar(this.getToolbar());
     this.renderForm();
     this.refreshTimeline();
   }
@@ -900,6 +988,7 @@ export class PresentationLabApp {
 
   private async reloadFromServer(): Promise<void> {
     try {
+      const selection = this.captureSelection();
       const [classes, enemies, skills] = await Promise.all([
         fetchClasses(),
         fetchEnemies(),
@@ -908,12 +997,8 @@ export class PresentationLabApp {
       this.classes = classes;
       this.enemies = enemies;
       this.skills = skills;
-      this.loadSkillDraft();
-      this.loadEntityTraitsDraft();
-      this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
-      this.renderForm();
-      this.syncPreviewEntities();
-      this.refreshTimeline();
+      this.restoreSelection(selection);
+      this.refreshAfterDataReload();
       this.setStatus('サーバーから再読込しました');
     } catch (error) {
       this.setStatus(
@@ -949,6 +1034,7 @@ export class PresentationLabApp {
             }
           : undefined,
       );
+      const selection = this.captureSelection();
       const [classes, enemies, skills] = await Promise.all([
         fetchClasses(),
         fetchEnemies(),
@@ -957,9 +1043,8 @@ export class PresentationLabApp {
       this.classes = classes;
       this.enemies = enemies;
       this.skills = skills;
-      this.loadSkillDraft();
-      this.loadEntityTraitsDraft();
-      this.renderToolbar(this.root.querySelector('.presentation-lab-toolbar')!);
+      this.restoreSelection(selection);
+      this.refreshAfterDataReload();
       this.setStatus('保存しました');
     } catch (error) {
       this.setStatus(

@@ -294,12 +294,20 @@ export function createSelect<T extends string | number>(
   onChange: (value: T) => void,
 ): HTMLSelectElement {
   const select = createEl('select', 'editor-select') as HTMLSelectElement;
+  const valueStr = String(value);
+  let matched = false;
   for (const option of options) {
     const opt = createEl('option') as HTMLOptionElement;
     opt.value = String(option.value);
     opt.textContent = option.label;
-    if (option.value === value) opt.selected = true;
+    if (String(option.value) === valueStr) {
+      opt.selected = true;
+      matched = true;
+    }
     select.appendChild(opt);
+  }
+  if (matched) {
+    select.value = valueStr;
   }
   select.addEventListener('change', () => {
     const raw = select.value;

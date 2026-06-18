@@ -1,12 +1,12 @@
-import type { VfxLayer, VfxParticleDef } from '../battle/types.ts';
-import { isParticleDefActive } from './particlePlayback.ts';
-import { mergeParticleDefWithPreset } from './particlePresetResolve.ts';
+import type { VfxLayer, VfxParticleDef } from "../battle/types.ts";
+import { isParticleDefActive } from "./particlePlayback.ts";
+import { mergeParticleDefWithPreset } from "./particlePresetResolve.ts";
 import type {
   ParticlePresetDef,
   ParticleShape,
   ParticlesPresetParams,
   RingPresetParams,
-} from './particlePresets.ts';
+} from "./particlePresets.ts";
 
 export const MAX_PARTICLE_EMITTERS = 32;
 export const MAX_PARTICLES_PER_EMITTER = 64;
@@ -21,7 +21,6 @@ interface Particle {
   maxLifeSec: number;
   size: number;
   shape: ParticleShape;
-  crossVertical: boolean;
 }
 
 interface ParticleEmitter {
@@ -38,7 +37,7 @@ interface ParticleEmitter {
 }
 
 function parseTint(hex: string): { r: number; g: number; b: number } {
-  const normalized = hex.startsWith('#') ? hex.slice(1) : hex;
+  const normalized = hex.startsWith("#") ? hex.slice(1) : hex;
   const value = Number.parseInt(normalized, 16);
   return {
     r: (value >> 16) & 0xff,
@@ -62,34 +61,24 @@ function countActiveParticles(emitters: Iterable<ParticleEmitter>): number {
 function createParticles(
   config: ParticlesPresetParams,
   count: number,
-  remainingBudget: number,
+  remainingBudget: number
 ): Particle[] {
   const cappedCount = Math.min(
     Math.max(1, Math.floor(count)),
     MAX_PARTICLES_PER_EMITTER,
-    remainingBudget,
+    remainingBudget
   );
   const particles: Particle[] = [];
   for (let i = 0; i < cappedCount; i += 1) {
-    const crossVertical = config.shape === 'cross' ? i % 2 === 0 : false;
-    const x =
-      config.shape === 'cross' && crossVertical
-        ? rand(-3, 3)
-        : rand(-config.spawnXSpread, config.spawnXSpread);
-    const y =
-      config.shape === 'cross' && crossVertical
-        ? rand(config.spawnYMin, config.spawnYMax)
-        : rand(-3, 3);
     particles.push({
-      x,
-      y,
+      x: rand(-config.spawnXSpread, config.spawnXSpread),
+      y: rand(config.spawnYMin, config.spawnYMax),
       vx: rand(-config.vxSpread, config.vxSpread),
       vy: rand(config.vyMin, config.vyMax),
       lifeSec: 0,
       maxLifeSec: rand(config.lifeMinSec, config.lifeMaxSec),
       size: rand(config.sizeMin, config.sizeMax),
       shape: config.shape,
-      crossVertical,
     });
   }
   return particles;
@@ -101,7 +90,7 @@ function drawRing(
   worldY: number,
   elapsedSec: number,
   tint: string,
-  config: RingPresetParams,
+  config: RingPresetParams
 ): void {
   const { r, g, b } = parseTint(tint);
   const tailSec = config.fadeSec;
@@ -117,14 +106,14 @@ function drawRing(
     Math.max(
       0,
       (elapsedSec - config.ringStartSec) /
-        (config.ringEndSec - config.ringStartSec),
-    ),
+        (config.ringEndSec - config.ringStartSec)
+    )
   );
   const radius =
     config.startRadius + t * (config.endRadius - config.startRadius);
   const fadeT = Math.min(
     1,
-    Math.max(0, (elapsedSec - config.ringEndSec) / tailSec),
+    Math.max(0, (elapsedSec - config.ringEndSec) / tailSec)
   );
   const alpha = (1 - fadeT) * (0.55 + (1 - t) * 0.35);
 
@@ -147,7 +136,7 @@ function drawParticle(
   emitter: ParticleEmitter,
   particle: Particle,
   scale: number,
-  rgb: { r: number; g: number; b: number },
+  rgb: { r: number; g: number; b: number }
 ): void {
   const lifeT = particle.lifeSec / particle.maxLifeSec;
   if (lifeT >= 1) return;
@@ -160,21 +149,18 @@ function drawParticle(
 
   ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha})`;
 
-  if (particle.shape === 'circle') {
+  if (particle.shape === "circle") {
     ctx.beginPath();
     ctx.arc(px, py, size / 2, 0, Math.PI * 2);
     ctx.fill();
     return;
   }
 
-  if (particle.shape === 'cross') {
+  if (particle.shape === "cross") {
     const arm = size * 1.4;
-    const thickness = Math.max(1, size * 0.45);
-    if (particle.crossVertical) {
-      ctx.fillRect(px - thickness / 2, py - arm / 2, thickness, arm);
-    } else {
-      ctx.fillRect(px - arm / 2, py - thickness / 2, arm, thickness);
-    }
+    const thickness = Math.max(1, size * 0.4);
+    ctx.fillRect(px - thickness / 2, py - arm / 2, thickness, arm);
+    ctx.fillRect(px - arm / 2, py - thickness / 2, arm, thickness);
     return;
   }
 
@@ -184,7 +170,7 @@ function drawParticle(
 function drawParticles(
   ctx: CanvasRenderingContext2D,
   emitter: ParticleEmitter,
-  scale: number,
+  scale: number
 ): void {
   const rgb = parseTint(emitter.tint);
   for (const particle of emitter.particles) {
@@ -200,20 +186,19 @@ export class ParticlePlaybackManager {
     worldPos: { x: number; y: number },
     layer: VfxLayer,
     def: VfxParticleDef,
-    presetDefaults: ParticlePresetDef,
+    presetDefaults: ParticlePresetDef
   ): void {
     if (!isParticleDefActive(def)) return;
     if (this.emitters.size >= MAX_PARTICLE_EMITTERS) return;
 
     const resolved = mergeParticleDefWithPreset(def, presetDefaults);
     const ring =
-      presetDefaults.kind === 'ring' || presetDefaults.kind === 'composite'
-        ? (presetDefaults.ring ?? null)
+      presetDefaults.kind === "ring" || presetDefaults.kind === "composite"
+        ? presetDefaults.ring ?? null
         : null;
     const particleConfig =
-      presetDefaults.kind === 'particles' ||
-      presetDefaults.kind === 'composite'
-        ? (presetDefaults.particles ?? null)
+      presetDefaults.kind === "particles" || presetDefaults.kind === "composite"
+        ? presetDefaults.particles ?? null
         : null;
 
     const remainingBudget =
@@ -274,11 +259,7 @@ export class ParticlePlaybackManager {
     }
   }
 
-  draw(
-    ctx: CanvasRenderingContext2D,
-    layer: VfxLayer,
-    scale: number,
-  ): void {
+  draw(ctx: CanvasRenderingContext2D, layer: VfxLayer, scale: number): void {
     for (const emitter of this.emitters.values()) {
       if (emitter.layer !== layer || emitter.finished) continue;
       if (emitter.elapsedSec < 0) continue;
@@ -289,7 +270,7 @@ export class ParticlePlaybackManager {
           emitter.worldY,
           emitter.elapsedSec,
           emitter.tint,
-          emitter.ring,
+          emitter.ring
         );
       }
       if (emitter.particles.length > 0) {

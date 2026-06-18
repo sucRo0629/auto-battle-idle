@@ -42,10 +42,10 @@ describe('particlePlayback', () => {
   it('resolves heal_holy_light defaults from preset registry', () => {
     const resolved = resolveParticleSpawnOptions({ preset: 'heal_holy_light' });
     expect(resolved.presetId).toBe('heal_holy_light');
-    expect(resolved.count).toBe(10);
+    expect(resolved.count).toBe(4);
     expect(resolved.durationSec).toBe(0.75);
     expect(resolved.delaySec).toBe(0);
-    expect(resolved.tint).toBe('#e8fff1');
+    expect(resolved.tint).toBe('#5ce88a');
     expect(resolved.preset.kind).toBe('composite');
     expect(resolved.preset.ring).toMatchObject({
       startRadius: 4,
@@ -60,13 +60,13 @@ describe('particlePlayback', () => {
       vyMin: -54,
       vyMax: -28,
       vxSpread: 0.08,
-      spawnXSpread: 8,
+      spawnXSpread: 11,
       spawnYMin: -2,
       spawnYMax: 4,
       lifeMinSec: 0.42,
       lifeMaxSec: 0.7,
-      sizeMin: 1.8,
-      sizeMax: 3.2,
+      sizeMin: 4,
+      sizeMax: 6,
     });
   });
 

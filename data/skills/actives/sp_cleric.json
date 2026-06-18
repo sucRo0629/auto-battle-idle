@@ -24,7 +24,7 @@
           "particles": {
             "preset": "heal_holy_light",
             "placement": {
-              "anchor": "footTarget",
+              "anchor": "target",
               "layer": "front"
             }
           }
@@ -43,7 +43,10 @@
           "kind": "atkBased",
           "atkScale": 0.1
         },
-        "healSubKind": "hot"
+        "healSubKind": "hot",
+        "hitVfx": {
+          "enabled": false
+        }
       }
     ],
     "useDurationSec": 0.3

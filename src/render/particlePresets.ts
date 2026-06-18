@@ -1,10 +1,10 @@
-import { PARTICLE_PRESET_IDS } from '../battle/data/gameDataSchema.ts';
+import { PARTICLE_PRESET_IDS } from "../battle/data/gameDataSchema.ts";
 
 export type ParticlePresetId = (typeof PARTICLE_PRESET_IDS)[number];
 
-export type ParticlePresetKind = 'particles' | 'ring' | 'composite';
+export type ParticlePresetKind = "particles" | "ring" | "composite";
 
-export type ParticleShape = 'dot' | 'cross' | 'circle';
+export type ParticleShape = "dot" | "cross" | "circle";
 
 export interface RingPresetParams {
   startRadius: number;
@@ -40,7 +40,7 @@ export interface ParticlePresetDef {
 
 const DEFAULT_RING: RingPresetParams = {
   startRadius: 4,
-  endRadius: 30,
+  endRadius: 20,
   ringStartSec: 0,
   ringEndSec: 0.35,
   fadeSec: 0.06,
@@ -48,21 +48,21 @@ const DEFAULT_RING: RingPresetParams = {
 };
 
 const DEFAULT_HEAL_PARTICLES: ParticlesPresetParams = {
-  shape: 'cross',
+  shape: "cross",
   vyMin: -54,
   vyMax: -28,
   vxSpread: 0.08,
-  spawnXSpread: 8,
+  spawnXSpread: 11,
   spawnYMin: -2,
   spawnYMax: 4,
   lifeMinSec: 0.42,
   lifeMaxSec: 0.7,
-  sizeMin: 1.8,
-  sizeMax: 3.2,
+  sizeMin: 5,
+  sizeMax: 10,
 };
 
 const DEFAULT_SPARK_BURST_PARTICLES: ParticlesPresetParams = {
-  shape: 'dot',
+  shape: "dot",
   vyMin: -52,
   vyMax: -26,
   vxSpread: 0.12,
@@ -75,23 +75,24 @@ const DEFAULT_SPARK_BURST_PARTICLES: ParticlesPresetParams = {
   sizeMax: 2.6,
 };
 
-export const PARTICLE_PRESET_DEFS: Record<ParticlePresetId, ParticlePresetDef> = {
-  heal_holy_light: {
-    kind: 'composite',
-    durationSec: 0.75,
-    defaultCount: 10,
-    defaultTint: '#e8fff1',
-    ring: DEFAULT_RING,
-    particles: DEFAULT_HEAL_PARTICLES,
-  },
-  spark_burst: {
-    kind: 'particles',
-    durationSec: 0.32,
-    defaultCount: 8,
-    defaultTint: '#fff4c2',
-    particles: DEFAULT_SPARK_BURST_PARTICLES,
-  },
-};
+export const PARTICLE_PRESET_DEFS: Record<ParticlePresetId, ParticlePresetDef> =
+  {
+    heal_holy_light: {
+      kind: "composite",
+      durationSec: 0.75,
+      defaultCount: 4,
+      defaultTint: "#5ce88a",
+      ring: DEFAULT_RING,
+      particles: DEFAULT_HEAL_PARTICLES,
+    },
+    spark_burst: {
+      kind: "particles",
+      durationSec: 0.32,
+      defaultCount: 8,
+      defaultTint: "#fff4c2",
+      particles: DEFAULT_SPARK_BURST_PARTICLES,
+    },
+  };
 
 /** @deprecated use PARTICLE_PRESET_DEFS */
 export const PARTICLE_PRESET_CONFIGS = PARTICLE_PRESET_DEFS;
@@ -101,14 +102,14 @@ export function isParticlePresetId(value: string): value is ParticlePresetId {
 }
 
 export function getParticlePresetDef(
-  presetId: ParticlePresetId,
+  presetId: ParticlePresetId
 ): ParticlePresetDef {
   return PARTICLE_PRESET_DEFS[presetId];
 }
 
 /** @deprecated use getParticlePresetDef */
 export function getParticlePresetConfig(
-  presetId: ParticlePresetId,
+  presetId: ParticlePresetId
 ): ParticlePresetDef {
   return getParticlePresetDef(presetId);
 }
