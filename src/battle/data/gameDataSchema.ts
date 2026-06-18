@@ -185,6 +185,11 @@ export const VFX_PARTICLE_DEF_FIELD_KEYS = [
 export const PARTICLE_PRESET_IDS = [
   "heal_normal",
   "heal_minor",
+  "heal_major",
+  "heal_cast",
+  "heal_area",
+  "heal_party",
+  "heal_major_party",
 ] as const;
 
 /** SkillVfxDef の JSON キー（traits.basicAttackVfx / effect.vfx 等） */

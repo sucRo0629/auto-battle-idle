@@ -156,7 +156,8 @@ describe('passiveDispel onDebuffReceived', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
 
     const holder = mockUnit({ id: 'holder', battleX: 100 });
-    const ally = mockUnit({ id: 'ally', battleX: 300 });
+    const ally = mockUnit({ id: 'ally', battleX: 300, learnedPassiveIds: [] });
+    ally.build.learnedPassiveIds = [];
     ally.statusEffects.push({ ...atkDebuff, id: 'debuff_ally' });
     const passives = {
       cleanse: cleansePassive({

@@ -224,7 +224,37 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 - **再生:** `vfxAnimPlayback.ts`（`resolveVfxPlaybackSec` / `resolveVfxPlacement`）→ `VfxPlaybackManager`（`spawn` / `tick` / `draw`）。フェーズ計算は `skillAnimPlayback.ts` と共有
 - **パーティクル:** `SkillVfxDef.particles` — preset レジストリ（`particlePresets.ts`）+ JSON 上書き（`particlePresetResolve.ts` が `count` / `durationSec` / `delaySec` / `tint` をマージ）。`resolveParticlePlaybackSec` は `presentationLock` と演出ラボの timeline `particleSec` 用秒数で、`delaySec` も含める。`particles.placement` は未指定時に親 `SkillVfxDef.placement` を継承。`ParticlePlaybackManager.spawn(instanceId, worldPos, layer, VfxParticleDef, presetDefaults)` が `tick` / `draw` で Canvas 2D 再生（外部ライブラリなし）。PNG と同時 spawn 可。PNG 未配置でも particles のみ再生可
 - **preset:** コード正本（`PARTICLE_PRESET_IDS`）。`kind` は `particles` / `ring` / `composite`（拡張可）。単体中回復の標準は `heal_normal`（同一 composite = 拡散リング + 少数の大きな緑 `+` 上昇）。`cross` shape は 1 粒子で縦横両腕を描く。同時 emitter 数・粒子数は Manager 定数で cap。新 preset は `particlePresets.ts` + validate 同期
-- **回復系の推奨:** 直接 heal の命中表現は `hitVfx` に `particles` を載せる。`preset: heal_normal` と `placement: { anchor: 'target', layer: 'front' }` のように胴体中心へ寄せると、PNG strip を主形、粒子を余韻として分離しやすい。
+- preset 一覧: `heal_minor`, `heal_normal`, `heal_major`, `heal_cast`, `heal_area`, `heal_party`, `heal_major_party`
+- エンジンは正円リング固定中心のみ（楕円・上昇リング未対応）。
+- 回復系の推奨: 直接 heal の命中表現は `hitVfx` に `particles` を載せる。`preset: heal_normal` と `placement: { anchor: 'target', layer: 'front' }` のように胴体中心へ寄せると、PNG strip を主形、粒子を余韻として分離しやすい。
+- 回復系 preset 使い分け表:
+
+| preset                | 用途           | 対象 / アンカー      |
+| --------------------- | -------------- | -------------------- |
+| `heal_minor`          | 小回復単体     | `hitVfx` / `target`  |
+| `heal_normal`         | 中回復単体     | `hitVfx` / `target`  |
+| `heal_major`          | 大回復単体     | `hitVfx` / `target`  |
+| `heal_cast`           | 詠唱フラッシュ | `vfx` / `footActor`  |
+| `heal_area`           | 範囲回復       | `vfx` / `footActor`  |
+| `heal_party`          | 全体回復       | `vfx` / `footActor`  |
+| `heal_major_party`    | 大全体回復     | `vfx` / `footActor`  |
+- 回復 hitVfx 推奨 anchor は target（胴体中心オーラ）
+- preset 一覧: `heal_minor`, `heal_normal`, `heal_major`, `heal_cast`, `heal_area`, `heal_party`, `heal_major_party`
+- エンジンは正円リング固定中心のみ（楕円・上昇リング未対応）。
+- 回復系の推奨: 直接 heal の命中表現は `hitVfx` に `particles` を載せる。`preset: heal_normal` と `placement: { anchor: 'target', layer: 'front' }` のように胴体中心へ寄せると、PNG strip を主形、粒子を余韻として分離しやすい。
+- 回復系 preset 使い分け表:
+
+| preset                | 用途           | 対象 / アンカー      |
+| --------------------- | -------------- | -------------------- |
+| `heal_minor`          | 小回復単体     | `hitVfx` / `target`  |
+| `heal_normal`         | 中回復単体     | `hitVfx` / `target`  |
+| `heal_major`          | 大回復単体     | `hitVfx` / `target`  |
+| `heal_cast`           | 詠唱フラッシュ | `vfx` / `footActor`  |
+| `heal_area`           | 範囲回復       | `vfx` / `footActor`  |
+| `heal_party`          | 全体回復       | `vfx` / `footActor`  |
+| `heal_major_party`    | 大全体回復     | `vfx` / `footActor`  |
+- 回復 hitVfx 推奨 anchor は target（胴体中心オーラ）
+
 - **配置:** `vfxPlacement.ts` の `resolveVfxWorldPosition` — `footActor` / `footTarget` は entity 足元中央を 64×64 VFX の下辺中央に合わせる。`particles.placement` 省略時は親 `vfx.placement` を継承
 - **描画:** `spriteFrameDraw.drawVfxFrameAtAnchor` — `BattleCanvas.playSkillVfx`（`layer` behind → entities → front）。パーティクルも同一 layer 順
 - **再生フェーズ:** body と同型の **`AnimPhaseFields`**（`animStartFrame` 〜 `animOutroStartFrame`）。`applyFrame` は body strip の絶対コマ基準のまま（VFX 側の `animStartFrame` は VFX strip 内）

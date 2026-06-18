@@ -413,15 +413,17 @@ export function resolveMoveBattleX(
 
   if (mode === 'toAnchor') {
     const offset = effect.anchorOffsetPx ?? 0;
-    const idealToX = actor.isEnemy
+    const isHostileAnchor = actor.isEnemy !== anchor.isEnemy;
+    const idealToX = isHostileAnchor
       ? anchor.battleX - offset
       : anchor.battleX + offset;
-    const hostileAnchor = actor.isEnemy !== anchor.isEnemy;
-    const toX = hostileAnchor
+    const toX = isHostileAnchor
       ? moveTowardX(
           actor.battleX,
           idealToX,
-          resolveSkillRangePx(actor, effect),
+          resolveSkillRangePx(actor, effect) === 0
+            ? Infinity // If melee, move without cap to achieve offset
+            : resolveSkillRangePx(actor, effect) // Otherwise, cap by skill range
         )
       : idealToX;
     return toX;

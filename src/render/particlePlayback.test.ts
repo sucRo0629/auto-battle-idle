@@ -70,27 +70,34 @@ describe('particlePlayback', () => {
     });
   });
 
-  it('resolves heal_minor defaults from preset registry', () => {
-    const resolved = resolveParticleSpawnOptions({ preset: 'heal_minor' });
-    expect(resolved.presetId).toBe('heal_minor');
-    expect(resolved.count).toBe(2);
-    expect(resolved.durationSec).toBe(0.4);
+  it('resolves heal_major defaults from preset registry', () => {
+    const resolved = resolveParticleSpawnOptions({ preset: 'heal_major' });
+    expect(resolved.presetId).toBe('heal_major');
+    expect(resolved.count).toBe(8);
+    expect(resolved.durationSec).toBe(1.1);
     expect(resolved.delaySec).toBe(0);
-    expect(resolved.tint).toBe('#72f0a0');
-    expect(resolved.preset.kind).toBe('particles');
-    expect(resolved.preset.ring).toBeUndefined();
+    expect(resolved.tint).toBe('#7dffaa');
+    expect(resolved.preset.kind).toBe('composite');
+    expect(resolved.preset.ring).toMatchObject({
+      startRadius: 6,
+      endRadius: 32,
+      ringStartSec: 0,
+      ringEndSec: 0.55,
+      fadeSec: 0.08,
+      lineWidth: 2,
+    });
     expect(resolved.preset.particles).toMatchObject({
       shape: 'cross',
-      vyMin: -38,
-      vyMax: -20,
-      vxSpread: 0.06,
-      spawnXSpread: 5,
-      spawnYMin: -2,
-      spawnYMax: 3,
-      lifeMinSec: 0.28,
-      lifeMaxSec: 0.42,
-      sizeMin: 3,
-      sizeMax: 5,
+      vyMin: -58,
+      vyMax: -30,
+      vxSpread: 0.08,
+      spawnXSpread: 14,
+      spawnYMin: -3,
+      spawnYMax: 5,
+      lifeMinSec: 0.5,
+      lifeMaxSec: 0.85,
+      sizeMin: 7,
+      sizeMax: 14,
     });
   });
 
@@ -115,6 +122,164 @@ describe('particlePlayback', () => {
       lifeMaxSec: 0.42,
       sizeMin: 3,
       sizeMax: 5,
+    });
+  });
+
+  it('resolves heal_cast defaults from preset registry', () => {
+    const resolved = resolveParticleSpawnOptions({ preset: 'heal_cast' });
+    expect(resolved.presetId).toBe('heal_cast');
+    expect(resolved.count).toBe(3);
+    expect(resolved.durationSec).toBe(0.65);
+    expect(resolved.delaySec).toBe(0);
+    expect(resolved.tint).toBe('#5ce88a');
+    expect(resolved.preset.kind).toBe('composite');
+    expect(resolved.preset.ring).toMatchObject({
+      startRadius: 3,
+      endRadius: 24,
+      ringStartSec: 0,
+      ringEndSec: 0.45,
+      fadeSec: 0.07,
+      lineWidth: 1.8,
+    });
+    expect(resolved.preset.particles).toMatchObject({
+      shape: 'cross',
+      vyMin: -48,
+      vyMax: -24,
+      vxSpread: 0.08,
+      spawnXSpread: 6,
+      spawnYMin: -4,
+      spawnYMax: 0,
+      lifeMinSec: 0.35,
+      lifeMaxSec: 0.55,
+      sizeMin: 4,
+      sizeMax: 7,
+    });
+  });
+
+  it('resolves heal_area defaults from preset registry', () => {
+    const resolved = resolveParticleSpawnOptions({ preset: 'heal_area' });
+    expect(resolved.presetId).toBe('heal_area');
+    expect(resolved.count).toBe(7);
+    expect(resolved.durationSec).toBe(0.85);
+    expect(resolved.delaySec).toBe(0);
+    expect(resolved.tint).toBe('#5ce88a');
+    expect(resolved.preset.kind).toBe('composite');
+    expect(resolved.preset.ring).toMatchObject({
+      startRadius: 5,
+      endRadius: 30,
+      ringStartSec: 0,
+      ringEndSec: 0.4,
+      fadeSec: 0.07,
+      lineWidth: 2,
+    });
+    expect(resolved.preset.particles).toMatchObject({
+      shape: 'cross',
+      vyMin: -50,
+      vyMax: -26,
+      vxSpread: 0.08,
+      spawnXSpread: 20,
+      spawnYMin: -4,
+      spawnYMax: 2,
+      lifeMinSec: 0.4,
+      lifeMaxSec: 0.65,
+      sizeMin: 5,
+      sizeMax: 9,
+    });
+  });
+
+  it('resolves heal_party defaults from preset registry', () => {
+    const resolved = resolveParticleSpawnOptions({ preset: 'heal_party' });
+    expect(resolved.presetId).toBe('heal_party');
+    expect(resolved.count).toBe(10);
+    expect(resolved.durationSec).toBe(1.0);
+    expect(resolved.delaySec).toBe(0);
+    expect(resolved.tint).toBe('#62eb95');
+    expect(resolved.preset.kind).toBe('composite');
+    expect(resolved.preset.ring).toMatchObject({
+      startRadius: 6,
+      endRadius: 38,
+      ringStartSec: 0,
+      ringEndSec: 0.5,
+      fadeSec: 0.08,
+      lineWidth: 2.2,
+    });
+    expect(resolved.preset.particles).toMatchObject({
+      shape: 'cross',
+      vyMin: -52,
+      vyMax: -28,
+      vxSpread: 0.08,
+      spawnXSpread: 26,
+      spawnYMin: -5,
+      spawnYMax: 3,
+      lifeMinSec: 0.45,
+      lifeMaxSec: 0.75,
+      sizeMin: 5,
+      sizeMax: 10,
+    });
+  });
+
+
+
+
+  it('resolves heal_major_party defaults from preset registry', () => {
+    const resolved = resolveParticleSpawnOptions({ preset: 'heal_major_party' });
+    expect(resolved.presetId).toBe('heal_major_party');
+    expect(resolved.count).toBe(14);
+    expect(resolved.durationSec).toBe(1.25);
+    expect(resolved.delaySec).toBe(0);
+    expect(resolved.tint).toBe('#8affb8');
+    expect(resolved.preset.kind).toBe('composite');
+    expect(resolved.preset.ring).toMatchObject({
+      startRadius: 8,
+      endRadius: 44,
+      ringStartSec: 0,
+      ringEndSec: 0.6,
+      fadeSec: 0.1,
+      lineWidth: 2.5,
+    });
+    expect(resolved.preset.particles).toMatchObject({
+      shape: 'cross',
+      vyMin: -60,
+      vyMax: -32,
+      vxSpread: 0.08,
+      spawnXSpread: 30,
+      spawnYMin: -6,
+      spawnYMax: 4,
+      lifeMinSec: 0.5,
+      lifeMaxSec: 0.9,
+      sizeMin: 6,
+      sizeMax: 12,
+    });
+  });
+
+  it('resolves heal_major_party defaults from preset registry', () => {
+    const resolved = resolveParticleSpawnOptions({ preset: 'heal_major_party' });
+    expect(resolved.presetId).toBe('heal_major_party');
+    expect(resolved.count).toBe(14);
+    expect(resolved.durationSec).toBe(1.25);
+    expect(resolved.delaySec).toBe(0);
+    expect(resolved.tint).toBe('#8affb8');
+    expect(resolved.preset.kind).toBe('composite');
+    expect(resolved.preset.ring).toMatchObject({
+      startRadius: 8,
+      endRadius: 44,
+      ringStartSec: 0,
+      ringEndSec: 0.6,
+      fadeSec: 0.1,
+      lineWidth: 2.5,
+    });
+    expect(resolved.preset.particles).toMatchObject({
+      shape: 'cross',
+      vyMin: -60,
+      vyMax: -32,
+      vxSpread: 0.08,
+      spawnXSpread: 30,
+      spawnYMin: -6,
+      spawnYMax: 4,
+      lifeMinSec: 0.5,
+      lifeMaxSec: 0.9,
+      sizeMin: 6,
+      sizeMax: 12,
     });
   });
 
@@ -135,6 +300,7 @@ describe('particlePlayback', () => {
       tint: '#aabbcc',
     });
   });
+
 
   it('treats disabled particles as inactive', () => {
     expect(

@@ -63,6 +63,20 @@ describe('parseSkillVfx', () => {
     });
   });
 
+  it('accepts all heal particle presets', () => {
+    const healPresets = [
+      'heal_minor', 'heal_normal', 'heal_major', 'heal_cast', 'heal_area', 'heal_party', 'heal_major_party'
+    ];
+    for (const preset of healPresets) {
+      expect(() =>
+        parseSkillVfx(
+          { particles: { preset: preset } },
+          'effect[0].vfx',
+        ),
+      ).not.toThrow();
+    }
+  });
+
   it('rejects unknown particle preset', () => {
     expect(() =>
       parseSkillVfx(

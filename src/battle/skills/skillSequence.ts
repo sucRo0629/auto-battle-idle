@@ -75,14 +75,28 @@ export function buildSkillSequence(
       enemies,
       passives,
     );
-    const anchor = resolveSequenceStepAnchor(
-      effectDef,
-      spec,
-      actor,
-      allies,
-      enemies,
-      _gameData,
-    );
+    let anchor: CombatantState | null;
+
+    // If it's a move effect targeting nearest ally and the actor is the only ally, skip the step
+    if (
+      effectDef.type === 'move' &&
+      getEffectTarget(effectDef).side === 'ally' &&
+      getEffectTarget(effectDef).order === 'nearest' &&
+      allies.length === 1 &&
+      allies[0]!.id === actor.id
+    ) {
+      anchor = null; // Skip this step
+    } else {
+      anchor = resolveSequenceStepAnchor(
+        effectDef,
+        spec,
+        actor,
+        allies,
+        enemies,
+        _gameData,
+      );
+    }
+
     if (!anchor) continue;
 
     steps.push({

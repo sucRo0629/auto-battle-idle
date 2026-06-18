@@ -419,4 +419,41 @@ describe('computePresentationTimeline', () => {
     expect(timeline.applyDelaySec).toBe(resolveEffectApplyDelaySec(skill.id, 0, effect));
     expect(timeline.vfxSec).toBe(resolveVfxPlaybackSec(presentation.vfx!, mainKey!));
   });
+
+  // 必須 integration テスト（本番 JSON 同形）
+  it('handles heal hitVfx particles with custom preset and placement', () => {
+    const skill: ActiveSkillDef = {
+      id: 'sp_cleric_active_1',
+      name: '癒しの光',
+      trigger: { kind: 'time', value: 8 },
+      effect: [
+        {
+          type: 'heal',
+          target: { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' },
+          amount: { kind: 'atkBased', atkScale: 1.25 },
+          healSubKind: 'instant',
+          hitVfx: {
+            enabled: true,
+            particles: {
+              enabled: true,
+              preset: 'heal_minor',
+              placement: { anchor: 'target', layer: 'front' },
+            },
+          },
+        },
+      ],
+    };
+
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
+    const effect = skill.effect[0]!;
+    const presentation = resolveSkillPresentation(
+      skill,
+      effect,
+      buildSkillVfxContext(previewEntity, 'active', effect, skill.id, 0),
+    );
+
+    expect(presentation.hitVfx).not.toBeNull();
+    expect(timeline.hitParticleSec).toBe(resolveParticlePlaybackSec(presentation.hitVfx!.particles!));
+    expect(timeline.hitParticleSec).toBe(0.4); // heal_minor preset has 0.4s durationSec
+  });
 });
