@@ -19,6 +19,7 @@ describe('particlePresetResolve', () => {
           preset: 'heal_holy_light',
           count: 20,
           durationSec: 1.2,
+          delaySec: 0.15,
           tint: '#aabbcc',
         },
         preset,
@@ -26,6 +27,7 @@ describe('particlePresetResolve', () => {
     ).toEqual({
       count: 20,
       durationSec: 1.2,
+      delaySec: 0.15,
       tint: '#aabbcc',
       preset,
     });
@@ -42,6 +44,7 @@ describe('particlePlayback', () => {
     expect(resolved.presetId).toBe('heal_holy_light');
     expect(resolved.count).toBe(10);
     expect(resolved.durationSec).toBe(0.75);
+    expect(resolved.delaySec).toBe(0);
     expect(resolved.tint).toBe('#e8fff1');
     expect(resolved.preset.kind).toBe('composite');
     expect(resolved.preset.ring).toMatchObject({
@@ -95,12 +98,14 @@ describe('particlePlayback', () => {
         preset: 'heal_holy_light',
         count: 20,
         durationSec: 1.2,
+        delaySec: 0.2,
         tint: '#aabbcc',
       }),
     ).toMatchObject({
       presetId: 'heal_holy_light',
       count: 20,
       durationSec: 1.2,
+      delaySec: 0.2,
       tint: '#aabbcc',
     });
   });
@@ -126,5 +131,12 @@ describe('particlePlayback', () => {
       }),
     ).toBe(1.5);
     expect(resolveParticlePlaybackSec({ preset: 'heal_holy_light' })).toBe(0.75);
+    expect(
+      resolveParticlePlaybackSec({
+        preset: 'heal_holy_light',
+        durationSec: 1.5,
+        delaySec: 0.25,
+      }),
+    ).toBe(1.75);
   });
 });

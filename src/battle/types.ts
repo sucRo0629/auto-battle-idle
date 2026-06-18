@@ -794,6 +794,8 @@ export interface VfxParticleDef {
   count?: number;
   /** preset 既定 durationSec の上書き */
   durationSec?: number;
+  /** spawn 開始を遅らせる秒数。省略 = 即時 */
+  delaySec?: number;
   /** preset 既定 tint の上書き（`#rrggbb`） */
   tint?: string;
 }

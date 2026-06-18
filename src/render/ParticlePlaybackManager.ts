@@ -227,7 +227,7 @@ export class ParticlePlaybackManager {
       worldX: worldPos.x,
       worldY: worldPos.y,
       layer,
-      elapsedSec: 0,
+      elapsedSec: -resolved.delaySec,
       durationSec: resolved.durationSec,
       tint: resolved.tint,
       ring,
@@ -248,12 +248,18 @@ export class ParticlePlaybackManager {
     const deltaSec = deltaMs / 1000;
     for (const emitter of this.emitters.values()) {
       if (emitter.finished) continue;
+      const prevElapsedSec = emitter.elapsedSec;
       emitter.elapsedSec += deltaSec;
 
-      for (const particle of emitter.particles) {
-        particle.lifeSec += deltaSec;
-        particle.x += particle.vx * deltaSec * 60;
-        particle.y += particle.vy * deltaSec;
+      const activeDeltaSec =
+        Math.max(0, emitter.elapsedSec) - Math.max(0, prevElapsedSec);
+
+      if (activeDeltaSec > 0) {
+        for (const particle of emitter.particles) {
+          particle.lifeSec += activeDeltaSec;
+          particle.x += particle.vx * activeDeltaSec * 60;
+          particle.y += particle.vy * activeDeltaSec;
+        }
       }
 
       if (emitter.elapsedSec >= emitter.durationSec) {
@@ -275,6 +281,7 @@ export class ParticlePlaybackManager {
   ): void {
     for (const emitter of this.emitters.values()) {
       if (emitter.layer !== layer || emitter.finished) continue;
+      if (emitter.elapsedSec < 0) continue;
       if (emitter.ring) {
         drawRing(
           ctx,

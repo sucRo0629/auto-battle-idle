@@ -9,6 +9,7 @@ import {
 export interface ResolvedParticleSpawn {
   presetId: ParticlePresetId;
   durationSec: number;
+  delaySec: number;
   count: number;
   tint: string;
   preset: ParticlePresetDef;
@@ -20,6 +21,7 @@ export function mergeParticleDefWithPreset(
 ): Omit<ResolvedParticleSpawn, 'presetId'> & { presetId?: ParticlePresetId } {
   return {
     durationSec: def.durationSec ?? presetDefaults.durationSec,
+    delaySec: def.delaySec ?? 0,
     count: def.count ?? presetDefaults.defaultCount,
     tint: def.tint ?? presetDefaults.defaultTint,
     preset: presetDefaults,

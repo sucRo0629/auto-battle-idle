@@ -1158,6 +1158,7 @@ function parseVfxParticles(
   if (durationSec !== undefined && durationSec <= 0) {
     invalidField(context, 'durationSec', 'must be a positive number');
   }
+  const delaySec = parseOptionalNonNegativeNumber(obj, 'delaySec', context);
   const tint = obj.tint;
   if (tint !== undefined) {
     if (typeof tint !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(tint)) {
@@ -1176,6 +1177,7 @@ function parseVfxParticles(
     ...(placement !== undefined ? { placement } : {}),
     ...(count !== undefined ? { count } : {}),
     ...(durationSec !== undefined ? { durationSec } : {}),
+    ...(delaySec !== undefined ? { delaySec } : {}),
     ...(typeof tint === 'string' ? { tint } : {}),
   };
 }

@@ -82,6 +82,9 @@ function validateVfxParticleDef(
   if (particles.durationSec !== undefined && particles.durationSec <= 0) {
     return `${label}.durationSec は正数にしてください`;
   }
+  if (particles.delaySec !== undefined && particles.delaySec < 0) {
+    return `${label}.delaySec は 0 以上にしてください`;
+  }
   if (
     particles.tint !== undefined &&
     !/^#[0-9a-fA-F]{6}$/.test(particles.tint)

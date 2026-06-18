@@ -42,7 +42,10 @@ describe('parseSkillVfx', () => {
         {
           particles: {
             preset: 'heal_holy_light',
+            placement: { anchor: 'footTarget', layer: 'front' },
             count: 16,
+            durationSec: 1.25,
+            delaySec: 0.2,
             tint: '#aabbcc',
           },
         },
@@ -51,7 +54,10 @@ describe('parseSkillVfx', () => {
     ).toEqual({
       particles: {
         preset: 'heal_holy_light',
+        placement: { anchor: 'footTarget', layer: 'front' },
         count: 16,
+        durationSec: 1.25,
+        delaySec: 0.2,
         tint: '#aabbcc',
       },
     });
@@ -73,5 +79,14 @@ describe('parseSkillVfx', () => {
         'effect[0].vfx',
       ),
     ).toThrow(/tint.*effect\[0\]\.vfx\.particles/);
+  });
+
+  it('rejects negative particle delay', () => {
+    expect(() =>
+      parseSkillVfx(
+        { particles: { preset: 'heal_holy_light', delaySec: -0.1 } },
+        'effect[0].vfx',
+      ),
+    ).toThrow(/delaySec.*effect\[0\]\.vfx\.particles/);
   });
 });

@@ -1200,6 +1200,21 @@ function appendParticleFields(
 
   grid.appendChild(
     createFieldRow(
+      'particles.durationSec',
+      createNumberInput(particles.durationSec ?? 0, (value) => {
+        patchParticles((draft) => {
+          if (value <= 0) {
+            delete draft.durationSec;
+          } else {
+            draft.durationSec = value;
+          }
+        });
+      }, { emptyWhen: 0, step: 0.05, min: 0, placeholder: 'preset 既定' }),
+    ),
+  );
+
+  grid.appendChild(
+    createFieldRow(
       'particles.tint',
       (() => {
         const input = createEl('input') as HTMLInputElement;
@@ -1220,6 +1235,43 @@ function appendParticleFields(
       })(),
     ),
   );
+
+  grid.appendChild(
+    createFieldRow(
+      'particles.delaySec',
+      createNumberInput(particles.delaySec ?? 0, (value) => {
+        patchParticles((draft) => {
+          if (value <= 0) {
+            delete draft.delaySec;
+          } else {
+            draft.delaySec = value;
+          }
+        });
+      }, { emptyWhen: 0, step: 0.05, min: 0, placeholder: '0 = 即時' }),
+    ),
+  );
+
+  appendVfxPlacementFields(
+    grid,
+    particles.placement,
+    (mutator) => {
+      patchParticles((draft) => {
+        const placement = { anchor: 'target' as VfxAnchor, ...draft.placement };
+        mutator(placement);
+        draft.placement = placement;
+      });
+    },
+    () => {
+      patchParticles((draft) => {
+        delete draft.placement;
+      });
+    },
+  );
+
+  appendHintLines(grid, [
+    ['placement', '未指定時は親 vfx.placement を継承。独自値を入れると particles 側だけ上書きされます。'],
+    ['delaySec', 'VFX 開始からの遅延秒数。presentationLock とタイムラインにも反映されます。'],
+  ]);
 }
 
 function appendVfxEnabledRow(

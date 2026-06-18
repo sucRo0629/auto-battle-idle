@@ -177,6 +177,7 @@ export const VFX_PARTICLE_DEF_FIELD_KEYS = [
   "placement",
   "count",
   "durationSec",
+  "delaySec",
   "tint",
 ] as const;
 

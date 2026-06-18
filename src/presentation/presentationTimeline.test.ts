@@ -317,6 +317,32 @@ describe('computePresentationTimeline', () => {
     expect(timeline.presentationLockSec).toBe(1.2);
   });
 
+  it('includes particle delay in particleSec and presentationLockSec', () => {
+    const skill: ActiveSkillDef = {
+      id: 'particle_delay',
+      name: 'Particle Delay',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'heal',
+          target: { rule: 'mostDamagedAlly' },
+          amount: { kind: 'atkScale', scale: 1 },
+          vfx: {
+            particles: {
+              preset: 'heal_holy_light',
+              durationSec: 1,
+              delaySec: 0.25,
+            },
+          },
+        },
+      ],
+    };
+
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
+    expect(timeline.particleSec).toBe(1.25);
+    expect(timeline.presentationLockSec).toBe(1.25);
+  });
+
   it('lab and battle resolvers agree on vfxSec and applyDelay for the same JSON', () => {
     __registerSkillAnimForTest('parity_skill', { width: 256, height: 48 } as HTMLImageElement);
     __registerVfxAnimForTest('parity_skill_0_vfx', mockImage(256));

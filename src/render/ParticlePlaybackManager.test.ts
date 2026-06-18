@@ -22,6 +22,33 @@ describe('ParticlePlaybackManager', () => {
     expect(manager.has('heal-1')).toBe(false);
   });
 
+  it('waits for delaySec before advancing particles', () => {
+    const manager = new ParticlePlaybackManager();
+    const preset = getParticlePresetDef('heal_holy_light');
+    manager.spawn(
+      'heal-delay',
+      { x: 100, y: 200 },
+      'front',
+      { preset: 'heal_holy_light', delaySec: 0.2, durationSec: 0.3 },
+      preset,
+    );
+
+    const emitter = (
+      manager as unknown as {
+        emitters: Map<string, { elapsedSec: number; particles: { lifeSec: number }[] }>;
+      }
+    ).emitters.get('heal-delay');
+    expect(emitter?.elapsedSec).toBe(-0.2);
+
+    manager.tick(100);
+    expect(emitter?.elapsedSec).toBeCloseTo(-0.1, 6);
+    expect(emitter?.particles[0]?.lifeSec ?? 0).toBe(0);
+
+    manager.tick(150);
+    expect(emitter?.elapsedSec).toBeCloseTo(0.05, 6);
+    expect(emitter?.particles[0]?.lifeSec ?? 0).toBeGreaterThan(0);
+  });
+
   it('spawns spark_burst with the preset particle count and duration', () => {
     const manager = new ParticlePlaybackManager();
     const preset = getParticlePresetDef('spark_burst');

@@ -39,5 +39,6 @@ export function resolveParticlePlaybackSec(
   particles: VfxParticleDef,
 ): number {
   if (!isParticleDefActive(particles)) return 0;
-  return resolveParticleSpawnOptions(particles).durationSec;
+  const resolved = resolveParticleSpawnOptions(particles);
+  return resolved.delaySec + resolved.durationSec;
 }

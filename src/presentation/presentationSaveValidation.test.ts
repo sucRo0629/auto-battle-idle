@@ -64,6 +64,27 @@ describe('validatePresentationSkillSave', () => {
     expect(validatePresentationSkillSave(skill)).toBeNull();
   });
 
+  it('accepts particles with placement and delay', () => {
+    const skill = buffSkill([
+      {
+        target: { kind: 'self' },
+        type: 'buff',
+        buffSubKind: 'stat',
+        buffStat: 'def',
+        buffMultiplier: 1.2,
+        buffDurationSec: 5,
+        vfx: {
+          particles: {
+            preset: 'heal_holy_light',
+            placement: { anchor: 'target' },
+            delaySec: 0.2,
+          },
+        },
+      },
+    ]);
+    expect(validatePresentationSkillSave(skill)).toBeNull();
+  });
+
   it('rejects deprecated vfx preset field', () => {
     const skill = buffSkill([
       {
