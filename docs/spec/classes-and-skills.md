@@ -86,7 +86,7 @@
 | -------------- | ------ | --------- | ---- | ---- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | `sp_cleric`    | 療養師 | Cleric    | back | 遠隔 | `sp_cleric_passive_1`（低 HP 味方への回復量増）                                                            | `sp_cleric_active_1` のみ                                |
 | `sp_abjurer`   | 結界師 | Abjurer   | back | 遠隔 | Lv0: `passive_1`（Wave 開始バリア）+ `passive_2`（余剰回復 → バリア）／Lv10: `passive_3`（前衛被ダメ軽減） | `sp_abjurer_active_1` のみ                               |
-| `sp_alchemist` | 薬草師 | Herbalist | back | 遠隔 | Lv0: `passive_1`（常時 HoT aura）／`passive_2`・`passive_3` は stub・未本実装                              | `sp_alchemist_active_1` のみ（範囲 HoT + 敵 atk debuff） |
+| `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | Lv0: `passive_1`（常時 HoT aura）／`passive_2`・`passive_3` は stub・未本実装                              | `sp_alchemist_active_1` のみ（範囲 HoT + 敵 atk debuff） |
 
 ### デモ編成（`parties.json` demo）
 
@@ -156,7 +156,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | `sp_abjurer`   | バリアヒーラー    | barrier + 少量 direct heal + 余剰回復 → バリア                            | **barrier** + **`damageTaken` 軽減**（Lv10 `passive_3`） |
 | `sp_alchemist` | HoT + debuff サポ | **HoT 二段**（`passive_1` aura + `active_1` 範囲 HoT）+ **敵 atk debuff** | Lv0: debuff + HoT／Lv10+: 味方 `def` / `reg` buff 候補   |
 
-**薬草師（Herbalist）参照:** Perfumer（常時 HoT + active 範囲 HoT）+ Mulberry（Lv10+ 味方 `def` / `reg` buff）。Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士（罠 + DoT 毒）との差: 薬草師 = HoT sustain + 与ダメ debuff（毒 DoT なし）。`active_1` の敵 debuff effect は後列から届くよう `effect.range` を `CONFIGURABLE_RANGE_PX_MAX`（460 px）に設定する。
+**薬草師（Herbalist）参照:** Perfumer（常時 HoT + active 範囲 HoT）+ Mulberry（Lv10+ 味方 `def` / `reg` buff）。Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士（罠 + DoT 毒）との差: 薬草師 = HoT sustain + 与ダメ debuff（毒 DoT なし）。`traits.rangePx` は近接帯（`rangePx < 100`）で前列配置。`active_1` の敵 debuff は `targetShape: aoe` + `aoeRadiusPx: 70`（最近接敵をアンカーにした範囲）。`effect.range` の拡張は使わない。
 
 **バランス目標:** 鉄衛 + 薬草師 90 秒 sim で実効 HP は cleric 比 **上限 75%**。
 
@@ -177,7 +177,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | ----------- | ------------------------------------------------------------------------------ |
 | `defender`  | `front`                                                                        |
 | `attacker`  | 近接帯（`rangePx < 100`）→ `front`、遠隔帯（`rangePx >= 100`）→ `back`         |
-| `supporter` | `back`                                                                         |
+| `supporter` | `back`（**例外:** `sp_alchemist` は近接帯のため `front`）                                                         |
 
 敵のデフォルトターゲットは射程内でヘイト最大（[combat.md](combat.md) の Threat 節）。近接アタッカーが前列にいても、ディフェンダーがヘイトを引きつける想定。
 

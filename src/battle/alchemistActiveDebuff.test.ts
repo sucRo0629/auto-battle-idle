@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from './data/loadGameData.ts';
 import { resolveEffectResolution } from './skills/targeting.ts';
 import { mockTargetingGameData, mockUnit } from './testFixtures.ts';
-import { RANGED_ATTACK_MIN_PX } from './types.ts';
+import { RANGED_ATTACK_MIN_PX, isMeleeRangePx } from './types.ts';
 import {
   asBattleEngineInternals,
   TICK_DT,
@@ -73,34 +73,43 @@ describe('sp_alchemist_active_1 enemy debuff targeting', () => {
     expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('e1');
   });
 
-  it('class data uses ranged band so active debuff can fire in battle', () => {
+  it('class data uses melee band as front-row supporter', () => {
     const alchemistClass = loadGameData().classRegistry['sp_alchemist'];
-    expect(alchemistClass?.traits.rangePx).toBeGreaterThanOrEqual(
-      RANGED_ATTACK_MIN_PX,
-    );
+    expect(isMeleeRangePx(alchemistClass?.traits.rangePx ?? 0)).toBe(true);
+    expect(alchemistClass?.formationRow).toBe('front');
   });
 
-  it('active debuff effect uses extended range for back-row reach', () => {
+  it('active debuff effect uses aoeRadiusPx around melee anchor', () => {
     const debuff =
       loadGameData().skillRegistry.actives['sp_alchemist_active_1']!.effect[1]!;
-    expect(debuff.range).toBeGreaterThanOrEqual(460);
+    expect(debuff.targetShape).toBe('aoe');
+    expect(debuff.aoeRadiusPx).toBe(70);
+    expect(debuff.range).toBeUndefined();
   });
 
   it('applies atk debuff to enemies during stage 1 engage sim', () => {
     const engine = createAlchemistGuardianEngine();
-    waitForEngaged(engine);
     const internal = asBattleEngineInternals(engine);
+    waitForEngaged(engine);
+
     const alchemist = internal.players.find((p) => p.classId === 'sp_alchemist');
     const enemy = internal.enemies.find((e) => e.isAlive);
     expect(alchemist).toBeDefined();
     expect(enemy).toBeDefined();
 
-    const debuffEffectWithRange =
-      loadGameData().skillRegistry.actives['sp_alchemist_active_1']!.effect[1]!;
-    const rangePx = debuffEffectWithRange.range ?? alchemist!.traits.rangePx;
-    expect(isWithinSkillRange(alchemist!, enemy!, rangePx)).toBe(true);
+    const anchorRangePx = alchemist!.traits.rangePx;
+    alchemist!.battleX = enemy!.battleX - anchorRangePx + 10;
+    expect(isWithinSkillRange(alchemist!, enemy!, anchorRangePx)).toBe(true);
 
-    for (let t = 0; t < 1200; t++) {
+    const activeCd = alchemist!.cooldowns.find(
+      (cd) => cd.skillId === 'sp_alchemist_active_1',
+    );
+    expect(activeCd).toBeDefined();
+    activeCd!.remaining = 0;
+
+    internal.runUnitSkills!([alchemist!]);
+
+    for (let t = 0; t < 120; t++) {
       engine.tick(TICK_DT);
     }
 
