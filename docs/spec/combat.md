@@ -139,7 +139,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 | レーン | 役割 |
 | --- | --- |
-| `presentationLock` | VFX 終了まで **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。**CD チャージは止めない**。 |
+| `presentationLock` | スキル発動後、各 effect の **body strip 再生秒** と **PNG VFX 再生秒**（main + `hitVfx`、登録 strip があるもののみ）の最大値を `resolvePresentationLockSec` で算出し、その間 **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。`useDurationSec > 0` のときは **0**（use lock が優先）。**CD チャージは止めない**。秒数計算だけ `effectVfxOnly: false` で skill 直下 `vfx` を含めうる（再生は effect 優先ポリシーのまま）— [classes-and-skills.md](classes-and-skills.md#演出解決コード) |
 | `animLock` | body strip の再生時間だけ `SkillSequenceRunner.beginAnimLock` で保持し、`isActorBusy` / `isBasicAttackBlocked` で **他スキル発動を停止**する。`presentationLock` と同様に **CD 進行は止めない**。body 再生を止める用途はここで自動付与する。 |
 | `useDurationSec` | アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。**詠唱など、発動後に明示ロックが必要な場合のみ使う**。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**停止中はそのユニットの全スキル CD 進行を停止する**。Party HUD: 停止中は `paused`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。`useDurationSec` の表示ゲージは発動後ロックを示す用途で、CD とは独立。 |
 
@@ -256,7 +256,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | `pierce`    | **`order: selfOrigin` 必須**。使用者の向き（味方 +X / 敵 −X）へ `range` px の前方セグメント内を手前→奥に命中。`piercePowerStepMultiplier` で威力減衰、`pierceDurationSec` で適用分散可 |
 | `chain`     | anchor から同陣営へ距離内で連鎖。直前 hop と同じユニットには飛ばない。範囲内に未命中がいれば最も近い未命中を優先（全員命中済みなら再訪問可）。`chainPowerStepMultiplier` で威力減衰、`chainDurationSec`（未指定時 `0.15×chainCount+0.5` 秒）で **スキル発動から最終命中まで** の総時間分散 |
 
-`chain` の各跳は `chainDurationSec ÷ 跳数` 秒間隔で **ダメージ適用と同時** に target 位置へ PNG hit VFX（`hitVfx`、未指定時は `vfx` を target placement で再生）を出す。main VFX（`vfx`、actor placement）は 1 跳目のみ。
+`chain` の各跳は `chainDurationSec ÷ 跳数` 秒間隔で **ダメージ適用と同時** に `playSkillHitFeedback` で hit VFX を出す。hit は effect **`hitVfx`**（`_vfx_hit` PNG があれば JSON 省略可）を優先し、未設定時は main **`vfx`** を target placement でフォールバック。main VFX（`vfx`、actor placement）は **1 跳目のみ**（`skipMainVfx` で 2 跳目以降は hit のみ）。
 | `scatter`   | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
 
 
@@ -301,7 +301,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 ## 演出（render 層）
 
-VFX パラメータ調整・Canvas プレビューは **Phase 5 演出調整ツール**。本番描画は **PNG strip**（`BattleCanvas.playSkillVfx`。[phase-roadmap.md](../plans/phase-roadmap.md) Phase 6 完了）。
+VFX パラメータ調整・プレビューは **Phase 5 演出調整ツール**（`presentation-lab.html`）。戦闘描画は **PNG strip のみ**（`BattleCanvas.playSkillVfx` → `VfxPlaybackManager`。[phase-roadmap.md](../plans/phase-roadmap.md) Phase 6 完了）。
 
 **body アセット:** entity は `sheets/bodies/{id}.png`（idle/move/death）。攻撃 body は **全スキル strip**（64×48、`{id}_basic_attack` 含む）。詳細は [classes-and-skills.md](classes-and-skills.md#スプライト演出アセット)。
 

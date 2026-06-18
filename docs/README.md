@@ -15,6 +15,7 @@
 | `data/levelCurves.json`, ステ計算 | [spec/stats.md](spec/stats.md) |
 | `combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット | [spec/combat.md](spec/combat.md) |
 | `battleLayout.ts`, `combatPosition.ts`, `SpriteAnimator`, `IBattleRenderer`, 描画 | [spec/battle-field.md](spec/battle-field.md) |
+| `vfxAnimRegistry.ts`, `VfxPlaybackManager`, `presentation/`, `sheets/vfx/` | [spec/classes-and-skills.md](spec/classes-and-skills.md#スプライト演出アセット) |
 | `data/stages.json`, セーブ, EXP, LvUP | [spec/progression.md](spec/progression.md) |
 | フェーズ・作業順 | [plans/phase-roadmap.md](plans/phase-roadmap.md) |
 

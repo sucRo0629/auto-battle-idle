@@ -13,7 +13,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **3**  | Lv アップ時スキル習得、アクティブセット 2 枠目                                       | **完了**             |
 | **4**  | クラスマスタ + スキル説明；4a **完了** / 4c **完了** / 4b 説明（データ PR 同梱）     | **4a+4c 完了**        |
 | **5**  | 演出アセット + **演出調整ツール**（Canvas プレビュー・VFX 調整含む）               | **次**（確定クラス順次） |
-| **6**  | VFX **PNG 描画**（`sheets/vfx/` 64×64）・Canvas preset 廃止                         | **完了**             |
+| **6**  | VFX **PNG 描画**（`sheets/vfx/` 64×64）— 戦闘描画の正本                           | **完了**             |
 | **7**  | バランス調整（数値チューニング全般）                                                 | 未着手               |
 | **8**  | globalExp、強化ツリー、オフライン報酬、Electron                                      | 未着手               |
 
@@ -39,7 +39,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 - Victory / Defeat → 3 秒待機 → HP 全回復 → 再スポーン（Phase 2 でセーブ連動の進行ルールを追加）
 - Canvas 2D：**アニメーション基盤**（`SpriteAnimator`、イベント連動、近接突進/遠隔弾、ダメージポップアップ）
 - **プレースホルダースプライト**（ロール別色分け PNG。本番ドット絵は Phase 5）
-- **戦闘 VFX**（PNG strip `sheets/vfx/`。旧 Canvas preset は Phase 6 で廃止）
+- **戦闘 VFX**（PNG strip `sheets/vfx/`、64×64）
 - buff VFX：対象スプライトの白い光（約 0.8 秒）
 - Canvas UI：ステージ名（左上）、パーティ HUD（クラス名 / Exp / HP / スキル CD）
 - バトルログ：**console のみ**（DOM ログは意図的に未実装）
@@ -230,20 +230,19 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 ### スコープ外（Phase 5）
 
 - PixiJS 描画層移行
-- VFX PNG 描画の **BattleCanvas 実装**（**Phase 6**）
 - 全 15 クラス一括完成（**確定分から順次**で可）
 
 ---
 
-## Phase 6 — VFX PNG 描画（Canvas 廃止）✅
+## Phase 6 — VFX PNG 描画 ✅
 
-Phase 5 の演出調整ツールで **タイミング・placement 編集・プレビューは済** とする。Phase 6 は **描画エンジンを Canvas preset から PNG strip へ切替** する。
+Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦闘でも **同一 PNG strip 経路** で描画する。VFX の正本は `sheets/vfx/*.png` + `SkillVfxDef`（`placement` / `AnimPhaseFields` / `hitVfx` / `basicAttackVfx`）。
 
 ### スコープ（完了）
 
-- **型・レジストリ（済）:** `SkillVfxDef`（`placement` / `AnimPhaseFields` / `hitVfx`）、`VFX_ANIM_CELL_*` 64×64、`vfxAnimRegistry.ts`
-- **再生・描画（済）:** `vfxAnimPlayback.ts` / `vfxPlacement.ts` / `VfxPlaybackManager.ts` / `BattleCanvas.playSkillVfx`（`layer` behind → entities → front）。`AttackEffect.ts` / `curseMarkEffect.ts` / Canvas preset 廃止
-- **データ（済）:** `data/skills/` の `vfx.preset` 削除・`gameDataSchema` の `VFX_PRESETS` 削除
+- **型・レジストリ:** `SkillVfxDef`、`VFX_ANIM_CELL_*` 64×64、`vfxAnimRegistry.ts`（`resolveVfxAnimKey`）
+- **再生・描画:** `vfxAnimPlayback.ts` / `vfxPlacement.ts` / `VfxPlaybackManager.ts` / `BattleCanvas.playSkillVfx`（`layer` behind → entities → front）
+- **データ:** スキル JSON は `vfx` / `hitVfx` のみ（traits は `basicAttackVfx`）。旧 preset フィールドは削除済み
 
 ### スコープ外（Phase 6）
 
