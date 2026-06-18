@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { ActiveSkillDef } from '../battle/types.ts';
+import {
+  __registerSkillAnimForTest,
+  __resetSkillAnimsForTest,
+} from '../render/skillAnimRegistry.ts';
 import { computePresentationTimeline } from './presentationTimeline.ts';
 
 const previewEntity = {
@@ -12,6 +16,10 @@ const previewEntity = {
 };
 
 describe('computePresentationTimeline', () => {
+  afterEach(() => {
+    __resetSkillAnimsForTest();
+  });
+
   it('includes body playback when skill strip exists', () => {
     const skill: ActiveSkillDef = {
       id: 'test_skill',
@@ -29,6 +37,30 @@ describe('computePresentationTimeline', () => {
     const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
     expect(timeline.bodyPlaybackFrames).toBeNull();
     expect(timeline.useDurationSec).toBe(0);
+  });
+
+  it('ignores presentationLock when resolving body playback sec', () => {
+    __registerSkillAnimForTest('test_body', { width: 256, height: 48 } as HTMLImageElement);
+    const skill: ActiveSkillDef = {
+      id: 'test_body',
+      name: 'Body',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'damage',
+          target: { rule: 'frontEnemy' },
+          amount: { kind: 'atkScale', scale: 1 },
+          animStartFrame: 0,
+          animLoopFrame: 1,
+          vfx: { preset: 'slash', durationMs: 500 },
+        },
+      ],
+    };
+
+    const timeline = computePresentationTimeline(skill, 0, previewEntity, 'active');
+    expect(timeline.presentationLockSec).toBe(0.5);
+    expect(timeline.bodyPlaybackSec).toBe(0.25);
+    expect(timeline.bodyHoldSec).toBe(0);
   });
 
   it('reports move duration for move effects', () => {

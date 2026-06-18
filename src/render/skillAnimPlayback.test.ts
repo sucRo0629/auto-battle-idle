@@ -12,6 +12,7 @@ import {
   normalizeAnimStartFrame,
   resolveSkillAnimPhaseConfig,
   resolveSkillAnimPlayback,
+  resolveSkillBodyPlaybackSec,
   resolveEffectApplyDelaySec,
   resolveSkillBodyAnimFields,
 } from './skillAnimPlayback.ts';
@@ -154,6 +155,21 @@ describe('skillAnimPlayback', () => {
       resolveEffectApplyDelaySec('hit_skill', 0, { applyFrame: 2 }),
     ).toBe(0.25);
     expect(resolveEffectApplyDelaySec('hit_skill', 0, {})).toBe(0);
+  });
+
+  it('resolves body playback sec from useDuration hold', () => {
+    __registerSkillAnimForTest('phased_body', mockImage(384));
+    expect(
+      resolveSkillBodyPlaybackSec(
+        'phased_body',
+        0,
+        {
+          animStartFrame: 1,
+          animLoopFrame: 3,
+        },
+        { useDurationSec: 1.2 },
+      ),
+    ).toBeCloseTo(1.575);
   });
 
   it('falls back to the effect that owns body anim fields', () => {

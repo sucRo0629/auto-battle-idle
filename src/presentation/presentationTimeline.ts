@@ -8,12 +8,11 @@ import type {
 } from '../battle/types.ts';
 import { resolvePresentationLockSec } from '../battle/skills/presentationLock.ts';
 import { resolveUseDurationSec } from '../battle/skills/skillSequence.ts';
-import { resolveSkillAnimKey } from '../render/skillAnimRegistry.ts';
 import {
   getSkillAnimIntroSec,
   getSkillAnimOutroSec,
   resolveEffectApplyDelaySec,
-  resolveSkillAnimPlayback,
+  resolveSkillBodyPlayback,
 } from '../render/skillAnimPlayback.ts';
 import { resolveEffectPresentation } from '../render/skillVfx/resolveEffectPresentation.ts';
 import { resolvePresetDurationMs } from '../render/skillVfx/presetDurations.ts';
@@ -115,17 +114,16 @@ export function computePresentationTimeline(
   );
   const useDurationSec = resolveUseDurationSec(skill);
   const applyDelaySec = resolveEffectApplyDelaySec(skill.id, effectIndex, effect);
-  const holdSec =
-    useDurationSec > 0 ? useDurationSec : presentationLockSec;
 
   let bodyPlaybackFrames: number | null = null;
   let bodyPlaybackSec: number | null = null;
   let bodyIntroSec: number | null = null;
   let bodyHoldSec: number | null = null;
   let bodyOutroSec: number | null = null;
-  const skillAnimKey = resolveSkillAnimKey(skill.id, effectIndex);
-  if (skillAnimKey) {
-    const playback = resolveSkillAnimPlayback(skillAnimKey, effect, holdSec);
+  const playback = resolveSkillBodyPlayback(skill.id, effectIndex, effect, {
+    useDurationSec,
+  });
+  if (playback) {
     bodyPlaybackFrames = playback.playbackFrameCount;
     bodyPlaybackSec = playback.totalPlaybackSec;
     if (playback.phased) {

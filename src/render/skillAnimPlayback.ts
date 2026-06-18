@@ -256,3 +256,42 @@ export function resolveSkillAnimPlayback(
     totalPlaybackSec,
   };
 }
+
+export interface SkillBodyPlaybackOptions {
+  useDurationSec?: number;
+}
+
+function resolveSkillBodyHoldSec(useDurationSec?: number): number {
+  return useDurationSec !== undefined && useDurationSec > 0
+    ? useDurationSec
+    : 0;
+}
+
+/** body strip の総再生秒数。hold は現時点では useDurationSec のみを反映する */
+export function resolveSkillBodyPlayback(
+  skillId: string,
+  effectIndex: number,
+  effect: SkillAnimPhaseFields,
+  options: SkillBodyPlaybackOptions = {},
+): ReturnType<typeof resolveSkillAnimPlayback> | null {
+  const skillAnimKey = resolveSkillAnimKey(skillId, effectIndex);
+  if (!skillAnimKey) return null;
+  return resolveSkillAnimPlayback(
+    skillAnimKey,
+    effect,
+    resolveSkillBodyHoldSec(options.useDurationSec),
+  );
+}
+
+/** body strip の総再生秒数だけ欲しいときの薄い便宜関数 */
+export function resolveSkillBodyPlaybackSec(
+  skillId: string,
+  effectIndex: number,
+  effect: SkillAnimPhaseFields,
+  options: SkillBodyPlaybackOptions = {},
+): number {
+  return (
+    resolveSkillBodyPlayback(skillId, effectIndex, effect, options)
+      ?.totalPlaybackSec ?? 0
+  );
+}

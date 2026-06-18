@@ -214,7 +214,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 - **1 コマ:** 64×48 px（横 strip）。通常攻撃 `{entityId}_basic_attack` も同規格
 - **解決:** `resolveSkillAnimKey` → あれば **skill anim**。entity `attack` フォールバックは使わない（本番）
 - **先頭 idle 参照コマ:** strip 0 コマ目に entity idle 0 と同絵を入れてよい。再生は effect **`animStartFrame`**（default `0`、idle 入りなら `1`）から（**実装済み:** `skillAnimPlayback.ts` / `SpriteAnimator`）
-- **3 段再生（intro / hold / outro）:** effect に **`animLoopFrame`** を指定すると有効。`animIntroEndFrame`（省略時 = loop 開始）、`animLoopEndFrame`（省略時 = loop 開始）、`animOutroStartFrame`（省略時 = loop 終了 + 1）。hold 中は loop 開始〜終了コマをループ。hold 時間は `useDurationSec` または `presentationLockSec`（`skillAnimPlayback.ts`）
+- **3 段再生（intro / hold / outro）:** effect に **`animLoopFrame`** を指定すると有効。`animIntroEndFrame`（省略時 = loop 開始）、`animLoopEndFrame`（省略時 = loop 開始）、`animOutroStartFrame`（省略時 = loop 終了 + 1）。hold 中は loop 開始〜終了コマをループ。hold 時間は `resolveSkillBodyPlaybackSec` が正本で、現時点では `useDurationSec > 0` のときのみ hold を積む（`skillAnimPlayback.ts`）
 
 ### 通常攻撃の見た目
 
@@ -227,7 +227,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 ### 演出解決（コード）
 
-Battle イベント → `resolveEffectPresentation` → skill anim 優先 → VFX。タイミングは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。本番バトルと演出ラボは `effectVfxOnly: true` を使い、`effect.vfx` が未指定のときは `skill.vfx` へフォールバックしない（`basicAttackVfx` は通常攻撃のみ）。
+Battle イベント → `resolveEffectPresentation` → skill anim 優先 → VFX。body 再生秒数は `resolveSkillBodyPlaybackSec` を戦闘 / ラボで共通使用し、残りの表示ロックは [combat.md](combat.md) の presentationLock / useDurationSec。調整 UI は **演出ラボ**（`presentation-lab.html` / `PresentationPreviewRunner` — Canvas プレビュー + VFX 統合。BattleEngine 非依存）。本番バトルと演出ラボは `effectVfxOnly: true` を使い、`effect.vfx` が未指定のときは `skill.vfx` へフォールバックしない（`basicAttackVfx` は通常攻撃のみ）。
 
 ### 射程
 
