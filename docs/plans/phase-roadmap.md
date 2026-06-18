@@ -200,8 +200,8 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 ### 演出調整ツール（スコープ）
 
 - **Canvas プレビュー必須** — 1 スキル / 1 effect の isolated 再生（本番と同じ `resolveEffectPresentation` → `BattleCanvas` 経路）
-- **VFX パラメータ調整を統合** — `vfx.preset` / `durationMs` / `useDurationSec` / `moveDurationSec`（Phase 6 用の別 VFX エディタは作らない）
-- タイムライン表示（body strip / VFX / presentationLock / useDurationSec）
+- **VFX パラメータ調整を統合** — `vfx.preset` / `durationMs` / `moveDurationSec`（Phase 6 用の別 VFX エディタは作らない）
+- タイムライン表示（body strip / VFX / presentationLock）
 - JSON 書き戻し（`data/skills/actives/` 等）。BattleEngine 全体は回さない薄いランナー
 - SkillEditorStep から「演出プレビューを開く」連携（任意）
 

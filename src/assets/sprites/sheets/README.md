@@ -114,7 +114,7 @@ JSON で指定。PNG 不要（Phase 6 で新 preset の `draw*` 追加）。
 
 解決: `basicAttackVfx` → `effect.vfx` → `skill.vfx` → なし。
 
-**演出調整ツール（Phase 5）** で body PNG・VFX・`useDurationSec` / `durationMs` を **同一 Canvas プレビュー** で調整する（Phase 6 用の別 VFX エディタは作らない）。
+**演出調整ツール（Phase 5）** で body PNG・VFX・`durationMs` を **同一 Canvas プレビュー** で調整する（Phase 6 用の別 VFX エディタは作らない）。
 
 ---
 

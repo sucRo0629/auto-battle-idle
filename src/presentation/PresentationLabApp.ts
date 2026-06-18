@@ -426,21 +426,6 @@ export class PresentationLabApp {
 
     grid.appendChild(
       createFieldRow(
-        'useDurationSec',
-        createNumberInput(skill.useDurationSec ?? 0, (value) => {
-          this.patchSkill((draft) => {
-            if (value <= 0) {
-              delete draft.useDurationSec;
-            } else {
-              draft.useDurationSec = value;
-            }
-          });
-        }, { emptyWhen: 0, step: 0.05, min: 0 }),
-      ),
-    );
-
-    grid.appendChild(
-      createFieldRow(
         'animStartFrame',
         createNumberInput(effect.animStartFrame ?? 0, (value) => {
           this.patchEffect((draft) => {
@@ -533,13 +518,9 @@ export class PresentationLabApp {
 
     const phaseHint = createEl('p', 'presentation-lab-hint');
     phaseHint.textContent =
-      'animLoopFrame を指定すると intro（start〜introEnd）→ hold（loop開始〜loop終了をループ）→ outro（outroStart〜終端）の 3 段再生。hold 時間は useDurationSec または presentationLock。introEnd 省略時は loop開始、outroStart 省略時は loop終了+1。';
+      'animLoopFrame を指定すると intro（start〜introEnd）→ hold（loop開始〜loop終了をループ）→ outro（outroStart〜終端）の 3 段再生。hold 時間は resolveSkillBodyPlaybackSec が決める。introEnd 省略時は loop開始、outroStart 省略時は loop終了+1。';
     grid.appendChild(phaseHint);
     appendHintLines(grid, [
-      [
-        'useDurationSec',
-        '発動後にそのユニットを busy にする時間。`time` / `hitsTaken` のアクティブ CD 進行も止めたいときに使う。',
-      ],
       [
         'applyFrame',
         'body を先に見せて、効果の発生だけ遅らせたいときのコマ位置。ダメージ / 回復 / VFX の適用タイミングをずらす。',
@@ -702,17 +683,12 @@ export class PresentationLabApp {
         formatSec(timeline.presentationLockSec),
         timeline.presentationLockSec,
       ),
-      this.timelineItem(
-        'useDurationSec',
-        formatSec(timeline.useDurationSec),
-        timeline.useDurationSec > 0 ? timeline.useDurationSec : null,
-      ),
     );
     this.timelineHost.appendChild(list);
     appendHintLines(this.timelineHost, [
       [
         'body playback',
-        'body strip の見た目上の再生時間。intro / hold / outro を含む。`useDurationSec` があればその値、なければ `presentationLock` まで伸びる。',
+        'body strip の見た目上の再生時間。intro / hold / outro を含む。`resolveSkillBodyPlaybackSec` が決める。',
       ],
       [
         'presentationLock',
@@ -727,7 +703,6 @@ export class PresentationLabApp {
       timeline.moveDurationSec ?? 0,
       timeline.applyDelaySec,
       timeline.presentationLockSec,
-      timeline.useDurationSec,
       0.5,
     );
     for (const segment of buildTimelineSegments(timeline)) {
@@ -856,11 +831,6 @@ function buildTimelineSegments(
       label: 'presLock',
       sec: timeline.presentationLockSec,
       color: '#909399',
-    },
-    {
-      label: 'useDur',
-      sec: timeline.useDurationSec,
-      color: '#f56c6c',
     },
   ];
 }
