@@ -13,6 +13,10 @@ import type { SkillVfxContext } from '../../render/skillVfx/types.ts';
 import { resolveSkillBodyPlaybackSec } from '../../render/skillAnimPlayback.ts';
 import { resolveVfxAnimKey } from '../../render/vfxAnimRegistry.ts';
 import { resolveVfxPlaybackSec } from '../../render/vfxAnimPlayback.ts';
+import {
+  isParticleDefActive,
+  resolveParticlePlaybackSec,
+} from '../../render/particlePlayback.ts';
 import { resolveUseDurationSec } from './skillSequence.ts';
 
 function buildLockVfxContext(
@@ -42,9 +46,15 @@ function vfxPlaybackSec(
   kind: 'main' | 'hit',
 ): number {
   if (!isVfxDefActive(vfx)) return 0;
+  let sec = 0;
   const key = resolveVfxAnimKey(skillId, effectIndex, kind);
-  if (!key) return 0;
-  return resolveVfxPlaybackSec(vfx, key);
+  if (key) {
+    sec = Math.max(sec, resolveVfxPlaybackSec(vfx, key));
+  }
+  if (isParticleDefActive(vfx.particles)) {
+    sec = Math.max(sec, resolveParticlePlaybackSec(vfx.particles));
+  }
+  return sec;
 }
 
 function effectPresentationSec(

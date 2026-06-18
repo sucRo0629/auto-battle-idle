@@ -108,4 +108,49 @@ describe('resolvePresentationLockSec', () => {
 
     expect(resolvePresentationLockSec(skill, actor, 'active')).toBe(0);
   });
+
+  it('includes particle duration when longer than PNG vfx', () => {
+    __registerVfxAnimForTest('lock_particle_0_vfx', mockImage(128));
+
+    const skill: ActiveSkillDef = {
+      id: 'lock_particle',
+      name: 'Lock Particle',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'heal',
+          target: { rule: 'mostDamagedAlly' },
+          amount: { kind: 'atkScale', scale: 1 },
+          vfx: {
+            particles: {
+              preset: 'heal_holy_light',
+              durationSec: 1.2,
+            },
+          },
+        },
+      ],
+    };
+
+    expect(resolvePresentationLockSec(skill, actor, 'active')).toBe(1.2);
+  });
+
+  it('includes particle-only vfx without PNG strip', () => {
+    const skill: ActiveSkillDef = {
+      id: 'lock_particle_only',
+      name: 'Lock Particle Only',
+      trigger: { kind: 'manual' },
+      effect: [
+        {
+          type: 'heal',
+          target: { rule: 'mostDamagedAlly' },
+          amount: { kind: 'atkScale', scale: 1 },
+          vfx: {
+            particles: { preset: 'heal_holy_light' },
+          },
+        },
+      ],
+    };
+
+    expect(resolvePresentationLockSec(skill, actor, 'active')).toBe(0.8);
+  });
 });

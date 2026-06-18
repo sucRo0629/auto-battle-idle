@@ -24,12 +24,17 @@ import {
   battleCanvasHeight,
 } from "./formationLayout.ts";
 import { VfxPlaybackManager } from "./VfxPlaybackManager.ts";
+import { ParticlePlaybackManager } from "./ParticlePlaybackManager.ts";
 import { resolveVfxAnimKey } from "./vfxAnimRegistry.ts";
 import {
   resolveVfxLayer,
   resolveVfxPlacement,
   toVfxPlaybackOptions,
 } from "./vfxAnimPlayback.ts";
+import {
+  isParticleDefActive,
+  resolveParticleSpawnOptions,
+} from "./particlePlayback.ts";
 import { resolveVfxWorldPosition } from "./vfxPlacement.ts";
 import { CombatReactionPopupManager } from "./CombatReactionPopup.ts";
 import { DamagePopupManager } from "./DamagePopup.ts";
@@ -82,6 +87,7 @@ export class BattleCanvas implements IBattleRenderer {
   private ctx!: CanvasRenderingContext2D;
   private animator = new SpriteAnimator();
   private vfxPlayback = new VfxPlaybackManager();
+  private particlePlayback = new ParticlePlaybackManager();
   private damagePopups = new DamagePopupManager();
   private combatReactionPopups = new CombatReactionPopupManager();
   private buffGlows = new BuffGlowManager();
@@ -157,7 +163,8 @@ export class BattleCanvas implements IBattleRenderer {
       options.effectIndex,
       kind,
     );
-    if (!vfxKey) return;
+    const hasParticles = isParticleDefActive(vfx.particles);
+    if (!vfxKey && !hasParticles) return;
 
     const source = this.layouts.find((layout) => layout.id === actorId);
     const target = this.layouts.find((layout) => layout.id === targetId);
@@ -172,13 +179,38 @@ export class BattleCanvas implements IBattleRenderer {
     );
     const layer = resolveVfxLayer(placement);
 
-    this.vfxPlayback.spawn(
-      instanceId,
-      vfxKey,
-      worldPos,
-      toVfxPlaybackOptions(vfx, options),
-      layer,
-    );
+    if (vfxKey) {
+      this.vfxPlayback.spawn(
+        instanceId,
+        vfxKey,
+        worldPos,
+        toVfxPlaybackOptions(vfx, options),
+        layer,
+      );
+    }
+
+    if (hasParticles) {
+      const particlePlacement = vfx.particles.placement ?? placement;
+      const particleWorldPos = resolveVfxWorldPosition(
+        particlePlacement,
+        source,
+        target,
+        SPRITE_SIZE * SPRITE_SCALE,
+      );
+      const particleLayer = resolveVfxLayer(particlePlacement);
+      const particleOptions = resolveParticleSpawnOptions(vfx.particles);
+      this.particlePlayback.spawn(
+        `${instanceId}:particles`,
+        particleOptions.presetId,
+        particleWorldPos,
+        {
+          count: particleOptions.count,
+          durationSec: particleOptions.durationSec,
+          tint: particleOptions.tint,
+        },
+        particleLayer,
+      );
+    }
   }
 
   showDamagePopup(
@@ -215,6 +247,7 @@ export class BattleCanvas implements IBattleRenderer {
     }
     this.syncLayoutAnimStates();
     this.vfxPlayback.tick(deltaMs);
+    this.particlePlayback.tick(deltaMs);
     this.damagePopups.tick(deltaMs);
     this.combatReactionPopups.tick(deltaMs);
     this.buffGlows.tick(deltaMs);
@@ -448,6 +481,7 @@ export class BattleCanvas implements IBattleRenderer {
     );
 
     this.vfxPlayback.draw(this.ctx, "behind", SPRITE_SCALE);
+    this.particlePlayback.draw(this.ctx, "behind", SPRITE_SCALE);
 
     for (const layout of enemyLayouts) {
       const spriteY = spriteDrawY(layout);
@@ -467,6 +501,7 @@ export class BattleCanvas implements IBattleRenderer {
     }
 
     this.vfxPlayback.draw(this.ctx, "front", SPRITE_SCALE);
+    this.particlePlayback.draw(this.ctx, "front", SPRITE_SCALE);
 
     this.drawStatusBadges(SPRITE_SCALE);
 

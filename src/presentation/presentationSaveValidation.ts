@@ -2,8 +2,12 @@ import type {
   ActiveSkillDef,
   SkillEffectDef,
   SkillVfxDef,
+  VfxParticleDef,
 } from '../battle/types.ts';
-import { DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS } from '../battle/data/gameDataSchema.ts';
+import {
+  DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS,
+  PARTICLE_PRESET_IDS,
+} from '../battle/data/gameDataSchema.ts';
 import type { SkillAnimPhaseFields } from '../render/skillAnimPlayback.ts';
 
 function validateAnimPhaseFields(
@@ -62,6 +66,31 @@ function validateAnimPhaseFields(
   return null;
 }
 
+const PARTICLE_PRESET_IDS_SET = new Set<string>(PARTICLE_PRESET_IDS);
+
+function validateVfxParticleDef(
+  particles: VfxParticleDef,
+  label: string,
+): string | null {
+  if (particles.enabled === false) return null;
+  if (!PARTICLE_PRESET_IDS_SET.has(particles.preset)) {
+    return `${label}.preset は ${[...PARTICLE_PRESET_IDS_SET].join(', ')} のいずれかにしてください`;
+  }
+  if (particles.count !== undefined && particles.count < 1) {
+    return `${label}.count は 1 以上にしてください`;
+  }
+  if (particles.durationSec !== undefined && particles.durationSec <= 0) {
+    return `${label}.durationSec は正数にしてください`;
+  }
+  if (
+    particles.tint !== undefined &&
+    !/^#[0-9a-fA-F]{6}$/.test(particles.tint)
+  ) {
+    return `${label}.tint は #rrggbb 形式にしてください`;
+  }
+  return null;
+}
+
 function validateSkillVfxDef(
   vfx: SkillVfxDef,
   label: string,
@@ -71,7 +100,16 @@ function validateSkillVfxDef(
       return `${label}.${key} は廃止されました（Canvas preset VFX）`;
     }
   }
-  return validateAnimPhaseFields(vfx, label);
+  const bodyError = validateAnimPhaseFields(vfx, label);
+  if (bodyError) return bodyError;
+  if (vfx.particles) {
+    const particleError = validateVfxParticleDef(
+      vfx.particles,
+      `${label}.particles`,
+    );
+    if (particleError) return particleError;
+  }
+  return null;
 }
 
 function validateEffectPresentation(

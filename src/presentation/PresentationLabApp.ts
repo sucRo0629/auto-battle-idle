@@ -7,8 +7,10 @@ import type {
   SkillVfxDef,
   VfxAnchor,
   VfxLayer,
+  VfxParticleDef,
   VfxPlacement,
 } from '../battle/types.ts';
+import { PARTICLE_PRESET_IDS } from '../battle/data/gameDataSchema.ts';
 import {
   fetchClasses,
   fetchEnemies,
@@ -560,6 +562,17 @@ export class PresentationLabApp {
           });
         },
       );
+      appendParticleFields(mainGrid, vfx.particles, (mutator) => {
+        this.patchBasicAttackVfx((draft) => {
+          const current = { preset: PARTICLE_PRESET_IDS[0], ...draft.particles };
+          mutator(current);
+          draft.particles = current;
+        });
+      }, () => {
+        this.patchBasicAttackVfx((draft) => {
+          delete draft.particles;
+        });
+      });
     } else {
       const vfx = effect.vfx ?? {};
       appendVfxEnabledRow(mainGrid, 'vfx.enabled', vfx.enabled !== false, (enabled) => {
@@ -586,6 +599,17 @@ export class PresentationLabApp {
           });
         },
       );
+      appendParticleFields(mainGrid, vfx.particles, (mutator) => {
+        this.patchEffectVfx('vfx', (draft) => {
+          const current = { preset: PARTICLE_PRESET_IDS[0], ...draft.particles };
+          mutator(current);
+          draft.particles = current;
+        });
+      }, () => {
+        this.patchEffectVfx('vfx', (draft) => {
+          delete draft.particles;
+        });
+      });
     }
 
     if (effect.type === 'damage' || effect.type === 'dot') {
@@ -628,6 +652,17 @@ export class PresentationLabApp {
           });
         },
       );
+      appendParticleFields(hitGrid, hitVfx.particles, (mutator) => {
+        this.patchEffectVfx('hitVfx', (draft) => {
+          const current = { preset: PARTICLE_PRESET_IDS[0], ...draft.particles };
+          mutator(current);
+          draft.particles = current;
+        });
+      }, () => {
+        this.patchEffectVfx('hitVfx', (draft) => {
+          delete draft.particles;
+        });
+      });
     }
 
     return section;
@@ -1081,6 +1116,96 @@ function appendVfxPlacementFields(
           p.layer = value as VfxLayer;
         });
       }),
+    ),
+  );
+}
+
+function appendParticleFields(
+  grid: HTMLElement,
+  particles: VfxParticleDef | undefined,
+  patchParticles: (mutator: (draft: VfxParticleDef) => void) => void,
+  clearParticles: () => void,
+): void {
+  const particleHeading = createEl('h3', 'presentation-lab-section-title');
+  particleHeading.textContent = 'particles';
+  grid.appendChild(particleHeading);
+
+  const enabled = particles !== undefined && particles.enabled !== false;
+  appendVfxEnabledRow(grid, 'particles.enabled', enabled, (nextEnabled) => {
+    if (nextEnabled) {
+      patchParticles((draft) => {
+        draft.enabled = true;
+        if (!draft.preset) {
+          draft.preset = PARTICLE_PRESET_IDS[0];
+        }
+      });
+    } else if (particles) {
+      patchParticles((draft) => {
+        draft.enabled = false;
+      });
+    } else {
+      patchParticles((draft) => {
+        draft.preset = PARTICLE_PRESET_IDS[0];
+        draft.enabled = true;
+      });
+    }
+  });
+
+  if (!particles) return;
+
+  grid.appendChild(
+    createFieldRow(
+      'particles.preset',
+      createSelect(particles.preset ?? PARTICLE_PRESET_IDS[0], [
+        { value: '', label: '—' },
+        ...PARTICLE_PRESET_IDS.map((id) => ({ value: id, label: id })),
+      ], (value) => {
+        if (!value) {
+          clearParticles();
+          return;
+        }
+        patchParticles((draft) => {
+          draft.preset = value;
+        });
+      }),
+    ),
+  );
+
+  grid.appendChild(
+    createFieldRow(
+      'particles.count',
+      createNumberInput(particles.count ?? 0, (value) => {
+        patchParticles((draft) => {
+          if (value <= 0) {
+            delete draft.count;
+          } else {
+            draft.count = Math.floor(value);
+          }
+        });
+      }, { emptyWhen: 0, step: 1, min: 1, placeholder: 'preset 既定' }),
+    ),
+  );
+
+  grid.appendChild(
+    createFieldRow(
+      'particles.tint',
+      (() => {
+        const input = createEl('input') as HTMLInputElement;
+        input.type = 'text';
+        input.placeholder = '#rrggbb（preset 既定）';
+        input.value = particles.tint ?? '';
+        input.addEventListener('change', () => {
+          const value = input.value.trim();
+          patchParticles((draft) => {
+            if (!value) {
+              delete draft.tint;
+            } else {
+              draft.tint = value;
+            }
+          });
+        });
+        return input;
+      })(),
     ),
   );
 }

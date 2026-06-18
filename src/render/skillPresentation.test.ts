@@ -235,4 +235,35 @@ describe("playSkillHitFeedback", () => {
 
     expect(canvas.showDamagePopup).toHaveBeenCalledTimes(2);
   });
+
+  it("spawns main VFX for particles-only heal vfx", () => {
+    const canvas = {
+      playSkillVfx: vi.fn(),
+      showDamagePopup: vi.fn(),
+      showHealPopup: vi.fn(),
+    };
+    const effect = { type: "heal" } as never;
+    const presentation = {
+      vfx: {
+        particles: { preset: "heal_holy_light" },
+      },
+    } as never;
+
+    playSkillHitFeedback(canvas, {
+      sourceId: "cleric",
+      targetId: "guardian",
+      presentation,
+      effect,
+      skillId: "heal_skill",
+      effectIndex: 0,
+      hitIndex: 0,
+    });
+
+    expect(canvas.playSkillVfx).toHaveBeenCalledTimes(2);
+    expect(canvas.playSkillVfx.mock.calls[0]?.[3]).toEqual(
+      expect.objectContaining({
+        particles: { preset: "heal_holy_light" },
+      }),
+    );
+  });
 });

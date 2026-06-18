@@ -782,11 +782,28 @@ export interface VfxPlacement {
   layer?: VfxLayer;
 }
 
-/** スキル VFX 定義（skills.json / traits.basicAttackVfx）。PNG strip 正本 */
+/** パーティクル VFX（preset レジストリ + JSON 上書き）。PNG strip と併用可 */
+export interface VfxParticleDef {
+  /** false でパーティクル抑制。省略 = 有効 */
+  enabled?: boolean;
+  /** `particlePresets.ts` レジストリ ID */
+  preset: string;
+  /** 未指定時は親 SkillVfxDef.placement を継承 */
+  placement?: VfxPlacement;
+  /** preset 既定 count の上書き */
+  count?: number;
+  /** preset 既定 durationSec の上書き */
+  durationSec?: number;
+  /** preset 既定 tint の上書き（`#rrggbb`） */
+  tint?: string;
+}
+
+/** スキル VFX 定義（skills.json / traits.basicAttackVfx）。PNG strip + パーティクル */
 export interface SkillVfxDef extends AnimPhaseFields {
   /** false で VFX 抑制。省略 = 有効 */
   enabled?: boolean;
   placement?: VfxPlacement;
+  particles?: VfxParticleDef;
 }
 
 /** effect ごとの entity スプライトアニメ。none = 再生なし（スキルアニメ PNG 優先） */

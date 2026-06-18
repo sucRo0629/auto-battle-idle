@@ -55,6 +55,7 @@ import type {
   TargetSpec,
   VfxAnchor,
   VfxLayer,
+  VfxParticleDef,
   VfxPlacement,
   AnimPhaseFields,
   DebuffFilterTag,
@@ -106,6 +107,8 @@ import {
   VFX_ANCHORS,
   VFX_LAYERS,
   DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS,
+  PARTICLE_PRESET_IDS,
+  VFX_PARTICLE_DEF_FIELD_KEYS,
   DEBUFF_FILTER_TAG_OPTIONS,
   DISPEL_PRIORITIES,
   BUFF_FILTER_TAG_OPTIONS,
@@ -134,6 +137,7 @@ const COUNTER_RESPONSE_KINDS_SET = new Set<CounterResponseKind>(
 const DAMAGE_TYPES_SET = new Set<DamageType>(DAMAGE_TYPES);
 const VFX_ANCHORS_SET = new Set<VfxAnchor>(VFX_ANCHORS);
 const VFX_LAYERS_SET = new Set<VfxLayer>(VFX_LAYERS);
+const PARTICLE_PRESET_IDS_SET = new Set<string>(PARTICLE_PRESET_IDS);
 const TARGET_RULES_SET = new Set<TargetRule>(TARGET_RULES);
 const TARGET_SHAPES_SET = new Set<TargetShape>(TARGET_SHAPES);
 const MOVE_MODES_SET = new Set<MoveMode>(MOVE_MODES);
@@ -1128,6 +1132,54 @@ function rejectDeprecatedSkillVfxFields(
   }
 }
 
+function parseVfxParticles(
+  raw: unknown,
+  context: string,
+): VfxParticleDef | undefined {
+  if (raw === undefined) return undefined;
+  const obj = requireRecord(raw, context);
+  const enabled = obj.enabled;
+  if (enabled !== undefined && typeof enabled !== 'boolean') {
+    invalidField(context, 'enabled', 'must be a boolean');
+  }
+  const preset = requireString(obj, 'preset', context);
+  if (!PARTICLE_PRESET_IDS_SET.has(preset)) {
+    invalidField(
+      context,
+      'preset',
+      `must be one of ${[...PARTICLE_PRESET_IDS_SET].join(', ')}`,
+    );
+  }
+  const count = parseOptionalNumber(obj, 'count', context);
+  if (count !== undefined && (!Number.isInteger(count) || count < 1)) {
+    invalidField(context, 'count', 'must be a positive integer');
+  }
+  const durationSec = parseOptionalNumber(obj, 'durationSec', context);
+  if (durationSec !== undefined && durationSec <= 0) {
+    invalidField(context, 'durationSec', 'must be a positive number');
+  }
+  const tint = obj.tint;
+  if (tint !== undefined) {
+    if (typeof tint !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(tint)) {
+      invalidField(context, 'tint', 'must be a #rrggbb hex color');
+    }
+  }
+  const placement = parseVfxPlacement(obj.placement, `${context}.placement`);
+  for (const key of Object.keys(obj)) {
+    if (!(VFX_PARTICLE_DEF_FIELD_KEYS as readonly string[]).includes(key)) {
+      invalidField(context, key, 'is not a valid particle field');
+    }
+  }
+  return {
+    preset,
+    ...(typeof enabled === 'boolean' ? { enabled } : {}),
+    ...(placement !== undefined ? { placement } : {}),
+    ...(count !== undefined ? { count } : {}),
+    ...(durationSec !== undefined ? { durationSec } : {}),
+    ...(typeof tint === 'string' ? { tint } : {}),
+  };
+}
+
 export function parseSkillVfx(
   raw: unknown,
   context: string,
@@ -1140,11 +1192,13 @@ export function parseSkillVfx(
     invalidField(context, 'enabled', 'must be a boolean');
   }
   const placement = parseVfxPlacement(obj.placement, `${context}.placement`);
+  const particles = parseVfxParticles(obj.particles, `${context}.particles`);
   const animPhase = parseOptionalAnimPhaseFields(obj, context);
   return {
     ...animPhase,
     ...(typeof enabled === 'boolean' ? { enabled } : {}),
     ...(placement !== undefined ? { placement } : {}),
+    ...(particles !== undefined ? { particles } : {}),
   };
 }
 

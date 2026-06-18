@@ -3,9 +3,11 @@ import type {
   SkillEffectAnimId,
   SkillEffectDef,
   SkillVfxDef,
+  VfxParticleDef,
 } from "../../battle/types.ts";
 import type { AnimState } from "../SpriteRegistry.ts";
 import { resolveVfxAnimKey } from "../vfxAnimRegistry.ts";
+import { isParticleDefActive } from "../particlePlayback.ts";
 import type { SkillVfxContext } from "./types.ts";
 
 export interface EffectPresentation {
@@ -51,10 +53,18 @@ function supportsVfx(effect: SkillEffectDef): boolean {
   );
 }
 
+export function isParticleVfxActive(
+  particles: VfxParticleDef | null | undefined,
+): particles is VfxParticleDef {
+  return isParticleDefActive(particles);
+}
+
 export function isVfxDefActive(
   vfx: SkillVfxDef | null | undefined,
 ): vfx is SkillVfxDef {
-  return vfx != null && vfx.enabled !== false;
+  if (vfx == null || vfx.enabled === false) return false;
+  if (isParticleDefActive(vfx.particles)) return true;
+  return true;
 }
 
 function resolveExplicitVfx(
