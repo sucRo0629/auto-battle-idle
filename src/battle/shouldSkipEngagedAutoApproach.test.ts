@@ -17,7 +17,7 @@ function mockUnit(
     role: 'attacker',
     classId: 'test',
     formationRow: 'back',
-    traits: { rangePx: 40, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+    traits: { rangePx: 40, damageType: 'physical', basicAttackVfx: { enabled: true } },
     build: {
       learnedPassiveIds: ['passive_target_ranged_attacking'],
       learnedActiveIds: [],
@@ -77,14 +77,14 @@ describe('shouldSkipEngagedAutoApproach', () => {
       id: 'melee',
       isEnemy: true,
       battleX: 200,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'slash_basic', remaining: 0, slotKind: 'basic' }],
     });
     const farRanged = mockUnit({
       id: 'farRanged',
       isEnemy: true,
       battleX: 500,
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });
 
@@ -104,7 +104,7 @@ describe('shouldSkipEngagedAutoApproach', () => {
       id: 'ranged',
       isEnemy: true,
       battleX: 210,
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });
 
@@ -122,7 +122,7 @@ describe('shouldSkipEngagedAutoApproach', () => {
       traits: {
         rangePx: 100,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'arrow', arc: true },
+        basicAttackVfx: { enabled: true },
       },
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });

@@ -14,7 +14,7 @@ const allyActor: PreviewEntity = {
   role: 'attacker',
   rangePx: 100,
   damageType: 'physical',
-  basicAttackVfx: { preset: 'arrow', arc: true },
+  basicAttackVfx: { enabled: true },
   isEnemy: false,
 };
 
@@ -22,7 +22,7 @@ const enemyActor: PreviewEntity = {
   entityId: 'stage1_1',
   rangePx: 0,
   damageType: 'physical',
-  basicAttackVfx: { preset: 'slash' },
+  basicAttackVfx: { enabled: true },
   isEnemy: true,
 };
 

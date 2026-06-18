@@ -24,7 +24,7 @@ function mockUnit(
     role: 'attacker',
     classId: 'at_assassin',
     formationRow: 'front',
-    traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+    traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
     build: {
       learnedPassiveIds: [],
       learnedActiveIds: ['transform_active'],
@@ -243,7 +243,7 @@ describe('basicAttackTransform', () => {
     const runner = new SkillSequenceRunner();
     const actor = mockUnit({
       id: 'actor',
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [
         { skillId: 'warrior_basic', remaining: 0, slotKind: 'basic' },
       ],
@@ -411,7 +411,7 @@ describe('basicAttackTransform', () => {
       role: 'supporter',
       formationRow: 'back',
       battleX: 52,
-      traits: { rangePx: 128, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      traits: { rangePx: 128, damageType: 'magic', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'at_warrior_basic_attack', remaining: 0, slotKind: 'basic' }],
       statusEffects: [
         {
@@ -444,7 +444,7 @@ describe('basicAttackTransform', () => {
     });
     const enemy = mockEnemy('ranged');
     enemy.battleX = 320;
-    enemy.traits = { rangePx: 180, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } };
+    enemy.traits = { rangePx: 180, damageType: 'physical', basicAttackVfx: { enabled: true } };
 
     expect(
       shouldSkipEngagedAutoApproach(cleric, [cleric, guardian], [enemy], gameData),

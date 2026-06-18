@@ -339,7 +339,7 @@ describe('battle contact (R1-fix: battleX single)', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 220,
       visualX: 120,
     });
@@ -376,7 +376,7 @@ describe('resolveEngagedFormationOverlaps', () => {
       traits: {
         rangePx,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'slash' },
+        basicAttackVfx: { enabled: true },
       },
       ...rest,
     });

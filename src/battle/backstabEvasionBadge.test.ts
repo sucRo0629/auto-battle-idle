@@ -35,7 +35,7 @@ function mockUnit(
     role: 'attacker',
     classId: 'at_assassin',
     formationRow: 'front',
-    traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+    traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { enabled: true } },
     build: {
       learnedPassiveIds: [],
       learnedActiveIds: ['at_assassin_active_2'],

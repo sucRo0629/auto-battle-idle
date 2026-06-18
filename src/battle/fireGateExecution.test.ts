@@ -34,7 +34,7 @@ function mockUnit(
     traits: {
       rangePx: 10,
       damageType: 'physical',
-      basicAttackVfx: { preset: 'slash' },
+      basicAttackVfx: { enabled: true },
     },
     build: {
       learnedPassiveIds: [],
@@ -100,7 +100,7 @@ describe('runUnitSkills fire gate', () => {
       traits: {
         rangePx: range,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'slash' },
+        basicAttackVfx: { enabled: true },
       },
     });
     const inRangeEnemy = mockUnit({
@@ -147,7 +147,7 @@ describe('runUnitSkills fire gate', () => {
       traits: {
         rangePx: range,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'slash' },
+        basicAttackVfx: { enabled: true },
       },
     });
     const enemyA = mockUnit({

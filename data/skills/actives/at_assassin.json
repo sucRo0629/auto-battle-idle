@@ -52,7 +52,7 @@
       }
     ],
     "vfx": {
-      "preset": "slash"
+      "enabled": true
     }
   },
   {
@@ -123,7 +123,7 @@
       }
     ],
     "vfx": {
-      "preset": "slash"
+      "enabled": true
     },
     "useDurationSec": 2
   },

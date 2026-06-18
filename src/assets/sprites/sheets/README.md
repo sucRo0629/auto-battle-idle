@@ -139,17 +139,14 @@ sheets/skills/at_assassin_active_1_1.png   # damage ステップ
 | `placement.offsetX` / `offsetY` | アンカーからの px ずれ |
 | `placement.layer` | `behind` / `front` |
 | `animStartFrame` 〜 | body と同型（VFX strip 内の絶対コマ） |
-| `preset` / `arc` / `durationMs` | **deprecated** — Canvas 移行中のフォールバック |
 
 effect **`hitVfx`** は main `vfx` とは別オブジェクト（別 PNG・別 placement 可）。
 
-**演出調整ツール（Phase 5）** で body PNG・VFX（移行中は Canvas preset）・タイミングを **同一 Canvas プレビュー** で調整する。
+**演出調整ツール（Phase 5）** で body PNG・VFX・タイミングを **同一 Canvas プレビュー** で調整する。
 
 ---
 
-## スキル VFX（Canvas プリセット・移行中）
-
-JSON で `vfx.preset` を指定した場合のみ Canvas 描画（`AttackEffect.ts`）。PNG 配置後は廃止予定。
+## スキル VFX（PNG strip）
 
 | 設定場所 | フィールド |
 |----------|-----------|
@@ -157,7 +154,7 @@ JSON で `vfx.preset` を指定した場合のみ Canvas 描画（`AttackEffect.
 | skill | `vfx` |
 | traits | `basicAttackVfx` |
 
-解決: `basicAttackVfx` → `effect.vfx` → `skill.vfx` → なし（`effectVfxOnly` 既定時は effect のみ）。
+解決: `basicAttackVfx` → `effect.vfx` → `skill.vfx` → なし（`effectVfxOnly` 既定時は effect のみ）。`enabled: false` で抑制。
 
 ---
 

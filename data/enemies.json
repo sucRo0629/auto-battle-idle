@@ -83,8 +83,7 @@
       "rangePx": 300,
       "damageType": "physical",
       "basicAttackVfx": {
-        "preset": "arrow",
-        "arc": true
+        "enabled": true
       },
       "stationary": false
     },

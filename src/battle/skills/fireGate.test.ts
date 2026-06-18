@@ -20,7 +20,7 @@ function mockUnit(
     traits: {
       rangePx: 999,
       damageType: 'physical',
-      basicAttackVfx: { preset: 'slash' },
+      basicAttackVfx: { enabled: true },
     },
     build: {
       learnedPassiveIds: [],

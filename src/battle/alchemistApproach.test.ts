@@ -59,7 +59,7 @@ function mockAlchemist(battleX: number, overrides: Partial<CombatantState> = {})
     traits: {
       rangePx: 128,
       damageType: 'magic' as const,
-      basicAttackVfx: { preset: 'orb' as const },
+      basicAttackVfx: { enabled: true },
     },
     build: {
       learnedPassiveIds: [],
@@ -105,7 +105,7 @@ describe('alchemist approach (melee-band active range regression)', () => {
       traits: {
         rangePx: 90,
         damageType: 'magic',
-        basicAttackVfx: { preset: 'orb' },
+        basicAttackVfx: { enabled: true },
       },
     });
     const stopX = resolveApproachAttackBattleX(alchemist, 120, gameData, 4);

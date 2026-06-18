@@ -301,7 +301,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 ## 演出（render 層）
 
-VFX パラメータ調整・Canvas プレビューは **Phase 5 演出調整ツール**。新 Canvas preset の **描画追加** は **Phase 6**（[phase-roadmap.md](../plans/phase-roadmap.md)）。
+VFX パラメータ調整・Canvas プレビューは **Phase 5 演出調整ツール**。本番描画は **PNG strip**（`BattleCanvas.playSkillVfx`。[phase-roadmap.md](../plans/phase-roadmap.md) Phase 6 完了）。
 
 **body アセット:** entity は `sheets/bodies/{id}.png`（idle/move/death）。攻撃 body は **全スキル strip**（64×48、`{id}_basic_attack` 含む）。詳細は [classes-and-skills.md](classes-and-skills.md#スプライト演出アセット)。
 

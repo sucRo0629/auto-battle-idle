@@ -349,19 +349,19 @@ describe('resyncEnemyBasicAttackEntry', () => {
   it('preserves in-memory draft when basic attack id is unchanged', () => {
     const draftActive: ActiveSkillDef = {
       ...skills.actives[0]!,
-      vfx: { preset: 'orb' },
+      vfx: { enabled: true },
     };
     const entries = [basicAttackEntry(enemyId, draftActive)];
 
     const next = resyncEnemyBasicAttackEntry(entries, enemyId, skills);
 
-    expect(next[0]?.active?.vfx).toEqual({ preset: 'orb' });
+    expect(next[0]?.active?.vfx).toEqual({ enabled: true });
   });
 
   it('renames draft id when enemy id changes without reloading from disk', () => {
     const draftActive: ActiveSkillDef = {
       ...skills.actives[0]!,
-      vfx: { preset: 'arrow', arc: true },
+      vfx: { enabled: true },
     };
     const entries = [basicAttackEntry(enemyId, draftActive)];
 
@@ -370,6 +370,6 @@ describe('resyncEnemyBasicAttackEntry', () => {
 
     expect(next[0]?.ref.skillId).toBe(renamedId);
     expect(next[0]?.active?.id).toBe(renamedId);
-    expect(next[0]?.active?.vfx).toEqual({ preset: 'arrow', arc: true });
+    expect(next[0]?.active?.vfx).toEqual({ enabled: true });
   });
 });

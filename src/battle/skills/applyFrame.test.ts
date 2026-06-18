@@ -39,7 +39,7 @@ function makeActor(overrides: Partial<CombatantState> = {}): CombatantState {
     traits: {
       rangePx: 40,
       damageType: 'physical',
-      basicAttackVfx: { preset: 'slash' },
+      basicAttackVfx: { enabled: true },
     },
     build: { learnedPassiveIds: [], learnedActiveIds: [], equippedActiveSlots: [] },
     ...overrides,

@@ -54,7 +54,7 @@
         },
         "pierceDurationSec": 0.5,
         "vfx": {
-          "preset": "impale"
+          "enabled": true
         },
         "target": {
           "kind": "distance",

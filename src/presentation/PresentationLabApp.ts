@@ -1,13 +1,8 @@
 import { normalizeEntityTraits } from '../battle/data/entityTraits.ts';
-import {
-  VFX_PRESET_LABELS,
-  VFX_PRESET_OPTIONS,
-} from '../battle/data/gameDataSchema.ts';
 import type {
   ActiveSkillDef,
   EnemyTemplate,
   SkillEffectDef,
-  SkillVfxPresetId,
 } from '../battle/types.ts';
 import {
   fetchClasses,
@@ -529,10 +524,6 @@ export class PresentationLabApp {
         'moveDurationSec',
         'move ステップの移動補間秒。battleX の位置移動を何秒で終えるかを決める。',
       ],
-      [
-        'vfx.durationMs',
-        'VFX 1 本の表示時間。body の再生や presentationLock の長さを決める基準にもなる。',
-      ],
     ]);
 
     if (effect.type === 'move') {
@@ -550,60 +541,31 @@ export class PresentationLabApp {
       );
     }
 
-    const preset = effect.vfx?.preset ?? '';
     grid.appendChild(
       createFieldRow(
-        'vfx.preset',
-        createSelect(
-          preset,
-          [
-            { value: '', label: '— なし —' },
-            ...VFX_PRESET_OPTIONS.map((value) => ({
-              value,
-              label: VFX_PRESET_LABELS[value],
-            })),
-          ],
-          (value) => {
+        'vfx.enabled',
+        (() => {
+          const row = createEl('div', 'presentation-lab-field presentation-lab-field-checkbox');
+          const input = createEl('input') as HTMLInputElement;
+          input.type = 'checkbox';
+          input.checked = effect.vfx?.enabled !== false;
+          input.addEventListener('change', () => {
             this.patchEffect((draft) => {
-              if (value.length === 0) {
-                delete draft.vfx;
+              if (!input.checked) {
+                draft.vfx = { ...(draft.vfx ?? {}), enabled: false };
                 return;
               }
-              draft.vfx = {
-                ...(draft.vfx ?? {}),
-                preset: value as SkillVfxPresetId,
-              };
+              if (draft.vfx) {
+                draft.vfx = { ...draft.vfx, enabled: true };
+              } else {
+                draft.vfx = { enabled: true };
+              }
             });
-          },
-        ),
-      ),
-    );
-
-    const vfxPreset = effect.vfx?.preset;
-    grid.appendChild(
-      createFieldRow(
-        'vfx.durationMs',
-        createNumberInput(effect.vfx?.durationMs ?? 0, (value) => {
-          this.patchEffect((draft) => {
-            if (!draft.vfx?.preset) return;
-            if (value <= 0) {
-              const next = { ...draft.vfx };
-              delete next.durationMs;
-              draft.vfx = next;
-              return;
-            }
-            draft.vfx = {
-              ...draft.vfx,
-              durationMs: Math.floor(value),
-            };
           });
-        }, {
-          emptyWhen: 0,
-          step: 10,
-          min: 0,
-          readonly: !vfxPreset,
-          placeholder: vfxPreset ? undefined : 'なし',
-        }),
+          row.appendChild(createEl('label', undefined, 'PNG VFX 有効'));
+          row.appendChild(input);
+          return row;
+        })(),
       ),
     );
 

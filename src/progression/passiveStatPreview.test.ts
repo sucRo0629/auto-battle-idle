@@ -56,7 +56,7 @@ const baseClass: ClassPresetBeforeEnrich = {
   role: 'attacker',
   displayName: 'Preview',
   formationRow: 'front',
-  traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+  traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
   maxHp: 100,
   atk: 10,
   def: 10,

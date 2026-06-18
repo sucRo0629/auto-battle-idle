@@ -25,7 +25,7 @@ function mockAlly(
     traits: {
       rangePx: 0,
       damageType: 'physical',
-      basicAttackVfx: { preset: 'slash' },
+      basicAttackVfx: { enabled: true },
     },
     build: {
       learnedPassiveIds: [],

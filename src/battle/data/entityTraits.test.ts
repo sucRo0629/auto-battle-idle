@@ -16,8 +16,8 @@ describe('normalizeEntityTraits', () => {
     expect(
       normalizeEntityTraits({
         rangePx: 100,
-        basicAttackVfx: { preset: 'arrow', arc: true },
+        basicAttackVfx: { enabled: true },
       }).basicAttackVfx,
-    ).toEqual({ preset: 'arrow', arc: true });
+    ).toEqual({ enabled: true });
   });
 });

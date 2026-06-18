@@ -146,9 +146,9 @@ Phase 3 の習得機構 + キャラクターデータ GUI で **クラス 15 種
 
 ---
 
-## Phase 6 — VFX 描画拡張
+## Phase 6 — VFX PNG 描画（完了）
 
-Phase 5 の演出ラボで VFX **調整** は済とする。Phase 6 は **新 Canvas preset の描画実装** とデータ本番化の残り。
+Phase 5 の演出ラボで VFX **調整** は済。Phase 6 で Canvas preset 描画を廃止し PNG strip のみに統一した。
 
 ---
 

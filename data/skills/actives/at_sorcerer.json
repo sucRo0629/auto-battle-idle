@@ -37,7 +37,7 @@
           "atkScale": 1.4
         },
         "vfx": {
-          "preset": "orb"
+          "enabled": true
         },
         "targetShape": "single",
         "target": {
@@ -64,7 +64,7 @@
           "atkScale": 1.1
         },
         "vfx": {
-          "preset": "orb"
+          "enabled": true
         },
         "targetShape": "multiLock",
         "hitCount": 2,

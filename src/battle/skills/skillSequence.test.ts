@@ -386,7 +386,7 @@ describe('skillSequence', () => {
       battleX: 100,
       hp: 150,
       maxHp: 150,
-      traits: { rangePx: 70, damageType: 'physical', basicAttackVfx: { preset: 'impale' } },
+      traits: { rangePx: 70, damageType: 'physical', basicAttackVfx: { enabled: true } },
     });
     const near = mockUnit({ id: 'near', isEnemy: true, battleX: 240, hp: 9999999, maxHp: 9999999 });
     const far = mockUnit({ id: 'far', isEnemy: true, battleX: 360, hp: 9999999, maxHp: 9999999 });

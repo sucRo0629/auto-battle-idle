@@ -23,7 +23,7 @@ function mockUnit(
     role: 'tank',
     classId: 'test',
     formationRow: 'front',
-    traits: { rangePx: 40, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+    traits: { rangePx: 40, damageType: 'physical', basicAttackVfx: { enabled: true } },
     build: {
       learnedPassiveIds: [],
       learnedActiveIds: [],

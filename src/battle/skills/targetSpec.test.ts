@@ -45,7 +45,7 @@ function mockUnit(
     traits: {
       rangePx: opts.rangePx ?? 0,
       damageType: opts.damageType ?? 'physical',
-      basicAttackVfx: { preset: 'slash' },
+      basicAttackVfx: { enabled: true },
     },
     build: {
       learnedPassiveIds: [],

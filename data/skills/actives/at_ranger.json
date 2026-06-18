@@ -17,7 +17,7 @@
           "atkOffset": 0
         },
         "vfx": {
-          "preset": "arrow"
+          "enabled": true
         },
         "target": {
           "kind": "distance",

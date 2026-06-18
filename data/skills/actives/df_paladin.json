@@ -14,7 +14,7 @@
           "atkScale": 1.25
         },
         "vfx": {
-          "preset": "healRise"
+          "enabled": true
         },
         "target": {
           "kind": "stat",
@@ -40,7 +40,7 @@
       }
     ],
     "vfx": {
-      "preset": "slash"
+      "enabled": true
     },
     "maxCharges": 1
   },
@@ -159,7 +159,7 @@
       }
     ],
     "vfx": {
-      "preset": "healRise"
+      "enabled": true
     }
   }
 ]

@@ -13,7 +13,7 @@ describe('sanitizeBasicAttackSkillForJson', () => {
       id: 'sp_cleric_basic_attack',
       name: 'sp_cleric_basic_attack',
       trigger: { kind: 'time', value: 2 },
-      vfx: { preset: 'orb' },
+      vfx: { enabled: true },
       effect: [
         {
           target: { kind: 'distance', side: 'enemy', order: 'nearest' },

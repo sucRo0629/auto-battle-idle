@@ -193,7 +193,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | ---------------- | ----------------------------------------------------------------------------------------------- |
 | `rangePx`        | `0`（分類用: 0〜99 は近接帯、100 以上は遠隔帯）                                                  |
 | `damageType`     | `physical`                                                                                      |
-| `basicAttackVfx` | なし。明示 `preset`（移行中）または PNG VFX 用 `enabled` / `placement` があるとき battle VFX に使う |
+| `basicAttackVfx` | なし。PNG VFX 用 `enabled` / `placement` があるとき battle VFX に使う |
 
 `basicAttackSkillId` は省略可（`{entityId}_basic_attack`）。通常攻撃スキルはロード時に合成。`data/skills/actives/` に同名 ID があれば `name` / `atkScale` / `interval` 等のみ上書き可（`range` / `damageType` / `vfx` は traits 正）。
 
@@ -226,17 +226,16 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 - **描画:** `spriteFrameDraw.drawVfxFrameAtAnchor` — `BattleCanvas.playSkillVfx`（`layer` behind → entities → front）
 - **再生フェーズ:** body と同型の **`AnimPhaseFields`**（`animStartFrame` 〜 `animOutroStartFrame`）。`applyFrame` は body strip の絶対コマ基準のまま（VFX 側の `animStartFrame` は VFX strip 内）
 - **配置 JSON:** `vfx.placement` — `anchor`（`actor` / `target` / `between` / `footActor` / `footTarget`）、`offsetX` / `offsetY`、`layer`（`behind` / `front`）
-- **命中 VFX:** effect **`hitVfx`**（main `vfx` とは別 PNG・別 `placement` 可）。未指定時は解決層の既定（移行中は Canvas `slashHit` 等）
-- **Canvas preset（移行中）:** `vfx.preset` / `arc` / `durationMs` は **deprecated**。PNG 未配置時のフォールバックのみ
+- **命中 VFX:** effect **`hitVfx`**（main `vfx` とは別 PNG・別 `placement` 可）。未指定時は解決層の既定（`_vfx_hit` PNG があれば再生）
 
 ### 通常攻撃の見た目
 
 | 条件 | body | VFX |
 |------|------|-----|
 | `sheets/skills/{id}_basic_attack.png` **あり** | skill anim 再生 | `basicAttackVfx` / effect `vfx` |
-| PNG **なし** | なし | `basicAttackVfx` 等（slash / arrow / orb） |
+| PNG **なし** | なし | VFX PNG 未配置のため演出なし |
 
-**遠隔**（`rangePx >= RANGED_ATTACK_MIN_PX`）も同じ。弓引き PNG を置けば body 再生する。未配置時のみ VFX のみ。
+**遠隔**（`rangePx >= RANGED_ATTACK_MIN_PX`）も同じ。弓引き PNG を置けば body 再生する。VFX strip も `sheets/vfx/` に配置する。
 
 ### 演出解決（コード）
 
@@ -550,7 +549,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `animIntroEndFrame`                                          | 任意。イントロ最終コマ（inclusive）。省略時は `animLoopFrame` |
 | `animOutroStartFrame`                                        | 任意。アウトロ開始コマ。省略時は `(animLoopEndFrame ?? animLoopFrame) + 1` |
 | `applyFrame`                                                 | 任意。strip 内の**効果適用コマ**（絶対 index）。省略 = 即時。遅延秒 = `max(0, applyFrame - animStartFrame) / 8`。body は発動直後、VFX・ダメージは apply コマ（`skillWindup` → pending） |
-| `vfx`                                                        | 任意。effect 単位の main VFX（PNG strip + `placement` / 移行中 `preset`）。未指定 = skill `vfx`、それも未設定なら VFX なし |
+| `vfx`                                                        | 任意。effect 単位の main VFX（PNG strip + `placement` / `enabled`）。未指定 = skill `vfx`、それも未設定なら VFX なし |
 | `hitVfx`                                                     | 任意。命中時 VFX（`_vfx_hit` PNG）。main `vfx` とは独立 |
 
 **パッシブ `debuff`:** 上記 `target` / `targetShape` / `range` / 形状別フィールドと同型の項目を **`debuff` 接頭辞**で保持（例: `target` → `debuffTargetRule`、`targetShape` → `debuffTargetShape`、`range` → `debuffRange`、`aoeRadiusPx` → `debuffAoeRadiusPx`）。変換は `passiveDebuffBridge.ts`。発動タイミングは **常時**（未指定）または **`periodicTrigger: stageStart` / `waveStart`**。Stage/Wave 開始時は `chance`（0〜1、未指定=1）で発動確率を判定。アクティブの `trigger`（`basicAttackCount` 等）や `fireConditions` は使わない。

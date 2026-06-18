@@ -137,7 +137,7 @@ describe('combatPosition', () => {
     const enemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
       battleX: 300,
     });
@@ -168,7 +168,7 @@ describe('combatPosition', () => {
     });
     const bow = mockCombatant({
       id: 'bow',
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       formationRow: 'back',
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
@@ -180,7 +180,7 @@ describe('combatPosition', () => {
   it('approach range follows skill effect range', () => {
     const bow = mockCombatant({
       id: 'bow',
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
     expect(resolveMaxEffectiveRangePx(bow, gameData)).toBe(100);
@@ -219,7 +219,7 @@ describe('combatPosition', () => {
       id: 'b',
       formationRow: 'back',
       role: 'attacker',
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
     });
     assignInitialPlayerBattleX([front, back]);
     expect(front.battleX).toBeGreaterThan(back.battleX);
@@ -230,13 +230,13 @@ describe('combatPosition', () => {
       id: 'cleric',
       formationRow: 'back',
       role: 'supporter',
-      traits: { rangePx: 40, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      traits: { rangePx: 40, damageType: 'magic', basicAttackVfx: { enabled: true } },
     });
     const ranger = mockCombatant({
       id: 'ranger',
       formationRow: 'back',
       role: 'attacker',
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
     });
     assignInitialPlayerBattleX([cleric, ranger]);
     expect(cleric.battleX).toBeGreaterThan(ranger.battleX);
@@ -306,7 +306,7 @@ describe('combatPosition', () => {
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 220,
     });
     expect(getPlayerContactX([guard, archer])).toBe(220);
@@ -376,7 +376,7 @@ describe('combatPosition', () => {
       traits: {
         rangePx: 70,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'impale' },
+        basicAttackVfx: { enabled: true },
       },
     });
     const enemy = mockCombatant({ id: 'e', isEnemy: true, battleX: 338 });
@@ -400,7 +400,7 @@ describe('combatPosition', () => {
     const actor = mockCombatant({
       id: 'actor',
       battleX: 70,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
     });
     const ally = mockCombatant({ id: 'ally', battleX: 210 });
     expect(
@@ -421,7 +421,7 @@ describe('combatPosition', () => {
   it('resolveApproachRangePx uses shorter equipped active range when ready', () => {
     const mage = mockCombatant({
       id: 'mage',
-      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { enabled: true } },
       cooldowns: [
         { skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' },
         { skillId: 'short_magic', remaining: 0, slotKind: 'active', slotIndex: 0 },
@@ -436,7 +436,7 @@ describe('combatPosition', () => {
   it('resolveApproachRangePx uses basic range while shorter active is on cooldown', () => {
     const mage = mockCombatant({
       id: 'mage',
-      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { enabled: true } },
       cooldowns: [
         { skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' },
         { skillId: 'short_magic', remaining: 8, slotKind: 'active', slotIndex: 0 },
@@ -449,7 +449,7 @@ describe('combatPosition', () => {
   it('resolveApproachRangePx falls back to basic when no actives', () => {
     const mage = mockCombatant({
       id: 'mage',
-      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' }],
     });
     expect(resolveApproachRangePx(mage, gameData)).toBe(200);
@@ -460,7 +460,7 @@ describe('combatPosition', () => {
     const enemyX = 280;
     const mage = mockCombatant({
       id: 'mage',
-      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { enabled: true } },
       battleX: enemyX - 40,
       cooldowns: [
         { skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' },
@@ -474,7 +474,7 @@ describe('combatPosition', () => {
     const enemyX = 280;
     const mage = mockCombatant({
       id: 'mage',
-      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { enabled: true } },
       battleX: 40,
       cooldowns: [
         { skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' },
@@ -488,7 +488,7 @@ describe('combatPosition', () => {
     const enemyX = 280;
     const mage = mockCombatant({
       id: 'mage',
-      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      traits: { rangePx: 200, damageType: 'magic', basicAttackVfx: { enabled: true } },
       battleX: 40,
       cooldowns: [
         { skillId: 'sorcerer_basic', remaining: 0, slotKind: 'basic' },

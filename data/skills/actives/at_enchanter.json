@@ -45,7 +45,7 @@
           "atkScale": 0.75
         },
         "vfx": {
-          "preset": "chainLightning"
+          "enabled": true
         },
         "target": {
           "kind": "distance",
@@ -88,7 +88,7 @@
         },
         "range": 50,
         "vfx": {
-          "preset": "orb"
+          "enabled": true
         },
         "targetShape": "aoe",
         "aoeRadiusPx": 55,
@@ -100,7 +100,7 @@
       }
     ],
     "vfx": {
-      "preset": "orb"
+      "enabled": true
     }
   }
 ]

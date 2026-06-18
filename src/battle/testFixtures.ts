@@ -4,7 +4,7 @@ export function mockMeleeTraits(): NormalizedEntityTraits {
   return {
     rangePx: 0,
     damageType: 'physical',
-    basicAttackVfx: { preset: 'slash' },
+    basicAttackVfx: { enabled: true },
   };
 }
 
@@ -12,7 +12,7 @@ export function mockRangedTraits(rangePx = 100): NormalizedEntityTraits {
   return {
     rangePx,
     damageType: 'physical',
-    basicAttackVfx: { preset: 'arrow', arc: true },
+    basicAttackVfx: { enabled: true },
   };
 }
 

@@ -1,8 +1,6 @@
 export type AnimState = 'idle' | 'attack' | 'move' | 'death';
 
 import type { Role, StatusEffect, SkillVfxDef } from '../battle/types.ts';
-import type { AttackEffectSpawnOptions } from './AttackEffect.ts';
-import type { CurseMarkSpawnOptions } from './curseMarkEffect.ts';
 import type { SkillAnimPlaybackOptions } from './skillAnimPlayback.ts';
 import type { VfxPlaybackKind } from './vfxAnimPlayback.ts';
 
@@ -48,12 +46,6 @@ export interface IBattleRenderer {
     skillAnimKey: string,
     playback?: SkillAnimPlaybackOptions,
   ): void;
-  playAttackEffect(
-    actorId: string,
-    targetId: string,
-    vfx: SkillVfxDef,
-    options?: AttackEffectSpawnOptions,
-  ): void;
   playSkillVfx(
     instanceId: string,
     actorId: string,
@@ -61,9 +53,6 @@ export interface IBattleRenderer {
     vfx: SkillVfxDef,
     options: PlaySkillVfxOptions,
   ): void;
-  playCurseMark(targetId: string, options?: CurseMarkSpawnOptions): void;
-  fadeCurseMark(targetId: string): void;
-  fadeLatestChainSegment(chainGroupId: string): void;
   showDamagePopup(
     targetId: string,
     amount: number,

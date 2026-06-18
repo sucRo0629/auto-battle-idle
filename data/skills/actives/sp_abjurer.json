@@ -38,7 +38,7 @@
     ],
     "useDurationSec": 0.3,
     "vfx": {
-      "preset": "orb"
+      "enabled": true
     }
   },
   {

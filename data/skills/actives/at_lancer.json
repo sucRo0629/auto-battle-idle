@@ -34,7 +34,7 @@
       }
     ],
     "vfx": {
-      "preset": "impale"
+      "enabled": true
     }
   },
   {

@@ -49,7 +49,7 @@ describe('validatePresentationSkillSave', () => {
     expect(validatePresentationSkillSave(skill)).toBeNull();
   });
 
-  it('rejects vfx.durationMs without preset', () => {
+  it('accepts vfx with enabled flag', () => {
     const skill = buffSkill([
       {
         target: { kind: 'self' },
@@ -58,10 +58,10 @@ describe('validatePresentationSkillSave', () => {
         buffStat: 'def',
         buffMultiplier: 1.2,
         buffDurationSec: 5,
-        vfx: { durationMs: 500 },
+        vfx: { enabled: true },
       },
     ]);
-    expect(validatePresentationSkillSave(skill)).toMatch(/vfx\.preset/);
+    expect(validatePresentationSkillSave(skill)).toBeNull();
   });
 
   it('rejects animOutroStartFrame on or before loop end', () => {

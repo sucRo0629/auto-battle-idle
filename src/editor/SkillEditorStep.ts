@@ -32,8 +32,6 @@ import {
   TARGET_SHAPE_OPTIONS,
   POWER_STEP_MODE_LABELS,
   POWER_STEP_MODES,
-  VFX_PRESET_LABELS,
-  VFX_PRESET_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
 import {
   normalizePassiveSkillForEditor,
@@ -63,7 +61,6 @@ import type {
   SkillEffectDef,
   SkillEffectKind,
   SkillTriggerKind,
-  SkillVfxPresetId,
   StatusEffectStat,
   TargetShape,
   PowerStepMode,
@@ -1353,69 +1350,23 @@ function appendEffectPresentationFields(
     ),
   );
 
-  const preset = effect.vfx?.preset ?? '';
-  grid.appendChild(
-    createFieldRow(
-      'VFX プリセット',
-      createSelect(
-        (preset || '') as SkillVfxPresetId | '',
-        [
-          { value: '', label: '— スキル既定 / なし —' },
-          ...VFX_PRESET_OPTIONS.map((value) => ({
-            value,
-            label: VFX_PRESET_LABELS[value],
-          })),
-        ],
-        (value) => {
-          patchEffect((prev) => {
-            const next = { ...prev } as SkillEffectDef;
-            if (value.length === 0) {
-              delete next.vfx;
-            } else {
-              next.vfx = { ...next.vfx, preset: value as SkillVfxPresetId };
-            }
-            return next;
-          });
-        },
-      ),
-    ),
-  );
-
   if (effect.vfx) {
-    grid.appendChild(
-      createFieldRow(
-        'VFX durationMs',
-        createNumberInput(
-          effect.vfx.durationMs ?? 0,
-          (durationMs) => {
-            patchEffect((prev) => ({
-              ...prev,
-              vfx: {
-                ...prev.vfx!,
-                durationMs: durationMs || undefined,
-              },
-            }));
-          },
-          { min: 0, step: 50 },
-        ),
-      ),
-    );
-    const arcRow = createEl('div', 'editor-field editor-field-checkbox');
-    const arcInput = createEl('input') as HTMLInputElement;
-    arcInput.type = 'checkbox';
-    arcInput.checked = Boolean(effect.vfx.arc);
-    arcInput.addEventListener('change', () => {
+    const enabledRow = createEl('div', 'editor-field editor-field-checkbox');
+    const enabledInput = createEl('input') as HTMLInputElement;
+    enabledInput.type = 'checkbox';
+    enabledInput.checked = effect.vfx.enabled !== false;
+    enabledInput.addEventListener('change', () => {
       patchEffect((prev) => ({
         ...prev,
         vfx: {
           ...prev.vfx!,
-          arc: arcInput.checked || undefined,
+          enabled: enabledInput.checked,
         },
       }));
     });
-    arcRow.appendChild(createEl('label', undefined, 'VFX arc（放物線）'));
-    arcRow.appendChild(arcInput);
-    grid.appendChild(arcRow);
+    enabledRow.appendChild(createEl('label', undefined, 'PNG VFX 有効'));
+    enabledRow.appendChild(enabledInput);
+    grid.appendChild(enabledRow);
     section.appendChild(
       createButton('effect VFX を削除', 'editor-btn editor-btn-small', () => {
         patchEffect((prev) => {
@@ -2858,67 +2809,22 @@ export class SkillEditorStep {
       );
     }
     const vfxGrid = appendGrid(vfxSection);
-    const preset = active.vfx?.preset ?? '';
-    vfxGrid.appendChild(
-      createFieldRow(
-        'プリセット',
-        createSelect(
-          (preset || '') as SkillVfxPresetId | '',
-          [
-            { value: '', label: '— なし —' },
-            ...VFX_PRESET_OPTIONS.map((value) => ({
-              value,
-              label: VFX_PRESET_LABELS[value],
-            })),
-          ],
-          (value) => {
-            setActive((current) => {
-              if (value.length === 0) {
-                current.vfx = undefined;
-              } else {
-                current.vfx = {
-                  ...current.vfx,
-                  preset: value as SkillVfxPresetId,
-                };
-              }
-            }, { rerender: value.length === 0 });
-          },
-        ),
-      ),
-    );
     if (active.vfx) {
-      vfxGrid.appendChild(
-        createFieldRow(
-          'durationMs',
-          createNumberInput(
-            active.vfx.durationMs ?? 0,
-            (durationMs) => {
-              setActive((current) => {
-                current.vfx = {
-                  ...current.vfx!,
-                  durationMs: durationMs || undefined,
-                };
-              }, { rerender: false });
-            },
-            { min: 0, step: 50 },
-          ),
-        ),
-      );
-      const arcRow = createEl('div', 'editor-field editor-field-checkbox');
-      const arcInput = createEl('input') as HTMLInputElement;
-      arcInput.type = 'checkbox';
-      arcInput.checked = Boolean(active.vfx.arc);
-      arcInput.addEventListener('change', () => {
+      const enabledRow = createEl('div', 'editor-field editor-field-checkbox');
+      const enabledInput = createEl('input') as HTMLInputElement;
+      enabledInput.type = 'checkbox';
+      enabledInput.checked = active.vfx.enabled !== false;
+      enabledInput.addEventListener('change', () => {
         setActive((current) => {
           current.vfx = {
             ...current.vfx!,
-            arc: arcInput.checked || undefined,
+            enabled: enabledInput.checked,
           };
         }, { rerender: false });
       });
-      arcRow.appendChild(createEl('label', undefined, 'arc（放物線）'));
-      arcRow.appendChild(arcInput);
-      vfxGrid.appendChild(arcRow);
+      enabledRow.appendChild(createEl('label', undefined, 'PNG VFX 有効'));
+      enabledRow.appendChild(enabledInput);
+      vfxGrid.appendChild(enabledRow);
       vfxSection.appendChild(
         createButton('VFX を削除', 'editor-btn editor-btn-small', () => {
           setActive((current) => {
@@ -2930,7 +2836,7 @@ export class SkillEditorStep {
       vfxSection.appendChild(
         createButton('VFX を設定', 'editor-btn editor-btn-small', () => {
           setActive((current) => {
-            current.vfx = { preset: 'slash' };
+            current.vfx = { enabled: true };
           }, { rerender: true });
         }),
       );

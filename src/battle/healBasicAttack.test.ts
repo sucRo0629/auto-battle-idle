@@ -48,7 +48,7 @@ function mockHealCleric(
     traits: {
       rangePx: 128,
       damageType: 'magic',
-      basicAttackVfx: { preset: 'orb' },
+      basicAttackVfx: { enabled: true },
     },
     build: {
       learnedPassiveIds: [],
@@ -86,7 +86,7 @@ function mockSorcerer(battleX: number): CombatantState {
     traits: {
       rangePx: 30,
       damageType: 'magic',
-      basicAttackVfx: { preset: 'orb' },
+      basicAttackVfx: { enabled: true },
     },
     build: {
       learnedPassiveIds: [],
@@ -127,7 +127,7 @@ function mockMeleeEnemy(battleX: number, id = 'enemy'): CombatantState {
     traits: {
       rangePx: 0,
       damageType: 'physical' as const,
-      basicAttackVfx: { preset: 'slash' as const },
+      basicAttackVfx: { enabled: true },
     },
     build: {
       learnedPassiveIds: [],
@@ -172,7 +172,7 @@ function mockGuardian(
     traits: {
       rangePx: 5,
       damageType: 'physical',
-      basicAttackVfx: { preset: 'slash' },
+      basicAttackVfx: { enabled: true },
     },
     build: {
       learnedPassiveIds: [],
@@ -221,7 +221,7 @@ describe('resolveSkillRangePx ally heal', () => {
       traits: {
         rangePx: 90,
         damageType: 'magic',
-        basicAttackVfx: { preset: 'orb' },
+        basicAttackVfx: { enabled: true },
       },
     });
     const range = resolveSkillRangePx(
@@ -303,7 +303,7 @@ describe('heal basic attack approach', () => {
       traits: {
         rangePx: 200,
         damageType: 'magic' as const,
-        basicAttackVfx: { preset: 'orb' as const },
+        basicAttackVfx: { enabled: true },
       },
       build: {
         learnedPassiveIds: [],
@@ -351,7 +351,7 @@ describe('heal basic attack approach', () => {
       traits: {
         rangePx: 180,
         damageType: 'physical' as const,
-        basicAttackVfx: { preset: 'arrow' as const, arc: true },
+        basicAttackVfx: { enabled: true },
       },
       build: {
         learnedPassiveIds: [],

@@ -782,27 +782,11 @@ export interface VfxPlacement {
   layer?: VfxLayer;
 }
 
-/** @deprecated Canvas プリセット ID。PNG VFX（`sheets/vfx/`）移行完了後に削除 */
-export type SkillVfxPresetId =
-  | "slash"
-  | "slashHit"
-  | "orb"
-  | "arrow"
-  | "healRise"
-  | "chainLightning"
-  | "impale";
-
 /** スキル VFX 定義（skills.json / traits.basicAttackVfx）。PNG strip 正本 */
 export interface SkillVfxDef extends AnimPhaseFields {
   /** false で VFX 抑制。省略 = 有効 */
   enabled?: boolean;
   placement?: VfxPlacement;
-  /** @deprecated Canvas preset。移行中は既存 JSON 互換 */
-  preset?: SkillVfxPresetId;
-  /** @deprecated preset=arrow 用 */
-  arc?: boolean;
-  /** @deprecated preset 既定時間の上書き（ms） */
-  durationMs?: number;
 }
 
 /** effect ごとの entity スプライトアニメ。none = 再生なし（スキルアニメ PNG 優先） */

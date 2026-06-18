@@ -38,7 +38,7 @@
       }
     ],
     "vfx": {
-      "preset": "healRise"
+      "enabled": true
     },
     "useDurationSec": 0.3
   },
@@ -79,8 +79,7 @@
       }
     ],
     "vfx": {
-      "preset": "orb",
-      "arc": true
+      "enabled": true
     }
   },
   {

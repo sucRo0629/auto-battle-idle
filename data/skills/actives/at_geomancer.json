@@ -39,7 +39,7 @@
           "atkScale": 1.1
         },
         "vfx": {
-          "preset": "orb"
+          "enabled": true
         },
         "targetShape": "aoe",
         "aoeRadiusPx": 100,
@@ -67,7 +67,7 @@
           "atkScale": 0.7
         },
         "vfx": {
-          "preset": "orb"
+          "enabled": true
         },
         "targetShape": "scatter",
         "scatterRadiusPx": 60,

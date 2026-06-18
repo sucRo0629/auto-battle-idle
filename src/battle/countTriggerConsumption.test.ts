@@ -42,7 +42,7 @@ function mockUnit(
     traits: {
       rangePx: 0,
       damageType: 'physical',
-      basicAttackVfx: { preset: 'slash' },
+      basicAttackVfx: { enabled: true },
     },
     build: {
       learnedPassiveIds: [],
@@ -229,7 +229,7 @@ describe('count trigger consumption', () => {
       count_burst: countActive,
       multi_basic: multiBasic,
     });
-    const actor = mockUnit({ id: 'actor', battleX: 200, traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { preset: 'slash' } } });
+    const actor = mockUnit({ id: 'actor', battleX: 200, traits: { rangePx: 50, damageType: 'physical', basicAttackVfx: { enabled: true } } });
     const enemy = mockUnit({ id: 'enemy', isEnemy: true, battleX: 200, hp: 500 });
     const basicCd: SkillCooldown = {
       skillId: 'multi_basic',

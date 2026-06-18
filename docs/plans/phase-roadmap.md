@@ -13,7 +13,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **3**  | Lv アップ時スキル習得、アクティブセット 2 枠目                                       | **完了**             |
 | **4**  | クラスマスタ + スキル説明；4a **完了** / 4c **完了** / 4b 説明（データ PR 同梱）     | **4a+4c 完了**        |
 | **5**  | 演出アセット + **演出調整ツール**（Canvas プレビュー・VFX 調整含む）               | **次**（確定クラス順次） |
-| **6**  | VFX **PNG 描画**（`sheets/vfx/` 64×64）・Canvas preset 廃止・データ本番化の残り       | 未着手（Phase 5 と並行可） |
+| **6**  | VFX **PNG 描画**（`sheets/vfx/` 64×64）・Canvas preset 廃止                         | **完了**             |
 | **7**  | バランス調整（数値チューニング全般）                                                 | 未着手               |
 | **8**  | globalExp、強化ツリー、オフライン報酬、Electron                                      | 未着手               |
 
@@ -39,7 +39,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 - Victory / Defeat → 3 秒待機 → HP 全回復 → 再スポーン（Phase 2 でセーブ連動の進行ルールを追加）
 - Canvas 2D：**アニメーション基盤**（`SpriteAnimator`、イベント連動、近接突進/遠隔弾、ダメージポップアップ）
 - **プレースホルダースプライト**（ロール別色分け PNG。本番ドット絵は Phase 5）
-- **プレースホルダー戦闘 VFX**（slash / orb / arrow / healRise 等の Canvas preset。明示 `preset` のみ表示。**Phase 6 で PNG `sheets/vfx/` に置換**）
+- **戦闘 VFX**（PNG strip `sheets/vfx/`。旧 Canvas preset は Phase 6 で廃止）
 - buff VFX：対象スプライトの白い光（約 0.8 秒）
 - Canvas UI：ステージ名（左上）、パーティ HUD（クラス名 / Exp / HP / スキル CD）
 - バトルログ：**console のみ**（DOM ログは意図的に未実装）
@@ -200,7 +200,7 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 ### 演出調整ツール（スコープ）
 
 - **Canvas プレビュー必須** — 1 スキル / 1 effect の isolated 再生（本番と同じ `resolveEffectPresentation` → `BattleCanvas` 経路）
-- **VFX パラメータ調整を統合** — `vfx.placement` / `animStartFrame` 等（移行中 `vfx.preset` / `durationMs`）/ `moveDurationSec`（別 VFX エディタは作らない）
+- **VFX パラメータ調整を統合** — `vfx.placement` / `animStartFrame` 等 / `moveDurationSec`（別 VFX エディタは作らない）
 - タイムライン表示（body strip / VFX / presentationLock）
 - JSON 書き戻し（`data/skills/actives/` 等）。BattleEngine 全体は回さない薄いランナー
 - SkillEditorStep から「演出プレビューを開く」連携（任意）
@@ -235,15 +235,15 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 
 ---
 
-## Phase 6 — VFX PNG 描画（Canvas 廃止）
+## Phase 6 — VFX PNG 描画（Canvas 廃止）✅
 
 Phase 5 の演出調整ツールで **タイミング・placement 編集・プレビューは済** とする。Phase 6 は **描画エンジンを Canvas preset から PNG strip へ切替** する。
 
-### スコープ（インフラ済み）
+### スコープ（完了）
 
 - **型・レジストリ（済）:** `SkillVfxDef`（`placement` / `AnimPhaseFields` / `hitVfx`）、`VFX_ANIM_CELL_*` 64×64、`vfxAnimRegistry.ts`
-- **再生・描画（済）:** `vfxAnimPlayback.ts` / `vfxPlacement.ts` / `VfxPlaybackManager.ts` / `BattleCanvas.playSkillVfx`（`layer` behind → entities → front）。BattleView / SkillExecutor 配線と `AttackEffect.ts` 廃止は別 PR
-- **描画（残）:** `data/skills/` の `vfx` 本番データ移行（`preset` → PNG + `placement`）・`SKILL_VFX_OVERRIDES` 廃止・`gameDataSchema` の `VFX_PRESETS` 削除
+- **再生・描画（済）:** `vfxAnimPlayback.ts` / `vfxPlacement.ts` / `VfxPlaybackManager.ts` / `BattleCanvas.playSkillVfx`（`layer` behind → entities → front）。`AttackEffect.ts` / `curseMarkEffect.ts` / Canvas preset 廃止
+- **データ（済）:** `data/skills/` の `vfx.preset` 削除・`gameDataSchema` の `VFX_PRESETS` 削除
 
 ### スコープ外（Phase 6）
 

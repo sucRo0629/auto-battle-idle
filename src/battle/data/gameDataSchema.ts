@@ -22,7 +22,6 @@ import type {
   SkillEffectAnimId,
   SkillEffectKind,
   SkillTriggerKind,
-  SkillVfxPresetId,
   SpecialEffectApplyTo,
   StatusEffectStat,
   TargetRule,
@@ -150,16 +149,6 @@ export const DAMAGE_TYPES = [
   "physical",
   "magic",
 ] as const satisfies readonly DamageType[];
-/** @deprecated Canvas VFX プリセット。PNG VFX（`sheets/vfx/`）正本化後に削除予定 */
-export const VFX_PRESETS = [
-  "slash",
-  "slashHit",
-  "orb",
-  "arrow",
-  "healRise",
-  "chainLightning",
-  "impale",
-] as const satisfies readonly SkillVfxPresetId[];
 export const VFX_ANCHORS = [
   "actor",
   "target",
@@ -522,21 +511,9 @@ export const RESOURCE_AMOUNT_KIND_OPTIONS: ResourceAmountKind[] = [
   ...RESOURCE_AMOUNT_KINDS,
 ];
 export const DAMAGE_TYPE_OPTIONS: DamageType[] = [...DAMAGE_TYPES];
-/** @deprecated Canvas VFX 移行中。エディタ互換用 */
-export const VFX_PRESET_OPTIONS: SkillVfxPresetId[] = [...VFX_PRESETS];
 export const VFX_ANCHOR_OPTIONS: VfxAnchor[] = [...VFX_ANCHORS];
 export const VFX_LAYER_OPTIONS: VfxLayer[] = [...VFX_LAYERS];
 
-/** @deprecated Canvas VFX 移行中 */
-export const VFX_PRESET_LABELS: Record<SkillVfxPresetId, string> = {
-  slash: "slash（攻撃スイング）",
-  slashHit: "slashHit（ダメージ）",
-  orb: "orb",
-  arrow: "arrow",
-  healRise: "healRise",
-  chainLightning: "chainLightning（連鎖雷）",
-  impale: "impale（貫通）",
-};
 export const TARGET_RULE_OPTIONS: TargetRule[] = [...TARGET_RULES];
 export const TARGET_SHAPE_OPTIONS: TargetShape[] = [...TARGET_SHAPES];
 export const PASSIVE_EFFECT_KIND_OPTIONS: PassiveEffectKind[] = [

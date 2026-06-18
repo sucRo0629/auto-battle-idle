@@ -180,7 +180,7 @@ addActive('at_sorcerer_active_2', '集中砲', { kind: 'time', value: 11 }, [
 ]);
 
 addActive('at_enchanter_active_1', '連符', { kind: 'time', value: 9 }, [
-  { targetRule: 'frontEnemy', targetShape: 'chain', chainCount: 3, chainMaxDistancePx: 80, type: 'damage', damageType: 'magic', amount: { kind: 'atkBased', atkScale: 0.75 }, range: 50, vfx: { preset: 'chainLightning' } },
+  { targetRule: 'frontEnemy', targetShape: 'chain', chainCount: 3, chainMaxDistancePx: 80, type: 'damage', damageType: 'magic', amount: { kind: 'atkBased', atkScale: 0.75 }, range: 50, vfx: { enabled: true } },
 ]);
 addActive('at_enchanter_active_2', '爆符', { kind: 'time', value: 11 }, [
   magicHit(1.2, { targetShape: 'aoe', aoeRadiusPx: 55 }),

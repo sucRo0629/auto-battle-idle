@@ -61,9 +61,6 @@ function validateEffectPresentation(
   effect: SkillEffectDef,
   label: string,
 ): string | null {
-  if (effect.vfx !== undefined && !effect.vfx.preset) {
-    return `${label}: vfx.preset を選択してから保存してください`;
-  }
   return validateAnimPhaseFields(effect, label);
 }
 

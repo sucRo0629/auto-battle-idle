@@ -9,7 +9,6 @@ import {
   GROWTH_TIER_OPTIONS,
   REG_OPTIONS,
   ROLE_OPTIONS,
-  VFX_PRESET_OPTIONS,
 } from "../battle/data/gameDataSchema.ts";
 import type {
   DamageType,
@@ -17,7 +16,6 @@ import type {
   GrowthPresetKey,
   GrowthTier,
   Role,
-  SkillVfxPresetId,
 } from "../battle/types.ts";
 import {
   CONFIGURABLE_RANGE_PX_MAX,
@@ -470,28 +468,24 @@ export class ClassEditorStep {
     identityGrid.appendChild(
       createFieldRow(
         "通常攻撃 VFX",
-        createSelect(
-          draft.class.traits.basicAttackVfx?.preset ?? "",
-          [
-            { value: "", label: "— なし —" },
-            ...VFX_PRESET_OPTIONS.map((value) => ({
-              value,
-              label: value,
-            })),
-          ],
-          (preset) => {
+        (() => {
+          const row = createEl("div", "editor-field editor-field-checkbox");
+          const input = createEl("input") as HTMLInputElement;
+          input.type = "checkbox";
+          input.checked = draft.class.traits.basicAttackVfx?.enabled !== false;
+          input.addEventListener("change", () => {
             commitDraft((next) => {
-              if (!preset) {
-                delete next.class.traits.basicAttackVfx;
+              if (!input.checked) {
+                next.class.traits.basicAttackVfx = { enabled: false };
                 return;
               }
-              next.class.traits.basicAttackVfx = {
-                preset: preset as SkillVfxPresetId,
-                ...(preset === "arrow" ? { arc: true } : {}),
-              };
+              next.class.traits.basicAttackVfx = { enabled: true };
             }, { rerender: true });
-          }
-        )
+          });
+          row.appendChild(createEl("label", undefined, "PNG VFX 有効"));
+          row.appendChild(input);
+          return row;
+        })(),
       )
     );
     identityGrid.appendChild(

@@ -18,7 +18,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       battleX: 200,
       threat: 120,
       baseThreat: 120,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
         learnedPassiveIds: [],
@@ -32,7 +32,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       battleX: 210,
       threat: 40,
       baseThreat: 40,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
         learnedPassiveIds: [],
@@ -44,7 +44,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       id: 'melee',
       isEnemy: true,
       battleX: 250,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
       build: {
         learnedPassiveIds: [],
@@ -68,7 +68,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       id: 'guard',
       formationRow: 'front',
       battleX: 200,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
         learnedPassiveIds: [],
@@ -82,7 +82,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       battleX: 80,
       threat: 200,
       baseThreat: 200,
-      traits: { rangePx: 100, damageType: 'magic', basicAttackVfx: { preset: 'orb' } },
+      traits: { rangePx: 100, damageType: 'magic', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
         learnedPassiveIds: [],
@@ -94,7 +94,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       id: 'melee',
       isEnemy: true,
       battleX: 250,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
       build: {
         learnedPassiveIds: [],
@@ -144,7 +144,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       id: 'melee',
       isEnemy: true,
       battleX: 250,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
       build: {
         learnedPassiveIds: [],
@@ -182,7 +182,7 @@ describe('resolveEnemyAttackTargetPlayer', () => {
       battleX: 200,
       threat: 120,
       baseThreat: 120,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
         learnedPassiveIds: [],
@@ -196,7 +196,7 @@ describe('resolveEnemyAttackTargetPlayer', () => {
       battleX: 210,
       threat: 40,
       baseThreat: 40,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
         learnedPassiveIds: [],
@@ -208,7 +208,7 @@ describe('resolveEnemyAttackTargetPlayer', () => {
       id: 'melee',
       isEnemy: true,
       battleX: 200 + engagedMinBodyGap(),
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
       build: {
         learnedPassiveIds: [],
@@ -236,7 +236,7 @@ describe('resolveEnemyApproachBattleX', () => {
       battleX: 200,
       threat: 100,
       baseThreat: 100,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
         learnedPassiveIds: [],
@@ -248,7 +248,7 @@ describe('resolveEnemyApproachBattleX', () => {
       id: 'melee',
       isEnemy: true,
       battleX: 300,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
       build: {
         learnedPassiveIds: [],
@@ -287,7 +287,7 @@ describe('resolveEnemyApproachBattleX', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 180,
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });
@@ -312,21 +312,21 @@ describe('resolveEnemyApproachBattleX', () => {
     const rangedEnemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 300,
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
     const melee = mockCombatant({
       id: 'melee',
       isEnemy: true,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 250,
       cooldowns: [],
     });
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 180,
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });
@@ -345,28 +345,28 @@ describe('resolveEnemyApproachBattleX', () => {
     const rangedEnemy = mockCombatant({
       id: 'ranged',
       isEnemy: true,
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 300,
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
     const melee = mockCombatant({
       id: 'melee',
       isEnemy: true,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 250,
       cooldowns: [],
     });
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
-      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { preset: 'arrow', arc: true } },
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 60,
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 180,
       cooldowns: [{ skillId: 'bow_basic', remaining: 0, slotKind: 'basic' }],
     });

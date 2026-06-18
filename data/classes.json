@@ -8,7 +8,7 @@
     "traits": {
       "rangePx": 30,
       "basicAttackVfx": {
-        "preset": "slashHit"
+        "enabled": true
       }
     },
     "maxHp": 235,
@@ -160,7 +160,7 @@
     "traits": {
       "rangePx": 50,
       "basicAttackVfx": {
-        "preset": "slashHit"
+        "enabled": true
       }
     },
     "maxHp": 165,
@@ -200,7 +200,7 @@
     "traits": {
       "rangePx": 30,
       "basicAttackVfx": {
-        "preset": "slash"
+        "enabled": true
       }
     },
     "maxHp": 100,
@@ -247,7 +247,7 @@
     "traits": {
       "rangePx": 80,
       "basicAttackVfx": {
-        "preset": "impale"
+        "enabled": true
       }
     },
     "maxHp": 150,
@@ -438,7 +438,7 @@
       "rangePx": 150,
       "damageType": "magic",
       "basicAttackVfx": {
-        "preset": "chainLightning"
+        "enabled": true
       }
     },
     "maxHp": 78,
@@ -510,7 +510,7 @@
     "traits": {
       "rangePx": 128,
       "basicAttackVfx": {
-        "preset": "orb"
+        "enabled": true
       },
       "damageType": "magic"
     },

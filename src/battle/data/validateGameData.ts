@@ -48,7 +48,6 @@ import type {
   SkillTriggerKind,
   SkillRegistry,
   SkillVfxDef,
-  SkillVfxPresetId,
   StageDef,
   StatusEffectStat,
   TargetRule,
@@ -104,7 +103,6 @@ import {
   SKILL_TRIGGER_KINDS,
   TARGET_SHAPES,
   VALID_REG_VALUES,
-  VFX_PRESETS,
   VFX_ANCHORS,
   VFX_LAYERS,
   DEBUFF_FILTER_TAG_OPTIONS,
@@ -133,7 +131,6 @@ const COUNTER_RESPONSE_KINDS_SET = new Set<CounterResponseKind>(
   COUNTER_RESPONSE_KINDS,
 );
 const DAMAGE_TYPES_SET = new Set<DamageType>(DAMAGE_TYPES);
-const VFX_PRESETS_SET = new Set<SkillVfxPresetId>(VFX_PRESETS);
 const VFX_ANCHORS_SET = new Set<VfxAnchor>(VFX_ANCHORS);
 const VFX_LAYERS_SET = new Set<VfxLayer>(VFX_LAYERS);
 const TARGET_RULES_SET = new Set<TargetRule>(TARGET_RULES);
@@ -1126,31 +1123,11 @@ function parseSkillVfx(
     invalidField(context, 'enabled', 'must be a boolean');
   }
   const placement = parseVfxPlacement(obj.placement, `${context}.placement`);
-  const preset =
-    obj.preset === undefined
-      ? undefined
-      : requireEnum(obj, 'preset', context, VFX_PRESETS_SET);
-  const arc = obj.arc;
-  if (arc !== undefined && typeof arc !== 'boolean') {
-    invalidField(context, 'arc', 'must be a boolean');
-  }
-  const durationMs = obj.durationMs;
-  if (
-    durationMs !== undefined &&
-    (typeof durationMs !== 'number' ||
-      Number.isNaN(durationMs) ||
-      durationMs <= 0)
-  ) {
-    invalidField(context, 'durationMs', 'must be a positive number');
-  }
   const animPhase = parseOptionalAnimPhaseFields(obj, context);
   return {
     ...animPhase,
     ...(typeof enabled === 'boolean' ? { enabled } : {}),
     ...(placement !== undefined ? { placement } : {}),
-    ...(preset !== undefined ? { preset } : {}),
-    ...(typeof arc === 'boolean' ? { arc } : {}),
-    ...(typeof durationMs === 'number' ? { durationMs } : {}),
   };
 }
 

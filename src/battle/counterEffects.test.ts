@@ -70,7 +70,7 @@ describe('isCounterInTriggerRange', () => {
       traits: {
         rangePx: 80,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'slash' },
+        basicAttackVfx: { enabled: true },
       },
     });
     const attacker = mockCombatant({
@@ -108,7 +108,7 @@ describe('isCounterInTriggerRange', () => {
       traits: {
         rangePx: 100,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'slash' },
+        basicAttackVfx: { enabled: true },
       },
     });
     const effect = counterStatus(
@@ -125,7 +125,7 @@ describe('resolveCounterRangePx', () => {
       traits: {
         rangePx: 120,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'arrow', arc: true },
+        basicAttackVfx: { enabled: true },
       },
     });
     expect(resolveCounterRangePx(undefined, victim)).toBe(120);
@@ -266,7 +266,7 @@ describe('applyCounterRetaliation', () => {
       traits: {
         rangePx: 100,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'slash' },
+        basicAttackVfx: { enabled: true },
       },
     });
     const emit = vi.fn();
@@ -407,7 +407,7 @@ describe('applyPassiveCounterRetaliation', () => {
         equippedActiveSlots: [],
       },
       battleX: 100,
-      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { preset: 'slash' } },
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
     });
     const attacker = mockCombatant({
       id: 'attacker',
@@ -417,7 +417,7 @@ describe('applyPassiveCounterRetaliation', () => {
       traits: {
         rangePx: 100,
         damageType: 'physical',
-        basicAttackVfx: { preset: 'slash' },
+        basicAttackVfx: { enabled: true },
       },
     });
     const emit = vi.fn();
