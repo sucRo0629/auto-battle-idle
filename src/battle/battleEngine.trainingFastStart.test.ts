@@ -25,7 +25,7 @@ describe('BattleEngine training fast start', () => {
     expect(snap.waveAnnouncementActive).toBe(false);
     expect(snap.partyDeployActive).toBe(false);
     expect(snap.engaged).toBe(false);
-    expect(snap.enemies.length).toBe(3);
+    expect(snap.enemies.length).toBe(5);
   });
 
   it('stage 1 still uses wave announcement flow', () => {

@@ -98,7 +98,10 @@ describe('computeDamagePopupTops', () => {
     const result = topsFor(popups, baseAnchorYById);
     expect(result.get(0)).toBe(baseY);
     expect(result.get(1)).toBeLessThan(baseY);
-    expect(baseY - result.get(1)!).toBeCloseTo(textHeight / 2, 0);
+    expect(baseY - result.get(1)!).toBeCloseTo(
+      textHeight - textHeight / 1.1,
+      0,
+    );
   });
 
   it('does not offset popups that are horizontally separated', () => {

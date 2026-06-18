@@ -66,7 +66,7 @@ describe('training dummy positions', () => {
 
     const deployTargets = expectedDeployPositions(internal.enemies);
     const deployXs = [...deployTargets.values()].sort((a, b) => a - b);
-    expect(deployXs.length).toBe(3);
+    expect(deployXs.length).toBe(5);
     for (let i = 1; i < deployXs.length; i++) {
       expect(deployXs[i]! - deployXs[i - 1]!).toBeGreaterThanOrEqual(SPRITE_GAP);
     }
