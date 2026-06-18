@@ -271,19 +271,14 @@ export class BattleView {
               ),
             );
         if (!presentation) return;
-        const isChainLightning =
-          presentation.vfx?.preset === "chainLightning";
-        const isChainEffect = effectDef.targetShape === "chain";
-        const chainGroupId = isChainLightning
-          ? `${event.actorId}:${event.skillId}:${event.effectIndex ?? 0}`
-          : undefined;
-        const skipStagedChainVfx =
-          event.stagedChainVfx === true && isChainLightning && isChainEffect;
         playSkillHitFeedback(this.canvas, {
           sourceId: event.vfxSourceId ?? event.actorId,
           targetId: event.targetId,
           presentation,
           effect: effectDef,
+          skillId: skillDef.id,
+          effectIndex: event.effectIndex ?? 0,
+          hitIndex: event.hitIndex,
           amount: event.amount,
           kind:
             event.effect === "damage"
@@ -306,77 +301,9 @@ export class BattleView {
                   event.amount,
                 ].join(":")
               : undefined,
-          skipMainVfx: skipStagedChainVfx,
-          vfxOptions: isChainLightning
-            ? {
-                chainGroupId,
-                showTalisman:
-                  isChainEffect && (event.hitIndex ?? 0) === 0,
-                chainInstantHit:
-                  isChainEffect && (event.hitIndex ?? 0) !== 0,
-              }
-            : undefined,
+          skipMainVfx: (event.hitIndex ?? 0) > 0,
         });
-        if (
-          isChainLightning &&
-          isChainEffect &&
-          (event.effect === "damage" || event.effect === "dot")
-        ) {
-          if (event.stagedChainVfx) {
-            if (
-              (event.hitIndex ?? 0) >= 1 &&
-              event.vfxSourceId !== undefined
-            ) {
-              this.canvas.fadeCurseMark(event.vfxSourceId);
-            }
-            this.canvas.playCurseMark(event.targetId, { staged: true });
-            if (event.isLastChainSegment && chainGroupId) {
-              this.canvas.fadeLatestChainSegment(chainGroupId);
-              this.canvas.fadeCurseMark(event.targetId);
-            }
-          } else {
-            this.canvas.playCurseMark(event.targetId);
-          }
-        }
       }
-    } else if (event.type === "chainSegmentVfx") {
-      const snapshot = this.engine.getSnapshot();
-      const actor = [...snapshot.allies, ...snapshot.enemies].find(
-        (c) => c.id === event.actorId,
-      );
-      const slotKind = event.slotKind ?? "active";
-      const skillDef = this.gameData.skillRegistry.actives[event.skillId];
-      const effectDef = skillDef?.effect[event.effectIndex];
-      if (!skillDef || !effectDef) return;
-      const presentation = resolveSkillPresentation(
-        skillDef,
-        effectDef,
-        buildSkillPresentationContext(
-          actor,
-          slotKind,
-          effectDef,
-          skillDef.id,
-          event.effectIndex,
-        ),
-      );
-      if (!presentation.vfx) return;
-
-      const travelDurationMs = Math.round(event.travelDurationSec * 1000);
-      const segmentDurationMs = Math.round(
-        event.travelDurationSec * event.segmentCount * 1000,
-      );
-      playSkillHitFeedback(this.canvas, {
-        sourceId: event.vfxSourceId ?? event.actorId,
-        targetId: event.targetId,
-        presentation,
-        effect: effectDef,
-        vfxOptions: {
-          chainGroupId: `${event.actorId}:${event.skillId}:${event.effectIndex}`,
-          showTalisman: event.hitIndex === 0,
-          travelDurationMs,
-          segmentDurationMs,
-        },
-      });
     } else if (event.type === "basicAttackCountCharged") {
       this.refreshPartyHud();
     } else if (event.type === "evade") {

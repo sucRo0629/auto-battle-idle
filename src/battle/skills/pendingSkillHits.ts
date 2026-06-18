@@ -8,15 +8,9 @@ import type {
 } from '../types.ts';
 
 export interface BuildPendingHitsOptions {
-  stagedChainVfx?: boolean;
   effectIndex?: number;
   /** applyFrame 等による全ヒット共通の先頭遅延（秒） */
   baseDelaySec?: number;
-}
-
-export interface TickPendingHitsCallbacks {
-  onApply: (hit: PendingSkillHit) => void | boolean;
-  onVfxStart?: (hit: PendingSkillHit) => void;
 }
 
 export function buildPendingHitsFromResolution(
@@ -38,19 +32,16 @@ export function buildPendingHitsFromResolution(
 
   const segmentShape =
     effectDef.targetShape === 'chain' || effectDef.targetShape === 'pierce';
-  const stagedChainVfx = options?.stagedChainVfx === true;
-  const travelSec = stagedChainVfx ? spread / waves.length : undefined;
   let segmentSourceId = actorId;
 
   return waves.map((wave) => {
     const hitIndex = wave.hitIndex;
     let applyAtBattleSec: number;
     if (hasSpread) {
-      applyAtBattleSec = stagedChainVfx
-        ? battleSec + baseDelaySec + (hitIndex + 1) * travelSec!
-        : battleSec +
-          baseDelaySec +
-          (spread * hitIndex) / Math.max(waves.length, 1);
+      applyAtBattleSec =
+        battleSec +
+        baseDelaySec +
+        (spread * hitIndex) / Math.max(waves.length, 1);
     } else {
       applyAtBattleSec = battleSec + baseDelaySec;
     }
@@ -68,13 +59,6 @@ export function buildPendingHitsFromResolution(
         targetId: entry.unit.id,
         powerMultiplierOverride: entry.powerMultiplierOverride,
       })),
-      ...(stagedChainVfx
-        ? {
-            vfxStartAtBattleSec: battleSec + baseDelaySec + hitIndex * travelSec!,
-            travelDurationSec: travelSec,
-            segmentCount: waves.length,
-          }
-        : {}),
     };
     if (segmentShape) {
       hit.vfxSourceId = segmentSourceId;
@@ -90,13 +74,8 @@ export function buildPendingHitsFromResolution(
 export function tickPendingHits(
   queue: PendingSkillHit[],
   battleSec: number,
-  callbacks: TickPendingHitsCallbacks | ((hit: PendingSkillHit) => void),
+  onApply: (hit: PendingSkillHit) => void | boolean,
 ): PendingSkillHit[] {
-  const { onApply, onVfxStart } =
-    typeof callbacks === 'function'
-      ? { onApply: callbacks, onVfxStart: undefined }
-      : callbacks;
-
   const remaining: PendingSkillHit[] = [];
   const sorted = [...queue].sort(
     (a, b) =>
@@ -111,19 +90,6 @@ export function tickPendingHits(
       }
     } else {
       remaining.push(hit);
-    }
-  }
-
-  if (onVfxStart) {
-    for (const hit of queue) {
-      if (
-        hit.vfxStartAtBattleSec !== undefined &&
-        hit.vfxStartAtBattleSec <= battleSec &&
-        !hit.vfxSpawned
-      ) {
-        onVfxStart(hit);
-        hit.vfxSpawned = true;
-      }
     }
   }
 

@@ -907,14 +907,6 @@ export interface PendingSkillHit {
   /** chain/pierce 等: VFX セグメント起点 */
   vfxSourceId?: string;
   targets: PendingSkillHitTarget[];
-  /** staged chain: 飛行 VFX 開始時刻 */
-  vfxStartAtBattleSec?: number;
-  /** staged chain: 1 レグの飛行時間（秒） */
-  travelDurationSec?: number;
-  /** staged chain: セグメント総数 */
-  segmentCount?: number;
-  /** tick 用: VFX 開始済み */
-  vfxSpawned?: boolean;
 }
 
 export interface DamageSkillEffect extends SkillEffectCommon {

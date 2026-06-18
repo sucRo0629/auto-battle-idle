@@ -256,7 +256,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | `pierce`    | **`order: selfOrigin` 必須**。使用者の向き（味方 +X / 敵 −X）へ `range` px の前方セグメント内を手前→奥に命中。`piercePowerStepMultiplier` で威力減衰、`pierceDurationSec` で適用分散可 |
 | `chain`     | anchor から同陣営へ距離内で連鎖。直前 hop と同じユニットには飛ばない。範囲内に未命中がいれば最も近い未命中を優先（全員命中済みなら再訪問可）。`chainPowerStepMultiplier` で威力減衰、`chainDurationSec`（未指定時 `0.15×chainCount+0.5` 秒）で **スキル発動から最終命中まで** の総時間分散 |
 
-`chain` + VFX `chainLightning`（符術士など）では、各レグ = `chainDurationSec ÷ 跳数` 秒。1 跳目は符が飛んでから着弾（封＋ダメージ）、以降は前ターゲットから雷線が伸びて着弾。封のフェードアウトは雷線セグメントと同期（320ms）。
+`chain` の各跳は `chainDurationSec ÷ 跳数` 秒間隔で **ダメージ適用と同時** に target 位置へ PNG hit VFX（`hitVfx`、未指定時は `vfx` を target placement で再生）を出す。main VFX（`vfx`、actor placement）は 1 跳目のみ。
 | `scatter`   | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
 
 
@@ -314,5 +314,6 @@ VFX パラメータ調整・Canvas プレビューは **Phase 5 演出調整ツ�
 | スタン（CC）       | オーバーレイ `stun` |
 | 死亡          | entity death 行（body atlas） |
 
+**VFX 再生（`playSkillHitFeedback`）:** `skill` イベントごとに main（actor placement・1 跳目のみ）と hit（target placement・`hitVfx` 未指定時は `vfx` フォールバック）を PNG strip で再生。`scatter` / `chain` / `hitCount` 分散時は各適用タイミングで hit VFX を独立インスタンスとして重ね表示可。
 
 ロジックは `BattleEvent` を発火；`BattleView` が `BattleCanvas` を駆動。`render/` に戦闘ルールは置かない。

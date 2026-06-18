@@ -134,6 +134,8 @@ export class PresentationPreviewRunner {
         targetId: PREVIEW_TARGET_ID,
         presentation,
         effect,
+        skillId: request.skill.id,
+        effectIndex: request.effectIndex,
         amount:
           effect.type === 'damage' || effect.type === 'dot' || effect.type === 'heal'
             ? 99

@@ -73,14 +73,13 @@ describe('buildPendingHitsFromResolution vfxSourceId', () => {
   });
 });
 
-describe('buildPendingHitsFromResolution staged chain', () => {
+describe('buildPendingHitsFromResolution chain spread', () => {
   const effectDef = {
     type: 'damage',
     targetShape: 'chain',
     chainCount: 3,
     chainMaxDistancePx: 80,
     chainDurationSec: 0.9,
-    vfx: { preset: 'chainLightning' },
     target: { kind: 'distance', side: 'enemy', order: 'nearest' },
     damageType: 'magic',
     amount: { kind: 'atkBased', atkScale: 1 },
@@ -92,7 +91,7 @@ describe('buildPendingHitsFromResolution staged chain', () => {
     { hitIndex: 2, targets: [{ unit: { id: 'e3' } as never }] },
   ];
 
-  it('schedules vfx start before apply for each hop', () => {
+  it('schedules evenly spread apply times for each hop', () => {
     const hits = buildPendingHitsFromResolution(
       { spreadDurationSec: 0.9, waves },
       1,
@@ -100,16 +99,13 @@ describe('buildPendingHitsFromResolution staged chain', () => {
       skill,
       effectDef,
       { skillId: skill.id, remaining: 0, slotKind: 'active' },
-      { stagedChainVfx: true, effectIndex: 0 },
+      { effectIndex: 0 },
     );
 
-    expect(hits.map((hit) => hit.vfxStartAtBattleSec)).toEqual([1, 1.3, 1.6]);
-    expect(hits.map((hit) => hit.applyAtBattleSec)).toEqual([1.3, 1.6, 1.9]);
-    expect(hits.map((hit) => hit.travelDurationSec)).toEqual([0.3, 0.3, 0.3]);
-    expect(hits.map((hit) => hit.segmentCount)).toEqual([3, 3, 3]);
+    expect(hits.map((hit) => hit.applyAtBattleSec)).toEqual([1, 1.3, 1.6]);
   });
 
-  it('fires vfx start before apply on tick', () => {
+  it('applies hops as battle time advances', () => {
     const hits = buildPendingHitsFromResolution(
       { spreadDurationSec: 0.9, waves },
       0,
@@ -117,25 +113,22 @@ describe('buildPendingHitsFromResolution staged chain', () => {
       skill,
       effectDef,
       { skillId: skill.id, remaining: 0, slotKind: 'active' },
-      { stagedChainVfx: true, effectIndex: 0 },
+      { effectIndex: 0 },
     );
-    const onVfxStart = vi.fn();
     const onApply = vi.fn();
 
-    let queue = tickPendingHits(hits, 0, { onVfxStart, onApply });
-    expect(onVfxStart).toHaveBeenCalledTimes(1);
-    expect(onVfxStart.mock.calls[0]?.[0]?.hitIndex).toBe(0);
-    expect(onApply).not.toHaveBeenCalled();
-
-    queue = tickPendingHits(queue, 0.3, { onVfxStart, onApply });
+    let queue = tickPendingHits(hits, 0, onApply);
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(onApply.mock.calls[0]?.[0]?.hitIndex).toBe(0);
-    expect(onVfxStart).toHaveBeenCalledTimes(2);
-    expect(onVfxStart.mock.calls[1]?.[0]?.hitIndex).toBe(1);
     expect(queue).toHaveLength(2);
+
+    queue = tickPendingHits(queue, 0.3, onApply);
+    expect(onApply).toHaveBeenCalledTimes(2);
+    expect(onApply.mock.calls[1]?.[0]?.hitIndex).toBe(1);
+    expect(queue).toHaveLength(1);
   });
 
-  it('applies every hop and spawns vfx for the full chain', () => {
+  it('applies every hop across the full chain duration', () => {
     const hits = buildPendingHitsFromResolution(
       { spreadDurationSec: 0.9, waves },
       0,
@@ -143,18 +136,16 @@ describe('buildPendingHitsFromResolution staged chain', () => {
       skill,
       effectDef,
       { skillId: skill.id, remaining: 0, slotKind: 'active' },
-      { stagedChainVfx: true, effectIndex: 0 },
+      { effectIndex: 0 },
     );
-    const onVfxStart = vi.fn();
     const onApply = vi.fn();
     let queue = hits;
 
     for (const t of [0, 0.3, 0.6, 0.9]) {
-      queue = tickPendingHits(queue, t, { onVfxStart, onApply });
+      queue = tickPendingHits(queue, t, onApply);
     }
 
     expect(onApply).toHaveBeenCalledTimes(3);
-    expect(onVfxStart).toHaveBeenCalledTimes(3);
     expect(queue).toHaveLength(0);
   });
 
@@ -169,12 +160,12 @@ describe('buildPendingHitsFromResolution staged chain', () => {
     );
     const onApply = vi.fn(() => false);
 
-    let queue = tickPendingHits(hits, 0, { onApply });
+    let queue = tickPendingHits(hits, 0, onApply);
     expect(onApply).toHaveBeenCalledTimes(1);
     expect(queue).toHaveLength(1);
 
     onApply.mockReturnValue(true);
-    queue = tickPendingHits(queue, 0, { onApply });
+    queue = tickPendingHits(queue, 0, onApply);
     expect(queue).toHaveLength(0);
   });
 
@@ -186,11 +177,11 @@ describe('buildPendingHitsFromResolution staged chain', () => {
       skill,
       effectDef,
       { skillId: skill.id, remaining: 0, slotKind: 'active' },
-      { stagedChainVfx: true, effectIndex: 0 },
+      { effectIndex: 0 },
     );
     const onApply = vi.fn();
 
-    const queue = tickPendingHits(hits, 0.9, { onApply });
+    const queue = tickPendingHits(hits, 0.9, onApply);
 
     expect(onApply).toHaveBeenCalledTimes(3);
     expect(onApply.mock.calls.map((call) => call[0]?.hitIndex)).toEqual([0, 1, 2]);

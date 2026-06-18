@@ -57,7 +57,6 @@ import {
   buildPendingHitsFromResolution,
   findCombatantById,
 } from './pendingSkillHits.ts';
-import { usesStagedChainVfx } from './resolveEffectHasVfx.ts';
 import { resolveSkillDamageType } from './damageTypeUtils.ts';
 import {
   buildSkillSequence,
@@ -78,19 +77,13 @@ import {
 function skillHitEventFields(
   hitIndex?: number,
   vfxSourceId?: string,
-  isLastChainSegment?: boolean,
-  stagedChainVfx?: boolean,
 ): {
   hitIndex?: number;
   vfxSourceId?: string;
-  isLastChainSegment?: boolean;
-  stagedChainVfx?: boolean;
 } {
   return {
     ...(hitIndex !== undefined ? { hitIndex } : {}),
     ...(vfxSourceId !== undefined ? { vfxSourceId } : {}),
-    ...(isLastChainSegment ? { isLastChainSegment: true } : {}),
-    ...(stagedChainVfx ? { stagedChainVfx: true } : {}),
   };
 }
 
@@ -267,13 +260,6 @@ export class SkillExecutor {
       (spread !== undefined && spread > 0) ||
       applyDelaySec > 0
     ) {
-      const stagedChainVfx = usesStagedChainVfx(
-        skill,
-        effectDef,
-        actor,
-        cd.slotKind,
-        effectIndex,
-      );
       const pending = buildPendingHitsFromResolution(
         resolution!,
         this.deps.getBattleTimeSec(),
@@ -281,7 +267,7 @@ export class SkillExecutor {
         skill,
         effectDef,
         cd,
-        { stagedChainVfx, effectIndex, baseDelaySec: applyDelaySec },
+        { effectIndex, baseDelaySec: applyDelaySec },
       );
       if (pending.length > 0) {
         if (applyDelaySec > 0) {
@@ -440,10 +426,6 @@ export class SkillExecutor {
 
     const effectIndex =
       hit.effectIndex >= 0 ? hit.effectIndex : 0;
-    const isLastChainSegment =
-      hit.segmentCount !== undefined &&
-      hit.hitIndex === hit.segmentCount - 1;
-    const stagedChainVfx = hit.travelDurationSec !== undefined;
     let appliedAny = false;
     for (const entry of hit.targets) {
       const target = findCombatantById(entry.targetId, allies, enemies);
@@ -460,8 +442,6 @@ export class SkillExecutor {
           hit.hitIndex,
           hit.vfxSourceId,
           {},
-          isLastChainSegment,
-          stagedChainVfx,
         )
       ) {
         appliedAny = true;
@@ -543,8 +523,6 @@ export class SkillExecutor {
     hitIndex?: number,
     vfxSourceId?: string,
     damageContext: PassiveDamageContext = {},
-    isLastChainSegment?: boolean,
-    stagedChainVfx?: boolean,
   ): boolean {
     if (effectDef.type === 'move') {
       return false;
@@ -614,7 +592,7 @@ export class SkillExecutor {
         effectIndex,
         amount: finalDamage,
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       this.emit({ type: 'hurt', targetId: target.id });
       if (lethal) {
@@ -673,7 +651,7 @@ export class SkillExecutor {
           effectIndex,
           statusLabel: 'hot',
           range: effectDef.range,
-          ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+          ...skillHitEventFields(hitIndex, vfxSourceId),
         });
         return true;
       }
@@ -697,7 +675,7 @@ export class SkillExecutor {
           effectIndex,
           amount: removed,
           range: effectDef.range,
-          ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+          ...skillHitEventFields(hitIndex, vfxSourceId),
         });
         return true;
       }
@@ -749,7 +727,7 @@ export class SkillExecutor {
         effectIndex,
         amount,
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -781,7 +759,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'basicAttackTransform',
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -820,7 +798,7 @@ export class SkillExecutor {
             effectIndex,
             amount: grant,
             range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+            ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
@@ -853,7 +831,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: subKind,
             range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+            ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
@@ -884,7 +862,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: 'damageTakenToHeal',
             range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+            ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
@@ -940,7 +918,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: 'dot',
             range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+            ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           this.deps.onTargetReceivedDebuff?.(target);
           return true;
@@ -969,7 +947,7 @@ export class SkillExecutor {
             effectIndex,
             statusLabel: 'stun',
             range: effectDef.range,
-            ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+            ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           this.deps.onTargetReceivedDebuff?.(target);
           return true;
@@ -1042,7 +1020,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: statusLabels.join(', '),
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       if (!isBuff && actor.isEnemy === false && target.isEnemy) {
         this.deps.onDebuffApplied?.(actor);
@@ -1075,7 +1053,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'stun',
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       this.deps.onTargetReceivedDebuff?.(target);
       return true;
@@ -1094,7 +1072,7 @@ export class SkillExecutor {
         effect: 'knockback',
         effectIndex,
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -1119,7 +1097,7 @@ export class SkillExecutor {
         effectIndex,
         amount: removed,
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -1148,7 +1126,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'block',
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -1174,7 +1152,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'counter',
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
@@ -1207,7 +1185,7 @@ export class SkillExecutor {
         effectIndex,
         statusLabel: 'dot',
         range: effectDef.range,
-        ...skillHitEventFields(hitIndex, vfxSourceId, isLastChainSegment, stagedChainVfx),
+        ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }

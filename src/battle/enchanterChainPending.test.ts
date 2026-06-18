@@ -29,20 +29,16 @@ function createEnchanterTestEngine(): BattleEngine {
 }
 
 describe('enchanter staged chain pending hits', () => {
-  it('applies all chain hops and emits segment vfx on test stage', () => {
+  it('applies all chain hops on test stage', () => {
     const engine = createEnchanterTestEngine();
     engine.startBattle();
 
     const chainDamageHits: number[] = [];
-    const chainVfxHits: number[] = [];
     engine.onEvent((event: BattleEvent) => {
       if (event.type === 'skill' && event.effect === 'damage') {
         if (event.hitIndex !== undefined) {
           chainDamageHits.push(event.hitIndex);
         }
-      }
-      if (event.type === 'chainSegmentVfx') {
-        chainVfxHits.push(event.hitIndex);
       }
     });
 
@@ -56,7 +52,6 @@ describe('enchanter staged chain pending hits', () => {
     }
 
     expect(chainDamageHits.sort()).toEqual([0, 1, 2]);
-    expect(chainVfxHits.sort()).toEqual([0, 1, 2]);
     expect(maxPending).toBeGreaterThanOrEqual(2);
     expect(eng.pendingHitQueue?.length ?? 0).toBe(0);
   });

@@ -1445,28 +1445,8 @@ export class BattleEngine {
     this.pendingHitQueue = tickPendingHits(
       this.pendingHitQueue,
       this.battleTimeSec,
-      {
-        onApply: (hit) => this.executor.applyPendingHit(hit),
-        onVfxStart: (hit) => this.emitChainSegmentVfx(hit),
-      },
+      (hit) => this.executor.applyPendingHit(hit),
     );
-  }
-
-  private emitChainSegmentVfx(hit: PendingSkillHit): void {
-    const targetId = hit.targets[0]?.targetId;
-    if (!targetId || hit.travelDurationSec === undefined) return;
-    this.emit({
-      type: 'chainSegmentVfx',
-      actorId: hit.actorId,
-      targetId,
-      skillId: hit.skillId,
-      slotKind: hit.slotKind,
-      effectIndex: hit.effectIndex,
-      hitIndex: hit.hitIndex,
-      ...(hit.vfxSourceId !== undefined ? { vfxSourceId: hit.vfxSourceId } : {}),
-      travelDurationSec: hit.travelDurationSec,
-      segmentCount: hit.segmentCount ?? 1,
-    });
   }
 
   private tickSkillSequences(deltaTime: number): void {

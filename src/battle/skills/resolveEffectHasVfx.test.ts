@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { resolveEffectHasVfx, usesStagedChainVfx } from './resolveEffectHasVfx.ts';
+import { resolveEffectHasVfx } from './resolveEffectHasVfx.ts';
 import type { ActiveSkillDef, CombatantState, SkillEffectDef } from '../types.ts';
 import {
   __registerVfxAnimForTest,
@@ -94,30 +94,5 @@ describe('resolveEffectHasVfx', () => {
         0,
       ),
     ).toBe(true);
-  });
-
-  it('detects staged chain for chain damage with VFX', () => {
-    __registerVfxAnimForTest('at_enchanter_active_1_0_vfx', mockImage(128));
-    expect(
-      usesStagedChainVfx(skill, chainEffect, actor, 'basic', 0),
-    ).toBe(true);
-    expect(
-      usesStagedChainVfx(
-        skill,
-        { ...chainEffect, type: 'buff', buffStat: 'attackSpeed' } as SkillEffectDef,
-        actor,
-        'basic',
-        0,
-      ),
-    ).toBe(false);
-    expect(
-      usesStagedChainVfx(
-        skill,
-        { ...chainEffect, vfx: undefined },
-        { ...actor, traits: { ...actor.traits, basicAttackVfx: undefined } },
-        'active',
-        0,
-      ),
-    ).toBe(false);
   });
 });

@@ -6,10 +6,10 @@ import type {
   SkillSlotKind,
   SkillVfxDef,
 } from "../battle/types.ts";
-import type { AttackEffectSpawnOptions } from "./AttackEffect.ts";
 import type { BattleCanvas } from "./BattleCanvas.ts";
 import { resolveSkillAnimKey } from "./skillAnimRegistry.ts";
 import {
+  isVfxDefActive,
   resolveEffectPresentation,
   type EffectPresentation,
 } from "./skillVfx/resolveEffectPresentation.ts";
@@ -37,11 +37,24 @@ export interface SkillHitFeedbackRequest {
   targetId: string;
   presentation: EffectPresentation;
   effect: SkillEffectDef;
+  skillId: string;
+  effectIndex: number;
+  hitIndex?: number;
   amount?: number;
   kind?: "damage" | "dot" | "heal";
   popupDedupeKey?: string;
   skipMainVfx?: boolean;
-  vfxOptions?: AttackEffectSpawnOptions;
+}
+
+function buildVfxInstanceId(
+  sourceId: string,
+  targetId: string,
+  skillId: string,
+  effectIndex: number,
+  hitIndex: number,
+  kind: "main" | "hit",
+): string {
+  return `${sourceId}:${targetId}:${skillId}:${effectIndex}:${hitIndex}:${kind}:${performance.now()}`;
 }
 
 const DAMAGE_POPUP_DEDUPE_WINDOW_MS = 50;
@@ -133,18 +146,60 @@ export function playSkillBody(
 export function playSkillHitFeedback(
   canvas: Pick<
     BattleCanvas,
-    "playAttackEffect" | "showDamagePopup" | "showHealPopup"
+    "playSkillVfx" | "showDamagePopup" | "showHealPopup"
   >,
   request: SkillHitFeedbackRequest,
 ): void {
-  const { sourceId, targetId, presentation, effect, amount, kind, vfxOptions } =
-    request;
+  const {
+    sourceId,
+    targetId,
+    presentation,
+    effect,
+    skillId,
+    effectIndex,
+    amount,
+    kind,
+  } = request;
+  const hitIndex = request.hitIndex ?? 0;
+  const vfxOptions = { skillId, effectIndex };
 
-  if (!request.skipMainVfx && presentation.vfx) {
-    canvas.playAttackEffect(sourceId, targetId, presentation.vfx, vfxOptions);
+  if (!request.skipMainVfx && isVfxDefActive(presentation.vfx)) {
+    canvas.playSkillVfx(
+      buildVfxInstanceId(
+        sourceId,
+        targetId,
+        skillId,
+        effectIndex,
+        hitIndex,
+        "main",
+      ),
+      sourceId,
+      targetId,
+      presentation.vfx,
+      { ...vfxOptions, kind: "main" },
+    );
   }
-  if (presentation.hitVfx) {
-    canvas.playAttackEffect(sourceId, targetId, presentation.hitVfx, vfxOptions);
+
+  const hitVfx = isVfxDefActive(presentation.hitVfx)
+    ? presentation.hitVfx
+    : isVfxDefActive(presentation.vfx)
+      ? presentation.vfx
+      : null;
+  if (hitVfx) {
+    canvas.playSkillVfx(
+      buildVfxInstanceId(
+        sourceId,
+        targetId,
+        skillId,
+        effectIndex,
+        hitIndex,
+        "hit",
+      ),
+      sourceId,
+      targetId,
+      hitVfx,
+      { ...vfxOptions, kind: "hit" },
+    );
   }
 
   if (amount === undefined) return;

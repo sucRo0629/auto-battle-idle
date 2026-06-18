@@ -43,21 +43,3 @@ export function resolveEffectHasVfx(
   );
   return vfx !== null || hitVfx !== null;
 }
-
-export function usesStagedChainVfx(
-  skill: ActiveSkillDef,
-  effectDef: SkillEffectDef,
-  actor: CombatantState,
-  slotKind: SkillSlotKind,
-  effectIndex: number,
-): boolean {
-  if (effectDef.targetShape !== 'chain') return false;
-  if (effectDef.type !== 'damage' && effectDef.type !== 'dot') return false;
-  return resolveEffectHasVfx(
-    skill,
-    effectDef,
-    actor,
-    slotKind,
-    effectIndex,
-  );
-}

@@ -25,22 +25,6 @@ export type BattleEvent =
       hitIndex?: number;
       /** chain/pierce 等: VFX セグメントの起点（未指定時は actorId） */
       vfxSourceId?: string;
-      /** staged chain: 最終跳の着弾 */
-      isLastChainSegment?: boolean;
-      /** staged chain: VFX は chainSegmentVfx で再生済み */
-      stagedChainVfx?: boolean;
-    }
-  | {
-      type: 'chainSegmentVfx';
-      actorId: string;
-      targetId: string;
-      skillId: string;
-      slotKind?: 'basic' | 'active';
-      effectIndex: number;
-      hitIndex: number;
-      vfxSourceId?: string;
-      travelDurationSec: number;
-      segmentCount: number;
     }
   | { type: 'basicAttackCountCharged'; actorId: string }
   | { type: 'hurt'; targetId: string }
