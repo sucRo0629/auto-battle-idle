@@ -5,6 +5,7 @@
 - **[Plans](plans/README.md)** — 開発ロードマップ（[フェーズ詳細](plans/phase-roadmap.md)）
 - **[Spec](spec/README.md)** — ゲーム設計リファレンス（ステータス・戦闘・クラス・進行）
 - **[Combat Architecture](combat-architecture.md)** — 戦闘システム全体の上位構造（Kill / Flow / Survival）
+- **[Class Philosophy](class-philosophy.md)** — 職群の基礎 / 発展 / 変則と 3 職構成の設計思想
 
 ## コード ↔ ドキュメント対応表
 
@@ -39,6 +40,7 @@
 |----------|----------|
 | フェーズ状況 | [plans/phase-roadmap.md](plans/phase-roadmap.md) |
 | 戦闘アーキテクチャ | [combat-architecture.md](combat-architecture.md) |
+| 職群設計思想 | [class-philosophy.md](class-philosophy.md) |
 | デモ編成・スキル | [spec/classes-and-skills.md](spec/classes-and-skills.md) |
 | ダメージ・バフ | [spec/combat.md](spec/combat.md) |
 | 戦場・座標 | [spec/battle-field.md](spec/battle-field.md) |
