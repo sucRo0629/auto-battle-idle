@@ -55,6 +55,8 @@
 - 状態保持責務 — 反映後の確定値だけを保持する。未判定の確率状態は保持しない。
 - ログ / イベント責務 — 戦闘ログと `BattleEvent` には確定結果のみを出す。例: `evaded`、`debuff applied`、`counter triggered`、`counter not triggered`。確率値や未判定状態はログ上の戦闘結果として扱わない。
 
+表示ログは成功イベント中心でもよいが、S4 検証用の内部イベント / debug ledger では失敗結果（例: debuff 非付与、counter 非発動、防御無視非適用）も **判定済みの確定結果** として観測できる形を保つ。
+
 このルールは [../combat-architecture.md](../combat-architecture.md) の「確定結果レイヤー」に従う。戦闘結果レイヤーの完全決定性とは、確率判定を禁止することではなく、判定後の結果が必ず確定状態として保存・描画・ログ出力されることを指す。
 
 ## 魔法ダメージ
@@ -129,7 +131,9 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 
 ## クールダウン
 
-クールダウンは **戦闘時間で進行するタイマー**として統一する。スタン、ターゲット不在、発動条件未成立、演出ロック、通常攻撃停止は CD タイマーを止めない。時間停止が必要な効果はスタンではなく、後述の `freeze` など別状態として定義する。
+クールダウンは **戦闘時間で進行するタイマー**として統一する。スタン、ターゲット不在、発動条件未成立、演出ロック、通常攻撃停止は CD タイマーを止めない。
+
+例外は `useDurationSec` による **SkillHold**。`useDurationSec` はスキルデータ層に置く「このスキルは hold / channel / commit time を持つ」という宣言であり、デバフや `StatusEffect` ではない。戦闘エンジン層は発動成功時にその宣言を SkillHold として解釈し、持続中の basic CD / active CD / イベントゲージ停止、busy 判定、残時間管理を行う。敵対的な時間停止が必要な効果は SkillHold ではなく、後述の `freeze` など別状態として定義する。
 
 | 枠 | 進行ルール |
 | --- | --- |
@@ -150,7 +154,7 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 | 準備完了 | `remaining === 0` | 発動しない | 発動しない | **100%（Max）** |
 | 消費 | 準備完了後の N+1 回目 | **通常攻撃の代わりに**アクティブ発動 → `remaining = N` にリセット | **N+1 回目の被弾**でアクティブ発動（ダメージは通常通り）→ リセット | 0% に戻る |
 
-ステージ開始時は `remaining = trigger.value`（ゲージ未充填）。カウントトリガーは `remaining === 0` でも active 枠から自動発動せず、上記の消費イベントを待つ。スタン中は行動不能のため `basicAttackCount` の消費イベントは起きない。`hitsTaken` はスタン中でも被弾して `hurt` が発生すれば通常どおり進む。
+ステージ開始時は `remaining = trigger.value`（ゲージ未充填）。カウントトリガーは `remaining === 0` でも active 枠から自動発動せず、上記の消費イベントを待つ。スタン中は行動不能のため `basicAttackCount` の消費イベントは起きない。`hitsTaken` はスタン中でも被弾して `hurt` が発生すれば通常どおり進む。SkillHold 中は使用者自身のイベントゲージも停止する。
 
 1 tick あたりの実行順（1ユニット）：active 枠0→1→2→3 → basic（準備完了カウント active があれば basic 枠処理時にそちらを優先）
 
@@ -171,7 +175,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 | --- | --- |
 | `presentationLock` | スキル発動後、各 effect の **body strip 再生秒** と **VFX 再生秒**（main + `hitVfx`、登録 strip があるもののみ）および **particles 再生秒**（`resolveParticlePlaybackSec`）の最大値を `resolvePresentationLockSec` で算出し、その間 **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。`useDurationSec > 0` のときは **0**（use lock が優先）。**CD は止めない**。秒数計算だけ `effectVfxOnly: false` で skill 直下 `vfx` を含めうる（再生は effect 優先ポリシーのまま）— [classes-and-skills.md](classes-and-skills.md#演出解決コード) |
 | `animLock` | body strip の再生時間だけ `SkillSequenceRunner.beginAnimLock` で保持し、`isActorBusy` / `isBasicAttackBlocked` で **他スキル発動を停止**する。`presentationLock` と同様に **CD 進行は止めない**。body 再生を止める用途はここで自動付与する。 |
-| `useDurationSec` | アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。**詠唱など、発動後に明示ロックが必要な場合のみ使う**。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**停止中も CD は進行する**。Party HUD: 停止中は `busy`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。`useDurationSec` の表示ゲージは発動後ロックを示す用途で、CD とは独立。 |
+| `useDurationSec` | アクティブのみ optional（省略 / `0` = 即時）。スキルデータ層では SkillHold を発生させる宣言だけを担う。戦闘エンジン層は発動成功時に `SkillSequenceRunner.beginUse` で SkillHold を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）を発動不可にする。hold / channel / commit time 系スキルの特性であり、デバフではない。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**SkillHold 中は使用者自身の basic CD / active CD / イベントゲージを停止する**。Party HUD: 停止中は `busy`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も hold 残量があれば busy 継続。`useDurationSec` の表示ゲージはSkillHold残量を示す用途で、通常CDとは独立。 |
 
 **Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 3px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。
 

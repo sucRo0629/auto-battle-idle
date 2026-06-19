@@ -411,7 +411,9 @@ export function resolveMoveBattleX(
     const offset = effect.anchorOffsetPx ?? 0;
     const isHostileAnchor = actor.isEnemy !== anchor.isEnemy;
     const idealToX = isHostileAnchor
-      ? anchor.battleX - offset
+      ? actor.isEnemy
+        ? anchor.battleX - offset
+        : anchor.battleX + offset
       : anchor.battleX + offset;
     const toX = isHostileAnchor
       ? moveTowardX(

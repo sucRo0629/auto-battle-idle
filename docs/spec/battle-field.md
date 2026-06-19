@@ -284,6 +284,15 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 接近（chase）と攻撃停止（attack）は **同じ target 判定系** を共有し、停止距離だけ `effectiveRangePx` で解く（`resolveApproachBattleX.ts`）。
 `getMeleeEnemyContactX` は表示や旧互換 helper 用で、接近停止の正本ではない。
 
+**Target Intent 境界:** 接近・攻撃・移動・表示は対象選択の目的が異なる。
+
+| Intent | この章での用途 | 正本 |
+| ------ | -------------- | ---- |
+| `ChaseTarget` | 自動接近で追う相手 | 敵は Threat、味方は target spec |
+| `AttackTarget` | 射程内停止と実際の攻撃対象 | 射程内プール。敵の対プレイヤーは Threat 優先 |
+| `MoveAnchor` | スキル `move` の到達基準 | 使用者との `battleX` 距離。Threat は使わない |
+| `DisplayAnchor` | 遠隔敵の表示凍結・VFX 基準 | 描画専用。戦闘判定へ逆流させない |
+
 | 側                           | chase（毎 tick 再評価）                                           | attack / 停止判定                                                  |
 | ---------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------ |
 | 敵                           | 全生存プレイヤーからヘイト最大（`resolveEnemyChaseTargetPlayer`） | 射程内プレイヤーからヘイト最大（`resolveEnemyAttackTargetPlayer`） |

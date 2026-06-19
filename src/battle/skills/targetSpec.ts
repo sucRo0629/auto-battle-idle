@@ -424,7 +424,11 @@ export function applyIncludeSelfFilter(
 }
 
 export type PickTargetOptions = {
-  /** move anchor: 至近/最遠は使用者との battleX 距離（接近 chase の編成奥選択と分離） */
+  /**
+   * Target Intent: MoveAnchor.
+   * MoveAnchor は移動の到達基準であり、AttackTarget / ChaseTarget とは別責務。
+   * 至近/最遠は使用者との battleX 距離で決め、Threat や接近 chase の編成奥選択を使わない。
+   */
   moveAnchor?: boolean;
 };
 
@@ -477,9 +481,11 @@ export function pickTargetFromPool(
 
   if (actor.isEnemy) {
     if (spec.kind === "distance" && spec.side === "enemy") {
+      // Target Intent: AttackTarget. Enemy attacks player-side targets by Threat.
       if (spec.order === "nearest" && !options?.moveAnchor) {
         return pickHighestThreatAlly(pool);
       }
+      // Target Intent: MoveAnchor. Enemy move effects use actor-distance anchors.
       if (spec.order === "nearest" || spec.order === "farthest") {
         return pickEnemyByActorDistance(actor, pool, spec.order);
       }
@@ -493,6 +499,7 @@ export function pickTargetFromPool(
       : allySelectableExcludingSelf(pool, actor);
     if (selectable.length === 0) return null;
     const actorX = getBattleX(actor);
+    // Target Intent: ally closestAlly. Same-faction distance is pure battleX distance.
     if (spec.order === "nearest") {
       return selectable.reduce((a, b) =>
         Math.abs(getBattleX(a) - actorX) <= Math.abs(getBattleX(b) - actorX)
@@ -509,10 +516,12 @@ export function pickTargetFromPool(
 
   if (spec.kind === "distance" && spec.side === "enemy") {
     if (options?.moveAnchor) {
+      // Target Intent: MoveAnchor. Player move effects also use actor-distance anchors.
       if (spec.order === "nearest" || spec.order === "farthest") {
         return pickEnemyByActorDistance(actor, pool, spec.order);
       }
     }
+    // Target Intent: AttackTarget. Player enemy nearest/farthest follows battle-line depth.
     if (spec.order === "nearest") {
       return pool.reduce((a, b) => (getBattleX(a) >= getBattleX(b) ? a : b));
     }

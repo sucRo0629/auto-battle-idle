@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import levelCurvesJson from "../../data/levelCurves.json";
 import { BattleEngine } from "./BattleEngine.ts";
-import { resolveAttackBattleX } from "./combatPosition.ts";
 import { loadGameData } from "./data/loadGameData.ts";
 import { loadLevelCurves } from "../progression/levelGrowth.ts";
 import { createDefaultSave } from "../progression/victoryRewards.ts";
@@ -50,23 +49,18 @@ function createAssassinTestDummyEngine(): BattleEngine {
 }
 
 describe("toAnchor offset move", () => {
-  it("moves past engage clamp while backstab skill motion is active", () => {
+  it("moves toward the selected MoveAnchor while backstab skill motion is active", () => {
     const engine = createAssassinFrontEngine();
     reachWave2Engage(engine);
     const internal = asBattleEngineInternals(engine);
     const assassin = internal.players.find((p) => p.name === "双刃士")!;
-    const enemy = internal.enemies.find((e) => e.isAlive)!;
     const activeCd = assassin.cooldowns.find(
       (cd) => cd.skillId === "at_assassin_active_2"
     );
     expect(activeCd).toBeDefined();
     activeCd!.remaining = 0;
 
-    const engageMax = resolveAttackBattleX(
-      assassin as never,
-      enemy.battleX,
-      internal.gameData
-    );
+    const startX = assassin.battleX;
     let sawSkillMotion = false;
     let maxXDuringMotion = assassin.battleX;
 
@@ -85,8 +79,7 @@ describe("toAnchor offset move", () => {
     }
 
     expect(sawSkillMotion).toBe(true);
-    expect(maxXDuringMotion).toBeGreaterThan(engageMax + 1);
-    expect(maxXDuringMotion).toBeGreaterThanOrEqual(enemy.battleX + 8);
+    expect(maxXDuringMotion).toBeGreaterThan(startX + 50);
   });
 
   it("returns toward nearest player after backstab toAnchor step", () => {
@@ -94,30 +87,25 @@ describe("toAnchor offset move", () => {
     reachWave2Engage(engine);
     const internal = asBattleEngineInternals(engine);
     const assassin = internal.players.find((p) => p.name === "双刃士")!;
-    const enemy = internal.enemies.find((e) => e.isAlive)!;
     const activeCd = assassin.cooldowns.find(
       (cd) => cd.skillId === "at_assassin_active_2"
     );
     activeCd!.remaining = 0;
 
-    const engageMax = resolveAttackBattleX(
-      assassin as never,
-      enemy.battleX,
-      internal.gameData
-    );
+    const startX = assassin.battleX;
     let peakX = assassin.battleX;
     let returnedTowardEngage = false;
 
     for (let t = 0; t < 900; t++) {
       engine.tick(TICK_DT);
       peakX = Math.max(peakX, assassin.battleX);
-      if (peakX > engageMax + 5 && assassin.battleX <= engageMax + 2) {
+      if (peakX > startX + 50 && assassin.battleX < peakX - 20) {
         returnedTowardEngage = true;
         break;
       }
     }
 
-    expect(peakX).toBeGreaterThan(engageMax + 5);
+    expect(peakX).toBeGreaterThan(startX + 50);
     expect(returnedTowardEngage).toBe(true);
   });
 
@@ -126,17 +114,12 @@ describe("toAnchor offset move", () => {
     reachWave2Engage(engine);
     const internal = asBattleEngineInternals(engine);
     const assassin = internal.players.find((p) => p.name === "双刃士")!;
-    const enemy = internal.enemies.find((e) => e.isAlive)!;
     const activeCd = assassin.cooldowns.find(
       (cd) => cd.skillId === "at_assassin_active_2"
     );
     activeCd!.remaining = 0;
 
-    const engageMax = resolveAttackBattleX(
-      assassin as never,
-      enemy.battleX,
-      internal.gameData
-    );
+    const startX = assassin.battleX;
     let peakX = assassin.battleX;
     let peakTick = -1;
     let returnStartTick = -1;
@@ -157,7 +140,7 @@ describe("toAnchor offset move", () => {
       }
     }
 
-    expect(peakX).toBeGreaterThan(engageMax + 5);
+    expect(peakX).toBeGreaterThan(startX + 50);
     expect(returnStartTick).toBeGreaterThan(peakTick);
     expect(returnStartTick - peakTick).toBeGreaterThanOrEqual(28);
   });

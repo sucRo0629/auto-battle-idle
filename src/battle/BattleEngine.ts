@@ -85,7 +85,6 @@ import { deathAnimDurationMs } from "../render/deathPlayback.ts";
 import { EngagedCompositionTracker } from "./battleDisplay.ts";
 import {
   getLeadingPlayerFormationRow,
-  computeEngagedLayout,
   resolveEngagedLayout,
   applyEngagedFormationToBattleX,
   resolveEngagePlayerVisualAnchor,
@@ -1702,9 +1701,6 @@ export class BattleEngine {
         if (cd.remaining <= 0) continue;
         const skill = this.gameData.skillRegistry.actives[cd.skillId];
         if (!skill || !shouldTickCooldown(skill, cd.slotKind)) continue;
-        if (isUnitStunned(unit) && cd.slotKind === "active") {
-          continue;
-        }
         const prevRemaining = cd.remaining;
         const speedMul =
           cd.slotKind === "active" ? 1 : getEffectiveAttackSpeedMultiplier(unit);
@@ -1733,9 +1729,8 @@ export class BattleEngine {
       return;
     }
 
-    if (isUnitStunned(unit)) return;
-
-    const canConsumeHitsTaken = !this.skillSequenceRunner.isActorBusy(unit.id);
+    const canConsumeHitsTaken =
+      !isUnitStunned(unit) && !this.skillSequenceRunner.isActorBusy(unit.id);
 
     for (const cd of unit.cooldowns) {
       if (cd.slotKind !== "active") continue;

@@ -15,16 +15,14 @@ export function cloneBuild(build: CharacterBuild): CharacterBuild {
   return structuredClone(build);
 }
 
-/** 段階解放: Lv0=2, Lv15=3, 二次職/Lv30=4 */
+/** 段階解放: Lv0=2, Lv10=3, Lv20=4 */
 export function getUnlockedActiveSlotCount(
   member: PartyMemberState,
-  gameData: GameData,
+  _gameData: GameData,
 ): number {
-  const preset = gameData.classRegistry[member.classId];
   const level = member.progress.level;
-  const jobTier = preset?.jobTier ?? 1;
-  if (jobTier >= 2 || level >= 30) return Math.min(4, MAX_ACTIVE_SLOTS);
-  if (level >= 15) return Math.min(3, MAX_ACTIVE_SLOTS);
+  if (level >= 20) return Math.min(4, MAX_ACTIVE_SLOTS);
+  if (level >= 10) return Math.min(3, MAX_ACTIVE_SLOTS);
   return Math.min(2, MAX_ACTIVE_SLOTS);
 }
 
@@ -84,10 +82,10 @@ export function hasBuildChanges(a: CharacterBuild, b: CharacterBuild): boolean {
 }
 
 /**
- * 現在レベルに応じて習得スキルを同期し、未習得のセット枠を外す。
+ * 現在レベルに応じて習得スキルを同期し、互換用セット枠から未習得IDを外す。
  * セーブロード・LvUP・クラス差し替え時に呼ぶ。
  */
-/** 習得済みの取得Lv0アクティブを、空きセット枠へ順に入れる */
+/** @deprecated equippedActiveSlots は互換用途のみ。本番戦闘参加には使わない。 */
 export function equipStarterActiveSkills(
   build: CharacterBuild,
   classPreset: ClassPreset,
@@ -126,11 +124,6 @@ export function reconcileMemberBuild(
       member.build.equippedActiveSlots[i] = '';
     }
   }
-  equipStarterActiveSkills(
-    member.build,
-    classPreset,
-    learned.learnedActiveIds,
-  );
 }
 
 export function reconcileMemberBuildFromGameData(

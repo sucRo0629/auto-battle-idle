@@ -14,6 +14,7 @@ import levelCurvesJson from '../../data/levelCurves.json';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
 import { SkillExecutor } from './skills/SkillExecutor.ts';
 import { SkillSequenceRunner } from './skills/skillSequence.ts';
+import { applyStunToTarget } from './ccEffects.ts';
 import {
   asBattleEngineInternals,
   type BattleEngineInternals,
@@ -557,6 +558,49 @@ describe('count trigger consumption', () => {
     engine.skillSequenceRunner.tickUseLocks(1);
     engine.tickCountTriggers(actor.id, 'hitsTaken');
     expect(fired).toEqual(['guard_busy']);
+  });
+
+  it('charges hitsTaken while stunned but defers consumption until stun ends', () => {
+    const guardActive: ActiveSkillDef = {
+      id: 'guard_stunned',
+      name: 'guard_stunned',
+      trigger: { kind: 'hitsTaken', value: 1 },
+      effect: [
+        {
+          type: 'buff',
+          target: { kind: 'self' },
+          buffStat: 'def',
+          buffMultiplier: 1.5,
+          buffDurationSec: 2,
+        },
+      ],
+    };
+
+    const { engine } = createTestEngine({ guard_stunned: guardActive });
+    const actor = mockUnit({ id: 'actor', battleX: 200 });
+    const activeCd: SkillCooldown = {
+      skillId: 'guard_stunned',
+      remaining: 1,
+      slotKind: 'active',
+      slotIndex: 0,
+    };
+    actor.cooldowns = [activeCd];
+    engine.players = [actor];
+    engine.enemies = [];
+
+    const fired = trackSkillFires(engine as unknown as BattleEngine);
+    applyStunToTarget(actor, 1, { skillId: 'stun_test', sourceId: 'enemy' });
+
+    engine.tickCountTriggers(actor.id, 'hitsTaken');
+    expect(activeCd.remaining).toBe(0);
+    expect(fired).toEqual([]);
+
+    engine.tickCountTriggers(actor.id, 'hitsTaken');
+    expect(fired).toEqual([]);
+
+    actor.statusEffects = [];
+    engine.tickCountTriggers(actor.id, 'hitsTaken');
+    expect(fired).toEqual(['guard_stunned']);
   });
 
   it('time trigger still fires from active slot when remaining is zero', () => {

@@ -352,7 +352,7 @@ describe('combatPosition', () => {
         },
         gameData,
       ),
-    ).toBe(296);
+    ).toBe(300);
   });
 
   it('resolveMoveBattleX caps hostile toAnchor at effect range (lancer lunge)', () => {

@@ -8,7 +8,6 @@ import {
   clampStunDurationSec,
   isUnitMovementLocked,
   isUnitStunned,
-  resetBasicCooldownOnStun,
 } from './ccEffects.ts';
 
 function mockUnit(
@@ -98,15 +97,7 @@ describe('ccEffects', () => {
     expect(target.statusEffects[0]?.remainingSec).toBe(5);
   });
 
-  it('resetBasicCooldownOnStun sets basic remaining to trigger value', () => {
-    const target = mockUnit({ id: 'enemy', isEnemy: true });
-    const basicCd = target.cooldowns.find((cd) => cd.slotKind === 'basic')!;
-    basicCd.remaining = 0;
-    resetBasicCooldownOnStun(target, actives);
-    expect(basicCd.remaining).toBe(2);
-  });
-
-  it('applyStunToTarget resets basic cooldown when actives provided', () => {
+  it('applyStunToTarget does not reset basic cooldown when actives provided', () => {
     const target = mockUnit({ id: 'enemy', isEnemy: true });
     const basicCd = target.cooldowns.find((cd) => cd.slotKind === 'basic')!;
     basicCd.remaining = 0;
@@ -116,7 +107,7 @@ describe('ccEffects', () => {
       { skillId: 'bash', sourceId: 'ally' },
       { actives },
     );
-    expect(basicCd.remaining).toBe(2);
+    expect(basicCd.remaining).toBe(0);
   });
 
   it('applyKnockbackToTarget pushes each side toward rear', () => {

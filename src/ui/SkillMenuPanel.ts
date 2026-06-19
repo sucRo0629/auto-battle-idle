@@ -28,12 +28,10 @@ import {
 import { type LevelCurvesConfig } from "../progression/levelGrowth.ts";
 import { resolveMemberDisplayStats } from "../progression/memberStatsDisplay.ts";
 import {
-  canSetActive,
   cloneBuild,
   getUnlockedActiveSlotCount,
   MAX_ACTIVE_SLOTS,
   normalizeActiveSlots,
-  setActiveSlot,
 } from "../progression/skillBuild.ts";
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
 import {
@@ -43,7 +41,6 @@ import {
 
 type PickerTarget =
   | { kind: "class" }
-  | { kind: "activeSkill"; slotIndex: number }
   | null;
 
 export interface SkillMenuPanelCallbacks {
@@ -117,21 +114,6 @@ export class SkillMenuPanel {
         return;
       }
 
-      const skillSlot = (event.target as Element | null)?.closest(
-        ".skill-menu-skill-icon-slot"
-      );
-      if (
-        skillSlot instanceof HTMLElement &&
-        skillSlot.dataset.slotIndex !== undefined
-      ) {
-        if (skillSlot.dataset.locked === "true") return;
-        const slotIndex = Number(skillSlot.dataset.slotIndex);
-        if (Number.isNaN(slotIndex)) return;
-        this.pickerTarget = { kind: "activeSkill", slotIndex };
-        this.render();
-        return;
-      }
-
       const pickerRow = (event.target as Element | null)?.closest(
         ".skill-menu-picker-row"
       );
@@ -148,30 +130,6 @@ export class SkillMenuPanel {
         return;
       }
 
-      const skillId = pickerRow.dataset.skillId ?? "";
-      if (this.pickerTarget?.kind !== "activeSkill") return;
-      const slotIndex = this.pickerTarget.slotIndex;
-
-      const member = this.draftParty[this.selectedIndex];
-      if (!member) return;
-
-      if (
-        skillId &&
-        !canSetActive(
-          member.build,
-          skillId,
-          this.gameData,
-          member.classId,
-          slotIndex
-        )
-      ) {
-        return;
-      }
-
-      member.build = setActiveSlot(member.build, skillId, slotIndex);
-      this.commitBuildChange(this.selectedIndex);
-      this.pickerTarget = null;
-      this.render();
     });
 
     this.formationBlockEl.append(formationTitleEl, this.tabsEl);
@@ -192,13 +150,6 @@ export class SkillMenuPanel {
     }
     this.pickerTarget = null;
     this.render();
-  }
-
-  private commitBuildChange(partyIndex: number): void {
-    const member = this.draftParty[partyIndex];
-    if (!member) return;
-    member.build = normalizeActiveSlots(member.build);
-    this.callbacks.onBuildChanged(partyIndex, member.build);
   }
 
   private render(): void {
@@ -375,13 +326,6 @@ export class SkillMenuPanel {
       return;
     }
 
-    if (member && this.pickerTarget?.kind === "activeSkill") {
-      this.bodyEl.appendChild(
-        this.renderSkillPicker(member, this.pickerTarget.slotIndex)
-      );
-      return;
-    }
-
     this.bodyEl.appendChild(this.createClassSettingsSection(member));
     if (member) {
       this.bodyEl.appendChild(this.createPassiveSkillsSection(member));
@@ -539,11 +483,13 @@ export class SkillMenuPanel {
     unlockedCount: number
   ): HTMLElement {
     const preset = this.gameData.classRegistry[member.classId];
-    const skillId = member.build.equippedActiveSlots[slotIndex] ?? "";
+    const skillId =
+      slotIndex < unlockedCount ? member.build.learnedActiveIds[slotIndex] ?? "" : "";
     const def = skillId
       ? this.gameData.skillRegistry.actives[skillId]
       : undefined;
-    const label = def?.name ?? (skillId || "未セット");
+    const label =
+      def?.name ?? (skillId || (slotIndex >= unlockedCount ? "未解放" : "未習得"));
 
     const slot = document.createElement("button");
     slot.type = "button";
@@ -560,6 +506,7 @@ export class SkillMenuPanel {
       slot.dataset.locked = "true";
       slot.setAttribute("aria-disabled", "true");
     }
+    slot.disabled = true;
 
     this.appendSkillIcon(slot, label, skillId, def, preset);
 
@@ -569,7 +516,7 @@ export class SkillMenuPanel {
     } else if (def) {
       tooltipDesc = formatActiveDescription(def);
     } else {
-      tooltipDesc = "タップしてセット";
+      tooltipDesc = "このLvでは習得済みアクティブがありません";
     }
     slot.appendChild(this.createFloatingTooltip(label, tooltipDesc));
 
@@ -706,54 +653,6 @@ export class SkillMenuPanel {
     }`;
   }
 
-  private renderSkillPicker(
-    member: PartyMemberState,
-    slotIndex: number
-  ): HTMLElement {
-    const picker = document.createElement("div");
-    picker.className = "skill-menu-picker skill-menu-picker--active";
-
-    const heading = document.createElement("h3");
-    heading.className = "skill-menu-section-title";
-    heading.textContent = `スロット ${slotIndex + 1} をセット`;
-
-    const list = document.createElement("div");
-    list.className = "skill-menu-skill-list";
-
-    list.appendChild(this.createCancelPickerRow());
-    const preset = this.gameData.classRegistry[member.classId];
-    list.appendChild(
-      this.createSkillPickerRow("外す", "スロットを空にする", "")
-    );
-
-    for (const skillId of member.build.learnedActiveIds) {
-      const def = this.gameData.skillRegistry.actives[skillId];
-      if (
-        !canSetActive(
-          member.build,
-          skillId,
-          this.gameData,
-          member.classId,
-          slotIndex
-        )
-      ) {
-        continue;
-      }
-      list.appendChild(
-        this.createSkillPickerRow(
-          def?.name ?? skillId,
-          def ? formatActiveDescription(def) : "",
-          skillId,
-          preset,
-          def
-        )
-      );
-    }
-
-    picker.append(heading, list);
-    return picker;
-  }
-
   private createCancelPickerRow(): HTMLElement {
     const row = document.createElement("button");
     row.type = "button";
@@ -817,32 +716,6 @@ export class SkillMenuPanel {
 
     text.append(nameEl, descEl);
     row.appendChild(text);
-    return row;
-  }
-
-  private createSkillPickerRow(
-    name: string,
-    description: string,
-    skillId: string,
-    classPreset?: ClassPreset,
-    skill?: ActiveSkillDef
-  ): HTMLElement {
-    const row = this.createClassPickerRow(name, description, "", classPreset, {
-      showEpithet: false,
-    });
-    delete row.dataset.classId;
-    row.dataset.skillId = skillId;
-
-    if (skill?.iconKey) {
-      row.querySelector(".skill-menu-tab-icon")?.replaceWith(
-        this.createIconWrap(
-          undefined,
-          name,
-          this.resolveSkillIconUrl(skillId, skill, classPreset)
-        )
-      );
-    }
-
     return row;
   }
 

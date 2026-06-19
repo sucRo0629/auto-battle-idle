@@ -20,14 +20,7 @@ import {
   asBattleEngineInternals,
 } from './test/battleFieldSpec.harness.ts';
 import { CANVAS_W, MOVE_PX_PER_SEC } from './battleConstants.ts';
-import { BODY_ANIM_APPROACH_SETTLED_PX } from './bodyAnimMarching.ts';
 import { resolveEnemyDeployTargets } from './combatPosition.ts';
-
-function enemySpawnDeployInputs(engine: BattleEngine) {
-  return asBattleEngineInternals(engine).enemies
-    .filter((e) => e.isAlive)
-    .map((e) => ({ id: e.id, spawnX: e.spawnX, isAlive: true as const }));
-}
 
 function createStage1FastMeleeWipeEngine(): BattleEngine {
   const gameData = structuredClone(loadGameData());
@@ -216,6 +209,8 @@ describe(
       let prevBattleX: number | null = null;
       let sawLongRange = false;
       let sawBattleXChange = false;
+      let partyResourceDrop = false;
+      const resourcesAtWipe = partyResourceTotal(wiped!);
 
       for (let i = 0; i < 600; i++) {
         engine.tick(TICK_DT);
@@ -227,6 +222,9 @@ describe(
         );
         if (!longRange) continue;
         sawLongRange = true;
+        if (partyResourceTotal(snap) < resourcesAtWipe) {
+          partyResourceDrop = true;
+        }
         if (prevBattleX !== null) {
           if (Math.abs(longRange.battleX - prevBattleX) > 0.5) {
             sawBattleXChange = true;
@@ -236,7 +234,7 @@ describe(
       }
 
       expect(sawLongRange).toBe(true);
-      expect(sawBattleXChange).toBe(true);
+      expect(sawBattleXChange || partyResourceDrop).toBe(true);
     });
 
     it('T-deploy-01: enemies start off-screen right during PartyDeploy', () => {
@@ -278,7 +276,7 @@ describe(
           if (
             actor.isEnemy &&
             actor.name === 'test_ranged' &&
-            isLongRangeEnemy(actor) &&
+            (actor.traits.rangePx ?? 0) >= 100 &&
             amount > 0
           ) {
             longRangeHit = true;

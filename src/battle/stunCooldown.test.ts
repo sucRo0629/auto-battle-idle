@@ -71,16 +71,13 @@ function tickCooldownLikeEngine(
     if (cd.remaining <= 0) continue;
     const skill = actives[cd.skillId];
     if (!skill || !shouldTickCooldown(skill, cd.slotKind)) continue;
-    if (isUnitStunned(unit) && cd.slotKind === 'active') {
-      continue;
-    }
     const rate = cd.slotKind === 'active' ? 1 : basicRate;
     cd.remaining = Math.max(0, cd.remaining - deltaTime * rate);
   }
 }
 
 describe('stun cooldown side effects', () => {
-  it('pauses time-trigger active cooldown while stunned', () => {
+  it('continues time-trigger active cooldown while stunned', () => {
     const activeCd: SkillCooldown = {
       skillId: 'test_active',
       remaining: 8,
@@ -103,22 +100,22 @@ describe('stun cooldown side effects', () => {
 
     tickStunStatus(unit, 0.5);
     tickCooldownLikeEngine(unit, 0.5);
-    expect(activeCd.remaining).toBe(8);
+    expect(activeCd.remaining).toBe(7.5);
     tickStunStatus(unit, 0.5);
     tickCooldownLikeEngine(unit, 0.5);
-    expect(activeCd.remaining).toBe(8);
+    expect(activeCd.remaining).toBe(7);
     expect(isUnitStunned(unit)).toBe(true);
 
     tickStunStatus(unit, 1);
     tickCooldownLikeEngine(unit, 1);
     expect(isUnitStunned(unit)).toBe(false);
-    expect(activeCd.remaining).toBe(7);
+    expect(activeCd.remaining).toBe(6);
   });
 
-  it('ticks basic cooldown while stunned after stun reset', () => {
+  it('ticks basic cooldown while stunned without stun reset', () => {
     const basicCd: SkillCooldown = {
       skillId: 'test_basic',
-      remaining: 0,
+      remaining: 2,
       slotKind: 'basic',
     };
     const unit = mockUnit([basicCd]);

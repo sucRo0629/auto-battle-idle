@@ -27,7 +27,6 @@ import { resolveEffectiveBasicAttackSkill } from '../resolveEffectiveBasicAttack
 import { basicAttackTransformSpecFromEffect } from '../resolveEffectiveBasicAttack.ts';
 import {
   resolveAttackBattleX,
-  resolveApproachRangePx,
   resolveMoveBattleX,
 } from '../combatPosition.ts';
 import {
@@ -146,8 +145,12 @@ function shouldDeferUntilHostileToAnchorInRange(
       gameData,
     );
     if (!anchor || anchor.isEnemy === actor.isEnemy) continue;
-    const range = resolveApproachRangePx(actor, gameData);
-    if (!isWithinSkillRange(actor, anchor, range)) {
+    const offset = effectDef.anchorOffsetPx ?? 0;
+    const idealAnchorX = actor.isEnemy
+      ? anchor.battleX - offset
+      : anchor.battleX + offset;
+    const resolvedMoveX = resolveMoveBattleX(actor, anchor, effectDef, gameData);
+    if (Math.abs(resolvedMoveX - idealAnchorX) > 0.5) {
       return true;
     }
   }

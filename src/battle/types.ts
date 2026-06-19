@@ -268,7 +268,7 @@ export interface SkillCooldown {
 export interface CharacterBuild {
   learnedPassiveIds: string[];
   learnedActiveIds: string[];
-  /** セット済みアクティブスキル ID（JSON キー名は歴史的に equippedActiveSlots） */
+  /** 歴史的互換フィールド。戦闘参加は learnedActiveIds を正本にする。 */
   equippedActiveSlots: string[];
 }
 

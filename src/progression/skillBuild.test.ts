@@ -11,6 +11,7 @@ import {
   normalizeActiveSlots,
   reconcileMemberBuild,
 } from './skillBuild.ts';
+import { resolveBattleActiveSkillIds } from './battleActiveSkills.ts';
 
 const member: PartyMemberState = {
   classId: 'test',
@@ -64,6 +65,27 @@ describe('skillBuild', () => {
     expect(MAX_ACTIVE_SLOTS).toBe(4);
   });
 
+  it('unlocks active slots at levels 0, 10, and 20', () => {
+    expect(
+      getUnlockedActiveSlotCount(
+        { ...member, progress: { level: 9, exp: 0 } },
+        gameData,
+      ),
+    ).toBe(2);
+    expect(
+      getUnlockedActiveSlotCount(
+        { ...member, progress: { level: 10, exp: 0 } },
+        gameData,
+      ),
+    ).toBe(3);
+    expect(
+      getUnlockedActiveSlotCount(
+        { ...member, progress: { level: 20, exp: 0 } },
+        gameData,
+      ),
+    ).toBe(4);
+  });
+
   it('normalizeActiveSlots pads to MAX_ACTIVE_SLOTS', () => {
     const normalized = normalizeActiveSlots(member.build);
     expect(normalized.equippedActiveSlots).toHaveLength(MAX_ACTIVE_SLOTS);
@@ -71,7 +93,21 @@ describe('skillBuild', () => {
     expect(normalized.equippedActiveSlots[1]).toBe('');
   });
 
-  it('reconcileMemberBuild learns passives and equips starter actives into empty slots', () => {
+  it('uses learnedActiveIds, not equippedActiveSlots, for battle participation', () => {
+    const build = {
+      learnedPassiveIds: [],
+      learnedActiveIds: ['learned_1', 'learned_2', 'learned_3', 'learned_4'],
+      equippedActiveSlots: ['equipped_1', 'equipped_2', '', ''],
+    };
+
+    expect(resolveBattleActiveSkillIds(build, 3)).toEqual([
+      'learned_1',
+      'learned_2',
+      'learned_3',
+    ]);
+  });
+
+  it('reconcileMemberBuild learns passives and actives without auto-equipping slots', () => {
     const slotMember: PartyMemberState = {
       classId: 'test',
       progress: { level: 1, exp: 0 },
@@ -86,12 +122,7 @@ describe('skillBuild', () => {
 
     expect(slotMember.build.learnedPassiveIds).toContain('passive_a');
     expect(slotMember.build.learnedActiveIds).toEqual(['active_1', 'active_2']);
-    expect(slotMember.build.equippedActiveSlots).toEqual([
-      'active_1',
-      'active_2',
-      '',
-      '',
-    ]);
+    expect(slotMember.build.equippedActiveSlots).toEqual(['', '', '', '']);
   });
 
   it('reconcileMemberBuild strips equipped actives above current level', () => {

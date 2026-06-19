@@ -63,6 +63,19 @@
 
 ターゲット選択は、スキルや通常攻撃が「誰を対象にするか」を決める仕組みである。基本構造は `TargetSpec` と `targetShape` の組み合わせで、まず対象プールを作り、射程で絞り、形状に従って命中対象を解決する。
 
+### Target Intent
+
+同じ `TargetSpec` でも、何のために対象を選ぶかで評価軸を分ける。
+
+| Intent | 役割 | 距離 / Threat の扱い |
+| ------ | ---- | -------------------- |
+| `AttackTarget` | damage / heal / buff / debuff の実対象 | 射程内プールから選ぶ。敵の対プレイヤー通常対象は Threat 優先 |
+| `MoveAnchor` | `move` の到達基準 | 射程外も anchor にできる。Threat ではなく使用者との `battleX` 距離 |
+| `ChaseTarget` | 自動接近の追跡対象 | 敵は Threat、味方はスキル / 通常攻撃の target spec |
+| `DisplayAnchor` | VFX・描画凍結用 | 戦闘判定へ逆流させない |
+
+これにより、Flow の移動が発生しても「移動先」「攻撃対象」「追跡対象」「表示基準」を同一概念へ潰さない。
+
 ### 主な選択軸
 
 | 軸            | 例                                               | 状態     |
@@ -101,6 +114,17 @@
 カウント式は、ゲージ Max になった瞬間に自動発動するのではなく、次の消費イベントで発動する。攻撃回数式なら N 回目で準備完了、N+1 回目の通常攻撃枠で通常攻撃の代わりにアクティブが発動する。
 
 この構造により、双刃士や弓術士のような Hit / 攻撃回数に依存するクラスは、単に通常攻撃が強いだけでなく、アクティブ回転そのものを変えられる。
+
+## SkillHold
+
+`useDurationSec` はデバフではなく、hold / channel / commit time 系スキルの特性である。定義はスキルデータ層に残し、戦闘エンジン層が実行時の SkillHold として処理する。
+
+- スキルデータ層は `useDurationSec` により「このスキルは SkillHold を発生させる」と宣言する。
+- 戦闘エンジン層は発動成功時に SkillHold を開始し、残時間、busy 判定、CD / イベントゲージ停止を管理する。
+- 持続中は使用者自身の通常攻撃・アクティブ発動を止める。
+- 持続中は使用者自身の basic CD / active CD / `basicAttackCount` / `hitsTaken` を停止する。
+- スタン、`presentationLock`、`animLock` は SkillHold ではないため、CD を止めない。
+- 敵対的な時間停止は `freeze` など別 `StatusEffect` として定義する。
 
 ## Hit システム
 
