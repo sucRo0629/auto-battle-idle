@@ -29,23 +29,26 @@
 
 ---
 
-# 1. 上位ロール分類（3大ロール）
+# 1. 上位ロール分類（3 大ロール）
 
-本ゲームの全ユニットは以下の3ロールに分類される。
+本ゲームの全ユニットは以下の 3 ロールに分類される。
 
 ---
 
 ## ■ ディフェンダー
 
 ### コンセプト
+
 **「味方を守り、戦線を維持するロール」**
 
 ### 役割
+
 - 被ダメージの吸収
 - 前線維持
 - 味方の生存補助
 
 ### 特徴
+
 - 耐久性能が高い
 - 敵の攻撃を受ける前提の設計
 - 防御・軽減・保護が主軸
@@ -55,14 +58,17 @@
 ## ■ アタッカー
 
 ### コンセプト
+
 **「敵を撃破し戦況を進行させるロール」**
 
 ### 役割
+
 - 敵ユニットの撃破
 - ダメージソースの中核
 - 戦闘進行の推進力
 
 ### 特徴
+
 - 最も多様な攻撃手段を持つ
 - 近接・遠隔・魔法に分化
 - 火力と役割特化の両立
@@ -72,14 +78,17 @@
 ## ■ ヒーラー（サポーター）
 
 ### コンセプト
+
 **「味方の戦闘継続能力を維持・補助するロール」**
 
 ### 役割
+
 - 回復
 - バフ・デバフ
 - 状態異常対策
 
 ### 特徴
+
 - 直接火力には関与しない
 - 戦闘の安定性を支える
 - 補助・制御寄りの性能
@@ -88,21 +97,24 @@
 
 # 2. アタッカー内部分類
 
-アタッカーは攻撃手段により以下の3系統に分化する。
+アタッカーは攻撃手段により以下の 3 系統に分化する。
 
 ---
 
 ## ■ ファイター（近接アタッカー）
 
 ### コンセプト
+
 **「接近戦で確実に敵を削る近接戦闘職」**
 
 ### 役割
+
 - 単体・近距離火力
 - 高耐久または継戦能力
 - 前線での戦闘維持
 
 ### 特徴
+
 - 被弾前提または自己完結型
 - 高い安定火力
 - 対単体処理能力が高い
@@ -112,14 +124,17 @@
 ## ■ シューター（物理遠隔アタッカー）
 
 ### コンセプト
+
 **「遠距離から物理攻撃で戦況を制御する射撃職」**
 
 ### 役割
+
 - 遠距離からの物理火力
 - 複数敵の削り・制圧
 - 特定対象の処理
 
 ### 特徴
+
 - 安定した遠距離攻撃
 - 敵の種類に応じた処理担当
 - 魔法職とは異なる耐性処理
@@ -129,27 +144,34 @@
 ## ■ キャスター（魔法遠隔アタッカー）
 
 ### コンセプト
-**「魔法によって戦場の出力・流れ・意味を変化させる職」**
+
+**「魔法によって戦場の出力・流れ・意味を操作する職群」**
+
+単純な火力職ではなく、ダメージの発生だけでなく流れ・配置・条件適応までを設計対象とする。自動戦闘でも成立する**事前設計型の戦術ロール**。
 
 ### 役割
-- 魔法ダメージによる範囲・単体攻撃
-- 戦況制御・ダメージ構造変化
-- 状況依存の火力変化
+
+- 魔法ダメージ（単体・範囲）
+- 戦況に応じた出力・構造の調整
+- 戦闘の「意味」の再解釈（符術師・法陣師）
 
 ### 特徴
-- 魔法耐性に依存する独自ダメージ体系
+
+- 魔法耐性前提の独自ダメージ体系
 - 出力だけでなく戦闘構造に干渉
-- サブ的に制御要素を持つ
+- 内部 3 系統（魔術師 / 符術師 / 法陣師）で分化
+
+詳細は **§クラスキャスター設計方針** を正とする。
 
 ---
 
-# 3. アタッカー3系統の関係性
+# 3. アタッカー 3 系統の関係性
 
-| 系統 | 主軸 | 役割 |
-|------|------|------|
-| ファイター | 単体突破 | 近接確殺 |
-| シューター | 遠距離制圧 | 物理処理 |
-| キャスター | 戦況変化 | 魔法制御＋火力 |
+| 系統       | 主軸       | 役割           |
+| ---------- | ---------- | -------------- |
+| ファイター | 単体突破   | 近接確殺       |
+| シューター | 遠距離制圧 | 物理処理       |
+| キャスター | 戦況変化   | 魔法制御＋火力 |
 
 ---
 
@@ -184,11 +206,11 @@
 
 ## ロール（3 種）
 
-| ロール      | 役割                                                  |
-| ----------- | ----------------------------------------------------- |
-| `defender`  | 前列タンク + 軽い支援（buff/heal 可）                                      |
-| `attacker`  | ダメージディーラー。近接帯（`rangePx < 100`）は前列、遠隔帯は後列が既定 |
-| ヒーラー | 回復・支援（後列が典型）                                                   |
+| ロール                              | 役割                                                                    |
+| ----------------------------------- | ----------------------------------------------------------------------- |
+| `defender`                          | 前列タンク + 軽い支援（buff/heal 可）                                   |
+| `attacker`                          | ダメージディーラー。近接帯（`rangePx < 100`）は前列、遠隔帯は後列が既定 |
+| ヒーラー(内部は `supporter` のまま) | 回復・支援（後列が典型）                                                |
 
 `classId` 命名：`{rolePrefix}_{englishSlug}`
 
@@ -204,7 +226,7 @@
 
 ### クラス設計方針
 
-各ロールは以下の3系統で構成される。
+各ロールは以下の 3 系統で構成される。
 
 #### 基礎
 
@@ -220,10 +242,10 @@
 ロール本来の役割に加えて、
 別ロールの要素を取り入れた複合クラス。
 
-| 区分         | 現状                     | 備考 |
-| ------------ | ------------------------ | ---- |
-| **プレイ可能** | 15 種（下表）            | `data/classes.json` に定義 |
-| **予約フィールド** | なし                  | `jobTier` / `promotion` / `promotesFrom` は廃止 |
+| 区分               | 現状          | 備考                                            |
+| ------------------ | ------------- | ----------------------------------------------- |
+| **プレイ可能**     | 15 種（下表） | `data/classes.json` に定義                      |
+| **予約フィールド** | なし          | `jobTier` / `promotion` / `promotesFrom` は廃止 |
 
 クラス ID と表示名、ロール、射程、スキル習得は `classes.json` を正とする。将来の追加クラスは同じ形式で拡張する。
 
@@ -233,35 +255,37 @@
 
 #### defender（`df_`）
 
-| classId       | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0 代表）              | アクティブ（Lv0）          |
-| ------------- | ------ | --------- | ----- | ---- | --------------------------------- | -------------------------- |
-| `df_guardian` | 鉄衛士 | Guardian  | front | 近接 | 共有 block + 追加 block           | 防御強化／防御専念         |
-| `df_paladin`  | 護法士 | Paladin   | front | 近接 | 低 HP 味方への回復量増            | 光の剣／聖盾               |
-| `df_duelist`  | 闘技士 | Gladiator | front | 近接 | 低 HP 時 DEF 上昇（`passive_2`）  | 戦叫び／体力温存           |
+| classId       | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0 代表）             | アクティブ（Lv0）  |
+| ------------- | ------ | --------- | ----- | ---- | -------------------------------- | ------------------ |
+| `df_guardian` | 鉄衛士 | Guardian  | front | 近接 | 共有 block + 追加 block          | 防御強化／防御専念 |
+| `df_paladin`  | 護法士 | Paladin   | front | 近接 | 低 HP 味方への回復量増           | 光の剣／聖盾       |
+| `df_duelist`  | 闘技士 | Gladiator | front | 近接 | 低 HP 時 DEF 上昇（`passive_2`） | 戦叫び／体力温存   |
 
 #### attacker（`at_`）
 
-| classId        | 表示名 | epithetEn | 列    | 射程     | パッシブ（Lv0 代表）                     | アクティブ（Lv0）              |
-| -------------- | ------ | --------- | ----- | -------- | ---------------------------------------- | ------------------------------ |
-| `at_warrior`   | 剣術士 | Swordsman | front | 近接     | 最高 HP 狙い + DEF 無視                  | 叩き付け／薙ぎ払い             |
-| `at_assassin`  | 双刃士 | Assassin  | front | 近接     | 最低 HP 比率狙い + 回避                  | 引き裂き／影の刃               |
-| `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 前方 pierce ATK debuff + 近傍 ATK aura   | 踏み込み突き／足払い           |
-| `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff               | 連射／連ね矢                   |
-| `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 最高 HP 狙い + DEF 無視                  | 引き絞り／貫く一射             |
-| `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | デバフ対象への与ダメ増                   | 毒罠／拘束罠                   |
-| `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | —（Lv0 パッシブなし）                    | 魔弾／集中砲                   |
-| `at_enchanter` | 符術士 | Enchanter | back  | 遠隔魔法 | —（Lv0 パッシブなし）                    | **Lv0: `active_1`（連符）のみ** |
-| `at_geomancer` | 法陣師 | Geomancer | back  | 遠隔魔法 | 密集時 AoE ボーナス                      | 大法陣／小法陣                 |
+| classId        | 表示名 | epithetEn | 列    | 射程     | パッシブ（Lv0 代表）                          | アクティブ（Lv0）    |
+| -------------- | ------ | --------- | ----- | -------- | --------------------------------------------- | -------------------- |
+| `at_warrior`   | 剣術士 | Swordsman | front | 近接     | 最高 DEF 狙い + DEF 無視                      | 叩き付け／薙ぎ払い   |
+| `at_assassin`  | 双刃士 | Assassin  | front | 近接     | 最低 HP 比率狙い + 回避                       | 引き裂き／影の刃     |
+| `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura | 踏み込み突き／足払い |
+| `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                    | 連射／連ね矢         |
+| `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 最高 HP 狙い + （未実装）                     | 重撃態勢／貫く一射   |
+| `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | — （未実装）                                  | （未実装）           |
+| `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | —（未実装）                                   | （未実装）           |
+| `at_enchanter` | 符術士 | Enchanter | back  | 遠隔魔法 | —（未実装）                                   | （未実装）           |
+| `at_geomancer` | 法陣師 | Geomancer | back  | 遠隔魔法 | —（未実装）                                   | （未実装）           |
+
+※ 魔法 3 クラス（魔術士 / 符術士 / 法陣師）の設計思想・三分類・TBD は **§クラスキャスター設計方針** を正とする。
 
 ※ `at_lancer_passive_1`（牽制）は常時 debuff として再評価する。`at_lancer_passive_2`（連携）は `selfOrigin` + `aoe` の味方 ATK aura。
 
 #### ヒーラー（`sp_`）
 
-| classId        | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0）                                                                 | アクティブ（Lv0）                          |
-| -------------- | ------ | --------- | ----- | ---- | ------------------------------------------------------------------------------- | ------------------------------------------ |
-| `sp_cleric`    | 療養師 | Cleric    | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）                   | `sp_cleric_active_1`（癒しの光）のみ       |
-| `sp_abjurer`   | 結界師 | Abjurer   | back  | 遠隔 | 高 HP 味方被ダメ軽減 + Wave 開始バリア（`passive_1` / `passive_2`）             | `sp_abjurer_active_1`（盾添え）のみ        |
-| `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | 常時 HoT aura + 高 HP 味方 DEF buff（`passive_1` / `passive_2`）                | `sp_alchemist_active_1`（薬粉撒き）のみ    |
+| classId        | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0）                                                     | アクティブ（Lv0）                       |
+| -------------- | ------ | --------- | ----- | ---- | ------------------------------------------------------------------- | --------------------------------------- |
+| `sp_cleric`    | 療養師 | Cleric    | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）       | `sp_cleric_active_1`（癒しの光）のみ    |
+| `sp_abjurer`   | 結界師 | Abjurer   | back  | 遠隔 | 高 HP 味方被ダメ軽減 + Wave 開始バリア（`passive_1` / `passive_2`） | `sp_abjurer_active_1`（盾添え）のみ     |
+| `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | 常時 HoT aura + 高 HP 味方 DEF buff（`passive_1` / `passive_2`）    | `sp_alchemist_active_1`（薬粉撒き）のみ |
 
 ### デモ編成（`parties.json` demo）
 
@@ -280,13 +304,13 @@
 
 ### 共通ルール
 
-| 項目               | 内容                                                                                            |
-| ------------------ | ----------------------------------------------------------------------------------------------- |
-| **Lv0 アクティブ** | **`active_1` のみ**（`active_2` は基本性能確定まで設計・習得しない）                            |
+| 項目               | 内容                                                                                                                                                                                                 |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Lv0 アクティブ** | **`active_1` のみ**（`active_2` は基本性能確定まで設計・習得しない）                                                                                                                                 |
 | **Lv0 パッシブ**   | 原則 `passive_1`。**療養師**は Lv0 で `passive_2`（余剰回復 → バリア）も習得。**結界師**は Lv0 で `passive_2`（Wave 開始バリア）も習得。**薬草師**は Lv0 で `passive_2`（高 HP 味方 DEF buff）も習得 |
-| **`active_2`**     | ヒーラーは Lv0 では原則習得しない（**例外:** 結界師 Lv10 で `active_2` 習得済み）。attacker の第 2 アクティブは Lv0 から 2 種 |
-| **スキル表示名**   | 仮で `name` = `id`。正式名称は後日決定                                                          |
-| **回復力順位**     | 療養師 ≈ 結界師（実効耐久 parity） **＞** 薬草師（instant/burst heal は意図的に劣る）           |
+| **`active_2`**     | ヒーラーは Lv0 では原則習得しない（**例外:** 結界師 Lv10 で `active_2` 習得済み）。attacker の第 2 アクティブは Lv0 から 2 種                                                                        |
+| **スキル表示名**   | 仮で `name` = `id`。正式名称は後日決定                                                                                                                                                               |
+| **回復力順位**     | 療養師 ≈ 結界師（実効耐久 parity） **＞** 薬草師（instant/burst heal は意図的に劣る）                                                                                                                |
 
 ### Lv0 / Lv10 / Lv20 習得パターン
 
@@ -295,18 +319,18 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | 段階 | 典型内容                                     | データ例                                                            |
 | ---- | -------------------------------------------- | ------------------------------------------------------------------- |
 | Lv0  | 共有 passive + クラス passive_2 + active_1/2 | 鉄衛: `defender_passive_1` + `df_guardian_passive_2` + `active_1/2` |
-| Lv10 | passive_3 + active 追加           | 鉄衛: `passive_3` + `active_3`／闘技: `passive_3` + `active_3`     |
-| Lv20 | passive_4 + active 追加           | 護法: `passive_4`／闘技: `passive_4` + `active_4`（鉄衛 Lv20 未定）  |
+| Lv10 | passive_3 + active 追加                      | 鉄衛: `passive_3` + `active_3`／闘技: `passive_3` + `active_3`      |
+| Lv20 | passive_4 + active 追加                      | 護法: `passive_4`／闘技: `passive_4` + `active_4`（鉄衛 Lv20 未定） |
 
 **attacker / defender:** Lv0 で **アクティブ 2 種**を習得（**例外:** `at_enchanter` は Lv0 で `active_1` のみ）。**ヒーラー:** Lv0 で **`active_1` のみ**（`active_2` は Lv10+ または Lv20 枝候補）。
 
 ヒーラー（現行 `classes.json`）:
 
-| classId        | Lv0                                           | Lv10                                              | Lv20              |
-| -------------- | --------------------------------------------- | ------------------------------------------------- | ----------------- |
-| `sp_cleric`    | `passive_1` + `passive_2` + `active_1`        | **未定**                                          | **未定**          |
-| `sp_abjurer`   | `passive_1` + `passive_2` + `active_1`        | `passive_3` + `active_2`（双璧の護り）            | `passive_4`       |
-| `sp_alchemist` | `passive_1` + `passive_2` + `active_1`        | `passive_3`（`onDebuffReceived` で dot 1 件解除） | **未定**          |
+| classId        | Lv0                                    | Lv10                                              | Lv20        |
+| -------------- | -------------------------------------- | ------------------------------------------------- | ----------- |
+| `sp_cleric`    | `passive_1` + `passive_2` + `active_1` | **未定**                                          | **未定**    |
+| `sp_abjurer`   | `passive_1` + `passive_2` + `active_1` | `passive_3` + `active_2`（双璧の護り）            | `passive_4` |
+| `sp_alchemist` | `passive_1` + `passive_2` + `active_1` | `passive_3`（`onDebuffReceived` で dot 1 件解除） | **未定**    |
 
 ### 火力系バフ／デバフ（Lv20 枝方針）
 
@@ -317,19 +341,19 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | 味方 `atk` / `attackSpeed` buff    | **禁止**                                                | ロール分岐候補（例: 薬草師 調合 buff 枝） |
 | 敵 `def`↓ / 被ダメ ↑ debuff        | **禁止**                                                | 同上                                      |
 | 敵 `atk` debuff                    | **薬草師 Lv0 のみ可**（sustain 遅延。DPS 強化ではない） | 強化版は Lv10+ 検討                       |
-| 味方耐久 UP（`damageTaken`↓ aura） | 結界師 Lv0 `passive_1` のみ可                          | 結界師 Lv10 `passive_3`（全体 barrier）  |
-| 味方 `def` / `reg` stat buff       | 薬草師 Lv0 `passive_2`（高 HP 味方 DEF）のみ可           | Lv10+ 拡張候補                           |
+| 味方耐久 UP（`damageTaken`↓ aura） | 結界師 Lv0 `passive_1` のみ可                           | 結界師 Lv10 `passive_3`（全体 barrier）   |
+| 味方 `def` / `reg` stat buff       | 薬草師 Lv0 `passive_2`（高 HP 味方 DEF）のみ可          | Lv10+ 拡張候補                            |
 | 自己火力（scatter damage 等）      | **Lv0 なし**                                            | Lv20 枝のみ検討                           |
 
 **根拠:** Lv0 で回復 + sustain + 味方火力 / 敵被ダメ debuff を持つとヒーラー 1 枠が強すぎる → defender 型 Lv0 / Lv10 / Lv20 に揃え **火力寄与は Lv20 枝**。
 
 ### 三ヒーラーの役割分担（Lv0 確定分）
 
-| classId        | 個性              | Lv0 の柱                                                                  | 耐久の出し方                                             |
-| -------------- | ----------------- | ------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `sp_cleric`    | 純ヒーラー        | 直接 heal + 低 HP 回復特化 + 余剰回復 → バリア（`passive_1` / `passive_2`） | **HP 回復** + **barrier**（余剰分）                      |
-| `sp_abjurer`   | バリアヒーラー    | 高 HP 味方被ダメ軽減 + Wave 開始バリア + 直接 heal                          | Lv0: **`damageTaken` 軽減** + **barrier**／Lv10: 全体 barrier（`passive_3`） |
-| `sp_alchemist` | HoT + debuff ヒーラー | HoT aura + 高 HP 味方 DEF buff + active 範囲 HoT / debuff                   | Lv0: debuff + HoT／Lv10: 味方 dot 解除（`passive_3`）    |
+| classId        | 個性                  | Lv0 の柱                                                                    | 耐久の出し方                                                                 |
+| -------------- | --------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `sp_cleric`    | 純ヒーラー            | 直接 heal + 低 HP 回復特化 + 余剰回復 → バリア（`passive_1` / `passive_2`） | **HP 回復** + **barrier**（余剰分）                                          |
+| `sp_abjurer`   | バリアヒーラー        | 高 HP 味方被ダメ軽減 + Wave 開始バリア + 直接 heal                          | Lv0: **`damageTaken` 軽減** + **barrier**／Lv10: 全体 barrier（`passive_3`） |
+| `sp_alchemist` | HoT + debuff ヒーラー | HoT aura + 高 HP 味方 DEF buff + active 範囲 HoT / debuff                   | Lv0: debuff + HoT／Lv10: 味方 dot 解除（`passive_3`）                        |
 
 **薬草師（Herbalist）参照:** Perfumer（常時 HoT + active 範囲 HoT）+ Mulberry（Lv0 高 HP 味方 DEF buff + Lv10 dot 解除）。Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士（罠 + DoT 毒）との差: 薬草師 = HoT sustain + 与ダメ debuff（毒 DoT なし）。`traits.rangePx` は近接帯（`rangePx < 100`）で前列配置。`active_1` の敵 debuff は `targetShape: aoe` + `aoeRadiusPx: 70`（最近接敵をアンカーにした範囲）。`effect.range` の拡張は使わない。
 
@@ -339,7 +363,127 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 - 全ヒーラー: Lv20 `passive_4` / `active_2` の具体設計（結界師 `passive_4` のみ Lv20 習得済み）
 - 療養師: `sp_cleric_active_2`（広域治療）は `data/skills/actives/sp_cleric.json` に定義済みだが **`classes.json` 未習得**（Lv20 候補）
-- 符術士: Lv0 は `active_1` のみ。`active_2`（爆符）の習得段階は未配線
+
+## クラスキャスター設計方針
+
+キャスターは魔法遠隔アタッカーであり、戦闘の**出力・流れ・意味**を操作する職群。§2 のアタッカー 3 系統のうち「戦況変化」軸を担う。
+
+### 三分類と classId
+
+| 系統 | classId        | 表示名 |
+| ---- | -------------- | ------ |
+| 基礎 | `at_sorcerer`  | 魔術士 |
+| 拡張 | `at_enchanter` | 符術士 |
+| 変則 | `at_geomancer` | 法陣師 |
+
+成長は 3 クラスとも `growthPresetKey: "caster"`（[stats.md](stats.md)）。`traits.damageType: magic`、`formationRow: back`、射程帯は遠隔魔法（参考 `rangePx` 30）。
+
+### 魔術師（`at_sorcerer`・基礎）
+
+#### コンセプト
+
+魔力をそのまま火力へ変換する、**純粋出力型**キャスター。
+
+#### 役割
+
+- 単体・範囲の安定魔法ダメージ
+- 魔法耐性前提の基準火力供給
+- 継続的な DPS 維持
+- 損失のないマルチロックによる少数殲滅性能
+
+#### 特徴
+
+- 状況に左右されない安定出力
+- 最もシンプルなダメージ構造
+- キャスター火力の**基準ライン**
+- **マルチロック** — 対象数不足時でもロック枠が無駄にならず、既存対象へ再配分される。少数戦でも火力ロスが発生しない
+
+#### 立ち位置
+
+戦場に対して**直接ダメージを発生させる**存在。
+
+#### 属性イメージ
+
+**火** — 純粋な破壊エネルギーとしての直感的火力。
+
+---
+
+### 符術師（`at_enchanter`・拡張）
+
+#### コンセプト
+
+対象の条件を読み取り、スキル効果をより有利な形へ**分岐**させる柔軟適応型キャスター。
+
+#### 役割
+
+- 対象数・HP 割合・隊列などの戦況条件に応じた効果分岐
+- 1 スキルが 2 系統の攻撃効果を持ち、状況に応じて自動的に最適側へ切り替わる
+- 付与する状態異常やターゲット形状（単体・範囲・拡散など）の最適化
+- 戦況を崩さず、常に攻撃効率が高い側へ寄せる出力調整
+
+#### 特徴
+
+- 条件分岐は対象数・HP 割合・隊列などの**戦術情報**に依存
+- 各スキルは 2 種類の攻撃効果を持ち、状況に応じて**自動分岐**
+- ランダムではなく**完全に予測可能**な条件型変化
+- 回復・支援方向への変化は行わず、**攻撃性能の中で**最適化
+- 状態異常・攻撃範囲・ターゲット構造の「攻撃的な解釈変換」に特化
+- 構造を変えるのではなく、**攻撃の当て方と効率**を最適化
+
+#### 立ち位置
+
+戦況条件を読み取り、攻撃効果を最も有利な形へ調整する**適応型**キャスター。
+
+#### 属性イメージ
+
+**風・地（乾坤）** — 風＝拡散・変化・流動、地＝集中・安定・収束。条件に応じて二方向へ分岐する柔軟性の象徴。
+
+---
+
+### 法陣師（`at_geomancer`・変則）
+
+#### コンセプト
+
+戦場のダメージ配置と流れを再構築し、味方を含む戦闘全体の効率を最適化する**構造操作型**キャスター。
+
+#### 役割
+
+- 敵へのダメージはロスなく集中・分配し、火力効率を最大化する**火力支援**
+- 味方へのダメージは被害そのものを軽減・防御値を上げるのではなく、**被害の発生構造**を変えて損失を抑える**防御支援**
+- 単体 ⇄ 範囲など攻撃構造の変換
+- 戦場全体のダメージ偏りを均質化し、総合的な損失を最小化
+
+#### 特徴
+
+- **領域（法陣）** によって戦場のダメージルールそのものを再定義
+- 火力支援は「攻撃・ダメージ増加」ではなく、既存火力の無駄を消し**効率を最大化**
+- 防御支援は「防御力上昇・ダメージ軽減」ではなく、ダメージの**分配・転送・集中制御**による損失圧縮
+- 攻撃と防御を別軸として扱わず、すべてを**ダメージ流量の最適化問題**として統合
+- 味方支援を含む戦闘全体の最適化装置
+
+#### 立ち位置
+
+戦場のダメージ構造を設計し直し、火力は「無駄を消して強く見せる」、防御は「受け方を変えて弱くしない」ことで全体効率を最大化するキャスター。
+
+#### 属性イメージ
+
+**水** — 流れ・循環・再配置としてのダメージ制御。
+
+---
+
+### 三キャスターの役割分担（設計確定分）
+
+| classId        | 個性     | 設計の柱                                           | 他系統との差分                                  |
+| -------------- | -------- | -------------------------------------------------- | ----------------------------------------------- |
+| `at_sorcerer`  | 純出力   | 安定 DPS・基準火力・マルチロック再配分             | 条件分岐・領域再定義なし                        |
+| `at_enchanter` | 条件適応 | 2 系統効果の予測可能分岐・攻撃効率の最適化         | 回復/支援分岐なし。構造は変えず当て方を最適化   |
+| `at_geomancer` | 構造操作 | 法陣によるダメージ流量の再配置・味方含む全体最適化 | ATK/DEF buff ではなく分配・転送・集中で損失圧縮 |
+
+### 未実装・TBD
+
+- 符術師: 条件分岐スキルの `fireConditions` / effect 分岐の具体 JSON
+- 法陣師: 味方ダメージ分配・転送、地点指定範囲の combat 実装と `data/skills/` への反映
+- 3 キャスター: Lv0 / Lv10 / Lv20 枝・属性（火 / 風地 / 水）と VFX の対応
 
 ## 配置
 
@@ -347,11 +491,11 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 **列の既定：**
 
-| ロール      | `formationRow`                                                                 |
-| ----------- | ------------------------------------------------------------------------------ |
-| `defender`  | `front`                                                                        |
-| `attacker`  | 近接帯（`rangePx < 100`）→ `front`、遠隔帯（`rangePx >= 100`）→ `back`         |
-| ヒーラー | `back`（**例外:** `sp_alchemist` は近接帯のため `front`）                                                         |
+| ロール     | `formationRow`                                                         |
+| ---------- | ---------------------------------------------------------------------- |
+| `defender` | `front`                                                                |
+| `attacker` | 近接帯（`rangePx < 100`）→ `front`、遠隔帯（`rangePx >= 100`）→ `back` |
+| ヒーラー   | `back`（**例外:** `sp_alchemist` は近接帯のため `front`）              |
 
 敵のデフォルトターゲットは射程内でヘイト最大（[combat.md](combat.md) の Threat 節）。近接アタッカーが前列にいても、ディフェンダーがヘイトを引きつける想定。
 
@@ -363,10 +507,10 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 `classes.json` / `enemies.json` の `traits`（省略可。ロード時に正規化）:
 
-| フィールド       | 省略時                                                                                          |
-| ---------------- | ----------------------------------------------------------------------------------------------- |
-| `rangePx`        | `0`（分類用: 0〜99 は近接帯、100 以上は遠隔帯）                                                  |
-| `damageType`     | `physical`                                                                                      |
+| フィールド       | 省略時                                                                                                                                                                                                                                          |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rangePx`        | `0`（分類用: 0〜99 は近接帯、100 以上は遠隔帯）                                                                                                                                                                                                 |
+| `damageType`     | `physical`                                                                                                                                                                                                                                      |
 | `basicAttackVfx` | 省略時は未設定。**通常攻撃（`slotKind: basic`）専用**の PNG VFX 定義（`SkillVfxDef`）。`enabled` / `placement` / strip フェーズ。対応 PNG は `sheets/vfx/{entityId}_basic_attack_vfx.png`。effect `vfx` や skill `vfx` にはフォールバックしない |
 
 `basicAttackSkillId` は省略可（`{entityId}_basic_attack`）。通常攻撃スキルはロード時に合成。`data/skills/actives/` に同名 ID があれば `name` / `atkScale` / `interval` 等のみ上書き可（`range` / `damageType` / `vfx` は traits 正）。
@@ -403,15 +547,16 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 - 回復系の推奨: 直接 heal の命中表現は `hitVfx` に `particles` を載せる。`preset: heal_normal` と `placement: { anchor: 'target', layer: 'front' }` のように胴体中心へ寄せると、PNG strip を主形、粒子を余韻として分離しやすい。
 - 回復系 preset 使い分け表:
 
-| preset                | 用途           | 対象 / アンカー      |
-| --------------------- | -------------- | -------------------- |
-| `heal_minor`          | 小回復単体     | `hitVfx` / `target`  |
-| `heal_normal`         | 中回復単体     | `hitVfx` / `target`  |
-| `heal_major`          | 大回復単体     | `hitVfx` / `target`  |
-| `heal_cast`           | 詠唱フラッシュ | `vfx` / `footActor`  |
-| `heal_area`           | 範囲回復       | `vfx` / `footActor`  |
-| `heal_party`          | 全体回復       | `vfx` / `footActor`  |
-| `heal_major_party`    | 大全体回復     | `vfx` / `footActor`  |
+| preset             | 用途           | 対象 / アンカー     |
+| ------------------ | -------------- | ------------------- |
+| `heal_minor`       | 小回復単体     | `hitVfx` / `target` |
+| `heal_normal`      | 中回復単体     | `hitVfx` / `target` |
+| `heal_major`       | 大回復単体     | `hitVfx` / `target` |
+| `heal_cast`        | 詠唱フラッシュ | `vfx` / `footActor` |
+| `heal_area`        | 範囲回復       | `vfx` / `footActor` |
+| `heal_party`       | 全体回復       | `vfx` / `footActor` |
+| `heal_major_party` | 大全体回復     | `vfx` / `footActor` |
+
 - 回復 hitVfx 推奨 anchor は target（胴体中心オーラ）
 - **非推奨 VFX フィールド（validate 拒否）:** `preset` / `arc` / `durationMs`（Phase 6 以前の Canvas preset VFX）
 
@@ -423,10 +568,10 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 ### 通常攻撃の見た目
 
-| 条件 | body | VFX |
-|------|------|-----|
-| `sheets/skills/{id}_basic_attack.png` **あり** | skill anim 再生 | `traits.basicAttackVfx` + `sheets/vfx/{id}_basic_attack_vfx.png` |
-| body PNG **なし** | なし | `basicAttackVfx` と `_basic_attack_vfx.png` が揃えば VFX のみ。どちらも無ければ演出なし |
+| 条件                                           | body            | VFX                                                                                     |
+| ---------------------------------------------- | --------------- | --------------------------------------------------------------------------------------- |
+| `sheets/skills/{id}_basic_attack.png` **あり** | skill anim 再生 | `traits.basicAttackVfx` + `sheets/vfx/{id}_basic_attack_vfx.png`                        |
+| body PNG **なし**                              | なし            | `basicAttackVfx` と `_basic_attack_vfx.png` が揃えば VFX のみ。どちらも無ければ演出なし |
 
 **遠隔**（`rangePx >= RANGED_ATTACK_MIN_PX`）も同じ。弓引き PNG を置けば body 再生する。VFX strip も `sheets/vfx/` に配置する。
 
@@ -458,14 +603,14 @@ flowchart TD
   play --> canvas[BattleCanvas.playSkillVfx → VfxPlaybackManager + ParticlePlaybackManager]
 ```
 
-| 用途 | 共有関数 |
-| ---- | -------- |
-| VFX 解決 | `resolveSkillPresentation`（内部で `resolveEffectPresentation`） |
+| 用途             | 共有関数                                                                          |
+| ---------------- | --------------------------------------------------------------------------------- |
+| VFX 解決         | `resolveSkillPresentation`（内部で `resolveEffectPresentation`）                  |
 | コンテキスト構築 | `buildSkillPresentationContext`（ラボは `buildSkillVfxContext` — 同一フィールド） |
-| 命中遅延 | `resolveEffectApplyDelaySec`（`applyFrame` → 秒） |
-| ヒット VFX 再生 | `playSkillHitFeedback` |
-| body 再生秒数 | `resolveSkillBodyPlaybackSec` |
-| 表示ロック秒数 | `resolvePresentationLockSec`（タイムライン表示用） |
+| 命中遅延         | `resolveEffectApplyDelaySec`（`applyFrame` → 秒）                                 |
+| ヒット VFX 再生  | `playSkillHitFeedback`                                                            |
+| body 再生秒数    | `resolveSkillBodyPlaybackSec`                                                     |
+| 表示ロック秒数   | `resolvePresentationLockSec`（タイムライン表示用）                                |
 
 **`effectVfxOnly` ポリシー（戦闘・ラボ共通、既定 `true`）:** アクティブ等（`slotKind !== 'basic'`）では **effect に明示した `vfx` / `hitVfx` のみ**再生する。`skill.vfx` へのフォールバックはしない（レガシー JSON の skill 直下 `vfx` は新規演出では使わない）。**通常攻撃**（`slotKind: basic`）は effect `vfx` を見ず **`traits.basicAttackVfx` のみ**（未設定なら VFX なし）。`presentationLock` の秒数計算だけ `effectVfxOnly: false` で skill 直下 `vfx` を含めうる（[combat.md](combat.md) 参照）。
 
@@ -552,7 +697,7 @@ interface CharacterBuild {
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `trigger.kind`   | `time`（秒）／`basicAttackCount`（通常攻撃回数）／`hitsTaken`（被攻撃回数）                                                                                                                                        |
 | `trigger.value`  | 条件の閾値 N。ステージ開始時 `remaining = N`（ゲージ未充填）。カウントトリガーは N 回のイベントで `remaining === 0`（ゲージ Max）となり、N+1 回目で発動・`remaining = N` にリセット。時間トリガーは 0 到達で即発動 |
-| `useDurationSec` | optional。発動後ロック時間（秒）。省略 / `0` = 即時。**詠唱など、発動後に明示ロックが必要な場合のみ使う**。発動後はそのユニットの他スキル発動を止めるが、CD 進行は止めない（詳細は [combat.md](combat.md)）                                                         |
+| `useDurationSec` | optional。発動後ロック時間（秒）。省略 / `0` = 即時。**詠唱など、発動後に明示ロックが必要な場合のみ使う**。発動後はそのユニットの他スキル発動を止めるが、CD 進行は止めない（詳細は [combat.md](combat.md)）        |
 | `firePolicy`     | optional。`immediate`（既定）／`smart`（条件成立まで発動保留）                                                                                                                                                     |
 | `fireConditions` | `firePolicy: smart` 時の AND 条件（[combat.md](combat.md)）                                                                                                                                                        |
 | `fireTimeoutSec` | smart 保留の最大秒。経過後は条件無視で発動                                                                                                                                                                         |
@@ -589,76 +734,80 @@ interface CharacterBuild {
 | 2. `allowedClassIds[0]`                                                              | 該当クラスの role / `attackRange` プレースホルダ |
 | 3. UI コンテキストの所属クラス                                                       | 同上                                             |
 | 4. `id` の role プレフィックス（`df_*` / `at_*` / `sp_*`、レガシー `defender_*` 等） | 同上                                             |
-| 5. 上記いずれも不可                                                                  | `supporter_placeholder`                       |
+| 5. 上記いずれも不可                                                                  | `supporter_placeholder`                          |
 
 ### バフ・デバフ・HoT・バリア仕様一覧
 
 戦闘中にユニットに付与される、または常時適用されるステータス効果（StatusEffect）および持続効果の一覧と仕様です。詳細な計算式や挙動は `docs/spec/combat.md` を参照してください。
 
 #### 1. バフ（Buff）
+
 味方のステータスを強化、または特殊な防御効果を付与する効果です。
 
-| サブ種別 (`buffSubKind`) | 対象・効果 | 主なパラメータ | 重複・スタックルール | 備考 |
-| :--- | :--- | :--- | :--- | :--- |
-| `stat` | ステータス（`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の上昇 | `buffStat`<br>`buffMultiplier`<br>`buffFlatBonus` | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。 | `damageTaken` の減少（被ダメ軽減）や `attackSpeed`（攻撃速度）の上昇もこれに含みます。 |
-| `barrier` | ダメージを身代わりに受けるバリアを付与 | `ResourceAmountSpec` | 既定は `barrierHp` に加算。`barrierStack: false` で新量に置換。 | 持続時間制限なし（消費されるまで維持）。詳細は後述の「バリア」参照。 |
-| `block` | 物理直接ダメージのブロック率を上昇 | `chance`（0〜1） | 複数ソースは加算（上限 1.0）。 | 成功時、DEF適用後の物理直接ダメージを一定割合カット。DoTは対象外。 |
-| `evasion` | 直接ダメージ（物理/魔法）の回避率を上昇 | `chance`（0〜1） | 複数ソースは加算（上限 1.0）。 | 成功時、直接ダメージを完全に無効化。DoTは対象外。 |
-| `damageDelay` | 一部ダメージ後払い | `ratio`, `buffDurationSec` | 複数ソースは `ratio` 加算（上限 1.0）。遅延プールは加算。 | 軽減ではない。Block 後の確定ダメージを分割し、遅延分は DEF/REG/Barrier/Block/Evasion を再適用しない。詳細は [combat.md](combat.md)。 |
+| サブ種別 (`buffSubKind`) | 対象・効果                                                            | 主なパラメータ                                    | 重複・スタックルール                                                | 備考                                                                                                                                 |
+| :----------------------- | :-------------------------------------------------------------------- | :------------------------------------------------ | :------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------- |
+| `stat`                   | ステータス（`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の上昇 | `buffStat`<br>`buffMultiplier`<br>`buffFlatBonus` | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。 | `damageTaken` の減少（被ダメ軽減）や `attackSpeed`（攻撃速度）の上昇もこれに含みます。                                               |
+| `barrier`                | ダメージを身代わりに受けるバリアを付与                                | `ResourceAmountSpec`                              | 既定は `barrierHp` に加算。`barrierStack: false` で新量に置換。     | 持続時間制限なし（消費されるまで維持）。詳細は後述の「バリア」参照。                                                                 |
+| `block`                  | 物理直接ダメージのブロック率を上昇                                    | `chance`（0〜1）                                  | 複数ソースは加算（上限 1.0）。                                      | 成功時、DEF 適用後の物理直接ダメージを一定割合カット。DoT は対象外。                                                                 |
+| `evasion`                | 直接ダメージ（物理/魔法）の回避率を上昇                               | `chance`（0〜1）                                  | 複数ソースは加算（上限 1.0）。                                      | 成功時、直接ダメージを完全に無効化。DoT は対象外。                                                                                   |
+| `damageDelay`            | 一部ダメージ後払い                                                    | `ratio`, `buffDurationSec`                        | 複数ソースは `ratio` 加算（上限 1.0）。遅延プールは加算。           | 軽減ではない。Block 後の確定ダメージを分割し、遅延分は DEF/REG/Barrier/Block/Evasion を再適用しない。詳細は [combat.md](combat.md)。 |
 
-* **通常攻撃変形 (`basicAttackTransform`)**: 自身に付与する特殊バフ。バフ持続中、通常攻撃（`slotKind: basic`）の性能を上書き・追加効果をマージします（複数付与時は最新1件のみ有効）。
+- **通常攻撃変形 (`basicAttackTransform`)**: 自身に付与する特殊バフ。バフ持続中、通常攻撃（`slotKind: basic`）の性能を上書き・追加効果をマージします（複数付与時は最新 1 件のみ有効）。
 
 #### 2. デバフ（Debuff）
+
 敵のステータスを弱体化、または行動を阻害する効果です。
 
-| サブ種別 (`debuffSubKind`) | 対象・効果 | 主なパラメータ | 重複・スタックルール | 備考 |
-| :--- | :--- | :--- | :--- | :--- |
-| `stat` | ステータス（`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の低下 | `debuffStat`<br>`debuffMultiplier`<br>`debuffFlatBonus` | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。 | `damageTaken` の増加（被ダメUP）や `attackSpeed` の低下（スロウ）もこれに含みます。 |
-| `dot` | 持続ダメージ（Damage over Time）を付与 | `ResourceAmountSpec` | 同一効果は持続時間の長い方を優先。 | 1秒ごとにダメージを再計算（付与時のATKバフ等の変動をリアルタイムに反映）。 |
-| `stun` | 行動不能（CC）状態にする | `durationSec`（上限5秒） | 持続時間の長い方を優先。 | 通常攻撃・アクティブ発動不可。付与成功時に対象の通常攻撃CDをリセット。時間CDは停止。 |
+| サブ種別 (`debuffSubKind`) | 対象・効果                                                            | 主なパラメータ                                          | 重複・スタックルール                                                | 備考                                                                                     |
+| :------------------------- | :-------------------------------------------------------------------- | :------------------------------------------------------ | :------------------------------------------------------------------ | :--------------------------------------------------------------------------------------- |
+| `stat`                     | ステータス（`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の低下 | `debuffStat`<br>`debuffMultiplier`<br>`debuffFlatBonus` | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。 | `damageTaken` の増加（被ダメ UP）や `attackSpeed` の低下（スロウ）もこれに含みます。     |
+| `dot`                      | 持続ダメージ（Damage over Time）を付与                                | `ResourceAmountSpec`                                    | 同一効果は持続時間の長い方を優先。                                  | 1 秒ごとにダメージを再計算（付与時の ATK バフ等の変動をリアルタイムに反映）。            |
+| `stun`                     | 行動不能（CC）状態にする                                              | `durationSec`（上限 5 秒）                              | 持続時間の長い方を優先。                                            | 通常攻撃・アクティブ発動不可。付与成功時に対象の通常攻撃 CD をリセット。時間 CD は停止。 |
 
 #### 3. 持続回復（HoT - Heal over Time）
-時間経過とともに味方のHPを継続的に回復する効果です。
 
-| 定義方法 | 対象・効果 | 主なパラメータ | 重複・スタックルール | 備考 |
-| :--- | :--- | :--- | :--- | :--- |
-| **アクティブ** (`type: heal`, `healSubKind: hot`) | 対象にHoT状態を付与し、持続回復を行う | `ResourceAmountSpec`<br>`durationSec` | 同一効果は持続時間の長い方を優先。 | 1秒ごとに回復量を再計算（使用者のリアルタイムなATK変動を反映）。 |
-| **パッシブ** (`effect: heal`, `healSubKind: hot`) | 常時、またはStage/Wave開始時にHoTを適用 | `ResourceAmountSpec`<br>`hotDurationSec`（0=無限） | パッシブの対象解決ルールに従い同期。 | 薬草師の「常時HoT aura」などがこれに該当します。 |
+時間経過とともに味方の HP を継続的に回復する効果です。
 
-* **被回復量増加**: 対象がパッシブ `healReceivedIncrease` を持っている場合、直接回復だけでなく HoT の毎秒 tick 回復量も `floor(量 × (1 + percent合算))` で増加します。
+| 定義方法                                          | 対象・効果                                  | 主なパラメータ                                     | 重複・スタックルール                 | 備考                                                                |
+| :------------------------------------------------ | :------------------------------------------ | :------------------------------------------------- | :----------------------------------- | :------------------------------------------------------------------ |
+| **アクティブ** (`type: heal`, `healSubKind: hot`) | 対象に HoT 状態を付与し、持続回復を行う     | `ResourceAmountSpec`<br>`durationSec`              | 同一効果は持続時間の長い方を優先。   | 1 秒ごとに回復量を再計算（使用者のリアルタイムな ATK 変動を反映）。 |
+| **パッシブ** (`effect: heal`, `healSubKind: hot`) | 常時、または Stage/Wave 開始時に HoT を適用 | `ResourceAmountSpec`<br>`hotDurationSec`（0=無限） | パッシブの対象解決ルールに従い同期。 | 薬草師の「常時 HoT aura」などがこれに該当します。                   |
+
+- **被回復量増加**: 対象がパッシブ `healReceivedIncrease` を持っている場合、直接回復だけでなく HoT の毎秒 tick 回復量も `floor(量 × (1 + percent合算))` で増加します。
 
 #### 4. バリア（Barrier）
-HPとは別の `barrierHp` プールを作成し、ダメージを肩代わりする効果です。
 
-| 項目 | 仕様 | 備考 |
-| :--- | :--- | :--- |
-| **付与方法** | ・アクティブ: `type: barrier` または `effect: buff`（`buffSubKind: barrier`）<br>・パッシブ: `effect: buff`（`buffSubKind: barrier`） | 効果量は `ResourceAmountSpec`（healと同式）で決定されます。 |
-| **スタック** | 既定は既存の `barrierHp` に**加算**。`barrierStack: false` で新量に**置換**（既存残量は破棄）。 | maxHp を超えていくらでも付与可能です。 |
-| **持続時間** | 時間切れなし。**ダメージで消費されるまで維持**されます。 | ステージクリアやWave跨ぎでも維持されます。 |
-| **ダメージ吸収** | 被ダメージ時、HPより先にバリアが消費されます（直接ダメージ・DoT共通）。 | `barrierHp` が減少し、バリアで防ぎきれなかった超過分のみがHPから減ります。 |
-| **HP割合の参照** | HP割合（`hp / maxHp`）の計算時, `barrierHp` は**含めません**。 | 満タンHP＋大バリアでもHP割合は 1.0 となります。 |
-| **余剰回復変換** | パッシブ `excessHealToBarrier` により、直接回復の超過分をバリアに変換。 | 変換されたバリアは**置換**（`barrierStack: false`）として適用されます。 |
+HP とは別の `barrierHp` プールを作成し、ダメージを肩代わりする効果です。
+
+| 項目              | 仕様                                                                                                                                  | 備考                                                                         |
+| :---------------- | :------------------------------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------- |
+| **付与方法**      | ・アクティブ: `type: barrier` または `effect: buff`（`buffSubKind: barrier`）<br>・パッシブ: `effect: buff`（`buffSubKind: barrier`） | 効果量は `ResourceAmountSpec`（heal と同式）で決定されます。                 |
+| **スタック**      | 既定は既存の `barrierHp` に**加算**。`barrierStack: false` で新量に**置換**（既存残量は破棄）。                                       | maxHp を超えていくらでも付与可能です。                                       |
+| **持続時間**      | 時間切れなし。**ダメージで消費されるまで維持**されます。                                                                              | ステージクリアや Wave 跨ぎでも維持されます。                                 |
+| **ダメージ吸収**  | 被ダメージ時、HP より先にバリアが消費されます（直接ダメージ・DoT 共通）。                                                             | `barrierHp` が減少し、バリアで防ぎきれなかった超過分のみが HP から減ります。 |
+| **HP 割合の参照** | HP 割合（`hp / maxHp`）の計算時, `barrierHp` は**含めません**。                                                                       | 満タン HP ＋大バリアでも HP 割合は 1.0 となります。                          |
+| **余剰回復変換**  | パッシブ `excessHealToBarrier` により、直接回復の超過分をバリアに変換。                                                               | 変換されたバリアは**置換**（`barrierStack: false`）として適用されます。      |
 
 ### パッシブ効果（`PassiveEffectKind`）
 
 共有パッシブは `data/skills/passives.json` に定義し、クラスは `passiveIds` で参照する。
 
-| effect               | 主なフィールド                                                                                                                                              | 挙動                                                                                                                                                                                                                                        |
-| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `targetRuleOverride` | `targetRuleOverride`, `targetRuleOverrideApplyTo?` (`enemy` / `ally`)                                                                                       | effect のターゲット陣営とスコープが一致するときだけ `targetRuleOverride` で上書き（`enemy` = 敵向け effect・通常攻撃・接近、`ally` = 味方向け effect。`kind: self` は常に除外。複数時は配列の後ろ優先）                                     |
-| `specialEffect`      | `specialEffectApplyTo`, `specialEffect`                                                                                                                     | 条件付き特効倍率。`damage` = 与ダメ、`heal` = 被回復（直接 heal のみ、HoT 非対象）。`conditions: []` は無条件で `scale` 適用                                                                                                                |
-| `buff`               | `buffSubKind`, `buffTargetRule`, `buffTargetShape?`, `buffRange?`, 形状別フィールド, `chance?`, `buffStat?`, `ratio?`, `periodicTrigger?` 等 | **常時**（未指定時。barrier は除く）または **Stage/Wave 開始時**（`stageStart` / `waveStart`）。ターゲット形状・射程はアクティブ `buff` effect と同型（接頭辞 `buff`）。`buffSubKind`: `stat` / `barrier` / `block` / `evasion` / `damageDelay` |
-| `debuff`             | `debuffSubKind`, `debuffTargetRule`, `debuffTargetShape?`, `debuffRange?`, 形状別フィールド（`debuffAoeRadiusPx` 等）, `debuffStat?`, `periodicTrigger?` 等 | **常時**（未指定時）または **Stage/Wave 開始時**（`stageStart` / `waveStart`）。ターゲット形状・射程はアクティブ `debuff` effect と同型（接頭辞 `debuff`）。`debuffSubKind`: `stat` / `dot` / `stun` |
-| `counter`            | `chance`, `counterResponses[]`, `counterRange?`                                                                                                             | 常時受付。被 `damage` / `dot` で HP に入ったダメージがあるたび、射程内なら `chance` を判定し、成功時に `counterResponses` を攻撃者へ直接適用（反撃 StatusEffect は付与しない） |
-| `damageReduction`    | `damageReductionPercent`, `damageReductionTargetRule`, `damageReductionTargetShape?`, `damageReductionRange?`, 形状別フィールド                              | 対象に常時被ダメ軽減を付与（戦闘開始時同期）。ターゲット形状・射程はアクティブ effect と同型（接頭辞 `damageReduction`） |
-| `defenseIgnore`      | `defenseIgnore`                                                                                                                                             | 与ダメ時の DEF / REG 無視（`damage` / `dot` でも effect 単位で指定可） |
-| `periodicDispel`     | `periodicTrigger`, `dispelTriggerLimit?`, `dispelTargetRule`, `dispelTargetShape?`, `dispelRange?`, 形状別フィールド, `dispelCount`, `dispelTags?`           | Stage/Wave 開始時、または **対象がデバフを受けた時**（`onDebuffReceived`）にデバフ解除。`dispelTriggerLimit` = 1 Wave 内の発動上限（未指定 = 無制限）。ターゲット形状・射程はアクティブ `dispel` effect と同型（接頭辞 `dispel`） |
-| `aoeCrowdBonus`      | `perExtraTargetScale`, `maxExtraTargets`                                                                                                                    | `aoe` / `scatter` の追加ヒット数ボーナス |
-| `heal`               | `healSubKind`, `hotAmount`, `hotTargetRule`, `hotTargetShape?`, `hotRange?`, 形状別フィールド, `periodicTrigger?`, `hotDurationSec?`                        | パッシブ `heal` は **`healSubKind: hot` のみ**（未指定 = hot）。`periodicTrigger: stageStart` / `waveStart` で開幕付与。`hotDurationSec` は付与 HoT の持続（0=無限）。ターゲット形状・射程はアクティブ heal(hot) effect と同型（接頭辞 `hot`） |
-| `excessHealToBarrier`| `barrierScale`, `excessHealSources?`                                                                                                                        | 回復が maxHp を超過した分をバリアに変換（**上書き**）。`outgoing`（与回復）/ `incoming`（被回復）を複数選択可。未指定 = `outgoing` のみ。直接 `heal` のみ |
-| `selfHpRatioBuff`    | `buffStat`, `buffMultiplierMax?` / `buffFlatBonusMax?`, `maxBuffAtHpRatio`                                                                                  | 自身 HP 割合（`hp/maxHp`。バリア非含有）に応じた常時バフ（対象・形状は自身単体固定）。満タン時は中立、指定 HP 割合以下で最大 |
-| `skillAmountOverride`| `targetSkillId`, `amount`, `effectIndex?`, `passiveAmountField?`                                                                                             | 指定スキル（アクティブ / 取得済みパッシブ）の `ResourceAmountSpec` を完全上書き。アクティブは `effectIndex` 省略で amount 持ち effect すべて。パッシブは `hotAmount` / `barrierAmount`。複数時は `learnedPassiveIds` の後方優先。反撃 `counterResponses` は対象外 |
-| `skillPropertyOverride` | `maxChargesBonus`, `skillPropertyTargetSkillIds?`                                                                                                         | 対象アクティブの `maxCharges` 加算（上限 3） |
+| effect                  | 主なフィールド                                                                                                                                              | 挙動                                                                                                                                                                                                                                                              |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `targetRuleOverride`    | `targetRuleOverride`, `targetRuleOverrideApplyTo?` (`enemy` / `ally`)                                                                                       | effect のターゲット陣営とスコープが一致するときだけ `targetRuleOverride` で上書き（`enemy` = 敵向け effect・通常攻撃・接近、`ally` = 味方向け effect。`kind: self` は常に除外。複数時は配列の後ろ優先）                                                           |
+| `specialEffect`         | `specialEffectApplyTo`, `specialEffect`                                                                                                                     | 条件付き特効倍率。`damage` = 与ダメ、`heal` = 被回復（直接 heal のみ、HoT 非対象）。`conditions: []` は無条件で `scale` 適用                                                                                                                                      |
+| `buff`                  | `buffSubKind`, `buffTargetRule`, `buffTargetShape?`, `buffRange?`, 形状別フィールド, `chance?`, `buffStat?`, `ratio?`, `periodicTrigger?` 等                | **常時**（未指定時。barrier は除く）または **Stage/Wave 開始時**（`stageStart` / `waveStart`）。ターゲット形状・射程はアクティブ `buff` effect と同型（接頭辞 `buff`）。`buffSubKind`: `stat` / `barrier` / `block` / `evasion` / `damageDelay`                   |
+| `debuff`                | `debuffSubKind`, `debuffTargetRule`, `debuffTargetShape?`, `debuffRange?`, 形状別フィールド（`debuffAoeRadiusPx` 等）, `debuffStat?`, `periodicTrigger?` 等 | **常時**（未指定時）または **Stage/Wave 開始時**（`stageStart` / `waveStart`）。ターゲット形状・射程はアクティブ `debuff` effect と同型（接頭辞 `debuff`）。`debuffSubKind`: `stat` / `dot` / `stun`                                                              |
+| `counter`               | `chance`, `counterResponses[]`, `counterRange?`                                                                                                             | 常時受付。被 `damage` / `dot` で HP に入ったダメージがあるたび、射程内なら `chance` を判定し、成功時に `counterResponses` を攻撃者へ直接適用（反撃 StatusEffect は付与しない）                                                                                    |
+| `damageReduction`       | `damageReductionPercent`, `damageReductionTargetRule`, `damageReductionTargetShape?`, `damageReductionRange?`, 形状別フィールド                             | 対象に常時被ダメ軽減を付与（戦闘開始時同期）。ターゲット形状・射程はアクティブ effect と同型（接頭辞 `damageReduction`）                                                                                                                                          |
+| `defenseIgnore`         | `defenseIgnore`                                                                                                                                             | 与ダメ時の DEF / REG 無視（`damage` / `dot` でも effect 単位で指定可）                                                                                                                                                                                            |
+| `periodicDispel`        | `periodicTrigger`, `dispelTriggerLimit?`, `dispelTargetRule`, `dispelTargetShape?`, `dispelRange?`, 形状別フィールド, `dispelCount`, `dispelTags?`          | Stage/Wave 開始時、または **対象がデバフを受けた時**（`onDebuffReceived`）にデバフ解除。`dispelTriggerLimit` = 1 Wave 内の発動上限（未指定 = 無制限）。ターゲット形状・射程はアクティブ `dispel` effect と同型（接頭辞 `dispel`）                                 |
+| `aoeCrowdBonus`         | `perExtraTargetScale`, `maxExtraTargets`                                                                                                                    | `aoe` / `scatter` の追加ヒット数ボーナス                                                                                                                                                                                                                          |
+| `heal`                  | `healSubKind`, `hotAmount`, `hotTargetRule`, `hotTargetShape?`, `hotRange?`, 形状別フィールド, `periodicTrigger?`, `hotDurationSec?`                        | パッシブ `heal` は **`healSubKind: hot` のみ**（未指定 = hot）。`periodicTrigger: stageStart` / `waveStart` で開幕付与。`hotDurationSec` は付与 HoT の持続（0=無限）。ターゲット形状・射程はアクティブ heal(hot) effect と同型（接頭辞 `hot`）                    |
+| `excessHealToBarrier`   | `barrierScale`, `excessHealSources?`                                                                                                                        | 回復が maxHp を超過した分をバリアに変換（**上書き**）。`outgoing`（与回復）/ `incoming`（被回復）を複数選択可。未指定 = `outgoing` のみ。直接 `heal` のみ                                                                                                         |
+| `selfHpRatioBuff`       | `buffStat`, `buffMultiplierMax?` / `buffFlatBonusMax?`, `maxBuffAtHpRatio`                                                                                  | 自身 HP 割合（`hp/maxHp`。バリア非含有）に応じた常時バフ（対象・形状は自身単体固定）。満タン時は中立、指定 HP 割合以下で最大                                                                                                                                      |
+| `skillAmountOverride`   | `targetSkillId`, `amount`, `effectIndex?`, `passiveAmountField?`                                                                                            | 指定スキル（アクティブ / 取得済みパッシブ）の `ResourceAmountSpec` を完全上書き。アクティブは `effectIndex` 省略で amount 持ち effect すべて。パッシブは `hotAmount` / `barrierAmount`。複数時は `learnedPassiveIds` の後方優先。反撃 `counterResponses` は対象外 |
+| `skillPropertyOverride` | `maxChargesBonus`, `skillPropertyTargetSkillIds?`                                                                                                           | 対象アクティブの `maxCharges` 加算（上限 3）                                                                                                                                                                                                                      |
 
 **スタン（`stun` / `debuffSubKind: stun` / counter `kind: stun`）:** `durationSec` **上限 5 秒**。付与成功時に対象の通常攻撃 CD を満タンにリセット。スタン中は time トリガーアクティブ CD 停止（基本攻撃 CD は進行）。詳細は [combat.md](combat.md) のスタン行。
 
@@ -693,21 +842,21 @@ HPとは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 
 ### デバフ解除（`dispel` effect / `periodicDispel` passive）
 
-| フィールド       | 説明                                                                                            |
-| ---------------- | ----------------------------------------------------------------------------------------------- |
-| `dispelCount`    | `0` = 対象タグすべて、`N>0` = 優先度に従い N 件                                                 |
-| `dispelTags`     | 未指定 = 全デバフタグ（`atk` / `def` / `reg` / `damageTaken` / `attackSpeed` / `dot` / `stun`） |
-| `dispelPriority` | 未指定 = `longest`（最長）。`strongest` = 効果量最大を優先                                      |
-| `dispelTriggerLimit` | パッシブ `periodicDispel` のみ。1 Wave 内の発動回数上限（未指定 = 無制限）              |
+| フィールド           | 説明                                                                                            |
+| -------------------- | ----------------------------------------------------------------------------------------------- |
+| `dispelCount`        | `0` = 対象タグすべて、`N>0` = 優先度に従い N 件                                                 |
+| `dispelTags`         | 未指定 = 全デバフタグ（`atk` / `def` / `reg` / `damageTaken` / `attackSpeed` / `dot` / `stun`） |
+| `dispelPriority`     | 未指定 = `longest`（最長）。`strongest` = 効果量最大を優先                                      |
+| `dispelTriggerLimit` | パッシブ `periodicDispel` のみ。1 Wave 内の発動回数上限（未指定 = 無制限）                      |
 
 ### ブロック / 回避 / ダメージ遅延（`buff` effect、`buffSubKind`）
 
-| フィールド        | 説明                                                                 |
-| ----------------- | -------------------------------------------------------------------- |
-| `buffSubKind`     | `block` / `evasion` / `damageDelay` / `stat` / `barrier`       |
-| `chance`          | `block` / `evasion` 用。0〜1。複数ソースは加算（上限 1）             |
-| `ratio`           | `damageDelay` 用。後払いにする被ダメ割合（0.5 = 50%）               |
-| `buffDurationSec` | 付与 buff の持続（秒）                                               |
+| フィールド        | 説明                                                     |
+| ----------------- | -------------------------------------------------------- |
+| `buffSubKind`     | `block` / `evasion` / `damageDelay` / `stat` / `barrier` |
+| `chance`          | `block` / `evasion` 用。0〜1。複数ソースは加算（上限 1） |
+| `ratio`           | `damageDelay` 用。後払いにする被ダメ割合（0.5 = 50%）    |
+| `buffDurationSec` | 付与 buff の持続（秒）                                   |
 
 アクティブは `type: buff` + `buffSubKind` で `StatusEffect` を付与（`overlay: block` / `evasion` / `damageDelay` 等）。パッシブは `syncBuffAuras` で常時同期。旧 `type: block` / パッシブ `block` は読み込み時に正規化。
 
@@ -772,9 +921,9 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `kind`       | 説明                                                                                                                                                                                                                          |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest/**selfOrigin**）。`selfOrigin` = 使用者位置・向きを効果範囲の起点とする（aoe / pierce / single）。`includeSelf`（任意）= 味方 side 時、最終対象に使用者を含める（既定 false） |
-| `stat`       | `side` + `stat`（hp/atk/def/reg）+ `order`（highest/lowest/ratio）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外                                                                                          |
+| `stat`       | `side` + `stat`（hp/atk/def/reg）+ `order`（highest/lowest/ratio）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外                           |
 | `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。フィルタ後 anchor は最前線                                                                                                    |
-| `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR。`DEBUFF_FILTER_TAGS` / `BUFF_FILTER_TAGS` 参照）。フィルタ後 anchor は最前線 |
+| `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR。`DEBUFF_FILTER_TAGS` / `BUFF_FILTER_TAGS` 参照）。フィルタ後 anchor は最前線                                                                                             |
 | `self`       | 自身                                                                                                                                                                                                                          |
 | `all`        | `side` で味方全員 / 敵全員（射程無視）                                                                                                                                                                                        |
 
@@ -805,35 +954,35 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 
 ## effect 共通フィールド（`data/skills/`）
 
-| フィールド                                                   | 説明                                                                                                                                 |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `target`                                                     | anchor 選定（`TargetSpec`）。**射程内**のユニットのみ対象（`self` / `all` を除く）                                                   |
-| `damageIncrease`                                             | 任意。`damage` / `heal` / `dot` 用条件付き倍率（`heal` は直接回復のみ）                                                              |
-| `defenseIgnore`                                              | 任意。`damage` / `dot` 用 DEF / REG 無視                                                                                             |
-| `targetShape`                                                | `single`（既定）／`aoe`／`multiLock`／`pierce`／`chain`／`scatter`                                                                   |
-| `aoeRadiusPx`                                                | `aoe` 必須。anchor の X から ±px                                                                                                     |
-| `hitCount`                                                   | `multiLock` 必須（整数 ≥ 2）。`single` / `aoe` 任意（整数 ≥ 2、省略=1）                                                              |
-| `hitDurationSec`                                             | `single` / `aoe` で `hitCount >= 2` 時必須。全ヒットを均等分散                                                                       |
-| `chainCount` / `chainMaxDistancePx`                          | `chain` 必須                                                                                                                         |
-| `chainPowerStepMultiplier` / `chainPowerStepMode`            | `chain` 任意。跳ごとの威力減衰（`multiply` / `divide`）                                                                              |
-| `chainDurationSec`                                           | `chain` 任意。複数命中の適用時間分散（秒）。未指定 = `0.15 × chainCount + 0.5` 秒（2 体以上命中時）                                |
-| `scatterSpreadRadiusPx`                                      | `scatter` 任意。着弾位置の分散半径（±px）。未指定 = `scatterRadiusPx`                                                                |
-| `scatterRadiusPx` / `scatterHitCount` / `scatterDurationSec` | `scatter` 必須（`scatterRadiusPx` = 乱打半径・命中判定）                                                                             |
-| `scatterSpreadRate`                                          | `scatter` 任意（0〜1。0 = anchor 中心固定。着弾 offset = `scatterSpreadRadiusPx × rate`）                                            |
-| `waitAfterSec`                                               | 任意。**この effect 適用後**、次 effect までの待機秒（正数）。move シーケンスの tail wait にも使う（`skillSequence.ts`）           |
-| `piercePowerStepMultiplier` / `piercePowerStepMode`          | `pierce` 任意。命中ごとの威力減衰（`multiply` / `divide`）                                                                           |
-| `pierceDurationSec`                                          | `pierce` 任意。複数命中の適用時間分散（秒）                                                                                          |
-| `range`                                                      | 命中判定・VFX 共用（px）。省略時 = `actor.traits.rangePx`。`pierce` + `selfOrigin` では向き前方の効果距離                            |
-| `anim`                                                       | 任意。スキル PNG 未配置時の entity anim フォールバック（本番では **skill strip 優先**）。`none` で body 抑制 |
-| `animStartFrame`                                             | 任意。スキル strip 内の再生開始コマ。先頭 idle 参照コマを skip するとき `1`（**実装済み**） |
-| `animLoopFrame`                                              | 任意。ループ開始コマ。指定時は intro → hold（開始〜終了をループ）→ outro の 3 段再生（**実装済み**） |
-| `animLoopEndFrame`                                           | 任意。ループ終了コマ（inclusive）。省略時は `animLoopFrame` |
-| `animIntroEndFrame`                                          | 任意。イントロ最終コマ（inclusive）。省略時は `animLoopFrame` |
-| `animOutroStartFrame`                                        | 任意。アウトロ開始コマ。省略時は `(animLoopEndFrame ?? animLoopFrame) + 1` |
-| `applyFrame`                                                 | 任意。strip 内の**効果適用コマ**（絶対 index）。省略 = 即時。遅延秒 = `max(0, applyFrame - animStartFrame) / 8`。body は発動直後、VFX・ダメージは apply コマ（`skillWindup` → pending） |
+| フィールド                                                   | 説明                                                                                                                                                                                     |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `target`                                                     | anchor 選定（`TargetSpec`）。**射程内**のユニットのみ対象（`self` / `all` を除く）                                                                                                       |
+| `damageIncrease`                                             | 任意。`damage` / `heal` / `dot` 用条件付き倍率（`heal` は直接回復のみ）                                                                                                                  |
+| `defenseIgnore`                                              | 任意。`damage` / `dot` 用 DEF / REG 無視                                                                                                                                                 |
+| `targetShape`                                                | `single`（既定）／`aoe`／`multiLock`／`pierce`／`chain`／`scatter`                                                                                                                       |
+| `aoeRadiusPx`                                                | `aoe` 必須。anchor の X から ±px                                                                                                                                                         |
+| `hitCount`                                                   | `multiLock` 必須（整数 ≥ 2）。`single` / `aoe` 任意（整数 ≥ 2、省略=1）                                                                                                                  |
+| `hitDurationSec`                                             | `single` / `aoe` で `hitCount >= 2` 時必須。全ヒットを均等分散                                                                                                                           |
+| `chainCount` / `chainMaxDistancePx`                          | `chain` 必須                                                                                                                                                                             |
+| `chainPowerStepMultiplier` / `chainPowerStepMode`            | `chain` 任意。跳ごとの威力減衰（`multiply` / `divide`）                                                                                                                                  |
+| `chainDurationSec`                                           | `chain` 任意。複数命中の適用時間分散（秒）。未指定 = `0.15 × chainCount + 0.5` 秒（2 体以上命中時）                                                                                      |
+| `scatterSpreadRadiusPx`                                      | `scatter` 任意。着弾位置の分散半径（±px）。未指定 = `scatterRadiusPx`                                                                                                                    |
+| `scatterRadiusPx` / `scatterHitCount` / `scatterDurationSec` | `scatter` 必須（`scatterRadiusPx` = 乱打半径・命中判定）                                                                                                                                 |
+| `scatterSpreadRate`                                          | `scatter` 任意（0〜1。0 = anchor 中心固定。着弾 offset = `scatterSpreadRadiusPx × rate`）                                                                                                |
+| `waitAfterSec`                                               | 任意。**この effect 適用後**、次 effect までの待機秒（正数）。move シーケンスの tail wait にも使う（`skillSequence.ts`）                                                                 |
+| `piercePowerStepMultiplier` / `piercePowerStepMode`          | `pierce` 任意。命中ごとの威力減衰（`multiply` / `divide`）                                                                                                                               |
+| `pierceDurationSec`                                          | `pierce` 任意。複数命中の適用時間分散（秒）                                                                                                                                              |
+| `range`                                                      | 命中判定・VFX 共用（px）。省略時 = `actor.traits.rangePx`。`pierce` + `selfOrigin` では向き前方の効果距離                                                                                |
+| `anim`                                                       | 任意。スキル PNG 未配置時の entity anim フォールバック（本番では **skill strip 優先**）。`none` で body 抑制                                                                             |
+| `animStartFrame`                                             | 任意。スキル strip 内の再生開始コマ。先頭 idle 参照コマを skip するとき `1`（**実装済み**）                                                                                              |
+| `animLoopFrame`                                              | 任意。ループ開始コマ。指定時は intro → hold（開始〜終了をループ）→ outro の 3 段再生（**実装済み**）                                                                                     |
+| `animLoopEndFrame`                                           | 任意。ループ終了コマ（inclusive）。省略時は `animLoopFrame`                                                                                                                              |
+| `animIntroEndFrame`                                          | 任意。イントロ最終コマ（inclusive）。省略時は `animLoopFrame`                                                                                                                            |
+| `animOutroStartFrame`                                        | 任意。アウトロ開始コマ。省略時は `(animLoopEndFrame ?? animLoopFrame) + 1`                                                                                                               |
+| `applyFrame`                                                 | 任意。strip 内の**効果適用コマ**（絶対 index）。省略 = 即時。遅延秒 = `max(0, applyFrame - animStartFrame) / 8`。body は発動直後、VFX・ダメージは apply コマ（`skillWindup` → pending）  |
 | `vfx`                                                        | 任意。effect 単位の main VFX（`sheets/vfx/{skillId}[_index]_vfx.png` + `placement` / `enabled` / `particles`）。`effectVfxOnly` 既定時は effect のみ（skill 直下へのフォールバックなし） |
-| `vfx.particles`                                              | 任意。パーティクル preset（`preset` 必須、`count` / `durationSec` / `tint` / `placement` で上書き）。PNG strip と併用、または particles のみ |
-| `hitVfx`                                                     | 任意。命中 VFX（`sheets/vfx/{skillId}[_index]_vfx_hit.png`）。再生時に未設定なら main `vfx` を target placement でフォールバック（`playSkillHitFeedback`）。`particles` も同型 |
+| `vfx.particles`                                              | 任意。パーティクル preset（`preset` 必須、`count` / `durationSec` / `tint` / `placement` で上書き）。PNG strip と併用、または particles のみ                                             |
+| `hitVfx`                                                     | 任意。命中 VFX（`sheets/vfx/{skillId}[_index]_vfx_hit.png`）。再生時に未設定なら main `vfx` を target placement でフォールバック（`playSkillHitFeedback`）。`particles` も同型           |
 
 **パッシブ `debuff`:** 上記 `target` / `targetShape` / `range` / 形状別フィールドと同型の項目を **`debuff` 接頭辞**で保持（例: `target` → `debuffTargetRule`、`targetShape` → `debuffTargetShape`、`range` → `debuffRange`、`aoeRadiusPx` → `debuffAoeRadiusPx`）。変換は `passiveDebuffBridge.ts`。発動タイミングは **常時**（未指定）または **`periodicTrigger: stageStart` / `waveStart`**。Stage/Wave 開始時は `chance`（0〜1、未指定=1）で発動確率を判定。アクティブの `trigger`（`basicAttackCount` 等）や `fireConditions` は使わない。
 
@@ -863,12 +1012,12 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 
 ### heal 専用（アクティブ `type: heal`）
 
-| フィールド     | 説明                                                                 |
-| -------------- | -------------------------------------------------------------------- |
-| `healSubKind`  | `instant`（既定）／`hot`／`dispel`。省略時 = `instant`（直接回復）   |
-| `durationSec`  | `hot` 時必須。HoT 持続（秒）                                         |
-| `dispelCount`  | `dispel` 時。`0` = 全デバフ、`N>0` = 優先度に従い N 件             |
-| `dispelTags`   | `dispel` 時 optional。未指定 = 全デバフタグ                          |
+| フィールド    | 説明                                                               |
+| ------------- | ------------------------------------------------------------------ |
+| `healSubKind` | `instant`（既定）／`hot`／`dispel`。省略時 = `instant`（直接回復） |
+| `durationSec` | `hot` 時必須。HoT 持続（秒）                                       |
+| `dispelCount` | `dispel` 時。`0` = 全デバフ、`N>0` = 優先度に従い N 件             |
+| `dispelTags`  | `dispel` 時 optional。未指定 = 全デバフタグ                        |
 
 パッシブ `effect: heal` は **`healSubKind: hot` のみ**（上記パッシブ表参照）。
 
@@ -880,12 +1029,12 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 
 ### move 専用
 
-| フィールド        | 説明                                                             |
-| ----------------- | ---------------------------------------------------------------- |
-| `type: move`      | 使用者（actor）の `battleX` を anchor 基準位置へ移動             |
-| `moveDurationSec` | 補間秒（必須・正数）                                             |
-| `moveMode`        | `engage`（接敵・射程内）／`toAnchor`（anchor 座標 + オフセット） |
-| `anchorOffsetPx`  | `toAnchor` 時、anchor からの px（−=味方側、+=敵背後）。未指定=0  |
+| フィールド        | 説明                                                                                                             |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `type: move`      | 使用者（actor）の `battleX` を anchor 基準位置へ移動                                                             |
+| `moveDurationSec` | 補間秒（必須・正数）                                                                                             |
+| `moveMode`        | `engage`（接敵・射程内）／`toAnchor`（anchor 座標 + オフセット）                                                 |
+| `anchorOffsetPx`  | `toAnchor` 時、anchor からの px（−=味方側、+=敵背後）。未指定=0                                                  |
 | `range`           | `toAnchor` で敵対 anchor へ向かう移動の 1 回上限 px（未指定=`traits.rangePx`）。味方 anchor への帰還等は上限なし |
 
 - `targetShape` は **single のみ**（Phase 1）
