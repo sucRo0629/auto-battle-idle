@@ -8,6 +8,7 @@ import {
   mergeMigrationUnlockedClassIds,
   normalizePartySlots,
 } from '../progression/partyCompose.ts';
+import { migrateSaveClassIds } from './saveClassMigration.ts';
 
 export const SAVE_STORAGE_KEY = 'auto-battle-idle:save';
 
@@ -51,12 +52,12 @@ function parseSaveGameState(raw: unknown): SaveGameState {
   const party = parsePartySlots(obj.party, true);
   const unlockedClassIds = parseUnlockedClassIds(obj.unlockedClassIds);
 
-  return {
+  return migrateSaveClassIds({
     version: SAVE_VERSION,
     stageProgress,
     party,
     unlockedClassIds,
-  };
+  });
 }
 
 function migrateSaveV1(obj: Record<string, unknown>): SaveGameState {
@@ -70,12 +71,12 @@ function migrateSaveV1(obj: Record<string, unknown>): SaveGameState {
   });
   const party = normalizePartySlots(slots);
 
-  return {
+  return migrateSaveClassIds({
     version: SAVE_VERSION,
     stageProgress,
     party,
     unlockedClassIds: mergeMigrationUnlockedClassIds(party),
-  };
+  });
 }
 
 function parseStageProgress(raw: unknown): SaveGameState['stageProgress'] {

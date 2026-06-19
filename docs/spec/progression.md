@@ -72,7 +72,7 @@ interface SaveGameState {
 | `learnedPassiveIds` / `learnedActiveIds` | LvUP 時に `classes.json` の `skills[]` から再計算して更新                           |
 | `equippedActiveSlots`                    | スキルメニューでのセット変更時に即セーブ。LvUP 後も維持（未習得になった ID は除去） |
 
-- ロード時：`reconcilePartyBuilds` がレベルと習得リストを突き合わせ、不整合を修復してから再保存する。
+- ロード時：`migrateSaveClassIds` で旧 classId（例: `at_sniper` → `at_ballista`）を置換したうえで、`reconcilePartyBuilds` がレベルと習得リストを突き合わせ、不整合を修復してから再保存する。
 - 新アクティブ習得時は自動セットしない（プレイヤーがスキルメニューで選ぶ）。
 
 ### 進行 UI
