@@ -25,7 +25,37 @@
 固定値（flat）: 同一 stat 内で buff は `+flatBonus`、debuff は `-flatBonus` を代数和。  
 係数（multiplier）: 同一 stat 内で乗算。
 
-**ダメージ乱数:** 最終ダメージ・回復量に乱数ブレは設けない（完全決定）。
+**ダメージ乱数:** 最終ダメージ・回復量に乱数ブレは設けない。確率要素を使う場合も、判定直後に成功 / 失敗の確定結果へ収束させる（下記「確率判定と確定状態」）。
+
+## 確率判定と確定状態
+
+戦闘状態は **未判定状態 → 判定 → 確定状態** の遷移として扱う。
+
+```text
+未判定状態
+  → 判定（chance / 確率ロール）
+  → 確定状態
+```
+
+確率要素は判定時だけ使用できる。`chance` はスキル定義やパッシブ定義に置かれる判定パラメータであり、戦闘中の `CombatantState` / `StatusEffect` / `BattleSnapshot` に「未判定」「成功するかもしれない」「失敗するかもしれない」という確率状態を保持しない。
+
+| 対象 | 未判定状態 | 判定 | 確定状態 |
+| ---- | ---------- | ---- | -------- |
+| 回避 | 直接 `damage` を受ける | `evasion` の `chance` を判定 | 回避成功なら damage 非適用、失敗なら後続処理へ進む |
+| ブロック | 物理直接 `damage` が確定 | `block` の `chance` を判定 | 成功なら block 後 damage、失敗なら block なし |
+| 防御無視 | damage 計算開始 | 各 `defenseIgnore.chance` を判定 | 成功したソースだけ DEF / REG 無視へ合算 |
+| debuff / stun / knockback 付与 | effect 適用時 | effect / passive の `chance` を判定 | 成功なら `StatusEffect` / moveLock 等を付与、失敗なら非付与 |
+| 確率反撃 | 被攻撃条件と射程条件を満たす | `counter.chance` を判定 | 成功なら responses を即時適用、失敗なら反撃なし |
+| Stage/Wave 開始パッシブ | 発動タイミング到達 | `chance` を判定 | 成功なら効果を適用、失敗なら非適用 |
+
+**責務分離:**
+
+- 確率判定責務 — `chance` を読み、成功 / 失敗をその場で確定する。
+- 効果適用責務 — 判定済みの成功結果だけを HP、barrier、StatusEffect、CD、Threat、位置へ反映する。
+- 状態保持責務 — 反映後の確定値だけを保持する。未判定の確率状態は保持しない。
+- ログ / イベント責務 — 戦闘ログと `BattleEvent` には確定結果のみを出す。例: `evaded`、`debuff applied`、`counter triggered`、`counter not triggered`。確率値や未判定状態はログ上の戦闘結果として扱わない。
+
+このルールは [../combat-architecture.md](../combat-architecture.md) の「確定結果レイヤー」に従う。戦闘結果レイヤーの完全決定性とは、確率判定を禁止することではなく、判定後の結果が必ず確定状態として保存・描画・ログ出力されることを指す。
 
 ## 魔法ダメージ
 
