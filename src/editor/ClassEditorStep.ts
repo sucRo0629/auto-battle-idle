@@ -64,7 +64,7 @@ import {
 const ROLE_LABELS: Record<Role, string> = {
   defender: "守備 (defender)",
   attacker: "攻撃 (attacker)",
-  supporter: "支援 (supporter)",
+  supporter: "ヒーラー (supporter)",
 };
 
 const ROW_LABELS: Record<FormationRow, string> = {

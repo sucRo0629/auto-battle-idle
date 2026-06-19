@@ -31,7 +31,7 @@
 | ----------- | ----------------------------------------------------- |
 | `defender`  | 前列タンク + 軽い支援（buff/heal 可）                                      |
 | `attacker`  | ダメージディーラー。近接帯（`rangePx < 100`）は前列、遠隔帯は後列が既定 |
-| `supporter` | 回復・支援（後列が典型）                                                   |
+| ヒーラー | 回復・支援（後列が典型）                                                   |
 
 `classId` 命名：`{rolePrefix}_{englishSlug}`
 
@@ -44,6 +44,24 @@
 例：`df_guardian`, `at_ranger`, `sp_cleric`
 
 ## クラス区分
+
+### クラス設計方針
+
+各ロールは以下の3系統で構成される。
+
+#### 基礎
+
+ロール本来の役割に特化した標準クラス。
+
+#### 拡張
+
+ロール本来の役割を維持しながら、
+その性能を発展・強化したクラス。
+
+#### 変則
+
+ロール本来の役割に加えて、
+別ロールの要素を取り入れた複合クラス。
 
 | 区分         | 現状                     | 備考 |
 | ------------ | ------------------------ | ---- |
@@ -80,7 +98,7 @@
 
 ※ `at_lancer_passive_1`（牽制）は常時 debuff として再評価する。`at_lancer_passive_2`（連携）は `selfOrigin` + `aoe` の味方 ATK aura。
 
-#### supporter（`sp_`）
+#### ヒーラー（`sp_`）
 
 | classId        | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0）                                                                 | アクティブ（Lv0）                          |
 | -------------- | ------ | --------- | ----- | ---- | ------------------------------------------------------------------------------- | ------------------------------------------ |
@@ -99,9 +117,9 @@
 
 未編成の残り 11 クラスは `DEFAULT_ROSTER_EXTRAS.demo` でアンロック（編成画面から選択可）。
 
-詳細な設計方針・Lv 習得表・TBD は **§クラスサポ設計方針** を正とする。実装履歴の詳細は Cursor プラン（結界師バリアヒーラー化・薬草師データ固め）も参照可。
+詳細な設計方針・Lv 習得表・TBD は **§クラスヒーラー設計方針** を正とする。実装履歴の詳細は Cursor プラン（結界師バリアヒーラー化・薬草師データ固め）も参照可。
 
-## クラスサポ設計方針
+## クラスヒーラー設計方針
 
 ### 共通ルール
 
@@ -109,7 +127,7 @@
 | ------------------ | ----------------------------------------------------------------------------------------------- |
 | **Lv0 アクティブ** | **`active_1` のみ**（`active_2` は基本性能確定まで設計・習得しない）                            |
 | **Lv0 パッシブ**   | 原則 `passive_1`。**療養師**は Lv0 で `passive_2`（余剰回復 → バリア）も習得。**結界師**は Lv0 で `passive_2`（Wave 開始バリア）も習得。**薬草師**は Lv0 で `passive_2`（高 HP 味方 DEF buff）も習得 |
-| **`active_2`**     | サポは Lv0 では原則習得しない（**例外:** 結界師 Lv10 で `active_2` 習得済み）。attacker の第 2 アクティブは Lv0 から 2 種 |
+| **`active_2`**     | ヒーラーは Lv0 では原則習得しない（**例外:** 結界師 Lv10 で `active_2` 習得済み）。attacker の第 2 アクティブは Lv0 から 2 種 |
 | **スキル表示名**   | 仮で `name` = `id`。正式名称は後日決定                                                          |
 | **回復力順位**     | 療養師 ≈ 結界師（実効耐久 parity） **＞** 薬草師（instant/burst heal は意図的に劣る）           |
 
@@ -123,9 +141,9 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | Lv10 | passive_3 + active 追加           | 鉄衛: `passive_3` + `active_3`／闘技: `passive_3` + `active_3`     |
 | Lv20 | passive_4 + active 追加           | 護法: `passive_4`／闘技: `passive_4` + `active_4`（鉄衛 Lv20 未定）  |
 
-**attacker / defender:** Lv0 で **アクティブ 2 種**を習得（**例外:** `at_enchanter` は Lv0 で `active_1` のみ）。**supporter:** Lv0 で **`active_1` のみ**（`active_2` は Lv10+ または Lv20 枝候補）。
+**attacker / defender:** Lv0 で **アクティブ 2 種**を習得（**例外:** `at_enchanter` は Lv0 で `active_1` のみ）。**ヒーラー:** Lv0 で **`active_1` のみ**（`active_2` は Lv10+ または Lv20 枝候補）。
 
-サポーター（現行 `classes.json`）:
+ヒーラー（現行 `classes.json`）:
 
 | classId        | Lv0                                           | Lv10                                              | Lv20              |
 | -------------- | --------------------------------------------- | ------------------------------------------------- | ----------------- |
@@ -146,15 +164,15 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | 味方 `def` / `reg` stat buff       | 薬草師 Lv0 `passive_2`（高 HP 味方 DEF）のみ可           | Lv10+ 拡張候補                           |
 | 自己火力（scatter damage 等）      | **Lv0 なし**                                            | Lv20 枝のみ検討                           |
 
-**根拠:** Lv0 で回復 + sustain + 味方火力 / 敵被ダメ debuff を持つとサポ 1 枠が強すぎる → defender 型 Lv0 / Lv10 / Lv20 に揃え **火力寄与は Lv20 枝**。
+**根拠:** Lv0 で回復 + sustain + 味方火力 / 敵被ダメ debuff を持つとヒーラー 1 枠が強すぎる → defender 型 Lv0 / Lv10 / Lv20 に揃え **火力寄与は Lv20 枝**。
 
-### 三サポの役割分担（Lv0 確定分）
+### 三ヒーラーの役割分担（Lv0 確定分）
 
 | classId        | 個性              | Lv0 の柱                                                                  | 耐久の出し方                                             |
 | -------------- | ----------------- | ------------------------------------------------------------------------- | -------------------------------------------------------- |
 | `sp_cleric`    | 純ヒーラー        | 直接 heal + 低 HP 回復特化 + 余剰回復 → バリア（`passive_1` / `passive_2`） | **HP 回復** + **barrier**（余剰分）                      |
 | `sp_abjurer`   | バリアヒーラー    | 高 HP 味方被ダメ軽減 + Wave 開始バリア + 直接 heal                          | Lv0: **`damageTaken` 軽減** + **barrier**／Lv10: 全体 barrier（`passive_3`） |
-| `sp_alchemist` | HoT + debuff サポ | HoT aura + 高 HP 味方 DEF buff + active 範囲 HoT / debuff                   | Lv0: debuff + HoT／Lv10: 味方 dot 解除（`passive_3`）    |
+| `sp_alchemist` | HoT + debuff ヒーラー | HoT aura + 高 HP 味方 DEF buff + active 範囲 HoT / debuff                   | Lv0: debuff + HoT／Lv10: 味方 dot 解除（`passive_3`）    |
 
 **薬草師（Herbalist）参照:** Perfumer（常時 HoT + active 範囲 HoT）+ Mulberry（Lv0 高 HP 味方 DEF buff + Lv10 dot 解除）。Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士（罠 + DoT 毒）との差: 薬草師 = HoT sustain + 与ダメ debuff（毒 DoT なし）。`traits.rangePx` は近接帯（`rangePx < 100`）で前列配置。`active_1` の敵 debuff は `targetShape: aoe` + `aoeRadiusPx: 70`（最近接敵をアンカーにした範囲）。`effect.range` の拡張は使わない。
 
@@ -162,7 +180,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 
 ### 未決・TBD
 
-- 全サポ: Lv20 `passive_4` / `active_2` の具体設計（結界師 `passive_4` のみ Lv20 習得済み）
+- 全ヒーラー: Lv20 `passive_4` / `active_2` の具体設計（結界師 `passive_4` のみ Lv20 習得済み）
 - 療養師: `sp_cleric_active_2`（広域治療）は `data/skills/actives/sp_cleric.json` に定義済みだが **`classes.json` 未習得**（Lv20 候補）
 - 符術士: Lv0 は `active_1` のみ。`active_2`（爆符）の習得段階は未配線
 
@@ -176,7 +194,7 @@ defender 系（[`data/classes.json`](../../data/classes.json)）を **参照実�
 | ----------- | ------------------------------------------------------------------------------ |
 | `defender`  | `front`                                                                        |
 | `attacker`  | 近接帯（`rangePx < 100`）→ `front`、遠隔帯（`rangePx >= 100`）→ `back`         |
-| `supporter` | `back`（**例外:** `sp_alchemist` は近接帯のため `front`）                                                         |
+| ヒーラー | `back`（**例外:** `sp_alchemist` は近接帯のため `front`）                                                         |
 
 敵のデフォルトターゲットは射程内でヘイト最大（[combat.md](combat.md) の Threat 節）。近接アタッカーが前列にいても、ディフェンダーがヘイトを引きつける想定。
 
@@ -349,7 +367,7 @@ passiveIds?: string[]; // クラス固有パッシブ（`data/skills/passives.js
 
 - 基本攻撃も `data/skills/actives/` に `{entityId}_basic_attack` として定義し、`slotKind: 'basic'` で実行。
 - 基本攻撃 ID をセット枠（`equippedActiveSlots`）に入れない。
-- **defender / attacker:** Lv0 でアクティブ 2 種を習得（`skills[].level: 0` に 2 active ID）。**supporter:** Lv0 で **`active_1` のみ**（`active_2` は Lv20 枝候補。詳細は §クラスサポ設計方針）。
+- **defender / attacker:** Lv0 でアクティブ 2 種を習得（`skills[].level: 0` に 2 active ID）。**ヒーラー:** Lv0 で **`active_1` のみ**（`active_2` は Lv20 枝候補。詳細は §クラスヒーラー設計方針）。
 - 戦闘エンジンは **習得済みアクティブを最大 4 枠まで**自動参加（段階解放: Lv0=2 / Lv15=3 / Lv30=4）。
 - **`equippedActiveSlots`** — スキルメニュー（テスト・バランス用）のみ。本番戦闘の参加判定には使わない。
 
@@ -414,7 +432,7 @@ interface CharacterBuild {
 | 2. `allowedClassIds[0]`                                                              | 該当クラスの role / `attackRange` プレースホルダ |
 | 3. UI コンテキストの所属クラス                                                       | 同上                                             |
 | 4. `id` の role プレフィックス（`df_*` / `at_*` / `sp_*`、レガシー `defender_*` 等） | 同上                                             |
-| 5. 上記いずれも不可                                                                  | `supporter_placeholder`                          |
+| 5. 上記いずれも不可                                                                  | `supporter_placeholder`                       |
 
 ### バフ・デバフ・HoT・バリア仕様一覧
 

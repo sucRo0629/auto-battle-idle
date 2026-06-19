@@ -148,7 +148,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | 1          | 近接アタッカー     | `role === "attacker"` かつ `rangePx < 100` |
 | 2          | 遠隔アタッカー     | `role === "attacker"` かつ `rangePx >= 100` |
 | 3          | ディフェンダー     | `role === "defender"`                     |
-| 4          | サポーター         | `role === "supporter"`                    |
+| 4          | ヒーラー           | `role === "supporter"`                    |
 
 **後方の定義（陣営ごとの battleX 向き）：**
 

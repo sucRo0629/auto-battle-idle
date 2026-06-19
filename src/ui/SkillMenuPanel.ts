@@ -699,7 +699,7 @@ export class SkillMenuPanel {
     const roleLabels: Record<string, string> = {
       defender: "ディフェンダー",
       attacker: "アタッカー",
-      supporter: "サポーター",
+      supporter: "ヒーラー",
     };
     return `${rowLabels[preset.formationRow] ?? preset.formationRow} / ${
       roleLabels[preset.role] ?? preset.role

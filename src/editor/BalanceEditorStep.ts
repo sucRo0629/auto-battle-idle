@@ -59,7 +59,7 @@ const PREVIEW_LEVEL = 10;
 const ROLE_LABELS: Record<Role, string> = {
   defender: '守備',
   attacker: '攻撃',
-  supporter: '支援',
+  supporter: 'ヒーラー',
 };
 
 function computeRowDerived(

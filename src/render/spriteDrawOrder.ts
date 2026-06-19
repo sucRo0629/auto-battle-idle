@@ -23,7 +23,7 @@ export function factionBackDepth(layout: SpriteDrawOrderInput): number {
 
 /**
  * 味方のみ: 値が小さいほど下層（先に描画）。
- * サポーター → ディフェンダー → 遠隔アタッカー → 近接アタッカーの順で手前に重なる。
+ * ヒーラー → ディフェンダー → 遠隔アタッカー → 近接アタッカーの順で手前に重なる。
  */
 export function allyRoleBackDepth(layout: SpriteDrawOrderInput): number {
   const role = layout.role ?? 'attacker';
