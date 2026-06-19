@@ -129,22 +129,20 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 
 ## クールダウン
 
+クールダウンは **戦闘時間で進行するタイマー**として統一する。スタン、ターゲット不在、発動条件未成立、演出ロック、通常攻撃停止は CD タイマーを止めない。時間停止が必要な効果はスタンではなく、後述の `freeze` など別状態として定義する。
 
-| 枠                 | 進行ルール                                                   |
-| ----------------- | ------------------------------------------------------- |
-| **basic**         | 常に **時間**（`remaining -= deltaTime × basicCooldownRate`） |
-| **active（時間）**    | `remaining -= deltaTime × ∏ passive.activeCooldownRate` |
-| **active（攻撃回数）**  | 通常攻撃のダメージ発生ごとに、全 `basicAttackCount` アクティブがそれぞれ `remaining--`（多段は各ダメージごと。攻撃枠単位ではまとめない。回避時は進まない。`remaining > 0` のときのみ） |
-| **active（被攻撃回数）** | 使用者が `hurt` になるたび `remaining--`（`remaining > 0` のときのみ） |
-
+| 枠 | 進行ルール |
+| --- | --- |
+| **basic CD** | 常に **時間**（`remaining -= deltaTime × basicCooldownRate`） |
+| **active CD（time trigger）** | 常に **時間**（`remaining -= deltaTime × ∏ passive.activeCooldownRate`） |
 
 **basicCooldownRate** — クラス `attackSpeedTier` を `levelCurves.json` の `attackSpeedPresets` で係数化（`normal` = 1.0）。詳細は [stats.md](stats.md)。
 
 **予定（未実装）** — パッシブ `attackSpeedTierShift` と buff/debuff `attackSpeed` による tier ステップ加算後、上記 preset から rate を再解決。
 
-**時間トリガー（`time`）** — `remaining` が 0 になると `SkillExecutor` が1回発動し、`trigger.value` にリセット（レガシー `interval` は `trigger.kind: time` として解釈）。ステージ開始時は `remaining = trigger.value`（HUD ゲージ未充填）。
+**時間トリガー（`time`）** — `remaining` が 0 になると発動可能状態になる。発動できる場合は `SkillExecutor` が1回発動し、`trigger.value` にリセットする。スタン中などで行動できない場合も `remaining = 0` の準備完了状態を保持し、CD は停止しない（レガシー `interval` は `trigger.kind: time` として解釈）。
 
-**カウントトリガー（`basicAttackCount` / `hitsTaken`）** — `trigger.value = N` のとき、次の3段階で進行する。
+**カウントトリガー（`basicAttackCount` / `hitsTaken`）は CD ではなくイベントゲージ。** `trigger.value = N` のとき、次の3段階で進行する。
 
 | フェーズ | 条件 | 攻撃回数 | 被攻撃回数 | HUD ゲージ |
 | -------- | ---- | -------- | ---------- | ---------- |
@@ -152,7 +150,7 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 | 準備完了 | `remaining === 0` | 発動しない | 発動しない | **100%（Max）** |
 | 消費 | 準備完了後の N+1 回目 | **通常攻撃の代わりに**アクティブ発動 → `remaining = N` にリセット | **N+1 回目の被弾**でアクティブ発動（ダメージは通常通り）→ リセット | 0% に戻る |
 
-ステージ開始時は `remaining = trigger.value`（ゲージ未充填）。カウントトリガーは `remaining === 0` でも active 枠から自動発動せず、上記の消費イベントを待つ。
+ステージ開始時は `remaining = trigger.value`（ゲージ未充填）。カウントトリガーは `remaining === 0` でも active 枠から自動発動せず、上記の消費イベントを待つ。スタン中は行動不能のため `basicAttackCount` の消費イベントは起きない。`hitsTaken` はスタン中でも被弾して `hurt` が発生すれば通常どおり進む。
 
 1 tick あたりの実行順（1ユニット）：active 枠0→1→2→3 → basic（準備完了カウント active があれば basic 枠処理時にそちらを優先）
 
@@ -171,13 +169,13 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 | レーン | 役割 |
 | --- | --- |
-| `presentationLock` | スキル発動後、各 effect の **body strip 再生秒** と **VFX 再生秒**（main + `hitVfx`、登録 strip があるもののみ）および **particles 再生秒**（`resolveParticlePlaybackSec`）の最大値を `resolvePresentationLockSec` で算出し、その間 **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。`useDurationSec > 0` のときは **0**（use lock が優先）。**CD チャージは止めない**。秒数計算だけ `effectVfxOnly: false` で skill 直下 `vfx` を含めうる（再生は effect 優先ポリシーのまま）— [classes-and-skills.md](classes-and-skills.md#演出解決コード) |
+| `presentationLock` | スキル発動後、各 effect の **body strip 再生秒** と **VFX 再生秒**（main + `hitVfx`、登録 strip があるもののみ）および **particles 再生秒**（`resolveParticlePlaybackSec`）の最大値を `resolvePresentationLockSec` で算出し、その間 **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。`useDurationSec > 0` のときは **0**（use lock が優先）。**CD は止めない**。秒数計算だけ `effectVfxOnly: false` で skill 直下 `vfx` を含めうる（再生は effect 優先ポリシーのまま）— [classes-and-skills.md](classes-and-skills.md#演出解決コード) |
 | `animLock` | body strip の再生時間だけ `SkillSequenceRunner.beginAnimLock` で保持し、`isActorBusy` / `isBasicAttackBlocked` で **他スキル発動を停止**する。`presentationLock` と同様に **CD 進行は止めない**。body 再生を止める用途はここで自動付与する。 |
-| `useDurationSec` | アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。**詠唱など、発動後に明示ロックが必要な場合のみ使う**。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**停止中はそのユニットの全スキル CD 進行を停止する**。Party HUD: 停止中は `paused`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。`useDurationSec` の表示ゲージは発動後ロックを示す用途で、CD とは独立。 |
+| `useDurationSec` | アクティブのみ optional（省略 / `0` = 即時）。発動成功時に `SkillSequenceRunner.beginUse` で停止を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）が発動不可。**詠唱など、発動後に明示ロックが必要な場合のみ使う**。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**停止中も CD は進行する**。Party HUD: 停止中は `busy`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も lock 残量があれば busy 継続。`useDurationSec` の表示ゲージは発動後ロックを示す用途で、CD とは独立。 |
 
 **Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 3px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。
 
-**スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、通常攻撃・アクティブは発動しない。`basicAttackCount` / `hitsTaken` トリガーもスタン中は進まない（命中・被弾が起きないため）。
+**スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、使用者として通常攻撃・アクティブを発動せず、ターゲット選択も行わない。スタン中のユニットは他ユニットからの攻撃・回復・効果対象にはなり得る。スタンは CD 停止効果を持たない。
 
 ## ヘイト（Threat）
 
@@ -223,10 +221,13 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | buff   | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec`                                                                           |
 | 通常攻撃変形 | `effect: "basicAttackTransform"` + `buffDurationSec` 等 — バフ持続中のみ通常攻撃 effect を実行時マージ（下記）。付与対象は自身固定 |
 | debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                   |
-| スタン    | `effect: "stun"` + `durationSec`（**上限 5 秒**）— `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は通常攻撃・アクティブ発動不可。**付与成功時**に対象の通常攻撃 CD を満タンにリセット。スタン中は **time トリガーアクティブ CD 停止**（基本攻撃 CD は進行） |
+| スタン    | `effect: "stun"` + `durationSec`（**上限 5 秒**）— `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は使用者としての通常攻撃・アクティブ発動・ターゲット選択不可。CD は停止しない |
+| 凍結 / 時間停止系拘束 | **未実装・予約概念**。CD 停止が必要な場合はスタンではなく別 `StatusEffect` として定義する。スタンとは別物で、Flow 系上位制御など時間進行そのものへ干渉する効果として個別仕様化する |
 | 反撃    | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記 |
 | デバフ解除  | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `dispelPriority` に従い N 件（`longest` = 残り時間最長、`strongest` = 効果量最大。未指定は `longest`）。対象タグに `attackSpeed`（SPDデバフ）可。パッシブ `periodicDispel` は `stageStart` / `waveStart` / `onDebuffReceived` で `dispelTargetRule` + 形状・射程（接頭辞 `dispel`、[classes-and-skills.md](classes-and-skills.md)）で対象選択。`dispelTriggerLimit` = Wave 内発動回数上限 |
 | ノックバック | `effect: "knockback"` + `distancePx` — 各陣営の **後方** へ即時移動（プレイヤーは左 `-X`、敵は右 `+X`）。敵は進軍表示下限未満にならない。**付与成功時**に移動硬直 **1.5 秒**（`StatusEffect.overlay: "moveLock"`）。移動硬直中は接敵接近・スキル `move` を停止するが、通常攻撃・アクティブは可能。詳細は [battle-field.md](battle-field.md) §2.5 |
+
+**スタンと凍結の境界:** スタンは行動不能だけを扱い、CD 停止・時間停止・ゲージ停止を持たない。CD 停止を行うデバフが必要になった場合は、`freeze` など別状態として追加し、CD 進行停止対象（basic CD / active CD / イベントゲージ / DoT/HoT tick 等）を個別に定義する。
 
 ### 反撃（`counter`）
 
