@@ -61,7 +61,7 @@ interface SaveGameState {
 
 初回セーブは `parties.json` からパーティを生成。
 
-保存タイミング：Victory/Defeat 後、60 秒ごと、`beforeunload` 時。スキルセット変更・パーティ編集時は即時。
+保存タイミング：Victory/Defeat 後、60 秒ごと、`beforeunload` 時。パーティ編集時は即時。
 
 ### 習得済みビルドの永続化
 
@@ -70,10 +70,10 @@ interface SaveGameState {
 | フィールド                               | 永続化のタイミング                                                                  |
 | ---------------------------------------- | ----------------------------------------------------------------------------------- |
 | `learnedPassiveIds` / `learnedActiveIds` | LvUP 時に `classes.json` の `skills[]` から再計算して更新                           |
-| `equippedActiveSlots`                    | スキルメニューでのセット変更時に即セーブ。LvUP 後も維持（未習得になった ID は除去） |
 
 - ロード時：`migrateSaveClassIds` で旧 classId（例: `at_sniper` → `at_ballista`）を置換したうえで、`reconcilePartyBuilds` がレベルと習得リストを突き合わせ、不整合を修復してから再保存する。
-- 新アクティブ習得時は自動セットしない（プレイヤーがスキルメニューで選ぶ）。
+- `equippedActiveSlots` は歴史的互換フィールドとして残る場合があるが、設計上は使用しない。ロード時の整合対象は習得済みリストを正とする。
+- 新アクティブ習得時は、付け替え操作なしで常時使用可能になる。
 
 ### 進行 UI
 
@@ -100,18 +100,18 @@ interface ClassSkillUnlock {
 ```
 
 - LvUP 時、`resolveLearnedSkills` が該当 `skillIds` を `learnedPassiveIds` / `learnedActiveIds` に反映。
-- 新アクティブの自動セットはしない（スキルセット UI でプレイヤーが選ぶ）。
+- 習得したアクティブは、Lv に応じた枠数内で常時使用可能になる。付け替え・セット操作は行わない。
 - 習得エントリは `classes.json` の各クラス `skills[]` に定義する。
 
 ### アクティブ枠（最大 4）
 
-- 戦闘参加は **`learnedActiveIds`**（習得即参加）。`equippedActiveSlots` はスキルメニュー（テスト用）のみ。
-- 段階解放: Lv0=2 / Lv15=3 / Lv30=4（`getUnlockedActiveSlotCount`）。
+- 戦闘参加は **`learnedActiveIds`**（習得即参加）。
+- 段階解放: Lv0=2 / Lv10=3 / Lv20=4（`getUnlockedActiveSlotCount`）。
 - Party HUD: 2×2 リキャスト + 多段チャージストックピップ（`maxCharges > 0` 時）。
 
 ### 習得済みビルドの永続化
 
-`reconcileMemberBuild` / `reconcilePartyBuilds`（`skillBuild.ts`）がレベルと `skills[]` から習得リストを同期し、セット枠の整合を保つ。詳細は Phase 2 セーブ節を参照。
+`reconcileMemberBuild` / `reconcilePartyBuilds`（`skillBuild.ts`）がレベルと `skills[]` から習得リストを同期する。詳細は Phase 2 セーブ節を参照。
 
 ---
 
@@ -156,12 +156,12 @@ Phase 5 の演出ラボで VFX **調整** は済。Phase 6 で戦闘 VFX を PNG
 
 Phase 3〜6 完了後。敵 `exp`、成長曲線、クラス/スキル/ステージ数値の体感チューニング。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
 
-### アクティブセット 2 枠目の解放
+### アクティブ枠構造
 
-- Phase 3 で追加した 2 枠目基盤に対し、**いつ・誰が 2 枠目を使えるか**を決定する。
-- `getUnlockedActiveSlotCount` に本番ロジックを実装する。
-- **UI**（スキルメニュー）と**戦闘**（`createCooldowns` 等）の両方で未解放枠を無効化し、セーブ改ざん・デバッグ Lv 変更時も整合する。
-- 候補：ステージマイルストーン / Lv / クラス別等。
+- 全クラス共通で Lv0=2、Lv10=3、Lv20=4。
+- `getUnlockedActiveSlotCount` はこの Lv 段階を返す。
+- **UI**（HUD / スキル表示）と**戦闘**（`createCooldowns` 等）の両方で、習得済みアクティブの常時使用枠として扱う。
+- 付け替え・セット・装備変更によるビルド分岐は行わない。ビルドは `classes.json` の習得構造で決まる。
 
 ---
 

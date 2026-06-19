@@ -85,7 +85,7 @@ Survival Layer
 
 Physical Kill は、敵の処理対象と攻撃イベント構造を操作する。
 
-物理アタッカーの本質は、近接か遠隔かではなく、**Attack / Hit / Skill Gauge の組み合わせで、どの敵をどう処理するか**にある。
+物理 Kill / Flow クラスの本質は、近接か遠隔かではなく、**Attack / Hit / Skill Gauge の組み合わせで、どの敵をどう処理するか**にある。
 近接・遠隔は配置と射程の違いとして現れるが、設計上の主軸は「処理対象」と「イベント密度」である。
 
 現在の Kill 寄り物理職は次のように整理できる。
@@ -99,7 +99,7 @@ Physical Kill は、敵の処理対象と攻撃イベント構造を操作する
 
 Physical Kill が扱うのは、単なる物理ダメージ量ではない。
 高 DEF、瀕死、遠隔、高 Max HP という敵側の問題を、それぞれ別の処理クラスへ割り当てている。
-これにより、アタッカーの差分は「DPS の大小」ではなく「どの敵構造に適合するか」になる。
+これにより、物理 Kill / Flow クラスの差分は「DPS の大小」ではなく「どの敵構造に適合するか」になる。
 
 ### 3.2 Magic Kill
 
@@ -196,12 +196,12 @@ Defender は基礎 Threat に補正を持ち、前列圧力や被ダメージに
 Defender は「ダメージを消す」だけではない。
 誰が被害を受けるか、どこで敵を止めるか、被弾を制圧へ変換できるかを担当する。
 
-### 5.2 Healer
+### 5.2 Recovery / Stability Control
 
-Healer は、受けた損失を戦闘継続可能な状態へ戻す。
+Recovery / Stability Control は、受けた損失を戦闘継続可能な状態へ戻す。
 
-本作のヒーラーは、Lv0 時点では火力貢献を抑え、回復・バリア・HoT・軽減・デバフ対策へ寄せられている。
-これは、ヒーラーを Kill Layer の補助火力にせず、Survival Layer の正本として扱うための設計である。
+本作の Survival 主軸クラスは、Lv0 時点では火力貢献を抑え、回復・バリア・HoT・軽減・デバフ対策へ寄せられている。
+これは、維持・安定化手段を Kill Layer の補助火力にせず、Survival Layer の正本として扱うための設計である。
 
 現在の 3 職は、回復を単一の heal 量ではなく、損失への対応方法で分担している。
 
@@ -211,20 +211,20 @@ Healer は、受けた損失を戦闘継続可能な状態へ戻す。
 | Barrier / Mitigation | 結界師 | バリアと被ダメ軽減で崩壊前に猶予を作る |
 | Sustain / Dispel | 薬草師 | HoT、DEF buff、debuff/DoT 対策で長期戦を支える |
 
-Healer は、Defender が作った受け口を維持する。
-Defender が被害を集中・分散・制御し、Healer がその被害を時間の中で処理することで、Survival Layer が成立する。
+Recovery / Stability Control は、Defense Control が作った受け口を維持する。
+Defense Control が被害を集中・分散・制御し、Recovery / Stability Control がその被害を時間の中で処理することで、Survival Layer が成立する。
 
-### 5.3 Defender と Healer の関係
+### 5.3 Defense Control と Recovery / Stability Control の関係
 
-Defender と Healer の関係は、「タンクが受け、ヒーラーが回復する」という単純な直列ではない。
+Defense Control と Recovery / Stability Control の関係は、「前者が受け、後者が回復する」という単純な直列ではない。
 
-Defender は被害の入口を設計する。
-Healer は被害の後処理と継続時間を設計する。
+Defense Control は被害の入口を設計する。
+Recovery / Stability Control は被害の後処理と継続時間を設計する。
 
 ```text
 敵の攻撃
-  → Defender が受け口・位置・Threat・制圧で形を整える
-  → Healer が HP / barrier / HoT / dispel で継戦可能な状態へ戻す
+  → Defense Control が受け口・位置・Threat・制圧で形を整える
+  → Recovery / Stability Control が HP / barrier / HoT / dispel で継戦可能な状態へ戻す
   → Survival Layer が敗北条件への到達を遅らせる
 ```
 
@@ -247,9 +247,10 @@ Healer は被害の後処理と継続時間を設計する。
 | Survival | 鉄衛士 / 護法士 / 闘技士 | 被害の受け口、戦線安定、被弾起点の制圧 |
 | Survival | 療養師 / 結界師 / 薬草師 | HP 回復、バリア、HoT、軽減、状態異常対策 |
 
-この整理では、アタッカー・ディフェンダー・ヒーラーという UI 上のロール分類と、Kill / Flow / Survival という戦闘構造分類を分けて扱う。
+この整理では、`defender` / `attacker` / `supporter` という UI 上のロール分類と、Kill / Flow / Survival という戦闘構造分類を分けて扱う。
+設計定義では UI ロール語ではなく、どの機能レイヤーへ影響するかを正本とする。
 
-特に重要なのは、Flow が「アタッカーの中の変則枠」ではなく、Combat 全体の第 2 レイヤーとして振る舞っている点である。
+特に重要なのは、Flow が UI ロール内の変則枠ではなく、Combat 全体の第 2 レイヤーとして振る舞っている点である。
 槍術士・狩猟士・法陣師は、いずれも敵 HP を削るだけでは説明できない。
 これらは Kill の亜種ではなく、Kill と Survival の条件を再定義するクラス群である。
 
@@ -257,7 +258,7 @@ Healer は被害の後処理と継続時間を設計する。
 
 ## 7. なぜこのクラス構成なのか
 
-現在の 15 クラス構成は、単に「タンク 3、アタッカー 9、ヒーラー 3」を埋めるためのものではない。
+現在の 15 クラス構成は、UI 上の 3 ロールを数合わせで埋めるためのものではない。
 設計から読み取れる意図は、戦闘を以下の問題へ分解し、それぞれに担当クラスを置くことである。
 
 | 戦闘上の問題 | 担当レイヤー | 設計上の解き方 |
@@ -300,8 +301,8 @@ Healer は被害の後処理と継続時間を設計する。
 
 ### 8.3 支援を火力に還元しすぎない
 
-既存設計では、ヒーラーの Lv0 火力 buff / 敵被ダメ debuff は制限されている。
-これは、すべての支援を DPS 増加へ寄せると、Kill / Flow / Survival の分離が壊れるためである。
+既存設計では、Survival 主軸スキルの Lv0 火力 buff / 敵被ダメ debuff は制限されている。
+これは、すべての維持・安定化手段を DPS 増加へ寄せると、Kill / Flow / Survival の分離が壊れるためである。
 
 支援は「火力を上げる」だけでなく、被害の受け方、戦線の安定、状態異常対策、行動テンポの変化として表現される。
 

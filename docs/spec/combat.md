@@ -189,7 +189,7 @@ baseThreat = statComponent + frontRowPressureBonus
 defender のみ baseThreat = floor(baseThreat × 1.2)
 ```
 
-- `frontRowPressureBonus` — **前列**味方のみ。他前列の `1 - hp/maxHp` の最大値 × 自 statComponent（床が削れたほどタンクの基礎ヘイト上昇）
+- `frontRowPressureBonus` — **前列**味方のみ。他前列の `1 - hp/maxHp` の最大値 × 自 statComponent（前列 Survival / `defender` UI ロールの基礎ヘイト上昇）
 - `defender` ロール — `statComponent + frontRowPressureBonus` の合計に `× 1.2`（`floor`）を適用
 
 ### 変動と減衰

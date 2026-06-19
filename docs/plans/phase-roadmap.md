@@ -10,7 +10,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2a** | 放置 MVP：セーブ・ステージ進行・個別 Lv（ステのみ）                                  | **完了**             |
 | **2b** | 戦闘計算（`combatMath` 等）                                                          | **完了**             |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                            | **完了**             |
-| **3**  | Lv アップ時スキル習得、アクティブセット 2 枠目                                       | **完了**             |
+| **3**  | Lv アップ時スキル習得、習得済みアクティブ常時使用枠（最大 4）                       | **完了**             |
 | **4**  | クラスマスタ + スキル説明；4a **完了** / 4c **完了** / 4b 説明（データ PR 同梱）     | **4a+4c 完了**        |
 | **5**  | 演出アセット + **演出調整ツール**（Canvas プレビュー・VFX 調整含む）               | **次**（確定クラス順次） |
 | **6**  | VFX **PNG 描画**（`sheets/vfx/` 64×64）— 戦闘描画の正本                           | **完了**             |
@@ -33,7 +33,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 - JSON ゲームデータ：`data/classes.json`, `data/skills/`, `enemies.json`, `stages.json`, `parties.json`
 - 戦闘ロジック：`BattleEngine`, `SkillExecutor`, `targeting`, `combatMath`, `validateGameData`
 - 3 ロール、4 人編成（鉄衛士 / 剣術士 / 療養師 / 弓術士）、`stage_1` に test_enemy × 2
-- スキル枠：**basic**（非表示・常時稼働）+ **セットアクティブ 1 枠**（HUD に CD 表示）
+- スキル枠：**basic**（非表示・常時稼働）+ **習得済みアクティブ枠**（HUD に CD 表示）
 - パッシブはすべて同時発動；`snipe` でターゲットルールを `lowestHpEnemy` に上書き
 - ステータス効果：`atk`, `def`, `damageTaken` への buff / debuff
 - Victory / Defeat → 3 秒待機 → HP 全回復 → 再スポーン（Phase 2 でセーブ連動の進行ルールを追加）
@@ -90,14 +90,14 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ## Phase 3 — スキル・戦闘拡張（完了）
 
-**ゴール：** LvUP でスキルプールが増え、セットアクティブを最大 2 枠まで扱える。ビルドはセーブに永続化。
+**ゴール：** LvUP で習得済みスキルが増え、アクティブは Lv0=2、Lv10=3、Lv20=4 の最大 4 枠で常時使用可能になる。ビルドは付け替えではなく習得構造としてセーブに永続化。
 
 ### 実装済み
 
 - LvUP 時、`classes.json` の `skills[]`（レベル別 `skillIds`）から `learnedPassiveIds` / `learnedActiveIds` を再計算（`resolveLearnedSkills`, `reconcileMemberBuild`）
 - 勝利報酬・セーブロード・デバッグ Lv 変更時に習得リストを同期；LvUP ログに新スキル名を表示
-- アクティブ **最大 4 枠**（`MAX_ACTIVE_SLOTS = 4`）：習得即参加（`learnedActiveIds`）。段階解放 Lv0=2 / Lv15=3 / Lv30=4。`equippedActiveSlots` は SkillMenuPanel テスト用
-- 新アクティブ習得時は自動セットしない（スキルメニューでプレイヤーが選ぶ）
+- アクティブ **最大 4 枠**（`MAX_ACTIVE_SLOTS = 4`）：習得即参加（`learnedActiveIds`）。段階解放 Lv0=2 / Lv10=3 / Lv20=4
+- 付け替え・セット・装備変更は行わない。`equippedActiveSlots` は歴史的互換のみで、設計上の戦闘参加判定には使わない
 - セーブに `CharacterBuild` を含め、ロード時 `reconcilePartyBuilds` でレベルと整合
 
 ---
@@ -262,9 +262,9 @@ Phase 3〜6（および Phase 4 のクラスマスタ）で機能・コンテン
 - クラス 5 種の Lv1 基礎ステ・スキル威力（具体スキルはマスタ確定後）
 - ステージ難易度カーブ（敵ステ・ウェーブ構成）
 - Phase 3 以降のスキル習得・強化ツリーとの整合
-- **アクティブセット 2 枠目**の解放条件を決定・実装（ステージマイルストーン / Lv / クラス別等）
-  - `getUnlockedActiveSlotCount` に本番ロジックを実装
-  - **UI**（スキルメニューの枠ロック）と**戦闘**（`createCooldowns` / `reconcileMemberBuild` 等）の両方で未解放枠を無効化
+- **アクティブ枠構造**の最終確認（Lv0=2 / Lv10=3 / Lv20=4）
+  - `getUnlockedActiveSlotCount` をこの Lv 段階に固定
+  - **UI**（HUD / スキル表示）と**戦闘**（`createCooldowns` / `reconcileMemberBuild` 等）の両方で習得済みアクティブ常時使用として扱う
 
 ### スコープ外（Phase 7）
 
@@ -293,7 +293,7 @@ Phase 2a（セーブ + ステージ + Lv ステ）
 Phase 2b（戦闘計算） ── 2c と並行可
 Phase 2c（JSON クラス + 成長曲線）
     ↓
-Phase 3（スキル習得 + セット2枠目）
+Phase 3（スキル習得 + 習得済みアクティブ常時使用枠）
     ↓
 Phase 4a（クラスマスタ + GUI）  ← 完了
     ↓
