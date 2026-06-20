@@ -836,7 +836,7 @@ export function computeEngagedLayout(
   };
 }
 
-/** 構成変化・接敵開始時のみ（A-L1-01 カウンタ対象） */
+/** 非接敵配置確定時のみ（訓練 bake 等。Engaged 中の構成変化では呼ばない。A-L1-01 カウンタ対象） */
 export function resolveEngagedLayout(
   ctx: EngagedLayoutContext,
 ): EngagedLayoutResult | null {
@@ -844,7 +844,7 @@ export function resolveEngagedLayout(
   return computeEngagedLayout(ctx);
 }
 
-/** R1-fix: layout 結果を battleX（= 描画正本）へ1回適用 */
+/** 非接敵配置確定: layout 結果を battleX（= 描画正本）へ1回適用（訓練・Wave 開始 bake 等） */
 export function applyEngagedFormationToBattleX(
   players: CombatantState[],
   enemies: CombatantState[],

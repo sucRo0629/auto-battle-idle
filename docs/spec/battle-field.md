@@ -73,7 +73,7 @@ BattlePhase 判定
   → BattleSnapshot
 ```
 
-接敵開始・前列死亡・構成変化時のみ `applyEngagedFormationToBattleX`（1 回 bake）。**毎 tick の layout 再計算・visual 補間は行わない。**
+接敵中の生存ユニット `battleX` 更新は §4.4 の 4 系統（approach / skill move / knockback / overlap）のみ。**毎 tick の layout 再計算・visual 補間は行わない。** 非接敵配置確定時のみ `applyEngagedFormationToBattleX`（§4.2）。
 
 ### 2.4 一方通行（フェーズ別）
 
@@ -247,27 +247,39 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ### 4.2 `applyEngagedFormationToBattleX`（R1-fix + L10）
 
-**`layout bake` のタイミング：** 接敵開始・前列死亡・構成変化（毎 tick 不可）。`layout bake` の詳細は以下の通り。
+**`layout bake` の用途：** **非接敵配置確定用** layout bake。Engaged 中の前列死亡・敵近接死亡・構成変化では bake しない。
 
-| タイミング           | layout bake | 実装箇所                                                         |
-| -------------------- | ----------- | ---------------------------------------------------------------- |
-| 通常 Wave 接敵開始   | しない      | `setupEngagedCombat`（凍結・署名のみ）                           |
-| 訓練ステージ         | する        | `prepareTrainingWave` → `resolveEngagedLayoutForEvent` + `applyEngagedFormationLayout` |
-| 接敵中の構成変化     | する        | `maybeRecomputeEngagedLayout` → `applyEngagedFormationLayout`（部分適用可） |
+| タイミング                         | layout bake | 実装箇所                                                                 |
+| ---------------------------------- | ----------- | ------------------------------------------------------------------------ |
+| Wave 開始 / PartyDeploy 目標確定   | しない      | deploy 終点を維持。接敵は自動接近のみ                                    |
+| 通常 Wave 接敵開始                 | しない      | `setupEngagedCombat`（凍結・署名のみ）                                   |
+| 訓練ステージ                       | する        | `prepareTrainingWave` → `resolveEngagedLayoutForEvent` + `applyEngagedFormationLayout` |
+| 初期配置                           | する        | 同上（訓練と同経路）                                                     |
+| **Engaged 中の前列死亡**           | **禁止**    | `maybeRecomputeEngagedLayout` — target / threat / contact / 凍結のみ     |
+| **Engaged 中の敵近接死亡**         | **禁止**    | 同上                                                                     |
+| **Engaged 中の構成変化**           | **禁止**    | 同上（署名更新・`freezeEngagedMeleeVisualSlots`・ranged display target 更新） |
 
 ```
 1. スロット ideal battleX（§3.3）
 2. 接敵アンカーへ前衛を配置（§2.5: 敵接触 − 最前列最短 `effectiveRangePx`。`engagedMinBodyGap` は加算しない）
 3. 敵接触帯: 味方最前列 `battleX` + 接触帯最短 `effectiveRangePx`（body gap 加算なし）
 4. resolveOverlaps(PLAYER_VISUAL_MIN_GAP) on battleX  ← 味方同士・敵同士の overlap のみ
-5. `maybeRecomputeEngagedLayout`（前列死亡・構成変化時）のみ `applyEngagedFormationToBattleX` を実行。Wave 接敵開始（`setupEngagedCombat`）では bake しない
+5. 上記 bake は非接敵配置確定（訓練等）のみ。Engaged 中の構成変化では `applyEngagedFormationToBattleX` を呼ばない
 ```
 
 **禁止：**
 
 - `battleX` / `visualX` 二重パイプラインと橋渡し sync
 - 毎 tick の layout 目標再計算 + visual 補間
-- layout 外の座標直接 mutation
+- Engaged 中の layout bake（前列死亡・敵近接死亡・構成変化を含む）
+- layout 外の座標直接 mutation（§4.4 の approach target cap を除く）
+
+**Engaged 中の構成変化時（前列死亡・敵近接死亡含む）：**
+
+- target / threat / contact / frontline owner の再評価のみ
+- `freezeEngagedMeleeVisualSlots`（敵近接構成変化時）
+- `engagedVisualTargetPlayerId` の再凍結（`freezeRangedTargets`）
+- 生存ユニットの `battleX` を formation snap **しない**
 
 **凍結フィールド（接敵開始時）：**
 
@@ -321,6 +333,19 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 **敵対 `toAnchor` スキル:** 自動接近で anchor が通常攻撃射程内に入るまで発動を保留（`SkillExecutor`）。射程内発動後の背後移動は `effect.range` で 1 ステップ上限（§2.5）。
 
+**Engaged 中の生存ユニット `battleX` 更新（4 系統のみ）：**
+
+| 系統        | 実装                                                                 |
+| ----------- | -------------------------------------------------------------------- |
+| approach    | `updateEngagedBattleMovement` → `resolveAllPlayerApproachBattleX` / `resolveEnemyApproachBattleX` |
+| skill move  | `SkillSequenceRunner.tickMoves`                                      |
+| knockback   | `ccEffects` 等                                                       |
+| overlap     | `resolveEngagedFormationOverlaps`（leading row 限定・生存のみ・skill motion 除外） |
+
+target / threat / contact / frontline owner は **座標 snap の理由ではない**。approach / attack / display の入力として毎 tick 再評価する。
+
+**前列過進軍 cap：** `capFrontRowBeforeEnemyContact` は `resolveAllPlayerApproachBattleX` 内の approach target 解決に含める。Engaged 中に `battleX` を直接 mutation する独立 clamp 経路は持たない（旧 `clampEngagedFrontRowBattleX` 相当）。
+
 ### 4.5 スキル `move`
 
 - `battleX` — `SkillSequenceRunner` が線形補間（正本・描画も同値）
@@ -362,11 +387,13 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 - `battleLayout` が `visualX` を正本として layout bake と approach が乖離
 - 後衛が隊形深度 cap で射程停止より前方へ引きずられる問題
 - **接敵開始時のワープ** — `setupEngagedCombat` で layout bake せず deploy 終点のまま `Engaged` へ遷移。接敵接近は自動接近のみ（§3.4・§4.3）
+- **Engaged 中の構成変化 layout bake** — 前列死亡・敵近接死亡・構成変化で `applyEngagedFormationToBattleX` を呼ばない。target / threat / contact / 凍結のみ
+- **Engaged 中の直接 mutation clamp** — 旧 `clampEngagedFrontRowBattleX` を廃止。前列 cap は approach target 解決（`capFrontRowBeforeEnemyContact`）に統合
 
 **監視中：**
 
-- 前列死亡・Wave 跨ぎ時のワープ（layout snap と approach の競合）
-- 混成前列の overlap 補正タイミング
+- Wave 跨ぎ時の ally 位置（VictoryExit march → 次 Wave PartyDeploy。layout bake なし）
+- 混成前列の overlap 補正タイミング（leading row 限定・skill motion 除外・生存のみの制約維持）
 
 ### 6.2 根本原因
 

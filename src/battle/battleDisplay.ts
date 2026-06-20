@@ -7,7 +7,8 @@ import type { CombatantState, FormationRow, GameData } from './types.ts';
 
 /**
  * 接敵中の構成変化検知（R1-fix: visual 補間は廃止）。
- * layout bake は BattleEngine + battleLayout.applyEngagedFormationToBattleX が担当。
+ * Engaged 中は layout bake せず、署名更新・凍結・表示 target 再評価のみ。
+ * layout bake は非接敵配置確定（訓練等）で BattleEngine + applyEngagedFormationToBattleX が担当。
  */
 export class EngagedCompositionTracker {
   private meleeEnemySignature: string | null = null;

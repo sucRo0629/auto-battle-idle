@@ -141,7 +141,7 @@ describe(
       }
     });
 
-    it('T-L1-02: resolveEngagedLayout only on engage and composition change', () => {
+    it('T-L1-02: resolveEngagedLayout is not called during Engaged (including composition change)', () => {
       const engine = createStage1Engine();
       engine.startBattle();
 

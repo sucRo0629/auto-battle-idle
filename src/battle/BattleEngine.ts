@@ -651,7 +651,7 @@ export class BattleEngine {
     };
   }
 
-  /** 接敵開始・構成変化時（A-L1-01 カウンタ対象） */
+  /** 非接敵配置確定時のみ（訓練 bake 等。A-L1-01 カウンタ対象） */
   private resolveEngagedLayoutForEvent(): EngagedLayoutResult | null {
     const ctx = this.buildEngagedLayoutContext();
     if (ctx === null) return null;
@@ -729,41 +729,9 @@ export class BattleEngine {
     }
   }
 
-  /** 接敵中: 前列 battleX が接近目標を越えないよう clamp（近接前線のみ） */
-  private clampEngagedFrontRowBattleX(): void {
-    const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
-    const leadingRow = getLeadingPlayerFormationRow(placementInputs);
-    if (leadingRow === null) return;
-
-    const approachTargets = resolveAllPlayerApproachBattleX(
-      this.players,
-      this.enemies,
-      this.gameData,
-    );
-
-    for (const ally of this.players) {
-      if (!ally.isAlive || ally.formationRow !== leadingRow) continue;
-      if (this.skillSequenceRunner.isActorInSkillMotion(ally.id)) continue;
-      if (
-        shouldSkipEngagedAutoApproach(
-          ally,
-          this.players,
-          this.enemies,
-          this.gameData,
-        )
-      ) {
-        continue;
-      }
-      const maxForward = approachTargets.get(ally.id);
-      if (maxForward !== undefined && ally.battleX > maxForward) {
-        ally.battleX = maxForward;
-      }
-    }
-  }
-
   /**
- * layout bake のタイミング: する
- * 実装箇所: maybeRecomputeEngagedLayout → applyEngagedFormationLayout（部分適用可）
+ * layout bake のタイミング: しない（Engaged 中）
+ * 実装箇所: maybeRecomputeEngagedLayout — 署名・凍結・表示 target のみ更新
  */
   private maybeRecomputeEngagedLayout(): void {
     const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
@@ -783,14 +751,11 @@ export class BattleEngine {
       this.freezeEngagedMeleeVisualSlots();
     }
 
-    const layout = this.resolveEngagedLayoutForEvent();
-    if (layout !== null) {
-      this.applyEngagedFormationLayout(layout, {
-        players: leadingChanged,
-        enemies: meleeChanged,
-      });
-      syncAllFieldX([...this.players, ...this.enemies]);
-    }
+    this.engagedComposition.freezeRangedTargets(
+      this.players,
+      this.enemies,
+      this.gameData,
+    );
   }
 
   private clearPendingVictory(): void {
@@ -1485,7 +1450,6 @@ export class BattleEngine {
         return;
       }
       this.updateEngagedBattleMovement(deltaTime);
-      this.clampEngagedFrontRowBattleX();
       this.maybeRecomputeEngagedLayout();
       this.tickStatusAndCooldowns(deltaTime);
       this.runUnitSkills(this.enemies);
