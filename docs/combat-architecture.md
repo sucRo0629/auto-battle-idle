@@ -196,6 +196,16 @@ Defender は基礎 Threat に補正を持ち、前列圧力や被ダメージに
 Defender は「ダメージを消す」だけではない。
 誰が被害を受けるか、どこで敵を止めるか、被弾を制圧へ変換できるかを担当する。
 
+Defender の仕事は、Threat を高く保つことだけではない。Defender は「誰が攻撃されるか」に加えて、「誰が前線を保持するか」「前衛がどのように被害を分担するか」を設計する。
+
+- Threat control: 誰が優先的に狙われるか
+- Frontline control: 誰が戦線を保持するか
+- Damage intake design: 前衛内で被害を一点集中させるか、分担させるか
+
+Guardian は main tank として受け口を一点集中で保持する。Paladin は front 全体で被害を分担し、Fighter を sub-defender 化することで戦線を安定させる。Duelist は局所戦闘で被弾を counter / control へ変換し、常時受け切るのではなく「崩しながら受ける」Defender として扱う。
+
+移動型アタッカーの背後侵入や一時的な前進は、Flow / Move に属する戦場操作であり、その瞬間に Survival 上の恒久的な被害入口へ変換しない。Assassin のような rear assault は、「前に出た」ことと「前線を保持している」ことを同義にしない設計が必要である。
+
 ### 5.2 Recovery / Stability / Sustain Control
 
 Recovery / Stability / Sustain Control は、受けた損失を戦闘継続可能な状態へ戻す。

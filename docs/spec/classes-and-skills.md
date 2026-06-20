@@ -570,6 +570,16 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 
 `formationRow: front`、近接帯。Lv0 / Lv10 / Lv20 の習得パターンは全クラス共通のアクティブ習得構造（Lv0=2、Lv10=3、Lv20=4）を正とする。
 
+### Defender 共通 passive の考え方
+
+Defender 共通の初期 passive は、まず「ブロック能力を持つ」という共通基盤を担う。ただし、Threat の維持方法は Defender 間で同一ではない。
+
+- Guardian は、受け止め続けることで Threat を保持する main tank
+- Paladin は、front 全体の被害分担を安定させる shared tank
+- Duelist は、被弾を control / counter へ変換する local tank
+
+このため、Defender 共通 passive と各 Defender の Threat 挙動は同一視しない。被弾による Threat 維持・上昇は、必要に応じてクラス固有 passive / skill で明示する。
+
 ### 鉄衛士（`df_guardian`・基礎）
 
 #### コンセプト
@@ -790,6 +800,8 @@ Hit と Attack は分離され、Hit 単位で追加効果やゲージ処理が�
 #### 立ち位置
 
 近接物理の**高速処理・フィニッシャー職**。
+
+背後侵入系 move は、処理対象へ一時アクセスするためのものであり、Defender 的な前線保持を意味しない。rear assault 中の立ち位置は Kill 成立のためのアクセス状態として扱い、通常の front line ownership と分けて考える。
 
 ---
 

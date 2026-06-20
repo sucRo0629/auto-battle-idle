@@ -185,6 +185,17 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 味方のみランタイムで `threat` / `baseThreat` を保持。敵のデフォルトターゲット（`targetRuleOverride` なし・`distance/enemy/nearest`）は **射程内でヘイト最大の味方**（実装：`src/battle/threat.ts` の `pickHighestThreatAlly`）。
 
+### 設計意図
+
+Threat は、敵 AI が「誰を優先して攻撃するか」を決めるための **受け口設計値** である。これは Position（どこにいるか）、Move（どこへ移動するか）、Frontline ownership（誰が戦線を保持しているか）とは分けて扱う。
+
+- Threat は **敵のデフォルトターゲット優先度** を決める
+- Position は **射程内に入るか、どこで戦うか** を決める
+- Move は **どこへ侵入し、どこへ戻るか** を決める
+- これらを同一の意味へ畳み込まない
+
+移動型アタッカーや背後侵入スキルを成立させるため、前進・背後侵入・一時的な接敵は、そのまま「新しい被害入口になった」とは解釈しない。双刃士などの rear assault は、戦線保持ではなく **短時間アクセスによる Kill 成立** として扱う。
+
 ### baseThreat（戦闘開始・前列圧力更新時）
 
 ```
@@ -198,6 +209,8 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 
 ### 変動と減衰
 
+**現行実装:**
+
 
 | イベント        | 変化                                                                  |
 | ----------- | ------------------------------------------------------------------- |
@@ -206,12 +219,24 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | debuff 付与成功 | actor に `+15` 固定                                                    |
 | 毎 tick      | `threat > baseThreat` なら `threat -= 20 × deltaTime`、下限 `baseThreat` |
 
+**再設計方針（未実装）:**
+
+- Threat の変動は、原則として **敵へ圧力をかけた行動** によって発生させる
+- 与ダメ、debuff 成功、高火力スキル使用などは Threat 上昇要因になりうる
+- **被ダメージそのものを全ロール共通の Threat 上昇要因にはしない**
+- 被弾による Threat 維持・上昇は Defender の役割差として扱い、共通ルールではなく passive / skill によって明示する
+- これにより、Guardian は main tank として Threat を保持し、Paladin は front 共有型の受け口を作り、Fighter は burst 時のみ一時的に狙いを引く、という差分を表現する
+
 
 ### 敵ターゲット選定
 
 `pickHighestThreatAlly`: 生存味方のうち射程内プールから `threat ?? baseThreat ?? 0` が最大の 1 体を選ぶ（決定論的）。同率タイは `battleX` が大きい方（前線側）→ `id` 辞書順。ヘイト 2 位以降が選ばれることはない。
 
 `targetRuleOverride` 等で `distance/enemy/farthest`（または `nearest` + `moveAnchor`）に上書きされた場合は、敵 actor も使用者との `battleX` 距離で至近/最遠を選ぶ（ヘイトは使わない）。
+
+### Threat とターゲット切替
+
+Threat 値は毎 tick 再評価されうるが、敵の chase / attack target は単純な「その瞬間の最大値」へ常時即時切替する前提では扱わない。Defender の受け口維持と Fighter の瞬間的なヘイト奪取を両立するため、ターゲット切替には保持・閾値・遅延などのヒステリシスを許容する。
 
 ## ステータス効果
 
