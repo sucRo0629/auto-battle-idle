@@ -1,0 +1,14 @@
+---
+description: スキル仕様変更時はデータ編集ツールも同時に更新する
+alwaysApply: true
+---
+
+# スキル仕様とデータ編集ツールの同期
+
+スキルに effect、target、条件、数値フィールド、表示要素などの新しいデータ要素を追加・変更した場合は、同じ作業内でデータ編集ツール側も更新する。
+
+- `data/skills/` の JSON スキーマ、`src/battle/skills/` の型・解釈、`docs/spec/classes-and-skills.md` に関わる変更では、編集ツールでその項目を作成・編集・保存できることを確認する。
+- 新要素を追加しただけで、`src/editor/SkillEditorStep.ts` や `src/editor/editorApi.ts` から入力・保存できない状態にしない。
+- バリデーション、正規化、既定値、表示名、説明、インポート/エクスポート処理がある場合は新要素にも対応させる。
+- ゲームルールやデータ形状が変わる場合は、既存の docs 同期ルールに従って対応 spec も更新する。
+- `data/skills/` や `classes.json` は全文読み込みせず、Grep・diff・関連 spec で必要箇所だけ確認する。
