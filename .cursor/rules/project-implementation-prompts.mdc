@@ -1,0 +1,28 @@
+---
+description: auto-battle-idle の実装プロンプトへ含めるプロジェクト固有制約
+alwaysApply: true
+---
+
+# Project Implementation Prompts
+
+このリポジトリで Composer / Agent / 外部実装エージェントへ実装を任せるプロンプトを書くときは、全体ルールの品質基準に加えて、このプロジェクト固有の制約を本文へ明記する。
+
+## プロンプトへ転記する制約
+
+- `docs/` 配下の設計書と現在の実装を正本にする。
+- 既存 RPG テンプレートや一般論で仕様・命名・ロールを補完しない。
+- 設計書・実装・ユーザー指示から判断できない要件は、推測で実装せず質問する。
+- ゲームルール・データ形状・フェーズ計画を追加または変更する場合は、同じ作業内で対応する `docs/` も更新する。
+- `data/skills/` や `classes.json` は全文読み込みせず、Grep・diff・関連 spec で必要箇所だけ確認する。
+
+## 参照する既存ルール
+
+- 設計判断: `.cursor/rules/project-principles.mdc`
+- docs 同期: `.cursor/rules/documentation-sync.mdc`
+- JSON の扱い: `.cursor/rules/data-json-lightweight.mdc`
+
+## 実装プロンプトの追加チェック
+
+- 変更対象が battle / combat / progression / classes / skills のどれに属するかを明示する。
+- 更新すべき spec は `docs/spec/README.md` と `docs/README.md` の対応表で確認させる。
+- acceptance criteria には、テストだけでなく仕様書との一致確認も含める。
