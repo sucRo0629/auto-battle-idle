@@ -459,6 +459,14 @@ function pickEnemyByActorDistance(
   });
 }
 
+function enemyForwardFacingPool(
+  actor: CombatantState,
+  pool: CombatantState[],
+): CombatantState[] {
+  const actorX = getBattleX(actor);
+  return pool.filter((unit) => getBattleX(unit) <= actorX);
+}
+
 export function pickTargetFromPool(
   spec: TargetSpec,
   actor: CombatantState,
@@ -483,7 +491,7 @@ export function pickTargetFromPool(
     if (spec.kind === "distance" && spec.side === "enemy") {
       // Target Intent: AttackTarget. Enemy attacks player-side targets by Threat.
       if (spec.order === "nearest" && !options?.moveAnchor) {
-        return pickHighestThreatAlly(pool);
+        return pickHighestThreatAlly(enemyForwardFacingPool(actor, pool));
       }
       // Target Intent: MoveAnchor. Enemy move effects use actor-distance anchors.
       if (spec.order === "nearest" || spec.order === "farthest") {

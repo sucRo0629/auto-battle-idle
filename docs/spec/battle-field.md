@@ -301,6 +301,8 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | 味方（attacker / supporter） | ターゲット spec の敵プールから **奥**（`battleX` 最大）           | 同じ attack プールで `effectiveRangePx` 内なら停止                |
 | 味方（ally-heal 通常攻撃の supporter） | 射程外の負傷味方へ接近。全員健康なら **現位置維持**（敵 chase しない） | 射程内の負傷味方がいれば停止（`shouldSkipEngagedAutoApproach`）   |
 
+敵の Threat chase は敵の前方側にいるプレイヤー候補から選ぶ。敵の `battleX` より前方（敵にとって背後側）へ一時侵入したプレイヤーは、rear assault の Move / Kill 状態であり、敵の新しい `ChaseTarget` や前線所有者にはしない。
+
 **停止 X：** chase 対象の `battleX` に対し `resolveApproachAttackBattleX`（§2.5 と同じ射程式）。敵は `capEngagedEnemyApproachBattleX` により左（`battleX` 減少）のみ。
 
 **自動接近スキップ：** `shouldSkipEngagedAutoApproach` — attack プールに 1 体でもいれば接近しない（射程内で攻撃待機）。`test_ranged` も通常の attack プールとして扱う。

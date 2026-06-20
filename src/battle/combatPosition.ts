@@ -77,6 +77,22 @@ export function getPlayerContactX(players: CombatantState[]): number | null {
   return Math.max(...living.map((a) => a.battleX));
 }
 
+/** 前線所有 contact。敵接触線を越えた一時侵入は前線として扱わない。 */
+export function getPlayerFrontlineContactX(
+  players: CombatantState[],
+  enemies: CombatantState[],
+): number | null {
+  const living = players.filter((a) => a.isAlive);
+  if (living.length === 0) return null;
+  const enemyContact = getEnemyContactX(enemies);
+  const frontline =
+    enemyContact === null
+      ? living
+      : living.filter((player) => player.battleX <= enemyContact);
+  if (frontline.length === 0) return null;
+  return Math.max(...frontline.map((a) => a.battleX));
+}
+
 function toPartyFormationUnits(
   players: CombatantState[],
 ): PartyFormationUnit[] {

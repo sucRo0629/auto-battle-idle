@@ -555,7 +555,9 @@ export function resolveEnemyApproachBattleX(
     gameData,
   );
   if (!chase) {
-    const contact = players.filter((p) => p.isAlive);
+    const contact = players.filter(
+      (p) => p.isAlive && p.battleX <= enemy.battleX,
+    );
     if (contact.length === 0) return enemy.battleX;
     const frontX = Math.max(...contact.map((p) => p.battleX));
     return resolveAttackBattleX(enemy, frontX, gameData);

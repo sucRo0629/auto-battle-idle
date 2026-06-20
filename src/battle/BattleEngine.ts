@@ -24,7 +24,7 @@ import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
   getEnemyContactX,
-  getPlayerContactX,
+  getPlayerFrontlineContactX,
   resolveFormationRangePx,
   resolveMaxEffectiveRangePx,
   isMeleeUnit,
@@ -481,7 +481,7 @@ export class BattleEngine {
 
   private updateEngagedBattleMovement(deltaTime: number): void {
     const enemyContact = getEnemyContactX(this.enemies);
-    const playerContact = getPlayerContactX(this.players);
+    const playerContact = getPlayerFrontlineContactX(this.players, this.enemies);
     if (enemyContact === null || playerContact === null) return;
 
     this.engagedFrontLineAnchor =
@@ -577,7 +577,7 @@ export class BattleEngine {
 
   private buildEngagedLayoutContext() {
     const enemyContact = getEnemyContactX(this.enemies);
-    const playerContact = getPlayerContactX(this.players);
+    const playerContact = getPlayerFrontlineContactX(this.players, this.enemies);
     if (enemyContact === null || playerContact === null) return null;
 
     const engageAnchor = resolveEngagePlayerVisualAnchor(

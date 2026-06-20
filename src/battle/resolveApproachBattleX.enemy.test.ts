@@ -112,6 +112,58 @@ describe('resolveEnemyChaseTargetPlayer', () => {
     expect(target?.id).toBe('enchanter');
   });
 
+  it('does not treat rear assault behind the enemy as a chase target', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 200,
+      threat: 100,
+      baseThreat: 100,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const assassinBehindEnemy = mockCombatant({
+      id: 'assassin',
+      formationRow: 'front',
+      battleX: 280,
+      threat: 300,
+      baseThreat: 300,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 250,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    const target = resolveEnemyChaseTargetPlayer(
+      meleeEnemy,
+      [guard, assassinBehindEnemy],
+      [meleeEnemy],
+      gameData,
+    );
+
+    expect(target?.id).toBe('guard');
+  });
+
   it('re-targets chase when a different ally becomes top threat', () => {
     const tank = mockCombatant({
       id: 'tank',
@@ -378,5 +430,43 @@ describe('resolveEnemyApproachBattleX', () => {
     );
 
     expect(approachX).toBe(180 + 100);
+  });
+
+  it('falls back to current position when only rear assault players are behind the enemy', () => {
+    const assassinBehindEnemy = mockCombatant({
+      id: 'assassin',
+      formationRow: 'front',
+      battleX: 280,
+      threat: 300,
+      baseThreat: 300,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 250,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    const approachX = resolveEnemyApproachBattleX(
+      meleeEnemy,
+      [assassinBehindEnemy],
+      [meleeEnemy],
+      gameData,
+    );
+
+    expect(approachX).toBe(meleeEnemy.battleX);
   });
 });
