@@ -675,8 +675,8 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | 段階 | アクティブ枠 | 典型内容 |
 | ---- | ------------ | -------- |
 | Lv0  | 2 | 基礎 Survival 手段 + クラス固有の補助 Survival 手段 |
-| Lv10 | 3 | クラス固有の維持・解除・軽減・範囲化を追加 |
-| Lv20 | 4 | 上位 Survival、または Kill / Flow との複合影響を追加 |
+| Lv10 | 3 | 基礎役割の範囲化・維持化・複数対象化を追加 |
+| Lv20 | 4 | 上位 Survival、または Survival 内での高度な複合運用を追加 |
 
 この構造は全クラス共通であり、`sp_` クラス群だけ Lv0 で 1 枠にする例外は廃止する。
 
@@ -688,14 +688,24 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | `sp_abjurer` | Survival / Stability Control | 高 HP 味方被ダメ軽減 + Wave 開始 barrier + 直接 heal | 範囲 barrier による崩壊前猶予 |
 | `sp_alchemist` | Survival / Sustain Control | HoT aura + 高 HP 味方 DEF buff + active 範囲 HoT / debuff | Flow 寄りの敵 `atk` debuff、状態異常対策 |
 
-**薬草師（Herbalist）参照:** Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士との差分は、狩猟士が Flow として罠・DoT 毒で局所戦場を制御するのに対し、薬草師は Survival として HoT sustain、被害低減、状態異常対策を扱う点にある。`traits.rangePx` は近接帯（`rangePx < 100`）で前列配置。`active_1` の敵 debuff は `targetShape: aoe` + `aoeRadiusPx: 70`（最近接敵をアンカーにした範囲）。`effect.range` の拡張は使わない。
+この 3 職は同じ「回復役」の数値違いではなく、**どの段階の損失を処理するか** で分担する。
+
+- `sp_cleric` — **欠損後の復元**。大きく減った HP を即時に戻し、戦線崩壊後の損失を回収する
+- `sp_abjurer` — **崩壊前の猶予作成**。barrier / 軽減で HP 欠損が致命化する前に余裕を作る
+- `sp_alchemist` — **長期維持と継戦リズム調整**。HoT と局所的な被害速度低下で戦線を長く保つ
+
+**療養師（Cleric）参照:** 療養師の主責務は Recovery であり、持続維持や事前軽減ではなく **欠損 HP の即時復元** を正本とする。`sp_cleric_active_2`（広域治療）は単体救命ではなく Recovery の範囲化・維持化に属するため **Lv10 習得** を正とする。Lv20 の上位 Recovery では、大きな被害を受けた味方を即座に立て直す **反応型 heal** を候補とする。現行仕様では、まず A 案として `time` + `firePolicy: smart` + `fireConditions` による待機型即応 heal を許容する。
+
+**結界師（Abjurer）参照:** 結界師は直接 heal も扱うが、主責務は Recovery ではなく Stability である。小回復は barrier / 軽減による保護を実戦で成立させるための補助であり、役割の本体は **崩壊前猶予の作成** にある。
+
+**薬草師（Herbalist）参照:** Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士との差分は、狩猟士が Flow として罠・DoT 毒で局所戦場を制御するのに対し、薬草師は Survival として HoT sustain、被害低減、状態異常対策を扱う点にある。`traits.rangePx` は近接帯（`rangePx < 100`）で前列配置とするが、これは戦場制御を主目的にしたものではなく、**Survival 主軸内での射程個性の分離** と、**薬草師というフレーバーを長射程 caster 系と分けるための設計** を正本とする。戦闘構造上は、前列 supporter として最前帯の直後に留まり、近接帯の味方へ HoT / sustain を差し込む役割を持つ。`active_1` の敵 debuff は `targetShape: aoe` + `aoeRadiusPx: 70`（最近接敵をアンカーにした範囲）とし、Survival の範囲に留まる **被害量・被害速度の抑制** に限定する。`effect.range` の拡張は使わない。
 
 **バランス目標:** 鉄衛 + 薬草師 90 秒 sim で実効 HP は cleric 比 **上限 75%**。
 
 ### 未決・TBD
 
 - `sp_` クラス群: Lv10 / Lv20 で追加する `active_3` / `active_4` の具体設計
-- 療養師: `sp_cleric_active_2`（広域治療）は `data/skills/actives/sp_cleric.json` に定義済みだが、Lv0 常時使用枠に含めるか、Lv10 / Lv20 側へ再配置するかはデータ確認が必要
+- 療養師: Lv20 上位 Recovery を、A 案（`time` + `firePolicy: smart` + `fireConditions`）で先行するか、将来の被ダメ反応 trigger で実装するかの詳細方式
 
 ## 物理 Kill / Flow 設計方針
 

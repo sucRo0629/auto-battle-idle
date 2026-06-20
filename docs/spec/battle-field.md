@@ -129,6 +129,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | `back`  | ロール順: attacker → supporter → defender → `rangePx` 降順 → `id` 順（従来どおり）   |
 
 前列の supporter は近接最前帯（attacker/defender かつ `rangePx < RANGED_ATTACK_MIN_PX`）の手前に留める。接敵接近では supporter の停止 X をその最前帯の手前に cap する（`resolveApproachBattleX.ts` の `capFrontRowSupporterBehindMeleeFront`）。
+この例外は defender の代替壁を作るためではなく、`sp_alchemist` のような近接帯 Survival に **前線直後から局所 sustain を差し込む位置** を与えるためのものとして扱う。
 
 ### 2.7 スプライト描画順（重なり）
 

@@ -196,9 +196,9 @@ Defender は基礎 Threat に補正を持ち、前列圧力や被ダメージに
 Defender は「ダメージを消す」だけではない。
 誰が被害を受けるか、どこで敵を止めるか、被弾を制圧へ変換できるかを担当する。
 
-### 5.2 Recovery / Stability Control
+### 5.2 Recovery / Stability / Sustain Control
 
-Recovery / Stability Control は、受けた損失を戦闘継続可能な状態へ戻す。
+Recovery / Stability / Sustain Control は、受けた損失を戦闘継続可能な状態へ戻す。
 
 本作の Survival 主軸クラスは、Lv0 時点では火力貢献を抑え、回復・バリア・HoT・軽減・デバフ対策へ寄せられている。
 これは、維持・安定化手段を Kill Layer の補助火力にせず、Survival Layer の正本として扱うための設計である。
@@ -207,12 +207,24 @@ Recovery / Stability Control は、受けた損失を戦闘継続可能な状態
 
 | 分類 | 主な担当 | Survival 上の役割 |
 | ---- | -------- | ----------------- |
-| Recovery | 療養師 | 欠損 HP を戻し、余剰回復をバリアへ変換する |
-| Barrier / Mitigation | 結界師 | バリアと被ダメ軽減で崩壊前に猶予を作る |
-| Sustain / Dispel | 薬草師 | HoT、DEF buff、debuff/DoT 対策で長期戦を支える |
+| Recovery | 療養師 | 欠損 HP を戻し、余剰回復をバリアへ変換し、崩壊後の損失を即応で回収する |
+| Stability | 結界師 | バリアと被ダメ軽減で崩壊前に猶予を作る |
+| Sustain | 薬草師 | HoT、DEF buff、敵 `atk` debuff、debuff/DoT 対策で長期戦を支える |
 
-Recovery / Stability Control は、Defense Control が作った受け口を維持する。
-Defense Control が被害を集中・分散・制御し、Recovery / Stability Control がその被害を時間の中で処理することで、Survival Layer が成立する。
+この 3 分類は、同じ「回復役」の数値違いではない。
+
+- Recovery は **欠損後の復元**
+- Stability は **崩壊前の猶予作成**
+- Sustain は **被害の時間分布の平準化と長期維持**
+
+を担当する。
+
+療養師の上位個性は、継続維持ではなく **崩壊後の即応復元** に置く。大きな被害が発生した直後に即時 heal を返すことで、Recovery Control の最終形を担う。現行仕様では、まず `time` + `firePolicy: smart` + `fireConditions` による待機型即応 heal を許容する。
+
+薬草師が持つ敵 debuff は、Flow のような戦場条件変更ではなく、**被害量・被害速度の抑制** として Survival 側に留める。命中妨害、位置操作、罠、DoT 時間密度操作など、戦闘成立条件そのものを変える効果は Flow 側の担当とする。
+
+Recovery / Stability / Sustain Control は、Defense Control が作った受け口を維持する。
+Defense Control が被害を集中・分散・制御し、Recovery / Stability / Sustain Control がその被害を時間の中で処理することで、Survival Layer が成立する。
 
 ### 5.3 Defense Control と Recovery / Stability Control の関係
 
