@@ -5,7 +5,10 @@ import {
   getEffectiveDef,
   getEffectiveReg,
 } from "../combatMath.ts";
-import { getBattleX } from "../combatPosition.ts";
+import {
+  getBattleX,
+  isPlayerRearAssaultAccess,
+} from "../combatPosition.ts";
 import { hasMatchingStatus } from "../statusMatching.ts";
 import {
   compareThreatTargetPriority,
@@ -465,7 +468,9 @@ function enemyForwardFacingPool(
   pool: CombatantState[],
 ): CombatantState[] {
   const actorX = getBattleX(actor);
-  return pool.filter((unit) => getBattleX(unit) <= actorX);
+  return pool.filter(
+    (unit) => !isPlayerRearAssaultAccess(unit, actorX),
+  );
 }
 
 export function pickTargetFromPool(

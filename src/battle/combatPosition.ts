@@ -77,20 +77,50 @@ export function getPlayerContactX(players: CombatantState[]): number | null {
   return Math.max(...living.map((a) => a.battleX));
 }
 
+/**
+ * 敵接触線（`contactBattleX`）を越えた一時侵入 = rear assault アクセス状態。
+ * Threat / ChaseTarget / FrontlineOwner の対象から外す判定に使う。
+ */
+export function isPlayerRearAssaultAccess(
+  player: CombatantState,
+  contactBattleX: number,
+): boolean {
+  return getBattleX(player) > contactBattleX;
+}
+
+/** 敵接触線より手前にいる生存味方（FrontlineOwner 候補プール） */
+export function resolvePlayerFrontlineOwnerCandidates(
+  players: CombatantState[],
+  enemies: CombatantState[],
+): CombatantState[] {
+  const living = players.filter((player) => player.isAlive);
+  if (living.length === 0) return [];
+  const enemyContact = getEnemyContactX(enemies);
+  if (enemyContact === null) return living;
+  return living.filter(
+    (player) => !isPlayerRearAssaultAccess(player, enemyContact),
+  );
+}
+
+/** 現在の FrontlineOwner（接触線手前で最も前の味方。同率は複数可） */
+export function resolvePlayerFrontlineOwners(
+  players: CombatantState[],
+  enemies: CombatantState[],
+): CombatantState[] {
+  const candidates = resolvePlayerFrontlineOwnerCandidates(players, enemies);
+  if (candidates.length === 0) return [];
+  const contactX = Math.max(...candidates.map((player) => player.battleX));
+  return candidates.filter((player) => player.battleX === contactX);
+}
+
 /** 前線所有 contact。敵接触線を越えた一時侵入は前線として扱わない。 */
 export function getPlayerFrontlineContactX(
   players: CombatantState[],
   enemies: CombatantState[],
 ): number | null {
-  const living = players.filter((a) => a.isAlive);
-  if (living.length === 0) return null;
-  const enemyContact = getEnemyContactX(enemies);
-  const frontline =
-    enemyContact === null
-      ? living
-      : living.filter((player) => player.battleX <= enemyContact);
-  if (frontline.length === 0) return null;
-  return Math.max(...frontline.map((a) => a.battleX));
+  const owners = resolvePlayerFrontlineOwners(players, enemies);
+  if (owners.length === 0) return null;
+  return Math.max(...owners.map((player) => player.battleX));
 }
 
 function toPartyFormationUnits(

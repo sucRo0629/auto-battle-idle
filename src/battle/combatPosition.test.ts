@@ -9,6 +9,9 @@ import {
 import {
   assignInitialPlayerBattleX,
   getPlayerContactX,
+  getPlayerFrontlineContactX,
+  isPlayerRearAssaultAccess,
+  resolvePlayerFrontlineOwners,
   getEnemyContactX,
   getMeleeEnemyContactX,
   isEnemyVisibleOnScreen,
@@ -310,6 +313,33 @@ describe('combatPosition', () => {
       battleX: 220,
     });
     expect(getPlayerContactX([guard, archer])).toBe(220);
+  });
+
+  it('excludes rear assault access from frontline contact and owners', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 200,
+    });
+    const assassinBehind = mockCombatant({
+      id: 'assassin',
+      formationRow: 'front',
+      battleX: 280,
+    });
+    const enemy = mockCombatant({
+      id: 'enemy',
+      isEnemy: true,
+      battleX: 250,
+    });
+    const players = [guard, assassinBehind];
+    const enemies = [enemy];
+
+    expect(isPlayerRearAssaultAccess(assassinBehind, enemy.battleX)).toBe(true);
+    expect(isPlayerRearAssaultAccess(guard, enemy.battleX)).toBe(false);
+    expect(getPlayerFrontlineContactX(players, enemies)).toBe(200);
+    expect(resolvePlayerFrontlineOwners(players, enemies).map((p) => p.id)).toEqual([
+      'guard',
+    ]);
   });
 
   it('resolveMoveBattleX engage and toAnchor offset', () => {

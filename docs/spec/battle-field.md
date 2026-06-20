@@ -292,6 +292,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | `ChaseTarget` | 自動接近で追う相手 | 敵は Threat、味方は target spec |
 | `AttackTarget` | 射程内停止と実際の攻撃対象 | 射程内プール。敵の対プレイヤーは Threat 優先 |
 | `MoveAnchor` | スキル `move` の到達基準 | 使用者との `battleX` 距離。Threat は使わない |
+| `FrontlineOwner` | 現在その戦線を保持している味方 | `resolvePlayerFrontlineOwners`（`combatPosition.ts`）。rear assault アクセス中は含めない |
 | `DisplayAnchor` | 遠隔敵の表示凍結・VFX 基準 | 描画専用。戦闘判定へ逆流させない |
 
 | 側                           | chase（毎 tick 再評価）                                           | attack / 停止判定                                                  |
@@ -312,7 +313,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 - 前衛（`formationRow !== 'back'`）：敵全体の接触点より右へ過進軍しない（`capFrontRowBeforeEnemyContact`）
 - 接近ターゲットの row-order clamp は前衛 / 後衛で共通で、`applyFormationRowApproachSpacing` の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
 
-**敵の追い替え：** 前線ユニットが後列ヘイトへ追いかけている間も、毎 tick でヘイト 1 位を chase 対象にする（スティッキー chase ID なし）。射程内に入ったら attack プールで停止・攻撃。
+**敵の追い替え：** Threat は毎 tick 再評価するが、chase / attack には [combat.md](combat.md) の **閾値ヒステリシス**（`pickThreatTargetWithHysteresis` / `threatFocusTargetId`）を適用する。ヘイト 1 位が瞬間的に入れ替わっただけでは chase target を即切替しない。射程内に入ったら attack プールで停止・攻撃。
 
 **遠隔敵の表示凍結：** 接敵開始時 `engagedVisualTargetPlayerId` は attack プール → なければ chase（`battleDisplay.freezeRangedTargets`）。接敵中の攻撃ターゲット解決とは独立。
 
