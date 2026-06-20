@@ -538,12 +538,12 @@ export function appendPassiveThreatControlFields(
     createEl(
       "p",
       "editor-hint",
-      "Threat 維持・上昇。被ダメ / ブロック / 前列 aura のいずれかを 1 つ以上設定してください。",
+      "ヘイト維持・上昇。被ダメ / ブロック / 前列 aura のいずれかを 1 つ以上設定してください。",
     ),
   );
   appendOptionalPassiveNumberField(
     parent,
-    "被ダメ時 Threat 加算（固定）",
+    "被ダメ時ヘイト加算（固定）",
     passive.onDamageTakenFlat,
     (onDamageTakenFlat) => {
       patchPassive((current) => {
@@ -558,7 +558,7 @@ export function appendPassiveThreatControlFields(
   );
   appendOptionalPassiveNumberField(
     parent,
-    "被ダメ時 Threat 係数",
+    "被ダメ時ヘイト係数",
     passive.onDamageTakenScale,
     (onDamageTakenScale) => {
       patchPassive((current) => {
@@ -573,7 +573,7 @@ export function appendPassiveThreatControlFields(
   );
   appendOptionalPassiveNumberField(
     parent,
-    "ブロック成功時 Threat 加算（固定）",
+    "ブロック成功時ヘイト加算（固定）",
     passive.onBlockFlat,
     (onBlockFlat) => {
       patchPassive((current) => {
@@ -588,7 +588,7 @@ export function appendPassiveThreatControlFields(
   );
   appendOptionalPassiveNumberField(
     parent,
-    "自身 Threat 減衰倍率",
+    "自身ヘイト減衰倍率",
     passive.threatDecayMultiplier,
     (threatDecayMultiplier) => {
       patchPassive((current) => {
@@ -603,7 +603,7 @@ export function appendPassiveThreatControlFields(
   );
   appendOptionalPassiveNumberField(
     parent,
-    "前列 Threat 下限（source × ratio）",
+    "前列ヘイト下限（source × ratio）",
     passive.frontThreatFloor,
     (frontThreatFloor) => {
       patchPassive((current) => {
@@ -618,7 +618,7 @@ export function appendPassiveThreatControlFields(
   );
   appendOptionalPassiveNumberField(
     parent,
-    "前列 Threat 減衰倍率",
+    "前列ヘイト減衰倍率",
     passive.frontThreatDecayMultiplier,
     (frontThreatDecayMultiplier) => {
       patchPassive((current) => {
@@ -660,12 +660,12 @@ export function appendThreatBurstFields(
     createEl(
       "p",
       "editor-hint",
-      "Threat burst: 与ダメ成功時の追加 Threat。通常攻撃には付けません。",
+      "バーストヘイト: 与ダメ成功時の追加ヘイト。通常攻撃には付けません。",
     ),
   );
   appendOptionalPassiveNumberField(
     parent,
-    "Threat burst 固定",
+    "バーストヘイト固定",
     effect.threatBurstFlat,
     (threatBurstFlat) => {
       patchEffect((prev) => {
@@ -683,7 +683,7 @@ export function appendThreatBurstFields(
   );
   appendOptionalPassiveNumberField(
     parent,
-    "Threat burst 係数（appliedDamage ×）",
+    "バーストヘイト係数（appliedDamage ×）",
     effect.threatBurstScale,
     (threatBurstScale) => {
       patchEffect((prev) => {

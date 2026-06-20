@@ -305,7 +305,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   selfHpRatioBuff: "自HP割合バフ",
   skillAmountOverride: "スキル効果量上書き",
   skillPropertyOverride: "スキル属性上書き",
-  threatControl: "Threat 制御",
+  threatControl: "ヘイト制御",
 };
 
 export const HEAL_SUB_KINDS = [
