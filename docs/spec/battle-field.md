@@ -271,7 +271,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 **凍結フィールド（接敵開始時）：**
 
-- `engagedVisualSlot` — 接敵開始時に固定する表示上の射程 px 奥行き（legacy: `engagedMeleeVisualSlot`）
+- `engagedMeleeDepthSlot` — 接敵開始時に固定する射程 px 奥行き（近接敵の列内深度）
 - `engagedVisualTargetPlayerId` — 遠距離敵の狙いプレイヤー（L5）
 
 ### 4.3 接敵開始

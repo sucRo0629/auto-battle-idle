@@ -467,10 +467,10 @@ export interface CombatantState extends Combatant {
   battleX: number;
   /** snapshot 出力用。描画は formationLayout の隊形配置で算出 */
   visualX: number;
-  /** 接敵中: battleX 基準線からの描画レーンずれ（接敵開始時に固定） */
-  engagedVisualLaneX?: number;
+  /** 接敵中: battleX 基準線からのレーンずれ（接敵開始時に固定） */
+  engagedBattleLaneX?: number;
   /** 近接敵: 最前列からの奥行きスロット（接敵開始時に固定、0=最前列） */
-  engagedMeleeVisualSlot?: number;
+  engagedMeleeDepthSlot?: number;
   /** 遠距離敵: 描画アンカー用の狙いプレイヤー id（接敵開始時に固定） */
   engagedVisualTargetPlayerId?: string;
   /** @deprecated engagedVisualTargetPlayerId */

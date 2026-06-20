@@ -1,7 +1,6 @@
 import type {
   CombatantState,
   FormationRow,
-  GameData,
   Role,
 } from './types.ts';
 import { RANGED_ATTACK_MIN_PX } from './types.ts';
@@ -14,14 +13,10 @@ import {
   ENGAGED_VISUAL_TUNING,
   PARTY_FORMATION_LEFT_ANCHOR,
   PARTY_FORMATION_SLOT_SPACING,
-  PLAYER_FORMATION_DEPTH,
   PLAYER_ROW_SPACING,
   PLAYER_VISUAL_MIN_GAP,
   ROW_X,
-  MOVE_PX_PER_SEC,
-  moveDeltaPx,
   SPRITE_WIDTH,
-  engagedFrontLineGap,
   engagedMinBodyGap,
   enemyRangedRearGap,
 } from './battleConstants.ts';
@@ -32,12 +27,6 @@ import {
   type PartyFormationUnit,
 } from './partyFormation.ts';
 import type { DamageType } from './types.ts';
-
-/** Placement row sort input; rangePx defaults to 0 when omitted. */
-type FormationSlotUnit = Pick<
-  PlayerPlacementInput,
-  'id' | 'role' | 'formationRow' | 'isAlive'
-> & { rangePx?: number };
 
 export interface PlayerPlacementInput {
   id: string;
@@ -245,7 +234,7 @@ export function resolveOverlaps(
 }
 
 /** 接敵アンカー: 最前列の最短射程分だけ敵接触点より後方（body gap は加算しない） */
-export function resolveEngagePlayerVisualAnchor(
+export function resolveEngagePlayerBattleAnchor(
   players: PlayerPlacementInput[],
   enemyContact: number,
 ): number {
@@ -391,7 +380,7 @@ export function computePlayerPositions(
 }
 
 
-export function computeEngagedPlayerLaneOffsets(
+export function computeEngagedPlayerBattleLaneOffsets(
   players: PlayerPlacementInput[],
   frontEnemyBattleX: number,
   contactBattleX: number,
@@ -491,14 +480,14 @@ function compareEngagedContactEnemyOrder(
   b: EngagedLayoutEnemyInput,
 ): number {
   if (a.rangePx !== b.rangePx) return a.rangePx - b.rangePx;
-  const slotA = a.engagedMeleeVisualSlot ?? 0;
-  const slotB = b.engagedMeleeVisualSlot ?? 0;
+  const slotA = a.engagedMeleeDepthSlot ?? 0;
+  const slotB = b.engagedMeleeDepthSlot ?? 0;
   if (slotA !== slotB) return slotA - slotB;
   return a.battleX - b.battleX;
 }
 
 /** 接敵: 同一 effectiveRangePx は同停止線、差分 px で奥行き（§4.2 / L10） */
-function resolveEngagedContactEnemyVisuals(
+function resolveEngagedContactEnemyBattleX(
   enemies: EngagedLayoutEnemyInput[],
   frontLineTargetX: number,
 ): Map<string, number> {
@@ -539,7 +528,7 @@ export function computeRangedEnemyBattleX(
 
 export interface EngagedLayoutPlayerInput extends PlayerPlacementInput {
   battleX: number;
-  engagedVisualLaneX?: number;
+  engagedBattleLaneX?: number;
 }
 
 
@@ -548,16 +537,16 @@ export interface EngagedLayoutEnemyInput {
   isAlive: boolean;
   rangePx: number;
   battleX: number;
-  /** legacy: engagedVisualSlot — 接敵開始時に固定する射程 px 奥行きスロット */
-  engagedMeleeVisualSlot?: number;
+  /** 接敵開始時に固定する射程 px 奥行きスロット */
+  engagedMeleeDepthSlot?: number;
 }
 
 export interface EngagedLayoutContext {
   players?: EngagedLayoutPlayerInput[];
   enemies: EngagedLayoutEnemyInput[];
   playerContactBattleX?: number | null;
-  battleVisualOffset: number;
-  frontEnemyVisualAnchor: number | null;
+  battleOffset: number;
+  frontEnemyBattleAnchor: number | null;
   resolveRangedTargetBattleX: (enemyId: string) => number | null;
 }
 
@@ -578,7 +567,7 @@ function layoutPlayerContact(ctx: EngagedLayoutContext): number | null {
 export function resolveEngagedContactBattleX(
   players: EngagedLayoutPlayerInput[],
   playerContactBattleX: number | null,
-  battleVisualOffset: number,
+  battleOffset: number,
 ): number | null {
   const living = players.filter((p) => p.isAlive);
   if (living.length === 0) return null;
@@ -589,11 +578,11 @@ export function resolveEngagedContactBattleX(
   }
 
   if (playerContactBattleX === null) return null;
-  return playerContactBattleX + battleVisualOffset;
+  return playerContactBattleX + battleOffset;
 }
 
-function isAbsoluteEngagedVisualLane(
-  player: { formationRow: FormationRow; engagedVisualLaneX?: number },
+function isAbsoluteEngagedBattleLane(
+  player: { formationRow: FormationRow; engagedBattleLaneX?: number },
   leadingRow: FormationRow | null,
   useAbsoluteRear: boolean,
 ): boolean {
@@ -601,21 +590,21 @@ function isAbsoluteEngagedVisualLane(
     useAbsoluteRear &&
     leadingRow !== null &&
     player.formationRow !== leadingRow &&
-    player.engagedVisualLaneX !== undefined
+    player.engagedBattleLaneX !== undefined
   );
 }
 
-export function resolveStablePlayerEngagedVisuals(
+export function resolveStablePlayerEngagedBattleX(
   players: Array<{
     id: string;
     formationRow: FormationRow;
     rangePx: number;
     battleX: number;
     isAlive: boolean;
-    engagedVisualLaneX?: number;
+    engagedBattleLaneX?: number;
   }>,
   contactBattleX: number,
-  _battleVisualOffset: number,
+  _battleOffset: number,
   leadingRow: FormationRow | null = null,
   useAbsoluteRear: boolean = false,
 ): Map<string, number> {
@@ -625,13 +614,13 @@ export function resolveStablePlayerEngagedVisuals(
     [];
 
   for (const player of living) {
-    if (isAbsoluteEngagedVisualLane(player, leadingRow, useAbsoluteRear)) {
-      result.set(player.id, player.engagedVisualLaneX!);
+    if (isAbsoluteEngagedBattleLane(player, leadingRow, useAbsoluteRear)) {
+      result.set(player.id, player.engagedBattleLaneX!);
       continue;
     }
     leadingIdeals.push({
       id: player.id,
-      battleX: contactBattleX + (player.engagedVisualLaneX ?? 0),
+      battleX: contactBattleX + (player.engagedBattleLaneX ?? 0),
       isAlive: true as const,
     });
   }
@@ -666,7 +655,7 @@ export function computeEngagedLayout(
   const frontLineBattleX = resolveEngagedContactBattleX(
     players,
     playerContact,
-    ctx.battleVisualOffset,
+    ctx.battleOffset,
   );
   if (frontLineBattleX === null) return null;
 
@@ -681,10 +670,10 @@ export function computeEngagedLayout(
   }));
 
   const engagedFormationTargets =
-    !backRowOnly && ctx.frontEnemyVisualAnchor !== null
+    !backRowOnly && ctx.frontEnemyBattleAnchor !== null
       ? computeEngagedPlayerTargets(
           placementInputs,
-          ctx.frontEnemyVisualAnchor,
+          ctx.frontEnemyBattleAnchor,
         )
       : null;
 
@@ -709,14 +698,14 @@ export function computeEngagedLayout(
     }
   } else {
     const lanes =
-      !backRowOnly && ctx.frontEnemyVisualAnchor !== null
-        ? computeEngagedPlayerLaneOffsets(
+      !backRowOnly && ctx.frontEnemyBattleAnchor !== null
+        ? computeEngagedPlayerBattleLaneOffsets(
             living,
-            ctx.frontEnemyVisualAnchor,
+            ctx.frontEnemyBattleAnchor,
             frontLineBattleX,
           )
         : new Map<string, number>();
-    const leadingVisuals = resolveStablePlayerEngagedVisuals(
+    const leadingBattleX = resolveStablePlayerEngagedBattleX(
       living
         .filter(
           (p) => leadingRow === null || p.formationRow === leadingRow,
@@ -727,14 +716,14 @@ export function computeEngagedLayout(
           rangePx: p.rangePx,
           battleX: p.battleX,
           isAlive: true as const,
-          engagedVisualLaneX: lanes.get(p.id) ?? 0,
+          engagedBattleLaneX: lanes.get(p.id) ?? 0,
         })),
       frontLineBattleX,
-      ctx.battleVisualOffset,
+      ctx.battleOffset,
       leadingRow,
       false,
     );
-    for (const [id, x] of leadingVisuals) {
+    for (const [id, x] of leadingBattleX) {
       playerBattleX.set(id, x);
     }
   }
@@ -757,7 +746,7 @@ export function computeEngagedLayout(
   }
   const enemyFrontTargetX =
     frontRowMaxBattleX + minContactEnemyRangePx(ctx.enemies);
-  const contactPositions = resolveEngagedContactEnemyVisuals(
+  const contactPositions = resolveEngagedContactEnemyBattleX(
     ctx.enemies,
     enemyFrontTargetX,
   );
@@ -897,7 +886,6 @@ export function resolveEngagedFormationOverlaps(
   players: CombatantState[],
   leadingRow: FormationRow | null,
   isOnField: (unit: CombatantState) => boolean,
-  gameData: GameData,
   isInSkillMotion?: (id: string) => boolean,
 ): void {
   if (leadingRow === null) return;
@@ -953,47 +941,9 @@ export function resolveEngagedFormationOverlaps(
   }
 }
 
-export function moveTowardX(
-  current: number,
-  target: number,
-  maxDelta: number,
-): number {
-  if (maxDelta <= 0) return current;
-  const delta = target - current;
-  if (Math.abs(delta) <= maxDelta) return target;
-  return current + Math.sign(delta) * maxDelta;
-}
-
-/** 接敵中: visualX は双方向補間（L3） */
-export function approachVisualX(
-  current: number,
-  target: number,
-  maxDelta: number,
-): number {
-  return moveTowardX(current, target, maxDelta);
-}
-
-/** @deprecated approachVisualX — 旧一方通行の互換名 */
-export function approachPlayerVisualX(
-  current: number,
-  target: number,
-  maxDelta: number,
-): number {
-  return approachVisualX(current, target, maxDelta);
-}
-
-
-export function approachEnemyVisualX(
-  current: number,
-  target: number,
-  maxDelta: number,
-): number {
-  return approachVisualX(current, target, maxDelta);
-}
-
+/** 接敵中: 敵グループを canvas 幅内に clamp（battleX 正本） */
 export function clampEngagedEnemyGroupOnScreen(
   enemies: Array<{ id: string; battleX: number; isAlive: boolean }>,
-  _combatCameraX: number = 0,
   maxScreenX: number = CANVAS_W,
   minScreenX: number = -SPRITE_WIDTH,
 ): Map<string, number> {
@@ -1029,243 +979,6 @@ export function clampEngagedEnemyGroupOnScreen(
   return positions;
 }
 
-export type FormationRestorePhase = 'lead' | 'trail' | 'marching';
-
-export const FORMATION_RESTORE_SPACING_EPSILON = 2;
-
-export interface FormationRestoreUnit {
-  id: string;
-  role: Role;
-  formationRow: FormationRow;
-  rangePx?: number;
-  isAlive: boolean;
-  battleX: number;
-}
-
-export interface FormationRestoreGroups {
-  leadIds: Set<string>;
-  trailIds: Set<string>;
-}
-
-export interface FormationRestoreAnchors {
-  leadFront: FormationRestoreUnit | null;
-  leadBack: FormationRestoreUnit | null;
-  trailFront: FormationRestoreUnit | null;
-  trailBack: FormationRestoreUnit | null;
-}
-
-export interface StaggeredFormationRestoreState {
-  phase: FormationRestorePhase;
-  players?: FormationRestoreUnit[];
-}
-
-function restorePlayers(
-  state: StaggeredFormationRestoreState,
-): FormationRestoreUnit[] {
-  return state.players ?? [];
-}
-
-function formationSlotInRow(
-  player: FormationSlotUnit,
-  rowPlayers: FormationSlotUnit[],
-): number {
-  const row = player.formationRow;
-  const sorted = sortPlayersInFormationRow(
-    row,
-    rowPlayers
-      .filter((p) => p.formationRow === row && p.isAlive)
-      .map((p) => ({
-        id: p.id,
-        role: p.role,
-        formationRow: p.formationRow,
-        rangePx: p.rangePx ?? 0,
-        isAlive: true as const,
-      })),
-  );
-  return sorted.findIndex((p) => p.id === player.id);
-}
-
-export function getFormationRestoreGroups(
-  players: FormationSlotUnit[],
-): FormationRestoreGroups {
-  const living = players.filter((p) => p.isAlive);
-  const leadIds = new Set<string>();
-  const trailIds = new Set<string>();
-
-  for (const player of living) {
-    const slot = formationSlotInRow(player, living);
-    if (slot <= 0) {
-      leadIds.add(player.id);
-    } else {
-      trailIds.add(player.id);
-    }
-  }
-
-  return { leadIds, trailIds };
-}
-
-export function resolveFormationRestoreAnchors(
-  players: FormationRestoreUnit[],
-): FormationRestoreAnchors {
-  const living = players.filter((p) => p.isAlive);
-  let leadFront: FormationRestoreUnit | null = null;
-  let leadBack: FormationRestoreUnit | null = null;
-  let trailFront: FormationRestoreUnit | null = null;
-  let trailBack: FormationRestoreUnit | null = null;
-
-  for (const player of living) {
-    const slot = formationSlotInRow(player, living);
-    if (player.formationRow === 'front') {
-      if (slot <= 0) leadFront = player;
-      else trailFront = player;
-    } else if (player.formationRow === 'back') {
-      if (slot <= 0) leadBack = player;
-      else trailBack = player;
-    }
-  }
-
-  return { leadFront, leadBack, trailFront, trailBack };
-}
-
-export function isLeadColumnSpacingRestored(
-  leadFrontX: number,
-  leadBackX: number,
-  epsilon: number = FORMATION_RESTORE_SPACING_EPSILON,
-): boolean {
-  return (
-    Math.abs(leadBackX - leadFrontX - PLAYER_FORMATION_DEPTH) <= epsilon
-  );
-}
-
-export function isFormationSpacingRestored(
-  players: FormationRestoreUnit[],
-  epsilon: number = FORMATION_RESTORE_SPACING_EPSILON,
-): boolean {
-  const living = players.filter((p) => p.isAlive);
-  if (living.length === 0) return true;
-
-  const targets = resolveFormationScreenTargets(living);
-  for (const player of living) {
-    const target = targets.get(player.id);
-    if (target === undefined) continue;
-    if (Math.abs(player.battleX - target) > epsilon) return false;
-  }
-  return true;
-}
-
-export function resolveFormationScreenTargets(
-  players: FormationSlotUnit[],
-): Map<string, number> {
-  const living = players.filter((p) => p.isAlive);
-  return computePlayerPositions(
-    living.map((p) => ({
-      id: p.id,
-      role: p.role,
-      formationRow: p.formationRow,
-      rangePx: p.rangePx ?? 0,
-      isAlive: true as const,
-    })),
-    { engaged: false },
-  );
-}
-
-export function isFormationScreenLayoutRestored(
-  players: FormationRestoreUnit[],
-  _combatCameraX: number = 0,
-  epsilon: number = FORMATION_RESTORE_SPACING_EPSILON,
-): boolean {
-  const living = players.filter((p) => p.isAlive);
-  if (living.length === 0) return true;
-
-  const targets = resolveFormationScreenTargets(living);
-  for (const player of living) {
-    const target = targets.get(player.id);
-    if (target === undefined) continue;
-    if (Math.abs(player.battleX - target) > epsilon) return false;
-  }
-  return true;
-}
-
-export function snapFormationScreenLayout(
-  players: FormationRestoreUnit[],
-): void {
-  const living = players.filter((p) => p.isAlive);
-  const targets = resolveFormationScreenTargets(living);
-  for (const player of living) {
-    const target = targets.get(player.id);
-    if (target !== undefined) {
-      player.battleX = target;
-    }
-  }
-}
-
-export interface CompensatedFormationResetState {
-  phase: FormationRestorePhase;
-  players?: FormationRestoreUnit[];
-}
-
-export function tickCompensatedFormationReset(
-  state: CompensatedFormationResetState,
-  _combatCameraX: number = 0,
-  deltaTime: number,
-  spacingPxPerSec: number = MOVE_PX_PER_SEC,
-): { phase: FormationRestorePhase; combatCameraX: number } {
-  const players = state.players ?? [];
-  const living = players.filter((p) => p.isAlive);
-  if (living.length === 0) {
-    return { phase: state.phase, combatCameraX: 0 };
-  }
-
-  const moveStep = moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
-  const spacingStep = moveDeltaPx(spacingPxPerSec, deltaTime);
-  const targets = resolveFormationScreenTargets(living);
-  const { leadIds, trailIds } = getFormationRestoreGroups(living);
-
-  for (const player of living) {
-    player.battleX += moveStep;
-  }
-
-  const correctPlayerTowardTarget = (player: FormationRestoreUnit): void => {
-    const target = targets.get(player.id);
-    if (target === undefined) return;
-    if (Math.abs(player.battleX - target) <= FORMATION_RESTORE_SPACING_EPSILON) {
-      return;
-    }
-    player.battleX = approachVisualX(player.battleX, target, spacingStep);
-  };
-
-  let phase = state.phase;
-
-  if (phase === 'lead') {
-    for (const player of living) {
-      if (leadIds.has(player.id)) {
-        correctPlayerTowardTarget(player);
-      }
-    }
-    const leadRestored = living.every((p) => {
-      if (!leadIds.has(p.id)) return true;
-      const target = targets.get(p.id);
-      if (target === undefined) return true;
-      return Math.abs(p.battleX - target) <= FORMATION_RESTORE_SPACING_EPSILON;
-    });
-    if (leadRestored) phase = 'trail';
-  }
-
-  if (phase === 'trail') {
-    for (const player of living) {
-      if (leadIds.has(player.id) || trailIds.has(player.id)) {
-        correctPlayerTowardTarget(player);
-      }
-    }
-    if (isFormationScreenLayoutRestored(living)) {
-      phase = 'marching';
-    }
-  }
-
-  state.phase = phase;
-  return { phase, combatCameraX: 0 };
-}
-
 export function computeEngagedPlayerTargets(
   players: PlayerPlacementInput[],
   frontEnemyX: number,
@@ -1274,222 +987,6 @@ export function computeEngagedPlayerTargets(
     engaged: true,
     frontEnemyX,
   });
-}
-
-
-export interface EngagedEnemyTargetPlayer {
-  x: number;
-  rangePx: number;
-  referenceBackRowPlayerX?: number;
-}
-
-export function computeEngagedEnemyPositions(
-  enemies: Array<{
-    id: string;
-    battleX: number;
-    rangePx: number;
-    isAlive: boolean;
-  }>,
-  targetPlayerForEnemy: (
-    enemyId: string,
-  ) => EngagedEnemyTargetPlayer | null,
-): Map<string, number> {
-  const living = enemies.filter((e) => e.isAlive);
-  if (living.length === 0) return new Map();
-
-  const ideals = living.map((enemy) => {
-    const target = targetPlayerForEnemy(enemy.id);
-    const rangeStopX =
-      target === null
-        ? enemy.battleX
-        : computeEnemyStopX(enemy.rangePx, target.x, target.rangePx);
-    const idealX =
-      target === null
-        ? enemy.battleX
-        : isEngagedFormationRangePx(enemy.rangePx)
-          ? Math.max(
-              rangeStopX,
-              computeRangedEnemyBattleX(
-                target.x,
-                target.referenceBackRowPlayerX,
-              ),
-            )
-          : rangeStopX;
-    return {
-      id: enemy.id,
-      battleX: idealX,
-      isAlive: true as const,
-    };
-  });
-
-  return separateSpritesByGapRight(ideals, engagedMinBodyGap());
-}
-
-export interface FormationMarchPlacementInput extends PlayerPlacementInput {}
-
-/** 進軍中: 理想隊形を保ったまま右へ移動（同列複数ユニットの重なり防止） */
-export function applyFormationMarchTick(
-  players: FormationRestoreUnit[],
-  placements: PlayerPlacementInput[],
-  deltaTime: number,
-): void {
-  const living = players.filter((p) => p.isAlive);
-  if (living.length === 0) return;
-
-  const ideals = computePlayerPositions(placements);
-  const placementLiving = placements.filter((p) => p.isAlive);
-  const leadRow = getLeadingPlayerFormationRow(placementLiving);
-  if (leadRow === null) return;
-
-  let anchor = living.find((p) => p.formationRow === leadRow);
-  if (!anchor) return;
-
-  let anchorIdeal = ideals.get(anchor.id) ?? ROW_X[leadRow];
-  for (const unit of living) {
-    if (unit.formationRow !== leadRow) continue;
-    const ideal = ideals.get(unit.id) ?? ROW_X[leadRow];
-    if (ideal > anchorIdeal) {
-      anchorIdeal = ideal;
-      anchor = unit;
-    }
-  }
-
-  let marchOrigin = anchor.battleX - anchorIdeal;
-  for (const unit of living) {
-    unit.battleX = (ideals.get(unit.id) ?? unit.battleX) + marchOrigin;
-  }
-
-  anchor.battleX += moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
-  marchOrigin = anchor.battleX - anchorIdeal;
-  for (const unit of living) {
-    unit.battleX = (ideals.get(unit.id) ?? unit.battleX) + marchOrigin;
-  }
-}
-
-export function applyStaggeredFormationMarchRestore(
-  state: StaggeredFormationRestoreState,
-  deltaTime: number,
-  spacingPxPerSec: number = MOVE_PX_PER_SEC,
-  placements?: FormationMarchPlacementInput[],
-): FormationRestorePhase {
-  const players = restorePlayers(state);
-  const living = players.filter((p) => p.isAlive);
-  if (living.length === 0) return state.phase;
-
-  if (placements && placements.length > 0) {
-    applyFormationMarchTick(players, placements, deltaTime);
-    state.phase = 'marching';
-    return state.phase;
-  }
-
-  const moveStep = moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
-  const spacingStep = moveDeltaPx(spacingPxPerSec, deltaTime);
-
-  for (const player of living) {
-    player.battleX += moveStep;
-  }
-
-  const anchors = resolveFormationRestoreAnchors(living);
-  let phase = state.phase;
-
-  if (phase === 'lead') {
-    if (!anchors.leadFront || !anchors.leadBack) {
-      phase = 'trail';
-    } else {
-      const targetBackX =
-        anchors.leadFront.battleX + PLAYER_FORMATION_DEPTH;
-      anchors.leadBack.battleX = approachVisualX(
-        anchors.leadBack.battleX,
-        targetBackX,
-        spacingStep,
-      );
-      if (
-        isLeadColumnSpacingRestored(
-          anchors.leadFront.battleX,
-          anchors.leadBack.battleX,
-        )
-      ) {
-        phase = 'trail';
-      }
-    }
-  }
-
-  if (phase === 'trail') {
-    if (anchors.leadFront && anchors.trailFront) {
-      const target = anchors.leadFront.battleX + PLAYER_ROW_SPACING;
-      anchors.trailFront.battleX = approachVisualX(
-        anchors.trailFront.battleX,
-        target,
-        spacingStep,
-      );
-    }
-    if (anchors.leadBack && anchors.trailBack) {
-      const target = anchors.leadBack.battleX + PLAYER_ROW_SPACING;
-      anchors.trailBack.battleX = approachVisualX(
-        anchors.trailBack.battleX,
-        target,
-        spacingStep,
-      );
-    }
-    if (isFormationSpacingRestored(living)) {
-      phase = 'marching';
-    }
-  }
-
-  state.phase = phase;
-  return phase;
-}
-
-export interface BeginEngagedLayoutUnit {
-  id: string;
-  formationRow: FormationRow;
-  battleX: number;
-  isAlive: boolean;
-}
-
-export interface BeginEngagedLayoutInput {
-  players: BeginEngagedLayoutUnit[];
-  combatCameraX: number;
-  leadingRow: FormationRow | null;
-  contactBattleX: number | null;
-}
-
-export interface BeginEngagedLayoutResult {
-  combatCameraX: number;
-  engageRearScreenX: Map<string, number>;
-  cameraFocusLineX: number;
-  playerBattleX: Map<string, number>;
-}
-
-/** 接敵開始: 後列の battleX を記録（カメラ廃止後は screenX = battleX） */
-export function beginEngagedLayout(
-  input: BeginEngagedLayoutInput,
-): BeginEngagedLayoutResult {
-  const engageRearScreenX = new Map<string, number>();
-  const playerBattleXMap = new Map<string, number>();
-
-  for (const player of input.players) {
-    if (!player.isAlive) continue;
-    playerBattleXMap.set(player.id, player.battleX);
-    if (
-      input.leadingRow !== null &&
-      player.formationRow !== input.leadingRow
-    ) {
-      engageRearScreenX.set(player.id, player.battleX);
-    }
-  }
-
-  const cameraFocusLineX =
-    input.contactBattleX !== null
-      ? input.contactBattleX + SPRITE_WIDTH / 2
-      : PARTY_FORMATION_LEFT_ANCHOR + PARTY_FORMATION_SLOT_SPACING * 2;
-
-  return {
-    combatCameraX: 0,
-    engageRearScreenX,
-    cameraFocusLineX,
-    playerBattleX: playerBattleXMap,
-  };
 }
 
 export { ENGAGED_VISUAL_TUNING };

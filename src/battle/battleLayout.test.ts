@@ -53,7 +53,7 @@ describe('battleLayout snapshots', () => {
           rangePx: 0,
           isAlive: true,
           battleX: 180,
-          engagedVisualLaneX: 0,
+          engagedBattleLaneX: 0,
         },
       ],
       enemies: [
@@ -62,12 +62,12 @@ describe('battleLayout snapshots', () => {
           isAlive: true,
           rangePx: 0,
           battleX: 250,
-          engagedMeleeVisualSlot: 0,
+          engagedMeleeDepthSlot: 0,
         },
       ],
       playerContactBattleX: 180,
-      battleVisualOffset: 20,
-      frontEnemyVisualAnchor: 270,
+      battleOffset: 20,
+      frontEnemyBattleAnchor: 270,
       resolveRangedTargetBattleX: () => null,
     });
 
@@ -87,7 +87,7 @@ describe('battleLayout snapshots', () => {
           rangePx: 0,
           isAlive: true,
           battleX: 180,
-          engagedVisualLaneX: 0,
+          engagedBattleLaneX: 0,
         },
         {
           id: 'archer',
@@ -96,7 +96,7 @@ describe('battleLayout snapshots', () => {
           rangePx: 100,
           isAlive: true,
           battleX: 60,
-          engagedVisualLaneX: -120,
+          engagedBattleLaneX: -120,
         },
       ],
       enemies: [
@@ -105,7 +105,7 @@ describe('battleLayout snapshots', () => {
           isAlive: true,
           rangePx: 0,
           battleX: 250,
-          engagedMeleeVisualSlot: 0,
+          engagedMeleeDepthSlot: 0,
         },
         {
           id: 'ranged',
@@ -115,8 +115,8 @@ describe('battleLayout snapshots', () => {
         },
       ],
       playerContactBattleX: 180,
-      battleVisualOffset: 20,
-      frontEnemyVisualAnchor: 270,
+      battleOffset: 20,
+      frontEnemyBattleAnchor: 270,
       resolveRangedTargetBattleX: (enemyId) =>
         enemyId === 'ranged' ? 200 : null,
     });
@@ -138,7 +138,7 @@ describe('battleLayout snapshots', () => {
           rangePx: 0,
           isAlive: true,
           battleX: 180,
-          engagedVisualLaneX: 0,
+          engagedBattleLaneX: 0,
         },
       ],
       enemies: [
@@ -147,19 +147,19 @@ describe('battleLayout snapshots', () => {
           isAlive: true,
           rangePx: 0,
           battleX: 250,
-          engagedMeleeVisualSlot: 0,
+          engagedMeleeDepthSlot: 0,
         },
         {
           id: 'contact-b',
           isAlive: true,
           rangePx: 0,
           battleX: 260,
-          engagedMeleeVisualSlot: 1,
+          engagedMeleeDepthSlot: 1,
         },
       ],
       playerContactBattleX: 180,
-      battleVisualOffset: 20,
-      frontEnemyVisualAnchor: 270,
+      battleOffset: 20,
+      frontEnemyBattleAnchor: 270,
       resolveRangedTargetBattleX: () => null,
     });
 
@@ -179,7 +179,7 @@ describe('battleLayout snapshots', () => {
           rangePx: 0,
           isAlive: true,
           battleX: 180,
-          engagedVisualLaneX: 0,
+          engagedBattleLaneX: 0,
         },
       ],
       enemies: [
@@ -188,19 +188,19 @@ describe('battleLayout snapshots', () => {
           isAlive: true,
           rangePx: 0,
           battleX: 250,
-          engagedMeleeVisualSlot: 0,
+          engagedMeleeDepthSlot: 0,
         },
         {
           id: 'mid',
           isAlive: true,
           rangePx: 30,
           battleX: 260,
-          engagedMeleeVisualSlot: 0,
+          engagedMeleeDepthSlot: 0,
         },
       ],
       playerContactBattleX: 180,
-      battleVisualOffset: 20,
-      frontEnemyVisualAnchor: 270,
+      battleOffset: 20,
+      frontEnemyBattleAnchor: 270,
       resolveRangedTargetBattleX: () => null,
     });
 
@@ -220,7 +220,7 @@ describe('battleLayout snapshots', () => {
           rangePx: 0,
           isAlive: true,
           battleX: 180,
-          engagedVisualLaneX: 0,
+          engagedBattleLaneX: 0,
         },
       ],
       enemies: [
@@ -229,14 +229,14 @@ describe('battleLayout snapshots', () => {
           isAlive: true,
           rangePx: 0,
           battleX: 250,
-          engagedMeleeVisualSlot: 0,
+          engagedMeleeDepthSlot: 0,
         },
         {
           id: 'melee-b',
           isAlive: true,
           rangePx: 0,
           battleX: 260,
-          engagedMeleeVisualSlot: 1,
+          engagedMeleeDepthSlot: 1,
         },
         {
           id: 'ranged',
@@ -246,8 +246,8 @@ describe('battleLayout snapshots', () => {
         },
       ],
       playerContactBattleX: 180,
-      battleVisualOffset: 20,
-      frontEnemyVisualAnchor: 270,
+      battleOffset: 20,
+      frontEnemyBattleAnchor: 270,
       resolveRangedTargetBattleX: (enemyId) =>
         enemyId === 'ranged' ? 200 : null,
     });
@@ -270,7 +270,7 @@ describe('battleLayout snapshots', () => {
           rangePx: 0,
           isAlive: true,
           battleX: 180,
-          engagedVisualLaneX: 0,
+          engagedBattleLaneX: 0,
         },
         {
           id: 'cleric',
@@ -295,12 +295,12 @@ describe('battleLayout snapshots', () => {
           isAlive: true,
           rangePx: 0,
           battleX: 250,
-          engagedMeleeVisualSlot: 0,
+          engagedMeleeDepthSlot: 0,
         },
       ],
       playerContactBattleX: 180,
-      battleVisualOffset: 20,
-      frontEnemyVisualAnchor: 270,
+      battleOffset: 20,
+      frontEnemyBattleAnchor: 270,
       resolveRangedTargetBattleX: () => null,
     });
     const swordX = layout!.playerBattleX.get('sword')!;
@@ -400,7 +400,6 @@ describe('resolveEngagedFormationOverlaps', () => {
       [assassin, guardian],
       'front',
       () => true,
-      gameData,
       (id) => id === 'as',
     );
     expect(guardian.battleX).toBe(guardianX);
@@ -430,7 +429,6 @@ describe('resolveEngagedFormationOverlaps', () => {
       [warrior, guardian, assassin],
       'front',
       () => true,
-      gameData,
       (id) => id === 'as',
     );
     expect(guardian.battleX).toBeGreaterThanOrEqual(warrior.battleX + 3);

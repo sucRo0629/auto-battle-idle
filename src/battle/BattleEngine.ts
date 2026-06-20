@@ -87,7 +87,7 @@ import {
   getLeadingPlayerFormationRow,
   resolveEngagedLayout,
   applyEngagedFormationToBattleX,
-  resolveEngagePlayerVisualAnchor,
+  resolveEngagePlayerBattleAnchor,
   resolveEngagedFormationOverlaps,
   type EngagedLayoutResult,
 } from "./battleLayout.ts";
@@ -547,8 +547,8 @@ export class BattleEngine {
     this.engagedFrontLineAnchor = null;
     this.engagedComposition.clear();
     for (const unit of [...this.players, ...this.enemies]) {
-      unit.engagedVisualLaneX = undefined;
-      unit.engagedMeleeVisualSlot = undefined;
+      unit.engagedBattleLaneX = undefined;
+      unit.engagedMeleeDepthSlot = undefined;
       unit.engagedVisualTargetPlayerId = undefined;
       unit.engagedVisualTargetAllyId = undefined;
       if (unit.isEnemy) {
@@ -567,11 +567,11 @@ export class BattleEngine {
       .sort((a, b) => a.battleX - b.battleX);
     for (const enemy of this.enemies) {
       if (isMeleeUnit(enemy, this.gameData)) {
-        enemy.engagedMeleeVisualSlot = undefined;
+        enemy.engagedMeleeDepthSlot = undefined;
       }
     }
     melee.forEach((enemy, slot) => {
-      enemy.engagedMeleeVisualSlot = slot;
+      enemy.engagedMeleeDepthSlot = slot;
     });
   }
 
@@ -580,7 +580,7 @@ export class BattleEngine {
     const playerContact = getPlayerFrontlineContactX(this.players, this.enemies);
     if (enemyContact === null || playerContact === null) return null;
 
-    const engageAnchor = resolveEngagePlayerVisualAnchor(
+    const engageAnchor = resolveEngagePlayerBattleAnchor(
       this.players
         .filter((ally) => this.isOnBattlefield(ally))
         .map((ally) => ({
@@ -594,7 +594,7 @@ export class BattleEngine {
     );
 
     return {
-      allies: this.players
+      players: this.players
         .filter((ally) => this.isOnBattlefield(ally))
         .map((ally) => ({
           id: ally.id,
@@ -609,12 +609,12 @@ export class BattleEngine {
         isAlive: enemy.isAlive,
         rangePx: resolveMaxEffectiveRangePx(enemy, this.gameData),
         battleX: enemy.battleX,
-        engagedMeleeVisualSlot: enemy.engagedMeleeVisualSlot,
+        engagedMeleeDepthSlot: enemy.engagedMeleeDepthSlot,
       })),
       playerContactBattleX:
         this.engagedFrontLineAnchor ?? playerContact,
-      battleVisualOffset: 0,
-      frontEnemyVisualAnchor: engageAnchor,
+      battleOffset: 0,
+      frontEnemyBattleAnchor: engageAnchor,
       resolveRangedTargetBattleX: (enemyId: string) => {
         const enemy = this.enemies.find((unit) => unit.id === enemyId);
         if (!enemy) return null;
@@ -1473,7 +1473,6 @@ export class BattleEngine {
         this.players,
         engagedLeadingRow,
         (unit) => this.isOnBattlefield(unit),
-        this.gameData,
         (id) => this.skillSequenceRunner.isActorInSkillMotion(id),
       );
       syncAllFieldX([...this.players, ...this.enemies]);
