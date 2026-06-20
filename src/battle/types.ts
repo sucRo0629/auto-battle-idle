@@ -679,6 +679,12 @@ export interface PassiveSkillDef {
   onBlockFlat?: number;
   /** threatControl: threat 減衰倍率（1 = 既定。0.5 = 半減速） */
   threatDecayMultiplier?: number;
+  /** threatControl: 生存中、前列味方の threat 下限（source threat × ratio） */
+  frontThreatFloor?: number;
+  /** threatControl: 生存中、前列味方の threat 減衰倍率（1 = 既定） */
+  frontThreatDecayMultiplier?: number;
+  /** threatControl: 生存中、前列味方の被ダメ軽減率（0.08 = 8%） */
+  frontDamageTakenReduction?: number;
   dispelTargetRule?: TargetSpec;
   /** アクティブ effect.targetShape に対応 */
   dispelTargetShape?: TargetShape;
@@ -932,6 +938,10 @@ export interface DamageSkillEffect extends SkillEffectCommon {
   /** 省略時 = actor.traits.damageType */
   damageType?: DamageType;
   amount: ResourceAmountSpec;
+  /** 与ダメ成功時の追加 threat（固定）。basic には付けない */
+  threatBurstFlat?: number;
+  /** 与ダメ成功時の追加 threat（appliedDamage × scale）。basic には付けない */
+  threatBurstScale?: number;
 }
 
 export interface HealSkillEffect extends SkillEffectCommon {

@@ -110,6 +110,9 @@ export interface SkillExecutorDeps {
       isCounterDamage?: boolean;
       hpDamage?: number;
       attackRangePx?: number;
+      didBlock?: boolean;
+      threatBurstFlat?: number;
+      threatBurstScale?: number;
     },
   ) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
@@ -634,6 +637,8 @@ export class SkillExecutor {
         hpDamage: damageResult.hpDamage,
         attackRangePx: effectDef.range ?? actor.traits.rangePx,
         didBlock,
+        threatBurstFlat: effectDef.threatBurstFlat,
+        threatBurstScale: effectDef.threatBurstScale,
       });
       const { lethal } = damageResult;
       if (cd.slotKind === 'basic') {

@@ -1,4 +1,4 @@
-import { currentHpRatio } from "./combatMath.ts";
+import { currentHpRatio, getPassiveDefs } from "./combatMath.ts";
 import { getBattleX } from "./combatPosition.ts";
 import type { CombatantState, PassiveSkillDef } from "./types.ts";
 
@@ -142,10 +142,40 @@ function resolveThreatDecayMultiplier(
   return multiplier;
 }
 
+function resolveFrontThreatDecayMultiplier(
+  ally: CombatantState,
+  allies: CombatantState[],
+  passivesRegistry: Record<string, PassiveSkillDef>,
+): number {
+  if (ally.formationRow !== "front") return 1;
+  let multiplier = 1;
+  for (const source of allies) {
+    if (!source.isAlive || source.id === ally.id) continue;
+    for (const passive of getPassiveDefs(source, passivesRegistry)) {
+      if (passive.effect !== "threatControl") continue;
+      if (passive.frontThreatDecayMultiplier === undefined) continue;
+      multiplier *= passive.frontThreatDecayMultiplier;
+    }
+  }
+  return multiplier;
+}
+
+export function resolveAllyThreatDecayMultiplier(
+  ally: CombatantState,
+  allies: CombatantState[],
+  passivesRegistry: Record<string, PassiveSkillDef>,
+  ownPassives?: PassiveSkillDef[],
+): number {
+  return (
+    resolveThreatDecayMultiplier(ownPassives) *
+    resolveFrontThreatDecayMultiplier(ally, allies, passivesRegistry)
+  );
+}
+
 export function tickAllyThreatDecay(
   ally: CombatantState,
   deltaTime: number,
-  passives?: PassiveSkillDef[],
+  decayMultiplier = 1,
 ): void {
   if (!ally.isAlive) return;
   const base = ally.baseThreat ?? 0;
@@ -154,8 +184,7 @@ export function tickAllyThreatDecay(
     ally.threat = base;
     return;
   }
-  const decayRate =
-    THREAT_DECAY_PER_SEC * deltaTime * resolveThreatDecayMultiplier(passives);
+  const decayRate = THREAT_DECAY_PER_SEC * deltaTime * decayMultiplier;
   ally.threat = Math.max(base, current - decayRate);
 }
 
@@ -223,4 +252,43 @@ export function applyThreatControlOnBlock(
 export function applyThreatFromDebuffApply(actor: CombatantState): void {
   if (actor.isEnemy || !actor.isAlive) return;
   addThreatGain(actor, THREAT_DEBUFF_APPLY);
+}
+
+export function applyThreatBurst(
+  actor: CombatantState,
+  appliedDamage: number,
+  burst: { threatBurstFlat?: number; threatBurstScale?: number },
+): void {
+  if (actor.isEnemy || !actor.isAlive || appliedDamage <= 0) return;
+  const flat = burst.threatBurstFlat ?? 0;
+  const scaleGain =
+    burst.threatBurstScale !== undefined && burst.threatBurstScale > 0
+      ? Math.floor(appliedDamage * burst.threatBurstScale)
+      : 0;
+  addThreatGain(actor, flat + scaleGain);
+}
+
+export function applyFrontThreatFloor(
+  allies: CombatantState[],
+  passivesRegistry: Record<string, PassiveSkillDef>,
+): void {
+  for (const source of allies) {
+    if (!source.isAlive) continue;
+    for (const passive of getPassiveDefs(source, passivesRegistry)) {
+      if (passive.effect !== "threatControl") continue;
+      if (passive.frontThreatFloor === undefined) continue;
+      const floor = Math.floor(
+        resolveThreatValue(source) * passive.frontThreatFloor,
+      );
+      if (floor <= 0) continue;
+      for (const ally of allies) {
+        if (!ally.isAlive || ally.id === source.id) continue;
+        if (ally.formationRow !== "front") continue;
+        const current = ally.threat ?? ally.baseThreat ?? 0;
+        if (current < floor) {
+          ally.threat = floor;
+        }
+      }
+    }
+  }
 }

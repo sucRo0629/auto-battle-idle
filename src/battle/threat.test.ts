@@ -236,7 +236,7 @@ describe('threat', () => {
 
   it('tickAllyThreatDecay respects threatDecayMultiplier', () => {
     const ally = mockAlly({ id: 'ally', threat: 200, baseThreat: 80 });
-    tickAllyThreatDecay(ally, 1, [guardianThreatControl]);
+    tickAllyThreatDecay(ally, 1, 0.5);
     expect(ally.threat).toBe(190);
   });
 

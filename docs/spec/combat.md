@@ -214,6 +214,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 | イベント        | 変化                                                                  |
 | ----------- | ------------------------------------------------------------------- |
 | 与ダメ（actor）   | 味方 actor に `floor(damage × 0.5)` を加算（全ロール共通） |
+| 与ダメ burst（active effect） | 上記に加え `threatBurstFlat` / `floor(appliedDamage × threatBurstScale)` を加算（高火力 active 専用） |
 | 被ダメ（target）  | **共通ルールでは加算しない**。Defender 等は passive `threatControl` で明示 |
 | debuff 付与成功 | actor に `+15` 固定                                                    |
 | 毎 tick      | `threat > baseThreat` なら `threat -= 20 × deltaTime × threatDecayMultiplier`、下限 `baseThreat`（`threatDecayMultiplier` 未指定 = 1） |
@@ -225,6 +226,8 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 - **被ダメージそのものを全ロール共通の Threat 上昇要因にはしない**
 - 被弾による Threat 維持・上昇は Defender の役割差として扱い、passive `threatControl` または skill で明示する
 - Guardian（`df_guardian_passive_5`）は main tank として被弾・ブロックで Threat を維持し、減衰も遅くする
+- Paladin（`df_paladin_passive_5`）は `frontThreatFloor` / `frontThreatDecayMultiplier` / `frontDamageTakenReduction` で前列を sub-defender 化する
+- 剣術士（`at_warrior_active_1`）は `threatBurstScale` で burst 時のみ一時 overtaking する
 
 
 ### 敵ターゲット選定

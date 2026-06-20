@@ -72,6 +72,7 @@ import {
   syncBuffAuras,
   syncDebuffAuras,
   syncDamageReductionAuras,
+  syncFrontThreatControlAuras,
   syncSelfHpRatioBuffAuras,
 } from "./passiveEffects.ts";
 import {
@@ -79,8 +80,11 @@ import {
   applyThreatFromDebuffApply,
   applyThreatControlOnBlock,
   applyThreatControlOnDamageTaken,
+  applyThreatBurst,
+  applyFrontThreatFloor,
   initializeAllyThreat,
   refreshAlliesBaseThreat,
+  resolveAllyThreatDecayMultiplier,
   tickAllyThreatDecay,
 } from "./threat.ts";
 import { deathAnimDurationMs } from "../render/deathPlayback.ts";
@@ -250,9 +254,17 @@ export class BattleEngine {
       hpDamage?: number;
       attackRangePx?: number;
       didBlock?: boolean;
+      threatBurstFlat?: number;
+      threatBurstScale?: number;
     },
   ): void {
     applyThreatFromDamage(actor, target, amount);
+    if (!actor.isEnemy && actor.isAlive && amount > 0) {
+      applyThreatBurst(actor, amount, {
+        threatBurstFlat: meta?.threatBurstFlat,
+        threatBurstScale: meta?.threatBurstScale,
+      });
+    }
     if (!target.isEnemy && target.isAlive && amount > 0) {
       const targetPassives = getPassiveDefs(
         target,
@@ -381,6 +393,7 @@ export class BattleEngine {
     syncBuffAuras(this.players, this.enemies, passives, this.gameData);
     syncDebuffAuras(this.players, this.enemies, passives, this.gameData);
     syncDamageReductionAuras(this.players, this.enemies, passives, this.gameData);
+    syncFrontThreatControlAuras(this.players, passives);
     syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
   }
 
@@ -398,6 +411,7 @@ export class BattleEngine {
     const passives = this.gameData.skillRegistry.passives;
     const actives = this.gameData.skillRegistry.actives;
     initializeAllyThreat(this.players);
+    applyFrontThreatFloor(this.players, passives);
     this.syncContinuousPassiveAuras();
     resetPassiveDispelTriggerLimits(
       [...this.players, ...this.enemies],
@@ -1504,11 +1518,19 @@ export class BattleEngine {
   }
 
   private tickAllyThreat(deltaTime: number): void {
+    const passivesRegistry = this.gameData.skillRegistry.passives;
     refreshAlliesBaseThreat(this.players);
     for (const ally of this.players) {
-      const passives = getPassiveDefs(ally, this.gameData.skillRegistry.passives);
-      tickAllyThreatDecay(ally, deltaTime, passives);
+      const ownPassives = getPassiveDefs(ally, passivesRegistry);
+      const decayMultiplier = resolveAllyThreatDecayMultiplier(
+        ally,
+        this.players,
+        passivesRegistry,
+        ownPassives,
+      );
+      tickAllyThreatDecay(ally, deltaTime, decayMultiplier);
     }
+    applyFrontThreatFloor(this.players, passivesRegistry);
   }
 
   private tickPendingHitQueue(): void {

@@ -477,6 +477,37 @@ export function syncDamageReductionAuras(
   }
 }
 
+export function syncFrontThreatControlAuras(
+  allies: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+): void {
+  for (const unit of allies) {
+    unit.statusEffects = unit.statusEffects.filter(
+      (effect) => !effect.id.startsWith('passive_front_threat_dmg_reduction_'),
+    );
+  }
+
+  for (const source of allies) {
+    if (!source.isAlive) continue;
+    for (const passive of getPassiveDefs(source, passives)) {
+      if (passive.effect !== 'threatControl') continue;
+      const percent = passive.frontDamageTakenReduction;
+      if (percent === undefined || percent <= 0) continue;
+      for (const target of allies) {
+        if (!target.isAlive || target.formationRow !== 'front') continue;
+        target.statusEffects.push(
+          createPassiveDamageReductionEffect(
+            source,
+            passive.id,
+            percent,
+            'passive_front_threat_dmg_reduction_',
+          ),
+        );
+      }
+    }
+  }
+}
+
 function createPassiveOverlayBuffEffect(
   source: CombatantState,
   passiveId: string,
@@ -522,9 +553,10 @@ function createPassiveDamageReductionEffect(
   source: CombatantState,
   passiveId: string,
   percent: number,
+  idPrefix = 'passive_dmg_reduction_',
 ): StatusEffect {
   return {
-    id: `passive_dmg_reduction_${source.id}_${passiveId}`,
+    id: `${idPrefix}${source.id}_${passiveId}`,
     kind: 'buff',
     stat: 'damageTaken',
     multiplier: Math.max(0, 1 - percent),

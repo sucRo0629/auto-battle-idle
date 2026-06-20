@@ -172,6 +172,14 @@
     }
   },
   {
+    "id": "df_paladin_passive_5",
+    "name": "前衛の加護",
+    "effect": "threatControl",
+    "frontThreatFloor": 0.72,
+    "frontThreatDecayMultiplier": 0.65,
+    "frontDamageTakenReduction": 0.06
+  },
+  {
     "id": "at_warrior_passive_2",
     "name": "骨断ち",
     "effect": "defenseIgnore",

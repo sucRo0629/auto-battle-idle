@@ -69,7 +69,8 @@
       "defender_passive_1",
       "df_paladin_passive_2",
       "df_paladin_passive_3",
-      "df_paladin_passive_4"
+      "df_paladin_passive_4",
+      "df_paladin_passive_5"
     ],
     "skills": [
       {
@@ -84,7 +85,8 @@
       {
         "level": 10,
         "skillIds": [
-          "df_paladin_passive_3"
+          "df_paladin_passive_3",
+          "df_paladin_passive_5"
         ]
       },
       {

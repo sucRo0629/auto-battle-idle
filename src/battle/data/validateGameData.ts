@@ -2173,6 +2173,18 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         ? undefined
         : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
     const amount = parseEffectAmount(obj, context, 'damage');
+    const threatBurstFlat = parseOptionalNumber(obj, 'threatBurstFlat', context);
+    const threatBurstScale = parseOptionalNumber(
+      obj,
+      'threatBurstScale',
+      context,
+    );
+    if (threatBurstFlat !== undefined && threatBurstFlat < 0) {
+      invalidField(context, 'threatBurstFlat', 'must be non-negative');
+    }
+    if (threatBurstScale !== undefined && threatBurstScale < 0) {
+      invalidField(context, 'threatBurstScale', 'must be non-negative');
+    }
     return normalizeSkillEffect({
       target,
       ...targetShapeFields,
@@ -2180,6 +2192,8 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       type,
       ...(damageType !== undefined ? { damageType } : {}),
       amount,
+      ...(threatBurstFlat !== undefined ? { threatBurstFlat } : {}),
+      ...(threatBurstScale !== undefined ? { threatBurstScale } : {}),
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
@@ -3248,16 +3262,34 @@ function requirePassiveEffectParams(
         'threatDecayMultiplier',
         context,
       );
+      const frontThreatFloor = parseOptionalNumber(
+        obj,
+        'frontThreatFloor',
+        context,
+      );
+      const frontThreatDecayMultiplier = parseOptionalNumber(
+        obj,
+        'frontThreatDecayMultiplier',
+        context,
+      );
+      const frontDamageTakenReduction = parseOptionalNumber(
+        obj,
+        'frontDamageTakenReduction',
+        context,
+      );
       if (
         onDamageTakenFlat === undefined &&
         onDamageTakenScale === undefined &&
         onBlockFlat === undefined &&
-        threatDecayMultiplier === undefined
+        threatDecayMultiplier === undefined &&
+        frontThreatFloor === undefined &&
+        frontThreatDecayMultiplier === undefined &&
+        frontDamageTakenReduction === undefined
       ) {
         invalidField(
           context,
           'effect',
-          'threatControl requires at least one of onDamageTakenFlat, onDamageTakenScale, onBlockFlat, threatDecayMultiplier',
+          'threatControl requires at least one configured field',
         );
       }
       if (onDamageTakenScale !== undefined && onDamageTakenScale < 0) {
@@ -3272,6 +3304,32 @@ function requirePassiveEffectParams(
       ) {
         invalidField(context, 'threatDecayMultiplier', 'must be positive');
       }
+      if (
+        frontThreatFloor !== undefined &&
+        (frontThreatFloor <= 0 || frontThreatFloor > 1)
+      ) {
+        invalidField(context, 'frontThreatFloor', 'must be between 0 and 1');
+      }
+      if (
+        frontThreatDecayMultiplier !== undefined &&
+        frontThreatDecayMultiplier <= 0
+      ) {
+        invalidField(
+          context,
+          'frontThreatDecayMultiplier',
+          'must be positive',
+        );
+      }
+      if (
+        frontDamageTakenReduction !== undefined &&
+        (frontDamageTakenReduction < 0 || frontDamageTakenReduction >= 1)
+      ) {
+        invalidField(
+          context,
+          'frontDamageTakenReduction',
+          'must be between 0 and 1 (exclusive of 1)',
+        );
+      }
       return {
         ...base,
         ...(onDamageTakenFlat !== undefined ? { onDamageTakenFlat } : {}),
@@ -3279,6 +3337,13 @@ function requirePassiveEffectParams(
         ...(onBlockFlat !== undefined ? { onBlockFlat } : {}),
         ...(threatDecayMultiplier !== undefined
           ? { threatDecayMultiplier }
+          : {}),
+        ...(frontThreatFloor !== undefined ? { frontThreatFloor } : {}),
+        ...(frontThreatDecayMultiplier !== undefined
+          ? { frontThreatDecayMultiplier }
+          : {}),
+        ...(frontDamageTakenReduction !== undefined
+          ? { frontDamageTakenReduction }
           : {}),
       };
     }

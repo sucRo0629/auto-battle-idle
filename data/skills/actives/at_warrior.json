@@ -14,6 +14,7 @@
           "kind": "atkBased",
           "atkScale": 1.8
         },
+        "threatBurstScale": 1.25,
         "targetShape": "single",
         "target": {
           "kind": "distance",
