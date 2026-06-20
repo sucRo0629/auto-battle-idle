@@ -30,7 +30,7 @@ const chainEffect = {
 } as SkillEffectDef;
 
 const skill = {
-  id: 'at_enchanter_active_1',
+  id: 'at_sigilist_active_1',
   name: '連符',
   trigger: { kind: 'time', value: 9 },
   effect: [chainEffect],
@@ -42,14 +42,14 @@ describe('resolveEffectHasVfx', () => {
   });
 
   it('uses explicit basicAttackVfx for basic slot', () => {
-    __registerVfxAnimForTest('at_enchanter_active_1_0_vfx', mockImage(128));
+    __registerVfxAnimForTest('at_sigilist_active_1_0_vfx', mockImage(128));
     expect(
       resolveEffectHasVfx(skill, chainEffect, actor, 'basic', 0),
     ).toBe(true);
   });
 
   it('uses effect vfx for active slot', () => {
-    __registerVfxAnimForTest('at_enchanter_active_1_0_vfx', mockImage(128));
+    __registerVfxAnimForTest('at_sigilist_active_1_0_vfx', mockImage(128));
     const activeEffect = {
       ...chainEffect,
       vfx: {},
@@ -84,7 +84,7 @@ describe('resolveEffectHasVfx', () => {
   });
 
   it('detects hit vfx from PNG naming', () => {
-    __registerVfxAnimForTest('at_enchanter_active_1_0_vfx_hit', mockImage(128));
+    __registerVfxAnimForTest('at_sigilist_active_1_0_vfx_hit', mockImage(128));
     expect(
       resolveEffectHasVfx(
         skill,

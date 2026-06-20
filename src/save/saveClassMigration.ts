@@ -3,6 +3,7 @@ import type { ClassId, PartyMemberState, SaveGameState } from '../battle/types.t
 /** クラス ID リネーム（セーブ互換）。キーは旧 ID。 */
 const LEGACY_CLASS_ID_ALIASES: Readonly<Record<string, ClassId>> = {
   at_sniper: 'at_ballista',
+  at_enchanter: 'at_sigilist',
 };
 
 export function migrateLegacyClassId(classId: string): ClassId {

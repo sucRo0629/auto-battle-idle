@@ -429,10 +429,10 @@
     "growthPresetKey": "caster"
   },
   {
-    "id": "at_enchanter",
+    "id": "at_sigilist",
     "role": "attacker",
-    "displayName": "符術士",
-    "epithetEn": "Enchanter",
+    "displayName": "印術師",
+    "epithetEn": "Sigilist",
     "formationRow": "back",
     "traits": {
       "rangePx": 150,
@@ -447,13 +447,13 @@
     "reg": 20,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
-    "basicAttackSkillId": "at_enchanter_basic_attack",
+    "basicAttackSkillId": "at_sigilist_basic_attack",
     "passiveIds": [],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "at_enchanter_active_1"
+          "at_sigilist_active_1"
         ]
       }
     ],

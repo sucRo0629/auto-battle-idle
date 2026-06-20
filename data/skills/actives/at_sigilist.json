@@ -1,6 +1,6 @@
 [
   {
-    "id": "at_enchanter_basic_attack",
+    "id": "at_sigilist_basic_attack",
     "name": "魔弾",
     "effect": [
       {
@@ -27,8 +27,8 @@
     }
   },
   {
-    "id": "at_enchanter_active_1",
-    "name": "連符",
+    "id": "at_sigilist_active_1",
+    "name": "連印",
     "trigger": {
       "kind": "time",
       "value": 8
@@ -72,8 +72,8 @@
     ]
   },
   {
-    "id": "at_enchanter_active_2",
-    "name": "爆符",
+    "id": "at_sigilist_active_2",
+    "name": "爆印",
     "trigger": {
       "kind": "time",
       "value": 11

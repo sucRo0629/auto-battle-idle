@@ -21,6 +21,13 @@ describe('saveClassMigration', () => {
     );
   });
 
+  it('maps at_enchanter to at_sigilist', () => {
+    expect(migrateLegacyClassId('at_enchanter')).toBe('at_sigilist');
+    expect(migrateLegacySkillId('at_enchanter_active_1')).toBe(
+      'at_sigilist_active_1',
+    );
+  });
+
   it('migrates party and unlockedClassIds', () => {
     const save: SaveGameState = {
       version: 2,

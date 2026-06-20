@@ -12,11 +12,11 @@ type EngineWithPending = BattleEngine & {
   pendingHitQueue: Array<{ hitIndex?: number; applyAtBattleSec: number }>;
 };
 
-function createEnchanterTestEngine(): BattleEngine {
+function createSigilistTestEngine(): BattleEngine {
   const gameData = structuredClone(loadGameData());
   const save = createDefaultSave(gameData, 'demo');
   save.stageProgress.currentStageId = 'test';
-  save.party[0] = createMemberFromClass('at_enchanter', gameData);
+  save.party[0] = createMemberFromClass('at_sigilist', gameData);
   save.party[1] = null;
   save.party[2] = null;
   save.party[3] = null;
@@ -28,9 +28,9 @@ function createEnchanterTestEngine(): BattleEngine {
   );
 }
 
-describe('enchanter staged chain pending hits', () => {
+describe('sigilist staged chain pending hits', () => {
   it('applies all chain hops on test stage', () => {
-    const engine = createEnchanterTestEngine();
+    const engine = createSigilistTestEngine();
     engine.startBattle();
 
     const chainDamageHits: number[] = [];
