@@ -24,7 +24,7 @@ import {
   separateByGap,
   enemyDeployOffScreenBattleX,
   resolveEnemyDeployTargets,
-  freezeEnemyCorpseScreenAnchor,
+  freezeEnemyCorpseBattleAnchor,
   syncDeadEnemyCorpseBattleX,
   updateUnitApproach,
 } from './combatPosition.ts';
@@ -493,7 +493,7 @@ describe('combatPosition', () => {
       battleX: 200,
       visualX: 200,
     });
-    freezeEnemyCorpseScreenAnchor(enemy);
+    freezeEnemyCorpseBattleAnchor(enemy);
     expect(enemy.corpseScreenAnchorX).toBe(200);
 
     enemy.battleX = 150;

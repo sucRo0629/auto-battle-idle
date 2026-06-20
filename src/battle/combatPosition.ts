@@ -175,9 +175,8 @@ export function syncAllFieldX(units: CombatantState[]): void {
 }
 
 /** 敵死亡: 以降の battleX を固定 */
-export function freezeEnemyCorpseScreenAnchor(
+export function freezeEnemyCorpseBattleAnchor(
   enemy: CombatantState,
-  _combatCameraX: number = 0,
 ): void {
   if (!enemy.isEnemy || enemy.isAlive) return;
   if (enemy.corpseScreenAnchorX === undefined) {
@@ -187,10 +186,9 @@ export function freezeEnemyCorpseScreenAnchor(
   enemy.visualX = enemy.battleX;
 }
 
-/** 死体 battleX をアンカーから再同期（カメラ廃止後は no-op 相当） */
+/** 死体 battleX をアンカーから再同期 */
 export function syncDeadEnemyCorpseBattleX(
   enemies: CombatantState[],
-  _combatCameraX: number = 0,
 ): void {
   for (const enemy of enemies) {
     if (enemy.isAlive || enemy.corpseScreenAnchorX === undefined) continue;
@@ -199,10 +197,10 @@ export function syncDeadEnemyCorpseBattleX(
   }
 }
 
-export function getEngagedFrontEnemyVisualAnchor(
+/** 接敵アンカー: 最前列最短射程分だけ敵接触点より後方（body gap 加算なし） */
+export function getEngagedFrontEnemyBattleAnchor(
   players: CombatantState[],
   enemies: CombatantState[],
-  _battleVisualOffset?: number | null,
 ): number | null {
   const frontEnemyBattleX = getEnemyContactX(enemies);
   if (frontEnemyBattleX === null) return null;

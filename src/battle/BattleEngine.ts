@@ -31,7 +31,7 @@ import {
   updateUnitApproach,
   capEngagedEnemyApproachBattleX,
   syncAllFieldX,
-  freezeEnemyCorpseScreenAnchor,
+  freezeEnemyCorpseBattleAnchor,
   syncDeadEnemyCorpseBattleX,
   resolvePartyDeployTargets,
   placePartyOffScreenForDeploy,
@@ -698,7 +698,7 @@ export class BattleEngine {
 
   private noteEnemyCorpseAnchor(unit: CombatantState): void {
     if (unit.isEnemy) {
-      freezeEnemyCorpseScreenAnchor(unit);
+      freezeEnemyCorpseBattleAnchor(unit);
     }
   }
 

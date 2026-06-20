@@ -479,7 +479,7 @@ export interface CombatantState extends Combatant {
   corpseVisible: boolean;
   /** 敵のみ: ステージ配置のスポーン battleX */
   spawnX?: number;
-  /** 敵 dead: 死亡時 screen X 固定（battleX = anchor - combatCameraX） */
+  /** 敵 dead: 死亡時に固定する battleX（= screenX） */
   corpseScreenAnchorX?: number;
   /** 味方のみ: 敵 AI ヘイト（ランタイム） */
   threat?: number;
