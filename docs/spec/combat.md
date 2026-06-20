@@ -210,23 +210,21 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 
 ### 変動と減衰
 
-**現行実装:**
-
 
 | イベント        | 変化                                                                  |
 | ----------- | ------------------------------------------------------------------- |
 | 与ダメ（actor）   | 味方 actor に `floor(damage × 0.5)` を加算（全ロール共通） |
-| 被ダメ（target）  | 味方 target に `floor(damage × 0.5)` を加算                                      |
+| 被ダメ（target）  | **共通ルールでは加算しない**。Defender 等は passive `threatControl` で明示 |
 | debuff 付与成功 | actor に `+15` 固定                                                    |
-| 毎 tick      | `threat > baseThreat` なら `threat -= 20 × deltaTime`、下限 `baseThreat` |
+| 毎 tick      | `threat > baseThreat` なら `threat -= 20 × deltaTime × threatDecayMultiplier`、下限 `baseThreat`（`threatDecayMultiplier` 未指定 = 1） |
 
-**再設計方針（未実装）:**
+**Threat 変動の原則:**
 
 - Threat の変動は、原則として **敵へ圧力をかけた行動** によって発生させる
 - 与ダメ、debuff 成功、高火力スキル使用などは Threat 上昇要因になりうる
 - **被ダメージそのものを全ロール共通の Threat 上昇要因にはしない**
-- 被弾による Threat 維持・上昇は Defender の役割差として扱い、共通ルールではなく passive / skill によって明示する
-- これにより、Guardian は main tank として Threat を保持し、Paladin は front 共有型の受け口を作り、Fighter は burst 時のみ一時的に狙いを引く、という差分を表現する
+- 被弾による Threat 維持・上昇は Defender の役割差として扱い、passive `threatControl` または skill で明示する
+- Guardian（`df_guardian_passive_5`）は main tank として被弾・ブロックで Threat を維持し、減衰も遅くする
 
 
 ### 敵ターゲット選定
@@ -237,7 +235,11 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 
 ### Threat とターゲット切替
 
-Threat 値は毎 tick 再評価されうるが、敵の chase / attack target は単純な「その瞬間の最大値」へ常時即時切替する前提では扱わない。Defender の受け口維持と Fighter の瞬間的なヘイト奪取を両立するため、ターゲット切替には保持・閾値・遅延などのヒステリシスを許容する。
+Threat 値は毎 tick 再評価されうるが、敵の chase / attack target は単純な「その瞬間の最大値」へ常時即時切替する前提では扱わない。Defender の受け口維持と Fighter の瞬間的なヘイト奪取を両立するため、ターゲット切替には **閾値ヒステリシス** を適用する。
+
+- 実装: `pickThreatTargetWithHysteresis`（`src/battle/threat.ts`）。敵 `CombatantState.threatFocusTargetId` に現在フォーカスを保持
+- 切替条件: 新候補の threat が現フォーカスより **`THREAT_TARGET_SWITCH_MARGIN`（50）以上** 高いときのみ切替。フォーカス対象が死亡・プール外のときは即再選定
+- `pickHighestThreatAlly` は threat 値そのものの決定論的比較用。敵 AI の chase / attack にはヒステリシス版を使用
 
 ## ステータス効果
 

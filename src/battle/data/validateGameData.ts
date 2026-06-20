@@ -3231,6 +3231,57 @@ function requirePassiveEffectParams(
         ...parseCounterAttackRangeBandFields(obj, context),
       };
     }
+    case 'threatControl': {
+      const onDamageTakenFlat = parseOptionalNumber(
+        obj,
+        'onDamageTakenFlat',
+        context,
+      );
+      const onDamageTakenScale = parseOptionalNumber(
+        obj,
+        'onDamageTakenScale',
+        context,
+      );
+      const onBlockFlat = parseOptionalNumber(obj, 'onBlockFlat', context);
+      const threatDecayMultiplier = parseOptionalNumber(
+        obj,
+        'threatDecayMultiplier',
+        context,
+      );
+      if (
+        onDamageTakenFlat === undefined &&
+        onDamageTakenScale === undefined &&
+        onBlockFlat === undefined &&
+        threatDecayMultiplier === undefined
+      ) {
+        invalidField(
+          context,
+          'effect',
+          'threatControl requires at least one of onDamageTakenFlat, onDamageTakenScale, onBlockFlat, threatDecayMultiplier',
+        );
+      }
+      if (onDamageTakenScale !== undefined && onDamageTakenScale < 0) {
+        invalidField(context, 'onDamageTakenScale', 'must be non-negative');
+      }
+      if (onBlockFlat !== undefined && onBlockFlat < 0) {
+        invalidField(context, 'onBlockFlat', 'must be non-negative');
+      }
+      if (
+        threatDecayMultiplier !== undefined &&
+        threatDecayMultiplier <= 0
+      ) {
+        invalidField(context, 'threatDecayMultiplier', 'must be positive');
+      }
+      return {
+        ...base,
+        ...(onDamageTakenFlat !== undefined ? { onDamageTakenFlat } : {}),
+        ...(onDamageTakenScale !== undefined ? { onDamageTakenScale } : {}),
+        ...(onBlockFlat !== undefined ? { onBlockFlat } : {}),
+        ...(threatDecayMultiplier !== undefined
+          ? { threatDecayMultiplier }
+          : {}),
+      };
+    }
     case 'selfHpRatioBuff': {
       const buffStat = requireStatusEffectStat(obj, 'buffStat', context);
       const buffMultiplierMax = parseOptionalNumber(

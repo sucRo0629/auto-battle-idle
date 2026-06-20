@@ -284,6 +284,7 @@ export const PASSIVE_EFFECT_KINDS = [
   "selfHpRatioBuff",
   "skillAmountOverride",
   "skillPropertyOverride",
+  "threatControl",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -304,6 +305,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   selfHpRatioBuff: "自HP割合バフ",
   skillAmountOverride: "スキル効果量上書き",
   skillPropertyOverride: "スキル属性上書き",
+  threatControl: "Threat 制御",
 };
 
 export const HEAL_SUB_KINDS = [

@@ -77,6 +77,8 @@ import {
 import {
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
+  applyThreatControlOnBlock,
+  applyThreatControlOnDamageTaken,
   initializeAllyThreat,
   refreshAlliesBaseThreat,
   tickAllyThreatDecay,
@@ -247,9 +249,20 @@ export class BattleEngine {
       isCounterDamage?: boolean;
       hpDamage?: number;
       attackRangePx?: number;
+      didBlock?: boolean;
     },
   ): void {
     applyThreatFromDamage(actor, target, amount);
+    if (!target.isEnemy && target.isAlive && amount > 0) {
+      const targetPassives = getPassiveDefs(
+        target,
+        this.gameData.skillRegistry.passives,
+      );
+      applyThreatControlOnDamageTaken(target, amount, targetPassives);
+      if (meta?.didBlock) {
+        applyThreatControlOnBlock(target, targetPassives);
+      }
+    }
     if (amount > 0 && meta?.attackKind) {
       const counterCallbacks = {
         emit: (event: Parameters<BattleEventListener>[0]) => this.emit(event),
@@ -1493,7 +1506,8 @@ export class BattleEngine {
   private tickAllyThreat(deltaTime: number): void {
     refreshAlliesBaseThreat(this.players);
     for (const ally of this.players) {
-      tickAllyThreatDecay(ally, deltaTime);
+      const passives = getPassiveDefs(ally, this.gameData.skillRegistry.passives);
+      tickAllyThreatDecay(ally, deltaTime, passives);
     }
   }
 

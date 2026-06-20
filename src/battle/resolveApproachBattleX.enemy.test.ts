@@ -164,7 +164,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
     expect(target?.id).toBe('guard');
   });
 
-  it('re-targets chase when a different ally becomes top threat', () => {
+  it('re-targets chase when a different ally becomes top threat by margin', () => {
     const tank = mockCombatant({
       id: 'tank',
       formationRow: 'front',
@@ -222,6 +222,58 @@ describe('resolveEnemyChaseTargetPlayer', () => {
         gameData,
       )?.id,
     ).toBe('tank');
+  });
+
+  it('keeps chase focus when challenger threat lead is below hysteresis margin', () => {
+    const tank = mockCombatant({
+      id: 'tank',
+      formationRow: 'front',
+      battleX: 200,
+      threat: 150,
+      baseThreat: 150,
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const striker = mockCombatant({
+      id: 'striker',
+      formationRow: 'front',
+      battleX: 210,
+      threat: 170,
+      baseThreat: 170,
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 250,
+      threatFocusTargetId: 'tank',
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    const target = resolveEnemyChaseTargetPlayer(
+      meleeEnemy,
+      [tank, striker],
+      [meleeEnemy],
+      gameData,
+    );
+
+    expect(target?.id).toBe('tank');
+    expect(meleeEnemy.threatFocusTargetId).toBe('tank');
   });
 });
 

@@ -10,6 +10,7 @@ import { hasMatchingStatus } from "../statusMatching.ts";
 import {
   compareThreatTargetPriority,
   pickHighestThreatAlly,
+  pickThreatTargetWithHysteresis,
 } from "../threat.ts";
 import type {
   BuffFilterTag,
@@ -491,7 +492,17 @@ export function pickTargetFromPool(
     if (spec.kind === "distance" && spec.side === "enemy") {
       // Target Intent: AttackTarget. Enemy attacks player-side targets by Threat.
       if (spec.order === "nearest" && !options?.moveAnchor) {
-        return pickHighestThreatAlly(enemyForwardFacingPool(actor, pool));
+        const facingPool = enemyForwardFacingPool(actor, pool);
+        const { target, focusId } = pickThreatTargetWithHysteresis(
+          facingPool,
+          actor.threatFocusTargetId,
+        );
+        if (focusId !== undefined) {
+          actor.threatFocusTargetId = focusId;
+        } else {
+          delete actor.threatFocusTargetId;
+        }
+        return target;
       }
       // Target Intent: MoveAnchor. Enemy move effects use actor-distance anchors.
       if (spec.order === "nearest" || spec.order === "farthest") {

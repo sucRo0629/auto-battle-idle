@@ -610,6 +610,7 @@ export class SkillExecutor {
         },
       );
       let finalDamage = amount;
+      let didBlock = false;
       if (resolveSkillDamageType(actor, effectDef) === 'physical') {
         const blockResult = applyBlockToPhysicalDamage(
           target,
@@ -617,6 +618,7 @@ export class SkillExecutor {
           this.gameData.skillRegistry.passives,
         );
         finalDamage = blockResult.finalDamage;
+        didBlock = blockResult.didBlock;
         if (blockResult.didBlock) {
           this.emit({ type: 'block', targetId: target.id });
         }
@@ -631,6 +633,7 @@ export class SkillExecutor {
         attackKind: 'damage',
         hpDamage: damageResult.hpDamage,
         attackRangePx: effectDef.range ?? actor.traits.rangePx,
+        didBlock,
       });
       const { lethal } = damageResult;
       if (cd.slotKind === 'basic') {

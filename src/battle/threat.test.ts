@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import type { CombatantState } from './types.ts';
+import type { CombatantState, PassiveSkillDef } from './types.ts';
 import {
   THREAT_BASE_DEFENDER_MULTIPLIER,
   THREAT_DAMAGE_SCALE,
+  THREAT_TARGET_SWITCH_MARGIN,
+  applyThreatControlOnBlock,
+  applyThreatControlOnDamageTaken,
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
   computeAllyBaseThreat,
   initializeAllyThreat,
   pickHighestThreatAlly,
+  pickThreatTargetWithHysteresis,
   tickAllyThreatDecay,
 } from './threat.ts';
 
@@ -43,6 +47,15 @@ function mockAlly(
     ...overrides,
   };
 }
+
+const guardianThreatControl: PassiveSkillDef = {
+  id: 'df_guardian_passive_5',
+  name: '鉄壁の挑発',
+  effect: 'threatControl',
+  onDamageTakenScale: 0.5,
+  onBlockFlat: 5,
+  threatDecayMultiplier: 0.5,
+};
 
 describe('threat', () => {
   it('computes base threat from stats only', () => {
@@ -126,7 +139,31 @@ describe('threat', () => {
     expect(pickHighestThreatAlly([right, left])?.id).toBe('a-left');
   });
 
-  it('applyThreatFromDamage increases ally threat on deal and take', () => {
+  it('pickThreatTargetWithHysteresis keeps focus until margin exceeded', () => {
+    const tank = mockAlly({ id: 'tank', threat: 150, baseThreat: 150 });
+    const striker = mockAlly({ id: 'striker', threat: 180, baseThreat: 180 });
+    const smallLead = pickThreatTargetWithHysteresis(
+      [tank, striker],
+      'tank',
+    );
+    expect(smallLead.target?.id).toBe('tank');
+
+    striker.threat = 150 + THREAT_TARGET_SWITCH_MARGIN - 1;
+    const belowMargin = pickThreatTargetWithHysteresis(
+      [tank, striker],
+      'tank',
+    );
+    expect(belowMargin.target?.id).toBe('tank');
+
+    striker.threat = 150 + THREAT_TARGET_SWITCH_MARGIN;
+    const atMargin = pickThreatTargetWithHysteresis(
+      [tank, striker],
+      'tank',
+    );
+    expect(atMargin.target?.id).toBe('striker');
+  });
+
+  it('applyThreatFromDamage increases ally threat on deal only', () => {
     const ally = mockAlly({ id: 'ally', threat: 50, baseThreat: 50 });
     const enemy = mockAlly({
       id: 'enemy',
@@ -137,9 +174,7 @@ describe('threat', () => {
     applyThreatFromDamage(ally, enemy, 40);
     expect(ally.threat).toBe(50 + Math.floor(40 * THREAT_DAMAGE_SCALE));
     applyThreatFromDamage(enemy, ally, 40);
-    expect(ally.threat).toBe(
-      50 + Math.floor(40 * THREAT_DAMAGE_SCALE) * 2,
-    );
+    expect(ally.threat).toBe(50 + Math.floor(40 * THREAT_DAMAGE_SCALE));
   });
 
   it('applyThreatFromDamage uses same scale when attacker deals damage', () => {
@@ -161,6 +196,28 @@ describe('threat', () => {
     );
   });
 
+  it('applyThreatControlOnDamageTaken adds threat only with passive', () => {
+    const guardian = mockAlly({ id: 'guardian', threat: 90, baseThreat: 90 });
+    const attacker = mockAlly({
+      id: 'attacker',
+      role: 'attacker',
+      threat: 44,
+      baseThreat: 44,
+    });
+    applyThreatControlOnDamageTaken(attacker, 40, []);
+    expect(attacker.threat).toBe(44);
+    applyThreatControlOnDamageTaken(guardian, 40, [guardianThreatControl]);
+    expect(guardian.threat).toBe(
+      90 + Math.floor(40 * 0.5),
+    );
+  });
+
+  it('applyThreatControlOnBlock adds flat threat', () => {
+    const guardian = mockAlly({ id: 'guardian', threat: 90, baseThreat: 90 });
+    applyThreatControlOnBlock(guardian, [guardianThreatControl]);
+    expect(guardian.threat).toBe(95);
+  });
+
   it('applyThreatFromDebuffApply adds fixed debuff threat', () => {
     const duelist = mockAlly({
       id: 'duelist',
@@ -175,6 +232,12 @@ describe('threat', () => {
     const ally = mockAlly({ id: 'ally', threat: 200, baseThreat: 80 });
     tickAllyThreatDecay(ally, 1);
     expect(ally.threat).toBe(180);
+  });
+
+  it('tickAllyThreatDecay respects threatDecayMultiplier', () => {
+    const ally = mockAlly({ id: 'ally', threat: 200, baseThreat: 80 });
+    tickAllyThreatDecay(ally, 1, [guardianThreatControl]);
+    expect(ally.threat).toBe(190);
   });
 
   it('initialize sets threat equal to baseThreat', () => {
@@ -279,5 +342,21 @@ describe('threat', () => {
     applyThreatFromDamage(swordsman, enemy, 100);
     expect(swordsman.threat!).toBeGreaterThan(guardian.threat!);
     expect(pickHighestThreatAlly([guardian, swordsman])?.id).toBe('swordsman');
+  });
+
+  it('attacker does not gain threat from being hit without threatControl', () => {
+    const assassin = mockAlly({
+      id: 'assassin',
+      role: 'attacker',
+      threat: 44,
+      baseThreat: 44,
+    });
+    const enemy = mockAlly({
+      id: 'enemy',
+      isEnemy: true,
+    });
+    applyThreatFromDamage(enemy, assassin, 80);
+    applyThreatControlOnDamageTaken(assassin, 80, []);
+    expect(assassin.threat).toBe(44);
   });
 });

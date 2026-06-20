@@ -170,7 +170,7 @@ export function resolvePlayerAttackTargetEnemy(
   return pickTargetFromPool(spec, player, pool);
 }
 
-/** 敵: 全生存プレイヤーからヘイト最大を chase（毎 tick 再評価） */
+/** 敵: 全生存プレイヤーからヘイト最大を chase（Threat ヒステリシス付き） */
 export function resolveEnemyChaseTargetPlayer(
   enemy: CombatantState,
   players: CombatantState[],
@@ -182,7 +182,7 @@ export function resolveEnemyChaseTargetPlayer(
   return pickTargetFromPool(spec, enemy, pool);
 }
 
-/** 敵: 射程内プレイヤーからヘイト最大（停止・攻撃） */
+/** 敵: 射程内プレイヤーからヘイト最大（Threat ヒステリシス付き） */
 export function resolveEnemyAttackTargetPlayer(
   enemy: CombatantState,
   players: CombatantState[],

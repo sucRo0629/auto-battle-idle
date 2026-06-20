@@ -21,6 +21,7 @@
     "passiveIds": [
       "defender_passive_1",
       "df_guardian_passive_2",
+      "df_guardian_passive_5",
       "df_guardian_passive_3"
     ],
     "skills": [
@@ -29,6 +30,7 @@
         "skillIds": [
           "defender_passive_1",
           "df_guardian_passive_2",
+          "df_guardian_passive_5",
           "df_guardian_active_1",
           "df_guardian_active_2"
         ]

@@ -485,6 +485,8 @@ export interface CombatantState extends Combatant {
   threat?: number;
   /** 味方のみ: 減衰の目標ヘイト */
   baseThreat?: number;
+  /** 敵のみ: Threat ヒステリシス用の現在フォーカス対象 id */
+  threatFocusTargetId?: string;
   /** periodicDispel: Wave 内の残り発動回数（passiveId → 残数） */
   passiveDispelRemainingTriggers?: Record<string, number>;
   /** damageDelay: 後払いダメージプール */
@@ -508,6 +510,7 @@ export type PassiveEffectKind =
   | "selfHpRatioBuff"
   | "skillAmountOverride"
   | "skillPropertyOverride"
+  | "threatControl"
   /** @deprecated 読み込み互換 */
   | "evasionChance"
   | "block"
@@ -668,6 +671,14 @@ export interface PassiveSkillDef {
   intervalSec?: number;
   /** hot / buff / debuff / periodicDispel: Stage/Wave 開始時発動。未指定 = 常時（barrier は未指定 = stageStart） */
   periodicTrigger?: PassivePeriodicTriggerKind;
+  /** threatControl: 被ダメ時の固定 threat 加算 */
+  onDamageTakenFlat?: number;
+  /** threatControl: 被ダメ量に対する threat 係数 */
+  onDamageTakenScale?: number;
+  /** threatControl: ブロック成功時の固定 threat 加算 */
+  onBlockFlat?: number;
+  /** threatControl: threat 減衰倍率（1 = 既定。0.5 = 半減速） */
+  threatDecayMultiplier?: number;
   dispelTargetRule?: TargetSpec;
   /** アクティブ effect.targetShape に対応 */
   dispelTargetShape?: TargetShape;

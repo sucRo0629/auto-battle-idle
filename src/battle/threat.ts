@@ -1,12 +1,12 @@
 import { currentHpRatio } from "./combatMath.ts";
 import { getBattleX } from "./combatPosition.ts";
-import type { CombatantState } from "./types.ts";
+import type { CombatantState, PassiveSkillDef } from "./types.ts";
 
 /** maxHp 係数（statComponent = floor(maxHp×a + def×b)） */
 export const THREAT_STAT_HP_WEIGHT = 0.1;
 /** def 係数 */
 export const THREAT_STAT_DEF_WEIGHT = 2;
-/** 与ダメ・被ダメ 1 につき threat 増加（全ロール共通） */
+/** 与ダメ 1 につき actor 側 threat 増加 */
 export const THREAT_DAMAGE_SCALE = 0.5;
 /** defender の baseThreat 倍率（statComponent + pressure 適用後） */
 export const THREAT_BASE_DEFENDER_MULTIPLIER = 1.2;
@@ -14,6 +14,8 @@ export const THREAT_BASE_DEFENDER_MULTIPLIER = 1.2;
 export const THREAT_DEBUFF_APPLY = 15;
 /** 秒あたり baseThreat 方向への減衰量 */
 export const THREAT_DECAY_PER_SEC = 20;
+/** 敵 chase / attack ターゲット切替に必要な threat 差（ヒステリシス） */
+export const THREAT_TARGET_SWITCH_MARGIN = 50;
 
 export function resolveThreatValue(unit: CombatantState): number {
   return unit.threat ?? unit.baseThreat ?? 0;
@@ -40,25 +42,61 @@ export function pickHighestThreatAlly(
   );
 }
 
+export function pickThreatTargetWithHysteresis(
+  pool: CombatantState[],
+  currentFocusId: string | undefined,
+): { target: CombatantState | null; focusId: string | undefined } {
+  if (pool.length === 0) {
+    return { target: null, focusId: undefined };
+  }
+
+  const highest = pickHighestThreatAlly(pool);
+  if (!highest) {
+    return { target: null, focusId: undefined };
+  }
+
+  if (!currentFocusId) {
+    return { target: highest, focusId: highest.id };
+  }
+
+  const current = pool.find(
+    (unit) => unit.id === currentFocusId && unit.isAlive,
+  );
+  if (!current) {
+    return { target: highest, focusId: highest.id };
+  }
+
+  if (current.id === highest.id) {
+    return { target: current, focusId: current.id };
+  }
+
+  const margin = resolveThreatValue(highest) - resolveThreatValue(current);
+  if (margin >= THREAT_TARGET_SWITCH_MARGIN) {
+    return { target: highest, focusId: highest.id };
+  }
+
+  return { target: current, focusId: current.id };
+}
+
 export function computeThreatStatComponent(unit: CombatantState): number {
   return Math.floor(
-    unit.maxHp * THREAT_STAT_HP_WEIGHT + unit.def * THREAT_STAT_DEF_WEIGHT
+    unit.maxHp * THREAT_STAT_HP_WEIGHT + unit.def * THREAT_STAT_DEF_WEIGHT,
   );
 }
 
 function computeFrontRowPressureBonus(
   ally: CombatantState,
-  allies: CombatantState[]
+  allies: CombatantState[],
 ): number {
   if (ally.formationRow !== "front") return 0;
   const statComponent = computeThreatStatComponent(ally);
   const frontOthers = allies.filter(
     (unit) =>
-      unit.isAlive && unit.formationRow === "front" && unit.id !== ally.id
+      unit.isAlive && unit.formationRow === "front" && unit.id !== ally.id,
   );
   if (frontOthers.length === 0) return 0;
   const pressure = Math.max(
-    ...frontOthers.map((unit) => 1 - currentHpRatio(unit))
+    ...frontOthers.map((unit) => 1 - currentHpRatio(unit)),
   );
   return Math.floor(statComponent * pressure);
 }
@@ -91,9 +129,23 @@ export function refreshAlliesBaseThreat(allies: CombatantState[]): void {
   }
 }
 
+function resolveThreatDecayMultiplier(
+  passives: PassiveSkillDef[] | undefined,
+): number {
+  if (!passives || passives.length === 0) return 1;
+  let multiplier = 1;
+  for (const passive of passives) {
+    if (passive.effect !== "threatControl") continue;
+    if (passive.threatDecayMultiplier === undefined) continue;
+    multiplier *= passive.threatDecayMultiplier;
+  }
+  return multiplier;
+}
+
 export function tickAllyThreatDecay(
   ally: CombatantState,
-  deltaTime: number
+  deltaTime: number,
+  passives?: PassiveSkillDef[],
 ): void {
   if (!ally.isAlive) return;
   const base = ally.baseThreat ?? 0;
@@ -102,28 +154,73 @@ export function tickAllyThreatDecay(
     ally.threat = base;
     return;
   }
-  ally.threat = Math.max(base, current - THREAT_DECAY_PER_SEC * deltaTime);
+  const decayRate =
+    THREAT_DECAY_PER_SEC * deltaTime * resolveThreatDecayMultiplier(passives);
+  ally.threat = Math.max(base, current - decayRate);
+}
+
+function addThreatGain(unit: CombatantState, gain: number): void {
+  if (gain <= 0) return;
+  unit.threat = (unit.threat ?? unit.baseThreat ?? 0) + gain;
 }
 
 export function applyThreatFromDamage(
   actor: CombatantState,
-  target: CombatantState,
-  amount: number
+  _target: CombatantState,
+  amount: number,
 ): void {
   if (amount <= 0) return;
   const actorGain = Math.floor(amount * THREAT_DAMAGE_SCALE);
-  const targetGain = Math.floor(amount * THREAT_DAMAGE_SCALE);
   if (!actor.isEnemy && actor.isAlive && actorGain > 0) {
-    actor.threat = (actor.threat ?? actor.baseThreat ?? 0) + actorGain;
+    addThreatGain(actor, actorGain);
   }
-  if (!target.isEnemy && target.isAlive && targetGain > 0) {
-    target.threat = (target.threat ?? target.baseThreat ?? 0) + targetGain;
+}
+
+function resolveThreatControlGain(
+  passives: PassiveSkillDef[],
+  field: "onDamageTakenFlat" | "onDamageTakenScale" | "onBlockFlat",
+  amount = 0,
+): number {
+  let gain = 0;
+  for (const passive of passives) {
+    if (passive.effect !== "threatControl") continue;
+    if (field === "onDamageTakenFlat" && passive.onDamageTakenFlat !== undefined) {
+      gain += passive.onDamageTakenFlat;
+    }
+    if (
+      field === "onDamageTakenScale" &&
+      passive.onDamageTakenScale !== undefined
+    ) {
+      gain += Math.floor(amount * passive.onDamageTakenScale);
+    }
+    if (field === "onBlockFlat" && passive.onBlockFlat !== undefined) {
+      gain += passive.onBlockFlat;
+    }
   }
+  return gain;
+}
+
+export function applyThreatControlOnDamageTaken(
+  target: CombatantState,
+  amount: number,
+  passives: PassiveSkillDef[],
+): void {
+  if (target.isEnemy || !target.isAlive || amount <= 0) return;
+  const gain =
+    resolveThreatControlGain(passives, "onDamageTakenFlat") +
+    resolveThreatControlGain(passives, "onDamageTakenScale", amount);
+  addThreatGain(target, gain);
+}
+
+export function applyThreatControlOnBlock(
+  target: CombatantState,
+  passives: PassiveSkillDef[],
+): void {
+  if (target.isEnemy || !target.isAlive) return;
+  addThreatGain(target, resolveThreatControlGain(passives, "onBlockFlat"));
 }
 
 export function applyThreatFromDebuffApply(actor: CombatantState): void {
   if (actor.isEnemy || !actor.isAlive) return;
-  actor.threat =
-    (actor.threat ?? actor.baseThreat ?? 0) + THREAT_DEBUFF_APPLY;
+  addThreatGain(actor, THREAT_DEBUFF_APPLY);
 }
-

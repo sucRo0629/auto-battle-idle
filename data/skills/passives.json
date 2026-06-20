@@ -20,6 +20,14 @@
     }
   },
   {
+    "id": "df_guardian_passive_5",
+    "name": "鉄壁の挑発",
+    "effect": "threatControl",
+    "onDamageTakenScale": 0.5,
+    "onBlockFlat": 5,
+    "threatDecayMultiplier": 0.5
+  },
+  {
     "id": "sp_cleric_passive_1",
     "name": "救命の心得",
     "effect": "specialEffect",
