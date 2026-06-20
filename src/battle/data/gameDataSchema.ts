@@ -582,6 +582,7 @@ export const EDITOR_PASSIVE_EFFECT_KINDS = [
   "periodicDispel",
   "excessHealToBarrier",
   "damageReduction",
+  "threatControl",
   "defenseIgnore",
   "selfHpRatioBuff",
   "targetRuleOverride",

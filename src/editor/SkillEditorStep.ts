@@ -96,7 +96,9 @@ import {
   appendPassiveSpecialEffectFields,
   appendActiveFireGateFields,
   appendPassiveSkillPropertyOverrideFields,
+  appendPassiveThreatControlFields,
   appendTargetSpecFields,
+  appendThreatBurstFields,
 } from './skillEditorCombatFields.ts';
 import {
   appendGrid,
@@ -564,6 +566,19 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.damageReductionTargetRule ??= { kind: 'self' };
       passive.damageReductionPercent ??= 0.2;
       break;
+    case 'threatControl':
+      if (
+        passive.onDamageTakenFlat === undefined &&
+        passive.onDamageTakenScale === undefined &&
+        passive.onBlockFlat === undefined &&
+        passive.threatDecayMultiplier === undefined &&
+        passive.frontThreatFloor === undefined &&
+        passive.frontThreatDecayMultiplier === undefined &&
+        passive.frontDamageTakenReduction === undefined
+      ) {
+        passive.onDamageTakenScale = 0.5;
+      }
+      break;
     case 'excessHealToBarrier':
       passive.barrierScale ??= 1;
       passive.excessHealSources ??= ['outgoing'];
@@ -977,6 +992,122 @@ function appendBasicAttackTransformFields(
         ),
       ),
     );
+    if (effect.primaryPatch?.target !== undefined) {
+      appendTargetSpecFields(
+        detailGrid,
+        effect.primaryPatch.target,
+        (target) =>
+          patchEffect((prev) => {
+            if (prev.type !== 'basicAttackTransform') return prev;
+            return {
+              ...prev,
+              target: { kind: 'self' },
+              primaryPatch: { ...(prev.primaryPatch ?? {}), target },
+            };
+          }, { rerender: false }),
+      );
+      detailGrid.appendChild(
+        createActionButton(
+          'primary target パッチを削除',
+          'editor-btn editor-btn-small',
+          () =>
+            patchEffect((prev) => {
+              if (prev.type !== 'basicAttackTransform' || !prev.primaryPatch) return prev;
+              const { target: _, ...restPatch } = prev.primaryPatch;
+              return {
+                ...prev,
+                target: { kind: 'self' },
+                primaryPatch:
+                  Object.keys(restPatch).length > 0 ? restPatch : undefined,
+              };
+            }, { rerender: true }),
+        ),
+      );
+    } else {
+      detailGrid.appendChild(
+        createActionButton(
+          'primary target パッチを追加',
+          'editor-btn editor-btn-small',
+          () =>
+            patchEffect((prev) => {
+              if (prev.type !== 'basicAttackTransform') return prev;
+              return {
+                ...prev,
+                target: { kind: 'self' },
+                primaryPatch: {
+                  ...(prev.primaryPatch ?? {}),
+                  target: {
+                    kind: 'distance',
+                    side: 'enemy',
+                    order: 'nearest',
+                  },
+                },
+              };
+            }, { rerender: true }),
+        ),
+      );
+    }
+    detailGrid.appendChild(
+      createFieldRow(
+        'primary targetShape',
+        createSelect(
+          effect.primaryPatch?.targetShape ?? '',
+          [
+            { value: '', label: '（変更なし）' },
+            ...(['single', 'aoe'] as const).map((value) => ({
+              value,
+              label: TARGET_SHAPE_LABELS[value],
+            })),
+          ],
+          (targetShape) =>
+            patchEffect((prev) => {
+              if (prev.type !== 'basicAttackTransform') return prev;
+              const primaryPatch = { ...(prev.primaryPatch ?? {}) };
+              if (targetShape === '') {
+                delete primaryPatch.targetShape;
+                delete primaryPatch.aoeRadiusPx;
+              } else {
+                primaryPatch.targetShape = targetShape as TargetShape;
+                if (targetShape === 'aoe') {
+                  primaryPatch.aoeRadiusPx ??= 70;
+                } else {
+                  delete primaryPatch.aoeRadiusPx;
+                }
+              }
+              return {
+                ...prev,
+                target: { kind: 'self' },
+                primaryPatch:
+                  Object.keys(primaryPatch).length > 0 ? primaryPatch : undefined,
+              };
+            }, { rerender: true }),
+        ),
+      ),
+    );
+    if (effect.primaryPatch?.targetShape === 'aoe') {
+      detailGrid.appendChild(
+        createFieldRow(
+          'primary aoe 半径 px',
+          createNumberInput(
+            effect.primaryPatch?.aoeRadiusPx ?? 70,
+            (aoeRadiusPx) =>
+              patchEffect((prev) => {
+                if (prev.type !== 'basicAttackTransform') return prev;
+                return {
+                  ...prev,
+                  target: { kind: 'self' },
+                  primaryPatch: {
+                    ...(prev.primaryPatch ?? {}),
+                    targetShape: 'aoe',
+                    aoeRadiusPx,
+                  },
+                };
+              }),
+            { min: 1, step: 10 },
+          ),
+        ),
+      );
+    }
   } else {
     const overrideDefaultAtkScale = primaryMode === 'heal' ? 0.5 : 1;
     detailGrid.appendChild(
@@ -1006,6 +1137,32 @@ function appendBasicAttackTransformFields(
         ),
       ),
     );
+    const override = effect.primaryEffectOverride;
+    if (
+      override &&
+      override.type !== 'move' &&
+      override.type !== 'counter' &&
+      override.type !== 'basicAttackTransform'
+    ) {
+      appendTargetSpecFields(
+        detailGrid,
+        getEffectTarget(override),
+        (target) =>
+          patchEffect((prev) => {
+            if (prev.type !== 'basicAttackTransform' || !prev.primaryEffectOverride) {
+              return prev;
+            }
+            return {
+              ...prev,
+              target: { kind: 'self' },
+              primaryEffectOverride: {
+                ...prev.primaryEffectOverride,
+                target,
+              },
+            };
+          }, { rerender: false }),
+      );
+    }
   }
 }
 
@@ -2155,6 +2312,11 @@ export class SkillEditorStep {
           },
           { traitsRangePx: this.resolveTraitsRangePx() },
         );
+        break;
+      case 'threatControl':
+        appendPassiveThreatControlFields(effectGrid, passive, (mutate, options) => {
+          this.patchPassive(index, mutate, options);
+        });
         break;
       case 'excessHealToBarrier':
         effectGrid.appendChild(
@@ -3459,6 +3621,13 @@ export class SkillEditorStep {
             patchEffect((prev) => ({ ...prev, defenseIgnore }), options);
           },
         );
+        if (!isBasicAttack) {
+          appendThreatBurstFields(
+            detailGrid,
+            effect as Extract<SkillEffectDef, { type: 'damage' }>,
+            patchEffect,
+          );
+        }
         break;
       case 'heal': {
         const healEffect = getEffect();

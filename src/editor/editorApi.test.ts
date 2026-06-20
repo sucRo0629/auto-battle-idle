@@ -373,3 +373,129 @@ describe('resyncEnemyBasicAttackEntry', () => {
     expect(next[0]?.active?.vfx).toEqual({ enabled: true });
   });
 });
+
+describe('collectSkillsFromDrafts threat fields', () => {
+  it('preserves threatBurstScale on damage effect save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'at_warrior_active_1', kind: 'active' },
+        active: {
+          id: 'at_warrior_active_1',
+          name: '叩き付け',
+          trigger: { kind: 'basicAttackCount', value: 5 },
+          effect: [
+            {
+              target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+              type: 'damage',
+              damageType: 'physical',
+              amount: { kind: 'atkBased', atkScale: 1.8 },
+              threatBurstScale: 1.25,
+            },
+          ],
+        },
+      },
+    ];
+
+    const { actives } = collectSkillsFromDrafts(entries);
+    const effect = actives[0]?.effect[0];
+    expect(effect?.type).toBe('damage');
+    if (effect?.type !== 'damage') return;
+    expect(effect.threatBurstScale).toBe(1.25);
+  });
+
+  it('preserves threatControl passive fields on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'df_guardian_passive_5', kind: 'passive' },
+        passive: {
+          id: 'df_guardian_passive_5',
+          name: '鉄壁の挑発',
+          effect: 'threatControl',
+          onDamageTakenScale: 0.5,
+          onBlockFlat: 5,
+          threatDecayMultiplier: 0.5,
+        },
+      },
+    ];
+
+    const { passives } = collectSkillsFromDrafts(entries);
+    expect(passives[0]).toMatchObject({
+      effect: 'threatControl',
+      onDamageTakenScale: 0.5,
+      onBlockFlat: 5,
+      threatDecayMultiplier: 0.5,
+    });
+  });
+
+  it('preserves fireConditions compare gte on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'at_warrior_active_1', kind: 'active' },
+        active: {
+          id: 'at_warrior_active_1',
+          name: '叩き付け',
+          trigger: { kind: 'basicAttackCount', value: 5 },
+          firePolicy: 'smart',
+          fireConditions: [{ kind: 'targetHp', maxHpRatio: 0.3, compare: 'gte' }],
+          effect: [
+            {
+              target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+              type: 'damage',
+              damageType: 'physical',
+              amount: { kind: 'atkBased', atkScale: 1.8 },
+            },
+          ],
+        },
+      },
+    ];
+
+    const { actives } = collectSkillsFromDrafts(entries);
+    expect(actives[0]?.fireConditions).toEqual([
+      { kind: 'targetHp', maxHpRatio: 0.3, compare: 'gte' },
+    ]);
+  });
+
+  it('preserves basicAttackTransform primaryEffectOverride target on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'df_paladin_active_3', kind: 'active' },
+        active: {
+          id: 'df_paladin_active_3',
+          name: '治療専念',
+          trigger: { kind: 'time', value: 8 },
+          effect: [
+            {
+              target: { kind: 'self' },
+              type: 'basicAttackTransform',
+              buffDurationSec: 4,
+              primaryEffectOverride: {
+                type: 'heal',
+                healSubKind: 'instant',
+                target: {
+                  kind: 'stat',
+                  side: 'ally',
+                  stat: 'hp',
+                  order: 'ratio',
+                },
+                amount: { kind: 'atkBased', atkScale: 1.5 },
+              },
+              range: 60,
+            },
+          ],
+        },
+      },
+    ];
+
+    const { actives } = collectSkillsFromDrafts(entries);
+    const effect = actives[0]?.effect[0];
+    expect(effect?.type).toBe('basicAttackTransform');
+    if (effect?.type !== 'basicAttackTransform') return;
+    expect(effect.primaryEffectOverride?.target).toEqual({
+      kind: 'stat',
+      side: 'ally',
+      stat: 'hp',
+      order: 'ratio',
+    });
+    expect(effect.range).toBe(60);
+  });
+});

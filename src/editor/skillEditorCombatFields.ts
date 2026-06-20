@@ -492,6 +492,215 @@ export function appendDispelEffectFields(
   });
 }
 
+function appendOptionalPassiveNumberField(
+  parent: HTMLElement,
+  label: string,
+  value: number | undefined,
+  onChange: (next: number | undefined) => void,
+  options: {
+    min?: number;
+    max?: number;
+    step?: number;
+    emptyWhen?: number;
+    placeholder?: string;
+  } = {},
+): void {
+  parent.appendChild(
+    createFieldRow(
+      label,
+      createNumberInput(
+        value ?? options.emptyWhen ?? 0,
+        (next) => {
+          const emptyWhen = options.emptyWhen ?? 0;
+          onChange(next === emptyWhen ? undefined : next);
+        },
+        {
+          min: options.min,
+          max: options.max,
+          step: options.step ?? 0.01,
+          emptyWhen: options.emptyWhen ?? 0,
+          placeholder: options.placeholder ?? "未設定",
+        },
+      ),
+    ),
+  );
+}
+
+export function appendPassiveThreatControlFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean }
+  ) => void,
+): void {
+  parent.appendChild(
+    createEl(
+      "p",
+      "editor-hint",
+      "Threat 維持・上昇。被ダメ / ブロック / 前列 aura のいずれかを 1 つ以上設定してください。",
+    ),
+  );
+  appendOptionalPassiveNumberField(
+    parent,
+    "被ダメ時 Threat 加算（固定）",
+    passive.onDamageTakenFlat,
+    (onDamageTakenFlat) => {
+      patchPassive((current) => {
+        if (onDamageTakenFlat === undefined) {
+          delete current.onDamageTakenFlat;
+        } else {
+          current.onDamageTakenFlat = onDamageTakenFlat;
+        }
+      });
+    },
+    { min: 0, step: 1 },
+  );
+  appendOptionalPassiveNumberField(
+    parent,
+    "被ダメ時 Threat 係数",
+    passive.onDamageTakenScale,
+    (onDamageTakenScale) => {
+      patchPassive((current) => {
+        if (onDamageTakenScale === undefined) {
+          delete current.onDamageTakenScale;
+        } else {
+          current.onDamageTakenScale = onDamageTakenScale;
+        }
+      });
+    },
+    { min: 0, step: 0.05 },
+  );
+  appendOptionalPassiveNumberField(
+    parent,
+    "ブロック成功時 Threat 加算（固定）",
+    passive.onBlockFlat,
+    (onBlockFlat) => {
+      patchPassive((current) => {
+        if (onBlockFlat === undefined) {
+          delete current.onBlockFlat;
+        } else {
+          current.onBlockFlat = onBlockFlat;
+        }
+      });
+    },
+    { min: 0, step: 1 },
+  );
+  appendOptionalPassiveNumberField(
+    parent,
+    "自身 Threat 減衰倍率",
+    passive.threatDecayMultiplier,
+    (threatDecayMultiplier) => {
+      patchPassive((current) => {
+        if (threatDecayMultiplier === undefined) {
+          delete current.threatDecayMultiplier;
+        } else {
+          current.threatDecayMultiplier = threatDecayMultiplier;
+        }
+      });
+    },
+    { min: 0.01, step: 0.05 },
+  );
+  appendOptionalPassiveNumberField(
+    parent,
+    "前列 Threat 下限（source × ratio）",
+    passive.frontThreatFloor,
+    (frontThreatFloor) => {
+      patchPassive((current) => {
+        if (frontThreatFloor === undefined) {
+          delete current.frontThreatFloor;
+        } else {
+          current.frontThreatFloor = frontThreatFloor;
+        }
+      });
+    },
+    { min: 0.01, max: 1, step: 0.01 },
+  );
+  appendOptionalPassiveNumberField(
+    parent,
+    "前列 Threat 減衰倍率",
+    passive.frontThreatDecayMultiplier,
+    (frontThreatDecayMultiplier) => {
+      patchPassive((current) => {
+        if (frontThreatDecayMultiplier === undefined) {
+          delete current.frontThreatDecayMultiplier;
+        } else {
+          current.frontThreatDecayMultiplier = frontThreatDecayMultiplier;
+        }
+      });
+    },
+    { min: 0.01, step: 0.05 },
+  );
+  appendOptionalPassiveNumberField(
+    parent,
+    "前列被ダメ軽減率（0〜1）",
+    passive.frontDamageTakenReduction,
+    (frontDamageTakenReduction) => {
+      patchPassive((current) => {
+        if (frontDamageTakenReduction === undefined) {
+          delete current.frontDamageTakenReduction;
+        } else {
+          current.frontDamageTakenReduction = frontDamageTakenReduction;
+        }
+      });
+    },
+    { min: 0, max: 0.99, step: 0.01 },
+  );
+}
+
+export function appendThreatBurstFields(
+  parent: HTMLElement,
+  effect: Extract<SkillEffectDef, { type: "damage" }>,
+  patchEffect: (
+    patch: SkillEffectDef | ((prev: SkillEffectDef) => SkillEffectDef),
+    options?: { rerender?: boolean }
+  ) => void,
+): void {
+  parent.appendChild(
+    createEl(
+      "p",
+      "editor-hint",
+      "Threat burst: 与ダメ成功時の追加 Threat。通常攻撃には付けません。",
+    ),
+  );
+  appendOptionalPassiveNumberField(
+    parent,
+    "Threat burst 固定",
+    effect.threatBurstFlat,
+    (threatBurstFlat) => {
+      patchEffect((prev) => {
+        if (prev.type !== "damage") return prev;
+        const next = { ...prev };
+        if (threatBurstFlat === undefined) {
+          delete next.threatBurstFlat;
+        } else {
+          next.threatBurstFlat = threatBurstFlat;
+        }
+        return next;
+      });
+    },
+    { min: 0, step: 1 },
+  );
+  appendOptionalPassiveNumberField(
+    parent,
+    "Threat burst 係数（appliedDamage ×）",
+    effect.threatBurstScale,
+    (threatBurstScale) => {
+      patchEffect((prev) => {
+        if (prev.type !== "damage") return prev;
+        const next = { ...prev };
+        if (threatBurstScale === undefined) {
+          delete next.threatBurstScale;
+        } else {
+          next.threatBurstScale = threatBurstScale;
+        }
+        return next;
+      });
+    },
+    { min: 0, step: 0.05 },
+  );
+}
+
 export function appendPassiveDamageReductionFields(
   parent: HTMLElement,
   passive: PassiveSkillDef,
