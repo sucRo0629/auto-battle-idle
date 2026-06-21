@@ -28,6 +28,9 @@ import { basicAttackTransformSpecFromEffect } from '../resolveEffectiveBasicAtta
 import {
   resolveAttackBattleX,
   resolveMoveBattleX,
+  isHostileRearAssaultMove,
+  setPlayerRearAssaultAccess,
+  clearPlayerRearAssaultAccess,
 } from '../combatPosition.ts';
 import {
   battleDistance,
@@ -584,6 +587,7 @@ export class SkillExecutor {
     const moveDeltaPx = Math.abs(toX - fromX);
     const engageToX = resolveAttackBattleX(actor, anchor.battleX, this.gameData, rangePx);
     if (fromX === toX) {
+      this.applyRearAssaultAccessFromMove(actor, anchor, effectDef);
       this.emit({
         type: 'skill',
         actorId: actor.id,
@@ -596,6 +600,8 @@ export class SkillExecutor {
       });
       return;
     }
+
+    this.applyRearAssaultAccessFromMove(actor, anchor, effectDef);
 
     this.deps.getSequenceRunner().startMove({
       actorId: actor.id,
@@ -617,6 +623,18 @@ export class SkillExecutor {
       effect: 'move',
       effectIndex,
     });
+  }
+
+  private applyRearAssaultAccessFromMove(
+    actor: CombatantState,
+    anchor: CombatantState,
+    effectDef: MoveSkillEffect,
+  ): void {
+    if (isHostileRearAssaultMove(actor, anchor, effectDef)) {
+      setPlayerRearAssaultAccess(actor);
+      return;
+    }
+    clearPlayerRearAssaultAccess(actor);
   }
 
   private applyEffect(

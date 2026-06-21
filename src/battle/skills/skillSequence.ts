@@ -487,6 +487,7 @@ export class SkillSequenceRunner {
   tickSequences(
     battleTimeSec: number,
     applyStep: (step: PendingSkillStep) => void,
+    onSequenceComplete?: (actorId: string) => void,
   ): void {
     const kept: ActiveSkillSequence[] = [];
 
@@ -497,6 +498,7 @@ export class SkillSequenceRunner {
           continue;
         }
         sequence.cd.remaining = sequence.skillInterval;
+        onSequenceComplete?.(sequence.actorId);
         continue;
       }
 
@@ -513,6 +515,7 @@ export class SkillSequenceRunner {
             sequence.tailWaitUntilBattleSec = battleTimeSec + waitAfterSec;
           } else {
             sequence.cd.remaining = sequence.skillInterval;
+            onSequenceComplete?.(sequence.actorId);
           }
           break;
         }

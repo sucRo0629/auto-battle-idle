@@ -342,6 +342,33 @@ describe('combatPosition', () => {
     ]);
   });
 
+  it('excludes runtime rearAssault accessState without battleX fallback', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 200,
+    });
+    const assassinRuntime = mockCombatant({
+      id: 'assassin',
+      formationRow: 'front',
+      battleX: 200,
+      accessState: 'rearAssault',
+    });
+    const enemy = mockCombatant({
+      id: 'enemy',
+      isEnemy: true,
+      battleX: 250,
+    });
+    const players = [guard, assassinRuntime];
+    const enemies = [enemy];
+
+    expect(isPlayerRearAssaultAccess(assassinRuntime, enemy.battleX)).toBe(true);
+    expect(getPlayerFrontlineContactX(players, enemies)).toBe(200);
+    expect(resolvePlayerFrontlineOwners(players, enemies).map((p) => p.id)).toEqual([
+      'guard',
+    ]);
+  });
+
   it('resolveMoveBattleX engage and toAnchor offset', () => {
     const sword = mockCombatant({
       id: 'sword',

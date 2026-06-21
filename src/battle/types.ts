@@ -448,6 +448,9 @@ export function asStatusEffectStatList(
   return Array.isArray(stat) ? stat : [stat];
 }
 
+/** runtime-only: Threat / FrontlineOwner から除外する一時アクセス（シリアライズしない） */
+export type CombatantAccessState = "normal" | "rearAssault";
+
 export interface CombatantState extends Combatant {
   /** ダメージ先消耗のシールド量（maxHp 超え可） */
   barrierHp: number;
@@ -487,6 +490,8 @@ export interface CombatantState extends Combatant {
   baseThreat?: number;
   /** 敵のみ: Threat ヒステリシス用の現在フォーカス対象 id */
   threatFocusTargetId?: string;
+  /** runtime-only: 背後滞在など一時アクセス。`isPlayerRearAssaultAccess` の正本 */
+  accessState?: CombatantAccessState;
   /** periodicDispel: Wave 内の残り発動回数（passiveId → 残数） */
   passiveDispelRemainingTriggers?: Record<string, number>;
   /** damageDelay: 後払いダメージプール */

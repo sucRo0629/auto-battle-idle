@@ -159,10 +159,21 @@ describe("toAnchor offset move", () => {
     activeCd!.remaining = 0;
 
     let behindDuringWait = false;
+    let rearAssaultStateDuringWait = false;
     for (let t = 0; t < 900; t++) {
       engine.tick(TICK_DT);
+      if (assassin.accessState === "rearAssault") {
+        rearAssaultStateDuringWait = true;
+      }
       if (
         internal.skillSequenceRunner.isActorInSkillMotion(assassin.id) &&
+        assassin.battleX >= dummy.battleX + 8
+      ) {
+        behindDuringWait = true;
+      }
+      if (
+        rearAssaultStateDuringWait &&
+        assassin.accessState === "rearAssault" &&
         assassin.battleX >= dummy.battleX + 8
       ) {
         behindDuringWait = true;
@@ -175,6 +186,39 @@ describe("toAnchor offset move", () => {
       }
     }
 
+    expect(rearAssaultStateDuringWait).toBe(true);
     expect(behindDuringWait).toBe(true);
+  });
+
+  it("sets runtime accessState on rear assault and clears after engage return", () => {
+    const engine = createAssassinFrontEngine();
+    reachWave2Engage(engine);
+    const internal = asBattleEngineInternals(engine);
+    const assassin = internal.players.find((p) => p.name === "双刃士")!;
+    const activeCd = assassin.cooldowns.find(
+      (cd) => cd.skillId === "at_assassin_active_2"
+    );
+    activeCd!.remaining = 0;
+
+    let sawRearAssaultState = false;
+    let clearedAfterSequence = false;
+
+    for (let t = 0; t < 900; t++) {
+      engine.tick(TICK_DT);
+      if (assassin.accessState === "rearAssault") {
+        sawRearAssaultState = true;
+      }
+      if (
+        sawRearAssaultState &&
+        assassin.accessState !== "rearAssault" &&
+        !internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)
+      ) {
+        clearedAfterSequence = true;
+        break;
+      }
+    }
+
+    expect(sawRearAssaultState).toBe(true);
+    expect(clearedAfterSequence).toBe(true);
   });
 });

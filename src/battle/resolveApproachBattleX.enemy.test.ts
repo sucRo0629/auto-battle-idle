@@ -112,7 +112,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
     expect(target?.id).toBe('enchanter');
   });
 
-  it('does not treat rear assault behind the enemy as a chase target', () => {
+  it("does not treat rear assault behind the enemy as a chase target", () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',
@@ -157,6 +157,59 @@ describe('resolveEnemyChaseTargetPlayer', () => {
     const target = resolveEnemyChaseTargetPlayer(
       meleeEnemy,
       [guard, assassinBehindEnemy],
+      [meleeEnemy],
+      gameData,
+    );
+
+    expect(target?.id).toBe('guard');
+  });
+
+  it('does not treat runtime rearAssault accessState as a chase target without battleX fallback', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 200,
+      threat: 100,
+      baseThreat: 100,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const assassinRuntime = mockCombatant({
+      id: 'assassin',
+      formationRow: 'front',
+      battleX: 200,
+      accessState: 'rearAssault',
+      threat: 300,
+      baseThreat: 300,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 250,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    const target = resolveEnemyChaseTargetPlayer(
+      meleeEnemy,
+      [guard, assassinRuntime],
       [meleeEnemy],
       gameData,
     );

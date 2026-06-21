@@ -1,5 +1,6 @@
 import type {
   CombatantState,
+  MoveSkillEffect,
   GameData,
   MoveSkillEffect,
   SkillCooldown,
@@ -79,14 +80,39 @@ export function getPlayerContactX(players: CombatantState[]): number | null {
 }
 
 /**
- * 敵接触線（`contactBattleX`）を越えた一時侵入 = rear assault アクセス状態。
+ * プレイヤーが rear assault アクセス中か。
+ * 正本: `CombatantState.accessState`。移行中 fallback として `battleX > contactBattleX` を残す。
  * Threat / ChaseTarget / FrontlineOwner の対象から外す判定に使う。
  */
 export function isPlayerRearAssaultAccess(
   player: CombatantState,
   contactBattleX: number,
 ): boolean {
+  if (player.accessState === "rearAssault") return true;
   return getBattleX(player) > contactBattleX;
+}
+
+/** 敵対 anchor への toAnchor で anchorOffsetPx > 0（味方→敵の背後側） */
+export function isHostileRearAssaultMove(
+  actor: CombatantState,
+  anchor: CombatantState,
+  effect: MoveSkillEffect,
+): boolean {
+  if (actor.isEnemy) return false;
+  if ((effect.moveMode ?? "engage") !== "toAnchor") return false;
+  if (actor.isEnemy === anchor.isEnemy) return false;
+  return (effect.anchorOffsetPx ?? 0) > 0;
+}
+
+export function setPlayerRearAssaultAccess(player: CombatantState): void {
+  if (player.isEnemy) return;
+  player.accessState = "rearAssault";
+}
+
+export function clearPlayerRearAssaultAccess(player: CombatantState): void {
+  if (player.accessState === "rearAssault") {
+    delete player.accessState;
+  }
 }
 
 /** 敵接触線より手前にいる生存味方（FrontlineOwner 候補プール） */

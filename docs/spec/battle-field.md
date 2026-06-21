@@ -314,7 +314,9 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | 味方（attacker / supporter） | ターゲット spec の敵プールから **奥**（`battleX` 最大）           | 同じ attack プールで `effectiveRangePx` 内なら停止                |
 | 味方（ally-heal 通常攻撃の supporter） | 射程外の負傷味方へ接近。全員健康なら **現位置維持**（敵 chase しない） | 射程内の負傷味方がいれば停止（`shouldSkipEngagedAutoApproach`）   |
 
-敵の Threat chase は敵の前方側にいるプレイヤー候補から選ぶ。敵の `battleX` より前方（敵にとって背後側）へ一時侵入したプレイヤーは、rear assault の Move / Kill 状態であり、敵の新しい `ChaseTarget` や前線所有者にはしない。
+敵の Threat chase は敵の前方側にいるプレイヤー候補から選ぶ。rear assault アクセス中のプレイヤーは敵の新しい `ChaseTarget` や前線所有者にはしない。
+
+**rear assault アクセス状態（runtime）:** 背後滞在の正本は `CombatantState.accessState === "rearAssault"`（`combatPosition.ts` の `setPlayerRearAssaultAccess` / `clearPlayerRearAssaultAccess`）。`isPlayerRearAssaultAccess` が Threat / `FrontlineOwner` / `enemyForwardFacingPool` からの除外判定に使う。立てる条件: 味方 actor が敵対 anchor へ `moveMode: "toAnchor"` かつ `anchorOffsetPx > 0` の move を適用したとき（Assassin 固有 ID ではなく効果形状で判定）。解除: 帰還 `engage` / 非 rear の move 適用時、スキルシーケンス完了時、死亡・`clearForActor` / `clearAll` / wave reset（`clearEngagedVisualState`）。`waitAfterSec` 中も move 完了だけでは解除しない。移行中 fallback として `battleX > contactBattleX` を残す。敵側のプレイヤー背後 move は本 spec のスコープ外。
 
 **停止 X：** chase 対象の `battleX` に対し `resolveApproachAttackBattleX`（§2.5 と同じ射程式）。敵は `capEngagedEnemyApproachBattleX` により左（`battleX` 減少）のみ。
 

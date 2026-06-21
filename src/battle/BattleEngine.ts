@@ -37,6 +37,7 @@ import {
   placePartyOffScreenForDeploy,
   resolveEnemyDeployTargets,
   placeEnemiesOffScreenForDeploy,
+  clearPlayerRearAssaultAccess,
 } from "./combatPosition.ts";
 import { waveHasTrainingDummy } from "./trainingStage.ts";
 import {
@@ -239,7 +240,10 @@ export class BattleEngine {
       onHealApplied: () => {
         this.refreshSelfHpRatioBuffAuras();
       },
-      onUnitDied: (unit) => this.noteEnemyCorpseAnchor(unit),
+      onUnitDied: (unit) => {
+        clearPlayerRearAssaultAccess(unit);
+        this.noteEnemyCorpseAnchor(unit);
+      },
     });
     this.reloadBattlefield();
   }
@@ -301,6 +305,7 @@ export class BattleEngine {
           this.gameData.skillRegistry.passives[skillId]?.name ??
           "反撃",
         onUnitDied: (unit: CombatantState) => {
+          clearPlayerRearAssaultAccess(unit);
           this.skillSequenceRunner.clearForActor(unit.id);
           this.noteEnemyCorpseAnchor(unit);
           this.emit({ type: "death", targetId: unit.id });
@@ -574,6 +579,7 @@ export class BattleEngine {
     this.engagedFrontLineAnchor = null;
     this.engagedComposition.clear();
     for (const unit of [...this.players, ...this.enemies]) {
+      clearPlayerRearAssaultAccess(unit);
       unit.engagedBattleLaneX = undefined;
       unit.engagedMeleeDepthSlot = undefined;
       unit.engagedVisualTargetPlayerId = undefined;
@@ -1511,9 +1517,16 @@ export class BattleEngine {
     this.skillSequenceRunner.tickAnimLocks(deltaTime);
     this.skillSequenceRunner.tickActiveEffectGauges(deltaTime);
     this.skillSequenceRunner.tickMoves(deltaTime, units);
-    this.skillSequenceRunner.tickSequences(this.battleTimeSec, (step) => {
-      this.executor.applyScheduledStep(step, this.players, this.enemies);
-    });
+    this.skillSequenceRunner.tickSequences(
+      this.battleTimeSec,
+      (step) => {
+        this.executor.applyScheduledStep(step, this.players, this.enemies);
+      },
+      (actorId) => {
+        const unit = this.findCombatant(actorId);
+        if (unit) clearPlayerRearAssaultAccess(unit);
+      },
+    );
   }
 
   private tickStatusEffects(deltaTime: number): void {
@@ -1597,6 +1610,7 @@ export class BattleEngine {
       if (!unit.isEnemy) {
         stripPassivesAurasFromSource(unit.id, [...this.players, ...this.enemies]);
       }
+      clearPlayerRearAssaultAccess(unit);
       this.skillSequenceRunner.clearForActor(unit.id);
       this.noteEnemyCorpseAnchor(unit);
       this.emit({ type: "death", targetId: unit.id });
@@ -1668,6 +1682,8 @@ export class BattleEngine {
       this.emit({ type: "hurt", targetId: target.id });
       if (lethal) {
         target.isAlive = false;
+        clearPlayerRearAssaultAccess(target);
+        this.skillSequenceRunner.clearForActor(target.id);
         this.emit({ type: "death", targetId: target.id });
         this.noteEnemyCorpseAnchor(target);
       }
