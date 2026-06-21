@@ -444,7 +444,10 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": []
+        "skillIds": [
+          "at_sigilist_active_1",
+          "at_sigilist_active_2"
+        ]
       }
     ],
     "growthTier": {
