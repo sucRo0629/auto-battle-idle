@@ -474,9 +474,11 @@ export interface CombatantState extends Combatant {
   engagedBattleLaneX?: number;
   /** 近接敵: 最前列からの奥行きスロット（接敵開始時に固定、0=最前列） */
   engagedMeleeDepthSlot?: number;
-  /** 遠距離敵: 描画アンカー用の狙いプレイヤー id（接敵開始時に固定） */
+  /** 遠距離敵: DisplayAnchor（描画・VFX 基準プレイヤー id。接敵開始時に固定） */
+  engagedDisplayAnchorPlayerId?: string;
+  /** @deprecated engagedDisplayAnchorPlayerId */
   engagedVisualTargetPlayerId?: string;
-  /** @deprecated engagedVisualTargetPlayerId */
+  /** @deprecated engagedDisplayAnchorPlayerId */
   engagedVisualTargetAllyId?: string;
   /** 味方: Wave 中の death スプライト表示。Wave 移行で false（HP0・HUD は維持） */
   corpseVisible: boolean;

@@ -32,7 +32,7 @@ battle 系 cleanup を別チャットや Composer へ引き継ぐときの完了
 |------|----------|
 | `battleX` 単一正本に反する旧 `visual/screen/camera` pipeline が runtime から消えている | **部分**。`visualX` の snapshot 互換ミラー、`battleCamera.ts`、`corpseScreenAnchorX` など互換残骸が残る |
 | 接敵開始時 bake なし、自動接近主体の流れがテストで固定されている | **済み**。`battleFieldTransition.test.ts` の `T-engage-01`、`battleFieldArchitecture.test.ts` の `A-L1-01` を基準に維持 |
-| `AttackTarget` / `ChaseTarget` / `MoveAnchor` / `DisplayAnchor` / `FrontlineContact` の責務境界が実装名またはテスト名で読める | **部分**。`AttackTarget` / `ChaseTarget` / `MoveAnchor` / `FrontlineContact` は読めるが、`DisplayAnchor` は主に spec 名で、実装は `engagedVisualTargetPlayerId` 残存 |
+| `AttackTarget` / `ChaseTarget` / `MoveAnchor` / `DisplayAnchor` / `FrontlineContact` の責務境界が実装名またはテスト名で読める | **済み**。`DisplayAnchor` は `engagedDisplayAnchorPlayerId` + `battleDisplay.getEngagedDisplayAnchorPlayerId` 等。`engagedVisualTargetPlayerId` / `engagedVisualTargetAllyId` は deprecated alias |
 | Assassin の rear assault と Defender の frontline ownership が衝突しない | **済み**。`CombatantState.accessState` が正本。`resolveApproachBattleX.enemy.test.ts` / `duelistAssassinFormation.test.ts` / `behindTargetMove.test.ts` を維持 |
 | 関連テストが通る | battle cleanup ごとに `battleFieldArchitecture` / `battleFieldTransition` / `resolveApproachBattleX.enemy` / `duelistAssassinFormation` を最低確認 |
 | [`docs/spec/battle-field.md`](../spec/battle-field.md) と [`docs/spec/combat.md`](../spec/combat.md) に今回の境界が反映されている | **部分**。`battle-field.md` は概ね反映済み。`combat.md` は Threat 境界を持つが、座標節に移行中の旧表現が残る |

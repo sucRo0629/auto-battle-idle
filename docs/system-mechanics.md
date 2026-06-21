@@ -72,7 +72,7 @@
 | `AttackTarget` | damage / heal / buff / debuff の実対象 | 射程内プールから選ぶ。敵の対プレイヤー通常対象は Threat 優先 |
 | `MoveAnchor` | `move` の到達基準 | 射程外も anchor にできる。Threat ではなく使用者との `battleX` 距離 |
 | `ChaseTarget` | 自動接近の追跡対象 | 敵は Threat、味方はスキル / 通常攻撃の target spec |
-| `DisplayAnchor` | VFX・描画凍結用 | 戦闘判定へ逆流させない |
+| `DisplayAnchor` | VFX・描画凍結用 | 戦闘判定へ逆流させない。実装: `CombatantState.engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper） |
 
 これにより、Flow の移動が発生しても「移動先」「攻撃対象」「追跡対象」「表示基準」を同一概念へ潰さない。
 

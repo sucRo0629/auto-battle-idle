@@ -278,13 +278,13 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 - target / threat / contact / frontline owner の再評価のみ
 - `freezeEngagedMeleeVisualSlots`（敵近接構成変化時）
-- `engagedVisualTargetPlayerId` の再凍結（`freezeRangedTargets`）
+- `engagedDisplayAnchorPlayerId` の再凍結（`freezeRangedTargets`）
 - 生存ユニットの `battleX` を formation snap **しない**
 
 **凍結フィールド（接敵開始時）：**
 
 - `engagedMeleeDepthSlot` — 接敵開始時に固定する射程 px 奥行き（近接敵の列内深度）
-- `engagedVisualTargetPlayerId` — 遠距離敵の狙いプレイヤー（L5）
+- `engagedDisplayAnchorPlayerId` — 遠距離敵の DisplayAnchor（L5）。`engagedVisualTargetPlayerId` は deprecated alias
 
 ### 4.3 接敵開始
 
@@ -305,7 +305,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | `AttackTarget` | 射程内停止と実際の攻撃対象 | 射程内プール。敵の対プレイヤーは Threat 優先 |
 | `MoveAnchor` | スキル `move` の到達基準 | 使用者との `battleX` 距離。Threat は使わない |
 | `FrontlineOwner` | 現在その戦線を保持している味方 | `resolvePlayerFrontlineOwners`（`combatPosition.ts`）。rear assault アクセス中は含めない |
-| `DisplayAnchor` | 遠隔敵の表示凍結・VFX 基準 | 描画専用。戦闘判定へ逆流させない |
+| `DisplayAnchor` | 遠隔敵の表示凍結・VFX 基準 | 描画専用。`engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper）。戦闘判定へ逆流させない |
 
 | 側                           | chase（毎 tick 再評価）                                           | attack / 停止判定                                                  |
 | ---------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------ |
@@ -329,7 +329,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 **敵の追い替え：** Threat は毎 tick 再評価するが、chase / attack には [combat.md](combat.md) の **閾値ヒステリシス**（`pickThreatTargetWithHysteresis` / `threatFocusTargetId`）を適用する。ヘイト 1 位が瞬間的に入れ替わっただけでは chase target を即切替しない。射程内に入ったら attack プールで停止・攻撃。
 
-**遠隔敵の表示凍結：** 接敵開始時 `engagedVisualTargetPlayerId` は attack プール → なければ chase（`battleDisplay.freezeRangedTargets`）。接敵中の攻撃ターゲット解決とは独立。
+**遠隔敵の表示凍結：** 接敵開始時 `engagedDisplayAnchorPlayerId`（`battleDisplay.getEngagedDisplayAnchorPlayerId` / `setEngagedDisplayAnchorPlayerId`）は attack プール → なければ chase（`battleDisplay.freezeRangedTargets`）。接敵中の攻撃ターゲット解決とは独立。DisplayAnchor は描画専用で `AttackTarget` / `ChaseTarget` / `MoveAnchor` へ逆流させない。
 
 **スキル `move` 中・シーケンス busy 中**の actor は自動接近対象外。接敵中の `resolveEngagedFormationOverlaps` でも **スキルモーション中ユニットは overlap 対象から除外**（一時的な `battleX` で味方を引っ張らない）。
 
@@ -412,7 +412,7 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 | ---------- | --------------------------------------------------------------------------- |
 | **R1-fix** | **`battleX` 単一座標。** `visualX` 廃止。描画 = ロジック                    |
 | L2         | 単一 `FormationReset`（Wave 1 は背景・時間差分のみ）                        |
-| L5         | `engagedVisualTargetPlayerId` を layout で必ず参照                          |
+| L5         | `engagedDisplayAnchorPlayerId` を layout で必ず参照（`resolveRangedTargetBattleX`） |
 | L6         | 分類用途の `isMeleeUnit` は [combat.md](combat.md) / [classes-and-skills.md](classes-and-skills.md) に委譲 |
 | L7         | モジュール分割 + 一方向 import                                              |
 | L8         | 軸反転を座標系として一括適用                                                |

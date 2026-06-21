@@ -89,7 +89,12 @@ import {
   tickAllyThreatDecay,
 } from "./threat.ts";
 import { deathAnimDurationMs } from "../render/deathPlayback.ts";
-import { EngagedCompositionTracker } from "./battleDisplay.ts";
+import {
+  clearEngagedDisplayAnchor,
+  EngagedCompositionTracker,
+  getEngagedDisplayAnchorPlayerId,
+  setEngagedDisplayAnchorPlayerId,
+} from "./battleDisplay.ts";
 import {
   getLeadingPlayerFormationRow,
   resolveEngagedLayout,
@@ -582,8 +587,7 @@ export class BattleEngine {
       clearPlayerRearAssaultAccess(unit);
       unit.engagedBattleLaneX = undefined;
       unit.engagedMeleeDepthSlot = undefined;
-      unit.engagedVisualTargetPlayerId = undefined;
-      unit.engagedVisualTargetAllyId = undefined;
+      clearEngagedDisplayAnchor(unit);
       if (unit.isEnemy) {
         unit.corpseScreenAnchorX = undefined;
       }
@@ -678,8 +682,7 @@ export class BattleEngine {
   private resolveEngagedRangedTargetPlayer(
     enemy: CombatantState,
   ): CombatantState | undefined {
-    const frozenId =
-      enemy.engagedVisualTargetPlayerId ?? enemy.engagedVisualTargetAllyId;
+    const frozenId = getEngagedDisplayAnchorPlayerId(enemy);
     let target = frozenId
       ? this.players.find((ally) => ally.id === frozenId && ally.isAlive)
       : undefined;
@@ -699,8 +702,7 @@ export class BattleEngine {
         ) ??
         undefined;
       if (target) {
-        enemy.engagedVisualTargetPlayerId = target.id;
-        enemy.engagedVisualTargetAllyId = target.id;
+        setEngagedDisplayAnchorPlayerId(enemy, target.id);
       }
     }
     return target;

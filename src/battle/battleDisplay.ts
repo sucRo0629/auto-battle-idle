@@ -5,6 +5,34 @@ import {
 } from './resolveApproachBattleX.ts';
 import type { CombatantState, FormationRow, GameData } from './types.ts';
 
+/** DisplayAnchor 読取（優先: engagedDisplayAnchorPlayerId → engagedVisualTargetPlayerId → engagedVisualTargetAllyId） */
+export function getEngagedDisplayAnchorPlayerId(
+  enemy: CombatantState,
+): string | undefined {
+  return (
+    enemy.engagedDisplayAnchorPlayerId ??
+    enemy.engagedVisualTargetPlayerId ??
+    enemy.engagedVisualTargetAllyId
+  );
+}
+
+/** DisplayAnchor 書込（移行中互換: 新旧 alias すべてに代入） */
+export function setEngagedDisplayAnchorPlayerId(
+  enemy: CombatantState,
+  playerId: string,
+): void {
+  enemy.engagedDisplayAnchorPlayerId = playerId;
+  enemy.engagedVisualTargetPlayerId = playerId;
+  enemy.engagedVisualTargetAllyId = playerId;
+}
+
+/** DisplayAnchor クリア（新旧 alias すべてを undefined に） */
+export function clearEngagedDisplayAnchor(enemy: CombatantState): void {
+  enemy.engagedDisplayAnchorPlayerId = undefined;
+  enemy.engagedVisualTargetPlayerId = undefined;
+  enemy.engagedVisualTargetAllyId = undefined;
+}
+
 /**
  * 接敵中の構成変化検知（R1-fix: visual 補間は廃止）。
  * Engaged 中は layout bake せず、署名更新・凍結・表示 target 再評価のみ。
@@ -45,8 +73,7 @@ export class EngagedCompositionTracker {
         resolveEnemyChaseTargetPlayer(enemy, players, enemies, gameData) ??
         undefined;
       if (target) {
-        enemy.engagedVisualTargetPlayerId = target.id;
-        enemy.engagedVisualTargetAllyId = target.id;
+        setEngagedDisplayAnchorPlayerId(enemy, target.id);
       }
     }
   }
