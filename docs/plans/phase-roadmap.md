@@ -10,16 +10,16 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2a** | 放置 MVP：セーブ・ステージ進行・個別 Lv（ステのみ）                                  | **完了**             |
 | **2b** | 戦闘計算（`combatMath` 等）                                                          | **完了**             |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                            | **完了**             |
-| **3**  | Lv アップ時スキル習得、習得済みアクティブ常時使用枠（最大 4）                       | **完了**             |
-| **4**  | クラスマスタ + スキル説明；4a **完了** / 4c **完了** / 4b 説明（データ PR 同梱）     | **4a+4c 完了**        |
-| **5**  | 演出アセット + **演出調整ツール**（Canvas プレビュー・VFX 調整含む）               | **次**（確定クラス順次） |
+| **3**  | Lv アップ時スキル習得、習得済みアクティブ常時使用枠（最大 4）+ クラス別スキル再設定 | **再オープン中**     |
+| **4**  | クラスマスタ + スキル説明；4a **見直し中** / 4c **完了** / 4b 説明（データ PR 同梱） | **Phase 3 後に再確定** |
+| **5**  | 演出アセット + **演出調整ツール**（Canvas プレビュー・VFX 調整含む）               | 待機（スキル再確定後） |
 | **6**  | VFX **PNG 描画**（`sheets/vfx/` 64×64）— 戦闘描画の正本                           | **完了**             |
 | **7**  | バランス調整（数値チューニング全般）                                                 | 未着手               |
 | **8**  | globalExp、強化ツリー、オフライン報酬、Electron                                      | 未着手               |
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
-**開発優先:** **Phase 5（演出アセット + 演出調整ツール）** — 4a で確定したクラス / 敵から **順次** アニメ・VFX を実装。4b（`formatSkillText`）はスキル JSON 変更 PR ごとに同梱（Phase 7 前の一括仕上げ）。4c JSON 分割は **完了**。接敵ビジュアルは [master-work-order.md](./master-work-order.md) Phase 3a/3b。globalExp / 強化ツリー / Electron は Phase 8。
+**開発優先:** **Phase 3（クラス別パッシブ / アクティブスキル再設定）** — 仕様見直しにより、既存クラスの一部でスキル構成を再定義する。Phase 3 の習得・常時使用枠の実装は維持しつつ、`classes.json` / `data/skills/` / スキル説明 / validate / エディタ保存経路が新しいクラス設計と一致するまで Phase 5 へ進まない。4c JSON 分割は **完了**。接敵ビジュアルは [master-work-order.md](./master-work-order.md) Phase 3a/3b。globalExp / 強化ツリー / Electron は Phase 8。
 
 ---
 
@@ -88,7 +88,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ---
 
-## Phase 3 — スキル・戦闘拡張（完了）
+## Phase 3 — スキル・戦闘拡張（再オープン中）
 
 **ゴール：** LvUP で習得済みスキルが増え、アクティブは Lv0=2、Lv10=3、Lv20=4 の最大 4 枠で常時使用可能になる。ビルドは付け替えではなく習得構造としてセーブに永続化。
 
@@ -100,6 +100,17 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 - 付け替え・セット・装備変更は行わない。`equippedActiveSlots` は歴史的互換のみで、設計上の戦闘参加判定には使わない
 - セーブに `CharacterBuild` を含め、ロード時 `reconcilePartyBuilds` でレベルと整合
 
+### 再オープン理由（2026-06）
+
+仕様見直しにより、クラスによってはパッシブ / アクティブスキルの役割・習得順・効果構成を再設定する必要が出た。習得システム自体は完了済みだが、Phase 4 以降のクラスマスタ・演出・バランス調整の前提になるため、現在地は Phase 3 へ戻す。
+
+### 未完了タスク
+
+- 影響クラスを洗い出し、各クラスのパッシブ / アクティブスキル構成を再定義
+- `classes.json` の習得テーブルと `data/skills/` の効果・ターゲット・数値フィールドを更新
+- 新 effect / target / 条件 / 表示要素が増える場合は、`SkillEditorStep`・validate・`formatSkillText`・関連 spec を同じ作業で同期
+- 変更後のクラスマスタを [classes-and-skills.md](../spec/classes-and-skills.md) と突き合わせ、Phase 4a を再確定
+
 ---
 
 ## Phase 4 — クラスマスタ + スキル
@@ -108,11 +119,11 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 
 | サブフェーズ | 内容                                                                 | 状態                      |
 | ------------ | -------------------------------------------------------------------- | ------------------------- |
-| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ        | **完了**                  |
+| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ        | **見直し中**              |
 | **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率） | **完了**              |
 | **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7 前 polish | **随時**（コア済）    |
 
-### クラスマスタ（完了）
+### クラスマスタ（見直し中）
 
 ロスター全表は [classes-and-skills.md](../spec/classes-and-skills.md) を正とする。`displayName`（漢字）+ `epithetEn`（英語肩書き）を `classes.json` に保持し、デモ編成は `parties.json` の最新構成（鉄衛士 / 剣術士 / 療養師 / 弓術士）とする。
 
@@ -120,9 +131,9 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 - `epithetEn` の 2 段ルビ UI は master-work-order Phase 3c
 - 数値バランスの最終版は Phase 7
 
-### 4a — クラスデータ + GUI（完了）
+### 4a — クラスデータ + GUI（見直し中）
 
-- 15 クラスを `classes.json` + `data/skills/` に投入済み
+- 15 クラスを `classes.json` + `data/skills/` に投入済み。ただし Phase 3 再オープンにより、一部クラスのパッシブ / アクティブ構成は再確定待ち
 - **ステータス・成長** — Lv1 基準 + `growthTier`（低/中/高）+ `levelCurves.growthPresets` + `attackSpeedPresets`；術師は `growthPresetKey: caster`；`ClassEditorStep` 成長 UI + Lv10 プレビュー（[stats.md](../spec/stats.md)）
 - **複数ターゲットスキル**（`targetShape` 等）— 実装検証用 WIP データ。**仕様書へのスキル一覧転記はマスタ確定後**
 - キャラクターデータ GUI で編集・保存
@@ -186,7 +197,7 @@ data/
 
 ## Phase 5 — 演出アセット + 演出調整ツール
 
-Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント連動）は維持。**確定した classId / enemyId から順次** 本番 PNG とタイミングを載せる。アセット規約は [classes-and-skills.md](../spec/classes-and-skills.md#スプライト演出アセット) と [sheets/README.md](../../src/assets/sprites/sheets/README.md)。
+Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント連動）は維持。Phase 3 のスキル再設定と Phase 4a のクラスマスタ再確定後、**確定した classId / skillId / enemyId から順次** 本番 PNG とタイミングを載せる。アセット規約は [classes-and-skills.md](../spec/classes-and-skills.md#スプライト演出アセット) と [sheets/README.md](../../src/assets/sprites/sheets/README.md)。
 
 ### アセット仕様（目標）
 
@@ -253,13 +264,13 @@ Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦�
 
 ## Phase 7 — バランス調整
 
-Phase 3〜6（および Phase 4 のクラスマスタ）で機能・コンテンツ・見た目が揃ったあとに、ゲーム全体の数値をチューニングする。
+Phase 3〜6（および Phase 4 のクラスマスタ）で機能・コンテンツ・見た目が揃ったあとに、ゲーム全体の数値をチューニングする。Phase 3 再オープン中は、クラス別スキル再設定を優先し、数値の最終調整はここへ残す。
 
 ### スコープ
 
 - [combat.md](../spec/combat.md) との突き合わせ・検証
 - 敵 `exp`、**growthPresets 表**・クラス `growthTier` 割当、LvUP ペース
-- クラス 5 種の Lv1 基礎ステ・スキル威力（具体スキルはマスタ確定後）
+- クラス 15 種の Lv1 基礎ステ・スキル威力（具体スキルはマスタ確定後）
 - ステージ難易度カーブ（敵ステ・ウェーブ構成）
 - Phase 3 以降のスキル習得・強化ツリーとの整合
 - **アクティブ枠構造**の最終確認（Lv0=2 / Lv10=3 / Lv20=4）
@@ -293,15 +304,15 @@ Phase 2a（セーブ + ステージ + Lv ステ）
 Phase 2b（戦闘計算） ── 2c と並行可
 Phase 2c（JSON クラス + 成長曲線）
     ↓
-Phase 3（スキル習得 + 習得済みアクティブ常時使用枠）
+Phase 3（スキル習得 + 習得済みアクティブ常時使用枠 + クラス別スキル再設定）  ← **現在**
     ↓
-Phase 4a（クラスマスタ + GUI）  ← 完了
+Phase 4a（クラスマスタ + GUI）  ← 見直し中
     ↓
 Phase 4c（JSON 分割）  ← 完了
     ↓
 Phase 4b（formatSkillText）  ← データ PR 随時
     ↓
-Phase 5（演出アセット + 演出調整ツール）  ← **次**（確定クラス順次）
+Phase 5（演出アセット + 演出調整ツール）  ← スキル再確定後
     ↓
 Phase 6（VFX PNG 描画）  ← 5 と並行可
     ↓
