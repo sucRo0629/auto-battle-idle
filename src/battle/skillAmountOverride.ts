@@ -44,6 +44,7 @@ export function inferPassiveAmountField(
 }
 
 export function activeEffectHasAmount(effect: SkillEffectDef): boolean {
+  if (effect.type === 'conditionalEffect') return false;
   if (effect.type === 'damage') return true;
   if (effect.type === 'heal') {
     return effect.amount !== undefined;

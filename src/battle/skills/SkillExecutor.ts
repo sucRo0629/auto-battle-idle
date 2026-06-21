@@ -39,6 +39,10 @@ import {
   resetCooldownAfterFire,
 } from '../skillTrigger.ts';
 import { consumeActiveChargeOnFire, hasAvailableActiveCharge } from './chargeBank.ts';
+import {
+  resolveConditionalBranchEffects,
+  type ConditionEvalContext,
+} from './effectConditions.ts';
 import { resolvePresentationLockSec } from './presentationLock.ts';
 import { resolveEffectApplyDelaySec } from '../../render/skillAnimPlayback.ts';
 import type {
@@ -283,6 +287,23 @@ export class SkillExecutor {
     return false;
   }
 
+  private buildConditionEvalContext(
+    actor: CombatantState,
+    allies: CombatantState[],
+    enemies: CombatantState[],
+    passives: ReturnType<typeof getPassiveDefs>,
+    referenceEffect?: import('../types.ts').SkillEffectDef,
+  ): ConditionEvalContext {
+    return {
+      actor,
+      allies,
+      enemies,
+      passives,
+      gameData: this.gameData,
+      referenceEffect,
+    };
+  }
+
   private applyResolvedEffectStep(
     actor: CombatantState,
     allies: CombatantState[],
@@ -293,6 +314,37 @@ export class SkillExecutor {
     cd: SkillCooldown,
     passives: ReturnType<typeof getPassiveDefs>,
   ): boolean {
+    if (effectDef.type === 'conditionalEffect') {
+      const branchEffects = resolveConditionalBranchEffects(
+        effectDef,
+        this.buildConditionEvalContext(
+          actor,
+          allies,
+          enemies,
+          passives,
+          effectDef.thenEffects[0] ?? effectDef.elseEffects[0],
+        ),
+      );
+      let appliedAny = false;
+      for (const branchEffect of branchEffects) {
+        if (
+          this.applyResolvedEffectStep(
+            actor,
+            allies,
+            enemies,
+            skill,
+            branchEffect,
+            effectIndex,
+            cd,
+            passives,
+          )
+        ) {
+          appliedAny = true;
+        }
+      }
+      return appliedAny;
+    }
+
     const resolution = resolveEffectResolution(
       effectDef,
       actor,

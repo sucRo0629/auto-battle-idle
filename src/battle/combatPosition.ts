@@ -19,6 +19,7 @@ import {
   type PartyFormationUnit,
 } from './partyFormation.ts';
 import { resolveSkillRangePx } from './skills/rangeUtils.ts';
+import { flattenSkillEffectsForRuntime } from './skills/effectConditions.ts';
 import { getEffectTarget, targetSpecFaction } from './skills/targetSpec.ts';
 import type { SkillEffectDef } from './types.ts';
 
@@ -335,7 +336,7 @@ export function resolveMaxEffectiveRangePx(
   for (const cd of unit.cooldowns) {
     const skill = gameData.skillRegistry.actives[cd.skillId];
     if (!skill) continue;
-    for (const effect of skill.effect) {
+    for (const effect of flattenSkillEffectsForRuntime(skill.effect)) {
       if (effect.type === 'move') continue;
       max = Math.max(max, resolveSkillRangePx(unit, effect));
     }
@@ -369,7 +370,7 @@ export function resolveMinEquippedActiveRangePx(
     if (cd.slotKind !== 'active') continue;
     const skill = gameData.skillRegistry.actives[cd.skillId];
     if (!skill) continue;
-    for (const effect of skill.effect) {
+    for (const effect of flattenSkillEffectsForRuntime(skill.effect)) {
       if (effect.type === 'move') continue;
       const range = resolveSkillRangePx(unit, effect);
       min = min === null ? range : Math.min(min, range);
@@ -387,7 +388,7 @@ function activeEffectNeedsEnemyProximity(
   unit: CombatantState,
   effect: SkillEffectDef,
 ): boolean {
-  if (effect.type === 'move') return false;
+  if (effect.type === 'move' || effect.type === 'conditionalEffect') return false;
   const faction = targetSpecFaction(getEffectTarget(effect), unit);
   return faction === 'enemy';
 }
@@ -404,7 +405,7 @@ export function resolveMinReadyEquippedActiveRangePx(
     if (!isEquippedActiveSkillReady(cd)) continue;
     const skill = gameData.skillRegistry.actives[cd.skillId];
     if (!skill) continue;
-    for (const effect of skill.effect) {
+    for (const effect of flattenSkillEffectsForRuntime(skill.effect)) {
       if (!activeEffectNeedsEnemyProximity(unit, effect)) continue;
       const range = resolveSkillRangePx(unit, effect);
       effectRanges.push({ skillId: cd.skillId, type: effect.type, range });

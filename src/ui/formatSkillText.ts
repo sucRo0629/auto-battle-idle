@@ -385,6 +385,17 @@ function formatCounterResponse(response: CounterResponseDef): string {
 }
 
 function formatActiveEffectDetail(effect: SkillEffectDef): string {
+  if (effect.type === "conditionalEffect") {
+    const conditionCount = effect.conditions.length;
+    const thenSummary = effect.thenEffects
+      .map((branch) => formatActiveEffectDetail(branch))
+      .join(" / ");
+    const elseSummary = effect.elseEffects
+      .map((branch) => formatActiveEffectDetail(branch))
+      .join(" / ");
+    return `条件×${conditionCount} → 成立: ${thenSummary} / 不成立: ${elseSummary}`;
+  }
+
   const target = formatTarget(
     effect.target,
     defaultTargetForEffectType(effect.type)
@@ -651,6 +662,10 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
       return "ブロック";
     case "counter":
       return "反撃";
+    case "conditionalEffect":
+      return "条件分岐";
+    case "basicAttackTransform":
+      return "通常攻撃変形";
     default:
       return kind;
   }

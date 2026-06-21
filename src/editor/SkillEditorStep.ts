@@ -95,6 +95,7 @@ import {
   appendPassiveBuffFields,
   appendPassiveSpecialEffectFields,
   appendActiveFireGateFields,
+  appendConditionListFields,
   appendPassiveSkillPropertyOverrideFields,
   appendPassiveThreatControlFields,
   appendTargetSpecFields,
@@ -1639,6 +1640,13 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         buffDurationSec: 5,
         hitCountMultiplier: 2,
       };
+    case 'conditionalEffect':
+      return {
+        type: 'conditionalEffect',
+        conditions: [{ kind: 'enemyCount', min: 3, scope: 'inRange' }],
+        thenEffects: [defaultEffect('damage')],
+        elseEffects: [defaultEffect('damage')],
+      };
   }
 }
 
@@ -3013,6 +3021,7 @@ export class SkillEditorStep {
     isBasicAttack = false,
     sequenceContext?: { effectIndex: number; effectCount: number },
     skillId?: string,
+    branchEditorOptions?: { hideConditionalCategory?: boolean },
   ): void {
     const normalizedEffect = withEditorEffectDefaults(effect);
     if (editorEffectNeedsDefaultSync(effect, normalizedEffect)) {
@@ -3023,9 +3032,12 @@ export class SkillEditorStep {
       onUpdate,
     );
     const grid = appendGrid(parent);
-    const categoryOptions = isBasicAttack
+    const baseCategoryOptions = isBasicAttack
       ? BASIC_ATTACK_EFFECT_CATEGORIES
       : EDITOR_ACTIVE_EFFECT_CATEGORIES;
+    const categoryOptions = branchEditorOptions?.hideConditionalCategory
+      ? baseCategoryOptions.filter((value) => value !== 'conditionalEffect')
+      : baseCategoryOptions;
     const selectedCategory = isBasicAttack
       ? basicAttackEffectToCategory(normalizedEffect)
       : effectTypeToCategory(normalizedEffect.type);
@@ -3053,11 +3065,52 @@ export class SkillEditorStep {
         ),
       ),
     );
+    if (normalizedEffect.type === 'conditionalEffect') {
+      appendConditionListFields(
+        grid,
+        normalizedEffect.conditions,
+        (mutate, options) => {
+          patchEffect((prev) => {
+            if (prev.type !== 'conditionalEffect') return prev;
+            return {
+              ...prev,
+              conditions: mutate([...prev.conditions]),
+            };
+          }, options);
+        },
+        { addButtonLabel: '分岐条件を追加' },
+      );
+      grid.appendChild(
+        createEl(
+          'p',
+          'editor-hint',
+          '分岐条件は AND 評価。成立時は thenEffects、未成立時は elseEffects を実行します。',
+        ),
+      );
+      this.renderBranchEffectList(
+        parent,
+        '条件成立時の効果',
+        'thenEffects',
+        normalizedEffect,
+        patchEffect,
+        _showPerEffectPresentation,
+        skillId,
+      );
+      this.renderBranchEffectList(
+        parent,
+        '条件不成立時の効果',
+        'elseEffects',
+        normalizedEffect,
+        patchEffect,
+        _showPerEffectPresentation,
+        skillId,
+      );
+    }
     if (normalizedEffect.type === 'counter' || normalizedEffect.type === 'basicAttackTransform') {
       grid.appendChild(
         createEl('p', 'editor-hint', '付与対象: 自身（固定）'),
       );
-    } else {
+    } else if (normalizedEffect.type !== 'conditionalEffect') {
       const effectTarget = getEffectTarget(effect);
       const lockSelfOrigin = (normalizedEffect.targetShape ?? 'single') === 'pierce';
       appendTargetSpecFields(
@@ -3094,9 +3147,12 @@ export class SkillEditorStep {
     const isMove = normalizedEffect.type === 'move';
     const isCounter = normalizedEffect.type === 'counter';
     const isBasicAttackTransform = normalizedEffect.type === 'basicAttackTransform';
-    const effectTargetKind = getEffectTarget(effect).kind;
+    const isConditionalEffect = normalizedEffect.type === 'conditionalEffect';
+    const effectTargetKind = isConditionalEffect
+      ? 'distance'
+      : getEffectTarget(effect).kind;
     const targetShape: TargetShape = normalizedEffect.targetShape ?? 'single';
-    if (!isMove && !isCounter && !isBasicAttackTransform) {
+    if (!isMove && !isCounter && !isBasicAttackTransform && !isConditionalEffect) {
       const shapeSelect = createSelect(
         effectTargetKind === 'self' ? 'single' : targetShape,
         TARGET_SHAPE_OPTIONS.map((value) => ({
@@ -3590,7 +3646,7 @@ export class SkillEditorStep {
     const detailGrid = appendGrid(parent);
     detailGrid.classList.add('editor-subgrid');
 
-    switch (normalizedEffect.type) {
+    if (!isConditionalEffect) switch (normalizedEffect.type) {
       case 'damage':
         if (!isBasicAttack) {
           detailGrid.appendChild(
@@ -4212,6 +4268,71 @@ export class SkillEditorStep {
       appendEffectPresentationFields(parent, effect, patchEffect, labLink);
     }
   }
+
+  private renderBranchEffectList(
+    parent: HTMLElement,
+    title: string,
+    branchKey: 'thenEffects' | 'elseEffects',
+    effect: Extract<SkillEffectDef, { type: 'conditionalEffect' }>,
+    patchEffect: (patch: EffectPatch, options?: { rerender?: boolean }) => void,
+    showPerEffectPresentation: boolean,
+    skillId?: string,
+  ): void {
+    const section = createEl('div', 'editor-branch-effects-section');
+    section.appendChild(createEl('h4', 'editor-subsection-title', title));
+    const branchEffects = effect[branchKey];
+    branchEffects.forEach((branchEffect, branchIndex) => {
+      const block = createEl('div', 'editor-effect-block editor-branch-effect-block');
+      const header = createEl('div', 'editor-effect-header');
+      header.appendChild(
+        createEl('span', 'editor-effect-label', `${title} ${branchIndex + 1}`),
+      );
+      if (branchEffects.length > 1) {
+        header.appendChild(
+          createButton('削除', 'editor-btn editor-btn-small', () => {
+            patchEffect((prev) => {
+              if (prev.type !== 'conditionalEffect') return prev;
+              return {
+                ...prev,
+                [branchKey]: prev[branchKey].filter((_, i) => i !== branchIndex),
+              };
+            }, { rerender: true });
+          }),
+        );
+      }
+      block.appendChild(header);
+      this.renderEffect(
+        block,
+        branchEffect,
+        (nextEffect, options) => {
+          patchEffect((prev) => {
+            if (prev.type !== 'conditionalEffect') return prev;
+            const nextBranch = [...prev[branchKey]];
+            nextBranch[branchIndex] = nextEffect;
+            return { ...prev, [branchKey]: nextBranch };
+          }, options);
+        },
+        showPerEffectPresentation,
+        false,
+        undefined,
+        skillId,
+        { hideConditionalCategory: true },
+      );
+      section.appendChild(block);
+    });
+    section.appendChild(
+      createButton(`+ ${title}を追加`, 'editor-btn editor-btn-small', () => {
+        patchEffect((prev) => {
+          if (prev.type !== 'conditionalEffect') return prev;
+          return {
+            ...prev,
+            [branchKey]: [...prev[branchKey], defaultEffect('damage')],
+          };
+        }, { rerender: true });
+      }),
+    );
+    parent.appendChild(section);
+  }
 }
 
 function effectSupportsPresentationFields(effect: SkillEffectDef): boolean {
@@ -4219,6 +4340,7 @@ function effectSupportsPresentationFields(effect: SkillEffectDef): boolean {
     effect.type === 'move' ||
     effect.type === 'damage' ||
     effect.type === 'dot' ||
-    effect.type === 'heal'
+    effect.type === 'heal' ||
+    effect.type === 'conditionalEffect'
   );
 }

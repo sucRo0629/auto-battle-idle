@@ -2075,6 +2075,58 @@ function appendFireConditionFields(
   parent.appendChild(card);
 }
 
+export function appendConditionListFields(
+  parent: HTMLElement,
+  conditions: FireCondition[],
+  onChange: (
+    mutate: (current: FireCondition[]) => FireCondition[],
+    options?: CombatFieldChangeOptions
+  ) => void,
+  options?: {
+    addButtonLabel?: string;
+    emptyFallback?: () => FireCondition[];
+  }
+): void {
+  const emptyFallback =
+    options?.emptyFallback ?? (() => [{ kind: "enemyCount" as const, min: 1 }]);
+  const conditionsWrap = createEl("div", "editor-conditions-list");
+  conditions.forEach((condition, index) => {
+    appendFireConditionFields(
+      conditionsWrap,
+      condition,
+      (next, changeOptions) => {
+        onChange((current) => {
+          const nextConditions = [...current];
+          nextConditions[index] = next;
+          return nextConditions;
+        }, changeOptions);
+      },
+      () => {
+        onChange((current) => {
+          const nextConditions = current.filter((_, i) => i !== index);
+          return nextConditions.length > 0 ? nextConditions : emptyFallback();
+        }, { rerender: false });
+      }
+    );
+  });
+  parent.appendChild(conditionsWrap);
+  parent.appendChild(
+    createActionButton(
+      options?.addButtonLabel ?? "条件を追加",
+      "editor-btn editor-btn-small",
+      () => {
+        onChange(
+          (current) => [
+            ...current,
+            { kind: "enemyCount", min: 1 },
+          ],
+          { rerender: false }
+        );
+      }
+    )
+  );
+}
+
 export function appendActiveFireGateFields(
   parent: HTMLElement,
   active: ActiveSkillDef,
@@ -2121,52 +2173,18 @@ export function appendActiveFireGateFields(
     const conditions = active.fireConditions ?? [
       { kind: "enemyCount", min: 1 },
     ];
-    const conditionsWrap = createEl("div", "editor-conditions-list");
-    conditions.forEach((condition, index) => {
-      appendFireConditionFields(
-        conditionsWrap,
-        condition,
-        (next, changeOptions) => {
-          onChange((current) => {
-            const nextConditions = [...(current.fireConditions ?? conditions)];
-            nextConditions[index] = next;
-            current.fireConditions = nextConditions;
-          }, changeOptions);
-        },
-        () => {
-          onChange(
-            (current) => {
-              const nextConditions = (
-                current.fireConditions ?? conditions
-              ).filter((_, i) => i !== index);
-              current.fireConditions =
-                nextConditions.length > 0
-                  ? nextConditions
-                  : [{ kind: "enemyCount", min: 1 }];
-            },
-            { rerender: false }
-          );
-        }
-      );
-    });
-    section.appendChild(conditionsWrap);
-    section.appendChild(
-      createActionButton(
-        "発動条件を追加",
-        "editor-btn editor-btn-small",
-        () => {
-          onChange(
-            (current) => {
-              current.firePolicy = "smart";
-              current.fireConditions = [
-                ...(current.fireConditions ?? conditions),
-                { kind: "enemyCount", min: 1 },
-              ];
-            },
-            { rerender: false }
-          );
-        }
-      )
+    appendConditionListFields(
+      section,
+      conditions,
+      (mutate, changeOptions) => {
+        onChange((current) => {
+          current.fireConditions = mutate(current.fireConditions ?? conditions);
+        }, changeOptions);
+      },
+      {
+        addButtonLabel: "発動条件を追加",
+        emptyFallback: () => [{ kind: "enemyCount", min: 1 }],
+      }
     );
     section.appendChild(
       createFieldRow(

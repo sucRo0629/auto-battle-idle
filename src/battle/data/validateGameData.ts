@@ -1359,6 +1359,49 @@ function parseFireConditions(
   );
 }
 
+function parseRequiredConditions(
+  raw: unknown,
+  context: string,
+  fieldName: string,
+): FireCondition[] {
+  if (raw === undefined) {
+    missingField(context, fieldName);
+  }
+  if (!Array.isArray(raw) || raw.length === 0) {
+    invalidField(context, fieldName, 'must be a non-empty array');
+  }
+  return raw.map((entry, index) =>
+    parseFireCondition(entry, `${context}.${fieldName}[${index}]`),
+  );
+}
+
+function parseBranchEffectEntry(
+  entry: unknown,
+  context: string,
+): SkillEffectDef {
+  const effect = parseSkillEffect(entry, context);
+  if (effect.type === 'conditionalEffect') {
+    invalidField(context, 'type', 'nested conditionalEffect is not allowed');
+  }
+  return effect;
+}
+
+function parseBranchEffects(
+  raw: unknown,
+  context: string,
+  fieldName: string,
+): SkillEffectDef[] {
+  if (raw === undefined) {
+    missingField(context, fieldName);
+  }
+  if (!Array.isArray(raw) || raw.length === 0) {
+    invalidField(context, fieldName, 'must be a non-empty array');
+  }
+  return raw.map((entry, index) =>
+    parseBranchEffectEntry(entry, `${context}.${fieldName}[${index}]`),
+  );
+}
+
 function parseDamageIncreaseSpec(
   raw: unknown,
   context: string,
@@ -1971,6 +2014,17 @@ function normalizeSkillEffect(effect: SkillEffectDef | LegacyHotSkillEffect): Sk
   if (effect.type === 'debuff' && effect.debuffSubKind === undefined) {
     return { ...effect, debuffSubKind: 'stat' };
   }
+  if (effect.type === 'conditionalEffect') {
+    return {
+      ...effect,
+      thenEffects: effect.thenEffects.map((branch) =>
+        normalizeSkillEffect(branch),
+      ),
+      elseEffects: effect.elseEffects.map((branch) =>
+        normalizeSkillEffect(branch),
+      ),
+    };
+  }
   return normalizeEffectTargetForShape(effect);
 }
 
@@ -1978,7 +2032,8 @@ function normalizeEffectTargetForShape(effect: SkillEffectDef): SkillEffectDef {
   if (
     effect.type === 'counter' ||
     effect.type === 'basicAttackTransform' ||
-    effect.type === 'move'
+    effect.type === 'move' ||
+    effect.type === 'conditionalEffect'
   ) {
     return effect;
   }
@@ -2154,6 +2209,21 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
+    });
+  }
+  if (typeRaw === 'conditionalEffect') {
+    const conditions = parseRequiredConditions(obj.conditions, context, 'conditions');
+    const thenEffects = parseBranchEffects(obj.thenEffects, context, 'thenEffects');
+    const elseEffects = parseBranchEffects(obj.elseEffects, context, 'elseEffects');
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    return normalizeSkillEffect({
+      type: 'conditionalEffect',
+      conditions,
+      thenEffects,
+      elseEffects,
+      ...sequenceTiming,
+      ...presentation,
     });
   }
   const type = requireEnum(obj, 'type', context, SKILL_EFFECTS);

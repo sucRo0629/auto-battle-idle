@@ -58,6 +58,7 @@ export const SKILL_EFFECT_KINDS = [
   "block",
   "counter",
   "basicAttackTransform",
+  "conditionalEffect",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [
@@ -391,6 +392,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORIES = [
   "basicAttackTransform",
   "move",
   "knockback",
+  "conditionalEffect",
 ] as const;
 
 export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
@@ -405,6 +407,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   basicAttackTransform: "通常攻撃変形",
   move: "移動",
   knockback: "ノックバック",
+  conditionalEffect: "条件分岐",
 };
 export const STATUS_EFFECT_STATS = [
   "atk",

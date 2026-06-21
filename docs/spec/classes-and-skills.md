@@ -524,7 +524,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 最高 HP 狙い + （未実装）                     | 重撃態勢／貫く一射   |
 | `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | — （未実装）                                  | （未実装）           |
 | `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | —（未実装）                                   | （未実装）           |
-| `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | —（未実装）                                   | （未実装）           |
+| `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | —（未実装）                                   | 連印／爆印（`conditionalEffect`） |
 | `at_geomancer` | 法陣師 | Geomancer | back  | 遠隔魔法 | —（未実装）                                   | （未実装）           |
 
 ※ 物理 6 クラス（剣術士 / 双刃士 / 槍術士 / 弓術士 / 弩砲士 / 狩猟士）の設計思想・三分類・TBD は **§物理 Kill / Flow 設計方針** を正とする。
@@ -1049,7 +1049,7 @@ Hit と Attack は分離され、Hit 単位で追加効果やゲージ処理が�
 
 ### 未実装・TBD
 
-- 印術師: 条件分岐スキルの `fireConditions` / effect 分岐の具体 JSON
+- 印術師: 条件分岐 effect 種別 `conditionalEffect`（`conditions` / `thenEffects` / `elseEffects`）。発動ゲートは skill 直下の `fireConditions` を維持
 - 法陣師: 味方ダメージ分配・転送、地点指定範囲の combat 実装と `data/skills/` への反映
 - 3 キャスター: Lv0 / Lv10 / Lv20 枝・属性（火 / 風地 / 水）と VFX の対応
 
@@ -1321,6 +1321,7 @@ interface CharacterBuild {
 | `damageDelay`            | 一部ダメージ後払い                                                    | `ratio`, `buffDurationSec`                        | 複数ソースは `ratio` 加算（上限 1.0）。遅延プールは加算。           | 軽減ではない。Block 後の確定ダメージを分割し、遅延分は DEF/REG/Barrier/Block/Evasion を再適用しない。詳細は [combat.md](combat.md)。 |
 
 - **通常攻撃変形 (`basicAttackTransform`)**: 自身に付与する特殊バフ。バフ持続中、通常攻撃（`slotKind: basic`）の性能を上書き・追加効果をマージします（複数付与時は最新 1 件のみ有効）。
+- **条件分岐 (`conditionalEffect`)**: 1 effect 内で `conditions`（AND）を評価し、成立時は `thenEffects`、未成立時は `elseEffects` のみ実行。コンテナ自体に `target` / `targetShape` は持たせず、branch 内の通常 effect に委譲。branch 内 `conditionalEffect` の入れ子は不可。skill 直下 `fireConditions` は発動ゲート専用（[combat.md](combat.md)）。
 
 #### 2. デバフ（Debuff）
 

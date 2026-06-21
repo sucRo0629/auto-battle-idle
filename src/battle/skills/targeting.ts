@@ -270,6 +270,8 @@ export function resolveEffectResolution(
   passives?: PassiveSkillDef[],
   allSkillEffects?: readonly SkillEffectDef[],
 ): SkillEffectResolution | null {
+  if (effect.type === 'conditionalEffect') return null;
+
   const spec = resolveEffectTargetSpec(effect, actor, allies, enemies, passives);
 
   if (effect.type === 'move') {

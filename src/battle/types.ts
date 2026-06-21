@@ -768,7 +768,8 @@ export type SkillEffectKind =
   | "dispel"
   | "block"
   | "counter"
-  | "basicAttackTransform";
+  | "basicAttackTransform"
+  | "conditionalEffect";
 
 export type MoveMode = "engage" | "toAnchor";
 export type DamageType = "physical" | "magic";
@@ -1091,6 +1092,19 @@ export interface CounterSkillEffect extends SkillEffectCommon {
   counterRanged?: boolean;
 }
 
+export interface ConditionalSkillEffect extends AnimPhaseFields {
+  type: "conditionalEffect";
+  /** AND 条件。全成立で thenEffects、未成立時 elseEffects */
+  conditions: FireCondition[];
+  thenEffects: SkillEffectDef[];
+  elseEffects: SkillEffectDef[];
+  waitAfterSec?: number;
+  anim?: SkillEffectAnimId;
+  applyFrame?: number;
+  vfx?: SkillVfxDef;
+  hitVfx?: SkillVfxDef;
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -1104,7 +1118,8 @@ export type SkillEffectDef =
   | DispelSkillEffect
   | BlockSkillEffect
   | CounterSkillEffect
-  | BasicAttackTransformSkillEffect;
+  | BasicAttackTransformSkillEffect
+  | ConditionalSkillEffect;
 
 /** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
 export type LegacyHotSkillEffect = HotSkillEffect;

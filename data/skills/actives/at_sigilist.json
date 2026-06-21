@@ -31,39 +31,71 @@
     },
     "effect": [
       {
-        "targetShape": "chain",
-        "chainCount": 4,
-        "chainMaxDistancePx": 80,
-        "type": "damage",
-        "damageType": "magic",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.75
-        },
-        "vfx": {
-          "enabled": true
-        },
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        }
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "debuff",
-        "debuffSubKind": "stun",
-        "debuffStat": "def",
-        "debuffMultiplier": 0.8,
-        "debuffDurationSec": 5,
-        "durationSec": 0.2,
-        "targetShape": "chain",
-        "chainCount": 4,
-        "chainMaxDistancePx": 80
+        "type": "conditionalEffect",
+        "conditions": [
+          {
+            "kind": "enemyCount",
+            "min": 3,
+            "scope": "inRange"
+          }
+        ],
+        "thenEffects": [
+          {
+            "type": "damage",
+            "damageType": "magic",
+            "targetShape": "aoe",
+            "aoeRadiusPx": 55,
+            "amount": {
+              "kind": "atkBased",
+              "atkScale": 0.85
+            },
+            "target": {
+              "kind": "distance",
+              "side": "enemy",
+              "order": "nearest"
+            },
+            "vfx": {
+              "enabled": true
+            }
+          }
+        ],
+        "elseEffects": [
+          {
+            "targetShape": "chain",
+            "chainCount": 4,
+            "chainMaxDistancePx": 80,
+            "type": "damage",
+            "damageType": "magic",
+            "amount": {
+              "kind": "atkBased",
+              "atkScale": 0.75
+            },
+            "vfx": {
+              "enabled": true
+            },
+            "target": {
+              "kind": "distance",
+              "side": "enemy",
+              "order": "nearest"
+            }
+          },
+          {
+            "target": {
+              "kind": "distance",
+              "side": "enemy",
+              "order": "nearest"
+            },
+            "type": "debuff",
+            "debuffSubKind": "stun",
+            "debuffStat": "def",
+            "debuffMultiplier": 0.8,
+            "debuffDurationSec": 5,
+            "durationSec": 0.2,
+            "targetShape": "chain",
+            "chainCount": 4,
+            "chainMaxDistancePx": 80
+          }
+        ]
       }
     ]
   },
@@ -76,23 +108,58 @@
     },
     "effect": [
       {
-        "type": "damage",
-        "damageType": "magic",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1.2
-        },
-        "range": 50,
-        "vfx": {
-          "enabled": true
-        },
-        "targetShape": "aoe",
-        "aoeRadiusPx": 55,
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        }
+        "type": "conditionalEffect",
+        "conditions": [
+          {
+            "kind": "enemyCount",
+            "min": 2,
+            "scope": "inRange"
+          }
+        ],
+        "thenEffects": [
+          {
+            "type": "damage",
+            "damageType": "magic",
+            "amount": {
+              "kind": "atkBased",
+              "atkScale": 1.2
+            },
+            "range": 50,
+            "vfx": {
+              "enabled": true
+            },
+            "targetShape": "aoe",
+            "aoeRadiusPx": 55,
+            "target": {
+              "kind": "distance",
+              "side": "enemy",
+              "order": "nearest"
+            }
+          }
+        ],
+        "elseEffects": [
+          {
+            "type": "damage",
+            "damageType": "magic",
+            "targetShape": "chain",
+            "chainCount": 4,
+            "chainMaxDistancePx": 80,
+            "chainPowerStepMultiplier": 0.9,
+            "chainPowerStepMode": "multiply",
+            "amount": {
+              "kind": "atkBased",
+              "atkScale": 1.35
+            },
+            "target": {
+              "kind": "distance",
+              "side": "enemy",
+              "order": "nearest"
+            },
+            "vfx": {
+              "enabled": true
+            }
+          }
+        ]
       }
     ],
     "vfx": {

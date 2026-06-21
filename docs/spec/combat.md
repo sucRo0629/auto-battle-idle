@@ -255,6 +255,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | buff   | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec`                                                                           |
 | 通常攻撃変形 | `effect: "basicAttackTransform"` + `buffDurationSec` 等 — バフ持続中のみ通常攻撃 effect を実行時マージ（下記）。付与対象は自身固定 |
+| 条件分岐 | `effect: "conditionalEffect"` + `conditions` / `thenEffects` / `elseEffects` — 戦況条件で branch effect を 1 系統だけ実行。branch 内 `conditionalEffect` の入れ子は不可。skill 直下 `fireConditions` は発動ゲート専用 |
 | debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                   |
 | スタン    | `effect: "stun"` + `durationSec`（**上限 5 秒**）— `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は使用者としての通常攻撃・アクティブ発動・ターゲット選択不可。CD は停止しない |
 | 凍結 / 時間停止系拘束 | **未実装・予約概念**。CD 停止が必要な場合はスタンではなく別 `StatusEffect` として定義する。スタンとは別物で、Flow 系上位制御など時間進行そのものへ干渉する効果として個別仕様化する |

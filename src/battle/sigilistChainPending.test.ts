@@ -8,15 +8,16 @@ import { createMemberFromClass } from '../progression/partyCompose.ts';
 import type { BattleEvent } from './events.ts';
 import { TICK_DT } from './test/battleFieldSpec.harness.ts';
 
-type EngineWithPending = BattleEngine & {
-  pendingHitQueue: Array<{ hitIndex?: number; applyAtBattleSec: number }>;
-};
-
 function createSigilistTestEngine(): BattleEngine {
   const gameData = structuredClone(loadGameData());
   const save = createDefaultSave(gameData, 'demo');
   save.stageProgress.currentStageId = 'test';
-  save.party[0] = createMemberFromClass('at_sigilist', gameData);
+  const member = createMemberFromClass('at_sigilist', gameData);
+  member.build.learnedActiveIds = [
+    'at_sigilist_active_1',
+    'at_sigilist_active_2',
+  ];
+  save.party[0] = member;
   save.party[1] = null;
   save.party[2] = null;
   save.party[3] = null;
@@ -28,31 +29,27 @@ function createSigilistTestEngine(): BattleEngine {
   );
 }
 
-describe('sigilist staged chain pending hits', () => {
-  it('applies all chain hops on test stage', () => {
+describe('sigilist conditionalEffect on test stage', () => {
+  it('fires active_1 damage on crowded test stage when actives are learned', () => {
     const engine = createSigilistTestEngine();
     engine.startBattle();
 
-    const chainDamageHits: number[] = [];
+    let active1DamageEvents = 0;
     engine.onEvent((event: BattleEvent) => {
-      if (event.type === 'skill' && event.effect === 'damage') {
-        if (event.hitIndex !== undefined) {
-          chainDamageHits.push(event.hitIndex);
-        }
+      if (
+        event.type === 'skill' &&
+        event.skillId === 'at_sigilist_active_1' &&
+        event.effect === 'damage'
+      ) {
+        active1DamageEvents += 1;
       }
     });
 
-    const eng = engine as EngineWithPending;
-    let maxPending = 0;
-
-    for (let t = 0; t < 6000; t++) {
+    for (let t = 0; t < 12000; t++) {
       engine.tick(TICK_DT);
-      maxPending = Math.max(maxPending, eng.pendingHitQueue?.length ?? 0);
-      if (chainDamageHits.filter((h) => h === 2).length > 0) break;
+      if (active1DamageEvents > 0) break;
     }
 
-    expect(chainDamageHits.sort()).toEqual([0, 1, 2]);
-    expect(maxPending).toBeGreaterThanOrEqual(2);
-    expect(eng.pendingHitQueue?.length ?? 0).toBe(0);
+    expect(active1DamageEvents).toBeGreaterThan(0);
   });
 });
