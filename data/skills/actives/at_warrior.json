@@ -38,23 +38,24 @@
     "name": "薙ぎ払い",
     "trigger": {
       "kind": "time",
-      "value": 8
+      "value": 10
     },
     "effect": [
       {
-        "targetShape": "pierce",
+        "targetShape": "multiLock",
         "type": "damage",
         "damageType": "physical",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.5
+          "atkScale": 0.55
         },
         "target": {
           "kind": "distance",
           "side": "enemy",
-          "order": "selfOrigin"
+          "order": "nearest"
         },
-        "applyFrame": 3
+        "applyFrame": 3,
+        "hitCount": 2
       }
     ]
   },
