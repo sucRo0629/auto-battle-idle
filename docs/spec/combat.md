@@ -14,7 +14,7 @@
 
 **回避:** 直接 `damage` の物理/魔法問わず（DoT tick 非対象）。`SkillExecutor` で `resolveDamage` 前に判定。
 
-**ブロック:** 直接 `damage` かつ `damageType: physical` のみ。`resolveDamage` 後に判定（DoT 非対象）。
+**ブロック:** 現行は直接 `damage` かつ `damageType: physical` のみ。`resolveDamage` 後に判定（DoT 非対象）。Paladin 後半 passive の候補として魔法 block を扱う場合は、新フィールドまたは新 effect として別途定義する。
 
 7. **DamageDelay 有効時（直接 `damage` / 反撃 `damage` のみ）:** Block 後の確定ダメージ `final` を `ratio` で分割。即時分は Barrier → HP。遅延分はプールに加算し、`buffDurationSec` 中 1 秒ごとに HP へ tick。遅延 tick は DEF/REG/Barrier/Block/Evasion を再適用しない（確定済みダメージ）。DoT 非対象。
 
@@ -226,7 +226,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 - **被ダメージそのものを全ロール共通の Threat 上昇要因にはしない**
 - 被弾による Threat 維持・上昇は Defender の役割差として扱い、passive `threatControl` または skill で明示する
 - Guardian（`df_guardian_passive_5`）は main tank として被弾・ブロックで Threat を維持し、減衰も遅くする
-- Paladin（`df_paladin_passive_5`）は `frontThreatFloor` / `frontThreatDecayMultiplier` / `frontDamageTakenReduction` で前列を sub-defender 化する
+- Paladin は `frontThreatFloor` / `frontThreatDecayMultiplier` で前列を sub-defender 化し、Lv0 では前列 block 付与で物理被害を抑える。前列被ダメ軽減は `threatControl` には含めず、必要なら `damageReduction` passive として分離する
 - 剣術士（`at_warrior_active_1`）は `threatBurstScale` で burst 時のみ一時 overtaking する
 
 

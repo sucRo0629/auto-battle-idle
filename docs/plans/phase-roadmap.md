@@ -10,7 +10,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2a** | 放置 MVP：セーブ・ステージ進行・個別 Lv（ステのみ）                                  | **完了**             |
 | **2b** | 戦闘計算（`combatMath` 等）                                                          | **完了**             |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                            | **完了**             |
-| **3**  | Lv アップ時スキル習得、習得済みアクティブ常時使用枠（最大 4）+ クラス別スキル再設定 | **再オープン中**     |
+| **3**  | Lv アップ時スキル習得、習得済み passive / active 常時使用枠（各最大 4）+ クラス別スキル再設定 | **再オープン中**     |
 | **4**  | クラスマスタ + スキル説明；4a **見直し中** / 4c **完了** / 4b 説明（データ PR 同梱） | **Phase 3 後に再確定** |
 | **5**  | 演出アセット + **演出調整ツール**（Canvas プレビュー・VFX 調整含む）               | 待機（スキル再確定後） |
 | **6**  | VFX **PNG 描画**（`sheets/vfx/` 64×64）— 戦闘描画の正本                           | **完了**             |
@@ -33,8 +33,8 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 - JSON ゲームデータ：`data/classes.json`, `data/skills/`, `enemies.json`, `stages.json`, `parties.json`
 - 戦闘ロジック：`BattleEngine`, `SkillExecutor`, `targeting`, `combatMath`, `validateGameData`
 - 3 ロール、4 人編成（鉄衛士 / 剣術士 / 療養師 / 弓術士）、`stage_1` に test_enemy × 2
-- スキル枠：**basic**（非表示・常時稼働）+ **習得済みアクティブ枠**（HUD に CD 表示）
-- パッシブはすべて同時発動；`snipe` でターゲットルールを `lowestHpEnemy` に上書き
+- スキル枠：**basic**（非表示・常時稼働）+ **習得済み active 枠**（HUD に CD 表示）。Phase 3 再確定後は passive も同じ Lv 段階枠で扱う
+- パッシブは Phase 3 再確定後、active と同じ Lv0=2 / Lv10=3 / Lv20=4 の段階解放へ揃える
 - ステータス効果：`atk`, `def`, `damageTaken` への buff / debuff
 - Victory / Defeat → 3 秒待機 → HP 全回復 → 再スポーン（Phase 2 でセーブ連動の進行ルールを追加）
 - Canvas 2D：**アニメーション基盤**（`SpriteAnimator`、イベント連動、近接突進/遠隔弾、ダメージポップアップ）
@@ -90,13 +90,14 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ## Phase 3 — スキル・戦闘拡張（再オープン中）
 
-**ゴール：** LvUP で習得済みスキルが増え、アクティブは Lv0=2、Lv10=3、Lv20=4 の最大 4 枠で常時使用可能になる。ビルドは付け替えではなく習得構造としてセーブに永続化。
+**ゴール：** LvUP で習得済みスキルが増え、passive / active はどちらも Lv0=2、Lv10=3、Lv20=4 の各最大 4 枠で常時使用可能になる。ビルドは付け替えではなく習得構造としてセーブに永続化。
 
 ### 実装済み
 
 - LvUP 時、`classes.json` の `skills[]`（レベル別 `skillIds`）から `learnedPassiveIds` / `learnedActiveIds` を再計算（`resolveLearnedSkills`, `reconcileMemberBuild`）
 - 勝利報酬・セーブロード・デバッグ Lv 変更時に習得リストを同期；LvUP ログに新スキル名を表示
 - アクティブ **最大 4 枠**（`MAX_ACTIVE_SLOTS = 4`）：習得即参加（`learnedActiveIds`）。段階解放 Lv0=2 / Lv10=3 / Lv20=4
+- パッシブも active と同じ段階解放（Lv0=2 / Lv10=3 / Lv20=4）へ再確定する。現行実装が `passiveIds` を全展開している場合は Phase 3 再確定作業で修正する
 - 付け替え・セット・装備変更は行わない。`equippedActiveSlots` は歴史的互換のみで、設計上の戦闘参加判定には使わない
 - セーブに `CharacterBuild` を含め、ロード時 `reconcilePartyBuilds` でレベルと整合
 
@@ -273,9 +274,9 @@ Phase 3〜6（および Phase 4 のクラスマスタ）で機能・コンテン
 - クラス 15 種の Lv1 基礎ステ・スキル威力（具体スキルはマスタ確定後）
 - ステージ難易度カーブ（敵ステ・ウェーブ構成）
 - Phase 3 以降のスキル習得・強化ツリーとの整合
-- **アクティブ枠構造**の最終確認（Lv0=2 / Lv10=3 / Lv20=4）
-  - `getUnlockedActiveSlotCount` をこの Lv 段階に固定
-  - **UI**（HUD / スキル表示）と**戦闘**（`createCooldowns` / `reconcileMemberBuild` 等）の両方で習得済みアクティブ常時使用として扱う
+- **passive / active 枠構造**の最終確認（Lv0=2 / Lv10=3 / Lv20=4）
+  - active は `getUnlockedActiveSlotCount`、passive は同じ Lv 段階に対応する解決処理へ固定
+  - **UI**（HUD / スキル表示）と**戦闘**（`createCooldowns` / `reconcileMemberBuild` 等）の両方で習得済み passive / active 常時使用として扱う
 
 ### スコープ外（Phase 7）
 
@@ -304,7 +305,7 @@ Phase 2a（セーブ + ステージ + Lv ステ）
 Phase 2b（戦闘計算） ── 2c と並行可
 Phase 2c（JSON クラス + 成長曲線）
     ↓
-Phase 3（スキル習得 + 習得済みアクティブ常時使用枠 + クラス別スキル再設定）  ← **現在**
+Phase 3（スキル習得 + 習得済み passive / active 常時使用枠 + クラス別スキル再設定）  ← **現在**
     ↓
 Phase 4a（クラスマスタ + GUI）  ← 見直し中
     ↓

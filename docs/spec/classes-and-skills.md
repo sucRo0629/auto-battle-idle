@@ -16,7 +16,8 @@
 
 | 日本語 | 意味 | コード上のフィールド（例） |
 | ------ | ---- | -------------------------- |
-| **習得** | LvUP 等でアクティブが使用可能状態になること | `learnedActiveIds` |
+| **習得** | LvUP 等で passive / active が使用可能状態になること | `learnedPassiveIds`, `learnedActiveIds` |
+| **パッシブ枠** | 習得済み passive が常時参加する枠。Lv0=2、Lv10=3、Lv20=4 | `learnedPassiveIds` の先頭から枠数分 |
 | **アクティブ枠** | 習得済みアクティブが常時参加する枠。Lv0=2、Lv10=3、Lv20=4 | `learnedActiveIds` の先頭から枠数分 |
 | **装備** | **将来**のアイテム・武器防具など。スキルには使わない | — |
 
@@ -508,7 +509,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | classId       | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0 代表）             | アクティブ（Lv0）  |
 | ------------- | ------ | --------- | ----- | ---- | -------------------------------- | ------------------ |
 | `df_guardian` | 鉄衛士 | Guardian  | front | 近接 | 共有 block + 追加 block          | 防御強化／防御専念 |
-| `df_paladin`  | 護法士 | Paladin   | front | 近接 | 低 HP 味方への回復量増           | 光の剣／聖盾       |
+| `df_paladin`  | 護法士 | Paladin   | front | 近接 | front Threat 制御 + 前列 block     | 光の剣／聖盾       |
 | `df_duelist`  | 闘技士 | Gladiator | front | 近接 | 低 HP 時 DEF 上昇（`passive_2`） | 戦叫び／体力温存   |
 
 ※ ディフェンダー 3 クラス（鉄衛士 / 護法士 / 闘技士）の設計思想・三分類・TBD は **§クラスディフェンダー設計方針** を正とする。
@@ -575,14 +576,14 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | 拡張 | `df_paladin`  | 護法士 |
 | 変則 | `df_duelist`  | 闘技士 |
 
-`formationRow: front`、近接帯。Lv0 / Lv10 / Lv20 の習得パターンは全クラス共通のアクティブ習得構造（Lv0=2、Lv10=3、Lv20=4）を正とする。
+`formationRow: front`、近接帯。Lv0 / Lv10 / Lv20 の習得パターンは全クラス共通で passive / active ともに Lv0=2、Lv10=3、Lv20=4 を正とする。
 
-### Defender 共通 passive の考え方
+### Defender 初期 passive の考え方
 
-Defender 共通の初期 passive は、まず「ブロック能力を持つ」という共通基盤を担う。ただし、Threat の維持方法は Defender 間で同一ではない。
+Defender は共通して「前列で被害入口を作る」役割を持つが、初期 passive は全員同一の block にしない。Lv0 passive は 2 枠までであり、各 Defender の受け口設計に合わせて分ける。
 
 - Guardian は、受け止め続けることで Threat を保持する main tank
-- Paladin は、front 全体の被害分担を安定させる shared tank
+- Paladin は、front 全体の被害分担を安定させる shared tank。自己 block（盾受け）ではなく、front Threat 制御 + 前列 block 付与を初期 passive の柱にする。block は Lv0 では物理直接ダメージ対策に留め、魔法も block 可能にする拡張は後半 passive 候補とする
 - Duelist は、被弾を control / counter へ変換する local tank
 
 このため、Defender 共通 passive と各 Defender の Threat 挙動は同一視しない。被弾による Threat 維持・上昇は、必要に応じてクラス固有 passive / skill で明示する。
@@ -682,7 +683,7 @@ Defender 共通の初期 passive は、まず「ブロック能力を持つ」�
 
 | 項目 | 内容 |
 | ---- | ---- |
-| **アクティブ習得構造** | 全クラス共通で Lv0=2、Lv10=+1、Lv20=+1。最大 4 アクティブを常時使用可能 |
+| **スキル習得構造** | 全クラス共通で passive / active ともに Lv0=2、Lv10=+1、Lv20=+1。各最大 4 種を常時使用可能 |
 | **付け替え** | なし。習得したアクティブは枠上限内で常時戦闘参加する |
 | **設計単位** | Recovery / Barrier / Sustain / Dispel / Damage Mitigation などの Survival 操作点 |
 | **火力寄与** | Kill / Flow 影響を持つ場合も、主目的が Survival を崩さないことを前提に個別説明する |
@@ -775,6 +776,7 @@ Hit と Attack は分離され、Hit 単位で追加効果やゲージ処理が�
 
 - DEF 貫通軸の単体処理
 - 安定 DPS
+- Paladin と組んだ際の前衛 sub-defender。防御は攻撃継続のための短時間補助、または近接 counter に留める
 
 #### 処理対象
 
@@ -799,6 +801,7 @@ Hit と Attack は分離され、Hit 単位で追加効果やゲージ処理が�
 - 攻撃回数回復高速化
 - コンボ加速構造
 - 優先ターゲット：瀕死の敵
+- 既存 evasion による最低限の自衛。追加防御を重ねず、Hit 密度と処理速度へ伸ばす
 
 #### 処理対象
 
@@ -1232,31 +1235,31 @@ passiveIds?: string[]; // クラス固有パッシブ（`data/skills/passives.js
 | 枠          | 数      | 出所                                                      | UI                 |
 | ----------- | ------- | --------------------------------------------------------- | ------------------ |
 | **basic**   | 1       | `ClassPreset.basicAttackSkillId`                          | 非表示             |
-| **passive** | 0〜複数 | `ClassPreset.passiveIds` → `learnedPassiveIds` に自動反映 | 将来               |
+| **passive** | 最大 4  | `build.learnedPassiveIds`（習得即常時発動）               | 将来               |
 | **active**  | 最大 4  | `build.learnedActiveIds`（習得即戦闘参加）                | HUD 2×2 リキャスト |
 
 - 基本攻撃も `data/skills/actives/` に `{entityId}_basic_attack` として定義し、`slotKind: 'basic'` で実行。
 - 基本攻撃 ID はアクティブ習得枠に含めない。
-- 全クラス共通で Lv0 にアクティブ 2 種、Lv10 に 1 種、Lv20 に 1 種を習得する（合計最大 4）。
-- 戦闘エンジンは **習得済みアクティブを最大 4 枠まで**自動参加（段階解放: Lv0=2 / Lv10=3 / Lv20=4）。
+- 全クラス共通で passive / active ともに Lv0 に 2 種、Lv10 に 1 種、Lv20 に 1 種を習得する（各カテゴリ合計最大 4）。
+- 戦闘エンジンは **習得済み passive / active を各最大 4 枠まで**自動参加（段階解放: Lv0=2 / Lv10=3 / Lv20=4）。
 - 付け替え・セット・装備変更は行わない。`equippedActiveSlots` は歴史的互換フィールドであり、本番戦闘・新規 UI・新規仕様では使用しない。
 
 ### LvUP 習得データ
 
-- `classes.json` の `skills[]` にレベル別 `skillIds` を定義（**passive ID は `passiveIds` のみ**。`skills[]` に入れない）。
-- `passiveIds` は Lv に関係なく常時有効（`resolveLearnedSkills` が `learnedPassiveIds` へ展開）。
+- `classes.json` の `skills[]` にレベル別 `skillIds` を定義する。passive / active ともに Lv0 / Lv10 / Lv20 の習得段階を持つ。
+- `passiveIds` は歴史的互換またはクラス定義上の参照元として扱い、設計上の戦闘参加数は active と同じ Lv 段階ルールで決定する。現行実装が `passiveIds` を Lv に関係なく全展開している場合は Phase 3 再確定作業で修正する。
 
 ## ビルドルール
 
 ```typescript
 interface CharacterBuild {
-  learnedPassiveIds: string[]; // すべて同時発動
+  learnedPassiveIds: string[]; // 習得済みパッシブ（最大 4。Lv0 / Lv10 / Lv20 で増加）
   learnedActiveIds: string[]; // 習得済みアクティブ（最大 4。Lv0 / Lv10 / Lv20 で増加）
   equippedActiveSlots: string[]; // 歴史的互換のみ。設計上は使用しない
 }
 ```
 
-- **パッシブ：** `learnedPassiveIds` の全 ID が同時に有効（枠上限なし）
+- **パッシブ：** `learnedPassiveIds` のうち Lv に応じた枠数までが常時有効
 - **アクティブ：** `learnedActiveIds` のうち Lv に応じた枠数までが戦闘に自動参加し、発動条件を満たしたときに自動発動
 
 ### アクティブの発動条件（`trigger`）
@@ -1316,7 +1319,7 @@ interface CharacterBuild {
 | :----------------------- | :-------------------------------------------------------------------- | :------------------------------------------------ | :------------------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------------------------------- |
 | `stat`                   | ステータス（`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の上昇 | `buffStat`<br>`buffMultiplier`<br>`buffFlatBonus` | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。 | `damageTaken` の減少（被ダメ軽減）や `attackSpeed`（攻撃速度）の上昇もこれに含みます。                                               |
 | `barrier`                | ダメージを身代わりに受けるバリアを付与                                | `ResourceAmountSpec`                              | 既定は `barrierHp` に加算。`barrierStack: false` で新量に置換。     | 持続時間制限なし（消費されるまで維持）。詳細は後述の「バリア」参照。                                                                 |
-| `block`                  | 物理直接ダメージのブロック率を上昇                                    | `chance`（0〜1）                                  | 複数ソースは加算（上限 1.0）。                                      | 成功時、DEF 適用後の物理直接ダメージを一定割合カット。DoT は対象外。                                                                 |
+| `block`                  | 物理直接ダメージのブロック率を上昇                                    | `chance`（0〜1）                                  | 複数ソースは加算（上限 1.0）。                                      | 成功時、DEF 適用後の物理直接ダメージを一定割合カット。DoT は対象外。魔法 block は Paladin 後半 passive 候補で、採用時は新フィールドまたは新 effect として別途定義する。 |
 | `evasion`                | 直接ダメージ（物理/魔法）の回避率を上昇                               | `chance`（0〜1）                                  | 複数ソースは加算（上限 1.0）。                                      | 成功時、直接ダメージを完全に無効化。DoT は対象外。                                                                                   |
 | `damageDelay`            | 一部ダメージ後払い                                                    | `ratio`, `buffDurationSec`                        | 複数ソースは `ratio` 加算（上限 1.0）。遅延プールは加算。           | 軽減ではない。Block 後の確定ダメージを分割し、遅延分は DEF/REG/Barrier/Block/Evasion を再適用しない。詳細は [combat.md](combat.md)。 |
 
@@ -1378,7 +1381,7 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `selfHpRatioBuff`       | `buffStat`, `buffMultiplierMax?` / `buffFlatBonusMax?`, `maxBuffAtHpRatio`                                                                                  | 自身 HP 割合（`hp/maxHp`。バリア非含有）に応じた常時バフ（対象・形状は自身単体固定）。満タン時は中立、指定 HP 割合以下で最大                                                                                                                                      |
 | `skillAmountOverride`   | `targetSkillId`, `amount`, `effectIndex?`, `passiveAmountField?`                                                                                            | 指定スキル（アクティブ / 取得済みパッシブ）の `ResourceAmountSpec` を完全上書き。アクティブは `effectIndex` 省略で amount 持ち effect すべて。パッシブは `hotAmount` / `barrierAmount`。複数時は `learnedPassiveIds` の後方優先。反撃 `counterResponses` は対象外 |
 | `skillPropertyOverride` | `maxChargesBonus`, `skillPropertyTargetSkillIds?`                                                                                                           | 対象アクティブの `maxCharges` 加算（上限 3）                                                                                                                                                                                                                      |
-| `threatControl`         | `onDamageTakenFlat?`, `onDamageTakenScale?`, `onBlockFlat?`, `threatDecayMultiplier?`, `frontThreatFloor?`, `frontThreatDecayMultiplier?`, `frontDamageTakenReduction?` | Defender 等のヘイト維持・上昇。被ダメ / ブロック成功時にヘイト加算。`threatDecayMultiplier` は自身の tick 減衰倍率。`frontThreatFloor` は生存中 source threat × ratio を前列味方の下限に。`frontThreatDecayMultiplier` は前列味方の減衰倍率。`frontDamageTakenReduction` は前列味方の被ダメ軽減 aura |
+| `threatControl`         | `onDamageTakenFlat?`, `onDamageTakenScale?`, `onBlockFlat?`, `threatDecayMultiplier?`, `frontThreatFloor?`, `frontThreatDecayMultiplier?`, `frontDamageTakenReduction?` | Defender 等のヘイト維持・上昇。被ダメ / ブロック成功時にヘイト加算。`threatDecayMultiplier` は自身の tick 減衰倍率。`frontThreatFloor` は生存中 source threat × ratio を前列味方の下限に。`frontThreatDecayMultiplier` は前列味方の減衰倍率。`frontDamageTakenReduction` は互換用フィールドであり、新規スキル定義では使わず、前列被ダメ軽減は `damageReduction` passive として分離する |
 
 **スタン（`stun` / `debuffSubKind: stun` / counter `kind: stun`）:** `durationSec` **上限 5 秒**。スタン中は使用者として通常攻撃・アクティブ発動・ターゲット選択不可。CD は停止しない。CD 停止が必要な状態はスタンではなく、凍結 / 時間停止系拘束など別 `StatusEffect` として定義する。詳細は [combat.md](combat.md) のスタン行。
 

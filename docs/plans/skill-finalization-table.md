@@ -13,8 +13,10 @@
 
 ## 確定ルール
 
-- 全クラス共通で、アクティブは Lv0=2、Lv10=3、Lv20=4 の最大 4 枠を常時使用する。
-- 「スキル装備」「セット枠」「付け替え」は扱わない。習得済みアクティブが常時参加する。
+- 全クラス共通で、active / passive はどちらも Lv0=2、Lv10=3、Lv20=4 の最大 4 種を常時使用する。
+- 初期アクティブは `active_1` を基本スキル、`active_2` を強めスキルとして扱う。Lv0 の 2 枠でクラスの基礎操作を成立させつつ、`active_2` には初期段階からクラス個性が分かる強い効果形状を置く。
+- passive は active と同じ数・習得段階ルールに従う。初期 passive は 2 つまでとし、Lv10 / Lv20 で 1 つずつ追加する。現行実装の `passiveIds` 一括常時有効方式は、この方針に合わせて習得段階を持つ形へ見直す。
+- 「スキル装備」「セット枠」「付け替え」は扱わない。習得済み passive / active が常時参加する。
 - 数値は Phase 7 で調整する。今決めるのは、効果形状、対象、習得段階、クラス内の役割。
 - `atkScale`、倍率、秒数、CD、発動間隔、確率などの細かい数値はこの表では確定しない。実装時は現行値または保守的な仮値を置き、Phase 7 の調整対象として残す。
 - 既存 effect / target / condition で表現できる案を優先する。
@@ -38,37 +40,78 @@
 | `conditionalEffect` | 印術師の核として採用候補。ただし editor / validate / text / spec 同期が必須 |
 | Hit / Attack / Gauge | 仕様語としては重要。ただし gauge 系は v1 では増やさず、既存の `basicAttackCount`, `hitCount`, `basicAttackTransform` で代替する |
 | 貫通ライン | 槍術士・弩砲士の核。既存 `targetShape: pierce` で表現できる範囲を優先し、フィールド端貫通などは別ゲート |
-| 罠 / scatter / DoT | 狩猟士の核。既存 `scatter` + `dot` + `stun` を v1 範囲にする。DoT 残り時間圧縮は要判断 |
-| 法陣のダメージ分配・転送 | 法陣師の核だが実装負荷が高い。v1 で採用するか、既存 AoE / scatter の暫定構造操作に抑えるか要判断 |
+| 地点指定範囲 / 持続範囲 | 単純な範囲攻撃、狩猟士の罠範囲、法陣師の法陣範囲で共有する。範囲指定そのものは共通化し、単発 effect なら通常範囲攻撃、持続効果を持たせれば罠 / 法陣 / 領域効果として扱う。狩猟士は DoT 圧縮 / 行動制限、法陣師は damage routing / transfer など、設定する effect 内容で役割を分ける。法陣師は自分で直接 damage を出さない方向を候補にする |
+| 罠 / DoT 圧縮 / 行動制限 | 狩猟士の核。広範囲 DoT 火力ではなく、地点指定範囲 + 持続効果に DoT 残り時間圧縮と局所行動制限を置いて Field Flow を作る。既存 `scatter` / `dot` / `stun` は土台にできるが、地点指定範囲の持続化と DoT 圧縮は新 effect / condition ゲート |
+| 法陣のダメージ分配・転送 | 法陣師の核。自分で damage を出すのではなく、既存の味方 / 敵 damage の流れを分配・転送・集中する。通常攻撃も含めて非 damage 化する場合は、新 effect / target / UI 表示が必要 |
 | 反応型 heal | 療養師 Lv20 候補。v1 は `time` + `firePolicy: smart` + `fireConditions` で先行するか要判断 |
+| `threatControl.frontDamageTakenReduction` | **新規設計では使わない**。Threat は「誰が殴られるか」、被ダメ軽減は「殴られた後の損失をどう減らすか」で責務が異なるため、前列被ダメ軽減は passive `damageReduction` として分離する。既存データ互換として残す場合も、新規スキル定義では `damageReductionTargetRule` 側へ移す |
+| 魔法 block | Paladin 後半 passive 候補。現行 block は物理直接ダメージ対策なので、魔法も block 可能にするなら新フィールドまたは新 effect が必要。editor / validate / `formatSkillText` / combat / spec 同期が必須 |
 
 ## Passive 監査表
 
 | classId | 現行 passive | v1 確定方針 |
 | --- | --- | --- |
 | `df_guardian` | block、Threat 維持、Wave 開始 barrier 系が複数 | **残す / 整理**。重複 ID・同名 passive を整理し、Guardian は自己 block + 被弾 Threat 維持に集約する |
-| `df_paladin` | block、front Threat floor、全体 barrier、全体 damageReduction | **残す / 整理**。Paladin は front 全体安定と party protection に寄せ、Guardian と同じ自己壁にしない |
+| `df_paladin` | block、front Threat floor、全体 barrier、全体 damageReduction | **置換 / 整理**。Lv0 2 枠は front Threat 制御 + 前列 block 付与にする。前列被ダメ軽減は generic すぎるため Lv0 から外し、魔法 block は後半 passive 候補にする |
 | `df_duelist` | block、低 HP DEF / ATK、counter | **残す**。Duelist の被弾起点・反撃・低 HP 逆転を passive 側の核にする |
 | `at_warrior` | 高 DEF 狙い、DEF 無視 | **残す**。Warrior の高 DEF 単体処理の正本 |
 | `at_assassin` | 低 HP 比率狙い、evasion、低 HP 対象 damage bonus | **残す**。瀕死処理と背後アクセスの補助に限定し、Defender 的な生存性能には寄せない |
 | `at_lancer` | pierce 範囲 ATK debuff、近傍 ally ATK aura | **残す**。Position Flow の常時圧力として扱う |
 | `at_ranger` | 遠隔敵優先、attackSpeed buff、ranged counter | **残す / 見直し**。遠隔敵処理と連射構造は残す。counter は Lv 段階または active との重複を確認する |
-| `at_ballista` | 高 Max HP 狙いが重複、DEF 無視 | **整理**。高 HP targeting は 1 つに統合し、重撃・貫通・高耐久処理へ寄せる |
-| `at_hunter` | debuff 中対象への damage bonus | **見直し**。Hunter は Kill ではなく Field Flow が主軸なので、罠・DoT・拘束への補助として意味づけ直す |
+| `at_ballista` | 高 Max HP 狙いが重複、DEF 無視が古い仕様として残存 | **整理 / 置換**。高 HP targeting は 1 つに統合し、常時 DEF 無視は外す。高 Max HP 対象に限り、相手 DEF 参照の追加ダメージなど「重装甲を重撃へ変換する」新 effect 候補を許容する |
+| `at_hunter` | debuff 中対象への damage bonus | **置換**。古い Kill 寄り仕様として外し、DoT 圧縮・行動制限・拘束精度を支える Field Flow passive へ置き換える |
 | `at_sorcerer` | 現行データ上、専用 passive 未確認 | **追加候補**。条件分岐なしの安定出力を支える、魔法 damage / multiLock 再配分補助などを検討 |
-| `at_sigilist` | 現行データ上、専用 passive 未確認 | **追加候補**。`conditionalEffect` を本採用する場合、条件成立時の効率補助にする |
-| `at_geomancer` | AoE crowd bonus | **見直し**。暫定 AoE 法陣なら残せるが、damage routing 採用時は置換候補 |
+| `at_sigilist` | 現行データ上、専用 passive 未確認 | **追加 / 説明 passive 候補**。Lv0 passive 1 は「条件でスキル効果が分岐する」ことを明示するクラス説明 passive でもよい。数値補助を無理に入れない |
+| `at_geomancer` | AoE crowd bonus、AoE / scatter 攻撃寄り active | **置換**。既存攻撃スキルは正本にしない。法陣師は通常攻撃を含め、自分で damage を出さず damage routing / transfer / distribution を扱う方向へ寄せる |
 | `sp_cleric` | 低 HP heal 強化、余剰 heal → barrier | **残す**。Recovery Control の核 |
 | `sp_abjurer` | 高 HP ally 軽減、Wave 開始 barrier、全体 barrier / damageReduction | **残す / 整理**。Stability Control として、事前猶予・軽減・barrier の担当を明確化する |
-| `sp_alchemist` | party HoT aura、高 HP ally DEF、dot dispel | **残す**。Sustain Control と状態異常対策の核 |
+| `sp_alchemist` | party HoT aura、高 HP ally DEF、Wave 回数限定の debuff cleanse | **残す**。debuff cleanse は薬草師専用の補助個性だが、必須インフラにはしない |
 
 ## Defender
 
 | classId | 設計の柱 | 現行スキル | v1 確定方針 | 実装影響 |
 | --- | --- | --- | --- | --- |
-| `df_guardian` | 前線構築。単一路線の完全防衛、高 HP 正面受け、被弾による前線押上 | `active_1` 防御強化、`active_2` 防御専念、`active_3` 息入れ。`active_4` 未配置 | `active_1` / `active_2` は **残す**。`active_3` は自己 HoT が Guardian の「壁」から外れすぎないか **見直し**。Lv20 は自己耐久よりも前線保持を強める防御・block・Threat 維持系を **追加** | 既存 buff / heal / block / threatControl 周辺で実装可能。新 effect は避けたい |
-| `df_paladin` | 戦線安定。範囲・魔法ダメージを含む戦場全体の被害緩和 | `active_1` 光の剣、`active_2` 聖盾、`active_3` 治療専念。`active_4` 未配置 | `active_1` は heal + magic damage の複合として **見直し**。`active_2` は自己防御寄りなので、front / all ally への barrier・damageTaken 軽減へ寄せる。Lv20 は全体安定装置として **追加** | 既存 heal / barrier / damageTaken / basicAttackTransform で対応可能。対象範囲の整理が必要 |
-| `df_duelist` | 攻撃防御。単体強敵への制圧・拘束・カウンター・行動阻害 | `active_1` 戦叫び、`active_2` 体力温存、`active_3` 隙撃ち、`active_4` 血気煽り | 4 枠構造は最も進んでいるため **残す** 寄り。`active_4` の全敵 ATK debuff + 自己被害増は範囲が広いので、単体強敵制圧へ寄せるか **見直し** | 既存 debuff / damageDelay / stun / damageIncrease で対応可能。数値は Phase 7 |
+| `df_guardian` | 前線構築。単一路線の完全防衛、高 HP 正面受け、被弾による前線押上 | `active_1` 防御強化、`active_2` 防御専念、`active_3` 息入れ。`active_4` 未配置 | `active_1` / `active_2` は **残す**。`active_3` は自己 HoT ではなく、自己 barrier / block / damageTaken 低下など「壁」の維持へ **見直し**。Lv20 は Threat そのものより前線保持を強める上位防御として **追加** | 既存 buff / barrier / block / damageTaken 周辺で実装可能。恒常 Threat は passive に寄せる |
+| `df_paladin` | 戦線安定。範囲・魔法ダメージを含む戦場全体の被害緩和 | `active_1` 光の剣、`active_2` 聖盾、`active_3` 治療専念。`active_4` 未配置 | `active_1` は heal + magic damage の複合として **見直し**。`active_2` は自己防御寄りなので、front / all ally への barrier・damageTaken 軽減へ寄せる。Lv20 は全体安定装置として **追加** | 既存 heal / barrier / damageTaken / basicAttackTransform で対応可能。front Threat floor は passive 側を正本にする |
+| `df_duelist` | 攻撃防御。単体強敵への制圧・拘束・カウンター・行動阻害 | `active_1` 戦叫び、`active_2` 体力温存、`active_3` 隙撃ち、`active_4` 血気煽り | 4 枠構造は最も進んでいるため **残す** 寄り。`active_4` の全敵 ATK debuff + 自己被害増は範囲が広いので、単体強敵制圧へ寄せる | 既存 debuff / damageDelay / stun / damageIncrease で対応可能。数値は Phase 7 |
+
+### Defender 枠確定案
+
+Defender 3 種は「硬さの大小」ではなく、被害入口の作り方で分ける。Threat は [combat.md](../spec/combat.md) の受け口設計値を正とし、恒常的な受け口は passive 側へ寄せる。active は一時的な防御・保護・制圧として扱い、active だけで Defender の Threat 構造を成立させない。
+
+| classId | 枠 | 方針 | 採否 |
+| --- | --- | --- | --- |
+| `df_guardian` | basic | 最近接敵への通常攻撃。main tank の Threat は basic 火力ではなく passive で維持する | 現行 `df_guardian_basic_attack` を **残す** |
+| `df_guardian` | Lv0 passive 1-2 | block + 被弾 / block による Threat 維持。Guardian は単体前線の main tank | 重複 ID・同名 passive を **整理** し、Lv0 2 枠へ収める |
+| `df_guardian` | Lv10 / Lv20 passive | 前線保持を支える上位 passive。Threat 追加ではなく block / barrier / damageTaken などを候補にする | **追加 / 整理** |
+| `df_guardian` | Lv0 active 1 | 自己 DEF / damageTaken 低下。単一路線の正面受けを補強 | 現行 `df_guardian_active_1`（防御強化）を **残す** |
+| `df_guardian` | Lv0 active 2 | 被弾起点の防御専念。block / damageTaken / barrier など、受け止め続ける状態を作る | 現行 `df_guardian_active_2`（防御専念）を **残す / 整理** |
+| `df_guardian` | Lv10 active 3 | 自己 HoT ではなく、前線保持の持続防御へ寄せる。候補は self barrier、block 強化、damageTaken 低下 | 現行 `df_guardian_active_3`（息入れ）を **置換 / 見直し** |
+| `df_guardian` | Lv20 active 4 | 上位防御。正面ラッシュに対して一定時間「抜かれない」状態を作る | **追加**。新 effect は避け、既存 barrier / block / damageTaken を組み合わせる |
+| `df_paladin` | basic | 最近接敵への通常攻撃。火力ではなく前線安定の補助 | 現行 `df_paladin_basic_attack` を **残す** |
+| `df_paladin` | Lv0 passive 1-2 | front Threat floor と前列 block 付与を別 passive として扱う。Paladin は shared tank | 自己 block ではなく前列 block aura として採用し、Lv0 2 枠へ収める |
+| `df_paladin` | Lv10 / Lv20 passive | Wave 開始 barrier、party protection、または魔法も block 可能にする護法化 | **追加 / 整理**。魔法 block は新メカニクスゲート |
+| `df_paladin` | Lv0 active 1 | heal + magic damage の複合は Paladin らしいが、主目的は前線安定。damage は副次 | 現行 `df_paladin_active_1`（光の剣）を **見直し** |
+| `df_paladin` | Lv0 active 2 | 自己防御ではなく front / all ally への barrier または damageTaken 低下へ寄せる | 現行 `df_paladin_active_2`（聖盾）を **見直し** |
+| `df_paladin` | Lv10 active 3 | basicAttackTransform による治療専念は残せるが、Recovery 主軸にしすぎない。front 安定の補助 heal として扱う | 現行 `df_paladin_active_3`（治療専念）を **残す / 見直し** |
+| `df_paladin` | Lv20 active 4 | 戦線全体の崩れを吸収する上位 Stability。範囲 barrier / 全体 damageTaken 低下候補 | **追加** |
+| `df_duelist` | basic | 最近接敵への通常攻撃。Duelist は攻撃防御だが基本攻撃は標準でよい | 現行 `df_duelist_basic_attack` を **残す** |
+| `df_duelist` | Lv0 passive 1-2 | block + 低 HP DEF など、被弾を耐える基礎 | 現行 passive を **整理** し、Lv0 2 枠へ収める |
+| `df_duelist` | Lv10 / Lv20 passive | counter、低 HP ATK など、被弾を反撃・制圧へ変換する段階強化 | **追加 / 整理** |
+| `df_duelist` | Lv0 active 1 | 敵の攻撃速度低下。単体強敵または近傍敵の行動密度を落とす | 現行 `df_duelist_active_1`（戦叫び）を **残す** |
+| `df_duelist` | Lv0 active 2 | damageDelay による被害の一時預かり。正面受けではなく局所戦闘の時間稼ぎ | 現行 `df_duelist_active_2`（体力温存）を **残す** |
+| `df_duelist` | Lv10 active 3 | debuff 中対象への追撃 + stun。制圧から反撃へつなぐ | 現行 `df_duelist_active_3`（隙撃ち）を **残す** |
+| `df_duelist` | Lv20 active 4 | 全敵弱体ではなく、単体強敵を挑発的に崩す上位制圧へ寄せる。自己被害増はリスク演出として残すか要確認 | 現行 `df_duelist_active_4`（血気煽り）を **見直し** |
+
+Defender pass の実装方針:
+
+- Guardian の Threat 維持は passive `threatControl` を正本にする。active では Threat 値を直接操作せず、受け続けるための防御状態を作る。
+- Paladin の Threat は front 全体の受け口を安定させる passive を正本にする。active は barrier / damageTaken / 補助 heal で前線崩壊を遅らせる。
+- Paladin の Lv0 passive 2 枠は `frontThreatFloor` 系 + 前列 `block` aura に使う。盾を持つ直感を優先しつつ、自己だけでなく front 全体を守る shared tank として表現する。
+- Paladin の前列被ダメ軽減は `threatControl` に含めない。Threat 制御と damage reduction は責務が異なるため、必要なら前列向け `damageReduction` passive として別スキル化する。ただし Lv0 の柱は前列 block を優先する。
+- 現行 block は物理直接ダメージのみの対策とする。Paladin が魔法も block できるようになるのは Lv10 / Lv20 passive の候補であり、実装時は新メカニクスとして扱う。
+- Duelist は Threat を広域に集める main tank ではなく、被弾・反撃・制圧で単体強敵を崩す local tank として扱う。
+- Defender active に新 effect を増やさない。既存の `buff`, `debuff`, `barrier`, `damageDelay`, `stun`, `damageIncrease`, `basicAttackTransform` の範囲で実装する。
 
 ## Physical Kill / Flow
 
@@ -79,7 +122,78 @@
 | `at_lancer` | Position Flow。前線バフ・前線デバフ・接敵領域制御 | `active_1` 踏み込み突き、`active_2` 足払い。`active_3` / `active_4` 未配置 | `active_1` / `active_2` は **残す**。Lv10 は味方近接への ATK aura / 戦線維持、Lv20 は pierce + stun / knockback など前線再形成を **追加** | 既存 pierce / buff / debuff / stun を優先。knockback 採用時は combat / text 同期確認 |
 | `at_ranger` | 連射変形。攻撃回数、攻撃速度、遠隔敵処理 | `active_1` 連射、`active_2` 連ね矢。`active_3` / `active_4` 未配置 | `active_1` / `active_2` は **残す**。Lv10 は連射の維持・回転改善、Lv20 は遠隔敵優先を強める上位 volley を **追加** | 既存 hitCount / basicAttackTransform / attackSpeed buff で対応可能 |
 | `at_ballista` | 貫通重撃。高 Max HP 対象、時間圧縮、貫通範囲 | `active_1` 重撃態勢、`active_2` 貫く一射。`active_3` / `active_4` 未配置 | `active_1` / `active_2` は **残す**。Lv10 は reload / stance のリズム改善、Lv20 は高 Max HP 対象へ大きく刺さる siege shot を **追加** | 既存 pierce / target HP 条件で v1 可。フィールド端貫通ラインは要判断 |
-| `at_hunter` | Field Flow。罠、範囲 DoT、行動精度・テンポ制御 | `active_1` 毒罠、`active_2` 拘束罠。`active_3` / `active_4` 未配置 | `active_1` / `active_2` は **残す**。Lv10 は範囲 DoT の維持・拡張、Lv20 は局所 knockback / 行動阻害強化を **追加** 候補。命中・視界干渉は v1 では増やさない | scatter / dot / stun / atk debuff は既存。DoT 圧縮・命中干渉・視界妨害は新規ゲート |
+| `at_hunter` | Field Flow。罠、DoT 圧縮、行動制限、戦闘テンポ制御 | `active_1` 毒罠、`active_2` 拘束罠。`active_3` / `active_4` 未配置 | `active_1` / `active_2` は **見直し / 残す**。罠範囲は法陣師と同じ地点指定範囲を使い、広範囲 DoT 火力ではなく、短い局所 DoT を圧縮し、stun / moveLock / knockback / attackSpeed debuff などの行動制限へつなぐ。命中・視界干渉は v1 では増やさない | 地点指定範囲は法陣師と共有。scatter / dot / stun / atk debuff は既存土台。DoT 圧縮は新規 effect / condition ゲート。命中干渉・視界妨害は将来ゲート |
+
+### Physical pass A 枠確定案
+
+Warrior / Assassin / Ranger は v1 では新 effect を増やさず、既存の target override、defenseIgnore、specialEffect、hitCount、basicAttackTransform、damageIncrease を中心に 4 枠化する。
+
+| classId | 枠 | 方針 | 採否 |
+| --- | --- | --- | --- |
+| `at_warrior` | basic | 最近接敵への標準物理攻撃 | 現行 `at_warrior_basic_attack` を **残す** |
+| `at_warrior` | Lv0 passive 1-2 | 高 DEF 敵優先 + DEF 無視。Warrior の「高 DEF 単体処理」を Lv0 で成立させる | 現行 `at_warrior_passive_1` / `at_warrior_passive_2` を **残す** |
+| `at_warrior` | Lv10 / Lv20 passive | 高 DEF 対象への安定性を段階強化。Paladin と組むと前衛 sub-defender も担うため、攻撃を続けるための防御手段も候補にする。近接 counter も可 | **追加 / 整理**。既存 counter / buff / barrier の範囲を優先 |
+| `at_warrior` | Lv0 active 1 | 高 HP または高 DEF 対象へ重い単体打撃 | 現行 `at_warrior_active_1`（叩き付け）を **残す** |
+| `at_warrior` | Lv0 active 2 | 近接標準の複数対応。主役は単体処理なので範囲火力に寄せすぎない | 現行 `at_warrior_active_2`（薙ぎ払い）を **残す / 弱めに整理** |
+| `at_warrior` | Lv10 active 3 | armor break / 高 DEF 追撃。DEF debuff または高 DEF 条件 damageIncrease。攻撃命中時に短い self damageTaken 低下 / barrier を得る案、または近接 counter を付与する案も可 | **追加** |
+| `at_warrior` | Lv20 active 4 | 高 DEF 対象への上位単体処理。大技だが汎用 AoE にはしない | **追加** |
+| `at_assassin` | basic | 2 Hit 通常攻撃。Hit 密度の基礎 | 現行 `at_assassin_basic_attack` を **残す** |
+| `at_assassin` | Lv0 passive 1-2 | 低 HP 比率狙い + evasion。瀕死処理と背後アクセスの補助 | 現行 `at_assassin_passive_1` / `at_assassin_passive_2` を **残す** |
+| `at_assassin` | Lv10 / Lv20 passive | 低 HP 対象 damage bonus、Hit / basic attack count との相互作用。防御職化しない。回避は既に Lv0 passive にあるため、追加防御を重ねない | 現行 `at_assassin_passive_3`（刈り取り）を Lv10 候補として **残す / 整理**。Lv20 は **追加** |
+| `at_assassin` | Lv0 active 1 | DoT 付与 + debuff 対象への追加ダメージ。瀕死処理の下準備 | 現行 `at_assassin_active_1`（引き裂き）を **残す** |
+| `at_assassin` | Lv0 active 2 | 背後侵入 + 低 HP 条件の追撃。rear assault は Kill アクセスであり前線保持ではない | 現行 `at_assassin_active_2`（影の刃）を **残す** |
+| `at_assassin` | Lv10 active 3 | 連撃回転の加速。`basicAttackCount` / `hitCount` / `basicAttackTransform` の範囲で表現 | **追加** |
+| `at_assassin` | Lv20 active 4 | execute 系。瀕死対象を処理する上位 finisher | **追加** |
+| `at_ranger` | basic | 遠隔物理の標準攻撃 | 現行 `at_ranger_basic_attack` を **残す** |
+| `at_ranger` | Lv0 passive 1-2 | 遠隔敵優先 + attackSpeed。遠隔処理と連射構造を Lv0 で成立させる | 現行 `at_ranger_passive_1` / `at_ranger_passive_2` を **残す** |
+| `at_ranger` | Lv10 / Lv20 passive | 応射 / 連射維持 / 遠隔敵への継続火力強化。counter は Lv0 ではなく段階強化に置く | 現行 `at_ranger_passive_3`（応射）を Lv10 候補として **残す / 整理**。Lv20 は **追加** |
+| `at_ranger` | Lv0 active 1 | 2 Hit の連射攻撃 | 現行 `at_ranger_active_1`（連射）を **残す** |
+| `at_ranger` | Lv0 active 2 | 一定時間 basic の Hit 構造を変形 | 現行 `at_ranger_active_2`（連ね矢）を **残す** |
+| `at_ranger` | Lv10 active 3 | 連射の維持・回転改善。attackSpeed buff または basicAttackTransform 延長系 | **追加** |
+| `at_ranger` | Lv20 active 4 | 遠隔敵優先を強める上位 volley。対象は遠隔敵または複数ロック | **追加** |
+
+Physical pass A の実装方針:
+
+- Warrior は高 DEF 対象処理を崩さない。範囲対応は副次で、Ranger / Hunter の領域を奪わない。Paladin と組んだ際は前衛 sub-defender も担うため、Lv10 以降に攻撃寄りの防御手段を持ってよい。ただし Guardian 的な受け専用性能ではなく、攻撃継続のための短時間 barrier / damageTaken 低下、または近接 counter に留める。Ranger の応射は遠隔 counter、Warrior は近接で受けて返す counter として分ける。
+- Assassin の rear assault は Kill アクセスであり、Threat / frontline ownership を変えるものではない。
+- Assassin は既に Lv0 passive に evasion を持つため、防御手段をさらに積むより、Hit 密度・瀕死処理・回転加速へ伸ばす。
+- Ranger は Hit 数と attackSpeed の相互作用を軸にする。counter は遠隔敵制圧の段階強化として扱い、Lv0 から過剰に盛らない。
+- Gauge は v1 では増やさない。`basicAttackCount`, `hitCount`, `basicAttackTransform`, `damageIncrease` で表現する。
+
+### Physical pass B 枠確定案
+
+Lancer / Ballista / Hunter は、物理職の中でも「対象をどう倒すか」だけでなく、戦線・射線・局所領域をどう作るかを扱う。既存 `pierce` / `scatter` / `dot` / `stun` / `buff` / `debuff` / `targetRuleOverride` / `defenseIgnore` / `skillPropertyOverride` を優先するが、Flow を成立させるために必要な新 trigger / condition / effect はゲート化して採用候補にする。Lancer の「前列味方被攻撃時の援護反撃」を採用する場合は、現行 counter が自己被弾専用のため新 trigger が必要になる。Ballista の「高 Max HP 対象」を厳密に扱う場合は、現行 `stat: "hp"`（現在 HP）ではなく `maxHp` target 拡張が必要になる。また現状は高 HP / 高 Max HP 対象への `specialEffect` 条件も存在しないため、Ballista の高耐久特効を実装するなら新 condition が必要になる。Hunter は広範囲 DoT 火力ではなく DoT 圧縮と行動制限を主軸にするため、DoT 圧縮 effect が新規実装対象になる。罠の範囲指定は法陣師と同じ地点指定範囲を使い、Hunter / Geomancer の違いは範囲形状ではなく配置する effect 内容で分ける。地点指定範囲は単発範囲攻撃にも使える汎用 target とし、持続効果を組み合わせると罠 / 法陣 / 領域効果になる。
+
+| classId | 枠 | 効果カテゴリ・対象・条件 | 方針 | 採否 / 実装影響 |
+| --- | --- | --- | --- | --- |
+| `at_lancer` | basic | physical damage。対象は自身前方 `selfOrigin` の `pierce`。条件なし | 槍術士の通常攻撃自体を Position Flow の常時圧力にする | 現行 `at_lancer_basic_attack` を **残す**。新実装なし |
+| `at_lancer` | Lv0 passive 1-2 | passive debuff + passive buff。敵前方 `pierce` ATK debuff、味方 `selfOrigin` + `aoe` ATK aura。条件なし | 前線に入った敵の接触圧を下げ、近傍味方の前線維持を支える | 現行 `at_lancer_passive_1` / `at_lancer_passive_2` を **残す**。数値は Phase 7 |
+| `at_lancer` | Lv10 / Lv20 passive | passive buff / debuff / assist counter 候補。対象は前線敵または近傍味方。援護反撃は「自分以外の前列味方が攻撃された時」を条件に、攻撃者へ反撃 | Lv0 の前線圧力を段階強化する。Kill 対象特化や Defender 的 Threat 操作には寄せず、前列の横連携として扱う | **追加**。援護反撃を採用する場合は既存 counter では不可。`frontAllyDamaged` / `allyDamaged` 系 trigger、editor / validate / `formatSkillText` / combat / spec 同期が必要 |
+| `at_lancer` | Lv0 active 1 | move + physical `pierce` damage。対象は nearest enemy へ接近後、自身前方 `selfOrigin` | 戦線へ踏み込んで前方ラインへ圧力を作る | 現行 `at_lancer_active_1`（踏み込み突き）を **残す** |
+| `at_lancer` | Lv0 active 2 | physical `pierce` damage + `stun` / DEF debuff。対象は自身前方 `selfOrigin`。条件なし | 前線に入った敵群の足を止め、接敵領域を一時的に薄くする | 現行 `at_lancer_active_2`（足払い）を **残す / 整理**。stun と stat debuff の形状を実装時に確認 |
+| `at_lancer` | Lv10 active 3 | buff / debuff / pierce damage 候補。対象は近傍味方または自身前方敵。条件は位置・範囲のみ | 味方近接帯の押し上げ、または敵前線の ATK / DEF 低下で戦線を維持する | **追加**。既存 buff / debuff / pierce で対応 |
+| `at_lancer` | Lv20 active 4 | pierce + stun、または knockback を含む前線再形成。対象は自身前方ライン | 上位 Position Flow。敵を倒す大技ではなく、崩れた接触ラインを作り直す | **追加**。knockback 採用時は既存実装・`formatSkillText`・editor 表示を確認。未対応なら pierce + stun に留める |
+| `at_ballista` | basic | physical single damage。対象は通常 enemy target。条件なし | 遠隔物理の重撃前提の標準射撃 | 現行 `at_ballista_basic_attack` を **残す** |
+| `at_ballista` | Lv0 passive 1-2 | targetRuleOverride + 高 HP / 高 Max HP 特効候補。対象は高 Max HP 敵優先。条件は高 HP / 高 Max HP 対象 | 高 HP targeting は 1 枠へ統合し、もう 1 枠は高耐久処理の攻城性へ寄せる。常時 DEF 無視は古い仕様の残骸として採用しない | `at_ballista_passive_1` / `passive_2` の重複を **整理**。`at_ballista_passive_3`（常時 DEF 無視）は **置換 / 削除**。Max HP 厳密化は `maxHp` target 拡張が必要 |
+| `at_ballista` | Lv10 / Lv20 passive | skillPropertyOverride / specialEffect / target DEF 参照追加ダメージ候補。対象は自身または高 Max HP target。条件は高 HP / 高 Max HP 対象 | reload / stance の扱いや貫通射撃の保持を段階強化する。高 HP ボス / エリートが高 DEF でも完全に止まらないよう、DEF 対策は「無視」ではなく「装甲を重撃の追加量に変える」方向を優先する | **追加 / 整理**。高 HP 特効は現状存在しないため新 condition が必要。target DEF 参照追加ダメージを採用する場合は新 effect / amount 参照として tooling 同期必須。Warrior の高 DEF 処理を奪わないよう high maxHp 条件つきにする |
+| `at_ballista` | Lv0 active 1 | self ATK buff + self attackSpeed debuff。発動は `targetHp` smart 条件 | 重撃態勢として残す。火力増減の数値は扱わず、攻撃間隔を火力へ変換する構造を採用する | 現行 `at_ballista_active_1`（重撃態勢）を **残す**。数値は Phase 7 |
+| `at_ballista` | Lv0 active 2 | physical `pierce` damage + hold。対象は自身前方 `selfOrigin`。発動は enemyCount smart 条件 | 射線上の敵をまとめて抜く攻城射撃の基礎 | 現行 `at_ballista_active_2`（貫く一射）を **残す** |
+| `at_ballista` | Lv10 active 3 | reload / stance 補助。self buff、basicAttackTransform、または charge 保持候補。条件は高 HP target または enemyCount | `active_1` と `active_2` の間をつなぐ装填リズムを作る | **追加**。既存 buff / basicAttackTransform / skillPropertyOverride で検討。新 gauge は作らない |
+| `at_ballista` | Lv20 active 4 | 高 Max HP 対象への siege shot。physical damage + pierce + 高 HP / 高 Max HP 特効。必要なら高 Max HP 条件つきの target DEF 参照追加ダメージ。対象は高 Max HP target / 自身前方ライン | 高耐久処理の上位枠。汎用 AoE ではなく、高 Max HP 対象と射線上の敵へ刺さる形にする。高 DEF 汎用処理にはしない | **追加**。高 HP 特効 condition を新規追加する。`maxHp` target 拡張を採用するか、現行 `hp/highest` を暫定 proxy にするか実装前に確定。DEF 無視ではなく target DEF 参照追加ダメージを入れる場合は新 effect / amount 参照として扱う。フィールド端貫通はゲートに残す |
+| `at_hunter` | basic | physical single damage。対象は通常 enemy target。条件なし | 罠・DoT の補助に留める標準射撃 | 現行 `at_hunter_basic_attack` を **残す** |
+| `at_hunter` | Lv0 passive 1-2 | trap 補助 / DoT 圧縮補助 / 行動制限補助。対象は自身の罠スキル、または dot / stun / moveLock / attackSpeed debuff 中の敵 | `追い込み` の damage bonus は古い Kill 寄り仕様として置換する。Lv0 は罠が Field Flow として働く精度を支える | 現行 `at_hunter_passive_1` を **置換**。DoT 圧縮補助を採用する場合は新 effect / condition と tooling 同期が必要。Lv0 2 枠目は **追加** |
+| `at_hunter` | Lv10 / Lv20 passive | DoT 圧縮、行動制限時間、罠 active の性質変更候補。対象は自身の罠スキルまたは局所範囲 | Field Flow の精度・維持を段階強化する。広範囲 DoT 火力ではなく、短時間に状態を畳み、敵の行動密度を落とす | **追加**。`skillPropertyOverride` だけで足りない場合は DoT 圧縮 effect / action restriction condition を新規実装 |
+| `at_hunter` | Lv0 active 1 | 地点指定範囲 + 持続効果 + dot。対象は指定地点周辺の局所範囲。条件なし | 毒罠として残すが、広範囲 DoT 火力ではなく DoT 圧縮の下準備にする。初期基本スキルとして、罠範囲と DoT 付与を分かりやすく成立させる | 現行 `at_hunter_active_1`（毒罠）を **見直し / 残す**。地点指定範囲と持続効果を入れるなら新 target / effect が必要 |
+| `at_hunter` | Lv0 active 2 | 地点指定範囲 + 持続効果 + DoT 圧縮 + stun / ATK debuff / moveLock 候補。対象は指定地点周辺の局所範囲、または dot 中敵を含む局所範囲 | 拘束罠を強めスキルとして扱い、DoT 圧縮をここに入れる。敵の行動密度と接触圧を下げつつ、既存 DoT を短時間に畳んで戦闘テンポを崩す | 現行 `at_hunter_active_2`（拘束罠）を **見直し / 残す**。DoT 圧縮、地点指定範囲、持続効果、moveLock 等を使う場合は新 effect / target と既存 knockback / moveLock 仕様の整合を確認 |
+| `at_hunter` | Lv10 active 3 | DoT 圧縮 + attackSpeed debuff / 行動制限延長候補。対象は dot 中敵または局所範囲 | DoT の残り時間を短く畳んで戦闘テンポを変える。単なる範囲 DoT 維持・拡張にはしない | **追加**。DoT 圧縮 effect / condition、editor / validate / `formatSkillText` / combat / spec 同期が必要 |
+| `at_hunter` | Lv20 active 4 | 上位行動制限。scatter stun / knockback / moveLock / DoT 圧縮連動候補。対象は局所範囲。条件は dot 中敵または enemyCount | 上位 Field Flow。局所的に敵の進行・行動を止め、DoT 圧縮で戦闘テンポを崩す | **追加**。knockback は既存仕様、DoT 圧縮 / action restriction condition は新規ゲート。視界・命中干渉は将来ゲートに残す |
+
+Physical pass B の実装方針:
+
+- Lancer は Kill 対象を持たない Position Flow として扱う。target override や Threat 操作ではなく、`selfOrigin` の前方ライン、味方近傍 aura、敵前線 debuff で「どこで戦うか」を調整する。自分以外の前列味方が攻撃された際の援護反撃は、Defender 的な Threat 代替ではなく、槍の間合いで前列横方向を支える Position Flow として扱える。ただし現行 counter は自己被弾専用なので、採用するなら新 passive trigger と tooling 同期が必要。
+- Ballista は高 Max HP 対象と貫通射線を正本にする。高 HP targeting の重複 passive は 1 枠へ整理し、追加枠は reload / stance / pierce / 高 HP 特効のどれかに使う。`at_ballista_passive_3` のような常時 DEF 無視は古い仕様の残骸として置換 / 削除対象にする。ただし Ballista の処理対象であるボス / エリート敵は高 DEF も併せ持つ可能性が高いため、高 Max HP 条件に閉じた DEF 対策は許容する。差別化として、Warrior は高 DEF 単体を対象に取り DEF を抜く職、Ballista は高 Max HP 対象へ重撃を通し、必要なら target DEF を追加ダメージ源として参照する職に分ける。DEF 無視は「防御をなかったことにする」ため Warrior 側、target DEF 参照追加ダメージは「重装甲ほど衝撃が乗る」ため Ballista 側の表現にできる。現行 target stat の `hp/highest` は現在 HP 比較なので、Max HP targeting を正確に実装するなら `TargetStat` に `maxHp` を追加し、editor / validate / `formatSkillText` / docs を同期する。さらに現行 `specialEffect` 条件は `debuff` と低 HP 側の `targetHp` のみなので、高 HP / 高 Max HP 特効 condition も追加対象にする。target DEF 参照追加ダメージを採用する場合も新 effect / amount 参照として editor / validate / `formatSkillText` / docs 同期が必要。フィールド端までの特別な貫通ラインは v1 では増やさず、既存 `pierce` の `range` と `selfOrigin` で表現する。
+- Hunter は Field Flow であり、Warrior / Ranger のような処理対象特化に寄せない。現行 `at_hunter_passive_1` の debuff 中 damage bonus は古い Kill 寄り仕様として置換する。広範囲 DoT 火力も主軸にせず、DoT 残り時間を圧縮して短時間に状態を畳み、stun / knockback / moveLock / attackSpeed debuff などの行動制限で局所戦闘テンポを崩す。地点指定範囲は単発範囲攻撃にも使える汎用 target とし、持続効果を付けると罠 / 法陣 / 領域効果になる。Hunter はその範囲に DoT 圧縮・行動制限を置き、Geomancer は damage routing / transfer などを置くことで分ける。
+- Physical pass B では Lancer の援護反撃 trigger、Ballista の `maxHp` target、高 HP 特効 condition、target DEF 参照追加ダメージ、地点指定範囲 / 持続範囲、Hunter の DoT 圧縮 / action restriction condition 以外、新 effect / targetShape / condition を増やさない。新要素を採用する場合は editor / validate / `formatSkillText` / docs 同期を同じ実装単位に含める。knockback は既存仕様だが、Hunter の行動制限として使う場合は moveLock / stun との責務差を combat / text で確認する。視界妨害、命中干渉、フィールド端貫通ラインは未決ゲートに残す。
 
 ## Caster
 
@@ -87,7 +201,43 @@
 | --- | --- | --- | --- | --- |
 | `at_sorcerer` | 純出力。安定 DPS、基準火力、マルチロック再配分 | `active_1` / `active_2` は placeholder 名の単体・multiLock。`active_3` / `active_4` 未配置 | 名前と習得段階を **見直し**。条件分岐なし、領域再定義なしの安定魔法として、単体・multiLock・大火力・継続火力の 4 枠へ整理 | 既存 damage / multiLock で対応可能。名称・説明・VFX 対応が必要 |
 | `at_sigilist` | 条件適応。2 系統効果の予測可能分岐、攻撃効率最適化 | `active_1` 連印、`active_2` 爆印。`conditionalEffect` 使用。`active_3` / `active_4` 未配置 | `conditionalEffect` を採用するなら `active_1` / `active_2` は **残す**。Lv10 / Lv20 も条件分岐型で **追加**。採用しないなら印術師全体を置換する必要がある | 新 effect ゲートの中核。editor / validate / `formatSkillText` / spec 同期が必須 |
-| `at_geomancer` | 構造操作。法陣によるダメージ流量の再配置、味方含む全体最適化 | `active_1` 大法陣、`active_2` 小法陣。AoE / scatter の攻撃寄り。`active_3` / `active_4` 未配置 | v1 方針が要判断。既存 AoE / scatter だけで暫定構造操作にするなら **見直し**。味方ダメージ分配・転送を核にするなら現行は **置換** 寄り | 最も実装負荷が高い。damage routing / transfer を採用するか決めてから着手 |
+| `at_geomancer` | 構造操作。法陣によるダメージ流量の再配置、味方含む全体最適化 | `active_1` 大法陣、`active_2` 小法陣。現行は AoE / scatter の攻撃寄り。`active_3` / `active_4` 未配置 | 現行攻撃スキルは **無視 / 置換**。法陣師は通常攻撃を含め、自分で damage を出さず、味方 / 敵の damage routing / transfer / distribution を核にする | 最も実装負荷が高い。非 damage basic、damage routing / transfer、地点指定範囲 / 持続範囲、UI 表示の同期が必要 |
+
+### Caster pass 枠確定案
+
+Caster 3 種は魔法 damage を扱うが、役割は「火力の大小」ではなく出力構造の違いで分ける。Sorcerer は multiLock を中心にした条件分岐なしの純出力、Sigilist はスキル対象の条件分岐によってより適した効果へ調整する攻撃最適化、Geomancer は通常攻撃を含めて自分で damage を出さず、地点指定範囲 / 持続範囲で既存 damage の流れを変える構造操作として扱う。Lv0 active は共通ルールどおり `active_1` を基本スキル、`active_2` を強めスキルにする。
+
+| classId | 枠 | 効果カテゴリ・対象・条件 | 方針 | 採否 / 実装影響 |
+| --- | --- | --- | --- | --- |
+| `at_sorcerer` | basic | magic single damage。対象は通常 enemy target。条件なし | キャスターの標準魔法弾。条件分岐や領域再定義は持たせない | 現行 `at_sorcerer_basic_attack` を **残す**。名称は「魔弾」を維持可 |
+| `at_sorcerer` | Lv0 passive 1-2 | 軽めの REG 無視 + magic damage / multiLock 補助候補。対象は自身または習得魔法。条件なし | 純出力の基準値を支える。軽い REG 無視は魔法基準火力の下支えとして採用可。状況条件や構造操作ではなく、安定 damage / multiLock 再配分の損失低減へ寄せる | **追加**。REG 無視は既存 `defenseIgnore.reg.percent` で対応可能。既存 `specialEffect` 空条件、`skillAmountOverride`、`skillPropertyOverride` 候補。数値は Phase 7 |
+| `at_sorcerer` | Lv10 passive | MultiLock Count Increase。対象は自身の multiLock active | Lock 数を増やし、単体・少数・多数戦すべてを強化する。条件分岐ではなく、Sorcerer の multiLock 純出力を段階強化する | **追加**。採用候補。既存 multiLock の hit / lock 数拡張で対応する。editor / validate / `formatSkillText` 同期確認 |
+| `at_sorcerer` | Lv20 passive | Full Saturation。同一対象への Lock 集中時追加効果。対象は自身の multiLock active | Lock が一定数以上同一対象へ集中した際に追加攻撃を発生させる。少数戦でもロックが無駄にならない Sorcerer の完成形 | **追加**。採用候補。Lock 集中数参照 condition / property 追加が必要。editor / validate / `formatSkillText` / docs 同期必須 |
+| `at_sorcerer` | Lv0 active 1 | magic single damage。対象は nearest enemy。条件なし | 基本スキル。安定単体魔法として、Caster 火力の基準を示す | 現行 `at_sorcerer_active_1` を **残す / 改名**。placeholder 名を置換 |
+| `at_sorcerer` | Lv0 active 2 | magic `multiLock` damage。対象は nearest enemy から複数ロック。条件なし | 強めスキル。対象数が少なくてもロックが無駄にならない安定出力として扱う | 現行 `at_sorcerer_active_2` を **残す / 改名**。multiLock 再配分は Sorcerer の個性 |
+| `at_sorcerer` | Lv10 active 3 | magic damage。候補は高威力 single、または hitCount / multiLock の継続火力 | 純出力の段階強化。条件分岐や地点指定範囲は使わない | **追加**。既存 damage / hitCount / multiLock で対応 |
+| `at_sorcerer` | Lv20 active 4 | 上位 magic `multiLock` damage。対象は nearest enemy から複数ロック、少数戦では同一対象へ集中 | Caster 基準火力の上位枠。範囲大火力ではなく、multiLock のロック集中で少数戦にもロスなく火力を出す | **追加**。既存 `multiLock` / damage で本体は対応可能。ロック集中ボーナスを入れる場合は新 property / condition が必要 |
+| `at_sigilist` | basic | magic single damage。対象は通常 enemy target。条件なし | 標準魔法弾。条件分岐は active 側の個性として残す | 現行 `at_sigilist_basic_attack` を **残す** |
+| `at_sigilist` | Lv0 passive 1-2 | passive 1 は説明 / ルール解放 passive 候補。「スキル対象の条件によって、より適した効果へ分岐する」ことを明示する。passive 2 は対象読解 / 分岐対象選定候補 | 印術師の初期 passive は強化ではなく基本能力として扱う。passive 1 で分岐ルールを示し、passive 2 で条件分岐スキルの対象を「分岐が意味を持つ候補」へ寄せる。charge 増加などは active 側の設計で扱い、passive には置かない | **追加**。説明 passive を採用する場合は、効果なし passive または class rule 表示を editor / validate / UI / `formatSkillText` で扱えるか確認。対象読解を採用する場合は best-area anchor / branch-aware targeting など新 targetRule または conditionalEffect 対象選定補助が必要 |
+| `at_sigilist` | Lv10 / Lv20 passive | 対象条件分岐の扱いやすさ・効果調整補助。対象は自身または条件分岐 active | Lv0 passive 1/2 はクラス基本能力にする。Lv10 / Lv20 で対象読解の範囲、分岐条件の種類、または条件分岐 active の扱いやすさを段階強化する。回復 / 支援分岐、multiLock 純出力にはしない | **追加**。新 effect はできるだけ避け、conditionalEffect tooling と対象選定補助の同期を優先 |
+| `at_sigilist` | Lv0 active 1 | `conditionalEffect`。条件はスキル対象の状態・数・密集度など。branch はその対象により適した damage / debuff / hit 構造へ分岐 | 基本スキル。条件成立 / 未成立の性能差ではなく、対象に応じて同格の効果を選ぶ印術師の入口 | 現行 `at_sigilist_active_1`（連印）を **見直し / 整理**。conditionalEffect 本採用が必要 |
+| `at_sigilist` | Lv0 active 2 | 強めの `conditionalEffect`。条件はスキル対象の状態・数・密集度など。branch はより適した範囲 / debuff / hit 構造へ分岐 | 強めスキル。`active_1` より効果形状は大きいが、成立側 / 未成立側の性能差は付けない | 現行 `at_sigilist_active_2`（爆印）を **見直し / 整理**。multiLock 純出力には寄せない。skill 直下 vfx と effect vfx の扱い確認 |
+| `at_sigilist` | Lv10 active 3 | `conditionalEffect`。候補は HP 条件 / 敵数条件 / 密集条件 / debuff 条件による効果調整 | 条件適応の段階強化。Flow ではなく Kill 内で、対象に合わせて攻撃効果を最適化する | **追加**。条件種類を増やす場合は editor / validate / `formatSkillText` / spec 同期 |
+| `at_sigilist` | Lv20 active 4 | 上位 `conditionalEffect`。対象条件に応じた明確な効果分岐 | 印術師の完成形。ランダムではなく予測可能な条件分岐にする。Sorcerer の multiLock 純出力とは分ける | **追加**。conditionalEffect tooling 完了が前提 |
+| `at_geomancer` | basic | 非 damage の法陣補助。候補は小さな地点指定範囲の準備、既存法陣の維持、または味方 / 敵 damage routing の軽い補助 | 通常攻撃でも自分で damage を出さない方向にする。標準魔法弾は Sorcerer / Sigilist 側へ寄せ、Geomancer は常時から構造操作職として見せる | 現行 `at_geomancer_basic_attack` は **置換**。非 damage basic を扱うため、戦闘参加・表示・ログ・AI 保留の確認が必要 |
+| `at_geomancer` | Lv0 passive 1-2 | passive 1 は説明 / ルール解放 passive 候補。「攻撃を行わず、法陣で damage の流れを変える」ことを明示する。passive 2 は地点指定範囲 / 持続範囲 / damage routing 補助候補 | AoE crowd bonus は古い攻撃寄り暫定仕様として置換する。法陣の本体は自分の火力ではなく damage 流量操作 | 現行 `at_geomancer_passive_1` は **置換**。説明 passive を採用する場合は、効果なし passive または class rule 表示を editor / validate / UI / `formatSkillText` で扱えるか確認。passive 2 にだけ実効果を置く案も可 |
+| `at_geomancer` | Lv10 / Lv20 passive | damage routing / transfer / 地点指定範囲の維持補助 | 法陣による構造操作を段階強化。ATK / DEF buff ではなく、被害や火力の流れを変える | **追加**。実装負荷が高いため Geomancer pass でまとめて判断 |
+| `at_geomancer` | Lv0 active 1 | 地点指定範囲 + 持続効果。候補は敵 damage routing の軽量版、または味方 damage transfer / distribution の軽量版 | 基本スキル。自分で damage を出さず、法陣で範囲内の damage の流れを少し変える | 現行 `at_geomancer_active_1` / `active_2` は **置換**。地点指定範囲 / 持続範囲 / routing 新 effect が必要 |
+| `at_geomancer` | Lv0 active 2 | 地点指定範囲 + 持続効果。候補は `active_1` より強い damage routing / transfer / distribution | 強めスキル。Lv0 から「法陣で範囲に意味を置く」体験を出す。直接 damage は出さない | **置換**。既存 AoE / scatter 攻撃は使わない。damage routing / transfer の採用判断が必要 |
+| `at_geomancer` | Lv10 active 3 | 地点指定範囲 + 持続効果。敵への damage 集中 / 分配、または味方被害分配候補 | Structure Flow の段階強化。単なる広範囲魔法にしない。自身 damage ではなく既存 damage の流れを変える | **追加**。routing / transfer 新 effect と tooling 同期が必要 |
+| `at_geomancer` | Lv20 active 4 | 上位法陣。味方含む戦場全体の damage 流量最適化 | Geomancer の完成形。火力支援と防御支援を damage 流量として統合する。自身 damage は出さない | **追加**。最も重い新メカニクス。v1 で暫定にするか本採用か要判断 |
+
+Caster pass の実装方針:
+
+- Sorcerer は条件分岐なし・領域再定義なしの純出力に限定する。placeholder 名は必ず置換し、`active_1` は基本単体、`active_2` は強め multiLock として Lv0 からクラスの基準火力を示す。Lv0 passive 1 には軽めの REG 無視を置ける。Lv10 passive は MultiLock Count Increase、Lv20 passive は Full Saturation（同一対象への Lock 集中時追加効果）として扱う。Lv20 active も範囲大火力ではなく上位 multiLock にし、少数戦でもロックが無駄にならない純出力へ寄せる。
+- Sigilist は `conditionalEffect` を本採用する場合に成立する。Sorcerer を multiLock 純出力へ寄せるため、Sigilist はスキル対象の条件によってより適した効果へ調整する攻撃最適化にする。分岐は回復 / 支援ではなく、対象の状態・数・密集度などに応じて damage / debuff / hit 構造 / 範囲形状を変える中で完結させる。成立側 / 未成立側の性能差は付けず、どちらも同格の効果として扱う。Sigilist の Lv0 passive 1 は、数値補助ではなく「スキル対象の条件で効果が分岐する」ことを説明する class rule passive として採用してもよい。Lv0 passive 2 は強化ではなく、条件分岐スキルの対象を分岐が意味を持つ候補へ寄せる対象読解 / 分岐対象選定として扱う。branch 内の effect 表示、validate、editor 保存、`formatSkillText` は同じ実装単位で同期する。
+- Geomancer は地点指定範囲 / 持続範囲を Hunter と共有するが、置く effect が異なる。Hunter は DoT 圧縮 / 行動制限、Geomancer は damage routing / transfer / distribution を置く。既存 AoE / scatter 攻撃は正本にせず、通常攻撃を含めて自分で damage を出さない構造操作職にする案を採用候補にする。Lv0 passive 1 は、数値補助ではなく「攻撃を行わない」ことを説明する class rule passive にしてよい。
+- Caster pass で増やす新要素は、`conditionalEffect` の tooling 本採用、地点指定範囲 / 持続範囲、非 damage basic、damage routing / transfer / distribution に絞る。Sorcerer では新 effect を増やさない。
 
 ## Survival
 
@@ -95,7 +245,7 @@
 | --- | --- | --- | --- | --- |
 | `sp_cleric` | Recovery Control。欠損 HP の即時復元、余剰回復を barrier 化 | `active_1` 癒しの光、`active_2` 広域治療。仕様上は `active_2` が Lv10 とされ、Lv0=2 との整合が未解決 | `active_1` は **残す**。広域治療は Lv10 へ移し、Lv0 2 枠目は低 HP smart heal として **追加**。Lv20 は反応型大 heal 候補 | 既存 heal / hot / fireConditions で先行可能。真の被ダメ反応 trigger は新規ゲート |
 | `sp_abjurer` | Stability Control。崩壊前猶予、barrier、軽減 | `active_1` 盾添え、`active_2` 双璧の護り。`active_3` / `active_4` 未配置 | `active_1` / `active_2` は **残す**。Lv10 は複数・範囲 barrier、Lv20 は全体軽減または Wave 開始保護の強化を **追加** | 既存 barrier / damageReduction で対応可能。対象選択を整理 |
-| `sp_alchemist` | Sustain Control。HoT、被害速度低下、状態異常対策 | `active_1` 薬粉撒き。`active_2` / `active_3` / `active_4` 未配置 | `active_1` は **残す**。Lv0 2 枠目は前列 supporter としての近接 sustain / 守り薬を **追加**。Lv10 は状態異常対策、Lv20 は長期維持の上位化を **追加** | 既存 HoT / atk debuff / periodicDispel 周辺で対応。dispel を active 化するなら editor / text 確認 |
+| `sp_alchemist` | Sustain Control。HoT、被害速度低下、限定的な状態異常対策 | `active_1` 薬粉撒き。`active_2` / `active_3` / `active_4` 未配置 | `active_1` は **残す**。Lv0 2 枠目は前列 supporter としての近接 sustain / 守り薬を **追加**。Lv10 以降は HoT 維持、敵 debuff 延長、または味方 ATK buff を **追加**。debuff cleanse は active にしない | 既存 HoT / atk debuff / atk buff / periodicDispel 周辺で対応。新しい active dispel は作らない |
 
 ### Supporter 枠確定案
 
@@ -104,65 +254,67 @@ Supporter 3 種は「回復量の大小」ではなく、損失を処理する�
 | classId | 枠 | 方針 | 採否 |
 | --- | --- | --- | --- |
 | `sp_cleric` | basic | 最低 HP 比率の味方へ小さな即時 heal。Recovery の常時基礎 | 現行 `sp_cleric_basic_attack` を **残す** |
-| `sp_cleric` | passive | 低 HP heal 強化、余剰 heal → barrier | 現行 `sp_cleric_passive_1` / `sp_cleric_passive_2` を **残す** |
+| `sp_cleric` | Lv0 passive 1-2 | 低 HP heal 強化、余剰 heal → barrier | 現行 `sp_cleric_passive_1` / `sp_cleric_passive_2` を **残す** |
+| `sp_cleric` | Lv10 / Lv20 passive | Recovery の精度・安定性を上げる段階強化。数値ではなく対象条件や余剰変換補助を候補にする | **追加 / 整理** |
 | `sp_cleric` | Lv0 active 1 | 単体欠損を戻す主 heal。対象は最低 HP 比率、即時 heal + 短い HoT | 現行 `sp_cleric_active_1`（癒しの光）を **残す** |
 | `sp_cleric` | Lv0 active 2 | 低 HP の味方だけに反応する救命 heal。真の被ダメ反応 trigger は使わず、`time` + `firePolicy: smart` + `fireConditions` で先行 | **追加**。`sp_cleric_active_2` をこの役割へ再定義する案 |
 | `sp_cleric` | Lv10 active 3 | Recovery の範囲化・維持化。全体または複数対象の HoT / heal | 現行 `sp_cleric_active_2`（広域治療）は Lv10 枠へ **移動 / 改番** |
 | `sp_cleric` | Lv20 active 4 | 上位 Recovery。大きな欠損を即座に立て直す smart heal。被ダメ反応 trigger は将来ゲート | **追加** |
 | `sp_abjurer` | basic | 最低 HP 比率の味方へ小 heal + 小 barrier。崩壊前猶予の常時基礎 | 現行 `sp_abjurer_basic_attack` を **残す** |
-| `sp_abjurer` | passive | 高 HP 味方軽減、Wave 開始 barrier、全体 barrier / damageReduction | **残す / 整理**。事前猶予と軽減に寄せる |
+| `sp_abjurer` | Lv0 passive 1-2 | 高 HP 味方軽減、Wave 開始 barrier | **残す / 整理**。事前猶予と軽減に寄せ、Lv0 2 枠へ収める |
+| `sp_abjurer` | Lv10 / Lv20 passive | 全体 barrier / damageReduction など、崩壊前猶予の段階強化 | **追加 / 整理** |
 | `sp_abjurer` | Lv0 active 1 | 単体へ heal + 厚い barrier | 現行 `sp_abjurer_active_1`（盾添え）を **残す** |
 | `sp_abjurer` | Lv0 active 2 | 複数対象 barrier。崩れる前の猶予を 2 人以上に作る | 現行 `sp_abjurer_active_2`（双璧の護り）を **残す** |
 | `sp_abjurer` | Lv10 active 3 | 範囲 barrier または all ally barrier。Recovery ではなく Stability の範囲化 | **追加** |
 | `sp_abjurer` | Lv20 active 4 | 全体 damageTaken 軽減 + barrier など、Wave 中の崩壊を遅らせる上位 Stability | **追加** |
 | `sp_alchemist` | basic | 最低 HP 比率の味方へ HoT。即時復元ではなく持続維持 | 現行 `sp_alchemist_basic_attack` を **残す** |
-| `sp_alchemist` | passive | party HoT aura、高 HP ally DEF、DoT 対策 | 現行 passive を **残す** |
+| `sp_alchemist` | Lv0 passive 1-2 | party HoT aura、高 HP ally DEF | 現行 passive を **残す / 整理** し、Lv0 2 枠へ収める |
+| `sp_alchemist` | Lv10 / Lv20 passive | Wave 回数限定の debuff cleanse など、長期維持の段階強化。解除は薬草師専用の補助個性に留め、必須枠にしない | **追加 / 整理** |
 | `sp_alchemist` | Lv0 active 1 | 範囲 HoT + 敵 ATK debuff。被害量・被害速度の抑制 | 現行 `sp_alchemist_active_1`（薬粉撒き）を **残す** |
 | `sp_alchemist` | Lv0 active 2 | 前列 / 近接帯の味方を長く保たせる sustain。HoT + DEF または damageTaken 補助 | **追加** |
-| `sp_alchemist` | Lv10 active 3 | 状態異常対策を active 側にも持たせるか要確認。active dispel が重い場合は HoT + debuff 延長に置換 | **追加 / 要判断** |
-| `sp_alchemist` | Lv20 active 4 | 長期戦向けの上位 sustain。party HoT 強化 + 敵被害速度低下 | **追加** |
+| `sp_alchemist` | Lv10 active 3 | HoT 維持、敵 debuff 延長、または近接帯 / 前列味方への ATK buff。ATK buff は撃破主目的ではなく、前線の継戦リズム調整として扱う。debuff cleanse は passive の Wave 回数限定に閉じる | **追加** |
+| `sp_alchemist` | Lv20 active 4 | 長期戦向けの上位 sustain。party HoT 強化 + 敵被害速度低下、または Lv10 で解禁した味方 ATK buff の範囲化 / 維持化 | **追加** |
 
 Supporter pass の実装方針:
 
 - `sp_cleric_active_2` は **広域治療のまま Lv0 に置かない**。設計書の「広域治療は Lv10」を正とし、Lv0 2 枠目は低 HP smart heal として追加する。
 - `sp_abjurer` は direct heal 量を主役にしない。heal は barrier を成立させる補助で、役割の本体は barrier / damageTaken / Wave 猶予。
 - `sp_alchemist` は毒・罠による Field Flow へ寄せない。敵への干渉は Survival 範囲の ATK debuff / 被害速度低下に限定する。
-- active dispel を採用する場合は、既存 passive の `periodicDispel` と別に active effect として表現できるかを実装チャットで確認する。重い場合は v1 では passive のみ残す。
+- `sp_alchemist` の味方 ATK buff は Lv10 以降なら許容する。ただし [`classes-and-skills.md`](../spec/classes-and-skills.md) の Survival 設計原則を正とし、Kill 主目的の火力支援ではなく、近接帯の味方を長く戦わせる継戦リズム調整として実装する。
+- debuff cleanse は薬草師専用だが、active 化しない。passive の Wave 回数限定解除に閉じ、解除が必須になる戦闘設計にはしない。
 
 ## 優先実装順
 
-1. **Supporter 3 種の Lv0=2 整合**
-   - `sp_cleric` の広域治療は Lv10 正本に寄せ、Lv0 2 枠目は低 HP smart heal として追加する。
-2. **Defender 3 種の 4 枠化**
+1. **Supporter 3 種の passive / active Lv0=2 整合**
+   - `sp_cleric` の広域治療は Lv10 正本に寄せ、Lv0 active 2 枠目は低 HP smart heal として追加する。passive も Lv0 2 / Lv10 1 / Lv20 1 へ整理する。
+2. **Defender 3 種の passive / active 4 枠化**
    - 既存 effect でほぼ進められる。戦線維持・戦線安定・攻撃防御の差分を明確化する。
-3. **物理 Kill / Flow 6 種の Lv10 / Lv20 追加**
+3. **物理 Kill / Flow 6 種の passive / active Lv10 / Lv20 追加**
    - 多くは既存 effect で進められる。Hunter と Ballista の新メカニクスだけゲート化する。
-4. **Caster 3 種**
+4. **Caster 3 種の passive / active 4 枠化**
    - `at_sigilist` の `conditionalEffect` と `at_geomancer` の damage routing 方針が重いため、最後にまとめて判断する。
 
 ## 実装チャットへ渡す単位
 
 | 実装単位 | 対象 | 目的 |
 | --- | --- | --- |
-| Supporter pass | `sp_cleric`, `sp_abjurer`, `sp_alchemist` | Lv0=2 整合、Lv10 / Lv20 の Survival 構造確定 |
-| Defender pass | `df_guardian`, `df_paladin`, `df_duelist` | 既存 4 枠化、戦線維持系の重複整理 |
-| Physical pass A | `at_warrior`, `at_assassin`, `at_ranger` | 既存 effect 中心で Kill クラスの 4 枠化 |
-| Physical pass B | `at_lancer`, `at_ballista`, `at_hunter` | Flow / pierce / trap のゲート整理 |
-| Caster pass | `at_sorcerer`, `at_sigilist`, `at_geomancer` | 新 effect 採用可否、条件分岐・構造操作の確定 |
+| Supporter pass | `sp_cleric`, `sp_abjurer`, `sp_alchemist` | passive / active の Lv0=2 整合、Lv10 / Lv20 の Survival 構造確定 |
+| Defender pass | `df_guardian`, `df_paladin`, `df_duelist` | passive / active の 4 枠化、戦線維持系の重複整理 |
+| Physical pass A | `at_warrior`, `at_assassin`, `at_ranger` | 既存 effect 中心で Kill クラスの passive / active 4 枠化 |
+| Physical pass B | `at_lancer`, `at_ballista`, `at_hunter` | passive / active 4 枠化、Flow / pierce / trap のゲート整理 |
+| Caster pass | `at_sorcerer`, `at_sigilist`, `at_geomancer` | passive / active 4 枠化、新 effect 採用可否、条件分岐・構造操作の確定 |
 | Tooling pass | editor / validate / `formatSkillText` / spec | 新 effect / targetShape / condition を採用した場合の同期 |
 
 ## 未決事項
 
-- `sp_alchemist` の active dispel を v1 に入れるか。重い場合は passive の `periodicDispel` のみ残し、active は HoT + debuff 延長に置換する。
 - `conditionalEffect` を v1 本採用するか。採用するなら印術師実装と tooling pass を同じ作業にする。
 - 法陣師を v1 で「本当の damage routing / transfer」まで実装するか、既存 AoE / scatter で暫定確定するか。
-- Hunter の DoT 残り時間圧縮、視界・命中干渉を v1 へ入れるか。
+- Hunter の DoT 残り時間圧縮と行動制限 condition の具体仕様。視界・命中干渉は将来ゲートに残す。
 - Ballista のフィールド端貫通ラインを既存 `pierce` の範囲に留めるか、戦場座標仕様として拡張するか。
-- Guardian / Paladin / Duelist の Threat 操作を active skill に持たせるか、passive へ寄せるか。
 
 ## 完了条件
 
-- 15 クラスすべてに basic + passive 方針 + Lv0 2 active + Lv10 active + Lv20 active が存在する。
+- 15 クラスすべてに basic + Lv0 2 passive + Lv10 passive + Lv20 passive + Lv0 2 active + Lv10 active + Lv20 active が存在する。
 - `data/skills/actives/*.json` に placeholder 名、未実装メモ、習得段階と矛盾するスキルが残らない。
 - `classes.json` の習得テーブルがこの表の段階と一致する。
 - 新 effect / target / condition を追加した場合、editor / validate / `formatSkillText` / spec が同じ作業で更新されている。

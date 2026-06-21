@@ -156,11 +156,11 @@ Phase 5 の演出ラボで VFX **調整** は済。Phase 6 で戦闘 VFX を PNG
 
 Phase 3〜6 完了後。敵 `exp`、成長曲線、クラス/スキル/ステージ数値の体感チューニング。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
 
-### アクティブ枠構造
+### passive / active 枠構造
 
-- 全クラス共通で Lv0=2、Lv10=3、Lv20=4。
-- `getUnlockedActiveSlotCount` はこの Lv 段階を返す。
-- **UI**（HUD / スキル表示）と**戦闘**（`createCooldowns` 等）の両方で、習得済みアクティブの常時使用枠として扱う。
+- 全クラス共通で passive / active ともに Lv0=2、Lv10=3、Lv20=4。
+- active は `getUnlockedActiveSlotCount`、passive は同じ Lv 段階に対応する解決処理を使う。
+- **UI**（HUD / スキル表示）と**戦闘**（`createCooldowns` 等）の両方で、習得済み passive / active の常時使用枠として扱う。
 - 付け替え・セット・装備変更によるビルド分岐は行わない。ビルドは `classes.json` の習得構造で決まる。
 
 ---
