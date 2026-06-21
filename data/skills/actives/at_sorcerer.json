@@ -23,7 +23,7 @@
   },
   {
     "id": "at_sorcerer_active_1",
-    "name": "魔弾",
+    "name": "at_sorcerer_active_1",
     "trigger": {
       "kind": "time",
       "value": 8
@@ -50,7 +50,7 @@
   },
   {
     "id": "at_sorcerer_active_2",
-    "name": "集中砲",
+    "name": "at_sorcerer_active_2",
     "trigger": {
       "kind": "time",
       "value": 11

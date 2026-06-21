@@ -7,15 +7,14 @@
         "type": "damage",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.6
+          "atkScale": 1
         },
         "target": {
           "kind": "distance",
           "side": "enemy",
           "order": "nearest"
         },
-        "targetShape": "aoe",
-        "aoeRadiusPx": 50
+        "targetShape": "single"
       }
     ],
     "trigger": {

@@ -1,27 +1,25 @@
 [
   {
     "id": "defender_passive_1",
-    "name": "盾受け",
+    "name": "大盾使い",
     "effect": "buff",
     "buffSubKind": "block",
-    "chance": 0.1,
+    "chance": 0.2,
     "buffTargetRule": {
       "kind": "self"
     }
   },
   {
     "id": "df_guardian_passive_2",
-    "name": "大盾使い",
-    "effect": "buff",
-    "buffSubKind": "block",
-    "chance": 0.1,
-    "buffTargetRule": {
-      "kind": "self"
-    }
+    "name": "立ちはだかる壁",
+    "effect": "threatControl",
+    "onDamageTakenScale": 0.5,
+    "onBlockFlat": 5,
+    "threatDecayMultiplier": 0.5
   },
   {
     "id": "df_guardian_passive_5",
-    "name": "鉄壁の挑発",
+    "name": "立ちはだかる壁",
     "effect": "threatControl",
     "onDamageTakenScale": 0.5,
     "onBlockFlat": 5,
@@ -78,27 +76,20 @@
   },
   {
     "id": "df_paladin_passive_2",
-    "name": "治癒の心得",
-    "effect": "specialEffect",
-    "specialEffectApplyTo": "heal",
-    "specialEffect": {
-      "scale": 1.2,
-      "conditions": [
-        {
-          "kind": "targetHp",
-          "maxHpRatio": 0.5
-        }
-      ]
-    }
+    "name": "護法の陣",
+    "effect": "threatControl",
+    "frontThreatFloor": 0.72,
+    "frontThreatDecayMultiplier": 0.65,
+    "frontDamageTakenReduction": 0.06
   },
   {
     "id": "at_warrior_passive_1",
-    "name": "大物狙い",
+    "name": "重装狙い",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
       "kind": "stat",
       "side": "enemy",
-      "stat": "hp",
+      "stat": "def",
       "order": "highest"
     },
     "targetRuleOverrideApplyTo": "enemy"
@@ -127,27 +118,21 @@
   },
   {
     "id": "df_guardian_passive_4",
-    "name": "息入れ",
-    "effect": "heal",
-    "healSubKind": "hot",
-    "specialEffectApplyTo": "heal",
-    "specialEffect": {
-      "scale": 1.2,
-      "conditions": []
+    "name": "防御態勢",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "defBased",
+      "defScale": 0.5
     },
-    "hotTargetRule": {
+    "buffTargetRule": {
       "kind": "self"
     },
-    "hotAmount": {
-      "kind": "atkBased",
-      "atkScale": 0.25
-    },
-    "intervalSec": 10,
-    "hotDurationSec": 5
+    "periodicTrigger": "waveStart"
   },
   {
     "id": "df_paladin_passive_3",
-    "name": "形なき盾",
+    "name": "無形の盾",
     "effect": "buff",
     "buffSubKind": "barrier",
     "barrierAmount": {
@@ -163,7 +148,7 @@
   },
   {
     "id": "df_paladin_passive_4",
-    "name": "護法の陣",
+    "name": "df_paladin_passive_4",
     "effect": "damageReduction",
     "damageReductionPercent": 0.05,
     "damageReductionTargetRule": {
@@ -181,12 +166,12 @@
   },
   {
     "id": "at_warrior_passive_2",
-    "name": "骨断ち",
+    "name": "鎧砕き",
     "effect": "defenseIgnore",
     "defenseIgnore": {
       "def": {
         "mode": "percent",
-        "amount": 0.2
+        "amount": 0.25
       }
     }
   },
@@ -404,7 +389,7 @@
   },
   {
     "id": "at_ballista_passive_1",
-    "name": "大物狙い",
+    "name": "大物喰い",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
       "kind": "stat",
@@ -525,6 +510,36 @@
           "maxHpRatio": 0.25
         }
       ]
+    }
+  },
+  {
+    "id": "df_guardian_passive_1",
+    "name": "大盾使い",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.2,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
+    "id": "df_paladin_passive_1",
+    "name": "盾受け",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.1,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
+    "id": "df_duelist_passive_1",
+    "name": "盾受け",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.1,
+    "buffTargetRule": {
+      "kind": "self"
     }
   }
 ]

@@ -7,18 +7,14 @@
         "type": "damage",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.85
+          "atkScale": 1
         },
         "target": {
           "kind": "distance",
           "side": "enemy",
           "order": "nearest"
         },
-        "targetShape": "chain",
-        "chainCount": 3,
-        "chainMaxDistancePx": 80,
-        "chainPowerStepMultiplier": 0.85,
-        "chainPowerStepMode": "multiply"
+        "targetShape": "single"
       }
     ],
     "trigger": {
