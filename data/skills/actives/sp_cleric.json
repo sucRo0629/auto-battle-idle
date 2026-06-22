@@ -1,7 +1,7 @@
 [
   {
     "id": "sp_cleric_active_1",
-    "name": "癒しの光",
+    "name": "sp_cleric_active_1",
     "trigger": {
       "kind": "time",
       "value": 8
@@ -69,7 +69,39 @@
   },
   {
     "id": "sp_cleric_active_2",
-    "name": "広域治療",
+    "name": "sp_cleric_active_2",
+    "trigger": {
+      "kind": "time",
+      "value": 12
+    },
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.4
+      }
+    ],
+    "effect": [
+      {
+        "type": "heal",
+        "healSubKind": "instant",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.75
+        },
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        }
+      }
+    ],
+    "useDurationSec": 0.3
+  },
+  {
+    "id": "sp_cleric_active_3",
+    "name": "sp_cleric_active_3",
     "trigger": {
       "kind": "time",
       "value": 10
@@ -103,6 +135,53 @@
         "healSubKind": "hot"
       }
     ]
+  },
+  {
+    "id": "sp_cleric_active_4",
+    "name": "sp_cleric_active_4",
+    "trigger": {
+      "kind": "time",
+      "value": 15
+    },
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.35
+      }
+    ],
+    "effect": [
+      {
+        "type": "heal",
+        "healSubKind": "instant",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 2
+        },
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        }
+      },
+      {
+        "type": "heal",
+        "healSubKind": "hot",
+        "durationSec": 4,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.15
+        },
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        }
+      }
+    ],
+    "useDurationSec": 0.4
   },
   {
     "id": "sp_cleric_basic_attack",
