@@ -201,3 +201,11 @@ finalStat = Lv1 基準値（classes.json）
 ```
 
 スキル・パッシブは戦闘時に上乗せ（[combat.md](combat.md) 参照）。
+
+---
+
+## Phase 9 — ローグライクモード（仮称）
+
+Phase 8 完了後に着手。メインモードのステージ進行・EXP とは **独立したラン** で、ランダム問題の解法探索を提供する。
+
+詳細は [roguelike-mode.md](roguelike-mode.md)。実装タスクは同 doc §18 および [phase-roadmap.md](../plans/phase-roadmap.md) Phase 9。

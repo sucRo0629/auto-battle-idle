@@ -13,3 +13,4 @@
 | [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン） |
 | [classes-and-skills.md](classes-and-skills.md) | ロール、クラス、スキル JSON スキーマ、**スプライト・演出アセット** |
 | [progression.md](progression.md) | EXP、レベル、セーブ、Phase 2〜8 |
+| [roguelike-mode.md](roguelike-mode.md) | ローグライクモード（仮称）— ランダム問題・ラン進行・報酬設計（Phase 9） |

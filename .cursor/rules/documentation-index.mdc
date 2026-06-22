@@ -17,6 +17,7 @@ alwaysApply: false
 | `src/battle/combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット | `docs/spec/combat.md` |
 | `battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `BattleCanvas.ts` | `docs/spec/battle-field.md` |
 | `data/stages.json`, セーブ, EXP, LvUP | `docs/spec/progression.md` |
+| ローグライクモード | `docs/spec/roguelike-mode.md` |
 | フェーズ計画・完了マーク・次の作業 | `docs/plans/phase-roadmap.md` |
 
 ロードマップ（`docs/plans/`）は **Phase やマイルストーンの議論時だけ** 読む。バグ修正・数値調整だけなら spec のみで足りる。

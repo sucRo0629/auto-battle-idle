@@ -7,6 +7,7 @@
 - **[Combat Architecture](combat-architecture.md)** — 戦闘システム全体の上位構造（Kill / Flow / Survival）
 - **[System Mechanics](system-mechanics.md)** — 複数クラスが共有する戦闘メカニクス
 - **[Class Philosophy](class-philosophy.md)** — 職群の基礎 / 発展 / 変則と 3 職構成の設計思想
+- **[Enemy Design Concept](enemy-design-concept.md)** — 敵をクラス体系で構成する設計方針（問題提示・教材化）
 
 ## コード ↔ ドキュメント対応表
 
@@ -20,6 +21,8 @@
 | `battleLayout.ts`, `combatPosition.ts`, `SpriteAnimator`, `IBattleRenderer`, 描画 | [spec/battle-field.md](spec/battle-field.md)                                    |
 | `vfxAnimRegistry.ts`, `VfxPlaybackManager`, `presentation/`, `sheets/vfx/`        | [spec/classes-and-skills.md](spec/classes-and-skills.md#スプライト演出アセット) |
 | `data/stages.json`, セーブ, EXP, LvUP                                             | [spec/progression.md](spec/progression.md)                                      |
+| `data/enemies.json`, 敵編成・ボス設計の方針                                       | [enemy-design-concept.md](enemy-design-concept.md)                              |
+| ローグライクモード（ラン・問題生成・報酬）                                        | [spec/roguelike-mode.md](spec/roguelike-mode.md)                                |
 | フェーズ・作業順                                                                  | [plans/phase-roadmap.md](plans/phase-roadmap.md)                                |
 
 ## JSON の読み方（トークン節約）
@@ -43,7 +46,9 @@
 | 戦闘アーキテクチャ | [combat-architecture.md](combat-architecture.md)         |
 | 共通戦闘メカニクス | [system-mechanics.md](system-mechanics.md)               |
 | 職群設計思想       | [class-philosophy.md](class-philosophy.md)               |
+| 敵設計コンセプト   | [enemy-design-concept.md](enemy-design-concept.md)       |
 | デモ編成・スキル   | [spec/classes-and-skills.md](spec/classes-and-skills.md) |
 | ダメージ・バフ     | [spec/combat.md](spec/combat.md)                         |
 | 戦場・座標         | [spec/battle-field.md](spec/battle-field.md)             |
 | セーブ・EXP        | [spec/progression.md](spec/progression.md)               |
+| ローグライクモード | [spec/roguelike-mode.md](spec/roguelike-mode.md)         |
