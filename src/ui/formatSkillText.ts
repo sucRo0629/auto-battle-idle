@@ -797,6 +797,12 @@ function formatPassiveEffect(
       const ratio = formatPercent(def.maxBuffAtHpRatio ?? 0);
       return `自HP比例バフ ${statsLabel}（残HP${ratio}以下時最大）`;
     }
+    case "excessHealRedirect": {
+      const sourceLabels = (def.excessHealSources ?? ["outgoing"]).map((s) =>
+        s === "outgoing" ? "与" : "被"
+      );
+      return `余剰回復転送 ×${def.redirectScale ?? 0.5} → 次低HP味方（${sourceLabels.join("・")}）`;
+    }
     case "targetHpRatioHealScale": {
       const ratio = formatPercent(def.maxScaleAtHpRatio ?? 0);
       return `対象HP比例回復 ×${def.healScaleMax ?? 1}（残HP${ratio}以下時最大）`;

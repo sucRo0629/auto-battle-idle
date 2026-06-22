@@ -3417,6 +3417,18 @@ function requirePassiveEffectParams(
           : {}),
       };
     }
+    case 'excessHealRedirect': {
+      const redirectScale = requireNumber(obj, 'redirectScale', context);
+      if (redirectScale <= 0 || redirectScale > 1) {
+        invalidField(context, 'redirectScale', 'must be between 0 and 1');
+      }
+      const excessHealSources = parseExcessHealSources(obj, context);
+      return {
+        ...base,
+        redirectScale,
+        ...(excessHealSources !== undefined ? { excessHealSources } : {}),
+      };
+    }
     case 'targetHpRatioHealScale': {
       const healScaleMax = requireNumber(obj, 'healScaleMax', context);
       if (healScaleMax <= 1) {

@@ -1,10 +1,12 @@
 import {
-  applyHealToTarget,
   currentHpRatio,
   getPassiveDefs,
   resolveHealAmount,
 } from './combatMath.ts';
-import { applyExcessHealToBarrierFromPassive } from './passiveEffects.ts';
+import {
+  applyDirectHealWithExcess,
+  sameSideAlliesFrom,
+} from './instantHealExcess.ts';
 import type {
   CombatantState,
   PassiveSkillDef,
@@ -56,6 +58,10 @@ export interface HealReservationTriggerResult {
   healerId?: string;
   passiveId?: string;
   buffDisplayName?: string;
+  redirectTarget?: CombatantState;
+  redirectHealed?: number;
+  redirectAmount?: number;
+  redirectHpRatioBeforeHeal?: number;
 }
 
 export function tryTriggerHealReservation(
@@ -98,15 +104,33 @@ export function tryTriggerHealReservation(
       return { healed: 0, healerId: healer.id, passiveId };
     }
 
-    applyExcessHealToBarrierFromPassive(
+    const healResult = applyDirectHealWithExcess(
       healer,
       target,
       amount,
+      sameSideAlliesFrom(allUnits, healer),
       passives,
-      'outgoing',
+      { allowRedirect: true },
     );
-    const healed = applyHealToTarget(target, amount);
-    return { healed, healerId: healer.id, passiveId, buffDisplayName: effect.displayName };
+    if (healResult.redirectTarget && healResult.redirectHealed > 0) {
+      grantHealReservationStacks(
+        healer,
+        healResult.redirectTarget,
+        healResult.redirectHpRatioBeforeHeal ??
+          currentHpRatio(healResult.redirectTarget),
+        passives,
+      );
+    }
+    return {
+      healed: healResult.healed,
+      healerId: healer.id,
+      passiveId,
+      buffDisplayName: effect.displayName,
+      redirectTarget: healResult.redirectTarget,
+      redirectHealed: healResult.redirectHealed,
+      redirectAmount: healResult.redirectAmount,
+      redirectHpRatioBeforeHeal: healResult.redirectHpRatioBeforeHeal,
+    };
   }
 
   return { healed: 0 };

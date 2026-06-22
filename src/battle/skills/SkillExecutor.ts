@@ -15,12 +15,15 @@ import {
   isUnitStunned,
 } from '../ccEffects.ts';
 import {
-  applyExcessHealToBarrierFromPassive,
+  applyDirectHealWithExcess,
+  sameSideAlliesFrom,
+} from '../instantHealExcess.ts';
+import { grantHealReservationStacks } from '../healReservation.ts';
+import {
   rollsEvasion,
   stripPassivesAurasFromSource,
   type PassiveDamageContext,
 } from '../passiveEffects.ts';
-import { grantHealReservationStacks } from '../healReservation.ts';
 import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
 import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
 import { grantCounterStatus } from '../counterEffects.ts';
@@ -835,22 +838,25 @@ export class SkillExecutor {
       );
       if (amount <= 0) return false;
       const targetHpRatioBeforeHeal = currentHpRatio(target);
-      applyExcessHealToBarrierFromPassive(
+      const sameSideAllies = sameSideAlliesFrom(
+        this.deps.getAllCombatants(),
+        actor,
+      );
+      const healResult = applyDirectHealWithExcess(
         actor,
         target,
         amount,
+        sameSideAllies,
         passives,
-        'outgoing',
+        { allowRedirect: true },
       );
-      applyExcessHealToBarrierFromPassive(
-        target,
-        target,
-        amount,
-        passives,
-        'incoming',
-      );
-      const healed = applyHealToTarget(target, amount);
-      if (healed <= 0 && target.barrierHp <= 0) return false;
+      if (
+        healResult.healed <= 0 &&
+        healResult.redirectHealed <= 0 &&
+        target.barrierHp <= 0
+      ) {
+        return false;
+      }
       grantHealReservationStacks(
         actor,
         target,
@@ -871,6 +877,28 @@ export class SkillExecutor {
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
+      if (healResult.redirectTarget && healResult.redirectHealed > 0) {
+        grantHealReservationStacks(
+          actor,
+          healResult.redirectTarget,
+          healResult.redirectHpRatioBeforeHeal ?? currentHpRatio(healResult.redirectTarget),
+          passives,
+        );
+        this.deps.onHealApplied?.(healResult.redirectTarget);
+        this.emit({
+          type: 'skill',
+          actorId: actor.id,
+          targetId: healResult.redirectTarget.id,
+          skillId: skill.id,
+          skillName: skill.name,
+          slotKind: cd.slotKind,
+          effect: 'heal',
+          effectIndex,
+          amount: healResult.redirectAmount,
+          range: effectDef.range,
+          ...skillHitEventFields(hitIndex, vfxSourceId),
+        });
+      }
       return true;
     }
 

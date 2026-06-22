@@ -1,5 +1,6 @@
 import {
   applyBarrierToTarget,
+  computeInstantHealExcess,
   currentHpRatio,
   getPassiveDefs,
   resolveResourceAmount,
@@ -187,7 +188,24 @@ export function applyExcessHealToBarrierFromPassive(
   passives: Record<string, PassiveSkillDef>,
   source: ExcessHealSource,
 ): number {
-  if (attemptedHeal <= 0) return 0;
+  const excess = computeInstantHealExcess(target, attemptedHeal);
+  return applyExcessHealToBarrierFromExcess(
+    owner,
+    target,
+    excess,
+    passives,
+    source,
+  );
+}
+
+export function applyExcessHealToBarrierFromExcess(
+  owner: CombatantState,
+  target: CombatantState,
+  excess: number,
+  passives: Record<string, PassiveSkillDef>,
+  source: ExcessHealSource,
+): number {
+  if (excess <= 0) return 0;
   const defs = getPassiveDefs(owner, passives);
   let scaleSum = 0;
   for (const passive of defs) {
@@ -196,11 +214,6 @@ export function applyExcessHealToBarrierFromPassive(
     scaleSum += passive.barrierScale ?? 1;
   }
   if (scaleSum <= 0) return 0;
-
-  const hpBefore = target.hp;
-  const afterHealHp = Math.min(target.maxHp, hpBefore + attemptedHeal);
-  const excess = attemptedHeal - (afterHealHp - hpBefore);
-  if (excess <= 0) return 0;
 
   const grant = Math.floor(excess * scaleSum);
   if (grant <= 0) return 0;
@@ -919,37 +932,12 @@ export function stripPassivesAurasFromSource(
   }
 }
 
-export function resolveTargetHpRatioHealScaleMultiplier(
-  actor: CombatantState,
-  target: CombatantState,
-  passives: Record<string, PassiveSkillDef>,
-): number {
-  let mul = 1;
-  for (const passive of getPassiveDefs(actor, passives)) {
-    if (passive.effect !== 'targetHpRatioHealScale') continue;
-    const healScaleMax = passive.healScaleMax ?? 1;
-    if (healScaleMax <= 1) continue;
-    const maxScaleAtHpRatio = passive.maxScaleAtHpRatio ?? 0;
-    if (maxScaleAtHpRatio >= 1) continue;
-    const hpRatio = currentHpRatio(target);
-    const denom = 1 - maxScaleAtHpRatio;
-    if (denom <= 0) continue;
-    const t = Math.max(0, Math.min(1, (1 - hpRatio) / denom));
-    if (t <= 0) continue;
-    mul *= 1 + (healScaleMax - 1) * t;
-  }
-  return mul;
-}
-
 export function resolveOutgoingHealSpecialMultiplier(
   actor: CombatantState,
   target: CombatantState,
   passives: Record<string, PassiveSkillDef>,
 ): number {
-  return (
-    getPassiveSpecialEffectMultiplier('heal', actor, target, passives) *
-    resolveTargetHpRatioHealScaleMultiplier(actor, target, passives)
-  );
+  return getPassiveSpecialEffectMultiplier('heal', actor, target, passives);
 }
 
 export function countDamageTargetsInResolution(

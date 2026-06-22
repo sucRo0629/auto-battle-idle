@@ -63,7 +63,7 @@
 | `at_sorcerer` | 現行データ上、専用 passive 未確認 | **追加候補**。条件分岐なしの安定出力を支える、魔法 damage / multiLock 再配分補助などを検討 |
 | `at_sigilist` | 現行データ上、専用 passive 未確認 | **追加 / 説明 passive 候補**。Lv0 passive 1 は「条件でスキル効果が分岐する」ことを明示するクラス説明 passive でもよい。数値補助を無理に入れない |
 | `at_conductor` | AoE crowd bonus、AoE / scatter 攻撃寄り active（旧 `at_geomancer`） | **置換**。既存攻撃スキルは正本にしない。Conductor は自身で damage を出さず、観測・蓄積・法陣による damage routing / distribution / recycling を扱う |
-| `sp_cleric` | 低 HP heal 強化、余剰 heal → barrier、Lv10 対象 HP 比例 heal 補正、Lv20 癒しの残響 | **残す / 実装済**。Recovery Control の核。passive 3 = `targetHpRatioHealScale`、passive 4 = `healReservation` |
+| `sp_cleric` | 低 HP heal 強化、余剰 heal → barrier、Lv10 余剰 heal 転送、Lv20 癒しの残響 | **残す / 実装済**。Recovery Control の核。passive 3 = `excessHealRedirect`、passive 4 = `healReservation` |
 | `sp_abjurer` | 高 HP ally 軽減、Wave 開始 barrier、全体 barrier / damageReduction | **残す / 整理**。Stability Control として、事前猶予・軽減・barrier の担当を明確化する |
 | `sp_alchemist` | party HoT aura、高 HP ally DEF、Wave 回数限定の debuff cleanse | **残す**。debuff cleanse は薬草師専用の補助個性だが、必須インフラにはしない |
 
@@ -258,7 +258,7 @@ Supporter 3 種は「回復量の大小」ではなく、損失を処理する�
 | --- | --- | --- | --- |
 | `sp_cleric` | basic | 最低 HP 比率の味方へ小さな即時 heal。Recovery の常時基礎 | 現行 `sp_cleric_basic_attack` を **残す** |
 | `sp_cleric` | Lv0 passive 1-2 | 低 HP heal 強化、余剰 heal → barrier | 現行 `sp_cleric_passive_1` / `sp_cleric_passive_2` を **残す** |
-| `sp_cleric` | Lv10 passive 3 | 対象 HP 割合に応じた緩やかな回復効率補正（`targetHpRatioHealScale`）。Active2 救命と競合しない弱い段階補正 | `sp_cleric_passive_3`（生命調律）を **実装** |
+| `sp_cleric` | Lv10 passive 3 | オーバーヒールの一部を次低 HP 味方へ転送（`excessHealRedirect`、1 ホップ）。残り余剰は barrier 等へ | `sp_cleric_passive_3`（生命調律）を **実装** |
 | `sp_cleric` | Lv20 passive 4 | 低 HP 回復時にバフ「癒しの残響」を付与。被ダメ後の短期保険回復（`healReservation`、蘇生ではない） | `sp_cleric_passive_4`（ヒール予約）を **実装** |
 | `sp_cleric` | Lv0 active 1 | 単体欠損を戻す主 heal。対象は最低 HP 比率、即時 heal + 短い HoT | 現行 `sp_cleric_active_1`（癒しの光）を **残す** |
 | `sp_cleric` | Lv0 active 2 | 低 HP の味方だけに反応する救命 heal。真の被ダメ反応 trigger は使わず、`time` + `firePolicy: smart` + `fireConditions` で先行 | **追加**。`sp_cleric_active_2` をこの役割へ再定義する案 |

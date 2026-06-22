@@ -218,6 +218,17 @@ export function applyHealToTarget(
   return target.hp - before;
 }
 
+/** 直接 heal の試行量から maxHp 超過分（余剰）を算出。HP はまだ変えない。 */
+export function computeInstantHealExcess(
+  target: CombatantState,
+  attemptedHeal: number,
+): number {
+  if (attemptedHeal <= 0) return 0;
+  const hpBefore = target.hp;
+  const afterHealHp = Math.min(target.maxHp, hpBefore + attemptedHeal);
+  return Math.max(0, attemptedHeal - (afterHealHp - hpBefore));
+}
+
 /** 未指定時は加算（`barrierStack: false` のみ置換） */
 export function resolveBarrierStack(barrierStack?: boolean): boolean {
   return barrierStack !== false;

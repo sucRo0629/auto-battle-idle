@@ -518,6 +518,7 @@ export type PassiveEffectKind =
   | "debuff"
   | "counter"
   | "selfHpRatioBuff"
+  | "excessHealRedirect"
   | "targetHpRatioHealScale"
   | "healReservation"
   | "skillAmountOverride"
@@ -752,8 +753,10 @@ export interface PassiveSkillDef {
   healAmount?: ResourceAmountSpec;
   /** healReservation: 付与バフの表示名 */
   buffDisplayName?: string;
-  /** excessHealToBarrier: 余剰変換の対象（未指定 = outgoing のみ） */
+  /** excessHealToBarrier / excessHealRedirect: 余剰変換の対象（未指定 = outgoing のみ） */
   excessHealSources?: Array<"outgoing" | "incoming">;
+  /** excessHealRedirect: 余剰回復の転送割合（0〜1） */
+  redirectScale?: number;
   /** @deprecated 読み込み互換（正規化後は buff + chance） */
   evasionChance?: number;
   /** @deprecated 読み込み互換（正規化後は buff + chance） */

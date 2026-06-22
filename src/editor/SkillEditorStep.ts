@@ -589,6 +589,10 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.buffMultiplierMax ??= 1.5;
       passive.maxBuffAtHpRatio ??= 0;
       break;
+    case 'excessHealRedirect':
+      passive.redirectScale ??= 0.5;
+      passive.excessHealSources ??= ['outgoing'];
+      break;
     case 'targetHpRatioHealScale':
       passive.healScaleMax ??= 1.1;
       passive.maxScaleAtHpRatio ??= 0.4;
@@ -2443,6 +2447,48 @@ export class SkillEditorStep {
             ),
           ),
         );
+        break;
+      case 'excessHealRedirect':
+        effectGrid.appendChild(
+          createFieldRow(
+            'redirectScale',
+            createNumberInput(
+              passive.redirectScale ?? 0.5,
+              (redirectScale) => {
+                this.patchPassive(index, (current) => {
+                  current.redirectScale = redirectScale;
+                }, { rerender: false });
+              },
+              { min: 0.01, max: 1, step: 0.01 },
+            ),
+          ),
+        );
+        for (const source of ['outgoing', 'incoming'] as const) {
+          const label = source === 'outgoing' ? '与回復' : '被回復';
+          const sources = passive.excessHealSources ?? ['outgoing'];
+          const row = createEl('div', 'editor-field editor-field-checkbox');
+          const input = createEl('input') as HTMLInputElement;
+          input.type = 'checkbox';
+          input.checked = sources.includes(source);
+          input.addEventListener('change', () => {
+            this.patchPassive(index, (current) => {
+              const currentSources = new Set(
+                current.excessHealSources ?? ['outgoing'],
+              );
+              if (input.checked) {
+                currentSources.add(source);
+              } else {
+                currentSources.delete(source);
+              }
+              const next = [...currentSources] as Array<'outgoing' | 'incoming'>;
+              current.excessHealSources =
+                next.length > 0 ? next : ['outgoing'];
+            }, { rerender: false });
+          });
+          row.appendChild(createEl('label', undefined, label));
+          row.appendChild(input);
+          effectGrid.appendChild(row);
+        }
         break;
       case 'targetHpRatioHealScale':
         effectGrid.appendChild(

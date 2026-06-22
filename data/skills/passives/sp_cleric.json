@@ -26,9 +26,11 @@
   {
     "id": "sp_cleric_passive_3",
     "name": "生命調律",
-    "effect": "targetHpRatioHealScale",
-    "healScaleMax": 1.15,
-    "maxScaleAtHpRatio": 0.4
+    "effect": "excessHealRedirect",
+    "redirectScale": 0.5,
+    "excessHealSources": [
+      "outgoing"
+    ]
   },
   {
     "id": "sp_cleric_passive_4",

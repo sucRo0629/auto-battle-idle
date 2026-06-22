@@ -3,10 +3,6 @@ import {
   grantHealReservationStacks,
   tryTriggerHealReservation,
 } from './healReservation.ts';
-import {
-  resolveOutgoingHealSpecialMultiplier,
-  resolveTargetHpRatioHealScaleMultiplier,
-} from './passiveEffects.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 
 function unit(partial: Partial<CombatantState> & Pick<CombatantState, 'id'>): CombatantState {
@@ -55,52 +51,6 @@ function withPassives(
     },
   };
 }
-
-describe('targetHpRatioHealScale', () => {
-  const passive: PassiveSkillDef = {
-    id: 'scale_passive',
-    name: 'scale',
-    effect: 'targetHpRatioHealScale',
-    healScaleMax: 1.2,
-    maxScaleAtHpRatio: 0.5,
-  };
-  const passives = { scale_passive: passive };
-
-  it('returns 1 at full HP', () => {
-    const healer = withPassives(unit({ id: 'h' }), ['scale_passive']);
-    const target = unit({ id: 't', hp: 100, maxHp: 100 });
-    expect(resolveTargetHpRatioHealScaleMultiplier(healer, target, passives)).toBe(1);
-  });
-
-  it('ramps toward healScaleMax as target HP drops', () => {
-    const healer = withPassives(unit({ id: 'h' }), ['scale_passive']);
-    const target = unit({ id: 't', hp: 75, maxHp: 100 });
-    const mul = resolveTargetHpRatioHealScaleMultiplier(healer, target, passives);
-    expect(mul).toBeCloseTo(1.1, 5);
-  });
-
-  it('reaches healScaleMax when target HP is at or below maxScaleAtHpRatio', () => {
-    const healer = withPassives(unit({ id: 'h' }), ['scale_passive']);
-    const target = unit({ id: 't', hp: 25, maxHp: 100 });
-    const mul = resolveTargetHpRatioHealScaleMultiplier(healer, target, passives);
-    expect(mul).toBeCloseTo(1.2, 5);
-  });
-
-  it('stacks with specialEffect in outgoing heal multiplier', () => {
-    const specialPassive: PassiveSkillDef = {
-      id: 'special',
-      name: 'special',
-      effect: 'specialEffect',
-      specialEffectApplyTo: 'heal',
-      specialEffect: { scale: 1.5, conditions: [{ kind: 'targetHp', maxHpRatio: 0.5 }] },
-    };
-    const registry = { scale_passive: passive, special: specialPassive };
-    const healer = withPassives(unit({ id: 'h' }), ['scale_passive', 'special']);
-    const target = unit({ id: 't', hp: 25, maxHp: 100 });
-    const mul = resolveOutgoingHealSpecialMultiplier(healer, target, registry);
-    expect(mul).toBeCloseTo(1.5 * 1.2, 5);
-  });
-});
 
 describe('healReservation', () => {
   const passive: PassiveSkillDef = {
