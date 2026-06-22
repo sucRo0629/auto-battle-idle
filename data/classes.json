@@ -511,7 +511,22 @@
         "skillIds": [
           "sp_cleric_passive_1",
           "sp_cleric_passive_2",
-          "sp_cleric_active_1"
+          "sp_cleric_active_1",
+          "sp_cleric_active_2"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "sp_cleric_passive_3",
+          "sp_cleric_active_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "sp_cleric_passive_4",
+          "sp_cleric_active_4"
         ]
       }
     ],
@@ -522,7 +537,9 @@
     },
     "passiveIds": [
       "sp_cleric_passive_1",
-      "sp_cleric_passive_2"
+      "sp_cleric_passive_2",
+      "sp_cleric_passive_3",
+      "sp_cleric_passive_4"
     ]
   },
   {

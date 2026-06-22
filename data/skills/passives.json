@@ -27,7 +27,7 @@
   },
   {
     "id": "sp_cleric_passive_1",
-    "name": "救命の心得",
+    "name": "sp_cleric_passive_1",
     "effect": "specialEffect",
     "specialEffectApplyTo": "heal",
     "specialEffect": {
@@ -380,9 +380,33 @@
   },
   {
     "id": "sp_cleric_passive_2",
-    "name": "生気重ね",
+    "name": "sp_cleric_passive_2",
     "effect": "excessHealToBarrier",
     "barrierScale": 1,
+    "excessHealSources": [
+      "outgoing"
+    ]
+  },
+  {
+    "id": "sp_cleric_passive_3",
+    "name": "sp_cleric_passive_3",
+    "effect": "specialEffect",
+    "specialEffectApplyTo": "heal",
+    "specialEffect": {
+      "scale": 1.2,
+      "conditions": [
+        {
+          "kind": "targetHp",
+          "maxHpRatio": 0.4
+        }
+      ]
+    }
+  },
+  {
+    "id": "sp_cleric_passive_4",
+    "name": "sp_cleric_passive_4",
+    "effect": "excessHealToBarrier",
+    "barrierScale": 0.5,
     "excessHealSources": [
       "outgoing"
     ]

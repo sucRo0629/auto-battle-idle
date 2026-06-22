@@ -538,7 +538,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 
 | classId        | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0）                                                     | アクティブ（Lv0）                       |
 | -------------- | ------ | --------- | ----- | ---- | ------------------------------------------------------------------- | --------------------------------------- |
-| `sp_cleric`    | 療養師 | Cleric    | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）       | `sp_cleric_active_1`（癒しの光）のみ    |
+| `sp_cleric`    | 療養師 | Cleric    | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）       | `sp_cleric_active_1` + `sp_cleric_active_2`（低 HP smart heal） |
 | `sp_abjurer`   | 結界師 | Abjurer   | back  | 遠隔 | 高 HP 味方被ダメ軽減 + Wave 開始バリア（`passive_1` / `passive_2`） | `sp_abjurer_active_1`（盾添え）のみ     |
 | `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | 常時 HoT aura + 高 HP 味方 DEF buff（`passive_1` / `passive_2`）    | `sp_alchemist_active_1`（薬粉撒き）のみ |
 
@@ -712,7 +712,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 - `sp_abjurer` — **崩壊前の猶予作成**。barrier / 軽減で HP 欠損が致命化する前に余裕を作る
 - `sp_alchemist` — **長期維持と継戦リズム調整**。HoT と局所的な被害速度低下で戦線を長く保つ
 
-**療養師（Cleric）参照:** 療養師の主責務は Recovery であり、持続維持や事前軽減ではなく **欠損 HP の即時復元** を正本とする。`sp_cleric_active_2`（広域治療）は単体救命ではなく Recovery の範囲化・維持化に属するため **Lv10 習得** を正とする。Lv20 の上位 Recovery では、大きな被害を受けた味方を即座に立て直す **反応型 heal** を候補とする。現行仕様では、まず A 案として `time` + `firePolicy: smart` + `fireConditions` による待機型即応 heal を許容する。
+**療養師（Cleric）参照:** 療養師の主責務は Recovery であり、持続維持や事前軽減ではなく **欠損 HP の即時復元** を正本とする。Lv0 の `sp_cleric_active_1` は単体即時 heal + 短 HoT、`sp_cleric_active_2` は低 HP 味方向けの smart heal（`time` + `firePolicy: smart` + `fireConditions`）。旧 `sp_cleric_active_2`（広域治療）は `sp_cleric_active_3` として **Lv10 習得** に移した。Lv10 / Lv20 passive は回復精度・余剰変換の段階強化。Lv20 の `sp_cleric_active_4` は大きな欠損を即座に立て直す smart heal（被ダメ反応 trigger は将来ゲート。現行は A 案の待機型即応 heal）。
 
 **結界師（Abjurer）参照:** 結界師は直接 heal も扱うが、主責務は Recovery ではなく Stability である。小回復は barrier / 軽減による保護を実戦で成立させるための補助であり、役割の本体は **崩壊前猶予の作成** にある。
 
@@ -722,8 +722,8 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 
 ### 未決・TBD
 
-- `sp_` クラス群: Lv10 / Lv20 で追加する `active_3` / `active_4` の具体設計
-- 療養師: Lv20 上位 Recovery を、A 案（`time` + `firePolicy: smart` + `fireConditions`）で先行するか、将来の被ダメ反応 trigger で実装するかの詳細方式
+- `sp_abjurer` / `sp_alchemist`: Lv10 / Lv20 で追加する `active_3` / `active_4` の具体設計
+- 療養師 Lv20 smart heal: 将来の被ダメ反応 trigger へ移行するか（現行 A 案は `time` + `firePolicy: smart` + `fireConditions`）
 
 ## 物理 Kill / Flow 設計方針
 
