@@ -62,7 +62,7 @@
 | `at_hunter` | debuff 中対象への damage bonus | **置換**。古い Kill 寄り仕様として外し、DoT 圧縮・行動制限・拘束精度を支える Field Flow passive へ置き換える |
 | `at_sorcerer` | 現行データ上、専用 passive 未確認 | **追加候補**。条件分岐なしの安定出力を支える、魔法 damage / multiLock 再配分補助などを検討 |
 | `at_sigilist` | 現行データ上、専用 passive 未確認 | **追加 / 説明 passive 候補**。Lv0 passive 1 は「条件でスキル効果が分岐する」ことを明示するクラス説明 passive でもよい。数値補助を無理に入れない |
-| `at_geomancer` | AoE crowd bonus、AoE / scatter 攻撃寄り active | **置換**。既存攻撃スキルは正本にしない。法陣師は通常攻撃を含め、自分で damage を出さず damage routing / transfer / distribution を扱う方向へ寄せる |
+| `at_conductor` | AoE crowd bonus、AoE / scatter 攻撃寄り active（旧 `at_geomancer`） | **置換**。既存攻撃スキルは正本にしない。Conductor は自身で damage を出さず、観測・蓄積・法陣による damage routing / distribution / recycling を扱う |
 | `sp_cleric` | 低 HP heal 強化、余剰 heal → barrier | **残す**。Recovery Control の核 |
 | `sp_abjurer` | 高 HP ally 軽減、Wave 開始 barrier、全体 barrier / damageReduction | **残す / 整理**。Stability Control として、事前猶予・軽減・barrier の担当を明確化する |
 | `sp_alchemist` | party HoT aura、高 HP ally DEF、Wave 回数限定の debuff cleanse | **残す**。debuff cleanse は薬草師専用の補助個性だが、必須インフラにはしない |
@@ -162,7 +162,7 @@ Physical pass A の実装方針:
 
 ### Physical pass B 枠確定案
 
-Lancer / Ballista / Hunter は、物理職の中でも「対象をどう倒すか」だけでなく、戦線・射線・局所領域をどう作るかを扱う。既存 `pierce` / `scatter` / `dot` / `stun` / `buff` / `debuff` / `targetRuleOverride` / `defenseIgnore` / `skillPropertyOverride` を優先するが、Flow を成立させるために必要な新 trigger / condition / effect はゲート化して採用候補にする。Lancer の「前列味方被攻撃時の援護反撃」を採用する場合は、現行 counter が自己被弾専用のため新 trigger が必要になる。Ballista の「高 Max HP 対象」を厳密に扱う場合は、現行 `stat: "hp"`（現在 HP）ではなく `maxHp` target 拡張が必要になる。また現状は高 HP / 高 Max HP 対象への `specialEffect` 条件も存在しないため、Ballista の高耐久特効を実装するなら新 condition が必要になる。Hunter は広範囲 DoT 火力ではなく DoT 圧縮と行動制限を主軸にするため、DoT 圧縮 effect が新規実装対象になる。罠の範囲指定は法陣師と同じ地点指定範囲を使い、Hunter / Geomancer の違いは範囲形状ではなく配置する effect 内容で分ける。地点指定範囲は単発範囲攻撃にも使える汎用 target とし、持続効果を組み合わせると罠 / 法陣 / 領域効果になる。
+Lancer / Ballista / Hunter は、物理職の中でも「対象をどう倒すか」だけでなく、戦線・射線・局所領域をどう作るかを扱う。既存 `pierce` / `scatter` / `dot` / `stun` / `buff` / `debuff` / `targetRuleOverride` / `defenseIgnore` / `skillPropertyOverride` を優先するが、Flow を成立させるために必要な新 trigger / condition / effect はゲート化して採用候補にする。Lancer の「前列味方被攻撃時の援護反撃」を採用する場合は、現行 counter が自己被弾専用のため新 trigger が必要になる。Ballista の「高 Max HP 対象」を厳密に扱う場合は、現行 `stat: "hp"`（現在 HP）ではなく `maxHp` target 拡張が必要になる。また現状は高 HP / 高 Max HP 対象への `specialEffect` 条件も存在しないため、Ballista の高耐久特効を実装するなら新 condition が必要になる。Hunter は広範囲 DoT 火力ではなく DoT 圧縮と行動制限を主軸にするため、DoT 圧縮 effect が新規実装対象になる。罠の範囲指定は法陣師と同じ地点指定範囲を使い、Hunter / Conductor の違いは範囲形状ではなく配置する effect 内容で分ける。地点指定範囲は単発範囲攻撃にも使える汎用 target とし、持続効果を組み合わせると罠 / 法陣 / 領域効果になる。
 
 | classId | 枠 | 効果カテゴリ・対象・条件 | 方針 | 採否 / 実装影響 |
 | --- | --- | --- | --- | --- |
@@ -192,7 +192,7 @@ Physical pass B の実装方針:
 
 - Lancer は Kill 対象を持たない Position Flow として扱う。target override や Threat 操作ではなく、`selfOrigin` の前方ライン、味方近傍 aura、敵前線 debuff で「どこで戦うか」を調整する。自分以外の前列味方が攻撃された際の援護反撃は、Defender 的な Threat 代替ではなく、槍の間合いで前列横方向を支える Position Flow として扱える。ただし現行 counter は自己被弾専用なので、採用するなら新 passive trigger と tooling 同期が必要。
 - Ballista は高 Max HP 対象と貫通射線を正本にする。高 HP targeting の重複 passive は 1 枠へ整理し、追加枠は reload / stance / pierce / 高 HP 特効のどれかに使う。`at_ballista_passive_3` のような常時 DEF 無視は古い仕様の残骸として置換 / 削除対象にする。ただし Ballista の処理対象であるボス / エリート敵は高 DEF も併せ持つ可能性が高いため、高 Max HP 条件に閉じた DEF 対策は許容する。差別化として、Warrior は高 DEF 単体を対象に取り DEF を抜く職、Ballista は高 Max HP 対象へ重撃を通し、必要なら target DEF を追加ダメージ源として参照する職に分ける。DEF 無視は「防御をなかったことにする」ため Warrior 側、target DEF 参照追加ダメージは「重装甲ほど衝撃が乗る」ため Ballista 側の表現にできる。現行 target stat の `hp/highest` は現在 HP 比較なので、Max HP targeting を正確に実装するなら `TargetStat` に `maxHp` を追加し、editor / validate / `formatSkillText` / docs を同期する。さらに現行 `specialEffect` 条件は `debuff` と低 HP 側の `targetHp` のみなので、高 HP / 高 Max HP 特効 condition も追加対象にする。target DEF 参照追加ダメージを採用する場合も新 effect / amount 参照として editor / validate / `formatSkillText` / docs 同期が必要。フィールド端までの特別な貫通ラインは v1 では増やさず、既存 `pierce` の `range` と `selfOrigin` で表現する。
-- Hunter は Field Flow であり、Warrior / Ranger のような処理対象特化に寄せない。現行 `at_hunter_passive_1` の debuff 中 damage bonus は古い Kill 寄り仕様として置換する。広範囲 DoT 火力も主軸にせず、DoT 残り時間を圧縮して短時間に状態を畳み、stun / knockback / moveLock / attackSpeed debuff などの行動制限で局所戦闘テンポを崩す。地点指定範囲は単発範囲攻撃にも使える汎用 target とし、持続効果を付けると罠 / 法陣 / 領域効果になる。Hunter はその範囲に DoT 圧縮・行動制限を置き、Geomancer は damage routing / transfer などを置くことで分ける。
+- Hunter は Field Flow であり、Warrior / Ranger のような処理対象特化に寄せない。現行 `at_hunter_passive_1` の debuff 中 damage bonus は古い Kill 寄り仕様として置換する。広範囲 DoT 火力も主軸にせず、DoT 残り時間を圧縮して短時間に状態を畳み、stun / knockback / moveLock / attackSpeed debuff などの行動制限で局所戦闘テンポを崩す。地点指定範囲は単発範囲攻撃にも使える汎用 target とし、持続効果を付けると罠 / 法陣 / 領域効果になる。Hunter はその範囲に DoT 圧縮・行動制限を置き、Conductor は damage concentration / distribution / recycling を置くことで分ける。
 - Physical pass B では Lancer の援護反撃 trigger、Ballista の `maxHp` target、高 HP 特効 condition、target DEF 参照追加ダメージ、地点指定範囲 / 持続範囲、Hunter の DoT 圧縮 / action restriction condition 以外、新 effect / targetShape / condition を増やさない。新要素を採用する場合は editor / validate / `formatSkillText` / docs 同期を同じ実装単位に含める。knockback は既存仕様だが、Hunter の行動制限として使う場合は moveLock / stun との責務差を combat / text で確認する。視界妨害、命中干渉、フィールド端貫通ラインは未決ゲートに残す。
 
 ## Caster
@@ -200,12 +200,12 @@ Physical pass B の実装方針:
 | classId | 設計の柱 | 現行スキル | v1 確定方針 | 実装影響 |
 | --- | --- | --- | --- | --- |
 | `at_sorcerer` | 純出力。安定 DPS、基準火力、マルチロック再配分 | `active_1` / `active_2` は placeholder 名の単体・multiLock。`active_3` / `active_4` 未配置 | 名前と習得段階を **見直し**。条件分岐なし、領域再定義なしの安定魔法として、単体・multiLock・大火力・継続火力の 4 枠へ整理 | 既存 damage / multiLock で対応可能。名称・説明・VFX 対応が必要 |
-| `at_sigilist` | 条件適応。2 系統効果の予測可能分岐、攻撃効率最適化 | `active_1` 連印、`active_2` 爆印。`conditionalEffect` 使用。`active_3` / `active_4` 未配置 | `conditionalEffect` を採用するなら `active_1` / `active_2` は **残す**。Lv10 / Lv20 も条件分岐型で **追加**。採用しないなら印術師全体を置換する必要がある | 新 effect ゲートの中核。editor / validate / `formatSkillText` / spec 同期が必須 |
-| `at_geomancer` | 構造操作。法陣によるダメージ流量の再配置、味方含む全体最適化 | `active_1` 大法陣、`active_2` 小法陣。現行は AoE / scatter の攻撃寄り。`active_3` / `active_4` 未配置 | 現行攻撃スキルは **無視 / 置換**。法陣師は通常攻撃を含め、自分で damage を出さず、味方 / 敵の damage routing / transfer / distribution を核にする | 最も実装負荷が高い。非 damage basic、damage routing / transfer、地点指定範囲 / 持続範囲、UI 表示の同期が必要 |
+| `at_sigilist` | Earth / Wind Mark 分岐。条件適応型 Kill | 旧 JSON 廃棄済み | 設計は **確定**。combat / JSON / tooling は **Phase 7 以降** | Mark state / effect、editor / validate / `formatSkillText` / spec 同期（Phase 7 以降） |
+| `at_conductor` | Damage Routing / Distribution / Recycling | 旧 JSON 廃棄済み | 設計は **確定**。combat / JSON / tooling は **Phase 7 以降** | damage reservoir、地点指定範囲、非 damage basic 等（Phase 7 以降） |
 
 ### Caster pass 枠確定案
 
-Caster 3 種は魔法 damage を扱うが、役割は「火力の大小」ではなく出力構造の違いで分ける。Sorcerer は multiLock を中心にした条件分岐なしの純出力、Sigilist はスキル対象の条件分岐によってより適した効果へ調整する攻撃最適化、Geomancer は通常攻撃を含めて自分で damage を出さず、地点指定範囲 / 持続範囲で既存 damage の流れを変える構造操作として扱う。Lv0 active は共通ルールどおり `active_1` を基本スキル、`active_2` を強めスキルにする。
+Caster 3 種は魔法 damage を扱うが、役割は「火力の大小」ではなく出力構造の違いで分ける。Phase 3 では `at_sorcerer` のみ JSON / combat 実装の対象とし、`at_sigilist` / `at_conductor` は独自システムのため設計確定のみ行い実装は **Phase 7 以降** とする。
 
 | classId | 枠 | 効果カテゴリ・対象・条件 | 方針 | 採否 / 実装影響 |
 | --- | --- | --- | --- | --- |
@@ -217,27 +217,30 @@ Caster 3 種は魔法 damage を扱うが、役割は「火力の大小」では
 | `at_sorcerer` | Lv0 active 2 | magic `multiLock` damage。対象は nearest enemy から複数ロック。条件なし | 強めスキル。対象数が少なくてもロックが無駄にならない安定出力として扱う | 現行 `at_sorcerer_active_2` を **残す / 改名**。multiLock 再配分は Sorcerer の個性 |
 | `at_sorcerer` | Lv10 active 3 | magic damage。候補は高威力 single、または hitCount / multiLock の継続火力 | 純出力の段階強化。条件分岐や地点指定範囲は使わない | **追加**。既存 damage / hitCount / multiLock で対応 |
 | `at_sorcerer` | Lv20 active 4 | 上位 magic `multiLock` damage。対象は nearest enemy から複数ロック、少数戦では同一対象へ集中 | Caster 基準火力の上位枠。範囲大火力ではなく、multiLock のロック集中で少数戦にもロスなく火力を出す | **追加**。既存 `multiLock` / damage で本体は対応可能。ロック集中ボーナスを入れる場合は新 property / condition が必要 |
-| `at_sigilist` | basic | magic single damage。対象は通常 enemy target。条件なし | 標準魔法弾。条件分岐は active 側の個性として残す | 現行 `at_sigilist_basic_attack` を **残す** |
+| `at_sigilist` | basic | magic single damage 候補。対象は通常 enemy target。条件なし | 標準魔法弾は設計上あり得るが、現行 JSON は廃棄。再実装時に確定 | 現行 `at_sigilist_basic_attack` JSON は **廃棄**。再設計まで合成 basic または未配置 |
 | `at_sigilist` | Lv0 passive 1-2 | passive 1 は説明 / ルール解放 passive 候補。「スキル対象の条件によって、より適した効果へ分岐する」ことを明示する。passive 2 は対象読解 / 分岐対象選定候補 | 印術師の初期 passive は強化ではなく基本能力として扱う。passive 1 で分岐ルールを示し、passive 2 で条件分岐スキルの対象を「分岐が意味を持つ候補」へ寄せる。charge 増加などは active 側の設計で扱い、passive には置かない | **追加**。説明 passive を採用する場合は、効果なし passive または class rule 表示を editor / validate / UI / `formatSkillText` で扱えるか確認。対象読解を採用する場合は best-area anchor / branch-aware targeting など新 targetRule または conditionalEffect 対象選定補助が必要 |
 | `at_sigilist` | Lv10 / Lv20 passive | 対象条件分岐の扱いやすさ・効果調整補助。対象は自身または条件分岐 active | Lv0 passive 1/2 はクラス基本能力にする。Lv10 / Lv20 で対象読解の範囲、分岐条件の種類、または条件分岐 active の扱いやすさを段階強化する。回復 / 支援分岐、multiLock 純出力にはしない | **追加**。新 effect はできるだけ避け、conditionalEffect tooling と対象選定補助の同期を優先 |
-| `at_sigilist` | Lv0 active 1 | `conditionalEffect`。条件はスキル対象の状態・数・密集度など。branch はその対象により適した damage / debuff / hit 構造へ分岐 | 基本スキル。条件成立 / 未成立の性能差ではなく、対象に応じて同格の効果を選ぶ印術師の入口 | 現行 `at_sigilist_active_1`（連印）を **見直し / 整理**。conditionalEffect 本採用が必要 |
-| `at_sigilist` | Lv0 active 2 | 強めの `conditionalEffect`。条件はスキル対象の状態・数・密集度など。branch はより適した範囲 / debuff / hit 構造へ分岐 | 強めスキル。`active_1` より効果形状は大きいが、成立側 / 未成立側の性能差は付けない | 現行 `at_sigilist_active_2`（爆印）を **見直し / 整理**。multiLock 純出力には寄せない。skill 直下 vfx と effect vfx の扱い確認 |
+| `at_sigilist` | Lv0 active 1 | Earth / Wind Branch + Mark 付与・起爆。基本スキル | 条件分岐 + 対応 Mark +1 + 1 個起爆 | 現行 `at_sigilist_active_1`（連印）JSON は **廃棄**。**追加** |
+| `at_sigilist` | Lv0 active 2 | 強め Branch + 複数 Mark 付与・起爆 | 条件分岐 + 対応 Mark +2 + 2 個起爆 | 現行 `at_sigilist_active_2`（爆印）JSON は **廃棄**。**追加** |
 | `at_sigilist` | Lv10 active 3 | `conditionalEffect`。候補は HP 条件 / 敵数条件 / 密集条件 / debuff 条件による効果調整 | 条件適応の段階強化。Flow ではなく Kill 内で、対象に合わせて攻撃効果を最適化する | **追加**。条件種類を増やす場合は editor / validate / `formatSkillText` / spec 同期 |
 | `at_sigilist` | Lv20 active 4 | 上位 `conditionalEffect`。対象条件に応じた明確な効果分岐 | 印術師の完成形。ランダムではなく予測可能な条件分岐にする。Sorcerer の multiLock 純出力とは分ける | **追加**。conditionalEffect tooling 完了が前提 |
-| `at_geomancer` | basic | 非 damage の法陣補助。候補は小さな地点指定範囲の準備、既存法陣の維持、または味方 / 敵 damage routing の軽い補助 | 通常攻撃でも自分で damage を出さない方向にする。標準魔法弾は Sorcerer / Sigilist 側へ寄せ、Geomancer は常時から構造操作職として見せる | 現行 `at_geomancer_basic_attack` は **置換**。非 damage basic を扱うため、戦闘参加・表示・ログ・AI 保留の確認が必要 |
-| `at_geomancer` | Lv0 passive 1-2 | passive 1 は説明 / ルール解放 passive 候補。「攻撃を行わず、法陣で damage の流れを変える」ことを明示する。passive 2 は地点指定範囲 / 持続範囲 / damage routing 補助候補 | AoE crowd bonus は古い攻撃寄り暫定仕様として置換する。法陣の本体は自分の火力ではなく damage 流量操作 | 現行 `at_geomancer_passive_1` は **置換**。説明 passive を採用する場合は、効果なし passive または class rule 表示を editor / validate / UI / `formatSkillText` で扱えるか確認。passive 2 にだけ実効果を置く案も可 |
-| `at_geomancer` | Lv10 / Lv20 passive | damage routing / transfer / 地点指定範囲の維持補助 | 法陣による構造操作を段階強化。ATK / DEF buff ではなく、被害や火力の流れを変える | **追加**。実装負荷が高いため Geomancer pass でまとめて判断 |
-| `at_geomancer` | Lv0 active 1 | 地点指定範囲 + 持続効果。候補は敵 damage routing の軽量版、または味方 damage transfer / distribution の軽量版 | 基本スキル。自分で damage を出さず、法陣で範囲内の damage の流れを少し変える | 現行 `at_geomancer_active_1` / `active_2` は **置換**。地点指定範囲 / 持続範囲 / routing 新 effect が必要 |
-| `at_geomancer` | Lv0 active 2 | 地点指定範囲 + 持続効果。候補は `active_1` より強い damage routing / transfer / distribution | 強めスキル。Lv0 から「法陣で範囲に意味を置く」体験を出す。直接 damage は出さない | **置換**。既存 AoE / scatter 攻撃は使わない。damage routing / transfer の採用判断が必要 |
-| `at_geomancer` | Lv10 active 3 | 地点指定範囲 + 持続効果。敵への damage 集中 / 分配、または味方被害分配候補 | Structure Flow の段階強化。単なる広範囲魔法にしない。自身 damage ではなく既存 damage の流れを変える | **追加**。routing / transfer 新 effect と tooling 同期が必要 |
-| `at_geomancer` | Lv20 active 4 | 上位法陣。味方含む戦場全体の damage 流量最適化 | Geomancer の完成形。火力支援と防御支援を damage 流量として統合する。自身 damage は出さない | **追加**。最も重い新メカニクス。v1 で暫定にするか本採用か要判断 |
+| `at_conductor` | basic | 非 damage。自身で攻撃しない | Conductor 自身は攻撃しない | 現行 `at_conductor_basic_attack` JSON は **廃棄**。**追加**（非 damage basic） |
+| `at_conductor` | Lv0 passive 1 | Damage Observation。スキル非発動中、戦場で発生した damage の一部を蓄積プールへ加算 | スキル非発動時間の価値創出、damage 流量の観測、蓄積システムの基盤 | **追加**。採用候補。新 state（damage reservoir）/ effect（damageObservation）が必要。editor / validate / `formatSkillText` / docs 同期 |
+| `at_conductor` | Lv0 passive 2 | Self Reservoir。Conductor が受けた damage を全量蓄積プールへ加算 | Defender 副属性。後列狙い・範囲攻撃への耐性価値。「受けた流れも記録する」 | **追加**。採用候補。self damage → reservoir 転送 effect が必要 |
+| `at_conductor` | Lv10 passive | Enhanced Observation。スキル非発動中の damage 回収量増加 | 蓄積システムの成長。シンプルな上位 passive | **追加**。採用候補。damageObservation 係数拡張 |
+| `at_conductor` | Lv20 passive | Advanced Observation。スキル非発動中の damage 回収量増加（上位） | 蓄積システム最終強化。数値成長担当 | **追加**。採用候補。damageObservation 係数拡張 |
+| `at_conductor` | Lv0 active 1 | Convergence Field（集中法陣）。地点指定範囲 + 持続。法陣内 damage を収束。敵は現在 HP 絶対値最大へ、味方は現在 HP 絶対値最大へ | Damage Concentration。基本スキル | **追加**。現行 `at_conductor_active_1`（大法陣）JSON は **廃棄** |
+| `at_conductor` | Lv0 active 2 | Distribution Field（分散法陣）。法陣内 damage を頭割り。敵集団 / 味方集団内で分散 | Damage Distribution。強めスキル | **追加**。現行 `at_conductor_active_2`（小法陣）JSON は **廃棄** |
+| `at_conductor` | Lv10 active 3 | Continuous Observation。永続自己強化。発動後、スキル発動中の damage もごく一部を蓄積プールへ加算（非スキル中回収とは別枠・低係数）。軽減・転送・無効化は行わない | Observation Expansion。「法陣展開中も流量を観測できる」 | **追加**。採用候補。activeObservation または damageObservation 発動中拡張が必要 |
+| `at_conductor` | Lv20 active 4 | Reflux Field（返流法陣）。法陣展開中、法陣内 damage を追加で蓄積へ記録（通常適用は維持）。法陣終了時、蓄積プールを敵へ再配分 | Damage Recycling。戦場 damage を貯留し再び放流する完成形 | **追加**。採用候補。damageRecycling、reservoir 放出 effect が必要 |
 
 Caster pass の実装方針:
 
 - Sorcerer は条件分岐なし・領域再定義なしの純出力に限定する。placeholder 名は必ず置換し、`active_1` は基本単体、`active_2` は強め multiLock として Lv0 からクラスの基準火力を示す。Lv0 passive 1 には軽めの REG 無視を置ける。Lv10 passive は MultiLock Count Increase、Lv20 passive は Full Saturation（同一対象への Lock 集中時追加効果）として扱う。Lv20 active も範囲大火力ではなく上位 multiLock にし、少数戦でもロックが無駄にならない純出力へ寄せる。
 - Sigilist は `conditionalEffect` を本採用する場合に成立する。Sorcerer を multiLock 純出力へ寄せるため、Sigilist はスキル対象の条件によってより適した効果へ調整する攻撃最適化にする。分岐は回復 / 支援ではなく、対象の状態・数・密集度などに応じて damage / debuff / hit 構造 / 範囲形状を変える中で完結させる。成立側 / 未成立側の性能差は付けず、どちらも同格の効果として扱う。Sigilist の Lv0 passive 1 は、数値補助ではなく「スキル対象の条件で効果が分岐する」ことを説明する class rule passive として採用してもよい。Lv0 passive 2 は強化ではなく、条件分岐スキルの対象を分岐が意味を持つ候補へ寄せる対象読解 / 分岐対象選定として扱う。branch 内の effect 表示、validate、editor 保存、`formatSkillText` は同じ実装単位で同期する。
-- Geomancer は地点指定範囲 / 持続範囲を Hunter と共有するが、置く effect が異なる。Hunter は DoT 圧縮 / 行動制限、Geomancer は damage routing / transfer / distribution を置く。既存 AoE / scatter 攻撃は正本にせず、通常攻撃を含めて自分で damage を出さない構造操作職にする案を採用候補にする。Lv0 passive 1 は、数値補助ではなく「攻撃を行わない」ことを説明する class rule passive にしてよい。
-- Caster pass で増やす新要素は、`conditionalEffect` の tooling 本採用、地点指定範囲 / 持続範囲、非 damage basic、damage routing / transfer / distribution に絞る。Sorcerer では新 effect を増やさない。
+- Conductor は地点指定範囲 / 持続範囲を Hunter と共有するが、置く effect が異なる。Hunter は DoT 圧縮 / 行動制限、Conductor は damage concentration / distribution / recycling を置く。既存 AoE / scatter 攻撃は正本にせず、通常攻撃を含めて自分で damage を出さない。ダメージ軽減職・ATK/DEF buff 職ではなく、damage の発生量を直接増減せず routing / distribution / recycling が主役。蓄積プールは主役ではなく補助エンジン。成長ラインは Lv0=観測・集中・分散、Lv10=観測拡張、Lv20=再循環。
+- Caster pass で増やす新要素は、Phase 3 では `at_sorcerer` の既存 effect 整理に限定する。`at_sigilist` / `at_conductor` 向けの Mark 系・damage reservoir 系は **Phase 7 以降**。
+- `at_sigilist` と `at_conductor` の現行 `data/skills/actives/*.json` は設計確定に伴い **廃棄済み**。`classes.json` の Lv0 active 習得も空。新スキルは Phase 7 以降に設計表どおり追加する。
 
 ## Survival
 
@@ -291,8 +294,11 @@ Supporter pass の実装方針:
    - 既存 effect でほぼ進められる。戦線維持・戦線安定・攻撃防御の差分を明確化する。
 3. **物理 Kill / Flow 6 種の passive / active Lv10 / Lv20 追加**
    - 多くは既存 effect で進められる。Hunter と Ballista の新メカニクスだけゲート化する。
-4. **Caster 3 種の passive / active 4 枠化**
-   - `at_sigilist` の `conditionalEffect` と `at_geomancer` の damage routing 方針が重いため、最後にまとめて判断する。
+4. **Caster — `at_sorcerer` の passive / active 4 枠化**
+   - 印術師・法陣師は独自システムのため **Phase 7 以降**（設計は本表で確定済み、JSON / combat 実装は送る）。
+5. **印術師・法陣師（Phase 7 以降）**
+   - `at_sigilist`: Mark 系 state / effect、Branch 分岐 tooling、`data/skills/` 投入。
+   - `at_conductor`: damage reservoir、法陣 routing / recycling、地点指定範囲、非 damage basic。
 
 ## 実装チャットへ渡す単位
 
@@ -302,19 +308,20 @@ Supporter pass の実装方針:
 | Defender pass | `df_guardian`, `df_paladin`, `df_duelist` | passive / active の 4 枠化、戦線維持系の重複整理 |
 | Physical pass A | `at_warrior`, `at_assassin`, `at_ranger` | 既存 effect 中心で Kill クラスの passive / active 4 枠化 |
 | Physical pass B | `at_lancer`, `at_ballista`, `at_hunter` | passive / active 4 枠化、Flow / pierce / trap のゲート整理 |
-| Caster pass | `at_sorcerer`, `at_sigilist`, `at_geomancer` | passive / active 4 枠化、新 effect 採用可否、条件分岐・構造操作の確定 |
+| Caster pass A | `at_sorcerer` | passive / active 4 枠化（Phase 3） |
+| Caster pass B | `at_sigilist`, `at_conductor` | 独自システム実装（**Phase 7 以降**）。設計確定は本表、JSON / combat / tooling は未着手 |
 | Tooling pass | editor / validate / `formatSkillText` / spec | 新 effect / targetShape / condition を採用した場合の同期 |
 
 ## 未決事項
 
-- `conditionalEffect` を v1 本採用するか。採用するなら印術師実装と tooling pass を同じ作業にする。
-- 法陣師を v1 で「本当の damage routing / transfer」まで実装するか、既存 AoE / scatter で暫定確定するか。
+- `at_sigilist` / `at_conductor` の combat 実装タイミングは **Phase 7 以降**（独自システムのため Phase 3 では設計確定のみ）。
 - Hunter の DoT 残り時間圧縮と行動制限 condition の具体仕様。視界・命中干渉は将来ゲートに残す。
 - Ballista のフィールド端貫通ラインを既存 `pierce` の範囲に留めるか、戦場座標仕様として拡張するか。
 
 ## 完了条件
 
 - 15 クラスすべてに basic + Lv0 2 passive + Lv10 passive + Lv20 passive + Lv0 2 active + Lv10 active + Lv20 active が存在する。
+  - **例外:** `at_sigilist` / `at_conductor` は独自システムのため Phase 7 以降まで JSON / combat 未実装を許容する。設計表と docs の確定を Phase 3 の完了条件とする。
 - `data/skills/actives/*.json` に placeholder 名、未実装メモ、習得段階と矛盾するスキルが残らない。
 - `classes.json` の習得テーブルがこの表の段階と一致する。
 - 新 effect / target / condition を追加した場合、editor / validate / `formatSkillText` / spec が同じ作業で更新されている。

@@ -444,10 +444,7 @@
     "skills": [
       {
         "level": 0,
-        "skillIds": [
-          "at_sigilist_active_1",
-          "at_sigilist_active_2"
-        ]
+        "skillIds": []
       }
     ],
     "growthTier": {
@@ -458,10 +455,10 @@
     "growthPresetKey": "caster"
   },
   {
-    "id": "at_geomancer",
+    "id": "at_conductor",
     "role": "attacker",
     "displayName": "法陣師",
-    "epithetEn": "Geomancer",
+    "epithetEn": "Conductor",
     "formationRow": "back",
     "traits": {
       "rangePx": 110,
@@ -473,7 +470,7 @@
     "reg": 20,
     "jobTier": 1,
     "attackSpeedTier": "slow",
-    "basicAttackSkillId": "at_geomancer_basic_attack",
+    "basicAttackSkillId": "at_conductor_basic_attack",
     "passiveIds": [],
     "skills": [
       {

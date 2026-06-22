@@ -491,8 +491,8 @@
     }
   },
   {
-    "id": "at_geomancer_passive_1",
-    "name": "at_geomancer_passive_1",
+    "id": "at_conductor_passive_1",
+    "name": "at_conductor_passive_1",
     "effect": "aoeCrowdBonus",
     "perExtraTargetScale": 0.05,
     "maxExtraTargets": 5

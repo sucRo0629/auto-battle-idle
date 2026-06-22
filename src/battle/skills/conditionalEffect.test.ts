@@ -175,10 +175,11 @@ describe('conditionalEffect runtime branching', () => {
   });
 
   it('loads at_sigilist actives with conditionalEffect from game data', () => {
+    // at_sigilist の現行 JSON active は設計確定に伴い廃棄。Mark 系スキル実装後に再追加する。
     const active1 = gameData.skillRegistry.actives.at_sigilist_active_1;
     const active2 = gameData.skillRegistry.actives.at_sigilist_active_2;
-    expect(active1?.effect[0]?.type).toBe('conditionalEffect');
-    expect(active2?.effect[0]?.type).toBe('conditionalEffect');
+    expect(active1).toBeUndefined();
+    expect(active2).toBeUndefined();
   });
 });
 

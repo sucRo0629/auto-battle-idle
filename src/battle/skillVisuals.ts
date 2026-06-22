@@ -33,7 +33,7 @@ const RANGED_PHYSICAL_ATTACKER_SKILL_PREFIXES = [
 const RANGED_MAGIC_ATTACKER_SKILL_PREFIXES = [
   'at_sorcerer_',
   'at_sigilist_',
-  'at_geomancer_',
+  'at_conductor_',
   'attacker_jutsushi_',
 ] as const;
 

@@ -18,7 +18,7 @@ export const DEFAULT_ROSTER_EXTRAS: Record<string, ClassId[]> = {
     'at_hunter',
     'at_sorcerer',
     'at_sigilist',
-    'at_geomancer',
+    'at_conductor',
     'sp_abjurer',
     'sp_alchemist',
   ],

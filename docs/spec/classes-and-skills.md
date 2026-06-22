@@ -244,7 +244,7 @@ Flow Layer は、戦場そのもののルール・構造・時間軸を操作す
 
 #### ③ Structure Flow（構造制御）
 
-- 法陣師（`at_geomancer`）
+- 法陣師（`at_conductor`）
 
 ##### 特徴
 
@@ -525,8 +525,8 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 最高 HP 狙い + （未実装）                     | 重撃態勢／貫く一射   |
 | `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | — （未実装）                                  | （未実装）           |
 | `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | —（未実装）                                   | （未実装）           |
-| `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | —（未実装）                                   | 連印／爆印（`conditionalEffect`） |
-| `at_geomancer` | 法陣師 | Geomancer | back  | 遠隔魔法 | —（未実装）                                   | （未実装）           |
+| `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | —（未実装）                                   | （未実装・JSON 廃棄） |
+| `at_conductor` | 法陣師 | Conductor | back  | 遠隔魔法 | —（未実装）                                   | （未実装・JSON 廃棄） |
 
 ※ 物理 6 クラス（剣術士 / 双刃士 / 槍術士 / 弓術士 / 弩砲士 / 狩猟士）の設計思想・三分類・TBD は **§物理 Kill / Flow 設計方針** を正とする。
 
@@ -942,7 +942,7 @@ Hit と Attack は分離され、Hit 単位で追加効果やゲージ処理が�
 | ---- | -------------- | ------ |
 | 基礎 | `at_sorcerer`  | 魔術士 |
 | 拡張 | `at_sigilist`  | 印術師 |
-| 変則 | `at_geomancer` | 法陣師 |
+| 変則 | `at_conductor` | 法陣師 |
 
 成長は 3 クラスとも `growthPresetKey: "caster"`（[stats.md](stats.md)）。`traits.damageType: magic`、`formationRow: back`、射程帯は遠隔魔法（参考 `rangePx` 30）。
 
@@ -1011,34 +1011,83 @@ Hit と Attack は分離され、Hit 単位で追加効果やゲージ処理が�
 
 ---
 
-### 法陣師（`at_geomancer`・変則）
+### 法陣師（`at_conductor`・変則）
+
+英語名は **Conductor**（旧 Geomancer）。内部 ID は `at_conductor`。
 
 #### コンセプト
 
-戦場のダメージ配置と流れを再構築し、味方を含む戦闘全体の効率を最適化する**構造操作型**キャスター。
+Conductor は自身でダメージを与えるキャスターではない。
+
+戦場で発生するダメージの流れを観測・蓄積し、法陣によってその流れを集中・分散・再循環させる **Damage Routing / Distribution / Recycling** 特化クラス。
 
 #### 役割
 
-- 敵へのダメージはロスなく集中・分配し、火力効率を最大化する**火力支援**
-- 味方へのダメージは被害そのものを軽減・防御値を上げるのではなく、**被害の発生構造**を変えて損失を抑える**防御支援**
-- 単体 ⇄ 範囲など攻撃構造の変換
-- 戦場全体のダメージ偏りを均質化し、総合的な損失を最小化
+- スキル非発動中の戦場 damage を蓄積プールへ回収し、非稼働時間に価値を持たせる
+- 自身が受けた damage を蓄積へ転送し、後列狙い・範囲攻撃への耐性価値を持たせる
+- 法陣で敵 / 味方の damage を集中または分散し、戦場の偏りを調整する
+- 上位法陣で damage を貯留し、終了時に敵へ再配分する
 
 #### 特徴
 
-- **領域（法陣）** によって戦場のダメージルールそのものを再定義
-- 火力支援は「攻撃・ダメージ増加」ではなく、既存火力の無駄を消し**効率を最大化**
-- 防御支援は「防御力上昇・ダメージ軽減」ではなく、ダメージの**分配・転送・集中制御**による損失圧縮
-- 攻撃と防御を別軸として扱わず、すべてを**ダメージ流量の最適化問題**として統合
-- 味方支援を含む戦闘全体の最適化装置
+- **自身は攻撃しない**（通常攻撃含む）
+- ダメージ軽減職・ATK/DEF buff 職ではない
+- damage の発生量を直接増減しない
+- 蓄積プールは主役ではなく補助エンジン。集中・分散・返流がコア体験
+- 火力支援は「自分で殴る」「ATK buff」ではなく、既存火力の偏りを収束させる
+- 防御支援は「DEF buff」「単純軽減」ではなく、味方への damage を頭割りして損失構造を変える
+- 地点指定範囲 / 持続範囲は Hunter と共有するが、配置する effect で差別化する
+
+#### 成長ライン
+
+| 段階 | 役割 |
+| ---- | ---- |
+| Lv0 | 観測（passive）・集中（active 1）・分散（active 2） |
+| Lv10 | 観測能力拡張（passive + Continuous Observation） |
+| Lv20 | ダメージ再循環（Reflux Field） |
+
+#### コアシステム（蓄積プール）
+
+- Conductor は戦闘中 `damage reservoir`（蓄積プール）を保持する
+- スキル非発動中、戦場で発生した damage の一部をプールへ加算する（Damage Observation）
+- Conductor が受けた damage は全量プールへ加算する（Self Reservoir）
+- スキル発動中の回収は別枠・低係数とし、軽減・転送・無効化は行わない
+
+#### Passive 設計（確定案）
+
+| 枠 | 効果 | 方針 |
+| --- | --- | --- |
+| Lv0 passive 1 | Damage Observation | スキル非発動中の戦場 damage 回収。蓄積基盤 |
+| Lv0 passive 2 | Self Reservoir | 自身被弾 damage の全量回収。Defender 副属性 |
+| Lv10 passive | Enhanced Observation | 非発動中回収量増加 |
+| Lv20 passive | Advanced Observation | 非発動中回収量増加（上位） |
+
+#### Active 設計（確定案）
+
+| 枠 | 名称 | 効果 | コンセプト |
+| --- | --- | --- | --- |
+| Lv0 active 1 | Convergence Field（集中法陣） | 法陣内 damage を収束。敵は現在 HP 絶対値最大へ、味方も同様 | Damage Concentration |
+| Lv0 active 2 | Distribution Field（分散法陣） | 法陣内 damage を敵 / 味方集団内で頭割り | Damage Distribution |
+| Lv10 active 3 | Continuous Observation | 永続自己強化。発動中 damage もごく一部を蓄積へ（別枠・低係数） | Observation Expansion |
+| Lv20 active 4 | Reflux Field（返流法陣） | 法陣中の damage を追加蓄積。終了時にプールを敵へ再配分 | Damage Recycling |
 
 #### 立ち位置
 
-戦場のダメージ構造を設計し直し、火力は「無駄を消して強く見せる」、防御は「受け方を変えて弱くしない」ことで全体効率を最大化するキャスター。
+戦場のダメージ流量を観測・蓄積し、法陣で集中 / 分散 / 再循環させる **構造操作型** キャスター。
 
 #### 属性イメージ
 
-**水** — 流れ・循環・再配置としてのダメージ制御。
+**水** — 流れ・循環・集積・放流を表現するフレーバー。水魔法による攻撃ではない。
+
+#### 実装影響（TBD 同期対象）
+
+| 区分 | 候補 |
+| ---- | ---- |
+| state | `damageReservoir` |
+| effect | `damageObservation`, `selfReservoir`, `damageConcentration`, `damageDistribution`, `activeObservation`, `damageRecycling` |
+| targetShape | 地点指定範囲 + 持続効果 |
+| editor / validate / `formatSkillText` | 蓄積・法陣・回収・放出の編集・検証・表示 |
+| docs | 本節、`combat.md`、[`skill-finalization-table.md`](../plans/skill-finalization-table.md) |
 
 ---
 
@@ -1047,13 +1096,13 @@ Hit と Attack は分離され、Hit 単位で追加効果やゲージ処理が�
 | classId        | 個性     | 設計の柱                                           | 他系統との差分                                  |
 | -------------- | -------- | -------------------------------------------------- | ----------------------------------------------- |
 | `at_sorcerer`  | 純出力   | 安定 DPS・基準火力・マルチロック再配分             | 条件分岐・領域再定義なし                        |
-| `at_sigilist`  | 条件適応 | 2 系統効果の予測可能分岐・攻撃効率の最適化         | 回復/支援分岐なし。構造は変えず当て方を最適化   |
-| `at_geomancer` | 構造操作 | 法陣によるダメージ流量の再配置・味方含む全体最適化 | ATK/DEF buff ではなく分配・転送・集中で損失圧縮 |
+| `at_sigilist`  | 条件適応 | Earth / Wind Branch + Mark 付与・起爆           | 主火力は Mark 起爆。Earth / Wind は同格分岐      |
+| `at_conductor` | 構造操作 | 戦場 damage の観測・蓄積・法陣による集中 / 分散 / 再循環 | 自身 damage なし。軽減 / ATK/DEF buff ではなく routing / distribution / recycling |
 
 ### 未実装・TBD
 
-- 印術師: 条件分岐 effect 種別 `conditionalEffect`（`conditions` / `thenEffects` / `elseEffects`）。発動ゲートは skill 直下の `fireConditions` を維持
-- 法陣師: 味方ダメージ分配・転送、地点指定範囲の combat 実装と `data/skills/` への反映
+- 印術師（`at_sigilist`）: Earth / Wind Mark 系 effect、条件分岐 tooling、`data/skills/` への新 active 追加 — **Phase 7 以降**。旧 JSON active（連印 / 爆印）は廃棄済み
+- 法陣師（`at_conductor`）: damage reservoir、damage observation / concentration / distribution / recycling、地点指定範囲の combat 実装と `data/skills/` への反映 — **Phase 7 以降**。旧 `at_geomancer` ID・攻撃寄り active JSON は廃棄済み
 - 3 キャスター: Lv0 / Lv10 / Lv20 枝・属性（火 / 風地 / 水）と VFX の対応
 
 ## 配置

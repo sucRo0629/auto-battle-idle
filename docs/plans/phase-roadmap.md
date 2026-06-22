@@ -14,8 +14,9 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **4**  | クラスマスタ + スキル説明；4a **見直し中** / 4c **完了** / 4b 説明（データ PR 同梱） | **Phase 3 後に再確定** |
 | **5**  | 演出アセット + **演出調整ツール**（Canvas プレビュー・VFX 調整含む）               | 待機（スキル再確定後） |
 | **6**  | VFX **PNG 描画**（`sheets/vfx/` 64×64）— 戦闘描画の正本                           | **完了**             |
-| **7**  | バランス調整（数値チューニング全般）                                                 | 未着手               |
+| **7**  | バランス調整 + 印術師・法陣師の独自システム実装                                   | 未着手               |
 | **8**  | globalExp、強化ツリー、オフライン報酬、Electron                                      | 未着手               |
+| **9**  | ローグライクモード（仮称）— ランダム問題・ラン進行                                   | 未着手               |
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
@@ -111,6 +112,17 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 - `classes.json` の習得テーブルと `data/skills/` の効果・ターゲット・数値フィールドを更新
 - 新 effect / target / 条件 / 表示要素が増える場合は、`SkillEditorStep`・validate・`formatSkillText`・関連 spec を同じ作業で同期
 - 変更後のクラスマスタを [classes-and-skills.md](../spec/classes-and-skills.md) と突き合わせ、Phase 4a を再確定
+
+### スコープ外（Phase 3）— 独自システムクラス
+
+`at_sigilist`（印術師）と `at_conductor`（法陣師）は、Earth / Wind Mark 系・damage reservoir / routing 系など **戦闘エンジン拡張を伴う独自システム** を持つ。設計確定（[skill-finalization-table.md](./skill-finalization-table.md)）は Phase 3 で行うが、**combat 実装・`data/skills/` 投入・tooling 本番化は Phase 7 以降** とする。
+
+| classId | Phase 3 で行うこと | Phase 7 以降へ送ること |
+| --- | --- | --- |
+| `at_sigilist` | 枠設計・Mark / Branch 仕様の docs 確定。現行 JSON active は廃棄済み | Mark state / effect、conditionalEffect tooling、passive / active JSON |
+| `at_conductor` | 枠設計・蓄積プール / 法陣仕様の docs 確定。現行 JSON active は廃棄済み | damage reservoir、observation / concentration / distribution / recycling、非 damage basic、地点指定範囲 |
+
+Phase 3 の Caster pass は **`at_sorcerer` のみ** を対象とする。印術師・法陣師はクラスマスタ上は存在するが、スキル未実装のまま据え置き可。
 
 ---
 
@@ -263,9 +275,9 @@ Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦�
 
 ---
 
-## Phase 7 — バランス調整
+## Phase 7 — バランス調整 + 独自システムクラス実装
 
-Phase 3〜6（および Phase 4 のクラスマスタ）で機能・コンテンツ・見た目が揃ったあとに、ゲーム全体の数値をチューニングする。Phase 3 再オープン中は、クラス別スキル再設定を優先し、数値の最終調整はここへ残す。
+Phase 3〜6（および Phase 4 のクラスマスタ）で **既存 effect 中心の 13 クラス** の機能・コンテンツ・見た目が揃ったあとに着手する。ゲーム全体の数値チューニングに加え、Phase 3 で設計のみ確定した **印術師・法陣師の独自システム実装** もここで行う（Phase 7 以降が望ましい）。
 
 ### スコープ
 
@@ -277,6 +289,8 @@ Phase 3〜6（および Phase 4 のクラスマスタ）で機能・コンテン
 - **passive / active 枠構造**の最終確認（Lv0=2 / Lv10=3 / Lv20=4）
   - active は `getUnlockedActiveSlotCount`、passive は同じ Lv 段階に対応する解決処理へ固定
   - **UI**（HUD / スキル表示）と**戦闘**（`createCooldowns` / `reconcileMemberBuild` 等）の両方で習得済み passive / active 常時使用として扱う
+- **`at_sigilist`** — Earth / Wind Mark、Branch 分岐、Mark 付与・起爆、関連 tooling（[skill-finalization-table.md](./skill-finalization-table.md)）
+- **`at_conductor`** — damage reservoir、observation / concentration / distribution / recycling、地点指定範囲 / 持続法陣、非 damage basic
 
 ### スコープ外（Phase 7）
 
@@ -286,7 +300,7 @@ Phase 3〜6（および Phase 4 のクラスマスタ）で機能・コンテン
 
 ## Phase 8 — メタ・デスクトップ
 
-Phase 7（バランス調整）完了後に着手。クラスマスタ・数値チューニングが揃ってからパーティ全体メタとデスクトップシェルを本番化する。
+Phase 7（バランス調整 + 印術師・法陣師実装）完了後に着手。クラスマスタ・数値チューニングが揃ってからパーティ全体メタとデスクトップシェルを本番化する。
 
 - 勝利・オフライン時間から **globalExp** 付与
 - 強化ツリー（`enhancementTree.json`）：パーティ永続のステノード
@@ -317,7 +331,32 @@ Phase 5（演出アセット + 演出調整ツール）  ← スキル再確定�
     ↓
 Phase 6（VFX PNG 描画）  ← 5 と並行可
     ↓
-Phase 7（バランス調整）
+Phase 7（バランス調整 + 印術師・法陣師実装）
     ↓
 Phase 8（globalExp + ツリー + オフライン + Electron）
+    ↓
+Phase 9（ローグライクモード — [roguelike-mode.md](../spec/roguelike-mode.md)）
 ```
+
+---
+
+## Phase 9 — ローグライクモード（仮称）
+
+**着手条件:** Phase 8 完了後。詳細仕様は [roguelike-mode.md](../spec/roguelike-mode.md) §18。
+
+**ゴール:** メインステージ攻略後も、編成実験・クラス研究・解法探索を供給するランダム問題モード。
+
+### スコープ（概要）
+
+- ラン専用 state（メインセーブと分離）
+- 問題生成（敵構成・傾向・ステージ補正）
+- 分岐マップ・進路選択・報酬選択 UI
+- 世界補正・制約・クラスルール変化型報酬
+- 既存 `BattleEngine` への Mod 注入
+- エンドレス継続
+
+### スコープ外（初期）
+
+- メインモードへのラン報酬永続転用
+- 戦闘中プレイヤー操作
+- ラン専用新クラス
