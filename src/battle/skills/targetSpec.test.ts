@@ -170,6 +170,28 @@ describe('getTargetPool / pickTargetFromPool', () => {
     expect(pickTargetFromPool(spec, actor, pool)?.id).toBe('a2');
   });
 
+  it('includes actor in ally hp ratio pool for heal effects', () => {
+    const spec = {
+      kind: 'stat',
+      side: 'ally',
+      stat: 'hp',
+      order: 'ratio',
+    } as const;
+    const woundedHealer = mockUnit('a1', 200, { hp: 30, maxHp: 100 });
+    const healthier = mockUnit('a2', 150, { hp: 60, maxHp: 100 });
+    const pool = getTargetPool(spec, woundedHealer, [woundedHealer, healthier], enemies);
+    expect(
+      pickTargetFromPool(spec, woundedHealer, pool, {
+        includeActorInAllyPool: true,
+      })?.id,
+    ).toBe('a1');
+    expect(
+      orderPoolByTarget(spec, woundedHealer, pool, {
+        includeActorInAllyPool: true,
+      }).map((u) => u.id),
+    ).toEqual(['a1', 'a2']);
+  });
+
   it('falls back to self for ally stat target when alone in party', () => {
     const spec = {
       kind: 'stat',

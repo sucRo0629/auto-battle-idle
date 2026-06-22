@@ -78,7 +78,7 @@
 
 **原則:** 回復後の HP は `min(maxHp, hp + amount)` — 超過分は切り捨て。
 
-**アクティブ heal / hot の発動保留:** 射程内の対象候補（`self` のときは自身）に **欠損 HP（`hp < maxHp`）の味方が 1 人もいない場合は発動しない**（CD 進行なし）。**同一スキルにバリア付与 effect がある場合は例外** — 対象が満タンでも heal / hot を解決する。パッシブ由来の HoT aura / 定期 tick は対象外。`target` の `order: ratio` で同率タイのときはプール先頭が選ばれる（実 HP のタイブレークなし）— 保留ルール適用後、全員満タン時には通常到達しない。**味方 stat / distance 対象で他味方がいないときは自身にフォールバック**（単独パーティの heal / バリア等）。
+**アクティブ heal / hot の発動保留:** 射程内の対象候補（`self` のときは自身）に **欠損 HP（`hp < maxHp`）の味方が 1 人もいない場合は発動しない**（CD 進行なし）。**同一スキルにバリア付与 effect がある場合は例外** — 対象が満タンでも heal / hot を解決する。パッシブ由来の HoT aura / 定期 tick は対象外。`target` の `order: ratio` で同率タイのときはプール先頭が選ばれる（実 HP のタイブレークなし）— 保留ルール適用後、全員満タン時には通常到達しない。**heal の味方 stat / distance 対象は使用者自身も候補に含める**（支援 buff 等の非 heal 味方 stat は従来どおり使用者除外）。
 
 **余剰回復バリア変換**（パッシブ `excessHealToBarrier`）: 試行回復量のうち maxHp 超過分 × `barrierScale` を **バリア上書き**（`barrierStack` なし）。
 
@@ -166,6 +166,8 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 | `waveEnd` | 敵全滅 settle〜次 Wave deploy まで |
 | `enemyCount` | 生存敵数（`scope: living`）または射程内敵数（`inRange`） |
 | `targetHp` / `debuff` / `minTargets` / `selfHp` / `allyDamaged` | 各 kind の閾値・タグ |
+
+**`fireConditions` の `targetHp`:** 参照 effect（先頭 effect）の `target` と射程で **攻撃可能プール** を組み、味方向けはプール全体で判定する。`target: all` + `side: ally` → 射程内（`all` は射程無視で全生存味方）の **誰か1人** が閾値を満たせば成立。`target: stat` + `hp` + `order: ratio` + `side: ally` → プール内 **最小 HP 割合**が閾値を満たせば成立（heal は使用者もプールに含む）。敵向け・単体 anchor 向けは従来どおり primary 1 体で判定。
 
 Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `periodicTrigger: waveStart`** を使用（味方 CD は Wave 跨ぎ維持のため初期チャージは廃案）。
 

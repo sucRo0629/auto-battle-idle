@@ -20,6 +20,7 @@ import type {
   CombatantState,
   DebuffFilterTag,
   PassiveSkillDef,
+  SkillEffectDef,
   SkillHitTarget,
   TargetDistanceOrder,
   TargetRule,
@@ -434,7 +435,35 @@ export type PickTargetOptions = {
    * 至近/最遠は使用者との battleX 距離で決め、Threat や接近 chase の編成奥選択を使わない。
    */
   moveAnchor?: boolean;
+  /** heal 等：味方 stat / distance 対象で使用者を候補プールに含める */
+  includeActorInAllyPool?: boolean;
 };
+
+/** 回復 effect は味方対象に使用者自身も含める */
+export function pickOptionsForEffect(
+  effect: SkillEffectDef | undefined,
+): PickTargetOptions | undefined {
+  if (effect?.type === 'heal') {
+    return { includeActorInAllyPool: true };
+  }
+  return undefined;
+}
+
+function includeActorInAllyPool(options?: PickTargetOptions): boolean {
+  return options?.includeActorInAllyPool === true;
+}
+
+/** 味方対象で自身を除いた後に候補が空なら、単独パーティ時は自身にフォールバック */
+function allySelectablePool(
+  pool: CombatantState[],
+  actor: CombatantState,
+  options?: PickTargetOptions,
+): CombatantState[] {
+  if (includeActorInAllyPool(options)) {
+    return pool.filter((unit) => unit.isAlive);
+  }
+  return allySelectableExcludingSelf(pool, actor);
+}
 
 /** 味方対象で自身を除いた後に候補が空なら、単独パーティ時は自身にフォールバック */
 function allySelectableExcludingSelf(
@@ -519,8 +548,8 @@ export function pickTargetFromPool(
 
   if (spec.kind === "distance" && spec.side === "ally") {
     const selectable = distanceSpecIncludesSelf(spec)
-      ? pool
-      : allySelectableExcludingSelf(pool, actor);
+      ? pool.filter((unit) => unit.isAlive)
+      : allySelectablePool(pool, actor, options);
     if (selectable.length === 0) return null;
     const actorX = getBattleX(actor);
     // Target Intent: ally closestAlly. Same-faction distance is pure battleX distance.
@@ -555,7 +584,7 @@ export function pickTargetFromPool(
   if (spec.kind === "stat") {
     const selectable =
       spec.side === "ally"
-        ? allySelectableExcludingSelf(pool, actor)
+        ? allySelectablePool(pool, actor, options)
         : pool;
     if (selectable.length === 0) return null;
     const pickHigher = spec.order === "highest";
@@ -600,7 +629,8 @@ export function filterSelectablePool(
 export function orderPoolByTarget(
   spec: TargetSpec,
   actor: CombatantState,
-  pool: CombatantState[]
+  pool: CombatantState[],
+  options?: PickTargetOptions,
 ): CombatantState[] {
   if (pool.length <= 1) return [...pool];
 
@@ -633,8 +663,10 @@ export function orderPoolByTarget(
   if (spec.kind === "distance" && spec.side === "ally") {
     const actorX = getBattleX(actor);
     const selectable = distanceSpecIncludesSelf(spec)
-      ? copy
-      : copy.filter((unit) => unit.id !== actor.id);
+      ? copy.filter((unit) => unit.isAlive)
+      : includeActorInAllyPool(options)
+        ? copy.filter((unit) => unit.isAlive)
+        : copy.filter((unit) => unit.id !== actor.id);
     const sorted = selectable.sort((a, b) => {
       const da = Math.abs(getBattleX(a) - actorX);
       const db = Math.abs(getBattleX(b) - actorX);
@@ -655,14 +687,18 @@ export function orderPoolByTarget(
     if (spec.stat === "hp" && spec.order === "ratio") {
       const selectable =
         spec.side === "ally"
-          ? copy.filter((unit) => unit.id !== actor.id)
+          ? includeActorInAllyPool(options)
+            ? copy.filter((unit) => unit.isAlive)
+            : copy.filter((unit) => unit.id !== actor.id)
           : copy;
       return selectable.sort((a, b) => currentHpRatio(a) - currentHpRatio(b));
     }
     const desc = spec.order === "highest";
     const selectable =
       spec.side === "ally"
-        ? copy.filter((unit) => unit.id !== actor.id)
+        ? includeActorInAllyPool(options)
+          ? copy.filter((unit) => unit.isAlive)
+          : copy.filter((unit) => unit.id !== actor.id)
         : copy;
     return selectable.sort((a, b) => {
       const av = compareStat(a, spec.stat);

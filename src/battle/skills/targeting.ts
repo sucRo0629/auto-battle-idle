@@ -31,6 +31,7 @@ import {
   isSelfOriginSpec,
   normalizeTarget,
   orderPoolByTarget,
+  pickOptionsForEffect,
   pickTargetFromPool as pickTargetFromPoolSpec,
   resolveTargetSpec,
   targetSpecFaction,
@@ -106,6 +107,7 @@ function resolveAoeHitTargets(
   actor: CombatantState,
   attackablePool: CombatantState[],
   aoeRadiusPx: number,
+  pickOptions?: PickTargetOptions,
 ): SkillHitTarget[] {
   if (isSelfOriginSpec(spec)) {
     const anchorX = getBattleX(actor);
@@ -114,7 +116,7 @@ function resolveAoeHitTargets(
       .map((unit) => ({ unit }));
   }
 
-  const anchor = pickTargetFromPoolSpec(spec, actor, attackablePool);
+  const anchor = pickTargetFromPoolSpec(spec, actor, attackablePool, pickOptions);
   if (!anchor) return [];
 
   const anchorX = getBattleX(anchor);
@@ -298,6 +300,7 @@ export function resolveEffectResolution(
   const attackablePool = getAttackablePool(spec, actor, allies, enemies, rangePx);
   const shape: TargetShape = effect.targetShape ?? 'single';
   const basePower = getBaseAtkScale(effect);
+  const pickOptions = pickOptionsForEffect(effect);
 
   const skipHealWithhold =
     allSkillEffects !== undefined &&
@@ -339,7 +342,7 @@ export function resolveEffectResolution(
       return resolveRepeatedHitWaves(targets, hits, duration);
     }
 
-    const target = pickTargetFromPoolSpec(spec, actor, attackablePool);
+    const target = pickTargetFromPoolSpec(spec, actor, attackablePool, pickOptions);
     if (!target) return null;
     const hits = effect.hitCount;
     if (hits === undefined || hits < 2) {
@@ -363,7 +366,7 @@ export function resolveEffectResolution(
     const targets = applyIncludeSelfFilter(
       spec,
       actor,
-      resolveAoeHitTargets(spec, actor, attackablePool, radius),
+      resolveAoeHitTargets(spec, actor, attackablePool, radius, pickOptions),
     );
     if (targets.length === 0) return null;
     const hits = effect.hitCount;
@@ -383,6 +386,7 @@ export function resolveEffectResolution(
       actor,
       attackablePool,
       hits,
+      pickOptions,
     );
     if (targets.length === 0) return null;
     return { waves: [{ hitIndex: 0, targets }] };
@@ -491,11 +495,12 @@ function resolveMultiLockHitTargets(
   actor: CombatantState,
   attackablePool: CombatantState[],
   hitCount: number,
+  pickOptions?: PickTargetOptions,
 ): SkillHitTarget[] {
   const selectable = filterSelectablePool(spec, attackablePool);
   if (selectable.length === 0) return [];
 
-  const ordered = orderPoolByTarget(spec, actor, selectable);
+  const ordered = orderPoolByTarget(spec, actor, selectable, pickOptions);
   const targets: SkillHitTarget[] = [];
   for (let i = 0; i < hitCount; i++) {
     targets.push({ unit: ordered[i % ordered.length]! });
@@ -574,6 +579,7 @@ function resolveChainHitTargets(
     spec,
     actor,
     attackablePool,
+    pickOptionsForEffect(effect),
   );
   if (!current) return [];
 

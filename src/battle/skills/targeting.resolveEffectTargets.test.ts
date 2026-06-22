@@ -160,6 +160,28 @@ describe('resolveEffectTargets', () => {
     expect(targets).toHaveLength(0);
   });
 
+  it('multiLock heal hp ratio: includes caster when most damaged', () => {
+    const caster = mockUnit('caster', 200, { hp: 30, maxHp: 100 });
+    const healthy = mockUnit('healthy', 220, { hp: 100, maxHp: 100 });
+
+    const targets = resolveEffectTargets(
+      {
+        type: 'heal',
+        healSubKind: 'instant',
+        target: { kind: 'stat', side: 'ally', stat: 'hp', order: 'ratio' },
+        targetShape: 'multiLock',
+        hitCount: 4,
+        amount: { kind: 'flat', flatAmount: 10 },
+      } as SkillEffectDef,
+      caster,
+      [caster, healthy],
+      [],
+      gameData,
+    );
+    expect(targets).toHaveLength(4);
+    expect(targets.every((t) => t.id === 'caster')).toBe(true);
+  });
+
   it('single: repeated hits on same target with duration', () => {
     const resolution = resolveEffectResolution(
       {

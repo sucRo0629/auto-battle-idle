@@ -9,8 +9,13 @@ import type {
   GameData,
   PassiveSkillDef,
   SkillEffectDef,
+  TargetSpec,
 } from '../types.ts';
-import { isWithinSkillRange } from './rangeUtils.ts';
+import {
+  getAttackablePool,
+  isWithinSkillRange,
+  resolveSkillRangePx,
+} from './rangeUtils.ts';
 import { getTargetPool } from './targetSpec.ts';
 import { pickTargetFromPool, resolveEffectTargetSpec } from './targeting.ts';
 
@@ -50,16 +55,70 @@ export function resolveSkillConditionReferenceEffect(
   return resolveConditionReferenceEffect(skill.effect[0]);
 }
 
-function resolvePrimaryTarget(ctx: ConditionEvalContext): CombatantState | null {
+function resolveReferenceTargetSpec(ctx: ConditionEvalContext): TargetSpec | null {
   const reference = ctx.referenceEffect;
   if (!reference) return null;
-  const spec = resolveEffectTargetSpec(
+  return resolveEffectTargetSpec(
     reference,
     ctx.actor,
     ctx.allies,
     ctx.enemies,
     ctx.passives,
   );
+}
+
+function resolveReferenceAttackablePool(ctx: ConditionEvalContext): CombatantState[] {
+  const reference = ctx.referenceEffect;
+  const spec = resolveReferenceTargetSpec(ctx);
+  if (!reference || !spec) return [];
+  const rangePx = resolveSkillRangePx(
+    ctx.actor,
+    reference,
+    livingUnits(ctx.allies).length,
+  );
+  return getAttackablePool(
+    spec,
+    ctx.actor,
+    ctx.allies,
+    ctx.enemies,
+    rangePx,
+  ).filter((unit) => unit.isAlive);
+}
+
+function evaluateAllyTargetHpCondition(
+  pool: CombatantState[],
+  spec: TargetSpec,
+  condition: Extract<FireCondition, { kind: 'targetHp' }>,
+): boolean {
+  if (pool.length === 0) return false;
+  const threshold = condition.maxHpRatio;
+  const compare = condition.compare;
+
+  if (spec.kind === 'all' && spec.side === 'ally') {
+    return pool.some((unit) =>
+      matchesHpRatioThreshold(currentHpRatio(unit), threshold, compare),
+    );
+  }
+
+  if (
+    spec.kind === 'stat' &&
+    spec.side === 'ally' &&
+    spec.stat === 'hp' &&
+    spec.order === 'ratio'
+  ) {
+    const minRatio = Math.min(...pool.map((unit) => currentHpRatio(unit)));
+    return matchesHpRatioThreshold(minRatio, threshold, compare);
+  }
+
+  return pool.some((unit) =>
+    matchesHpRatioThreshold(currentHpRatio(unit), threshold, compare),
+  );
+}
+
+function resolvePrimaryTarget(ctx: ConditionEvalContext): CombatantState | null {
+  const reference = ctx.referenceEffect;
+  const spec = resolveReferenceTargetSpec(ctx);
+  if (!reference || !spec) return null;
   const pool = getTargetPool(spec, ctx.actor, ctx.allies, ctx.enemies);
   return pickTargetFromPool(spec, ctx.actor, pool);
 }
@@ -118,6 +177,23 @@ export function evaluateCondition(
       return true;
     }
     case 'targetHp': {
+      const spec = resolveReferenceTargetSpec(ctx);
+      if (!spec) return false;
+
+      if (
+        (spec.kind === 'all' && spec.side === 'ally') ||
+        (spec.kind === 'stat' &&
+          spec.side === 'ally' &&
+          spec.stat === 'hp' &&
+          spec.order === 'ratio')
+      ) {
+        return evaluateAllyTargetHpCondition(
+          resolveReferenceAttackablePool(ctx),
+          spec,
+          condition,
+        );
+      }
+
       const target = resolvePrimaryTarget(ctx);
       if (!target?.isAlive) return false;
       return matchesHpRatioThreshold(
