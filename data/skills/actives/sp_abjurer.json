@@ -1,7 +1,7 @@
 [
   {
     "id": "sp_abjurer_active_1",
-    "name": "盾添え",
+    "name": "支えの障壁",
     "trigger": {
       "kind": "time",
       "value": 8
@@ -97,7 +97,7 @@
         "buffSubKind": "barrier",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.15
+          "atkScale": 1.25
         },
         "targetShape": "multiLock",
         "hitCount": 2
@@ -106,7 +106,7 @@
   },
   {
     "id": "sp_abjurer_active_3",
-    "name": "sp_abjurer_active_3",
+    "name": "庇護の帷",
     "trigger": {
       "kind": "time",
       "value": 12
@@ -146,7 +146,7 @@
   },
   {
     "id": "sp_abjurer_active_4",
-    "name": "sp_abjurer_active_4",
+    "name": "双重の大盾",
     "trigger": {
       "kind": "time",
       "value": 16
@@ -160,7 +160,7 @@
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "damageTaken",
-        "buffMultiplier": 0.9,
+        "buffMultiplier": 0.85,
         "buffDurationSec": 8
       },
       {
@@ -172,7 +172,7 @@
         "buffSubKind": "barrier",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1
+          "atkScale": 1.25
         }
       }
     ]

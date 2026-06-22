@@ -1,7 +1,7 @@
 [
   {
     "id": "sp_alchemist_active_1",
-    "name": "sp_alchemist_active_1",
+    "name": "薬粉撒き",
     "trigger": {
       "kind": "time",
       "value": 10

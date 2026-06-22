@@ -47,7 +47,7 @@
   },
   {
     "id": "sp_cleric_active_2",
-    "name": "救命",
+    "name": "救命の息吹",
     "trigger": {
       "kind": "time",
       "value": 10
@@ -110,7 +110,7 @@
   },
   {
     "id": "sp_cleric_active_4",
-    "name": "調律の癒光",
+    "name": "命の奔流",
     "trigger": {
       "kind": "time",
       "value": 15

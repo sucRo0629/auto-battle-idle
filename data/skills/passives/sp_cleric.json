@@ -16,7 +16,7 @@
   },
   {
     "id": "sp_cleric_passive_2",
-    "name": "癒光循環",
+    "name": "生気の循環",
     "effect": "excessHealToBarrier",
     "barrierScale": 0.8,
     "excessHealSources": [
@@ -25,7 +25,7 @@
   },
   {
     "id": "sp_cleric_passive_3",
-    "name": "生命調律",
+    "name": "巡る生命",
     "effect": "excessHealRedirect",
     "redirectScale": 0.5,
     "excessHealSources": [
@@ -34,7 +34,7 @@
   },
   {
     "id": "sp_cleric_passive_4",
-    "name": "癒しの備え",
+    "name": "生命調律",
     "effect": "healReservation",
     "grantOnHealMaxHpRatio": 0.55,
     "stackDurationSec": 8,
@@ -43,6 +43,6 @@
       "kind": "atkBased",
       "atkScale": 0.75
     },
-    "buffDisplayName": "癒しの残響"
+    "buffDisplayName": "治癒の残響"
   }
 ]

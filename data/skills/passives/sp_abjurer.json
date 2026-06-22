@@ -1,7 +1,7 @@
 [
   {
     "id": "sp_abjurer_passive_1",
-    "name": "常の庇護",
+    "name": "朧の衣",
     "effect": "buff",
     "buffSubKind": "stat",
     "buffStat": [
@@ -17,7 +17,7 @@
   },
   {
     "id": "sp_abjurer_passive_2",
-    "name": "備えあれば",
+    "name": "守護の備え",
     "effect": "buff",
     "buffSubKind": "barrier",
     "barrierAmount": {
@@ -34,7 +34,7 @@
   },
   {
     "id": "sp_abjurer_passive_3",
-    "name": "憂い無し",
+    "name": "守護の陣立て",
     "effect": "buff",
     "buffSubKind": "barrier",
     "barrierAmount": {
@@ -49,7 +49,7 @@
   },
   {
     "id": "sp_abjurer_passive_4",
-    "name": "結界再編",
+    "name": "結い直し",
     "effect": "barrierBreakRegen",
     "barrierAmount": {
       "kind": "atkBased",
