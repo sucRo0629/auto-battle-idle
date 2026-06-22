@@ -1,0 +1,37 @@
+[
+  {
+    "id": "at_ballista_passive_1",
+    "name": "大物喰い",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "hp",
+      "order": "highest"
+    },
+    "targetRuleOverrideApplyTo": "enemy"
+  },
+  {
+    "id": "at_ballista_passive_2",
+    "name": "大物狙い",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "hp",
+      "order": "highest"
+    },
+    "targetRuleOverrideApplyTo": "enemy"
+  },
+  {
+    "id": "at_ballista_passive_3",
+    "name": "岩穿ち",
+    "effect": "defenseIgnore",
+    "defenseIgnore": {
+      "def": {
+        "mode": "percent",
+        "amount": 0.3
+      }
+    }
+  }
+]

@@ -1,0 +1,14 @@
+[
+  {
+    "id": "at_passive_1",
+    "name": "大物喰い",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "hp",
+      "order": "highest"
+    },
+    "targetRuleOverrideApplyTo": "enemy"
+  }
+]

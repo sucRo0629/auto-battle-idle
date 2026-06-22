@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const legacyPath = path.join(root, 'data/skills.json');
 const skillsDir = path.join(root, 'data/skills');
+const passivesDir = path.join(skillsDir, 'passives');
 const activesDir = path.join(skillsDir, 'actives');
 
 function getActiveFileStem(skillId) {
@@ -25,11 +26,23 @@ if (!Array.isArray(skills.passives) || !Array.isArray(skills.actives)) {
   throw new Error('skills.json must have passives[] and actives[]');
 }
 
+fs.mkdirSync(passivesDir, { recursive: true });
 fs.mkdirSync(activesDir, { recursive: true });
-fs.writeFileSync(
-  path.join(skillsDir, 'passives.json'),
-  `${JSON.stringify(skills.passives, null, 2)}\n`,
-);
+
+const passivesByStem = new Map();
+for (const passive of skills.passives) {
+  const stem = getActiveFileStem(passive.id);
+  const bucket = passivesByStem.get(stem) ?? [];
+  bucket.push(passive);
+  passivesByStem.set(stem, bucket);
+}
+
+for (const [stem, passives] of [...passivesByStem.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+  fs.writeFileSync(
+    path.join(passivesDir, `${stem}.json`),
+    `${JSON.stringify(passives, null, 2)}\n`,
+  );
+}
 
 const byStem = new Map();
 for (const active of skills.actives) {
@@ -51,7 +64,9 @@ fs.unlinkSync(legacyPath);
 console.log(
   'split complete:',
   skills.passives.length,
-  'passives,',
+  'passives in',
+  passivesByStem.size,
+  'files,',
   skills.actives.length,
   'actives in',
   byStem.size,

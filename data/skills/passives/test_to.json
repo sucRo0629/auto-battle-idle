@@ -1,0 +1,13 @@
+[
+  {
+    "id": "test_to_ranged_passive_1",
+    "name": "test_to_ranged_passive_1",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "distance",
+      "side": "enemy",
+      "order": "farthest"
+    },
+    "targetRuleOverrideApplyTo": "enemy"
+  }
+]

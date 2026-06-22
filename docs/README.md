@@ -29,8 +29,8 @@
 
 | ファイル                          | 行数目安           | AI / エージェント向け                                      |
 | --------------------------------- | ------------------ | ---------------------------------------------------------- |
-| `data/skills/passives.json`       | ~400               | 共有パッシブのみ。必要なら全文可                           |
-| `data/skills/actives/<stem>.json` | ~30–150 / ファイル | **触るクラス分だけ** Read / Grep（例: `df_guardian.json`） |
+| `data/skills/passives/<stem>.json` | ~10–80 / ファイル | **触るクラス分だけ** Read / Grep（例: `df_guardian.json`） |
+| `data/skills/actives/<stem>.json`  | ~30–150 / ファイル | **触るクラス分だけ** Read / Grep（例: `df_guardian.json`） |
 | `classes.json`                    | ~600               | 全文読まない。`.cursorignore` 除外。ID で Grep             |
 | その他 `data/*.json`              | ~100 以下          | 必要なら全文可                                             |
 

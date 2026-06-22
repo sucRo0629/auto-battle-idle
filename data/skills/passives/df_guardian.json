@@ -1,0 +1,56 @@
+[
+  {
+    "id": "df_guardian_passive_2",
+    "name": "立ちはだかる壁",
+    "effect": "threatControl",
+    "onDamageTakenScale": 0.5,
+    "onBlockFlat": 5,
+    "threatDecayMultiplier": 0.5
+  },
+  {
+    "id": "df_guardian_passive_5",
+    "name": "立ちはだかる壁",
+    "effect": "threatControl",
+    "onDamageTakenScale": 0.5,
+    "onBlockFlat": 5,
+    "threatDecayMultiplier": 0.5
+  },
+  {
+    "id": "df_guardian_passive_3",
+    "name": "防御態勢",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "defBased",
+      "defScale": 0.5
+    },
+    "buffTargetRule": {
+      "kind": "self"
+    },
+    "periodicTrigger": "waveStart"
+  },
+  {
+    "id": "df_guardian_passive_4",
+    "name": "防御態勢",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "defBased",
+      "defScale": 0.5
+    },
+    "buffTargetRule": {
+      "kind": "self"
+    },
+    "periodicTrigger": "waveStart"
+  },
+  {
+    "id": "df_guardian_passive_1",
+    "name": "大盾使い",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.2,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  }
+]

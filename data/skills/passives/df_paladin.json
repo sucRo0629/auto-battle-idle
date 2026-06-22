@@ -1,0 +1,54 @@
+[
+  {
+    "id": "df_paladin_passive_2",
+    "name": "護法の陣",
+    "effect": "threatControl",
+    "frontThreatFloor": 0.72,
+    "frontThreatDecayMultiplier": 0.65,
+    "frontDamageTakenReduction": 0.06
+  },
+  {
+    "id": "df_paladin_passive_3",
+    "name": "無形の盾",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "percentMaxHp",
+      "percentOfMaxHp": 0.1,
+      "maxHpRef": "self"
+    },
+    "buffTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    },
+    "periodicTrigger": "waveStart"
+  },
+  {
+    "id": "df_paladin_passive_4",
+    "name": "df_paladin_passive_4",
+    "effect": "damageReduction",
+    "damageReductionPercent": 0.05,
+    "damageReductionTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    }
+  },
+  {
+    "id": "df_paladin_passive_5",
+    "name": "前衛の加護",
+    "effect": "threatControl",
+    "frontThreatFloor": 0.72,
+    "frontThreatDecayMultiplier": 0.65,
+    "frontDamageTakenReduction": 0.06
+  },
+  {
+    "id": "df_paladin_passive_1",
+    "name": "盾受け",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.1,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  }
+]

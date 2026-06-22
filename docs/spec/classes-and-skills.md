@@ -2,7 +2,7 @@
 
 ゲームデータは `data/*.json`。型・スキーマ定数：`src/battle/types.ts`, `src/battle/data/gameDataSchema.ts`。ロード・検証：`loadGameData.ts`, `validateGameData.ts`
 
-**スキルマスタ：** `data/classes.json`（15 クラス）と `data/skills/`（`passives.json` + `actives/<stem>.json`。共有パッシブ + クラス別 basic/active）が本番マスタ。数値バランスは調整対象だが、ID・形状・パッシブ種別はこの仕様に従う。
+**スキルマスタ：** `data/classes.json`（15 クラス）と `data/skills/`（`passives/<stem>.json` + `actives/<stem>.json`。クラス別パッシブ + basic/active）が本番マスタ。数値バランスは調整対象だが、ID・形状・パッシブ種別はこの仕様に従う。
 
 ## データ編集ツールとの同期
 
@@ -1278,7 +1278,7 @@ growthTier: GrowthTierSet;
 growthPresetKey?: "attacker" | "caster"; // 魔術系（at_sorcerer 等）の成長合成
 attackSpeedTier?: AttackSpeedTier;       // 未指定 = normal
 epithetEn?: string;   // 英語肩書き（UI 未接続）
-passiveIds?: string[]; // クラス固有パッシブ（`data/skills/passives.json` への参照）
+passiveIds?: string[]; // クラス固有パッシブ（`data/skills/passives/<stem>.json` への参照）
 ```
 
 - 成長の実数解決・`growthPresets` 表・術師合成ルール → [stats.md](stats.md)
@@ -1417,7 +1417,7 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 
 ### パッシブ効果（`PassiveEffectKind`）
 
-共有パッシブは `data/skills/passives.json` に定義し、クラスは `passiveIds` で参照する。
+クラス固有パッシブは `data/skills/passives/<stem>.json` に定義し（stem はスキル ID 先頭2セグメント。`actives/` と同規則）、クラスは `passiveIds` で参照する。
 
 | effect                  | 主なフィールド                                                                                                                                                          | 挙動                                                                                                                                                                                                                                                                                                                                                                                   |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -1715,6 +1715,6 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 ## コンテンツ追加手順
 
 1. `classes.json` にクラスを追加
-2. 必要なら `data/skills/passives.json` または `data/skills/actives/<classStem>.json` にスキルを追加
+2. 必要なら `data/skills/passives/<classStem>.json` または `data/skills/actives/<classStem>.json` にスキルを追加
 3. `parties.json` または将来のセーブ形式で ID を参照
 4. 起動時 `validateGameData` が ID 参照の整合性をチェック

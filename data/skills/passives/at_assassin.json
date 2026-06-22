@@ -1,0 +1,38 @@
+[
+  {
+    "id": "at_assassin_passive_1",
+    "name": "手負い狩り",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "hp",
+      "order": "ratio"
+    }
+  },
+  {
+    "id": "at_assassin_passive_2",
+    "name": "影の歩み",
+    "effect": "buff",
+    "buffSubKind": "evasion",
+    "chance": 0.2,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
+    "id": "at_assassin_passive_3",
+    "name": "刈り取り",
+    "effect": "specialEffect",
+    "specialEffectApplyTo": "damage",
+    "specialEffect": {
+      "scale": 1.25,
+      "conditions": [
+        {
+          "kind": "targetHp",
+          "maxHpRatio": 0.25
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "at_hunter_passive_1",
+    "name": "追い込み",
+    "effect": "specialEffect",
+    "specialEffectApplyTo": "damage",
+    "specialEffect": {
+      "scale": 1.2,
+      "conditions": [
+        {
+          "kind": "debuff",
+          "tags": [
+            "def",
+            "reg"
+          ]
+        }
+      ]
+    }
+  }
+]

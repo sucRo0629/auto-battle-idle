@@ -1,0 +1,25 @@
+[
+  {
+    "id": "at_warrior_passive_1",
+    "name": "重装狙い",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "def",
+      "order": "highest"
+    },
+    "targetRuleOverrideApplyTo": "enemy"
+  },
+  {
+    "id": "at_warrior_passive_2",
+    "name": "鎧砕き",
+    "effect": "defenseIgnore",
+    "defenseIgnore": {
+      "def": {
+        "mode": "percent",
+        "amount": 0.25
+      }
+    }
+  }
+]

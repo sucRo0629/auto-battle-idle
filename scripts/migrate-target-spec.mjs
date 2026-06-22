@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const skillsDir = join(root, 'data/skills');
-const passivesPath = join(skillsDir, 'passives.json');
+const passivesDir = join(skillsDir, 'passives');
 const activesDir = join(skillsDir, 'actives');
 
 const DEBUFF_TAGS = ['atk', 'def', 'reg', 'damageTaken', 'dot', 'stun'];
@@ -91,12 +91,15 @@ function migrateActive(active) {
   return next;
 }
 
-function migratePassivesFile() {
-  const passives = JSON.parse(readFileSync(passivesPath, 'utf8'));
-  if (!Array.isArray(passives)) {
-    throw new Error('passives.json must be an array');
+function migratePassivesFiles() {
+  for (const name of readdirSync(passivesDir).filter((entry) => entry.endsWith('.json'))) {
+    const filePath = join(passivesDir, name);
+    const passives = JSON.parse(readFileSync(filePath, 'utf8'));
+    if (!Array.isArray(passives)) {
+      throw new Error(`${filePath} must be an array`);
+    }
+    writeFileSync(filePath, `${JSON.stringify(passives.map(migratePassive), null, 2)}\n`, 'utf8');
   }
-  writeFileSync(passivesPath, `${JSON.stringify(passives.map(migratePassive), null, 2)}\n`, 'utf8');
 }
 
 function migrateActiveFiles() {
@@ -110,6 +113,6 @@ function migrateActiveFiles() {
   }
 }
 
-migratePassivesFile();
+migratePassivesFiles();
 migrateActiveFiles();
 console.log('Migrated', skillsDir);

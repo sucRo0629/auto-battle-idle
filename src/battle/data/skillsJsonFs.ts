@@ -3,16 +3,25 @@ import path from 'node:path';
 import type { ActiveSkillDef, PassiveSkillDef } from '../types.ts';
 
 export const SKILLS_DATA_DIR = path.resolve(process.cwd(), 'data/skills');
-export const PASSIVES_PATH = path.join(SKILLS_DATA_DIR, 'passives.json');
+export const PASSIVES_DIR = path.join(SKILLS_DATA_DIR, 'passives');
 export const ACTIVES_DIR = path.join(SKILLS_DATA_DIR, 'actives');
 
-/** active スキル ID の先頭2セグメント（例: df_guardian_active_1 → df_guardian） */
-export function getActiveFileStemForSkillId(skillId: string): string {
+/** スキル ID の先頭2セグメント（例: df_guardian_passive_1 → df_guardian） */
+export function getSkillFileStemForSkillId(skillId: string): string {
   const parts = skillId.split('_');
   if (parts.length < 2) {
-    throw new Error(`invalid active skill id: ${skillId}`);
+    throw new Error(`invalid skill id: ${skillId}`);
   }
   return `${parts[0]}_${parts[1]}`;
+}
+
+/** @deprecated use getSkillFileStemForSkillId */
+export function getActiveFileStemForSkillId(skillId: string): string {
+  return getSkillFileStemForSkillId(skillId);
+}
+
+export function passiveFilePath(stem: string): string {
+  return path.join(PASSIVES_DIR, `${stem}.json`);
 }
 
 export function activeFilePath(stem: string): string {
@@ -29,15 +38,29 @@ function readJsonArray<T>(filePath: string): T[] {
 }
 
 function writeJsonArray(filePath: string, items: unknown[]): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, `${JSON.stringify(items, null, 2)}\n`, 'utf8');
 }
 
-export function readPassives(): PassiveSkillDef[] {
-  return readJsonArray<PassiveSkillDef>(PASSIVES_PATH);
+export function readPassiveFile(stem: string): PassiveSkillDef[] {
+  return readJsonArray<PassiveSkillDef>(passiveFilePath(stem));
 }
 
-export function writePassives(passives: PassiveSkillDef[]): void {
-  writeJsonArray(PASSIVES_PATH, passives);
+export function writePassiveFile(stem: string, passives: PassiveSkillDef[]): void {
+  writeJsonArray(passiveFilePath(stem), passives);
+}
+
+export function readAllPassiveFiles(): PassiveSkillDef[] {
+  if (!fs.existsSync(PASSIVES_DIR)) {
+    return [];
+  }
+  const files = fs
+    .readdirSync(PASSIVES_DIR)
+    .filter((name) => name.endsWith('.json'))
+    .sort();
+  return files.flatMap((name) =>
+    readJsonArray<PassiveSkillDef>(path.join(PASSIVES_DIR, name)),
+  );
 }
 
 export function readActiveFile(stem: string): ActiveSkillDef[] {
@@ -66,7 +89,7 @@ export function readSkillsRoot(): {
   actives: ActiveSkillDef[];
 } {
   return {
-    passives: readPassives(),
+    passives: readAllPassiveFiles(),
     actives: readAllActiveFiles(),
   };
 }
@@ -86,19 +109,28 @@ export function upsertSkillsToFiles(
 ): string[] {
   const written = new Set<string>();
 
-  if (passives.length > 0) {
-    let nextPassives = readPassives();
-    for (const passive of passives) {
-      nextPassives = upsertById(nextPassives, passive);
-    }
-    writePassives(nextPassives);
-    written.add(PASSIVES_PATH);
+  const passivesByStem = new Map<string, PassiveSkillDef[]>();
+  for (const passive of passives) {
+    const stem = getSkillFileStemForSkillId(passive.id);
+    const filePath = passiveFilePath(stem);
+    const bucket =
+      passivesByStem.get(stem) ??
+      (fs.existsSync(filePath) ? readPassiveFile(stem) : []);
+    passivesByStem.set(stem, upsertById(bucket, passive));
+  }
+
+  for (const [stem, nextPassives] of passivesByStem) {
+    writePassiveFile(stem, nextPassives);
+    written.add(passiveFilePath(stem));
   }
 
   const activesByStem = new Map<string, ActiveSkillDef[]>();
   for (const active of actives) {
-    const stem = getActiveFileStemForSkillId(active.id);
-    const bucket = activesByStem.get(stem) ?? readActiveFile(stem);
+    const stem = getSkillFileStemForSkillId(active.id);
+    const filePath = activeFilePath(stem);
+    const bucket =
+      activesByStem.get(stem) ??
+      (fs.existsSync(filePath) ? readActiveFile(stem) : []);
     activesByStem.set(stem, upsertById(bucket, active));
   }
 

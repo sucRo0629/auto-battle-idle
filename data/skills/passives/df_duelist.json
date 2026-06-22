@@ -1,0 +1,54 @@
+[
+  {
+    "id": "df_duelist_passive_2",
+    "name": "不屈の闘士",
+    "effect": "selfHpRatioBuff",
+    "buffStat": "def",
+    "maxBuffAtHpRatio": 0.5,
+    "buffMultiplierMax": 1.6
+  },
+  {
+    "id": "df_duelist_passive_3",
+    "name": "出鼻挫き",
+    "effect": "counter",
+    "chance": 0.2,
+    "counterResponses": [
+      {
+        "kind": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        },
+        "damageType": "physical"
+      },
+      {
+        "kind": "stun",
+        "durationSec": 1.5
+      },
+      {
+        "kind": "knockback",
+        "distancePx": 15
+      }
+    ],
+    "counterRange": 0,
+    "counterMelee": true
+  },
+  {
+    "id": "df_duelist_passive_4",
+    "name": "闘士は流血で滾る",
+    "effect": "selfHpRatioBuff",
+    "buffStat": "atk",
+    "maxBuffAtHpRatio": 0.1,
+    "buffMultiplierMax": 2
+  },
+  {
+    "id": "df_duelist_passive_1",
+    "name": "盾受け",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.1,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  }
+]

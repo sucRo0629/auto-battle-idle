@@ -174,7 +174,10 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 ```
 data/
   skills/
-    passives.json              # 共有パッシブ配列
+    passives/
+      df_guardian.json         # スキル ID 先頭2セグメント単位
+      at_warrior.json
+      …
     actives/
       df_guardian.json         # スキル ID 先頭2セグメント単位（17 ファイル）
       at_warrior.json
@@ -191,7 +194,8 @@ data/
 - `src/battle/data/skillsJsonFs.ts` — Node 側 read/write / upsert
 - `validateGameData.ts` — マージ後に現行と同じ検証（変更なし）
 - `vite-plugin-editor-api.ts` — 読み書きパス・HMR 対象の更新
-- `scripts/split-skills-json.mjs` — 初回移行用
+- `scripts/split-skills-json.mjs` — 初回移行用（actives）
+- `scripts/split-passives-json.mjs` — パッシブ分割移行用
 - `.cursorignore` — `data/skills.json` 除外を解除（`classes.json` のみ除外継続）
 
 **4c スコープ外**

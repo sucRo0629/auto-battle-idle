@@ -1,0 +1,12 @@
+[
+  {
+    "id": "defender_passive_1",
+    "name": "大盾使い",
+    "effect": "buff",
+    "buffSubKind": "block",
+    "chance": 0.2,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  }
+]

@@ -1,0 +1,60 @@
+[
+  {
+    "id": "sp_abjurer_passive_1",
+    "name": "常の庇護",
+    "effect": "buff",
+    "buffSubKind": "stat",
+    "buffStat": [
+      "damageTaken"
+    ],
+    "buffMultiplier": 0.95,
+    "buffTargetRule": {
+      "kind": "stat",
+      "side": "ally",
+      "stat": "hp",
+      "order": "highest"
+    }
+  },
+  {
+    "id": "sp_abjurer_passive_2",
+    "name": "備えあれば",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "atkBased",
+      "atkScale": 1.5
+    },
+    "buffTargetRule": {
+      "kind": "stat",
+      "side": "ally",
+      "stat": "hp",
+      "order": "highest"
+    },
+    "periodicTrigger": "waveStart"
+  },
+  {
+    "id": "sp_abjurer_passive_3",
+    "name": "憂い無し",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "atkBased",
+      "atkScale": 1
+    },
+    "buffTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    },
+    "periodicTrigger": "waveStart"
+  },
+  {
+    "id": "sp_abjurer_passive_4",
+    "name": "守護結界",
+    "effect": "damageReduction",
+    "damageReductionPercent": 0.1,
+    "damageReductionTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    }
+  }
+]

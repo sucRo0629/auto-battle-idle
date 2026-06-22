@@ -1,10 +1,14 @@
 import classesJson from '../../../data/classes.json';
-import passivesJson from '../../../data/skills/passives.json';
 import enemiesJson from '../../../data/enemies.json';
 import stagesJson from '../../../data/stages.json';
 import partiesJson from '../../../data/parties.json';
 import type { ActiveSkillDef, ClassPreset, EnemyTemplate, GameData, PassiveSkillDef } from '../types.ts';
 import { parseAndValidateGameDataJson } from './validateGameData.ts';
+
+const passiveModules = import.meta.glob<PassiveSkillDef[]>(
+  '../../../data/skills/passives/*.json',
+  { eager: true, import: 'default' },
+);
 
 const activeModules = import.meta.glob<ActiveSkillDef[]>(
   '../../../data/skills/actives/*.json',
@@ -13,6 +17,10 @@ const activeModules = import.meta.glob<ActiveSkillDef[]>(
 
 function indexById<T extends { id: string }>(items: T[]): Record<string, T> {
   return Object.fromEntries(items.map((item) => [item.id, item]));
+}
+
+function loadMergedPassives(): PassiveSkillDef[] {
+  return Object.values(passiveModules).flat();
 }
 
 function loadMergedActives(): ActiveSkillDef[] {
@@ -55,7 +63,7 @@ export function renderGameDataLoadError(
 }
 
 export function loadGameData(): GameData {
-  const passives = passivesJson as PassiveSkillDef[];
+  const passives = loadMergedPassives();
   const actives = loadMergedActives();
   const parsed = parseAndValidateGameDataJson({
     classes: classesJson,
