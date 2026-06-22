@@ -26,6 +26,7 @@ import type {
   StatusEffectStat,
   TargetRule,
   TargetShape,
+  TargetSide,
   TargetSpec,
   VfxAnchor,
   VfxLayer,
@@ -680,7 +681,7 @@ export const TARGET_RULE_OVERRIDE_APPLY_TO_LABELS: Record<
   player: "味方向け effect",
 };
 
-export const TARGET_SIDE_OPTIONS = ["player", "enemy"] as const;
+export const TARGET_SIDE_OPTIONS = ["ally", "enemy"] as const;
 export const TARGET_DISTANCE_ORDER_OPTIONS = [
   "nearest",
   "farthest",
@@ -693,11 +694,8 @@ export const TARGET_STAT_ORDER_OPTIONS = [
   "ratio",
 ] as const;
 
-export const TARGET_SIDE_LABELS: Record<
-  TargetSpec["kind"] extends never ? never : "player" | "enemy",
-  string
-> = {
-  player: "味方",
+export const TARGET_SIDE_LABELS: Record<TargetSide, string> = {
+  ally: "味方",
   enemy: "敵",
 };
 
