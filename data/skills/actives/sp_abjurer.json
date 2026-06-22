@@ -1,7 +1,7 @@
 [
   {
     "id": "sp_abjurer_active_1",
-    "name": "sp_abjurer_active_1",
+    "name": "盾添え",
     "trigger": {
       "kind": "time",
       "value": 8
@@ -36,7 +36,6 @@
         "buffSubKind": "barrier"
       }
     ],
-    "useDurationSec": 0.3,
     "vfx": {
       "enabled": true
     }
@@ -81,7 +80,7 @@
   },
   {
     "id": "sp_abjurer_active_2",
-    "name": "sp_abjurer_active_2",
+    "name": "双璧の護り",
     "trigger": {
       "kind": "time",
       "value": 10
@@ -98,13 +97,12 @@
         "buffSubKind": "barrier",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.1
+          "atkScale": 1.15
         },
         "targetShape": "multiLock",
         "hitCount": 2
       }
-    ],
-    "useDurationSec": 0.3
+    ]
   },
   {
     "id": "sp_abjurer_active_3",
@@ -116,18 +114,35 @@
     "effect": [
       {
         "target": {
-          "kind": "all",
-          "side": "ally"
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
+        },
+        "type": "heal",
+        "healSubKind": "instant",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.2
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 100
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
         },
         "type": "buff",
         "buffSubKind": "barrier",
         "amount": {
           "kind": "atkBased",
           "atkScale": 1.2
-        }
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 100
       }
-    ],
-    "useDurationSec": 0.3
+    ]
   },
   {
     "id": "sp_abjurer_active_4",
@@ -145,7 +160,7 @@
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "damageTaken",
-        "buffMultiplier": 0.92,
+        "buffMultiplier": 0.9,
         "buffDurationSec": 8
       },
       {
@@ -157,10 +172,9 @@
         "buffSubKind": "barrier",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.8
+          "atkScale": 1
         }
       }
-    ],
-    "useDurationSec": 0.4
+    ]
   }
 ]

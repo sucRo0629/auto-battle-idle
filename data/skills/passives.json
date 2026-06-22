@@ -27,7 +27,7 @@
   },
   {
     "id": "sp_cleric_passive_1",
-    "name": "sp_cleric_passive_1",
+    "name": "救命の心得",
     "effect": "specialEffect",
     "specialEffectApplyTo": "heal",
     "specialEffect": {
@@ -225,7 +225,7 @@
   },
   {
     "id": "sp_alchemist_passive_1",
-    "name": "sp_alchemist_passive_1",
+    "name": "薬効の香り",
     "effect": "heal",
     "healSubKind": "hot",
     "hotAmount": {
@@ -233,19 +233,22 @@
       "percentOfMaxHp": 0.004
     },
     "hotTargetRule": {
-      "kind": "all",
-      "side": "ally"
-    }
+      "kind": "distance",
+      "side": "ally",
+      "order": "selfOrigin"
+    },
+    "hotTargetShape": "aoe",
+    "hotAoeRadiusPx": 120
   },
   {
     "id": "sp_alchemist_passive_2",
-    "name": "sp_alchemist_passive_2",
+    "name": "守りの薬",
     "effect": "buff",
     "buffSubKind": "stat",
     "buffStat": [
       "def"
     ],
-    "buffMultiplier": 1.1,
+    "buffMultiplier": 1.05,
     "buffTargetRule": {
       "kind": "stat",
       "side": "ally",
@@ -365,7 +368,7 @@
   },
   {
     "id": "sp_alchemist_passive_3",
-    "name": "sp_alchemist_passive_3",
+    "name": "毒消し",
     "effect": "periodicDispel",
     "periodicTrigger": "onDebuffReceived",
     "dispelTargetRule": {
@@ -497,7 +500,7 @@
     "id": "sp_abjurer_passive_4",
     "name": "守護結界",
     "effect": "damageReduction",
-    "damageReductionPercent": 0.9,
+    "damageReductionPercent": 0.1,
     "damageReductionTargetRule": {
       "kind": "all",
       "side": "ally"

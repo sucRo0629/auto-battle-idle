@@ -1,7 +1,7 @@
 [
   {
     "id": "sp_cleric_active_1",
-    "name": "sp_cleric_active_1",
+    "name": "癒しの光",
     "trigger": {
       "kind": "time",
       "value": 8
@@ -11,7 +11,7 @@
         "type": "heal",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.25
+          "atkScale": 1.75
         },
         "target": {
           "kind": "stat",
@@ -42,135 +42,75 @@
           },
           "enabled": false
         }
-      },
-      {
-        "target": {
-          "kind": "stat",
-          "side": "ally",
-          "stat": "hp",
-          "order": "ratio"
-        },
-        "type": "heal",
-        "durationSec": 5,
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.1
-        },
-        "healSubKind": "hot",
-        "hitVfx": {
-          "enabled": false
-        },
-        "vfx": {
-          "enabled": false
-        }
       }
-    ],
-    "useDurationSec": 0.3
+    ]
   },
   {
     "id": "sp_cleric_active_2",
-    "name": "sp_cleric_active_2",
-    "trigger": {
-      "kind": "time",
-      "value": 12
-    },
-    "firePolicy": "smart",
-    "fireConditions": [
-      {
-        "kind": "targetHp",
-        "maxHpRatio": 0.4
-      }
-    ],
-    "effect": [
-      {
-        "type": "heal",
-        "healSubKind": "instant",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1.75
-        },
-        "target": {
-          "kind": "stat",
-          "side": "ally",
-          "stat": "hp",
-          "order": "ratio"
-        }
-      }
-    ],
-    "useDurationSec": 0.3
-  },
-  {
-    "id": "sp_cleric_active_3",
-    "name": "sp_cleric_active_3",
-    "trigger": {
-      "kind": "time",
-      "value": 12
-    },
-    "firePolicy": "smart",
-    "fireConditions": [
-      {
-        "kind": "targetHp",
-        "maxHpRatio": 0.4
-      }
-    ],
-    "effect": [
-      {
-        "type": "heal",
-        "healSubKind": "instant",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1.75
-        },
-        "target": {
-          "kind": "stat",
-          "side": "ally",
-          "stat": "hp",
-          "order": "ratio"
-        }
-      }
-    ],
-    "useDurationSec": 0.3
-  },
-  {
-    "id": "sp_cleric_active_3",
-    "name": "sp_cleric_active_3",
+    "name": "救命",
     "trigger": {
       "kind": "time",
       "value": 10
     },
     "effect": [
       {
-        "target": {
-          "kind": "all",
-          "side": "ally"
-        },
         "type": "heal",
-        "durationSec": 10,
+        "healSubKind": "instant",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.5
+          "atkScale": 2
         },
-        "targetShape": "single",
-        "healSubKind": "hot"
-      },
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "targetShape": "single"
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.5
+      }
+    ]
+  },
+  {
+    "id": "sp_cleric_active_3",
+    "name": "広がる癒し",
+    "trigger": {
+      "kind": "time",
+      "value": 12
+    },
+    "effect": [
       {
         "target": {
           "kind": "all",
           "side": "ally"
         },
         "type": "heal",
-        "durationSec": 5,
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.2
+          "atkScale": 1.25
         },
-        "healSubKind": "hot"
+        "targetShape": "single",
+        "healSubKind": "instant"
       }
-    ]
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.5
+      }
+    ],
+    "maxCharges": 1
   },
   {
     "id": "sp_cleric_active_4",
-    "name": "sp_cleric_active_4",
+    "name": "即時回復（仮",
     "trigger": {
       "kind": "time",
       "value": 15
@@ -196,24 +136,9 @@
           "stat": "hp",
           "order": "ratio"
         }
-      },
-      {
-        "type": "heal",
-        "healSubKind": "hot",
-        "durationSec": 4,
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.15
-        },
-        "target": {
-          "kind": "stat",
-          "side": "ally",
-          "stat": "hp",
-          "order": "ratio"
-        }
       }
     ],
-    "useDurationSec": 0.4
+    "maxCharges": 1
   },
   {
     "id": "sp_cleric_basic_attack",
