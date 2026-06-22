@@ -156,9 +156,9 @@ Phase 4a で確定したクラス・スキルを前提に、メインモード�
 
 ---
 
-## Phase 7 — VFX PNG 描画（完了）
+## Phase 7 — VFX PNG 描画（基盤のみ）
 
-Phase 6 の演出ラボで VFX **調整** は済。Phase 7 で戦闘 VFX を PNG strip（`sheets/vfx/`）描画に統一した。
+Phase 6 の演出ラボで VFX **調整** は可能。Phase 7 では PNG strip（`sheets/vfx/`）描画の型・再生パイプラインは実装済みだが、本番 VFX PNG の投入とスキル対応は未完了。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 7。
 
 ---
 

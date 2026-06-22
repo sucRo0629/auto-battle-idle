@@ -14,7 +14,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **4**  | クラスマスタ + スキル説明；4a **見直し中** / 4c **完了** / 4b 説明（データ PR 同梱） | **Phase 3 後に再確定** |
 | **5**  | ステージ作成 — 敵テンプレート・固定ステージコンテンツ・ステージ編集 GUI             | 未着手（4a 後）      |
 | **6**  | 演出アセット + **演出調整ツール**（Canvas プレビュー・VFX 調整含む）               | 待機（スキル再確定後） |
-| **7**  | VFX **PNG 描画**（`sheets/vfx/` 64×64）— 戦闘描画の正本                           | **完了**             |
+| **7**  | VFX **PNG 描画**（`sheets/vfx/` 64×64）— 戦闘描画の正本                           | **基盤のみ**（VFX 未実装） |
 | **8**  | バランス調整 + 印術師・法陣師の独自システム実装                                   | 未着手               |
 | **9**  | globalExp、強化ツリー、オフライン報酬、Electron                                      | 未着手               |
 | **10** | ローグライクモード（仮称）— ランダム問題・ラン進行                                   | 未着手               |
@@ -305,15 +305,23 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 
 ---
 
-## Phase 7 — VFX PNG 描画 ✅
+## Phase 7 — VFX PNG 描画（基盤のみ）
 
 Phase 6 の演出調整ツールで編集した JSON・タイミングを、戦闘でも **同一 PNG strip 経路** で描画する。VFX の正本は `sheets/vfx/*.png` + `SkillVfxDef`（`placement` / `AnimPhaseFields` / `hitVfx` / `basicAttackVfx`）。
 
-### スコープ（完了）
+**現状:** 型・レジストリ・再生パイプラインは実装済みだが、`sheets/vfx/` に本番 PNG が未投入のため、スキル単位の VFX 描画は未完了。
+
+### 基盤実装済み
 
 - **型・レジストリ:** `SkillVfxDef`、`VFX_ANIM_CELL_*` 64×64、`vfxAnimRegistry.ts`（`resolveVfxAnimKey`）
 - **再生・描画:** `vfxAnimPlayback.ts` / `vfxPlacement.ts` / `VfxPlaybackManager.ts` / `BattleCanvas.playSkillVfx`（`layer` behind → entities → front）
-- **データ:** スキル JSON は `vfx` / `hitVfx` のみ（traits は `basicAttackVfx`）。旧 preset フィールドは削除済み
+- **データ形状:** スキル JSON は `vfx` / `hitVfx` のみ（traits は `basicAttackVfx`）。旧 preset フィールドは削除済み
+
+### 未完了
+
+- `sheets/vfx/` への VFX PNG strip 投入（`{skillId}_vfx` / `{skillId}_{effectIndex}_vfx` / `_vfx_hit` 規約）
+- スキル JSON の `vfx` / `hitVfx` / `basicAttackVfx` と実 PNG の対応付け・戦闘 / 演出ラボでの目視確認
+- 確定クラス / スキル単位 PR で順次載せる（Phase 6 本番アセットと並行可）
 
 ### スコープ外（Phase 7）
 
@@ -378,7 +386,7 @@ Phase 5（ステージ作成 — 5a 敵 / 5b コンテンツ / 5c GUI）
     ↓
 Phase 6（演出アセット + 演出調整ツール）  ← スキル再確定後。5 と並行可
     ↓
-Phase 7（VFX PNG 描画）  ← 6 と並行可
+Phase 7（VFX PNG 描画 — 基盤済、PNG 未投入）  ← 6 と並行可
     ↓
 Phase 8（バランス調整 + 印術師・法陣師実装）
     ↓

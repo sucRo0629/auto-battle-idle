@@ -370,7 +370,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 ## 演出（render 層）
 
-VFX パラメータ調整・プレビューは **Phase 6 演出調整ツール**（`presentation-lab.html`）。戦闘描画は **PNG strip のみ**（`BattleCanvas.playSkillVfx` → `VfxPlaybackManager`。[phase-roadmap.md](../plans/phase-roadmap.md) Phase 7 完了）。
+VFX パラメータ調整・プレビューは **Phase 6 演出調整ツール**（`presentation-lab.html`）。戦闘描画は **PNG strip 経路**（`BattleCanvas.playSkillVfx` → `VfxPlaybackManager`）— パイプラインは Phase 7 基盤済、本番 PNG 投入は未完了（[phase-roadmap.md](../plans/phase-roadmap.md) Phase 7）。
 
 **body アセット:** entity は `sheets/bodies/{id}.png`（idle/move/death）。攻撃 body は **全スキル strip**（64×48、`{id}_basic_attack` 含む）。詳細は [classes-and-skills.md](classes-and-skills.md#スプライト演出アセット)。
 
