@@ -49,12 +49,11 @@
   },
   {
     "id": "sp_abjurer_passive_4",
-    "name": "守護結界",
-    "effect": "damageReduction",
-    "damageReductionPercent": 0.1,
-    "damageReductionTargetRule": {
-      "kind": "all",
-      "side": "ally"
+    "name": "結界再編",
+    "effect": "barrierBreakRegen",
+    "barrierAmount": {
+      "kind": "atkBased",
+      "atkScale": 0.85
     }
   }
 ]

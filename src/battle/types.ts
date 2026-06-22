@@ -503,6 +503,8 @@ export interface CombatantState extends Combatant {
   delayedDamagePool?: number;
   /** damageDelay tick 用（1 秒間隔） */
   damageDelayTickSec?: number;
+  /** barrierBreakRegen: 対象ユニットで再生成を消費済み */
+  barrierBreakRegenUsed?: boolean;
 }
 
 export type PassiveEffectKind =
@@ -521,6 +523,7 @@ export type PassiveEffectKind =
   | "excessHealRedirect"
   | "targetHpRatioHealScale"
   | "healReservation"
+  | "barrierBreakRegen"
   | "skillAmountOverride"
   | "skillPropertyOverride"
   | "threatControl"

@@ -815,6 +815,12 @@ function formatPassiveEffect(
       const buffName = def.buffDisplayName ?? "癒しの残響";
       return `ヒール予約（回復時 対象HP${grant}以下で「${buffName}」付与 / ${duration}秒 / 被ダメ後HP${trigger}以下で${amount}回復）`;
     }
+    case "barrierBreakRegen": {
+      const amount = formatResourceAmount(
+        def.barrierAmount ?? { kind: "atkBased", atkScale: 0.85 },
+      );
+      return `バリア破壊時 ${amount} 再生成（対象1回限り・HP回復ではない）`;
+    }
     case "buff": {
       const effectView = passiveBuffToEffectDef(def);
       const target = formatTarget(def.buffTargetRule, { kind: "self" });

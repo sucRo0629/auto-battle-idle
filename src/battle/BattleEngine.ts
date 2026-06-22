@@ -77,6 +77,7 @@ import {
   syncSelfHpRatioBuffAuras,
 } from "./passiveEffects.ts";
 import { tryTriggerHealReservation, grantHealReservationStacks } from "./healReservation.ts";
+import { tryTriggerBarrierBreakRegen } from "./barrierBreakRegen.ts";
 import {
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
@@ -266,6 +267,8 @@ export class BattleEngine {
       didBlock?: boolean;
       threatBurstFlat?: number;
       threatBurstScale?: number;
+      barrierHpBefore?: number;
+      barrierDamage?: number;
     },
   ): void {
     applyThreatFromDamage(actor, target, amount);
@@ -403,6 +406,32 @@ export class BattleEngine {
             amount: reservation.redirectAmount ?? reservation.redirectHealed,
           });
         }
+      }
+    }
+    if (
+      !target.isEnemy &&
+      target.isAlive &&
+      meta?.barrierHpBefore !== undefined
+    ) {
+      const breakRegen = tryTriggerBarrierBreakRegen(
+        target,
+        meta.barrierHpBefore,
+        meta.barrierDamage ?? 0,
+        [...this.players, ...this.enemies],
+        this.gameData.skillRegistry.passives,
+      );
+      if (breakRegen.granted > 0 && breakRegen.sourceId) {
+        this.emit({
+          type: "skill",
+          actorId: breakRegen.sourceId,
+          targetId: target.id,
+          skillId: breakRegen.passiveId ?? "",
+          skillName: breakRegen.passiveId
+            ? this.gameData.skillRegistry.passives[breakRegen.passiveId]?.name
+            : undefined,
+          effect: "barrier",
+          amount: breakRegen.granted,
+        });
       }
     }
     this.refreshSelfHpRatioBuffAuras();
@@ -1723,6 +1752,7 @@ export class BattleEngine {
         effect,
         passives,
       );
+      const barrierHpBefore = target.barrierHp;
       const damageResult = applyDamageToTarget(target, amount);
       const appliedDamage =
         damageResult.hpDamage + damageResult.barrierDamage;
@@ -1730,6 +1760,8 @@ export class BattleEngine {
         attackKind: "dot",
         hpDamage: damageResult.hpDamage,
         attackRangePx: source.traits.rangePx,
+        barrierHpBefore,
+        barrierDamage: damageResult.barrierDamage,
       });
       const { lethal } = damageResult;
       this.emit({

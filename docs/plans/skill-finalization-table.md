@@ -266,7 +266,7 @@ Supporter 3 種は「回復量の大小」ではなく、損失を処理する�
 | `sp_cleric` | Lv20 active 4 | 上位 Recovery。大きな欠損を即座に立て直す smart heal。被ダメ反応 trigger は将来ゲート | **追加** |
 | `sp_abjurer` | basic | 最低 HP 比率の味方へ小 heal + 小 barrier。崩壊前猶予の常時基礎 | 現行 `sp_abjurer_basic_attack` を **残す** |
 | `sp_abjurer` | Lv0 passive 1-2 | 高 HP 味方軽減、Wave 開始 barrier | **残す / 整理**。事前猶予と軽減に寄せ、Lv0 2 枠へ収める |
-| `sp_abjurer` | Lv10 / Lv20 passive | 全体 barrier / damageReduction など、崩壊前猶予の段階強化 | **追加 / 整理** |
+| `sp_abjurer` | Lv10 / Lv20 passive | Lv10: Wave 開始全体 barrier（`passive_3`）。Lv20: バリア完全破壊時の 1 回限り再生成（`barrierBreakRegen` / `passive_4`） | **実装** |
 | `sp_abjurer` | Lv0 active 1 | 単体へ heal + 厚い barrier | 現行 `sp_abjurer_active_1`（盾添え）を **残す** |
 | `sp_abjurer` | Lv0 active 2 | 複数対象 barrier。崩れる前の猶予を 2 人以上に作る | 現行 `sp_abjurer_active_2`（双璧の護り）を **残す** |
 | `sp_abjurer` | Lv10 active 3 | 範囲 barrier または all ally barrier。Recovery ではなく Stability の範囲化 | **追加** |

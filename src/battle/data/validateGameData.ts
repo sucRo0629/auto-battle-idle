@@ -3486,6 +3486,16 @@ function requirePassiveEffectParams(
         ...(buffDisplayName !== undefined ? { buffDisplayName } : {}),
       };
     }
+    case 'barrierBreakRegen': {
+      const barrierAmount = parseResourceAmountSpec(
+        obj.barrierAmount,
+        `${context}.barrierAmount`,
+      );
+      return {
+        ...base,
+        barrierAmount,
+      };
+    }
     case 'selfHpRatioBuff': {
       const buffStat = requireStatusEffectStat(obj, 'buffStat', context);
       const buffMultiplierMax = parseOptionalNumber(

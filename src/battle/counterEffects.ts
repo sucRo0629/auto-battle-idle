@@ -179,6 +179,7 @@ function applyCounterDamageResponse(
   const mitigated = applyDefenseMitigation(rawAmount, attacker, damageType);
   if (mitigated <= 0) return;
 
+  const barrierHpBefore = attacker.barrierHp;
   const incoming = applyIncomingDamage(attacker, mitigated);
   const { damageResult } = incoming;
   const appliedCounter =
@@ -191,6 +192,8 @@ function applyCounterDamageResponse(
     attackKind: 'damage',
     isCounterDamage: true,
     hpDamage: damageResult.hpDamage,
+    barrierHpBefore,
+    barrierDamage: damageResult.barrierDamage,
   });
 
   emitCounterSkillEvent(

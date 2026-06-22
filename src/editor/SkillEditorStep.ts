@@ -604,6 +604,9 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.healAmount ??= defaultResourceAmount(0.75);
       passive.buffDisplayName ??= '癒しの残響';
       break;
+    case 'barrierBreakRegen':
+      passive.barrierAmount ??= defaultResourceAmount(0.85);
+      break;
     case 'aoeCrowdBonus':
       passive.perExtraTargetScale ??= 0.1;
       passive.maxExtraTargets ??= 4;
@@ -2581,6 +2584,17 @@ export class SkillEditorStep {
               }, { rerender: false });
             }),
           ),
+        );
+        break;
+      case 'barrierBreakRegen':
+        appendResourceAmountFields(
+          effectGrid,
+          passive.barrierAmount ?? defaultResourceAmount(0.85),
+          (barrierAmount) => {
+            this.patchPassive(index, (current) => {
+              current.barrierAmount = barrierAmount;
+            }, { rerender: false });
+          },
         );
         break;
       case 'extendSelfAppliedDebuff':

@@ -125,6 +125,8 @@ export interface SkillExecutorDeps {
       didBlock?: boolean;
       threatBurstFlat?: number;
       threatBurstScale?: number;
+      barrierHpBefore?: number;
+      barrierDamage?: number;
     },
   ) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
@@ -701,6 +703,7 @@ export class SkillExecutor {
           this.emit({ type: 'block', targetId: target.id });
         }
       }
+      const barrierHpBefore = target.barrierHp;
       const incoming = applyIncomingDamage(target, finalDamage);
       const { damageResult } = incoming;
       const appliedDamage =
@@ -714,6 +717,8 @@ export class SkillExecutor {
         didBlock,
         threatBurstFlat: effectDef.threatBurstFlat,
         threatBurstScale: effectDef.threatBurstScale,
+        barrierHpBefore,
+        barrierDamage: damageResult.barrierDamage,
       });
       const { lethal } = damageResult;
       if (cd.slotKind === 'basic') {
