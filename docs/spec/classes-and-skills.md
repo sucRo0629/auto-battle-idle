@@ -728,7 +728,6 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 
 ### 未決・TBD
 
-- `sp_abjurer`: Lv10 / Lv20 で追加する `active_3` / `active_4` の具体設計
 - 療養師 Lv20 smart heal: 将来の被ダメ反応 trigger へ移行するか（現行 A 案は `time` + `firePolicy: smart` + `fireConditions`）
 
 ## 物理 Kill / Flow 設計方針
