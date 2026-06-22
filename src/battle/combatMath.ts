@@ -53,15 +53,28 @@ export function getEffectiveReg(combatant: CombatantState): number {
   return computeEffectiveStat(combatant.reg, agg);
 }
 
+export function getEffectiveMaxHp(combatant: CombatantState): number {
+  const agg = aggregateStatEffects(combatant.statusEffects, 'hp');
+  return computeEffectiveStat(combatant.maxHp, agg);
+}
+
+export function clampHpToEffectiveMax(combatant: CombatantState): void {
+  const maxHp = getEffectiveMaxHp(combatant);
+  if (combatant.hp > maxHp) {
+    combatant.hp = maxHp;
+  }
+}
+
 export function getDamageTakenMultiplier(combatant: CombatantState): number {
   const agg = aggregateStatEffects(combatant.statusEffects, 'damageTaken');
   return computeEffectiveStat(1, agg);
 }
 
-/** 現在 HP 割合（0〜1）。barrierHp は含めない。 */
+/** 現在 HP 割合（0〜1）。barrierHp は含めない。maxHp はバフ反映後。 */
 export function currentHpRatio(unit: CombatantState): number {
-  if (unit.maxHp <= 0) return 0;
-  return unit.hp / unit.maxHp;
+  const maxHp = getEffectiveMaxHp(unit);
+  if (maxHp <= 0) return 0;
+  return unit.hp / maxHp;
 }
 
 export function matchesHpRatioThreshold(
@@ -103,7 +116,10 @@ export function resolvePowerAmount(
       return Math.floor(Math.max(0, spec.flatAmount ?? 0));
     case 'percentMaxHp': {
       const ref = spec.maxHpRef ?? 'target';
-      const maxHp = ref === 'self' ? actor.maxHp : target.maxHp;
+      const maxHp =
+        ref === 'self'
+          ? getEffectiveMaxHp(actor)
+          : getEffectiveMaxHp(target);
       return Math.floor(Math.max(0, maxHp * (spec.percentOfMaxHp ?? 0)));
     }
   }
@@ -214,7 +230,7 @@ export function applyHealToTarget(
   amount: number,
 ): number {
   const before = target.hp;
-  target.hp = Math.min(target.maxHp, target.hp + amount);
+  target.hp = Math.min(getEffectiveMaxHp(target), target.hp + amount);
   return target.hp - before;
 }
 
@@ -225,7 +241,10 @@ export function computeInstantHealExcess(
 ): number {
   if (attemptedHeal <= 0) return 0;
   const hpBefore = target.hp;
-  const afterHealHp = Math.min(target.maxHp, hpBefore + attemptedHeal);
+  const afterHealHp = Math.min(
+    getEffectiveMaxHp(target),
+    hpBefore + attemptedHeal,
+  );
   return Math.max(0, attemptedHeal - (afterHealHp - hpBefore));
 }
 

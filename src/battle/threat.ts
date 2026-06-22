@@ -1,4 +1,4 @@
-import { currentHpRatio, getPassiveDefs } from "./combatMath.ts";
+import { currentHpRatio, getEffectiveDef, getEffectiveMaxHp, getPassiveDefs } from "./combatMath.ts";
 import { getBattleX } from "./combatPosition.ts";
 import type { CombatantState, PassiveSkillDef } from "./types.ts";
 
@@ -80,7 +80,8 @@ export function pickThreatTargetWithHysteresis(
 
 export function computeThreatStatComponent(unit: CombatantState): number {
   return Math.floor(
-    unit.maxHp * THREAT_STAT_HP_WEIGHT + unit.def * THREAT_STAT_DEF_WEIGHT,
+    getEffectiveMaxHp(unit) * THREAT_STAT_HP_WEIGHT +
+      getEffectiveDef(unit) * THREAT_STAT_DEF_WEIGHT,
   );
 }
 

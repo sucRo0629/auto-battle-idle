@@ -3,7 +3,7 @@ import type {
   GameData,
   TargetSpec,
 } from './types.ts';
-import { getPassiveDefs } from './combatMath.ts';
+import { getEffectiveMaxHp, getPassiveDefs } from './combatMath.ts';
 import {
   getEnemyContactX,
   resolveApproachAttackBattleX,
@@ -87,7 +87,9 @@ function resolveDamagedAllyHealTarget(
     livingAllyCount(players),
   );
   const pool = getAttackablePool(spec, player, players, enemies, range);
-  const damaged = pool.filter((unit) => unit.isAlive && unit.hp < unit.maxHp);
+  const damaged = pool.filter(
+    (unit) => unit.isAlive && unit.hp < getEffectiveMaxHp(unit),
+  );
   if (damaged.length === 0) return null;
   return pickTargetFromPool(spec, player, damaged);
 }
@@ -115,7 +117,7 @@ function resolveOutOfRangeDamagedAllyHealTarget(
   const outOfRange = pool.filter(
     (unit) =>
       unit.isAlive &&
-      unit.hp < unit.maxHp &&
+      unit.hp < getEffectiveMaxHp(unit) &&
       !isWithinSkillRange(player, unit, range),
   );
   if (outOfRange.length === 0) return null;

@@ -366,6 +366,7 @@ export interface CounterAttackRangeBandFilter {
 }
 
 export type StatusEffectStat =
+  | "hp"
   | "atk"
   | "def"
   | "reg"
@@ -442,6 +443,28 @@ export interface DefenseIgnoreSpec {
   chance?: number;
   def?: DefenseIgnoreDefSpec;
   reg?: DefenseIgnoreRegSpec;
+}
+
+const STATUS_EFFECT_STAT_VALUES: readonly StatusEffectStat[] = [
+  "hp",
+  "atk",
+  "def",
+  "reg",
+  "damageTaken",
+  "attackSpeed",
+];
+
+export function isStatusEffectStat(value: string): value is StatusEffectStat {
+  return (STATUS_EFFECT_STAT_VALUES as readonly string[]).includes(value);
+}
+
+export function filterStatusEffectStats(
+  stat: BuffTargetKind | BuffTargetKind[] | undefined,
+): StatusEffectStat[] {
+  const list = Array.isArray(stat) ? stat : stat !== undefined ? [stat] : [];
+  return list.filter((entry): entry is StatusEffectStat =>
+    isStatusEffectStat(entry),
+  );
 }
 
 export function asStatusEffectStatList(

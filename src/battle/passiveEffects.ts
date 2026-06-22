@@ -1,7 +1,9 @@
 import {
   applyBarrierToTarget,
+  clampHpToEffectiveMax,
   computeInstantHealExcess,
   currentHpRatio,
+  getEffectiveMaxHp,
   getPassiveDefs,
   resolveResourceAmount,
 } from './combatMath.ts';
@@ -35,7 +37,11 @@ import type {
   StatusEffectStat,
   TargetShape,
 } from './types.ts';
-import { asStatusEffectStatList, isPassiveHot } from './types.ts';
+import {
+  asStatusEffectStatList,
+  filterStatusEffectStats,
+  isPassiveHot,
+} from './types.ts';
 
 const PASSIVE_AURA_DURATION_SEC = 99999;
 const PASSIVE_HOT_AURA_PREFIX = 'passive_hot_aura_';
@@ -280,6 +286,10 @@ export function syncBuffAuras(
       );
     }
   }
+
+  for (const unit of units) {
+    clampHpToEffectiveMax(unit);
+  }
 }
 
 function applyPassiveBuffOverlayToTarget(
@@ -331,9 +341,7 @@ export function applyPassiveBuffFromPassive(
     return;
   }
 
-  const stats = asStatusEffectStatList(
-    passive.buffStat as StatusEffectStat | StatusEffectStat[] | undefined,
-  );
+  const stats = filterStatusEffectStats(passive.buffStat);
   const multiplier = passive.buffMultiplier;
   const flatBonus = passive.buffFlatBonus;
   if (stats.length === 0 || (multiplier === undefined && flatBonus === undefined)) {
@@ -585,7 +593,7 @@ export function resolveSelfHpRatioBuffScale(
   unit: CombatantState,
   maxBuffAtHpRatio: number,
 ): number {
-  if (unit.maxHp <= 0) return 0;
+  if (getEffectiveMaxHp(unit) <= 0) return 0;
   if (maxBuffAtHpRatio >= 1) return 0;
   const hpRatio = currentHpRatio(unit);
   const denom = 1 - maxBuffAtHpRatio;
@@ -633,24 +641,7 @@ export function syncSelfHpRatioBuffAuras(
       const t = resolveSelfHpRatioBuffScale(unit, maxBuffAtHpRatio);
       if (t <= 0) continue;
 
-      const stats = asStatusEffectStatList(
-        Array.isArray(passive.buffStat)
-          ? passive.buffStat.filter(
-              (stat): stat is StatusEffectStat =>
-                stat === 'atk' ||
-                stat === 'def' ||
-                stat === 'reg' ||
-                stat === 'damageTaken' ||
-                stat === 'attackSpeed',
-            )
-          : passive.buffStat === 'atk' ||
-              passive.buffStat === 'def' ||
-              passive.buffStat === 'reg' ||
-              passive.buffStat === 'damageTaken' ||
-              passive.buffStat === 'attackSpeed'
-            ? passive.buffStat
-            : undefined,
-      );
+      const stats = filterStatusEffectStats(passive.buffStat);
       if (stats.length === 0) continue;
 
       for (const stat of stats) {

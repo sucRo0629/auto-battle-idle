@@ -11,6 +11,7 @@ import type {
 } from './types.ts';
 
 const STAT_TAGS = new Set<StatusEffectStat>([
+  'hp',
   'atk',
   'def',
   'reg',

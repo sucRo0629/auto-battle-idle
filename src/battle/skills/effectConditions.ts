@@ -1,5 +1,5 @@
 import { resolveMaxEffectiveRangePx } from '../combatPosition.ts';
-import { currentHpRatio, matchesHpRatioThreshold } from '../combatMath.ts';
+import { currentHpRatio, getEffectiveMaxHp, matchesHpRatioThreshold } from '../combatMath.ts';
 import { hasMatchingDebuff } from '../debuffMatching.ts';
 import type {
   ActiveSkillDef,
@@ -161,7 +161,7 @@ export function evaluateCondition(
       );
     case 'allyDamaged':
       return ctx.allies.some(
-        (ally) => ally.isAlive && ally.hp < ally.maxHp,
+        (ally) => ally.isAlive && ally.hp < getEffectiveMaxHp(ally),
       );
     case 'minTargets':
       return countSkillTargets(ctx) >= condition.count;

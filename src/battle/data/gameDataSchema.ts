@@ -359,6 +359,7 @@ export const DEBUFF_SUB_KIND_LABELS: Record<DebuffSubKind, string> = {
 };
 
 export const BUFF_TARGET_KINDS = [
+  "hp",
   "atk",
   "def",
   "reg",
@@ -369,6 +370,7 @@ export const BUFF_TARGET_KINDS = [
 ] as const satisfies readonly BuffTargetKind[];
 
 export const BUFF_TARGET_KIND_LABELS: Record<BuffTargetKind, string> = {
+  hp: "HP",
   atk: "攻撃",
   def: "防御",
   reg: "耐魔",
@@ -419,6 +421,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   conditionalEffect: "条件分岐",
 };
 export const STATUS_EFFECT_STATS = [
+  "hp",
   "atk",
   "def",
   "reg",

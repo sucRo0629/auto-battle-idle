@@ -3,6 +3,7 @@ import { applyIncomingDamage } from '../damageDelay.ts';
 import {
   applyBarrierToTarget,
   applyHealToTarget,
+  clampHpToEffectiveMax,
   currentHpRatio,
   getPassiveDefs,
   resolveDamage,
@@ -64,7 +65,7 @@ import type {
   SkillSlotKind,
   StatusEffect,
 } from '../types.ts';
-import { asStatusEffectStatList } from '../types.ts';
+import { asStatusEffectStatList, filterStatusEffectStats } from '../types.ts';
 import {
   buildPendingHitsFromResolution,
   findCombatantById,
@@ -1129,26 +1130,9 @@ export class SkillExecutor {
         }
       }
       const isBuff = effectDef.type === 'buff';
-      const stats = asStatusEffectStatList(
-        isBuff
-          ? (Array.isArray(effectDef.buffStat)
-              ? effectDef.buffStat.filter(
-                  (stat): stat is 'atk' | 'def' | 'reg' | 'damageTaken' | 'attackSpeed' =>
-                    stat === 'atk' ||
-                    stat === 'def' ||
-                    stat === 'reg' ||
-                    stat === 'damageTaken' ||
-                    stat === 'attackSpeed',
-                )
-              : effectDef.buffStat === 'atk' ||
-                  effectDef.buffStat === 'def' ||
-                  effectDef.buffStat === 'reg' ||
-                  effectDef.buffStat === 'damageTaken' ||
-                  effectDef.buffStat === 'attackSpeed'
-                ? [effectDef.buffStat]
-                : [])
-          : effectDef.debuffStat,
-      );
+      const stats = isBuff
+        ? filterStatusEffectStats(effectDef.buffStat)
+        : asStatusEffectStatList(effectDef.debuffStat);
       const multiplier = isBuff
         ? effectDef.buffMultiplier
         : effectDef.debuffMultiplier;
@@ -1183,6 +1167,8 @@ export class SkillExecutor {
         target.statusEffects.push(effect);
         statusLabels.push(formatStatusLabel(stat, multiplier, flatBonus));
       }
+
+      clampHpToEffectiveMax(target);
 
       this.emit({
         type: 'skill',

@@ -3,6 +3,7 @@ import {
   currentHpRatio,
   getEffectiveAtk,
   getEffectiveDef,
+  getEffectiveMaxHp,
   getEffectiveReg,
 } from "../combatMath.ts";
 import {
@@ -621,7 +622,9 @@ export function filterSelectablePool(
     spec.stat === "hp" &&
     spec.order === "ratio"
   ) {
-    return pool.filter((unit) => unit.isAlive && unit.hp < unit.maxHp);
+    return pool.filter(
+      (unit) => unit.isAlive && unit.hp < getEffectiveMaxHp(unit),
+    );
   }
   return pool;
 }

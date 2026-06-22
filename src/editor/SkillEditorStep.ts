@@ -117,6 +117,7 @@ import {
 } from './formUtils.ts';
 
 const STAT_LABELS: Record<StatusEffectStat, string> = {
+  hp: 'HP',
   atk: '攻撃',
   def: '防御',
   reg: '耐魔',

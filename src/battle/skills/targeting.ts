@@ -16,6 +16,7 @@ import {
   pierceStepFields,
 } from './powerStep.ts';
 import { getBattleX } from '../combatPosition.ts';
+import { getEffectiveMaxHp } from '../combatMath.ts';
 import {
   getAttackablePool,
   isInForwardSegment,
@@ -168,7 +169,7 @@ function hasDamagedHealCandidate(
           unit.isAlive &&
           Math.abs(getBattleX(unit) - anchorX) <= effect.aoeRadiusPx!,
       )
-      .some((unit) => unit.hp < unit.maxHp);
+      .some((unit) => unit.hp < getEffectiveMaxHp(unit));
   }
 
   const candidates =
@@ -177,7 +178,7 @@ function hasDamagedHealCandidate(
         ? [actor]
         : []
       : attackablePool.filter((unit) => unit.isAlive);
-  return candidates.some((unit) => unit.hp < unit.maxHp);
+  return candidates.some((unit) => unit.hp < getEffectiveMaxHp(unit));
 }
 
 function hasScopedTargetRuleOverride(

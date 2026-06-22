@@ -32,7 +32,7 @@ import type {
   StatusEffectStat,
   TargetSpec,
 } from "../battle/types.ts";
-import { asStatusEffectStatList } from "../battle/types.ts";
+import { asStatusEffectStatList, filterStatusEffectStats } from "../battle/types.ts";
 import {
   PASSIVE_PERIODIC_TRIGGER_LABELS,
   resolvePassiveBarrierTrigger,
@@ -75,6 +75,7 @@ const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
 };
 
 const STATUS_STAT_SHORT: Record<StatusEffectStat, string> = {
+  hp: "HP",
   atk: "ATK",
   def: "DEF",
   reg: "REG",
@@ -280,15 +281,7 @@ function formatBuffTargetStats(
   multiplier: number | undefined,
   flatBonus: number | undefined
 ): string {
-  const list = Array.isArray(stat) ? stat : stat ? [stat] : [];
-  const stats = list.filter(
-    (entry): entry is StatusEffectStat =>
-      entry === "atk" ||
-      entry === "def" ||
-      entry === "reg" ||
-      entry === "damageTaken" ||
-      entry === "attackSpeed"
-  );
+  const stats = filterStatusEffectStats(stat);
   if (stats.length === 0) return "—";
   return formatStatsWithModifier(stats, multiplier, flatBonus);
 }

@@ -20,6 +20,7 @@
 
 `effectiveAtk = max(0, (atk + atkFlatSum) × atkMulProduct)`  
 `effectiveDef = max(0, (def + defFlatSum) × defMulProduct)`  
+`effectiveMaxHp = max(0, (maxHp + hpFlatSum) × hpMulProduct)`  
 `damageTakenMul = max(0, (1 + damageTakenFlatSum) × damageTakenMulProduct)` × パッシブ `damageTakenMultiplier`
 
 固定値（flat）: 同一 stat 内で buff は `+flatBonus`、debuff は `-flatBonus` を代数和。  
@@ -76,9 +77,9 @@
 
 ## 回復
 
-**原則:** 回復後の HP は `min(maxHp, hp + amount)` — 超過分は切り捨て。
+**原則:** 回復後の HP は `min(effectiveMaxHp, hp + amount)` — 超過分は切り捨て。maxHp バフ / デバフ解消で effectiveMaxHp が下がった場合、現在 HP は effectiveMaxHp で切り上げない（超過分のみ clamp）。
 
-**アクティブ heal / hot の発動保留:** 射程内の対象候補（`self` のときは自身）に **欠損 HP（`hp < maxHp`）の味方が 1 人もいない場合は発動しない**（CD 進行なし）。**同一スキルにバリア付与 effect がある場合は例外** — 対象が満タンでも heal / hot を解決する。パッシブ由来の HoT aura / 定期 tick は対象外。`target` の `order: ratio` で同率タイのときはプール先頭が選ばれる（実 HP のタイブレークなし）— 保留ルール適用後、全員満タン時には通常到達しない。**heal の味方 stat / distance 対象は使用者自身も候補に含める**（支援 buff 等の非 heal 味方 stat は従来どおり使用者除外）。
+**アクティブ heal / hot の発動保留:** 射程内の対象候補（`self` のときは自身）に **欠損 HP（`hp < effectiveMaxHp`）の味方が 1 人もいない場合は発動しない**（CD 進行なし）。**同一スキルにバリア付与 effect がある場合は例外** — 対象が満タンでも heal / hot を解決する。パッシブ由来の HoT aura / 定期 tick は対象外。`target` の `order: ratio` で同率タイのときはプール先頭が選ばれる（実 HP のタイブレークなし）— 保留ルール適用後、全員満タン時には通常到達しない。**heal の味方 stat / distance 対象は使用者自身も候補に含める**（支援 buff 等の非 heal 味方 stat は従来どおり使用者除外）。
 
 **余剰回復バリア変換**（パッシブ `excessHealToBarrier`）: 試行回復量のうち maxHp 超過分 × `barrierScale` を **バリア上書き**（`barrierStack` なし）。
 
@@ -93,7 +94,7 @@ heal / HoT / barrier / **damage** は `**ResourceAmountSpec`**（`amount`）で�
 | -------------- | ----------------------------------------------------------------------------------------- |
 | `atkBased`（既定） | `floor(max(0, (effectiveAtk + healBonus + atkOffset) × atkScale))`（damage は healBonus なし） |
 | `flat`         | `floor(max(0, flatAmount + healBonus))`                                                   |
-| `percentMaxHp` | `floor(max(0, ref.maxHp × percentOfMaxHp + healBonus))` — `ref` は `maxHpRef`: `self` → 使用者、`target` または未指定 → 対象 |
+| `percentMaxHp` | `floor(max(0, ref.effectiveMaxHp × percentOfMaxHp + healBonus))` — `ref` は `maxHpRef`: `self` → 使用者、`target` または未指定 → 対象 |
 
 
 - `healBonus` — 使用者パッシブ `healBonus` の合算
@@ -127,7 +128,7 @@ hp = max(0, hp - remaining)
 
 HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 HP の右端から描画。HP 満タン時は tier1 を左から HP fill の上に重ねる。超過分 tier2（`max(0, barrierHp − maxHp)`）は従来どおり左端から明るい色で描画。
 
-**HP 割合の参照:** 戦闘ロジックで「現在 HP 割合」を使うとき（`target.stat hp order: ratio`、特効 `targetHp`、`selfHpRatioBuff`、前列圧力ボーナス等）は **`hp / maxHp` のみ**とする。`barrierHp` は含めない（満タン HP + 大バリアでも HP 割合は 1.0）。
+**HP 割合の参照:** 戦闘ロジックで「現在 HP 割合」を使うとき（`target.stat hp order: ratio`、特効 `targetHp`、`selfHpRatioBuff`、前列圧力ボーナス等）は **`hp / effectiveMaxHp` のみ**とする。`barrierHp` は含めない（満タン HP + 大バリアでも HP 割合は 1.0）。
 
 ## クールダウン
 

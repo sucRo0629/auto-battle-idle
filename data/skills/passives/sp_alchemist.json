@@ -18,11 +18,11 @@
   },
   {
     "id": "sp_alchemist_passive_2",
-    "name": "守りの薬",
+    "name": "健康体",
     "effect": "buff",
     "buffSubKind": "stat",
     "buffStat": [
-      "def"
+      "hp"
     ],
     "buffMultiplier": 1.05,
     "buffTargetRule": {

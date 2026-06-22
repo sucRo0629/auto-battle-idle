@@ -1612,6 +1612,7 @@ export function appendPassiveBuffFields(
           ? passive.buffStat[0] ?? "atk"
           : passive.buffStat ?? "atk",
         [
+          { value: "hp", label: "HP" },
           { value: "atk", label: "攻撃" },
           { value: "def", label: "防御" },
           { value: "reg", label: "耐魔" },

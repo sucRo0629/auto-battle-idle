@@ -2,6 +2,7 @@ import {
   applyHealToTarget,
   computeInstantHealExcess,
   currentHpRatio,
+  getEffectiveMaxHp,
   getPassiveDefs,
 } from './combatMath.ts';
 import {
@@ -23,7 +24,7 @@ export function resolveExcessHealRedirectTarget(
     (unit) =>
       unit.isAlive &&
       unit.id !== primaryTarget.id &&
-      unit.hp < unit.maxHp,
+      unit.hp < getEffectiveMaxHp(unit),
   );
   if (candidates.length === 0) return undefined;
 
@@ -32,8 +33,8 @@ export function resolveExcessHealRedirectTarget(
     const currentRatio = currentHpRatio(current);
     if (currentRatio < bestRatio - 1e-9) return current;
     if (currentRatio > bestRatio + 1e-9) return best;
-    if (current.maxHp < best.maxHp) return current;
-    if (current.maxHp > best.maxHp) return best;
+    if (getEffectiveMaxHp(current) < getEffectiveMaxHp(best)) return current;
+    if (getEffectiveMaxHp(current) > getEffectiveMaxHp(best)) return best;
     return best;
   });
 }

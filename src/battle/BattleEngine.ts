@@ -9,7 +9,10 @@ import {
 import {
   applyDamageToTarget,
   applyHealToTarget,
+  clampHpToEffectiveMax,
+  currentHpRatio,
   getEffectiveAttackSpeedMultiplier,
+  getEffectiveMaxHp,
   getPassiveDefs,
   resolveDotAmountFromStatus,
   resolveHotAmountFromStatus,
@@ -386,7 +389,7 @@ export class BattleEngine {
               healer,
               reservation.redirectTarget,
               reservation.redirectHpRatioBeforeHeal ??
-                reservation.redirectTarget.hp / reservation.redirectTarget.maxHp,
+                currentHpRatio(reservation.redirectTarget),
               this.gameData.skillRegistry.passives,
             );
           }
@@ -1396,7 +1399,7 @@ export class BattleEngine {
       id: c.id,
       name: c.name,
       hp: c.hp,
-      maxHp: c.maxHp,
+      maxHp: getEffectiveMaxHp(c),
       barrierHp: c.barrierHp,
       atk: c.atk,
       def: c.def,
@@ -1654,6 +1657,7 @@ export class BattleEngine {
       }
 
       unit.statusEffects = kept;
+      clampHpToEffectiveMax(unit);
       this.tickDelayedDamage(unit, deltaTime);
     }
   }

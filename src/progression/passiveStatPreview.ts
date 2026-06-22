@@ -8,7 +8,7 @@ import type {
   StatusEffect,
   StatusEffectStat,
 } from '../battle/types.ts';
-import { asStatusEffectStatList } from '../battle/types.ts';
+import { asStatusEffectStatList, filterStatusEffectStats } from '../battle/types.ts';
 import {
   computeStatsAtLevel,
   type LevelCurvesConfig,
@@ -72,24 +72,7 @@ function collectSelfHpRatioBuffEffects(
   const scale = resolveHpRatioBuffScale(hpRatio, maxBuffAtHpRatio);
   if (scale <= 0) return;
 
-  const stats = asStatusEffectStatList(
-    Array.isArray(passive.buffStat)
-      ? passive.buffStat.filter(
-          (stat): stat is StatusEffectStat =>
-            stat === 'atk' ||
-            stat === 'def' ||
-            stat === 'reg' ||
-            stat === 'damageTaken' ||
-            stat === 'attackSpeed',
-        )
-      : passive.buffStat === 'atk' ||
-          passive.buffStat === 'def' ||
-          passive.buffStat === 'reg' ||
-          passive.buffStat === 'damageTaken' ||
-          passive.buffStat === 'attackSpeed'
-        ? passive.buffStat
-        : undefined,
-  );
+  const stats = filterStatusEffectStats(passive.buffStat);
   if (stats.length === 0) return;
 
   for (const stat of stats) {
@@ -121,8 +104,8 @@ function collectBuffPassiveStatEffects(
   if (subKind !== 'stat') return;
   if (!isSelfTargetRule(passive.buffTargetRule)) return;
 
-  const stats = asStatusEffectStatList(
-    passive.buffStat as StatusEffectStat | StatusEffectStat[] | undefined,
+  const stats = filterStatusEffectStats(
+    passive.buffStat as PassiveSkillDef['buffStat'],
   );
   const multiplier = passive.buffMultiplier;
   const flatBonus = passive.buffFlatBonus;
@@ -212,7 +195,7 @@ export function computePreviewCombatStats(
   );
 
   const effective = {
-    maxHp: base.maxHp,
+    maxHp: applyPreviewStat(base.maxHp, effects, 'hp'),
     atk: applyPreviewStat(base.atk, effects, 'atk'),
     def: applyPreviewStat(base.def, effects, 'def'),
     reg: applyPreviewStat(base.reg, effects, 'reg'),
@@ -220,6 +203,7 @@ export function computePreviewCombatStats(
   const attackSpeedMultiplier = applyPreviewStat(1, effects, 'attackSpeed');
 
   const hasPassiveStatModifiers =
+    effective.maxHp !== base.maxHp ||
     effective.atk !== base.atk ||
     effective.def !== base.def ||
     effective.reg !== base.reg ||
