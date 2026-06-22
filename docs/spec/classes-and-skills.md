@@ -1101,8 +1101,8 @@ Conductor は自身でダメージを与えるキャスターではない。
 
 ### 未実装・TBD
 
-- 印術師（`at_sigilist`）: Earth / Wind Mark 系 effect、条件分岐 tooling、`data/skills/` への新 active 追加 — **Phase 7 以降**。旧 JSON active（連印 / 爆印）は廃棄済み
-- 法陣師（`at_conductor`）: damage reservoir、damage observation / concentration / distribution / recycling、地点指定範囲の combat 実装と `data/skills/` への反映 — **Phase 7 以降**。旧 `at_geomancer` ID・攻撃寄り active JSON は廃棄済み
+- 印術師（`at_sigilist`）: Earth / Wind Mark 系 effect、条件分岐 tooling、`data/skills/` への新 active 追加 — **Phase 8 以降**。旧 JSON active（連印 / 爆印）は廃棄済み
+- 法陣師（`at_conductor`）: damage reservoir、damage observation / concentration / distribution / recycling、地点指定範囲の combat 実装と `data/skills/` への反映 — **Phase 8 以降**。旧 `at_geomancer` ID・攻撃寄り active JSON は廃棄済み
 - 3 キャスター: Lv0 / Lv10 / Lv20 枝・属性（火 / 風地 / 水）と VFX の対応
 
 ## 配置
@@ -1137,7 +1137,7 @@ Conductor は自身でダメージを与えるキャスターではない。
 
 ## スプライト・演出アセット
 
-アセットパス・寸法の詳細は [sheets/README.md](../../src/assets/sprites/sheets/README.md)。フェーズ計画は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 5 / 6。
+アセットパス・寸法の詳細は [sheets/README.md](../../src/assets/sprites/sheets/README.md)。フェーズ計画は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 6 / 7。
 
 ### entity 本体（idle / move / death）
 
@@ -1178,7 +1178,7 @@ Conductor は自身でダメージを与えるキャスターではない。
 | `heal_major_party` | 大全体回復     | `vfx` / `footActor` |
 
 - 回復 hitVfx 推奨 anchor は target（胴体中心オーラ）
-- **非推奨 VFX フィールド（validate 拒否）:** `preset` / `arc` / `durationMs`（Phase 6 以前の Canvas preset VFX）
+- **非推奨 VFX フィールド（validate 拒否）:** `preset` / `arc` / `durationMs`（Phase 7 以前の Canvas preset VFX）
 
 - **配置:** `vfxPlacement.ts` の `resolveVfxWorldPosition` — `footActor` / `footTarget` は entity 足元中央を 64×64 VFX の下辺中央に合わせる。`particles.placement` 省略時は親 `vfx.placement` を継承
 - **描画:** `spriteFrameDraw.drawVfxFrameAtAnchor` — `BattleCanvas.playSkillVfx`（`layer` behind → entities → front）。パーティクルも同一 layer 順

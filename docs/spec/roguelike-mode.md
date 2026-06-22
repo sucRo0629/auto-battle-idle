@@ -84,7 +84,7 @@
 | 育成目的 | ステージ攻略・キャラ Lv 成長 | **非目的**（後述のエンドレスも同様） |
 | 戦闘 | 既存 `BattleEngine` による完全自動戦闘 | 同一戦闘基盤を利用（ルール差分はデータ・モディファイアで与える） |
 
-メインモードのセーブ・EXP・`globalExp`（Phase 8）とは **独立したラン状態** を持つ。ラン外への永続育成への転用は本 spec では定義しない。
+メインモードのセーブ・EXP・`globalExp`（Phase 9）とは **独立したラン状態** を持つ。ラン外への永続育成への転用は本 spec では定義しない。
 
 ---
 
@@ -216,7 +216,7 @@
 ### 8.3 メインモードとの関係
 
 - ラン内報酬は **ラン終了で失効** する（エンドレス継続中もラン内状態として保持）。
-- メインモードの `CharacterProgress`・習得スキル・Phase 8 の globalExp 強化には **直接反映しない**。
+- メインモードの `CharacterProgress`・習得スキル・Phase 9 の globalExp 強化には **直接反映しない**。
 
 ---
 
@@ -422,11 +422,11 @@ Hunter / Defender / Healer 等も、既存の Kill / Flow / Survival 機構に�
 
 ## 18. 実装フェーズ
 
-**着手条件:** Phase 8（メインモードの globalExp・強化ツリー・Electron）完了後。メイン進行・クラスマスタ・戦闘基盤が安定してから、本モードを **Phase 9** として実装する。
+**着手条件:** Phase 9（メインモードの globalExp・強化ツリー・Electron）完了後。メイン進行・クラスマスタ・戦闘基盤が安定してから、本モードを **Phase 10** として実装する。
 
-**実装:** （未着手）— 本節は概要のみ。詳細タスクは [phase-roadmap.md](../plans/phase-roadmap.md) Phase 9 を参照。
+**実装:** （未着手）— 本節は概要のみ。詳細タスクは [phase-roadmap.md](../plans/phase-roadmap.md) Phase 10 を参照。
 
-### 18.1 スコープ（Phase 9 想定）
+### 18.1 スコープ（Phase 10 想定）
 
 | 領域 | 内容 |
 | ---- | ---- |
@@ -440,7 +440,7 @@ Hunter / Defender / Healer 等も、既存の Kill / Flow / Survival 機構に�
 | **エンドレス** | クリア後の難度スケールと報酬テーブル |
 | **UI** | マップ・報酬選択・ラン結果。メインモード入口 |
 
-### 18.2 スコープ外（Phase 9 初期）
+### 18.2 スコープ外（Phase 10 初期）
 
 - メインモードへのラン報酬の永続転用
 - ラン専用の新クラス追加
@@ -450,11 +450,11 @@ Hunter / Defender / Healer 等も、既存の Kill / Flow / Survival 機構に�
 ### 18.3 依存関係
 
 ```text
-Phase 7（バランス + 印術師・法陣師）
+Phase 8（バランス + 印術師・法陣師）
     ↓
-Phase 8（globalExp + 強化ツリー + Electron）
+Phase 9（globalExp + 強化ツリー + Electron）
     ↓
-Phase 9（ローグライクモード — 本 spec）
+Phase 10（ローグライクモード — 本 spec）
 ```
 
 ### 18.4 受け入れ基準（概要）

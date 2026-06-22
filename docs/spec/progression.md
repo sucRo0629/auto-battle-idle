@@ -6,7 +6,7 @@
 
 - セーブなし・EXP/Lv なしの戦闘サンドボックス。
 - Victory / Defeat 後、3 秒待って HP 全回復し同一ウェーブ再スポーン。
-- 描画：アニメーション基盤 + ロール別プレースホルダー（本番スプライトは Phase 5）。
+- 描画：アニメーション基盤 + ロール別プレースホルダー（本番スプライトは Phase 6）。
 
 ---
 
@@ -119,8 +119,8 @@ interface ClassSkillUnlock {
 
 Phase 3 の習得機構 + キャラクターデータ GUI で **クラス 15 種**を確定する。
 
-- 数値・習得タイミングの最終調整は **Phase 7**
-- スキル説明（`formatSkillText`）は **データ PR ごと** に同梱（Phase 4b）。一括 polish は Phase 7 前
+- 数値・習得タイミングの最終調整は **Phase 8**
+- スキル説明（`formatSkillText`）は **データ PR ごと** に同梱（Phase 4b）。一括 polish は Phase 8 前
 
 ### ステータス・成長（Phase 4a）
 
@@ -136,7 +136,17 @@ Phase 3 の習得機構 + キャラクターデータ GUI で **クラス 15 種
 
 ---
 
-## Phase 5 — 演出アセット + 演出調整ツール
+## Phase 5 — ステージ作成
+
+Phase 4a で確定したクラス・スキルを前提に、メインモード用の固定ステージ（`stages.json`）と敵テンプレート（`enemies.json`）を整備する。敵編成方針は [enemy-design-concept.md](../enemy-design-concept.md)。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 5（5a 敵 / 5b コンテンツ / 5c 編集 GUI）。
+
+- `stages.json` 配列順 = メイン進行チェーン（Phase 2a の Victory / Defeat ルール）
+- Wave / `spawnX` — [battle-field.md](battle-field.md)
+- 難易度・EXP の最終調整は **Phase 8**
+
+---
+
+## Phase 6 — 演出アセット + 演出調整ツール
 
 進行・育成とは独立。**確定 classId / enemyId から順次** PNG とタイミングを載せる。詳細は [phase-roadmap.md](../plans/phase-roadmap.md)。
 
@@ -146,15 +156,15 @@ Phase 3 の習得機構 + キャラクターデータ GUI で **クラス 15 種
 
 ---
 
-## Phase 6 — VFX PNG 描画（完了）
+## Phase 7 — VFX PNG 描画（完了）
 
-Phase 5 の演出ラボで VFX **調整** は済。Phase 6 で戦闘 VFX を PNG strip（`sheets/vfx/`）描画に統一した。
+Phase 6 の演出ラボで VFX **調整** は済。Phase 7 で戦闘 VFX を PNG strip（`sheets/vfx/`）描画に統一した。
 
 ---
 
-## Phase 7 — バランス調整
+## Phase 8 — バランス調整
 
-Phase 3〜6 完了後。敵 `exp`、成長曲線、クラス/スキル/ステージ数値の体感チューニング。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
+Phase 3〜7 および Phase 5 の固定ステージ骨格完了後。敵 `exp`、成長曲線、クラス/スキル/ステージ数値の体感チューニング。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
 
 ### passive / active 枠構造
 
@@ -165,9 +175,9 @@ Phase 3〜6 完了後。敵 `exp`、成長曲線、クラス/スキル/ステー
 
 ---
 
-## Phase 8 — パーティ全体メタ
+## Phase 9 — パーティ全体メタ
 
-Phase 7（バランス調整）完了後に着手。Electron シェルは `electron/main.mjs` に基盤のみ一部実装済み。
+Phase 8（バランス調整）完了後に着手。Electron シェルは `electron/main.mjs` に基盤のみ一部実装済み。
 
 ### globalExp
 
@@ -197,15 +207,15 @@ Phase 7（バランス調整）完了後に着手。Electron シェルは `elect
 ```
 finalStat = Lv1 基準値（classes.json）
           + resolveStatGrowth(growthTier, growthPresets) × (Lv - 1)
-          × enhancementMultiplier   // Phase 8
+          × enhancementMultiplier   // Phase 9
 ```
 
 スキル・パッシブは戦闘時に上乗せ（[combat.md](combat.md) 参照）。
 
 ---
 
-## Phase 9 — ローグライクモード（仮称）
+## Phase 10 — ローグライクモード（仮称）
 
-Phase 8 完了後に着手。メインモードのステージ進行・EXP とは **独立したラン** で、ランダム問題の解法探索を提供する。
+Phase 9 完了後に着手。メインモードのステージ進行・EXP とは **独立したラン** で、ランダム問題の解法探索を提供する。
 
-詳細は [roguelike-mode.md](roguelike-mode.md)。実装タスクは同 doc §18 および [phase-roadmap.md](../plans/phase-roadmap.md) Phase 9。
+詳細は [roguelike-mode.md](roguelike-mode.md)。実装タスクは同 doc §18 および [phase-roadmap.md](../plans/phase-roadmap.md) Phase 10。

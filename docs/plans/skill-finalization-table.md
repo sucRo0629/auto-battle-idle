@@ -17,8 +17,8 @@
 - 初期アクティブは `active_1` を基本スキル、`active_2` を強めスキルとして扱う。Lv0 の 2 枠でクラスの基礎操作を成立させつつ、`active_2` には初期段階からクラス個性が分かる強い効果形状を置く。
 - passive は active と同じ数・習得段階ルールに従う。初期 passive は 2 つまでとし、Lv10 / Lv20 で 1 つずつ追加する。現行実装の `passiveIds` 一括常時有効方式は、この方針に合わせて習得段階を持つ形へ見直す。
 - 「スキル装備」「セット枠」「付け替え」は扱わない。習得済み passive / active が常時参加する。
-- 数値は Phase 7 で調整する。今決めるのは、効果形状、対象、習得段階、クラス内の役割。
-- `atkScale`、倍率、秒数、CD、発動間隔、確率などの細かい数値はこの表では確定しない。実装時は現行値または保守的な仮値を置き、Phase 7 の調整対象として残す。
+- 数値は Phase 8 で調整する。今決めるのは、効果形状、対象、習得段階、クラス内の役割。
+- `atkScale`、倍率、秒数、CD、発動間隔、確率などの細かい数値はこの表では確定しない。実装時は現行値または保守的な仮値を置き、Phase 8 の調整対象として残す。
 - 既存 effect / target / condition で表現できる案を優先する。
 - 新 effect、targetShape、条件、表示要素を採用する場合は、同じ実装単位で `SkillEditorStep`、`editorApi`、validate、`formatSkillText`、関連 spec を同期する。
 - 既存 RPG テンプレートではなく、現在の設計書と実装を正本にする。
@@ -73,7 +73,7 @@
 | --- | --- | --- | --- | --- |
 | `df_guardian` | 前線構築。単一路線の完全防衛、高 HP 正面受け、被弾による前線押上 | `active_1` 防御強化、`active_2` 防御専念、`active_3` 息入れ。`active_4` 未配置 | `active_1` / `active_2` は **残す**。`active_3` は自己 HoT ではなく、自己 barrier / block / damageTaken 低下など「壁」の維持へ **見直し**。Lv20 は Threat そのものより前線保持を強める上位防御として **追加** | 既存 buff / barrier / block / damageTaken 周辺で実装可能。恒常 Threat は passive に寄せる |
 | `df_paladin` | 戦線安定。範囲・魔法ダメージを含む戦場全体の被害緩和 | `active_1` 光の剣、`active_2` 聖盾、`active_3` 治療専念。`active_4` 未配置 | `active_1` は heal + magic damage の複合として **見直し**。`active_2` は自己防御寄りなので、front / all ally への barrier・damageTaken 軽減へ寄せる。Lv20 は全体安定装置として **追加** | 既存 heal / barrier / damageTaken / basicAttackTransform で対応可能。front Threat floor は passive 側を正本にする |
-| `df_duelist` | 攻撃防御。単体強敵への制圧・拘束・カウンター・行動阻害 | `active_1` 戦叫び、`active_2` 体力温存、`active_3` 隙撃ち、`active_4` 血気煽り | 4 枠構造は最も進んでいるため **残す** 寄り。`active_4` の全敵 ATK debuff + 自己被害増は範囲が広いので、単体強敵制圧へ寄せる | 既存 debuff / damageDelay / stun / damageIncrease で対応可能。数値は Phase 7 |
+| `df_duelist` | 攻撃防御。単体強敵への制圧・拘束・カウンター・行動阻害 | `active_1` 戦叫び、`active_2` 体力温存、`active_3` 隙撃ち、`active_4` 血気煽り | 4 枠構造は最も進んでいるため **残す** 寄り。`active_4` の全敵 ATK debuff + 自己被害増は範囲が広いので、単体強敵制圧へ寄せる | 既存 debuff / damageDelay / stun / damageIncrease で対応可能。数値は Phase 8 |
 
 ### Defender 枠確定案
 
@@ -167,7 +167,7 @@ Lancer / Ballista / Hunter は、物理職の中でも「対象をどう倒す�
 | classId | 枠 | 効果カテゴリ・対象・条件 | 方針 | 採否 / 実装影響 |
 | --- | --- | --- | --- | --- |
 | `at_lancer` | basic | physical damage。対象は自身前方 `selfOrigin` の `pierce`。条件なし | 槍術士の通常攻撃自体を Position Flow の常時圧力にする | 現行 `at_lancer_basic_attack` を **残す**。新実装なし |
-| `at_lancer` | Lv0 passive 1-2 | passive debuff + passive buff。敵前方 `pierce` ATK debuff、味方 `selfOrigin` + `aoe` ATK aura。条件なし | 前線に入った敵の接触圧を下げ、近傍味方の前線維持を支える | 現行 `at_lancer_passive_1` / `at_lancer_passive_2` を **残す**。数値は Phase 7 |
+| `at_lancer` | Lv0 passive 1-2 | passive debuff + passive buff。敵前方 `pierce` ATK debuff、味方 `selfOrigin` + `aoe` ATK aura。条件なし | 前線に入った敵の接触圧を下げ、近傍味方の前線維持を支える | 現行 `at_lancer_passive_1` / `at_lancer_passive_2` を **残す**。数値は Phase 8 |
 | `at_lancer` | Lv10 / Lv20 passive | passive buff / debuff / assist counter 候補。対象は前線敵または近傍味方。援護反撃は「自分以外の前列味方が攻撃された時」を条件に、攻撃者へ反撃 | Lv0 の前線圧力を段階強化する。Kill 対象特化や Defender 的 Threat 操作には寄せず、前列の横連携として扱う | **追加**。援護反撃を採用する場合は既存 counter では不可。`frontAllyDamaged` / `allyDamaged` 系 trigger、editor / validate / `formatSkillText` / combat / spec 同期が必要 |
 | `at_lancer` | Lv0 active 1 | move + physical `pierce` damage。対象は nearest enemy へ接近後、自身前方 `selfOrigin` | 戦線へ踏み込んで前方ラインへ圧力を作る | 現行 `at_lancer_active_1`（踏み込み突き）を **残す** |
 | `at_lancer` | Lv0 active 2 | physical `pierce` damage + `stun` / DEF debuff。対象は自身前方 `selfOrigin`。条件なし | 前線に入った敵群の足を止め、接敵領域を一時的に薄くする | 現行 `at_lancer_active_2`（足払い）を **残す / 整理**。stun と stat debuff の形状を実装時に確認 |
@@ -176,7 +176,7 @@ Lancer / Ballista / Hunter は、物理職の中でも「対象をどう倒す�
 | `at_ballista` | basic | physical single damage。対象は通常 enemy target。条件なし | 遠隔物理の重撃前提の標準射撃 | 現行 `at_ballista_basic_attack` を **残す** |
 | `at_ballista` | Lv0 passive 1-2 | targetRuleOverride + 高 HP / 高 Max HP 特効候補。対象は高 Max HP 敵優先。条件は高 HP / 高 Max HP 対象 | 高 HP targeting は 1 枠へ統合し、もう 1 枠は高耐久処理の攻城性へ寄せる。常時 DEF 無視は古い仕様の残骸として採用しない | `at_ballista_passive_1` / `passive_2` の重複を **整理**。`at_ballista_passive_3`（常時 DEF 無視）は **置換 / 削除**。Max HP 厳密化は `maxHp` target 拡張が必要 |
 | `at_ballista` | Lv10 / Lv20 passive | skillPropertyOverride / specialEffect / target DEF 参照追加ダメージ候補。対象は自身または高 Max HP target。条件は高 HP / 高 Max HP 対象 | reload / stance の扱いや貫通射撃の保持を段階強化する。高 HP ボス / エリートが高 DEF でも完全に止まらないよう、DEF 対策は「無視」ではなく「装甲を重撃の追加量に変える」方向を優先する | **追加 / 整理**。高 HP 特効は現状存在しないため新 condition が必要。target DEF 参照追加ダメージを採用する場合は新 effect / amount 参照として tooling 同期必須。Warrior の高 DEF 処理を奪わないよう high maxHp 条件つきにする |
-| `at_ballista` | Lv0 active 1 | self ATK buff + self attackSpeed debuff。発動は `targetHp` smart 条件 | 重撃態勢として残す。火力増減の数値は扱わず、攻撃間隔を火力へ変換する構造を採用する | 現行 `at_ballista_active_1`（重撃態勢）を **残す**。数値は Phase 7 |
+| `at_ballista` | Lv0 active 1 | self ATK buff + self attackSpeed debuff。発動は `targetHp` smart 条件 | 重撃態勢として残す。火力増減の数値は扱わず、攻撃間隔を火力へ変換する構造を採用する | 現行 `at_ballista_active_1`（重撃態勢）を **残す**。数値は Phase 8 |
 | `at_ballista` | Lv0 active 2 | physical `pierce` damage + hold。対象は自身前方 `selfOrigin`。発動は enemyCount smart 条件 | 射線上の敵をまとめて抜く攻城射撃の基礎 | 現行 `at_ballista_active_2`（貫く一射）を **残す** |
 | `at_ballista` | Lv10 active 3 | reload / stance 補助。self buff、basicAttackTransform、または charge 保持候補。条件は高 HP target または enemyCount | `active_1` と `active_2` の間をつなぐ装填リズムを作る | **追加**。既存 buff / basicAttackTransform / skillPropertyOverride で検討。新 gauge は作らない |
 | `at_ballista` | Lv20 active 4 | 高 Max HP 対象への siege shot。physical damage + pierce + 高 HP / 高 Max HP 特効。必要なら高 Max HP 条件つきの target DEF 参照追加ダメージ。対象は高 Max HP target / 自身前方ライン | 高耐久処理の上位枠。汎用 AoE ではなく、高 Max HP 対象と射線上の敵へ刺さる形にする。高 DEF 汎用処理にはしない | **追加**。高 HP 特効 condition を新規追加する。`maxHp` target 拡張を採用するか、現行 `hp/highest` を暫定 proxy にするか実装前に確定。DEF 無視ではなく target DEF 参照追加ダメージを入れる場合は新 effect / amount 参照として扱う。フィールド端貫通はゲートに残す |
@@ -200,17 +200,17 @@ Physical pass B の実装方針:
 | classId | 設計の柱 | 現行スキル | v1 確定方針 | 実装影響 |
 | --- | --- | --- | --- | --- |
 | `at_sorcerer` | 純出力。安定 DPS、基準火力、マルチロック再配分 | `active_1` / `active_2` は placeholder 名の単体・multiLock。`active_3` / `active_4` 未配置 | 名前と習得段階を **見直し**。条件分岐なし、領域再定義なしの安定魔法として、単体・multiLock・大火力・継続火力の 4 枠へ整理 | 既存 damage / multiLock で対応可能。名称・説明・VFX 対応が必要 |
-| `at_sigilist` | Earth / Wind Mark 分岐。条件適応型 Kill | 旧 JSON 廃棄済み | 設計は **確定**。combat / JSON / tooling は **Phase 7 以降** | Mark state / effect、editor / validate / `formatSkillText` / spec 同期（Phase 7 以降） |
-| `at_conductor` | Damage Routing / Distribution / Recycling | 旧 JSON 廃棄済み | 設計は **確定**。combat / JSON / tooling は **Phase 7 以降** | damage reservoir、地点指定範囲、非 damage basic 等（Phase 7 以降） |
+| `at_sigilist` | Earth / Wind Mark 分岐。条件適応型 Kill | 旧 JSON 廃棄済み | 設計は **確定**。combat / JSON / tooling は **Phase 8 以降** | Mark state / effect、editor / validate / `formatSkillText` / spec 同期（Phase 8 以降） |
+| `at_conductor` | Damage Routing / Distribution / Recycling | 旧 JSON 廃棄済み | 設計は **確定**。combat / JSON / tooling は **Phase 8 以降** | damage reservoir、地点指定範囲、非 damage basic 等（Phase 8 以降） |
 
 ### Caster pass 枠確定案
 
-Caster 3 種は魔法 damage を扱うが、役割は「火力の大小」ではなく出力構造の違いで分ける。Phase 3 では `at_sorcerer` のみ JSON / combat 実装の対象とし、`at_sigilist` / `at_conductor` は独自システムのため設計確定のみ行い実装は **Phase 7 以降** とする。
+Caster 3 種は魔法 damage を扱うが、役割は「火力の大小」ではなく出力構造の違いで分ける。Phase 3 では `at_sorcerer` のみ JSON / combat 実装の対象とし、`at_sigilist` / `at_conductor` は独自システムのため設計確定のみ行い実装は **Phase 8 以降** とする。
 
 | classId | 枠 | 効果カテゴリ・対象・条件 | 方針 | 採否 / 実装影響 |
 | --- | --- | --- | --- | --- |
 | `at_sorcerer` | basic | magic single damage。対象は通常 enemy target。条件なし | キャスターの標準魔法弾。条件分岐や領域再定義は持たせない | 現行 `at_sorcerer_basic_attack` を **残す**。名称は「魔弾」を維持可 |
-| `at_sorcerer` | Lv0 passive 1-2 | 軽めの REG 無視 + magic damage / multiLock 補助候補。対象は自身または習得魔法。条件なし | 純出力の基準値を支える。軽い REG 無視は魔法基準火力の下支えとして採用可。状況条件や構造操作ではなく、安定 damage / multiLock 再配分の損失低減へ寄せる | **追加**。REG 無視は既存 `defenseIgnore.reg.percent` で対応可能。既存 `specialEffect` 空条件、`skillAmountOverride`、`skillPropertyOverride` 候補。数値は Phase 7 |
+| `at_sorcerer` | Lv0 passive 1-2 | 軽めの REG 無視 + magic damage / multiLock 補助候補。対象は自身または習得魔法。条件なし | 純出力の基準値を支える。軽い REG 無視は魔法基準火力の下支えとして採用可。状況条件や構造操作ではなく、安定 damage / multiLock 再配分の損失低減へ寄せる | **追加**。REG 無視は既存 `defenseIgnore.reg.percent` で対応可能。既存 `specialEffect` 空条件、`skillAmountOverride`、`skillPropertyOverride` 候補。数値は Phase 8 |
 | `at_sorcerer` | Lv10 passive | MultiLock Count Increase。対象は自身の multiLock active | Lock 数を増やし、単体・少数・多数戦すべてを強化する。条件分岐ではなく、Sorcerer の multiLock 純出力を段階強化する | **追加**。採用候補。既存 multiLock の hit / lock 数拡張で対応する。editor / validate / `formatSkillText` 同期確認 |
 | `at_sorcerer` | Lv20 passive | Full Saturation。同一対象への Lock 集中時追加効果。対象は自身の multiLock active | Lock が一定数以上同一対象へ集中した際に追加攻撃を発生させる。少数戦でもロックが無駄にならない Sorcerer の完成形 | **追加**。採用候補。Lock 集中数参照 condition / property 追加が必要。editor / validate / `formatSkillText` / docs 同期必須 |
 | `at_sorcerer` | Lv0 active 1 | magic single damage。対象は nearest enemy。条件なし | 基本スキル。安定単体魔法として、Caster 火力の基準を示す | 現行 `at_sorcerer_active_1` を **残す / 改名**。placeholder 名を置換 |
@@ -239,8 +239,8 @@ Caster pass の実装方針:
 - Sorcerer は条件分岐なし・領域再定義なしの純出力に限定する。placeholder 名は必ず置換し、`active_1` は基本単体、`active_2` は強め multiLock として Lv0 からクラスの基準火力を示す。Lv0 passive 1 には軽めの REG 無視を置ける。Lv10 passive は MultiLock Count Increase、Lv20 passive は Full Saturation（同一対象への Lock 集中時追加効果）として扱う。Lv20 active も範囲大火力ではなく上位 multiLock にし、少数戦でもロックが無駄にならない純出力へ寄せる。
 - Sigilist は `conditionalEffect` を本採用する場合に成立する。Sorcerer を multiLock 純出力へ寄せるため、Sigilist はスキル対象の条件によってより適した効果へ調整する攻撃最適化にする。分岐は回復 / 支援ではなく、対象の状態・数・密集度などに応じて damage / debuff / hit 構造 / 範囲形状を変える中で完結させる。成立側 / 未成立側の性能差は付けず、どちらも同格の効果として扱う。Sigilist の Lv0 passive 1 は、数値補助ではなく「スキル対象の条件で効果が分岐する」ことを説明する class rule passive として採用してもよい。Lv0 passive 2 は強化ではなく、条件分岐スキルの対象を分岐が意味を持つ候補へ寄せる対象読解 / 分岐対象選定として扱う。branch 内の effect 表示、validate、editor 保存、`formatSkillText` は同じ実装単位で同期する。
 - Conductor は地点指定範囲 / 持続範囲を Hunter と共有するが、置く effect が異なる。Hunter は DoT 圧縮 / 行動制限、Conductor は damage concentration / distribution / recycling を置く。既存 AoE / scatter 攻撃は正本にせず、通常攻撃を含めて自分で damage を出さない。ダメージ軽減職・ATK/DEF buff 職ではなく、damage の発生量を直接増減せず routing / distribution / recycling が主役。蓄積プールは主役ではなく補助エンジン。成長ラインは Lv0=観測・集中・分散、Lv10=観測拡張、Lv20=再循環。
-- Caster pass で増やす新要素は、Phase 3 では `at_sorcerer` の既存 effect 整理に限定する。`at_sigilist` / `at_conductor` 向けの Mark 系・damage reservoir 系は **Phase 7 以降**。
-- `at_sigilist` と `at_conductor` の現行 `data/skills/actives/*.json` は設計確定に伴い **廃棄済み**。`classes.json` の Lv0 active 習得も空。新スキルは Phase 7 以降に設計表どおり追加する。
+- Caster pass で増やす新要素は、Phase 3 では `at_sorcerer` の既存 effect 整理に限定する。`at_sigilist` / `at_conductor` 向けの Mark 系・damage reservoir 系は **Phase 8 以降**。
+- `at_sigilist` と `at_conductor` の現行 `data/skills/actives/*.json` は設計確定に伴い **廃棄済み**。`classes.json` の Lv0 active 習得も空。新スキルは Phase 8 以降に設計表どおり追加する。
 
 ## Survival
 
@@ -295,8 +295,8 @@ Supporter pass の実装方針:
 3. **物理 Kill / Flow 6 種の passive / active Lv10 / Lv20 追加**
    - 多くは既存 effect で進められる。Hunter と Ballista の新メカニクスだけゲート化する。
 4. **Caster — `at_sorcerer` の passive / active 4 枠化**
-   - 印術師・法陣師は独自システムのため **Phase 7 以降**（設計は本表で確定済み、JSON / combat 実装は送る）。
-5. **印術師・法陣師（Phase 7 以降）**
+   - 印術師・法陣師は独自システムのため **Phase 8 以降**（設計は本表で確定済み、JSON / combat 実装は送る）。
+5. **印術師・法陣師（Phase 8 以降）**
    - `at_sigilist`: Mark 系 state / effect、Branch 分岐 tooling、`data/skills/` 投入。
    - `at_conductor`: damage reservoir、法陣 routing / recycling、地点指定範囲、非 damage basic。
 
@@ -309,19 +309,19 @@ Supporter pass の実装方針:
 | Physical pass A | `at_warrior`, `at_assassin`, `at_ranger` | 既存 effect 中心で Kill クラスの passive / active 4 枠化 |
 | Physical pass B | `at_lancer`, `at_ballista`, `at_hunter` | passive / active 4 枠化、Flow / pierce / trap のゲート整理 |
 | Caster pass A | `at_sorcerer` | passive / active 4 枠化（Phase 3） |
-| Caster pass B | `at_sigilist`, `at_conductor` | 独自システム実装（**Phase 7 以降**）。設計確定は本表、JSON / combat / tooling は未着手 |
+| Caster pass B | `at_sigilist`, `at_conductor` | 独自システム実装（**Phase 8 以降**）。設計確定は本表、JSON / combat / tooling は未着手 |
 | Tooling pass | editor / validate / `formatSkillText` / spec | 新 effect / targetShape / condition を採用した場合の同期 |
 
 ## 未決事項
 
-- `at_sigilist` / `at_conductor` の combat 実装タイミングは **Phase 7 以降**（独自システムのため Phase 3 では設計確定のみ）。
+- `at_sigilist` / `at_conductor` の combat 実装タイミングは **Phase 8 以降**（独自システムのため Phase 3 では設計確定のみ）。
 - Hunter の DoT 残り時間圧縮と行動制限 condition の具体仕様。視界・命中干渉は将来ゲートに残す。
 - Ballista のフィールド端貫通ラインを既存 `pierce` の範囲に留めるか、戦場座標仕様として拡張するか。
 
 ## 完了条件
 
 - 15 クラスすべてに basic + Lv0 2 passive + Lv10 passive + Lv20 passive + Lv0 2 active + Lv10 active + Lv20 active が存在する。
-  - **例外:** `at_sigilist` / `at_conductor` は独自システムのため Phase 7 以降まで JSON / combat 未実装を許容する。設計表と docs の確定を Phase 3 の完了条件とする。
+  - **例外:** `at_sigilist` / `at_conductor` は独自システムのため Phase 8 以降まで JSON / combat 未実装を許容する。設計表と docs の確定を Phase 3 の完了条件とする。
 - `data/skills/actives/*.json` に placeholder 名、未実装メモ、習得段階と矛盾するスキルが残らない。
 - `classes.json` の習得テーブルがこの表の段階と一致する。
 - 新 effect / target / condition を追加した場合、editor / validate / `formatSkillText` / spec が同じ作業で更新されている。
