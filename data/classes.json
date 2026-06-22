@@ -612,7 +612,8 @@
     "passiveIds": [
       "sp_alchemist_passive_1",
       "sp_alchemist_passive_2",
-      "sp_alchemist_passive_3"
+      "sp_alchemist_passive_3",
+      "sp_alchemist_passive_4"
     ],
     "skills": [
       {
@@ -620,13 +621,22 @@
         "skillIds": [
           "sp_alchemist_passive_1",
           "sp_alchemist_passive_2",
-          "sp_alchemist_active_1"
+          "sp_alchemist_active_1",
+          "sp_alchemist_active_2"
         ]
       },
       {
         "level": 10,
         "skillIds": [
-          "sp_alchemist_passive_3"
+          "sp_alchemist_passive_3",
+          "sp_alchemist_active_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "sp_alchemist_passive_4",
+          "sp_alchemist_active_4"
         ]
       }
     ],

@@ -1,7 +1,7 @@
 [
   {
     "id": "sp_alchemist_active_1",
-    "name": "薬粉撒き",
+    "name": "sp_alchemist_active_1",
     "trigger": {
       "kind": "time",
       "value": 10
@@ -37,6 +37,137 @@
         "debuffDurationSec": 7,
         "targetShape": "aoe",
         "aoeRadiusPx": 70
+      }
+    ]
+  },
+  {
+    "id": "sp_alchemist_active_2",
+    "name": "sp_alchemist_active_2",
+    "trigger": {
+      "kind": "time",
+      "value": 12
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
+        },
+        "type": "heal",
+        "healSubKind": "hot",
+        "durationSec": 8,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.42
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 80
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "def",
+        "buffMultiplier": 1.12,
+        "buffDurationSec": 8,
+        "targetShape": "aoe",
+        "aoeRadiusPx": 80
+      }
+    ]
+  },
+  {
+    "id": "sp_alchemist_active_3",
+    "name": "sp_alchemist_active_3",
+    "trigger": {
+      "kind": "time",
+      "value": 11
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "heal",
+        "healSubKind": "hot",
+        "durationSec": 12,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.28
+        }
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "atk",
+        "buffMultiplier": 1.08,
+        "buffDurationSec": 10,
+        "targetShape": "aoe",
+        "aoeRadiusPx": 80
+      }
+    ]
+  },
+  {
+    "id": "sp_alchemist_active_4",
+    "name": "sp_alchemist_active_4",
+    "trigger": {
+      "kind": "time",
+      "value": 14
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
+        },
+        "type": "heal",
+        "healSubKind": "hot",
+        "durationSec": 10,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.25
+        },
+        "targetShape": "single"
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "debuff",
+        "debuffSubKind": "stat",
+        "debuffStat": "atk",
+        "debuffMultiplier": 0.82,
+        "debuffDurationSec": 10,
+        "targetShape": "aoe",
+        "aoeRadiusPx": 70
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "atk",
+        "buffMultiplier": 1.1,
+        "buffDurationSec": 10,
+        "targetShape": "aoe",
+        "aoeRadiusPx": 80
       }
     ]
   },

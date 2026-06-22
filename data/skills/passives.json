@@ -27,7 +27,7 @@
   },
   {
     "id": "sp_cleric_passive_1",
-    "name": "sp_cleric_passive_1",
+    "name": "救命の心得",
     "effect": "specialEffect",
     "specialEffectApplyTo": "heal",
     "specialEffect": {
@@ -225,7 +225,7 @@
   },
   {
     "id": "sp_alchemist_passive_1",
-    "name": "薬効の香り",
+    "name": "sp_alchemist_passive_1",
     "effect": "heal",
     "healSubKind": "hot",
     "hotAmount": {
@@ -239,7 +239,7 @@
   },
   {
     "id": "sp_alchemist_passive_2",
-    "name": "守り薬",
+    "name": "sp_alchemist_passive_2",
     "effect": "buff",
     "buffSubKind": "stat",
     "buffStat": [
@@ -365,7 +365,7 @@
   },
   {
     "id": "sp_alchemist_passive_3",
-    "name": "毒消し",
+    "name": "sp_alchemist_passive_3",
     "effect": "periodicDispel",
     "periodicTrigger": "onDebuffReceived",
     "dispelTargetRule": {
@@ -379,10 +379,20 @@
     "dispelTriggerLimit": 3
   },
   {
+    "id": "sp_alchemist_passive_4",
+    "name": "sp_alchemist_passive_4",
+    "effect": "damageReduction",
+    "damageReductionPercent": 0.04,
+    "damageReductionTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    }
+  },
+  {
     "id": "sp_cleric_passive_2",
-    "name": "sp_cleric_passive_2",
+    "name": "生気の衣",
     "effect": "excessHealToBarrier",
-    "barrierScale": 1,
+    "barrierScale": 0.8,
     "excessHealSources": [
       "outgoing"
     ]

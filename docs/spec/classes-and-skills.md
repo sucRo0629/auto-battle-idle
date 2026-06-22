@@ -540,7 +540,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | -------------- | ------ | --------- | ----- | ---- | ------------------------------------------------------------------- | --------------------------------------- |
 | `sp_cleric`    | 療養師 | Cleric    | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）       | `sp_cleric_active_1` + `sp_cleric_active_2`（低 HP smart heal） |
 | `sp_abjurer`   | 結界師 | Abjurer   | back  | 遠隔 | 高 HP 味方被ダメ軽減 + Wave 開始バリア（`passive_1` / `passive_2`） | `sp_abjurer_active_1`（盾添え）のみ     |
-| `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | 常時 HoT aura + 高 HP 味方 DEF buff（`passive_1` / `passive_2`）    | `sp_alchemist_active_1`（薬粉撒き）のみ |
+| `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | 常時 HoT aura + 高 HP 味方 DEF buff（`passive_1` / `passive_2`）    | `sp_alchemist_active_1` + `sp_alchemist_active_2`（近接帯 sustain） |
 
 ### デモ編成（`parties.json` demo）
 
@@ -718,11 +718,17 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 
 **薬草師（Herbalist）参照:** Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士との差分は、狩猟士が Flow として罠・DoT 毒で局所戦場を制御するのに対し、薬草師は Survival として HoT sustain、被害低減、状態異常対策を扱う点にある。`traits.rangePx` は近接帯（`rangePx < 100`）で前列配置とするが、これは戦場制御を主目的にしたものではなく、**Survival 主軸内での射程個性の分離** と、**薬草師というフレーバーを長射程 caster 系と分けるための設計** を正本とする。戦闘構造上は、前列 supporter として最前帯の直後に留まり、近接帯の味方へ HoT / sustain を差し込む役割を持つ。`active_1` の敵 debuff は `targetShape: aoe` + `aoeRadiusPx: 70`（最近接敵をアンカーにした範囲）とし、Survival の範囲に留まる **被害量・被害速度の抑制** に限定する。`effect.range` の拡張は使わない。
 
+- Lv0 `sp_alchemist_active_2` — 自身位置（`selfOrigin`）+ `aoeRadiusPx: 80` で近接帯味方へ HoT + DEF buff。Lv0 の強め sustain。
+- Lv10 `sp_alchemist_active_3` — 最低 HP 比率味方への長 HoT + 近接帯味方 ATK buff（継戦リズム調整。Kill 主目的の火力支援ではない）。
+- Lv10 `sp_alchemist_passive_3` — Wave 回数限定の debuff cleanse（`periodicDispel` / `onDebuffReceived`）。薬草師専用の補助個性。
+- Lv20 `sp_alchemist_active_4` — party HoT + 敵 ATK debuff + 近接帯 ATK buff の上位 sustain 大技。
+- Lv20 `sp_alchemist_passive_4` — 味方全体の軽微な被ダメ軽減（`damageReduction`）。
+
 **バランス目標:** 鉄衛 + 薬草師 90 秒 sim で実効 HP は cleric 比 **上限 75%**。
 
 ### 未決・TBD
 
-- `sp_abjurer` / `sp_alchemist`: Lv10 / Lv20 で追加する `active_3` / `active_4` の具体設計
+- `sp_abjurer`: Lv10 / Lv20 で追加する `active_3` / `active_4` の具体設計
 - 療養師 Lv20 smart heal: 将来の被ダメ反応 trigger へ移行するか（現行 A 案は `time` + `firePolicy: smart` + `fireConditions`）
 
 ## 物理 Kill / Flow 設計方針
