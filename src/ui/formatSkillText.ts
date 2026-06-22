@@ -797,6 +797,18 @@ function formatPassiveEffect(
       const ratio = formatPercent(def.maxBuffAtHpRatio ?? 0);
       return `自HP比例バフ ${statsLabel}（残HP${ratio}以下時最大）`;
     }
+    case "targetHpRatioHealScale": {
+      const ratio = formatPercent(def.maxScaleAtHpRatio ?? 0);
+      return `対象HP比例回復 ×${def.healScaleMax ?? 1}（残HP${ratio}以下時最大）`;
+    }
+    case "healReservation": {
+      const grant = formatPercent(def.grantOnHealMaxHpRatio ?? 1);
+      const trigger = formatPercent(def.triggerHpRatio ?? 0.35);
+      const duration = def.stackDurationSec ?? 8;
+      const amount = formatResourceAmount(def.healAmount);
+      const buffName = def.buffDisplayName ?? "癒しの残響";
+      return `ヒール予約（回復時 対象HP${grant}以下で「${buffName}」付与 / ${duration}秒 / 被ダメ後HP${trigger}以下で${amount}回復）`;
+    }
     case "buff": {
       const effectView = passiveBuffToEffectDef(def);
       const target = formatTarget(def.buffTargetRule, { kind: "self" });

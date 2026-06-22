@@ -23,6 +23,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   damageReduction: damageReductionIconUrl,
   damageIncrease: damageIncreaseIconUrl,
   hot: hotIconUrl,
+  healReservation: hotIconUrl,
   dot: dotIconUrl,
   block: blockIconUrl,
   stun: stunIconUrl,

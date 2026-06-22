@@ -538,7 +538,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 
 | classId        | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0）                                                     | アクティブ（Lv0）                                                   |
 | -------------- | ------ | --------- | ----- | ---- | ------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `sp_cleric`    | 療養師 | Cleric    | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）       | `sp_cleric_active_1` + `sp_cleric_active_2`（低 HP smart heal）     |
+| `sp_cleric`    | 療養師 | Cleric    | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）。Lv10 / Lv20 で回復精度・癒しの残響 | `sp_cleric_active_1` + `sp_cleric_active_2`（低 HP smart heal）     |
 | `sp_abjurer`   | 結界師 | Abjurer   | back  | 遠隔 | 高 HP 味方被ダメ軽減 + Wave 開始バリア（`passive_1` / `passive_2`） | `sp_abjurer_active_1` + `sp_abjurer_active_2`（複数対象 barrier） |
 | `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | 常時 HoT aura + 高 HP 味方 DEF buff（`passive_1` / `passive_2`）    | `sp_alchemist_active_1` + `sp_alchemist_active_2`（近接帯 sustain） |
 
@@ -702,7 +702,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 
 | classId        | 主レイヤー                   | Lv0 の柱                                                  | 補助レイヤー                             |
 | -------------- | ---------------------------- | --------------------------------------------------------- | ---------------------------------------- |
-| `sp_cleric`    | Survival / Recovery Control  | 直接 heal + 低 HP 回復特化 + 余剰回復 → barrier           | 過剰回復を barrier に変換する Stability  |
+| `sp_cleric`    | Survival / Recovery Control  | 直接 heal + 低 HP 回復特化 + 余剰回復 → barrier           | 回復結果の補正（段階的 heal 効率・癒しの残響） |
 | `sp_abjurer`   | Survival / Stability Control | 高 HP 味方被ダメ軽減 + Wave 開始 barrier + 直接 heal      | 範囲 barrier による崩壊前猶予            |
 | `sp_alchemist` | Survival / Sustain Control   | HoT aura + 高 HP 味方 DEF buff + active 範囲 HoT / debuff | Flow 寄りの敵 `atk` debuff、状態異常対策 |
 
@@ -712,7 +712,19 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 - `sp_abjurer` — **崩壊前の猶予作成**。barrier / 軽減で HP 欠損が致命化する前に余裕を作る
 - `sp_alchemist` — **長期維持と継戦リズム調整**。HoT と局所的な被害速度低下で戦線を長く保つ
 
-**療養師（Cleric）参照:** 療養師の主責務は Recovery であり、持続維持や事前軽減ではなく **欠損 HP の即時復元** を正本とする。Lv0 の `sp_cleric_active_1` は単体即時 heal + 短 HoT、`sp_cleric_active_2` は低 HP 味方向けの smart heal（`time` + `firePolicy: smart` + `fireConditions`）。旧 `sp_cleric_active_2`（広域治療）は `sp_cleric_active_3` として **Lv10 習得** に移した。Lv10 / Lv20 passive は回復精度・余剰変換の段階強化。Lv20 の `sp_cleric_active_4` は大きな欠損を即座に立て直す smart heal（被ダメ反応 trigger は将来ゲート。現行は A 案の待機型即応 heal）。
+**療養師（Cleric）参照:** 療養師の主責務は Recovery であり、持続維持や事前軽減ではなく **欠損 HP の即時復元** を正本とする。パッシブは回復そのものを無限に強化するのではなく、**回復の結果処理と安定性** を制御する（HP 直接操作・防御生成・被ダメ介入は行わない）。
+
+- **設計思想:** 回復が戦闘に与える影響を整える。Active との機能重複は禁止。
+- **Passive 構造:** Lv0 / Lv10 / Lv20 の 3 段階。各段階は独立した常時効果で、上位は下位を置き換えず **累積** する。
+
+| 段階 | id | 名称（JSON） | 効果 | 役割 |
+| ---- | --- | --- | --- | --- |
+| Lv0 | `sp_cleric_passive_1` | 慈悲の加護 | 対象 HP 割合が低いほど回復量増（`specialEffect` heal、軽度補正） | 基礎回復の安定性・緊急回復の最低保証 |
+| Lv0 | `sp_cleric_passive_2` | 癒光循環 | 余剰回復（オーバーヒール）を固定率でバリアに変換（`excessHealToBarrier`） | 回復リソースの無駄削減・実効 HP への変換 |
+| Lv10 | `sp_cleric_passive_3` | 生命調律 | 回復時、対象 HP 割合に応じて回復効率が **緩やかに** 上昇（`targetHpRatioHealScale`） | 回復精度の補助。Active2（救命）と競合しない弱い段階補正 |
+| Lv20 | `sp_cleric_passive_4` | ヒール予約 | 低 HP 対象を回復した際にバフ「癒しの残響」を付与。被ダメで HP が閾値以下になったら 1 スタック消費して即時回復（`healReservation`、蘇生ではない） | 回復後の即死リスク軽減・短期保険 |
+
+**Active 参照:** Lv0 の `sp_cleric_active_1` は単体即時 heal + 短 HoT、`sp_cleric_active_2` は低 HP 味方向けの smart heal（`time` + `firePolicy: smart` + `fireConditions`）。旧 `sp_cleric_active_2`（広域治療）は `sp_cleric_active_3` として **Lv10 習得** に移した。Lv20 の `sp_cleric_active_4` は大きな欠損を即座に立て直す smart heal（被ダメ反応 trigger は将来ゲート。現行は A 案の待機型即応 heal）。
 
 **結界師（Abjurer）参照:** 結界師は直接 heal も扱うが、主責務は Recovery ではなく Stability である。小回復は barrier / 軽減による保護を実戦で成立させるための補助であり、役割の本体は **崩壊前猶予の作成** にある。Lv0 の `sp_abjurer_active_1` は単体 heal + 厚い barrier、`sp_abjurer_active_2` は複数対象 barrier（`multiLock`）。Lv10 の `sp_abjurer_active_3` は味方全体 barrier。Lv20 の `sp_abjurer_active_4` は味方全体の一時被ダメ軽減 + barrier。Lv10 / Lv20 passive は全体 barrier（Wave 開始）と全体 `damageReduction` の段階強化。
 
@@ -1432,6 +1444,8 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `aoeCrowdBonus`         | `perExtraTargetScale`, `maxExtraTargets`                                                                                                                                | `aoe` / `scatter` の追加ヒット数ボーナス                                                                                                                                                                                                                                                                                                                                               |
 | `heal`                  | `healSubKind`, `hotAmount`, `hotTargetRule`, `hotTargetShape?`, `hotRange?`, 形状別フィールド, `periodicTrigger?`, `hotDurationSec?`                                    | パッシブ `heal` は **`healSubKind: hot` のみ**（未指定 = hot）。`periodicTrigger: stageStart` / `waveStart` で開幕付与。`hotDurationSec` は付与 HoT の持続（0=無限）。ターゲット形状・射程はアクティブ heal(hot) effect と同型（接頭辞 `hot`）                                                                                                                                         |
 | `excessHealToBarrier`   | `barrierScale`, `excessHealSources?`                                                                                                                                    | 回復が maxHp を超過した分をバリアに変換（**上書き**）。`outgoing`（与回復）/ `incoming`（被回復）を複数選択可。未指定 = `outgoing` のみ。直接 `heal` のみ                                                                                                                                                                                                                              |
+| `targetHpRatioHealScale`| `healScaleMax`, `maxScaleAtHpRatio`                                                                                                                                     | 与回復時、対象 `hp/maxHp` に応じて回復倍率を **緩やかに** 補正。満タン時は 1、対象 HP が `maxScaleAtHpRatio` 以下で `healScaleMax` に到達（線形）。直接 `heal` のみ。HoT 非対象                                                                                                                                                                                                      |
+| `healReservation`       | `grantOnHealMaxHpRatio`, `stackDurationSec`, `triggerHpRatio`, `healAmount`, `buffDisplayName?`                                                                       | 与回復時、回復 **前** の対象 HP 割合が `grantOnHealMaxHpRatio` 以下ならバフ（既定表示名「癒しの残響」）を 1 スタック付与（複数保持可、時間経過で消滅）。被ダメで HP ダメージが入り、**後** の HP 割合が `triggerHpRatio` 以下なら 1 スタック消費して `healAmount` で即時回復（source ATK 基準可）。1 被弾につき最大 1 スタック。致死無効ではない                                                                                                                                  |
 | `selfHpRatioBuff`       | `buffStat`, `buffMultiplierMax?` / `buffFlatBonusMax?`, `maxBuffAtHpRatio`                                                                                              | 自身 HP 割合（`hp/maxHp`。バリア非含有）に応じた常時バフ（対象・形状は自身単体固定）。満タン時は中立、指定 HP 割合以下で最大                                                                                                                                                                                                                                                           |
 | `skillAmountOverride`   | `targetSkillId`, `amount`, `effectIndex?`, `passiveAmountField?`                                                                                                        | 指定スキル（アクティブ / 取得済みパッシブ）の `ResourceAmountSpec` を完全上書き。アクティブは `effectIndex` 省略で amount 持ち effect すべて。パッシブは `hotAmount` / `barrierAmount`。複数時は `learnedPassiveIds` の後方優先。反撃 `counterResponses` は対象外                                                                                                                      |
 | `skillPropertyOverride` | `maxChargesBonus`, `skillPropertyTargetSkillIds?`                                                                                                                       | 対象アクティブの `maxCharges` 加算（上限 3）                                                                                                                                                                                                                                                                                                                                           |

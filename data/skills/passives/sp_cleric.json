@@ -1,11 +1,11 @@
 [
   {
     "id": "sp_cleric_passive_1",
-    "name": "救命の心得",
+    "name": "慈悲の加護",
     "effect": "specialEffect",
     "specialEffectApplyTo": "heal",
     "specialEffect": {
-      "scale": 1.5,
+      "scale": 1.25,
       "conditions": [
         {
           "kind": "targetHp",
@@ -16,7 +16,7 @@
   },
   {
     "id": "sp_cleric_passive_2",
-    "name": "生気の衣",
+    "name": "癒光循環",
     "effect": "excessHealToBarrier",
     "barrierScale": 0.8,
     "excessHealSources": [
@@ -25,26 +25,22 @@
   },
   {
     "id": "sp_cleric_passive_3",
-    "name": "sp_cleric_passive_3",
-    "effect": "specialEffect",
-    "specialEffectApplyTo": "heal",
-    "specialEffect": {
-      "scale": 1.2,
-      "conditions": [
-        {
-          "kind": "targetHp",
-          "maxHpRatio": 0.4
-        }
-      ]
-    }
+    "name": "生命調律",
+    "effect": "targetHpRatioHealScale",
+    "healScaleMax": 1.15,
+    "maxScaleAtHpRatio": 0.4
   },
   {
     "id": "sp_cleric_passive_4",
-    "name": "sp_cleric_passive_4",
-    "effect": "excessHealToBarrier",
-    "barrierScale": 0.5,
-    "excessHealSources": [
-      "outgoing"
-    ]
+    "name": "癒しの備え",
+    "effect": "healReservation",
+    "grantOnHealMaxHpRatio": 0.55,
+    "stackDurationSec": 8,
+    "triggerHpRatio": 0.35,
+    "healAmount": {
+      "kind": "atkBased",
+      "atkScale": 0.75
+    },
+    "buffDisplayName": "癒しの残響"
   }
 ]

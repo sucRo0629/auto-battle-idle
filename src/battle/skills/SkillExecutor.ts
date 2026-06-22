@@ -3,6 +3,7 @@ import { applyIncomingDamage } from '../damageDelay.ts';
 import {
   applyBarrierToTarget,
   applyHealToTarget,
+  currentHpRatio,
   getPassiveDefs,
   resolveDamage,
   resolveHealAmount,
@@ -19,6 +20,7 @@ import {
   stripPassivesAurasFromSource,
   type PassiveDamageContext,
 } from '../passiveEffects.ts';
+import { grantHealReservationStacks } from '../healReservation.ts';
 import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
 import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
 import { grantCounterStatus } from '../counterEffects.ts';
@@ -832,6 +834,7 @@ export class SkillExecutor {
         },
       );
       if (amount <= 0) return false;
+      const targetHpRatioBeforeHeal = currentHpRatio(target);
       applyExcessHealToBarrierFromPassive(
         actor,
         target,
@@ -848,6 +851,12 @@ export class SkillExecutor {
       );
       const healed = applyHealToTarget(target, amount);
       if (healed <= 0 && target.barrierHp <= 0) return false;
+      grantHealReservationStacks(
+        actor,
+        target,
+        targetHpRatioBeforeHeal,
+        passives,
+      );
       this.deps.onHealApplied?.(target);
       this.emit({
         type: 'skill',

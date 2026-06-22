@@ -316,7 +316,8 @@ export interface StatusEffect {
     | "counter"
     | "evasion"
     | "damageDelay"
-    | "basicAttackTransform";
+    | "basicAttackTransform"
+    | "healReservation";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */
@@ -354,6 +355,8 @@ export interface StatusEffect {
   counterRanged?: boolean;
   /** basicAttackTransform overlay: 通常攻撃変形 spec（付与時コピー） */
   basicAttackTransform?: BasicAttackTransformSpec;
+  /** HUD / ログ用の表示名（未指定時は overlay / stat から解決） */
+  displayName?: string;
 }
 
 /** 反撃対象の近接／遠隔帯フィルタ（OR。両方未指定 = 全区間） */
@@ -515,6 +518,8 @@ export type PassiveEffectKind =
   | "debuff"
   | "counter"
   | "selfHpRatioBuff"
+  | "targetHpRatioHealScale"
+  | "healReservation"
   | "skillAmountOverride"
   | "skillPropertyOverride"
   | "threatControl"
@@ -733,6 +738,20 @@ export interface PassiveSkillDef {
   buffFlatBonusMax?: number;
   /** selfHpRatioBuff: この HP 割合以下で最大バフ（0〜1、1 未満） */
   maxBuffAtHpRatio?: number;
+  /** targetHpRatioHealScale: 対象 HP 割合に応じた回復倍率の上限（1 超） */
+  healScaleMax?: number;
+  /** targetHpRatioHealScale: この HP 割合以下で healScaleMax に到達（0〜1、1 未満） */
+  maxScaleAtHpRatio?: number;
+  /** healReservation: 付与時の対象 HP 割合上限（この割合以下を回復したとき 1 スタック） */
+  grantOnHealMaxHpRatio?: number;
+  /** healReservation: スタック持続秒 */
+  stackDurationSec?: number;
+  /** healReservation: 被ダメ後に発動する HP 割合上限 */
+  triggerHpRatio?: number;
+  /** healReservation: 発動時回復量（source ATK 基準） */
+  healAmount?: ResourceAmountSpec;
+  /** healReservation: 付与バフの表示名 */
+  buffDisplayName?: string;
   /** excessHealToBarrier: 余剰変換の対象（未指定 = outgoing のみ） */
   excessHealSources?: Array<"outgoing" | "incoming">;
   /** @deprecated 読み込み互換（正規化後は buff + chance） */

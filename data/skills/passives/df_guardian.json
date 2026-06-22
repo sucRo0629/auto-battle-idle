@@ -17,7 +17,7 @@
   },
   {
     "id": "df_guardian_passive_3",
-    "name": "防御態勢",
+    "name": "防御の備え",
     "effect": "buff",
     "buffSubKind": "barrier",
     "barrierAmount": {

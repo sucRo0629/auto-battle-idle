@@ -93,7 +93,7 @@
         "type": "heal",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.25
+          "atkScale": 1.05
         },
         "targetShape": "single",
         "healSubKind": "instant"
@@ -110,7 +110,7 @@
   },
   {
     "id": "sp_cleric_active_4",
-    "name": "即時回復（仮",
+    "name": "調律の癒光",
     "trigger": {
       "kind": "time",
       "value": 15
@@ -119,23 +119,25 @@
     "fireConditions": [
       {
         "kind": "targetHp",
-        "maxHpRatio": 0.35
+        "maxHpRatio": 0.5
       }
     ],
     "effect": [
       {
-        "type": "heal",
-        "healSubKind": "instant",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 2
-        },
         "target": {
           "kind": "stat",
           "side": "ally",
           "stat": "hp",
           "order": "ratio"
-        }
+        },
+        "type": "heal",
+        "healSubKind": "instant",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.25
+        },
+        "targetShape": "multiLock",
+        "hitCount": 6
       }
     ],
     "maxCharges": 1

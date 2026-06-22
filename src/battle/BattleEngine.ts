@@ -76,6 +76,7 @@ import {
   syncFrontThreatControlAuras,
   syncSelfHpRatioBuffAuras,
 } from "./passiveEffects.ts";
+import { tryTriggerHealReservation } from "./healReservation.ts";
 import {
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
@@ -344,6 +345,34 @@ export class BattleEngine {
         this.gameData.skillRegistry.actives,
         counterCallbacks,
       );
+    }
+    if (
+      !target.isEnemy &&
+      target.isAlive &&
+      (meta?.hpDamage ?? amount) > 0
+    ) {
+      const reservation = tryTriggerHealReservation(
+        target,
+        [...this.players, ...this.enemies],
+        this.gameData.skillRegistry.passives,
+      );
+      if (reservation.healed > 0 && reservation.healerId) {
+        this.refreshSelfHpRatioBuffAuras();
+        this.emit({
+          type: "skill",
+          actorId: reservation.healerId,
+          targetId: target.id,
+          skillId: reservation.passiveId ?? "",
+          skillName:
+            reservation.buffDisplayName ??
+            (reservation.passiveId
+              ? this.gameData.skillRegistry.passives[reservation.passiveId]?.name
+              : undefined) ??
+            "癒しの残響",
+          effect: "heal",
+          amount: reservation.healed,
+        });
+      }
     }
     this.refreshSelfHpRatioBuffAuras();
     this.onDamageApplied?.(actor, target, amount);

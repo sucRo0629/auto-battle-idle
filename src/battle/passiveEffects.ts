@@ -919,12 +919,37 @@ export function stripPassivesAurasFromSource(
   }
 }
 
+export function resolveTargetHpRatioHealScaleMultiplier(
+  actor: CombatantState,
+  target: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  let mul = 1;
+  for (const passive of getPassiveDefs(actor, passives)) {
+    if (passive.effect !== 'targetHpRatioHealScale') continue;
+    const healScaleMax = passive.healScaleMax ?? 1;
+    if (healScaleMax <= 1) continue;
+    const maxScaleAtHpRatio = passive.maxScaleAtHpRatio ?? 0;
+    if (maxScaleAtHpRatio >= 1) continue;
+    const hpRatio = currentHpRatio(target);
+    const denom = 1 - maxScaleAtHpRatio;
+    if (denom <= 0) continue;
+    const t = Math.max(0, Math.min(1, (1 - hpRatio) / denom));
+    if (t <= 0) continue;
+    mul *= 1 + (healScaleMax - 1) * t;
+  }
+  return mul;
+}
+
 export function resolveOutgoingHealSpecialMultiplier(
   actor: CombatantState,
   target: CombatantState,
   passives: Record<string, PassiveSkillDef>,
 ): number {
-  return getPassiveSpecialEffectMultiplier('heal', actor, target, passives);
+  return (
+    getPassiveSpecialEffectMultiplier('heal', actor, target, passives) *
+    resolveTargetHpRatioHealScaleMultiplier(actor, target, passives)
+  );
 }
 
 export function countDamageTargetsInResolution(

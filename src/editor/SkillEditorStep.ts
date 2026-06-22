@@ -589,6 +589,17 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.buffMultiplierMax ??= 1.5;
       passive.maxBuffAtHpRatio ??= 0;
       break;
+    case 'targetHpRatioHealScale':
+      passive.healScaleMax ??= 1.1;
+      passive.maxScaleAtHpRatio ??= 0.4;
+      break;
+    case 'healReservation':
+      passive.grantOnHealMaxHpRatio ??= 0.6;
+      passive.stackDurationSec ??= 8;
+      passive.triggerHpRatio ??= 0.35;
+      passive.healAmount ??= defaultResourceAmount(0.75);
+      passive.buffDisplayName ??= '癒しの残響';
+      break;
     case 'aoeCrowdBonus':
       passive.perExtraTargetScale ??= 0.1;
       passive.maxExtraTargets ??= 4;
@@ -2430,6 +2441,99 @@ export class SkillEditorStep {
               },
               { min: 0, max: 0.99, step: 0.01 },
             ),
+          ),
+        );
+        break;
+      case 'targetHpRatioHealScale':
+        effectGrid.appendChild(
+          createFieldRow(
+            '最大回復倍率',
+            createNumberInput(
+              passive.healScaleMax ?? 1.1,
+              (healScaleMax) => {
+                this.patchPassive(index, (current) => {
+                  current.healScaleMax = healScaleMax > 1 ? healScaleMax : undefined;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '最大になる対象HP割合 (0–1)',
+            createNumberInput(
+              passive.maxScaleAtHpRatio ?? 0.4,
+              (maxScaleAtHpRatio) => {
+                this.patchPassive(index, (current) => {
+                  current.maxScaleAtHpRatio = maxScaleAtHpRatio;
+                }, { rerender: false });
+              },
+              { min: 0, max: 0.99, step: 0.01 },
+            ),
+          ),
+        );
+        break;
+      case 'healReservation':
+        effectGrid.appendChild(
+          createFieldRow(
+            '付与対象HP割合 (0–1)',
+            createNumberInput(
+              passive.grantOnHealMaxHpRatio ?? 0.6,
+              (grantOnHealMaxHpRatio) => {
+                this.patchPassive(index, (current) => {
+                  current.grantOnHealMaxHpRatio = grantOnHealMaxHpRatio;
+                }, { rerender: false });
+              },
+              { min: 0, max: 1, step: 0.01 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'スタック持続秒',
+            createNumberInput(
+              passive.stackDurationSec ?? 8,
+              (stackDurationSec) => {
+                this.patchPassive(index, (current) => {
+                  current.stackDurationSec = stackDurationSec;
+                }, { rerender: false });
+              },
+              { min: 0.1, step: 0.5 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '発動HP割合 (0–1)',
+            createNumberInput(
+              passive.triggerHpRatio ?? 0.35,
+              (triggerHpRatio) => {
+                this.patchPassive(index, (current) => {
+                  current.triggerHpRatio = triggerHpRatio;
+                }, { rerender: false });
+              },
+              { min: 0, max: 1, step: 0.01 },
+            ),
+          ),
+        );
+        appendResourceAmountFields(
+          effectGrid,
+          passive.healAmount ?? defaultResourceAmount(0.75),
+          (healAmount) => {
+            this.patchPassive(index, (current) => {
+              current.healAmount = healAmount;
+            }, { rerender: false });
+          },
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '付与バフ名',
+            createTextInput(passive.buffDisplayName ?? '癒しの残響', (buffDisplayName) => {
+              this.patchPassive(index, (current) => {
+                current.buffDisplayName = buffDisplayName.trim() || undefined;
+              }, { rerender: false });
+            }),
           ),
         );
         break;

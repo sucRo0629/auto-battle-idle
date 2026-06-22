@@ -8,6 +8,7 @@ export type StatusDisplayCategory =
   | "damageReduction"
   | "damageIncrease"
   | "hot"
+  | "healReservation"
   | "dot"
   | "evasion"
   | "block"
@@ -24,6 +25,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "damageReduction",
   "damageIncrease",
   "hot",
+  "healReservation",
   "damageDelay",
   "dot",
   "evasion",
@@ -130,6 +132,13 @@ function statusEffectBadgeForOverlay(
     case "hot":
       return {
         category: "hot",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "healReservation":
+      return {
+        category: "healReservation",
         kind: "buff",
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
@@ -244,6 +253,9 @@ function effectsForCategory(
 ): StatusEffect[] {
   if (category === "hot") {
     return effects.filter((effect) => effect.overlay === "hot");
+  }
+  if (category === "healReservation") {
+    return effects.filter((effect) => effect.overlay === "healReservation");
   }
   if (category === "dot") {
     return effects.filter((effect) => effect.overlay === "dot");

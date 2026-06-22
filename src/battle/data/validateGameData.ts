@@ -3417,6 +3417,63 @@ function requirePassiveEffectParams(
           : {}),
       };
     }
+    case 'targetHpRatioHealScale': {
+      const healScaleMax = requireNumber(obj, 'healScaleMax', context);
+      if (healScaleMax <= 1) {
+        invalidField(context, 'healScaleMax', 'must be greater than 1');
+      }
+      const maxScaleAtHpRatio = requireNumber(obj, 'maxScaleAtHpRatio', context);
+      if (maxScaleAtHpRatio < 0 || maxScaleAtHpRatio >= 1) {
+        invalidField(
+          context,
+          'maxScaleAtHpRatio',
+          'must be between 0 and 1 (exclusive of 1)',
+        );
+      }
+      return {
+        ...base,
+        healScaleMax,
+        maxScaleAtHpRatio,
+      };
+    }
+    case 'healReservation': {
+      const grantOnHealMaxHpRatio = requireNumber(
+        obj,
+        'grantOnHealMaxHpRatio',
+        context,
+      );
+      if (grantOnHealMaxHpRatio < 0 || grantOnHealMaxHpRatio > 1) {
+        invalidField(
+          context,
+          'grantOnHealMaxHpRatio',
+          'must be between 0 and 1',
+        );
+      }
+      const stackDurationSec = requireNumber(obj, 'stackDurationSec', context);
+      if (stackDurationSec <= 0) {
+        invalidField(context, 'stackDurationSec', 'must be a positive number');
+      }
+      const triggerHpRatio = requireNumber(obj, 'triggerHpRatio', context);
+      if (triggerHpRatio < 0 || triggerHpRatio > 1) {
+        invalidField(context, 'triggerHpRatio', 'must be between 0 and 1');
+      }
+      const healAmount = parseResourceAmountSpec(
+        obj.healAmount,
+        `${context}.healAmount`,
+      );
+      const buffDisplayName =
+        obj.buffDisplayName === undefined
+          ? undefined
+          : requireString(obj, 'buffDisplayName', context);
+      return {
+        ...base,
+        grantOnHealMaxHpRatio,
+        stackDurationSec,
+        triggerHpRatio,
+        healAmount,
+        ...(buffDisplayName !== undefined ? { buffDisplayName } : {}),
+      };
+    }
     case 'selfHpRatioBuff': {
       const buffStat = requireStatusEffectStat(obj, 'buffStat', context);
       const buffMultiplierMax = parseOptionalNumber(
