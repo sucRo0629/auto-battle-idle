@@ -570,20 +570,22 @@
         "skillIds": [
           "sp_abjurer_passive_1",
           "sp_abjurer_passive_2",
-          "sp_abjurer_active_1"
+          "sp_abjurer_active_1",
+          "sp_abjurer_active_2"
         ]
       },
       {
         "level": 10,
         "skillIds": [
           "sp_abjurer_passive_3",
-          "sp_abjurer_active_2"
+          "sp_abjurer_active_3"
         ]
       },
       {
         "level": 20,
         "skillIds": [
-          "sp_abjurer_passive_4"
+          "sp_abjurer_passive_4",
+          "sp_abjurer_active_4"
         ]
       }
     ],

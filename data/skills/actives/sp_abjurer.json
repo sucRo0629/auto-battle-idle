@@ -1,7 +1,7 @@
 [
   {
     "id": "sp_abjurer_active_1",
-    "name": "盾添え",
+    "name": "sp_abjurer_active_1",
     "trigger": {
       "kind": "time",
       "value": 8
@@ -81,7 +81,7 @@
   },
   {
     "id": "sp_abjurer_active_2",
-    "name": "双璧の護り",
+    "name": "sp_abjurer_active_2",
     "trigger": {
       "kind": "time",
       "value": 10
@@ -96,16 +96,71 @@
         },
         "type": "buff",
         "buffSubKind": "barrier",
-        "buffStat": "atk",
-        "buffMultiplier": 1.2,
-        "buffDurationSec": 5,
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.5
+          "atkScale": 1.1
         },
         "targetShape": "multiLock",
         "hitCount": 2
       }
-    ]
+    ],
+    "useDurationSec": 0.3
+  },
+  {
+    "id": "sp_abjurer_active_3",
+    "name": "sp_abjurer_active_3",
+    "trigger": {
+      "kind": "time",
+      "value": 12
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
+        },
+        "type": "buff",
+        "buffSubKind": "barrier",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.2
+        }
+      }
+    ],
+    "useDurationSec": 0.3
+  },
+  {
+    "id": "sp_abjurer_active_4",
+    "name": "sp_abjurer_active_4",
+    "trigger": {
+      "kind": "time",
+      "value": 16
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "damageTaken",
+        "buffMultiplier": 0.92,
+        "buffDurationSec": 8
+      },
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
+        },
+        "type": "buff",
+        "buffSubKind": "barrier",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.8
+        }
+      }
+    ],
+    "useDurationSec": 0.4
   }
 ]

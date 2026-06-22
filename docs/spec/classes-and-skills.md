@@ -539,7 +539,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | classId        | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0）                                                     | アクティブ（Lv0）                                                   |
 | -------------- | ------ | --------- | ----- | ---- | ------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | `sp_cleric`    | 療養師 | Cleric    | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）       | `sp_cleric_active_1` + `sp_cleric_active_2`（低 HP smart heal）     |
-| `sp_abjurer`   | 結界師 | Abjurer   | back  | 遠隔 | 高 HP 味方被ダメ軽減 + Wave 開始バリア（`passive_1` / `passive_2`） | `sp_abjurer_active_1`（盾添え）のみ                                 |
+| `sp_abjurer`   | 結界師 | Abjurer   | back  | 遠隔 | 高 HP 味方被ダメ軽減 + Wave 開始バリア（`passive_1` / `passive_2`） | `sp_abjurer_active_1` + `sp_abjurer_active_2`（複数対象 barrier） |
 | `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | 常時 HoT aura + 高 HP 味方 DEF buff（`passive_1` / `passive_2`）    | `sp_alchemist_active_1` + `sp_alchemist_active_2`（近接帯 sustain） |
 
 ### デモ編成（`parties.json` demo）
@@ -714,7 +714,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 
 **療養師（Cleric）参照:** 療養師の主責務は Recovery であり、持続維持や事前軽減ではなく **欠損 HP の即時復元** を正本とする。Lv0 の `sp_cleric_active_1` は単体即時 heal + 短 HoT、`sp_cleric_active_2` は低 HP 味方向けの smart heal（`time` + `firePolicy: smart` + `fireConditions`）。旧 `sp_cleric_active_2`（広域治療）は `sp_cleric_active_3` として **Lv10 習得** に移した。Lv10 / Lv20 passive は回復精度・余剰変換の段階強化。Lv20 の `sp_cleric_active_4` は大きな欠損を即座に立て直す smart heal（被ダメ反応 trigger は将来ゲート。現行は A 案の待機型即応 heal）。
 
-**結界師（Abjurer）参照:** 結界師は直接 heal も扱うが、主責務は Recovery ではなく Stability である。小回復は barrier / 軽減による保護を実戦で成立させるための補助であり、役割の本体は **崩壊前猶予の作成** にある。
+**結界師（Abjurer）参照:** 結界師は直接 heal も扱うが、主責務は Recovery ではなく Stability である。小回復は barrier / 軽減による保護を実戦で成立させるための補助であり、役割の本体は **崩壊前猶予の作成** にある。Lv0 の `sp_abjurer_active_1` は単体 heal + 厚い barrier、`sp_abjurer_active_2` は複数対象 barrier（`multiLock`）。Lv10 の `sp_abjurer_active_3` は味方全体 barrier。Lv20 の `sp_abjurer_active_4` は味方全体の一時被ダメ軽減 + barrier。Lv10 / Lv20 passive は全体 barrier（Wave 開始）と全体 `damageReduction` の段階強化。
 
 **薬草師（Herbalist）参照:** Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士との差分は、狩猟士が Flow として罠・DoT 毒で局所戦場を制御するのに対し、薬草師は Survival として HoT sustain、被害低減、状態異常対策を扱う点にある。`traits.rangePx` は近接帯（`rangePx < 100`）で前列配置とするが、これは戦場制御を主目的にしたものではなく、**Survival 主軸内での射程個性の分離** と、**薬草師というフレーバーを長射程 caster 系と分けるための設計** を正本とする。戦闘構造上は、前列 supporter として最前帯の直後に留まり、近接帯の味方へ HoT / sustain を差し込む役割を持つ。`active_1` の敵 debuff は `targetShape: aoe` + `aoeRadiusPx: 70`（最近接敵をアンカーにした範囲）とし、Survival の範囲に留まる **被害量・被害速度の抑制** に限定する。`effect.range` の拡張は使わない。
 
