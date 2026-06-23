@@ -28,6 +28,13 @@ describe('saveClassMigration', () => {
     );
   });
 
+  it('maps sp_abjurer to sp_wardweaver', () => {
+    expect(migrateLegacyClassId('sp_abjurer')).toBe('sp_wardweaver');
+    expect(migrateLegacySkillId('sp_abjurer_passive_2')).toBe(
+      'sp_wardweaver_passive_2',
+    );
+  });
+
   it('migrates party and unlockedClassIds', () => {
     const save: SaveGameState = {
       version: 2,

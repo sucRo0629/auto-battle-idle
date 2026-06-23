@@ -31,14 +31,14 @@ function mockUnit(
 }
 
 const passive: PassiveSkillDef = {
-  id: 'sp_abjurer_passive_4',
+  id: 'sp_wardweaver_passive_4',
   name: '結界再編',
   effect: 'barrierBreakRegen',
   barrierAmount: { kind: 'atkBased', atkScale: 0.85 },
 };
 
 const passives: Record<string, PassiveSkillDef> = {
-  sp_abjurer_passive_4: passive,
+  sp_wardweaver_passive_4: passive,
 };
 
 describe('barrierBreakRegen', () => {
@@ -50,10 +50,10 @@ describe('barrierBreakRegen', () => {
   });
 
   it('grants barrier once when ally barrier is fully broken', () => {
-    const abjurer = mockUnit({
-      id: 'abjurer',
+    const wardweaver = mockUnit({
+      id: 'wardweaver',
       atk: 200,
-      build: { learnedPassiveIds: ['sp_abjurer_passive_4'], learnedActiveIds: [] },
+      build: { learnedPassiveIds: ['sp_wardweaver_passive_4'], learnedActiveIds: [] },
     });
     const target = mockUnit({ id: 'guardian', barrierHp: 80, hp: 100 });
     const barrierHpBefore = target.barrierHp;
@@ -63,7 +63,7 @@ describe('barrierBreakRegen', () => {
       target,
       barrierHpBefore,
       80,
-      [abjurer, target],
+      [wardweaver, target],
       passives,
     );
 
@@ -73,10 +73,10 @@ describe('barrierBreakRegen', () => {
   });
 
   it('does not retrigger for the same unit', () => {
-    const abjurer = mockUnit({
-      id: 'abjurer',
+    const wardweaver = mockUnit({
+      id: 'wardweaver',
       atk: 200,
-      build: { learnedPassiveIds: ['sp_abjurer_passive_4'], learnedActiveIds: [] },
+      build: { learnedPassiveIds: ['sp_wardweaver_passive_4'], learnedActiveIds: [] },
     });
     const target = mockUnit({
       id: 'guardian',
@@ -90,7 +90,7 @@ describe('barrierBreakRegen', () => {
       target,
       barrierHpBefore,
       30,
-      [abjurer, target],
+      [wardweaver, target],
       passives,
     );
 
@@ -99,10 +99,10 @@ describe('barrierBreakRegen', () => {
   });
 
   it('does not trigger when barrier is only partially depleted', () => {
-    const abjurer = mockUnit({
-      id: 'abjurer',
+    const wardweaver = mockUnit({
+      id: 'wardweaver',
       atk: 200,
-      build: { learnedPassiveIds: ['sp_abjurer_passive_4'], learnedActiveIds: [] },
+      build: { learnedPassiveIds: ['sp_wardweaver_passive_4'], learnedActiveIds: [] },
     });
     const target = mockUnit({ id: 'guardian', barrierHp: 100, hp: 100 });
     const barrierHpBefore = target.barrierHp;
@@ -112,7 +112,7 @@ describe('barrierBreakRegen', () => {
       target,
       barrierHpBefore,
       40,
-      [abjurer, target],
+      [wardweaver, target],
       passives,
     );
 
@@ -121,10 +121,10 @@ describe('barrierBreakRegen', () => {
   });
 
   it('ignores enemy units as targets', () => {
-    const abjurer = mockUnit({
-      id: 'abjurer',
+    const wardweaver = mockUnit({
+      id: 'wardweaver',
       atk: 200,
-      build: { learnedPassiveIds: ['sp_abjurer_passive_4'], learnedActiveIds: [] },
+      build: { learnedPassiveIds: ['sp_wardweaver_passive_4'], learnedActiveIds: [] },
     });
     const enemy = mockUnit({
       id: 'enemy',
@@ -138,7 +138,7 @@ describe('barrierBreakRegen', () => {
       enemy,
       barrierHpBefore,
       50,
-      [abjurer, enemy],
+      [wardweaver, enemy],
       passives,
     );
 

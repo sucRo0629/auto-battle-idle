@@ -25,6 +25,7 @@ export interface FireGateContext {
   cd?: SkillCooldown;
   isWaveStartPhase: boolean;
   isWaveEndPhase: boolean;
+  pendingHitQueue?: readonly import('../types.ts').PendingSkillHit[];
 }
 
 function toConditionEvalContext(ctx: FireGateContext) {
@@ -37,6 +38,9 @@ function toConditionEvalContext(ctx: FireGateContext) {
     isWaveStartPhase: ctx.isWaveStartPhase,
     isWaveEndPhase: ctx.isWaveEndPhase,
     referenceEffect: resolveSkillConditionReferenceEffect(ctx.skill),
+    battleTimeSec: ctx.battleTimeSec,
+    pendingHitQueue: ctx.pendingHitQueue,
+    skill: ctx.skill,
   };
 }
 
@@ -47,7 +51,11 @@ export function shouldFireActiveSkill(ctx: FireGateContext): boolean {
   if (resolveFirePolicy(ctx.skill) !== 'smart') return true;
   const conditions = ctx.skill.fireConditions;
   if (!conditions || conditions.length === 0) return true;
-  return evaluateConditions(toConditionEvalContext(ctx), conditions);
+  return evaluateConditions(
+    toConditionEvalContext(ctx),
+    conditions,
+    ctx.skill.fireConditionMatch ?? 'all',
+  );
 }
 
 export function isActiveFireHold(ctx: FireGateContext): boolean {

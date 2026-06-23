@@ -4,6 +4,7 @@ import {
   applyStunToTarget,
 } from './ccEffects.ts';
 import { applyIncomingDamage } from './damageDelay.ts';
+import { applyWardBarrierToIncomingDamage } from './wardBarrier.ts';
 import {
   applyDefenseMitigation,
   getPassiveDefs,
@@ -179,8 +180,9 @@ function applyCounterDamageResponse(
   const mitigated = applyDefenseMitigation(rawAmount, attacker, damageType);
   if (mitigated <= 0) return;
 
+  const wardResult = applyWardBarrierToIncomingDamage(attacker, mitigated);
   const barrierHpBefore = attacker.barrierHp;
-  const incoming = applyIncomingDamage(attacker, mitigated);
+  const incoming = applyIncomingDamage(attacker, wardResult.damage);
   const { damageResult } = incoming;
   const appliedCounter =
     damageResult.hpDamage +

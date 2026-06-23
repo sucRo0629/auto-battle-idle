@@ -90,10 +90,10 @@ describe('collectSkillsFromDrafts passive sanitize', () => {
   it('strips orphan fields from excessHealToBarrier passive on save', () => {
     const entries: SkillDraftEntry[] = [
       {
-        ref: { skillId: 'sp_abjurer_passive_2', kind: 'passive' },
+        ref: { skillId: 'sp_wardweaver_passive_2', kind: 'passive' },
         passive: {
-          id: 'sp_abjurer_passive_2',
-          name: 'sp_abjurer_passive_2',
+          id: 'sp_wardweaver_passive_2',
+          name: 'sp_wardweaver_passive_2',
           effect: 'excessHealToBarrier',
           barrierScale: 1.5,
           excessHealSources: ['outgoing', 'incoming'],
@@ -109,8 +109,8 @@ describe('collectSkillsFromDrafts passive sanitize', () => {
 
     const { passives } = collectSkillsFromDrafts(entries);
     expect(passives[0]).toEqual({
-      id: 'sp_abjurer_passive_2',
-      name: 'sp_abjurer_passive_2',
+      id: 'sp_wardweaver_passive_2',
+      name: 'sp_wardweaver_passive_2',
       effect: 'excessHealToBarrier',
       barrierScale: 1.5,
       excessHealSources: ['outgoing', 'incoming'],

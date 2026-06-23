@@ -5,6 +5,7 @@ import {
   createEnemiesForStage,
   hideFallenAllyCorpses,
   resetEntityIdCounter,
+  resetPerWaveCombatantFlags,
 } from "./entities.ts";
 import {
   applyDamageToTarget,
@@ -81,6 +82,8 @@ import {
 } from "./passiveEffects.ts";
 import { tryTriggerHealReservation, grantHealReservationStacks } from "./healReservation.ts";
 import { tryTriggerBarrierBreakRegen } from "./barrierBreakRegen.ts";
+import { tryTriggerBarrierDepletionHeal } from "./barrierDepletionHeal.ts";
+import { applyWardBarrierToIncomingDamage } from "./wardBarrier.ts";
 import {
   applyThreatFromDamage,
   applyThreatFromDebuffApply,
@@ -429,11 +432,34 @@ export class BattleEngine {
           actorId: breakRegen.sourceId,
           targetId: target.id,
           skillId: breakRegen.passiveId ?? "",
-          skillName: breakRegen.passiveId
-            ? this.gameData.skillRegistry.passives[breakRegen.passiveId]?.name
-            : undefined,
+          skillName:
+            (breakRegen.passiveId
+              ? this.gameData.skillRegistry.passives[breakRegen.passiveId]?.name
+              : undefined) ?? "",
           effect: "barrier",
           amount: breakRegen.granted,
+        });
+      }
+      const depletionHeal = tryTriggerBarrierDepletionHeal(
+        target,
+        meta.barrierHpBefore,
+        meta.barrierDamage ?? 0,
+        [...this.players, ...this.enemies],
+        this.gameData.skillRegistry.passives,
+      );
+      if (depletionHeal.healed > 0 && depletionHeal.sourceId) {
+        this.emit({
+          type: "skill",
+          actorId: depletionHeal.sourceId,
+          targetId: target.id,
+          skillId: depletionHeal.passiveId ?? "",
+          skillName:
+            (depletionHeal.passiveId
+              ? this.gameData.skillRegistry.passives[depletionHeal.passiveId]
+                  ?.name
+              : undefined) ?? "",
+          effect: "heal",
+          amount: depletionHeal.healed,
         });
       }
     }
@@ -922,6 +948,7 @@ export class BattleEngine {
       cd,
       isWaveStartPhase: this.isWaveStartPhase(),
       isWaveEndPhase: this.isWaveEndPhase(),
+      pendingHitQueue: this.pendingHitQueue,
     };
   }
 
@@ -1023,6 +1050,7 @@ export class BattleEngine {
       [...this.players, ...this.enemies],
       this.gameData.skillRegistry.passives,
     );
+    resetPerWaveCombatantFlags(this.players);
     firePeriodicPassivesForTrigger(
       'waveStart',
       [...this.players, ...this.enemies],
@@ -1155,6 +1183,7 @@ export class BattleEngine {
       [...this.players, ...this.enemies],
       this.gameData.skillRegistry.passives,
     );
+    resetPerWaveCombatantFlags(this.players);
     firePeriodicPassivesForTrigger(
       'waveStart',
       [...this.players, ...this.enemies],
@@ -1757,7 +1786,8 @@ export class BattleEngine {
         passives,
       );
       const barrierHpBefore = target.barrierHp;
-      const damageResult = applyDamageToTarget(target, amount);
+      const wardResult = applyWardBarrierToIncomingDamage(target, amount);
+      const damageResult = applyDamageToTarget(target, wardResult.damage);
       const appliedDamage =
         damageResult.hpDamage + damageResult.barrierDamage;
       this.handleDamageThreat(source, target, appliedDamage, {

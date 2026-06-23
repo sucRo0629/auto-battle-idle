@@ -543,10 +543,10 @@
     ]
   },
   {
-    "id": "sp_abjurer",
+    "id": "sp_wardweaver",
     "role": "supporter",
     "displayName": "結界師",
-    "epithetEn": "Abjurer",
+    "epithetEn": "Wardweaver",
     "formationRow": "back",
     "traits": {
       "rangePx": 100
@@ -557,35 +557,35 @@
     "reg": 15,
     "jobTier": 1,
     "attackSpeedTier": "slow",
-    "basicAttackSkillId": "sp_abjurer_basic_attack",
+    "basicAttackSkillId": "sp_wardweaver_basic_attack",
     "passiveIds": [
-      "sp_abjurer_passive_1",
-      "sp_abjurer_passive_2",
-      "sp_abjurer_passive_3",
-      "sp_abjurer_passive_4"
+      "sp_wardweaver_passive_1",
+      "sp_wardweaver_passive_2",
+      "sp_wardweaver_passive_3",
+      "sp_wardweaver_passive_4"
     ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "sp_abjurer_passive_1",
-          "sp_abjurer_passive_2",
-          "sp_abjurer_active_1",
-          "sp_abjurer_active_2"
+          "sp_wardweaver_passive_1",
+          "sp_wardweaver_passive_2",
+          "sp_wardweaver_active_1",
+          "sp_wardweaver_active_2"
         ]
       },
       {
         "level": 10,
         "skillIds": [
-          "sp_abjurer_passive_3",
-          "sp_abjurer_active_3"
+          "sp_wardweaver_passive_3",
+          "sp_wardweaver_active_3"
         ]
       },
       {
         "level": 20,
         "skillIds": [
-          "sp_abjurer_passive_4",
-          "sp_abjurer_active_4"
+          "sp_wardweaver_passive_4",
+          "sp_wardweaver_active_4"
         ]
       }
     ],

@@ -1343,6 +1343,20 @@ function parseFireCondition(raw: unknown, context: string): FireCondition {
       ...(scope !== undefined ? { scope } : {}),
     };
   }
+  if (kind === 'pendingIncomingDamage') {
+    const maxHpRatio = requireNumber(obj, 'maxHpRatio', context);
+    if (maxHpRatio < 0 || maxHpRatio > 1) {
+      invalidField(context, 'maxHpRatio', 'must be between 0 and 1');
+    }
+    const windowSec = requireNumber(obj, 'windowSec', context);
+    if (windowSec <= 0) {
+      invalidField(context, 'windowSec', 'must be a positive number');
+    }
+    return { kind, maxHpRatio, windowSec };
+  }
+  if (kind === 'targetBarrierBelowGrant') {
+    return { kind: 'targetBarrierBelowGrant' };
+  }
   invalidField(context, 'kind', `unsupported fire condition kind: ${kind}`);
 }
 
@@ -1687,8 +1701,11 @@ function parseOptionalPassiveTarget(
 function parseOptionalEffectCombatModifiers(
   obj: Record<string, unknown>,
   context: string,
-): Pick<SkillEffectDef, 'damageIncrease' | 'defenseIgnore'> {
-  const result: Pick<SkillEffectDef, 'damageIncrease' | 'defenseIgnore'> = {};
+): Pick<SkillEffectDef, 'damageIncrease' | 'defenseIgnore' | 'effectConditions'> {
+  const result: Pick<
+    SkillEffectDef,
+    'damageIncrease' | 'defenseIgnore' | 'effectConditions'
+  > = {};
   if (obj.targetDebuffFilter !== undefined) {
     invalidField(
       context,
@@ -1706,6 +1723,13 @@ function parseOptionalEffectCombatModifiers(
     result.defenseIgnore = parseDefenseIgnoreSpec(
       obj.defenseIgnore,
       `${context}.defenseIgnore`,
+    );
+  }
+  if (obj.effectConditions !== undefined) {
+    result.effectConditions = parseRequiredConditions(
+      obj.effectConditions,
+      context,
+      'effectConditions',
     );
   }
   return result;
@@ -2403,6 +2427,35 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         buffSubKind,
         amount,
         ...(typeof barrierStack === 'boolean' ? { barrierStack } : {}),
+        ...sequenceTiming,
+        ...presentation,
+        ...(range !== undefined ? { range } : {}),
+      });
+    }
+    if (buffSubKind === 'wardBarrier') {
+      const stacks = requireNumber(obj, 'stacks', context);
+      if (!Number.isInteger(stacks) || stacks < 1) {
+        invalidField(context, 'stacks', 'must be a positive integer');
+      }
+      const damageReductionRatio =
+        obj.damageReductionRatio === undefined
+          ? 0.1
+          : requireNumber(obj, 'damageReductionRatio', context);
+      if (damageReductionRatio < 0 || damageReductionRatio > 1) {
+        invalidField(
+          context,
+          'damageReductionRatio',
+          'must be between 0 and 1',
+        );
+      }
+      return normalizeSkillEffect({
+        target,
+        ...targetShapeFields,
+        ...combatModifiers,
+        type,
+        buffSubKind,
+        stacks,
+        damageReductionRatio,
         ...sequenceTiming,
         ...presentation,
         ...(range !== undefined ? { range } : {}),
@@ -3496,6 +3549,16 @@ function requirePassiveEffectParams(
         barrierAmount,
       };
     }
+    case 'barrierDepletionHeal': {
+      const healAmount = parseResourceAmountSpec(
+        obj.healAmount,
+        `${context}.healAmount`,
+      );
+      return {
+        ...base,
+        healAmount,
+      };
+    }
     case 'selfHpRatioBuff': {
       const buffStat = requireStatusEffectStat(obj, 'buffStat', context);
       const buffMultiplierMax = parseOptionalNumber(
@@ -4115,6 +4178,14 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
       firePolicy = firePolicyRaw;
     }
     const fireConditions = parseFireConditions(obj.fireConditions, `${context}.fireConditions`);
+    const fireConditionMatchRaw = obj.fireConditionMatch;
+    let fireConditionMatch: 'all' | 'any' | undefined;
+    if (fireConditionMatchRaw !== undefined) {
+      if (fireConditionMatchRaw !== 'all' && fireConditionMatchRaw !== 'any') {
+        invalidField(context, 'fireConditionMatch', 'must be all or any');
+      }
+      fireConditionMatch = fireConditionMatchRaw;
+    }
     const fireTimeoutSec = parseOptionalNonNegativeNumber(
       obj,
       'fireTimeoutSec',
@@ -4159,6 +4230,7 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
       ...(useDurationSec !== undefined ? { useDurationSec } : {}),
       ...(firePolicy !== undefined ? { firePolicy } : {}),
       ...(fireConditions !== undefined ? { fireConditions } : {}),
+      ...(fireConditionMatch !== undefined ? { fireConditionMatch } : {}),
       ...(fireTimeoutSec !== undefined ? { fireTimeoutSec } : {}),
       ...(maxCharges !== undefined ? { maxCharges } : {}),
     };

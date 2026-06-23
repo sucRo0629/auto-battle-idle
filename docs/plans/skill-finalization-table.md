@@ -64,7 +64,7 @@
 | `at_sigilist` | 現行データ上、専用 passive 未確認 | **追加 / 説明 passive 候補**。Lv0 passive 1 は「条件でスキル効果が分岐する」ことを明示するクラス説明 passive でもよい。数値補助を無理に入れない |
 | `at_conductor` | AoE crowd bonus、AoE / scatter 攻撃寄り active（旧 `at_geomancer`） | **置換**。既存攻撃スキルは正本にしない。Conductor は自身で damage を出さず、観測・蓄積・法陣による damage routing / distribution / recycling を扱う |
 | `sp_cleric` | 低 HP heal 強化、余剰 heal → barrier、Lv10 余剰 heal 転送、Lv20 癒しの残響 | **残す / 実装済**。Recovery Control の核。passive 3 = `excessHealRedirect`、passive 4 = `healReservation` |
-| `sp_abjurer` | 高 HP ally 軽減、Wave 開始 barrier、全体 barrier / damageReduction | **残す / 整理**。Stability Control として、事前猶予・軽減・barrier の担当を明確化する |
+| `sp_wardweaver` | 低 HP barrier 特効、枯渇回復、障壁（ward）、先読み smart | **実装済**（Stability Control リデザイン） |
 | `sp_alchemist` | party HoT aura、高 HP ally DEF、Wave 回数限定の debuff cleanse | **残す**。debuff cleanse は薬草師専用の補助個性だが、必須インフラにはしない |
 
 ## Defender
@@ -247,7 +247,7 @@ Caster pass の実装方針:
 | classId | 設計の柱 | 現行スキル | v1 確定方針 | 実装影響 |
 | --- | --- | --- | --- | --- |
 | `sp_cleric` | Recovery Control。欠損 HP の即時復元、余剰回復を barrier 化 | `active_1` 癒しの光、`active_2` 広域治療。仕様上は `active_2` が Lv10 とされ、Lv0=2 との整合が未解決 | `active_1` は **残す**。広域治療は Lv10 へ移し、Lv0 2 枠目は低 HP smart heal として **追加**。Lv20 は反応型大 heal 候補 | 既存 heal / hot / fireConditions で先行可能。真の被ダメ反応 trigger は新規ゲート |
-| `sp_abjurer` | Stability Control。崩壊前猶予、barrier、軽減 | `active_1` 盾添え、`active_2` 双璧の護り。`active_3` / `active_4` 未配置 | `active_1` / `active_2` は **残す**。Lv10 は複数・範囲 barrier、Lv20 は全体軽減または Wave 開始保護の強化を **追加** | 既存 barrier / damageReduction で対応可能。対象選択を整理 |
+| `sp_wardweaver` | Stability Control。崩壊前猶予、barrier max、障壁（ward）、先読み smart | **実装済**（2025 リデザイン） | Lv0: heal 補助 + barrier 特効 + 枯渇回復。Lv10: 単体 barrierStack。Lv20: 三重の障壁（障壁2+バリア） | `barrierDepletionHeal` / `wardBarrier` / `pendingIncomingDamage` / `fireConditionMatch` |
 | `sp_alchemist` | Sustain Control。HoT、被害速度低下、限定的な状態異常対策 | `active_1` 薬粉撒き。`active_2` / `active_3` / `active_4` 未配置 | `active_1` は **残す**。Lv0 2 枠目は前列 supporter としての近接 sustain / 守り薬を **追加**。Lv10 以降は HoT 維持、敵 debuff 延長、または味方 ATK buff を **追加**。debuff cleanse は active にしない | 既存 HoT / atk debuff / atk buff / periodicDispel 周辺で対応。新しい active dispel は作らない |
 
 ### Supporter 枠確定案
@@ -264,13 +264,13 @@ Supporter 3 種は「回復量の大小」ではなく、損失を処理する�
 | `sp_cleric` | Lv0 active 2 | 低 HP の味方だけに反応する救命 heal。真の被ダメ反応 trigger は使わず、`time` + `firePolicy: smart` + `fireConditions` で先行 | **追加**。`sp_cleric_active_2` をこの役割へ再定義する案 |
 | `sp_cleric` | Lv10 active 3 | Recovery の範囲化・維持化。全体または複数対象の HoT / heal | 現行 `sp_cleric_active_2`（広域治療）は Lv10 枠へ **移動 / 改番** |
 | `sp_cleric` | Lv20 active 4 | 上位 Recovery。大きな欠損を即座に立て直す smart heal。被ダメ反応 trigger は将来ゲート | **追加** |
-| `sp_abjurer` | basic | 最低 HP 比率の味方へ小 heal + 小 barrier。崩壊前猶予の常時基礎 | 現行 `sp_abjurer_basic_attack` を **残す** |
-| `sp_abjurer` | Lv0 passive 1-2 | 高 HP 味方軽減、Wave 開始 barrier | **残す / 整理**。事前猶予と軽減に寄せ、Lv0 2 枠へ収める |
-| `sp_abjurer` | Lv10 / Lv20 passive | Lv10: Wave 開始全体 barrier（`passive_3`）。Lv20: バリア完全破壊時の 1 回限り再生成（`barrierBreakRegen` / `passive_4`） | **実装** |
-| `sp_abjurer` | Lv0 active 1 | 単体へ heal + 厚い barrier | 現行 `sp_abjurer_active_1`（盾添え）を **残す** |
-| `sp_abjurer` | Lv0 active 2 | 複数対象 barrier。崩れる前の猶予を 2 人以上に作る | 現行 `sp_abjurer_active_2`（双璧の護り）を **残す** |
-| `sp_abjurer` | Lv10 active 3 | 範囲 barrier または all ally barrier。Recovery ではなく Stability の範囲化 | **追加** |
-| `sp_abjurer` | Lv20 active 4 | 全体 damageTaken 軽減 + barrier など、Wave 中の崩壊を遅らせる上位 Stability | **追加** |
+| `sp_wardweaver` | basic | 最低 HP 味方へ heal ATK×0.7 のみ（barrier なし） | **実装** |
+| `sp_wardweaver` | Lv0 passive 1-2 | 低 HP barrier 特効 1.25、バリア枯渇時 instant heal | **実装** |
+| `sp_wardweaver` | Lv10 / Lv20 passive | Lv10: Wave 開始全体 barrier×0.5（`passive_3`）。Lv20: `barrierBreakRegen`（`passive_4`） | **実装** |
+| `sp_wardweaver` | Lv0 active 1 | 支えの御盾: heal×0.35 + barrier×1.9 | **実装** |
+| `sp_wardweaver` | Lv0 active 2 | 双璧の護り: barrier×2 multiLock、smart HP≤50%、`targetBarrierBelowGrant` | **実装** |
+| `sp_wardweaver` | Lv10 active 3 | 庇護の帷: `barrierStack` 単体最低 HP barrier×1.0 | **実装** |
+| `sp_wardweaver` | Lv20 active 4 | 三重の障壁: 障壁×2 + barrier×1.25、smart any（先読み OR HP≤50%） | **実装** |
 | `sp_alchemist` | basic | 最低 HP 比率の味方へ HoT。即時復元ではなく持続維持 | 現行 `sp_alchemist_basic_attack` を **残す** |
 | `sp_alchemist` | Lv0 passive 1-2 | party HoT aura、高 HP ally DEF | 現行 passive を **残す / 整理** し、Lv0 2 枠へ収める |
 | `sp_alchemist` | Lv10 / Lv20 passive | Wave 回数限定の debuff cleanse など、長期維持の段階強化。解除は薬草師専用の補助個性に留め、必須枠にしない | **追加 / 整理** |
@@ -282,7 +282,7 @@ Supporter 3 種は「回復量の大小」ではなく、損失を処理する�
 Supporter pass の実装方針:
 
 - `sp_cleric_active_2` は **広域治療のまま Lv0 に置かない**。設計書の「広域治療は Lv10」を正とし、Lv0 2 枠目は低 HP smart heal として追加する。
-- `sp_abjurer` は direct heal 量を主役にしない。heal は barrier を成立させる補助で、役割の本体は barrier / damageTaken / Wave 猶予。
+- `sp_wardweaver` は direct heal 量を主役にしない。heal は barrier を成立させる補助で、役割の本体は barrier / damageTaken / Wave 猶予。
 - `sp_alchemist` は毒・罠による Field Flow へ寄せない。敵への干渉は Survival 範囲の ATK debuff / 被害速度低下に限定する。
 - `sp_alchemist` の味方 ATK buff は Lv10 以降なら許容する。ただし [`classes-and-skills.md`](../spec/classes-and-skills.md) の Survival 設計原則を正とし、Kill 主目的の火力支援ではなく、近接帯の味方を長く戦わせる継戦リズム調整として実装する。
 - debuff cleanse は薬草師専用だが、active 化しない。passive の Wave 回数限定解除に閉じ、解除が必須になる戦闘設計にはしない。
@@ -305,7 +305,7 @@ Supporter pass の実装方針:
 
 | 実装単位 | 対象 | 目的 |
 | --- | --- | --- |
-| Supporter pass | `sp_cleric`, `sp_abjurer`, `sp_alchemist` | passive / active の Lv0=2 整合、Lv10 / Lv20 の Survival 構造確定 |
+| Supporter pass | `sp_cleric`, `sp_wardweaver`, `sp_alchemist` | passive / active の Lv0=2 整合、Lv10 / Lv20 の Survival 構造確定 |
 | Defender pass | `df_guardian`, `df_paladin`, `df_duelist` | passive / active の 4 枠化、戦線維持系の重複整理 |
 | Physical pass A | `at_warrior`, `at_assassin`, `at_ranger` | 既存 effect 中心で Kill クラスの passive / active 4 枠化 |
 | Physical pass B | `at_lancer`, `at_ballista`, `at_hunter` | passive / active 4 枠化、Flow / pierce / trap のゲート整理 |

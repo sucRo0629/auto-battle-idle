@@ -252,7 +252,13 @@ export type FireCondition =
       min?: number;
       max?: number;
       scope?: "living" | "inRange";
-    };
+    }
+  | {
+      kind: "pendingIncomingDamage";
+      maxHpRatio: number;
+      windowSec: number;
+    }
+  | { kind: "targetBarrierBelowGrant" };
 
 export interface SkillCooldown {
   skillId: string;
@@ -317,7 +323,8 @@ export interface StatusEffect {
     | "evasion"
     | "damageDelay"
     | "basicAttackTransform"
-    | "healReservation";
+    | "healReservation"
+    | "wardBarrier";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */
@@ -355,6 +362,8 @@ export interface StatusEffect {
   counterRanged?: boolean;
   /** basicAttackTransform overlay: 通常攻撃変形 spec（付与時コピー） */
   basicAttackTransform?: BasicAttackTransformSpec;
+  /** wardBarrier overlay: 残スタック数 */
+  stacks?: number;
   /** HUD / ログ用の表示名（未指定時は overlay / stat から解決） */
   displayName?: string;
 }
@@ -395,12 +404,13 @@ export interface DamageIncreaseSpec {
 /** パッシブ特効効果（DamageIncreaseSpec と同型） */
 export type SpecialEffectSpec = DamageIncreaseSpec;
 
-export type SpecialEffectApplyTo = "damage" | "heal";
+export type SpecialEffectApplyTo = "damage" | "heal" | "barrier";
 
 export type HealSubKind = "instant" | "hot" | "dispel";
 export type BuffSubKind =
   | "stat"
   | "barrier"
+  | "wardBarrier"
   | "block"
   | "evasion"
   | "damageDelay";
@@ -528,6 +538,8 @@ export interface CombatantState extends Combatant {
   damageDelayTickSec?: number;
   /** barrierBreakRegen: 対象ユニットで再生成を消費済み */
   barrierBreakRegenUsed?: boolean;
+  /** barrierDepletionHeal: 対象ユニットで枯渇回復を消費済み（Wave 1 回） */
+  barrierDepletionHealUsed?: boolean;
 }
 
 export type PassiveEffectKind =
@@ -547,6 +559,7 @@ export type PassiveEffectKind =
   | "targetHpRatioHealScale"
   | "healReservation"
   | "barrierBreakRegen"
+  | "barrierDepletionHeal"
   | "skillAmountOverride"
   | "skillPropertyOverride"
   | "threatControl"
@@ -952,6 +965,8 @@ interface SkillEffectCommon extends AnimPhaseFields {
   damageIncrease?: DamageIncreaseSpec;
   /** damage / dot 用 */
   defenseIgnore?: DefenseIgnoreSpec;
+  /** 対象フィルタ（barrier 付与等）。全成立で対象に適用 */
+  effectConditions?: FireCondition[];
 }
 
 export interface SkillHitTarget {
@@ -1020,6 +1035,10 @@ export interface BuffSkillEffect extends SkillEffectCommon {
   chance?: number;
   /** damageDelay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
+  /** wardBarrier: 障壁スタック数 */
+  stacks?: number;
+  /** wardBarrier: 被ダメ倍率（0.1 = 9 割軽減） */
+  damageReductionRatio?: number;
   amount?: ResourceAmountSpec;
   barrierStack?: boolean;
 }
@@ -1057,7 +1076,7 @@ export interface HotSkillEffect extends SkillEffectCommon {
 export interface BarrierSkillEffect extends SkillEffectCommon {
   type: "barrier";
   amount: ResourceAmountSpec;
-  /** true = 既存に加算。false/未指定 = 置換 */
+  /** true = 既存に加算。false/未指定 = max(既存, grant) */
   barrierStack?: boolean;
 }
 
@@ -1196,8 +1215,10 @@ export interface ActiveSkillDef {
   useDurationSec?: number;
   /** 発動ゲート。省略 = immediate */
   firePolicy?: FirePolicy;
-  /** firePolicy=smart 時の AND 条件 */
+  /** firePolicy=smart 時の AND/OR 条件（省略 = all） */
   fireConditions?: FireCondition[];
+  /** smart 条件の結合。省略 = all（AND） */
+  fireConditionMatch?: "all" | "any";
   /** smart 発動待ちの最大秒（経過後は条件無視で発動） */
   fireTimeoutSec?: number;
   /** 多段チャージ上限。省略 = 1 */

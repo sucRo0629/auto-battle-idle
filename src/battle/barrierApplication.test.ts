@@ -8,30 +8,30 @@ import { SkillExecutor } from './skills/SkillExecutor.ts';
 import { SkillSequenceRunner } from './skills/skillSequence.ts';
 
 describe('barrier application', () => {
-  it('abjurer can grant barrier during battle', () => {
+  it('wardweaver can grant barrier during battle', () => {
     const gameData = loadGameData();
     const levelCurves = loadLevelCurves(levelCurvesJson);
     const allies = createAlliesFromPartyState(
       gameData,
       [
         {
-          classId: 'sp_abjurer',
+          classId: 'sp_wardweaver',
           progress: { level: 1, exp: 0 },
           build: {
             learnedPassiveIds: [],
-            learnedActiveIds: ['sp_abjurer_active_1'],
-            equippedActiveSlots: ['sp_abjurer_active_1'],
+            learnedActiveIds: ['sp_wardweaver_active_1'],
+            equippedActiveSlots: ['sp_wardweaver_active_1'],
           },
         },
       ],
       levelCurves,
     );
-    const abjurer = allies[0];
-    expect(abjurer?.classId).toBe('sp_abjurer');
+    const wardweaver = allies[0];
+    expect(wardweaver?.classId).toBe('sp_wardweaver');
 
     const enemies = createEnemiesForStage(gameData, '1', 0);
-    const barrierCd = abjurer!.cooldowns.find(
-      (cd) => cd.skillId === 'sp_abjurer_active_1',
+    const barrierCd = wardweaver!.cooldowns.find(
+      (cd) => cd.skillId === 'sp_wardweaver_active_1',
     );
     expect(barrierCd).toBeDefined();
     barrierCd!.remaining = 0;
@@ -53,34 +53,34 @@ describe('barrier application', () => {
       },
     );
 
-    executor.tryExecute(abjurer!, barrierCd!, allies, enemies);
+    executor.tryExecute(wardweaver!, barrierCd!, allies, enemies);
 
     expect(barrierEvent).toBe(true);
-    expect(abjurer!.barrierHp).toBeGreaterThan(0);
+    expect(wardweaver!.barrierHp).toBeGreaterThan(0);
   });
 
-  it('stacks barrier on repeated grants', () => {
+  it('max-merges barrier on repeated grants without barrierStack', () => {
     const gameData = loadGameData();
     const levelCurves = loadLevelCurves(levelCurvesJson);
     const allies = createAlliesFromPartyState(
       gameData,
       [
         {
-          classId: 'sp_abjurer',
+          classId: 'sp_wardweaver',
           progress: { level: 1, exp: 0 },
           build: {
             learnedPassiveIds: [],
-            learnedActiveIds: ['sp_abjurer_active_1'],
-            equippedActiveSlots: ['sp_abjurer_active_1'],
+            learnedActiveIds: ['sp_wardweaver_active_1'],
+            equippedActiveSlots: ['sp_wardweaver_active_1'],
           },
         },
       ],
       levelCurves,
     );
-    const abjurer = allies[0]!;
+    const wardweaver = allies[0]!;
     const enemies = createEnemiesForStage(gameData, '1', 0);
-    const barrierCd = abjurer.cooldowns.find(
-      (cd) => cd.skillId === 'sp_abjurer_active_1',
+    const barrierCd = wardweaver.cooldowns.find(
+      (cd) => cd.skillId === 'sp_wardweaver_active_1',
     )!;
     barrierCd.remaining = 0;
 
@@ -96,13 +96,13 @@ describe('barrier application', () => {
       },
     );
 
-    executor.tryExecute(abjurer, barrierCd, allies, enemies);
-    const firstBarrier = abjurer.barrierHp;
+    executor.tryExecute(wardweaver, barrierCd, allies, enemies);
+    const firstBarrier = wardweaver.barrierHp;
     expect(firstBarrier).toBeGreaterThan(0);
 
     barrierCd.remaining = 0;
     runner.tickUseLocks(0.31);
-    executor.tryExecute(abjurer, barrierCd, allies, enemies);
-    expect(abjurer.barrierHp).toBeGreaterThan(firstBarrier);
+    executor.tryExecute(wardweaver, barrierCd, allies, enemies);
+    expect(wardweaver.barrierHp).toBe(firstBarrier);
   });
 });

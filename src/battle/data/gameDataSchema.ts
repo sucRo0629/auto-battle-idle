@@ -288,6 +288,7 @@ export const PASSIVE_EFFECT_KINDS = [
   "targetHpRatioHealScale",
   "healReservation",
   "barrierBreakRegen",
+  "barrierDepletionHeal",
   "skillAmountOverride",
   "skillPropertyOverride",
   "threatControl",
@@ -313,6 +314,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   targetHpRatioHealScale: "対象HP割合回復補正",
   healReservation: "ヒール予約",
   barrierBreakRegen: "バリア再生成",
+  barrierDepletionHeal: "バリア枯渇回復",
   skillAmountOverride: "スキル効果量上書き",
   skillPropertyOverride: "スキル属性上書き",
   threatControl: "ヘイト制御",
@@ -333,6 +335,7 @@ export const HEAL_SUB_KIND_LABELS: Record<HealSubKind, string> = {
 export const BUFF_SUB_KINDS = [
   "stat",
   "barrier",
+  "wardBarrier",
   "block",
   "evasion",
   "damageDelay",
@@ -341,6 +344,7 @@ export const BUFF_SUB_KINDS = [
 export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
   stat: "ステータス",
   barrier: "バリア",
+  wardBarrier: "障壁",
   block: "ブロック",
   evasion: "回避",
   damageDelay: "ダメージ遅延",
@@ -383,6 +387,7 @@ export const BUFF_TARGET_KIND_LABELS: Record<BuffTargetKind, string> = {
 export const SPECIAL_EFFECT_APPLY_TO_OPTIONS = [
   "damage",
   "heal",
+  "barrier",
 ] as const satisfies readonly SpecialEffectApplyTo[];
 
 export const SPECIAL_EFFECT_APPLY_TO_LABELS: Record<
@@ -391,6 +396,7 @@ export const SPECIAL_EFFECT_APPLY_TO_LABELS: Record<
 > = {
   damage: "ダメージ",
   heal: "回復",
+  barrier: "バリア",
 };
 
 /** エディタ top-level（レガシー hot/dot 等は正規化で吸収） */
@@ -535,6 +541,8 @@ export const FIRE_CONDITION_KINDS = [
   "waveStart",
   "waveEnd",
   "enemyCount",
+  "pendingIncomingDamage",
+  "targetBarrierBelowGrant",
 ] as const satisfies readonly FireConditionKind[];
 
 export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
@@ -546,6 +554,8 @@ export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
   waveStart: "Wave開始フェーズ",
   waveEnd: "Wave終了フェーズ",
   enemyCount: "敵数",
+  pendingIncomingDamage: "先読み被ダメ",
+  targetBarrierBelowGrant: "付与量>現バリア",
 };
 
 export const FIRE_CONDITION_KIND_OPTIONS: FireConditionKind[] = [
@@ -604,6 +614,7 @@ export const EDITOR_PASSIVE_EFFECT_KINDS = [
   "targetHpRatioHealScale",
   "healReservation",
   "barrierBreakRegen",
+  "barrierDepletionHeal",
   "targetRuleOverride",
   "aoeCrowdBonus",
   "skillAmountOverride",

@@ -229,6 +229,13 @@ export function createEnemiesForStage(
   });
 }
 
+export function resetPerWaveCombatantFlags(allies: CombatantState[]): void {
+  for (const ally of allies) {
+    delete ally.barrierBreakRegenUsed;
+    delete ally.barrierDepletionHealUsed;
+  }
+}
+
 export function healAllAllies(allies: CombatantState[]): void {
   for (const ally of allies) {
     ally.hp = ally.maxHp;

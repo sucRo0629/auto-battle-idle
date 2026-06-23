@@ -539,7 +539,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | classId        | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0）                                                     | アクティブ（Lv0）                                                   |
 | -------------- | ------ | --------- | ----- | ---- | ------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | `sp_cleric`    | 療養師 | Cleric    | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）。Lv10 / Lv20 で回復精度・癒しの残響 | `sp_cleric_active_1` + `sp_cleric_active_2`（低 HP smart heal）     |
-| `sp_abjurer`   | 結界師 | Abjurer   | back  | 遠隔 | 高 HP 味方被ダメ軽減 + Wave 開始バリア（`passive_1` / `passive_2`） | `sp_abjurer_active_1` + `sp_abjurer_active_2`（複数対象 barrier） |
+| `sp_wardweaver`   | 結界師 | Wardweaver   | back  | 遠隔 | 低 HP 特効 barrier + バリア枯渇回復（`passive_1` / `passive_2`） | `sp_wardweaver_active_1` + `sp_wardweaver_active_2`（smart barrier） |
 | `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | 常時 HoT aura + 高 HP 味方 DEF buff（`passive_1` / `passive_2`）    | `sp_alchemist_active_1` + `sp_alchemist_active_2`（近接帯 sustain） |
 
 ### デモ編成（`parties.json` demo）
@@ -703,13 +703,13 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | classId        | 主レイヤー                   | Lv0 の柱                                                  | 補助レイヤー                             |
 | -------------- | ---------------------------- | --------------------------------------------------------- | ---------------------------------------- |
 | `sp_cleric`    | Survival / Recovery Control  | 直接 heal + 低 HP 回復特化 + 余剰回復 → barrier           | 回復結果の補正（段階的 heal 効率・癒しの残響） |
-| `sp_abjurer`   | Survival / Stability Control | 高 HP 味方被ダメ軽減 + Wave 開始 barrier + 直接 heal      | 範囲 barrier による崩壊前猶予            |
+| `sp_wardweaver`   | Survival / Stability Control | 低 HP 特効 barrier + 枯渇回復 + Wave 開始全体 barrier | 障壁（ward）・先読み smart・崩壊前猶予 |
 | `sp_alchemist` | Survival / Sustain Control   | HoT aura + 高 HP 味方 DEF buff + active 範囲 HoT / debuff | Flow 寄りの敵 `atk` debuff、状態異常対策 |
 
 この 3 職は同じ「回復役」の数値違いではなく、**どの段階の損失を処理するか** で分担する。
 
 - `sp_cleric` — **欠損後の復元**。大きく減った HP を即時に戻し、戦線崩壊後の損失を回収する
-- `sp_abjurer` — **崩壊前の猶予作成**。barrier / 軽減で HP 欠損が致命化する前に余裕を作る
+- `sp_wardweaver` — **崩壊前の猶予作成**。barrier / 軽減で HP 欠損が致命化する前に余裕を作る
 - `sp_alchemist` — **長期維持と継戦リズム調整**。HoT と局所的な被害速度低下で戦線を長く保つ
 
 **療養師（Cleric）参照:** 療養師の主責務は Recovery であり、持続維持や事前軽減ではなく **欠損 HP の即時復元** を正本とする。パッシブは回復そのものを無限に強化するのではなく、**回復の結果処理と安定性** を制御する（HP 直接操作・防御生成・被ダメ介入は行わない）。
@@ -726,7 +726,19 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 
 **Active 参照:** Lv0 の `sp_cleric_active_1` は単体即時 heal + 短 HoT、`sp_cleric_active_2` は低 HP 味方向けの smart heal（`time` + `firePolicy: smart` + `fireConditions`）。旧 `sp_cleric_active_2`（広域治療）は `sp_cleric_active_3` として **Lv10 習得** に移した。Lv20 の `sp_cleric_active_4` は大きな欠損を即座に立て直す smart heal（被ダメ反応 trigger は将来ゲート。現行は A 案の待機型即応 heal）。
 
-**結界師（Abjurer）参照:** 結界師は直接 heal も扱うが、主責務は Recovery ではなく Stability である。小回復は barrier / 軽減による保護を実戦で成立させるための補助であり、役割の本体は **崩壊前猶予の作成** にある。Lv0 の `sp_abjurer_active_1` は単体 heal + 厚い barrier、`sp_abjurer_active_2` は複数対象 barrier（`multiLock`）。Lv10 の `sp_abjurer_active_3` は味方全体 barrier。Lv20 の `sp_abjurer_active_4` は味方全体の一時被ダメ軽減 + barrier。Lv10 passive は Wave 開始の味方全体 barrier（`passive_3`）。Lv20 passive（`passive_4` / `barrierBreakRegen`）は味方バリア完全破壊時に結界師 ATK 基準で追加バリアを 1 回再生成（対象ユニット 1 回限り・HP 回復ではない）。
+**結界師（Wardweaver）参照:** 主責務は Recovery ではなく **Stability Control（崩壊前猶予）**。療養師と Lv0 で同等の崩壊対策を目指し、直接 heal は補助。用語: **バリア** = `barrierHp`（ダメージ先消耗シールド）、**障壁** = `wardBarrier` スタック（上位軽減・バリアより先に消費）、**印（Mark）** = 印術師専用（結界師と混同しない）。
+
+| 枠 | 内容 |
+| --- | --- |
+| Lv0 basic | 最低 HP 味方へ heal ATK×0.7 のみ（barrier なし） |
+| Lv0 passive_1 | `specialEffectApplyTo: barrier` 1.25（対象 HP≤50%） |
+| Lv0 passive_2 | `barrierDepletionHeal` ATK×0.65（味方バリア完全消失時・Wave 1 回） |
+| Lv0 active_1 | 支えの御盾: heal×0.35 + barrier×1.9 |
+| Lv0 active_2 | 双璧の護り: barrier×2.0 multiLock×2、smart HP≤50%、`targetBarrierBelowGrant` |
+| Lv10 passive_3 | Wave 開始味方全体 barrier×0.5 |
+| Lv10 active_3 | 庇護の帷: `barrierStack` barrier×1.0 単体最低 HP |
+| Lv20 passive_4 | `barrierBreakRegen`（障壁消費では発火しない） |
+| Lv20 active_4 | 三重の障壁: 障壁×2 + barrier×1.25 全体、smart `any`（先読み被ダメ OR HP≤50%）、CD 15 |
 
 **薬草師（Herbalist）参照:** Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士との差分は、狩猟士が Flow として罠・DoT 毒で局所戦場を制御するのに対し、薬草師は Survival として HoT sustain、被害低減、状態異常対策を扱う点にある。`traits.rangePx` は近接帯（`rangePx < 100`）で前列配置とするが、これは戦場制御を主目的にしたものではなく、**Survival 主軸内での射程個性の分離** と、**薬草師というフレーバーを長射程 caster 系と分けるための設計** を正本とする。戦闘構造上は、前列 supporter として最前帯の直後に留まり、近接帯の味方へ HoT / sustain を差し込む役割を持つ。`active_1` の敵 debuff は `targetShape: aoe` + `aoeRadiusPx: 70`（最近接敵をアンカーにした範囲）とし、Survival の範囲に留まる **被害量・被害速度の抑制** に限定する。`effect.range` の拡張は使わない。
 

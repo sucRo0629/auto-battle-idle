@@ -1,6 +1,14 @@
 import { resolveMaxEffectiveRangePx } from '../combatPosition.ts';
-import { currentHpRatio, getEffectiveMaxHp, matchesHpRatioThreshold } from '../combatMath.ts';
+import {
+  currentHpRatio,
+  getEffectiveMaxHp,
+  matchesHpRatioThreshold,
+  resolveResourceAmount,
+} from '../combatMath.ts';
 import { hasMatchingDebuff } from '../debuffMatching.ts';
+import { evaluatePendingIncomingDamage } from '../pendingIncomingDamage.ts';
+import { getPassiveSpecialEffectMultiplier } from '../passiveEffects.ts';
+import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -8,6 +16,8 @@ import type {
   FireCondition,
   GameData,
   PassiveSkillDef,
+  PendingSkillHit,
+  ResourceAmountSpec,
   SkillEffectDef,
   TargetSpec,
 } from '../types.ts';
@@ -29,6 +39,12 @@ export interface ConditionEvalContext {
   isWaveEndPhase?: boolean;
   /** minTargets / targetHp / debuff 評価の参照 effect */
   referenceEffect?: SkillEffectDef;
+  battleTimeSec?: number;
+  pendingHitQueue?: readonly PendingSkillHit[];
+  /** targetBarrierBelowGrant 用 */
+  skill?: ActiveSkillDef;
+  effectIndex?: number;
+  evaluationTarget?: CombatantState;
 }
 
 function livingUnits(units: CombatantState[]): CombatantState[] {
@@ -144,6 +160,49 @@ function enemiesInActorRange(ctx: ConditionEvalContext): CombatantState[] {
   );
 }
 
+function resolveBarrierGrantForContext(
+  ctx: ConditionEvalContext,
+  effect: SkillEffectDef,
+  target: CombatantState,
+): number {
+  const passivesRecord = Object.fromEntries(
+    ctx.passives.map((passive) => [passive.id, passive]),
+  );
+  let amountSpec: ResourceAmountSpec | undefined;
+  if (effect.type === 'buff' && effect.buffSubKind === 'barrier') {
+    amountSpec = effect.amount;
+  } else if (effect.type === 'barrier') {
+    amountSpec = effect.amount;
+  }
+  if (!amountSpec) return 0;
+
+  const resolvedSpec =
+    ctx.skill && ctx.effectIndex !== undefined
+      ? resolveEffectiveAmountSpecForActiveEffect(
+          ctx.actor,
+          passivesRecord,
+          ctx.skill,
+          effect,
+          ctx.effectIndex,
+          amountSpec,
+        )
+      : amountSpec;
+
+  const base = resolveResourceAmount(
+    ctx.actor,
+    target,
+    resolvedSpec,
+    passivesRecord,
+  );
+  const mul = getPassiveSpecialEffectMultiplier(
+    'barrier',
+    ctx.actor,
+    target,
+    passivesRecord,
+  );
+  return Math.floor(base * mul);
+}
+
 export function evaluateCondition(
   ctx: ConditionEvalContext,
   condition: FireCondition,
@@ -210,15 +269,64 @@ export function evaluateCondition(
         selfAppliedOnly: condition.selfAppliedOnly,
       });
     }
+    case 'pendingIncomingDamage': {
+      if (ctx.pendingHitQueue === undefined || ctx.battleTimeSec === undefined) {
+        return false;
+      }
+      const passivesRecord = Object.fromEntries(
+        ctx.passives.map((passive) => [passive.id, passive]),
+      );
+      return evaluatePendingIncomingDamage(
+        ctx.allies,
+        ctx.enemies,
+        ctx.pendingHitQueue,
+        ctx.battleTimeSec,
+        condition.maxHpRatio,
+        condition.windowSec,
+        passivesRecord,
+      );
+    }
+    case 'targetBarrierBelowGrant': {
+      const target = ctx.evaluationTarget ?? resolvePrimaryTarget(ctx);
+      const effect = ctx.referenceEffect;
+      if (!target?.isAlive || !effect) return false;
+      const grant = resolveBarrierGrantForContext(ctx, effect, target);
+      return grant > target.barrierHp;
+    }
   }
 }
 
 export function evaluateConditions(
   ctx: ConditionEvalContext,
   conditions: readonly FireCondition[],
+  match: 'all' | 'any' = 'all',
 ): boolean {
   if (conditions.length === 0) return true;
+  if (match === 'any') {
+    return conditions.some((condition) => evaluateCondition(ctx, condition));
+  }
   return conditions.every((condition) => evaluateCondition(ctx, condition));
+}
+
+export function targetPassesEffectConditions(
+  ctx: ConditionEvalContext,
+  effect: SkillEffectDef,
+  target: CombatantState,
+): boolean {
+  const conditions = effect.effectConditions;
+  if (!conditions || conditions.length === 0) return true;
+  return evaluateConditions(
+    { ...ctx, referenceEffect: effect, evaluationTarget: target },
+    conditions,
+  );
+}
+
+/** @deprecated use evaluateConditions with match */
+export function evaluateConditionsAll(
+  ctx: ConditionEvalContext,
+  conditions: readonly FireCondition[],
+): boolean {
+  return evaluateConditions(ctx, conditions, 'all');
 }
 
 export function resolveConditionalBranchEffects(

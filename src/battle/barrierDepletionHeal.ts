@@ -1,39 +1,32 @@
 import {
-  applyBarrierToTarget,
+  applyHealToTarget,
   getEffectiveAtk,
   getPassiveDefs,
   resolveResourceAmount,
 } from './combatMath.ts';
+import { isBarrierFullyBroken } from './barrierBreakRegen.ts';
 import type { CombatantState, PassiveSkillDef, ResourceAmountSpec } from './types.ts';
 
-export function isBarrierFullyBroken(
-  barrierHpBefore: number,
-  target: CombatantState,
-  barrierDamage: number,
-): boolean {
-  return barrierHpBefore > 0 && target.barrierHp <= 0 && barrierDamage > 0;
-}
-
-export interface BarrierBreakRegenResult {
-  granted: number;
+export interface BarrierDepletionHealResult {
+  healed: number;
   sourceId?: string;
   passiveId?: string;
 }
 
-export function tryTriggerBarrierBreakRegen(
+export function tryTriggerBarrierDepletionHeal(
   target: CombatantState,
   barrierHpBefore: number,
   barrierDamage: number,
   allUnits: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
-): BarrierBreakRegenResult {
+): BarrierDepletionHealResult {
   if (
     target.isEnemy ||
     !target.isAlive ||
-    target.barrierBreakRegenUsed ||
+    target.barrierDepletionHealUsed ||
     !isBarrierFullyBroken(barrierHpBefore, target, barrierDamage)
   ) {
-    return { granted: 0 };
+    return { healed: 0 };
   }
 
   let bestSource:
@@ -43,7 +36,7 @@ export function tryTriggerBarrierBreakRegen(
   for (const ally of allUnits) {
     if (ally.isEnemy || !ally.isAlive) continue;
     for (const passive of getPassiveDefs(ally, passives)) {
-      if (passive.effect !== 'barrierBreakRegen') continue;
+      if (passive.effect !== 'barrierDepletionHeal') continue;
       if (
         !bestSource ||
         getEffectiveAtk(ally) > getEffectiveAtk(bestSource.wardweaver)
@@ -53,24 +46,26 @@ export function tryTriggerBarrierBreakRegen(
     }
   }
 
-  if (!bestSource) return { granted: 0 };
+  if (!bestSource) return { healed: 0 };
 
   const amountSpec: ResourceAmountSpec =
-    bestSource.passive.barrierAmount ??
-    ({ kind: 'atkBased', atkScale: 0.85 } as const);
-  const grant = resolveResourceAmount(
+    bestSource.passive.healAmount ??
+    ({ kind: 'atkBased', atkScale: 0.65 } as const);
+  const healAttempt = resolveResourceAmount(
     bestSource.wardweaver,
     target,
     amountSpec,
     passives,
   );
-  if (grant <= 0) return { granted: 0 };
+  if (healAttempt <= 0) return { healed: 0 };
 
-  applyBarrierToTarget(target, grant, false);
-  target.barrierBreakRegenUsed = true;
+  const healed = applyHealToTarget(target, healAttempt);
+  if (healed <= 0) return { healed: 0 };
+
+  target.barrierDepletionHealUsed = true;
 
   return {
-    granted: grant,
+    healed,
     sourceId: bestSource.wardweaver.id,
     passiveId: bestSource.passive.id,
   };

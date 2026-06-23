@@ -220,16 +220,22 @@ describe('applyDamageToTarget', () => {
 });
 
 describe('applyBarrierToTarget', () => {
-  it('stacks barrier by default', () => {
+  it('keeps higher barrier when grant is smaller (max merge)', () => {
     const target = mockCombatant({ barrierHp: 40 });
     applyBarrierToTarget(target, 25);
-    expect(target.barrierHp).toBe(65);
+    expect(target.barrierHp).toBe(40);
   });
 
-  it('replaces barrier when barrierStack is false', () => {
+  it('raises barrier when grant is larger (max merge)', () => {
     const target = mockCombatant({ barrierHp: 40 });
-    applyBarrierToTarget(target, 25, false);
-    expect(target.barrierHp).toBe(25);
+    applyBarrierToTarget(target, 50);
+    expect(target.barrierHp).toBe(50);
+  });
+
+  it('stacks barrier when barrierStack is true', () => {
+    const target = mockCombatant({ barrierHp: 40 });
+    applyBarrierToTarget(target, 25, true);
+    expect(target.barrierHp).toBe(65);
   });
 });
 

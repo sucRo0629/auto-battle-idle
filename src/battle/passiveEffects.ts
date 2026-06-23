@@ -84,18 +84,26 @@ export interface PassiveDamageContext {
   targetShape?: TargetShape;
 }
 
-export function rollsEvasion(
+export function getEvasionChance(
   target: CombatantState,
   _passives: Record<string, PassiveSkillDef>,
-): boolean {
+): number {
   let chance = 0;
   for (const effect of target.statusEffects) {
     if (effect.remainingSec <= 0) continue;
     if (effect.overlay !== 'evasion') continue;
     chance += effect.evasionChance ?? 0;
   }
+  return Math.min(1, chance);
+}
+
+export function rollsEvasion(
+  target: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): boolean {
+  const chance = getEvasionChance(target, passives);
   if (chance <= 0) return false;
-  return Math.random() < Math.min(1, chance);
+  return Math.random() < chance;
 }
 
 /** @deprecated use getPassiveSpecialEffectMultiplier('damage', ...) */
@@ -108,7 +116,7 @@ export function getPassiveDamageIncreaseMultiplier(
 }
 
 export function getPassiveSpecialEffectMultiplier(
-  applyTo: 'damage' | 'heal',
+  applyTo: 'damage' | 'heal' | 'barrier',
   attacker: CombatantState,
   target: CombatantState,
   passives: Record<string, PassiveSkillDef>,
@@ -720,7 +728,7 @@ export function applyPassiveBarrierFromPassive(
       passives,
     );
     if (grant <= 0) continue;
-    applyBarrierToTarget(target, grant);
+    applyBarrierToTarget(target, grant, passive.barrierStack);
   }
 }
 

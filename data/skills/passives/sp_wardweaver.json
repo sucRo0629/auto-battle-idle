@@ -1,0 +1,50 @@
+[
+  {
+    "id": "sp_wardweaver_passive_1",
+    "name": "固結び",
+    "effect": "specialEffect",
+    "specialEffectApplyTo": "barrier",
+    "specialEffect": {
+      "scale": 1.25,
+      "conditions": [
+        {
+          "kind": "targetHp",
+          "maxHpRatio": 0.5
+        }
+      ]
+    }
+  },
+  {
+    "id": "sp_wardweaver_passive_2",
+    "name": "傷塞ぎ",
+    "effect": "barrierDepletionHeal",
+    "healAmount": {
+      "kind": "atkBased",
+      "atkScale": 0.65
+    }
+  },
+  {
+    "id": "sp_wardweaver_passive_3",
+    "name": "帷重ね",
+    "effect": "buff",
+    "buffSubKind": "barrier",
+    "barrierAmount": {
+      "kind": "atkBased",
+      "atkScale": 0.5
+    },
+    "buffTargetRule": {
+      "kind": "all",
+      "side": "ally"
+    },
+    "periodicTrigger": "waveStart"
+  },
+  {
+    "id": "sp_wardweaver_passive_4",
+    "name": "綻び直し",
+    "effect": "barrierBreakRegen",
+    "barrierAmount": {
+      "kind": "atkBased",
+      "atkScale": 0.85
+    }
+  }
+]

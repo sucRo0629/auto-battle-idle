@@ -1,7 +1,7 @@
 [
   {
-    "id": "sp_abjurer_active_1",
-    "name": "支えの障壁",
+    "id": "sp_wardweaver_active_1",
+    "name": "支えの御盾",
     "trigger": {
       "kind": "time",
       "value": 8
@@ -41,8 +41,8 @@
     }
   },
   {
-    "id": "sp_abjurer_basic_attack",
-    "name": "sp_abjurer_basic_attack",
+    "id": "sp_wardweaver_basic_attack",
+    "name": "sp_wardweaver_basic_attack",
     "trigger": {
       "kind": "time",
       "value": 2
@@ -59,32 +59,25 @@
         "healSubKind": "instant",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.55
-        }
-      },
-      {
-        "target": {
-          "kind": "stat",
-          "side": "ally",
-          "stat": "hp",
-          "order": "ratio"
-        },
-        "type": "buff",
-        "buffSubKind": "barrier",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.55
+          "atkScale": 0.7
         }
       }
     ]
   },
   {
-    "id": "sp_abjurer_active_2",
+    "id": "sp_wardweaver_active_2",
     "name": "双璧の護り",
     "trigger": {
       "kind": "time",
       "value": 10
     },
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.5
+      }
+    ],
     "effect": [
       {
         "target": {
@@ -97,15 +90,20 @@
         "buffSubKind": "barrier",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.25
+          "atkScale": 2
         },
         "targetShape": "multiLock",
-        "hitCount": 2
+        "hitCount": 2,
+        "effectConditions": [
+          {
+            "kind": "targetBarrierBelowGrant"
+          }
+        ]
       }
     ]
   },
   {
-    "id": "sp_abjurer_active_3",
+    "id": "sp_wardweaver_active_3",
     "name": "庇護の帷",
     "trigger": {
       "kind": "time",
@@ -114,43 +112,41 @@
     "effect": [
       {
         "target": {
-          "kind": "distance",
+          "kind": "stat",
           "side": "ally",
-          "order": "selfOrigin"
-        },
-        "type": "heal",
-        "healSubKind": "instant",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.2
-        },
-        "targetShape": "aoe",
-        "aoeRadiusPx": 100
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "ally",
-          "order": "selfOrigin"
+          "stat": "hp",
+          "order": "ratio"
         },
         "type": "buff",
         "buffSubKind": "barrier",
+        "barrierStack": true,
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.2
-        },
-        "targetShape": "aoe",
-        "aoeRadiusPx": 100
+          "atkScale": 1
+        }
       }
     ]
   },
   {
-    "id": "sp_abjurer_active_4",
-    "name": "双重の大盾",
+    "id": "sp_wardweaver_active_4",
+    "name": "三重の障壁",
     "trigger": {
       "kind": "time",
-      "value": 16
+      "value": 15
     },
+    "firePolicy": "smart",
+    "fireConditionMatch": "any",
+    "fireConditions": [
+      {
+        "kind": "pendingIncomingDamage",
+        "maxHpRatio": 0.25,
+        "windowSec": 4
+      },
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.5
+      }
+    ],
     "effect": [
       {
         "target": {
@@ -158,10 +154,9 @@
           "side": "ally"
         },
         "type": "buff",
-        "buffSubKind": "stat",
-        "buffStat": "damageTaken",
-        "buffMultiplier": 0.85,
-        "buffDurationSec": 8
+        "buffSubKind": "wardBarrier",
+        "stacks": 2,
+        "damageReductionRatio": 0.1
       },
       {
         "target": {

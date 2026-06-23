@@ -15,7 +15,8 @@ export type StatusDisplayCategory =
   | "counter"
   | "stun"
   | "moveLock"
-  | "damageDelay";
+  | "damageDelay"
+  | "wardBarrier";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "atk",
@@ -27,6 +28,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "hot",
   "healReservation",
   "damageDelay",
+  "wardBarrier",
   "dot",
   "evasion",
   "block",
@@ -192,6 +194,13 @@ function statusEffectBadgeForOverlay(
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
       };
+    case "wardBarrier":
+      return {
+        category: "wardBarrier",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
     default:
       return null;
   }
@@ -292,6 +301,9 @@ function effectsForCategory(
   }
   if (category === "damageDelay") {
     return effects.filter((effect) => effect.overlay === "damageDelay");
+  }
+  if (category === "wardBarrier") {
+    return effects.filter((effect) => effect.overlay === "wardBarrier");
   }
   return [];
 }

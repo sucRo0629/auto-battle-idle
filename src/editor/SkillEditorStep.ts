@@ -608,6 +608,9 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case 'barrierBreakRegen':
       passive.barrierAmount ??= defaultResourceAmount(0.85);
       break;
+    case 'barrierDepletionHeal':
+      passive.healAmount ??= defaultResourceAmount(0.65);
+      break;
     case 'aoeCrowdBonus':
       passive.perExtraTargetScale ??= 0.1;
       passive.maxExtraTargets ??= 4;
@@ -1265,6 +1268,12 @@ function applyActiveBuffSubKindChange(
       return {
         ...base,
         amount: prev.amount ?? defaultResourceAmount(),
+      };
+    case 'wardBarrier':
+      return {
+        ...base,
+        stacks: prev.stacks ?? 2,
+        damageReductionRatio: prev.damageReductionRatio ?? 0.1,
       };
     default:
       return base;
@@ -2594,6 +2603,17 @@ export class SkillEditorStep {
           (barrierAmount) => {
             this.patchPassive(index, (current) => {
               current.barrierAmount = barrierAmount;
+            }, { rerender: false });
+          },
+        );
+        break;
+      case 'barrierDepletionHeal':
+        appendResourceAmountFields(
+          effectGrid,
+          passive.healAmount ?? defaultResourceAmount(0.65),
+          (healAmount) => {
+            this.patchPassive(index, (current) => {
+              current.healAmount = healAmount;
             }, { rerender: false });
           },
         );
@@ -4011,6 +4031,39 @@ export class SkillEditorStep {
           );
           break;
         }
+        if (effect.buffSubKind === 'wardBarrier') {
+          detailGrid.appendChild(
+            createFieldRow(
+              'スタック',
+              createNumberInput(
+                effect.stacks ?? 2,
+                (stacks) =>
+                  patchEffect(
+                    (prev) =>
+                      prev.type === 'buff' ? { ...prev, stacks } : prev,
+                  ),
+                { min: 1, step: 1 },
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              '被ダメ倍率',
+              createNumberInput(
+                effect.damageReductionRatio ?? 0.1,
+                (damageReductionRatio) =>
+                  patchEffect(
+                    (prev) =>
+                      prev.type === 'buff'
+                        ? { ...prev, damageReductionRatio }
+                        : prev,
+                  ),
+                { min: 0, max: 1, step: 0.05 },
+              ),
+            ),
+          );
+          break;
+        }
         detailGrid.appendChild(
           createFieldRow(
             '対象ステ',
@@ -4228,11 +4281,11 @@ export class SkillEditorStep {
             const label = createEl('label');
             const input = document.createElement('input');
             input.type = 'checkbox';
-            input.checked = effect.barrierStack !== false;
+            input.checked = effect.barrierStack === true;
             input.addEventListener('change', () => {
               patchEffect((prev) => ({
                 ...prev,
-                barrierStack: input.checked ? undefined : false,
+                barrierStack: input.checked ? true : undefined,
               }));
             });
             label.appendChild(input);

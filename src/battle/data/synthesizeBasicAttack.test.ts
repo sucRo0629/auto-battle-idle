@@ -126,13 +126,13 @@ describe('synthesizeBasicAttackSkill', () => {
 
   it('merges heal and barrier effects from JSON override', () => {
     const skill = synthesizeBasicAttackSkill({
-      entityId: 'sp_abjurer',
+      entityId: 'sp_wardweaver',
       isEnemy: false,
       traits: normalizeEntityTraits({ rangePx: 100 }),
       attackSpeedTier: 'slow',
       jsonOverride: {
-        id: 'sp_abjurer_basic_attack',
-        name: 'sp_abjurer_basic_attack',
+        id: 'sp_wardweaver_basic_attack',
+        name: 'sp_wardweaver_basic_attack',
         trigger: { kind: 'time', value: 2 },
         effect: [
           {

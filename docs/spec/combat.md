@@ -109,14 +109,23 @@ heal / HoT / barrier / **damage** は `**ResourceAmountSpec`**（`amount`）で�
 | 項目        | 仕様                               |
 | --------- | -------------------------------- |
 | 付与量       | `ResourceAmountSpec`（heal と同式）   |
-| 加算（既定）    | 既存 `barrierHp` に **加算**                  |
-| 置換         | `barrierStack: false` で新量に **置換**（既存残量は捨てる） |
+| max（既定）    | `grant > barrierHp` のとき `barrierHp = grant`（小さい grant は無視） |
+| 加算         | `barrierStack: true` のみ既存に **加算**                  |
 | 持続        | 時間切れなし — **ダメージで消費されるまで維持**      |
 | 死亡        | `hp ≤ 0` のみ（バリアだけ残っても HP 0 なら死亡） |
 | リスポーン     | HP 全回復と同時に `barrierHp = 0`       |
 
 
-**ダメージ吸収**（`applyDamageToTarget` — damage / DoT 共通）:
+**ダメージ吸収**（被ダメパイプライン。`applyIncomingDamage` 前に障壁・ブロックを適用）:
+
+```
+1. 障壁（wardBarrier）スタックあり → そのヒット × damageReductionRatio、スタック 1 消費
+2. block（物理のみ・確率）
+3. barrierHp 吸収（applyDamageToTarget）
+4. HP 減少
+```
+
+`barrierHp` 単体の吸収式:
 
 ```
 remaining = rawDamage
@@ -125,6 +134,18 @@ barrierHp -= barrierDamage
 remaining -= barrierDamage
 hp = max(0, hp - remaining)
 ```
+
+**障壁（wardBarrier）** — バリア（`barrierHp`）より上位のスタック資源。印（Mark）は印術師専用で別リソース。HUD は `barrierHp` とは別バッジ「障壁 ×N」。`barrierDepletionHeal` / `barrierBreakRegen` の対象外（`barrierHp` 完全消失のみ）。
+
+**パッシブ `barrierDepletionHeal`** — 味方 `barrierHp` が被ダメで完全消失したとき、パーティ内結界師（ATK 最大）が ATK 基準 instant heal を 1 回（味方ごと Wave 1 回・`barrierDepletionHealUsed`）。
+
+**パッシブ `specialEffectApplyTo: barrier`** — 結界師の outgoing barrier grant に乗算（heal 特効と同型）。
+
+**`targetBarrierBelowGrant`** — `resolvedGrant > target.barrierHp` のときのみ成立。smart 発火または effect `effectConditions` に指定。
+
+**`pendingIncomingDamage`（fire 条件）** — 敵 origin の `pendingHitQueue` 内、味方対象 `damage` を `windowSec` 以内に評価。見積もり = `resolveDamage` → `applyDefenseMitigation` → `damageTaken` 倍率 → 物理は block 期待値・回避は期待値 `(1-p)×dmg`。バリア・障壁は見積もりに含めない。
+
+**`fireConditionMatch`** — `all`（省略時 AND）または `any`（OR）。三重の障壁は `any`。
 
 HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 HP の右端から描画。HP 満タン時は tier1 を左から HP fill の上に重ねる。超過分 tier2（`max(0, barrierHp − maxHp)`）は従来どおり左端から明るい色で描画。
 
@@ -167,6 +188,10 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 | `waveEnd` | 敵全滅 settle〜次 Wave deploy まで |
 | `enemyCount` | 生存敵数（`scope: living`）または射程内敵数（`inRange`） |
 | `targetHp` / `debuff` / `minTargets` / `selfHp` / `allyDamaged` | 各 kind の閾値・タグ |
+| `pendingIncomingDamage` | 先読みキュー内の味方被ダメ見積もり（`maxHpRatio` / `windowSec`） |
+| `targetBarrierBelowGrant` | 参照 effect の grant > 対象 `barrierHp` |
+
+**`fireConditionMatch`** — `all`（省略）または `any`。`any` 時は条件のいずれかで smart 発動。
 
 **`fireConditions` の `targetHp`:** 参照 effect（先頭 effect）の `target` と射程で **攻撃可能プール** を組み、味方向けはプール全体で判定する。`target: all` + `side: ally` → 射程内（`all` は射程無視で全生存味方）の **誰か1人** が閾値を満たせば成立。`target: stat` + `hp` + `order: ratio` + `side: ally` → プール内 **最小 HP 割合**が閾値を満たせば成立（heal は使用者もプールに含む）。敵向け・単体 anchor 向けは従来どおり primary 1 体で判定。
 

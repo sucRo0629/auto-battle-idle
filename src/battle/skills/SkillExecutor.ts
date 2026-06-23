@@ -22,12 +22,17 @@ import {
 import { grantHealReservationStacks } from '../healReservation.ts';
 import {
   rollsEvasion,
+  getPassiveSpecialEffectMultiplier,
   stripPassivesAurasFromSource,
   type PassiveDamageContext,
 } from '../passiveEffects.ts';
 import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
 import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
 import { grantCounterStatus } from '../counterEffects.ts';
+import {
+  applyWardBarrierToTarget,
+  applyWardBarrierToIncomingDamage,
+} from '../wardBarrier.ts';
 import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
 import { resolveEffectiveBasicAttackSkill } from '../resolveEffectiveBasicAttack.ts';
 import { basicAttackTransformSpecFromEffect } from '../resolveEffectiveBasicAttack.ts';
@@ -50,6 +55,7 @@ import {
 import { consumeActiveChargeOnFire, hasAvailableActiveCharge } from './chargeBank.ts';
 import {
   resolveConditionalBranchEffects,
+  targetPassesEffectConditions,
   type ConditionEvalContext,
 } from './effectConditions.ts';
 import { resolvePresentationLockSec } from './presentationLock.ts';
@@ -413,8 +419,22 @@ export class SkillExecutor {
 
     let appliedAny = false;
     let segmentSourceId = actor.id;
+    const effectConditionCtx: ConditionEvalContext = {
+      ...this.buildConditionEvalContext(
+        actor,
+        allies,
+        enemies,
+        passives,
+        effectDef,
+      ),
+      skill,
+      effectIndex,
+    };
     for (const wave of resolution!.waves) {
       for (const { unit, powerMultiplierOverride } of wave.targets) {
+        if (!targetPassesEffectConditions(effectConditionCtx, effectDef, unit)) {
+          continue;
+        }
         const vfxSourceId = usesSegmentVfxSource(effectDef.targetShape)
           ? segmentSourceId
           : undefined;
@@ -691,6 +711,8 @@ export class SkillExecutor {
         },
       );
       let finalDamage = amount;
+      const wardResult = applyWardBarrierToIncomingDamage(target, finalDamage);
+      finalDamage = wardResult.damage;
       let didBlock = false;
       if (resolveSkillDamageType(actor, effectDef) === 'physical') {
         const blockResult = applyBlockToPhysicalDamage(
@@ -954,15 +976,24 @@ export class SkillExecutor {
             effectDef.amount ??
               ({ kind: 'flat', flatAmount: 0 } as const),
           );
-          const grant = resolveResourceAmount(
+          const baseGrant = resolveResourceAmount(
             actor,
             target,
             amountSpec,
             passives,
             powerMultiplierOverride,
           );
+          const grant = Math.floor(
+            baseGrant *
+              getPassiveSpecialEffectMultiplier(
+                'barrier',
+                actor,
+                target,
+                passives,
+              ),
+          );
           if (grant <= 0) return false;
-          applyBarrierToTarget(target, grant);
+          applyBarrierToTarget(target, grant, effectDef.barrierStack);
           this.emit({
             type: 'skill',
             actorId: actor.id,
@@ -973,6 +1004,31 @@ export class SkillExecutor {
             effect: 'barrier',
             effectIndex,
             amount: grant,
+            range: effectDef.range,
+            ...skillHitEventFields(hitIndex, vfxSourceId),
+          });
+          return true;
+        }
+        if (subKind === 'wardBarrier') {
+          const stacks = effectDef.stacks ?? 1;
+          const ratio = effectDef.damageReductionRatio ?? 0.1;
+          applyWardBarrierToTarget(
+            target,
+            stacks,
+            ratio,
+            skill.id,
+            actor.id,
+          );
+          this.emit({
+            type: 'skill',
+            actorId: actor.id,
+            targetId: target.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            slotKind: cd.slotKind,
+            effect: 'buff',
+            effectIndex,
+            statusLabel: 'wardBarrier',
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId),
           });

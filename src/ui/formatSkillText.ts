@@ -128,14 +128,20 @@ function formatFireConditionSummary(condition: FireCondition): string {
       const scope = condition.scope === "inRange" ? "射程内" : "生存";
       return `敵数${range}(${scope})`;
     }
+    case "pendingIncomingDamage":
+      return `先読み被ダメ≥${Math.round(condition.maxHpRatio * 100)}%/${condition.windowSec}s`;
+    case "targetBarrierBelowGrant":
+      return "付与量>現バリア";
   }
 }
 
 function formatFireConditionsSummary(
-  conditions: FireCondition[] | undefined
+  conditions: FireCondition[] | undefined,
+  match: "all" | "any" = "all",
 ): string {
   if (!conditions || conditions.length === 0) return "";
-  return conditions.map(formatFireConditionSummary).join(" & ");
+  const joiner = match === "any" ? " | " : " & ";
+  return conditions.map(formatFireConditionSummary).join(joiner);
 }
 
 function formatTarget(
@@ -444,7 +450,13 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
         extras.push(
           `${BUFF_SUB_KIND_LABELS.barrier} ${formatResourceAmount(
             effect.amount
-          )}`
+          )}${effect.barrierStack ? "（加算）" : ""}`
+        );
+      } else if (effect.buffSubKind === "wardBarrier") {
+        extras.push(
+          `${BUFF_SUB_KIND_LABELS.wardBarrier} ×${effect.stacks ?? 1}（被ダメ×${formatPercent(
+            effect.damageReductionRatio ?? 0.1
+          )}）`
         );
       } else if (effect.buffSubKind === "block") {
         extras.push(
@@ -814,6 +826,12 @@ function formatPassiveEffect(
       );
       return `バリア破壊時 ${amount} 再生成（対象1回限り・HP回復ではない）`;
     }
+    case "barrierDepletionHeal": {
+      const amount = formatResourceAmount(
+        def.healAmount ?? { kind: "atkBased", atkScale: 0.65 },
+      );
+      return `バリア完全消失時 ${amount} 即時回復（味方1回限り/Wave・障壁消費では発火しない）`;
+    }
     case "buff": {
       const effectView = passiveBuffToEffectDef(def);
       const target = formatTarget(def.buffTargetRule, { kind: "self" });
@@ -970,7 +988,10 @@ export function formatActiveDescription(def: ActiveSkillDef): string {
     headerParts.push(`停止${stopSec}s`);
   }
   if ((def.firePolicy ?? "immediate") === "smart") {
-    const condSummary = formatFireConditionsSummary(def.fireConditions);
+    const condSummary = formatFireConditionsSummary(
+      def.fireConditions,
+      def.fireConditionMatch ?? "all",
+    );
     headerParts.push(condSummary ? `smart: ${condSummary}` : "smart");
     if (def.fireTimeoutSec !== undefined && def.fireTimeoutSec > 0) {
       headerParts.push(`待機上限${def.fireTimeoutSec}s`);

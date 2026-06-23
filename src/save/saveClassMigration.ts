@@ -4,6 +4,7 @@ import type { ClassId, PartyMemberState, SaveGameState } from '../battle/types.t
 const LEGACY_CLASS_ID_ALIASES: Readonly<Record<string, ClassId>> = {
   at_sniper: 'at_ballista',
   at_enchanter: 'at_sigilist',
+  sp_abjurer: 'sp_wardweaver',
 };
 
 export function migrateLegacyClassId(classId: string): ClassId {

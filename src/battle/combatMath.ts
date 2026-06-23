@@ -248,9 +248,9 @@ export function computeInstantHealExcess(
   return Math.max(0, attemptedHeal - (afterHealHp - hpBefore));
 }
 
-/** 未指定時は加算（`barrierStack: false` のみ置換） */
+/** `barrierStack: true` のみ加算。未指定は max(既存, grant) */
 export function resolveBarrierStack(barrierStack?: boolean): boolean {
-  return barrierStack !== false;
+  return barrierStack === true;
 }
 
 export function applyBarrierToTarget(
@@ -258,10 +258,11 @@ export function applyBarrierToTarget(
   grant: number,
   stack?: boolean,
 ): number {
+  if (grant <= 0) return 0;
   if (resolveBarrierStack(stack)) {
     target.barrierHp += grant;
   } else {
-    target.barrierHp = grant;
+    target.barrierHp = Math.max(target.barrierHp, grant);
   }
   return grant;
 }
