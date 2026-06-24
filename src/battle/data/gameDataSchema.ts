@@ -60,6 +60,7 @@ export const SKILL_EFFECT_KINDS = [
   "counter",
   "basicAttackTransform",
   "conditionalEffect",
+  "herbalPotencyConsume",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [
@@ -292,6 +293,7 @@ export const PASSIVE_EFFECT_KINDS = [
   "skillAmountOverride",
   "skillPropertyOverride",
   "threatControl",
+  "herbalPotency",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -318,6 +320,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   skillAmountOverride: "スキル効果量上書き",
   skillPropertyOverride: "スキル属性上書き",
   threatControl: "ヘイト制御",
+  herbalPotency: "薬効浸潤",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -410,6 +413,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORIES = [
   "move",
   "knockback",
   "conditionalEffect",
+  "herbalPotencyConsume",
 ] as const;
 
 export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
@@ -425,6 +429,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   move: "移動",
   knockback: "ノックバック",
   conditionalEffect: "条件分岐",
+  herbalPotencyConsume: "薬効消費",
 };
 export const STATUS_EFFECT_STATS = [
   "hp",
@@ -604,6 +609,7 @@ export const EDITOR_PASSIVE_EFFECT_KINDS = [
   "debuff",
   "counter",
   "heal",
+  "herbalPotency",
   "periodicDispel",
   "excessHealToBarrier",
   "excessHealRedirect",

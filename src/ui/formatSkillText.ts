@@ -423,6 +423,15 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
             effect.durationSec ?? 0
           }s`
         );
+        if (effect.stackOnApply) {
+          extras.push(`薬効+${effect.stackOnApply}`);
+        }
+        if (effect.potencyStackScale) {
+          extras.push("消費スタック比例");
+        }
+        if (effect.buffDisplayName) {
+          extras.push(effect.buffDisplayName);
+        }
       } else if (effect.healSubKind === "dispel") {
         const tags =
           effect.dispelTags && effect.dispelTags.length > 0
@@ -669,6 +678,8 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
       return "反撃";
     case "conditionalEffect":
       return "条件分岐";
+    case "herbalPotencyConsume":
+      return "薬効消費";
     case "basicAttackTransform":
       return "通常攻撃変形";
     default:
@@ -762,6 +773,7 @@ function formatPassiveEffect(
         }) || `被回復 +${formatPercent(legacy.percent ?? 0)}`
       );
     case "hot":
+    case "herbalPotency":
     case "heal": {
       if (def.effect === "heal" && (def.healSubKind ?? "hot") !== "hot") {
         return HEAL_SUB_KIND_LABELS[def.healSubKind ?? "instant"];
@@ -777,8 +789,24 @@ function formatPassiveEffect(
         .filter(Boolean)
         .join(" · ");
       const metaSuffix = hotMeta ? ` · ${hotMeta}` : "";
-      if (usesHotAuraMode(def)) {
-        return `常時 HoT ${amount} → ${target}（${durationLabel}${metaSuffix}）`;
+      const potencyParts: string[] = [];
+      if (def.herbalPotencyMaxStacks !== undefined) {
+        potencyParts.push(`上限${def.herbalPotencyMaxStacks} stack`);
+      }
+      if (def.herbalPotencyHotPerStackPercent !== undefined) {
+        potencyParts.push(
+          `HoT+${formatPercent(def.herbalPotencyHotPerStackPercent)}/stack`,
+        );
+      }
+      if (def.herbalPotencyConstitutionThresholds?.length) {
+        potencyParts.push(
+          `体質 ${def.herbalPotencyConstitutionThresholds.join("/")}`,
+        );
+      }
+      const potencySuffix =
+        potencyParts.length > 0 ? ` · ${potencyParts.join(" · ")}` : "";
+      if (usesHotAuraMode(def) || def.effect === "herbalPotency") {
+        return `常時 HoT ${amount} → ${target}（${durationLabel}${metaSuffix}${potencySuffix}）`;
       }
       const trigger = resolvePassivePeriodicTrigger(def);
       const triggerLabel = formatPassiveTriggerSummary(def, trigger);

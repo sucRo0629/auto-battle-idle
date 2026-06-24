@@ -276,7 +276,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 対象ステ：`atk`, `def`, `reg`（耐魔）, `damageTaken`, `attackSpeed`（攻撃速度。基本攻撃 CD 回復倍率に適用）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
 
-**HUD バッジ表示:** 1 つの `StatusEffect` を 1 つのバッジとして描画する。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。パッシブ効果は常駐表示として扱い、`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン（矢印なし・原色）。味方は `PartyHudPanel`、敵は `BattleCanvas` 上のスプライト頭上（[battle-field.md](battle-field.md)）。
+**HUD バッジ表示:** 通常は 1 つの `StatusEffect` を 1 つのバッジとして描画する。**例外:** `overlay: herbalPotency`（および将来の `mark`）は `stacks` 数ぶん同カテゴリアイコンを横並び（`statusBadgeOverlap` で重ね）。`wardBarrier` は 1 アイコン + `stacks` フィールド表示（別処理）。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。味方は `PartyHudPanel`、敵は `BattleCanvas` 上のスプライト頭上（[battle-field.md](battle-field.md)）。
 
 
 | 種別     | 定義方法                                                                                                                                           |

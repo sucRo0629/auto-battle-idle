@@ -12,60 +12,59 @@ describe('sp_alchemist passive / active unlock structure', () => {
   const alchemistClass = gameData.classRegistry['sp_alchemist'];
   const { passives, actives } = gameData.skillRegistry;
 
-  it('defines basic + four passives + four actives with id-matched names', () => {
-    expect(actives['sp_alchemist_basic_attack']?.name).toBe('sp_alchemist_basic_attack');
-    expect(actives['sp_alchemist_active_1']?.name).toBe('sp_alchemist_active_1');
-    expect(actives['sp_alchemist_active_2']?.name).toBe('sp_alchemist_active_2');
-    expect(actives['sp_alchemist_active_3']?.name).toBe('sp_alchemist_active_3');
-    expect(actives['sp_alchemist_active_4']?.name).toBe('sp_alchemist_active_4');
-
-    for (let i = 1; i <= 4; i += 1) {
-      const id = `sp_alchemist_passive_${i}`;
-      expect(passives[id]?.name).toBe(id);
-    }
+  it('defines named basic + passives + actives', () => {
+    expect(actives['sp_alchemist_basic_attack']?.name).toBe('薬手当て');
+    expect(actives['sp_alchemist_active_1']?.name).toBe('薬粉撒き');
+    expect(actives['sp_alchemist_active_2']?.name).toBe('薬香の霧');
+    expect(actives['sp_alchemist_active_3']?.name).toBe('滋養強壮薬');
+    expect(actives['sp_alchemist_active_4']?.name).toBe('薬効顕現');
+    expect(passives['sp_alchemist_passive_1']?.name).toBe('薬効の香り');
+    expect(passives['sp_alchemist_passive_4']?.name).toBe('薬草の極意');
   });
 
-  it('keeps active_1 as area HoT plus enemy atk debuff', () => {
+  it('uses herbalPotency on passive_1 and passive_4', () => {
+    expect(passives['sp_alchemist_passive_1']?.effect).toBe('herbalPotency');
+    expect(passives['sp_alchemist_passive_4']?.effect).toBe('herbalPotency');
+    expect(passives['sp_alchemist_passive_1']?.herbalPotencyMaxStacks).toBe(6);
+    expect(passives['sp_alchemist_passive_4']?.herbalPotencyMaxStacks).toBe(9);
+  });
+
+  it('defines active_1 as melee HoT with stackOnApply only', () => {
     const active1 = actives['sp_alchemist_active_1']!;
     const hot = active1.effect.find((e) => e.type === 'heal' && e.healSubKind === 'hot');
-    const debuff = active1.effect.find((e) => e.type === 'debuff' && e.debuffStat === 'atk');
     expect(hot?.targetShape).toBe('aoe');
-    expect(debuff?.targetShape).toBe('aoe');
-    expect(debuff?.debuffMultiplier).toBeLessThan(1);
+    expect(hot?.stackOnApply).toBe(1);
+    expect(active1.effect.some((e) => e.type === 'debuff')).toBe(false);
   });
 
-  it('defines active_2 as front-band sustain with HoT and def buff', () => {
+  it('defines active_2 and active_3 as party HoT sustain', () => {
     const active2 = actives['sp_alchemist_active_2']!;
-    expect(active2.effect.some((e) => e.type === 'heal' && e.healSubKind === 'hot')).toBe(true);
+    const active3 = actives['sp_alchemist_active_3']!;
     expect(
       active2.effect.some(
-        (e) => e.type === 'buff' && e.buffSubKind === 'stat' && e.buffStat === 'def',
-      ),
-    ).toBe(true);
-    expect(active2.effect.every((e) => e.target?.order === 'selfOrigin')).toBe(true);
-  });
-
-  it('defines active_3 as sustain rhythm with hot and modest ally atk buff', () => {
-    const active3 = actives['sp_alchemist_active_3']!;
-    expect(active3.effect.some((e) => e.type === 'heal' && e.healSubKind === 'hot')).toBe(true);
-    const atkBuff = active3.effect.find(
-      (e) => e.type === 'buff' && e.buffStat === 'atk',
-    );
-    expect(atkBuff).toBeDefined();
-    expect(atkBuff!.buffMultiplier).toBeLessThanOrEqual(1.1);
-  });
-
-  it('defines active_4 as upper sustain with party hot, enemy debuff, and ally atk buff', () => {
-    const active4 = actives['sp_alchemist_active_4']!;
-    expect(
-      active4.effect.some(
         (e) => e.type === 'heal' && e.healSubKind === 'hot' && e.target?.kind === 'all',
       ),
     ).toBe(true);
     expect(
-      active4.effect.some((e) => e.type === 'debuff' && e.debuffStat === 'atk'),
+      active3.effect.some((e) => e.type === 'heal' && e.healSubKind === 'hot'),
     ).toBe(true);
-    expect(active4.effect.some((e) => e.type === 'buff' && e.buffStat === 'atk')).toBe(true);
+    expect(active3.effect.some((e) => e.type === 'buff' && e.buffStat === 'hp')).toBe(
+      true,
+    );
+  });
+
+  it('defines active_4 as potency consume plus conditional branch', () => {
+    const active4 = actives['sp_alchemist_active_4']!;
+    expect(active4.effect[0]?.type).toBe('herbalPotencyConsume');
+    const branch = active4.effect[1];
+    expect(branch?.type).toBe('conditionalEffect');
+    if (branch?.type !== 'conditionalEffect') return;
+    const thenHot = branch.thenEffects.find(
+      (e) => e.type === 'heal' && e.healSubKind === 'hot',
+    );
+    expect(thenHot?.potencyStackScale).toBe(true);
+    expect(thenHot?.buffDisplayName).toBe('濃縮薬効');
+    expect(active4.effect.every((e) => e.type !== 'debuff')).toBe(true);
   });
 
   it('unlocks Lv0=2 / Lv10=3 / Lv20=4 actives via classes.json skills[]', () => {

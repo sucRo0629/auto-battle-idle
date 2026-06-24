@@ -33,6 +33,11 @@ import {
   applyWardBarrierToTarget,
   applyWardBarrierToIncomingDamage,
 } from '../wardBarrier.ts';
+import {
+  addHerbalPotencyStacks,
+  consumeAllAllyHerbalPotencyStacks,
+  resolvePartyHerbalPotencyConfig,
+} from '../herbalPotency.ts';
 import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
 import { resolveEffectiveBasicAttackSkill } from '../resolveEffectiveBasicAttack.ts';
 import { basicAttackTransformSpecFromEffect } from '../resolveEffectiveBasicAttack.ts';
@@ -182,6 +187,8 @@ function shouldDeferUntilHostileToAnchorInRange(
 }
 
 export class SkillExecutor {
+  private potencyStacksConsumed = new Map<string, number>();
+
   constructor(
     private readonly gameData: GameData,
     private readonly emit: BattleEventListener,
@@ -264,6 +271,7 @@ export class SkillExecutor {
     }
 
     let appliedAny = false;
+    this.potencyStacksConsumed.clear();
     for (let effectIndex = 0; effectIndex < skill.effect.length; effectIndex++) {
       if (
         this.applyResolvedEffectStep(
@@ -331,6 +339,28 @@ export class SkillExecutor {
     cd: SkillCooldown,
     passives: ReturnType<typeof getPassiveDefs>,
   ): boolean {
+    if (effectDef.type === 'herbalPotencyConsume') {
+      const resolution = resolveEffectResolution(
+        effectDef,
+        actor,
+        allies,
+        enemies,
+        this.gameData,
+        Math.random,
+        passives,
+        skill.effect,
+      );
+      if (!resolutionHasTargets(resolution)) return false;
+      const targets = resolution!.waves.flatMap((wave) =>
+        wave.targets.map((entry) => entry.unit),
+      );
+      const consumed = consumeAllAllyHerbalPotencyStacks(allies, targets);
+      for (const [targetId, stacks] of consumed) {
+        this.potencyStacksConsumed.set(targetId, stacks);
+      }
+      return consumed.size > 0;
+    }
+
     if (effectDef.type === 'conditionalEffect') {
       const branchEffects = resolveConditionalBranchEffects(
         effectDef,
@@ -782,7 +812,7 @@ export class SkillExecutor {
         const baseSpec =
           effectDef.amount ??
           ({ kind: 'flat', flatAmount: 0 } as const);
-        const amountSpec = resolveEffectiveAmountSpecForActiveEffect(
+        let amountSpec = resolveEffectiveAmountSpecForActiveEffect(
           actor,
           passives,
           skill,
@@ -790,6 +820,31 @@ export class SkillExecutor {
           effectIndex,
           baseSpec,
         );
+        if (effectDef.potencyStackScale) {
+          const stacks = this.potencyStacksConsumed.get(target.id) ?? 0;
+          if (stacks <= 0) return false;
+          if (amountSpec.kind === 'percentMaxHp') {
+            amountSpec = {
+              ...amountSpec,
+              percentOfMaxHp: amountSpec.percentOfMaxHp * stacks,
+            };
+          } else if (amountSpec.kind === 'atkBased') {
+            amountSpec = {
+              ...amountSpec,
+              atkScale: amountSpec.atkScale * stacks,
+            };
+          } else if (amountSpec.kind === 'flat') {
+            amountSpec = {
+              ...amountSpec,
+              flatAmount: amountSpec.flatAmount * stacks,
+            };
+          } else if (amountSpec.kind === 'defBased') {
+            amountSpec = {
+              ...amountSpec,
+              defScale: amountSpec.defScale * stacks,
+            };
+          }
+        }
         const duration = effectDef.durationSec ?? 0;
         if (duration <= 0) return false;
         const appliedAt = Date.now();
@@ -805,7 +860,24 @@ export class SkillExecutor {
           skillId: skill.id,
           effectIndex,
           tickSec: 1,
+          ...(effectDef.buffDisplayName
+            ? { displayName: effectDef.buffDisplayName }
+            : {}),
         });
+        if (effectDef.stackOnApply && effectDef.stackOnApply > 0) {
+          const config = resolvePartyHerbalPotencyConfig(
+            sameSideAlliesFrom(this.deps.getAllCombatants(), actor),
+            passives,
+          );
+          if (config.maxStacks > 0) {
+            addHerbalPotencyStacks(
+              target,
+              effectDef.stackOnApply,
+              config.maxStacks,
+              actor.id,
+            );
+          }
+        }
         this.emit({
           type: 'skill',
           actorId: actor.id,

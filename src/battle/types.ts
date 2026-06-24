@@ -324,7 +324,8 @@ export interface StatusEffect {
     | "damageDelay"
     | "basicAttackTransform"
     | "healReservation"
-    | "wardBarrier";
+    | "wardBarrier"
+    | "herbalPotency";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */
@@ -540,6 +541,10 @@ export interface CombatantState extends Combatant {
   barrierBreakRegenUsed?: boolean;
   /** barrierDepletionHeal: 対象ユニットで枯渇回復を消費済み（Wave 1 回） */
   barrierDepletionHealUsed?: boolean;
+  /** herbalPotency: 蓄積タイマー残秒（3 秒間隔） */
+  herbalPotencyAccumTickSec?: number;
+  /** herbalPotency: 到達済み体質段階（active_4 消費後も維持） */
+  herbalPotencyConstitutionTier?: number;
 }
 
 export type PassiveEffectKind =
@@ -570,6 +575,7 @@ export type PassiveEffectKind =
   | "damageIncrease"
   | "healReceivedIncrease"
   | "extendSelfAppliedDebuff"
+  | "herbalPotency"
   /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
   | "hot";
 
@@ -821,6 +827,14 @@ export interface PassiveSkillDef {
   maxChargesBonus?: number;
   /** skillPropertyOverride: 対象アクティブ ID（未指定 = 全習得アクティブ） */
   skillPropertyTargetSkillIds?: string[];
+  /** herbalPotency: スタック上限 */
+  herbalPotencyMaxStacks?: number;
+  /** herbalPotency: stack ごとの HoT maxHp 加算率（0.0005 = 0.05%/stack） */
+  herbalPotencyHotPerStackPercent?: number;
+  /** herbalPotency: 体質段階の stack 閾値（passive_4） */
+  herbalPotencyConstitutionThresholds?: number[];
+  /** herbalPotency: 体質段階ごとの hp 乗算（閾値と同順） */
+  herbalPotencyConstitutionHpMultipliers?: number[];
 }
 
 export type SkillEffectKind =
@@ -837,7 +851,8 @@ export type SkillEffectKind =
   | "block"
   | "counter"
   | "basicAttackTransform"
-  | "conditionalEffect";
+  | "conditionalEffect"
+  | "herbalPotencyConsume";
 
 export type MoveMode = "engage" | "toAnchor";
 export type DamageType = "physical" | "magic";
@@ -1023,6 +1038,12 @@ export interface HealSkillEffect extends SkillEffectCommon {
   dispelTags?: DebuffFilterTag[];
   dispelCount?: number;
   dispelPriority?: DispelPriority;
+  /** herbalPotency: HoT 付与時に加算するスタック数 */
+  stackOnApply?: number;
+  /** herbalPotencyConsume 後: 消費スタック数で効果量を乗算 */
+  potencyStackScale?: boolean;
+  /** HUD 表示名（濃縮薬効など） */
+  buffDisplayName?: string;
 }
 
 export interface BuffSkillEffect extends SkillEffectCommon {
@@ -1179,6 +1200,10 @@ export interface ConditionalSkillEffect extends AnimPhaseFields {
   hitVfx?: SkillVfxDef;
 }
 
+export interface HerbalPotencyConsumeSkillEffect extends SkillEffectCommon {
+  type: "herbalPotencyConsume";
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -1193,7 +1218,8 @@ export type SkillEffectDef =
   | BlockSkillEffect
   | CounterSkillEffect
   | BasicAttackTransformSkillEffect
-  | ConditionalSkillEffect;
+  | ConditionalSkillEffect
+  | HerbalPotencyConsumeSkillEffect;
 
 /** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
 export type LegacyHotSkillEffect = HotSkillEffect;

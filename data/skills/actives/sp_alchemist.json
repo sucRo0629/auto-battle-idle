@@ -9,122 +9,29 @@
     "effect": [
       {
         "target": {
-          "kind": "stat",
+          "kind": "distance",
           "side": "ally",
-          "stat": "hp",
-          "order": "ratio"
+          "order": "selfOrigin"
         },
         "type": "heal",
         "healSubKind": "hot",
         "durationSec": 8,
         "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.35
+          "kind": "percentMaxHp",
+          "percentOfMaxHp": 0.006
         },
         "targetShape": "aoe",
-        "aoeRadiusPx": 70
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "debuff",
-        "debuffSubKind": "stat",
-        "debuffStat": "atk",
-        "debuffMultiplier": 0.85,
-        "debuffDurationSec": 7,
-        "targetShape": "aoe",
-        "aoeRadiusPx": 70
+        "aoeRadiusPx": 70,
+        "stackOnApply": 1
       }
     ]
   },
   {
     "id": "sp_alchemist_active_2",
-    "name": "sp_alchemist_active_2",
+    "name": "薬香の霧",
     "trigger": {
       "kind": "time",
       "value": 12
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "distance",
-          "side": "ally",
-          "order": "selfOrigin"
-        },
-        "type": "heal",
-        "healSubKind": "hot",
-        "durationSec": 8,
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.42
-        },
-        "targetShape": "aoe",
-        "aoeRadiusPx": 80
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "ally",
-          "order": "selfOrigin"
-        },
-        "type": "buff",
-        "buffSubKind": "stat",
-        "buffStat": "def",
-        "buffMultiplier": 1.12,
-        "buffDurationSec": 8,
-        "targetShape": "aoe",
-        "aoeRadiusPx": 80
-      }
-    ]
-  },
-  {
-    "id": "sp_alchemist_active_3",
-    "name": "sp_alchemist_active_3",
-    "trigger": {
-      "kind": "time",
-      "value": 11
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "stat",
-          "side": "ally",
-          "stat": "hp",
-          "order": "ratio"
-        },
-        "type": "heal",
-        "healSubKind": "hot",
-        "durationSec": 12,
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.28
-        }
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "ally",
-          "order": "selfOrigin"
-        },
-        "type": "buff",
-        "buffSubKind": "stat",
-        "buffStat": "atk",
-        "buffMultiplier": 1.08,
-        "buffDurationSec": 10,
-        "targetShape": "aoe",
-        "aoeRadiusPx": 80
-      }
-    ]
-  },
-  {
-    "id": "sp_alchemist_active_4",
-    "name": "sp_alchemist_active_4",
-    "trigger": {
-      "kind": "time",
-      "value": 14
     },
     "effect": [
       {
@@ -136,44 +43,130 @@
         "healSubKind": "hot",
         "durationSec": 10,
         "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.25
+          "kind": "percentMaxHp",
+          "percentOfMaxHp": 0.008
+        }
+      }
+    ]
+  },
+  {
+    "id": "sp_alchemist_active_3",
+    "name": "滋養強壮薬",
+    "trigger": {
+      "kind": "time",
+      "value": 11
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
         },
-        "targetShape": "single"
+        "type": "heal",
+        "healSubKind": "hot",
+        "durationSec": 14,
+        "amount": {
+          "kind": "percentMaxHp",
+          "percentOfMaxHp": 0.007
+        }
       },
       {
         "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "debuff",
-        "debuffSubKind": "stat",
-        "debuffStat": "atk",
-        "debuffMultiplier": 0.82,
-        "debuffDurationSec": 10,
-        "targetShape": "aoe",
-        "aoeRadiusPx": 70
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "ally",
-          "order": "selfOrigin"
+          "kind": "all",
+          "side": "ally"
         },
         "type": "buff",
         "buffSubKind": "stat",
-        "buffStat": "atk",
-        "buffMultiplier": 1.1,
-        "buffDurationSec": 10,
-        "targetShape": "aoe",
-        "aoeRadiusPx": 80
+        "buffStat": "hp",
+        "buffFlatBonus": 8,
+        "buffDurationSec": 10
+      }
+    ]
+  },
+  {
+    "id": "sp_alchemist_active_4",
+    "name": "薬効顕現",
+    "trigger": {
+      "kind": "time",
+      "value": 15
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
+        },
+        "type": "herbalPotencyConsume"
+      },
+      {
+        "type": "conditionalEffect",
+        "conditions": [
+          {
+            "kind": "targetHp",
+            "maxHpRatio": 0.5,
+            "compare": "lte"
+          }
+        ],
+        "thenEffects": [
+          {
+            "target": {
+              "kind": "stat",
+              "side": "ally",
+              "stat": "hp",
+              "order": "ratio"
+            },
+            "type": "heal",
+            "healSubKind": "hot",
+            "durationSec": 12,
+            "amount": {
+              "kind": "percentMaxHp",
+              "percentOfMaxHp": 0.004
+            },
+            "potencyStackScale": true,
+            "buffDisplayName": "濃縮薬効"
+          },
+          {
+            "target": {
+              "kind": "all",
+              "side": "ally"
+            },
+            "type": "buff",
+            "buffSubKind": "stat",
+            "buffStat": "atk",
+            "buffMultiplier": 1.12,
+            "buffDurationSec": 6
+          }
+        ],
+        "elseEffects": [
+          {
+            "target": {
+              "kind": "all",
+              "side": "ally"
+            },
+            "type": "buff",
+            "buffSubKind": "stat",
+            "buffStat": "atk",
+            "buffMultiplier": 1.18,
+            "buffDurationSec": 8
+          },
+          {
+            "target": {
+              "kind": "all",
+              "side": "ally"
+            },
+            "type": "buff",
+            "buffSubKind": "stat",
+            "buffStat": "hp",
+            "buffMultiplier": 1.04,
+            "buffDurationSec": 8
+          }
+        ]
       }
     ]
   },
   {
     "id": "sp_alchemist_basic_attack",
-    "name": "sp_alchemist_basic_attack",
+    "name": "薬手当て",
     "trigger": {
       "kind": "time",
       "value": 2
@@ -189,8 +182,8 @@
         "type": "heal",
         "healSubKind": "hot",
         "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.11
+          "kind": "percentMaxHp",
+          "percentOfMaxHp": 0.003
         },
         "durationSec": 5
       }

@@ -11,8 +11,13 @@ import { dispelDebuffsOnTarget } from './debuffDispel.ts';
 import { resolvePassiveDebuffTargets } from './passiveDebuffBridge.ts';
 import { resolvePassiveBuffTargets } from './passiveBuffBridge.ts';
 import { resolvePassiveDamageReductionTargets } from './passiveDamageReductionBridge.ts';
-import { resolvePassiveHotTargets } from './passiveHotBridge.ts';
-import { resolvePassiveDispelTargets } from './passiveDispelBridge.ts';
+import { resolvePassiveAuraHotTargets, resolvePassiveHotTargets } from './passiveHotBridge.ts';
+import {
+  resolvePassiveDispelTargets,
+} from './passiveDispelBridge.ts';
+import {
+  stripHerbalPotencyAurasFromSource,
+} from './herbalPotency.ts';
 import {
   isPassiveBarrierBuff,
   resolvePassiveBarrierTrigger,
@@ -743,12 +748,11 @@ export function applyPassiveHotFromPassive(
   previousEffectsByTarget?: Map<string, Map<string, StatusEffect>>,
 ): void {
   if (!isPassiveHot(passive) || !passive.hotAmount) return;
-  const targets = resolvePassiveHotTargets(
+  const targets = resolvePassiveAuraHotTargets(
     source,
     passive,
     allies,
     enemies,
-    gameData,
   );
   const durationSec = resolvePassiveHotDurationSec(passive.hotDurationSec);
   const effectId = passiveHotEffectId(source.id, passive.id, idPrefix);
@@ -918,6 +922,7 @@ export function stripPassivesAurasFromSource(
   sourceId: string,
   units: CombatantState[],
 ): void {
+  stripHerbalPotencyAurasFromSource(sourceId, units);
   for (const unit of units) {
     unit.statusEffects = unit.statusEffects.filter(
       (effect) =>

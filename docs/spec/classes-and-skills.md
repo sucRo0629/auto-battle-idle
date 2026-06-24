@@ -274,7 +274,7 @@ Survival Layer は、味方の戦闘継続性を維持し、敗北条件への�
 | ----------------- | ------------------------ | -------------------------------------- |
 | Defense Control   | 鉄衛士 / 護法士 / 闘技士 | 被害の受け口、前線維持、被弾起点の制圧 |
 | Recovery Control  | 療養師                   | 欠損 HP の回復、余剰回復のバリア変換   |
-| Stability Control | 結界師 / 薬草師          | バリア、軽減、HoT、解除、長期戦維持    |
+| Stability Control | 結界師 / 薬草師          | バリア、HoT、薬効スタック、解除、長期戦維持    |
 
 ---
 
@@ -540,7 +540,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | -------------- | ------ | --------- | ----- | ---- | ------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | `sp_cleric`    | 療養師 | Cleric    | back  | 遠隔 | 低 HP 回復増 + 余剰回復 → バリア（`passive_1` / `passive_2`）。Lv10 / Lv20 で回復精度・癒しの残響 | `sp_cleric_active_1` + `sp_cleric_active_2`（低 HP smart heal）     |
 | `sp_wardweaver`   | 結界師 | Wardweaver   | back  | 遠隔 | 低 HP 特効 barrier + バリア枯渇回復（`passive_1` / `passive_2`） | `sp_wardweaver_active_1` + `sp_wardweaver_active_2`（smart barrier） |
-| `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | 常時 HoT aura + 高 HP 味方 DEF buff（`passive_1` / `passive_2`）    | `sp_alchemist_active_1` + `sp_alchemist_active_2`（近接帯 sustain） |
+| `sp_alchemist` | 薬草師 | Herbalist | front | 近接 | 薬効浸潤 aura + 高 HP 味方 hp buff（`passive_1` / `passive_2`）    | `sp_alchemist_active_1` + `sp_alchemist_active_2`（HoT sustain） |
 
 ### デモ編成（`parties.json` demo）
 
@@ -704,13 +704,13 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | -------------- | ---------------------------- | --------------------------------------------------------- | ---------------------------------------- |
 | `sp_cleric`    | Survival / Recovery Control  | 直接 heal + 低 HP 回復特化 + 余剰回復 → barrier           | 回復結果の補正（段階的 heal 効率・癒しの残響） |
 | `sp_wardweaver`   | Survival / Stability Control | 低 HP 特効 barrier + 枯渇回復 + Wave 開始全体 barrier | 障壁（ward）・先読み smart・崩壊前猶予 |
-| `sp_alchemist` | Survival / Sustain Control   | HoT aura + 高 HP 味方 DEF buff + active 範囲 HoT / debuff | Flow 寄りの敵 `atk` debuff、状態異常対策 |
+| `sp_alchemist` | Survival / Sustain Control   | 薬効浸潤（`herbalPotency`）HoT aura + 薬効スタック + 高 HP 味方 hp buff | 限定的な DoT 解除（`periodicDispel`） |
 
 この 3 職は同じ「回復役」の数値違いではなく、**どの段階の損失を処理するか** で分担する。
 
 - `sp_cleric` — **欠損後の復元**。大きく減った HP を即時に戻し、戦線崩壊後の損失を回収する
 - `sp_wardweaver` — **崩壊前の猶予作成**。barrier / 軽減で HP 欠損が致命化する前に余裕を作る
-- `sp_alchemist` — **長期維持と継戦リズム調整**。HoT と局所的な被害速度低下で戦線を長く保つ
+- `sp_alchemist` — **長期維持と継戦リズム調整**。薬効スタック蓄積・HoT 特化・薬効顕現（`active_4`）で戦線を長く保つ
 
 **療養師（Cleric）参照:** 療養師の主責務は Recovery であり、持続維持や事前軽減ではなく **欠損 HP の即時復元** を正本とする。パッシブは回復そのものを無限に強化するのではなく、**回復の結果処理と安定性** を制御する（HP 直接操作・防御生成・被ダメ介入は行わない）。
 
@@ -740,15 +740,34 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | Lv20 passive_4 | `barrierBreakRegen`（障壁消費では発火しない） |
 | Lv20 active_4 | 三重の障壁: 障壁×2 + barrier×1.25 全体、smart `any`（先読み被ダメ OR HP≤50%）、CD 15 |
 
-**薬草師（Herbalist）参照:** Lv0 では毒 DoT・scatter 与ダメ・通常攻撃 dmg+heal 同時は載せない。狩猟士との差分は、狩猟士が Flow として罠・DoT 毒で局所戦場を制御するのに対し、薬草師は Survival として HoT sustain、被害低減、状態異常対策を扱う点にある。`traits.rangePx` は近接帯（`rangePx < 100`）で前列配置とするが、これは戦場制御を主目的にしたものではなく、**Survival 主軸内での射程個性の分離** と、**薬草師というフレーバーを長射程 caster 系と分けるための設計** を正本とする。戦闘構造上は、前列 supporter として最前帯の直後に留まり、近接帯の味方へ HoT / sustain を差し込む役割を持つ。`active_1` の敵 debuff は `targetShape: aoe` + `aoeRadiusPx: 70`（最近接敵をアンカーにした範囲）とし、Survival の範囲に留まる **被害量・被害速度の抑制** に限定する。`effect.range` の拡張は使わない。
+**薬草師（Herbalist）参照:** Lv0 では毒 DoT・scatter 与ダメ・即時 heal は載せない（**HoT のみ**）。主軸は **`herbalPotency`（薬効浸潤）** — 習得済み `effect: herbalPotency` パッシブを合成する。
 
-- Lv0 `sp_alchemist_active_2` — 自身位置（`selfOrigin`）+ `aoeRadiusPx: 80` で近接帯味方へ HoT + DEF buff。Lv0 の強め sustain。
-- Lv10 `sp_alchemist_active_3` — 最低 HP 比率味方への長 HoT + 近接帯味方 ATK buff（継戦リズム調整。Kill 主目的の火力支援ではない）。
+**薬効浸潤（正本）**
+
+| 項目 | ルール |
+| --- | --- |
+| 蓄積 | 薬草師由来 HoT が 1 本でも乗っている味方へ、**実時間 3 秒ごとに stack +1**（HoT tick 毎ではない。複数 HoT 重ねても加速しない） |
+| stack 加算 | stack ごとにその味方への HoT `percentMaxHp` を加算（`herbalPotencyHotPerStackPercent`、正本は JSON） |
+| 上限 | Lv0 `passive_1`: `maxStacks: 6`。Lv20 `passive_4` 習得後は合成 **`maxStacks: 9`**（複数 `herbalPotency` パッシブの `herbalPotencyMaxStacks` の **最大値**） |
+| 常時 aura | `passive_1` の弱い party HoT（満タン時の tick 無駄は許容） |
+| 体質段階 | `passive_4`: stack 閾値 3 / 6 / 9 で段階的 `hp` 乗算。**`active_4` 消費で体質段階は剥がさない**（消えるのは stack カウンタと HoT 加算のみ） |
+| HUD | `overlay: herbalPotency` + `stacks`。スタック数ぶん同アイコンを横並び（`wardBarrier` の「1 アイコン + stacks フィールド」とは別） |
+
+| 枠 | 名称 | 内容 |
+| --- | --- | --- |
+| passive_1 | 薬効の香り | `herbalPotency` — aura HoT + 蓄積基礎（max 6） |
+| passive_2 | 健康体 | 最高 HP 味方 `hp` ×1.05 |
+| passive_3 | 毒消し | `periodicDispel` dot 限定（Wave 回数上限） |
+| passive_4 | 薬草の極意 | `herbalPotency` — max 9 + 体質閾値 |
+| basic | 薬手当て | 最低 HP 味方へ短い `percentMaxHp` HoT |
+| active_1 | 薬粉撒き | 近接帯 HoT + `stackOnApply` |
+| active_2 | 薬香の霧 | 味方全体中程度 HoT |
+| active_3 | 滋養強壮薬 | 味方全体長 HoT + `hp` flat buff（MaxHP 底上げが主役） |
+| active_4 | 薬効顕現 | `herbalPotencyConsume` → 全 stack 消費。**即時 heal なし**。`conditionalEffect`: 最低 HP ≤50% → 濃縮 HoT（消費 n 比例）+ 短 ATK buff / else → 強め ATK + 短 `hp` buff |
+
+実装: `src/battle/herbalPotency.ts` / `passiveHotBridge.resolvePassiveAuraHotTargets`（aura は満タン保留を bypass）
+
 - Lv10 `sp_alchemist_passive_3` — Wave 回数限定の debuff cleanse（`periodicDispel` / `onDebuffReceived`）。薬草師専用の補助個性。
-- Lv20 `sp_alchemist_active_4` — party HoT + 敵 ATK debuff + 近接帯 ATK buff の上位 sustain 大技。
-- Lv20 `sp_alchemist_passive_4` — 味方全体の軽微な被ダメ軽減（`damageReduction`）。
-
-**バランス目標:** 鉄衛 + 薬草師 90 秒 sim で実効 HP は cleric 比 **上限 75%**。
 
 ### 未決・TBD
 
@@ -1422,7 +1441,8 @@ interface CharacterBuild {
 | 定義方法                                          | 対象・効果                                  | 主なパラメータ                                     | 重複・スタックルール                 | 備考                                                                |
 | :------------------------------------------------ | :------------------------------------------ | :------------------------------------------------- | :----------------------------------- | :------------------------------------------------------------------ |
 | **アクティブ** (`type: heal`, `healSubKind: hot`) | 対象に HoT 状態を付与し、持続回復を行う     | `ResourceAmountSpec`<br>`durationSec`              | 同一効果は持続時間の長い方を優先。   | 1 秒ごとに回復量を再計算（使用者のリアルタイムな ATK 変動を反映）。 |
-| **パッシブ** (`effect: heal`, `healSubKind: hot`) | 常時、または Stage/Wave 開始時に HoT を適用 | `ResourceAmountSpec`<br>`hotDurationSec`（0=無限） | パッシブの対象解決ルールに従い同期。 | 薬草師の「常時 HoT aura」などがこれに該当します。                   |
+| **パッシブ** (`effect: heal`, `healSubKind: hot`) | 常時、または Stage/Wave 開始時に HoT を適用 | `ResourceAmountSpec`<br>`hotDurationSec`（0=無限） | パッシブの対象解決ルールに従い同期。 | 一般パッシブ HoT。常時 aura は `resolvePassiveAuraHotTargets` で満タン保留を bypass。 |
+| **パッシブ** (`effect: herbalPotency`) | 薬効浸潤: aura HoT + stack 蓄積 + 体質段階 | `herbalPotencyMaxStacks`<br>`herbalPotencyHotPerStackPercent`<br>`herbalPotencyConstitutionThresholds` / `HpMultipliers` | 習得済み `herbalPotency` を合成（`maxStacks` は最大値）。 | 薬草師専用。実装: `herbalPotency.ts` |
 
 - **被回復量増加**: 対象がパッシブ `healReceivedIncrease` を持っている場合、直接回復だけでなく HoT の毎秒 tick 回復量も `floor(量 × (1 + percent合算))` で増加します。
 

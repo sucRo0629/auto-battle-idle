@@ -16,7 +16,9 @@ export type StatusDisplayCategory =
   | "stun"
   | "moveLock"
   | "damageDelay"
-  | "wardBarrier";
+  | "wardBarrier"
+  | "herbalPotency"
+  | "mark";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "atk",
@@ -29,6 +31,8 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "healReservation",
   "damageDelay",
   "wardBarrier",
+  "herbalPotency",
+  "mark",
   "dot",
   "evasion",
   "block",
@@ -68,7 +72,7 @@ export interface StatusEffectBadgeDisplay {
   isPassive: boolean;
 }
 
-/** パッシブオーラ同期で付与された効果（HUD バッジ非表示・戦闘計算は対象） */
+/** パッシブオーラ同期で付与された効果（aggregateStatStatusEffects 集計から除外） */
 export function isPassiveAuraStatusEffect(effect: StatusEffect): boolean {
   return effect.id.startsWith("passive_");
 }
@@ -201,6 +205,13 @@ function statusEffectBadgeForOverlay(
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
       };
+    case "herbalPotency":
+      return {
+        category: "herbalPotency",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
     default:
       return null;
   }
@@ -232,21 +243,31 @@ export function collectStatusEffectBadgeDisplays(
   effects: StatusEffect[],
   baseStats: StatBadgeBaseStats,
 ): StatusEffectBadgeDisplay[] {
-  return effects
-    .map((effect, index) => ({
-      effect,
-      index,
-      badge: statusEffectBadgeForEffect(effect, baseStats),
-    }))
-    .filter(
-      (
-        entry,
-      ): entry is {
-        effect: StatusEffect;
-        index: number;
-        badge: StatusEffectBadgeDisplay;
-      } => entry.badge !== null,
-    )
+  const entries: Array<{ badge: StatusEffectBadgeDisplay; index: number }> = [];
+
+  effects.forEach((effect, index) => {
+    if (effect.overlay === "herbalPotency" || effect.overlay === "mark") {
+      const stackCount = effect.stacks ?? 0;
+      if (stackCount <= 0) return;
+      const badge = statusEffectBadgeForOverlay(effect);
+      if (!badge) return;
+      for (let i = 0; i < stackCount; i++) {
+        entries.push({
+          badge: {
+            ...badge,
+            isPassive: isPassiveDisplayedStatusEffect(effect),
+          },
+          index,
+        });
+      }
+      return;
+    }
+
+    const badge = statusEffectBadgeForEffect(effect, baseStats);
+    if (badge) entries.push({ badge, index });
+  });
+
+  return entries
     .sort((a, b) => {
       if (a.badge.isPassive !== b.badge.isPassive) {
         return a.badge.isPassive ? -1 : 1;

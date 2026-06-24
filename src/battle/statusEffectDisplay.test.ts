@@ -118,6 +118,26 @@ describe('statusEffectDisplay', () => {
     expect(badges).toEqual([]);
   });
 
+  it('collects stack badges as repeated icons for herbalPotency', () => {
+    const badges = collectStatusEffectBadgeDisplays(
+      [
+        {
+          id: 'herbal_potency_stacks_ally1',
+          kind: 'buff',
+          overlay: 'herbalPotency',
+          stacks: 3,
+          multiplier: 1,
+          durationSec: 99999,
+          remainingSec: 99999,
+        },
+      ],
+      { atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges).toHaveLength(3);
+    expect(badges.every((b) => b.category === 'herbalPotency')).toBe(true);
+  });
+
   it('collects one badge per status effect and keeps passives on the left', () => {
     const badges = collectStatusEffectBadgeDisplays(
       [

@@ -2,19 +2,17 @@
   {
     "id": "sp_alchemist_passive_1",
     "name": "薬効の香り",
-    "effect": "heal",
-    "healSubKind": "hot",
+    "effect": "herbalPotency",
     "hotAmount": {
       "kind": "percentMaxHp",
       "percentOfMaxHp": 0.004
     },
     "hotTargetRule": {
-      "kind": "distance",
-      "side": "ally",
-      "order": "selfOrigin"
+      "kind": "all",
+      "side": "ally"
     },
-    "hotTargetShape": "aoe",
-    "hotAoeRadiusPx": 120
+    "herbalPotencyMaxStacks": 6,
+    "herbalPotencyHotPerStackPercent": 0.0005
   },
   {
     "id": "sp_alchemist_passive_2",
@@ -49,12 +47,18 @@
   },
   {
     "id": "sp_alchemist_passive_4",
-    "name": "sp_alchemist_passive_4",
-    "effect": "damageReduction",
-    "damageReductionPercent": 0.04,
-    "damageReductionTargetRule": {
-      "kind": "all",
-      "side": "ally"
-    }
+    "name": "薬草の極意",
+    "effect": "herbalPotency",
+    "herbalPotencyMaxStacks": 9,
+    "herbalPotencyConstitutionThresholds": [
+      3,
+      6,
+      9
+    ],
+    "herbalPotencyConstitutionHpMultipliers": [
+      1.03,
+      1.06,
+      1.09
+    ]
   }
 ]

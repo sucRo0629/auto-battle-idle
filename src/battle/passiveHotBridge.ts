@@ -1,4 +1,10 @@
+import { getBattleX } from './combatPosition.ts';
 import { resolveEffectTargets } from './skills/targeting.ts';
+import {
+  getTargetPool,
+  isMultiTargetSpec,
+  pickTargetFromPool,
+} from './skills/targetSpec.ts';
 import type {
   CombatantState,
   GameData,
@@ -149,6 +155,41 @@ export function resolvePassiveHotTargets(
     enemies,
     gameData,
   );
+}
+
+/** 常時 aura 同期用。満タン保留（hasDamagedHealCandidate）を bypass する */
+export function resolvePassiveAuraHotTargets(
+  source: CombatantState,
+  passive: PassiveSkillDef,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+): CombatantState[] {
+  const effect = passiveHotToEffectDef(passive);
+  const spec: TargetSpec = effect.target ?? { kind: 'self' };
+  const pool = getTargetPool(spec, source, allies, enemies).filter(
+    (unit) => unit.isAlive,
+  );
+  const shape = passive.hotTargetShape ?? 'single';
+
+  if (shape === 'aoe') {
+    const radius = passive.hotAoeRadiusPx ?? 0;
+    if (radius <= 0) return [];
+    const anchor =
+      spec.kind === 'distance' && spec.order === 'selfOrigin'
+        ? source
+        : (pickTargetFromPool(spec, source, pool) ?? source);
+    const anchorX = getBattleX(anchor);
+    return pool.filter(
+      (unit) => Math.abs(getBattleX(unit) - anchorX) <= radius,
+    );
+  }
+
+  if (isMultiTargetSpec(spec)) {
+    return pool;
+  }
+
+  const target = pickTargetFromPool(spec, source, pool);
+  return target ? [target] : [];
 }
 
 export function remapPassiveHotTargetingToEffect(

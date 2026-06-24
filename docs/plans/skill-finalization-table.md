@@ -248,7 +248,7 @@ Caster pass の実装方針:
 | --- | --- | --- | --- | --- |
 | `sp_cleric` | Recovery Control。欠損 HP の即時復元、余剰回復を barrier 化 | `active_1` 癒しの光、`active_2` 広域治療。仕様上は `active_2` が Lv10 とされ、Lv0=2 との整合が未解決 | `active_1` は **残す**。広域治療は Lv10 へ移し、Lv0 2 枠目は低 HP smart heal として **追加**。Lv20 は反応型大 heal 候補 | 既存 heal / hot / fireConditions で先行可能。真の被ダメ反応 trigger は新規ゲート |
 | `sp_wardweaver` | Stability Control。崩壊前猶予、barrier max、障壁（ward）、先読み smart | **実装済**（2025 リデザイン） | Lv0: heal 補助 + barrier 特効 + 枯渇回復。Lv10: 単体 barrierStack。Lv20: 三重の障壁（障壁2+バリア） | `barrierDepletionHeal` / `wardBarrier` / `pendingIncomingDamage` / `fireConditionMatch` |
-| `sp_alchemist` | Sustain Control。HoT、被害速度低下、限定的な状態異常対策 | `active_1` 薬粉撒き。`active_2` / `active_3` / `active_4` 未配置 | `active_1` は **残す**。Lv0 2 枠目は前列 supporter としての近接 sustain / 守り薬を **追加**。Lv10 以降は HoT 維持、敵 debuff 延長、または味方 ATK buff を **追加**。debuff cleanse は active にしない | 既存 HoT / atk debuff / atk buff / periodicDispel 周辺で対応。新しい active dispel は作らない |
+| `sp_alchemist` | Sustain Control。薬効浸潤（`herbalPotency`）HoT + stack 蓄積 + 薬効顕現 | **実装済**（2025 リデザイン） | Lv0: aura + stack 基礎 + 近接 HoT。Lv20: 体質段階 + 薬効顕現 | `herbalPotency` / `herbalPotencyConsume` / `stackOnApply` / `potencyStackScale` |
 
 ### Supporter 枠確定案
 
@@ -271,13 +271,13 @@ Supporter 3 種は「回復量の大小」ではなく、損失を処理する�
 | `sp_wardweaver` | Lv0 active 2 | 双璧の護り: barrier×2 multiLock、smart HP≤50%、`targetBarrierBelowGrant` | **実装** |
 | `sp_wardweaver` | Lv10 active 3 | 庇護の帷: `barrierStack` 単体最低 HP barrier×1.0 | **実装** |
 | `sp_wardweaver` | Lv20 active 4 | 三重の障壁: 障壁×2 + barrier×1.25、smart any（先読み OR HP≤50%） | **実装** |
-| `sp_alchemist` | basic | 最低 HP 比率の味方へ HoT。即時復元ではなく持続維持 | 現行 `sp_alchemist_basic_attack` を **残す** |
-| `sp_alchemist` | Lv0 passive 1-2 | party HoT aura、高 HP ally DEF | 現行 passive を **残す / 整理** し、Lv0 2 枠へ収める |
-| `sp_alchemist` | Lv10 / Lv20 passive | Wave 回数限定の debuff cleanse など、長期維持の段階強化。解除は薬草師専用の補助個性に留め、必須枠にしない | **追加 / 整理** |
-| `sp_alchemist` | Lv0 active 1 | 範囲 HoT + 敵 ATK debuff。被害量・被害速度の抑制 | 現行 `sp_alchemist_active_1`（薬粉撒き）を **残す** |
-| `sp_alchemist` | Lv0 active 2 | 前列 / 近接帯の味方を長く保たせる sustain。HoT + DEF または damageTaken 補助 | **追加** |
-| `sp_alchemist` | Lv10 active 3 | HoT 維持、敵 debuff 延長、または近接帯 / 前列味方への ATK buff。ATK buff は撃破主目的ではなく、前線の継戦リズム調整として扱う。debuff cleanse は passive の Wave 回数限定に閉じる | **追加** |
-| `sp_alchemist` | Lv20 active 4 | 長期戦向けの上位 sustain。party HoT 強化 + 敵被害速度低下、または Lv10 で解禁した味方 ATK buff の範囲化 / 維持化 | **追加** |
+| `sp_alchemist` | basic | 最低 HP 比率の味方へ短い `percentMaxHp` HoT（即時 heal なし） | `sp_alchemist_basic_attack`（薬手当て）**実装** |
+| `sp_alchemist` | Lv0 passive 1-2 | `herbalPotency` aura + stack 基礎、高 HP ally hp buff | **実装** |
+| `sp_alchemist` | Lv10 / Lv20 passive | dot 限定 `periodicDispel`、体質段階（max stack 9） | **実装** |
+| `sp_alchemist` | Lv0 active 1 | 近接帯 HoT + `stackOnApply`（敵 debuff なし） | **実装** |
+| `sp_alchemist` | Lv0 active 2 | 薬香の霧: 味方全体中程度 HoT | **実装** |
+| `sp_alchemist` | Lv10 active 3 | 滋養強壮薬: 味方全体長 HoT + hp flat buff | **実装** |
+| `sp_alchemist` | Lv20 active 4 | 薬効顕現: 全 stack 消費 + `conditionalEffect` 分岐（即時 heal なし） | **実装** |
 
 Supporter pass の実装方針:
 

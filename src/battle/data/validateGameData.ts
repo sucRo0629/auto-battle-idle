@@ -988,6 +988,44 @@ function parseOptionalNonNegativeNumber(
   return value;
 }
 
+function parseOptionalPositiveIntArray(
+  value: unknown,
+  context: string,
+): number[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    invalidField(context, '', 'must be an array of positive integers');
+  }
+  const result: number[] = [];
+  for (let i = 0; i < value.length; i++) {
+    const entry = value[i];
+    if (typeof entry !== 'number' || !Number.isInteger(entry) || entry < 1) {
+      invalidField(context, `[${i}]`, 'must be a positive integer');
+    }
+    result.push(entry);
+  }
+  return result;
+}
+
+function parseOptionalNumberArray(
+  value: unknown,
+  context: string,
+): number[] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) {
+    invalidField(context, '', 'must be an array of numbers');
+  }
+  const result: number[] = [];
+  for (let i = 0; i < value.length; i++) {
+    const entry = value[i];
+    if (typeof entry !== 'number' || Number.isNaN(entry)) {
+      invalidField(context, `[${i}]`, 'must be a number');
+    }
+    result.push(entry);
+  }
+  return result;
+}
+
 function parseOptionalWaitAfterSec(
   obj: Record<string, unknown>,
   context: string,
@@ -2250,6 +2288,17 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...presentation,
     });
   }
+  if (typeRaw === 'herbalPotencyConsume') {
+    const target = parseEffectTarget(obj, context);
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    return normalizeSkillEffect({
+      type: 'herbalPotencyConsume',
+      target,
+      ...sequenceTiming,
+      ...presentation,
+    });
+  }
   const type = requireEnum(obj, 'type', context, SKILL_EFFECTS);
   const target =
     type === 'counter' || type === 'basicAttackTransform'
@@ -2302,6 +2351,20 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     if (healSubKind === 'hot') {
       const durationSec = requireNumber(obj, 'durationSec', context);
       const amount = parseEffectAmount(obj, context, 'heal hot');
+      const stackOnApply = parseOptionalNonNegativeNumber(
+        obj,
+        'stackOnApply',
+        context,
+      );
+      if (stackOnApply !== undefined && !Number.isInteger(stackOnApply)) {
+        invalidField(context, 'stackOnApply', 'must be a non-negative integer');
+      }
+      const potencyStackScale =
+        obj.potencyStackScale === true ? true : undefined;
+      const buffDisplayName =
+        typeof obj.buffDisplayName === 'string' && obj.buffDisplayName.length > 0
+          ? obj.buffDisplayName
+          : undefined;
       return normalizeSkillEffect({
         target,
         ...targetShapeFields,
@@ -2310,6 +2373,9 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         healSubKind,
         amount,
         durationSec,
+        ...(stackOnApply !== undefined ? { stackOnApply } : {}),
+        ...(potencyStackScale ? { potencyStackScale } : {}),
+        ...(buffDisplayName ? { buffDisplayName } : {}),
         ...sequenceTiming,
         ...presentation,
         ...(range !== undefined ? { range } : {}),
@@ -3260,6 +3326,79 @@ function requirePassiveEffectParams(
         ...(dispelTags !== undefined ? { dispelTags } : {}),
         ...(dispelPriority !== undefined ? { dispelPriority } : {}),
         ...(dispelTriggerLimit !== undefined ? { dispelTriggerLimit } : {}),
+      };
+    }
+    case 'herbalPotency': {
+      const amountSource = obj.hotAmount ?? obj.partyHotAuraAmount;
+      const targetSource = obj.hotTargetRule ?? obj.partyHotTargetRule;
+      const hotDurationSec = parseOptionalNonNegativeNumber(
+        obj,
+        'hotDurationSec',
+        context,
+      );
+      const targetingFields = parsePassiveHotTargetingFields(obj, context);
+      const maxStacks = requireNumber(obj, 'herbalPotencyMaxStacks', context);
+      if (!Number.isInteger(maxStacks) || maxStacks < 1) {
+        invalidField(
+          context,
+          'herbalPotencyMaxStacks',
+          'must be a positive integer',
+        );
+      }
+      const hotPerStackPercent = parseOptionalNonNegativeNumber(
+        obj,
+        'herbalPotencyHotPerStackPercent',
+        context,
+      );
+      const constitutionThresholds = parseOptionalPositiveIntArray(
+        obj.herbalPotencyConstitutionThresholds,
+        `${context}.herbalPotencyConstitutionThresholds`,
+      );
+      const constitutionHpMultipliers = parseOptionalNumberArray(
+        obj.herbalPotencyConstitutionHpMultipliers,
+        `${context}.herbalPotencyConstitutionHpMultipliers`,
+      );
+      if (
+        constitutionThresholds !== undefined &&
+        constitutionHpMultipliers !== undefined &&
+        constitutionThresholds.length !== constitutionHpMultipliers.length
+      ) {
+        invalidField(
+          context,
+          'herbalPotencyConstitutionHpMultipliers',
+          'length must match herbalPotencyConstitutionThresholds',
+        );
+      }
+      return {
+        ...base,
+        ...(amountSource !== undefined
+          ? {
+              hotAmount: parseResourceAmountSpec(
+                amountSource,
+                `${context}.hotAmount`,
+              ),
+            }
+          : {}),
+        ...(targetSource !== undefined
+          ? {
+              hotTargetRule: parseTargetSpec(
+                targetSource,
+                `${context}.hotTargetRule`,
+              ),
+            }
+          : {}),
+        ...targetingFields,
+        herbalPotencyMaxStacks: maxStacks,
+        ...(hotPerStackPercent !== undefined
+          ? { herbalPotencyHotPerStackPercent: hotPerStackPercent }
+          : {}),
+        ...(constitutionThresholds !== undefined
+          ? { herbalPotencyConstitutionThresholds: constitutionThresholds }
+          : {}),
+        ...(constitutionHpMultipliers !== undefined
+          ? { herbalPotencyConstitutionHpMultipliers: constitutionHpMultipliers }
+          : {}),
+        ...(hotDurationSec !== undefined ? { hotDurationSec } : {}),
       };
     }
     case 'heal': {

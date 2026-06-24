@@ -80,6 +80,12 @@ import {
   syncFrontThreatControlAuras,
   syncSelfHpRatioBuffAuras,
 } from "./passiveEffects.ts";
+import {
+  resolveHerbalPotencyHotBonus,
+  resolvePartyHerbalPotencyConfig,
+  syncHerbalPotencyAuras,
+  tickHerbalPotencyAccumulation,
+} from "./herbalPotency.ts";
 import { tryTriggerHealReservation, grantHealReservationStacks } from "./healReservation.ts";
 import { tryTriggerBarrierBreakRegen } from "./barrierBreakRegen.ts";
 import { tryTriggerBarrierDepletionHeal } from "./barrierDepletionHeal.ts";
@@ -523,6 +529,7 @@ export class BattleEngine {
     syncDamageReductionAuras(this.players, this.enemies, passives, this.gameData);
     syncFrontThreatControlAuras(this.players, passives);
     syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
+    syncHerbalPotencyAuras(this.players, this.enemies, passives, this.gameData);
   }
 
   private handlePassiveDispelOnDebuffReceived(target: CombatantState): void {
@@ -1605,6 +1612,11 @@ export class BattleEngine {
   /** DoT/HoT・バフ/デバフ持続・CD を接敵状態に関係なく進める */
   private tickStatusAndCooldowns(deltaTime: number): void {
     this.tickStatusEffects(deltaTime);
+    tickHerbalPotencyAccumulation(
+      this.players,
+      this.gameData.skillRegistry.passives,
+      deltaTime,
+    );
     this.syncContinuousPassiveAuras();
     this.tickCooldowns(this.players, deltaTime);
     this.tickCooldowns(this.enemies, deltaTime);
@@ -1760,7 +1772,15 @@ export class BattleEngine {
 
     if (effect.overlay === "hot") {
       const baseAmount = resolveHotAmountFromStatus(source, target, effect, passives);
-      const amount = resolveIncomingHealAmount(target, baseAmount, passives);
+      const potencyBonus = resolveHerbalPotencyHotBonus(
+        target,
+        resolvePartyHerbalPotencyConfig(this.players, passives),
+      );
+      const amount = resolveIncomingHealAmount(
+        target,
+        baseAmount + potencyBonus,
+        passives,
+      );
       if (amount <= 0) return;
       const healed = applyHealToTarget(target, amount);
       if (healed <= 0) return;

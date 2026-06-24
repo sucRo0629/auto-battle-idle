@@ -1675,6 +1675,11 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         thenEffects: [defaultEffect('damage')],
         elseEffects: [defaultEffect('damage')],
       };
+    case 'herbalPotencyConsume':
+      return {
+        target: { kind: 'all', side: 'ally' },
+        type: 'herbalPotencyConsume',
+      };
   }
 }
 
@@ -2337,6 +2342,47 @@ export class SkillEditorStep {
             appendResourceAmountFields(grid, amount, onUpdate);
           },
           { traitsRangePx: this.resolveTraitsRangePx() },
+        );
+        break;
+      case 'herbalPotency':
+        appendPassiveHealFields(
+          effectGrid,
+          passive,
+          (mutate, options) => {
+            this.patchPassive(index, mutate, options);
+          },
+          (grid, amount, onUpdate) => {
+            appendResourceAmountFields(grid, amount, onUpdate);
+          },
+          { traitsRangePx: this.resolveTraitsRangePx() },
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'herbalPotencyMaxStacks',
+            createNumberInput(
+              passive.herbalPotencyMaxStacks ?? 6,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.herbalPotencyMaxStacks = value;
+                }, { rerender: false });
+              },
+              { step: 1, min: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'herbalPotencyHotPerStackPercent',
+            createNumberInput(
+              passive.herbalPotencyHotPerStackPercent ?? 0.0005,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.herbalPotencyHotPerStackPercent = value;
+                }, { rerender: false });
+              },
+              { step: 0.0001 },
+            ),
+          ),
         );
         break;
       case 'damageReduction':
