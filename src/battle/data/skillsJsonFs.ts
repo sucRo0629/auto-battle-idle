@@ -141,3 +141,33 @@ export function upsertSkillsToFiles(
 
   return [...written];
 }
+
+/** in-memory skills root から entityStem 分を payload で置換（orphan 除去） */
+export function mergeSkillsRootAfterEntityReplace(
+  skillsRoot: { passives: PassiveSkillDef[]; actives: ActiveSkillDef[] },
+  entityStem: string,
+  passives: PassiveSkillDef[],
+  actives: ActiveSkillDef[],
+): { passives: PassiveSkillDef[]; actives: ActiveSkillDef[] } {
+  const belongsToEntity = (skillId: string) =>
+    getSkillFileStemForSkillId(skillId) === entityStem;
+
+  const otherPassives = skillsRoot.passives.filter((p) => !belongsToEntity(p.id));
+  const otherActives = skillsRoot.actives.filter((a) => !belongsToEntity(a.id));
+
+  return {
+    passives: [...otherPassives, ...passives],
+    actives: [...otherActives, ...actives],
+  };
+}
+
+/** entityStem の stem ファイルを payload で丸ごと上書き（他 stem は変更しない） */
+export function replaceEntitySkillsInFiles(
+  entityStem: string,
+  passives: PassiveSkillDef[],
+  actives: ActiveSkillDef[],
+): string[] {
+  writePassiveFile(entityStem, passives);
+  writeActiveFile(entityStem, actives);
+  return [passiveFilePath(entityStem), activeFilePath(entityStem)];
+}

@@ -12,7 +12,9 @@ import type {
 import type { ClassPresetBeforeEnrich } from './src/progression/skillUnlocks.ts';
 import { ensureClassGrowthFields } from './src/editor/editorApi.ts';
 import {
+  mergeSkillsRootAfterEntityReplace,
   readSkillsRoot,
+  replaceEntitySkillsInFiles,
   upsertSkillsToFiles,
 } from './src/battle/data/skillsJsonFs.ts';
 
@@ -161,25 +163,28 @@ async function applyClassBundle(
   const classes = readJsonFile(READ_FILES.classes) as ClassPresetBeforeEnrich[];
   const skillsRoot = readSkillsRoot();
 
+  const entityStem = body.class.id.trim();
   const nextClasses = upsertById(classes, body.class);
-  const nextPassives = body.passives.reduce(
-    (list, passive) => upsertById(list, passive),
-    skillsRoot.passives,
-  );
-  const nextActives = body.actives.reduce(
-    (list, active) => upsertById(list, active),
-    skillsRoot.actives,
+  const nextSkills = mergeSkillsRootAfterEntityReplace(
+    skillsRoot,
+    entityStem,
+    body.passives,
+    body.actives,
   );
 
   const validationBase = loadValidationPayload();
   validateAll({
     ...validationBase,
     classes: nextClasses,
-    skills: { passives: nextPassives, actives: nextActives },
+    skills: nextSkills,
   });
 
   writeJsonFile(READ_FILES.classes, nextClasses);
-  const writtenSkillFiles = upsertSkillsToFiles(body.passives, body.actives);
+  const writtenSkillFiles = replaceEntitySkillsInFiles(
+    entityStem,
+    body.passives,
+    body.actives,
+  );
   await reloadGameDataModules(server, [READ_FILES.classes, ...writtenSkillFiles]);
 }
 
@@ -240,25 +245,28 @@ async function applyEnemyBundle(
   const enemies = readJsonFile(READ_FILES.enemies) as EnemyTemplate[];
   const skillsRoot = readSkillsRoot();
 
+  const entityStem = body.enemy.id.trim();
   const nextEnemies = upsertById(enemies, body.enemy);
-  const nextPassives = body.passives.reduce(
-    (list, passive) => upsertById(list, passive),
-    skillsRoot.passives,
-  );
-  const nextActives = body.actives.reduce(
-    (list, active) => upsertById(list, active),
-    skillsRoot.actives,
+  const nextSkills = mergeSkillsRootAfterEntityReplace(
+    skillsRoot,
+    entityStem,
+    body.passives,
+    body.actives,
   );
 
   const validationBase = loadValidationPayload();
   validateAll({
     ...validationBase,
     enemies: nextEnemies,
-    skills: { passives: nextPassives, actives: nextActives },
+    skills: nextSkills,
   });
 
   writeJsonFile(READ_FILES.enemies, nextEnemies);
-  const writtenSkillFiles = upsertSkillsToFiles(body.passives, body.actives);
+  const writtenSkillFiles = replaceEntitySkillsInFiles(
+    entityStem,
+    body.passives,
+    body.actives,
+  );
   await reloadGameDataModules(server, [READ_FILES.enemies, ...writtenSkillFiles]);
 }
 
