@@ -8,10 +8,10 @@
 2. `effectiveDef = applyDefenseIgnore(getEffectiveDef(target))`（DEF 無視: flat 減算 → percent 減算、パッシブ + effect 合算。各 `defenseIgnore` の `chance` を毎回判定し、失敗したソースは合算から除外）
 3. `afterSubtract = baseDamage - effectiveDef`
 4. `afterSubtract <= 0` なら `afterDefense = 0`、
-  それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
+   それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
 5. `final = max(1, floor(afterDefense × damageTakenMul))`
 6. **物理直接 `damage` のみ:** 回避判定 → ブロック判定（成功時 `blocked = floor(final × min(1, 0.25 + effectiveAtk/100))`、実ダメ = `final - blocked`）
-6b. **魔法直接 `damage`:** `blocksMagic: true` の block overlay がある対象のみ追加判定。成功時 `blocked = floor(final × 0.15)`（ATK/DEF/REG 非参照。定数 `MAGIC_BLOCK_MITIGATION_RATIO`）
+   6b. **魔法直接 `damage`:** `blocksMagic: true` の block overlay がある対象のみ追加判定。成功時 `blocked = floor(final × 0.15)`（ATK/DEF/REG 非参照。定数 `MAGIC_BLOCK_MITIGATION_RATIO`）
 
 **回避:** 直接 `damage` の物理/魔法問わず（DoT tick 非対象）。`SkillExecutor` で `resolveDamage` 前に判定。
 
@@ -43,14 +43,14 @@
 
 確率要素は判定時だけ使用できる。`chance` はスキル定義やパッシブ定義に置かれる判定パラメータであり、戦闘中の `CombatantState` / `StatusEffect` / `BattleSnapshot` に「未判定」「成功するかもしれない」「失敗するかもしれない」という確率状態を保持しない。
 
-| 対象 | 未判定状態 | 判定 | 確定状態 |
-| ---- | ---------- | ---- | -------- |
-| 回避 | 直接 `damage` を受ける | `evasion` の `chance` を判定 | 回避成功なら damage 非適用、失敗なら後続処理へ進む |
-| ブロック | 物理直接 `damage` が確定 | `block` の `chance` を判定 | 成功なら block 後 damage、失敗なら block なし |
-| 防御無視 | damage 計算開始 | 各 `defenseIgnore.chance` を判定 | 成功したソースだけ DEF / REG 無視へ合算 |
-| debuff / stun / knockback 付与 | effect 適用時 | effect / passive の `chance` を判定 | 成功なら `StatusEffect` / moveLock 等を付与、失敗なら非付与 |
-| 確率反撃 | 被攻撃条件と射程条件を満たす | `counter.chance` を判定 | 成功なら responses を即時適用、失敗なら反撃なし |
-| Stage/Wave 開始パッシブ | 発動タイミング到達 | `chance` を判定 | 成功なら効果を適用、失敗なら非適用 |
+| 対象                           | 未判定状態                   | 判定                                | 確定状態                                                    |
+| ------------------------------ | ---------------------------- | ----------------------------------- | ----------------------------------------------------------- |
+| 回避                           | 直接 `damage` を受ける       | `evasion` の `chance` を判定        | 回避成功なら damage 非適用、失敗なら後続処理へ進む          |
+| ブロック                       | 物理直接 `damage` が確定     | `block` の `chance` を判定          | 成功なら block 後 damage、失敗なら block なし               |
+| 防御無視                       | damage 計算開始              | 各 `defenseIgnore.chance` を判定    | 成功したソースだけ DEF / REG 無視へ合算                     |
+| debuff / stun / knockback 付与 | effect 適用時                | effect / passive の `chance` を判定 | 成功なら `StatusEffect` / moveLock 等を付与、失敗なら非付与 |
+| 確率反撃                       | 被攻撃条件と射程条件を満たす | `counter.chance` を判定             | 成功なら responses を即時適用、失敗なら反撃なし             |
+| Stage/Wave 開始パッシブ        | 発動タイミング到達           | `chance` を判定                     | 成功なら効果を適用、失敗なら非適用                          |
 
 **責務分離:**
 
@@ -90,15 +90,13 @@
 
 **被回復量増加**（パッシブ `healReceivedIncrease`）: 回復対象のパッシブ `percent` を加算し、`heal` / HoT tick 量に `floor(量 × (1 + percent合算))` を適用（`damageIncrease` 適用後の量に対して乗算）。
 
-heal / HoT / barrier / **damage** は `**ResourceAmountSpec`**（`amount`）で効果量を定義。旧 JSON のトップレベル `powerMultiplier` のみも、`kind: atkBased` + `atkScale` として読み込む（後方互換）。
+heal / HoT / barrier / **damage** は `**ResourceAmountSpec`\*\*（`amount`）で効果量を定義。旧 JSON のトップレベル `powerMultiplier` のみも、`kind: atkBased` + `atkScale` として読み込む（後方互換）。
 
-
-| kind           | 式                                                                                         |
-| -------------- | ----------------------------------------------------------------------------------------- |
-| `atkBased`（既定） | `floor(max(0, (effectiveAtk + healBonus + atkOffset) × atkScale))`（damage は healBonus なし） |
-| `flat`         | `floor(max(0, flatAmount + healBonus))`                                                   |
-| `percentMaxHp` | `floor(max(0, ref.effectiveMaxHp × percentOfMaxHp + healBonus))` — `ref` は `maxHpRef`: `self` → 使用者、`target` または未指定 → 対象 |
-
+| kind               | 式                                                                                                                                    |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `atkBased`（既定） | `floor(max(0, (effectiveAtk + healBonus + atkOffset) × atkScale))`（damage は healBonus なし）                                        |
+| `flat`             | `floor(max(0, flatAmount + healBonus))`                                                                                               |
+| `percentMaxHp`     | `floor(max(0, ref.effectiveMaxHp × percentOfMaxHp + healBonus))` — `ref` は `maxHpRef`: `self` → 使用者、`target` または未指定 → 対象 |
 
 - `healBonus` — 使用者パッシブ `healBonus` の合算
 - HoT — 1 秒 tick ごとに上記を **再計算**（付与時の ATK buff 変動を反映）
@@ -106,18 +104,16 @@ heal / HoT / barrier / **damage** は `**ResourceAmountSpec`**（`amount`）で�
 
 ## バリア
 
-**effect 種別:** `barrier` — HP とは別の `**barrierHp`** プール。maxHp を超えて付与可。
+**effect 種別:** `barrier` — HP とは別の `**barrierHp`\*\* プール。maxHp を超えて付与可。
 
-
-| 項目        | 仕様                               |
-| --------- | -------------------------------- |
-| 付与量       | `ResourceAmountSpec`（heal と同式）   |
-| max（既定）    | `grant > barrierHp` のとき `barrierHp = grant`（小さい grant は無視） |
-| 加算         | `barrierStack: true` のみ既存に **加算**                  |
-| 持続        | 時間切れなし — **ダメージで消費されるまで維持**      |
-| 死亡        | `hp ≤ 0` のみ（バリアだけ残っても HP 0 なら死亡） |
-| リスポーン     | HP 全回復と同時に `barrierHp = 0`       |
-
+| 項目        | 仕様                                                                  |
+| ----------- | --------------------------------------------------------------------- |
+| 付与量      | `ResourceAmountSpec`（heal と同式）                                   |
+| max（既定） | `grant > barrierHp` のとき `barrierHp = grant`（小さい grant は無視） |
+| 加算        | `barrierStack: true` のみ既存に **加算**                              |
+| 持続        | 時間切れなし — **ダメージで消費されるまで維持**                       |
+| 死亡        | `hp ≤ 0` のみ（バリアだけ残っても HP 0 なら死亡）                     |
+| リスポーン  | HP 全回復と同時に `barrierHp = 0`                                     |
 
 **ダメージ吸収**（被ダメパイプライン。`applyIncomingDamage` 前に障壁・ブロックを適用）:
 
@@ -160,58 +156,58 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 
 例外は `useDurationSec` による **SkillHold**。`useDurationSec` はスキルデータ層に置く「このスキルは hold / channel / commit time を持つ」という宣言であり、デバフや `StatusEffect` ではない。戦闘エンジン層は発動成功時にその宣言を SkillHold として解釈し、持続中の basic CD / active CD / イベントゲージ停止、busy 判定、残時間管理を行う。敵対的な時間停止が必要な効果は SkillHold ではなく、後述の `freeze` など別状態として定義する。
 
-| 枠 | 進行ルール |
-| --- | --- |
-| **basic CD** | 常に **時間**（`remaining -= deltaTime × basicCooldownRate`） |
+| 枠                            | 進行ルール                                                               |
+| ----------------------------- | ------------------------------------------------------------------------ |
+| **basic CD**                  | 常に **時間**（`remaining -= deltaTime × basicCooldownRate`）            |
 | **active CD（time trigger）** | 常に **時間**（`remaining -= deltaTime × ∏ passive.activeCooldownRate`） |
 
 **basicCooldownRate** — クラス `attackSpeedTier` を `levelCurves.json` の `attackSpeedPresets` で係数化（`normal` = 1.0）。詳細は [stats.md](stats.md)。
 
 **予定（未実装）** — パッシブ `attackSpeedTierShift` と buff/debuff `attackSpeed` による tier ステップ加算後、上記 preset から rate を再解決。
 
-**時間トリガー（`time`）** — `remaining` が 0 になると発動可能状態になる。発動できる場合は `SkillExecutor` が1回発動し、`trigger.value` にリセットする。スタン中などで行動できない場合も `remaining = 0` の準備完了状態を保持し、CD は停止しない（レガシー `interval` は `trigger.kind: time` として解釈）。
+**時間トリガー（`time`）** — `remaining` が 0 になると発動可能状態になる。発動できる場合は `SkillExecutor` が 1 回発動し、`trigger.value` にリセットする。スタン中などで行動できない場合も `remaining = 0` の準備完了状態を保持し、CD は停止しない（レガシー `interval` は `trigger.kind: time` として解釈）。
 
 **チャージなし（`time` / `value: 0`）** — 時間充填なし（`remaining` は常に 0、CD tick なし）。`smart` + `fireConditions` または `stageTriggerLimit` が必須。発動後も `remaining = 0` のまま。実装: `skillTrigger.ts` `isNoChargeTimeTrigger`。
 
 **`finalWaveStart` イベント発動** — `fireConditions` に `finalWaveStart` を持つアクティブは、最終 Wave 接敵時（`tryAutoFireFinalWaveStageSkills`）に `remaining` を 0 に強制リセットしてから発動する（`trigger.value` が大きくてもイベント時は撃てる）。
 
-**カウントトリガー（`basicAttackCount` / `hitsTaken`）は CD ではなくイベントゲージ。** `trigger.value = N` のとき、次の3段階で進行する。
+**カウントトリガー（`basicAttackCount` / `hitsTaken`）は CD ではなくイベントゲージ。** `trigger.value = N` のとき、次の 3 段階で進行する。
 
-| フェーズ | 条件 | 攻撃回数 | 被攻撃回数 | HUD ゲージ |
-| -------- | ---- | -------- | ---------- | ---------- |
-| 充填中 | `remaining > 0` | 通常攻撃ダメージごとに全 basicAttackCount アクティブが `remaining--`（多段は各ダメージ、回避時は進まない） | `hurt` ごとに `remaining--` | `1 - remaining/N` |
-| 準備完了 | `remaining === 0` | 発動しない | 発動しない | **100%（Max）** |
-| 消費 | 準備完了後の N+1 回目 | **通常攻撃の代わりに**アクティブ発動 → `remaining = N` にリセット | **N+1 回目の被弾**でアクティブ発動（ダメージは通常通り）→ リセット | 0% に戻る |
+| フェーズ | 条件                  | 攻撃回数                                                                                                   | 被攻撃回数                                                         | HUD ゲージ        |
+| -------- | --------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ----------------- |
+| 充填中   | `remaining > 0`       | 通常攻撃ダメージごとに全 basicAttackCount アクティブが `remaining--`（多段は各ダメージ、回避時は進まない） | `hurt` ごとに `remaining--`                                        | `1 - remaining/N` |
+| 準備完了 | `remaining === 0`     | 発動しない                                                                                                 | 発動しない                                                         | **100%（Max）**   |
+| 消費     | 準備完了後の N+1 回目 | **通常攻撃の代わりに**アクティブ発動 → `remaining = N` にリセット                                          | **N+1 回目の被弾**でアクティブ発動（ダメージは通常通り）→ リセット | 0% に戻る         |
 
 ステージ開始時は `remaining = trigger.value`（ゲージ未充填）。カウントトリガーは `remaining === 0` でも active 枠から自動発動せず、上記の消費イベントを待つ。スタン中は行動不能のため `basicAttackCount` の消費イベントは起きない。`hitsTaken` はスタン中でも被弾して `hurt` が発生すれば通常どおり進む。SkillHold 中は使用者自身のイベントゲージも停止する。
 
-1 tick あたりの実行順（1ユニット）：active 枠0→1→2→3 → basic（準備完了カウント active があれば basic 枠処理時にそちらを優先）
+1 tick あたりの実行順（1 ユニット）：active 枠 0→1→2→3 → basic（準備完了カウント active があれば basic 枠処理時にそちらを優先）
 
 **発動ゲート（`firePolicy` / `fireConditions`）:** `trigger` がチャージ、`firePolicy` / `fireConditions` が発動可否。省略時 `immediate`（既存互換）。`smart` + 条件未成立 → ストック処理（多段チャージ）または `fireHold`（HUD 点滅）。`fireTimeoutSec` 経過後は条件無視で発動。
 
-| kind | 成立条件 |
-| ---- | -------- |
-| `waveStart` | PartyDeploy 開始〜接敵（`beginEngaged`）まで |
-| `finalWaveStart` | 最終 Wave の PartyDeploy 開始〜接敵（`beginEngaged`）まで |
-| `waveEnd` | 敵全滅 settle〜次 Wave deploy まで |
-| `enemyCount` | 生存敵数（`scope: living`）または射程内敵数（`inRange`） |
-| `targetHp` / `debuff` / `minTargets` / `selfHp` / `allyDamaged` | 各 kind の閾値・タグ |
-| `pendingIncomingDamage` | 先読みキュー内の味方被ダメ見積もり（`maxHpRatio` / `windowSec`） |
-| `targetBarrierBelowGrant` | 参照 effect の grant > 対象 `barrierHp` |
+| kind                                                            | 成立条件                                                         |
+| --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `waveStart`                                                     | PartyDeploy 開始〜接敵（`beginEngaged`）まで                     |
+| `finalWaveStart`                                                | 最終 Wave の PartyDeploy 開始〜接敵（`beginEngaged`）まで        |
+| `waveEnd`                                                       | 敵全滅 settle〜次 Wave deploy まで                               |
+| `enemyCount`                                                    | 生存敵数（`scope: living`）または射程内敵数（`inRange`）         |
+| `targetHp` / `debuff` / `minTargets` / `selfHp` / `allyDamaged` | 各 kind の閾値・タグ                                             |
+| `pendingIncomingDamage`                                         | 先読みキュー内の味方被ダメ見積もり（`maxHpRatio` / `windowSec`） |
+| `targetBarrierBelowGrant`                                       | 参照 effect の grant > 対象 `barrierHp`                          |
 
 **`fireConditionMatch`** — `all`（省略）または `any`。`any` 時は条件のいずれかで smart 発動。
 
-**`fireConditions` の `targetHp`:** 参照 effect（先頭 effect）の `target` と射程で **攻撃可能プール** を組み、味方向けはプール全体で判定する。`target: all` + `side: ally` → 射程内（`all` は射程無視で全生存味方）の **誰か1人** が閾値を満たせば成立。`target: stat` + `hp` + `order: ratio` + `side: ally` → プール内 **最小 HP 割合**が閾値を満たせば成立（heal は使用者もプールに含む）。敵向け・単体 anchor 向けは従来どおり primary 1 体で判定。
+**`fireConditions` の `targetHp`:** 参照 effect（先頭 effect）の `target` と射程で **攻撃可能プール** を組み、味方向けはプール全体で判定する。`target: all` + `side: ally` → 射程内（`all` は射程無視で全生存味方）の **誰か 1 人** が閾値を満たせば成立。`target: stat` + `hp` + `order: ratio` + `side: ally` → プール内 **最小 HP 割合**が閾値を満たせば成立（heal は使用者もプールに含む）。敵向け・単体 anchor 向けは従来どおり primary 1 体で判定。
 
 Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `periodicTrigger: waveStart`** を使用（味方 CD は Wave 跨ぎ維持のため初期チャージは廃案）。
 
 **多段チャージ（`maxCharges` / `storedCharges`）:** `maxCharges` 省略 = **0**（保持なし・ストック UI なし）。`maxCharges > 0` かつ smart 保留時、CD Max 後に 2 段目チャージを開始し `storedCharges` に確定ストック（上限 0〜3）。パッシブ `skillPropertyOverride.maxChargesBonus` で実効上限を加算（`GLOBAL_MAX_CHARGES_CAP = 3`）。
 
-| レーン | 役割 |
-| --- | --- |
-| `presentationLock` | スキル発動後、各 effect の **body strip 再生秒** と **VFX 再生秒**（main + `hitVfx`、登録 strip があるもののみ）および **particles 再生秒**（`resolveParticlePlaybackSec`）の最大値を `resolvePresentationLockSec` で算出し、その間 **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。`useDurationSec > 0` のときは **0**（use lock が優先）。**CD は止めない**。秒数計算だけ `effectVfxOnly: false` で skill 直下 `vfx` を含めうる（再生は effect 優先ポリシーのまま）— [classes-and-skills.md](classes-and-skills.md#演出解決コード) |
-| `animLock` | body strip の再生時間だけ `SkillSequenceRunner.beginAnimLock` で保持し、`isActorBusy` / `isBasicAttackBlocked` で **他スキル発動を停止**する。`presentationLock` と同様に **CD 進行は止めない**。body 再生を止める用途はここで自動付与する。 |
-| `useDurationSec` | アクティブのみ optional（省略 / `0` = 即時）。スキルデータ層では SkillHold を発生させる宣言だけを担う。戦闘エンジン層は発動成功時に `SkillSequenceRunner.beginUse` で SkillHold を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）を発動不可にする。hold / channel / commit time 系スキルの特性であり、デバフではない。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**SkillHold 中は使用者自身の basic CD / active CD / イベントゲージを停止する**。Party HUD: 停止中は `busy`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も hold 残量があれば busy 継続。`useDurationSec` の表示ゲージはSkillHold残量を示す用途で、通常CDとは独立。 |
+| レーン             | 役割                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `presentationLock` | スキル発動後、各 effect の **body strip 再生秒** と **VFX 再生秒**（main + `hitVfx`、登録 strip があるもののみ）および **particles 再生秒**（`resolveParticlePlaybackSec`）の最大値を `resolvePresentationLockSec` で算出し、その間 **通常攻撃のみ** 停止（`isBasicAttackBlocked`）。`useDurationSec > 0` のときは **0**（use lock が優先）。**CD は止めない**。秒数計算だけ `effectVfxOnly: false` で skill 直下 `vfx` を含めうる（再生は effect 優先ポリシーのまま）— [classes-and-skills.md](classes-and-skills.md#演出解決コード)                                                                                                                                                                                             |
+| `animLock`         | body strip の再生時間だけ `SkillSequenceRunner.beginAnimLock` で保持し、`isActorBusy` / `isBasicAttackBlocked` で **他スキル発動を停止**する。`presentationLock` と同様に **CD 進行は止めない**。body 再生を止める用途はここで自動付与する。                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `useDurationSec`   | アクティブのみ optional（省略 / `0` = 即時）。スキルデータ層では SkillHold を発生させる宣言だけを担う。戦闘エンジン層は発動成功時に `SkillSequenceRunner.beginUse` で SkillHold を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）を発動不可にする。hold / channel / commit time 系スキルの特性であり、デバフではない。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**SkillHold 中は使用者自身の basic CD / active CD / イベントゲージを停止する**。Party HUD: 停止中は `busy`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も hold 残量があれば busy 継続。`useDurationSec` の表示ゲージは SkillHold 残量を示す用途で、通常 CD とは独立。 |
 
 **Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 3px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。`stageTriggerLimit` を持つスキルで Stage 内残回数が 0 のときは fill を **empty（トラック色のみ・最暗）** のまま表示し、`ready` / `fireHold` にしない。
 
@@ -246,14 +242,13 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 
 ### 変動と減衰
 
-
-| イベント        | 変化                                                                  |
-| ----------- | ------------------------------------------------------------------- |
-| 与ダメ（actor）   | 味方 actor に `floor(damage × 0.5)` を加算（全ロール共通） |
-| 与ダメ burst（active effect） | 上記に加え `threatBurstFlat` / `floor(appliedDamage × threatBurstScale)` を加算（高火力 active 専用） |
-| 被ダメ（target）  | **共通ルールでは加算しない**。Defender 等は passive `threatControl` で明示 |
-| debuff 付与成功 | actor に `+15` 固定                                                    |
-| 毎 tick      | `threat > baseThreat` なら `threat -= 20 × deltaTime × threatDecayMultiplier`、下限 `baseThreat`（`threatDecayMultiplier` 未指定 = 1） |
+| イベント                      | 変化                                                                                                                                   |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 与ダメ（actor）               | 味方 actor に `floor(damage × 0.5)` を加算（全ロール共通）                                                                             |
+| 与ダメ burst（active effect） | 上記に加え `threatBurstFlat` / `floor(appliedDamage × threatBurstScale)` を加算（高火力 active 専用）                                  |
+| 被ダメ（target）              | **共通ルールでは加算しない**。Defender 等は passive `threatControl` で明示                                                             |
+| debuff 付与成功               | actor に `+15` 固定                                                                                                                    |
+| 毎 tick                       | `threat > baseThreat` なら `threat -= 20 × deltaTime × threatDecayMultiplier`、下限 `baseThreat`（`threatDecayMultiplier` 未指定 = 1） |
 
 **Threat 変動の原則:**
 
@@ -264,7 +259,6 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 - Guardian（`df_guardian_passive_2`）は main tank として被弾・ブロックで Threat を維持し、減衰も遅くする
 - Paladin は `frontThreatFloor` / `frontThreatDecayMultiplier` で前列を sub-defender 化し、Lv0 では前列 block 付与で物理被害を抑える。前列被ダメ軽減は `threatControl` には含めず、必要なら `damageReduction` passive として分離する
 - 剣術士（`at_warrior_active_1`）は `threatBurstScale` で burst 時のみ一時 overtaking する
-
 
 ### 敵ターゲット選定
 
@@ -282,7 +276,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 ## ステータス効果
 
-対象ステ：`atk`, `def`, `reg`（耐魔）, `damageTaken`, `attackSpeed`（攻撃速度。基本攻撃 CD 回復倍率に適用）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
+対象ステ：`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`（攻撃速度。基本攻撃 CD 回復倍率に適用）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
 
 **HUD バッジ表示:** 通常は 1 つの `StatusEffect` を 1 つのバッジとして描画する。**例外:** `overlay: herbalPotency` / `blockResonance`（および将来の `mark`）は `stacks` 数ぶん同カテゴリアイコンを横並び（`statusBadgeOverlap` で重ね）。`wardBarrier` は 1 アイコン + `stacks` フィールド表示（別処理）。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。味方は `PartyHudPanel`、敵は `BattleCanvas` 上のスプライト頭上（[battle-field.md](battle-field.md)）。
 
@@ -325,29 +319,28 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 実装: `duelistPride.ts` / `lowHpCover.ts` / `lastStandGuts.ts` / `bloodlustDuelist.ts` / `enemyReelIn.ts` / `arenaDominance.ts`
 
-| effect | 要点 |
-| --- | --- |
-| `lowHpCover` | 味方 HP 割合 ≤ `coverHpRatioThreshold` の被ダメ適用先を闘技士へ差し替え（単体・AoE 各ヒット）。Wave 内 `coverWaveLimit` 回 |
-| `duelistPride` | 自身 `hp/maxHp` ≥ `prideHpRatioMin`（バリア非含有）のとき、受ける即時回復・HoT tick を `prideHealMultiplier` 倍（`arenaDominance` の味方支援拒否より弱い） |
-| `bloodlustDuelist` | block + 低 HP DEF（線形）/ ATK（`bloodlustAtkBuffCurveExponent` で指数カーブ、未指定=線形） |
-| `lastStandGuts` | 致死直前 Wave 1 回 → HP 1 未満にならない状態を数秒（完全無敵ではない）。終了時生存敵全体に短 stun + KB。イベント `lastStandGuts` →「不屈！」 |
-| `enemyReelIn` | 遠隔帯の敵（`attackType.ranged`）を対象に `battleX` を使用者 `traits.rangePx` の射程内へ引き寄せ（進軍下限整合）。effect の `range` はターゲットプール絞り込みのみで移動先には使わない。移動量 0 のときは effect 未適用（イベント・ポップアップなし）。`df_duelist_active_1` は本 effect のみの引き寄せ専用スキル。`firePolicy: smart` では `minTargets` が先頭 `enemyReelIn` の対象数を参照 |
-| `arenaDominance` | `finalWaveStart` + `stageTriggerLimit: 1` で発動。15 秒間、敵単体攻撃ターゲットを闘技士固定（AoE / `targetRuleOverride` 除外）。最高 ATK 敵に **闘士の指名**（`arenaMark`）。指名対象は闘技士以外からの被ダメ −50%。闘技士はマーク以外の敵からの被ダメ −50%。効果中、闘技士は味方（自身以外）からの回復・バリア・HoT を受けない。指名は効果終了と同時に解除 |
+| effect             | 要点                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lowHpCover`       | 味方 HP 割合 ≤ `coverHpRatioThreshold` の被ダメ適用先を闘技士へ差し替え（単体・AoE 各ヒット）。Wave 内 `coverWaveLimit` 回                                                                                                                                                                                                                                                                   |
+| `duelistPride`     | 自身 `hp/maxHp` ≥ `prideHpRatioMin`（バリア非含有）のとき、受ける即時回復・HoT tick を `prideHealMultiplier` 倍（`arenaDominance` の味方支援拒否より弱い）                                                                                                                                                                                                                                   |
+| `bloodlustDuelist` | block + 低 HP DEF（線形）/ ATK（`bloodlustAtkBuffCurveExponent` で指数カーブ、未指定=線形）                                                                                                                                                                                                                                                                                                  |
+| `lastStandGuts`    | 致死直前 Wave 1 回 → HP 1 未満にならない状態を数秒（完全無敵ではない）。終了時生存敵全体に短 stun + KB。イベント `lastStandGuts` →「不屈！」                                                                                                                                                                                                                                                 |
+| `enemyReelIn`      | 遠隔帯の敵（`attackType.ranged`）を対象に `battleX` を使用者 `traits.rangePx` の射程内へ引き寄せ（進軍下限整合）。effect の `range` はターゲットプール絞り込みのみで移動先には使わない。移動量 0 のときは effect 未適用（イベント・ポップアップなし）。`df_duelist_active_1` は本 effect のみの引き寄せ専用スキル。`firePolicy: smart` では `minTargets` が先頭 `enemyReelIn` の対象数を参照 |
+| `arenaDominance`   | `finalWaveStart` + `stageTriggerLimit: 1` で発動。15 秒間、敵単体攻撃ターゲットを闘技士固定（AoE / `targetRuleOverride` 除外）。最高 ATK 敵に **闘士の指名**（`arenaMark`）。指名対象は闘技士以外からの被ダメ −50%。闘技士はマーク以外の敵からの被ダメ −50%。効果中、闘技士は味方（自身以外）からの回復・バリア・HoT を受けない。指名は効果終了と同時に解除                                  |
 
 `fireCondition` `finalWaveStart`: `waveIndex === stage.waves.length - 1` かつ Wave 開始フェーズ。
 
-
-| 種別     | 定義方法                                                                                                                                           |
-| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| buff   | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec`                                                                           |
-| 通常攻撃変形 | `effect: "basicAttackTransform"` + `buffDurationSec` 等 — バフ持続中のみ通常攻撃 effect を実行時マージ（下記）。付与対象は自身固定 |
-| 条件分岐 | `effect: "conditionalEffect"` + `conditions` / `thenEffects` / `elseEffects` — 戦況条件で branch effect を 1 系統だけ実行。branch 内 `conditionalEffect` の入れ子は不可。skill 直下 `fireConditions` は発動ゲート専用 |
-| debuff | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                   |
-| スタン    | `effect: "stun"` + `durationSec`（**上限 5 秒**）— `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は使用者としての通常攻撃・アクティブ発動・ターゲット選択不可。CD は停止しない |
-| 凍結 / 時間停止系拘束 | **未実装・予約概念**。CD 停止が必要な場合はスタンではなく別 `StatusEffect` として定義する。スタンとは別物で、Flow 系上位制御など時間進行そのものへ干渉する効果として個別仕様化する |
-| 反撃    | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記 |
-| デバフ解除  | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `dispelPriority` に従い N 件（`longest` = 残り時間最長、`strongest` = 効果量最大。未指定は `longest`）。対象タグに `attackSpeed`（SPDデバフ）可。パッシブ `periodicDispel` は `stageStart` / `waveStart` / `onDebuffReceived` で `dispelTargetRule` + 形状・射程（接頭辞 `dispel`、[classes-and-skills.md](classes-and-skills.md)）で対象選択。`dispelTriggerLimit` = Wave 内発動回数上限 |
-| ノックバック | `effect: "knockback"` + `distancePx` — 各陣営の **後方** へ即時移動（プレイヤーは左 `-X`、敵は右 `+X`）。敵は進軍表示下限未満にならない。**付与成功時**に移動硬直 **1.5 秒**（`StatusEffect.overlay: "moveLock"`）。移動硬直中は接敵接近・スキル `move` を停止するが、通常攻撃・アクティブは可能。詳細は [battle-field.md](battle-field.md) §2.5 |
+| 種別                  | 定義方法                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| buff                  | `effect: "buff"` + `buffStat` / `buffMultiplier` / `buffDurationSec`                                                                                                                                                                                                                                                                                                                                                                                       |
+| 通常攻撃変形          | `effect: "basicAttackTransform"` + `buffDurationSec` 等 — バフ持続中のみ通常攻撃 effect を実行時マージ（下記）。付与対象は自身固定                                                                                                                                                                                                                                                                                                                         |
+| 条件分岐              | `effect: "conditionalEffect"` + `conditions` / `thenEffects` / `elseEffects` — 戦況条件で branch effect を 1 系統だけ実行。branch 内 `conditionalEffect` の入れ子は不可。skill 直下 `fireConditions` は発動ゲート専用                                                                                                                                                                                                                                      |
+| debuff                | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                                                                                                                                                                                                                                                                                                                               |
+| スタン                | `effect: "stun"` + `durationSec`（**上限 5 秒**）— `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は使用者としての通常攻撃・アクティブ発動・ターゲット選択不可。CD は停止しない                                                                                                                                                                                                                                                                       |
+| 凍結 / 時間停止系拘束 | **未実装・予約概念**。CD 停止が必要な場合はスタンではなく別 `StatusEffect` として定義する。スタンとは別物で、Flow 系上位制御など時間進行そのものへ干渉する効果として個別仕様化する                                                                                                                                                                                                                                                                         |
+| 反撃                  | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記                                                                                                                                                                                                                                                                                                                                      |
+| デバフ解除            | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `dispelPriority` に従い N 件（`longest` = 残り時間最長、`strongest` = 効果量最大。未指定は `longest`）。対象タグに `attackSpeed`（SPD デバフ）可。パッシブ `periodicDispel` は `stageStart` / `waveStart` / `onDebuffReceived` で `dispelTargetRule` + 形状・射程（接頭辞 `dispel`、[classes-and-skills.md](classes-and-skills.md)）で対象選択。`dispelTriggerLimit` = Wave 内発動回数上限 |
+| ノックバック          | `effect: "knockback"` + `distancePx` — 各陣営の **後方** へ即時移動（プレイヤーは左 `-X`、敵は右 `+X`）。敵は進軍表示下限未満にならない。**付与成功時**に移動硬直 **1.5 秒**（`StatusEffect.overlay: "moveLock"`）。移動硬直中は接敵接近・スキル `move` を停止するが、通常攻撃・アクティブは可能。詳細は [battle-field.md](battle-field.md) §2.5                                                                                                           |
 
 **スタンと凍結の境界:** スタンは行動不能だけを扱い、CD 停止・時間停止・ゲージ停止を持たない。CD 停止を行うデバフが必要になった場合は、`freeze` など別状態として追加し、CD 進行停止対象（basic CD / active CD / イベントゲージ / DoT/HoT tick 等）を個別に定義する。
 
@@ -355,16 +348,16 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 **攻撃**（`damage` / `dot` を含むスキル。通常攻撃含む）を受け、バリア吸収後の **実ダメージ > 0**、かつ **攻撃者が反撃の `range` 以内** のとき、反撃状態の持有者が `responses[]` の内容を **すべて** 攻撃者へ適用する。
 
-| 項目 | 挙動 |
-|------|------|
-| 付与対象 | 常に自身（`target: self`） |
-| 射程 | `resolveCounterRangePx(counter.range, 持有者)` — 未指定・`0` = 持有者 `traits.rangePx`。正の値は絶対 px。距離判定は `isWithinSkillRange`（`battleDistance <= effectiveRangePx`）で行う |
-| 種別フィルタ | `matchesCounterAttackRangeBand` → `isRangedAttack(attackRangePx)`。距離計算とは分離し、近接帯/遠隔帯の分類のみで使う |
-| レスポンス | `damage` / `debuff` / `dot` / `stun` / `knockback` から 1 種別以上。被攻撃 1 回で選択種別を同時適用 |
-| トリガー | 直接 `damage` および DoT tick |
-| 非トリガー | 回避・0 ダメージ・反撃ダメージ（連鎖反撃なし）・射程外 |
-| `damage` 軽減 | 攻撃者の DEF（物理）/ REG（魔法）を適用。回避・ブロックは非適用 |
-| `targetShape` | `multiLock` 禁止 |
+| 項目          | 挙動                                                                                                                                                                                   |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 付与対象      | 常に自身（`target: self`）                                                                                                                                                             |
+| 射程          | `resolveCounterRangePx(counter.range, 持有者)` — 未指定・`0` = 持有者 `traits.rangePx`。正の値は絶対 px。距離判定は `isWithinSkillRange`（`battleDistance <= effectiveRangePx`）で行う |
+| 種別フィルタ  | `matchesCounterAttackRangeBand` → `isRangedAttack(attackRangePx)`。距離計算とは分離し、近接帯/遠隔帯の分類のみで使う                                                                   |
+| レスポンス    | `damage` / `debuff` / `dot` / `stun` / `knockback` から 1 種別以上。被攻撃 1 回で選択種別を同時適用                                                                                    |
+| トリガー      | 直接 `damage` および DoT tick                                                                                                                                                          |
+| 非トリガー    | 回避・0 ダメージ・反撃ダメージ（連鎖反撃なし）・射程外                                                                                                                                 |
+| `damage` 軽減 | 攻撃者の DEF（物理）/ REG（魔法）を適用。回避・ブロックは非適用                                                                                                                        |
+| `targetShape` | `multiLock` 禁止                                                                                                                                                                       |
 
 **確率反撃（パッシブ `counterChance`）：** 常時受付。上記と同じ被攻撃条件・射程・`responses` 内容だが、ヒットごとに `counterChance` を判定し、成功時に反撃内容を直接適用（`StatusEffect` 付与なし）。アクティブ `counter` とは独立に併用可。
 
@@ -378,15 +371,15 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 アクティブ effect の `type: "basicAttackTransform"`。自身へ付与し、**バフ持続中のみ**通常攻撃（`slotKind: basic`）の effect を実行時にマージする。
 
-| 項目 | 挙動 |
-|------|------|
-| 有効期間 | `buffDurationSec`（`remainingSec` 減衰）。**use lock / presentation lock 中は通常攻撃停止**（既存仕様）。lock 解除後〜バフ切れまで変形 |
-| スタック | 複数付与時は **最新 1 件のみ**有効 |
-| `hitCountMultiplier` | 既存 primary effect の `hitCount`（未指定 = 1）に乗算 |
-| `primaryEffectOverride` | primary（先頭 non-move effect）を丸ごと差し替え |
-| `primaryPatch` | primary への部分上書き（`damageType` / `amount.atkScale` 等） |
-| `appendEffects` | primary の後に effect を追加（例: ダメージ + 自分中心 AoE heal） |
-| `basicAttackCount` | 変形後も **damage ヒットのみ**充填。heal 化すると充填停止 |
+| 項目                    | 挙動                                                                                                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 有効期間                | `buffDurationSec`（`remainingSec` 減衰）。**use lock / presentation lock 中は通常攻撃停止**（既存仕様）。lock 解除後〜バフ切れまで変形 |
+| スタック                | 複数付与時は **最新 1 件のみ**有効                                                                                                     |
+| `hitCountMultiplier`    | 既存 primary effect の `hitCount`（未指定 = 1）に乗算                                                                                  |
+| `primaryEffectOverride` | primary（先頭 non-move effect）を丸ごと差し替え                                                                                        |
+| `primaryPatch`          | primary への部分上書き（`damageType` / `amount.atkScale` 等）                                                                          |
+| `appendEffects`         | primary の後に effect を追加（例: ダメージ + 自分中心 AoE heal）                                                                       |
+| `basicAttackCount`      | 変形後も **damage ヒットのみ**充填。heal 化すると充填停止                                                                              |
 
 毎 tick：`remainingSec -= deltaTime`、0 以下で除去。
 
@@ -402,18 +395,16 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 `distance` の `order: selfOrigin` は「使用者自身を起点にした範囲」を表す。`side: ally` では使用者自身も対象に含め、`side: enemy` では使用者自身を含めない。
 
-
-| 形状          | 挙動                                                                                   |
-| ----------- | ------------------------------------------------------------------------------------ |
-| `single`    | 攻撃可能プールから 1 体。`hitCount >= 2` なら同一対象へ N 回（`hitDurationSec` で分散）                      |
-| `aoe`       | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散）                     |
-| `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打）。味方 HP 割合最低（`order: ratio`）のとき満タン味方はプールから除外                  |
-| `pierce`    | **`order: selfOrigin` 必須**。使用者の向き（味方 +X / 敵 −X）へ `range` px の前方セグメント内を手前→奥に命中。`piercePowerStepMultiplier` で威力減衰、`pierceDurationSec` で適用分散可 |
+| 形状        | 挙動                                                                                                                                                                                                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `single`    | 攻撃可能プールから 1 体。`hitCount >= 2` なら同一対象へ N 回（`hitDurationSec` で分散）                                                                                                                                                                                                    |
+| `aoe`       | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散）                                                                                                                                                                                                        |
+| `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打）。味方 HP 割合最低（`order: ratio`）のとき満タン味方はプールから除外                                                                                                                |
+| `pierce`    | **`order: selfOrigin` 必須**。使用者の向き（味方 +X / 敵 −X）へ `range` px の前方セグメント内を手前 → 奥に命中。`piercePowerStepMultiplier` で威力減衰、`pierceDurationSec` で適用分散可                                                                                                   |
 | `chain`     | anchor から同陣営へ距離内で連鎖。直前 hop と同じユニットには飛ばない。範囲内に未命中がいれば最も近い未命中を優先（全員命中済みなら再訪問可）。`chainPowerStepMultiplier` で威力減衰、`chainDurationSec`（未指定時 `0.15×chainCount+0.5` 秒）で **スキル発動から最終命中まで** の総時間分散 |
 
 `chain` の各跳は `chainDurationSec ÷ 跳数` 秒間隔で **ダメージ適用と同時** に `playSkillHitFeedback` で hit VFX を出す。hit は effect **`hitVfx`**（`_vfx_hit` PNG があれば JSON 省略可）を優先し、未設定時は main **`vfx`** を target placement でフォールバック。main VFX（`vfx`、actor placement）は **1 跳目のみ**（`skipMainVfx` で 2 跳目以降は hit のみ）。
-| `scatter`   | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
-
+| `scatter` | 乱打（`scatterSpreadRadiusPx` で着弾分散、`scatterRadiusPx` で命中判定、`scatterDurationSec` で適用分散） |
 
 プール：プレイヤー actor → 敵、敵 actor → プレイヤー（実装移行中は `ally` 表記の残存あり）。heal / buff 向け `mostDamagedAlly` 等も anchor として同じ形状を利用。
 
@@ -450,7 +441,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 3. **非接敵中**も DoT/HoT tick・バフ/デバフ持続・CD 進行は継続。スキル発動・脅威 decay は接敵中のみ（battle-field.md §4.7）
 4. 毎 tick（接敵中）：プレイヤー行動 → 敵行動
 5. 敵全滅 → **Victory**；プレイヤー全滅 → **Defeat**
-6. 3秒後：HP全回復、同一ステージ再スポーン、`Running` 再開
+6. 3 秒後：HP 全回復、同一ステージ再スポーン、`Running` 再開
 
 死亡ユニットはターゲット対象外。次の再スポーンまで death アニメ。Wave 跨ぎの生死表示は battle-field.md §3.4。
 
@@ -460,14 +451,14 @@ VFX パラメータ調整・プレビューは **Phase 6 演出調整ツール**
 
 **body アセット:** entity は `sheets/bodies/{id}.png`（idle/move/death）。攻撃 body は **全スキル strip**（64×48、`{id}_basic_attack` 含む）。詳細は [classes-and-skills.md](classes-and-skills.md#スプライト演出アセット)。
 
-| イベント          | 演出 |
-| ------------- | --- |
+| イベント                 | 演出                                                                                                                       |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | ダメージ（通常攻撃含む） | skill strip（あれば）+ VFX + ダメージポップアップ。`applyFrame` あり時は strip を先に再生し VFX・ポップアップは apply コマ |
-| ダメージ（active） | skill strip + VFX |
-| 回復            | skill strip または VFX + 緑ポップアップ |
-| buff / debuff | 対象の白い光（約0.8秒） |
-| スタン（CC）       | オーバーレイ `stun` |
-| 死亡          | entity death 行（body atlas） |
+| ダメージ（active）       | skill strip + VFX                                                                                                          |
+| 回復                     | skill strip または VFX + 緑ポップアップ                                                                                    |
+| buff / debuff            | 対象の白い光（約 0.8 秒）                                                                                                  |
+| スタン（CC）             | オーバーレイ `stun`                                                                                                        |
+| 死亡                     | entity death 行（body atlas）                                                                                              |
 
 **VFX 再生（`playSkillHitFeedback`）:** `skill` イベントごとに main（actor placement・1 跳目のみ）と hit（target placement・`hitVfx` 未指定時は `vfx` フォールバック）を PNG strip で再生。`scatter` / `chain` / `hitCount` 分散時は各適用タイミングで hit VFX を独立インスタンスとして重ね表示可。
 

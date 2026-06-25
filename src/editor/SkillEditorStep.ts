@@ -53,6 +53,7 @@ import type {
   CounterResponseDef,
   CounterResponseKind,
   CounterSkillEffect,
+  DamageType,
   MoveSkillEffect,
   MaxHpReference,
   PassiveSkillDef,
@@ -1156,33 +1157,82 @@ function appendBasicAttackTransformFields(
     }
   } else {
     const overrideDefaultAtkScale = primaryMode === 'heal' ? 0.5 : 1;
-    detailGrid.appendChild(
-      createFieldRow(
-        'primary atkScale',
-        createNumberInput(
-          effect.primaryEffectOverride?.amount?.atkScale ?? overrideDefaultAtkScale,
-          (atkScale) =>
-            patchEffect((prev) => {
-              if (prev.type !== 'basicAttackTransform') return prev;
-              const override = prev.primaryEffectOverride;
-              if (!override) return prev;
-              return {
-                ...prev,
-                target: { kind: 'self' },
-                primaryEffectOverride: {
-                  ...override,
-                  amount: {
-                    ...(override.amount ?? defaultResourceAmount(overrideDefaultAtkScale)),
-                    kind: 'atkBased',
-                    atkScale,
+    if (primaryMode === 'damage') {
+      const overrideDamage = effect.primaryEffectOverride;
+      detailGrid.appendChild(
+        createFieldRow(
+          'primary ダメージ種',
+          createSelect(
+            overrideDamage?.type === 'damage'
+              ? (overrideDamage.damageType ?? 'physical')
+              : 'physical',
+            DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
+            (damageType) =>
+              patchEffect((prev) => {
+                if (prev.type !== 'basicAttackTransform') return prev;
+                const override = prev.primaryEffectOverride;
+                if (!override || override.type !== 'damage') return prev;
+                return {
+                  ...prev,
+                  target: { kind: 'self' },
+                  primaryEffectOverride: {
+                    ...override,
+                    damageType: damageType as DamageType,
                   },
-                },
-              };
-            }),
-          { min: 0, step: 0.05 },
+                };
+              }),
+          ),
         ),
-      ),
-    );
+      );
+      appendResourceAmountFields(
+        detailGrid,
+        overrideDamage?.type === 'damage' && overrideDamage.amount
+          ? overrideDamage.amount
+          : defaultResourceAmount(1),
+        (amount) =>
+          patchEffect((prev) => {
+            if (prev.type !== 'basicAttackTransform') return prev;
+            const override = prev.primaryEffectOverride;
+            if (!override || override.type !== 'damage') return prev;
+            return {
+              ...prev,
+              target: { kind: 'self' },
+              primaryEffectOverride: {
+                ...override,
+                amount,
+              },
+            };
+          }),
+      );
+    } else {
+      detailGrid.appendChild(
+        createFieldRow(
+          'primary atkScale',
+          createNumberInput(
+            effect.primaryEffectOverride?.amount?.atkScale ?? overrideDefaultAtkScale,
+            (atkScale) =>
+              patchEffect((prev) => {
+                if (prev.type !== 'basicAttackTransform') return prev;
+                const override = prev.primaryEffectOverride;
+                if (!override) return prev;
+                return {
+                  ...prev,
+                  target: { kind: 'self' },
+                  primaryEffectOverride: {
+                    ...override,
+                    amount: {
+                      ...(override.amount ?? defaultResourceAmount(overrideDefaultAtkScale)),
+                      kind: 'atkBased',
+                      atkScale,
+                    },
+                  },
+                };
+              }),
+            { min: 0, step: 0.05 },
+          ),
+        ),
+      );
+    }
     const override = effect.primaryEffectOverride;
     if (
       override &&
@@ -1758,6 +1808,9 @@ export interface SkillEditorStepOptions {
   };
   /** +数値 射程入力の加算基準（traits.rangePx） */
   getTraitsRangePx?: () => number;
+  /** 通常攻撃のダメージ種（traits.damageType） */
+  getTraitsDamageType?: () => DamageType;
+  onTraitsDamageTypeChange?: (damageType: DamageType) => void;
 }
 
 export function renderEntityPicker(
@@ -3418,7 +3471,7 @@ export class SkillEditorStep {
         createEl(
           'p',
           'editor-hint',
-          '通常攻撃の間隔はクラス設定の「攻撃速度（SPD 段階）」から決まります。射程・ダメージ種・VFX はクラス／敵の traits で編集します。',
+          '通常攻撃の間隔はクラス設定の「攻撃速度（SPD 段階）」から決まります。ダメージ種は下の効果欄、射程・VFX はクラス／敵の traits で編集します。',
         ),
       );
     } else {
@@ -4284,7 +4337,26 @@ export class SkillEditorStep {
 
     if (!isConditionalEffect) switch (normalizedEffect.type) {
       case 'damage':
-        if (!isBasicAttack) {
+        if (isBasicAttack) {
+          if (
+            this.options.getTraitsDamageType &&
+            this.options.onTraitsDamageTypeChange
+          ) {
+            detailGrid.appendChild(
+              createFieldRow(
+                'ダメージ種',
+                createSelect(
+                  this.options.getTraitsDamageType(),
+                  DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
+                  (damageType) =>
+                    this.options.onTraitsDamageTypeChange?.(
+                      damageType as DamageType,
+                    ),
+                ),
+              ),
+            );
+          }
+        } else {
           detailGrid.appendChild(
             createFieldRow(
               'ダメージ種',

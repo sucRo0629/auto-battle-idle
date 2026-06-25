@@ -413,14 +413,14 @@ export function appendDefenseIgnoreFields(
       onChange(next.def || next.reg ? next : undefined, { rerender: true });
     }
   });
-  regEnableRow.appendChild(createEl("label", undefined, "耐魔無視"));
+  regEnableRow.appendChild(createEl("label", undefined, "REG無視"));
   regEnableRow.appendChild(regEnableInput);
   section.appendChild(regEnableRow);
 
   if (spec.reg) {
     section.appendChild(
       createFieldRow(
-        "耐魔割合 (0–1)",
+        "REG割合 (0–1)",
         createNumberInput(
           spec.reg.percent,
           (percent) => {
@@ -503,7 +503,7 @@ function appendOptionalPassiveNumberField(
     step?: number;
     emptyWhen?: number;
     placeholder?: string;
-  } = {},
+  } = {}
 ): void {
   parent.appendChild(
     createFieldRow(
@@ -520,9 +520,9 @@ function appendOptionalPassiveNumberField(
           step: options.step ?? 0.01,
           emptyWhen: options.emptyWhen ?? 0,
           placeholder: options.placeholder ?? "未設定",
-        },
-      ),
-    ),
+        }
+      )
+    )
   );
 }
 
@@ -532,14 +532,14 @@ export function appendPassiveThreatControlFields(
   patchPassive: (
     mutate: (current: PassiveSkillDef) => void,
     options?: { rerender?: boolean }
-  ) => void,
+  ) => void
 ): void {
   parent.appendChild(
     createEl(
       "p",
       "editor-hint",
-      "ヘイト維持・上昇。被ダメ / ブロック / 前列 aura のいずれかを 1 つ以上設定してください。",
-    ),
+      "ヘイト維持・上昇。被ダメ / ブロック / 前列 aura のいずれかを 1 つ以上設定してください。"
+    )
   );
   appendOptionalPassiveNumberField(
     parent,
@@ -554,7 +554,7 @@ export function appendPassiveThreatControlFields(
         }
       });
     },
-    { min: 0, step: 1 },
+    { min: 0, step: 1 }
   );
   appendOptionalPassiveNumberField(
     parent,
@@ -569,7 +569,7 @@ export function appendPassiveThreatControlFields(
         }
       });
     },
-    { min: 0, step: 0.05 },
+    { min: 0, step: 0.05 }
   );
   appendOptionalPassiveNumberField(
     parent,
@@ -584,7 +584,7 @@ export function appendPassiveThreatControlFields(
         }
       });
     },
-    { min: 0, step: 1 },
+    { min: 0, step: 1 }
   );
   appendOptionalPassiveNumberField(
     parent,
@@ -599,7 +599,7 @@ export function appendPassiveThreatControlFields(
         }
       });
     },
-    { min: 0.01, step: 0.05 },
+    { min: 0.01, step: 0.05 }
   );
   appendOptionalPassiveNumberField(
     parent,
@@ -614,7 +614,7 @@ export function appendPassiveThreatControlFields(
         }
       });
     },
-    { min: 0.01, max: 1, step: 0.01 },
+    { min: 0.01, max: 1, step: 0.01 }
   );
   appendOptionalPassiveNumberField(
     parent,
@@ -629,7 +629,7 @@ export function appendPassiveThreatControlFields(
         }
       });
     },
-    { min: 0.01, step: 0.05 },
+    { min: 0.01, step: 0.05 }
   );
   appendOptionalPassiveNumberField(
     parent,
@@ -644,7 +644,7 @@ export function appendPassiveThreatControlFields(
         }
       });
     },
-    { min: 0, max: 0.99, step: 0.01 },
+    { min: 0, max: 0.99, step: 0.01 }
   );
 }
 
@@ -654,14 +654,14 @@ export function appendThreatBurstFields(
   patchEffect: (
     patch: SkillEffectDef | ((prev: SkillEffectDef) => SkillEffectDef),
     options?: { rerender?: boolean }
-  ) => void,
+  ) => void
 ): void {
   parent.appendChild(
     createEl(
       "p",
       "editor-hint",
-      "バーストヘイト: 与ダメ成功時の追加ヘイト。通常攻撃には付けません。",
-    ),
+      "バーストヘイト: 与ダメ成功時の追加ヘイト。通常攻撃には付けません。"
+    )
   );
   appendOptionalPassiveNumberField(
     parent,
@@ -679,7 +679,7 @@ export function appendThreatBurstFields(
         return next;
       });
     },
-    { min: 0, step: 1 },
+    { min: 0, step: 1 }
   );
   appendOptionalPassiveNumberField(
     parent,
@@ -697,7 +697,7 @@ export function appendThreatBurstFields(
         return next;
       });
     },
-    { min: 0, step: 0.05 },
+    { min: 0, step: 0.05 }
   );
 }
 
@@ -809,13 +809,16 @@ function appendPassivePeriodicTriggerFields(
         createNumberInput(
           passive.chance ?? 1,
           (chance) => {
-            patchPassive((current) => {
-              if (chance >= 1) {
-                delete current.chance;
-              } else {
-                current.chance = chance;
-              }
-            }, { rerender: false });
+            patchPassive(
+              (current) => {
+                if (chance >= 1) {
+                  delete current.chance;
+                } else {
+                  current.chance = chance;
+                }
+              },
+              { rerender: false }
+            );
           },
           { min: 0, max: 1, step: 0.01 }
         )
@@ -883,11 +886,7 @@ function appendPassiveDispelTriggerFields(
     )
   );
   parent.appendChild(
-    createEl(
-      "p",
-      "editor-hint",
-      "1 Wave 内の発動上限。0 または未指定 = 無制限"
-    )
+    createEl("p", "editor-hint", "1 Wave 内の発動上限。0 または未指定 = 無制限")
   );
 
   if (usesPassiveTriggerChance(passive)) {
@@ -897,13 +896,16 @@ function appendPassiveDispelTriggerFields(
         createNumberInput(
           passive.chance ?? 1,
           (chance) => {
-            patchPassive((current) => {
-              if (chance >= 1) {
-                delete current.chance;
-              } else {
-                current.chance = chance;
-              }
-            }, { rerender: false });
+            patchPassive(
+              (current) => {
+                if (chance >= 1) {
+                  delete current.chance;
+                } else {
+                  current.chance = chance;
+                }
+              },
+              { rerender: false }
+            );
           },
           { min: 0, max: 1, step: 0.01 }
         )
@@ -2148,10 +2150,13 @@ export function appendConditionListFields(
         }, changeOptions);
       },
       () => {
-        onChange((current) => {
-          const nextConditions = current.filter((_, i) => i !== index);
-          return nextConditions.length > 0 ? nextConditions : emptyFallback();
-        }, { rerender: false });
+        onChange(
+          (current) => {
+            const nextConditions = current.filter((_, i) => i !== index);
+            return nextConditions.length > 0 ? nextConditions : emptyFallback();
+          },
+          { rerender: false }
+        );
       }
     );
   });
@@ -2161,13 +2166,9 @@ export function appendConditionListFields(
       options?.addButtonLabel ?? "条件を追加",
       "editor-btn editor-btn-small",
       () => {
-        onChange(
-          (current) => [
-            ...current,
-            { kind: "enemyCount", min: 1 },
-          ],
-          { rerender: false }
-        );
+        onChange((current) => [...current, { kind: "enemyCount", min: 1 }], {
+          rerender: false,
+        });
       }
     )
   );

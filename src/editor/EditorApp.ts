@@ -525,6 +525,11 @@ export class EditorApp {
       onSave: () => void this.saveClass(),
       saving: this.saving,
       getTraitsRangePx: () => this.classDraft.class.traits.rangePx ?? 0,
+      getTraitsDamageType: () =>
+        this.classDraft.class.traits.damageType ?? 'physical',
+      onTraitsDamageTypeChange: (damageType) => {
+        this.classDraft.class.traits.damageType = damageType;
+      },
     };
   }
 
@@ -570,6 +575,14 @@ export class EditorApp {
       onSave: () => void this.saveEnemy(),
       saving: this.saving,
       getTraitsRangePx: () => this.enemyDraft.enemy.traits?.rangePx ?? 0,
+      getTraitsDamageType: () =>
+        this.enemyDraft.enemy.traits?.damageType ?? 'physical',
+      onTraitsDamageTypeChange: (damageType) => {
+        if (!this.enemyDraft.enemy.traits) {
+          this.enemyDraft.enemy.traits = {};
+        }
+        this.enemyDraft.enemy.traits.damageType = damageType;
+      },
     };
   }
 

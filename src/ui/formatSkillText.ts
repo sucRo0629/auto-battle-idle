@@ -314,7 +314,7 @@ function formatDefenseIgnoreSpec(
     );
   }
   if (spec.reg) {
-    parts.push(`耐魔無視${formatPercent(spec.reg.percent)}`);
+    parts.push(`REG無視${formatPercent(spec.reg.percent)}`);
   }
   if (spec.chance !== undefined && spec.chance < 1) {
     parts.unshift(`${formatPercent(spec.chance)}で`);
@@ -520,9 +520,22 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
             ? "通常攻撃→回復"
             : "通常攻撃置換",
         ];
+        if (
+          effect.primaryEffectOverride.type === "damage" &&
+          effect.primaryEffectOverride.damageType !== undefined
+        ) {
+          overrideParts.push(
+            DAMAGE_TYPE_LABELS[effect.primaryEffectOverride.damageType]
+          );
+        }
         if (effect.primaryEffectOverride.amount?.atkScale !== undefined) {
           overrideParts.push(
             `ATK×${effect.primaryEffectOverride.amount.atkScale}`
+          );
+        }
+        if (effect.primaryEffectOverride.amount?.defScale !== undefined) {
+          overrideParts.push(
+            `DEF×${effect.primaryEffectOverride.amount.defScale}`
           );
         }
         parts.push(overrideParts.join(" "));
@@ -820,7 +833,9 @@ function formatPassiveEffect(
       if (def.effect === "duelistPride") {
         const minRatio = def.prideHpRatioMin ?? 0.5;
         const healMul = def.prideHealMultiplier ?? 0.25;
-        return `HP≥${formatPercent(minRatio)} 被回復×${healMul}（バリア非対象）`;
+        return `HP≥${formatPercent(
+          minRatio
+        )} 被回復×${healMul}（バリア非対象）`;
       }
       if (def.effect === "lastStandGuts") {
         const duration = def.lastStandGutsDurationSec ?? 4;
@@ -830,7 +845,9 @@ function formatPassiveEffect(
         const block = def.bloodlustBlockChance ?? 0.05;
         const atkCurve = def.bloodlustAtkBuffCurveExponent;
         const curveNote =
-          atkCurve !== undefined && atkCurve !== 1 ? ` · ATK曲線^${atkCurve}` : "";
+          atkCurve !== undefined && atkCurve !== 1
+            ? ` · ATK曲線^${atkCurve}`
+            : "";
         return `block ${formatPercent(block)} · 低HP DEF/ATK 強化${curveNote}`;
       }
       if (def.effect === "lastStandInvulnerable") {
