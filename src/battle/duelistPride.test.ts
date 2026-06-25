@@ -5,6 +5,7 @@ import {
   PRIDE_HEAL_MULTIPLIER_DEFAULT,
   PRIDE_HP_RATIO_MIN_DEFAULT,
   resolveDuelistPrideIncomingHealMultiplier,
+  syncDuelistPrideAuras,
 } from './duelistPride.ts';
 
 function mockUnit(
@@ -79,5 +80,24 @@ describe('duelistPride', () => {
   it('ignores barrier HP for pride threshold', () => {
     const unit = mockUnit({ id: 'duelist', hp: 40, maxHp: 100, barrierHp: 50 });
     expect(resolveDuelistPrideIncomingHealMultiplier(unit, passives)).toBe(1);
+  });
+
+  it('syncs debuff overlay while HP is at or above pride threshold', () => {
+    const highHp = mockUnit({ id: 'duelist', hp: 60, maxHp: 100 });
+    syncDuelistPrideAuras([highHp], passives);
+    expect(
+      highHp.statusEffects.some(
+        (effect) =>
+          effect.overlay === 'duelistPride' &&
+          effect.kind === 'debuff' &&
+          effect.displayName === '闘士の矜持',
+      ),
+    ).toBe(true);
+
+    const lowHp = mockUnit({ id: 'duelist2', hp: 40, maxHp: 100 });
+    syncDuelistPrideAuras([lowHp], passives);
+    expect(lowHp.statusEffects.some((effect) => effect.overlay === 'duelistPride')).toBe(
+      false,
+    );
   });
 });

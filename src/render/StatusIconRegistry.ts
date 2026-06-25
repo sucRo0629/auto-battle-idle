@@ -12,6 +12,17 @@ import evasionIconUrl from "../assets/status-icons/evasion.png";
 import counterIconUrl from "../assets/status-icons/counter.png";
 import damageDelayIconUrl from "../assets/status-icons/damageDelay.png";
 import herbalPotencyIconUrl from "../assets/status-icons/herbalPotency.png";
+import basicAttackTransformIconUrl from "../assets/status-icons/basicAttackTransform.png";
+import blockResonanceIconUrl from "../assets/status-icons/blockResonance.png";
+import blockResonanceStanceIconUrl from "../assets/status-icons/blockResonanceStance.png";
+import healReservationIconUrl from "../assets/status-icons/healReservation.png";
+import wardBarrierIconUrl from "../assets/status-icons/wardBarrier.png";
+import markIconUrl from "../assets/status-icons/mark.png";
+import arenaMarkIconUrl from "../assets/status-icons/arenaMark.png";
+import invulnerableIconUrl from "../assets/status-icons/invulnerable.png";
+import lastStandGutsIconUrl from "../assets/status-icons/lastStandGuts.png";
+import arenaDominanceIconUrl from "../assets/status-icons/arenaDominance.png";
+import duelistPrideIconUrl from "../assets/status-icons/duelistPride.png";
 import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
 
 export type { StatusDisplayCategory };
@@ -24,7 +35,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   damageReduction: damageReductionIconUrl,
   damageIncrease: damageIncreaseIconUrl,
   hot: hotIconUrl,
-  healReservation: hotIconUrl,
+  healReservation: healReservationIconUrl,
   dot: dotIconUrl,
   block: blockIconUrl,
   stun: stunIconUrl,
@@ -33,8 +44,16 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   counter: counterIconUrl,
   damageDelay: damageDelayIconUrl,
   herbalPotency: herbalPotencyIconUrl,
-  blockResonance: blockIconUrl,
-  mark: hotIconUrl,
+  blockResonance: blockResonanceIconUrl,
+  blockResonanceStance: blockResonanceStanceIconUrl,
+  basicAttackTransform: basicAttackTransformIconUrl,
+  invulnerable: invulnerableIconUrl,
+  lastStandGuts: lastStandGutsIconUrl,
+  arenaDominance: arenaDominanceIconUrl,
+  duelistPride: duelistPrideIconUrl,
+  wardBarrier: wardBarrierIconUrl,
+  mark: markIconUrl,
+  arenaMark: arenaMarkIconUrl,
 };
 
 const iconImages = new Map<StatusDisplayCategory, HTMLImageElement>();

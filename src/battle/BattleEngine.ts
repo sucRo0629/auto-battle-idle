@@ -94,6 +94,7 @@ import {
 import { syncFrontBlockAuras } from "./frontBlockAura.ts";
 import { mitigateIncomingDamage } from "./incomingDamageMitigation.ts";
 import { syncBloodlustDuelistAuras } from "./bloodlustDuelist.ts";
+import { syncDuelistPrideAuras } from "./duelistPride.ts";
 import { resetLowHpCoverRedirects } from "./lowHpCover.ts";
 import {
   applyLastStandGutsEndEffects,
@@ -545,6 +546,10 @@ export class BattleEngine {
       [...this.players, ...this.enemies],
       this.gameData.skillRegistry.passives,
     );
+    syncDuelistPrideAuras(
+      [...this.players, ...this.enemies],
+      this.gameData.skillRegistry.passives,
+    );
   }
 
   private syncContinuousPassiveAuras(): void {
@@ -560,6 +565,7 @@ export class BattleEngine {
       [...this.players, ...this.enemies],
       passives,
     );
+    syncDuelistPrideAuras([...this.players, ...this.enemies], passives);
     syncHerbalPotencyAuras(this.players, this.enemies, passives, this.gameData);
     for (const ally of this.players) {
       if (!ally.isAlive) continue;

@@ -278,14 +278,14 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 対象ステ：`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`（攻撃速度。基本攻撃 CD 回復倍率に適用）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
 
-**HUD バッジ表示:** 通常は 1 つの `StatusEffect` を 1 つのバッジとして描画する。**例外:** `overlay: herbalPotency` / `blockResonance`（および将来の `mark`）は `stacks` 数ぶん同カテゴリアイコンを横並び（`statusBadgeOverlap` で重ね）。`wardBarrier` は 1 アイコン + `stacks` フィールド表示（別処理）。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。味方は `PartyHudPanel`、敵は `BattleCanvas` 上のスプライト頭上（[battle-field.md](battle-field.md)）。
+**HUD バッジ表示:** 通常は 1 つの `StatusEffect` を 1 つのバッジとして描画する。**例外:** `overlay: herbalPotency` / `blockResonance` / `mark` / `arenaMark` は `stacks` 数ぶん同カテゴリアイコンを横並び（`statusBadgeOverlap` で重ね）。`wardBarrier` は 1 アイコン + `stacks` フィールド表示（別処理）。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride`（`src/assets/status-icons/{category}.png`）。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。味方は `PartyHudPanel`、敵は `BattleCanvas` 上のスプライト頭上（[battle-field.md](battle-field.md)）。
 
 ### 迎撃態勢（`blockResonance`）
 
 実装: `src/battle/blockResonance.ts`
 
 - passive effect `blockResonance`: 常時 block 率（`chance`）+ 物理直接ダメージの **block 成功** で専用 stack +1（`blockResonanceMaxStacks` 上限）
-- stack ごとに自己 `damageTaken` 軽減（`blockResonanceDamageTakenPerStack`）。HUD overlay `blockResonance`（stacks 表示）
+- stack ごとに自己 `damageTaken` 軽減（`blockResonanceDamageTakenPerStack`）。HUD overlay `blockResonance`（`displayName`: **防壁**、stacks 表示）
 - `blockResonanceDecayIntervalSec` ごとに stack -1（`herbalPotency` 蓄積とは別タイマー）
 - active `blockResonanceConsume`（城塞の構え）: 全 stack 消費 → overlay `blockResonanceStance`（持続 `blockResonanceStanceDurationBaseSec + n`）。`useDurationSec` も同秒数。態勢中 block 成功で半径内敵へ `blockResonanceOnBlockDamage` + knockback
 - smart 発動条件: `fireConditions` に `{ kind: "blockResonanceStacks", min: 1 }`

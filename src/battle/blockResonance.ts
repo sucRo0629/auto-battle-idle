@@ -91,7 +91,7 @@ export function setBlockResonanceStacks(
     multiplier: 1,
     durationSec: BLOCK_RESONANCE_AURA_DURATION_SEC,
     remainingSec: BLOCK_RESONANCE_AURA_DURATION_SEC,
-    displayName: '迎撃',
+    displayName: '防壁',
   });
 }
 

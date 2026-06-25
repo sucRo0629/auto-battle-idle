@@ -19,7 +19,14 @@ export type StatusDisplayCategory =
   | "wardBarrier"
   | "herbalPotency"
   | "blockResonance"
-  | "mark";
+  | "blockResonanceStance"
+  | "basicAttackTransform"
+  | "invulnerable"
+  | "lastStandGuts"
+  | "arenaDominance"
+  | "duelistPride"
+  | "mark"
+  | "arenaMark";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "atk",
@@ -34,7 +41,14 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "wardBarrier",
   "herbalPotency",
   "blockResonance",
+  "blockResonanceStance",
+  "basicAttackTransform",
+  "invulnerable",
+  "lastStandGuts",
+  "arenaDominance",
+  "duelistPride",
   "mark",
+  "arenaMark",
   "dot",
   "evasion",
   "block",
@@ -221,6 +235,62 @@ function statusEffectBadgeForOverlay(
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
       };
+    case "basicAttackTransform":
+      return {
+        category: "basicAttackTransform",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "blockResonanceStance":
+      return {
+        category: "blockResonanceStance",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "invulnerable":
+      return {
+        category: "invulnerable",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "lastStandGuts":
+      return {
+        category: "lastStandGuts",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "arenaDominance":
+      return {
+        category: "arenaDominance",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "duelistPride":
+      return {
+        category: "duelistPride",
+        kind: "debuff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "arenaMark":
+      return {
+        category: "arenaMark",
+        kind: "debuff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "mark":
+      return {
+        category: "mark",
+        kind: "debuff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
     default:
       return null;
   }
@@ -255,7 +325,12 @@ export function collectStatusEffectBadgeDisplays(
   const entries: Array<{ badge: StatusEffectBadgeDisplay; index: number }> = [];
 
   effects.forEach((effect, index) => {
-    if (effect.overlay === "herbalPotency" || effect.overlay === "blockResonance" || effect.overlay === "mark" || effect.overlay === "arenaMark") {
+    if (
+      effect.overlay === "herbalPotency" ||
+      effect.overlay === "blockResonance" ||
+      effect.overlay === "mark" ||
+      effect.overlay === "arenaMark"
+    ) {
       const stackCount = effect.stacks ?? 0;
       if (stackCount <= 0) return;
       const badge = statusEffectBadgeForOverlay(effect);
@@ -334,6 +409,31 @@ function effectsForCategory(
   }
   if (category === "wardBarrier") {
     return effects.filter((effect) => effect.overlay === "wardBarrier");
+  }
+  if (category === "blockResonanceStance") {
+    return effects.filter(
+      (effect) => effect.overlay === "blockResonanceStance",
+    );
+  }
+  if (category === "invulnerable") {
+    return effects.filter((effect) => effect.overlay === "invulnerable");
+  }
+  if (category === "lastStandGuts") {
+    return effects.filter((effect) => effect.overlay === "lastStandGuts");
+  }
+  if (category === "arenaDominance") {
+    return effects.filter((effect) => effect.overlay === "arenaDominance");
+  }
+  if (category === "duelistPride") {
+    return effects.filter((effect) => effect.overlay === "duelistPride");
+  }
+  if (category === "arenaMark") {
+    return effects.filter((effect) => effect.overlay === "arenaMark");
+  }
+  if (category === "basicAttackTransform") {
+    return effects.filter(
+      (effect) => effect.overlay === "basicAttackTransform",
+    );
   }
   return [];
 }

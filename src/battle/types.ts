@@ -333,7 +333,8 @@ export interface StatusEffect {
     | "invulnerable"
     | "lastStandGuts"
     | "arenaDominance"
-    | "arenaMark";
+    | "arenaMark"
+    | "duelistPride";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */

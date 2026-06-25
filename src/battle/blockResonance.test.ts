@@ -65,6 +65,10 @@ describe('blockResonance stacks', () => {
       addBlockResonanceStacksOnBlock(unit, config);
     }
     expect(getBlockResonanceStacks(unit)).toBe(6);
+    const stackEffect = unit.statusEffects.find(
+      (effect) => effect.overlay === 'blockResonance',
+    );
+    expect(stackEffect?.displayName).toBe('防壁');
   });
 
   it('decays one stack per interval', () => {

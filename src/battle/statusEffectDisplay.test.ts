@@ -203,4 +203,74 @@ describe('statusEffectDisplay', () => {
     expect(badges[0]?.kind).toBe('debuff');
     expect(badges[0]?.remainingRatio).toBeCloseTo(0.8 / 1.2);
   });
+
+  it('collects basicAttackTransform overlay badge', () => {
+    const badges = collectStatusEffectBadgeDisplays(
+      [
+        {
+          id: 'bat',
+          kind: 'buff',
+          overlay: 'basicAttackTransform',
+          multiplier: 1,
+          durationSec: 5,
+          remainingSec: 3,
+        },
+      ],
+      { atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges).toHaveLength(1);
+    expect(badges[0]?.category).toBe('basicAttackTransform');
+    expect(badges[0]?.kind).toBe('buff');
+  });
+
+  it('collects class-specific overlay badges', () => {
+    const overlays = [
+      ['blockResonanceStance', 'blockResonanceStance', 'buff'],
+      ['invulnerable', 'invulnerable', 'buff'],
+      ['lastStandGuts', 'lastStandGuts', 'buff'],
+      ['arenaDominance', 'arenaDominance', 'buff'],
+      ['duelistPride', 'duelistPride', 'debuff'],
+    ] as const;
+
+    for (const [overlay, category, kind] of overlays) {
+      const badges = collectStatusEffectBadgeDisplays(
+        [
+          {
+            id: overlay,
+            kind: kind,
+            overlay,
+            multiplier: 1,
+            durationSec: 5,
+            remainingSec: 4,
+          },
+        ],
+        { atk: 10, def: 10, reg: 0 },
+      );
+      expect(badges).toHaveLength(1);
+      expect(badges[0]?.category).toBe(category);
+      expect(badges[0]?.kind).toBe(kind);
+    }
+  });
+
+  it('collects arenaMark stack badges with arenaMark category', () => {
+    const badges = collectStatusEffectBadgeDisplays(
+      [
+        {
+          id: 'arena_mark_enemy1',
+          kind: 'debuff',
+          overlay: 'arenaMark',
+          stacks: 2,
+          multiplier: 1,
+          durationSec: 15,
+          remainingSec: 10,
+        },
+      ],
+      { atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges).toHaveLength(2);
+    expect(badges.every((badge) => badge.category === 'arenaMark')).toBe(true);
+    expect(badges.every((badge) => badge.kind === 'debuff')).toBe(true);
+  });
 });

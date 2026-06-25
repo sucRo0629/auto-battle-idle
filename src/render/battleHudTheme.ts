@@ -445,6 +445,18 @@ export function resolveStatusIconFallbackColor(
     stun: theme.statusIconStun,
     moveLock: theme.statusIconMoveLock,
     damageDelay: theme.statusIconDamageDelay,
+    healReservation: theme.statusIconHot,
+    wardBarrier: theme.statusIconBlock,
+    herbalPotency: theme.statusIconHot,
+    blockResonance: theme.statusIconBlock,
+    blockResonanceStance: theme.statusIconDef,
+    basicAttackTransform: theme.statusIconAtk,
+    invulnerable: theme.statusIconStun,
+    lastStandGuts: theme.statusIconCounter,
+    arenaDominance: theme.statusIconAtk,
+    duelistPride: theme.statusIconDamageIncrease,
+    mark: theme.statusIconHot,
+    arenaMark: theme.statusIconDamageIncrease,
   };
   return colors[category];
 }
