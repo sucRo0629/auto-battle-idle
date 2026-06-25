@@ -370,7 +370,7 @@ describe(
       expect(gap).toBeGreaterThanOrEqual(3);
     });
 
-    it("T-Phase3d-01: stage 1 wave 2 test_to_ranged survivor keeps iron guard approach continuous", () => {
+    it("T-Phase3d-02: iron guard battleX does not jump after test_to_ranged becomes sole enemy", () => {
       const engine = createStage1Wave2ToRangedOnlyRegressionEngine();
       const reached = advanceUntil(
         engine,
@@ -384,11 +384,12 @@ describe(
       expect(reached).not.toBeNull();
 
       let maxIronGuardJump = 0;
+      let trackedTicks = 0;
       let sawContinuousForwardMovement = false;
       let previousIronGuardX =
         reached!.allies.find((ally) => ally.name === "鉄衛士")?.battleX ?? null;
 
-      for (let i = 0; i < 300; i++) {
+      for (let i = 0; i < 1800; i++) {
         engine.tick(TICK_DT);
         const after = engine.getSnapshot();
         if (after.waveIndex !== 1 || !after.engaged) continue;
@@ -405,14 +406,60 @@ describe(
 
         const jump = Math.abs(ironGuard.battleX - previousIronGuardX);
         maxIronGuardJump = Math.max(maxIronGuardJump, jump);
+        trackedTicks += 1;
         if (ironGuard.battleX > previousIronGuardX + 0.5) {
           sawContinuousForwardMovement = true;
         }
         previousIronGuardX = ironGuard.battleX;
       }
 
+      expect(trackedTicks).toBeGreaterThanOrEqual(900);
       expect(maxIronGuardJump).toBeLessThanOrEqual(8);
       expect(sawContinuousForwardMovement).toBe(true);
+    });
+
+    it("T-Phase3d-03: iron guard does not exceed approach speed while overlap resolves after test_to_ranged remains", () => {
+      const engine = createStage1Wave2ToRangedOnlyRegressionEngine();
+      const reached = advanceUntil(
+        engine,
+        (snap) => {
+          if (snap.waveIndex !== 1 || !snap.engaged) return false;
+          const living = snap.enemies.filter((e) => e.hp > 0);
+          return living.length === 1 && living[0]?.name === "遠隔狙い";
+        },
+        120_000,
+      );
+      expect(reached).not.toBeNull();
+
+      const maxExpectedDelta = MOVE_PX_PER_SEC * TICK_DT + 0.75;
+      let maxIronGuardDelta = 0;
+      let trackedTicks = 0;
+      let previousIronGuardX =
+        reached!.allies.find((ally) => ally.name === "鉄衛士")?.battleX ?? null;
+
+      for (let i = 0; i < 1800; i++) {
+        engine.tick(TICK_DT);
+        const after = engine.getSnapshot();
+        if (after.waveIndex !== 1 || !after.engaged) continue;
+
+        const living = after.enemies.filter((enemy) => enemy.hp > 0);
+        if (living.length !== 1 || living[0]?.name !== "遠隔狙い") {
+          break;
+        }
+
+        const ironGuard = after.allies.find(
+          (ally) => ally.name === "鉄衛士" && ally.hp > 0,
+        );
+        if (!ironGuard || previousIronGuardX === null) continue;
+
+        const deltaX = Math.abs(ironGuard.battleX - previousIronGuardX);
+        maxIronGuardDelta = Math.max(maxIronGuardDelta, deltaX);
+        trackedTicks += 1;
+        previousIronGuardX = ironGuard.battleX;
+      }
+
+      expect(trackedTicks).toBeGreaterThanOrEqual(900);
+      expect(maxIronGuardDelta).toBeLessThanOrEqual(maxExpectedDelta);
     });
 
     it("T-wave-exit-01: wave clear marches living allies right before next WaveAnnouncement", () => {

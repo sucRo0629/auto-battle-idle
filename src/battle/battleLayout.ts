@@ -882,13 +882,22 @@ export function applyEngagedFormationToBattleX(
 }
 
 /** 接敵中: 前列 battleX の overlap 解消（毎 tick） */
+interface EngagedFormationOverlapOptions {
+  maxCorrectionPx?: number;
+  movementBudgetOriginById?: ReadonlyMap<string, number>;
+}
+
 export function resolveEngagedFormationOverlaps(
   players: CombatantState[],
   leadingRow: FormationRow | null,
   isOnField: (unit: CombatantState) => boolean,
   isInSkillMotion?: (id: string) => boolean,
+  options?: EngagedFormationOverlapOptions,
 ): void {
   if (leadingRow === null) return;
+  const maxCorrectionPx = resolveOverlapCorrectionLimit(
+    options?.maxCorrectionPx,
+  );
   const frontUnits = players.filter(
     (p) =>
       isOnField(p) &&
@@ -918,7 +927,13 @@ export function resolveEngagedFormationOverlaps(
       if (!rear || !front) continue;
       const minFrontX = rear.battleX + minGap;
       if (front.battleX < minFrontX) {
-        front.battleX = minFrontX;
+        front.battleX = applyOverlapCorrectionLimit(
+          front.id,
+          front.battleX,
+          minFrontX,
+          maxCorrectionPx,
+          options?.movementBudgetOriginById,
+        );
       }
     }
     return;
@@ -935,10 +950,50 @@ export function resolveEngagedFormationOverlaps(
   for (const player of frontUnits) {
     const x = separated.get(player.id);
     if (x !== undefined) {
-      player.battleX = x;
-      player.battleX = x;
+      player.battleX = applyOverlapCorrectionLimit(
+        player.id,
+        player.battleX,
+        x,
+        maxCorrectionPx,
+        options?.movementBudgetOriginById,
+      );
     }
   }
+}
+
+function resolveOverlapCorrectionLimit(maxCorrectionPx: number | undefined) {
+  if (maxCorrectionPx === undefined) return Number.POSITIVE_INFINITY;
+  return Math.max(0, maxCorrectionPx);
+}
+
+function applyOverlapCorrectionLimit(
+  unitId: string,
+  currentX: number,
+  targetX: number,
+  maxCorrectionPx: number,
+  movementBudgetOriginById: ReadonlyMap<string, number> | undefined,
+): number {
+  const correctionLimit = resolveRemainingOverlapCorrectionPx(
+    unitId,
+    currentX,
+    maxCorrectionPx,
+    movementBudgetOriginById,
+  );
+  const delta = targetX - currentX;
+  if (Math.abs(delta) <= correctionLimit) return targetX;
+  return currentX + Math.sign(delta) * correctionLimit;
+}
+
+function resolveRemainingOverlapCorrectionPx(
+  unitId: string,
+  currentX: number,
+  maxCorrectionPx: number,
+  movementBudgetOriginById: ReadonlyMap<string, number> | undefined,
+): number {
+  const originX = movementBudgetOriginById?.get(unitId);
+  if (originX === undefined) return maxCorrectionPx;
+  const spentMovementPx = Math.abs(currentX - originX);
+  return Math.max(0, maxCorrectionPx - spentMovementPx);
 }
 
 /** 接敵中: 敵グループを canvas 幅内に clamp（battleX 正本） */

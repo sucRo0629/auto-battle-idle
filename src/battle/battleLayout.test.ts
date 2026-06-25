@@ -433,4 +433,58 @@ describe('resolveEngagedFormationOverlaps', () => {
     );
     expect(guardian.battleX).toBeGreaterThanOrEqual(warrior.battleX + 3);
   });
+
+  it('limits engaged overlap correction so formation spacing does not snap battleX', () => {
+    const warrior = meleeUnit({
+      id: 'war',
+      role: 'attacker',
+      rangePx: 30,
+      battleX: 408,
+    });
+    const guardian = meleeUnit({
+      id: 'guard',
+      role: 'defender',
+      rangePx: 10,
+      battleX: 375,
+    });
+
+    resolveEngagedFormationOverlaps(
+      [warrior, guardian],
+      'front',
+      () => true,
+      undefined,
+      { maxCorrectionPx: 2 },
+    );
+    expect(guardian.battleX).toBe(377);
+  });
+
+  it('limits engaged overlap correction by remaining tick movement budget', () => {
+    const warrior = meleeUnit({
+      id: 'war',
+      role: 'attacker',
+      rangePx: 30,
+      battleX: 408,
+    });
+    const guardian = meleeUnit({
+      id: 'guard',
+      role: 'defender',
+      rangePx: 10,
+      battleX: 375,
+    });
+
+    resolveEngagedFormationOverlaps(
+      [warrior, guardian],
+      'front',
+      () => true,
+      undefined,
+      {
+        maxCorrectionPx: 2,
+        movementBudgetOriginById: new Map([
+          ['war', 408],
+          ['guard', 373],
+        ]),
+      },
+    );
+    expect(guardian.battleX).toBe(375);
+  });
 });

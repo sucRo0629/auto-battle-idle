@@ -343,7 +343,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | approach        | `updateEngagedBattleMovement` → `resolveAllPlayerApproachBattleX` / `resolveEnemyApproachBattleX` | 通常の接近・射程停止。Phase 3d の Intent 一本化を正本とし、role 専用接近分岐を持たない             |
 | skill move      | `SkillSequenceRunner.tickMoves`                                                                   | busy actor の `battleX` を moveDurationSec で補間。auto approach / overlap 対象から一時除外        |
 | forced movement | `ccEffects.applyKnockbackToTarget` / `enemyReelIn.applyEnemyReelIn`                               | effect 成功時に `battleX` を即時更新し、`visualX` は互換ミラーとして同期。layout bake ではない     |
-| overlap         | `resolveEngagedFormationOverlaps`（leading row 限定・生存のみ・skill motion 除外）                | 味方同士・敵同士の重なり解消だけ。射程停止・target 選択・死体固定には使わない                     |
+| overlap         | `resolveEngagedFormationOverlaps`（leading row 限定・生存のみ・skill motion 除外）                | 味方同士・敵同士の重なり解消だけ。射程停止・target 選択・死体固定には使わない。Engaged 中は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、formation snap や 32px 級の直接押し出し、不自然な加速を起こさない |
 
 target / threat / contact / frontline owner は **座標 snap の理由ではない**。approach / attack / display / clamp の入力として毎 tick 再評価するが、Engaged 中の生存ユニットを layout bake で再配置しない。
 

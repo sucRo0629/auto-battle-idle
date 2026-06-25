@@ -1675,6 +1675,11 @@ export class BattleEngine {
       return;
     }
     if (this.engaged) {
+      const movementBudgetOriginById = new Map(
+        this.players
+          .filter((unit) => unit.isAlive)
+          .map((unit) => [unit.id, unit.battleX] as const),
+      );
       if (!this.enemies.some((enemy) => enemy.isAlive)) {
         this.checkBattleEnd();
         if (this.isPostCombatSettling()) {
@@ -1699,6 +1704,10 @@ export class BattleEngine {
         engagedLeadingRow,
         (unit) => this.isOnBattlefield(unit),
         (id) => this.skillSequenceRunner.isActorInSkillMotion(id),
+        {
+          maxCorrectionPx: moveDeltaPx(MOVE_PX_PER_SEC, deltaTime),
+          movementBudgetOriginById,
+        },
       );
       syncAllFieldX([...this.players, ...this.enemies]);
       syncDeadEnemyCorpseBattleX(this.enemies);

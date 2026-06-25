@@ -97,6 +97,7 @@ flowchart LR
 - `resolveDefenderApproachBattleX` を削除し、`resolveAllPlayerApproachBattleX` をロール共通の chase/standoff resolver + 共有 clamp / formation レイヤに整理
 - `capFrontRowBeforeEnemyContact`、front-row supporter cap、formation spacing / march follow は接近本体ではなく共有 clamp / formation レイヤとして扱う
 - Stage 1 Wave 2 の `test_to_ranged` 残存時に鉄衛士が不連続に接敵しないことを regression 化
+- Phase 3d 後 regression: Engaged 中の `resolveEngagedFormationOverlaps` は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、前列構成変化後の 32px 級 `battleX` snap と 2倍速に見える加速を禁止
 - role set（D / A / S / DA / DS / AS / DAS）と敵構成遷移の matrix で、接近 target continuity・1 tick jump・停止判定・body anim・前列 overtake を確認
 
 ## 参照

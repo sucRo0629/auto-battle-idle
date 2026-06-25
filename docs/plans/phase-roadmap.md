@@ -127,6 +127,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 - ロール差は接近パイプラインではなく target spec / target rule に閉じる
 - `contact` / `frontline` / `display` / `move anchor` / `attack target` の責務境界を [battle-field.md](../spec/battle-field.md) と [combat.md](../spec/combat.md) に同期する
 - Stage 1 Wave 2 の `test_to_ranged` 残存時に鉄衛士が不連続に接敵しないことを regression 化する
+- Phase 3d 後 regression として、Engaged 中 overlap 補正は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、front row spacing が `battleX` を 32px 級で snap したり 2倍速に見える加速を起こしたりしないことを固定する
 
 **Phase 3d 後 cleanup:** `battleX` 単一正本の runtime 整理は [master-work-order.md](./master-work-order.md) の battle-field cleanup 表を正とする。`battleCamera.ts` と skill move の旧 visual フィールドは削除済み。`visualX` は snapshot 互換ミラー、`engagedVisualTarget*` は deprecated alias として次フェーズ送り。
 
