@@ -128,6 +128,8 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 - `contact` / `frontline` / `display` / `move anchor` / `attack target` の責務境界を [battle-field.md](../spec/battle-field.md) と [combat.md](../spec/combat.md) に同期する
 - Stage 1 Wave 2 の `test_to_ranged` 残存時に鉄衛士が不連続に接敵しないことを regression 化する
 
+**Phase 3d 後 cleanup:** `battleX` 単一正本の runtime 整理は [master-work-order.md](./master-work-order.md) の battle-field cleanup 表を正とする。`battleCamera.ts` と skill move の旧 visual フィールドは削除済み。`visualX` は snapshot 互換ミラー、`engagedVisualTarget*` は deprecated alias として次フェーズ送り。
+
 ### スコープ外（Phase 3）— 独自システムクラス
 
 `at_sigilist`（印術師）と `at_conductor`（法陣師）は、Earth / Wind Mark 系・damage reservoir / routing 系など **戦闘エンジン拡張を伴う独自システム** を持つ。設計確定（[skill-finalization-table.md](./skill-finalization-table.md)）は Phase 3 で行うが、**combat 実装・`data/skills/` 投入・tooling 本番化は Phase 7b / 7c 以降** とする。

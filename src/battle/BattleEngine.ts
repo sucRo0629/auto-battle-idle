@@ -34,6 +34,7 @@ import {
   isMeleeUnit,
   updateUnitApproach,
   capEngagedEnemyApproachBattleX,
+  syncFieldX,
   syncAllFieldX,
   freezeEnemyCorpseBattleAnchor,
   syncDeadEnemyCorpseBattleX,
@@ -643,7 +644,7 @@ export class BattleEngine {
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
       enemy.battleX = this.clampEnemyFieldOnScreen(enemy.battleX);
-      enemy.visualX = enemy.battleX;
+      syncFieldX(enemy);
     }
   }
 
@@ -673,7 +674,7 @@ export class BattleEngine {
     for (const ally of this.players) {
       if (livingOnly && !ally.isAlive) continue;
       ally.battleX += step;
-      ally.visualX = ally.battleX;
+      syncFieldX(ally);
     }
   }
 
@@ -762,7 +763,7 @@ export class BattleEngine {
       unit.engagedMeleeDepthSlot = undefined;
       clearEngagedDisplayAnchor(unit);
       if (unit.isEnemy) {
-        unit.corpseScreenAnchorX = undefined;
+        unit.corpseBattleAnchorX = undefined;
       }
     }
   }
@@ -1220,14 +1221,14 @@ export class BattleEngine {
       const x = partyDeployTargets.get(ally.id);
       if (x === undefined) continue;
       ally.battleX = x;
-      ally.visualX = x;
+      syncFieldX(ally);
     }
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
       const x = enemyDeployTargets.get(enemy.id);
       if (x === undefined) continue;
       enemy.battleX = x;
-      enemy.visualX = x;
+      syncFieldX(enemy);
     }
   }
 
@@ -1272,7 +1273,7 @@ export class BattleEngine {
       const target = this.partyDeployTargets.get(ally.id);
       if (target === undefined) continue;
       updateUnitApproach(ally, target, step);
-      ally.visualX = ally.battleX;
+      syncFieldX(ally);
       if (Math.abs(ally.battleX - target) > BODY_ANIM_APPROACH_SETTLED_PX) {
         allSettled = false;
       }
@@ -1282,7 +1283,7 @@ export class BattleEngine {
       const target = this.enemyDeployTargets.get(enemy.id);
       if (target === undefined) continue;
       updateUnitApproach(enemy, target, step);
-      enemy.visualX = enemy.battleX;
+      syncFieldX(enemy);
       if (Math.abs(enemy.battleX - target) > BODY_ANIM_APPROACH_SETTLED_PX) {
         allSettled = false;
       }

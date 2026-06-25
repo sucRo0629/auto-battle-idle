@@ -1,4 +1,4 @@
-import { getBattleX } from './combatPosition.ts';
+import { getBattleX, syncFieldX } from './combatPosition.ts';
 import type { CombatantState, GameData } from './types.ts';
 
 const SPRITE_WIDTH = 64;
@@ -22,6 +22,6 @@ export function applyEnemyReelIn(
   const fromX = enemy.battleX;
   const toX = resolveEnemyReelInBattleX(duelist, enemy, gameData);
   enemy.battleX = toX;
-  enemy.visualX = toX;
+  syncFieldX(enemy);
   return toX - fromX;
 }

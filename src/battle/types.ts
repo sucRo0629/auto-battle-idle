@@ -516,7 +516,7 @@ export interface CombatantState extends Combatant {
   isEnemy: boolean;
   /** 戦闘ロジック用 1D 座標（大きいほど前方＝右） */
   battleX: number;
-  /** snapshot 出力用。描画は formationLayout の隊形配置で算出 */
+  /** snapshot 互換ミラー。runtime 正本は battleX */
   visualX: number;
   /** 接敵中: battleX 基準線からのレーンずれ（接敵開始時に固定） */
   engagedBattleLaneX?: number;
@@ -532,8 +532,8 @@ export interface CombatantState extends Combatant {
   corpseVisible: boolean;
   /** 敵のみ: ステージ配置のスポーン battleX */
   spawnX?: number;
-  /** 敵 dead: 死亡時に固定する battleX（= screenX） */
-  corpseScreenAnchorX?: number;
+  /** 敵 dead: 死亡時に固定する battleX */
+  corpseBattleAnchorX?: number;
   /** 味方のみ: 敵 AI ヘイト（ランタイム） */
   threat?: number;
   /** 味方のみ: 減衰の目標ヘイト */
@@ -928,6 +928,8 @@ export type SkillEffectKind =
   | "counter"
   | "basicAttackTransform"
   | "conditionalEffect"
+  /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
+  | "hot"
   | "herbalPotencyConsume"
   | "blockResonanceConsume"
   | "enemyReelIn"
@@ -1456,6 +1458,7 @@ export interface CombatantSnapshot {
   formationRow: FormationRow;
   isEnemy: boolean;
   battleX: number;
+  /** snapshot 互換。battleX と同値 */
   visualX: number;
   /** entity body の move 再生（自動接近・PartyDeploy・スキル move 等） */
   bodyAnimMarching: boolean;

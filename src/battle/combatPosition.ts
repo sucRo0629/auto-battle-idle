@@ -236,10 +236,10 @@ export function freezeEnemyCorpseBattleAnchor(
   enemy: CombatantState,
 ): void {
   if (!enemy.isEnemy || enemy.isAlive) return;
-  if (enemy.corpseScreenAnchorX === undefined) {
-    enemy.corpseScreenAnchorX = enemy.battleX;
+  if (enemy.corpseBattleAnchorX === undefined) {
+    enemy.corpseBattleAnchorX = enemy.battleX;
   }
-  enemy.battleX = enemy.corpseScreenAnchorX;
+  enemy.battleX = enemy.corpseBattleAnchorX;
   enemy.visualX = enemy.battleX;
 }
 
@@ -248,8 +248,8 @@ export function syncDeadEnemyCorpseBattleX(
   enemies: CombatantState[],
 ): void {
   for (const enemy of enemies) {
-    if (enemy.isAlive || enemy.corpseScreenAnchorX === undefined) continue;
-    enemy.battleX = enemy.corpseScreenAnchorX;
+    if (enemy.isAlive || enemy.corpseBattleAnchorX === undefined) continue;
+    enemy.battleX = enemy.corpseBattleAnchorX;
     enemy.visualX = enemy.battleX;
   }
 }

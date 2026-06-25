@@ -283,10 +283,8 @@ describe('skillSequence', () => {
       actorId: 'actor',
       fromX: 100,
       toX: 50,
-      toVisualX: 125,
       remainingSec: 1,
       totalSec: 1,
-      baseVisualX: 210,
     });
 
     runner.tickMoves(0.5, [actor]);
@@ -305,10 +303,8 @@ describe('skillSequence', () => {
       actorId: 'actor',
       fromX: 100,
       toX: 50,
-      toVisualX: 50,
       remainingSec: 1,
       totalSec: 1,
-      baseVisualX: 100,
     });
 
     runner.tickMoves(0.5, [actor]);
@@ -681,10 +677,8 @@ describe('skillSequence', () => {
       actorId: 'actor',
       fromX: 200,
       toX: 100,
-      toVisualX: 150,
       remainingSec: 1,
       totalSec: 1,
-      baseVisualX: 210,
     });
 
     expect(runner.isActorInSkillMotion('actor')).toBe(true);
@@ -703,10 +697,8 @@ describe('skillSequence', () => {
       actorId: 'actor',
       fromX: 200,
       toX: 100,
-      toVisualX: 150,
       remainingSec: 0.5,
       totalSec: 0.5,
-      baseVisualX: 210,
     });
 
     runner.tickUseLocks(0.2);

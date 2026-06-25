@@ -699,10 +699,8 @@ export class SkillExecutor {
       actorId: actor.id,
       fromX,
       toX,
-      toVisualX: toX,
       remainingSec: effectDef.moveDurationSec,
       totalSec: effectDef.moveDurationSec,
-      baseVisualX: actor.battleX,
     });
 
     this.emit({

@@ -551,7 +551,7 @@ describe('combatPosition', () => {
       visualX: 200,
     });
     freezeEnemyCorpseBattleAnchor(enemy);
-    expect(enemy.corpseScreenAnchorX).toBe(200);
+    expect(enemy.corpseBattleAnchorX).toBe(200);
 
     enemy.battleX = 150;
     syncDeadEnemyCorpseBattleX([enemy]);

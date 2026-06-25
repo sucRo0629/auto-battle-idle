@@ -61,8 +61,9 @@
 - 隊形スペーシングは `battleX` に直接反映（§3.3 スロット ideal を battle 座標として使用）
 - 攻撃・回復・自動接近・engage move の距離計算は **`effectiveRangePx` 共通式** を使う。近接/遠隔で分岐しない
 - `engagedMinBodyGap()` / `PLAYER_VISUAL_MIN_GAP` は overlap 解消専用。射程停止や range 加算には使わない
-- `visualX` は **snapshot 互換ミラー**（`battleX` と同値。layout ロジックは参照しない）
-- `src/render` は `battleX`（= `screenX`）のみ参照し、戦闘ルールを持たない
+- `visualX` は **snapshot 互換ミラー**（`battleX` と同値）。`syncFieldX` / snapshot 出力で同期するだけで、layout・接近・特殊移動の正本ではない
+- `screenX` は `battleX` の別名として扱う。`battleCamera.ts` 互換層は持たない
+- `src/render` は `battleX`（= `screenX`）を描画座標として参照し、戦闘ルールを持たない
 
 ### 2.3 毎 tick パイプライン
 
@@ -73,7 +74,7 @@ BattlePhase 判定
   → BattleSnapshot
 ```
 
-接敵中の生存ユニット `battleX` 更新は §4.4 の 4 系統（approach / skill move / knockback / overlap）のみ。**毎 tick の layout 再計算・visual 補間は行わない。** 非接敵配置確定時のみ `applyEngagedFormationToBattleX`（§4.2）。
+接敵中の生存ユニット `battleX` 更新は §4.4 の系統（approach / skill move / forced movement / overlap）のみ。**毎 tick の layout 再計算・visual 補間は行わない。** 非接敵配置確定時のみ `applyEngagedFormationToBattleX`（§4.2）。
 
 ### 2.4 一方通行（フェーズ別）
 
@@ -335,22 +336,25 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 **敵対 `toAnchor` スキル:** 自動接近で anchor が通常攻撃射程内に入るまで発動を保留（`SkillExecutor`）。射程内発動後の背後移動は `effect.range` で 1 ステップ上限（§2.5）。
 
-**Engaged 中の生存ユニット `battleX` 更新（4 系統のみ）：**
+**Engaged 中の生存ユニット `battleX` 更新系統：**
 
-| 系統       | 実装                                                                                              |
-| ---------- | ------------------------------------------------------------------------------------------------- |
-| approach   | `updateEngagedBattleMovement` → `resolveAllPlayerApproachBattleX` / `resolveEnemyApproachBattleX` |
-| skill move | `SkillSequenceRunner.tickMoves`                                                                   |
-| knockback  | `ccEffects` 等                                                                                    |
-| overlap    | `resolveEngagedFormationOverlaps`（leading row 限定・生存のみ・skill motion 除外）                |
+| 系統            | 実装                                                                                              | 境界                                                                                               |
+| --------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| approach        | `updateEngagedBattleMovement` → `resolveAllPlayerApproachBattleX` / `resolveEnemyApproachBattleX` | 通常の接近・射程停止。Phase 3d の Intent 一本化を正本とし、role 専用接近分岐を持たない             |
+| skill move      | `SkillSequenceRunner.tickMoves`                                                                   | busy actor の `battleX` を moveDurationSec で補間。auto approach / overlap 対象から一時除外        |
+| forced movement | `ccEffects.applyKnockbackToTarget` / `enemyReelIn.applyEnemyReelIn`                               | effect 成功時に `battleX` を即時更新し、`visualX` は互換ミラーとして同期。layout bake ではない     |
+| overlap         | `resolveEngagedFormationOverlaps`（leading row 限定・生存のみ・skill motion 除外）                | 味方同士・敵同士の重なり解消だけ。射程停止・target 選択・死体固定には使わない                     |
 
 target / threat / contact / frontline owner は **座標 snap の理由ではない**。approach / attack / display / clamp の入力として毎 tick 再評価するが、Engaged 中の生存ユニットを layout bake で再配置しない。
+
+死亡敵は生存ユニット更新系統から外れ、`freezeEnemyCorpseBattleAnchor` / `syncDeadEnemyCorpseBattleX` が死亡時の `corpseBattleAnchorX` に `battleX` を固定する。これは死体表示の固定アンカーであり、`screenX` / camera の互換経路ではない。
 
 **前列過進軍 cap：** `capFrontRowBeforeEnemyContact` は `resolveAllPlayerApproachBattleX` 内の共有 clamp / formation safety layer として適用する。`ChaseTarget` / `AttackTarget` の代替正本ではなく、Engaged 中に `battleX` を直接 mutation する独立 clamp 経路も持たない（旧 `clampEngagedFrontRowBattleX` 相当）。
 
 ### 4.5 スキル `move`
 
 - `battleX` — `SkillSequenceRunner` が線形補間（正本・描画も同値）
+- `visualX` — `battleX` から同期される snapshot 互換ミラー。move 演出 overlay の正本ではない
 - `effectiveRangePx` — `resolveMaxEffectiveRangePx(unit, gameData)`（debug / 検証用の実効射程）
 - 敵背後へのプレイヤー `toAnchor`（正オフセット）はスコープ内。敵のプレイヤー背後移動はスコープ外
 
@@ -364,7 +368,7 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 
 | モジュール                                 | 責務                                                                                    |
 | ------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `combatPosition.ts`                        | **pure `battleX`**。接近・cap・knockback・`resolveMoveBattleX`。render へ import しない |
+| `combatPosition.ts`                        | **pure `battleX`**。接近・cap・`resolveMoveBattleX`・snapshot 互換同期。render へ import しない |
 | `battleLayout.ts`                          | 隊形スロット、overlap、`applyEngagedFormationToBattleX`                                 |
 | `partyFormation.ts`                        | 射程順一列の ideal `battleX`                                                            |
 | `battleConstants.ts`（新設 or `types.ts`） | §2.6 定数の単一正本                                                                     |
@@ -410,7 +414,7 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 
 | ID         | 採用                                                                                                       |
 | ---------- | ---------------------------------------------------------------------------------------------------------- |
-| **R1-fix** | **`battleX` 単一座標。** `visualX` 廃止。描画 = ロジック                                                   |
+| **R1-fix** | **`battleX` 単一座標。** `visualX` は snapshot 互換ミラーのみ。描画 = ロジック                              |
 | L2         | 単一 `FormationReset`（Wave 1 は背景・時間差分のみ）                                                       |
 | L5         | `engagedDisplayAnchorPlayerId` を layout で必ず参照（`resolveRangedTargetBattleX`）                        |
 | L6         | 分類用途の `isMeleeUnit` は [combat.md](combat.md) / [classes-and-skills.md](classes-and-skills.md) に委譲 |

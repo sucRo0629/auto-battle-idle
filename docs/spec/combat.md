@@ -337,7 +337,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 | `duelistPride`     | 自身 `hp/maxHp` ≥ `prideHpRatioMin`（バリア非含有）のとき、受ける即時回復・HoT tick を `prideHealMultiplier` 倍（`arenaDominance` の味方支援拒否より弱い）                                                                                                                                                                                                                                   |
 | `bloodlustDuelist` | block + 低 HP DEF（線形）/ ATK（`bloodlustAtkBuffCurveExponent` で指数カーブ、未指定=線形）                                                                                                                                                                                                                                                                                                  |
 | `lastStandGuts`    | 致死直前 Wave 1 回 → HP 1 未満にならない状態を数秒（完全無敵ではない）。終了時生存敵全体に短 stun + KB。イベント `lastStandGuts` →「不屈！」                                                                                                                                                                                                                                                 |
-| `enemyReelIn`      | 遠隔帯の敵（`attackType.ranged`）を対象に `battleX` を使用者 `traits.rangePx` の射程内へ引き寄せ（進軍下限整合）。effect の `range` はターゲットプール絞り込みのみで移動先には使わない。移動量 0 のときは effect 未適用（イベント・ポップアップなし）。`df_duelist_active_1` は本 effect のみの引き寄せ専用スキル。`firePolicy: smart` では `minTargets` が先頭 `enemyReelIn` の対象数を参照 |
+| `enemyReelIn`      | 遠隔帯の敵（`attackType.ranged`）を対象に `battleX` を使用者 `traits.rangePx` の射程内へ即時引き寄せ（進軍下限整合）。effect の `range` はターゲットプール絞り込みのみで移動先には使わない。layout bake / camera / visual 補間ではなく [battle-field.md](battle-field.md) §4.4 の forced movement。移動量 0 のときは effect 未適用（イベント・ポップアップなし）。`df_duelist_active_1` は本 effect のみの引き寄せ専用スキル。`firePolicy: smart` では `minTargets` が先頭 `enemyReelIn` の対象数を参照 |
 | `arenaDominance`   | `finalWaveStart` + `stageTriggerLimit: 1` で発動。15 秒間、敵単体攻撃ターゲットを闘技士固定（AoE / `targetRuleOverride` 除外）。最高 ATK 敵に **闘士の指名**（`arenaMark`）。指名対象は闘技士以外からの被ダメ −50%。闘技士はマーク以外の敵からの被ダメ −50%。効果中、闘技士は味方（自身以外）からの回復・バリア・HoT を受けない。指名は効果終了と同時に解除                                  |
 
 `fireCondition` `finalWaveStart`: `waveIndex === stage.waves.length - 1` かつ Wave 開始フェーズ。
@@ -352,7 +352,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 | 凍結 / 時間停止系拘束 | **未実装・予約概念**。CD 停止が必要な場合はスタンではなく別 `StatusEffect` として定義する。スタンとは別物で、Flow 系上位制御など時間進行そのものへ干渉する効果として個別仕様化する                                                                                                                                                                                                                                                                         |
 | 反撃                  | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記                                                                                                                                                                                                                                                                                                                                      |
 | デバフ解除            | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `dispelPriority` に従い N 件（`longest` = 残り時間最長、`strongest` = 効果量最大。未指定は `longest`）。対象タグに `attackSpeed`（SPD デバフ）可。パッシブ `periodicDispel` は `stageStart` / `waveStart` / `onDebuffReceived` で `dispelTargetRule` + 形状・射程（接頭辞 `dispel`、[classes-and-skills.md](classes-and-skills.md)）で対象選択。`dispelTriggerLimit` = Wave 内発動回数上限 |
-| ノックバック          | `effect: "knockback"` + `distancePx` — 各陣営の **後方** へ即時移動（プレイヤーは左 `-X`、敵は右 `+X`）。敵は進軍表示下限未満にならない。**付与成功時**に移動硬直 **1.5 秒**（`StatusEffect.overlay: "moveLock"`）。移動硬直中は接敵接近・スキル `move` を停止するが、通常攻撃・アクティブは可能。詳細は [battle-field.md](battle-field.md) §2.5                                                                                                           |
+| ノックバック          | `effect: "knockback"` + `distancePx` — 各陣営の **後方** へ `battleX` を即時移動（プレイヤーは左 `-X`、敵は右 `+X`）。敵は進軍表示下限未満にならない。**付与成功時**に移動硬直 **1.5 秒**（`StatusEffect.overlay: "moveLock"`）。移動硬直中は接敵接近・スキル `move` を停止するが、通常攻撃・アクティブは可能。詳細は [battle-field.md](battle-field.md) §4.4                                                                                                           |
 
 **スタンと凍結の境界:** スタンは行動不能だけを扱い、CD 停止・時間停止・ゲージ停止を持たない。CD 停止を行うデバフが必要になった場合は、`freeze` など別状態として追加し、CD 進行停止対象（basic CD / active CD / イベントゲージ / DoT/HoT tick 等）を個別に定義する。
 
@@ -422,7 +422,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 ## 座標・移動・戦闘フェーズ
 
-横 1 軸のバトルライン、座標層（`battleX` / `visualX` / `screenX`）、Wave・`spawnX`、隊形スロット、接敵トリガー、カメラ、BattlePhase FSM、生死表示は **[battle-field.md](battle-field.md)** を正本とする。現行コードは旧軸・旧パイプラインのため、実装が追いつくまで本節の旧記述は battle-field.md に置き換え済み。
+横 1 軸のバトルライン、座標層（`battleX` 正本 / `visualX` snapshot 互換 / `screenX = battleX`）、Wave・`spawnX`、隊形スロット、接敵トリガー、BattlePhase FSM、生死表示は **[battle-field.md](battle-field.md)** を正本とする。
 
 ### 射程（要約）
 
@@ -440,7 +440,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 `move` を 1 つでも含むアクティブは、発動時に effect 列を battle 時間でスケジュールし順に適用する。
 
 1. 各 effect の anchor を事前解決（move は射程外でも選択可）
-2. `move` は `moveDurationSec` で `battleX` を線形補間（`visualX` は overlay。layout とは分離 — battle-field.md §4.5）
+2. `move` は `moveDurationSec` で `battleX` を線形補間（`visualX` は snapshot 互換ミラー。layout とは分離 — battle-field.md §4.5）
 3. 次の effect の `applyAt` = 直前 move 完了時刻（move 連続時は累積）
 4. 全 step 完了後に CD リセット（途中キャンセルは死亡時のみ）
 

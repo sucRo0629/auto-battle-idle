@@ -1,4 +1,5 @@
 import { isUnitMovementBlocked } from '../ccEffects.ts';
+import { syncFieldX } from '../combatPosition.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -23,12 +24,8 @@ export interface ActiveSkillMove {
   actorId: string;
   fromX: number;
   toX: number;
-  /** move 完了時の visualX（standoff 基準） */
-  toVisualX: number;
   remainingSec: number;
   totalSec: number;
-  /** move 開始時の formation 基準 visualX（演出オーバーレイ用） */
-  baseVisualX: number;
 }
 
 export interface PendingSkillStep {
@@ -474,11 +471,13 @@ export class SkillSequenceRunner {
           ? 1
           : 1 - move.remainingSec / move.totalSec;
       unit.battleX = move.fromX + (move.toX - move.fromX) * progress;
+      syncFieldX(unit);
 
       if (move.remainingSec > 0) {
         kept.push(move);
       } else {
         unit.battleX = move.toX;
+        syncFieldX(unit);
       }
     }
     this.activeMoves = kept;
