@@ -62,6 +62,9 @@ vi.mock("../ui/BattleXDebugCanvas.ts", () => ({
     mount: vi.fn(),
     setVisible: vi.fn(),
     syncFromSnapshot: vi.fn(),
+    flashSkillRange: vi.fn(),
+    tick: vi.fn(),
+    destroy: vi.fn(),
   })),
 }));
 

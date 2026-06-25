@@ -1,7 +1,15 @@
 import "../styles/battle-view.css";
 import type { BattleEngine } from "../battle/BattleEngine.ts";
 import type { BattleEvent } from "../battle/events.ts";
-import type { GameData, SaveGameState } from "../battle/types.ts";
+import { resolveSkillRangePx } from "../battle/skills/rangeUtils.ts";
+import type {
+  BattleSnapshot,
+  CombatantSnapshot,
+  CombatantState,
+  GameData,
+  SaveGameState,
+  SkillEffectDef,
+} from "../battle/types.ts";
 import {
   expRequiredForLevel,
   type LevelCurvesConfig,
@@ -40,6 +48,19 @@ export interface VerifyModeControls {
   getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
   getCurrentStageId?: () => string;
   onStatsOverlayOpenChange?: (open: boolean) => void;
+}
+
+function resolveSkillRangePxFromSnapshot(
+  actor: CombatantSnapshot,
+  effect: SkillEffectDef,
+  snapshot: BattleSnapshot,
+): number {
+  const livingAllyCount = snapshot.allies.filter((ally) => ally.hp > 0).length;
+  return resolveSkillRangePx(
+    { traits: { rangePx: actor.rangePx }, isEnemy: actor.isEnemy } as CombatantState,
+    effect,
+    livingAllyCount,
+  );
 }
 
 export class BattleView {
@@ -178,6 +199,19 @@ export class BattleView {
     this.engine.onEvent((event) => this.onBattleEvent(event));
   }
 
+  private flashDebugSkillRange(
+    actorId: string,
+    effectDef: SkillEffectDef,
+  ): void {
+    const snapshot = this.engine.getSnapshot();
+    const actor = [...snapshot.allies, ...snapshot.enemies].find(
+      (unit) => unit.id === actorId,
+    );
+    if (!actor) return;
+    const rangePx = resolveSkillRangePxFromSnapshot(actor, effectDef, snapshot);
+    this.battleXDebugCanvas.flashSkillRange(actorId, rangePx);
+  }
+
   private refreshPartyHud(): void {
     const snapshot = this.engine.getSnapshot();
     const save = this.getSave();
@@ -258,6 +292,7 @@ export class BattleView {
       if (!skillDef) return;
       const effectDef = skillDef?.effect[event.effectIndex ?? 0];
       if (effectDef) {
+        this.flashDebugSkillRange(event.actorId, effectDef);
         const skipBodyAnim = effectDef.applyFrame !== undefined;
         const presentation = !skipBodyAnim && skillDef
           ? playSkillBody(

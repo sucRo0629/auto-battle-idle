@@ -8,12 +8,18 @@ const FIRST_LANE_Y = 72;
 const LANE_STEP = 36;
 const LABEL_Y_OFFSET = 24;
 const BOTTOM_PADDING = 20;
+const DEAD_ENEMY_ALPHA = 0.35;
+const SKILL_RANGE_FLASH_MS = 1000;
 
 export class BattleXDebugCanvas {
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
   private snapshot: BattleSnapshot | null = null;
   private visible = false;
+  private elapsedMs = 0;
+  private laneByUnitId = new Map<string, number>();
+  private nextLane = 0;
+  private rangeFlashes = new Map<string, { rangePx: number; expiresAtMs: number }>();
 
   mount(parent: HTMLElement): void {
     this.canvas = document.createElement("canvas");
@@ -41,11 +47,24 @@ export class BattleXDebugCanvas {
   }
 
   syncFromSnapshot(snapshot: BattleSnapshot): void {
+    if (this.snapshot?.waveIndex !== snapshot.waveIndex) {
+      this.resetLanes();
+    }
     this.snapshot = snapshot;
+    this.ensureLanes(snapshot);
   }
 
-  tick(_deltaMs: number): void {
+  flashSkillRange(actorId: string, rangePx: number): void {
+    this.rangeFlashes.set(actorId, {
+      rangePx,
+      expiresAtMs: this.elapsedMs + SKILL_RANGE_FLASH_MS,
+    });
+  }
+
+  tick(deltaMs: number): void {
     if (!this.visible) return;
+    this.elapsedMs += deltaMs;
+    this.pruneRangeFlashes();
     this.draw();
   }
 
@@ -54,17 +73,48 @@ export class BattleXDebugCanvas {
     this.canvas = null;
     this.ctx = null;
     this.snapshot = null;
+    this.resetLanes();
+    this.rangeFlashes.clear();
+    this.elapsedMs = 0;
+  }
+
+  private resetLanes(): void {
+    this.laneByUnitId.clear();
+    this.nextLane = 0;
+  }
+
+  private pruneRangeFlashes(): void {
+    for (const [actorId, flash] of this.rangeFlashes) {
+      if (flash.expiresAtMs <= this.elapsedMs) {
+        this.rangeFlashes.delete(actorId);
+      }
+    }
+  }
+
+  private ensureLanes(snapshot: BattleSnapshot): void {
+    const units = [
+      ...snapshot.allies
+        .slice()
+        .sort(
+          (a, b) =>
+            (a.partySlotIndex ?? Number.MAX_SAFE_INTEGER) -
+            (b.partySlotIndex ?? Number.MAX_SAFE_INTEGER),
+        ),
+      ...snapshot.enemies.slice().sort((a, b) => a.id.localeCompare(b.id)),
+    ];
+    for (const unit of units) {
+      if (!this.laneByUnitId.has(unit.id)) {
+        this.laneByUnitId.set(unit.id, this.nextLane++);
+      }
+    }
   }
 
   private draw(): void {
     const { canvas, ctx, snapshot } = this;
     if (!canvas || !ctx || !snapshot) return;
 
-    const units = [
-      ...this.sortByBattleX(snapshot.allies),
-      ...this.sortByBattleX(snapshot.enemies),
-    ].sort((a, b) => a.battleX - b.battleX);
-    this.ensureCanvasHeight(canvas, units.length);
+    const units = [...snapshot.allies, ...snapshot.enemies];
+    this.ensureCanvasHeight(canvas, this.nextLane);
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "rgba(14, 18, 28, 0.96)";
@@ -102,7 +152,6 @@ export class BattleXDebugCanvas {
     ctx.textAlign = "center";
     ctx.lineWidth = 1;
 
-    // Y axis line: draw a crisp 1px line from top to bottom of the plotted area.
     ctx.beginPath();
     ctx.moveTo(0.5, 28);
     ctx.lineTo(0.5, canvasHeight - 8);
@@ -121,18 +170,37 @@ export class BattleXDebugCanvas {
     ctx: CanvasRenderingContext2D,
     units: CombatantSnapshot[],
   ): void {
-    for (const [index, unit] of units.entries()) {
-      const y = FIRST_LANE_Y + index * LANE_STEP;
+    const sorted = units
+      .slice()
+      .sort(
+        (a, b) =>
+          (this.laneByUnitId.get(a.id) ?? 0) - (this.laneByUnitId.get(b.id) ?? 0),
+      );
+
+    for (const unit of sorted) {
+      const lane = this.laneByUnitId.get(unit.id);
+      if (lane === undefined) continue;
+
+      const y = FIRST_LANE_Y + lane * LANE_STEP;
+      const isDeadEnemy = unit.isEnemy && unit.hp <= 0;
+
       ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(CANVAS_W, y);
       ctx.stroke();
 
-      const x = this.clamp(unit.battleX, 6, CANVAS_W - 6);
-      this.drawRangeBand(ctx, unit, y, unit.effectiveRangePx, "effective");
-      this.drawRangeBand(ctx, unit, y, unit.rangePx, "base");
+      const flash = this.rangeFlashes.get(unit.id);
+      if (flash && flash.expiresAtMs > this.elapsedMs) {
+        this.drawRangeBand(ctx, unit, y, flash.rangePx, isDeadEnemy);
+      }
 
+      ctx.save();
+      if (isDeadEnemy) {
+        ctx.globalAlpha = DEAD_ENEMY_ALPHA;
+      }
+
+      const x = this.clamp(unit.battleX, 6, CANVAS_W - 6);
       ctx.fillStyle = unit.isEnemy ? "#ff8f8f" : "#8fd3ff";
       ctx.beginPath();
       ctx.arc(x, y, DOT_RADIUS, 0, Math.PI * 2);
@@ -154,6 +222,8 @@ export class BattleXDebugCanvas {
       ctx.fillText(idText, x, idY);
       ctx.strokeText(xText, x, xY);
       ctx.fillText(xText, x, xY);
+
+      ctx.restore();
     }
   }
 
@@ -162,7 +232,7 @@ export class BattleXDebugCanvas {
     unit: CombatantSnapshot,
     y: number,
     rangePx: number,
-    bandKind: "base" | "effective",
+    faded: boolean,
   ): void {
     const clampedRangePx = Math.max(0, rangePx);
     if (clampedRangePx <= 0) return;
@@ -181,39 +251,31 @@ export class BattleXDebugCanvas {
     if (width <= 0) return;
 
     ctx.save();
-    ctx.fillStyle =
-      bandKind === "effective"
-        ? unit.isEnemy
-          ? "rgba(199, 143, 255, 0.14)"
-          : "rgba(165, 255, 203, 0.14)"
-        : unit.isEnemy
-          ? "rgba(255, 143, 143, 0.20)"
-          : "rgba(143, 211, 255, 0.20)";
+    if (faded) {
+      ctx.globalAlpha = DEAD_ENEMY_ALPHA;
+    }
+    ctx.fillStyle = unit.isEnemy
+      ? "rgba(199, 143, 255, 0.14)"
+      : "rgba(165, 255, 203, 0.14)";
     ctx.fillRect(start, bandTop, width, bandHeight);
-    ctx.strokeStyle =
-      bandKind === "effective"
-        ? unit.isEnemy
-          ? "rgba(199, 143, 255, 0.38)"
-          : "rgba(165, 255, 203, 0.38)"
-        : unit.isEnemy
-          ? "rgba(255, 143, 143, 0.40)"
-          : "rgba(143, 211, 255, 0.40)";
+    ctx.strokeStyle = unit.isEnemy
+      ? "rgba(199, 143, 255, 0.38)"
+      : "rgba(165, 255, 203, 0.38)";
     const tipX = this.clamp(end, 0, CANVAS_W - 1);
     ctx.fillRect(tipX, bandTop, 1, bandHeight);
     ctx.restore();
   }
 
-  private sortByBattleX(units: CombatantSnapshot[]): CombatantSnapshot[] {
-    return [...units].sort((a, b) => a.battleX - b.battleX);
-  }
-
   private ensureCanvasHeight(
     canvas: HTMLCanvasElement,
-    unitCount: number,
+    laneCount: number,
   ): void {
     const requiredHeight = Math.max(
       MIN_CANVAS_H,
-      FIRST_LANE_Y + Math.max(0, unitCount - 1) * LANE_STEP + LABEL_Y_OFFSET + BOTTOM_PADDING,
+      FIRST_LANE_Y +
+        Math.max(0, laneCount - 1) * LANE_STEP +
+        LABEL_Y_OFFSET +
+        BOTTOM_PADDING,
     );
     if (canvas.height !== requiredHeight) {
       canvas.height = requiredHeight;
