@@ -805,6 +805,11 @@ export class SkillExecutor {
       const coverResult = resolveLowHpCoverTarget(target, allies, passives);
       const damageTarget = coverResult.target;
 
+      if (rollsEvasion(damageTarget, passives)) {
+        this.emit({ type: 'evade', targetId: damageTarget.id });
+        return false;
+      }
+
       const damageEffect = {
         ...effectDef,
         amount: resolveEffectiveAmountSpecForActiveEffect(
@@ -830,11 +835,6 @@ export class SkillExecutor {
             effectDef.ignoreDamageTakenReduction === true,
         },
       );
-
-      if (rollsEvasion(damageTarget, passives)) {
-        this.emit({ type: 'evade', targetId: damageTarget.id });
-        return false;
-      }
 
       let finalDamage = afterDr;
       let didBlock = false;

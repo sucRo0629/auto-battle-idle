@@ -14,14 +14,15 @@
 7. `bonus = floor(ignoredDef × ignoredDefBonusScale)` — パッシブ `ignoredDefBonusDamage`（例: 剣術士 P4 剛剣の冴え）。未習得なら 0
 8. `subtotal = afterDefense + bonus`
 9. `afterDR = max(1, floor(subtotal × damageTakenMul))` — `ignoreDamageTakenReduction: true` の直接 `damage` は `damageTakenMul` を 1 として計算（⑨）
-10. **物理直接 `damage` のみ（SkillExecutor / `applyIncomingDamage`、⑨の後）:** 回避判定 → ブロック判定 → 障壁（wardBarrier）軽減 → `barrierHp` 吸収 → HP 減少
+10. **直接 `damage` パイプライン（SkillExecutor / `applyIncomingDamage`、ターゲット確定後）:** 回避判定（⑩）→ `resolveDamage`（①〜⑨）→ ブロック判定（⑪）→ 障壁（wardBarrier）軽減（⑫）→ `barrierHp` 吸収（⑬）→ HP 減少
+    - 回避成功時は以降（①〜⑬・BAC 充填）をスキップ
     - `pierceBlock: true` — ⑪ block をスキップ
     - `pierceWard: true` — ⑫ wardBarrier をスキップ
     - `pierceBarrier: true` — ⑬ barrierHp 吸収をスキップ
     - 回避は v1 では貫通対象外（⑩は常に判定）
    10b. **魔法直接 `damage`:** `blocksMagic: true` の block overlay がある対象のみ追加判定（⑪相当）。成功時 `blocked = floor(afterDR × 0.15)`（定数 `MAGIC_BLOCK_MITIGATION_RATIO`）
 
-**回避:** 直接 `damage` の物理/魔法問わず（DoT tick 非対象）。`SkillExecutor` で `resolveDamage`（⑨）**後**に判定。
+**回避:** 直接 `damage` の物理/魔法問わず（DoT tick 非対象）。`SkillExecutor` で `resolveDamage`（①〜⑨）**前**（直接 `damage` パイプライン先頭）に判定。
 
 **ブロック（物理）:** 直接 `damage` かつ `damageType: physical`。⑨の後・⑪で判定（DoT 非対象）。`overlay: block` の `blockChance` を合算して 1 回ロール。
 
@@ -53,7 +54,7 @@
 
 | 対象                           | 未判定状態                   | 判定                                | 確定状態                                                    |
 | ------------------------------ | ---------------------------- | ----------------------------------- | ----------------------------------------------------------- |
-| 回避                           | 直接 `damage` を受ける       | `evasion` の `chance` を判定        | 回避成功なら damage 非適用、失敗なら後続処理へ進む          |
+| 回避                           | 直接 `damage` を受ける（ターゲット確定後） | `evasion` の `chance` を判定（⑨より前） | 回避成功なら damage 非適用、失敗なら `resolveDamage` 以降へ進む |
 | ブロック                       | 物理直接 `damage` が確定     | `block` の `chance` を判定          | 成功なら block 後 damage、失敗なら block なし               |
 | 防御無視                       | damage 計算開始              | 各 `defenseIgnore.chance` を判定    | 成功したソースだけ DEF / REG 無視へ合算                     |
 | 無視DEFボーナス                | damage 計算（物理）⑥       | —                                   | `ignoredDef × ignoredDefBonusScale` を `afterDefense` に加算 |
