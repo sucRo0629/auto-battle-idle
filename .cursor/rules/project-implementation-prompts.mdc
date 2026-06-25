@@ -20,12 +20,19 @@ alwaysApply: true
 - 設計判断: `.cursor/rules/project-principles.mdc`
 - docs 同期: `.cursor/rules/documentation-sync.mdc`
 - JSON の扱い: `.cursor/rules/data-json-lightweight.mdc`
+- バグ修正: ユーザールール `bug-fix-root-cause`、`.cursor/rules/bug-fix-project.mdc`
 
 ## 実装プロンプトの追加チェック
 
 - 変更対象が battle / combat / progression / classes / skills のどれに属するかを明示する。
 - 更新すべき spec は `docs/spec/README.md` と `docs/README.md` の対応表で確認させる。
 - acceptance criteria には、テストだけでなく仕様書との一致確認も含める。
+
+## バグ修正
+
+- 汎用手順: ユーザールール `bug-fix-root-cause`
+- 本リポジトリ: `.cursor/rules/bug-fix-project.mdc`
+- acceptance criteria に「根本原因の説明」「不採用案の理由」「spec 一致」を含める
 
 ## コピペ用プロンプトの書き方
 

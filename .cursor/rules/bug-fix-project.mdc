@@ -1,0 +1,53 @@
+---
+description: auto-battle-idle の不具合修正 — 設計書正本・spec 同期・battle 具体例
+alwaysApply: true
+---
+
+# Bug Fix — auto-battle-idle
+
+汎用手順はユーザールール `bug-fix-root-cause` に従う。ここは本プロジェクト固有の判断基準。
+
+## 正本と分類
+
+- 仕様判断は `docs/` と現在の実装を正本とする（`project-principles.mdc`）
+- 不具合を次に分類する: 仕様バグ / 実装バグ / データ不整合 / テスト不足
+- 設計書と実装が食い違う場合は、黙って片方に寄せず差分を明示する
+- ゲームルール・データ形状が変わる場合は同作業内で `docs/` を更新（`documentation-sync.mdc`）
+
+## データ
+
+- `data/skills/` と `classes.json` は全文 Read せず Grep・diff・関連 spec で必要箇所のみ（`data-json-lightweight.mdc`）
+- スキル schema 変更時は編集ツール同期も確認（`skill-data-editor-sync.mdc`）
+
+## battle / 座標系の具体例（場当たりになりやすい箇所）
+
+| 場当たり | 根本寄り |
+|----------|----------|
+| `BattleEngine` にだけ職業・隊形用 if を追加 | `combatPosition` / `battleLayout` / `resolveApproachBattleX` など座標・隊形の単一経路を直す |
+| 描画側や呼び出し元で座標を微調整 | 接敵・隊形の決定ロジックを1箇所に集約 |
+| テスト期待値だけ更新 | 不変条件（前後衛・接敵ライン・隊形間隔など）を固定し、spec 変更理由を doc に書く |
+| 同じ補正を複数ファイルにコピー | 既存ヘルパーへ集約 |
+
+## spec 更新の当たり
+
+`docs/spec/README.md` と `docs/README.md` の対応表に従う。
+battle / 座標 / 隊形 → `battle-field.md`、ダメージ・ターゲット → `combat.md` など。
+
+## バグ修正プロンプト（コピペ枠）
+
+不具合: （現象）
+再現: （手順 or テスト名）
+期待: （spec または設計上の正）
+
+修正前に必ず:
+1. 根本原因の仮説を2案以上（場当たり案と構造案）
+2. 各案の変更ファイル・負債・spec との関係
+3. 推奨案とその理由
+
+ゲート:
+- 同種の分岐/補正を増やしていないか
+- battle の単一経路を壊していないか
+- テストは不変条件を固定しているか
+- spec 更新が必要なら同作業内で更新
+
+推奨案だけ実装。場当たり案は採用しない理由を1行で残す。
