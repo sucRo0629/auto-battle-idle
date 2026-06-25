@@ -15,7 +15,7 @@ import {
 const gameData = mockApproachGameData();
 
 describe("resolvePlayerApproachBattleX", () => {
-  it("approaches farthest-in-range priority target, not only front contact", () => {
+  it("approaches farthest-in-range ChaseTarget beyond the frontline clamp", () => {
     const archer = mockCombatant({ id: "archer" });
     const frontMelee = mockCombatant({
       id: "melee",
@@ -61,7 +61,7 @@ describe("resolvePlayerApproachBattleX", () => {
     expect(approachX).toBeGreaterThan(280 - 100);
   });
 
-  it("front row uses front enemy contact with effectiveRangePx stop", () => {
+  it("front row clamp prevents advancing beyond the enemy front line", () => {
     const guard = mockCombatant({
       id: "guard",
       formationRow: "front",
@@ -192,7 +192,7 @@ describe("resolvePlayerApproachBattleX", () => {
     expect(guardianX - warriorX).toBe(3);
   });
 
-  it("falls back to front contact when no ranged enemies exist", () => {
+  it("uses shared chase fallback when only melee frontline enemies exist", () => {
     const archer = mockCombatant({ id: "archer" });
     const frontMelee = mockCombatant({
       id: "melee",

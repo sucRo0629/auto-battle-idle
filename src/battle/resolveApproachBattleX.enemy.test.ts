@@ -62,7 +62,7 @@ describe('resolveEnemyChaseTargetPlayer', () => {
     expect(target?.id).toBe('tank');
   });
 
-  it('chases high-threat back row beyond front contact', () => {
+  it('chases high-threat back row beyond the frontline owner', () => {
     const guard = mockCombatant({
       id: 'guard',
       formationRow: 'front',

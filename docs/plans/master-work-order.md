@@ -36,7 +36,7 @@ battle 系 cleanup を別チャットや Composer へ引き継ぐときの完了
 | `AttackTarget` / `ChaseTarget` / `MoveAnchor` / `DisplayAnchor` / `FrontlineContact` の責務境界が実装名またはテスト名で読める     | **済み**。`DisplayAnchor` は `engagedDisplayAnchorPlayerId` + `battleDisplay.getEngagedDisplayAnchorPlayerId` 等。`engagedVisualTargetPlayerId` / `engagedVisualTargetAllyId` は deprecated alias |
 | Assassin の rear assault と Defender の frontline ownership が衝突しない                                                          | **済み**。`CombatantState.accessState` が正本。`resolveApproachBattleX.enemy.test.ts` / `duelistAssassinFormation.test.ts` / `behindTargetMove.test.ts` を維持                                    |
 | 関連テストが通る                                                                                                                  | battle cleanup ごとに `battleFieldArchitecture` / `battleFieldTransition` / `resolveApproachBattleX.enemy` / `duelistAssassinFormation` を最低確認                                                |
-| [`docs/spec/battle-field.md`](../spec/battle-field.md) と [`docs/spec/combat.md`](../spec/combat.md) に今回の境界が反映されている | **部分**。`battle-field.md` は概ね反映済み。`combat.md` は Threat 境界を持つが、座標節に移行中の旧表現が残る                                                                                      |
+| [`docs/spec/battle-field.md`](../spec/battle-field.md) と [`docs/spec/combat.md`](../spec/combat.md) に今回の境界が反映されている | **済み**。defender 専用 contact 接近を持たず、`ChaseTarget` / `AttackTarget` / `MoveAnchor` / `DisplayAnchor` / 共有 clamp の境界を各 spec に反映済み                                             |
 
 **完了条件:** 上表の「部分」をすべて解消し、関連テストを通した時点で battle-field cleanup の収束とみなす。
 

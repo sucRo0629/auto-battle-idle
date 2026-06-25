@@ -346,7 +346,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 target / threat / contact / frontline owner は **座標 snap の理由ではない**。approach / attack / display / clamp の入力として毎 tick 再評価するが、Engaged 中の生存ユニットを layout bake で再配置しない。
 
-**前列過進軍 cap：** `capFrontRowBeforeEnemyContact` は `resolveAllPlayerApproachBattleX` 内の approach target 解決に含める。Engaged 中に `battleX` を直接 mutation する独立 clamp 経路は持たない（旧 `clampEngagedFrontRowBattleX` 相当）。
+**前列過進軍 cap：** `capFrontRowBeforeEnemyContact` は `resolveAllPlayerApproachBattleX` 内の共有 clamp / formation safety layer として適用する。`ChaseTarget` / `AttackTarget` の代替正本ではなく、Engaged 中に `battleX` を直接 mutation する独立 clamp 経路も持たない（旧 `clampEngagedFrontRowBattleX` 相当）。
 
 ### 4.5 スキル `move`
 

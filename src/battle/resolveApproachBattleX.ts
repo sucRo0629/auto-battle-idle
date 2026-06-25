@@ -204,7 +204,10 @@ export function resolveEnemyBasicAttackTarget(
   return resolveEnemyAttackTargetPlayer(enemy, players, enemies, gameData);
 }
 
-/** 前列は敵最前線より左（rear 側）に留める — battleX 過進軍防止 */
+/**
+ * 共有 clamp / formation safety layer。
+ * 前衛が敵最前線を越えて過進軍しないための cap であり、ChaseTarget の正本ではない。
+ */
 function capFrontRowBeforeEnemyContact(
   player: CombatantState,
   players: CombatantState[],
