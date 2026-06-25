@@ -1,7 +1,7 @@
 [
   {
     "id": "df_paladin_active_1",
-    "name": "光の剣",
+    "name": "光明剣",
     "trigger": {
       "kind": "time",
       "value": 5
@@ -46,7 +46,7 @@
   },
   {
     "id": "df_paladin_active_2",
-    "name": "聖盾",
+    "name": "障身法",
     "trigger": {
       "kind": "hitsTaken",
       "value": 8
@@ -54,47 +54,57 @@
     "effect": [
       {
         "target": {
-          "kind": "self"
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
         },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 50,
+        "targetFormationRow": "front",
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "reg",
-        "buffMultiplier": 1.2,
-        "buffDurationSec": 5,
-        "amount": {
-          "kind": "percentMaxHp",
-          "percentOfMaxHp": 0.1,
-          "maxHpRef": "self"
-        }
-      },
-      {
-        "target": {
-          "kind": "self"
-        },
-        "type": "buff",
-        "buffSubKind": "stat",
-        "buffStat": "damageTaken",
-        "buffMultiplier": 0.9,
+        "buffFlatBonus": 10,
         "buffDurationSec": 5
       },
       {
         "target": {
-          "kind": "self"
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
         },
-        "type": "heal",
-        "healSubKind": "hot",
+        "targetShape": "aoe",
+        "aoeRadiusPx": 50,
+        "targetFormationRow": "front",
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "damageTaken",
+        "buffMultiplier": 0.95,
+        "buffDurationSec": 5
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 50,
+        "targetFormationRow": "front",
+        "type": "buff",
+        "buffSubKind": "barrier",
+        "barrierStack": true,
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.85
-        },
-        "durationSec": 5
+          "atkScale": 0.2
+        }
       }
     ],
     "firePolicy": "smart",
     "fireConditions": [
       {
         "kind": "selfHp",
-        "maxHpRatio": 0.7
+        "maxHpRatio": 0.8
       }
     ]
   },
@@ -122,10 +132,52 @@
   },
   {
     "id": "df_paladin_active_3",
-    "name": "治療専念",
+    "name": "慈光",
     "trigger": {
       "kind": "time",
-      "value": 8
+      "value": 11
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "damageTaken",
+        "buffMultiplier": 0.9,
+        "buffDurationSec": 5
+      },
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "reg",
+        "buffFlatBonus": 20,
+        "buffDurationSec": 5
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.8
+      }
+    ],
+    "vfx": {
+      "enabled": true
+    }
+  },
+  {
+    "id": "df_paladin_active_4",
+    "name": "降魔光明",
+    "trigger": {
+      "kind": "time",
+      "value": 12
     },
     "effect": [
       {
@@ -133,22 +185,36 @@
           "kind": "self"
         },
         "type": "basicAttackTransform",
-        "buffDurationSec": 4,
+        "buffDurationSec": 5,
         "primaryEffectOverride": {
-          "type": "heal",
-          "healSubKind": "instant",
+          "type": "damage",
+          "damageType": "magic",
           "target": {
-            "kind": "stat",
-            "side": "ally",
-            "stat": "hp",
-            "order": "ratio"
+            "kind": "distance",
+            "side": "enemy",
+            "order": "nearest"
           },
           "amount": {
-            "kind": "atkBased",
-            "atkScale": 1.5
+            "kind": "defBased",
+            "defScale": 1.2
           }
         },
-        "range": 60
+        "appendEffects": [
+          {
+            "type": "heal",
+            "healSubKind": "instant",
+            "target": {
+              "kind": "stat",
+              "side": "ally",
+              "stat": "hp",
+              "order": "ratio"
+            },
+            "amount": {
+              "kind": "defBased",
+              "defScale": 1
+            }
+          }
+        ]
       }
     ],
     "firePolicy": "smart",
@@ -158,6 +224,7 @@
         "maxHpRatio": 0.7
       }
     ],
+    "maxCharges": 1,
     "vfx": {
       "enabled": true
     }

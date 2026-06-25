@@ -1746,10 +1746,13 @@ function parseOptionalPassiveTarget(
 function parseOptionalEffectCombatModifiers(
   obj: Record<string, unknown>,
   context: string,
-): Pick<SkillEffectDef, 'damageIncrease' | 'defenseIgnore' | 'effectConditions'> {
+): Pick<
+  SkillEffectDef,
+  'damageIncrease' | 'defenseIgnore' | 'effectConditions' | 'targetFormationRow'
+> {
   const result: Pick<
     SkillEffectDef,
-    'damageIncrease' | 'defenseIgnore' | 'effectConditions'
+    'damageIncrease' | 'defenseIgnore' | 'effectConditions' | 'targetFormationRow'
   > = {};
   if (obj.targetDebuffFilter !== undefined) {
     invalidField(
@@ -1775,6 +1778,14 @@ function parseOptionalEffectCombatModifiers(
       obj.effectConditions,
       context,
       'effectConditions',
+    );
+  }
+  if (obj.targetFormationRow !== undefined) {
+    result.targetFormationRow = requireEnum(
+      obj,
+      'targetFormationRow',
+      context,
+      FORMATION_ROWS_SET,
     );
   }
   return result;
@@ -3457,6 +3468,51 @@ function requirePassiveEffectParams(
     }
     case 'lastStandInvulnerable':
       return { ...base };
+    case 'frontBlockAura': {
+      const chance = parseOptionalNonNegativeNumber(obj, 'chance', context);
+      const frontBlockAuraMagicBlock =
+        obj.frontBlockAuraMagicBlock === undefined
+          ? undefined
+          : requireBoolean(obj, 'frontBlockAuraMagicBlock', context);
+      return {
+        ...base,
+        ...(chance !== undefined ? { chance } : {}),
+        ...(frontBlockAuraMagicBlock !== undefined
+          ? { frontBlockAuraMagicBlock }
+          : {}),
+      };
+    }
+    case 'lastStandRecovery': {
+      const hpRatio = parseOptionalNumber(obj, 'lastStandRecoveryHpRatio', context);
+      const selfMul = parseOptionalNumber(
+        obj,
+        'lastStandRecoverySelfDamageTakenMultiplier',
+        context,
+      );
+      const frontMul = parseOptionalNumber(
+        obj,
+        'lastStandRecoveryFrontAllyDamageTakenMultiplier',
+        context,
+      );
+      const durationSec = parseOptionalNonNegativeNumber(
+        obj,
+        'lastStandRecoveryDurationSec',
+        context,
+      );
+      return {
+        ...base,
+        ...(hpRatio !== undefined ? { lastStandRecoveryHpRatio: hpRatio } : {}),
+        ...(selfMul !== undefined
+          ? { lastStandRecoverySelfDamageTakenMultiplier: selfMul }
+          : {}),
+        ...(frontMul !== undefined
+          ? { lastStandRecoveryFrontAllyDamageTakenMultiplier: frontMul }
+          : {}),
+        ...(durationSec !== undefined
+          ? { lastStandRecoveryDurationSec: durationSec }
+          : {}),
+      };
+    }
     case 'heal': {
       const healSubKind =
         obj.healSubKind === undefined

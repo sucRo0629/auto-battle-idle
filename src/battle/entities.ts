@@ -234,6 +234,7 @@ export function resetPerWaveCombatantFlags(allies: CombatantState[]): void {
     delete ally.barrierBreakRegenUsed;
     delete ally.barrierDepletionHealUsed;
     delete ally.lastStandInvulnerableUsed;
+    delete ally.lastStandRecoveryUsed;
   }
 }
 

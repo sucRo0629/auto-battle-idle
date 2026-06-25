@@ -11,10 +11,13 @@
   それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
 5. `final = max(1, floor(afterDefense × damageTakenMul))`
 6. **物理直接 `damage` のみ:** 回避判定 → ブロック判定（成功時 `blocked = floor(final × min(1, 0.25 + effectiveAtk/100))`、実ダメ = `final - blocked`）
+6b. **魔法直接 `damage`:** `blocksMagic: true` の block overlay がある対象のみ追加判定。成功時 `blocked = floor(final × 0.15)`（ATK/DEF/REG 非参照。定数 `MAGIC_BLOCK_MITIGATION_RATIO`）
 
 **回避:** 直接 `damage` の物理/魔法問わず（DoT tick 非対象）。`SkillExecutor` で `resolveDamage` 前に判定。
 
-**ブロック:** 現行は直接 `damage` かつ `damageType: physical` のみ。`resolveDamage` 後に判定（DoT 非対象）。Paladin 後半 passive の候補として魔法 block を扱う場合は、新フィールドまたは新 effect として別途定義する。
+**ブロック（物理）:** 直接 `damage` かつ `damageType: physical`。`resolveDamage` 後に判定（DoT 非対象）。`overlay: block` の `blockChance` を合算して 1 回ロール。
+
+**ブロック（魔法）:** 直接 `damage` かつ `damageType: magic`。`blocksMagic: true` の overlay の `blockChance` のみ合算して 1 回ロール。軽減率は固定 15%。`frontBlockAura`（護法士 P3 真言加護）で前列に付与。
 
 7. **DamageDelay 有効時（直接 `damage` / 反撃 `damage` のみ）:** Block 後の確定ダメージ `final` を `ratio` で分割。即時分は Barrier → HP。遅延分はプールに加算し、`buffDurationSec` 中 1 秒ごとに HP へ tick。遅延 tick は DEF/REG/Barrier/Block/Evasion を再適用しない（確定済みダメージ）。DoT 非対象。
 
@@ -295,6 +298,23 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 - StatusEffect.overlay `invulnerable`: 付与中は直接ダメージ・DoT・`damageDelay` tick・counter 被弾・ward / barrier 消費を含め HP にダメージを入れない
 - 付与時バトルイベント `invulnerable` → ポップアップ「無敵！」
 - `lastStandInvulnerable` passive: HP 割合 ≤ 0.25 かつ致死ダメージ確定直前に 1 回だけ発動（Wave 内 1 回、`resetPerWaveCombatantFlags` でリセット）→ ダメージ 0 + 3 秒 `invulnerable`
+
+### 護身 block aura（`frontBlockAura`）
+
+実装: `src/battle/frontBlockAura.ts`
+
+- 生存中の持有者が `formationRow === front` の味方へ `overlay: block` を同期（`syncBuffAuras` とは別モジュール）
+- P1 のみ: `chance` 0.10、物理直接ダメージのみ block
+- P1 + P3（`frontBlockAuraMagicBlock: true`）: chance 合算 0.15、魔法直接ダメージも block 対象（軽減は上記魔法 block 定数）
+
+### 不退転（`lastStandRecovery`）
+
+実装: `src/battle/lastStandRecovery.ts` / `incomingDamageMitigation.ts`
+
+- 致死ダメージ確定直前に Wave 1 回（HP 閾値なし）→ ダメージ 0 + `hp = maxHp × lastStandRecoveryHpRatio`（バリア不変）
+- 自己: `damageTaken × lastStandRecoverySelfDamageTakenMultiplier` を `lastStandRecoveryDurationSec`
+- 前列味方: `damageTaken × lastStandRecoveryFrontAllyDamageTakenMultiplier` を同秒数
+- バトルイベント `lastStandRecovery` → ポップアップ「再起！」（鉄衛士 `invulnerable` の「無敵！」とは別）
 
 
 | 種別     | 定義方法                                                                                                                                           |

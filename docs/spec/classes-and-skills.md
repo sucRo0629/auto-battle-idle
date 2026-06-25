@@ -509,7 +509,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | classId       | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0 代表）             | アクティブ（Lv0）  |
 | ------------- | ------ | --------- | ----- | ---- | -------------------------------- | ------------------ |
 | `df_guardian` | 鉄衛士 | Guardian  | front | 近接 | 共有 block + 追加 block          | 防御強化／防御専念 |
-| `df_paladin`  | 護法士 | Paladin   | front | 近接 | front Threat 制御 + 前列 block   | 光の剣／聖盾       |
+| `df_paladin`  | 護法士 | Paladin   | front | 近接 | front Threat 制御 + 前列 block   | 光明剣／障身法       |
 | `df_duelist`  | 闘技士 | Gladiator | front | 近接 | 低 HP 時 DEF 上昇（`passive_2`） | 戦叫び／体力温存   |
 
 ※ ディフェンダー 3 クラス（鉄衛士 / 護法士 / 闘技士）の設計思想・三分類・TBD は **§クラスディフェンダー設計方針** を正とする。
@@ -625,7 +625,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | active 2 Lv0 | `df_guardian_active_2` | 防御専念 | `hitsTaken` + DEF / block + `useDurationSec` |
 | passive 3 Lv10 | `df_guardian_passive_3` | 迎撃態勢 | 常時 block +10% + `blockResonance`（block 成功で stack 蓄積・減衰・被ダメ軽減） |
 | active 3 Lv10 | `df_guardian_active_3` | 鉄身 | smart 自己 `damageTaken` 低下（HoT 廃止） |
-| passive 4 Lv20 | `df_guardian_passive_4` | 不退の誓い | `lastStandInvulnerable`（HP≤25% 致死時 Wave 1 回・3 秒無敵） |
+| passive 4 Lv20 | `df_guardian_passive_4` | 不撓の誓い | `lastStandInvulnerable`（HP≤25% 致死時 Wave 1 回・3 秒無敵） |
 | active 4 Lv20 | `df_guardian_active_4` | 城塞の構え | `hitsTaken` + smart `blockResonanceStacks≥1` → stack 消費態勢。構え中 block で周囲敵に DEF ダメージ + KB |
 
 新 effect: `blockResonance` / `lastStandInvulnerable` / `blockResonanceConsume`。共通 overlay: `invulnerable`（[combat.md](combat.md)）。
@@ -655,6 +655,24 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 #### 立ち位置
 
 戦線全体の**崩れを吸収する安定装置**。
+
+#### 習得スキル（v1 確定）
+
+護法士のみ Defender 内で barrier を持てる（鉄衛士は barrier / HoT なし）。
+
+| 枠 | ID | 名称 | 効果 |
+| --- | --- | --- | --- |
+| basic | `df_paladin_basic_attack` | — | 最近接 physical |
+| passive 1 Lv0 | `df_paladin_passive_1` | 護身手 | `frontBlockAura`（前列 block chance 0.10・物理直接） |
+| passive 2 Lv0 | `df_paladin_passive_2` | 護法陣 | `threatControl`（`frontThreatFloor` + `frontThreatDecayMultiplier` のみ） |
+| active 1 Lv0 | `df_paladin_active_1` | 光明剣 | 低 HP 味方 heal + 最近接 magic damage |
+| active 2 Lv0 | `df_paladin_active_2` | 障身法 | `hitsTaken` + smart。自身起点 AoE 50px 内の前列へ REG / 被ダメ軽減 / barrier stack |
+| passive 3 Lv10 | `df_paladin_passive_3` | 真言加護 | P1 強化: block +0.05 + 魔法直接も block |
+| active 3 Lv10 | `df_paladin_active_3` | 慈光 | 味方全体 被ダメ−10% + REG+20（バリアなし） |
+| passive 4 Lv20 | `df_paladin_passive_4` | 不退転 | `lastStandRecovery`（致死半復活 + 自己/前列 DR） |
+| active 4 Lv20 | `df_paladin_active_4` | 降魔光明 | `basicAttackTransform`（魔法 DEF ダメ + 最低 HP heal） |
+
+新 effect: `frontBlockAura` / `lastStandRecovery`。魔法 block は [combat.md](combat.md)。
 
 ---
 
@@ -1504,6 +1522,8 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `threatControl`         | `onDamageTakenFlat?`, `onDamageTakenScale?`, `onBlockFlat?`, `threatDecayMultiplier?`, `frontThreatFloor?`, `frontThreatDecayMultiplier?`, `frontDamageTakenReduction?` | Defender 等のヘイト維持・上昇。被ダメ / ブロック成功時にヘイト加算。`threatDecayMultiplier` は自身の tick 減衰倍率。`frontThreatFloor` は生存中 source threat × ratio を前列味方の下限に。`frontThreatDecayMultiplier` は前列味方の減衰倍率。`frontDamageTakenReduction` は互換用フィールドであり、新規スキル定義では使わず、前列被ダメ軽減は `damageReduction` passive として分離する |
 | `blockResonance`        | `chance?`, `blockResonanceMaxStacks`, `blockResonanceDamageTakenPerStack`, `blockResonanceDecayIntervalSec?` | 常時 block（`chance`）+ 物理直接ダメージの block 成功で stack 蓄積。stack ごとに被ダメ軽減。`overlay: blockResonance`。減衰タイマーは `herbalPotency` とは別。実装: `blockResonance.ts` |
 | `lastStandInvulnerable` | （フィールドなし） | HP≤25% かつ致死ダメージ直前に Wave 1 回だけダメージ 0 + 3 秒 `overlay: invulnerable`。実装: `lastStandInvulnerable.ts` |
+| `frontBlockAura` | `chance?`, `frontBlockAuraMagicBlock?` | 生存中、前列味方へ block overlay。`frontBlockAuraMagicBlock` で魔法直接も block 対象。実装: `frontBlockAura.ts` |
+| `lastStandRecovery` | `lastStandRecoveryHpRatio?`, `lastStandRecoverySelfDamageTakenMultiplier?`, `lastStandRecoveryFrontAllyDamageTakenMultiplier?`, `lastStandRecoveryDurationSec?` | 致死直前 Wave 1 回・半復活 + 自己/前列 DR。実装: `lastStandRecovery.ts` |
 
 **スタン（`stun` / `debuffSubKind: stun` / counter `kind: stun`）:** `durationSec` **上限 5 秒**。スタン中は使用者として通常攻撃・アクティブ発動・ターゲット選択不可。CD は停止しない。CD 停止が必要な状態はスタンではなく、凍結 / 時間停止系拘束など別 `StatusEffect` として定義する。詳細は [combat.md](combat.md) のスタン行。
 

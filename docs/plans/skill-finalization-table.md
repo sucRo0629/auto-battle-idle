@@ -51,8 +51,8 @@
 
 | classId | 現行 passive | v1 確定方針 |
 | --- | --- | --- |
-| `df_guardian` | block、Threat 維持、旧 Wave barrier 重複 | **v1.6 確定**。Lv0=大盾使い+立ちはだかる壁。Lv10=迎撃態勢（`blockResonance`）。Lv20=不退の誓い。barrier / 重複 passive 削除 |
-| `df_paladin` | block、front Threat floor、全体 barrier、全体 damageReduction | **置換 / 整理**。Lv0 2 枠は front Threat 制御 + 前列 block 付与にする。前列被ダメ軽減は generic すぎるため Lv0 から外し、魔法 block は後半 passive 候補にする |
+| `df_guardian` | block、Threat 維持、旧 Wave barrier 重複 | **v1.6 確定**。Lv0=大盾使い+立ちはだかる壁。Lv10=迎撃態勢（`blockResonance`）。Lv20=不撓の誓い。barrier / 重複 passive 削除 |
+| `df_paladin` | block、front Threat floor、全体 barrier、全体 damageReduction | **v1 確定・実装済**。護身手 / 護法陣 / 真言加護 / 不退転 + 光明剣 / 障身法 / 慈光 / 降魔光明。`frontBlockAura` / 魔法 block / `lastStandRecovery` |
 | `df_duelist` | block、低 HP DEF / ATK、counter | **残す**。Duelist の被弾起点・反撃・低 HP 逆転を passive 側の核にする |
 | `at_warrior` | 高 DEF 狙い、DEF 無視 | **残す**。Warrior の高 DEF 単体処理の正本 |
 | `at_assassin` | 低 HP 比率狙い、evasion、低 HP 対象 damage bonus | **残す**。瀕死処理と背後アクセスの補助に限定し、Defender 的な生存性能には寄せない |
@@ -72,7 +72,7 @@
 | classId | 設計の柱 | 現行スキル | v1 確定方針 | 実装影響 |
 | --- | --- | --- | --- | --- |
 | `df_guardian` | 前線構築。単一路線の完全防衛、高 HP 正面受け、被弾による前線押上 | v1.6: basic+4passive+4active。`active_3` 鉄身、`active_4` 城塞の構え | **v1.6 実装済**。barrier / HoT 候補は削除。迎撃態勢・不退・城塞で前線保持を強化 | `blockResonance` / `lastStandInvulnerable` / `invulnerable` overlay / `blockResonanceConsume` |
-| `df_paladin` | 戦線安定。範囲・魔法ダメージを含む戦場全体の被害緩和 | `active_1` 光の剣、`active_2` 聖盾、`active_3` 治療専念。`active_4` 未配置 | `active_1` は heal + magic damage の複合として **見直し**。`active_2` は自己防御寄りなので、front / all ally への barrier・damageTaken 軽減へ寄せる。Lv20 は全体安定装置として **追加** | 既存 heal / barrier / damageTaken / basicAttackTransform で対応可能。front Threat floor は passive 側を正本にする |
+| `df_paladin` | 戦線安定。範囲・魔法ダメージを含む戦場全体の被害緩和 | v1: 護身手 / 護法陣 / 真言加護 / 不退転 + 光明剣 / 障身法 / 慈光 / 降魔光明 | **v1 実装済**。Defender 内唯一の barrier（障身法）。前列 block + 魔法 block + 半復活 DR | `frontBlockAura` / 魔法 block / `lastStandRecovery` / `targetFormationRow` |
 | `df_duelist` | 攻撃防御。単体強敵への制圧・拘束・カウンター・行動阻害 | `active_1` 戦叫び、`active_2` 体力温存、`active_3` 隙撃ち、`active_4` 血気煽り | 4 枠構造は最も進んでいるため **残す** 寄り。`active_4` の全敵 ATK debuff + 自己被害増は範囲が広いので、単体強敵制圧へ寄せる | 既存 debuff / damageDelay / stun / damageIncrease で対応可能。数値は Phase 8 |
 
 ### Defender 枠確定案
@@ -84,16 +84,15 @@ Defender 3 種は「硬さの大小」ではなく、被害入口の作り方で
 | `df_guardian` | basic | 最近接敵への通常攻撃。main tank の Threat は basic 火力ではなく passive で維持する | 現行 `df_guardian_basic_attack` を **残す** |
 | `df_guardian` | Lv0 passive 1-2 | block + 被弾 / block による Threat 維持。Guardian は単体前線の main tank | **v1.6 確定**（大盾使い / 立ちはだかる壁） |
 | `df_guardian` | Lv0 active 1-2 | 防御強化 / 防御専念 | **v1.6 残す** |
-| `df_guardian` | Lv10 / Lv20 passive | 迎撃態勢（`blockResonance`）+ 不退の誓い（`lastStandInvulnerable`） | **v1.6 確定** |
+| `df_guardian` | Lv10 / Lv20 passive | 迎撃態勢（`blockResonance`）+ 不撓の誓い（`lastStandInvulnerable`） | **v1.6 確定** |
 | `df_guardian` | Lv10 active 3 | 鉄身: smart 自己 `damageTaken` 低下（息入れ HoT 廃止） | **v1.6 確定** |
 | `df_guardian` | Lv20 active 4 | 城塞の構え: `blockResonanceConsume` + 構え中 block 範囲反撃 | **v1.6 確定** |
 | `df_paladin` | basic | 最近接敵への通常攻撃。火力ではなく前線安定の補助 | 現行 `df_paladin_basic_attack` を **残す** |
-| `df_paladin` | Lv0 passive 1-2 | front Threat floor と前列 block 付与を別 passive として扱う。Paladin は shared tank | 自己 block ではなく前列 block aura として採用し、Lv0 2 枠へ収める |
-| `df_paladin` | Lv10 / Lv20 passive | Wave 開始 barrier、party protection、または魔法も block 可能にする護法化 | **追加 / 整理**。魔法 block は新メカニクスゲート |
-| `df_paladin` | Lv0 active 1 | heal + magic damage の複合は Paladin らしいが、主目的は前線安定。damage は副次 | 現行 `df_paladin_active_1`（光の剣）を **見直し** |
-| `df_paladin` | Lv0 active 2 | 自己防御ではなく front / all ally への barrier または damageTaken 低下へ寄せる | 現行 `df_paladin_active_2`（聖盾）を **見直し** |
-| `df_paladin` | Lv10 active 3 | basicAttackTransform による治療専念は残せるが、Recovery 主軸にしすぎない。front 安定の補助 heal として扱う | 現行 `df_paladin_active_3`（治療専念）を **残す / 見直し** |
-| `df_paladin` | Lv20 active 4 | 戦線全体の崩れを吸収する上位 Stability。範囲 barrier / 全体 damageTaken 低下候補 | **追加** |
+| `df_paladin` | Lv0 passive 1-2 | 護身手（`frontBlockAura`）+ 護法陣（`threatControl` のみ） | **v1 確定** |
+| `df_paladin` | Lv10 / Lv20 passive | 真言加護（魔法 block）+ 不退転（`lastStandRecovery`） | **v1 確定** |
+| `df_paladin` | Lv0 active 1-2 | 光明剣 + 障身法（前列 barrier stack） | **v1 確定** |
+| `df_paladin` | Lv10 active 3 | 慈光（全体軽減 + REG、バリアなし） | **v1 確定** |
+| `df_paladin` | Lv20 active 4 | 降魔光明（BAT: magic DEF ダメ + heal） | **v1 確定** |
 | `df_duelist` | basic | 最近接敵への通常攻撃。Duelist は攻撃防御だが基本攻撃は標準でよい | 現行 `df_duelist_basic_attack` を **残す** |
 | `df_duelist` | Lv0 passive 1-2 | block + 低 HP DEF など、被弾を耐える基礎 | 現行 passive を **整理** し、Lv0 2 枠へ収める |
 | `df_duelist` | Lv10 / Lv20 passive | counter、低 HP ATK など、被弾を反撃・制圧へ変換する段階強化 | **追加 / 整理** |

@@ -235,6 +235,10 @@ export class BattleCanvas implements IBattleRenderer {
     this.combatReactionPopups.spawn(targetId, "invulnerable");
   }
 
+  showLastStandRecoveryPopup(targetId: string): void {
+    this.combatReactionPopups.spawn(targetId, "lastStandRecovery");
+  }
+
   showBuffGlow(targetId: string): void {
     this.buffGlows.trigger(targetId);
   }

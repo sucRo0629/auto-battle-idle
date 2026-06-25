@@ -780,9 +780,29 @@ function formatPassiveEffect(
     case "herbalPotency":
     case "blockResonance":
     case "lastStandInvulnerable":
+    case "frontBlockAura":
+    case "lastStandRecovery":
     case "heal": {
       if (def.effect === "lastStandInvulnerable") {
         return "致死時 3秒無敵（Wave 1回・HP≤25%）";
+      }
+      if (def.effect === "lastStandRecovery") {
+        const hpRatio = def.lastStandRecoveryHpRatio ?? 0.5;
+        const selfMul = def.lastStandRecoverySelfDamageTakenMultiplier ?? 0.5;
+        const frontMul =
+          def.lastStandRecoveryFrontAllyDamageTakenMultiplier ?? 0.75;
+        const duration = def.lastStandRecoveryDurationSec ?? 5;
+        return `致死時 HP${formatPercent(hpRatio)}復活（Wave 1回）· 自己被ダメ×${selfMul} · 前列×${frontMul} · ${duration}s`;
+      }
+      if (def.effect === "frontBlockAura") {
+        const parts: string[] = ["前列 block aura"];
+        if (def.chance !== undefined) {
+          parts.push(`+${formatPercent(def.chance)}`);
+        }
+        if (def.frontBlockAuraMagicBlock) {
+          parts.push("魔法 block");
+        }
+        return parts.join(" · ");
       }
       if (def.effect === "blockResonance") {
         const parts: string[] = [];

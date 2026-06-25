@@ -355,6 +355,8 @@ export interface StatusEffect {
   defenseIgnore?: DefenseIgnoreSpec;
   /** 一時ブロック付与 */
   blockChance?: number;
+  /** block overlay: 魔法直接ダメージも block 対象 */
+  blocksMagic?: boolean;
   /** 回避率付与 */
   evasionChance?: number;
   /** 反撃 overlay: 発動時に攻撃者へ適用するレスポンス一覧 */
@@ -553,6 +555,8 @@ export interface CombatantState extends Combatant {
   blockResonanceDecayTickSec?: number;
   /** lastStandInvulnerable: Wave 内 1 回消費済み */
   lastStandInvulnerableUsed?: boolean;
+  /** lastStandRecovery: Wave 内 1 回消費済み */
+  lastStandRecoveryUsed?: boolean;
 }
 
 export type PassiveEffectKind =
@@ -586,6 +590,8 @@ export type PassiveEffectKind =
   | "herbalPotency"
   | "blockResonance"
   | "lastStandInvulnerable"
+  | "frontBlockAura"
+  | "lastStandRecovery"
   /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
   | "hot";
 
@@ -851,6 +857,16 @@ export interface PassiveSkillDef {
   blockResonanceDamageTakenPerStack?: number;
   /** blockResonance: stack 減衰間隔（秒） */
   blockResonanceDecayIntervalSec?: number;
+  /** frontBlockAura: 魔法直接ダメージも block 対象にする */
+  frontBlockAuraMagicBlock?: boolean;
+  /** lastStandRecovery: 発動時 HP 比率（maxHp 基準） */
+  lastStandRecoveryHpRatio?: number;
+  /** lastStandRecovery: 自己 damageTaken 倍率 */
+  lastStandRecoverySelfDamageTakenMultiplier?: number;
+  /** lastStandRecovery: 前列味方 damageTaken 倍率 */
+  lastStandRecoveryFrontAllyDamageTakenMultiplier?: number;
+  /** lastStandRecovery: DR 持続秒 */
+  lastStandRecoveryDurationSec?: number;
 }
 
 export type SkillEffectKind =
@@ -999,6 +1015,8 @@ interface SkillEffectCommon extends AnimPhaseFields {
   defenseIgnore?: DefenseIgnoreSpec;
   /** 対象フィルタ（barrier 付与等）。全成立で対象に適用 */
   effectConditions?: FireCondition[];
+  /** 解決後に formationRow が一致する対象のみ適用 */
+  targetFormationRow?: FormationRow;
 }
 
 export interface SkillHitTarget {

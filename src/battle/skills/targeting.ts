@@ -1,5 +1,6 @@
 import type {
   CombatantState,
+  FormationRow,
   GameData,
   PassiveSkillDef,
   SkillEffectDef,
@@ -263,6 +264,29 @@ export function resolveEffectAnchor(
   return resolution?.waves[0]?.targets[0]?.unit ?? null;
 }
 
+function filterTargetsByFormationRow(
+  targets: SkillHitTarget[],
+  formationRow?: FormationRow,
+): SkillHitTarget[] {
+  if (!formationRow) return targets;
+  return targets.filter((entry) => entry.unit.formationRow === formationRow);
+}
+
+function finalizeEffectResolution(
+  resolution: SkillEffectResolution | null,
+  formationRow?: FormationRow,
+): SkillEffectResolution | null {
+  if (!resolution || !formationRow) return resolution;
+  const waves = resolution.waves
+    .map((wave) => ({
+      ...wave,
+      targets: filterTargetsByFormationRow(wave.targets, formationRow),
+    }))
+    .filter((wave) => wave.targets.length > 0);
+  if (waves.length === 0) return null;
+  return { ...resolution, waves };
+}
+
 export function resolveEffectResolution(
   effect: SkillEffectDef,
   actor: CombatantState,
@@ -288,9 +312,12 @@ export function resolveEffectResolution(
       livingAllies(allies).length,
     );
     if (!target) return null;
-    return {
-      waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
-    };
+    return finalizeEffectResolution(
+      {
+        waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
+      },
+      effect.targetFormationRow,
+    );
   }
 
   const rangePx = resolveSkillRangePx(
@@ -372,11 +399,17 @@ export function resolveEffectResolution(
     if (targets.length === 0) return null;
     const hits = effect.hitCount;
     if (hits === undefined || hits < 2) {
-      return { waves: [{ hitIndex: 0, targets }] };
+      return finalizeEffectResolution(
+        { waves: [{ hitIndex: 0, targets }] },
+        effect.targetFormationRow,
+      );
     }
     const duration = effect.hitDurationSec;
     if (duration === undefined || duration <= 0) return null;
-    return resolveRepeatedHitWaves(targets, hits, duration);
+    return finalizeEffectResolution(
+      resolveRepeatedHitWaves(targets, hits, duration),
+      effect.targetFormationRow,
+    );
   }
 
   if (shape === 'multiLock') {

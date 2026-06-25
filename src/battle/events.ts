@@ -31,6 +31,7 @@ export type BattleEvent =
   | { type: 'evade'; targetId: string }
   | { type: 'block'; targetId: string }
   | { type: 'invulnerable'; targetId: string }
+  | { type: 'lastStandRecovery'; targetId: string }
   | { type: 'death'; targetId: string }
   | { type: 'levelUp'; actorId: string; newLevel: number; statOnly: boolean }
   | { type: 'skillLearn'; actorId: string; skillId: string; skillName: string }

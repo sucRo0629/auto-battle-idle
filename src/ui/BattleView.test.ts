@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => {
     showEvadePopup: vi.fn(),
     showBlockPopup: vi.fn(),
     showInvulnerablePopup: vi.fn(),
+    showLastStandRecoveryPopup: vi.fn(),
     showCounterPopup: vi.fn(),
     showBuffGlow: vi.fn(),
     tick: vi.fn(),

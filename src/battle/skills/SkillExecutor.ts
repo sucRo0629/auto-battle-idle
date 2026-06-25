@@ -27,7 +27,7 @@ import {
   type PassiveDamageContext,
 } from '../passiveEffects.ts';
 import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
-import { applyBlockToPhysicalDamage } from '../blockMitigation.ts';
+import { applyBlockToPhysicalDamage, applyBlockToMagicDamage } from '../blockMitigation.ts';
 import { grantCounterStatus } from '../counterEffects.ts';
 import {
   applyWardBarrierToTarget,
@@ -764,7 +764,8 @@ export class SkillExecutor {
       const wardResult = applyWardBarrierToIncomingDamage(target, finalDamage);
       finalDamage = wardResult.damage;
       let didBlock = false;
-      if (resolveSkillDamageType(actor, effectDef) === 'physical') {
+      const damageType = resolveSkillDamageType(actor, effectDef);
+      if (damageType === 'physical') {
         const blockResult = applyBlockToPhysicalDamage(
           target,
           amount,
@@ -772,16 +773,21 @@ export class SkillExecutor {
         );
         finalDamage = blockResult.finalDamage;
         didBlock = blockResult.didBlock;
-        if (blockResult.didBlock) {
-          this.emit({ type: 'block', targetId: target.id });
-          const blockResonanceConfig = resolveBlockResonanceConfigForUnit(
-            target,
-            passives,
-          );
-          if (blockResonanceConfig.maxStacks > 0) {
-            addBlockResonanceStacksOnBlock(target, blockResonanceConfig);
-          }
-          if (hasBlockResonanceStance(target)) {
+      } else if (damageType === 'magic') {
+        const blockResult = applyBlockToMagicDamage(target, amount);
+        finalDamage = blockResult.finalDamage;
+        didBlock = blockResult.didBlock;
+      }
+      if (didBlock) {
+        this.emit({ type: 'block', targetId: target.id });
+        const blockResonanceConfig = resolveBlockResonanceConfigForUnit(
+          target,
+          passives,
+        );
+        if (blockResonanceConfig.maxStacks > 0) {
+          addBlockResonanceStacksOnBlock(target, blockResonanceConfig);
+        }
+        if (hasBlockResonanceStance(target)) {
             const stanceSkill =
               this.gameData.skillRegistry.actives[
                 target.statusEffects.find(
@@ -835,12 +841,17 @@ export class SkillExecutor {
                 },
               );
             }
-          }
         }
       }
-      const mitigation = mitigateIncomingDamage(target, finalDamage, passives);
+      const allies = this.deps.getAllCombatants().filter((unit) => !unit.isEnemy);
+      const mitigation = mitigateIncomingDamage(target, finalDamage, passives, {
+        allies,
+      });
       if (mitigation.lastStandTriggered) {
         this.emit({ type: 'invulnerable', targetId: target.id });
+      }
+      if (mitigation.lastStandRecoveryTriggered) {
+        this.emit({ type: 'lastStandRecovery', targetId: target.id });
       }
       finalDamage = mitigation.finalDamage;
       const barrierHpBefore = target.barrierHp;

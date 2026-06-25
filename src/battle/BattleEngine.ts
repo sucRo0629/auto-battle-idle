@@ -91,6 +91,7 @@ import {
   syncBlockResonanceAuras,
   tickBlockResonanceDecay,
 } from "./blockResonance.ts";
+import { syncFrontBlockAuras } from "./frontBlockAura.ts";
 import { mitigateIncomingDamage } from "./incomingDamageMitigation.ts";
 import { tryTriggerHealReservation, grantHealReservationStacks } from "./healReservation.ts";
 import { tryTriggerBarrierBreakRegen } from "./barrierBreakRegen.ts";
@@ -534,6 +535,7 @@ export class BattleEngine {
     syncDebuffAuras(this.players, this.enemies, passives, this.gameData);
     syncDamageReductionAuras(this.players, this.enemies, passives, this.gameData);
     syncFrontThreatControlAuras(this.players, passives);
+    syncFrontBlockAuras(this.players, passives);
     syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
     syncHerbalPotencyAuras(this.players, this.enemies, passives, this.gameData);
     for (const ally of this.players) {
@@ -1832,9 +1834,13 @@ export class BattleEngine {
         target,
         wardResult.damage,
         passives,
+        { allies: this.players },
       );
       if (mitigation.lastStandTriggered) {
         this.emit({ type: "invulnerable", targetId: target.id });
+      }
+      if (mitigation.lastStandRecoveryTriggered) {
+        this.emit({ type: "lastStandRecovery", targetId: target.id });
       }
       const damageResult = applyDamageToTarget(target, mitigation.finalDamage);
       const appliedDamage =

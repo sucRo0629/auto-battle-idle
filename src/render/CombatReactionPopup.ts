@@ -11,13 +11,14 @@ const START_SCALE = 0.4;
 const END_SCALE = 1;
 const HEAD_LABEL_OFFSET_Y = -4;
 
-export type CombatReactionKind = "evade" | "block" | "counter" | "invulnerable";
+export type CombatReactionKind = "evade" | "block" | "counter" | "invulnerable" | "lastStandRecovery";
 
 const REACTION_TEXT: Record<CombatReactionKind, string> = {
   evade: "回避！",
   block: "ブロック！",
   counter: "反撃！",
   invulnerable: "無敵！",
+  lastStandRecovery: "再起！",
 };
 
 function easeOutCubic(t: number): number {

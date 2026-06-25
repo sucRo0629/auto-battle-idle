@@ -90,13 +90,15 @@
       {
         "level": 10,
         "skillIds": [
-          "df_paladin_passive_3"
+          "df_paladin_passive_3",
+          "df_paladin_active_3"
         ]
       },
       {
         "level": 20,
         "skillIds": [
-          "df_paladin_passive_4"
+          "df_paladin_passive_4",
+          "df_paladin_active_4"
         ]
       }
     ],

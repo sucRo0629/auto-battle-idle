@@ -59,17 +59,16 @@ const guardianThreatControl: PassiveSkillDef = {
 };
 
 const paladinFrontSharing: PassiveSkillDef = {
-  id: 'df_paladin_passive_5',
-  name: '前衛の加護',
+  id: 'df_paladin_passive_2',
+  name: '護法陣',
   effect: 'threatControl',
   frontThreatFloor: 0.72,
   frontThreatDecayMultiplier: 0.65,
-  frontDamageTakenReduction: 0.06,
 };
 
 const passivesRegistry: Record<string, PassiveSkillDef> = {
   df_guardian_passive_2: guardianThreatControl,
-  df_paladin_passive_5: paladinFrontSharing,
+  df_paladin_passive_2: paladinFrontSharing,
 };
 
 describe('threat phase 2', () => {
@@ -125,7 +124,7 @@ describe('threat phase 2', () => {
       maxHp: 220,
       def: 22,
       build: {
-        learnedPassiveIds: ['df_paladin_passive_5'],
+        learnedPassiveIds: ['df_paladin_passive_2'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
@@ -151,7 +150,7 @@ describe('threat phase 2', () => {
     const paladin = mockAlly({
       id: 'paladin',
       build: {
-        learnedPassiveIds: ['df_paladin_passive_5'],
+        learnedPassiveIds: ['df_paladin_passive_2'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
@@ -174,11 +173,11 @@ describe('threat phase 2', () => {
     expect(warrior.threat).toBe(187);
   });
 
-  it('paladin applies front damage taken reduction aura to front allies', () => {
+  it('護法陣 does not apply front damage taken reduction aura', () => {
     const paladin = mockAlly({
       id: 'paladin',
       build: {
-        learnedPassiveIds: ['df_paladin_passive_5'],
+        learnedPassiveIds: ['df_paladin_passive_2'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
@@ -198,12 +197,10 @@ describe('threat phase 2', () => {
       passivesRegistry,
     );
     expect(
-      warrior.statusEffects.some(
-        (fx) =>
-          fx.stat === 'damageTaken' &&
-          fx.id.startsWith('passive_front_threat_dmg_reduction_'),
+      warrior.statusEffects.some((fx) =>
+        fx.id.startsWith('passive_front_threat_dmg_reduction_'),
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(
       backline.statusEffects.some((fx) =>
         fx.id.startsWith('passive_front_threat_dmg_reduction_'),

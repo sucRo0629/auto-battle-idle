@@ -2449,6 +2449,101 @@ export class SkillEditorStep {
         break;
       case 'lastStandInvulnerable':
         break;
+      case 'frontBlockAura':
+        effectGrid.appendChild(
+          createFieldRow(
+            'chance',
+            createNumberInput(
+              passive.chance ?? 0.1,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.chance = value;
+                }, { rerender: false });
+              },
+              { step: 0.01, min: 0, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'frontBlockAuraMagicBlock',
+            createSelect(
+              passive.frontBlockAuraMagicBlock ? 'true' : 'false',
+              [
+                { value: 'false', label: '物理のみ' },
+                { value: 'true', label: '魔法も block' },
+              ],
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  if (value === 'true') {
+                    current.frontBlockAuraMagicBlock = true;
+                  } else {
+                    delete current.frontBlockAuraMagicBlock;
+                  }
+                }, { rerender: false });
+              },
+            ),
+          ),
+        );
+        break;
+      case 'lastStandRecovery':
+        effectGrid.appendChild(
+          createFieldRow(
+            'lastStandRecoveryHpRatio',
+            createNumberInput(
+              passive.lastStandRecoveryHpRatio ?? 0.5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.lastStandRecoveryHpRatio = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0.01, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'lastStandRecoverySelfDamageTakenMultiplier',
+            createNumberInput(
+              passive.lastStandRecoverySelfDamageTakenMultiplier ?? 0.5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.lastStandRecoverySelfDamageTakenMultiplier = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0.01, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'lastStandRecoveryFrontAllyDamageTakenMultiplier',
+            createNumberInput(
+              passive.lastStandRecoveryFrontAllyDamageTakenMultiplier ?? 0.75,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.lastStandRecoveryFrontAllyDamageTakenMultiplier = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0.01, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'lastStandRecoveryDurationSec',
+            createNumberInput(
+              passive.lastStandRecoveryDurationSec ?? 5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.lastStandRecoveryDurationSec = value;
+                }, { rerender: false });
+              },
+              { step: 0.5, min: 0.1 },
+            ),
+          ),
+        );
+        break;
       case 'damageReduction':
         appendPassiveDamageReductionFields(
           effectGrid,

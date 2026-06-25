@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 import {
   applyBlockToPhysicalDamage,
+  applyBlockToMagicDamage,
   computeBlockMitigationRatio,
   getBlockChance,
+  getMagicBlockChance,
+  MAGIC_BLOCK_MITIGATION_RATIO,
 } from './blockMitigation.ts';
 
 function mockUnit(
@@ -146,6 +149,42 @@ describe('blockMitigation', () => {
     const result = applyBlockToPhysicalDamage(defender, 80, passives);
     expect(result.didBlock).toBe(false);
     expect(result.finalDamage).toBe(80);
+    vi.restoreAllMocks();
+  });
+
+  it('applyBlockToMagicDamage uses fixed 15% mitigation independent of ATK', () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0);
+    const lowAtk = mockUnit({
+      id: 'low',
+      atk: 10,
+      statusEffects: [
+        {
+          id: 'magic-block',
+          kind: 'buff',
+          overlay: 'block',
+          blockChance: 0.15,
+          blocksMagic: true,
+          multiplier: 1,
+          durationSec: 99999,
+          remainingSec: 99999,
+        },
+      ],
+    });
+    const highAtk = mockUnit({
+      id: 'high',
+      atk: 200,
+      statusEffects: [...lowAtk.statusEffects],
+    });
+
+    const lowResult = applyBlockToMagicDamage(lowAtk, 100);
+    const highResult = applyBlockToMagicDamage(highAtk, 100);
+    expect(lowResult.didBlock).toBe(true);
+    expect(highResult.didBlock).toBe(true);
+    expect(lowResult.blockedAmount).toBe(
+      Math.floor(100 * MAGIC_BLOCK_MITIGATION_RATIO),
+    );
+    expect(highResult.blockedAmount).toBe(lowResult.blockedAmount);
+    expect(getMagicBlockChance(lowAtk)).toBe(0.15);
     vi.restoreAllMocks();
   });
 });

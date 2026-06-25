@@ -42,7 +42,7 @@ function mockUnit(
 const passives: Record<string, PassiveSkillDef> = {
   df_guardian_passive_4: {
     id: 'df_guardian_passive_4',
-    name: '不退の誓い',
+    name: '不撓の誓い',
     effect: 'lastStandInvulnerable',
   },
 };

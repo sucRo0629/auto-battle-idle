@@ -297,6 +297,8 @@ export const PASSIVE_EFFECT_KINDS = [
   "herbalPotency",
   "blockResonance",
   "lastStandInvulnerable",
+  "frontBlockAura",
+  "lastStandRecovery",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -325,7 +327,9 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   threatControl: "ヘイト制御",
   herbalPotency: "薬効浸潤",
   blockResonance: "迎撃態勢",
-  lastStandInvulnerable: "不退の誓い",
+  lastStandInvulnerable: "不撓の誓い",
+  frontBlockAura: "護身手",
+  lastStandRecovery: "不退転",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -621,6 +625,8 @@ export const EDITOR_PASSIVE_EFFECT_KINDS = [
   "herbalPotency",
   "blockResonance",
   "lastStandInvulnerable",
+  "frontBlockAura",
+  "lastStandRecovery",
   "periodicDispel",
   "excessHealToBarrier",
   "excessHealRedirect",
