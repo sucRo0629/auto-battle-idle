@@ -521,4 +521,8 @@ export class BattleView {
     this.battleXDebugCanvas.setVisible(enabled);
     this.debugMenu.refresh();
   }
+
+  isBattleXDebugReplayPaused(): boolean {
+    return this.battleXDebugCanvas.isReplayPaused();
+  }
 }

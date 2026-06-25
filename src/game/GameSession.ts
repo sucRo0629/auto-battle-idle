@@ -308,7 +308,9 @@ export class GameSession {
   }
 
   tick(deltaSec: number, deltaMs: number): void {
-    if (!this.metaMenuOpen) {
+    const debugReplayPaused =
+      this.verifyMode && this.view.isBattleXDebugReplayPaused();
+    if (!this.metaMenuOpen && !debugReplayPaused) {
       this.engine.tick(deltaSec);
     }
     this.view.tick(deltaMs);

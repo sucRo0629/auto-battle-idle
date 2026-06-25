@@ -83,8 +83,13 @@ export class BattleXDebugCanvas {
     }
   }
 
+  /** replay paused: UI seek 固定 + 戦闘エンジン tick 停止対象 */
+  isReplayPaused(): boolean {
+    return this.visible && !this.followLatest;
+  }
+
   recordLiveFrame(liveSnapshot: BattleSnapshot): void {
-    if (!this.visible) return;
+    if (!this.visible || !this.followLatest) return;
     const frame = buildBattleXDebugReplayFrame(liveSnapshot);
     if (!frame) return;
 
@@ -301,6 +306,7 @@ export class BattleXDebugCanvas {
     this.renderSeekMarkers(latestIndex);
 
     const modeLabel = this.followLatest ? "live" : "paused";
+    const engineLabel = this.followLatest ? "running" : "frozen";
     const tickLabel = frame
       ? `${frame.tickIndex} / ${latestIndex >= 0 ? this.replayBuffer.getFrame(latestIndex)?.tickIndex ?? frame.tickIndex : frame.tickIndex}`
       : "-";
@@ -314,6 +320,7 @@ export class BattleXDebugCanvas {
 
     this.replayInfoEl.textContent = [
       `mode=${modeLabel}`,
+      `engine=${engineLabel}`,
       `frame=${this.selectedIndex + 1}/${Math.max(1, this.replayBuffer.size)}`,
       `tick=${tickLabel}`,
       `time=${timeLabel}`,
