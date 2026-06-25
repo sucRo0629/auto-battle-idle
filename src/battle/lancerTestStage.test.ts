@@ -27,7 +27,7 @@ function createLancerTestStageEngine(): BattleEngine {
 }
 
 describe('lancer on test stage', () => {
-  it('engages, approaches stationary dummies, and deals damage', () => {
+  it('engages and damages stationary dummies with self-origin pierce', () => {
     const engine = createLancerTestStageEngine();
     engine.startBattle();
     const internal = asBattleEngineInternals(engine);
@@ -51,14 +51,14 @@ describe('lancer on test stage', () => {
 
     for (let t = 0; t < 3600; t++) {
       engine.tick(TICK_DT);
-      const snap = engine.getSnapshot();
-      const ally = snap.allies.find((a) => a.partySlotIndex === 0);
-      if (ally && ally.battleX > 200 && dealtDamage) break;
+      if (dealtDamage) break;
     }
 
     const finalSnap = engine.getSnapshot();
     const finalLancer = finalSnap.allies.find((a) => a.partySlotIndex === 0);
-    expect(finalLancer?.battleX).toBeGreaterThan(200);
+    expect(finalLancer).toBeDefined();
+    expect(finalLancer!.hp).toBeGreaterThan(0);
+    expect(Number.isFinite(finalLancer!.battleX)).toBe(true);
     expect(dealtDamage).toBe(true);
   });
 });
