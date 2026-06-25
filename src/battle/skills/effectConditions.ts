@@ -46,6 +46,8 @@ export interface ConditionEvalContext {
   skill?: ActiveSkillDef;
   effectIndex?: number;
   evaluationTarget?: CombatantState;
+  waveIndex?: number;
+  waveCount?: number;
 }
 
 function livingUnits(units: CombatantState[]): CombatantState[] {
@@ -211,6 +213,13 @@ export function evaluateCondition(
   switch (condition.kind) {
     case 'waveStart':
       return ctx.isWaveStartPhase === true;
+    case 'finalWaveStart':
+      return (
+        ctx.isWaveStartPhase === true &&
+        ctx.waveCount !== undefined &&
+        ctx.waveIndex !== undefined &&
+        ctx.waveIndex === ctx.waveCount - 1
+      );
     case 'waveEnd':
       return ctx.isWaveEndPhase === true;
     case 'selfHp':

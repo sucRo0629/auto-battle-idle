@@ -4,6 +4,7 @@ import {
   getPassiveDefs,
   resolveResourceAmount,
 } from './combatMath.ts';
+import { isAllySupportBlockedDuringArenaDominance } from './arenaDominance.ts';
 import type { CombatantState, PassiveSkillDef, ResourceAmountSpec } from './types.ts';
 
 export function isBarrierFullyBroken(
@@ -65,6 +66,15 @@ export function tryTriggerBarrierBreakRegen(
     passives,
   );
   if (grant <= 0) return { granted: 0 };
+
+  if (
+    isAllySupportBlockedDuringArenaDominance(
+      target,
+      bestSource.wardweaver,
+    )
+  ) {
+    return { granted: 0 };
+  }
 
   applyBarrierToTarget(target, grant, false);
   target.barrierBreakRegenUsed = true;

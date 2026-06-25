@@ -7,6 +7,7 @@ import {
   getPassiveDefs,
   resolveResourceAmount,
 } from './combatMath.ts';
+import { isAllySupportBlockedDuringArenaDominance } from './arenaDominance.ts';
 import { dispelDebuffsOnTarget } from './debuffDispel.ts';
 import { resolvePassiveDebuffTargets } from './passiveDebuffBridge.ts';
 import { resolvePassiveBuffTargets } from './passiveBuffBridge.ts';
@@ -27,6 +28,7 @@ import {
   usesDebuffAuraMode,
   usesHotAuraMode,
 } from './passivePeriodicTrigger.ts';
+import { resolveDuelistPrideIncomingHealMultiplier } from './duelistPride.ts';
 import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
 import { resolveEffectivePassiveAmountSpec } from './skillAmountOverride.ts';
 import type {
@@ -186,7 +188,9 @@ export function resolveIncomingHealAmount(
   passives: Record<string, PassiveSkillDef>,
 ): number {
   if (baseAmount <= 0) return 0;
-  const mul = getPassiveSpecialEffectMultiplier('heal', target, target, passives);
+  const mul =
+    getPassiveSpecialEffectMultiplier('heal', target, target, passives) *
+    resolveDuelistPrideIncomingHealMultiplier(target, passives);
   return Math.floor(Math.max(0, baseAmount * mul));
 }
 
@@ -726,6 +730,7 @@ export function applyPassiveBarrierFromPassive(
     passive.barrierAmount,
   );
   for (const target of targets) {
+    if (isAllySupportBlockedDuringArenaDominance(target, source)) continue;
     const grant = resolveResourceAmount(
       source,
       target,
@@ -764,6 +769,7 @@ export function applyPassiveHotFromPassive(
     passive.hotAmount,
   );
   for (const target of targets) {
+    if (isAllySupportBlockedDuringArenaDominance(target, source)) continue;
     target.statusEffects = target.statusEffects.filter(
       (effect) => effect.id !== effectId,
     );

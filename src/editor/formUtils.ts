@@ -317,6 +317,49 @@ export function createSelect<T extends string | number>(
   return select;
 }
 
+export function createGroupedSelect<T extends string>(
+  value: T,
+  groups: { label: string; options: { value: T; label: string }[] }[],
+  onChange: (value: T) => void,
+): HTMLSelectElement {
+  const select = createEl('select', 'editor-select') as HTMLSelectElement;
+  const valueStr = String(value);
+  let matched = false;
+  const flatOptions: { value: T; label: string }[] = [];
+  for (const group of groups) {
+    const optgroup = createEl('optgroup', undefined) as HTMLOptGroupElement;
+    optgroup.label = group.label;
+    for (const option of group.options) {
+      flatOptions.push(option);
+      const opt = createEl('option') as HTMLOptionElement;
+      opt.value = String(option.value);
+      opt.textContent = option.label;
+      if (String(option.value) === valueStr) {
+        opt.selected = true;
+        matched = true;
+      }
+      optgroup.appendChild(opt);
+    }
+    select.appendChild(optgroup);
+  }
+  if (!matched && valueStr) {
+    const opt = createEl('option') as HTMLOptionElement;
+    opt.value = valueStr;
+    opt.textContent = valueStr;
+    opt.selected = true;
+    select.insertBefore(opt, select.firstChild);
+    flatOptions.push({ value, label: valueStr });
+  } else if (matched) {
+    select.value = valueStr;
+  }
+  select.addEventListener('change', () => {
+    const raw = select.value;
+    const option = flatOptions.find((entry) => String(entry.value) === raw);
+    if (option) onChange(option.value);
+  });
+  return select;
+}
+
 export function createFieldRow(
   label: string,
   control: HTMLElement,

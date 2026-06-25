@@ -15,6 +15,7 @@ import {
   statusBadgeOutlinePad,
 } from '../render/statusBadgeRenderer.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
+import { resolveRecastFillView } from './partyHudRecast.ts';
 
 interface RecastCellElements {
   cell: HTMLElement;
@@ -289,42 +290,18 @@ export class PartyHudPanel {
         }
       }
 
+      const fillView = resolveRecastFillView(cd, entry.useLocked);
       cell.classList.toggle(
         'party-hud-recast-cell--fire-hold',
-        cd.fireHold === true,
+        fillView.showFireHold,
       );
-
-      const activeEffectRemaining = cd.activeEffectRemaining ?? 0;
-      const activeEffectTotal = cd.activeEffectTotal ?? 0;
-      if (activeEffectRemaining > 0 && activeEffectTotal > 0) {
-        const ratio = Math.max(
-          0,
-          Math.min(1, activeEffectRemaining / activeEffectTotal),
-        );
-        fill.style.width = `${ratio * 100}%`;
-        fill.dataset.state = 'active';
+      fill.style.width = `${fillView.widthPct}%`;
+      fill.dataset.state = fillView.state;
+      if (fillView.pausedMax) {
+        fill.dataset.pausedMax = 'true';
+      } else {
         delete fill.dataset.pausedMax;
-        continue;
       }
-
-      const ready = cd.remaining <= 0;
-      const chargeRatio = ready
-        ? 1
-        : Math.max(0, Math.min(1, 1 - cd.remaining / cd.triggerValue));
-      if (entry.useLocked) {
-        fill.style.width = `${chargeRatio * 100}%`;
-        fill.dataset.state = 'paused';
-        if (ready) {
-          fill.dataset.pausedMax = 'true';
-        } else {
-          delete fill.dataset.pausedMax;
-        }
-        continue;
-      }
-
-      fill.style.width = `${chargeRatio * 100}%`;
-      fill.dataset.state = ready ? 'ready' : 'charging';
-      delete fill.dataset.pausedMax;
     }
   }
 }

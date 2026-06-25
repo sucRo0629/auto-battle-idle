@@ -6,16 +6,14 @@ import {
   getEffectiveMaxHp,
   getEffectiveReg,
 } from "../combatMath.ts";
-import {
-  getBattleX,
-  isPlayerRearAssaultAccess,
-} from "../combatPosition.ts";
+import { getBattleX, isPlayerRearAssaultAccess } from "../combatPosition.ts";
 import { hasMatchingStatus } from "../statusMatching.ts";
 import {
   compareThreatTargetPriority,
   pickHighestThreatAlly,
   pickThreatTargetWithHysteresis,
 } from "../threat.ts";
+import { isArenaDominanceActive } from "../arenaDominance.ts";
 import type {
   BuffFilterTag,
   CombatantState,
@@ -112,9 +110,7 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
     const order = raw.order;
     if (
       (side !== "ally" && side !== "enemy") ||
-      (order !== "nearest" &&
-        order !== "farthest" &&
-        order !== "selfOrigin")
+      (order !== "nearest" && order !== "farthest" && order !== "selfOrigin")
     ) {
       throw new Error("Invalid target.distance fields");
     }
@@ -234,7 +230,7 @@ export interface TargetRuleContext {
 /** effect target の適用スコープ（spec.side は actor 視点。自己対象は self） */
 export function targetSpecFaction(
   spec: TargetSpec,
-  _actor: CombatantState,
+  _actor: CombatantState
 ): TargetRuleOverrideApplyTo | "self" {
   if (spec.kind === "self") return "self";
   if (spec.kind === "distance" || spec.kind === "stat" || spec.kind === "all") {
@@ -257,7 +253,10 @@ export function resolveTargetSpec(
 ): TargetSpec {
   for (let i = passives.length - 1; i >= 0; i--) {
     const passive = passives[i]!;
-    if (passive.effect !== "targetRuleOverride" || !passive.targetRuleOverride) {
+    if (
+      passive.effect !== "targetRuleOverride" ||
+      !passive.targetRuleOverride
+    ) {
       continue;
     }
     const scope = passive.targetRuleOverrideApplyTo ?? "enemy";
@@ -414,7 +413,7 @@ export function resolveApproachTargetSpec(spec: TargetSpec): TargetSpec {
 export function applyIncludeSelfFilter(
   spec: TargetSpec,
   actor: CombatantState,
-  targets: SkillHitTarget[],
+  targets: SkillHitTarget[]
 ): SkillHitTarget[] {
   if (spec.kind === "self") {
     return targets;
@@ -438,14 +437,22 @@ export type PickTargetOptions = {
   moveAnchor?: boolean;
   /** heal 等：味方 stat / distance 対象で使用者を候補プールに含める */
   includeActorInAllyPool?: boolean;
+  /** 単体攻撃ターゲット選定（闘技場の掟の強制ターゲット用） */
+  singleTargetAttack?: boolean;
 };
 
-/** 回復 effect は味方対象に使用者自身も含める */
+/** 回復 effect は味方対象に使用者自身も含める。単体 damage は闘技場の掟判定用 */
 export function pickOptionsForEffect(
-  effect: SkillEffectDef | undefined,
+  effect: SkillEffectDef | undefined
 ): PickTargetOptions | undefined {
-  if (effect?.type === 'heal') {
+  if (effect?.type === "heal") {
     return { includeActorInAllyPool: true };
+  }
+  if (
+    effect?.type === "damage" &&
+    (effect.targetShape ?? "single") === "single"
+  ) {
+    return { singleTargetAttack: true };
   }
   return undefined;
 }
@@ -458,7 +465,7 @@ function includeActorInAllyPool(options?: PickTargetOptions): boolean {
 function allySelectablePool(
   pool: CombatantState[],
   actor: CombatantState,
-  options?: PickTargetOptions,
+  options?: PickTargetOptions
 ): CombatantState[] {
   if (includeActorInAllyPool(options)) {
     return pool.filter((unit) => unit.isAlive);
@@ -469,7 +476,7 @@ function allySelectablePool(
 /** 味方対象で自身を除いた後に候補が空なら、単独パーティ時は自身にフォールバック */
 function allySelectableExcludingSelf(
   pool: CombatantState[],
-  actor: CombatantState,
+  actor: CombatantState
 ): CombatantState[] {
   const others = pool.filter((unit) => unit.id !== actor.id);
   if (others.length > 0) return others;
@@ -482,7 +489,7 @@ function allySelectableExcludingSelf(
 function pickEnemyByActorDistance(
   actor: CombatantState,
   pool: CombatantState[],
-  order: "nearest" | "farthest",
+  order: "nearest" | "farthest"
 ): CombatantState {
   const actorX = getBattleX(actor);
   return pool.reduce((a, b) => {
@@ -495,19 +502,17 @@ function pickEnemyByActorDistance(
 
 function enemyForwardFacingPool(
   actor: CombatantState,
-  pool: CombatantState[],
+  pool: CombatantState[]
 ): CombatantState[] {
   const actorX = getBattleX(actor);
-  return pool.filter(
-    (unit) => !isPlayerRearAssaultAccess(unit, actorX),
-  );
+  return pool.filter((unit) => !isPlayerRearAssaultAccess(unit, actorX));
 }
 
 export function pickTargetFromPool(
   spec: TargetSpec,
   actor: CombatantState,
   pool: CombatantState[],
-  options?: PickTargetOptions,
+  options?: PickTargetOptions
 ): CombatantState | null {
   if (pool.length === 0) return null;
 
@@ -528,9 +533,18 @@ export function pickTargetFromPool(
       // Target Intent: AttackTarget. Enemy attacks player-side targets by Threat.
       if (spec.order === "nearest" && !options?.moveAnchor) {
         const facingPool = enemyForwardFacingPool(actor, pool);
+        if (options?.singleTargetAttack) {
+          const dominanceDuelist = facingPool.find(
+            (unit) => unit.isAlive && isArenaDominanceActive(unit)
+          );
+          if (dominanceDuelist) {
+            actor.threatFocusTargetId = dominanceDuelist.id;
+            return dominanceDuelist;
+          }
+        }
         const { target, focusId } = pickThreatTargetWithHysteresis(
           facingPool,
-          actor.threatFocusTargetId,
+          actor.threatFocusTargetId
         );
         if (focusId !== undefined) {
           actor.threatFocusTargetId = focusId;
@@ -584,9 +598,7 @@ export function pickTargetFromPool(
 
   if (spec.kind === "stat") {
     const selectable =
-      spec.side === "ally"
-        ? allySelectablePool(pool, actor, options)
-        : pool;
+      spec.side === "ally" ? allySelectablePool(pool, actor, options) : pool;
     if (selectable.length === 0) return null;
     const pickHigher = spec.order === "highest";
     const pickLower = spec.order === "lowest" || spec.order === "ratio";
@@ -614,7 +626,7 @@ export function pickTargetFromPool(
 /** ally HP 割合最低: 満タン（hp >= maxHp）の味方は対象プールから除外 */
 export function filterSelectablePool(
   spec: TargetSpec,
-  pool: CombatantState[],
+  pool: CombatantState[]
 ): CombatantState[] {
   if (
     spec.kind === "stat" &&
@@ -623,7 +635,7 @@ export function filterSelectablePool(
     spec.order === "ratio"
   ) {
     return pool.filter(
-      (unit) => unit.isAlive && unit.hp < getEffectiveMaxHp(unit),
+      (unit) => unit.isAlive && unit.hp < getEffectiveMaxHp(unit)
     );
   }
   return pool;
@@ -633,7 +645,7 @@ export function orderPoolByTarget(
   spec: TargetSpec,
   actor: CombatantState,
   pool: CombatantState[],
-  options?: PickTargetOptions,
+  options?: PickTargetOptions
 ): CombatantState[] {
   if (pool.length <= 1) return [...pool];
 
@@ -668,8 +680,8 @@ export function orderPoolByTarget(
     const selectable = distanceSpecIncludesSelf(spec)
       ? copy.filter((unit) => unit.isAlive)
       : includeActorInAllyPool(options)
-        ? copy.filter((unit) => unit.isAlive)
-        : copy.filter((unit) => unit.id !== actor.id);
+      ? copy.filter((unit) => unit.isAlive)
+      : copy.filter((unit) => unit.id !== actor.id);
     const sorted = selectable.sort((a, b) => {
       const da = Math.abs(getBattleX(a) - actorX);
       const db = Math.abs(getBattleX(b) - actorX);

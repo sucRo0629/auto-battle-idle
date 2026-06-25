@@ -5,6 +5,7 @@ import {
   resolveResourceAmount,
 } from './combatMath.ts';
 import { isBarrierFullyBroken } from './barrierBreakRegen.ts';
+import { isAllySupportBlockedDuringArenaDominance } from './arenaDominance.ts';
 import type { CombatantState, PassiveSkillDef, ResourceAmountSpec } from './types.ts';
 
 export interface BarrierDepletionHealResult {
@@ -47,6 +48,14 @@ export function tryTriggerBarrierDepletionHeal(
   }
 
   if (!bestSource) return { healed: 0 };
+  if (
+    isAllySupportBlockedDuringArenaDominance(
+      target,
+      bestSource.wardweaver,
+    )
+  ) {
+    return { healed: 0 };
+  }
 
   const amountSpec: ResourceAmountSpec =
     bestSource.passive.healAmount ??

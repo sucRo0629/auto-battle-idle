@@ -3,6 +3,7 @@ import {
   getPassiveDefs,
   resolveHealAmount,
 } from './combatMath.ts';
+import { isAllySupportBlockedDuringArenaDominance } from './arenaDominance.ts';
 import {
   applyDirectHealWithExcess,
   sameSideAlliesFrom,
@@ -90,6 +91,7 @@ export function tryTriggerHealReservation(
 
     const healer = allUnits.find((unit) => unit.id === effect.sourceId);
     if (!healer?.isAlive) continue;
+    if (isAllySupportBlockedDuringArenaDominance(target, healer)) continue;
 
     target.statusEffects = target.statusEffects.filter(
       (entry) => entry.id !== effect.id,

@@ -26,6 +26,8 @@ export interface FireGateContext {
   isWaveStartPhase: boolean;
   isWaveEndPhase: boolean;
   pendingHitQueue?: readonly import('../types.ts').PendingSkillHit[];
+  waveIndex?: number;
+  waveCount?: number;
 }
 
 function toConditionEvalContext(ctx: FireGateContext) {
@@ -41,6 +43,8 @@ function toConditionEvalContext(ctx: FireGateContext) {
     battleTimeSec: ctx.battleTimeSec,
     pendingHitQueue: ctx.pendingHitQueue,
     skill: ctx.skill,
+    waveIndex: ctx.waveIndex,
+    waveCount: ctx.waveCount,
   };
 }
 

@@ -4,6 +4,7 @@ import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
 import { spriteDrawY } from "./spriteVisualDepth.ts";
 
 const POPUP_DURATION_MS = 800;
+export const COMBAT_REACTION_POPUP_DURATION_MS = POPUP_DURATION_MS;
 const FADE_IN_END = 0.15;
 const FADE_OUT_START = 0.5;
 const ZOOM_IN_END = 0.35;
@@ -11,7 +12,15 @@ const START_SCALE = 0.4;
 const END_SCALE = 1;
 const HEAD_LABEL_OFFSET_Y = -4;
 
-export type CombatReactionKind = "evade" | "block" | "counter" | "invulnerable" | "lastStandRecovery";
+export type CombatReactionKind =
+  | "evade"
+  | "block"
+  | "counter"
+  | "invulnerable"
+  | "lastStandRecovery"
+  | "lastStandGuts"
+  | "enemyReelIn"
+  | "knockback";
 
 const REACTION_TEXT: Record<CombatReactionKind, string> = {
   evade: "回避！",
@@ -19,13 +28,20 @@ const REACTION_TEXT: Record<CombatReactionKind, string> = {
   counter: "反撃！",
   invulnerable: "無敵！",
   lastStandRecovery: "再起！",
+  lastStandGuts: "不屈！",
+  enemyReelIn: "引き寄せ！",
+  knockback: "ノックバック！",
 };
+
+export function getCombatReactionText(kind: CombatReactionKind): string {
+  return REACTION_TEXT[kind];
+}
 
 function easeOutCubic(t: number): number {
   return 1 - (1 - t) ** 3;
 }
 
-function popupAlpha(progress: number): number {
+export function computeCombatReactionPopupAlpha(progress: number): number {
   if (progress < FADE_IN_END) {
     return progress / FADE_IN_END;
   }
@@ -35,7 +51,7 @@ function popupAlpha(progress: number): number {
   return 1;
 }
 
-function popupScale(progress: number): number {
+export function computeCombatReactionPopupScale(progress: number): number {
   if (progress < ZOOM_IN_END) {
     const t = easeOutCubic(progress / ZOOM_IN_END);
     return START_SCALE + t * (END_SCALE - START_SCALE);
@@ -45,6 +61,14 @@ function popupScale(progress: number): number {
     return END_SCALE + t * 0.15;
   }
   return END_SCALE;
+}
+
+function popupAlpha(progress: number): number {
+  return computeCombatReactionPopupAlpha(progress);
+}
+
+function popupScale(progress: number): number {
+  return computeCombatReactionPopupScale(progress);
 }
 
 interface ReactionEntry {
@@ -94,12 +118,12 @@ export class CombatReactionPopupManager {
       const popupScaleValue = popupScale(progress);
       const bob = getPlaceholderSpriteYOffset(layout, scale);
       const centerX = layout.x + spriteSize / 2;
-      const centerY = spriteDrawY(layout) + bob + HEAD_LABEL_OFFSET_Y;
+      const anchorY = spriteDrawY(layout) + bob + HEAD_LABEL_OFFSET_Y;
 
-      const text = REACTION_TEXT[popup.kind];
+      const text = getCombatReactionText(popup.kind);
 
       ctx.save();
-      ctx.translate(centerX, centerY);
+      ctx.translate(centerX, anchorY);
       ctx.scale(popupScaleValue, popupScaleValue);
       ctx.globalAlpha = alpha;
       ctx.font = `bold ${fontSize}px ${theme.fontFamily}`;

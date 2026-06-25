@@ -1923,8 +1923,15 @@ function defaultFireCondition(kind: FireConditionKind): FireCondition {
       return { kind, min: 1 };
     case "allyDamaged":
     case "waveStart":
+    case "finalWaveStart":
     case "waveEnd":
       return { kind };
+    case "pendingIncomingDamage":
+      return { kind, maxHpRatio: 0.3, windowSec: 2 };
+    case "targetBarrierBelowGrant":
+      return { kind };
+    case "blockResonanceStacks":
+      return { kind, min: 1 };
   }
 }
 
@@ -2066,7 +2073,45 @@ function appendFireConditionFields(
     }
     case "allyDamaged":
     case "waveStart":
+    case "finalWaveStart":
     case "waveEnd":
+    case "targetBarrierBelowGrant":
+      break;
+    case "pendingIncomingDamage":
+      card.appendChild(
+        createFieldRow(
+          "HP割合しきい値",
+          createNumberInput(
+            condition.maxHpRatio,
+            (maxHpRatio) =>
+              onChange({ ...condition, maxHpRatio }, { rerender: false }),
+            { step: 0.05, min: 0.01, max: 1 }
+          )
+        )
+      );
+      card.appendChild(
+        createFieldRow(
+          "ウィンドウ秒",
+          createNumberInput(
+            condition.windowSec,
+            (windowSec) =>
+              onChange({ ...condition, windowSec }, { rerender: false }),
+            { step: 0.1, min: 0.1 }
+          )
+        )
+      );
+      break;
+    case "blockResonanceStacks":
+      card.appendChild(
+        createFieldRow(
+          "最小スタック",
+          createNumberInput(
+            condition.min,
+            (min) => onChange({ ...condition, min }, { rerender: false }),
+            { min: 1, step: 1 }
+          )
+        )
+      );
       break;
   }
 
@@ -2229,6 +2274,25 @@ export function appendActiveFireGateFields(
           );
         },
         { min: 0, max: GLOBAL_MAX_CHARGES_CAP, step: 1 }
+      )
+    )
+  );
+
+  section.appendChild(
+    createFieldRow(
+      "Stage 発動上限 (0=省略)",
+      createNumberInput(
+        active.stageTriggerLimit ?? 0,
+        (value) => {
+          onChange(
+            (current) => {
+              if (value <= 0) delete current.stageTriggerLimit;
+              else current.stageTriggerLimit = value;
+            },
+            { rerender: false }
+          );
+        },
+        { min: 0, step: 1 }
       )
     )
   );

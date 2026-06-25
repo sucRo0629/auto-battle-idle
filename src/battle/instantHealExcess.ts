@@ -5,6 +5,7 @@ import {
   getEffectiveMaxHp,
   getPassiveDefs,
 } from './combatMath.ts';
+import { isAllySupportBlockedDuringArenaDominance } from './arenaDominance.ts';
 import {
   applyExcessHealToBarrierFromExcess,
   getPassiveSpecialEffectMultiplier,
@@ -116,6 +117,12 @@ export function resolveInstantHealExcessEffects(
           primaryTarget,
           sameSideAllies,
         );
+        if (
+          redirectTarget &&
+          isAllySupportBlockedDuringArenaDominance(redirectTarget, healer)
+        ) {
+          redirectTarget = undefined;
+        }
         if (redirectTarget) {
           redirectAmount = resolveRedirectHealAmount(
             healer,

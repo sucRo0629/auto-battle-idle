@@ -1,6 +1,10 @@
 import { isInvulnerable } from './invulnerable.ts';
 import { tryLastStandInvulnerable } from './lastStandInvulnerable.ts';
 import { tryLastStandRecovery } from './lastStandRecovery.ts';
+import {
+  applyLastStandGutsHpFloor,
+  tryLastStandGuts,
+} from './lastStandGuts.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 
 export interface IncomingDamageMitigationOptions {
@@ -12,6 +16,7 @@ export interface IncomingDamageMitigationResult {
   invulnerableBlocked: boolean;
   lastStandTriggered: boolean;
   lastStandRecoveryTriggered: boolean;
+  lastStandGutsTriggered: boolean;
 }
 
 export function mitigateIncomingDamage(
@@ -26,6 +31,7 @@ export function mitigateIncomingDamage(
       invulnerableBlocked: false,
       lastStandTriggered: false,
       lastStandRecoveryTriggered: false,
+      lastStandGutsTriggered: false,
     };
   }
 
@@ -35,6 +41,7 @@ export function mitigateIncomingDamage(
       invulnerableBlocked: true,
       lastStandTriggered: false,
       lastStandRecoveryTriggered: false,
+      lastStandGutsTriggered: false,
     };
   }
 
@@ -45,6 +52,7 @@ export function mitigateIncomingDamage(
       invulnerableBlocked: false,
       lastStandTriggered: lastStand.triggered,
       lastStandRecoveryTriggered: false,
+      lastStandGutsTriggered: false,
     };
   }
 
@@ -60,13 +68,27 @@ export function mitigateIncomingDamage(
       invulnerableBlocked: false,
       lastStandTriggered: false,
       lastStandRecoveryTriggered: recovery.triggered,
+      lastStandGutsTriggered: false,
     };
   }
 
+  const guts = tryLastStandGuts(target, damage, passives);
+  if (guts.negated) {
+    return {
+      finalDamage: 0,
+      invulnerableBlocked: false,
+      lastStandTriggered: false,
+      lastStandRecoveryTriggered: false,
+      lastStandGutsTriggered: guts.triggered,
+    };
+  }
+
+  const capped = applyLastStandGutsHpFloor(target, damage);
   return {
-    finalDamage: damage,
+    finalDamage: capped,
     invulnerableBlocked: false,
     lastStandTriggered: false,
     lastStandRecoveryTriggered: false,
+    lastStandGutsTriggered: false,
   };
 }

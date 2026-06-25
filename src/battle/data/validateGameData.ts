@@ -1356,6 +1356,7 @@ function parseFireCondition(raw: unknown, context: string): FireCondition {
   }
   if (kind === 'allyDamaged') return { kind: 'allyDamaged' };
   if (kind === 'waveStart') return { kind: 'waveStart' };
+  if (kind === 'finalWaveStart') return { kind: 'finalWaveStart' };
   if (kind === 'waveEnd') return { kind: 'waveEnd' };
   if (kind === 'enemyCount') {
     const min = parseOptionalNumber(obj, 'min', context);
@@ -2323,6 +2324,42 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     return normalizeSkillEffect({
       type: 'blockResonanceConsume',
       target: { kind: 'self' },
+      ...sequenceTiming,
+      ...presentation,
+    });
+  }
+  if (typeRaw === 'enemyReelIn') {
+    const target = parseEffectTarget(obj, context);
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    const targetShapeFields = parseTargetShapeFields(obj, context);
+    const range = parseOptionalRange(obj, context);
+    return normalizeSkillEffect({
+      type: 'enemyReelIn',
+      target,
+      ...targetShapeFields,
+      ...(range !== undefined ? { range } : {}),
+      ...sequenceTiming,
+      ...presentation,
+    });
+  }
+  if (typeRaw === 'arenaDominance') {
+    const target = parseEffectTarget(obj, context);
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    const durationSec = parseOptionalNonNegativeNumber(obj, 'durationSec', context);
+    const nonMarkDamageMultiplier = parseOptionalNumber(
+      obj,
+      'nonMarkDamageMultiplier',
+      context,
+    );
+    return normalizeSkillEffect({
+      type: 'arenaDominance',
+      target: target.kind === 'self' ? target : { kind: 'self' },
+      ...(durationSec !== undefined ? { durationSec } : {}),
+      ...(nonMarkDamageMultiplier !== undefined
+        ? { nonMarkDamageMultiplier }
+        : {}),
       ...sequenceTiming,
       ...presentation,
     });
@@ -3513,6 +3550,104 @@ function requirePassiveEffectParams(
           : {}),
       };
     }
+    case 'duelistPride': {
+      const prideHpRatioMin = parseOptionalNumber(obj, 'prideHpRatioMin', context);
+      const prideHealMultiplier = parseOptionalNumber(
+        obj,
+        'prideHealMultiplier',
+        context,
+      );
+      if (prideHpRatioMin !== undefined && (prideHpRatioMin < 0 || prideHpRatioMin > 1)) {
+        invalidField(context, 'prideHpRatioMin', 'must be between 0 and 1');
+      }
+      if (
+        prideHealMultiplier !== undefined &&
+        (prideHealMultiplier < 0 || prideHealMultiplier > 1)
+      ) {
+        invalidField(context, 'prideHealMultiplier', 'must be between 0 and 1');
+      }
+      return {
+        ...base,
+        ...(prideHpRatioMin !== undefined ? { prideHpRatioMin } : {}),
+        ...(prideHealMultiplier !== undefined ? { prideHealMultiplier } : {}),
+      };
+    }
+    case 'lowHpCover': {
+      const coverHpRatioThreshold = parseOptionalNumber(
+        obj,
+        'coverHpRatioThreshold',
+        context,
+      );
+      const coverWaveLimit = parseOptionalNonNegativeNumber(
+        obj,
+        'coverWaveLimit',
+        context,
+      );
+      return {
+        ...base,
+        ...(coverHpRatioThreshold !== undefined ? { coverHpRatioThreshold } : {}),
+        ...(coverWaveLimit !== undefined ? { coverWaveLimit } : {}),
+      };
+    }
+    case 'lastStandGuts': {
+      const durationSec = parseOptionalNonNegativeNumber(
+        obj,
+        'lastStandGutsDurationSec',
+        context,
+      );
+      const endStunSec = parseOptionalNonNegativeNumber(
+        obj,
+        'lastStandGutsEndStunSec',
+        context,
+      );
+      const endKnockbackPx = parseOptionalNonNegativeNumber(
+        obj,
+        'lastStandGutsEndKnockbackPx',
+        context,
+      );
+      return {
+        ...base,
+        ...(durationSec !== undefined ? { lastStandGutsDurationSec: durationSec } : {}),
+        ...(endStunSec !== undefined ? { lastStandGutsEndStunSec: endStunSec } : {}),
+        ...(endKnockbackPx !== undefined
+          ? { lastStandGutsEndKnockbackPx: endKnockbackPx }
+          : {}),
+      };
+    }
+    case 'bloodlustDuelist': {
+      const blockChance = parseOptionalNumber(obj, 'bloodlustBlockChance', context);
+      const defRatio = parseOptionalNumber(
+        obj,
+        'bloodlustDefMaxBuffAtHpRatio',
+        context,
+      );
+      const defMul = parseOptionalNumber(obj, 'bloodlustDefBuffMultiplierMax', context);
+      const atkRatio = parseOptionalNumber(
+        obj,
+        'bloodlustAtkMaxBuffAtHpRatio',
+        context,
+      );
+      const atkMul = parseOptionalNumber(obj, 'bloodlustAtkBuffMultiplierMax', context);
+      const atkCurveExponent = parseOptionalNumber(
+        obj,
+        'bloodlustAtkBuffCurveExponent',
+        context,
+      );
+      if (atkCurveExponent !== undefined && atkCurveExponent < 1) {
+        invalidField(context, 'bloodlustAtkBuffCurveExponent', 'must be >= 1');
+      }
+      return {
+        ...base,
+        ...(blockChance !== undefined ? { bloodlustBlockChance: blockChance } : {}),
+        ...(defRatio !== undefined ? { bloodlustDefMaxBuffAtHpRatio: defRatio } : {}),
+        ...(defMul !== undefined ? { bloodlustDefBuffMultiplierMax: defMul } : {}),
+        ...(atkRatio !== undefined ? { bloodlustAtkMaxBuffAtHpRatio: atkRatio } : {}),
+        ...(atkMul !== undefined ? { bloodlustAtkBuffMultiplierMax: atkMul } : {}),
+        ...(atkCurveExponent !== undefined
+          ? { bloodlustAtkBuffCurveExponent: atkCurveExponent }
+          : {}),
+      };
+    }
     case 'heal': {
       const healSubKind =
         obj.healSubKind === undefined
@@ -4370,13 +4505,33 @@ function validateTriggerValue(
   context: string,
 ): void {
   if (kind === 'time') {
-    if (value < 0.1) {
-      invalidField(context, 'value', 'must be >= 0.1 for time trigger');
+    if (value < 0) {
+      invalidField(context, 'value', 'must be >= 0 for time trigger');
     }
     return;
   }
   if (!Number.isInteger(value) || value < 1) {
     invalidField(context, 'value', 'must be an integer >= 1 for count triggers');
+  }
+}
+
+function validateNoChargeTimeTriggerActive(
+  trigger: SkillTrigger,
+  firePolicy: FirePolicy | undefined,
+  fireConditions: FireCondition[] | undefined,
+  stageTriggerLimit: number | undefined,
+  context: string,
+): void {
+  if (trigger.kind !== 'time' || trigger.value !== 0) return;
+  const hasFireGate =
+    firePolicy === 'smart' &&
+    ((fireConditions?.length ?? 0) > 0 || stageTriggerLimit !== undefined);
+  if (!hasFireGate) {
+    invalidField(
+      context,
+      'trigger.value',
+      'time trigger value 0 requires smart firePolicy and fireConditions or stageTriggerLimit',
+    );
   }
 }
 
@@ -4507,6 +4662,29 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
         'required when firePolicy is smart',
       );
     }
+    const stageTriggerLimit = parseOptionalNonNegativeNumber(
+      obj,
+      'stageTriggerLimit',
+      context,
+    );
+    const arenaDominanceDurationSec = parseOptionalNonNegativeNumber(
+      obj,
+      'arenaDominanceDurationSec',
+      context,
+    );
+    const arenaDominanceNonMarkDamageMultiplier = parseOptionalNumber(
+      obj,
+      'arenaDominanceNonMarkDamageMultiplier',
+      context,
+    );
+
+    validateNoChargeTimeTriggerActive(
+      trigger,
+      firePolicy,
+      fireConditions,
+      stageTriggerLimit,
+      context,
+    );
 
     return {
       id,
@@ -4544,6 +4722,13 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
         : {}),
       ...(blockResonanceOnBlockKnockbackDistancePx !== undefined
         ? { blockResonanceOnBlockKnockbackDistancePx }
+        : {}),
+      ...(stageTriggerLimit !== undefined ? { stageTriggerLimit } : {}),
+      ...(arenaDominanceDurationSec !== undefined
+        ? { arenaDominanceDurationSec }
+        : {}),
+      ...(arenaDominanceNonMarkDamageMultiplier !== undefined
+        ? { arenaDominanceNonMarkDamageMultiplier }
         : {}),
     };
   });

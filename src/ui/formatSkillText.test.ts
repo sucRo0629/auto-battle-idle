@@ -341,4 +341,20 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('射程+0');
     expect(desc).not.toContain('射程0');
   });
+
+  it('formats no-charge time trigger without interval suffix', () => {
+    const def: ActiveSkillDef = {
+      id: 'df_duelist_active_4',
+      name: '闘技場の掟',
+      trigger: { kind: 'time', value: 0 },
+      firePolicy: 'smart',
+      fireConditions: [{ kind: 'finalWaveStart' }],
+      stageTriggerLimit: 1,
+      effect: [{ type: 'arenaDominance', target: { kind: 'self' }, durationSec: 15 }],
+    };
+    const desc = formatActiveDescription(def);
+    expect(desc).toContain('チャージなし');
+    expect(desc).not.toContain('0s毎');
+    expect(desc).toContain('最終Wave開始');
+  });
 });

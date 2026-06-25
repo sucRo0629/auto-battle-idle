@@ -171,6 +171,10 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 
 **時間トリガー（`time`）** — `remaining` が 0 になると発動可能状態になる。発動できる場合は `SkillExecutor` が1回発動し、`trigger.value` にリセットする。スタン中などで行動できない場合も `remaining = 0` の準備完了状態を保持し、CD は停止しない（レガシー `interval` は `trigger.kind: time` として解釈）。
 
+**チャージなし（`time` / `value: 0`）** — 時間充填なし（`remaining` は常に 0、CD tick なし）。`smart` + `fireConditions` または `stageTriggerLimit` が必須。発動後も `remaining = 0` のまま。実装: `skillTrigger.ts` `isNoChargeTimeTrigger`。
+
+**`finalWaveStart` イベント発動** — `fireConditions` に `finalWaveStart` を持つアクティブは、最終 Wave 接敵時（`tryAutoFireFinalWaveStageSkills`）に `remaining` を 0 に強制リセットしてから発動する（`trigger.value` が大きくてもイベント時は撃てる）。
+
 **カウントトリガー（`basicAttackCount` / `hitsTaken`）は CD ではなくイベントゲージ。** `trigger.value = N` のとき、次の3段階で進行する。
 
 | フェーズ | 条件 | 攻撃回数 | 被攻撃回数 | HUD ゲージ |
@@ -188,6 +192,7 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 | kind | 成立条件 |
 | ---- | -------- |
 | `waveStart` | PartyDeploy 開始〜接敵（`beginEngaged`）まで |
+| `finalWaveStart` | 最終 Wave の PartyDeploy 開始〜接敵（`beginEngaged`）まで |
 | `waveEnd` | 敵全滅 settle〜次 Wave deploy まで |
 | `enemyCount` | 生存敵数（`scope: living`）または射程内敵数（`inRange`） |
 | `targetHp` / `debuff` / `minTargets` / `selfHp` / `allyDamaged` | 各 kind の閾値・タグ |
@@ -208,7 +213,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 | `animLock` | body strip の再生時間だけ `SkillSequenceRunner.beginAnimLock` で保持し、`isActorBusy` / `isBasicAttackBlocked` で **他スキル発動を停止**する。`presentationLock` と同様に **CD 進行は止めない**。body 再生を止める用途はここで自動付与する。 |
 | `useDurationSec` | アクティブのみ optional（省略 / `0` = 即時）。スキルデータ層では SkillHold を発生させる宣言だけを担う。戦闘エンジン層は発動成功時に `SkillSequenceRunner.beginUse` で SkillHold を開始し、`isActorBusy` により **そのユニットの全スキル**（基本攻撃含む）を発動不可にする。hold / channel / commit time 系スキルの特性であり、デバフではない。効果適用タイミングは変更なし（即時 / spread は pending キュー）。**SkillHold 中は使用者自身の basic CD / active CD / イベントゲージを停止する**。Party HUD: 停止中は `busy`（黄）。`move` シーケンス実行中も busy — `useDurationSec` を併用した場合、シーケンス終了後も hold 残量があれば busy 継続。`useDurationSec` の表示ゲージはSkillHold残量を示す用途で、通常CDとは独立。 |
 
-**Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 3px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。
+**Party HUD（アクティブ）:** 2×2 四分割（slot 0=左上, 1=右上, 2=左下, 3=右下）。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 3px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。`stageTriggerLimit` を持つスキルで Stage 内残回数が 0 のときは fill を **empty（トラック色のみ・最暗）** のまま表示し、`ready` / `fireHold` にしない。
 
 **スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、使用者として通常攻撃・アクティブを発動せず、ターゲット選択も行わない。スタン中のユニットは他ユニットからの攻撃・回復・効果対象にはなり得る。スタンは CD 停止効果を持たない。
 
@@ -315,6 +320,21 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 - 自己: `damageTaken × lastStandRecoverySelfDamageTakenMultiplier` を `lastStandRecoveryDurationSec`
 - 前列味方: `damageTaken × lastStandRecoveryFrontAllyDamageTakenMultiplier` を同秒数
 - バトルイベント `lastStandRecovery` → ポップアップ「再起！」（鉄衛士 `invulnerable` の「無敵！」とは別）
+
+### 闘技士 v1 専用メカニクス
+
+実装: `duelistPride.ts` / `lowHpCover.ts` / `lastStandGuts.ts` / `bloodlustDuelist.ts` / `enemyReelIn.ts` / `arenaDominance.ts`
+
+| effect | 要点 |
+| --- | --- |
+| `lowHpCover` | 味方 HP 割合 ≤ `coverHpRatioThreshold` の被ダメ適用先を闘技士へ差し替え（単体・AoE 各ヒット）。Wave 内 `coverWaveLimit` 回 |
+| `duelistPride` | 自身 `hp/maxHp` ≥ `prideHpRatioMin`（バリア非含有）のとき、受ける即時回復・HoT tick を `prideHealMultiplier` 倍（`arenaDominance` の味方支援拒否より弱い） |
+| `bloodlustDuelist` | block + 低 HP DEF（線形）/ ATK（`bloodlustAtkBuffCurveExponent` で指数カーブ、未指定=線形） |
+| `lastStandGuts` | 致死直前 Wave 1 回 → HP 1 未満にならない状態を数秒（完全無敵ではない）。終了時生存敵全体に短 stun + KB。イベント `lastStandGuts` →「不屈！」 |
+| `enemyReelIn` | 遠隔帯の敵（`attackType.ranged`）を対象に `battleX` を使用者 `traits.rangePx` の射程内へ引き寄せ（進軍下限整合）。effect の `range` はターゲットプール絞り込みのみで移動先には使わない。移動量 0 のときは effect 未適用（イベント・ポップアップなし）。`df_duelist_active_1` は本 effect のみの引き寄せ専用スキル。`firePolicy: smart` では `minTargets` が先頭 `enemyReelIn` の対象数を参照 |
+| `arenaDominance` | `finalWaveStart` + `stageTriggerLimit: 1` で発動。15 秒間、敵単体攻撃ターゲットを闘技士固定（AoE / `targetRuleOverride` 除外）。最高 ATK 敵に **闘士の指名**（`arenaMark`）。指名対象は闘技士以外からの被ダメ −50%。闘技士はマーク以外の敵からの被ダメ −50%。効果中、闘技士は味方（自身以外）からの回復・バリア・HoT を受けない。指名は効果終了と同時に解除 |
+
+`fireCondition` `finalWaveStart`: `waveIndex === stage.waves.length - 1` かつ Wave 開始フェーズ。
 
 
 | 種別     | 定義方法                                                                                                                                           |

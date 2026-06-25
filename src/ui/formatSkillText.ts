@@ -32,7 +32,10 @@ import type {
   StatusEffectStat,
   TargetSpec,
 } from "../battle/types.ts";
-import { asStatusEffectStatList, filterStatusEffectStats } from "../battle/types.ts";
+import {
+  asStatusEffectStatList,
+  filterStatusEffectStats,
+} from "../battle/types.ts";
 import {
   PASSIVE_PERIODIC_TRIGGER_LABELS,
   resolvePassiveBarrierTrigger,
@@ -86,7 +89,7 @@ const STATUS_STAT_SHORT: Record<StatusEffectStat, string> = {
 function formatTriggerLabel(kind: SkillTriggerKind, value: number): string {
   switch (kind) {
     case "time":
-      return `${value}s`;
+      return value === 0 ? "チャージなし" : `${value}s`;
     case "basicAttackCount":
       return `${value}攻撃`;
     case "hitsTaken":
@@ -118,6 +121,8 @@ function formatFireConditionSummary(condition: FireCondition): string {
       return "味方被ダメ";
     case "waveStart":
       return FIRE_CONDITION_KIND_LABELS.waveStart;
+    case "finalWaveStart":
+      return FIRE_CONDITION_KIND_LABELS.finalWaveStart;
     case "waveEnd":
       return FIRE_CONDITION_KIND_LABELS.waveEnd;
     case "enemyCount": {
@@ -129,7 +134,9 @@ function formatFireConditionSummary(condition: FireCondition): string {
       return `敵数${range}(${scope})`;
     }
     case "pendingIncomingDamage":
-      return `先読み被ダメ≥${Math.round(condition.maxHpRatio * 100)}%/${condition.windowSec}s`;
+      return `先読み被ダメ≥${Math.round(condition.maxHpRatio * 100)}%/${
+        condition.windowSec
+      }s`;
     case "targetBarrierBelowGrant":
       return "付与量>現バリア";
     case "blockResonanceStacks":
@@ -139,7 +146,7 @@ function formatFireConditionSummary(condition: FireCondition): string {
 
 function formatFireConditionsSummary(
   conditions: FireCondition[] | undefined,
-  match: "all" | "any" = "all",
+  match: "all" | "any" = "all"
 ): string {
   if (!conditions || conditions.length === 0) return "";
   const joiner = match === "any" ? " | " : " & ";
@@ -465,9 +472,9 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
         );
       } else if (effect.buffSubKind === "wardBarrier") {
         extras.push(
-          `${BUFF_SUB_KIND_LABELS.wardBarrier} ×${effect.stacks ?? 1}（被ダメ×${formatPercent(
-            effect.damageReductionRatio ?? 0.1
-          )}）`
+          `${BUFF_SUB_KIND_LABELS.wardBarrier} ×${
+            effect.stacks ?? 1
+          }（被ダメ×${formatPercent(effect.damageReductionRatio ?? 0.1)}）`
         );
       } else if (effect.buffSubKind === "block") {
         extras.push(
@@ -607,9 +614,7 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       extras.push(`${effect.durationSec}s`);
       break;
     case "knockback":
-      extras.push(
-        `${effect.distancePx}px+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`,
-      );
+      extras.push(`${effect.distancePx}px+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`);
       break;
     case "dispel": {
       const tags =
@@ -639,6 +644,20 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
           .filter(Boolean)
           .join(" ")
       );
+      break;
+    }
+    case "enemyReelIn":
+      break;
+    case "arenaDominance": {
+      if (effect.durationSec !== undefined) {
+        extras.push(`${effect.durationSec}s`);
+      }
+      extras.push("闘士の指名");
+      extras.push("闘技士以外被ダメ−50%");
+      extras.push("味方支援拒否");
+      if (effect.nonMarkDamageMultiplier !== undefined) {
+        extras.push(`非指名被ダメ×${effect.nonMarkDamageMultiplier}`);
+      }
       break;
     }
   }
@@ -684,6 +703,10 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
       return "薬効消費";
     case "blockResonanceConsume":
       return "迎撃消費";
+    case "enemyReelIn":
+      return "敵引き寄せ";
+    case "arenaDominance":
+      return "闘技場の掟";
     case "basicAttackTransform":
       return "通常攻撃変形";
     default:
@@ -782,7 +805,34 @@ function formatPassiveEffect(
     case "lastStandInvulnerable":
     case "frontBlockAura":
     case "lastStandRecovery":
+    case "lowHpCover":
+    case "duelistPride":
+    case "lastStandGuts":
+    case "bloodlustDuelist":
     case "heal": {
+      if (def.effect === "lowHpCover") {
+        const ratio = def.coverHpRatioThreshold ?? 0.35;
+        const limit = def.coverWaveLimit ?? 3;
+        return `低HP味方(≤${formatPercent(
+          ratio
+        )})の被ダメ肩代わり · ${limit}回/Wave`;
+      }
+      if (def.effect === "duelistPride") {
+        const minRatio = def.prideHpRatioMin ?? 0.5;
+        const healMul = def.prideHealMultiplier ?? 0.25;
+        return `HP≥${formatPercent(minRatio)} 被回復×${healMul}（バリア非対象）`;
+      }
+      if (def.effect === "lastStandGuts") {
+        const duration = def.lastStandGutsDurationSec ?? 4;
+        return `致死時 HP1維持 ${duration}s（Wave 1回）· 終了時敵全体スタン`;
+      }
+      if (def.effect === "bloodlustDuelist") {
+        const block = def.bloodlustBlockChance ?? 0.05;
+        const atkCurve = def.bloodlustAtkBuffCurveExponent;
+        const curveNote =
+          atkCurve !== undefined && atkCurve !== 1 ? ` · ATK曲線^${atkCurve}` : "";
+        return `block ${formatPercent(block)} · 低HP DEF/ATK 強化${curveNote}`;
+      }
       if (def.effect === "lastStandInvulnerable") {
         return "致死時 3秒無敵（Wave 1回・HP≤25%）";
       }
@@ -792,7 +842,9 @@ function formatPassiveEffect(
         const frontMul =
           def.lastStandRecoveryFrontAllyDamageTakenMultiplier ?? 0.75;
         const duration = def.lastStandRecoveryDurationSec ?? 5;
-        return `致死時 HP${formatPercent(hpRatio)}復活（Wave 1回）· 自己被ダメ×${selfMul} · 前列×${frontMul} · ${duration}s`;
+        return `致死時 HP${formatPercent(
+          hpRatio
+        )}復活（Wave 1回）· 自己被ダメ×${selfMul} · 前列×${frontMul} · ${duration}s`;
       }
       if (def.effect === "frontBlockAura") {
         const parts: string[] = ["前列 block aura"];
@@ -814,7 +866,9 @@ function formatPassiveEffect(
         }
         if (def.blockResonanceDamageTakenPerStack !== undefined) {
           parts.push(
-            `被ダメ-${formatPercent(def.blockResonanceDamageTakenPerStack)}/stack`,
+            `被ダメ-${formatPercent(
+              def.blockResonanceDamageTakenPerStack
+            )}/stack`
           );
         }
         if (def.blockResonanceDecayIntervalSec !== undefined) {
@@ -842,12 +896,12 @@ function formatPassiveEffect(
       }
       if (def.herbalPotencyHotPerStackPercent !== undefined) {
         potencyParts.push(
-          `HoT+${formatPercent(def.herbalPotencyHotPerStackPercent)}/stack`,
+          `HoT+${formatPercent(def.herbalPotencyHotPerStackPercent)}/stack`
         );
       }
       if (def.herbalPotencyConstitutionThresholds?.length) {
         potencyParts.push(
-          `体質 ${def.herbalPotencyConstitutionThresholds.join("/")}`,
+          `体質 ${def.herbalPotencyConstitutionThresholds.join("/")}`
         );
       }
       const potencySuffix =
@@ -881,11 +935,15 @@ function formatPassiveEffect(
       const sourceLabels = (def.excessHealSources ?? ["outgoing"]).map((s) =>
         s === "outgoing" ? "与" : "被"
       );
-      return `余剰回復転送 ×${def.redirectScale ?? 0.5} → 次低HP味方（${sourceLabels.join("・")}）`;
+      return `余剰回復転送 ×${
+        def.redirectScale ?? 0.5
+      } → 次低HP味方（${sourceLabels.join("・")}）`;
     }
     case "targetHpRatioHealScale": {
       const ratio = formatPercent(def.maxScaleAtHpRatio ?? 0);
-      return `対象HP比例回復 ×${def.healScaleMax ?? 1}（残HP${ratio}以下時最大）`;
+      return `対象HP比例回復 ×${
+        def.healScaleMax ?? 1
+      }（残HP${ratio}以下時最大）`;
     }
     case "healReservation": {
       const grant = formatPercent(def.grantOnHealMaxHpRatio ?? 1);
@@ -897,13 +955,13 @@ function formatPassiveEffect(
     }
     case "barrierBreakRegen": {
       const amount = formatResourceAmount(
-        def.barrierAmount ?? { kind: "atkBased", atkScale: 0.85 },
+        def.barrierAmount ?? { kind: "atkBased", atkScale: 0.85 }
       );
       return `バリア破壊時 ${amount} 再生成（対象1回限り・HP回復ではない）`;
     }
     case "barrierDepletionHeal": {
       const amount = formatResourceAmount(
-        def.healAmount ?? { kind: "atkBased", atkScale: 0.65 },
+        def.healAmount ?? { kind: "atkBased", atkScale: 0.65 }
       );
       return `バリア完全消失時 ${amount} 即時回復（味方1回限り/Wave・障壁消費では発火しない）`;
     }
@@ -1057,7 +1115,11 @@ export function formatPassiveDescription(def: PassiveSkillDef): string {
 
 export function formatActiveDescription(def: ActiveSkillDef): string {
   const trigger = resolveSkillTrigger(def);
-  const headerParts = [`${formatTriggerLabel(trigger.kind, trigger.value)}毎`];
+  const triggerHeader =
+    trigger.kind === "time" && trigger.value === 0
+      ? "チャージなし"
+      : `${formatTriggerLabel(trigger.kind, trigger.value)}毎`;
+  const headerParts = [triggerHeader];
   const stopSec = def.useDurationSec ?? 0;
   if (stopSec > 0) {
     headerParts.push(`停止${stopSec}s`);
@@ -1065,7 +1127,7 @@ export function formatActiveDescription(def: ActiveSkillDef): string {
   if ((def.firePolicy ?? "immediate") === "smart") {
     const condSummary = formatFireConditionsSummary(
       def.fireConditions,
-      def.fireConditionMatch ?? "all",
+      def.fireConditionMatch ?? "all"
     );
     headerParts.push(condSummary ? `smart: ${condSummary}` : "smart");
     if (def.fireTimeoutSec !== undefined && def.fireTimeoutSec > 0) {

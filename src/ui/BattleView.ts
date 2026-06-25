@@ -216,6 +216,15 @@ export class BattleView {
       if (event.effect === "counter") {
         this.canvas.showCounterPopup(event.actorId);
       }
+      if (event.effect === "enemyReelIn") {
+        this.canvas.showEnemyReelInPopup(event.targetId);
+      }
+      if (
+        event.effect === "knockback" ||
+        (event.effect === "counter" && event.statusLabel === "knockback")
+      ) {
+        this.canvas.showKnockbackPopup(event.targetId);
+      }
       if (event.effect === "damage" || event.effect === "dot") {
         if (event.amount !== undefined) {
           this.pushLog(`${slotLabel} → ${event.amount} dmg`);
@@ -314,6 +323,8 @@ export class BattleView {
       this.canvas.showInvulnerablePopup(event.targetId);
     } else if (event.type === "lastStandRecovery") {
       this.canvas.showLastStandRecoveryPopup(event.targetId);
+    } else if (event.type === "lastStandGuts") {
+      this.canvas.showLastStandGutsPopup(event.targetId);
     } else if (event.type === "death") {
       this.canvas.playAnim(event.targetId, "death");
     } else if (event.type === "battleEnd") {

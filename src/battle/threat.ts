@@ -78,6 +78,15 @@ export function pickThreatTargetWithHysteresis(
   return { target: current, focusId: current.id };
 }
 
+/** ヒステリシスをバイパスして即時フォーカス切替 */
+export function forceThreatFocusSwitch(
+  enemy: CombatantState,
+  allyId: string,
+): void {
+  if (!enemy.isEnemy) return;
+  enemy.threatFocusTargetId = allyId;
+}
+
 export function computeThreatStatComponent(unit: CombatantState): number {
   return Math.floor(
     getEffectiveMaxHp(unit) * THREAT_STAT_HP_WEIGHT +

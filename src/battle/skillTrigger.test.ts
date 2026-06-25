@@ -4,8 +4,10 @@ import type { CombatantState } from './types.ts';
 import {
   chargeCountTrigger,
   findReadyCountTriggerCooldowns,
+  forceActiveCooldownReady,
   initializeSkillCooldowns,
   isCountTriggerReady,
+  isNoChargeTimeTrigger,
   resetCooldownAfterFire,
   resolveSkillTrigger,
   shouldPauseActiveCooldown,
@@ -98,6 +100,39 @@ describe('skillTrigger', () => {
       ),
     ).toBe(false);
     expect(shouldTickCooldown(skill(), 'basic')).toBe(true);
+    expect(
+      shouldTickCooldown(skill({ trigger: { kind: 'time', value: 0 } }), 'active'),
+    ).toBe(false);
+  });
+
+  it('no-charge time trigger stays ready and does not tick', () => {
+    const noCharge = skill({ id: 'event', trigger: { kind: 'time', value: 0 } });
+    const registry = { event: noCharge };
+    const unit = {
+      cooldowns: [
+        { skillId: 'event', remaining: 5, slotKind: 'active' as const, slotIndex: 0 },
+      ],
+    } as CombatantState;
+
+    initializeSkillCooldowns(unit, registry);
+    expect(unit.cooldowns[0]!.remaining).toBe(0);
+    expect(isNoChargeTimeTrigger(noCharge)).toBe(true);
+
+    resetCooldownAfterFire(unit.cooldowns[0]!, noCharge);
+    expect(unit.cooldowns[0]!.remaining).toBe(0);
+  });
+
+  it('forceActiveCooldownReady clears remaining and fire hold', () => {
+    const cd: SkillCooldown = {
+      skillId: 'event',
+      remaining: 999,
+      slotKind: 'active',
+      slotIndex: 0,
+      fireHoldSinceSec: 12,
+    };
+    forceActiveCooldownReady(cd);
+    expect(cd.remaining).toBe(0);
+    expect(cd.fireHoldSinceSec).toBeUndefined();
   });
 
   it('initializeSkillCooldowns sets all slots to trigger value at stage start', () => {

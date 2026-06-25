@@ -62,6 +62,8 @@ export const SKILL_EFFECT_KINDS = [
   "conditionalEffect",
   "herbalPotencyConsume",
   "blockResonanceConsume",
+  "enemyReelIn",
+  "arenaDominance",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [
@@ -299,6 +301,10 @@ export const PASSIVE_EFFECT_KINDS = [
   "lastStandInvulnerable",
   "frontBlockAura",
   "lastStandRecovery",
+  "lowHpCover",
+  "lastStandGuts",
+  "bloodlustDuelist",
+  "duelistPride",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -330,6 +336,10 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   lastStandInvulnerable: "不撓の誓い",
   frontBlockAura: "護身手",
   lastStandRecovery: "不退転",
+  lowHpCover: "攻撃誘導",
+  lastStandGuts: "不屈の闘士",
+  bloodlustDuelist: "流血闘志",
+  duelistPride: "闘士の矜持",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -411,8 +421,16 @@ export const SPECIAL_EFFECT_APPLY_TO_LABELS: Record<
   barrier: "バリア",
 };
 
-/** エディタ top-level（レガシー hot/dot 等は正規化で吸収） */
-export const EDITOR_ACTIVE_EFFECT_CATEGORIES = [
+/** エディタ「種別」— クラス固有アクティブ */
+export const EDITOR_ACTIVE_CLASS_SPECIFIC_EFFECT_CATEGORIES = [
+  "herbalPotencyConsume",
+  "blockResonanceConsume",
+  "enemyReelIn",
+  "arenaDominance",
+] as const satisfies readonly SkillEffectKind[];
+
+/** エディタ「種別」— 汎用アクティブ */
+export const EDITOR_ACTIVE_GENERAL_EFFECT_CATEGORIES = [
   "damage",
   "heal",
   "buff",
@@ -422,8 +440,23 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORIES = [
   "move",
   "knockback",
   "conditionalEffect",
-  "herbalPotencyConsume",
-  "blockResonanceConsume",
+] as const satisfies readonly SkillEffectKind[];
+
+export const EDITOR_ACTIVE_EFFECT_KIND_GROUPS = [
+  {
+    label: "クラス固有",
+    kinds: [...EDITOR_ACTIVE_CLASS_SPECIFIC_EFFECT_CATEGORIES],
+  },
+  {
+    label: "一般",
+    kinds: [...EDITOR_ACTIVE_GENERAL_EFFECT_CATEGORIES],
+  },
+] as const;
+
+/** エディタ top-level（レガシー hot/dot 等は正規化で吸収） */
+export const EDITOR_ACTIVE_EFFECT_CATEGORIES = [
+  ...EDITOR_ACTIVE_CLASS_SPECIFIC_EFFECT_CATEGORIES,
+  ...EDITOR_ACTIVE_GENERAL_EFFECT_CATEGORIES,
 ] as const;
 
 export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
@@ -441,6 +474,8 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   conditionalEffect: "条件分岐",
   herbalPotencyConsume: "薬効消費",
   blockResonanceConsume: "迎撃消費",
+  enemyReelIn: "敵引き寄せ",
+  arenaDominance: "闘技場の掟",
 };
 export const STATUS_EFFECT_STATS = [
   "hp",
@@ -555,6 +590,7 @@ export const FIRE_CONDITION_KINDS = [
   "selfHp",
   "playerDamaged",
   "waveStart",
+  "finalWaveStart",
   "waveEnd",
   "enemyCount",
   "pendingIncomingDamage",
@@ -569,6 +605,7 @@ export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
   selfHp: "自身HP割合",
   playerDamaged: "味方被ダメ",
   waveStart: "Wave開始フェーズ",
+  finalWaveStart: "最終Wave開始",
   waveEnd: "Wave終了フェーズ",
   enemyCount: "敵数",
   pendingIncomingDamage: "先読み被ダメ",
@@ -615,18 +652,29 @@ export const PASSIVE_EFFECT_KIND_OPTIONS: PassiveEffectKind[] = [
   ...PASSIVE_EFFECT_KINDS,
 ];
 
-/** エディタ「効果種別」ドロップダウン（新 taxonomy を先頭に並べる） */
-export const EDITOR_PASSIVE_EFFECT_KINDS = [
-  "specialEffect",
-  "buff",
-  "debuff",
-  "counter",
-  "heal",
+/** エディタ「効果種別」— クラス固有パッシブ */
+export const EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS = [
   "herbalPotency",
   "blockResonance",
   "lastStandInvulnerable",
   "frontBlockAura",
   "lastStandRecovery",
+  "lowHpCover",
+  "lastStandGuts",
+  "bloodlustDuelist",
+  "duelistPride",
+  "healReservation",
+  "barrierBreakRegen",
+  "barrierDepletionHeal",
+] as const satisfies readonly (typeof PASSIVE_EFFECT_KINDS)[number][];
+
+/** エディタ「効果種別」— 汎用パッシブ */
+export const EDITOR_PASSIVE_GENERAL_EFFECT_KINDS = [
+  "specialEffect",
+  "buff",
+  "debuff",
+  "counter",
+  "heal",
   "periodicDispel",
   "excessHealToBarrier",
   "excessHealRedirect",
@@ -635,13 +683,27 @@ export const EDITOR_PASSIVE_EFFECT_KINDS = [
   "defenseIgnore",
   "selfHpRatioBuff",
   "targetHpRatioHealScale",
-  "healReservation",
-  "barrierBreakRegen",
-  "barrierDepletionHeal",
   "targetRuleOverride",
   "aoeCrowdBonus",
   "skillAmountOverride",
   "skillPropertyOverride",
+] as const satisfies readonly (typeof PASSIVE_EFFECT_KINDS)[number][];
+
+export const EDITOR_PASSIVE_EFFECT_KIND_GROUPS = [
+  {
+    label: "クラス固有",
+    kinds: [...EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS],
+  },
+  {
+    label: "一般",
+    kinds: [...EDITOR_PASSIVE_GENERAL_EFFECT_KINDS],
+  },
+] as const;
+
+/** エディタ「効果種別」ドロップダウン（フラット列；グループは EDITOR_PASSIVE_EFFECT_KIND_GROUPS） */
+export const EDITOR_PASSIVE_EFFECT_KINDS = [
+  ...EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS,
+  ...EDITOR_PASSIVE_GENERAL_EFFECT_KINDS,
 ] as const satisfies readonly (typeof PASSIVE_EFFECT_KINDS)[number][];
 
 export const EDITOR_PASSIVE_EFFECT_KIND_OPTIONS: (typeof EDITOR_PASSIVE_EFFECT_KINDS)[number][] =
@@ -720,7 +782,10 @@ export const TARGET_SPEC_KIND_LABELS: Record<TargetSpecKind, string> = {
   all: "全体",
 };
 
-export const TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS = ["enemy", "player"] as const;
+export const TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS = [
+  "enemy",
+  "player",
+] as const;
 
 export const TARGET_RULE_OVERRIDE_APPLY_TO_LABELS: Record<
   (typeof TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS)[number],

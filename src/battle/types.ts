@@ -246,6 +246,7 @@ export type FireCondition =
   | { kind: "selfHp"; maxHpRatio: number; compare?: HpRatioCompare }
   | { kind: "allyDamaged" }
   | { kind: "waveStart" }
+  | { kind: "finalWaveStart" }
   | { kind: "waveEnd" }
   | {
       kind: "enemyCount";
@@ -329,7 +330,10 @@ export interface StatusEffect {
     | "herbalPotency"
     | "blockResonance"
     | "blockResonanceStance"
-    | "invulnerable";
+    | "invulnerable"
+    | "lastStandGuts"
+    | "arenaDominance"
+    | "arenaMark";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */
@@ -557,6 +561,14 @@ export interface CombatantState extends Combatant {
   lastStandInvulnerableUsed?: boolean;
   /** lastStandRecovery: Wave 内 1 回消費済み */
   lastStandRecoveryUsed?: boolean;
+  /** lastStandGuts: Wave 内 1 回消費済み */
+  lastStandGutsUsed?: boolean;
+  /** lowHpCover: Wave 内の残り肩代わり回数（闘技士のみ） */
+  coverRedirectsRemaining?: number;
+  /** Wave 内の残り発動回数（passiveId → 残数） */
+  passiveWaveRemainingTriggers?: Record<string, number>;
+  /** arenaDominance 等: Stage 内の残り発動回数（skillId → 残数） */
+  activeStageRemainingTriggers?: Record<string, number>;
 }
 
 export type PassiveEffectKind =
@@ -592,6 +604,10 @@ export type PassiveEffectKind =
   | "lastStandInvulnerable"
   | "frontBlockAura"
   | "lastStandRecovery"
+  | "lowHpCover"
+  | "lastStandGuts"
+  | "bloodlustDuelist"
+  | "duelistPride"
   /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
   | "hot";
 
@@ -867,6 +883,30 @@ export interface PassiveSkillDef {
   lastStandRecoveryFrontAllyDamageTakenMultiplier?: number;
   /** lastStandRecovery: DR 持続秒 */
   lastStandRecoveryDurationSec?: number;
+  /** lowHpCover: 肩代わり対象の HP 割合上限（未指定 = 0.35） */
+  coverHpRatioThreshold?: number;
+  /** lowHpCover: Wave 内肩代わり上限（未指定 = 3） */
+  coverWaveLimit?: number;
+  /** lastStandGuts: 最低 HP 維持秒（未指定 = 4） */
+  lastStandGutsDurationSec?: number;
+  /** lastStandGuts: 終了時 stun 秒（未指定 = 1.5） */
+  lastStandGutsEndStunSec?: number;
+  /** lastStandGuts: 終了時ノックバック px（未指定 = 15） */
+  lastStandGutsEndKnockbackPx?: number;
+  /** bloodlustDuelist: block 率（未指定 = 0.05） */
+  bloodlustBlockChance?: number;
+  /** bloodlustDuelist: DEF バフ（maxBuffAtHpRatio / buffMultiplierMax） */
+  bloodlustDefMaxBuffAtHpRatio?: number;
+  bloodlustDefBuffMultiplierMax?: number;
+  /** bloodlustDuelist: ATK バフ */
+  bloodlustAtkMaxBuffAtHpRatio?: number;
+  bloodlustAtkBuffMultiplierMax?: number;
+  /** bloodlustDuelist: ATK バフの指数カーブ（未指定 = 1 = 線形） */
+  bloodlustAtkBuffCurveExponent?: number;
+  /** duelistPride: 被回復抑制の HP 下限（未指定 = 0.5） */
+  prideHpRatioMin?: number;
+  /** duelistPride: 被回復倍率（未指定 = 0.25） */
+  prideHealMultiplier?: number;
 }
 
 export type SkillEffectKind =
@@ -885,7 +925,9 @@ export type SkillEffectKind =
   | "basicAttackTransform"
   | "conditionalEffect"
   | "herbalPotencyConsume"
-  | "blockResonanceConsume";
+  | "blockResonanceConsume"
+  | "enemyReelIn"
+  | "arenaDominance";
 
 export type MoveMode = "engage" | "toAnchor";
 export type DamageType = "physical" | "magic";
@@ -1243,6 +1285,16 @@ export interface BlockResonanceConsumeSkillEffect extends SkillEffectCommon {
   type: "blockResonanceConsume";
 }
 
+export interface EnemyReelInSkillEffect extends SkillEffectCommon {
+  type: "enemyReelIn";
+}
+
+export interface ArenaDominanceSkillEffect extends SkillEffectCommon {
+  type: "arenaDominance";
+  durationSec?: number;
+  nonMarkDamageMultiplier?: number;
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -1259,7 +1311,9 @@ export type SkillEffectDef =
   | BasicAttackTransformSkillEffect
   | ConditionalSkillEffect
   | HerbalPotencyConsumeSkillEffect
-  | BlockResonanceConsumeSkillEffect;
+  | BlockResonanceConsumeSkillEffect
+  | EnemyReelInSkillEffect
+  | ArenaDominanceSkillEffect;
 
 /** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
 export type LegacyHotSkillEffect = HotSkillEffect;
@@ -1303,6 +1357,12 @@ export interface ActiveSkillDef {
   blockResonanceOnBlockKnockbackRadiusPx?: number;
   /** blockResonanceConsume: 態勢中ブロック成功時のノックバック距離（px） */
   blockResonanceOnBlockKnockbackDistancePx?: number;
+  /** arenaDominance 等: Stage 内発動上限（未指定 = 無制限） */
+  stageTriggerLimit?: number;
+  /** arenaDominance: 効果持続秒（未指定 = 15） */
+  arenaDominanceDurationSec?: number;
+  /** arenaDominance: マーク以外の敵からの被ダメ倍率（未指定 = 0.5） */
+  arenaDominanceNonMarkDamageMultiplier?: number;
 }
 
 export interface EnemyTemplate extends CombatStats {
@@ -1407,6 +1467,7 @@ export interface CombatantSnapshot {
     fireHold?: boolean;
     activeEffectRemaining?: number;
     activeEffectTotal?: number;
+    stageTriggerExhausted?: boolean;
   }[];
 }
 

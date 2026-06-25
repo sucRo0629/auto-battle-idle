@@ -16,12 +16,13 @@ const mocks = vi.hoisted(() => {
     showInvulnerablePopup: vi.fn(),
     showLastStandRecoveryPopup: vi.fn(),
     showCounterPopup: vi.fn(),
+    showEnemyReelInPopup: vi.fn(),
+    showKnockbackPopup: vi.fn(),
     showBuffGlow: vi.fn(),
     tick: vi.fn(),
     destroy: vi.fn(),
     syncFromSnapshot: vi.fn(),
   };
-
   return {
     canvasInstance,
     BattleCanvas: vi.fn().mockImplementation(() => canvasInstance),
@@ -68,6 +69,7 @@ vi.mock("../ui/PartyHudPanel.ts", () => ({
   PartyHudPanel: vi.fn().mockImplementation(() => ({
     mount: vi.fn(),
     update: vi.fn(),
+    destroy: vi.fn(),
   })),
 }));
 
@@ -236,6 +238,140 @@ describe("BattleView", () => {
     expect(mocks.canvasInstance.showCounterPopup).toHaveBeenCalledTimes(1);
     expect(mocks.canvasInstance.showCounterPopup).toHaveBeenCalledWith(
       "actor-1",
+    );
+  });
+
+  it("shows an enemyReelIn popup for reel-in skill events", () => {
+    let emitEvent: (event: any) => void = () => {};
+    const engine = {
+      onEvent: vi.fn((listener: (event: any) => void) => {
+        emitEvent = listener;
+      }),
+      getSnapshot: vi.fn(() => ({
+        allies: [{ id: "actor-1" }],
+        enemies: [{ id: "target-1" }],
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: {
+        actives: {
+          reel_in_1: {
+            id: "reel_in_1",
+            name: "誘い込み",
+            effect: [{ type: "enemyReelIn" }],
+          },
+        },
+      },
+      classRegistry: {},
+      stages: [],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+    }));
+    const verifyModeControls = {
+      isVerifyMode: () => false,
+      onVerifyModeChange: vi.fn(),
+      onOpenMetaMenu: vi.fn(),
+    };
+
+    vi.stubGlobal("document", {
+      createElement: () => createFakeElement(),
+    });
+
+    const container = createFakeElement();
+
+    new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+      verifyModeControls,
+    );
+
+    emitEvent({
+      type: "skill",
+      actorId: "actor-1",
+      targetId: "target-1",
+      skillId: "reel_in_1",
+      skillName: "誘い込み",
+      effect: "enemyReelIn",
+      effectIndex: 0,
+      slotKind: "active",
+    });
+
+    expect(mocks.canvasInstance.showEnemyReelInPopup).toHaveBeenCalledTimes(1);
+    expect(mocks.canvasInstance.showEnemyReelInPopup).toHaveBeenCalledWith(
+      "target-1",
+    );
+  });
+
+  it("shows a knockback popup for knockback skill events", () => {
+    let emitEvent: (event: any) => void = () => {};
+    const engine = {
+      onEvent: vi.fn((listener: (event: any) => void) => {
+        emitEvent = listener;
+      }),
+      getSnapshot: vi.fn(() => ({
+        allies: [{ id: "actor-1" }],
+        enemies: [{ id: "target-1" }],
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: {
+        actives: {
+          knockback_1: {
+            id: "knockback_1",
+            name: "体捌き",
+            effect: [{ type: "knockback", distancePx: 30 }],
+          },
+        },
+      },
+      classRegistry: {},
+      stages: [],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+    }));
+    const verifyModeControls = {
+      isVerifyMode: () => false,
+      onVerifyModeChange: vi.fn(),
+      onOpenMetaMenu: vi.fn(),
+    };
+
+    vi.stubGlobal("document", {
+      createElement: () => createFakeElement(),
+    });
+
+    const container = createFakeElement();
+
+    new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+      verifyModeControls,
+    );
+
+    emitEvent({
+      type: "skill",
+      actorId: "actor-1",
+      targetId: "target-1",
+      skillId: "knockback_1",
+      skillName: "体捌き",
+      effect: "knockback",
+      effectIndex: 0,
+      slotKind: "active",
+    });
+
+    expect(mocks.canvasInstance.showKnockbackPopup).toHaveBeenCalledTimes(1);
+    expect(mocks.canvasInstance.showKnockbackPopup).toHaveBeenCalledWith(
+      "target-1",
     );
   });
 });

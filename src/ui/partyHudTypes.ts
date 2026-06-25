@@ -37,6 +37,8 @@ export interface PartyHudEntry {
     fireHold?: boolean;
     activeEffectRemaining?: number;
     activeEffectTotal?: number;
+    /** stageTriggerLimit 消費済み（HUD は最暗の empty 表示） */
+    stageTriggerExhausted?: boolean;
   }[];
 }
 

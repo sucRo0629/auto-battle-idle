@@ -48,6 +48,19 @@ import {
   resolveEffectiveUseDurationSec,
 } from '../blockResonance.ts';
 import { mitigateIncomingDamage } from '../incomingDamageMitigation.ts';
+import { resolveLowHpCoverTarget } from '../lowHpCover.ts';
+import {
+  applyArenaDominanceDamageMitigation,
+  applyArenaMarkDamageMitigation,
+  grantArenaDominance,
+  grantArenaMark,
+  isAllySupportBlockedDuringArenaDominance,
+  pickHighestAtkEnemy,
+  resolveArenaDominanceDurationSec,
+  resolveArenaDominanceNonMarkMultiplier,
+  consumeActiveStageTrigger,
+} from '../arenaDominance.ts';
+import { applyEnemyReelIn } from '../enemyReelIn.ts';
 import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
 import { resolveEffectiveBasicAttackSkill } from '../resolveEffectiveBasicAttack.ts';
 import { basicAttackTransformSpecFromEffect } from '../resolveEffectiveBasicAttack.ts';
@@ -155,6 +168,7 @@ export interface SkillExecutorDeps {
   onTargetReceivedDebuff?: (target: CombatantState) => void;
   onHealApplied?: (target: CombatantState) => void;
   onUnitDied?: (unit: CombatantState) => void;
+  onLastStandGuts?: (targetId: string) => void;
 }
 
 function shouldDeferUntilHostileToAnchorInRange(
@@ -731,12 +745,70 @@ export class SkillExecutor {
       return false;
     }
 
+    if (effectDef.type === 'move') {
+      return false;
+    }
+
+    if (effectDef.type === 'enemyReelIn') {
+      if (!target.isEnemy || actor.isEnemy) return false;
+      const delta = applyEnemyReelIn(actor, target, this.gameData);
+      if (delta === 0) return false;
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'enemyReelIn',
+        effectIndex,
+        range: effectDef.range,
+        ...skillHitEventFields(hitIndex, vfxSourceId),
+      });
+      return true;
+    }
+
+    if (effectDef.type === 'arenaDominance') {
+      const enemies = this.deps
+        .getAllCombatants()
+        .filter((unit) => unit.isEnemy);
+      const duration = resolveArenaDominanceDurationSec(effectDef, skill);
+      grantArenaDominance(actor, skill.id, duration);
+      const markTarget = pickHighestAtkEnemy(enemies);
+      if (markTarget) {
+        grantArenaMark(markTarget, actor.id, skill.id, duration);
+      }
+      for (const enemy of enemies) {
+        if (enemy.isAlive) {
+          enemy.threatFocusTargetId = actor.id;
+        }
+      }
+      consumeActiveStageTrigger(actor, skill);
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: actor.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'arenaDominance',
+        effectIndex,
+        statusLabel: 'arenaDominance',
+        ...skillHitEventFields(hitIndex, vfxSourceId),
+      });
+      return true;
+    }
+
     if (effectDef.type === 'damage') {
-      if (rollsEvasion(target, this.gameData.skillRegistry.passives)) {
-        this.emit({ type: 'evade', targetId: target.id });
+      const passives = this.gameData.skillRegistry.passives;
+      const allies = this.deps.getAllCombatants().filter((unit) => !unit.isEnemy);
+      const coverResult = resolveLowHpCoverTarget(target, allies, passives);
+      const damageTarget = coverResult.target;
+
+      if (rollsEvasion(damageTarget, passives)) {
+        this.emit({ type: 'evade', targetId: damageTarget.id });
         return false;
       }
-      const passives = this.gameData.skillRegistry.passives;
       const damageEffect = {
         ...effectDef,
         amount: resolveEffectiveAmountSpecForActiveEffect(
@@ -750,7 +822,7 @@ export class SkillExecutor {
       };
       const amount = resolveDamage(
         actor,
-        target,
+        damageTarget,
         damageEffect,
         passives,
         {
@@ -761,36 +833,43 @@ export class SkillExecutor {
         },
       );
       let finalDamage = amount;
-      const wardResult = applyWardBarrierToIncomingDamage(target, finalDamage);
+      const wardResult = applyWardBarrierToIncomingDamage(damageTarget, finalDamage);
       finalDamage = wardResult.damage;
       let didBlock = false;
       const damageType = resolveSkillDamageType(actor, effectDef);
       if (damageType === 'physical') {
         const blockResult = applyBlockToPhysicalDamage(
-          target,
+          damageTarget,
           amount,
-          this.gameData.skillRegistry.passives,
+          passives,
         );
         finalDamage = blockResult.finalDamage;
         didBlock = blockResult.didBlock;
       } else if (damageType === 'magic') {
-        const blockResult = applyBlockToMagicDamage(target, amount);
+        const blockResult = applyBlockToMagicDamage(damageTarget, amount);
         finalDamage = blockResult.finalDamage;
         didBlock = blockResult.didBlock;
       }
+      if (damageTarget.isEnemy) {
+        finalDamage = applyArenaMarkDamageMitigation(
+          damageTarget,
+          actor,
+          finalDamage,
+        );
+      }
       if (didBlock) {
-        this.emit({ type: 'block', targetId: target.id });
+        this.emit({ type: 'block', targetId: damageTarget.id });
         const blockResonanceConfig = resolveBlockResonanceConfigForUnit(
-          target,
+          damageTarget,
           passives,
         );
         if (blockResonanceConfig.maxStacks > 0) {
-          addBlockResonanceStacksOnBlock(target, blockResonanceConfig);
+          addBlockResonanceStacksOnBlock(damageTarget, blockResonanceConfig);
         }
-        if (hasBlockResonanceStance(target)) {
+        if (hasBlockResonanceStance(damageTarget)) {
             const stanceSkill =
               this.gameData.skillRegistry.actives[
-                target.statusEffects.find(
+                damageTarget.statusEffects.find(
                   (effect) =>
                     effect.overlay === 'blockResonanceStance' &&
                     effect.remainingSec > 0,
@@ -798,7 +877,7 @@ export class SkillExecutor {
               ];
             if (stanceSkill) {
               applyBlockResonanceStanceOnBlock(
-                target,
+                damageTarget,
                 enemies,
                 stanceSkill,
                 passives,
@@ -843,25 +922,53 @@ export class SkillExecutor {
             }
         }
       }
-      const allies = this.deps.getAllCombatants().filter((unit) => !unit.isEnemy);
-      const mitigation = mitigateIncomingDamage(target, finalDamage, passives, {
+      if (actor.isEnemy && !damageTarget.isEnemy) {
+        const dominanceOverlay = damageTarget.statusEffects.find(
+          (effect) =>
+            effect.overlay === 'arenaDominance' && effect.remainingSec > 0,
+        );
+        if (dominanceOverlay) {
+          const overlaySkill = dominanceOverlay.skillId
+            ? this.gameData.skillRegistry.actives[dominanceOverlay.skillId]
+            : undefined;
+          const mul = overlaySkill
+            ? resolveArenaDominanceNonMarkMultiplier(
+                { type: 'arenaDominance' },
+                overlaySkill,
+              )
+            : undefined;
+          if (mul !== undefined) {
+            finalDamage = applyArenaDominanceDamageMitigation(
+              damageTarget,
+              actor,
+              finalDamage,
+              mul,
+            );
+          }
+        }
+      }
+      const mitigation = mitigateIncomingDamage(damageTarget, finalDamage, passives, {
         allies,
       });
       if (mitigation.lastStandTriggered) {
-        this.emit({ type: 'invulnerable', targetId: target.id });
+        this.emit({ type: 'invulnerable', targetId: damageTarget.id });
       }
       if (mitigation.lastStandRecoveryTriggered) {
-        this.emit({ type: 'lastStandRecovery', targetId: target.id });
+        this.emit({ type: 'lastStandRecovery', targetId: damageTarget.id });
+      }
+      if (mitigation.lastStandGutsTriggered) {
+        this.emit({ type: 'lastStandGuts', targetId: damageTarget.id });
+        this.deps.onLastStandGuts?.(damageTarget.id);
       }
       finalDamage = mitigation.finalDamage;
-      const barrierHpBefore = target.barrierHp;
-      const incoming = applyIncomingDamage(target, finalDamage);
+      const barrierHpBefore = damageTarget.barrierHp;
+      const incoming = applyIncomingDamage(damageTarget, finalDamage);
       const { damageResult } = incoming;
       const appliedDamage =
         damageResult.hpDamage +
         damageResult.barrierDamage +
         incoming.delayedDamage;
-      this.deps.onDamageApplied?.(actor, target, appliedDamage, {
+      this.deps.onDamageApplied?.(actor, damageTarget, appliedDamage, {
         attackKind: 'damage',
         hpDamage: damageResult.hpDamage,
         attackRangePx: effectDef.range ?? actor.traits.rangePx,
@@ -878,7 +985,7 @@ export class SkillExecutor {
       this.emit({
         type: 'skill',
         actorId: actor.id,
-        targetId: target.id,
+        targetId: damageTarget.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
@@ -888,23 +995,26 @@ export class SkillExecutor {
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
-      this.emit({ type: 'hurt', targetId: target.id });
+      this.emit({ type: 'hurt', targetId: damageTarget.id });
       if (lethal) {
-        target.isAlive = false;
-        if (!target.isEnemy) {
+        damageTarget.isAlive = false;
+        if (!damageTarget.isEnemy) {
           stripPassivesAurasFromSource(
-            target.id,
+            damageTarget.id,
             this.deps.getAllCombatants(),
           );
         }
-        this.deps.getSequenceRunner().clearForActor(target.id);
-        this.deps.onUnitDied?.(target);
-        this.emit({ type: 'death', targetId: target.id });
+        this.deps.getSequenceRunner().clearForActor(damageTarget.id);
+        this.deps.onUnitDied?.(damageTarget);
+        this.emit({ type: 'death', targetId: damageTarget.id });
       }
       return true;
     }
 
     if (effectDef.type === 'heal') {
+      if (isAllySupportBlockedDuringArenaDominance(target, actor)) {
+        return false;
+      }
       if ((effectDef.healSubKind ?? 'instant') === 'hot') {
         const passives = this.gameData.skillRegistry.passives;
         const baseSpec =
@@ -1136,6 +1246,9 @@ export class SkillExecutor {
       if (effectDef.type === 'buff') {
         const subKind = effectDef.buffSubKind ?? 'stat';
         if (subKind === 'barrier') {
+          if (isAllySupportBlockedDuringArenaDominance(target, actor)) {
+            return false;
+          }
           const passives = this.gameData.skillRegistry.passives;
           const amountSpec = resolveEffectiveAmountSpecForActiveEffect(
             actor,

@@ -255,7 +255,7 @@ export function collectStatusEffectBadgeDisplays(
   const entries: Array<{ badge: StatusEffectBadgeDisplay; index: number }> = [];
 
   effects.forEach((effect, index) => {
-    if (effect.overlay === "herbalPotency" || effect.overlay === "blockResonance" || effect.overlay === "mark") {
+    if (effect.overlay === "herbalPotency" || effect.overlay === "blockResonance" || effect.overlay === "mark" || effect.overlay === "arenaMark") {
       const stackCount = effect.stacks ?? 0;
       if (stackCount <= 0) return;
       const badge = statusEffectBadgeForOverlay(effect);

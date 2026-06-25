@@ -11,7 +11,7 @@
         "enabled": true
       }
     },
-    "maxHp": 235,
+    "maxHp": 285,
     "atk": 11,
     "def": 27,
     "reg": 0,
@@ -64,7 +64,7 @@
     "traits": {
       "rangePx": 30
     },
-    "maxHp": 220,
+    "maxHp": 250,
     "atk": 15,
     "def": 22,
     "reg": 10,
@@ -117,7 +117,7 @@
     "traits": {
       "rangePx": 30
     },
-    "maxHp": 180,
+    "maxHp": 200,
     "atk": 19,
     "def": 18,
     "reg": 0,
@@ -168,7 +168,7 @@
     "epithetEn": "Swordsman",
     "formationRow": "front",
     "traits": {
-      "rangePx": 50,
+      "rangePx": 40,
       "basicAttackVfx": {
         "enabled": true
       }
@@ -255,7 +255,7 @@
     "epithetEn": "Lancer",
     "formationRow": "front",
     "traits": {
-      "rangePx": 80,
+      "rangePx": 60,
       "basicAttackVfx": {
         "enabled": true
       }
@@ -459,7 +459,7 @@
     ],
     "growthTier": {
       "maxHp": 2,
-      "atk": 2,
+      "atk": 3,
       "def": 1
     },
     "growthPresetKey": "caster"
@@ -471,11 +471,11 @@
     "epithetEn": "Conductor",
     "formationRow": "back",
     "traits": {
-      "rangePx": 110,
+      "rangePx": 120,
       "damageType": "magic"
     },
     "maxHp": 72,
-    "atk": 24,
+    "atk": 0,
     "def": 4,
     "reg": 20,
     "jobTier": 1,
@@ -490,7 +490,7 @@
     ],
     "growthTier": {
       "maxHp": 1,
-      "atk": 3,
+      "atk": 1,
       "def": 1
     },
     "growthPresetKey": "caster"
@@ -502,7 +502,7 @@
     "epithetEn": "Cleric",
     "formationRow": "back",
     "traits": {
-      "rangePx": 128,
+      "rangePx": 110,
       "basicAttackVfx": {
         "enabled": true
       },
@@ -542,7 +542,7 @@
     ],
     "growthTier": {
       "maxHp": 2,
-      "atk": 1,
+      "atk": 2,
       "def": 2
     },
     "passiveIds": [
@@ -602,7 +602,7 @@
     "growthTier": {
       "maxHp": 2,
       "atk": 1,
-      "def": 2
+      "def": 3
     }
   },
   {
@@ -614,9 +614,9 @@
     "traits": {
       "rangePx": 80
     },
-    "maxHp": 100,
+    "maxHp": 120,
     "atk": 17,
-    "def": 9,
+    "def": 10,
     "reg": 10,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
@@ -655,7 +655,7 @@
     "growthTier": {
       "maxHp": 3,
       "atk": 2,
-      "def": 1
+      "def": 2
     }
   }
 ]

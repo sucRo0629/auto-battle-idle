@@ -7,7 +7,7 @@ import {
 import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
 import { getSheetCellHeight, SKILL_ANIM_CELL_HEIGHT } from "./spriteLayout.ts";
 
-/** スプライト上端からポップアップ下端までの隙間（CombatReactionPopup の HEAD_LABEL_OFFSET_Y と同程度） */
+/** スプライト上端からポップアップ下端までの隙間 */
 export const HEAD_GAP_ABOVE_SPRITE = -20;
 
 export interface DamagePopupLayoutInput {

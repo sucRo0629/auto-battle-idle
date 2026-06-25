@@ -1,48 +1,5 @@
 [
   {
-    "id": "df_duelist_active_1",
-    "name": "戦叫び",
-    "trigger": {
-      "kind": "time",
-      "value": 8
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "debuff",
-        "debuffSubKind": "stat",
-        "debuffStat": "attackSpeed",
-        "debuffMultiplier": 0.8,
-        "debuffDurationSec": 5,
-        "targetShape": "aoe",
-        "aoeRadiusPx": 100
-      }
-    ]
-  },
-  {
-    "id": "df_duelist_active_2",
-    "name": "体力温存",
-    "trigger": {
-      "kind": "hitsTaken",
-      "value": 10
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "self"
-        },
-        "type": "buff",
-        "buffSubKind": "damageDelay",
-        "ratio": 0.5,
-        "buffDurationSec": 5
-      }
-    ]
-  },
-  {
     "id": "df_duelist_basic_attack",
     "name": "df_duelist_basic_attack",
     "effect": [
@@ -65,59 +22,53 @@
     }
   },
   {
-    "id": "df_duelist_active_3",
-    "name": "隙撃ち",
+    "id": "df_duelist_active_1",
+    "name": "誘い込み",
     "trigger": {
-      "kind": "basicAttackCount",
+      "kind": "time",
       "value": 8
     },
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "minTargets",
+        "count": 1
+      }
+    ],
     "effect": [
       {
-        "type": "damage",
-        "damageType": "physical",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1.05
+        "target": {
+          "kind": "attackType",
+          "ranged": true
         },
+        "type": "enemyReelIn",
         "targetShape": "single",
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "damageIncrease": {
-          "scale": 1.5,
-          "conditions": [
-            {
-              "kind": "debuff",
-              "tags": [
-                "def",
-                "stun",
-                "damageTaken",
-                "atk"
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "debuff",
-        "debuffSubKind": "stun",
-        "debuffStat": "def",
-        "debuffMultiplier": 0.8,
-        "debuffDurationSec": 5,
-        "durationSec": 3
+        "range": 300
       }
     ]
   },
   {
-    "id": "df_duelist_active_4",
-    "name": "血気煽り",
+    "id": "df_duelist_active_2",
+    "name": "体捌き",
+    "trigger": {
+      "kind": "hitsTaken",
+      "value": 10
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "buff",
+        "buffSubKind": "damageDelay",
+        "ratio": 0.5,
+        "buffDurationSec": 5
+      }
+    ]
+  },
+  {
+    "id": "df_duelist_active_3",
+    "name": "隙打ち",
     "trigger": {
       "kind": "time",
       "value": 15
@@ -125,24 +76,57 @@
     "effect": [
       {
         "target": {
-          "kind": "all",
-          "side": "enemy"
+          "kind": "self"
         },
-        "type": "debuff",
-        "debuffSubKind": "stat",
-        "debuffStat": "atk",
-        "debuffMultiplier": 0.8,
-        "debuffDurationSec": 6
-      },
+        "type": "counter",
+        "chance": 0.33,
+        "durationSec": 8,
+        "counterMelee": true,
+        "responses": [
+          {
+            "kind": "damage",
+            "amount": {
+              "kind": "atkBased",
+              "atkScale": 0.5
+            },
+            "damageType": "physical"
+          },
+          {
+            "kind": "stun",
+            "durationSec": 1.5
+          },
+          {
+            "kind": "knockback",
+            "distancePx": 15
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "df_duelist_active_4",
+    "name": "闘技場の掟",
+    "trigger": {
+      "kind": "time",
+      "value": 0
+    },
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "finalWaveStart"
+      }
+    ],
+    "stageTriggerLimit": 1,
+    "arenaDominanceDurationSec": 15,
+    "arenaDominanceNonMarkDamageMultiplier": 0.5,
+    "effect": [
       {
         "target": {
           "kind": "self"
         },
-        "type": "debuff",
-        "debuffSubKind": "stat",
-        "debuffStat": "damageTaken",
-        "debuffMultiplier": 1.5,
-        "debuffDurationSec": 6
+        "type": "arenaDominance",
+        "durationSec": 10,
+        "nonMarkDamageMultiplier": 0.5
       }
     ]
   }

@@ -8,7 +8,8 @@ import {
   DAMAGE_TYPE_OPTIONS,
   EDITOR_ACTIVE_EFFECT_CATEGORIES,
   EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS,
-  EDITOR_PASSIVE_EFFECT_KIND_OPTIONS,
+  EDITOR_ACTIVE_EFFECT_KIND_GROUPS,
+  EDITOR_PASSIVE_EFFECT_KIND_GROUPS,
   HEAL_SUB_KIND_LABELS,
   HEAL_SUB_KINDS,
   MOVE_MODE_LABELS,
@@ -111,6 +112,7 @@ import {
   createNumberInput,
   createRadioGroup,
   createSection,
+  createGroupedSelect,
   createSelect,
   createTextInput,
   preserveScrollDuring,
@@ -659,6 +661,27 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       };
       passive.debuffStat ??= 'atk';
       passive.debuffMultiplier ??= 0.9;
+      break;
+    case 'duelistPride':
+      passive.prideHpRatioMin ??= 0.5;
+      passive.prideHealMultiplier ??= 0.25;
+      break;
+    case 'lowHpCover':
+      passive.coverHpRatioThreshold ??= 0.35;
+      passive.coverWaveLimit ??= 3;
+      break;
+    case 'lastStandGuts':
+      passive.lastStandGutsDurationSec ??= 4;
+      passive.lastStandGutsEndStunSec ??= 1.5;
+      passive.lastStandGutsEndKnockbackPx ??= 15;
+      break;
+    case 'bloodlustDuelist':
+      passive.bloodlustBlockChance ??= 0.05;
+      passive.bloodlustDefMaxBuffAtHpRatio ??= 0.5;
+      passive.bloodlustDefBuffMultiplierMax ??= 1.6;
+      passive.bloodlustAtkMaxBuffAtHpRatio ??= 0;
+      passive.bloodlustAtkBuffMultiplierMax ??= 4;
+      passive.bloodlustAtkBuffCurveExponent ??= 1;
       break;
   }
 }
@@ -1684,6 +1707,18 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
       return {
         type: 'blockResonanceConsume',
       };
+    case 'enemyReelIn':
+      return {
+        target: { kind: 'attackType', ranged: true },
+        type: 'enemyReelIn',
+        targetShape: 'single',
+      };
+    case 'arenaDominance':
+      return {
+        target: { kind: 'self' },
+        type: 'arenaDominance',
+        durationSec: 15,
+      };
   }
 }
 
@@ -2244,11 +2279,14 @@ export class SkillEditorStep {
     grid.appendChild(
       createFieldRow(
         '効果種別',
-        createSelect(
+        createGroupedSelect(
           passive.effect,
-          EDITOR_PASSIVE_EFFECT_KIND_OPTIONS.map((value) => ({
-            value,
-            label: PASSIVE_EFFECT_KIND_LABELS[value],
+          EDITOR_PASSIVE_EFFECT_KIND_GROUPS.map((group) => ({
+            label: group.label,
+            options: group.kinds.map((value) => ({
+              value,
+              label: PASSIVE_EFFECT_KIND_LABELS[value],
+            })),
           })),
           (effect) => {
             this.patchPassive(index, (current) => {
@@ -2540,6 +2578,196 @@ export class SkillEditorStep {
                 }, { rerender: false });
               },
               { step: 0.5, min: 0.1 },
+            ),
+          ),
+        );
+        break;
+      case 'duelistPride':
+        effectGrid.appendChild(
+          createFieldRow(
+            'prideHpRatioMin',
+            createNumberInput(
+              passive.prideHpRatioMin ?? 0.5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.prideHpRatioMin = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'prideHealMultiplier',
+            createNumberInput(
+              passive.prideHealMultiplier ?? 0.25,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.prideHealMultiplier = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0, max: 1 },
+            ),
+          ),
+        );
+        break;
+      case 'lowHpCover':
+        effectGrid.appendChild(
+          createFieldRow(
+            'coverHpRatioThreshold',
+            createNumberInput(
+              passive.coverHpRatioThreshold ?? 0.35,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.coverHpRatioThreshold = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0.01, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'coverWaveLimit',
+            createNumberInput(
+              passive.coverWaveLimit ?? 3,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.coverWaveLimit = value;
+                }, { rerender: false });
+              },
+              { step: 1, min: 1 },
+            ),
+          ),
+        );
+        break;
+      case 'lastStandGuts':
+        effectGrid.appendChild(
+          createFieldRow(
+            'lastStandGutsDurationSec',
+            createNumberInput(
+              passive.lastStandGutsDurationSec ?? 4,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.lastStandGutsDurationSec = value;
+                }, { rerender: false });
+              },
+              { step: 0.5, min: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'lastStandGutsEndStunSec',
+            createNumberInput(
+              passive.lastStandGutsEndStunSec ?? 1.5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.lastStandGutsEndStunSec = value;
+                }, { rerender: false });
+              },
+              { step: 0.1, min: 0 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'lastStandGutsEndKnockbackPx',
+            createNumberInput(
+              passive.lastStandGutsEndKnockbackPx ?? 15,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.lastStandGutsEndKnockbackPx = value;
+                }, { rerender: false });
+              },
+              { step: 1, min: 0 },
+            ),
+          ),
+        );
+        break;
+      case 'bloodlustDuelist':
+        effectGrid.appendChild(
+          createFieldRow(
+            'bloodlustBlockChance',
+            createNumberInput(
+              passive.bloodlustBlockChance ?? 0.05,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.bloodlustBlockChance = value;
+                }, { rerender: false });
+              },
+              { step: 0.01, min: 0, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'DEF最大倍率',
+            createNumberInput(
+              passive.bloodlustDefBuffMultiplierMax ?? 1.6,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.bloodlustDefBuffMultiplierMax = value;
+                }, { rerender: false });
+              },
+              { step: 0.01, min: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'DEF最大バフHP比率',
+            createNumberInput(
+              passive.bloodlustDefMaxBuffAtHpRatio ?? 0.5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.bloodlustDefMaxBuffAtHpRatio = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0.01, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'ATK最大倍率',
+            createNumberInput(
+              passive.bloodlustAtkBuffMultiplierMax ?? 2,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.bloodlustAtkBuffMultiplierMax = value;
+                }, { rerender: false });
+              },
+              { step: 0.01, min: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'ATK最大バフHP比率',
+            createNumberInput(
+              passive.bloodlustAtkMaxBuffAtHpRatio ?? 0,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.bloodlustAtkMaxBuffAtHpRatio = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'bloodlustAtkBuffCurveExponent',
+            createNumberInput(
+              passive.bloodlustAtkBuffCurveExponent ?? 1,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.bloodlustAtkBuffCurveExponent = value;
+                }, { rerender: false });
+              },
+              { step: 0.5, min: 1 },
             ),
           ),
         );
@@ -3234,7 +3462,7 @@ export class SkillEditorStep {
                 delete current.interval;
               }, { rerender: false });
             },
-            {},
+            { min: 0, step: 0.1 },
           ),
         ),
       );
@@ -3437,22 +3665,40 @@ export class SkillEditorStep {
     grid.appendChild(
       createFieldRow(
         '種別',
-        createSelect(
-          selectedCategory,
-          categoryOptions.map((value) => ({
-            value,
-            label: categoryLabels[value as keyof typeof categoryLabels],
-          })),
-          (category) =>
-            patchEffect(
-              isBasicAttack
-                ? defaultBasicAttackEffectForCategory(
+        isBasicAttack
+          ? createSelect(
+              selectedCategory,
+              categoryOptions.map((value) => ({
+                value,
+                label: categoryLabels[value as keyof typeof categoryLabels],
+              })),
+              (category) =>
+                patchEffect(
+                  defaultBasicAttackEffectForCategory(
                     category as BasicAttackEffectCategory,
+                  ),
+                  { rerender: true },
+                ),
+            )
+          : createGroupedSelect(
+              selectedCategory,
+              EDITOR_ACTIVE_EFFECT_KIND_GROUPS.map((group) => ({
+                label: group.label,
+                options: group.kinds
+                  .filter((value) =>
+                    (categoryOptions as readonly string[]).includes(value),
                   )
-                : defaultEffect(categoryToEffectType(category as EditorActiveEffectCategory)),
-              { rerender: true },
+                  .map((value) => ({
+                    value,
+                    label: categoryLabels[value],
+                  })),
+              })),
+              (category) =>
+                patchEffect(
+                  defaultEffect(categoryToEffectType(category as EditorActiveEffectCategory)),
+                  { rerender: true },
+                ),
             ),
-        ),
       ),
     );
     if (normalizedEffect.type === 'conditionalEffect') {
@@ -4602,6 +4848,40 @@ export class SkillEditorStep {
             patchEffect,
           );
         }
+        break;
+      case 'enemyReelIn':
+        break;
+      case 'arenaDominance':
+        detailGrid.appendChild(
+          createFieldRow(
+            '持続秒',
+            createNumberInput(
+              effect.durationSec ?? 15,
+              (durationSec) =>
+                patchEffect((prev) =>
+                  prev.type === 'arenaDominance'
+                    ? { ...prev, durationSec }
+                    : prev,
+                ),
+              { min: 0.1, step: 0.5 },
+            ),
+          ),
+        );
+        detailGrid.appendChild(
+          createFieldRow(
+            '非マーク被ダメ倍率',
+            createNumberInput(
+              effect.nonMarkDamageMultiplier ?? 0.5,
+              (nonMarkDamageMultiplier) =>
+                patchEffect((prev) =>
+                  prev.type === 'arenaDominance'
+                    ? { ...prev, nonMarkDamageMultiplier }
+                    : prev,
+                ),
+              { min: 0, max: 1, step: 0.05 },
+            ),
+          ),
+        );
         break;
       case 'move': {
         const moveEffect = effect as MoveSkillEffect;

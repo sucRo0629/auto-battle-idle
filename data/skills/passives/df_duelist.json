@@ -1,54 +1,35 @@
 [
   {
+    "id": "df_duelist_passive_1",
+    "name": "闘士の矜持",
+    "effect": "duelistPride",
+    "prideHpRatioMin": 0.5,
+    "prideHealMultiplier": 0.25
+  },
+  {
     "id": "df_duelist_passive_2",
-    "name": "不屈の闘士",
-    "effect": "selfHpRatioBuff",
-    "buffStat": "def",
-    "maxBuffAtHpRatio": 0.5,
-    "buffMultiplierMax": 1.6
+    "name": "剣闘士は流血で滾る",
+    "effect": "bloodlustDuelist",
+    "bloodlustBlockChance": 0.05,
+    "bloodlustDefMaxBuffAtHpRatio": 0.6,
+    "bloodlustDefBuffMultiplierMax": 1.25,
+    "bloodlustAtkMaxBuffAtHpRatio": 0,
+    "bloodlustAtkBuffMultiplierMax": 4,
+    "bloodlustAtkBuffCurveExponent": 3
   },
   {
     "id": "df_duelist_passive_3",
-    "name": "出鼻挫き",
-    "effect": "counter",
-    "chance": 0.2,
-    "counterResponses": [
-      {
-        "kind": "damage",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1
-        },
-        "damageType": "physical"
-      },
-      {
-        "kind": "stun",
-        "durationSec": 1.5
-      },
-      {
-        "kind": "knockback",
-        "distancePx": 15
-      }
-    ],
-    "counterRange": 0,
-    "counterMelee": true
+    "name": "攻撃誘導",
+    "effect": "lowHpCover",
+    "coverHpRatioThreshold": 0.35,
+    "coverWaveLimit": 3
   },
   {
     "id": "df_duelist_passive_4",
-    "name": "闘士は流血で滾る",
-    "effect": "selfHpRatioBuff",
-    "buffStat": "atk",
-    "maxBuffAtHpRatio": 0.1,
-    "buffMultiplierMax": 2
-  },
-  {
-    "id": "df_duelist_passive_1",
-    "name": "盾受け",
-    "effect": "buff",
-    "buffSubKind": "block",
-    "chance": 0.1,
-    "buffTargetRule": {
-      "kind": "self"
-    }
+    "name": "不屈の闘士",
+    "effect": "lastStandGuts",
+    "lastStandGutsDurationSec": 4,
+    "lastStandGutsEndStunSec": 1.5,
+    "lastStandGutsEndKnockbackPx": 15
   }
 ]

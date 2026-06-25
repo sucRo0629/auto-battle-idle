@@ -93,6 +93,20 @@ import {
 } from "./blockResonance.ts";
 import { syncFrontBlockAuras } from "./frontBlockAura.ts";
 import { mitigateIncomingDamage } from "./incomingDamageMitigation.ts";
+import { syncBloodlustDuelistAuras } from "./bloodlustDuelist.ts";
+import { resetLowHpCoverRedirects } from "./lowHpCover.ts";
+import {
+  applyLastStandGutsEndEffects,
+  LAST_STAND_GUTS_OVERLAY,
+  resolveLastStandGutsEndConfig,
+} from "./lastStandGuts.ts";
+import {
+  ARENA_DOMINANCE_OVERLAY,
+  handleArenaDominanceEnd,
+  hasActiveStageTriggerRemaining,
+  initActiveStageTriggerLimits,
+  isAllySupportBlockedDuringArenaDominance,
+} from "./arenaDominance.ts";
 import { tryTriggerHealReservation, grantHealReservationStacks } from "./healReservation.ts";
 import { tryTriggerBarrierBreakRegen } from "./barrierBreakRegen.ts";
 import { tryTriggerBarrierDepletionHeal } from "./barrierDepletionHeal.ts";
@@ -131,6 +145,7 @@ import { SkillSequenceRunner } from "./skills/skillSequence.ts";
 import {
   chargeCountTrigger,
   findReadyCountTriggerCooldowns,
+  forceActiveCooldownReady,
   initializeSkillCooldowns,
   isCountTriggerReady,
   isCountTriggerSkill,
@@ -526,6 +541,10 @@ export class BattleEngine {
       this.enemies,
       this.gameData.skillRegistry.passives,
     );
+    syncBloodlustDuelistAuras(
+      [...this.players, ...this.enemies],
+      this.gameData.skillRegistry.passives,
+    );
   }
 
   private syncContinuousPassiveAuras(): void {
@@ -537,6 +556,10 @@ export class BattleEngine {
     syncFrontThreatControlAuras(this.players, passives);
     syncFrontBlockAuras(this.players, passives);
     syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
+    syncBloodlustDuelistAuras(
+      [...this.players, ...this.enemies],
+      passives,
+    );
     syncHerbalPotencyAuras(this.players, this.enemies, passives, this.gameData);
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
@@ -566,6 +589,10 @@ export class BattleEngine {
     resetPassiveDispelTriggerLimits(
       [...this.players, ...this.enemies],
       passives,
+    );
+    initActiveStageTriggerLimits(
+      [...this.players, ...this.enemies],
+      actives,
     );
     firePeriodicPassivesForTrigger(
       'stageStart',
@@ -956,6 +983,8 @@ export class BattleEngine {
     skill: import("./types.ts").ActiveSkillDef,
     cd?: SkillCooldown,
   ): FireGateContext {
+    const stage = this.gameData.stages.find((s) => s.id === this.stageId);
+    const waveCount = stage?.waves.length ?? 1;
     return {
       actor,
       allies: this.players,
@@ -971,6 +1000,8 @@ export class BattleEngine {
       isWaveStartPhase: this.isWaveStartPhase(),
       isWaveEndPhase: this.isWaveEndPhase(),
       pendingHitQueue: this.pendingHitQueue,
+      waveIndex: this.waveIndex,
+      waveCount,
     };
   }
 
@@ -1073,6 +1104,7 @@ export class BattleEngine {
       this.gameData.skillRegistry.passives,
     );
     resetPerWaveCombatantFlags(this.players);
+    resetLowHpCoverRedirects(this.players, this.gameData.skillRegistry.passives);
     firePeriodicPassivesForTrigger(
       'waveStart',
       [...this.players, ...this.enemies],
@@ -1206,6 +1238,7 @@ export class BattleEngine {
       this.gameData.skillRegistry.passives,
     );
     resetPerWaveCombatantFlags(this.players);
+    resetLowHpCoverRedirects(this.players, this.gameData.skillRegistry.passives);
     firePeriodicPassivesForTrigger(
       'waveStart',
       [...this.players, ...this.enemies],
@@ -1258,6 +1291,42 @@ export class BattleEngine {
     }
   }
 
+  private tryAutoFireFinalWaveStageSkills(): void {
+    const stage = this.gameData.stages.find((s) => s.id === this.stageId);
+    const waveCount = stage?.waves.length ?? 1;
+    if (this.waveIndex !== waveCount - 1) return;
+
+    const actives = this.gameData.skillRegistry.actives;
+    for (const ally of this.players) {
+      if (!ally.isAlive) continue;
+      for (const cd of ally.cooldowns) {
+        if (cd.slotKind !== 'active') continue;
+        const skill = actives[cd.skillId];
+        if (!skill) continue;
+        if (!skill.fireConditions?.some((c) => c.kind === 'finalWaveStart')) {
+          continue;
+        }
+        if (!hasActiveStageTriggerRemaining(ally, skill)) continue;
+        forceActiveCooldownReady(cd);
+        this.executor.tryExecute(ally, cd, this.players, this.enemies);
+      }
+    }
+  }
+
+  private handleLastStandGutsEnd(unit: CombatantState): void {
+    const config = resolveLastStandGutsEndConfig(
+      unit,
+      this.gameData.skillRegistry.passives,
+    );
+    if (!config) return;
+    applyLastStandGutsEndEffects(
+      unit,
+      this.enemies,
+      config.endStunSec,
+      config.endKnockbackPx,
+    );
+  }
+
   private beginEngaged(): void {
     this.partyDeployActive = false;
     this.partyDeployPrepared = false;
@@ -1268,6 +1337,7 @@ export class BattleEngine {
     this.postDeploySettleDelaySec = null;
     this.engaged = true;
     this.setupEngagedCombat();
+    this.tryAutoFireFinalWaveStageSkills();
     if (!this.enemies.some((enemy) => enemy.isAlive)) {
       this.checkBattleEnd();
     }
@@ -1498,8 +1568,13 @@ export class BattleEngine {
                 c.build.learnedActiveIds,
               )
             : 0;
+          const stageTriggerExhausted =
+            skill !== undefined &&
+            !c.isEnemy &&
+            skill.stageTriggerLimit !== undefined &&
+            !hasActiveStageTriggerRemaining(c, skill);
           const fireGateCtx =
-            skill && !c.isEnemy
+            skill && !c.isEnemy && !stageTriggerExhausted
               ? this.buildFireGateContext(c, skill, cd)
               : null;
           return {
@@ -1511,6 +1586,7 @@ export class BattleEngine {
             storedCharges: cd.storedCharges ?? 0,
             maxCharges,
             fireHold: fireGateCtx ? isActiveFireHold(fireGateCtx) : false,
+            ...(stageTriggerExhausted ? { stageTriggerExhausted: true } : {}),
             ...(effectGauge
               ? {
                   activeEffectRemaining: effectGauge.remainingSec,
@@ -1692,8 +1768,25 @@ export class BattleEngine {
       const kept: StatusEffect[] = [];
 
       for (const effect of unit.statusEffects) {
+        const wasActive = effect.remainingSec > 0;
         effect.remainingSec -= deltaTime;
-        if (effect.remainingSec <= 0) continue;
+        if (effect.remainingSec <= 0) {
+          if (
+            wasActive &&
+            effect.overlay === LAST_STAND_GUTS_OVERLAY &&
+            unit.isAlive
+          ) {
+            this.handleLastStandGutsEnd(unit);
+          }
+          if (
+            wasActive &&
+            effect.overlay === ARENA_DOMINANCE_OVERLAY &&
+            unit.isAlive
+          ) {
+            handleArenaDominanceEnd(this.enemies);
+          }
+          continue;
+        }
 
         if (
           unit.isAlive &&
@@ -1794,6 +1887,9 @@ export class BattleEngine {
     const skillName = skill?.name ?? effect.overlay ?? "";
 
     if (effect.overlay === "hot") {
+      if (isAllySupportBlockedDuringArenaDominance(target, source)) {
+        return;
+      }
       const baseAmount = resolveHotAmountFromStatus(source, target, effect, passives);
       const potencyBonus = resolveHerbalPotencyHotBonus(
         target,
@@ -1841,6 +1937,9 @@ export class BattleEngine {
       }
       if (mitigation.lastStandRecoveryTriggered) {
         this.emit({ type: "lastStandRecovery", targetId: target.id });
+      }
+      if (mitigation.lastStandGutsTriggered) {
+        this.emit({ type: "lastStandGuts", targetId: target.id });
       }
       const damageResult = applyDamageToTarget(target, mitigation.finalDamage);
       const appliedDamage =
@@ -1980,6 +2079,7 @@ export class BattleEngine {
   ): boolean {
     const skill = this.gameData.skillRegistry.actives[cd.skillId];
     if (!skill) return false;
+    if (!hasActiveStageTriggerRemaining(unit, skill)) return false;
     const ctx = this.buildFireGateContext(unit, skill, cd);
     if (!shouldFireActiveSkill(ctx)) return false;
     return this.executor.tryExecute(unit, cd, this.players, this.enemies);

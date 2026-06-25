@@ -15,6 +15,22 @@ export function isTimeTrigger(skill: ActiveSkillDef): boolean {
   return resolveSkillTrigger(skill).kind === 'time';
 }
 
+/** time trigger value 0 = チャージ不要（常時 remaining 0、CD tick なし） */
+export function isNoChargeTimeTrigger(skill: ActiveSkillDef): boolean {
+  const trigger = resolveSkillTrigger(skill);
+  return trigger.kind === 'time' && trigger.value === 0;
+}
+
+export function resolveCooldownRemainingForSkill(skill: ActiveSkillDef): number {
+  return resolveSkillTrigger(skill).value;
+}
+
+/** finalWaveStart 等のイベント発動直前に CD を強制リセット */
+export function forceActiveCooldownReady(cd: SkillCooldown): void {
+  cd.remaining = 0;
+  cd.fireHoldSinceSec = undefined;
+}
+
 export function isPausableActiveTriggerKind(kind: SkillTriggerKind): boolean {
   return kind === 'time' || kind === 'hitsTaken';
 }
@@ -80,10 +96,10 @@ export function resetCooldownAfterFire(
   cd: SkillCooldown,
   skill: ActiveSkillDef,
 ): void {
-  cd.remaining = resolveSkillTrigger(skill).value;
+  cd.remaining = resolveCooldownRemainingForSkill(skill);
 }
 
-/** ステージ開始時: 全スキル CD を未充填（remaining = trigger.value）にする */
+/** ステージ開始時: 全スキル CD を未充填（remaining = trigger.value、0 は即 ready）にする */
 export function initializeSkillCooldowns(
   unit: CombatantState,
   actives: Record<string, ActiveSkillDef>,
@@ -91,7 +107,7 @@ export function initializeSkillCooldowns(
   for (const cd of unit.cooldowns) {
     const skill = actives[cd.skillId];
     if (!skill) continue;
-    cd.remaining = resolveSkillTrigger(skill).value;
+    cd.remaining = resolveCooldownRemainingForSkill(skill);
     if (cd.slotKind === 'active') {
       cd.storedCharges = 0;
       cd.fireHoldSinceSec = undefined;
@@ -104,6 +120,7 @@ export function shouldTickCooldown(
   slotKind: SkillCooldown['slotKind'],
 ): boolean {
   if (slotKind === 'basic') return true;
+  if (isNoChargeTimeTrigger(skill)) return false;
   return isTimeTrigger(skill);
 }
 
