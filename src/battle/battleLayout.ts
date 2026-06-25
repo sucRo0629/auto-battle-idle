@@ -7,6 +7,8 @@ import { RANGED_ATTACK_MIN_PX } from './types.ts';
 import {
   resolveApproachFormationRangePx,
   resolveFormationRangePx,
+  isPlayerRearAssaultAccess,
+  type PlayerRearAssaultBattleContext,
 } from './combatPosition.ts';
 import {
   CANVAS_W,
@@ -892,18 +894,23 @@ export function resolveEngagedFormationOverlaps(
   leadingRow: FormationRow | null,
   isOnField: (unit: CombatantState) => boolean,
   isInSkillMotion?: (id: string) => boolean,
-  options?: EngagedFormationOverlapOptions,
+  options?: EngagedFormationOverlapOptions & {
+    battleContext?: PlayerRearAssaultBattleContext;
+  },
 ): void {
   if (leadingRow === null) return;
   const maxCorrectionPx = resolveOverlapCorrectionLimit(
     options?.maxCorrectionPx,
   );
+  const battleContext = options?.battleContext;
   const frontUnits = players.filter(
     (p) =>
       isOnField(p) &&
       p.isAlive &&
       p.formationRow === leadingRow &&
-      !(isInSkillMotion?.(p.id) ?? false),
+      !(isInSkillMotion?.(p.id) ?? false) &&
+      (battleContext === undefined ||
+        !isPlayerRearAssaultAccess(p, battleContext)),
   );
   if (frontUnits.length < 2) return;
 

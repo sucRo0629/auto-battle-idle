@@ -926,7 +926,9 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 
 近接物理の**高速処理・フィニッシャー職**。
 
-背後侵入系 move は、処理対象へ一時アクセスするためのものであり、Defender 的な前線保持を意味しない。rear assault 中の立ち位置は Kill 成立のためのアクセス状態として扱い、通常の front line ownership と分けて考える。
+背後侵入系 move は、処理対象へ一時アクセスするためのものであり、Defender 的な前線保持を意味しない。rear assault 中の立ち位置は Kill 成立のためのアクセス状態として扱い、通常の front line ownership と分けて考える。同期間は formation / overlap / march follow の基準からも除外する（[battle-field.md](battle-field.md) の rear assault 節）。
+
+**影の刃（`at_assassin_active_2`）:** effect 順は evasion buff → 敵対 `toAnchor`（`anchorOffsetPx > 0`）→ damage。専用 `engage` 帰還 step は持たない。シーケンス完了後は通常 approach が敵最前線より右に残った `battleX` を停止 X へ戻す。
 
 ---
 
@@ -1799,7 +1801,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 - move を含むスキルは effect 列を **順序実行**（`buildSkillSequence` → `SkillSequenceRunner`）。各 step は `applyAtBattleSec` でスケジュールされ、move 完了後に次 effect へ進む
 - 任意 effect の **`waitAfterSec`** は step 適用後の tail 待機。最終 step の tail 中も `isActorInSkillMotion` を維持
 - CD はシーケンス全 step 完了後にリセット
-- シーケンス `move` step 適用時、build 時の `targetId` が死亡済みなら **effect の `target` spec を再解決**して anchor を取り直す（影の刃の帰還 `engage` 等）
+- シーケンス `move` step 適用時、build 時の `targetId` が死亡済みなら **effect の `target` spec を再解決**して anchor を取り直す。ただし rear assault 帰還は専用 `engage` step ではなく通常 approach に任せる（`at_assassin_active_2` は帰還 move を含まない）
 - move 含むスキルで味方 `nearest` ターゲットが使用者のみのとき、その move step は **スキップ**（帰還先なし）
 
 ### targetShape の JSON 例（スキーマ参考・具体 ID は未固定）

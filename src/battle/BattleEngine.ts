@@ -43,6 +43,7 @@ import {
   resolveEnemyDeployTargets,
   placeEnemiesOffScreenForDeploy,
   clearPlayerRearAssaultAccess,
+  shouldClearRearAssaultAccess,
 } from "./combatPosition.ts";
 import { waveHasTrainingDummy } from "./trainingStage.ts";
 import {
@@ -875,6 +876,12 @@ export class BattleEngine {
       }
       if (target === undefined) continue;
       updateUnitApproach(ally, target, moveStep);
+      if (
+        ally.accessState === "rearAssault" &&
+        shouldClearRearAssaultAccess(ally, this.players, this.enemies)
+      ) {
+        clearPlayerRearAssaultAccess(ally);
+      }
     }
 
     for (const enemy of this.enemies) {
@@ -1896,6 +1903,7 @@ export class BattleEngine {
         {
           maxCorrectionPx: moveDeltaPx(MOVE_PX_PER_SEC, deltaTime),
           movementBudgetOriginById,
+          battleContext: { players: this.players, enemies: this.enemies },
         },
       );
       this.recordBattleXDebugChanges(
@@ -1976,7 +1984,12 @@ export class BattleEngine {
       },
       (actorId) => {
         const unit = this.findCombatant(actorId);
-        if (unit) clearPlayerRearAssaultAccess(unit);
+        if (
+          unit &&
+          shouldClearRearAssaultAccess(unit, this.players, this.enemies)
+        ) {
+          clearPlayerRearAssaultAccess(unit);
+        }
       },
     );
   }

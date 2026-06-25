@@ -79,17 +79,107 @@ export function getPlayerContactX(players: CombatantState[]): number | null {
   return Math.max(...living.map((a) => a.battleX));
 }
 
+/** 味方 peer frontline から外れた rear assault 判定の余白（`FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX` と同値） */
+export const PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX = 3;
+
+export type PlayerRearAssaultBattleContext = {
+  players: CombatantState[];
+  enemies: CombatantState[];
+};
+
 /**
- * プレイヤーが rear assault アクセス中か。
- * 正本: `CombatantState.accessState`。移行中 fallback として `battleX > contactBattleX` を残す。
- * Threat / ChaseTarget / FrontlineOwner の対象から外す判定に使う。
+ * プレイヤーが rear assault / 戦線外アクセス中か（正本）。
+ *
+ * - `number`: 敵 anchor 基準（`battleX > anchor`）。`enemyForwardFacingPool` 等。
+ * - `PlayerRearAssaultBattleContext`: 接敵中の統一判定。Threat / FrontlineOwner /
+ *   formation / overlap / march follow / approach clamp はこちらを使う。
+ *
+ * Battle context の判定:
+ * 1. `accessState === "rearAssault"`
+ * 2. 固定点: 生存味方集合から「peer 最前線 + margin より前方」のユニットを除外
+ * 3. 単独生存時のみ `battleX > getEnemyContactX` fallback
  */
 export function isPlayerRearAssaultAccess(
   player: CombatantState,
-  contactBattleX: number,
+  enemyAnchorBattleX: number,
+): boolean;
+export function isPlayerRearAssaultAccess(
+  player: CombatantState,
+  context: PlayerRearAssaultBattleContext,
+): boolean;
+export function isPlayerRearAssaultAccess(
+  player: CombatantState,
+  contextOrAnchor: number | PlayerRearAssaultBattleContext,
 ): boolean {
-  if (player.accessState === "rearAssault") return true;
-  return getBattleX(player) > contactBattleX;
+  if (typeof contextOrAnchor === "number") {
+    if (player.accessState === "rearAssault") return true;
+    return getBattleX(player) > contextOrAnchor;
+  }
+  return isPlayerRearAssaultAccessInBattle(
+    player,
+    contextOrAnchor.players,
+    contextOrAnchor.enemies,
+  );
+}
+
+function resolveOnFrontlinePlayerIds(players: CombatantState[]): Set<string> {
+  let onFrontline = new Set(
+    players
+      .filter(
+        (player) => player.isAlive && player.accessState !== "rearAssault",
+      )
+      .map((player) => player.id),
+  );
+
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const id of [...onFrontline]) {
+      const unit = players.find((player) => player.id === id);
+      if (!unit) continue;
+      const peerIds = [...onFrontline].filter((peerId) => peerId !== id);
+      if (peerIds.length === 0) continue;
+      const maxPeerX = Math.max(
+        ...peerIds.map(
+          (peerId) => players.find((player) => player.id === peerId)!.battleX,
+        ),
+      );
+      if (unit.battleX > maxPeerX + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX) {
+        onFrontline.delete(id);
+        changed = true;
+      }
+    }
+  }
+
+  return onFrontline;
+}
+
+function isPlayerRearAssaultAccessInBattle(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  ignoreAccessState = false,
+): boolean {
+  if (!player.isAlive) return false;
+  if (!ignoreAccessState && player.accessState === "rearAssault") return true;
+
+  const probePlayers = ignoreAccessState
+    ? players.map((unit) =>
+        unit.id === player.id
+          ? { ...unit, accessState: undefined as CombatantState["accessState"] }
+          : unit,
+      )
+    : players;
+  const onFrontline = resolveOnFrontlinePlayerIds(probePlayers);
+  if (!onFrontline.has(player.id)) return true;
+
+  const living = players.filter((unit) => unit.isAlive);
+  if (living.length === 1) {
+    const contact = getEnemyContactX(enemies);
+    if (contact !== null && player.battleX > contact) return true;
+  }
+
+  return false;
 }
 
 /** 敵対 anchor への toAnchor で anchorOffsetPx > 0（味方→敵の背後側） */
@@ -115,6 +205,21 @@ export function clearPlayerRearAssaultAccess(player: CombatantState): void {
   }
 }
 
+/** スキル完了 / 接近後: accessState を外しても戦線外でなければ解除 */
+export function shouldClearRearAssaultAccess(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+): boolean {
+  if (player.accessState !== "rearAssault") return false;
+  return !isPlayerRearAssaultAccessInBattle(
+    player,
+    players,
+    enemies,
+    true,
+  );
+}
+
 /** 敵接触線より手前にいる生存味方（FrontlineOwner 候補プール） */
 export function resolvePlayerFrontlineOwnerCandidates(
   players: CombatantState[],
@@ -124,8 +229,9 @@ export function resolvePlayerFrontlineOwnerCandidates(
   if (living.length === 0) return [];
   const enemyContact = getEnemyContactX(enemies);
   if (enemyContact === null) return living;
+  const battleContext: PlayerRearAssaultBattleContext = { players, enemies };
   return living.filter(
-    (player) => !isPlayerRearAssaultAccess(player, enemyContact),
+    (player) => !isPlayerRearAssaultAccess(player, battleContext),
   );
 }
 
@@ -461,10 +567,17 @@ export function resolveApproachAttackBattleX(
   contactX: number,
   gameData: GameData,
   livingAllyCount?: number,
+  enemyFrontContact?: number,
 ): number {
   const rangePx = resolveApproachRangePx(unit, gameData, livingAllyCount);
   const stopX = resolveAttackBattleX(unit, contactX, gameData, rangePx);
   if (!unit.isEnemy && stopX < unit.battleX) {
+    if (
+      enemyFrontContact !== undefined &&
+      unit.battleX > enemyFrontContact
+    ) {
+      return stopX;
+    }
     return unit.battleX;
   }
   return stopX;

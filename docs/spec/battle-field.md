@@ -320,7 +320,20 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 敵の Threat chase は敵の前方側にいるプレイヤー候補から選ぶ。rear assault アクセス中のプレイヤーは敵の新しい `ChaseTarget` や前線所有者にはしない。
 
-**rear assault アクセス状態（runtime）:** 背後滞在の正本は `CombatantState.accessState === "rearAssault"`（`combatPosition.ts` の `setPlayerRearAssaultAccess` / `clearPlayerRearAssaultAccess`）。`isPlayerRearAssaultAccess` が Threat / `FrontlineOwner` / `enemyForwardFacingPool` からの除外判定に使う。立てる条件: 味方 actor が敵対 anchor へ `moveMode: "toAnchor"` かつ `anchorOffsetPx > 0` の move を適用したとき（Assassin 固有 ID ではなく効果形状で判定）。解除: 帰還 `engage` / 非 rear の move 適用時、スキルシーケンス完了時、死亡・`clearForActor` / `clearAll` / wave reset（`clearEngagedVisualState`）。`waitAfterSec` 中も move 完了だけでは解除しない。移行中 fallback として `battleX > contactBattleX` を残す。敵側のプレイヤー背後 move は本 spec のスコープ外。
+**rear assault アクセス状態（runtime）:** 背後滞在の runtime フラグは `CombatantState.accessState === "rearAssault"`（`setPlayerRearAssaultAccess` / `clearPlayerRearAssaultAccess`）。**戦線外判定の正本は `isPlayerRearAssaultAccess` のみ**（`combatPosition.ts`）。
+
+| 呼び出し | 用途 |
+| -------- | ---- |
+| `isPlayerRearAssaultAccess(player, enemyAnchorX)` | 敵 anchor 基準（`enemyForwardFacingPool` 等） |
+| `isPlayerRearAssaultAccess(player, { players, enemies })` | 接敵中の統一判定。Threat / `FrontlineOwner` / formation / overlap / march follow / approach clamp |
+
+接敵 context の判定順: (1) `accessState === "rearAssault"` (2) 生存味方 peer 集合の固定点から「最前線 + `PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX`（3px）より前方」を除外 (3) **単独生存時のみ** `battleX > getEnemyContactX` fallback。遠隔だけ残って contact が大きく振れても、peer frontline で戦線外を判定する。
+
+rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormationOverlaps`・spacing の **基準から除外**する（戦線外の単独アクセス）。`applyFormationRowApproachSpacing` は dead-chain 維持のため on-field 全スロットを入力に含めるが、戦線外ユニットの `baseApproach` は clamp する。
+
+立てる条件: 味方 actor が敵対 anchor へ `moveMode: "toAnchor"` かつ `anchorOffsetPx > 0` の move を適用したとき（効果形状で判定）。解除: 非 rear の move 適用時、**`shouldClearRearAssaultAccess`（peer frontline 付近へ戻ったとき）**、スキルシーケンス完了時（同条件）、死亡・wave reset。`waitAfterSec` 中も move 完了だけでは解除しない。敵側のプレイヤー背後 move は本 spec のスコープ外。
+
+**背後侵入後の復帰:** 専用 `engage` 帰還 step に依存しない。シーケンス完了後は通常 approach（`resolveAllPlayerApproachBattleX`）が正本。`battleX` が敵最前線より右（敵背後）に残っている間は `resolveApproachAttackBattleX` が **後退（battleX 減少）を許可**し、ChaseTarget の停止 X へ戻す。射程内に入れば `shouldSkipEngagedAutoApproach` で停止し攻撃可能。
 
 **停止 X：** chase 対象の `battleX` に対し `resolveApproachAttackBattleX`（§2.5 と同じ射程式）。敵は `capEngagedEnemyApproachBattleX` により左（`battleX` 減少）のみ。味方 defender 専用の contact 停止 resolver は持たない。
 
@@ -331,12 +344,13 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 - 前衛（`formationRow !== 'back'`）：生存敵 contact より右へ過進軍しない（`capFrontRowBeforeEnemyContact`）。これは `ChaseTarget` ではなく overtake 防止 clamp
 - 前列 supporter：近接最前帯の直後へ留める（`capFrontRowSupporterBehindMeleeFront`）。これは defender 代替壁ではなく前線直後 sustain 用の formation clamp
 - 接近ターゲットの row-order clamp は前衛 / 後衛で共通で、`applyFormationRowApproachSpacing` の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
+- rear assault 中の味方は `applyFormationMarchFollow` の leader / follower から除外。`baseApproach` は formation chain 用に clamp し、背後位置を他ユニットの spacing 基準にしない
 
 **敵の追い替え：** Threat は毎 tick 再評価するが、chase / attack には [combat.md](combat.md) の **閾値ヒステリシス**（`pickThreatTargetWithHysteresis` / `threatFocusTargetId`）を適用する。ヘイト 1 位が瞬間的に入れ替わっただけでは chase target を即切替しない。射程内に入ったら attack プールで停止・攻撃。
 
 **遠隔敵の表示凍結：** 接敵開始時 `engagedDisplayAnchorPlayerId`（`battleDisplay.getEngagedDisplayAnchorPlayerId` / `setEngagedDisplayAnchorPlayerId`）は attack プール → なければ chase（`battleDisplay.freezeRangedTargets`）。接敵中の攻撃ターゲット解決とは独立。DisplayAnchor は描画専用で `AttackTarget` / `ChaseTarget` / `MoveAnchor` へ逆流させない。
 
-**スキル `move` 中・シーケンス busy 中**の actor は自動接近対象外。接敵中の `resolveEngagedFormationOverlaps` でも **スキルモーション中ユニットは overlap 対象から除外**（一時的な `battleX` で味方を引っ張らない）。
+**スキル `move` 中・シーケンス busy 中**の actor は自動接近対象外。接敵中の `resolveEngagedFormationOverlaps` でも **スキルモーション中ユニットと rear assault アクセス中ユニットは overlap 対象から除外**（一時的な `battleX` で味方を引っ張らない）。
 
 **敵対 `toAnchor` スキル:** 自動接近で anchor が通常攻撃射程内に入るまで発動を保留（`SkillExecutor`）。射程内発動後の背後移動は `effect.range` で 1 ステップ上限（§2.5）。
 
@@ -347,7 +361,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | approach        | `updateEngagedBattleMovement` → `resolveAllPlayerApproachBattleX` / `resolveEnemyApproachBattleX` | 通常の接近・射程停止。Phase 3d の Intent 一本化を正本とし、role 専用接近分岐を持たない             |
 | skill move      | `SkillSequenceRunner.tickMoves`                                                                   | busy actor の `battleX` を moveDurationSec で補間。auto approach / overlap 対象から一時除外        |
 | forced movement | `ccEffects.applyKnockbackToTarget` / `enemyReelIn.applyEnemyReelIn`                               | effect 成功時に `battleX` を即時更新し、`visualX` は互換ミラーとして同期。layout bake ではない     |
-| overlap         | `resolveEngagedFormationOverlaps`（leading row 限定・生存のみ・skill motion 除外）                | 味方同士・敵同士の重なり解消だけ。射程停止・target 選択・死体固定には使わない。Engaged 中は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、formation snap や 32px 級の直接押し出し、不自然な加速を起こさない |
+| overlap         | `resolveEngagedFormationOverlaps`（leading row 限定・生存のみ・skill motion / rear assault 除外） | 味方同士・敵同士の重なり解消だけ。射程停止・target 選択・死体固定には使わない。Engaged 中は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、formation snap や 32px 級の直接押し出し、不自然な加速を起こさない |
 
 target / threat / contact / frontline owner は **座標 snap の理由ではない**。approach / attack / display / clamp の入力として毎 tick 再評価するが、Engaged 中の生存ユニットを layout bake で再配置しない。
 

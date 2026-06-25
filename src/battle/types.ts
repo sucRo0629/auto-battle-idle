@@ -540,7 +540,7 @@ export interface CombatantState extends Combatant {
   baseThreat?: number;
   /** 敵のみ: Threat ヒステリシス用の現在フォーカス対象 id */
   threatFocusTargetId?: string;
-  /** runtime-only: 背後滞在など一時アクセス。`isPlayerRearAssaultAccess` の正本 */
+  /** runtime-only: 背後滞在など一時アクセス。`isPlayerRearAssaultAccess` battle context の入力 */
   accessState?: CombatantAccessState;
   /** periodicDispel: Wave 内の残り発動回数（passiveId → 残数） */
   passiveDispelRemainingTriggers?: Record<string, number>;

@@ -239,7 +239,7 @@ Threat は、敵 AI が「誰を優先して攻撃するか」を決めるため
 - これらを同一の意味へ畳み込まない
 
 移動型アタッカーや背後侵入スキルを成立させるため、前進・背後侵入・一時的な接敵は、そのまま「新しい被害入口になった」とは解釈しない。双刃士などの rear assault は、戦線保持ではなく **短時間アクセスによる Kill 成立** として扱う。
-座標・接敵側の具体ルールは [battle-field.md](battle-field.md) を正本とし、敵のデフォルト chase は敵の前方側にいる候補から Threat を選ぶ。背後侵入中のユニットは Threat 値を持っていても、その位置だけで敵の新しい追跡入口や前線所有者にはならない。Threat / target / contact / frontline owner は攻撃・接近・表示・clamp の入力であり、Engaged 中の座標 snap 理由にはしない。
+座標・接敵側の具体ルールは [battle-field.md](battle-field.md) を正本とし、敵のデフォルト chase は敵の前方側にいる候補から Threat を選ぶ。背後侵入中のユニットは Threat 値を持っていても、その位置だけで敵の新しい追跡入口や前線所有者にはならない。同期間は `isPlayerRearAssaultAccess(player, { players, enemies })` により formation / overlap / march follow の基準からも除外する（敵 anchor 用の数値 overload とは別）。Threat / target / contact / frontline owner は攻撃・接近・表示・clamp の入力であり、Engaged 中の座標 snap 理由にはしない。背後侵入完了後の復帰は専用 move step ではなく、`battleX` が敵最前線より右に残っている間 `resolveApproachAttackBattleX` が後退を許可する通常 approach が正本。
 
 ### baseThreat（戦闘開始・前列圧力更新時）
 

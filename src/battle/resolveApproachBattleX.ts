@@ -2,6 +2,8 @@ import type { CombatantState, GameData, TargetSpec } from "./types.ts";
 import { getEffectiveMaxHp, getPassiveDefs } from "./combatMath.ts";
 import {
   getEnemyContactX,
+  isPlayerRearAssaultAccess,
+  type PlayerRearAssaultBattleContext,
   resolveApproachAttackBattleX,
   resolveApproachFormationRangePx,
   resolveAttackBattleX,
@@ -221,6 +223,7 @@ function capFrontRowBeforeEnemyContact(
     contact,
     gameData,
     livingAllyCount(players),
+    contact,
   );
   return Math.min(approachX, maxForward);
 }
@@ -245,9 +248,16 @@ function resolvePlayerChaseApproachBattleX(
       chase.battleX,
       gameData,
       allyCount,
+      contact,
     );
   }
-  return resolveApproachAttackBattleX(player, contact, gameData, allyCount);
+  return resolveApproachAttackBattleX(
+    player,
+    contact,
+    gameData,
+    allyCount,
+    contact,
+  );
 }
 
 function resolveSharedPlayerApproachBattleX(
@@ -332,6 +342,7 @@ function capFrontRowSupporterBehindMeleeFront(
   let maxMeleeFrontX = Number.NEGATIVE_INFINITY;
   for (const ally of players) {
     if (!ally.isAlive) continue;
+    if (isPlayerRearAssaultAccess(ally, { players, enemies })) continue;
     if (ally.formationRow !== "front") continue;
     if (!isMeleeFormationSlot(toMeleeFormationSlot(ally))) continue;
     const meleeX = resolvePlayerChaseApproachBattleX(
@@ -345,6 +356,29 @@ function capFrontRowSupporterBehindMeleeFront(
   }
   if (maxMeleeFrontX === Number.NEGATIVE_INFINITY) return approachX;
   return Math.min(approachX, maxMeleeFrontX - FORMATION_DEPTH_STEP_PX);
+}
+
+function resolveRearAssaultReturnApproachBattleX(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  contact: number,
+): number | null {
+  if (!isPlayerRearAssaultAccess(player, { players, enemies })) return null;
+  const chase = resolvePlayerChaseTargetEnemy(
+    player,
+    players,
+    enemies,
+    gameData,
+  );
+  const anchorX = chase?.battleX ?? contact;
+  return resolveAttackBattleX(
+    player,
+    anchorX,
+    gameData,
+    livingAllyCount(players),
+  );
 }
 
 /** 列内スペーシング前の個別接近目標 X */
@@ -417,25 +451,54 @@ export function resolveAllPlayerApproachBattleX(
     return new Map(players.map((p) => [p.id, p.battleX]));
   }
 
+  const battleContext: PlayerRearAssaultBattleContext = { players, enemies };
   const baseApproach = new Map<string, number>();
   for (const player of players) {
-    baseApproach.set(
-      player.id,
-      resolveIndividualPlayerApproachBattleX(
+    let base = resolveIndividualPlayerApproachBattleX(
+      player,
+      players,
+      enemies,
+      gameData,
+      contact,
+    );
+    if (isPlayerRearAssaultAccess(player, battleContext)) {
+      const rearReturn = resolveRearAssaultReturnApproachBattleX(
         player,
         players,
         enemies,
         gameData,
         contact,
-      ),
-    );
+      );
+      if (rearReturn !== null && rearReturn < player.battleX) {
+        base = rearReturn;
+      } else {
+        base = Math.min(
+          base,
+          resolveApproachAttackBattleX(
+            player,
+            contact,
+            gameData,
+            livingAllyCount(players),
+            contact,
+          ),
+        );
+      }
+    }
+    baseApproach.set(player.id, base);
   }
 
   const spacingInputs = players.map(toPlacementInput);
 
   const spaced = applyFormationRowApproachSpacing(baseApproach, spacingInputs);
   capApproachFormationOrder(spaced, baseApproach, players);
-  applyFormationMarchFollow(spaced, players);
+  applyFormationMarchFollow(
+    spaced,
+    players.filter(
+      (player) =>
+        player.isAlive &&
+        !isPlayerRearAssaultAccess(player, battleContext),
+    ),
+  );
 
   return spaced;
 }

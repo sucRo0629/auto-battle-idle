@@ -369,6 +369,55 @@ describe('combatPosition', () => {
     ]);
   });
 
+  it('peels off-frontline allies via peer frontline fixed point', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 200,
+    });
+    const assassin = mockCombatant({
+      id: 'assassin',
+      formationRow: 'front',
+      battleX: 280,
+    });
+    const enemy = mockCombatant({
+      id: 'enemy',
+      isEnemy: true,
+      battleX: 335,
+    });
+    const battleContext = { players: [guard, assassin], enemies: [enemy] };
+
+    expect(isPlayerRearAssaultAccess(assassin, enemy.battleX)).toBe(false);
+    expect(isPlayerRearAssaultAccess(assassin, battleContext)).toBe(true);
+    expect(isPlayerRearAssaultAccess(guard, battleContext)).toBe(false);
+  });
+
+  it('isPlayerRearAssaultAccess in battle context when ahead of peer frontline despite ranged contact skew', () => {
+    const guard = mockCombatant({
+      id: 'guard',
+      formationRow: 'front',
+      battleX: 299.9,
+    });
+    const assassin = mockCombatant({
+      id: 'assassin',
+      formationRow: 'front',
+      battleX: 328.9,
+    });
+    const rangedEnemy = mockCombatant({
+      id: 'ranged',
+      isEnemy: true,
+      battleX: 335,
+    });
+    const players = [guard, assassin];
+    const enemies = [rangedEnemy];
+    const battleContext = { players, enemies };
+
+    expect(isPlayerRearAssaultAccess(assassin, rangedEnemy.battleX)).toBe(false);
+    expect(isPlayerRearAssaultAccess(assassin, battleContext)).toBe(true);
+    expect(isPlayerRearAssaultAccess(guard, battleContext)).toBe(false);
+    expect(getPlayerFrontlineContactX(players, enemies)).toBe(299.9);
+  });
+
   it('resolveMoveBattleX engage and toAnchor offset', () => {
     const sword = mockCombatant({
       id: 'sword',

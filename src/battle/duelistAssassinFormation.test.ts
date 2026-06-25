@@ -8,10 +8,16 @@ import { createMemberFromClass } from "../progression/partyCompose.ts";
 import { PARTY_FORMATION_SLOT_SPACING } from "./battleConstants.ts";
 import {
   asBattleEngineInternals,
+  advanceUntil,
   reachWave1Engage,
+  reachWave2Engage,
   SCREEN_MIN_X,
   TICK_DT,
 } from "./test/battleFieldSpec.harness.ts";
+import {
+  getEnemyContactX,
+  isPlayerRearAssaultAccess,
+} from "./combatPosition.ts";
 import {
   resolveEnemyAttackTargetPlayer,
   resolvePlayerApproachBattleX,
@@ -35,6 +41,100 @@ function createDuelistAssassinEngine(): BattleEngine {
     () => save.party,
     () => save.stageProgress.currentStageId,
   );
+}
+
+function createDuelistAssassinWave2RegressionEngine(): BattleEngine {
+  const gameData = structuredClone(loadGameData());
+  const stage = gameData.stages.find((s) => s.id === "1");
+  if (stage?.waves[0]) {
+    stage.waves[0].enemies = [{ templateId: "stage1_1", spawnX: 120 }];
+  }
+  if (stage?.waves[1]) {
+    stage.waves[1].enemies = [
+      { templateId: "test_enemy", spawnX: 100 },
+      { templateId: "test_ranged", spawnX: 160 },
+      { templateId: "test_to_ranged", spawnX: 220 },
+    ];
+  }
+  const wave1Enemy = gameData.enemyRegistry.stage1_1;
+  const melee = gameData.enemyRegistry.test_enemy;
+  const ranged = gameData.enemyRegistry.test_ranged;
+  const toRanged = gameData.enemyRegistry.test_to_ranged;
+  if (wave1Enemy) wave1Enemy.maxHp = 1;
+  if (melee) melee.maxHp = 1;
+  if (ranged) ranged.maxHp = 1;
+  if (toRanged) toRanged.maxHp = 9_999;
+  const save = createDefaultSave(gameData, "demo");
+  save.stageProgress.currentStageId = "1";
+  save.party[0] = createMemberFromClass("df_duelist", gameData);
+  save.party[1] = createMemberFromClass("at_assassin", gameData);
+  save.party[2] = null;
+  save.party[3] = null;
+  for (const slot of save.party) {
+    if (slot) slot.progress.level = 12;
+  }
+  return new BattleEngine(
+    gameData,
+    loadLevelCurves(levelCurvesJson),
+    () => save.party,
+    () => save.stageProgress.currentStageId,
+  );
+}
+
+function createGuardAssassinWave2RegressionEngine(): BattleEngine {
+  const gameData = structuredClone(loadGameData());
+  const stage = gameData.stages.find((s) => s.id === "1");
+  if (stage?.waves[0]) {
+    stage.waves[0].enemies = [{ templateId: "stage1_1", spawnX: 120 }];
+  }
+  if (stage?.waves[1]) {
+    stage.waves[1].enemies = [
+      { templateId: "test_enemy", spawnX: 100 },
+      { templateId: "test_ranged", spawnX: 160 },
+      { templateId: "test_to_ranged", spawnX: 220 },
+    ];
+  }
+  const wave1Enemy = gameData.enemyRegistry.stage1_1;
+  const melee = gameData.enemyRegistry.test_enemy;
+  const ranged = gameData.enemyRegistry.test_ranged;
+  const toRanged = gameData.enemyRegistry.test_to_ranged;
+  if (wave1Enemy) wave1Enemy.maxHp = 1;
+  if (melee) melee.maxHp = 1;
+  if (ranged) ranged.maxHp = 1;
+  if (toRanged) toRanged.maxHp = 9_999;
+  const save = createDefaultSave(gameData, "demo");
+  save.stageProgress.currentStageId = "1";
+  save.party[0] = createMemberFromClass("df_guardian", gameData);
+  save.party[1] = createMemberFromClass("at_assassin", gameData);
+  save.party[2] = null;
+  save.party[3] = null;
+  for (const slot of save.party) {
+    if (slot) slot.progress.level = 12;
+  }
+  return new BattleEngine(
+    gameData,
+    loadLevelCurves(levelCurvesJson),
+    () => save.party,
+    () => save.stageProgress.currentStageId,
+  );
+}
+
+function advanceToWave2Engaged(engine: BattleEngine): void {
+  const reached = advanceUntil(
+    engine,
+    (snap) => snap.waveIndex === 1 && snap.engaged,
+    120_000,
+  );
+  expect(reached).not.toBeNull();
+}
+
+function triggerShadowBlade(engine: BattleEngine): void {
+  const internal = asBattleEngineInternals(engine);
+  const assassin = internal.players.find((p) => p.name === "双刃士")!;
+  const active2 = assassin.cooldowns.find(
+    (cd) => cd.skillId === "at_assassin_active_2",
+  )!;
+  active2.remaining = 0;
 }
 
 describe("duelist + assassin front row", () => {
@@ -373,5 +473,152 @@ describe("duelist + assassin front row", () => {
 
     expect(duelistDeathTick).toBeGreaterThan(0);
     expect(assassinAttacked).toBe(true);
+  });
+
+  it("assassin rear assault does not pull defender formation behind enemies", () => {
+    const engine = createDuelistAssassinWave2RegressionEngine();
+    engine.startBattle();
+    advanceToWave2Engaged(engine);
+    triggerShadowBlade(engine);
+    const internal = asBattleEngineInternals(engine);
+
+    const duelist = internal.players.find((p) => p.name === "闘技士")!;
+    const assassin = internal.players.find((p) => p.name === "双刃士")!;
+
+    let sawRearAssault = false;
+    let maxDuelistBeyondContact = Number.NEGATIVE_INFINITY;
+    const battleContext = () => ({
+      players: internal.players,
+      enemies: internal.enemies,
+    });
+
+    for (let t = 0; t < 3_600; t++) {
+      engine.tick(TICK_DT);
+      const enemyContact = getEnemyContactX(internal.enemies);
+      if (enemyContact === null) break;
+
+      if (
+        isPlayerRearAssaultAccess(assassin, battleContext()) ||
+        internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)
+      ) {
+        sawRearAssault = true;
+        if (assassin.battleX > enemyContact + 8) {
+          maxDuelistBeyondContact = Math.max(
+            maxDuelistBeyondContact,
+            duelist.battleX - enemyContact,
+          );
+          expect(duelist.battleX).toBeLessThanOrEqual(enemyContact + 4);
+        }
+      }
+
+      if (
+        sawRearAssault &&
+        !isPlayerRearAssaultAccess(assassin, battleContext()) &&
+        !internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)
+      ) {
+        break;
+      }
+    }
+
+    expect(sawRearAssault).toBe(true);
+    expect(maxDuelistBeyondContact).toBeLessThanOrEqual(4);
+  });
+
+  it("shadow blade target death does not retarget return move forward", () => {
+    const engine = createDuelistAssassinWave2RegressionEngine();
+    engine.startBattle();
+    advanceToWave2Engaged(engine);
+    triggerShadowBlade(engine);
+    const internal = asBattleEngineInternals(engine);
+
+    const assassin = internal.players.find((p) => p.name === "双刃士")!;
+    const killTarget = internal.enemies.find(
+      (e) => e.isAlive && e.name === "test_enemy",
+    );
+    expect(killTarget?.isAlive).toBe(true);
+    if (killTarget) killTarget.hp = 1;
+
+    let peakX = assassin.battleX;
+    let sawRearAssault = false;
+    let targetDiedDuringSkill = false;
+    let maxXAfterTargetDeath = assassin.battleX;
+    const battleContext = () => ({
+      players: internal.players,
+      enemies: internal.enemies,
+    });
+
+    for (let t = 0; t < 3_600; t++) {
+      engine.tick(TICK_DT);
+      peakX = Math.max(peakX, assassin.battleX);
+
+      if (isPlayerRearAssaultAccess(assassin, battleContext())) {
+        sawRearAssault = true;
+      }
+
+      if (killTarget && !killTarget.isAlive && sawRearAssault) {
+        targetDiedDuringSkill = true;
+        maxXAfterTargetDeath = Math.max(maxXAfterTargetDeath, assassin.battleX);
+      }
+
+      if (
+        targetDiedDuringSkill &&
+        !internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)
+      ) {
+        break;
+      }
+    }
+
+    expect(sawRearAssault).toBe(true);
+    expect(targetDiedDuringSkill).toBe(true);
+    expect(maxXAfterTargetDeath).toBeLessThanOrEqual(peakX + 2);
+    expect(assassin.battleX).toBeLessThan(peakX);
+  });
+
+  it("iron guard rear assault peer case does not pull forward via overlap", () => {
+    const engine = createGuardAssassinWave2RegressionEngine();
+    engine.startBattle();
+    advanceToWave2Engaged(engine);
+    triggerShadowBlade(engine);
+    const internal = asBattleEngineInternals(engine);
+
+    const guardian = internal.players.find((p) => p.name === "鉄衛士")!;
+    const assassin = internal.players.find((p) => p.name === "双刃士")!;
+
+    let sawRearAssault = false;
+    let maxGuardianBeyondContact = Number.NEGATIVE_INFINITY;
+    const battleContext = () => ({
+      players: internal.players,
+      enemies: internal.enemies,
+    });
+
+    for (let t = 0; t < 3_600; t++) {
+      engine.tick(TICK_DT);
+      const enemyContact = getEnemyContactX(internal.enemies);
+      if (enemyContact === null) break;
+
+      const assassinRear = isPlayerRearAssaultAccess(assassin, battleContext());
+
+      if (assassinRear) {
+        sawRearAssault = true;
+        if (assassin.battleX > guardian.battleX + 8) {
+          maxGuardianBeyondContact = Math.max(
+            maxGuardianBeyondContact,
+            guardian.battleX - enemyContact,
+          );
+          expect(guardian.battleX).toBeLessThanOrEqual(enemyContact + 4);
+        }
+      }
+
+      if (
+        sawRearAssault &&
+        !assassinRear &&
+        !internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)
+      ) {
+        break;
+      }
+    }
+
+    expect(sawRearAssault).toBe(true);
+    expect(maxGuardianBeyondContact).toBeLessThanOrEqual(4);
   });
 });

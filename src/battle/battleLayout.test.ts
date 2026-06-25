@@ -458,6 +458,44 @@ describe('resolveEngagedFormationOverlaps', () => {
     expect(guardian.battleX).toBe(377);
   });
 
+  it('excludes rear assault by peer frontline when ranged enemy skews contact', () => {
+    const guardian = meleeUnit({
+      id: 'guard',
+      role: 'defender',
+      rangePx: 10,
+      battleX: 299.9,
+    });
+    const assassin = meleeUnit({
+      id: 'as',
+      role: 'attacker',
+      rangePx: 15,
+      battleX: 328.9,
+    });
+    const guardianX = guardian.battleX;
+
+    resolveEngagedFormationOverlaps(
+      [guardian, assassin],
+      'front',
+      () => true,
+      undefined,
+      {
+        battleContext: {
+          players: [guardian, assassin],
+          enemies: [
+            mockCombatant({
+              id: 'ranged',
+              isEnemy: true,
+              battleX: 335,
+            }),
+          ],
+        },
+        maxCorrectionPx: 2,
+      },
+    );
+
+    expect(guardian.battleX).toBe(guardianX);
+  });
+
   it('limits engaged overlap correction by remaining tick movement budget', () => {
     const warrior = meleeUnit({
       id: 'war',
