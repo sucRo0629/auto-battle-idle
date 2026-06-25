@@ -1,5 +1,27 @@
 [
   {
+    "id": "df_paladin_basic_attack",
+    "name": "df_paladin_basic_attack",
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ],
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    }
+  },
+  {
     "id": "df_paladin_active_1",
     "name": "光明剣",
     "trigger": {
@@ -109,33 +131,11 @@
     ]
   },
   {
-    "id": "df_paladin_basic_attack",
-    "name": "df_paladin_basic_attack",
-    "effect": [
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "damage",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1
-        }
-      }
-    ],
-    "trigger": {
-      "kind": "time",
-      "value": 2
-    }
-  },
-  {
     "id": "df_paladin_active_3",
     "name": "慈光",
     "trigger": {
       "kind": "time",
-      "value": 11
+      "value": 12
     },
     "effect": [
       {
@@ -177,7 +177,7 @@
     "name": "降魔光明",
     "trigger": {
       "kind": "time",
-      "value": 12
+      "value": 15
     },
     "effect": [
       {
