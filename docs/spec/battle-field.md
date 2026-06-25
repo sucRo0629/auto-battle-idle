@@ -78,6 +78,8 @@ BattlePhase 判定
 
 verify/debug mode の `battleX debug` 表は、tick 内の `battleX` 更新内訳（approach / skillMove / knockback / enemyReelIn / overlap / deploy / victoryExit / layoutBake / corpseAnchor 等）を調査するための表示であり、runtime 正本ではない。通常 snapshot には trace を含めない。
 
+確認モード ON 時は、Wave 内 tick ごとの `BattleSnapshot` と当 tick の trace をリングバッファ（最大 3600 frame ≒ 60 秒）に保持し、debug UI で pause / seek / warning ジャンプできる。Wave 切替で buffer はクリアする。完全な決定論 replay 再計算は行わず、保存済み snapshot の playback のみ。
+
 ### 2.4 一方通行（フェーズ別）
 
 | フェーズ          | プレイヤー `battleX` 自動接近                         | 敵 `battleX` 自動接近                                        |

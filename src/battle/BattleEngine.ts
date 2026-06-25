@@ -264,6 +264,7 @@ export class BattleEngine {
   private tickIndex = 0;
   private battleXDebugWarningThresholdPx = 8;
   private battleXDebugTrace: BattleXDebugTraceEntry[] = [];
+  private battleXDebugTickTrace: BattleXDebugTraceEntry[] = [];
   private stageId: string;
   private waveIndex = 0;
   private readonly onDamageApplied?: (
@@ -573,12 +574,21 @@ export class BattleEngine {
     details?: BattleXDebugTraceEntry["details"],
   ): void {
     if (!this.isBattleXDebugEnabled()) return;
+    const context = this.buildBattleXDebugTraceContext();
     recordBattleXTraceEntry(
       this.battleXDebugTrace,
       unit,
       beforeX,
       reason,
-      this.buildBattleXDebugTraceContext(),
+      context,
+      details,
+    );
+    recordBattleXTraceEntry(
+      this.battleXDebugTickTrace,
+      unit,
+      beforeX,
+      reason,
+      context,
       details,
     );
   }
@@ -590,12 +600,21 @@ export class BattleEngine {
     detailsById?: ReadonlyMap<string, BattleXDebugTraceEntry["details"]>,
   ): void {
     if (!beforeById) return;
+    const context = this.buildBattleXDebugTraceContext();
     recordBattleXTraceEntries(
       this.battleXDebugTrace,
       units,
       beforeById,
       reason,
-      this.buildBattleXDebugTraceContext(),
+      context,
+      detailsById,
+    );
+    recordBattleXTraceEntries(
+      this.battleXDebugTickTrace,
+      units,
+      beforeById,
+      reason,
+      context,
       detailsById,
     );
   }
@@ -618,6 +637,7 @@ export class BattleEngine {
     this.battleTimeSec = 0;
     this.tickIndex = 0;
     this.battleXDebugTrace = [];
+    this.battleXDebugTickTrace = [];
     this.players = createAlliesFromPartyState(
       this.gameData,
       this.getParty(),
@@ -1647,6 +1667,11 @@ export class BattleEngine {
             battleXDebugTrace: this.battleXDebugTrace.slice(
               -BATTLE_X_DEBUG_TRACE_LIMIT,
             ),
+            battleXDebugTickTrace: this.battleXDebugTickTrace.slice(),
+            battleXDebugTickMeta: {
+              tickIndex: this.tickIndex,
+              battleTimeSec: this.battleTimeSec,
+            },
           }
         : {}),
     };
@@ -1790,6 +1815,9 @@ export class BattleEngine {
   private tickRunning(deltaTime: number): void {
     this.tickIndex += 1;
     this.battleTimeSec += deltaTime;
+    if (this.isBattleXDebugEnabled()) {
+      this.battleXDebugTickTrace = [];
+    }
     this.updateBattleXDebugThreshold(deltaTime);
     if (this.waveAnnouncementActive) {
       this.tickWaveAnnouncement(deltaTime);

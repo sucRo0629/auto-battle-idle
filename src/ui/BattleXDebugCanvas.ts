@@ -1,4 +1,9 @@
 import type { BattleSnapshot, CombatantSnapshot } from "../battle/types.ts";
+import {
+  BattleXDebugReplayBuffer,
+  buildBattleXDebugReplayFrame,
+  type BattleXDebugReplayFrame,
+} from "../battle/battleXDebugReplayBuffer.ts";
 
 const CANVAS_W = 480;
 const MIN_CANVAS_H = 157;
@@ -10,19 +15,29 @@ const LABEL_Y_OFFSET = 24;
 const BOTTOM_PADDING = 20;
 const DEAD_ENEMY_ALPHA = 0.35;
 const SKILL_RANGE_FLASH_MS = 1000;
-const TRACE_TABLE_LIMIT = 30;
 
 export class BattleXDebugCanvas {
   private root: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
   private tableBody: HTMLTableSectionElement | null = null;
+  private replayPanel: HTMLElement | null = null;
+  private replayInfoEl: HTMLElement | null = null;
+  private seekInput: HTMLInputElement | null = null;
+  private seekMarkersEl: HTMLElement | null = null;
+  private pauseButton: HTMLButtonElement | null = null;
+  private followButton: HTMLButtonElement | null = null;
   private snapshot: BattleSnapshot | null = null;
+  private selectedTraceEntries: BattleXDebugTraceEntryView[] = [];
   private visible = false;
   private elapsedMs = 0;
   private laneByUnitId = new Map<string, number>();
   private nextLane = 0;
   private rangeFlashes = new Map<string, { rangePx: number; expiresAtMs: number }>();
+  private readonly replayBuffer = new BattleXDebugReplayBuffer();
+  private followLatest = true;
+  private selectedIndex = 0;
+  private liveFrame: BattleXDebugReplayFrame | null = null;
 
   mount(parent: HTMLElement): void {
     this.root = document.createElement("section");
@@ -35,6 +50,7 @@ export class BattleXDebugCanvas {
     this.canvas.className = "battle-x-debug-canvas";
     this.canvas.hidden = !this.visible;
     this.root.appendChild(this.canvas);
+    this.mountReplayControls(this.root);
     this.mountTraceTable(this.root);
     parent.appendChild(this.root);
 
@@ -53,10 +69,43 @@ export class BattleXDebugCanvas {
     if (this.canvas) {
       this.canvas.hidden = !visible;
     }
+    if (!visible) {
+      this.replayBuffer.clear();
+      this.followLatest = true;
+      this.selectedIndex = 0;
+      this.liveFrame = null;
+      this.selectedTraceEntries = [];
+    }
     if (visible) {
+      this.updateReplayControls();
       this.draw();
       this.renderTraceTable();
     }
+  }
+
+  recordLiveFrame(liveSnapshot: BattleSnapshot): void {
+    if (!this.visible) return;
+    const frame = buildBattleXDebugReplayFrame(liveSnapshot);
+    if (!frame) return;
+
+    this.liveFrame = frame;
+    this.replayBuffer.push(frame);
+    if (this.followLatest) {
+      this.selectedIndex = this.replayBuffer.latestIndex;
+    } else if (this.selectedIndex > this.replayBuffer.latestIndex) {
+      this.selectedIndex = this.replayBuffer.latestIndex;
+    }
+    this.applySelectedFrame();
+    this.updateReplayControls();
+  }
+
+  resolveDisplaySnapshot(liveSnapshot: BattleSnapshot): BattleSnapshot {
+    if (!this.visible || this.followLatest) {
+      return this.liveFrame?.snapshot ?? liveSnapshot;
+    }
+    return (
+      this.replayBuffer.getFrame(this.selectedIndex)?.snapshot ?? liveSnapshot
+    );
   }
 
   syncFromSnapshot(snapshot: BattleSnapshot): void {
@@ -65,10 +114,12 @@ export class BattleXDebugCanvas {
     }
     this.snapshot = snapshot;
     this.ensureLanes(snapshot);
+    this.draw();
     this.renderTraceTable();
   }
 
   flashSkillRange(actorId: string, rangePx: number): void {
+    if (!this.followLatest) return;
     this.rangeFlashes.set(actorId, {
       rangePx,
       expiresAtMs: this.elapsedMs + SKILL_RANGE_FLASH_MS,
@@ -78,7 +129,9 @@ export class BattleXDebugCanvas {
   tick(deltaMs: number): void {
     if (!this.visible) return;
     this.elapsedMs += deltaMs;
-    this.pruneRangeFlashes();
+    if (this.followLatest) {
+      this.pruneRangeFlashes();
+    }
     this.draw();
   }
 
@@ -88,10 +141,202 @@ export class BattleXDebugCanvas {
     this.canvas = null;
     this.ctx = null;
     this.tableBody = null;
+    this.replayPanel = null;
+    this.replayInfoEl = null;
+    this.seekInput = null;
+    this.seekMarkersEl = null;
+    this.pauseButton = null;
+    this.followButton = null;
     this.snapshot = null;
+    this.liveFrame = null;
+    this.selectedTraceEntries = [];
     this.resetLanes();
     this.rangeFlashes.clear();
+    this.replayBuffer.clear();
     this.elapsedMs = 0;
+  }
+
+  private applySelectedFrame(): void {
+    const frame =
+      this.replayBuffer.getFrame(this.selectedIndex) ?? this.liveFrame;
+    if (!frame) return;
+    this.snapshot = frame.snapshot;
+    this.selectedTraceEntries = frame.traceEntries;
+    this.ensureLanes(frame.snapshot);
+    this.draw();
+    this.renderTraceTable();
+  }
+
+  private mountReplayControls(parent: HTMLElement): void {
+    this.replayPanel = document.createElement("div");
+    this.replayPanel.className = "battle-x-debug-replay";
+
+    const toolbar = document.createElement("div");
+    toolbar.className = "battle-x-debug-replay__toolbar";
+
+    this.pauseButton = this.createReplayButton("Pause", () => {
+      if (this.followLatest) {
+        this.followLatest = false;
+      } else {
+        this.followLatest = true;
+        this.selectedIndex = this.replayBuffer.latestIndex;
+        this.applySelectedFrame();
+      }
+      this.updateReplayControls();
+    });
+    this.followButton = this.createReplayButton("Follow latest", () => {
+      this.followLatest = true;
+      this.selectedIndex = this.replayBuffer.latestIndex;
+      this.applySelectedFrame();
+      this.updateReplayControls();
+    });
+    const stepBackButton = this.createReplayButton("◀ tick", () => {
+      this.followLatest = false;
+      this.selectedIndex = Math.max(0, this.selectedIndex - 1);
+      this.applySelectedFrame();
+      this.updateReplayControls();
+    });
+    const stepForwardButton = this.createReplayButton("tick ▶", () => {
+      this.followLatest = false;
+      this.selectedIndex = Math.min(
+        this.replayBuffer.latestIndex,
+        this.selectedIndex + 1,
+      );
+      this.applySelectedFrame();
+      this.updateReplayControls();
+    });
+    const prevWarningButton = this.createReplayButton("◀ warn", () => {
+      this.followLatest = false;
+      const target = this.replayBuffer.findNearestWarningIndex(
+        this.selectedIndex,
+        -1,
+      );
+      if (target !== null) {
+        this.selectedIndex = target;
+        this.applySelectedFrame();
+      }
+      this.updateReplayControls();
+    });
+    const nextWarningButton = this.createReplayButton("warn ▶", () => {
+      this.followLatest = false;
+      const target = this.replayBuffer.findNearestWarningIndex(
+        this.selectedIndex,
+        1,
+      );
+      if (target !== null) {
+        this.selectedIndex = target;
+        this.applySelectedFrame();
+      }
+      this.updateReplayControls();
+    });
+
+    toolbar.append(
+      this.pauseButton,
+      this.followButton,
+      stepBackButton,
+      stepForwardButton,
+      prevWarningButton,
+      nextWarningButton,
+    );
+
+    const seekWrap = document.createElement("div");
+    seekWrap.className = "battle-x-debug-replay__seek-wrap";
+
+    this.seekMarkersEl = document.createElement("div");
+    this.seekMarkersEl.className = "battle-x-debug-replay__seek-markers";
+
+    this.seekInput = document.createElement("input");
+    this.seekInput.type = "range";
+    this.seekInput.className = "battle-x-debug-replay__seek";
+    this.seekInput.min = "0";
+    this.seekInput.step = "1";
+    this.seekInput.value = "0";
+    this.seekInput.addEventListener("input", () => {
+      this.followLatest = false;
+      this.selectedIndex = Number(this.seekInput?.value ?? 0);
+      this.applySelectedFrame();
+      this.updateReplayControls();
+    });
+
+    seekWrap.append(this.seekMarkersEl, this.seekInput);
+
+    this.replayInfoEl = document.createElement("div");
+    this.replayInfoEl.className = "battle-x-debug-replay__info";
+
+    this.replayPanel.append(toolbar, seekWrap, this.replayInfoEl);
+    parent.appendChild(this.replayPanel);
+  }
+
+  private createReplayButton(
+    label: string,
+    onClick: () => void,
+  ): HTMLButtonElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "battle-x-debug-replay__button";
+    button.textContent = label;
+    button.addEventListener("click", onClick);
+    return button;
+  }
+
+  private updateReplayControls(): void {
+    if (!this.replayPanel || !this.seekInput || !this.replayInfoEl) return;
+
+    const latestIndex = this.replayBuffer.latestIndex;
+    const frame =
+      this.replayBuffer.getFrame(this.selectedIndex) ?? this.liveFrame;
+    const warningCount = this.replayBuffer.collectWarningIndices().length;
+
+    this.seekInput.max = String(Math.max(0, latestIndex));
+    this.seekInput.value = String(this.selectedIndex);
+    this.seekInput.disabled = this.replayBuffer.size <= 0;
+
+    if (this.pauseButton) {
+      this.pauseButton.textContent = this.followLatest ? "Pause" : "Resume";
+    }
+    if (this.followButton) {
+      this.followButton.disabled = this.followLatest;
+    }
+
+    this.renderSeekMarkers(latestIndex);
+
+    const modeLabel = this.followLatest ? "live" : "paused";
+    const tickLabel = frame
+      ? `${frame.tickIndex} / ${latestIndex >= 0 ? this.replayBuffer.getFrame(latestIndex)?.tickIndex ?? frame.tickIndex : frame.tickIndex}`
+      : "-";
+    const timeLabel = frame ? `${frame.battleTimeSec.toFixed(2)}s` : "-";
+    const waveLabel = frame ? `W${frame.waveIndex + 1}` : "-";
+    const phaseLabel = frame?.runtimePhase ?? "-";
+    const warningLabel =
+      frame?.hasWarning || frame?.traceEntries.some((entry) => entry.warning)
+        ? "yes"
+        : "no";
+
+    this.replayInfoEl.textContent = [
+      `mode=${modeLabel}`,
+      `frame=${this.selectedIndex + 1}/${Math.max(1, this.replayBuffer.size)}`,
+      `tick=${tickLabel}`,
+      `time=${timeLabel}`,
+      `wave=${waveLabel}`,
+      `phase=${phaseLabel}`,
+      `warnings=${warningCount}`,
+      `frameWarn=${warningLabel}`,
+    ].join("  ·  ");
+  }
+
+  private renderSeekMarkers(latestIndex: number): void {
+    if (!this.seekMarkersEl) return;
+    this.seekMarkersEl.replaceChildren();
+    if (latestIndex <= 0) return;
+
+    const warnings = this.replayBuffer.collectWarningIndices();
+    for (const index of warnings) {
+      const marker = document.createElement("span");
+      marker.className = "battle-x-debug-replay__seek-marker";
+      marker.style.left = `${(index / latestIndex) * 100}%`;
+      marker.title = `warning @ frame ${index + 1}`;
+      this.seekMarkersEl.appendChild(marker);
+    }
   }
 
   private resetLanes(): void {
@@ -113,7 +358,7 @@ export class BattleXDebugCanvas {
 
     const title = document.createElement("div");
     title.className = "battle-x-debug-trace__title";
-    title.textContent = "battleX 更新内訳";
+    title.textContent = "battleX 更新内訳（selected tick）";
 
     const table = document.createElement("table");
     table.className = "battle-x-debug-trace__table";
@@ -145,14 +390,15 @@ export class BattleXDebugCanvas {
   private renderTraceTable(): void {
     if (!this.tableBody) return;
     this.tableBody.replaceChildren();
-    const entries = this.snapshot?.battleXDebugTrace ?? [];
-    const rows = entries.slice(-TRACE_TABLE_LIMIT).reverse();
+    const rows = this.selectedTraceEntries.filter(
+      (entry) => Math.abs(entry.deltaX) > 0.001,
+    );
     if (rows.length === 0) {
       const row = document.createElement("tr");
       const cell = document.createElement("td");
       cell.colSpan = 7;
       cell.className = "battle-x-debug-trace__empty";
-      cell.textContent = "debug trace empty";
+      cell.textContent = "no battleX delta on selected tick";
       row.appendChild(cell);
       this.tableBody.appendChild(row);
       return;
@@ -263,10 +509,14 @@ export class BattleXDebugCanvas {
   }
 
   private drawHeader(ctx: CanvasRenderingContext2D): void {
+    const frame =
+      this.replayBuffer.getFrame(this.selectedIndex) ?? this.liveFrame;
     ctx.fillStyle = "#d9e4f5";
     ctx.fillText("battleX debug", 10, 14);
     ctx.fillStyle = "#9fb0c8";
-    ctx.fillText("raw battleX by combatant id", 110, 14);
+    const mode = this.followLatest ? "live" : "paused";
+    const tickLabel = frame ? `tick ${frame.tickIndex}` : "tick -";
+    ctx.fillText(`${mode} · ${tickLabel}`, 110, 14);
   }
 
   private drawAxis(ctx: CanvasRenderingContext2D, canvasHeight: number): void {
@@ -415,3 +665,7 @@ export class BattleXDebugCanvas {
     return Math.max(min, Math.min(max, value));
   }
 }
+
+type BattleXDebugTraceEntryView = NonNullable<
+  BattleSnapshot["battleXDebugTickTrace"]
+>[number];

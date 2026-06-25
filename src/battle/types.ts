@@ -1553,4 +1553,11 @@ export interface BattleSnapshot {
   enemies: CombatantSnapshot[];
   /** verify/debug 表示用。通常 snapshot には含めない。 */
   battleXDebugTrace?: BattleXDebugTraceEntry[];
+  /** verify/debug: 直近 tick の battleX 更新内訳のみ。 */
+  battleXDebugTickTrace?: BattleXDebugTraceEntry[];
+  /** verify/debug: replay UI 用 tick メタデータ。 */
+  battleXDebugTickMeta?: {
+    tickIndex: number;
+    battleTimeSec: number;
+  };
 }

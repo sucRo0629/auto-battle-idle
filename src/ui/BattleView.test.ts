@@ -61,6 +61,8 @@ vi.mock("../ui/BattleXDebugCanvas.ts", () => ({
   BattleXDebugCanvas: vi.fn().mockImplementation(() => ({
     mount: vi.fn(),
     setVisible: vi.fn(),
+    recordLiveFrame: vi.fn(),
+    resolveDisplaySnapshot: vi.fn((snapshot: unknown) => snapshot),
     syncFromSnapshot: vi.fn(),
     flashSkillRange: vi.fn(),
     tick: vi.fn(),

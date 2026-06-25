@@ -431,8 +431,17 @@ export class BattleView {
     const waveTotal = snapshot.waveCount;
     const stageLabel = `${stageName}  Wave ${waveNum}/${waveTotal}`;
     this.stageLabelEl.textContent = stageLabel;
+
+    const debugEnabled = this.verifyModeControls?.isVerifyMode() ?? false;
+    if (debugEnabled) {
+      this.battleXDebugCanvas.recordLiveFrame(snapshot);
+    }
+    const debugSnapshot = debugEnabled
+      ? this.battleXDebugCanvas.resolveDisplaySnapshot(snapshot)
+      : snapshot;
+
     this.canvas.syncFromSnapshot(snapshot);
-    this.battleXDebugCanvas.syncFromSnapshot(snapshot);
+    this.battleXDebugCanvas.syncFromSnapshot(debugSnapshot);
     this.partyHud.update(
       buildPartyHudEntries(
         snapshot,
