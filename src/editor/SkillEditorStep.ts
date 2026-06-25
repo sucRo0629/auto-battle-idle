@@ -560,6 +560,10 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case 'ignoredDefBonusDamage':
       passive.ignoredDefBonusScale ??= 0.5;
       break;
+    case 'bonusBasicAttackOnHit':
+      passive.chance ??= 0.5;
+      passive.bonusBasicAttackHpRatio ??= 0.3;
+      break;
     case 'periodicDispel':
       passive.periodicTrigger ??= 'waveStart';
       passive.dispelTargetRule ??= { kind: 'self' };
@@ -1040,6 +1044,56 @@ function appendBasicAttackTransformFields(
               };
             }),
           { min: 0, step: 0.05 },
+        ),
+      ),
+    );
+    detailGrid.appendChild(
+      createFieldRow(
+        'primary hitCount',
+        createNumberInput(
+          effect.primaryPatch?.hitCount ?? 0,
+          (hitCount) =>
+            patchEffect((prev) => {
+              if (prev.type !== 'basicAttackTransform') return prev;
+              const primaryPatch = { ...(prev.primaryPatch ?? {}) };
+              if (hitCount <= 0) {
+                delete primaryPatch.hitCount;
+              } else {
+                primaryPatch.hitCount = Math.round(hitCount);
+              }
+              return {
+                ...prev,
+                target: { kind: 'self' },
+                primaryPatch:
+                  Object.keys(primaryPatch).length > 0 ? primaryPatch : undefined,
+              };
+            }),
+          { min: 0, step: 1 },
+        ),
+      ),
+    );
+    detailGrid.appendChild(
+      createFieldRow(
+        'primary hitDurationSec',
+        createNumberInput(
+          effect.primaryPatch?.hitDurationSec ?? 0,
+          (hitDurationSec) =>
+            patchEffect((prev) => {
+              if (prev.type !== 'basicAttackTransform') return prev;
+              const primaryPatch = { ...(prev.primaryPatch ?? {}) };
+              if (hitDurationSec <= 0) {
+                delete primaryPatch.hitDurationSec;
+              } else {
+                primaryPatch.hitDurationSec = hitDurationSec;
+              }
+              return {
+                ...prev,
+                target: { kind: 'self' },
+                primaryPatch:
+                  Object.keys(primaryPatch).length > 0 ? primaryPatch : undefined,
+              };
+            }),
+          { min: 0, step: 0.01 },
         ),
       ),
     );
@@ -2427,6 +2481,36 @@ export class SkillEditorStep {
           ),
         );
         break;
+      case 'bonusBasicAttackOnHit':
+        effectGrid.appendChild(
+          createFieldRow(
+            'chance',
+            createNumberInput(
+              passive.chance ?? 0.5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.chance = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'bonusBasicAttackHpRatio',
+            createNumberInput(
+              passive.bonusBasicAttackHpRatio ?? 0.3,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.bonusBasicAttackHpRatio = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0, max: 1 },
+            ),
+          ),
+        );
+        break;
       case 'periodicDispel':
         appendPassiveDispelFields(
           effectGrid,
@@ -3205,6 +3289,11 @@ export class SkillEditorStep {
         appendPassiveSpecialEffectFields(effectGrid, passive, (mutate, options) => {
           this.patchPassive(index, mutate, options);
         });
+        if (passive.specialEffectApplyTo === 'damage' || passive.specialEffectApplyTo === undefined) {
+          appendPassiveDefenseIgnoreFields(effectGrid, passive, (mutate, options) => {
+            this.patchPassive(index, mutate, options);
+          });
+        }
         break;
       case 'buff':
         appendPassiveBuffFields(

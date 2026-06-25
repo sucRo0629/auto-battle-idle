@@ -239,7 +239,8 @@
     "passiveIds": [
       "at_assassin_passive_1",
       "at_assassin_passive_2",
-      "at_assassin_passive_3"
+      "at_assassin_passive_3",
+      "at_assassin_passive_4"
     ],
     "skills": [
       {
@@ -254,7 +255,15 @@
       {
         "level": 10,
         "skillIds": [
-          "at_assassin_passive_3"
+          "at_assassin_passive_3",
+          "at_assassin_active_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "at_assassin_passive_4",
+          "at_assassin_active_4"
         ]
       }
     ],

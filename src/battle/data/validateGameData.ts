@@ -2204,6 +2204,19 @@ function parseBasicAttackPrimaryPatch(
   }
   const aoeRadiusPx = parseOptionalNumber(obj, 'aoeRadiusPx', context);
   if (aoeRadiusPx !== undefined) patch.aoeRadiusPx = aoeRadiusPx;
+  const hitCount = parseOptionalNumber(obj, 'hitCount', context);
+  if (hitCount !== undefined) {
+    if (!Number.isInteger(hitCount) || hitCount < 1) {
+      invalidField(context, 'hitCount', 'must be an integer >= 1');
+    }
+    patch.hitCount = hitCount;
+  }
+  const hitDurationSec = parseOptionalNonNegativeNumber(
+    obj,
+    'hitDurationSec',
+    context,
+  );
+  if (hitDurationSec !== undefined) patch.hitDurationSec = hitDurationSec;
   if (Object.keys(patch).length === 0) {
     invalidField(context, 'primaryPatch', 'must specify at least one field');
   }
@@ -3111,6 +3124,13 @@ function requirePassiveEffectParams(
               context,
               SPECIAL_EFFECT_APPLY_TO_SET,
             );
+      const defenseIgnore =
+        obj.defenseIgnore === undefined
+          ? undefined
+          : parseDefenseIgnoreSpec(
+              obj.defenseIgnore,
+              `${context}.defenseIgnore`,
+            );
       return {
         ...base,
         specialEffectApplyTo,
@@ -3118,6 +3138,7 @@ function requirePassiveEffectParams(
           obj.specialEffect,
           `${context}.specialEffect`,
         ),
+        ...(defenseIgnore !== undefined ? { defenseIgnore } : {}),
       };
     }
     case 'defenseIgnore':
@@ -3144,6 +3165,31 @@ function requirePassiveEffectParams(
       return {
         ...base,
         ignoredDefBonusScale,
+      };
+    }
+    case 'bonusBasicAttackOnHit': {
+      const chance =
+        obj.chance === undefined
+          ? 0.5
+          : requireNumber(obj, 'chance', context);
+      if (chance < 0 || chance > 1) {
+        invalidField(context, 'chance', 'must be between 0 and 1');
+      }
+      const bonusBasicAttackHpRatio =
+        obj.bonusBasicAttackHpRatio === undefined
+          ? 0.3
+          : requireNumber(obj, 'bonusBasicAttackHpRatio', context);
+      if (bonusBasicAttackHpRatio < 0 || bonusBasicAttackHpRatio > 1) {
+        invalidField(
+          context,
+          'bonusBasicAttackHpRatio',
+          'must be between 0 and 1',
+        );
+      }
+      return {
+        ...base,
+        chance,
+        bonusBasicAttackHpRatio,
       };
     }
     case 'buff': {

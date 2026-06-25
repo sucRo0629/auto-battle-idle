@@ -1,5 +1,6 @@
 import type { BattleEventListener } from '../events.ts';
 import { applyIncomingDamage } from '../damageDelay.ts';
+import { shouldTriggerBonusBasicAttackOnHit } from '../bonusBasicAttackOnHit.ts';
 import {
   applyBarrierToTarget,
   applyHealToTarget,
@@ -648,7 +649,9 @@ export class SkillExecutor {
           entry.powerMultiplierOverride,
           hit.hitIndex,
           hit.vfxSourceId,
-          {},
+          {
+            suppressBonusBasicAttack: hit.suppressBonusBasicAttack === true,
+          },
         )
       ) {
         appliedAny = true;
@@ -1025,6 +1028,28 @@ export class SkillExecutor {
         this.deps.getSequenceRunner().clearForActor(damageTarget.id);
         this.deps.onUnitDied?.(damageTarget);
         this.emit({ type: 'death', targetId: damageTarget.id });
+      }
+      if (
+        cd.slotKind === 'basic' &&
+        !damageContext.suppressBonusBasicAttack &&
+        damageTarget.isAlive &&
+        shouldTriggerBonusBasicAttackOnHit(actor, damageTarget, passives)
+      ) {
+        this.deps.enqueuePendingHits([
+          {
+            applyAtBattleSec: this.deps.getBattleTimeSec(),
+            actorId: actor.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            effectDef,
+            effectIndex,
+            slotKind: 'basic',
+            hitIndex: hitIndex ?? 0,
+            vfxSourceId,
+            suppressBonusBasicAttack: true,
+            targets: [{ targetId: damageTarget.id }],
+          },
+        ]);
       }
       return true;
     }

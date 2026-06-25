@@ -140,5 +140,57 @@
       "enabled": true
     },
     "useDurationSec": 2
+  },
+  {
+    "id": "at_assassin_active_3",
+    "name": "閃影刃",
+    "trigger": {
+      "kind": "time",
+      "value": 12
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "basicAttackTransform",
+        "buffDurationSec": 4,
+        "primaryPatch": {
+          "hitCount": 3,
+          "hitDurationSec": 0.22
+        }
+      }
+    ]
+  },
+  {
+    "id": "at_assassin_active_4",
+    "name": "百花繚乱",
+    "trigger": {
+      "kind": "basicAttackCount",
+      "value": 16
+    },
+    "useDurationSec": 0.8,
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "physical",
+        "targetShape": "multiLock",
+        "hitCount": 3,
+        "range": 100,
+        "target": {
+          "kind": "stat",
+          "side": "enemy",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.5
+        }
+      }
+    ],
+    "vfx": {
+      "enabled": true
+    }
   }
 ]

@@ -6,7 +6,7 @@
 
 1. `baseDamage = floor(resolvePowerAmount(amount) × crowdBonus × damageIncreaseMul)`（`damageIncrease` はパッシブ + effect + DoT status の乗算）
 2. `rawDef = getEffectiveDef(target)`（物理のみ。魔法は REG 側）
-3. `effectiveDef = applyDefenseIgnore(rawDef)`（DEF 無視: flat 減算 → percent 減算、パッシブ + effect 合算。各 `defenseIgnore` の `chance` を毎回判定し、失敗したソースは合算から除外）
+3. `effectiveDef = applyDefenseIgnore(rawDef)`（DEF 無視: flat 減算 → percent 減算、パッシブ + effect 合算。各 `defenseIgnore` の `chance` を毎回判定し、失敗したソースは合算から除外。passive `effect: specialEffect` に `defenseIgnore` を併記した場合は、`specialEffect` の damage 条件が成立した Hit のみ DEF 無視へ合算 — 例: 双刃士 P3 刈り取り）
 4. `ignoredDef = max(0, rawDef - effectiveDef)`（物理のみ）
 5. `afterSubtract = baseDamage - effectiveDef`
 6. `afterSubtract <= 0` なら `afterDefense = 0`、
@@ -389,11 +389,15 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 | スタック                | 複数付与時は **最新 1 件のみ**有効                                                                                                     |
 | `hitCountMultiplier`    | 既存 primary effect の `hitCount`（未指定 = 1）に乗算                                                                                  |
 | `primaryEffectOverride` | primary（先頭 non-move effect）を丸ごと差し替え                                                                                        |
-| `primaryPatch`          | primary への部分上書き（`damageType` / `amount.atkScale` 等）                                                                          |
+| `primaryPatch`          | primary への部分上書き（`damageType` / `amount.atkScale` / `hitCount` / `hitDurationSec` 等）                                                                          |
 | `appendEffects`         | primary の後に effect を追加（例: ダメージ + 自分中心 AoE heal）                                                                       |
 | `basicAttackCount`      | 変形後も **damage ヒットのみ**充填。heal 化すると充填停止                                                                              |
 
 毎 tick：`remainingSec -= deltaTime`、0 以下で除去。
+
+### 追加通常攻撃（`bonusBasicAttackOnHit`）
+
+パッシブ `effect: "bonusBasicAttackOnHit"`。通常攻撃（`slotKind: basic`）の **damage Hit 適用後**、対象の `hp/maxHp <= bonusBasicAttackHpRatio`（未指定 0.3）なら `chance`（未指定 0.5）で **同一 basic effect を 1 Hit 追加**。追加 Hit も `basicAttackCount` を充填する。`suppressBonusBasicAttack` フラグ付き pending Hit から再帰発火しない。evasion / block / DR は追加しない（通常攻撃と同じ effect 再実行のみ）。例: 双刃士 P4 無慈悲な刃。
 
 ## ターゲット解決
 

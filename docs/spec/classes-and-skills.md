@@ -918,6 +918,22 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 - 優先ターゲット：瀕死の敵
 - 既存 evasion による最低限の自衛。追加防御を重ねず、Hit 密度と処理速度へ伸ばす
 
+#### スキル枠（basic + passive×4 + active×4）
+
+| 枠             | ID                         | 名称       | 概要                                                                 |
+| -------------- | -------------------------- | ---------- | -------------------------------------------------------------------- |
+| basic          | `at_assassin_basic_attack` | —          | 2 Hit 標準物理単体                                                   |
+| passive 1 Lv0  | `at_assassin_passive_1`    | 手負い狩り | 低 HP 比率優先 `targetRuleOverride`                                  |
+| passive 2 Lv0  | `at_assassin_passive_2`    | 影の歩み   | 回避 buff（`chance: 0.2`）                                           |
+| passive 3 Lv10 | `at_assassin_passive_3`    | 刈り取り   | HP≤30% 対象 damage×1.2 + 条件成立時 DEF 100% 無視（複合 passive）    |
+| passive 4 Lv20 | `at_assassin_passive_4`    | 無慈悲な刃 | `bonusBasicAttackOnHit` — 瀕死対象 basic Hit 後 50% で追加 1 Hit（非再帰） |
+| active 1 Lv0   | `at_assassin_active_1`     | 引き裂き   | DoT 付与 + debuff 対象追加ダメ                                       |
+| active 2 Lv0   | `at_assassin_active_2`     | 影の刃     | evasion → 背後 `toAnchor` → 低 HP 追撃（move 仕様は下記）            |
+| active 3 Lv10  | `at_assassin_active_3`     | 閃影刃     | `basicAttackTransform` — basic を 3 Hit 化（`primaryPatch`）         |
+| active 4 Lv20  | `at_assassin_active_4`     | 百花繚乱   | BAC 16・`multiLock` range 100・低 HP 優先投擲（位置移動なし）        |
+
+新 effect: `bonusBasicAttackOnHit`（[combat.md](combat.md) 物理ダメージ節）。passive `specialEffect` + `defenseIgnore` 併記は条件成立時のみ DEF 無視を合算する。
+
 #### 処理対象
 
 - 瀕死の敵

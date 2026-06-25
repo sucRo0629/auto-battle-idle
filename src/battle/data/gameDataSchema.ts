@@ -305,6 +305,7 @@ export const PASSIVE_EFFECT_KINDS = [
   "bloodlustDuelist",
   "duelistPride",
   "ignoredDefBonusDamage",
+  "bonusBasicAttackOnHit",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -341,6 +342,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   bloodlustDuelist: "流血闘志",
   duelistPride: "闘士の矜持",
   ignoredDefBonusDamage: "無視DEFボーナス",
+  bonusBasicAttackOnHit: "追加通常攻撃",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -683,6 +685,7 @@ export const EDITOR_PASSIVE_GENERAL_EFFECT_KINDS = [
   "threatControl",
   "defenseIgnore",
   "ignoredDefBonusDamage",
+  "bonusBasicAttackOnHit",
   "selfHpRatioBuff",
   "targetHpRatioHealScale",
   "targetRuleOverride",

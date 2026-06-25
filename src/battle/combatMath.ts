@@ -408,7 +408,7 @@ export function resolveDamage(
   );
 
   const ignoreSpecs = [
-    getPassiveDefenseIgnoreSpec(attacker, passives),
+    getPassiveDefenseIgnoreSpec(attacker, target, passives),
     rollDefenseIgnoreSpec(
       options.effectDefenseIgnore ?? effect.defenseIgnore,
     ),

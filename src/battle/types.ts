@@ -434,6 +434,8 @@ export interface BasicAttackTransformPrimaryPatch {
   target?: TargetSpec;
   targetShape?: TargetShape;
   aoeRadiusPx?: number;
+  hitCount?: number;
+  hitDurationSec?: number;
 }
 
 /** 通常攻撃変形 spec（バフ持続中に basic skill へマージ） */
@@ -610,6 +612,7 @@ export type PassiveEffectKind =
   | "bloodlustDuelist"
   | "duelistPride"
   | "ignoredDefBonusDamage"
+  | "bonusBasicAttackOnHit"
   /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
   | "hot";
 
@@ -700,6 +703,8 @@ export interface PassiveSkillDef {
   defenseIgnore?: DefenseIgnoreSpec;
   /** ignoredDefBonusDamage: 無視した DEF 量 × scale を追加物理ダメ */
   ignoredDefBonusScale?: number;
+  /** bonusBasicAttackOnHit: 追加 basic Hit を発火する対象 HP 比率上限（未指定 0.3） */
+  bonusBasicAttackHpRatio?: number;
   buffSubKind?: BuffSubKind;
   buffTargetRule?: TargetSpec;
   /** アクティブ effect.targetShape に対応 */
@@ -1100,6 +1105,8 @@ export interface PendingSkillHit {
   /** chain/pierce 等: VFX セグメント起点 */
   vfxSourceId?: string;
   targets: PendingSkillHitTarget[];
+  /** bonusBasicAttackOnHit 由来 Hit — 再帰発火を抑止 */
+  suppressBonusBasicAttack?: boolean;
 }
 
 export interface DamageSkillEffect extends SkillEffectCommon {

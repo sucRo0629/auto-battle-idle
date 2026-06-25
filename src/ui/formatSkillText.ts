@@ -554,6 +554,12 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
         if (effect.primaryPatch.amount?.atkScale !== undefined) {
           patchParts.push(`ATK×${effect.primaryPatch.amount.atkScale}`);
         }
+        if (effect.primaryPatch.hitCount !== undefined) {
+          patchParts.push(`${effect.primaryPatch.hitCount}Hit`);
+        }
+        if (effect.primaryPatch.hitDurationSec !== undefined) {
+          patchParts.push(`${effect.primaryPatch.hitDurationSec}s`);
+        }
         if (patchParts.length > 0) {
           parts.push(patchParts.join(" "));
         }
@@ -783,6 +789,11 @@ function formatPassiveEffect(
       return def.ignoredDefBonusScale !== undefined
         ? `無視DEF×${formatPercent(def.ignoredDefBonusScale)} 追加ダメ`
         : "無視DEFボーナス";
+    case "bonusBasicAttackOnHit": {
+      const ratio = def.bonusBasicAttackHpRatio ?? 0.3;
+      const chance = def.chance ?? 0.5;
+      return `通常攻撃 Hit 後 HP≤${formatPercent(ratio)} で ${formatPercent(chance)} 追加 Hit（非再帰）`;
+    }
     case "periodicDispel": {
       const tags =
         def.dispelTags && def.dispelTags.length > 0
@@ -810,11 +821,13 @@ function formatPassiveEffect(
         def.dispelPriority
       )}${limitLabel}）${target}${metaSuffix}`;
     }
-    case "specialEffect":
-      return (
+    case "specialEffect": {
+      const special =
         formatSpecialEffectSpec(def.specialEffectApplyTo, def.specialEffect) ||
-        "特効効果"
-      );
+        "特効効果";
+      const ign = formatDefenseIgnoreSpec(def.defenseIgnore);
+      return ign ? `${special} · 条件成立時 ${ign}` : special;
+    }
     case "healReceivedIncrease":
       return (
         formatSpecialEffectSpec("heal", {

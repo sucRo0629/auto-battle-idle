@@ -1,4 +1,5 @@
 import { getPassiveDefs } from './combatMath.ts';
+import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
 import type {
   CombatantState,
   DefenseIgnoreSpec,
@@ -57,14 +58,30 @@ export function rollDefenseIgnoreSpec(
 
 export function getPassiveDefenseIgnoreSpec(
   attacker: CombatantState,
+  target: CombatantState,
   passives: Record<string, PassiveSkillDef>,
 ): DefenseIgnoreSpec | undefined {
   const specs: Array<DefenseIgnoreSpec | undefined> = [];
   for (const passive of getPassiveDefs(attacker, passives)) {
-    if (passive.effect !== 'defenseIgnore') continue;
-    const chance = passive.defenseIgnore?.chance ?? passive.chance ?? 1;
-    if (rollDefenseIgnoreChance(chance)) {
-      specs.push(passive.defenseIgnore);
+    if (passive.effect === 'defenseIgnore') {
+      const chance = passive.defenseIgnore?.chance ?? passive.chance ?? 1;
+      if (rollDefenseIgnoreChance(chance)) {
+        specs.push(passive.defenseIgnore);
+      }
+      continue;
+    }
+    if (
+      passive.effect === 'specialEffect' &&
+      passive.defenseIgnore &&
+      passive.specialEffectApplyTo === 'damage' &&
+      passive.specialEffect &&
+      resolveDamageIncreaseMultiplier(attacker, target, passive.specialEffect) !==
+        1
+    ) {
+      const chance = passive.defenseIgnore.chance ?? passive.chance ?? 1;
+      if (rollDefenseIgnoreChance(chance)) {
+        specs.push(passive.defenseIgnore);
+      }
     }
   }
   if (specs.length === 0) return undefined;

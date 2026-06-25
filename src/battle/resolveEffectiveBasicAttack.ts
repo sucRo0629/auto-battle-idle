@@ -50,6 +50,12 @@ function applyPrimaryPatch(
       next.amount = mergeResourceAmountPatch(next.amount, patch.amount);
     }
   }
+  if (patch.hitCount !== undefined) {
+    next.hitCount = Math.max(1, Math.round(patch.hitCount));
+  }
+  if (patch.hitDurationSec !== undefined) {
+    next.hitDurationSec = patch.hitDurationSec;
+  }
   return next;
 }
 

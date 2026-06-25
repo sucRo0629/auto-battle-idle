@@ -89,6 +89,8 @@ export interface PassiveDamageContext {
   slotKind?: SkillCooldown['slotKind'];
   crowdHitCount?: number;
   targetShape?: TargetShape;
+  /** bonusBasicAttackOnHit 追加 Hit — 再帰発火を抑止 */
+  suppressBonusBasicAttack?: boolean;
 }
 
 export function getEvasionChance(
