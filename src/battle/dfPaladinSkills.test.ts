@@ -140,9 +140,9 @@ describe('df_paladin skill data v1', () => {
     expect(resolved.effect[1]?.type).toBe('heal');
   });
 
-  it('df_guardian_passive_4 display name is 不撓の誓い', () => {
+  it('df_guardian_passive_4 uses lastStandInvulnerable effect', () => {
     const passives = readPassiveFile('df_guardian');
     const p4 = passives.find((p) => p.id === 'df_guardian_passive_4');
-    expect(p4?.name).toBe('不撓の誓い');
+    expect(p4?.effect).toBe('lastStandInvulnerable');
   });
 });
