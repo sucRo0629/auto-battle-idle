@@ -1,9 +1,5 @@
-import type {
-  CombatantState,
-  GameData,
-  TargetSpec,
-} from './types.ts';
-import { getEffectiveMaxHp, getPassiveDefs } from './combatMath.ts';
+import type { CombatantState, GameData, TargetSpec } from "./types.ts";
+import { getEffectiveMaxHp, getPassiveDefs } from "./combatMath.ts";
 import {
   getEnemyContactX,
   resolveApproachAttackBattleX,
@@ -11,26 +7,26 @@ import {
   resolveAttackBattleX,
   resolveApproachRangePx,
   resolveFormationRangePx,
-} from './combatPosition.ts';
-import { pickTargetFromPool, resolveTargetSpec } from './skills/targeting.ts';
+} from "./combatPosition.ts";
+import { pickTargetFromPool, resolveTargetSpec } from "./skills/targeting.ts";
 import {
   getEffectTarget,
   getTargetPool,
   resolveApproachTargetSpec,
-} from './skills/targetSpec.ts';
-import { getAttackablePool, isWithinSkillRange } from './skills/rangeUtils.ts';
-import { isStationaryUnit } from './data/entityTraits.ts';
-import { applyFormationRowApproachSpacing } from './battleLayout.ts';
-import { FORMATION_DEPTH_STEP_PX } from './battleLayout.ts';
+} from "./skills/targetSpec.ts";
+import { getAttackablePool, isWithinSkillRange } from "./skills/rangeUtils.ts";
+import { isStationaryUnit } from "./data/entityTraits.ts";
+import { applyFormationRowApproachSpacing } from "./battleLayout.ts";
+import { FORMATION_DEPTH_STEP_PX } from "./battleLayout.ts";
 import {
   compareFormationRowSlot,
   computePartyFormationBattleX,
   isMeleeFormationSlot,
-} from './partyFormation.ts';
+} from "./partyFormation.ts";
 import {
   isAllyHealBasicAttack,
   resolveBasicAttackEffect,
-} from './allyHealBasicAttack.ts';
+} from "./allyHealBasicAttack.ts";
 
 function resolveBasicAttackTarget(
   unit: CombatantState,
@@ -38,7 +34,7 @@ function resolveBasicAttackTarget(
 ): TargetSpec {
   const effect = resolveBasicAttackEffect(unit, gameData);
   if (effect) return getEffectTarget(effect);
-  return { kind: 'distance', side: 'enemy', order: 'nearest' };
+  return { kind: "distance", side: "enemy", order: "nearest" };
 }
 
 function resolveAllyHealBasicTargetSpec(
@@ -55,7 +51,7 @@ function resolveAllyHealBasicTargetSpec(
     actor: player,
     allies: players,
     enemies,
-    applyScope: 'ally',
+    applyScope: "ally",
   });
 }
 
@@ -138,11 +134,11 @@ function resolveUnitTargetSpec(
     actor: unit,
     allies: players,
     enemies,
-    applyScope: 'enemy',
+    applyScope: "enemy",
   });
 }
 
-/** 味方: attacker/supporter の chase（敵編成の奥 = battleX 最大） */
+/** 味方: target spec に従う ChaseTarget */
 export function resolvePlayerChaseTargetEnemy(
   player: CombatantState,
   players: CombatantState[],
@@ -216,7 +212,7 @@ function capFrontRowBeforeEnemyContact(
   contact: number,
   approachX: number,
 ): number {
-  if (player.formationRow === 'back') return approachX;
+  if (player.formationRow === "back") return approachX;
   const maxForward = resolveApproachAttackBattleX(
     player,
     contact,
@@ -226,21 +222,7 @@ function capFrontRowBeforeEnemyContact(
   return Math.min(approachX, maxForward);
 }
 
-function resolveDefenderApproachBattleX(
-  player: CombatantState,
-  players: CombatantState[],
-  gameData: GameData,
-  contact: number,
-): number {
-  return resolveApproachAttackBattleX(
-    player,
-    contact,
-    gameData,
-    livingAllyCount(players),
-  );
-}
-
-function resolveEnemyBasedApproachBattleX(
+function resolvePlayerChaseApproachBattleX(
   player: CombatantState,
   players: CombatantState[],
   enemies: CombatantState[],
@@ -265,7 +247,7 @@ function resolveEnemyBasedApproachBattleX(
   return resolveApproachAttackBattleX(player, contact, gameData, allyCount);
 }
 
-function resolveNonDefenderApproachBattleX(
+function resolveSharedPlayerApproachBattleX(
   player: CombatantState,
   players: CombatantState[],
   enemies: CombatantState[],
@@ -287,7 +269,7 @@ function resolveNonDefenderApproachBattleX(
         gameData,
         allyCount,
       );
-      const enemyStopX = resolveEnemyBasedApproachBattleX(
+      const enemyStopX = resolvePlayerChaseApproachBattleX(
         player,
         players,
         enemies,
@@ -298,7 +280,7 @@ function resolveNonDefenderApproachBattleX(
     }
     return player.battleX;
   }
-  return resolveEnemyBasedApproachBattleX(
+  return resolvePlayerChaseApproachBattleX(
     player,
     players,
     enemies,
@@ -319,10 +301,10 @@ function toPlacementInput(unit: CombatantState) {
 
 function toMeleeFormationSlot(unit: CombatantState): {
   id: string;
-  role: CombatantState['role'];
+  role: CombatantState["role"];
   rangePx: number;
-  damageType: CombatantState['traits']['damageType'];
-  formationRow: CombatantState['formationRow'];
+  damageType: CombatantState["traits"]["damageType"];
+  formationRow: CombatantState["formationRow"];
 } {
   return {
     id: unit.id,
@@ -341,24 +323,21 @@ function capFrontRowSupporterBehindMeleeFront(
   contact: number,
   approachX: number,
 ): number {
-  if (player.formationRow !== 'front' || player.role !== 'supporter') {
+  if (player.formationRow !== "front" || player.role !== "supporter") {
     return approachX;
   }
   let maxMeleeFrontX = Number.NEGATIVE_INFINITY;
   for (const ally of players) {
     if (!ally.isAlive) continue;
-    if (ally.formationRow !== 'front') continue;
+    if (ally.formationRow !== "front") continue;
     if (!isMeleeFormationSlot(toMeleeFormationSlot(ally))) continue;
-    const meleeX =
-      ally.role === 'defender'
-        ? resolveDefenderApproachBattleX(ally, players, gameData, contact)
-        : resolveEnemyBasedApproachBattleX(
-            ally,
-            players,
-            enemies,
-            gameData,
-            contact,
-          );
+    const meleeX = resolvePlayerChaseApproachBattleX(
+      ally,
+      players,
+      enemies,
+      gameData,
+      contact,
+    );
     maxMeleeFrontX = Math.max(maxMeleeFrontX, meleeX);
   }
   if (maxMeleeFrontX === Number.NEGATIVE_INFINITY) return approachX;
@@ -373,21 +352,13 @@ function resolveIndividualPlayerApproachBattleX(
   gameData: GameData,
   contact: number,
 ): number {
-  let approachX =
-    player.role === 'defender'
-      ? resolveDefenderApproachBattleX(
-          player,
-          players,
-          gameData,
-          contact,
-        )
-      : resolveNonDefenderApproachBattleX(
-          player,
-          players,
-          enemies,
-          gameData,
-          contact,
-        );
+  let approachX = resolveSharedPlayerApproachBattleX(
+    player,
+    players,
+    enemies,
+    gameData,
+    contact,
+  );
 
   approachX = capFrontRowSupporterBehindMeleeFront(
     player,
@@ -398,7 +369,7 @@ function resolveIndividualPlayerApproachBattleX(
     approachX,
   );
 
-  if (player.formationRow !== 'back') {
+  if (player.formationRow !== "back") {
     approachX = capFrontRowBeforeEnemyContact(
       player,
       players,
@@ -422,7 +393,7 @@ function capApproachFormationOrder(
   players: CombatantState[],
 ): void {
   for (const player of players) {
-    if (!player.isAlive || player.role !== 'supporter') continue;
+    if (!player.isAlive || player.role !== "supporter") continue;
     const base = individualBases.get(player.id);
     const spaced = targets.get(player.id);
     if (base === undefined || spaced === undefined) continue;
@@ -577,8 +548,7 @@ export function shouldSkipEngagedAutoApproach(
   if (isStationaryUnit(unit)) return true;
   if (unit.isEnemy) {
     return (
-      resolveEnemyAttackTargetPlayer(unit, players, enemies, gameData) !==
-      null
+      resolveEnemyAttackTargetPlayer(unit, players, enemies, gameData) !== null
     );
   }
   if (isAllyHealBasicAttack(unit, gameData)) {

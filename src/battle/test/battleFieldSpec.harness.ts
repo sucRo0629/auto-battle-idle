@@ -2,14 +2,14 @@
  * Shared harness for battle-field.md spec compliance tests.
  * Maps spec section IDs (F-*, A-*, I-*) to reusable engine fixtures and assertions.
  */
-import { expect } from 'vitest';
-import { BattleEngine, type BattleEngineOptions } from '../BattleEngine.ts';
-import { loadGameData } from '../data/loadGameData.ts';
-import { loadLevelCurves } from '../../progression/levelGrowth.ts';
-import levelCurvesJson from '../../../data/levelCurves.json';
-import { createDefaultSave } from '../../progression/victoryRewards.ts';
-import { SPRITE_WIDTH } from '../battleConstants.ts';
-import type { SkillSequenceRunner } from '../skills/skillSequence.ts';
+import { expect } from "vitest";
+import { BattleEngine, type BattleEngineOptions } from "../BattleEngine.ts";
+import { loadGameData } from "../data/loadGameData.ts";
+import { loadLevelCurves } from "../../progression/levelGrowth.ts";
+import levelCurvesJson from "../../../data/levelCurves.json";
+import { createDefaultSave } from "../../progression/victoryRewards.ts";
+import { SPRITE_WIDTH } from "../battleConstants.ts";
+import type { SkillSequenceRunner } from "../skills/skillSequence.ts";
 import {
   DEFAULT_MELEE_RANGE_PX,
   RANGED_ATTACK_MIN_PX,
@@ -17,7 +17,7 @@ import {
   type CombatantState,
   type GameData,
   type SkillTriggerKind,
-} from '../types.ts';
+} from "../types.ts";
 
 /** private フィールドへのアクセス用（`BattleEngine & {...}` は never になるため unknown 経由） */
 export type BattleEngineInternals = {
@@ -29,7 +29,9 @@ export type BattleEngineInternals = {
   tickCountTriggers?: (unitId: string, kind: SkillTriggerKind) => void;
 };
 
-export function asBattleEngineInternals(engine: BattleEngine): BattleEngineInternals {
+export function asBattleEngineInternals(
+  engine: BattleEngine,
+): BattleEngineInternals {
   return engine as unknown as BattleEngineInternals;
 }
 
@@ -39,11 +41,11 @@ export const SCREEN_MAX_X = 496;
 export const MARCH_MAX_ALLY_SCREEN_X = 280;
 export const TICK_DT = 1 / 60;
 
-export const BACK_ROW_NAMES = ['療養師', '弓術士'] as const;
+export const BACK_ROW_NAMES = ["療養師", "弓術士"] as const;
 
 /** screenX = battleX（カメラ廃止） */
 export function screenX(
-  unit: Pick<CombatantSnapshot, 'visualX' | 'battleX'>,
+  unit: Pick<CombatantSnapshot, "visualX" | "battleX">,
   _combatCameraX: number = 0,
 ): number {
   return unit.battleX;
@@ -52,16 +54,16 @@ export function screenX(
 export function createStage1Engine(options?: { reliableWaveClear?: boolean }) {
   const gameData = structuredClone(loadGameData());
   if (options?.reliableWaveClear) {
-    const stage = gameData.stages.find((s) => s.id === '1');
+    const stage = gameData.stages.find((s) => s.id === "1");
     if (stage?.waves[0]) {
-      stage.waves[0].enemies = [{ templateId: 'stage1_1', spawnX: 120 }];
+      stage.waves[0].enemies = [{ templateId: "stage1_1", spawnX: 120 }];
     }
     const wave1Enemy = gameData.enemyRegistry.stage1_1;
     if (wave1Enemy) wave1Enemy.maxHp = 1;
   }
   const levelCurves = loadLevelCurves(levelCurvesJson);
-  const save = createDefaultSave(gameData, 'demo');
-  save.stageProgress.currentStageId = '1';
+  const save = createDefaultSave(gameData, "demo");
+  save.stageProgress.currentStageId = "1";
   if (options?.reliableWaveClear) {
     for (const slot of save.party) {
       if (slot) slot.progress.level = 10;
@@ -81,11 +83,11 @@ export function createStage1Wave1MeleeFirstDeathEngine(
   options?: BattleEngineOptions,
 ) {
   const gameData = structuredClone(loadGameData());
-  const stage = gameData.stages.find((s) => s.id === '1');
+  const stage = gameData.stages.find((s) => s.id === "1");
   if (stage?.waves[0]) {
     stage.waves[0].enemies = [
-      { templateId: 'test_enemy', spawnX: 100 },
-      { templateId: 'test_ranged', spawnX: 160 },
+      { templateId: "test_enemy", spawnX: 100 },
+      { templateId: "test_ranged", spawnX: 160 },
     ];
   }
   const melee = gameData.enemyRegistry.test_enemy;
@@ -93,8 +95,8 @@ export function createStage1Wave1MeleeFirstDeathEngine(
   if (melee) melee.maxHp = 400;
   if (ranged) ranged.maxHp = 9_999;
   const levelCurves = loadLevelCurves(levelCurvesJson);
-  const save = createDefaultSave(gameData, 'demo');
-  save.stageProgress.currentStageId = '1';
+  const save = createDefaultSave(gameData, "demo");
+  save.stageProgress.currentStageId = "1";
   for (const slot of save.party) {
     if (slot) slot.progress.level = 12;
   }
@@ -111,9 +113,9 @@ export function createStage1Wave1MeleeFirstDeathEngine(
 
 export function createStage1Wave2MeleeOnlyEngine() {
   const gameData = structuredClone(loadGameData());
-  const stage = gameData.stages.find((s) => s.id === '1');
+  const stage = gameData.stages.find((s) => s.id === "1");
   if (stage?.waves[0]) {
-    stage.waves[0].enemies = [{ templateId: 'stage1_1', spawnX: 600 }];
+    stage.waves[0].enemies = [{ templateId: "stage1_1", spawnX: 600 }];
   }
   const wave1Enemy = gameData.enemyRegistry.stage1_1;
   if (wave1Enemy) wave1Enemy.maxHp = 1;
@@ -121,10 +123,10 @@ export function createStage1Wave2MeleeOnlyEngine() {
   const melee = gameData.enemyRegistry.test_enemy;
   // Wave 2: melee dies first; ranged survive for ranged-only engaged window
   if (ranged) ranged.maxHp = 9_999;
-  if (melee) melee.maxHp = 400;
+  if (melee) melee.maxHp = 80;
   const levelCurves = loadLevelCurves(levelCurvesJson);
-  const save = createDefaultSave(gameData, 'demo');
-  save.stageProgress.currentStageId = '1';
+  const save = createDefaultSave(gameData, "demo");
+  save.stageProgress.currentStageId = "1";
   for (const slot of save.party) {
     if (slot) slot.progress.level = 12;
   }
@@ -138,7 +140,44 @@ export function createStage1Wave2MeleeOnlyEngine() {
   return engine;
 }
 
-export type BattleSnapshot = ReturnType<BattleEngine['getSnapshot']>;
+export function createStage1Wave2ToRangedOnlyRegressionEngine() {
+  const gameData = structuredClone(loadGameData());
+  const stage = gameData.stages.find((s) => s.id === "1");
+  if (stage?.waves[0]) {
+    stage.waves[0].enemies = [{ templateId: "stage1_1", spawnX: 120 }];
+  }
+  if (stage?.waves[1]) {
+    stage.waves[1].enemies = [
+      { templateId: "test_enemy", spawnX: 100 },
+      { templateId: "test_ranged", spawnX: 160 },
+      { templateId: "test_to_ranged", spawnX: 220 },
+    ];
+  }
+  const wave1Enemy = gameData.enemyRegistry.stage1_1;
+  const melee = gameData.enemyRegistry.test_enemy;
+  const ranged = gameData.enemyRegistry.test_ranged;
+  const toRanged = gameData.enemyRegistry.test_to_ranged;
+  if (wave1Enemy) wave1Enemy.maxHp = 1;
+  if (melee) melee.maxHp = 1;
+  if (ranged) ranged.maxHp = 1;
+  if (toRanged) toRanged.maxHp = 9_999;
+  const levelCurves = loadLevelCurves(levelCurvesJson);
+  const save = createDefaultSave(gameData, "demo");
+  save.stageProgress.currentStageId = "1";
+  for (const slot of save.party) {
+    if (slot) slot.progress.level = 12;
+  }
+  const engine = new BattleEngine(
+    gameData,
+    levelCurves,
+    () => save.party,
+    () => save.stageProgress.currentStageId,
+  );
+  engine.startBattle();
+  return engine;
+}
+
+export type BattleSnapshot = ReturnType<BattleEngine["getSnapshot"]>;
 
 export interface TickSample {
   tick: number;
@@ -171,7 +210,7 @@ export function waitForEngaged(engine: BattleEngine, maxTicks = 5000): void {
     engine.tick(TICK_DT);
     if (engine.getSnapshot().engaged) return;
   }
-  throw new Error('engagement did not start');
+  throw new Error("engagement did not start");
 }
 
 export function advanceUntil(
@@ -187,9 +226,10 @@ export function advanceUntil(
   return null;
 }
 
-export function reachWave1Engage(
-  engine: BattleEngine,
-): { preEngage: BattleSnapshot; engageSnap: BattleSnapshot } {
+export function reachWave1Engage(engine: BattleEngine): {
+  preEngage: BattleSnapshot;
+  engageSnap: BattleSnapshot;
+} {
   const initial = engine.getSnapshot();
   if (initial.waveIndex === 0 && initial.engaged) {
     return { preEngage: initial, engageSnap: initial };
@@ -206,11 +246,16 @@ export function reachWave1Engage(
     }
     engine.tick(TICK_DT);
     const after = engine.getSnapshot();
-    if (preEngage && after.waveIndex === 0 && after.engaged && !before.engaged) {
+    if (
+      preEngage &&
+      after.waveIndex === 0 &&
+      after.engaged &&
+      !before.engaged
+    ) {
       return { preEngage, engageSnap: after };
     }
   }
-  throw new Error('wave 1 engagement did not occur');
+  throw new Error("wave 1 engagement did not occur");
 }
 
 export function reachWave2Engage(
@@ -230,11 +275,16 @@ export function reachWave2Engage(
     }
     engine.tick(TICK_DT);
     const after = engine.getSnapshot();
-    if (preEngage && after.waveIndex === 1 && after.engaged && !before.engaged) {
+    if (
+      preEngage &&
+      after.waveIndex === 1 &&
+      after.engaged &&
+      !before.engaged
+    ) {
       return after;
     }
   }
-  throw new Error('wave 2 engagement did not occur');
+  throw new Error("wave 2 engagement did not occur");
 }
 
 export function enemyRangePx(enemy: { rangePx?: number }): number {
@@ -327,11 +377,7 @@ export function measureAllyBattleXDriftAfterShortRangeWipe(
       maxAllyXAtWipe = Math.max(...livingAllies.map((a) => a.battleX));
     }
 
-    if (
-      wipeTick >= 0 &&
-      t - wipeTick <= maxTicksAfterWipe &&
-      snap.engaged
-    ) {
+    if (wipeTick >= 0 && t - wipeTick <= maxTicksAfterWipe && snap.engaged) {
       const minNow = Math.min(...livingAllies.map((a) => a.battleX));
       const maxNow = Math.max(...livingAllies.map((a) => a.battleX));
       maxLeftDrift = Math.max(maxLeftDrift, minAllyXAtWipe - minNow);
@@ -343,7 +389,6 @@ export function measureAllyBattleXDriftAfterShortRangeWipe(
 
   return { wipeTick, maxLeftDrift, maxRightDrift };
 }
-
 
 /** Snapshot 版: R1-fix 後は常に 0（battleX === visualX） */
 export function battleVisualOffsetFromSnapshot(
@@ -377,7 +422,7 @@ export function assertEngagedEnemyScreenStable(
   let engagedTicks = 0;
   let maxJump = 0;
   const prevScreenX = new Map<string, number>();
-  let prevEnemySignature = '';
+  let prevEnemySignature = "";
 
   for (let i = 0; i < maxTicks; i++) {
     engine.tick(TICK_DT);
@@ -385,12 +430,14 @@ export function assertEngagedEnemyScreenStable(
     if (!snap.engaged) {
       engagedTicks = 0;
       prevScreenX.clear();
-      prevEnemySignature = '';
+      prevEnemySignature = "";
       continue;
     }
     engagedTicks += 1;
 
-    for (const unit of [...snap.allies, ...snap.enemies].filter((u) => u.hp > 0)) {
+    for (const unit of [...snap.allies, ...snap.enemies].filter(
+      (u) => u.hp > 0,
+    )) {
       expect(unit.visualX).toBe(unit.battleX);
     }
 
@@ -398,7 +445,7 @@ export function assertEngagedEnemyScreenStable(
       .filter((e) => e.hp > 0)
       .map((e) => e.id)
       .sort()
-      .join(',');
+      .join(",");
     if (enemySignature !== prevEnemySignature) {
       prevScreenX.clear();
       prevEnemySignature = enemySignature;
@@ -435,7 +482,7 @@ export function assertEngagedDeathVisualStability(
   const prevLivingScreenX = new Map<string, number>();
   const corpsePrevScreenX = new Map<string, number>();
   const deathTick = new Map<string, number>();
-  let prevLivingSignature = '';
+  let prevLivingSignature = "";
   let maxLivingJump = 0;
   let maxCorpseJump = 0;
   let sawDeath = false;
@@ -447,7 +494,7 @@ export function assertEngagedDeathVisualStability(
       prevLivingScreenX.clear();
       corpsePrevScreenX.clear();
       deathTick.clear();
-      prevLivingSignature = '';
+      prevLivingSignature = "";
       continue;
     }
 
@@ -455,7 +502,7 @@ export function assertEngagedDeathVisualStability(
     const signature = living
       .map((e) => e.id)
       .sort()
-      .join(',');
+      .join(",");
     if (signature !== prevLivingSignature) {
       prevLivingScreenX.clear();
       prevLivingSignature = signature;
@@ -489,6 +536,14 @@ export function assertEngagedDeathVisualStability(
       const prev = corpsePrevScreenX.get(enemy.id)!;
       maxCorpseJump = Math.max(maxCorpseJump, Math.abs(sx - prev));
       corpsePrevScreenX.set(enemy.id, sx);
+    }
+
+    if (
+      sawDeath &&
+      deathTick.size > 0 &&
+      [...deathTick.values()].every((start) => i - start > trackAfter)
+    ) {
+      break;
     }
   }
 
@@ -599,7 +654,7 @@ export function assertNoFrontOvertake(
 
     const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
     const frontAllies = snap.allies.filter(
-      (a) => a.hp > 0 && a.formationRow === 'front',
+      (a) => a.hp > 0 && a.formationRow === "front",
     );
     if (livingEnemies.length === 0 || frontAllies.length === 0) continue;
 
@@ -670,14 +725,14 @@ export function countScreenXSignFlips(samples: number[]): number {
 export function assertFrozenScreenDelta(
   samples: TickSample[],
   unitId: string,
-  side: 'ally' | 'enemy',
+  side: "ally" | "enemy",
   epsilon = 0.5,
 ): void {
   let prevScreen: number | null = null;
   let prevBattleX: number | null = null;
 
   for (const sample of samples) {
-    const list = side === 'ally' ? sample.allies : sample.enemies;
+    const list = side === "ally" ? sample.allies : sample.enemies;
     const unit = list.find((u) => u.id === unitId && u.hp > 0);
     if (!unit) continue;
 

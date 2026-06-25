@@ -14,13 +14,14 @@
 
 ## 現在地（2026-06）
 
-| Phase | 状態 | 内容 |
-|-------|------|------|
-| 1 | 完了 | passiveIds 分離、ヘイト制、コアパッシブ |
-| **2** | **完了** | stun/knockback、`epithetEn` データ、15 クラス、`traits.rangePx`、仕様書 |
-| **3a** | **完了** | 接敵定数 4 項目化、弓士のみ生存距離修正 |
-| **3b** | **完了** | `resolveEngagedLayout` 一本化 |
+| Phase  | 状態     | 内容                                                                           |
+| ------ | -------- | ------------------------------------------------------------------------------ |
+| 1      | 完了     | passiveIds 分離、ヘイト制、コアパッシブ                                        |
+| **2**  | **完了** | stun/knockback、`epithetEn` データ、15 クラス、`traits.rangePx`、仕様書        |
+| **3a** | **完了** | 接敵定数 4 項目化、弓士のみ生存距離修正                                        |
+| **3b** | **完了** | `resolveEngagedLayout` 一本化                                                  |
 | **3c** | 部分完了 | `epithetEn` UI（バトル HUD・統計・スキルメニュー）。スプライト本番化は Phase 5 |
+| **3d** | **完了** | 接近・接敵 Intent 一本化（defender 専用 contact 接近の廃止）                   |
 
 **原則:** Phase 2 と Phase 3 を同時に大規模変更しない（`BattleEngine` / `formationLayout` が共通）。
 
@@ -28,14 +29,14 @@
 
 battle 系 cleanup を別チャットや Composer へ引き継ぐときの完了判定。ゲームルールの正本は [`docs/spec/battle-field.md`](../spec/battle-field.md)、Threat 境界の正本は [`docs/spec/combat.md`](../spec/combat.md)。
 
-| 項目 | 現状メモ |
-|------|----------|
-| `battleX` 単一正本に反する旧 `visual/screen/camera` pipeline が runtime から消えている | **部分**。`visualX` の snapshot 互換ミラー、`battleCamera.ts`、`corpseScreenAnchorX` など互換残骸が残る |
-| 接敵開始時 bake なし、自動接近主体の流れがテストで固定されている | **済み**。`battleFieldTransition.test.ts` の `T-engage-01`、`battleFieldArchitecture.test.ts` の `A-L1-01` を基準に維持 |
-| `AttackTarget` / `ChaseTarget` / `MoveAnchor` / `DisplayAnchor` / `FrontlineContact` の責務境界が実装名またはテスト名で読める | **済み**。`DisplayAnchor` は `engagedDisplayAnchorPlayerId` + `battleDisplay.getEngagedDisplayAnchorPlayerId` 等。`engagedVisualTargetPlayerId` / `engagedVisualTargetAllyId` は deprecated alias |
-| Assassin の rear assault と Defender の frontline ownership が衝突しない | **済み**。`CombatantState.accessState` が正本。`resolveApproachBattleX.enemy.test.ts` / `duelistAssassinFormation.test.ts` / `behindTargetMove.test.ts` を維持 |
-| 関連テストが通る | battle cleanup ごとに `battleFieldArchitecture` / `battleFieldTransition` / `resolveApproachBattleX.enemy` / `duelistAssassinFormation` を最低確認 |
-| [`docs/spec/battle-field.md`](../spec/battle-field.md) と [`docs/spec/combat.md`](../spec/combat.md) に今回の境界が反映されている | **部分**。`battle-field.md` は概ね反映済み。`combat.md` は Threat 境界を持つが、座標節に移行中の旧表現が残る |
+| 項目                                                                                                                              | 現状メモ                                                                                                                                                                                          |
+| --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `battleX` 単一正本に反する旧 `visual/screen/camera` pipeline が runtime から消えている                                            | **部分**。`visualX` の snapshot 互換ミラー、`battleCamera.ts`、`corpseScreenAnchorX` など互換残骸が残る                                                                                           |
+| 接敵開始時 bake なし、自動接近主体の流れがテストで固定されている                                                                  | **済み**。`battleFieldTransition.test.ts` の `T-engage-01`、`battleFieldArchitecture.test.ts` の `A-L1-01` を基準に維持                                                                           |
+| `AttackTarget` / `ChaseTarget` / `MoveAnchor` / `DisplayAnchor` / `FrontlineContact` の責務境界が実装名またはテスト名で読める     | **済み**。`DisplayAnchor` は `engagedDisplayAnchorPlayerId` + `battleDisplay.getEngagedDisplayAnchorPlayerId` 等。`engagedVisualTargetPlayerId` / `engagedVisualTargetAllyId` は deprecated alias |
+| Assassin の rear assault と Defender の frontline ownership が衝突しない                                                          | **済み**。`CombatantState.accessState` が正本。`resolveApproachBattleX.enemy.test.ts` / `duelistAssassinFormation.test.ts` / `behindTargetMove.test.ts` を維持                                    |
+| 関連テストが通る                                                                                                                  | battle cleanup ごとに `battleFieldArchitecture` / `battleFieldTransition` / `resolveApproachBattleX.enemy` / `duelistAssassinFormation` を最低確認                                                |
+| [`docs/spec/battle-field.md`](../spec/battle-field.md) と [`docs/spec/combat.md`](../spec/combat.md) に今回の境界が反映されている | **部分**。`battle-field.md` は概ね反映済み。`combat.md` は Threat 境界を持つが、座標節に移行中の旧表現が残る                                                                                      |
 
 **完了条件:** 上表の「部分」をすべて解消し、関連テストを通した時点で battle-field cleanup の収束とみなす。
 
@@ -50,8 +51,9 @@ flowchart LR
     B1[3a 接敵小PR]
     B2[3b resolver一本化]
     B3[3c 表示polish]
+    B4[3d 接近Intent一本化]
   end
-  done --> B1 --> B2 --> B3
+  done --> B1 --> B2 --> B3 --> B4
 ```
 
 ## Phase 2（完了）
@@ -80,16 +82,27 @@ flowchart LR
 - `BattleEngine` 接敵ループを「resolver 呼び出し + 補間」に薄化
 - [`docs/spec/combat.md`](../spec/combat.md) 座標節を更新
 
+**境界:** 3b は layout / display 側の resolver 一本化であり、`ChaseTarget` / `AttackTarget` による自動接近 Intent の一本化は Phase 3d で扱う。
+
 ## Phase 3c: 表示 polish（任意）
 
 - `epithetEn` 2 段ルビ（クラス画面・バトル HUD）
 - スプライトシート本番化（[sheets/README.md](../../src/assets/sprites/sheets/README.md)）
 - CC HUD の見た目調整
 
+## Phase 3d: 接近・接敵 Intent 一本化
+
+**目的:** defender 専用の「敵全体の接触点へ前進」経路を廃止し、全ロール共通で `ChaseTarget → standoff battleX → AttackTarget` の停止判定へ揃える。P3 剣術士完了後、Position Flow 系スキルの本格実装前に挟む。
+
+- `resolveDefenderApproachBattleX` を削除し、`resolveAllPlayerApproachBattleX` をロール共通の chase/standoff resolver + 共有 clamp / formation レイヤに整理
+- `capFrontRowBeforeEnemyContact`、front-row supporter cap、formation spacing / march follow は接近本体ではなく共有 clamp / formation レイヤとして扱う
+- Stage 1 Wave 2 の `test_to_ranged` 残存時に鉄衛士が不連続に接敵しないことを regression 化
+- role set（D / A / S / DA / DS / AS / DAS）と敵構成遷移の matrix で、接近 target continuity・1 tick jump・停止判定・body anim・前列 overtake を確認
+
 ## 参照
 
-| 用途 | ファイル |
-|------|----------|
-| フェーズ一覧 | [phase-roadmap.md](./phase-roadmap.md) |
-| 接敵小 PR 詳細 | `.cursor/plans/接敵定数整理_9843f9d9.plan.md` |
-| パッシブ経緯 | `.cursor/plans/passive_skill_slim-down_9061e534.plan.md` |
+| 用途           | ファイル                                                 |
+| -------------- | -------------------------------------------------------- |
+| フェーズ一覧   | [phase-roadmap.md](./phase-roadmap.md)                   |
+| 接敵小 PR 詳細 | `.cursor/plans/接敵定数整理_9843f9d9.plan.md`            |
+| パッシブ経緯   | `.cursor/plans/passive_skill_slim-down_9061e534.plan.md` |

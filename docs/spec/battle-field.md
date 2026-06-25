@@ -99,9 +99,9 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 **`move` の `moveMode`（プレイヤー actor・新軸）：**
 
-| mode       | 目標 `battleX`                                                                                                                                                               |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `engage`   | `anchor.battleX - effectiveRangePx`（敵の手前＝後方側）                                                                                                                    |
+| mode       | 目標 `battleX`                                                                                                                                         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `engage`   | `anchor.battleX - effectiveRangePx`（敵の手前＝後方側）                                                                                                |
 | `toAnchor` | `anchor.battleX + anchorOffsetPx`（未指定=0。−=味方側、+=敵背後）。**敵／味方など敵対 anchor へ向かう場合**は 1 回の移動量を `effectiveRangePx` で上限 |
 
 **ノックバック：** 各陣営の **後方** へ押す。プレイヤーは `-X`（左）、敵は `+X`（右）。敵は `battleX` が進軍表示下限未満にならない。成功時は **移動硬直 1.5 秒**（攻撃は可能・接近とスキル `move` のみ停止）。実装：`ccEffects.ts` の `KNOCKBACK_MOVE_LOCK_SEC`。
@@ -115,7 +115,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | `PARTY_FORMATION_LEFT_ANCHOR`（20）  | 味方隊列左端（射程最長ユニット）                                                                                |
 | `PARTY_FORMATION_SLOT_SPACING`（32） | 味方隊列スロット間隔                                                                                            |
 | `SPAWN_X_MAX`（240）                 | 敵 `spawnX` 上限（中心からの右オフセット）                                                                      |
-| `PLAYER_VISUAL_MIN_GAP`              | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`）。射程加算には使わない                                |
+| `PLAYER_VISUAL_MIN_GAP`              | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`）。射程加算には使わない                               |
 | `CONFIGURABLE_RANGE_PX_MAX`          | `traits.rangePx` / `effect.range` の設定上限（`CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`）                        |
 | `MOVE_PX_PER_SEC`（120）             | 1 秒あたりの戦闘移動量（px）。進軍・接敵接近・PartyDeploy・隊形復帰に使用。Victory 退場は `MOVE_PX_PER_SEC × 2` |
 
@@ -123,10 +123,10 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 **同一 `formationRow` 内の X 深度（左＝後方、右＝前方）：**
 
-| 列      | 深度ルール（左 → 右）                                                                 |
-| ------- | ------------------------------------------------------------------------------------- |
+| 列      | 深度ルール（左 → 右）                                                                                                                |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `front` | 近接帯の attacker/defender を最前帯（右）。帯内は `rangePx` 降順 → 同値は `id` 順。それ以外（supporter・前列遠隔など）は後方帯（左） |
-| `back`  | ロール順: attacker → supporter → defender → `rangePx` 降順 → `id` 順（従来どおり）   |
+| `back`  | ロール順: attacker → supporter → defender → `rangePx` 降順 → `id` 順（従来どおり）                                                   |
 
 前列の supporter は近接最前帯（attacker/defender かつ `rangePx < RANGED_ATTACK_MIN_PX`）の手前に留める。接敵接近では supporter の停止 X をその最前帯の手前に cap する（`resolveApproachBattleX.ts` の `capFrontRowSupporterBehindMeleeFront`）。
 この例外は defender の代替壁を作るためではなく、`sp_alchemist` のような近接帯 Survival に **前線直後から局所 sustain を差し込む位置** を与えるためのものとして扱う。
@@ -135,21 +135,21 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 Canvas 2D の描画順（先に描いた方が下層）で重なりを決める。実装：`src/render/spriteDrawOrder.ts` → `BattleCanvas.ts`。
 
-| 優先 | ルール                         | 意味                                     |
-| ---- | ------------------------------ | ---------------------------------------- |
-| 1    | **敵を先に描画**               | プレイヤー側スプライトが敵より手前（上） |
-| 2    | **味方はロール帯で重なり**     | 下表の順で手前に重なる（上→下）          |
+| 優先 | ルール                           | 意味                                     |
+| ---- | -------------------------------- | ---------------------------------------- |
+| 1    | **敵を先に描画**                 | プレイヤー側スプライトが敵より手前（上） |
+| 2    | **味方はロール帯で重なり**       | 下表の順で手前に重なる（上→下）          |
 | 3    | **敵内は射程が長い方を先に描画** | 射程の短い敵ほど上に重なる               |
-| 4    | **同一帯内は後方を先に描画**   | 手前に立つユニットが後方ユニットより上   |
+| 4    | **同一帯内は後方を先に描画**     | 手前に立つユニットが後方ユニットより上   |
 
 **味方のロール帯（手前＝上層 → 奥＝下層）：**
 
-| 手前（上） | ロール帯           | 判定                                      |
-| ---------- | ------------------ | ----------------------------------------- |
-| 1          | 近接 `attacker` UI ロール | `role === "attacker"` かつ `rangePx < 100` |
+| 手前（上） | ロール帯                  | 判定                                        |
+| ---------- | ------------------------- | ------------------------------------------- |
+| 1          | 近接 `attacker` UI ロール | `role === "attacker"` かつ `rangePx < 100`  |
 | 2          | 遠隔 `attacker` UI ロール | `role === "attacker"` かつ `rangePx >= 100` |
-| 3          | ディフェンダー     | `role === "defender"`                     |
-| 4          | `supporter` UI ロール | `role === "supporter"`                    |
+| 3          | ディフェンダー            | `role === "defender"`                       |
+| 4          | `supporter` UI ロール     | `role === "supporter"`                      |
 
 **後方の定義（陣営ごとの battleX 向き）：**
 
@@ -164,13 +164,13 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 同一 `battleX` 付近でスプライトが重ならないよう、**描画のみ** Y をずらす。`battleX`（戦闘正本）は変えない。スケールは変えずドット絵の等倍を維持する。
 
-| 項目 | 内容 |
-| ---- | ---- |
-| 足元アンカー | `layout.y` = `groundY`（全員共通） |
-| 奥行き | `depthOffsetY` — `spriteDrawOrder` と同じ並びで陣営内に割当（奥ほど大きい） |
-| 敵の正本 | Wave 内の全敵（倒れた敵含む `snapshot.enemies`）。生存敵の Y は撃破後も変わらない |
-| 描画 Y | `spriteDrawY = layout.y - depthOffsetY` |
-| 段幅 | `VISUAL_DEPTH_STEP_PX`（10px × スプライト scale） |
+| 項目         | 内容                                                                              |
+| ------------ | --------------------------------------------------------------------------------- |
+| 足元アンカー | `layout.y` = `groundY`（全員共通）                                                |
+| 奥行き       | `depthOffsetY` — `spriteDrawOrder` と同じ並びで陣営内に割当（奥ほど大きい）       |
+| 敵の正本     | Wave 内の全敵（倒れた敵含む `snapshot.enemies`）。生存敵の Y は撃破後も変わらない |
+| 描画 Y       | `spriteDrawY = layout.y - depthOffsetY`                                           |
+| 段幅         | `VISUAL_DEPTH_STEP_PX`（10px × スプライト scale）                                 |
 
 実装：`src/render/spriteVisualDepth.ts`（`assignVisualDepthOffsets`）→ `BattleCanvas.ts`、VFX・ポップアップは `spriteDrawY` を参照。§2.7 の描画順と同一キーで深度を決める。
 
@@ -181,8 +181,8 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 `BattleEngine` がスナップショット各ユニットに `bodyAnimMarching` を付与し、`BattleCanvas` が `move` / `idle` を切り替える。判定正本は `src/battle/bodyAnimMarching.ts`（`battleX` のフレーム差分や overlap 微調整は使わない）。
 
 | `bodyAnimMarching === true` | PartyDeploy 目標へ未着、接敵自動接近中、スキル `move` 実行中、Wave 間/Victory 退場 march |
-| --------------------------- | ----------------------------------------------------------------------------------------- |
-| `false`                     | 配置完了待ち、射程内で自動接近停止、死亡、その他静止                                       |
+| --------------------------- | ---------------------------------------------------------------------------------------- |
+| `false`                     | 配置完了待ち、射程内で自動接近停止、死亡、その他静止                                     |
 
 ---
 
@@ -234,14 +234,14 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ### 4.1 BattlePhase FSM
 
-| Phase                | 概要                                                                         |
-| -------------------- | ---------------------------------------------------------------------------- |
-| `WaveAnnouncement`   | 各 Wave 開始。告知オーバーレイ（Victory 同様の fade/hold/fade）              |
+| Phase                | 概要                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| `WaveAnnouncement`   | 各 Wave 開始。告知オーバーレイ（Victory 同様の fade/hold/fade）                         |
 | `PartyDeploy`        | 告知と **同時**。味方左外 → 隊形アンカー、敵右外 → spawn 位置（接敵接近はまだ行わない） |
-| `Engaged`            | 告知 fade-out 開始 + 250ms かつ Deploy 到達後。味方・敵とも自動接近・スキル開始 |
-| `PostCombatSettle`   | 敵全滅後の死亡演出待ち                                                       |
-| `VictoryExit`        | Wave 間・ステージクリア。位置維持のまま右退場（`worldOffsetX` パララックス） |
-| `Defeat` / `Respawn` | 既存 combat フローに準拠                                                     |
+| `Engaged`            | 告知 fade-out 開始 + 250ms かつ Deploy 到達後。味方・敵とも自動接近・スキル開始         |
+| `PostCombatSettle`   | 敵全滅後の死亡演出待ち                                                                  |
+| `VictoryExit`        | Wave 間・ステージクリア。位置維持のまま右退場（`worldOffsetX` パララックス）            |
+| `Defeat` / `Respawn` | 既存 combat フローに準拠                                                                |
 
 `PartyDeploy` / 告知中はスキル発動を停止。CD / DoT / HoT は継続。
 
@@ -249,15 +249,15 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 **`layout bake` の用途：** **非接敵配置確定用** layout bake。Engaged 中の前列死亡・敵近接死亡・構成変化では bake しない。
 
-| タイミング                         | layout bake | 実装箇所                                                                 |
-| ---------------------------------- | ----------- | ------------------------------------------------------------------------ |
-| Wave 開始 / PartyDeploy 目標確定   | しない      | deploy 終点を維持。接敵は自動接近のみ                                    |
-| 通常 Wave 接敵開始                 | しない      | `setupEngagedCombat`（凍結・署名のみ）                                   |
-| 訓練ステージ                       | する        | `prepareTrainingWave` → `resolveEngagedLayoutForEvent` + `applyEngagedFormationLayout` |
-| 初期配置                           | する        | 同上（訓練と同経路）                                                     |
-| **Engaged 中の前列死亡**           | **禁止**    | `maybeRecomputeEngagedLayout` — target / threat / contact / 凍結のみ     |
-| **Engaged 中の敵近接死亡**         | **禁止**    | 同上                                                                     |
-| **Engaged 中の構成変化**           | **禁止**    | 同上（署名更新・`freezeEngagedMeleeVisualSlots`・ranged display target 更新） |
+| タイミング                       | layout bake | 実装箇所                                                                               |
+| -------------------------------- | ----------- | -------------------------------------------------------------------------------------- |
+| Wave 開始 / PartyDeploy 目標確定 | しない      | deploy 終点を維持。接敵は自動接近のみ                                                  |
+| 通常 Wave 接敵開始               | しない      | `setupEngagedCombat`（凍結・署名のみ）                                                 |
+| 訓練ステージ                     | する        | `prepareTrainingWave` → `resolveEngagedLayoutForEvent` + `applyEngagedFormationLayout` |
+| 初期配置                         | する        | 同上（訓練と同経路）                                                                   |
+| **Engaged 中の前列死亡**         | **禁止**    | `maybeRecomputeEngagedLayout` — target / threat / contact / 凍結のみ                   |
+| **Engaged 中の敵近接死亡**       | **禁止**    | 同上                                                                                   |
+| **Engaged 中の構成変化**         | **禁止**    | 同上（署名更新・`freezeEngagedMeleeVisualSlots`・ranged display target 更新）          |
 
 ```
 1. スロット ideal battleX（§3.3）
@@ -294,37 +294,37 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 ### 4.4 自動接近（`battleX`）
 
-接近（chase）と攻撃停止（attack）は **同じ target 判定系** を共有し、停止距離だけ `effectiveRangePx` で解く（`resolveApproachBattleX.ts`）。
-`getMeleeEnemyContactX` は表示や旧互換 helper 用で、接近停止の正本ではない。
+接近（chase）と攻撃停止（attack）は **同じ target 判定系** を共有し、停止距離だけ `effectiveRangePx` で解く（`resolveApproachBattleX.ts`）。defender も例外にせず、全ロール共通で `ChaseTarget → standoff battleX → AttackTarget` の順に扱う。
+`getEnemyContactX` / `getMeleeEnemyContactX` は contact / frontline / clamp / 表示 helper 用で、ロール専用の接近停止正本ではない。
 
 **Target Intent 境界:** 接近・攻撃・移動・表示は対象選択の目的が異なる。
 
-| Intent | この章での用途 | 正本 |
-| ------ | -------------- | ---- |
-| `ChaseTarget` | 自動接近で追う相手 | 敵は Threat、味方は target spec |
-| `AttackTarget` | 射程内停止と実際の攻撃対象 | 射程内プール。敵の対プレイヤーは Threat 優先 |
-| `MoveAnchor` | スキル `move` の到達基準 | 使用者との `battleX` 距離。Threat は使わない |
-| `FrontlineOwner` | 現在その戦線を保持している味方 | `resolvePlayerFrontlineOwners`（`combatPosition.ts`）。rear assault アクセス中は含めない |
-| `DisplayAnchor` | 遠隔敵の表示凍結・VFX 基準 | 描画専用。`engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper）。戦闘判定へ逆流させない |
+| Intent           | この章での用途                 | 正本                                                                                          |
+| ---------------- | ------------------------------ | --------------------------------------------------------------------------------------------- |
+| `ChaseTarget`    | 自動接近で追う相手             | 敵は Threat、味方は target spec / target rule                                                 |
+| `AttackTarget`   | 射程内停止と実際の攻撃対象     | `ChaseTarget` と同じ target spec 系の射程内プール。敵の対プレイヤーは Threat 優先             |
+| `MoveAnchor`     | スキル `move` の到達基準       | 使用者との `battleX` 距離。Threat は使わない                                                  |
+| `FrontlineOwner` | 現在その戦線を保持している味方 | `resolvePlayerFrontlineOwners`（`combatPosition.ts`）。rear assault アクセス中は含めない      |
+| `DisplayAnchor`  | 遠隔敵の表示凍結・VFX 基準     | 描画専用。`engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper）。戦闘判定へ逆流させない |
 
-| 側                           | chase（毎 tick 再評価）                                           | attack / 停止判定                                                  |
-| ---------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------ |
-| 敵                           | 全生存プレイヤーからヘイト最大（`resolveEnemyChaseTargetPlayer`） | 射程内プレイヤーからヘイト最大（`resolveEnemyAttackTargetPlayer`） |
-| 味方（defender）             | 敵全体の接触点を基準に前進                                        | attack プールで `effectiveRangePx` 内なら停止                      |
-| 味方（attacker / supporter） | ターゲット spec の敵プールから **奥**（`battleX` 最大）           | 同じ attack プールで `effectiveRangePx` 内なら停止                |
-| 味方（ally-heal 通常攻撃の supporter） | 射程外の負傷味方へ接近。全員健康なら **現位置維持**（敵 chase しない） | 射程内の負傷味方がいれば停止（`shouldSkipEngagedAutoApproach`）   |
+| 側                                     | chase（毎 tick 再評価）                                                                                                                       | attack / 停止判定                                                   |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| 敵                                     | 全生存プレイヤーからヘイト最大（`resolveEnemyChaseTargetPlayer`）                                                                             | 射程内プレイヤーからヘイト最大（`resolveEnemyAttackTargetPlayer`）  |
+| 味方（全ロール共通）                   | target spec / target rule の敵プールから `ChaseTarget` を選ぶ。既定 `distance/enemy/nearest` は battle-line depth の **奥**（`battleX` 最大） | 同じ target spec 系の attack プールで `effectiveRangePx` 内なら停止 |
+| 味方（ally-heal 通常攻撃の supporter） | 射程外の負傷味方へ接近。全員健康なら **現位置維持**（敵 chase しない）                                                                        | 射程内の負傷味方がいれば停止（`shouldSkipEngagedAutoApproach`）     |
 
 敵の Threat chase は敵の前方側にいるプレイヤー候補から選ぶ。rear assault アクセス中のプレイヤーは敵の新しい `ChaseTarget` や前線所有者にはしない。
 
 **rear assault アクセス状態（runtime）:** 背後滞在の正本は `CombatantState.accessState === "rearAssault"`（`combatPosition.ts` の `setPlayerRearAssaultAccess` / `clearPlayerRearAssaultAccess`）。`isPlayerRearAssaultAccess` が Threat / `FrontlineOwner` / `enemyForwardFacingPool` からの除外判定に使う。立てる条件: 味方 actor が敵対 anchor へ `moveMode: "toAnchor"` かつ `anchorOffsetPx > 0` の move を適用したとき（Assassin 固有 ID ではなく効果形状で判定）。解除: 帰還 `engage` / 非 rear の move 適用時、スキルシーケンス完了時、死亡・`clearForActor` / `clearAll` / wave reset（`clearEngagedVisualState`）。`waitAfterSec` 中も move 完了だけでは解除しない。移行中 fallback として `battleX > contactBattleX` を残す。敵側のプレイヤー背後 move は本 spec のスコープ外。
 
-**停止 X：** chase 対象の `battleX` に対し `resolveApproachAttackBattleX`（§2.5 と同じ射程式）。敵は `capEngagedEnemyApproachBattleX` により左（`battleX` 減少）のみ。
+**停止 X：** chase 対象の `battleX` に対し `resolveApproachAttackBattleX`（§2.5 と同じ射程式）。敵は `capEngagedEnemyApproachBattleX` により左（`battleX` 減少）のみ。味方 defender 専用の contact 停止 resolver は持たない。
 
 **自動接近スキップ：** `shouldSkipEngagedAutoApproach` — attack プールに 1 体でもいれば接近しない（射程内で攻撃待機）。`test_ranged` も通常の attack プールとして扱う。
 
-**味方の追加 cap：**
+**味方の共有 clamp / formation レイヤ：**
 
-- 前衛（`formationRow !== 'back'`）：敵全体の接触点より右へ過進軍しない（`capFrontRowBeforeEnemyContact`）
+- 前衛（`formationRow !== 'back'`）：生存敵 contact より右へ過進軍しない（`capFrontRowBeforeEnemyContact`）。これは `ChaseTarget` ではなく overtake 防止 clamp
+- 前列 supporter：近接最前帯の直後へ留める（`capFrontRowSupporterBehindMeleeFront`）。これは defender 代替壁ではなく前線直後 sustain 用の formation clamp
 - 接近ターゲットの row-order clamp は前衛 / 後衛で共通で、`applyFormationRowApproachSpacing` の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
 
 **敵の追い替え：** Threat は毎 tick 再評価するが、chase / attack には [combat.md](combat.md) の **閾値ヒステリシス**（`pickThreatTargetWithHysteresis` / `threatFocusTargetId`）を適用する。ヘイト 1 位が瞬間的に入れ替わっただけでは chase target を即切替しない。射程内に入ったら attack プールで停止・攻撃。
@@ -337,14 +337,14 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 **Engaged 中の生存ユニット `battleX` 更新（4 系統のみ）：**
 
-| 系統        | 実装                                                                 |
-| ----------- | -------------------------------------------------------------------- |
-| approach    | `updateEngagedBattleMovement` → `resolveAllPlayerApproachBattleX` / `resolveEnemyApproachBattleX` |
-| skill move  | `SkillSequenceRunner.tickMoves`                                      |
-| knockback   | `ccEffects` 等                                                       |
-| overlap     | `resolveEngagedFormationOverlaps`（leading row 限定・生存のみ・skill motion 除外） |
+| 系統       | 実装                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------- |
+| approach   | `updateEngagedBattleMovement` → `resolveAllPlayerApproachBattleX` / `resolveEnemyApproachBattleX` |
+| skill move | `SkillSequenceRunner.tickMoves`                                                                   |
+| knockback  | `ccEffects` 等                                                                                    |
+| overlap    | `resolveEngagedFormationOverlaps`（leading row 限定・生存のみ・skill motion 除外）                |
 
-target / threat / contact / frontline owner は **座標 snap の理由ではない**。approach / attack / display の入力として毎 tick 再評価する。
+target / threat / contact / frontline owner は **座標 snap の理由ではない**。approach / attack / display / clamp の入力として毎 tick 再評価するが、Engaged 中の生存ユニットを layout bake で再配置しない。
 
 **前列過進軍 cap：** `capFrontRowBeforeEnemyContact` は `resolveAllPlayerApproachBattleX` 内の approach target 解決に含める。Engaged 中に `battleX` を直接 mutation する独立 clamp 経路は持たない（旧 `clampEngagedFrontRowBattleX` 相当）。
 
@@ -399,25 +399,25 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 
 ### 6.2 根本原因
 
-| ID  | 内容                                                               |
-| --- | ------------------------------------------------------------------ |
-| R1  | `battleX` と `visualX` の二重パイプライン + 橋渡し散在             |
-| R2  | `BattleEngine` の位相フラグごと分岐（bake 対象が不一致）           |
-| R3  | `combatPosition` ↔ `formationLayout` 循環依存・重複定数            |
+| ID  | 内容                                                                     |
+| --- | ------------------------------------------------------------------------ |
+| R1  | `battleX` と `visualX` の二重パイプライン + 橋渡し散在                   |
+| R2  | `BattleEngine` の位相フラグごと分岐（bake 対象が不一致）                 |
+| R3  | `combatPosition` ↔ `formationLayout` 循環依存・重複定数                 |
 | R4  | 射程計算と分類の正本が battle-field / combat / classes-and-skills に分散 |
 
 ### 6.3 解消ロジック（確定済み）
 
-| ID         | 採用                                                                        |
-| ---------- | --------------------------------------------------------------------------- |
-| **R1-fix** | **`battleX` 単一座標。** `visualX` 廃止。描画 = ロジック                    |
-| L2         | 単一 `FormationReset`（Wave 1 は背景・時間差分のみ）                        |
-| L5         | `engagedDisplayAnchorPlayerId` を layout で必ず参照（`resolveRangedTargetBattleX`） |
+| ID         | 採用                                                                                                       |
+| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| **R1-fix** | **`battleX` 単一座標。** `visualX` 廃止。描画 = ロジック                                                   |
+| L2         | 単一 `FormationReset`（Wave 1 は背景・時間差分のみ）                                                       |
+| L5         | `engagedDisplayAnchorPlayerId` を layout で必ず参照（`resolveRangedTargetBattleX`）                        |
 | L6         | 分類用途の `isMeleeUnit` は [combat.md](combat.md) / [classes-and-skills.md](classes-and-skills.md) に委譲 |
-| L7         | モジュール分割 + 一方向 import                                              |
-| L8         | 軸反転を座標系として一括適用                                                |
-| L9         | layout snapshot 単体テストへ置換                                            |
-| L10        | overlap は `resolveOverlaps` のみ。`engagedMinBodyGap()` / `PLAYER_VISUAL_MIN_GAP` は射程加算に使わない |
+| L7         | モジュール分割 + 一方向 import                                                                             |
+| L8         | 軸反転を座標系として一括適用                                                                               |
+| L9         | layout snapshot 単体テストへ置換                                                                           |
+| L10        | overlap は `resolveOverlaps` のみ。`engagedMinBodyGap()` / `PLAYER_VISUAL_MIN_GAP` は射程加算に使わない    |
 
 **廃止：** L1（毎 tick layout tick）、L3（visual 双方向補間を approach 正本へ統合）、接敵 layout 収束タイマー（`engagedEnemyLayoutTargets`）、`engageStandoff.ts` 等の未使用 helper。
 

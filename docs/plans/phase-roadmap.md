@@ -23,7 +23,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
-**開発優先:** **Phase 3（クラス別パッシブ / アクティブスキル再設定）** — 仕様見直しにより、既存クラスの一部でスキル構成を再定義する。Phase 3 の習得・常時使用枠の実装は維持しつつ、`classes.json` / `data/skills/` / スキル説明 / validate / エディタ保存経路が新しいクラス設計と一致するまで Phase 5 へ進まない。4c JSON 分割は **完了**。接敵ビジュアルは [master-work-order.md](./master-work-order.md) Phase 3a/3b。Electron は Phase 8。globalExp / 強化ツリー / オフライン報酬は Phase 8 から外し、別途再計画する。
+**開発優先:** **Phase 3（クラス別パッシブ / アクティブスキル再設定）** — 仕様見直しにより、既存クラスの一部でスキル構成を再定義する。Phase 3 の習得・常時使用枠の実装は維持しつつ、`classes.json` / `data/skills/` / スキル説明 / validate / エディタ保存経路が新しいクラス設計と一致するまで Phase 5 へ進まない。4c JSON 分割は **完了**。接敵ビジュアルは [master-work-order.md](./master-work-order.md) Phase 3a/3b、接近 Intent 一本化は Phase 3d。Electron は Phase 8。globalExp / 強化ツリー / オフライン報酬は Phase 8 から外し、別途再計画する。
 
 ---
 
@@ -115,6 +115,18 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 - `classes.json` の習得テーブルと `data/skills/` の効果・ターゲット・数値フィールドを更新
 - 新 effect / target / 条件 / 表示要素が増える場合は、`SkillEditorStep`・validate・`formatSkillText`・関連 spec を同じ作業で同期
 - 変更後のクラスマスタを [classes-and-skills.md](../spec/classes-and-skills.md) と突き合わせ、Phase 4a を再確定
+
+### Phase 3d — 接近・接敵 Intent 一本化（完了）
+
+**位置づけ:** P3 剣術士完了後、Position Flow 系スキルの本格実装前に挟む。Phase 3b の `resolveEngagedLayout` 一本化は layout / display 側の cleanup であり、Phase 3d は approach / attack / move / display の Target Intent 境界を揃える別作業。
+
+**ゴール:**
+
+- defender 専用の「敵全体の接触点へ前進」接近本体を廃止する
+- 全ロール共通で `ChaseTarget → standoff battleX → AttackTarget` の停止判定へ寄せる
+- ロール差は接近パイプラインではなく target spec / target rule に閉じる
+- `contact` / `frontline` / `display` / `move anchor` / `attack target` の責務境界を [battle-field.md](../spec/battle-field.md) と [combat.md](../spec/combat.md) に同期する
+- Stage 1 Wave 2 の `test_to_ranged` 残存時に鉄衛士が不連続に接敵しないことを regression 化する
 
 ### スコープ外（Phase 3）— 独自システムクラス
 
@@ -444,6 +456,8 @@ Phase 2b（戦闘計算） ── 2c と並行可
 Phase 2c（JSON クラス + 成長曲線）
     ↓
 Phase 3（スキル習得 + 習得済み passive / active 常時使用枠 + クラス別スキル再設定）  ← **現在**
+    ↓
+Phase 3d（接近・接敵 Intent 一本化）
     ↓
 Phase 4a（クラスマスタ + GUI）  ← 見直し中
     ↓

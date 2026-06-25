@@ -20,7 +20,7 @@
     - `pierceWard: true` — ⑫ wardBarrier をスキップ
     - `pierceBarrier: true` — ⑬ barrierHp 吸収をスキップ
     - 回避は v1 では貫通対象外（⑩は常に判定）
-   10b. **魔法直接 `damage`:** `blocksMagic: true` の block overlay がある対象のみ追加判定（⑪相当）。成功時 `blocked = floor(afterDR × 0.15)`（定数 `MAGIC_BLOCK_MITIGATION_RATIO`）
+      10b. **魔法直接 `damage`:** `blocksMagic: true` の block overlay がある対象のみ追加判定（⑪相当）。成功時 `blocked = floor(afterDR × 0.15)`（定数 `MAGIC_BLOCK_MITIGATION_RATIO`）
 
 **回避:** 直接 `damage` の物理/魔法問わず（DoT tick 非対象）。`SkillExecutor` で `resolveDamage`（①〜⑨）**前**（直接 `damage` パイプライン先頭）に判定。
 
@@ -52,17 +52,17 @@
 
 確率要素は判定時だけ使用できる。`chance` はスキル定義やパッシブ定義に置かれる判定パラメータであり、戦闘中の `CombatantState` / `StatusEffect` / `BattleSnapshot` に「未判定」「成功するかもしれない」「失敗するかもしれない」という確率状態を保持しない。
 
-| 対象                           | 未判定状態                   | 判定                                | 確定状態                                                    |
-| ------------------------------ | ---------------------------- | ----------------------------------- | ----------------------------------------------------------- |
-| 回避                           | 直接 `damage` を受ける（ターゲット確定後） | `evasion` の `chance` を判定（⑨より前） | 回避成功なら damage 非適用、失敗なら `resolveDamage` 以降へ進む |
-| ブロック                       | 物理直接 `damage` が確定     | `block` の `chance` を判定          | 成功なら block 後 damage、失敗なら block なし               |
-| 防御無視                       | damage 計算開始              | 各 `defenseIgnore.chance` を判定    | 成功したソースだけ DEF / REG 無視へ合算                     |
-| 無視DEFボーナス                | damage 計算（物理）⑥       | —                                   | `ignoredDef × ignoredDefBonusScale` を `afterDefense` に加算 |
-| DR 無視（`ignoreDamageTakenReduction`） | damage 計算⑨          | —                                   | `damageTakenMul` を 1.0 として `afterDR` を算出              |
-| 貫通フラグ（`pierceBlock` 等） | 直接 `damage` 適用⑪〜⑬   | —                                   | 各フラグ ON 時に block / ward / barrier をスキップ           |
-| debuff / stun / knockback 付与 | effect 適用時                | effect / passive の `chance` を判定 | 成功なら `StatusEffect` / moveLock 等を付与、失敗なら非付与 |
-| 確率反撃                       | 被攻撃条件と射程条件を満たす | `counter.chance` を判定             | 成功なら responses を即時適用、失敗なら反撃なし             |
-| Stage/Wave 開始パッシブ        | 発動タイミング到達           | `chance` を判定                     | 成功なら効果を適用、失敗なら非適用                          |
+| 対象                                    | 未判定状態                                 | 判定                                    | 確定状態                                                        |
+| --------------------------------------- | ------------------------------------------ | --------------------------------------- | --------------------------------------------------------------- |
+| 回避                                    | 直接 `damage` を受ける（ターゲット確定後） | `evasion` の `chance` を判定（⑨より前） | 回避成功なら damage 非適用、失敗なら `resolveDamage` 以降へ進む |
+| ブロック                                | 物理直接 `damage` が確定                   | `block` の `chance` を判定              | 成功なら block 後 damage、失敗なら block なし                   |
+| 防御無視                                | damage 計算開始                            | 各 `defenseIgnore.chance` を判定        | 成功したソースだけ DEF / REG 無視へ合算                         |
+| 無視DEFボーナス                         | damage 計算（物理）⑥                       | —                                       | `ignoredDef × ignoredDefBonusScale` を `afterDefense` に加算    |
+| DR 無視（`ignoreDamageTakenReduction`） | damage 計算⑨                               | —                                       | `damageTakenMul` を 1.0 として `afterDR` を算出                 |
+| 貫通フラグ（`pierceBlock` 等）          | 直接 `damage` 適用⑪〜⑬                     | —                                       | 各フラグ ON 時に block / ward / barrier をスキップ              |
+| debuff / stun / knockback 付与          | effect 適用時                              | effect / passive の `chance` を判定     | 成功なら `StatusEffect` / moveLock 等を付与、失敗なら非付与     |
+| 確率反撃                                | 被攻撃条件と射程条件を満たす               | `counter.chance` を判定                 | 成功なら responses を即時適用、失敗なら反撃なし                 |
+| Stage/Wave 開始パッシブ                 | 発動タイミング到達                         | `chance` を判定                         | 成功なら効果を適用、失敗なら非適用                              |
 
 **責務分離:**
 
@@ -239,7 +239,7 @@ Threat は、敵 AI が「誰を優先して攻撃するか」を決めるため
 - これらを同一の意味へ畳み込まない
 
 移動型アタッカーや背後侵入スキルを成立させるため、前進・背後侵入・一時的な接敵は、そのまま「新しい被害入口になった」とは解釈しない。双刃士などの rear assault は、戦線保持ではなく **短時間アクセスによる Kill 成立** として扱う。
-座標・接敵側の具体ルールは [battle-field.md](battle-field.md) を正本とし、敵のデフォルト chase は敵の前方側にいる候補から Threat を選ぶ。背後侵入中のユニットは Threat 値を持っていても、その位置だけで敵の新しい追跡入口や前線所有者にはならない。
+座標・接敵側の具体ルールは [battle-field.md](battle-field.md) を正本とし、敵のデフォルト chase は敵の前方側にいる候補から Threat を選ぶ。背後侵入中のユニットは Threat 値を持っていても、その位置だけで敵の新しい追跡入口や前線所有者にはならない。Threat / target / contact / frontline owner は攻撃・接近・表示・clamp の入力であり、Engaged 中の座標 snap 理由にはしない。
 
 ### baseThreat（戦闘開始・前列圧力更新時）
 
@@ -446,14 +446,15 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 例（奇襲帰還）: `move farthestEnemy` → `damage` → `move closestPlayer (toAnchor)`
 
-### 戦闘フロー（Phase 1）
+### 戦闘フロー（座標要約）
 
-1. プレイヤー隊列を後方に配置、敵 Wave を前方（`spawnX`）から左進軍 — [battle-field.md](battle-field.md) §3–§4
-2. standoff cap 到達 → **Engaged** → 接近 + スキル発動（射程内のみ）
-3. **非接敵中**も DoT/HoT tick・バフ/デバフ持続・CD 進行は継続。スキル発動・脅威 decay は接敵中のみ（battle-field.md §4.7）
-4. 毎 tick（接敵中）：プレイヤー行動 → 敵行動
-5. 敵全滅 → **Victory**；プレイヤー全滅 → **Defeat**
-6. 3 秒後：HP 全回復、同一ステージ再スポーン、`Running` 再開
+1. プレイヤー隊列を後方に配置、敵 Wave を前方（`spawnX`）から deploy — [battle-field.md](battle-field.md) §3–§4
+2. PartyDeploy 到達 + Wave 告知 fade-out 条件で **Engaged**。接敵開始時に layout bake せず、自動接近で距離を詰める
+3. 接近は全ロール共通で `ChaseTarget → standoff battleX → AttackTarget`。defender 専用の contact 接近経路は持たない
+4. **非接敵中**も DoT/HoT tick・バフ/デバフ持続・CD 進行は継続。スキル発動・脅威 decay は接敵中のみ（[battle-field.md](battle-field.md) §4.6）
+5. 毎 tick（接敵中）：プレイヤー行動 → 敵行動
+6. 敵全滅 → **Victory**；プレイヤー全滅 → **Defeat**
+7. 3 秒後：HP 全回復、同一ステージ再スポーン、`Running` 再開
 
 死亡ユニットはターゲット対象外。次の再スポーンまで death アニメ。Wave 跨ぎの生死表示は battle-field.md §3.4。
 

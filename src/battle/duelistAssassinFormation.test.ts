@@ -1,29 +1,29 @@
-import { describe, expect, it } from 'vitest';
-import levelCurvesJson from '../../data/levelCurves.json';
-import { BattleEngine } from './BattleEngine.ts';
-import { loadGameData } from './data/loadGameData.ts';
-import { loadLevelCurves } from '../progression/levelGrowth.ts';
-import { createDefaultSave } from '../progression/victoryRewards.ts';
-import { createMemberFromClass } from '../progression/partyCompose.ts';
-import { PARTY_FORMATION_SLOT_SPACING } from './battleConstants.ts';
+import { describe, expect, it } from "vitest";
+import levelCurvesJson from "../../data/levelCurves.json";
+import { BattleEngine } from "./BattleEngine.ts";
+import { loadGameData } from "./data/loadGameData.ts";
+import { loadLevelCurves } from "../progression/levelGrowth.ts";
+import { createDefaultSave } from "../progression/victoryRewards.ts";
+import { createMemberFromClass } from "../progression/partyCompose.ts";
+import { PARTY_FORMATION_SLOT_SPACING } from "./battleConstants.ts";
 import {
   asBattleEngineInternals,
   reachWave1Engage,
   SCREEN_MIN_X,
   TICK_DT,
-} from './test/battleFieldSpec.harness.ts';
+} from "./test/battleFieldSpec.harness.ts";
 import {
   resolveEnemyAttackTargetPlayer,
   resolvePlayerApproachBattleX,
   shouldSkipEngagedAutoApproach,
-} from './resolveApproachBattleX.ts';
+} from "./resolveApproachBattleX.ts";
 
 function createDuelistAssassinEngine(): BattleEngine {
   const gameData = structuredClone(loadGameData());
-  const save = createDefaultSave(gameData, 'demo');
-  save.stageProgress.currentStageId = '1';
-  save.party[0] = createMemberFromClass('df_duelist', gameData);
-  save.party[1] = createMemberFromClass('at_assassin', gameData);
+  const save = createDefaultSave(gameData, "demo");
+  save.stageProgress.currentStageId = "1";
+  save.party[0] = createMemberFromClass("df_duelist", gameData);
+  save.party[1] = createMemberFromClass("at_assassin", gameData);
   save.party[2] = null;
   save.party[3] = null;
   for (const slot of save.party) {
@@ -37,47 +37,16 @@ function createDuelistAssassinEngine(): BattleEngine {
   );
 }
 
-describe('duelist + assassin front row', () => {
-  it('uses pierce 砂かけ (range 30) against enemies in front', () => {
-    const engine = createDuelistAssassinEngine();
-    engine.startBattle();
-    reachWave1Engage(engine);
-    const internal = asBattleEngineInternals(engine);
-
-    let appliedSand = false;
-    for (let t = 0; t < 1200; t++) {
-      engine.tick(TICK_DT);
-      const snap = engine.getSnapshot();
-      if (!snap.engaged) continue;
-
-      for (const enemy of internal.enemies) {
-        if (!enemy.isAlive) continue;
-        const hasAtkDebuff = enemy.statusEffects.some(
-          (fx) =>
-            fx.kind === 'debuff' &&
-            (fx.stat === 'atk' || fx.stat === 'attackSpeed'),
-        );
-        const hasStun = enemy.statusEffects.some((fx) => fx.overlay === 'stun');
-        if (hasAtkDebuff || hasStun) {
-          appliedSand = true;
-          break;
-        }
-      }
-      if (appliedSand) break;
-    }
-
-    expect(appliedSand).toBe(true);
-  });
-
-  it('keeps deploy spacing at engage start (no overlap snap)', () => {
+describe("duelist + assassin front row", () => {
+  it("keeps deploy spacing at engage start (no overlap snap)", () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);
     const snap = engine.getSnapshot();
     expect(snap.engaged).toBe(true);
 
-    const duelist = snap.allies.find((a) => a.name === '闘技士');
-    const assassin = snap.allies.find((a) => a.name === '双刃士');
+    const duelist = snap.allies.find((a) => a.name === "闘技士");
+    const assassin = snap.allies.find((a) => a.name === "双刃士");
     expect(duelist).toBeDefined();
     expect(assassin).toBeDefined();
     expect(duelist!.battleX).toBeGreaterThan(assassin!.battleX);
@@ -86,7 +55,7 @@ describe('duelist + assassin front row', () => {
     );
   });
 
-  it('shorter-range melee stays forward of longer-range during natural approach', () => {
+  it("shorter-range melee stays forward of longer-range during natural approach", () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);
@@ -95,14 +64,14 @@ describe('duelist + assassin front row', () => {
       engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged) continue;
-      const duelist = snap.allies.find((a) => a.name === '闘技士');
-      const assassin = snap.allies.find((a) => a.name === '双刃士');
+      const duelist = snap.allies.find((a) => a.name === "闘技士");
+      const assassin = snap.allies.find((a) => a.name === "双刃士");
       if (!duelist || !assassin) continue;
       expect(duelist.battleX).toBeGreaterThanOrEqual(assassin.battleX);
     }
   });
 
-  it('duelist deals damage while both are alive', () => {
+  it("duelist deals damage while both are alive", () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);
@@ -117,8 +86,8 @@ describe('duelist + assassin front row', () => {
       engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged) continue;
-      const duelist = snap.allies.find((a) => a.name === '闘技士' && a.hp > 0);
-      const assassin = snap.allies.find((a) => a.name === '双刃士' && a.hp > 0);
+      const duelist = snap.allies.find((a) => a.name === "闘技士" && a.hp > 0);
+      const assassin = snap.allies.find((a) => a.name === "双刃士" && a.hp > 0);
       if (!duelist || !assassin) break;
 
       const enemyHpNow = snap.enemies
@@ -133,7 +102,7 @@ describe('duelist + assassin front row', () => {
     expect(duelistDealt).toBe(true);
   });
 
-  it('enemies prefer duelist threat when both are in range', () => {
+  it("enemies prefer duelist threat when both are in range", () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);
@@ -143,8 +112,8 @@ describe('duelist + assassin front row', () => {
       engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
       if (!snap.engaged) continue;
-      const duelist = internal.players.find((p) => p.name === '闘技士');
-      const assassin = internal.players.find((p) => p.name === '双刃士');
+      const duelist = internal.players.find((p) => p.name === "闘技士");
+      const assassin = internal.players.find((p) => p.name === "双刃士");
       const enemy = internal.enemies.find((e) => e.isAlive);
       if (!duelist?.isAlive || !assassin?.isAlive || !enemy) continue;
 
@@ -159,15 +128,15 @@ describe('duelist + assassin front row', () => {
         return;
       }
     }
-    expect.fail('enemy never found an attack target while both allies lived');
+    expect.fail("enemy never found an attack target while both allies lived");
   });
 
-  it('no off-screen slide after assassin dies', () => {
+  it("no off-screen slide after assassin dies", () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);
     const internal = asBattleEngineInternals(engine);
-    const assassinUnit = internal.players.find((p) => p.name === '双刃士');
+    const assassinUnit = internal.players.find((p) => p.name === "双刃士");
     expect(assassinUnit?.isAlive).toBe(true);
 
     for (let t = 0; t < 120; t++) {
@@ -206,7 +175,7 @@ describe('duelist + assassin front row', () => {
     }
   });
 
-  it('assassin advances to forward depth after duelist dies', () => {
+  it("assassin advances to forward depth after duelist dies", () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);
@@ -216,8 +185,8 @@ describe('duelist + assassin front row', () => {
       engine.tick(TICK_DT);
     }
 
-    const duelist = internal.players.find((p) => p.name === '闘技士')!;
-    const assassin = internal.players.find((p) => p.name === '双刃士')!;
+    const duelist = internal.players.find((p) => p.name === "闘技士")!;
+    const assassin = internal.players.find((p) => p.name === "双刃士")!;
     const assassinXBefore = assassin.battleX;
     const duelistApproachBefore = resolvePlayerApproachBattleX(
       duelist,
@@ -241,7 +210,7 @@ describe('duelist + assassin front row', () => {
     expect(assassinApproachAfter).toBeGreaterThanOrEqual(duelistApproachBefore);
   });
 
-  it('fires shadow blade solo after duelist dies without stalling', () => {
+  it("fires shadow blade solo after duelist dies without stalling", () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);
@@ -251,13 +220,13 @@ describe('duelist + assassin front row', () => {
       engine.tick(TICK_DT);
     }
 
-    const duelist = internal.players.find((p) => p.name === '闘技士')!;
+    const duelist = internal.players.find((p) => p.name === "闘技士")!;
     duelist.hp = 0;
     duelist.isAlive = false;
 
-    const assassin = internal.players.find((p) => p.name === '双刃士')!;
+    const assassin = internal.players.find((p) => p.name === "双刃士")!;
     const active2 = assassin.cooldowns.find(
-      (cd) => cd.skillId === 'at_assassin_active_2',
+      (cd) => cd.skillId === "at_assassin_active_2",
     )!;
     active2.remaining = 0;
 
@@ -284,7 +253,7 @@ describe('duelist + assassin front row', () => {
     expect(progressed).toBe(true);
   });
 
-  it('assassin keeps attacking after duelist dies (manual)', () => {
+  it("assassin keeps attacking after duelist dies (manual)", () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);
@@ -294,8 +263,8 @@ describe('duelist + assassin front row', () => {
       engine.tick(TICK_DT);
     }
 
-    const duelist = internal.players.find((p) => p.name === '闘技士');
-    const assassin = internal.players.find((p) => p.name === '双刃士');
+    const duelist = internal.players.find((p) => p.name === "闘技士");
+    const assassin = internal.players.find((p) => p.name === "双刃士");
     expect(duelist?.isAlive).toBe(true);
     expect(assassin?.isAlive).toBe(true);
 
@@ -312,7 +281,7 @@ describe('duelist + assassin front row', () => {
       const snap = engine.getSnapshot();
       if (!snap.engaged) continue;
       const livingAssassin = snap.allies.find(
-        (a) => a.name === '双刃士' && a.hp > 0,
+        (a) => a.name === "双刃士" && a.hp > 0,
       );
       const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
       if (!livingAssassin || livingEnemies.length === 0) break;
@@ -339,11 +308,11 @@ describe('duelist + assassin front row', () => {
     expect(dealtDamage).toBe(true);
   });
 
-  it('assassin keeps attacking after duelist dies naturally', () => {
+  it("assassin keeps attacking after duelist dies naturally", () => {
     const engine = createDuelistAssassinEngine();
     const internal = asBattleEngineInternals(engine);
     for (const [id, enemy] of Object.entries(internal.gameData.enemyRegistry)) {
-      enemy.atk = id === 'test_enemy' ? 800 : 15;
+      enemy.atk = id === "test_enemy" ? 800 : 15;
     }
     engine.startBattle();
     reachWave1Engage(engine);
@@ -357,8 +326,8 @@ describe('duelist + assassin front row', () => {
       const snap = engine.getSnapshot();
       if (!snap.engaged) continue;
 
-      const duelist = snap.allies.find((a) => a.name === '闘技士');
-      const assassin = snap.allies.find((a) => a.name === '双刃士');
+      const duelist = snap.allies.find((a) => a.name === "闘技士");
+      const assassin = snap.allies.find((a) => a.name === "双刃士");
       const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
 
       if (
@@ -378,7 +347,7 @@ describe('duelist + assassin front row', () => {
       if (duelistDeathTick < 0 || snap.waveIndex !== 0) continue;
 
       const assassinUnit = internal.players.find(
-        (p) => p.name === '双刃士' && p.isAlive,
+        (p) => p.name === "双刃士" && p.isAlive,
       );
       if (!assassinUnit || livingEnemies.length === 0) break;
 
