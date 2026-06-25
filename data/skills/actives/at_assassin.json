@@ -1,5 +1,30 @@
 [
   {
+    "id": "at_assassin_basic_attack",
+    "name": "at_assassin_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.5
+        },
+        "targetShape": "single",
+        "hitCount": 2,
+        "hitDurationSec": 0.2
+      }
+    ]
+  },
+  {
     "id": "at_assassin_active_1",
     "name": "引き裂き",
     "trigger": {
@@ -97,11 +122,11 @@
         "damageType": "physical",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.5
+          "atkScale": 1.2
         },
         "waitAfterSec": 0.5,
         "damageIncrease": {
-          "scale": 1.5,
+          "scale": 2,
           "conditions": [
             {
               "kind": "targetHp",
@@ -109,47 +134,11 @@
             }
           ]
         }
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "move",
-        "moveMode": "engage",
-        "moveDurationSec": 0.25,
-        "waitAfterSec": 0.25
       }
     ],
     "vfx": {
       "enabled": true
     },
     "useDurationSec": 2
-  },
-  {
-    "id": "at_assassin_basic_attack",
-    "name": "at_assassin_basic_attack",
-    "trigger": {
-      "kind": "time",
-      "value": 2
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "damage",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.5
-        },
-        "targetShape": "single",
-        "hitCount": 2,
-        "hitDurationSec": 0.2
-      }
-    ]
   }
 ]
