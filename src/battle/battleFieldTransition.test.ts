@@ -71,6 +71,14 @@ describe(
   "battle-field transition spec (T-* / §4.3–§4.4)",
   { timeout: LONG_BATTLE_TIMEOUT_MS },
   () => {
+    it("debug battleX trace is omitted from normal snapshots", () => {
+      const engine = createStage1Engine();
+
+      engine.tick(TICK_DT);
+
+      expect(engine.getSnapshot().battleXDebugTrace).toBeUndefined();
+    });
+
     it("T-engage-01: engage start does not warp battleX (deploy end positions kept)", () => {
       const engine = createStage1Engine();
 

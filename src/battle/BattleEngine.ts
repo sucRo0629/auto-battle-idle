@@ -176,7 +176,25 @@ import {
   POST_ANNOUNCEMENT_ENGAGE_DELAY_SEC,
   POST_DEPLOY_SETTLE_DELAY_SEC,
 } from "../render/announcementOverlayTiming.ts";
-import type { BattlePhase, BattleSnapshot, CombatantState, GameData, PartySlotState, PendingSkillHit, SkillCooldown, SkillTriggerKind, StatusEffect } from "./types.ts";
+import {
+  BATTLE_X_DEBUG_TRACE_LIMIT,
+  createBattleXBeforeMap,
+  recordBattleXTraceEntries,
+  recordBattleXTraceEntry,
+} from "./battleXDebugTrace.ts";
+import type {
+  BattlePhase,
+  BattleSnapshot,
+  BattleXDebugTraceEntry,
+  BattleXDebugTraceReason,
+  CombatantState,
+  GameData,
+  PartySlotState,
+  PendingSkillHit,
+  SkillCooldown,
+  SkillTriggerKind,
+  StatusEffect,
+} from "./types.ts";
 import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 
 const RESTART_DELAY_SEC = 3;
@@ -197,6 +215,8 @@ export interface BattleEngineOptions {
   ) => void;
   /** 確認モード: 特定 Wave のみ周回（null = ステージ全 Wave） */
   getLoopWaveIndex?: () => number | null;
+  /** battleX debug 表示時のみ tick 内の位置変更を記録する */
+  getBattleXDebugEnabled?: () => boolean;
 }
 
 export class BattleEngine {
@@ -241,6 +261,9 @@ export class BattleEngine {
   private readonly skillSequenceRunner = new SkillSequenceRunner();
   private pendingHitQueue: PendingSkillHit[] = [];
   private battleTimeSec = 0;
+  private tickIndex = 0;
+  private battleXDebugWarningThresholdPx = 8;
+  private battleXDebugTrace: BattleXDebugTraceEntry[] = [];
   private stageId: string;
   private waveIndex = 0;
   private readonly onDamageApplied?: (
@@ -249,6 +272,7 @@ export class BattleEngine {
     amount: number,
   ) => void;
   private readonly getLoopWaveIndex?: () => number | null;
+  private readonly getBattleXDebugEnabled?: () => boolean;
 
   constructor(
     private readonly gameData: GameData,
@@ -260,6 +284,7 @@ export class BattleEngine {
     this.stageId = getStageId();
     this.onDamageApplied = options.onDamageApplied;
     this.getLoopWaveIndex = options.getLoopWaveIndex;
+    this.getBattleXDebugEnabled = options.getBattleXDebugEnabled;
     this.executor = new SkillExecutor(gameData, (e) => this.emit(e), {
       getBattleTimeSec: () => this.battleTimeSec,
       enqueuePendingHits: (hits) => {
@@ -286,6 +311,9 @@ export class BattleEngine {
       onUnitDied: (unit) => {
         clearPlayerRearAssaultAccess(unit);
         this.noteEnemyCorpseAnchor(unit);
+      },
+      onBattleXChanged: (unit, beforeX, reason) => {
+        this.recordBattleXDebugChange(unit, beforeX, reason);
       },
     });
     this.reloadBattlefield();
@@ -368,6 +396,10 @@ export class BattleEngine {
         isCounterDamage: meta.isCounterDamage,
         attackRangePx: meta.attackRangePx,
       };
+      const counterBeforeById = this.captureBattleXDebugBefore([
+        ...this.players,
+        ...this.enemies,
+      ]);
       applyPassiveCounterRetaliation(
         target,
         actor,
@@ -383,6 +415,11 @@ export class BattleEngine {
         this.gameData.skillRegistry.passives,
         this.gameData.skillRegistry.actives,
         counterCallbacks,
+      );
+      this.recordBattleXDebugChanges(
+        [...this.players, ...this.enemies],
+        counterBeforeById,
+        "knockback",
       );
     }
     if (
@@ -497,12 +534,90 @@ export class BattleEngine {
     this.onDamageApplied?.(actor, target, amount);
   }
 
+  private isBattleXDebugEnabled(): boolean {
+    return this.getBattleXDebugEnabled?.() ?? false;
+  }
+
+  private resolveCurrentRuntimePhase(): BattleSnapshot["runtimePhase"] {
+    const victoryAwaitExitMarch =
+      this.phase === "victory" && !this.hasFallenAllies();
+    return resolveRuntimeBattlePhase({
+      phase: this.phase,
+      engaged: this.engaged,
+      waveAnnouncementActive: this.waveAnnouncementActive,
+      partyDeployActive: this.partyDeployActive,
+      postCombatSettling: this.isPostCombatSettling(),
+      waveExitMarchActive: this.waveExitMarchActive,
+      victoryAwaitExitMarch,
+    });
+  }
+
+  private updateBattleXDebugThreshold(deltaTime: number): void {
+    this.battleXDebugWarningThresholdPx = Math.max(
+      8,
+      moveDeltaPx(MOVE_PX_PER_SEC, deltaTime) + 1,
+    );
+  }
+
+  private captureBattleXDebugBefore(
+    units: readonly CombatantState[],
+  ): Map<string, number> | null {
+    if (!this.isBattleXDebugEnabled()) return null;
+    return createBattleXBeforeMap(units);
+  }
+
+  private recordBattleXDebugChange(
+    unit: CombatantState,
+    beforeX: number,
+    reason: BattleXDebugTraceReason,
+    details?: BattleXDebugTraceEntry["details"],
+  ): void {
+    if (!this.isBattleXDebugEnabled()) return;
+    recordBattleXTraceEntry(
+      this.battleXDebugTrace,
+      unit,
+      beforeX,
+      reason,
+      this.buildBattleXDebugTraceContext(),
+      details,
+    );
+  }
+
+  private recordBattleXDebugChanges(
+    units: readonly CombatantState[],
+    beforeById: ReadonlyMap<string, number> | null,
+    reason: BattleXDebugTraceReason,
+    detailsById?: ReadonlyMap<string, BattleXDebugTraceEntry["details"]>,
+  ): void {
+    if (!beforeById) return;
+    recordBattleXTraceEntries(
+      this.battleXDebugTrace,
+      units,
+      beforeById,
+      reason,
+      this.buildBattleXDebugTraceContext(),
+      detailsById,
+    );
+  }
+
+  private buildBattleXDebugTraceContext() {
+    return {
+      phase: this.phase,
+      runtimePhase: this.resolveCurrentRuntimePhase(),
+      battleTimeSec: this.battleTimeSec,
+      tickIndex: this.tickIndex,
+      warningThresholdPx: this.battleXDebugWarningThresholdPx,
+    };
+  }
+
   private reloadBattlefield(): void {
     resetEntityIdCounter();
     this.trainingWaveReadyToEngage = false;
     this.pendingHitQueue = [];
     this.skillSequenceRunner.clearAll();
     this.battleTimeSec = 0;
+    this.tickIndex = 0;
+    this.battleXDebugTrace = [];
     this.players = createAlliesFromPartyState(
       this.gameData,
       this.getParty(),
@@ -671,11 +786,13 @@ export class BattleEngine {
   ): void {
     const step = moveDeltaPx(VICTORY_EXIT_PX_PER_SEC, deltaTime);
     this.advanceWorldOffset(deltaTime, VICTORY_EXIT_PX_PER_SEC);
+    const beforeById = this.captureBattleXDebugBefore(this.players);
     for (const ally of this.players) {
       if (livingOnly && !ally.isAlive) continue;
       ally.battleX += step;
       syncFieldX(ally);
     }
+    this.recordBattleXDebugChanges(this.players, beforeById, "victoryExit");
   }
 
   private hasFallenAllies(): boolean {
@@ -694,6 +811,11 @@ export class BattleEngine {
     const enemyContact = getEnemyContactX(this.enemies);
     const playerContact = getPlayerFrontlineContactX(this.players, this.enemies);
     if (enemyContact === null || playerContact === null) return;
+    const units = [...this.players, ...this.enemies];
+    const beforeById = this.captureBattleXDebugBefore(units);
+    const detailsById = beforeById
+      ? new Map<string, BattleXDebugTraceEntry["details"]>()
+      : undefined;
 
     this.engagedFrontLineAnchor =
       this.engagedFrontLineAnchor === null
@@ -710,18 +832,27 @@ export class BattleEngine {
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
       if (isUnitMovementBlocked(ally)) continue;
-      if (this.skillSequenceRunner.isActorInSkillMotion(ally.id)) continue;
-      if (
-        shouldSkipEngagedAutoApproach(
-          ally,
-          this.players,
-          this.enemies,
-          this.gameData,
-        )
-      ) {
+      const isActorInSkillMotion =
+        this.skillSequenceRunner.isActorInSkillMotion(ally.id);
+      const target = playerApproachTargets.get(ally.id);
+      const skipAutoApproach = shouldSkipEngagedAutoApproach(
+        ally,
+        this.players,
+        this.enemies,
+        this.gameData,
+      );
+      detailsById?.set(ally.id, {
+        approachTargetX: target,
+        shouldSkipEngagedAutoApproach: skipAutoApproach,
+        bodyAnimMarching: this.resolveBodyAnimMarching(ally),
+        isActorUseLocked: this.skillSequenceRunner.isActorUseLocked(ally.id),
+        isActorInSkillMotion,
+        isActorAnimLocked: this.skillSequenceRunner.isActorAnimLocked(ally.id),
+      });
+      if (isActorInSkillMotion) continue;
+      if (skipAutoApproach) {
         continue;
       }
-      const target = playerApproachTargets.get(ally.id);
       if (target === undefined) continue;
       updateUnitApproach(ally, target, moveStep);
     }
@@ -729,18 +860,14 @@ export class BattleEngine {
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
       if (isUnitMovementBlocked(enemy)) continue;
-      if (this.skillSequenceRunner.isActorInSkillMotion(enemy.id)) continue;
-      if (
-        shouldSkipEngagedAutoApproach(
-          enemy,
-          this.players,
-          this.enemies,
-          this.gameData,
-        )
-      ) {
-        continue;
-      }
-
+      const isActorInSkillMotion =
+        this.skillSequenceRunner.isActorInSkillMotion(enemy.id);
+      const skipAutoApproach = shouldSkipEngagedAutoApproach(
+        enemy,
+        this.players,
+        this.enemies,
+        this.gameData,
+      );
       const target = capEngagedEnemyApproachBattleX(
         enemy,
         resolveEnemyApproachBattleX(
@@ -750,8 +877,21 @@ export class BattleEngine {
           this.gameData,
         ),
       );
+      detailsById?.set(enemy.id, {
+        approachTargetX: target,
+        shouldSkipEngagedAutoApproach: skipAutoApproach,
+        bodyAnimMarching: this.resolveBodyAnimMarching(enemy),
+        isActorUseLocked: this.skillSequenceRunner.isActorUseLocked(enemy.id),
+        isActorInSkillMotion,
+        isActorAnimLocked: this.skillSequenceRunner.isActorAnimLocked(enemy.id),
+      });
+      if (isActorInSkillMotion) continue;
+      if (skipAutoApproach) {
+        continue;
+      }
       updateUnitApproach(enemy, target, moveStep);
     }
+    this.recordBattleXDebugChanges(units, beforeById, "approach", detailsById);
   }
 
   private clearEngagedVisualState(): void {
@@ -846,11 +986,14 @@ export class BattleEngine {
     layout: EngagedLayoutResult,
     scope?: { players?: boolean; enemies?: boolean },
   ): void {
+    const units = [...this.players, ...this.enemies];
+    const beforeById = this.captureBattleXDebugBefore(units);
     applyEngagedFormationToBattleX(this.players, this.enemies, layout, {
       isOnField: (unit) => this.isOnBattlefield(unit),
       players: scope?.players,
       enemies: scope?.enemies,
     });
+    this.recordBattleXDebugChanges(units, beforeById, "layoutBake");
   }
 
   private resolveEngagedRangedTargetPlayer(
@@ -906,9 +1049,17 @@ export class BattleEngine {
   }
 
   private noteEnemyCorpseAnchor(unit: CombatantState): void {
+    const beforeX = unit.battleX;
     if (unit.isEnemy) {
       freezeEnemyCorpseBattleAnchor(unit);
+      this.recordBattleXDebugChange(unit, beforeX, "corpseAnchor");
     }
+  }
+
+  private syncDeadEnemyCorpseBattleXForDebug(): void {
+    const beforeById = this.captureBattleXDebugBefore(this.enemies);
+    syncDeadEnemyCorpseBattleX(this.enemies);
+    this.recordBattleXDebugChanges(this.enemies, beforeById, "corpseAnchor");
   }
 
   /**
@@ -1029,7 +1180,7 @@ export class BattleEngine {
 
   /** 敵全滅後: 死亡演出待ち → 次 Wave は右退場 → PartyDeploy */
   private tickPostCombatSettle(deltaTime: number): void {
-    syncDeadEnemyCorpseBattleX(this.enemies);
+    this.syncDeadEnemyCorpseBattleXForDebug();
     if (this.waveAdvanceDelayTimer > 0) {
       this.waveAdvanceDelayTimer -= deltaTime;
       if (this.waveAdvanceDelayTimer <= 0) {
@@ -1054,7 +1205,7 @@ export class BattleEngine {
     if (this.waveAnnouncementActive) return;
     if (this.partyDeploySettled && !this.engaged) return;
     if (this.enemies.some((enemy) => enemy.isAlive)) return;
-    syncDeadEnemyCorpseBattleX(this.enemies);
+    this.syncDeadEnemyCorpseBattleXForDebug();
     this.engaged = false;
     this.clearEngagedVisualState();
     this.skillSequenceRunner.clearAll();
@@ -1067,7 +1218,7 @@ export class BattleEngine {
 
   /** 次 Wave 前: Victory と同様の右退場 → 完了後に Wave 告知 */
   private tickWaveExitMarch(deltaTime: number): void {
-    syncDeadEnemyCorpseBattleX(this.enemies);
+    this.syncDeadEnemyCorpseBattleXForDebug();
     this.updateVictoryExitMarch(deltaTime, true);
     if (!this.areAlliesOffScreen(true)) return;
 
@@ -1216,6 +1367,8 @@ export class BattleEngine {
     partyDeployTargets: Map<string, number>,
     enemyDeployTargets: Map<string, number>,
   ): void {
+    const units = [...this.players, ...this.enemies];
+    const beforeById = this.captureBattleXDebugBefore(units);
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
       const x = partyDeployTargets.get(ally.id);
@@ -1230,6 +1383,7 @@ export class BattleEngine {
       enemy.battleX = x;
       syncFieldX(enemy);
     }
+    this.recordBattleXDebugChanges(units, beforeById, "deploy");
   }
 
   /** Wave 開始: 敵 spawn + 味方・敵を画面外から配置 */
@@ -1268,6 +1422,8 @@ export class BattleEngine {
   private tickPartyDeploy(deltaTime: number): void {
     const step = moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
     let allSettled = true;
+    const units = [...this.players, ...this.enemies];
+    const beforeById = this.captureBattleXDebugBefore(units);
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
       const target = this.partyDeployTargets.get(ally.id);
@@ -1288,6 +1444,7 @@ export class BattleEngine {
         allSettled = false;
       }
     }
+    this.recordBattleXDebugChanges(units, beforeById, "deploy");
     if (allSettled) {
       this.partyDeployActive = false;
       this.partyDeploySettled = true;
@@ -1326,12 +1483,14 @@ export class BattleEngine {
       this.gameData.skillRegistry.passives,
     );
     if (!config) return;
+    const beforeById = this.captureBattleXDebugBefore(this.enemies);
     applyLastStandGutsEndEffects(
       unit,
       this.enemies,
       config.endStunSec,
       config.endKnockbackPx,
     );
+    this.recordBattleXDebugChanges(this.enemies, beforeById, "knockback");
   }
 
   private beginEngaged(): void {
@@ -1467,15 +1626,7 @@ export class BattleEngine {
       this.phase === "victory" && !this.hasFallenAllies();
     return {
       phase: this.phase,
-      runtimePhase: resolveRuntimeBattlePhase({
-        phase: this.phase,
-        engaged: this.engaged,
-        waveAnnouncementActive: this.waveAnnouncementActive,
-        partyDeployActive: this.partyDeployActive,
-        postCombatSettling: this.isPostCombatSettling(),
-        waveExitMarchActive: this.waveExitMarchActive,
-        victoryAwaitExitMarch,
-      }),
+      runtimePhase: this.resolveCurrentRuntimePhase(),
       engaged: this.engaged,
       waveIndex: this.waveIndex,
       waveCount,
@@ -1491,6 +1642,13 @@ export class BattleEngine {
       players: this.players.map((c) => this.toSnapshot(c)),
       allies: this.players.map((c) => this.toSnapshot(c)),
       enemies: this.enemies.map((c) => this.toSnapshot(c)),
+      ...(this.isBattleXDebugEnabled()
+        ? {
+            battleXDebugTrace: this.battleXDebugTrace.slice(
+              -BATTLE_X_DEBUG_TRACE_LIMIT,
+            ),
+          }
+        : {}),
     };
   }
 
@@ -1630,7 +1788,9 @@ export class BattleEngine {
   }
 
   private tickRunning(deltaTime: number): void {
+    this.tickIndex += 1;
     this.battleTimeSec += deltaTime;
+    this.updateBattleXDebugThreshold(deltaTime);
     if (this.waveAnnouncementActive) {
       this.tickWaveAnnouncement(deltaTime);
     }
@@ -1654,7 +1814,7 @@ export class BattleEngine {
     if (this.isPostCombatSettling()) {
       this.tickPostCombatSettle(deltaTime);
       this.tickStatusAndCooldowns(deltaTime);
-      syncDeadEnemyCorpseBattleX(this.enemies);
+      this.syncDeadEnemyCorpseBattleXForDebug();
       return;
     }
     if (this.waveExitMarchActive) {
@@ -1699,6 +1859,7 @@ export class BattleEngine {
       );
       const engagedLeadingRow =
         getLeadingPlayerFormationRow(leadingRowInputs);
+      const overlapBeforeById = this.captureBattleXDebugBefore(this.players);
       resolveEngagedFormationOverlaps(
         this.players,
         engagedLeadingRow,
@@ -1709,8 +1870,13 @@ export class BattleEngine {
           movementBudgetOriginById,
         },
       );
+      this.recordBattleXDebugChanges(
+        this.players,
+        overlapBeforeById,
+        "overlap",
+      );
       syncAllFieldX([...this.players, ...this.enemies]);
-      syncDeadEnemyCorpseBattleX(this.enemies);
+      this.syncDeadEnemyCorpseBattleXForDebug();
       this.tickAllyThreat(deltaTime);
       this.checkBattleEnd();
     }
@@ -1766,7 +1932,15 @@ export class BattleEngine {
     this.skillSequenceRunner.tickUseLocks(deltaTime);
     this.skillSequenceRunner.tickAnimLocks(deltaTime);
     this.skillSequenceRunner.tickActiveEffectGauges(deltaTime);
-    this.skillSequenceRunner.tickMoves(deltaTime, units);
+    this.skillSequenceRunner.tickMoves(deltaTime, units, ({ unit, beforeX }) => {
+      this.recordBattleXDebugChange(unit, beforeX, "skillMove", {
+        bodyAnimMarching: this.resolveBodyAnimMarching(unit),
+        isActorUseLocked: this.skillSequenceRunner.isActorUseLocked(unit.id),
+        isActorInSkillMotion:
+          this.skillSequenceRunner.isActorInSkillMotion(unit.id),
+        isActorAnimLocked: this.skillSequenceRunner.isActorAnimLocked(unit.id),
+      });
+    });
     this.skillSequenceRunner.tickSequences(
       this.battleTimeSec,
       (step) => {

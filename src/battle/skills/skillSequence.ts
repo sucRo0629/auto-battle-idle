@@ -28,6 +28,11 @@ export interface ActiveSkillMove {
   totalSec: number;
 }
 
+export interface SkillMoveTrace {
+  unit: CombatantState;
+  beforeX: number;
+}
+
 export interface PendingSkillStep {
   applyAtBattleSec: number;
   actorId: string;
@@ -455,6 +460,7 @@ export class SkillSequenceRunner {
   tickMoves(
     deltaTime: number,
     units: CombatantState[],
+    onBattleXChanged?: (trace: SkillMoveTrace) => void,
   ): void {
     const kept: ActiveSkillMove[] = [];
     for (const move of this.activeMoves) {
@@ -465,6 +471,7 @@ export class SkillSequenceRunner {
         continue;
       }
 
+      const beforeX = unit.battleX;
       move.remainingSec = Math.max(0, move.remainingSec - deltaTime);
       const progress =
         move.totalSec <= 0
@@ -479,6 +486,7 @@ export class SkillSequenceRunner {
         unit.battleX = move.toX;
         syncFieldX(unit);
       }
+      onBattleXChanged?.({ unit, beforeX });
     }
     this.activeMoves = kept;
   }

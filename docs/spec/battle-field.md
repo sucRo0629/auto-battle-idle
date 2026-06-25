@@ -76,6 +76,8 @@ BattlePhase 判定
 
 接敵中の生存ユニット `battleX` 更新は §4.4 の系統（approach / skill move / forced movement / overlap）のみ。**毎 tick の layout 再計算・visual 補間は行わない。** 非接敵配置確定時のみ `applyEngagedFormationToBattleX`（§4.2）。
 
+verify/debug mode の `battleX debug` 表は、tick 内の `battleX` 更新内訳（approach / skillMove / knockback / enemyReelIn / overlap / deploy / victoryExit / layoutBake / corpseAnchor 等）を調査するための表示であり、runtime 正本ではない。通常 snapshot には trace を含めない。
+
 ### 2.4 一方通行（フェーズ別）
 
 | フェーズ          | プレイヤー `battleX` 自動接近                         | 敵 `battleX` 自動接近                                        |

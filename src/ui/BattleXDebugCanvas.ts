@@ -10,10 +10,13 @@ const LABEL_Y_OFFSET = 24;
 const BOTTOM_PADDING = 20;
 const DEAD_ENEMY_ALPHA = 0.35;
 const SKILL_RANGE_FLASH_MS = 1000;
+const TRACE_TABLE_LIMIT = 30;
 
 export class BattleXDebugCanvas {
+  private root: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
+  private tableBody: HTMLTableSectionElement | null = null;
   private snapshot: BattleSnapshot | null = null;
   private visible = false;
   private elapsedMs = 0;
@@ -22,12 +25,18 @@ export class BattleXDebugCanvas {
   private rangeFlashes = new Map<string, { rangePx: number; expiresAtMs: number }>();
 
   mount(parent: HTMLElement): void {
+    this.root = document.createElement("section");
+    this.root.className = "battle-x-debug";
+    this.root.hidden = !this.visible;
+
     this.canvas = document.createElement("canvas");
     this.canvas.width = CANVAS_W;
     this.canvas.height = MIN_CANVAS_H;
     this.canvas.className = "battle-x-debug-canvas";
     this.canvas.hidden = !this.visible;
-    parent.appendChild(this.canvas);
+    this.root.appendChild(this.canvas);
+    this.mountTraceTable(this.root);
+    parent.appendChild(this.root);
 
     const ctx = this.canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D unavailable");
@@ -38,11 +47,15 @@ export class BattleXDebugCanvas {
 
   setVisible(visible: boolean): void {
     this.visible = visible;
+    if (this.root) {
+      this.root.hidden = !visible;
+    }
     if (this.canvas) {
       this.canvas.hidden = !visible;
     }
     if (visible) {
       this.draw();
+      this.renderTraceTable();
     }
   }
 
@@ -52,6 +65,7 @@ export class BattleXDebugCanvas {
     }
     this.snapshot = snapshot;
     this.ensureLanes(snapshot);
+    this.renderTraceTable();
   }
 
   flashSkillRange(actorId: string, rangePx: number): void {
@@ -69,9 +83,11 @@ export class BattleXDebugCanvas {
   }
 
   destroy(): void {
-    this.canvas?.remove();
+    this.root?.remove();
+    this.root = null;
     this.canvas = null;
     this.ctx = null;
+    this.tableBody = null;
     this.snapshot = null;
     this.resetLanes();
     this.rangeFlashes.clear();
@@ -89,6 +105,119 @@ export class BattleXDebugCanvas {
         this.rangeFlashes.delete(actorId);
       }
     }
+  }
+
+  private mountTraceTable(parent: HTMLElement): void {
+    const panel = document.createElement("div");
+    panel.className = "battle-x-debug-trace";
+
+    const title = document.createElement("div");
+    title.className = "battle-x-debug-trace__title";
+    title.textContent = "battleX 更新内訳";
+
+    const table = document.createElement("table");
+    table.className = "battle-x-debug-trace__table";
+
+    const thead = document.createElement("thead");
+    const headerRow = document.createElement("tr");
+    for (const label of [
+      "unit",
+      "side",
+      "reason",
+      "before",
+      "after",
+      "delta",
+      "time",
+    ]) {
+      const th = document.createElement("th");
+      th.textContent = label;
+      headerRow.appendChild(th);
+    }
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    this.tableBody = document.createElement("tbody");
+    table.appendChild(this.tableBody);
+    panel.append(title, table);
+    parent.appendChild(panel);
+  }
+
+  private renderTraceTable(): void {
+    if (!this.tableBody) return;
+    this.tableBody.replaceChildren();
+    const entries = this.snapshot?.battleXDebugTrace ?? [];
+    const rows = entries.slice(-TRACE_TABLE_LIMIT).reverse();
+    if (rows.length === 0) {
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 7;
+      cell.className = "battle-x-debug-trace__empty";
+      cell.textContent = "debug trace empty";
+      row.appendChild(cell);
+      this.tableBody.appendChild(row);
+      return;
+    }
+
+    for (const entry of rows) {
+      const row = document.createElement("tr");
+      if (entry.warning) {
+        row.classList.add("battle-x-debug-trace__row--warning");
+      }
+      row.title = this.formatDetails(entry);
+      for (const value of [
+        entry.unitName || entry.unitId,
+        entry.isEnemy ? "enemy" : "ally",
+        entry.reason,
+        this.formatPx(entry.beforeX),
+        this.formatPx(entry.afterX),
+        this.formatSignedPx(entry.deltaX),
+        `${entry.tickIndex} / ${entry.battleTimeSec.toFixed(2)}s`,
+      ]) {
+        const cell = document.createElement("td");
+        cell.textContent = value;
+        row.appendChild(cell);
+      }
+      this.tableBody.appendChild(row);
+    }
+  }
+
+  private formatDetails(
+    entry: NonNullable<BattleSnapshot["battleXDebugTrace"]>[number],
+  ): string {
+    const details = entry.details;
+    if (!details) return `${entry.phase} / ${entry.runtimePhase}`;
+    const parts = [
+      `phase=${entry.phase}`,
+      `runtime=${entry.runtimePhase}`,
+      details.approachTargetX === undefined
+        ? null
+        : `target=${this.formatPx(details.approachTargetX)}`,
+      details.shouldSkipEngagedAutoApproach === undefined
+        ? null
+        : `skip=${details.shouldSkipEngagedAutoApproach}`,
+      details.bodyAnimMarching === undefined
+        ? null
+        : `march=${details.bodyAnimMarching}`,
+      details.isActorUseLocked === undefined
+        ? null
+        : `useLock=${details.isActorUseLocked}`,
+      details.isActorInSkillMotion === undefined
+        ? null
+        : `skillMotion=${details.isActorInSkillMotion}`,
+      details.isActorAnimLocked === undefined
+        ? null
+        : `animLock=${details.isActorAnimLocked}`,
+    ].filter((part): part is string => part !== null);
+    return parts.join(" | ");
+  }
+
+  private formatPx(value: number): string {
+    return value.toFixed(1);
+  }
+
+  private formatSignedPx(value: number): string {
+    const formatted = this.formatPx(value);
+    return value > 0 ? `+${formatted}` : formatted;
   }
 
   private ensureLanes(snapshot: BattleSnapshot): void {

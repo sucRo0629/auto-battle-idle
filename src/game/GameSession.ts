@@ -94,6 +94,7 @@ export class GameSession {
         },
         getLoopWaveIndex: () =>
           this.verifyMode ? this.loopWaveIndex : null,
+        getBattleXDebugEnabled: () => this.verifyMode,
       },
     );
 

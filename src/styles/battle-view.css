@@ -192,6 +192,75 @@
   box-sizing: border-box;
 }
 
+.battle-x-debug {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.battle-x-debug-trace {
+  width: 100%;
+  max-height: 220px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 6px;
+  background: rgba(14, 18, 28, 0.96);
+  box-sizing: border-box;
+}
+
+.battle-x-debug-trace__title {
+  margin-bottom: 4px;
+  color: #d9e4f5;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.battle-x-debug-trace__table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #d9e4f5;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-x-debug-trace__table th,
+.battle-x-debug-trace__table td {
+  padding: 3px 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.battle-x-debug-trace__table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: #9fb0c8;
+  background: rgba(14, 18, 28, 0.98);
+  font-weight: 600;
+}
+
+.battle-x-debug-trace__table th:first-child,
+.battle-x-debug-trace__table td:first-child,
+.battle-x-debug-trace__table th:nth-child(2),
+.battle-x-debug-trace__table td:nth-child(2),
+.battle-x-debug-trace__table th:nth-child(3),
+.battle-x-debug-trace__table td:nth-child(3) {
+  text-align: left;
+}
+
+.battle-x-debug-trace__row--warning {
+  background: rgba(255, 128, 96, 0.22);
+  color: #ffd2c4;
+}
+
+.battle-x-debug-trace__empty {
+  color: #72809a;
+  text-align: left;
+}
+
 .party-hud-panel {
   position: relative;
   z-index: 1;

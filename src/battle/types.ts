@@ -1438,6 +1438,42 @@ export type BattlePhase = "idle" | "running" | "victory" | "defeat";
 
 export type { RuntimeBattlePhase } from "./battlePhase.ts";
 
+export type BattleXDebugTraceReason =
+  | "approach"
+  | "skillMove"
+  | "knockback"
+  | "enemyReelIn"
+  | "overlap"
+  | "deploy"
+  | "victoryExit"
+  | "layoutBake"
+  | "corpseAnchor"
+  | "sync"
+  | "unknown";
+
+export interface BattleXDebugTraceEntry {
+  unitId: string;
+  unitName: string;
+  isEnemy: boolean;
+  phase: BattlePhase | string;
+  runtimePhase: import("./battlePhase.ts").RuntimeBattlePhase;
+  reason: BattleXDebugTraceReason;
+  beforeX: number;
+  afterX: number;
+  deltaX: number;
+  battleTimeSec: number;
+  tickIndex: number;
+  warning: boolean;
+  details?: {
+    approachTargetX?: number;
+    shouldSkipEngagedAutoApproach?: boolean;
+    bodyAnimMarching?: boolean;
+    isActorUseLocked?: boolean;
+    isActorInSkillMotion?: boolean;
+    isActorAnimLocked?: boolean;
+  };
+}
+
 export interface CombatantSnapshot {
   id: string;
   name: string;
@@ -1515,4 +1551,6 @@ export interface BattleSnapshot {
   /** @deprecated players */
   allies: CombatantSnapshot[];
   enemies: CombatantSnapshot[];
+  /** verify/debug 表示用。通常 snapshot には含めない。 */
+  battleXDebugTrace?: BattleXDebugTraceEntry[];
 }

@@ -169,6 +169,11 @@ export interface SkillExecutorDeps {
   onHealApplied?: (target: CombatantState) => void;
   onUnitDied?: (unit: CombatantState) => void;
   onLastStandGuts?: (targetId: string) => void;
+  onBattleXChanged?: (
+    unit: CombatantState,
+    beforeX: number,
+    reason: "knockback" | "enemyReelIn",
+  ) => void;
 }
 
 function shouldDeferUntilHostileToAnchorInRange(
@@ -749,8 +754,10 @@ export class SkillExecutor {
 
     if (effectDef.type === 'enemyReelIn') {
       if (!target.isEnemy || actor.isEnemy) return false;
+      const beforeX = target.battleX;
       const delta = applyEnemyReelIn(actor, target, this.gameData);
       if (delta === 0) return false;
+      this.deps.onBattleXChanged?.(target, beforeX, 'enemyReelIn');
       this.emit({
         type: 'skill',
         actorId: actor.id,
@@ -1571,11 +1578,13 @@ export class SkillExecutor {
     }
 
     if (effectDef.type === 'knockback') {
+      const beforeX = target.battleX;
       const applied = applyKnockbackToTarget(target, effectDef.distancePx, {
         skillId: skill.id,
         sourceId: actor.id,
       });
       if (!applied) return false;
+      this.deps.onBattleXChanged?.(target, beforeX, 'knockback');
       this.emit({
         type: 'skill',
         actorId: actor.id,
