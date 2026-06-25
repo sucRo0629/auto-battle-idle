@@ -253,7 +253,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 - 与ダメ、debuff 成功、高火力スキル使用などは Threat 上昇要因になりうる
 - **被ダメージそのものを全ロール共通の Threat 上昇要因にはしない**
 - 被弾による Threat 維持・上昇は Defender の役割差として扱い、passive `threatControl` または skill で明示する
-- Guardian（`df_guardian_passive_5`）は main tank として被弾・ブロックで Threat を維持し、減衰も遅くする
+- Guardian（`df_guardian_passive_2`）は main tank として被弾・ブロックで Threat を維持し、減衰も遅くする
 - Paladin は `frontThreatFloor` / `frontThreatDecayMultiplier` で前列を sub-defender 化し、Lv0 では前列 block 付与で物理被害を抑える。前列被ダメ軽減は `threatControl` には含めず、必要なら `damageReduction` passive として分離する
 - 剣術士（`at_warrior_active_1`）は `threatBurstScale` で burst 時のみ一時 overtaking する
 
@@ -276,7 +276,25 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 対象ステ：`atk`, `def`, `reg`（耐魔）, `damageTaken`, `attackSpeed`（攻撃速度。基本攻撃 CD 回復倍率に適用）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
 
-**HUD バッジ表示:** 通常は 1 つの `StatusEffect` を 1 つのバッジとして描画する。**例外:** `overlay: herbalPotency`（および将来の `mark`）は `stacks` 数ぶん同カテゴリアイコンを横並び（`statusBadgeOverlap` で重ね）。`wardBarrier` は 1 アイコン + `stacks` フィールド表示（別処理）。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。味方は `PartyHudPanel`、敵は `BattleCanvas` 上のスプライト頭上（[battle-field.md](battle-field.md)）。
+**HUD バッジ表示:** 通常は 1 つの `StatusEffect` を 1 つのバッジとして描画する。**例外:** `overlay: herbalPotency` / `blockResonance`（および将来の `mark`）は `stacks` 数ぶん同カテゴリアイコンを横並び（`statusBadgeOverlap` で重ね）。`wardBarrier` は 1 アイコン + `stacks` フィールド表示（別処理）。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。味方は `PartyHudPanel`、敵は `BattleCanvas` 上のスプライト頭上（[battle-field.md](battle-field.md)）。
+
+### 迎撃態勢（`blockResonance`）
+
+実装: `src/battle/blockResonance.ts`
+
+- passive effect `blockResonance`: 常時 block 率（`chance`）+ 物理直接ダメージの **block 成功** で専用 stack +1（`blockResonanceMaxStacks` 上限）
+- stack ごとに自己 `damageTaken` 軽減（`blockResonanceDamageTakenPerStack`）。HUD overlay `blockResonance`（stacks 表示）
+- `blockResonanceDecayIntervalSec` ごとに stack -1（`herbalPotency` 蓄積とは別タイマー）
+- active `blockResonanceConsume`（城塞の構え）: 全 stack 消費 → overlay `blockResonanceStance`（持続 `blockResonanceStanceDurationBaseSec + n`）。`useDurationSec` も同秒数。態勢中 block 成功で半径内敵へ `blockResonanceOnBlockDamage` + knockback
+- smart 発動条件: `fireConditions` に `{ kind: "blockResonanceStacks", min: 1 }`
+
+### 無敵（overlay `invulnerable`）
+
+実装: `src/battle/invulnerable.ts` / `src/battle/incomingDamageMitigation.ts`
+
+- StatusEffect.overlay `invulnerable`: 付与中は直接ダメージ・DoT・`damageDelay` tick・counter 被弾・ward / barrier 消費を含め HP にダメージを入れない
+- 付与時バトルイベント `invulnerable` → ポップアップ「無敵！」
+- `lastStandInvulnerable` passive: HP 割合 ≤ 0.25 かつ致死ダメージ確定直前に 1 回だけ発動（Wave 内 1 回、`resetPerWaveCombatantFlags` でリセット）→ ダメージ 0 + 3 秒 `invulnerable`
 
 
 | 種別     | 定義方法                                                                                                                                           |

@@ -18,6 +18,7 @@ export type StatusDisplayCategory =
   | "damageDelay"
   | "wardBarrier"
   | "herbalPotency"
+  | "blockResonance"
   | "mark";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
@@ -32,6 +33,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "damageDelay",
   "wardBarrier",
   "herbalPotency",
+  "blockResonance",
   "mark",
   "dot",
   "evasion",
@@ -212,6 +214,13 @@ function statusEffectBadgeForOverlay(
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
       };
+    case "blockResonance":
+      return {
+        category: "blockResonance",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
     default:
       return null;
   }
@@ -246,7 +255,7 @@ export function collectStatusEffectBadgeDisplays(
   const entries: Array<{ badge: StatusEffectBadgeDisplay; index: number }> = [];
 
   effects.forEach((effect, index) => {
-    if (effect.overlay === "herbalPotency" || effect.overlay === "mark") {
+    if (effect.overlay === "herbalPotency" || effect.overlay === "blockResonance" || effect.overlay === "mark") {
       const stackCount = effect.stacks ?? 0;
       if (stackCount <= 0) return;
       const badge = statusEffectBadgeForOverlay(effect);

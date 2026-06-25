@@ -1,4 +1,5 @@
 import type { CombatantState, StatusEffect } from './types.ts';
+import { isInvulnerable } from './invulnerable.ts';
 
 /** 障壁は時間切れなし。HUD 用に十分長い持続を付与する */
 export const WARD_BARRIER_DURATION_SEC = 999_999;
@@ -41,7 +42,7 @@ export function applyWardBarrierToIncomingDamage(
   target: CombatantState,
   damage: number,
 ): { damage: number; wardConsumed: boolean } {
-  if (damage <= 0 || !target.isAlive) {
+  if (damage <= 0 || !target.isAlive || isInvulnerable(target)) {
     return { damage: 0, wardConsumed: false };
   }
   const ward = findActiveWardBarrier(target);

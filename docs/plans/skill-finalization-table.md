@@ -51,7 +51,7 @@
 
 | classId | 現行 passive | v1 確定方針 |
 | --- | --- | --- |
-| `df_guardian` | block、Threat 維持、Wave 開始 barrier 系が複数 | **残す / 整理**。重複 ID・同名 passive を整理し、Guardian は自己 block + 被弾 Threat 維持に集約する |
+| `df_guardian` | block、Threat 維持、旧 Wave barrier 重複 | **v1.6 確定**。Lv0=大盾使い+立ちはだかる壁。Lv10=迎撃態勢（`blockResonance`）。Lv20=不退の誓い。barrier / 重複 passive 削除 |
 | `df_paladin` | block、front Threat floor、全体 barrier、全体 damageReduction | **置換 / 整理**。Lv0 2 枠は front Threat 制御 + 前列 block 付与にする。前列被ダメ軽減は generic すぎるため Lv0 から外し、魔法 block は後半 passive 候補にする |
 | `df_duelist` | block、低 HP DEF / ATK、counter | **残す**。Duelist の被弾起点・反撃・低 HP 逆転を passive 側の核にする |
 | `at_warrior` | 高 DEF 狙い、DEF 無視 | **残す**。Warrior の高 DEF 単体処理の正本 |
@@ -71,7 +71,7 @@
 
 | classId | 設計の柱 | 現行スキル | v1 確定方針 | 実装影響 |
 | --- | --- | --- | --- | --- |
-| `df_guardian` | 前線構築。単一路線の完全防衛、高 HP 正面受け、被弾による前線押上 | `active_1` 防御強化、`active_2` 防御専念、`active_3` 息入れ。`active_4` 未配置 | `active_1` / `active_2` は **残す**。`active_3` は自己 HoT ではなく、自己 barrier / block / damageTaken 低下など「壁」の維持へ **見直し**。Lv20 は Threat そのものより前線保持を強める上位防御として **追加** | 既存 buff / barrier / block / damageTaken 周辺で実装可能。恒常 Threat は passive に寄せる |
+| `df_guardian` | 前線構築。単一路線の完全防衛、高 HP 正面受け、被弾による前線押上 | v1.6: basic+4passive+4active。`active_3` 鉄身、`active_4` 城塞の構え | **v1.6 実装済**。barrier / HoT 候補は削除。迎撃態勢・不退・城塞で前線保持を強化 | `blockResonance` / `lastStandInvulnerable` / `invulnerable` overlay / `blockResonanceConsume` |
 | `df_paladin` | 戦線安定。範囲・魔法ダメージを含む戦場全体の被害緩和 | `active_1` 光の剣、`active_2` 聖盾、`active_3` 治療専念。`active_4` 未配置 | `active_1` は heal + magic damage の複合として **見直し**。`active_2` は自己防御寄りなので、front / all ally への barrier・damageTaken 軽減へ寄せる。Lv20 は全体安定装置として **追加** | 既存 heal / barrier / damageTaken / basicAttackTransform で対応可能。front Threat floor は passive 側を正本にする |
 | `df_duelist` | 攻撃防御。単体強敵への制圧・拘束・カウンター・行動阻害 | `active_1` 戦叫び、`active_2` 体力温存、`active_3` 隙撃ち、`active_4` 血気煽り | 4 枠構造は最も進んでいるため **残す** 寄り。`active_4` の全敵 ATK debuff + 自己被害増は範囲が広いので、単体強敵制圧へ寄せる | 既存 debuff / damageDelay / stun / damageIncrease で対応可能。数値は Phase 8 |
 
@@ -82,12 +82,11 @@ Defender 3 種は「硬さの大小」ではなく、被害入口の作り方で
 | classId | 枠 | 方針 | 採否 |
 | --- | --- | --- | --- |
 | `df_guardian` | basic | 最近接敵への通常攻撃。main tank の Threat は basic 火力ではなく passive で維持する | 現行 `df_guardian_basic_attack` を **残す** |
-| `df_guardian` | Lv0 passive 1-2 | block + 被弾 / block による Threat 維持。Guardian は単体前線の main tank | 重複 ID・同名 passive を **整理** し、Lv0 2 枠へ収める |
-| `df_guardian` | Lv10 / Lv20 passive | 前線保持を支える上位 passive。Threat 追加ではなく block / barrier / damageTaken などを候補にする | **追加 / 整理** |
-| `df_guardian` | Lv0 active 1 | 自己 DEF / damageTaken 低下。単一路線の正面受けを補強 | 現行 `df_guardian_active_1`（防御強化）を **残す** |
-| `df_guardian` | Lv0 active 2 | 被弾起点の防御専念。block / damageTaken / barrier など、受け止め続ける状態を作る | 現行 `df_guardian_active_2`（防御専念）を **残す / 整理** |
-| `df_guardian` | Lv10 active 3 | 自己 HoT ではなく、前線保持の持続防御へ寄せる。候補は self barrier、block 強化、damageTaken 低下 | 現行 `df_guardian_active_3`（息入れ）を **置換 / 見直し** |
-| `df_guardian` | Lv20 active 4 | 上位防御。正面ラッシュに対して一定時間「抜かれない」状態を作る | **追加**。新 effect は避け、既存 barrier / block / damageTaken を組み合わせる |
+| `df_guardian` | Lv0 passive 1-2 | block + 被弾 / block による Threat 維持。Guardian は単体前線の main tank | **v1.6 確定**（大盾使い / 立ちはだかる壁） |
+| `df_guardian` | Lv0 active 1-2 | 防御強化 / 防御専念 | **v1.6 残す** |
+| `df_guardian` | Lv10 / Lv20 passive | 迎撃態勢（`blockResonance`）+ 不退の誓い（`lastStandInvulnerable`） | **v1.6 確定** |
+| `df_guardian` | Lv10 active 3 | 鉄身: smart 自己 `damageTaken` 低下（息入れ HoT 廃止） | **v1.6 確定** |
+| `df_guardian` | Lv20 active 4 | 城塞の構え: `blockResonanceConsume` + 構え中 block 範囲反撃 | **v1.6 確定** |
 | `df_paladin` | basic | 最近接敵への通常攻撃。火力ではなく前線安定の補助 | 現行 `df_paladin_basic_attack` を **残す** |
 | `df_paladin` | Lv0 passive 1-2 | front Threat floor と前列 block 付与を別 passive として扱う。Paladin は shared tank | 自己 block ではなく前列 block aura として採用し、Lv0 2 枠へ収める |
 | `df_paladin` | Lv10 / Lv20 passive | Wave 開始 barrier、party protection、または魔法も block 可能にする護法化 | **追加 / 整理**。魔法 block は新メカニクスゲート |

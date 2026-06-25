@@ -38,6 +38,16 @@ import {
   consumeAllAllyHerbalPotencyStacks,
   resolvePartyHerbalPotencyConfig,
 } from '../herbalPotency.ts';
+import {
+  addBlockResonanceStacksOnBlock,
+  applyBlockResonanceStance,
+  applyBlockResonanceStanceOnBlock,
+  consumeBlockResonanceStacks,
+  hasBlockResonanceStance,
+  resolveBlockResonanceConfigForUnit,
+  resolveEffectiveUseDurationSec,
+} from '../blockResonance.ts';
+import { mitigateIncomingDamage } from '../incomingDamageMitigation.ts';
 import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
 import { resolveEffectiveBasicAttackSkill } from '../resolveEffectiveBasicAttack.ts';
 import { basicAttackTransformSpecFromEffect } from '../resolveEffectiveBasicAttack.ts';
@@ -188,6 +198,7 @@ function shouldDeferUntilHostileToAnchorInRange(
 
 export class SkillExecutor {
   private potencyStacksConsumed = new Map<string, number>();
+  private blockResonanceStacksConsumed = new Map<string, number>();
 
   constructor(
     private readonly gameData: GameData,
@@ -272,6 +283,7 @@ export class SkillExecutor {
 
     let appliedAny = false;
     this.potencyStacksConsumed.clear();
+    this.blockResonanceStacksConsumed.clear();
     for (let effectIndex = 0; effectIndex < skill.effect.length; effectIndex++) {
       if (
         this.applyResolvedEffectStep(
@@ -359,6 +371,14 @@ export class SkillExecutor {
         this.potencyStacksConsumed.set(targetId, stacks);
       }
       return consumed.size > 0;
+    }
+
+    if (effectDef.type === 'blockResonanceConsume') {
+      const stacks = consumeBlockResonanceStacks(actor);
+      if (stacks <= 0) return false;
+      this.blockResonanceStacksConsumed.set(actor.id, stacks);
+      applyBlockResonanceStance(actor, skill, stacks);
+      return true;
     }
 
     if (effectDef.type === 'conditionalEffect') {
@@ -754,8 +774,75 @@ export class SkillExecutor {
         didBlock = blockResult.didBlock;
         if (blockResult.didBlock) {
           this.emit({ type: 'block', targetId: target.id });
+          const blockResonanceConfig = resolveBlockResonanceConfigForUnit(
+            target,
+            passives,
+          );
+          if (blockResonanceConfig.maxStacks > 0) {
+            addBlockResonanceStacksOnBlock(target, blockResonanceConfig);
+          }
+          if (hasBlockResonanceStance(target)) {
+            const stanceSkill =
+              this.gameData.skillRegistry.actives[
+                target.statusEffects.find(
+                  (effect) =>
+                    effect.overlay === 'blockResonanceStance' &&
+                    effect.remainingSec > 0,
+                )?.skillId ?? ''
+              ];
+            if (stanceSkill) {
+              applyBlockResonanceStanceOnBlock(
+                target,
+                enemies,
+                stanceSkill,
+                passives,
+                (defender, enemy, counterAmount) => {
+                  const ward = applyWardBarrierToIncomingDamage(
+                    enemy,
+                    counterAmount,
+                  );
+                  const mitigation = mitigateIncomingDamage(
+                    enemy,
+                    ward.damage,
+                    passives,
+                  );
+                  if (mitigation.lastStandTriggered) {
+                    this.emit({ type: 'invulnerable', targetId: enemy.id });
+                  }
+                  const incoming = applyIncomingDamage(
+                    enemy,
+                    mitigation.finalDamage,
+                  );
+                  const { damageResult } = incoming;
+                  const appliedCounterDamage =
+                    damageResult.hpDamage + damageResult.barrierDamage;
+                  this.deps.onDamageApplied?.(
+                    defender,
+                    enemy,
+                    appliedCounterDamage,
+                    {
+                      attackKind: 'damage',
+                      hpDamage: damageResult.hpDamage,
+                      attackRangePx: defender.traits.rangePx,
+                    },
+                  );
+                  if (damageResult.lethal) {
+                    enemy.isAlive = false;
+                    this.deps.getSequenceRunner().clearForActor(enemy.id);
+                    this.deps.onUnitDied?.(enemy);
+                    this.emit({ type: 'death', targetId: enemy.id });
+                  }
+                },
+              );
+            }
+          }
         }
       }
+      const mitigation = mitigateIncomingDamage(target, finalDamage, passives);
+      if (mitigation.lastStandTriggered) {
+        this.emit({ type: 'invulnerable', targetId: target.id });
+      }
+      finalDamage = mitigation.finalDamage;
       const barrierHpBefore = target.barrierHp;
       const incoming = applyIncomingDamage(target, finalDamage);
       const { damageResult } = incoming;
@@ -1502,7 +1589,11 @@ export class SkillExecutor {
     slotKind: SkillSlotKind,
   ): void {
     if (slotKind === 'basic') return;
-    const useSec = resolveUseDurationSec(skill);
+    const useSec = resolveEffectiveUseDurationSec(
+      skill,
+      actorId,
+      this.blockResonanceStacksConsumed,
+    );
     if (useSec <= 0) return;
     const duration = Math.max(useSec, resolveSequenceWallClockSec(skill));
     this.deps.getSequenceRunner().beginUse(actorId, duration);

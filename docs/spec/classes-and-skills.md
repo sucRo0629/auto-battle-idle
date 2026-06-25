@@ -612,6 +612,24 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 
 戦場の**物理ラインそのものを作る壁**。
 
+#### 習得スキル（v1.6 確定）
+
+鉄衛士は barrier / HoT を持たない（Recovery 系は療養師・護法士のみ例外）。
+
+| 枠 | ID | 名称 | 効果 |
+| --- | --- | --- | --- |
+| basic | `df_guardian_basic_attack` | — | 最近接 physical |
+| passive 1 Lv0 | `df_guardian_passive_1` | 大盾使い | 自己 block |
+| passive 2 Lv0 | `df_guardian_passive_2` | 立ちはだかる壁 | `threatControl`（被弾 / block で Threat 維持） |
+| active 1 Lv0 | `df_guardian_active_1` | 防御強化 | 自己 DEF buff |
+| active 2 Lv0 | `df_guardian_active_2` | 防御専念 | `hitsTaken` + DEF / block + `useDurationSec` |
+| passive 3 Lv10 | `df_guardian_passive_3` | 迎撃態勢 | 常時 block +10% + `blockResonance`（block 成功で stack 蓄積・減衰・被ダメ軽減） |
+| active 3 Lv10 | `df_guardian_active_3` | 鉄身 | smart 自己 `damageTaken` 低下（HoT 廃止） |
+| passive 4 Lv20 | `df_guardian_passive_4` | 不退の誓い | `lastStandInvulnerable`（HP≤25% 致死時 Wave 1 回・3 秒無敵） |
+| active 4 Lv20 | `df_guardian_active_4` | 城塞の構え | `hitsTaken` + smart `blockResonanceStacks≥1` → stack 消費態勢。構え中 block で周囲敵に DEF ダメージ + KB |
+
+新 effect: `blockResonance` / `lastStandInvulnerable` / `blockResonanceConsume`。共通 overlay: `invulnerable`（[combat.md](combat.md)）。
+
 ---
 
 ### 護法士（`df_paladin`・拡張）
@@ -1484,6 +1502,8 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `skillAmountOverride`   | `targetSkillId`, `amount`, `effectIndex?`, `passiveAmountField?`                                                                                                        | 指定スキル（アクティブ / 取得済みパッシブ）の `ResourceAmountSpec` を完全上書き。アクティブは `effectIndex` 省略で amount 持ち effect すべて。パッシブは `hotAmount` / `barrierAmount`。複数時は `learnedPassiveIds` の後方優先。反撃 `counterResponses` は対象外                                                                                                                      |
 | `skillPropertyOverride` | `maxChargesBonus`, `skillPropertyTargetSkillIds?`                                                                                                                       | 対象アクティブの `maxCharges` 加算（上限 3）                                                                                                                                                                                                                                                                                                                                           |
 | `threatControl`         | `onDamageTakenFlat?`, `onDamageTakenScale?`, `onBlockFlat?`, `threatDecayMultiplier?`, `frontThreatFloor?`, `frontThreatDecayMultiplier?`, `frontDamageTakenReduction?` | Defender 等のヘイト維持・上昇。被ダメ / ブロック成功時にヘイト加算。`threatDecayMultiplier` は自身の tick 減衰倍率。`frontThreatFloor` は生存中 source threat × ratio を前列味方の下限に。`frontThreatDecayMultiplier` は前列味方の減衰倍率。`frontDamageTakenReduction` は互換用フィールドであり、新規スキル定義では使わず、前列被ダメ軽減は `damageReduction` passive として分離する |
+| `blockResonance`        | `chance?`, `blockResonanceMaxStacks`, `blockResonanceDamageTakenPerStack`, `blockResonanceDecayIntervalSec?` | 常時 block（`chance`）+ 物理直接ダメージの block 成功で stack 蓄積。stack ごとに被ダメ軽減。`overlay: blockResonance`。減衰タイマーは `herbalPotency` とは別。実装: `blockResonance.ts` |
+| `lastStandInvulnerable` | （フィールドなし） | HP≤25% かつ致死ダメージ直前に Wave 1 回だけダメージ 0 + 3 秒 `overlay: invulnerable`。実装: `lastStandInvulnerable.ts` |
 
 **スタン（`stun` / `debuffSubKind: stun` / counter `kind: stun`）:** `durationSec` **上限 5 秒**。スタン中は使用者として通常攻撃・アクティブ発動・ターゲット選択不可。CD は停止しない。CD 停止が必要な状態はスタンではなく、凍結 / 時間停止系拘束など別 `StatusEffect` として定義する。詳細は [combat.md](combat.md) のスタン行。
 

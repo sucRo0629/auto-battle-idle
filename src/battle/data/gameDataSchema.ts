@@ -61,6 +61,7 @@ export const SKILL_EFFECT_KINDS = [
   "basicAttackTransform",
   "conditionalEffect",
   "herbalPotencyConsume",
+  "blockResonanceConsume",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [
@@ -294,6 +295,8 @@ export const PASSIVE_EFFECT_KINDS = [
   "skillPropertyOverride",
   "threatControl",
   "herbalPotency",
+  "blockResonance",
+  "lastStandInvulnerable",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -321,6 +324,8 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   skillPropertyOverride: "スキル属性上書き",
   threatControl: "ヘイト制御",
   herbalPotency: "薬効浸潤",
+  blockResonance: "迎撃態勢",
+  lastStandInvulnerable: "不退の誓い",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -414,6 +419,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORIES = [
   "knockback",
   "conditionalEffect",
   "herbalPotencyConsume",
+  "blockResonanceConsume",
 ] as const;
 
 export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
@@ -430,6 +436,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   knockback: "ノックバック",
   conditionalEffect: "条件分岐",
   herbalPotencyConsume: "薬効消費",
+  blockResonanceConsume: "迎撃消費",
 };
 export const STATUS_EFFECT_STATS = [
   "hp",
@@ -548,6 +555,7 @@ export const FIRE_CONDITION_KINDS = [
   "enemyCount",
   "pendingIncomingDamage",
   "targetBarrierBelowGrant",
+  "blockResonanceStacks",
 ] as const satisfies readonly FireConditionKind[];
 
 export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
@@ -561,6 +569,7 @@ export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
   enemyCount: "敵数",
   pendingIncomingDamage: "先読み被ダメ",
   targetBarrierBelowGrant: "付与量>現バリア",
+  blockResonanceStacks: "迎撃スタック",
 };
 
 export const FIRE_CONDITION_KIND_OPTIONS: FireConditionKind[] = [
@@ -610,6 +619,8 @@ export const EDITOR_PASSIVE_EFFECT_KINDS = [
   "counter",
   "heal",
   "herbalPotency",
+  "blockResonance",
+  "lastStandInvulnerable",
   "periodicDispel",
   "excessHealToBarrier",
   "excessHealRedirect",

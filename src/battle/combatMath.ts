@@ -27,6 +27,7 @@ import {
   aggregateStatEffects,
   computeEffectiveStat,
 } from './statusEffectDisplay.ts';
+import { isInvulnerable } from './invulnerable.ts';
 import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
 
 export function getPassiveDefs(
@@ -302,6 +303,9 @@ export function applyDamageToTarget(
   target: CombatantState,
   rawDamage: number,
 ): DamageApplicationResult {
+  if (isInvulnerable(target)) {
+    return { hpDamage: 0, barrierDamage: 0, lethal: false };
+  }
   let remaining = rawDamage;
   const absorbed = Math.min(target.barrierHp, remaining);
   target.barrierHp -= absorbed;
@@ -321,6 +325,9 @@ export function applyConfirmedHpDamage(
   amount: number,
 ): DamageApplicationResult {
   if (amount <= 0) {
+    return { hpDamage: 0, barrierDamage: 0, lethal: false };
+  }
+  if (isInvulnerable(target)) {
     return { hpDamage: 0, barrierDamage: 0, lethal: false };
   }
   const hpBefore = target.hp;

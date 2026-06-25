@@ -50,7 +50,7 @@ function mockAlly(
 }
 
 const guardianThreatControl: PassiveSkillDef = {
-  id: 'df_guardian_passive_5',
+  id: 'df_guardian_passive_2',
   name: '鉄壁の挑発',
   effect: 'threatControl',
   onDamageTakenScale: 0.5,
@@ -68,7 +68,7 @@ const paladinFrontSharing: PassiveSkillDef = {
 };
 
 const passivesRegistry: Record<string, PassiveSkillDef> = {
-  df_guardian_passive_5: guardianThreatControl,
+  df_guardian_passive_2: guardianThreatControl,
   df_paladin_passive_5: paladinFrontSharing,
 };
 
@@ -79,7 +79,7 @@ describe('threat phase 2', () => {
       maxHp: 235,
       def: 26,
       build: {
-        learnedPassiveIds: ['df_guardian_passive_5'],
+        learnedPassiveIds: ['df_guardian_passive_2'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
@@ -217,7 +217,7 @@ describe('threat phase 2', () => {
       maxHp: 235,
       def: 26,
       build: {
-        learnedPassiveIds: ['df_guardian_passive_5'],
+        learnedPassiveIds: ['df_guardian_passive_2'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
@@ -274,7 +274,7 @@ describe('threat phase 2', () => {
       threat: 92,
       baseThreat: 92,
       build: {
-        learnedPassiveIds: ['df_guardian_passive_5'],
+        learnedPassiveIds: ['df_guardian_passive_2'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },

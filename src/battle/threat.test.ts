@@ -49,7 +49,7 @@ function mockAlly(
 }
 
 const guardianThreatControl: PassiveSkillDef = {
-  id: 'df_guardian_passive_5',
+  id: 'df_guardian_passive_2',
   name: '鉄壁の挑発',
   effect: 'threatControl',
   onDamageTakenScale: 0.5,

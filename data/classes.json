@@ -21,7 +21,8 @@
     "passiveIds": [
       "df_guardian_passive_1",
       "df_guardian_passive_2",
-      "df_guardian_passive_3"
+      "df_guardian_passive_3",
+      "df_guardian_passive_4"
     ],
     "skills": [
       {
@@ -38,6 +39,13 @@
         "skillIds": [
           "df_guardian_passive_3",
           "df_guardian_active_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "df_guardian_passive_4",
+          "df_guardian_active_4"
         ]
       }
     ],

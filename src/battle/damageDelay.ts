@@ -1,3 +1,4 @@
+import { isInvulnerable } from './invulnerable.ts';
 import {
   applyConfirmedHpDamage,
   applyDamageToTarget,
@@ -54,7 +55,7 @@ export function applyIncomingDamage(
   target: CombatantState,
   finalDamage: number,
 ): IncomingDamageResult {
-  if (finalDamage <= 0 || !target.isAlive) {
+  if (finalDamage <= 0 || !target.isAlive || isInvulnerable(target)) {
     return {
       damageResult: { hpDamage: 0, barrierDamage: 0, lethal: false },
       immediateDamage: 0,

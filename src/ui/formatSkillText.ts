@@ -132,6 +132,8 @@ function formatFireConditionSummary(condition: FireCondition): string {
       return `先読み被ダメ≥${Math.round(condition.maxHpRatio * 100)}%/${condition.windowSec}s`;
     case "targetBarrierBelowGrant":
       return "付与量>現バリア";
+    case "blockResonanceStacks":
+      return `迎撃stack≥${condition.min}`;
   }
 }
 
@@ -680,6 +682,8 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
       return "条件分岐";
     case "herbalPotencyConsume":
       return "薬効消費";
+    case "blockResonanceConsume":
+      return "迎撃消費";
     case "basicAttackTransform":
       return "通常攻撃変形";
     default:
@@ -774,7 +778,30 @@ function formatPassiveEffect(
       );
     case "hot":
     case "herbalPotency":
+    case "blockResonance":
+    case "lastStandInvulnerable":
     case "heal": {
+      if (def.effect === "lastStandInvulnerable") {
+        return "致死時 3秒無敵（Wave 1回・HP≤25%）";
+      }
+      if (def.effect === "blockResonance") {
+        const parts: string[] = [];
+        if (def.chance !== undefined) {
+          parts.push(`ブロック +${formatPercent(def.chance)}`);
+        }
+        if (def.blockResonanceMaxStacks !== undefined) {
+          parts.push(`上限${def.blockResonanceMaxStacks} stack`);
+        }
+        if (def.blockResonanceDamageTakenPerStack !== undefined) {
+          parts.push(
+            `被ダメ-${formatPercent(def.blockResonanceDamageTakenPerStack)}/stack`,
+          );
+        }
+        if (def.blockResonanceDecayIntervalSec !== undefined) {
+          parts.push(`減衰 ${def.blockResonanceDecayIntervalSec}s`);
+        }
+        return parts.length > 0 ? parts.join(" · ") : "迎撃態勢";
+      }
       if (def.effect === "heal" && (def.healSubKind ?? "hot") !== "hot") {
         return HEAL_SUB_KIND_LABELS[def.healSubKind ?? "instant"];
       }

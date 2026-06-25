@@ -8,6 +8,7 @@ import {
 import { hasMatchingDebuff } from '../debuffMatching.ts';
 import { evaluatePendingIncomingDamage } from '../pendingIncomingDamage.ts';
 import { getPassiveSpecialEffectMultiplier } from '../passiveEffects.ts';
+import { getBlockResonanceStacks } from '../blockResonance.ts';
 import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
 import type {
   ActiveSkillDef,
@@ -293,6 +294,8 @@ export function evaluateCondition(
       const grant = resolveBarrierGrantForContext(ctx, effect, target);
       return grant > target.barrierHp;
     }
+    case 'blockResonanceStacks':
+      return getBlockResonanceStacks(ctx.actor) >= condition.min;
   }
 }
 

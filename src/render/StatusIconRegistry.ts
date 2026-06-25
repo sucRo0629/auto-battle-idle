@@ -33,6 +33,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   counter: counterIconUrl,
   damageDelay: damageDelayIconUrl,
   herbalPotency: herbalPotencyIconUrl,
+  blockResonance: blockIconUrl,
   mark: hotIconUrl,
 };
 

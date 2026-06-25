@@ -1,49 +1,5 @@
 [
   {
-    "id": "df_guardian_passive_2",
-    "name": "立ちはだかる壁",
-    "effect": "threatControl",
-    "onDamageTakenScale": 0.5,
-    "onBlockFlat": 5,
-    "threatDecayMultiplier": 0.5
-  },
-  {
-    "id": "df_guardian_passive_5",
-    "name": "立ちはだかる壁",
-    "effect": "threatControl",
-    "onDamageTakenScale": 0.5,
-    "onBlockFlat": 5,
-    "threatDecayMultiplier": 0.5
-  },
-  {
-    "id": "df_guardian_passive_3",
-    "name": "防御の備え",
-    "effect": "buff",
-    "buffSubKind": "barrier",
-    "barrierAmount": {
-      "kind": "defBased",
-      "defScale": 0.5
-    },
-    "buffTargetRule": {
-      "kind": "self"
-    },
-    "periodicTrigger": "waveStart"
-  },
-  {
-    "id": "df_guardian_passive_4",
-    "name": "防御態勢",
-    "effect": "buff",
-    "buffSubKind": "barrier",
-    "barrierAmount": {
-      "kind": "defBased",
-      "defScale": 0.5
-    },
-    "buffTargetRule": {
-      "kind": "self"
-    },
-    "periodicTrigger": "waveStart"
-  },
-  {
     "id": "df_guardian_passive_1",
     "name": "大盾使い",
     "effect": "buff",
@@ -52,5 +8,27 @@
     "buffTargetRule": {
       "kind": "self"
     }
+  },
+  {
+    "id": "df_guardian_passive_2",
+    "name": "立ちはだかる壁",
+    "effect": "threatControl",
+    "onDamageTakenScale": 0.5,
+    "onBlockFlat": 5,
+    "threatDecayMultiplier": 0.5
+  },
+  {
+    "id": "df_guardian_passive_3",
+    "name": "迎撃態勢",
+    "effect": "blockResonance",
+    "chance": 0.1,
+    "blockResonanceMaxStacks": 6,
+    "blockResonanceDamageTakenPerStack": 0.03,
+    "blockResonanceDecayIntervalSec": 8
+  },
+  {
+    "id": "df_guardian_passive_4",
+    "name": "不退の誓い",
+    "effect": "lastStandInvulnerable"
   }
 ]

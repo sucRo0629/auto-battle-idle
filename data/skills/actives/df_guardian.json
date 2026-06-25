@@ -81,7 +81,7 @@
   },
   {
     "id": "df_guardian_active_3",
-    "name": "息入れ",
+    "name": "鉄身",
     "trigger": {
       "kind": "time",
       "value": 10
@@ -91,13 +91,11 @@
         "target": {
           "kind": "self"
         },
-        "type": "heal",
-        "healSubKind": "hot",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.25
-        },
-        "durationSec": 5
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "damageTaken",
+        "buffMultiplier": 0.75,
+        "buffDurationSec": 5
       }
     ],
     "firePolicy": "smart",
@@ -107,5 +105,37 @@
         "maxHpRatio": 0.8
       }
     ]
+  },
+  {
+    "id": "df_guardian_active_4",
+    "name": "城塞の構え",
+    "trigger": {
+      "kind": "hitsTaken",
+      "value": 8
+    },
+    "effect": [
+      {
+        "type": "blockResonanceConsume"
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "blockResonanceStacks",
+        "min": 1
+      }
+    ],
+    "useDurationSec": 2,
+    "maxCharges": 1,
+    "blockResonanceStanceDurationBaseSec": 2,
+    "blockResonanceStanceDamageTakenPerStack": 0.04,
+    "blockResonanceStanceDefPerStack": 0.05,
+    "blockResonanceStanceBlockPerStack": 0.05,
+    "blockResonanceOnBlockDamage": {
+      "kind": "defBased",
+      "defScale": 1
+    },
+    "blockResonanceOnBlockKnockbackRadiusPx": 50,
+    "blockResonanceOnBlockKnockbackDistancePx": 50
   }
 ]

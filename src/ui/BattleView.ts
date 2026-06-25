@@ -310,6 +310,8 @@ export class BattleView {
       this.canvas.showEvadePopup(event.targetId);
     } else if (event.type === "block") {
       this.canvas.showBlockPopup(event.targetId);
+    } else if (event.type === "invulnerable") {
+      this.canvas.showInvulnerablePopup(event.targetId);
     } else if (event.type === "death") {
       this.canvas.playAnim(event.targetId, "death");
     } else if (event.type === "battleEnd") {

@@ -258,7 +258,8 @@ export type FireCondition =
       maxHpRatio: number;
       windowSec: number;
     }
-  | { kind: "targetBarrierBelowGrant" };
+  | { kind: "targetBarrierBelowGrant" }
+  | { kind: "blockResonanceStacks"; min: number };
 
 export interface SkillCooldown {
   skillId: string;
@@ -325,7 +326,10 @@ export interface StatusEffect {
     | "basicAttackTransform"
     | "healReservation"
     | "wardBarrier"
-    | "herbalPotency";
+    | "herbalPotency"
+    | "blockResonance"
+    | "blockResonanceStance"
+    | "invulnerable";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
   /** HoT tick 量（ResourceAmountSpec） */
@@ -545,6 +549,10 @@ export interface CombatantState extends Combatant {
   herbalPotencyAccumTickSec?: number;
   /** herbalPotency: 到達済み体質段階（active_4 消費後も維持） */
   herbalPotencyConstitutionTier?: number;
+  /** blockResonance: 減衰タイマー残秒 */
+  blockResonanceDecayTickSec?: number;
+  /** lastStandInvulnerable: Wave 内 1 回消費済み */
+  lastStandInvulnerableUsed?: boolean;
 }
 
 export type PassiveEffectKind =
@@ -576,6 +584,8 @@ export type PassiveEffectKind =
   | "healReceivedIncrease"
   | "extendSelfAppliedDebuff"
   | "herbalPotency"
+  | "blockResonance"
+  | "lastStandInvulnerable"
   /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
   | "hot";
 
@@ -835,6 +845,12 @@ export interface PassiveSkillDef {
   herbalPotencyConstitutionThresholds?: number[];
   /** herbalPotency: 体質段階ごとの hp 乗算（閾値と同順） */
   herbalPotencyConstitutionHpMultipliers?: number[];
+  /** blockResonance: スタック上限 */
+  blockResonanceMaxStacks?: number;
+  /** blockResonance: stack ごとの被ダメ軽減率（0.03 = 3%/stack） */
+  blockResonanceDamageTakenPerStack?: number;
+  /** blockResonance: stack 減衰間隔（秒） */
+  blockResonanceDecayIntervalSec?: number;
 }
 
 export type SkillEffectKind =
@@ -852,7 +868,8 @@ export type SkillEffectKind =
   | "counter"
   | "basicAttackTransform"
   | "conditionalEffect"
-  | "herbalPotencyConsume";
+  | "herbalPotencyConsume"
+  | "blockResonanceConsume";
 
 export type MoveMode = "engage" | "toAnchor";
 export type DamageType = "physical" | "magic";
@@ -1204,6 +1221,10 @@ export interface HerbalPotencyConsumeSkillEffect extends SkillEffectCommon {
   type: "herbalPotencyConsume";
 }
 
+export interface BlockResonanceConsumeSkillEffect extends SkillEffectCommon {
+  type: "blockResonanceConsume";
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -1219,7 +1240,8 @@ export type SkillEffectDef =
   | CounterSkillEffect
   | BasicAttackTransformSkillEffect
   | ConditionalSkillEffect
-  | HerbalPotencyConsumeSkillEffect;
+  | HerbalPotencyConsumeSkillEffect
+  | BlockResonanceConsumeSkillEffect;
 
 /** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
 export type LegacyHotSkillEffect = HotSkillEffect;
@@ -1249,6 +1271,20 @@ export interface ActiveSkillDef {
   fireTimeoutSec?: number;
   /** 多段チャージ上限。省略 = 1 */
   maxCharges?: number;
+  /** blockResonanceConsume: 態勢の基礎持続秒（+消費 stack） */
+  blockResonanceStanceDurationBaseSec?: number;
+  /** blockResonanceConsume: 態勢中 stack あたりの被ダメ軽減率 */
+  blockResonanceStanceDamageTakenPerStack?: number;
+  /** blockResonanceConsume: 態勢中 stack あたりの DEF 倍率加算 */
+  blockResonanceStanceDefPerStack?: number;
+  /** blockResonanceConsume: 態勢中 stack あたりの block 率加算 */
+  blockResonanceStanceBlockPerStack?: number;
+  /** blockResonanceConsume: 態勢中ブロック成功時の範囲ダメージ */
+  blockResonanceOnBlockDamage?: ResourceAmountSpec;
+  /** blockResonanceConsume: 態勢中ブロック成功時の範囲半径（px） */
+  blockResonanceOnBlockKnockbackRadiusPx?: number;
+  /** blockResonanceConsume: 態勢中ブロック成功時のノックバック距離（px） */
+  blockResonanceOnBlockKnockbackDistancePx?: number;
 }
 
 export interface EnemyTemplate extends CombatStats {

@@ -1395,6 +1395,13 @@ function parseFireCondition(raw: unknown, context: string): FireCondition {
   if (kind === 'targetBarrierBelowGrant') {
     return { kind: 'targetBarrierBelowGrant' };
   }
+  if (kind === 'blockResonanceStacks') {
+    const min = requireNumber(obj, 'min', context);
+    if (!Number.isInteger(min) || min < 1) {
+      invalidField(context, 'min', 'must be a positive integer');
+    }
+    return { kind: 'blockResonanceStacks', min };
+  }
   invalidField(context, 'kind', `unsupported fire condition kind: ${kind}`);
 }
 
@@ -2295,6 +2302,16 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     return normalizeSkillEffect({
       type: 'herbalPotencyConsume',
       target,
+      ...sequenceTiming,
+      ...presentation,
+    });
+  }
+  if (typeRaw === 'blockResonanceConsume') {
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    return normalizeSkillEffect({
+      type: 'blockResonanceConsume',
+      target: { kind: 'self' },
       ...sequenceTiming,
       ...presentation,
     });
@@ -3401,6 +3418,45 @@ function requirePassiveEffectParams(
         ...(hotDurationSec !== undefined ? { hotDurationSec } : {}),
       };
     }
+    case 'blockResonance': {
+      const maxStacks = requireNumber(obj, 'blockResonanceMaxStacks', context);
+      if (!Number.isInteger(maxStacks) || maxStacks < 1) {
+        invalidField(
+          context,
+          'blockResonanceMaxStacks',
+          'must be a positive integer',
+        );
+      }
+      const damageTakenPerStack = requireNumber(
+        obj,
+        'blockResonanceDamageTakenPerStack',
+        context,
+      );
+      if (damageTakenPerStack < 0 || damageTakenPerStack > 1) {
+        invalidField(
+          context,
+          'blockResonanceDamageTakenPerStack',
+          'must be between 0 and 1',
+        );
+      }
+      const decayIntervalSec = parseOptionalNonNegativeNumber(
+        obj,
+        'blockResonanceDecayIntervalSec',
+        context,
+      );
+      const chance = parseOptionalNonNegativeNumber(obj, 'chance', context);
+      return {
+        ...base,
+        blockResonanceMaxStacks: maxStacks,
+        blockResonanceDamageTakenPerStack: damageTakenPerStack,
+        ...(decayIntervalSec !== undefined
+          ? { blockResonanceDecayIntervalSec: decayIntervalSec }
+          : {}),
+        ...(chance !== undefined ? { chance } : {}),
+      };
+    }
+    case 'lastStandInvulnerable':
+      return { ...base };
     case 'heal': {
       const healSubKind =
         obj.healSubKind === undefined
@@ -4348,6 +4404,46 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
         maxCharges = maxChargesRaw;
       }
     }
+    const blockResonanceStanceDurationBaseSec = parseOptionalNonNegativeNumber(
+      obj,
+      'blockResonanceStanceDurationBaseSec',
+      context,
+    );
+    const blockResonanceStanceDamageTakenPerStack = parseOptionalNonNegativeNumber(
+      obj,
+      'blockResonanceStanceDamageTakenPerStack',
+      context,
+    );
+    const blockResonanceStanceDefPerStack = parseOptionalNonNegativeNumber(
+      obj,
+      'blockResonanceStanceDefPerStack',
+      context,
+    );
+    const blockResonanceStanceBlockPerStack = parseOptionalNonNegativeNumber(
+      obj,
+      'blockResonanceStanceBlockPerStack',
+      context,
+    );
+    const blockResonanceOnBlockDamage = obj.blockResonanceOnBlockDamage;
+    let parsedBlockResonanceOnBlockDamage:
+      | import('../types.ts').ResourceAmountSpec
+      | undefined;
+    if (blockResonanceOnBlockDamage !== undefined) {
+      parsedBlockResonanceOnBlockDamage = parseResourceAmountSpec(
+        blockResonanceOnBlockDamage,
+        `${context}.blockResonanceOnBlockDamage`,
+      );
+    }
+    const blockResonanceOnBlockKnockbackRadiusPx = parseOptionalNonNegativeNumber(
+      obj,
+      'blockResonanceOnBlockKnockbackRadiusPx',
+      context,
+    );
+    const blockResonanceOnBlockKnockbackDistancePx = parseOptionalNonNegativeNumber(
+      obj,
+      'blockResonanceOnBlockKnockbackDistancePx',
+      context,
+    );
     if (firePolicy === 'smart' && !fireConditions?.length) {
       invalidField(
         context,
@@ -4372,6 +4468,27 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
       ...(fireConditionMatch !== undefined ? { fireConditionMatch } : {}),
       ...(fireTimeoutSec !== undefined ? { fireTimeoutSec } : {}),
       ...(maxCharges !== undefined ? { maxCharges } : {}),
+      ...(blockResonanceStanceDurationBaseSec !== undefined
+        ? { blockResonanceStanceDurationBaseSec }
+        : {}),
+      ...(blockResonanceStanceDamageTakenPerStack !== undefined
+        ? { blockResonanceStanceDamageTakenPerStack }
+        : {}),
+      ...(blockResonanceStanceDefPerStack !== undefined
+        ? { blockResonanceStanceDefPerStack }
+        : {}),
+      ...(blockResonanceStanceBlockPerStack !== undefined
+        ? { blockResonanceStanceBlockPerStack }
+        : {}),
+      ...(parsedBlockResonanceOnBlockDamage !== undefined
+        ? { blockResonanceOnBlockDamage: parsedBlockResonanceOnBlockDamage }
+        : {}),
+      ...(blockResonanceOnBlockKnockbackRadiusPx !== undefined
+        ? { blockResonanceOnBlockKnockbackRadiusPx }
+        : {}),
+      ...(blockResonanceOnBlockKnockbackDistancePx !== undefined
+        ? { blockResonanceOnBlockKnockbackDistancePx }
+        : {}),
     };
   });
 }

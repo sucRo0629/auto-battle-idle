@@ -1680,6 +1680,10 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         target: { kind: 'all', side: 'ally' },
         type: 'herbalPotencyConsume',
       };
+    case 'blockResonanceConsume':
+      return {
+        type: 'blockResonanceConsume',
+      };
   }
 }
 
@@ -2384,6 +2388,66 @@ export class SkillEditorStep {
             ),
           ),
         );
+        break;
+      case 'blockResonance':
+        effectGrid.appendChild(
+          createFieldRow(
+            'chance',
+            createNumberInput(
+              passive.chance ?? 0.1,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.chance = value;
+                }, { rerender: false });
+              },
+              { step: 0.01, min: 0, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'blockResonanceMaxStacks',
+            createNumberInput(
+              passive.blockResonanceMaxStacks ?? 6,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.blockResonanceMaxStacks = value;
+                }, { rerender: false });
+              },
+              { step: 1, min: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'blockResonanceDamageTakenPerStack',
+            createNumberInput(
+              passive.blockResonanceDamageTakenPerStack ?? 0.03,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.blockResonanceDamageTakenPerStack = value;
+                }, { rerender: false });
+              },
+              { step: 0.01, min: 0, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'blockResonanceDecayIntervalSec',
+            createNumberInput(
+              passive.blockResonanceDecayIntervalSec ?? 8,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.blockResonanceDecayIntervalSec = value;
+                }, { rerender: false });
+              },
+              { step: 0.1, min: 0.1 },
+            ),
+          ),
+        );
+        break;
+      case 'lastStandInvulnerable':
         break;
       case 'damageReduction':
         appendPassiveDamageReductionFields(

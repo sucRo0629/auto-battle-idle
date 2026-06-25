@@ -86,6 +86,12 @@ import {
   syncHerbalPotencyAuras,
   tickHerbalPotencyAccumulation,
 } from "./herbalPotency.ts";
+import {
+  resolveBlockResonanceConfigForUnit,
+  syncBlockResonanceAuras,
+  tickBlockResonanceDecay,
+} from "./blockResonance.ts";
+import { mitigateIncomingDamage } from "./incomingDamageMitigation.ts";
 import { tryTriggerHealReservation, grantHealReservationStacks } from "./healReservation.ts";
 import { tryTriggerBarrierBreakRegen } from "./barrierBreakRegen.ts";
 import { tryTriggerBarrierDepletionHeal } from "./barrierDepletionHeal.ts";
@@ -530,6 +536,13 @@ export class BattleEngine {
     syncFrontThreatControlAuras(this.players, passives);
     syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
     syncHerbalPotencyAuras(this.players, this.enemies, passives, this.gameData);
+    for (const ally of this.players) {
+      if (!ally.isAlive) continue;
+      const config = resolveBlockResonanceConfigForUnit(ally, passives);
+      if (config.maxStacks > 0) {
+        syncBlockResonanceAuras(ally, config);
+      }
+    }
   }
 
   private handlePassiveDispelOnDebuffReceived(target: CombatantState): void {
@@ -1617,6 +1630,14 @@ export class BattleEngine {
       this.gameData.skillRegistry.passives,
       deltaTime,
     );
+    const passives = this.gameData.skillRegistry.passives;
+    for (const ally of this.players) {
+      if (!ally.isAlive) continue;
+      const config = resolveBlockResonanceConfigForUnit(ally, passives);
+      if (config.maxStacks > 0) {
+        tickBlockResonanceDecay(ally, deltaTime, config);
+      }
+    }
     this.syncContinuousPassiveAuras();
     this.tickCooldowns(this.players, deltaTime);
     this.tickCooldowns(this.enemies, deltaTime);
@@ -1807,7 +1828,15 @@ export class BattleEngine {
       );
       const barrierHpBefore = target.barrierHp;
       const wardResult = applyWardBarrierToIncomingDamage(target, amount);
-      const damageResult = applyDamageToTarget(target, wardResult.damage);
+      const mitigation = mitigateIncomingDamage(
+        target,
+        wardResult.damage,
+        passives,
+      );
+      if (mitigation.lastStandTriggered) {
+        this.emit({ type: "invulnerable", targetId: target.id });
+      }
+      const damageResult = applyDamageToTarget(target, mitigation.finalDamage);
       const appliedDamage =
         damageResult.hpDamage + damageResult.barrierDamage;
       this.handleDamageThreat(source, target, appliedDamage, {
