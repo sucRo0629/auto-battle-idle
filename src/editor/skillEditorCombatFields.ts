@@ -701,6 +701,49 @@ export function appendThreatBurstFields(
   );
 }
 
+export function appendDamagePierceFields(
+  parent: HTMLElement,
+  effect: Extract<SkillEffectDef, { type: "damage" }>,
+  patchEffect: (
+    patch: SkillEffectDef | ((prev: SkillEffectDef) => SkillEffectDef),
+    options?: { rerender?: boolean }
+  ) => void
+): void {
+  parent.appendChild(
+    createEl(
+      "p",
+      "editor-hint",
+      "貫通フラグ: 断鉄など全軽減貫通用。回避は v1 では対象外。"
+    )
+  );
+  for (const [field, label] of [
+    ["ignoreDamageTakenReduction", "DR無視（damageTakenMul=1）"],
+    ["pierceBlock", "block 貫通"],
+    ["pierceWard", "障壁（wardBarrier）貫通"],
+    ["pierceBarrier", "barrierHp 貫通"],
+  ] as const) {
+    const row = createEl("div", "editor-field editor-field-checkbox");
+    const input = createEl("input") as HTMLInputElement;
+    input.type = "checkbox";
+    input.checked = effect[field] === true;
+    input.addEventListener("change", () => {
+      patchEffect((prev) => {
+        if (prev.type !== "damage") return prev;
+        const next = { ...prev };
+        if (input.checked) {
+          next[field] = true;
+        } else {
+          delete next[field];
+        }
+        return next;
+      });
+    });
+    row.appendChild(createEl("label", undefined, label));
+    row.appendChild(input);
+    parent.appendChild(row);
+  }
+}
+
 export function appendPassiveDamageReductionFields(
   parent: HTMLElement,
   passive: PassiveSkillDef,

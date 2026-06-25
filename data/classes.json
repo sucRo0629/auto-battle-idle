@@ -189,6 +189,20 @@
           "at_warrior_active_1",
           "at_warrior_active_2"
         ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "at_warrior_passive_3",
+          "at_warrior_active_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "at_warrior_passive_4",
+          "at_warrior_active_4"
+        ]
       }
     ],
     "growthTier": {
@@ -198,7 +212,9 @@
     },
     "passiveIds": [
       "at_warrior_passive_1",
-      "at_warrior_passive_2"
+      "at_warrior_passive_2",
+      "at_warrior_passive_3",
+      "at_warrior_passive_4"
     ]
   },
   {

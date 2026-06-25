@@ -317,6 +317,55 @@ describe('resolveDamage defenseIgnore', () => {
     randomSpy.mockRestore();
   });
 
+  it('adds ignoredDef bonus for physical damage', () => {
+    const passives: Record<string, PassiveSkillDef> = {
+      bonus: {
+        id: 'bonus',
+        name: 'Bonus',
+        effect: 'ignoredDefBonusDamage',
+        ignoredDefBonusScale: 0.5,
+      },
+    };
+    const warrior = mockCombatant({
+      atk: 100,
+      build: {
+        learnedPassiveIds: ['bonus'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const without = resolveDamage(warrior, target, baseEffect, {}, {
+      effectDefenseIgnore: { def: { mode: 'flat', amount: 40 } },
+    });
+    const withBonus = resolveDamage(warrior, target, baseEffect, passives, {
+      effectDefenseIgnore: { def: { mode: 'flat', amount: 40 } },
+    });
+    expect(withBonus - without).toBe(20);
+  });
+
+  it('skips damageTakenMul when ignoreDamageTakenReduction is set', () => {
+    const drTarget = mockCombatant({
+      def: 0,
+      isEnemy: true,
+      statusEffects: [
+        {
+          id: 'dr',
+          kind: 'buff',
+          stat: 'damageTaken',
+          multiplier: 0.25,
+          durationSec: 5,
+          remainingSec: 5,
+        },
+      ],
+    });
+    const mitigated = resolveDamage(attacker, drTarget, baseEffect, {});
+    const ignored = resolveDamage(attacker, drTarget, baseEffect, {}, {
+      ignoreDamageTakenReduction: true,
+    });
+    expect(ignored).toBeGreaterThan(mitigated);
+    expect(ignored).toBe(100);
+  });
+
   it('reg buff increases magic mitigation and reg debuff weakens it', () => {
     const magicEffect = {
       type: 'damage' as const,

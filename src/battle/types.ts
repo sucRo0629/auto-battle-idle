@@ -609,6 +609,7 @@ export type PassiveEffectKind =
   | "lastStandGuts"
   | "bloodlustDuelist"
   | "duelistPride"
+  | "ignoredDefBonusDamage"
   /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
   | "hot";
 
@@ -697,6 +698,8 @@ export interface PassiveSkillDef {
   specialEffectApplyTo?: SpecialEffectApplyTo;
   specialEffect?: SpecialEffectSpec;
   defenseIgnore?: DefenseIgnoreSpec;
+  /** ignoredDefBonusDamage: 無視した DEF 量 × scale を追加物理ダメ */
+  ignoredDefBonusScale?: number;
   buffSubKind?: BuffSubKind;
   buffTargetRule?: TargetSpec;
   /** アクティブ effect.targetShape に対応 */
@@ -1106,6 +1109,14 @@ export interface DamageSkillEffect extends SkillEffectCommon {
   threatBurstFlat?: number;
   /** 与ダメ成功時の追加 threat（appliedDamage × scale）。basic には付けない */
   threatBurstScale?: number;
+  /** barrierHp 吸収をスキップ */
+  pierceBarrier?: boolean;
+  /** wardBarrier 軽減をスキップ */
+  pierceWard?: boolean;
+  /** 物理 block 判定をスキップ */
+  pierceBlock?: boolean;
+  /** resolveDamage 内で damageTakenMul を 1.0 として計算 */
+  ignoreDamageTakenReduction?: boolean;
 }
 
 export interface HealSkillEffect extends SkillEffectCommon {

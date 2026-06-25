@@ -423,6 +423,12 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       if (inc) extras.push(inc);
       const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);
       if (ign) extras.push(ign);
+      const pierceLabels: string[] = [];
+      if (effect.ignoreDamageTakenReduction) pierceLabels.push("DR無視");
+      if (effect.pierceBlock) pierceLabels.push("block貫通");
+      if (effect.pierceWard) pierceLabels.push("障壁貫通");
+      if (effect.pierceBarrier) pierceLabels.push("barrier貫通");
+      if (pierceLabels.length > 0) extras.push(pierceLabels.join("・"));
       break;
     }
     case "heal":
@@ -773,6 +779,10 @@ function formatPassiveEffect(
         .join(" · ")}）`;
     case "defenseIgnore":
       return formatDefenseIgnoreSpec(def.defenseIgnore) || "防御無視";
+    case "ignoredDefBonusDamage":
+      return def.ignoredDefBonusScale !== undefined
+        ? `無視DEF×${formatPercent(def.ignoredDefBonusScale)} 追加ダメ`
+        : "無視DEFボーナス";
     case "periodicDispel": {
       const tags =
         def.dispelTags && def.dispelTags.length > 0

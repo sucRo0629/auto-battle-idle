@@ -21,5 +21,23 @@
         "amount": 0.25
       }
     }
+  },
+  {
+    "id": "at_warrior_passive_3",
+    "name": "穿甲の一撃",
+    "effect": "defenseIgnore",
+    "defenseIgnore": {
+      "def": {
+        "mode": "percent",
+        "amount": 1
+      },
+      "chance": 0.15
+    }
+  },
+  {
+    "id": "at_warrior_passive_4",
+    "name": "剛剣の冴え",
+    "effect": "ignoredDefBonusDamage",
+    "ignoredDefBonusScale": 0.5
   }
 ]

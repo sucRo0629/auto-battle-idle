@@ -5,17 +5,25 @@
 ## 物理ダメージ
 
 1. `baseDamage = floor(resolvePowerAmount(amount) × crowdBonus × damageIncreaseMul)`（`damageIncrease` はパッシブ + effect + DoT status の乗算）
-2. `effectiveDef = applyDefenseIgnore(getEffectiveDef(target))`（DEF 無視: flat 減算 → percent 減算、パッシブ + effect 合算。各 `defenseIgnore` の `chance` を毎回判定し、失敗したソースは合算から除外）
-3. `afterSubtract = baseDamage - effectiveDef`
-4. `afterSubtract <= 0` なら `afterDefense = 0`、
+2. `rawDef = getEffectiveDef(target)`（物理のみ。魔法は REG 側）
+3. `effectiveDef = applyDefenseIgnore(rawDef)`（DEF 無視: flat 減算 → percent 減算、パッシブ + effect 合算。各 `defenseIgnore` の `chance` を毎回判定し、失敗したソースは合算から除外）
+4. `ignoredDef = max(0, rawDef - effectiveDef)`（物理のみ）
+5. `afterSubtract = baseDamage - effectiveDef`
+6. `afterSubtract <= 0` なら `afterDefense = 0`、
    それ以外は `afterDefense = floor(afterSubtract × 100 / (100 + effectiveDef))`
-5. `final = max(1, floor(afterDefense × damageTakenMul))`
-6. **物理直接 `damage` のみ:** 回避判定 → ブロック判定（成功時 `blocked = floor(final × min(1, 0.25 + effectiveAtk/100))`、実ダメ = `final - blocked`）
-   6b. **魔法直接 `damage`:** `blocksMagic: true` の block overlay がある対象のみ追加判定。成功時 `blocked = floor(final × 0.15)`（ATK/DEF/REG 非参照。定数 `MAGIC_BLOCK_MITIGATION_RATIO`）
+7. `bonus = floor(ignoredDef × ignoredDefBonusScale)` — パッシブ `ignoredDefBonusDamage`（例: 剣術士 P4 剛剣の冴え）。未習得なら 0
+8. `subtotal = afterDefense + bonus`
+9. `afterDR = max(1, floor(subtotal × damageTakenMul))` — `ignoreDamageTakenReduction: true` の直接 `damage` は `damageTakenMul` を 1 として計算（⑨）
+10. **物理直接 `damage` のみ（SkillExecutor / `applyIncomingDamage`、⑨の後）:** 回避判定 → ブロック判定 → 障壁（wardBarrier）軽減 → `barrierHp` 吸収 → HP 減少
+    - `pierceBlock: true` — ⑪ block をスキップ
+    - `pierceWard: true` — ⑫ wardBarrier をスキップ
+    - `pierceBarrier: true` — ⑬ barrierHp 吸収をスキップ
+    - 回避は v1 では貫通対象外（⑩は常に判定）
+   10b. **魔法直接 `damage`:** `blocksMagic: true` の block overlay がある対象のみ追加判定（⑪相当）。成功時 `blocked = floor(afterDR × 0.15)`（定数 `MAGIC_BLOCK_MITIGATION_RATIO`）
 
-**回避:** 直接 `damage` の物理/魔法問わず（DoT tick 非対象）。`SkillExecutor` で `resolveDamage` 前に判定。
+**回避:** 直接 `damage` の物理/魔法問わず（DoT tick 非対象）。`SkillExecutor` で `resolveDamage`（⑨）**後**に判定。
 
-**ブロック（物理）:** 直接 `damage` かつ `damageType: physical`。`resolveDamage` 後に判定（DoT 非対象）。`overlay: block` の `blockChance` を合算して 1 回ロール。
+**ブロック（物理）:** 直接 `damage` かつ `damageType: physical`。⑨の後・⑪で判定（DoT 非対象）。`overlay: block` の `blockChance` を合算して 1 回ロール。
 
 **ブロック（魔法）:** 直接 `damage` かつ `damageType: magic`。`blocksMagic: true` の overlay の `blockChance` のみ合算して 1 回ロール。軽減率は固定 15%。`frontBlockAura`（護法士 P3 真言加護）で前列に付与。
 
@@ -48,6 +56,9 @@
 | 回避                           | 直接 `damage` を受ける       | `evasion` の `chance` を判定        | 回避成功なら damage 非適用、失敗なら後続処理へ進む          |
 | ブロック                       | 物理直接 `damage` が確定     | `block` の `chance` を判定          | 成功なら block 後 damage、失敗なら block なし               |
 | 防御無視                       | damage 計算開始              | 各 `defenseIgnore.chance` を判定    | 成功したソースだけ DEF / REG 無視へ合算                     |
+| 無視DEFボーナス                | damage 計算（物理）⑥       | —                                   | `ignoredDef × ignoredDefBonusScale` を `afterDefense` に加算 |
+| DR 無視（`ignoreDamageTakenReduction`） | damage 計算⑨          | —                                   | `damageTakenMul` を 1.0 として `afterDR` を算出              |
+| 貫通フラグ（`pierceBlock` 等） | 直接 `damage` 適用⑪〜⑬   | —                                   | 各フラグ ON 時に block / ward / barrier をスキップ           |
 | debuff / stun / knockback 付与 | effect 適用時                | effect / passive の `chance` を判定 | 成功なら `StatusEffect` / moveLock 等を付与、失敗なら非付与 |
 | 確率反撃                       | 被攻撃条件と射程条件を満たす | `counter.chance` を判定             | 成功なら responses を即時適用、失敗なら反撃なし             |
 | Stage/Wave 開始パッシブ        | 発動タイミング到達           | `chance` を判定                     | 成功なら効果を適用、失敗なら非適用                          |

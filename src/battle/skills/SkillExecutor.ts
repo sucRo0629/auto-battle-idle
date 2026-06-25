@@ -805,10 +805,6 @@ export class SkillExecutor {
       const coverResult = resolveLowHpCoverTarget(target, allies, passives);
       const damageTarget = coverResult.target;
 
-      if (rollsEvasion(damageTarget, passives)) {
-        this.emit({ type: 'evade', targetId: damageTarget.id });
-        return false;
-      }
       const damageEffect = {
         ...effectDef,
         amount: resolveEffectiveAmountSpecForActiveEffect(
@@ -820,7 +816,7 @@ export class SkillExecutor {
           effectDef.amount,
         ),
       };
-      const amount = resolveDamage(
+      const afterDr = resolveDamage(
         actor,
         damageTarget,
         damageEffect,
@@ -830,25 +826,40 @@ export class SkillExecutor {
           passiveContext: damageContext,
           effectDamageIncrease: effectDef.damageIncrease,
           effectDefenseIgnore: effectDef.defenseIgnore,
+          ignoreDamageTakenReduction:
+            effectDef.ignoreDamageTakenReduction === true,
         },
       );
-      let finalDamage = amount;
-      const wardResult = applyWardBarrierToIncomingDamage(damageTarget, finalDamage);
-      finalDamage = wardResult.damage;
+
+      if (rollsEvasion(damageTarget, passives)) {
+        this.emit({ type: 'evade', targetId: damageTarget.id });
+        return false;
+      }
+
+      let finalDamage = afterDr;
       let didBlock = false;
       const damageType = resolveSkillDamageType(actor, effectDef);
-      if (damageType === 'physical') {
-        const blockResult = applyBlockToPhysicalDamage(
+      if (effectDef.pierceBlock !== true) {
+        if (damageType === 'physical') {
+          const blockResult = applyBlockToPhysicalDamage(
+            damageTarget,
+            afterDr,
+            passives,
+          );
+          finalDamage = blockResult.finalDamage;
+          didBlock = blockResult.didBlock;
+        } else if (damageType === 'magic') {
+          const blockResult = applyBlockToMagicDamage(damageTarget, afterDr);
+          finalDamage = blockResult.finalDamage;
+          didBlock = blockResult.didBlock;
+        }
+      }
+      if (effectDef.pierceWard !== true) {
+        const wardResult = applyWardBarrierToIncomingDamage(
           damageTarget,
-          amount,
-          passives,
+          finalDamage,
         );
-        finalDamage = blockResult.finalDamage;
-        didBlock = blockResult.didBlock;
-      } else if (damageType === 'magic') {
-        const blockResult = applyBlockToMagicDamage(damageTarget, amount);
-        finalDamage = blockResult.finalDamage;
-        didBlock = blockResult.didBlock;
+        finalDamage = wardResult.damage;
       }
       if (damageTarget.isEnemy) {
         finalDamage = applyArenaMarkDamageMitigation(
@@ -962,7 +973,9 @@ export class SkillExecutor {
       }
       finalDamage = mitigation.finalDamage;
       const barrierHpBefore = damageTarget.barrierHp;
-      const incoming = applyIncomingDamage(damageTarget, finalDamage);
+      const incoming = applyIncomingDamage(damageTarget, finalDamage, {
+        skipBarrier: effectDef.pierceBarrier === true,
+      });
       const { damageResult } = incoming;
       const appliedDamage =
         damageResult.hpDamage +

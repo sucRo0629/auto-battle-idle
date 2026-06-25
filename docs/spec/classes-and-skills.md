@@ -869,13 +869,29 @@ Hit と Attack は分離され、Hit 単位で追加効果やゲージ処理が�
 
 #### コンセプト
 
-シンプルな近接単体火力職。安定した攻撃性能で高 DEF の単体敵を確実に処理する。
+Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下げず**無視**し、無視した装甲を火力源に変換する。
 
 #### 役割
 
-- DEF 貫通軸の単体処理
-- 安定 DPS
-- Paladin と組んだ際の前衛 sub-defender。防御は攻撃継続のための短時間補助、または近接 counter に留める
+- 高 DEF 単体の防御突破（DEF debuff は付けない）
+- 無視 DEF 量のボーナスダメ（Lv20 パッシブ）
+- Paladin と組んだ際の前衛 sub-defender
+
+#### スキル枠（basic + passive×4 + active×4）
+
+| 枠             | ID                         | 名称       | 概要                                                                 |
+| -------------- | -------------------------- | ---------- | -------------------------------------------------------------------- |
+| basic          | `at_warrior_basic_attack`  | 斬撃       | 標準物理単体                                                         |
+| passive 1 Lv0  | `at_warrior_passive_1`     | 重装狙い   | 高 DEF 優先 `targetRuleOverride`                                     |
+| passive 2 Lv0  | `at_warrior_passive_2`     | 鎧砕き     | 常時 DEF 25% 無視                                                    |
+| passive 3 Lv10 | `at_warrior_passive_3`     | 穿甲の一撃 | DEF 100% 無視（`chance: 0.15`）                                      |
+| passive 4 Lv20 | `at_warrior_passive_4`     | 剛剣の冴え | `ignoredDefBonusDamage` — 無視 DEF × 0.5 追加ダメ                   |
+| active 1 Lv0   | `at_warrior_active_1`      | 叩き付け   | 高 HP 単体重撃 + burst ヘイト                                         |
+| active 2 Lv0   | `at_warrior_active_2`      | 薙ぎ払い   | 近接複数対応（弱め）                                                 |
+| active 3 Lv10  | `at_warrior_active_3`      | 突き通し   | BAC 7・小前進 + DEF 100% 無視単体（回転核）                          |
+| active 4 Lv20  | `at_warrior_active_4`      | 断鉄       | BAC 14・溜め斬り・DEF 100% 無視 + 全軽減貫通フラグ（回避除く）       |
+
+新 effect: `ignoredDefBonusDamage` / `pierceBarrier` / `pierceWard` / `pierceBlock` / `ignoreDamageTakenReduction`（[combat.md](combat.md) 物理ダメージ節）。
 
 #### 処理対象
 
@@ -1523,6 +1539,7 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `counter`                | `chance`, `counterResponses[]`, `counterRange?`                                                                                                                         | 常時受付。被 `damage` / `dot` で HP に入ったダメージがあるたび、射程内なら `chance` を判定し、成功時に `counterResponses` を攻撃者へ直接適用（反撃 StatusEffect は付与しない）                                                                                                                                                                                                         |
 | `damageReduction`        | `damageReductionPercent`, `damageReductionTargetRule`, `damageReductionTargetShape?`, `damageReductionRange?`, 形状別フィールド                                         | 対象に常時被ダメ軽減を付与（戦闘開始時同期）。ターゲット形状・射程はアクティブ effect と同型（接頭辞 `damageReduction`）                                                                                                                                                                                                                                                               |
 | `defenseIgnore`          | `defenseIgnore`                                                                                                                                                         | 与ダメ時の DEF / REG 無視（`damage` / `dot` でも effect 単位で指定可）                                                                                                                                                                                                                                                                                                                 |
+| `ignoredDefBonusDamage`  | `ignoredDefBonusScale`                                                                                                                                                  | 物理直接 `damage` 時、無視した DEF 量 × scale を `afterDefense` に加算（パッシブのみ）                                                                                                                                                                                                                                                                                                 |
 | `periodicDispel`         | `periodicTrigger`, `dispelTriggerLimit?`, `dispelTargetRule`, `dispelTargetShape?`, `dispelRange?`, 形状別フィールド, `dispelCount`, `dispelTags?`                      | Stage/Wave 開始時、または **対象がデバフを受けた時**（`onDebuffReceived`）にデバフ解除。`dispelTriggerLimit` = 1 Wave 内の発動上限（未指定 = 無制限）。ターゲット形状・射程はアクティブ `dispel` effect と同型（接頭辞 `dispel`）                                                                                                                                                      |
 | `aoeCrowdBonus`          | `perExtraTargetScale`, `maxExtraTargets`                                                                                                                                | `aoe` / `scatter` の追加ヒット数ボーナス                                                                                                                                                                                                                                                                                                                                               |
 | `heal`                   | `healSubKind`, `hotAmount`, `hotTargetRule`, `hotTargetShape?`, `hotRange?`, 形状別フィールド, `periodicTrigger?`, `hotDurationSec?`                                    | パッシブ `heal` は **`healSubKind: hot` のみ**（未指定 = hot）。`periodicTrigger: stageStart` / `waveStart` で開幕付与。`hotDurationSec` は付与 HoT の持続（0=無限）。ターゲット形状・射程はアクティブ heal(hot) effect と同型（接頭辞 `hot`）                                                                                                                                         |
@@ -1694,6 +1711,8 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `target`                                                     | anchor 選定（`TargetSpec`）。**射程内**のユニットのみ対象（`self` / `all` を除く）                                                                                                       |
 | `damageIncrease`                                             | 任意。`damage` / `heal` / `dot` 用条件付き倍率（`heal` は直接回復のみ）                                                                                                                  |
 | `defenseIgnore`                                              | 任意。`damage` / `dot` 用 DEF / REG 無視                                                                                                                                                 |
+| `pierceBarrier` / `pierceWard` / `pierceBlock`               | 任意。`damage` のみ。⑨後の barrier / wardBarrier / block を個別スキップ                                                                                                                  |
+| `ignoreDamageTakenReduction`                                   | 任意。`damage` のみ。⑨で `damageTakenMul` を 1.0 として計算                                                                                                                              |
 | `threatBurstFlat` / `threatBurstScale`                       | 任意。`damage` effect の追加ヘイト（`appliedDamage` 成功時）。basic には付けない。burst 用 active のみ                                                                                   |
 | `targetShape`                                                | `single`（既定）／`aoe`／`multiLock`／`pierce`／`chain`／`scatter`                                                                                                                       |
 | `aoeRadiusPx`                                                | `aoe` 必須。anchor の X から ±px                                                                                                                                                         |

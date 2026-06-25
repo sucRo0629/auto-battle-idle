@@ -185,6 +185,7 @@ const LEGACY_PASSIVE_EFFECT_ALIASES: Record<string, PassiveEffectKind> = {
   counterChance: 'counter',
   damageIncrease: 'specialEffect',
   healReceivedIncrease: 'specialEffect',
+  ignoredDefBonus: 'ignoredDefBonusDamage',
 };
 
 /** エディタ表示・保存前に旧 effect 名を新 taxonomy へ正規化 */
@@ -2393,6 +2394,11 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     if (threatBurstScale !== undefined && threatBurstScale < 0) {
       invalidField(context, 'threatBurstScale', 'must be non-negative');
     }
+    const pierceBarrier = obj.pierceBarrier === true ? true : undefined;
+    const pierceWard = obj.pierceWard === true ? true : undefined;
+    const pierceBlock = obj.pierceBlock === true ? true : undefined;
+    const ignoreDamageTakenReduction =
+      obj.ignoreDamageTakenReduction === true ? true : undefined;
     return normalizeSkillEffect({
       target,
       ...targetShapeFields,
@@ -2402,6 +2408,10 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       amount,
       ...(threatBurstFlat !== undefined ? { threatBurstFlat } : {}),
       ...(threatBurstScale !== undefined ? { threatBurstScale } : {}),
+      ...(pierceBarrier ? { pierceBarrier } : {}),
+      ...(pierceWard ? { pierceWard } : {}),
+      ...(pierceBlock ? { pierceBlock } : {}),
+      ...(ignoreDamageTakenReduction ? { ignoreDamageTakenReduction } : {}),
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
@@ -3118,6 +3128,24 @@ function requirePassiveEffectParams(
           `${context}.defenseIgnore`,
         ),
       };
+    case 'ignoredDefBonusDamage': {
+      const ignoredDefBonusScale = requireNumber(
+        obj,
+        'ignoredDefBonusScale',
+        context,
+      );
+      if (ignoredDefBonusScale < 0) {
+        invalidField(
+          context,
+          'ignoredDefBonusScale',
+          'must be non-negative',
+        );
+      }
+      return {
+        ...base,
+        ignoredDefBonusScale,
+      };
+    }
     case 'buff': {
       const buffSubKind =
         obj.buffSubKind === undefined

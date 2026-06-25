@@ -96,6 +96,18 @@ export function applyDefenseIgnoreToDef(
   return Math.max(0, afterFlat * (1 - defPercent));
 }
 
+export function getPassiveIgnoredDefBonusScale(
+  attacker: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  let scale = 0;
+  for (const passive of getPassiveDefs(attacker, passives)) {
+    if (passive.effect !== 'ignoredDefBonusDamage') continue;
+    scale += passive.ignoredDefBonusScale ?? 0;
+  }
+  return scale;
+}
+
 export function applyDefenseIgnoreToReg(
   effectiveReg: number,
   specs: Array<DefenseIgnoreSpec | undefined>,

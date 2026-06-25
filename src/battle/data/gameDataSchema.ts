@@ -305,6 +305,7 @@ export const PASSIVE_EFFECT_KINDS = [
   "lastStandGuts",
   "bloodlustDuelist",
   "duelistPride",
+  "ignoredDefBonusDamage",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -340,6 +341,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   lastStandGuts: "不屈の闘士",
   bloodlustDuelist: "流血闘志",
   duelistPride: "闘士の矜持",
+  ignoredDefBonusDamage: "無視DEFボーナス",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -681,6 +683,7 @@ export const EDITOR_PASSIVE_GENERAL_EFFECT_KINDS = [
   "damageReduction",
   "threatControl",
   "defenseIgnore",
+  "ignoredDefBonusDamage",
   "selfHpRatioBuff",
   "targetHpRatioHealScale",
   "targetRuleOverride",

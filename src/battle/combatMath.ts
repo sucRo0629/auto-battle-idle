@@ -13,6 +13,7 @@ import {
   applyDefenseIgnoreToDef,
   applyDefenseIgnoreToReg,
   getPassiveDefenseIgnoreSpec,
+  getPassiveIgnoredDefBonusScale,
   rollDefenseIgnoreSpec,
 } from './defenseIgnore.ts';
 import {
@@ -346,6 +347,8 @@ export interface DamageResolveOptions {
   effectDefenseIgnore?: DefenseIgnoreSpec;
   statusDamageIncrease?: DamageIncreaseSpec;
   statusDefenseIgnore?: DefenseIgnoreSpec;
+  /** damage effect: resolveDamage 内で damageTakenMul を 1.0 として計算 */
+  ignoreDamageTakenReduction?: boolean;
 }
 
 export function resolveDamage(
@@ -413,19 +416,23 @@ export function resolveDamage(
   ];
 
   const damageType: DamageType = effect.damageType ?? attacker.traits.damageType;
-  const effectiveDef = applyDefenseIgnoreToDef(
-    getEffectiveDef(target),
-    ignoreSpecs,
-  );
+  const ignoreDr = options.ignoreDamageTakenReduction === true;
+  const rawDef = getEffectiveDef(target);
+  const effectiveDef = applyDefenseIgnoreToDef(rawDef, ignoreSpecs);
   const effectiveReg = applyDefenseIgnoreToReg(
     getEffectiveReg(target),
     ignoreSpecs,
   );
 
   let afterDefense: number;
+  let ignoredDefBonus = 0;
   if (damageType === 'magic') {
     afterDefense = Math.floor((baseDamage * 100) / (100 + effectiveReg));
   } else {
+    const ignoredDef = Math.max(0, rawDef - effectiveDef);
+    ignoredDefBonus = Math.floor(
+      ignoredDef * getPassiveIgnoredDefBonusScale(attacker, passives),
+    );
     const afterSubtract = baseDamage - effectiveDef;
     if (afterSubtract <= 0) {
       afterDefense = 0;
@@ -436,8 +443,9 @@ export function resolveDamage(
     }
   }
 
-  const takenMul = getDamageTakenMultiplier(target);
-  return Math.max(1, Math.floor(afterDefense * takenMul));
+  const subtotal = afterDefense + ignoredDefBonus;
+  const takenMul = ignoreDr ? 1 : getDamageTakenMultiplier(target);
+  return Math.max(1, Math.floor(subtotal * takenMul));
 }
 
 export function resolveDotTick(

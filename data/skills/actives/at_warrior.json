@@ -60,8 +60,90 @@
     ]
   },
   {
+    "id": "at_warrior_active_3",
+    "name": "突き通し",
+    "trigger": {
+      "kind": "basicAttackCount",
+      "value": 7
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "move",
+        "moveMode": "toAnchor",
+        "anchorOffsetPx": 5,
+        "moveDurationSec": 0.1
+      },
+      {
+        "targetShape": "single",
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.5
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "defenseIgnore": {
+          "def": {
+            "mode": "percent",
+            "amount": 1
+          },
+          "chance": 1
+        }
+      }
+    ],
+    "vfx": {
+      "enabled": true
+    }
+  },
+  {
+    "id": "at_warrior_active_4",
+    "name": "断鉄",
+    "trigger": {
+      "kind": "basicAttackCount",
+      "value": 14
+    },
+    "useDurationSec": 1.1,
+    "effect": [
+      {
+        "targetShape": "single",
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 2.25
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "defenseIgnore": {
+          "def": {
+            "mode": "percent",
+            "amount": 1
+          },
+          "chance": 1
+        },
+        "ignoreDamageTakenReduction": true,
+        "pierceBlock": true,
+        "pierceWard": true,
+        "pierceBarrier": true
+      }
+    ],
+    "vfx": {
+      "enabled": true
+    }
+  },
+  {
     "id": "at_warrior_basic_attack",
-    "name": "at_warrior_basic_attack",
+    "name": "斬撃",
     "trigger": {
       "kind": "time",
       "value": 2

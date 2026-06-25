@@ -51,9 +51,15 @@ export function computeDamageDelayTickAmount(
   return Math.min(pool, Math.max(1, Math.floor(pool / intervals)));
 }
 
+export interface ApplyIncomingDamageOptions {
+  /** barrierHp を消費せず HP に直接適用 */
+  skipBarrier?: boolean;
+}
+
 export function applyIncomingDamage(
   target: CombatantState,
   finalDamage: number,
+  options: ApplyIncomingDamageOptions = {},
 ): IncomingDamageResult {
   if (finalDamage <= 0 || !target.isAlive || isInvulnerable(target)) {
     return {
@@ -68,7 +74,9 @@ export function applyIncomingDamage(
   const delayedDamage =
     ratio > 0 ? Math.floor(finalDamage * ratio) : 0;
   const immediateDamage = finalDamage - delayedDamage;
-  const damageResult = applyDamageToTarget(target, immediateDamage);
+  const damageResult = options.skipBarrier
+    ? applyConfirmedHpDamage(target, immediateDamage)
+    : applyDamageToTarget(target, immediateDamage);
 
   if (delayedDamage > 0) {
     target.delayedDamagePool = (target.delayedDamagePool ?? 0) + delayedDamage;

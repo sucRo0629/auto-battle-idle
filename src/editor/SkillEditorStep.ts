@@ -102,6 +102,7 @@ import {
   appendPassiveThreatControlFields,
   appendTargetSpecFields,
   appendThreatBurstFields,
+  appendDamagePierceFields,
 } from './skillEditorCombatFields.ts';
 import {
   appendGrid,
@@ -555,6 +556,9 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       break;
     case 'defenseIgnore':
       passive.defenseIgnore ??= { def: { mode: 'percent', amount: 0.2 } };
+      break;
+    case 'ignoredDefBonusDamage':
+      passive.ignoredDefBonusScale ??= 0.5;
       break;
     case 'periodicDispel':
       passive.periodicTrigger ??= 'waveStart';
@@ -2406,6 +2410,22 @@ export class SkillEditorStep {
         appendPassiveDefenseIgnoreFields(effectGrid, passive, (mutate, options) => {
           this.patchPassive(index, mutate, options);
         });
+        break;
+      case 'ignoredDefBonusDamage':
+        effectGrid.appendChild(
+          createFieldRow(
+            'ignoredDefBonusScale',
+            createNumberInput(
+              passive.ignoredDefBonusScale ?? 0.5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.ignoredDefBonusScale = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0 },
+            ),
+          ),
+        );
         break;
       case 'periodicDispel':
         appendPassiveDispelFields(
@@ -4391,6 +4411,11 @@ export class SkillEditorStep {
             effect as Extract<SkillEffectDef, { type: 'damage' }>,
             patchEffect,
           );
+          appendDamagePierceFields(
+            detailGrid,
+            effect as Extract<SkillEffectDef, { type: 'damage' }>,
+            patchEffect,
+          );
         }
         break;
       case 'heal': {
@@ -4855,6 +4880,11 @@ export class SkillEditorStep {
           (defenseIgnore, options) => {
             patchEffect((prev) => ({ ...prev, defenseIgnore }), options);
           },
+        );
+        appendDamagePierceFields(
+          detailGrid,
+          effect as Extract<SkillEffectDef, { type: 'damage' }>,
+          patchEffect,
         );
         break;
       case 'dispel':
