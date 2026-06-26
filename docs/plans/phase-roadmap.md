@@ -155,7 +155,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 | **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                | **見直し中**            |
 | **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                        | **完了**                |
 | **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish                               | **随時**（コア済）      |
-| **4d**       | パーティ編成 UI 刷新（`SkillMenuPanel`）— 画面設計は [party-formation-ui.md](../spec/party-formation-ui.md) | **未着手**（設計 v0.4） |
+| **4d**       | パーティ編成 UI 刷新（`SkillMenuPanel`）+ **状態バッジ HUD 刷新** — 画面設計は [party-formation-ui.md](../spec/party-formation-ui.md) | **未着手**（設計 v0.4） |
 
 ### クラスマスタ（見直し中）
 
@@ -243,6 +243,22 @@ data/
 - スキル: 縦セクション + 閲覧カード、効果単位改行、詳細全体スクロール
 - Picker: 3 ロールブロック・中央モーダル（タブ / サイドバー / rangePx なし）
 
+**状態バッジ（HUD）— 4d と同タイミングで実装**
+
+正本: [combat.md §ステータス効果](../spec/combat.md#ステータス効果)（HUD バッジ）、[combat.md §Damage Popup](../spec/combat.md#damage-popup)（DoT 色）。
+
+| 項目 | 仕様 |
+| --- | --- |
+| 集約 | 同一 `StatusDisplayCategory` あたり **アイコン 1 つ**（旧「stack 数ぶん横並び」例外は廃止） |
+| buff / debuff | **上向き / 下向き五角形背景** + 中央に効果アイコン。active buff = **青**、active debuff = **赤** |
+| パッシブ | buff/debuff の色相は維持し、五角形のみ **彩度・明度を下げた同系色**。アイコン縁は黒で統一（`--status-icon-passive-outline-color` は廃止） |
+| stat 系 | atk / def / reg / attackSpeed は **tint なし**（白シルエット + 黒縁）。その他 PNG は既存カラー + 黒縁のまま |
+| スタック表示 | `stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数。**1 スタックは非表示** |
+| 残時間 | 同一カテゴリ内の **最短** `remainingRatio` を、上端からの暗化オーバーレイで表示（現行方式） |
+| DoT ポップアップ | `dotFlavor: bleed` / 未指定 generic dot → **赤**。`dotFlavor: poison` → **紫**（状態バッジの debuff 五角形は赤のまま） |
+
+**実装タッチポイント:** `statusEffectDisplay.ts`, `statusBadgeRenderer.ts`, `PartyHudPanel`, `BattleCanvas`, `battle-view.css` / `battleHudTheme.ts`, `DamagePopup.ts`（DoT tick に `dotFlavor` 伝播）。
+
 **4d スコープ外**
 
 - ステージ敵構成との連動ヒント（**Phase 6**）
@@ -296,7 +312,7 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 
 | 項目         | 内容                                                                     | 状態                                                                     |
 | ------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| Damage Popup | Damage / Heal / DoT の数値のみ。頭上表示。内訳・Barrier 吸収量は出さない | 基盤済み（`DamagePopupManager`）。仕様合わせ・DoT 経路の漏れがあれば修正 |
+| Damage Popup | Damage / Heal / DoT の数値のみ。頭上表示。内訳・Barrier 吸収量は出さない | 基盤済み（`DamagePopupManager`）。**DoT フレーバー色**（出血=赤・毒=紫）は **Phase 4d** と同タイミング（[combat.md §Damage Popup](../spec/combat.md#damage-popup)） |
 | Event Popup  | v1 対象 8 種（回避・block・反撃・無敵・再起・不屈・引き寄せ・ノックバック）。Damage より上 | 基盤済み（`CombatReactionPopupManager`）。v1 対象外 Event の追加はしない |
 | レイアウト   | `damagePopupLayout` と reaction popup の Y 衝突回避を regression 化      | 未着手                                                                   |
 | HUD 境界     | Barrier 残量・Buff / Debuff は HUD のみ（ポップアップに出さない）        | 要確認                                                                   |

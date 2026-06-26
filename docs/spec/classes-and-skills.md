@@ -802,7 +802,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | 上限       | Lv0 `passive_1`: `maxStacks: 6`。Lv20 `passive_4` 習得後は合成 **`maxStacks: 9`**（複数 `herbalPotency` パッシブの `herbalPotencyMaxStacks` の **最大値**） |
 | 常時 aura  | `passive_1` の弱い party HoT（満タン時の tick 無駄は許容）                                                                                                  |
 | 体質段階   | `passive_4`: stack 閾値 3 / 6 / 9 で段階的 `hp` 乗算。**`active_4` 消費で体質段階は剥がさない**（消えるのは stack カウンタと HoT 加算のみ）                 |
-| HUD        | `overlay: herbalPotency` + `stacks`。スタック数ぶん同アイコンを横並び（`wardBarrier` の「1 アイコン + stacks フィールド」とは別）                           |
+| HUD        | `overlay: herbalPotency` + `stacks`。1 アイコン + 累積数（2 以上のみ）。[combat.md HUD バッジ](combat.md#ステータス効果) 共通ルール                         |
 
 | 枠        | 名称       | 内容                                                                                                                                                                  |
 | --------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
