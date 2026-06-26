@@ -408,6 +408,20 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 - buff/debuff `multiplier` — 乗算
 - buff/debuff `flatBonus` — 代数和（buff `+` / debuff `-`）
 - buff/debuff / CC `remainingSec` — **長い方**を採用（短い効果は上書き）
+- **DoT（`overlay: dot`）のみ例外** — 再付与時にマージせず StatusEffect を追加。各实例が独立 tick（累積）。stun 等の CC とは別扱い
+
+### DoT 圧縮・延長・持続罠（狩猟士 Field Flow）
+
+| 操作 | 対象 | 効果 |
+| ---- | ---- | ---- |
+| **dot 圧縮**（`dotCompress`） | 対象の全 dot（付与元不問） | 残り `durationSec` を `compressRatio` で短縮。tick 総ダメは `1/compressRatio` 方向に増幅（短縮のみで損にならない）。P1 基準倍率 0.7 |
+| **dot 延長**（`dotExtend`） | 対象の全 dot | 残り duration / tick 予算を `extendRatio` で延長（新規 dot 付与ではない） |
+| **placedField** | `clusterCenter` 配置 + 半径 | 進入時 `enterEffects`、滞在 tick で `stayEffects`。A3 は滞在ごとに圧縮比率 +0.05 累積 |
+| **dotHarvest** | 単体 | 各 dot 残ダメの `harvestRatio` を即時結算（dot は消費しない） |
+| **poisonSpread** | 単体の poison | 半径内他敵へ 50% duration で複製（v1: poison のみ） |
+| **仕留め**（P4 aura） | hasDot かつ HP≤50% の敵 | 被ダメ×1.2。全味方の直接 damage / dot tick に反映 |
+
+視界妨害・命中干渉・フィールド端貫通は v1 対象外。
 
 ### 通常攻撃変形（`basicAttackTransform`）
 

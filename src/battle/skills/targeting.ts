@@ -298,6 +298,7 @@ export function resolveEffectResolution(
   allSkillEffects?: readonly SkillEffectDef[],
 ): SkillEffectResolution | null {
   if (effect.type === 'conditionalEffect') return null;
+  if (effect.type === 'placedField') return null;
 
   const spec = resolveEffectTargetSpec(effect, actor, allies, enemies, passives);
 

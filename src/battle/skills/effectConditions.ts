@@ -271,6 +271,11 @@ export function evaluateCondition(
         condition.compare,
       );
     }
+    case 'hasDot': {
+      const target = resolvePrimaryTarget(ctx);
+      if (!target?.isAlive) return false;
+      return hasMatchingDebuff(target, ['dot']);
+    }
     case 'debuff': {
       const target = resolvePrimaryTarget(ctx);
       if (!target?.isAlive) return false;

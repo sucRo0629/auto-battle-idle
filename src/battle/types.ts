@@ -159,6 +159,10 @@ export type TargetSpec =
       /** 味方 side 時、最終対象に使用者を含める（既定 false） */
       includeSelf?: boolean;
     }
+  | {
+      kind: "clusterCenter";
+      side: TargetSide;
+    }
   | { kind: "stat"; side: TargetSide; stat: TargetStat; order: TargetStatOrder }
   | {
       kind: "attackType";
@@ -260,7 +264,8 @@ export type FireCondition =
       windowSec: number;
     }
   | { kind: "targetBarrierBelowGrant" }
-  | { kind: "blockResonanceStacks"; min: number };
+  | { kind: "blockResonanceStacks"; min: number }
+  | { kind: "hasDot" };
 
 export interface SkillCooldown {
   skillId: string;
@@ -392,6 +397,8 @@ export interface StatusEffect {
   displayName?: string;
   /** DoT overlay のフレーバー種別（未指定 = generic dot） */
   dotFlavor?: DotFlavor;
+  /** dot overlay: tick ダメ倍率（圧縮等の累積） */
+  dotTickDamageMul?: number;
 }
 
 /** 反撃対象の近接／遠隔帯フィルタ（OR。両方未指定 = 全区間） */
@@ -428,6 +435,7 @@ export type DamageIncreaseCondition =
       selfAppliedOnly?: boolean;
     }
   | { kind: "targetHp"; maxHpRatio: number }
+  | { kind: "hasDot" }
   | {
       kind: "attackType";
       physical?: boolean;
@@ -653,6 +661,11 @@ export type PassiveEffectKind =
   | "duelistPride"
   | "ignoredDefBonusDamage"
   | "bonusBasicAttackOnHit"
+  | "dotCompressAssist"
+  | "allyBasicAttackDotProc"
+  | "dotDurationMultiplierOnApply"
+  | "dottedEnemyHealReceivedDebuff"
+  | "conditionalEnemyDamageTakenAura"
   /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
   | "hot";
 
@@ -966,6 +979,16 @@ export interface PassiveSkillDef {
   lastStandGutsEndStunSec?: number;
   /** lastStandGuts: 終了時ノックバック px（未指定 = 15） */
   lastStandGutsEndKnockbackPx?: number;
+  /** dotCompressAssist: 基準圧縮倍率（残り duration 乗算） */
+  dotCompressRatio?: number;
+  /** dotDurationMultiplierOnApply: 味方 dot 付与時 duration 倍率 */
+  dotDurationMultiplierOnApply?: number;
+  /** dottedEnemyHealReceivedDebuff: dot 中敵の被回復倍率 */
+  dottedEnemyHealReceivedMultiplier?: number;
+  /** conditionalEnemyDamageTakenAura: 条件成立時の敵被ダメ倍率 */
+  enemyDamageTakenMultiplier?: number;
+  /** conditionalEnemyDamageTakenAura: AND 条件 */
+  auraConditions?: DamageIncreaseCondition[];
   /** bloodlustDuelist: block 率（未指定 = 0.05） */
   bloodlustBlockChance?: number;
   /** bloodlustDuelist: DEF バフ（maxBuffAtHpRatio / buffMultiplierMax） */
@@ -1003,7 +1026,12 @@ export type SkillEffectKind =
   | "blockResonanceConsume"
   | "enemyReelIn"
   | "arenaDominance"
-  | "grantNextOutgoingDamage";
+  | "grantNextOutgoingDamage"
+  | "placedField"
+  | "dotCompress"
+  | "dotExtend"
+  | "dotHarvest"
+  | "poisonSpread";
 
 export type MoveMode = "engage" | "toAnchor";
 export type DamageType = "physical" | "magic";
@@ -1404,6 +1432,57 @@ export interface GrantNextOutgoingDamageSkillEffect extends SkillEffectCommon {
   nextOutgoingDamageMultiplier?: number;
 }
 
+export interface PlacedFieldSkillEffect extends SkillEffectCommon {
+  type: "placedField";
+  fieldRadiusPx: number;
+  fieldDurationSec: number;
+  stayTickIntervalSec?: number;
+  /** 滞在 tick ごとに dotCompress 比率へ加算（A3 等） */
+  stayCompressRatioBonusPerTick?: number;
+  enterEffects?: SkillEffectDef[];
+  stayEffects?: SkillEffectDef[];
+}
+
+export interface DotCompressSkillEffect extends SkillEffectCommon {
+  type: "dotCompress";
+  compressRatio: number;
+}
+
+export interface DotExtendSkillEffect extends SkillEffectCommon {
+  type: "dotExtend";
+  extendRatio: number;
+}
+
+export interface DotHarvestSkillEffect extends SkillEffectCommon {
+  type: "dotHarvest";
+  harvestRatio: number;
+}
+
+export interface PoisonSpreadSkillEffect extends SkillEffectCommon {
+  type: "poisonSpread";
+  spreadRadiusPx: number;
+  spreadDurationRatio: number;
+  dotFlavor?: DotFlavor;
+}
+
+/** 地点指定持続範囲のランタイム实例 */
+export interface PlacedFieldInstance {
+  id: string;
+  sourceId: string;
+  skillId: string;
+  effectIndex: number;
+  centerX: number;
+  radiusPx: number;
+  remainingSec: number;
+  stayTickIntervalSec: number;
+  stayTickAccumulator: number;
+  stayCompressRatioBonus: number;
+  stayCompressRatioBonusPerTick?: number;
+  enterEffects: SkillEffectDef[];
+  stayEffects: SkillEffectDef[];
+  enteredUnitIds: Set<string>;
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -1423,7 +1502,12 @@ export type SkillEffectDef =
   | BlockResonanceConsumeSkillEffect
   | EnemyReelInSkillEffect
   | ArenaDominanceSkillEffect
-  | GrantNextOutgoingDamageSkillEffect;
+  | GrantNextOutgoingDamageSkillEffect
+  | PlacedFieldSkillEffect
+  | DotCompressSkillEffect
+  | DotExtendSkillEffect
+  | DotHarvestSkillEffect
+  | PoisonSpreadSkillEffect;
 
 /** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
 export type LegacyHotSkillEffect = HotSkillEffect;

@@ -65,6 +65,11 @@ export const SKILL_EFFECT_KINDS = [
   "enemyReelIn",
   "arenaDominance",
   "grantNextOutgoingDamage",
+  "placedField",
+  "dotCompress",
+  "dotExtend",
+  "dotHarvest",
+  "poisonSpread",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [
@@ -324,6 +329,11 @@ export const PASSIVE_EFFECT_KINDS = [
   "duelistPride",
   "ignoredDefBonusDamage",
   "bonusBasicAttackOnHit",
+  "dotCompressAssist",
+  "allyBasicAttackDotProc",
+  "dotDurationMultiplierOnApply",
+  "dottedEnemyHealReceivedDebuff",
+  "conditionalEnemyDamageTakenAura",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -364,6 +374,11 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   duelistPride: "闘士の矜持",
   ignoredDefBonusDamage: "無視DEFボーナス",
   bonusBasicAttackOnHit: "追加通常攻撃",
+  dotCompressAssist: "DoT圧縮補助",
+  allyBasicAttackDotProc: "味方通常攻撃DoT",
+  dotDurationMultiplierOnApply: "DoT付与時間倍率",
+  dottedEnemyHealReceivedDebuff: "DoT中被回復減",
+  conditionalEnemyDamageTakenAura: "条件付き被ダメ aura",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -630,6 +645,7 @@ export const FIRE_CONDITION_KINDS = [
   "pendingIncomingDamage",
   "targetBarrierBelowGrant",
   "blockResonanceStacks",
+  "hasDot",
 ] as const satisfies readonly FireConditionKind[];
 
 export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
@@ -645,6 +661,7 @@ export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
   pendingIncomingDamage: "先読み被ダメ",
   targetBarrierBelowGrant: "付与量>現バリア",
   blockResonanceStacks: "迎撃スタック",
+  hasDot: "DoT中",
 };
 
 export const FIRE_CONDITION_KIND_OPTIONS: FireConditionKind[] = [
@@ -895,6 +912,7 @@ export const DAMAGE_INCREASE_CONDITION_KINDS = [
   "debuff",
   "targetHp",
   "attackType",
+  "hasDot",
 ] as const satisfies readonly DamageIncreaseCondition["kind"][];
 
 export const DAMAGE_INCREASE_CONDITION_KIND_LABELS: Record<
@@ -904,6 +922,7 @@ export const DAMAGE_INCREASE_CONDITION_KIND_LABELS: Record<
   debuff: "デバフ",
   targetHp: "対象HP",
   attackType: "攻撃種別",
+  hasDot: "DoT中",
 };
 
 export const DEFENSE_IGNORE_DEF_MODES = ["flat", "percent"] as const;

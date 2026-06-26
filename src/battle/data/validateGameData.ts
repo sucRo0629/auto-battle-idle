@@ -1423,6 +1423,10 @@ function parseDamageIncreaseCondition(
     };
   }
 
+  if (kind === 'hasDot') {
+    return { kind: 'hasDot' };
+  }
+
   invalidField(context, 'kind', `unsupported condition kind: ${kind}`);
 }
 
@@ -1514,6 +1518,9 @@ function parseFireCondition(raw: unknown, context: string): FireCondition {
       invalidField(context, 'min', 'must be a positive integer');
     }
     return { kind: 'blockResonanceStacks', min };
+  }
+  if (kind === 'hasDot') {
+    return { kind: 'hasDot' };
   }
   invalidField(context, 'kind', `unsupported fire condition kind: ${kind}`);
 }
@@ -1703,6 +1710,13 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
   const obj = requireRecord(raw, context);
   const kind = obj.kind;
   if (kind === 'self') return { kind: 'self' };
+  if (kind === 'clusterCenter') {
+    const side = normalizeTargetSide(
+      requireEnum(obj, 'side', context, new Set(['ally', 'enemy', 'player'])),
+      context,
+    );
+    return { kind: 'clusterCenter', side };
+  }
   if (kind === 'all') {
     const side = normalizeTargetSide(
       requireEnum(obj, 'side', context, new Set(['ally', 'enemy', 'player'])),
@@ -2508,6 +2522,130 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         : {}),
       ...sequenceTiming,
       ...presentation,
+    });
+  }
+  if (typeRaw === 'placedField') {
+    const target = parseEffectTarget(obj, context);
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    const range = parseOptionalRange(obj, context);
+    const fieldRadiusPx = requireNumber(obj, 'fieldRadiusPx', context);
+    const fieldDurationSec = requireNumber(obj, 'fieldDurationSec', context);
+    if (fieldRadiusPx <= 0 || fieldDurationSec <= 0) {
+      invalidField(context, 'fieldRadiusPx/fieldDurationSec', 'must be positive');
+    }
+    const stayTickIntervalSec = parseOptionalNumber(
+      obj,
+      'stayTickIntervalSec',
+      context,
+    );
+    const stayCompressRatioBonusPerTick = parseOptionalNumber(
+      obj,
+      'stayCompressRatioBonusPerTick',
+      context,
+    );
+    const enterEffects = obj.enterEffects === undefined
+      ? []
+      : parseBranchEffects(obj.enterEffects, context, 'enterEffects');
+    const stayEffects = obj.stayEffects === undefined
+      ? []
+      : parseBranchEffects(obj.stayEffects, context, 'stayEffects');
+    return normalizeSkillEffect({
+      type: 'placedField',
+      target,
+      fieldRadiusPx,
+      fieldDurationSec,
+      ...(stayTickIntervalSec !== undefined ? { stayTickIntervalSec } : {}),
+      ...(stayCompressRatioBonusPerTick !== undefined
+        ? { stayCompressRatioBonusPerTick }
+        : {}),
+      enterEffects,
+      stayEffects,
+      ...sequenceTiming,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    });
+  }
+  if (typeRaw === 'dotCompress') {
+    const target = parseEffectTarget(obj, context);
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    const range = parseOptionalRange(obj, context);
+    const compressRatio = requireNumber(obj, 'compressRatio', context);
+    if (compressRatio <= 0 || compressRatio > 1) {
+      invalidField(context, 'compressRatio', 'must be between 0 and 1');
+    }
+    return normalizeSkillEffect({
+      type: 'dotCompress',
+      target,
+      compressRatio,
+      ...sequenceTiming,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    });
+  }
+  if (typeRaw === 'dotExtend') {
+    const target = parseEffectTarget(obj, context);
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    const range = parseOptionalRange(obj, context);
+    const extendRatio = requireNumber(obj, 'extendRatio', context);
+    if (extendRatio <= 1) {
+      invalidField(context, 'extendRatio', 'must be greater than 1');
+    }
+    return normalizeSkillEffect({
+      type: 'dotExtend',
+      target,
+      extendRatio,
+      ...sequenceTiming,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    });
+  }
+  if (typeRaw === 'dotHarvest') {
+    const target = parseEffectTarget(obj, context);
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    const range = parseOptionalRange(obj, context);
+    const harvestRatio = requireNumber(obj, 'harvestRatio', context);
+    if (harvestRatio <= 0 || harvestRatio > 1) {
+      invalidField(context, 'harvestRatio', 'must be between 0 and 1');
+    }
+    return normalizeSkillEffect({
+      type: 'dotHarvest',
+      target,
+      harvestRatio,
+      ...sequenceTiming,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
+    });
+  }
+  if (typeRaw === 'poisonSpread') {
+    const target = parseEffectTarget(obj, context);
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    const range = parseOptionalRange(obj, context);
+    const spreadRadiusPx = requireNumber(obj, 'spreadRadiusPx', context);
+    const spreadDurationRatio = requireNumber(obj, 'spreadDurationRatio', context);
+    if (spreadRadiusPx <= 0) {
+      invalidField(context, 'spreadRadiusPx', 'must be positive');
+    }
+    if (spreadDurationRatio <= 0 || spreadDurationRatio > 1) {
+      invalidField(context, 'spreadDurationRatio', 'must be between 0 and 1');
+    }
+    const dotFlavor =
+      obj.dotFlavor === undefined
+        ? undefined
+        : requireEnum(obj, 'dotFlavor', context, new Set(['poison', 'bleed']));
+    return normalizeSkillEffect({
+      type: 'poisonSpread',
+      target,
+      spreadRadiusPx,
+      spreadDurationRatio,
+      ...(dotFlavor !== undefined ? { dotFlavor } : {}),
+      ...sequenceTiming,
+      ...presentation,
+      ...(range !== undefined ? { range } : {}),
     });
   }
   const type = requireEnum(obj, 'type', context, SKILL_EFFECTS);
@@ -4311,6 +4449,130 @@ function requirePassiveEffectParams(
           ? { ballistaMarkSelfAttackSpeedMul }
           : {}),
         ...(targetRuleOverride !== undefined ? { targetRuleOverride } : {}),
+      };
+    }
+    case 'dotCompressAssist': {
+      const dotCompressRatio = requireNumber(obj, 'dotCompressRatio', context);
+      if (dotCompressRatio <= 0 || dotCompressRatio > 1) {
+        invalidField(context, 'dotCompressRatio', 'must be between 0 and 1');
+      }
+      return { ...base, dotCompressRatio };
+    }
+    case 'allyBasicAttackDotProc': {
+      const chance = requireNumber(obj, 'chance', context);
+      if (chance <= 0 || chance > 1) {
+        invalidField(context, 'chance', 'must be between 0 and 1');
+      }
+      const debuffDotDurationSec = requireNumber(
+        obj,
+        'debuffDotDurationSec',
+        context,
+      );
+      if (debuffDotDurationSec <= 0) {
+        invalidField(context, 'debuffDotDurationSec', 'must be positive');
+      }
+      const debuffDotAmount = parseResourceAmountSpec(
+        obj.debuffDotAmount,
+        `${context}.debuffDotAmount`,
+      );
+      const debuffDotDamageType =
+        obj.debuffDotDamageType === undefined
+          ? undefined
+          : requireEnum(obj, 'debuffDotDamageType', context, DAMAGE_TYPES_SET);
+      const debuffDotFlavor =
+        obj.debuffDotFlavor === undefined
+          ? undefined
+          : requireEnum(obj, 'debuffDotFlavor', context, new Set(['poison', 'bleed']));
+      return {
+        ...base,
+        chance,
+        debuffDotDurationSec,
+        debuffDotAmount,
+        ...(debuffDotDamageType !== undefined ? { debuffDotDamageType } : {}),
+        ...(debuffDotFlavor !== undefined ? { debuffDotFlavor } : {}),
+      };
+    }
+    case 'dotDurationMultiplierOnApply': {
+      const dotDurationMultiplierOnApply = requireNumber(
+        obj,
+        'dotDurationMultiplierOnApply',
+        context,
+      );
+      if (dotDurationMultiplierOnApply <= 0) {
+        invalidField(
+          context,
+          'dotDurationMultiplierOnApply',
+          'must be positive',
+        );
+      }
+      const dottedEnemyHealReceivedMultiplier = parseOptionalNumber(
+        obj,
+        'dottedEnemyHealReceivedMultiplier',
+        context,
+      );
+      if (
+        dottedEnemyHealReceivedMultiplier !== undefined &&
+        (dottedEnemyHealReceivedMultiplier <= 0 ||
+          dottedEnemyHealReceivedMultiplier > 1)
+      ) {
+        invalidField(
+          context,
+          'dottedEnemyHealReceivedMultiplier',
+          'must be between 0 and 1',
+        );
+      }
+      return {
+        ...base,
+        dotDurationMultiplierOnApply,
+        ...(dottedEnemyHealReceivedMultiplier !== undefined
+          ? { dottedEnemyHealReceivedMultiplier }
+          : {}),
+      };
+    }
+    case 'dottedEnemyHealReceivedDebuff': {
+      const dottedEnemyHealReceivedMultiplier = requireNumber(
+        obj,
+        'dottedEnemyHealReceivedMultiplier',
+        context,
+      );
+      if (
+        dottedEnemyHealReceivedMultiplier <= 0 ||
+        dottedEnemyHealReceivedMultiplier > 1
+      ) {
+        invalidField(
+          context,
+          'dottedEnemyHealReceivedMultiplier',
+          'must be between 0 and 1',
+        );
+      }
+      return { ...base, dottedEnemyHealReceivedMultiplier };
+    }
+    case 'conditionalEnemyDamageTakenAura': {
+      const enemyDamageTakenMultiplier = requireNumber(
+        obj,
+        'enemyDamageTakenMultiplier',
+        context,
+      );
+      if (enemyDamageTakenMultiplier <= 0) {
+        invalidField(
+          context,
+          'enemyDamageTakenMultiplier',
+          'must be positive',
+        );
+      }
+      const auraConditions =
+        obj.auraConditions === undefined
+          ? undefined
+          : (obj.auraConditions as unknown[]).map((entry, index) =>
+              parseDamageIncreaseCondition(
+                entry,
+                `${context}.auraConditions[${index}]`,
+              ),
+            );
+      return {
+        ...base,
+        enemyDamageTakenMultiplier,
+        ...(auraConditions !== undefined ? { auraConditions } : {}),
       };
     }
     case 'healReservation': {

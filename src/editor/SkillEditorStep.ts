@@ -630,6 +630,29 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.ballistaMarkSplashDamageScale ??= 0.3;
       passive.ballistaMarkSelfAttackSpeedMul ??= 0.85;
       break;
+    case 'dotCompressAssist':
+      passive.dotCompressRatio ??= 0.7;
+      break;
+    case 'allyBasicAttackDotProc':
+      passive.chance ??= 0.2;
+      passive.debuffDotDurationSec ??= 5;
+      passive.debuffDotAmount ??= defaultResourceAmount(10, 'flat');
+      passive.debuffDotDamageType ??= 'magic';
+      passive.debuffDotFlavor ??= 'poison';
+      break;
+    case 'dotDurationMultiplierOnApply':
+      passive.dotDurationMultiplierOnApply ??= 1.5;
+      break;
+    case 'dottedEnemyHealReceivedDebuff':
+      passive.dottedEnemyHealReceivedMultiplier ??= 0.8;
+      break;
+    case 'conditionalEnemyDamageTakenAura':
+      passive.enemyDamageTakenMultiplier ??= 1.2;
+      passive.auraConditions ??= [
+        { kind: 'hasDot' },
+        { kind: 'targetHp', maxHpRatio: 0.5 },
+      ];
+      break;
     case 'healReservation':
       passive.grantOnHealMaxHpRatio ??= 0.6;
       passive.stackDurationSec ??= 8;

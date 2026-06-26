@@ -33,6 +33,7 @@ import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
 import { resolveIdleAtkRampMultiplier } from './idleAtkRamp.ts';
 import { consumeNextOutgoingDamageMultiplier } from './nextOutgoingDamage.ts';
 import { resolveTargetHpRatioDamageScale } from './targetHpRatioDamageScale.ts';
+import { resolvePartyFinisherDamageMultiplier } from './hunterPassives.ts';
 
 export function getPassiveDefs(
   combatant: CombatantState,
@@ -199,6 +200,8 @@ export interface DotTickOptions {
   effectDamageIncrease?: DamageIncreaseSpec;
   effectDefenseIgnore?: DefenseIgnoreSpec;
   statusEffect?: StatusEffect;
+  dotTickDamageMul?: number;
+  allies?: CombatantState[];
 }
 
 export function resolveDotAmountFromStatus(
@@ -206,6 +209,7 @@ export function resolveDotAmountFromStatus(
   target: CombatantState,
   effect: StatusEffect,
   passives: Record<string, PassiveSkillDef>,
+  allies: CombatantState[] = [],
 ): number {
   const baseSpec =
     effect.amount ??
@@ -227,6 +231,8 @@ export function resolveDotAmountFromStatus(
       effectDamageIncrease: effect.damageIncrease,
       effectDefenseIgnore: effect.defenseIgnore,
       statusEffect: effect,
+      dotTickDamageMul: effect.dotTickDamageMul,
+      allies,
     },
   );
 }
@@ -457,8 +463,16 @@ export function resolveDamage(
   }
 
   const subtotal = afterDefense + ignoredDefBonus;
+  const finisherMul =
+    target.isEnemy && context.allies && context.allies.length > 0
+      ? resolvePartyFinisherDamageMultiplier(
+          target,
+          context.allies,
+          passives,
+        )
+      : 1;
   const takenMul = ignoreDr ? 1 : getDamageTakenMultiplier(target);
-  return Math.max(1, Math.floor(subtotal * takenMul));
+  return Math.max(1, Math.floor(subtotal * takenMul * finisherMul));
 }
 
 export function resolveDotTick(
@@ -470,6 +484,14 @@ export function resolveDotTick(
   options: DotTickOptions = {},
 ): number {
   const status = options.statusEffect;
+  const tickMul = options.dotTickDamageMul ?? 1;
+  const scaledAmount: ResourceAmountSpec =
+    tickMul === 1 || amount.kind !== 'atkBased'
+      ? amount
+      : {
+          ...amount,
+          atkScale: (amount.atkScale ?? 1) * tickMul,
+        };
   return resolveDamage(
     source,
     target,
@@ -477,7 +499,7 @@ export function resolveDotTick(
       type: 'damage',
       target: { kind: 'distance', side: 'enemy', order: 'nearest' },
       damageType,
-      amount,
+      amount: scaledAmount,
     },
     passives,
     {
@@ -485,6 +507,9 @@ export function resolveDotTick(
         options.effectDamageIncrease ?? status?.damageIncrease,
       effectDefenseIgnore:
         options.effectDefenseIgnore ?? status?.defenseIgnore,
+      passiveContext: {
+        allies: options.allies,
+      },
     },
   );
 }

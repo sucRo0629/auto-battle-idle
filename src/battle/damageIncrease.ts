@@ -20,6 +20,8 @@ export function evaluateDamageIncreaseCondition(
       });
     case 'targetHp':
       return currentHpRatio(target) <= condition.maxHpRatio;
+    case 'hasDot':
+      return hasMatchingDebuff(target, ['dot']);
     case 'attackType':
       return matchesAttackType(target, condition);
   }

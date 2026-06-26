@@ -451,11 +451,35 @@
     "jobTier": 1,
     "attackSpeedTier": "normal",
     "basicAttackSkillId": "at_hunter_basic_attack",
-    "passiveIds": [],
+    "passiveIds": [
+      "at_hunter_passive_1",
+      "at_hunter_passive_2",
+      "at_hunter_passive_3",
+      "at_hunter_passive_4"
+    ],
     "skills": [
       {
         "level": 0,
-        "skillIds": []
+        "skillIds": [
+          "at_hunter_passive_1",
+          "at_hunter_passive_2",
+          "at_hunter_active_1",
+          "at_hunter_active_2"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "at_hunter_passive_3",
+          "at_hunter_active_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "at_hunter_passive_4",
+          "at_hunter_active_4"
+        ]
       }
     ],
     "growthTier": {

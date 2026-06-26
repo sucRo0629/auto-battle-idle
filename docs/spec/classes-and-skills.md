@@ -523,7 +523,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura | 号令／崩勢／鼓舞／追撃  |
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                    | 連射／連ね矢          |
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 高 Max HP 狙い + 待機蓄積 + 砲撃標的           | 破城矢装填／重矢          |
-| `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | — （未実装）                                  | （未実装）            |
+| `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | DoT 圧縮補助 + 味方 basic 毒 proc              | 毒罠／粘着罠／追い込み／毒収穫 |
 | `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | —（未実装）                                   | （未実装）            |
 | `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | —（未実装）                                   | （未実装・JSON 廃棄） |
 | `at_conductor` | 法陣師 | Conductor | back  | 遠隔魔法 | —（未実装）                                   | （未実装・JSON 廃棄） |
@@ -1096,15 +1096,14 @@ Kill 対象を持たない **Position Flow / 戦線指揮** 職。位置取り�
 
 #### コンセプト
 
-視界妨害・罠・範囲 DoT（時間圧縮型）によって敵の行動精度と戦闘テンポを崩し、戦場そのものの“進行速度”を制御する制圧型遠隔職。
+毒（poison）と局所持続範囲（placedField）で戦場の DoT 密度と時間圧縮を操作する **Field Flow** 遠隔職。視界妨害・命中干渉は v1 対象外。
 
 #### 役割
 
-- 視界・命中干渉による認知妨害（敵のターゲット精度低下）
-- 罠設置による局所エリア制御（行動誘導・拘束）
-- 範囲 DoT（毒・出血）による持続圧力付与
-- DoT の残り時間圧縮による戦闘テンポ操作
-- 局所的な戦闘密度のコントロール
+- 味方 basic 経由の poison 付与（P2）と唯一のアクティブ毒付与（A1）
+- 持続罠による dot 再付与・延長・圧縮（A1/A2/A3）
+- dot 中敵への回復抑制・仕留め被ダメ補正（P3/P4）
+- 毒収穫と poison 蔓延による dot 再分配（A4）
 
 #### 処理対象
 
@@ -1112,8 +1111,21 @@ Kill 対象を持たない **Position Flow / 戦線指揮** 職。位置取り�
 
 #### 立ち位置
 
-遠隔物理の**Field Flow（局所戦場制御）担当**。  
-直接的な撃破性能ではなく、敵の行動精度と戦闘速度を崩すことで戦況優位を作る制圧職。
+Hunter = poison Field（P2/A1）+ 任意 dot 延長・圧縮（A2/A3）+ 毒収穫再分配（A4）+ 仕留め補正（P4）の Field Flow。
+
+#### スキル枠（basic + passive×4 + active×4）
+
+| 枠             | ID                       | 名称     | 効果形状（確定方針）                                                                 |
+| -------------- | ------------------------ | -------- | ------------------------------------------------------------------------------------ |
+| basic          | `at_hunter_basic_attack` | 通常射撃 | 物理単体 nearest。dot・罠補助なし                                                    |
+| passive 1 Lv0  | `at_hunter_passive_1`    | 濃縮毒   | 狩猟士の dot 圧縮基準倍率 0.7（`dotCompressAssist`）                                 |
+| passive 2 Lv0  | `at_hunter_passive_2`    | 毒の武器 | 味方全員 basic 命中 20% で poison dot（flat 10 / magic / 5s）                        |
+| passive 3 Lv10 | `at_hunter_passive_3`    | 癒えぬ傷 | dot 中敵 heal×0.8 + 全味方 dot 付与 duration×1.5                                       |
+| passive 4 Lv20 | `at_hunter_passive_4`    | 仕留め時 | hasDot かつ HP≤50% 敵への被ダメ×1.2（全味方与ダメ。[combat.md](combat.md) §仕留め） |
+| active 1 Lv0   | `at_hunter_active_1`     | 毒罠     | clusterCenter + placedField 70px / 5s。poison dot。滞在 1s 再付与（累積）            |
+| active 2 Lv0   | `at_hunter_active_2`     | 粘着罠   | placedField 70px / 8s。stun 1.5s。滞在 2s dot 延長                                   |
+| active 3 Lv10  | `at_hunter_active_3`     | 追い込み | placedField 150px / 10s。基礎 dot 圧縮 0.5 + 滞在 1s +0.05                           |
+| active 4 Lv20  | `at_hunter_active_4`     | 毒収穫   | smart 単体 dotHarvest 10% + poisonSpread 70px 50% duration                           |
 
 ---
 
@@ -1134,7 +1146,7 @@ Kill 対象を持たない **Position Flow / 戦線指揮** 職。位置取り�
 - Hit / Attack / Gauge の厳密な内部仕様ドキュメント化（[combat.md](combat.md) への反映含む）
 - 優先ターゲット AI の詳細アルゴリズム（ターゲット選択優先順位ロジック）
 - 弩砲士: ~~フィールド貫通ライン仕様、Lv0 `passive_2` 以降の具体設計~~ **Physical pass B 実装済**（[弩砲士節](#弩砲士at_ballista拡張遠隔)）
-- 狩猟士: 範囲 DoT・範囲ノックバック（1.5 秒移動硬直）の combat 実装と `data/skills/` への反映
+- 狩猟士: ~~範囲 DoT・範囲ノックバック~~ **Physical pass B 実装済**（[狩猟士節](#狩猟士at_hunter変則遠隔)）
 
 ## クラスキャスター設計方針
 
@@ -1587,7 +1599,7 @@ interface CharacterBuild {
 | サブ種別 (`debuffSubKind`) | 対象・効果                                                                  | 主なパラメータ                                          | 重複・スタックルール                                                | 備考                                                                                                                         |
 | :------------------------- | :-------------------------------------------------------------------------- | :------------------------------------------------------ | :------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------- |
 | `stat`                     | ステータス（`hp`, `atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の低下 | `debuffStat`<br>`debuffMultiplier`<br>`debuffFlatBonus` | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。 | `hp` は maxHp 低下（`effectiveMaxHp`）。`damageTaken` の増加（被ダメ UP）や `attackSpeed` の低下（スロウ）もこれに含みます。 |
-| `dot`                      | 持続ダメージ（Damage over Time）を付与                                      | `ResourceAmountSpec`<br>`dotFlavor?`（`bleed` / `poison`） | 同一効果は持続時間の長い方を優先。                                  | 1 秒ごとにダメージを再計算。`dotFlavor` 未指定 = 汎用 DoT。HUD はフレーバー別アイコン（`bleed` / `poison` / 未指定 `dot`）。 |
+| `dot`                      | 持続ダメージ（Damage over Time）を付与                                      | `ResourceAmountSpec`<br>`dotFlavor?`（`bleed` / `poison`） | **累積**: 同一対象へ独立 StatusEffect を追加し各实例が tick（stat/stun 等は長い方優先） | 1 秒ごとにダメージを再計算。`dotFlavor` 未指定 = 汎用 DoT。HUD はフレーバー別アイコン（`bleed` / `poison` / 未指定 `dot`）。 |
 | `stun`                     | 行動不能（CC）状態にする                                                    | `durationSec`（上限 5 秒）                              | 持続時間の長い方を優先。                                            | 使用者として通常攻撃・アクティブ発動・ターゲット選択不可。CD は停止しない。                                                  |
 | `freeze`                   | 時間停止系拘束（予約概念）                                                  | 未定                                                    | 未定                                                                | CD 停止が必要な場合は stun ではなく別状態として定義する。現行 JSON では未使用。                                              |
 

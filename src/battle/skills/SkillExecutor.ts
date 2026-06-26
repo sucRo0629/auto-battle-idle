@@ -76,6 +76,22 @@ import {
   resolveBallistaMarkSourceId,
   resolveBallistaMarkSplashDamage,
 } from '../ballistaMark.ts';
+import {
+  collectAllyBasicAttackDotProcs,
+  rollAllyBasicAttackDotProc,
+} from '../allyBasicAttackDotProc.ts';
+import {
+  clonePoisonDotForSpread,
+  compressAllDotsOnUnit,
+  extendAllDotsOnUnit,
+  harvestDotRemainingDamage,
+  resolveDotDurationOnApply,
+  resolveHunterDotCompressRatio,
+} from '../dotMechanics.ts';
+import {
+  spawnPlacedField,
+  resolvePlacedFieldCenterX,
+} from '../placedField.ts';
 import { resetIdleAtkRampOnAttack } from '../idleAtkRamp.ts';
 import {
   scheduleNextOutgoingDamageCharge,
@@ -190,6 +206,7 @@ export interface SkillExecutorDeps {
   onHealApplied?: (target: CombatantState) => void;
   onUnitDied?: (unit: CombatantState) => void;
   onLastStandGuts?: (targetId: string) => void;
+  addPlacedField?: (field: import('../types.ts').PlacedFieldInstance) => void;
   onBattleXChanged?: (
     unit: CombatantState,
     beforeX: number,
@@ -418,6 +435,37 @@ export class SkillExecutor {
       if (stacks <= 0) return false;
       this.blockResonanceStacksConsumed.set(actor.id, stacks);
       applyBlockResonanceStance(actor, skill, stacks);
+      return true;
+    }
+
+    if (effectDef.type === 'placedField') {
+      const centerX = resolvePlacedFieldCenterX(actor, effectDef, enemies);
+      if (centerX === null) return false;
+      const field = spawnPlacedField(
+        actor,
+        skill,
+        effectDef,
+        centerX,
+        effectIndex,
+        allies,
+        enemies,
+        Object.fromEntries(passives.map((p) => [p.id, p])),
+        this.gameData.skillRegistry.actives,
+        (target) => this.deps.onTargetReceivedDebuff?.(target),
+      );
+      this.deps.addPlacedField?.(field);
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: actor.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'placedField',
+        effectIndex,
+        range: effectDef.range,
+        ...skillHitEventFields(undefined, undefined),
+      });
       return true;
     }
 
@@ -796,8 +844,128 @@ export class SkillExecutor {
       return false;
     }
 
-    if (effectDef.type === 'move') {
-      return false;
+    if (effectDef.type === 'dotHarvest') {
+      const passives = this.gameData.skillRegistry.passives;
+      const harvestAmount = harvestDotRemainingDamage(
+        actor,
+        target,
+        passives,
+        effectDef.harvestRatio,
+      );
+      if (harvestAmount <= 0) return false;
+      const damageResult = applyConfirmedHpDamage(target, harvestAmount);
+      const applied = damageResult.hpDamage + damageResult.barrierDamage;
+      if (applied <= 0) return false;
+      this.deps.onDamageApplied?.(actor, target, applied, {
+        attackKind: 'damage',
+        hpDamage: damageResult.hpDamage,
+        attackRangePx: effectDef.range ?? actor.traits.rangePx,
+      });
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'dotHarvest',
+        effectIndex,
+        amount: harvestAmount,
+        range: effectDef.range,
+        ...skillHitEventFields(hitIndex, vfxSourceId),
+      });
+      this.emit({ type: 'hurt', targetId: target.id });
+      if (damageResult.lethal) {
+        target.isAlive = false;
+        this.deps.getSequenceRunner().clearForActor(target.id);
+        this.deps.onUnitDied?.(target);
+        this.emit({ type: 'death', targetId: target.id });
+      }
+      return true;
+    }
+
+    if (effectDef.type === 'poisonSpread') {
+      const poisonDots = target.statusEffects.filter(
+        (e) => e.overlay === 'dot' && e.dotFlavor === 'poison' && e.remainingSec > 0,
+      );
+      if (poisonDots.length === 0) return false;
+      const hostiles = this.deps
+        .getAllCombatants()
+        .filter((u) => u.isEnemy && u.id !== target.id && u.isAlive);
+      let spreadCount = 0;
+      for (const enemy of hostiles) {
+        if (
+          Math.abs(enemy.battleX - target.battleX) > effectDef.spreadRadiusPx
+        ) {
+          continue;
+        }
+        for (const dot of poisonDots) {
+          const clone = clonePoisonDotForSpread(
+            dot,
+            actor.id,
+            skill.id,
+            effectDef.spreadDurationRatio,
+          );
+          if (!clone) continue;
+          enemy.statusEffects.push(clone);
+          spreadCount++;
+        }
+      }
+      if (spreadCount === 0) return false;
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'poisonSpread',
+        effectIndex,
+        range: effectDef.range,
+        ...skillHitEventFields(hitIndex, vfxSourceId),
+      });
+      return true;
+    }
+
+    if (effectDef.type === 'dotCompress') {
+      const passives = this.gameData.skillRegistry.passives;
+      const ratio = resolveHunterDotCompressRatio(
+        actor,
+        passives,
+        effectDef.compressRatio,
+      );
+      if (compressAllDotsOnUnit(target, ratio) <= 0) return false;
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'dotCompress',
+        effectIndex,
+        range: effectDef.range,
+        ...skillHitEventFields(hitIndex, vfxSourceId),
+      });
+      this.deps.onTargetReceivedDebuff?.(target);
+      return true;
+    }
+
+    if (effectDef.type === 'dotExtend') {
+      if (extendAllDotsOnUnit(target, effectDef.extendRatio) <= 0) return false;
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: target.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'dotExtend',
+        effectIndex,
+        range: effectDef.range,
+        ...skillHitEventFields(hitIndex, vfxSourceId),
+      });
+      return true;
     }
 
     if (effectDef.type === 'enemyReelIn') {
@@ -854,8 +1022,8 @@ export class SkillExecutor {
 
     if (effectDef.type === 'damage') {
       const passives = this.gameData.skillRegistry.passives;
-      const allies = this.deps.getAllCombatants().filter((unit) => !unit.isEnemy);
-      const coverResult = resolveLowHpCoverTarget(target, allies, passives);
+      const partyAllies = this.deps.getAllCombatants().filter((u) => !u.isEnemy);
+      const coverResult = resolveLowHpCoverTarget(target, partyAllies, passives);
       const damageTarget = coverResult.target;
 
       if (rollsEvasion(damageTarget, passives)) {
@@ -881,7 +1049,7 @@ export class SkillExecutor {
         passives,
         {
           atkScaleOverride: powerMultiplierOverride,
-          passiveContext: damageContext,
+          passiveContext: { ...damageContext, allies: partyAllies },
           effectDamageIncrease: effectDef.damageIncrease,
           effectDefenseIgnore: effectDef.defenseIgnore,
           ignoreDamageTakenReduction:
@@ -1012,7 +1180,7 @@ export class SkillExecutor {
         }
       }
       const mitigation = mitigateIncomingDamage(damageTarget, finalDamage, passives, {
-        allies,
+        allies: partyAllies,
       });
       if (mitigation.lastStandTriggered) {
         this.emit({ type: 'invulnerable', targetId: damageTarget.id });
@@ -1133,6 +1301,41 @@ export class SkillExecutor {
         this.deps.getSequenceRunner().clearForActor(damageTarget.id);
         this.deps.onUnitDied?.(damageTarget);
         this.emit({ type: 'death', targetId: damageTarget.id });
+      }
+      if (
+        cd.slotKind === 'basic' &&
+        appliedDamage > 0 &&
+        damageTarget.isEnemy &&
+        damageTarget.isAlive
+      ) {
+        const dotProcs = collectAllyBasicAttackDotProcs(
+          partyAllies,
+          passives,
+        );
+        const proc = rollAllyBasicAttackDotProc(dotProcs);
+        if (proc) {
+          const procDuration = resolveDotDurationOnApply(
+            partyAllies,
+            passives,
+            proc.durationSec,
+          );
+          const appliedAt = Date.now();
+          damageTarget.statusEffects.push({
+            id: `${proc.passiveId}_proc_dot_${appliedAt}`,
+            kind: 'debuff',
+            overlay: 'dot',
+            multiplier: 1,
+            durationSec: procDuration,
+            remainingSec: procDuration,
+            amount: proc.amount,
+            sourceId: actor.id,
+            skillId: skill.id,
+            damageType: proc.damageType,
+            tickSec: 1,
+            dotFlavor: proc.dotFlavor,
+          });
+          this.deps.onTargetReceivedDebuff?.(damageTarget);
+        }
       }
       if (
         cd.slotKind === 'basic' &&
@@ -1619,8 +1822,16 @@ export class SkillExecutor {
       if (effectDef.type === 'debuff') {
         const subKind = effectDef.debuffSubKind ?? 'stat';
         if (subKind === 'dot') {
-          const duration = effectDef.durationSec ?? 0;
+          const baseDuration = effectDef.durationSec ?? 0;
           const passives = this.gameData.skillRegistry.passives;
+          const partyAllies = this.deps
+            .getAllCombatants()
+            .filter((u) => !u.isEnemy);
+          const duration = resolveDotDurationOnApply(
+            partyAllies,
+            passives,
+            baseDuration,
+          );
           const baseSpec =
             effectDef.amount ??
             (effectDef.powerMultiplier !== undefined &&

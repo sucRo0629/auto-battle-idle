@@ -146,6 +146,8 @@ function formatFireConditionSummary(condition: FireCondition): string {
       return "付与量>現バリア";
     case "blockResonanceStacks":
       return `迎撃stack≥${condition.min}`;
+    case "hasDot":
+      return FIRE_CONDITION_KIND_LABELS.hasDot;
   }
 }
 
@@ -733,6 +735,25 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       }
       break;
     }
+    case "placedField": {
+      extras.push(`${effect.fieldRadiusPx}px/${effect.fieldDurationSec}s`);
+      if (effect.stayTickIntervalSec !== undefined) {
+        extras.push(`滞在${effect.stayTickIntervalSec}s`);
+      }
+      break;
+    }
+    case "dotCompress":
+      extras.push(`圧縮×${effect.compressRatio}`);
+      break;
+    case "dotExtend":
+      extras.push(`延長×${effect.extendRatio}`);
+      break;
+    case "dotHarvest":
+      extras.push(`収穫${Math.round(effect.harvestRatio * 100)}%`);
+      break;
+    case "poisonSpread":
+      extras.push(`蔓延${effect.spreadRadiusPx}px/${Math.round(effect.spreadDurationRatio * 100)}%`);
+      break;
   }
 
   if (effect.range !== undefined && effect.type !== "counter") {
@@ -782,6 +803,16 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
       return "闘技場の掟";
     case "grantNextOutgoingDamage":
       return "次与ダメ装填";
+    case "placedField":
+      return "持続罠";
+    case "dotCompress":
+      return "DoT圧縮";
+    case "dotExtend":
+      return "DoT延長";
+    case "dotHarvest":
+      return "DoT収穫";
+    case "poisonSpread":
+      return "毒蔓延";
     case "basicAttackTransform":
       return "通常攻撃変形";
     default:
@@ -1065,6 +1096,27 @@ function formatPassiveEffect(
       const spd = def.ballistaMarkSelfAttackSpeedMul ?? 0.85;
       return `砲撃標的（着弾${radius}px内飛散${splash} / 自身SPD×${spd}）`;
     }
+    case "dotCompressAssist":
+      return `DoT圧縮基準×${def.dotCompressRatio ?? 0.7}`;
+    case "allyBasicAttackDotProc": {
+      const chance = formatPercent(def.chance ?? 0.2);
+      const dur = def.debuffDotDurationSec ?? 5;
+      const amount = formatResourceAmount(
+        def.debuffDotAmount ?? { kind: "flat", flatAmount: 10 },
+      );
+      return `味方basic ${chance}でpoison ${amount}/${dur}s`;
+    }
+    case "dotDurationMultiplierOnApply": {
+      const dur = def.dotDurationMultiplierOnApply ?? 1.5;
+      const heal = def.dottedEnemyHealReceivedMultiplier;
+      const healPart =
+        heal !== undefined ? ` / dot中被回復×${heal}` : "";
+      return `味方dot付与duration×${dur}${healPart}`;
+    }
+    case "dottedEnemyHealReceivedDebuff":
+      return `dot中被回復×${def.dottedEnemyHealReceivedMultiplier ?? 0.8}`;
+    case "conditionalEnemyDamageTakenAura":
+      return `仕留め aura（hasDot+HP≤50% → 被ダメ×${def.enemyDamageTakenMultiplier ?? 1.2}）`;
     case "healReservation": {
       const grant = formatPercent(def.grantOnHealMaxHpRatio ?? 1);
       const trigger = formatPercent(def.triggerHpRatio ?? 0.35);

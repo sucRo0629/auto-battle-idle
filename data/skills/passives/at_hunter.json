@@ -1,20 +1,38 @@
 [
   {
     "id": "at_hunter_passive_1",
-    "name": "追い込み",
-    "effect": "specialEffect",
-    "specialEffectApplyTo": "damage",
-    "specialEffect": {
-      "scale": 1.2,
-      "conditions": [
-        {
-          "kind": "debuff",
-          "tags": [
-            "def",
-            "reg"
-          ]
-        }
-      ]
-    }
+    "name": "濃縮毒",
+    "effect": "dotCompressAssist",
+    "dotCompressRatio": 0.7
+  },
+  {
+    "id": "at_hunter_passive_2",
+    "name": "毒の武器",
+    "effect": "allyBasicAttackDotProc",
+    "chance": 0.2,
+    "debuffDotDurationSec": 5,
+    "debuffDotAmount": {
+      "kind": "flat",
+      "flatAmount": 10
+    },
+    "debuffDotDamageType": "magic",
+    "debuffDotFlavor": "poison"
+  },
+  {
+    "id": "at_hunter_passive_3",
+    "name": "癒えぬ傷",
+    "effect": "dotDurationMultiplierOnApply",
+    "dotDurationMultiplierOnApply": 1.5,
+    "dottedEnemyHealReceivedMultiplier": 0.8
+  },
+  {
+    "id": "at_hunter_passive_4",
+    "name": "仕留め時",
+    "effect": "conditionalEnemyDamageTakenAura",
+    "enemyDamageTakenMultiplier": 1.2,
+    "auraConditions": [
+      { "kind": "hasDot" },
+      { "kind": "targetHp", "maxHpRatio": 0.5 }
+    ]
   }
 ]

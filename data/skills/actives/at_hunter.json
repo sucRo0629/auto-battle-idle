@@ -1,125 +1,7 @@
 [
   {
-    "id": "at_hunter_active_1",
-    "name": "毒罠",
-    "trigger": {
-      "kind": "time",
-      "value": 9
-    },
-    "effect": [
-      {
-        "targetShape": "scatter",
-        "scatterRadiusPx": 70,
-        "scatterSpreadRadiusPx": 90,
-        "scatterHitCount": 3,
-        "scatterDurationSec": 0.6,
-        "scatterSpreadRate": 0.4,
-        "range": 50,
-        "type": "damage",
-        "damageType": "physical",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.35
-        },
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        }
-      },
-      {
-        "targetShape": "scatter",
-        "scatterRadiusPx": 70,
-        "scatterSpreadRadiusPx": 90,
-        "scatterHitCount": 3,
-        "scatterDurationSec": 0.6,
-        "scatterSpreadRate": 0.4,
-        "range": 50,
-        "type": "debuff",
-        "durationSec": 6,
-        "damageType": "physical",
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.18
-        },
-        "debuffSubKind": "dot"
-      }
-    ]
-  },
-  {
-    "id": "at_hunter_active_2",
-    "name": "拘束罠",
-    "trigger": {
-      "kind": "time",
-      "value": 11
-    },
-    "effect": [
-      {
-        "targetShape": "scatter",
-        "scatterRadiusPx": 70,
-        "scatterSpreadRadiusPx": 90,
-        "scatterHitCount": 3,
-        "scatterDurationSec": 0.6,
-        "scatterSpreadRate": 0.4,
-        "range": 50,
-        "type": "damage",
-        "damageType": "physical",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.25
-        },
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        }
-      },
-      {
-        "targetShape": "scatter",
-        "scatterRadiusPx": 70,
-        "scatterSpreadRadiusPx": 90,
-        "scatterHitCount": 3,
-        "scatterDurationSec": 0.6,
-        "scatterSpreadRate": 0.4,
-        "range": 50,
-        "type": "debuff",
-        "durationSec": 1,
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "debuffSubKind": "stun"
-      },
-      {
-        "targetShape": "scatter",
-        "scatterRadiusPx": 70,
-        "scatterSpreadRadiusPx": 90,
-        "scatterHitCount": 3,
-        "scatterDurationSec": 0.6,
-        "scatterSpreadRate": 0.4,
-        "range": 50,
-        "type": "debuff",
-        "debuffStat": "atk",
-        "debuffMultiplier": 0.85,
-        "debuffDurationSec": 4,
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "debuffSubKind": "stat"
-      }
-    ]
-  },
-  {
     "id": "at_hunter_basic_attack",
-    "name": "at_hunter_basic_attack",
+    "name": "通常射撃",
     "trigger": {
       "kind": "time",
       "value": 2
@@ -132,9 +14,181 @@
           "order": "nearest"
         },
         "type": "damage",
+        "damageType": "physical",
         "amount": {
           "kind": "atkBased",
           "atkScale": 1
+        }
+      }
+    ]
+  },
+  {
+    "id": "at_hunter_active_1",
+    "name": "毒罠",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "type": "placedField",
+        "target": {
+          "kind": "clusterCenter",
+          "side": "enemy"
+        },
+        "fieldRadiusPx": 70,
+        "fieldDurationSec": 5,
+        "stayTickIntervalSec": 1,
+        "enterEffects": [
+          {
+            "type": "debuff",
+            "debuffSubKind": "dot",
+            "durationSec": 5,
+            "dotFlavor": "poison",
+            "damageType": "magic",
+            "amount": {
+              "kind": "atkBased",
+              "atkScale": 0.1
+            },
+            "target": {
+              "kind": "all",
+              "side": "enemy"
+            }
+          }
+        ],
+        "stayEffects": [
+          {
+            "type": "debuff",
+            "debuffSubKind": "dot",
+            "durationSec": 5,
+            "dotFlavor": "poison",
+            "damageType": "magic",
+            "amount": {
+              "kind": "atkBased",
+              "atkScale": 0.1
+            },
+            "target": {
+              "kind": "all",
+              "side": "enemy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "at_hunter_active_2",
+    "name": "粘着罠",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "effect": [
+      {
+        "type": "placedField",
+        "target": {
+          "kind": "clusterCenter",
+          "side": "enemy"
+        },
+        "fieldRadiusPx": 70,
+        "fieldDurationSec": 8,
+        "stayTickIntervalSec": 2,
+        "enterEffects": [
+          {
+            "type": "debuff",
+            "debuffSubKind": "stun",
+            "durationSec": 1.5,
+            "target": {
+              "kind": "all",
+              "side": "enemy"
+            }
+          }
+        ],
+        "stayEffects": [
+          {
+            "type": "dotExtend",
+            "extendRatio": 1.25,
+            "target": {
+              "kind": "all",
+              "side": "enemy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "at_hunter_active_3",
+    "name": "追い込み",
+    "trigger": {
+      "kind": "time",
+      "value": 15
+    },
+    "effect": [
+      {
+        "type": "placedField",
+        "target": {
+          "kind": "clusterCenter",
+          "side": "enemy"
+        },
+        "range": 150,
+        "fieldRadiusPx": 150,
+        "fieldDurationSec": 10,
+        "stayTickIntervalSec": 1,
+        "stayCompressRatioBonusPerTick": 0.05,
+        "enterEffects": [
+          {
+            "type": "dotCompress",
+            "compressRatio": 0.5,
+            "target": {
+              "kind": "all",
+              "side": "enemy"
+            }
+          }
+        ],
+        "stayEffects": [
+          {
+            "type": "dotCompress",
+            "compressRatio": 0.5,
+            "target": {
+              "kind": "all",
+              "side": "enemy"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "at_hunter_active_4",
+    "name": "毒収穫",
+    "trigger": {
+      "kind": "time",
+      "value": 12
+    },
+    "firePolicy": "smart",
+    "fireConditions": [
+      { "kind": "hasDot" }
+    ],
+    "effect": [
+      {
+        "type": "dotHarvest",
+        "harvestRatio": 0.1,
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      },
+      {
+        "type": "poisonSpread",
+        "spreadRadiusPx": 70,
+        "spreadDurationRatio": 0.5,
+        "dotFlavor": "poison",
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
         }
       }
     ]

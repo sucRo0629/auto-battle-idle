@@ -29,6 +29,7 @@ import {
   usesDebuffAuraMode,
   usesHotAuraMode,
 } from './passivePeriodicTrigger.ts';
+import { resolveDottedEnemyHealReceivedMultiplier } from './hunterPassives.ts';
 import { resolveDuelistPrideIncomingHealMultiplier } from './duelistPride.ts';
 import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
 import { resolveEffectivePassiveAmountSpec } from './skillAmountOverride.ts';
@@ -94,6 +95,8 @@ export interface PassiveDamageContext {
   suppressBonusBasicAttack?: boolean;
   /** allyAttackFollowUp 追撃 Hit — 再帰追撃を抑止 */
   suppressAllyAttackFollowUp?: boolean;
+  /** 味方一覧（仕留め aura 等） */
+  allies?: CombatantState[];
 }
 
 export function getEvasionChance(
@@ -191,11 +194,13 @@ export function resolveIncomingHealAmount(
   target: CombatantState,
   baseAmount: number,
   passives: Record<string, PassiveSkillDef>,
+  allies: CombatantState[] = [],
 ): number {
   if (baseAmount <= 0) return 0;
   const mul =
     getPassiveSpecialEffectMultiplier('heal', target, target, passives) *
-    resolveDuelistPrideIncomingHealMultiplier(target, passives);
+    resolveDuelistPrideIncomingHealMultiplier(target, passives) *
+    resolveDottedEnemyHealReceivedMultiplier(target, allies, passives);
   return Math.floor(Math.max(0, baseAmount * mul));
 }
 

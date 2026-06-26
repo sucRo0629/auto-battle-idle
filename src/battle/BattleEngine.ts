@@ -90,6 +90,8 @@ import {
   tickHerbalPotencyAccumulation,
 } from "./herbalPotency.ts";
 import { tickIdleAtkRamp } from "./idleAtkRamp.ts";
+import { tickPlacedFields } from "./placedField.ts";
+import type { PlacedFieldInstance } from "./types.ts";
 import { tickNextOutgoingDamageArming } from "./nextOutgoingDamage.ts";
 import { syncBallistaMarks } from "./ballistaMark.ts";
 import {
@@ -265,6 +267,7 @@ export class BattleEngine {
   private readonly executor: SkillExecutor;
   private readonly skillSequenceRunner = new SkillSequenceRunner();
   private pendingHitQueue: PendingSkillHit[] = [];
+  private placedFields: PlacedFieldInstance[] = [];
   private battleTimeSec = 0;
   private tickIndex = 0;
   private battleXDebugWarningThresholdPx = 8;
@@ -320,6 +323,9 @@ export class BattleEngine {
       },
       onBattleXChanged: (unit, beforeX, reason) => {
         this.recordBattleXDebugChange(unit, beforeX, reason);
+      },
+      addPlacedField: (field) => {
+        this.placedFields.push(field);
       },
     });
     this.reloadBattlefield();
@@ -649,6 +655,7 @@ export class BattleEngine {
     resetEntityIdCounter();
     this.trainingWaveReadyToEngage = false;
     this.pendingHitQueue = [];
+    this.placedFields = [];
     this.skillSequenceRunner.clearAll();
     this.battleTimeSec = 0;
     this.tickIndex = 0;
@@ -1937,6 +1944,19 @@ export class BattleEngine {
   /** DoT/HoT・バフ/デバフ持続・CD を接敵状態に関係なく進める */
   private tickStatusAndCooldowns(deltaTime: number): void {
     this.tickStatusEffects(deltaTime);
+    this.placedFields = tickPlacedFields(
+      this.placedFields,
+      this.players,
+      this.enemies,
+      this.gameData.skillRegistry.passives,
+      this.gameData.skillRegistry.actives,
+      deltaTime,
+      {
+        onDebuffApplied: (target) => {
+          this.handlePassiveDispelOnDebuffReceived(target);
+        },
+      },
+    );
     tickHerbalPotencyAccumulation(
       this.players,
       this.gameData.skillRegistry.passives,
@@ -2161,6 +2181,7 @@ export class BattleEngine {
         target,
         baseAmount + potencyBonus,
         passives,
+        this.players,
       );
       if (amount <= 0) return;
       const healed = applyHealToTarget(target, amount);
@@ -2185,6 +2206,7 @@ export class BattleEngine {
         target,
         effect,
         passives,
+        this.players,
       );
       const barrierHpBefore = target.barrierHp;
       const wardResult = applyWardBarrierToIncomingDamage(target, amount);
