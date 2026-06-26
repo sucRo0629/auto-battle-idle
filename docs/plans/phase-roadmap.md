@@ -12,7 +12,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                                     | **完了**                        |
 | **3**  | Lv アップ時スキル習得、習得済み passive / active 常時使用枠（各最大 4）+ クラス別スキル再設定 | **再オープン中**                |
 | **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **見直し中** / 4c **完了** / 4b 説明 / **4d 編成 UI** | **Phase 3 後に再確定**          |
-| **5**  | 演出アセット + VFX PNG + **演出調整ツール**；**5d Combat Feedback**（Damage / Event Popup） | **基盤のみ**（本番 PNG 未実装） |
+| **5**  | 演出アセット + VFX PNG + **演出調整ツール**；**5d Combat Feedback**（Damage / Event Popup）   | **基盤のみ**（本番 PNG 未実装） |
 | **6**  | ステージ作成 — 敵テンプレート・固定ステージコンテンツ・ステージ編集 GUI                       | 未着手（4a 後）                 |
 | **9**  | ローグライクモード（仮称）— 既存 effect 中心 13 クラス向けランダム問題・ラン進行              | 未着手                          |
 | **7a** | バランス調整 — 既存 effect 中心 13 クラス + 固定ステージ                                      | 未着手                          |
@@ -20,7 +20,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **7c** | 法陣師の独自システム実装                                                                      | 未着手                          |
 | **8**  | Electron シェル本番化                                                                         | 未着手                          |
 | **10** | 印術師・法陣師対応ローグライクモード（仮称）                                                  | 未着手                          |
-| **11** | 解法評価メタ（07582b6）— グローバル `playerLevel` / Stage Records / Level Sync              | 未着手（Phase 6 後）            |
+| **11** | 解法評価メタ（07582b6）— グローバル `playerLevel` / Stage Records / Level Sync                | 未着手（Phase 6 後）            |
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
@@ -128,7 +128,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 - ロール差は接近パイプラインではなく target spec / target rule に閉じる
 - `contact` / `frontline` / `display` / `move anchor` / `attack target` の責務境界を [battle-field.md](../spec/battle-field.md) と [combat.md](../spec/combat.md) に同期する
 - Stage 1 Wave 2 の `test_to_ranged` 残存時に鉄衛士が不連続に接敵しないことを regression 化する
-- Phase 3d 後 regression として、Engaged 中 overlap 補正は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、front row spacing が `battleX` を 32px 級で snap したり 2倍速に見える加速を起こしたりしないことを固定する
+- Phase 3d 後 regression として、Engaged 中 overlap 補正は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、front row spacing が `battleX` を 32px 級で snap したり 2 倍速に見える加速を起こしたりしないことを固定する
 
 **Phase 3d 後 cleanup:** `battleX` 単一正本の runtime 整理は [master-work-order.md](./master-work-order.md) の battle-field cleanup 表を正とする。`battleCamera.ts` と skill move の旧 visual フィールドは削除済み。`visualX` は snapshot 互換ミラー、`engagedVisualTarget*` は deprecated alias として次フェーズ送り。
 
@@ -149,11 +149,11 @@ Phase 3 の Caster pass は **`at_sorcerer` のみ** を対象とする。印術
 
 Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON を確定する。**一次職 / 二次職の区別は廃止**し、`jobTier` / `promotion` / `promotesFrom` の予約は行わない。
 
-| サブフェーズ | 内容                                                                          | 状態               |
-| ------------ | ----------------------------------------------------------------------------- | ------------------ |
-| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                  | **見直し中**       |
-| **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）          | **完了**           |
-| **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish | **随時**（コア済） |
+| サブフェーズ | 内容                                                                                                        | 状態                    |
+| ------------ | ----------------------------------------------------------------------------------------------------------- | ----------------------- |
+| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                | **見直し中**            |
+| **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                        | **完了**                |
+| **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish                               | **随時**（コア済）      |
 | **4d**       | パーティ編成 UI 刷新（`SkillMenuPanel`）— 画面設計は [party-formation-ui.md](../spec/party-formation-ui.md) | **未着手**（設計 v0.3） |
 
 ### クラスマスタ（見直し中）
@@ -238,7 +238,7 @@ data/
 **主な変更（設計書 §11 差分）**
 
 - Overview（4 人ロスター）+ Detail + Picker オーバーレイ
-- 「編成枠」→ 陣形誤解のないラベル、枠≠位置の注記
+- 「編成枠」→ 陣形誤解のないラベル、枠 ≠ 位置の注記
 - スキル: tooltip 依存廃止方向、閲覧カード化
 - クラス Picker: UI ロール別グループ、15 クラス対応
 
@@ -293,12 +293,12 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 
 **ゴール:** [combat-architecture.md](../combat-architecture.md) §8 の HUD / Damage Popup / Event Popup 分離を戦闘描画へ反映する。正本は §8（07582b6）。
 
-| 項目 | 内容 | 状態 |
-| ---- | ---- | ---- |
+| 項目         | 内容                                                                     | 状態                                                                     |
+| ------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
 | Damage Popup | Damage / Heal / DoT の数値のみ。頭上表示。内訳・Barrier 吸収量は出さない | 基盤済み（`DamagePopupManager`）。仕様合わせ・DoT 経路の漏れがあれば修正 |
-| Event Popup | Block / Counter / Evade 等の瞬間イベント。Damage より上に表示 | 基盤済み（`CombatReactionPopupManager`）。未配線イベントの追加 |
-| レイアウト | `damagePopupLayout` と reaction popup の Y 衝突回避を regression 化 | 未着手 |
-| HUD 境界 | Barrier 残量・Buff / Debuff は HUD のみ（ポップアップに出さない） | 要確認 |
+| Event Popup  | Block / Counter / Evade 等の瞬間イベント。Damage より上に表示            | 基盤済み（`CombatReactionPopupManager`）。未配線イベントの追加           |
+| レイアウト   | `damagePopupLayout` と reaction popup の Y 衝突回避を regression 化      | 未着手                                                                   |
+| HUD 境界     | Barrier 残量・Buff / Debuff は HUD のみ（ポップアップに出さない）        | 要確認                                                                   |
 
 **未配線 Event（例）:** `Redirect!`、`Barrier Break!`、`Execute!`、`Armor Break!` — 戦闘イベント → `BattleView` → `IBattleRenderer`。
 
