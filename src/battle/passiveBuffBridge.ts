@@ -102,6 +102,7 @@ export function passiveBuffToEffectDef(
     buffStat: passive.buffStat,
     buffMultiplier: passive.buffMultiplier,
     buffFlatBonus: passive.buffFlatBonus,
+    buffStatModifiers: passive.buffStatModifiers,
     buffDurationSec: passive.buffDurationSec,
     chance: passive.chance,
     ratio: passive.ratio,
@@ -126,6 +127,7 @@ export function applyBuffEffectToPassive(
     passive.buffStat = effect.buffStat;
     passive.buffMultiplier = effect.buffMultiplier;
     passive.buffFlatBonus = effect.buffFlatBonus;
+    passive.buffStatModifiers = effect.buffStatModifiers;
     passive.buffDurationSec = effect.buffDurationSec;
     passive.chance = effect.chance;
     passive.ratio = effect.ratio;

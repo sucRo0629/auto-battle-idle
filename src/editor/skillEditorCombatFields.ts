@@ -83,16 +83,25 @@ import type {
   ResourceAmountSpec,
   SkillEffectDef,
   SpecialEffectApplyTo,
+  StatusEffectStat,
   TargetSpec,
 } from "../battle/types.ts";
 import { attackTypeRangedBandEditorHintJa } from "../battle/rangeLimits.ts";
+import {
+  defaultStatBuffModifierEntry,
+  parseStatBuffModifiers,
+  syncPassiveBuffStatModifiers,
+} from "../battle/statBuffModifiers.ts";
+import type { StatBuffModifierEntry } from "../battle/types.ts";
 import type { TargetSpecKind } from "../battle/data/gameDataSchema.ts";
 import {
   createActionButton,
+  createButton,
   createEl,
   createFieldRow,
   createNumberInput,
   createSelect,
+  createSection,
 } from "./formUtils.ts";
 import { appendSkillEffectTargetingFields } from "./effectTargetingFields.ts";
 
@@ -1554,6 +1563,134 @@ export function appendPassiveDefenseIgnoreFields(
   );
 }
 
+const PASSIVE_BUFF_STAT_OPTIONS: Array<{
+  value: StatusEffectStat;
+  label: string;
+}> = [
+  { value: "hp", label: "HP" },
+  { value: "atk", label: "攻撃" },
+  { value: "def", label: "防御" },
+  { value: "reg", label: "耐魔" },
+  { value: "damageTaken", label: "被ダメ" },
+  { value: "attackSpeed", label: "攻撃速度" },
+];
+
+function appendPassiveBuffStatModifierListFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean }
+  ) => void,
+): void {
+  const section = createSection("ステータスバフ");
+  parent.appendChild(section);
+
+  const entries = parseStatBuffModifiers(passive);
+  const displayEntries =
+    entries.length > 0 ? entries : [defaultStatBuffModifierEntry()];
+
+  const patchEntries = (
+    mutate: (current: StatBuffModifierEntry[]) => StatBuffModifierEntry[],
+    options?: { rerender?: boolean },
+  ) => {
+    patchPassive((current) => {
+      syncPassiveBuffStatModifiers(current, mutate(parseStatBuffModifiers(current)));
+    }, options);
+  };
+
+  displayEntries.forEach((entry, index) => {
+    const block = createEl("div", "editor-effect-block");
+    const header = createEl("div", "editor-effect-header");
+    header.appendChild(
+      createEl("span", "editor-effect-label", `バフ ${index + 1}`)
+    );
+    if (displayEntries.length > 1) {
+      header.appendChild(
+        createButton("削除", "editor-btn editor-btn-small", () => {
+          patchEntries(
+            (current) => current.filter((_, i) => i !== index),
+            { rerender: true },
+          );
+        })
+      );
+    }
+    block.appendChild(header);
+
+    const grid = createEl("div", "editor-subgrid");
+    grid.appendChild(
+      createFieldRow(
+        "対象ステ",
+        createSelect(
+          entry.stat,
+          PASSIVE_BUFF_STAT_OPTIONS.map((option) => ({
+            value: option.value,
+            label: option.label,
+          })),
+          (stat) => {
+            patchEntries((current) =>
+              current.map((row, i) => (i === index ? { ...row, stat } : row)),
+            );
+          },
+        )
+      )
+    );
+    grid.appendChild(
+      createFieldRow(
+        "倍率",
+        createNumberInput(
+          entry.multiplier ?? 1,
+          (multiplier) => {
+            patchEntries((current) =>
+              current.map((row, i) =>
+                i === index
+                  ? {
+                      ...row,
+                      multiplier: multiplier !== 1 ? multiplier : undefined,
+                    }
+                  : row,
+              ),
+            );
+          },
+          { step: 0.01 },
+        )
+      )
+    );
+    grid.appendChild(
+      createFieldRow(
+        "固定値",
+        createNumberInput(
+          entry.flatBonus ?? 0,
+          (flatBonus) => {
+            patchEntries((current) =>
+              current.map((row, i) =>
+                i === index
+                  ? {
+                      ...row,
+                      flatBonus: flatBonus > 0 ? flatBonus : undefined,
+                    }
+                  : row,
+              ),
+            );
+          },
+          { step: 1 },
+        )
+      )
+    );
+    block.appendChild(grid);
+    section.appendChild(block);
+  });
+
+  section.appendChild(
+    createButton("+ バフを追加", "editor-btn editor-btn-small", () => {
+      patchEntries(
+        (current) => [...current, defaultStatBuffModifierEntry()],
+        { rerender: true },
+      );
+    })
+  );
+}
+
 const PASSIVE_BUFF_SUB_KIND_OPTIONS: Array<{
   value: BuffSubKind;
   label: string;
@@ -1727,59 +1864,8 @@ export function appendPassiveBuffFields(
     return;
   }
 
-  parent.appendChild(
-    createFieldRow(
-      "対象ステ",
-      createSelect(
-        Array.isArray(passive.buffStat)
-          ? passive.buffStat[0] ?? "atk"
-          : passive.buffStat ?? "atk",
-        [
-          { value: "hp", label: "HP" },
-          { value: "atk", label: "攻撃" },
-          { value: "def", label: "防御" },
-          { value: "reg", label: "耐魔" },
-          { value: "damageTaken", label: "被ダメ" },
-          { value: "attackSpeed", label: "攻撃速度" },
-          { value: "block", label: "ブロック" },
-          { value: "evasion", label: "回避" },
-        ],
-        (buffStat) => {
-          patchPassive((current) => {
-            current.buffStat = buffStat;
-          });
-        }
-      )
-    )
-  );
-  parent.appendChild(
-    createFieldRow(
-      "倍率",
-      createNumberInput(
-        passive.buffMultiplier ?? 1.1,
-        (buffMultiplier) => {
-          patchPassive((current) => {
-            current.buffMultiplier = buffMultiplier;
-          });
-        },
-        { step: 0.01 }
-      )
-    )
-  );
-  parent.appendChild(
-    createFieldRow(
-      "固定値",
-      createNumberInput(
-        passive.buffFlatBonus ?? 0,
-        (buffFlatBonus) => {
-          patchPassive((current) => {
-            current.buffFlatBonus = buffFlatBonus || undefined;
-          });
-        },
-        { step: 1 }
-      )
-    )
-  );
+  appendPassiveBuffStatModifierListFields(parent, passive, patchPassive);
+
 }
 
 export function appendPassiveDebuffFields(

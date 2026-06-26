@@ -50,6 +50,7 @@ import type {
   SkillVfxDef,
   StageDef,
   StatusEffectStat,
+  StatBuffModifierEntry,
   TargetRule,
   TargetShape,
   TargetSpec,
@@ -416,6 +417,59 @@ function requireBuffOrDebuffModifier(
   if (hasFlatBonus && flatBonus <= 0) {
     invalidField(context, flatBonusKey, 'must be a positive number');
   }
+}
+
+function parseStatBuffModifierEntry(
+  entry: unknown,
+  context: string,
+  index: number,
+): StatBuffModifierEntry {
+  const entryContext = `${context}[${index}]`;
+  if (typeof entry !== 'object' || entry === null) {
+    invalidField(entryContext, 'entry', 'must be an object');
+  }
+  const obj = entry as Record<string, unknown>;
+  const stat = requireStatusEffectStat(obj, 'stat', entryContext);
+  if (Array.isArray(stat)) {
+    invalidField(entryContext, 'stat', 'must be a single status stat');
+  }
+  const multiplier = parseOptionalNumber(obj, 'multiplier', entryContext);
+  const flatBonus = parseOptionalNonNegativeNumber(obj, 'flatBonus', entryContext);
+  const hasMultiplier =
+    multiplier !== undefined && !Number.isNaN(multiplier);
+  const hasFlatBonus = flatBonus !== undefined && !Number.isNaN(flatBonus);
+  if (!hasMultiplier && !hasFlatBonus) {
+    invalidField(
+      entryContext,
+      'multiplier or flatBonus',
+      'at least one is required',
+    );
+  }
+  if (hasFlatBonus && flatBonus <= 0) {
+    invalidField(entryContext, 'flatBonus', 'must be a positive number');
+  }
+  return {
+    stat,
+    ...(hasMultiplier ? { multiplier } : {}),
+    ...(hasFlatBonus ? { flatBonus } : {}),
+  };
+}
+
+function parseStatBuffModifierEntries(
+  obj: Record<string, unknown>,
+  context: string,
+): StatBuffModifierEntry[] | undefined {
+  const raw = obj.buffStatModifiers;
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw)) {
+    invalidField(context, 'buffStatModifiers', 'must be an array');
+  }
+  if (raw.length === 0) {
+    invalidField(context, 'buffStatModifiers', 'must not be empty');
+  }
+  return raw.map((entry, index) =>
+    parseStatBuffModifierEntry(entry, `${context}.buffStatModifiers`, index),
+  );
 }
 
 function requireStatusEffectStat(
@@ -3442,6 +3496,43 @@ function requirePassiveEffectParams(
           'passive buff supports stat/block/evasion/damageDelay/barrier',
         );
       }
+      const buffStatModifiers = parseStatBuffModifierEntries(obj, context);
+      const periodicFields = parsePassivePeriodicTriggerFields(obj, context);
+      const buffDurationSec = parseOptionalNonNegativeNumber(
+        obj,
+        'buffDurationSec',
+        context,
+      );
+      if (buffStatModifiers !== undefined) {
+        if (buffStatModifiers.length === 1) {
+          const entry = buffStatModifiers[0]!;
+          return {
+            ...base,
+            buffSubKind,
+            buffStat: entry.stat,
+            ...targetingFields,
+            ...periodicFields,
+            ...(entry.multiplier !== undefined
+              ? { buffMultiplier: entry.multiplier }
+              : {}),
+            ...(entry.flatBonus !== undefined
+              ? { buffFlatBonus: entry.flatBonus }
+              : {}),
+            ...(buffTargetRule !== undefined ? { buffTargetRule } : {}),
+            ...(buffDurationSec !== undefined ? { buffDurationSec } : {}),
+          };
+        }
+        return {
+          ...base,
+          buffSubKind,
+          buffStatModifiers,
+          buffStat: buffStatModifiers.map((entry) => entry.stat),
+          ...targetingFields,
+          ...periodicFields,
+          ...(buffTargetRule !== undefined ? { buffTargetRule } : {}),
+          ...(buffDurationSec !== undefined ? { buffDurationSec } : {}),
+        };
+      }
       const buffStatRaw = obj.buffStat;
       if (buffStatRaw === undefined) {
         missingField(context, 'buffStat');
@@ -3463,12 +3554,6 @@ function requirePassiveEffectParams(
         context,
         'buffMultiplier',
         'buffFlatBonus',
-      );
-      const periodicFields = parsePassivePeriodicTriggerFields(obj, context);
-      const buffDurationSec = parseOptionalNonNegativeNumber(
-        obj,
-        'buffDurationSec',
-        context,
       );
       return {
         ...base,

@@ -11,7 +11,7 @@
     },
     "debuffTargetShape": "pierce",
     "debuffStat": "atk",
-    "debuffMultiplier": 0.9
+    "debuffMultiplier": 0.95
   },
   {
     "id": "at_lancer_passive_2",
@@ -35,14 +35,18 @@
     "name": "堅陣",
     "effect": "buff",
     "buffSubKind": "stat",
-    "buffStat": [
-      "def",
-      "reg"
+    "buffStatModifiers": [
+      {
+        "stat": "def",
+        "multiplier": 1.1
+      },
+      {
+        "stat": "reg",
+        "flatBonus": 5
+      }
     ],
     "buffTargetShape": "aoe",
     "buffAoeRadiusPx": 50,
-    "buffMultiplier": 1.1,
-    "buffFlatBonus": 5,
     "buffTargetRule": {
       "kind": "distance",
       "side": "ally",
@@ -53,7 +57,6 @@
     "id": "at_lancer_passive_4",
     "name": "援護",
     "effect": "counter",
-    "counterTrigger": "frontAllyDamaged",
     "chance": 0.25,
     "counterResponses": [
       {
@@ -67,9 +70,10 @@
       {
         "kind": "debuff",
         "debuffStat": "atk",
-        "debuffMultiplier": 0.9,
-        "debuffDurationSec": 5
+        "debuffDurationSec": 5,
+        "debuffMultiplier": 0.9
       }
-    ]
+    ],
+    "counterTrigger": "frontAllyDamaged"
   }
 ]

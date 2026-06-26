@@ -38,6 +38,10 @@ import {
   filterStatusEffectStats,
 } from "../battle/types.ts";
 import {
+  formatStatBuffModifierEntries,
+  parseStatBuffModifiers,
+} from "../battle/statBuffModifiers.ts";
+import {
   PASSIVE_PERIODIC_TRIGGER_LABELS,
   resolvePassiveBarrierTrigger,
   resolvePassivePeriodicTrigger,
@@ -250,11 +254,24 @@ function formatStatsWithModifier(
   multiplier: number | undefined,
   flatBonus: number | undefined
 ): string {
-  const stats = asStatusEffectStatList(stat);
-  if (stats.length === 0) return "—";
-  return stats
-    .map((s) => formatStatWithModifier(s, multiplier, flatBonus))
-    .join("・");
+  return formatStatBuffModifierEntries(
+    parseStatBuffModifiers({ buffStat: stat, buffMultiplier: multiplier, buffFlatBonus: flatBonus }),
+    formatStatWithModifier,
+  );
+}
+
+function formatBuffStatModifiersFromDef(
+  def: {
+    buffStatModifiers?: import("../battle/types.ts").StatBuffModifierEntry[];
+    buffStat?: BuffTargetKind | BuffTargetKind[];
+    buffMultiplier?: number;
+    buffFlatBonus?: number;
+  },
+): string {
+  return formatStatBuffModifierEntries(
+    parseStatBuffModifiers(def),
+    formatStatWithModifier,
+  );
 }
 
 function formatDamageIncreaseCondition(
@@ -1126,11 +1143,7 @@ function formatPassiveEffect(
         "常時"
       );
       metaParts.push(triggerLabel);
-      return `バフ ${formatBuffTargetStats(
-        def.buffStat,
-        def.buffMultiplier,
-        def.buffFlatBonus
-      )} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
+      return `バフ ${formatBuffStatModifiersFromDef(def)} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
     }
     case "debuff": {
       const effectView = passiveDebuffToEffectDef(def);

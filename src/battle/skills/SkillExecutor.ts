@@ -119,7 +119,8 @@ import type {
   SkillSlotKind,
   StatusEffect,
 } from '../types.ts';
-import { asStatusEffectStatList, filterStatusEffectStats } from '../types.ts';
+import { asStatusEffectStatList } from '../types.ts';
+import { parseStatBuffModifiers } from '../statBuffModifiers.ts';
 import {
   buildPendingHitsFromResolution,
   findCombatantById,
@@ -1706,19 +1707,18 @@ export class SkillExecutor {
         }
       }
       const isBuff = effectDef.type === 'buff';
+      const buffModifiers = isBuff ? parseStatBuffModifiers(effectDef) : [];
       const stats = isBuff
-        ? filterStatusEffectStats(effectDef.buffStat)
+        ? buffModifiers.map((entry) => entry.stat)
         : asStatusEffectStatList(effectDef.debuffStat);
-      const multiplier = isBuff
-        ? effectDef.buffMultiplier
-        : effectDef.debuffMultiplier;
-      const flatBonus = isBuff
-        ? effectDef.buffFlatBonus
-        : effectDef.debuffFlatBonus;
+      const multiplier = isBuff ? undefined : effectDef.debuffMultiplier;
+      const flatBonus = isBuff ? undefined : effectDef.debuffFlatBonus;
       let duration = isBuff
         ? effectDef.buffDurationSec
         : effectDef.debuffDurationSec;
-      if (
+      if (isBuff) {
+        if (buffModifiers.length === 0) return false;
+      } else if (
         stats.length === 0 ||
         (multiplier === undefined && flatBonus === undefined)
       ) {
@@ -1729,19 +1729,45 @@ export class SkillExecutor {
       const appliedAt = Date.now();
       if (duration === undefined) return false;
 
-      for (let i = 0; i < stats.length; i++) {
-        const stat = stats[i]!;
-        const effect: StatusEffect = {
-          id: `${skill.id}_${stat}_${appliedAt}_${i}`,
-          kind: isBuff ? 'buff' : 'debuff',
-          stat,
-          multiplier: multiplier ?? 1,
-          durationSec: duration,
-          remainingSec: duration,
-          ...(flatBonus !== undefined ? { flatBonus: Math.abs(flatBonus) } : {}),
-        };
-        target.statusEffects.push(effect);
-        statusLabels.push(formatStatusLabel(stat, multiplier, flatBonus));
+      if (isBuff) {
+        for (let i = 0; i < buffModifiers.length; i++) {
+          const entry = buffModifiers[i]!;
+          const entryMultiplier = entry.multiplier;
+          const entryFlatBonus = entry.flatBonus;
+          if (entryMultiplier === undefined && entryFlatBonus === undefined) {
+            continue;
+          }
+          const effect: StatusEffect = {
+            id: `${skill.id}_${entry.stat}_${appliedAt}_${i}`,
+            kind: 'buff',
+            stat: entry.stat,
+            multiplier: entryMultiplier ?? 1,
+            durationSec: duration,
+            remainingSec: duration,
+            ...(entryFlatBonus !== undefined
+              ? { flatBonus: Math.abs(entryFlatBonus) }
+              : {}),
+          };
+          target.statusEffects.push(effect);
+          statusLabels.push(
+            formatStatusLabel(entry.stat, entryMultiplier, entryFlatBonus),
+          );
+        }
+      } else {
+        for (let i = 0; i < stats.length; i++) {
+          const stat = stats[i]!;
+          const effect: StatusEffect = {
+            id: `${skill.id}_${stat}_${appliedAt}_${i}`,
+            kind: 'debuff',
+            stat,
+            multiplier: multiplier ?? 1,
+            durationSec: duration,
+            remainingSec: duration,
+            ...(flatBonus !== undefined ? { flatBonus: Math.abs(flatBonus) } : {}),
+          };
+          target.statusEffects.push(effect);
+          statusLabels.push(formatStatusLabel(stat, multiplier, flatBonus));
+        }
       }
 
       clampHpToEffectiveMax(target);

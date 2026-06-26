@@ -9,6 +9,7 @@ import type {
   StatusEffectStat,
 } from '../battle/types.ts';
 import { asStatusEffectStatList, filterStatusEffectStats } from '../battle/types.ts';
+import { parseStatBuffModifiers } from '../battle/statBuffModifiers.ts';
 import {
   computeStatsAtLevel,
   type LevelCurvesConfig,
@@ -104,17 +105,16 @@ function collectBuffPassiveStatEffects(
   if (subKind !== 'stat') return;
   if (!isSelfTargetRule(passive.buffTargetRule)) return;
 
-  const stats = filterStatusEffectStats(
-    passive.buffStat as PassiveSkillDef['buffStat'],
-  );
-  const multiplier = passive.buffMultiplier;
-  const flatBonus = passive.buffFlatBonus;
-  if (stats.length === 0 || (multiplier === undefined && flatBonus === undefined)) {
-    return;
-  }
+  const modifiers = parseStatBuffModifiers(passive);
+  if (modifiers.length === 0) return;
 
-  for (const stat of stats) {
-    pushStatBuffEffect(effects, stat, multiplier, flatBonus);
+  for (const entry of modifiers) {
+    pushStatBuffEffect(
+      effects,
+      entry.stat,
+      entry.multiplier,
+      entry.flatBonus,
+    );
   }
 }
 

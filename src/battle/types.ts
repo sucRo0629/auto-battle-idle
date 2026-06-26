@@ -408,6 +408,13 @@ export type StatusEffectStat =
   | "damageTaken"
   | "attackSpeed";
 
+/** stat buff: ステごとの倍率/固定値。2件以上は正本、1件は buffStat レガシーでも可 */
+export interface StatBuffModifierEntry {
+  stat: StatusEffectStat;
+  multiplier?: number;
+  flatBonus?: number;
+}
+
 /** デバフフィルタタグ（gameDataSchema.DEBUFF_FILTER_TAGS と同期） */
 export type DebuffFilterTag = StatusEffectStat | "dot" | "bleed" | "poison" | "stun";
 
@@ -765,6 +772,7 @@ export interface PassiveSkillDef {
   buffScatterSpreadRate?: number;
   buffMultiplier?: number;
   buffFlatBonus?: number;
+  buffStatModifiers?: StatBuffModifierEntry[];
   /** stat buff 持続（秒）。aura 未指定時は無限、定期発動時は必須 */
   buffDurationSec?: number;
   debuffSubKind?: DebuffSubKind;
@@ -1209,6 +1217,7 @@ export interface BuffSkillEffect extends SkillEffectCommon {
   buffStat?: BuffTargetKind | BuffTargetKind[];
   buffMultiplier?: number;
   buffFlatBonus?: number;
+  buffStatModifiers?: StatBuffModifierEntry[];
   buffDurationSec?: number;
   chance?: number;
   /** damageDelay: 後払いにする被ダメ割合（0.5 = 50%） */

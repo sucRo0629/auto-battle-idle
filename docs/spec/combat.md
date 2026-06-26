@@ -292,6 +292,8 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 対象ステ：`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`（攻撃速度。基本攻撃 CD 回復倍率に適用）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
 
+複数ステを異なる倍率/固定値で上げるパッシブ buff は `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1ステのみの場合は従来の `buffStat` + `buffMultiplier` / `buffFlatBonus` でも可（実装: `parseStatBuffModifiers`）。
+
 **HUD バッジ表示:** 通常は 1 つの `StatusEffect` を 1 つのバッジとして描画する。**例外:** `overlay: herbalPotency` / `blockResonance` / `mark` / `arenaMark` は `stacks` 数ぶん同カテゴリアイコンを横並び（`statusBadgeOverlap` で重ね）。`wardBarrier` は 1 アイコン + `stacks` フィールド表示（別処理）。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride`（`src/assets/status-icons/{category}.png`）。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。味方は `PartyHudPanel`、敵は `BattleCanvas` 上のスプライト頭上（[battle-field.md](battle-field.md)）。
 
 ### 迎撃態勢（`blockResonance`）

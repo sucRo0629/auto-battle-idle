@@ -36,7 +36,7 @@
         "damageType": "physical",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.8
+          "atkScale": 0.5
         },
         "target": {
           "kind": "distance",
@@ -79,7 +79,7 @@
         },
         "type": "debuff",
         "debuffSubKind": "stun",
-        "durationSec": 3,
+        "durationSec": 2,
         "targetShape": "pierce"
       },
       {

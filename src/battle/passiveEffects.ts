@@ -11,6 +11,7 @@ import { isAllySupportBlockedDuringArenaDominance } from './arenaDominance.ts';
 import { dispelDebuffsOnTarget } from './debuffDispel.ts';
 import { resolvePassiveDebuffTargets } from './passiveDebuffBridge.ts';
 import { resolvePassiveBuffTargets } from './passiveBuffBridge.ts';
+import { parseStatBuffModifiers } from './statBuffModifiers.ts';
 import { resolvePassiveDamageReductionTargets } from './passiveDamageReductionBridge.ts';
 import { resolvePassiveAuraHotTargets, resolvePassiveHotTargets } from './passiveHotBridge.ts';
 import {
@@ -362,26 +363,27 @@ export function applyPassiveBuffFromPassive(
     return;
   }
 
-  const stats = filterStatusEffectStats(passive.buffStat);
-  const multiplier = passive.buffMultiplier;
-  const flatBonus = passive.buffFlatBonus;
-  if (stats.length === 0 || (multiplier === undefined && flatBonus === undefined)) {
+  const modifiers = parseStatBuffModifiers(passive);
+  if (modifiers.length === 0) {
     return;
   }
 
   for (const target of targets) {
-    for (let i = 0; i < stats.length; i++) {
-      const stat = stats[i]!;
+    for (let i = 0; i < modifiers.length; i++) {
+      const entry = modifiers[i]!;
+      const multiplier = entry.multiplier;
+      const flatBonus = entry.flatBonus;
+      if (multiplier === undefined && flatBonus === undefined) continue;
       target.statusEffects.push({
         ...createPassiveStatBuffEffect(
           source,
           passive.id,
-          stat,
+          entry.stat,
           i,
           multiplier,
           flatBonus,
         ),
-        id: `${idPrefix}${source.id}_${passive.id}_${stat}_${i}`,
+        id: `${idPrefix}${source.id}_${passive.id}_${entry.stat}_${i}`,
         durationSec,
         remainingSec: durationSec,
       });

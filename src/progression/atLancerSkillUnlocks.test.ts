@@ -89,9 +89,10 @@ describe('at_lancer passive / active unlock structure', () => {
 
     const p3 = passives['at_lancer_passive_3'];
     expect(p3?.name).toBe('堅陣');
-    expect(p3?.buffStat).toEqual(['def', 'reg']);
-    expect(p3?.buffMultiplier).toBe(1.1);
-    expect(p3?.buffFlatBonus).toBe(5);
+    expect(p3?.buffStatModifiers).toEqual([
+      { stat: 'def', multiplier: 1.1 },
+      { stat: 'reg', flatBonus: 5 },
+    ]);
 
     const p4 = passives['at_lancer_passive_4'];
     expect(p4?.name).toBe('援護');
@@ -133,12 +134,12 @@ describe('at_lancer combat helpers', () => {
     const farAlly = mockUnit({ id: 'far', battleX: 180 });
 
     syncBuffAuras([lancer, nearAlly, farAlly], [], passives, mockTargetingGameData());
-    expect(
-      nearAlly.statusEffects.some((e) => e.stat === 'def' && e.multiplier === 1.1),
-    ).toBe(true);
-    expect(
-      nearAlly.statusEffects.some((e) => e.stat === 'reg' && e.flatBonus === 5),
-    ).toBe(true);
+    const defBuff = nearAlly.statusEffects.find((e) => e.stat === 'def');
+    const regBuff = nearAlly.statusEffects.find((e) => e.stat === 'reg');
+    expect(defBuff?.multiplier).toBe(1.1);
+    expect(defBuff?.flatBonus).toBeUndefined();
+    expect(regBuff?.flatBonus).toBe(5);
+    expect(regBuff?.multiplier).toBe(1);
     expect(farAlly.statusEffects.some((e) => e.stat === 'def')).toBe(false);
   });
 
@@ -168,11 +169,17 @@ describe('at_lancer combat helpers', () => {
     syncDebuffAuras([lancer], [enemy], passives, mockTargetingGameData());
     syncBuffAuras([lancer, ally], [], passives, mockTargetingGameData());
 
+    const p1 = passives['at_lancer_passive_1'];
+    const p2 = passives['at_lancer_passive_2'];
     expect(
-      enemy.statusEffects.some((e) => e.stat === 'atk' && e.multiplier === 0.9),
+      enemy.statusEffects.some(
+        (e) => e.stat === 'atk' && e.multiplier === p1?.debuffMultiplier,
+      ),
     ).toBe(true);
     expect(
-      ally.statusEffects.some((e) => e.stat === 'atk' && e.multiplier === 1.05),
+      ally.statusEffects.some(
+        (e) => e.stat === 'atk' && e.multiplier === p2?.buffMultiplier,
+      ),
     ).toBe(true);
   });
 });
