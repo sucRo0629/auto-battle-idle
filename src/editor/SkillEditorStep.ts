@@ -1402,6 +1402,14 @@ function applyActiveBuffSubKindChange(
         ratio: prev.ratio ?? 0.1,
         buffDurationSec: prev.buffDurationSec ?? 5,
       };
+    case 'allyAttackFollowUp':
+      return {
+        ...base,
+        buffDurationSec: prev.buffDurationSec ?? 8,
+        allyFollowUpRadiusPx: prev.allyFollowUpRadiusPx ?? 70,
+        followUpDefDebuffMultiplier: prev.followUpDefDebuffMultiplier ?? 0.95,
+        followUpDefDebuffDurationSec: prev.followUpDefDebuffDurationSec ?? 5,
+      };
     case 'block':
     case 'evasion':
       return {

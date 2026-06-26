@@ -385,6 +385,7 @@ export const BUFF_SUB_KINDS = [
   "block",
   "evasion",
   "damageDelay",
+  "allyAttackFollowUp",
 ] as const satisfies readonly BuffSubKind[];
 
 export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
@@ -394,6 +395,7 @@ export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
   block: "ブロック",
   evasion: "回避",
   damageDelay: "ダメージ遅延",
+  allyAttackFollowUp: "追撃モード",
 };
 
 export const DEBUFF_SUB_KINDS = [

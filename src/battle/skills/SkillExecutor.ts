@@ -2,6 +2,13 @@ import type { BattleEventListener } from '../events.ts';
 import { applyIncomingDamage } from '../damageDelay.ts';
 import { shouldTriggerBonusBasicAttackOnHit } from '../bonusBasicAttackOnHit.ts';
 import {
+  ALLY_ATTACK_FOLLOW_UP_OVERLAY,
+  applyFollowUpDefDebuffOnHit,
+  buildAllyAttackFollowUpPendingHit,
+  findFollowUpLancersForAllyBasic,
+  getAllyAttackFollowUpConfig,
+} from '../allyAttackFollowUp.ts';
+import {
   applyBarrierToTarget,
   applyHealToTarget,
   clampHpToEffectiveMax,
@@ -687,6 +694,7 @@ export class SkillExecutor {
           hit.vfxSourceId,
           {
             suppressBonusBasicAttack: hit.suppressBonusBasicAttack === true,
+            suppressAllyAttackFollowUp: hit.suppressAllyAttackFollowUp === true,
           },
         )
       ) {
@@ -1147,6 +1155,51 @@ export class SkillExecutor {
           },
         ]);
       }
+      if (
+        cd.slotKind === 'basic' &&
+        appliedDamage > 0 &&
+        damageTarget.isEnemy &&
+        !actor.isEnemy
+      ) {
+        const followUpConfig = getAllyAttackFollowUpConfig(actor);
+        if (followUpConfig) {
+          if (
+            applyFollowUpDefDebuffOnHit(actor, damageTarget, followUpConfig)
+          ) {
+            this.deps.onTargetReceivedDebuff?.(damageTarget);
+          }
+        }
+      }
+      if (
+        cd.slotKind === 'basic' &&
+        appliedDamage > 0 &&
+        damageTarget.isEnemy &&
+        !actor.isEnemy &&
+        !damageContext.suppressAllyAttackFollowUp
+      ) {
+        const partyAllies = this.deps
+          .getAllCombatants()
+          .filter((unit) => !unit.isEnemy);
+        const followUpLancers = findFollowUpLancersForAllyBasic(
+          actor,
+          partyAllies,
+        );
+        if (followUpLancers.length > 0) {
+          const pendingHits = followUpLancers
+            .map((lancer) =>
+              buildAllyAttackFollowUpPendingHit(
+                lancer,
+                damageTarget.id,
+                this.gameData,
+                this.deps.getBattleTimeSec(),
+              ),
+            )
+            .filter((hit): hit is NonNullable<typeof hit> => hit !== undefined);
+          if (pendingHits.length > 0) {
+            this.deps.enqueuePendingHits(pendingHits);
+          }
+        }
+      }
       return true;
     }
 
@@ -1515,6 +1568,47 @@ export class SkillExecutor {
             effect: 'buff',
             effectIndex,
             statusLabel: 'damageDelay',
+            range: effectDef.range,
+            ...skillHitEventFields(hitIndex, vfxSourceId),
+          });
+          return true;
+        }
+        if (subKind === 'allyAttackFollowUp') {
+          const duration = effectDef.buffDurationSec ?? 0;
+          const radiusPx = effectDef.allyFollowUpRadiusPx ?? 70;
+          const defDebuffMultiplier =
+            effectDef.followUpDefDebuffMultiplier ?? 0.95;
+          const defDebuffDurationSec =
+            effectDef.followUpDefDebuffDurationSec ?? 5;
+          if (duration <= 0) return false;
+          const appliedAt = Date.now();
+          target.statusEffects = target.statusEffects.filter(
+            (effect) => effect.overlay !== ALLY_ATTACK_FOLLOW_UP_OVERLAY,
+          );
+          target.statusEffects.push({
+            id: `${skill.id}_allyAttackFollowUp_${appliedAt}`,
+            kind: 'buff',
+            overlay: ALLY_ATTACK_FOLLOW_UP_OVERLAY,
+            multiplier: 1,
+            durationSec: duration,
+            remainingSec: duration,
+            sourceId: actor.id,
+            skillId: skill.id,
+            allyFollowUpRadiusPx: radiusPx,
+            followUpDefDebuffMultiplier: defDebuffMultiplier,
+            followUpDefDebuffDurationSec: defDebuffDurationSec,
+            displayName: '追撃モード',
+          });
+          this.emit({
+            type: 'skill',
+            actorId: actor.id,
+            targetId: target.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            slotKind: cd.slotKind,
+            effect: 'buff',
+            effectIndex,
+            statusLabel: 'allyAttackFollowUp',
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId),
           });

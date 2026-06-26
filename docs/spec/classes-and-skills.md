@@ -520,7 +520,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | -------------- | ------ | --------- | ----- | -------- | --------------------------------------------- | --------------------- |
 | `at_warrior`   | 剣術士 | Swordsman | front | 近接     | 最高 DEF 狙い + DEF 無視                      | 叩き付け／薙ぎ払い    |
 | `at_assassin`  | 双刃士 | Assassin  | front | 近接     | 最低 HP 比率狙い + 回避                       | 引き裂き／影の刃      |
-| `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura | 号令／崩勢／鼓舞／退撃  |
+| `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura | 号令／崩勢／鼓舞／追撃  |
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                    | 連射／連ね矢          |
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 高 Max HP 狙い + 待機蓄積 + 砲撃標的           | 破城矢装填／重矢          |
 | `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | — （未実装）                                  | （未実装）            |
@@ -999,9 +999,9 @@ Kill 対象を持たない **Position Flow / 戦線指揮** 職。位置取り�
 | passive 3 Lv10 | `at_lancer_passive_3`    | 堅陣         | 味方 `selfOrigin` + `aoe` 常時 DEF buff ×1.1 + REG flat +5（P2 と同型 aura）         |
 | passive 4 Lv20 | `at_lancer_passive_4`    | 援護         | 自分以外の前列味方被弾時、攻撃者へ counter（chance 0.25 / counter ATK×0.5 / 攻撃者 ATK×0.9 debuff）。[combat.md](combat.md) §援護反撃 |
 | active 1 Lv0   | `at_lancer_active_1`     | 号令         | `move` なし。pierce 物理ダメ + 味方 ATK buff 短時間パルス（`selfOrigin` + `aoe`）   |
-| active 2 Lv0   | `at_lancer_active_2`     | 崩勢         | pierce 攻撃 + `stun` 3 秒のみ。`attackSpeed` debuff / DEF debuff 二重 / `moveLock` なし |
+| active 2 Lv0   | `at_lancer_active_2`     | 崩勢         | pierce 形状で `stun` 3 秒 + `knockback` のみ。`damage` / `attackSpeed` debuff / DEF debuff / `moveLock` なし |
 | active 3 Lv10  | `at_lancer_active_3`     | 鼓舞         | 味方前線 ATK buff + `attackSpeed` buff（持続寄り）。P2 常時より能動の上位               |
-| active 4 Lv20  | `at_lancer_active_4`     | 退撃         | pierce + `knockback` + 敵 DEF debuff ×0.9（前方ライン）。撃破大技にしない             |
+| active 4 Lv20  | `at_lancer_active_4`     | 追撃         | 自身へ `allyAttackFollowUp` 追撃モード。近傍味方 basic 後に槍術士 basic 1 回・追撃 basic 命中で敵 DEF debuff ×0.95。[combat.md](combat.md) §追撃モード |
 
 #### 処理対象
 
@@ -1575,6 +1575,7 @@ interface CharacterBuild {
 | `block`                  | 物理直接ダメージのブロック率を上昇                                          | `chance`（0〜1）                                  | 複数ソースは加算（上限 1.0）。                                      | 成功時、DEF 適用後の物理直接ダメージを一定割合カット。DoT は対象外。魔法 block は Paladin 後半 passive 候補で、採用時は新フィールドまたは新 effect として別途定義する。 |
 | `evasion`                | 直接ダメージ（物理/魔法）の回避率を上昇                                     | `chance`（0〜1）                                  | 複数ソースは加算（上限 1.0）。                                      | 成功時、直接ダメージを完全に無効化。DoT は対象外。                                                                                                                      |
 | `damageDelay`            | 一部ダメージ後払い                                                          | `ratio`, `buffDurationSec`                        | 複数ソースは `ratio` 加算（上限 1.0）。遅延プールは加算。           | 軽減ではない。Block 後の確定ダメージを分割し、遅延分は DEF/REG/Barrier/Block/Evasion を再適用しない。詳細は [combat.md](combat.md)。                                    |
+| `allyAttackFollowUp`     | 追撃モード（近傍味方 basic 後に自身 basic 追撃）                            | `buffDurationSec`, `allyFollowUpRadiusPx`, `followUpDefDebuffMultiplier`, `followUpDefDebuffDurationSec?` | 同一対象への複数付与は **最新 1 件のみ**（overlay 置換）            | 正本は [combat.md](combat.md) §追撃モード。槍術士 A4。パッシブ aura ではない。                                                                                          |
 
 - **通常攻撃変形 (`basicAttackTransform`)**: 自身に付与する特殊バフ。バフ持続中、通常攻撃（`slotKind: basic`）の性能を上書き・追加効果をマージします（複数付与時は最新 1 件のみ有効）。
 - **条件分岐 (`conditionalEffect`)**: 1 effect 内で `conditions`（AND）を評価し、成立時は `thenEffects`、未成立時は `elseEffects` のみ実行。コンテナ自体に `target` / `targetShape` は持たせず、branch 内の通常 effect に委譲。branch 内 `conditionalEffect` の入れ子は不可。skill 直下 `fireConditions` は発動ゲート専用（[combat.md](combat.md)）。
@@ -1698,7 +1699,7 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 
 | フィールド        | 説明                                                     |
 | ----------------- | -------------------------------------------------------- |
-| `buffSubKind`     | `block` / `evasion` / `damageDelay` / `stat` / `barrier` |
+| `buffSubKind`     | `block` / `evasion` / `damageDelay` / `allyAttackFollowUp` / `stat` / `barrier` |
 | `chance`          | `block` / `evasion` 用。0〜1。複数ソースは加算（上限 1） |
 | `ratio`           | `damageDelay` 用。後払いにする被ダメ割合（0.5 = 50%）    |
 | `buffDurationSec` | 付与 buff の持続（秒）                                   |

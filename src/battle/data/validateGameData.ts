@@ -2718,6 +2718,50 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         ...(range !== undefined ? { range } : {}),
       });
     }
+    if (buffSubKind === 'allyAttackFollowUp') {
+      const buffDurationSec = requireNumber(obj, 'buffDurationSec', context);
+      const allyFollowUpRadiusPx = parseOptionalNonNegativeNumber(
+        obj,
+        'allyFollowUpRadiusPx',
+        context,
+      );
+      const followUpDefDebuffMultiplier = parseOptionalNumber(
+        obj,
+        'followUpDefDebuffMultiplier',
+        context,
+      );
+      if (
+        followUpDefDebuffMultiplier !== undefined &&
+        (followUpDefDebuffMultiplier < 0 || followUpDefDebuffMultiplier > 1)
+      ) {
+        invalidField(
+          context,
+          'followUpDefDebuffMultiplier',
+          'must be between 0 and 1',
+        );
+      }
+      const followUpDefDebuffDurationSec = parseOptionalNonNegativeNumber(
+        obj,
+        'followUpDefDebuffDurationSec',
+        context,
+      );
+      return normalizeSkillEffect({
+        target: { kind: 'self' },
+        ...combatModifiers,
+        type,
+        buffSubKind,
+        buffDurationSec,
+        ...(allyFollowUpRadiusPx !== undefined ? { allyFollowUpRadiusPx } : {}),
+        ...(followUpDefDebuffMultiplier !== undefined
+          ? { followUpDefDebuffMultiplier }
+          : {}),
+        ...(followUpDefDebuffDurationSec !== undefined
+          ? { followUpDefDebuffDurationSec }
+          : {}),
+        ...sequenceTiming,
+        ...presentation,
+      });
+    }
     const chance = requireNumber(obj, 'chance', context);
     if (chance < 0 || chance > 1) {
       invalidField(context, 'chance', 'must be between 0 and 1');

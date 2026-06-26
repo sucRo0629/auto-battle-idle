@@ -113,7 +113,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 ### 未完了タスク
 
 - 影響クラスを洗い出し、各クラスのパッシブ / アクティブスキル構成を再定義
-- 槍術士（`at_lancer`）: pierce approach は [battle-field.md](../spec/battle-field.md) §4.4、4 枠化 doc は [classes-and-skills.md §槍術士](../spec/classes-and-skills.md#槍術士at_lancer変則近接) で確定済み。JSON / combat 実装は別タスク
+- 槍術士（`at_lancer`）: pierce approach は [battle-field.md](../spec/battle-field.md) §4.4、4 枠化 doc / JSON / combat（A4 追撃モード `allyAttackFollowUp` 含む）は [classes-and-skills.md §槍術士](../spec/classes-and-skills.md#槍術士at_lancer変則近接)・[combat.md](../spec/combat.md) §追撃モード で **実装済**
 - `classes.json` の習得テーブルと `data/skills/` の効果・ターゲット・数値フィールドを更新
 - 新 effect / target / 条件 / 表示要素が増える場合は、`SkillEditorStep`・validate・`formatSkillText`・関連 spec を同じ作業で同期
 - 変更後のクラスマスタを [classes-and-skills.md](../spec/classes-and-skills.md) と突き合わせ、Phase 4a を再確定

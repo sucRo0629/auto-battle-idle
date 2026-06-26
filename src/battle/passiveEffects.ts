@@ -91,6 +91,8 @@ export interface PassiveDamageContext {
   targetShape?: TargetShape;
   /** bonusBasicAttackOnHit 追加 Hit — 再帰発火を抑止 */
   suppressBonusBasicAttack?: boolean;
+  /** allyAttackFollowUp 追撃 Hit — 再帰追撃を抑止 */
+  suppressAllyAttackFollowUp?: boolean;
 }
 
 export function getEvasionChance(

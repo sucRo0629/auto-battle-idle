@@ -56,9 +56,11 @@ describe('at_lancer passive / active unlock structure', () => {
     const a2 = actives['at_lancer_active_2'];
     expect(a2?.name).toBe('崩勢');
     const a2Effects = a2?.effect ?? [];
+    expect(a2Effects.some((e) => e.type === 'damage')).toBe(false);
     expect(
       a2Effects.some((e) => e.type === 'debuff' && e.debuffSubKind === 'stun'),
     ).toBe(true);
+    expect(a2Effects.some((e) => e.type === 'knockback')).toBe(true);
     expect(a2Effects.filter((e) => e.type === 'debuff')).toHaveLength(1);
 
     const a3 = actives['at_lancer_active_3'];
@@ -70,16 +72,20 @@ describe('at_lancer passive / active unlock structure', () => {
     expect(a3BuffStats).toContain('attackSpeed');
 
     const a4 = actives['at_lancer_active_4'];
-    expect(a4?.name).toBe('退撃');
-    expect(a4?.effect.some((e) => e.type === 'knockback')).toBe(true);
+    expect(a4?.name).toBe('追撃');
     expect(
       a4?.effect.some(
-        (e) =>
-          e.type === 'debuff' &&
-          e.debuffSubKind === 'stat' &&
-          e.debuffStat === 'def',
+        (e) => e.type === 'buff' && e.buffSubKind === 'allyAttackFollowUp',
       ),
     ).toBe(true);
+    expect(a4?.effect.some((e) => e.type === 'knockback')).toBe(false);
+    const followUp = a4?.effect.find(
+      (e) => e.type === 'buff' && e.buffSubKind === 'allyAttackFollowUp',
+    );
+    if (followUp?.type === 'buff') {
+      expect(followUp.followUpDefDebuffMultiplier).toBe(0.95);
+      expect(followUp.allyFollowUpRadiusPx).toBe(70);
+    }
 
     const p3 = passives['at_lancer_passive_3'];
     expect(p3?.name).toBe('堅陣');

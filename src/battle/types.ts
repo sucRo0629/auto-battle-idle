@@ -339,6 +339,7 @@ export interface StatusEffect {
     | "arenaMark"
     | "ballistaMark"
     | "nextOutgoingDamage"
+    | "allyAttackFollowUp"
     | "duelistPride";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
@@ -379,6 +380,12 @@ export interface StatusEffect {
   counterRanged?: boolean;
   /** basicAttackTransform overlay: 通常攻撃変形 spec（付与時コピー） */
   basicAttackTransform?: BasicAttackTransformSpec;
+  /** allyAttackFollowUp overlay: 近傍味方 basic 追撃の半径（px） */
+  allyFollowUpRadiusPx?: number;
+  /** allyAttackFollowUp overlay: 追撃 basic 命中時の DEF debuff 倍率 */
+  followUpDefDebuffMultiplier?: number;
+  /** allyAttackFollowUp overlay: DEF debuff 持続（秒） */
+  followUpDefDebuffDurationSec?: number;
   /** wardBarrier overlay: 残スタック数 */
   stacks?: number;
   /** HUD / ログ用の表示名（未指定時は overlay / stat から解決） */
@@ -439,7 +446,8 @@ export type BuffSubKind =
   | "wardBarrier"
   | "block"
   | "evasion"
-  | "damageDelay";
+  | "damageDelay"
+  | "allyAttackFollowUp";
 
 /** 通常攻撃変形 — primary effect への部分パッチ */
 export interface BasicAttackTransformPrimaryPatch {
@@ -1156,6 +1164,8 @@ export interface PendingSkillHit {
   targets: PendingSkillHitTarget[];
   /** bonusBasicAttackOnHit 由来 Hit — 再帰発火を抑止 */
   suppressBonusBasicAttack?: boolean;
+  /** allyAttackFollowUp 由来 Hit — 再帰追撃を抑止 */
+  suppressAllyAttackFollowUp?: boolean;
 }
 
 export interface DamageSkillEffect extends SkillEffectCommon {
@@ -1209,6 +1219,12 @@ export interface BuffSkillEffect extends SkillEffectCommon {
   damageReductionRatio?: number;
   amount?: ResourceAmountSpec;
   barrierStack?: boolean;
+  /** allyAttackFollowUp: 近傍味方 basic 追撃の半径（px。未指定 70） */
+  allyFollowUpRadiusPx?: number;
+  /** allyAttackFollowUp: 追撃 basic 命中時の DEF debuff 倍率（未指定 0.95） */
+  followUpDefDebuffMultiplier?: number;
+  /** allyAttackFollowUp: DEF debuff 持続秒（未指定 5） */
+  followUpDefDebuffDurationSec?: number;
 }
 
 export interface BasicAttackTransformSkillEffect extends SkillEffectCommon {

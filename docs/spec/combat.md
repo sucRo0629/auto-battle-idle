@@ -436,6 +436,22 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 **HP ゲート省略規則:** `bonusBasicAttackConditions` のみで `bonusBasicAttackHpRatio` を省略した場合は HP ゲートをスキップ（例: 弓術士 P4 二の矢）。conditions も HP も省略時は従来どおり `bonusBasicAttackHpRatio` 未指定 = 0.3（双刃士 P4 無慈悲な刃）。
 
+### 追撃モード（`buffSubKind: "allyAttackFollowUp"`）
+
+アクティブ effect。自身へ overlay `allyAttackFollowUp`（表示名例: 追撃モード）を付与し、持続中のみ近傍味方の通常攻撃を監視して追撃する。槍術士 A4（`at_lancer_active_4`）が正本。
+
+| 項目 | 挙動 |
+| ---- | ---- |
+| 付与 | `buffDurationSec`（Phase 8 仮値可）。`allyFollowUpRadiusPx`（未指定 **70**）を overlay にコピー |
+| 監視対象 | 槍術士から `battleX` 距離 ≤ `allyFollowUpRadiusPx` の味方（**使用者自身は除外**） |
+| トリガー | 対象味方の **basic**（`slotKind: basic`）`damage` 適用成功（`appliedDamage > 0`）。active は v1 対象外 |
+| 追撃内容 | 槍術士が **通常攻撃（basic）を 1 回**、**味方と同じターゲット**へ実行（`pendingHitQueue`） |
+| 頻度 | 味方 1 攻撃につき最大 1 回（chance なし） |
+| 非再帰 | 追撃由来 basic は `suppressAllyAttackFollowUp` 付き pending Hit とし、再度追撃を発火しない |
+| DEF debuff | 追撃モード中、槍術士自身の basic（追撃含む）が敵に `appliedDamage > 0` で命中した相手へ DEF stat debuff。倍率 `followUpDefDebuffMultiplier`（未指定 **0.95**）、持続 `followUpDefDebuffDurationSec`（未指定 5 秒） |
+
+`knockback` は A2 崩勢へ移管済み。A4 には含めない。
+
 ## ターゲット解決
 
 1. effect のターゲット陣営（`spec.side` 等）と一致する `targetRuleOverrideApplyTo` を持つパッシブのみ `targetRuleOverride` を適用（`kind: self` は除外。配列の後ろが優先）。通常攻撃・接近は敵向けスコープ

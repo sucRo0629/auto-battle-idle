@@ -509,6 +509,14 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
             effect.ratio ?? 0
           )} ${effect.buffDurationSec ?? 0}s`
         );
+      } else if (effect.buffSubKind === "allyAttackFollowUp") {
+        extras.push(
+          `${BUFF_SUB_KIND_LABELS.allyAttackFollowUp} ${
+            effect.buffDurationSec ?? 8
+          }s 半径${effect.allyFollowUpRadiusPx ?? 70}px DEF×${(
+            effect.followUpDefDebuffMultiplier ?? 0.95
+          ).toFixed(2)}`
+        );
       } else {
         const statLabel = formatBuffTargetStats(
           effect.buffStat,

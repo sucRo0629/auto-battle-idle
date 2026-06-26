@@ -72,20 +72,6 @@
     },
     "effect": [
       {
-        "type": "damage",
-        "damageType": "physical",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.5
-        },
-        "targetShape": "pierce",
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "selfOrigin"
-        }
-      },
-      {
         "target": {
           "kind": "distance",
           "side": "enemy",
@@ -95,6 +81,16 @@
         "debuffSubKind": "stun",
         "durationSec": 3,
         "targetShape": "pierce"
+      },
+      {
+        "type": "knockback",
+        "distancePx": 25,
+        "targetShape": "pierce",
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        }
       }
     ]
   },
@@ -140,48 +136,21 @@
   },
   {
     "id": "at_lancer_active_4",
-    "name": "退撃",
+    "name": "追撃",
     "trigger": {
       "kind": "time",
       "value": 16
     },
     "effect": [
       {
-        "targetShape": "pierce",
-        "type": "damage",
-        "damageType": "physical",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.7
+        "target": {
+          "kind": "self"
         },
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "selfOrigin"
-        }
-      },
-      {
-        "type": "knockback",
-        "distancePx": 25,
-        "targetShape": "pierce",
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "selfOrigin"
-        }
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "selfOrigin"
-        },
-        "type": "debuff",
-        "debuffSubKind": "stat",
-        "debuffStat": "def",
-        "debuffMultiplier": 0.9,
-        "debuffDurationSec": 5,
-        "targetShape": "pierce"
+        "type": "buff",
+        "buffSubKind": "allyAttackFollowUp",
+        "buffDurationSec": 8,
+        "allyFollowUpRadiusPx": 70,
+        "followUpDefDebuffMultiplier": 0.95
       }
     ]
   }
