@@ -45,6 +45,10 @@
         "flatBonus": 5
       }
     ],
+    "buffStat": [
+      "def",
+      "reg"
+    ],
     "buffTargetShape": "aoe",
     "buffAoeRadiusPx": 50,
     "buffTargetRule": {
