@@ -339,7 +339,11 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 
 **自動接近スキップ：** `shouldSkipEngagedAutoApproach` — attack プールに 1 体でもいれば接近しない（射程内で攻撃待機）。`test_ranged` も通常の attack プールとして扱う。
 
-**pierce 敵向け通常攻撃の接近停止（`isPierceEnemyBasicAttack`）：** 上記の単体射程内停止は使わない。停止 X は `contact − effectiveRangePx`（`resolvePierceApproachStopBattleX` / `capFrontRowBeforeEnemyContact` と同式）。`battleX >= pierceStopX − settleEpsilon` で接近停止。過前進（`battleX > pierceStopX`）時は `shouldSkip` を false のまま `updateUnitApproach` の双方向補間で `pierceStopX` へ戻す。接近目標 X も chase 個体ではなく contact 基準（`resolvePlayerChaseApproachBattleX`）。battle-line depth の **nearest**（`battleX` 最大の奥敵）を pierce 接近アンカーにしない。貫通形状・ターゲット仕様は [combat.md](combat.md) を参照。
+**pierce 敵向け通常攻撃の接近停止（`isPierceEnemyBasicAttack`）：** `selfOrigin` + `pierce` の敵向け通常攻撃は、接近停止の正本が「射程内に敵 1 体」ではない（上記 `shouldSkipEngagedAutoApproach` の単体射程内停止を使わない）。停止目標 `battleX` = `getEnemyContactX() − effectiveRangePx`（`resolvePierceApproachStopBattleX` / `capFrontRowBeforeEnemyContact` と同式）。pierce basic 持ちユニットはこの停止 X に到達するまで接近を継続する（`shouldSkipEngagedAutoApproach` 相当の意味。実装は別タスク）。`battleX >= pierceStopX − settleEpsilon` で接近停止。過前進（`battleX > pierceStopX`）時は `shouldSkip` を false のまま `updateUnitApproach` の双方向補間で `pierceStopX` へ戻す。接近目標 X も chase 個体ではなく contact 基準（`resolvePlayerChaseApproachBattleX`）。battle-line depth の **nearest**（`battleX` 最大＝戦線奥）を pierce 接近アンカーにしない。後列遠隔に引きずられて前進しすぎない。停止は contact 基準。
+
+**用語（battle-line depth）：** プレイヤー敵 target の `nearest` = 奥（`battleX` 最大）、`farthest` = 手前。本節の pierce 接近はこの depth 用語と混同しない。
+
+貫通形状・ターゲット仕様は [combat.md](combat.md) の `pierce` / `selfOrigin` 節を参照。
 
 **味方の共有 clamp / formation レイヤ：**
 
