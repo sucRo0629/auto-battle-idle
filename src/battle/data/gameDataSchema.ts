@@ -825,6 +825,7 @@ export const TARGET_SPEC_KINDS = [
   "stat",
   "attackType",
   "status",
+  "clusterCenter",
   "self",
   "all",
 ] as const;
@@ -836,6 +837,7 @@ export const TARGET_SPEC_KIND_LABELS: Record<TargetSpecKind, string> = {
   stat: "ステータス",
   attackType: "攻撃種別",
   status: "状態",
+  clusterCenter: "クラスタ中心",
   self: "自身",
   all: "全体",
 };

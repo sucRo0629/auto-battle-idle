@@ -265,7 +265,11 @@ Barrier は Survival Layer の猶予を作る。被ダメージ軽減は損失�
 | Freeze / 時間停止系拘束 | CD 停止など時間進行へ干渉する上位制御。スタンとは別状態として扱う | 構想段階 |
 | Dispel | debuff / DoT / stun などを指定数または全解除する | 実装済み |
 
-出血と毒は、内部的に別ダメージ式を持たず、同一の DoT メカニクス（`overlay: dot`、1 秒 tick）に対する表示・フレーバー層として扱う。`debuffSubKind: dot` の effect に任意で `dotFlavor: bleed | poison` を指定し、未指定は従来どおり汎用 DoT。`DebuffFilterTag` の `bleed` / `poison` は各フレーバー専用、`dot` は全フレーバー + 未指定にマッチする。既存設計上、狩猟士は範囲 DoT（毒・出血）による持続圧力や DoT 時間密度を扱う職として構想されているが、狩猟士の範囲 DoT・範囲ノックバックは未実装・TBD とされている。
+出血と毒は、内部的に別ダメージ式を持たず、同一の DoT メカニクス（`overlay: dot`、1 秒 tick）に対する表示・フレーバー層として扱う。`debuffSubKind: dot` の effect に任意で `dotFlavor: bleed | poison` を指定し、未指定は従来どおり汎用 DoT。`DebuffFilterTag` の `bleed` / `poison` は各フレーバー専用、`dot` は全フレーバー + 未指定にマッチする。
+
+**DoT 再付与:** buff/debuff / CC の `remainingSec` は長い方を採用するが、**DoT（`overlay: dot`）のみ例外** — 再付与時にマージせず StatusEffect を追加し、各实例が独立 tick（累積）する。詳細は [combat.md](spec/combat.md) §状態再付与。
+
+**狩猟士（`at_hunter`）:** Physical pass B **実装済**。Field Flow 職として `placedField`（`clusterCenter` 配置）による局所 poison Field、`dotCompress` / `dotExtend` / `dotHarvest`、`hasDot` 条件、P2 味方 basic からの poison 付与を扱う。広範囲 DoT 火力や scatter 罠は v1 主軸にしない。視界妨害・命中干渉・フィールド端貫通は v1 外。
 
 Stun は damage ではなく行動可否を操作する。スタン中は使用者として通常攻撃・アクティブが発動せず、ターゲット選択も行わない。一方で CD は戦闘時間に従って進行し続ける。時間 CD 停止や時間進行そのものへの干渉が必要な場合は、Freeze / 時間停止系拘束など、スタンとは別の状態として定義する。
 
@@ -325,6 +329,5 @@ chain と multiLock は、単なる演出ではなくターゲット形状シス
 | 項目                                                | 状態                                                             |
 | --------------------------------------------------- | ---------------------------------------------------------------- |
 | 優先ターゲット AI の詳細アルゴリズム                | TBD。高 MaxHP などの設計概念と現行 TargetSpec の詳細対応は要確認 |
-| 狩猟士の範囲 DoT / 範囲ノックバック                 | 未実装・TBD                                                      |
 | Attack / Hit / Gauge の厳密な内部仕様ドキュメント化 | TBD。ただし `hitCount` とカウントトリガーの現行仕様は存在する    |
 | 戦闘中の attackSpeed tier 変更                      | 未実装                                                           |

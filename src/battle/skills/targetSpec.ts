@@ -185,6 +185,13 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
       ...(buffTags && buffTags.length > 0 ? { buffTags } : {}),
     };
   }
+  if (kind === "clusterCenter") {
+    const side = raw.side;
+    if (side !== "ally" && side !== "enemy") {
+      throw new Error("Invalid target.clusterCenter side");
+    }
+    return { kind: "clusterCenter", side };
+  }
   throw new Error(`Unknown target.kind: ${String(kind)}`);
 }
 
@@ -239,7 +246,7 @@ export function targetSpecFaction(
   if (spec.kind === "attackType") {
     return "enemy";
   }
-  if (spec.kind === "status") {
+  if (spec.kind === "status" || spec.kind === "clusterCenter") {
     return spec.side ?? "enemy";
   }
   return "enemy";
@@ -778,6 +785,8 @@ export function formatTargetLabel(spec: TargetSpec): string {
     }
     case "status":
       return `${SIDE_LABELS[spec.side ?? "enemy"]}・状態`;
+    case "clusterCenter":
+      return `${SIDE_LABELS[spec.side]}・クラスタ中心`;
   }
 }
 

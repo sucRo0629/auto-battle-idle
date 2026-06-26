@@ -164,6 +164,8 @@ function appendDamageIncreaseConditionFields(
             onChange({ kind, tags: ["def"] }, { rerender: true });
           } else if (kind === "attackType") {
             onChange({ kind: "attackType", ranged: true }, { rerender: true });
+          } else if (kind === "hasDot") {
+            onChange({ kind: "hasDot" }, { rerender: true });
           } else {
             onChange({ kind: "targetHp", maxHpRatio: 0.5 }, { rerender: true });
           }
@@ -234,6 +236,10 @@ function appendDamageIncreaseConditionFields(
     card.appendChild(attackRow);
     card.appendChild(
       createEl("p", "editor-hint", attackTypeRangedBandEditorHintJa())
+    );
+  } else if (condition.kind === "hasDot") {
+    card.appendChild(
+      createEl("p", "editor-hint", "対象が DoT 中（overlay: dot）のときに成立")
     );
   }
 
@@ -1259,6 +1265,8 @@ function defaultTargetForKind(kind: TargetSpecKind): TargetSpec {
       return { kind: "attackType", physical: true };
     case "status":
       return { kind: "status", side: "enemy", debuffTags: ["def"] };
+    case "clusterCenter":
+      return { kind: "clusterCenter", side: "enemy" };
     default:
       return { kind: "self" };
   }
@@ -1496,6 +1504,29 @@ export function appendTargetSpecFields(
           debuffTags: debuffTags.length > 0 ? debuffTags : undefined,
           buffTags: buffTags.length > 0 ? buffTags : undefined,
         })
+    );
+  }
+
+  if (normalized.kind === "clusterCenter") {
+    wrap.appendChild(
+      createFieldRow(
+        "対象側",
+        createSelect(
+          normalized.side,
+          (["ally", "enemy"] as const).map((value) => ({
+            value,
+            label: TARGET_SIDE_LABELS[value],
+          })),
+          (side) => onChange({ ...normalized, side })
+        )
+      )
+    );
+    wrap.appendChild(
+      createEl(
+        "p",
+        "editor-hint",
+        "生存ユニットの battleX 重心。placedField の配置 anchor などに使用"
+      )
     );
   }
 
@@ -2165,6 +2196,8 @@ function defaultFireCondition(kind: FireConditionKind): FireCondition {
       return { kind };
     case "blockResonanceStacks":
       return { kind, min: 1 };
+    case "hasDot":
+      return { kind };
   }
 }
 
@@ -2344,6 +2377,11 @@ function appendFireConditionFields(
             { min: 1, step: 1 }
           )
         )
+      );
+      break;
+    case "hasDot":
+      card.appendChild(
+        createEl("p", "editor-hint", "対象が DoT 中（overlay: dot）のときに成立")
       );
       break;
   }
