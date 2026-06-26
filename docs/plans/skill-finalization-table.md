@@ -22,6 +22,7 @@
 - 既存 effect / target / condition で表現できる案を優先する。
 - 新 effect、targetShape、条件、表示要素を採用する場合は、同じ実装単位で `SkillEditorStep`、`editorApi`、validate、`formatSkillText`、関連 spec を同期する。
 - 既存 RPG テンプレートではなく、現在の設計書と実装を正本にする。
+- Targeted Kill（処理対象を持つ物理 Kill）の passive 段階: P1 Lv0 = 処理対象選定、P2 Lv0 = クラス基盤、P3 Lv10 = 処理対象特効、P4 Lv20 = 処理完成形。詳細は [classes-and-skills.md §Targeted Kill の passive 段階](../spec/classes-and-skills.md#targeted-kill-の-passive-段階設計ルール) を正とする。
 
 ## 判定ラベル
 

@@ -837,6 +837,27 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 - 各クラスは「敵の処理方法」を担当する
 - 近接・遠隔は実装差であり本質ではない
 
+### Targeted Kill の passive 段階（設計ルール）
+
+**適用対象:** 処理対象を持つ Targeted Kill — `at_warrior` / `at_assassin` / `at_ranger` / `at_ballista`。
+
+**非適用:** Flow 職（`at_lancer` / `at_hunter` / `at_conductor` 等）は処理対象を持たないため、この passive 枠割りは使わない。
+
+「誰を狙うか」と「処理対象に当たったときどれだけ効くか」の概念分離は [system-mechanics.md](../system-mechanics.md) の「ターゲット選択とターゲット特効」を正とする。以下はその概念を passive 枠番号へ割り当てる設計ルールである。
+
+| 枠 | 習得 | 役割 | 典型 effect |
+|----|------|------|-------------|
+| P1 | Lv0 | 処理対象の選定 | `targetRuleOverride` |
+| P2 | Lv0 | クラス基盤（回転・貫通・自衛等。特効とは別） | `defenseIgnore` / attackSpeed buff / evasion 等 |
+| P3 | Lv10 | 処理対象特効 | `specialEffect` / 条件付き `defenseIgnore` / `damageIncrease` |
+| P4 | Lv20 | 処理の完成形 | `ignoredDefBonusDamage` / `bonusBasicAttackOnHit` 等 |
+
+- P2 はクラス個性の土台であり、必ずしも処理対象そのものへの特効ではない（例: [双刃士](#双刃士at_assassin拡張近接) P2=回避）。
+- P3 は「誰を狙うか」ではなく「処理対象に当たったときどれだけ効くか」の段階強化。
+- active 側は回転・火力形状を担い、passive の特効とは役割分担する。
+
+**参照例（詳細は各クラス節のスキル表を正とする）:** [剣術士](#剣術士at_warrior基礎近接) P1=重装狙い / P3=穿甲の一撃 / P4=剛剣の冴え、[双刃士](#双刃士at_assassin拡張近接) P1=手負い狩り / P3=刈り取り / P4=無慈悲な刃。
+
 ### 三分類と classId
 
 | 系統         | classId       | 表示名 |

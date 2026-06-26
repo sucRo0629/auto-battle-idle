@@ -174,6 +174,8 @@ Level Sync Clear: ✓
 
 ターゲット選択は「当て先」を変える。ターゲット特効は「当たった後の効き方」を変える。たとえば低 HP の敵を優先することと、低 HP の敵に追加倍率を乗せることは組み合わせられるが、片方だけでも成立する。
 
+処理対象を持つ Targeted Kill では、passive P1 がターゲット選択、P3 Lv10 がターゲット特効（処理対象特効）を担う設計ルールがある。枠割りの詳細は [classes-and-skills.md の Targeted Kill の passive 段階](spec/classes-and-skills.md#targeted-kill-の-passive-段階設計ルール) を正とする。
+
 ## スキルチャージシステム
 
 アクティブは `trigger` によってチャージ方式が変わる。現在の設計では、時間だけでなく、通常攻撃や被弾をリソース化できる。
