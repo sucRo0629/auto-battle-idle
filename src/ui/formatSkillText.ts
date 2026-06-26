@@ -702,6 +702,12 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
       }
       break;
     }
+    case "grantNextOutgoingDamage": {
+      if (effect.nextOutgoingDamageMultiplier !== undefined) {
+        extras.push(`次与ダメ×${effect.nextOutgoingDamageMultiplier}`);
+      }
+      break;
+    }
   }
 
   if (effect.range !== undefined && effect.type !== "counter") {
@@ -749,6 +755,8 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
       return "敵引き寄せ";
     case "arenaDominance":
       return "闘技場の掟";
+    case "grantNextOutgoingDamage":
+      return "次与ダメ装填";
     case "basicAttackTransform":
       return "通常攻撃変形";
     default:
@@ -1013,6 +1021,24 @@ function formatPassiveEffect(
       return `対象HP比例回復 ×${
         def.healScaleMax ?? 1
       }（残HP${ratio}以下時最大）`;
+    }
+    case "targetHpRatioDamageScale": {
+      const ratio = formatPercent(def.minScaleAtHpRatio ?? 0);
+      return `対象HP比例ダメ ×${
+        def.damageScaleMax ?? 1
+      }（残HP${ratio}以下で×1）`;
+    }
+    case "idleAtkRamp": {
+      const maxSec = def.rampToMaxSec ?? 2.5;
+      const minMul = def.atkMulMin ?? 1.25;
+      const maxMul = def.atkMulMax ?? 1.6;
+      return `待機ATK蓄積 ${maxSec}秒で ×${minMul}〜×${maxMul}（SPD低下で上限上昇）`;
+    }
+    case "ballistaMark": {
+      const radius = def.ballistaMarkSplashRadiusPx ?? 50;
+      const splash = formatPercent(def.ballistaMarkSplashDamageScale ?? 0.3);
+      const spd = def.ballistaMarkSelfAttackSpeedMul ?? 0.85;
+      return `砲撃標的（着弾${radius}px内飛散${splash} / 自身SPD×${spd}）`;
     }
     case "healReservation": {
       const grant = formatPercent(def.grantOnHealMaxHpRatio ?? 1);

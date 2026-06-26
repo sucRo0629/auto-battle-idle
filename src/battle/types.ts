@@ -143,7 +143,7 @@ export type TargetRule =
 
 export type TargetSide = "ally" | "enemy";
 export type TargetDistanceOrder = "nearest" | "farthest" | "selfOrigin";
-export type TargetStat = "hp" | "atk" | "def" | "reg";
+export type TargetStat = "hp" | "maxHp" | "atk" | "def" | "reg";
 export type TargetStatOrder = "highest" | "lowest" | "ratio";
 
 /** バフフィルタタグ（gameDataSchema.BUFF_FILTER_TAGS と同期） */
@@ -337,6 +337,8 @@ export interface StatusEffect {
     | "lastStandGuts"
     | "arenaDominance"
     | "arenaMark"
+    | "ballistaMark"
+    | "nextOutgoingDamage"
     | "duelistPride";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;
@@ -584,6 +586,14 @@ export interface CombatantState extends Combatant {
   passiveWaveRemainingTriggers?: Record<string, number>;
   /** arenaDominance 等: Stage 内の残り発動回数（skillId → 残数） */
   activeStageRemainingTriggers?: Record<string, number>;
+  /** idleAtkRamp: 前回攻撃からの経過秒（攻撃で 0 にリセット） */
+  idleAtkRampElapsedSec?: number;
+  /** grantNextOutgoingDamage: 次の与ダメ倍率（装填完了後に armed） */
+  nextOutgoingDamageCharge?: {
+    multiplier: number;
+    armed: boolean;
+    skillId?: string;
+  };
 }
 
 export type PassiveEffectKind =
@@ -601,6 +611,9 @@ export type PassiveEffectKind =
   | "selfHpRatioBuff"
   | "excessHealRedirect"
   | "targetHpRatioHealScale"
+  | "targetHpRatioDamageScale"
+  | "idleAtkRamp"
+  | "ballistaMark"
   | "healReservation"
   | "barrierBreakRegen"
   | "barrierDepletionHeal"
@@ -844,6 +857,24 @@ export interface PassiveSkillDef {
   healScaleMax?: number;
   /** targetHpRatioHealScale: この HP 割合以下で healScaleMax に到達（0〜1、1 未満） */
   maxScaleAtHpRatio?: number;
+  /** targetHpRatioDamageScale: 対象 HP 割合に応じた与ダメ倍率の上限（1 超） */
+  damageScaleMax?: number;
+  /** targetHpRatioDamageScale: この HP 割合以下で倍率 1.0（0〜1、1 未満） */
+  minScaleAtHpRatio?: number;
+  /** idleAtkRamp: 最大蓄積までの秒 */
+  rampToMaxSec?: number;
+  /** idleAtkRamp: 攻撃速度低下なし時の ATK 倍率上限 */
+  atkMulMin?: number;
+  /** idleAtkRamp: 最大攻撃速度低下時の ATK 倍率上限 */
+  atkMulMax?: number;
+  /** idleAtkRamp: severity 補間の基準 attackSpeed 倍率 */
+  fullRampAttackSpeedMul?: number;
+  /** ballistaMark: マーク着弾位置からの飛散半径（px） */
+  ballistaMarkSplashRadiusPx?: number;
+  /** ballistaMark: 飛散ダメージ倍率（実ダメに対する割合） */
+  ballistaMarkSplashDamageScale?: number;
+  /** ballistaMark: 自身 attackSpeed debuff 倍率 */
+  ballistaMarkSelfAttackSpeedMul?: number;
   /** healReservation: 付与時の対象 HP 割合上限（この割合以下を回復したとき 1 スタック） */
   grantOnHealMaxHpRatio?: number;
   /** healReservation: スタック持続秒 */
@@ -953,7 +984,8 @@ export type SkillEffectKind =
   | "herbalPotencyConsume"
   | "blockResonanceConsume"
   | "enemyReelIn"
-  | "arenaDominance";
+  | "arenaDominance"
+  | "grantNextOutgoingDamage";
 
 export type MoveMode = "engage" | "toAnchor";
 export type DamageType = "physical" | "magic";
@@ -1337,6 +1369,11 @@ export interface ArenaDominanceSkillEffect extends SkillEffectCommon {
   nonMarkDamageMultiplier?: number;
 }
 
+export interface GrantNextOutgoingDamageSkillEffect extends SkillEffectCommon {
+  type: "grantNextOutgoingDamage";
+  nextOutgoingDamageMultiplier?: number;
+}
+
 export type SkillEffectDef =
   | DamageSkillEffect
   | HealSkillEffect
@@ -1355,7 +1392,8 @@ export type SkillEffectDef =
   | HerbalPotencyConsumeSkillEffect
   | BlockResonanceConsumeSkillEffect
   | EnemyReelInSkillEffect
-  | ArenaDominanceSkillEffect;
+  | ArenaDominanceSkillEffect
+  | GrantNextOutgoingDamageSkillEffect;
 
 /** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
 export type LegacyHotSkillEffect = HotSkillEffect;

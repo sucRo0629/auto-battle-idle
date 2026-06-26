@@ -64,6 +64,7 @@ export const SKILL_EFFECT_KINDS = [
   "blockResonanceConsume",
   "enemyReelIn",
   "arenaDominance",
+  "grantNextOutgoingDamage",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const MOVE_MODES = [
@@ -290,6 +291,9 @@ export const PASSIVE_EFFECT_KINDS = [
   "selfHpRatioBuff",
   "excessHealRedirect",
   "targetHpRatioHealScale",
+  "targetHpRatioDamageScale",
+  "idleAtkRamp",
+  "ballistaMark",
   "healReservation",
   "barrierBreakRegen",
   "barrierDepletionHeal",
@@ -327,6 +331,9 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   counter: "反撃",
   selfHpRatioBuff: "自HP割合バフ",
   targetHpRatioHealScale: "対象HP割合回復補正",
+  targetHpRatioDamageScale: "対象HP割合ダメ補正",
+  idleAtkRamp: "待機ATK蓄積",
+  ballistaMark: "砲撃標的",
   healReservation: "ヒール予約",
   barrierBreakRegen: "バリア再生成",
   barrierDepletionHeal: "バリア枯渇回復",
@@ -487,6 +494,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   blockResonanceConsume: "迎撃消費",
   enemyReelIn: "敵引き寄せ",
   arenaDominance: "闘技場の掟",
+  grantNextOutgoingDamage: "次与ダメ装填",
 };
 export const STATUS_EFFECT_STATS = [
   "hp",
@@ -696,6 +704,9 @@ export const EDITOR_PASSIVE_GENERAL_EFFECT_KINDS = [
   "bonusBasicAttackOnHit",
   "selfHpRatioBuff",
   "targetHpRatioHealScale",
+  "targetHpRatioDamageScale",
+  "idleAtkRamp",
+  "ballistaMark",
   "targetRuleOverride",
   "aoeCrowdBonus",
   "skillAmountOverride",
@@ -816,7 +827,7 @@ export const TARGET_DISTANCE_ORDER_OPTIONS = [
   "farthest",
   "selfOrigin",
 ] as const;
-export const TARGET_STAT_OPTIONS = ["hp", "atk", "def", "reg"] as const;
+export const TARGET_STAT_OPTIONS = ["hp", "maxHp", "atk", "def", "reg"] as const;
 export const TARGET_STAT_ORDER_OPTIONS = [
   "highest",
   "lowest",
@@ -845,13 +856,16 @@ export const POWER_STEP_MODE_LABELS: Record<
   divide: "累除",
 };
 
-export const TARGET_STAT_LABELS: Record<"hp" | "atk" | "def" | "reg", string> =
-  {
-    hp: "HP",
-    atk: "ATK",
-    def: "DEF",
-    reg: "REG",
-  };
+export const TARGET_STAT_LABELS: Record<
+  "hp" | "maxHp" | "atk" | "def" | "reg",
+  string
+> = {
+  hp: "HP",
+  maxHp: "最大HP",
+  atk: "ATK",
+  def: "DEF",
+  reg: "REG",
+};
 
 export const TARGET_STAT_ORDER_LABELS: Record<
   "highest" | "lowest" | "ratio",

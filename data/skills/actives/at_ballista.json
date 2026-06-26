@@ -1,6 +1,48 @@
 [
   {
     "id": "at_ballista_active_1",
+    "name": "破城矢装填",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "useDurationSec": 5,
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "grantNextOutgoingDamage",
+        "nextOutgoingDamageMultiplier": 1.3
+      }
+    ]
+  },
+  {
+    "id": "at_ballista_active_2",
+    "name": "重矢",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "effect": [
+      {
+        "targetShape": "single",
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.4
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      }
+    ]
+  },
+  {
+    "id": "at_ballista_active_3",
     "name": "重撃態勢",
     "trigger": {
       "kind": "time",
@@ -37,11 +79,11 @@
     ]
   },
   {
-    "id": "at_ballista_active_2",
+    "id": "at_ballista_active_4",
     "name": "貫く一射",
     "trigger": {
-      "kind": "time",
-      "value": 20
+      "kind": "basicAttackCount",
+      "value": 15
     },
     "effect": [
       {
@@ -50,9 +92,10 @@
         "damageType": "physical",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.5
+          "atkScale": 1.8
         },
-        "pierceDurationSec": 0.5,
+        "pierceDurationSec": 0.4,
+        "range": 460,
         "vfx": {
           "enabled": true
         },
@@ -63,14 +106,7 @@
         }
       }
     ],
-    "useDurationSec": 3,
-    "firePolicy": "smart",
-    "fireConditions": [
-      {
-        "kind": "enemyCount",
-        "min": 3
-      }
-    ]
+    "useDurationSec": 3
   },
   {
     "id": "at_ballista_basic_attack",

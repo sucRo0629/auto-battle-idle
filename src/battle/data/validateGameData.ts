@@ -1667,7 +1667,7 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
       obj,
       'stat',
       context,
-      new Set(['hp', 'atk', 'def', 'reg']),
+      new Set(['hp', 'atk', 'def', 'reg', 'maxHp']),
     );
     const order = requireEnum(
       obj,
@@ -1681,7 +1681,7 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
     return {
       kind: 'stat',
       side,
-      stat: stat as 'hp' | 'atk' | 'def' | 'reg',
+      stat: stat as 'hp' | 'maxHp' | 'atk' | 'def' | 'reg',
       order: order as 'highest' | 'lowest' | 'ratio',
     };
   }
@@ -2415,6 +2415,25 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ...(durationSec !== undefined ? { durationSec } : {}),
       ...(nonMarkDamageMultiplier !== undefined
         ? { nonMarkDamageMultiplier }
+        : {}),
+      ...sequenceTiming,
+      ...presentation,
+    });
+  }
+  if (typeRaw === 'grantNextOutgoingDamage') {
+    const target = parseEffectTarget(obj, context);
+    const presentation = parseOptionalEffectPresentation(obj, context);
+    const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
+    const nextOutgoingDamageMultiplier = parseOptionalNumber(
+      obj,
+      'nextOutgoingDamageMultiplier',
+      context,
+    );
+    return normalizeSkillEffect({
+      type: 'grantNextOutgoingDamage',
+      target: target.kind === 'self' ? target : { kind: 'self' },
+      ...(nextOutgoingDamageMultiplier !== undefined
+        ? { nextOutgoingDamageMultiplier }
         : {}),
       ...sequenceTiming,
       ...presentation,
@@ -4046,6 +4065,104 @@ function requirePassiveEffectParams(
         ...base,
         healScaleMax,
         maxScaleAtHpRatio,
+      };
+    }
+    case 'targetHpRatioDamageScale': {
+      const damageScaleMax = requireNumber(obj, 'damageScaleMax', context);
+      if (damageScaleMax <= 1) {
+        invalidField(context, 'damageScaleMax', 'must be greater than 1');
+      }
+      const minScaleAtHpRatio = requireNumber(obj, 'minScaleAtHpRatio', context);
+      if (minScaleAtHpRatio < 0 || minScaleAtHpRatio >= 1) {
+        invalidField(
+          context,
+          'minScaleAtHpRatio',
+          'must be between 0 and 1 (exclusive of 1)',
+        );
+      }
+      return {
+        ...base,
+        damageScaleMax,
+        minScaleAtHpRatio,
+      };
+    }
+    case 'idleAtkRamp': {
+      const rampToMaxSec = requireNumber(obj, 'rampToMaxSec', context);
+      if (rampToMaxSec <= 0) {
+        invalidField(context, 'rampToMaxSec', 'must be positive');
+      }
+      const atkMulMin = requireNumber(obj, 'atkMulMin', context);
+      const atkMulMax = requireNumber(obj, 'atkMulMax', context);
+      if (atkMulMin <= 0 || atkMulMax <= 0) {
+        invalidField(context, 'atkMulMin/atkMulMax', 'must be positive');
+      }
+      if (atkMulMax < atkMulMin) {
+        invalidField(context, 'atkMulMax', 'must be >= atkMulMin');
+      }
+      const fullRampAttackSpeedMul = requireNumber(
+        obj,
+        'fullRampAttackSpeedMul',
+        context,
+      );
+      if (fullRampAttackSpeedMul <= 0 || fullRampAttackSpeedMul >= 1) {
+        invalidField(
+          context,
+          'fullRampAttackSpeedMul',
+          'must be between 0 and 1 (exclusive)',
+        );
+      }
+      return {
+        ...base,
+        rampToMaxSec,
+        atkMulMin,
+        atkMulMax,
+        fullRampAttackSpeedMul,
+      };
+    }
+    case 'ballistaMark': {
+      const ballistaMarkSplashRadiusPx = requireNumber(
+        obj,
+        'ballistaMarkSplashRadiusPx',
+        context,
+      );
+      if (ballistaMarkSplashRadiusPx <= 0) {
+        invalidField(context, 'ballistaMarkSplashRadiusPx', 'must be positive');
+      }
+      const ballistaMarkSplashDamageScale = requireNumber(
+        obj,
+        'ballistaMarkSplashDamageScale',
+        context,
+      );
+      if (
+        ballistaMarkSplashDamageScale <= 0 ||
+        ballistaMarkSplashDamageScale > 1
+      ) {
+        invalidField(
+          context,
+          'ballistaMarkSplashDamageScale',
+          'must be between 0 and 1 (exclusive of 0)',
+        );
+      }
+      const ballistaMarkSelfAttackSpeedMul = parseOptionalNumber(
+        obj,
+        'ballistaMarkSelfAttackSpeedMul',
+        context,
+      );
+      const targetRuleOverride =
+        obj.targetRuleOverride !== undefined
+          ? parseTargetSpec(
+              obj.targetRuleOverride,
+              `${context}.targetRuleOverride`,
+            )
+          : undefined;
+      return {
+        ...base,
+        ballistaMarkSplashRadiusPx,
+        ballistaMarkSplashDamageScale,
+        ...(ballistaMarkSelfAttackSpeedMul !== undefined
+          ? { ballistaMarkSelfAttackSpeedMul }
+          : {}),
+        ...(targetRuleOverride !== undefined ? { targetRuleOverride } : {}),
       };
     }
     case 'healReservation': {

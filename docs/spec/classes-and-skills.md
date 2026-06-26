@@ -522,7 +522,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | `at_assassin`  | 双刃士 | Assassin  | front | 近接     | 最低 HP 比率狙い + 回避                       | 引き裂き／影の刃      |
 | `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura | 踏み込み突き／足払い  |
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                    | 連射／連ね矢          |
-| `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 最高 HP 狙い + （未実装）                     | 重撃態勢／貫く一射    |
+| `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 高 Max HP 狙い + 待機蓄積 + 砲撃標的           | 破城矢装填／重矢          |
 | `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | — （未実装）                                  | （未実装）            |
 | `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | —（未実装）                                   | （未実装）            |
 | `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | —（未実装）                                   | （未実装・JSON 廃棄） |
@@ -1056,6 +1056,20 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 
 遠隔物理の**貫通攻城・高耐久処理職**。
 
+#### スキル枠（basic + passive×4 + active×4）
+
+| 枠             | ID                         | 名称       | 概要                                                                 |
+| -------------- | -------------------------- | ---------- | -------------------------------------------------------------------- |
+| basic          | `at_ballista_basic_attack` | 通常射撃   | 標準物理単体                                                         |
+| passive 1 Lv0  | `at_ballista_passive_1`    | 城落としの弩 | 高 Max HP 優先 `targetRuleOverride`（`stat: maxHp`）               |
+| passive 2 Lv0  | `at_ballista_passive_2`    | 巻き上げ機構 | `idleAtkRamp` — 非攻撃時間で ATK 蓄積（攻撃速度低下で上限上昇）      |
+| passive 3 Lv10 | `at_ballista_passive_3`    | 城塞穿ち   | `targetHpRatioDamageScale` — 対象 HP が高いほど与ダメ増              |
+| passive 4 Lv20 | `at_ballista_passive_4`    | 粉砕する大矢 | `ballistaMark` + 着弾飛散 + 自身 `attackSpeed` ×0.85               |
+| active 1 Lv0   | `at_ballista_active_1`     | 破城矢装填 | `grantNextOutgoingDamage` + `useDurationSec` 5 — 次の与ダメ ×1.3   |
+| active 2 Lv0   | `at_ballista_active_2`     | 重矢       | 物理単体（modest `atkScale`）                                        |
+| active 3 Lv10  | `at_ballista_active_3`     | 重撃態勢   | self ATK×1.5 + attackSpeed×0.7、8s、smart `targetHp` ≤0.7          |
+| active 4 Lv20  | `at_ballista_active_4`     | 貫く一射   | `pierce` + `selfOrigin` + 最大 `range`、装填 hold、BAC 発動          |
+
 ---
 
 ### 狩猟士（`at_hunter`・変則・遠隔）
@@ -1099,7 +1113,7 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 - 各クラスのスキルツリー詳細設計（Lv10 / Lv20 分岐）
 - Hit / Attack / Gauge の厳密な内部仕様ドキュメント化（[combat.md](combat.md) への反映含む）
 - 優先ターゲット AI の詳細アルゴリズム（ターゲット選択優先順位ロジック）
-- 弩砲士: フィールド貫通ライン仕様、Lv0 `passive_2` 以降の具体設計
+- 弩砲士: ~~フィールド貫通ライン仕様、Lv0 `passive_2` 以降の具体設計~~ **Physical pass B 実装済**（[弩砲士節](#弩砲士at_ballista拡張遠隔)）
 - 狩猟士: 範囲 DoT・範囲ノックバック（1.5 秒移動硬直）の combat 実装と `data/skills/` への反映
 
 ## クラスキャスター設計方針
@@ -1601,6 +1615,9 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `excessHealToBarrier`    | `barrierScale`, `excessHealSources?`                                                                                                                                    | 回復が maxHp を超過した分をバリアに変換（**上書き**）。`outgoing`（与回復）/ `incoming`（被回復）を複数選択可。未指定 = `outgoing` のみ。直接 `heal` のみ                                                                                                                                                                                                                              |
 | `excessHealRedirect`     | `redirectScale`, `excessHealSources?`                                                                                                                                   | 与回復のオーバーヒールの `redirectScale` 合算分を、主対象を除く **HP 割合が最も低い味方** へ転送（同率時は maxHp が小さい方、さらに同率ならプール順）。転送 heal には healer の `specialEffect` heal のみ（effect 特効・再転送は非対象）。残り余剰は `excessHealToBarrier` 等へ。直接 `heal` のみ。1 ホップ                                                                            |
 | `targetHpRatioHealScale` | `healScaleMax`, `maxScaleAtHpRatio`                                                                                                                                     | 与回復時、対象 `hp/maxHp` に応じて回復倍率を **緩やかに** 補正。満タン時は 1、対象 HP が `maxScaleAtHpRatio` 以下で `healScaleMax` に到達（線形）。直接 `heal` のみ。HoT 非対象（汎用 effect。現行 `sp_cleric` では未使用）                                                                                                                                                            |
+| `targetHpRatioDamageScale` | `damageScaleMax`, `minScaleAtHpRatio`                                                                                                                                   | 与ダメ時、対象 `hp/maxHp` に応じてダメ倍率を補正。満タン時 `damageScaleMax`、対象 HP が `minScaleAtHpRatio` 以下で 1.0（線形）。`targetHpRatioHealScale` の逆方向                                                                                                                                                                                                                      |
+| `idleAtkRamp`            | `rampToMaxSec`, `atkMulMin`, `atkMulMax`, `fullRampAttackSpeedMul`                                                                                                     | 非攻撃経過時間で ATK 倍率を蓄積（basic / active の damage 発動でリセット）。`attackSpeed` 低下 severity で `atkMulMin`〜`atkMulMax` を補間。hold 中も経過                                                                                                                                                                                                                            |
+| `ballistaMark`           | `ballistaMarkSplashRadiusPx`, `ballistaMarkSplashDamageScale`, `ballistaMarkSelfAttackSpeedMul?`, `targetRuleOverride?`                                               | 優先ターゲットに `ballistaMark` overlay。本人の攻撃がマーク対象に命中したとき、半径内の他敵へ実ダメ×`splashDamageScale`（マーク対象へ二重適用なし）。常時自身 attackSpeed debuff                                                                                                                                                                                                      |
 | `healReservation`        | `grantOnHealMaxHpRatio`, `stackDurationSec`, `triggerHpRatio`, `healAmount`, `buffDisplayName?`                                                                         | 与回復時、回復 **前** の対象 HP 割合が `grantOnHealMaxHpRatio` 以下ならバフ（既定表示名「癒しの残響」）を 1 スタック付与（複数保持可、時間経過で消滅）。被ダメで HP ダメージが入り、**後** の HP 割合が `triggerHpRatio` 以下なら 1 スタック消費して `healAmount` で即時回復（source ATK 基準可）。1 被弾につき最大 1 スタック。致死無効ではない                                       |
 | `barrierBreakRegen`      | `barrierAmount`                                                                                                                                                         | 味方のバリアが被ダメで **完全消失** したとき、パッシブ持有者の `barrierAmount`（既定 ATK 基準）で追加バリアを **置換付与**（既存量の参照・合算なし）。**対象ユニット 1 回限り**（`barrierBreakRegenUsed`）。再生成バリアの破壊では再発動しない。HP 回復・蘇生ではない                                                                                                                  |
 | `selfHpRatioBuff`        | `buffStat`, `buffMultiplierMax?` / `buffFlatBonusMax?`, `maxBuffAtHpRatio`                                                                                              | 自身 HP 割合（`hp/maxHp`。バリア非含有）に応じた常時バフ（対象・形状は自身単体固定）。満タン時は中立、指定 HP 割合以下で最大                                                                                                                                                                                                                                                           |
@@ -1729,7 +1746,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `kind`       | 説明                                                                                                                                                                                                                                           |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest/**selfOrigin**）。`selfOrigin` = 使用者位置・向きを効果範囲の起点とする（aoe / pierce / single）。`includeSelf`（任意）= 味方 side 時、最終対象に使用者を含める（既定 false）                  |
-| `stat`       | `side` + `stat`（hp/atk/def/reg）+ `order`（highest/lowest/ratio）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。**heal** の味方 stat は使用者も候補に含む。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外 |
+| `stat`       | `side` + `stat`（hp/maxHp/atk/def/reg）+ `order`（highest/lowest/ratio）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`maxHp` は effective maxHp 比較。**heal** の味方 stat は使用者も候補に含む。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外 |
 | `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。フィルタ後 anchor は最前線                                                                                                                     |
 | `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR。`DEBUFF_FILTER_TAGS` / `BUFF_FILTER_TAGS` 参照）。フィルタ後 anchor は最前線                                                                                                              |
 | `self`       | 自身                                                                                                                                                                                                                                           |

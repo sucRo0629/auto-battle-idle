@@ -1,37 +1,44 @@
 [
   {
     "id": "at_ballista_passive_1",
-    "name": "大物喰い",
+    "name": "城落としの弩",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
       "kind": "stat",
       "side": "enemy",
-      "stat": "hp",
+      "stat": "maxHp",
       "order": "highest"
     },
     "targetRuleOverrideApplyTo": "enemy"
   },
   {
     "id": "at_ballista_passive_2",
-    "name": "大物狙い",
-    "effect": "targetRuleOverride",
-    "targetRuleOverride": {
-      "kind": "stat",
-      "side": "enemy",
-      "stat": "hp",
-      "order": "highest"
-    },
-    "targetRuleOverrideApplyTo": "enemy"
+    "name": "巻き上げ機構",
+    "effect": "idleAtkRamp",
+    "rampToMaxSec": 2.5,
+    "atkMulMin": 1.25,
+    "atkMulMax": 1.6,
+    "fullRampAttackSpeedMul": 0.7
   },
   {
     "id": "at_ballista_passive_3",
-    "name": "岩穿ち",
-    "effect": "defenseIgnore",
-    "defenseIgnore": {
-      "def": {
-        "mode": "percent",
-        "amount": 0.3
-      }
+    "name": "城塞穿ち",
+    "effect": "targetHpRatioDamageScale",
+    "damageScaleMax": 1.35,
+    "minScaleAtHpRatio": 0.35
+  },
+  {
+    "id": "at_ballista_passive_4",
+    "name": "粉砕する大矢",
+    "effect": "ballistaMark",
+    "ballistaMarkSplashRadiusPx": 50,
+    "ballistaMarkSplashDamageScale": 0.3,
+    "ballistaMarkSelfAttackSpeedMul": 0.85,
+    "targetRuleOverride": {
+      "kind": "stat",
+      "side": "enemy",
+      "stat": "maxHp",
+      "order": "highest"
     }
   }
 ]

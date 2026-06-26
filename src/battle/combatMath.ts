@@ -30,6 +30,9 @@ import {
 } from './statusEffectDisplay.ts';
 import { isInvulnerable } from './invulnerable.ts';
 import { resolveDamageIncreaseMultiplier } from './damageIncrease.ts';
+import { resolveIdleAtkRampMultiplier } from './idleAtkRamp.ts';
+import { consumeNextOutgoingDamageMultiplier } from './nextOutgoingDamage.ts';
+import { resolveTargetHpRatioDamageScale } from './targetHpRatioDamageScale.ts';
 
 export function getPassiveDefs(
   combatant: CombatantState,
@@ -105,7 +108,8 @@ export function resolvePowerAmount(
     case 'atkBased': {
       const offset = spec.atkOffset ?? 0;
       const scale = atkScaleOverride ?? spec.atkScale ?? 1;
-      const base = (getEffectiveAtk(actor) + offset) * scale;
+      const idleRampMul = resolveIdleAtkRampMultiplier(actor, _passives);
+      const base = (getEffectiveAtk(actor) + offset) * scale * idleRampMul;
       return Math.floor(Math.max(0, base));
     }
     case 'defBased': {
@@ -390,6 +394,13 @@ export function resolveDamage(
     passives,
   );
 
+  const chargeMul = consumeNextOutgoingDamageMultiplier(attacker);
+  const hpRatioDamageMul = resolveTargetHpRatioDamageScale(
+    target,
+    passives,
+    attacker,
+  );
+
   const baseDamage = Math.floor(
     resolvePowerAmount(
       attacker,
@@ -404,7 +415,9 @@ export function resolveDamage(
         passives,
         context,
       ) *
-      increaseMul,
+      increaseMul *
+      chargeMul *
+      hpRatioDamageMul,
   );
 
   const ignoreSpecs = [

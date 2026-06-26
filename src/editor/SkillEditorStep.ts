@@ -613,6 +613,21 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.healScaleMax ??= 1.1;
       passive.maxScaleAtHpRatio ??= 0.4;
       break;
+    case 'targetHpRatioDamageScale':
+      passive.damageScaleMax ??= 1.35;
+      passive.minScaleAtHpRatio ??= 0.35;
+      break;
+    case 'idleAtkRamp':
+      passive.rampToMaxSec ??= 2.5;
+      passive.atkMulMin ??= 1.25;
+      passive.atkMulMax ??= 1.6;
+      passive.fullRampAttackSpeedMul ??= 0.7;
+      break;
+    case 'ballistaMark':
+      passive.ballistaMarkSplashRadiusPx ??= 50;
+      passive.ballistaMarkSplashDamageScale ??= 0.3;
+      passive.ballistaMarkSelfAttackSpeedMul ??= 0.85;
+      break;
     case 'healReservation':
       passive.grantOnHealMaxHpRatio ??= 0.6;
       passive.stackDurationSec ??= 8;
@@ -1830,6 +1845,12 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         target: { kind: 'self' },
         type: 'arenaDominance',
         durationSec: 15,
+      };
+    case 'grantNextOutgoingDamage':
+      return {
+        target: { kind: 'self' },
+        type: 'grantNextOutgoingDamage',
+        nextOutgoingDamageMultiplier: 1.3,
       };
   }
 }
@@ -3141,6 +3162,141 @@ export class SkillEditorStep {
                 }, { rerender: false });
               },
               { min: 0, max: 0.99, step: 0.01 },
+            ),
+          ),
+        );
+        break;
+      case 'targetHpRatioDamageScale':
+        effectGrid.appendChild(
+          createFieldRow(
+            '最大ダメ倍率',
+            createNumberInput(
+              passive.damageScaleMax ?? 1.35,
+              (damageScaleMax) => {
+                this.patchPassive(index, (current) => {
+                  current.damageScaleMax =
+                    damageScaleMax > 1 ? damageScaleMax : undefined;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '倍率1.0になる対象HP割合 (0–1)',
+            createNumberInput(
+              passive.minScaleAtHpRatio ?? 0.35,
+              (minScaleAtHpRatio) => {
+                this.patchPassive(index, (current) => {
+                  current.minScaleAtHpRatio = minScaleAtHpRatio;
+                }, { rerender: false });
+              },
+              { min: 0, max: 0.99, step: 0.01 },
+            ),
+          ),
+        );
+        break;
+      case 'idleAtkRamp':
+        effectGrid.appendChild(
+          createFieldRow(
+            '最大蓄積秒',
+            createNumberInput(
+              passive.rampToMaxSec ?? 2.5,
+              (rampToMaxSec) => {
+                this.patchPassive(index, (current) => {
+                  current.rampToMaxSec = rampToMaxSec;
+                }, { rerender: false });
+              },
+              { step: 0.1, min: 0.1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'ATK倍率下限',
+            createNumberInput(
+              passive.atkMulMin ?? 1.25,
+              (atkMulMin) => {
+                this.patchPassive(index, (current) => {
+                  current.atkMulMin = atkMulMin;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'ATK倍率上限',
+            createNumberInput(
+              passive.atkMulMax ?? 1.6,
+              (atkMulMax) => {
+                this.patchPassive(index, (current) => {
+                  current.atkMulMax = atkMulMax;
+                }, { rerender: false });
+              },
+              { step: 0.01 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'severity基準SPD倍率',
+            createNumberInput(
+              passive.fullRampAttackSpeedMul ?? 0.7,
+              (fullRampAttackSpeedMul) => {
+                this.patchPassive(index, (current) => {
+                  current.fullRampAttackSpeedMul = fullRampAttackSpeedMul;
+                }, { rerender: false });
+              },
+              { step: 0.01, min: 0.01, max: 0.99 },
+            ),
+          ),
+        );
+        break;
+      case 'ballistaMark':
+        effectGrid.appendChild(
+          createFieldRow(
+            '飛散半径 (px)',
+            createNumberInput(
+              passive.ballistaMarkSplashRadiusPx ?? 50,
+              (ballistaMarkSplashRadiusPx) => {
+                this.patchPassive(index, (current) => {
+                  current.ballistaMarkSplashRadiusPx = ballistaMarkSplashRadiusPx;
+                }, { rerender: false });
+              },
+              { step: 1, min: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '飛散ダメ割合',
+            createNumberInput(
+              passive.ballistaMarkSplashDamageScale ?? 0.3,
+              (ballistaMarkSplashDamageScale) => {
+                this.patchPassive(index, (current) => {
+                  current.ballistaMarkSplashDamageScale =
+                    ballistaMarkSplashDamageScale;
+                }, { rerender: false });
+              },
+              { step: 0.01, min: 0.01, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '自身SPD倍率',
+            createNumberInput(
+              passive.ballistaMarkSelfAttackSpeedMul ?? 0.85,
+              (ballistaMarkSelfAttackSpeedMul) => {
+                this.patchPassive(index, (current) => {
+                  current.ballistaMarkSelfAttackSpeedMul =
+                    ballistaMarkSelfAttackSpeedMul;
+                }, { rerender: false });
+              },
+              { step: 0.01, min: 0.01, max: 1 },
             ),
           ),
         );

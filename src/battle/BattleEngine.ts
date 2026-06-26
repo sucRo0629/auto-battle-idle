@@ -88,6 +88,9 @@ import {
   syncHerbalPotencyAuras,
   tickHerbalPotencyAccumulation,
 } from "./herbalPotency.ts";
+import { tickIdleAtkRamp } from "./idleAtkRamp.ts";
+import { tickNextOutgoingDamageArming } from "./nextOutgoingDamage.ts";
+import { syncBallistaMarks } from "./ballistaMark.ts";
 import {
   resolveBlockResonanceConfigForUnit,
   syncBlockResonanceAuras,
@@ -704,6 +707,7 @@ export class BattleEngine {
     );
     syncDuelistPrideAuras([...this.players, ...this.enemies], passives);
     syncHerbalPotencyAuras(this.players, this.enemies, passives, this.gameData);
+    syncBallistaMarks(this.players, this.enemies, passives);
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
       const config = resolveBlockResonanceConfigForUnit(ally, passives);
@@ -1926,6 +1930,11 @@ export class BattleEngine {
       this.gameData.skillRegistry.passives,
       deltaTime,
     );
+    tickIdleAtkRamp(
+      [...this.players, ...this.enemies],
+      this.gameData.skillRegistry.passives,
+      deltaTime,
+    );
     const passives = this.gameData.skillRegistry.passives;
     for (const ally of this.players) {
       if (!ally.isAlive) continue;
@@ -1965,7 +1974,17 @@ export class BattleEngine {
 
   private tickSkillSequences(deltaTime: number): void {
     const units = [...this.players, ...this.enemies];
+    const wasUseLocked = (actorId: string) =>
+      this.skillSequenceRunner.isActorUseLocked(actorId);
+    const useLockSnapshot = new Map(
+      units.map((unit) => [unit.id, wasUseLocked(unit.id)]),
+    );
     this.skillSequenceRunner.tickUseLocks(deltaTime);
+    tickNextOutgoingDamageArming(
+      units,
+      (actorId) => useLockSnapshot.get(actorId) === true,
+      (actorId) => this.skillSequenceRunner.isActorUseLocked(actorId),
+    );
     this.skillSequenceRunner.tickAnimLocks(deltaTime);
     this.skillSequenceRunner.tickActiveEffectGauges(deltaTime);
     this.skillSequenceRunner.tickMoves(deltaTime, units, ({ unit, beforeX }) => {

@@ -10,6 +10,7 @@ import {
   resolveDamage,
   resolveHealAmount,
   resolveResourceAmount,
+  applyConfirmedHpDamage,
 } from '../combatMath.ts';
 import {
   applyKnockbackToTarget,
@@ -61,6 +62,17 @@ import {
   resolveArenaDominanceNonMarkMultiplier,
   consumeActiveStageTrigger,
 } from '../arenaDominance.ts';
+import {
+  findBallistaMarkSplashTargets,
+  isBallistaMarked,
+  mergeBallistaMarkPassive,
+  resolveBallistaMarkSourceId,
+  resolveBallistaMarkSplashDamage,
+} from '../ballistaMark.ts';
+import { resetIdleAtkRampOnAttack } from '../idleAtkRamp.ts';
+import {
+  scheduleNextOutgoingDamageCharge,
+} from '../nextOutgoingDamage.ts';
 import { applyEnemyReelIn } from '../enemyReelIn.ts';
 import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
 import { resolveEffectiveBasicAttackSkill } from '../resolveEffectiveBasicAttack.ts';
@@ -398,6 +410,30 @@ export class SkillExecutor {
       if (stacks <= 0) return false;
       this.blockResonanceStacksConsumed.set(actor.id, stacks);
       applyBlockResonanceStance(actor, skill, stacks);
+      return true;
+    }
+
+    if (effectDef.type === 'grantNextOutgoingDamage') {
+      const multiplier = effectDef.nextOutgoingDamageMultiplier ?? 1.3;
+      const useSec = skill.useDurationSec ?? 0;
+      scheduleNextOutgoingDamageCharge(
+        actor,
+        multiplier,
+        skill.id,
+        useSec <= 0,
+      );
+      this.emit({
+        type: 'skill',
+        actorId: actor.id,
+        targetId: actor.id,
+        skillId: skill.id,
+        skillName: skill.name,
+        slotKind: cd.slotKind,
+        effect: 'grantNextOutgoingDamage',
+        effectIndex,
+        amount: multiplier,
+        ...skillHitEventFields(undefined, undefined),
+      });
       return true;
     }
 
@@ -1017,6 +1053,66 @@ export class SkillExecutor {
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       this.emit({ type: 'hurt', targetId: damageTarget.id });
+      if (
+        (cd.slotKind === 'basic' || cd.slotKind === 'active') &&
+        appliedDamage > 0
+      ) {
+        resetIdleAtkRampOnAttack(actor);
+      }
+      const ballistaConfig = mergeBallistaMarkPassive(
+        getPassiveDefs(actor, passives),
+      );
+      if (
+        ballistaConfig &&
+        damageTarget.isEnemy &&
+        isBallistaMarked(damageTarget) &&
+        resolveBallistaMarkSourceId(damageTarget) === actor.id &&
+        appliedDamage > 0
+      ) {
+        const splashTargets = findBallistaMarkSplashTargets(
+          damageTarget,
+          enemies,
+          ballistaConfig.splashRadiusPx,
+        );
+        const splashDamage = resolveBallistaMarkSplashDamage(
+          appliedDamage,
+          ballistaConfig.splashDamageScale,
+        );
+        for (const splashTarget of splashTargets) {
+          const splashResult = applyConfirmedHpDamage(
+            splashTarget,
+            splashDamage,
+          );
+          const splashApplied =
+            splashResult.hpDamage + splashResult.barrierDamage;
+          if (splashApplied <= 0) continue;
+          this.deps.onDamageApplied?.(actor, splashTarget, splashApplied, {
+            attackKind: 'damage',
+            hpDamage: splashResult.hpDamage,
+            attackRangePx: effectDef.range ?? actor.traits.rangePx,
+          });
+          this.emit({
+            type: 'skill',
+            actorId: actor.id,
+            targetId: splashTarget.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            slotKind: cd.slotKind,
+            effect: 'damage',
+            effectIndex,
+            amount: splashDamage,
+            range: effectDef.range,
+            ...skillHitEventFields(hitIndex, vfxSourceId),
+          });
+          this.emit({ type: 'hurt', targetId: splashTarget.id });
+          if (splashResult.lethal) {
+            splashTarget.isAlive = false;
+            this.deps.getSequenceRunner().clearForActor(splashTarget.id);
+            this.deps.onUnitDied?.(splashTarget);
+            this.emit({ type: 'death', targetId: splashTarget.id });
+          }
+        }
+      }
       if (lethal) {
         damageTarget.isAlive = false;
         if (!damageTarget.isEnemy) {

@@ -333,6 +333,17 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 実装: `duelistPride.ts` / `lowHpCover.ts` / `lastStandGuts.ts` / `bloodlustDuelist.ts` / `enemyReelIn.ts` / `arenaDominance.ts`
 
+### 弩砲士 v1 専用メカニクス
+
+実装: `idleAtkRamp.ts` / `nextOutgoingDamage.ts` / `ballistaMark.ts` / `targetHpRatioDamageScale.ts`
+
+| effect / overlay           | 要点                                                                                                                                                                                                                                                                                          |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `idleAtkRamp`              | 非攻撃経過で ATK 倍率蓄積（`resolvePowerAmount` の atkBased）。basic / active damage 発動でリセット。`useDurationSec` hold 中も tick 継続                                                                                     |
+| `grantNextOutgoingDamage`  | active effect。`useDurationSec` 終了後に `nextOutgoingDamage` overlay を武装。次の outgoing damage 1 回に `nextOutgoingDamageMultiplier` を乗算して消費                                                                 |
+| `ballistaMark`             | 高 Max HP 対象へ overlay。本人攻撃がマーク命中時、半径内の他敵へ実ダメ×`ballistaMarkSplashDamageScale`（DEF 再計算なし・`applyConfirmedHpDamage`）                                                                        |
+| `targetHpRatioDamageScale` | 対象 `hp/maxHp` が高いほど与ダメ増（`targetHpRatioHealScale` の逆方向）                                                                                                                                                                                                                     |
+
 | effect             | 要点                                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `lowHpCover`       | 味方 HP 割合 ≤ `coverHpRatioThreshold` の被ダメ適用先を闘技士へ差し替え（単体・AoE 各ヒット）。Wave 内 `coverWaveLimit` 回                                                                                                                                                                                                                                                                   |

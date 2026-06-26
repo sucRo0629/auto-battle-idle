@@ -323,6 +323,8 @@ function compareStat(unit: CombatantState, stat: TargetStat): number {
   switch (stat) {
     case "hp":
       return unit.hp;
+    case "maxHp":
+      return getEffectiveMaxHp(unit);
     case "atk":
       return getEffectiveAtk(unit);
     case "def":
@@ -742,6 +744,7 @@ const DISTANCE_ORDER_LABELS: Record<TargetDistanceOrder, string> = {
 
 const STAT_LABELS: Record<TargetStat, string> = {
   hp: "HP",
+  maxHp: "最大HP",
   atk: "ATK",
   def: "DEF",
   reg: "REG",
