@@ -15,7 +15,7 @@ alwaysApply: true
 |------------|--------------|
 | ステータス・Lv 成長・growthPresets | `docs/spec/stats.md` |
 | ダメージ・回復・CD・バフ/デバフ・ターゲット | `docs/spec/combat.md` |
-| 座標・隊形・Wave・接敵・描画 | `docs/spec/battle-field.md` |
+| 座標・隊形・Wave・接敵・描画・**戦闘中統計 UI** | `docs/spec/battle-field.md` |
 | クラス・ロール・スキル JSON スキーマ・用語 | `docs/spec/classes-and-skills.md` |
 | パーティ編成メニュー UI（`SkillMenuPanel`） | `docs/spec/party-formation-ui.md` |
 | EXP・セーブ・ステージ進行・Phase 別機能 | `docs/spec/progression.md` |

@@ -11,7 +11,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2b** | 戦闘計算（`combatMath` 等）                                                                   | **完了**                        |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                                     | **完了**                        |
 | **3**  | Lv アップ時スキル習得、習得済み passive / active 常時使用枠（各最大 4）+ クラス別スキル再設定 | **再オープン中**                |
-| **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **見直し中** / 4c **完了** / 4b 説明 / **4d 編成 UI** | **Phase 3 後に再確定**          |
+| **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **見直し中** / 4c **完了** / 4b 説明 / **4d 編成・統計 UI + HUD** | **Phase 3 後に再確定**          |
 | **5**  | 演出アセット + VFX PNG + **演出調整ツール**；**5d Combat Feedback**（Damage / Event Popup）   | **基盤のみ**（本番 PNG 未実装） |
 | **6**  | ステージ作成 — 敵テンプレート・固定ステージコンテンツ・ステージ編集 GUI                       | 未着手（4a 後）                 |
 | **9**  | ローグライクモード（仮称）— 既存 effect 中心 13 クラス向けランダム問題・ラン進行              | 未着手                          |
@@ -155,7 +155,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 | **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                | **見直し中**            |
 | **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                        | **完了**                |
 | **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish                               | **随時**（コア済）      |
-| **4d**       | パーティ編成 UI 刷新（`SkillMenuPanel`）+ **状態バッジ HUD 刷新** — 画面設計は [party-formation-ui.md](../spec/party-formation-ui.md) | **未着手**（設計 v0.4） |
+| **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsOverlay`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **未着手**（設計 v0.4） |
 
 ### クラスマスタ（見直し中）
 
@@ -226,9 +226,12 @@ data/
 
 **タイミング：** 4a でスキーマが固まったあと。**4b と並行** してよい（説明文生成はマージ後の型・validate に依存するだけ）。
 
-### 4d — パーティ編成 UI（未着手）
+### 4d — パーティ編成 UI + 統計 UI + HUD（未着手）
 
-**ゴール:** [party-formation-ui.md](../spec/party-formation-ui.md)（**v0.4**）に沿って `SkillMenuPanel` を再構成する。上ロスター / 下詳細、編成内訳行、中央モーダル Picker、閲覧スキルカード（効果単位改行）、`playerProgress.level` をヘッダー 1 か所表示。
+**ゴール:** 戦闘外 DOM UI（編成・統計）と戦闘 HUD の見た目を **PC 向け RPG 情報パネル**基調に揃え、Web アプリ風ダッシュボード感を除去する。
+
+- **編成:** [party-formation-ui.md](../spec/party-formation-ui.md)（**v0.4**）に沿って `SkillMenuPanel` を再構成。上ロスター / 下詳細、編成内訳行、中央モーダル Picker、閲覧スキルカード（効果単位改行）、`playerProgress.level` をヘッダー 1 か所表示。
+- **統計:** [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) に沿って `BattleStatsOverlay` / `PartyMemberStatsDisplay` を刷新。デザイン言語は編成 UI [§11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通) と共通。
 
 **着手条件**
 
@@ -257,13 +260,28 @@ data/
 | 残時間 | 同一カテゴリ内の **最短** `remainingRatio` を、上端からの暗化オーバーレイで表示（現行方式） |
 | DoT ポップアップ | `dotFlavor: bleed` / 未指定 generic dot → **赤**。`dotFlavor: poison` → **紫**（状態バッジの debuff 五角形は赤のまま） |
 
-**実装タッチポイント:** `statusEffectDisplay.ts`, `statusBadgeRenderer.ts`, `PartyHudPanel`, `BattleCanvas`, `battle-view.css` / `battleHudTheme.ts`, `DamagePopup.ts`（DoT tick に `dotFlavor` 伝播）。
+**実装タッチポイント（HUD）:** `statusEffectDisplay.ts`, `statusBadgeRenderer.ts`, `PartyHudPanel`, `BattleCanvas`, `battle-view.css` / `battleHudTheme.ts`, `DamagePopup.ts`（DoT tick に `dotFlavor` 伝播）。
+
+**統計 UI — 4d と同タイミングで実装**
+
+正本: [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui)。表示項目・集計ルールは [combat.md](../spec/combat.md)（脅威・ダメージ）と現行実装を維持。**見た目のみ**刷新。
+
+| 項目 | 仕様 |
+| --- | --- |
+| デザイン言語 | [party-formation-ui.md §11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通) と同一（縦情報パネル・細セパレーター・大角丸 / 強 shadow 禁止） |
+| オーバーレイ | Web モーダル風（大角丸・強 box-shadow・ダッシュボード風 title bar）を避け、**情報パネル**として閉じる |
+| メンバー行 | `PartyMemberStatsDisplay` 共通 — epithet + 名前、Exp / Threat / 与ダメ・被ダメバー。行は **細い区切り + 余白** |
+| バー | 角丸グラデーションのダッシュボード棒を控えめに。色意味（Threat 青・与ダメ橙・被ダメ青等）は維持可 |
+| 共有 CSS | `battle-stats-overlay.css` + `party-member-stats.css`。`DebugMenuPanel` 内 stats 行も同スタイル |
+
+**実装タッチポイント（統計）:** `BattleStatsOverlay.ts`, `PartyMemberStatsDisplay.ts`, `battle-stats-overlay.css`, `party-member-stats.css`（必要なら `DebugMenuPanel.ts` の stats ホスト）。
 
 **4d スコープ外**
 
 - ステージ敵構成との連動ヒント（**Phase 6**）
 - 戦闘 `battleX` 配置プレビュー
 - Kill / Flow / Survival レイヤーの編成 UI 表示
+- 統計の集計項目追加・本番モード Stage Records（**Phase 11**）
 
 **タイミング:** 4a データ形安定後、**Phase 6（固定ステージ）より前**。4b（説明文）と並行可。Phase 5（演出 PNG）とは独立。
 

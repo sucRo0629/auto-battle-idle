@@ -343,9 +343,9 @@ Picker 表示中も **上部ロスター帯は背面に見える**。他 3 人�
 
 ---
 
-## 11. デザイン方針
+## 11. デザイン方針（DOM UI 共通）
 
-編成画面は Web アプリ風ダッシュボードではなく、**PC 向け RPG の情報パネル**を基調とする。
+編成画面および戦闘中の統計オーバーレイ（[battle-field.md §7](battle-field.md#7-戦闘中統計-ui)）は、Web アプリ風ダッシュボードではなく、**PC 向け RPG の情報パネル**を基調とする。Phase 4d では編成・統計・HUD バッジでこの言語を揃える。
 
 | 指針 | 内容 |
 | ---- | ---- |
@@ -398,7 +398,7 @@ Picker 表示中も **上部ロスター帯は背面に見える**。他 3 人�
 | ドキュメント                                    | 関係                                   |
 | ----------------------------------------------- | -------------------------------------- |
 | [design-philosophy.md](../design-philosophy.md) | 編成解法・理解度向上                   |
-| [battle-field.md](battle-field.md)              | `partySlotIndex`、隊形、`formationRow` |
+| [battle-field.md](battle-field.md)              | `partySlotIndex`、隊形、`formationRow`、**統計 UI §7** |
 | [classes-and-skills.md](classes-and-skills.md)  | UI ロール、スキル習得、用語            |
 | [progression.md](progression.md)                | セーブ、`playerProgress`、進行 UI      |
 | [phase-roadmap.md](../plans/phase-roadmap.md)   | Phase 4d 実装タイミング                |

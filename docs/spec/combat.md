@@ -583,7 +583,7 @@ DoT フレーバーは HUD バッジ（`bleed` / `poison` / 汎用 `dot` アイ�
 
 ### 確認モード（popup 外）
 
-console log（`pushLog`、画面上のログ UI なし）、統計オーバーレイ、battleX debug — [battle-field.md](battle-field.md) §verify。
+console log（`pushLog`、画面上のログ UI なし）、[統計オーバーレイ](battle-field.md#7-戦闘中統計-ui)、battleX debug — [battle-field.md](battle-field.md) §2.3。
 
 Phase 5d 残タスク: [phase-roadmap.md](../plans/phase-roadmap.md) §5d（レイアウト regression、HUD 境界確認）。
 

@@ -2,6 +2,7 @@
 
 実装：`src/battle/battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `bodyAnimMarching.ts`, `BattleEngine.ts`
 描画：`src/render/BattleCanvas.ts`（`screenX = battleX`）
+戦闘中統計 UI：`src/ui/BattleStatsOverlay.ts`, `PartyMemberStatsDisplay.ts`, `src/styles/battle-stats-overlay.css`, `party-member-stats.css`
 
 本ドキュメントは **横 1 軸のバトルライン** における座標・隊形・Wave・接敵・描画の設計正本。ダメージ/CD/脅威等は [combat.md](combat.md) を参照。
 
@@ -460,6 +461,44 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 
 ---
 
+## 7. 戦闘中統計 UI
+
+戦闘画面の **統計情報**オーバーレイ（`BattleStatsOverlay`）と、メンバー行コンポーネント（`PartyMemberStatsDisplay`）の画面設計正本。脅威・ダメージの計算は [combat.md](combat.md)。DOM UI の共通デザイン言語は [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) を参照（Phase 4d で編成 UI と揃える）。
+
+### 7.1 役割とデータ
+
+| 要素 | 内容 |
+| ---- | ---- |
+| 起動 | 戦闘画面メニューの「統計情報」ボタン（`BattleView`） |
+| タイトル | ステージ表示名（`stages.json` の `displayName`） |
+| メンバー行 | 編成スロット順。`displayName` + `epithetEn`、Exp バー、Threat バー、与ダメ / 被ダメバー |
+| データ源 | `getStageDamageDisplayRows`（ステージ内累計）、`CombatantSnapshot`（Threat）、`partyProgress`（Exp） |
+| 確認モード | 現行は verify 経路でダメージ行が供給される。本番 Stage Records は **Phase 11** |
+
+`DebugMenuPanel` も同一 `PartyMemberStatsDisplay` を使う。CSS 刷新時は **両方を同スタイル**にする。
+
+### 7.2 デザイン方針（Phase 4d 刷新）
+
+[party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) と同一。統計 UI 固有の目標:
+
+| 現行（避ける） | 目標 |
+| -------------- | ---- |
+| 中央モーダル + 強 backdrop + 大角丸 + 強 box-shadow | **情報パネル** — 枠は控えめ、パネル内は縦積み |
+| ダッシュボード風 title bar（角丸 `×` ボタン等） | 閉じる操作は最小限。装飾より可読性 |
+| メンバー行の角丸グラデーション棒のみの区切り | **細セパレーター + 余白**で行を分ける |
+| カードグリッド風の横並びダッシュボード | 1 列の **縦リスト**（Threat / Exp / ダメージは行内サブ列のまま可） |
+
+**スコープ:** 表示項目・集計ロジックは変更しない（見た目のみ）。バー色の意味（Threat・与ダメ・被ダメ・down 時の減衰）は維持してよい。
+
+### 7.3 受け入れ条件（Phase 4d — 統計部分）
+
+1. オーバーレイが Web モーダル / ダッシュボード風に見えない（§11 準拠）
+2. 4 人分の epithet + 名前・Exp・Threat・与ダメ / 被ダメが **縦リスト**で読める
+3. `party-member-stats.css` の変更が `DebugMenuPanel` 内 stats 行にも反映される
+4. 閉じる操作（backdrop / 閉じるボタン）が機能する
+
+---
+
 ## 付録 A. 業界参考（補足）
 
 | 型                 | 参考にした点                           | 採用              |
@@ -503,5 +542,6 @@ A-/F- で代替した旧 I-\*（§4.6 カメラ、§3.3 隊形順、振動 sign-
 ## 関連ドキュメント
 
 - [combat.md](combat.md) — ダメージ、CD、脅威、ステータス（座標節は本書へ委譲）
+- [party-formation-ui.md](party-formation-ui.md) — DOM UI 共通デザイン（§11）、編成画面
 - [classes-and-skills.md](classes-and-skills.md) — スキル `move` スキーマ
 - `data/stages.json` — Wave / `spawnX`
