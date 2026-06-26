@@ -22,6 +22,7 @@
 | `battleLayout.ts`, `combatPosition.ts`, `SpriteAnimator`, `IBattleRenderer`, 描画 | [spec/battle-field.md](spec/battle-field.md)                                    |
 | `vfxAnimRegistry.ts`, `VfxPlaybackManager`, `presentation/`, `sheets/vfx/`        | [spec/classes-and-skills.md](spec/classes-and-skills.md#スプライト演出アセット) |
 | `data/stages.json`, セーブ, EXP, LvUP                                             | [spec/progression.md](spec/progression.md)                                      |
+| `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, 編成メニュー DOM                       | [spec/party-formation-ui.md](spec/party-formation-ui.md)                          |
 | `data/enemies.json`, 敵編成・ボス設計の方針                                       | [enemy-design-concept.md](enemy-design-concept.md)                              |
 | ローグライクモード（ラン・問題生成・報酬）                                        | [spec/roguelike-mode.md](spec/roguelike-mode.md)                                |
 | フェーズ・作業順                                                                  | [plans/phase-roadmap.md](plans/phase-roadmap.md)                                |
@@ -53,4 +54,5 @@
 | ダメージ・バフ     | [spec/combat.md](spec/combat.md)                         |
 | 戦場・座標         | [spec/battle-field.md](spec/battle-field.md)             |
 | セーブ・EXP        | [spec/progression.md](spec/progression.md)               |
+| パーティ編成 UI    | [spec/party-formation-ui.md](spec/party-formation-ui.md) |
 | ローグライクモード | [spec/roguelike-mode.md](spec/roguelike-mode.md)         |

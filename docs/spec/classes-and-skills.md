@@ -42,7 +42,7 @@
 | **Flow**     | 戦場の優先度・位置・行動ルールを操作する | ターゲット制御、移動制御、戦場分断、時間密度操作 |
 | **Survival** | 味方の戦闘継続性を維持する               | 被害抑制、回復、バリア、状態異常管理、崩壊防止   |
 
-`defender` / `attacker` / `supporter` などの `role` は、編成 UI・配置既定・表示上の分類であり、スキル設計上の定義には使わない。
+`defender` / `attacker` / `supporter` などの `role` は、編成 UI・配置既定・表示上の分類であり、スキル設計上の定義には使わない。編成画面の表示要件は [party-formation-ui.md](party-formation-ui.md) を正とする。ここでの「配置既定」は **クラスマスタの `formationRow`** を指し、メンバー枠の番号ではない（[battle-field.md](battle-field.md)）。
 
 # ロール体系設計（v1.0）
 

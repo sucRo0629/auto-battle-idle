@@ -17,6 +17,7 @@ alwaysApply: true
 | ダメージ・回復・CD・バフ/デバフ・ターゲット | `docs/spec/combat.md` |
 | 座標・隊形・Wave・接敵・描画 | `docs/spec/battle-field.md` |
 | クラス・ロール・スキル JSON スキーマ・用語 | `docs/spec/classes-and-skills.md` |
+| パーティ編成メニュー UI（`SkillMenuPanel`） | `docs/spec/party-formation-ui.md` |
 | EXP・セーブ・ステージ進行・Phase 別機能 | `docs/spec/progression.md` |
 | フェーズ状態・ロードマップ・作業順 | `docs/plans/phase-roadmap.md`（必要なら `master-work-order.md`） |
 

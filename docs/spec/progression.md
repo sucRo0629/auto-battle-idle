@@ -81,7 +81,7 @@ interface SaveGameState {
 
 - 現在ステージ名（Canvas 左上）
 - メンバー別 Lv / Exp バー（パーティ HUD）
-- **パーティ編成メニュー**（`SkillMenuPanel`）— 選択中メンバーの **Lv 反映ステータス**を表示
+- **パーティ編成メニュー**（`SkillMenuPanel`）— 画面設計の正本は [party-formation-ui.md](party-formation-ui.md)（Phase 4d）。現行は選択中メンバーの **Lv 反映ステータス**を表示
   - **HP** のみ英字表記、それ以外は日本語（攻撃力 / 防御力 / 魔法耐性 / 攻撃速度）
   - 攻撃速度は内部略称 **SPD**（`attackSpeedTier`）。UI では 5 段階ラベル（遅い〜早い）
   - 編成画面ではスキル buff 込みの実効値は表示しない（素のクラス + Lv）
