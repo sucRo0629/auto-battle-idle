@@ -27,8 +27,12 @@ import {
 } from "./partyFormation.ts";
 import {
   isAllyHealBasicAttack,
+  isPierceEnemyBasicAttack,
   resolveBasicAttackEffect,
 } from "./allyHealBasicAttack.ts";
+
+/** `bodyAnimMarching.BODY_ANIM_APPROACH_SETTLED_PX` と同期 */
+const APPROACH_SETTLE_EPSILON_PX = 0.5;
 
 function resolveBasicAttackTarget(
   unit: CombatantState,
@@ -228,7 +232,31 @@ function capFrontRowBeforeEnemyContact(
   return Math.min(approachX, maxForward);
 }
 
-function resolvePlayerChaseApproachBattleX(
+/** pierce 敵向け通常攻撃の接近停止 X（contact − effectiveRangePx） */
+export function resolvePierceApproachStopBattleX(
+  player: CombatantState,
+  contact: number,
+  gameData: GameData,
+  livingAllyCount?: number,
+): number {
+  const rangePx = resolveApproachRangePx(
+    player,
+    gameData,
+    livingAllyCount,
+  );
+  return resolveAttackBattleX(player, contact, gameData, rangePx);
+}
+
+function isAtPierceApproachStop(
+  unit: CombatantState,
+  pierceStopX: number,
+): boolean {
+  if (unit.battleX > pierceStopX) return false;
+  return unit.battleX >= pierceStopX - APPROACH_SETTLE_EPSILON_PX;
+}
+
+/** 味方: pierce 敵向け通常攻撃の接近目標 X（chase 個体ではなく contact 基準） */
+export function resolvePlayerChaseApproachBattleX(
   player: CombatantState,
   players: CombatantState[],
   enemies: CombatantState[],
@@ -236,6 +264,14 @@ function resolvePlayerChaseApproachBattleX(
   contact: number,
 ): number {
   const allyCount = livingAllyCount(players);
+  if (isPierceEnemyBasicAttack(player, gameData)) {
+    return resolvePierceApproachStopBattleX(
+      player,
+      contact,
+      gameData,
+      allyCount,
+    );
+  }
   const chase = resolvePlayerChaseTargetEnemy(
     player,
     players,
@@ -621,6 +657,17 @@ export function shouldSkipEngagedAutoApproach(
     return (
       resolveDamagedAllyHealTarget(unit, players, enemies, gameData) !== null
     );
+  }
+  if (isPierceEnemyBasicAttack(unit, gameData)) {
+    const contact = getEnemyContactX(enemies);
+    if (contact === null) return true;
+    const pierceStopX = resolvePierceApproachStopBattleX(
+      unit,
+      contact,
+      gameData,
+      livingAllyCount(players),
+    );
+    return isAtPierceApproachStop(unit, pierceStopX);
   }
   return (
     resolvePlayerAttackTargetEnemy(unit, players, enemies, gameData) !== null

@@ -23,3 +23,14 @@ export function isAllyHealBasicAttack(
   if (!effect || effect.type !== 'heal') return false;
   return targetSpecFaction(getEffectTarget(effect), unit) === 'ally';
 }
+
+/** 通常攻撃が敵向け pierce か（contact 基準の接近停止用） */
+export function isPierceEnemyBasicAttack(
+  unit: CombatantState,
+  gameData: GameData,
+): boolean {
+  const effect = resolveBasicAttackEffect(unit, gameData);
+  if (!effect || effect.type !== 'damage') return false;
+  if (effect.targetShape !== 'pierce') return false;
+  return targetSpecFaction(getEffectTarget(effect), unit) === 'enemy';
+}

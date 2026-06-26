@@ -1,6 +1,7 @@
 import { isUnitMovementBlocked } from './ccEffects.ts';
 import {
   capEngagedEnemyApproachBattleX,
+  getEnemyContactX,
   resolveApproachRangePx,
 } from './combatPosition.ts';
 import {
@@ -8,9 +9,11 @@ import {
   engagedMinBodyGap,
   moveDeltaPx,
 } from './battleConstants.ts';
+import { isPierceEnemyBasicAttack } from './allyHealBasicAttack.ts';
 import {
   resolveAllPlayerApproachBattleX,
   resolveEnemyApproachBattleX,
+  resolvePierceApproachStopBattleX,
   shouldSkipEngagedAutoApproach,
 } from './resolveApproachBattleX.ts';
 import { isWithinSkillRange } from './skills/rangeUtils.ts';
@@ -65,6 +68,21 @@ function isWithinApproachAnimSettleRange(
   const step = moveDeltaPx(MOVE_PX_PER_SEC, 1 / 60);
   const overlapTolerance = Math.max(0, engagedMinBodyGap() - range);
   const tolerance = BODY_ANIM_APPROACH_SETTLED_PX + step + overlapTolerance;
+
+  if (!unit.isEnemy && isPierceEnemyBasicAttack(unit, ctx.gameData)) {
+    const contact = getEnemyContactX(ctx.enemies);
+    if (contact === null) return false;
+    const livingAllyCount = ctx.players.filter((p) => p.isAlive).length;
+    const pierceStopX = resolvePierceApproachStopBattleX(
+      unit,
+      contact,
+      ctx.gameData,
+      livingAllyCount,
+    );
+    if (unit.battleX > pierceStopX) return false;
+    return unit.battleX >= pierceStopX - tolerance;
+  }
+
   const opponents = unit.isEnemy
     ? ctx.players.filter((p) => p.isAlive)
     : ctx.enemies.filter((e) => e.isAlive);
