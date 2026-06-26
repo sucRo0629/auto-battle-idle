@@ -1,5 +1,28 @@
 [
   {
+    "id": "at_lancer_basic_attack",
+    "name": "at_lancer_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.95
+        },
+        "targetShape": "pierce"
+      }
+    ]
+  },
+  {
     "id": "at_lancer_active_1",
     "name": "踏み込み突き",
     "trigger": {
@@ -7,17 +30,6 @@
       "value": 10
     },
     "effect": [
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "move",
-        "moveMode": "toAnchor",
-        "moveDurationSec": 0.25,
-        "anchorOffsetPx": -32
-      },
       {
         "targetShape": "pierce",
         "type": "damage",
@@ -84,29 +96,6 @@
         "debuffStat": "def",
         "debuffMultiplier": 0.8,
         "debuffDurationSec": 5,
-        "targetShape": "pierce"
-      }
-    ]
-  },
-  {
-    "id": "at_lancer_basic_attack",
-    "name": "at_lancer_basic_attack",
-    "trigger": {
-      "kind": "time",
-      "value": 2
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "selfOrigin"
-        },
-        "type": "damage",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.95
-        },
         "targetShape": "pierce"
       }
     ]
