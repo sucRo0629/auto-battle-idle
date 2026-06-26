@@ -69,6 +69,24 @@ describe('damageIncrease', () => {
     expect(mul).toBe(1);
   });
 
+  it('attackType ranged matches enemies by rangePx band', () => {
+    const attacker = unit({ id: 'a' });
+    const ranged = unit({
+      id: 'r',
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
+    });
+    const melee = unit({
+      id: 'm',
+      traits: { rangePx: 30, damageType: 'physical', basicAttackVfx: { enabled: true } },
+    });
+    const spec = {
+      scale: 1.2,
+      conditions: [{ kind: 'attackType' as const, ranged: true }],
+    };
+    expect(resolveDamageIncreaseMultiplier(attacker, ranged, spec)).toBe(1.2);
+    expect(resolveDamageIncreaseMultiplier(attacker, melee, spec)).toBe(1);
+  });
+
   it('requires all conditions (AND)', () => {
     const attacker = unit({ id: 'a', hp: 20, maxHp: 100 });
     const target = unit({ id: 't', hp: 30, maxHp: 100 });

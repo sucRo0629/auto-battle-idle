@@ -153,6 +153,8 @@ function appendDamageIncreaseConditionFields(
         (kind) => {
           if (kind === "debuff") {
             onChange({ kind, tags: ["def"] }, { rerender: true });
+          } else if (kind === "attackType") {
+            onChange({ kind: "attackType", ranged: true }, { rerender: true });
           } else {
             onChange({ kind: "targetHp", maxHpRatio: 0.5 }, { rerender: true });
           }
@@ -199,12 +201,86 @@ function appendDamageIncreaseConditionFields(
         )
       )
     );
+  } else if (condition.kind === "attackType") {
+    const attackRow = createEl("div", "editor-debuff-tag-checkboxes");
+    for (const [key, label] of [
+      ["physical", "物理"],
+      ["magic", "魔法"],
+      ["melee", "近接"],
+      ["ranged", "遠隔"],
+    ] as const) {
+      const row = createEl("div", "editor-field editor-field-checkbox");
+      const input = createEl("input") as HTMLInputElement;
+      input.type = "checkbox";
+      input.checked = condition[key] === true;
+      input.addEventListener("change", () => {
+        const next = { ...condition, [key]: input.checked ? true : undefined };
+        const hasAny = next.physical || next.magic || next.melee || next.ranged;
+        if (hasAny) onChange(next, { rerender: false });
+      });
+      row.appendChild(createEl("label", undefined, label));
+      row.appendChild(input);
+      attackRow.appendChild(row);
+    }
+    card.appendChild(attackRow);
+    card.appendChild(
+      createEl("p", "editor-hint", attackTypeRangedBandEditorHintJa())
+    );
   }
 
   card.appendChild(
     createActionButton("条件を削除", "editor-btn editor-btn-small", onRemove)
   );
   parent.appendChild(card);
+}
+
+export function appendDamageIncreaseConditionListFields(
+  parent: HTMLElement,
+  conditions: DamageIncreaseCondition[],
+  onChange: (
+    mutate: (current: DamageIncreaseCondition[]) => DamageIncreaseCondition[],
+    options?: CombatFieldChangeOptions
+  ) => void,
+  options?: { addButtonLabel?: string; title?: string }
+): void {
+  if (options?.title) {
+    parent.appendChild(
+      createEl("h4", "editor-subsection-title", options.title)
+    );
+  }
+  const conditionsWrap = createEl("div", "editor-conditions-list");
+  conditions.forEach((condition, index) => {
+    appendDamageIncreaseConditionFields(
+      conditionsWrap,
+      condition,
+      (next, changeOptions) => {
+        onChange((current) => {
+          const nextConditions = [...current];
+          nextConditions[index] = next;
+          return nextConditions;
+        }, changeOptions);
+      },
+      () => {
+        onChange(
+          (current) => current.filter((_, i) => i !== index),
+          { rerender: false }
+        );
+      }
+    );
+  });
+  parent.appendChild(conditionsWrap);
+  parent.appendChild(
+    createActionButton(
+      options?.addButtonLabel ?? "条件を追加",
+      "editor-btn editor-btn-small",
+      () => {
+        onChange(
+          (current) => [...current, { kind: "debuff", tags: ["def"] }],
+          { rerender: false }
+        );
+      }
+    )
+  );
 }
 
 type CombatFieldChangeOptions = { rerender?: boolean };

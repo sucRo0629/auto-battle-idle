@@ -26,52 +26,29 @@
   },
   {
     "id": "at_ranger_passive_3",
-    "name": "応射",
-    "effect": "counter",
-    "targetRuleOverride": {
-      "kind": "distance",
-      "side": "enemy",
-      "order": "nearest"
-    },
-    "buffSubKind": "stat",
-    "buffTargetRule": {
-      "kind": "self"
-    },
-    "buffStat": "atk",
-    "buffMultiplier": 1.2,
-    "defenseIgnore": {
-      "def": {
-        "mode": "percent",
-        "amount": 0.2
-      }
-    },
+    "name": "遠隔狩り",
+    "effect": "specialEffect",
     "specialEffectApplyTo": "damage",
     "specialEffect": {
       "scale": 1.2,
       "conditions": [
         {
-          "kind": "debuff",
-          "tags": [
-            "def"
-          ]
+          "kind": "attackType",
+          "ranged": true
         }
       ]
-    },
-    "counterChance": 0.33,
-    "chance": 0.33,
-    "counterResponses": [
+    }
+  },
+  {
+    "id": "at_ranger_passive_4",
+    "name": "二の矢",
+    "effect": "bonusBasicAttackOnHit",
+    "chance": 0.5,
+    "bonusBasicAttackConditions": [
       {
-        "kind": "damage",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1,
-          "defOffset": 0,
-          "defScale": 1
-        },
-        "damageType": "physical"
+        "kind": "attackType",
+        "ranged": true
       }
-    ],
-    "counterRange": 0,
-    "counterRanged": true
+    ]
   }
 ]

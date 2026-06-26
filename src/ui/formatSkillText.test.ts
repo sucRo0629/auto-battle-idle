@@ -300,7 +300,7 @@ describe('formatActiveDescription', () => {
 
   it('formats counter passive with slash-separated summary', () => {
     const def: PassiveSkillDef = {
-      id: 'at_ranger_passive_3',
+      id: 'df_duelist_passive_counter_sample',
       name: '応射',
       effect: 'counter',
       chance: 0.33,
@@ -318,6 +318,22 @@ describe('formatActiveDescription', () => {
     expect(desc).toBe(
       '被攻撃時 33% で反撃 / 物理ATK / 射程+0 / 対象遠隔',
     );
+  });
+
+  it('formats at_ranger_passive_3 ranged special effect', () => {
+    const def: PassiveSkillDef = {
+      id: 'at_ranger_passive_3',
+      name: '遠隔狩り',
+      effect: 'specialEffect',
+      specialEffectApplyTo: 'damage',
+      specialEffect: {
+        scale: 1.2,
+        conditions: [{ kind: 'attackType', ranged: true }],
+      },
+    };
+    const desc = formatPassiveDescription(def);
+    expect(desc).toContain('特効');
+    expect(desc).toContain('対象遠隔');
   });
 
   it('formats active counter range 0 as 射程+0', () => {

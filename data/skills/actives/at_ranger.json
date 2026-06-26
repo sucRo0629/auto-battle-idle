@@ -48,6 +48,56 @@
     ]
   },
   {
+    "id": "at_ranger_active_3",
+    "name": "早射ち",
+    "trigger": {
+      "kind": "time",
+      "value": 10
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "attackSpeed",
+        "buffMultiplier": 1.25,
+        "buffDurationSec": 6
+      }
+    ]
+  },
+  {
+    "id": "at_ranger_active_4",
+    "name": "矢の雨",
+    "trigger": {
+      "kind": "basicAttackCount",
+      "value": 11
+    },
+    "effect": [
+      {
+        "targetShape": "scatter",
+        "scatterRadiusPx": 45,
+        "scatterSpreadRadiusPx": 55,
+        "scatterHitCount": 3,
+        "scatterDurationSec": 0.4,
+        "scatterSpreadRate": 0.4,
+        "range": 50,
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.5
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      }
+    ]
+  },
+  {
     "id": "at_ranger_basic_attack",
     "name": "at_ranger_basic_attack",
     "trigger": {

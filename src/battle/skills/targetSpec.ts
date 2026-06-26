@@ -293,7 +293,7 @@ function factionPool(
   return side === "ally" ? alliesLive : enemiesLive;
 }
 
-function matchesAttackType(
+export function matchesAttackType(
   unit: CombatantState,
   spec: Extract<TargetSpec, { kind: "attackType" }>
 ): boolean {

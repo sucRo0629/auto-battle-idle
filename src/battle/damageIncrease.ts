@@ -1,12 +1,13 @@
 import { currentHpRatio } from './combatMath.ts';
 import { hasMatchingDebuff } from './debuffMatching.ts';
+import { matchesAttackType } from './skills/targetSpec.ts';
 import type {
   CombatantState,
   DamageIncreaseCondition,
   DamageIncreaseSpec,
 } from './types.ts';
 
-function evaluateCondition(
+export function evaluateDamageIncreaseCondition(
   attacker: CombatantState,
   target: CombatantState,
   condition: DamageIncreaseCondition,
@@ -19,6 +20,8 @@ function evaluateCondition(
       });
     case 'targetHp':
       return currentHpRatio(target) <= condition.maxHpRatio;
+    case 'attackType':
+      return matchesAttackType(target, condition);
   }
 }
 
@@ -28,7 +31,7 @@ function resolveConditionMultiplier(
   condition: DamageIncreaseCondition,
   scale: number,
 ): number {
-  if (!evaluateCondition(attacker, target, condition)) {
+  if (!evaluateDamageIncreaseCondition(attacker, target, condition)) {
     return 1;
   }
   return scale;

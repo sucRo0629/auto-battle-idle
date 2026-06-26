@@ -270,6 +270,14 @@ function formatDamageIncreaseCondition(
     }
     case "targetHp":
       return `対象HP${formatPercent(condition.maxHpRatio)}以下`;
+    case "attackType": {
+      const parts: string[] = [];
+      if (condition.physical) parts.push("物理");
+      if (condition.magic) parts.push("魔法");
+      if (condition.melee) parts.push("近接");
+      if (condition.ranged) parts.push("遠隔");
+      return parts.length > 0 ? `対象${parts.join("・")}` : "対象攻撃種別";
+    }
   }
 }
 
@@ -799,9 +807,21 @@ function formatPassiveEffect(
         ? `無視DEF×${formatPercent(def.ignoredDefBonusScale)} 追加ダメ`
         : "無視DEFボーナス";
     case "bonusBasicAttackOnHit": {
-      const ratio = def.bonusBasicAttackHpRatio ?? 0.3;
       const chance = def.chance ?? 0.5;
-      return `通常攻撃 Hit 後 HP≤${formatPercent(ratio)} で ${formatPercent(chance)} 追加 Hit（非再帰）`;
+      const conditions = def.bonusBasicAttackConditions ?? [];
+      const parts: string[] = [];
+      if (conditions.length > 0) {
+        parts.push(
+          conditions.map(formatDamageIncreaseCondition).join("・"),
+        );
+      }
+      if (def.bonusBasicAttackHpRatio !== undefined) {
+        parts.push(`HP≤${formatPercent(def.bonusBasicAttackHpRatio)}`);
+      } else if (conditions.length === 0) {
+        parts.push(`HP≤${formatPercent(0.3)}`);
+      }
+      const gate = parts.length > 0 ? parts.join("・") : "—";
+      return `通常攻撃 Hit 後 ${gate} で ${formatPercent(chance)} 追加 Hit（非再帰）`;
     }
     case "periodicDispel": {
       const tags =

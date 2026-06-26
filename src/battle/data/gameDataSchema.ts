@@ -865,6 +865,7 @@ export const TARGET_STAT_ORDER_LABELS: Record<
 export const DAMAGE_INCREASE_CONDITION_KINDS = [
   "debuff",
   "targetHp",
+  "attackType",
 ] as const satisfies readonly DamageIncreaseCondition["kind"][];
 
 export const DAMAGE_INCREASE_CONDITION_KIND_LABELS: Record<
@@ -873,6 +874,7 @@ export const DAMAGE_INCREASE_CONDITION_KIND_LABELS: Record<
 > = {
   debuff: "デバフ",
   targetHp: "対象HP",
+  attackType: "攻撃種別",
 };
 
 export const DEFENSE_IGNORE_DEF_MODES = ["flat", "percent"] as const;

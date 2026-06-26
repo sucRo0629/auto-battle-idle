@@ -100,6 +100,8 @@
 
 **特効ダメージ**（パッシブ `damageIncrease` + effect `damageIncrease`）: **直接 `heal` のみ**に乗算（`damage` と同式の条件判定）。**HoT tick には非適用**（`damage` 直接のみ / DoT tick あり、という攻撃側の対比と同様）。
 
+`DamageIncreaseCondition`（パッシブ `specialEffect` / effect `damageIncrease` / `bonusBasicAttackConditions` 共用）: 全条件 **AND**。種別は `debuff` / `targetHp` / `attackType`。`attackType` は `target.attackType` と同型で、対象の `traits.rangePx` 等から遠隔/近接を判定（`matchesAttackType`）。詳細は [classes-and-skills.md](classes-and-skills.md) 特効効果節。
+
 **被回復量増加**（パッシブ `healReceivedIncrease`）: 回復対象のパッシブ `percent` を加算し、`heal` / HoT tick 量に `floor(量 × (1 + percent合算))` を適用（`damageIncrease` 適用後の量に対して乗算）。
 
 heal / HoT / barrier / **damage** は `**ResourceAmountSpec`\*\*（`amount`）で効果量を定義。旧 JSON のトップレベル `powerMultiplier` のみも、`kind: atkBased` + `atkScale` として読み込む（後方互換）。
@@ -397,7 +399,16 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 ### 追加通常攻撃（`bonusBasicAttackOnHit`）
 
-パッシブ `effect: "bonusBasicAttackOnHit"`。通常攻撃（`slotKind: basic`）の **damage Hit 適用後**、対象の `hp/maxHp <= bonusBasicAttackHpRatio`（未指定 0.3）なら `chance`（未指定 0.5）で **同一 basic effect を 1 Hit 追加**。追加 Hit も `basicAttackCount` を充填する。`suppressBonusBasicAttack` フラグ付き pending Hit から再帰発火しない。evasion / block / DR は追加しない（通常攻撃と同じ effect 再実行のみ）。例: 双刃士 P4 無慈悲な刃。
+パッシブ `effect: "bonusBasicAttackOnHit"`。通常攻撃（`slotKind: basic`）の **damage Hit 適用後**、ゲート条件を満たせば `chance`（未指定 0.5）で **同一 basic effect を 1 Hit 追加**。追加 Hit も `basicAttackCount` を充填する。`suppressBonusBasicAttack` フラグ付き pending Hit から再帰発火しない。evasion / block / DR は追加しない（通常攻撃と同じ effect 再実行のみ）。
+
+**ゲート条件（AND）:**
+
+| フィールド | 説明 |
+| ---------- | ---- |
+| `bonusBasicAttackConditions[]` | 任意。非空なら全条件を AND 評価（`DamageIncreaseCondition` と同型。`debuff` / `targetHp` / `attackType`） |
+| `bonusBasicAttackHpRatio` | 任意。明示時は `hp/maxHp <= ratio` も要求 |
+
+**HP ゲート省略規則:** `bonusBasicAttackConditions` のみで `bonusBasicAttackHpRatio` を省略した場合は HP ゲートをスキップ（例: 弓術士 P4 二の矢）。conditions も HP も省略時は従来どおり `bonusBasicAttackHpRatio` 未指定 = 0.3（双刃士 P4 無慈悲な刃）。
 
 ## ターゲット解決
 

@@ -856,7 +856,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 - P3 は「誰を狙うか」ではなく「処理対象に当たったときどれだけ効くか」の段階強化。
 - active 側は回転・火力形状を担い、passive の特効とは役割分担する。
 
-**参照例（詳細は各クラス節のスキル表を正とする）:** [剣術士](#剣術士at_warrior基礎近接) P1=重装狙い / P3=穿甲の一撃 / P4=剛剣の冴え、[双刃士](#双刃士at_assassin拡張近接) P1=手負い狩り / P3=刈り取り / P4=無慈悲な刃。
+**参照例（詳細は各クラス節のスキル表を正とする）:** [剣術士](#剣術士at_warrior基礎近接) P1=重装狙い / P3=穿甲の一撃 / P4=剛剣の冴え、[双刃士](#双刃士at_assassin拡張近接) P1=手負い狩り / P3=刈り取り / P4=無慈悲な刃、[弓術士](#弓術士at_ranger基礎遠隔) P1=射手排除 / P3=遠隔狩り / P4=二の矢。
 
 ### 三分類と classId
 
@@ -1007,6 +1007,22 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 - スキルによる攻撃構造変形（1 Hit → 2 Hit）
 - 攻撃回復による回転加速
 - 優先ターゲット：遠隔敵
+
+#### スキル枠（basic + passive×4 + active×4）
+
+| 枠             | ID                       | 名称     | 概要                                                                 |
+| -------------- | ------------------------ | -------- | -------------------------------------------------------------------- |
+| basic          | `at_ranger_basic_attack` | —        | 標準物理単体                                                         |
+| passive 1 Lv0  | `at_ranger_passive_1`    | 射手排除 | 遠隔敵優先 `targetRuleOverride`（`attackType.ranged`）               |
+| passive 2 Lv0  | `at_ranger_passive_2`    | 速射の技 | 常時 self `attackSpeed` buff（×1.25）                               |
+| passive 3 Lv10 | `at_ranger_passive_3`    | 遠隔狩り | 遠隔敵への damage×1.2（`specialEffect` + `attackType` 条件）       |
+| passive 4 Lv20 | `at_ranger_passive_4`    | 二の矢   | 遠隔敵 basic Hit 後 50% で追加 1 Hit（非再帰。HP 条件なし）          |
+| active 1 Lv0   | `at_ranger_active_1`     | 連射     | BAC 5・single 2 Hit 物理ダメ                                         |
+| active 2 Lv0   | `at_ranger_active_2`     | 連ね矢   | 10s・5s 間 basic `hitCountMultiplier: 2`（唯一の basicAttackTransform） |
+| active 3 Lv10  | `at_ranger_active_3`     | 早射ち   | 10s・self `attackSpeed` buff（6s・×1.25）                            |
+| active 4 Lv20  | `at_ranger_active_4`     | 矢の雨   | BAC 11・小範囲 scatter 短時間弾幕（damage のみ）                     |
+
+応射（`counter`）は採用しない。`basicAttackTransform` は A2 のみ。
 
 #### 処理対象
 
@@ -1617,10 +1633,11 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | フィールド               | 説明                                                               |
 | ------------------------ | ------------------------------------------------------------------ |
 | `scale`                  | 条件成立時（または `conditions: []` で無条件）の倍率               |
-| `conditions[]`           | 全条件 **AND**。種別: `debuff` / `targetHp`。空配列 = 常時 `scale` |
+| `conditions[]`           | 全条件 **AND**。種別: `debuff` / `targetHp` / `attackType`。空配列 = 常時 `scale` |
 | `debuff.tags`            | デバフタグ（OR）。`DEBUFF_FILTER_TAGS` 参照                        |
 | `debuff.selfAppliedOnly` | DoT 等で自分付与のみ                                               |
 | `targetHp.maxHpRatio`    | 対象 `hp/maxHp ≤ ratio`（バリア非含有）                            |
+| `attackType`             | `target.attackType` と同型。対象の `traits.rangePx` 等で遠隔/近接等を判定（`matchesAttackType`） |
 
 ### 防御無視（`DefenseIgnoreSpec`）
 

@@ -1331,6 +1331,27 @@ function parseDamageIncreaseCondition(
     return { kind, maxHpRatio };
   }
 
+  if (kind === 'attackType') {
+    const physical = obj.physical === true;
+    const magic = obj.magic === true;
+    const melee = obj.melee === true;
+    const ranged = obj.ranged === true;
+    if (!physical && !magic && !melee && !ranged) {
+      invalidField(
+        context,
+        'attackType',
+        'requires at least one of physical, magic, melee, ranged',
+      );
+    }
+    return {
+      kind,
+      ...(physical ? { physical: true } : {}),
+      ...(magic ? { magic: true } : {}),
+      ...(melee ? { melee: true } : {}),
+      ...(ranged ? { ranged: true } : {}),
+    };
+  }
+
   invalidField(context, 'kind', `unsupported condition kind: ${kind}`);
 }
 
@@ -3202,21 +3223,54 @@ function requirePassiveEffectParams(
       if (chance < 0 || chance > 1) {
         invalidField(context, 'chance', 'must be between 0 and 1');
       }
-      const bonusBasicAttackHpRatio =
-        obj.bonusBasicAttackHpRatio === undefined
-          ? 0.3
-          : requireNumber(obj, 'bonusBasicAttackHpRatio', context);
-      if (bonusBasicAttackHpRatio < 0 || bonusBasicAttackHpRatio > 1) {
-        invalidField(
-          context,
+      const bonusBasicAttackConditions =
+        obj.bonusBasicAttackConditions === undefined
+          ? undefined
+          : (() => {
+              const raw = obj.bonusBasicAttackConditions;
+              if (!Array.isArray(raw)) {
+                invalidField(
+                  context,
+                  'bonusBasicAttackConditions',
+                  'must be an array',
+                );
+              }
+              return raw.map((entry, index) =>
+                parseDamageIncreaseCondition(
+                  entry,
+                  `${context}.bonusBasicAttackConditions[${index}]`,
+                ),
+              );
+            })();
+      const hasConditions =
+        bonusBasicAttackConditions !== undefined &&
+        bonusBasicAttackConditions.length > 0;
+      let bonusBasicAttackHpRatio: number | undefined;
+      if (obj.bonusBasicAttackHpRatio !== undefined) {
+        bonusBasicAttackHpRatio = requireNumber(
+          obj,
           'bonusBasicAttackHpRatio',
-          'must be between 0 and 1',
+          context,
         );
+        if (bonusBasicAttackHpRatio < 0 || bonusBasicAttackHpRatio > 1) {
+          invalidField(
+            context,
+            'bonusBasicAttackHpRatio',
+            'must be between 0 and 1',
+          );
+        }
+      } else if (!hasConditions) {
+        bonusBasicAttackHpRatio = 0.3;
       }
       return {
         ...base,
         chance,
-        bonusBasicAttackHpRatio,
+        ...(bonusBasicAttackHpRatio !== undefined
+          ? { bonusBasicAttackHpRatio }
+          : {}),
+        ...(bonusBasicAttackConditions !== undefined
+          ? { bonusBasicAttackConditions }
+          : {}),
       };
     }
     case 'buff': {

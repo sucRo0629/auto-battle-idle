@@ -411,7 +411,14 @@ export type DamageIncreaseCondition =
       tags: DebuffFilterTag[];
       selfAppliedOnly?: boolean;
     }
-  | { kind: "targetHp"; maxHpRatio: number };
+  | { kind: "targetHp"; maxHpRatio: number }
+  | {
+      kind: "attackType";
+      physical?: boolean;
+      magic?: boolean;
+      melee?: boolean;
+      ranged?: boolean;
+    };
 
 export interface DamageIncreaseSpec {
   scale: number;
@@ -710,6 +717,8 @@ export interface PassiveSkillDef {
   ignoredDefBonusScale?: number;
   /** bonusBasicAttackOnHit: 追加 basic Hit を発火する対象 HP 比率上限（未指定 0.3） */
   bonusBasicAttackHpRatio?: number;
+  /** bonusBasicAttackOnHit: 非空なら全条件 AND。HP ゲートは bonusBasicAttackHpRatio 明示時のみ */
+  bonusBasicAttackConditions?: DamageIncreaseCondition[];
   buffSubKind?: BuffSubKind;
   buffTargetRule?: TargetSpec;
   /** アクティブ effect.targetShape に対応 */

@@ -1,5 +1,33 @@
 import { currentHpRatio, getPassiveDefs } from './combatMath.ts';
+import { evaluateDamageIncreaseCondition } from './damageIncrease.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
+
+function passesBonusBasicAttackGates(
+  actor: CombatantState,
+  target: CombatantState,
+  passive: PassiveSkillDef,
+): boolean {
+  const conditions = passive.bonusBasicAttackConditions ?? [];
+  if (conditions.length > 0) {
+    for (const condition of conditions) {
+      if (!evaluateDamageIncreaseCondition(actor, target, condition)) {
+        return false;
+      }
+    }
+  }
+
+  if (passive.bonusBasicAttackHpRatio !== undefined) {
+    if (currentHpRatio(target) > passive.bonusBasicAttackHpRatio) {
+      return false;
+    }
+  } else if (conditions.length === 0) {
+    if (currentHpRatio(target) > 0.3) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 export function shouldTriggerBonusBasicAttackOnHit(
   actor: CombatantState,
@@ -8,8 +36,7 @@ export function shouldTriggerBonusBasicAttackOnHit(
 ): boolean {
   for (const passive of getPassiveDefs(actor, passives)) {
     if (passive.effect !== 'bonusBasicAttackOnHit') continue;
-    const threshold = passive.bonusBasicAttackHpRatio ?? 0.3;
-    if (currentHpRatio(target) > threshold) continue;
+    if (!passesBonusBasicAttackGates(actor, target, passive)) continue;
     const chance = passive.chance ?? 0.5;
     if (chance <= 0) continue;
     if (Math.random() <= Math.min(1, chance)) {

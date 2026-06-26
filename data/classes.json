@@ -332,7 +332,8 @@
     "passiveIds": [
       "at_ranger_passive_1",
       "at_ranger_passive_2",
-      "at_ranger_passive_3"
+      "at_ranger_passive_3",
+      "at_ranger_passive_4"
     ],
     "skills": [
       {
@@ -347,7 +348,15 @@
       {
         "level": 10,
         "skillIds": [
-          "at_ranger_passive_3"
+          "at_ranger_passive_3",
+          "at_ranger_active_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "at_ranger_passive_4",
+          "at_ranger_active_4"
         ]
       }
     ],

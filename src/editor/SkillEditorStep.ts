@@ -91,6 +91,7 @@ import {
   appendDefenseIgnoreFields,
   appendDispelEffectFields,
   appendDamageIncreaseFields,
+  appendDamageIncreaseConditionListFields,
   appendPassiveDamageIncreaseFields,
   appendPassiveDefenseIgnoreFields,
   appendPassiveDebuffFields,
@@ -2501,7 +2502,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            'bonusBasicAttackHpRatio',
+            'bonusBasicAttackHpRatio（省略可）',
             createNumberInput(
               passive.bonusBasicAttackHpRatio ?? 0.3,
               (value) => {
@@ -2512,6 +2513,24 @@ export class SkillEditorStep {
               { step: 0.05, min: 0, max: 1 },
             ),
           ),
+        );
+        appendDamageIncreaseConditionListFields(
+          effectGrid,
+          passive.bonusBasicAttackConditions ?? [],
+          (mutate, options) => {
+            this.patchPassive(index, (current) => {
+              const next = mutate(current.bonusBasicAttackConditions ?? []);
+              if (next.length > 0) {
+                current.bonusBasicAttackConditions = next;
+              } else {
+                delete current.bonusBasicAttackConditions;
+              }
+            }, options);
+          },
+          {
+            title: 'bonusBasicAttackConditions（非空なら全条件 AND）',
+            addButtonLabel: '追加 Hit 条件を追加',
+          },
         );
         break;
       case 'periodicDispel':
