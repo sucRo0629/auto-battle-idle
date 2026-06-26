@@ -154,7 +154,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 | **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                | **見直し中**            |
 | **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                        | **完了**                |
 | **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish                               | **随時**（コア済）      |
-| **4d**       | パーティ編成 UI 刷新（`SkillMenuPanel`）— 画面設計は [party-formation-ui.md](../spec/party-formation-ui.md) | **未着手**（設計 v0.3） |
+| **4d**       | パーティ編成 UI 刷新（`SkillMenuPanel`）— 画面設計は [party-formation-ui.md](../spec/party-formation-ui.md) | **未着手**（設計 v0.4） |
 
 ### クラスマスタ（見直し中）
 
@@ -227,7 +227,7 @@ data/
 
 ### 4d — パーティ編成 UI（未着手）
 
-**ゴール:** [party-formation-ui.md](../spec/party-formation-ui.md) に沿って `SkillMenuPanel` を編成解法向けに再構成する。デスクトップ **上ロスター / 下詳細**、メンバー枠 ≠ 戦闘位置、クラスごとの前衛 / 後衛表示、**プレイヤーレベルはウィンドウヘッダー 1 か所**、スキル説明の常時閲覧。
+**ゴール:** [party-formation-ui.md](../spec/party-formation-ui.md)（**v0.4**）に沿って `SkillMenuPanel` を再構成する。上ロスター / 下詳細、編成内訳行、中央モーダル Picker、閲覧スキルカード（効果単位改行）、`playerProgress.level` をヘッダー 1 か所表示。
 
 **着手条件**
 
@@ -237,10 +237,10 @@ data/
 
 **主な変更（設計書 §11 差分）**
 
-- Overview（4 人ロスター）+ Detail + Picker オーバーレイ
-- 「編成枠」→ 陣形誤解のないラベル、枠 ≠ 位置の注記
-- スキル: tooltip 依存廃止方向、閲覧カード化
-- クラス Picker: UI ロール別グループ、15 クラス対応
+- 上ロスター / 下詳細、編成内訳行（空き枠 suffix）、PC RPG 情報パネル基調（§11）
+- `playerProgress.level` をヘッダー表示。`party[].progress.level` は表示に使わない
+- スキル: 縦セクション + 閲覧カード、効果単位改行、詳細全体スクロール
+- Picker: 3 ロールブロック・中央モーダル（タブ / サイドバー / rangePx なし）
 
 **4d スコープ外**
 
