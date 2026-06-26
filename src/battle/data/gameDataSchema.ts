@@ -152,6 +152,19 @@ export const COUNTER_RESPONSE_KIND_LABELS: Record<
   stun: "スタン",
   knockback: "ノックバック",
 };
+
+export const PASSIVE_COUNTER_TRIGGER_KINDS = [
+  "selfDamaged",
+  "frontAllyDamaged",
+] as const satisfies readonly import("../types.ts").PassiveCounterTriggerKind[];
+
+export const PASSIVE_COUNTER_TRIGGER_KIND_LABELS: Record<
+  import("../types.ts").PassiveCounterTriggerKind,
+  string
+> = {
+  selfDamaged: "自己被弾",
+  frontAllyDamaged: "前列味方被弾（援護）",
+};
 export const DAMAGE_TYPES = [
   "physical",
   "magic",

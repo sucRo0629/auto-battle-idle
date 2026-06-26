@@ -384,7 +384,22 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 | `damage` 軽減 | 攻撃者の DEF（物理）/ REG（魔法）を適用。回避・ブロックは非適用                                                                                                                        |
 | `targetShape` | `multiLock` 禁止                                                                                                                                                                       |
 
-**確率反撃（パッシブ `counterChance`）：** 常時受付。上記と同じ被攻撃条件・射程・`responses` 内容だが、ヒットごとに `counterChance` を判定し、成功時に反撃内容を直接適用（`StatusEffect` 付与なし）。アクティブ `counter` とは独立に併用可。
+**確率反撃（パッシブ `counterChance`）：** 常時受付。上記と同じ被攻撃条件・射程・`responses` 内容だが、ヒットごとに `counterChance` を判定し、成功時に反撃内容を直接適用（`StatusEffect` 付与なし）。アクティブ `counter` とは独立に併用可。`counterTrigger` 未指定時は **自己被弾** が正本。
+
+### 援護反撃（パッシブ `counter` + `counterTrigger: "frontAllyDamaged"`）
+
+自分以外の **前列味方**（`formationRow: "front"`）が敵の攻撃で実ダメージ > 0 を受けたとき、援護パッシブ持有者が攻撃者へ `counterResponses` を適用する。Threat 操作・ターゲット override ではない。
+
+| 項目       | 挙動                                                                 |
+| ---------- | -------------------------------------------------------------------- |
+| トリガー   | 味方被弾（前列のみ）。持有者本人の被弾では発火しない                 |
+| 判定主体   | パーティ内の各味方ユニットが所持する `frontAllyDamaged` counter を評価 |
+| 反撃者 ATK | 持有者の ATK を `counterResponses` の `damage` 量計算に使用        |
+| 確率       | `chance`（例: 槍術士 P4 援護 = 0.25）                                |
+| 射程・帯   | 自己被弾 counter と同じ（`counterRange` / `counterMelee` / `counterRanged`） |
+| 非トリガー | 反撃ダメージ・後列味方被弾・0 ダメージ・射程外                       |
+
+詳細なスキル枠は [classes-and-skills.md](classes-and-skills.md) §槍術士を正とする。
 
 **重複（同一対象・同一 stat / CC）：**
 

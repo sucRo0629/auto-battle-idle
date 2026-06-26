@@ -26,6 +26,49 @@ import type {
 } from './types.ts';
 import { asStatusEffectStatList } from './types.ts';
 
+function resolvePassiveCounterTrigger(
+  passive: PassiveSkillDef,
+): 'selfDamaged' | 'frontAllyDamaged' {
+  return passive.counterTrigger ?? 'selfDamaged';
+}
+
+function tryApplyPassiveCounterResponses(
+  counterActor: CombatantState,
+  attacker: CombatantState,
+  passive: PassiveSkillDef,
+  ctx: CounterRetaliationContext,
+  passives: Record<string, PassiveSkillDef>,
+  actives: Record<string, ActiveSkillDef>,
+  callbacks: CounterRetaliationCallbacks,
+): void {
+  const chance = passive.chance ?? 0;
+  const responses = passive.counterResponses;
+  if (chance <= 0 || !responses?.length) return;
+  if (!isPassiveCounterInRange(passive, counterActor, attacker)) return;
+  if (
+    !matchesCounterAttackRangeBand(ctx.attackRangePx, {
+      counterMelee: passive.counterMelee,
+      counterRanged: passive.counterRanged,
+    })
+  ) {
+    return;
+  }
+  if (Math.random() >= chance) return;
+
+  const counterRef = { skillId: passive.id };
+  for (const response of responses) {
+    applyCounterResponse(
+      counterActor,
+      attacker,
+      response,
+      counterRef,
+      passives,
+      actives,
+      callbacks,
+    );
+  }
+}
+
 export type CounterAttackKind = 'damage' | 'dot';
 
 export interface CounterRetaliationContext {
@@ -444,27 +487,47 @@ export function applyPassiveCounterRetaliation(
 
   for (const passive of getPassiveDefs(victim, passives)) {
     if (passive.effect !== 'counter') continue;
-    const chance = passive.chance ?? 0;
-    const responses = passive.counterResponses;
-    if (chance <= 0 || !responses?.length) continue;
-    if (!isPassiveCounterInRange(passive, victim, attacker)) continue;
-    if (
-      !matchesCounterAttackRangeBand(ctx.attackRangePx, {
-        counterMelee: passive.counterMelee,
-        counterRanged: passive.counterRanged,
-      })
-    ) {
-      continue;
-    }
-    if (Math.random() >= chance) continue;
+    if (resolvePassiveCounterTrigger(passive) !== 'selfDamaged') continue;
+    tryApplyPassiveCounterResponses(
+      victim,
+      attacker,
+      passive,
+      ctx,
+      passives,
+      actives,
+      callbacks,
+    );
+  }
+}
 
-    const counterRef = { skillId: passive.id };
-    for (const response of responses) {
-      applyCounterResponse(
-        victim,
+export function applyAllyGuardCounterRetaliation(
+  damagedAlly: CombatantState,
+  attacker: CombatantState,
+  ctx: CounterRetaliationContext,
+  guardCandidates: CombatantState[],
+  passives: Record<string, PassiveSkillDef>,
+  actives: Record<string, ActiveSkillDef>,
+  callbacks: CounterRetaliationCallbacks,
+): void {
+  if (ctx.isCounterDamage) return;
+  if (!damagedAlly.isAlive || !attacker.isAlive) return;
+  if (damagedAlly.isEnemy || !attacker.isEnemy) return;
+  if (ctx.appliedDamage <= 0) return;
+  if (ctx.attackKind !== 'damage' && ctx.attackKind !== 'dot') return;
+  if (damagedAlly.formationRow !== 'front') return;
+
+  for (const guard of guardCandidates) {
+    if (!guard.isAlive || guard.isEnemy) continue;
+    if (guard.id === damagedAlly.id) continue;
+
+    for (const passive of getPassiveDefs(guard, passives)) {
+      if (passive.effect !== 'counter') continue;
+      if (resolvePassiveCounterTrigger(passive) !== 'frontAllyDamaged') continue;
+      tryApplyPassiveCounterResponses(
+        guard,
         attacker,
-        response,
-        counterRef,
+        passive,
+        ctx,
         passives,
         actives,
         callbacks,

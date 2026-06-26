@@ -67,6 +67,7 @@ import { isUnitMovementBlocked, isUnitStunned } from "./ccEffects.ts";
 import {
   applyCounterRetaliation,
   applyPassiveCounterRetaliation,
+  applyAllyGuardCounterRetaliation,
   type CounterAttackKind,
 } from "./counterEffects.ts";
 import {
@@ -421,6 +422,17 @@ export class BattleEngine {
         this.gameData.skillRegistry.actives,
         counterCallbacks,
       );
+      if (!target.isEnemy && target.isAlive) {
+        applyAllyGuardCounterRetaliation(
+          target,
+          actor,
+          counterCtx,
+          this.players,
+          this.gameData.skillRegistry.passives,
+          this.gameData.skillRegistry.actives,
+          counterCallbacks,
+        );
+      }
       this.recordBattleXDebugChanges(
         [...this.players, ...this.enemies],
         counterBeforeById,

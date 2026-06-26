@@ -19,6 +19,8 @@ import {
   PASSIVE_EFFECT_KIND_LABELS,
   COUNTER_RESPONSE_KIND_LABELS,
   COUNTER_RESPONSE_KINDS,
+  PASSIVE_COUNTER_TRIGGER_KIND_LABELS,
+  PASSIVE_COUNTER_TRIGGER_KINDS,
   MAX_HP_REF_LABELS,
   MAX_HP_REFERENCES,
   RESOURCE_AMOUNT_KIND_LABELS,
@@ -3427,6 +3429,27 @@ export class SkillEditorStep {
         break;
       case 'counter':
       case 'counterChance':
+        effectGrid.appendChild(
+          createFieldRow(
+            '反撃トリガー',
+            createSelect(
+              passive.counterTrigger ?? 'selfDamaged',
+              PASSIVE_COUNTER_TRIGGER_KINDS.map((kind) => ({
+                value: kind,
+                label: PASSIVE_COUNTER_TRIGGER_KIND_LABELS[kind],
+              })),
+              (counterTrigger) => {
+                this.patchPassive(index, (current) => {
+                  if (counterTrigger === 'selfDamaged') {
+                    delete current.counterTrigger;
+                  } else {
+                    current.counterTrigger = counterTrigger;
+                  }
+                }, { rerender: false });
+              },
+            ),
+          ),
+        );
         effectGrid.appendChild(
           createFieldRow(
             '発動確率 (0–1)',

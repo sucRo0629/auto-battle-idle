@@ -1188,8 +1188,12 @@ function formatPassiveEffect(
       if (def.counterMelee) bandParts.push("近接");
       if (def.counterRanged) bandParts.push("遠隔");
       const band = bandParts.length > 0 ? `対象${bandParts.join("・")}` : "";
+      const triggerLabel =
+        def.counterTrigger === "frontAllyDamaged"
+          ? "前列味方被弾時"
+          : "被攻撃時";
       return [
-        `被攻撃時 ${formatPercent(
+        `${triggerLabel} ${formatPercent(
           def.chance ?? legacy.counterChance ?? 0
         )} で反撃`,
         responseParts.join(" / "),

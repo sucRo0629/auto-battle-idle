@@ -24,7 +24,7 @@
   },
   {
     "id": "at_lancer_active_1",
-    "name": "踏み込み突き",
+    "name": "号令",
     "trigger": {
       "kind": "time",
       "value": 10
@@ -43,6 +43,20 @@
           "side": "enemy",
           "order": "selfOrigin"
         }
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 50,
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "atk",
+        "buffMultiplier": 1.15,
+        "buffDurationSec": 4
       }
     ],
     "vfx": {
@@ -51,7 +65,7 @@
   },
   {
     "id": "at_lancer_active_2",
-    "name": "足払い",
+    "name": "崩勢",
     "trigger": {
       "kind": "time",
       "value": 14
@@ -79,11 +93,82 @@
         },
         "type": "debuff",
         "debuffSubKind": "stun",
-        "debuffStat": "def",
-        "debuffMultiplier": 0.8,
-        "debuffDurationSec": 5,
+        "durationSec": 3,
+        "targetShape": "pierce"
+      }
+    ]
+  },
+  {
+    "id": "at_lancer_active_3",
+    "name": "鼓舞",
+    "trigger": {
+      "kind": "time",
+      "value": 12
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 50,
+        "targetFormationRow": "front",
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "atk",
+        "buffMultiplier": 1.2,
+        "buffDurationSec": 8
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
+        },
+        "targetShape": "aoe",
+        "aoeRadiusPx": 50,
+        "targetFormationRow": "front",
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "attackSpeed",
+        "buffMultiplier": 1.15,
+        "buffDurationSec": 8
+      }
+    ]
+  },
+  {
+    "id": "at_lancer_active_4",
+    "name": "退撃",
+    "trigger": {
+      "kind": "time",
+      "value": 16
+    },
+    "effect": [
+      {
         "targetShape": "pierce",
-        "durationSec": 3
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.7
+        },
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        }
+      },
+      {
+        "type": "knockback",
+        "distancePx": 25,
+        "targetShape": "pierce",
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        }
       },
       {
         "target": {
@@ -94,7 +179,7 @@
         "type": "debuff",
         "debuffSubKind": "stat",
         "debuffStat": "def",
-        "debuffMultiplier": 0.8,
+        "debuffMultiplier": 0.9,
         "debuffDurationSec": 5,
         "targetShape": "pierce"
       }

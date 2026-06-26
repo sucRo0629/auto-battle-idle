@@ -839,6 +839,8 @@ export interface PassiveSkillDef {
   dispelTriggerLimit?: number;
   /** counter: 反撃内容 */
   counterResponses?: CounterResponseDef[];
+  /** counter: 被弾トリガー。未指定 = 自己被弾 */
+  counterTrigger?: PassiveCounterTriggerKind;
   /** counter: 反撃発動射程（px）。未指定 = 持有者 traits.rangePx */
   counterRange?: number;
   /** counter: 近接帯の攻撃のみ反撃（未指定かつ counterRanged も未指定 = 全区間） */
@@ -1297,6 +1299,9 @@ export type CounterResponseKind =
   | "dot"
   | "stun"
   | "knockback";
+
+/** パッシブ counter の被弾トリガー。未指定 = 自己被弾 */
+export type PassiveCounterTriggerKind = "selfDamaged" | "frontAllyDamaged";
 
 export type CounterResponseDef =
   | {

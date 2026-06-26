@@ -294,7 +294,9 @@
     "basicAttackSkillId": "at_lancer_basic_attack",
     "passiveIds": [
       "at_lancer_passive_1",
-      "at_lancer_passive_2"
+      "at_lancer_passive_2",
+      "at_lancer_passive_3",
+      "at_lancer_passive_4"
     ],
     "skills": [
       {
@@ -304,6 +306,20 @@
           "at_lancer_passive_2",
           "at_lancer_active_1",
           "at_lancer_active_2"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "at_lancer_passive_3",
+          "at_lancer_active_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "at_lancer_passive_4",
+          "at_lancer_active_4"
         ]
       }
     ],

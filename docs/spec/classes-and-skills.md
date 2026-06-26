@@ -520,7 +520,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | -------------- | ------ | --------- | ----- | -------- | --------------------------------------------- | --------------------- |
 | `at_warrior`   | 剣術士 | Swordsman | front | 近接     | 最高 DEF 狙い + DEF 無視                      | 叩き付け／薙ぎ払い    |
 | `at_assassin`  | 双刃士 | Assassin  | front | 近接     | 最低 HP 比率狙い + 回避                       | 引き裂き／影の刃      |
-| `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura | 号令突き／攻勢制圧  |
+| `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura | 号令／崩勢／鼓舞／退撃  |
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                    | 連射／連ね矢          |
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 高 Max HP 狙い + 待機蓄積 + 砲撃標的           | 破城矢装填／重矢          |
 | `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | — （未実装）                                  | （未実装）            |
@@ -996,12 +996,12 @@ Kill 対象を持たない **Position Flow / 戦線指揮** 職。位置取り�
 | basic          | `at_lancer_basic_attack` | —            | `selfOrigin` pierce 物理（常時ライン圧力）                                           |
 | passive 1 Lv0  | `at_lancer_passive_1`    | 牽制         | 敵前方 pierce 常時 ATK debuff（**残す**）                                            |
 | passive 2 Lv0  | `at_lancer_passive_2`    | 連携         | 味方 `selfOrigin` + `aoe` 常時 ATK aura（**残す**）                                  |
-| passive 3 Lv10 | `at_lancer_passive_3`    | （要命名）   | 前線圧力の段階強化。buff / debuff 延長。新 trigger なし                              |
-| passive 4 Lv20 | `at_lancer_passive_4`    | （要命名）   | 援護反撃候補。前列味方被弾時に攻撃者へ counter。P4 で採用。新 trigger は実装ゲート（Phase 3 後半 or 別タスク） |
-| active 1 Lv0   | `at_lancer_active_1`     | 号令突き等   | `move` なし。pierce ダメ + Flow 追加（味方近接 ATK buff 短時間パルス案を推奨）。単体ダメのみにしない |
-| active 2 Lv0   | `at_lancer_active_2`     | 攻勢制圧等   | pierce 軽ダメ + 攻撃停止主軸（`attackSpeed` debuff 主、必要なら短 `stun`）。足止め・`moveLock` 主目的にしない。DEF debuff 二重は設計上整理対象 |
-| active 3 Lv10  | `at_lancer_active_3`     | （要命名）   | 味方前線の戦線維持（近傍 ATK / DEF buff 持続寄り）。A1 の鼓舞パルスより上位               |
-| active 4 Lv20  | `at_lancer_active_4`     | （要命名）   | pierce + `knockback` で戦線再形成。敵撃破大技ではない。A2 の攻撃停止・A1+`move` 複合と被らない（`stun` だけの A4 は採用しない） |
+| passive 3 Lv10 | `at_lancer_passive_3`    | 堅陣         | 味方 `selfOrigin` + `aoe` 常時 DEF buff ×1.1 + REG flat +5（P2 と同型 aura）         |
+| passive 4 Lv20 | `at_lancer_passive_4`    | 援護         | 自分以外の前列味方被弾時、攻撃者へ counter（chance 0.25 / counter ATK×0.5 / 攻撃者 ATK×0.9 debuff）。[combat.md](combat.md) §援護反撃 |
+| active 1 Lv0   | `at_lancer_active_1`     | 号令         | `move` なし。pierce 物理ダメ + 味方 ATK buff 短時間パルス（`selfOrigin` + `aoe`）   |
+| active 2 Lv0   | `at_lancer_active_2`     | 崩勢         | pierce 攻撃 + `stun` 3 秒のみ。`attackSpeed` debuff / DEF debuff 二重 / `moveLock` なし |
+| active 3 Lv10  | `at_lancer_active_3`     | 鼓舞         | 味方前線 ATK buff + `attackSpeed` buff（持続寄り）。P2 常時より能動の上位               |
+| active 4 Lv20  | `at_lancer_active_4`     | 退撃         | pierce + `knockback` + 敵 DEF debuff ×0.9（前方ライン）。撃破大技にしない             |
 
 #### 処理対象
 
@@ -1130,7 +1130,7 @@ Kill 対象を持たない **Position Flow / 戦線指揮** 職。位置取り�
 
 ### 未実装・TBD
 
-- ~~各クラスのスキルツリー詳細設計（Lv10 / Lv20 分岐）~~ 槍術士は [槍術士節](#槍術士at_lancer変則近接) で doc 確定（JSON / pierce approach 実装は別タスク）。他 Kill / Flow クラスは [skill-finalization-table.md](../plans/skill-finalization-table.md) を参照
+- ~~各クラスのスキルツリー詳細設計（Lv10 / Lv20 分岐）~~ 槍術士は [槍術士節](#槍術士at_lancer変則近接) で doc / JSON 確定（pierce approach は [battle-field.md](battle-field.md) §4.4）。他 Kill / Flow クラスは [skill-finalization-table.md](../plans/skill-finalization-table.md) を参照
 - Hit / Attack / Gauge の厳密な内部仕様ドキュメント化（[combat.md](combat.md) への反映含む）
 - 優先ターゲット AI の詳細アルゴリズム（ターゲット選択優先順位ロジック）
 - 弩砲士: ~~フィールド貫通ライン仕様、Lv0 `passive_2` 以降の具体設計~~ **Physical pass B 実装済**（[弩砲士節](#弩砲士at_ballista拡張遠隔)）

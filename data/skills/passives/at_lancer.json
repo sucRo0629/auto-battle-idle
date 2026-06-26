@@ -29,5 +29,47 @@
       "side": "ally",
       "order": "selfOrigin"
     }
+  },
+  {
+    "id": "at_lancer_passive_3",
+    "name": "堅陣",
+    "effect": "buff",
+    "buffSubKind": "stat",
+    "buffStat": [
+      "def",
+      "reg"
+    ],
+    "buffTargetShape": "aoe",
+    "buffAoeRadiusPx": 50,
+    "buffMultiplier": 1.1,
+    "buffFlatBonus": 5,
+    "buffTargetRule": {
+      "kind": "distance",
+      "side": "ally",
+      "order": "selfOrigin"
+    }
+  },
+  {
+    "id": "at_lancer_passive_4",
+    "name": "援護",
+    "effect": "counter",
+    "counterTrigger": "frontAllyDamaged",
+    "chance": 0.25,
+    "counterResponses": [
+      {
+        "kind": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.5
+        },
+        "damageType": "physical"
+      },
+      {
+        "kind": "debuff",
+        "debuffStat": "atk",
+        "debuffMultiplier": 0.9,
+        "debuffDurationSec": 5
+      }
+    ]
   }
 ]

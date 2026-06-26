@@ -116,6 +116,7 @@ import {
   DAMAGE_INCREASE_CONDITION_KINDS,
   DEFENSE_IGNORE_DEF_MODES,
   COUNTER_RESPONSE_KINDS,
+  PASSIVE_COUNTER_TRIGGER_KINDS,
   TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS,
 } from './gameDataSchema.ts';
 import { normalizeTarget } from '../skills/targetSpec.ts';
@@ -135,6 +136,9 @@ const SKILL_EFFECTS = new Set<SkillEffectKind>(SKILL_EFFECT_KINDS);
 const COUNTER_RESPONSE_KINDS_SET = new Set<CounterResponseKind>(
   COUNTER_RESPONSE_KINDS,
 );
+const PASSIVE_COUNTER_TRIGGER_KINDS_SET = new Set<
+  import('../types.ts').PassiveCounterTriggerKind
+>(PASSIVE_COUNTER_TRIGGER_KINDS);
 const DAMAGE_TYPES_SET = new Set<DamageType>(DAMAGE_TYPES);
 const VFX_ANCHORS_SET = new Set<VfxAnchor>(VFX_ANCHORS);
 const VFX_LAYERS_SET = new Set<VfxLayer>(VFX_LAYERS);
@@ -615,6 +619,19 @@ function parseCounterAttackRangeBandFields(
     ...(counterMelee ? { counterMelee } : {}),
     ...(counterRanged ? { counterRanged } : {}),
   };
+}
+
+function parseOptionalPassiveCounterTrigger(
+  obj: Record<string, unknown>,
+  context: string,
+): import('../types.ts').PassiveCounterTriggerKind | undefined {
+  if (obj.counterTrigger === undefined) return undefined;
+  return requireEnum(
+    obj,
+    'counterTrigger',
+    context,
+    PASSIVE_COUNTER_TRIGGER_KINDS_SET,
+  );
 }
 
 function parseResourceAmountSpec(
@@ -3926,11 +3943,13 @@ function requirePassiveEffectParams(
       if (counterRange !== undefined && counterRange < 0) {
         invalidField(context, 'counterRange', 'must be a non-negative number');
       }
+      const counterTrigger = parseOptionalPassiveCounterTrigger(obj, context);
       return {
         ...base,
         chance,
         counterResponses,
         ...(counterRange !== undefined ? { counterRange } : {}),
+        ...(counterTrigger !== undefined ? { counterTrigger } : {}),
         ...parseCounterAttackRangeBandFields(obj, context),
       };
     }
