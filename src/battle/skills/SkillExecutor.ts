@@ -1464,6 +1464,10 @@ export class SkillExecutor {
             damageIncrease: effectDef.damageIncrease,
             defenseIgnore: effectDef.defenseIgnore,
             tickSec: 1,
+            ...(effectDef.dotFlavor ? { dotFlavor: effectDef.dotFlavor } : {}),
+            ...(effectDef.buffDisplayName
+              ? { displayName: effectDef.buffDisplayName }
+              : {}),
           });
           this.emit({
             type: 'skill',
@@ -1721,6 +1725,7 @@ export class SkillExecutor {
         damageIncrease: effectDef.damageIncrease,
         defenseIgnore: effectDef.defenseIgnore,
         tickSec: 1,
+        ...(effectDef.dotFlavor ? { dotFlavor: effectDef.dotFlavor } : {}),
       });
       this.emit({
         type: 'skill',

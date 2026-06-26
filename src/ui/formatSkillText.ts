@@ -8,6 +8,7 @@ import {
   BUFF_SUB_KIND_LABELS,
   DEBUFF_FILTER_TAG_LABELS,
   DEBUFF_SUB_KIND_LABELS,
+  DOT_FLAVOR_LABELS,
   EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS,
   DISPEL_PRIORITY_LABELS,
   FIRE_CONDITION_KIND_LABELS,
@@ -578,12 +579,20 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
         const dmgType = effect.damageType
           ? DAMAGE_TYPE_LABELS[effect.damageType]
           : "";
+        const amountScale =
+          effect.amount?.kind === "atkBased"
+            ? effect.amount.atkScale
+            : effect.powerMultiplier;
         const power = dmgType
-          ? `${dmgType} ×${effect.powerMultiplier ?? 0}`
-          : `×${effect.powerMultiplier ?? 0}`;
-        extras.push(
-          `${DEBUFF_SUB_KIND_LABELS.dot} ${power} ${effect.durationSec ?? 0}s`
-        );
+          ? `${dmgType} ×${amountScale ?? 0}`
+          : `×${amountScale ?? 0}`;
+        const flavorLabel = effect.dotFlavor
+          ? DOT_FLAVOR_LABELS[effect.dotFlavor]
+          : DEBUFF_SUB_KIND_LABELS.dot;
+        extras.push(`${flavorLabel} ${power} ${effect.durationSec ?? 0}s`);
+        if (effect.buffDisplayName) {
+          extras.push(effect.buffDisplayName);
+        }
         const inc = formatDamageIncreaseSpec(effect.damageIncrease);
         if (inc) extras.push(inc);
         const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);

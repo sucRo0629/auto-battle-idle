@@ -47,6 +47,14 @@ function matchesDebuffTag(
     return true;
   }
 
+  if (tag === 'bleed') {
+    return effect.overlay === 'dot' && effect.dotFlavor === 'bleed';
+  }
+
+  if (tag === 'poison') {
+    return effect.overlay === 'dot' && effect.dotFlavor === 'poison';
+  }
+
   if (tag === 'stun') {
     return effect.overlay === 'stun' || effect.kind === 'cc';
   }

@@ -32,10 +32,29 @@ describe('at_assassin passive / active unlock structure', () => {
 
     expect(passives['at_assassin_passive_4']?.effect).toBe('bonusBasicAttackOnHit');
 
-    const a3 = actives['at_assassin_active_3']?.effect[0];
-    expect(a3?.type).toBe('basicAttackTransform');
-    if (a3?.type === 'basicAttackTransform') {
-      expectIntAtLeast(a3.primaryPatch?.hitCount, 2);
+    const a3 = actives['at_assassin_active_3'];
+    expect(a3?.firePolicy).toBe('smart');
+    expect(a3?.fireConditions).toEqual([{ kind: 'debuff', tags: ['bleed'] }]);
+    const a3Effect = a3?.effect[0];
+    expect(a3Effect?.type).toBe('debuff');
+    if (a3Effect?.type === 'debuff') {
+      expect(a3Effect.debuffSubKind).toBe('stat');
+      expect(a3Effect.debuffStat).toBe('damageTaken');
+      expect(a3Effect.debuffMultiplier).toBeGreaterThan(1);
+    }
+
+    const a1Dot = actives['at_assassin_active_1']?.effect[1];
+    expect(a1Dot?.type).toBe('debuff');
+    if (a1Dot?.type === 'debuff') {
+      expect(a1Dot.debuffSubKind).toBe('dot');
+      expect(a1Dot.dotFlavor).toBe('bleed');
+    }
+    const a1Damage = actives['at_assassin_active_1']?.effect[0];
+    if (a1Damage?.type === 'damage') {
+      expect(a1Damage.damageIncrease?.conditions?.[0]).toEqual({
+        kind: 'debuff',
+        tags: ['bleed'],
+      });
     }
   });
 

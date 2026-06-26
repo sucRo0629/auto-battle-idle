@@ -72,6 +72,7 @@ export function passiveDebuffToEffectDef(passive: PassiveSkillDef): DebuffSkillE
     durationSec: passive.debuffStunDurationSec ?? passive.debuffDotDurationSec,
     amount: passive.debuffDotAmount,
     damageType: passive.debuffDotDamageType,
+    dotFlavor: passive.debuffDotFlavor,
   };
 
   for (const [effectKey, passiveKey] of Object.entries(
@@ -107,6 +108,7 @@ export function applyDebuffEffectToPassive(
     passive.debuffDotDurationSec = effect.durationSec;
     passive.debuffDotAmount = effect.amount;
     passive.debuffDotDamageType = effect.damageType;
+    passive.debuffDotFlavor = effect.dotFlavor;
   }
 
   for (const passiveKey of Object.values(PASSIVE_DEBUFF_TARGETING_FIELD_MAP)) {

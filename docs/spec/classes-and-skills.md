@@ -927,9 +927,9 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 | passive 2 Lv0  | `at_assassin_passive_2`    | 影の歩み   | 回避 buff（`chance: 0.2`）                                           |
 | passive 3 Lv10 | `at_assassin_passive_3`    | 刈り取り   | HP≤30% 対象 damage×1.2 + 条件成立時 DEF 100% 無視（複合 passive）    |
 | passive 4 Lv20 | `at_assassin_passive_4`    | 無慈悲な刃 | `bonusBasicAttackOnHit` — 瀕死対象 basic Hit 後 50% で追加 1 Hit（非再帰） |
-| active 1 Lv0   | `at_assassin_active_1`     | 引き裂き   | DoT 付与 + debuff 対象追加ダメ                                       |
+| active 1 Lv0   | `at_assassin_active_1`     | 引き裂き   | 出血 DoT 付与 + 出血中追加ダメ                                       |
 | active 2 Lv0   | `at_assassin_active_2`     | 影の刃     | evasion → 背後 `toAnchor` → 低 HP 追撃（move 仕様は下記）            |
-| active 3 Lv10  | `at_assassin_active_3`     | 閃影刃     | `basicAttackTransform` — basic を 3 Hit 化（`primaryPatch`）         |
+| active 3 Lv10  | `at_assassin_active_3`     | 失血刻印   | smart + `bleed` 条件。対象 `damageTaken` debuff（被ダメ増）          |
 | active 4 Lv20  | `at_assassin_active_4`     | 百花繚乱   | BAC 16・`multiLock` range 100・低 HP 優先投擲（位置移動なし）        |
 
 新 effect: `bonusBasicAttackOnHit`（[combat.md](combat.md) 物理ダメージ節）。passive `specialEffect` + `defenseIgnore` 併記は条件成立時のみ DEF 無視を合算する。
@@ -1515,7 +1515,7 @@ interface CharacterBuild {
 | サブ種別 (`debuffSubKind`) | 対象・効果                                                                  | 主なパラメータ                                          | 重複・スタックルール                                                | 備考                                                                                                                         |
 | :------------------------- | :-------------------------------------------------------------------------- | :------------------------------------------------------ | :------------------------------------------------------------------ | :--------------------------------------------------------------------------------------------------------------------------- |
 | `stat`                     | ステータス（`hp`, `atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の低下 | `debuffStat`<br>`debuffMultiplier`<br>`debuffFlatBonus` | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。 | `hp` は maxHp 低下（`effectiveMaxHp`）。`damageTaken` の増加（被ダメ UP）や `attackSpeed` の低下（スロウ）もこれに含みます。 |
-| `dot`                      | 持続ダメージ（Damage over Time）を付与                                      | `ResourceAmountSpec`                                    | 同一効果は持続時間の長い方を優先。                                  | 1 秒ごとにダメージを再計算（付与時の ATK バフ等の変動をリアルタイムに反映）。                                                |
+| `dot`                      | 持続ダメージ（Damage over Time）を付与                                      | `ResourceAmountSpec`<br>`dotFlavor?`（`bleed` / `poison`） | 同一効果は持続時間の長い方を優先。                                  | 1 秒ごとにダメージを再計算。`dotFlavor` 未指定 = 汎用 DoT。HUD はフレーバー別アイコン（`bleed` / `poison` / 未指定 `dot`）。 |
 | `stun`                     | 行動不能（CC）状態にする                                                    | `durationSec`（上限 5 秒）                              | 持続時間の長い方を優先。                                            | 使用者として通常攻撃・アクティブ発動・ターゲット選択不可。CD は停止しない。                                                  |
 | `freeze`                   | 時間停止系拘束（予約概念）                                                  | 未定                                                    | 未定                                                                | CD 停止が必要な場合は stun ではなく別状態として定義する。現行 JSON では未使用。                                              |
 
@@ -1615,7 +1615,7 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | フィールド           | 説明                                                                                            |
 | -------------------- | ----------------------------------------------------------------------------------------------- |
 | `dispelCount`        | `0` = 対象タグすべて、`N>0` = 優先度に従い N 件                                                 |
-| `dispelTags`         | 未指定 = 全デバフタグ（`atk` / `def` / `reg` / `damageTaken` / `attackSpeed` / `dot` / `stun`） |
+| `dispelTags`         | 未指定 = 全デバフタグ（`atk` / `def` / `reg` / `damageTaken` / `attackSpeed` / `dot` / `bleed` / `poison` / `stun`）。`dot` は全 DoT（全フレーバー + 未指定）にマッチ |
 | `dispelPriority`     | 未指定 = `longest`（最長）。`strongest` = 効果量最大を優先                                      |
 | `dispelTriggerLimit` | パッシブ `periodicDispel` のみ。1 Wave 内の発動回数上限（未指定 = 無制限）                      |
 

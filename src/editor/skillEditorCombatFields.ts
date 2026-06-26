@@ -3,6 +3,8 @@ import {
   DAMAGE_INCREASE_CONDITION_KIND_LABELS,
   DAMAGE_INCREASE_CONDITION_KINDS,
   DEBUFF_FILTER_TAGS,
+  DOT_FLAVOR_LABELS,
+  DOT_FLAVORS,
   DISPEL_PRIORITIES,
   DISPEL_PRIORITY_LABELS,
   DEFENSE_IGNORE_DEF_MODE_LABELS,
@@ -1806,6 +1808,30 @@ export function appendPassiveDebuffFields(
             });
           },
           { min: 0.1, step: 0.5 }
+        )
+      )
+    );
+    parent.appendChild(
+      createFieldRow(
+        "DoTフレーバー",
+        createSelect(
+          passive.debuffDotFlavor ?? "",
+          [
+            { value: "", label: "未指定（汎用DoT）" },
+            ...DOT_FLAVORS.map((value) => ({
+              value,
+              label: DOT_FLAVOR_LABELS[value],
+            })),
+          ],
+          (debuffDotFlavor) => {
+            patchPassive((current) => {
+              if (debuffDotFlavor === "") {
+                delete current.debuffDotFlavor;
+              } else {
+                current.debuffDotFlavor = debuffDotFlavor as PassiveSkillDef["debuffDotFlavor"];
+              }
+            });
+          }
         )
       )
     );

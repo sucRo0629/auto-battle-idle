@@ -51,7 +51,7 @@
             {
               "kind": "debuff",
               "tags": [
-                "dot"
+                "bleed"
               ]
             }
           ]
@@ -65,6 +65,8 @@
         },
         "type": "debuff",
         "debuffSubKind": "dot",
+        "dotFlavor": "bleed",
+        "buffDisplayName": "出血",
         "debuffStat": "def",
         "debuffMultiplier": 0.8,
         "debuffDurationSec": 5,
@@ -143,24 +145,37 @@
   },
   {
     "id": "at_assassin_active_3",
-    "name": "閃影刃",
+    "name": "失血刻印",
     "trigger": {
       "kind": "time",
       "value": 12
     },
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "debuff",
+        "tags": [
+          "bleed"
+        ]
+      }
+    ],
     "effect": [
       {
         "target": {
-          "kind": "self"
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
         },
-        "type": "basicAttackTransform",
-        "buffDurationSec": 4,
-        "primaryPatch": {
-          "hitCount": 3,
-          "hitDurationSec": 0.22
-        }
+        "type": "debuff",
+        "debuffSubKind": "stat",
+        "debuffStat": "damageTaken",
+        "debuffMultiplier": 1.2,
+        "debuffDurationSec": 5
       }
-    ]
+    ],
+    "vfx": {
+      "enabled": true
+    }
   },
   {
     "id": "at_assassin_active_4",

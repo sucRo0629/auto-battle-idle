@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { resolveDamage } from './combatMath.ts';
 import { shouldTriggerBonusBasicAttackOnHit } from './bonusBasicAttackOnHit.ts';
-import { applyBasicAttackTransform } from './resolveEffectiveBasicAttack.ts';
+import { shouldFireActiveSkill } from './skills/fireGate.ts';
 import { SkillExecutor } from './skills/SkillExecutor.ts';
 import { mockCombatant } from './testFixtures.ts';
 import type {
@@ -59,27 +59,153 @@ describe('at_assassin combat mechanics', () => {
     expect(highHpDamage).toBe(highHpBaseline);
   });
 
-  it('A3 basicAttackTransform sets basic attack to 3 hits via primaryPatch', () => {
-    const basic: ActiveSkillDef = {
-      id: 'at_assassin_basic_attack',
-      name: 'basic',
-      trigger: { kind: 'time', value: 2 },
+  it('A3 fires only when the primary target has bleed', () => {
+    const actor = mockCombatant({ id: 'assassin' });
+    const enemyWithBleed = mockCombatant({
+      id: 'enemy-bleed',
+      isEnemy: true,
+      statusEffects: [
+        {
+          id: 'bleed',
+          kind: 'debuff',
+          overlay: 'dot',
+          dotFlavor: 'bleed',
+          multiplier: 1,
+          durationSec: 5,
+          remainingSec: 5,
+        },
+      ],
+    });
+    const enemyClean = mockCombatant({ id: 'enemy-clean', isEnemy: true });
+    const skill: ActiveSkillDef = {
+      id: 'at_assassin_active_3',
+      name: '失血刻印',
+      trigger: { kind: 'time', value: 12 },
+      firePolicy: 'smart',
+      fireConditions: [{ kind: 'debuff', tags: ['bleed'] }],
       effect: [
         {
-          type: 'damage',
+          type: 'debuff',
           target: { kind: 'distance', side: 'enemy', order: 'nearest' },
-          amount: { kind: 'atkBased', atkScale: 0.5 },
-          targetShape: 'single',
-          hitCount: 2,
-          hitDurationSec: 0.2,
+          debuffSubKind: 'stat',
+          debuffStat: 'damageTaken',
+          debuffMultiplier: 1.2,
+          debuffDurationSec: 5,
         },
       ],
     };
-    const transformed = applyBasicAttackTransform(basic, {
-      primaryPatch: { hitCount: 3, hitDurationSec: 0.22 },
+    const gameData = { skillRegistry: { passives: {}, actives: {} } } as never;
+
+    expect(
+      shouldFireActiveSkill({
+        actor,
+        allies: [actor],
+        enemies: [enemyWithBleed],
+        skill,
+        passives: [],
+        gameData,
+        battleTimeSec: 0,
+        isWaveStartPhase: false,
+        isWaveEndPhase: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldFireActiveSkill({
+        actor,
+        allies: [actor],
+        enemies: [enemyClean],
+        skill,
+        passives: [],
+        gameData,
+        battleTimeSec: 0,
+        isWaveStartPhase: false,
+        isWaveEndPhase: false,
+      }),
+    ).toBe(false);
+  });
+
+  it('A3 applies damageTaken debuff without instant damage', () => {
+    const gameData = {
+      skillRegistry: {
+        passives: {} as Record<string, PassiveSkillDef>,
+        actives: {} as Record<string, ActiveSkillDef>,
+      },
+    };
+    const actor = mockCombatant({
+      id: 'assassin',
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: ['at_assassin_active_3'],
+        equippedActiveSlots: [],
+      },
     });
-    expect(transformed.effect[0]?.hitCount).toBe(3);
-    expect(transformed.effect[0]?.hitDurationSec).toBe(0.22);
+    const enemy = mockCombatant({
+      id: 'enemy',
+      hp: 100,
+      maxHp: 100,
+      def: 0,
+      isEnemy: true,
+      statusEffects: [
+        {
+          id: 'bleed',
+          kind: 'debuff',
+          overlay: 'dot',
+          dotFlavor: 'bleed',
+          multiplier: 1,
+          durationSec: 5,
+          remainingSec: 5,
+        },
+      ],
+    });
+    const executor = new SkillExecutor(gameData as never, () => {}, {
+      getBattleTimeSec: () => 0,
+      enqueuePendingHits: () => {},
+      getAllCombatants: () => [actor, enemy],
+      getSequenceRunner: () => ({
+        isActorBusy: () => false,
+        isActorInSkillMotion: () => false,
+        isBasicAttackBlocked: () => false,
+      }),
+      onBasicAttackCountCharged: () => {},
+      onDamageApplied: () => {},
+    });
+
+    const skill: ActiveSkillDef = {
+      id: 'at_assassin_active_3',
+      name: '失血刻印',
+      trigger: { kind: 'time', value: 12 },
+      firePolicy: 'smart',
+      fireConditions: [{ kind: 'debuff', tags: ['bleed'] }],
+      effect: [
+        {
+          type: 'debuff',
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          debuffSubKind: 'stat',
+          debuffStat: 'damageTaken',
+          debuffMultiplier: 1.2,
+          debuffDurationSec: 5,
+        },
+      ],
+    };
+    gameData.skillRegistry.actives = { [skill.id]: skill };
+
+    const hpBefore = enemy.hp;
+    executor.applyPendingHit({
+      applyAtBattleSec: 0,
+      actorId: actor.id,
+      skillId: skill.id,
+      skillName: skill.name,
+      effectDef: skill.effect[0]!,
+      effectIndex: 0,
+      slotKind: 'active',
+      hitIndex: 0,
+      targets: [{ targetId: enemy.id }],
+    });
+
+    expect(enemy.hp).toBe(hpBefore);
+    expect(enemy.statusEffects.some((effect) => effect.stat === 'damageTaken')).toBe(
+      true,
+    );
   });
 
   it('P4 triggers bonus basic hit only on low HP targets when chance succeeds', () => {

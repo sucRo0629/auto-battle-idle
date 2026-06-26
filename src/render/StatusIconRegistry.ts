@@ -6,6 +6,8 @@ import damageReductionIconUrl from "../assets/status-icons/damageReduction.png";
 import damageIncreaseIconUrl from "../assets/status-icons/damageIncrease.png";
 import hotIconUrl from "../assets/status-icons/hot.png";
 import dotIconUrl from "../assets/status-icons/dot.png";
+import bleedIconUrl from "../assets/status-icons/bleed.png";
+import poisonIconUrl from "../assets/status-icons/poison.png";
 import blockIconUrl from "../assets/status-icons/block.png";
 import stunIconUrl from "../assets/status-icons/stun.png";
 import evasionIconUrl from "../assets/status-icons/evasion.png";
@@ -37,6 +39,8 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   hot: hotIconUrl,
   healReservation: healReservationIconUrl,
   dot: dotIconUrl,
+  bleed: bleedIconUrl,
+  poison: poisonIconUrl,
   block: blockIconUrl,
   stun: stunIconUrl,
   moveLock: stunIconUrl,

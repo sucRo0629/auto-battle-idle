@@ -10,6 +10,8 @@ export type StatusDisplayCategory =
   | "hot"
   | "healReservation"
   | "dot"
+  | "bleed"
+  | "poison"
   | "evasion"
   | "block"
   | "counter"
@@ -50,6 +52,8 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "mark",
   "arenaMark",
   "dot",
+  "bleed",
+  "poison",
   "evasion",
   "block",
   "counter",
@@ -60,6 +64,14 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
 export const STATUS_BADGE_SLOT_COUNT = STATUS_BADGE_SLOT_ORDER.length;
 
 const NEUTRAL_EPSILON = 0.001;
+
+function resolveDotDisplayCategory(
+  effect: StatusEffect,
+): "dot" | "bleed" | "poison" {
+  if (effect.dotFlavor === "bleed") return "bleed";
+  if (effect.dotFlavor === "poison") return "poison";
+  return "dot";
+}
 
 export interface StatAggregation {
   netFlat: number;
@@ -167,7 +179,7 @@ function statusEffectBadgeForOverlay(
       };
     case "dot":
       return {
-        category: "dot",
+        category: resolveDotDisplayCategory(effect),
         kind: "debuff",
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
@@ -372,7 +384,19 @@ function effectsForCategory(
     return effects.filter((effect) => effect.overlay === "healReservation");
   }
   if (category === "dot") {
-    return effects.filter((effect) => effect.overlay === "dot");
+    return effects.filter(
+      (effect) => effect.overlay === "dot" && !effect.dotFlavor,
+    );
+  }
+  if (category === "bleed") {
+    return effects.filter(
+      (effect) => effect.overlay === "dot" && effect.dotFlavor === "bleed",
+    );
+  }
+  if (category === "poison") {
+    return effects.filter(
+      (effect) => effect.overlay === "dot" && effect.dotFlavor === "poison",
+    );
   }
   if (category === "atk") {
     return effects.filter((effect) => effect.stat === "atk");
@@ -479,6 +503,8 @@ function aggregateOverlayCategory(
   category:
     | "hot"
     | "dot"
+    | "bleed"
+    | "poison"
     | "evasion"
     | "block"
     | "counter"
@@ -598,6 +624,8 @@ export function aggregateStatStatusEffects(
   for (const category of [
     "hot",
     "dot",
+    "bleed",
+    "poison",
     "evasion",
     "block",
     "counter",

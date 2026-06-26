@@ -5,6 +5,8 @@ import {
   BUFF_SUB_KINDS,
   DEBUFF_SUB_KIND_LABELS,
   DEBUFF_SUB_KINDS,
+  DOT_FLAVOR_LABELS,
+  DOT_FLAVORS,
   DAMAGE_TYPE_OPTIONS,
   EDITOR_ACTIVE_EFFECT_CATEGORIES,
   EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS,
@@ -54,6 +56,7 @@ import type {
   CounterResponseKind,
   CounterSkillEffect,
   DamageType,
+  DebuffSkillEffect,
   MoveSkillEffect,
   MaxHpReference,
   PassiveSkillDef,
@@ -4818,6 +4821,50 @@ export class SkillEditorStep {
                   patchEffect(
                     (prev) => ({ ...prev, damageType }) as SkillEffectDef,
                   ),
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              'DoTフレーバー',
+              createSelect(
+                normalizedEffect.dotFlavor ?? '',
+                [
+                  { value: '', label: '未指定（汎用DoT）' },
+                  ...DOT_FLAVORS.map((value) => ({
+                    value,
+                    label: DOT_FLAVOR_LABELS[value],
+                  })),
+                ],
+                (dotFlavor) =>
+                  patchEffect((prev) => {
+                    if (prev.type !== 'debuff') return prev;
+                    const next = { ...prev } as DebuffSkillEffect;
+                    if (dotFlavor === '') {
+                      delete next.dotFlavor;
+                    } else {
+                      next.dotFlavor = dotFlavor as DebuffSkillEffect['dotFlavor'];
+                    }
+                    return next;
+                  }),
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              '表示名',
+              createTextInput(normalizedEffect.buffDisplayName ?? '', (buffDisplayName) =>
+                patchEffect((prev) => {
+                  if (prev.type !== 'debuff') return prev;
+                  const trimmed = buffDisplayName.trim();
+                  const next = { ...prev } as DebuffSkillEffect;
+                  if (trimmed) {
+                    next.buffDisplayName = trimmed;
+                  } else {
+                    delete next.buffDisplayName;
+                  }
+                  return next;
+                }),
               ),
             ),
           );

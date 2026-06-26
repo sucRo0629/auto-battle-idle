@@ -300,6 +300,7 @@ function applyCounterDotResponse(
     ...(response.defenseIgnore
       ? { defenseIgnore: response.defenseIgnore }
       : {}),
+    ...(response.dotFlavor ? { dotFlavor: response.dotFlavor } : {}),
     tickSec: 1,
   });
 

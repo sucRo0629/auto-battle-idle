@@ -11,6 +11,7 @@ import type {
   BuffTargetKind,
   DebuffFilterTag,
   DispelPriority,
+  DotFlavor,
   DamageIncreaseCondition,
   FireCondition,
   FirePolicy,
@@ -387,6 +388,13 @@ export const DEBUFF_SUB_KIND_LABELS: Record<DebuffSubKind, string> = {
   stun: "スタン",
 };
 
+export const DOT_FLAVORS = ["bleed", "poison"] as const satisfies readonly DotFlavor[];
+
+export const DOT_FLAVOR_LABELS: Record<DotFlavor, string> = {
+  bleed: "出血",
+  poison: "毒",
+};
+
 export const BUFF_TARGET_KINDS = [
   "hp",
   "atk",
@@ -725,7 +733,9 @@ export const DEBUFF_FILTER_TAGS = [
   { id: "reg" as const, label: "REGデバフ" },
   { id: "damageTaken" as const, label: "被ダメデバフ" },
   { id: "attackSpeed" as const, label: "SPDデバフ" },
-  { id: "dot" as const, label: "DoT" },
+  { id: "dot" as const, label: "DoT（全種）" },
+  { id: "bleed" as const, label: "出血" },
+  { id: "poison" as const, label: "毒" },
   { id: "stun" as const, label: "スタン" },
 ] as const satisfies readonly { id: DebuffFilterTag; label: string }[];
 

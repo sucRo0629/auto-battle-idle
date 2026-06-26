@@ -112,6 +112,7 @@ import {
   DEBUFF_FILTER_TAG_OPTIONS,
   DISPEL_PRIORITIES,
   BUFF_FILTER_TAG_OPTIONS,
+  DOT_FLAVORS,
   DAMAGE_INCREASE_CONDITION_KINDS,
   DEFENSE_IGNORE_DEF_MODES,
   COUNTER_RESPONSE_KINDS,
@@ -166,6 +167,24 @@ const BUFF_SUB_KINDS_SET = new Set<import('../types.ts').BuffSubKind>(
 const DEBUFF_SUB_KINDS_SET = new Set<import('../types.ts').DebuffSubKind>(
   DEBUFF_SUB_KINDS,
 );
+const DOT_FLAVORS_SET = new Set<string>(DOT_FLAVORS);
+
+function parseOptionalDotFlavor(
+  obj: Record<string, unknown>,
+  context: string,
+  field = 'dotFlavor',
+): import('../types.ts').DotFlavor | undefined {
+  if (obj[field] === undefined) return undefined;
+  return requireEnum(obj, field, context, DOT_FLAVORS_SET);
+}
+
+function parseOptionalDebuffDisplayName(
+  obj: Record<string, unknown>,
+): string | undefined {
+  return typeof obj.buffDisplayName === 'string' && obj.buffDisplayName.length > 0
+    ? obj.buffDisplayName
+    : undefined;
+}
 const SPECIAL_EFFECT_APPLY_TO_SET = new Set<
   import('../types.ts').SpecialEffectApplyTo
 >(SPECIAL_EFFECT_APPLY_TO_OPTIONS);
@@ -1965,11 +1984,13 @@ function parseCounterResponseEntry(
         ? undefined
         : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
     const combatModifiers = parseOptionalEffectCombatModifiers(obj, context);
+    const dotFlavor = parseOptionalDotFlavor(obj, context);
     return {
       kind,
       durationSec,
       powerMultiplier: amount.atkScale!,
       ...(damageType !== undefined ? { damageType } : {}),
+      ...(dotFlavor !== undefined ? { dotFlavor } : {}),
       ...combatModifiers,
     };
   }
@@ -2688,6 +2709,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       obj.damageType === undefined
         ? undefined
         : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
+    const dotFlavor = parseOptionalDotFlavor(obj, context);
     return normalizeSkillEffect({
       target,
       ...targetShapeFields,
@@ -2696,6 +2718,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       durationSec,
       amount,
       ...(damageType !== undefined ? { damageType } : {}),
+      ...(dotFlavor !== undefined ? { dotFlavor } : {}),
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
@@ -2944,6 +2967,8 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       obj.damageType === undefined
         ? undefined
         : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
+    const dotFlavor = parseOptionalDotFlavor(obj, context);
+    const buffDisplayName = parseOptionalDebuffDisplayName(obj);
     return normalizeSkillEffect({
       target,
       ...targetShapeFields,
@@ -2953,6 +2978,8 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       durationSec,
       amount,
       ...(damageType !== undefined ? { damageType } : {}),
+      ...(dotFlavor !== undefined ? { dotFlavor } : {}),
+      ...(buffDisplayName ? { buffDisplayName } : {}),
       ...sequenceTiming,
       ...presentation,
       ...(range !== undefined ? { range } : {}),
@@ -3392,6 +3419,11 @@ function requirePassiveEffectParams(
           obj.debuffDotDamageType === undefined
             ? undefined
             : requireEnum(obj, 'debuffDotDamageType', context, DAMAGE_TYPES_SET);
+        const debuffDotFlavor = parseOptionalDotFlavor(
+          obj,
+          context,
+          'debuffDotFlavor',
+        );
         return {
           ...base,
           debuffSubKind,
@@ -3401,6 +3433,7 @@ function requirePassiveEffectParams(
           debuffDotDurationSec,
           debuffDotAmount: amount,
           ...(damageType !== undefined ? { debuffDotDamageType: damageType } : {}),
+          ...(debuffDotFlavor !== undefined ? { debuffDotFlavor } : {}),
         };
       }
 

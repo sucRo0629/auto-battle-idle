@@ -309,6 +309,9 @@ export interface SaveGameState {
   unlockedClassIds: ClassId[];
 }
 
+/** DoT フレーバー種別（v1: bleed / poison のみ。tick 式は overlay dot 共通） */
+export type DotFlavor = "bleed" | "poison";
+
 export interface StatusEffect {
   id: string;
   kind: "buff" | "debuff" | "cc";
@@ -378,6 +381,8 @@ export interface StatusEffect {
   stacks?: number;
   /** HUD / ログ用の表示名（未指定時は overlay / stat から解決） */
   displayName?: string;
+  /** DoT overlay のフレーバー種別（未指定 = generic dot） */
+  dotFlavor?: DotFlavor;
 }
 
 /** 反撃対象の近接／遠隔帯フィルタ（OR。両方未指定 = 全区間） */
@@ -395,7 +400,7 @@ export type StatusEffectStat =
   | "attackSpeed";
 
 /** デバフフィルタタグ（gameDataSchema.DEBUFF_FILTER_TAGS と同期） */
-export type DebuffFilterTag = StatusEffectStat | "dot" | "stun";
+export type DebuffFilterTag = StatusEffectStat | "dot" | "bleed" | "poison" | "stun";
 
 /** デバフ解除の優先順位（dispelCount > 0 のとき） */
 export type DispelPriority = "longest" | "strongest";
@@ -764,6 +769,7 @@ export interface PassiveSkillDef {
   debuffDotDurationSec?: number;
   debuffDotAmount?: ResourceAmountSpec;
   debuffDotDamageType?: DamageType;
+  debuffDotFlavor?: DotFlavor;
   /** stun debuff 持続（秒） */
   debuffStunDurationSec?: number;
   /** @deprecated 時間間隔トリガーは廃止。読み込み時に除去される。 */
@@ -1183,6 +1189,10 @@ export interface DebuffSkillEffect extends SkillEffectCommon {
   amount?: ResourceAmountSpec;
   powerMultiplier?: number;
   damageType?: DamageType;
+  /** debuff dot 用フレーバー（未指定 = generic dot） */
+  dotFlavor?: DotFlavor;
+  /** HUD 表示名（出血・毒など） */
+  buffDisplayName?: string;
 }
 
 /** @deprecated 読み込み互換。正規化後は HealSkillEffect + healSubKind: hot */
@@ -1206,6 +1216,7 @@ export interface DotSkillEffect extends SkillEffectCommon {
   /** @deprecated amount 未指定時の後方互換 */
   powerMultiplier?: number;
   damageType?: DamageType;
+  dotFlavor?: DotFlavor;
 }
 
 export interface MoveSkillEffect extends SkillEffectCommon {
@@ -1264,6 +1275,7 @@ export type CounterResponseDef =
       durationSec: number;
       powerMultiplier: number;
       damageType?: DamageType;
+      dotFlavor?: DotFlavor;
       damageIncrease?: DamageIncreaseSpec;
       defenseIgnore?: DefenseIgnoreSpec;
     }
