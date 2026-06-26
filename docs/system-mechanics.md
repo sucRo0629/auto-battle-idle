@@ -29,7 +29,7 @@
 
 ## Player Level
 
-プレイヤーレベルは全クラス共通である。
+プレイヤーレベルは全クラス共通である。セーブ上は `playerProgress`（アカウント 1 本）を正本とし、メンバー個別 Lv は持たない（[progression.md](spec/progression.md) Phase 11）。
 
 プレイヤーレベル上昇時、全クラスの解放状態が更新される。
 

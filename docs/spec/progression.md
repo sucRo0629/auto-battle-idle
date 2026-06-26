@@ -27,6 +27,8 @@
 
 ### 個別レベル（ステのみ）
 
+> **Phase 11 予定:** メンバー個別 `CharacterProgress` は廃止し、セーブ直下のグローバル `playerProgress`（B 案）へ移行する。以下は Phase 2〜10 現行実装の記述。
+
 ```typescript
 interface CharacterProgress {
   level: number; // 初期 1
@@ -153,6 +155,7 @@ Phase 4a で確定したクラス・スキルを前提に、メインモード�
 - `data/entityAnimLayout.json` + `sheets/bodies/{id}.png`（idle/move/death、味方・敵共通レイアウト）
 - 通常攻撃・全 active = `sheets/skills/*.png`（64×48 strip）。遠隔 basic も弓引き PNG で body 可
 - **演出調整ツール** — Canvas プレビュー + VFX / タイミング調整
+- **Combat Feedback（roadmap 5d）** — Damage / Heal / DoT ポップアップと Event ポップアップの分離・レイアウト。正本 [combat-architecture.md](../combat-architecture.md) §8。Phase 3d 後・4a と並行可
 
 ---
 
@@ -211,6 +214,68 @@ finalStat = Lv1 基準値（classes.json）
 ```
 
 スキル・パッシブは戦闘時に上乗せ（[combat.md](combat.md) 参照）。
+
+---
+
+## Phase 11 — プレイヤーレベル + 解法評価メタ（07582b6）
+
+Phase 6 完了後に着手。タスク一覧は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 11。設計思想は [design-philosophy.md](../design-philosophy.md)、Player Level / Stage Records は [system-mechanics.md](../system-mechanics.md)。
+
+### グローバル `playerProgress`（B 案）
+
+プレイヤーレベルは **アカウント共通** の 1 本。Phase 2 の `party[].progress`（メンバー個別 Lv / Exp）は Phase 11 で廃止する。
+
+```typescript
+interface PlayerProgress {
+  level: number; // 初期 1。全 15 クラスの習得・枠解放の単一基準
+  exp: number;
+}
+
+interface SaveGameState {
+  version: number;
+  playerProgress: PlayerProgress;
+  stageProgress: { currentStageId: string; totalClears: number };
+  party: {
+    classId: ClassId;
+    build: CharacterBuild;
+    // progress は削除（移行期のみ読み取り互換）
+  }[];
+  stageRecords?: Record<StageId, StageRecord>;
+  options?: {
+    instantLv20?: boolean;
+    levelSync?: boolean;
+  };
+}
+```
+
+| 項目 | ルール |
+| ---- | ------ |
+| EXP 付与 | 勝利時、撃破敵 `exp` 合計を `playerProgress.exp` に加算（メンバー別配分なし） |
+| LvUP | `playerProgress.level` 上昇で **全クラス** の習得テーブル・枠段階が更新される |
+| 戦闘 Lv | `resolveEffectiveLevel` が `playerProgress.level` を基準に、Level Sync / Instant Lv20 を適用 |
+| Lv20 完成 | 習得・枠は Lv20 で頭打ち。Lv21+ はステータス救済のみ |
+| 移行 | 旧セーブは `party[].progress` の最大 `level` / `exp` 等から `playerProgress` を生成 |
+
+### Instant Lv20 / Level Sync
+
+- **Instant Lv20** — 任意オプション。戦闘計算・習得表示を Lv20 扱いにする（編成検証・周回削減用）。セーブ上の実 `playerProgress.level` は変えない。
+- **Level Sync** — 任意オプション。`effectiveLevel = min(playerProgress.level, stage.recommendedLevel)` で戦闘ステ・習得判定を行う。育成差を除外し編成解法を検証する。
+
+### Stage Records
+
+ステージ ID ごとに攻略履歴を保持する。主要指標は **最低クリアレベル**（`playerProgress.level` の実値。Level Sync 中の effective Lv ではない）。
+
+```typescript
+interface StageRecord {
+  firstClearLevel?: number;
+  lowestClearLevel?: number;
+  bestTimeMs?: number;
+  latestPartyClassIds?: ClassId[];
+  levelSyncClear?: boolean;
+}
+```
+
+`stages.json` に `recommendedLevel` を追加する。ソート既定: `lowestClearLevel ASC` → `bestTimeMs ASC`。
 
 ---
 

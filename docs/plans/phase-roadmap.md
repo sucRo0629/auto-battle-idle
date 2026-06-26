@@ -12,7 +12,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                                     | **完了**                        |
 | **3**  | Lv アップ時スキル習得、習得済み passive / active 常時使用枠（各最大 4）+ クラス別スキル再設定 | **再オープン中**                |
 | **4**  | クラスマスタ + スキル説明；4a **見直し中** / 4c **完了** / 4b 説明（データ PR 同梱）          | **Phase 3 後に再確定**          |
-| **5**  | 演出アセット + VFX PNG + **演出調整ツール**（Canvas プレビュー・VFX 調整含む）                | **基盤のみ**（本番 PNG 未実装） |
+| **5**  | 演出アセット + VFX PNG + **演出調整ツール**；**5d Combat Feedback**（Damage / Event Popup） | **基盤のみ**（本番 PNG 未実装） |
 | **6**  | ステージ作成 — 敵テンプレート・固定ステージコンテンツ・ステージ編集 GUI                       | 未着手（4a 後）                 |
 | **9**  | ローグライクモード（仮称）— 既存 effect 中心 13 クラス向けランダム問題・ラン進行              | 未着手                          |
 | **7a** | バランス調整 — 既存 effect 中心 13 クラス + 固定ステージ                                      | 未着手                          |
@@ -20,6 +20,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **7c** | 法陣師の独自システム実装                                                                      | 未着手                          |
 | **8**  | Electron シェル本番化                                                                         | 未着手                          |
 | **10** | 印術師・法陣師対応ローグライクモード（仮称）                                                  | 未着手                          |
+| **11** | 解法評価メタ（07582b6）— グローバル `playerLevel` / Stage Records / Level Sync              | 未着手（Phase 6 後）            |
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
@@ -260,12 +261,32 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 - `PUT /__editor/presentation-skill` — `skillsJsonFs` upsert + validate
 - SkillEditorStep effect 演出セクションから演出ラボ deep link（任意）
 
+### 5d — Combat Feedback（Damage / Event Popup）
+
+**着手条件:** Phase 3d 完了後。**Phase 4a / 4b と並行可**。本番 PNG・VFX 投入（5a〜5c）の前後どちらでもよいが、クラス別スキル再設定の目視検証には **4a 前でも着手推奨**。
+
+**ゴール:** [combat-architecture.md](../combat-architecture.md) §8 の HUD / Damage Popup / Event Popup 分離を戦闘描画へ反映する。正本は §8（07582b6）。
+
+| 項目 | 内容 | 状態 |
+| ---- | ---- | ---- |
+| Damage Popup | Damage / Heal / DoT の数値のみ。頭上表示。内訳・Barrier 吸収量は出さない | 基盤済み（`DamagePopupManager`）。仕様合わせ・DoT 経路の漏れがあれば修正 |
+| Event Popup | Block / Counter / Evade 等の瞬間イベント。Damage より上に表示 | 基盤済み（`CombatReactionPopupManager`）。未配線イベントの追加 |
+| レイアウト | `damagePopupLayout` と reaction popup の Y 衝突回避を regression 化 | 未着手 |
+| HUD 境界 | Barrier 残量・Buff / Debuff は HUD のみ（ポップアップに出さない） | 要確認 |
+
+**未配線 Event（例）:** `Redirect!`、`Barrier Break!`、`Execute!`、`Armor Break!` — 戦闘イベント → `BattleView` → `IBattleRenderer`。
+
+**実装済み（部分）:** `showDamagePopup` / `showHealPopup`、`showBlockPopup` / `showCounterPopup` / `showEvadePopup` 等、`damagePopupLayout.test.ts`。
+
+**スコープ外:** 戦闘ログ DOM、手書き `description`、演出ラボ、Stage Records（**Phase 11**）。
+
 ### 進め方
 
-1. インフラ — `entityAnimLayout.json`、body atlas 描画、スキル strip 64px、`animStartFrame`
-2. 演出調整ツール MVP（プレースホルダー PNG でもタイミング調整可）
-3. VFX PNG — `sheets/vfx/` に strip 投入、スキル JSON の `vfx` / `hitVfx` / `basicAttackVfx` と対応付け
-4. 確定クラス / 敵ごと — `bodies/` → `basic_attack` → 各 active → VFX → 演出ラボで詰め → 本番 battle 目視
+1. **5d** — Combat Feedback 仕上げ（Phase 3d 後、4a と並行可）
+2. インフラ — `entityAnimLayout.json`、body atlas 描画、スキル strip 64px、`animStartFrame`
+3. 演出調整ツール MVP（プレースホルダー PNG でもタイミング調整可）
+4. VFX PNG — `sheets/vfx/` に strip 投入、スキル JSON の `vfx` / `hitVfx` / `basicAttackVfx` と対応付け
+5. 確定クラス / 敵ごと — `bodies/` → `basic_attack` → 各 active → VFX → 演出ラボで詰め → 本番 battle 目視
 
 ### Phase 1 との境界
 
@@ -448,6 +469,64 @@ Phase 7 完了後に着手。クラスマスタ・数値チューニングが揃
 
 ---
 
+## Phase 11 — 解法評価メタ（07582b6）
+
+**着手条件:** Phase 6 完了後（6b で進行チェーン骨格が存在すること）。
+
+**ゴール:** [design-philosophy.md](../design-philosophy.md) と [system-mechanics.md](../system-mechanics.md) で追記した「理解度評価」を、セーブ・ステージ・オプションに反映する。戦闘表示（Damage / Event Popup）は **Phase 5d** で扱う。
+
+**正本:** 進行メタは `system-mechanics.md`（Player Level / Instant Lv20 / Level Sync / Stage Records）。Combat Feedback は [combat-architecture.md](../combat-architecture.md) §8 → **Phase 5d**。セーブ schema の詳細は [progression.md](../spec/progression.md) Phase 11。
+
+| サブフェーズ | 内容                                                                             | 状態   |
+| ------------ | -------------------------------------------------------------------------------- | ------ |
+| **11b**      | グローバル `playerLevel` 移行 + Instant Lv20 / Level Sync オプション             | 未着手 |
+| **11c**      | Stage Records — クリア履歴セーブ、`recommendedLevel`、リザルト / ステージ選択 UI | 未着手 |
+
+### 11b — グローバル `playerLevel`（B 案）
+
+Phase 2 の **メンバー個別** `CharacterProgress.level` を廃止し、セーブ直下の **アカウント共通** `playerProgress` を正本とする。
+
+```typescript
+interface PlayerProgress {
+  level: number; // 初期 1。全クラスの習得・枠解放の単一基準
+  exp: number;
+}
+```
+
+- **習得・枠解放** — `playerProgress.level` を `classes.json` の `skills[]` 閾値と `getUnlockedActiveSlotCount` / passive 段階解放の入力に使う。編成にいないクラスも同じ Lv で解放状態が決まる。
+- **戦闘ステ計算** — 味方・敵の Lv 参照は `resolveEffectiveLevel(member, stage, options)` の単一経路へ集約。通常は `playerProgress.level`、Level Sync ON 時は `min(playerLevel, stage.recommendedLevel)`、Instant Lv20 ON 時は 20 扱い。
+- **EXP 付与** — 勝利時の敵 `exp` 合計は `playerProgress.exp` に加算。メンバー別 EXP は持たない。
+- **Lv20 以降** — `playerProgress.level` が 20 を超えても習得・枠は Lv20 完成で頭打ち。超過分はステータス救済のみ（[design-philosophy.md](../design-philosophy.md) §4）。
+- **移行** — ロード時に旧 `party[].progress` から `playerProgress` へマイグレーション（例: パーティ内最大 `level` / 最大 `exp` を採用）。移行後はメンバー `progress` を削除または読み取り専用互換に落とす。
+- **UI** — パーティ HUD / 編成画面は **プレイヤー Lv / Exp** を表示。クラス行は「この Lv での完成度」として読む。
+
+**波及:** `reconcileMemberBuild` / `resolveLearnedSkills`、`levelGrowth.ts`、セーブ型、`SaveManager`、Victory 報酬、`SkillMenuPanel`、デバッグ Lv 変更。Phase 3 の習得機構は維持し、**Lv の正本だけ**をグローバル化する。
+
+### 11c — Stage Records
+
+- `stages.json` に `recommendedLevel`（推奨プレイヤー Lv）を追加。`validateGameData`・`StageEditorStep`（Phase 6c 済みなら同時、前なら暫定 JSON 手編集）
+- `SaveGameState` にステージ別記録を追加:
+  - First Clear Level / Lowest Clear Level / Best Time / Latest Party（`classId[]`）/ Level Sync Clear
+- Victory 時に `playerProgress.level`（Level Sync 適用前の実 Lv）とクリア時間で更新
+- デフォルト表示順: `Lowest Clear Level ASC` → `Best Time ASC`
+- ステージ選択またはクリア後 UI で表示（Canvas / メニューは最小 MVP で可）
+
+### 進め方
+
+1. **11b schema** — `playerProgress` 型・マイグレーション・`resolveEffectiveLevel` の単一経路を先に確定
+2. **11b オプション** — Instant Lv20 / Level Sync を `resolveEffectiveLevel` に接続
+3. **11c** — `recommendedLevel` + Stage Records セーブ + Victory フック
+4. **11c UI** — 記録表示
+
+### スコープ外（Phase 11）
+
+- globalExp / 強化ツリー / オフライン報酬（別途再計画）
+- ローグライクの問題生成・ラン記録（**Phase 9**）
+- 全ステージの推奨レベル・記録閾値の最終チューニング（**Phase 7a**）
+- クラスごとに別々のプレイヤー Lv を持つ A 案（採用しない）
+
+---
+
 ## 依存関係
 
 ```
@@ -462,6 +541,8 @@ Phase 3（スキル習得 + 習得済み passive / active 常時使用枠 + ク�
     ↓
 Phase 3d（接近・接敵 Intent 一本化）
     ↓
+Phase 5d（Combat Feedback — Damage / Event Popup）  ← 4a / 4b と並行可
+    ↓
 Phase 4a（クラスマスタ + GUI）  ← 見直し中
     ↓
 Phase 4c（JSON 分割）  ← 完了
@@ -471,6 +552,8 @@ Phase 4b（formatSkillText）  ← データ PR 随時
 Phase 5（演出アセット + VFX PNG + 演出調整ツール）  ← スキル再確定後
     ↓
 Phase 6（ステージ作成 — 6a 敵 / 6b コンテンツ / 6c GUI）
+    ↓
+Phase 11（解法評価メタ — 07582b6）
     ↓
 Phase 9（ローグライクモード — 既存 effect 中心 13 クラス）
     ↓
