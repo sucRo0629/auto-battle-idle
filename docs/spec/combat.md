@@ -531,6 +531,59 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 死亡ユニットはターゲット対象外。次の再スポーンまで death アニメ。Wave 跨ぎの生死表示は battle-field.md §3.4。
 
+## Combat Feedback（VFX なし・v1）
+
+設計思想・3 層分離の正本は [combat-architecture.md](../combat-architecture.md) §8。実装: `src/render/DamagePopup.ts`, `CombatReactionPopup.ts`, `BattleView.ts`, `skillPresentation.ts`。
+
+**前提:** 本番 VFX PNG 未投入（Phase 5a–5c / 7）。popup と HUD がスキル・パッシブ検証の主要手段。本番 VFX 投入後、Event Popup の一部は専用 VFX で省略しうる（Damage 数値 popup は別判断）。
+
+### 3 層
+
+| 層 | 内容 | 実装 |
+| --- | --- | --- |
+| HUD | HP / バリア tier / 状態バッジ（パッシブ overlay 含む） | `PartyHudPanel`, `BattleCanvas` 頭上バッジ |
+| Damage Popup | damage / heal / dot の**確定数値のみ** | `DamagePopupManager` |
+| Event Popup | 瞬間イベントの短いラベル | `CombatReactionPopupManager` |
+
+HUD 情報は原則 popup しない。スキル名・ダメージ内訳・Barrier 吸収量は Damage Popup に載せない。
+
+### Damage Popup
+
+| kind | 色（theme） | 主な経路 |
+| --- | --- | --- |
+| `damage` | 白 | skill `damage` → `playSkillHitFeedback` |
+| `heal` | 緑 | 即時 heal、HoT tick、`excessHealRedirect` 転送先 |
+| `dot` | 赤（全 DoT 共通） | skill / status `dot` tick |
+
+### Event Popup（v1 対象）
+
+| 表示 | 発火 |
+| --- | --- |
+| 回避！ | `BattleEvent` `evade` |
+| ブロック！ | `block` |
+| 反撃！ | skill `counter` |
+| 無敵！ | `invulnerable` |
+| 再起！ | `lastStandRecovery` |
+| 不屈！ | `lastStandGuts` |
+| 引き寄せ！ | skill `enemyReelIn` |
+| ノックバック！ | knockback 系 |
+
+**v1 対象外:** Redirect! / Barrier Break! / Execute! / Armor Break! — 理由は architecture §8.3。
+
+### popup なしで足りるもの
+
+| 現象 | フィードバック |
+| --- | --- |
+| バリア付与 | HUD バー tier 変化 + VFX（あれば）。console log（確認モード） |
+| buff / debuff 付与 | `showBuffGlow` + HUD バッジ |
+| HoT 付与（初回） | buff glow。tick から heal 数値 popup |
+
+### 確認モード（popup 外）
+
+console log（`pushLog`、画面上のログ UI なし）、統計オーバーレイ、battleX debug — [battle-field.md](battle-field.md) §verify。
+
+Phase 5d 残タスク: [phase-roadmap.md](../plans/phase-roadmap.md) §5d（レイアウト regression、HUD 境界確認）。
+
 ## 演出（render 層）
 
 VFX パラメータ調整・プレビューは **Phase 6 演出調整ツール**（`presentation-lab.html`）。戦闘描画は **PNG strip 経路**（`BattleCanvas.playSkillVfx` → `VfxPlaybackManager`）— パイプラインは Phase 7 基盤済、本番 PNG 投入は未完了（[phase-roadmap.md](../plans/phase-roadmap.md) Phase 7）。
@@ -541,8 +594,10 @@ VFX パラメータ調整・プレビューは **Phase 6 演出調整ツール**
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
 | ダメージ（通常攻撃含む） | skill strip（あれば）+ VFX + ダメージポップアップ。`applyFrame` あり時は strip を先に再生し VFX・ポップアップは apply コマ |
 | ダメージ（active）       | skill strip + VFX                                                                                                          |
-| 回復                     | skill strip または VFX + 緑ポップアップ                                                                                    |
-| buff / debuff            | 対象の白い光（約 0.8 秒）                                                                                                  |
+| 回復                     | skill strip または VFX + 緑数値ポップアップ（Event ラベルなし）                                                            |
+| バリア付与               | skill strip または VFX + HUD バー tier（数値・Event popup なし）                                                           |
+| buff / debuff            | 対象の白い光（約 0.8 秒）+ HUD バッジ                                                                                      |
+| 回避 / block / 反撃等    | Event ポップアップ（上記 Combat Feedback §）                                                                               |
 | スタン（CC）             | オーバーレイ `stun`                                                                                                        |
 | 死亡                     | entity death 行（body atlas）                                                                                              |
 

@@ -304,6 +304,8 @@ Recovery / Stability Control は被害の後処理と継続時間を設計する
 
 本作はタイムアタックやダメージ量そのものではなく、解法が機能したこと、クラスが仕事をしたことを伝える。そのため、数値よりもイベント通知を優先する。
 
+**フェーズ注記（v1）:** 本番 VFX PNG は未投入（[phase-roadmap.md](plans/phase-roadmap.md) Phase 5a–5c / 7）。その間は **popup と HUD** がスキル・パッシブ検証の主要手段。実装表・経路は [combat.md](spec/combat.md#combat-feedbackvfx-なしv1) を正とする。本番 VFX 投入後、Event Popup の一部は専用 VFX で省略しうる（Damage 数値 popup は別判断）。
+
 ### 8.1 HUD
 
 HUD は継続状態を表示する。
@@ -342,16 +344,29 @@ NG
 
 ### 8.3 Event Popup
 
-Event Popup は瞬間的なイベントのみ表示する。
+Event Popup は瞬間的なイベントのみ表示する（短いラベル。スキル名・ダメージ内訳は載せない）。
 
-例は次の通り。
+**v1 対象** — 実装: `CombatReactionPopupManager` / `BattleView` → `IBattleRenderer`
 
-- Armor Break!
-- Counter!
-- Execute!
-- Block!
-- Redirect!
-- Barrier Break!
+| 表示       | 主な発火                          |
+| ---------- | --------------------------------- |
+| 回避！     | `evade`                           |
+| ブロック！ | `block`                           |
+| 反撃！     | skill `effect: counter`           |
+| 無敵！     | `invulnerable`                    |
+| 再起！     | `lastStandRecovery`               |
+| 不屈！     | `lastStandGuts`                   |
+| 引き寄せ！ | skill `enemyReelIn`               |
+| ノックバック！ | knockback 系                  |
+
+**v1 対象外（Event ラベル不要）**
+
+| 名称（旧例示） | 理由                                                         |
+| -------------- | ------------------------------------------------------------ |
+| Redirect!      | 余剰回復転送は heal 数値 popup。低 HP 肩代わりは block 系    |
+| Barrier Break! | バリア残量・付与は HUD（HP バー tier）。吸収量も popup 非表示 |
+| Execute!       | 処刑・即死 effect 未実装。スキル追加まで不要                 |
+| Armor Break!   | §8.2 の内訳 NG 例の illustrative 名称のみ。mechanic なし     |
 
 ### 8.4 表示位置
 
@@ -372,13 +387,10 @@ Barrier 残量は HUD で確認する。
 
 ### 8.6 Redirect
 
-Redirect 量は表示しない。
+Redirect 量は表示しない。v1 では **Redirect! Event Popup も設けない**。
 
-イベント通知のみ行う。
-
-```text
-Redirect!
-```
+- `excessHealRedirect` — 転送先に heal 数値 popup
+- `lowHpCover` 等の被ダメ肩代わり — block 系イベント
 
 ### 8.7 設計思想
 

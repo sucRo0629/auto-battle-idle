@@ -297,11 +297,13 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 | 項目         | 内容                                                                     | 状態                                                                     |
 | ------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
 | Damage Popup | Damage / Heal / DoT の数値のみ。頭上表示。内訳・Barrier 吸収量は出さない | 基盤済み（`DamagePopupManager`）。仕様合わせ・DoT 経路の漏れがあれば修正 |
-| Event Popup  | Block / Counter / Evade 等の瞬間イベント。Damage より上に表示            | 基盤済み（`CombatReactionPopupManager`）。未配線イベントの追加           |
+| Event Popup  | v1 対象 8 種（回避・block・反撃・無敵・再起・不屈・引き寄せ・ノックバック）。Damage より上 | 基盤済み（`CombatReactionPopupManager`）。v1 対象外 Event の追加はしない |
 | レイアウト   | `damagePopupLayout` と reaction popup の Y 衝突回避を regression 化      | 未着手                                                                   |
 | HUD 境界     | Barrier 残量・Buff / Debuff は HUD のみ（ポップアップに出さない）        | 要確認                                                                   |
 
-**未配線 Event（例）:** `Redirect!`、`Barrier Break!`、`Execute!`、`Armor Break!` — 戦闘イベント → `BattleView` → `IBattleRenderer`。
+**VFX なし v1:** 本番 VFX 未投入のため popup / HUD が目視検証の主手段。詳細は [combat-architecture.md](../combat-architecture.md) §8、[combat.md](../spec/combat.md#combat-feedbackvfx-なしv1)。
+
+**v1 Event 対象外:** Redirect! / Barrier Break! / Execute! / Armor Break! — 理由は architecture §8.3。
 
 **実装済み（部分）:** `showDamagePopup` / `showHealPopup`、`showBlockPopup` / `showCounterPopup` / `showEvadePopup` 等、`damagePopupLayout.test.ts`。
 

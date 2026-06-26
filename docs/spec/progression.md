@@ -155,7 +155,7 @@ Phase 4a で確定したクラス・スキルを前提に、メインモード�
 - `data/entityAnimLayout.json` + `sheets/bodies/{id}.png`（idle/move/death、味方・敵共通レイアウト）
 - 通常攻撃・全 active = `sheets/skills/*.png`（64×48 strip）。遠隔 basic も弓引き PNG で body 可
 - **演出調整ツール** — Canvas プレビュー + VFX / タイミング調整
-- **Combat Feedback（roadmap 5d）** — Damage / Heal / DoT ポップアップと Event ポップアップの分離・レイアウト。正本 [combat-architecture.md](../combat-architecture.md) §8。Phase 3d 後・4a と並行可
+- **Combat Feedback（roadmap 5d）** — VFX なし v1: Damage / Heal / DoT 数値 popup + Event popup（8 種）。正本 [combat-architecture.md](../combat-architecture.md) §8、実装表 [combat.md](combat.md#combat-feedbackvfx-なしv1)。Phase 3d 後・4a と並行可
 
 ---
 
