@@ -45,7 +45,7 @@ function syncNextOutgoingDamageOverlay(actor: CombatantState): void {
     remainingSec: 99999,
     sourceId: actor.id,
     skillId: charge.skillId,
-    displayName: '破城矢',
+    displayName: '次与ダメ増加',
   });
 }
 

@@ -10,6 +10,7 @@ import bleedIconUrl from "../assets/status-icons/bleed.png";
 import poisonIconUrl from "../assets/status-icons/poison.png";
 import blockIconUrl from "../assets/status-icons/block.png";
 import stunIconUrl from "../assets/status-icons/stun.png";
+import moveLockIconUrl from "../assets/status-icons/moveLock.png";
 import evasionIconUrl from "../assets/status-icons/evasion.png";
 import counterIconUrl from "../assets/status-icons/counter.png";
 import damageDelayIconUrl from "../assets/status-icons/damageDelay.png";
@@ -25,6 +26,11 @@ import invulnerableIconUrl from "../assets/status-icons/invulnerable.png";
 import lastStandGutsIconUrl from "../assets/status-icons/lastStandGuts.png";
 import arenaDominanceIconUrl from "../assets/status-icons/arenaDominance.png";
 import duelistPrideIconUrl from "../assets/status-icons/duelistPride.png";
+import seedFlameIconUrl from "../assets/status-icons/seedFlame.png";
+import blazingFlameIconUrl from "../assets/status-icons/blazingFlame.png";
+import ballistaMarkIconUrl from "../assets/status-icons/ballistaMark.png";
+import allyAttackFollowUpIconUrl from "../assets/status-icons/allyAttackFollowUp.png";
+import nextOutgoingDamageIconUrl from "../assets/status-icons/nextOutgoingDamage.png";
 import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
 
 export type { StatusDisplayCategory };
@@ -43,7 +49,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   poison: poisonIconUrl,
   block: blockIconUrl,
   stun: stunIconUrl,
-  moveLock: stunIconUrl,
+  moveLock: moveLockIconUrl,
   evasion: evasionIconUrl,
   counter: counterIconUrl,
   damageDelay: damageDelayIconUrl,
@@ -58,6 +64,11 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   wardBarrier: wardBarrierIconUrl,
   mark: markIconUrl,
   arenaMark: arenaMarkIconUrl,
+  seedFlame: seedFlameIconUrl,
+  blazingFlame: blazingFlameIconUrl,
+  ballistaMark: ballistaMarkIconUrl,
+  allyAttackFollowUp: allyAttackFollowUpIconUrl,
+  nextOutgoingDamage: nextOutgoingDamageIconUrl,
 };
 
 const iconImages = new Map<StatusDisplayCategory, HTMLImageElement>();

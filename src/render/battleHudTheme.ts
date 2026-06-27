@@ -439,6 +439,8 @@ export function resolveStatusIconFallbackColor(
     damageIncrease: theme.statusIconDamageIncrease,
     hot: theme.statusIconHot,
     dot: theme.statusIconDot,
+    bleed: theme.statusIconDot,
+    poison: theme.statusIconDot,
     evasion: theme.statusIconBlock,
     block: theme.statusIconBlock,
     counter: theme.statusIconCounter,
@@ -457,6 +459,11 @@ export function resolveStatusIconFallbackColor(
     duelistPride: theme.statusIconDamageIncrease,
     mark: theme.statusIconHot,
     arenaMark: theme.statusIconDamageIncrease,
+    seedFlame: theme.statusIconDot,
+    blazingFlame: theme.statusIconDamageIncrease,
+    ballistaMark: theme.statusIconDamageIncrease,
+    allyAttackFollowUp: theme.statusIconCounter,
+    nextOutgoingDamage: theme.statusIconAtk,
   };
   return colors[category];
 }

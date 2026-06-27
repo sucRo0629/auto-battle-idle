@@ -30,7 +30,10 @@ export type StatusDisplayCategory =
   | "mark"
   | "arenaMark"
   | "seedFlame"
-  | "blazingFlame";
+  | "blazingFlame"
+  | "ballistaMark"
+  | "allyAttackFollowUp"
+  | "nextOutgoingDamage";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "atk",
@@ -55,6 +58,9 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "arenaMark",
   "seedFlame",
   "blazingFlame",
+  "ballistaMark",
+  "allyAttackFollowUp",
+  "nextOutgoingDamage",
   "dot",
   "bleed",
   "poison",
@@ -309,6 +315,27 @@ function statusEffectBadgeForOverlay(
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
       };
+    case "ballistaMark":
+      return {
+        category: "ballistaMark",
+        kind: "debuff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "allyAttackFollowUp":
+      return {
+        category: "allyAttackFollowUp",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "nextOutgoingDamage":
+      return {
+        category: "nextOutgoingDamage",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
     default:
       return null;
   }
@@ -474,6 +501,19 @@ function effectsForCategory(
   if (category === "basicAttackTransform") {
     return effects.filter(
       (effect) => effect.overlay === "basicAttackTransform",
+    );
+  }
+  if (category === "ballistaMark") {
+    return effects.filter((effect) => effect.overlay === "ballistaMark");
+  }
+  if (category === "allyAttackFollowUp") {
+    return effects.filter(
+      (effect) => effect.overlay === "allyAttackFollowUp",
+    );
+  }
+  if (category === "nextOutgoingDamage") {
+    return effects.filter(
+      (effect) => effect.overlay === "nextOutgoingDamage",
     );
   }
   return [];

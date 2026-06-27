@@ -167,6 +167,10 @@ describe('ballista combat helpers', () => {
     scheduleNextOutgoingDamageCharge(actor, 1.3, 'at_ballista_active_1', false);
     expect(consumeNextOutgoingDamageMultiplier(actor)).toBe(1);
     armNextOutgoingDamageCharge(actor);
+    expect(
+      actor.statusEffects.find((effect) => effect.overlay === 'nextOutgoingDamage')
+        ?.displayName,
+    ).toBe('次与ダメ増加');
     expect(consumeNextOutgoingDamageMultiplier(actor)).toBe(1.3);
     expect(consumeNextOutgoingDamageMultiplier(actor)).toBe(1);
   });

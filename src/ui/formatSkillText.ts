@@ -802,7 +802,7 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
     case "arenaDominance":
       return "闘技場の掟";
     case "grantNextOutgoingDamage":
-      return "次与ダメ装填";
+      return "次与ダメ増加";
     case "placedField":
       return "持続罠";
     case "dotCompress":

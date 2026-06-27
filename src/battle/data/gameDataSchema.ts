@@ -538,7 +538,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   blockResonanceConsume: "迎撃消費",
   enemyReelIn: "敵引き寄せ",
   arenaDominance: "闘技場の掟",
-  grantNextOutgoingDamage: "次与ダメ装填",
+  grantNextOutgoingDamage: "次与ダメ増加",
   placedField: "設置フィールド",
   dotCompress: "Dot圧縮",
   dotExtend: "Dot延長",

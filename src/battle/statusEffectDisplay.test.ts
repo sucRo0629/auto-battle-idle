@@ -204,6 +204,33 @@ describe('statusEffectDisplay', () => {
     expect(badges[0]?.remainingRatio).toBeCloseTo(0.8 / 1.2);
   });
 
+  it('aggregates moveLock overlay separately from stun', () => {
+    const badges = aggregateStatStatusEffects(
+      [
+        {
+          id: 'stun',
+          kind: 'debuff',
+          overlay: 'stun',
+          multiplier: 1,
+          durationSec: 3,
+          remainingSec: 2,
+        },
+        {
+          id: 'move_lock',
+          kind: 'debuff',
+          overlay: 'moveLock',
+          multiplier: 1,
+          durationSec: 1.5,
+          remainingSec: 1,
+        },
+      ],
+      { atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges.map((badge) => badge.category)).toEqual(['stun', 'moveLock']);
+    expect(badges.every((badge) => badge.kind === 'debuff')).toBe(true);
+  });
+
   it('collects basicAttackTransform overlay badge', () => {
     const badges = collectStatusEffectBadgeDisplays(
       [
@@ -231,6 +258,9 @@ describe('statusEffectDisplay', () => {
       ['lastStandGuts', 'lastStandGuts', 'buff'],
       ['arenaDominance', 'arenaDominance', 'buff'],
       ['duelistPride', 'duelistPride', 'debuff'],
+      ['ballistaMark', 'ballistaMark', 'debuff'],
+      ['allyAttackFollowUp', 'allyAttackFollowUp', 'buff'],
+      ['nextOutgoingDamage', 'nextOutgoingDamage', 'buff'],
     ] as const;
 
     for (const [overlay, category, kind] of overlays) {
@@ -251,6 +281,38 @@ describe('statusEffectDisplay', () => {
       expect(badges[0]?.category).toBe(category);
       expect(badges[0]?.kind).toBe(kind);
     }
+  });
+
+  it('collects dot flavor badges for seedFlame and blazingFlame', () => {
+    const badges = collectStatusEffectBadgeDisplays(
+      [
+        {
+          id: 'seed',
+          kind: 'debuff',
+          overlay: 'dot',
+          dotFlavor: 'seedFlame',
+          multiplier: 1,
+          durationSec: 10,
+          remainingSec: 8,
+        },
+        {
+          id: 'blaze',
+          kind: 'debuff',
+          overlay: 'dot',
+          dotFlavor: 'blazingFlame',
+          multiplier: 1,
+          durationSec: 10,
+          remainingSec: 6,
+        },
+      ],
+      { atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges.map((badge) => badge.category)).toEqual([
+      'seedFlame',
+      'blazingFlame',
+    ]);
+    expect(badges.every((badge) => badge.kind === 'debuff')).toBe(true);
   });
 
   it('collects arenaMark stack badges with arenaMark category', () => {
