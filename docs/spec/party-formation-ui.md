@@ -1,12 +1,12 @@
 # パーティ編成 UI
 
-実装：`src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`（用語パネル予定: `gameTermGlossary.ts`, `annotateGameTerms.ts`, `GameTermPanel.ts`, `game-term-panel.css`）。**Phase 4d PR1-3:** 上ロスター（`formationBlockEl`）+ 下詳細（`bodyEl`）の flex 縦積み・詳細のみ scroll・Picker 中もロスター帯表示 — 骨格完了。
+実装：`src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`（用語パネル予定: `gameTermGlossary.ts`, `annotateGameTerms.ts`, `GameTermPanel.ts`, `game-term-panel.css`）。**Phase 4d PR1:** 上ロスター（`formationBlockEl`）+ 下詳細（`bodyEl`）の flex 縦積み・詳細のみ scroll・ヘッダー Lv。**PR2:** ロスターカード・編成内訳・注記・Picker オーバーレイ・閲覧スキルカード（`formatSkillCardLines`）。
 
 本ドキュメントは **メタメニューから開くパーティ編成画面**（`SkillMenuPanel`）の画面設計正本。戦闘フィールド上の隊形・座標は [battle-field.md](battle-field.md)、クラス・ロール・スキル習得は [classes-and-skills.md](classes-and-skills.md)、セーブ・Lv は [progression.md](progression.md) を参照。
 
 **フェーズ:** 画面設計の確定は本書。実装は [phase-roadmap.md](../plans/phase-roadmap.md) の **Phase 4d**。
 
-**現行コードとの関係:** 本書は目標仕様（**v0.4**）。`SkillMenuPanel` は Phase 3 頃の最小 UI のまま。実装が追いつくまで差分は許容する。
+**現行コードとの関係:** 本書は目標仕様（**v0.4**）。Phase 4d PR1–2 で骨格・ロスター・Picker・閲覧スキルカードを実装済み。用語パネル（§6.4）は PR3 予定。
 
 **配信形態:** 最終的に **Electron デスクトップアプリ**（Phase 8）を正とする。編成画面は **十分な幅のウィンドウ**（`MetaMenuOverlay` の `presentation: "window"`）で見せる。レイアウトの正本は **上: ロスター / 下: 詳細** の縦積み（§4）。
 
@@ -156,7 +156,7 @@ UI は次の順で情報を理解できる構成とする。
 | クラスアイコン or スプライト | `classId`      | body atlas 優先                               |
 | `displayName` + `epithetEn`  | `classes.json` | **2 段表示**（漢字 + 英語肩書き）。ロスターでも必須 |
 | 前衛 / 後衛                  | `formationRow` | `front` → 前衛、`back` → 後衛                 |
-| UI ロール                    | `role`         | ディフェンダー / アタッカー / ヒーラー（サポーター） |
+| UI ロール                    | `role`         | ディフェンダー / アタッカー / サポーター |
 
 選択中枠は視覚的にハイライトする（軽い発光や色変化。§15）。
 
@@ -438,23 +438,23 @@ Picker 表示中も **上部ロスター帯は背面に見える**。他 3 人�
 
 ## 12. 現行実装との差分（改修チェックリスト）
 
-| 現行                          | 目標                                          |
-| ----------------------------- | --------------------------------------------- |
-| 見出し「編成枠」              | 「パーティ」等、陣形と誤解されない名称        |
-| タブのみにクラス名            | ロスターカードに epithet・前衛/後衛・ロール   |
-| 詳細に前衛/後衛なし           | クラス情報に常時表示                          |
-| Picker で上部タブ hidden      | 中央モーダル・オーバーレイ                    |
-| スキルが icon + hover tooltip | 縦セクション + 閲覧カード・効果単位改行       |
-| Active が `disabled` button   | 非インタラクティブなカード                    |
-| パッシブがアイコン列のみ      | Active と同型の閲覧カード列（ややコンパクト可） |
-| 縦 1 カラム（タブ上のみ）     | 上ロスター + 下詳細の縦積み                   |
-| 詳細・カードに Lv 表示        | `playerProgress.level` をヘッダーのみ         |
-| `ステータス（Lv n）` 見出し   | `ステータス` のみ                             |
-| 編成内訳なし                  | ロスター直下 1 行 + 空き枠 suffix             |
-| 空き枠の見た目                | `＋` / `クラスを追加`                         |
-| `party[].progress.level` 表示 | 廃止。`playerProgress.level` のみ             |
-| 説明文内用語なし              | 辞書登録語はクリック可能 + 用語パネル（§6.4） |
-| スキル icon ホバー tooltip のみ | 閲覧カード + 用語パネル                       |
+| 現行                          | 目標                                          | PR2 |
+| ----------------------------- | --------------------------------------------- | --- |
+| 見出し「編成枠」              | 「パーティ」等、陣形と誤解されない名称        | —（見出し廃止・ロスター帯のみ） |
+| タブのみにクラス名            | ロスターカードに epithet・前衛/後衛・ロール   | ✅ |
+| 詳細に前衛/後衛なし           | クラス情報に常時表示                          | ✅ |
+| Picker で上部タブ hidden      | 中央モーダル・オーバーレイ                    | ✅ |
+| スキルが icon + hover tooltip | 縦セクション + 閲覧カード・効果単位改行       | ✅ |
+| Active が `disabled` button   | 非インタラクティブなカード                    | ✅ |
+| パッシブがアイコン列のみ      | Active と同型の閲覧カード列（ややコンパクト可） | ✅ |
+| 縦 1 カラム（タブ上のみ）     | 上ロスター + 下詳細の縦積み                   | PR1 ✅ |
+| 詳細・カードに Lv 表示        | `playerProgress.level` をヘッダーのみ         | ✅ |
+| `ステータス（Lv n）` 見出し   | `ステータス` のみ                             | ✅ |
+| 編成内訳なし                  | ロスター直下 1 行 + 空き枠 suffix             | ✅ |
+| 空き枠の見た目                | `＋` / `クラスを追加`                         | ✅ |
+| `party[].progress.level` 表示 | 廃止。`playerProgress.level` のみ             | ✅（暫定 `resolvePlayerDisplayLevel`） |
+| 説明文内用語なし              | 辞書登録語はクリック可能 + 用語パネル（§6.4） | PR3 |
+| スキル icon ホバー tooltip のみ | 閲覧カード + 用語パネル                       | PR2 閲覧カード ✅ / 用語 PR3 |
 
 ---
 

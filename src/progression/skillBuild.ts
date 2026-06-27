@@ -16,14 +16,17 @@ export function cloneBuild(build: CharacterBuild): CharacterBuild {
 }
 
 /** 段階解放: Lv0=2, Lv10=3, Lv20=4 */
+export function getUnlockedSkillSlotCount(level: number): number {
+  if (level >= 20) return Math.min(4, MAX_ACTIVE_SLOTS);
+  if (level >= 10) return Math.min(3, MAX_ACTIVE_SLOTS);
+  return Math.min(2, MAX_ACTIVE_SLOTS);
+}
+
 export function getUnlockedActiveSlotCount(
   member: PartyMemberState,
   _gameData: GameData,
 ): number {
-  const level = member.progress.level;
-  if (level >= 20) return Math.min(4, MAX_ACTIVE_SLOTS);
-  if (level >= 10) return Math.min(3, MAX_ACTIVE_SLOTS);
-  return Math.min(2, MAX_ACTIVE_SLOTS);
+  return getUnlockedSkillSlotCount(member.progress.level);
 }
 
 /** セット枠配列を最大長に正規化する */
