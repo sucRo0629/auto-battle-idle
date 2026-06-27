@@ -216,7 +216,7 @@
 ### 8.3 メインモードとの関係
 
 - ラン内報酬は **ラン終了で失効** する（エンドレス継続中もラン内状態として保持）。
-- メインモードの `CharacterProgress`・習得スキル・Phase 9 の globalExp 強化には **直接反映しない**。
+- メインモードの `playerProgress`・`build`（習得スキル）・Phase 9 の globalExp 強化には **直接反映しない**。
 
 ---
 
@@ -355,7 +355,7 @@ Hunter / Defender / Healer 等も、既存の Kill / Flow / Survival 機構に�
 
 | 案 | 概要 |
 | -- | ---- |
-| A. メイン同期 | セーブの `CharacterProgress` + `build` をそのまま使用 |
+| A. メイン同期 | セーブの `playerProgress` + `build` をそのまま使用 |
 | B. ラン固定 | 全員同一 Lv（例: Lv20 相当）で習得枠最大 |
 | C. ラン内成長 | ラン専用 Lv（メインに反映しない） |
 

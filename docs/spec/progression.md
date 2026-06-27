@@ -10,7 +10,7 @@
 
 ---
 
-## Phase 2 — 個別成長とステージ（完了）
+## Phase 2 — プレイヤー成長とステージ（完了）
 
 ### ステージ進行
 
@@ -22,23 +22,28 @@
 ### EXP 報酬
 
 - ステージ単位の `expReward` は使わない。
-- 勝利時、**撃破した敵の `exp` 合計**（`enemies.json` の各テンプレート）を生存味方全員に付与。
+- 勝利時、**撃破した敵の `exp` 合計**（`enemies.json` の各テンプレート）を **`playerProgress.exp` に加算**する。
 - 計算：`computeStageExpReward` がステージ内の全ウェーブ・全敵の `exp` を合算。
+- **廃止:** メンバー別 EXP 配分、「生存味方全員に付与」。
 
-### 個別レベル（ステのみ）
+### プレイヤーレベル（`playerProgress`）
 
-> **Phase 11 予定:** メンバー個別 `CharacterProgress` は廃止し、セーブ直下のグローバル `playerProgress`（B 案）へ移行する。以下は Phase 2〜10 現行実装の記述。
+プレイヤーレベルは **アカウント共通** の 1 本。Lv / Exp / 習得・枠解放 / 編成ステ表示 / 戦闘ステ計算の入力はすべて `playerProgress` を正本とする。
 
 ```typescript
-interface CharacterProgress {
-  level: number; // 初期 1
+interface PlayerProgress {
+  level: number; // 初期 1。全 15 クラスの習得・枠解放の単一基準
   exp: number;
 }
 ```
 
-- LvUP で **maxHp, atk, def** が上昇（**Phase 4** で成長段階 + `growthPresets` 方式に刷新。詳細は [stats.md](stats.md)）。
-- **REG は成長しない。**
-- **Phase 2 では LvUP してもスキルは増えない。**
+| 項目 | ルール |
+| ---- | ------ |
+| EXP 付与 | 勝利時、撃破敵 `exp` 合計を `playerProgress.exp` に加算（メンバー別配分なし） |
+| LvUP | `playerProgress.level` 上昇で **全クラス** の習得テーブル・枠段階が更新される |
+| ステ成長 | LvUP で **maxHp, atk, def** が上昇（**Phase 4** で成長段階 + `growthPresets` 方式。詳細は [stats.md](stats.md)）。**REG は成長しない** |
+| 戦闘 Lv | `resolveEffectiveLevel` が `playerProgress.level` を基準に Level Sync / Instant Lv20 を適用（オプション詳細は [Phase 11](#phase-11--解法評価メタ07582b6)） |
+| Lv20 完成 | 習得・枠は Lv20 で頭打ち。Lv21+ はステータス救済のみ（[design-philosophy.md](../design-philosophy.md) §4） |
 
 ### セーブ（`SaveManager`）
 
@@ -52,39 +57,51 @@ interface CharacterProgress {
 ```typescript
 interface SaveGameState {
   version: number;
+  playerProgress: PlayerProgress;
   stageProgress: { currentStageId: string; totalClears: number };
   party: {
     classId: ClassId;
-    progress: CharacterProgress;
     build: CharacterBuild;
   }[];
+  stageRecords?: Record<StageId, StageRecord>; // Phase 11c
+  options?: {
+    instantLv20?: boolean;
+    levelSync?: boolean;
+  }; // Phase 11b
 }
 ```
 
-初回セーブは `parties.json` からパーティを生成。
+初回セーブは `parties.json` からパーティを生成（`playerProgress` は level 1 / exp 0）。
 
 保存タイミング：Victory/Defeat 後、60 秒ごと、`beforeunload` 時。パーティ編集時は即時。
 
 ### 習得済みビルドの永続化
 
-各メンバーの `build: CharacterBuild` をセーブに含める。
+各メンバーの `build: CharacterBuild` をセーブに含める。Lv の入力は **`playerProgress.level`**（`reconcileMemberBuild` / `reconcilePartyBuilds` / `levelGrowth.ts`）。
 
 | フィールド                               | 永続化のタイミング                                                                  |
 | ---------------------------------------- | ----------------------------------------------------------------------------------- |
 | `learnedPassiveIds` / `learnedActiveIds` | LvUP 時に `classes.json` の `skills[]` から再計算して更新                           |
 
-- ロード時：`migrateSaveClassIds` で旧 classId（例: `at_sniper` → `at_ballista`）を置換したうえで、`reconcilePartyBuilds` がレベルと習得リストを突き合わせ、不整合を修復してから再保存する。
+- ロード時：`migrateSaveClassIds` で旧 classId（例: `at_sniper` → `at_ballista`）を置換したうえで、`reconcilePartyBuilds` が `playerProgress.level` と習得リストを突き合わせ、不整合を修復してから再保存する。
 - `equippedActiveSlots` は歴史的互換フィールドとして残る場合があるが、設計上は使用しない。ロード時の整合対象は習得済みリストを正とする。
 - 新アクティブ習得時は、付け替え操作なしで常時使用可能になる。
+
+### 廃止・移行（メンバー個別 progress）
+
+**廃止:** メンバー個別 `CharacterProgress`、`party[].progress`（クラス別 Lv / Exp）。
+
+旧セーブはロード時に **`party[].progress` の最大 `level` / 最大 `exp`** から `playerProgress` を生成し、移行後はメンバー `progress` を削除する（読み取り専用互換は移行期のみ可）。**移行ルールの正本は本節のみ** — 他 doc はリンクのみ。
 
 ### 進行 UI
 
 - 現在ステージ名（Canvas 左上）
-- メンバー別 Lv / Exp バー（パーティ HUD）
-- **パーティ編成メニュー**（`SkillMenuPanel`）— 画面設計の正本は [party-formation-ui.md](party-formation-ui.md)（Phase 4d）。現行は選択中メンバーの **Lv 反映ステータス**を表示
+- **プレイヤー共通 Lv（数値）+ Exp バー（戦闘 HUD）** — Exp バーの具体レイアウトは **TBD**（HUD 内の共通表示 1 か所を想定）
+- **パーティ HUD スロット行** — クラス名 + HP 等。**メンバー別 `Lv{n}` 表記は廃止**。プレイヤー Lv / Exp は HUD 内の共通表示（レイアウト TBD）
+- **パーティ編成メニュー**（`SkillMenuPanel`）— 画面設計の正本は [party-formation-ui.md](party-formation-ui.md)（Phase 4d）。ヘッダーに **`プレイヤー Lv {n}` のみ**（Exp バーは編成画面に出さない）
   - **HP** のみ英字表記、それ以外は日本語（攻撃力 / 防御力 / 魔法耐性 / 攻撃速度）
   - 攻撃速度は内部略称 **SPD**（`attackSpeedTier`）。UI では 5 段階ラベル（遅い〜早い）
-  - 編成画面ではスキル buff 込みの実効値は表示しない（素のクラス + Lv）
+  - 編成画面ではスキル buff 込みの実効値は表示しない（素のクラス + `playerProgress.level`）
 - ステージクリア / LvUP / ステージロールバックのログ（console）
 
 ---
@@ -113,7 +130,7 @@ interface ClassSkillUnlock {
 
 ### 習得済みビルドの永続化
 
-`reconcileMemberBuild` / `reconcilePartyBuilds`（`skillBuild.ts`）がレベルと `skills[]` から習得リストを同期する。詳細は Phase 2 セーブ節を参照。
+`reconcileMemberBuild` / `reconcilePartyBuilds`（`skillBuild.ts`）が `playerProgress.level` と `classes.json` の `skills[]` から習得リストを同期する。詳細は Phase 2 セーブ節を参照。
 
 ---
 
@@ -217,44 +234,9 @@ finalStat = Lv1 基準値（classes.json）
 
 ---
 
-## Phase 11 — プレイヤーレベル + 解法評価メタ（07582b6）
+## Phase 11 — 解法評価メタ（07582b6）
 
-Phase 6 完了後に着手。タスク一覧は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 11。設計思想は [design-philosophy.md](../design-philosophy.md)、Player Level / Stage Records は [system-mechanics.md](../system-mechanics.md)。
-
-### グローバル `playerProgress`（B 案）
-
-プレイヤーレベルは **アカウント共通** の 1 本。Phase 2 の `party[].progress`（メンバー個別 Lv / Exp）は Phase 11 で廃止する。
-
-```typescript
-interface PlayerProgress {
-  level: number; // 初期 1。全 15 クラスの習得・枠解放の単一基準
-  exp: number;
-}
-
-interface SaveGameState {
-  version: number;
-  playerProgress: PlayerProgress;
-  stageProgress: { currentStageId: string; totalClears: number };
-  party: {
-    classId: ClassId;
-    build: CharacterBuild;
-    // progress は削除（移行期のみ読み取り互換）
-  }[];
-  stageRecords?: Record<StageId, StageRecord>;
-  options?: {
-    instantLv20?: boolean;
-    levelSync?: boolean;
-  };
-}
-```
-
-| 項目 | ルール |
-| ---- | ------ |
-| EXP 付与 | 勝利時、撃破敵 `exp` 合計を `playerProgress.exp` に加算（メンバー別配分なし） |
-| LvUP | `playerProgress.level` 上昇で **全クラス** の習得テーブル・枠段階が更新される |
-| 戦闘 Lv | `resolveEffectiveLevel` が `playerProgress.level` を基準に、Level Sync / Instant Lv20 を適用 |
-| Lv20 完成 | 習得・枠は Lv20 で頭打ち。Lv21+ はステータス救済のみ |
-| 移行 | 旧セーブは `party[].progress` の最大 `level` / `exp` 等から `playerProgress` を生成 |
+Phase 6 完了後に着手。**Lv / Exp 正本は Phase 2 の `playerProgress`**（[上記](#プレイヤーレベルplayerprogress)）。本 Phase は Stage Records とオプションの **実装**（schema 移行・`resolveEffectiveLevel`・HUD Exp 表示等）。タスク境界は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 11b / 11c。設計思想は [design-philosophy.md](../design-philosophy.md)、Player Level / Stage Records の概要は [system-mechanics.md](../system-mechanics.md)。
 
 ### Instant Lv20 / Level Sync
 
@@ -284,3 +266,17 @@ interface StageRecord {
 Phase 9 完了後に着手。メインモードのステージ進行・EXP とは **独立したラン** で、ランダム問題の解法探索を提供する。
 
 詳細は [roguelike-mode.md](roguelike-mode.md)。実装タスクは同 doc §18 および [phase-roadmap.md](../plans/phase-roadmap.md) Phase 10。
+
+---
+
+## 実装追随（doc 正本 vs 現行コード）
+
+本 PR は doc のみ更新。コード・セーブ schema の追随は別 PR。
+
+| 項目 | doc 正本 | 実装がまだ古い可能性 |
+| ---- | -------- | -------------------- |
+| `SaveGameState` | `playerProgress` 直下 | `party[].progress` 残存 |
+| 表示 Lv | `playerProgress.level` | `resolvePlayerDisplayLevel`、HUD スロット行の `Lv{n}` |
+| 統計 UI Exp 行 | なし（統計オーバーレイは Threat / ダメージのみ） | `PartyMemberStatsDisplay` の Exp ラベル（あれば） |
+| Victory EXP | `playerProgress.exp` 加算 | `member.progress.exp` への加算 |
+| 習得 / 成長 Lv 入力 | `playerProgress.level` | `member.progress.level`（`skillBuild.ts` / `entities.ts` 等） |

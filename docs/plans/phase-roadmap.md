@@ -78,9 +78,9 @@ data/    → loadGameData.ts が JSON マスタを読み込み
 - 複数ステージ：`stages.json` の順序で `currentStageId` を管理
 - **Victory** → 次ステージへ進行（最終後は同ステージ周回、`totalClears` +1）
 - **Defeat** → 1 つ前のステージへロールバック（先頭では据え置き）
-- 勝利時に生存味方へ敵 `exp` 合計を付与し個別 LvUP
-- LvUP で **maxHp / atk / def のみ上昇**（スキル習得なし）
-- 進行 UI：ステージ名、パーティ Lv / Exp
+- 勝利時、撃破敵 `exp` 合計を **`playerProgress.exp` に加算**（[progression.md](../spec/progression.md)）。メンバー別 LvUP は廃止
+- LvUP で **maxHp / atk / def のみ上昇**（スキル習得は Phase 3）
+- 進行 UI：ステージ名、プレイヤー共通 Lv / Exp（戦闘 HUD）。編成は Lv のみ
 
 ### 2b — 戦闘計算（完了）
 
@@ -230,7 +230,7 @@ data/
 
 **ゴール:** 戦闘外 DOM UI（編成・統計）と戦闘 HUD の見た目を **PC 向け RPG 情報パネル**基調に揃え、Web アプリ風ダッシュボード感を除去する。
 
-- **編成:** [party-formation-ui.md](../spec/party-formation-ui.md)（**v0.4**）に沿って `SkillMenuPanel` を再構成。上ロスター / 下詳細、編成内訳行、中央モーダル Picker、閲覧スキルカード（効果単位改行）、**インライン用語パネル**（クリック・辞書 locale キー、`ja` v1）、`playerProgress.level` をヘッダー 1 か所表示。
+- **編成:** [party-formation-ui.md](../spec/party-formation-ui.md)（**v0.4**）に沿って `SkillMenuPanel` を再構成。上ロスター / 下詳細、編成内訳行、中央モーダル Picker、閲覧スキルカード（効果単位改行）、**インライン用語パネル**（クリック・辞書 locale キー、`ja` v1）、**`playerProgress.level`**（確定方針 — [progression.md](../spec/progression.md)）をヘッダー 1 か所表示。
 - **統計:** [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) に沿って `BattleStatsOverlay` / `PartyMemberStatsDisplay` を刷新。デザイン言語は編成 UI [§11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通) と共通。
 
 **着手条件**
@@ -242,7 +242,7 @@ data/
 **主な変更（設計書 §11 差分）**
 
 - 上ロスター / 下詳細、編成内訳行（空き枠 suffix）、PC RPG 情報パネル基調（§11）
-- `playerProgress.level` をヘッダー表示。`party[].progress.level` は表示に使わない
+- `playerProgress.level` をヘッダー表示（正本は [progression.md](../spec/progression.md)）。`party[].progress` は廃止
 - スキル: 縦セクション + 閲覧カード、効果単位改行、詳細全体スクロール
 - 用語 UI: [classes-and-skills.md §UI 用語辞書](../spec/classes-and-skills.md#ui-用語辞書) + [party-formation-ui.md §6.4](../spec/party-formation-ui.md#64-インライン用語パネル) — `gameTermGlossary.ts`（locale キー）、クリック Popover、パネル内用語の履歴遷移
 - Picker: 3 ロールブロック・中央モーダル（タブ / サイドバー / rangePx なし）
@@ -539,32 +539,24 @@ Phase 7 完了後に着手。クラスマスタ・数値チューニングが揃
 
 **ゴール:** [design-philosophy.md](../design-philosophy.md) と [system-mechanics.md](../system-mechanics.md) で追記した「理解度評価」を、セーブ・ステージ・オプションに反映する。戦闘表示（Damage / Event Popup）は **Phase 5d** で扱う。
 
-**正本:** 進行メタは `system-mechanics.md`（Player Level / Instant Lv20 / Level Sync / Stage Records）。Combat Feedback は [combat-architecture.md](../combat-architecture.md) §8 → **Phase 5d**。セーブ schema の詳細は [progression.md](../spec/progression.md) Phase 11。
+**正本:** 進行メタは [progression.md](../spec/progression.md)（`playerProgress`）と [system-mechanics.md](../system-mechanics.md)（Instant Lv20 / Level Sync / Stage Records 概要）。Combat Feedback は [combat-architecture.md](../combat-architecture.md) §8 → **Phase 5d**。
 
 | サブフェーズ | 内容                                                                             | 状態   |
 | ------------ | -------------------------------------------------------------------------------- | ------ |
-| **11b**      | グローバル `playerLevel` 移行 + Instant Lv20 / Level Sync オプション             | 未着手 |
+| **11b**      | schema 移行 + `resolveEffectiveLevel` + Instant Lv20 / Level Sync + HUD Exp 表示 | 未着手 |
 | **11c**      | Stage Records — クリア履歴セーブ、`recommendedLevel`、リザルト / ステージ選択 UI | 未着手 |
 
-### 11b — グローバル `playerLevel`（B 案）
+**doc 上の正本:** Lv / Exp は Phase 2 の `playerProgress`（[progression.md](../spec/progression.md)）。**11b = 上記 doc の schema 実装・旧セーブ移行・`resolveEffectiveLevel` 単一経路・HUD 共通 Exp 表示**。習得・枠・EXP ルールの詳細は progression へ集約し、本節では重複記載しない。
 
-Phase 2 の **メンバー個別** `CharacterProgress.level` を廃止し、セーブ直下の **アカウント共通** `playerProgress` を正本とする。
+### 11b — schema 実装（未着手）
 
-```typescript
-interface PlayerProgress {
-  level: number; // 初期 1。全クラスの習得・枠解放の単一基準
-  exp: number;
-}
-```
+- **習得・枠解放** — `playerProgress.level` を入力（[progression.md](../spec/progression.md)）
+- **戦闘ステ** — `resolveEffectiveLevel` の単一経路（Level Sync / Instant Lv20）
+- **EXP 付与** — Victory 時 `playerProgress.exp` 加算
+- **移行** — 旧 `party[].progress` → `playerProgress`（移行ルールは progression「廃止・移行」のみ）
+- **UI** — パーティ HUD：スロット行からメンバー別 Lv 廃止、プレイヤー Lv / Exp を HUD 共通表示。編成は [party-formation-ui.md](../spec/party-formation-ui.md) §5.0
 
-- **習得・枠解放** — `playerProgress.level` を `classes.json` の `skills[]` 閾値と `getUnlockedActiveSlotCount` / passive 段階解放の入力に使う。編成にいないクラスも同じ Lv で解放状態が決まる。
-- **戦闘ステ計算** — 味方・敵の Lv 参照は `resolveEffectiveLevel(member, stage, options)` の単一経路へ集約。通常は `playerProgress.level`、Level Sync ON 時は `min(playerLevel, stage.recommendedLevel)`、Instant Lv20 ON 時は 20 扱い。
-- **EXP 付与** — 勝利時の敵 `exp` 合計は `playerProgress.exp` に加算。メンバー別 EXP は持たない。
-- **Lv20 以降** — `playerProgress.level` が 20 を超えても習得・枠は Lv20 完成で頭打ち。超過分はステータス救済のみ（[design-philosophy.md](../design-philosophy.md) §4）。
-- **移行** — ロード時に旧 `party[].progress` から `playerProgress` へマイグレーション（例: パーティ内最大 `level` / 最大 `exp` を採用）。移行後はメンバー `progress` を削除または読み取り専用互換に落とす。
-- **UI** — パーティ HUD / 編成画面は **プレイヤー Lv / Exp** を表示。クラス行は「この Lv での完成度」として読む。
-
-**波及:** `reconcileMemberBuild` / `resolveLearnedSkills`、`levelGrowth.ts`、セーブ型、`SaveManager`、Victory 報酬、`SkillMenuPanel`、デバッグ Lv 変更。Phase 3 の習得機構は維持し、**Lv の正本だけ**をグローバル化する。
+**波及:** `reconcileMemberBuild` / `resolveLearnedSkills`、`levelGrowth.ts`、セーブ型、`SaveManager`、Victory 報酬、`SkillMenuPanel`、デバッグ Lv 変更。
 
 ### 11c — Stage Records
 

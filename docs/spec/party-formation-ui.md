@@ -127,7 +127,7 @@ UI は次の順で情報を理解できる構成とする。
 
 ### 5.0 プレイヤーレベルとデータ正本
 
-レベルは **クラス個別ではなくプレイヤー共通**。編成画面で参照する表示・計算の正本は **`playerProgress.level`**（[progression.md](progression.md) Phase 11 B 案と同義）。**`party[].progress.level` は表示に使用しない**。旧セーブのメンバー個別 progress は段階的に廃止してよい。
+レベルは **クラス個別ではなくプレイヤー共通**。編成画面で参照する表示・計算の正本は **`playerProgress.level`**（[progression.md](progression.md)）。**`party[].progress` は廃止** — 表示・計算に使用しない。
 
 | 表示場所                               | 内容                                                                                             |
 | -------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -136,11 +136,9 @@ UI は次の順で情報を理解できる構成とする。
 | 詳細 · ステータス見出し                | **「Lv n」付き見出しは使わない**（例: `ステータス（Lv 12）` は廃止）                             |
 | ロスター各カード                       | **表示しない**                                                                                   |
 | スキル未解放枠                         | **プレイヤー Lv** の閾値のみ（例: `プレイヤー Lv10 で追加`）                                    |
-| Exp バー                               | **表示しない**（戦闘 HUD に委譲）                                                                |
+| Exp バー                               | **表示しない**（プレイヤー共通 Exp バーは戦闘 HUD — [progression.md](progression.md)「進行 UI」） |
 
 **実装:** `MetaMenuOverlay` の `meta-menu-window-bar` に Lv 表示。`SkillMenuPanel` の `formationBlockEl`（上部ロスター帯）と `bodyEl`（下部詳細）を縦積みにする。
-
-**暫定 Lv ソース（Phase 11 前）:** `resolvePlayerDisplayLevel(party)`（`src/progression/resolvePlayerDisplayLevel.ts`）。`party` 全枠の `member?.progress.level` の最大値。全 null なら `1`。Phase 11 で `playerProgress.level` / `resolveEffectiveLevel` へ差し替える単一関数。
 
 ### 5.1 枠数と並び
 
@@ -453,7 +451,7 @@ Picker 表示中も **上部ロスター帯は背面に見える**。他 3 人�
 | `ステータス（Lv n）` 見出し   | `ステータス` のみ                             | ✅ |
 | 編成内訳なし                  | ロスター直下 1 行 + 空き枠 suffix             | ✅ |
 | 空き枠の見た目                | `＋` / `クラスを追加`                         | ✅ |
-| `party[].progress.level` 表示 | 廃止。`playerProgress.level` のみ             | ✅（暫定 `resolvePlayerDisplayLevel`） |
+| `party[].progress` 表示       | 廃止。`playerProgress.level` のみ             | ✅ |
 | 説明文内用語なし              | 辞書登録語はクリック可能 + 用語パネル（§6.4） | PR3 ✅ |
 | スキル icon ホバー tooltip のみ | 閲覧カード + 用語パネル                       | PR2 閲覧カード ✅ / 用語 PR3 ✅ |
 
@@ -542,4 +540,3 @@ Picker 表示中も **上部ロスター帯は背面に見える**。他 3 人�
 | ----------------------------------- | ---------------------------------------------------------- |
 | 用語辞書の初版登録語一覧            | `formatSkillText` 頻出語から段階追加（全量一覧は spec に転記しない） |
 | ロスター帯のピクセル寸法            | §5.2 目安の範囲で CSS 調整可                               |
-| `playerProgress` 未実装期のフォールバック | 表示正本はプレイヤーレベル。暫定は `resolvePlayerDisplayLevel`（パーティ内最大 `progress.level`、空なら 1）。Phase 11 で `playerProgress.level` / `resolveEffectiveLevel` へ差し替え |

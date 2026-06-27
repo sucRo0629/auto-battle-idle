@@ -471,8 +471,8 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 | ---- | ---- |
 | 起動 | 戦闘画面メニューの「統計情報」ボタン（`BattleView`） |
 | タイトル | ステージ表示名（`stages.json` の `displayName`） |
-| メンバー行 | 編成スロット順。**統計オーバーレイのみ** 24px クラスアイコン + `displayName` + `epithetEn`、Threat バー、与ダメ / 被ダメバー（Exp は HUD に委譲し **表示しない**）。`DebugMenuPanel` にはアイコンなし |
-| データ源 | `getStageDamageDisplayRows`（ステージ内累計）、`CombatantSnapshot`（Threat） |
+| メンバー行 | 編成スロット順。**統計オーバーレイのみ** 24px クラスアイコン + `displayName` + `epithetEn`、Threat バー、与ダメ / 被ダメバー。**Exp 数値・メンバー別 Lv は表示しない**（プレイヤー共通 Exp バーは戦闘 HUD — [progression.md](progression.md)「進行 UI」）。`DebugMenuPanel` にはアイコンなし |
+| データ源 | `getStageDamageDisplayRows`（ステージ内累計与ダメ / 被ダメ）、`CombatantSnapshot`（Threat）。**Exp / `partyProgress` は統計 UI スコープ外** |
 | 確認モード | 現行は verify 経路でダメージ行が供給される。本番 Stage Records は **Phase 11** |
 
 `DebugMenuPanel` も同一 `PartyMemberStatsDisplay` を使う。CSS 刷新時は **両方を同スタイル**にする。
@@ -493,7 +493,7 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 ### 7.3 受け入れ条件（Phase 4d — 統計部分）
 
 1. オーバーレイが Web モーダル / ダッシュボード風に見えない（§11 準拠）
-2. 4 人分の epithet + 名前・Threat・与ダメ / 被ダメが **縦リスト**で読める
+2. 4 人分の epithet + 名前・Threat・与ダメ / 被ダメが **縦リスト**で読める（Exp 数値・メンバー別 Lv なし）
 3. `party-member-stats.css` の変更が `DebugMenuPanel` 内 stats 行にも反映される
 4. 閉じる操作（backdrop / 閉じるボタン）が機能する
 
