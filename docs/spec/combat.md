@@ -125,7 +125,7 @@
 | `sp_wardweaver_active_3` | selfOrigin aoe barrier | **対象外**（heal/hot ではない） | effect 1 は `poolFromEffectIndex` + stat ratio barrier |
 | 槍術士 / 護法士 passive 等 | selfOrigin ally **buff** | 対象外 | PHT 節は heal / hot のみ |
 
-**アクティブ heal / hot の発動保留（要約）:** 上表の PHT 基準。パッシブ由来 HoT aura / 定期 tick は対象外。**heal の味方 stat / distance 対象は使用者自身も候補に含める**（支援 buff 等の非 heal 味方 stat は従来どおり使用者除外）。`order: ratio` の同率タイブレークは本節 PHT 定義に従う。verify モードの battleX debug には `pht` / `withhold` 理由を載せる（`battleXHealDebug.ts`）。
+**アクティブ heal / hot の発動保留（要約）:** 上表の PHT 基準。パッシブ由来 HoT aura / 定期 tick は対象外。**heal の味方 stat / distance 対象は使用者自身も候補に含める**（支援 buff 等の非 heal 味方 stat は従来どおり使用者除外）。`order: ratio` の同率タイブレークは本節 PHT 定義に従う。verify モード battleX debug の approach 表は deltaX=0 でも PHT / withhold を `details` 列に表示（`battleXDebugTraceTable.ts`）。
 
 **余剰回復バリア変換**（パッシブ `excessHealToBarrier`）: 試行回復量のうち maxHp 超過分 × `barrierScale` を **バリア上書き**（`barrierStack` なし）。
 

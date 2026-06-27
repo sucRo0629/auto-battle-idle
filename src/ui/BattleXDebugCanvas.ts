@@ -1,9 +1,14 @@
-import type { BattleSnapshot, CombatantSnapshot } from "../battle/types.ts";
+import {
+  formatBattleXTraceDetails,
+  isBattleXTraceApproachIdleRow,
+  isBattleXTraceTableRowVisible,
+} from "../battle/battleXDebugTraceTable.ts";
 import {
   BattleXDebugReplayBuffer,
   buildBattleXDebugReplayFrame,
   type BattleXDebugReplayFrame,
 } from "../battle/battleXDebugReplayBuffer.ts";
+import type { BattleSnapshot, CombatantSnapshot } from "../battle/types.ts";
 
 const CANVAS_W = 480;
 const MIN_CANVAS_H = 157;
@@ -380,6 +385,7 @@ export class BattleXDebugCanvas {
       "after",
       "delta",
       "time",
+      "details",
     ]) {
       const th = document.createElement("th");
       th.textContent = label;
@@ -397,15 +403,13 @@ export class BattleXDebugCanvas {
   private renderTraceTable(): void {
     if (!this.tableBody) return;
     this.tableBody.replaceChildren();
-    const rows = this.selectedTraceEntries.filter(
-      (entry) => Math.abs(entry.deltaX) > 0.001,
-    );
+    const rows = this.selectedTraceEntries.filter(isBattleXTraceTableRowVisible);
     if (rows.length === 0) {
       const row = document.createElement("tr");
       const cell = document.createElement("td");
-      cell.colSpan = 7;
+      cell.colSpan = 8;
       cell.className = "battle-x-debug-trace__empty";
-      cell.textContent = "no battleX delta on selected tick";
+      cell.textContent = "no trace rows on selected tick";
       row.appendChild(cell);
       this.tableBody.appendChild(row);
       return;
@@ -416,7 +420,11 @@ export class BattleXDebugCanvas {
       if (entry.warning) {
         row.classList.add("battle-x-debug-trace__row--warning");
       }
-      row.title = this.formatDetails(entry);
+      if (isBattleXTraceApproachIdleRow(entry)) {
+        row.classList.add("battle-x-debug-trace__row--approach-idle");
+      }
+      const detailsText = formatBattleXTraceDetails(entry);
+      row.title = detailsText;
       for (const value of [
         entry.unitName || entry.unitId,
         entry.isEnemy ? "enemy" : "ally",
@@ -425,49 +433,17 @@ export class BattleXDebugCanvas {
         this.formatPx(entry.afterX),
         this.formatSignedPx(entry.deltaX),
         `${entry.tickIndex} / ${entry.battleTimeSec.toFixed(2)}s`,
+        detailsText,
       ]) {
         const cell = document.createElement("td");
         cell.textContent = value;
+        if (value === detailsText) {
+          cell.className = "battle-x-debug-trace__details";
+        }
         row.appendChild(cell);
       }
       this.tableBody.appendChild(row);
     }
-  }
-
-  private formatDetails(
-    entry: NonNullable<BattleSnapshot["battleXDebugTrace"]>[number],
-  ): string {
-    const details = entry.details;
-    if (!details) return `${entry.phase} / ${entry.runtimePhase}`;
-    const parts = [
-      `phase=${entry.phase}`,
-      `runtime=${entry.runtimePhase}`,
-      details.approachTargetX === undefined
-        ? null
-        : `target=${this.formatPx(details.approachTargetX)}`,
-      details.shouldSkipEngagedAutoApproach === undefined
-        ? null
-        : `skip=${details.shouldSkipEngagedAutoApproach}`,
-      details.priorityHealTargetId === undefined
-        ? null
-        : `pht=${details.priorityHealTargetId}`,
-      details.healWithholdReason === undefined
-        ? null
-        : `withhold=${details.healWithholdReason}`,
-      details.bodyAnimMarching === undefined
-        ? null
-        : `march=${details.bodyAnimMarching}`,
-      details.isActorUseLocked === undefined
-        ? null
-        : `useLock=${details.isActorUseLocked}`,
-      details.isActorInSkillMotion === undefined
-        ? null
-        : `skillMotion=${details.isActorInSkillMotion}`,
-      details.isActorAnimLocked === undefined
-        ? null
-        : `animLock=${details.isActorAnimLocked}`,
-    ].filter((part): part is string => part !== null);
-    return parts.join(" | ");
   }
 
   private formatPx(value: number): string {

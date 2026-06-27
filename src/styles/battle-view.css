@@ -325,6 +325,18 @@
   color: #ffd2c4;
 }
 
+.battle-x-debug-trace__row--approach-idle {
+  color: #b8c6da;
+}
+
+.battle-x-debug-trace__details {
+  text-align: left;
+  white-space: normal;
+  max-width: 280px;
+  font-size: 0.62rem;
+  line-height: 1.25;
+}
+
 .battle-x-debug-trace__empty {
   color: #72809a;
   text-align: left;

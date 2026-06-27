@@ -77,7 +77,7 @@ BattlePhase 判定
 
 接敵中の生存ユニット `battleX` 更新は §4.4 の系統（approach / skill move / forced movement / overlap）のみ。**毎 tick の layout 再計算・visual 補間は行わない。** 非接敵配置確定時のみ `applyEngagedFormationToBattleX`（§4.2）。
 
-verify/debug mode の `battleX debug` 表は、tick 内の `battleX` 更新内訳（approach / skillMove / knockback / enemyReelIn / overlap / deploy / victoryExit / layoutBake / corpseAnchor 等）を調査するための表示であり、runtime 正本ではない。`approach` 行は **移動量 0 でも** `target` / `skip` / **PHT id** / **heal withhold 理由**（`basic:` / 装備 active id 付き）を tooltip に載せる（[combat.md](combat.md) §回復 PHT）。通常 snapshot には trace を含めない。
+verify/debug mode の `battleX debug` 表は、tick 内の `battleX` 更新内訳（approach / skillMove / knockback / enemyReelIn / overlap / deploy / victoryExit / layoutBake / corpseAnchor 等）を調査するための表示であり、runtime 正本ではない。`approach` 行は **移動量 0 でも** `target` / `skip` / **PHT id** / **heal withhold 理由** があるとき表に載せ、`details` 列と行 hover（`title`）の両方で見られる（[combat.md](combat.md) §回復 PHT）。通常 snapshot には trace を含めない。
 
 確認モード ON 時は、Wave 内 tick ごとの `BattleSnapshot` と当 tick の trace をリングバッファ（最大 3600 frame ≒ 60 秒）に保持し、debug UI で pause / seek / warning ジャンプできる。Wave 切替で buffer はクリアする。**replay pause 中は `BattleEngine.tick` も停止**し、Wave 進行や buffer 上書きを防ぐ。完全な決定論 replay 再計算は行わず、保存済み snapshot の playback のみ。
 
