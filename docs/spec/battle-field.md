@@ -317,7 +317,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | 敵                                     | 全生存プレイヤーからヘイト最大（`resolveEnemyChaseTargetPlayer`）                                                                             | 射程内プレイヤーからヘイト最大（`resolveEnemyAttackTargetPlayer`）  |
 | 味方（全ロール共通）                   | target spec / target rule の敵プールから `ChaseTarget` を選ぶ。既定 `distance/enemy/nearest` は battle-line depth の **奥**（`battleX` 最大） | 同じ target spec 系の attack プールで `effectiveRangePx` 内なら停止 |
-| 味方（ally-heal 通常攻撃の supporter） | 射程外の負傷味方へ接近。全員健康なら **現位置維持**（敵 chase しない）                                                                        | 射程内の負傷味方がいれば停止（`shouldSkipEngagedAutoApproach`）     |
+| 味方（ally-heal 通常攻撃の supporter） | 射程外の **PHT**（[combat.md](combat.md) §回復 PHT）へ接近。全員健康なら **現位置維持**（敵 chase しない）                                      | 射程内に **PHT** がいれば停止（`shouldSkipEngagedAutoApproach`）。任意の軽傷者では停止しない |
 
 敵の Threat chase は敵の前方側にいるプレイヤー候補から選ぶ。rear assault アクセス中のプレイヤーは敵の新しい `ChaseTarget` や前線所有者にはしない。
 
@@ -349,7 +349,7 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 **味方の共有 clamp / formation レイヤ：**
 
 - 前衛（`formationRow !== 'back'`）：生存敵 contact より右へ過進軍しない（`capFrontRowBeforeEnemyContact`）。これは `ChaseTarget` ではなく overtake 防止 clamp
-- 前列 supporter：近接最前帯の直後へ留める（`capFrontRowSupporterBehindMeleeFront`）。これは defender 代替壁ではなく前線直後 sustain 用の formation clamp
+- 前列 supporter：近接最前帯の直後へ留める（`capFrontRowSupporterBehindMeleeFront`）。これは defender 代替壁ではなく前線直後 sustain 用の formation clamp。PHT 接近は cap 位置まで試み、cap 到達後も PHT が selfOrigin aoe / basic heal 射程内に入るまで withhold で空振りしない（[combat.md](combat.md) §回復 PHT）
 - 接近ターゲットの row-order clamp は前衛 / 後衛で共通で、`applyFormationRowApproachSpacing` の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
 - rear assault 中の味方は `applyFormationMarchFollow` の leader / follower から除外。`baseApproach` は formation chain 用に clamp し、背後位置を他ユニットの spacing 基準にしない
 

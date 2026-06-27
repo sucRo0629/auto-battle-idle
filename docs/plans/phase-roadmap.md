@@ -133,6 +133,8 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 **Phase 3d 後 cleanup:** `battleX` 単一正本の runtime 整理は [master-work-order.md](./master-work-order.md) の battle-field cleanup 表を正とする。`battleCamera.ts` と skill move の旧 visual フィールドは削除済み。`visualX` は snapshot 互換ミラー、`engagedVisualTarget*` は deprecated alias として次フェーズ送り。
 
+**Phase 3d 延長 — 回復 PHT 整合（進行中）:** Priority Heal Target（PHT）を [combat.md](../spec/combat.md) §回復 PHT に正本化。ally-heal 接近・heal withhold・selfOrigin aoe（薬草師 A1 等）を PHT 基準へ揃える。Task 0 spec 確定 → Task 1 回帰テスト → Task 2 ally-heal 接近 → Task 3 withhold → Task 4–5 範囲回復 / クラス整合。
+
 ### スコープ外（Phase 3）— 独自システムクラス
 
 `at_sigilist`（印術師）と `at_conductor`（法陣師）は、Earth / Wind Mark 系・damage reservoir / routing 系など **戦闘エンジン拡張を伴う独自システム** を持つ。設計確定（[skill-finalization-table.md](./skill-finalization-table.md)）は Phase 3 で行うが、**combat 実装・`data/skills/` 投入・tooling 本番化は Phase 7b / 7c 以降** とする。

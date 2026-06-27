@@ -150,13 +150,19 @@ Level Sync Clear: ✓
 
 これにより、Flow の移動が発生しても「移動先」「攻撃対象」「追跡対象」「表示基準」を同一概念へ潰さない。
 
+### Priority Heal Target（PHT）
+
+味方回復専用の横断概念。生存味方のうち `hp / effectiveMaxHp` が最小の負傷者（満タン除外）。同率タイブレーク: HP 割合 → `effectiveMaxHp` 昇順 → `id` 辞書順。
+
+PHT は **ターゲット選択**（`stat` ratio 単体 heal）、**ally-heal 自動接近**（PHT が射程内まで前進）、**heal / hot 発動保留**（形状ごとに PHT が効果内か）で共有する。`selfOrigin` ally aoe は形状解決（足元半径）と withhold（PHT ∈ 半径）を分ける。正本: [spec/combat.md](spec/combat.md) §回復 PHT。
+
 ### 主な選択軸
 
 | 軸            | 例                                               | 状態     |
 | ------------- | ------------------------------------------------ | -------- |
 | 距離          | nearest / farthest / selfOrigin                  | 実装済み |
 | ステータス    | HP / ATK / DEF / REG の highest / lowest / ratio | 実装済み |
-| HP 割合       | 低 HP 割合、負傷味方                             | 実装済み |
+| HP 割合 / PHT | 低 HP 割合、負傷味方、回復優先対象               | 実装済み（PHT 接近・withhold は整合作業中） |
 | 攻撃種別      | melee / ranged / physical / magic                | 実装済み |
 | 状態          | buff / debuff タグ保持対象                       | 実装済み |
 | 高 MaxHP 対象 | ボス・強敵処理の設計概念                         | 要確認   |
@@ -328,6 +334,7 @@ chain と multiLock は、単なる演出ではなくターゲット形状シス
 
 | 項目                                                | 状態                                                             |
 | --------------------------------------------------- | ---------------------------------------------------------------- |
-| 優先ターゲット AI の詳細アルゴリズム                | TBD。高 MaxHP などの設計概念と現行 TargetSpec の詳細対応は要確認 |
+| 味方回復 PHT（接近・withhold・selfOrigin aoe）      | 仕様確定済 — [combat.md](spec/combat.md) §回復 PHT。実装整合は Phase 3d 延長作業 |
+| 敵側優先ターゲット（高 MaxHP 等）の詳細             | TBD。Threat / TargetSpec との対応は要確認                        |
 | Attack / Hit / Gauge の厳密な内部仕様ドキュメント化 | TBD。ただし `hitCount` とカウントトリガーの現行仕様は存在する    |
 | 戦闘中の attackSpeed tier 変更                      | 未実装                                                           |

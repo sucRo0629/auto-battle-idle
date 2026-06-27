@@ -887,13 +887,22 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | passive_2 | 健康体     | 最高 HP 味方 `hp` ×1.05                                                                                                                                               |
 | passive_3 | 毒消し     | `periodicDispel` dot 限定（Wave 回数上限）                                                                                                                            |
 | passive_4 | 薬草の極意 | `herbalPotency` — max 9 + 体質閾値                                                                                                                                    |
-| basic     | 薬手当て   | 最低 HP 味方へ短い `percentMaxHp` HoT                                                                                                                                 |
-| active_1  | 薬粉撒き   | 近接帯 HoT + `stackOnApply`                                                                                                                                           |
+| basic     | 薬手当て   | PHT へ短い `percentMaxHp` HoT（`stat` ally / `order: ratio`）。ally-heal 接近・停止の正本は [combat.md](combat.md) §回復 PHT |
+| active_1  | 薬粉撒き   | 使用者足元 `selfOrigin` + `aoe` 70px HoT + `stackOnApply`。**方針 A:** JSON 形状維持。発動保留・接近は PHT ∈ 半径。命中は半径内の全負傷味方。前列 `front` + `capFrontRowSupporterBehindMeleeFront` で前線直後 sustain（[battle-field.md](battle-field.md) §4.4） |
 | active_2  | 薬香の霧   | 味方全体中程度 HoT                                                                                                                                                    |
 | active_3  | 滋養強壮薬 | 味方全体長 HoT + `hp` flat buff（MaxHP 底上げが主役）                                                                                                                 |
 | active_4  | 薬効顕現   | `herbalPotencyConsume` → 全 stack 消費。**即時 heal なし**。`conditionalEffect`: 最低 HP ≤50% → 濃縮 HoT（消費 n 比例）+ 短 ATK buff / else → 強め ATK + 短 `hp` buff |
 
 実装: `src/battle/herbalPotency.ts` / `passiveHotBridge.resolvePassiveAuraHotTargets`（aura は満タン保留を bypass）
+
+**回復ターゲット（PHT 整合）**
+
+| 枠 | target 形状 | PHT との関係 |
+| -- | ----------- | ------------ |
+| basic | `stat` ally / `order: ratio` | 単体 PHT へ HoT。ally-heal 接近の停止・追跡対象 |
+| active_1 | `distance` ally / `selfOrigin` + `aoe` 70 | 発動: PHT ∈ 足元半径。命中: 半径内全負傷味方（庇護の帷型 `poolFromEffectIndex` は採用しない — 方針 A） |
+| active_2 / active_3 | `all` ally | withhold: パーティに負傷者がいれば可（位置無関係） |
+| active_4 条件分岐 | `stat` ally / `order: ratio` | 最低 HP ≤50% への濃縮 HoT |
 
 - Lv10 `sp_alchemist_passive_3` — Wave 回数限定の debuff cleanse（`periodicDispel` / `onDebuffReceived`）。薬草師専用の補助個性。
 

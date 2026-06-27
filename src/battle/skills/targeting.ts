@@ -17,7 +17,7 @@ import {
   pierceStepFields,
 } from './powerStep.ts';
 import { getBattleX } from '../combatPosition.ts';
-import { getEffectiveMaxHp } from '../combatMath.ts';
+import { getEffectiveMaxHp, currentHpRatio } from '../combatMath.ts';
 import {
   getAttackablePool,
   isInForwardSegment,
@@ -64,6 +64,28 @@ function livingAllies(allies: CombatantState[]): CombatantState[] {
 
 function livingEnemies(enemies: CombatantState[]): CombatantState[] {
   return enemies.filter((e) => e.isAlive);
+}
+
+/** 生存味方のうち hp/effectiveMaxHp 最小の負傷者（PHT）。正本: docs/spec/combat.md §回復 PHT */
+export function resolvePriorityHealTarget(
+  allies: readonly CombatantState[],
+): CombatantState | null {
+  const candidates = allies.filter(
+    (unit) => unit.isAlive && unit.hp < getEffectiveMaxHp(unit),
+  );
+  if (candidates.length === 0) return null;
+
+  return candidates.reduce((best, current) => {
+    const bestRatio = currentHpRatio(best);
+    const currentRatio = currentHpRatio(current);
+    if (currentRatio < bestRatio - 1e-9) return current;
+    if (currentRatio > bestRatio + 1e-9) return best;
+    const bestMax = getEffectiveMaxHp(best);
+    const currentMax = getEffectiveMaxHp(current);
+    if (currentMax < bestMax) return current;
+    if (currentMax > bestMax) return best;
+    return current.id < best.id ? current : best;
+  });
 }
 
 export function pickTargetFromPool(

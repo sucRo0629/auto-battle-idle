@@ -94,7 +94,30 @@
 
 **原則:** 回復後の HP は `min(effectiveMaxHp, hp + amount)` — 超過分は切り捨て。maxHp バフ / デバフ解消で effectiveMaxHp が下がった場合、現在 HP は effectiveMaxHp で切り上げない（超過分のみ clamp）。
 
-**アクティブ heal / hot の発動保留:** 射程内の対象候補（`self` のときは自身）に **欠損 HP（`hp < effectiveMaxHp`）の味方が 1 人もいない場合は発動しない**（CD 進行なし）。**同一スキルにバリア付与 effect がある場合は例外** — 対象が満タンでも heal / hot を解決する。パッシブ由来の HoT aura / 定期 tick は対象外。`target` の `order: ratio` で同率タイのときはプール先頭が選ばれる（実 HP のタイブレークなし）— 保留ルール適用後、全員満タン時には通常到達しない。**heal の味方 stat / distance 対象は使用者自身も候補に含める**（支援 buff 等の非 heal 味方 stat は従来どおり使用者除外）。
+### Priority Heal Target（PHT）
+
+回復系スキル・ally-heal 自動接近・heal / hot 発動保留で共有する正本。実装: `resolvePriorityHealTarget`（`src/battle/skills/targeting.ts` または `combatMath.ts` — 接近・withhold・stat ratio 選定の単一経路）。
+
+**定義:** 生存味方のうち `hp < effectiveMaxHp` を負傷者とし、その中で `hp / effectiveMaxHp` が最小の 1 体を **PHT** とする。満タン味方は候補外。
+
+**同率タイブレーク:** (1) HP 割合最小 (2) `effectiveMaxHp` 昇順 (3) `id` 辞書順。
+
+**適用:**
+
+| 用途 | ルール |
+| ---- | ------ |
+| 味方 `stat` + `order: ratio` 単体 heal / hot | PHT を選ぶ（従来 spec と同一意味を PHT 名で正本化） |
+| ally-heal 自動接近 | PHT が通常攻撃 heal 射程内に入るまで前進。全員満タンは現位置維持（敵 chase しない） |
+| ally-heal 接近停止 | 射程内に **PHT** がいれば停止（任意の軽傷者ではない） |
+| heal / hot withhold — 単体・`stat` | PHT が射程内にいなければ保留（CD 進行なし） |
+| heal / hot withhold — `selfOrigin` + `aoe` | **PHT が aoe 半径内**（使用者足元）にいなければ保留 |
+| heal / hot withhold — `kind: all` + ally | パーティに負傷者（≡ PHT が存在）がいなければ保留。位置制約なし |
+| パッシブ aura HoT | withhold 対象外（既存） |
+| 同一スキルに barrier effect | 満タンでも heal / hot を解決（既存例外） |
+
+接近・formation clamp の詳細は [battle-field.md](battle-field.md) §4.4。薬草師 A1 等のクラス別割当は [classes-and-skills.md](classes-and-skills.md) 薬草師節。
+
+**アクティブ heal / hot の発動保留（要約）:** 上表の PHT 基準。パッシブ由来 HoT aura / 定期 tick は対象外。**heal の味方 stat / distance 対象は使用者自身も候補に含める**（支援 buff 等の非 heal 味方 stat は従来どおり使用者除外）。`order: ratio` の同率タイブレークは本節 PHT 定義に従う。
 
 **余剰回復バリア変換**（パッシブ `excessHealToBarrier`）: 試行回復量のうち maxHp 超過分 × `barrierScale` を **バリア上書き**（`barrierStack` なし）。
 
@@ -506,7 +529,7 @@ multiLock × P3 × P4 の複数 Hit ごとに P2/P3/P4 は意図通り独立発�
 | 形状        | 挙動                                                                                                                                                                                                                                                                                       |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `single`    | 攻撃可能プールから 1 体。`hitCount >= 2` なら同一対象へ N 回（`hitDurationSec` で分散）                                                                                                                                                                                                    |
-| `aoe`       | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散）                                                                                                                                                                                                        |
+| `aoe`       | anchor + 半径内全員。`hitCount >= 2` なら同一範囲へ N 回（`hitDurationSec` で分散）。`selfOrigin` + ally heal / hot の **発動保留** は PHT が半径内かで判定（§回復 PHT）。命中は足元半径内の全負傷味方（形状は JSON どおり） |
 | `multiLock` | `targetRule` で並べた攻撃可能プールへ `hitCount` 回ラウンドロビン（複数対象。1 体のみなら同一 ID 連打）。味方 HP 割合最低（`order: ratio`）のとき満タン味方はプールから除外                                                                                                                |
 | `pierce`    | **`order: selfOrigin` 必須**。使用者の向き（味方 +X / 敵 −X）へ `range` px の前方セグメント内を手前 → 奥に命中。`piercePowerStepMultiplier` で威力減衰、`pierceDurationSec` で適用分散可。敵向け pierce 通常攻撃の接近停止は [battle-field.md](battle-field.md) §4.4 を正本とする                                                                                                   |
 | `chain`     | anchor から同陣営へ距離内で連鎖。直前 hop と同じユニットには飛ばない。範囲内に未命中がいれば最も近い未命中を優先（全員命中済みなら再訪問可）。`chainPowerStepMultiplier` で威力減衰、`chainDurationSec`（未指定時 `0.15×chainCount+0.5` 秒）で **スキル発動から最終命中まで** の総時間分散 |

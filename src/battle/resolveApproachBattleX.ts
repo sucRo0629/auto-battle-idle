@@ -1,5 +1,5 @@
 import type { CombatantState, GameData, TargetSpec } from "./types.ts";
-import { getEffectiveMaxHp, getPassiveDefs } from "./combatMath.ts";
+import { getPassiveDefs } from "./combatMath.ts";
 import {
   getEnemyContactX,
   isPlayerRearAssaultAccess,
@@ -10,7 +10,7 @@ import {
   resolveApproachRangePx,
   resolveFormationRangePx,
 } from "./combatPosition.ts";
-import { pickTargetFromPool, resolveTargetSpec } from "./skills/targeting.ts";
+import { pickTargetFromPool, resolvePriorityHealTarget, resolveTargetSpec } from "./skills/targeting.ts";
 import {
   getEffectTarget,
   getTargetPool,
@@ -69,7 +69,7 @@ function livingAllyCount(players: CombatantState[]): number {
   return livingPlayers(players).length;
 }
 
-/** 射程内に負傷味方がいれば回復通常攻撃の停止対象 */
+/** 射程内に PHT がいれば回復通常攻撃の停止対象 */
 function resolveDamagedAllyHealTarget(
   player: CombatantState,
   players: CombatantState[],
@@ -77,6 +77,8 @@ function resolveDamagedAllyHealTarget(
   gameData: GameData,
 ): CombatantState | null {
   if (!isAllyHealBasicAttack(player, gameData)) return null;
+  const pht = resolvePriorityHealTarget(livingPlayers(players));
+  if (!pht) return null;
   const spec = resolveAllyHealBasicTargetSpec(
     player,
     players,
@@ -89,14 +91,11 @@ function resolveDamagedAllyHealTarget(
     livingAllyCount(players),
   );
   const pool = getAttackablePool(spec, player, players, enemies, range);
-  const damaged = pool.filter(
-    (unit) => unit.isAlive && unit.hp < getEffectiveMaxHp(unit),
-  );
-  if (damaged.length === 0) return null;
-  return pickTargetFromPool(spec, player, damaged);
+  if (!pool.some((unit) => unit.id === pht.id)) return null;
+  return pht;
 }
 
-/** 射程外の負傷味方（接近目標） */
+/** 射程外の PHT（接近目標） */
 function resolveOutOfRangeDamagedAllyHealTarget(
   player: CombatantState,
   players: CombatantState[],
@@ -104,26 +103,15 @@ function resolveOutOfRangeDamagedAllyHealTarget(
   gameData: GameData,
 ): CombatantState | null {
   if (!isAllyHealBasicAttack(player, gameData)) return null;
-  const spec = resolveAllyHealBasicTargetSpec(
-    player,
-    players,
-    enemies,
-    gameData,
-  );
+  const pht = resolvePriorityHealTarget(livingPlayers(players));
+  if (!pht) return null;
   const range = resolveApproachRangePx(
     player,
     gameData,
     livingAllyCount(players),
   );
-  const pool = getTargetPool(spec, player, players, enemies);
-  const outOfRange = pool.filter(
-    (unit) =>
-      unit.isAlive &&
-      unit.hp < getEffectiveMaxHp(unit) &&
-      !isWithinSkillRange(player, unit, range),
-  );
-  if (outOfRange.length === 0) return null;
-  return pickTargetFromPool(spec, player, outOfRange);
+  if (isWithinSkillRange(player, pht, range)) return null;
+  return pht;
 }
 
 function resolveUnitTargetSpec(
