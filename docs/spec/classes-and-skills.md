@@ -31,6 +31,50 @@
 | **攻撃** | `damage` または `dot` を含むスキル（通常攻撃 `slotKind: basic` 含む）             |
 | **反撃** | 攻撃を受けたとき、設定量のダメージを攻撃者へ返す効果。バフ/デバフタグには含めない |
 
+### UI 用語辞書
+
+スキル説明など DOM UI 上の **ゲーム用語** を、クリックで補足説明できるようにするための辞書。戦闘ルールの正本は引き続き [combat.md](combat.md) および本書の各節。辞書は **プレイヤー向け要約** を載せ、詳細数式・パイプラインは spec へ委ねる。
+
+**実装（予定）:** `src/ui/gameTermGlossary.ts`（辞書）、`annotateGameTerms.ts`（本文へのリンク化）、`GameTermPanel.ts`（用語パネル）。画面振る舞いは [party-formation-ui.md §6.4](party-formation-ui.md#64-インライン用語パネル) を正とする。
+
+#### スコープ（v1）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 表示言語 | **日本語のみ**（`locale: "ja"`）。他 locale は未実装 |
+| 適用面 | 編成 UI のスキルカード説明文（Phase 4d）。エディタのスキル説明プレビューは同辞書で揃える |
+| 説明文生成 | `formatSkillText` は当面プレーン文字列のまま。辞書は **事後マッチ** または将来の `formatSkillCardLines` 構造化出力と接続 |
+| スキル JSON | 用語説明フィールドは **持たない**（4b 方針と同様。説明は生成 + 辞書） |
+
+#### エントリ形状（locale キー付き）
+
+内部 ID（`GameTermId`）を正本とし、表示・マッチ・説明は locale ごとに保持する。v1 では `ja` のみ必須。
+
+| フィールド | 意味 |
+| ---------- | ---- |
+| `id` | 言語非依存の辞書キー（例: `stun`, `barrier`, `wardBarrier`） |
+| `title` | `{ ja: "スタン", … }` — 用語パネル見出し |
+| `description` | `{ ja: "…", … }` — パネル本文（1〜3 文の要約） |
+| `aliases` | `{ ja: ["スタン"], … }` — 本文中でリンク化する表記。**長い語を先**にマッチ |
+| `statusCategory?` | 状態系のみ。[combat.md §ステータス効果](combat.md#ステータス効果) の `StatusDisplayCategory` と対応。HUD と同じ PNG（`src/assets/status-icons/`）をパネルに表示 |
+
+**多言語:** v1 では i18n ライブラリは導入しない。型・データ形状だけ locale キーを持ち、将来 `en` 等を追加できるようにする。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。
+
+#### 混同禁止（別 ID 必須）
+
+| ID（例） | 日本語 | 正本 |
+| -------- | ------ | ---- |
+| `barrier` | **バリア** | `barrierHp` — HP より先に消費されるダメージ吸収（[combat.md §バリア](combat.md#バリア)） |
+| `wardBarrier` | **障壁** | `wardBarrier` スタック — 被ダメ軽減。バリアより先に消費（本書 結界師節） |
+| `mark` | **印** | 印術師専用 Mark |
+| `arenaMark` | **闘技場の指名** 等 | 闘技士 `arenaDominance` 系。印（Mark）と混同しない |
+
+#### 登録方針
+
+- 初版は `formatSkillText` 出力で **頻出する用語** から段階追加（全用語一括は不要）
+- ルール変更時は **本書 / combat.md と辞書の `ja` を同作業内で更新**
+- 状態アイコン・カテゴリの正本は [combat.md §ステータス効果](combat.md#ステータス効果) の HUD バッジ節。辞書の `statusCategory` はそれに従う
+
 ## スキル機能レイヤー
 
 スキル設計の正本は、一般 RPG 的な職業語ではなく **Kill / Flow / Survival** の戦闘機能レイヤーで説明する。

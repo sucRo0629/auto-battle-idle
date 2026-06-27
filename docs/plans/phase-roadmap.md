@@ -230,7 +230,7 @@ data/
 
 **ゴール:** 戦闘外 DOM UI（編成・統計）と戦闘 HUD の見た目を **PC 向け RPG 情報パネル**基調に揃え、Web アプリ風ダッシュボード感を除去する。
 
-- **編成:** [party-formation-ui.md](../spec/party-formation-ui.md)（**v0.4**）に沿って `SkillMenuPanel` を再構成。上ロスター / 下詳細、編成内訳行、中央モーダル Picker、閲覧スキルカード（効果単位改行）、`playerProgress.level` をヘッダー 1 か所表示。
+- **編成:** [party-formation-ui.md](../spec/party-formation-ui.md)（**v0.4**）に沿って `SkillMenuPanel` を再構成。上ロスター / 下詳細、編成内訳行、中央モーダル Picker、閲覧スキルカード（効果単位改行）、**インライン用語パネル**（クリック・辞書 locale キー、`ja` v1）、`playerProgress.level` をヘッダー 1 か所表示。
 - **統計:** [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) に沿って `BattleStatsOverlay` / `PartyMemberStatsDisplay` を刷新。デザイン言語は編成 UI [§11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通) と共通。
 
 **着手条件**
@@ -244,6 +244,7 @@ data/
 - 上ロスター / 下詳細、編成内訳行（空き枠 suffix）、PC RPG 情報パネル基調（§11）
 - `playerProgress.level` をヘッダー表示。`party[].progress.level` は表示に使わない
 - スキル: 縦セクション + 閲覧カード、効果単位改行、詳細全体スクロール
+- 用語 UI: [classes-and-skills.md §UI 用語辞書](../spec/classes-and-skills.md#ui-用語辞書) + [party-formation-ui.md §6.4](../spec/party-formation-ui.md#64-インライン用語パネル) — `gameTermGlossary.ts`（locale キー）、クリック Popover、パネル内用語の履歴遷移
 - Picker: 3 ロールブロック・中央モーダル（タブ / サイドバー / rangePx なし）
 
 **状態バッジ（HUD）— 4d と同タイミングで実装**
