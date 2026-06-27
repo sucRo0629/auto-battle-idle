@@ -746,7 +746,6 @@ export class SkillMenuPanel {
 
     const modal = document.createElement("div");
     modal.className = "skill-menu-picker-modal";
-    modal.addEventListener("click", (event) => event.stopPropagation());
 
     const heading = document.createElement("h3");
     heading.className = "skill-menu-picker-modal-title";
