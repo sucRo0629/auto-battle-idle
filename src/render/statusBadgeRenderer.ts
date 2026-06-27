@@ -290,17 +290,17 @@ function drawStackCountLabel(
   stackCount: number,
 ): void {
   const text = String(stackCount);
-  const fontSize = Math.max(5, size * 0.42);
+  const fontSize = Math.round(Math.max(9, size * 0.5625));
   ctx.save();
   ctx.font = `bold ${fontSize}px ${themeFontFamily(ctx)}`;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'bottom';
   ctx.lineJoin = 'round';
-  ctx.lineWidth = Math.max(1, fontSize * 0.18);
+  ctx.lineWidth = Math.max(1.5, fontSize * 0.22);
   ctx.strokeStyle = '#000000';
   ctx.fillStyle = '#ffffff';
-  const textX = x + size - 1;
-  const textY = y + size - 1;
+  const textX = x + size;
+  const textY = y + size;
   ctx.strokeText(text, textX, textY);
   ctx.fillText(text, textX, textY);
   ctx.restore();
