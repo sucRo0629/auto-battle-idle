@@ -174,7 +174,7 @@ export class SkillMenuPanel {
 
     this.detailWrapEl = document.createElement("div");
     this.detailWrapEl.className = "skill-menu-detail-wrap";
-    this.detailWrapEl.append(this.bodyEl, this.pickerOverlayEl);
+    this.detailWrapEl.append(this.bodyEl);
 
     this.gameTermPanel = new GameTermPanel(this.root, {
       locale: "ja",
@@ -187,7 +187,11 @@ export class SkillMenuPanel {
       this.summaryEl,
       noteEl
     );
-    this.root.append(this.formationBlockEl, this.detailWrapEl);
+    this.root.append(
+      this.formationBlockEl,
+      this.detailWrapEl,
+      this.pickerOverlayEl
+    );
     this.container.appendChild(this.root);
     this.render();
   }
@@ -297,6 +301,14 @@ export class SkillMenuPanel {
         "skill-menu-roster-card-sprite-frame skill-menu-roster-card-sprite-frame--body-atlas";
       frame.setAttribute("aria-hidden", "true");
       frame.style.backgroundImage = `url("${bodyUrl}")`;
+      spriteWrap.style.setProperty(
+        "--body-atlas-cell-width",
+        `${layout.cellWidth}px`
+      );
+      spriteWrap.style.setProperty(
+        "--body-atlas-cell-height",
+        `${layout.cellHeight}px`
+      );
       frame.style.setProperty(
         "--body-atlas-idle-shift",
         `${-layout.cellWidth * idle.frames}px`
@@ -417,6 +429,16 @@ export class SkillMenuPanel {
     heading.className = "skill-menu-section-title";
     heading.textContent = "クラス情報";
 
+    const header = document.createElement("div");
+    header.className = "skill-menu-class-info-header";
+
+    header.appendChild(
+      this.createIconWrap(preset, preset.displayName)
+    );
+
+    const textWrap = document.createElement("div");
+    textWrap.className = "skill-menu-class-info-text";
+
     const nameEl = document.createElement("div");
     nameEl.className = "skill-menu-class-info-name";
     nameEl.textContent = preset.displayName;
@@ -429,13 +451,16 @@ export class SkillMenuPanel {
     metaEl.className = "skill-menu-class-info-meta";
     metaEl.textContent = this.formatClassFormationRole(preset);
 
+    textWrap.append(nameEl, epithetEl, metaEl);
+    header.appendChild(textWrap);
+
     const changeButton = document.createElement("button");
     changeButton.type = "button";
     changeButton.className = "skill-menu-open-picker-button";
     changeButton.dataset.action = "open-class-picker";
     changeButton.textContent = "クラスを変更";
 
-    section.append(heading, nameEl, epithetEl, metaEl, changeButton);
+    section.append(heading, header, changeButton);
     return section;
   }
 
@@ -589,10 +614,10 @@ export class SkillMenuPanel {
     nameEl.className = "skill-menu-skill-view-card-name";
     nameEl.textContent = label;
 
-    header.append(nameEl);
     header.appendChild(
       this.createIconWrap(preset, label, skillId, def)
     );
+    header.appendChild(nameEl);
     card.appendChild(header);
 
     if (def) {
@@ -652,7 +677,7 @@ export class SkillMenuPanel {
 
   private formatLockedSlotFooter(slotIndex: number): string {
     const unlockLevel = slotIndex < 2 ? 0 : slotIndex === 2 ? 10 : 20;
-    return `プレイヤー Lv${unlockLevel} で枠 +1`;
+    return `プレイヤー Lv${unlockLevel} で追加`;
   }
 
   private getSkillUnlockLevel(
@@ -717,6 +742,7 @@ export class SkillMenuPanel {
 
     this.pickerOverlayEl.hidden = false;
     this.pickerOverlayEl.replaceChildren();
+    this.pickerOverlayEl.scrollTop = 0;
 
     const modal = document.createElement("div");
     modal.className = "skill-menu-picker-modal";
