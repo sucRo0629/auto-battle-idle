@@ -183,8 +183,48 @@ function isSelfTargetSpec(spec: TargetSpec): boolean {
   return spec.kind === "self";
 }
 
-function resolveEffectTargetSpec(effect: SkillEffectDef): TargetSpec {
-  return effect.target ?? defaultTargetForEffectType(effect.type);
+function resolveEffectTargetSpec(
+  effect: SkillEffectDef,
+  inheritTarget?: TargetSpec,
+): TargetSpec {
+  return effect.target ?? inheritTarget ?? defaultTargetForEffectType(effect.type);
+}
+
+function formatCompactTargetHint(spec: TargetSpec): string {
+  switch (spec.kind) {
+    case "distance":
+      if (spec.order === "nearest") return "至近";
+      if (spec.order === "selfOrigin") return "自身起点";
+      return "";
+    case "stat":
+      if (spec.side === "ally" && spec.stat === "hp" && spec.order === "ratio") {
+        return "最低HP味方";
+      }
+      return "";
+    case "all":
+      return spec.side === "ally" ? "味方全体" : "";
+    default:
+      return "";
+  }
+}
+
+function resolveActiveSkillScopePrefix(def: ActiveSkillDef): string | undefined {
+  if (
+    def.target?.kind === "distance" &&
+    def.target.order === "selfOrigin" &&
+    (def.targetShape ?? "single") === "aoe"
+  ) {
+    const radius = def.aoeRadiusPx;
+    return radius !== undefined ? `自身起点±${radius}px：` : "自身起点：";
+  }
+  if (def.effect.length > 0) {
+    const allAllyAll = def.effect.every((effect) => {
+      const target = resolveEffectTargetSpec(effect, def.target);
+      return target.kind === "all" && target.side === "ally";
+    });
+    if (allAllyAll) return "味方全体";
+  }
+  return undefined;
 }
 
 function collectEffectDurationSec(
@@ -276,10 +316,21 @@ function formatActiveSkillEffectBody(def: ActiveSkillDef): string {
   if (def.effect.some((effect) => effect.type === "blockResonanceConsume")) {
     return formatBlockResonanceConsumeSkillEffect(def);
   }
-  return def.effect
-    .map((effect) => formatActiveEffectDetail(effect, { compact: true }))
+  const scopePrefix = resolveActiveSkillScopePrefix(def);
+  const effectParts = def.effect
+    .map((effect) =>
+      formatActiveEffectDetail(effect, {
+        compact: true,
+        scopePrefix,
+        inheritTarget: def.target,
+      }),
+    )
     .filter(Boolean)
     .join("、");
+  if (scopePrefix && effectParts) {
+    return `${scopePrefix}${effectParts}`;
+  }
+  return effectParts;
 }
 
 function formatTarget(
@@ -452,7 +503,12 @@ function formatBuffTargetStats(
 }
 
 function compactStatEffectLabel(label: string): string {
-  return label.replace(/\s+×/g, "×").replace(/\+\s+/g, "+").replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
+  return label
+    .replace(/\s+×/g, "×")
+    .replace(/\s+\+/g, "+")
+    .replace(/\+\s+/g, "+")
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")");
 }
 
 function formatDefenseIgnoreSpec(
@@ -548,9 +604,14 @@ function formatCounterResponse(response: CounterResponseDef): string {
 
 function formatActiveEffectDetail(
   effect: SkillEffectDef,
-  options?: { compact?: boolean },
+  options?: {
+    compact?: boolean;
+    scopePrefix?: string;
+    inheritTarget?: TargetSpec;
+  },
 ): string {
   const compact = options?.compact ?? false;
+  const inheritTarget = options?.inheritTarget;
 
   if (effect.type === "blockResonanceConsume") {
     return "";
@@ -566,9 +627,10 @@ function formatActiveEffectDetail(
     return `条件×${conditionCount} → 成立: ${thenSummary} / 不成立: ${elseSummary}`;
   }
 
+  const targetSpec = resolveEffectTargetSpec(effect, inheritTarget);
   const target = formatTarget(
-    effect.target,
-    defaultTargetForEffectType(effect.type)
+    effect.target ?? inheritTarget,
+    defaultTargetForEffectType(effect.type),
   );
   const shape = formatTargetShape(effect);
   const extras: string[] = [];
@@ -579,8 +641,13 @@ function formatActiveEffectDetail(
         ? DAMAGE_TYPE_LABELS[effect.damageType]
         : "";
       const amount = formatResourceAmount(effect.amount);
-      const power = dmgType ? `${dmgType} ${amount}` : amount;
-      extras.push(power);
+      if (compact) {
+        const hint = formatCompactTargetHint(targetSpec);
+        extras.push(`${hint}${dmgType}${amount}`);
+      } else {
+        const power = dmgType ? `${dmgType} ${amount}` : amount;
+        extras.push(power);
+      }
       const inc = formatDamageIncreaseSpec(effect.damageIncrease);
       if (inc) extras.push(inc);
       const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);
@@ -621,6 +688,9 @@ function formatActiveEffectDetail(
             effect.dispelCount ?? 0
           }${formatDispelPriorityLabel(effect.dispelPriority)}`
         );
+      } else if (compact) {
+        const hint = formatCompactTargetHint(targetSpec);
+        extras.push(`${hint}${formatResourceAmount(effect.amount)}回復`);
       } else {
         extras.push(
           `${
@@ -633,11 +703,19 @@ function formatActiveEffectDetail(
       break;
     case "buff":
       if (effect.buffSubKind === "barrier") {
-        extras.push(
-          `${BUFF_SUB_KIND_LABELS.barrier} ${formatResourceAmount(
-            effect.amount
-          )}${effect.barrierStack ? "（加算）" : ""}`
-        );
+        if (compact) {
+          extras.push(
+            `${formatResourceAmount(effect.amount)}${
+              effect.barrierStack ? "（加算）" : ""
+            }`,
+          );
+        } else {
+          extras.push(
+            `${BUFF_SUB_KIND_LABELS.barrier} ${formatResourceAmount(
+              effect.amount
+            )}${effect.barrierStack ? "（加算）" : ""}`
+          );
+        }
       } else if (effect.buffSubKind === "wardBarrier") {
         extras.push(
           `${BUFF_SUB_KIND_LABELS.wardBarrier} ×${
@@ -692,63 +770,105 @@ function formatActiveEffectDetail(
       }
       break;
     case "basicAttackTransform": {
-      const parts: string[] = [
-        EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS.basicAttackTransform,
-      ];
-      if (effect.hitCountMultiplier !== undefined) {
-        parts.push(`${effect.hitCountMultiplier}回`);
-      }
-      if (effect.primaryEffectOverride !== undefined) {
-        const overrideParts: string[] = [
-          effect.primaryEffectOverride.type === "heal"
-            ? "通常攻撃→回復"
-            : "通常攻撃置換",
+      if (compact) {
+        const parts: string[] = [];
+        if (effect.primaryEffectOverride !== undefined) {
+          const override = effect.primaryEffectOverride;
+          if (override.type === "damage") {
+            const dmgType = override.damageType
+              ? DAMAGE_TYPE_LABELS[override.damageType]
+              : "";
+            parts.push(
+              `通常攻撃→${dmgType}${formatResourceAmount(override.amount)}`,
+            );
+          } else if (override.type === "heal") {
+            parts.push(
+              `通常攻撃→${formatResourceAmount(override.amount)}回復`,
+            );
+          }
+        } else if (effect.primaryPatch !== undefined) {
+          const patchParts: string[] = ["通常攻撃→"];
+          if (effect.primaryPatch.damageType !== undefined) {
+            patchParts.push(DAMAGE_TYPE_LABELS[effect.primaryPatch.damageType]);
+          }
+          if (effect.primaryPatch.amount?.atkScale !== undefined) {
+            patchParts.push(`ATK×${effect.primaryPatch.amount.atkScale}`);
+          }
+          if (effect.primaryPatch.amount?.defScale !== undefined) {
+            patchParts.push(`DEF×${effect.primaryPatch.amount.defScale}`);
+          }
+          parts.push(patchParts.join(""));
+        }
+        if (effect.appendEffects !== undefined && effect.appendEffects.length > 0) {
+          for (const appendEffect of effect.appendEffects) {
+            parts.push(
+              formatActiveEffectDetail(appendEffect, {
+                compact: true,
+                inheritTarget: appendEffect.target,
+              }),
+            );
+          }
+        }
+        extras.push(parts.filter(Boolean).join("、"));
+      } else {
+        const parts: string[] = [
+          EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS.basicAttackTransform,
         ];
+        if (effect.hitCountMultiplier !== undefined) {
+          parts.push(`${effect.hitCountMultiplier}回`);
+        }
+        if (effect.primaryEffectOverride !== undefined) {
+          const overrideParts: string[] = [
+            effect.primaryEffectOverride.type === "heal"
+              ? "通常攻撃→回復"
+              : "通常攻撃置換",
+          ];
+          if (
+            effect.primaryEffectOverride.type === "damage" &&
+            effect.primaryEffectOverride.damageType !== undefined
+          ) {
+            overrideParts.push(
+              DAMAGE_TYPE_LABELS[effect.primaryEffectOverride.damageType]
+            );
+          }
+          if (effect.primaryEffectOverride.amount?.atkScale !== undefined) {
+            overrideParts.push(
+              `ATK×${effect.primaryEffectOverride.amount.atkScale}`
+            );
+          }
+          if (effect.primaryEffectOverride.amount?.defScale !== undefined) {
+            overrideParts.push(
+              `DEF×${effect.primaryEffectOverride.amount.defScale}`
+            );
+          }
+          parts.push(overrideParts.join(" "));
+        }
+        if (effect.primaryPatch !== undefined) {
+          const patchParts: string[] = [];
+          if (effect.primaryPatch.damageType !== undefined) {
+            patchParts.push(DAMAGE_TYPE_LABELS[effect.primaryPatch.damageType]);
+          }
+          if (effect.primaryPatch.amount?.atkScale !== undefined) {
+            patchParts.push(`ATK×${effect.primaryPatch.amount.atkScale}`);
+          }
+          if (effect.primaryPatch.hitCount !== undefined) {
+            patchParts.push(`${effect.primaryPatch.hitCount}Hit`);
+          }
+          if (effect.primaryPatch.hitDurationSec !== undefined) {
+            patchParts.push(`${effect.primaryPatch.hitDurationSec}s`);
+          }
+          if (patchParts.length > 0) {
+            parts.push(patchParts.join(" "));
+          }
+        }
         if (
-          effect.primaryEffectOverride.type === "damage" &&
-          effect.primaryEffectOverride.damageType !== undefined
+          effect.appendEffects !== undefined &&
+          effect.appendEffects.length > 0
         ) {
-          overrideParts.push(
-            DAMAGE_TYPE_LABELS[effect.primaryEffectOverride.damageType]
-          );
+          parts.push(`+${effect.appendEffects.length}効果`);
         }
-        if (effect.primaryEffectOverride.amount?.atkScale !== undefined) {
-          overrideParts.push(
-            `ATK×${effect.primaryEffectOverride.amount.atkScale}`
-          );
-        }
-        if (effect.primaryEffectOverride.amount?.defScale !== undefined) {
-          overrideParts.push(
-            `DEF×${effect.primaryEffectOverride.amount.defScale}`
-          );
-        }
-        parts.push(overrideParts.join(" "));
+        extras.push(`${parts.join(" ")} ${effect.buffDurationSec ?? 0}s`);
       }
-      if (effect.primaryPatch !== undefined) {
-        const patchParts: string[] = [];
-        if (effect.primaryPatch.damageType !== undefined) {
-          patchParts.push(DAMAGE_TYPE_LABELS[effect.primaryPatch.damageType]);
-        }
-        if (effect.primaryPatch.amount?.atkScale !== undefined) {
-          patchParts.push(`ATK×${effect.primaryPatch.amount.atkScale}`);
-        }
-        if (effect.primaryPatch.hitCount !== undefined) {
-          patchParts.push(`${effect.primaryPatch.hitCount}Hit`);
-        }
-        if (effect.primaryPatch.hitDurationSec !== undefined) {
-          patchParts.push(`${effect.primaryPatch.hitDurationSec}s`);
-        }
-        if (patchParts.length > 0) {
-          parts.push(patchParts.join(" "));
-        }
-      }
-      if (
-        effect.appendEffects !== undefined &&
-        effect.appendEffects.length > 0
-      ) {
-        parts.push(`+${effect.appendEffects.length}効果`);
-      }
-      extras.push(`${parts.join(" ")} ${effect.buffDurationSec ?? 0}s`);
       break;
     }
     case "debuff":
@@ -898,13 +1018,30 @@ function formatActiveEffectDetail(
       break;
   }
 
-  if (effect.range !== undefined && effect.type !== "counter") {
+  if (effect.range !== undefined && effect.type !== "counter" && !compact) {
     extras.push(`射程${effect.range}px`);
   }
 
   const kindLabel = formatEffectKindLabel(effect.type);
   const detail = extras.filter(Boolean).join(" ");
-  if (compact && isSelfTargetSpec(resolveEffectTargetSpec(effect))) {
+  if (compact) {
+    if (
+      options?.scopePrefix &&
+      targetSpec.kind === "all" &&
+      targetSpec.side === "ally"
+    ) {
+      return detail;
+    }
+    if (isSelfTargetSpec(targetSpec)) {
+      return detail;
+    }
+    if (
+      options?.scopePrefix &&
+      targetSpec.kind === "distance" &&
+      targetSpec.order === "selfOrigin"
+    ) {
+      return detail;
+    }
     return detail;
   }
   return `${kindLabel} ${detail} → ${target} / ${shape}`.trim();
@@ -1120,19 +1257,23 @@ function formatPassiveEffect(
         const frontMul =
           def.lastStandRecoveryFrontAllyDamageTakenMultiplier ?? 0.75;
         const duration = def.lastStandRecoveryDurationSec ?? 5;
-        return `致死時 HP${formatPercent(
-          hpRatio
-        )}復活（Wave 1回）· 自己被ダメ×${selfMul} · 前列×${frontMul} · ${duration}s`;
+        return `HPが0以下になるダメージを受けた際、HP${formatPercent(
+          hpRatio,
+        )}復活（Wave 1回まで）、自己被ダメ×${selfMul}、前列被ダメ×${frontMul}、${formatSecondsLabel(
+          duration,
+        )}`;
       }
       if (def.effect === "frontBlockAura") {
-        const parts: string[] = ["前列 block aura"];
+        const parts: string[] = [];
         if (def.chance !== undefined) {
-          parts.push(`+${formatPercent(def.chance)}`);
+          parts.push(`前列ブロック率+${formatPercent(def.chance)}`);
+        } else {
+          parts.push("前列ブロック率");
         }
         if (def.frontBlockAuraMagicBlock) {
-          parts.push("魔法 block");
+          parts.push("魔法ブロック");
         }
-        return parts.join(" · ");
+        return parts.join("、");
       }
       if (def.effect === "blockResonance") {
         const parts: string[] = [];
@@ -1421,6 +1562,7 @@ function formatPassiveEffect(
     case "threatControl": {
       const parts: string[] = [];
       if (
+        def.onDamageTakenFlat !== undefined ||
         def.onDamageTakenScale !== undefined ||
         def.onBlockFlat !== undefined
       ) {
@@ -1431,6 +1573,15 @@ function formatPassiveEffect(
         def.threatDecayMultiplier < 1
       ) {
         parts.push("ヘイト減衰速度低下");
+      }
+      if (def.frontThreatFloor !== undefined) {
+        parts.push(`前列ヘイト下限${formatPercent(def.frontThreatFloor)}`);
+      }
+      if (
+        def.frontThreatDecayMultiplier !== undefined &&
+        def.frontThreatDecayMultiplier < 1
+      ) {
+        parts.push("前列ヘイト減衰速度低下");
       }
       return parts.length > 0 ? parts.join("、") : "ヘイト制御";
     }

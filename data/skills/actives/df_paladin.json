@@ -30,6 +30,19 @@
     },
     "effect": [
       {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "damageType": "magic",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      },
+      {
         "type": "heal",
         "amount": {
           "kind": "atkBased",
@@ -46,19 +59,6 @@
         },
         "healSubKind": "instant",
         "range": 50
-      },
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "damage",
-        "damageType": "magic",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1
-        }
       }
     ],
     "vfx": {

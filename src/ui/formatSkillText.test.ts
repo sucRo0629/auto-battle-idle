@@ -117,9 +117,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatActiveDescription(def);
     expect(desc).toContain('CD：11秒');
-    expect(desc).toContain('物理 ATK×0.9');
-    expect(desc).toContain('範囲');
-    expect(desc).toContain('±50px');
+    expect(desc).toContain('至近物理ATK×0.9');
   });
 
   it('formats move + multi-lock damage', () => {
@@ -147,11 +145,8 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatActiveDescription(def);
     expect(desc).toContain('CD：9秒');
-    expect(desc).toContain('移動');
     expect(desc).toContain('アンカー +32px');
-    expect(desc).toContain('マルチロック');
-    expect(desc).toContain('×3');
-    expect(desc).toContain('物理 ATK×0.7');
+    expect(desc).toContain('至近物理ATK×0.7');
   });
 
   it('formats buff with flat bonus before multiplier', () => {
@@ -179,7 +174,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatActiveDescription(def);
     expect(desc).toContain('CD：被撃10');
-    expect(desc).toContain('(DEF +10)×1.8');
+    expect(desc).toContain('(DEF+10)×1.8');
     expect(desc).toContain('HoT maxHp×1%');
   });
 
@@ -257,8 +252,7 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('貫通');
-    expect(desc).toContain('物理 ATK×1.1');
+    expect(desc).toContain('至近物理ATK×1.1');
   });
 
   it('formats smart fire gate and maxCharges', () => {
@@ -417,6 +411,52 @@ describe('formatActiveDescription', () => {
     expect(formatPassiveDescription(p3!)).toContain('8秒ごとに1スタック消失');
     expect(formatPassiveDescription(p4!)).toBe(
       '効果：HPが0以下になるダメージを受けた際、3秒無敵（Wave 1回まで）',
+    );
+  });
+
+  it('formats df_paladin actives with new template', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.df_paladin_active_1;
+    const a2 = gameData.skillRegistry.actives.df_paladin_active_2;
+    const a3 = gameData.skillRegistry.actives.df_paladin_active_3;
+    const a4 = gameData.skillRegistry.actives.df_paladin_active_4;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(a3).toBeDefined();
+    expect(a4).toBeDefined();
+
+    expect(formatActiveDescription(a1!)).toBe(
+      'CD：5秒 / 至近魔法ATK、最低HP味方ATK×1.25回復 /',
+    );
+    expect(formatActiveDescription(a2!)).toBe(
+      'CD：被撃8 / 持続：5秒 / 条件：自HP≤80% / 自身起点±50px：REG+10、被ダメ×0.95、ATK×0.2（加算） /',
+    );
+    expect(formatActiveDescription(a3!)).toBe(
+      'CD：12秒 / 持続：5秒 / 条件：対象HP≤80% / 味方全体被ダメ×0.9、REG+20 /',
+    );
+    expect(formatActiveDescription(a4!)).toBe(
+      'CD：15秒 / 持続：5秒 / 条件：対象HP≤70% / 通常攻撃→魔法DEF×1.2、最低HP味方DEF回復 /',
+    );
+  });
+
+  it('formats df_paladin passives with 効果 prefix', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const p1 = gameData.skillRegistry.passives.df_paladin_passive_1;
+    const p2 = gameData.skillRegistry.passives.df_paladin_passive_2;
+    const p3 = gameData.skillRegistry.passives.df_paladin_passive_3;
+    const p4 = gameData.skillRegistry.passives.df_paladin_passive_4;
+
+    expect(formatPassiveDescription(p1!)).toBe('効果：前列ブロック率+10%');
+    expect(formatPassiveDescription(p2!)).toBe(
+      '効果：前列ヘイト下限72%、前列ヘイト減衰速度低下',
+    );
+    expect(formatPassiveDescription(p3!)).toBe(
+      '効果：前列ブロック率+5%、魔法ブロック',
+    );
+    expect(formatPassiveDescription(p4!)).toBe(
+      '効果：HPが0以下になるダメージを受けた際、HP50%復活（Wave 1回まで）、自己被ダメ×0.5、前列被ダメ×0.75、5秒',
     );
   });
 });
