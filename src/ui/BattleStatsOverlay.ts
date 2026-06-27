@@ -38,7 +38,7 @@ export class BattleStatsOverlay {
     const backdrop = document.createElement('button');
     backdrop.type = 'button';
     backdrop.className = 'battle-stats-backdrop';
-    backdrop.setAttribute('aria-label', '統計情報を閉じる');
+    backdrop.setAttribute('aria-label', '戦闘詳細を閉じる');
     backdrop.addEventListener('click', () => callbacks.onClose());
     this.root.appendChild(backdrop);
 
@@ -54,7 +54,7 @@ export class BattleStatsOverlay {
 
     const titleEl = document.createElement('h2');
     titleEl.className = 'battle-stats-title';
-    titleEl.textContent = '統計情報';
+    titleEl.textContent = '戦闘詳細';
 
     const subtitleEl = document.createElement('p');
     subtitleEl.className = 'battle-stats-subtitle';
@@ -75,7 +75,9 @@ export class BattleStatsOverlay {
 
     this.bodyEl = document.createElement('div');
     this.bodyEl.className = 'battle-stats-window-body';
-    this.statsDisplay = new PartyMemberStatsDisplay(this.bodyEl);
+    this.statsDisplay = new PartyMemberStatsDisplay(this.bodyEl, {
+      themeHost: host.querySelector('.battle-view') ?? undefined,
+    });
     this.renderBody();
 
     windowEl.append(titleBar, this.bodyEl);
@@ -104,7 +106,6 @@ export class BattleStatsOverlay {
       return {
         slotIndex: row.slotIndex,
         displayName: row.displayName,
-        epithetEn: row.epithetEn,
         iconKey: preset ? resolveClassIconKey(preset) : row.classId,
       };
     });
@@ -113,6 +114,7 @@ export class BattleStatsOverlay {
   }
 
   destroy(): void {
+    this.statsDisplay.destroy();
     this.root.remove();
   }
 }

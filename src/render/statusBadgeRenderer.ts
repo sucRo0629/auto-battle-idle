@@ -148,6 +148,207 @@ export function drawStatusBadgeBlock(
   return layout;
 }
 
+export const COMPACT_STATUS_BADGE_VISIBLE_COUNT = 3;
+export const COMPACT_STATUS_BADGE_SLOT_COUNT = 4;
+
+export interface CompactStatusBadgeRowLayout {
+  totalWidth: number;
+  totalHeight: number;
+}
+
+export function measureCompactStatusBadgeRow(
+  scale: number,
+  iconSize: number,
+  outlineWidth: number,
+  rowOverlap = 0,
+): CompactStatusBadgeRowLayout {
+  const rowHeight = iconSize * scale;
+  const placeholder = Array.from(
+    { length: COMPACT_STATUS_BADGE_SLOT_COUNT },
+    () => ({ category: 'hot' as const }),
+  );
+  return {
+    totalWidth: statusBadgeRowWidth(
+      placeholder,
+      scale,
+      iconSize,
+      outlineWidth,
+      rowOverlap,
+    ),
+    totalHeight: rowHeight,
+  };
+}
+
+export function drawCompactStatusBadgeRow(
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  visible: StatusBadgeDrawItem[],
+  overflowCount: number,
+  scale: number,
+  theme: StatusBadgeTheme,
+): CompactStatusBadgeRowLayout {
+  const layout = measureCompactStatusBadgeRow(
+    scale,
+    theme.iconSize,
+    theme.iconOutlineWidth,
+    theme.rowOverlap,
+  );
+  const stride = statusBadgeStride(
+    scale,
+    theme.iconSize,
+    theme.iconOutlineWidth,
+    theme.rowOverlap,
+  );
+  let x = left;
+
+  for (let slot = 0; slot < COMPACT_STATUS_BADGE_VISIBLE_COUNT; slot++) {
+    const badge = visible[slot];
+    if (badge) {
+      drawStatusBadge(ctx, x, top, badge, scale, theme);
+    }
+    x += stride;
+  }
+
+  if (overflowCount > 0) {
+    drawOverflowCountBadge(ctx, x, top, overflowCount, scale, theme);
+  }
+
+  return layout;
+}
+
+export function drawOverflowCountBadge(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  overflowCount: number,
+  scale: number,
+  theme: StatusBadgeTheme,
+): void {
+  const badgeSize = theme.iconSize * scale;
+  const text = `+${overflowCount}`;
+  const fontSize = Math.round(Math.max(8, badgeSize * 0.5625));
+  ctx.save();
+  ctx.font = `bold ${fontSize}px ${themeFontFamily(ctx)}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(1.5, fontSize * 0.22);
+  ctx.strokeStyle = '#000000';
+  ctx.fillStyle = '#ffffff';
+  const textX = x + badgeSize / 2;
+  const textY = y + badgeSize / 2;
+  ctx.strokeText(text, textX, textY);
+  ctx.fillText(text, textX, textY);
+  ctx.restore();
+}
+
+export interface StatusBadgeWrapLayout {
+  rows: StatusBadgeDrawItem[][];
+  totalWidth: number;
+  totalHeight: number;
+}
+
+function packBadgesIntoRows(
+  badges: StatusBadgeDrawItem[],
+  maxWidth: number,
+  scale: number,
+  iconSize: number,
+  outlineWidth: number,
+  rowOverlap: number,
+): StatusBadgeDrawItem[][] {
+  if (badges.length === 0) return [];
+  const rows: StatusBadgeDrawItem[][] = [];
+  let currentRow: StatusBadgeDrawItem[] = [];
+
+  for (const badge of badges) {
+    const candidate = [...currentRow, badge];
+    const rowW = statusBadgeRowWidth(
+      candidate,
+      scale,
+      iconSize,
+      outlineWidth,
+      rowOverlap,
+    );
+    if (currentRow.length > 0 && rowW > maxWidth) {
+      rows.push(currentRow);
+      currentRow = [badge];
+    } else {
+      currentRow = candidate;
+    }
+  }
+
+  if (currentRow.length > 0) rows.push(currentRow);
+  return rows;
+}
+
+export function measureStatusBadgeWrap(
+  badges: StatusBadgeDrawItem[],
+  maxWidth: number,
+  scale: number,
+  iconSize: number,
+  outlineWidth: number,
+  rowOverlap = 0,
+): StatusBadgeWrapLayout {
+  const rows = packBadgesIntoRows(
+    badges,
+    maxWidth,
+    scale,
+    iconSize,
+    outlineWidth,
+    rowOverlap,
+  );
+  const rowHeight = iconSize * scale;
+  const rowGap = Math.max(2, scale * 2);
+  const rowWidths = rows.map((row) =>
+    statusBadgeRowWidth(row, scale, iconSize, outlineWidth, rowOverlap),
+  );
+  return {
+    rows,
+    totalWidth: rowWidths.length > 0 ? Math.max(...rowWidths) : 0,
+    totalHeight:
+      rows.length > 0
+        ? rowHeight * rows.length + rowGap * (rows.length - 1)
+        : 0,
+  };
+}
+
+export function drawStatusBadgeWrap(
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  badges: StatusBadgeDrawItem[],
+  maxWidth: number,
+  scale: number,
+  theme: StatusBadgeTheme,
+): StatusBadgeWrapLayout {
+  const layout = measureStatusBadgeWrap(
+    badges,
+    maxWidth,
+    scale,
+    theme.iconSize,
+    theme.iconOutlineWidth,
+    theme.rowOverlap,
+  );
+  const rowHeight = theme.iconSize * scale;
+  const rowGap = Math.max(2, scale * 2);
+  let rowTop = top;
+
+  for (const row of layout.rows) {
+    const rowW = statusBadgeRowWidth(
+      row,
+      scale,
+      theme.iconSize,
+      theme.iconOutlineWidth,
+      theme.rowOverlap,
+    );
+    drawStatusBadgeRow(ctx, left + rowW / 2, rowTop, row, scale, theme);
+    rowTop += rowHeight + rowGap;
+  }
+
+  return layout;
+}
+
 export interface StatusBadgeTheme {
   iconSize: number;
   rowOverlap: number;

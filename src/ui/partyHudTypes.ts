@@ -10,12 +10,10 @@ import { PARTY_SLOT_COUNT } from '../battle/types.ts';
 export interface PartyHudMeta {
   displayName: string;
   epithetEn?: string;
-  level: number;
 }
 
 export interface PartyHudEntry {
   displayName: string;
-  level: number;
   iconKey: string;
   hp: number;
   maxHp: number;
@@ -53,7 +51,6 @@ export function buildPartyHudMetaBySlot(
     return {
       displayName: preset?.displayName ?? member.classId,
       epithetEn: preset?.epithetEn,
-      level: member.progress.level,
     };
   });
 }
@@ -73,7 +70,6 @@ export function buildPartyHudEntries(
 
     return {
       displayName: meta.displayName,
-      level: meta.level,
       iconKey: ally.iconKey,
       hp: ally.hp,
       maxHp: ally.maxHp,

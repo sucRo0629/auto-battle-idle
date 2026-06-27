@@ -140,7 +140,7 @@ export class BattleView {
       verifyModeControls?.onOpenMetaMenu();
     });
 
-    this.statsButton = this.createBattleMenuButton("analytics", "統計情報");
+    this.statsButton = this.createBattleMenuButton("analytics", "戦闘詳細");
     this.statsButton.addEventListener("click", () => {
       this.openStatsOverlay(verifyModeControls);
     });

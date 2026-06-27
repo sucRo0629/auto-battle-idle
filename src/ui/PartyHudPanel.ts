@@ -1,4 +1,7 @@
-import { collectStatusEffectBadgeDisplays } from '../battle/statusEffectDisplay.ts';
+import {
+  collectStatusEffectBadgeDisplays,
+  selectCompactStatusBadges,
+} from '../battle/statusEffectDisplay.ts';
 import { MAX_ACTIVE_SLOTS } from '../progression/skillBuild.ts';
 import { layoutHpBarBarrier } from '../render/hpBarBarrierLayout.ts';
 import { getClassIconUrl } from '../render/IconRegistry.ts';
@@ -10,9 +13,8 @@ import {
   type BattleHudTheme,
 } from '../render/battleHudTheme.ts';
 import {
-  drawStatusBadgeBlock,
-  measureStatusBadgeBlock,
-  orderBadgesForDraw,
+  drawCompactStatusBadgeRow,
+  measureCompactStatusBadgeRow,
   statusBadgeOutlinePad,
 } from '../render/statusBadgeRenderer.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
@@ -26,7 +28,7 @@ interface RecastCellElements {
 
 interface SlotElements {
   root: HTMLElement;
-  labelRow: HTMLElement;
+  head: HTMLElement;
   label: HTMLElement;
   icon: HTMLImageElement;
   hpFill: HTMLElement;
@@ -89,22 +91,14 @@ export class PartyHudPanel {
     const root = document.createElement('div');
     root.className = 'party-hud-slot';
 
-    const labelRow = document.createElement('div');
-    labelRow.className = 'party-hud-label-row';
-    root.appendChild(labelRow);
-
-    const label = document.createElement('div');
-    label.className = 'party-hud-label';
-    labelRow.appendChild(label);
-
-    const body = document.createElement('div');
-    body.className = 'party-hud-body';
-    root.appendChild(body);
+    const head = document.createElement('div');
+    head.className = 'party-hud-head';
+    root.appendChild(head);
 
     const iconWrap = document.createElement('div');
     iconWrap.className =
       'party-hud-icon-wrap pixel-icon-frame pixel-icon-frame--24';
-    body.appendChild(iconWrap);
+    head.appendChild(iconWrap);
 
     const icon = document.createElement('img');
     icon.className = 'party-hud-icon pixel-icon-img pixel-icon-img--24';
@@ -114,9 +108,21 @@ export class PartyHudPanel {
     icon.alt = '';
     iconWrap.appendChild(icon);
 
+    const headText = document.createElement('div');
+    headText.className = 'party-hud-head-text';
+    head.appendChild(headText);
+
+    const label = document.createElement('div');
+    label.className = 'party-hud-label';
+    headText.appendChild(label);
+
+    const statusCanvas = document.createElement('canvas');
+    statusCanvas.className = 'party-hud-status-badges';
+    headText.appendChild(statusCanvas);
+
     const bars = document.createElement('div');
     bars.className = 'party-hud-bars';
-    body.appendChild(bars);
+    root.appendChild(bars);
 
     const hpTrack = document.createElement('div');
     hpTrack.className = 'party-hud-hp-track';
@@ -129,11 +135,6 @@ export class PartyHudPanel {
     const barrierLayer = document.createElement('div');
     barrierLayer.className = 'party-hud-barrier-layer';
     hpTrack.appendChild(barrierLayer);
-
-    const statusCanvas = document.createElement('canvas');
-    statusCanvas.className = 'party-hud-status-badges';
-    statusCanvas.hidden = true;
-    labelRow.appendChild(statusCanvas);
 
     const recastGrid = document.createElement('div');
     recastGrid.className = 'party-hud-recast-grid';
@@ -161,7 +162,7 @@ export class PartyHudPanel {
 
     return {
       root,
-      labelRow,
+      head,
       label,
       icon,
       hpFill,
@@ -174,7 +175,7 @@ export class PartyHudPanel {
   private updateSlot(slot: SlotElements, entry: PartyHudEntry): void {
     const theme = this.theme;
     slot.root.classList.toggle('party-hud-slot--dead', !entry.isAlive);
-    slot.label.textContent = `${entry.displayName} Lv${entry.level}`;
+    slot.label.textContent = entry.displayName;
 
     const iconUrl = getClassIconUrl(entry.iconKey);
     if (iconUrl) {
@@ -188,8 +189,8 @@ export class PartyHudPanel {
       );
     }
 
-    this.updateHpBar(slot, entry);
     this.updateStatusBadges(slot, entry);
+    this.updateHpBar(slot, entry);
     this.updateRecastGrid(slot, entry);
   }
 
@@ -222,18 +223,12 @@ export class PartyHudPanel {
       def: entry.def,
       reg: entry.reg,
     });
-    const drawItems = orderBadgesForDraw(badges);
+    const { visible, overflowCount } = selectCompactStatusBadges(badges);
     const canvas = slot.statusCanvas;
-
-    if (drawItems.length === 0) {
-      canvas.hidden = true;
-      return;
-    }
-
     const theme = this.theme;
     const scale = 1;
-    const badgeLayout = measureStatusBadgeBlock(
-      drawItems,
+
+    const badgeLayout = measureCompactStatusBadgeRow(
       scale,
       theme.statusBadgeIconSize,
       theme.statusIconOutlineWidth,
@@ -245,17 +240,22 @@ export class PartyHudPanel {
 
     canvas.width = canvasW;
     canvas.height = canvasH;
-    canvas.hidden = false;
+    canvas.style.width = badges.length === 0 ? '' : `${canvasW}px`;
+    canvas.style.height = badges.length === 0 ? '' : `${canvasH}px`;
+    canvas.hidden = badges.length === 0;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvasW, canvasH);
-    drawStatusBadgeBlock(
+    if (badges.length === 0) return;
+
+    drawCompactStatusBadgeRow(
       ctx,
-      outlinePad + badgeLayout.totalWidth / 2,
       outlinePad,
-      drawItems,
+      outlinePad,
+      visible,
+      overflowCount,
       scale,
       {
         iconSize: theme.statusBadgeIconSize,

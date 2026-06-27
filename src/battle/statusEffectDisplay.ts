@@ -762,3 +762,94 @@ export function isCategoryEffectVisible(
 ): boolean {
   return agg.kind === "buff" || agg.kind === "debuff";
 }
+
+const COMPACT_TIER1_CC: ReadonlySet<StatusDisplayCategory> = new Set([
+  "stun",
+  "moveLock",
+  "damageDelay",
+]);
+
+const COMPACT_TIER3_DOT: ReadonlySet<StatusDisplayCategory> = new Set([
+  "dot",
+  "bleed",
+  "poison",
+  "seedFlame",
+  "blazingFlame",
+]);
+
+function statusBadgeSlotOrderIndex(
+  category: StatusDisplayCategory,
+): number {
+  const index = STATUS_BADGE_SLOT_ORDER.indexOf(category);
+  return index >= 0 ? index : STATUS_BADGE_SLOT_ORDER.length;
+}
+
+/** 簡易表示（Party HUD / 敵頭上）用の優先度 tier。小さいほど先に表示。 */
+export function assignCompactBadgeTier(
+  badge: StatusEffectBadgeDisplay,
+): number {
+  if (COMPACT_TIER1_CC.has(badge.category)) return 1;
+
+  if (
+    (badge.category === "def" || badge.category === "reg") &&
+    badge.kind === "debuff"
+  ) {
+    return 2;
+  }
+
+  if (COMPACT_TIER3_DOT.has(badge.category) && badge.kind === "debuff") {
+    return 3;
+  }
+
+  if (badge.category === "damageIncrease" && badge.kind === "debuff") {
+    return 3;
+  }
+
+  if (badge.kind === "debuff") return 4;
+
+  return 5;
+}
+
+export function sortBadgesForCompactView(
+  badges: StatusEffectBadgeDisplay[],
+): StatusEffectBadgeDisplay[] {
+  return badges.slice().sort((a, b) => {
+    const tierDiff = assignCompactBadgeTier(a) - assignCompactBadgeTier(b);
+    if (tierDiff !== 0) return tierDiff;
+    return (
+      statusBadgeSlotOrderIndex(a.category) -
+      statusBadgeSlotOrderIndex(b.category)
+    );
+  });
+}
+
+export function sortBadgesForDetailView(
+  badges: StatusEffectBadgeDisplay[],
+): StatusEffectBadgeDisplay[] {
+  return badges.slice().sort((a, b) => {
+    if (a.kind !== b.kind) {
+      return a.kind === "debuff" ? -1 : 1;
+    }
+    return (
+      statusBadgeSlotOrderIndex(a.category) -
+      statusBadgeSlotOrderIndex(b.category)
+    );
+  });
+}
+
+export interface CompactStatusBadgeSelection {
+  visible: StatusEffectBadgeDisplay[];
+  overflowCount: number;
+}
+
+/** 簡易表示: 最大 3 バッジ + overflowCount（第 4 枠は +N 専用）。 */
+export function selectCompactStatusBadges(
+  badges: StatusEffectBadgeDisplay[],
+): CompactStatusBadgeSelection {
+  const sorted = sortBadgesForCompactView(badges);
+  const overflowCount = Math.max(0, sorted.length - 3);
+  return {
+    visible: sorted.slice(0, 3),
+    overflowCount,
+  };
+}

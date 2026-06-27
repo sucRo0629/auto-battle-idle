@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   aggregateStatStatusEffects,
+  assignCompactBadgeTier,
   collectStatusEffectBadgeDisplays,
+  selectCompactStatusBadges,
+  sortBadgesForCompactView,
+  type StatusEffectBadgeDisplay,
 } from './statusEffectDisplay.ts';
 import type { StatusEffect } from './types.ts';
 
@@ -366,5 +370,74 @@ describe('statusEffectDisplay', () => {
     expect(badges[0]?.category).toBe('arenaMark');
     expect(badges[0]?.kind).toBe('debuff');
     expect(badges[0]?.stackCount).toBe(2);
+  });
+});
+
+describe('compact status badge selection', () => {
+  function badge(
+    partial: Partial<StatusEffectBadgeDisplay> &
+      Pick<StatusEffectBadgeDisplay, 'category' | 'kind'>,
+  ): StatusEffectBadgeDisplay {
+    return {
+      remainingRatio: 1,
+      isPassive: false,
+      ...partial,
+    };
+  }
+
+  it('assigns CC debuffs to tier 1', () => {
+    expect(assignCompactBadgeTier(badge({ category: 'stun', kind: 'debuff' }))).toBe(1);
+    expect(assignCompactBadgeTier(badge({ category: 'moveLock', kind: 'debuff' }))).toBe(1);
+    expect(assignCompactBadgeTier(badge({ category: 'damageDelay', kind: 'buff' }))).toBe(1);
+  });
+
+  it('prioritizes def/reg debuff over other debuffs', () => {
+    const sorted = sortBadgesForCompactView([
+      badge({ category: 'dot', kind: 'debuff' }),
+      badge({ category: 'def', kind: 'debuff' }),
+      badge({ category: 'mark', kind: 'debuff' }),
+    ]);
+    expect(sorted.map((entry) => entry.category)).toEqual(['def', 'dot', 'mark']);
+  });
+
+  it('puts damageIncrease debuff in tier 3 and damageReduction buff in tier 5', () => {
+    const sorted = sortBadgesForCompactView([
+      badge({ category: 'damageReduction', kind: 'buff' }),
+      badge({ category: 'damageIncrease', kind: 'debuff' }),
+      badge({ category: 'atk', kind: 'buff' }),
+    ]);
+    expect(sorted.map((entry) => entry.category)).toEqual([
+      'damageIncrease',
+      'atk',
+      'damageReduction',
+    ]);
+    expect(assignCompactBadgeTier(badge({ category: 'damageIncrease', kind: 'debuff' }))).toBe(3);
+    expect(assignCompactBadgeTier(badge({ category: 'damageReduction', kind: 'buff' }))).toBe(5);
+  });
+
+  it('selects at most three visible badges and reports overflow', () => {
+    const selection = selectCompactStatusBadges([
+      badge({ category: 'stun', kind: 'debuff' }),
+      badge({ category: 'def', kind: 'debuff' }),
+      badge({ category: 'dot', kind: 'debuff' }),
+      badge({ category: 'mark', kind: 'debuff' }),
+      badge({ category: 'atk', kind: 'buff' }),
+    ]);
+    expect(selection.visible).toHaveLength(3);
+    expect(selection.visible.map((entry) => entry.category)).toEqual([
+      'stun',
+      'def',
+      'dot',
+    ]);
+    expect(selection.overflowCount).toBe(2);
+  });
+
+  it('leaves overflow at zero when three or fewer badges', () => {
+    const selection = selectCompactStatusBadges([
+      badge({ category: 'hot', kind: 'buff' }),
+      badge({ category: 'block', kind: 'buff' }),
+    ]);
+    expect(selection.visible).toHaveLength(2);
+    expect(selection.overflowCount).toBe(0);
   });
 });

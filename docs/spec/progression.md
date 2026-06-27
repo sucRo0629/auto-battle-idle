@@ -276,7 +276,7 @@ Phase 9 完了後に着手。メインモードのステージ進行・EXP と�
 | 項目 | doc 正本 | 実装がまだ古い可能性 |
 | ---- | -------- | -------------------- |
 | `SaveGameState` | `playerProgress` 直下 | `party[].progress` 残存 |
-| 表示 Lv | `playerProgress.level` | `resolvePlayerDisplayLevel`、HUD スロット行の `Lv{n}` |
-| 統計 UI Exp 行 | なし（統計オーバーレイは Threat / ダメージのみ） | `PartyMemberStatsDisplay` の Exp ラベル（あれば） |
+| 表示 Lv | `playerProgress.level`（Party HUD スロット行に Lv は出さない） | `resolvePlayerDisplayLevel`、旧 HUD `Lv{n}` |
+| 統計 UI Exp 行 | なし（戦闘詳細は Threat / ダメージ / 全状態バッジ） | `PartyMemberStatsDisplay` の Exp ラベル（あれば） |
 | Victory EXP | `playerProgress.exp` 加算 | `member.progress.exp` への加算 |
 | 習得 / 成長 Lv 入力 | `playerProgress.level` | `member.progress.level`（`skillBuild.ts` / `entities.ts` 等） |

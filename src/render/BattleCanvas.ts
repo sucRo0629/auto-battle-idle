@@ -42,15 +42,15 @@ import {
   ENEMY_HP_BAR_H,
   ENEMY_HP_BAR_W,
 } from "./enemyHpBarLayout.ts";
-import { collectStatusEffectBadgeDisplays } from "../battle/statusEffectDisplay.ts";
+import { collectStatusEffectBadgeDisplays, selectCompactStatusBadges } from "../battle/statusEffectDisplay.ts";
 import {
   computeStatusBadgeTops,
   type StatusBadgeLayoutInput,
 } from "./statusBadgeLayout.ts";
 import {
-  measureStatusBadgeBlock,
-  drawStatusBadgeBlock,
-  orderBadgesForDraw,
+  drawCompactStatusBadgeRow,
+  measureCompactStatusBadgeRow,
+  statusBadgeOutlinePad,
 } from "./statusBadgeRenderer.ts";
 import type {
   AnimState,
@@ -755,6 +755,10 @@ export class BattleCanvas implements IBattleRenderer {
     const badgeInputs: StatusBadgeLayoutInput[] = [];
     const rowWidthById = new Map<string, number>();
     const rowHeightById = new Map<string, number>();
+    const compactById = new Map<
+      string,
+      ReturnType<typeof selectCompactStatusBadges>
+    >();
 
     for (const layout of this.layouts) {
       if (!layout.isEnemy || !layout.isAlive) continue;
@@ -764,18 +768,22 @@ export class BattleCanvas implements IBattleRenderer {
         def: layout.def,
         reg: layout.reg,
       });
-      const drawItems = orderBadgesForDraw(badges);
-      if (drawItems.length === 0) continue;
+      const compact = selectCompactStatusBadges(badges);
+      if (badges.length === 0) continue;
 
-      const badgeLayout = measureStatusBadgeBlock(
-        drawItems,
+      const badgeLayout = measureCompactStatusBadgeRow(
         scale,
         this.theme.statusBadgeIconSize,
         this.theme.statusIconOutlineWidth,
         this.theme.statusBadgeOverlap,
       );
-      rowWidthById.set(layout.id, badgeLayout.totalWidth);
-      rowHeightById.set(layout.id, badgeLayout.totalHeight);
+      const outlinePad = statusBadgeOutlinePad(
+        this.theme.statusIconOutlineWidth,
+        scale,
+      );
+      rowWidthById.set(layout.id, badgeLayout.totalWidth + outlinePad * 2);
+      rowHeightById.set(layout.id, badgeLayout.totalHeight + outlinePad * 2);
+      compactById.set(layout.id, compact);
       badgeInputs.push({
         id: layout.id,
         x: layout.x,
@@ -794,28 +802,42 @@ export class BattleCanvas implements IBattleRenderer {
     for (const layout of this.layouts) {
       if (!layout.isEnemy || !layout.isAlive) continue;
 
-      const badges = collectStatusEffectBadgeDisplays(layout.statusEffects, {
-        atk: layout.atk,
-        def: layout.def,
-        reg: layout.reg,
-      });
-      const drawItems = orderBadgesForDraw(badges);
+      const compact = compactById.get(layout.id);
       const top = badgeTops.get(layout.id);
-      if (drawItems.length === 0 || top === undefined) continue;
+      if (!compact || top === undefined) continue;
 
+      const badgeLayout = measureCompactStatusBadgeRow(
+        scale,
+        this.theme.statusBadgeIconSize,
+        this.theme.statusIconOutlineWidth,
+        this.theme.statusBadgeOverlap,
+      );
+      const outlinePad = statusBadgeOutlinePad(
+        this.theme.statusIconOutlineWidth,
+        scale,
+      );
       const spriteW = SPRITE_SIZE * scale;
-      const centerX = layout.x + spriteW / 2;
+      const rowWidth = badgeLayout.totalWidth + outlinePad * 2;
+      const left = layout.x + (spriteW - rowWidth) / 2 + outlinePad;
 
-      drawStatusBadgeBlock(this.ctx, centerX, top, drawItems, scale, {
-        iconSize: this.theme.statusBadgeIconSize,
-        rowOverlap: this.theme.statusBadgeOverlap,
-        overlayColor: this.theme.statusBadgeOverlay,
-        iconOutlineColor: this.theme.statusIconOutlineColor,
-        iconOutlineWidth: this.theme.statusIconOutlineWidth,
-        iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
-        resolveIconFallbackColor: (category) =>
-          resolveStatusIconFallbackColor(category, this.theme),
-      });
+      drawCompactStatusBadgeRow(
+        this.ctx,
+        left,
+        top + outlinePad,
+        compact.visible,
+        compact.overflowCount,
+        scale,
+        {
+          iconSize: this.theme.statusBadgeIconSize,
+          rowOverlap: this.theme.statusBadgeOverlap,
+          overlayColor: this.theme.statusBadgeOverlay,
+          iconOutlineColor: this.theme.statusIconOutlineColor,
+          iconOutlineWidth: this.theme.statusIconOutlineWidth,
+          iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
+          resolveIconFallbackColor: (category) =>
+            resolveStatusIconFallbackColor(category, this.theme),
+        },
+      );
     }
   }
 }

@@ -262,8 +262,11 @@ data/
 | スタック表示 | `stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数。**1 スタックは非表示** |
 | 残時間 | 同一カテゴリ内の **最短** `remainingRatio` を、上端からの暗化オーバーレイで表示（現行方式） |
 | DoT ポップアップ | `dotFlavor: bleed` / 未指定 generic dot → **赤**。`dotFlavor: poison` → **紫**（状態バッジの debuff 五角形は赤のまま） |
+| 簡易表示 | Party HUD + 敵頭上: **固定 1 行・3 バッジ + 第 4 枠 `+N`**（折り返しなし）。tier 優先度は [combat.md](../spec/combat.md#ステータス効果) |
+| 詳細表示 | 戦闘詳細（`BattleStatsOverlay` / `DebugMenuPanel`）: **全件**、debuff/buff ラベル付き flex-wrap |
+| Party HUD レイアウト | 24px クラスアイコン左 + `displayName` のみ（スロット行 Lv 廃止）。HP + リキャストは全幅 |
 
-**実装タッチポイント（HUD）:** `statusEffectDisplay.ts`, `statusBadgeRenderer.ts`, `PartyHudPanel`, `BattleCanvas`, `battle-view.css` / `battleHudTheme.ts`, `DamagePopup.ts`（DoT tick に `dotFlavor` 伝播）。
+**実装タッチポイント（HUD）:** `statusEffectDisplay.ts`（`selectCompactStatusBadges` 等）, `statusBadgeRenderer.ts`, `PartyHudPanel`, `BattleCanvas`, `battle-view.css` / `battleHudTheme.ts`, `DamagePopup.ts`（DoT tick に `dotFlavor` 伝播）。**HUD 簡易/詳細分割 — 実装済み（2026-06）。** 旧「4 個折り返し」は廃止。
 
 **統計 UI — 4d と同タイミングで実装**
 
@@ -272,8 +275,8 @@ data/
 | 項目 | 仕様 |
 | --- | --- |
 | デザイン言語 | [party-formation-ui.md §11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通) と同一（縦情報パネル・細セパレーター・大角丸 / 強 shadow 禁止） |
-| オーバーレイ | Web モーダル風（大角丸・強 box-shadow・ダッシュボード風 title bar）を避け、**情報パネル**として閉じる |
-| メンバー行 | `PartyMemberStatsDisplay` 共通 — epithet + 名前、Threat / 与ダメ・被ダメバー。行は **細い区切り + 余白**（行内は横サブ列。Exp は HUD 委譲で非表示） |
+| オーバーレイ | Web モーダル風を避け、**情報パネル**として閉じる。タイトル **戦闘詳細** |
+| メンバー行 | `PartyMemberStatsDisplay` 共通 — 名前（`displayName`）、Threat / 与ダメ・被ダメバー、**状態バッジ帯（全件・debuff/buff ラベル）**。行は **細い区切り + 余白**（Exp / epithetEn / メンバー別 Lv なし） |
 | バー | 角丸グラデーションのダッシュボード棒を控えめに。色意味（Threat 青・与ダメ橙・被ダメ青等）は維持可 |
 | 共有 CSS | `battle-stats-overlay.css` + `party-member-stats.css`。`DebugMenuPanel` 内 stats 行も同スタイル |
 

@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  drawCompactStatusBadgeRow,
   drawStatusBadgeBlock,
+  measureCompactStatusBadgeRow,
   measureStatusBadgeBlock,
   statusBadgeRowWidth,
   statusBadgeStride,
@@ -132,6 +134,117 @@ describe('drawStatusBadgeBlock', () => {
       expect(drawImages.length).toBeGreaterThan(0);
       const ys = drawImages.map((entry) => entry.y);
       expect(Math.max(...ys)).toBeGreaterThan(Math.min(...ys));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
+describe('measureCompactStatusBadgeRow', () => {
+  it('uses a fixed four-slot row width', () => {
+    const layout = measureCompactStatusBadgeRow(1, 16, 1, 0);
+    expect(layout.totalWidth).toBe(statusBadgeRowWidth(
+      [
+        { category: 'hot' },
+        { category: 'hot' },
+        { category: 'hot' },
+        { category: 'hot' },
+      ],
+      1,
+      16,
+      1,
+      0,
+    ));
+    expect(layout.totalHeight).toBe(16);
+  });
+});
+
+describe('drawCompactStatusBadgeRow', () => {
+  it('reserves the fourth slot for overflow count', () => {
+    const drawImages: Array<{ x: number; y: number }> = [];
+    const bufferCtx = {
+      clearRect() {},
+      drawImage() {},
+      fillRect() {},
+      globalAlpha: 1,
+      globalCompositeOperation: 'source-over',
+    };
+    vi.stubGlobal('document', {
+      createElement: () => ({
+        getContext: () => bufferCtx,
+        width: 0,
+        height: 0,
+      }),
+    });
+    const ctx = {
+      save() {},
+      restore() {},
+      clearRect() {},
+      beginPath() {},
+      closePath() {},
+      fill() {},
+      stroke() {},
+      moveTo() {},
+      lineTo() {},
+      fillRect() {},
+      strokeText() {},
+      fillText() {},
+      font: 'bold 9px sans-serif',
+      textAlign: 'left',
+      textBaseline: 'alphabetic',
+      lineJoin: 'round',
+      lineWidth: 1,
+      strokeStyle: '#000',
+      fillStyle: '#fff',
+      drawImage(
+        _image: CanvasImageSource,
+        arg2: number,
+        arg3: number,
+        arg4?: number,
+        arg5?: number,
+        arg6?: number,
+        arg7?: number,
+        arg8?: number,
+        arg9?: number,
+      ) {
+        if (arg4 === undefined) {
+          drawImages.push({ x: arg2, y: arg3 });
+          return;
+        }
+        if (arg6 !== undefined && arg7 !== undefined) {
+          drawImages.push({ x: arg6, y: arg7 });
+          return;
+        }
+        drawImages.push({ x: arg2, y: arg3 });
+      },
+    } as unknown as CanvasRenderingContext2D;
+
+    try {
+      drawCompactStatusBadgeRow(
+        ctx,
+        0,
+        0,
+        [
+          { category: 'stun', kind: 'debuff', remainingRatio: 1, isPassive: false },
+          { category: 'def', kind: 'debuff', remainingRatio: 1, isPassive: false },
+          { category: 'dot', kind: 'debuff', remainingRatio: 1, isPassive: false },
+        ],
+        2,
+        1,
+        {
+          iconSize: 16,
+          rowOverlap: 0,
+          overlayColor: '#000',
+          iconOutlineColor: '#000',
+          iconOutlineWidth: 0,
+          iconFallbackAlpha: 0,
+          resolveIconFallbackColor: () => '#888',
+        },
+      );
+
+      const xs = drawImages.map((entry) => entry.x);
+      expect(xs.length).toBeGreaterThanOrEqual(3);
+      expect(Math.max(...xs)).toBeGreaterThanOrEqual(statusBadgeStride(1, 16, 0, 0) * 2);
     } finally {
       vi.unstubAllGlobals();
     }

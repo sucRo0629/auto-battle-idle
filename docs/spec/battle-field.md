@@ -461,21 +461,23 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 
 ---
 
-## 7. 戦闘中統計 UI
+## 7. 戦闘中統計 UI（戦闘詳細）
 
-戦闘画面の **統計情報**オーバーレイ（`BattleStatsOverlay`）と、メンバー行コンポーネント（`PartyMemberStatsDisplay`）の画面設計正本。脅威・ダメージの計算は [combat.md](combat.md)。DOM UI の共通デザイン言語は [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) を参照（Phase 4d で編成 UI と揃える）。
+戦闘画面の **戦闘詳細**オーバーレイ（`BattleStatsOverlay`）と、メンバー行コンポーネント（`PartyMemberStatsDisplay`）の画面設計正本。脅威・ダメージの計算は [combat.md](combat.md)。DOM UI の共通デザイン言語は [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) を参照（Phase 4d で編成 UI と揃える）。
 
 ### 7.1 役割とデータ
 
 | 要素 | 内容 |
 | ---- | ---- |
-| 起動 | 戦闘画面メニューの「統計情報」ボタン（`BattleView`） |
-| タイトル | ステージ表示名（`stages.json` の `displayName`） |
-| メンバー行 | 編成スロット順。**統計オーバーレイのみ** 24px クラスアイコン + `displayName` + `epithetEn`、Threat バー、与ダメ / 被ダメバー。**Exp 数値・メンバー別 Lv は表示しない**（プレイヤー共通 Exp バーは戦闘 HUD — [progression.md](progression.md)「進行 UI」）。`DebugMenuPanel` にはアイコンなし |
-| データ源 | `getStageDamageDisplayRows`（ステージ内累計与ダメ / 被ダメ）、`CombatantSnapshot`（Threat）。**Exp / `partyProgress` は統計 UI スコープ外** |
+| 起動 | 戦闘画面メニューの「戦闘詳細」ボタン（`BattleView`） |
+| タイトル | オーバーレイ見出し **戦闘詳細**。サブタイトルはステージ表示名（`stages.json` の `displayName`） |
+| メンバー行 | 編成スロット順。**統計オーバーレイのみ** 24px クラスアイコン + `displayName`、Threat バー、与ダメ / 被ダメバー、**状態バッジ帯（全件）**。**Exp 数値・メンバー別 Lv・epithetEn は表示しない**（プレイヤー共通 Exp バーは戦闘 HUD — [progression.md](progression.md)「進行 UI」）。`DebugMenuPanel` にはアイコンなし |
+| 状態バッジ帯 | debuff / buff でラベル行を分ける（例: Debuff / Buff）。パネル横幅いっぱいで flex-wrap 折り返し。**簡易 3+N 省略なし**（[combat.md](combat.md) HUD バッジ §簡易/詳細） |
+| 更新 | オーバーレイ表示中は `update()` で Threat / ダメージと同様に状態バッジも refresh |
+| データ源 | `getStageDamageDisplayRows`（ステージ内累計与ダメ / 被ダメ）、`CombatantSnapshot`（Threat・`statusEffects`）。**Exp / `partyProgress` は統計 UI スコープ外** |
 | 確認モード | 現行は verify 経路でダメージ行が供給される。本番 Stage Records は **Phase 11** |
 
-`DebugMenuPanel` も同一 `PartyMemberStatsDisplay` を使う。CSS 刷新時は **両方を同スタイル**にする。
+`DebugMenuPanel` も同一 `PartyMemberStatsDisplay` を使う。CSS 刷新時は **両方を同スタイル**にする（状態バッジ帯含む）。
 
 ### 7.2 デザイン方針（Phase 4d 刷新）
 
@@ -493,7 +495,7 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 ### 7.3 受け入れ条件（Phase 4d — 統計部分）
 
 1. オーバーレイが Web モーダル / ダッシュボード風に見えない（§11 準拠）
-2. 4 人分の epithet + 名前・Threat・与ダメ / 被ダメが **縦リスト**で読める（Exp 数値・メンバー別 Lv なし）
+2. 4 人分の名前・Threat・与ダメ / 被ダメ・**全状態バッジ（debuff/buff ラベル付き）**が **縦リスト**で読める（Exp 数値・メンバー別 Lv・epithetEn なし）
 3. `party-member-stats.css` の変更が `DebugMenuPanel` 内 stats 行にも反映される
 4. 閉じる操作（backdrop / 閉じるボタン）が機能する
 

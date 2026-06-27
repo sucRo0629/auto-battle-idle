@@ -174,7 +174,6 @@ export class DebugMenuPanel {
       specs.push({
         slotIndex: partyIndex,
         displayName: preset?.displayName ?? member.classId,
-        epithetEn: preset?.epithetEn,
       });
     });
 
@@ -253,6 +252,7 @@ export class DebugMenuPanel {
   }
 
   destroy(): void {
+    this.statsDisplay.destroy();
     this.root.remove();
   }
 }
