@@ -379,13 +379,13 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   duelistPride: "闘士の矜持",
   ignoredDefBonusDamage: "無視DEFボーナス",
   bonusBasicAttackOnHit: "追加通常攻撃",
-  dotCompressAssist: "DoT圧縮補助",
-  allyBasicAttackDotProc: "味方通常攻撃DoT",
-  dotDurationMultiplierOnApply: "DoT付与時間倍率",
+  dotCompressAssist: "Dot圧縮",
+  allyBasicAttackDotProc: "味方基本攻撃Dot付与",
+  dotDurationMultiplierOnApply: "Dot延長",
   dottedEnemyHealReceivedDebuff: "DoT中被回復減",
-  conditionalEnemyDamageTakenAura: "条件付き被ダメ aura",
-  seedFlameOnActiveHit: "種火付与（active hit）",
-  bonusActiveOnHit: "追撃 active",
+  conditionalEnemyDamageTakenAura: "条件付き被ダメ増加",
+  seedFlameOnActiveHit: "種火付与",
+  bonusActiveOnHit: "アクティブ誘発",
   blazingFlameDetonate: "熾火起爆",
 };
 
@@ -479,10 +479,17 @@ export const SPECIAL_EFFECT_APPLY_TO_LABELS: Record<
 
 /** エディタ「種別」— クラス固有アクティブ */
 export const EDITOR_ACTIVE_CLASS_SPECIFIC_EFFECT_CATEGORIES = [
+  "conditionalEffect",
   "herbalPotencyConsume",
   "blockResonanceConsume",
   "enemyReelIn",
   "arenaDominance",
+  "grantNextOutgoingDamage",
+  "placedField",
+  "dotCompress",
+  "dotExtend",
+  "dotHarvest",
+  "poisonSpread",
 ] as const satisfies readonly SkillEffectKind[];
 
 /** エディタ「種別」— 汎用アクティブ */
@@ -495,24 +502,23 @@ export const EDITOR_ACTIVE_GENERAL_EFFECT_CATEGORIES = [
   "basicAttackTransform",
   "move",
   "knockback",
-  "conditionalEffect",
 ] as const satisfies readonly SkillEffectKind[];
 
 export const EDITOR_ACTIVE_EFFECT_KIND_GROUPS = [
   {
-    label: "クラス固有",
-    kinds: [...EDITOR_ACTIVE_CLASS_SPECIFIC_EFFECT_CATEGORIES],
-  },
-  {
     label: "一般",
     kinds: [...EDITOR_ACTIVE_GENERAL_EFFECT_CATEGORIES],
+  },
+  {
+    label: "クラス固有",
+    kinds: [...EDITOR_ACTIVE_CLASS_SPECIFIC_EFFECT_CATEGORIES],
   },
 ] as const;
 
 /** エディタ top-level（レガシー hot/dot 等は正規化で吸収） */
 export const EDITOR_ACTIVE_EFFECT_CATEGORIES = [
-  ...EDITOR_ACTIVE_CLASS_SPECIFIC_EFFECT_CATEGORIES,
   ...EDITOR_ACTIVE_GENERAL_EFFECT_CATEGORIES,
+  ...EDITOR_ACTIVE_CLASS_SPECIFIC_EFFECT_CATEGORIES,
 ] as const;
 
 export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
@@ -533,6 +539,11 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   enemyReelIn: "敵引き寄せ",
   arenaDominance: "闘技場の掟",
   grantNextOutgoingDamage: "次与ダメ装填",
+  placedField: "設置フィールド",
+  dotCompress: "Dot圧縮",
+  dotExtend: "Dot延長",
+  dotHarvest: "Dot収穫",
+  poisonSpread: "毒拡散",
 };
 export const STATUS_EFFECT_STATS = [
   "hp",
@@ -713,6 +724,22 @@ export const PASSIVE_EFFECT_KIND_OPTIONS: PassiveEffectKind[] = [
 
 /** エディタ「効果種別」— クラス固有パッシブ */
 export const EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS = [
+  "excessHealToBarrier",
+  "excessHealRedirect",
+  "threatControl",
+  "ignoredDefBonusDamage",
+  "bonusBasicAttackOnHit",
+  "selfHpRatioBuff",
+  "idleAtkRamp",
+  "ballistaMark",
+  "dotCompressAssist",
+  "allyBasicAttackDotProc",
+  "dotDurationMultiplierOnApply",
+  "dottedEnemyHealReceivedDebuff",
+  "conditionalEnemyDamageTakenAura",
+  "seedFlameOnActiveHit",
+  "bonusActiveOnHit",
+  "blazingFlameDetonate",
   "herbalPotency",
   "blockResonance",
   "lastStandInvulnerable",
@@ -735,18 +762,10 @@ export const EDITOR_PASSIVE_GENERAL_EFFECT_KINDS = [
   "counter",
   "heal",
   "periodicDispel",
-  "excessHealToBarrier",
-  "excessHealRedirect",
   "damageReduction",
-  "threatControl",
   "defenseIgnore",
-  "ignoredDefBonusDamage",
-  "bonusBasicAttackOnHit",
-  "selfHpRatioBuff",
   "targetHpRatioHealScale",
   "targetHpRatioDamageScale",
-  "idleAtkRamp",
-  "ballistaMark",
   "targetRuleOverride",
   "aoeCrowdBonus",
   "skillAmountOverride",
@@ -755,19 +774,19 @@ export const EDITOR_PASSIVE_GENERAL_EFFECT_KINDS = [
 
 export const EDITOR_PASSIVE_EFFECT_KIND_GROUPS = [
   {
-    label: "クラス固有",
-    kinds: [...EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS],
-  },
-  {
     label: "一般",
     kinds: [...EDITOR_PASSIVE_GENERAL_EFFECT_KINDS],
+  },
+  {
+    label: "クラス固有",
+    kinds: [...EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS],
   },
 ] as const;
 
 /** エディタ「効果種別」ドロップダウン（フラット列；グループは EDITOR_PASSIVE_EFFECT_KIND_GROUPS） */
 export const EDITOR_PASSIVE_EFFECT_KINDS = [
-  ...EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS,
   ...EDITOR_PASSIVE_GENERAL_EFFECT_KINDS,
+  ...EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS,
 ] as const satisfies readonly (typeof PASSIVE_EFFECT_KINDS)[number][];
 
 export const EDITOR_PASSIVE_EFFECT_KIND_OPTIONS: (typeof EDITOR_PASSIVE_EFFECT_KINDS)[number][] =

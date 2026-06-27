@@ -926,7 +926,7 @@ export interface PassiveSkillDef {
   triggerHpRatio?: number;
   /** healReservation: 発動時回復量（source ATK 基準） */
   healAmount?: ResourceAmountSpec;
-  /** healReservation: 付与バフの表示名 */
+  /** healReservation / frontBlockAura: 付与バフの表示名 */
   buffDisplayName?: string;
   /** excessHealToBarrier / excessHealRedirect: 余剰変換の対象（未指定 = outgoing のみ） */
   excessHealSources?: Array<"outgoing" | "incoming">;

@@ -50,6 +50,17 @@ function stripFrontBlockAuras(units: CombatantState[]): void {
   }
 }
 
+function resolveFrontBlockAuraDisplayName(
+  source: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): string {
+  for (const passive of getPassiveDefs(source, passives)) {
+    if (!isFrontBlockAuraPassive(passive)) continue;
+    if (passive.buffDisplayName) return passive.buffDisplayName;
+  }
+  return '護身手';
+}
+
 /** 生存中の持有者が前列味方へ block overlay を付与（syncBuffAuras とは別） */
 export function syncFrontBlockAuras(
   allies: CombatantState[],
@@ -61,6 +72,7 @@ export function syncFrontBlockAuras(
     if (!source.isAlive) continue;
     const config = resolveFrontBlockAuraConfigForUnit(source, passives);
     if (config.blockChance <= 0) continue;
+    const displayName = resolveFrontBlockAuraDisplayName(source, passives);
 
     for (const target of allies) {
       if (!target.isAlive || target.formationRow !== 'front') continue;
@@ -74,7 +86,7 @@ export function syncFrontBlockAuras(
         multiplier: 1,
         durationSec: FRONT_BLOCK_AURA_DURATION_SEC,
         remainingSec: FRONT_BLOCK_AURA_DURATION_SEC,
-        displayName: '護身手',
+        displayName,
       });
     }
   }

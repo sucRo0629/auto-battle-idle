@@ -42,6 +42,7 @@ import {
   normalizePassiveSkillForEditor,
   stripBasicAttackTraitFieldsFromEffect,
 } from '../battle/data/validateGameData.ts';
+import { HERBAL_POTENCY_ACCUMULATE_SEC } from '../battle/herbalPotency.ts';
 import {
   activeEffectHasAmount,
   getActiveEffectAmountSpec,
@@ -1896,6 +1897,42 @@ function defaultEffect(type: SkillEffectKind): SkillEffectDef {
         type: 'grantNextOutgoingDamage',
         nextOutgoingDamageMultiplier: 1.3,
       };
+    case 'placedField':
+      return {
+        target: { kind: 'clusterCenter', side: 'enemy' },
+        type: 'placedField',
+        fieldRadiusPx: 70,
+        fieldDurationSec: 5,
+        stayTickIntervalSec: 1,
+        enterEffects: [],
+        stayEffects: [],
+      };
+    case 'dotCompress':
+      return {
+        target: { kind: 'all', side: 'enemy' },
+        type: 'dotCompress',
+        compressRatio: 0.5,
+      };
+    case 'dotExtend':
+      return {
+        target: { kind: 'all', side: 'enemy' },
+        type: 'dotExtend',
+        extendRatio: 1.25,
+      };
+    case 'dotHarvest':
+      return {
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        type: 'dotHarvest',
+        harvestRatio: 0.1,
+      };
+    case 'poisonSpread':
+      return {
+        target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+        type: 'poisonSpread',
+        spreadRadiusPx: 70,
+        spreadDurationRatio: 0.5,
+        dotFlavor: 'poison',
+      };
   }
 }
 
@@ -2670,6 +2707,66 @@ export class SkillEditorStep {
             ),
           ),
         );
+        effectGrid.appendChild(
+          createEl(
+            'p',
+            'editor-hint',
+            `stack 蓄積間隔: ${HERBAL_POTENCY_ACCUMULATE_SEC} 秒（実時間固定。HoT tick 毎ではない）`,
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'herbalPotencyConstitutionThresholds（カンマ区切り）',
+            createTextInput(
+              (passive.herbalPotencyConstitutionThresholds ?? []).join(', '),
+              (raw) => {
+                this.patchPassive(index, (current) => {
+                  const trimmed = raw.trim();
+                  if (!trimmed) {
+                    delete current.herbalPotencyConstitutionThresholds;
+                    delete current.herbalPotencyConstitutionHpMultipliers;
+                    return;
+                  }
+                  const thresholds = trimmed
+                    .split(',')
+                    .map((part) => Number(part.trim()))
+                    .filter((value) => Number.isFinite(value) && value > 0);
+                  if (thresholds.length === 0) {
+                    delete current.herbalPotencyConstitutionThresholds;
+                    delete current.herbalPotencyConstitutionHpMultipliers;
+                    return;
+                  }
+                  current.herbalPotencyConstitutionThresholds = thresholds;
+                  const multipliers =
+                    current.herbalPotencyConstitutionHpMultipliers ?? [];
+                  current.herbalPotencyConstitutionHpMultipliers = thresholds.map(
+                    (_, idx) => multipliers[idx] ?? 1,
+                  );
+                }, { rerender: true });
+              },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'herbalPotencyConstitutionHpMultipliers（カンマ区切り）',
+            createTextInput(
+              (passive.herbalPotencyConstitutionHpMultipliers ?? []).join(', '),
+              (raw) => {
+                this.patchPassive(index, (current) => {
+                  const thresholds = current.herbalPotencyConstitutionThresholds;
+                  if (!thresholds || thresholds.length === 0) return;
+                  const multipliers = raw
+                    .split(',')
+                    .map((part) => Number(part.trim()))
+                    .filter((value) => Number.isFinite(value) && value > 0);
+                  if (multipliers.length !== thresholds.length) return;
+                  current.herbalPotencyConstitutionHpMultipliers = multipliers;
+                }, { rerender: false });
+              },
+            ),
+          ),
+        );
         break;
       case 'blockResonance':
         effectGrid.appendChild(
@@ -2733,6 +2830,13 @@ export class SkillEditorStep {
         break;
       case 'frontBlockAura':
         effectGrid.appendChild(
+          createEl(
+            'p',
+            'editor-hint',
+            '対象: 生存中の持有者が付与。効果範囲は前列味方（formationRow: front）固定。',
+          ),
+        );
+        effectGrid.appendChild(
           createFieldRow(
             'chance',
             createNumberInput(
@@ -2744,6 +2848,17 @@ export class SkillEditorStep {
               },
               { step: 0.01, min: 0, max: 1 },
             ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            '付与バフ名',
+            createTextInput(passive.buffDisplayName ?? '護身手', (buffDisplayName) => {
+              this.patchPassive(index, (current) => {
+                const trimmed = buffDisplayName.trim();
+                current.buffDisplayName = trimmed || undefined;
+              }, { rerender: false });
+            }),
           ),
         );
         effectGrid.appendChild(
@@ -3021,7 +3136,7 @@ export class SkillEditorStep {
           createEl(
             'p',
             'editor-hint',
-            'active ダメージ Hit ごとに種火 +1 stack（basic 非対象）',
+            'active ダメージ Hit ごとに種火 +1 stack（basic 非対象）。種火上限 5、熾火上限 1（P4 未習得時既定）。',
           ),
         );
         break;
@@ -3096,6 +3211,173 @@ export class SkillEditorStep {
               },
             ),
           ),
+        );
+        break;
+      case 'dotCompressAssist':
+        effectGrid.appendChild(
+          createFieldRow(
+            'dotCompressRatio',
+            createNumberInput(
+              passive.dotCompressRatio ?? 0.7,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.dotCompressRatio = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0.01, max: 1 },
+            ),
+          ),
+        );
+        break;
+      case 'allyBasicAttackDotProc':
+        effectGrid.appendChild(
+          createFieldRow(
+            'chance',
+            createNumberInput(
+              passive.chance ?? 0.2,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.chance = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0, max: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'debuffDotDurationSec',
+            createNumberInput(
+              passive.debuffDotDurationSec ?? 5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.debuffDotDurationSec = value;
+                }, { rerender: false });
+              },
+              { step: 0.5, min: 0.1 },
+            ),
+          ),
+        );
+        appendResourceAmountFields(
+          effectGrid,
+          passive.debuffDotAmount ?? defaultResourceAmount(10, 'flat'),
+          (debuffDotAmount) => {
+            this.patchPassive(index, (current) => {
+              current.debuffDotAmount = debuffDotAmount;
+            }, { rerender: false });
+          },
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'debuffDotDamageType',
+            createSelect(
+              passive.debuffDotDamageType ?? 'magic',
+              DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
+              (debuffDotDamageType) => {
+                this.patchPassive(index, (current) => {
+                  current.debuffDotDamageType =
+                    debuffDotDamageType as DamageType;
+                }, { rerender: false });
+              },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'debuffDotFlavor',
+            createSelect(
+              passive.debuffDotFlavor ?? 'poison',
+              DOT_FLAVORS.map((value) => ({
+                value,
+                label: DOT_FLAVOR_LABELS[value],
+              })),
+              (debuffDotFlavor) => {
+                this.patchPassive(index, (current) => {
+                  current.debuffDotFlavor = debuffDotFlavor;
+                }, { rerender: false });
+              },
+            ),
+          ),
+        );
+        break;
+      case 'dotDurationMultiplierOnApply':
+        effectGrid.appendChild(
+          createFieldRow(
+            'dotDurationMultiplierOnApply',
+            createNumberInput(
+              passive.dotDurationMultiplierOnApply ?? 1.5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.dotDurationMultiplierOnApply = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0.01 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'dottedEnemyHealReceivedMultiplier',
+            createNumberInput(
+              passive.dottedEnemyHealReceivedMultiplier ?? 0.8,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.dottedEnemyHealReceivedMultiplier = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0.01, max: 1 },
+            ),
+          ),
+        );
+        break;
+      case 'dottedEnemyHealReceivedDebuff':
+        effectGrid.appendChild(
+          createFieldRow(
+            'dottedEnemyHealReceivedMultiplier',
+            createNumberInput(
+              passive.dottedEnemyHealReceivedMultiplier ?? 0.8,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.dottedEnemyHealReceivedMultiplier = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0.01, max: 1 },
+            ),
+          ),
+        );
+        break;
+      case 'conditionalEnemyDamageTakenAura':
+        effectGrid.appendChild(
+          createFieldRow(
+            'enemyDamageTakenMultiplier',
+            createNumberInput(
+              passive.enemyDamageTakenMultiplier ?? 1.2,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.enemyDamageTakenMultiplier = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0.01 },
+            ),
+          ),
+        );
+        appendDamageIncreaseConditionListFields(
+          effectGrid,
+          passive.auraConditions ?? [],
+          (mutate, options) => {
+            this.patchPassive(index, (current) => {
+              const next = mutate(current.auraConditions ?? []);
+              if (next.length > 0) {
+                current.auraConditions = next;
+              } else {
+                delete current.auraConditions;
+              }
+            }, options);
+          },
+          {
+            title: 'auraConditions（非空なら全条件 AND）',
+            addButtonLabel: 'aura 条件を追加',
+          },
         );
         break;
       case 'damageReduction':
@@ -4271,11 +4553,22 @@ export class SkillEditorStep {
     const isCounter = normalizedEffect.type === 'counter';
     const isBasicAttackTransform = normalizedEffect.type === 'basicAttackTransform';
     const isConditionalEffect = normalizedEffect.type === 'conditionalEffect';
+    const skipTargetShape =
+      normalizedEffect.type === 'placedField' ||
+      normalizedEffect.type === 'dotCompress' ||
+      normalizedEffect.type === 'dotExtend' ||
+      normalizedEffect.type === 'grantNextOutgoingDamage';
     const effectTargetKind = isConditionalEffect
       ? 'distance'
       : getEffectTarget(effect).kind;
     const targetShape: TargetShape = normalizedEffect.targetShape ?? 'single';
-    if (!isMove && !isCounter && !isBasicAttackTransform && !isConditionalEffect) {
+    if (
+      !isMove &&
+      !isCounter &&
+      !isBasicAttackTransform &&
+      !isConditionalEffect &&
+      !skipTargetShape
+    ) {
       const shapeSelect = createSelect(
         effectTargetKind === 'self' ? 'single' : targetShape,
         TARGET_SHAPE_OPTIONS.map((value) => ({
@@ -5407,7 +5700,244 @@ export class SkillEditorStep {
             normalizedEffect,
             patchEffect,
           );
+          this.renderNestedEffectList(
+            detailGrid,
+            'appendEffects（通常攻撃後に追加）',
+            normalizedEffect.appendEffects ?? [],
+            (appendEffects, options) => {
+              patchEffect((prev) => {
+                if (prev.type !== 'basicAttackTransform') return prev;
+                return {
+                  ...prev,
+                  target: { kind: 'self' },
+                  appendEffects:
+                    appendEffects.length > 0 ? appendEffects : undefined,
+                };
+              }, options);
+            },
+            skillId,
+            { defaultEffectType: 'heal' },
+          );
         }
+        break;
+      case 'grantNextOutgoingDamage':
+        detailGrid.appendChild(
+          createFieldRow(
+            'nextOutgoingDamageMultiplier',
+            createNumberInput(
+              effect.nextOutgoingDamageMultiplier ?? 1.3,
+              (nextOutgoingDamageMultiplier) =>
+                patchEffect((prev) =>
+                  prev.type === 'grantNextOutgoingDamage'
+                    ? { ...prev, nextOutgoingDamageMultiplier }
+                    : prev,
+                ),
+              { min: 0.01, step: 0.05 },
+            ),
+          ),
+        );
+        break;
+      case 'placedField':
+        if (normalizedEffect.type === 'placedField') {
+          detailGrid.appendChild(
+            createEl(
+              'p',
+              'editor-hint',
+              '配置 anchor は clusterCenter 推奨。範囲内 enter / stay で効果を適用。',
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              'fieldRadiusPx',
+              createNumberInput(
+                normalizedEffect.fieldRadiusPx ?? 70,
+                (fieldRadiusPx) =>
+                  patchEffect((prev) =>
+                    prev.type === 'placedField'
+                      ? { ...prev, fieldRadiusPx }
+                      : prev,
+                  ),
+                { min: 1, step: 10 },
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              'fieldDurationSec',
+              createNumberInput(
+                normalizedEffect.fieldDurationSec ?? 5,
+                (fieldDurationSec) =>
+                  patchEffect((prev) =>
+                    prev.type === 'placedField'
+                      ? { ...prev, fieldDurationSec }
+                      : prev,
+                  ),
+                { min: 0.1, step: 0.5 },
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              'stayTickIntervalSec',
+              createNumberInput(
+                normalizedEffect.stayTickIntervalSec ?? 1,
+                (stayTickIntervalSec) =>
+                  patchEffect((prev) =>
+                    prev.type === 'placedField'
+                      ? { ...prev, stayTickIntervalSec }
+                      : prev,
+                  ),
+                { min: 0.1, step: 0.5 },
+              ),
+            ),
+          );
+          detailGrid.appendChild(
+            createFieldRow(
+              'stayCompressRatioBonusPerTick',
+              createNumberInput(
+                normalizedEffect.stayCompressRatioBonusPerTick ?? 0,
+                (stayCompressRatioBonusPerTick) =>
+                  patchEffect((prev) =>
+                    prev.type === 'placedField'
+                      ? {
+                          ...prev,
+                          stayCompressRatioBonusPerTick:
+                            stayCompressRatioBonusPerTick > 0
+                              ? stayCompressRatioBonusPerTick
+                              : undefined,
+                        }
+                      : prev,
+                  ),
+                { min: 0, step: 0.01 },
+              ),
+            ),
+          );
+          this.renderNestedEffectList(
+            detailGrid,
+            'enterEffects',
+            normalizedEffect.enterEffects ?? [],
+            (enterEffects, options) => {
+              patchEffect((prev) => {
+                if (prev.type !== 'placedField') return prev;
+                return {
+                  ...prev,
+                  enterEffects: enterEffects.length > 0 ? enterEffects : undefined,
+                };
+              }, options);
+            },
+            skillId,
+            { defaultEffectType: 'dotCompress' },
+          );
+          this.renderNestedEffectList(
+            detailGrid,
+            'stayEffects',
+            normalizedEffect.stayEffects ?? [],
+            (stayEffects, options) => {
+              patchEffect((prev) => {
+                if (prev.type !== 'placedField') return prev;
+                return {
+                  ...prev,
+                  stayEffects: stayEffects.length > 0 ? stayEffects : undefined,
+                };
+              }, options);
+            },
+            skillId,
+            { defaultEffectType: 'dotCompress' },
+          );
+        }
+        break;
+      case 'dotCompress':
+        detailGrid.appendChild(
+          createFieldRow(
+            'compressRatio',
+            createNumberInput(
+              effect.compressRatio ?? 0.5,
+              (compressRatio) =>
+                patchEffect((prev) =>
+                  prev.type === 'dotCompress' ? { ...prev, compressRatio } : prev,
+                ),
+              { min: 0.01, max: 1, step: 0.05 },
+            ),
+          ),
+        );
+        break;
+      case 'dotExtend':
+        detailGrid.appendChild(
+          createFieldRow(
+            'extendRatio',
+            createNumberInput(
+              effect.extendRatio ?? 1.25,
+              (extendRatio) =>
+                patchEffect((prev) =>
+                  prev.type === 'dotExtend' ? { ...prev, extendRatio } : prev,
+                ),
+              { min: 0.01, step: 0.05 },
+            ),
+          ),
+        );
+        break;
+      case 'dotHarvest':
+        detailGrid.appendChild(
+          createFieldRow(
+            'harvestRatio',
+            createNumberInput(
+              effect.harvestRatio ?? 0.1,
+              (harvestRatio) =>
+                patchEffect((prev) =>
+                  prev.type === 'dotHarvest' ? { ...prev, harvestRatio } : prev,
+                ),
+              { min: 0.01, max: 1, step: 0.01 },
+            ),
+          ),
+        );
+        break;
+      case 'poisonSpread':
+        detailGrid.appendChild(
+          createFieldRow(
+            'spreadRadiusPx',
+            createNumberInput(
+              effect.spreadRadiusPx ?? 70,
+              (spreadRadiusPx) =>
+                patchEffect((prev) =>
+                  prev.type === 'poisonSpread'
+                    ? { ...prev, spreadRadiusPx }
+                    : prev,
+                ),
+              { min: 1, step: 10 },
+            ),
+          ),
+        );
+        detailGrid.appendChild(
+          createFieldRow(
+            'spreadDurationRatio',
+            createNumberInput(
+              effect.spreadDurationRatio ?? 0.5,
+              (spreadDurationRatio) =>
+                patchEffect((prev) =>
+                  prev.type === 'poisonSpread'
+                    ? { ...prev, spreadDurationRatio }
+                    : prev,
+                ),
+              { min: 0.01, max: 1, step: 0.05 },
+            ),
+          ),
+        );
+        detailGrid.appendChild(
+          createFieldRow(
+            'dotFlavor',
+            createSelect(
+              effect.dotFlavor ?? 'poison',
+              DOT_FLAVORS.map((value) => ({
+                value,
+                label: DOT_FLAVOR_LABELS[value],
+              })),
+              (dotFlavor) =>
+                patchEffect((prev) =>
+                  prev.type === 'poisonSpread' ? { ...prev, dotFlavor } : prev,
+                ),
+            ),
+          ),
+        );
         break;
       case 'enemyReelIn':
         break;
@@ -5530,6 +6060,61 @@ export class SkillEditorStep {
           : undefined;
       appendEffectPresentationFields(parent, effect, patchEffect, labLink);
     }
+  }
+
+  private renderNestedEffectList(
+    parent: HTMLElement,
+    title: string,
+    effects: SkillEffectDef[],
+    onUpdate: (
+      effects: SkillEffectDef[],
+      options?: { rerender?: boolean },
+    ) => void,
+    skillId?: string,
+    options?: { defaultEffectType?: SkillEffectKind },
+  ): void {
+    const section = createEl('div', 'editor-branch-effects-section');
+    section.appendChild(createEl('h4', 'editor-subsection-title', title));
+    const defaultType = options?.defaultEffectType ?? 'damage';
+    effects.forEach((nestedEffect, nestedIndex) => {
+      const block = createEl('div', 'editor-effect-block editor-branch-effect-block');
+      const header = createEl('div', 'editor-effect-header');
+      header.appendChild(
+        createEl('span', 'editor-effect-label', `${title} ${nestedIndex + 1}`),
+      );
+      if (effects.length > 1) {
+        header.appendChild(
+          createButton('削除', 'editor-btn editor-btn-small', () => {
+            onUpdate(
+              effects.filter((_, i) => i !== nestedIndex),
+              { rerender: true },
+            );
+          }),
+        );
+      }
+      block.appendChild(header);
+      this.renderEffect(
+        block,
+        nestedEffect,
+        (nextEffect, patchOptions) => {
+          const nextEffects = [...effects];
+          nextEffects[nestedIndex] = nextEffect;
+          onUpdate(nextEffects, patchOptions);
+        },
+        false,
+        false,
+        undefined,
+        skillId,
+        { hideConditionalCategory: true },
+      );
+      section.appendChild(block);
+    });
+    section.appendChild(
+      createButton(`+ ${title}を追加`, 'editor-btn editor-btn-small', () => {
+        onUpdate([...effects, defaultEffect(defaultType)], { rerender: true });
+      }),
+    );
+    parent.appendChild(section);
   }
 
   private renderBranchEffectList(

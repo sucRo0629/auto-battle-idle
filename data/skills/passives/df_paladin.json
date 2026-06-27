@@ -17,6 +17,7 @@
     "name": "真言加護",
     "effect": "frontBlockAura",
     "chance": 0.05,
+    "buffDisplayName": "真言加護",
     "frontBlockAuraMagicBlock": true
   },
   {

@@ -128,7 +128,11 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
     const order = raw.order;
     if (
       (side !== "ally" && side !== "enemy") ||
-      (stat !== "hp" && stat !== "atk" && stat !== "def" && stat !== "reg") ||
+      (stat !== "hp" &&
+        stat !== "maxHp" &&
+        stat !== "atk" &&
+        stat !== "def" &&
+        stat !== "reg") ||
       (order !== "highest" && order !== "lowest" && order !== "ratio")
     ) {
       throw new Error("Invalid target.stat fields");

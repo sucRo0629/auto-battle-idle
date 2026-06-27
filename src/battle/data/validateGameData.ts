@@ -3979,12 +3979,17 @@ function requirePassiveEffectParams(
         obj.frontBlockAuraMagicBlock === undefined
           ? undefined
           : requireBoolean(obj, 'frontBlockAuraMagicBlock', context);
+      const buffDisplayName =
+        typeof obj.buffDisplayName === 'string' && obj.buffDisplayName.length > 0
+          ? obj.buffDisplayName
+          : undefined;
       return {
         ...base,
         ...(chance !== undefined ? { chance } : {}),
         ...(frontBlockAuraMagicBlock !== undefined
           ? { frontBlockAuraMagicBlock }
           : {}),
+        ...(buffDisplayName !== undefined ? { buffDisplayName } : {}),
       };
     }
     case 'lastStandRecovery': {

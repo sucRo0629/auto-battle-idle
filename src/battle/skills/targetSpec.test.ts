@@ -323,4 +323,20 @@ describe('getTargetPool / pickTargetFromPool', () => {
     const pool = getTargetPool(spec, actor, allies, [enemies[0]!, debuffed]);
     expect(pool.map((u) => u.id)).toEqual(['e2']);
   });
+
+  it('normalizes target.stat maxHp for editor and ballista passives', () => {
+    expect(
+      normalizeTarget({
+        kind: 'stat',
+        side: 'enemy',
+        stat: 'maxHp',
+        order: 'highest',
+      }),
+    ).toEqual({
+      kind: 'stat',
+      side: 'enemy',
+      stat: 'maxHp',
+      order: 'highest',
+    });
+  });
 });
