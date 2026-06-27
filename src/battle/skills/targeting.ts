@@ -296,6 +296,7 @@ export function resolveEffectResolution(
   rand: () => number = Math.random,
   passives?: PassiveSkillDef[],
   allSkillEffects?: readonly SkillEffectDef[],
+  priorEffectHitPools?: ReadonlyMap<number, readonly CombatantState[]>,
 ): SkillEffectResolution | null {
   if (effect.type === 'conditionalEffect') return null;
   if (effect.type === 'placedField') return null;
@@ -326,7 +327,11 @@ export function resolveEffectResolution(
     effect,
     livingAllies(allies).length,
   );
-  const attackablePool = getAttackablePool(spec, actor, allies, enemies, rangePx);
+  const priorPool = resolvePriorEffectAttackablePool(spec, priorEffectHitPools);
+  if (priorPool === null) return null;
+  const attackablePool =
+    priorPool ??
+    getAttackablePool(spec, actor, allies, enemies, rangePx);
   const shape: TargetShape = effect.targetShape ?? 'single';
   const basePower = getBaseAtkScale(effect);
   const pickOptions = pickOptionsForEffect(effect);
@@ -729,4 +734,32 @@ export function resolutionHasTargets(
 ): boolean {
   if (!resolution) return false;
   return resolution.waves.some((wave) => wave.targets.length > 0);
+}
+
+export function extractResolutionHitUnits(
+  resolution: SkillEffectResolution,
+): CombatantState[] {
+  const seen = new Set<string>();
+  const units: CombatantState[] = [];
+  for (const wave of resolution.waves) {
+    for (const { unit } of wave.targets) {
+      if (!unit.isAlive || seen.has(unit.id)) continue;
+      seen.add(unit.id);
+      units.push(unit);
+    }
+  }
+  return units;
+}
+
+function resolvePriorEffectAttackablePool(
+  spec: TargetSpec,
+  priorEffectHitPools?: ReadonlyMap<number, readonly CombatantState[]>,
+): CombatantState[] | null | undefined {
+  if (spec.kind !== 'stat' || spec.poolFromEffectIndex === undefined) {
+    return undefined;
+  }
+  const prior = priorEffectHitPools?.get(spec.poolFromEffectIndex);
+  if (!prior || prior.length === 0) return null;
+  const alive = prior.filter((unit) => unit.isAlive);
+  return alive.length > 0 ? alive : null;
 }

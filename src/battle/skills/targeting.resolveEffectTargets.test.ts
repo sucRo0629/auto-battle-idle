@@ -3,6 +3,7 @@ import { engagedMinBodyGap } from '../battleConstants.ts';
 import type { SkillEffectDef } from '../types.ts';
 import { getAttackablePool, isWithinSkillRange } from './rangeUtils.ts';
 import {
+  extractResolutionHitUnits,
   resolveEffectAnchor,
   resolveEffectResolution,
   resolveEffectTargets,
@@ -745,5 +746,78 @@ describe('resolveEffectTargets', () => {
       gameData,
     );
     expect(anchor?.id).toBe('deb');
+  });
+
+  it('poolFromEffectIndex limits stat pick to prior effect hit pool', () => {
+    const healer = mockUnit('healer', 100, { rangePx: 30 });
+    const allyInRangeLow = mockUnit('inLow', 120, { hp: 40, maxHp: 100 });
+    const allyInRangeHigh = mockUnit('inHigh', 135, { hp: 80, maxHp: 100 });
+    const allyOutOfAoe = mockUnit('out', 190, { hp: 10, maxHp: 100 });
+    const allies = [healer, allyInRangeLow, allyInRangeHigh, allyOutOfAoe];
+
+    const aoeEffect: SkillEffectDef = {
+      type: 'buff',
+      buffSubKind: 'barrier',
+      target: { kind: 'distance', side: 'ally', order: 'selfOrigin' },
+      targetShape: 'aoe',
+      aoeRadiusPx: 50,
+      amount: { kind: 'flat', flatAmount: 1 },
+    };
+    const aoeResolution = resolveEffectResolution(
+      aoeEffect,
+      healer,
+      allies,
+      [],
+      gameData,
+    );
+    expect(aoeResolution).not.toBeNull();
+    const priorPool = extractResolutionHitUnits(aoeResolution!);
+    expect(priorPool.map((u) => u.id).sort()).toEqual(['healer', 'inHigh', 'inLow']);
+
+    const followUpEffect: SkillEffectDef = {
+      type: 'buff',
+      buffSubKind: 'barrier',
+      target: {
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+        poolFromEffectIndex: 0,
+      },
+      amount: { kind: 'flat', flatAmount: 1 },
+    };
+    const followUpResolution = resolveEffectResolution(
+      followUpEffect,
+      healer,
+      allies,
+      [],
+      gameData,
+      Math.random,
+      undefined,
+      undefined,
+      new Map([[0, priorPool]]),
+    );
+    expect(
+      followUpResolution?.waves[0]?.targets[0]?.unit.id,
+    ).toBe('inLow');
+
+    const followUpWithoutPool: SkillEffectDef = {
+      ...followUpEffect,
+      target: {
+        kind: 'stat',
+        side: 'ally',
+        stat: 'hp',
+        order: 'ratio',
+      },
+    };
+    expect(
+      resolveEffectResolution(
+        followUpWithoutPool,
+        healer,
+        allies,
+        [],
+        gameData,
+      )?.waves[0]?.targets[0]?.unit.id,
+    ).toBe('out');
   });
 });

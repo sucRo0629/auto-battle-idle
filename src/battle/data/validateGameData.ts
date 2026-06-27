@@ -1767,11 +1767,30 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
     if (order === 'ratio' && stat !== 'hp') {
       invalidField(context, 'order', 'ratio is only valid when stat is hp');
     }
+    const poolFromEffectIndex = obj.poolFromEffectIndex;
+    if (poolFromEffectIndex !== undefined) {
+      if (
+        typeof poolFromEffectIndex !== 'number' ||
+        !Number.isInteger(poolFromEffectIndex) ||
+        poolFromEffectIndex < 0
+      ) {
+        invalidField(
+          context,
+          'poolFromEffectIndex',
+          'must be a non-negative integer',
+        );
+      }
+    }
     return {
       kind: 'stat',
       side,
       stat: stat as 'hp' | 'maxHp' | 'atk' | 'def' | 'reg',
       order: order as 'highest' | 'lowest' | 'ratio',
+      ...(typeof poolFromEffectIndex === 'number' &&
+      Number.isInteger(poolFromEffectIndex) &&
+      poolFromEffectIndex >= 0
+        ? { poolFromEffectIndex }
+        : {}),
     };
   }
   if (kind === 'attackType') {
@@ -5277,6 +5296,40 @@ function parseOptionalUseDurationSec(
   return value;
 }
 
+function validateEffectTargetPoolReference(
+  effect: SkillEffectDef,
+  effectIndex: number,
+  context: string,
+): void {
+  if (effect.type === 'conditionalEffect') {
+    effect.thenEffects.forEach((branch, branchIndex) => {
+      validateEffectTargetPoolReference(
+        branch,
+        effectIndex,
+        `${context}.thenEffects[${branchIndex}]`,
+      );
+    });
+    effect.elseEffects.forEach((branch, branchIndex) => {
+      validateEffectTargetPoolReference(
+        branch,
+        effectIndex,
+        `${context}.elseEffects[${branchIndex}]`,
+      );
+    });
+    return;
+  }
+  const target = effect.target;
+  if (target?.kind === 'stat' && target.poolFromEffectIndex !== undefined) {
+    if (target.poolFromEffectIndex >= effectIndex) {
+      invalidField(
+        context,
+        'target.poolFromEffectIndex',
+        'must refer to a prior effect index',
+      );
+    }
+  }
+}
+
 function parseActives(raw: unknown): ActiveSkillDef[] {
   if (!Array.isArray(raw)) {
     throw new Error('skills.json actives must be an array');
@@ -5295,6 +5348,13 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
     const effect = (effectsRaw as unknown[]).map((entry, effectIndex) =>
       parseSkillEffect(entry, `${context}.effect[${effectIndex}]`),
     );
+    effect.forEach((entry, effectIndex) => {
+      validateEffectTargetPoolReference(
+        entry,
+        effectIndex,
+        `${context}.effect[${effectIndex}]`,
+      );
+    });
 
     const allowedClassIds = obj.allowedClassIds;
     if (allowedClassIds !== undefined) {

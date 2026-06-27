@@ -1305,6 +1305,8 @@ function appendStatusTagCheckboxes(
 export interface AppendTargetSpecFieldsOptions {
   /** 貫通形状時: 距離を自身起点に固定 */
   lockSelfOrigin?: boolean;
+  /** stat.poolFromEffectIndex 用: 現在の effect インデックス */
+  effectIndex?: number;
 }
 
 export function appendTargetSpecFields(
@@ -1451,6 +1453,39 @@ export function appendTargetSpecFields(
         )
       )
     );
+    if (
+      options?.effectIndex !== undefined &&
+      options.effectIndex > 0
+    ) {
+      wrap.appendChild(
+        createFieldRow(
+          "先行 effect プール",
+          createNumberInput(
+            normalized.poolFromEffectIndex ?? -1,
+            (poolFromEffectIndex) => {
+              onChange({
+                ...normalized,
+                poolFromEffectIndex:
+                  poolFromEffectIndex < 0 ? undefined : poolFromEffectIndex,
+              });
+            },
+            {
+              min: 0,
+              max: options.effectIndex - 1,
+              step: 1,
+              emptyWhen: -1,
+            },
+          ),
+        ),
+      );
+      wrap.appendChild(
+        createEl(
+          "p",
+          "editor-hint",
+          "指定した effect の命中プール内だけで stat 選定します。空欄 = 通常の全体プール。"
+        )
+      );
+    }
   }
 
   if (normalized.kind === "attackType") {

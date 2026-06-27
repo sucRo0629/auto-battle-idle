@@ -787,7 +787,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | Lv0 active_1   | 支えの御盾: heal×0.35 + barrier×1.9                                                   |
 | Lv0 active_2   | 双璧の護り: barrier×2.0 multiLock×2、smart HP≤50%、`targetBarrierBelowGrant`          |
 | Lv10 passive_3 | Wave 開始味方全体 barrier×0.5                                                         |
-| Lv10 active_3  | 庇護の帷: `barrierStack` barrier×1.0 単体最低 HP                                      |
+| Lv10 active_3  | 庇護の帷: 近傍味方 aoe barrier×1.0 + 範囲内 HP 割合最低 1 体へ `barrierStack` barrier×1.25 |
 | Lv20 passive_4 | `barrierBreakRegen`（障壁消費では発火しない）                                         |
 | Lv20 active_4  | 三重の障壁: 障壁 ×2 + barrier×1.25 全体、smart `any`（先読み被ダメ OR HP≤50%）、CD 15 |
 
@@ -1599,7 +1599,7 @@ interface CharacterBuild {
 | サブ種別 (`buffSubKind`) | 対象・効果                                                                  | 主なパラメータ                                    | 重複・スタックルール                                                | 備考                                                                                                                                                                    |
 | :----------------------- | :-------------------------------------------------------------------------- | :------------------------------------------------ | :------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `stat`                   | ステータス（`hp`, `atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の上昇 | `buffStat`<br>`buffMultiplier`<br>`buffFlatBonus`<br>`buffStatModifiers?` | `multiplier` は乗算、`flatBonus` は代数和。複数ステを別々に上げるときは `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1ステのみは従来3フィールドでも可。 | `hp` は maxHp 上昇（`effectiveMaxHp`）。`damageTaken` の減少（被ダメ軽減）や `attackSpeed`（攻撃速度）の上昇もこれに含みます。                                          |
-| `barrier`                | ダメージを身代わりに受けるバリアを付与                                      | `ResourceAmountSpec`                              | 既定は `barrierHp` に加算。`barrierStack: false` で新量に置換。     | 持続時間制限なし（消費されるまで維持）。詳細は後述の「バリア」参照。                                                                                                    |
+| `barrier`                | ダメージを身代わりに受けるバリアを付与                                      | `ResourceAmountSpec`                              | 既定は max(既存, 付与量)。`barrierStack: true` で加算。     | 持続時間制限なし（消費されるまで維持）。詳細は後述の「バリア」参照。                                                                                                    |
 | `block`                  | 物理直接ダメージのブロック率を上昇                                          | `chance`（0〜1）                                  | 複数ソースは加算（上限 1.0）。                                      | 成功時、DEF 適用後の物理直接ダメージを一定割合カット。DoT は対象外。魔法 block は Paladin 後半 passive 候補で、採用時は新フィールドまたは新 effect として別途定義する。 |
 | `evasion`                | 直接ダメージ（物理/魔法）の回避率を上昇                                     | `chance`（0〜1）                                  | 複数ソースは加算（上限 1.0）。                                      | 成功時、直接ダメージを完全に無効化。DoT は対象外。                                                                                                                      |
 | `damageDelay`            | 一部ダメージ後払い                                                          | `ratio`, `buffDurationSec`                        | 複数ソースは `ratio` 加算（上限 1.0）。遅延プールは加算。           | 軽減ではない。Block 後の確定ダメージを分割し、遅延分は DEF/REG/Barrier/Block/Evasion を再適用しない。詳細は [combat.md](combat.md)。                                    |
@@ -1638,11 +1638,11 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | 項目              | 仕様                                                                                                                                  | 備考                                                                         |
 | :---------------- | :------------------------------------------------------------------------------------------------------------------------------------ | :--------------------------------------------------------------------------- |
 | **付与方法**      | ・アクティブ: `type: barrier` または `effect: buff`（`buffSubKind: barrier`）<br>・パッシブ: `effect: buff`（`buffSubKind: barrier`） | 効果量は `ResourceAmountSpec`（heal と同式）で決定されます。                 |
-| **スタック**      | 既定は既存の `barrierHp` に**加算**。`barrierStack: false` で新量に**置換**（既存残量は破棄）。                                       | maxHp を超えていくらでも付与可能です。                                       |
+| **スタック**      | 既定は max(既存 `barrierHp`, 付与量)。小さい付与は無視。`barrierStack: true` で既存に**加算**。                                       | maxHp を超えていくらでも付与可能です。                                       |
 | **持続時間**      | 時間切れなし。**ダメージで消費されるまで維持**されます。                                                                              | ステージクリアや Wave 跨ぎでも維持されます。                                 |
 | **ダメージ吸収**  | 被ダメージ時、HP より先にバリアが消費されます（直接ダメージ・DoT 共通）。                                                             | `barrierHp` が減少し、バリアで防ぎきれなかった超過分のみが HP から減ります。 |
 | **HP 割合の参照** | HP 割合（`hp / maxHp`）の計算時, `barrierHp` は**含めません**。                                                                       | 満タン HP ＋大バリアでも HP 割合は 1.0 となります。                          |
-| **余剰回復変換**  | パッシブ `excessHealToBarrier` により、直接回復の超過分をバリアに変換。                                                               | 変換されたバリアは**置換**（`barrierStack: false`）として適用されます。      |
+| **余剰回復変換**  | パッシブ `excessHealToBarrier` により、直接回復の超過分をバリアに変換。                                                               | 変換されたバリアは max マージ（`barrierStack` なし）として適用されます。      |
 
 ### パッシブ効果（`PassiveEffectKind`）
 
@@ -1798,7 +1798,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `kind`       | 説明                                                                                                                                                                                                                                           |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest/**selfOrigin**）。`selfOrigin` = 使用者位置・向きを効果範囲の起点とする（aoe / pierce / single）。`includeSelf`（任意）= 味方 side 時、最終対象に使用者を含める（既定 false）                  |
-| `stat`       | `side` + `stat`（hp/maxHp/atk/def/reg）+ `order`（highest/lowest/ratio）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`maxHp` は effective maxHp 比較。**heal** の味方 stat は使用者も候補に含む。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外 |
+| `stat`       | `side` + `stat`（hp/maxHp/atk/def/reg）+ `order`（highest/lowest/ratio）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`maxHp` は effective maxHp 比較。**heal** の味方 stat は使用者も候補に含む。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外。`poolFromEffectIndex`（任意）= 同一スキル内の先行 effect 命中プール内だけで stat 選定 |
 | `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。フィルタ後 anchor は最前線                                                                                                                     |
 | `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR。`DEBUFF_FILTER_TAGS` / `BUFF_FILTER_TAGS` 参照）。フィルタ後 anchor は最前線                                                                                                              |
 | `self`       | 自身                                                                                                                                                                                                                                           |
@@ -1809,6 +1809,13 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 - `nearest` / `farthest` は「どの対象を選ぶか」の距離順で、`selfOrigin` は「どこを起点に形状を解くか」のアンカー指定。
 - `selfOrigin` は `aoe` / `pierce` / `chain` の幾何解決に使う。`single` では単一対象選択の起点に留まり、`self` と同義ではない。
 - `includeSelf` は `distance.side: ally` の最終対象に自分を含めるかだけを制御し、アンカーの意味は変えない。
+
+### 同一スキル内の先行 effect プール（`poolFromEffectIndex`）
+
+- `stat` target の任意フィールド。値 = 同一スキル `effect[]` のインデックス（0 始まり）。
+- 指定時、その effect の**命中プール**（発動 tick で解決した全 hit 対象）内だけで stat 選定する。射程・形状の再解決は行わない。
+- 未指定 = 従来どおり effect 単位で独立解決。
+- 例: 庇護の帷 — effect 0 の aoe 範囲内全員 → effect 1 で範囲内 HP 割合最低 1 体へ追加バリア。
 
 ### パッシブのターゲット解決
 
@@ -1905,7 +1912,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 
 | フィールド     | 説明                                                           |
 | -------------- | -------------------------------------------------------------- |
-| `barrierStack` | 未指定 = 既存 `barrierHp` に加算（既定）。`false` = 新量で置換 |
+| `barrierStack` | 未指定 = max(既存, 付与量)。`true` = 既存 `barrierHp` に加算 |
 
 ### move 専用
 

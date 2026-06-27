@@ -163,7 +163,14 @@ export type TargetSpec =
       kind: "clusterCenter";
       side: TargetSide;
     }
-  | { kind: "stat"; side: TargetSide; stat: TargetStat; order: TargetStatOrder }
+  | {
+      kind: "stat";
+      side: TargetSide;
+      stat: TargetStat;
+      order: TargetStatOrder;
+      /** 同一スキル内の先行 effect 命中プール内だけで stat 選定 */
+      poolFromEffectIndex?: number;
+    }
   | {
       kind: "attackType";
       physical?: boolean;

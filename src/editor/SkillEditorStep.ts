@@ -4327,12 +4327,10 @@ export class SkillEditorStep {
         },
         showPerEffectPresentation,
         idReadonly,
-        showPerEffectPresentation
-          ? {
-              effectIndex,
-              effectCount: active.effect.length,
-            }
-          : undefined,
+        {
+          effectIndex,
+          effectCount: active.effect.length,
+        },
         active.id,
       );
       effectsSection.appendChild(block);
@@ -4546,7 +4544,7 @@ export class SkillEditorStep {
             return next;
           }, { rerender: true });
         },
-        { lockSelfOrigin },
+        { lockSelfOrigin, effectIndex: sequenceContext?.effectIndex },
       );
     }
     const isMove = normalizedEffect.type === 'move';
@@ -5283,6 +5281,25 @@ export class SkillEditorStep {
         if (effect.buffSubKind === 'barrier') {
           appendResourceAmountFields(detailGrid, normalizeEffectAmount(effect), (amount, options) =>
             patchEffect((prev) => ({ ...prev, amount }) as SkillEffectDef, options),
+          );
+          detailGrid.appendChild(
+            (() => {
+              const row = createEl('div', 'editor-field editor-field-checkbox');
+              const label = createEl('label');
+              const input = document.createElement('input');
+              input.type = 'checkbox';
+              input.checked = effect.barrierStack === true;
+              input.addEventListener('change', () => {
+                patchEffect((prev) => ({
+                  ...prev,
+                  barrierStack: input.checked ? true : undefined,
+                }) as SkillEffectDef);
+              });
+              label.appendChild(input);
+              label.append(' 継ぎ足し（既存バリアに加算）');
+              row.appendChild(label);
+              return row;
+            })(),
           );
           break;
         }

@@ -2030,8 +2030,13 @@ export class BattleEngine {
     });
     this.skillSequenceRunner.tickSequences(
       this.battleTimeSec,
-      (step) => {
-        this.executor.applyScheduledStep(step, this.players, this.enemies);
+      (step, sequence) => {
+        this.executor.applyScheduledStep(
+          step,
+          this.players,
+          this.enemies,
+          sequence.effectHitPools,
+        );
       },
       (actorId) => {
         const unit = this.findCombatant(actorId);

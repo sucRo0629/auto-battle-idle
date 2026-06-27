@@ -53,6 +53,8 @@ export interface ActiveSkillSequence {
   nextStepIndex: number;
   /** 最終 step 適用後の waitAfterSec 待機（完了まで isActorInSkillMotion を維持） */
   tailWaitUntilBattleSec?: number;
+  /** 同一スキル内 effect 命中プール（poolFromEffectIndex 用） */
+  effectHitPools: Map<number, CombatantState[]>;
 }
 
 export function buildSkillSequence(
@@ -130,6 +132,7 @@ export function buildSkillSequence(
     cd,
     steps,
     nextStepIndex: 0,
+    effectHitPools: new Map(),
   };
 }
 
@@ -493,7 +496,7 @@ export class SkillSequenceRunner {
 
   tickSequences(
     battleTimeSec: number,
-    applyStep: (step: PendingSkillStep) => void,
+    applyStep: (step: PendingSkillStep, sequence: ActiveSkillSequence) => void,
     onSequenceComplete?: (actorId: string) => void,
   ): void {
     const kept: ActiveSkillSequence[] = [];
@@ -513,7 +516,7 @@ export class SkillSequenceRunner {
         const step = sequence.steps[sequence.nextStepIndex]!;
         if (step.applyAtBattleSec > battleTimeSec) break;
 
-        applyStep(step);
+        applyStep(step, sequence);
         sequence.nextStepIndex += 1;
 
         if (sequence.nextStepIndex >= sequence.steps.length) {

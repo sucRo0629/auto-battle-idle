@@ -158,10 +158,16 @@ import {
   resolveSequenceStepAnchor,
 } from './skillSequence.ts';
 import {
+  extractResolutionHitUnits,
   resolutionHasTargets,
   resolveEffectResolution,
   resolveEffectTargetSpec,
 } from './targeting.ts';
+
+interface ApplyResolvedEffectStepResult {
+  applied: boolean;
+  hitUnits: CombatantState[];
+}
 
 function skillHitEventFields(
   hitIndex?: number,
@@ -345,19 +351,27 @@ export class SkillExecutor {
     let appliedAny = false;
     this.potencyStacksConsumed.clear();
     this.blockResonanceStacksConsumed.clear();
+    const effectHitPools = new Map<number, CombatantState[]>();
     for (let effectIndex = 0; effectIndex < skill.effect.length; effectIndex++) {
+      const effectDef = skill.effect[effectIndex]!;
+      const result = this.applyResolvedEffectStep(
+        actor,
+        allies,
+        enemies,
+        skill,
+        effectDef,
+        effectIndex,
+        cd,
+        passives,
+        effectHitPools,
+      );
       if (
-        this.applyResolvedEffectStep(
-          actor,
-          allies,
-          enemies,
-          skill,
-          skill.effect[effectIndex]!,
-          effectIndex,
-          cd,
-          passives,
-        )
+        effectDef.type !== 'conditionalEffect' &&
+        result.hitUnits.length > 0
       ) {
+        effectHitPools.set(effectIndex, result.hitUnits);
+      }
+      if (result.applied) {
         appliedAny = true;
       }
     }
@@ -411,7 +425,9 @@ export class SkillExecutor {
     effectIndex: number,
     cd: SkillCooldown,
     passives: ReturnType<typeof getPassiveDefs>,
-  ): boolean {
+    priorEffectHitPools?: ReadonlyMap<number, readonly CombatantState[]>,
+  ): ApplyResolvedEffectStepResult {
+    const empty: ApplyResolvedEffectStepResult = { applied: false, hitUnits: [] };
     if (effectDef.type === 'herbalPotencyConsume') {
       const resolution = resolveEffectResolution(
         effectDef,
@@ -422,8 +438,9 @@ export class SkillExecutor {
         Math.random,
         passives,
         skill.effect,
+        priorEffectHitPools,
       );
-      if (!resolutionHasTargets(resolution)) return false;
+      if (!resolutionHasTargets(resolution)) return empty;
       const targets = resolution!.waves.flatMap((wave) =>
         wave.targets.map((entry) => entry.unit),
       );
@@ -431,20 +448,23 @@ export class SkillExecutor {
       for (const [targetId, stacks] of consumed) {
         this.potencyStacksConsumed.set(targetId, stacks);
       }
-      return consumed.size > 0;
+      return {
+        applied: consumed.size > 0,
+        hitUnits: extractResolutionHitUnits(resolution!),
+      };
     }
 
     if (effectDef.type === 'blockResonanceConsume') {
       const stacks = consumeBlockResonanceStacks(actor);
-      if (stacks <= 0) return false;
+      if (stacks <= 0) return empty;
       this.blockResonanceStacksConsumed.set(actor.id, stacks);
       applyBlockResonanceStance(actor, skill, stacks);
-      return true;
+      return { applied: true, hitUnits: [] };
     }
 
     if (effectDef.type === 'placedField') {
       const centerX = resolvePlacedFieldCenterX(actor, effectDef, enemies);
-      if (centerX === null) return false;
+      if (centerX === null) return empty;
       const field = spawnPlacedField(
         actor,
         skill,
@@ -470,7 +490,7 @@ export class SkillExecutor {
         range: effectDef.range,
         ...skillHitEventFields(undefined, undefined),
       });
-      return true;
+      return { applied: true, hitUnits: [] };
     }
 
     if (effectDef.type === 'grantNextOutgoingDamage') {
@@ -494,7 +514,7 @@ export class SkillExecutor {
         amount: multiplier,
         ...skillHitEventFields(undefined, undefined),
       });
-      return true;
+      return { applied: true, hitUnits: [] };
     }
 
     if (effectDef.type === 'conditionalEffect') {
@@ -510,22 +530,22 @@ export class SkillExecutor {
       );
       let appliedAny = false;
       for (const branchEffect of branchEffects) {
-        if (
-          this.applyResolvedEffectStep(
-            actor,
-            allies,
-            enemies,
-            skill,
-            branchEffect,
-            effectIndex,
-            cd,
-            passives,
-          )
-        ) {
+        const branchResult = this.applyResolvedEffectStep(
+          actor,
+          allies,
+          enemies,
+          skill,
+          branchEffect,
+          effectIndex,
+          cd,
+          passives,
+          priorEffectHitPools,
+        );
+        if (branchResult.applied) {
           appliedAny = true;
         }
       }
-      return appliedAny;
+      return { applied: appliedAny, hitUnits: [] };
     }
 
     const resolution = resolveEffectResolution(
@@ -537,8 +557,10 @@ export class SkillExecutor {
       Math.random,
       passives,
       skill.effect,
+      priorEffectHitPools,
     );
-    if (!resolutionHasTargets(resolution)) return false;
+    if (!resolutionHasTargets(resolution)) return empty;
+    const hitUnits = extractResolutionHitUnits(resolution!);
 
     const applyDelaySec = resolveEffectApplyDelaySec(
       skill.id,
@@ -564,9 +586,9 @@ export class SkillExecutor {
           this.emitSkillWindup(actor, skill, effectIndex, cd, resolution!);
         }
         this.deps.enqueuePendingHits(pending);
-        return true;
+        return { applied: true, hitUnits };
       }
-      return false;
+      return empty;
     }
 
     const crowdHitCount =
@@ -625,7 +647,7 @@ export class SkillExecutor {
         }
       }
     }
-    return appliedAny;
+    return { applied: appliedAny, hitUnits };
   }
 
   private emitSkillWindup(
@@ -652,6 +674,7 @@ export class SkillExecutor {
     step: PendingSkillStep,
     allies: CombatantState[],
     enemies: CombatantState[],
+    effectHitPools?: Map<number, CombatantState[]>,
   ): void {
     const actor = findCombatantById(step.actorId, allies, enemies);
     if (!actor?.isAlive) return;
@@ -696,7 +719,7 @@ export class SkillExecutor {
       return;
     }
 
-    this.applyResolvedEffectStep(
+    const result = this.applyResolvedEffectStep(
       actor,
       allies,
       enemies,
@@ -705,7 +728,15 @@ export class SkillExecutor {
       step.effectIndex,
       step.cd,
       passives,
+      effectHitPools,
     );
+    if (
+      effectHitPools &&
+      step.effectDef.type !== 'conditionalEffect' &&
+      result.hitUnits.length > 0
+    ) {
+      effectHitPools.set(step.effectIndex, result.hitUnits);
+    }
   }
 
   applyPendingHit(hit: PendingSkillHit): boolean {

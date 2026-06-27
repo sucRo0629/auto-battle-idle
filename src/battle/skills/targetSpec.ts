@@ -140,7 +140,22 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
     if (order === "ratio" && stat !== "hp") {
       throw new Error("target.stat order ratio is only valid for hp");
     }
-    return { kind: "stat", side, stat, order };
+    const poolFromEffectIndex = raw.poolFromEffectIndex;
+    if (
+      poolFromEffectIndex !== undefined &&
+      (typeof poolFromEffectIndex !== "number" ||
+        !Number.isInteger(poolFromEffectIndex) ||
+        poolFromEffectIndex < 0)
+    ) {
+      throw new Error("Invalid target.poolFromEffectIndex");
+    }
+    return {
+      kind: "stat",
+      side,
+      stat,
+      order,
+      ...(poolFromEffectIndex !== undefined ? { poolFromEffectIndex } : {}),
+    };
   }
   if (kind === "attackType") {
     const spec: TargetSpec = { kind: "attackType" };

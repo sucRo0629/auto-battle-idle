@@ -133,7 +133,8 @@
           "kind": "stat",
           "side": "ally",
           "stat": "hp",
-          "order": "ratio"
+          "order": "ratio",
+          "poolFromEffectIndex": 0
         },
         "type": "buff",
         "buffSubKind": "barrier",
