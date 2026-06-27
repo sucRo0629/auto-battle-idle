@@ -4,7 +4,7 @@ import {
   resolvePlayerApproachBattleX,
   shouldSkipEngagedAutoApproach,
 } from './resolveApproachBattleX.ts';
-import { resolvePriorityHealTarget } from './skills/targeting.ts';
+import { resolvePriorityHealTarget, resolveEffectResolution } from './skills/targeting.ts';
 import type { CombatantState, GameData } from './types.ts';
 
 const ALCHEMIST_BASIC_ID = 'sp_alchemist_basic_attack';
@@ -275,5 +275,28 @@ describe('PHT ally-heal approach (sp_alchemist regression)', () => {
         gameData,
       ),
     ).toBe(alchemist.battleX);
+  });
+
+  it('withholds sp_alchemist_active_1 when PHT is outside selfOrigin aoe', () => {
+    const alchemist = mockAlchemist(52);
+    const guardian = mockGuardian(224, 47);
+    const sorcerer = mockSorcerer(20, 76);
+    const players = [guardian, sorcerer, alchemist];
+    const active1 = gameData.skillRegistry.actives['sp_alchemist_active_1'];
+    expect(active1?.effect[0]?.type).toBe('heal');
+
+    const resolution = resolveEffectResolution(
+      active1!.effect[0]!,
+      alchemist,
+      players,
+      [mockEnemy(280)],
+      gameData,
+      Math.random,
+      undefined,
+      active1!.effect,
+      undefined,
+      active1,
+    );
+    expect(resolution).toBeNull();
   });
 });

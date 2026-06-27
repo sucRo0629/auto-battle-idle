@@ -176,36 +176,36 @@ export function skillHasBarrierEffect(
   return effects.some(isBarrierEffect);
 }
 
-/** アクティブ heal / hot: 射程内候補に欠損 HP の味方がいなければ発動保留 */
+/** アクティブ heal / hot: PHT が効果形状内にいなければ発動保留（正本: combat.md §回復 PHT） */
 function hasDamagedHealCandidate(
   spec: TargetSpec,
   actor: CombatantState,
+  allies: CombatantState[],
   attackablePool: CombatantState[],
   effect?: SkillEffectDef,
 ): boolean {
+  if (spec.kind === 'self') {
+    return actor.isAlive && actor.hp < getEffectiveMaxHp(actor);
+  }
+
+  if (spec.kind === 'all' && spec.side === 'ally') {
+    return resolvePriorityHealTarget(livingAllies(allies)) !== null;
+  }
+
+  const pht = resolvePriorityHealTarget(livingAllies(allies));
+  if (!pht) return false;
+
   if (
     effect?.targetShape === 'aoe' &&
     effect.aoeRadiusPx !== undefined &&
     effect.aoeRadiusPx > 0 &&
-    (isSelfOriginSpec(spec) || spec.kind === 'self')
+    isSelfOriginSpec(spec)
   ) {
     const anchorX = getBattleX(actor);
-    return attackablePool
-      .filter(
-        (unit) =>
-          unit.isAlive &&
-          Math.abs(getBattleX(unit) - anchorX) <= effect.aoeRadiusPx!,
-      )
-      .some((unit) => unit.hp < getEffectiveMaxHp(unit));
+    return Math.abs(getBattleX(pht) - anchorX) <= effect.aoeRadiusPx;
   }
 
-  const candidates =
-    spec.kind === 'self'
-      ? actor.isAlive
-        ? [actor]
-        : []
-      : attackablePool.filter((unit) => unit.isAlive);
-  return candidates.some((unit) => unit.hp < getEffectiveMaxHp(unit));
+  return attackablePool.some((unit) => unit.id === pht.id);
 }
 
 function hasScopedTargetRuleOverride(
@@ -403,7 +403,13 @@ function resolveEffectResolutionInternal(
     sourceEffect.type === 'heal' &&
     (sourceEffect.healSubKind ?? 'instant') !== 'dispel' &&
     !skipHealWithhold &&
-    !hasDamagedHealCandidate(specForResolution, actor, attackablePool, merged)
+    !hasDamagedHealCandidate(
+      specForResolution,
+      actor,
+      allies,
+      attackablePool,
+      merged,
+    )
   ) {
     return null;
   }
