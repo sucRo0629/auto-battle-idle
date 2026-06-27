@@ -3,9 +3,9 @@
 .debug-menu {
   -webkit-app-region: no-drag;
   padding: 8px 10px;
-  background: rgba(22, 33, 62, 0.95);
+  background: rgba(15, 18, 28, 0.97);
   border: 1px solid var(--canvas-border-color);
-  border-radius: 6px;
+  border-radius: 2px;
   font-size: 12px;
 }
 

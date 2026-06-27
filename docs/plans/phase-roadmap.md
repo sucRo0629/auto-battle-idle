@@ -11,7 +11,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2b** | 戦闘計算（`combatMath` 等）                                                                   | **完了**                        |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                                     | **完了**                        |
 | **3**  | Lv アップ時スキル習得、習得済み passive / active 常時使用枠（各最大 4）+ クラス別スキル再設定 | **完了**                        |
-| **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **確定済** / 4c **完了** / 4b 説明 / **4d 編成・統計 UI + HUD** | **進行中**（4d 残）             |
+| **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **確定済** / 4c **完了** / 4b 説明 / **4d ほぼ完了** | **進行中**（4d 目視確認）       |
 | **5**  | 演出アセット + VFX PNG + **演出調整ツール**；**5d Combat Feedback**（Damage / Event Popup）   | **基盤のみ**（本番 PNG 未実装） |
 | **6**  | ステージ作成 — 敵テンプレート・固定ステージコンテンツ・ステージ編集 GUI                       | 未着手（4a 後）                 |
 | **9**  | ローグライクモード（仮称）— 既存 effect 中心 13 クラス向けランダム問題・ラン進行              | 未着手                          |
@@ -152,7 +152,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 | **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                | **確定済**（13 クラス。印術師・法陣師は Phase 7b/7c 送り） |
 | **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                        | **完了**                |
 | **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish                               | **随時**（コア済）      |
-| **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsOverlay`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **部分完了**（編成 PR1–3 済 / 統計・HUD 見た目 残） |
+| **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsOverlay`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **ほぼ完了**（§11 視覚 polish 残確認） |
 
 ### クラスマスタ（確定済）
 
@@ -223,13 +223,14 @@ data/
 
 **タイミング：** 4a でスキーマが固まったあと。**4b と並行** してよい（説明文生成はマージ後の型・validate に依存するだけ）。
 
-### 4d — パーティ編成 UI + 統計 UI + HUD（部分完了）
+### 4d — パーティ編成 UI + 統計 UI + HUD（ほぼ完了）
 
 **ゴール:** 戦闘外 DOM UI（編成・統計）と戦闘 HUD の見た目を **PC 向け RPG 情報パネル**基調に揃え、Web アプリ風ダッシュボード感を除去する。
 
 - **編成（完了）:** [party-formation-ui.md](../spec/party-formation-ui.md)（**v0.4**）PR1–3 — 上ロスター / 下詳細、編成内訳行、中央モーダル Picker、閲覧スキルカード、インライン用語パネル、`playerProgress.level` ヘッダー表示。
-- **統計（未着手）:** [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) — `BattleStatsOverlay` / `PartyMemberStatsDisplay` の §11 準拠刷新。
-- **HUD（作業中）:** 状態バッジ五角形・簡易/詳細分割は spec 整合済。`battleHudTheme` / `statusBadgeRenderer` 等の見た目仕上げが残る。
+- **統計（刷新済）:** [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) — `2e43f08` 以降。縦リスト・細セパレーター・控えめバー、24px アイコン + `displayName`、Debuff/Buff ラベル付き全件バッジ帯、`DebugMenuPanel` 同期。
+- **HUD（完了）:** 五角形バッジ・簡易/詳細分割・`statusBadgeRenderer` 共有。Party HUD / 敵頭上 / 統計詳細で同一描画経路。
+- **DOM §11 polish（完了）:** `meta-menu-overlay.css` / `skill-menu-panel.css`（Picker・ロスター・スキルカード）/ `game-term-panel.css` / `battle-view.css` ヘッダーを統計 UI と同系（角丸 2px・弱 shadow・控えめ backdrop）に揃え。
 
 **前提（充足済）**
 
