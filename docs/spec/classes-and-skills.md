@@ -35,7 +35,7 @@
 
 スキル説明など DOM UI 上の **ゲーム用語** を、クリックで補足説明できるようにするための辞書。戦闘ルールの正本は引き続き [combat.md](combat.md) および本書の各節。辞書は **プレイヤー向け要約** を載せ、詳細数式・パイプラインは spec へ委ねる。
 
-**実装（予定）:** `src/ui/gameTermGlossary.ts`（辞書）、`annotateGameTerms.ts`（本文へのリンク化）、`GameTermPanel.ts`（用語パネル）。画面振る舞いは [party-formation-ui.md §6.4](party-formation-ui.md#64-インライン用語パネル) を正とする。
+**実装:** `src/ui/gameTermGlossary.ts`（辞書）、`src/ui/annotateGameTerms.ts`（本文へのリンク化）、`src/ui/GameTermPanel.ts`（用語パネル）、`src/styles/game-term-panel.css`。画面振る舞いは [party-formation-ui.md §6.4](party-formation-ui.md#64-インライン用語パネル) を正とする。
 
 #### スコープ（v1）
 

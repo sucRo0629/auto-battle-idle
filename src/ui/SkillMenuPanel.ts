@@ -36,6 +36,8 @@ import {
 } from "../progression/skillBuild.ts";
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
 import { formatSkillCardLines } from "./formatSkillText.ts";
+import { annotateGameTerms } from "./annotateGameTerms.ts";
+import { GameTermPanel } from "./GameTermPanel.ts";
 
 const FORMATION_ROW_LABELS: Record<string, string> = {
   front: "前衛",
@@ -73,6 +75,7 @@ export class SkillMenuPanel {
   private readonly detailWrapEl: HTMLElement;
   private readonly bodyEl: HTMLElement;
   private readonly pickerOverlayEl: HTMLElement;
+  private readonly gameTermPanel: GameTermPanel;
   private readonly draftParty: PartySlotState[];
   private readonly unlockedClassIds: ClassId[];
   private selectedIndex = 0;
@@ -172,6 +175,12 @@ export class SkillMenuPanel {
     this.detailWrapEl = document.createElement("div");
     this.detailWrapEl.className = "skill-menu-detail-wrap";
     this.detailWrapEl.append(this.bodyEl, this.pickerOverlayEl);
+
+    this.gameTermPanel = new GameTermPanel(this.root, {
+      locale: "ja",
+      detailScrollRoot: this.bodyEl,
+    });
+    this.gameTermPanel.mount();
 
     this.formationBlockEl.append(
       this.rosterSlotsEl,
@@ -599,7 +608,16 @@ export class SkillMenuPanel {
       for (const line of lines.effectLines) {
         const lineEl = document.createElement("div");
         lineEl.className = "skill-menu-skill-view-card-effect-line";
-        lineEl.textContent = line;
+        lineEl.appendChild(
+          annotateGameTerms(
+            line,
+            "ja",
+            (termId, anchor) => {
+              this.gameTermPanel.openFromTerm(termId, anchor);
+            },
+            { panelId: this.gameTermPanel.getPanelId() },
+          ),
+        );
         effectsEl.appendChild(lineEl);
       }
       card.appendChild(effectsEl);

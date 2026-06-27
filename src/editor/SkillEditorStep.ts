@@ -95,6 +95,8 @@ import {
   formatActiveDescription,
   formatPassiveDescription,
 } from '../ui/formatSkillText.ts';
+import { annotateGameTerms } from '../ui/annotateGameTerms.ts';
+import { GameTermPanel } from '../ui/GameTermPanel.ts';
 import type { SkillDraftEntry, SkillSlotKind } from './editorApi.ts';
 import {
   appendDefenseIgnoreFields,
@@ -2101,12 +2103,15 @@ const SKILL_KIND_LABELS: Record<SkillEntryKind, string> = {
 export class SkillEditorStep {
   private container: HTMLElement;
   private skillExpandedState = new Map<string, boolean>();
+  private readonly gameTermPanel: GameTermPanel;
 
   constructor(
     container: HTMLElement,
     private options: SkillEditorStepOptions,
   ) {
     this.container = container;
+    this.gameTermPanel = new GameTermPanel(container, { locale: 'ja' });
+    this.gameTermPanel.mount();
     this.render();
   }
 
@@ -2340,9 +2345,18 @@ export class SkillEditorStep {
       : entry.active
         ? formatActiveDescription(entry.active)
         : entry.ref.skillId;
-    summaryExtra.appendChild(
-      createEl('span', 'editor-collapsible-summary-desc', description),
+    const descEl = createEl('span', 'editor-collapsible-summary-desc');
+    descEl.appendChild(
+      annotateGameTerms(
+        description,
+        'ja',
+        (termId, anchor) => {
+          this.gameTermPanel.openFromTerm(termId, anchor);
+        },
+        { panelId: this.gameTermPanel.getPanelId() },
+      ),
     );
+    summaryExtra.appendChild(descEl);
 
     let summaryActions: HTMLElement | undefined;
     if (!idReadonly && this.options.onRemoveSkill) {
@@ -4085,13 +4099,29 @@ export class SkillEditorStep {
       }
     }
 
-    parent.appendChild(
-      createEl(
-        'p',
-        'editor-skill-desc-preview',
-        `説明: ${formatPassiveDescription(passive)}`,
+    this.appendSkillDescriptionPreview(
+      parent,
+      formatPassiveDescription(passive),
+    );
+  }
+
+  private appendSkillDescriptionPreview(
+    parent: HTMLElement,
+    description: string,
+  ): void {
+    const preview = createEl('p', 'editor-skill-desc-preview');
+    preview.append(document.createTextNode('説明: '));
+    preview.appendChild(
+      annotateGameTerms(
+        description,
+        'ja',
+        (termId, anchor) => {
+          this.gameTermPanel.openFromTerm(termId, anchor);
+        },
+        { panelId: this.gameTermPanel.getPanelId() },
       ),
     );
+    parent.appendChild(preview);
   }
 
   private renderActive(parent: HTMLElement, index: number, idReadonly: boolean): void {
@@ -4295,12 +4325,9 @@ export class SkillEditorStep {
       );
     }
 
-    parent.appendChild(
-      createEl(
-        'p',
-        'editor-skill-desc-preview',
-        `説明: ${formatActiveDescription(active)}`,
-      ),
+    this.appendSkillDescriptionPreview(
+      parent,
+      formatActiveDescription(active),
     );
 
     const effectsSection = createSection('効果');

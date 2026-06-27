@@ -350,6 +350,10 @@
   line-height: 1.45;
 }
 
+.skill-menu-skill-view-card-effect-line .game-term-link {
+  color: inherit;
+}
+
 .skill-menu-skill-view-card-footer {
   margin-top: 2px;
   font-size: 11px;
