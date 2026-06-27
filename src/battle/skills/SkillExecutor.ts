@@ -1306,7 +1306,8 @@ export class SkillExecutor {
         cd.slotKind === 'basic' &&
         appliedDamage > 0 &&
         damageTarget.isEnemy &&
-        damageTarget.isAlive
+        damageTarget.isAlive &&
+        damageType === 'physical'
       ) {
         const dotProcs = collectAllyBasicAttackDotProcs(
           partyAllies,

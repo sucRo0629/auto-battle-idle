@@ -523,7 +523,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura | 号令／崩勢／鼓舞／追撃  |
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                    | 連射／連ね矢          |
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 高 Max HP 狙い + 待機蓄積 + 砲撃標的           | 破城矢装填／重矢          |
-| `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | DoT 圧縮補助 + 味方 basic 毒 proc              | 毒罠／粘着罠／追い込み／毒収穫 |
+| `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | DoT 圧縮補助 + 味方物理 basic 毒 proc          | 毒罠／粘着罠／追い込み／毒収穫 |
 | `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | —（未実装）                                   | （未実装）            |
 | `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | —（未実装）                                   | （未実装・JSON 廃棄） |
 | `at_conductor` | 法陣師 | Conductor | back  | 遠隔魔法 | —（未実装）                                   | （未実装・JSON 廃棄） |
@@ -1100,7 +1100,7 @@ Kill 対象を持たない **Position Flow / 戦線指揮** 職。位置取り�
 
 #### 役割
 
-- 味方 basic 経由の poison 付与（P2）と唯一のアクティブ毒付与（A1）
+- 味方物理 basic 経由の poison 付与（P2）と唯一のアクティブ毒付与（A1）
 - 持続罠による dot 再付与・延長・圧縮（A1/A2/A3）
 - dot 中敵への回復抑制・仕留め被ダメ補正（P3/P4）
 - 毒収穫と poison 蔓延による dot 再分配（A4）
@@ -1119,7 +1119,7 @@ Hunter = poison Field（P2/A1）+ 任意 dot 延長・圧縮（A2/A3）+ 毒収�
 | -------------- | ------------------------ | -------- | ------------------------------------------------------------------------------------ |
 | basic          | `at_hunter_basic_attack` | 通常射撃 | 物理単体 nearest。dot・罠補助なし                                                    |
 | passive 1 Lv0  | `at_hunter_passive_1`    | 濃縮毒   | 狩猟士の dot 圧縮基準倍率 0.7（`dotCompressAssist`）                                 |
-| passive 2 Lv0  | `at_hunter_passive_2`    | 毒の武器 | 味方全員 basic 命中 20% で poison dot（flat 10 / magic / 5s）                        |
+| passive 2 Lv0  | `at_hunter_passive_2`    | 毒の武器 | 味方物理 basic 命中 20% で poison dot（flat 10 / magic / 5s）                        |
 | passive 3 Lv10 | `at_hunter_passive_3`    | 癒えぬ傷 | dot 中敵 heal×0.8 + 全味方 dot 付与 duration×1.5                                       |
 | passive 4 Lv20 | `at_hunter_passive_4`    | 仕留め時 | hasDot かつ HP≤50% 敵への被ダメ×1.2（全味方与ダメ。[combat.md](combat.md) §仕留め） |
 | active 1 Lv0   | `at_hunter_active_1`     | 毒罠     | clusterCenter + placedField 70px / 5s。poison dot。滞在 1s 再付与（累積）            |

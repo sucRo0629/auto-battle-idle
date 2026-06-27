@@ -269,7 +269,7 @@ Barrier は Survival Layer の猶予を作る。被ダメージ軽減は損失�
 
 **DoT 再付与:** buff/debuff / CC の `remainingSec` は長い方を採用するが、**DoT（`overlay: dot`）のみ例外** — 再付与時にマージせず StatusEffect を追加し、各实例が独立 tick（累積）する。詳細は [combat.md](spec/combat.md) §状態再付与。
 
-**狩猟士（`at_hunter`）:** Physical pass B **実装済**。Field Flow 職として `placedField`（`clusterCenter` 配置）による局所 poison Field、`dotCompress` / `dotExtend` / `dotHarvest`、`hasDot` 条件、P2 味方 basic からの poison 付与を扱う。広範囲 DoT 火力や scatter 罠は v1 主軸にしない。視界妨害・命中干渉・フィールド端貫通は v1 外。
+**狩猟士（`at_hunter`）:** Physical pass B **実装済**。Field Flow 職として `placedField`（`clusterCenter` 配置）による局所 poison Field、`dotCompress` / `dotExtend` / `dotHarvest`、`hasDot` 条件、P2 味方物理 basic からの poison 付与を扱う。広範囲 DoT 火力や scatter 罠は v1 主軸にしない。視界妨害・命中干渉・フィールド端貫通は v1 外。
 
 Stun は damage ではなく行動可否を操作する。スタン中は使用者として通常攻撃・アクティブが発動せず、ターゲット選択も行わない。一方で CD は戦闘時間に従って進行し続ける。時間 CD 停止や時間進行そのものへの干渉が必要な場合は、Freeze / 時間停止系拘束など、スタンとは別の状態として定義する。
 

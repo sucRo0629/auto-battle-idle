@@ -1104,7 +1104,7 @@ function formatPassiveEffect(
       const amount = formatResourceAmount(
         def.debuffDotAmount ?? { kind: "flat", flatAmount: 10 },
       );
-      return `味方basic ${chance}でpoison ${amount}/${dur}s`;
+      return `味方物理basic ${chance}でpoison ${amount}/${dur}s`;
     }
     case "dotDurationMultiplierOnApply": {
       const dur = def.dotDurationMultiplierOnApply ?? 1.5;

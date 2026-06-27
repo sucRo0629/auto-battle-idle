@@ -420,6 +420,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 | **dotHarvest** | 単体 | 各 dot 残ダメの `harvestRatio` を即時結算（dot は消費しない） |
 | **poisonSpread** | 単体の poison | 半径内他敵へ 50% duration で複製（v1: poison のみ） |
 | **仕留め**（P4 aura） | hasDot かつ HP≤50% の敵 | 被ダメ×1.2。全味方の直接 damage / dot tick に反映 |
+| **allyBasicAttackDotProc**（P2 毒の武器） | 命中した敵 | 味方 **物理 basic**（`slotKind: basic` かつ Hit の `damageType: physical`）`damage` 適用成功（`appliedDamage > 0`）時、`chance` で poison dot 付与。魔法 basic は対象外 |
 
 視界妨害・命中干渉・フィールド端貫通は v1 対象外。
 
