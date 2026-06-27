@@ -415,7 +415,7 @@ describe('compact status badge selection', () => {
     expect(assignCompactBadgeTier(badge({ category: 'damageReduction', kind: 'buff' }))).toBe(5);
   });
 
-  it('selects at most three visible badges and reports overflow', () => {
+  it('selects at most three visible badges and reports overflow (field default)', () => {
     const selection = selectCompactStatusBadges([
       badge({ category: 'stun', kind: 'debuff' }),
       badge({ category: 'def', kind: 'debuff' }),
@@ -430,6 +430,21 @@ describe('compact status badge selection', () => {
       'dot',
     ]);
     expect(selection.overflowCount).toBe(2);
+  });
+
+  it('selects four visible badges for Party HUD compact', () => {
+    const selection = selectCompactStatusBadges(
+      [
+        badge({ category: 'stun', kind: 'debuff' }),
+        badge({ category: 'def', kind: 'debuff' }),
+        badge({ category: 'dot', kind: 'debuff' }),
+        badge({ category: 'mark', kind: 'debuff' }),
+        badge({ category: 'atk', kind: 'buff' }),
+      ],
+      { visibleCount: 4 },
+    );
+    expect(selection.visible).toHaveLength(4);
+    expect(selection.overflowCount).toBe(1);
   });
 
   it('leaves overflow at zero when three or fewer badges', () => {

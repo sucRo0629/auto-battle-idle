@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   drawCompactStatusBadgeRow,
   drawStatusBadgeBlock,
+  FIELD_COMPACT_STATUS_BADGE_LAYOUT,
   measureCompactStatusBadgeRow,
   measureStatusBadgeBlock,
+  PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
   statusBadgeRowWidth,
   statusBadgeStride,
   statusBadgeWidth,
@@ -141,21 +143,44 @@ describe('drawStatusBadgeBlock', () => {
 });
 
 describe('measureCompactStatusBadgeRow', () => {
-  it('uses a fixed four-slot row width', () => {
+  it('uses a fixed four-slot row width for field layout', () => {
     const layout = measureCompactStatusBadgeRow(1, 16, 1, 0);
-    expect(layout.totalWidth).toBe(statusBadgeRowWidth(
-      [
-        { category: 'hot' },
-        { category: 'hot' },
-        { category: 'hot' },
-        { category: 'hot' },
-      ],
+    expect(layout.totalWidth).toBe(
+      statusBadgeRowWidth(
+        [
+          { category: 'hot' },
+          { category: 'hot' },
+          { category: 'hot' },
+          { category: 'hot' },
+        ],
+        1,
+        16,
+        1,
+        0,
+      ),
+    );
+    expect(layout.totalHeight).toBe(16);
+  });
+
+  it('uses five slots for Party HUD layout', () => {
+    const layout = measureCompactStatusBadgeRow(
       1,
       16,
       1,
       0,
-    ));
-    expect(layout.totalHeight).toBe(16);
+      PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
+    );
+    expect(layout.totalWidth).toBe(
+      statusBadgeRowWidth(
+        Array.from({ length: 5 }, () => ({ category: 'hot' as const })),
+        1,
+        16,
+        1,
+        0,
+      ),
+    );
+    expect(PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT.visibleCount).toBe(4);
+    expect(FIELD_COMPACT_STATUS_BADGE_LAYOUT.slotCount).toBe(4);
   });
 });
 

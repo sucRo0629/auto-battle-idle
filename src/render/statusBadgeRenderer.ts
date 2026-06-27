@@ -148,8 +148,30 @@ export function drawStatusBadgeBlock(
   return layout;
 }
 
-export const COMPACT_STATUS_BADGE_VISIBLE_COUNT = 3;
-export const COMPACT_STATUS_BADGE_SLOT_COUNT = 4;
+export interface CompactStatusBadgeLayout {
+  visibleCount: number;
+  slotCount: number;
+}
+
+/** 敵頭上等: 3 +N（計 4 スロット） */
+export const FIELD_COMPACT_STATUS_BADGE_LAYOUT: CompactStatusBadgeLayout = {
+  visibleCount: 3,
+  slotCount: 4,
+};
+
+/** Party HUD: 4 +N（計 5 スロット） */
+export const PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT: CompactStatusBadgeLayout = {
+  visibleCount: 4,
+  slotCount: 5,
+};
+
+/** @deprecated FIELD_COMPACT_STATUS_BADGE_LAYOUT.visibleCount を参照 */
+export const COMPACT_STATUS_BADGE_VISIBLE_COUNT =
+  FIELD_COMPACT_STATUS_BADGE_LAYOUT.visibleCount;
+
+/** @deprecated FIELD_COMPACT_STATUS_BADGE_LAYOUT.slotCount を参照 */
+export const COMPACT_STATUS_BADGE_SLOT_COUNT =
+  FIELD_COMPACT_STATUS_BADGE_LAYOUT.slotCount;
 
 export interface CompactStatusBadgeRowLayout {
   totalWidth: number;
@@ -161,10 +183,11 @@ export function measureCompactStatusBadgeRow(
   iconSize: number,
   outlineWidth: number,
   rowOverlap = 0,
+  layout: CompactStatusBadgeLayout = FIELD_COMPACT_STATUS_BADGE_LAYOUT,
 ): CompactStatusBadgeRowLayout {
   const rowHeight = iconSize * scale;
   const placeholder = Array.from(
-    { length: COMPACT_STATUS_BADGE_SLOT_COUNT },
+    { length: layout.slotCount },
     () => ({ category: 'hot' as const }),
   );
   return {
@@ -187,12 +210,14 @@ export function drawCompactStatusBadgeRow(
   overflowCount: number,
   scale: number,
   theme: StatusBadgeTheme,
+  layout: CompactStatusBadgeLayout = FIELD_COMPACT_STATUS_BADGE_LAYOUT,
 ): CompactStatusBadgeRowLayout {
-  const layout = measureCompactStatusBadgeRow(
+  const rowLayout = measureCompactStatusBadgeRow(
     scale,
     theme.iconSize,
     theme.iconOutlineWidth,
     theme.rowOverlap,
+    layout,
   );
   const stride = statusBadgeStride(
     scale,
@@ -202,7 +227,7 @@ export function drawCompactStatusBadgeRow(
   );
   let x = left;
 
-  for (let slot = 0; slot < COMPACT_STATUS_BADGE_VISIBLE_COUNT; slot++) {
+  for (let slot = 0; slot < layout.visibleCount; slot++) {
     const badge = visible[slot];
     if (badge) {
       drawStatusBadge(ctx, x, top, badge, scale, theme);
@@ -214,7 +239,7 @@ export function drawCompactStatusBadgeRow(
     drawOverflowCountBadge(ctx, x, top, overflowCount, scale, theme);
   }
 
-  return layout;
+  return rowLayout;
 }
 
 export function drawOverflowCountBadge(

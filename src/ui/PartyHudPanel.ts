@@ -1,5 +1,6 @@
 import {
   collectStatusEffectBadgeDisplays,
+  PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT,
   selectCompactStatusBadges,
 } from '../battle/statusEffectDisplay.ts';
 import { MAX_ACTIVE_SLOTS } from '../progression/skillBuild.ts';
@@ -15,6 +16,7 @@ import {
 import {
   drawCompactStatusBadgeRow,
   measureCompactStatusBadgeRow,
+  PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
   statusBadgeOutlinePad,
 } from '../render/statusBadgeRenderer.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
@@ -28,7 +30,6 @@ interface RecastCellElements {
 
 interface SlotElements {
   root: HTMLElement;
-  head: HTMLElement;
   label: HTMLElement;
   icon: HTMLImageElement;
   hpFill: HTMLElement;
@@ -95,10 +96,22 @@ export class PartyHudPanel {
     head.className = 'party-hud-head';
     root.appendChild(head);
 
+    const label = document.createElement('div');
+    label.className = 'party-hud-label';
+    head.appendChild(label);
+
+    const statusCanvas = document.createElement('canvas');
+    statusCanvas.className = 'party-hud-status-badges';
+    head.appendChild(statusCanvas);
+
+    const bodyRow = document.createElement('div');
+    bodyRow.className = 'party-hud-body-row';
+    root.appendChild(bodyRow);
+
     const iconWrap = document.createElement('div');
     iconWrap.className =
       'party-hud-icon-wrap pixel-icon-frame pixel-icon-frame--24';
-    head.appendChild(iconWrap);
+    bodyRow.appendChild(iconWrap);
 
     const icon = document.createElement('img');
     icon.className = 'party-hud-icon pixel-icon-img pixel-icon-img--24';
@@ -108,21 +121,9 @@ export class PartyHudPanel {
     icon.alt = '';
     iconWrap.appendChild(icon);
 
-    const headText = document.createElement('div');
-    headText.className = 'party-hud-head-text';
-    head.appendChild(headText);
-
-    const label = document.createElement('div');
-    label.className = 'party-hud-label';
-    headText.appendChild(label);
-
-    const statusCanvas = document.createElement('canvas');
-    statusCanvas.className = 'party-hud-status-badges';
-    headText.appendChild(statusCanvas);
-
     const bars = document.createElement('div');
     bars.className = 'party-hud-bars';
-    root.appendChild(bars);
+    bodyRow.appendChild(bars);
 
     const hpTrack = document.createElement('div');
     hpTrack.className = 'party-hud-hp-track';
@@ -162,7 +163,6 @@ export class PartyHudPanel {
 
     return {
       root,
-      head,
       label,
       icon,
       hpFill,
@@ -223,16 +223,20 @@ export class PartyHudPanel {
       def: entry.def,
       reg: entry.reg,
     });
-    const { visible, overflowCount } = selectCompactStatusBadges(badges);
+    const { visible, overflowCount } = selectCompactStatusBadges(badges, {
+      visibleCount: PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT,
+    });
     const canvas = slot.statusCanvas;
     const theme = this.theme;
     const scale = 1;
+    const badgeLayoutConfig = PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT;
 
     const badgeLayout = measureCompactStatusBadgeRow(
       scale,
       theme.statusBadgeIconSize,
       theme.statusIconOutlineWidth,
       theme.statusBadgeOverlap,
+      badgeLayoutConfig,
     );
     const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
     const canvasW = badgeLayout.totalWidth + outlinePad * 2;
@@ -267,6 +271,7 @@ export class PartyHudPanel {
         resolveIconFallbackColor: (category) =>
           resolveStatusIconFallbackColor(category, theme),
       },
+      badgeLayoutConfig,
     );
   }
 

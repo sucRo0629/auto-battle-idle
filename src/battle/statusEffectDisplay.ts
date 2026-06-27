@@ -842,14 +842,27 @@ export interface CompactStatusBadgeSelection {
   overflowCount: number;
 }
 
-/** 簡易表示: 最大 3 バッジ + overflowCount（第 4 枠は +N 専用）。 */
+/** 敵頭上等のフィールド簡易表示: 3 +N（計 4 スロット） */
+export const FIELD_COMPACT_STATUS_VISIBLE_COUNT = 3;
+
+/** Party HUD 簡易表示: 4 +N（計 5 スロット） */
+export const PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT = 4;
+
+export interface CompactStatusBadgeSelectOptions {
+  visibleCount?: number;
+}
+
+/** 簡易表示: 最大 visibleCount バッジ + overflowCount（最終枠は +N 専用）。 */
 export function selectCompactStatusBadges(
   badges: StatusEffectBadgeDisplay[],
+  options: CompactStatusBadgeSelectOptions = {},
 ): CompactStatusBadgeSelection {
+  const visibleCount =
+    options.visibleCount ?? FIELD_COMPACT_STATUS_VISIBLE_COUNT;
   const sorted = sortBadgesForCompactView(badges);
-  const overflowCount = Math.max(0, sorted.length - 3);
+  const overflowCount = Math.max(0, sorted.length - visibleCount);
   return {
-    visible: sorted.slice(0, 3),
+    visible: sorted.slice(0, visibleCount),
     overflowCount,
   };
 }

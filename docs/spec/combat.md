@@ -331,8 +331,11 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 | 表示 | 場所 | ルール |
 | ---- | ---- | ------ |
-| **簡易** | `PartyHudPanel`、敵頭上（`BattleCanvas`） | 固定 **1 行・4 スロット幅**（最大 3 バッジ + 第 4 枠 `+N`）。折り返しなし。`overflowCount = max(0, badges.length − 3)`。0 のとき第 4 枠は空（透明スロットで幅固定） |
+| **簡易（Party HUD）** | `PartyHudPanel` | 固定 **1 行・5 スロット幅**（最大 4 バッジ + 第 5 枠 `+N`）。クラス名・バッジ行はスロット全幅、24px クラスアイコンは HP/リキャスト行の左（下端揃え）。`overflowCount = max(0, badges.length − 4)` |
+| **簡易（敵）** | `BattleCanvas` 頭上 | 固定 **1 行・4 スロット幅**（最大 3 バッジ + 第 4 枠 `+N`）。`overflowCount = max(0, badges.length − 3)` |
 | **詳細** | 戦闘詳細（`BattleStatsOverlay` / `DebugMenuPanel` 内 `PartyMemberStatsDisplay`） | **全件**表示。debuff / buff でラベル付き行を分け、パネル幅内で flex-wrap 折り返し |
+
+いずれの簡易表示も折り返しなし。`+N` 枠が不要（overflow 0）のときは最終枠を空（透明スロットで幅固定）。
 
 簡易表示の優先度（`assignCompactBadgeTier` → `sortBadgesForCompactView` → `selectCompactStatusBadges`）。同 tier 内は `STATUS_BADGE_SLOT_ORDER` 昇順:
 

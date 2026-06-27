@@ -163,7 +163,7 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
       "--hud-backdrop-pad-bottom",
       readNumber(style, "--hud-backdrop-pad-y", 4)
     ),
-    headerFontSize: readNumber(style, "--hud-header-font-size", 9),
+    headerFontSize: readNumber(style, "--hud-header-font-size", 13),
     expBarH: readNumber(style, "--hud-exp-bar-h", 4),
     headerBlockGap: readNumber(style, "--hud-header-block-gap", 2),
     expHpGap: readNumber(style, "--hud-exp-hp-gap", 2),
