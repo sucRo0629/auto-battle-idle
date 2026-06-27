@@ -2,9 +2,9 @@ import '../styles/battle-stats-overlay.css';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 import type { CombatantSnapshot, GameData } from '../battle/types.ts';
 import { getStageById } from '../progression/stageProgression.ts';
+import { resolveClassIconKey } from '../render/entityVisuals.ts';
 import {
   PartyMemberStatsDisplay,
-  type PartyMemberProgress,
   type PartyMemberStatsDataSource,
   type PartyMemberStatsRowSpec,
 } from './PartyMemberStatsDisplay.ts';
@@ -12,7 +12,6 @@ import {
 export interface BattleStatsOverlayCallbacks {
   getDisplayRows: () => StageDamageDisplayRow[];
   getAllySnapshots: () => CombatantSnapshot[];
-  getPartyProgress: () => PartyMemberProgress[];
   getCurrentStageId: () => string;
   onClose: () => void;
 }
@@ -31,7 +30,6 @@ export class BattleStatsOverlay {
     this.dataSource = {
       getDisplayRows: callbacks.getDisplayRows,
       getAllySnapshots: callbacks.getAllySnapshots,
-      getPartyProgress: callbacks.getPartyProgress,
     };
 
     this.root = document.createElement('div');
@@ -45,7 +43,7 @@ export class BattleStatsOverlay {
     this.root.appendChild(backdrop);
 
     const windowEl = document.createElement('div');
-    windowEl.className = 'battle-stats-window';
+    windowEl.className = 'battle-stats-window battle-stats-panel';
     windowEl.addEventListener('click', (event) => event.stopPropagation());
 
     const titleBar = document.createElement('div');
@@ -101,11 +99,15 @@ export class BattleStatsOverlay {
       return;
     }
 
-    const specs: PartyMemberStatsRowSpec[] = rows.map((row) => ({
-      slotIndex: row.slotIndex,
-      displayName: row.displayName,
-      epithetEn: row.epithetEn,
-    }));
+    const specs: PartyMemberStatsRowSpec[] = rows.map((row) => {
+      const preset = this.gameData.classRegistry[row.classId];
+      return {
+        slotIndex: row.slotIndex,
+        displayName: row.displayName,
+        epithetEn: row.epithetEn,
+        iconKey: preset ? resolveClassIconKey(preset) : row.classId,
+      };
+    });
     this.statsDisplay.rebuild(specs);
     this.statsDisplay.update(this.dataSource);
   }

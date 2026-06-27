@@ -23,16 +23,27 @@
 }
 
 .debug-menu-stats-rows {
-  gap: 4px;
+  --party-stats-metric-col: 88px;
+  gap: 0;
 }
 
 .debug-menu-stats-rows .party-stats-row {
-  gap: 6px;
+  grid-template-columns:
+    var(--party-stats-name-col)
+    var(--party-stats-metric-col)
+    var(--party-stats-metric-col)
+    auto;
+  column-gap: 8px;
+  align-items: center;
+  padding: 6px 0;
 }
 
-.debug-menu-stats-rows .party-stats-threat,
-.debug-menu-stats-rows .party-stats-damage {
-  max-width: 110px;
+.debug-menu-stats-rows .debug-menu-level-controls {
+  grid-column: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  justify-self: end;
 }
 
 .debug-menu-stage-row {

@@ -3,7 +3,6 @@ import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 import type { CombatantSnapshot, GameData, SaveGameState } from '../battle/types.ts';
 import {
   PartyMemberStatsDisplay,
-  type PartyMemberProgress,
   type PartyMemberStatsDataSource,
   type PartyMemberStatsRowSpec,
 } from './PartyMemberStatsDisplay.ts';
@@ -15,7 +14,6 @@ export interface DebugMenuControls {
   getLoopWaveIndex: () => number | null;
   getAllySnapshots?: () => CombatantSnapshot[];
   getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
-  getPartyProgress?: () => PartyMemberProgress[];
   onLoopStageChange: (stageId: string | null) => void;
   onLoopWaveChange: (waveIndex: number | null) => void;
   onMemberLevelChange: (partyIndex: number, level: number) => void;
@@ -35,7 +33,6 @@ export class DebugMenuPanel {
     this.dataSource = {
       getDisplayRows: () => this.controls.getStageDamageDisplayRows?.() ?? [],
       getAllySnapshots: () => this.controls.getAllySnapshots?.() ?? [],
-      getPartyProgress: () => this.controls.getPartyProgress?.() ?? [],
     };
 
     this.root = document.createElement('aside');
@@ -245,7 +242,11 @@ export class DebugMenuPanel {
       });
 
       levelLabel.appendChild(levelInput);
-      row.append(levelLabel, decButton, incButton);
+
+      const levelControls = document.createElement('div');
+      levelControls.className = 'debug-menu-level-controls';
+      levelControls.append(levelLabel, decButton, incButton);
+      row.appendChild(levelControls);
     });
 
     this.statsDisplay.update(this.dataSource);

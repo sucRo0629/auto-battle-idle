@@ -11,7 +11,6 @@ import type {
   SkillEffectDef,
 } from "../battle/types.ts";
 import {
-  expRequiredForLevel,
   type LevelCurvesConfig,
 } from "../progression/levelGrowth.ts";
 import {
@@ -34,7 +33,6 @@ import {
 import { BattleStatsOverlay } from "./BattleStatsOverlay.ts";
 import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
-import type { PartyMemberProgress } from "./PartyMemberStatsDisplay.ts";
 
 export interface VerifyModeControls {
   isVerifyMode: () => boolean;
@@ -162,7 +160,6 @@ export class BattleView {
       isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
       getSave: this.getSave,
       getAllySnapshots: () => this.engine.getSnapshot().allies,
-      getPartyProgress: () => this.getPartyProgress(),
       getStageDamageDisplayRows: () =>
         verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
       getLoopStageId: () => verifyModeControls?.getLoopStageId?.() ?? null,
@@ -401,24 +398,6 @@ export class BattleView {
     console.log(`[battle] ${message}`);
   }
 
-  private getPartyProgress(): PartyMemberProgress[] {
-    const save = this.getSave();
-    const rows: PartyMemberProgress[] = [];
-    save.party.forEach((member, slotIndex) => {
-      if (!member) return;
-      rows.push({
-        slotIndex,
-        level: member.progress.level,
-        exp: member.progress.exp,
-        expRequired: expRequiredForLevel(
-          member.progress.level,
-          this.levelCurves,
-        ),
-      });
-    });
-    return rows;
-  }
-
   tick(deltaMs: number): void {
     const snapshot = this.engine.getSnapshot();
     const save = this.getSave();
@@ -477,7 +456,6 @@ export class BattleView {
     this.statsOverlay = new BattleStatsOverlay(document.body, this.gameData, {
       getDisplayRows: controls.getStageDamageDisplayRows,
       getAllySnapshots: () => this.engine.getSnapshot().allies,
-      getPartyProgress: () => this.getPartyProgress(),
       getCurrentStageId: controls.getCurrentStageId,
       onClose: () => this.closeStatsOverlay(controls),
     });

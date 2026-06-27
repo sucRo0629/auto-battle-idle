@@ -1,99 +1,114 @@
+@import './pixel-icon-frame.css';
+
 .party-stats-rows {
+  --party-stats-name-col: 6.5rem;
+  --party-stats-metric-col: 112px;
+  --party-stats-col-gap: 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .party-stats-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  display: grid;
+  grid-template-columns:
+    var(--party-stats-name-col)
+    var(--party-stats-metric-col)
+    var(--party-stats-metric-col);
+  column-gap: var(--party-stats-col-gap);
+  align-items: start;
+  width: fit-content;
+  max-width: 100%;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.party-stats-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.party-stats-row:first-child {
+  padding-top: 4px;
 }
 
 .party-stats-member {
-  flex: 0 1 9em;
+  grid-column: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: flex-start;
+  gap: 2px;
 }
 
-.party-stats-member-header {
+.party-stats-member--with-icon {
   display: flex;
-  align-items: baseline;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.party-stats-member-text {
+  flex: 1 1 auto;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.party-stats-member-icon {
+  flex: 0 0 auto;
+  box-shadow: inset 0 0 0 1px rgba(74, 85, 104, 0.85);
+}
+
+.party-stats-member-icon-img {
+  object-fit: none;
+  object-position: 0 0;
+}
+
+.party-stats-member-icon--empty {
+  background: transparent;
+  box-shadow: none;
+  outline: 1px dashed rgba(74, 85, 104, 0.85);
+  outline-offset: -1px;
+  opacity: 0.55;
+}
+
+.party-stats-member.is-down .party-stats-member-icon {
+  opacity: 0.55;
 }
 
 .party-stats-member-epithet {
-  font-size: 0.6875rem;
-  line-height: 1.1;
-  color: rgba(227, 227, 227, 0.55);
-  letter-spacing: 0.02em;
+  width: 100%;
+  font-size: 0.625rem;
+  line-height: 1.2;
+  color: rgba(227, 227, 227, 0.5);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .party-stats-member-name {
-  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   font-size: 0.8125rem;
-  color: rgba(227, 227, 227, 0.88);
+  font-weight: 600;
+  color: rgba(227, 227, 227, 0.92);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.party-stats-exp {
-  width: 100%;
-}
-
-.party-stats-exp-bar {
-  position: relative;
-  width: 100%;
-  height: 4px;
-  border-radius: 2px;
-  background: rgba(8, 12, 22, 0.85);
-  border: 1px solid rgba(245, 166, 35, 0.25);
-  overflow: hidden;
-}
-
-.party-stats-exp-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 0;
-  border-radius: 1px 0 0 1px;
-  background: linear-gradient(90deg, #c47d12 0%, #f5a623 100%);
-  transition: width 0.12s ease-out;
-}
-
-.party-stats-exp-label {
-  flex-shrink: 0;
-  font-size: 10px;
-  line-height: 1.2;
-  color: #8fa8c8;
-  white-space: nowrap;
-}
-
-.party-stats-member.is-down .party-stats-exp-bar {
-  opacity: 0.45;
-  border-color: rgba(120, 120, 120, 0.35);
-}
-
-.party-stats-member.is-down .party-stats-exp-fill {
-  background: linear-gradient(90deg, #6a5a3a 0%, #8a7a5a 100%);
-}
-
-.party-stats-member.is-down .party-stats-exp-label {
-  color: #6a7588;
+.party-stats-member.is-down .party-stats-member-name {
+  opacity: 0.55;
 }
 
 .party-stats-threat {
-  flex: 1 1 72px;
-  min-width: 72px;
+  grid-column: 2;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -102,10 +117,10 @@
 .party-stats-threat-bar {
   position: relative;
   width: 100%;
-  height: 10px;
-  border-radius: 3px;
+  height: 6px;
+  border-radius: 1px;
   background: rgba(8, 12, 22, 0.85);
-  border: 1px solid rgba(74, 144, 217, 0.25);
+  border: 1px solid rgba(74, 144, 217, 0.2);
   overflow: hidden;
 }
 
@@ -115,8 +130,8 @@
   top: 0;
   bottom: 0;
   width: 0;
-  border-radius: 2px 0 0 2px;
-  background: linear-gradient(90deg, #2d5a8a 0%, #4a90d9 100%);
+  border-radius: 0;
+  background: #4a90d9;
   transition: width 0.12s ease-out;
 }
 
@@ -128,7 +143,6 @@
   width: 2px;
   margin-left: -1px;
   background: #e8c547;
-  box-shadow: 0 0 3px rgba(232, 197, 71, 0.6);
   pointer-events: none;
   z-index: 1;
 }
@@ -146,12 +160,11 @@
 }
 
 .party-stats-threat.is-down .party-stats-threat-fill {
-  background: linear-gradient(90deg, #4a4a5a 0%, #6a6a7a 100%);
+  background: #6a6a7a;
 }
 
 .party-stats-threat.is-down .party-stats-threat-base {
   background: #a89850;
-  box-shadow: none;
 }
 
 .party-stats-threat.is-down .party-stats-threat-label {
@@ -159,8 +172,8 @@
 }
 
 .party-stats-damage {
-  flex: 1 1 72px;
-  min-width: 72px;
+  grid-column: 3;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -176,9 +189,9 @@
   position: relative;
   width: 100%;
   height: 4px;
-  border-radius: 2px;
+  border-radius: 1px;
   background: rgba(8, 12, 22, 0.85);
-  border: 1px solid rgba(74, 144, 217, 0.2);
+  border: 1px solid rgba(74, 144, 217, 0.15);
   overflow: hidden;
 }
 
@@ -188,16 +201,24 @@
   top: 0;
   bottom: 0;
   width: 0;
-  border-radius: 1px 0 0 1px;
+  border-radius: 0;
   transition: width 0.12s ease-out;
 }
 
+.party-stats-damage-bars .party-stats-damage-bar:first-child {
+  border-color: rgba(224, 112, 48, 0.2);
+}
+
+.party-stats-damage-bars .party-stats-damage-bar:last-child {
+  border-color: rgba(74, 144, 217, 0.2);
+}
+
 .party-stats-damage-fill--dealt {
-  background: linear-gradient(90deg, #c45c26 0%, #e8843d 100%);
+  background: #e07030;
 }
 
 .party-stats-damage-fill--taken {
-  background: linear-gradient(90deg, #2f6f9c 0%, #4a9fd4 100%);
+  background: #4a9fd4;
 }
 
 .party-stats-damage-label {
@@ -213,11 +234,11 @@
 }
 
 .party-stats-damage.is-down .party-stats-damage-fill--dealt {
-  background: linear-gradient(90deg, #6a4a3a 0%, #8a6a5a 100%);
+  background: #8a6a5a;
 }
 
 .party-stats-damage.is-down .party-stats-damage-fill--taken {
-  background: linear-gradient(90deg, #4a5a6a 0%, #6a7a8a 100%);
+  background: #6a7a8a;
 }
 
 .party-stats-damage.is-down .party-stats-damage-label {

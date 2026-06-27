@@ -271,7 +271,7 @@ data/
 | --- | --- |
 | デザイン言語 | [party-formation-ui.md §11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通) と同一（縦情報パネル・細セパレーター・大角丸 / 強 shadow 禁止） |
 | オーバーレイ | Web モーダル風（大角丸・強 box-shadow・ダッシュボード風 title bar）を避け、**情報パネル**として閉じる |
-| メンバー行 | `PartyMemberStatsDisplay` 共通 — epithet + 名前、Exp / Threat / 与ダメ・被ダメバー。行は **細い区切り + 余白** |
+| メンバー行 | `PartyMemberStatsDisplay` 共通 — epithet + 名前、Threat / 与ダメ・被ダメバー。行は **細い区切り + 余白**（行内は横サブ列。Exp は HUD 委譲で非表示） |
 | バー | 角丸グラデーションのダッシュボード棒を控えめに。色意味（Threat 青・与ダメ橙・被ダメ青等）は維持可 |
 | 共有 CSS | `battle-stats-overlay.css` + `party-member-stats.css`。`DebugMenuPanel` 内 stats 行も同スタイル |
 

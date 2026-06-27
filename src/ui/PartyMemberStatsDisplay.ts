@@ -1,36 +1,32 @@
 import '../styles/party-member-stats.css';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 import type { CombatantSnapshot } from '../battle/types.ts';
-
-export interface PartyMemberProgress {
-  slotIndex: number;
-  level: number;
-  exp: number;
-  expRequired: number;
-}
+import { getClassIconUrl } from '../render/IconRegistry.ts';
+import {
+  readBattleHudTheme,
+  resolveClassIconPlaceholderColor,
+} from '../render/battleHudTheme.ts';
 
 export interface PartyMemberStatsRowSpec {
   slotIndex: number;
   displayName: string;
   epithetEn?: string;
+  iconKey?: string;
 }
 
 export interface PartyMemberStatsDataSource {
   getDisplayRows: () => StageDamageDisplayRow[];
   getAllySnapshots: () => CombatantSnapshot[];
-  getPartyProgress: () => PartyMemberProgress[];
+}
+
+export interface MemberRowRefs {
+  root: HTMLElement;
 }
 
 export interface ThreatBarRefs {
   root: HTMLElement;
   fill: HTMLElement;
   baseMarker: HTMLElement;
-  label: HTMLElement;
-}
-
-export interface ExpBarRefs {
-  root: HTMLElement;
-  fill: HTMLElement;
   label: HTMLElement;
 }
 
@@ -56,35 +52,80 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+function createClassIcon(iconKey: string): HTMLElement {
+  const wrap = el(
+    'span',
+    'party-stats-member-icon pixel-icon-frame pixel-icon-frame--24',
+  );
+  const iconUrl = getClassIconUrl(iconKey);
+  if (iconUrl) {
+    const img = document.createElement('img');
+    img.className = 'party-stats-member-icon-img pixel-icon-img pixel-icon-img--24';
+    img.width = 24;
+    img.height = 24;
+    img.alt = '';
+    img.decoding = 'async';
+    img.src = iconUrl;
+    img.setAttribute('aria-hidden', 'true');
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  wrap.classList.add('party-stats-member-icon--empty');
+  wrap.setAttribute('aria-hidden', 'true');
+  const themeHost = document.querySelector('.battle-view');
+  if (themeHost instanceof HTMLElement) {
+    wrap.style.backgroundColor = resolveClassIconPlaceholderColor(
+      iconKey,
+      readBattleHudTheme(themeHost),
+    );
+  }
+  return wrap;
+}
+
+function appendMemberIdentity(
+  memberEl: HTMLElement,
+  displayName: string,
+  epithetEn?: string,
+  iconKey?: string,
+): void {
+  const nameEl = el('span', 'party-stats-member-name', displayName);
+
+  if (!iconKey) {
+    if (epithetEn) {
+      memberEl.appendChild(el('span', 'party-stats-member-epithet', epithetEn));
+    }
+    memberEl.appendChild(nameEl);
+    return;
+  }
+
+  memberEl.classList.add('party-stats-member--with-icon');
+  memberEl.appendChild(createClassIcon(iconKey));
+
+  const textEl = el('div', 'party-stats-member-text');
+  if (epithetEn) {
+    textEl.appendChild(el('span', 'party-stats-member-epithet', epithetEn));
+  }
+  textEl.appendChild(nameEl);
+  memberEl.appendChild(textEl);
+}
+
 export function createPartyMemberStatsRow(
   displayName: string,
   epithetEn?: string,
+  iconKey?: string,
 ): {
   row: HTMLElement;
   refs: {
+    member: MemberRowRefs;
     threat: ThreatBarRefs;
-    exp: ExpBarRefs;
     damage: DamageBarRefs;
   };
 } {
   const row = el('div', 'party-stats-row');
 
   const memberEl = el('div', 'party-stats-member');
-  const nameRow = el('div', 'party-stats-member-header');
-  if (epithetEn) {
-    const epithetEl = el('span', 'party-stats-member-epithet', epithetEn);
-    memberEl.appendChild(epithetEl);
-  }
-  const nameEl = el('span', 'party-stats-member-name', displayName);
-  const expLabel = el('span', 'party-stats-exp-label', 'Exp —');
-  nameRow.append(nameEl, expLabel);
-
-  const expEl = el('div', 'party-stats-exp');
-  const expBar = el('div', 'party-stats-exp-bar');
-  const expFill = el('div', 'party-stats-exp-fill');
-  expBar.appendChild(expFill);
-  expEl.appendChild(expBar);
-  memberEl.append(nameRow, expEl);
+  appendMemberIdentity(memberEl, displayName, epithetEn, iconKey);
 
   const threatEl = el('div', 'party-stats-threat');
   const threatBar = el('div', 'party-stats-threat-bar');
@@ -111,7 +152,7 @@ export function createPartyMemberStatsRow(
   return {
     row,
     refs: {
-      exp: { root: memberEl, fill: expFill, label: expLabel },
+      member: { root: memberEl },
       threat: { root: threatEl, fill: threatFill, baseMarker, label: threatLabel },
       damage: { root: damageEl, dealtFill, takenFill, label: damageLabel },
     },
@@ -126,6 +167,15 @@ export function buildDownBySlot(
       .filter((snapshot) => snapshot.partySlotIndex !== undefined)
       .map((snapshot) => [snapshot.partySlotIndex!, isAllyDown(snapshot)]),
   );
+}
+
+export function syncMemberDownState(
+  memberByPartyIndex: Map<number, MemberRowRefs>,
+  downBySlot: Map<number, boolean>,
+): void {
+  for (const [slotIndex, refs] of memberByPartyIndex) {
+    refs.root.classList.toggle('is-down', downBySlot.get(slotIndex) ?? false);
+  }
 }
 
 export function syncThreatBars(
@@ -170,29 +220,6 @@ export function syncThreatBars(
   }
 }
 
-export function syncExpBars(
-  expByPartyIndex: Map<number, ExpBarRefs>,
-  progressRows: PartyMemberProgress[],
-  downBySlot: Map<number, boolean>,
-): void {
-  for (const row of progressRows) {
-    const refs = expByPartyIndex.get(row.slotIndex);
-    if (!refs) continue;
-
-    const down = downBySlot.get(row.slotIndex) ?? false;
-    refs.root.classList.toggle('is-down', down);
-
-    const ratio =
-      row.expRequired > 0
-        ? Math.max(0, Math.min(1, row.exp / row.expRequired))
-        : 0;
-    refs.fill.style.width = `${ratio * 100}%`;
-    refs.label.textContent = down
-      ? `Exp ${row.exp} / ${row.expRequired} (倒)`
-      : `Exp ${row.exp} / ${row.expRequired}`;
-  }
-}
-
 export function syncDamageBars(
   damageByPartyIndex: Map<number, DamageBarRefs>,
   rows: StageDamageDisplayRow[],
@@ -223,8 +250,8 @@ export function syncDamageBars(
 
 export class PartyMemberStatsDisplay {
   private readonly listEl: HTMLElement;
+  private readonly memberByPartyIndex = new Map<number, MemberRowRefs>();
   private readonly threatByPartyIndex = new Map<number, ThreatBarRefs>();
-  private readonly expByPartyIndex = new Map<number, ExpBarRefs>();
   private readonly damageByPartyIndex = new Map<number, DamageBarRefs>();
 
   constructor(
@@ -238,8 +265,8 @@ export class PartyMemberStatsDisplay {
 
   rebuild(specs: PartyMemberStatsRowSpec[]): Map<number, HTMLElement> {
     this.listEl.replaceChildren();
+    this.memberByPartyIndex.clear();
     this.threatByPartyIndex.clear();
-    this.expByPartyIndex.clear();
     this.damageByPartyIndex.clear();
 
     const rowElements = new Map<number, HTMLElement>();
@@ -247,9 +274,10 @@ export class PartyMemberStatsDisplay {
       const { row, refs } = createPartyMemberStatsRow(
         spec.displayName,
         spec.epithetEn,
+        spec.iconKey,
       );
+      this.memberByPartyIndex.set(spec.slotIndex, refs.member);
       this.threatByPartyIndex.set(spec.slotIndex, refs.threat);
-      this.expByPartyIndex.set(spec.slotIndex, refs.exp);
       this.damageByPartyIndex.set(spec.slotIndex, refs.damage);
       this.listEl.appendChild(row);
       rowElements.set(spec.slotIndex, row);
@@ -260,8 +288,8 @@ export class PartyMemberStatsDisplay {
   update(source: PartyMemberStatsDataSource): void {
     const snapshots = source.getAllySnapshots();
     const downBySlot = buildDownBySlot(snapshots);
+    syncMemberDownState(this.memberByPartyIndex, downBySlot);
     syncThreatBars(this.threatByPartyIndex, snapshots);
-    syncExpBars(this.expByPartyIndex, source.getPartyProgress(), downBySlot);
     syncDamageBars(
       this.damageByPartyIndex,
       source.getDisplayRows(),
@@ -271,8 +299,8 @@ export class PartyMemberStatsDisplay {
 
   clear(): void {
     this.listEl.replaceChildren();
+    this.memberByPartyIndex.clear();
     this.threatByPartyIndex.clear();
-    this.expByPartyIndex.clear();
     this.damageByPartyIndex.clear();
   }
 }
