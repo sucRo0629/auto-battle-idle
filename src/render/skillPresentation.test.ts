@@ -195,7 +195,7 @@ describe("playSkillHitFeedback", () => {
     });
 
     expect(canvas.showDamagePopup).toHaveBeenCalledTimes(1);
-    expect(canvas.showDamagePopup).toHaveBeenCalledWith("target-1", 42, "damage");
+    expect(canvas.showDamagePopup).toHaveBeenCalledWith("target-1", 42, "damage", undefined);
   });
 
   it("allows the same damage popup after the dedupe window", () => {

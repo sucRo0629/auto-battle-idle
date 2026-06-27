@@ -2,6 +2,7 @@ import { collectStatusEffectBadgeDisplays } from '../battle/statusEffectDisplay.
 import { MAX_ACTIVE_SLOTS } from '../progression/skillBuild.ts';
 import { layoutHpBarBarrier } from '../render/hpBarBarrierLayout.ts';
 import { getClassIconUrl } from '../render/IconRegistry.ts';
+import { onStatusIconsReady } from '../render/StatusIconRegistry.ts';
 import {
   readBattleHudTheme,
   resolveClassIconPlaceholderColor,
@@ -38,8 +39,16 @@ export class PartyHudPanel {
   private root!: HTMLElement;
   private readonly slots: SlotElements[] = [];
   private theme!: BattleHudTheme;
+  private lastEntries: (PartyHudEntry | null)[] = [];
+  private readonly unsubscribeStatusIconsReady: () => void;
 
-  constructor(private readonly themeHost: HTMLElement) {}
+  constructor(private readonly themeHost: HTMLElement) {
+    this.unsubscribeStatusIconsReady = onStatusIconsReady(() => {
+      if (this.lastEntries.length > 0) {
+        this.update(this.lastEntries);
+      }
+    });
+  }
 
   mount(parent: HTMLElement): void {
     this.theme = readBattleHudTheme(this.themeHost);
@@ -56,6 +65,7 @@ export class PartyHudPanel {
   }
 
   update(entries: (PartyHudEntry | null)[]): void {
+    this.lastEntries = entries;
     this.theme = readBattleHudTheme(this.themeHost);
 
     for (let i = 0; i < this.slots.length; i++) {
@@ -71,6 +81,7 @@ export class PartyHudPanel {
   }
 
   destroy(): void {
+    this.unsubscribeStatusIconsReady();
     this.root.remove();
   }
 
@@ -247,13 +258,10 @@ export class PartyHudPanel {
       drawItems,
       scale,
       {
-        buffColor: theme.statusBuffColor,
-        debuffColor: theme.statusDebuffColor,
         iconSize: theme.statusBadgeIconSize,
         rowOverlap: theme.statusBadgeOverlap,
         overlayColor: theme.statusBadgeOverlay,
         iconOutlineColor: theme.statusIconOutlineColor,
-        passiveIconOutlineColor: theme.statusPassiveIconOutlineColor,
         iconOutlineWidth: theme.statusIconOutlineWidth,
         iconFallbackAlpha: theme.statusIconFallbackAlpha,
         resolveIconFallbackColor: (category) =>

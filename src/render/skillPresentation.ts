@@ -44,6 +44,7 @@ export interface SkillHitFeedbackRequest {
   hitIndex?: number;
   amount?: number;
   kind?: "damage" | "dot" | "heal";
+  dotFlavor?: import("../battle/types.ts").DotFlavor;
   popupDedupeKey?: string;
   skipMainVfx?: boolean;
 }
@@ -258,6 +259,9 @@ export function playSkillHitFeedback(
       targetId,
       amount,
       kind === "dot" || effect.type === "dot" ? "dot" : "damage",
+      kind === "dot" || effect.type === "dot"
+        ? (request.dotFlavor ?? effect.dotFlavor)
+        : undefined,
     );
   }
 }

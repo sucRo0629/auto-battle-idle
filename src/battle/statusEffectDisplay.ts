@@ -110,6 +110,35 @@ export interface StatusEffectBadgeDisplay {
   kind: "buff" | "debuff";
   remainingRatio: number;
   isPassive: boolean;
+  /** stacks>1 または同一カテゴリ複数 instance のときのみ（1 は非表示） */
+  stackCount?: number;
+}
+
+const STACK_OVERLAY_CATEGORIES = new Set<StatusEffect["overlay"]>([
+  "herbalPotency",
+  "blockResonance",
+  "mark",
+  "arenaMark",
+  "wardBarrier",
+]);
+
+function effectStackContribution(effect: StatusEffect): number {
+  if (
+    effect.overlay !== undefined &&
+    STACK_OVERLAY_CATEGORIES.has(effect.overlay) &&
+    effect.stacks !== undefined
+  ) {
+    return effect.stacks;
+  }
+  return 1;
+}
+
+function isStackOverlayWithNoStacks(effect: StatusEffect): boolean {
+  return (
+    effect.overlay !== undefined &&
+    STACK_OVERLAY_CATEGORIES.has(effect.overlay) &&
+    (effect.stacks ?? 0) <= 0
+  );
 }
 
 /** パッシブオーラ同期で付与された効果（aggregateStatStatusEffects 集計から除外） */
@@ -367,41 +396,63 @@ export function collectStatusEffectBadgeDisplays(
   effects: StatusEffect[],
   baseStats: StatBadgeBaseStats,
 ): StatusEffectBadgeDisplay[] {
-  const entries: Array<{ badge: StatusEffectBadgeDisplay; index: number }> = [];
+  const entries: Array<{
+    badge: StatusEffectBadgeDisplay;
+    index: number;
+    effect: StatusEffect;
+  }> = [];
 
   effects.forEach((effect, index) => {
-    if (
-      effect.overlay === "herbalPotency" ||
-      effect.overlay === "blockResonance" ||
-      effect.overlay === "mark" ||
-      effect.overlay === "arenaMark"
-    ) {
-      const stackCount = effect.stacks ?? 0;
-      if (stackCount <= 0) return;
-      const badge = statusEffectBadgeForOverlay(effect);
-      if (!badge) return;
-      for (let i = 0; i < stackCount; i++) {
-        entries.push({
-          badge: {
-            ...badge,
-            isPassive: isPassiveDisplayedStatusEffect(effect),
-          },
-          index,
-        });
-      }
-      return;
-    }
+    if (isStackOverlayWithNoStacks(effect)) return;
 
     const badge = statusEffectBadgeForEffect(effect, baseStats);
-    if (badge) entries.push({ badge, index });
+    if (badge) entries.push({ badge, index, effect });
   });
 
-  return entries
+  const groups = new Map<
+    StatusDisplayCategory,
+    Array<(typeof entries)[number]>
+  >();
+  for (const entry of entries) {
+    const group = groups.get(entry.badge.category) ?? [];
+    group.push(entry);
+    groups.set(entry.badge.category, group);
+  }
+
+  const aggregated: Array<{
+    badge: StatusEffectBadgeDisplay;
+    minIndex: number;
+  }> = [];
+
+  for (const [category, group] of groups) {
+    let stackCount = 0;
+    for (const { effect } of group) {
+      stackCount += effectStackContribution(effect);
+    }
+
+    // 代表値: グループ内に passive があれば passive 表示（passive 優先）
+    const isPassive = group.some(({ badge }) => badge.isPassive);
+    const kind = group[0]!.badge.kind;
+    const minIndex = Math.min(...group.map(({ index }) => index));
+
+    aggregated.push({
+      minIndex,
+      badge: {
+        category,
+        kind,
+        isPassive,
+        remainingRatio: categoryRemainingRatio(effects, category),
+        ...(stackCount > 1 ? { stackCount } : {}),
+      },
+    });
+  }
+
+  return aggregated
     .sort((a, b) => {
       if (a.badge.isPassive !== b.badge.isPassive) {
         return a.badge.isPassive ? -1 : 1;
       }
-      return a.index - b.index;
+      return a.minIndex - b.minIndex;
     })
     .map((entry) => entry.badge);
 }
@@ -477,6 +528,15 @@ function effectsForCategory(
   }
   if (category === "wardBarrier") {
     return effects.filter((effect) => effect.overlay === "wardBarrier");
+  }
+  if (category === "herbalPotency") {
+    return effects.filter((effect) => effect.overlay === "herbalPotency");
+  }
+  if (category === "blockResonance") {
+    return effects.filter((effect) => effect.overlay === "blockResonance");
+  }
+  if (category === "mark") {
+    return effects.filter((effect) => effect.overlay === "mark");
   }
   if (category === "blockResonanceStance") {
     return effects.filter(

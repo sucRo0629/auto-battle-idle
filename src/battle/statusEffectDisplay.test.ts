@@ -118,7 +118,7 @@ describe('statusEffectDisplay', () => {
     expect(badges).toEqual([]);
   });
 
-  it('collects stack badges as repeated icons for herbalPotency', () => {
+  it('collects stack badges as a single badge with stackCount for herbalPotency', () => {
     const badges = collectStatusEffectBadgeDisplays(
       [
         {
@@ -134,8 +134,39 @@ describe('statusEffectDisplay', () => {
       { atk: 10, def: 10, reg: 0 },
     );
 
-    expect(badges).toHaveLength(3);
-    expect(badges.every((b) => b.category === 'herbalPotency')).toBe(true);
+    expect(badges).toHaveLength(1);
+    expect(badges[0]?.category).toBe('herbalPotency');
+    expect(badges[0]?.stackCount).toBe(3);
+  });
+
+  it('aggregates multiple instances in the same category into one badge', () => {
+    const badges = collectStatusEffectBadgeDisplays(
+      [
+        {
+          id: 'bleed_a',
+          kind: 'debuff',
+          overlay: 'dot',
+          dotFlavor: 'bleed',
+          multiplier: 1,
+          durationSec: 5,
+          remainingSec: 4,
+        },
+        {
+          id: 'bleed_b',
+          kind: 'debuff',
+          overlay: 'dot',
+          dotFlavor: 'bleed',
+          multiplier: 1,
+          durationSec: 5,
+          remainingSec: 2,
+        },
+      ],
+      { atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges).toHaveLength(1);
+    expect(badges[0]?.category).toBe('bleed');
+    expect(badges[0]?.stackCount).toBe(2);
   });
 
   it('collects one badge per status effect and keeps passives on the left', () => {
@@ -315,7 +346,7 @@ describe('statusEffectDisplay', () => {
     expect(badges.every((badge) => badge.kind === 'debuff')).toBe(true);
   });
 
-  it('collects arenaMark stack badges with arenaMark category', () => {
+  it('collects arenaMark stack badges as one badge with stackCount', () => {
     const badges = collectStatusEffectBadgeDisplays(
       [
         {
@@ -331,8 +362,9 @@ describe('statusEffectDisplay', () => {
       { atk: 10, def: 10, reg: 0 },
     );
 
-    expect(badges).toHaveLength(2);
-    expect(badges.every((badge) => badge.category === 'arenaMark')).toBe(true);
-    expect(badges.every((badge) => badge.kind === 'debuff')).toBe(true);
+    expect(badges).toHaveLength(1);
+    expect(badges[0]?.category).toBe('arenaMark');
+    expect(badges[0]?.kind).toBe('debuff');
+    expect(badges[0]?.stackCount).toBe(2);
   });
 });

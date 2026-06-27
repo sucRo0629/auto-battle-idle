@@ -36,8 +36,6 @@ export interface BattleHudTheme {
   skillRecastCharging: string;
   skillRecastReady: string;
   iconFrame: string;
-  statusBuffColor: string;
-  statusDebuffColor: string;
   statusBadgeIconSize: number;
   statusBadgeOverlap: number;
   popupFontSize: number;
@@ -47,6 +45,8 @@ export interface BattleHudTheme {
   popupDamageStroke: string;
   popupDotFill: string;
   popupDotStroke: string;
+  popupPoisonDotFill: string;
+  popupPoisonDotStroke: string;
   popupHealFill: string;
   popupHealStroke: string;
   sceneSkyFill: string;
@@ -85,7 +85,6 @@ export interface BattleHudTheme {
   attackImpaleTip: string;
   statusBadgeOverlay: string;
   statusIconOutlineColor: string;
-  statusPassiveIconOutlineColor: string;
   statusIconOutlineWidth: number;
   statusIconFallbackAlpha: number;
   hurtTintR: number;
@@ -207,9 +206,7 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     ),
     skillRecastReady: readString(style, "--hud-skill-recast-ready", "#9aa3b0"),
     iconFrame: readString(style, "--hud-icon-frame", "#1a1a1a"),
-    statusBuffColor: readString(style, "--status-buff-color", "#e6b422"),
-    statusDebuffColor: readString(style, "--status-debuff-color", "#a855f7"),
-    statusBadgeIconSize: readNumber(style, "--status-badge-icon-size", 8),
+    statusBadgeIconSize: readNumber(style, "--status-badge-icon-size", 16),
     statusBadgeOverlap: readNumber(style, "--status-badge-overlap", 0),
     popupFontSize: readNumber(style, "--popup-font-size", 20),
     popupOutlineWidth: readNumber(style, "--popup-outline-width", 1),
@@ -222,6 +219,16 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     popupDamageStroke: readString(style, "--popup-damage-stroke", "#000000"),
     popupDotFill: readString(style, "--popup-dot-fill", "#ff3333"),
     popupDotStroke: readString(style, "--popup-dot-stroke", "#000000"),
+    popupPoisonDotFill: readString(
+      style,
+      "--popup-poison-dot-fill",
+      "#9933ff",
+    ),
+    popupPoisonDotStroke: readString(
+      style,
+      "--popup-poison-dot-stroke",
+      "#000000",
+    ),
     popupHealFill: readString(style, "--popup-heal-fill", "#2ecc71"),
     popupHealStroke: readString(style, "--popup-heal-stroke", "#1a3d24"),
     sceneSkyFill: readString(style, "--scene-sky-fill", "#87ceeb"),
@@ -323,11 +330,6 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
       style,
       "--status-icon-outline-color",
       "#000000"
-    ),
-    statusPassiveIconOutlineColor: readString(
-      style,
-      "--status-icon-passive-outline-color",
-      "#3e9a9c"
     ),
     statusIconOutlineWidth: readNumber(style, "--status-icon-outline-width", 1),
     statusIconFallbackAlpha: readNumber(

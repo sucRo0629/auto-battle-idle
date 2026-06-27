@@ -1,6 +1,6 @@
 export type AnimState = 'idle' | 'attack' | 'move' | 'death';
 
-import type { Role, StatusEffect, SkillVfxDef } from '../battle/types.ts';
+import type { DotFlavor, Role, StatusEffect, SkillVfxDef } from '../battle/types.ts';
 import type { SkillAnimPlaybackOptions } from './skillAnimPlayback.ts';
 import type { VfxPlaybackKind } from './vfxAnimPlayback.ts';
 
@@ -57,6 +57,7 @@ export interface IBattleRenderer {
     targetId: string,
     amount: number,
     variant?: 'damage' | 'dot',
+    dotFlavor?: DotFlavor,
   ): void;
   showHealPopup(targetId: string, amount: number): void;
   showEvadePopup(targetId: string): void;

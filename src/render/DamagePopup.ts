@@ -1,4 +1,5 @@
 import type { CombatantLayout } from "./IBattleRenderer.ts";
+import type { DotFlavor } from "../battle/types.ts";
 import type { BattleHudTheme } from "./battleHudTheme.ts";
 import {
   computeDamagePopupBaseAnchorY,
@@ -69,6 +70,7 @@ interface PopupEntry {
   targetId: string;
   amount: number;
   kind: PopupKind;
+  dotFlavor?: DotFlavor;
   elapsedMs: number;
   offsetX: number;
   offsetY: number;
@@ -79,11 +81,17 @@ interface PopupEntry {
 export class DamagePopupManager {
   private popups: PopupEntry[] = [];
 
-  spawn(targetId: string, amount: number, kind: PopupKind = "damage"): void {
+  spawn(
+    targetId: string,
+    amount: number,
+    kind: PopupKind = "damage",
+    dotFlavor?: DotFlavor,
+  ): void {
     this.popups.push({
       targetId,
       amount,
       kind,
+      dotFlavor,
       elapsedMs: 0,
       offsetX: (Math.random() - 0.5) * ORIGIN_JITTER_X,
       offsetY: (Math.random() - 0.5) * ORIGIN_JITTER_Y,
@@ -179,13 +187,17 @@ export class DamagePopupManager {
         popup.kind === "heal"
           ? theme.popupHealFill
           : popup.kind === "dot"
-          ? theme.popupDotFill
+          ? popup.dotFlavor === "poison"
+            ? theme.popupPoisonDotFill
+            : theme.popupDotFill
           : theme.popupDamageFill;
       const stroke =
         popup.kind === "heal"
           ? theme.popupHealStroke
           : popup.kind === "dot"
-          ? theme.popupDotStroke
+          ? popup.dotFlavor === "poison"
+            ? theme.popupPoisonDotStroke
+            : theme.popupDotStroke
           : theme.popupDamageStroke;
       ctx.save();
       ctx.translate(centerX, anchorY);

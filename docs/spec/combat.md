@@ -294,7 +294,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 複数ステを異なる倍率/固定値で上げるパッシブ buff は `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1ステのみの場合は従来の `buffStat` + `buffMultiplier` / `buffFlatBonus` でも可（実装: `parseStatBuffModifiers`）。
 
-**HUD バッジ表示（Phase 4d で刷新予定）:** 同一 `StatusDisplayCategory` あたり **1 バッジ**。buff = **上向き五角形背景（青）**、debuff = **下向き五角形背景（赤）** の上に効果アイコンを中央重ね。`isPassive` 由来（`effect.id` が `passive_` 始まり）は buff/debuff の色相を維持しつつ五角形のみくすんだ同系色。アイコン縁は黒で統一（stat 系 atk/def/reg/attackSpeed は **tint なし・白シルエット**、その他は既存カラー PNG + 黒縁）。`stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数（1 スタックは非表示）。残時間は同一カテゴリ内の最短 `remainingRatio` を上端からの暗化で表示。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride`（`src/assets/status-icons/{category}.png`）。`herbalPotency` / `blockResonance` / `mark` / `arenaMark` / `wardBarrier` も 1 アイコン + 累積数（2 以上のみ）。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。味方は `PartyHudPanel`、敵は `BattleCanvas` 上のスプライト頭上（[battle-field.md](battle-field.md)）。実装タイミングは [phase-roadmap.md](../plans/phase-roadmap.md) Phase 4d。
+**HUD バッジ表示（Phase 4d）:** 同一 `StatusDisplayCategory` あたり **1 バッジ**（**16×16px** スロット）。buff / debuff / passive buff / passive debuff 用の **五角形背景 PNG**（`src/assets/status-icons/pentagon-buff.png`, `pentagon-debuff.png`, `pentagon-passive-buff.png`, `pentagon-passive-debuff.png`）の上に効果アイコン（`{category}.png`、同一 16×16）を重ねる。`isPassive` 由来（`effect.id` が `passive_` 始まり）は passive 用五角形 PNG を使用。アイコン縁は黒で統一（stat 系 atk/def/reg/attackSpeed は **tint なし・白シルエット**、その他は既存カラー PNG + 黒縁）。`stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数（1 スタックは非表示）。残時間は同一カテゴリ内の最短 `remainingRatio` を上端からの暗化で表示。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride`（`src/assets/status-icons/{category}.png`）。`herbalPotency` / `blockResonance` / `mark` / `arenaMark` / `wardBarrier` も 1 アイコン + 累積数（2 以上のみ）。バッジは表示順のまま 4 個ごとに折り返し、2 段目以降は 1 段目の上に積む。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。味方は `PartyHudPanel`、敵は `BattleCanvas` 上のスプライト頭上（[battle-field.md](battle-field.md)）。実装: `statusEffectDisplay.ts`, `statusBadgeRenderer.ts`, `StatusIconRegistry.ts`。エディタ確認: `editor.html` → 状態アイコン（HUD 同等 ×1）。
 
 ### 迎撃態勢（`blockResonance`）
 
@@ -577,7 +577,7 @@ HUD 情報は原則 popup しない。スキル名・ダメージ内訳・Barrie
 | `damage` | 白 | skill `damage` → `playSkillHitFeedback` |
 | `heal` | 緑 | 即時 heal、HoT tick、`excessHealRedirect` 転送先 |
 | `dot`（`dotFlavor` 未指定 / `bleed`） | 赤 | skill / status `dot` tick |
-| `dot`（`dotFlavor: poison`） | 紫 | skill / status `dot` tick |
+| `dot`（`dotFlavor: poison`） | 紫（`--popup-poison-dot-fill` `#9933ff`） | skill / status `dot` tick |
 
 DoT フレーバーは HUD バッジ（`bleed` / `poison` / 汎用 `dot` アイコン）と独立。毒 tick の数字色のみ紫とし、debuff 五角形背景は赤のまま。
 

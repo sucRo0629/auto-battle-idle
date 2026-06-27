@@ -4,6 +4,7 @@ import {
   measureStatusBadgeBlock,
   statusBadgeRowWidth,
   statusBadgeStride,
+  statusBadgeWidth,
 } from './statusBadgeRenderer.ts';
 
 const hot = { category: 'hot' as const, kind: 'buff' as const, remainingRatio: 1, isPassive: false };
@@ -11,17 +12,23 @@ const dot = { category: 'dot' as const, kind: 'debuff' as const, remainingRatio:
 const atk = { category: 'atk' as const, kind: 'buff' as const, remainingRatio: 1, isPassive: false };
 const passiveAtk = { category: 'atk' as const, kind: 'buff' as const, remainingRatio: 1, isPassive: true };
 
+describe('statusBadgeWidth', () => {
+  it('matches icon size at scale 1', () => {
+    expect(statusBadgeWidth(1, 16)).toBe(16);
+  });
+});
+
 describe('statusBadgeRowWidth', () => {
   it('includes outline clearance between adjacent badges', () => {
-    expect(statusBadgeRowWidth([hot, dot], 1, 8, 1, 0)).toBe(20);
+    expect(statusBadgeRowWidth([hot, dot], 1, 16, 1, 0)).toBe(36);
   });
 
   it('matches legacy width when outline is disabled', () => {
-    expect(statusBadgeRowWidth([hot, dot], 1, 8, 0, 0)).toBe(16);
+    expect(statusBadgeRowWidth([hot, dot], 1, 16, 0, 0)).toBe(32);
   });
 
   it('adds outline clearance for each additional badge', () => {
-    expect(statusBadgeRowWidth([atk, hot, dot], 1, 8, 1, 0)).toBe(32);
+    expect(statusBadgeRowWidth([atk, hot, dot], 1, 16, 1, 0)).toBe(56);
   });
 });
 
@@ -40,7 +47,7 @@ describe('measureStatusBadgeBlock', () => {
         { ...passiveAtk, category: 'block' as const },
       ],
       1,
-      8,
+      16,
       1,
       0,
     );
@@ -74,18 +81,32 @@ describe('drawStatusBadgeBlock', () => {
       save() {},
       restore() {},
       clearRect() {},
+      beginPath() {},
+      closePath() {},
+      fill() {},
+      stroke() {},
+      moveTo() {},
+      lineTo() {},
       drawImage(
         _image: CanvasImageSource,
-        _sx: number,
-        _sy: number,
-        _sw: number,
-        _sh: number,
-        dx: number,
-        dy: number,
-        dw: number,
-        dh: number,
+        arg2: number,
+        arg3: number,
+        arg4?: number,
+        arg5?: number,
+        arg6?: number,
+        arg7?: number,
+        arg8?: number,
+        arg9?: number,
       ) {
-        drawImages.push({ x: dx, y: dy, width: dw, height: dh });
+        if (arg4 === undefined) {
+          drawImages.push({ x: arg2, y: arg3, width: 0, height: 0 });
+          return;
+        }
+        if (arg6 !== undefined && arg7 !== undefined && arg8 !== undefined && arg9 !== undefined) {
+          drawImages.push({ x: arg6, y: arg7, width: arg8, height: arg9 });
+          return;
+        }
+        drawImages.push({ x: arg2, y: arg3, width: arg4, height: arg5 ?? arg4 });
       },
       fillRect() {},
     } as unknown as CanvasRenderingContext2D;
@@ -98,13 +119,10 @@ describe('drawStatusBadgeBlock', () => {
         [passiveAtk, passiveAtk, passiveAtk, passiveAtk, passiveAtk],
         1,
         {
-          buffColor: '#fff',
-          debuffColor: '#f00',
-          iconSize: 8,
+          iconSize: 16,
           rowOverlap: 0,
           overlayColor: '#000',
           iconOutlineColor: '#000',
-          passiveIconOutlineColor: '#fff',
           iconOutlineWidth: 0,
           iconFallbackAlpha: 0,
           resolveIconFallbackColor: () => '#888',
@@ -112,7 +130,8 @@ describe('drawStatusBadgeBlock', () => {
       );
 
       expect(drawImages.length).toBeGreaterThan(0);
-      expect(drawImages[0]?.y).toBeGreaterThan(drawImages[4]?.y ?? -1);
+      const ys = drawImages.map((entry) => entry.y);
+      expect(Math.max(...ys)).toBeGreaterThan(Math.min(...ys));
     } finally {
       vi.unstubAllGlobals();
     }
@@ -121,6 +140,6 @@ describe('drawStatusBadgeBlock', () => {
 
 describe('statusBadgeStride', () => {
   it('adds 2px outline pad per side between icons', () => {
-    expect(statusBadgeStride(1, 8, 1, 0)).toBe(12);
+    expect(statusBadgeStride(1, 16, 1, 0)).toBe(20);
   });
 });

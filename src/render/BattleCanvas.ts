@@ -211,8 +211,9 @@ export class BattleCanvas implements IBattleRenderer {
     targetId: string,
     amount: number,
     variant: "damage" | "dot" = "damage",
+    dotFlavor?: import("../battle/types.ts").DotFlavor,
   ): void {
-    this.damagePopups.spawn(targetId, amount, variant);
+    this.damagePopups.spawn(targetId, amount, variant, dotFlavor);
   }
 
   showHealPopup(targetId: string, amount: number): void {
@@ -806,13 +807,10 @@ export class BattleCanvas implements IBattleRenderer {
       const centerX = layout.x + spriteW / 2;
 
       drawStatusBadgeBlock(this.ctx, centerX, top, drawItems, scale, {
-        buffColor: this.theme.statusBuffColor,
-        debuffColor: this.theme.statusDebuffColor,
         iconSize: this.theme.statusBadgeIconSize,
         rowOverlap: this.theme.statusBadgeOverlap,
         overlayColor: this.theme.statusBadgeOverlay,
         iconOutlineColor: this.theme.statusIconOutlineColor,
-        passiveIconOutlineColor: this.theme.statusPassiveIconOutlineColor,
         iconOutlineWidth: this.theme.statusIconOutlineWidth,
         iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
         resolveIconFallbackColor: (category) =>

@@ -1,4 +1,4 @@
-import type { SkillEffectKind } from './types.ts';
+import type { SkillEffectKind, DotFlavor } from './types.ts';
 
 export type BattleEvent =
   | {
@@ -22,6 +22,7 @@ export type BattleEvent =
       amount?: number;
       range?: number;
       statusLabel?: string;
+      dotFlavor?: DotFlavor;
       hitIndex?: number;
       /** chain/pierce 等: VFX セグメントの起点（未指定時は actorId） */
       vfxSourceId?: string;

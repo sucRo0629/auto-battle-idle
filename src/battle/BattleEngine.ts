@@ -2260,6 +2260,7 @@ export class BattleEngine {
         skillName,
         effect: "dot",
         amount,
+        ...(effect.dotFlavor ? { dotFlavor: effect.dotFlavor } : {}),
       });
       this.emit({ type: "hurt", targetId: target.id });
       if (lethal) {

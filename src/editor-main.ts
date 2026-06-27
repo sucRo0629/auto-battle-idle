@@ -1,4 +1,5 @@
 import './styles/app-base.css';
+import './styles/battle-view.css';
 import './styles/editor.css';
 import { EditorApp } from './editor/EditorApp.ts';
 

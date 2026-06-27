@@ -286,7 +286,17 @@ export class BattleView {
       );
       const slotKind = event.slotKind ?? "active";
       const skillDef = this.gameData.skillRegistry.actives[event.skillId];
-      if (!skillDef) return;
+      if (!skillDef) {
+        if (event.effect === "dot" && event.amount !== undefined) {
+          this.canvas.showDamagePopup(
+            event.targetId,
+            event.amount,
+            "dot",
+            event.dotFlavor,
+          );
+        }
+        return;
+      }
       const effectDef = skillDef?.effect[event.effectIndex ?? 0];
       if (effectDef) {
         this.flashDebugSkillRange(event.actorId, effectDef);
@@ -329,6 +339,8 @@ export class BattleView {
                 : event.effect === "heal"
                   ? "heal"
                   : undefined,
+          dotFlavor:
+            event.effect === "dot" ? event.dotFlavor : undefined,
           popupDedupeKey:
             event.amount !== undefined &&
             (event.effect === "damage" || event.effect === "dot")

@@ -83,8 +83,6 @@
   --hud-skill-recast-paused-mix: 38;
   --hud-skill-recast-paused-max-mix: 58;
   --hud-icon-frame: #1a1a1a;
-  --status-buff-color: #e6b422;
-  --status-debuff-color: #a855f7;
   --popup-font-size: 18;
   --popup-outline-width: 1;
   --popup-font-family: 'Segoe UI', system-ui, sans-serif;
@@ -92,6 +90,8 @@
   --popup-damage-stroke: #000000;
   --popup-dot-fill: #ff3333;
   --popup-dot-stroke: #000000;
+  --popup-poison-dot-fill: #9933ff;
+  --popup-poison-dot-stroke: #000000;
   --popup-heal-fill: #40ff90;
   --popup-heal-stroke: #000000;
   --scene-sky-fill: #87ceeb;
@@ -128,11 +128,10 @@
   --attack-chain-lightning-tail-alpha: 0.85;
   --attack-impale-shaft: #b8c4ce;
   --attack-impale-tip: #5d6d7e;
-  --status-badge-icon-size: 8;
+  --status-badge-icon-size: 16;
   --status-badge-overlap: 0;
   --status-badge-overlay: rgba(0, 0, 0, 0.55);
   --status-icon-outline-color: #000000;
-  --status-icon-passive-outline-color: #1a478a;
   --status-icon-outline-width: 1;
   --status-icon-fallback-alpha: 0.35;
   --hud-status-badge-gap: 2;

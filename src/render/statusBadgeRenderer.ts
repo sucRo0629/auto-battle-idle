@@ -2,11 +2,16 @@ import {
   type StatusEffectBadgeDisplay,
   type StatusDisplayCategory,
 } from '../battle/statusEffectDisplay.ts';
-import { getStatusIconImage } from './StatusIconRegistry.ts';
+import {
+  getStatusBadgePentagonImage,
+  getStatusIconImage,
+} from './StatusIconRegistry.ts';
 
 export const STATUS_BADGE_GAP = 0;
 
-function statusBadgeUsesTint(category: StatusDisplayCategory): boolean {
+function statusBadgeUsesWhiteSilhouette(
+  category: StatusDisplayCategory,
+): boolean {
   return (
     category === 'atk' ||
     category === 'def' ||
@@ -144,13 +149,10 @@ export function drawStatusBadgeBlock(
 }
 
 export interface StatusBadgeTheme {
-  buffColor: string;
-  debuffColor: string;
   iconSize: number;
   rowOverlap: number;
   overlayColor: string;
   iconOutlineColor: string;
-  passiveIconOutlineColor: string;
   iconOutlineWidth: number;
   iconFallbackAlpha: number;
   resolveIconFallbackColor: (
@@ -280,6 +282,36 @@ export function drawStatusBadgeRow(
   }
 }
 
+function drawStackCountLabel(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  stackCount: number,
+): void {
+  const text = String(stackCount);
+  const fontSize = Math.max(5, size * 0.42);
+  ctx.save();
+  ctx.font = `bold ${fontSize}px ${themeFontFamily(ctx)}`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(1, fontSize * 0.18);
+  ctx.strokeStyle = '#000000';
+  ctx.fillStyle = '#ffffff';
+  const textX = x + size - 1;
+  const textY = y + size - 1;
+  ctx.strokeText(text, textX, textY);
+  ctx.fillText(text, textX, textY);
+  ctx.restore();
+}
+
+function themeFontFamily(ctx: CanvasRenderingContext2D): string {
+  const raw = ctx.font;
+  const match = /(\d+(?:\.\d+)?px)\s+(.+)/.exec(raw);
+  return match?.[2] ?? 'sans-serif';
+}
+
 function drawStatusBadge(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -288,26 +320,45 @@ function drawStatusBadge(
   scale: number,
   theme: StatusBadgeTheme,
 ): void {
-  const accentColor =
-    badge.kind === 'buff' ? theme.buffColor : theme.debuffColor;
-  const outlineColor = badge.isPassive
-    ? theme.passiveIconOutlineColor
-    : theme.iconOutlineColor;
+  const outlineColor = theme.iconOutlineColor;
+  const badgeSize = theme.iconSize * scale;
 
   ctx.save();
 
-  const iconSize = theme.iconSize * scale;
+  const pentagon = getStatusBadgePentagonImage(badge.kind, badge.isPassive);
+  if (pentagon) {
+    ctx.drawImage(pentagon, x, y, badgeSize, badgeSize);
+  }
+
+  const iconTint = statusBadgeUsesWhiteSilhouette(badge.category)
+    ? '#ffffff'
+    : undefined;
+
   drawStatusIcon(
     ctx,
     badge.category,
     x,
     y,
-    iconSize,
-    accentColor,
-    badge.remainingRatio,
+    badgeSize,
+    iconTint,
     theme,
     outlineColor,
+    theme.iconOutlineWidth * (badgeSize / Math.max(1, theme.iconSize)),
   );
+
+  drawBadgeRemainingOverlay(
+    ctx,
+    x,
+    y,
+    badgeSize,
+    badgeSize,
+    badge.remainingRatio,
+    theme.overlayColor,
+  );
+
+  if (badge.stackCount !== undefined && badge.stackCount > 1) {
+    drawStackCountLabel(ctx, x, y, badgeSize, badge.stackCount);
+  }
 
   ctx.restore();
 }
@@ -318,16 +369,14 @@ function drawStatusIcon(
   x: number,
   y: number,
   size: number,
-  color: string,
-  remainingRatio: number,
+  whiteSilhouetteTint: string | undefined,
   theme: StatusBadgeTheme,
   outlineColor: string,
+  outlineWidthPx: number,
 ): void {
   const image = getStatusIconImage(category);
-  const outlineWidthPx =
-    theme.iconOutlineWidth * (size / Math.max(1, theme.iconSize));
   if (image) {
-    if (!statusBadgeUsesTint(category)) {
+    if (whiteSilhouetteTint === undefined) {
       drawPlainImage(
         ctx,
         image,
@@ -335,8 +384,6 @@ function drawStatusIcon(
         y,
         size,
         size,
-        remainingRatio,
-        theme.overlayColor,
         outlineColor,
         outlineWidthPx,
       );
@@ -348,9 +395,7 @@ function drawStatusIcon(
         y,
         size,
         size,
-        color,
-        remainingRatio,
-        theme.overlayColor,
+        whiteSilhouetteTint,
         outlineColor,
         outlineWidthPx,
       );
@@ -358,27 +403,10 @@ function drawStatusIcon(
     return;
   }
 
-  const pad = statusBadgeOutlinePad(outlineWidthPx);
-  if (pad > 0) {
-    ctx.fillStyle = outlineColor;
-    ctx.fillRect(x - pad, y - pad, size + pad * 2, size + pad * 2);
-  }
-
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, size, size);
-  ctx.fillStyle = theme.resolveIconFallbackColor(category);
+  ctx.fillStyle = whiteSilhouetteTint ?? theme.resolveIconFallbackColor(category);
   ctx.globalAlpha = theme.iconFallbackAlpha;
-  ctx.fillRect(x + size * 0.2, y + size * 0.2, size * 0.6, size * 0.6);
+  ctx.fillRect(x + size * 0.15, y + size * 0.15, size * 0.7, size * 0.7);
   ctx.globalAlpha = 1;
-  drawRemainingDarkOverlay(
-    ctx,
-    x,
-    y,
-    size,
-    size,
-    remainingRatio,
-    theme.overlayColor,
-  );
 }
 
 let tintBuffer: HTMLCanvasElement | null = null;
@@ -398,7 +426,7 @@ function getTintBuffer(width: number, height: number): CanvasRenderingContext2D 
   return bufferCtx;
 }
 
-function drawRemainingDarkOverlay(
+function drawBadgeRemainingOverlay(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -410,11 +438,9 @@ function drawRemainingDarkOverlay(
   const elapsedRatio = 1 - Math.max(0, Math.min(1, remainingRatio));
   if (elapsedRatio <= 0) return;
 
-  const darkH = height * elapsedRatio;
   ctx.save();
-  ctx.globalCompositeOperation = 'source-atop';
   ctx.fillStyle = overlayColor;
-  ctx.fillRect(x, y, width, darkH);
+  ctx.fillRect(x, y, width, height * elapsedRatio);
   ctx.restore();
 }
 
@@ -425,8 +451,6 @@ function drawPlainImage(
   y: number,
   width: number,
   height: number,
-  remainingRatio: number,
-  overlayColor: string,
   outlineColor: string,
   outlineWidth: number,
 ): void {
@@ -441,20 +465,7 @@ function drawPlainImage(
     outlineWidth,
   );
 
-  const bufferW = Math.ceil(width);
-  const bufferH = Math.ceil(height);
-  const bufferCtx = getTintBuffer(bufferW, bufferH);
-  bufferCtx.drawImage(image, 0, 0, bufferW, bufferH);
-  drawRemainingDarkOverlay(
-    bufferCtx,
-    0,
-    0,
-    bufferW,
-    bufferH,
-    remainingRatio,
-    overlayColor,
-  );
-  ctx.drawImage(tintBuffer!, 0, 0, bufferW, bufferH, x, y, width, height);
+  ctx.drawImage(image, x, y, width, height);
 }
 
 function drawTintedImage(
@@ -465,8 +476,6 @@ function drawTintedImage(
   width: number,
   height: number,
   color: string,
-  remainingRatio: number,
-  overlayColor: string,
   outlineColor: string,
   outlineWidth: number,
 ): void {
@@ -490,16 +499,6 @@ function drawTintedImage(
   bufferCtx.fillStyle = color;
   bufferCtx.fillRect(0, 0, bufferW, bufferH);
   bufferCtx.globalCompositeOperation = 'source-over';
-
-  drawRemainingDarkOverlay(
-    bufferCtx,
-    0,
-    0,
-    bufferW,
-    bufferH,
-    remainingRatio,
-    overlayColor,
-  );
 
   ctx.drawImage(tintBuffer!, 0, 0, bufferW, bufferH, x, y, width, height);
 }

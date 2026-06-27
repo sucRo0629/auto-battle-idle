@@ -55,6 +55,101 @@
   margin-top: 8px;
 }
 
+.status-icons-preview-intro {
+  margin-bottom: 12px;
+}
+
+.status-icons-preview-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.status-icons-preview-scale-label {
+  min-width: 10rem;
+  font-size: 0.9rem;
+  color: #c5d0de;
+}
+
+.status-icons-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.status-icons-preview-table th,
+.status-icons-preview-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #2d3a4f;
+  vertical-align: middle;
+}
+
+.status-icons-preview-table th {
+  text-align: left;
+  color: #9aa8bc;
+  font-weight: 600;
+}
+
+.status-icons-preview-category {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: nowrap;
+}
+
+.status-icons-preview-raw-img,
+.status-icons-preview-canvas {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.status-icons-preview-badge,
+.status-icons-preview-raw {
+  background: repeating-conic-gradient(#1a2233 0% 25%, #121826 0% 50%) 50% / 12px 12px;
+}
+
+.status-icons-preview-missing {
+  color: #e67e22;
+  font-size: 0.8rem;
+}
+
+.status-icons-pentagon-section {
+  margin-bottom: 20px;
+}
+
+.status-icons-pentagon-heading {
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  color: #c5d0de;
+}
+
+.status-icons-pentagon-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.status-icons-pentagon-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  background: repeating-conic-gradient(#1a2233 0% 25%, #121826 0% 50%) 50% / 12px 12px;
+  border: 1px solid #2d3a4f;
+  border-radius: 4px;
+}
+
+.status-icons-pentagon-label {
+  font-weight: 600;
+  color: #e8eef5;
+}
+
+.status-icons-pentagon-filename {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.75rem;
+  color: #9aa8bc;
+}
+
 .editor-tab {
   padding: 8px 16px;
   border: 1px solid #2d3a4f;

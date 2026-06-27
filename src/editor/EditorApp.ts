@@ -6,6 +6,7 @@ import type { BalanceDisplayMode } from './balanceReference.ts';
 import { BalanceEditorStep } from './BalanceEditorStep.ts';
 import { ClassEditorStep, loadClassDraftById } from './ClassEditorStep.ts';
 import { EnemyEditorStep, loadEnemyDraftById } from './EnemyEditorStep.ts';
+import { StatusIconsEditorStep } from './StatusIconsEditorStep.ts';
 import {
   applyEnemyAttackSpeedTier,
   applyEnemyCustomBasicAttackInterval,
@@ -54,7 +55,7 @@ import {
 } from './SkillEditorStep.ts';
 import { createActionButton, createButton, createEl, preserveScrollDuring } from './formUtils.ts';
 
-type EditorTab = 'class' | 'enemy' | 'balance';
+type EditorTab = 'class' | 'enemy' | 'balance' | 'statusIcons';
 
 const EDITOR_SESSION_KEY = 'auto-battle-idle:editor-session';
 
@@ -90,6 +91,7 @@ export class EditorApp {
   private enemyStep: EnemyEditorStep | null = null;
   private skillStep: SkillEditorStep | null = null;
   private balanceStep: BalanceEditorStep | null = null;
+  private statusIconsStep: StatusIconsEditorStep | null = null;
   private classSectionExpandedState = new Map<string, boolean>();
 
   private statusEl!: HTMLElement;
@@ -106,7 +108,7 @@ export class EditorApp {
       const raw = sessionStorage.getItem(EDITOR_SESSION_KEY);
       if (!raw) return;
       const state = JSON.parse(raw) as EditorSessionState;
-      if (state.tab === 'class' || state.tab === 'enemy' || state.tab === 'balance') {
+      if (state.tab === 'class' || state.tab === 'enemy' || state.tab === 'balance' || state.tab === 'statusIcons') {
         this.tab = state.tab;
       }
       if (typeof state.selectedClassId === 'string') {
@@ -183,6 +185,7 @@ export class EditorApp {
       { id: 'class', label: 'クラス' },
       { id: 'enemy', label: '敵' },
       { id: 'balance', label: 'バランス' },
+      { id: 'statusIcons', label: '状態アイコン' },
     ];
     for (const item of items) {
       const btn = createButton(item.label, 'editor-tab', () => {
@@ -255,13 +258,20 @@ export class EditorApp {
     this.enemyStep?.destroy();
     this.skillStep?.destroy();
     this.balanceStep?.destroy();
+    this.statusIconsStep?.destroy();
     this.classStep = null;
     this.enemyStep = null;
     this.skillStep = null;
     this.balanceStep = null;
+    this.statusIconsStep = null;
 
     preserveScrollDuring(() => {
       this.contentEl.replaceChildren();
+
+      if (this.tab === 'statusIcons') {
+        this.renderStatusIconsEditor();
+        return;
+      }
 
       if (this.tab === 'class') {
         this.renderClassEditor();
@@ -321,6 +331,12 @@ export class EditorApp {
     });
 
     this.appendSaveActions(() => void this.saveClass());
+  }
+
+  private renderStatusIconsEditor(): void {
+    const host = createEl('div', 'editor-panel editor-panel-status-icons');
+    this.contentEl.appendChild(host);
+    this.statusIconsStep = new StatusIconsEditorStep(host);
   }
 
   private renderBalanceEditor(): void {
