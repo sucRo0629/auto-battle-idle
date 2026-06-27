@@ -1,5 +1,28 @@
 [
   {
+    "id": "df_guardian_basic_attack",
+    "name": "df_guardian_basic_attack",
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        },
+        "applyFrame": 2
+      }
+    ],
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    }
+  },
+  {
     "id": "df_guardian_active_1",
     "name": "防御強化",
     "trigger": {
@@ -57,34 +80,11 @@
     "useDurationSec": 5
   },
   {
-    "id": "df_guardian_basic_attack",
-    "name": "df_guardian_basic_attack",
-    "effect": [
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "damage",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1
-        },
-        "applyFrame": 2
-      }
-    ],
-    "trigger": {
-      "kind": "time",
-      "value": 2
-    }
-  },
-  {
     "id": "df_guardian_active_3",
     "name": "鉄身",
     "trigger": {
       "kind": "time",
-      "value": 10
+      "value": 12
     },
     "effect": [
       {
@@ -111,7 +111,7 @@
     "name": "城塞の構え",
     "trigger": {
       "kind": "hitsTaken",
-      "value": 8
+      "value": 12
     },
     "effect": [
       {

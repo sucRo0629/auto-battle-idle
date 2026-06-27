@@ -1,5 +1,29 @@
 [
   {
+    "id": "sp_wardweaver_basic_attack",
+    "name": "sp_wardweaver_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "heal",
+        "healSubKind": "instant",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.7
+        }
+      }
+    ]
+  },
+  {
     "id": "sp_wardweaver_active_1",
     "name": "支えの御盾",
     "trigger": {
@@ -41,30 +65,6 @@
     }
   },
   {
-    "id": "sp_wardweaver_basic_attack",
-    "name": "sp_wardweaver_basic_attack",
-    "trigger": {
-      "kind": "time",
-      "value": 2
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "stat",
-          "side": "ally",
-          "stat": "hp",
-          "order": "ratio"
-        },
-        "type": "heal",
-        "healSubKind": "instant",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.7
-        }
-      }
-    ]
-  },
-  {
     "id": "sp_wardweaver_active_2",
     "name": "双璧の護り",
     "trigger": {
@@ -75,7 +75,7 @@
     "fireConditions": [
       {
         "kind": "targetHp",
-        "maxHpRatio": 0.5
+        "maxHpRatio": 0.8
       }
     ],
     "effect": [
@@ -112,6 +112,24 @@
     "effect": [
       {
         "target": {
+          "kind": "distance",
+          "side": "ally",
+          "order": "selfOrigin"
+        },
+        "type": "buff",
+        "buffSubKind": "barrier",
+        "buffStat": "atk",
+        "buffMultiplier": 1.2,
+        "buffDurationSec": 5,
+        "targetShape": "aoe",
+        "aoeRadiusPx": 150,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      },
+      {
+        "target": {
           "kind": "stat",
           "side": "ally",
           "stat": "hp",
@@ -122,10 +140,13 @@
         "barrierStack": true,
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1
+          "atkScale": 1.25
         }
       }
-    ]
+    ],
+    "vfx": {
+      "enabled": true
+    }
   },
   {
     "id": "sp_wardweaver_active_4",

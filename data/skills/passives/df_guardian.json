@@ -21,10 +21,10 @@
     "id": "df_guardian_passive_3",
     "name": "迎撃態勢",
     "effect": "blockResonance",
-    "chance": 0.1,
     "blockResonanceMaxStacks": 6,
     "blockResonanceDamageTakenPerStack": 0.03,
-    "blockResonanceDecayIntervalSec": 8
+    "blockResonanceDecayIntervalSec": 8,
+    "chance": 0.1
   },
   {
     "id": "df_guardian_passive_4",

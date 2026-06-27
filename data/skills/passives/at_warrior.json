@@ -27,11 +27,11 @@
     "name": "穿甲の一撃",
     "effect": "defenseIgnore",
     "defenseIgnore": {
+      "chance": 0.15,
       "def": {
         "mode": "percent",
         "amount": 1
-      },
-      "chance": 0.15
+      }
     }
   },
   {

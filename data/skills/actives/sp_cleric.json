@@ -1,5 +1,29 @@
 [
   {
+    "id": "sp_cleric_basic_attack",
+    "name": "sp_cleric_basic_attack",
+    "effect": [
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "heal",
+        "healSubKind": "instant",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ],
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    }
+  },
+  {
     "id": "sp_cleric_active_1",
     "name": "癒しの光",
     "trigger": {
@@ -141,29 +165,5 @@
       }
     ],
     "maxCharges": 1
-  },
-  {
-    "id": "sp_cleric_basic_attack",
-    "name": "sp_cleric_basic_attack",
-    "effect": [
-      {
-        "target": {
-          "kind": "stat",
-          "side": "ally",
-          "stat": "hp",
-          "order": "ratio"
-        },
-        "type": "heal",
-        "healSubKind": "instant",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1
-        }
-      }
-    ],
-    "trigger": {
-      "kind": "time",
-      "value": 2
-    }
   }
 ]

@@ -1,5 +1,30 @@
 [
   {
+    "id": "sp_alchemist_basic_attack",
+    "name": "薬手当て",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "stat",
+          "side": "ally",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "heal",
+        "healSubKind": "hot",
+        "amount": {
+          "kind": "percentMaxHp",
+          "percentOfMaxHp": 0.003
+        },
+        "durationSec": 5
+      }
+    ]
+  },
+  {
     "id": "sp_alchemist_active_1",
     "name": "薬粉撒き",
     "trigger": {
@@ -51,10 +76,10 @@
   },
   {
     "id": "sp_alchemist_active_3",
-    "name": "滋養強壮薬",
+    "name": "強壮薬",
     "trigger": {
       "kind": "time",
-      "value": 11
+      "value": 12
     },
     "effect": [
       {
@@ -67,7 +92,7 @@
         "durationSec": 14,
         "amount": {
           "kind": "percentMaxHp",
-          "percentOfMaxHp": 0.007
+          "percentOfMaxHp": 0.008
         }
       },
       {
@@ -78,7 +103,7 @@
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "hp",
-        "buffFlatBonus": 8,
+        "buffFlatBonus": 100,
         "buffDurationSec": 10
       }
     ]
@@ -161,31 +186,6 @@
             "buffDurationSec": 8
           }
         ]
-      }
-    ]
-  },
-  {
-    "id": "sp_alchemist_basic_attack",
-    "name": "薬手当て",
-    "trigger": {
-      "kind": "time",
-      "value": 2
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "stat",
-          "side": "ally",
-          "stat": "hp",
-          "order": "ratio"
-        },
-        "type": "heal",
-        "healSubKind": "hot",
-        "amount": {
-          "kind": "percentMaxHp",
-          "percentOfMaxHp": 0.003
-        },
-        "durationSec": 5
       }
     ]
   }

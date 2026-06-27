@@ -124,7 +124,7 @@
         "damageType": "physical",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.2
+          "atkScale": 1.1
         },
         "waitAfterSec": 0.5,
         "damageIncrease": {
@@ -147,8 +147,8 @@
     "id": "at_assassin_active_3",
     "name": "失血刻印",
     "trigger": {
-      "kind": "time",
-      "value": 12
+      "kind": "basicAttackCount",
+      "value": 18
     },
     "firePolicy": "smart",
     "fireConditions": [
@@ -179,10 +179,10 @@
   },
   {
     "id": "at_assassin_active_4",
-    "name": "百花繚乱",
+    "name": "花咲く紅",
     "trigger": {
       "kind": "basicAttackCount",
-      "value": 16
+      "value": 20
     },
     "useDurationSec": 0.8,
     "effect": [
@@ -201,7 +201,42 @@
         "amount": {
           "kind": "atkBased",
           "atkScale": 1.5
+        },
+        "damageIncrease": {
+          "scale": 1.2,
+          "conditions": [
+            {
+              "kind": "debuff",
+              "tags": [
+                "def",
+                "bleed"
+              ]
+            }
+          ]
         }
+      },
+      {
+        "target": {
+          "kind": "stat",
+          "side": "enemy",
+          "stat": "hp",
+          "order": "ratio"
+        },
+        "type": "debuff",
+        "debuffSubKind": "dot",
+        "debuffStat": "def",
+        "debuffMultiplier": 0.8,
+        "debuffDurationSec": 5,
+        "targetShape": "multiLock",
+        "hitCount": 3,
+        "durationSec": 5,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.5
+        },
+        "damageType": "physical",
+        "dotFlavor": "bleed",
+        "buffDisplayName": "出血"
       }
     ],
     "vfx": {

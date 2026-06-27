@@ -5,7 +5,6 @@
     "effect": [
       {
         "type": "damage",
-        "damageType": "magic",
         "amount": {
           "kind": "atkBased",
           "atkScale": 0.85
@@ -35,7 +34,7 @@
         "damageType": "magic",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.4
+          "atkScale": 1.15
         },
         "vfx": {
           "enabled": true
@@ -62,7 +61,7 @@
         "damageType": "magic",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.1
+          "atkScale": 0.9
         },
         "vfx": {
           "enabled": true
@@ -90,7 +89,7 @@
         "damageType": "magic",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.2
+          "atkScale": 1.1
         },
         "vfx": {
           "enabled": true
@@ -127,7 +126,9 @@
         "target": {
           "kind": "status",
           "side": "enemy",
-          "debuffTags": ["seedFlame"]
+          "debuffTags": [
+            "seedFlame"
+          ]
         }
       }
     ]

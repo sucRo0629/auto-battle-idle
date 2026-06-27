@@ -31,8 +31,13 @@
     "effect": "conditionalEnemyDamageTakenAura",
     "enemyDamageTakenMultiplier": 1.2,
     "auraConditions": [
-      { "kind": "hasDot" },
-      { "kind": "targetHp", "maxHpRatio": 0.5 }
+      {
+        "kind": "hasDot"
+      },
+      {
+        "kind": "targetHp",
+        "maxHpRatio": 0.5
+      }
     ]
   }
 ]

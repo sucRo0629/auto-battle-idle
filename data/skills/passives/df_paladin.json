@@ -1,7 +1,7 @@
 [
   {
     "id": "df_paladin_passive_1",
-    "name": "護身手",
+    "name": "護身加護",
     "effect": "frontBlockAura",
     "chance": 0.1
   },

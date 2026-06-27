@@ -1,5 +1,28 @@
 [
   {
+    "id": "at_warrior_basic_attack",
+    "name": "斬撃",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        },
+        "applyFrame": 3
+      }
+    ]
+  },
+  {
     "id": "at_warrior_active_1",
     "name": "叩き付け",
     "trigger": {
@@ -28,7 +51,7 @@
     "fireConditions": [
       {
         "kind": "targetHp",
-        "maxHpRatio": 0.3,
+        "maxHpRatio": 0.5,
         "compare": "gte"
       }
     ]
@@ -47,7 +70,7 @@
         "damageType": "physical",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.55
+          "atkScale": 0.6
         },
         "target": {
           "kind": "distance",
@@ -140,28 +163,5 @@
     "vfx": {
       "enabled": true
     }
-  },
-  {
-    "id": "at_warrior_basic_attack",
-    "name": "斬撃",
-    "trigger": {
-      "kind": "time",
-      "value": 2
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "damage",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1
-        },
-        "applyFrame": 3
-      }
-    ]
   }
 ]

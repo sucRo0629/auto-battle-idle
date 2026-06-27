@@ -16,7 +16,7 @@
         "type": "damage",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.75
+          "atkScale": 0.5
         },
         "targetShape": "pierce"
       }
@@ -91,6 +91,20 @@
           "side": "enemy",
           "order": "selfOrigin"
         }
+      },
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "selfOrigin"
+        },
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.2
+        },
+        "targetShape": "pierce"
       }
     ]
   },

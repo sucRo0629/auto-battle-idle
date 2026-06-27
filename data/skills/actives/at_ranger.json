@@ -1,5 +1,27 @@
 [
   {
+    "id": "at_ranger_basic_attack",
+    "name": "at_ranger_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ]
+  },
+  {
     "id": "at_ranger_active_1",
     "name": "連射",
     "trigger": {
@@ -52,7 +74,7 @@
     "name": "早射ち",
     "trigger": {
       "kind": "time",
-      "value": 10
+      "value": 12
     },
     "effect": [
       {
@@ -93,28 +115,6 @@
           "kind": "distance",
           "side": "enemy",
           "order": "nearest"
-        }
-      }
-    ]
-  },
-  {
-    "id": "at_ranger_basic_attack",
-    "name": "at_ranger_basic_attack",
-    "trigger": {
-      "kind": "time",
-      "value": 2
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "damage",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1
         }
       }
     ]

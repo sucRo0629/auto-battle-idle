@@ -1,7 +1,7 @@
 [
   {
     "id": "at_ranger_passive_1",
-    "name": "射手排除",
+    "name": "射手優先",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
       "kind": "attackType",
@@ -12,21 +12,18 @@
     "id": "at_ranger_passive_2",
     "name": "速射の技",
     "effect": "buff",
-    "targetRuleOverride": {
-      "kind": "distance",
-      "side": "enemy",
-      "order": "nearest"
-    },
     "buffSubKind": "stat",
+    "buffStat": [
+      "attackSpeed"
+    ],
+    "buffMultiplier": 1.25,
     "buffTargetRule": {
       "kind": "self"
-    },
-    "buffStat": "attackSpeed",
-    "buffMultiplier": 1.25
+    }
   },
   {
     "id": "at_ranger_passive_3",
-    "name": "遠隔狩り",
+    "name": "射手排除",
     "effect": "specialEffect",
     "specialEffectApplyTo": "damage",
     "specialEffect": {
