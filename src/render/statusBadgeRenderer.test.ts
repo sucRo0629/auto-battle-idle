@@ -6,6 +6,7 @@ import {
   measureCompactStatusBadgeRow,
   measureStatusBadgeBlock,
   PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
+  resolveBadgeLabelFontSize,
   statusBadgeRowWidth,
   statusBadgeStride,
   statusBadgeWidth,
@@ -273,6 +274,13 @@ describe('drawCompactStatusBadgeRow', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+});
+
+describe('badge label font size', () => {
+  it('uses 7px-tall bitmap labels on 16px badges', () => {
+    expect(resolveBadgeLabelFontSize(16)).toBe(7);
+    expect(resolveBadgeLabelFontSize(32)).toBe(14);
   });
 });
 

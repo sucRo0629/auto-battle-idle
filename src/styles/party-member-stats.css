@@ -277,14 +277,3 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
-
-.party-stats-status-canvas {
-  display: block;
-  flex: none;
-  align-self: flex-start;
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
-}

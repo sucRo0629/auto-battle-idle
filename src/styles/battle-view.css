@@ -459,10 +459,7 @@
 }
 
 .party-hud-status-badges {
-  flex: 0 0 auto;
   pointer-events: none;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
 
 .party-hud-recast-grid {

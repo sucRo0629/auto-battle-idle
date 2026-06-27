@@ -1614,7 +1614,7 @@ passiveIds?: string[]; // クラス固有パッシブ（`data/skills/passives/<s
 ### LvUP 習得データ
 
 - `classes.json` の `skills[]` にレベル別 `skillIds` を定義する。passive / active ともに Lv0 / Lv10 / Lv20 の習得段階を持つ。
-- `passiveIds` は歴史的互換またはクラス定義上の参照元として扱い、設計上の戦闘参加数は active と同じ Lv 段階ルールで決定する。現行実装が `passiveIds` を Lv に関係なく全展開している場合は Phase 3 再確定作業で修正する。
+- `passiveIds` は歴史的互換またはクラス定義上の参照元として扱い、設計上の戦闘参加数は active と同じ Lv 段階ルールで決定する（Phase 3 で `learnedPassiveIds` へ統一済）。
 
 ## ビルドルール
 

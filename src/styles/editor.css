@@ -97,8 +97,10 @@
 }
 
 .status-icons-preview-raw-img,
-.status-icons-preview-canvas {
+.status-icons-preview-canvas,
+.status-icons-preview-canvas.status-badge-canvas {
   display: block;
+  image-rendering: -moz-crisp-edges;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }

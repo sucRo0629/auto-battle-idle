@@ -15,6 +15,7 @@ import {
 import {
   drawStatusBadgeWrap,
   measureStatusBadgeWrap,
+  prepareStatusBadgeCanvasContext,
   statusBadgeOutlinePad,
 } from '../render/statusBadgeRenderer.ts';
 
@@ -128,7 +129,7 @@ function createStatusBadgeGroup(labelText: string): {
   const group = el('div', 'party-stats-status-group');
   group.appendChild(el('span', 'party-stats-status-label', labelText));
   const canvas = document.createElement('canvas');
-  canvas.className = 'party-stats-status-canvas';
+  canvas.className = 'party-stats-status-canvas status-badge-canvas';
   group.appendChild(canvas);
   return { group, canvas };
 }
@@ -288,6 +289,7 @@ function drawStatusBadgeCanvas(
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
+  prepareStatusBadgeCanvasContext(ctx);
 
   if (badges.length === 0) {
     canvas.width = 0;

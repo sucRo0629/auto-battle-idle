@@ -10,8 +10,8 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2a** | 放置 MVP：セーブ・ステージ進行・個別 Lv（ステのみ）                                           | **完了**                        |
 | **2b** | 戦闘計算（`combatMath` 等）                                                                   | **完了**                        |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                                     | **完了**                        |
-| **3**  | Lv アップ時スキル習得、習得済み passive / active 常時使用枠（各最大 4）+ クラス別スキル再設定 | **再オープン中**                |
-| **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **見直し中** / 4c **完了** / 4b 説明 / **4d 編成・統計 UI + HUD** | **Phase 3 後に再確定**          |
+| **3**  | Lv アップ時スキル習得、習得済み passive / active 常時使用枠（各最大 4）+ クラス別スキル再設定 | **完了**                        |
+| **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **確定済** / 4c **完了** / 4b 説明 / **4d 編成・統計 UI + HUD** | **進行中**（4d 残）             |
 | **5**  | 演出アセット + VFX PNG + **演出調整ツール**；**5d Combat Feedback**（Damage / Event Popup）   | **基盤のみ**（本番 PNG 未実装） |
 | **6**  | ステージ作成 — 敵テンプレート・固定ステージコンテンツ・ステージ編集 GUI                       | 未着手（4a 後）                 |
 | **9**  | ローグライクモード（仮称）— 既存 effect 中心 13 クラス向けランダム問題・ラン進行              | 未着手                          |
@@ -24,7 +24,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
-**開発優先:** **Phase 3（クラス別パッシブ / アクティブスキル再設定）** — 仕様見直しにより、既存クラスの一部でスキル構成を再定義する。Phase 3 の習得・常時使用枠の実装は維持しつつ、`classes.json` / `data/skills/` / スキル説明 / validate / エディタ保存経路が新しいクラス設計と一致するまで Phase 5 へ進まない。4c JSON 分割は **完了**。接敵ビジュアルは [master-work-order.md](./master-work-order.md) Phase 3a/3b、接近 Intent 一本化は Phase 3d。Electron は Phase 8。globalExp / 強化ツリー / オフライン報酬は Phase 8 から外し、別途再計画する。
+**開発優先:** **Phase 4d（編成・統計 UI + HUD 見た目）** — Web アプリ風ダッシュボード感を除去し、PC 向け RPG 情報パネル基調（[party-formation-ui.md §11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通)）に揃える。編成 UI（PR1–3）は **完了**。統計オーバーレイ刷新と HUD バッジ仕上げが残る。4c JSON 分割は **完了**。Electron は Phase 8。globalExp / 強化ツリー / オフライン報酬は Phase 8 から外し、別途再計画する。
 
 ---
 
@@ -38,8 +38,8 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 - JSON ゲームデータ：`data/classes.json`, `data/skills/`, `enemies.json`, `stages.json`, `parties.json`
 - 戦闘ロジック：`BattleEngine`, `SkillExecutor`, `targeting`, `combatMath`, `validateGameData`
 - 3 ロール、4 人編成（鉄衛士 / 剣術士 / 療養師 / 弓術士）、`stage_1` に test_enemy × 2
-- スキル枠：**basic**（非表示・常時稼働）+ **習得済み active 枠**（HUD に CD 表示）。Phase 3 再確定後は passive も同じ Lv 段階枠で扱う
-- パッシブは Phase 3 再確定後、active と同じ Lv0=2 / Lv10=3 / Lv20=4 の段階解放へ揃える
+- スキル枠：**basic**（非表示・常時稼働）+ **習得済み passive / active 枠**（各 Lv 段階解放、HUD に active CD 表示）
+- パッシブも active と同じ Lv0=2 / Lv10=3 / Lv20=4 の段階解放
 - ステータス効果：`atk`, `def`, `damageTaken` への buff / debuff
 - Victory / Defeat → 3 秒待機 → HP 全回復 → 再スポーン（Phase 2 でセーブ連動の進行ルールを追加）
 - Canvas 2D：**アニメーション基盤**（`SpriteAnimator`、イベント連動、近接突進/遠隔弾、ダメージポップアップ）
@@ -93,7 +93,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ---
 
-## Phase 3 — スキル・戦闘拡張（再オープン中）
+## Phase 3 — スキル・戦闘拡張（完了）
 
 **ゴール：** LvUP で習得済みスキルが増え、passive / active はどちらも Lv0=2、Lv10=3、Lv20=4 の各最大 4 枠で常時使用可能になる。ビルドは付け替えではなく習得構造としてセーブに永続化。
 
@@ -102,21 +102,16 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 - LvUP 時、`classes.json` の `skills[]`（レベル別 `skillIds`）から `learnedPassiveIds` / `learnedActiveIds` を再計算（`resolveLearnedSkills`, `reconcileMemberBuild`）
 - 勝利報酬・セーブロード・デバッグ Lv 変更時に習得リストを同期；LvUP ログに新スキル名を表示
 - アクティブ **最大 4 枠**（`MAX_ACTIVE_SLOTS = 4`）：習得即参加（`learnedActiveIds`）。段階解放 Lv0=2 / Lv10=3 / Lv20=4
-- パッシブも active と同じ段階解放（Lv0=2 / Lv10=3 / Lv20=4）へ再確定する。現行実装が `passiveIds` を全展開している場合は Phase 3 再確定作業で修正する
+- パッシブも active と同じ段階解放（Lv0=2 / Lv10=3 / Lv20=4）。`learnedPassiveIds` が Lv に応じた枠数まで常時発動
 - 付け替え・セット・装備変更は行わない。`equippedActiveSlots` は歴史的互換のみで、設計上の戦闘参加判定には使わない
 - セーブに `CharacterBuild` を含め、ロード時 `reconcilePartyBuilds` でレベルと整合
+- 13 クラス（effect 中心）の passive / active 4 枠化 — [skill-finalization-table.md](./skill-finalization-table.md) の各 pass **実装済**
+- 槍術士（`at_lancer`）: pierce approach、[classes-and-skills.md §槍術士](../spec/classes-and-skills.md#槍術士at_lancer変則近接)・[combat.md](../spec/combat.md) §追撃モード 含む 4 枠化 **実装済**
+- `classes.json` 習得テーブルと `data/skills/` の効果・ターゲット・数値フィールドを [classes-and-skills.md](../spec/classes-and-skills.md) と整合
 
-### 再オープン理由（2026-06）
+### 経緯（2026-06 再オープン → 完了）
 
-仕様見直しにより、クラスによってはパッシブ / アクティブスキルの役割・習得順・効果構成を再設定する必要が出た。習得システム自体は完了済みだが、Phase 4 以降のクラスマスタ・演出・バランス調整の前提になるため、現在地は Phase 3 へ戻す。
-
-### 未完了タスク
-
-- 影響クラスを洗い出し、各クラスのパッシブ / アクティブスキル構成を再定義
-- 槍術士（`at_lancer`）: pierce approach は [battle-field.md](../spec/battle-field.md) §4.4、4 枠化 doc / JSON / combat（A4 追撃モード `allyAttackFollowUp` 含む）は [classes-and-skills.md §槍術士](../spec/classes-and-skills.md#槍術士at_lancer変則近接)・[combat.md](../spec/combat.md) §追撃モード で **実装済**
-- `classes.json` の習得テーブルと `data/skills/` の効果・ターゲット・数値フィールドを更新
-- 新 effect / target / 条件 / 表示要素が増える場合は、`SkillEditorStep`・validate・`formatSkillText`・関連 spec を同じ作業で同期
-- 変更後のクラスマスタを [classes-and-skills.md](../spec/classes-and-skills.md) と突き合わせ、Phase 4a を再確定
+仕様見直しによりクラス別パッシブ / アクティブの再設定を Phase 3 へ戻したが、13 クラス分の再定義・JSON / combat 同期は完了。**印術師・法陣師**（`at_sigilist` / `at_conductor`）は独自システムのため combat 実装は **Phase 7b / 7c 以降**（設計確定のみ Phase 3 完了条件に含む）。
 
 ### Phase 3d — 接近・接敵 Intent 一本化（完了）
 
@@ -154,12 +149,12 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 
 | サブフェーズ | 内容                                                                                                        | 状態                    |
 | ------------ | ----------------------------------------------------------------------------------------------------------- | ----------------------- |
-| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                | **見直し中**            |
+| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                | **確定済**（13 クラス。印術師・法陣師は Phase 7b/7c 送り） |
 | **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                        | **完了**                |
 | **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish                               | **随時**（コア済）      |
-| **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsOverlay`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **未着手**（設計 v0.4） |
+| **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsOverlay`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **部分完了**（編成 PR1–3 済 / 統計・HUD 見た目 残） |
 
-### クラスマスタ（見直し中）
+### クラスマスタ（確定済）
 
 ロスター全表は [classes-and-skills.md](../spec/classes-and-skills.md) を正とする。`displayName`（漢字）+ `epithetEn`（英語肩書き）を `classes.json` に保持し、デモ編成は `parties.json` の最新構成（鉄衛士 / 剣術士 / 療養師 / 弓術士）とする。
 
@@ -167,9 +162,9 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 - `epithetEn` の 2 段ルビ UI は master-work-order Phase 3c
 - 数値バランスの最終版は Phase 7a
 
-### 4a — クラスデータ + GUI（見直し中）
+### 4a — クラスデータ + GUI（確定済）
 
-- 15 クラスを `classes.json` + `data/skills/` に投入済み。ただし Phase 3 再オープンにより、一部クラスのパッシブ / アクティブ構成は再確定待ち
+- 15 クラスを `classes.json` + `data/skills/` に投入済み。effect 中心 13 クラスは Phase 3 完了時点で passive / active 4 枠と整合。`at_sigilist` / `at_conductor` は設計のみ（combat 未実装）
 - **ステータス・成長** — Lv1 基準 + `growthTier`（低/中/高）+ `levelCurves.growthPresets` + `attackSpeedPresets`；術師は `growthPresetKey: caster`；`ClassEditorStep` 成長 UI + Lv10 プレビュー（[stats.md](../spec/stats.md)）
 - **複数ターゲットスキル**（`targetShape` 等）— 実装検証用 WIP データ。**仕様書へのスキル一覧転記はマスタ確定後**
 - キャラクターデータ GUI で編集・保存
@@ -228,17 +223,18 @@ data/
 
 **タイミング：** 4a でスキーマが固まったあと。**4b と並行** してよい（説明文生成はマージ後の型・validate に依存するだけ）。
 
-### 4d — パーティ編成 UI + 統計 UI + HUD（未着手）
+### 4d — パーティ編成 UI + 統計 UI + HUD（部分完了）
 
 **ゴール:** 戦闘外 DOM UI（編成・統計）と戦闘 HUD の見た目を **PC 向け RPG 情報パネル**基調に揃え、Web アプリ風ダッシュボード感を除去する。
 
-- **編成:** [party-formation-ui.md](../spec/party-formation-ui.md)（**v0.4**）に沿って `SkillMenuPanel` を再構成。上ロスター / 下詳細、編成内訳行、中央モーダル Picker、閲覧スキルカード（効果単位改行）、**インライン用語パネル**（クリック・辞書 locale キー、`ja` v1）、**`playerProgress.level`**（確定方針 — [progression.md](../spec/progression.md)）をヘッダー 1 か所表示。
-- **統計:** [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) に沿って `BattleStatsOverlay` / `PartyMemberStatsDisplay` を刷新。デザイン言語は編成 UI [§11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通) と共通。
+- **編成（完了）:** [party-formation-ui.md](../spec/party-formation-ui.md)（**v0.4**）PR1–3 — 上ロスター / 下詳細、編成内訳行、中央モーダル Picker、閲覧スキルカード、インライン用語パネル、`playerProgress.level` ヘッダー表示。
+- **統計（未着手）:** [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) — `BattleStatsOverlay` / `PartyMemberStatsDisplay` の §11 準拠刷新。
+- **HUD（作業中）:** 状態バッジ五角形・簡易/詳細分割は spec 整合済。`battleHudTheme` / `statusBadgeRenderer` 等の見た目仕上げが残る。
 
-**着手条件**
+**前提（充足済）**
 
 - 4a で `role` / `formationRow` / `epithetEn` が安定
-- 代表クラスのスキル ID が概ね確定（Phase 3 再オープン収束）
+- 代表クラスのスキル ID 確定（Phase 3 完了）
 - `formatSkillText` が代表スキルを破綻なく生成（4b 最低ライン）
 
 **主な変更（設計書 §11 差分）**

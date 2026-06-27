@@ -315,7 +315,7 @@ export class StatusIconsEditorStep {
       for (const variant of PREVIEW_VARIANTS) {
         const cell = createEl('td', 'status-icons-preview-badge');
         const canvas = document.createElement('canvas');
-        canvas.className = 'status-icons-preview-canvas';
+        canvas.className = 'status-icons-preview-canvas status-badge-canvas';
         renderBadgeCanvas(
           canvas,
           { ...variant.badge, category },

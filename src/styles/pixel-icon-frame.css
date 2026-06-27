@@ -32,3 +32,16 @@
   max-width: none;
   max-height: none;
 }
+
+/* 16px 状態バッジ canvas（Party HUD / 戦闘詳細 / 敵頭上キャンバス） */
+.status-badge-canvas {
+  display: block;
+  flex: none;
+  align-self: flex-start;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}

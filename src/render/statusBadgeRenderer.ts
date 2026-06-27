@@ -3,11 +3,31 @@ import {
   type StatusDisplayCategory,
 } from '../battle/statusEffectDisplay.ts';
 import {
+  drawBadgeBitmapLabel,
+  resolveBadgeLabelPixelScale,
+} from './badgeBitmapDigits.ts';
+import {
   getStatusBadgePentagonImage,
   getStatusIconImage,
 } from './StatusIconRegistry.ts';
 
+export { resolveBadgeLabelFontSize, resolveBadgeLabelPixelScale } from './badgeBitmapDigits.ts';
+
 export const STATUS_BADGE_GAP = 0;
+
+/** Canvas 描画を DOM の pixel-icon-img と同様 nearest-neighbor（等倍）にする */
+export function prepareStatusBadgeCanvasContext(
+  ctx: CanvasRenderingContext2D,
+): void {
+  ctx.imageSmoothingEnabled = false;
+}
+
+function preparePixelBufferContext(
+  ctx: CanvasRenderingContext2D,
+): CanvasRenderingContext2D {
+  prepareStatusBadgeCanvasContext(ctx);
+  return ctx;
+}
 
 function statusBadgeUsesWhiteSilhouette(
   category: StatusDisplayCategory,
@@ -117,6 +137,7 @@ export function drawStatusBadgeBlock(
   scale: number,
   theme: StatusBadgeTheme,
 ): StatusBadgeBlockLayout {
+  prepareStatusBadgeCanvasContext(ctx);
   const layout = measureStatusBadgeBlock(
     badges,
     scale,
@@ -212,6 +233,7 @@ export function drawCompactStatusBadgeRow(
   theme: StatusBadgeTheme,
   layout: CompactStatusBadgeLayout = FIELD_COMPACT_STATUS_BADGE_LAYOUT,
 ): CompactStatusBadgeRowLayout {
+  prepareStatusBadgeCanvasContext(ctx);
   const rowLayout = measureCompactStatusBadgeRow(
     scale,
     theme.iconSize,
@@ -251,21 +273,13 @@ export function drawOverflowCountBadge(
   theme: StatusBadgeTheme,
 ): void {
   const badgeSize = theme.iconSize * scale;
-  const text = `+${overflowCount}`;
-  const fontSize = Math.round(Math.max(8, badgeSize * 0.5625));
-  ctx.save();
-  ctx.font = `bold ${fontSize}px ${themeFontFamily(ctx)}`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = Math.max(1.5, fontSize * 0.22);
-  ctx.strokeStyle = '#000000';
-  ctx.fillStyle = '#ffffff';
-  const textX = x + badgeSize / 2;
-  const textY = y + badgeSize / 2;
-  ctx.strokeText(text, textX, textY);
-  ctx.fillText(text, textX, textY);
-  ctx.restore();
+  drawBadgeBitmapLabel(
+    ctx,
+    `+${overflowCount}`,
+    x + badgeSize,
+    y + badgeSize,
+    resolveBadgeLabelPixelScale(badgeSize),
+  );
 }
 
 export interface StatusBadgeWrapLayout {
@@ -347,6 +361,7 @@ export function drawStatusBadgeWrap(
   scale: number,
   theme: StatusBadgeTheme,
 ): StatusBadgeWrapLayout {
+  prepareStatusBadgeCanvasContext(ctx);
   const layout = measureStatusBadgeWrap(
     badges,
     maxWidth,
@@ -433,7 +448,7 @@ function getOutlineBuffer(
   bufferCtx.clearRect(0, 0, width, height);
   bufferCtx.globalCompositeOperation = 'source-over';
   bufferCtx.globalAlpha = 1;
-  return bufferCtx;
+  return preparePixelBufferContext(bufferCtx);
 }
 
 function drawSilhouetteOutline(
@@ -471,8 +486,8 @@ function drawSilhouetteOutline(
     0,
     bufferW,
     bufferH,
-    x - pad,
-    y - pad,
+    Math.round(x - pad),
+    Math.round(y - pad),
     bufferW,
     bufferH,
   );
@@ -515,27 +530,13 @@ function drawStackCountLabel(
   size: number,
   stackCount: number,
 ): void {
-  const text = String(stackCount);
-  const fontSize = Math.round(Math.max(9, size * 0.5625));
-  ctx.save();
-  ctx.font = `bold ${fontSize}px ${themeFontFamily(ctx)}`;
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'bottom';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = Math.max(1.5, fontSize * 0.22);
-  ctx.strokeStyle = '#000000';
-  ctx.fillStyle = '#ffffff';
-  const textX = x + size;
-  const textY = y + size;
-  ctx.strokeText(text, textX, textY);
-  ctx.fillText(text, textX, textY);
-  ctx.restore();
-}
-
-function themeFontFamily(ctx: CanvasRenderingContext2D): string {
-  const raw = ctx.font;
-  const match = /(\d+(?:\.\d+)?px)\s+(.+)/.exec(raw);
-  return match?.[2] ?? 'sans-serif';
+  drawBadgeBitmapLabel(
+    ctx,
+    String(stackCount),
+    x + size,
+    y + size,
+    resolveBadgeLabelPixelScale(size),
+  );
 }
 
 function drawStatusBadge(
@@ -550,10 +551,11 @@ function drawStatusBadge(
   const badgeSize = theme.iconSize * scale;
 
   ctx.save();
+  prepareStatusBadgeCanvasContext(ctx);
 
   const pentagon = getStatusBadgePentagonImage(badge.kind, badge.isPassive);
   if (pentagon) {
-    ctx.drawImage(pentagon, x, y, badgeSize, badgeSize);
+    drawImagePixelated(ctx, pentagon, x, y, badgeSize, badgeSize);
   }
 
   const iconTint = statusBadgeUsesWhiteSilhouette(badge.category)
@@ -649,7 +651,7 @@ function getTintBuffer(width: number, height: number): CanvasRenderingContext2D 
   if (!bufferCtx) throw new Error('Canvas 2D unavailable');
 
   bufferCtx.clearRect(0, 0, width, height);
-  return bufferCtx;
+  return preparePixelBufferContext(bufferCtx);
 }
 
 function drawBadgeRemainingOverlay(
@@ -668,6 +670,59 @@ function drawBadgeRemainingOverlay(
   ctx.fillStyle = overlayColor;
   ctx.fillRect(x, y, width, height * elapsedRatio);
   ctx.restore();
+}
+
+function resolveImageSourceSize(
+  image: CanvasImageSource,
+  fallback: number,
+): { width: number; height: number } {
+  if (
+    typeof image === 'object' &&
+    image !== null &&
+    'naturalWidth' in image &&
+    typeof (image as HTMLImageElement).naturalWidth === 'number'
+  ) {
+    const img = image as HTMLImageElement;
+    return {
+      width: img.naturalWidth || fallback,
+      height: img.naturalHeight || fallback,
+    };
+  }
+  if (
+    typeof image === 'object' &&
+    image !== null &&
+    'width' in image &&
+    'height' in image &&
+    typeof (image as HTMLCanvasElement).width === 'number' &&
+    typeof (image as HTMLCanvasElement).height === 'number'
+  ) {
+    const canvas = image as HTMLCanvasElement;
+    return { width: canvas.width, height: canvas.height };
+  }
+  return { width: fallback, height: fallback };
+}
+
+function drawImagePixelated(
+  ctx: CanvasRenderingContext2D,
+  image: CanvasImageSource,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  prepareStatusBadgeCanvasContext(ctx);
+  const source = resolveImageSourceSize(image, width);
+  ctx.drawImage(
+    image,
+    0,
+    0,
+    source.width,
+    source.height,
+    Math.round(x),
+    Math.round(y),
+    Math.round(width),
+    Math.round(height),
+  );
 }
 
 function drawPlainImage(
@@ -691,7 +746,7 @@ function drawPlainImage(
     outlineWidth,
   );
 
-  ctx.drawImage(image, x, y, width, height);
+  drawImagePixelated(ctx, image, x, y, width, height);
 }
 
 function drawTintedImage(
@@ -726,5 +781,6 @@ function drawTintedImage(
   bufferCtx.fillRect(0, 0, bufferW, bufferH);
   bufferCtx.globalCompositeOperation = 'source-over';
 
-  ctx.drawImage(tintBuffer!, 0, 0, bufferW, bufferH, x, y, width, height);
+  prepareStatusBadgeCanvasContext(ctx);
+  ctx.drawImage(tintBuffer!, 0, 0, bufferW, bufferH, Math.round(x), Math.round(y), Math.round(width), Math.round(height));
 }

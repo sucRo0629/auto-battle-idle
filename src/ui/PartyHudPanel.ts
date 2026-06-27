@@ -101,7 +101,7 @@ export class PartyHudPanel {
     head.appendChild(label);
 
     const statusCanvas = document.createElement('canvas');
-    statusCanvas.className = 'party-hud-status-badges';
+    statusCanvas.className = 'party-hud-status-badges status-badge-canvas';
     head.appendChild(statusCanvas);
 
     const bodyRow = document.createElement('div');
