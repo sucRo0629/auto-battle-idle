@@ -1,6 +1,6 @@
 # パーティ編成 UI
 
-実装：`src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`（用語パネル予定: `gameTermGlossary.ts`, `annotateGameTerms.ts`, `GameTermPanel.ts`, `game-term-panel.css`）
+実装：`src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`（用語パネル予定: `gameTermGlossary.ts`, `annotateGameTerms.ts`, `GameTermPanel.ts`, `game-term-panel.css`）。**Phase 4d PR1-3:** 上ロスター（`formationBlockEl`）+ 下詳細（`bodyEl`）の flex 縦積み・詳細のみ scroll・Picker 中もロスター帯表示 — 骨格完了。
 
 本ドキュメントは **メタメニューから開くパーティ編成画面**（`SkillMenuPanel`）の画面設計正本。戦闘フィールド上の隊形・座標は [battle-field.md](battle-field.md)、クラス・ロール・スキル習得は [classes-and-skills.md](classes-and-skills.md)、セーブ・Lv は [progression.md](progression.md) を参照。
 
@@ -140,6 +140,8 @@ UI は次の順で情報を理解できる構成とする。
 
 **実装:** `MetaMenuOverlay` の `meta-menu-window-bar` に Lv 表示。`SkillMenuPanel` の `formationBlockEl`（上部ロスター帯）と `bodyEl`（下部詳細）を縦積みにする。
 
+**暫定 Lv ソース（Phase 11 前）:** `resolvePlayerDisplayLevel(party)`（`src/progression/resolvePlayerDisplayLevel.ts`）。`party` 全枠の `member?.progress.level` の最大値。全 null なら `1`。Phase 11 で `playerProgress.level` / `resolveEffectiveLevel` へ差し替える単一関数。
+
 ### 5.1 枠数と並び
 
 - 固定 **4 枠**（`PARTY_SLOT_COUNT`）。
@@ -256,7 +258,26 @@ UI は次の順で情報を理解できる構成とする。
 | 3+     | 説明文（`formatSkillText` 系。**効果単位で改行**。1 段落にまとめない）                     |
 | フッタ | 習得に必要だった **プレイヤー Lv**（わかる場合） / 未解放枠は `プレイヤー Lv10 で枠 +1` 等 |
 
-説明文の文面生成は [Phase 4b](../plans/phase-roadmap.md)（`formatSkillText`）。**効果単位改行**は `formatSkillCardLines`（4b / 4d 共同）でエディタプレビューと編成 UI を揃える。
+説明文の文面生成は [Phase 4b](../plans/phase-roadmap.md)（`formatSkillText`）。**効果単位改行**は `formatSkillCardLines`（`src/ui/formatSkillText.ts`）でエディタプレビューと編成 UI を揃える。
+
+#### `formatSkillCardLines` API（Phase 4d PR1-1 確定）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| モジュール | `src/ui/formatSkillText.ts` |
+| シグネチャ | `formatSkillCardLines(def: ActiveSkillDef \| PassiveSkillDef, options: { locale: SkillCardLocale }): SkillCardLines` |
+| `SkillCardLocale` | v1 は `'ja'` のみ（将来 `en` 拡張可能） |
+| `SkillCardLines` | `{ metaLine: string; effectLines: string[] }` |
+
+**行の意味（§6.3 行 2 / 行 3+ に対応）**
+
+| フィールド | Active | Passive |
+| ---------- | ------ | ------- |
+| `metaLine` | CD・持続・硬直・条件を `/` 区切り 1 行（効果本文は含めない） | 発動タイミング要約（`formatPassiveTriggerSummary` 等） |
+| `effectLines` | `def.effect[]` を 1 effect 1 行（`formatActiveEffectDetail` compact）。`blockResonanceConsume` は map から除外；consume 専用スキルは特殊 1 行 | `[formatPassiveEffect(...)]` 1 要素（`効果：` プレフィックスなし） |
+
+- 文節 split 禁止 — 改行単位は **effect 配列要素**（Passive は effect 種別 1 行）
+- 1 行説明の `formatActiveDescription` / `formatPassiveDescription` は tooltip・エディタ互換として維持
 
 **UI 表現:**
 
@@ -518,8 +539,7 @@ Picker 表示中も **上部ロスター帯は背面に見える**。他 3 人�
 
 | 項目                                | メモ                                                       |
 | ----------------------------------- | ---------------------------------------------------------- |
-| `formatSkillCardLines` の具体 API   | 4b と共同で 4d 着手時に確定。効果単位改行の正本            |
 | 用語パネルのスクロール時挙動        | §6.4 — fixed 再配置 vs スクロールで閉じる                  |
 | 用語辞書の初版登録語一覧            | `formatSkillText` 頻出語から段階追加（全量一覧は spec に転記しない） |
 | ロスター帯のピクセル寸法            | §5.2 目安の範囲で CSS 調整可                               |
-| `playerProgress` 未実装期のフォールバック | 表示正本はプレイヤーレベル。暫定は `resolveEffectiveLevel` の単一ソースに寄せる |
+| `playerProgress` 未実装期のフォールバック | 表示正本はプレイヤーレベル。暫定は `resolvePlayerDisplayLevel`（パーティ内最大 `progress.level`、空なら 1）。Phase 11 で `playerProgress.level` / `resolveEffectiveLevel` へ差し替え |

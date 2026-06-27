@@ -6,6 +6,7 @@ import type {
   PartySlotState,
 } from "../battle/types.ts";
 import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
+import { resolvePlayerDisplayLevel } from "../progression/resolvePlayerDisplayLevel.ts";
 import { SkillMenuPanel } from "./SkillMenuPanel.ts";
 
 export type MetaMenuPresentation = "modal" | "window";
@@ -26,6 +27,7 @@ export class MetaMenuOverlay {
   private readonly root: HTMLElement;
   private readonly windowEl: HTMLElement;
   private readonly titleEl: HTMLElement;
+  private readonly playerLevelEl: HTMLElement;
   private readonly bodyEl: HTMLElement;
   private skillPanel: SkillMenuPanel | null = null;
   private readonly directPartyEntry: boolean;
@@ -69,6 +71,10 @@ export class MetaMenuOverlay {
     this.titleEl.className = "meta-menu-title";
     this.titleEl.textContent = "メニュー";
 
+    this.playerLevelEl = document.createElement("span");
+    this.playerLevelEl.className = "meta-menu-player-level";
+    this.playerLevelEl.hidden = true;
+
     const closeButton = document.createElement("button");
     closeButton.type = "button";
     closeButton.className = "meta-menu-close";
@@ -76,7 +82,7 @@ export class MetaMenuOverlay {
     closeButton.textContent = "×";
     closeButton.addEventListener("click", () => this.callbacks.onClose());
 
-    titleBar.append(this.titleEl, closeButton);
+    titleBar.append(this.titleEl, this.playerLevelEl, closeButton);
 
     this.bodyEl = document.createElement("div");
     this.bodyEl.className = "meta-menu-window-body";
@@ -94,6 +100,7 @@ export class MetaMenuOverlay {
   private renderHub(): void {
     this.destroySkillPanel();
     this.titleEl.textContent = "メニュー";
+    this.playerLevelEl.hidden = true;
     this.bodyEl.replaceChildren();
 
     const hub = document.createElement("div");
@@ -115,8 +122,15 @@ export class MetaMenuOverlay {
     this.bodyEl.appendChild(hub);
   }
 
+  private updatePlayerLevelDisplay(): void {
+    const level = resolvePlayerDisplayLevel(this.getParty());
+    this.playerLevelEl.textContent = `プレイヤー Lv ${level}`;
+    this.playerLevelEl.hidden = false;
+  }
+
   private openParty(): void {
     this.titleEl.textContent = "パーティ設定";
+    this.updatePlayerLevelDisplay();
     this.bodyEl.replaceChildren();
     this.skillPanel = new SkillMenuPanel(
       this.bodyEl,
@@ -142,6 +156,7 @@ export class MetaMenuOverlay {
         },
         onPartySlotChanged: (slotIndex, member) => {
           this.getParty()[slotIndex] = member ? structuredClone(member) : null;
+          this.updatePlayerLevelDisplay();
           this.callbacks.onPartySlotChanged(slotIndex, member);
         },
       }

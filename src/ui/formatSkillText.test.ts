@@ -3,6 +3,7 @@ import type { ActiveSkillDef, PassiveSkillDef } from '../battle/types.ts';
 import {
   formatActiveDescription,
   formatPassiveDescription,
+  formatSkillCardLines,
 } from './formatSkillText.ts';
 
 describe('formatPassiveDescription', () => {
@@ -438,6 +439,49 @@ describe('formatActiveDescription', () => {
     expect(formatActiveDescription(a4!)).toBe(
       'CD：15秒 / 持続：5秒 / 条件：対象HP≤70% / 通常攻撃→魔法DEF×1.2、最低HP味方DEF回復 /',
     );
+  });
+
+  it('formatSkillCardLines splits df_guardian actives by effect', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.df_guardian_active_1;
+    const a2 = gameData.skillRegistry.actives.df_guardian_active_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+
+    const card1 = formatSkillCardLines(a1!, { locale: 'ja' });
+    expect(card1.metaLine).toBe('CD：8秒 / 持続：5秒');
+    expect(card1.effectLines).toEqual(['DEF×1.2']);
+    expect(card1.effectLines.length).toBe(1);
+
+    const card2 = formatSkillCardLines(a2!, { locale: 'ja' });
+    expect(card2.metaLine).toBe('CD：被撃8 / 持続：5秒 / 硬直5秒・移動停止');
+    expect(card2.effectLines.length).toBe(2);
+    expect(card2.effectLines[0]).toContain('DEF×1.25');
+    expect(card2.effectLines[1]).toContain('ブロック率+50%');
+  });
+
+  it('formatSkillCardLines keeps blockResonance passive as one effect line', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const p3 = gameData.skillRegistry.passives.df_guardian_passive_3;
+    expect(p3).toBeDefined();
+
+    const card = formatSkillCardLines(p3!, { locale: 'ja' });
+    expect(card.effectLines.length).toBe(1);
+    expect(card.effectLines[0]).toContain('ブロック率+10%');
+    expect(card.effectLines[0]).toContain('8秒ごとに1スタック消失');
+    expect(card.effectLines[0]).not.toMatch(/^効果：/);
+    expect(formatPassiveDescription(p3!)).toBe(`効果：${card.effectLines[0]}`);
+  });
+
+  it('formatSkillCardLines requires locale ja', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.df_guardian_active_1;
+    expect(() =>
+      formatSkillCardLines(a1!, { locale: 'en' as 'ja' }),
+    ).toThrow(/Unsupported skill card locale/);
   });
 
   it('formats df_paladin passives with 効果 prefix', async () => {

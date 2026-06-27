@@ -1590,11 +1590,20 @@ function formatPassiveEffect(
   }
 }
 
-export function formatPassiveDescription(def: PassiveSkillDef): string {
-  return `効果：${formatPassiveEffect(def.effect, def)}`;
+export type SkillCardLocale = "ja";
+
+export type SkillCardLines = {
+  metaLine: string;
+  effectLines: string[];
+};
+
+function isActiveSkillDef(
+  def: ActiveSkillDef | PassiveSkillDef,
+): def is ActiveSkillDef {
+  return Array.isArray(def.effect);
 }
 
-export function formatActiveDescription(def: ActiveSkillDef): string {
+function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
   const trigger = resolveSkillTrigger(def);
   const parts: string[] = [`CD：${formatCdLabel(trigger.kind, trigger.value)}`];
 
@@ -1617,6 +1626,73 @@ export function formatActiveDescription(def: ActiveSkillDef): string {
       parts.push(`条件：${condSummary}`);
     }
   }
+
+  return parts.join(" / ");
+}
+
+function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
+  const hasConsume = def.effect.some(
+    (effect) => effect.type === "blockResonanceConsume",
+  );
+  const mappableEffects = def.effect.filter(
+    (effect) => effect.type !== "blockResonanceConsume",
+  );
+  if (hasConsume && mappableEffects.length === 0) {
+    return [formatBlockResonanceConsumeSkillEffect(def)];
+  }
+
+  const scopePrefix = resolveActiveSkillScopePrefix(def);
+  const lines = mappableEffects
+    .map((effect) =>
+      formatActiveEffectDetail(effect, {
+        compact: true,
+        scopePrefix,
+        inheritTarget: def.target,
+      }),
+    )
+    .filter(Boolean);
+  if (scopePrefix && lines.length > 0) {
+    lines[0] = `${scopePrefix}${lines[0]}`;
+  }
+  return lines;
+}
+
+function formatPassiveSkillMetaLine(def: PassiveSkillDef): string {
+  if (def.effect === "counter" || def.effect === "counterChance") {
+    return def.counterTrigger === "frontAllyDamaged"
+      ? "前列味方被弾時"
+      : "被攻撃時";
+  }
+  return formatPassiveTriggerSummary(def, resolvePassivePeriodicTrigger(def));
+}
+
+export function formatSkillCardLines(
+  def: ActiveSkillDef | PassiveSkillDef,
+  options: { locale: SkillCardLocale },
+): SkillCardLines {
+  if (options.locale !== "ja") {
+    throw new Error(`Unsupported skill card locale: ${options.locale}`);
+  }
+
+  if (isActiveSkillDef(def)) {
+    return {
+      metaLine: formatActiveSkillMetaLine(def),
+      effectLines: formatActiveSkillEffectLines(def),
+    };
+  }
+
+  return {
+    metaLine: formatPassiveSkillMetaLine(def),
+    effectLines: [formatPassiveEffect(def.effect, def)],
+  };
+}
+
+export function formatPassiveDescription(def: PassiveSkillDef): string {
+  return `効果：${formatPassiveEffect(def.effect, def)}`;
+}
+
+export function formatActiveDescription(def: ActiveSkillDef): string {
+  const parts = [formatActiveSkillMetaLine(def)];
 
   const effects = formatActiveSkillEffectBody(def);
   if (effects) {

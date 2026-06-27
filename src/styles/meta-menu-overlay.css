@@ -92,6 +92,20 @@
   margin: 0;
   font-size: 18px;
   font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.meta-menu-player-level {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+}
+
+.meta-menu-player-level[hidden] {
+  display: none;
 }
 
 .meta-menu-close {
@@ -113,24 +127,6 @@
 
 .meta-menu-close:hover {
   background: rgba(255, 255, 255, 0.08);
-}
-
-.meta-menu-screen.skill-menu-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 0;
-  overflow: visible;
-}
-
-.skill-menu-formation-block {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.skill-menu-formation-block[hidden] {
-  display: none;
 }
 
 .meta-menu-hub {

@@ -85,10 +85,15 @@ export class SkillMenuPanel {
 
     this.formationBlockEl = document.createElement("div");
     this.formationBlockEl.className = "skill-menu-formation-block";
+    this.formationBlockEl.dataset.section = "roster";
 
     const formationTitleEl = document.createElement("h3");
     formationTitleEl.className = "skill-menu-section-title";
     formationTitleEl.textContent = "編成枠";
+
+    const rosterSlotsEl = document.createElement("div");
+    rosterSlotsEl.className = "skill-menu-roster-slots";
+    rosterSlotsEl.dataset.section = "roster-slots";
 
     this.tabsEl = document.createElement("div");
     this.tabsEl.className = "skill-menu-tabs";
@@ -104,6 +109,7 @@ export class SkillMenuPanel {
 
     this.bodyEl = document.createElement("div");
     this.bodyEl.className = "skill-menu-body";
+    this.bodyEl.dataset.section = "detail";
     this.bodyEl.addEventListener("click", (event) => {
       const classSlot = (event.target as Element | null)?.closest(
         '[data-picker-kind="class"]'
@@ -132,7 +138,8 @@ export class SkillMenuPanel {
 
     });
 
-    this.formationBlockEl.append(formationTitleEl, this.tabsEl);
+    rosterSlotsEl.appendChild(this.tabsEl);
+    this.formationBlockEl.append(formationTitleEl, rosterSlotsEl);
     this.root.append(this.formationBlockEl, this.bodyEl);
     this.container.appendChild(this.root);
     this.render();
@@ -153,7 +160,6 @@ export class SkillMenuPanel {
   }
 
   private render(): void {
-    this.formationBlockEl.hidden = this.pickerTarget !== null;
     this.renderTabs();
     this.renderBody();
   }

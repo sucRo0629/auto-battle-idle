@@ -43,7 +43,7 @@
 | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
 | 表示言語    | **日本語のみ**（`locale: "ja"`）。他 locale は未実装                                                                     |
 | 適用面      | 編成 UI のスキルカード説明文（Phase 4d）。エディタのスキル説明プレビューは同辞書で揃える                                 |
-| 説明文生成  | `formatSkillText` は当面プレーン文字列のまま。辞書は **事後マッチ** または将来の `formatSkillCardLines` 構造化出力と接続 |
+| 説明文生成  | 1 行: `formatActiveDescription` / `formatPassiveDescription`。カード改行: `formatSkillCardLines`（[party-formation-ui.md §6.3](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。辞書は **事後マッチ** または `formatSkillCardLines` 構造化出力と接続 |
 | スキル JSON | 用語説明フィールドは **持たない**（4b 方針と同様。説明は生成 + 辞書）                                                    |
 
 #### エントリ形状（locale キー付き）
@@ -106,7 +106,7 @@
 
 - 新 effect / ターゲット形状を足す **データ PR ごと** に `formatSkillText` とテストを同梱（[phase-roadmap.md §4b](../plans/phase-roadmap.md#4b--スキル説明自動生成随時)）
 - クラス単位で文案をテスト固定し、全クラス一括 polish は Phase 7a 前でよい
-- Phase 4d 以降: 編成 UI のスキルカードは [party-formation-ui.md §6.3](party-formation-ui.md#63-習得スキル閲覧専用) の **効果単位改行**（`formatSkillCardLines`、API は 4d 着手時に確定）。4b の 1 行出力は当面 tooltip / エディタ互換として維持し、4d 後に目視で文案を調整する
+- Phase 4d 以降: 編成 UI のスキルカードは [party-formation-ui.md §6.3](party-formation-ui.md#63-習得スキル閲覧専用) の **効果単位改行**（`formatSkillCardLines` — API は [§6.3 formatSkillCardLines](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。4b の 1 行出力は当面 tooltip / エディタ互換として維持
 
 ## スキル機能レイヤー
 
