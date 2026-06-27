@@ -3,7 +3,8 @@
     "id": "df_paladin_passive_1",
     "name": "護身加護",
     "effect": "frontBlockAura",
-    "chance": 0.1
+    "chance": 0.1,
+    "buffDisplayName": "護身加護"
   },
   {
     "id": "df_paladin_passive_2",
@@ -17,8 +18,8 @@
     "name": "真言加護",
     "effect": "frontBlockAura",
     "chance": 0.05,
-    "buffDisplayName": "真言加護",
-    "frontBlockAuraMagicBlock": true
+    "frontBlockAuraMagicBlock": true,
+    "buffDisplayName": "真言加護"
   },
   {
     "id": "df_paladin_passive_4",

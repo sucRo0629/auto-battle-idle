@@ -494,9 +494,10 @@ multiLock × P3 × P4 の複数 Hit ごとに P2/P3/P4 は意図通り独立発�
 1. effect のターゲット陣営（`spec.side` 等）と一致する `targetRuleOverrideApplyTo` を持つパッシブのみ `targetRuleOverride` を適用（`kind: self` は除外。配列の後ろが優先）。通常攻撃・接近は敵向けスコープ
 2. スキル `range`（未指定 = 使用者射程）で **攻撃可能プール** を絞り込み
 3. 各 effect の `targetShape` に従い **発動 tick で全 hit を一括解決**（`resolveEffectResolution`）
-4. `applyFrame` 指定時は **適用のみ遅延**（body は `skillWindup` で即再生、ダメージ等は pending キュー）。`hitCount >= 2` の `hitDurationSec` 分散は 1 ヒット目を `applyFrame` 基準に加算
-5. `scatter` / `pierce`（`pierceDurationSec` あり）/ `chain`（2 体以上命中時、既定または `chainDurationSec`）は `pendingHitQueue` で **適用のみ時間分散**（再ターゲットなし）
-6. **`poolFromEffectIndex`:** 同一スキル発動 tick 内で、先行 effect の命中プールを後続 `stat` target の候補に制限（[classes-and-skills.md](classes-and-skills.md) §同一スキル内の先行 effect プール）
+4. **スキル共通ターゲット:** `ActiveSkillDef` 直下の target / 形状を継承する effect は、merged targeting key ごとに発動 tick で命中集合を 1 回ロックし、同一キーの effect 間で再抽選しない（[classes-and-skills.md](classes-and-skills.md) §アクティブスキル共通ターゲット）
+5. `applyFrame` 指定時は **適用のみ遅延**（body は `skillWindup` で即再生、ダメージ等は pending キュー）。`hitCount >= 2` の `hitDurationSec` 分散は 1 ヒット目を `applyFrame` 基準に加算
+6. `scatter` / `pierce`（`pierceDurationSec` あり）/ `chain`（2 体以上命中時、既定または `chainDurationSec`）は `pendingHitQueue` で **適用のみ時間分散**（再ターゲットなし）
+7. **`poolFromEffectIndex`:** 同一スキル発動 tick 内で、先行 effect の命中プールを後続 `stat` target の候補に制限（[classes-and-skills.md](classes-and-skills.md) §同一スキル内の先行 effect プール）
 
 **常時パッシブの再評価:** `periodicTrigger` 省略のパッシブは、対象を一度固定して終わりにはしない。対象が自分以外で、位置移動や新規侵入によって範囲内外が変わるものは、戦闘中に定期的に再評価して対象集合を同期する。
 

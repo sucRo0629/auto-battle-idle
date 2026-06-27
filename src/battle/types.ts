@@ -1135,7 +1135,8 @@ export type SkillEffectAnimId =
   | "hurt";
 
 interface SkillEffectCommon extends AnimPhaseFields {
-  target: TargetSpec;
+  /** 省略時は ActiveSkillDef の共通ターゲットを継承（未設定なら読み込み既定） */
+  target?: TargetSpec;
   /** @deprecated 読み込み専用。正規化後は target のみ使用 */
   targetRule?: TargetRule;
   /** 未指定は single（単体） */
@@ -1190,9 +1191,34 @@ interface SkillEffectCommon extends AnimPhaseFields {
   defenseIgnore?: DefenseIgnoreSpec;
   /** 対象フィルタ（barrier 付与等）。全成立で対象に適用 */
   effectConditions?: FireCondition[];
-  /** 解決後に formationRow が一致する対象のみ適用 */
-  targetFormationRow?: FormationRow;
 }
+
+/** アクティブスキル直下の共通ターゲット（effect が省略時に継承） */
+export type SkillSharedTargetingFields = Partial<
+  Pick<
+    SkillEffectDef,
+    | 'target'
+    | 'targetRule'
+    | 'targetShape'
+    | 'range'
+    | 'aoeRadiusPx'
+    | 'hitCount'
+    | 'hitDurationSec'
+    | 'piercePowerStepMultiplier'
+    | 'piercePowerStepMode'
+    | 'pierceDurationSec'
+    | 'chainCount'
+    | 'chainMaxDistancePx'
+    | 'chainPowerStepMultiplier'
+    | 'chainPowerStepMode'
+    | 'chainDurationSec'
+    | 'scatterRadiusPx'
+    | 'scatterSpreadRadiusPx'
+    | 'scatterHitCount'
+    | 'scatterDurationSec'
+    | 'scatterSpreadRate'
+  >
+>;
 
 export interface SkillHitTarget {
   unit: CombatantState;
@@ -1543,7 +1569,7 @@ export type SkillEffectDef =
 /** @deprecated JSON 読み込み互換。正規化後は HealSkillEffect */
 export type LegacyHotSkillEffect = HotSkillEffect;
 
-export interface ActiveSkillDef {
+export interface ActiveSkillDef extends SkillSharedTargetingFields {
   id: string;
   name: string;
   /** 未指定時は所属クラス role からプレースホルダー。PNG は assets/skill-icons/{iconKey}.png */

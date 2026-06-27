@@ -666,7 +666,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | passive 1 Lv0  | `df_paladin_passive_1`    | 護身手   | `frontBlockAura`（前列 block chance 0.10・物理直接）                               |
 | passive 2 Lv0  | `df_paladin_passive_2`    | 護法陣   | `threatControl`（`frontThreatFloor` + `frontThreatDecayMultiplier` のみ）          |
 | active 1 Lv0   | `df_paladin_active_1`     | 光明剣   | 低 HP 味方 heal + 最近接 magic damage                                              |
-| active 2 Lv0   | `df_paladin_active_2`     | 障身法   | `hitsTaken` + smart。自身起点 AoE 50px 内の前列へ REG / 被ダメ軽減 / barrier stack |
+| active 2 Lv0   | `df_paladin_active_2`     | 障身法   | `hitsTaken` + smart。自身起点 AoE 50px 内の近傍味方へ REG / 被ダメ軽減 / barrier stack（前列全体が入る半径） |
 | passive 3 Lv10 | `df_paladin_passive_3`    | 真言加護 | P1 強化: block +0.05 + 魔法直接も block                                            |
 | active 3 Lv10  | `df_paladin_active_3`     | 慈光     | 味方全体 被ダメ −10% + REG+20（バリアなし）                                        |
 | passive 4 Lv20 | `df_paladin_passive_4`    | 不退転   | `lastStandRecovery`（致死半復活 + 自己/前列 DR）                                   |
@@ -1816,6 +1816,24 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 - 指定時、その effect の**命中プール**（発動 tick で解決した全 hit 対象）内だけで stat 選定する。射程・形状の再解決は行わない。
 - 未指定 = 従来どおり effect 単位で独立解決。
 - 例: 庇護の帷 — effect 0 の aoe 範囲内全員 → effect 1 で範囲内 HP 割合最低 1 体へ追加バリア。
+- **例外:** スキル共通ターゲット（下記）で共有ロックされた命中集合も、先行 effect のプールとして参照できる。
+
+### アクティブスキル共通ターゲット（レイヤ A）
+
+`ActiveSkillDef` 直下に effect と同型のターゲットフィールド（`target` / `targetShape` / `range` / `aoeRadiusPx` / 形状別フィールド等）を置ける。`targetFormationRow` は廃止（幾何のみ）。
+
+**継承ルール（effect 単位）:**
+
+- effect 側で各フィールドが**省略**されていれば、スキル直下の値を使う（`mergeEffectWithSkillTargeting` 1 経路）。
+- effect に `target` が**明示**されていれば、その effect だけ独立解決（混在スキル: 敵 damage + 自身 buff 等）。
+- `move` / `counter` / `basicAttackTransform` / `placedField` / `conditionalEffect` コンテナ等、従来どおり effect 単位の例外は維持。
+- `conditionalEffect` の branch 内 effect も同じ継承ルール。
+
+**解決:** スキル共通ターゲットを継承する effect は、発動 tick で同一の merged targeting key ごとに命中集合を 1 回ロックし、後続 effect は再ターゲットしない。`poolFromEffectIndex` は従来どおり先行 effect 命中プールを参照（共有ロックと整合）。
+
+**後方互換:** スキル直下に共通ターゲット未指定かつ effect 単独指定のみのスキルは現行挙動を維持。
+
+**JSON 例（障身法型）:** スキル直下に `target` + `targetShape: aoe` + `aoeRadiusPx: 50`。3 effect は buff 内容のみ（`barrierStack` は barrier effect のみ `true`）。
 
 ### パッシブのターゲット解決
 
@@ -1837,6 +1855,8 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `allAllies` / `allEnemies`             | `{ "kind": "all", "side": "ally" \| "enemy" }`                         |
 
 ## effect 共通フィールド（`data/skills/`）
+
+アクティブスキル **`ActiveSkillDef` 直下**にも effect と同型のターゲットフィールド（`target` / `targetShape` / `range` / 形状別）を置ける（§アクティブスキル共通ターゲット）。effect 省略時は継承。
 
 | フィールド                                                   | 説明                                                                                                                                                                                     |
 | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

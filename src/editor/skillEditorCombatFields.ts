@@ -104,6 +104,7 @@ import {
   createSection,
 } from "./formUtils.ts";
 import { appendSkillEffectTargetingFields } from "./effectTargetingFields.ts";
+import type { ActiveSkillDef } from "../battle/types.ts";
 
 function defaultDamageIncrease(): DamageIncreaseSpec {
   return {
@@ -1307,6 +1308,43 @@ export interface AppendTargetSpecFieldsOptions {
   lockSelfOrigin?: boolean;
   /** stat.poolFromEffectIndex 用: 現在の effect インデックス */
   effectIndex?: number;
+}
+
+export function appendSkillSharedTargetingFields(
+  parent: HTMLElement,
+  skill: ActiveSkillDef,
+  patchActive: (
+    mutate: (current: ActiveSkillDef) => void,
+    options?: { rerender?: boolean },
+  ) => void,
+  options: { traitsRangePx: number },
+): void {
+  parent.appendChild(
+    createEl(
+      'p',
+      'editor-hint',
+      '複数 effect が同じ対象集合へ効果を付与する場合、ここで target / 形状を 1 箇所だけ指定します。各 effect は「スキル共通ターゲットを使う」が ON のとき継承します。',
+    ),
+  );
+  appendTargetSpecFields(
+    parent,
+    skill.target ?? { kind: 'distance', side: 'enemy', order: 'nearest' },
+    (target) => {
+      patchActive((current) => {
+        current.target = target;
+      }, { rerender: true });
+    },
+  );
+  appendSkillEffectTargetingFields(
+    parent,
+    skill,
+    (patch, patchOptions) => {
+      patchActive((current) => {
+        Object.assign(current, patch(current));
+      }, patchOptions);
+    },
+    options,
+  );
 }
 
 export function appendTargetSpecFields(

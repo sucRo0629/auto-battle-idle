@@ -163,6 +163,7 @@ import {
   resolveEffectResolution,
   resolveEffectTargetSpec,
 } from './targeting.ts';
+import { ensureSharedTargetingLock } from './skillSharedTargeting.ts';
 
 interface ApplyResolvedEffectStepResult {
   applied: boolean;
@@ -352,6 +353,7 @@ export class SkillExecutor {
     this.potencyStacksConsumed.clear();
     this.blockResonanceStacksConsumed.clear();
     const effectHitPools = new Map<number, CombatantState[]>();
+    const sharedTargetingLocks = new Map<string, import('../types.ts').SkillEffectResolution>();
     for (let effectIndex = 0; effectIndex < skill.effect.length; effectIndex++) {
       const effectDef = skill.effect[effectIndex]!;
       const result = this.applyResolvedEffectStep(
@@ -364,6 +366,7 @@ export class SkillExecutor {
         cd,
         passives,
         effectHitPools,
+        sharedTargetingLocks,
       );
       if (
         effectDef.type !== 'conditionalEffect' &&
@@ -426,9 +429,30 @@ export class SkillExecutor {
     cd: SkillCooldown,
     passives: ReturnType<typeof getPassiveDefs>,
     priorEffectHitPools?: ReadonlyMap<number, readonly CombatantState[]>,
+    sharedTargetingLocks?: Map<string, import('../types.ts').SkillEffectResolution>,
   ): ApplyResolvedEffectStepResult {
     const empty: ApplyResolvedEffectStepResult = { applied: false, hitUnits: [] };
     if (effectDef.type === 'herbalPotencyConsume') {
+      if (sharedTargetingLocks) {
+        ensureSharedTargetingLock(
+          skill,
+          effectDef,
+          () =>
+            resolveEffectResolution(
+              effectDef,
+              actor,
+              allies,
+              enemies,
+              this.gameData,
+              Math.random,
+              passives,
+              skill.effect,
+              priorEffectHitPools,
+              skill,
+            ),
+          sharedTargetingLocks,
+        );
+      }
       const resolution = resolveEffectResolution(
         effectDef,
         actor,
@@ -439,6 +463,8 @@ export class SkillExecutor {
         passives,
         skill.effect,
         priorEffectHitPools,
+        skill,
+        sharedTargetingLocks,
       );
       if (!resolutionHasTargets(resolution)) return empty;
       const targets = resolution!.waves.flatMap((wave) =>
@@ -540,6 +566,7 @@ export class SkillExecutor {
           cd,
           passives,
           priorEffectHitPools,
+          sharedTargetingLocks,
         );
         if (branchResult.applied) {
           appliedAny = true;
@@ -548,6 +575,26 @@ export class SkillExecutor {
       return { applied: appliedAny, hitUnits: [] };
     }
 
+    if (sharedTargetingLocks) {
+      ensureSharedTargetingLock(
+        skill,
+        effectDef,
+        () =>
+          resolveEffectResolution(
+            effectDef,
+            actor,
+            allies,
+            enemies,
+            this.gameData,
+            Math.random,
+            passives,
+            skill.effect,
+            priorEffectHitPools,
+            skill,
+          ),
+        sharedTargetingLocks,
+      );
+    }
     const resolution = resolveEffectResolution(
       effectDef,
       actor,
@@ -558,6 +605,8 @@ export class SkillExecutor {
       passives,
       skill.effect,
       priorEffectHitPools,
+      skill,
+      sharedTargetingLocks,
     );
     if (!resolutionHasTargets(resolution)) return empty;
     const hitUnits = extractResolutionHitUnits(resolution!);
@@ -675,6 +724,7 @@ export class SkillExecutor {
     allies: CombatantState[],
     enemies: CombatantState[],
     effectHitPools?: Map<number, CombatantState[]>,
+    sharedTargetingLocks?: Map<string, import('../types.ts').SkillEffectResolution>,
   ): void {
     const actor = findCombatantById(step.actorId, allies, enemies);
     if (!actor?.isAlive) return;
@@ -729,6 +779,7 @@ export class SkillExecutor {
       step.cd,
       passives,
       effectHitPools,
+      sharedTargetingLocks,
     );
     if (
       effectHitPools &&

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readActiveFile, readPassiveFile } from './data/skillsJsonFs.ts';
+import { mergeEffectWithSkillTargeting } from './skills/skillSharedTargeting.ts';
 import { resolveEffectTargets } from './skills/targeting.ts';
 import { resolveEffectiveBasicAttackSkill } from './resolveEffectiveBasicAttack.ts';
 import type { ActiveSkillDef, CombatantState } from './types.ts';
@@ -61,10 +62,12 @@ describe('df_paladin skill data v1', () => {
     expect(passives.find((p) => p.id === 'df_paladin_passive_5')).toBeUndefined();
   });
 
-  it('障身法 targets only front row allies within self-origin aoe', () => {
+  it('障身法 targets allies within self-origin aoe geometry', () => {
     const actives = readActiveFile('df_paladin');
     const active2 = actives.find((a) => a.id === 'df_paladin_active_2');
     expect(active2).toBeDefined();
+    expect(active2!.targetShape).toBe('aoe');
+    expect(active2!.aoeRadiusPx).toBe(50);
     const paladin = mockUnit({ id: 'paladin', battleX: 100 });
     const frontAlly = mockUnit({
       id: 'front',
@@ -76,12 +79,13 @@ describe('df_paladin skill data v1', () => {
       id: 'back',
       role: 'supporter',
       formationRow: 'back',
-      battleX: 110,
+      battleX: 160,
     });
 
     for (const effect of active2!.effect) {
+      const merged = mergeEffectWithSkillTargeting(active2!, effect);
       const targets = resolveEffectTargets(
-        effect,
+        merged,
         paladin,
         [paladin, frontAlly, backAlly],
         [],

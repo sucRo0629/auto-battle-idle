@@ -115,16 +115,15 @@
       "kind": "time",
       "value": 12
     },
+    "target": {
+      "kind": "distance",
+      "side": "ally",
+      "order": "selfOrigin"
+    },
+    "targetShape": "aoe",
+    "aoeRadiusPx": 50,
     "effect": [
       {
-        "target": {
-          "kind": "distance",
-          "side": "ally",
-          "order": "selfOrigin"
-        },
-        "targetShape": "aoe",
-        "aoeRadiusPx": 50,
-        "targetFormationRow": "front",
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "atk",
@@ -132,14 +131,6 @@
         "buffDurationSec": 8
       },
       {
-        "target": {
-          "kind": "distance",
-          "side": "ally",
-          "order": "selfOrigin"
-        },
-        "targetShape": "aoe",
-        "aoeRadiusPx": 50,
-        "targetFormationRow": "front",
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "attackSpeed",

@@ -141,7 +141,7 @@
         "barrierStack": true,
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.25
+          "atkScale": 1
         }
       }
     ],

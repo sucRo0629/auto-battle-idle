@@ -1,6 +1,6 @@
 import type {
+  ActiveSkillDef,
   CombatantState,
-  FormationRow,
   GameData,
   PassiveSkillDef,
   SkillEffectDef,
@@ -40,6 +40,10 @@ import {
   type PickTargetOptions,
   type TargetRuleContext,
 } from './targetSpec.ts';
+import {
+  computeTargetingLockKey,
+  mergeEffectWithSkillTargeting,
+} from './skillSharedTargeting.ts';
 
 export {
   formatTargetLabel,
@@ -220,8 +224,10 @@ export function resolveEffectTargetSpec(
   allies: CombatantState[],
   enemies: CombatantState[],
   passives?: PassiveSkillDef[],
+  skill?: ActiveSkillDef,
 ): TargetSpec {
-  const defaultSpec = getEffectTarget(effect);
+  const merged = mergeEffectWithSkillTargeting(skill, effect);
+  const defaultSpec = getEffectTarget(merged);
   if (!passives || passives.length === 0) return defaultSpec;
   const context: TargetRuleContext = { actor, allies, enemies };
   if (!shouldApplyTargetRuleOverride(defaultSpec, passives, context)) {
@@ -243,8 +249,16 @@ export function resolveEffectAnchor(
   enemies: CombatantState[],
   gameData: GameData,
   passives?: PassiveSkillDef[],
+  skill?: ActiveSkillDef,
 ): CombatantState | null {
-  const spec = resolveEffectTargetSpec(effect, actor, allies, enemies, passives);
+  const spec = resolveEffectTargetSpec(
+    effect,
+    actor,
+    allies,
+    enemies,
+    passives,
+    skill,
+  );
   if (isSelfOriginSpec(spec)) {
     return actor.isAlive ? actor : null;
   }
@@ -260,31 +274,11 @@ export function resolveEffectAnchor(
     gameData,
     Math.random,
     passives,
+    undefined,
+    undefined,
+    skill,
   );
   return resolution?.waves[0]?.targets[0]?.unit ?? null;
-}
-
-function filterTargetsByFormationRow(
-  targets: SkillHitTarget[],
-  formationRow?: FormationRow,
-): SkillHitTarget[] {
-  if (!formationRow) return targets;
-  return targets.filter((entry) => entry.unit.formationRow === formationRow);
-}
-
-function finalizeEffectResolution(
-  resolution: SkillEffectResolution | null,
-  formationRow?: FormationRow,
-): SkillEffectResolution | null {
-  if (!resolution || !formationRow) return resolution;
-  const waves = resolution.waves
-    .map((wave) => ({
-      ...wave,
-      targets: filterTargetsByFormationRow(wave.targets, formationRow),
-    }))
-    .filter((wave) => wave.targets.length > 0);
-  if (waves.length === 0) return null;
-  return { ...resolution, waves };
 }
 
 export function resolveEffectResolution(
@@ -297,132 +291,175 @@ export function resolveEffectResolution(
   passives?: PassiveSkillDef[],
   allSkillEffects?: readonly SkillEffectDef[],
   priorEffectHitPools?: ReadonlyMap<number, readonly CombatantState[]>,
+  skill?: ActiveSkillDef,
+  sharedTargetingLocks?: ReadonlyMap<string, SkillEffectResolution>,
 ): SkillEffectResolution | null {
-  if (effect.type === 'conditionalEffect') return null;
-  if (effect.type === 'placedField') return null;
+  const merged = mergeEffectWithSkillTargeting(skill, effect);
+  const lockKey =
+    skill !== undefined ? computeTargetingLockKey(skill, effect) : null;
+  if (lockKey && sharedTargetingLocks?.has(lockKey)) {
+    return sharedTargetingLocks.get(lockKey)!;
+  }
 
-  const spec = resolveEffectTargetSpec(effect, actor, allies, enemies, passives);
+  return resolveEffectResolutionInternal(
+    merged,
+    effect,
+    actor,
+    allies,
+    enemies,
+    _gameData,
+    rand,
+    passives,
+    allSkillEffects ?? skill?.effect,
+    priorEffectHitPools,
+    skill,
+  );
+}
 
-  if (effect.type === 'move') {
-    const pool = getTargetPool(spec, actor, allies, enemies);
-    const target = pickTargetFromPoolSpec(spec, actor, pool, {
+function resolveEffectResolutionInternal(
+  merged: SkillEffectDef,
+  sourceEffect: SkillEffectDef,
+  actor: CombatantState,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  _gameData: GameData,
+  rand: () => number = Math.random,
+  passives?: PassiveSkillDef[],
+  allSkillEffects?: readonly SkillEffectDef[],
+  priorEffectHitPools?: ReadonlyMap<number, readonly CombatantState[]>,
+  skill?: ActiveSkillDef,
+): SkillEffectResolution | null {
+  if (sourceEffect.type === 'conditionalEffect') return null;
+  if (sourceEffect.type === 'placedField') return null;
+
+  const specForResolution = resolveEffectTargetSpec(
+    sourceEffect,
+    actor,
+    allies,
+    enemies,
+    passives,
+    skill,
+  );
+
+  if (sourceEffect.type === 'move') {
+    const pool = getTargetPool(specForResolution, actor, allies, enemies);
+    const target = pickTargetFromPoolSpec(specForResolution, actor, pool, {
       moveAnchor: true,
     });
     const rangePx = resolveSkillRangePx(
       actor,
-      effect,
+      merged,
       livingAllies(allies).length,
     );
     if (!target) return null;
-    return finalizeEffectResolution(
-      {
-        waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
-      },
-      effect.targetFormationRow,
-    );
+    return {
+      waves: [{ hitIndex: 0, targets: [{ unit: target }] }],
+    };
   }
 
   const rangePx = resolveSkillRangePx(
     actor,
-    effect,
+    merged,
     livingAllies(allies).length,
   );
-  const priorPool = resolvePriorEffectAttackablePool(spec, priorEffectHitPools);
+  const priorPool = resolvePriorEffectAttackablePool(
+    specForResolution,
+    priorEffectHitPools,
+  );
   if (priorPool === null) return null;
   const attackablePool =
     priorPool ??
-    getAttackablePool(spec, actor, allies, enemies, rangePx);
-  const shape: TargetShape = effect.targetShape ?? 'single';
-  const basePower = getBaseAtkScale(effect);
-  const pickOptions = pickOptionsForEffect(effect);
+    getAttackablePool(specForResolution, actor, allies, enemies, rangePx);
+  const shape: TargetShape = merged.targetShape ?? 'single';
+  const basePower = getBaseAtkScale(sourceEffect);
+  const pickOptions = pickOptionsForEffect(merged);
 
   const skipHealWithhold =
     allSkillEffects !== undefined &&
     skillHasBarrierEffect(allSkillEffects);
   if (
-    effect.type === 'heal' &&
-    (effect.healSubKind ?? 'instant') !== 'dispel' &&
+    sourceEffect.type === 'heal' &&
+    (sourceEffect.healSubKind ?? 'instant') !== 'dispel' &&
     !skipHealWithhold &&
-    !hasDamagedHealCandidate(spec, actor, attackablePool, effect)
+    !hasDamagedHealCandidate(specForResolution, actor, attackablePool, merged)
   ) {
     return null;
   }
 
   if (shape === 'single') {
-    if (isSelfOriginSpec(spec)) {
+    if (isSelfOriginSpec(specForResolution)) {
       if (!actor.isAlive) return null;
-      const targets = applyIncludeSelfFilter(spec, actor, [{ unit: actor }]);
+      const targets = applyIncludeSelfFilter(specForResolution, actor, [{ unit: actor }]);
       if (targets.length === 0) return null;
-      const hits = effect.hitCount;
+      const hits = merged.hitCount;
       if (hits === undefined || hits < 2) {
         return { waves: [{ hitIndex: 0, targets }] };
       }
-      const duration = effect.hitDurationSec;
+      const duration = merged.hitDurationSec;
       if (duration === undefined || duration <= 0) return null;
       return resolveRepeatedHitWaves(targets, hits, duration);
     }
 
-    if (isMultiTargetSpec(spec)) {
+    if (isMultiTargetSpec(specForResolution)) {
       const targets = attackablePool
         .filter((unit) => unit.isAlive)
         .map((unit) => ({ unit }));
       if (targets.length === 0) return null;
-      const hits = effect.hitCount;
+      const hits = merged.hitCount;
       if (hits === undefined || hits < 2) {
         return { waves: [{ hitIndex: 0, targets }] };
       }
-      const duration = effect.hitDurationSec;
+      const duration = merged.hitDurationSec;
       if (duration === undefined || duration <= 0) return null;
       return resolveRepeatedHitWaves(targets, hits, duration);
     }
 
-    const target = pickTargetFromPoolSpec(spec, actor, attackablePool, pickOptions);
+    const target = pickTargetFromPoolSpec(
+      specForResolution,
+      actor,
+      attackablePool,
+      pickOptions,
+    );
     if (!target) return null;
-    const hits = effect.hitCount;
+    const hits = merged.hitCount;
     if (hits === undefined || hits < 2) {
       return {
         waves: [
           {
             hitIndex: 0,
-            targets: applyIncludeSelfFilter(spec, actor, [{ unit: target }]),
+            targets: applyIncludeSelfFilter(specForResolution, actor, [{ unit: target }]),
           },
         ],
       };
     }
-    const duration = effect.hitDurationSec;
+    const duration = merged.hitDurationSec;
     if (duration === undefined || duration <= 0) return null;
     return resolveRepeatedHitWaves([{ unit: target }], hits, duration);
   }
 
   if (shape === 'aoe') {
-    const radius = effect.aoeRadiusPx;
+    const radius = merged.aoeRadiusPx;
     if (radius === undefined || radius <= 0) return null;
     const targets = applyIncludeSelfFilter(
-      spec,
+      specForResolution,
       actor,
-      resolveAoeHitTargets(spec, actor, attackablePool, radius, pickOptions),
+      resolveAoeHitTargets(specForResolution, actor, attackablePool, radius, pickOptions),
     );
     if (targets.length === 0) return null;
-    const hits = effect.hitCount;
+    const hits = merged.hitCount;
     if (hits === undefined || hits < 2) {
-      return finalizeEffectResolution(
-        { waves: [{ hitIndex: 0, targets }] },
-        effect.targetFormationRow,
-      );
+      return { waves: [{ hitIndex: 0, targets }] };
     }
-    const duration = effect.hitDurationSec;
+    const duration = merged.hitDurationSec;
     if (duration === undefined || duration <= 0) return null;
-    return finalizeEffectResolution(
-      resolveRepeatedHitWaves(targets, hits, duration),
-      effect.targetFormationRow,
-    );
+    return resolveRepeatedHitWaves(targets, hits, duration);
   }
 
   if (shape === 'multiLock') {
-    const hits = effect.hitCount;
+    const hits = merged.hitCount;
     if (hits === undefined || hits < 2) return null;
     const targets = resolveMultiLockHitTargets(
-      spec,
+      specForResolution,
       actor,
       attackablePool,
       hits,
@@ -442,17 +479,17 @@ export function resolveEffectResolution(
 
   if (shape === 'pierce') {
     const targets = resolvePierceHitTargets(
-      spec,
+      specForResolution,
       actor,
       allies,
       enemies,
       rangePx,
       basePower,
-      effect,
+      merged,
     );
     if (targets.length === 0) return null;
 
-    const duration = effect.pierceDurationSec;
+    const duration = merged.pierceDurationSec;
     if (duration !== undefined && duration > 0 && targets.length > 1) {
       return {
         spreadDurationSec: duration,
@@ -466,13 +503,13 @@ export function resolveEffectResolution(
   }
 
   if (shape === 'chain') {
-    const count = effect.chainCount;
-    const maxDist = effect.chainMaxDistancePx;
+    const count = merged.chainCount;
+    const maxDist = merged.chainMaxDistancePx;
     if (count === undefined || count < 1 || maxDist === undefined || maxDist <= 0) {
       return null;
     }
     const targets = resolveChainHitTargets(
-      spec,
+      specForResolution,
       actor,
       attackablePool,
       allies,
@@ -480,7 +517,7 @@ export function resolveEffectResolution(
       count,
       maxDist,
       basePower,
-      effect,
+      merged,
     );
     if (targets.length === 0) return null;
 
@@ -492,7 +529,7 @@ export function resolveEffectResolution(
       return { waves };
     }
 
-    const explicitDuration = effect.chainDurationSec;
+    const explicitDuration = merged.chainDurationSec;
     const duration =
       explicitDuration !== undefined && explicitDuration > 0
         ? explicitDuration
@@ -505,9 +542,9 @@ export function resolveEffectResolution(
   }
 
   if (shape === 'scatter') {
-    const radius = effect.scatterRadiusPx;
-    const hitCount = effect.scatterHitCount;
-    const duration = effect.scatterDurationSec;
+    const radius = merged.scatterRadiusPx;
+    const hitCount = merged.scatterHitCount;
+    const duration = merged.scatterDurationSec;
     if (
       radius === undefined ||
       radius <= 0 ||
@@ -518,10 +555,10 @@ export function resolveEffectResolution(
     ) {
       return null;
     }
-    const spreadRate = effect.scatterSpreadRate ?? 1;
-    const spreadRadiusPx = effect.scatterSpreadRadiusPx ?? radius;
+    const spreadRate = merged.scatterSpreadRate ?? 1;
+    const spreadRadiusPx = merged.scatterSpreadRadiusPx ?? radius;
     const waves = resolveScatterWaves(
-      spec,
+      specForResolution,
       actor,
       attackablePool,
       spreadRadiusPx,

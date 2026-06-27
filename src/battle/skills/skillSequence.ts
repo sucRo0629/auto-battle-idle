@@ -55,6 +55,8 @@ export interface ActiveSkillSequence {
   tailWaitUntilBattleSec?: number;
   /** 同一スキル内 effect 命中プール（poolFromEffectIndex 用） */
   effectHitPools: Map<number, CombatantState[]>;
+  /** スキル共通ターゲットの発動 tick ロック（effect 間で共有） */
+  sharedTargetingLocks: Map<string, import('../types.ts').SkillEffectResolution>;
 }
 
 export function buildSkillSequence(
@@ -78,6 +80,7 @@ export function buildSkillSequence(
       allies,
       enemies,
       passives,
+      skill,
     );
     let anchor: CombatantState | null;
 
@@ -133,6 +136,7 @@ export function buildSkillSequence(
     steps,
     nextStepIndex: 0,
     effectHitPools: new Map(),
+    sharedTargetingLocks: new Map(),
   };
 }
 

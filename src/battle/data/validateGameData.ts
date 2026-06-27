@@ -1863,6 +1863,26 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
   invalidField(context, 'kind', `must be a valid target kind`);
 }
 
+function parseOptionalEffectTarget(
+  obj: Record<string, unknown>,
+  context: string,
+): TargetSpec | undefined {
+  if (obj.target === undefined) {
+    if (obj.targetDebuffFilter !== undefined) {
+      invalidField(
+        context,
+        'targetDebuffFilter',
+        'use target.kind status instead',
+      );
+    }
+    if (obj.targetRule !== undefined) {
+      invalidField(context, 'targetRule', 'use target instead');
+    }
+    return undefined;
+  }
+  return parseTargetSpec(obj.target, `${context}.target`);
+}
+
 function parseEffectTarget(
   obj: Record<string, unknown>,
   context: string,
@@ -1898,11 +1918,11 @@ function parseOptionalEffectCombatModifiers(
   context: string,
 ): Pick<
   SkillEffectDef,
-  'damageIncrease' | 'defenseIgnore' | 'effectConditions' | 'targetFormationRow'
+  'damageIncrease' | 'defenseIgnore' | 'effectConditions'
 > {
   const result: Pick<
     SkillEffectDef,
-    'damageIncrease' | 'defenseIgnore' | 'effectConditions' | 'targetFormationRow'
+    'damageIncrease' | 'defenseIgnore' | 'effectConditions'
   > = {};
   if (obj.targetDebuffFilter !== undefined) {
     invalidField(
@@ -1930,15 +1950,56 @@ function parseOptionalEffectCombatModifiers(
       'effectConditions',
     );
   }
-  if (obj.targetFormationRow !== undefined) {
-    result.targetFormationRow = requireEnum(
-      obj,
-      'targetFormationRow',
-      context,
-      FORMATION_ROWS_SET,
-    );
-  }
   return result;
+}
+
+function parseSkillSharedTargetingFields(
+  obj: Record<string, unknown>,
+  context: string,
+): Partial<ActiveSkillDef> {
+  const result: Partial<ActiveSkillDef> = {};
+  const target = parseOptionalEffectTarget(obj, context);
+  if (target !== undefined) {
+    result.target = target;
+  }
+  const range = parseOptionalRange(obj, context);
+  if (range !== undefined) {
+    result.range = range;
+  }
+  Object.assign(result, parseTargetShapeFields(obj, context));
+  return result;
+}
+
+function effectTypeRequiresTarget(type: string): boolean {
+  return (
+    type !== 'conditionalEffect' &&
+    type !== 'counter' &&
+    type !== 'basicAttackTransform' &&
+    type !== 'blockResonanceConsume' &&
+    type !== 'herbalPotencyConsume' &&
+    type !== 'grantNextOutgoingDamage' &&
+    type !== 'dotCompress' &&
+    type !== 'dotExtend' &&
+    type !== 'placedField'
+  );
+}
+
+function validateActiveSkillEffectTargeting(
+  skill: ActiveSkillDef,
+  context: string,
+): void {
+  const skillHasSharedTargeting =
+    skill.target !== undefined ||
+    skill.targetShape !== undefined ||
+    skill.range !== undefined ||
+    skill.aoeRadiusPx !== undefined;
+  skill.effect.forEach((effect, effectIndex) => {
+    const effectContext = `${context}.effect[${effectIndex}]`;
+    if (!effectTypeRequiresTarget(effect.type)) return;
+    if (effect.target !== undefined) return;
+    if (skillHasSharedTargeting) return;
+    missingField(effectContext, 'target');
+  });
 }
 
 function parseOptionalEffectPresentation(
@@ -2444,7 +2505,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     const combatModifiers = parseOptionalEffectCombatModifiers(obj, context);
     const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type: 'heal',
@@ -2477,7 +2538,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
     return normalizeSkillEffect({
       type: 'herbalPotencyConsume',
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...sequenceTiming,
       ...presentation,
     });
@@ -2500,7 +2561,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     const range = parseOptionalRange(obj, context);
     return normalizeSkillEffect({
       type: 'enemyReelIn',
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...(range !== undefined ? { range } : {}),
       ...sequenceTiming,
@@ -2575,7 +2636,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       : parseBranchEffects(obj.stayEffects, context, 'stayEffects');
     return normalizeSkillEffect({
       type: 'placedField',
-      target,
+      ...(target !== undefined ? { target } : {}),
       fieldRadiusPx,
       fieldDurationSec,
       ...(stayTickIntervalSec !== undefined ? { stayTickIntervalSec } : {}),
@@ -2600,7 +2661,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     }
     return normalizeSkillEffect({
       type: 'dotCompress',
-      target,
+      ...(target !== undefined ? { target } : {}),
       compressRatio,
       ...sequenceTiming,
       ...presentation,
@@ -2618,7 +2679,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     }
     return normalizeSkillEffect({
       type: 'dotExtend',
-      target,
+      ...(target !== undefined ? { target } : {}),
       extendRatio,
       ...sequenceTiming,
       ...presentation,
@@ -2636,7 +2697,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     }
     return normalizeSkillEffect({
       type: 'dotHarvest',
-      target,
+      ...(target !== undefined ? { target } : {}),
       harvestRatio,
       ...sequenceTiming,
       ...presentation,
@@ -2662,7 +2723,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         : requireEnum(obj, 'dotFlavor', context, new Set(['poison', 'bleed']));
     return normalizeSkillEffect({
       type: 'poisonSpread',
-      target,
+      ...(target !== undefined ? { target } : {}),
       spreadRadiusPx,
       spreadDurationRatio,
       ...(dotFlavor !== undefined ? { dotFlavor } : {}),
@@ -2675,7 +2736,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
   const target =
     type === 'counter' || type === 'basicAttackTransform'
       ? ({ kind: 'self' } satisfies TargetSpec)
-      : parseEffectTarget(obj, context);
+      : parseOptionalEffectTarget(obj, context);
   const range = parseOptionalRange(obj, context);
   const targetShapeFields = parseTargetShapeFields(obj, context);
   const presentation = parseOptionalEffectPresentation(obj, context);
@@ -2706,7 +2767,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     const ignoreDamageTakenReduction =
       obj.ignoreDamageTakenReduction === true ? true : undefined;
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type,
@@ -2747,7 +2808,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
           ? obj.buffDisplayName
           : undefined;
       return normalizeSkillEffect({
-        target,
+        ...(target !== undefined ? { target } : {}),
         ...targetShapeFields,
         ...combatModifiers,
         type,
@@ -2777,7 +2838,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         `${context}.dispelPriority`,
       );
       return normalizeSkillEffect({
-        target,
+        ...(target !== undefined ? { target } : {}),
         ...targetShapeFields,
         ...combatModifiers,
         type,
@@ -2791,7 +2852,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       });
     }
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type,
@@ -2842,7 +2903,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         'buffFlatBonus',
       );
       return normalizeSkillEffect({
-        target,
+        ...(target !== undefined ? { target } : {}),
         ...targetShapeFields,
         ...combatModifiers,
         type,
@@ -2867,7 +2928,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         invalidField(context, 'barrierStack', 'must be a boolean');
       }
       return normalizeSkillEffect({
-        target,
+        ...(target !== undefined ? { target } : {}),
         ...targetShapeFields,
         ...combatModifiers,
         type,
@@ -2896,7 +2957,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         );
       }
       return normalizeSkillEffect({
-        target,
+        ...(target !== undefined ? { target } : {}),
         ...targetShapeFields,
         ...combatModifiers,
         type,
@@ -2921,7 +2982,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
           ? 5
           : requireNumber(obj, 'buffDurationSec', context);
       return normalizeSkillEffect({
-        target,
+        ...(target !== undefined ? { target } : {}),
         ...targetShapeFields,
         ...combatModifiers,
         type,
@@ -2983,7 +3044,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     }
     const buffDurationSec = requireNumber(obj, 'buffDurationSec', context);
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type,
@@ -3003,7 +3064,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       invalidField(context, 'barrierStack', 'must be a boolean');
     }
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type: 'barrier',
@@ -3027,7 +3088,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
     const dotFlavor = parseOptionalDotFlavor(obj, context);
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type: 'dot',
@@ -3044,7 +3105,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
   if (type === 'stun') {
     const durationSec = requireStunDurationSec(obj, context);
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type: 'stun',
@@ -3061,7 +3122,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       invalidField(context, 'distancePx', 'must be a positive number');
     }
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type: 'knockback',
@@ -3113,7 +3174,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       moveMode = 'toAnchor';
     }
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       type: 'move',
       moveDurationSec,
       ...(moveMode !== undefined ? { moveMode } : {}),
@@ -3141,7 +3202,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       `${context}.dispelPriority`,
     );
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type: 'dispel',
@@ -3225,7 +3286,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       invalidField(context, 'durationSec', 'must be a positive number');
     }
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type: 'block',
@@ -3255,7 +3316,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       'debuffFlatBonus',
     );
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type,
@@ -3286,7 +3347,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
     const dotFlavor = parseOptionalDotFlavor(obj, context);
     const buffDisplayName = parseOptionalDebuffDisplayName(obj);
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type,
@@ -3304,7 +3365,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
   if (debuffSubKind === 'stun') {
     const durationSec = requireStunDurationSec(obj, context);
     return normalizeSkillEffect({
-      target,
+      ...(target !== undefined ? { target } : {}),
       ...targetShapeFields,
       ...combatModifiers,
       type,
@@ -5340,6 +5401,7 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
     const id = requireString(obj, 'id', context);
     const name = requireString(obj, 'name', context);
     const trigger = parseSkillTrigger(obj, context);
+    const sharedTargeting = parseSkillSharedTargetingFields(obj, context);
 
     const effectsRaw = obj.effect;
     if (!Array.isArray(effectsRaw) || effectsRaw.length === 0) {
@@ -5479,11 +5541,12 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
       context,
     );
 
-    return {
+    const skill: ActiveSkillDef = {
       id,
       name,
       trigger,
       effect,
+      ...sharedTargeting,
       ...(Array.isArray(allowedClassIds)
         ? { allowedClassIds: allowedClassIds as string[] }
         : {}),
@@ -5524,6 +5587,8 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
         ? { arenaDominanceNonMarkDamageMultiplier }
         : {}),
     };
+    validateActiveSkillEffectTargeting(skill, context);
+    return skill;
   });
 }
 

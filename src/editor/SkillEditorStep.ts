@@ -84,6 +84,12 @@ import {
   getEffectTarget,
 } from '../battle/skills/targetSpec.ts';
 import { skillHasMoveEffect } from '../battle/skills/skillSequence.ts';
+import {
+  effectInheritsSkillSharedTargeting,
+  hasSkillSharedTargeting,
+  mergeEffectWithSkillTargeting,
+  SKILL_SHARED_TARGETING_KEYS,
+} from '../battle/skills/skillSharedTargeting.ts';
 import { resolveSkillTrigger } from '../battle/skillTrigger.ts';
 import {
   formatActiveDescription,
@@ -108,6 +114,7 @@ import {
   appendPassiveSkillPropertyOverrideFields,
   appendPassiveThreatControlFields,
   appendTargetSpecFields,
+  appendSkillSharedTargetingFields,
   appendThreatBurstFields,
   appendDamagePierceFields,
 } from './skillEditorCombatFields.ts';
@@ -4275,6 +4282,17 @@ export class SkillEditorStep {
     parent.appendChild(effectsSection);
     const showPerEffectPresentation = skillHasMoveEffect(active);
 
+    if (!idReadonly) {
+      const sharedTargetSection = createSection('共通ターゲット');
+      parent.insertBefore(sharedTargetSection, effectsSection);
+      appendSkillSharedTargetingFields(
+        sharedTargetSection,
+        active,
+        setActive,
+        { traitsRangePx: this.resolveTraitsRangePx() },
+      );
+    }
+
     active.effect.forEach((effect, effectIndex) => {
       const block = createEl('div', 'editor-effect-block');
       const effectHeader = createEl('div', 'editor-effect-header');
@@ -4332,6 +4350,8 @@ export class SkillEditorStep {
           effectCount: active.effect.length,
         },
         active.id,
+        undefined,
+        active,
       );
       effectsSection.appendChild(block);
     });
@@ -4407,6 +4427,7 @@ export class SkillEditorStep {
     sequenceContext?: { effectIndex: number; effectCount: number },
     skillId?: string,
     branchEditorOptions?: { hideConditionalCategory?: boolean },
+    activeSkill?: ActiveSkillDef,
   ): void {
     const normalizedEffect = withEditorEffectDefaults(effect);
     if (editorEffectNeedsDefaultSync(effect, normalizedEffect)) {
@@ -4514,38 +4535,86 @@ export class SkillEditorStep {
         createEl('p', 'editor-hint', '付与対象: 自身（固定）'),
       );
     } else if (normalizedEffect.type !== 'conditionalEffect') {
-      const effectTarget = getEffectTarget(effect);
-      const lockSelfOrigin = (normalizedEffect.targetShape ?? 'single') === 'pierce';
-      appendTargetSpecFields(
-        grid,
-        effectTarget,
-        (target) => {
+      const inheritsSharedTarget =
+        activeSkill !== undefined &&
+        hasSkillSharedTargeting(activeSkill) &&
+        effectInheritsSkillSharedTargeting(activeSkill, normalizedEffect);
+      if (activeSkill && hasSkillSharedTargeting(activeSkill)) {
+        const inheritRow = createEl('div', 'editor-field-row');
+        const inheritInput = document.createElement('input');
+        inheritInput.type = 'checkbox';
+        inheritInput.checked = inheritsSharedTarget;
+        inheritInput.addEventListener('change', () => {
           patchEffect((prev) => {
-            const next: SkillEffectDef = { ...prev, target };
-            if (target.kind === 'self' && (next.targetShape ?? 'single') !== 'single') {
-              next.targetShape = 'single';
-              delete next.aoeRadiusPx;
-              delete next.hitCount;
-              delete next.hitDurationSec;
-              delete next.piercePowerStepMultiplier;
-              delete next.piercePowerStepMode;
-              delete next.pierceDurationSec;
-              delete next.chainCount;
-              delete next.chainMaxDistancePx;
-              delete next.chainPowerStepMultiplier;
-              delete next.chainPowerStepMode;
-              delete next.chainDurationSec;
-              delete next.scatterRadiusPx;
-              delete next.scatterSpreadRadiusPx;
-              delete next.scatterHitCount;
-              delete next.scatterDurationSec;
-              delete next.scatterSpreadRate;
+            const next = { ...prev } as SkillEffectDef;
+            if (inheritInput.checked) {
+              for (const key of SKILL_SHARED_TARGETING_KEYS) {
+                delete (next as Record<string, unknown>)[key];
+              }
+            } else {
+              const merged = mergeEffectWithSkillTargeting(activeSkill, prev);
+              for (const key of SKILL_SHARED_TARGETING_KEYS) {
+                const value = merged[key];
+                if (value !== undefined) {
+                  (next as Record<string, unknown>)[key] = value;
+                }
+              }
             }
             return next;
           }, { rerender: true });
-        },
-        { lockSelfOrigin, effectIndex: sequenceContext?.effectIndex },
-      );
+        });
+        inheritRow.appendChild(
+          createEl('label', undefined, 'スキル共通ターゲットを使う'),
+        );
+        inheritRow.appendChild(inheritInput);
+        grid.appendChild(inheritRow);
+      }
+      if (!inheritsSharedTarget) {
+        const effectTarget = getEffectTarget(
+          activeSkill
+            ? mergeEffectWithSkillTargeting(activeSkill, effect)
+            : effect,
+        );
+        const lockSelfOrigin = (normalizedEffect.targetShape ?? 'single') === 'pierce';
+        appendTargetSpecFields(
+          grid,
+          effectTarget,
+          (target) => {
+            patchEffect((prev) => {
+              const next: SkillEffectDef = { ...prev, target };
+              if (target.kind === 'self' && (next.targetShape ?? 'single') !== 'single') {
+                next.targetShape = 'single';
+                delete next.aoeRadiusPx;
+                delete next.hitCount;
+                delete next.hitDurationSec;
+                delete next.piercePowerStepMultiplier;
+                delete next.piercePowerStepMode;
+                delete next.pierceDurationSec;
+                delete next.chainCount;
+                delete next.chainMaxDistancePx;
+                delete next.chainPowerStepMultiplier;
+                delete next.chainPowerStepMode;
+                delete next.chainDurationSec;
+                delete next.scatterRadiusPx;
+                delete next.scatterSpreadRadiusPx;
+                delete next.scatterHitCount;
+                delete next.scatterDurationSec;
+                delete next.scatterSpreadRate;
+              }
+              return next;
+            }, { rerender: true });
+          },
+          { lockSelfOrigin, effectIndex: sequenceContext?.effectIndex },
+        );
+      } else {
+        grid.appendChild(
+          createEl(
+            'p',
+            'editor-hint',
+            'ターゲットはスキル共通設定を継承しています（上の「共通ターゲット」セクション）。',
+          ),
+        );
+      }
     }
     const isMove = normalizedEffect.type === 'move';
     const isCounter = normalizedEffect.type === 'counter';
@@ -4558,14 +4627,27 @@ export class SkillEditorStep {
       normalizedEffect.type === 'grantNextOutgoingDamage';
     const effectTargetKind = isConditionalEffect
       ? 'distance'
-      : getEffectTarget(effect).kind;
-    const targetShape: TargetShape = normalizedEffect.targetShape ?? 'single';
+      : getEffectTarget(
+          activeSkill
+            ? mergeEffectWithSkillTargeting(activeSkill, normalizedEffect)
+            : normalizedEffect,
+        ).kind;
+    const targetShape: TargetShape = (
+      activeSkill && effectInheritsSkillSharedTargeting(activeSkill, normalizedEffect)
+        ? mergeEffectWithSkillTargeting(activeSkill, normalizedEffect).targetShape
+        : normalizedEffect.targetShape
+    ) ?? 'single';
     if (
       !isMove &&
       !isCounter &&
       !isBasicAttackTransform &&
       !isConditionalEffect &&
-      !skipTargetShape
+      !skipTargetShape &&
+      !(
+        activeSkill &&
+        hasSkillSharedTargeting(activeSkill) &&
+        effectInheritsSkillSharedTargeting(activeSkill, normalizedEffect)
+      )
     ) {
       const shapeSelect = createSelect(
         effectTargetKind === 'self' ? 'single' : targetShape,

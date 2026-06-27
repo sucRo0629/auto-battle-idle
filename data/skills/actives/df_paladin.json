@@ -73,16 +73,15 @@
       "kind": "hitsTaken",
       "value": 8
     },
+    "target": {
+      "kind": "distance",
+      "side": "ally",
+      "order": "selfOrigin"
+    },
+    "targetShape": "aoe",
+    "aoeRadiusPx": 50,
     "effect": [
       {
-        "target": {
-          "kind": "distance",
-          "side": "ally",
-          "order": "selfOrigin"
-        },
-        "targetShape": "aoe",
-        "aoeRadiusPx": 50,
-        "targetFormationRow": "front",
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "reg",
@@ -90,14 +89,6 @@
         "buffDurationSec": 5
       },
       {
-        "target": {
-          "kind": "distance",
-          "side": "ally",
-          "order": "selfOrigin"
-        },
-        "targetShape": "aoe",
-        "aoeRadiusPx": 50,
-        "targetFormationRow": "front",
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "damageTaken",
@@ -105,14 +96,6 @@
         "buffDurationSec": 5
       },
       {
-        "target": {
-          "kind": "distance",
-          "side": "ally",
-          "order": "selfOrigin"
-        },
-        "targetShape": "aoe",
-        "aoeRadiusPx": 50,
-        "targetFormationRow": "front",
         "type": "buff",
         "buffSubKind": "barrier",
         "barrierStack": true,

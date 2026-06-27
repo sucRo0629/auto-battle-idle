@@ -2036,6 +2036,7 @@ export class BattleEngine {
           this.players,
           this.enemies,
           sequence.effectHitPools,
+          sequence.sharedTargetingLocks,
         );
       },
       (actorId) => {
