@@ -414,7 +414,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 | 操作 | 対象 | 効果 |
 | ---- | ---- | ---- |
-| **dot 圧縮**（`dotCompress`） | 対象の全 dot（付与元不問） | 残り `durationSec` を `compressRatio` で短縮。tick 総ダメは `1/compressRatio` 方向に増幅（短縮のみで損にならない）。P1 基準倍率 0.7 |
+| **dot 圧縮**（`dotCompress`） | 対象の全 dot（`dotCompressImmune` 除く） | 残り `durationSec` を `compressRatio` で短縮。tick 総ダメは `1/compressRatio` 方向に増幅。熾火（`dotFlavor: blazingFlame`）は圧縮対象外 |
 | **dot 延長**（`dotExtend`） | 対象の全 dot | 残り duration / tick 予算を `extendRatio` で延長（新規 dot 付与ではない） |
 | **placedField** | `clusterCenter` 配置 + 半径 | 進入時 `enterEffects`、滞在 tick で `stayEffects`。A3 は滞在ごとに圧縮比率 +0.05 累積 |
 | **dotHarvest** | 単体 | 各 dot 残ダメの `harvestRatio` を即時結算（dot は消費しない） |
@@ -423,6 +423,26 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 | **allyBasicAttackDotProc**（P2 毒の武器） | 命中した敵 | 味方 **物理 basic**（`slotKind: basic` かつ Hit の `damageType: physical`）`damage` 適用成功（`appliedDamage > 0`）時、`chance` で poison dot 付与。魔法 basic は対象外 |
 
 視界妨害・命中干渉・フィールド端貫通は v1 対象外。
+
+### 種火 / 熾火（魔術士 `at_sorcerer`）
+
+実装: `src/battle/sorcererFlame.ts`。overlay は `dot` + `dotFlavor: seedFlame | blazingFlame`。
+
+| 状態 | stack 上限 | DoT（1 stack / tick） | その他 |
+| ---- | ---------- | --------------------- | ------ |
+| **種火** | 5 | 付与者 ATK×0.05 magic / 10s（リフレッシュ） | max 到達で熾火 +1 へ変換。熾火が上限なら種火は max のまま据え置き |
+| **熾火** | P4 未習得: 1 / P4 後: 無制限 | 付与者 ATK×0.35 magic / tick | 被**魔法**ダメ +10%/stack（`damageTaken` stat とは分離）。`dotCompressImmune` |
+
+**active Hit のみ**（`slotKind: active`）で P2/P3/P4 が発動。basic では種火付与・連なる炎・花開く炎は走らない。
+
+| 枠 | passive / active | 発火 |
+| ---- | ---------------- | ---- |
+| P2 焼き尽くす熾火 | `seedFlameOnActiveHit` | active damage Hit ごとに種火 +1 |
+| P3 連なる炎 | `bonusActiveOnHit` + `bonusActiveSkillId` | active Hit 後 `at_sorcerer_active_1` を CD 消費なし追撃。追撃から P3 は再帰しない |
+| P4 花開く炎 | `blazingFlameDetonate` | 熾火≥1 の対象へ active Hit ごとに起爆: 種火全消費 → 熾火 -1 → 爆発 `(ATK + 消費種火×N)×1.3`（N 仮 = ATK×0.5）→ 対象 + 半径 50px 内へ種火 +1 |
+| A4 燎原 | `targetShape: poolEach` + `debuffTags: [seedFlame]` | 種火 overlay 敵各 1 回 magic single |
+
+multiLock × P3 × P4 の複数 Hit ごとに P2/P3/P4 は意図通り独立発火する。
 
 ### 通常攻撃変形（`basicAttackTransform`）
 

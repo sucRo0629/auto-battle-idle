@@ -28,7 +28,9 @@ export type StatusDisplayCategory =
   | "arenaDominance"
   | "duelistPride"
   | "mark"
-  | "arenaMark";
+  | "arenaMark"
+  | "seedFlame"
+  | "blazingFlame";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "atk",
@@ -51,6 +53,8 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "duelistPride",
   "mark",
   "arenaMark",
+  "seedFlame",
+  "blazingFlame",
   "dot",
   "bleed",
   "poison",
@@ -67,9 +71,11 @@ const NEUTRAL_EPSILON = 0.001;
 
 function resolveDotDisplayCategory(
   effect: StatusEffect,
-): "dot" | "bleed" | "poison" {
+): "dot" | "bleed" | "poison" | "seedFlame" | "blazingFlame" {
   if (effect.dotFlavor === "bleed") return "bleed";
   if (effect.dotFlavor === "poison") return "poison";
+  if (effect.dotFlavor === "seedFlame") return "seedFlame";
+  if (effect.dotFlavor === "blazingFlame") return "blazingFlame";
   return "dot";
 }
 
@@ -396,6 +402,17 @@ function effectsForCategory(
   if (category === "poison") {
     return effects.filter(
       (effect) => effect.overlay === "dot" && effect.dotFlavor === "poison",
+    );
+  }
+  if (category === "seedFlame") {
+    return effects.filter(
+      (effect) => effect.overlay === "dot" && effect.dotFlavor === "seedFlame",
+    );
+  }
+  if (category === "blazingFlame") {
+    return effects.filter(
+      (effect) =>
+        effect.overlay === "dot" && effect.dotFlavor === "blazingFlame",
     );
   }
   if (category === "atk") {

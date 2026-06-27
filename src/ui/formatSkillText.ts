@@ -1117,6 +1117,17 @@ function formatPassiveEffect(
       return `dot中被回復×${def.dottedEnemyHealReceivedMultiplier ?? 0.8}`;
     case "conditionalEnemyDamageTakenAura":
       return `仕留め aura（hasDot+HP≤50% → 被ダメ×${def.enemyDamageTakenMultiplier ?? 1.2}）`;
+    case "seedFlameOnActiveHit":
+      return "active ダメージ Hit ごとに種火 +1 stack";
+    case "bonusActiveOnHit":
+      return `active Hit 後 ${def.bonusActiveSkillId ?? "—"} 追撃（非再帰）`;
+    case "blazingFlameDetonate": {
+      const radius = def.blazingFlameDetonateSpreadRadiusPx ?? 50;
+      const n = def.blazingFlameDetonatePerSeedScale ?? 0.5;
+      const mul = def.blazingFlameDetonateMultiplier ?? 1.3;
+      const uncap = def.blazingFlameUncap ? " / 熾火上限解除" : "";
+      return `熾火起爆（(ATK+種火×ATK×${n})×${mul} / spread${radius}px）${uncap}`;
+    }
     case "healReservation": {
       const grant = formatPercent(def.grantOnHealMaxHpRatio ?? 1);
       const trigger = formatPercent(def.triggerHpRatio ?? 0.35);

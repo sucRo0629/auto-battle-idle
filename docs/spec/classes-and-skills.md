@@ -524,7 +524,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                    | 連射／連ね矢          |
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 高 Max HP 狙い + 待機蓄積 + 砲撃標的           | 破城矢装填／重矢          |
 | `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | DoT 圧縮補助 + 味方物理 basic 毒 proc          | 毒罠／粘着罠／追い込み／毒収穫 |
-| `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | —（未実装）                                   | （未実装）            |
+| `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | 猛火の術 / 焼き尽くす熾火（Lv0）+ 連なる炎 / 花開く炎（Lv10/20） | 炎術 / 双炎（Lv0）+ 散火 / 燎原（Lv10/20） |
 | `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | —（未実装）                                   | （未実装・JSON 廃棄） |
 | `at_conductor` | 法陣師 | Conductor | back  | 遠隔魔法 | —（未実装）                                   | （未実装・JSON 廃棄） |
 
@@ -1190,6 +1190,22 @@ Hunter = poison Field（P2/A1）+ 任意 dot 延長・圧縮（A2/A3）+ 毒収�
 
 **火** — 純粋な破壊エネルギーとしての直感的火力。
 
+#### スキル枠（Phase 3 確定）
+
+| 枠 | id | 名称 | 概要 |
+| --- | --- | --- | --- |
+| basic | `at_sorcerer_basic_attack` | （名称なし） | magic single。P2/P3/P4 非対象 |
+| P1 Lv0 | `at_sorcerer_passive_1` | 猛火の術 | REG 20% 無視 |
+| P2 Lv0 | `at_sorcerer_passive_2` | 焼き尽くす熾火 | active Hit ごとに種火 +1 |
+| P3 Lv10 | `at_sorcerer_passive_3` | 連なる炎 | active Hit 後 A1 追撃（非再帰） |
+| P4 Lv20 | `at_sorcerer_passive_4` | 花開く炎 | 熾火起爆 + 熾火上限解除 |
+| A1 Lv0 | `at_sorcerer_active_1` | 炎術 | magic single（CD 8s） |
+| A2 Lv0 | `at_sorcerer_active_2` | 双炎 | multiLock×2（CD 10s） |
+| A3 Lv10 | `at_sorcerer_active_3` | 散火 | multiLock×3（CD 14s） |
+| A4 Lv20 | `at_sorcerer_active_4` | 燎原 | 種火 overlay 敵へ poolEach（CD 18s） |
+
+種火 / 熾火 / P4 爆発 / dotCompress 除外の combat ルールは [combat.md](combat.md) §種火 / 熾火を正とする。実装: `src/battle/sorcererFlame.ts`。
+
 ---
 
 ### 印術師（`at_sigilist`・拡張）
@@ -1662,6 +1678,9 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `frontBlockAura`         | `chance?`, `frontBlockAuraMagicBlock?`                                                                                                                                  | 生存中、前列味方へ block overlay。`frontBlockAuraMagicBlock` で魔法直接も block 対象。実装: `frontBlockAura.ts`                                                                                                                                                                                                                                                                        |
 | `lastStandRecovery`      | `lastStandRecoveryHpRatio?`, `lastStandRecoverySelfDamageTakenMultiplier?`, `lastStandRecoveryFrontAllyDamageTakenMultiplier?`, `lastStandRecoveryDurationSec?`         | 致死直前 Wave 1 回・半復活 + 自己/前列 DR。実装: `lastStandRecovery.ts`                                                                                                                                                                                                                                                                                                                |
 | `duelistPride`           | `prideHpRatioMin?`, `prideHealMultiplier?`                                                                                                                              | HP 高帯で被回復（即時・HoT）を抑制。バリア非対象。実装: `duelistPride.ts`                                                                                                                                                                                                                                                                                                                |
+| `seedFlameOnActiveHit`   | （フィールドなし）                                                                                                                                                      | 習得者の **active** damage Hit ごとに対象へ種火 +1。basic 非対象。実装: `sorcererFlame.ts`                                                                                                                                                                                                                                                                                               |
+| `bonusActiveOnHit`       | `bonusActiveSkillId`                                                                                                                                                    | active Hit 後、指定 active の damage effect を CD 消費なし追撃（`suppressBonusActiveOnHit` で P3 非再帰）。実装: `sorcererFlame.ts`                                                                                                                                                                                                                                                    |
+| `blazingFlameDetonate`   | `blazingFlameDetonateSpreadRadiusPx?`, `blazingFlameDetonatePerSeedScale?`, `blazingFlameDetonateMultiplier?`, `blazingFlameUncap?`                                   | 熾火≥1 の対象へ active Hit ごとに起爆 + spread 種火。`blazingFlameUncap` で熾火 stack 上限解除。実装: `sorcererFlame.ts`                                                                                                                                                                                                                                                               |
 | `lowHpCover`             | `coverHpRatioThreshold?`, `coverWaveLimit?`                                                                                                                             | 低 HP 味方への被ダメを闘技士へ肩代わり。Wave 内上限。実装: `lowHpCover.ts`                                                                                                                                                                                                                                                                                                             |
 | `lastStandGuts`          | `lastStandGutsDurationSec?`, `lastStandGutsEndStunSec?`, `lastStandGutsEndKnockbackPx?`                                                                                 | 致死直前 Wave 1 回・HP1 維持（無敵ではない）。終了時敵全体 stun+KB。実装: `lastStandGuts.ts`                                                                                                                                                                                                                                                                                           |
 | `bloodlustDuelist`       | `bloodlustBlockChance?`, `bloodlustDefMaxBuffAtHpRatio?`, `bloodlustDefBuffMultiplierMax?`, `bloodlustAtkMaxBuffAtHpRatio?`, `bloodlustAtkBuffMultiplierMax?`, `bloodlustAtkBuffCurveExponent?` | block + 低 HP DEF（線形）/ ATK（指数カーブ可）。実装: `bloodlustDuelist.ts`                                                                                                                                                                                                                                                                                                            |
@@ -1820,7 +1839,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `pierceBarrier` / `pierceWard` / `pierceBlock`               | 任意。`damage` のみ。⑨後の barrier / wardBarrier / block を個別スキップ                                                                                                                  |
 | `ignoreDamageTakenReduction`                                   | 任意。`damage` のみ。⑨で `damageTakenMul` を 1.0 として計算                                                                                                                              |
 | `threatBurstFlat` / `threatBurstScale`                       | 任意。`damage` effect の追加ヘイト（`appliedDamage` 成功時）。basic には付けない。burst 用 active のみ                                                                                   |
-| `targetShape`                                                | `single`（既定）／`aoe`／`multiLock`／`pierce`／`chain`／`scatter`                                                                                                                       |
+| `targetShape`                                                | `single`（既定）／`aoe`／`multiLock`／`pierce`／`chain`／`scatter`／`poolEach`（プール全員各 1 Hit）                                                                                       |
 | `aoeRadiusPx`                                                | `aoe` 必須。anchor の X から ±px                                                                                                                                                         |
 | `hitCount`                                                   | `multiLock` 必須（整数 ≥ 2）。`single` / `aoe` 任意（整数 ≥ 2、省略=1）                                                                                                                  |
 | `hitDurationSec`                                             | `single` / `aoe` で `hitCount >= 2` 時必須。全ヒットを均等分散                                                                                                                           |

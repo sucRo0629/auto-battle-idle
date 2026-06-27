@@ -77,6 +77,7 @@ export function compressDotEffect(
   compressRatio: number,
 ): void {
   if (effect.overlay !== 'dot' || effect.remainingSec <= 0) return;
+  if (effect.dotCompressImmune === true) return;
   if (compressRatio >= 1) return;
   const oldRemaining = effect.remainingSec;
   effect.remainingSec = Math.max(DOT_TICK_SEC, oldRemaining * compressRatio);

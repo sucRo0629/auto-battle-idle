@@ -1,3 +1,7 @@
+import {
+  actorHasSorcererFlamePassives,
+  processSorcererActiveDamageHit,
+} from '../sorcererFlame.ts';
 import type { BattleEventListener } from '../events.ts';
 import { applyIncomingDamage } from '../damageDelay.ts';
 import { shouldTriggerBonusBasicAttackOnHit } from '../bonusBasicAttackOnHit.ts';
@@ -744,6 +748,7 @@ export class SkillExecutor {
           {
             suppressBonusBasicAttack: hit.suppressBonusBasicAttack === true,
             suppressAllyAttackFollowUp: hit.suppressAllyAttackFollowUp === true,
+            suppressBonusActiveOnHit: hit.suppressBonusActiveOnHit === true,
           },
         )
       ) {
@@ -1235,6 +1240,86 @@ export class SkillExecutor {
         appliedDamage > 0
       ) {
         resetIdleAtkRampOnAttack(actor);
+      }
+      if (
+        cd.slotKind === 'active' &&
+        appliedDamage > 0 &&
+        damageTarget.isAlive &&
+        actorHasSorcererFlamePassives(actor, passives)
+      ) {
+        const [partyAlliesForHook, enemiesForHook] = this.splitCombatants();
+        const flameOutcome = processSorcererActiveDamageHit(
+          actor,
+          damageTarget,
+          partyAlliesForHook,
+          enemiesForHook,
+          passives,
+          this.gameData,
+          {
+            battleTimeSec: this.deps.getBattleTimeSec(),
+            suppressBonusActiveOnHit:
+              damageContext.suppressBonusActiveOnHit === true,
+          },
+        );
+        if (flameOutcome.pendingHits.length > 0) {
+          this.deps.enqueuePendingHits(flameOutcome.pendingHits);
+        }
+        for (const [targetId, explosionDamage] of flameOutcome.explosionDamageByTargetId) {
+          const explosionTarget = findCombatantById(
+            targetId,
+            partyAlliesForHook,
+            enemiesForHook,
+          );
+          if (!explosionTarget?.isAlive || explosionDamage <= 0) continue;
+          const explosionMitigation = mitigateIncomingDamage(
+            explosionTarget,
+            explosionDamage,
+            passives,
+            { allies: partyAlliesForHook },
+          );
+          const explosionIncoming = applyIncomingDamage(
+            explosionTarget,
+            explosionMitigation.finalDamage,
+          );
+          const explosionApplied =
+            explosionIncoming.damageResult.hpDamage +
+            explosionIncoming.damageResult.barrierDamage +
+            explosionIncoming.delayedDamage;
+          if (explosionApplied <= 0) continue;
+          this.deps.onDamageApplied?.(
+            actor,
+            explosionTarget,
+            explosionApplied,
+            {
+              attackKind: 'damage',
+              hpDamage: explosionIncoming.damageResult.hpDamage,
+              attackRangePx: effectDef.range ?? actor.traits.rangePx,
+            },
+          );
+          this.emit({
+            type: 'skill',
+            actorId: actor.id,
+            targetId: explosionTarget.id,
+            skillId: skill.id,
+            skillName: skill.name,
+            slotKind: cd.slotKind,
+            effect: 'damage',
+            effectIndex,
+            amount: explosionMitigation.finalDamage,
+            range: effectDef.range,
+            ...skillHitEventFields(hitIndex, vfxSourceId),
+          });
+          this.emit({ type: 'hurt', targetId: explosionTarget.id });
+          if (explosionIncoming.damageResult.lethal) {
+            explosionTarget.isAlive = false;
+            this.deps.getSequenceRunner().clearForActor(explosionTarget.id);
+            this.deps.onUnitDied?.(explosionTarget);
+            this.emit({ type: 'death', targetId: explosionTarget.id });
+          }
+        }
+        if (flameOutcome.debuffChanged) {
+          this.deps.onTargetReceivedDebuff?.(damageTarget);
+        }
       }
       const ballistaConfig = mergeBallistaMarkPassive(
         getPassiveDefs(actor, passives),

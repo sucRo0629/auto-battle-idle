@@ -1009,6 +1009,10 @@ function parseTargetShapeFields(
     };
   }
 
+  if (effectiveShape === 'poolEach') {
+    return { targetShape: 'poolEach' };
+  }
+
   invalidField(context, 'targetShape', `unsupported shape ${effectiveShape}`);
 }
 
@@ -4573,6 +4577,42 @@ function requirePassiveEffectParams(
         ...base,
         enemyDamageTakenMultiplier,
         ...(auraConditions !== undefined ? { auraConditions } : {}),
+      };
+    }
+    case 'seedFlameOnActiveHit':
+      return base;
+    case 'bonusActiveOnHit': {
+      const bonusActiveSkillId = requireString(
+        obj,
+        'bonusActiveSkillId',
+        context,
+      );
+      return { ...base, bonusActiveSkillId };
+    }
+    case 'blazingFlameDetonate': {
+      const blazingFlameDetonateSpreadRadiusPx =
+        obj.blazingFlameDetonateSpreadRadiusPx === undefined
+          ? 50
+          : requireNumber(
+              obj,
+              'blazingFlameDetonateSpreadRadiusPx',
+              context,
+            );
+      const blazingFlameDetonatePerSeedScale =
+        obj.blazingFlameDetonatePerSeedScale === undefined
+          ? 0.5
+          : requireNumber(obj, 'blazingFlameDetonatePerSeedScale', context);
+      const blazingFlameDetonateMultiplier =
+        obj.blazingFlameDetonateMultiplier === undefined
+          ? 1.3
+          : requireNumber(obj, 'blazingFlameDetonateMultiplier', context);
+      const blazingFlameUncap = obj.blazingFlameUncap === true;
+      return {
+        ...base,
+        blazingFlameDetonateSpreadRadiusPx,
+        blazingFlameDetonatePerSeedScale,
+        blazingFlameDetonateMultiplier,
+        ...(blazingFlameUncap ? { blazingFlameUncap: true } : {}),
       };
     }
     case 'healReservation': {

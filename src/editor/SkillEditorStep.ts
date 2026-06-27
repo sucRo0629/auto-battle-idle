@@ -570,6 +570,17 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.chance ??= 0.5;
       passive.bonusBasicAttackHpRatio ??= 0.3;
       break;
+    case 'seedFlameOnActiveHit':
+      break;
+    case 'bonusActiveOnHit':
+      passive.bonusActiveSkillId ??= 'at_sorcerer_active_1';
+      break;
+    case 'blazingFlameDetonate':
+      passive.blazingFlameDetonateSpreadRadiusPx ??= 50;
+      passive.blazingFlameDetonatePerSeedScale ??= 0.5;
+      passive.blazingFlameDetonateMultiplier ??= 1.3;
+      passive.blazingFlameUncap ??= true;
+      break;
     case 'periodicDispel':
       passive.periodicTrigger ??= 'waveStart';
       passive.dispelTargetRule ??= { kind: 'self' };
@@ -3001,6 +3012,88 @@ export class SkillEditorStep {
                 }, { rerender: false });
               },
               { step: 0.5, min: 1 },
+            ),
+          ),
+        );
+        break;
+      case 'seedFlameOnActiveHit':
+        effectGrid.appendChild(
+          createEl(
+            'p',
+            'editor-hint',
+            'active ダメージ Hit ごとに種火 +1 stack（basic 非対象）',
+          ),
+        );
+        break;
+      case 'bonusActiveOnHit':
+        effectGrid.appendChild(
+          createFieldRow(
+            'bonusActiveSkillId',
+            createTextInput(passive.bonusActiveSkillId ?? '', (bonusActiveSkillId) => {
+              this.patchPassive(index, (current) => {
+                current.bonusActiveSkillId = bonusActiveSkillId.trim();
+              }, { rerender: false });
+            }),
+          ),
+        );
+        break;
+      case 'blazingFlameDetonate':
+        effectGrid.appendChild(
+          createFieldRow(
+            'blazingFlameDetonateSpreadRadiusPx',
+            createNumberInput(
+              passive.blazingFlameDetonateSpreadRadiusPx ?? 50,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.blazingFlameDetonateSpreadRadiusPx = value;
+                }, { rerender: false });
+              },
+              { step: 1, min: 1 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'blazingFlameDetonatePerSeedScale',
+            createNumberInput(
+              passive.blazingFlameDetonatePerSeedScale ?? 0.5,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.blazingFlameDetonatePerSeedScale = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'blazingFlameDetonateMultiplier',
+            createNumberInput(
+              passive.blazingFlameDetonateMultiplier ?? 1.3,
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.blazingFlameDetonateMultiplier = value;
+                }, { rerender: false });
+              },
+              { step: 0.05, min: 0 },
+            ),
+          ),
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            'blazingFlameUncap',
+            createSelect(
+              passive.blazingFlameUncap ? 'true' : 'false',
+              [
+                { value: 'false', label: '熾火 max 1' },
+                { value: 'true', label: '熾火上限解除' },
+              ],
+              (value) => {
+                this.patchPassive(index, (current) => {
+                  current.blazingFlameUncap = value === 'true';
+                }, { rerender: false });
+              },
             ),
           ),
         );

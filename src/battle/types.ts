@@ -185,7 +185,8 @@ export type TargetShape =
   | "multiLock"
   | "pierce"
   | "chain"
-  | "scatter";
+  | "scatter"
+  | "poolEach";
 
 export type PowerStepMode = "multiply" | "divide";
 
@@ -314,8 +315,8 @@ export interface SaveGameState {
   unlockedClassIds: ClassId[];
 }
 
-/** DoT フレーバー種別（v1: bleed / poison のみ。tick 式は overlay dot 共通） */
-export type DotFlavor = "bleed" | "poison";
+/** DoT フレーバー種別（tick 式は overlay dot 共通） */
+export type DotFlavor = "bleed" | "poison" | "seedFlame" | "blazingFlame";
 
 export interface StatusEffect {
   id: string;
@@ -399,6 +400,8 @@ export interface StatusEffect {
   dotFlavor?: DotFlavor;
   /** dot overlay: tick ダメ倍率（圧縮等の累積） */
   dotTickDamageMul?: number;
+  /** dot overlay: Hunter dotCompress 対象外 */
+  dotCompressImmune?: boolean;
 }
 
 /** 反撃対象の近接／遠隔帯フィルタ（OR。両方未指定 = 全区間） */
@@ -423,7 +426,13 @@ export interface StatBuffModifierEntry {
 }
 
 /** デバフフィルタタグ（gameDataSchema.DEBUFF_FILTER_TAGS と同期） */
-export type DebuffFilterTag = StatusEffectStat | "dot" | "bleed" | "poison" | "stun";
+export type DebuffFilterTag =
+  | StatusEffectStat
+  | "dot"
+  | "bleed"
+  | "poison"
+  | "stun"
+  | "seedFlame";
 
 /** デバフ解除の優先順位（dispelCount > 0 のとき） */
 export type DispelPriority = "longest" | "strongest";
@@ -666,6 +675,9 @@ export type PassiveEffectKind =
   | "dotDurationMultiplierOnApply"
   | "dottedEnemyHealReceivedDebuff"
   | "conditionalEnemyDamageTakenAura"
+  | "seedFlameOnActiveHit"
+  | "bonusActiveOnHit"
+  | "blazingFlameDetonate"
   /** @deprecated 読み込み互換（正規化後は heal + healSubKind: hot） */
   | "hot";
 
@@ -989,6 +1001,16 @@ export interface PassiveSkillDef {
   enemyDamageTakenMultiplier?: number;
   /** conditionalEnemyDamageTakenAura: AND 条件 */
   auraConditions?: DamageIncreaseCondition[];
+  /** bonusActiveOnHit: 追撃する active スキル ID */
+  bonusActiveSkillId?: string;
+  /** blazingFlameDetonate: 爆発後の種火 spread 半径（px） */
+  blazingFlameDetonateSpreadRadiusPx?: number;
+  /** blazingFlameDetonate: 消費種火 1 stack あたりの N（ATK 倍率） */
+  blazingFlameDetonatePerSeedScale?: number;
+  /** blazingFlameDetonate: 爆発ダメ倍率 */
+  blazingFlameDetonateMultiplier?: number;
+  /** blazingFlameDetonate: 熾火 stack 上限解除（P4） */
+  blazingFlameUncap?: boolean;
   /** bloodlustDuelist: block 率（未指定 = 0.05） */
   bloodlustBlockChance?: number;
   /** bloodlustDuelist: DEF バフ（maxBuffAtHpRatio / buffMultiplierMax） */
@@ -1202,6 +1224,8 @@ export interface PendingSkillHit {
   suppressBonusBasicAttack?: boolean;
   /** allyAttackFollowUp 由来 Hit — 再帰追撃を抑止 */
   suppressAllyAttackFollowUp?: boolean;
+  /** bonusActiveOnHit 由来 Hit — P3 再帰を抑止 */
+  suppressBonusActiveOnHit?: boolean;
 }
 
 export interface DamageSkillEffect extends SkillEffectCommon {

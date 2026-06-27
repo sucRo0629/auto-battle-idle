@@ -95,6 +95,8 @@ export interface PassiveDamageContext {
   suppressBonusBasicAttack?: boolean;
   /** allyAttackFollowUp 追撃 Hit — 再帰追撃を抑止 */
   suppressAllyAttackFollowUp?: boolean;
+  /** bonusActiveOnHit 追撃 Hit — P3 再帰を抑止 */
+  suppressBonusActiveOnHit?: boolean;
   /** 味方一覧（仕留め aura 等） */
   allies?: CombatantState[];
 }

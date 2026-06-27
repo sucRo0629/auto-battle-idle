@@ -1,10 +1,11 @@
 [
   {
     "id": "at_sorcerer_basic_attack",
-    "name": "魔弾",
+    "name": " ",
     "effect": [
       {
         "type": "damage",
+        "damageType": "magic",
         "amount": {
           "kind": "atkBased",
           "atkScale": 0.85
@@ -23,7 +24,7 @@
   },
   {
     "id": "at_sorcerer_active_1",
-    "name": "at_sorcerer_active_1",
+    "name": "炎術",
     "trigger": {
       "kind": "time",
       "value": 8
@@ -50,10 +51,10 @@
   },
   {
     "id": "at_sorcerer_active_2",
-    "name": "at_sorcerer_active_2",
+    "name": "双炎",
     "trigger": {
       "kind": "time",
-      "value": 11
+      "value": 10
     },
     "effect": [
       {
@@ -72,6 +73,61 @@
           "kind": "distance",
           "side": "enemy",
           "order": "nearest"
+        }
+      }
+    ]
+  },
+  {
+    "id": "at_sorcerer_active_3",
+    "name": "散火",
+    "trigger": {
+      "kind": "time",
+      "value": 14
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "magic",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.2
+        },
+        "vfx": {
+          "enabled": true
+        },
+        "targetShape": "multiLock",
+        "hitCount": 3,
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        }
+      }
+    ]
+  },
+  {
+    "id": "at_sorcerer_active_4",
+    "name": "燎原",
+    "trigger": {
+      "kind": "time",
+      "value": 18
+    },
+    "effect": [
+      {
+        "type": "damage",
+        "damageType": "magic",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1.5
+        },
+        "vfx": {
+          "enabled": true
+        },
+        "targetShape": "poolEach",
+        "target": {
+          "kind": "status",
+          "side": "enemy",
+          "debuffTags": ["seedFlame"]
         }
       }
     ]

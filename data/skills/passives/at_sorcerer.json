@@ -1,0 +1,32 @@
+[
+  {
+    "id": "at_sorcerer_passive_1",
+    "name": "猛火の術",
+    "effect": "defenseIgnore",
+    "defenseIgnore": {
+      "reg": {
+        "percent": 0.2
+      }
+    }
+  },
+  {
+    "id": "at_sorcerer_passive_2",
+    "name": "焼き尽くす熾火",
+    "effect": "seedFlameOnActiveHit"
+  },
+  {
+    "id": "at_sorcerer_passive_3",
+    "name": "連なる炎",
+    "effect": "bonusActiveOnHit",
+    "bonusActiveSkillId": "at_sorcerer_active_1"
+  },
+  {
+    "id": "at_sorcerer_passive_4",
+    "name": "花開く炎",
+    "effect": "blazingFlameDetonate",
+    "blazingFlameDetonateSpreadRadiusPx": 50,
+    "blazingFlameDetonatePerSeedScale": 0.5,
+    "blazingFlameDetonateMultiplier": 1.3,
+    "blazingFlameUncap": true
+  }
+]

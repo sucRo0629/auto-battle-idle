@@ -505,13 +505,34 @@
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "at_sorcerer_basic_attack",
-    "passiveIds": [],
+    "passiveIds": [
+      "at_sorcerer_passive_1",
+      "at_sorcerer_passive_2",
+      "at_sorcerer_passive_3",
+      "at_sorcerer_passive_4"
+    ],
     "skills": [
       {
         "level": 0,
         "skillIds": [
+          "at_sorcerer_passive_1",
+          "at_sorcerer_passive_2",
           "at_sorcerer_active_1",
           "at_sorcerer_active_2"
+        ]
+      },
+      {
+        "level": 10,
+        "skillIds": [
+          "at_sorcerer_passive_3",
+          "at_sorcerer_active_3"
+        ]
+      },
+      {
+        "level": 20,
+        "skillIds": [
+          "at_sorcerer_passive_4",
+          "at_sorcerer_active_4"
         ]
       }
     ],

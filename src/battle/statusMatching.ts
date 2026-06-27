@@ -59,6 +59,10 @@ function matchesDebuffTag(
     return effect.overlay === 'stun' || effect.kind === 'cc';
   }
 
+  if (tag === 'seedFlame') {
+    return effect.overlay === 'dot' && effect.dotFlavor === 'seedFlame';
+  }
+
   return false;
 }
 

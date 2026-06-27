@@ -34,6 +34,7 @@ import { resolveIdleAtkRampMultiplier } from './idleAtkRamp.ts';
 import { consumeNextOutgoingDamageMultiplier } from './nextOutgoingDamage.ts';
 import { resolveTargetHpRatioDamageScale } from './targetHpRatioDamageScale.ts';
 import { resolvePartyFinisherDamageMultiplier } from './hunterPassives.ts';
+import { resolveBlazingFlameMagicDamageTakenMultiplier } from './sorcererFlame.ts';
 
 export function getPassiveDefs(
   combatant: CombatantState,
@@ -202,6 +203,8 @@ export interface DotTickOptions {
   statusEffect?: StatusEffect;
   dotTickDamageMul?: number;
   allies?: CombatantState[];
+  /** seedFlame / blazingFlame: stack 数で tick 量を乗算 */
+  stackMultiplier?: number;
 }
 
 export function resolveDotAmountFromStatus(
@@ -233,6 +236,11 @@ export function resolveDotAmountFromStatus(
       statusEffect: effect,
       dotTickDamageMul: effect.dotTickDamageMul,
       allies,
+      stackMultiplier:
+        effect.dotFlavor === 'seedFlame' ||
+        effect.dotFlavor === 'blazingFlame'
+          ? Math.max(1, effect.stacks ?? 1)
+          : 1,
     },
   );
 }
@@ -471,7 +479,12 @@ export function resolveDamage(
           passives,
         )
       : 1;
-  const takenMul = ignoreDr ? 1 : getDamageTakenMultiplier(target);
+  const takenMul = ignoreDr
+    ? 1
+    : getDamageTakenMultiplier(target) *
+      (damageType === 'magic'
+        ? resolveBlazingFlameMagicDamageTakenMultiplier(target)
+        : 1);
   return Math.max(1, Math.floor(subtotal * takenMul * finisherMul));
 }
 
@@ -485,12 +498,13 @@ export function resolveDotTick(
 ): number {
   const status = options.statusEffect;
   const tickMul = options.dotTickDamageMul ?? 1;
+  const stackMul = options.stackMultiplier ?? 1;
   const scaledAmount: ResourceAmountSpec =
-    tickMul === 1 || amount.kind !== 'atkBased'
+    (tickMul === 1 && stackMul === 1) || amount.kind !== 'atkBased'
       ? amount
       : {
           ...amount,
-          atkScale: (amount.atkScale ?? 1) * tickMul,
+          atkScale: (amount.atkScale ?? 1) * tickMul * stackMul,
         };
   return resolveDamage(
     source,

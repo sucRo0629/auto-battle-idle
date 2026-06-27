@@ -427,6 +427,14 @@ export function resolveEffectResolution(
     return { waves: [{ hitIndex: 0, targets }] };
   }
 
+  if (shape === 'poolEach') {
+    const targets = attackablePool
+      .filter((unit) => unit.isAlive)
+      .map((unit) => ({ unit }));
+    if (targets.length === 0) return null;
+    return { waves: [{ hitIndex: 0, targets }] };
+  }
+
   if (shape === 'pierce') {
     const targets = resolvePierceHitTargets(
       spec,

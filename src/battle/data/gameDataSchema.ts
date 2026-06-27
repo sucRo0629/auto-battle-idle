@@ -258,6 +258,7 @@ export const TARGET_SHAPES = [
   "pierce",
   "chain",
   "scatter",
+  "poolEach",
 ] as const satisfies readonly TargetShape[];
 
 export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
@@ -287,6 +288,7 @@ export const TARGET_SHAPE_LABELS: Record<TargetShape, string> = {
   pierce: "貫通",
   chain: "連鎖",
   scatter: "乱打",
+  poolEach: "プール全員（各1回）",
 };
 
 export const POWER_STEP_MODES = [
@@ -334,6 +336,9 @@ export const PASSIVE_EFFECT_KINDS = [
   "dotDurationMultiplierOnApply",
   "dottedEnemyHealReceivedDebuff",
   "conditionalEnemyDamageTakenAura",
+  "seedFlameOnActiveHit",
+  "bonusActiveOnHit",
+  "blazingFlameDetonate",
 ] as const satisfies readonly PassiveEffectKind[];
 
 export const PASSIVE_EFFECT_KIND_LABELS: Record<
@@ -379,6 +384,9 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   dotDurationMultiplierOnApply: "DoT付与時間倍率",
   dottedEnemyHealReceivedDebuff: "DoT中被回復減",
   conditionalEnemyDamageTakenAura: "条件付き被ダメ aura",
+  seedFlameOnActiveHit: "種火付与（active hit）",
+  bonusActiveOnHit: "追撃 active",
+  blazingFlameDetonate: "熾火起爆",
 };
 
 export const HEAL_SUB_KINDS = [
@@ -780,6 +788,7 @@ export const DEBUFF_FILTER_TAGS = [
   { id: "bleed" as const, label: "出血" },
   { id: "poison" as const, label: "毒" },
   { id: "stun" as const, label: "スタン" },
+  { id: "seedFlame" as const, label: "種火" },
 ] as const satisfies readonly { id: DebuffFilterTag; label: string }[];
 
 export const DISPEL_PRIORITIES = [
