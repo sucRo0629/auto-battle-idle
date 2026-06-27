@@ -40,6 +40,16 @@ describe("battleX debug trace", () => {
     recordBattleXTraceEntry(trace, unit, 10, "approach", context);
     expect(trace).toHaveLength(0);
 
+    recordBattleXTraceEntry(trace, unit, 10, "approach", context, {
+      approachTargetX: 52,
+      shouldSkipEngagedAutoApproach: false,
+      priorityHealTargetId: "guardian",
+      healWithholdReason: "basic:pht_out_of_range",
+    }, { includeZeroDeltaWhenDetailed: true });
+    expect(trace).toHaveLength(1);
+    expect(trace[0]?.deltaX).toBe(0);
+    expect(trace[0]?.details?.priorityHealTargetId).toBe("guardian");
+
     for (let i = 0; i < BATTLE_X_DEBUG_TRACE_LIMIT + 3; i++) {
       unit.battleX = i + 1;
       recordBattleXTraceEntry(trace, unit, i, "approach", {

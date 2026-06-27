@@ -176,36 +176,101 @@ export function skillHasBarrierEffect(
   return effects.some(isBarrierEffect);
 }
 
-/** アクティブ heal / hot: PHT が効果形状内にいなければ発動保留（正本: combat.md §回復 PHT） */
-function hasDamagedHealCandidate(
-  spec: TargetSpec,
+/** アクティブ heal / hot 発動保留理由（debug 表示用） */
+export type HealWithholdReason =
+  | 'all_full_hp'
+  | 'pht_out_of_range'
+  | 'pht_outside_aoe';
+
+export function evaluateHealWithholdReason(
+  effect: SkillEffectDef,
   actor: CombatantState,
   allies: CombatantState[],
-  attackablePool: CombatantState[],
-  effect?: SkillEffectDef,
-): boolean {
+  enemies: CombatantState[],
+  gameData: GameData,
+  passives?: PassiveSkillDef[],
+  skill?: ActiveSkillDef,
+): HealWithholdReason | null {
+  if (effect.type !== 'heal' || (effect.healSubKind ?? 'instant') === 'dispel') {
+    return null;
+  }
+
+  const spec = resolveEffectTargetSpec(
+    effect,
+    actor,
+    allies,
+    enemies,
+    passives,
+    skill,
+  );
+
   if (spec.kind === 'self') {
-    return actor.isAlive && actor.hp < getEffectiveMaxHp(actor);
+    return actor.isAlive && actor.hp < getEffectiveMaxHp(actor)
+      ? null
+      : 'all_full_hp';
   }
 
   if (spec.kind === 'all' && spec.side === 'ally') {
-    return resolvePriorityHealTarget(livingAllies(allies)) !== null;
+    return resolvePriorityHealTarget(livingAllies(allies)) !== null
+      ? null
+      : 'all_full_hp';
   }
 
   const pht = resolvePriorityHealTarget(livingAllies(allies));
-  if (!pht) return false;
+  if (!pht) return 'all_full_hp';
+
+  const merged = mergeEffectWithSkillTargeting(skill, effect);
+  const rangePx = resolveSkillRangePx(
+    actor,
+    merged,
+    livingAllies(allies).length,
+  );
+  const attackablePool = getAttackablePool(
+    spec,
+    actor,
+    allies,
+    enemies,
+    rangePx,
+  );
 
   if (
-    effect?.targetShape === 'aoe' &&
-    effect.aoeRadiusPx !== undefined &&
-    effect.aoeRadiusPx > 0 &&
+    merged.targetShape === 'aoe' &&
+    merged.aoeRadiusPx !== undefined &&
+    merged.aoeRadiusPx > 0 &&
     isSelfOriginSpec(spec)
   ) {
     const anchorX = getBattleX(actor);
-    return Math.abs(getBattleX(pht) - anchorX) <= effect.aoeRadiusPx;
+    return Math.abs(getBattleX(pht) - anchorX) <= merged.aoeRadiusPx
+      ? null
+      : 'pht_outside_aoe';
   }
 
-  return attackablePool.some((unit) => unit.id === pht.id);
+  return attackablePool.some((unit) => unit.id === pht.id)
+    ? null
+    : 'pht_out_of_range';
+}
+
+/** アクティブ heal / hot: PHT が効果形状内にいなければ発動保留（正本: combat.md §回復 PHT） */
+function hasDamagedHealCandidate(
+  effect: SkillEffectDef,
+  actor: CombatantState,
+  allies: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  passives?: PassiveSkillDef[],
+  skill?: ActiveSkillDef,
+): boolean {
+  return (
+    evaluateHealWithholdReason(
+      effect,
+      actor,
+      allies,
+      enemies,
+      gameData,
+      passives,
+      skill,
+    ) === null
+  );
 }
 
 function hasScopedTargetRuleOverride(
@@ -404,11 +469,13 @@ function resolveEffectResolutionInternal(
     (sourceEffect.healSubKind ?? 'instant') !== 'dispel' &&
     !skipHealWithhold &&
     !hasDamagedHealCandidate(
-      specForResolution,
+      merged,
       actor,
       allies,
-      attackablePool,
-      merged,
+      enemies,
+      _gameData,
+      passives,
+      skill,
     )
   ) {
     return null;

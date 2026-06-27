@@ -189,6 +189,7 @@ import {
   recordBattleXTraceEntries,
   recordBattleXTraceEntry,
 } from "./battleXDebugTrace.ts";
+import { resolveApproachHealDebugDetails } from "./battleXHealDebug.ts";
 import type {
   BattlePhase,
   BattleSnapshot,
@@ -620,6 +621,7 @@ export class BattleEngine {
     beforeById: ReadonlyMap<string, number> | null,
     reason: BattleXDebugTraceReason,
     detailsById?: ReadonlyMap<string, BattleXDebugTraceEntry["details"]>,
+    options?: { includeZeroDeltaWhenDetailed?: boolean },
   ): void {
     if (!beforeById) return;
     const context = this.buildBattleXDebugTraceContext();
@@ -630,6 +632,7 @@ export class BattleEngine {
       reason,
       context,
       detailsById,
+      options,
     );
     recordBattleXTraceEntries(
       this.battleXDebugTickTrace,
@@ -638,6 +641,7 @@ export class BattleEngine {
       reason,
       context,
       detailsById,
+      options,
     );
   }
 
@@ -888,6 +892,12 @@ export class BattleEngine {
       detailsById?.set(ally.id, {
         approachTargetX: target,
         shouldSkipEngagedAutoApproach: skipAutoApproach,
+        ...resolveApproachHealDebugDetails(
+          ally,
+          this.players,
+          this.enemies,
+          this.gameData,
+        ),
         bodyAnimMarching: this.resolveBodyAnimMarching(ally),
         isActorUseLocked: this.skillSequenceRunner.isActorUseLocked(ally.id),
         isActorInSkillMotion,
@@ -947,7 +957,9 @@ export class BattleEngine {
       }
       updateUnitApproach(enemy, target, moveStep);
     }
-    this.recordBattleXDebugChanges(units, beforeById, "approach", detailsById);
+    this.recordBattleXDebugChanges(units, beforeById, "approach", detailsById, {
+      includeZeroDeltaWhenDetailed: true,
+    });
   }
 
   private clearEngagedVisualState(): void {

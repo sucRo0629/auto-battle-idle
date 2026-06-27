@@ -448,6 +448,12 @@ export class BattleXDebugCanvas {
       details.shouldSkipEngagedAutoApproach === undefined
         ? null
         : `skip=${details.shouldSkipEngagedAutoApproach}`,
+      details.priorityHealTargetId === undefined
+        ? null
+        : `pht=${details.priorityHealTargetId}`,
+      details.healWithholdReason === undefined
+        ? null
+        : `withhold=${details.healWithholdReason}`,
       details.bodyAnimMarching === undefined
         ? null
         : `march=${details.bodyAnimMarching}`,

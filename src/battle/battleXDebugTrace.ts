@@ -29,11 +29,20 @@ export function recordBattleXTraceEntries(
   reason: BattleXDebugTraceReason,
   context: BattleXDebugTraceContext,
   detailsById?: ReadonlyMap<string, BattleXDebugTraceEntry["details"]>,
+  options?: { includeZeroDeltaWhenDetailed?: boolean },
 ): void {
   for (const unit of units) {
     const beforeX = beforeById.get(unit.id);
     if (beforeX === undefined) continue;
-    recordBattleXTraceEntry(trace, unit, beforeX, reason, context, detailsById?.get(unit.id));
+    recordBattleXTraceEntry(
+      trace,
+      unit,
+      beforeX,
+      reason,
+      context,
+      detailsById?.get(unit.id),
+      options,
+    );
   }
   trimBattleXDebugTrace(trace);
 }
@@ -45,10 +54,19 @@ export function recordBattleXTraceEntry(
   reason: BattleXDebugTraceReason,
   context: BattleXDebugTraceContext,
   details?: BattleXDebugTraceEntry["details"],
+  options?: { includeZeroDeltaWhenDetailed?: boolean },
 ): void {
   const afterX = unit.battleX;
   const deltaX = afterX - beforeX;
-  if (Math.abs(deltaX) <= ZERO_DELTA_EPSILON) return;
+  const hasApproachDetails =
+    details?.approachTargetX !== undefined ||
+    details?.shouldSkipEngagedAutoApproach !== undefined;
+  if (
+    Math.abs(deltaX) <= ZERO_DELTA_EPSILON &&
+    !(options?.includeZeroDeltaWhenDetailed && hasApproachDetails)
+  ) {
+    return;
+  }
 
   trace.push({
     unitId: unit.id,

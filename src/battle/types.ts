@@ -1706,6 +1706,8 @@ export interface BattleXDebugTraceEntry {
   details?: {
     approachTargetX?: number;
     shouldSkipEngagedAutoApproach?: boolean;
+    priorityHealTargetId?: string;
+    healWithholdReason?: string;
     bodyAnimMarching?: boolean;
     isActorUseLocked?: boolean;
     isActorInSkillMotion?: boolean;

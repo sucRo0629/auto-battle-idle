@@ -133,7 +133,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 **Phase 3d 後 cleanup:** `battleX` 単一正本の runtime 整理は [master-work-order.md](./master-work-order.md) の battle-field cleanup 表を正とする。`battleCamera.ts` と skill move の旧 visual フィールドは削除済み。`visualX` は snapshot 互換ミラー、`engagedVisualTarget*` は deprecated alias として次フェーズ送り。
 
-**Phase 3d 延長 — 回復 PHT 整合（M2 完了）:** Priority Heal Target（PHT）を [combat.md](../spec/combat.md) §回復 PHT に正本化済。Task 0 spec → Task 1 回帰テスト → Task 2 ally-heal 接近 PHT 化 → Task 3 heal withhold PHT 化を実装。残: Task 4–5 範囲回復棚卸し / クラス整合、Task 6 debug、Task 7 横展開。
+**Phase 3d 延長 — 回復 PHT 整合（完了）:** Priority Heal Target（PHT）を [combat.md](../spec/combat.md) §回復 PHT に正本化。Task 0–7 実装済（spec / 接近 / withhold / selfOrigin 棚卸し / 薬草師整合 / battleX debug PHT・withhold 表示 / sp_cleric 等回帰）。
 
 ### スコープ外（Phase 3）— 独自システムクラス
 
