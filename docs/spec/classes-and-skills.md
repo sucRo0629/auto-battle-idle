@@ -75,6 +75,39 @@
 - ルール変更時は **本書 / combat.md と辞書の `ja` を同作業内で更新**
 - 状態アイコン・カテゴリの正本は [combat.md §ステータス効果](combat.md#ステータス効果) の HUD バッジ節。辞書の `statusCategory` はそれに従う
 
+### スキル説明自動生成（Phase 4b）
+
+スキル JSON に `description` フィールドは持たない。説明文は `src/ui/formatSkillText.ts` の `formatActiveDescription` / `formatPassiveDescription` で組み立てる（現行: `SkillMenuPanel` ツールチップ・`SkillEditorStep` プレビュー）。戦闘ルールの正本は [combat.md](combat.md) および本書の effect 定義。**数値・確定文案の正本は JSON と `src/ui/formatSkillText.test.ts`**。本節はテンプレ方針のみ（スキル一覧への文案転記はしない）。
+
+#### 出力テンプレ（v1・1 行）
+
+**Active**
+
+`CD：[時間|被撃N|攻撃N] / 持続：[あれば] / 硬直[・移動停止]：[あれば] / 条件：[あれば] / [効果…] /`
+
+- `CD` — `time` → `N秒`、`hitsTaken` → `被撃N`、`basicAttackCount` → `攻撃N`
+- `持続` — 効果残り秒（`buffDurationSec` 等の最大）。`useDurationSec`（硬直）とは分ける
+- `硬直` — `useDurationSec`。`useDurationPauseApproach` 時は `・移動停止` を付与
+- `条件` — `firePolicy: smart` の `fireConditions` 要約
+- `[効果…]` — コンパクト表記（例: `DEF×1.2`、`被ダメ×0.75`、`ブロック率+20%`）。複数 effect は `、` 区切り
+
+**Passive**
+
+`効果：[説明]`
+
+#### 表記ルール
+
+- 対象「自身」は effect 表示から省略（compact 時）
+- 秒表記は `秒`（`s` 表記にしない）
+- ブロック率に「（加算）」は各スキル説明に書かない（barrier の加算表記は既存どおり）
+- 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` テスト
+
+#### 運用
+
+- 新 effect / ターゲット形状を足す **データ PR ごと** に `formatSkillText` とテストを同梱（[phase-roadmap.md §4b](../plans/phase-roadmap.md#4b--スキル説明自動生成随時)）
+- クラス単位で文案をテスト固定し、全クラス一括 polish は Phase 7a 前でよい
+- Phase 4d 以降: 編成 UI のスキルカードは [party-formation-ui.md §6.3](party-formation-ui.md#63-習得スキル閲覧専用) の **効果単位改行**（`formatSkillCardLines`、API は 4d 着手時に確定）。4b の 1 行出力は当面 tooltip / エディタ互換として維持し、4d 後に目視で文案を調整する
+
 ## スキル機能レイヤー
 
 スキル設計の正本は、一般 RPG 的な職業語ではなく **Kill / Flow / Survival** の戦闘機能レイヤーで説明する。
