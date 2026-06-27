@@ -40,7 +40,12 @@
         "buffDurationSec": 5,
         "buffSubKind": "stat"
       }
-    ]
+    ],
+    "target": {
+      "kind": "distance",
+      "side": "enemy",
+      "order": "nearest"
+    }
   },
   {
     "id": "df_guardian_active_2",
@@ -51,9 +56,6 @@
     },
     "effect": [
       {
-        "target": {
-          "kind": "self"
-        },
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "def",
@@ -66,9 +68,6 @@
         "animLoopEndFrame": 5
       },
       {
-        "target": {
-          "kind": "self"
-        },
         "type": "buff",
         "buffSubKind": "block",
         "buffStat": "atk",
@@ -77,7 +76,11 @@
         "chance": 0.5
       }
     ],
-    "useDurationSec": 5
+    "useDurationSec": 5,
+    "useDurationPauseApproach": true,
+    "target": {
+      "kind": "self"
+    }
   },
   {
     "id": "df_guardian_active_3",
@@ -126,6 +129,7 @@
       }
     ],
     "useDurationSec": 2,
+    "useDurationPauseApproach": true,
     "maxCharges": 1,
     "blockResonanceStanceDurationBaseSec": 2,
     "blockResonanceStanceDamageTakenPerStack": 0.04,

@@ -1,10 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 import { grantInvulnerable } from './invulnerable.ts';
-import {
-  LAST_STAND_HP_RATIO_THRESHOLD,
-  tryLastStandInvulnerable,
-} from './lastStandInvulnerable.ts';
+import { tryLastStandInvulnerable } from './lastStandInvulnerable.ts';
 
 function mockUnit(
   overrides: Partial<CombatantState> & { id: string },
@@ -48,7 +45,7 @@ const passives: Record<string, PassiveSkillDef> = {
 };
 
 describe('lastStandInvulnerable', () => {
-  it('negates lethal damage once when HP ratio is at threshold', () => {
+  it('negates lethal damage once regardless of current HP ratio', () => {
     const unit = mockUnit({ id: 'g1', hp: 25, maxHp: 100 });
     const result = tryLastStandInvulnerable(unit, 30, passives);
     expect(result.negated).toBe(true);
@@ -56,9 +53,16 @@ describe('lastStandInvulnerable', () => {
     expect(unit.lastStandInvulnerableUsed).toBe(true);
   });
 
-  it('does not trigger above HP threshold', () => {
-    const unit = mockUnit({ id: 'g2', hp: 30, maxHp: 100 });
-    const result = tryLastStandInvulnerable(unit, 40, passives);
+  it('triggers on lethal damage even above former 25% HP threshold', () => {
+    const unit = mockUnit({ id: 'g2', hp: 80, maxHp: 100 });
+    const result = tryLastStandInvulnerable(unit, 90, passives);
+    expect(result.negated).toBe(true);
+    expect(result.triggered).toBe(true);
+  });
+
+  it('does not trigger on non-lethal damage', () => {
+    const unit = mockUnit({ id: 'g2b', hp: 80, maxHp: 100 });
+    const result = tryLastStandInvulnerable(unit, 50, passives);
     expect(result.negated).toBe(false);
     expect(unit.lastStandInvulnerableUsed).toBeUndefined();
   });
@@ -83,14 +87,6 @@ describe('lastStandInvulnerable', () => {
           effect.overlay === 'invulnerable' && effect.remainingSec > 0,
       ),
     ).toBe(true);
-  });
-
-  it('respects HP ratio threshold constant', () => {
-    expect(LAST_STAND_HP_RATIO_THRESHOLD).toBe(0.25);
-    const unit = mockUnit({ id: 'g5', hp: 26, maxHp: 100 });
-    expect(tryLastStandInvulnerable(unit, 30, passives).negated).toBe(false);
-    unit.hp = 25;
-    expect(tryLastStandInvulnerable(unit, 30, passives).negated).toBe(true);
   });
 });
 

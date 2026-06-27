@@ -16,7 +16,7 @@ import {
 } from './test/battleFieldSpec.harness.ts';
 
 describe('engage approach skill fixes', () => {
-  it('wave2: iron guard approaches while active useDuration lock is active', () => {
+  it('wave2: iron guard approaches during use lock without pauseApproach', () => {
     const engine = createStage1Engine();
     reachWave2Engage(engine);
     const internal = asBattleEngineInternals(engine);
@@ -41,6 +41,33 @@ describe('engage approach skill fixes', () => {
 
     expect(movedWhileUseLocked).toBe(true);
     expect(iron.battleX).toBeGreaterThan(startX + 1);
+  });
+
+  it('wave2: iron guard does not approach during pauseApproach use lock', () => {
+    const engine = createStage1Engine();
+    reachWave2Engage(engine);
+    const internal = asBattleEngineInternals(engine);
+    const iron = internal.players.find((p) => p.name === '鉄衛士')!;
+    for (const enemy of internal.enemies) {
+      if (!enemy.isAlive) continue;
+      enemy.battleX = iron.battleX + 200;
+    }
+    internal.skillSequenceRunner.beginUse(iron.id, 2, { pauseApproach: true });
+    const startX = iron.battleX;
+
+    let movedWhilePauseApproach = false;
+    for (let t = 0; t < 90; t++) {
+      const pauseApproach =
+        internal.skillSequenceRunner.isActorUseLockPauseApproach(iron.id);
+      const pre = iron.battleX;
+      engine.tick(TICK_DT);
+      if (pauseApproach && Math.abs(iron.battleX - pre) > 0.01) {
+        movedWhilePauseApproach = true;
+      }
+    }
+
+    expect(movedWhilePauseApproach).toBe(false);
+    expect(Math.abs(iron.battleX - startX)).toBeLessThan(0.5);
   });
 
   it('ally back row attacks from formation depth when enemy enters range', () => {

@@ -145,7 +145,7 @@ function formatFireConditionSummary(condition: FireCondition): string {
     case "targetBarrierBelowGrant":
       return "付与量>現バリア";
     case "blockResonanceStacks":
-      return `迎撃stack≥${condition.min}`;
+      return `防壁≥${condition.min}`;
     case "hasDot":
       return FIRE_CONDITION_KIND_LABELS.hasDot;
   }
@@ -158,6 +158,128 @@ function formatFireConditionsSummary(
   if (!conditions || conditions.length === 0) return "";
   const joiner = match === "any" ? " | " : " & ";
   return conditions.map(formatFireConditionSummary).join(joiner);
+}
+
+function formatSecondsLabel(value: number): string {
+  const rounded = Math.round(value * 100) / 100;
+  if (Number.isInteger(rounded)) {
+    return `${rounded}秒`;
+  }
+  return `${rounded}秒`;
+}
+
+function formatCdLabel(kind: SkillTriggerKind, value: number): string {
+  switch (kind) {
+    case "time":
+      return value === 0 ? "チャージなし" : formatSecondsLabel(value);
+    case "basicAttackCount":
+      return `攻撃${value}`;
+    case "hitsTaken":
+      return `被撃${value}`;
+  }
+}
+
+function isSelfTargetSpec(spec: TargetSpec): boolean {
+  return spec.kind === "self";
+}
+
+function resolveEffectTargetSpec(effect: SkillEffectDef): TargetSpec {
+  return effect.target ?? defaultTargetForEffectType(effect.type);
+}
+
+function collectEffectDurationSec(
+  effect: SkillEffectDef,
+  visit: (sec: number) => void,
+): void {
+  switch (effect.type) {
+    case "buff":
+      if (effect.buffDurationSec !== undefined && effect.buffDurationSec > 0) {
+        visit(effect.buffDurationSec);
+      }
+      break;
+    case "debuff":
+      if (effect.debuffDurationSec !== undefined && effect.debuffDurationSec > 0) {
+        visit(effect.debuffDurationSec);
+      }
+      if (effect.durationSec !== undefined && effect.durationSec > 0) {
+        visit(effect.durationSec);
+      }
+      break;
+    case "heal":
+      if (effect.durationSec !== undefined && effect.durationSec > 0) {
+        visit(effect.durationSec);
+      }
+      break;
+    case "basicAttackTransform":
+      if (effect.buffDurationSec !== undefined && effect.buffDurationSec > 0) {
+        visit(effect.buffDurationSec);
+      }
+      break;
+    case "conditionalEffect":
+      for (const branch of [...effect.thenEffects, ...effect.elseEffects]) {
+        collectEffectDurationSec(branch, visit);
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+function resolveActiveSkillDurationLabel(
+  def: ActiveSkillDef,
+): string | undefined {
+  if (def.effect.some((effect) => effect.type === "blockResonanceConsume")) {
+    const base = def.blockResonanceStanceDurationBaseSec ?? 2;
+    return `${base}+防壁スタック数秒`;
+  }
+  let maxSec = 0;
+  for (const effect of def.effect) {
+    collectEffectDurationSec(effect, (sec) => {
+      maxSec = Math.max(maxSec, sec);
+    });
+  }
+  if (maxSec <= 0) return undefined;
+  return formatSecondsLabel(maxSec);
+}
+
+function resolveActiveSkillLockLabel(def: ActiveSkillDef): string | undefined {
+  const hasConsume = def.effect.some(
+    (effect) => effect.type === "blockResonanceConsume",
+  );
+  const useSec = def.useDurationSec ?? 0;
+  if (useSec <= 0 && !hasConsume) return undefined;
+
+  let label: string;
+  if (hasConsume) {
+    const base = def.blockResonanceStanceDurationBaseSec ?? (useSec || 2);
+    label = `${base}+防壁スタック数秒`;
+  } else {
+    label = formatSecondsLabel(useSec);
+  }
+  if (def.useDurationPauseApproach) {
+    label += "・移動停止";
+  }
+  return label;
+}
+
+function formatBlockResonanceConsumeSkillEffect(
+  def: ActiveSkillDef,
+): string {
+  const radius = def.blockResonanceOnBlockKnockbackRadiusPx ?? 50;
+  const damage = def.blockResonanceOnBlockDamage;
+  const defScale =
+    damage?.kind === "defBased" ? (damage.defScale ?? 1) : 1;
+  return `「城塞の構え」：ブロック時半径${radius}px内の敵にDEF×${defScale}ダメ+ノックバック`;
+}
+
+function formatActiveSkillEffectBody(def: ActiveSkillDef): string {
+  if (def.effect.some((effect) => effect.type === "blockResonanceConsume")) {
+    return formatBlockResonanceConsumeSkillEffect(def);
+  }
+  return def.effect
+    .map((effect) => formatActiveEffectDetail(effect, { compact: true }))
+    .filter(Boolean)
+    .join("、");
 }
 
 function formatTarget(
@@ -329,6 +451,10 @@ function formatBuffTargetStats(
   return formatStatsWithModifier(stats, multiplier, flatBonus);
 }
 
+function compactStatEffectLabel(label: string): string {
+  return label.replace(/\s+×/g, "×").replace(/\+\s+/g, "+").replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
+}
+
 function formatDefenseIgnoreSpec(
   spec: PassiveSkillDef["defenseIgnore"] | SkillEffectDef["defenseIgnore"]
 ): string {
@@ -420,7 +546,15 @@ function formatCounterResponse(response: CounterResponseDef): string {
   }
 }
 
-function formatActiveEffectDetail(effect: SkillEffectDef): string {
+function formatActiveEffectDetail(
+  effect: SkillEffectDef,
+  options?: { compact?: boolean },
+): string {
+  const compact = options?.compact ?? false;
+
+  if (effect.type === "blockResonanceConsume") {
+    return "";
+  }
   if (effect.type === "conditionalEffect") {
     const conditionCount = effect.conditions.length;
     const thenSummary = effect.thenEffects
@@ -511,11 +645,15 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
           }（被ダメ×${formatPercent(effect.damageReductionRatio ?? 0.1)}）`
         );
       } else if (effect.buffSubKind === "block") {
-        extras.push(
-          `${BUFF_SUB_KIND_LABELS.block} ${formatPercent(effect.chance ?? 0)} ${
-            effect.buffDurationSec ?? 0
-          }s`
-        );
+        if (compact) {
+          extras.push(`ブロック率+${formatPercent(effect.chance ?? 0)}`);
+        } else {
+          extras.push(
+            `${BUFF_SUB_KIND_LABELS.block} ${formatPercent(effect.chance ?? 0)} ${
+              effect.buffDurationSec ?? 0
+            }s`
+          );
+        }
       } else if (effect.buffSubKind === "evasion") {
         extras.push(
           `${BUFF_SUB_KIND_LABELS.evasion} ${formatPercent(
@@ -542,11 +680,15 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
           effect.buffMultiplier,
           effect.buffFlatBonus
         );
-        extras.push(
-          `${BUFF_SUB_KIND_LABELS[effect.buffSubKind ?? "stat"]} ${statLabel} ${
-            effect.buffDurationSec ?? 0
-          }s`
-        );
+        if (compact) {
+          extras.push(compactStatEffectLabel(statLabel));
+        } else {
+          extras.push(
+            `${BUFF_SUB_KIND_LABELS[effect.buffSubKind ?? "stat"]} ${statLabel} ${
+              effect.buffDurationSec ?? 0
+            }s`
+          );
+        }
       }
       break;
     case "basicAttackTransform": {
@@ -762,6 +904,9 @@ function formatActiveEffectDetail(effect: SkillEffectDef): string {
 
   const kindLabel = formatEffectKindLabel(effect.type);
   const detail = extras.filter(Boolean).join(" ");
+  if (compact && isSelfTargetSpec(resolveEffectTargetSpec(effect))) {
+    return detail;
+  }
   return `${kindLabel} ${detail} → ${target} / ${shape}`.trim();
 }
 
@@ -967,7 +1112,7 @@ function formatPassiveEffect(
         return `block ${formatPercent(block)} · 低HP DEF/ATK 強化${curveNote}`;
       }
       if (def.effect === "lastStandInvulnerable") {
-        return "致死時 3秒無敵（Wave 1回・HP≤25%）";
+        return "HPが0以下になるダメージを受けた際、3秒無敵（Wave 1回まで）";
       }
       if (def.effect === "lastStandRecovery") {
         const hpRatio = def.lastStandRecoveryHpRatio ?? 0.5;
@@ -992,22 +1137,15 @@ function formatPassiveEffect(
       if (def.effect === "blockResonance") {
         const parts: string[] = [];
         if (def.chance !== undefined) {
-          parts.push(`ブロック +${formatPercent(def.chance)}`);
+          parts.push(`ブロック率+${formatPercent(def.chance)}`);
         }
-        if (def.blockResonanceMaxStacks !== undefined) {
-          parts.push(`上限${def.blockResonanceMaxStacks} stack`);
-        }
-        if (def.blockResonanceDamageTakenPerStack !== undefined) {
-          parts.push(
-            `被ダメ-${formatPercent(
-              def.blockResonanceDamageTakenPerStack
-            )}/stack`
-          );
-        }
-        if (def.blockResonanceDecayIntervalSec !== undefined) {
-          parts.push(`減衰 ${def.blockResonanceDecayIntervalSec}s`);
-        }
-        return parts.length > 0 ? parts.join(" · ") : "迎撃態勢";
+        const maxStacks = def.blockResonanceMaxStacks ?? 6;
+        const perStack = def.blockResonanceDamageTakenPerStack ?? 0.03;
+        const decay = def.blockResonanceDecayIntervalSec ?? 8;
+        parts.push(
+          `ブロック時「防壁」1スタック（上限${maxStacks})。「防壁」：1スタックごとに被ダメ-${formatPercent(perStack)}。${decay}秒ごとに1スタック消失`,
+        );
+        return parts.join("/");
       }
       if (def.effect === "heal" && (def.healSubKind ?? "hot") !== "hot") {
         return HEAL_SUB_KIND_LABELS[def.healSubKind ?? "instant"];
@@ -1155,14 +1293,7 @@ function formatPassiveEffect(
       const range = def.buffRange !== undefined ? `${def.buffRange}px` : null;
       const metaParts = [shape, range];
       if (def.buffSubKind === "block") {
-        const triggerLabel = formatPassiveTriggerLabel(
-          resolvePassivePeriodicTrigger(def),
-          "常時"
-        );
-        metaParts.push(triggerLabel);
-        return `バフ ${BUFF_SUB_KIND_LABELS.block} ${formatPercent(
-          def.chance ?? 0
-        )} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
+        return `ブロック率+${formatPercent(def.chance ?? 0)}`;
       }
       if (def.buffSubKind === "evasion") {
         const triggerLabel = formatPassiveTriggerLabel(
@@ -1287,39 +1418,59 @@ function formatPassiveEffect(
         .filter(Boolean)
         .join(" / ");
     }
+    case "threatControl": {
+      const parts: string[] = [];
+      if (
+        def.onDamageTakenScale !== undefined ||
+        def.onBlockFlat !== undefined
+      ) {
+        parts.push("被ダメ・ブロック成功でヘイト上昇");
+      }
+      if (
+        def.threatDecayMultiplier !== undefined &&
+        def.threatDecayMultiplier < 1
+      ) {
+        parts.push("ヘイト減衰速度低下");
+      }
+      return parts.length > 0 ? parts.join("、") : "ヘイト制御";
+    }
     default:
       return effect;
   }
 }
 
 export function formatPassiveDescription(def: PassiveSkillDef): string {
-  return formatPassiveEffect(def.effect, def);
+  return `効果：${formatPassiveEffect(def.effect, def)}`;
 }
 
 export function formatActiveDescription(def: ActiveSkillDef): string {
   const trigger = resolveSkillTrigger(def);
-  const triggerHeader =
-    trigger.kind === "time" && trigger.value === 0
-      ? "チャージなし"
-      : `${formatTriggerLabel(trigger.kind, trigger.value)}毎`;
-  const headerParts = [triggerHeader];
-  const stopSec = def.useDurationSec ?? 0;
-  if (stopSec > 0) {
-    headerParts.push(`停止${stopSec}s`);
+  const parts: string[] = [`CD：${formatCdLabel(trigger.kind, trigger.value)}`];
+
+  const duration = resolveActiveSkillDurationLabel(def);
+  if (duration) {
+    parts.push(`持続：${duration}`);
   }
+
+  const lock = resolveActiveSkillLockLabel(def);
+  if (lock) {
+    parts.push(`硬直${lock}`);
+  }
+
   if ((def.firePolicy ?? "immediate") === "smart") {
     const condSummary = formatFireConditionsSummary(
       def.fireConditions,
-      def.fireConditionMatch ?? "all"
+      def.fireConditionMatch ?? "all",
     );
-    headerParts.push(condSummary ? `smart: ${condSummary}` : "smart");
-    if (def.fireTimeoutSec !== undefined && def.fireTimeoutSec > 0) {
-      headerParts.push(`待機上限${def.fireTimeoutSec}s`);
+    if (condSummary) {
+      parts.push(`条件：${condSummary}`);
     }
   }
-  if ((def.maxCharges ?? 0) > 0) {
-    headerParts.push(`ストック上限${def.maxCharges}`);
+
+  const effects = formatActiveSkillEffectBody(def);
+  if (effects) {
+    parts.push(effects);
   }
-  const effects = def.effect.map(formatActiveEffectDetail).join(" / ");
-  return `${headerParts.join(" / ")} / ${effects}`;
+
+  return `${parts.join(" / ")} /`;
 }

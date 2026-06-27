@@ -2365,7 +2365,9 @@ export class SkillExecutor {
     );
     if (useSec <= 0) return;
     const duration = Math.max(useSec, resolveSequenceWallClockSec(skill));
-    this.deps.getSequenceRunner().beginUse(actorId, duration);
+    this.deps.getSequenceRunner().beginUse(actorId, duration, {
+      pauseApproach: skill.useDurationPauseApproach ?? false,
+    });
   }
 
   private beginActiveEffectGaugeIfNeeded(

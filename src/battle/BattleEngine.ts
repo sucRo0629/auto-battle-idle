@@ -894,6 +894,9 @@ export class BattleEngine {
         isActorAnimLocked: this.skillSequenceRunner.isActorAnimLocked(ally.id),
       });
       if (isActorInSkillMotion) continue;
+      if (this.skillSequenceRunner.isActorUseLockPauseApproach(ally.id)) {
+        continue;
+      }
       if (skipAutoApproach) {
         continue;
       }
@@ -936,6 +939,9 @@ export class BattleEngine {
         isActorAnimLocked: this.skillSequenceRunner.isActorAnimLocked(enemy.id),
       });
       if (isActorInSkillMotion) continue;
+      if (this.skillSequenceRunner.isActorUseLockPauseApproach(enemy.id)) {
+        continue;
+      }
       if (skipAutoApproach) {
         continue;
       }
@@ -1725,6 +1731,8 @@ export class BattleEngine {
       gameData: this.gameData,
       isActorInSkillMotion: (actorId) =>
         this.skillSequenceRunner.isActorInSkillMotion(actorId),
+      isActorUseLockPauseApproach: (actorId) =>
+        this.skillSequenceRunner.isActorUseLockPauseApproach(actorId),
     };
   }
 
@@ -1922,7 +1930,9 @@ export class BattleEngine {
         this.players,
         engagedLeadingRow,
         (unit) => this.isOnBattlefield(unit),
-        (id) => this.skillSequenceRunner.isActorInSkillMotion(id),
+        (id) =>
+          this.skillSequenceRunner.isActorInSkillMotion(id) ||
+          this.skillSequenceRunner.isActorUseLockPauseApproach(id),
         {
           maxCorrectionPx: moveDeltaPx(MOVE_PX_PER_SEC, deltaTime),
           movementBudgetOriginById,

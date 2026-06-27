@@ -1584,6 +1584,8 @@ export interface ActiveSkillDef extends SkillSharedTargetingFields {
   vfx?: SkillVfxDef;
   /** 停止時間（秒）。省略/0 = 即時。アニメ長に合わせて設定 */
   useDurationSec?: number;
+  /** SkillHold 中に自動接近も停止する。省略 = false */
+  useDurationPauseApproach?: boolean;
   /** 発動ゲート。省略 = immediate */
   firePolicy?: FirePolicy;
   /** firePolicy=smart 時の AND/OR 条件（省略 = all） */

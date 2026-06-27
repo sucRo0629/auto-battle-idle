@@ -5430,6 +5430,10 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
     const vfx = parseSkillVfx(obj.vfx, `${context}.vfx`);
     const iconKey = parseOptionalIconKey(obj, context);
     const useDurationSec = parseOptionalUseDurationSec(obj, context);
+    const useDurationPauseApproach =
+      useDurationSec !== undefined && useDurationSec > 0
+        ? parseOptionalBoolean(obj, 'useDurationPauseApproach', context)
+        : undefined;
     const firePolicyRaw = obj.firePolicy;
     let firePolicy: FirePolicy | undefined;
     if (firePolicyRaw !== undefined) {
@@ -5553,6 +5557,9 @@ function parseActives(raw: unknown): ActiveSkillDef[] {
       ...(vfx !== undefined ? { vfx } : {}),
       ...(iconKey !== undefined ? { iconKey } : {}),
       ...(useDurationSec !== undefined ? { useDurationSec } : {}),
+      ...(useDurationPauseApproach === true
+        ? { useDurationPauseApproach: true }
+        : {}),
       ...(firePolicy !== undefined ? { firePolicy } : {}),
       ...(fireConditions !== undefined ? { fireConditions } : {}),
       ...(fireConditionMatch !== undefined ? { fireConditionMatch } : {}),

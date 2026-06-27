@@ -1,4 +1,3 @@
-import { currentHpRatio } from './combatMath.ts';
 import { getPassiveDefs } from './combatMath.ts';
 import { grantInvulnerable } from './invulnerable.ts';
 import type {
@@ -7,7 +6,6 @@ import type {
 } from './types.ts';
 
 export const LAST_STAND_INVULNERABLE_DURATION_SEC = 3;
-export const LAST_STAND_HP_RATIO_THRESHOLD = 0.25;
 
 export function isLastStandInvulnerablePassive(
   passive: PassiveSkillDef,
@@ -51,9 +49,6 @@ export function tryLastStandInvulnerable(
     return { negated: false, triggered: false };
   }
   if (!wouldDamageBeLethal(target, incomingDamage)) {
-    return { negated: false, triggered: false };
-  }
-  if (currentHpRatio(target) > LAST_STAND_HP_RATIO_THRESHOLD) {
     return { negated: false, triggered: false };
   }
 

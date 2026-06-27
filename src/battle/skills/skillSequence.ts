@@ -279,10 +279,15 @@ export function resolveSequenceStepAnchor(
   return pickTargetFromPool(spec, actor, pool);
 }
 
+interface UseLockState {
+  remainingSec: number;
+  pauseApproach: boolean;
+}
+
 export class SkillSequenceRunner {
   private sequences: ActiveSkillSequence[] = [];
   private activeMoves: ActiveSkillMove[] = [];
-  private useLockRemainingSec = new Map<string, number>();
+  private useLockState = new Map<string, UseLockState>();
   private presentationLockRemainingSec = new Map<string, number>();
   private animLockRemainingSec = new Map<string, number>();
   private activeEffectGauges = new Map<string, ActiveEffectGauge>();
@@ -304,7 +309,12 @@ export class SkillSequenceRunner {
   }
 
   isActorUseLocked(actorId: string): boolean {
-    return (this.useLockRemainingSec.get(actorId) ?? 0) > 0;
+    return (this.useLockState.get(actorId)?.remainingSec ?? 0) > 0;
+  }
+
+  isActorUseLockPauseApproach(actorId: string): boolean {
+    const state = this.useLockState.get(actorId);
+    return (state?.remainingSec ?? 0) > 0 && state.pauseApproach;
   }
 
   isBasicAttackBlocked(actorId: string): boolean {
@@ -369,10 +379,17 @@ export class SkillSequenceRunner {
     });
   }
 
-  beginUse(actorId: string, durationSec: number): void {
+  beginUse(
+    actorId: string,
+    durationSec: number,
+    options?: { pauseApproach?: boolean },
+  ): void {
     if (durationSec <= 0) return;
-    const current = this.useLockRemainingSec.get(actorId) ?? 0;
-    this.useLockRemainingSec.set(actorId, Math.max(current, durationSec));
+    const current = this.useLockState.get(actorId);
+    const remainingSec = Math.max(current?.remainingSec ?? 0, durationSec);
+    const pauseApproach =
+      (current?.pauseApproach ?? false) || (options?.pauseApproach ?? false);
+    this.useLockState.set(actorId, { remainingSec, pauseApproach });
   }
 
   beginPresentationLock(actorId: string, durationSec: number): void {
@@ -401,7 +418,7 @@ export class SkillSequenceRunner {
   clearAll(): void {
     this.sequences = [];
     this.activeMoves = [];
-    this.useLockRemainingSec.clear();
+    this.useLockState.clear();
     this.presentationLockRemainingSec.clear();
     this.animLockRemainingSec.clear();
     this.activeEffectGauges.clear();
@@ -412,7 +429,7 @@ export class SkillSequenceRunner {
     this.activeMoves = this.activeMoves.filter(
       (move) => move.actorId !== actorId,
     );
-    this.useLockRemainingSec.delete(actorId);
+    this.useLockState.delete(actorId);
     this.presentationLockRemainingSec.delete(actorId);
     this.animLockRemainingSec.delete(actorId);
     const prefix = `${actorId}:`;
@@ -435,12 +452,12 @@ export class SkillSequenceRunner {
   }
 
   tickUseLocks(deltaTime: number): void {
-    for (const [actorId, remaining] of this.useLockRemainingSec) {
-      const next = remaining - deltaTime;
+    for (const [actorId, state] of this.useLockState) {
+      const next = state.remainingSec - deltaTime;
       if (next <= 0) {
-        this.useLockRemainingSec.delete(actorId);
+        this.useLockState.delete(actorId);
       } else {
-        this.useLockRemainingSec.set(actorId, next);
+        this.useLockState.set(actorId, { ...state, remainingSec: next });
       }
     }
     for (const [actorId, remaining] of this.presentationLockRemainingSec) {

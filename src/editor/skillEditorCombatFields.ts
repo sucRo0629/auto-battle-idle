@@ -2643,6 +2643,178 @@ export function appendActiveFireGateFields(
   parent.appendChild(section);
 }
 
+export function activeSkillHasBlockResonanceConsume(
+  active: ActiveSkillDef,
+): boolean {
+  return active.effect.some((effect) => effect.type === "blockResonanceConsume");
+}
+
+export function appendActiveBlockResonanceStanceFields(
+  parent: HTMLElement,
+  active: ActiveSkillDef,
+  onChange: (
+    mutate: (current: ActiveSkillDef) => void,
+    options?: CombatFieldChangeOptions
+  ) => void,
+  appendResourceAmountFields: (
+    grid: HTMLElement,
+    amount: ResourceAmountSpec,
+    onUpdate: (
+      amount: ResourceAmountSpec,
+      options?: { rerender?: boolean }
+    ) => void
+  ) => void
+): void {
+  if (!activeSkillHasBlockResonanceConsume(active)) return;
+
+  const section = createEl("div", "editor-subsection");
+  section.appendChild(
+    createEl("h4", "editor-subsection-title", "城塞の構え（blockResonanceConsume）")
+  );
+
+  const grid = createEl("div", "editor-grid");
+  section.appendChild(grid);
+
+  grid.appendChild(
+    createFieldRow(
+      "態勢の基礎持続（秒）",
+      createNumberInput(
+        active.blockResonanceStanceDurationBaseSec ?? 2,
+        (value) => {
+          onChange(
+            (current) => {
+              if (value <= 0) delete current.blockResonanceStanceDurationBaseSec;
+              else current.blockResonanceStanceDurationBaseSec = value;
+            },
+            { rerender: false }
+          );
+        },
+        { min: 0.1, step: 0.5 }
+      )
+    )
+  );
+  grid.appendChild(
+    createFieldRow(
+      "態勢中 stack あたり被ダメ軽減率",
+      createNumberInput(
+        active.blockResonanceStanceDamageTakenPerStack ?? 0.04,
+        (value) => {
+          onChange(
+            (current) => {
+              if (value <= 0) {
+                delete current.blockResonanceStanceDamageTakenPerStack;
+              } else {
+                current.blockResonanceStanceDamageTakenPerStack = value;
+              }
+            },
+            { rerender: false }
+          );
+        },
+        { min: 0, max: 1, step: 0.01 }
+      )
+    )
+  );
+  grid.appendChild(
+    createFieldRow(
+      "態勢中 stack あたり DEF 倍率加算",
+      createNumberInput(
+        active.blockResonanceStanceDefPerStack ?? 0.05,
+        (value) => {
+          onChange(
+            (current) => {
+              if (value <= 0) delete current.blockResonanceStanceDefPerStack;
+              else current.blockResonanceStanceDefPerStack = value;
+            },
+            { rerender: false }
+          );
+        },
+        { min: 0, step: 0.01 }
+      )
+    )
+  );
+  grid.appendChild(
+    createFieldRow(
+      "態勢中 stack あたりブロック率加算",
+      createNumberInput(
+        active.blockResonanceStanceBlockPerStack ?? 0.05,
+        (value) => {
+          onChange(
+            (current) => {
+              if (value <= 0) delete current.blockResonanceStanceBlockPerStack;
+              else current.blockResonanceStanceBlockPerStack = value;
+            },
+            { rerender: false }
+          );
+        },
+        { min: 0, max: 1, step: 0.01 }
+      )
+    )
+  );
+
+  appendResourceAmountFields(
+    grid,
+    active.blockResonanceOnBlockDamage ?? { kind: "defBased", defScale: 1 },
+    (amount, options) => {
+      onChange(
+        (current) => {
+          current.blockResonanceOnBlockDamage = amount;
+        },
+        options
+      );
+    }
+  );
+
+  grid.appendChild(
+    createFieldRow(
+      "ブロック反撃半径（px）",
+      createNumberInput(
+        active.blockResonanceOnBlockKnockbackRadiusPx ?? 50,
+        (value) => {
+          onChange(
+            (current) => {
+              if (value <= 0) delete current.blockResonanceOnBlockKnockbackRadiusPx;
+              else current.blockResonanceOnBlockKnockbackRadiusPx = value;
+            },
+            { rerender: false }
+          );
+        },
+        { min: 1, step: 10 }
+      )
+    )
+  );
+  grid.appendChild(
+    createFieldRow(
+      "ノックバック距離（px）",
+      createNumberInput(
+        active.blockResonanceOnBlockKnockbackDistancePx ?? 50,
+        (value) => {
+          onChange(
+            (current) => {
+              if (value <= 0) {
+                delete current.blockResonanceOnBlockKnockbackDistancePx;
+              } else {
+                current.blockResonanceOnBlockKnockbackDistancePx = value;
+              }
+            },
+            { rerender: false }
+          );
+        },
+        { min: 1, step: 10 }
+      )
+    )
+  );
+
+  section.appendChild(
+    createEl(
+      "p",
+      "editor-hint",
+      "硬直・持続秒は「基礎持続 + 消費 stack 数」で戦闘時に決定。useDurationSec は基礎値の目安。"
+    )
+  );
+
+  parent.appendChild(section);
+}
+
 export function appendPassiveSkillPropertyOverrideFields(
   parent: HTMLElement,
   passive: PassiveSkillDef,

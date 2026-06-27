@@ -53,6 +53,7 @@ function baseCtx(
     enemies: [],
     gameData: overrides.gameData!,
     isActorInSkillMotion: () => false,
+    isActorUseLockPauseApproach: () => false,
     ...overrides,
   };
 }

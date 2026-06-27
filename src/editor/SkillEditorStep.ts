@@ -110,6 +110,7 @@ import {
   appendPassiveBuffFields,
   appendPassiveSpecialEffectFields,
   appendActiveFireGateFields,
+  appendActiveBlockResonanceStanceFields,
   appendConditionListFields,
   appendPassiveSkillPropertyOverrideFields,
   appendPassiveThreatControlFields,
@@ -4260,14 +4261,38 @@ export class SkillEditorStep {
           ),
         ),
       );
+      const pauseApproachRow = createEl('div', 'editor-field editor-field-checkbox');
+      const pauseApproachInput = createEl('input') as HTMLInputElement;
+      pauseApproachInput.type = 'checkbox';
+      pauseApproachInput.checked = active.useDurationPauseApproach ?? false;
+      pauseApproachInput.addEventListener('change', () => {
+        setActive((current) => {
+          if (pauseApproachInput.checked) {
+            current.useDurationPauseApproach = true;
+          } else {
+            delete current.useDurationPauseApproach;
+          }
+        }, { rerender: false });
+      });
+      pauseApproachRow.appendChild(
+        createEl('label', undefined, '硬直中の自動接近停止'),
+      );
+      pauseApproachRow.appendChild(pauseApproachInput);
+      grid.appendChild(pauseApproachRow);
       grid.appendChild(
         createEl(
           'p',
           'editor-hint',
-          '0 = 即時。アニメ保護は body strip 再生中の自動 animLock。useDurationSec は詠唱など、発動後に明示ロックが必要な場合のみ使う（CD は止めない）。',
+          '0 = 即時。useDurationSec は SkillHold（硬直）。硬直中はスキル発動不可・CD 停止。チェック ON で自動接近も停止する。',
         ),
       );
       appendActiveFireGateFields(grid, active, setActive);
+      appendActiveBlockResonanceStanceFields(
+        grid,
+        active,
+        setActive,
+        appendResourceAmountFields,
+      );
     }
 
     parent.appendChild(
@@ -6039,6 +6064,15 @@ export class SkillEditorStep {
         );
         break;
       case 'enemyReelIn':
+        break;
+      case 'blockResonanceConsume':
+        detailGrid.appendChild(
+          createEl(
+            'p',
+            'editor-hint',
+            '態勢パラメータはスキル詳細（発動ゲートの下）で編集します。',
+          ),
+        );
         break;
       case 'arenaDominance':
         detailGrid.appendChild(

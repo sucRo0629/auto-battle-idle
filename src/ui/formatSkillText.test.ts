@@ -116,7 +116,7 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('11s');
+    expect(desc).toContain('CD：11秒');
     expect(desc).toContain('物理 ATK×0.9');
     expect(desc).toContain('範囲');
     expect(desc).toContain('±50px');
@@ -146,7 +146,7 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('9s');
+    expect(desc).toContain('CD：9秒');
     expect(desc).toContain('移動');
     expect(desc).toContain('アンカー +32px');
     expect(desc).toContain('マルチロック');
@@ -178,8 +178,8 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('10被攻撃毎');
-    expect(desc).toContain('( DEF + 10 ) ×1.8');
+    expect(desc).toContain('CD：被撃10');
+    expect(desc).toContain('(DEF +10)×1.8');
     expect(desc).toContain('HoT maxHp×1%');
   });
 
@@ -217,7 +217,7 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('ATK×2.5');
   });
 
-  it('includes stop duration when useDurationSec is set', () => {
+  it('includes lock duration when useDurationSec is set', () => {
     const def: ActiveSkillDef = {
       id: 'test_stop',
       name: '防御専念',
@@ -234,9 +234,10 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('12s毎');
-    expect(desc).toContain('停止6s');
-    expect(desc).toContain('バフ');
+    expect(desc).toContain('CD：12秒');
+    expect(desc).toContain('持続：6秒');
+    expect(desc).toContain('硬直6秒');
+    expect(desc).toContain('DEF×1.5');
   });
 
   it('formats pierce damage', () => {
@@ -279,10 +280,8 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('smart:');
-    expect(desc).toContain('敵数≥2');
-    expect(desc).toContain('待機上限5s');
-    expect(desc).toContain('ストック上限2');
+    expect(desc).toContain('条件：敵数≥2');
+    expect(desc).not.toContain('smart:');
   });
 
   it('formats skillPropertyOverride passive', () => {
@@ -316,7 +315,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatPassiveDescription(def);
     expect(desc).toBe(
-      '被攻撃時 33% で反撃 / 物理ATK / 射程+0 / 対象遠隔',
+      '効果：被攻撃時 33% で反撃 / 物理ATK / 射程+0 / 対象遠隔',
     );
   });
 
@@ -372,5 +371,52 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('チャージなし');
     expect(desc).not.toContain('0s毎');
     expect(desc).toContain('最終Wave開始');
+  });
+
+  it('formats df_guardian actives with new template', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.df_guardian_active_1;
+    const a2 = gameData.skillRegistry.actives.df_guardian_active_2;
+    const a3 = gameData.skillRegistry.actives.df_guardian_active_3;
+    const a4 = gameData.skillRegistry.actives.df_guardian_active_4;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(a3).toBeDefined();
+    expect(a4).toBeDefined();
+
+    expect(formatActiveDescription(a1!)).toBe(
+      'CD：8秒 / 持続：5秒 / DEF×1.2 /',
+    );
+    expect(formatActiveDescription(a2!)).toBe(
+      'CD：被撃8 / 持続：5秒 / 硬直5秒・移動停止 / DEF×1.25、ブロック率+50% /',
+    );
+    expect(formatActiveDescription(a3!)).toBe(
+      'CD：12秒 / 持続：5秒 / 条件：自HP≤80% / 被ダメ×0.75 /',
+    );
+    expect(formatActiveDescription(a4!)).toContain('CD：被撃12');
+    expect(formatActiveDescription(a4!)).toContain('持続：2+防壁スタック数秒');
+    expect(formatActiveDescription(a4!)).toContain('硬直2+防壁スタック数秒・移動停止');
+    expect(formatActiveDescription(a4!)).toContain('条件：防壁≥1');
+    expect(formatActiveDescription(a4!)).toContain('城塞の構え');
+  });
+
+  it('formats df_guardian passives with 効果 prefix', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const p1 = gameData.skillRegistry.passives.df_guardian_passive_1;
+    const p2 = gameData.skillRegistry.passives.df_guardian_passive_2;
+    const p3 = gameData.skillRegistry.passives.df_guardian_passive_3;
+    const p4 = gameData.skillRegistry.passives.df_guardian_passive_4;
+
+    expect(formatPassiveDescription(p1!)).toBe('効果：ブロック率+20%');
+    expect(formatPassiveDescription(p2!)).toBe(
+      '効果：被ダメ・ブロック成功でヘイト上昇、ヘイト減衰速度低下',
+    );
+    expect(formatPassiveDescription(p3!)).toContain('効果：ブロック率+10%');
+    expect(formatPassiveDescription(p3!)).toContain('8秒ごとに1スタック消失');
+    expect(formatPassiveDescription(p4!)).toBe(
+      '効果：HPが0以下になるダメージを受けた際、3秒無敵（Wave 1回まで）',
+    );
   });
 });

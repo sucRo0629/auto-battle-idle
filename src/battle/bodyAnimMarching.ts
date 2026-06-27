@@ -40,6 +40,7 @@ export interface BodyAnimMarchingContext {
   enemies: CombatantState[];
   gameData: GameData;
   isActorInSkillMotion: (actorId: string) => boolean;
+  isActorUseLockPauseApproach: (actorId: string) => boolean;
 }
 
 function isApproachingTarget(
@@ -101,6 +102,7 @@ function resolveEngagedMarching(
   if (!unit.isAlive) return false;
   if (isUnitMovementBlocked(unit)) return false;
   if (ctx.isActorInSkillMotion(unit.id)) return true;
+  if (ctx.isActorUseLockPauseApproach(unit.id)) return false;
   if (
     shouldSkipEngagedAutoApproach(
       unit,
