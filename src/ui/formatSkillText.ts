@@ -267,6 +267,39 @@ function formatPassiveSpecialEffectHeal(def: PassiveSkillDef): string {
   return formatSpecialEffectSpec(def.specialEffectApplyTo, spec) || "特効回復";
 }
 
+function formatPassiveSpecialEffectBarrier(def: PassiveSkillDef): string {
+  const spec = def.specialEffect;
+  if (!spec) return "特効バリア";
+  const bonusPct = formatPercent((spec.scale ?? 1) - 1);
+  for (const condition of spec.conditions ?? []) {
+    if (condition.kind !== "targetHp") continue;
+    const pct = Math.round(condition.maxHpRatio * 100);
+    const suffix = condition.compare === "gte" ? "以上" : "以下";
+    return `HPが${pct}%${suffix}の味方にバリア付与時、バリア量+${bonusPct}`;
+  }
+  return formatSpecialEffectSpec("barrier", spec) || "特効バリア";
+}
+
+function formatBarrierDepletionHealHealSentence(def: PassiveSkillDef): string {
+  if (def.healAmount?.kind === "atkBased") {
+    const pct = formatPercent(def.healAmount.atkScale ?? 1);
+    return `攻撃力の${pct}で回復`;
+  }
+  return `${formatResourceAmount(def.healAmount)}回復`;
+}
+
+function formatBarrierDepletionHealEffectLines(def: PassiveSkillDef): string[] {
+  const heal = formatBarrierDepletionHealHealSentence(def);
+  return [
+    `味方に付与したバリアが完全に消失した時、対象を${heal}（味方ごとにWave1回まで）`,
+    "この効果は「障壁」の消失では誘発しない",
+  ];
+}
+
+function formatBarrierDepletionHealPassive(def: PassiveSkillDef): string {
+  return formatBarrierDepletionHealEffectLines(def).join("、");
+}
+
 function formatExcessHealToBarrierPassive(def: PassiveSkillDef): string {
   const scalePct = formatPercent(def.barrierScale ?? 1);
   const sources = def.excessHealSources ?? ["outgoing"];
@@ -385,6 +418,14 @@ function formatTargetRuleOverridePassive(def: PassiveSkillDef): string {
   if (
     rule.kind === "stat" &&
     rule.side === "enemy" &&
+    rule.stat === "hp" &&
+    rule.order === "ratio"
+  ) {
+    return "最もHP割合が低い敵を優先して攻撃する";
+  }
+  if (
+    rule.kind === "stat" &&
+    rule.side === "enemy" &&
     rule.order === "highest"
   ) {
     const statLabel = resolveStatusEffectStatDisplayName(rule.stat);
@@ -416,12 +457,17 @@ function formatPassiveAlwaysSelfStatBuff(def: PassiveSkillDef): string | null {
 
 function formatPassiveDefenseIgnore(def: PassiveSkillDef): string {
   const spec = def.defenseIgnore;
-  if (!spec?.def) return "防御無視";
+  if (!spec) return "防御無視";
   if (spec.chance !== undefined && spec.chance < 1) {
     return formatDefenseIgnoreSpec(spec) || "防御無視";
   }
-  if (spec.def.mode === "percent") {
+  if (spec.def?.mode === "percent") {
     return `攻撃時、対象の防御力を${formatPercent(spec.def.amount)}無視する`;
+  }
+  if (spec.reg?.percent !== undefined) {
+    return `攻撃時、対象の${resolveStatusEffectStatDisplayName(
+      "reg"
+    )}を${formatPercent(spec.reg.percent)}無視する`;
   }
   return formatDefenseIgnoreSpec(spec) || "防御無視";
 }
@@ -565,6 +611,14 @@ function formatBlockResonanceConsumeSkillEffect(def: ActiveSkillDef): string {
 function formatActiveSkillEffectBody(def: ActiveSkillDef): string {
   if (def.effect.some((effect) => effect.type === "blockResonanceConsume")) {
     return formatBlockResonanceConsumeSkillEffect(def);
+  }
+  const polishedSequentialLines = tryFormatPolishedSequentialEffectLines(def);
+  if (polishedSequentialLines) {
+    const maxChargesLine = formatActiveSkillMaxChargesLine(def);
+    const lines = maxChargesLine
+      ? [...polishedSequentialLines, maxChargesLine]
+      : polishedSequentialLines;
+    return lines.join("、");
   }
   const scopePrefix = resolveActiveSkillScopePrefix(def);
   const effectParts = def.effect
@@ -730,6 +784,125 @@ function formatBuffStatModifiersFromDef(def: {
   return formatStatBuffModifierEntries(
     parseStatBuffModifiers(def),
     formatStatWithModifier
+  );
+}
+
+function formatDamageIncreaseConditionProse(
+  conditions: DamageIncreaseCondition[]
+): string | null {
+  if (conditions.length !== 1) return null;
+  const condition = conditions[0];
+  switch (condition.kind) {
+    case "debuff": {
+      if (condition.tags.length !== 1) return null;
+      const tag =
+        DEBUFF_FILTER_TAG_LABELS[condition.tags[0]] ?? condition.tags[0];
+      const prefix = condition.selfAppliedOnly ? "自身付与の" : "";
+      return `対象に${prefix}${tag}が付与されているなら`;
+    }
+    case "targetHp": {
+      const pct = Math.round(condition.maxHpRatio * 100);
+      return condition.compare === "gte"
+        ? `対象のHPが${pct}%以上なら`
+        : `対象のHPが${pct}%以下なら`;
+    }
+    default:
+      return null;
+  }
+}
+
+function formatCompactDamageIncreaseBonusLine(
+  spec: DamageIncreaseSpec | undefined
+): string | null {
+  if (!spec) return null;
+  const conditionText = formatDamageIncreaseConditionProse(spec.conditions);
+  if (!conditionText) return null;
+  return `${conditionText}、このダメージは+${formatPercent(spec.scale)}される`;
+}
+
+function formatCompactBleedDotApplyLine(effect: SkillEffectDef): string | null {
+  if (effect.type !== "debuff" || effect.debuffSubKind !== "dot") return null;
+  const duration = effect.durationSec ?? effect.debuffDurationSec ?? 0;
+  const flavor =
+    effect.buffDisplayName ??
+    (effect.dotFlavor ? DOT_FLAVOR_LABELS[effect.dotFlavor] : null);
+  if (!flavor) return null;
+  const dmgLabel = effect.damageType
+    ? `${DAMAGE_TYPE_LABELS[effect.damageType]}ダメージ`
+    : "ダメージ";
+  if (effect.amount?.kind !== "atkBased") return null;
+  const pct = formatPercent(effect.amount.atkScale ?? 1);
+  return `その後攻撃した対象に${duration}秒間毎秒攻撃力の${pct}の${dmgLabel}を与える${flavor}を付与する`;
+}
+
+function formatCompactTimedEvasionBuffLine(
+  effect: SkillEffectDef
+): string | null {
+  if (effect.type !== "buff" || effect.buffSubKind !== "evasion") return null;
+  const duration = effect.buffDurationSec ?? 0;
+  return `${duration}秒間回避+${formatPercent(effect.chance ?? 0)}`;
+}
+
+function formatCompactMoveThenDamageLine(
+  move: SkillEffectDef,
+  damage: SkillEffectDef
+): string | null {
+  if (move.type !== "move" || damage.type !== "damage") return null;
+  if (move.moveMode !== "toAnchor") return null;
+  const dmgSentence = formatCompactAtkBasedDamageSentence(
+    damage.amount,
+    damage.damageType
+  );
+  return `対象の背後に移動した後、${dmgSentence}`;
+}
+
+function tryFormatDamageThenBleedDotLines(
+  effects: SkillEffectDef[]
+): string[] | null {
+  if (effects.length !== 2) return null;
+  const [first, second] = effects;
+  if (first.type !== "damage" || second.type !== "debuff") return null;
+  if (second.debuffSubKind !== "dot") return null;
+  const bleedLine = formatCompactBleedDotApplyLine(second);
+  if (!bleedLine) return null;
+
+  const lines: string[] = [
+    formatCompactAtkBasedDamageSentence(first.amount, first.damageType),
+  ];
+  const bonusLine = formatCompactDamageIncreaseBonusLine(first.damageIncrease);
+  if (bonusLine) lines.push(bonusLine);
+  lines.push(bleedLine);
+  return lines;
+}
+
+function tryFormatEvasionMoveStrikeLines(
+  effects: SkillEffectDef[]
+): string[] | null {
+  if (effects.length !== 3) return null;
+  const [evasion, move, damage] = effects;
+  if (evasion.type !== "buff" || evasion.buffSubKind !== "evasion") return null;
+  if (move.type !== "move" || move.moveMode !== "toAnchor") return null;
+  if (damage.type !== "damage") return null;
+
+  const evasionLine = formatCompactTimedEvasionBuffLine(evasion);
+  const strikeLine = formatCompactMoveThenDamageLine(move, damage);
+  if (!evasionLine || !strikeLine) return null;
+
+  const lines = [evasionLine, strikeLine];
+  const bonusLine = formatCompactDamageIncreaseBonusLine(damage.damageIncrease);
+  if (bonusLine) lines.push(bonusLine);
+  return lines;
+}
+
+function tryFormatPolishedSequentialEffectLines(
+  def: ActiveSkillDef
+): string[] | null {
+  const effects = def.effect.filter(
+    (effect) => effect.type !== "blockResonanceConsume"
+  );
+  return (
+    tryFormatDamageThenBleedDotLines(effects) ??
+    tryFormatEvasionMoveStrikeLines(effects)
   );
 }
 
@@ -955,7 +1128,9 @@ function formatActiveEffectDetail(
         const power = dmgType ? `${dmgType} ${amount}` : amount;
         extras.push(power);
       }
-      const inc = formatDamageIncreaseSpec(effect.damageIncrease);
+      const inc =
+        formatCompactDamageIncreaseBonusLine(effect.damageIncrease) ??
+        formatDamageIncreaseSpec(effect.damageIncrease);
       if (inc) extras.push(inc);
       const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);
       if (ign) extras.push(ign);
@@ -1052,11 +1227,16 @@ function formatActiveEffectDetail(
           );
         }
       } else if (effect.buffSubKind === "evasion") {
-        extras.push(
-          `${BUFF_SUB_KIND_LABELS.evasion} ${formatPercent(
-            effect.chance ?? 0
-          )} ${effect.buffDurationSec ?? 0}s`
-        );
+        const evasionLine = formatCompactTimedEvasionBuffLine(effect);
+        if (compact && evasionLine) {
+          extras.push(evasionLine);
+        } else {
+          extras.push(
+            `${BUFF_SUB_KIND_LABELS.evasion} ${formatPercent(
+              effect.chance ?? 0
+            )} ${effect.buffDurationSec ?? 0}s`
+          );
+        }
       } else if (effect.buffSubKind === "damageDelay") {
         extras.push(
           `${BUFF_SUB_KIND_LABELS.damageDelay} ${formatPercent(
@@ -1210,24 +1390,33 @@ function formatActiveEffectDetail(
     }
     case "debuff":
       if (effect.debuffSubKind === "dot") {
-        const dmgType = effect.damageType
-          ? DAMAGE_TYPE_LABELS[effect.damageType]
-          : "";
-        const amountScale =
-          effect.amount?.kind === "atkBased"
-            ? effect.amount.atkScale
-            : effect.powerMultiplier;
-        const power = dmgType
-          ? `${dmgType} ×${amountScale ?? 0}`
-          : `×${amountScale ?? 0}`;
-        const flavorLabel = effect.dotFlavor
-          ? DOT_FLAVOR_LABELS[effect.dotFlavor]
-          : DEBUFF_SUB_KIND_LABELS.dot;
-        extras.push(`${flavorLabel} ${power} ${effect.durationSec ?? 0}s`);
-        if (effect.buffDisplayName) {
-          extras.push(effect.buffDisplayName);
+        const bleedApplyLine = compact
+          ? formatCompactBleedDotApplyLine(effect)
+          : null;
+        if (bleedApplyLine) {
+          extras.push(bleedApplyLine);
+        } else {
+          const dmgType = effect.damageType
+            ? DAMAGE_TYPE_LABELS[effect.damageType]
+            : "";
+          const amountScale =
+            effect.amount?.kind === "atkBased"
+              ? effect.amount.atkScale
+              : effect.powerMultiplier;
+          const power = dmgType
+            ? `${dmgType} ×${amountScale ?? 0}`
+            : `×${amountScale ?? 0}`;
+          const flavorLabel = effect.dotFlavor
+            ? DOT_FLAVOR_LABELS[effect.dotFlavor]
+            : DEBUFF_SUB_KIND_LABELS.dot;
+          extras.push(`${flavorLabel} ${power} ${effect.durationSec ?? 0}s`);
+          if (effect.buffDisplayName) {
+            extras.push(effect.buffDisplayName);
+          }
         }
-        const inc = formatDamageIncreaseSpec(effect.damageIncrease);
+        const inc =
+          formatCompactDamageIncreaseBonusLine(effect.damageIncrease) ??
+          formatDamageIncreaseSpec(effect.damageIncrease);
         if (inc) extras.push(inc);
         const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);
         if (ign) extras.push(ign);
@@ -1538,6 +1727,9 @@ function formatPassiveEffect(
       if (def.specialEffectApplyTo === "heal" && def.specialEffect) {
         return formatPassiveSpecialEffectHeal(def);
       }
+      if (def.specialEffectApplyTo === "barrier" && def.specialEffect) {
+        return formatPassiveSpecialEffectBarrier(def);
+      }
       const special =
         formatSpecialEffectSpec(def.specialEffectApplyTo, def.specialEffect) ||
         "特効効果";
@@ -1752,7 +1944,7 @@ function formatPassiveEffect(
         def.enemyDamageTakenMultiplier ?? 1.2
       )}）`;
     case "seedFlameOnActiveHit":
-      return "active ダメージ Hit ごとに種火 +1 stack";
+      return "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする";
     case "bonusActiveOnHit":
       return `active Hit 後 ${def.bonusActiveSkillId ?? "—"} 追撃（非再帰）`;
     case "blazingFlameDetonate": {
@@ -1776,12 +1968,8 @@ function formatPassiveEffect(
       );
       return `バリア破壊時 ${amount} 再生成（対象1回限り・HP回復ではない）`;
     }
-    case "barrierDepletionHeal": {
-      const amount = formatResourceAmount(
-        def.healAmount ?? { kind: "atkBased", atkScale: 0.65 }
-      );
-      return `バリア完全消失時 ${amount} 即時回復（味方1回限り/Wave・障壁消費では発火しない）`;
-    }
+    case "barrierDepletionHeal":
+      return formatBarrierDepletionHealPassive(def);
     case "buff": {
       const alwaysSelfStat = formatPassiveAlwaysSelfStatBuff(def);
       if (alwaysSelfStat) {
@@ -1794,6 +1982,15 @@ function formatPassiveEffect(
       const metaParts = [shape, range];
       if (def.buffSubKind === "block") {
         return `ブロック率+${formatPercent(def.chance ?? 0)}`;
+      }
+      if (def.buffSubKind === "evasion") {
+        const target = def.buffTargetRule ?? { kind: "self" };
+        if (
+          target.kind === "self" &&
+          resolvePassivePeriodicTrigger(def) === undefined
+        ) {
+          return `回避+${formatPercent(def.chance ?? 0)}`;
+        }
       }
       if (def.buffSubKind === "evasion") {
         const triggerLabel = formatPassiveTriggerLabel(
@@ -1962,6 +2159,9 @@ function formatPassiveSkillEffectLines(def: PassiveSkillDef): string[] {
   if (def.effect === "threatControl") {
     return formatThreatControlEffectParts(def);
   }
+  if (def.effect === "barrierDepletionHeal") {
+    return formatBarrierDepletionHealEffectLines(def);
+  }
   return [formatPassiveEffect(def.effect, def)];
 }
 
@@ -2016,6 +2216,14 @@ function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
   );
   if (hasConsume && mappableEffects.length === 0) {
     return [formatBlockResonanceConsumeSkillEffect(def)];
+  }
+
+  const polishedSequentialLines = tryFormatPolishedSequentialEffectLines(def);
+  if (polishedSequentialLines) {
+    const maxChargesLine = formatActiveSkillMaxChargesLine(def);
+    return maxChargesLine
+      ? [...polishedSequentialLines, maxChargesLine]
+      : polishedSequentialLines;
   }
 
   const selfOriginAoeBuffLines = formatSelfOriginAoeBuffCardLines(def);

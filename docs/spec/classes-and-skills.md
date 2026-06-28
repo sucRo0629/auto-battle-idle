@@ -109,10 +109,19 @@
 - ブロック率に「（加算）」は各スキル説明に書かない（barrier の加算表記は既存どおり）
 - 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` / `at_swordsman` / `sp_cleric` テスト
 - `targetRuleOverride`（stat 最高値）— `最も{stat}が高い敵を優先して攻撃する`
+- `targetRuleOverride`（`stat: hp` + `order: ratio`）— `最もHP割合が低い敵を優先して攻撃する`
 - `targetRuleOverride`（`attackType.ranged`）— `遠隔攻撃の敵を優先して攻撃する`
+- 常時 self evasion buff — `回避+20%` 等（対象・常時の冗長表記は省略）
+- active `damageIncrease`（単一条件）— `対象に{状態}が付与されているなら、このダメージは+{scale%}される` / `対象のHPがN%以下なら、このダメージは+{scale%}される`
+- bleed DoT 付与 — `その後攻撃した対象に{N}秒間毎秒攻撃力の{scale%}の物理ダメージを与える出血を付与する`
+- active evasion buff — `{N}秒間回避+{chance%}`
+- move `toAnchor` + 直後 damage — `対象の背後に移動した後、{ダメージ文}`
 - 常時 self stat buff — `攻撃速度+25%` 等（対象・常時の冗長表記は省略）
-- 常時 `defenseIgnore` — `攻撃時、対象の防御力をN%無視する`
+- 常時 `defenseIgnore` — `攻撃時、対象の防御力をN%無視する`（`def`）/ `攻撃時、対象の魔法耐性をN%無視する`（`reg`）
+- `seedFlameOnActiveHit` — `敵に攻撃スキルが1回命中するごとに「種火」を1スタックする`
 - `specialEffect` heal（低 HP 条件）— `HPがN%以下の味方を回復時、HP回復効果+{bonus}`
+- `specialEffect` barrier（低 HP 条件）— `HPがN%以下の味方にバリア付与時、バリア量+{bonus}`
+- `barrierDepletionHeal` — `味方に付与したバリアが完全に消失した時、対象を攻撃力のN%で回復（味方ごとにWave1回まで）` + `この効果は「障壁」の消失では誘発しない`（2 行）
 - `excessHealToBarrier`（与）— `味方を回復時、最大HPを超えた回復量のN%をバリアとして対象に付与する`
 
 #### 運用

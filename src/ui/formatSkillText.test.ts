@@ -14,6 +14,9 @@ const POLISHED_CLASS_LV10_PLUS: Record<string, readonly string[]> = {
   at_swordsman: ['active_3', 'active_4', 'passive_3', 'passive_4'],
   sp_cleric: ['active_3', 'active_4', 'passive_3', 'passive_4'],
   at_ranger: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+  at_assassin: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+  at_sorcerer: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+  sp_wardweaver: ['active_3', 'active_4', 'passive_3', 'passive_4'],
 };
 
 function assertNoLegacy4bLabels(text: string): void {
@@ -146,7 +149,7 @@ describe('formatPassiveDescription', () => {
         chance: 0.18,
         buffTargetRule: { kind: 'self' },
       } satisfies PassiveSkillDef,
-      fragments: ['バフ', '回避', '18%'],
+      fragments: ['回避+18%'],
     },
     {
       name: 'passive hot fractional percent max hp',
@@ -699,6 +702,35 @@ describe('formatActiveDescription', () => {
     );
   });
 
+  it('formats sp_wardweaver Lv0 passives with 4b polish', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const p1 = gameData.skillRegistry.passives.sp_wardweaver_passive_1;
+    const p2 = gameData.skillRegistry.passives.sp_wardweaver_passive_2;
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    expect(formatPassiveDescription(p1!)).toBe(
+      '効果：HPが50%以下の味方にバリア付与時、バリア量+20%',
+    );
+    expect(formatPassiveDescription(p2!)).toBe(
+      '効果：味方に付与したバリアが完全に消失した時、対象を攻撃力の65%で回復（味方ごとにWave1回まで）、この効果は「障壁」の消失では誘発しない',
+    );
+
+    const card1 = formatSkillCardLines(p1!, { locale: 'ja' });
+    expect(card1.metaLine).toBe('常時');
+    expect(card1.effectLines).toEqual([
+      'HPが50%以下の味方にバリア付与時、バリア量+20%',
+    ]);
+
+    const card2 = formatSkillCardLines(p2!, { locale: 'ja' });
+    expect(card2.metaLine).toBe('常時');
+    expect(card2.effectLines).toEqual([
+      '味方に付与したバリアが完全に消失した時、対象を攻撃力の65%で回復（味方ごとにWave1回まで）',
+      'この効果は「障壁」の消失では誘発しない',
+    ]);
+  });
+
   it('formats at_ranger Lv0 skills with 4b polish', async () => {
     const { loadGameData } = await import('../battle/data/loadGameData.ts');
     const gameData = await loadGameData();
@@ -733,6 +765,74 @@ describe('formatActiveDescription', () => {
       '効果：遠隔攻撃の敵を優先して攻撃する',
     );
     expect(formatPassiveDescription(p2!)).toBe('効果：攻撃速度+25%');
+  });
+
+  it('formats at_assassin Lv0 skills with 4b polish', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.at_assassin_active_1;
+    const a2 = gameData.skillRegistry.actives.at_assassin_active_2;
+    const p1 = gameData.skillRegistry.passives.at_assassin_passive_1;
+    const p2 = gameData.skillRegistry.passives.at_assassin_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    const hikisaki = formatSkillCardLines(a1!, { locale: 'ja' });
+    expect(hikisaki.metaLine).toBe('再使用：通常攻撃8回 / 持続：5秒');
+    expect(hikisaki.effectLines).toEqual([
+      '攻撃力の115%の物理ダメージを与える',
+      '対象に出血が付与されているなら、このダメージは+130%される',
+      'その後攻撃した対象に5秒間毎秒攻撃力の30%の物理ダメージを与える出血を付与する',
+    ]);
+
+    const kageNoHa = formatSkillCardLines(a2!, { locale: 'ja' });
+    expect(kageNoHa.metaLine).toBe(
+      '再使用：通常攻撃14回 / 持続：1.5秒 / 硬直2秒',
+    );
+    expect(kageNoHa.effectLines).toEqual([
+      '1.5秒間回避+100%',
+      '対象の背後に移動した後、攻撃力の110%の物理ダメージを与える',
+      '対象のHPが30%以下なら、このダメージは+200%される',
+    ]);
+
+    expect(formatPassiveDescription(p1!)).toBe(
+      '効果：最もHP割合が低い敵を優先して攻撃する',
+    );
+    expect(formatPassiveDescription(p2!)).toBe('効果：回避+20%');
+
+    const passive2Card = formatSkillCardLines(p2!, { locale: 'ja' });
+    expect(passive2Card.metaLine).toBe('常時');
+    expect(passive2Card.effectLines).toEqual(['回避+20%']);
+  });
+
+  it('formats at_sorcerer Lv0 passives with 4b polish', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const p1 = gameData.skillRegistry.passives.at_sorcerer_passive_1;
+    const p2 = gameData.skillRegistry.passives.at_sorcerer_passive_2;
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    expect(formatPassiveDescription(p1!)).toBe(
+      '効果：攻撃時、対象の魔法耐性を20%無視する',
+    );
+    expect(formatPassiveDescription(p2!)).toBe(
+      '効果：敵に攻撃スキルが1回命中するごとに「種火」を1スタックする',
+    );
+
+    const card1 = formatSkillCardLines(p1!, { locale: 'ja' });
+    expect(card1.metaLine).toBe('常時');
+    expect(card1.effectLines).toEqual([
+      '攻撃時、対象の魔法耐性を20%無視する',
+    ]);
+
+    const card2 = formatSkillCardLines(p2!, { locale: 'ja' });
+    expect(card2.metaLine).toBe('常時');
+    expect(card2.effectLines).toEqual([
+      '敵に攻撃スキルが1回命中するごとに「種火」を1スタックする',
+    ]);
   });
 
   it('formatSkillCardLines requires locale ja', async () => {
