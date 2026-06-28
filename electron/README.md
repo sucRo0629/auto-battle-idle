@@ -1,6 +1,8 @@
-# Electron シェル（Phase 9 基盤）
+# Electron シェル（Phase 7 — 配布用）
 
-## ウィンドウ構成
+**ロードマップ:** [phase-roadmap.md §Phase 7](../docs/plans/phase-roadmap.md#phase-7--デスクトップ配布electron) — Release M1 向け zip。常駐 UI（常時前面・トレイ）は **廃止予定**。
+
+## ウィンドウ構成（現状 — 開発用）
 
 | ウィンドウ | ファイル | 役割 |
 |-----------|---------|------|

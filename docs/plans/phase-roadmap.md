@@ -1,6 +1,8 @@
 # フェーズロードマップ
 
-Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../spec/README.md) を参照。
+Auto Battle Idle の開発フェーズ一覧。**Phase 1〜12 は番号順**（概要表の並び = 依存のおおまかな順）。ゲームルールは [spec](../spec/README.md) を参照。
+
+**旧番号からの変更（2026-06）:** 旧 Phase 8（Electron）→ **Phase 7**。旧 Phase 7a バランス → **Phase 6c / 8c** に分割。ステージ作成 → **Phase 6（体験版）** と **Phase 8（本編）** に分離。旧 Phase 7b/7c → **Phase 9**。旧 Phase 9 ローグ → **Phase 10**。旧 Phase 10 → **Phase 11**。旧 Phase 11 メタ → **Phase 12**。
 
 ## 概要
 
@@ -11,20 +13,114 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2b** | 戦闘計算（`combatMath` 等）                                                                   | **完了**                        |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                                     | **完了**                        |
 | **3**  | Lv アップ時スキル習得、習得済み passive / active 常時使用枠（各最大 4）+ クラス別スキル再設定 | **完了**                        |
-| **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **確定済** / 4c **完了** / 4b 説明 / **4d ほぼ完了**  | **進行中**（4d 目視確認）       |
+| **4**  | クラスマスタ + スキル説明 + 編成 UI + **i18n（4e）**；4a **確定済** / 4c **完了** / 4b 説明 / **4d ほぼ完了** | **進行中**（4d 目視確認・**4e / Release M1 準備**） |
 | **5**  | 演出アセット + VFX PNG + **演出調整ツール**；**5d Combat Feedback**（Damage / Event Popup）   | **基盤のみ**（本番 PNG 未実装） |
-| **6**  | ステージ作成 — 敵テンプレート・固定ステージコンテンツ・ステージ編集 GUI                       | 未着手（4a 後）                 |
-| **9**  | ローグライクモード（仮称）— 既存 effect 中心 13 クラス向けランダム問題・ラン進行              | 未着手                          |
-| **7a** | バランス調整 — 既存 effect 中心 13 クラス + 固定ステージ                                      | 未着手                          |
-| **7b** | 印術師の独自システム実装                                                                      | 未着手                          |
-| **7c** | 法陣師の独自システム実装                                                                      | 未着手                          |
-| **8**  | Electron シェル本番化                                                                         | 未着手                          |
-| **10** | 印術師・法陣師対応ローグライクモード（仮称）                                                  | 未着手                          |
-| **11** | 解法評価メタ（07582b6）— グローバル `playerLevel` / Stage Records / Level Sync                | 未着手（Phase 6 後）            |
+| **6**  | **体験版コンテンツ（Release M1）** — 敵・**体験版専用ステージ**・Lv1 バランス（8 クラス）     | 未着手                          |
+| **7**  | **デスクトップ配布** — Electron パッケージ（itch 向け zip）                                   | 未着手（Release M1 直前）       |
+| **8**  | **初版本編コンテンツ（Release M2）** — 敵拡張・**本編 Chapter 1 ステージ**・Lv1 バランス（13 クラス）・編集 GUI | 未着手                          |
+| **9**  | 印術師・法陣師の独自システム実装（**9a** / **9b**）                                         | 未着手                          |
+| **10** | ローグライクモード（仮称）— 13 クラス向けランダム問題・ラン進行                             | 未着手                          |
+| **11** | 印術師・法陣師対応ローグライクモード（仮称）                                                  | 未着手                          |
+| **12** | 解法評価メタ（07582b6）— Stage Records / Level Sync                                           | 未着手                          |
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
-**開発優先:** **Phase 4d（編成・統計 UI + HUD 見た目）** — Web アプリ風ダッシュボード感を除去し、PC 向け RPG 情報パネル基調（[party-formation-ui.md §11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通)）に揃える。編成 UI（PR1–3）は **完了**。統計オーバーレイ刷新と HUD バッジ仕上げが残る。4c JSON 分割は **完了**。Electron は Phase 8。globalExp / 強化ツリー / オフライン報酬は Phase 8 から外し、別途再計画する。
+**開発優先:** **Release M1（体験版）** へ向けて **Phase 4d 仕上げ → Phase 4e（英語 i18n）→ Phase 6（体験版ステージ・敵・バランス）→ Phase 7（zip ビルド）→ itch.io 公開**。**Release M2** は **Phase 8（本編ステージ・13 クラスバランス）**。体験版と本編のステージ JSON は **別管理**（§Phase 6 / §Phase 8）。ジャンルは **編成解法型オートバトル RPG**。最初の完成単位は **Lv1 章**（Lv10 / Lv20 スキルは実装済みだがコンテンツ・調整は M3 以降）。
+
+---
+
+## Release マイルストーン
+
+**Phase** = 開発タスクの塊。**Release** = プレイヤーに届ける完成単位。体験版用に **Git ブランチを長期分岐しない**。`main` 1 本 + ビルドフラグ（`BUILD_FLAVOR=demo|full`）で zip を 2 種類出す。
+
+| Release | 名称 | ゴール | 状態 |
+| ------- | ---- | ------ | ---- |
+| **M1** | **体験版** | itch.io 無料公開。Lv1 章 **前半**・解禁 **8 クラス**・**英語 UI** | 未着手 |
+| **M2** | **初版 Chapter 1** | 有料版。Lv1 章 **全文**・解禁 **13 クラス**（印術師・法陣師除く） | 未着手 |
+| **M3+** | 拡張 | Lv10 / Lv20 章、印術師・法陣師（Phase 9）、Steam 等 | 未着手 |
+
+### 配信方針
+
+| チャネル | 位置づけ |
+| -------- | -------- |
+| **itch.io** | **第一配信先**（体験版無料 → 初版有料。海外向け・Devlog / 外宣伝の受け皿） |
+| **Steam** | **後回し**（実績・レビュー・英語ページが整ってから。Partner 登録 $100 も後） |
+| **DLsite** | 日本向け **任意** の追加窓口（初版の日本語版など） |
+| **PWA** | 優先度低（ストア向けは Electron zip が正） |
+
+**Electron（Phase 7）:** デスクトップ **配布パッケージ**（`.exe` / zip）。frameless・常時前面・トレイ・片隅常駐は **スコープ外**。
+
+### M1 — 体験版
+
+**プレイ範囲**
+
+- **プレイヤー Lv1 キャップ**（Exp 取得しても Lv2 以上に上がらない）
+- 戦闘・習得は **Lv0 スキル**（passive / active 各 2 枠）のみが有効
+- **Chapter 1 前半**ステージのみ（変則・弩砲・高 Max HP 狙いが不要な問題）
+
+**解禁クラス（8）— 選べる**
+
+| classId | 表示名 |
+| ------- | ------ |
+| `df_guardian` | 鉄衛士 |
+| `df_paladin` | 護法士 |
+| `at_warrior` | 剣術士 |
+| `at_assassin` | 双刃士 |
+| `at_ranger` | 弓術士 |
+| `at_sorcerer` | 魔術師 |
+| `sp_cleric` | 療養師 |
+| `sp_wardweaver` | 結界師 |
+
+**グレーアウト（5）— ロスターに表示、選択不可**
+
+| classId | 表示名 | 理由 |
+| ------- | ------ | ---- |
+| `df_duelist` | 闘技士 | 変則 |
+| `at_lancer` | 槍術士 | 変則 |
+| `at_hunter` | 狩猟士 | 変則 |
+| `sp_alchemist` | 薬草師 | 変則 |
+| `at_ballista` | 弩砲士 | 体験版追加制限（遠隔は弓術士 1 本。初版 M2 で解禁） |
+
+グレー理由の文言は **変則 4** と **弩砲士** で分ける（「Full version」一括にしない）。
+
+**非表示（2）— ロスターに出さない**
+
+| classId | 表示名 | 理由 |
+| ------- | ------ | ---- |
+| `at_sigilist` | 印術師 | combat 未実装（Phase 9a） |
+| `at_conductor` | 法陣師 | combat 未実装（Phase 9b） |
+
+**編成 UX 要件（M1）**
+
+- UI ロール（`defender` / `attacker` / `supporter`）ごとに **2 クラス以上** 選べること → M1 は満たす（Def 2 / Atk 4 / Sup 2）
+- 職群ラインごとの「基礎 + 拡張 2 択」までは要求しない。遠隔物理・魔法 Kill は **各 1**（弓術士・魔術師のみ）
+- 魔法 Kill は **Phase 9a（印術師）まで魔術師 1 クラスのみ**（M2 も同様）
+
+**M1 に含める開発（Phase 対応）**
+
+- **4e** — 英語 i18n（Release M1 **必須**）
+- **6a** — 体験版に必要な敵テンプレ
+- **6b** — **体験版専用**ステージ（`data/stages-demo.json` 等。**本編 `stages.json` とは別**）
+- **6c** — Lv1・解禁 8 クラスのバランス + M1 ステージ調整
+- **7** — `BUILD_FLAVOR=demo`、デバッグ UI 無効、体験版終了画面、itch 用 Windows zip
+
+**M1 スコープ外:** 変則 4・弩砲士・Chapter 1 後半、Lv10 / Lv20 進行、印術師・法陣師、Steam、DLsite（任意）
+
+### M2 — 初版 Chapter 1
+
+- M1 から **+ 弩砲士 + 変則 4** → 解禁 **13 クラス**（印術師・法陣師は引き続き非表示）
+- **Chapter 1 全文**（変則・弩砲が効く後半ステージを含む）
+- 引き続き **Lv1 キャップ** + Lv0 スキル前提（**Phase 8c** で 13 クラスバランス + **Phase 8b** 本編ステージ）
+- `BUILD_FLAVOR=full`、itch 有料版（DLsite は任意）
+- 体験版セーブの本編引き継ぎは **v1 では任意**（別セーブキー）
+
+### M3 以降（概要）
+
+- Lv10 / Lv20 章・スキル段階のステージ追加
+- Phase 9 — 印術師・法陣師
+- Phase 10 / 11 — ローグライク
+- Phase 12 — Stage Records / Level Sync
+- Steam・本格 Electron 署名
 
 ---
 
@@ -84,7 +180,7 @@ data/    → loadGameData.ts が JSON マスタを読み込み
 
 ### 2b — 戦闘計算（完了）
 
-Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体感調整は **Phase 7a**。
+Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体感調整は **Phase 6c / 8c**。
 
 ### 2c — クラス基盤（完了）
 
@@ -111,7 +207,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ### 経緯（2026-06 再オープン → 完了）
 
-仕様見直しによりクラス別パッシブ / アクティブの再設定を Phase 3 へ戻したが、13 クラス分の再定義・JSON / combat 同期は完了。**印術師・法陣師**（`at_sigilist` / `at_conductor`）は独自システムのため combat 実装は **Phase 7b / 7c 以降**（設計確定のみ Phase 3 完了条件に含む）。
+仕様見直しによりクラス別パッシブ / アクティブの再設定を Phase 3 へ戻したが、13 クラス分の再定義・JSON / combat 同期は完了。**印術師・法陣師**（`at_sigilist` / `at_conductor`）は独自システムのため combat 実装は **Phase 9a / 9b 以降**（設計確定のみ Phase 3 完了条件に含む）。
 
 ### Phase 3d — 接近・接敵 Intent 一本化（完了）
 
@@ -132,9 +228,9 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ### スコープ外（Phase 3）— 独自システムクラス
 
-`at_sigilist`（印術師）と `at_conductor`（法陣師）は、乾印 / 坤印（`windMark` / `earthMark`）・Earth / Wind Branch 分岐・damage reservoir / routing 系など **戦闘エンジン拡張を伴う独自システム** を持つ。設計確定（[skill-finalization-table.md](./skill-finalization-table.md)）は Phase 3 で行うが、**combat 実装・`data/skills/` 投入・tooling 本番化は Phase 7b / 7c 以降** とする。
+`at_sigilist`（印術師）と `at_conductor`（法陣師）は、乾印 / 坤印（`windMark` / `earthMark`）・Earth / Wind Branch 分岐・damage reservoir / routing 系など **戦闘エンジン拡張を伴う独自システム** を持つ。設計確定（[skill-finalization-table.md](./skill-finalization-table.md)）は Phase 3 で行うが、**combat 実装・`data/skills/` 投入・tooling 本番化は Phase 9a / 9b 以降** とする。
 
-| classId        | Phase 3 で行うこと                                                     | Phase 7b / 7c 以降へ送ること                                                                            |
+| classId        | Phase 3 で行うこと                                                     | Phase 9a / 9b 以降へ送ること                                                                            |
 | -------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `at_sigilist`  | 枠設計・乾印 / 坤印 / Branch 仕様の docs 確定。現行 JSON active は廃棄済み | `windMark` / `earthMark` state / effect、conditionalEffect tooling、passive / active JSON |
 | `at_conductor` | 枠設計・蓄積プール / 法陣仕様の docs 確定。現行 JSON active は廃棄済み | damage reservoir、observation / concentration / distribution / recycling、非 damage basic、地点指定範囲 |
@@ -149,10 +245,11 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 
 | サブフェーズ | 内容                                                                                                                                                                                                                                    | 状態                                                       |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                                                                                                                                            | **確定済**（13 クラス。印術師・法陣師は Phase 7b/7c 送り） |
+| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                                                                                                                                            | **確定済**（13 クラス。印術師・法陣師は Phase 9 送り） |
 | **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                                                                                                                                                    | **完了**                                                   |
-| **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish                                                                                                                                                           | **随時**（コア済）                                         |
+| **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 6c / 8c 前 polish                                                                                                                                                     | **随時**（コア済）                                         |
 | **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsDrawer`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **ほぼ完了**（§11 視覚 polish 残確認）                     |
+| **4e**       | **多言語（英語）** — i18n 基盤、UI / ゲームデータ / スキル説明の locale 化（**Release M1 必須**）                                                                                                                                    | **未着手**                                                 |
 
 ### クラスマスタ（確定済）
 
@@ -160,7 +257,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 
 - 旧デモ 4 クラス（Bulwark 等）は削除済み
 - `epithetEn` の 2 段ルビ UI は master-work-order Phase 3c
-- 数値バランスの最終版は Phase 7a
+- 数値バランスの最終版は **Phase 6c（体験版）** / **Phase 8c（本編）**
 
 ### 4a — クラスデータ + GUI（確定済）
 
@@ -174,7 +271,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 
 スキル JSON に `description` フィールドは持たず、UI は `src/ui/formatSkillText.ts` から説明文を組み立てる（`SkillMenuPanel` ツールチップ・`SkillEditorStep` テキストプレビュー）。
 
-**方針:** コア（自動生成 + エディタプレビュー）は **既に稼働**。新 effect / ターゲット形状を足す **データ PR ごと** に `formatSkillText` とテストを同梱。全クラス目視の仕上げは **Phase 7a 前** でよい。1 行テンプレ・表記ルールは [classes-and-skills.md §スキル説明自動生成（Phase 4b）](../spec/classes-and-skills.md#スキル説明自動生成phase-4b) を正とする。
+**方針:** コア（自動生成 + エディタプレビュー）は **既に稼働**。新 effect / ターゲット形状を足す **データ PR ごと** に `formatSkillText` とテストを同梱。全クラス目視の仕上げは **Phase 6c / 8c 前** でよい。1 行テンプレ・表記ルールは [classes-and-skills.md §スキル説明自動生成（Phase 4b）](../spec/classes-and-skills.md#スキル説明自動生成phase-4b) を正とする。
 
 **4b スコープ外**
 
@@ -217,9 +314,9 @@ data/
 
 **4c スコープ外**
 
-- スキル数値・ID のバランス変更（**Phase 7a**）
+- スキル数値・ID のバランス変更（**Phase 6c / 8c**）
 - `classes.json` の 15 分割（効果が小さいため任意。4c 完了後に別タスク可）
-- ステージ・敵 JSON の分割（行数が少なく優先度低。**Phase 6** で必要になれば再検討）
+- 本編ステージ JSON の分割（**Phase 8** で必要になれば再検討。体験版は **Phase 6b**）
 
 **タイミング：** 4a でスキーマが固まったあと。**4b と並行** してよい（説明文生成はマージ後の型・validate に依存するだけ）。
 
@@ -280,16 +377,45 @@ data/
 
 **4d スコープ外**
 
-- ステージ敵構成との連動ヒント（**Phase 6**）
+- ステージ敵構成との連動ヒント（**Phase 6b / 8b**）
 - 戦闘 `battleX` 配置プレビュー
 - Kill / Flow / Survival レイヤーの編成 UI 表示
-- 統計の集計項目追加・本番モード Stage Records（**Phase 11**）
+- 統計の集計項目追加・本番モード Stage Records（**Phase 12**）
 
-**タイミング:** 4a データ形安定後、**Phase 6（固定ステージ）より前**。4b（説明文）と並行可。Phase 5（演出 PNG）とは独立。
+**タイミング:** 4a データ形安定後、**Phase 6 より前**。4b（説明文）と並行可。Phase 5（演出 PNG）とは独立。
+
+### 4e — 多言語（英語）— Release M1 向け
+
+**ゴール:** 海外向け itch.io 公開のため、**日本語 + 英語** の 2 言語をサポートする。Release M1（体験版）の **必須条件**。
+
+**着手条件:** 4d の編成 UI 骨格が安定していること（文言差し替え先が存在すること）。
+
+| レイヤ | 内容 |
+| ------ | ---- |
+| **基盤** | locale 選択（`ja` / `en`）、`t(key)` または同等、ビルド / 起動時の既定 locale（体験版 zip は **既定 `en`** を推奨） |
+| **DOM UI** | `SkillMenuPanel`、`MetaMenuOverlay`、`BattleStatsDrawer`、HUD ラベル、体験版終了画面、デバッグ以外の固定文言 |
+| **ゲームデータ** | `classes.json` の `displayName` / `epithetEn`（英語表示名の正本整理）、スキル名・説明（`formatSkillText` の locale 分岐、または JSON に locale フィールド） |
+| **用語** | `gameTermGlossary.ts` — 既存 locale キー設計を英語エントリまで拡張 |
+| **ストア** | itch.io ページ・短いキャッチコピー・スクリーンショット上の英語（doc 外だが M1 チェックリストに含める） |
+
+**進め方（推奨）**
+
+1. i18n 基盤 + DOM UI の英語（プレイに必要な最短経路）
+2. `formatSkillText` / クラス名 — M1 解禁 8 クラス分から
+3. M2 前に 13 クラス分へ拡張
+
+**4e スコープ外（初期）**
+
+- 中国語・韓国語など 3 言語目以降
+- 全 15 クラス（未実装 2 含む）の完全翻訳
+- コミュニティ翻訳基盤
+- 音声・ボイス
+
+**タイミング:** **Release M1 より前** に完了。Phase 6 / 8 と **並行可**（体験版ステージ名の英語は 6b と同時でもよい）。
 
 ### スコープ外（Phase 4）
 
-- 固定ステージコンテンツ・ステージ編集 GUI（**Phase 6**）
+- 体験版・本編ステージコンテンツ（**Phase 6 / 8**）
 - 演出アセット本番化・演出調整ツール（**Phase 5**）
 
 ---
@@ -343,7 +469,7 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 
 **実装済み（部分）:** `showDamagePopup` / `showHealPopup`、`showBlockPopup` / `showCounterPopup` / `showEvadePopup` 等、`damagePopupLayout.test.ts`。
 
-**スコープ外:** 戦闘ログ DOM、手書き `description`、演出ラボ、Stage Records（**Phase 11**）。
+**スコープ外:** 戦闘ログ DOM、手書き `description`、演出ラボ、Stage Records（**Phase 12**）。
 
 ### 進め方
 
@@ -389,237 +515,255 @@ Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦�
 
 ---
 
-## Phase 6 — ステージ作成
+## Phase 6 — 体験版コンテンツ（Release M1）
 
-Phase 4a で確定したクラス・スキルを前提に、メインモード用の **固定ステージ群**（`stages.json`）と **敵テンプレート**（`enemies.json`）を作成・編集できる状態にする。敵編成方針は [enemy-design-concept.md](../enemy-design-concept.md)（クラス体系ベース・問題提示型）に従う。進行ルールは [progression.md](../spec/progression.md) Phase 2 の `currentStageId` 連鎖を正とする。
+**ゴール:** **Release M1** 向けの敵・ステージ・Lv1 バランスを、**本編（Phase 8）とは別データ** で用意する。
 
-| サブフェーズ | 内容                                                                                          | 状態   |
-| ------------ | --------------------------------------------------------------------------------------------- | ------ |
-| **6a**       | 敵テンプレート整備 — クラス参照型 `enemies.json`、既存 `EnemyEditorStep` 経由の編集・validate | 未着手 |
-| **6b**       | 固定ステージコンテンツ — `stages.json` 進行順・Wave / `spawnX`・解法提示型編成                | 未着手 |
-| **6c**       | ステージ編集 GUI — Wave 編成・`spawnX`・保存（`StageEditorStep`）                             | 未着手 |
+**データ分離（正本）**
 
-### 6a — 敵テンプレート整備
+| 用途 | ファイル（案） | ビルド |
+| ---- | -------------- | ------ |
+| 体験版ステージ | `data/stages-demo.json`（名称は実装時確定） | `BUILD_FLAVOR=demo` のみ読込 |
+| 本編ステージ | `data/stages.json` | `BUILD_FLAVOR=full`（**Phase 8b**） |
 
-- [enemy-design-concept.md](../enemy-design-concept.md) に沿い、プレイヤークラスを流用した敵テンプレートを `enemies.json` に整備
-- 既存 **`EnemyEditorStep`** + `vite-plugin-editor-api` の敵保存経路を利用。`classId` 参照・スキル割当・`exp` は validate 整合
-- 雑魚 / エリート / ボス相当の **テンプレート骨格**（HP 倍率・専用パッシブ等はデータ PR 単位）。数値の最終調整は **Phase 7a**
-- test / 検証用ダミー敵と本番用テンプレートの整理
+体験版は **ビルド側でステージ上限** を設けるだけでなく、**コンテンツ JSON 自体を本編と分ける**。本編 `stages.json` に体験版用ステージを混在させない。
 
-### 6b — 固定ステージコンテンツ
+進行ルールは [progression.md](../spec/progression.md) Phase 2 の `currentStageId` 連鎖を正とする（demo 用セーブキーは Release 節参照）。
 
-- `stages.json` の **配列順 = メイン進行チェーン**（Victory で次 ID、Defeat で 1 つ前へ — Phase 2a 済）
-- 各ステージ：`id` / `displayName` / `waves[]` / 各 Wave の `enemies[]`（`templateId` + `spawnX`）。座標規約は [battle-field.md](../spec/battle-field.md)
-- [enemy-design-concept.md](../enemy-design-concept.md) の編成パターン（雑魚ラッシュ・バランス編成・魔術編成等）を **意図した解法体験** としてステージに配置
-- 学習導線となる早期〜中盤ステージの骨格。難易度カーブ・EXP ペースの **最終調整は Phase 7a**
+| サブフェーズ | 内容 | Release |
+| ------------ | ---- | ------- |
+| **6a** | 敵テンプレ — 体験版ステージに必要な `enemies.json` エントリ。`EnemyEditorStep` 経由 | M1 |
+| **6b** | **体験版固定ステージ** — `stages-demo.json`（または同等）。M1 解禁 8 クラス・Lv0 スキルのみで解ける問題。変則・弩砲不要 | M1 |
+| **6c** | **体験版バランス** — Lv1 キャップ、解禁 8 クラス、6b ステージの数値 polish | M1 |
 
-### 6c — ステージ編集 GUI
+### 6a — 敵テンプレ（体験版）
 
-- 新規 **`StageEditorStep`**（`EditorApp` タブ追加）
-- ステージ一覧・新規 / 複製・Wave 追加削除・敵 `templateId` 選択・`spawnX` 編集
-- `validateGameData` 連動保存（`stages.json` PUT — 読み取り API は既存）
-- 任意：`spawnX` のフィールド上プレビュー（本番 battle 起動なしの簡易配置表示）
+- [enemy-design-concept.md](../enemy-design-concept.md) に沿い、**6b が要求する編成パターン** に必要な敵のみ整備
+- 既存 **`EnemyEditorStep`** + validate。本編向けボス・高 Max HP テンプレは **Phase 8a** へ送る
+- test / 検証用ダミー敵と M1 用テンプレの整理
+
+### 6b — 体験版ステージ
+
+- **本編 `stages.json` とは別ファイル** に Chapter 1 **体験版分** のみ定義
+- 各ステージ：`id` / `displayName` / `waves[]` / `enemies[]`（`templateId` + `spawnX`）。座標は [battle-field.md](../spec/battle-field.md)
+- 解法は M1 解禁 8 クラス・Lv0 スキルのみで完結。体験版終了画面で初版（M2）へ誘導
+- 英語 `displayName` は **Phase 4e** と同期
+
+### 6c — 体験版バランス
+
+- [combat.md](../spec/combat.md) との突き合わせ
+- **Lv1 キャップ**（Lv10/20 習得が発生しない）
+- 解禁 **8 クラス**・**Lv0 スキル**威力 + 6b 敵 `exp`・難易度カーブ
+- **passive / active 枠**（Lv0=2）の UI / 戦闘整合確認
 
 ### 進め方
 
-1. **6a** — 編成パターンに必要な敵テンプレートを先に揃える（GUI は既存）
-2. **6b** — 手書き JSON または暫定フォームで最初の進行チェーンを投入し、validate / 戦闘目視
-3. **6c** — 反復編集のため GUI 化。6b と **並行可**（コンテンツ先行）
+1. **6a** — 6b 設計に必要な敵テンプレのみ
+2. **6b** — 体験版チェーンを JSON 投入 → validate / 戦闘目視
+3. **6c** — 6b と **反復**（ステージ骨格 → 数値 polish）
 
 ### スコープ外（Phase 6）
 
-- ローグライクのランダム問題生成（**Phase 9**）
-- ステージ難易度・敵 `exp`・周回テンポの最終チューニング（**Phase 7a**）
+- 本編 Chapter 1 後半・13 クラス向け問題（**Phase 8**）
+- ステージ編集 GUI（**Phase 8d**）
+- ローグライク（**Phase 10**）
 - 敵・味方の本番演出 PNG（**Phase 5**）
-- 敵コスト制による自動生成（enemy-design-concept §8 は将来拡張。初期は手組み）
 
 ---
 
-## Phase 9 — ローグライクモード（仮称）
+## Phase 7 — デスクトップ配布（Electron）
 
-**着手条件:** Phase 6 完了後。詳細仕様は [roguelike-mode.md](../spec/roguelike-mode.md) §18。
+**Release M1 直前** に最小構成で着手。**Phase 8 完了を待たない**。
 
-**ゴール:** 既存 effect 中心の 13 クラスで、メインステージ攻略後も編成実験・クラス研究・解法探索を供給するランダム問題モード。
+**ゴール:** itch.io 等向け **体験版 zip** を `main` から再現ビルドできること。
+
+| 項目 | 内容 |
+| ---- | ---- |
+| パッケージ | electron-builder（または Forge）— Windows zip |
+| ビルド | `npm run build:demo` / `build:full` — `BUILD_FLAVOR` |
+| データ | demo → `stages-demo.json` + 6a 敵。full → `stages.json`（Phase 8b 後） |
+| ウィンドウ | **通常のゲームウィンドウ**。常時前面・トレイ・片隅常駐は **スコープ外** |
+| セーブ | demo / full で **別 storage キー** |
+
+**既存資産:** `electron/main.mjs`（frameless・常時前面・トレイ）は **M1 前に通常ウィンドウへ寄せる**。
+
+### スコープ外（Phase 7）
+
+- globalExp、強化ツリー、オフライン報酬
+- Steamworks（Steam 後回し）
+- macOS / Linux（初期は Windows 優先可）
+- コード署名（推奨だが M1 ブロッカーにしない）
+
+---
+
+## Phase 8 — 初版本編コンテンツ（Release M2）
+
+**ゴール:** **Release M2** 向けの本編 Chapter 1（**全文**）・13 クラス Lv1 バランス。**体験版（Phase 6）とは別データ**。
+
+| サブフェーズ | 内容 | Release |
+| ------------ | ---- | ------- |
+| **8a** | 敵テンプレ拡張 — 弩砲・変則向け、ボス / 高 Max HP 等。`enemies.json` | M2 |
+| **8b** | **本編固定ステージ** — `stages.json` に Chapter 1 **全文**（後半＝変則・弩砲が効く問題）。6b とは **ID・ファイルを共有しない** | M2 |
+| **8c** | **本編バランス** — Lv1・解禁 **13 クラス**・8b ステージの数値 polish | M2 |
+| **8d** | ステージ編集 GUI — `StageEditorStep`、demo / main 両方の編集経路（任意でファイル切替） | M2 |
+
+### 8a — 敵テンプレ（本編）
+
+- 6a に無い編成パターン（雑魚ラッシュ・魔術編成・高耐久等）を [enemy-design-concept.md](../enemy-design-concept.md) に沿って追加
+- 数値最終調整は **8c**
+
+### 8b — 本編ステージ
+
+- **`data/stages.json`** = メインモード本編チェーン（配列順 = 進行順）
+- M2 解禁 13 クラス・Lv0 スキル前提。体験版 6b ステージの **続き / 別問題** として設計（コピー混在ではなく本編として独立管理）
+- `BUILD_FLAVOR=full` のみ読込
+
+### 8c — 本編バランス
+
+- **Lv1 キャップ** 維持
+- 解禁 **13 クラス**（印術師・法陣師除く）・8b 難易度・`exp` ペース
+- M1（6c）で確定した 8 クラス数値をベースに、追加 5 クラス + 後半ステージを調整
+
+### 8d — ステージ編集 GUI
+
+- **`StageEditorStep`**（`EditorApp` タブ）
+- ステージ一覧・Wave 編成・`spawnX`・validate 保存
+- demo / main の **編集対象ファイル** を切替可能にする（6b / 8b 分離に追随）
+
+### スコープ外（Phase 8）
+
+- Lv10 / Lv20 章（M3 以降）
+- ローグライク（**Phase 10**）
+- 印術師・法陣師（**Phase 9**）
+
+---
+
+## Phase 9 — 印術師・法陣師（独自システム）
+
+Phase 3 で設計確定済みの **印術師・法陣師** の combat 実装。**Release M2 完了後**（M3 以降）に着手。
+
+| サブフェーズ | 内容 | 状態 |
+| ------------ | ---- | ---- |
+| **9a** | 印術師 — 乾印 / 坤印、Earth / Wind Branch、`conditionalEffect` tooling | 未着手 |
+| **9b** | 法陣師 — damage reservoir、法陣 routing / distribution / recycling | 未着手 |
+
+### 9a — 印術師
+
+- Earth / Wind Branch 分岐、乾印（`windMark`）/ 坤印（`earthMark`）付与・起爆
+- `SkillEditorStep`・validate・`formatSkillText`・関連 spec の同期
+
+### 9b — 法陣師
+
+- damage reservoir、observation / concentration / distribution / recycling
+- 地点指定範囲 / 持続法陣、非 damage basic
+
+### スコープ外（Phase 9）
+
+- ローグライクへの組み込み（**Phase 11**）
+- Lv10 / Lv20 全章バランス（M3 以降別計画）
+
+---
+
+## Phase 10 — ローグライクモード（仮称）
+
+**着手条件:** Phase 8 完了後。詳細仕様は [roguelike-mode.md](../spec/roguelike-mode.md) §18。
+
+**ゴール:** effect 中心 **13 クラス** で、本編攻略後も編成実験・解法探索を供給するランダム問題モード。
 
 ### スコープ（概要）
 
 - ラン専用 state（メインセーブと分離）
 - 問題生成（敵構成・傾向・ステージ補正）
 - 分岐マップ・進路選択・報酬選択 UI
-- 世界補正・制約・クラスルール変化型報酬
 - 既存 `BattleEngine` への Mod 注入
-- エンドレス継続
 
 ### スコープ外（初期）
 
-- 印術師・法陣師の独自システム対応（**Phase 10**）
+- 印術師・法陣師（**Phase 11**）
 - メインモードへのラン報酬永続転用
-- 戦闘中プレイヤー操作
 - ラン専用新クラス
 
 ---
 
-## Phase 7 — バランス調整 + 独自システムクラス実装
+## Phase 11 — 印術師・法陣師対応ローグライク（仮称）
 
-Phase 3〜6 と Phase 9（および Phase 4 のクラスマスタ・**Phase 6 の固定ステージ骨格**）で **既存 effect 中心の 13 クラス** の機能・コンテンツ・見た目・ランダム問題基盤が揃ったあとに着手する。ゲーム全体の数値チューニング、Phase 3 で設計のみ確定した **印術師・法陣師の独自システム実装** を 3 つに分けて行う。
+**着手条件:** Phase 9a / 9b 完了後。
 
-| サブフェーズ | 内容                                                     | 状態   |
-| ------------ | -------------------------------------------------------- | ------ |
-| **7a**       | バランス調整 — 既存 effect 中心 13 クラス + 固定ステージ | 未着手 |
-| **7b**       | 印術師の独自システム実装                                 | 未着手 |
-| **7c**       | 法陣師の独自システム実装                                 | 未着手 |
-
-### 7a — バランス調整
-
-- [combat.md](../spec/combat.md) との突き合わせ・検証
-- 敵 `exp`、**growthPresets 表**・クラス `growthTier` 割当、LvUP ペース
-- 既存 effect 中心 13 クラスの Lv1 基礎ステ・スキル威力（具体スキルはマスタ確定後）
-- ステージ難易度カーブ（敵ステ・ウェーブ構成）— Phase 6 で置いた骨格の数値 polish
-- Phase 3 以降のスキル習得との整合
-- **passive / active 枠構造**の最終確認（Lv0=2 / Lv10=3 / Lv20=4）
-  - active は `getUnlockedActiveSlotCount`、passive は同じ Lv 段階に対応する解決処理へ固定
-  - **UI**（HUD / スキル表示）と**戦闘**（`createCooldowns` / `reconcileMemberBuild` 等）の両方で習得済み passive / active 常時使用として扱う
-
-### 7b — 印術師の独自システム実装
-
-- Earth / Wind Branch 分岐、乾印（`windMark`）/ 坤印（`earthMark`）付与・起爆
-- `windMark` / `earthMark` state / effect、conditionalEffect tooling、passive / active JSON
-- `SkillEditorStep`・validate・`formatSkillText`・関連 spec の同期
-
-### 7c — 法陣師の独自システム実装
-
-- damage reservoir、observation / concentration / distribution / recycling
-- 地点指定範囲 / 持続法陣、非 damage basic
-- `SkillEditorStep`・validate・`formatSkillText`・関連 spec の同期
-
-### スコープ外（Phase 7）
-
-- 職階追加の再導入
-- 印術師・法陣師をローグライク問題生成へ組み込む作業（**Phase 10**）
+**ゴール:** Phase 10 のローグライクに印術師・法陣師の独自システムを問題生成・報酬へ組み込む。
 
 ---
 
-## Phase 8 — Electron
+## Phase 12 — 解法評価メタ（07582b6）
 
-Phase 7 完了後に着手。クラスマスタ・数値チューニングが揃ってからデスクトップシェルを本番化する。
+**着手条件:** Phase 8b 完了後（本編進行チェーンが存在すること）。
 
-- Electron シェル：frameless、常に前面、トレイ、片隅配置（`electron/main.mjs` に基盤のみ一部実装済み）
+**ゴール:** [design-philosophy.md](../design-philosophy.md) の「理解度評価」をセーブ・ステージ・オプションに反映。
 
-### スコープ外（Phase 8）
+| サブフェーズ | 内容 | 状態 |
+| ------------ | ---- | ---- |
+| **12b** | schema + `resolveEffectiveLevel` + Instant Lv20 / Level Sync | 未着手 |
+| **12c** | Stage Records — `recommendedLevel`、クリア履歴 UI | 未着手 |
 
-- globalExp
-- 強化ツリー（`enhancementTree.json`）
-- オフライン報酬
+**正本:** [progression.md](../spec/progression.md)、[system-mechanics.md](../system-mechanics.md)。Combat Feedback は **Phase 5d**。
 
----
+### 12b — schema 実装
 
-## Phase 10 — 印術師・法陣師対応ローグライクモード（仮称）
+- `playerProgress` 型・マイグレーション・`resolveEffectiveLevel` 単一経路
+- Victory 時 EXP、HUD 共通 Lv / Exp 表示
 
-**着手条件:** Phase 7b / 7c と Phase 8 完了後。
+### 12c — Stage Records
 
-**ゴール:** Phase 9 の基本ローグライクに、印術師・法陣師の独自システムを問題生成・報酬・ラン中ルールへ組み込む。
+- `stages.json` に `recommendedLevel`
+- クリア履歴セーブ、ステージ選択 / リザルト UI（最小 MVP）
 
-### スコープ（概要）
+### スコープ外（Phase 12）
 
-- 乾印 / 坤印 / Branch、damage reservoir / 法陣を前提にした問題生成
-- 印術師・法陣師向けの世界補正・制約・報酬候補
-- ラン内 Mod と独自システム state の整合
-- Phase 9 のラン基盤への追加テスト
-
-### スコープ外（初期）
-
-- ラン専用新クラス
-- メインモードへのラン報酬永続転用
-- 戦闘中プレイヤー操作
-
----
-
-## Phase 11 — 解法評価メタ（07582b6）
-
-**着手条件:** Phase 6 完了後（6b で進行チェーン骨格が存在すること）。
-
-**ゴール:** [design-philosophy.md](../design-philosophy.md) と [system-mechanics.md](../system-mechanics.md) で追記した「理解度評価」を、セーブ・ステージ・オプションに反映する。戦闘表示（Damage / Event Popup）は **Phase 5d** で扱う。
-
-**正本:** 進行メタは [progression.md](../spec/progression.md)（`playerProgress`）と [system-mechanics.md](../system-mechanics.md)（Instant Lv20 / Level Sync / Stage Records 概要）。Combat Feedback は [combat-architecture.md](../combat-architecture.md) §8 → **Phase 5d**。
-
-| サブフェーズ | 内容                                                                             | 状態   |
-| ------------ | -------------------------------------------------------------------------------- | ------ |
-| **11b**      | schema 移行 + `resolveEffectiveLevel` + Instant Lv20 / Level Sync + HUD Exp 表示 | 未着手 |
-| **11c**      | Stage Records — クリア履歴セーブ、`recommendedLevel`、リザルト / ステージ選択 UI | 未着手 |
-
-**doc 上の正本:** Lv / Exp は Phase 2 の `playerProgress`（[progression.md](../spec/progression.md)）。**11b = 上記 doc の schema 実装・旧セーブ移行・`resolveEffectiveLevel` 単一経路・HUD 共通 Exp 表示**。習得・枠・EXP ルールの詳細は progression へ集約し、本節では重複記載しない。
-
-### 11b — schema 実装（未着手）
-
-- **習得・枠解放** — `playerProgress.level` を入力（[progression.md](../spec/progression.md)）
-- **戦闘ステ** — `resolveEffectiveLevel` の単一経路（Level Sync / Instant Lv20）
-- **EXP 付与** — Victory 時 `playerProgress.exp` 加算
-- **移行** — 旧 `party[].progress` → `playerProgress`（移行ルールは progression「廃止・移行」のみ）
-- **UI** — パーティ HUD：スロット行からメンバー別 Lv 廃止、プレイヤー Lv / Exp を HUD 共通表示。編成は [party-formation-ui.md](../spec/party-formation-ui.md) §5.0
-
-**波及:** `reconcileMemberBuild` / `resolveLearnedSkills`、`levelGrowth.ts`、セーブ型、`SaveManager`、Victory 報酬、`SkillMenuPanel`、デバッグ Lv 変更。
-
-### 11c — Stage Records
-
-- `stages.json` に `recommendedLevel`（推奨プレイヤー Lv）を追加。`validateGameData`・`StageEditorStep`（Phase 6c 済みなら同時、前なら暫定 JSON 手編集）
-- `SaveGameState` にステージ別記録を追加:
-  - First Clear Level / Lowest Clear Level / Best Time / Latest Party（`classId[]`）/ Level Sync Clear
-- Victory 時に `playerProgress.level`（Level Sync 適用前の実 Lv）とクリア時間で更新
-- デフォルト表示順: `Lowest Clear Level ASC` → `Best Time ASC`
-- ステージ選択またはクリア後 UI で表示（Canvas / メニューは最小 MVP で可）
-
-### 進め方
-
-1. **11b schema** — `playerProgress` 型・マイグレーション・`resolveEffectiveLevel` の単一経路を先に確定
-2. **11b オプション** — Instant Lv20 / Level Sync を `resolveEffectiveLevel` に接続
-3. **11c** — `recommendedLevel` + Stage Records セーブ + Victory フック
-4. **11c UI** — 記録表示
-
-### スコープ外（Phase 11）
-
-- globalExp / 強化ツリー / オフライン報酬（別途再計画）
-- ローグライクの問題生成・ラン記録（**Phase 9**）
-- 全ステージの推奨レベル・記録閾値の最終チューニング（**Phase 7a**）
-- クラスごとに別々のプレイヤー Lv を持つ A 案（採用しない）
+- globalExp / 強化ツリー（別途再計画）
+- ローグライク（**Phase 10**）
+- 全ステージ推奨レベルの最終 tuning（**Phase 8c** および M3 以降）
 
 ---
 
 ## 依存関係
 
+### Release 向け（M1 → M2）
+
 ```
-Phase 1（戦闘デモ + 描画基盤 + プレースホルダー）
+Phase 4d / 4e（編成 UI + 英語 i18n）
     ↓
-Phase 2a（セーブ + ステージ + Lv ステ）
+Phase 6a → 6b → 6c（体験版 敵 / stages-demo / バランス）
     ↓
-Phase 2b（戦闘計算） ── 2c と並行可
-Phase 2c（JSON クラス + 成長曲線）
+Phase 7（Electron demo zip）
     ↓
-Phase 3（スキル習得 + 習得済み passive / active 常時使用枠 + クラス別スキル再設定）  ← **現在**
+Release M1 — itch.io 体験版
     ↓
-Phase 3d（接近・接敵 Intent 一本化）
+Phase 8a → 8b → 8c（本編 敵 / stages.json / バランス）
     ↓
-Phase 5d（Combat Feedback — Damage / Event Popup）  ← 4a / 4b と並行可
+Phase 7 build:full（または 7 拡張）
     ↓
-Phase 4a（クラスマスタ + GUI）  ← 見直し中
+Release M2 — 初版 Chapter 1
+```
+
+Phase 5（演出 PNG）・5d は M1 / M2 と **並行可**。
+
+### Phase 依存（全体・番号順）
+
+```
+Phase 1 → 2 → 3 → 3d
     ↓
-Phase 4c（JSON 分割）  ← 完了
+Phase 4（4a 確定 → 4c 完了 → 4b 随時 → 4d / 4e）
     ↓
-Phase 4b（formatSkillText）  ← データ PR 随時
+Phase 5（演出・VFX）  ← 4 と並行可
     ↓
-Phase 5（演出アセット + VFX PNG + 演出調整ツール）  ← スキル再確定後
+Phase 6（体験版コンテンツ）→ Phase 7（配布）→ Release M1
     ↓
-Phase 6（ステージ作成 — 6a 敵 / 6b コンテンツ / 6c GUI）
+Phase 8（本編コンテンツ）→ Release M2
     ↓
-Phase 11（解法評価メタ — 07582b6）
+Phase 12（解法評価メタ）  ← 8b 後
     ↓
-Phase 9（ローグライクモード — 既存 effect 中心 13 クラス）
+Phase 10（ローグライク）
     ↓
-Phase 7a（バランス調整）
+Phase 9a / 9b（印術・法陣）  ← M3+
     ↓
-Phase 7b（印術師の独自システム実装） ── 7c と並行可
-Phase 7c（法陣師の独自システム実装）
-    ↓
-Phase 8（Electron）
-    ↓
-Phase 10（印術師・法陣師対応ローグライクモード — [roguelike-mode.md](../spec/roguelike-mode.md)）
+Phase 11（印術・法陣ローグ）
 ```

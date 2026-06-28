@@ -476,7 +476,7 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 | 状態バッジ帯 | debuff / buff でラベル行を分ける（例: Debuff / Buff）。パネル横幅いっぱいで flex-wrap 折り返し。**簡易 3+N 省略なし**（[combat.md](combat.md) HUD バッジ §簡易/詳細） |
 | 更新 | ドロワー展開中は `update()` で Threat / ダメージと同様に状態バッジも refresh |
 | データ源 | `getStageDamageDisplayRows`（ステージ内累計与ダメ / 被ダメ）、`CombatantSnapshot`（Threat・`statusEffects`）。**Exp / `partyProgress` は統計 UI スコープ外** |
-| 確認モード | 現行は verify 経路でダメージ行が供給される。本番 Stage Records は **Phase 11** |
+| 確認モード | 現行は verify 経路でダメージ行が供給される。本番 Stage Records は **Phase 12** |
 
 #### 7.1.1 戦闘中ステータス（Party HUD クリック）
 

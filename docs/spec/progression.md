@@ -155,13 +155,15 @@ Phase 3 の習得機構 + キャラクターデータ GUI で **クラス 15 種
 
 ---
 
-## Phase 5 — ステージ作成
+## Phase 5 — ステージ作成（旧節・要更新）
 
-Phase 4a で確定したクラス・スキルを前提に、メインモード用の固定ステージ（`stages.json`）と敵テンプレート（`enemies.json`）を整備する。敵編成方針は [enemy-design-concept.md](../enemy-design-concept.md)。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 5（5a 敵 / 5b コンテンツ / 5c 編集 GUI）。
+> **正本は [phase-roadmap.md](../plans/phase-roadmap.md)** — 体験版 **Phase 6**、本編 **Phase 8**。本節の Phase 5/6/7/8 表記は旧ロードマップの残骸。
 
-- `stages.json` 配列順 = メイン進行チェーン（Phase 2a の Victory / Defeat ルール）
-- Wave / `spawnX` — [battle-field.md](battle-field.md)
-- 難易度・EXP の最終調整は **Phase 8**
+Phase 4a で確定したクラス・スキルを前提にステージ・敵を整備。敵編成方針は [enemy-design-concept.md](../enemy-design-concept.md)。
+
+- 体験版: `stages-demo.json` 等 — **Phase 6b**
+- 本編: `stages.json` — **Phase 8b**
+- 難易度・EXP の最終調整 — **Phase 6c / 8c**
 
 ---
 
@@ -182,9 +184,9 @@ Phase 6 の演出ラボで VFX **調整** は可能。Phase 7 では PNG strip�
 
 ---
 
-## Phase 8 — バランス調整
+## Phase 8 — バランス調整（旧節・要更新）
 
-Phase 3〜7 および Phase 5 の固定ステージ骨格完了後。敵 `exp`、成長曲線、クラス/スキル/ステージ数値の体感チューニング。詳細は [phase-roadmap.md](../plans/phase-roadmap.md) を参照。
+> **正本は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 6c / 8c**。
 
 ### passive / active 枠構造
 
@@ -215,10 +217,13 @@ Phase 8（バランス調整）完了後に着手。Electron シェルは `elect
 - セーブに `lastActiveAt` を保持。
 - 起動時に経過時間分の globalExp を付与（上限あり）。
 
-### Electron デスクトップ
+### デスクトップ配布（Phase 7）
 
-- 小さな常に前面ウィンドウ
-- セーブ形式はブラウザと同一
+配信・Release スコープは [phase-roadmap.md §Release マイルストーン](../plans/phase-roadmap.md#release-マイルストーン) を正とする。
+
+- **Release M1/M2:** itch.io 等向け zip（Electron パッケージ）。**常時前面・トレイ常駐は廃止** — 通常ゲームウィンドウ
+- セーブ形式はブラウザと同一（demo / full でキー分離）
+- `electron/main.mjs` に開発用シェル基盤あり（M1 前に通常ウィンドウへ寄せるリファクタ予定）
 
 ---
 

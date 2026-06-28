@@ -8,7 +8,7 @@
 
 **現行コードとの関係:** 本書は目標仕様（**v0.4**）。Phase 4d PR1–3 で骨格・ロスター・Picker・閲覧スキルカード・用語パネル（§6.4）を実装済み。
 
-**配信形態:** 最終的に **Electron デスクトップアプリ**（Phase 8）を正とする。編成画面は **十分な幅のウィンドウ**（`MetaMenuOverlay` の `presentation: "window"`）で見せる。レイアウトの正本は **上: ロスター / 下: 詳細** の縦積み（§4）。
+**配信形態:** **Release M1** 体験版 → **Release M2** 初版（itch.io 第一、Steam 後回し）。デスクトップ zip は **Phase 7**（Electron、常駐 UI は廃止）。編成画面は **十分な幅のウィンドウ**（`MetaMenuOverlay` の `presentation: "window"`）で見せる。レイアウトの正本は **上: ロスター / 下: 詳細** の縦積み（§4）。Release スコープは [phase-roadmap.md §Release マイルストーン](../plans/phase-roadmap.md#release-マイルストーン) を正とする。
 
 ---
 
