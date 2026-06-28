@@ -3,8 +3,7 @@ import {
   type StatusDisplayCategory,
 } from "../battle/statusEffectDisplay.ts";
 import {
-  drawBadgeBitmapLabel,
-  resolveBadgeLabelPixelScale,
+  drawBadgeBitmapLabelForBadgeSize,
 } from "./badgeBitmapDigits.ts";
 import {
   getStatusBadgePentagonImage,
@@ -13,6 +12,7 @@ import {
 
 export {
   resolveBadgeLabelFontSize,
+  resolveBadgeLabelLayoutScale,
   resolveBadgeLabelPixelScale,
 } from "./badgeBitmapDigits.ts";
 
@@ -26,12 +26,12 @@ export const STATUS_BADGE_PENTAGON_PX = STATUS_BADGE_SLOT_PX;
 export const STATUS_BADGE_EFFECT_ICON_PX = 12;
 export const STATUS_BADGE_EFFECT_ICON_INSET_PX =
   (STATUS_BADGE_SLOT_PX - STATUS_BADGE_EFFECT_ICON_PX) / 2;
-/** 五角形 Y オフセット用の行上下パディング（buff −2 / debuff +2 のはみ出し分） */
+/** 五角形 Y オフセット用の行上下パディング（buff −2 のはみ出し分） */
 export const STATUS_BADGE_ROW_PAD_Y = 2;
 /** buff 五角形の Y オフセット（上へ 2px） */
 export const STATUS_BADGE_PENTAGON_BUFF_OFFSET_PX = -2;
-/** debuff 五角形の Y オフセット（下へ 2px） */
-export const STATUS_BADGE_PENTAGON_DEBUFF_OFFSET_PX = 2;
+/** debuff 五角形の Y オフセット（スロット基準。効果アイコンは buff/debuff 同一位置のため 0） */
+export const STATUS_BADGE_PENTAGON_DEBUFF_OFFSET_PX = 0;
 
 function statusBadgePentagonOffsetY(kind: "buff" | "debuff"): number {
   return kind === "buff"
@@ -39,17 +39,24 @@ function statusBadgePentagonOffsetY(kind: "buff" | "debuff"): number {
     : STATUS_BADGE_PENTAGON_DEBUFF_OFFSET_PX;
 }
 
+/** iconSize に対する 20px 正本レイアウトの倍率 */
+export function statusBadgeLayoutScale(iconSize: number): number {
+  return iconSize / STATUS_BADGE_SLOT_PX;
+}
+
 /** 1 行の描画高さ（スロット + 上下パディング） */
 export function statusBadgeDrawableRowHeight(
   scale: number,
   slotPx: number,
 ): number {
-  return slotPx * scale + STATUS_BADGE_ROW_PAD_Y * 2 * scale;
+  const layoutScale = statusBadgeLayoutScale(slotPx);
+  return Math.round(
+    slotPx * scale + STATUS_BADGE_ROW_PAD_Y * 2 * layoutScale * scale,
+  );
 }
 
-function statusBadgeSlotY(rowTop: number, scale: number): number {
-  return rowTop + STATUS_BADGE_ROW_PAD_Y * scale;
-}
+/** 敵 HP バー上フィールド用（Party HUD 20px より小さめ） */
+export const FIELD_ENEMY_STATUS_BADGE_ICON_SIZE = 14;
 
 /** Canvas 描画を DOM の pixel-icon-img と同様 nearest-neighbor（等倍）にする */
 export function prepareStatusBadgeCanvasContext(
@@ -308,14 +315,15 @@ export function drawOverflowCountBadge(
   scale: number,
   theme: StatusBadgeTheme
 ): void {
+  const layoutScale = statusBadgeLayoutScale(theme.iconSize);
   const badgeSize = theme.iconSize * scale;
-  const slotY = statusBadgeSlotY(y, scale);
-  drawBadgeBitmapLabel(
+  const slotY = y + STATUS_BADGE_ROW_PAD_Y * layoutScale * scale;
+  drawBadgeBitmapLabelForBadgeSize(
     ctx,
     `+${overflowCount}`,
     x + badgeSize,
     slotY + badgeSize,
-    resolveBadgeLabelPixelScale(badgeSize)
+    badgeSize,
   );
 }
 
@@ -562,12 +570,12 @@ function drawStackCountLabel(
   size: number,
   stackCount: number
 ): void {
-  drawBadgeBitmapLabel(
+  drawBadgeBitmapLabelForBadgeSize(
     ctx,
     String(stackCount),
     x + size,
     y + size,
-    resolveBadgeLabelPixelScale(size)
+    size,
   );
 }
 
@@ -580,23 +588,26 @@ function drawStatusBadge(
   theme: StatusBadgeTheme
 ): void {
   const outlineColor = theme.iconOutlineColor;
+  const layoutScale = statusBadgeLayoutScale(theme.iconSize);
   const badgeSize = theme.iconSize * scale;
-  const slotY = statusBadgeSlotY(rowTop, scale);
+  const rowHeight = statusBadgeDrawableRowHeight(scale, theme.iconSize);
+  const slotY = STATUS_BADGE_ROW_PAD_Y * layoutScale * scale;
+  const pentagonPx = STATUS_BADGE_PENTAGON_PX * layoutScale;
+  const pentagonOffsetY = statusBadgePentagonOffsetY(badge.kind) * layoutScale;
+  const iconDrawSize = STATUS_BADGE_EFFECT_ICON_PX * layoutScale;
+  const iconInset = STATUS_BADGE_EFFECT_ICON_INSET_PX * layoutScale;
 
-  ctx.save();
-  prepareStatusBadgeCanvasContext(ctx);
+  const bufferCtx = getBadgeDrawBuffer(badgeSize, rowHeight);
 
   const pentagon = getStatusBadgePentagonImage(badge.kind, badge.isPassive);
   if (pentagon) {
-    const pentagonX = x + (badgeSize - STATUS_BADGE_PENTAGON_PX) / 2;
-    const pentagonY = slotY + statusBadgePentagonOffsetY(badge.kind);
     drawImagePixelated(
-      ctx,
+      bufferCtx,
       pentagon,
-      pentagonX,
-      pentagonY,
-      STATUS_BADGE_PENTAGON_PX,
-      STATUS_BADGE_PENTAGON_PX,
+      0,
+      slotY + pentagonOffsetY,
+      pentagonPx,
+      pentagonPx,
     );
   }
 
@@ -604,12 +615,11 @@ function drawStatusBadge(
     ? "#ffffff"
     : undefined;
 
-  const iconDrawSize = STATUS_BADGE_EFFECT_ICON_PX;
-  const iconX = x + STATUS_BADGE_EFFECT_ICON_INSET_PX;
-  const iconY = slotY + STATUS_BADGE_EFFECT_ICON_INSET_PX;
+  const iconX = iconInset;
+  const iconY = slotY + iconInset;
 
   drawStatusIcon(
-    ctx,
+    bufferCtx,
     badge.category,
     iconX,
     iconY,
@@ -617,24 +627,33 @@ function drawStatusBadge(
     iconTint,
     theme,
     outlineColor,
-    theme.iconOutlineWidth * (iconDrawSize / Math.max(1, theme.iconSize))
+    theme.iconOutlineWidth * layoutScale,
   );
 
-  drawBadgeRemainingOverlay(
-    ctx,
-    x,
-    slotY,
+  applyRemainingOverlayPixels(
+    bufferCtx,
     badgeSize,
-    badgeSize,
+    rowHeight,
     badge.remainingRatio,
-    theme.overlayColor
+    theme.overlayColor,
   );
 
   if (badge.stackCount !== undefined && badge.stackCount > 1) {
-    drawStackCountLabel(ctx, x, slotY, badgeSize, badge.stackCount);
+    drawStackCountLabel(bufferCtx, 0, slotY, badgeSize, badge.stackCount);
   }
 
-  ctx.restore();
+  prepareStatusBadgeCanvasContext(ctx);
+  ctx.drawImage(
+    badgeDrawBuffer!,
+    0,
+    0,
+    badgeSize,
+    rowHeight,
+    Math.round(x),
+    Math.round(rowTop),
+    Math.round(badgeSize),
+    Math.round(rowHeight),
+  );
 }
 
 function drawStatusIcon(
@@ -685,6 +704,25 @@ function drawStatusIcon(
 }
 
 let tintBuffer: HTMLCanvasElement | null = null;
+let badgeDrawBuffer: HTMLCanvasElement | null = null;
+
+function getBadgeDrawBuffer(
+  width: number,
+  height: number,
+): CanvasRenderingContext2D {
+  if (!badgeDrawBuffer) {
+    badgeDrawBuffer = document.createElement("canvas");
+  }
+
+  badgeDrawBuffer.width = width;
+  badgeDrawBuffer.height = height;
+
+  const bufferCtx = badgeDrawBuffer.getContext("2d");
+  if (!bufferCtx) throw new Error("Canvas 2D unavailable");
+
+  bufferCtx.clearRect(0, 0, width, height);
+  return preparePixelBufferContext(bufferCtx);
+}
 
 function getTintBuffer(
   width: number,
@@ -704,22 +742,57 @@ function getTintBuffer(
   return preparePixelBufferContext(bufferCtx);
 }
 
-function drawBadgeRemainingOverlay(
+export function parseOverlayDarkenAlpha(overlayColor: string): number {
+  const rgba = overlayColor.match(
+    /rgba?\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)/i,
+  );
+  if (rgba) return Math.max(0, Math.min(1, Number(rgba[1])));
+  return 0.55;
+}
+
+export function overlayMultiplyFillStyle(overlayColor: string): string {
+  const shade = Math.round(255 * (1 - parseOverlayDarkenAlpha(overlayColor)));
+  return `rgb(${shade}, ${shade}, ${shade})`;
+}
+
+/** alpha > 0 のピクセルのみ、上端から elapsed 分を暗化（2値 alpha 向け） */
+export function darkenBadgeOverlayBand(
+  data: Uint8ClampedArray,
+  width: number,
+  bandBottom: number,
+  overlayColor: string,
+): void {
+  if (bandBottom <= 0) return;
+
+  const factor = 1 - parseOverlayDarkenAlpha(overlayColor);
+  const rowBytes = width * 4;
+
+  for (let rowStart = 0; rowStart < bandBottom * rowBytes; rowStart += rowBytes) {
+    for (let i = rowStart; i < rowStart + rowBytes; i += 4) {
+      if (data[i + 3] === 0) continue;
+      data[i] = Math.round(data[i] * factor);
+      data[i + 1] = Math.round(data[i + 1] * factor);
+      data[i + 2] = Math.round(data[i + 2] * factor);
+    }
+  }
+}
+
+export function applyRemainingOverlayPixels(
   ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
   width: number,
   height: number,
   remainingRatio: number,
-  overlayColor: string
+  overlayColor: string,
 ): void {
   const elapsedRatio = 1 - Math.max(0, Math.min(1, remainingRatio));
   if (elapsedRatio <= 0) return;
 
-  ctx.save();
-  ctx.fillStyle = overlayColor;
-  ctx.fillRect(x, y, width, height * elapsedRatio);
-  ctx.restore();
+  const bandBottom = Math.min(height, Math.ceil(height * elapsedRatio));
+  if (bandBottom <= 0) return;
+
+  const imageData = ctx.getImageData(0, 0, width, bandBottom);
+  darkenBadgeOverlayBand(imageData.data, width, bandBottom, overlayColor);
+  ctx.putImageData(imageData, 0, 0);
 }
 
 function resolveImageSourceSize(

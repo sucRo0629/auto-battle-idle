@@ -222,7 +222,7 @@ Kill Layer は、敵 HP を直接減少させることを主目的とする処�
 
 #### ① Fixed Kill（固定出力型）
 
-- 魔術士（`at_sorcerer`）
+- 魔術師（`at_sorcerer`）
 
 ##### 特徴
 
@@ -363,7 +363,7 @@ Survival Layer は、味方の戦闘継続性を維持し、敗北条件への�
 | 主目的   | 撃破             | 制御                   | 崩壊遅延               |
 | 操作対象 | ダメージ量・対象 | 空間・時間・構造       | HP・バリア・軽減・解除 |
 | 影響範囲 | 局所〜敵戦力全体 | 戦場全体               | 味方戦線全体           |
-| 例       | 魔術士・弓術士   | 槍術士・法陣師・狩猟士 | 鉄衛士・療養師・結界師 |
+| 例       | 魔術師・弓術士   | 槍術士・法陣師・狩猟士 | 鉄衛士・療養師・結界師 |
 
 ---
 
@@ -373,7 +373,7 @@ Survival Layer は、味方の戦闘継続性を維持し、敗北条件への�
 スキル機能レイヤー構造
 
 ├─ Kill Layer（撃破処理）
-│   ├─ Fixed Kill（魔術士）
+│   ├─ Fixed Kill（魔術師）
 │   ├─ Structured Kill（印術師）
 │   └─ Targeted Kill（物理処理群）
 │
@@ -601,13 +601,13 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                                       | 連射／連ね矢                               |
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 高 Max HP 狙い + 待機蓄積 + 砲撃標的                             | 破城矢装填／重矢                           |
 | `at_hunter`    | 狩猟士 | Hunter    | back  | 遠隔物理 | DoT 圧縮補助 + 味方物理 basic 毒 proc                            | 毒罠／粘着罠／追い込み／毒収穫             |
-| `at_sorcerer`  | 魔術士 | Sorcerer  | back  | 遠隔魔法 | 猛火の術 / 焼き尽くす熾火（Lv0）+ 連なる炎 / 花開く炎（Lv10/20） | 炎術 / 双炎（Lv0）+ 散火 / 燎原（Lv10/20） |
+| `at_sorcerer`  | 魔術師 | Sorcerer  | back  | 遠隔魔法 | 猛火の術 / 焼き尽くす熾火（Lv0）+ 連なる炎 / 花開く炎（Lv10/20） | 炎術 / 双炎（Lv0）+ 散火 / 燎原（Lv10/20） |
 | `at_sigilist`  | 印術師 | Sigilist  | back  | 遠隔魔法 | —（未実装）                                                      | （未実装・JSON 廃棄）                      |
 | `at_conductor` | 法陣師 | Conductor | back  | 遠隔魔法 | —（未実装）                                                      | （未実装・JSON 廃棄）                      |
 
 ※ 物理 6 クラス（剣術士 / 双刃士 / 槍術士 / 弓術士 / 弩砲士 / 狩猟士）の設計思想・三分類・TBD は **§物理 Kill / Flow 設計方針** を正とする。
 
-※ 魔法 3 クラス（魔術士 / 印術師 / 法陣師）の設計思想・三分類・TBD は **§クラスキャスター設計方針** を正とする。
+※ 魔法 3 クラス（魔術師 / 印術師 / 法陣師）の設計思想・三分類・TBD は **§クラスキャスター設計方針** を正とする。
 
 ※ `at_lancer_passive_1`（牽制）は常時 debuff として再評価する。`at_lancer_passive_2`（連携）は `selfOrigin` + `aoe` の味方 ATK aura。
 
@@ -1242,7 +1242,7 @@ Hunter = poison Field（P2/A1）+ 任意 dot 延長・圧縮（A2/A3）+ 毒収�
 
 | 系統 | classId        | 表示名 |
 | ---- | -------------- | ------ |
-| 基礎 | `at_sorcerer`  | 魔術士 |
+| 基礎 | `at_sorcerer`  | 魔術師 |
 | 拡張 | `at_sigilist`  | 印術師 |
 | 変則 | `at_conductor` | 法陣師 |
 

@@ -20,7 +20,7 @@ export const BALANCE_REFERENCE_DISPLAY_NAMES: Record<ClassId, string> = {
   df_guardian: '鉄衛士',
   at_warrior: '剣術士',
   at_ranger: '弓術士',
-  at_sorcerer: '魔術士',
+  at_sorcerer: '魔術師',
   sp_cleric: '療養師',
 };
 

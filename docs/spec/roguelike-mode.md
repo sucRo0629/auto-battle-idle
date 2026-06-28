@@ -226,7 +226,7 @@
 
 既存クラスの `classId` は [classes-and-skills.md](classes-and-skills.md) に従う。以下は設計上の代表例（全クラスに同様の方針で拡張可能）。
 
-### 9.1 魔術士（`at_sorcerer`）— MultiLock 軸
+### 9.1 魔術師（`at_sorcerer`）— MultiLock 軸
 
 | 変化例 | 内容 |
 | ------ | ---- |

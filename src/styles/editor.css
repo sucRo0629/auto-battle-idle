@@ -92,8 +92,18 @@
 }
 
 .status-icons-preview-category {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: nowrap;
+}
+
+.status-icons-preview-category-id {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.status-icons-preview-category-label {
+  display: block;
+  color: #9aa8bc;
+  font-size: 0.85em;
 }
 
 .status-icons-preview-raw-img,

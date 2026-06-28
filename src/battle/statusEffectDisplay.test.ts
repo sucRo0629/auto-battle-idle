@@ -3,8 +3,11 @@ import {
   aggregateStatStatusEffects,
   assignCompactBadgeTier,
   collectStatusEffectBadgeDisplays,
+  resolveStatusDisplayCategoryLabel,
   selectCompactStatusBadges,
   sortBadgesForCompactView,
+  STATUS_BADGE_SLOT_ORDER,
+  STATUS_DISPLAY_CATEGORY_LABELS,
   type StatusEffectBadgeDisplay,
 } from './statusEffectDisplay.ts';
 import type { StatusEffect } from './types.ts';
@@ -454,5 +457,14 @@ describe('compact status badge selection', () => {
     ]);
     expect(selection.visible).toHaveLength(2);
     expect(selection.overflowCount).toBe(0);
+  });
+
+  it('defines a display label for every badge slot category', () => {
+    for (const category of STATUS_BADGE_SLOT_ORDER) {
+      expect(STATUS_DISPLAY_CATEGORY_LABELS[category].length).toBeGreaterThan(0);
+      expect(resolveStatusDisplayCategoryLabel(category)).toBe(
+        STATUS_DISPLAY_CATEGORY_LABELS[category],
+      );
+    }
   });
 });

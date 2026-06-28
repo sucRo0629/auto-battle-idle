@@ -325,14 +325,14 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 複数ステを異なる倍率/固定値で上げるパッシブ buff は `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1ステのみの場合は従来の `buffStat` + `buffMultiplier` / `buffFlatBonus` でも可（実装: `parseStatBuffModifiers`）。
 
-**HUD バッジ表示（Phase 4d）:** 同一 `StatusDisplayCategory` あたり **1 バッジ**（**20×20px** スロット）。buff / debuff / passive buff / passive debuff 用の **五角形背景 PNG**（20×20、スロットと同一、`src/assets/status-icons/pentagon-buff.png`, `pentagon-debuff.png`, `pentagon-passive-buff.png`, `pentagon-passive-debuff.png`）を重ね、その上に効果アイコン（`{category}.png`、**12×12**、スロット内上下左右中央）を重ねる。五角形は **buff 系を Y − 2px**、**debuff 系を Y + 2px**（スロット基準）。行の描画高さは **24px**（スロット 20 + 上下パディング 2px ずつ、pentagon のはみ出し用）。残時間オーバーレイ・累積数は 20×20 スロット枠基準。`isPassive` 由来（`effect.id` が `passive_` 始まり）は passive 用五角形 PNG を使用。アイコン縁は黒で統一（stat 系 atk/def/reg/attackSpeed は **tint なし・白シルエット**、その他は既存カラー PNG + 黒縁）。`stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数（1 スタックは非表示）。残時間は同一カテゴリ内の最短 `remainingRatio` を上端からの暗化で表示。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride`（`src/assets/status-icons/{category}.png`）。`herbalPotency` / `blockResonance` / `mark` / `arenaMark` / `wardBarrier` も 1 アイコン + 累積数（2 以上のみ）。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。
+**HUD バッジ表示（Phase 4d）:** 同一 `StatusDisplayCategory` あたり **1 バッジ**（**20×20px** スロット）。buff / debuff / passive buff / passive debuff 用の **五角形背景 PNG**（20×20、スロットと同一、`src/assets/status-icons/pentagon-buff.png`, `pentagon-debuff.png`, `pentagon-passive-buff.png`, `pentagon-passive-debuff.png`）を重ね、その上に効果アイコン（`{category}.png`、**12×12**、スロット内上下左右中央）を重ねる。効果アイコンの位置は buff / debuff 共通。五角形のみ **buff 系を Y − 2px**、**debuff 系は Y 0**（スロット基準。debuff 形状の視覚バランス用）。行の描画高さは **24px**（スロット 20 + 上下パディング 2px ずつ、buff 五角形のはみ出し用）。残時間の暗化はオフスクリーン合成後に **alpha > 0 のピクセルのみ**上端から暗化（透明部分は変更しない）。累積数は 20×20 スロット枠基準。`isPassive` 由来（`effect.id` が `passive_` 始まり）は passive 用五角形 PNG を使用。アイコン縁は黒で統一（stat 系 atk/def/reg/attackSpeed は **tint なし・白シルエット**、その他は既存カラー PNG + 黒縁）。`stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数（1 スタックは非表示）。残時間は同一カテゴリ内の最短 `remainingRatio` を上端からの暗化で表示。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride`（`src/assets/status-icons/{category}.png`）。`herbalPotency` / `blockResonance` / `mark` / `arenaMark` / `wardBarrier` も 1 アイコン + 累積数（2 以上のみ）。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。
 
 **簡易表示 vs 詳細表示:**
 
 | 表示 | 場所 | ルール |
 | ---- | ---- | ------ |
 | **簡易（Party HUD）** | `PartyHudPanel` | 固定 **1 行・5 スロット幅**（最大 4 バッジ + 第 5 枠 `+N`）。クラス名・バッジ行はスロット全幅、24px クラスアイコンは HP/リキャスト行の左（下端揃え）。`overflowCount = max(0, badges.length − 4)` |
-| **簡易（敵）** | `BattleCanvas` 頭上 | 固定 **1 行・4 スロット幅**（最大 3 バッジ + 第 4 枠 `+N`）。`overflowCount = max(0, badges.length − 3)` |
+| **簡易（敵）** | `BattleCanvas` HP バー直上 | **14×14px** スロット（`FIELD_ENEMY_STATUS_BADGE_ICON_SIZE`。Party HUD 20px より小さめ）。累積数・`+N` ラベルも 20px 正本から比例縮小。固定 **1 行・4 スロット幅**（最大 3 バッジ + 第 4 枠 `+N`）。HP バー top を anchor に `STATUS_BADGE_GAP` 分だけ上へ配置。水平重なり時は半分重ねてさらに上へ。`overflowCount = max(0, badges.length − 3)` |
 | **詳細** | 戦闘詳細（`BattleStatsOverlay` / `DebugMenuPanel` 内 `PartyMemberStatsDisplay`） | **全件**表示。debuff / buff でラベル付き行を分け、パネル幅内で flex-wrap 折り返し |
 
 いずれの簡易表示も折り返しなし。`+N` 枠が不要（overflow 0）のときは最終枠を空（透明スロットで幅固定）。
@@ -477,7 +477,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 視界妨害・命中干渉・フィールド端貫通は v1 対象外。
 
-### 種火 / 熾火（魔術士 `at_sorcerer`）
+### 種火 / 熾火（魔術師 `at_sorcerer`）
 
 実装: `src/battle/sorcererFlame.ts`。overlay は `dot` + `dotFlavor: seedFlame | blazingFlame`。
 

@@ -44,7 +44,7 @@ describe('buildPartyHudEntries', () => {
         },
         at_sorcerer: {
           id: 'at_sorcerer',
-          displayName: '魔術士',
+          displayName: '魔術師',
           role: 'attacker',
           formationRow: 'back',
           traits: {},
@@ -99,7 +99,7 @@ describe('buildPartyHudEntries', () => {
           },
           {
             id: 'a3',
-            name: '魔術士',
+            name: '魔術師',
             hp: 60,
             maxHp: 80,
             barrierHp: 0,
@@ -127,6 +127,6 @@ describe('buildPartyHudEntries', () => {
     expect(entries[0]?.displayName).toBe('双刃士');
     expect(entries[1]).toBeNull();
     expect(entries[2]).toBeNull();
-    expect(entries[3]?.displayName).toBe('魔術士');
+    expect(entries[3]?.displayName).toBe('魔術師');
   });
 });

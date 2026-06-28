@@ -73,7 +73,7 @@ function mockHealCleric(
 function mockSorcerer(battleX: number): CombatantState {
   return {
     id: 'sorcerer',
-    name: '魔術士',
+    name: '魔術師',
     hp: 80,
     maxHp: 80,
     atk: 26,

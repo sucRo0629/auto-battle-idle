@@ -491,7 +491,7 @@
   {
     "id": "at_sorcerer",
     "role": "attacker",
-    "displayName": "魔術士",
+    "displayName": "魔術師",
     "epithetEn": "Sorcerer",
     "formationRow": "back",
     "traits": {

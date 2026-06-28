@@ -73,6 +73,52 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
 
 export const STATUS_BADGE_SLOT_COUNT = STATUS_BADGE_SLOT_ORDER.length;
 
+/** HUD 状態アイコン category の表示名（エディタプレビュー・辞書等） */
+export const STATUS_DISPLAY_CATEGORY_LABELS: Record<
+  StatusDisplayCategory,
+  string
+> = {
+  atk: "攻撃",
+  def: "防御",
+  reg: "耐魔",
+  attackSpeed: "攻撃速度",
+  damageReduction: "被ダメ軽減",
+  damageIncrease: "被ダメ増加",
+  hot: "HoT",
+  healReservation: "ヒール予約",
+  damageDelay: "ダメージ遅延",
+  wardBarrier: "障壁",
+  herbalPotency: "薬効",
+  blockResonance: "防壁",
+  blockResonanceStance: "迎撃態勢",
+  basicAttackTransform: "通常攻撃変形",
+  invulnerable: "無敵",
+  lastStandGuts: "不屈",
+  arenaDominance: "闘技場の掟",
+  duelistPride: "闘士の矜持",
+  mark: "印",
+  arenaMark: "闘士の指名",
+  seedFlame: "種火",
+  blazingFlame: "熾火",
+  ballistaMark: "砲撃標的",
+  allyAttackFollowUp: "追撃モード",
+  nextOutgoingDamage: "次与ダメ増加",
+  dot: "DoT",
+  bleed: "出血",
+  poison: "毒",
+  evasion: "回避",
+  block: "ブロック",
+  counter: "反撃",
+  stun: "スタン",
+  moveLock: "移動停止",
+};
+
+export function resolveStatusDisplayCategoryLabel(
+  category: StatusDisplayCategory,
+): string {
+  return STATUS_DISPLAY_CATEGORY_LABELS[category];
+}
+
 const NEUTRAL_EPSILON = 0.001;
 
 function resolveDotDisplayCategory(

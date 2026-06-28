@@ -1,4 +1,5 @@
 import {
+  resolveStatusDisplayCategoryLabel,
   STATUS_BADGE_SLOT_ORDER,
   type StatusDisplayCategory,
 } from '../battle/statusEffectDisplay.ts';
@@ -293,7 +294,15 @@ export class StatusIconsEditorStep {
     for (const category of STATUS_BADGE_SLOT_ORDER) {
       const row = document.createElement('tr');
 
-      const nameCell = createEl('td', 'status-icons-preview-category', category);
+      const nameCell = createEl('td', 'status-icons-preview-category');
+      nameCell.append(
+        createEl('span', 'status-icons-preview-category-id', category),
+        createEl(
+          'span',
+          'status-icons-preview-category-label',
+          resolveStatusDisplayCategoryLabel(category),
+        ),
+      );
       row.appendChild(nameCell);
 
       const rawCell = createEl('td', 'status-icons-preview-raw');

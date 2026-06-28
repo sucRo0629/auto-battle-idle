@@ -5,6 +5,10 @@ import {
   FIELD_COMPACT_STATUS_BADGE_LAYOUT,
   measureCompactStatusBadgeRow,
   measureStatusBadgeBlock,
+  applyRemainingOverlayPixels,
+  darkenBadgeOverlayBand,
+  overlayMultiplyFillStyle,
+  parseOverlayDarkenAlpha,
   PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
   resolveBadgeLabelFontSize,
   STATUS_BADGE_EFFECT_ICON_INSET_PX,
@@ -42,8 +46,51 @@ describe('status badge icon layout', () => {
     expect(STATUS_BADGE_PENTAGON_PX).toBe(STATUS_BADGE_SLOT_PX);
     expect(STATUS_BADGE_ROW_PAD_Y).toBe(2);
     expect(statusBadgeDrawableRowHeight(1, STATUS_BADGE_SLOT_PX)).toBe(24);
+    expect(statusBadgeDrawableRowHeight(1, 16)).toBe(19);
+    expect(statusBadgeDrawableRowHeight(1, 14)).toBe(17);
     expect(STATUS_BADGE_PENTAGON_BUFF_OFFSET_PX).toBe(-2);
-    expect(STATUS_BADGE_PENTAGON_DEBUFF_OFFSET_PX).toBe(2);
+    expect(STATUS_BADGE_PENTAGON_DEBUFF_OFFSET_PX).toBe(0);
+  });
+
+  it('draws buff and debuff effect icons at the same slot-centered Y', () => {
+    const slotY = STATUS_BADGE_ROW_PAD_Y;
+    const iconY = slotY + STATUS_BADGE_EFFECT_ICON_INSET_PX;
+    const buffPentagonY = slotY + STATUS_BADGE_PENTAGON_BUFF_OFFSET_PX;
+    const debuffPentagonY = slotY + STATUS_BADGE_PENTAGON_DEBUFF_OFFSET_PX;
+
+    expect(iconY - buffPentagonY).toBe(
+      STATUS_BADGE_EFFECT_ICON_INSET_PX - STATUS_BADGE_PENTAGON_BUFF_OFFSET_PX,
+    );
+    expect(iconY - debuffPentagonY).toBe(STATUS_BADGE_EFFECT_ICON_INSET_PX);
+  });
+});
+
+describe('remaining overlay color', () => {
+  it('maps rgba overlay alpha to multiply gray', () => {
+    expect(parseOverlayDarkenAlpha('rgba(0, 0, 0, 0.55)')).toBe(0.55);
+    expect(overlayMultiplyFillStyle('rgba(0, 0, 0, 0.55)')).toBe('rgb(115, 115, 115)');
+  });
+
+  it('darkens only non-transparent pixels in elapsed band', () => {
+    const data = new Uint8ClampedArray(4 * 4 * 4);
+    const white = (index: number) => {
+      data[index * 4] = 255;
+      data[index * 4 + 1] = 255;
+      data[index * 4 + 2] = 255;
+      data[index * 4 + 3] = 255;
+    };
+    white(5);
+    white(6);
+    white(9);
+    white(10);
+
+    darkenBadgeOverlayBand(data, 4, 2, 'rgba(0, 0, 0, 0.5)');
+
+    expect(Array.from(data.slice(0, 4))).toEqual([0, 0, 0, 0]);
+    expect(data[4 * 5]).toBe(128);
+    expect(data[4 * 5 + 3]).toBe(255);
+    expect(data[4 * 10 + 3]).toBe(255);
+    expect(data[4 * 10]).toBe(255);
   });
 });
 
@@ -184,7 +231,7 @@ describe('measureCompactStatusBadgeRow', () => {
         0,
       ),
     );
-    expect(layout.totalHeight).toBe(20);
+    expect(layout.totalHeight).toBe(19);
   });
 
   it('uses five slots for Party HUD layout', () => {
@@ -302,9 +349,11 @@ describe('drawCompactStatusBadgeRow', () => {
 });
 
 describe('badge label font size', () => {
-  it('uses 7px-tall bitmap labels on 16px badges', () => {
-    expect(resolveBadgeLabelFontSize(16)).toBe(7);
-    expect(resolveBadgeLabelFontSize(32)).toBe(14);
+  it('scales bitmap label height with badge size (20px reference)', () => {
+    expect(resolveBadgeLabelFontSize(20)).toBe(7);
+    expect(resolveBadgeLabelFontSize(16)).toBe(6);
+    expect(resolveBadgeLabelFontSize(14)).toBe(5);
+    expect(resolveBadgeLabelFontSize(32)).toBe(11);
   });
 });
 
