@@ -76,9 +76,13 @@ export function usesIntervalPeriodicTrigger(
   return false;
 }
 
-/** block/evasion/counter は chance が効果率・反撃率として別用途 */
+/** block/evasion/counter/frontBlockAura は chance が効果率・反撃率として別用途 */
 export function usesPassiveTriggerChance(passive: PassiveSkillDef): boolean {
-  if (passive.effect === "counter" || passive.effect === "counterChance") {
+  if (
+    passive.effect === "counter" ||
+    passive.effect === "counterChance" ||
+    passive.effect === "frontBlockAura"
+  ) {
     return false;
   }
   if (passive.effect === "buff") {

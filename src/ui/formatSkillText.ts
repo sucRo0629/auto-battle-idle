@@ -225,14 +225,33 @@ function isDefaultLowestHpAllyTarget(spec: TargetSpec): boolean {
   );
 }
 
+function isAllAllyTarget(spec: TargetSpec): boolean {
+  return spec.kind === "all" && spec.side === "ally";
+}
+
 function formatCompactAtkBasedHealSentence(
-  amount: ResourceAmountSpec | undefined
+  amount: ResourceAmountSpec | undefined,
+  targetSpec?: TargetSpec
 ): string {
   if (amount?.kind === "atkBased") {
     const pct = formatPercent(amount.atkScale ?? 1);
+    if (targetSpec && isAllAllyTarget(targetSpec)) {
+      return `味方全体のHPを攻撃力の${pct}で回復`;
+    }
     return `味方のHPを攻撃力の${pct}で回復`;
   }
   return `${formatResourceAmount(amount)}回復`;
+}
+
+function joinActiveSkillScopePrefix(
+  scopePrefix: string | undefined,
+  effectParts: string
+): string {
+  if (!scopePrefix || !effectParts) return effectParts;
+  if (scopePrefix === "味方全体" && effectParts.startsWith("味方")) {
+    return effectParts;
+  }
+  return `${scopePrefix}${effectParts}`;
 }
 
 function formatPassiveSpecialEffectHeal(def: PassiveSkillDef): string {
@@ -262,6 +281,52 @@ const ACTIVE_SKILL_RECAST_META_LABEL = "再使用";
 
 const MULTI_LOCK_UNDERFLOW_NOTE =
   "発動時に攻撃可能な対象が少なかった場合、再度同じ対象にダメージを与える";
+
+function formatCompactBarrierBuffLabel(
+  amount: ResourceAmountSpec | undefined,
+  stack?: boolean
+): string {
+  const stackSuffix = stack ? "（加算）" : "";
+  if (amount?.kind === "atkBased") {
+    const pct = formatPercent(amount.atkScale ?? 1);
+    return `攻撃力の${pct}のバリア${stackSuffix}`;
+  }
+  return `${formatResourceAmount(amount)}${stackSuffix}`;
+}
+
+function formatSelfOriginAoeBuffCardLines(def: ActiveSkillDef): string[] | null {
+  if (
+    def.target?.kind !== "distance" ||
+    def.target.order !== "selfOrigin" ||
+    (def.targetShape ?? "single") !== "aoe"
+  ) {
+    return null;
+  }
+  if (def.effect.length <= 1 || !def.effect.every((effect) => effect.type === "buff")) {
+    return null;
+  }
+
+  const lines: string[] = ["周囲に以下の効果を付与する"];
+  for (const effect of def.effect) {
+    if (effect.type !== "buff") continue;
+    if (effect.buffSubKind === "barrier") {
+      lines.push(formatCompactBarrierBuffLabel(effect.amount, effect.barrierStack));
+      continue;
+    }
+    const statLabel = formatBuffTargetStats(
+      effect.buffStat,
+      effect.buffMultiplier,
+      effect.buffFlatBonus
+    );
+    lines.push(compactStatEffectLabel(statLabel));
+  }
+  return lines;
+}
+
+function formatActiveSkillMaxChargesLine(def: ActiveSkillDef): string | null {
+  if (def.maxCharges === undefined || def.maxCharges <= 0) return null;
+  return `${def.maxCharges}回チャージ可能`;
+}
 
 function formatCompactAtkBasedDamageSentence(
   amount: ResourceAmountSpec | undefined,
@@ -513,7 +578,7 @@ function formatActiveSkillEffectBody(def: ActiveSkillDef): string {
     .filter(Boolean)
     .join("、");
   if (scopePrefix && effectParts) {
-    return `${scopePrefix}${effectParts}`;
+    return joinActiveSkillScopePrefix(scopePrefix, effectParts);
   }
   return effectParts;
 }
@@ -676,7 +741,7 @@ function formatDamageIncreaseCondition(
       const tags = condition.tags
         .map((t) => DEBUFF_FILTER_TAG_LABELS[t])
         .join("・");
-      const prefix = condition.selfAppliedOnly ? "自分付与の" : "";
+      const prefix = condition.selfAppliedOnly ? "自身付与の" : "";
       return `${prefix}${tags}`;
     }
     case "targetHp":
@@ -933,12 +998,16 @@ function formatActiveEffectDetail(
       } else if (compact) {
         if (
           (effect.healSubKind ?? "instant") === "instant" &&
-          isDefaultLowestHpAllyTarget(targetSpec) &&
-          effect.amount?.kind === "atkBased"
+          effect.amount?.kind === "atkBased" &&
+          (isDefaultLowestHpAllyTarget(targetSpec) ||
+            isAllAllyTarget(targetSpec))
         ) {
-          extras.push(formatCompactAtkBasedHealSentence(effect.amount));
+          extras.push(
+            formatCompactAtkBasedHealSentence(effect.amount, targetSpec)
+          );
         } else {
-          const hint = formatCompactTargetHint(targetSpec);
+          const hint =
+            isAllAllyTarget(targetSpec) ? "" : formatCompactTargetHint(targetSpec);
           extras.push(`${hint}${formatResourceAmount(effect.amount)}回復`);
         }
       } else {
@@ -955,9 +1024,7 @@ function formatActiveEffectDetail(
       if (effect.buffSubKind === "barrier") {
         if (compact) {
           extras.push(
-            `${formatResourceAmount(effect.amount)}${
-              effect.barrierStack ? "（加算）" : ""
-            }`
+            formatCompactBarrierBuffLabel(effect.amount, effect.barrierStack)
           );
         } else {
           extras.push(
@@ -1535,16 +1602,16 @@ function formatPassiveEffect(
           hpRatio
         )}復活（Wave 1回まで）、自己${formatDamageTakenMultiplierLabel(
           selfMul
-        )}、前列${formatDamageTakenMultiplierLabel(
+        )}、周囲${formatDamageTakenMultiplierLabel(
           frontMul
         )}、${formatSecondsLabel(duration)}`;
       }
       if (def.effect === "frontBlockAura") {
         const parts: string[] = [];
         if (def.chance !== undefined) {
-          parts.push(`前列ブロック率+${formatPercent(def.chance)}`);
+          parts.push(`周囲のブロック率+${formatPercent(def.chance)}`);
         } else {
-          parts.push("前列ブロック率");
+          parts.push("周囲のブロック率");
         }
         if (def.frontBlockAuraMagicBlock) {
           parts.push("魔法ブロック");
@@ -1840,7 +1907,7 @@ function formatPassiveEffect(
       const band = bandParts.length > 0 ? `対象${bandParts.join("・")}` : "";
       const triggerLabel =
         def.counterTrigger === "frontAllyDamaged"
-          ? "前列味方被弾時"
+          ? "周囲の味方被弾時"
           : "被攻撃時";
       return [
         `${triggerLabel} ${formatPercent(
@@ -1878,13 +1945,15 @@ function formatThreatControlEffectParts(
     parts.push("ヘイト減衰速度低下");
   }
   if (def.frontThreatFloor !== undefined) {
-    parts.push(`前列ヘイト下限${formatPercent(def.frontThreatFloor)}`);
+    parts.push(
+      `周囲のヘイト下限を自身の${formatPercent(def.frontThreatFloor)}に引き上げ`
+    );
   }
   if (
     def.frontThreatDecayMultiplier !== undefined &&
     def.frontThreatDecayMultiplier < 1
   ) {
-    parts.push("前列ヘイト減衰速度低下");
+    parts.push("周囲のヘイト減衰速度低下");
   }
   return parts.length > 0 ? parts : ["ヘイト制御"];
 }
@@ -1949,6 +2018,14 @@ function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
     return [formatBlockResonanceConsumeSkillEffect(def)];
   }
 
+  const selfOriginAoeBuffLines = formatSelfOriginAoeBuffCardLines(def);
+  if (selfOriginAoeBuffLines) {
+    const maxChargesLine = formatActiveSkillMaxChargesLine(def);
+    return maxChargesLine
+      ? [...selfOriginAoeBuffLines, maxChargesLine]
+      : selfOriginAoeBuffLines;
+  }
+
   const scopePrefix = resolveActiveSkillScopePrefix(def);
   const lines: string[] = [];
   let scopeApplied = false;
@@ -1973,11 +2050,16 @@ function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
     });
     if (!line) continue;
     if (scopePrefix && !scopeApplied) {
-      lines.push(`${scopePrefix}${line}`);
+      lines.push(joinActiveSkillScopePrefix(scopePrefix, line));
       scopeApplied = true;
     } else {
       lines.push(line);
     }
+  }
+
+  const maxChargesLine = formatActiveSkillMaxChargesLine(def);
+  if (maxChargesLine) {
+    lines.push(maxChargesLine);
   }
   return lines;
 }
@@ -1985,7 +2067,7 @@ function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
 function formatPassiveSkillMetaLine(def: PassiveSkillDef): string {
   if (def.effect === "counter" || def.effect === "counterChance") {
     return def.counterTrigger === "frontAllyDamaged"
-      ? "前列味方被弾時"
+      ? "周囲の味方被弾時"
       : "被攻撃時";
   }
   return formatPassiveTriggerSummary(def, resolvePassivePeriodicTrigger(def));

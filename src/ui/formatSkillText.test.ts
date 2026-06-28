@@ -4,7 +4,96 @@ import {
   formatActiveDescription,
   formatPassiveDescription,
   formatSkillCardLines,
+  type SkillCardLines,
 } from './formatSkillText.ts';
+
+/** 4b polish 済み M1 クラス — Lv10 / Lv20 スキル suffix */
+const POLISHED_CLASS_LV10_PLUS: Record<string, readonly string[]> = {
+  df_guardian: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+  df_paladin: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+  at_warrior: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+  sp_cleric: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+  at_ranger: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+};
+
+function assertNoLegacy4bLabels(text: string): void {
+  expect(text).not.toContain('CD：');
+  expect(text).not.toMatch(/(?:^| \/ )条件：/);
+  expect(text).not.toMatch(/被撃\d/);
+  expect(text).not.toContain('前列');
+}
+
+function assertGlobal4bActiveRules(desc: string, card: SkillCardLines): void {
+  assertNoLegacy4bLabels(desc);
+  assertNoLegacy4bLabels(card.metaLine);
+  for (const line of card.effectLines) {
+    assertNoLegacy4bLabels(line);
+  }
+  expect(desc).toContain('再使用：');
+}
+
+function assertGlobal4bPassiveRules(desc: string, card: SkillCardLines): void {
+  assertNoLegacy4bLabels(desc);
+  assertNoLegacy4bLabels(card.metaLine);
+  for (const line of card.effectLines) {
+    assertNoLegacy4bLabels(line);
+  }
+  expect(desc).toMatch(/^効果：/);
+}
+
+type Lv10PlusSkillContext = { desc: string; card: SkillCardLines };
+
+const LV10_PLUS_SKILL_ASSERTIONS: Record<
+  string,
+  Partial<Record<string, (ctx: Lv10PlusSkillContext) => void>>
+> = {
+  df_guardian: {
+    active_3: ({ desc }) => {
+      expect(desc).toContain('発動条件：');
+      expect(desc).toContain('ダメージ軽減25%');
+    },
+    active_4: ({ desc, card }) => {
+      expect(desc).toContain('被攻撃12回');
+      expect(desc).toContain('硬直・移動停止');
+      expect(card.metaLine).toContain('被攻撃12回');
+    },
+    passive_4: ({ desc }) => {
+      expect(desc).toContain('3秒無敵');
+    },
+  },
+  df_paladin: {
+    passive_3: ({ desc }) => expect(desc).toContain('周囲のブロック率'),
+    passive_4: ({ desc }) => expect(desc).toContain('周囲ダメージ軽減'),
+    active_4: ({ card }) =>
+      expect(card.effectLines).toContain('1回チャージ可能'),
+  },
+  at_warrior: {
+    active_3: ({ desc }) => {
+      expect(desc).toContain('通常攻撃7回');
+      expect(desc).toContain('攻撃力の150%の物理ダメージを与える');
+    },
+    active_4: ({ desc }) => expect(desc).toContain('通常攻撃14回'),
+    passive_4: ({ desc }) =>
+      expect(desc).toContain('無視防御力50% 追加ダメ'),
+  },
+  sp_cleric: {
+    active_3: ({ desc, card }) => {
+      expect(desc).toContain('発動条件：');
+      expect(desc).toContain('味方全体のHPを攻撃力の105%で回復');
+      expect(card.effectLines).toEqual([
+        '味方全体のHPを攻撃力の105%で回復',
+        '1回チャージ可能',
+      ]);
+    },
+    active_4: ({ card }) =>
+      expect(card.effectLines).toContain('1回チャージ可能'),
+  },
+  at_ranger: {
+    active_3: ({ card }) =>
+      expect(card.effectLines).toEqual(['攻撃速度+25%']),
+    active_4: ({ desc }) => expect(desc).toContain('通常攻撃11回'),
+  },
+};
 
 describe('formatPassiveDescription', () => {
   it.each([
@@ -395,7 +484,9 @@ describe('formatActiveDescription', () => {
         },
       ],
     };
-    expect(formatActiveDescription(atkScaleBarrier)).toContain('攻撃力20%（加算）');
+    expect(formatActiveDescription(atkScaleBarrier)).toContain(
+      '攻撃力の20%のバリア（加算）',
+    );
   });
 
   it('formats active counter range 0 as 射程+0', () => {
@@ -499,7 +590,7 @@ describe('formatActiveDescription', () => {
       '再使用：5秒 / 攻撃力の100%の魔法ダメージを与える、味方のHPを攻撃力の125%で回復 /',
     );
     expect(formatActiveDescription(a2!)).toBe(
-      '再使用：被攻撃8回 / 持続：5秒 / 発動条件：自身のHPが80%以下 / 自身起点±50px：魔法耐性+10、ダメージ軽減5%、攻撃力20%（加算） /',
+      '再使用：被攻撃8回 / 持続：5秒 / 発動条件：自身のHPが80%以下 / 自身起点±50px：魔法耐性+10、ダメージ軽減5%、攻撃力の20%のバリア（加算） /',
     );
     expect(formatActiveDescription(a3!)).toBe(
       '再使用：12秒 / 持続：5秒 / 発動条件：対象のHPが80%以下 / 味方全体ダメージ軽減10%、魔法耐性+20 /',
@@ -661,15 +752,89 @@ describe('formatActiveDescription', () => {
     const p3 = gameData.skillRegistry.passives.df_paladin_passive_3;
     const p4 = gameData.skillRegistry.passives.df_paladin_passive_4;
 
-    expect(formatPassiveDescription(p1!)).toBe('効果：前列ブロック率+10%');
+    expect(formatPassiveDescription(p1!)).toBe('効果：周囲のブロック率+10%');
     expect(formatPassiveDescription(p2!)).toBe(
-      '効果：前列ヘイト下限72%、前列ヘイト減衰速度低下',
+      '効果：周囲のヘイト下限を自身の72%に引き上げ、周囲のヘイト減衰速度低下',
     );
     expect(formatPassiveDescription(p3!)).toBe(
-      '効果：前列ブロック率+5%、魔法ブロック',
+      '効果：周囲のブロック率+5%、魔法ブロック',
     );
     expect(formatPassiveDescription(p4!)).toBe(
-      '効果：HPが0以下になるダメージを受けた際、HP50%復活（Wave 1回まで）、自己ダメージ軽減50%、前列ダメージ軽減25%、5秒',
+      '効果：HPが0以下になるダメージを受けた際、HP50%復活（Wave 1回まで）、自己ダメージ軽減50%、周囲ダメージ軽減25%、5秒',
     );
   });
+
+  it('formatSkillCardLines formats df_paladin Lv0 skills with polished lines', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.df_paladin_active_1;
+    const a2 = gameData.skillRegistry.actives.df_paladin_active_2;
+    const p1 = gameData.skillRegistry.passives.df_paladin_passive_1;
+    const p2 = gameData.skillRegistry.passives.df_paladin_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    const card1 = formatSkillCardLines(a1!, { locale: 'ja' });
+    expect(card1.metaLine).toBe('再使用：5秒');
+    expect(card1.effectLines).toEqual([
+      '攻撃力の100%の魔法ダメージを与える',
+      '味方のHPを攻撃力の125%で回復',
+      '1回チャージ可能',
+    ]);
+
+    const card2 = formatSkillCardLines(a2!, { locale: 'ja' });
+    expect(card2.metaLine).toBe(
+      '再使用：被攻撃8回 / 持続：5秒 / 発動条件：自身のHPが80%以下',
+    );
+    expect(card2.effectLines).toEqual([
+      '周囲に以下の効果を付与する',
+      '魔法耐性+10',
+      'ダメージ軽減5%',
+      '攻撃力の20%のバリア（加算）',
+    ]);
+
+    const passive1 = formatSkillCardLines(p1!, { locale: 'ja' });
+    expect(passive1.metaLine).toBe('常時');
+    expect(passive1.effectLines).toEqual(['周囲のブロック率+10%']);
+
+    const passive2 = formatSkillCardLines(p2!, { locale: 'ja' });
+    expect(passive2.metaLine).toBe('常時');
+    expect(passive2.effectLines).toEqual([
+      '周囲のヘイト下限を自身の72%に引き上げ',
+      '周囲のヘイト減衰速度低下',
+    ]);
+  });
+
+  it.each(Object.entries(POLISHED_CLASS_LV10_PLUS))(
+    'applies global 4b template rules to %s Lv10+ skills',
+    async (classId, skillSuffixes) => {
+      const { loadGameData } = await import('../battle/data/loadGameData.ts');
+      const gameData = await loadGameData();
+      const classAssertions = LV10_PLUS_SKILL_ASSERTIONS[classId] ?? {};
+
+      for (const suffix of skillSuffixes) {
+        const skillId = `${classId}_${suffix}`;
+        const isActive = suffix.startsWith('active');
+        const def = isActive
+          ? gameData.skillRegistry.actives[skillId]
+          : gameData.skillRegistry.passives[skillId];
+        expect(def, skillId).toBeDefined();
+
+        const desc = isActive
+          ? formatActiveDescription(def as ActiveSkillDef)
+          : formatPassiveDescription(def as PassiveSkillDef);
+        const card = formatSkillCardLines(def!, { locale: 'ja' });
+
+        if (isActive) {
+          assertGlobal4bActiveRules(desc, card);
+        } else {
+          assertGlobal4bPassiveRules(desc, card);
+        }
+
+        classAssertions[suffix]?.({ desc, card });
+      }
+    },
+  );
 });
