@@ -459,7 +459,17 @@ function resolveEffectResolutionInternal(
     getAttackablePool(specForResolution, actor, allies, enemies, rangePx);
   const shape: TargetShape = merged.targetShape ?? 'single';
   const basePower = getBaseAtkScale(sourceEffect);
-  const pickOptions = pickOptionsForEffect(merged);
+  const pickOptions: PickTargetOptions = {
+    ...pickOptionsForEffect(merged),
+    ...(actor.isEnemy
+      ? {
+          threatSwitchMarginContext: {
+            allies: livingAllies(allies),
+            passivesRegistry: _gameData.skillRegistry.passives,
+          },
+        }
+      : {}),
+  };
 
   const skipHealWithhold =
     allSkillEffects !== undefined &&

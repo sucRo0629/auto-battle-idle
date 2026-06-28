@@ -1,5 +1,6 @@
 import { currentHpRatio, getEffectiveDef, getEffectiveMaxHp, getPassiveDefs } from "./combatMath.ts";
-import { getBattleX } from "./combatPosition.ts";
+import { DEFAULT_SURROUND_AURA_RADIUS_PX } from "./battleConstants.ts";
+import { getBattleX, resolveLivingPlayersAtFrontlineBattleX } from "./combatPosition.ts";
 import type { CombatantState, PassiveSkillDef } from "./types.ts";
 
 /** maxHp 係数（statComponent = floor(maxHp×a + def×b)） */
@@ -16,6 +17,14 @@ export const THREAT_DEBUFF_APPLY = 15;
 export const THREAT_DECAY_PER_SEC = 20;
 /** 敵 chase / attack ターゲット切替に必要な threat 差（ヒステリシス） */
 export const THREAT_TARGET_SWITCH_MARGIN = 50;
+/** 護法陣等 `frontThreatFloor` aura の既定半径（障身法 AoE と同値） */
+export const DEFAULT_FRONT_THREAT_AURA_RADIUS_PX =
+  DEFAULT_SURROUND_AURA_RADIUS_PX;
+
+export type ThreatSwitchMarginResolver = (
+  highest: CombatantState,
+  current: CombatantState | undefined,
+) => number;
 
 export function resolveThreatValue(unit: CombatantState): number {
   return unit.threat ?? unit.baseThreat ?? 0;
@@ -45,6 +54,7 @@ export function pickHighestThreatAlly(
 export function pickThreatTargetWithHysteresis(
   pool: CombatantState[],
   currentFocusId: string | undefined,
+  resolveSwitchMargin?: ThreatSwitchMarginResolver,
 ): { target: CombatantState | null; focusId: string | undefined } {
   if (pool.length === 0) {
     return { target: null, focusId: undefined };
@@ -70,12 +80,66 @@ export function pickThreatTargetWithHysteresis(
     return { target: current, focusId: current.id };
   }
 
-  const margin = resolveThreatValue(highest) - resolveThreatValue(current);
-  if (margin >= THREAT_TARGET_SWITCH_MARGIN) {
+  const lead = resolveThreatValue(highest) - resolveThreatValue(current);
+  const switchMargin = resolveSwitchMargin
+    ? resolveSwitchMargin(highest, current)
+    : THREAT_TARGET_SWITCH_MARGIN;
+  if (lead >= switchMargin) {
     return { target: highest, focusId: highest.id };
   }
 
   return { target: current, focusId: current.id };
+}
+
+export function resolveFrontThreatAuraRadiusPx(
+  passive: PassiveSkillDef,
+): number {
+  return passive.frontThreatAuraRadiusPx ?? DEFAULT_FRONT_THREAT_AURA_RADIUS_PX;
+}
+
+export function isAllyInFrontThreatAura(
+  ally: CombatantState,
+  source: CombatantState,
+  passive: PassiveSkillDef,
+): boolean {
+  if (!ally.isAlive || ally.id === source.id) return false;
+  const radiusPx = resolveFrontThreatAuraRadiusPx(passive);
+  return Math.abs(getBattleX(source) - getBattleX(ally)) <= radiusPx;
+}
+
+export function isAllyCoveredByFrontThreatFloorAura(
+  ally: CombatantState,
+  allies: CombatantState[],
+  passivesRegistry: Record<string, PassiveSkillDef>,
+): boolean {
+  for (const source of allies) {
+    if (!source.isAlive) continue;
+    for (const passive of getPassiveDefs(source, passivesRegistry)) {
+      if (passive.effect !== "threatControl") continue;
+      if (passive.frontThreatFloor === undefined) continue;
+      if (isAllyInFrontThreatAura(ally, source, passive)) return true;
+    }
+  }
+  return false;
+}
+
+/** 護法陣 aura 内でヘイトが上回った味方は即座にターゲット切替（shared tank） */
+export function resolveSharedTankThreatSwitchMargin(
+  highest: CombatantState,
+  current: CombatantState | undefined,
+  allies: CombatantState[],
+  passivesRegistry: Record<string, PassiveSkillDef>,
+): number {
+  if (!current || current.id === highest.id) {
+    return THREAT_TARGET_SWITCH_MARGIN;
+  }
+  if (resolveThreatValue(highest) <= resolveThreatValue(current)) {
+    return THREAT_TARGET_SWITCH_MARGIN;
+  }
+  if (isAllyCoveredByFrontThreatFloorAura(highest, allies, passivesRegistry)) {
+    return 0;
+  }
+  return THREAT_TARGET_SWITCH_MARGIN;
 }
 
 /** ヒステリシスをバイパスして即時フォーカス切替 */
@@ -98,12 +162,10 @@ function computeFrontRowPressureBonus(
   ally: CombatantState,
   allies: CombatantState[],
 ): number {
-  if (ally.formationRow !== "front") return 0;
+  const frontline = resolveLivingPlayersAtFrontlineBattleX(allies);
+  if (!frontline.some((unit) => unit.id === ally.id)) return 0;
   const statComponent = computeThreatStatComponent(ally);
-  const frontOthers = allies.filter(
-    (unit) =>
-      unit.isAlive && unit.formationRow === "front" && unit.id !== ally.id,
-  );
+  const frontOthers = frontline.filter((unit) => unit.id !== ally.id);
   if (frontOthers.length === 0) return 0;
   const pressure = Math.max(
     ...frontOthers.map((unit) => 1 - currentHpRatio(unit)),
@@ -157,13 +219,13 @@ function resolveFrontThreatDecayMultiplier(
   allies: CombatantState[],
   passivesRegistry: Record<string, PassiveSkillDef>,
 ): number {
-  if (ally.formationRow !== "front") return 1;
   let multiplier = 1;
   for (const source of allies) {
     if (!source.isAlive || source.id === ally.id) continue;
     for (const passive of getPassiveDefs(source, passivesRegistry)) {
       if (passive.effect !== "threatControl") continue;
       if (passive.frontThreatDecayMultiplier === undefined) continue;
+      if (!isAllyInFrontThreatAura(ally, source, passive)) continue;
       multiplier *= passive.frontThreatDecayMultiplier;
     }
   }
@@ -292,8 +354,7 @@ export function applyFrontThreatFloor(
       );
       if (floor <= 0) continue;
       for (const ally of allies) {
-        if (!ally.isAlive || ally.id === source.id) continue;
-        if (ally.formationRow !== "front") continue;
+        if (!isAllyInFrontThreatAura(ally, source, passive)) continue;
         const current = ally.threat ?? ally.baseThreat ?? 0;
         if (current < floor) {
           ally.threat = floor;

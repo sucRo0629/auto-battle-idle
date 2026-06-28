@@ -1,4 +1,8 @@
 import { getEffectiveMaxHp, getPassiveDefs } from './combatMath.ts';
+import {
+  DEFAULT_SURROUND_AURA_RADIUS_PX,
+  isAllyWithinBattleXRadius,
+} from './combatPosition.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 
 export const LAST_STAND_RECOVERY_HP_RATIO_DEFAULT = 0.5;
@@ -17,6 +21,7 @@ export interface MergedLastStandRecoveryConfig {
   hpRatio: number;
   selfDamageTakenMultiplier: number;
   frontAllyDamageTakenMultiplier: number;
+  frontAllyAuraRadiusPx: number;
   durationSec: number;
 }
 
@@ -33,6 +38,9 @@ export function mergeLastStandRecoveryPassives(
       frontAllyDamageTakenMultiplier:
         passive.lastStandRecoveryFrontAllyDamageTakenMultiplier ??
         LAST_STAND_RECOVERY_FRONT_ALLY_DAMAGE_TAKEN_MULTIPLIER_DEFAULT,
+      frontAllyAuraRadiusPx:
+        passive.lastStandRecoveryFrontAllyAuraRadiusPx ??
+        DEFAULT_SURROUND_AURA_RADIUS_PX,
       durationSec:
         passive.lastStandRecoveryDurationSec ?? LAST_STAND_RECOVERY_DURATION_SEC_DEFAULT,
     };
@@ -78,8 +86,10 @@ function applyLastStandRecoveryBuffs(
   });
 
   for (const ally of allies) {
-    if (!ally.isAlive || ally.formationRow !== 'front') continue;
     if (ally.id === target.id) continue;
+    const radiusPx =
+      config.frontAllyAuraRadiusPx ?? DEFAULT_SURROUND_AURA_RADIUS_PX;
+    if (!isAllyWithinBattleXRadius(target, ally, radiusPx)) continue;
     const effectId = `${LAST_STAND_RECOVERY_FRONT_ID_PREFIX}${target.id}_${ally.id}`;
     ally.statusEffects = ally.statusEffects.filter((effect) => effect.id !== effectId);
     ally.statusEffects.push({

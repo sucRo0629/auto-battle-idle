@@ -12,6 +12,9 @@ export const PARTY_FORMATION_LEFT_ANCHOR = 20;
 /** 味方隊列: スロット間隔（px） */
 export const PARTY_FORMATION_SLOT_SPACING = 32;
 
+/** 周囲 aura 既定半径（障身法 AoE / 護法陣 / 援護系と同値） */
+export const DEFAULT_SURROUND_AURA_RADIUS_PX = 50;
+
 /** 敵 spawnX: 画面中心からの右オフセット上限（右端 = 480） */
 export const SPAWN_X_MAX = CANVAS_W / 2;
 

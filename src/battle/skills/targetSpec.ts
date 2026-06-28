@@ -12,6 +12,7 @@ import {
   compareThreatTargetPriority,
   pickHighestThreatAlly,
   pickThreatTargetWithHysteresis,
+  resolveSharedTankThreatSwitchMargin,
 } from "../threat.ts";
 import { isArenaDominanceActive } from "../arenaDominance.ts";
 import type {
@@ -456,6 +457,11 @@ export function applyIncludeSelfFilter(
   return filtered;
 }
 
+export type ThreatSwitchMarginContext = {
+  allies: CombatantState[];
+  passivesRegistry: Record<string, import("../types.ts").PassiveSkillDef>;
+};
+
 export type PickTargetOptions = {
   /**
    * Target Intent: MoveAnchor.
@@ -467,6 +473,8 @@ export type PickTargetOptions = {
   includeActorInAllyPool?: boolean;
   /** 単体攻撃ターゲット選定（闘技場の掟の強制ターゲット用） */
   singleTargetAttack?: boolean;
+  /** 敵 AI: 護法陣 shared tank 等のヘイト切替マージン */
+  threatSwitchMarginContext?: ThreatSwitchMarginContext;
 };
 
 /** 回復 effect は味方対象に使用者自身も含める。単体 damage は闘技場の掟判定用 */
@@ -570,9 +578,19 @@ export function pickTargetFromPool(
             return dominanceDuelist;
           }
         }
+        const threatMarginContext = options?.threatSwitchMarginContext;
         const { target, focusId } = pickThreatTargetWithHysteresis(
           facingPool,
-          actor.threatFocusTargetId
+          actor.threatFocusTargetId,
+          threatMarginContext
+            ? (highest, current) =>
+                resolveSharedTankThreatSwitchMargin(
+                  highest,
+                  current,
+                  threatMarginContext.allies,
+                  threatMarginContext.passivesRegistry,
+                )
+            : undefined,
         );
         if (focusId !== undefined) {
           actor.threatFocusTargetId = focusId;

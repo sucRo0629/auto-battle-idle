@@ -9,7 +9,7 @@ import {
 import { hideFallenAllyCorpses } from './entities.ts';
 import type { CombatantState, GameData } from './types.ts';
 import {
-  getLeadingPlayerFront,
+  getFrontlineContactFront,
   resolveEngagedFormationOverlaps,
   resolveEngagedLayout,
 } from './battleLayout.ts';
@@ -317,8 +317,8 @@ describe('battleLayout snapshots', () => {
     expect(fallen.corpseVisible).toBe(false);
   });
 
-  it('getLeadingPlayerFront picks max battleX on leading row', () => {
-    const front = getLeadingPlayerFront([
+  it('getFrontlineContactFront picks max battleX on frontline peer cluster', () => {
+    const front = getFrontlineContactFront([
       { id: 'g', role: 'defender', formationRow: 'front', rangePx: 0, isAlive: true, battleX: 200 },
       { id: 's', role: 'attacker', formationRow: 'front', rangePx: 0, isAlive: true, battleX: 180 },
     ]);
@@ -377,7 +377,6 @@ describe('resolveEngagedFormationOverlaps', () => {
 
     resolveEngagedFormationOverlaps(
       [assassin, guardian],
-      'front',
       () => true,
       (id) => id === 'as',
     );
@@ -406,7 +405,6 @@ describe('resolveEngagedFormationOverlaps', () => {
 
     resolveEngagedFormationOverlaps(
       [warrior, guardian, assassin],
-      'front',
       () => true,
       (id) => id === 'as',
     );
@@ -429,7 +427,6 @@ describe('resolveEngagedFormationOverlaps', () => {
 
     resolveEngagedFormationOverlaps(
       [warrior, guardian],
-      'front',
       () => true,
       undefined,
       { maxCorrectionPx: 2 },
@@ -454,7 +451,6 @@ describe('resolveEngagedFormationOverlaps', () => {
 
     resolveEngagedFormationOverlaps(
       [guardian, assassin],
-      'front',
       () => true,
       undefined,
       {
@@ -491,7 +487,6 @@ describe('resolveEngagedFormationOverlaps', () => {
 
     resolveEngagedFormationOverlaps(
       [warrior, guardian],
-      'front',
       () => true,
       undefined,
       {

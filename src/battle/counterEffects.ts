@@ -15,6 +15,7 @@ import {
 } from './passiveEffects.ts';
 import { isRangedAttack } from './data/entityTraits.ts';
 import { isWithinSkillRange } from './skills/rangeUtils.ts';
+import { isAllyOnCombatFrontline } from './combatPosition.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -505,6 +506,7 @@ export function applyAllyGuardCounterRetaliation(
   attacker: CombatantState,
   ctx: CounterRetaliationContext,
   guardCandidates: CombatantState[],
+  enemies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
   actives: Record<string, ActiveSkillDef>,
   callbacks: CounterRetaliationCallbacks,
@@ -514,7 +516,7 @@ export function applyAllyGuardCounterRetaliation(
   if (damagedAlly.isEnemy || !attacker.isEnemy) return;
   if (ctx.appliedDamage <= 0) return;
   if (ctx.attackKind !== 'damage' && ctx.attackKind !== 'dot') return;
-  if (damagedAlly.formationRow !== 'front') return;
+  if (!isAllyOnCombatFrontline(damagedAlly, guardCandidates, enemies)) return;
 
   for (const guard of guardCandidates) {
     if (!guard.isAlive || guard.isEnemy) continue;

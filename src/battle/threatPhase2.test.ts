@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 import { syncFrontThreatControlAuras } from './passiveEffects.ts';
+import { resolveEnemyChaseTargetPlayer } from './resolveApproachBattleX.ts';
+import { mockApproachGameData } from './testFixtures.ts';
 import {
   THREAT_DAMAGE_SCALE,
   THREAT_TARGET_SWITCH_MARGIN,
@@ -62,6 +64,7 @@ const paladinFrontSharing: PassiveSkillDef = {
   name: '護法陣',
   effect: 'threatControl',
   frontThreatFloor: 0.72,
+  frontThreatAuraRadiusPx: 50,
   frontThreatDecayMultiplier: 0.65,
 };
 
@@ -117,11 +120,12 @@ describe('threat phase 2', () => {
     expect(pickHighestThreatAlly([guardian, warrior])?.id).toBe('warrior');
   });
 
-  it('paladin raises front warrior threat floor toward shared tank level', () => {
+  it('paladin raises nearby warrior threat floor toward shared tank level', () => {
     const paladin = mockAlly({
       id: 'paladin',
       maxHp: 220,
       def: 22,
+      battleX: 200,
       build: {
         learnedPassiveIds: ['df_paladin_passive_2'],
         learnedActiveIds: [],
@@ -133,7 +137,8 @@ describe('threat phase 2', () => {
       role: 'attacker',
       maxHp: 165,
       def: 14,
-      formationRow: 'front',
+      formationRow: 'back',
+      battleX: 230,
     });
     initializeAllyThreat([paladin, warrior]);
     warrior.threat = warrior.baseThreat;
@@ -143,6 +148,72 @@ describe('threat phase 2', () => {
     );
     expect(warrior.threat).toBe(expectedFloor);
     expect(warrior.threat!).toBeGreaterThan(warrior.baseThreat!);
+  });
+
+  it('paladin threat floor does not apply outside aura radius', () => {
+    const paladin = mockAlly({
+      id: 'paladin',
+      battleX: 200,
+      build: {
+        learnedPassiveIds: ['df_paladin_passive_2'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const farAlly = mockAlly({
+      id: 'far',
+      role: 'attacker',
+      formationRow: 'front',
+      battleX: 100,
+    });
+    initializeAllyThreat([paladin, farAlly]);
+    const baseBefore = farAlly.baseThreat!;
+    farAlly.threat = baseBefore;
+    applyFrontThreatFloor([paladin, farAlly], passivesRegistry);
+    expect(farAlly.threat).toBe(baseBefore);
+  });
+
+  it('shared tank aura lets nearby ally steal focus below default margin', () => {
+    const paladin = mockAlly({
+      id: 'paladin',
+      threat: 100,
+      baseThreat: 100,
+      battleX: 200,
+      build: {
+        learnedPassiveIds: ['df_paladin_passive_2'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const warrior = mockAlly({
+      id: 'warrior',
+      role: 'attacker',
+      threat: 110,
+      baseThreat: 48,
+      battleX: 220,
+    });
+    const meleeEnemy = mockAlly({
+      id: 'enemy',
+      isEnemy: true,
+      battleX: 280,
+      threatFocusTargetId: 'paladin',
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+    });
+    const gameData = mockApproachGameData();
+    const target = resolveEnemyChaseTargetPlayer(
+      meleeEnemy,
+      [paladin, warrior],
+      [meleeEnemy],
+      {
+        ...gameData,
+        skillRegistry: {
+          ...gameData.skillRegistry,
+          passives: passivesRegistry,
+        },
+      },
+    );
+    expect(target?.id).toBe('warrior');
   });
 
   it('paladin front sharing slows front ally threat decay', () => {

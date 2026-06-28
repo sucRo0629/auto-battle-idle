@@ -17,6 +17,8 @@ import { resolvePassiveAuraHotTargets, resolvePassiveHotTargets } from './passiv
 import {
   resolvePassiveDispelTargets,
 } from './passiveDispelBridge.ts';
+import { isAllyWithinBattleXRadius } from './combatPosition.ts';
+import { DEFAULT_FRONT_THREAT_AURA_RADIUS_PX } from './threat.ts';
 import {
   stripHerbalPotencyAurasFromSource,
 } from './herbalPotency.ts';
@@ -545,7 +547,15 @@ export function syncFrontThreatControlAuras(
       const percent = passive.frontDamageTakenReduction;
       if (percent === undefined || percent <= 0) continue;
       for (const target of allies) {
-        if (!target.isAlive || target.formationRow !== 'front') continue;
+        if (
+          !isAllyWithinBattleXRadius(
+            source,
+            target,
+            DEFAULT_FRONT_THREAT_AURA_RADIUS_PX,
+          )
+        ) {
+          continue;
+        }
         target.statusEffects.push(
           createPassiveDamageReductionEffect(
             source,

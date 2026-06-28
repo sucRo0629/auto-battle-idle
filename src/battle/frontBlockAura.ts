@@ -1,4 +1,8 @@
 import { getPassiveDefs } from './combatMath.ts';
+import {
+  DEFAULT_SURROUND_AURA_RADIUS_PX,
+  isAllyWithinBattleXRadius,
+} from './combatPosition.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 
 const FRONT_BLOCK_AURA_ID_PREFIX = 'front_block_aura_';
@@ -61,7 +65,20 @@ function resolveFrontBlockAuraDisplayName(
   return '護身手';
 }
 
-/** 生存中の持有者が前列味方へ block overlay を付与（syncBuffAuras とは別） */
+function resolveFrontBlockAuraRadiusPx(
+  source: CombatantState,
+  passives: Record<string, PassiveSkillDef>,
+): number {
+  for (const passive of getPassiveDefs(source, passives)) {
+    if (!isFrontBlockAuraPassive(passive)) continue;
+    if (passive.frontBlockAuraRadiusPx !== undefined) {
+      return passive.frontBlockAuraRadiusPx;
+    }
+  }
+  return DEFAULT_SURROUND_AURA_RADIUS_PX;
+}
+
+/** 生存中の持有者が周囲味方へ block overlay を付与（syncBuffAuras とは別） */
 export function syncFrontBlockAuras(
   allies: CombatantState[],
   passives: Record<string, PassiveSkillDef>,
@@ -73,9 +90,10 @@ export function syncFrontBlockAuras(
     const config = resolveFrontBlockAuraConfigForUnit(source, passives);
     if (config.blockChance <= 0) continue;
     const displayName = resolveFrontBlockAuraDisplayName(source, passives);
+    const radiusPx = resolveFrontBlockAuraRadiusPx(source, passives);
 
     for (const target of allies) {
-      if (!target.isAlive || target.formationRow !== 'front') continue;
+      if (!isAllyWithinBattleXRadius(source, target, radiusPx)) continue;
       target.statusEffects.push({
         id: `${FRONT_BLOCK_AURA_ID_PREFIX}${source.id}_${target.id}`,
         kind: 'buff',

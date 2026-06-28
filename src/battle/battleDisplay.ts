@@ -1,9 +1,10 @@
 import { isMeleeUnit } from './combatPosition.ts';
+import { resolveFrontlinePeerPlayerIds } from './combatPosition.ts';
 import {
   resolveEnemyAttackTargetPlayer,
   resolveEnemyChaseTargetPlayer,
 } from './resolveApproachBattleX.ts';
-import type { CombatantState, FormationRow, GameData } from './types.ts';
+import type { CombatantState, GameData } from './types.ts';
 
 /** DisplayAnchor 読取 */
 export function getEngagedDisplayAnchorPlayerId(
@@ -32,24 +33,20 @@ export function clearEngagedDisplayAnchor(enemy: CombatantState): void {
  */
 export class EngagedCompositionTracker {
   private meleeEnemySignature: string | null = null;
-  private leadingRowSignature: string | null = null;
+  private frontlineSignature: string | null = null;
 
   clear(): void {
     this.meleeEnemySignature = null;
-    this.leadingRowSignature = null;
+    this.frontlineSignature = null;
   }
 
   initSignatures(
     players: CombatantState[],
     enemies: CombatantState[],
-    leadingRow: FormationRow | null,
-    gameData: GameData,
+    _gameData: GameData,
   ): void {
-    this.meleeEnemySignature = this.buildMeleeSignature(enemies, gameData);
-    this.leadingRowSignature = this.buildLeadingRowSignature(
-      players,
-      leadingRow,
-    );
+    this.meleeEnemySignature = this.buildMeleeSignature(enemies, _gameData);
+    this.frontlineSignature = this.buildFrontlineSignature(players);
   }
 
   freezeRangedTargets(
@@ -83,17 +80,12 @@ export class EngagedCompositionTracker {
     return ids.length > 0 ? ids.join(',') : null;
   }
 
-  private buildLeadingRowSignature(
-    players: CombatantState[],
-    leadingRow: FormationRow | null,
-  ): string | null {
-    if (leadingRow === null) return null;
-    const ids = players
-      .filter((p) => p.isAlive && p.formationRow === leadingRow)
-      .map((p) => p.id)
+  private buildFrontlineSignature(players: CombatantState[]): string | null {
+    const ids = [...resolveFrontlinePeerPlayerIds(players)]
+      .filter((id) => players.some((player) => player.id === id && player.isAlive))
       .sort()
       .join(',');
-    return `${leadingRow}:${ids}`;
+    return ids.length > 0 ? ids : null;
   }
 
   /** 生存近接敵の構成が変わったら true */
@@ -107,15 +99,20 @@ export class EngagedCompositionTracker {
     return true;
   }
 
-  /** 前列構成が変わったら true */
+  /** frontline peer 構成が変わったら true */
+  consumeFrontlineCompositionChange(players: CombatantState[]): boolean {
+    const next = this.buildFrontlineSignature(players);
+    if (next === null || next === this.frontlineSignature) return false;
+    this.frontlineSignature = next;
+    return true;
+  }
+
+  /** @deprecated consumeFrontlineCompositionChange を使用 */
   consumeLeadingRowCompositionChange(
     players: CombatantState[],
-    leadingRow: FormationRow | null,
+    _leadingRow?: unknown,
   ): boolean {
-    const next = this.buildLeadingRowSignature(players, leadingRow);
-    if (next === null || next === this.leadingRowSignature) return false;
-    this.leadingRowSignature = next;
-    return true;
+    return this.consumeFrontlineCompositionChange(players);
   }
 }
 

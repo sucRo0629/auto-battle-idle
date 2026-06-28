@@ -8,6 +8,8 @@ import {
   resolveApproachFormationRangePx,
   resolveFormationRangePx,
   isPlayerRearAssaultAccess,
+  resolveEngagedFrontlineClusterIdsByBattleX,
+  PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX,
   type PlayerRearAssaultBattleContext,
 } from './combatPosition.ts';
 import {
@@ -24,7 +26,9 @@ import {
 } from './battleConstants.ts';
 import {
   compareFormationRowSlot,
+  comparePartyFormationSlot,
   computePartyFormationBattleX,
+  isMeleeFormationSlot,
   partyFormationDepthPx,
   type PartyFormationUnit,
 } from './partyFormation.ts';
@@ -95,67 +99,75 @@ function sortPlayersInFormationRow(
 }
 
 /**
- * 接敵: 同一 formationRow 内で baseApproach を列ソート順に積み上げ、
- * 各ユニットを max(自身の base, 前スロット + DEPTH) に揃える。
+ * 接敵: partyFormation ソート順で baseApproach を深度積み上げ。
  * 死体スロットはチェーン維持用に含める（戦死後の前線継承）。
  */
-export function applyFormationRowApproachSpacing(
+export function applyPartyFormationApproachSpacing(
   baseApproachById: Map<string, number>,
   players: PlayerPlacementInput[],
 ): Map<string, number> {
   const result = new Map<string, number>();
-  const rows = new Set(players.map((p) => p.formationRow));
+  const sorted = [...players].sort((a, b) =>
+    comparePartyFormationSlot(toPartyFormationUnit(a), toPartyFormationUnit(b)),
+  );
+  const living = livingPlayers(players);
 
-  for (const row of rows) {
-    const rowFormation = players.filter((p) => p.formationRow === row);
-    if (rowFormation.length === 0) continue;
+  if (living.length === 1 && players.length >= 2) {
+    const unit = living[0]!;
+    const ownBase = baseApproachById.get(unit.id);
+    if (ownBase !== undefined) {
+      let prevX = Number.NEGATIVE_INFINITY;
+      let forwardmostX = ownBase;
+      for (const input of sorted) {
+        const unitBase = baseApproachById.get(input.id) ?? forwardmostX;
+        const x =
+          prevX === Number.NEGATIVE_INFINITY
+            ? unitBase
+            : Math.max(unitBase, prevX + FORMATION_DEPTH_STEP_PX);
+        forwardmostX = x;
+        prevX = x;
+      }
+      result.set(unit.id, forwardmostX);
+    }
+    return result;
+  }
 
-    const living = livingPlayers(rowFormation);
-    if (living.length === 1 && rowFormation.length >= 2) {
-      const sorted = sortPlayersInFormationRow(row, rowFormation);
-      const unit = living[0]!;
-      const ownBase = baseApproachById.get(unit.id);
-      if (ownBase !== undefined) {
-        let prevX = Number.NEGATIVE_INFINITY;
-        let forwardmostX = ownBase;
-        for (const input of sorted) {
-          const unitBase = baseApproachById.get(input.id) ?? forwardmostX;
-          const x =
-            prevX === Number.NEGATIVE_INFINITY
-              ? unitBase
-              : Math.max(unitBase, prevX + FORMATION_DEPTH_STEP_PX);
-          forwardmostX = x;
-          prevX = x;
-        }
-        result.set(unit.id, forwardmostX);
+  let prevX = Number.NEGATIVE_INFINITY;
+  let prevDeployRow: FormationRow | null = null;
+  for (const input of sorted) {
+    const base = baseApproachById.get(input.id);
+    if (base === undefined) continue;
+
+    const deployRow = toPartyFormationUnit(input).formationRow ?? 'front';
+    if (prevDeployRow !== null && deployRow !== prevDeployRow) {
+      prevX = Number.NEGATIVE_INFINITY;
+    }
+    prevDeployRow = deployRow;
+
+    if (!input.isAlive) {
+      if (prevX !== Number.NEGATIVE_INFINITY) {
+        prevX += FORMATION_DEPTH_STEP_PX;
       }
       continue;
     }
 
-    const sorted = sortPlayersInFormationRow(row, rowFormation);
-    let prevX = Number.NEGATIVE_INFINITY;
-
-    for (const input of sorted) {
-      const base = baseApproachById.get(input.id);
-      if (base === undefined) continue;
-
-      if (!input.isAlive) {
-        if (prevX !== Number.NEGATIVE_INFINITY) {
-          prevX += FORMATION_DEPTH_STEP_PX;
-        }
-        continue;
-      }
-
-      const x =
-        prevX === Number.NEGATIVE_INFINITY
-          ? base
-          : Math.max(base, prevX + FORMATION_DEPTH_STEP_PX);
-      result.set(input.id, x);
-      prevX = x;
-    }
+    const x =
+      prevX === Number.NEGATIVE_INFINITY
+        ? base
+        : Math.max(base, prevX + FORMATION_DEPTH_STEP_PX);
+    result.set(input.id, x);
+    prevX = x;
   }
 
   return result;
+}
+
+/** @deprecated applyPartyFormationApproachSpacing を使用 */
+export function applyFormationRowApproachSpacing(
+  baseApproachById: Map<string, number>,
+  players: PlayerPlacementInput[],
+): Map<string, number> {
+  return applyPartyFormationApproachSpacing(baseApproachById, players);
 }
 
 /** @deprecated applyFormationRowApproachSpacing を使用 */
@@ -235,7 +247,7 @@ export function resolveOverlaps(
   }
 }
 
-/** 接敵アンカー: 最前列の最短射程分だけ敵接触点より後方（body gap は加算しない） */
+/** 接敵アンカー: frontline 最短射程分だけ敵接触点より後方（body gap は加算しない） */
 export function resolveEngagePlayerBattleAnchor(
   players: PlayerPlacementInput[],
   enemyContact: number,
@@ -243,12 +255,8 @@ export function resolveEngagePlayerBattleAnchor(
   const living = livingPlayers(players);
   if (living.length === 0) return enemyContact;
 
-  const leadingRow = getLeadingPlayerFormationRow(living);
-  const contactPlayers =
-    leadingRow !== null
-      ? living.filter((p) => p.formationRow === leadingRow)
-      : living;
-  const minFrontRange = Math.min(...contactPlayers.map((p) => p.rangePx));
+  const contactPlayers = resolveForwardMeleeFormationUnits(living);
+  const minFrontRange = Math.min(...contactPlayers.map((player) => player.rangePx));
   return enemyContact - minFrontRange;
 }
 
@@ -262,25 +270,36 @@ function minContactEnemyRangePx(
   return Math.min(...contact.map((e) => e.rangePx));
 }
 
-export function getLeadingPlayerFormationRow(
+/** 近接前線スロットが 1 体もいない編成（全員遠隔帯） */
+export function isRearDepthOnlyFormation(
   players: PlayerPlacementInput[],
-): FormationRow | null {
-  const living = players.filter((p) => p.isAlive);
-  for (const row of ROW_ORDER) {
-    if (living.some((p) => p.formationRow === row)) {
-      return row;
-    }
-  }
-  return null;
+): boolean {
+  const living = livingPlayers(players);
+  return (
+    living.length > 0 &&
+    living.every((player) => !isMeleeFormationSlot(toPartyFormationUnit(player)))
+  );
 }
 
-
+/** @deprecated isRearDepthOnlyFormation を使用 */
 export function isBackRowOnlyFormation(
   players: PlayerPlacementInput[],
 ): boolean {
-  return (
-    getLeadingPlayerFormationRow(players.filter((p) => p.isAlive)) === 'back'
+  return isRearDepthOnlyFormation(players);
+}
+
+function resolveForwardMeleeFormationUnits(
+  players: PlayerPlacementInput[],
+): PlayerPlacementInput[] {
+  const living = livingPlayers(players);
+  if (living.length === 0) return [];
+  const sorted = [...living].sort((a, b) =>
+    comparePartyFormationSlot(toPartyFormationUnit(a), toPartyFormationUnit(b)),
   );
+  const melee = sorted.filter((player) =>
+    isMeleeFormationSlot(toPartyFormationUnit(player)),
+  );
+  return melee.length > 0 ? melee : [sorted[sorted.length - 1]!];
 }
 
 export function getFrontEnemyBattleX(
@@ -299,19 +318,40 @@ export function getFrontPlayerBattleX(
   return Math.max(...living.map((p) => p.battleX));
 }
 
-export function getLeadingPlayerFront(
+/** @deprecated formationRow ベース。battleX peer frontline へ移行済み */
+export function getLeadingPlayerFormationRow(
+  players: PlayerPlacementInput[],
+): FormationRow | null {
+  const living = players.filter((p) => p.isAlive);
+  for (const row of ROW_ORDER) {
+    if (living.some((p) => p.formationRow === row)) {
+      return row;
+    }
+  }
+  return null;
+}
+
+export function getFrontlineContactFront(
   players: Array<PlayerPlacementInput & { battleX: number }>,
 ): { battleX: number; rangePx: number } | null {
-  const living = players.filter((p) => p.isAlive);
+  const living = players.filter((player) => player.isAlive);
   if (living.length === 0) return null;
-  const leadingRow = getLeadingPlayerFormationRow(living);
-  if (leadingRow === null) return null;
-  const rowUnits = living.filter((p) => p.formationRow === leadingRow);
-  let front = rowUnits[0]!;
-  for (const unit of rowUnits) {
+  const maxX = Math.max(...living.map((player) => player.battleX));
+  const atFront = living.filter(
+    (player) => player.battleX >= maxX - PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX,
+  );
+  let front = atFront[0]!;
+  for (const unit of atFront) {
     if (unit.battleX > front.battleX) front = unit;
   }
   return { battleX: front.battleX, rangePx: front.rangePx };
+}
+
+/** @deprecated getFrontlineContactFront を使用 */
+export function getLeadingPlayerFront(
+  players: Array<PlayerPlacementInput & { battleX: number }>,
+): { battleX: number; rangePx: number } | null {
+  return getFrontlineContactFront(players);
 }
 
 
@@ -403,11 +443,11 @@ export function computeEngagedPlayerBattleLaneOffsets(
     formation.length > 0
       ? Math.max(...formation.map((p) => p.x))
       : contactBattleX;
-  const leadingRow = getLeadingPlayerFormationRow(living);
+  const frontlineIds = resolveEngagedFrontlineClusterIdsByBattleX(living);
 
   for (const player of living) {
     const formX = formationMap.get(player.id) ?? contactBattleX;
-    if (player.formationRow === leadingRow) {
+    if (frontlineIds.has(player.id)) {
       const engagedX = engagedMap.get(player.id) ?? formX;
       const blendedX = formX + (engagedX - formX) * advanceT;
       lanes.set(player.id, blendedX - contactBattleX);
@@ -574,8 +614,8 @@ export function resolveEngagedContactBattleX(
   const living = players.filter((p) => p.isAlive);
   if (living.length === 0) return null;
 
-  if (isBackRowOnlyFormation(living)) {
-    const front = getLeadingPlayerFront(living);
+  if (isRearDepthOnlyFormation(living)) {
+    const front = getFrontlineContactFront(living);
     return front?.battleX ?? PARTY_FORMATION_LEFT_ANCHOR;
   }
 
@@ -584,14 +624,13 @@ export function resolveEngagedContactBattleX(
 }
 
 function isAbsoluteEngagedBattleLane(
-  player: { formationRow: FormationRow; engagedBattleLaneX?: number },
-  leadingRow: FormationRow | null,
+  player: { id: string; engagedBattleLaneX?: number },
+  frontlineIds: Set<string>,
   useAbsoluteRear: boolean,
 ): boolean {
   return (
     useAbsoluteRear &&
-    leadingRow !== null &&
-    player.formationRow !== leadingRow &&
+    !frontlineIds.has(player.id) &&
     player.engagedBattleLaneX !== undefined
   );
 }
@@ -599,7 +638,6 @@ function isAbsoluteEngagedBattleLane(
 export function resolveStablePlayerEngagedBattleX(
   players: Array<{
     id: string;
-    formationRow: FormationRow;
     rangePx: number;
     battleX: number;
     isAlive: boolean;
@@ -607,7 +645,7 @@ export function resolveStablePlayerEngagedBattleX(
   }>,
   contactBattleX: number,
   _battleOffset: number,
-  leadingRow: FormationRow | null = null,
+  frontlineIds: Set<string> = resolveEngagedFrontlineClusterIdsByBattleX(players),
   useAbsoluteRear: boolean = false,
 ): Map<string, number> {
   const living = players.filter((p) => p.isAlive);
@@ -616,7 +654,7 @@ export function resolveStablePlayerEngagedBattleX(
     [];
 
   for (const player of living) {
-    if (isAbsoluteEngagedBattleLane(player, leadingRow, useAbsoluteRear)) {
+    if (isAbsoluteEngagedBattleLane(player, frontlineIds, useAbsoluteRear)) {
       result.set(player.id, player.engagedBattleLaneX!);
       continue;
     }
@@ -661,8 +699,8 @@ export function computeEngagedLayout(
   );
   if (frontLineBattleX === null) return null;
 
-  const backRowOnly = isBackRowOnlyFormation(living);
-  const leadingRow = getLeadingPlayerFormationRow(living);
+  const rearDepthOnly = isRearDepthOnlyFormation(living);
+  const frontlineIds = resolveEngagedFrontlineClusterIdsByBattleX(living);
   const placementInputs = living.map((p) => ({
     id: p.id,
     role: p.role,
@@ -672,7 +710,7 @@ export function computeEngagedLayout(
   }));
 
   const engagedFormationTargets =
-    !backRowOnly && ctx.frontEnemyBattleAnchor !== null
+    !rearDepthOnly && ctx.frontEnemyBattleAnchor !== null
       ? computeEngagedPlayerTargets(
           placementInputs,
           ctx.frontEnemyBattleAnchor,
@@ -681,11 +719,11 @@ export function computeEngagedLayout(
 
   const playerBattleX = new Map<string, number>();
 
-  if (engagedFormationTargets && leadingRow !== null) {
+  if (engagedFormationTargets && frontlineIds.size > 0) {
     const frontIdeals: Array<{ id: string; battleX: number; isAlive: true }> =
       [];
     for (const player of living) {
-      if (player.formationRow !== leadingRow) continue;
+      if (!frontlineIds.has(player.id)) continue;
       const target = engagedFormationTargets.get(player.id);
       if (target === undefined) continue;
       frontIdeals.push({
@@ -700,7 +738,7 @@ export function computeEngagedLayout(
     }
   } else {
     const lanes =
-      !backRowOnly && ctx.frontEnemyBattleAnchor !== null
+      !rearDepthOnly && ctx.frontEnemyBattleAnchor !== null
         ? computeEngagedPlayerBattleLaneOffsets(
             living,
             ctx.frontEnemyBattleAnchor,
@@ -709,20 +747,17 @@ export function computeEngagedLayout(
         : new Map<string, number>();
     const leadingBattleX = resolveStablePlayerEngagedBattleX(
       living
-        .filter(
-          (p) => leadingRow === null || p.formationRow === leadingRow,
-        )
-        .map((p) => ({
-          id: p.id,
-          formationRow: p.formationRow,
-          rangePx: p.rangePx,
-          battleX: p.battleX,
+        .filter((player) => frontlineIds.has(player.id))
+        .map((player) => ({
+          id: player.id,
+          rangePx: player.rangePx,
+          battleX: player.battleX,
           isAlive: true as const,
-          engagedBattleLaneX: lanes.get(p.id) ?? 0,
+          engagedBattleLaneX: lanes.get(player.id) ?? 0,
         })),
       frontLineBattleX,
       ctx.battleOffset,
-      leadingRow,
+      frontlineIds,
       false,
     );
     for (const [id, x] of leadingBattleX) {
@@ -731,30 +766,28 @@ export function computeEngagedLayout(
   }
 
   for (const player of living) {
-    if (leadingRow !== null && player.formationRow !== leadingRow) {
+    if (!frontlineIds.has(player.id)) {
       playerBattleX.set(player.id, player.battleX);
     }
   }
 
-  let frontRowMaxBattleX = frontLineBattleX;
-  if (leadingRow !== null) {
-    for (const player of living) {
-      if (player.formationRow !== leadingRow) continue;
-      const x = playerBattleX.get(player.id);
-      if (x !== undefined) {
-        frontRowMaxBattleX = Math.max(frontRowMaxBattleX, x);
-      }
+  let frontlineMaxBattleX = frontLineBattleX;
+  for (const player of living) {
+    if (!frontlineIds.has(player.id)) continue;
+    const x = playerBattleX.get(player.id);
+    if (x !== undefined) {
+      frontlineMaxBattleX = Math.max(frontlineMaxBattleX, x);
     }
   }
   const enemyFrontTargetX =
-    frontRowMaxBattleX + minContactEnemyRangePx(ctx.enemies);
+    frontlineMaxBattleX + minContactEnemyRangePx(ctx.enemies);
   const contactPositions = resolveEngagedContactEnemyBattleX(
     ctx.enemies,
     enemyFrontTargetX,
   );
 
-  const backRowPlayers = living.filter((p) => p.formationRow === 'back');
-  const formationBackRowTargets = computePlayerPositions(
+  const rearDepthPlayers = living.filter((player) => !frontlineIds.has(player.id));
+  const formationDepthTargets = computePlayerPositions(
     living.map((p) => ({
       id: p.id,
       role: p.role,
@@ -763,14 +796,19 @@ export function computeEngagedLayout(
       isAlive: true as const,
     })),
   );
+  const formationDeploy = buildFormationPlacements(living);
+  const formationAnchorX =
+    formationDeploy.length > 0
+      ? Math.max(...formationDeploy.map((placement) => placement.x))
+      : frontLineBattleX;
   const referenceBackRowPlayerX =
-    !backRowOnly && leadingRow && backRowPlayers.length > 0
+    !rearDepthOnly && rearDepthPlayers.length > 0
       ? frontLineBattleX +
         Math.max(
-          ...backRowPlayers.map(
-            (p) =>
-              (formationBackRowTargets.get(p.id) ?? ROW_X.back) -
-              ROW_X[leadingRow],
+          ...rearDepthPlayers.map(
+            (player) =>
+              (formationDepthTargets.get(player.id) ??
+                PARTY_FORMATION_LEFT_ANCHOR) - formationAnchorX,
           ),
         )
       : undefined;
@@ -889,48 +927,70 @@ interface EngagedFormationOverlapOptions {
   movementBudgetOriginById?: ReadonlyMap<string, number>;
 }
 
+function resolveEngagedMeleeOverlapClusterIds(
+  players: CombatantState[],
+): Set<string> {
+  const living = players.filter((player) => player.isAlive);
+  if (living.length === 0) return new Set();
+  const maxX = Math.max(...living.map((player) => player.battleX));
+  const depthLimit = partyFormationDepthPx(Math.max(living.length, 5));
+  return new Set(
+    living
+      .filter(
+        (player) =>
+          resolveApproachFormationRangePx(player) < RANGED_ATTACK_MIN_PX &&
+          player.battleX >= maxX - depthLimit,
+      )
+      .map((player) => player.id),
+  );
+}
+
 export function resolveEngagedFormationOverlaps(
   players: CombatantState[],
-  leadingRow: FormationRow | null,
   isOnField: (unit: CombatantState) => boolean,
   isInSkillMotion?: (id: string) => boolean,
   options?: EngagedFormationOverlapOptions & {
     battleContext?: PlayerRearAssaultBattleContext;
   },
 ): void {
-  if (leadingRow === null) return;
   const maxCorrectionPx = resolveOverlapCorrectionLimit(
     options?.maxCorrectionPx,
   );
   const battleContext = options?.battleContext;
-  const frontUnits = players.filter(
-    (p) =>
-      isOnField(p) &&
-      p.isAlive &&
-      p.formationRow === leadingRow &&
-      !(isInSkillMotion?.(p.id) ?? false) &&
+  const onFieldLiving = players.filter(
+    (player) =>
+      isOnField(player) &&
+      player.isAlive &&
+      !(isInSkillMotion?.(player.id) ?? false) &&
       (battleContext === undefined ||
-        !isPlayerRearAssaultAccess(p, battleContext)),
+        !isPlayerRearAssaultAccess(player, battleContext)),
   );
+  const overlapIds = resolveEngagedMeleeOverlapClusterIds(onFieldLiving);
+  const frontUnits = onFieldLiving.filter((player) => overlapIds.has(player.id));
   if (frontUnits.length < 2) return;
 
   const allContactBand = frontUnits.every(
-    (p) => resolveApproachFormationRangePx(p) < RANGED_ATTACK_MIN_PX,
+    (player) => resolveApproachFormationRangePx(player) < RANGED_ATTACK_MIN_PX,
   );
 
   if (allContactBand) {
-    const placements = frontUnits.map((p) => ({
-      id: p.id,
-      role: p.role,
-      formationRow: p.formationRow,
-      rangePx: resolveFormationRangePx(p),
+    const placements = frontUnits.map((player) => ({
+      id: player.id,
+      role: player.role,
+      formationRow: player.formationRow,
+      rangePx: resolveFormationRangePx(player),
       isAlive: true as const,
     }));
-    const sorted = sortPlayersInFormationRow(leadingRow, placements);
+    const sorted = [...placements].sort((a, b) =>
+      comparePartyFormationSlot(
+        toPartyFormationUnit(a),
+        toPartyFormationUnit(b),
+      ),
+    );
     const minGap = FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX;
     for (let i = 1; i < sorted.length; i++) {
-      const rear = frontUnits.find((p) => p.id === sorted[i - 1]!.id);
-      const front = frontUnits.find((p) => p.id === sorted[i]!.id);
+      const rear = frontUnits.find((player) => player.id === sorted[i - 1]!.id);
+      const front = frontUnits.find((player) => player.id === sorted[i]!.id);
       if (!rear || !front) continue;
       const minFrontX = rear.battleX + minGap;
       if (front.battleX < minFrontX) {

@@ -639,7 +639,7 @@ export function appendPassiveThreatControlFields(
     createEl(
       "p",
       "editor-hint",
-      "ヘイト維持・上昇。被ダメ / ブロック / 前列 aura のいずれかを 1 つ以上設定してください。"
+      "ヘイト維持・上昇。被ダメ / ブロック / 周囲 aura のいずれかを 1 つ以上設定してください。"
     )
   );
   appendOptionalPassiveNumberField(
@@ -704,7 +704,7 @@ export function appendPassiveThreatControlFields(
   );
   appendOptionalPassiveNumberField(
     parent,
-    "前列ヘイト下限（source × ratio）",
+    "周囲ヘイト下限（source × ratio）",
     passive.frontThreatFloor,
     (frontThreatFloor) => {
       patchPassive((current) => {
@@ -719,7 +719,22 @@ export function appendPassiveThreatControlFields(
   );
   appendOptionalPassiveNumberField(
     parent,
-    "前列ヘイト減衰倍率",
+    "周囲 aura 半径（px）",
+    passive.frontThreatAuraRadiusPx,
+    (frontThreatAuraRadiusPx) => {
+      patchPassive((current) => {
+        if (frontThreatAuraRadiusPx === undefined) {
+          delete current.frontThreatAuraRadiusPx;
+        } else {
+          current.frontThreatAuraRadiusPx = frontThreatAuraRadiusPx;
+        }
+      });
+    },
+    { min: 1, step: 1, placeholder: "未設定 = 50" }
+  );
+  appendOptionalPassiveNumberField(
+    parent,
+    "周囲ヘイト減衰倍率",
     passive.frontThreatDecayMultiplier,
     (frontThreatDecayMultiplier) => {
       patchPassive((current) => {

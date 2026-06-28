@@ -9,6 +9,7 @@ import { isMeleeRangePx } from './types.ts';
 import {
   BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
   BATTLE_ENEMY_VISIBLE_MAX_X,
+  DEFAULT_SURROUND_AURA_RADIUS_PX,
   resolvePartyDeployTravelPx,
   enemyRangedRearGap,
   SPRITE_GAP,
@@ -72,6 +73,51 @@ function livingPlayersOnLeadingRow(
   return living.filter((a) => a.battleX === maxX);
 }
 
+/** 最前線 battleX 帯の生存味方（`formationRow` 非依存） */
+export function resolveLivingPlayersAtFrontlineBattleX(
+  players: CombatantState[],
+): CombatantState[] {
+  return livingPlayersOnLeadingRow(players);
+}
+
+/** 周囲 aura 既定半径（障身法 AoE 同値） */
+export { DEFAULT_SURROUND_AURA_RADIUS_PX } from './battleConstants.ts';
+
+export function isAllyWithinBattleXRadius(
+  source: CombatantState,
+  ally: CombatantState,
+  radiusPx: number,
+): boolean {
+  if (!ally.isAlive || ally.id === source.id) return false;
+  return Math.abs(getBattleX(source) - getBattleX(ally)) <= radiusPx;
+}
+
+/** 接敵中の戦線上（rear assault 除外・contact 帯）にいるか */
+export function isAllyOnCombatFrontline(
+  ally: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+): boolean {
+  if (!ally.isAlive) return false;
+  if (ally.accessState === "rearAssault") return false;
+
+  const living = players.filter(
+    (player) => player.isAlive && player.accessState !== "rearAssault",
+  );
+  if (living.length === 0) return false;
+
+  const maxBattleX = Math.max(...living.map((player) => player.battleX));
+  if (getBattleX(ally) >= maxBattleX - PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX) {
+    return true;
+  }
+
+  const context: PlayerRearAssaultBattleContext = { players, enemies };
+  if (isPlayerRearAssaultAccess(ally, context)) return false;
+  const contactX = getPlayerFrontlineContactX(players, enemies);
+  if (contactX === null) return true;
+  return getBattleX(ally) >= contactX - PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX;
+}
+
 /** 最前線（射程順一列の右端 = max battleX） */
 export function getPlayerContactX(players: CombatantState[]): number | null {
   const living = players.filter((a) => a.isAlive);
@@ -122,36 +168,62 @@ export function isPlayerRearAssaultAccess(
   );
 }
 
-function resolveOnFrontlinePlayerIds(players: CombatantState[]): Set<string> {
-  let onFrontline = new Set(
-    players
-      .filter(
-        (player) => player.isAlive && player.accessState !== "rearAssault",
-      )
-      .map((player) => player.id),
-  );
+/** 生存味方 peer 集合の frontline クラスタ（`formationRow` 非依存） */
+export function resolveFrontlinePeerPlayerIds(
+  players: CombatantState[],
+): Set<string> {
+  return resolveOnFrontlinePlayerIds(players);
+}
 
-  let changed = true;
-  while (changed) {
-    changed = false;
-    for (const id of [...onFrontline]) {
-      const unit = players.find((player) => player.id === id);
-      if (!unit) continue;
-      const peerIds = [...onFrontline].filter((peerId) => peerId !== id);
-      if (peerIds.length === 0) continue;
-      const maxPeerX = Math.max(
-        ...peerIds.map(
-          (peerId) => players.find((player) => player.id === peerId)!.battleX,
-        ),
-      );
-      if (unit.battleX > maxPeerX + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX) {
-        onFrontline.delete(id);
-        changed = true;
+/** layout 用: 接触最前線（max battleX ± margin）クラスタ */
+export function resolveEngagedFrontlineClusterIdsByBattleX(
+  units: Array<{ id: string; battleX: number; isAlive: boolean }>,
+): Set<string> {
+  const living = units.filter((unit) => unit.isAlive);
+  if (living.length === 0) return new Set();
+  const maxX = Math.max(...living.map((unit) => unit.battleX));
+  return new Set(
+    living
+      .filter(
+        (unit) =>
+          unit.battleX >= maxX - PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX,
+      )
+      .map((unit) => unit.id),
+  );
+}
+
+function resolveOnFrontlinePlayerIds(players: CombatantState[]): Set<string> {
+  const living = players.filter(
+    (player) => player.isAlive && player.accessState !== "rearAssault",
+  );
+  if (living.length === 0) return new Set();
+
+  const maxPartyX = Math.max(...living.map((player) => player.battleX));
+  const ids = new Set<string>();
+
+  for (const player of living) {
+    const rearPeers = living.filter(
+      (peer) => peer.id !== player.id && peer.battleX < player.battleX,
+    );
+    if (rearPeers.length > 0) {
+      const maxRearPeerX = Math.max(...rearPeers.map((peer) => peer.battleX));
+      const forwardOutlierCount = living.filter(
+        (peer) => peer.battleX > maxRearPeerX + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX,
+      ).length;
+      if (
+        player.battleX > maxRearPeerX + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX &&
+        forwardOutlierCount >= 1 &&
+        player.battleX >= maxPartyX - PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX
+      ) {
+        continue;
       }
+    }
+    if (player.battleX <= maxPartyX + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX) {
+      ids.add(player.id);
     }
   }
 
-  return onFrontline;
+  return ids;
 }
 
 function isPlayerRearAssaultAccessInBattle(
@@ -170,13 +242,32 @@ function isPlayerRearAssaultAccessInBattle(
           : unit,
       )
     : players;
+
+  const living = players.filter((unit) => unit.isAlive);
+  const contact = getEnemyContactX(enemies);
+  if (contact !== null && player.battleX > contact + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX) {
+    return true;
+  }
+
+  const maxOtherX = Math.max(
+    ...living
+      .filter((unit) => unit.id !== player.id)
+      .map((unit) => unit.battleX),
+    Number.NEGATIVE_INFINITY,
+  );
+  if (
+    Number.isFinite(maxOtherX) &&
+    player.battleX > maxOtherX + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX
+  ) {
+    if (contact === null) return true;
+    if (player.battleX >= contact - DEFAULT_SURROUND_AURA_RADIUS_PX) return true;
+  }
+
   const onFrontline = resolveOnFrontlinePlayerIds(probePlayers);
   if (!onFrontline.has(player.id)) return true;
 
-  const living = players.filter((unit) => unit.isAlive);
-  if (living.length === 1) {
-    const contact = getEnemyContactX(enemies);
-    if (contact !== null && player.battleX > contact) return true;
+  if (living.length === 1 && contact !== null && player.battleX > contact) {
+    return true;
   }
 
   return false;
@@ -357,10 +448,8 @@ export function getEngagedFrontEnemyBattleAnchor(
   const living = players.filter((p) => p.isAlive);
   if (living.length === 0) return frontEnemyBattleX;
 
-  const hasFront = living.some((p) => p.formationRow === 'front');
-  const contactPlayers = hasFront
-    ? living.filter((p) => p.formationRow === 'front')
-    : living;
+  const frontline = resolveLivingPlayersAtFrontlineBattleX(living);
+  const contactPlayers = frontline.length > 0 ? frontline : living;
   const minFrontRange = Math.min(
     ...contactPlayers.map((p) => resolveApproachFormationRangePx(p)),
   );

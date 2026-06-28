@@ -4076,15 +4076,29 @@ function requirePassiveEffectParams(
         obj.frontBlockAuraMagicBlock === undefined
           ? undefined
           : requireBoolean(obj, 'frontBlockAuraMagicBlock', context);
+      const frontBlockAuraRadiusPx = parseOptionalNumber(
+        obj,
+        'frontBlockAuraRadiusPx',
+        context,
+      );
       const buffDisplayName =
         typeof obj.buffDisplayName === 'string' && obj.buffDisplayName.length > 0
           ? obj.buffDisplayName
           : undefined;
+      if (
+        frontBlockAuraRadiusPx !== undefined &&
+        frontBlockAuraRadiusPx <= 0
+      ) {
+        invalidField(context, 'frontBlockAuraRadiusPx', 'must be positive');
+      }
       return {
         ...base,
         ...(chance !== undefined ? { chance } : {}),
         ...(frontBlockAuraMagicBlock !== undefined
           ? { frontBlockAuraMagicBlock }
+          : {}),
+        ...(frontBlockAuraRadiusPx !== undefined
+          ? { frontBlockAuraRadiusPx }
           : {}),
         ...(buffDisplayName !== undefined ? { buffDisplayName } : {}),
       };
@@ -4106,6 +4120,21 @@ function requirePassiveEffectParams(
         'lastStandRecoveryDurationSec',
         context,
       );
+      const frontAllyAuraRadiusPx = parseOptionalNumber(
+        obj,
+        'lastStandRecoveryFrontAllyAuraRadiusPx',
+        context,
+      );
+      if (
+        frontAllyAuraRadiusPx !== undefined &&
+        frontAllyAuraRadiusPx <= 0
+      ) {
+        invalidField(
+          context,
+          'lastStandRecoveryFrontAllyAuraRadiusPx',
+          'must be positive',
+        );
+      }
       return {
         ...base,
         ...(hpRatio !== undefined ? { lastStandRecoveryHpRatio: hpRatio } : {}),
@@ -4114,6 +4143,9 @@ function requirePassiveEffectParams(
           : {}),
         ...(frontMul !== undefined
           ? { lastStandRecoveryFrontAllyDamageTakenMultiplier: frontMul }
+          : {}),
+        ...(frontAllyAuraRadiusPx !== undefined
+          ? { lastStandRecoveryFrontAllyAuraRadiusPx: frontAllyAuraRadiusPx }
           : {}),
         ...(durationSec !== undefined
           ? { lastStandRecoveryDurationSec: durationSec }
@@ -4353,6 +4385,11 @@ function requirePassiveEffectParams(
         'frontThreatDecayMultiplier',
         context,
       );
+      const frontThreatAuraRadiusPx = parseOptionalNumber(
+        obj,
+        'frontThreatAuraRadiusPx',
+        context,
+      );
       const frontDamageTakenReduction = parseOptionalNumber(
         obj,
         'frontDamageTakenReduction',
@@ -4402,6 +4439,12 @@ function requirePassiveEffectParams(
         );
       }
       if (
+        frontThreatAuraRadiusPx !== undefined &&
+        frontThreatAuraRadiusPx <= 0
+      ) {
+        invalidField(context, 'frontThreatAuraRadiusPx', 'must be positive');
+      }
+      if (
         frontDamageTakenReduction !== undefined &&
         (frontDamageTakenReduction < 0 || frontDamageTakenReduction >= 1)
       ) {
@@ -4422,6 +4465,9 @@ function requirePassiveEffectParams(
         ...(frontThreatFloor !== undefined ? { frontThreatFloor } : {}),
         ...(frontThreatDecayMultiplier !== undefined
           ? { frontThreatDecayMultiplier }
+          : {}),
+        ...(frontThreatAuraRadiusPx !== undefined
+          ? { frontThreatAuraRadiusPx }
           : {}),
         ...(frontDamageTakenReduction !== undefined
           ? { frontDamageTakenReduction }

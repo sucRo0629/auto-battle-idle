@@ -18,10 +18,10 @@ import {
 } from "./skills/targetSpec.ts";
 import { getAttackablePool, isWithinSkillRange } from "./skills/rangeUtils.ts";
 import { isStationaryUnit } from "./data/entityTraits.ts";
-import { applyFormationRowApproachSpacing } from "./battleLayout.ts";
+import { applyPartyFormationApproachSpacing } from "./battleLayout.ts";
 import { FORMATION_DEPTH_STEP_PX } from "./battleLayout.ts";
 import {
-  compareFormationRowSlot,
+  comparePartyFormationSlot,
   computePartyFormationBattleX,
   isMeleeFormationSlot,
 } from "./partyFormation.ts";
@@ -171,7 +171,12 @@ export function resolveEnemyChaseTargetPlayer(
 ): CombatantState | null {
   const spec = resolveUnitTargetSpec(enemy, players, enemies, gameData);
   const pool = getTargetPool(spec, enemy, players, enemies);
-  return pickTargetFromPool(spec, enemy, pool);
+  return pickTargetFromPool(spec, enemy, pool, {
+    threatSwitchMarginContext: {
+      allies: players,
+      passivesRegistry: gameData.skillRegistry.passives,
+    },
+  });
 }
 
 /** 敵: ChaseTarget が射程内のときのみ返す（Threat フォーカス対象と Attack を単一化） */
@@ -201,14 +206,17 @@ export function resolveEnemyBasicAttackTarget(
  * 共有 clamp / formation safety layer。
  * 前衛が敵最前線を越えて過進軍しないための cap であり、ChaseTarget の正本ではない。
  */
-function capFrontRowBeforeEnemyContact(
+function capOnFieldBeforeEnemyContact(
   player: CombatantState,
   players: CombatantState[],
+  enemies: CombatantState[],
   gameData: GameData,
   contact: number,
   approachX: number,
 ): number {
-  if (player.formationRow === "back") return approachX;
+  if (isPlayerRearAssaultAccess(player, { players, enemies })) {
+    return approachX;
+  }
   const maxForward = resolveApproachAttackBattleX(
     player,
     contact,
@@ -359,15 +367,22 @@ function capFrontRowSupporterBehindMeleeFront(
   contact: number,
   approachX: number,
 ): number {
-  if (player.formationRow !== "front" || player.role !== "supporter") {
+  if (player.role !== "supporter") {
     return approachX;
   }
+  const livingOnField = players.filter(
+    (ally) =>
+      ally.isAlive &&
+      !isPlayerRearAssaultAccess(ally, { players, enemies }),
+  );
+  if (livingOnField.length === 0) return approachX;
+  const contactX = Math.max(...livingOnField.map((ally) => ally.battleX));
   let maxMeleeFrontX = Number.NEGATIVE_INFINITY;
   for (const ally of players) {
     if (!ally.isAlive) continue;
     if (isPlayerRearAssaultAccess(ally, { players, enemies })) continue;
-    if (ally.formationRow !== "front") continue;
     if (!isMeleeFormationSlot(toMeleeFormationSlot(ally))) continue;
+    if (ally.battleX < contactX - FORMATION_DEPTH_STEP_PX) continue;
     const meleeX = resolvePlayerChaseApproachBattleX(
       ally,
       players,
@@ -429,18 +444,14 @@ function resolveIndividualPlayerApproachBattleX(
     approachX,
   );
 
-  if (player.formationRow !== "back") {
-    approachX = capFrontRowBeforeEnemyContact(
-      player,
-      players,
-      gameData,
-      contact,
-      approachX,
-    );
-    return approachX;
-  }
-
-  return approachX;
+  return capOnFieldBeforeEnemyContact(
+    player,
+    players,
+    enemies,
+    gameData,
+    contact,
+    approachX,
+  );
 }
 
 /**
@@ -512,7 +523,7 @@ export function resolveAllPlayerApproachBattleX(
 
   const spacingInputs = players.map(toPlacementInput);
 
-  const spaced = applyFormationRowApproachSpacing(baseApproach, spacingInputs);
+  const spaced = applyPartyFormationApproachSpacing(baseApproach, spacingInputs);
   capApproachFormationOrder(spaced, baseApproach, players);
   applyFormationMarchFollow(
     spaced,
@@ -547,49 +558,44 @@ function applyFormationMarchFollow(
     })),
   );
 
-  const rows = new Set(living.map((p) => p.formationRow));
-  for (const row of rows) {
-    const rowUnits = living.filter((p) => p.formationRow === row);
-    if (rowUnits.length < 2) continue;
+  if (living.length < 2) return;
 
-    const sorted = [...rowUnits].sort((a, b) =>
-      compareFormationRowSlot(
-        row,
-        {
-          id: a.id,
-          role: a.role,
-          rangePx: resolveFormationRangePx(a),
-          damageType: a.traits.damageType,
-          formationRow: a.formationRow,
-        },
-        {
-          id: b.id,
-          role: b.role,
-          rangePx: resolveFormationRangePx(b),
-          damageType: b.traits.damageType,
-          formationRow: b.formationRow,
-        },
-      ),
-    );
-    const leader = sorted[sorted.length - 1]!;
-    const leaderTarget = targets.get(leader.id);
-    const leaderFormX = formation.get(leader.id);
-    if (leaderTarget === undefined || leaderFormX === undefined) continue;
-    if (leader.battleX >= leaderTarget - 0.5) continue;
+  const sorted = [...living].sort((a, b) =>
+    comparePartyFormationSlot(
+      {
+        id: a.id,
+        role: a.role,
+        rangePx: resolveFormationRangePx(a),
+        damageType: a.traits.damageType,
+        formationRow: a.formationRow,
+      },
+      {
+        id: b.id,
+        role: b.role,
+        rangePx: resolveFormationRangePx(b),
+        damageType: b.traits.damageType,
+        formationRow: b.formationRow,
+      },
+    ),
+  );
+  const leader = sorted[sorted.length - 1]!;
+  const leaderTarget = targets.get(leader.id);
+  const leaderFormX = formation.get(leader.id);
+  if (leaderTarget === undefined || leaderFormX === undefined) return;
+  if (leader.battleX >= leaderTarget - 0.5) return;
 
-    for (const unit of sorted.slice(0, -1)) {
-      const unitFormX = formation.get(unit.id);
-      if (unitFormX === undefined) continue;
+  for (const unit of sorted.slice(0, -1)) {
+    const unitFormX = formation.get(unit.id);
+    if (unitFormX === undefined) continue;
 
-      const deployGap = leaderFormX - unitFormX;
-      const currentGap = leader.battleX - unit.battleX;
-      if (Math.abs(currentGap - deployGap) > 2) continue;
+    const deployGap = leaderFormX - unitFormX;
+    const currentGap = leader.battleX - unit.battleX;
+    if (Math.abs(currentGap - deployGap) > 2) continue;
 
-      const followTarget = leaderTarget + (unitFormX - leaderFormX);
-      const spaced = targets.get(unit.id);
-      if (spaced !== undefined && spaced > followTarget) {
-        targets.set(unit.id, Math.max(followTarget, unit.battleX));
-      }
+    const followTarget = leaderTarget + (unitFormX - leaderFormX);
+    const spaced = targets.get(unit.id);
+    if (spaced !== undefined && spaced > followTarget) {
+      targets.set(unit.id, Math.max(followTarget, unit.battleX));
     }
   }
 }

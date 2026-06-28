@@ -69,13 +69,14 @@ describe('lastStandRecovery', () => {
     expect(paladin.hp).toBe(80);
   });
 
-  it('applies self and front ally damageTaken buffs', () => {
-    const paladin = mockPaladin('p3');
+  it('applies self and nearby ally damageTaken buffs', () => {
+    const paladin = { ...mockPaladin('p3'), battleX: 200 };
     const frontWarrior = {
       ...mockPaladin('warrior'),
       role: 'attacker' as const,
       classId: 'at_swordsman',
       formationRow: 'front' as const,
+      battleX: 230,
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],
@@ -87,6 +88,7 @@ describe('lastStandRecovery', () => {
       role: 'supporter' as const,
       classId: 'sp_cleric',
       formationRow: 'back' as const,
+      battleX: 80,
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],

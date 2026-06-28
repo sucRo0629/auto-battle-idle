@@ -15,7 +15,7 @@ import {
 const gameData = mockApproachGameData();
 
 describe("resolvePlayerApproachBattleX", () => {
-  it("approaches farthest-in-range ChaseTarget beyond the frontline clamp", () => {
+  it("applies contact cap to all on-field units regardless of formationRow", () => {
     const archer = mockCombatant({ id: "archer" });
     const frontMelee = mockCombatant({
       id: "melee",
@@ -57,8 +57,8 @@ describe("resolvePlayerApproachBattleX", () => {
       gameData,
     );
 
-    expect(approachX).toBe(320 - 100);
-    expect(approachX).toBeGreaterThan(280 - 100);
+    expect(approachX).toBe(280 - 100);
+    expect(approachX).toBeLessThan(320 - 100);
   });
 
   it("front row clamp prevents advancing beyond the enemy front line", () => {

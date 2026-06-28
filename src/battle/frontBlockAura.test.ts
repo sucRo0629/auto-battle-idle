@@ -72,37 +72,38 @@ describe('frontBlockAura', () => {
     });
   });
 
-  it('applies block overlay to front row allies only', () => {
+  it('applies block overlay to allies within aura radius', () => {
     const paladin = mockAlly({
       id: 'paladin',
+      battleX: 200,
       build: {
         learnedPassiveIds: ['df_paladin_passive_1'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
     });
-    const frontWarrior = mockAlly({
+    const nearbyWarrior = mockAlly({
       id: 'warrior',
       role: 'attacker',
-      formationRow: 'front',
-      battleX: 120,
+      formationRow: 'back',
+      battleX: 230,
     });
-    const backCleric = mockAlly({
+    const farCleric = mockAlly({
       id: 'cleric',
       role: 'supporter',
       formationRow: 'back',
       battleX: 80,
     });
 
-    syncFrontBlockAuras([paladin, frontWarrior, backCleric], passives);
+    syncFrontBlockAuras([paladin, nearbyWarrior, farCleric], passives);
 
     expect(
-      frontWarrior.statusEffects.some(
+      nearbyWarrior.statusEffects.some(
         (fx) => fx.overlay === 'block' && fx.blockChance === 0.1,
       ),
     ).toBe(true);
     expect(
-      backCleric.statusEffects.some((fx) => fx.overlay === 'block'),
+      farCleric.statusEffects.some((fx) => fx.overlay === 'block'),
     ).toBe(false);
   });
 

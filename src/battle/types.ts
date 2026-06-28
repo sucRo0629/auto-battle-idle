@@ -861,9 +861,11 @@ export interface PassiveSkillDef {
   onBlockFlat?: number;
   /** threatControl: threat 減衰倍率（1 = 既定。0.5 = 半減速） */
   threatDecayMultiplier?: number;
-  /** threatControl: 生存中、前列味方の threat 下限（source threat × ratio） */
+  /** threatControl: 生存中、周囲味方の threat 下限（source threat × ratio） */
   frontThreatFloor?: number;
-  /** threatControl: 生存中、前列味方の threat 減衰倍率（1 = 既定） */
+  /** threatControl: 周囲 aura 半径（px）。未指定 = 50（障身法 AoE 同値） */
+  frontThreatAuraRadiusPx?: number;
+  /** threatControl: 生存中、周囲味方の threat 減衰倍率（1 = 既定） */
   frontThreatDecayMultiplier?: number;
   /** threatControl: 生存中、前列味方のダメージ軽減率（0.08 = 8%） */
   frontDamageTakenReduction?: number;
@@ -991,12 +993,16 @@ export interface PassiveSkillDef {
   blockResonanceDecayIntervalSec?: number;
   /** frontBlockAura: 魔法直接ダメージも block 対象にする */
   frontBlockAuraMagicBlock?: boolean;
+  /** frontBlockAura: 周囲 aura 半径（px）。未指定 = 50 */
+  frontBlockAuraRadiusPx?: number;
   /** lastStandRecovery: 発動時 HP 比率（maxHp 基準） */
   lastStandRecoveryHpRatio?: number;
   /** lastStandRecovery: 自己 damageTaken 倍率 */
   lastStandRecoverySelfDamageTakenMultiplier?: number;
-  /** lastStandRecovery: 前列味方 damageTaken 倍率 */
+  /** lastStandRecovery: 周囲味方 damageTaken 倍率 */
   lastStandRecoveryFrontAllyDamageTakenMultiplier?: number;
+  /** lastStandRecovery: 周囲 DR aura 半径（px）。未指定 = 50 */
+  lastStandRecoveryFrontAllyAuraRadiusPx?: number;
   /** lastStandRecovery: DR 持続秒 */
   lastStandRecoveryDurationSec?: number;
   /** lowHpCover: 肩代わり対象の HP 割合上限（未指定 = 0.35） */

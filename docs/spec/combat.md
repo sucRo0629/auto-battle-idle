@@ -282,7 +282,7 @@ baseThreat = statComponent + frontRowPressureBonus
 defender のみ baseThreat = floor(baseThreat × 1.2)
 ```
 
-- `frontRowPressureBonus` — **前列**味方のみ。他前列の `1 - hp/maxHp` の最大値 × 自 statComponent（前列 Survival / `defender` UI ロールの基礎ヘイト上昇）
+- `frontRowPressureBonus` — 最前線 `battleX` 帯の味方のみ。同帯の他味方の `1 - hp/maxHp` の最大値 × 自 statComponent
 - `defender` ロール — `statComponent + frontRowPressureBonus` の合計に `× 1.2`（`floor`）を適用
 
 ### 変動と減衰
@@ -302,7 +302,8 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 - **被ダメージそのものを全ロール共通の Threat 上昇要因にはしない**
 - 被弾による Threat 維持・上昇は Defender の役割差として扱い、passive `threatControl` または skill で明示する
 - Guardian（`df_guardian_passive_2`）は main tank として被弾・ブロックで Threat を維持し、減衰も遅くする
-- Paladin は `frontThreatFloor` / `frontThreatDecayMultiplier` で前列を sub-defender 化し、Lv0 では前列 block 付与で物理被害を抑える。前列ダメージ軽減は `threatControl` には含めず、必要なら `damageReduction` passive として分離する
+- Paladin は `frontThreatFloor` / `frontThreatDecayMultiplier` で **source から `frontThreatAuraRadiusPx`（未指定 50px）以内**の味方を sub-defender 化し、Lv0 では `frontBlockAura` で block 付与。前列ダメージ軽減は `threatControl` には含めず、必要なら `damageReduction` passive として分離する
+- 護法陣 aura 内でヘイトが現フォーカスを上回った味方へは、敵 AI のターゲット切替マージン 50 を **バイパス**（shared tank）
 - 剣術士（`at_swordsman_active_1`）は `threatBurstScale` で burst 時のみ一時 overtaking する
 
 ### 敵ターゲット選定
@@ -377,7 +378,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 実装: `src/battle/frontBlockAura.ts`
 
-- 生存中の持有者が `formationRow === front` の味方へ `overlay: block` を同期（`syncBuffAuras` とは別モジュール）
+- 生存中の持有者が **source から `frontBlockAuraRadiusPx`（未指定 50px）以内**の味方へ `overlay: block` を同期（`syncBuffAuras` とは別モジュール）
 - P1 のみ: `chance` 0.10、物理直接ダメージのみ block
 - P1 + P3（`frontBlockAuraMagicBlock: true`）: chance 合算 0.15、魔法直接ダメージも block 対象（軽減は上記魔法 block 定数）
 
@@ -387,7 +388,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 - 致死ダメージ確定直前に Wave 1 回（HP 閾値なし）→ ダメージ 0 + `hp = maxHp × lastStandRecoveryHpRatio`（バリア不変）
 - 自己: `damageTaken × lastStandRecoverySelfDamageTakenMultiplier` を `lastStandRecoveryDurationSec`
-- 前列味方: `damageTaken × lastStandRecoveryFrontAllyDamageTakenMultiplier` を同秒数
+- 周囲味方: `damageTaken × lastStandRecoveryFrontAllyDamageTakenMultiplier` を同秒数（`lastStandRecoveryFrontAllyAuraRadiusPx` 以内、未指定 50px）
 - バトルイベント `lastStandRecovery` → ポップアップ「再起！」（鉄衛士 `invulnerable` の「無敵！」とは別）
 
 ### 印術師の印（乾印・坤印）
@@ -458,7 +459,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 ### 援護反撃（パッシブ `counter` + `counterTrigger: "frontAllyDamaged"`）
 
-自分以外の **前列味方**（`formationRow: "front"`）が敵の攻撃で実ダメージ > 0 を受けたとき、援護パッシブ持有者が攻撃者へ `counterResponses` を適用する。Threat 操作・ターゲット override ではない。
+自分以外の **戦線上の味方**（`isAllyOnCombatFrontline`：rear assault 除外・contact 帯）が敵の攻撃で実ダメージ > 0 を受けたとき、援護パッシブ持有者が攻撃者へ `counterResponses` を適用する。Threat 操作・ターゲット override ではない。
 
 | 項目       | 挙動                                                                 |
 | ---------- | -------------------------------------------------------------------- |

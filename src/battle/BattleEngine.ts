@@ -139,7 +139,6 @@ import {
   setEngagedDisplayAnchorPlayerId,
 } from "./battleDisplay.ts";
 import {
-  getLeadingPlayerFormationRow,
   resolveEngagedLayout,
   applyEngagedFormationToBattleX,
   resolveEngagePlayerBattleAnchor,
@@ -434,6 +433,7 @@ export class BattleEngine {
           actor,
           counterCtx,
           this.players,
+          this.enemies,
           this.gameData.skillRegistry.passives,
           this.gameData.skillRegistry.actives,
           counterCallbacks,
@@ -1096,9 +1096,6 @@ export class BattleEngine {
  * 実装箇所: setupEngagedCombat（凍結・署名のみ）
  */
   private setupEngagedCombat(): void {
-    const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
-    const leadingRow = getLeadingPlayerFormationRow(placementInputs);
-
     this.freezeEngagedMeleeVisualSlots();
     this.engagedComposition.freezeRangedTargets(
       this.players,
@@ -1109,7 +1106,6 @@ export class BattleEngine {
     this.engagedComposition.initSignatures(
       this.players,
       this.enemies,
-      leadingRow,
       this.gameData,
     );
   }
@@ -1133,18 +1129,13 @@ export class BattleEngine {
  * 実装箇所: maybeRecomputeEngagedLayout — 署名・凍結・表示 target のみ更新
  */
   private maybeRecomputeEngagedLayout(): void {
-    const placementInputs = this.getPlayerPlacementInputs().filter((p) => p.isAlive);
-    const leadingRow = getLeadingPlayerFormationRow(placementInputs);
     const meleeChanged = this.engagedComposition.consumeMeleeCompositionChange(
       this.enemies,
       this.gameData,
     );
-    const leadingChanged =
-      this.engagedComposition.consumeLeadingRowCompositionChange(
-        this.players,
-        leadingRow,
-      );
-    if (!meleeChanged && !leadingChanged) return;
+    const frontlineChanged =
+      this.engagedComposition.consumeFrontlineCompositionChange(this.players);
+    if (!meleeChanged && !frontlineChanged) return;
 
     if (meleeChanged) {
       this.freezeEngagedMeleeVisualSlots();
@@ -1932,15 +1923,9 @@ export class BattleEngine {
       this.runUnitSkills(this.enemies);
       this.runUnitSkills(this.players);
       this.tickPendingHitQueue();
-      const leadingRowInputs = this.getPlayerPlacementInputs().filter(
-        (p) => p.isAlive,
-      );
-      const engagedLeadingRow =
-        getLeadingPlayerFormationRow(leadingRowInputs);
       const overlapBeforeById = this.captureBattleXDebugBefore(this.players);
       resolveEngagedFormationOverlaps(
         this.players,
-        engagedLeadingRow,
         (unit) => this.isOnBattlefield(unit),
         (id) =>
           this.skillSequenceRunner.isActorInSkillMotion(id) ||

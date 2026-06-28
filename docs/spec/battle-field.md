@@ -215,7 +215,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 1. **X 配置正本** — 全生存味方を **射程降順（長い＝左）** で一列。同射程は **物理 `attacker`** を左
 2. **スロット間隔** — 左端 `PARTY_FORMATION_LEFT_ANCHOR`（20px）、以降 `+32px`
-3. **`formationRow`** — Y 描画・スキルターゲット用（`classes.json`）。X 深度には使わない
+3. **`formationRow`** — Y 描画・クラス既定の編成分類（`classes.json`）。**X 深度・接敵・Threat・aura 範囲には使わない**
 4. **overlap 解消** — §4.2（接敵時プレイヤー必須）
 
 分類用途の `isMeleeRangePx` / `isMeleeUnit` は本書の距離計算・layout 正本から除外し、[combat.md](combat.md) / [classes-and-skills.md](classes-and-skills.md) に委譲する。
@@ -329,7 +329,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 接敵 context の判定順: (1) `accessState === "rearAssault"` (2) 生存味方 peer 集合の固定点から「最前線 + `PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX`（3px）より前方」を除外 (3) **単独生存時のみ** `battleX > getEnemyContactX` fallback。遠隔だけ残って contact が大きく振れても、peer frontline で戦線外を判定する。
 
-rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormationOverlaps`・spacing の **基準から除外**する（戦線外の単独アクセス）。`applyFormationRowApproachSpacing` は dead-chain 維持のため on-field 全スロットを入力に含めるが、戦線外ユニットの `baseApproach` は clamp する。
+rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormationOverlaps`・spacing の **基準から除外**する（戦線外の単独アクセス）。`applyPartyFormationApproachSpacing` は dead-chain 維持のため on-field 全スロットを入力に含めるが、戦線外ユニットの `baseApproach` は clamp する。
 
 立てる条件: 味方 actor が敵対 anchor へ `moveMode: "toAnchor"` かつ `anchorOffsetPx > 0` の move を適用したとき（効果形状で判定）。解除: 非 rear の move 適用時、**`shouldClearRearAssaultAccess`（peer frontline 付近へ戻ったとき）**、スキルシーケンス完了時（同条件）、死亡・wave reset。`waitAfterSec` 中も move 完了だけでは解除しない。敵側のプレイヤー背後 move は本 spec のスコープ外。
 
@@ -339,7 +339,7 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 
 **自動接近スキップ：** `shouldSkipEngagedAutoApproach` — attack プールに 1 体でもいれば接近しない（射程内で攻撃待機）。`test_ranged` も通常の attack プールとして扱う。
 
-**pierce 敵向け通常攻撃の接近停止（`isPierceEnemyBasicAttack`）：** `selfOrigin` + `pierce` の敵向け通常攻撃は、接近停止の正本が「射程内に敵 1 体」ではない（上記 `shouldSkipEngagedAutoApproach` の単体射程内停止を使わない）。停止目標 `battleX` = `getEnemyContactX() − effectiveRangePx`（`resolvePierceApproachStopBattleX` / `capFrontRowBeforeEnemyContact` と同式）。pierce basic 持ちユニットはこの停止 X に到達するまで接近を継続する（`shouldSkipEngagedAutoApproach` 相当の意味。実装は別タスク）。`battleX >= pierceStopX − settleEpsilon` で接近停止。過前進（`battleX > pierceStopX`）時は `shouldSkip` を false のまま `updateUnitApproach` の双方向補間で `pierceStopX` へ戻す。接近目標 X も chase 個体ではなく contact 基準（`resolvePlayerChaseApproachBattleX`）。battle-line depth の **nearest**（`battleX` 最大＝戦線奥）を pierce 接近アンカーにしない。後列遠隔に引きずられて前進しすぎない。停止は contact 基準。
+**pierce 敵向け通常攻撃の接近停止（`isPierceEnemyBasicAttack`）：** `selfOrigin` + `pierce` の敵向け通常攻撃は、接近停止の正本が「射程内に敵 1 体」ではない（上記 `shouldSkipEngagedAutoApproach` の単体射程内停止を使わない）。停止目標 `battleX` = `getEnemyContactX() − effectiveRangePx`（`resolvePierceApproachStopBattleX` / `capOnFieldBeforeEnemyContact` と同式）。pierce basic 持ちユニットはこの停止 X に到達するまで接近を継続する（`shouldSkipEngagedAutoApproach` 相当の意味。実装は別タスク）。`battleX >= pierceStopX − settleEpsilon` で接近停止。過前進（`battleX > pierceStopX`）時は `shouldSkip` を false のまま `updateUnitApproach` の双方向補間で `pierceStopX` へ戻す。接近目標 X も chase 個体ではなく contact 基準（`resolvePlayerChaseApproachBattleX`）。battle-line depth の **nearest**（`battleX` 最大＝戦線奥）を pierce 接近アンカーにしない。後列遠隔に引きずられて前進しすぎない。停止は contact 基準。
 
 **用語（battle-line depth）：** プレイヤー敵 target の `nearest` = 奥（`battleX` 最大）、`farthest` = 手前。本節の pierce 接近はこの depth 用語と混同しない。
 
@@ -347,9 +347,9 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 
 **味方の共有 clamp / formation レイヤ：**
 
-- 前衛（`formationRow !== 'back'`）：生存敵 contact より右へ過進軍しない（`capFrontRowBeforeEnemyContact`）。これは `ChaseTarget` ではなく overtake 防止 clamp
-- 前列 supporter：近接最前帯の直後へ留める（`capFrontRowSupporterBehindMeleeFront`）。これは defender 代替壁ではなく前線直後 sustain 用の formation clamp。PHT 接近は cap 位置まで試み、cap 到達後も PHT が selfOrigin aoe / basic heal 射程内に入るまで withhold で空振りしない（[combat.md](combat.md) §回復 PHT）
-- 接近ターゲットの row-order clamp は前衛 / 後衛で共通で、`applyFormationRowApproachSpacing` の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
+- 戦線 on-field ユニット（rear assault 除外）：生存敵 contact より右へ過進軍しない（`capOnFieldBeforeEnemyContact`）。`formationRow` は使わない
+- 前列 supporter（`role: supporter`）：近接最前帯の直後へ留める（`capFrontRowSupporterBehindMeleeFront`）。battleX / 近接帯で判定し `formationRow` は使わない。これは defender 代替壁ではなく前線直後 sustain 用の formation clamp。PHT 接近は cap 位置まで試み、cap 到達後も PHT が selfOrigin aoe / basic heal 射程内に入るまで withhold で空振りしない（[combat.md](combat.md) §回復 PHT）
+- 接近ターゲットの depth-order clamp は全 on-field ユニット共通で、`applyPartyFormationApproachSpacing`（partyFormation ソート順）の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
 - rear assault 中の味方は `applyFormationMarchFollow` の leader / follower から除外。`baseApproach` は formation chain 用に clamp し、背後位置を他ユニットの spacing 基準にしない
 
 **敵の追い替え：** Threat は毎 tick 再評価するが、chase / attack には [combat.md](combat.md) の **閾値ヒステリシス**（`pickThreatTargetWithHysteresis` / `threatFocusTargetId`）を適用する。ヘイト 1 位が瞬間的に入れ替わっただけでは chase target を即切替しない。射程内に入ったら attack プールで停止・攻撃。
@@ -367,13 +367,13 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 | approach        | `updateEngagedBattleMovement` → `resolveAllPlayerApproachBattleX` / `resolveEnemyApproachBattleX` | 通常の接近・射程停止。Phase 3d の Intent 一本化を正本とし、role 専用接近分岐を持たない             |
 | skill move      | `SkillSequenceRunner.tickMoves`                                                                   | busy actor の `battleX` を moveDurationSec で補間。auto approach / overlap 対象から一時除外        |
 | forced movement | `ccEffects.applyKnockbackToTarget` / `enemyReelIn.applyEnemyReelIn`                               | effect 成功時に `battleX` を即時更新。layout bake ではない     |
-| overlap         | `resolveEngagedFormationOverlaps`（leading row 限定・生存のみ・skill motion / rear assault 除外） | 味方同士・敵同士の重なり解消だけ。射程停止・target 選択・死体固定には使わない。Engaged 中は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、formation snap や 32px 級の直接押し出し、不自然な加速を起こさない |
+| overlap         | `resolveEngagedFormationOverlaps`（frontline melee クラスタ限定・生存のみ・skill motion / rear assault 除外） | 味方同士・敵同士の重なり解消だけ。射程停止・target 選択・死体固定には使わない。Engaged 中は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、formation snap や 32px 級の直接押し出し、不自然な加速を起こさない |
 
 target / threat / contact / frontline owner は **座標 snap の理由ではない**。approach / attack / display / clamp の入力として毎 tick 再評価するが、Engaged 中の生存ユニットを layout bake で再配置しない。
 
 死亡敵は生存ユニット更新系統から外れ、`freezeEnemyCorpseBattleAnchor` / `syncDeadEnemyCorpseBattleX` が死亡時の `corpseBattleAnchorX` に `battleX` を固定する。これは死体表示の固定アンカーであり、`screenX` / camera の互換経路ではない。
 
-**前列過進軍 cap：** `capFrontRowBeforeEnemyContact` は `resolveAllPlayerApproachBattleX` 内の共有 clamp / formation safety layer として適用する。`ChaseTarget` / `AttackTarget` の代替正本ではなく、Engaged 中に `battleX` を直接 mutation する独立 clamp 経路も持たない（旧 `clampEngagedFrontRowBattleX` 相当）。
+**前列過進軍 cap：** `capOnFieldBeforeEnemyContact` は `resolveAllPlayerApproachBattleX` 内の共有 clamp / formation safety layer として適用する。`ChaseTarget` / `AttackTarget` の代替正本ではなく、Engaged 中に `battleX` を直接 mutation する独立 clamp 経路も持たない（旧 `clampEngagedFrontRowBattleX` 相当）。
 
 ### 4.5 スキル `move`
 
@@ -418,7 +418,7 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 - 後衛が隊形深度 cap で射程停止より前方へ引きずられる問題
 - **接敵開始時のワープ** — `setupEngagedCombat` で layout bake せず deploy 終点のまま `Engaged` へ遷移。接敵接近は自動接近のみ（§3.4・§4.3）
 - **Engaged 中の構成変化 layout bake** — 前列死亡・敵近接死亡・構成変化で `applyEngagedFormationToBattleX` を呼ばない。target / threat / contact / 凍結のみ
-- **Engaged 中の直接 mutation clamp** — 旧 `clampEngagedFrontRowBattleX` を廃止。前列 cap は approach target 解決（`capFrontRowBeforeEnemyContact`）に統合
+- **Engaged 中の直接 mutation clamp** — 旧 `clampEngagedFrontRowBattleX` を廃止。contact cap は approach target 解決（`capOnFieldBeforeEnemyContact`）に統合
 
 **監視中：**
 
