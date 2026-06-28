@@ -21,7 +21,7 @@ describe('formatPassiveDescription', () => {
           order: 'highest',
         },
       } satisfies PassiveSkillDef,
-      fragments: ['敵向けターゲット', '敵', 'ATK最高'],
+      fragments: ['最も攻撃力が高い敵を優先して攻撃する'],
     },
     {
       name: 'damage delay',
@@ -117,8 +117,8 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('CD：11秒');
-    expect(desc).toContain('至近物理攻撃力90%');
+    expect(desc).toContain('再使用：11秒');
+    expect(desc).toContain('攻撃力の90%の物理ダメージを与える');
   });
 
   it('formats move + multi-lock damage', () => {
@@ -145,9 +145,10 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('CD：9秒');
+    expect(desc).toContain('再使用：9秒');
     expect(desc).toContain('アンカー +32px');
-    expect(desc).toContain('至近物理攻撃力70%');
+    expect(desc).toContain('敵3体に対して攻撃力の70%の物理ダメージを与える');
+    expect(desc).toContain('発動時に攻撃可能な対象が少なかった場合、再度同じ対象にダメージを与える');
   });
 
   it('formats buff with flat bonus before multiplier', () => {
@@ -174,7 +175,7 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('CD：被撃10');
+    expect(desc).toContain('再使用：被攻撃10回');
     expect(desc).toContain('(防御力+10)+80%');
     expect(desc).toContain('HoT maxHp×1%');
   });
@@ -230,7 +231,7 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('CD：12秒');
+    expect(desc).toContain('再使用：12秒');
     expect(desc).toContain('持続：6秒');
     expect(desc).toContain('硬直6秒');
     expect(desc).toContain('防御力+50%');
@@ -253,7 +254,7 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('至近物理攻撃力110%');
+    expect(desc).toContain('攻撃力の110%の物理ダメージを与える');
   });
 
   it('formats smart fire gate and maxCharges', () => {
@@ -275,7 +276,7 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('条件：敵数≥2');
+    expect(desc).toContain('発動条件：敵数≥2');
     expect(desc).not.toContain('smart:');
   });
 
@@ -448,18 +449,18 @@ describe('formatActiveDescription', () => {
     expect(a4).toBeDefined();
 
     expect(formatActiveDescription(a1!)).toBe(
-      'CD：8秒 / 持続：5秒 / 防御力+20% /',
+      '再使用：8秒 / 持続：5秒 / 防御力+20% /',
     );
     expect(formatActiveDescription(a2!)).toBe(
-      'CD：被撃8 / 持続：5秒 / 硬直・移動停止5秒 / 防御力+25%、ブロック率+50% /',
+      '再使用：被攻撃8回 / 持続：5秒 / 硬直・移動停止5秒 / 防御力+25%、ブロック率+50% /',
     );
     expect(formatActiveDescription(a3!)).toBe(
-      'CD：12秒 / 持続：5秒 / 条件：自HP≤80% / ダメージ軽減25% /',
+      '再使用：12秒 / 持続：5秒 / 発動条件：自身のHPが80%以下 / ダメージ軽減25% /',
     );
-    expect(formatActiveDescription(a4!)).toContain('CD：被撃12');
+    expect(formatActiveDescription(a4!)).toContain('再使用：被攻撃12回');
     expect(formatActiveDescription(a4!)).toContain('持続：2+防壁スタック数秒');
     expect(formatActiveDescription(a4!)).toContain('硬直・移動停止2+防壁スタック数秒');
-    expect(formatActiveDescription(a4!)).toContain('条件：防壁≥1');
+    expect(formatActiveDescription(a4!)).toContain('発動条件：防壁≥1');
     expect(formatActiveDescription(a4!)).toContain('城塞の構え');
   });
 
@@ -495,16 +496,16 @@ describe('formatActiveDescription', () => {
     expect(a4).toBeDefined();
 
     expect(formatActiveDescription(a1!)).toBe(
-      'CD：5秒 / 至近魔法攻撃力、最低HP味方攻撃力125%回復 /',
+      '再使用：5秒 / 攻撃力の100%の魔法ダメージを与える、味方のHPを攻撃力の125%で回復 /',
     );
     expect(formatActiveDescription(a2!)).toBe(
-      'CD：被撃8 / 持続：5秒 / 条件：自HP≤80% / 自身起点±50px：魔法耐性+10、ダメージ軽減5%、攻撃力20%（加算） /',
+      '再使用：被攻撃8回 / 持続：5秒 / 発動条件：自身のHPが80%以下 / 自身起点±50px：魔法耐性+10、ダメージ軽減5%、攻撃力20%（加算） /',
     );
     expect(formatActiveDescription(a3!)).toBe(
-      'CD：12秒 / 持続：5秒 / 条件：対象HP≤80% / 味方全体ダメージ軽減10%、魔法耐性+20 /',
+      '再使用：12秒 / 持続：5秒 / 発動条件：対象のHPが80%以下 / 味方全体ダメージ軽減10%、魔法耐性+20 /',
     );
     expect(formatActiveDescription(a4!)).toBe(
-      'CD：15秒 / 持続：5秒 / 条件：対象HP≤70% / 通常攻撃→魔法防御力120%、最低HP味方防御力回復 /',
+      '再使用：15秒 / 持続：5秒 / 発動条件：対象のHPが70%以下 / 通常攻撃→魔法防御力120%、最低HP味方防御力回復 /',
     );
   });
 
@@ -517,12 +518,12 @@ describe('formatActiveDescription', () => {
     expect(a2).toBeDefined();
 
     const card1 = formatSkillCardLines(a1!, { locale: 'ja' });
-    expect(card1.metaLine).toBe('CD：8秒 / 持続：5秒');
+    expect(card1.metaLine).toBe('再使用：8秒 / 持続：5秒');
     expect(card1.effectLines).toEqual(['防御力+20%']);
     expect(card1.effectLines.length).toBe(1);
 
     const card2 = formatSkillCardLines(a2!, { locale: 'ja' });
-    expect(card2.metaLine).toBe('CD：被撃8 / 持続：5秒 / 硬直・移動停止5秒');
+    expect(card2.metaLine).toBe('再使用：被攻撃8回 / 持続：5秒 / 硬直・移動停止5秒');
     expect(card2.effectLines.length).toBe(2);
     expect(card2.effectLines[0]).toContain('防御力+25%');
     expect(card2.effectLines[1]).toContain('ブロック率+50%');
@@ -548,6 +549,99 @@ describe('formatActiveDescription', () => {
     expect(card.effectLines[0]).toContain('8秒ごとに1スタック消失');
     expect(card.effectLines[0]).not.toMatch(/^効果：/);
     expect(formatPassiveDescription(p3!)).toBe(`効果：${card.effectLines[0]}`);
+  });
+
+  it('formats at_warrior Lv0 skills with 4b polish', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.at_warrior_active_1;
+    const a2 = gameData.skillRegistry.actives.at_warrior_active_2;
+    const p1 = gameData.skillRegistry.passives.at_warrior_passive_1;
+    const p2 = gameData.skillRegistry.passives.at_warrior_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    expect(formatActiveDescription(a1!)).toBe(
+      '再使用：通常攻撃5回 / 発動条件：対象のHPが50%以上 / 攻撃力の180%の物理ダメージを与える /',
+    );
+
+    const nagihara = formatSkillCardLines(a2!, { locale: 'ja' });
+    expect(nagihara.metaLine).toBe('再使用：10秒');
+    expect(nagihara.effectLines).toEqual([
+      '敵2体に対して攻撃力の60%の物理ダメージを与える',
+      '発動時に攻撃可能な対象が少なかった場合、再度同じ対象にダメージを与える',
+    ]);
+
+    expect(formatPassiveDescription(p1!)).toBe(
+      '効果：最も防御力が高い敵を優先して攻撃する',
+    );
+    expect(formatPassiveDescription(p2!)).toBe(
+      '効果：攻撃時、対象の防御力を25%無視する',
+    );
+  });
+
+  it('formats sp_cleric Lv0 skills with 4b polish', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.sp_cleric_active_1;
+    const p1 = gameData.skillRegistry.passives.sp_cleric_passive_1;
+    const p2 = gameData.skillRegistry.passives.sp_cleric_passive_2;
+    expect(a1).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    expect(formatActiveDescription(a1!)).toBe(
+      '再使用：8秒 / 味方のHPを攻撃力の175%で回復 /',
+    );
+
+    const card = formatSkillCardLines(a1!, { locale: 'ja' });
+    expect(card.metaLine).toBe('再使用：8秒');
+    expect(card.effectLines).toEqual(['味方のHPを攻撃力の175%で回復']);
+
+    expect(formatPassiveDescription(p1!)).toBe(
+      '効果：HPが50%以下の味方を回復時、HP回復効果+25%',
+    );
+    expect(formatPassiveDescription(p2!)).toBe(
+      '効果：味方を回復時、最大HPを超えた回復量の80%をバリアとして対象に付与する',
+    );
+  });
+
+  it('formats at_ranger Lv0 skills with 4b polish', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.at_ranger_active_1;
+    const a2 = gameData.skillRegistry.actives.at_ranger_active_2;
+    const p1 = gameData.skillRegistry.passives.at_ranger_passive_1;
+    const p2 = gameData.skillRegistry.passives.at_ranger_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    expect(formatActiveDescription(a1!)).toBe(
+      '再使用：通常攻撃5回 / 2回連続で攻撃力の125%の物理ダメージを与える /',
+    );
+
+    const rensha = formatSkillCardLines(a1!, { locale: 'ja' });
+    expect(rensha.metaLine).toBe('再使用：通常攻撃5回');
+    expect(rensha.effectLines).toEqual([
+      '2回連続で攻撃力の125%の物理ダメージを与える',
+    ]);
+
+    expect(formatActiveDescription(a2!)).toBe(
+      '再使用：10秒 / 持続：5秒 / 通常攻撃が2回連続攻撃になる /',
+    );
+
+    const card = formatSkillCardLines(a2!, { locale: 'ja' });
+    expect(card.metaLine).toBe('再使用：10秒 / 持続：5秒');
+    expect(card.effectLines).toEqual(['通常攻撃が2回連続攻撃になる']);
+
+    expect(formatPassiveDescription(p1!)).toBe(
+      '効果：遠隔攻撃の敵を優先して攻撃する',
+    );
+    expect(formatPassiveDescription(p2!)).toBe('効果：攻撃速度+25%');
   });
 
   it('formatSkillCardLines requires locale ja', async () => {

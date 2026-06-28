@@ -246,7 +246,7 @@ Phase 4d 当初案にあった表示例（参考）:
 | 行     | 内容                                                                                       |
 | ------ | ------------------------------------------------------------------------------------------ |
 | 1      | スキル名 + スキルアイコン（あれば）                                                        |
-| 2      | 種別補足（Active: CD 表示 / Passive: 発動タイミング要約）                                  |
+| 2      | 種別補足（Active: 再使用条件 / Passive: 発動タイミング要約）                                  |
 | 3+     | 説明文（`formatSkillText` 系。**効果単位で改行**。1 段落にまとめない）                     |
 | フッタ | 習得に必要だった **プレイヤー Lv**（わかる場合） / 未解放枠は `{スキル名}　プレイヤー Lv10 で追加` 等 |
 
@@ -265,7 +265,7 @@ Phase 4d 当初案にあった表示例（参考）:
 
 | フィールド | Active | Passive |
 | ---------- | ------ | ------- |
-| `metaLine` | CD・持続・硬直・条件を `/` 区切り 1 行（効果本文は含めない） | 発動タイミング要約（`formatPassiveTriggerSummary` 等） |
+| `metaLine` | 再使用・持続・硬直・発動条件を `/` 区切り 1 行（効果本文は含めない） | 発動タイミング要約（`formatPassiveTriggerSummary` 等） |
 | `effectLines` | `def.effect[]` を 1 effect 1 行（`formatActiveEffectDetail` compact）。`blockResonanceConsume` は map から除外；consume 専用スキルは特殊 1 行 | `[formatPassiveEffect(...)]` 1 要素（`効果：` プレフィックスなし） |
 
 - 文節 split 禁止 — 改行単位は **effect 配列要素**（Passive は effect 種別 1 行）

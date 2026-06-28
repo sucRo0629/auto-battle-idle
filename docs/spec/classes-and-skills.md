@@ -88,13 +88,13 @@
 
 **Active**
 
-`CD：[時間|被撃N|攻撃N] / 持続：[あれば] / 硬直[・移動停止][秒数]：[あれば] / 条件：[あれば] / [効果…] /`
+`再使用：[時間|被攻撃N回|通常攻撃N回] / 持続：[あれば] / 硬直[・移動停止][秒数]：[あれば] / 発動条件：[あれば] / [効果…] /`
 
-- `CD` — `time` → `N秒`、`hitsTaken` → `被撃N`、`basicAttackCount` → `攻撃N`
+- `再使用` — スキル再発動までの条件（旧表記 `CD` は使わない）。`time` → `N秒`、`hitsTaken` → `被攻撃N回`、`basicAttackCount` → `通常攻撃N回`
 - `持続` — 効果残り秒（`buffDurationSec` 等の最大）。`useDurationSec`（硬直）とは分ける
 - `硬直` — `useDurationSec`。`useDurationPauseApproach` 時は `硬直・移動停止N秒`（秒数は末尾）。それ以外は `硬直N秒`
-- `条件` — `firePolicy: smart` の `fireConditions` 要約
-- `[効果…]` — コンパクト表記（例: `防御力+20%`、`魔法耐性+20`、`攻撃力90%`、`ダメージ軽減25%`、`被ダメージ増加20%`、`ブロック率+20%`）。複数 effect は `、` 区切り
+- `発動条件` — `firePolicy: smart` の `fireConditions` 要約（例: `対象のHPが50%以上`）
+- `[効果…]` — コンパクト表記。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージを与える`（至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`multiLock` は `敵N体に…` + 不足時再命中の 2 行（`formatSkillCardLines`）
 
 **Passive**
 
@@ -107,7 +107,13 @@
 - `damageTaken` stat の倍率は `被ダメ×N` ではなく、`<1` → `ダメージ軽減N%`、`>1` → `被ダメージ増加N%`（N = |1 − 倍率| × 100）
 - その他 stat（`atk` / `def` / `reg` / `attackSpeed` / `hp`）は略称（`ATK` 等）を使わず表示名（`攻撃力` / `防御力` / `魔法耐性` / `攻撃速度` / `HP`）。flat は `魔法耐性+20`、乗算 buff は `防御力+20%`（N = |1 − 倍率| × 100）、resource の atk/def scale は `攻撃力90%`（scale をそのまま % 化）
 - ブロック率に「（加算）」は各スキル説明に書かない（barrier の加算表記は既存どおり）
-- 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` テスト
+- 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` / `at_warrior` / `sp_cleric` テスト
+- `targetRuleOverride`（stat 最高値）— `最も{stat}が高い敵を優先して攻撃する`
+- `targetRuleOverride`（`attackType.ranged`）— `遠隔攻撃の敵を優先して攻撃する`
+- 常時 self stat buff — `攻撃速度+25%` 等（対象・常時の冗長表記は省略）
+- 常時 `defenseIgnore` — `攻撃時、対象の防御力をN%無視する`
+- `specialEffect` heal（低 HP 条件）— `HPがN%以下の味方を回復時、HP回復効果+{bonus}`
+- `excessHealToBarrier`（与）— `味方を回復時、最大HPを超えた回復量のN%をバリアとして対象に付与する`
 
 #### 運用
 

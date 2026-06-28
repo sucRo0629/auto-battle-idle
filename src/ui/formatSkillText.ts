@@ -134,12 +134,16 @@ function formatFireConditionSummary(condition: FireCondition): string {
         : `デバフ:${tags}`;
     }
     case "targetHp": {
-      const op = condition.compare === "gte" ? "≥" : "≤";
-      return `対象HP${op}${Math.round(condition.maxHpRatio * 100)}%`;
+      const pct = Math.round(condition.maxHpRatio * 100);
+      return condition.compare === "gte"
+        ? `対象のHPが${pct}%以上`
+        : `対象のHPが${pct}%以下`;
     }
     case "selfHp": {
-      const op = condition.compare === "gte" ? "≥" : "≤";
-      return `自HP${op}${Math.round(condition.maxHpRatio * 100)}%`;
+      const pct = Math.round(condition.maxHpRatio * 100);
+      return condition.compare === "gte"
+        ? `自身のHPが${pct}%以上`
+        : `自身のHPが${pct}%以下`;
     }
     case "minTargets":
       return `対象≥${condition.count}`;
@@ -194,14 +198,167 @@ function formatCdLabel(kind: SkillTriggerKind, value: number): string {
     case "time":
       return value === 0 ? "チャージなし" : formatSecondsLabel(value);
     case "basicAttackCount":
-      return `攻撃${value}`;
+      return `通常攻撃${value}回`;
     case "hitsTaken":
-      return `被撃${value}`;
+      return `被攻撃${value}回`;
   }
 }
 
 function isSelfTargetSpec(spec: TargetSpec): boolean {
   return spec.kind === "self";
+}
+
+function isOmittableDefaultEnemyTarget(spec: TargetSpec): boolean {
+  return (
+    spec.kind === "distance" &&
+    spec.side === "enemy" &&
+    spec.order === "nearest"
+  );
+}
+
+function isDefaultLowestHpAllyTarget(spec: TargetSpec): boolean {
+  return (
+    spec.kind === "stat" &&
+    spec.side === "ally" &&
+    spec.stat === "hp" &&
+    spec.order === "ratio"
+  );
+}
+
+function formatCompactAtkBasedHealSentence(
+  amount: ResourceAmountSpec | undefined
+): string {
+  if (amount?.kind === "atkBased") {
+    const pct = formatPercent(amount.atkScale ?? 1);
+    return `味方のHPを攻撃力の${pct}で回復`;
+  }
+  return `${formatResourceAmount(amount)}回復`;
+}
+
+function formatPassiveSpecialEffectHeal(def: PassiveSkillDef): string {
+  const spec = def.specialEffect;
+  if (!spec) return "特効回復";
+  const bonusPct = formatPercent((spec.scale ?? 1) - 1);
+  for (const condition of spec.conditions ?? []) {
+    if (condition.kind !== "targetHp") continue;
+    const pct = Math.round(condition.maxHpRatio * 100);
+    const suffix = condition.compare === "gte" ? "以上" : "以下";
+    return `HPが${pct}%${suffix}の味方を回復時、HP回復効果+${bonusPct}`;
+  }
+  return formatSpecialEffectSpec(def.specialEffectApplyTo, spec) || "特効回復";
+}
+
+function formatExcessHealToBarrierPassive(def: PassiveSkillDef): string {
+  const scalePct = formatPercent(def.barrierScale ?? 1);
+  const sources = def.excessHealSources ?? ["outgoing"];
+  if (sources.length === 1 && sources[0] === "outgoing") {
+    return `味方を回復時、最大HPを超えた回復量の${scalePct}をバリアとして対象に付与する`;
+  }
+  const sourceLabels = sources.map((s) => (s === "outgoing" ? "与" : "被"));
+  return `余剰回復バリア ${scalePct}（${sourceLabels.join("・")}）`;
+}
+
+const ACTIVE_SKILL_RECAST_META_LABEL = "再使用";
+
+const MULTI_LOCK_UNDERFLOW_NOTE =
+  "発動時に攻撃可能な対象が少なかった場合、再度同じ対象にダメージを与える";
+
+function formatCompactAtkBasedDamageSentence(
+  amount: ResourceAmountSpec | undefined,
+  damageType?: DamageType
+): string {
+  if (amount?.kind === "atkBased") {
+    const scale = amount.atkScale ?? 1;
+    const pct = formatPercent(scale);
+    const dmgLabel = damageType
+      ? `${DAMAGE_TYPE_LABELS[damageType]}ダメージ`
+      : "ダメージ";
+    return `攻撃力の${pct}の${dmgLabel}を与える`;
+  }
+  const dmgPrefix = damageType ? `${DAMAGE_TYPE_LABELS[damageType]}` : "";
+  return `${dmgPrefix}${formatResourceAmount(amount)}のダメージを与える`;
+}
+
+function formatCompactSingleTargetDamageSentence(
+  effect: SkillEffectDef,
+  targetSpec: TargetSpec
+): string | null {
+  if (effect.type !== "damage") return null;
+  if ((effect.targetShape ?? "single") === "multiLock") return null;
+  if (!isOmittableDefaultEnemyTarget(targetSpec)) return null;
+  if (effect.amount?.kind !== "atkBased") return null;
+  const sentence = formatCompactAtkBasedDamageSentence(
+    effect.amount,
+    effect.damageType
+  );
+  const hitCount = effect.hitCount ?? 1;
+  if (hitCount > 1) {
+    return `${hitCount}回連続で${sentence}`;
+  }
+  return sentence;
+}
+
+function formatMultiLockDamageEffectLines(
+  effect: SkillEffectDef
+): string[] | null {
+  if (effect.type !== "damage") return null;
+  if ((effect.targetShape ?? "single") !== "multiLock") return null;
+  const hitCount = effect.hitCount ?? 1;
+  if (hitCount <= 1) return null;
+  return [
+    `敵${hitCount}体に対して${formatCompactAtkBasedDamageSentence(
+      effect.amount,
+      effect.damageType
+    )}`,
+    MULTI_LOCK_UNDERFLOW_NOTE,
+  ];
+}
+
+function formatTargetRuleOverridePassive(def: PassiveSkillDef): string {
+  const rule = def.targetRuleOverride;
+  if (!rule) return "ターゲット上書き";
+  if (
+    rule.kind === "stat" &&
+    rule.side === "enemy" &&
+    rule.order === "highest"
+  ) {
+    const statLabel = resolveStatusEffectStatDisplayName(rule.stat);
+    return `最も${statLabel}が高い敵を優先して攻撃する`;
+  }
+  if (rule.kind === "attackType" && rule.ranged && !rule.melee) {
+    return "遠隔攻撃の敵を優先して攻撃する";
+  }
+  const scope = def.targetRuleOverrideApplyTo ?? "enemy";
+  const scopeLabel = scope === "ally" ? "味方向け" : "敵向け";
+  return `${scopeLabel}ターゲット → ${formatTarget(rule, {
+    kind: "distance",
+    side: scope,
+    order: "nearest",
+  })}`;
+}
+
+function formatPassiveAlwaysSelfStatBuff(def: PassiveSkillDef): string | null {
+  if (def.effect !== "buff" || (def.buffSubKind ?? "stat") !== "stat") {
+    return null;
+  }
+  const target = def.buffTargetRule ?? { kind: "self" };
+  if (target.kind !== "self") return null;
+  if (resolvePassivePeriodicTrigger(def) !== undefined) return null;
+  const label = formatBuffStatModifiersFromDef(def);
+  if (!label || label === "—") return null;
+  return compactStatEffectLabel(label);
+}
+
+function formatPassiveDefenseIgnore(def: PassiveSkillDef): string {
+  const spec = def.defenseIgnore;
+  if (!spec?.def) return "防御無視";
+  if (spec.chance !== undefined && spec.chance < 1) {
+    return formatDefenseIgnoreSpec(spec) || "防御無視";
+  }
+  if (spec.def.mode === "percent") {
+    return `攻撃時、対象の防御力を${formatPercent(spec.def.amount)}無視する`;
+  }
+  return formatDefenseIgnoreSpec(spec) || "防御無視";
 }
 
 function resolveEffectTargetSpec(
@@ -704,8 +861,31 @@ function formatActiveEffectDetail(
         : "";
       const amount = formatResourceAmount(effect.amount);
       if (compact) {
-        const hint = formatCompactTargetHint(targetSpec);
-        extras.push(`${hint}${dmgType}${amount}`);
+        const multiLockLines = formatMultiLockDamageEffectLines(effect);
+        if (
+          multiLockLines &&
+          isOmittableDefaultEnemyTarget(targetSpec)
+        ) {
+          extras.push(multiLockLines.join("、"));
+        } else if (
+          effect.amount?.kind === "atkBased" &&
+          isOmittableDefaultEnemyTarget(targetSpec)
+        ) {
+          const singleSentence = formatCompactSingleTargetDamageSentence(
+            effect,
+            targetSpec
+          );
+          extras.push(
+            singleSentence ??
+              formatCompactAtkBasedDamageSentence(
+                effect.amount,
+                effect.damageType
+              )
+          );
+        } else {
+          const hint = formatCompactTargetHint(targetSpec);
+          extras.push(`${hint}${dmgType}${amount}`);
+        }
       } else {
         const power = dmgType ? `${dmgType} ${amount}` : amount;
         extras.push(power);
@@ -751,8 +931,16 @@ function formatActiveEffectDetail(
           }${formatDispelPriorityLabel(effect.dispelPriority)}`
         );
       } else if (compact) {
-        const hint = formatCompactTargetHint(targetSpec);
-        extras.push(`${hint}${formatResourceAmount(effect.amount)}回復`);
+        if (
+          (effect.healSubKind ?? "instant") === "instant" &&
+          isDefaultLowestHpAllyTarget(targetSpec) &&
+          effect.amount?.kind === "atkBased"
+        ) {
+          extras.push(formatCompactAtkBasedHealSentence(effect.amount));
+        } else {
+          const hint = formatCompactTargetHint(targetSpec);
+          extras.push(`${hint}${formatResourceAmount(effect.amount)}回復`);
+        }
       } else {
         extras.push(
           `${
@@ -839,6 +1027,14 @@ function formatActiveEffectDetail(
     case "basicAttackTransform": {
       if (compact) {
         const parts: string[] = [];
+        if (
+          effect.hitCountMultiplier !== undefined &&
+          effect.hitCountMultiplier > 1
+        ) {
+          parts.push(
+            `通常攻撃が${effect.hitCountMultiplier}回連続攻撃になる`
+          );
+        }
         if (effect.primaryEffectOverride !== undefined) {
           const override = effect.primaryEffectOverride;
           if (override.type === "damage") {
@@ -1198,15 +1394,8 @@ function formatPassiveEffect(
     counterChance?: number;
   };
   switch (effect) {
-    case "targetRuleOverride": {
-      const scope = def.targetRuleOverrideApplyTo ?? "enemy";
-      const scopeLabel = scope === "ally" ? "味方向け" : "敵向け";
-      return `${scopeLabel}ターゲット → ${formatTarget(def.targetRuleOverride, {
-        kind: "distance",
-        side: scope,
-        order: "nearest",
-      })}`;
-    }
+    case "targetRuleOverride":
+      return formatTargetRuleOverridePassive(def);
     case "evasionChance":
       return `回避 +${formatPercent(legacy.evasionChance ?? 0)}`;
     case "block":
@@ -1229,7 +1418,7 @@ function formatPassiveEffect(
         .filter(Boolean)
         .join(" · ")}）`;
     case "defenseIgnore":
-      return formatDefenseIgnoreSpec(def.defenseIgnore) || "防御無視";
+      return formatPassiveDefenseIgnore(def);
     case "ignoredDefBonusDamage":
       return def.ignoredDefBonusScale !== undefined
         ? `無視防御力${formatPercent(def.ignoredDefBonusScale)} 追加ダメ`
@@ -1279,6 +1468,9 @@ function formatPassiveEffect(
       )}${limitLabel}）${target}${metaSuffix}`;
     }
     case "specialEffect": {
+      if (def.specialEffectApplyTo === "heal" && def.specialEffect) {
+        return formatPassiveSpecialEffectHeal(def);
+      }
       const special =
         formatSpecialEffectSpec(def.specialEffectApplyTo, def.specialEffect) ||
         "特効効果";
@@ -1423,14 +1615,8 @@ function formatPassiveEffect(
       const triggerLabel = formatPassiveTriggerSummary(def, trigger);
       return `HoT ${triggerLabel} ${amount} → ${target}（${durationLabel}${metaSuffix}）`;
     }
-    case "excessHealToBarrier": {
-      const sourceLabels = (def.excessHealSources ?? ["outgoing"]).map((s) =>
-        s === "outgoing" ? "与" : "被"
-      );
-      return `余剰回復バリア ×${def.barrierScale ?? 1}（${sourceLabels.join(
-        "・"
-      )}）`;
-    }
+    case "excessHealToBarrier":
+      return formatExcessHealToBarrierPassive(def);
     case "selfHpRatioBuff": {
       const statsLabel = formatStatsWithModifier(
         (def.buffStat as StatusEffectStat | StatusEffectStat[] | undefined) ??
@@ -1530,6 +1716,10 @@ function formatPassiveEffect(
       return `バリア完全消失時 ${amount} 即時回復（味方1回限り/Wave・障壁消費では発火しない）`;
     }
     case "buff": {
+      const alwaysSelfStat = formatPassiveAlwaysSelfStatBuff(def);
+      if (alwaysSelfStat) {
+        return alwaysSelfStat;
+      }
       const effectView = passiveBuffToEffectDef(def);
       const target = formatTarget(def.buffTargetRule, { kind: "self" });
       const shape = formatTargetShape(effectView);
@@ -1721,7 +1911,9 @@ function isActiveSkillDef(
 
 function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
   const trigger = resolveSkillTrigger(def);
-  const parts: string[] = [`CD：${formatCdLabel(trigger.kind, trigger.value)}`];
+  const parts: string[] = [
+    `${ACTIVE_SKILL_RECAST_META_LABEL}：${formatCdLabel(trigger.kind, trigger.value)}`,
+  ];
 
   const duration = resolveActiveSkillDurationLabel(def);
   if (duration) {
@@ -1739,7 +1931,7 @@ function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
       def.fireConditionMatch ?? "all"
     );
     if (condSummary) {
-      parts.push(`条件：${condSummary}`);
+      parts.push(`発動条件：${condSummary}`);
     }
   }
 
@@ -1758,17 +1950,34 @@ function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
   }
 
   const scopePrefix = resolveActiveSkillScopePrefix(def);
-  const lines = mappableEffects
-    .map((effect) =>
-      formatActiveEffectDetail(effect, {
-        compact: true,
-        scopePrefix,
-        inheritTarget: def.target,
-      })
-    )
-    .filter(Boolean);
-  if (scopePrefix && lines.length > 0) {
-    lines[0] = `${scopePrefix}${lines[0]}`;
+  const lines: string[] = [];
+  let scopeApplied = false;
+
+  for (const effect of mappableEffects) {
+    const multiLockLines = formatMultiLockDamageEffectLines(effect);
+    if (multiLockLines) {
+      if (scopePrefix && !scopeApplied) {
+        lines.push(`${scopePrefix}${multiLockLines[0]}`);
+        scopeApplied = true;
+        lines.push(...multiLockLines.slice(1));
+      } else {
+        lines.push(...multiLockLines);
+      }
+      continue;
+    }
+
+    const line = formatActiveEffectDetail(effect, {
+      compact: true,
+      scopePrefix,
+      inheritTarget: def.target,
+    });
+    if (!line) continue;
+    if (scopePrefix && !scopeApplied) {
+      lines.push(`${scopePrefix}${line}`);
+      scopeApplied = true;
+    } else {
+      lines.push(line);
+    }
   }
   return lines;
 }
