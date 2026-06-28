@@ -4,15 +4,16 @@ import {
   resolveClassIconKey,
   resolveClassSpriteKey,
 } from "../render/entityVisuals.ts";
-import type {
-  ActiveSkillDef,
-  ClassId,
-  ClassPreset,
-  GameData,
-  PassiveSkillDef,
-  PartyMemberState,
-  PartySlotState,
-  Role,
+import {
+  isMeleeRangePx,
+  type ActiveSkillDef,
+  type ClassId,
+  type ClassPreset,
+  type GameData,
+  type PassiveSkillDef,
+  type PartyMemberState,
+  type PartySlotState,
+  type Role,
 } from "../battle/types.ts";
 import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
 import { getClassIconUrl, getSkillIconUrlForSkill } from "../render/IconRegistry.ts";
@@ -61,6 +62,21 @@ const PICKER_ROLE_BLOCKS: { role: ClassPreset["role"]; label: string }[] = [
   { role: "attacker", label: "アタッカー" },
   { role: "supporter", label: "サポーター" },
 ];
+
+type AttackerSubRole = "fighter" | "shooter" | "caster";
+
+const ATTACKER_SUB_ROLE_BLOCKS: { subRole: AttackerSubRole; label: string }[] =
+  [
+    { subRole: "fighter", label: "ファイター" },
+    { subRole: "shooter", label: "シューター" },
+    { subRole: "caster", label: "キャスター" },
+  ];
+
+function resolveAttackerSubRole(preset: ClassPreset): AttackerSubRole {
+  if (preset.traits.damageType === "magic") return "caster";
+  if (isMeleeRangePx(preset.traits.rangePx)) return "fighter";
+  return "shooter";
+}
 
 type PickerTarget = { kind: "class" } | null;
 
@@ -823,15 +839,43 @@ export class SkillMenuPanel {
 
       const list = document.createElement("div");
       list.className = "skill-menu-picker-role-list";
-      for (const classId of classIds) {
-        const preset = this.gameData.classRegistry[classId];
-        list.appendChild(
-          this.createClassPickerRow(
-            preset?.displayName ?? classId,
-            classId,
-            preset
-          )
-        );
+      if (block.role === "attacker") {
+        for (const subBlock of ATTACKER_SUB_ROLE_BLOCKS) {
+          const subClassIds = classIds.filter((classId) => {
+            const preset = this.gameData.classRegistry[classId];
+            return (
+              preset && resolveAttackerSubRole(preset) === subBlock.subRole
+            );
+          });
+          if (subClassIds.length === 0) continue;
+
+          const subHeading = document.createElement("div");
+          subHeading.className = "skill-menu-picker-role-subheading";
+          subHeading.textContent = subBlock.label;
+          list.appendChild(subHeading);
+
+          for (const classId of subClassIds) {
+            const preset = this.gameData.classRegistry[classId];
+            list.appendChild(
+              this.createClassPickerRow(
+                preset?.displayName ?? classId,
+                classId,
+                preset
+              )
+            );
+          }
+        }
+      } else {
+        for (const classId of classIds) {
+          const preset = this.gameData.classRegistry[classId];
+          list.appendChild(
+            this.createClassPickerRow(
+              preset?.displayName ?? classId,
+              classId,
+              preset
+            )
+          );
+        }
       }
       blockEl.appendChild(list);
       blocks.appendChild(blockEl);
