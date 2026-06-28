@@ -6,6 +6,7 @@ import {
   measureCompactStatusBadgeRow,
   measureStatusBadgeBlock,
   applyRemainingOverlayPixels,
+  BADGE_OVERLAY_STEPS,
   darkenBadgeOverlayBand,
   overlayMultiplyFillStyle,
   parseOverlayDarkenAlpha,
@@ -23,6 +24,7 @@ import {
   statusBadgeRowWidth,
   statusBadgeStride,
   statusBadgeWidth,
+  quantizeBadgeOverlayStep,
 } from './statusBadgeRenderer.ts';
 
 const hot = { category: 'hot' as const, kind: 'buff' as const, remainingRatio: 1, isPassive: false };
@@ -92,6 +94,20 @@ describe('remaining overlay color', () => {
     expect(data[4 * 5 + 3]).toBe(255);
     expect(data[4 * 10 + 3]).toBe(255);
     expect(data[4 * 10]).toBe(255);
+  });
+});
+
+describe('quantizeBadgeOverlayStep', () => {
+  it('returns 0 while the effect is still full', () => {
+    expect(quantizeBadgeOverlayStep(1)).toBe(0);
+  });
+
+  it('reaches the final step when elapsed', () => {
+    expect(quantizeBadgeOverlayStep(0)).toBe(BADGE_OVERLAY_STEPS);
+  });
+
+  it('buckets elapsed time into discrete steps', () => {
+    expect(quantizeBadgeOverlayStep(0.5)).toBe(12);
   });
 });
 

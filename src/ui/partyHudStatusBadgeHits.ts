@@ -3,6 +3,7 @@ import {
   resolveStatusBadgeTooltipLabel,
 } from "./gameTermGlossary.ts";
 import type { StatusEffectBadgeDisplay } from '../battle/statusEffectDisplay.ts';
+import { quantizeBadgeOverlayStep } from '../render/statusBadgeRenderer.ts';
 import type { BattleHudTheme } from '../render/battleHudTheme.ts';
 import {
   measureCompactStatusBadgeRow,
@@ -23,7 +24,7 @@ export function buildPartyHudStatusBadgeHitSignature(
   const badgePart = visible
     .map(
       (badge) =>
-        `${badge.category}:${badge.stackCount ?? 1}:${Math.floor((1 - (badge.remainingRatio ?? 1)) * 12)}`,
+        `${badge.category}:${badge.stackCount ?? 1}:${quantizeBadgeOverlayStep(badge.remainingRatio)}`,
     )
     .join('|');
   return `${slotIndex};${canvasWidth}x${canvasHeight};${overflowCount};${badgePart}`;
