@@ -43,7 +43,7 @@ Hensei Only の開発フェーズ一覧。**Phase 1〜12 は番号順**（概要
 
 | チャネル | 位置づけ |
 | -------- | -------- |
-| **itch.io** | **第一配信先**（体験版無料 → 初版有料。海外向け・Devlog / 外宣伝の受け皿） |
+| **itch.io** | **第一配信先**（体験版無料 → 初版有料。海外向け・Devlog / 外宣伝の受け皿）。Devlog 開始タイミングは [itch-io-devlog.md](./itch-io-devlog.md) |
 | **Steam** | **後回し**（実績・レビュー・英語ページが整ってから。Partner 登録 $100 も後） |
 | **DLsite** | 日本向け **任意** の追加窓口（初版の日本語版など） |
 | **PWA** | 優先度低（ストア向けは Electron zip が正） |
@@ -405,7 +405,7 @@ data/
 | **DOM UI** | `SkillMenuPanel`、`MetaMenuOverlay`、`BattleStatsDrawer`、HUD ラベル、体験版終了画面、デバッグ以外の固定文言 |
 | **ゲームデータ** | `classes.json` の `displayName` / `epithetEn`（英語表示名の正本整理）、スキル名・説明（`formatSkillText` の locale 分岐、または JSON に locale フィールド） |
 | **用語** | `gameTermGlossary.ts` — 既存 locale キー設計を英語エントリまで拡張 |
-| **ストア** | itch.io ページ・短いキャッチコピー・スクリーンショット上の英語（doc 外だが M1 チェックリストに含める） |
+| **ストア** | itch.io ページ・短いキャッチコピー・スクリーンショット上の英語（[itch-io-devlog.md](./itch-io-devlog.md)） |
 
 **進め方（推奨）**
 

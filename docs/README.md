@@ -2,7 +2,7 @@
 
 トピックごとに **分割** してあり、作業時は必要なファイルだけ開く（Cursor ルール: `.cursor/rules/documentation-index.mdc`）。
 
-- **[Plans](plans/README.md)** — 開発ロードマップ（[フェーズ詳細](plans/phase-roadmap.md)、[Phase 4 詳細](plans/phase-4-roadmap.md)）
+- **[Plans](plans/README.md)** — 開発ロードマップ（[フェーズ詳細](plans/phase-roadmap.md)、[Phase 4 詳細](plans/phase-4-roadmap.md)、[itch.io Devlog](plans/itch-io-devlog.md)）
 - **[Spec](spec/README.md)** — ゲーム設計リファレンス（ステータス・戦闘・クラス・進行）
 - **[Design Philosophy](design-philosophy.md)** — コアコンセプト（編成への思考圧縮）、評価軸、設計判断基準
 - **[Combat Architecture](combat-architecture.md)** — 戦闘システム全体の上位構造（Kill / Flow / Survival）
@@ -29,6 +29,7 @@
 | ローグライクモード（ラン・問題生成・報酬）                                        | [spec/roguelike-mode.md](spec/roguelike-mode.md)                                |
 | `formatSkillText.ts`, 4b 説明文 / 4e i18n                                      | [plans/phase-4-roadmap.md](plans/phase-4-roadmap.md)                          |
 | フェーズ・作業順                                                                  | [plans/phase-roadmap.md](plans/phase-roadmap.md)                                |
+| itch.io ストア・Devlog（M1 公開前）                                               | [plans/itch-io-devlog.md](plans/itch-io-devlog.md)                              |
 
 ## JSON の読み方（トークン節約）
 

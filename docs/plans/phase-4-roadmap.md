@@ -204,7 +204,7 @@ data/classes.json
 | **DOM UI** | `SkillMenuPanel`、`MetaMenuOverlay`、`BattleStatsDrawer`、HUD ラベル、体験版終了画面 | 未 |
 | **ゲームデータ** | `displayName` / `epithetEn` 整理、スキル名・説明の locale 分岐 | 未 |
 | **用語** | `gameTermGlossary.ts` の `en` エントリ | 未 |
-| **ストア** | itch.io ページ・キャッチコピー（doc 外、M1 チェックリスト） | 未 |
+| **ストア** | itch.io ページ・キャッチコピー・Devlog（[itch-io-devlog.md](./itch-io-devlog.md)） | 未 |
 
 ### 4e 進め方
 
