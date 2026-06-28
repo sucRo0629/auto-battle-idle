@@ -68,10 +68,13 @@
 | `wardBarrier` | **障壁**            | `wardBarrier` スタック — ダメージ軽減。バリアより先に消費（本書 結界師節）               |
 | `mark`        | **印**              | 印術師専用 Mark                                                                          |
 | `arenaMark`   | **闘技場の指名** 等 | 闘技士 `arenaDominance` 系。印（Mark）と混同しない                                       |
+| `damageReduction` | **ダメージ軽減** | `damageTaken` stat の軽減 buff / パッシブ `damageReduction`。倍率 `<1` は `ダメージ軽減N%` と表記 |
+| `damageIncrease`  | **被ダメージ増加** | `damageTaken` stat の増加 debuff。倍率 `>1` は `被ダメージ増加N%` と表記 |
 
 #### 登録方針
 
 - 初版は `formatSkillText` 出力で **頻出する用語** から段階追加（全用語一括は不要）
+- **`StatusDisplayCategory` 全件**（HUD 状態アイコン）には `statusCategory` 付き辞書エントリを用意し、スキル説明からリンク・要約パネルを開ける
 - ルール変更時は **本書 / combat.md と辞書の `ja` を同作業内で更新**
 - 状態アイコン・カテゴリの正本は [combat.md §ステータス効果](combat.md#ステータス効果) の HUD バッジ節。辞書の `statusCategory` はそれに従う
 
@@ -89,7 +92,7 @@
 - `持続` — 効果残り秒（`buffDurationSec` 等の最大）。`useDurationSec`（硬直）とは分ける
 - `硬直` — `useDurationSec`。`useDurationPauseApproach` 時は `・移動停止` を付与
 - `条件` — `firePolicy: smart` の `fireConditions` 要約
-- `[効果…]` — コンパクト表記（例: `DEF×1.2`、`被ダメ×0.75`、`ブロック率+20%`）。複数 effect は `、` 区切り
+- `[効果…]` — コンパクト表記（例: `防御力20%`、`魔法耐性+20`、`攻撃力90%`、`ダメージ軽減25%`、`被ダメージ増加20%`、`ブロック率+20%`）。複数 effect は `、` 区切り
 
 **Passive**
 
@@ -99,6 +102,8 @@
 
 - 対象「自身」は effect 表示から省略（compact 時）
 - 秒表記は `秒`（`s` 表記にしない）
+- `damageTaken` stat の倍率は `被ダメ×N` ではなく、`<1` → `ダメージ軽減N%`、`>1` → `被ダメージ増加N%`（N = |1 − 倍率| × 100）
+- その他 stat（`atk` / `def` / `reg` / `attackSpeed` / `hp`）は略称（`ATK` 等）を使わず表示名（`攻撃力` / `防御力` / `魔法耐性` / `攻撃速度` / `HP`）。flat は `魔法耐性+20`、乗算 buff は `防御力20%`（N = |1 − 倍率| × 100）、resource の atk/def scale は `攻撃力90%`（scale をそのまま % 化）
 - ブロック率に「（加算）」は各スキル説明に書かない（barrier の加算表記は既存どおり）
 - 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` テスト
 

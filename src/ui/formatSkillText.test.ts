@@ -45,7 +45,7 @@ describe('formatPassiveDescription', () => {
         buffMultiplierMax: 1.5,
         maxBuffAtHpRatio: 0.6,
       } satisfies PassiveSkillDef,
-      fragments: ['自HP比例', 'ATK', '×1.5', '60%以下'],
+      fragments: ['自HP比例', '攻撃力', '50%', '60%以下'],
     },
     {
       name: 'passive buff evasion',
@@ -118,7 +118,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatActiveDescription(def);
     expect(desc).toContain('CD：11秒');
-    expect(desc).toContain('至近物理ATK×0.9');
+    expect(desc).toContain('至近物理攻撃力90%');
   });
 
   it('formats move + multi-lock damage', () => {
@@ -147,7 +147,7 @@ describe('formatActiveDescription', () => {
     const desc = formatActiveDescription(def);
     expect(desc).toContain('CD：9秒');
     expect(desc).toContain('アンカー +32px');
-    expect(desc).toContain('至近物理ATK×0.7');
+    expect(desc).toContain('至近物理攻撃力70%');
   });
 
   it('formats buff with flat bonus before multiplier', () => {
@@ -175,7 +175,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatActiveDescription(def);
     expect(desc).toContain('CD：被撃10');
-    expect(desc).toContain('(DEF+10)×1.8');
+    expect(desc).toContain('(防御力+10)80%');
     expect(desc).toContain('HoT maxHp×1%');
   });
 
@@ -210,7 +210,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatPassiveDescription(def);
     expect(desc).toContain('at_warrior_active_1');
-    expect(desc).toContain('ATK×2.5');
+    expect(desc).toContain('攻撃力250%');
   });
 
   it('includes lock duration when useDurationSec is set', () => {
@@ -233,7 +233,7 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('CD：12秒');
     expect(desc).toContain('持続：6秒');
     expect(desc).toContain('硬直6秒');
-    expect(desc).toContain('DEF×1.5');
+    expect(desc).toContain('防御力50%');
   });
 
   it('formats pierce damage', () => {
@@ -253,7 +253,7 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('至近物理ATK×1.1');
+    expect(desc).toContain('至近物理攻撃力110%');
   });
 
   it('formats smart fire gate and maxCharges', () => {
@@ -310,7 +310,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatPassiveDescription(def);
     expect(desc).toBe(
-      '効果：被攻撃時 33% で反撃 / 物理ATK / 射程+0 / 対象遠隔',
+      '効果：被攻撃時 33% で反撃 / 物理攻撃力 / 射程+0 / 対象遠隔',
     );
   });
 
@@ -328,6 +328,73 @@ describe('formatActiveDescription', () => {
     const desc = formatPassiveDescription(def);
     expect(desc).toContain('特効');
     expect(desc).toContain('対象遠隔');
+  });
+
+  it('formats damageTaken stat as percent reduction/increase labels', () => {
+    const reduction: ActiveSkillDef = {
+      id: 'test_damage_taken_reduction',
+      name: '軽減',
+      trigger: { kind: 'time', value: 12 },
+      effect: [
+        {
+          type: 'buff',
+          buffSubKind: 'stat',
+          buffStat: 'damageTaken',
+          buffMultiplier: 0.75,
+          buffDurationSec: 5,
+        },
+      ],
+    };
+    expect(formatActiveDescription(reduction)).toContain('ダメージ軽減25%');
+
+    const increase: ActiveSkillDef = {
+      id: 'test_damage_taken_increase',
+      name: '増加',
+      trigger: { kind: 'time', value: 12 },
+      effect: [
+        {
+          type: 'debuff',
+          debuffSubKind: 'stat',
+          debuffStat: 'damageTaken',
+          debuffMultiplier: 1.2,
+          debuffDurationSec: 5,
+        },
+      ],
+    };
+    expect(formatActiveDescription(increase)).toContain('被ダメージ増加20%');
+  });
+
+  it('formats stat buffs with display names and percent labels', () => {
+    const flatReg: ActiveSkillDef = {
+      id: 'test_reg_flat',
+      name: '耐性',
+      trigger: { kind: 'time', value: 12 },
+      effect: [
+        {
+          type: 'buff',
+          buffSubKind: 'stat',
+          buffStat: 'reg',
+          buffFlatBonus: 20,
+          buffDurationSec: 5,
+        },
+      ],
+    };
+    expect(formatActiveDescription(flatReg)).toContain('魔法耐性+20');
+
+    const atkScaleBarrier: ActiveSkillDef = {
+      id: 'test_atk_barrier',
+      name: '壁',
+      trigger: { kind: 'time', value: 8 },
+      effect: [
+        {
+          type: 'buff',
+          buffSubKind: 'barrier',
+          barrierStack: true,
+          amount: { kind: 'atkBased', atkScale: 0.2 },
+        },
+      ],
+    };
+    expect(formatActiveDescription(atkScaleBarrier)).toContain('攻撃力20%（加算）');
   });
 
   it('formats active counter range 0 as 射程+0', () => {
@@ -381,13 +448,13 @@ describe('formatActiveDescription', () => {
     expect(a4).toBeDefined();
 
     expect(formatActiveDescription(a1!)).toBe(
-      'CD：8秒 / 持続：5秒 / DEF×1.2 /',
+      'CD：8秒 / 持続：5秒 / 防御力20% /',
     );
     expect(formatActiveDescription(a2!)).toBe(
-      'CD：被撃8 / 持続：5秒 / 硬直5秒・移動停止 / DEF×1.25、ブロック率+50% /',
+      'CD：被撃8 / 持続：5秒 / 硬直5秒・移動停止 / 防御力25%、ブロック率+50% /',
     );
     expect(formatActiveDescription(a3!)).toBe(
-      'CD：12秒 / 持続：5秒 / 条件：自HP≤80% / 被ダメ×0.75 /',
+      'CD：12秒 / 持続：5秒 / 条件：自HP≤80% / ダメージ軽減25% /',
     );
     expect(formatActiveDescription(a4!)).toContain('CD：被撃12');
     expect(formatActiveDescription(a4!)).toContain('持続：2+防壁スタック数秒');
@@ -428,16 +495,16 @@ describe('formatActiveDescription', () => {
     expect(a4).toBeDefined();
 
     expect(formatActiveDescription(a1!)).toBe(
-      'CD：5秒 / 至近魔法ATK、最低HP味方ATK×1.25回復 /',
+      'CD：5秒 / 至近魔法攻撃力、最低HP味方攻撃力125%回復 /',
     );
     expect(formatActiveDescription(a2!)).toBe(
-      'CD：被撃8 / 持続：5秒 / 条件：自HP≤80% / 自身起点±50px：REG+10、被ダメ×0.95、ATK×0.2（加算） /',
+      'CD：被撃8 / 持続：5秒 / 条件：自HP≤80% / 自身起点±50px：魔法耐性+10、ダメージ軽減5%、攻撃力20%（加算） /',
     );
     expect(formatActiveDescription(a3!)).toBe(
-      'CD：12秒 / 持続：5秒 / 条件：対象HP≤80% / 味方全体被ダメ×0.9、REG+20 /',
+      'CD：12秒 / 持続：5秒 / 条件：対象HP≤80% / 味方全体ダメージ軽減10%、魔法耐性+20 /',
     );
     expect(formatActiveDescription(a4!)).toBe(
-      'CD：15秒 / 持続：5秒 / 条件：対象HP≤70% / 通常攻撃→魔法DEF×1.2、最低HP味方DEF回復 /',
+      'CD：15秒 / 持続：5秒 / 条件：対象HP≤70% / 通常攻撃→魔法防御力120%、最低HP味方防御力回復 /',
     );
   });
 
@@ -451,13 +518,13 @@ describe('formatActiveDescription', () => {
 
     const card1 = formatSkillCardLines(a1!, { locale: 'ja' });
     expect(card1.metaLine).toBe('CD：8秒 / 持続：5秒');
-    expect(card1.effectLines).toEqual(['DEF×1.2']);
+    expect(card1.effectLines).toEqual(['防御力20%']);
     expect(card1.effectLines.length).toBe(1);
 
     const card2 = formatSkillCardLines(a2!, { locale: 'ja' });
     expect(card2.metaLine).toBe('CD：被撃8 / 持続：5秒 / 硬直5秒・移動停止');
     expect(card2.effectLines.length).toBe(2);
-    expect(card2.effectLines[0]).toContain('DEF×1.25');
+    expect(card2.effectLines[0]).toContain('防御力25%');
     expect(card2.effectLines[1]).toContain('ブロック率+50%');
   });
 
@@ -500,7 +567,7 @@ describe('formatActiveDescription', () => {
       '効果：前列ブロック率+5%、魔法ブロック',
     );
     expect(formatPassiveDescription(p4!)).toBe(
-      '効果：HPが0以下になるダメージを受けた際、HP50%復活（Wave 1回まで）、自己被ダメ×0.5、前列被ダメ×0.75、5秒',
+      '効果：HPが0以下になるダメージを受けた際、HP50%復活（Wave 1回まで）、自己ダメージ軽減50%、前列ダメージ軽減25%、5秒',
     );
   });
 });

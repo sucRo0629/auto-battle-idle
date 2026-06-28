@@ -1,4 +1,9 @@
-import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
+import type { StatusEffectStat } from "../battle/types.ts";
+import {
+  sortBadgesForCompactView,
+  type StatusDisplayCategory,
+  type StatusEffectBadgeDisplay,
+} from "../battle/statusEffectDisplay.ts";
 
 /** v1 display locale. Shape supports future `en` etc. */
 export type GameTermLocale = "ja";
@@ -11,6 +16,8 @@ export type GameTermId =
   | "block"
   | "stun"
   | "dot"
+  | "damageReduction"
+  | "damageIncrease"
   | "damageTaken"
   | "counter"
   | "evasion"
@@ -21,8 +28,24 @@ export type GameTermId =
   | "bleed"
   | "healReservation"
   | "blockResonance"
+  | "blockResonanceStance"
   | "herbalPotency"
-  | "herbalPotencyConstitution";
+  | "herbalPotencyConstitution"
+  | "hp"
+  | "atk"
+  | "def"
+  | "reg"
+  | "attackSpeed"
+  | "damageDelay"
+  | "basicAttackTransform"
+  | "lastStandGuts"
+  | "arenaDominance"
+  | "duelistPride"
+  | "seedFlame"
+  | "blazingFlame"
+  | "ballistaMark"
+  | "allyAttackFollowUp"
+  | "nextOutgoingDamage";
 
 export interface GameTermEntry {
   id: GameTermId;
@@ -45,9 +68,9 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "wardBarrier",
     title: { ja: "障壁" },
     description: {
-      ja: "被ダメージを軽減するスタック型の防御層。バリアより先に消費され、ブロック共鳴などで付与される「防壁」と同系統。",
+      ja: "被ダメージを軽減するスタック型の防御層。バリアより先に消費される。結界師 ward 系と連動。",
     },
-    aliases: { ja: ["障壁", "防壁"] },
+    aliases: { ja: ["障壁"] },
     statusCategory: "wardBarrier",
   },
   {
@@ -98,12 +121,30 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     statusCategory: "dot",
   },
   {
+    id: "damageReduction",
+    title: { ja: "ダメージ軽減" },
+    description: {
+      ja: "受けるダメージ量を減らす buff。被ダメ倍率が 1 未満の stat 効果や、パッシブ damageReduction として HUD に表示される。",
+    },
+    aliases: { ja: ["ダメージ軽減"] },
+    statusCategory: "damageReduction",
+  },
+  {
+    id: "damageIncrease",
+    title: { ja: "被ダメージ増加" },
+    description: {
+      ja: "受けるダメージ量を増やす debuff。被ダメ倍率が 1 を超える stat 効果として HUD に表示される。",
+    },
+    aliases: { ja: ["被ダメージ増加"] },
+    statusCategory: "damageIncrease",
+  },
+  {
     id: "damageTaken",
     title: { ja: "被ダメ" },
     description: {
-      ja: "受けるダメージ量の倍率。1未満で軽減、1超で増加。バフ・デバフ・スキル効果で変動する。",
+      ja: "被ダメージ倍率（damageTaken）stat。倍率 < 1 はダメージ軽減、> 1 は被ダメージ増加としてスキル説明に展開する。",
     },
-    aliases: { ja: ["ダメージ軽減", "被ダメ"] },
+    aliases: { ja: ["被ダメ"] },
   },
   {
     id: "counter",
@@ -179,12 +220,21 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
   },
   {
     id: "blockResonance",
-    title: { ja: "ブロック共鳴" },
+    title: { ja: "防壁" },
     description: {
       ja: "ブロック成功時にスタックが蓄積し、消費スキルで追加効果を発動するディフェンダー系の資源。",
     },
-    aliases: { ja: ["ブロック共鳴", "共鳴"] },
+    aliases: { ja: ["ブロック共鳴", "共鳴", "防壁"] },
     statusCategory: "blockResonance",
+  },
+  {
+    id: "blockResonanceStance",
+    title: { ja: "迎撃態勢" },
+    description: {
+      ja: "ブロック共鳴 stack を消費して発動する迎撃バフ。態勢中の block 成功で周囲の敵へ追加ダメージとノックバックを与える。",
+    },
+    aliases: { ja: ["迎撃態勢", "迎撃消費"] },
+    statusCategory: "blockResonanceStance",
   },
   {
     id: "herbalPotency",
@@ -203,11 +253,229 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     },
     aliases: { ja: ["薬効体質"] },
   },
+  {
+    id: "hp",
+    title: { ja: "HP" },
+    description: {
+      ja: "最大 HP の flat 加算または乗算バフ・debuff。HUD では HP アイコンで表示される。",
+    },
+    aliases: { ja: ["HP"] },
+    statusCategory: "hp",
+  },
+  {
+    id: "atk",
+    title: { ja: "攻撃力" },
+    description: {
+      ja: "攻撃力（ATK）の flat 加算または乗算バフ・debuff。与ダメージ計算の基礎 stat。",
+    },
+    aliases: { ja: ["ATK", "攻撃力", "攻撃"] },
+    statusCategory: "atk",
+  },
+  {
+    id: "def",
+    title: { ja: "防御力" },
+    description: {
+      ja: "物理防御（DEF）の flat 加算または乗算バフ・debuff。物理被ダメージの軽減に寄与する。",
+    },
+    aliases: { ja: ["DEF", "防御力", "防御"] },
+    statusCategory: "def",
+  },
+  {
+    id: "reg",
+    title: { ja: "魔法耐性" },
+    description: {
+      ja: "魔法耐性（REG）の flat 加算または乗算バフ・debuff。魔法被ダメージの軽減に寄与する。",
+    },
+    aliases: { ja: ["REG", "魔法耐性"] },
+    statusCategory: "reg",
+  },
+  {
+    id: "attackSpeed",
+    title: { ja: "攻撃速度" },
+    description: {
+      ja: "通常攻撃・スキルの再使用間隔に影響する攻撃速度（SPD）バフ・debuff。",
+    },
+    aliases: { ja: ["SPD", "攻撃速度"] },
+    statusCategory: "attackSpeed",
+  },
+  {
+    id: "damageDelay",
+    title: { ja: "ダメージ遅延" },
+    description: {
+      ja: "被ダメの一部を後払いプールへ送る効果。総ダメージ量は変わらず、持続中に分割 tick される。軽減ではない。",
+    },
+    aliases: { ja: ["ダメージ遅延"] },
+    statusCategory: "damageDelay",
+  },
+  {
+    id: "basicAttackTransform",
+    title: { ja: "通常攻撃変形" },
+    description: {
+      ja: "バフ持続中のみ通常攻撃（basic）の effect を実行時に差し替え・拡張する。複数付与時は最新 1 件のみ有効。",
+    },
+    aliases: { ja: ["通常攻撃変形", "通常攻撃置換"] },
+    statusCategory: "basicAttackTransform",
+  },
+  {
+    id: "lastStandGuts",
+    title: { ja: "不屈" },
+    description: {
+      ja: "致死直前に Wave 1 回発動し、HP が 1 未満にならない状態を数秒維持する（完全無敵ではない）。終了時に生存敵全体へ短スタンとノックバック。",
+    },
+    aliases: { ja: ["不屈"] },
+    statusCategory: "lastStandGuts",
+  },
+  {
+    id: "arenaDominance",
+    title: { ja: "闘技場の掟" },
+    description: {
+      ja: "最終 Wave 開始時に発動。敵単体攻撃のターゲットを闘技士へ固定し、最高 ATK 敵へ闘士の指名を付与。効果中は闘技士が味方支援を受けない。",
+    },
+    aliases: { ja: ["闘技場の掟"] },
+    statusCategory: "arenaDominance",
+  },
+  {
+    id: "duelistPride",
+    title: { ja: "闘士の矜持" },
+    description: {
+      ja: "自身 HP が一定割合以上のとき、受ける即時回復・HoT tick を増幅する闘技士パッシブ。闘技場の掟より弱い自己回復補正。",
+    },
+    aliases: { ja: ["闘士の矜持"] },
+    statusCategory: "duelistPride",
+  },
+  {
+    id: "seedFlame",
+    title: { ja: "種火" },
+    description: {
+      ja: "魔術師の種火 DoT。stack 上限に達すると熾火へ変換される。active Hit のみで付与・連動する。",
+    },
+    aliases: { ja: ["種火"] },
+    statusCategory: "seedFlame",
+  },
+  {
+    id: "blazingFlame",
+    title: { ja: "熾火" },
+    description: {
+      ja: "魔術師の上位 DoT。stack ごとに魔法被ダメを増加させ、DoT 圧縮の対象外。種火から変換または起爆連鎖で増減する。",
+    },
+    aliases: { ja: ["熾火上限解除", "熾火起爆", "熾火"] },
+    statusCategory: "blazingFlame",
+  },
+  {
+    id: "ballistaMark",
+    title: { ja: "砲撃標的" },
+    description: {
+      ja: "弩砲士が高 Max HP 敵へ付与するマーク。本人攻撃がマーク命中時、着弾半径内の他敵へ飛散ダメージを与える。",
+    },
+    aliases: { ja: ["砲撃標的"] },
+    statusCategory: "ballistaMark",
+  },
+  {
+    id: "allyAttackFollowUp",
+    title: { ja: "追撃状態" },
+    description: {
+      ja: "近傍味方の通常攻撃成功を監視し、槍術士が同ターゲットへ basic を 1 回追撃するバフ。追撃由来 basic は再帰しない。",
+    },
+    aliases: { ja: ["追撃状態", "追撃"] },
+    statusCategory: "allyAttackFollowUp",
+  },
+  {
+    id: "nextOutgoingDamage",
+    title: { ja: "次のダメージ増加" },
+    description: {
+      ja: "次の outgoing damage 1 回に倍率を乗算して消費する武装状態。弩砲士の grantNextOutgoingDamage 等で付与される。",
+    },
+    aliases: { ja: ["次のダメージ増加"] },
+    statusCategory: "nextOutgoingDamage",
+  },
 ];
 
 const ENTRY_BY_ID = new Map<GameTermId, GameTermEntry>(
   GAME_TERM_ENTRIES.map((entry) => [entry.id, entry])
 );
+
+export function resolveGameTermTitle(
+  id: GameTermId,
+  locale: GameTermLocale = "ja",
+): string {
+  const entry = ENTRY_BY_ID.get(id);
+  if (!entry) {
+    throw new Error(`Missing glossary entry: ${id}`);
+  }
+  return entry.title[locale];
+}
+
+const STATUS_EFFECT_STAT_TERM_ID: Record<StatusEffectStat, GameTermId> = {
+  hp: "hp",
+  atk: "atk",
+  def: "def",
+  reg: "reg",
+  damageTaken: "damageTaken",
+  attackSpeed: "attackSpeed",
+};
+
+/** スキル説明などでの StatusEffectStat 表示名 */
+export const STATUS_EFFECT_STAT_DISPLAY_NAMES = Object.fromEntries(
+  Object.entries(STATUS_EFFECT_STAT_TERM_ID).map(([stat, id]) => [
+    stat,
+    resolveGameTermTitle(id as GameTermId),
+  ]),
+) as Record<StatusEffectStat, string>;
+
+export function resolveStatusEffectStatDisplayName(
+  stat: StatusEffectStat,
+  locale: GameTermLocale = "ja",
+): string {
+  return resolveGameTermTitle(STATUS_EFFECT_STAT_TERM_ID[stat], locale);
+}
+
+const ENTRY_BY_STATUS_CATEGORY = new Map<
+  StatusDisplayCategory,
+  GameTermEntry
+>(
+  GAME_TERM_ENTRIES.flatMap((entry) =>
+    entry.statusCategory ? [[entry.statusCategory, entry] as const] : [],
+  ),
+);
+
+/** HUD 状態アイコン category の表示名（エディタプレビュー・ツールチップ等） */
+export const STATUS_DISPLAY_CATEGORY_LABELS = Object.fromEntries(
+  [...ENTRY_BY_STATUS_CATEGORY.entries()].map(([category, entry]) => [
+    category,
+    entry.title.ja,
+  ]),
+) as Record<StatusDisplayCategory, string>;
+
+export function resolveStatusDisplayCategoryLabel(
+  category: StatusDisplayCategory,
+  locale: GameTermLocale = "ja",
+): string {
+  const entry = ENTRY_BY_STATUS_CATEGORY.get(category);
+  if (!entry) {
+    throw new Error(`Missing glossary entry for status category: ${category}`);
+  }
+  return entry.title[locale];
+}
+
+export function resolveStatusBadgeTooltipLabel(
+  badge: StatusEffectBadgeDisplay,
+): string {
+  const label = resolveStatusDisplayCategoryLabel(badge.category);
+  if (badge.stackCount !== undefined && badge.stackCount > 1) {
+    return `${label} ×${badge.stackCount}`;
+  }
+  return label;
+}
+
+export function resolveCompactStatusOverflowTooltipLabel(
+  badges: StatusEffectBadgeDisplay[],
+  visibleCount: number,
+): string {
+  return sortBadgesForCompactView(badges)
+    .slice(visibleCount)
+    .map(resolveStatusBadgeTooltipLabel)
+    .join("、");
+}
 
 export function getGameTermEntry(id: GameTermId): GameTermEntry | undefined {
   return ENTRY_BY_ID.get(id);

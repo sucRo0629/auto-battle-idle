@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { GameTermPanel } from "./GameTermPanel.ts";
 
-function createAnchor(label = "被ダメ"): HTMLButtonElement {
+function createAnchor(label = "ダメージ軽減"): HTMLButtonElement {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "game-term-link";
@@ -56,11 +56,11 @@ describe("GameTermPanel", () => {
     const anchor = createAnchor();
     const panelEl = host.querySelector(".game-term-panel") as HTMLElement;
 
-    panel.openFromTerm("damageTaken", anchor);
+    panel.openFromTerm("damageReduction", anchor);
     expect(panelEl.hidden).toBe(false);
     expect(anchor.getAttribute("aria-expanded")).toBe("true");
 
-    panel.openFromTerm("damageTaken", anchor);
+    panel.openFromTerm("damageReduction", anchor);
     expect(panelEl.hidden).toBe(true);
     expect(anchor.getAttribute("aria-expanded")).toBe("false");
   });

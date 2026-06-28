@@ -3,15 +3,17 @@ import {
   aggregateStatStatusEffects,
   assignCompactBadgeTier,
   collectStatusEffectBadgeDisplays,
-  resolveCompactStatusOverflowTooltipLabel,
-  resolveStatusBadgeTooltipLabel,
-  resolveStatusDisplayCategoryLabel,
   selectCompactStatusBadges,
   sortBadgesForCompactView,
   STATUS_BADGE_SLOT_ORDER,
-  STATUS_DISPLAY_CATEGORY_LABELS,
   type StatusEffectBadgeDisplay,
 } from './statusEffectDisplay.ts';
+import {
+  resolveCompactStatusOverflowTooltipLabel,
+  resolveStatusBadgeTooltipLabel,
+  resolveStatusDisplayCategoryLabel,
+  STATUS_DISPLAY_CATEGORY_LABELS,
+} from '../ui/gameTermGlossary.ts';
 import type { StatusEffect } from './types.ts';
 
 function statEffect(

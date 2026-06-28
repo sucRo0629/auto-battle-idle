@@ -58,6 +58,10 @@ import { passiveDebuffToEffectDef } from "../battle/passiveDebuffBridge.ts";
 import { passiveDamageReductionToEffectDef } from "../battle/passiveDamageReductionBridge.ts";
 import { passiveDispelToEffectDef } from "../battle/passiveDispelBridge.ts";
 import { passiveHotToEffectDef } from "../battle/passiveHotBridge.ts";
+import {
+  resolveGameTermTitle,
+  resolveStatusEffectStatDisplayName,
+} from "./gameTermGlossary.ts";
 
 function formatPassiveTriggerLabel(
   trigger: PassivePeriodicTriggerKind | undefined,
@@ -86,14 +90,27 @@ const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
   magic: "魔法",
 };
 
-const STATUS_STAT_SHORT: Record<StatusEffectStat, string> = {
-  hp: "HP",
-  atk: "ATK",
-  def: "DEF",
-  reg: "REG",
-  damageTaken: "被ダメ",
-  attackSpeed: "SPD",
-};
+function formatStatFlatSuffix(flat: number): string {
+  if (flat > 0) return `+${flat}`;
+  if (flat < 0) return `${flat}`;
+  return "";
+}
+
+function formatStatMultiplierSuffix(mul: number): string {
+  if (mul > 1) return formatPercent(mul - 1);
+  if (mul < 1) return `-${formatPercent(1 - mul)}`;
+  return "";
+}
+
+function formatStatMultiplierLabel(
+  stat: StatusEffectStat,
+  mul: number
+): string {
+  const label = resolveStatusEffectStatDisplayName(stat);
+  const suffix = formatStatMultiplierSuffix(mul);
+  if (!suffix) return label;
+  return `${label}${suffix}`;
+}
 
 function formatTriggerLabel(kind: SkillTriggerKind, value: number): string {
   switch (kind) {
@@ -321,7 +338,9 @@ function formatBlockResonanceConsumeSkillEffect(def: ActiveSkillDef): string {
   const radius = def.blockResonanceOnBlockKnockbackRadiusPx ?? 50;
   const damage = def.blockResonanceOnBlockDamage;
   const defScale = damage?.kind === "defBased" ? damage.defScale ?? 1 : 1;
-  return `「城塞の構え」：ブロック時半径${radius}px内の敵にDEF×${defScale}ダメ+ノックバック`;
+  return `「城塞の構え」：ブロック時半径${radius}px内の敵に${formatDefScale(
+    defScale
+  )}のダメージ+ノックバック`;
 }
 
 function formatActiveSkillEffectBody(def: ActiveSkillDef): string {
@@ -369,16 +388,32 @@ function formatPercent(value: number): string {
   return `${roundedOne}%`;
 }
 
+/** damageTaken multiplier → ダメージ軽減N% / 被ダメージ増加N% */
+function formatDamageTakenMultiplierLabel(mul: number): string {
+  if (mul < 1) {
+    return `${resolveGameTermTitle("damageReduction")}${formatPercent(1 - mul)}`;
+  }
+  if (mul > 1) {
+    return `${resolveGameTermTitle("damageIncrease")}${formatPercent(mul - 1)}`;
+  }
+  return resolveStatusEffectStatDisplayName("damageTaken");
+}
+
+/** wardBarrier 等: 軽減率そのもの（0.1 = 10% 軽減） */
+function formatDamageTakenReductionRateLabel(rate: number): string {
+  return `${resolveGameTermTitle("damageReduction")}${formatPercent(rate)}`;
+}
+
 function formatAtkScale(scale: number | undefined): string {
   const s = scale ?? 1;
-  if (s === 1) return "ATK";
-  return `ATK×${s}`;
+  if (s === 1) return resolveStatusEffectStatDisplayName("atk");
+  return `${resolveStatusEffectStatDisplayName("atk")}${formatPercent(s)}`;
 }
 
 function formatDefScale(scale: number | undefined): string {
   const s = scale ?? 1;
-  if (s === 1) return "DEF";
-  return `DEF×${s}`;
+  if (s === 1) return resolveStatusEffectStatDisplayName("def");
+  return `${resolveStatusEffectStatDisplayName("def")}${formatPercent(s)}`;
 }
 
 function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
@@ -389,14 +424,18 @@ function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
       const offset = amount.atkOffset ?? 0;
       if (offset === 0) return formatAtkScale(scale);
       const sign = offset > 0 ? "+" : "";
-      return `(ATK${sign}${offset})×${scale}`;
+      return `(${resolveStatusEffectStatDisplayName("atk")}${sign}${offset})${formatPercent(
+        scale
+      )}`;
     }
     case "defBased": {
       const scale = amount.defScale ?? 1;
       const offset = amount.defOffset ?? 0;
       if (offset === 0) return formatDefScale(scale);
       const sign = offset > 0 ? "+" : "";
-      return `(DEF${sign}${offset})×${scale}`;
+      return `(${resolveStatusEffectStatDisplayName("def")}${sign}${offset})${formatPercent(
+        scale
+      )}`;
     }
     case "flat":
       return `固定${amount.flatAmount ?? 0}`;
@@ -411,14 +450,8 @@ function formatStatusStats(
   stat: StatusEffectStat | StatusEffectStat[] | undefined
 ): string {
   return asStatusEffectStatList(stat)
-    .map((s) => STATUS_STAT_SHORT[s])
+    .map((s) => resolveStatusEffectStatDisplayName(s))
     .join("・");
-}
-
-function formatFlatBonus(flat: number): string {
-  if (flat > 0) return `+ ${flat}`;
-  if (flat < 0) return `- ${Math.abs(flat)}`;
-  return "0";
 }
 
 function formatStatWithModifier(
@@ -426,14 +459,32 @@ function formatStatWithModifier(
   multiplier: number | undefined,
   flatBonus: number | undefined
 ): string {
-  const label = STATUS_STAT_SHORT[stat];
   const mul = multiplier ?? 1;
   const flat = flatBonus ?? 0;
 
+  if (stat === "damageTaken") {
+    if (mul === 1 && flat === 0) {
+      return resolveStatusEffectStatDisplayName("damageTaken");
+    }
+    if (flat === 0) return formatDamageTakenMultiplierLabel(mul);
+    if (mul === 1) {
+      return `${resolveStatusEffectStatDisplayName("damageTaken")}${formatStatFlatSuffix(
+        flat
+      )}`;
+    }
+    return `( ${resolveStatusEffectStatDisplayName("damageTaken")}${formatStatFlatSuffix(
+      flat
+    )} ) ${formatDamageTakenMultiplierLabel(mul)}`;
+  }
+
+  const label = resolveStatusEffectStatDisplayName(stat);
+
   if (mul === 1 && flat === 0) return label;
-  if (flat === 0) return `${label} ×${mul}`;
-  if (mul === 1) return `${label} ${formatFlatBonus(flat)}`;
-  return `( ${label} ${formatFlatBonus(flat)} ) ×${mul}`;
+  if (flat === 0) return formatStatMultiplierLabel(stat, mul);
+  if (mul === 1) return `${label}${formatStatFlatSuffix(flat)}`;
+  return `(${label}${formatStatFlatSuffix(flat)})${formatStatMultiplierSuffix(
+    mul
+  )}`;
 }
 
 function formatStatsWithModifier(
@@ -734,7 +785,9 @@ function formatActiveEffectDetail(
         extras.push(
           `${BUFF_SUB_KIND_LABELS.wardBarrier} ×${
             effect.stacks ?? 1
-          }（被ダメ×${formatPercent(effect.damageReductionRatio ?? 0.1)}）`
+          }（${formatDamageTakenReductionRateLabel(
+            effect.damageReductionRatio ?? 0.1
+          )}）`
         );
       } else if (effect.buffSubKind === "block") {
         if (compact) {
@@ -762,9 +815,12 @@ function formatActiveEffectDetail(
         extras.push(
           `${BUFF_SUB_KIND_LABELS.allyAttackFollowUp} ${
             effect.buffDurationSec ?? 8
-          }s 半径${effect.allyFollowUpRadiusPx ?? 70}px DEF×${(
+          }s 半径${
+            effect.allyFollowUpRadiusPx ?? 70
+          }px ${formatStatMultiplierLabel(
+            "def",
             effect.followUpDefDebuffMultiplier ?? 0.95
-          ).toFixed(2)}`
+          )}`
         );
       } else {
         const statLabel = formatBuffTargetStats(
@@ -804,10 +860,14 @@ function formatActiveEffectDetail(
             patchParts.push(DAMAGE_TYPE_LABELS[effect.primaryPatch.damageType]);
           }
           if (effect.primaryPatch.amount?.atkScale !== undefined) {
-            patchParts.push(`ATK×${effect.primaryPatch.amount.atkScale}`);
+            patchParts.push(
+              formatAtkScale(effect.primaryPatch.amount.atkScale)
+            );
           }
           if (effect.primaryPatch.amount?.defScale !== undefined) {
-            patchParts.push(`DEF×${effect.primaryPatch.amount.defScale}`);
+            patchParts.push(
+              formatDefScale(effect.primaryPatch.amount.defScale)
+            );
           }
           parts.push(patchParts.join(""));
         }
@@ -848,12 +908,12 @@ function formatActiveEffectDetail(
           }
           if (effect.primaryEffectOverride.amount?.atkScale !== undefined) {
             overrideParts.push(
-              `ATK×${effect.primaryEffectOverride.amount.atkScale}`
+              formatAtkScale(effect.primaryEffectOverride.amount.atkScale)
             );
           }
           if (effect.primaryEffectOverride.amount?.defScale !== undefined) {
             overrideParts.push(
-              `DEF×${effect.primaryEffectOverride.amount.defScale}`
+              formatDefScale(effect.primaryEffectOverride.amount.defScale)
             );
           }
           parts.push(overrideParts.join(" "));
@@ -864,7 +924,9 @@ function formatActiveEffectDetail(
             patchParts.push(DAMAGE_TYPE_LABELS[effect.primaryPatch.damageType]);
           }
           if (effect.primaryPatch.amount?.atkScale !== undefined) {
-            patchParts.push(`ATK×${effect.primaryPatch.amount.atkScale}`);
+            patchParts.push(
+              formatAtkScale(effect.primaryPatch.amount.atkScale)
+            );
           }
           if (effect.primaryPatch.hitCount !== undefined) {
             patchParts.push(`${effect.primaryPatch.hitCount}Hit`);
@@ -999,10 +1061,14 @@ function formatActiveEffectDetail(
         extras.push(`${effect.durationSec}s`);
       }
       extras.push("闘士の指名");
-      extras.push("闘技士以外被ダメ−50%");
+      extras.push(`闘技士以外${resolveGameTermTitle("damageReduction")}50%`);
       extras.push("味方支援拒否");
       if (effect.nonMarkDamageMultiplier !== undefined) {
-        extras.push(`非指名被ダメ×${effect.nonMarkDamageMultiplier}`);
+        extras.push(
+          `非指名${formatDamageTakenMultiplierLabel(
+            effect.nonMarkDamageMultiplier
+          )}`
+        );
       }
       break;
     }
@@ -1154,7 +1220,7 @@ function formatPassiveEffect(
         "特効ダメージ"
       );
     case "damageReduction":
-      return `ダメージ軽減 ${formatPercent(
+      return `${resolveGameTermTitle("damageReduction")}${formatPercent(
         def.damageReductionPercent ?? 0
       )} → ${formatTarget(def.damageReductionTargetRule, { kind: "self" })}（${[
         formatTargetShape(passiveDamageReductionToEffectDef(def)),
@@ -1169,7 +1235,7 @@ function formatPassiveEffect(
       return formatDefenseIgnoreSpec(def.defenseIgnore) || "防御無視";
     case "ignoredDefBonusDamage":
       return def.ignoredDefBonusScale !== undefined
-        ? `無視DEF×${formatPercent(def.ignoredDefBonusScale)} 追加ダメ`
+        ? `無視防御力${formatPercent(def.ignoredDefBonusScale)} 追加ダメ`
         : "無視DEFボーナス";
     case "bonusBasicAttackOnHit": {
       const chance = def.chance ?? 0.5;
@@ -1278,9 +1344,11 @@ function formatPassiveEffect(
         const duration = def.lastStandRecoveryDurationSec ?? 5;
         return `HPが0以下になるダメージを受けた際、HP${formatPercent(
           hpRatio
-        )}復活（Wave 1回まで）、自己被ダメ×${selfMul}、前列被ダメ×${frontMul}、${formatSecondsLabel(
-          duration
-        )}`;
+        )}復活（Wave 1回まで）、自己${formatDamageTakenMultiplierLabel(
+          selfMul
+        )}、前列${formatDamageTakenMultiplierLabel(
+          frontMul
+        )}、${formatSecondsLabel(duration)}`;
       }
       if (def.effect === "frontBlockAura") {
         const parts: string[] = [];
@@ -1303,7 +1371,7 @@ function formatPassiveEffect(
         const perStack = def.blockResonanceDamageTakenPerStack ?? 0.03;
         const decay = def.blockResonanceDecayIntervalSec ?? 8;
         parts.push(
-          `ブロック時「防壁」1スタック（上限${maxStacks})。「防壁」：1スタックごとに被ダメ-${formatPercent(
+          `ブロック時「防壁」1スタック（上限${maxStacks})。「防壁」：1スタックごとに${formatDamageTakenReductionRateLabel(
             perStack
           )}。${decay}秒ごとに1スタック消失`
         );
@@ -1406,7 +1474,10 @@ function formatPassiveEffect(
       const radius = def.ballistaMarkSplashRadiusPx ?? 50;
       const splash = formatPercent(def.ballistaMarkSplashDamageScale ?? 0.3);
       const spd = def.ballistaMarkSelfAttackSpeedMul ?? 0.85;
-      return `砲撃標的（着弾${radius}px内飛散${splash} / 自身SPD×${spd}）`;
+      return `砲撃標的（着弾${radius}px内飛散${splash} / 自身${formatStatMultiplierLabel(
+        "attackSpeed",
+        spd
+      )}）`;
     }
     case "dotCompressAssist":
       return `DoT圧縮基準×${def.dotCompressRatio ?? 0.7}`;
@@ -1427,9 +1498,9 @@ function formatPassiveEffect(
     case "dottedEnemyHealReceivedDebuff":
       return `dot中被回復×${def.dottedEnemyHealReceivedMultiplier ?? 0.8}`;
     case "conditionalEnemyDamageTakenAura":
-      return `仕留め aura（hasDot+HP≤50% → 被ダメ×${
+      return `仕留め aura（hasDot+HP≤50% → ${formatDamageTakenMultiplierLabel(
         def.enemyDamageTakenMultiplier ?? 1.2
-      }）`;
+      )}）`;
     case "seedFlameOnActiveHit":
       return "active ダメージ Hit ごとに種火 +1 stack";
     case "bonusActiveOnHit":

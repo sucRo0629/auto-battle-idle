@@ -1,8 +1,8 @@
 import {
   resolveCompactStatusOverflowTooltipLabel,
   resolveStatusBadgeTooltipLabel,
-  type StatusEffectBadgeDisplay,
-} from '../battle/statusEffectDisplay.ts';
+} from "./gameTermGlossary.ts";
+import type { StatusEffectBadgeDisplay } from '../battle/statusEffectDisplay.ts';
 import type { BattleHudTheme } from '../render/battleHudTheme.ts';
 import {
   measureCompactStatusBadgeRow,

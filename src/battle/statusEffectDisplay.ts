@@ -75,53 +75,6 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
 
 export const STATUS_BADGE_SLOT_COUNT = STATUS_BADGE_SLOT_ORDER.length;
 
-/** HUD 状態アイコン category の表示名（エディタプレビュー・辞書等） */
-export const STATUS_DISPLAY_CATEGORY_LABELS: Record<
-  StatusDisplayCategory,
-  string
-> = {
-  hp: "HP",
-  atk: "攻撃",
-  def: "防御",
-  reg: "魔法耐性",
-  attackSpeed: "攻撃速度",
-  damageReduction: "ダメージ軽減",
-  damageIncrease: "被ダメージ増加",
-  hot: "HoT",
-  healReservation: "ヒール予約",
-  damageDelay: "ダメージ遅延",
-  wardBarrier: "障壁",
-  herbalPotency: "薬効",
-  blockResonance: "防壁",
-  blockResonanceStance: "迎撃態勢",
-  basicAttackTransform: "通常攻撃変形",
-  invulnerable: "無敵",
-  lastStandGuts: "不屈",
-  arenaDominance: "闘技場の掟",
-  duelistPride: "闘士の矜持",
-  mark: "印",
-  arenaMark: "闘士の指名",
-  seedFlame: "種火",
-  blazingFlame: "熾火",
-  ballistaMark: "砲撃標的",
-  allyAttackFollowUp: "追撃状態",
-  nextOutgoingDamage: "次のダメージ増加",
-  dot: "DoT",
-  bleed: "出血",
-  poison: "毒",
-  evasion: "回避",
-  block: "ブロック",
-  counter: "反撃",
-  stun: "スタン",
-  moveLock: "移動停止",
-};
-
-export function resolveStatusDisplayCategoryLabel(
-  category: StatusDisplayCategory
-): string {
-  return STATUS_DISPLAY_CATEGORY_LABELS[category];
-}
-
 const NEUTRAL_EPSILON = 0.001;
 
 function resolveDotDisplayCategory(
@@ -900,26 +853,6 @@ export function sortBadgesForDetailView(
 export interface CompactStatusBadgeSelection {
   visible: StatusEffectBadgeDisplay[];
   overflowCount: number;
-}
-
-export function resolveStatusBadgeTooltipLabel(
-  badge: StatusEffectBadgeDisplay
-): string {
-  const label = resolveStatusDisplayCategoryLabel(badge.category);
-  if (badge.stackCount !== undefined && badge.stackCount > 1) {
-    return `${label} ×${badge.stackCount}`;
-  }
-  return label;
-}
-
-export function resolveCompactStatusOverflowTooltipLabel(
-  badges: StatusEffectBadgeDisplay[],
-  visibleCount: number
-): string {
-  return sortBadgesForCompactView(badges)
-    .slice(visibleCount)
-    .map(resolveStatusBadgeTooltipLabel)
-    .join("、");
 }
 
 /** 敵頭上等のフィールド簡易表示: 3 +N（計 4 スロット） */

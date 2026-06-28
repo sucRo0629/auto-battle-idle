@@ -1,5 +1,5 @@
+import { resolveStatusDisplayCategoryLabel } from '../ui/gameTermGlossary.ts';
 import {
-  resolveStatusDisplayCategoryLabel,
   STATUS_BADGE_SLOT_ORDER,
   type StatusDisplayCategory,
 } from '../battle/statusEffectDisplay.ts';

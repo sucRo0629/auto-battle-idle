@@ -14,11 +14,11 @@ describe("segmentTextByGameTerms", () => {
   });
 
   it("matches multiple non-overlapping terms", () => {
-    const text = "被ダメ×0.75、スタン3秒";
+    const text = "ダメージ軽減25%、スタン3秒";
     const segments = segmentTextByGameTerms(text, "ja");
     expect(segments).toEqual([
-      { kind: "term", termId: "damageTaken", matchedText: "被ダメ" },
-      { kind: "text", text: "×0.75、" },
+      { kind: "term", termId: "damageReduction", matchedText: "ダメージ軽減" },
+      { kind: "text", text: "25%、" },
       { kind: "term", termId: "stun", matchedText: "スタン" },
       { kind: "text", text: "3秒" },
     ]);
@@ -35,6 +35,13 @@ describe("segmentTextByGameTerms", () => {
     expect(
       wardSegments.some((s) => s.kind === "term" && s.termId === "wardBarrier")
     ).toBe(true);
+
+    const resonanceSegments = segmentTextByGameTerms("防壁≥3", "ja");
+    expect(
+      resonanceSegments.some(
+        (s) => s.kind === "term" && s.termId === "blockResonance",
+      )
+    ).toBe(true);
   });
 
   it("separates mark and arenaMark ids", () => {
@@ -50,16 +57,33 @@ describe("segmentTextByGameTerms", () => {
   });
 
   it("does not match ja aliases when locale is unsupported", () => {
-    const segments = segmentTextByGameTerms("被ダメ×0.75", "en" as "ja");
-    expect(segments).toEqual([{ kind: "text", text: "被ダメ×0.75" }]);
+    const segments = segmentTextByGameTerms("ダメージ軽減25%", "en" as "ja");
+    expect(segments).toEqual([{ kind: "text", text: "ダメージ軽減25%" }]);
   });
 
-  it("prefers ダメージ軽減 over 被ダメ when both could match", () => {
-    const segments = segmentTextByGameTerms("ダメージ軽減 20%", "ja");
-    expect(segments[0]).toEqual({
+  it("links ダメージ軽減 and 被ダメージ増加 separately", () => {
+    expect(segmentTextByGameTerms("ダメージ軽減 20%", "ja")[0]).toEqual({
       kind: "term",
-      termId: "damageTaken",
+      termId: "damageReduction",
       matchedText: "ダメージ軽減",
+    });
+
+    expect(segmentTextByGameTerms("被ダメージ増加 15%", "ja")[0]).toEqual({
+      kind: "term",
+      termId: "damageIncrease",
+      matchedText: "被ダメージ増加",
+    });
+
+    expect(segmentTextByGameTerms("ダメージ軽減25%", "ja")[0]).toEqual({
+      kind: "term",
+      termId: "damageReduction",
+      matchedText: "ダメージ軽減",
+    });
+
+    expect(segmentTextByGameTerms("被ダメージ増加20%", "ja")[0]).toEqual({
+      kind: "term",
+      termId: "damageIncrease",
+      matchedText: "被ダメージ増加",
     });
   });
 });
@@ -71,6 +95,23 @@ describe("gameTermGlossary locale shape", () => {
       expect(entry.title.ja.length).toBeGreaterThan(0);
       expect(entry.description.ja.length).toBeGreaterThan(0);
       expect(entry.aliases.ja.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("covers every HUD status badge category with a glossary entry", async () => {
+    const { GAME_TERM_ENTRIES } = await import("./gameTermGlossary.ts");
+    const { STATUS_BADGE_SLOT_ORDER } = await import(
+      "../battle/statusEffectDisplay.ts"
+    );
+
+    const covered = new Set(
+      GAME_TERM_ENTRIES.flatMap((entry) =>
+        entry.statusCategory ? [entry.statusCategory] : [],
+      ),
+    );
+
+    for (const category of STATUS_BADGE_SLOT_ORDER) {
+      expect(covered.has(category)).toBe(true);
     }
   });
 });
