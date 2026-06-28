@@ -176,19 +176,6 @@
   letter-spacing: 0.03em;
 }
 
-.skill-menu-roster-card-summary {
-  max-width: 100%;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  font-size: 10px;
-  font-weight: 400;
-  line-height: 1.35;
-  color: #b8c0cc;
-}
-
 .skill-menu-formation-note {
   margin: 0;
   font-size: 11px;
@@ -504,7 +491,8 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  width: min(560px, calc(100vw - 32px));
+  width: 100%;
+  max-width: 100%;
   max-height: calc(100vh - 32px);
   overflow-x: hidden;
   overflow-y: auto;
@@ -575,45 +563,46 @@
 }
 
 .skill-menu-picker-row--icon {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 11rem) minmax(0, 1fr);
-  column-gap: 12px;
-  align-items: start;
-}
-
-.skill-menu-picker-row--icon.skill-menu-picker-row--action,
-.skill-menu-picker-row--icon.skill-menu-picker-row--no-summary {
-  grid-template-columns: 24px 1fr;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .skill-menu-picker-row--icon > .skill-menu-tab-icon {
-  grid-column: 1;
-  grid-row: 1;
+  flex: 0 0 24px;
 }
 
 .skill-menu-picker-row--icon > .skill-menu-picker-row-text {
-  grid-column: 2;
-  grid-row: 1;
+  flex: 0 0 3rem;
+  width: 3rem;
+  min-width: 0;
 }
 
 .skill-menu-picker-row--icon > .skill-menu-picker-row-summary {
-  grid-column: 3;
-  grid-row: 1;
+  flex: 1 1 0;
   min-width: 0;
   font-size: 12px;
   line-height: 1.45;
   color: #9aa3b0;
 }
 
-.skill-menu-picker-row--action > .skill-menu-picker-row-text {
-  grid-column: 2 / -1;
+.skill-menu-picker-row--icon.skill-menu-picker-row--action > .skill-menu-picker-row-text,
+.skill-menu-picker-row--icon.skill-menu-picker-row--no-summary > .skill-menu-picker-row-text {
+  flex: 1 1 0;
+  width: auto;
 }
 
 .skill-menu-picker-row-text {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  flex: 1;
+}
+
+.skill-menu-picker-row--icon > .skill-menu-picker-row-text .skill-menu-skill-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .skill-menu-picker-row-epithet {

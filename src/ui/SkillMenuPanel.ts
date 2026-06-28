@@ -298,14 +298,6 @@ export class SkillMenuPanel {
 
     wrap.append(nameEl, epithetEl);
 
-    const summary = formatClassSummary(preset);
-    if (summary) {
-      const summaryEl = document.createElement("span");
-      summaryEl.className = "skill-menu-roster-card-summary";
-      summaryEl.textContent = summary;
-      wrap.appendChild(summaryEl);
-    }
-
     return wrap;
   }
 
