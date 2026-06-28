@@ -2,18 +2,17 @@ import type { CombatantLayout } from "./IBattleRenderer.ts";
 import type { DotFlavor } from "../battle/types.ts";
 import type { BattleHudTheme } from "./battleHudTheme.ts";
 import {
+  BATTLE_POPUP_DURATION_MS,
+  computeBattlePopupAlpha,
+  computeBattlePopupScale,
+} from "./battlePopupMotion.ts";
+import {
   computeDamagePopupBaseAnchorY,
   computeDamagePopupTops,
   type DamagePopupLayoutInput,
 } from "./damagePopupLayout.ts";
 
-const POPUP_DURATION_MS = 800;
-const FADE_IN_END = 0.15;
-const ZOOM_IN_END = 0.2;
-/** 拡大フェーズの 5 倍の長さで縮小する */
-const ZOOM_OUT_END = ZOOM_IN_END * 3;
-const START_SCALE = 0.3;
-const END_SCALE = 1;
+const POPUP_DURATION_MS = BATTLE_POPUP_DURATION_MS;
 const ORIGIN_JITTER_X = 20;
 const ORIGIN_JITTER_Y = 20;
 const DOT_FALL_DELAY_MIN_MS = 80;
@@ -22,36 +21,8 @@ const DOT_FALL_DISTANCE = 52;
 
 type PopupKind = "damage" | "dot" | "heal";
 
-function easeOutCubic(t: number): number {
-  return 1 - (1 - t) ** 3;
-}
-
 function easeInQuad(t: number): number {
   return t * t;
-}
-
-function popupAlpha(progress: number): number {
-  if (progress < FADE_IN_END) {
-    return progress / FADE_IN_END;
-  }
-  if (progress >= ZOOM_IN_END) {
-    const t = Math.min(1, (progress - ZOOM_IN_END) / ZOOM_OUT_END);
-    return 1 - easeInQuad(t);
-  }
-  return 1;
-}
-
-function popupScale(progress: number): number {
-  if (progress < ZOOM_IN_END) {
-    const t = easeOutCubic(progress / ZOOM_IN_END);
-    return START_SCALE + t * (END_SCALE - START_SCALE);
-  }
-  const zoomOutEnd = ZOOM_IN_END + ZOOM_OUT_END;
-  if (progress < zoomOutEnd) {
-    const t = easeOutCubic((progress - ZOOM_IN_END) / ZOOM_OUT_END);
-    return END_SCALE + t * (START_SCALE - END_SCALE);
-  }
-  return START_SCALE;
 }
 
 function dotFallOffsetY(
@@ -176,8 +147,8 @@ export class DamagePopupManager {
 
     for (const { popup, layout, index } of drawable) {
       const progress = popup.elapsedMs / POPUP_DURATION_MS;
-      const alpha = popupAlpha(progress);
-      const popupScaleValue = popupScale(progress);
+      const alpha = computeBattlePopupAlpha(progress);
+      const popupScaleValue = computeBattlePopupScale(progress);
       const centerX = layout.x + spriteSize / 2 + popup.offsetX;
       const anchorY = anchorYById.get(index)!;
 

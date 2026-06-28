@@ -1,15 +1,14 @@
 import type { CombatantLayout } from "./IBattleRenderer.ts";
 import type { BattleHudTheme } from "./battleHudTheme.ts";
+import {
+  BATTLE_POPUP_DURATION_MS,
+  computeBattlePopupAlpha,
+  computeBattlePopupScale,
+} from "./battlePopupMotion.ts";
 import { getPlaceholderSpriteYOffset } from "./placeholderSpriteAnim.ts";
 import { spriteDrawY } from "./spriteVisualDepth.ts";
 
-const POPUP_DURATION_MS = 800;
-export const COMBAT_REACTION_POPUP_DURATION_MS = POPUP_DURATION_MS;
-const FADE_IN_END = 0.15;
-const FADE_OUT_START = 0.5;
-const ZOOM_IN_END = 0.35;
-const START_SCALE = 0.4;
-const END_SCALE = 1;
+export const COMBAT_REACTION_POPUP_DURATION_MS = BATTLE_POPUP_DURATION_MS;
 const HEAD_LABEL_OFFSET_Y = -4;
 
 export type CombatReactionKind =
@@ -39,40 +38,6 @@ export function getCombatReactionText(kind: CombatReactionKind): string {
   return REACTION_TEXT[kind];
 }
 
-function easeOutCubic(t: number): number {
-  return 1 - (1 - t) ** 3;
-}
-
-export function computeCombatReactionPopupAlpha(progress: number): number {
-  if (progress < FADE_IN_END) {
-    return progress / FADE_IN_END;
-  }
-  if (progress > FADE_OUT_START) {
-    return 1 - (progress - FADE_OUT_START) / (1 - FADE_OUT_START);
-  }
-  return 1;
-}
-
-export function computeCombatReactionPopupScale(progress: number): number {
-  if (progress < ZOOM_IN_END) {
-    const t = easeOutCubic(progress / ZOOM_IN_END);
-    return START_SCALE + t * (END_SCALE - START_SCALE);
-  }
-  if (progress > FADE_OUT_START) {
-    const t = (progress - FADE_OUT_START) / (1 - FADE_OUT_START);
-    return END_SCALE + t * 0.15;
-  }
-  return END_SCALE;
-}
-
-function popupAlpha(progress: number): number {
-  return computeCombatReactionPopupAlpha(progress);
-}
-
-function popupScale(progress: number): number {
-  return computeCombatReactionPopupScale(progress);
-}
-
 interface ReactionEntry {
   targetId: string;
   kind: CombatReactionKind;
@@ -99,7 +64,9 @@ export class CombatReactionPopupManager {
     for (const popup of this.popups) {
       popup.elapsedMs += deltaMs;
     }
-    this.popups = this.popups.filter((p) => p.elapsedMs < POPUP_DURATION_MS);
+    this.popups = this.popups.filter(
+      (p) => p.elapsedMs < BATTLE_POPUP_DURATION_MS,
+    );
   }
 
   draw(
@@ -109,34 +76,34 @@ export class CombatReactionPopupManager {
     scale: number,
     theme: BattleHudTheme,
   ): void {
-    const fontSize = Math.max(8, Math.round(theme.headerFontSize)) + 4;
+    if (this.popups.length === 0) return;
+
+    ctx.font = `${theme.popupFontSize}px ${theme.popupFontFamily}`;
 
     for (const popup of this.popups) {
       const layout = layouts.find((l) => l.id === popup.targetId);
       if (!layout) continue;
 
-      const progress = popup.elapsedMs / POPUP_DURATION_MS;
-      const alpha = popupAlpha(progress);
-      const popupScaleValue = popupScale(progress);
+      const progress = popup.elapsedMs / BATTLE_POPUP_DURATION_MS;
+      const alpha = computeBattlePopupAlpha(progress);
+      const popupScaleValue = computeBattlePopupScale(progress);
       const bob = getPlaceholderSpriteYOffset(layout, scale);
       const centerX = layout.x + spriteSize / 2;
       const anchorY = spriteDrawY(layout) + bob + HEAD_LABEL_OFFSET_Y;
-
       const text = getCombatReactionText(popup.kind);
 
       ctx.save();
       ctx.translate(centerX, anchorY);
       ctx.scale(popupScaleValue, popupScaleValue);
       ctx.globalAlpha = alpha;
-      ctx.font = `bold ${fontSize}px ${theme.fontFamily}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "bottom";
       ctx.lineJoin = "round";
       ctx.miterLimit = 2;
-      ctx.strokeStyle = "#000000";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = theme.popupDamageStroke;
+      ctx.lineWidth = theme.popupOutlineWidth;
       ctx.strokeText(text, 0, 0);
-      ctx.fillStyle = theme.nameColor;
+      ctx.fillStyle = theme.popupDamageFill;
       ctx.fillText(text, 0, 0);
       ctx.restore();
     }
