@@ -52,6 +52,10 @@
   image-rendering: pixelated;
 }
 
+.game-term-panel-icon[hidden] {
+  display: none !important;
+}
+
 .game-term-panel-title {
   margin: 0;
   flex: 1 1 auto;

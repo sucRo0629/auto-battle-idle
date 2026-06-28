@@ -4,6 +4,7 @@ import {
   type StatusDisplayCategory,
   type StatusEffectBadgeDisplay,
 } from "../battle/statusEffectDisplay.ts";
+import { getStatusIconUrl } from "../render/StatusIconRegistry.ts";
 
 /** v1 display locale. Shape supports future `en` etc. */
 export type GameTermLocale = "ja";
@@ -499,6 +500,14 @@ export function resolveCompactStatusOverflowTooltipLabel(
 
 export function getGameTermEntry(id: GameTermId): GameTermEntry | undefined {
   return ENTRY_BY_ID.get(id);
+}
+
+/** 用語パネル見出し用。HUD PNG が登録されているときのみ URL を返す。 */
+export function resolveGameTermStatusIconUrl(
+  entry: GameTermEntry,
+): string | undefined {
+  if (!entry.statusCategory) return undefined;
+  return getStatusIconUrl(entry.statusCategory);
 }
 
 export function getGameTermIds(): GameTermId[] {

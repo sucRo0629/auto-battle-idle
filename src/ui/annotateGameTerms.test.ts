@@ -119,4 +119,21 @@ describe("gameTermGlossary locale shape", () => {
       expect(covered.has(category)).toBe(true);
     }
   });
+
+  it("returns status icon URL only when PNG is registered", async () => {
+    const { GAME_TERM_ENTRIES, resolveGameTermStatusIconUrl } = await import(
+      "./gameTermGlossary.ts"
+    );
+    const { hasStatusIcon } = await import("../render/StatusIconRegistry.ts");
+
+    const barrier = GAME_TERM_ENTRIES.find((entry) => entry.id === "barrier");
+    expect(barrier).toBeDefined();
+    expect(resolveGameTermStatusIconUrl(barrier!)).toBeUndefined();
+
+    const stun = GAME_TERM_ENTRIES.find((entry) => entry.id === "stun");
+    expect(stun).toBeDefined();
+    expect(stun!.statusCategory).toBe("stun");
+    expect(hasStatusIcon("stun")).toBe(true);
+    expect(resolveGameTermStatusIconUrl(stun!)).toBeTruthy();
+  });
 });

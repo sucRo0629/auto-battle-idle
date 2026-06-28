@@ -132,4 +132,20 @@ describe("GameTermPanel", () => {
       true,
     );
   });
+
+  it("shows status icon only when HUD PNG is registered", () => {
+    setupPanel();
+    const anchor = createAnchor("バリア");
+    panel.openFromTerm("barrier", anchor);
+
+    const iconEl = host.querySelector(
+      ".game-term-panel-icon",
+    ) as HTMLImageElement;
+    expect(iconEl.hidden).toBe(true);
+    expect(iconEl.hasAttribute("src")).toBe(false);
+
+    panel.openFromTerm("stun", createAnchor("スタン"));
+    expect(iconEl.hidden).toBe(false);
+    expect(iconEl.getAttribute("src")).toBeTruthy();
+  });
 });

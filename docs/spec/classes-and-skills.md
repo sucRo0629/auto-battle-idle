@@ -56,7 +56,7 @@
 | `title`           | `{ ja: "スタン", … }` — 用語パネル見出し                                                                                                                        |
 | `description`     | `{ ja: "…", … }` — パネル本文（1〜3 文の要約）                                                                                                                  |
 | `aliases`         | `{ ja: ["スタン"], … }` — 本文中でリンク化する表記。**長い語を先**にマッチ                                                                                      |
-| `statusCategory?` | 状態系のみ。[combat.md §ステータス効果](combat.md#ステータス効果) の `StatusDisplayCategory` と対応。HUD と同じ PNG（`src/assets/status-icons/`）をパネルに表示 |
+| `statusCategory?` | 状態系のみ。[combat.md §ステータス効果](combat.md#ステータス効果) の `StatusDisplayCategory` と対応。`StatusIconRegistry` に PNG が登録されているときのみ用語パネル見出しに表示 |
 
 **多言語:** v1 では i18n ライブラリは導入しない。型・データ形状だけ locale キーを持ち、将来 `en` 等を追加できるようにする。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。
 

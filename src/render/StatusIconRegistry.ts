@@ -151,6 +151,10 @@ export function getStatusIconUrl(
   return ICON_URLS[category];
 }
 
+export function hasStatusIcon(category: StatusDisplayCategory): boolean {
+  return getStatusIconUrl(category) !== undefined;
+}
+
 export function getStatusIconImage(
   category: StatusDisplayCategory
 ): HTMLImageElement | undefined {

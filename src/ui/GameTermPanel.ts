@@ -5,7 +5,7 @@ import {
   type GameTermId,
   type GameTermLocale,
 } from "./gameTermGlossary.ts";
-import { getStatusIconImage } from "../render/StatusIconRegistry.ts";
+import { resolveGameTermStatusIconUrl } from "./gameTermGlossary.ts";
 
 export interface GameTermPanelOptions {
   locale: GameTermLocale;
@@ -204,15 +204,12 @@ export class GameTermPanel {
     this.titleEl.id = `${this.panelId}-title`;
     this.root.setAttribute("aria-labelledby", this.titleEl.id);
 
-    if (entry.statusCategory) {
-      const icon = getStatusIconImage(entry.statusCategory);
-      if (icon) {
-        this.iconEl.src = icon.src;
-        this.iconEl.hidden = false;
-      } else {
-        this.iconEl.hidden = true;
-      }
+    const iconUrl = resolveGameTermStatusIconUrl(entry);
+    if (iconUrl) {
+      this.iconEl.src = iconUrl;
+      this.iconEl.hidden = false;
     } else {
+      this.iconEl.removeAttribute("src");
       this.iconEl.hidden = true;
     }
 
