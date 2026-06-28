@@ -11,7 +11,8 @@ export type GameTermLocale = "ja";
 export type GameTermId =
   | "barrier"
   | "wardBarrier"
-  | "mark"
+  | "windMark"
+  | "earthMark"
   | "arenaMark"
   | "block"
   | "stun"
@@ -75,13 +76,22 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     statusCategory: "wardBarrier",
   },
   {
-    id: "mark",
-    title: { ja: "印" },
+    id: "windMark",
+    title: { ja: "乾印" },
     description: {
-      ja: "印術師が付与するマーク。特定スキルや効果の対象指定・追加効果に使われる専用状態。",
+      ja: "印術師が Wind Branch 分岐で付与する印。拡散・変化・流動側。overlay ID は windMark。弩砲士・闘技士のマーク系とは別体系。",
     },
-    aliases: { ja: ["印"] },
-    statusCategory: "mark",
+    aliases: { ja: ["乾印"] },
+    statusCategory: "windMark",
+  },
+  {
+    id: "earthMark",
+    title: { ja: "坤印" },
+    description: {
+      ja: "印術師が Earth Branch 分岐で付与する印。集中・安定・収束側。overlay ID は earthMark。弩砲士・闘技士のマーク系とは別体系。",
+    },
+    aliases: { ja: ["坤印"] },
+    statusCategory: "earthMark",
   },
   {
     id: "arenaMark",

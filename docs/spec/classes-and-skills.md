@@ -66,8 +66,10 @@
 | ------------- | ------------------- | ---------------------------------------------------------------------------------------- |
 | `barrier`     | **バリア**          | `barrierHp` — HP より先に消費されるダメージ吸収（[combat.md §バリア](combat.md#バリア)） |
 | `wardBarrier` | **障壁**            | `wardBarrier` スタック — ダメージ軽減。バリアより先に消費（本書 結界師節）               |
-| `mark`        | **印**              | 印術師専用 Mark                                                                          |
-| `arenaMark`   | **闘技場の指名** 等 | 闘技士 `arenaDominance` 系。印（Mark）と混同しない                                       |
+| `windMark`    | **乾印**            | 印術師 Wind Branch 専用 overlay。拡散・変化・流動側（[§印術師](#印術師at_sigilist拡張)） |
+| `earthMark`   | **坤印**            | 印術師 Earth Branch 専用 overlay。集中・安定・収束側（同上）                             |
+| `ballistaMark`| **砲撃標的**        | 弩砲士専用。乾印・坤印と混同しない                                                       |
+| `arenaMark`   | **闘士の指名** 等   | 闘技士 `arenaDominance` 系。印術師の印と混同しない                                       |
 | `damageReduction` | **ダメージ軽減** | `damageTaken` stat の軽減 buff / パッシブ `damageReduction`。倍率 `<1` は `ダメージ軽減N%` と表記 |
 | `damageIncrease`  | **被ダメージ増加** | `damageTaken` stat の増加 debuff。倍率 `>1` は `被ダメージ増加N%` と表記 |
 
@@ -859,7 +861,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 
 **Active 参照:** Lv0 の `sp_cleric_active_1` は単体即時 heal + 短 HoT、`sp_cleric_active_2` は低 HP 味方向けの smart heal（`time` + `firePolicy: smart` + `fireConditions`）。旧 `sp_cleric_active_2`（広域治療）は `sp_cleric_active_3` として **Lv10 習得** に移した。Lv20 の `sp_cleric_active_4` は大きな欠損を即座に立て直す smart heal（被ダメ反応 trigger は将来ゲート。現行は A 案の待機型即応 heal）。
 
-**結界師（Wardweaver）参照:** 主責務は Recovery ではなく **Stability Control（崩壊前猶予）**。療養師と Lv0 で同等の崩壊対策を目指し、直接 heal は補助。用語: **バリア** = `barrierHp`（ダメージ先消耗シールド）、**障壁** = `wardBarrier` スタック（上位軽減・バリアより先に消費）、**印（Mark）** = 印術師専用（結界師と混同しない）。
+**結界師（Wardweaver）参照:** 主責務は Recovery ではなく **Stability Control（崩壊前猶予）**。療養師と Lv0 で同等の崩壊対策を目指し、直接 heal は補助。用語: **バリア** = `barrierHp`（ダメージ先消耗シールド）、**障壁** = `wardBarrier` スタック（上位軽減・バリアより先に消費）、**乾印 / 坤印** = 印術師専用（`windMark` / `earthMark`。結界師・弩砲士・闘技士のマーク系と混同しない）。
 
 | 枠             | 内容                                                                                       |
 | -------------- | ------------------------------------------------------------------------------------------ |
@@ -1304,7 +1306,7 @@ Hunter = poison Field（P2/A1）+ 任意 dot 延長・圧縮（A2/A3）+ 毒収�
 #### コンセプト
 
 対象の条件を読み取り、攻撃式・対象形状・副次効果をより有利な形へ**分岐**させる柔軟適応型キャスター。
-印は味方への付与ではなく、攻撃単位に組み込まれる条件式として扱う。
+乾印（`windMark`）と坤印（`earthMark`）は味方への付与ではなく、敵への overlay として Branch 分岐と連動する。
 
 #### 役割
 
@@ -1331,6 +1333,20 @@ Hunter = poison Field（P2/A1）+ 任意 dot 延長・圧縮（A2/A3）+ 毒収�
 #### 属性イメージ
 
 **風・地（乾坤）** — 風＝拡散・変化・流動、地＝集中・安定・収束。条件に応じて二方向へ分岐する柔軟性の象徴。
+
+#### 印（乾印・坤印）
+
+印術師専用の敵付着状態。**2 種のみ**とし、単一の汎用「印」は持たない。
+
+| overlay ID   | 日本語 | Branch       | イメージ               | 役割（設計）                                      |
+| ------------ | ------ | ------------ | ---------------------- | ------------------------------------------------- |
+| `windMark`   | 乾印   | Wind Branch  | 拡散・変化・流動       | 分岐側の攻撃効果に対応する印。付与・起爆の対象    |
+| `earthMark`  | 坤印   | Earth Branch | 集中・安定・収束       | 分岐側の攻撃効果に対応する印。付与・起爆の対象    |
+
+- Branch 分岐で選ばれた側に対応する印のみ付与する（Wind → 乾印、Earth → 坤印）
+- 主火力は **印の付与と起爆**。印は味方への buff ではなく、敵への debuff / overlay として扱う
+- 乾印と坤印は **別 overlay・別 HUD バッジ**（実装 Phase 7b 以降）
+- 弩砲士 `ballistaMark`・闘技士 `arenaMark` とは ID・ルールとも別体系（混同禁止表参照）
 
 ---
 
@@ -1419,12 +1435,12 @@ Conductor は自身でダメージを与えるキャスターではない。
 | classId        | 個性     | 設計の柱                                                 | 他系統との差分                                                                    |
 | -------------- | -------- | -------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `at_sorcerer`  | 純出力   | 安定 DPS・基準火力・マルチロック再配分                   | 条件分岐・領域再定義なし                                                          |
-| `at_sigilist`  | 条件適応 | Earth / Wind Branch + Mark 付与・起爆                    | 主火力は Mark 起爆。Earth / Wind は同格分岐                                       |
+| `at_sigilist`  | 条件適応 | Earth / Wind Branch + 乾印 / 坤印 付与・起爆             | 主火力は印起爆。Branch は同格分岐。印は `earthMark` / `windMark` の 2 種のみ     |
 | `at_conductor` | 構造操作 | 戦場 damage の観測・蓄積・法陣による集中 / 分散 / 再循環 | 自身 damage なし。軽減 / ATK/DEF buff ではなく routing / distribution / recycling |
 
 ### 未実装・TBD
 
-- 印術師（`at_sigilist`）: Earth / Wind Mark 系 effect、条件分岐 tooling、`data/skills/` への新 active 追加 — **Phase 8 以降**。旧 JSON active（連印 / 爆印）は廃棄済み
+- 印術師（`at_sigilist`）: 乾印（`windMark`）/ 坤印（`earthMark`）state / effect、Earth / Wind Branch 分岐 tooling、条件分岐 tooling、`data/skills/` への新 active 追加 — **Phase 7b / 8 以降**。旧 JSON active（連印 / 爆印）は廃棄済み
 - 法陣師（`at_conductor`）: damage reservoir、damage observation / concentration / distribution / recycling、地点指定範囲の combat 実装と `data/skills/` への反映 — **Phase 8 以降**。旧 `at_geomancer` ID・攻撃寄り active JSON は廃棄済み
 - 3 キャスター: Lv0 / Lv10 / Lv20 枝・属性（火 / 風地 / 水）と VFX の対応
 

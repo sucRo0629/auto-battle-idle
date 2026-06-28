@@ -179,7 +179,7 @@ remaining -= barrierDamage
 hp = max(0, hp - remaining)
 ```
 
-**障壁（wardBarrier）** — バリア（`barrierHp`）より上位のスタック資源。印（Mark）は印術師専用で別リソース。HUD は `barrierHp` とは別バッジ（`wardBarrier` アイコン + `stacks`、2 以上のみ数字表示）。`barrierDepletionHeal` / `barrierBreakRegen` の対象外（`barrierHp` 完全消失のみ）。
+**障壁（wardBarrier）** — バリア（`barrierHp`）より上位のスタック資源。印術師の **乾印**（`windMark`）/ **坤印**（`earthMark`）は別 overlay・別ルール（[classes-and-skills.md §印術師](classes-and-skills.md#印乾印坤印)）。HUD は `barrierHp` とは別バッジ（`wardBarrier` アイコン + `stacks`、2 以上のみ数字表示）。`barrierDepletionHeal` / `barrierBreakRegen` の対象外（`barrierHp` 完全消失のみ）。
 
 **パッシブ `barrierDepletionHeal`** — 味方 `barrierHp` が被ダメで完全消失したとき、パーティ内結界師（ATK 最大）が ATK 基準 instant heal を 1 回（味方ごと Wave 1 回・`barrierDepletionHealUsed`）。
 
@@ -325,7 +325,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 複数ステを異なる倍率/固定値で上げるパッシブ buff は `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1ステのみの場合は従来の `buffStat` + `buffMultiplier` / `buffFlatBonus` でも可（実装: `parseStatBuffModifiers`）。
 
-**HUD バッジ表示（Phase 4d）:** 同一 `StatusDisplayCategory` あたり **1 バッジ**（**20×20px** スロット）。buff / debuff / passive buff / passive debuff 用の **五角形背景 PNG**（20×20、スロットと同一、`src/assets/status-icons/pentagon-buff.png`, `pentagon-debuff.png`, `pentagon-passive-buff.png`, `pentagon-passive-debuff.png`）を重ね、その上に効果アイコン（`{category}.png`、**12×12**、スロット内上下左右中央）を重ねる。効果アイコンの位置は buff / debuff 共通。五角形のみ **buff 系を Y − 2px**、**debuff 系は Y 0**（スロット基準。debuff 形状の視覚バランス用）。行の描画高さは **24px**（スロット 20 + 上下パディング 2px ずつ、buff 五角形のはみ出し用）。残時間の暗化はオフスクリーン合成後に **alpha > 0 のピクセルのみ**上端から暗化（透明部分は変更しない）。累積数は 20×20 スロット枠基準。`isPassive` 由来（`effect.id` が `passive_` 始まり）は passive 用五角形 PNG を使用。アイコン縁は黒で統一（stat 系 hp/atk/def/reg/attackSpeed は **tint なし・白シルエット**、その他は既存カラー PNG + 黒縁）。`stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数（1 スタックは非表示）。残時間は同一カテゴリ内の最短 `remainingRatio` を上端からの暗化で表示。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride` / `poisonWeapon`（`src/assets/status-icons/{category}.png`）。`herbalPotency` / `blockResonance` / `mark` / `arenaMark` / `wardBarrier` も 1 アイコン + 累積数（2 以上のみ）。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。`hp` stat buff/debuff は `hp.png`（`baseMaxHp` 基準）。
+**HUD バッジ表示（Phase 4d）:** 同一 `StatusDisplayCategory` あたり **1 バッジ**（**20×20px** スロット）。buff / debuff / passive buff / passive debuff 用の **五角形背景 PNG**（20×20、スロットと同一、`src/assets/status-icons/pentagon-buff.png`, `pentagon-debuff.png`, `pentagon-passive-buff.png`, `pentagon-passive-debuff.png`）を重ね、その上に効果アイコン（`{category}.png`、**12×12**、スロット内上下左右中央）を重ねる。効果アイコンの位置は buff / debuff 共通。五角形のみ **buff 系を Y − 2px**、**debuff 系は Y 0**（スロット基準。debuff 形状の視覚バランス用）。行の描画高さは **24px**（スロット 20 + 上下パディング 2px ずつ、buff 五角形のはみ出し用）。残時間の暗化はオフスクリーン合成後に **alpha > 0 のピクセルのみ**上端から暗化（透明部分は変更しない）。累積数は 20×20 スロット枠基準。`isPassive` 由来（`effect.id` が `passive_` 始まり）は passive 用五角形 PNG を使用。アイコン縁は黒で統一（stat 系 hp/atk/def/reg/attackSpeed は **tint なし・白シルエット**、その他は既存カラー PNG + 黒縁）。`stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数（1 スタックは非表示）。残時間は同一カテゴリ内の最短 `remainingRatio` を上端からの暗化で表示。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride` / `poisonWeapon`（`src/assets/status-icons/{category}.png`）。`herbalPotency` / `blockResonance` / `windMark` / `earthMark`（印術師・Phase 7b 以降）/ `arenaMark` / `wardBarrier` も 1 アイコン + 累積数（2 以上のみ）。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。`hp` stat buff/debuff は `hp.png`（`baseMaxHp` 基準）。
 
 **簡易表示 vs 詳細表示:**
 
@@ -383,6 +383,15 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 - 自己: `damageTaken × lastStandRecoverySelfDamageTakenMultiplier` を `lastStandRecoveryDurationSec`
 - 前列味方: `damageTaken × lastStandRecoveryFrontAllyDamageTakenMultiplier` を同秒数
 - バトルイベント `lastStandRecovery` → ポップアップ「再起！」（鉄衛士 `invulnerable` の「無敵！」とは別）
+
+### 印術師の印（乾印・坤印）
+
+実装: **Phase 7b 以降**（設計正本: [classes-and-skills.md §印](classes-and-skills.md#印乾印坤印)）
+
+- 印術師（`at_sigilist`）が敵へ付与する overlay は **`windMark`（乾印）** と **`earthMark`（坤印）** の 2 種のみ
+- Earth / Wind Branch 分岐で選ばれた側に対応する印を付与（Wind → 乾印、Earth → 坤印）
+- 主火力は印の付与と起爆。乾印と坤印は別 overlay・別 HUD バッジ・別起爆ルールを持ちうる
+- `ballistaMark`（弩砲士）・`arenaMark`（闘技士）とは ID・ combat ルールとも独立
 
 ### 闘技士 v1 専用メカニクス
 

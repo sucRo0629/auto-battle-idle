@@ -422,9 +422,9 @@ describe('compact status badge selection', () => {
     const sorted = sortBadgesForCompactView([
       badge({ category: 'dot', kind: 'debuff' }),
       badge({ category: 'def', kind: 'debuff' }),
-      badge({ category: 'mark', kind: 'debuff' }),
+      badge({ category: 'windMark', kind: 'debuff' }),
     ]);
-    expect(sorted.map((entry) => entry.category)).toEqual(['def', 'dot', 'mark']);
+    expect(sorted.map((entry) => entry.category)).toEqual(['def', 'dot', 'windMark']);
   });
 
   it('puts damageIncrease debuff in tier 3 and damageReduction buff in tier 5', () => {
@@ -447,7 +447,7 @@ describe('compact status badge selection', () => {
       badge({ category: 'stun', kind: 'debuff' }),
       badge({ category: 'def', kind: 'debuff' }),
       badge({ category: 'dot', kind: 'debuff' }),
-      badge({ category: 'mark', kind: 'debuff' }),
+      badge({ category: 'windMark', kind: 'debuff' }),
       badge({ category: 'atk', kind: 'buff' }),
     ]);
     expect(selection.visible).toHaveLength(3);
@@ -465,7 +465,7 @@ describe('compact status badge selection', () => {
         badge({ category: 'stun', kind: 'debuff' }),
         badge({ category: 'def', kind: 'debuff' }),
         badge({ category: 'dot', kind: 'debuff' }),
-        badge({ category: 'mark', kind: 'debuff' }),
+        badge({ category: 'windMark', kind: 'debuff' }),
         badge({ category: 'atk', kind: 'buff' }),
       ],
       { visibleCount: 4 },

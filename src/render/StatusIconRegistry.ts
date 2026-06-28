@@ -21,7 +21,8 @@ import blockResonanceIconUrl from "../assets/status-icons/blockResonance.png";
 import blockResonanceStanceIconUrl from "../assets/status-icons/blockResonanceStance.png";
 import healReservationIconUrl from "../assets/status-icons/healReservation.png";
 import wardBarrierIconUrl from "../assets/status-icons/wardBarrier.png";
-import markIconUrl from "../assets/status-icons/mark.png";
+import windMarkIconUrl from "../assets/status-icons/windMark.png";
+import earthMarkIconUrl from "../assets/status-icons/earthMark.png";
 import arenaMarkIconUrl from "../assets/status-icons/arenaMark.png";
 import invulnerableIconUrl from "../assets/status-icons/invulnerable.png";
 import lastStandGutsIconUrl from "../assets/status-icons/lastStandGuts.png";
@@ -69,7 +70,8 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   arenaDominance: arenaDominanceIconUrl,
   duelistPride: duelistPrideIconUrl,
   wardBarrier: wardBarrierIconUrl,
-  mark: markIconUrl,
+  windMark: windMarkIconUrl,
+  earthMark: earthMarkIconUrl,
   arenaMark: arenaMarkIconUrl,
   seedFlame: seedFlameIconUrl,
   blazingFlame: blazingFlameIconUrl,

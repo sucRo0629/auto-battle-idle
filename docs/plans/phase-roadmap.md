@@ -132,11 +132,11 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ### スコープ外（Phase 3）— 独自システムクラス
 
-`at_sigilist`（印術師）と `at_conductor`（法陣師）は、Earth / Wind Mark 系・damage reservoir / routing 系など **戦闘エンジン拡張を伴う独自システム** を持つ。設計確定（[skill-finalization-table.md](./skill-finalization-table.md)）は Phase 3 で行うが、**combat 実装・`data/skills/` 投入・tooling 本番化は Phase 7b / 7c 以降** とする。
+`at_sigilist`（印術師）と `at_conductor`（法陣師）は、乾印 / 坤印（`windMark` / `earthMark`）・Earth / Wind Branch 分岐・damage reservoir / routing 系など **戦闘エンジン拡張を伴う独自システム** を持つ。設計確定（[skill-finalization-table.md](./skill-finalization-table.md)）は Phase 3 で行うが、**combat 実装・`data/skills/` 投入・tooling 本番化は Phase 7b / 7c 以降** とする。
 
 | classId        | Phase 3 で行うこと                                                     | Phase 7b / 7c 以降へ送ること                                                                            |
 | -------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `at_sigilist`  | 枠設計・Mark / Branch 仕様の docs 確定。現行 JSON active は廃棄済み    | Mark state / effect、conditionalEffect tooling、passive / active JSON                                   |
+| `at_sigilist`  | 枠設計・乾印 / 坤印 / Branch 仕様の docs 確定。現行 JSON active は廃棄済み | `windMark` / `earthMark` state / effect、conditionalEffect tooling、passive / active JSON |
 | `at_conductor` | 枠設計・蓄積プール / 法陣仕様の docs 確定。現行 JSON active は廃棄済み | damage reservoir、observation / concentration / distribution / recycling、非 damage basic、地点指定範囲 |
 
 Phase 3 の Caster pass は **`at_sorcerer` のみ** を対象とする。印術師・法陣師はクラスマスタ上は存在するが、スキル未実装のまま据え置き可。
@@ -482,8 +482,8 @@ Phase 3〜6 と Phase 9（および Phase 4 のクラスマスタ・**Phase 6 �
 
 ### 7b — 印術師の独自システム実装
 
-- Earth / Wind Mark、Branch 分岐、Mark 付与・起爆
-- Mark state / effect、conditionalEffect tooling、passive / active JSON
+- Earth / Wind Branch 分岐、乾印（`windMark`）/ 坤印（`earthMark`）付与・起爆
+- `windMark` / `earthMark` state / effect、conditionalEffect tooling、passive / active JSON
 - `SkillEditorStep`・validate・`formatSkillText`・関連 spec の同期
 
 ### 7c — 法陣師の独自システム実装
@@ -521,7 +521,7 @@ Phase 7 完了後に着手。クラスマスタ・数値チューニングが揃
 
 ### スコープ（概要）
 
-- Mark / Branch、damage reservoir / 法陣を前提にした問題生成
+- 乾印 / 坤印 / Branch、damage reservoir / 法陣を前提にした問題生成
 - 印術師・法陣師向けの世界補正・制約・報酬候補
 - ラン内 Mod と独自システム state の整合
 - Phase 9 のラン基盤への追加テスト

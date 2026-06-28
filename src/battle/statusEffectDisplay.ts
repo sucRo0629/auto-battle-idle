@@ -28,7 +28,8 @@ export type StatusDisplayCategory =
   | "lastStandGuts"
   | "arenaDominance"
   | "duelistPride"
-  | "mark"
+  | "windMark"
+  | "earthMark"
   | "arenaMark"
   | "seedFlame"
   | "blazingFlame"
@@ -57,7 +58,8 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "lastStandGuts",
   "arenaDominance",
   "duelistPride",
-  "mark",
+  "windMark",
+  "earthMark",
   "arenaMark",
   "seedFlame",
   "blazingFlame",
@@ -122,7 +124,8 @@ export interface StatusEffectBadgeDisplay {
 const STACK_OVERLAY_CATEGORIES = new Set<StatusEffect["overlay"]>([
   "herbalPotency",
   "blockResonance",
-  "mark",
+  "windMark",
+  "earthMark",
   "arenaMark",
   "wardBarrier",
 ]);
@@ -345,9 +348,16 @@ function statusEffectBadgeForOverlay(
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
       };
-    case "mark":
+    case "windMark":
       return {
-        category: "mark",
+        category: "windMark",
+        kind: "debuff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
+    case "earthMark":
+      return {
+        category: "earthMark",
         kind: "debuff",
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
@@ -556,8 +566,11 @@ function effectsForCategory(
   if (category === "blockResonance") {
     return effects.filter((effect) => effect.overlay === "blockResonance");
   }
-  if (category === "mark") {
-    return effects.filter((effect) => effect.overlay === "mark");
+  if (category === "windMark") {
+    return effects.filter((effect) => effect.overlay === "windMark");
+  }
+  if (category === "earthMark") {
+    return effects.filter((effect) => effect.overlay === "earthMark");
   }
   if (category === "blockResonanceStance") {
     return effects.filter(

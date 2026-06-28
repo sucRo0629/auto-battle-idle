@@ -239,8 +239,8 @@
 | 変化例 | 内容 |
 | ------ | ---- |
 | 条件判定追加 | `conditionalEffect` の分岐条件拡張 |
-| 印保持数増加 | Mark 等の同時保持上限 |
-| 印持続変更 | Mark / debuff の持続時間・ tick ルール |
+| 印保持数増加 | 乾印 / 坤印（`windMark` / `earthMark`）等の同時保持上限 |
+| 印持続変更 | 乾印 / 坤印 / debuff の持続時間・ tick ルール |
 
 ### 9.3 法陣師（`at_conductor`）— Flow / damage routing 軸
 

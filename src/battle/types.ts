@@ -350,6 +350,8 @@ export interface StatusEffect {
     | "lastStandGuts"
     | "arenaDominance"
     | "arenaMark"
+    | "windMark"
+    | "earthMark"
     | "ballistaMark"
     | "nextOutgoingDamage"
     | "allyAttackFollowUp"

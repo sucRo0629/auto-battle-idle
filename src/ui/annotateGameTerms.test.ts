@@ -44,10 +44,15 @@ describe("segmentTextByGameTerms", () => {
     ).toBe(true);
   });
 
-  it("separates mark and arenaMark ids", () => {
-    const markSegments = segmentTextByGameTerms("印を付与", "ja");
+  it("separates sigilist marks and arenaMark ids", () => {
+    const windSegments = segmentTextByGameTerms("乾印を付与", "ja");
     expect(
-      markSegments.some((s) => s.kind === "term" && s.termId === "mark")
+      windSegments.some((s) => s.kind === "term" && s.termId === "windMark")
+    ).toBe(true);
+
+    const earthSegments = segmentTextByGameTerms("坤印を起爆", "ja");
+    expect(
+      earthSegments.some((s) => s.kind === "term" && s.termId === "earthMark")
     ).toBe(true);
 
     const arenaSegments = segmentTextByGameTerms("闘士の指名", "ja");
