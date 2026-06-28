@@ -97,7 +97,7 @@ function formatStatFlatSuffix(flat: number): string {
 }
 
 function formatStatMultiplierSuffix(mul: number): string {
-  if (mul > 1) return formatPercent(mul - 1);
+  if (mul > 1) return `+${formatPercent(mul - 1)}`;
   if (mul < 1) return `-${formatPercent(1 - mul)}`;
   return "";
 }
@@ -314,24 +314,21 @@ function resolveActiveSkillDurationLabel(
   return formatSecondsLabel(maxSec);
 }
 
-function resolveActiveSkillLockLabel(def: ActiveSkillDef): string | undefined {
+function formatActiveSkillLockMetaPart(def: ActiveSkillDef): string | undefined {
   const hasConsume = def.effect.some(
     (effect) => effect.type === "blockResonanceConsume"
   );
   const useSec = def.useDurationSec ?? 0;
   if (useSec <= 0 && !hasConsume) return undefined;
 
-  let label: string;
-  if (hasConsume) {
-    const base = def.blockResonanceStanceDurationBaseSec ?? (useSec || 2);
-    label = `${base}+防壁スタック数秒`;
-  } else {
-    label = formatSecondsLabel(useSec);
-  }
+  const durationLabel = hasConsume
+    ? `${def.blockResonanceStanceDurationBaseSec ?? (useSec || 2)}+防壁スタック数秒`
+    : formatSecondsLabel(useSec);
+
   if (def.useDurationPauseApproach) {
-    label += "・移動停止";
+    return `硬直・移動停止${durationLabel}`;
   }
-  return label;
+  return `硬直${durationLabel}`;
 }
 
 function formatBlockResonanceConsumeSkillEffect(def: ActiveSkillDef): string {
@@ -1666,35 +1663,47 @@ function formatPassiveEffect(
         .filter(Boolean)
         .join(" / ");
     }
-    case "threatControl": {
-      const parts: string[] = [];
-      if (
-        def.onDamageTakenFlat !== undefined ||
-        def.onDamageTakenScale !== undefined ||
-        def.onBlockFlat !== undefined
-      ) {
-        parts.push("被ダメ・ブロック成功でヘイト上昇");
-      }
-      if (
-        def.threatDecayMultiplier !== undefined &&
-        def.threatDecayMultiplier < 1
-      ) {
-        parts.push("ヘイト減衰速度低下");
-      }
-      if (def.frontThreatFloor !== undefined) {
-        parts.push(`前列ヘイト下限${formatPercent(def.frontThreatFloor)}`);
-      }
-      if (
-        def.frontThreatDecayMultiplier !== undefined &&
-        def.frontThreatDecayMultiplier < 1
-      ) {
-        parts.push("前列ヘイト減衰速度低下");
-      }
-      return parts.length > 0 ? parts.join("、") : "ヘイト制御";
-    }
+    case "threatControl":
+      return formatThreatControlEffectParts(def).join("、");
     default:
       return effect;
   }
+}
+
+function formatThreatControlEffectParts(
+  def: PassiveSkillDef
+): string[] {
+  const parts: string[] = [];
+  if (
+    def.onDamageTakenFlat !== undefined ||
+    def.onDamageTakenScale !== undefined ||
+    def.onBlockFlat !== undefined
+  ) {
+    parts.push("被ダメ・ブロック成功でヘイト上昇");
+  }
+  if (
+    def.threatDecayMultiplier !== undefined &&
+    def.threatDecayMultiplier < 1
+  ) {
+    parts.push("ヘイト減衰速度低下");
+  }
+  if (def.frontThreatFloor !== undefined) {
+    parts.push(`前列ヘイト下限${formatPercent(def.frontThreatFloor)}`);
+  }
+  if (
+    def.frontThreatDecayMultiplier !== undefined &&
+    def.frontThreatDecayMultiplier < 1
+  ) {
+    parts.push("前列ヘイト減衰速度低下");
+  }
+  return parts.length > 0 ? parts : ["ヘイト制御"];
+}
+
+function formatPassiveSkillEffectLines(def: PassiveSkillDef): string[] {
+  if (def.effect === "threatControl") {
+    return formatThreatControlEffectParts(def);
+  }
+  return [formatPassiveEffect(def.effect, def)];
 }
 
 export type SkillCardLocale = "ja";
@@ -1719,9 +1728,9 @@ function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
     parts.push(`持続：${duration}`);
   }
 
-  const lock = resolveActiveSkillLockLabel(def);
+  const lock = formatActiveSkillLockMetaPart(def);
   if (lock) {
-    parts.push(`硬直${lock}`);
+    parts.push(lock);
   }
 
   if ((def.firePolicy ?? "immediate") === "smart") {
@@ -1790,7 +1799,7 @@ export function formatSkillCardLines(
 
   return {
     metaLine: formatPassiveSkillMetaLine(def),
-    effectLines: [formatPassiveEffect(def.effect, def)],
+    effectLines: formatPassiveSkillEffectLines(def),
   };
 }
 

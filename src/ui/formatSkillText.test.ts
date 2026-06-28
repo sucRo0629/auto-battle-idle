@@ -175,7 +175,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatActiveDescription(def);
     expect(desc).toContain('CD：被撃10');
-    expect(desc).toContain('(防御力+10)80%');
+    expect(desc).toContain('(防御力+10)+80%');
     expect(desc).toContain('HoT maxHp×1%');
   });
 
@@ -233,7 +233,7 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('CD：12秒');
     expect(desc).toContain('持続：6秒');
     expect(desc).toContain('硬直6秒');
-    expect(desc).toContain('防御力50%');
+    expect(desc).toContain('防御力+50%');
   });
 
   it('formats pierce damage', () => {
@@ -448,17 +448,17 @@ describe('formatActiveDescription', () => {
     expect(a4).toBeDefined();
 
     expect(formatActiveDescription(a1!)).toBe(
-      'CD：8秒 / 持続：5秒 / 防御力20% /',
+      'CD：8秒 / 持続：5秒 / 防御力+20% /',
     );
     expect(formatActiveDescription(a2!)).toBe(
-      'CD：被撃8 / 持続：5秒 / 硬直5秒・移動停止 / 防御力25%、ブロック率+50% /',
+      'CD：被撃8 / 持続：5秒 / 硬直・移動停止5秒 / 防御力+25%、ブロック率+50% /',
     );
     expect(formatActiveDescription(a3!)).toBe(
       'CD：12秒 / 持続：5秒 / 条件：自HP≤80% / ダメージ軽減25% /',
     );
     expect(formatActiveDescription(a4!)).toContain('CD：被撃12');
     expect(formatActiveDescription(a4!)).toContain('持続：2+防壁スタック数秒');
-    expect(formatActiveDescription(a4!)).toContain('硬直2+防壁スタック数秒・移動停止');
+    expect(formatActiveDescription(a4!)).toContain('硬直・移動停止2+防壁スタック数秒');
     expect(formatActiveDescription(a4!)).toContain('条件：防壁≥1');
     expect(formatActiveDescription(a4!)).toContain('城塞の構え');
   });
@@ -518,14 +518,22 @@ describe('formatActiveDescription', () => {
 
     const card1 = formatSkillCardLines(a1!, { locale: 'ja' });
     expect(card1.metaLine).toBe('CD：8秒 / 持続：5秒');
-    expect(card1.effectLines).toEqual(['防御力20%']);
+    expect(card1.effectLines).toEqual(['防御力+20%']);
     expect(card1.effectLines.length).toBe(1);
 
     const card2 = formatSkillCardLines(a2!, { locale: 'ja' });
-    expect(card2.metaLine).toBe('CD：被撃8 / 持続：5秒 / 硬直5秒・移動停止');
+    expect(card2.metaLine).toBe('CD：被撃8 / 持続：5秒 / 硬直・移動停止5秒');
     expect(card2.effectLines.length).toBe(2);
-    expect(card2.effectLines[0]).toContain('防御力25%');
+    expect(card2.effectLines[0]).toContain('防御力+25%');
     expect(card2.effectLines[1]).toContain('ブロック率+50%');
+
+    const p2 = gameData.skillRegistry.passives.df_guardian_passive_2;
+    expect(p2).toBeDefined();
+    const wallCard = formatSkillCardLines(p2!, { locale: 'ja' });
+    expect(wallCard.effectLines).toEqual([
+      '被ダメ・ブロック成功でヘイト上昇',
+      'ヘイト減衰速度低下',
+    ]);
   });
 
   it('formatSkillCardLines keeps blockResonance passive as one effect line', async () => {

@@ -554,7 +554,7 @@ export class SkillMenuPanel {
     }
 
     for (let slotIndex = unlockedSlots; slotIndex < MAX_ACTIVE_SLOTS; slotIndex++) {
-      list.appendChild(this.createLockedSlotCard(slotIndex));
+      list.appendChild(this.createLockedSlotCard(slotIndex, preset, "active"));
     }
 
     section.append(heading, list);
@@ -594,7 +594,7 @@ export class SkillMenuPanel {
     }
 
     for (let slotIndex = unlockedSlots; slotIndex < MAX_ACTIVE_SLOTS; slotIndex++) {
-      list.appendChild(this.createLockedSlotCard(slotIndex));
+      list.appendChild(this.createLockedSlotCard(slotIndex, preset, "passive"));
     }
 
     section.append(heading, list);
@@ -673,7 +673,11 @@ export class SkillMenuPanel {
     return card;
   }
 
-  private createLockedSlotCard(slotIndex: number): HTMLElement {
+  private createLockedSlotCard(
+    slotIndex: number,
+    preset: ClassPreset,
+    kind: "active" | "passive"
+  ): HTMLElement {
     const card = document.createElement("article");
     card.className =
       "skill-menu-skill-view-card skill-menu-skill-view-card--locked";
@@ -682,14 +686,43 @@ export class SkillMenuPanel {
 
     const footer = document.createElement("div");
     footer.className = "skill-menu-skill-view-card-footer";
-    footer.textContent = this.formatLockedSlotFooter(slotIndex);
+    footer.textContent = this.formatLockedSlotFooter(slotIndex, preset, kind);
     card.appendChild(footer);
     return card;
   }
 
-  private formatLockedSlotFooter(slotIndex: number): string {
+  private formatLockedSlotFooter(
+    slotIndex: number,
+    preset: ClassPreset,
+    kind: "active" | "passive"
+  ): string {
     const unlockLevel = slotIndex < 2 ? 0 : slotIndex === 2 ? 10 : 20;
-    return `プレイヤー Lv${unlockLevel} で追加`;
+    const unlockText = `プレイヤー Lv${unlockLevel} で追加`;
+    const skillName = this.resolveLockedSlotSkillName(preset, slotIndex, kind);
+    return skillName ? `${skillName}　${unlockText}` : unlockText;
+  }
+
+  private resolveLockedSlotSkillName(
+    preset: ClassPreset,
+    slotIndex: number,
+    kind: "active" | "passive"
+  ): string | undefined {
+    const atMaxLevel = resolveLearnedSkills(
+      preset,
+      20,
+      this.gameData.skillRegistry
+    );
+    const skillIds =
+      kind === "passive"
+        ? atMaxLevel.learnedPassiveIds
+        : atMaxLevel.learnedActiveIds;
+    const skillId = skillIds[slotIndex];
+    if (!skillId) return undefined;
+    const def =
+      kind === "passive"
+        ? this.gameData.skillRegistry.passives[skillId]
+        : this.gameData.skillRegistry.actives[skillId];
+    return def?.name;
   }
 
   private getSkillUnlockLevel(
