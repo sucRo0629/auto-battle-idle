@@ -29,6 +29,8 @@ import {
   TARGET_STAT_ORDER_LABELS,
   TARGET_STAT_OPTIONS,
   TARGET_STAT_ORDER_OPTIONS,
+  SPECIAL_EFFECT_APPLY_TO_LABELS,
+  SPECIAL_EFFECT_APPLY_TO_OPTIONS,
 } from "../battle/data/gameDataSchema.ts";
 import { GLOBAL_MAX_CHARGES_CAP } from "../battle/skills/chargeBank.ts";
 import {
@@ -82,7 +84,6 @@ import type {
   PassiveSkillDef,
   ResourceAmountSpec,
   SkillEffectDef,
-  SpecialEffectApplyTo,
   StatusEffectStat,
   TargetSpec,
 } from "../battle/types.ts";
@@ -1965,13 +1966,12 @@ const PASSIVE_DEBUFF_SUB_KIND_OPTIONS: Array<{
   { value: "stun", label: "スタン" },
 ];
 
-const PASSIVE_SPECIAL_APPLY_TO_OPTIONS: Array<{
-  value: SpecialEffectApplyTo;
-  label: string;
-}> = [
-  { value: "damage", label: "ダメージ" },
-  { value: "heal", label: "回復" },
-];
+const PASSIVE_SPECIAL_APPLY_TO_OPTIONS = SPECIAL_EFFECT_APPLY_TO_OPTIONS.map(
+  (value) => ({
+    value,
+    label: SPECIAL_EFFECT_APPLY_TO_LABELS[value],
+  })
+);
 
 export function appendPassiveBuffFields(
   parent: HTMLElement,
