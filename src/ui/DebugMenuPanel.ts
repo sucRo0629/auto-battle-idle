@@ -184,6 +184,7 @@ export class DebugMenuPanel {
   }
 
   private createPlayerLevelRow(currentLevel: number): HTMLElement {
+    const presetLevels = [1, 10, 20];
     const levelRow = document.createElement('div');
     levelRow.className = 'debug-menu-level-row';
 
@@ -199,25 +200,53 @@ export class DebugMenuPanel {
     levelInput.step = '1';
     levelInput.value = String(currentLevel);
 
-    const applyLevel = (): void => {
-      const parsed = Number.parseInt(levelInput.value, 10);
-      if (Number.isNaN(parsed)) {
-        levelInput.value = String(currentLevel);
-        return;
-      }
-      const clamped = Math.max(1, Math.min(99, parsed));
+    const applyLevel = (level: number): void => {
+      const clamped = Math.max(1, Math.min(99, Math.floor(level)));
       levelInput.value = String(clamped);
       if (clamped === currentLevel) return;
       this.controls.onPlayerLevelChange(clamped);
     };
 
-    levelInput.addEventListener('change', applyLevel);
+    levelInput.addEventListener('change', () => {
+      const parsed = Number.parseInt(levelInput.value, 10);
+      if (Number.isNaN(parsed)) {
+        levelInput.value = String(currentLevel);
+        return;
+      }
+      applyLevel(parsed);
+    });
     levelInput.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
-        applyLevel();
+        levelInput.dispatchEvent(new Event('change'));
         levelInput.blur();
       }
+    });
+
+    const presetSelect = document.createElement('select');
+    presetSelect.className = 'debug-menu-level-select';
+    presetSelect.setAttribute('aria-label', 'プレイヤーレベル プリセット');
+
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.textContent = '—';
+    presetSelect.appendChild(placeholderOption);
+
+    for (const preset of presetLevels) {
+      const option = document.createElement('option');
+      option.value = String(preset);
+      option.textContent = `Lv ${preset}`;
+      presetSelect.appendChild(option);
+    }
+
+    presetSelect.value = presetLevels.includes(currentLevel)
+      ? String(currentLevel)
+      : '';
+
+    presetSelect.addEventListener('change', () => {
+      const selected = presetSelect.value;
+      if (selected === '') return;
+      applyLevel(Number.parseInt(selected, 10));
     });
 
     const decButton = document.createElement('button');
@@ -226,7 +255,7 @@ export class DebugMenuPanel {
     decButton.textContent = '−';
     decButton.setAttribute('aria-label', 'プレイヤーレベルを下げる');
     decButton.addEventListener('click', () => {
-      this.controls.onPlayerLevelChange(Math.max(1, currentLevel - 1));
+      applyLevel(currentLevel - 1);
     });
 
     const incButton = document.createElement('button');
@@ -235,11 +264,11 @@ export class DebugMenuPanel {
     incButton.textContent = '+';
     incButton.setAttribute('aria-label', 'プレイヤーレベルを上げる');
     incButton.addEventListener('click', () => {
-      this.controls.onPlayerLevelChange(Math.min(99, currentLevel + 1));
+      applyLevel(currentLevel + 1);
     });
 
     levelLabel.appendChild(levelInput);
-    levelRow.append(levelLabel, decButton, incButton);
+    levelRow.append(levelLabel, presetSelect, decButton, incButton);
     return levelRow;
   }
 

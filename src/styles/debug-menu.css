@@ -93,6 +93,15 @@
   outline: 1px solid #4a90d9;
 }
 
+.debug-menu-level-select {
+  padding: 2px 4px;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 4px;
+  background: #0f0f1a;
+  color: var(--app-text);
+  font: inherit;
+}
+
 .debug-menu-level-button {
   display: inline-flex;
   align-items: center;
