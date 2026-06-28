@@ -4,7 +4,7 @@
 
 - **[Plans](plans/README.md)** — 開発ロードマップ（[フェーズ詳細](plans/phase-roadmap.md)）
 - **[Spec](spec/README.md)** — ゲーム設計リファレンス（ステータス・戦闘・クラス・進行）
-- **[Design Philosophy](design-philosophy.md)** — ゲーム全体の評価軸と設計判断基準
+- **[Design Philosophy](design-philosophy.md)** — コアコンセプト（編成への思考圧縮）、評価軸、設計判断基準
 - **[Combat Architecture](combat-architecture.md)** — 戦闘システム全体の上位構造（Kill / Flow / Survival）
 - **[System Mechanics](system-mechanics.md)** — 複数クラスが共有する戦闘メカニクス
 - **[Class Philosophy](class-philosophy.md)** — 職群の基礎 / 発展 / 変則と 3 職構成の設計思想
@@ -46,7 +46,7 @@
 | トピック           | ファイル                                                 |
 | ------------------ | -------------------------------------------------------- |
 | フェーズ状況       | [plans/phase-roadmap.md](plans/phase-roadmap.md)         |
-| ゲーム全体哲学     | [design-philosophy.md](design-philosophy.md)             |
+| コアコンセプト・設計哲学 | [design-philosophy.md](design-philosophy.md)         |
 | 戦闘アーキテクチャ | [combat-architecture.md](combat-architecture.md)         |
 | 共通戦闘メカニクス | [system-mechanics.md](system-mechanics.md)               |
 | 職群設計思想       | [class-philosophy.md](class-philosophy.md)               |
