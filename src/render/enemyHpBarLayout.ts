@@ -26,16 +26,25 @@ export function defaultEnemyHpBarTop(
   return spriteY + spriteH + ENEMY_HP_BAR_BELOW_SPRITE * scale;
 }
 
+export function enemyHpBarLeft(
+  spriteX: number,
+  scale: number,
+  spriteSize: number,
+): number {
+  const spriteW = spriteSize * scale;
+  const barW = ENEMY_HP_BAR_W * scale;
+  return spriteX + (spriteW - barW) / 2;
+}
+
 export function enemyHpBarRect(
   spriteX: number,
   barTop: number,
   scale: number,
   spriteSize: number
 ): HpBarRect {
-  const spriteW = spriteSize * scale;
   const barW = ENEMY_HP_BAR_W * scale;
   const barH = ENEMY_HP_BAR_H * scale;
-  const left = spriteX + (spriteW - barW) / 2;
+  const left = enemyHpBarLeft(spriteX, scale, spriteSize);
   return {
     left,
     top: barTop,

@@ -31,6 +31,7 @@ import seedFlameIconUrl from "../assets/status-icons/seedFlame.png";
 import blazingFlameIconUrl from "../assets/status-icons/blazingFlame.png";
 import ballistaMarkIconUrl from "../assets/status-icons/ballistaMark.png";
 import allyAttackFollowUpIconUrl from "../assets/status-icons/allyAttackFollowUp.png";
+import poisonWeaponIconUrl from "../assets/status-icons/poisonWeapon.png";
 import nextOutgoingDamageIconUrl from "../assets/status-icons/nextOutgoingDamage.png";
 import pentagonBuffUrl from "../assets/status-icons/pentagon-buff.png";
 import pentagonDebuffUrl from "../assets/status-icons/pentagon-debuff.png";
@@ -74,6 +75,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   blazingFlame: blazingFlameIconUrl,
   ballistaMark: ballistaMarkIconUrl,
   allyAttackFollowUp: allyAttackFollowUpIconUrl,
+  poisonWeapon: poisonWeaponIconUrl,
   nextOutgoingDamage: nextOutgoingDamageIconUrl,
 };
 

@@ -3,11 +3,16 @@ import { loadGameData } from '../battle/data/loadGameData.ts';
 import { getClassSkillIds } from './skillUnlocks.ts';
 import { expectUnlockTiersMatchGameData } from '../test/gameDataResilience.ts';
 import {
+  collectAllyBasicAttackDotProcs,
+  syncPoisonWeaponAuras,
+} from '../battle/allyBasicAttackDotProc.ts';
+import {
   compressDotEffect,
   extendDotEffect,
   harvestDotRemainingDamage,
   hasActiveDot,
 } from '../battle/dotMechanics.ts';
+import { collectStatusEffectBadgeDisplays } from '../battle/statusEffectDisplay.ts';
 import { resolvePartyFinisherDamageMultiplier } from '../battle/hunterPassives.ts';
 import { mockCombatant } from '../battle/testFixtures.ts';
 import type { CombatantState, StatusEffect } from '../battle/types.ts';
@@ -156,5 +161,44 @@ describe('at_hunter combat helpers', () => {
       harvestDotRemainingDamage(hunter, enemy, passives, 0.1),
     ).toBeGreaterThan(0);
     expect(enemy.statusEffects.length).toBe(before);
+  });
+
+  it('syncPoisonWeaponAuras shows passive poisonWeapon badge on allies', () => {
+    const hunter = mockHunter('h3', ['at_hunter_passive_2']);
+    const ally = mockHunter('a3');
+    syncPoisonWeaponAuras([hunter, ally], passives);
+
+    for (const unit of [hunter, ally]) {
+      expect(
+        unit.statusEffects.some((effect) => effect.overlay === 'poisonWeapon'),
+      ).toBe(true);
+    }
+
+    const badges = collectStatusEffectBadgeDisplays(hunter.statusEffects, {
+      baseMaxHp: 100,
+      atk: 30,
+      def: 10,
+      reg: 0,
+    });
+    expect(badges.some((badge) => badge.category === 'poisonWeapon')).toBe(
+      true,
+    );
+    expect(
+      badges.find((badge) => badge.category === 'poisonWeapon')?.isPassive,
+    ).toBe(true);
+
+    hunter.isAlive = false;
+    syncPoisonWeaponAuras([hunter, ally], passives);
+    expect(ally.statusEffects.some((e) => e.overlay === 'poisonWeapon')).toBe(
+      false,
+    );
+  });
+
+  it('collectAllyBasicAttackDotProcs gathers hunter P2 config', () => {
+    const hunter = mockHunter('h4', ['at_hunter_passive_2']);
+    const configs = collectAllyBasicAttackDotProcs([hunter], passives);
+    expect(configs).toHaveLength(1);
+    expect(configs[0]?.passiveId).toBe('at_hunter_passive_2');
+    expect(configs[0]?.chance).toBe(0.2);
   });
 });

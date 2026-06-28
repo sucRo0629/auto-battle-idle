@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   computeEnemyHpBarTops,
   defaultEnemyHpBarTop,
+  enemyHpBarLeft,
   ENEMY_HP_BAR_STACK_OVERLAP,
+  ENEMY_HP_BAR_W,
 } from './enemyHpBarLayout.ts';
 
 describe('computeEnemyHpBarTops', () => {
@@ -28,5 +30,12 @@ describe('computeEnemyHpBarTops', () => {
       ENEMY_HP_BAR_STACK_OVERLAP * scale,
       0,
     );
+  });
+});
+
+describe('enemyHpBarLeft', () => {
+  it('aligns hp bar left edge within the sprite footprint', () => {
+    expect(enemyHpBarLeft(100, 1, 48)).toBe(100 + (48 - ENEMY_HP_BAR_W) / 2);
+    expect(enemyHpBarLeft(100, 1, 64)).toBe(100 + (64 - ENEMY_HP_BAR_W) / 2);
   });
 });

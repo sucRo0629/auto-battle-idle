@@ -39,6 +39,7 @@ import { DamagePopupManager } from "./DamagePopup.ts";
 import {
   computeEnemyHpBarTops,
   defaultEnemyHpBarTop,
+  enemyHpBarLeft,
   ENEMY_HP_BAR_H,
   ENEMY_HP_BAR_W,
 } from "./enemyHpBarLayout.ts";
@@ -49,9 +50,6 @@ import {
 } from "./statusBadgeLayout.ts";
 import {
   drawCompactStatusBadgeRow,
-  FIELD_ENEMY_STACK_LABEL_OUTLINE_PX,
-  FIELD_ENEMY_STACK_LABEL_SLOT_PX,
-  FIELD_ENEMY_STATUS_BADGE_ICON_SIZE,
   measureCompactStatusBadgeRow,
   statusBadgeOutlinePad,
 } from "./statusBadgeRenderer.ts";
@@ -729,10 +727,9 @@ export class BattleCanvas implements IBattleRenderer {
     barTop?: number
   ): void {
     const { ctx } = this;
-    const spriteW = SPRITE_SIZE * scale;
     const barW = ENEMY_HP_BAR_W * scale;
     const barH = ENEMY_HP_BAR_H * scale;
-    const x = spriteX + (spriteW - barW) / 2;
+    const x = enemyHpBarLeft(spriteX, scale, SPRITE_SIZE);
     const y = barTop ?? defaultEnemyHpBarTop(spriteY, scale, SPRITE_SIZE);
 
     ctx.fillStyle = this.theme.barTrack;
@@ -757,7 +754,7 @@ export class BattleCanvas implements IBattleRenderer {
   }
 
   private drawStatusBadges(scale: number): void {
-    const enemyIconSize = FIELD_ENEMY_STATUS_BADGE_ICON_SIZE;
+    const enemyIconSize = this.theme.statusBadgeIconSize;
     const enemyBarTops = computeEnemyHpBarTops(
       this.layouts
         .filter((layout) => layout.isEnemy && layout.isAlive)
@@ -824,19 +821,11 @@ export class BattleCanvas implements IBattleRenderer {
       const top = badgeTops.get(layout.id);
       if (!compact || top === undefined) continue;
 
-      const badgeLayout = measureCompactStatusBadgeRow(
-        scale,
-        enemyIconSize,
-        this.theme.statusIconOutlineWidth,
-        this.theme.statusBadgeOverlap,
-      );
       const outlinePad = statusBadgeOutlinePad(
         this.theme.statusIconOutlineWidth,
         scale,
       );
-      const spriteW = SPRITE_SIZE * scale;
-      const rowWidth = badgeLayout.totalWidth + outlinePad * 2;
-      const left = layout.x + (spriteW - rowWidth) / 2 + outlinePad;
+      const left = enemyHpBarLeft(layout.x, scale, SPRITE_SIZE) + outlinePad;
 
       drawCompactStatusBadgeRow(
         this.ctx,
@@ -852,8 +841,6 @@ export class BattleCanvas implements IBattleRenderer {
           iconOutlineColor: this.theme.statusIconOutlineColor,
           iconOutlineWidth: this.theme.statusIconOutlineWidth,
           iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
-          stackLabelSlotPx: FIELD_ENEMY_STACK_LABEL_SLOT_PX,
-          stackLabelOutlinePx: FIELD_ENEMY_STACK_LABEL_OUTLINE_PX,
           resolveIconFallbackColor: (category) =>
             resolveStatusIconFallbackColor(category, this.theme),
         },

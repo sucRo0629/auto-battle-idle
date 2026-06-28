@@ -321,6 +321,7 @@ describe('statusEffectDisplay', () => {
       ['duelistPride', 'duelistPride', 'debuff'],
       ['ballistaMark', 'ballistaMark', 'debuff'],
       ['allyAttackFollowUp', 'allyAttackFollowUp', 'buff'],
+      ['poisonWeapon', 'poisonWeapon', 'buff'],
       ['nextOutgoingDamage', 'nextOutgoingDamage', 'buff'],
     ] as const;
 

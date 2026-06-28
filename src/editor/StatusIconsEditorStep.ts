@@ -180,7 +180,7 @@ export class StatusIconsEditorStep {
     const intro = createEl(
       'p',
       'editor-subtitle status-icons-preview-intro',
-      'src/assets/status-icons/*.png の生 PNG と、戦闘 HUD（×1）と同じ statusBadgeRenderer 描画を並べます。バッジは 20×20px スロット（行高 24px、五角形 20×20 + 効果アイコン 12×12 中央）。buff 五角形は上 2px、debuff は下 2px。pentagon-*.png / {category}.png を差し替えてください。',
+      'src/assets/status-icons/*.png の生 PNG と、Party HUD / 敵 HP バー上（×1）と同じ statusBadgeRenderer 描画を並べます。バッジは 20×20px スロット（行高 24px、五角形 20×20 + 効果アイコン 12×12 中央）。buff 五角形は上 2px、debuff は Y 0。pentagon-*.png / {category}.png を差し替えてください。',
     );
     this.host.appendChild(intro);
 
@@ -250,7 +250,6 @@ export class StatusIconsEditorStep {
 
   private renderPentagonGrid(): void {
     if (!this.pentagonGrid) return;
-    const hudTheme = readBattleHudTheme(this.themeHost);
     const size = STATUS_BADGE_PENTAGON_PX * this.scale;
     this.pentagonGrid.replaceChildren();
 

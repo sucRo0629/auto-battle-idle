@@ -353,6 +353,7 @@ export interface StatusEffect {
     | "ballistaMark"
     | "nextOutgoingDamage"
     | "allyAttackFollowUp"
+    | "poisonWeapon"
     | "duelistPride";
   /** damageDelay overlay: 後払いにする被ダメ割合（0.5 = 50%） */
   ratio?: number;

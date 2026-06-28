@@ -45,6 +45,7 @@ export type GameTermId =
   | "blazingFlame"
   | "ballistaMark"
   | "allyAttackFollowUp"
+  | "poisonWeapon"
   | "nextOutgoingDamage";
 
 export interface GameTermEntry {
@@ -378,6 +379,15 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     },
     aliases: { ja: ["追撃状態", "追撃"] },
     statusCategory: "allyAttackFollowUp",
+  },
+  {
+    id: "poisonWeapon",
+    title: { ja: "毒の武器" },
+    description: {
+      ja: "狩猟士 P2 パッシブ。味方の物理 basic 命中成功時、確率で poison dot を付与するパーティオーラ。",
+    },
+    aliases: { ja: ["毒の武器"] },
+    statusCategory: "poisonWeapon",
   },
   {
     id: "nextOutgoingDamage",

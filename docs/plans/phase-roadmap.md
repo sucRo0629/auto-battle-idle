@@ -259,7 +259,7 @@ data/
 | スタック表示         | `stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数。**1 スタックは非表示**                                                                        |
 | 残時間               | 同一カテゴリ内の **最短** `remainingRatio` を、上端からの暗化オーバーレイで表示（現行方式）                                                                          |
 | DoT ポップアップ     | `dotFlavor: bleed` / 未指定 generic dot → **赤**。`dotFlavor: poison` → **紫**（状態バッジの debuff 五角形は赤のまま）                                               |
-| 簡易表示             | Party HUD: **4 +N**（計 5 スロット・全幅バッジ行・20px）。敵 HP バー上: **3 +N**（計 4 スロット・14px）。tier 優先度は [combat.md](../spec/combat.md#ステータス効果) |
+| 簡易表示             | Party HUD: **4 +N**（計 5 スロット・全幅バッジ行・20px）。敵 HP バー上: **3 +N**（計 4 スロット・20px）。tier 優先度は [combat.md](../spec/combat.md#ステータス効果) |
 | Party HUD レイアウト | 上段: `displayName` + バッジ行（全幅）。下段: 24px クラスアイコン + HP/リキャスト（アイコン下端 = バー列下端）                                                       |
 
 **実装タッチポイント（HUD）:** `statusEffectDisplay.ts`（`selectCompactStatusBadges` 等）, `statusBadgeRenderer.ts`, `PartyHudPanel`, `BattleCanvas`, `battle-view.css` / `battleHudTheme.ts`, `DamagePopup.ts`（DoT tick に `dotFlavor` 伝播）。**HUD 簡易/詳細分割 — 実装済み（2026-06）。** 旧「4 個折り返し」は廃止。

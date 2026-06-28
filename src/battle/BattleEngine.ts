@@ -100,6 +100,7 @@ import {
   tickBlockResonanceDecay,
 } from "./blockResonance.ts";
 import { syncFrontBlockAuras } from "./frontBlockAura.ts";
+import { syncPoisonWeaponAuras } from "./allyBasicAttackDotProc.ts";
 import { mitigateIncomingDamage } from "./incomingDamageMitigation.ts";
 import { syncBloodlustDuelistAuras } from "./bloodlustDuelist.ts";
 import { syncDuelistPrideAuras } from "./duelistPride.ts";
@@ -723,6 +724,7 @@ export class BattleEngine {
     syncDamageReductionAuras(this.players, this.enemies, passives, this.gameData);
     syncFrontThreatControlAuras(this.players, passives);
     syncFrontBlockAuras(this.players, passives);
+    syncPoisonWeaponAuras(this.players, passives);
     syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
     syncBloodlustDuelistAuras(
       [...this.players, ...this.enemies],

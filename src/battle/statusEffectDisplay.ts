@@ -34,6 +34,7 @@ export type StatusDisplayCategory =
   | "blazingFlame"
   | "ballistaMark"
   | "allyAttackFollowUp"
+  | "poisonWeapon"
   | "nextOutgoingDamage";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
@@ -62,6 +63,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "blazingFlame",
   "ballistaMark",
   "allyAttackFollowUp",
+  "poisonWeapon",
   "nextOutgoingDamage",
   "dot",
   "bleed",
@@ -364,6 +366,13 @@ function statusEffectBadgeForOverlay(
         remainingRatio: statusEffectRemainingRatio(effect),
         isPassive: isPassiveDisplayedStatusEffect(effect),
       };
+    case "poisonWeapon":
+      return {
+        category: "poisonWeapon",
+        kind: "buff",
+        remainingRatio: statusEffectRemainingRatio(effect),
+        isPassive: isPassiveDisplayedStatusEffect(effect),
+      };
     case "nextOutgoingDamage":
       return {
         category: "nextOutgoingDamage",
@@ -580,6 +589,9 @@ function effectsForCategory(
   }
   if (category === "allyAttackFollowUp") {
     return effects.filter((effect) => effect.overlay === "allyAttackFollowUp");
+  }
+  if (category === "poisonWeapon") {
+    return effects.filter((effect) => effect.overlay === "poisonWeapon");
   }
   if (category === "nextOutgoingDamage") {
     return effects.filter((effect) => effect.overlay === "nextOutgoingDamage");

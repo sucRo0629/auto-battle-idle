@@ -468,6 +468,7 @@ export function resolveStatusIconFallbackColor(
     blazingFlame: theme.statusIconDamageIncrease,
     ballistaMark: theme.statusIconDamageIncrease,
     allyAttackFollowUp: theme.statusIconCounter,
+    poisonWeapon: theme.statusIconDot,
     nextOutgoingDamage: theme.statusIconAtk,
   };
   return colors[category];

@@ -40,7 +40,7 @@ function statusBadgePentagonOffsetY(kind: "buff" | "debuff"): number {
     : STATUS_BADGE_PENTAGON_DEBUFF_OFFSET_PX;
 }
 
-/** Party HUD / 詳細 UI の正本スロット（敵フィールド 14px とは独立） */
+/** Party HUD / 敵 HP バー上 / 詳細 UI の正本スロット */
 export const PARTY_HUD_STATUS_BADGE_ICON_SIZE = 20;
 
 /** iconSize に対する 20px 正本レイアウトの倍率（20px 未満の敵フィールド用） */
@@ -65,13 +65,6 @@ export function statusBadgeDrawableRowHeight(
     slotPx * scale + STATUS_BADGE_ROW_PAD_Y * 2 * layoutScale * scale,
   );
 }
-
-/** 敵 HP バー上フィールド用（Party HUD 20px より小さめ） */
-export const FIELD_ENEMY_STATUS_BADGE_ICON_SIZE = 14;
-/** 敵フィールドの累積数 / +N ラベル枠（px） */
-export const FIELD_ENEMY_STACK_LABEL_SLOT_PX = 12;
-/** 敵フィールドの累積数ビットマップアウトライン（px） */
-export const FIELD_ENEMY_STACK_LABEL_OUTLINE_PX = 1;
 
 /** Canvas 描画を DOM の pixel-icon-img と同様 nearest-neighbor（等倍）にする */
 export function prepareStatusBadgeCanvasContext(
@@ -595,8 +588,7 @@ function drawStatusStackLabel(
   if (theme.stackLabelSlotPx !== undefined) {
     drawBadgeBitmapLabel(ctx, text, anchorRight, anchorBottom, {
       pixelScale: 1,
-      outlineThickness:
-        theme.stackLabelOutlinePx ?? FIELD_ENEMY_STACK_LABEL_OUTLINE_PX,
+      outlineThickness: theme.stackLabelOutlinePx ?? 1,
     });
     return;
   }
