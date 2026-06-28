@@ -27,6 +27,7 @@
 }
 
 .skill-menu-roster-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -48,6 +49,29 @@
 .skill-menu-roster-card--active {
   border-color: rgba(74, 144, 217, 0.65);
   background: rgba(74, 144, 217, 0.12);
+}
+
+.skill-menu-roster-card-role-icon {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  box-sizing: content-box;
+  width: 12px;
+  height: 12px;
+  opacity: 0.5;
+  pointer-events: none;
+  line-height: 0;
+  font-size: 0;
+}
+
+.skill-menu-roster-card-role-icon-img {
+  display: block;
+  box-sizing: content-box;
+  width: 12px;
+  height: 12px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  filter: brightness(0) invert(1);
 }
 
 .skill-menu-roster-card--empty {

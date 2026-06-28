@@ -12,7 +12,9 @@ import type {
   PassiveSkillDef,
   PartyMemberState,
   PartySlotState,
+  Role,
 } from "../battle/types.ts";
+import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
 import { getClassIconUrl, getSkillIconUrlForSkill } from "../render/IconRegistry.ts";
 import {
   getEntityAnimLayout,
@@ -21,6 +23,7 @@ import {
   hasEntityBodyAtlas,
 } from "../render/entityAtlas.ts";
 import { getSpriteUrl } from "../render/SpriteRegistry.ts";
+import { getStatusIconUrl } from "../render/StatusIconRegistry.ts";
 import {
   createMemberFromClass,
   getAssignableClassIds,
@@ -50,6 +53,12 @@ const ROLE_LABELS: Record<string, string> = {
   defender: "ディフェンダー",
   attacker: "アタッカー",
   supporter: "サポーター",
+};
+
+const ROLE_STATUS_ICON: Record<Role, StatusDisplayCategory> = {
+  defender: "def",
+  attacker: "atk",
+  supporter: "hot",
 };
 
 const PICKER_ROLE_BLOCKS: { role: ClassPreset["role"]; label: string }[] = [
@@ -245,6 +254,7 @@ export class SkillMenuPanel {
           ROLE_LABELS[preset.role] ?? preset.role,
         ];
         button.setAttribute("aria-label", ariaParts.join(" "));
+        button.appendChild(this.createRosterRoleIcon(preset.role));
         button.appendChild(this.createRosterCharacterDisplay(preset));
         button.appendChild(this.createRosterTextBlock(preset));
       } else {
@@ -261,6 +271,24 @@ export class SkillMenuPanel {
 
       this.rosterSlotsEl.appendChild(button);
     });
+  }
+
+  private createRosterRoleIcon(role: Role): HTMLElement {
+    const wrap = document.createElement("span");
+    wrap.className = "skill-menu-roster-card-role-icon";
+    wrap.setAttribute("aria-hidden", "true");
+
+    const url = getStatusIconUrl(ROLE_STATUS_ICON[role]);
+    if (url) {
+      const img = document.createElement("img");
+      img.className = "skill-menu-roster-card-role-icon-img";
+      img.src = url;
+      img.alt = "";
+      img.decoding = "async";
+      wrap.appendChild(img);
+    }
+
+    return wrap;
   }
 
   private createRosterTextBlock(preset: ClassPreset): HTMLElement {

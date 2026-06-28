@@ -141,6 +141,12 @@ export function preloadStatusIcons(): Promise<void> {
   return preloadPromise;
 }
 
+export function getStatusIconUrl(
+  category: StatusDisplayCategory,
+): string | undefined {
+  return ICON_URLS[category];
+}
+
 export function getStatusIconImage(
   category: StatusDisplayCategory
 ): HTMLImageElement | undefined {
