@@ -1145,6 +1145,9 @@ export class SkillExecutor {
         passives
       );
       const damageTarget = coverResult.target;
+      if (coverResult.redirected && coverResult.coverDuelistId) {
+        this.emit({ type: "lowHpCover", targetId: coverResult.coverDuelistId });
+      }
 
       if (rollsEvasion(damageTarget, passives)) {
         this.emit({ type: "evade", targetId: damageTarget.id });

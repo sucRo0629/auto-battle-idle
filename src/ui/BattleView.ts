@@ -490,6 +490,8 @@ export class BattleView {
       this.canvas.showEvadePopup(event.targetId);
     } else if (event.type === "block") {
       this.canvas.showBlockPopup(event.targetId);
+    } else if (event.type === "lowHpCover") {
+      this.canvas.showLowHpCoverPopup(event.targetId);
     } else if (event.type === "invulnerable") {
       this.canvas.showInvulnerablePopup(event.targetId);
     } else if (event.type === "lastStandRecovery") {

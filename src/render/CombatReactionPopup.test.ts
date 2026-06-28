@@ -132,6 +132,30 @@ describe("CombatReactionPopupManager", () => {
     } as never);
   });
 
+  it("shows lowHpCover popup text", () => {
+    const manager = new CombatReactionPopupManager();
+    manager.spawn("ally-duelist", "lowHpCover");
+
+    const ctx = {
+      font: "",
+      save: () => {},
+      restore: () => {},
+      translate: () => {},
+      scale: () => {},
+      strokeText: (text: string) => {
+        expect(text).toBe("肩代わり！");
+      },
+      fillText: () => {},
+      measureText: () => ({ width: 40 }),
+    } as unknown as CanvasRenderingContext2D;
+
+    manager.draw(ctx, [{ id: "ally-duelist", x: 0, y: 0 } as never], 64, 1, {
+      headerFontSize: 12,
+      fontFamily: "sans-serif",
+      nameColor: "#fff",
+    } as never);
+  });
+
   it("uses the same anchor for knockback and evade on the same target", () => {
     const manager = new CombatReactionPopupManager();
     const layout = {

@@ -253,6 +253,10 @@ export class BattleCanvas implements IBattleRenderer {
     this.combatReactionPopups.spawn(targetId, "knockback");
   }
 
+  showLowHpCoverPopup(targetId: string): void {
+    this.combatReactionPopups.spawn(targetId, "lowHpCover");
+  }
+
   showBuffGlow(targetId: string): void {
     this.buffGlows.trigger(targetId);
   }

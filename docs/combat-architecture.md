@@ -358,12 +358,13 @@ Event Popup は瞬間的なイベントのみ表示する（短いラベル。�
 | 不屈！         | `lastStandGuts`         |
 | 引き寄せ！     | skill `enemyReelIn`     |
 | ノックバック！ | knockback 系            |
+| 肩代わり！     | `lowHpCover`（闘技士・攻撃誘導） |
 
 **v1 対象外（Event ラベル不要）**
 
 | 名称（旧例示） | 理由                                                          |
 | -------------- | ------------------------------------------------------------- |
-| Redirect!      | 余剰回復転送は heal 数値 popup。低 HP 肩代わりは block 系     |
+| Redirect!      | 余剰回復転送は heal 数値 popup のみ                           |
 | Barrier Break! | バリア残量・付与は HUD（HP バー tier）。吸収量も popup 非表示 |
 | Execute!       | 処刑・即死 effect 未実装。スキル追加まで不要                  |
 | Armor Break!   | §8.2 の内訳 NG 例の illustrative 名称のみ。mechanic なし      |
@@ -387,10 +388,10 @@ Barrier 残量は HUD で確認する。
 
 ### 8.6 Redirect
 
-Redirect 量は表示しない。v1 では **Redirect! Event Popup も設けない**。
+Redirect 量は表示しない。
 
 - `excessHealRedirect` — 転送先に heal 数値 popup
-- `lowHpCover` 等の被ダメ肩代わり — block 系イベント
+- `lowHpCover`（攻撃誘導）— 闘技士頭上に **肩代わり！** Event Popup
 
 ### 8.7 設計思想
 

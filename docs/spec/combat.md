@@ -655,8 +655,9 @@ DoT フレーバーは HUD バッジ（`bleed` / `poison` / 汎用 `dot` アイ�
 | 不屈！ | `lastStandGuts` |
 | 引き寄せ！ | skill `enemyReelIn` |
 | ノックバック！ | knockback 系 |
+| 肩代わり！ | `lowHpCover`（闘技士・攻撃誘導） |
 
-**v1 対象外:** Redirect! / Barrier Break! / Execute! / Armor Break! — 理由は architecture §8.3。
+**v1 対象外:** Barrier Break! / Execute! / Armor Break! — 理由は architecture §8.3。
 
 ### popup なしで足りるもの
 

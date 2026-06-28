@@ -33,6 +33,7 @@ export type BattleEvent =
   | { type: 'hurt'; targetId: string }
   | { type: 'evade'; targetId: string }
   | { type: 'block'; targetId: string }
+  | { type: 'lowHpCover'; targetId: string }
   | { type: 'invulnerable'; targetId: string }
   | { type: 'lastStandRecovery'; targetId: string }
   | { type: 'lastStandGuts'; targetId: string }

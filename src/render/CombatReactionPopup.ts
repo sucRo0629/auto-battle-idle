@@ -20,7 +20,8 @@ export type CombatReactionKind =
   | "lastStandRecovery"
   | "lastStandGuts"
   | "enemyReelIn"
-  | "knockback";
+  | "knockback"
+  | "lowHpCover";
 
 const REACTION_TEXT: Record<CombatReactionKind, string> = {
   evade: "回避！",
@@ -31,6 +32,7 @@ const REACTION_TEXT: Record<CombatReactionKind, string> = {
   lastStandGuts: "不屈！",
   enemyReelIn: "引き寄せ！",
   knockback: "ノックバック！",
+  lowHpCover: "肩代わり！",
 };
 
 export function getCombatReactionText(kind: CombatReactionKind): string {
