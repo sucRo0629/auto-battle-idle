@@ -27,6 +27,7 @@ import {
 } from "../progression/partyCompose.ts";
 import { type LevelCurvesConfig } from "../progression/levelGrowth.ts";
 import { resolveMemberDisplayStats } from "../progression/memberStatsDisplay.ts";
+import { resolveMemberBasicAttackDisplay } from "../progression/memberBasicAttackDisplay.ts";
 import { resolvePlayerDisplayLevel } from "../progression/resolvePlayerDisplayLevel.ts";
 import {
   cloneBuild,
@@ -67,6 +68,11 @@ export interface SkillMenuPanelCallbacks {
   onPartySlotChanged: (slotIndex: number, member: PartySlotState) => void;
 }
 
+export interface SkillMenuPanelOptions {
+  /** Picker オーバーレイのマウント先。省略時は `.meta-menu-overlay` または `document.body` */
+  pickerHost?: HTMLElement;
+}
+
 export class SkillMenuPanel {
   private readonly root: HTMLElement;
   private readonly formationBlockEl: HTMLElement;
@@ -75,6 +81,7 @@ export class SkillMenuPanel {
   private readonly detailWrapEl: HTMLElement;
   private readonly bodyEl: HTMLElement;
   private readonly pickerOverlayEl: HTMLElement;
+  private readonly pickerHost: HTMLElement;
   private readonly gameTermPanel: GameTermPanel;
   private readonly draftParty: PartySlotState[];
   private readonly unlockedClassIds: ClassId[];
@@ -87,8 +94,11 @@ export class SkillMenuPanel {
     private readonly levelCurves: LevelCurvesConfig,
     sourceParty: PartySlotState[],
     unlockedClassIds: ClassId[],
-    private readonly callbacks: SkillMenuPanelCallbacks
+    private readonly callbacks: SkillMenuPanelCallbacks,
+    options: SkillMenuPanelOptions = {}
   ) {
+    this.pickerHost =
+      options.pickerHost ?? document.body;
     this.unlockedClassIds = [...unlockedClassIds];
     this.draftParty = sourceParty.map((member) =>
       member
@@ -189,9 +199,9 @@ export class SkillMenuPanel {
     );
     this.root.append(
       this.formationBlockEl,
-      this.detailWrapEl,
-      this.pickerOverlayEl
+      this.detailWrapEl
     );
+    this.pickerHost.appendChild(this.pickerOverlayEl);
     this.container.appendChild(this.root);
     this.render();
   }
@@ -392,9 +402,15 @@ export class SkillMenuPanel {
     const preset = this.gameData.classRegistry[member.classId];
     if (!preset) return;
 
-    this.bodyEl.append(
+    const classStatsRow = document.createElement("div");
+    classStatsRow.className = "skill-menu-class-stats-row";
+    classStatsRow.append(
       this.createClassInfoSection(member, preset),
-      this.createStatsSection(preset),
+      this.createStatsSection(preset)
+    );
+
+    this.bodyEl.append(
+      classStatsRow,
       this.createActiveSkillsSection(preset),
       this.createPassiveSkillsSection(preset)
     );
@@ -490,6 +506,20 @@ export class SkillMenuPanel {
       { label: MEMBER_STAT_LABELS.reg, value: String(stats.reg) + "%" },
       { label: MEMBER_STAT_LABELS.spd, value: stats.spdLabel },
     ];
+
+    const basicAttack = resolveMemberBasicAttackDisplay(
+      preset,
+      this.gameData.skillRegistry
+    );
+    if (basicAttack) {
+      rows.push(
+        { label: MEMBER_STAT_LABELS.range, value: basicAttack.rangeLabel },
+        {
+          label: MEMBER_STAT_LABELS.basicAttack,
+          value: basicAttack.attributeLabel,
+        }
+      );
+    }
 
     for (const row of rows) {
       const dt = document.createElement("dt");
@@ -742,7 +772,6 @@ export class SkillMenuPanel {
 
     this.pickerOverlayEl.hidden = false;
     this.pickerOverlayEl.replaceChildren();
-    this.pickerOverlayEl.scrollTop = 0;
 
     const modal = document.createElement("div");
     modal.className = "skill-menu-picker-modal";
@@ -800,6 +829,7 @@ export class SkillMenuPanel {
     }
 
     modal.append(heading, actions, blocks);
+    modal.scrollTop = 0;
     this.pickerOverlayEl.appendChild(modal);
   }
 
@@ -872,6 +902,8 @@ export class SkillMenuPanel {
   }
 
   destroy(): void {
+    this.gameTermPanel.destroy();
+    this.pickerOverlayEl.remove();
     this.root.remove();
   }
 }

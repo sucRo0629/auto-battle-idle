@@ -159,7 +159,7 @@ export class MetaMenuOverlay {
           this.updatePlayerLevelDisplay();
           this.callbacks.onPartySlotChanged(slotIndex, member);
         },
-      }
+      },
     );
   }
 
