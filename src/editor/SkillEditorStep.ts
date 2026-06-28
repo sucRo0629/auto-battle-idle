@@ -42,7 +42,6 @@ import {
   normalizePassiveSkillForEditor,
   stripBasicAttackTraitFieldsFromEffect,
 } from '../battle/data/validateGameData.ts';
-import { HERBAL_POTENCY_ACCUMULATE_SEC } from '../battle/herbalPotency.ts';
 import {
   activeEffectHasAmount,
   getActiveEffectAmountSpec,
@@ -109,6 +108,7 @@ import {
   appendPassiveDispelFields,
   appendPassiveDamageReductionFields,
   appendPassiveHealFields,
+  appendHerbalPotencyPassiveFields,
   appendPassiveBuffFields,
   appendPassiveSpecialEffectFields,
   appendActiveFireGateFields,
@@ -2690,7 +2690,7 @@ export class SkillEditorStep {
         );
         break;
       case 'herbalPotency':
-        appendPassiveHealFields(
+        appendHerbalPotencyPassiveFields(
           effectGrid,
           passive,
           (mutate, options) => {
@@ -2699,95 +2699,10 @@ export class SkillEditorStep {
           (grid, amount, onUpdate) => {
             appendResourceAmountFields(grid, amount, onUpdate);
           },
+          (parent, text) => {
+            this.appendAnnotatedEditorHint(parent, text);
+          },
           { traitsRangePx: this.resolveTraitsRangePx() },
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            'herbalPotencyMaxStacks',
-            createNumberInput(
-              passive.herbalPotencyMaxStacks ?? 6,
-              (value) => {
-                this.patchPassive(index, (current) => {
-                  current.herbalPotencyMaxStacks = value;
-                }, { rerender: false });
-              },
-              { step: 1, min: 1 },
-            ),
-          ),
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            'herbalPotencyHotPerStackPercent',
-            createNumberInput(
-              passive.herbalPotencyHotPerStackPercent ?? 0.0005,
-              (value) => {
-                this.patchPassive(index, (current) => {
-                  current.herbalPotencyHotPerStackPercent = value;
-                }, { rerender: false });
-              },
-              { step: 0.0001 },
-            ),
-          ),
-        );
-        effectGrid.appendChild(
-          createEl(
-            'p',
-            'editor-hint',
-            `stack 蓄積間隔: ${HERBAL_POTENCY_ACCUMULATE_SEC} 秒（実時間固定。HoT tick 毎ではない）`,
-          ),
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            'herbalPotencyConstitutionThresholds（カンマ区切り）',
-            createTextInput(
-              (passive.herbalPotencyConstitutionThresholds ?? []).join(', '),
-              (raw) => {
-                this.patchPassive(index, (current) => {
-                  const trimmed = raw.trim();
-                  if (!trimmed) {
-                    delete current.herbalPotencyConstitutionThresholds;
-                    delete current.herbalPotencyConstitutionHpMultipliers;
-                    return;
-                  }
-                  const thresholds = trimmed
-                    .split(',')
-                    .map((part) => Number(part.trim()))
-                    .filter((value) => Number.isFinite(value) && value > 0);
-                  if (thresholds.length === 0) {
-                    delete current.herbalPotencyConstitutionThresholds;
-                    delete current.herbalPotencyConstitutionHpMultipliers;
-                    return;
-                  }
-                  current.herbalPotencyConstitutionThresholds = thresholds;
-                  const multipliers =
-                    current.herbalPotencyConstitutionHpMultipliers ?? [];
-                  current.herbalPotencyConstitutionHpMultipliers = thresholds.map(
-                    (_, idx) => multipliers[idx] ?? 1,
-                  );
-                }, { rerender: true });
-              },
-            ),
-          ),
-        );
-        effectGrid.appendChild(
-          createFieldRow(
-            'herbalPotencyConstitutionHpMultipliers（カンマ区切り）',
-            createTextInput(
-              (passive.herbalPotencyConstitutionHpMultipliers ?? []).join(', '),
-              (raw) => {
-                this.patchPassive(index, (current) => {
-                  const thresholds = current.herbalPotencyConstitutionThresholds;
-                  if (!thresholds || thresholds.length === 0) return;
-                  const multipliers = raw
-                    .split(',')
-                    .map((part) => Number(part.trim()))
-                    .filter((value) => Number.isFinite(value) && value > 0);
-                  if (multipliers.length !== thresholds.length) return;
-                  current.herbalPotencyConstitutionHpMultipliers = multipliers;
-                }, { rerender: false });
-              },
-            ),
-          ),
         );
         break;
       case 'blockResonance':
@@ -4103,6 +4018,21 @@ export class SkillEditorStep {
       parent,
       formatPassiveDescription(passive),
     );
+  }
+
+  private appendAnnotatedEditorHint(parent: HTMLElement, text: string): void {
+    const hint = createEl('p', 'editor-hint');
+    hint.appendChild(
+      annotateGameTerms(
+        text,
+        'ja',
+        (termId, anchor) => {
+          this.gameTermPanel.openFromTerm(termId, anchor);
+        },
+        { panelId: this.gameTermPanel.getPanelId() },
+      ),
+    );
+    parent.appendChild(hint);
   }
 
   private appendSkillDescriptionPreview(

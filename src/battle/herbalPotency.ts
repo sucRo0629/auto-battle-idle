@@ -14,6 +14,7 @@ import type {
   StatusEffect,
 } from './types.ts';
 
+export const HERBAL_POTENCY_HOT_TICK_SEC = 1;
 export const HERBAL_POTENCY_ACCUMULATE_SEC = 3;
 export const HERBAL_POTENCY_AURA_PREFIX = 'herbal_potency_aura_';
 export const HERBAL_POTENCY_STACKS_ID_PREFIX = 'herbal_potency_stacks_';
@@ -23,6 +24,8 @@ const HERBAL_POTENCY_AURA_DURATION_SEC = 99999;
 export interface MergedHerbalPotencyConfig {
   maxStacks: number;
   hotPerStackPercent: number;
+  hotTickSec: number;
+  accumulateSec: number;
   auraAmount?: ResourceAmountSpec;
   auraPassive?: PassiveSkillDef;
   constitutionThresholds: number[];
@@ -59,6 +62,8 @@ export function mergeHerbalPotencyPassives(
 ): MergedHerbalPotencyConfig {
   let maxStacks = 0;
   let hotPerStackPercent = 0;
+  let hotTickSec = HERBAL_POTENCY_HOT_TICK_SEC;
+  let accumulateSec = HERBAL_POTENCY_ACCUMULATE_SEC;
   let auraAmount: ResourceAmountSpec | undefined;
   let auraPassive: PassiveSkillDef | undefined;
   const constitutionThresholds: number[] = [];
@@ -71,6 +76,12 @@ export function mergeHerbalPotencyPassives(
     }
     if (passive.herbalPotencyHotPerStackPercent !== undefined) {
       hotPerStackPercent = passive.herbalPotencyHotPerStackPercent;
+    }
+    if (passive.herbalPotencyHotTickSec !== undefined) {
+      hotTickSec = passive.herbalPotencyHotTickSec;
+    }
+    if (passive.herbalPotencyAccumulateSec !== undefined) {
+      accumulateSec = passive.herbalPotencyAccumulateSec;
     }
     if (passive.hotAmount) {
       auraAmount = passive.hotAmount;
@@ -95,6 +106,8 @@ export function mergeHerbalPotencyPassives(
   return {
     maxStacks,
     hotPerStackPercent,
+    hotTickSec,
+    accumulateSec,
     auraAmount,
     auraPassive,
     constitutionThresholds,
@@ -261,7 +274,8 @@ function applyHerbalPotencyAura(
       multiplier: 1,
       durationSec: HERBAL_POTENCY_AURA_DURATION_SEC,
       remainingSec: HERBAL_POTENCY_AURA_DURATION_SEC,
-      tickSec: 1,
+      tickSec:
+        passive.herbalPotencyHotTickSec ?? HERBAL_POTENCY_HOT_TICK_SEC,
     });
   }
 }
@@ -325,7 +339,7 @@ export function tickHerbalPotencyAccumulation(
     }
 
     if (target.herbalPotencyAccumTickSec === undefined) {
-      target.herbalPotencyAccumTickSec = HERBAL_POTENCY_ACCUMULATE_SEC;
+      target.herbalPotencyAccumTickSec = config.accumulateSec;
     }
     target.herbalPotencyAccumTickSec -= deltaTime;
 
@@ -344,7 +358,7 @@ export function tickHerbalPotencyAccumulation(
       if (after > before) {
         updateConstitutionTier(target, config);
       }
-      target.herbalPotencyAccumTickSec += HERBAL_POTENCY_ACCUMULATE_SEC;
+      target.herbalPotencyAccumTickSec += config.accumulateSec;
       if (after >= config.maxStacks) break;
     }
   }

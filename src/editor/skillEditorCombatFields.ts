@@ -88,6 +88,10 @@ import type {
 } from "../battle/types.ts";
 import { attackTypeRangedBandEditorHintJa } from "../battle/rangeLimits.ts";
 import {
+  HERBAL_POTENCY_ACCUMULATE_SEC,
+  HERBAL_POTENCY_HOT_TICK_SEC,
+} from "../battle/herbalPotency.ts";
+import {
   defaultStatBuffModifierEntry,
   parseStatBuffModifiers,
   syncPassiveBuffStatModifiers,
@@ -102,6 +106,7 @@ import {
   createNumberInput,
   createSelect,
   createSection,
+  createTextInput,
 } from "./formUtils.ts";
 import { appendSkillEffectTargetingFields } from "./effectTargetingFields.ts";
 import type { ActiveSkillDef } from "../battle/types.ts";
@@ -1170,6 +1175,150 @@ export function appendPassiveHealFields(
         current.hotAmount = amount;
       }, options);
     }
+  );
+}
+
+export type AppendEditorAnnotatedHint = (
+  parent: HTMLElement,
+  text: string,
+) => void;
+
+const HERBAL_POTENCY_BUFF_SUMMARY_HINT =
+  "累積バフ: 薬効 — 薬草師由来 HoT 維持中に実時間で stack +1。stack ごとに HoT 回復量を加算（上限は習得パッシブの herbalPotencyMaxStacks 最大値）。薬効体質 — 薬効 stack が閾値に達すると maxHp 乗算バフ。到達段階は薬効顕現（stack 消費）後も維持。";
+
+export function appendHerbalPotencyPassiveFields(
+  parent: HTMLElement,
+  passive: PassiveSkillDef,
+  patchPassive: (
+    mutate: (current: PassiveSkillDef) => void,
+    options?: { rerender?: boolean },
+  ) => void,
+  appendResourceAmountFields: (
+    grid: HTMLElement,
+    amount: ResourceAmountSpec,
+    onUpdate: (amount: ResourceAmountSpec, options?: { rerender?: boolean }) => void,
+  ) => void,
+  appendAnnotatedHint: AppendEditorAnnotatedHint,
+  options: { traitsRangePx?: number } = {},
+): void {
+  appendPassiveHealFields(
+    parent,
+    passive,
+    patchPassive,
+    appendResourceAmountFields,
+    options,
+  );
+  parent.appendChild(
+    createFieldRow(
+      "herbalPotencyMaxStacks",
+      createNumberInput(
+        passive.herbalPotencyMaxStacks ?? 6,
+        (value) => {
+          patchPassive((current) => {
+            current.herbalPotencyMaxStacks = value;
+          }, { rerender: false });
+        },
+        { step: 1, min: 1 },
+      ),
+    ),
+  );
+  parent.appendChild(
+    createFieldRow(
+      "herbalPotencyHotPerStackPercent",
+      createNumberInput(
+        passive.herbalPotencyHotPerStackPercent ?? 0.0005,
+        (value) => {
+          patchPassive((current) => {
+            current.herbalPotencyHotPerStackPercent = value;
+          }, { rerender: false });
+        },
+        { step: 0.0001 },
+      ),
+    ),
+  );
+  if (passive.hotAmount) {
+    parent.appendChild(
+      createFieldRow(
+        "herbalPotencyHotTickSec",
+        createNumberInput(
+          passive.herbalPotencyHotTickSec ?? HERBAL_POTENCY_HOT_TICK_SEC,
+          (value) => {
+            patchPassive((current) => {
+              current.herbalPotencyHotTickSec = value;
+            }, { rerender: false });
+          },
+          { step: 0.1, min: 0.1 },
+        ),
+      ),
+    );
+  }
+  parent.appendChild(
+    createFieldRow(
+      "herbalPotencyAccumulateSec",
+      createNumberInput(
+        passive.herbalPotencyAccumulateSec ?? HERBAL_POTENCY_ACCUMULATE_SEC,
+        (value) => {
+          patchPassive((current) => {
+            current.herbalPotencyAccumulateSec = value;
+          }, { rerender: false });
+        },
+        { step: 0.1, min: 0.1 },
+      ),
+    ),
+  );
+  appendAnnotatedHint(parent, HERBAL_POTENCY_BUFF_SUMMARY_HINT);
+  parent.appendChild(
+    createFieldRow(
+      "herbalPotencyConstitutionThresholds（カンマ区切り）",
+      createTextInput(
+        (passive.herbalPotencyConstitutionThresholds ?? []).join(", "),
+        (raw) => {
+          patchPassive((current) => {
+            const trimmed = raw.trim();
+            if (!trimmed) {
+              delete current.herbalPotencyConstitutionThresholds;
+              delete current.herbalPotencyConstitutionHpMultipliers;
+              return;
+            }
+            const thresholds = trimmed
+              .split(",")
+              .map((part) => Number(part.trim()))
+              .filter((value) => Number.isFinite(value) && value > 0);
+            if (thresholds.length === 0) {
+              delete current.herbalPotencyConstitutionThresholds;
+              delete current.herbalPotencyConstitutionHpMultipliers;
+              return;
+            }
+            current.herbalPotencyConstitutionThresholds = thresholds;
+            const multipliers =
+              current.herbalPotencyConstitutionHpMultipliers ?? [];
+            current.herbalPotencyConstitutionHpMultipliers = thresholds.map(
+              (_, idx) => multipliers[idx] ?? 1,
+            );
+          }, { rerender: true });
+        },
+      ),
+    ),
+  );
+  parent.appendChild(
+    createFieldRow(
+      "herbalPotencyConstitutionHpMultipliers（カンマ区切り）",
+      createTextInput(
+        (passive.herbalPotencyConstitutionHpMultipliers ?? []).join(", "),
+        (raw) => {
+          patchPassive((current) => {
+            const thresholds = current.herbalPotencyConstitutionThresholds;
+            if (!thresholds || thresholds.length === 0) return;
+            const multipliers = raw
+              .split(",")
+              .map((part) => Number(part.trim()))
+              .filter((value) => Number.isFinite(value) && value > 0);
+            if (multipliers.length !== thresholds.length) return;
+            current.herbalPotencyConstitutionHpMultipliers = multipliers;
+          }, { rerender: false });
+        },
+      ),
+    ),
   );
 }
 

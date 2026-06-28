@@ -5,6 +5,10 @@ import {
 import { resolveSkillTrigger } from "../battle/skillTrigger.ts";
 import { KNOCKBACK_MOVE_LOCK_SEC } from "../battle/ccEffects.ts";
 import {
+  HERBAL_POTENCY_ACCUMULATE_SEC,
+  HERBAL_POTENCY_HOT_TICK_SEC,
+} from "../battle/herbalPotency.ts";
+import {
   BUFF_SUB_KIND_LABELS,
   DEBUFF_FILTER_TAG_LABELS,
   DEBUFF_SUB_KIND_LABELS,
@@ -1313,9 +1317,19 @@ function formatPassiveEffect(
       }
       if (def.herbalPotencyConstitutionThresholds?.length) {
         potencyParts.push(
-          `体質 ${def.herbalPotencyConstitutionThresholds.join("/")}`
+          `薬効体質 ${def.herbalPotencyConstitutionThresholds.join("/")}`
         );
       }
+      const hotTickSec =
+        def.herbalPotencyHotTickSec ?? HERBAL_POTENCY_HOT_TICK_SEC;
+      const accumulateSec =
+        def.herbalPotencyAccumulateSec ?? HERBAL_POTENCY_ACCUMULATE_SEC;
+      if (def.hotAmount) {
+        potencyParts.push(`aura HoT ${formatSecondsLabel(hotTickSec)} tick`);
+      }
+      potencyParts.push(
+        `薬効蓄積 ${formatSecondsLabel(accumulateSec)}（実時間・HoT tick 非連動）`
+      );
       const potencySuffix =
         potencyParts.length > 0 ? ` · ${potencyParts.join(" · ")}` : "";
       if (usesHotAuraMode(def) || def.effect === "herbalPotency") {

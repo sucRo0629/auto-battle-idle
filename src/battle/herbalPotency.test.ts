@@ -48,6 +48,28 @@ describe('herbalPotency merge', () => {
     ] as PassiveSkillDef[]);
     expect(merged.maxStacks).toBe(9);
   });
+
+  it('uses last defined accumulateSec and hotTickSec from passives', () => {
+    const merged = mergeHerbalPotencyPassives([
+      {
+        id: 'p1',
+        name: 'p1',
+        effect: 'herbalPotency',
+        herbalPotencyMaxStacks: 6,
+        herbalPotencyHotTickSec: 1.5,
+        herbalPotencyAccumulateSec: 4,
+      },
+      {
+        id: 'p4',
+        name: 'p4',
+        effect: 'herbalPotency',
+        herbalPotencyMaxStacks: 9,
+        herbalPotencyAccumulateSec: 2,
+      },
+    ] as PassiveSkillDef[]);
+    expect(merged.hotTickSec).toBe(1.5);
+    expect(merged.accumulateSec).toBe(2);
+  });
 });
 
 describe('herbalPotency stacks', () => {
@@ -75,6 +97,8 @@ describe('herbalPotency hot bonus', () => {
     const bonus = resolveHerbalPotencyHotBonus(target, {
       maxStacks: 6,
       hotPerStackPercent: 0.0005,
+      hotTickSec: 1,
+      accumulateSec: 3,
       constitutionThresholds: [],
       constitutionHpMultipliers: [],
     });
@@ -175,5 +199,9 @@ describe('syncHerbalPotencyAuras', () => {
         (e) => e.overlay === 'hot' && e.skillId === 'sp_alchemist_passive_1',
       ),
     ).toBe(true);
+    const hot = ally.statusEffects.find(
+      (e) => e.overlay === 'hot' && e.skillId === 'sp_alchemist_passive_1',
+    );
+    expect(hot?.tickSec).toBe(1);
   });
 });

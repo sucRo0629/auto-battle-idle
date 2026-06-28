@@ -607,7 +607,7 @@ export interface CombatantState extends Combatant {
   barrierBreakRegenUsed?: boolean;
   /** barrierDepletionHeal: 対象ユニットで枯渇回復を消費済み（Wave 1 回） */
   barrierDepletionHealUsed?: boolean;
-  /** herbalPotency: 蓄積タイマー残秒（3 秒間隔） */
+  /** herbalPotency: 蓄積タイマー残秒（`herbalPotencyAccumulateSec`、未指定 3 秒） */
   herbalPotencyAccumTickSec?: number;
   /** herbalPotency: 到達済み体質段階（active_4 消費後も維持） */
   herbalPotencyConstitutionTier?: number;
@@ -968,6 +968,10 @@ export interface PassiveSkillDef {
   herbalPotencyMaxStacks?: number;
   /** herbalPotency: stack ごとの HoT maxHp 加算率（0.0005 = 0.05%/stack） */
   herbalPotencyHotPerStackPercent?: number;
+  /** herbalPotency: aura HoT の tick 間隔（秒）。未指定 = 1 */
+  herbalPotencyHotTickSec?: number;
+  /** herbalPotency: 薬効 stack 蓄積間隔（秒）。未指定 = 3 */
+  herbalPotencyAccumulateSec?: number;
   /** herbalPotency: 体質段階の stack 閾値（passive_4） */
   herbalPotencyConstitutionThresholds?: number[];
   /** herbalPotency: 体質段階ごとの hp 乗算（閾値と同順） */

@@ -3963,6 +3963,16 @@ function requirePassiveEffectParams(
         'herbalPotencyHotPerStackPercent',
         context,
       );
+      const hotTickSec = parseOptionalNonNegativeNumber(
+        obj,
+        'herbalPotencyHotTickSec',
+        context,
+      );
+      const accumulateSec = parseOptionalNonNegativeNumber(
+        obj,
+        'herbalPotencyAccumulateSec',
+        context,
+      );
       const constitutionThresholds = parseOptionalPositiveIntArray(
         obj.herbalPotencyConstitutionThresholds,
         `${context}.herbalPotencyConstitutionThresholds`,
@@ -4004,6 +4014,12 @@ function requirePassiveEffectParams(
         herbalPotencyMaxStacks: maxStacks,
         ...(hotPerStackPercent !== undefined
           ? { herbalPotencyHotPerStackPercent: hotPerStackPercent }
+          : {}),
+        ...(hotTickSec !== undefined
+          ? { herbalPotencyHotTickSec: hotTickSec }
+          : {}),
+        ...(accumulateSec !== undefined
+          ? { herbalPotencyAccumulateSec: accumulateSec }
           : {}),
         ...(constitutionThresholds !== undefined
           ? { herbalPotencyConstitutionThresholds: constitutionThresholds }

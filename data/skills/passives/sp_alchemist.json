@@ -12,7 +12,9 @@
       "side": "ally"
     },
     "herbalPotencyMaxStacks": 6,
-    "herbalPotencyHotPerStackPercent": 0.0005
+    "herbalPotencyHotPerStackPercent": 0.0005,
+    "herbalPotencyHotTickSec": 1,
+    "herbalPotencyAccumulateSec": 10
   },
   {
     "id": "sp_alchemist_passive_2",
@@ -50,6 +52,7 @@
     "name": "薬草の極意",
     "effect": "herbalPotency",
     "herbalPotencyMaxStacks": 9,
+    "herbalPotencyAccumulateSec": 10,
     "herbalPotencyConstitutionThresholds": [
       3,
       6,

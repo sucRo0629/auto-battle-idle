@@ -20,7 +20,9 @@ export type GameTermId =
   | "poison"
   | "bleed"
   | "healReservation"
-  | "blockResonance";
+  | "blockResonance"
+  | "herbalPotency"
+  | "herbalPotencyConstitution";
 
 export interface GameTermEntry {
   id: GameTermId;
@@ -183,6 +185,23 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     },
     aliases: { ja: ["ブロック共鳴", "共鳴"] },
     statusCategory: "blockResonance",
+  },
+  {
+    id: "herbalPotency",
+    title: { ja: "薬効" },
+    description: {
+      ja: "薬草師の薬効浸潤で蓄積するスタック。薬草師由来 HoT 維持中に実時間で増加し、stack ごとにその味方への HoT 回復量を加算する。",
+    },
+    aliases: { ja: ["薬効"] },
+    statusCategory: "herbalPotency",
+  },
+  {
+    id: "herbalPotencyConstitution",
+    title: { ja: "薬効体質" },
+    description: {
+      ja: "薬効 stack が閾値に達すると付与される maxHp 乗算バフ。到達した体質段階は薬効顕現（stack 消費）後も維持される。",
+    },
+    aliases: { ja: ["薬効体質"] },
   },
 ];
 
