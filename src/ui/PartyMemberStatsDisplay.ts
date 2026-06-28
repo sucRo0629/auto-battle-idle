@@ -22,6 +22,12 @@ import {
   quantizeBadgeOverlayStep,
   statusBadgeOutlinePad,
 } from '../render/statusBadgeRenderer.ts';
+import {
+  DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH,
+  buildDetailStatusBadgeHitSignature,
+  syncDetailStatusBadgeHits,
+} from './partyHudStatusBadgeHits.ts';
+import type { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
 
 export interface PartyMemberStatsFrame {
   snapshots: CombatantSnapshot[];
@@ -63,11 +69,13 @@ export interface StatusBadgeRefs {
   root: HTMLElement;
   debuffCanvas: HTMLCanvasElement;
   buffCanvas: HTMLCanvasElement;
+  debuffHitLayer: HTMLElement;
+  buffHitLayer: HTMLElement;
   debuffRenderSignature?: string;
   buffRenderSignature?: string;
+  debuffHitSignature?: string;
+  buffHitSignature?: string;
 }
-
-const STATUS_WRAP_MAX_WIDTH = 280;
 
 export function buildDetailStatusBadgeSignature(
   badges: StatusEffectBadgeDisplay[],
@@ -147,16 +155,21 @@ function appendMemberIdentity(
   memberEl.appendChild(textEl);
 }
 
-function createStatusBadgeGroup(labelText: string): {
+export function createStatusBadgeGroupWithHits(labelText: string): {
   group: HTMLElement;
   canvas: HTMLCanvasElement;
+  hitLayer: HTMLElement;
 } {
   const group = el('div', 'party-stats-status-group');
   group.appendChild(el('span', 'party-stats-status-label', labelText));
+  const wrap = el('div', 'party-stats-status-canvas-wrap');
   const canvas = document.createElement('canvas');
   canvas.className = 'party-stats-status-canvas status-badge-canvas';
-  group.appendChild(canvas);
-  return { group, canvas };
+  const hitLayer = document.createElement('div');
+  hitLayer.className = 'party-hud-status-badge-hits';
+  wrap.append(canvas, hitLayer);
+  group.appendChild(wrap);
+  return { group, canvas, hitLayer };
 }
 
 export function createPartyMemberStatsRow(
@@ -197,8 +210,8 @@ export function createPartyMemberStatsRow(
   damageEl.append(bars, damageLabel);
 
   const statusEl = el('div', 'party-stats-status');
-  const debuffGroup = createStatusBadgeGroup('Debuff');
-  const buffGroup = createStatusBadgeGroup('Buff');
+  const debuffGroup = createStatusBadgeGroupWithHits('Debuff');
+  const buffGroup = createStatusBadgeGroupWithHits('Buff');
   statusEl.append(debuffGroup.group, buffGroup.group);
 
   row.append(memberEl, threatEl, damageEl, statusEl);
@@ -213,6 +226,8 @@ export function createPartyMemberStatsRow(
         root: statusEl,
         debuffCanvas: debuffGroup.canvas,
         buffCanvas: buffGroup.canvas,
+        debuffHitLayer: debuffGroup.hitLayer,
+        buffHitLayer: buffGroup.hitLayer,
       },
     },
   };
@@ -348,14 +363,16 @@ function drawStatusBadgeCanvas(
 
   const layout = measureStatusBadgeWrap(
     badges,
-    STATUS_WRAP_MAX_WIDTH,
+    DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH,
     scale,
     PARTY_HUD_STATUS_BADGE_ICON_SIZE,
     theme.statusIconOutlineWidth,
     theme.statusBadgeOverlap,
   );
   const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
-  const canvasW = Math.min(STATUS_WRAP_MAX_WIDTH, layout.totalWidth) + outlinePad * 2;
+  const canvasW =
+    Math.min(DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH, layout.totalWidth) +
+    outlinePad * 2;
   const canvasH = layout.totalHeight + outlinePad * 2;
 
   canvas.width = canvasW;
@@ -370,7 +387,7 @@ function drawStatusBadgeCanvas(
     outlinePad,
     outlinePad,
     badges,
-    STATUS_WRAP_MAX_WIDTH,
+    DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH,
     scale,
     badgeTheme,
   );
@@ -380,6 +397,7 @@ export function syncStatusBadges(
   statusByPartyIndex: Map<number, StatusBadgeRefs>,
   snapshots: CombatantSnapshot[],
   theme: BattleHudTheme | null,
+  floatingTooltip: PartyHudFloatingTooltip | null = null,
 ): void {
   for (const snapshot of snapshots) {
     if (snapshot.partySlotIndex === undefined) continue;
@@ -401,8 +419,14 @@ export function syncStatusBadges(
 
     refs.root.classList.toggle('is-down', isAllyDown(snapshot));
     refs.root.hidden = allBadges.length === 0;
-    refs.debuffCanvas.parentElement!.hidden = debuffBadges.length === 0;
-    refs.buffCanvas.parentElement!.hidden = buffBadges.length === 0;
+    const debuffGroup = refs.debuffCanvas.closest('.party-stats-status-group');
+    const buffGroup = refs.buffCanvas.closest('.party-stats-status-group');
+    if (debuffGroup instanceof HTMLElement) {
+      debuffGroup.hidden = debuffBadges.length === 0;
+    }
+    if (buffGroup instanceof HTMLElement) {
+      buffGroup.hidden = buffBadges.length === 0;
+    }
 
     if (!theme) continue;
 
@@ -412,10 +436,32 @@ export function syncStatusBadges(
       drawStatusBadgeCanvas(refs.debuffCanvas, debuffBadges, theme);
     }
 
+    const debuffHitSignature = buildDetailStatusBadgeHitSignature(debuffBadges);
+    if (refs.debuffHitSignature !== debuffHitSignature) {
+      refs.debuffHitSignature = debuffHitSignature;
+      syncDetailStatusBadgeHits(
+        refs.debuffHitLayer,
+        debuffBadges,
+        theme,
+        floatingTooltip,
+      );
+    }
+
     const buffSignature = buildDetailStatusBadgeSignature(buffBadges);
     if (refs.buffRenderSignature !== buffSignature) {
       refs.buffRenderSignature = buffSignature;
       drawStatusBadgeCanvas(refs.buffCanvas, buffBadges, theme);
+    }
+
+    const buffHitSignature = buildDetailStatusBadgeHitSignature(buffBadges);
+    if (refs.buffHitSignature !== buffHitSignature) {
+      refs.buffHitSignature = buffHitSignature;
+      syncDetailStatusBadgeHits(
+        refs.buffHitLayer,
+        buffBadges,
+        theme,
+        floatingTooltip,
+      );
     }
   }
 }
@@ -468,6 +514,8 @@ export class PartyMemberStatsDisplay {
     for (const refs of this.statusByPartyIndex.values()) {
       refs.debuffRenderSignature = undefined;
       refs.buffRenderSignature = undefined;
+      refs.debuffHitSignature = undefined;
+      refs.buffHitSignature = undefined;
     }
   }
 

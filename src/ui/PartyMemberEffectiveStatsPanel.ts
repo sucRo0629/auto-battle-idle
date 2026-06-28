@@ -20,6 +20,7 @@ export interface PartyMemberEffectiveStatsPanelData {
 export interface PartyMemberEffectiveStatsPanelOptions {
   onHoverStart?: () => void;
   onHoverEnd?: () => void;
+  frameMount?: HTMLElement;
 }
 
 export class PartyMemberEffectiveStatsPanel {
@@ -30,8 +31,10 @@ export class PartyMemberEffectiveStatsPanel {
   private readonly gridEl: HTMLElement;
   private readonly themeHost: HTMLElement;
   private readonly storageHost: HTMLElement;
+  private readonly frameMount: HTMLElement | null;
   private visible = false;
   private anchoredSlot: HTMLElement | null = null;
+  private anchoredSlotIndex: number | null = null;
 
   constructor(
     storageHost: HTMLElement,
@@ -40,6 +43,7 @@ export class PartyMemberEffectiveStatsPanel {
   ) {
     this.themeHost = themeHost;
     this.storageHost = storageHost;
+    this.frameMount = options.frameMount ?? null;
 
     this.root = document.createElement('aside');
     this.root.className = 'party-member-effective-stats';
@@ -78,34 +82,38 @@ export class PartyMemberEffectiveStatsPanel {
     this.gridEl.className = 'party-member-effective-stats-grid';
 
     this.root.append(header, this.gridEl);
-    this.storageHost.appendChild(this.root);
+    if (this.frameMount) {
+      this.frameMount.appendChild(this.root);
+    } else {
+      this.storageHost.appendChild(this.root);
+    }
   }
 
   attachToSlot(slotElement: HTMLElement | null, slotIndex?: number): void {
     this.anchoredSlot = slotElement;
+    this.anchoredSlotIndex = slotIndex ?? null;
     this.root.classList.toggle(
       'party-member-effective-stats--align-end',
       slotIndex !== undefined && slotIndex >= 2,
     );
-    if (slotElement) {
-      slotElement.appendChild(this.root);
-      return;
+    if (this.visible) {
+      this.reposition();
     }
-    this.storageHost.appendChild(this.root);
   }
 
   show(data: PartyMemberEffectiveStatsPanelData): void {
     this.visible = true;
     this.root.hidden = false;
     this.render(data);
+    this.reposition();
   }
 
   hide(): void {
     if (!this.visible) return;
     this.visible = false;
     this.root.hidden = true;
-    this.attachToSlot(null);
     this.anchoredSlot = null;
+    this.anchoredSlotIndex = null;
   }
 
   isVisible(): boolean {
@@ -115,6 +123,22 @@ export class PartyMemberEffectiveStatsPanel {
   update(data: PartyMemberEffectiveStatsPanelData): void {
     if (!this.visible) return;
     this.render(data);
+    this.reposition();
+  }
+
+  reposition(): void {
+    if (!this.visible || !this.anchoredSlot || !this.frameMount) return;
+
+    const frame = this.frameMount.getBoundingClientRect();
+    const slot = this.anchoredSlot.getBoundingClientRect();
+    const alignEnd = (this.anchoredSlotIndex ?? 0) >= 2;
+
+    if (alignEnd) {
+      this.root.style.left = `${slot.right - frame.left}px`;
+    } else {
+      this.root.style.left = `${slot.left - frame.left}px`;
+    }
+    this.root.style.top = `${slot.top - frame.top}px`;
   }
 
   destroy(): void {

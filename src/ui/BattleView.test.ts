@@ -96,6 +96,8 @@ vi.mock("../ui/PartyHudPanel.ts", () => ({
   PartyHudPanel: vi.fn().mockImplementation(() => ({
     mount: vi.fn(),
     update: vi.fn(),
+    setMode: vi.fn(),
+    updateDetailMetrics: vi.fn(),
     getSlotRoot: vi.fn(() => null),
     destroy: vi.fn(),
   })),
@@ -117,7 +119,6 @@ vi.mock("../ui/BattleStatsDrawer.ts", () => ({
     mount: vi.fn(),
     isOpen: vi.fn(() => false),
     setDisabled: vi.fn(),
-    update: vi.fn(),
     destroy: vi.fn(),
   })),
 }));

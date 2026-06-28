@@ -3,6 +3,8 @@ import {
   PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT,
   selectCompactStatusBadges,
 } from '../battle/statusEffectDisplay.ts';
+import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
+import type { CombatantSnapshot } from '../battle/types.ts';
 import { MAX_ACTIVE_SLOTS } from '../progression/skillBuild.ts';
 import { layoutHpBarBarrier } from '../render/hpBarBarrierLayout.ts';
 import { getClassIconUrl } from '../render/IconRegistry.ts';
@@ -22,7 +24,18 @@ import {
 } from '../render/statusBadgeRenderer.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
 import { resolveRecastFillView } from './partyHudRecast.ts';
-import { syncPartyHudStatusBadgeHits, buildPartyHudStatusBadgeHitSignature } from './partyHudStatusBadgeHits.ts';
+import { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
+import { syncPartyHudStatusBadgeHits, buildPartyHudStatusBadgeCanvasSignature, buildPartyHudStatusBadgeHitSignature } from './partyHudStatusBadgeHits.ts';
+import {
+  buildDownBySlot,
+  createStatusBadgeGroupWithHits,
+  syncDamageBars,
+  syncStatusBadges,
+  syncThreatBars,
+  type DamageBarRefs,
+  type StatusBadgeRefs,
+  type ThreatBarRefs,
+} from './PartyMemberStatsDisplay.ts';
 
 interface RecastCellElements {
   cell: HTMLElement;
@@ -46,18 +59,90 @@ interface SlotElements {
   statusBadgeRenderSignature: string | null;
   hpBarSignature: string | null;
   recastCells: RecastCellElements[];
+  threat: ThreatBarRefs;
+  damage: DamageBarRefs;
+  detailStatus: StatusBadgeRefs;
+}
+
+export type PartyHudPanelMode = 'compact' | 'detail';
+
+export interface PartyHudDetailFrame {
+  snapshots: CombatantSnapshot[];
+  displayRows: StageDamageDisplayRow[];
 }
 
 export interface PartyHudPanelOptions {
   onMemberStatsHoverStart?: (slotIndex: number) => void;
   onMemberStatsHoverEnd?: () => void;
+  floatingTooltip?: PartyHudFloatingTooltip;
+  onScrollReposition?: () => void;
+}
+
+function el<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className: string,
+  text?: string,
+): HTMLElementTagNameMap[K] {
+  const node = document.createElement(tag);
+  node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function createDetailStatusBadges(): StatusBadgeRefs {
+  const statusEl = el('div', 'party-stats-status party-hud-detail-status');
+  const debuffGroup = createStatusBadgeGroupWithHits('Debuff');
+  const buffGroup = createStatusBadgeGroupWithHits('Buff');
+  statusEl.append(debuffGroup.group, buffGroup.group);
+  return {
+    root: statusEl,
+    debuffCanvas: debuffGroup.canvas,
+    buffCanvas: buffGroup.canvas,
+    debuffHitLayer: debuffGroup.hitLayer,
+    buffHitLayer: buffGroup.hitLayer,
+  };
+}
+
+function createDetailThreatBar(): ThreatBarRefs {
+  const threatEl = el('div', 'party-stats-threat party-hud-detail-threat');
+  const threatBar = el('div', 'party-stats-threat-bar');
+  const threatFill = el('div', 'party-stats-threat-fill');
+  const baseMarker = el('div', 'party-stats-threat-base');
+  const threatLabel = el('span', 'party-stats-threat-label', 'Hate —');
+  threatBar.append(threatFill, baseMarker);
+  threatEl.append(threatBar, threatLabel);
+  return { root: threatEl, fill: threatFill, baseMarker, label: threatLabel };
+}
+
+function createDetailDamageBar(): DamageBarRefs {
+  const damageEl = el('div', 'party-stats-damage party-hud-detail-damage');
+  const bars = el('div', 'party-stats-damage-bars');
+  const dealtBar = el('div', 'party-stats-damage-bar');
+  const dealtFill = el(
+    'div',
+    'party-stats-damage-fill party-stats-damage-fill--dealt',
+  );
+  const takenBar = el('div', 'party-stats-damage-bar');
+  const takenFill = el(
+    'div',
+    'party-stats-damage-fill party-stats-damage-fill--taken',
+  );
+  dealtBar.appendChild(dealtFill);
+  takenBar.appendChild(takenFill);
+  bars.append(dealtBar, takenBar);
+  const damageLabel = el('span', 'party-stats-damage-label', '与 — · 被 —');
+  damageEl.append(bars, damageLabel);
+  return { root: damageEl, dealtFill, takenFill, label: damageLabel };
 }
 
 export class PartyHudPanel {
   private root!: HTMLElement;
+  private slotsBody!: HTMLElement;
   private readonly slots: SlotElements[] = [];
   private theme!: BattleHudTheme;
   private lastEntries: (PartyHudEntry | null)[] = [];
+  private mode: PartyHudPanelMode = 'compact';
+  private lastDetailFrame: PartyHudDetailFrame | null = null;
   private readonly unsubscribeStatusIconsReady: () => void;
 
   constructor(
@@ -65,8 +150,13 @@ export class PartyHudPanel {
     private readonly options: PartyHudPanelOptions = {},
   ) {
     this.unsubscribeStatusIconsReady = onStatusIconsReady(() => {
+      this.invalidateCompactStatusRenderSignatures();
       if (this.lastEntries.length > 0) {
         this.update(this.lastEntries);
+      }
+      if (this.mode === 'detail' && this.lastDetailFrame) {
+        this.invalidateDetailStatusSignatures();
+        this.updateDetailMetrics(this.lastDetailFrame);
       }
     });
   }
@@ -77,12 +167,42 @@ export class PartyHudPanel {
     this.root = root;
     root.className = 'party-hud-panel';
 
+    const slotsBody = document.createElement('div');
+    slotsBody.className = 'party-hud-panel-slots';
+    this.slotsBody = slotsBody;
+
     for (let i = 0; i < 4; i++) {
       this.slots.push(this.createSlot(i));
-      root.appendChild(this.slots[i].root);
+      slotsBody.appendChild(this.slots[i].root);
     }
 
+    root.appendChild(slotsBody);
     parent.appendChild(root);
+
+    this.slotsBody.addEventListener('scroll', () => {
+      this.options.floatingTooltip?.reposition();
+      this.options.onScrollReposition?.();
+    });
+  }
+
+  setMode(mode: PartyHudPanelMode): void {
+    if (this.mode === mode) return;
+    this.mode = mode;
+    this.root.classList.toggle('party-hud-panel--detail', mode === 'detail');
+    if (mode === 'compact') {
+      this.invalidateCompactStatusRenderSignatures();
+      if (this.lastEntries.length > 0) {
+        this.update(this.lastEntries);
+      }
+      return;
+    }
+    if (this.lastDetailFrame) {
+      this.updateDetailMetrics(this.lastDetailFrame);
+    }
+  }
+
+  getMode(): PartyHudPanelMode {
+    return this.mode;
   }
 
   update(entries: (PartyHudEntry | null)[]): void {
@@ -100,6 +220,31 @@ export class PartyHudPanel {
     }
   }
 
+  updateDetailMetrics(frame: PartyHudDetailFrame): void {
+    this.lastDetailFrame = frame;
+    if (this.mode !== 'detail') return;
+
+    const threatByPartyIndex = new Map(
+      this.slots.map((slot) => [slot.slotIndex, slot.threat] as const),
+    );
+    const damageByPartyIndex = new Map(
+      this.slots.map((slot) => [slot.slotIndex, slot.damage] as const),
+    );
+    const statusByPartyIndex = new Map(
+      this.slots.map((slot) => [slot.slotIndex, slot.detailStatus] as const),
+    );
+    const downBySlot = buildDownBySlot(frame.snapshots);
+
+    syncThreatBars(threatByPartyIndex, frame.snapshots);
+    syncDamageBars(damageByPartyIndex, frame.displayRows, downBySlot);
+    syncStatusBadges(
+      statusByPartyIndex,
+      frame.snapshots,
+      this.theme,
+      this.options.floatingTooltip ?? null,
+    );
+  }
+
   getSlotRoot(slotIndex: number): HTMLElement | null {
     return this.slots[slotIndex]?.root ?? null;
   }
@@ -107,6 +252,30 @@ export class PartyHudPanel {
   destroy(): void {
     this.unsubscribeStatusIconsReady();
     this.root.remove();
+  }
+
+  private invalidateCompactStatusRenderSignatures(): void {
+    for (const slot of this.slots) {
+      slot.statusBadgeRenderSignature = null;
+    }
+  }
+
+  private invalidateDetailStatusSignatures(): void {
+    for (const slot of this.slots) {
+      slot.detailStatus.debuffRenderSignature = undefined;
+      slot.detailStatus.buffRenderSignature = undefined;
+      slot.detailStatus.debuffHitSignature = undefined;
+      slot.detailStatus.buffHitSignature = undefined;
+    }
+  }
+
+  private bindMemberStatsHover(element: HTMLElement, slotIndex: number): void {
+    element.addEventListener('mouseenter', () => {
+      this.options.onMemberStatsHoverStart?.(slotIndex);
+    });
+    element.addEventListener('mouseleave', () => {
+      this.options.onMemberStatsHoverEnd?.();
+    });
   }
 
   private createSlot(slotIndex: number): SlotElements {
@@ -119,12 +288,7 @@ export class PartyHudPanel {
 
     const label = document.createElement('div');
     label.className = 'party-hud-label';
-    label.addEventListener('mouseenter', () => {
-      this.options.onMemberStatsHoverStart?.(slotIndex);
-    });
-    label.addEventListener('mouseleave', () => {
-      this.options.onMemberStatsHoverEnd?.();
-    });
+    this.bindMemberStatsHover(label, slotIndex);
     head.appendChild(label);
 
     const statusBadgeWrap = document.createElement('div');
@@ -141,12 +305,6 @@ export class PartyHudPanel {
 
     const bodyRow = document.createElement('div');
     bodyRow.className = 'party-hud-body-row';
-    bodyRow.addEventListener('mouseenter', () => {
-      this.options.onMemberStatsHoverStart?.(slotIndex);
-    });
-    bodyRow.addEventListener('mouseleave', () => {
-      this.options.onMemberStatsHoverEnd?.();
-    });
     root.appendChild(bodyRow);
 
     const iconWrap = document.createElement('div');
@@ -165,6 +323,9 @@ export class PartyHudPanel {
     const bars = document.createElement('div');
     bars.className = 'party-hud-bars';
     bodyRow.appendChild(bars);
+
+    this.bindMemberStatsHover(iconWrap, slotIndex);
+    this.bindMemberStatsHover(bars, slotIndex);
 
     const hpTrack = document.createElement('div');
     hpTrack.className = 'party-hud-hp-track';
@@ -202,6 +363,15 @@ export class PartyHudPanel {
       recastCells.push({ cell, fill, stockPips });
     }
 
+    const threat = createDetailThreatBar();
+    root.appendChild(threat.root);
+
+    const damage = createDetailDamageBar();
+    root.appendChild(damage.root);
+
+    const detailStatus = createDetailStatusBadges();
+    root.appendChild(detailStatus.root);
+
     return {
       root,
       slotIndex,
@@ -218,11 +388,13 @@ export class PartyHudPanel {
       statusBadgeRenderSignature: null,
       hpBarSignature: null,
       recastCells,
+      threat,
+      damage,
+      detailStatus,
     };
   }
 
   private updateSlot(slot: SlotElements, entry: PartyHudEntry): void {
-    const theme = this.theme;
     slot.root.classList.toggle('party-hud-slot--dead', !entry.isAlive);
     slot.label.textContent = entry.displayName;
 
@@ -234,11 +406,13 @@ export class PartyHudPanel {
       slot.icon.removeAttribute('src');
       slot.icon.style.backgroundColor = resolveClassIconPlaceholderColor(
         entry.iconKey,
-        theme,
+        this.theme,
       );
     }
 
-    this.updateStatusBadges(slot, entry);
+    if (this.mode === 'compact') {
+      this.updateCompactStatusBadges(slot, entry);
+    }
     this.updateHpBar(slot, entry);
     this.updateRecastGrid(slot, entry);
   }
@@ -270,7 +444,7 @@ export class PartyHudPanel {
     }
   }
 
-  private updateStatusBadges(slot: SlotElements, entry: PartyHudEntry): void {
+  private updateCompactStatusBadges(slot: SlotElements, entry: PartyHudEntry): void {
     const badges = collectStatusEffectBadgeDisplays(entry.statusEffects, {
       baseMaxHp: entry.baseMaxHp,
       atk: entry.atk,
@@ -295,76 +469,91 @@ export class PartyHudPanel {
     const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
     const canvasW = badgeLayout.totalWidth + outlinePad * 2;
     const canvasH = badgeLayout.totalHeight + outlinePad * 2;
-    const renderSignature = buildPartyHudStatusBadgeHitSignature(
+    const canvasSignature = buildPartyHudStatusBadgeCanvasSignature(
       visible,
       overflowCount,
       slot.slotIndex,
       canvasW,
       canvasH,
     );
-    if (renderSignature === slot.statusBadgeRenderSignature) {
+    const hitSignature = buildPartyHudStatusBadgeHitSignature(
+      visible,
+      overflowCount,
+      slot.slotIndex,
+    );
+    const canvasUnchanged = canvasSignature === slot.statusBadgeRenderSignature;
+    const hitsUnchanged = hitSignature === slot.statusBadgeHitSignature;
+    if (canvasUnchanged && hitsUnchanged) {
       return;
     }
-    slot.statusBadgeRenderSignature = renderSignature;
 
-    canvas.width = canvasW;
-    canvas.height = canvasH;
-    if (badges.length === 0) {
-      canvas.style.width = '';
-      canvas.style.height = '';
-      canvas.style.minWidth = '';
-      canvas.style.maxWidth = '';
-    } else {
-      const w = `${canvasW}px`;
-      const h = `${canvasH}px`;
-      canvas.style.width = w;
-      canvas.style.height = h;
-      // .status-badge-canvas の max-width:100% による縮小を防ぐ
-      canvas.style.minWidth = w;
-      canvas.style.maxWidth = w;
+    if (!canvasUnchanged) {
+      slot.statusBadgeRenderSignature = canvasSignature;
+
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+      if (badges.length === 0) {
+        canvas.style.width = '';
+        canvas.style.height = '';
+        canvas.style.minWidth = '';
+        canvas.style.maxWidth = '';
+      } else {
+        const w = `${canvasW}px`;
+        const h = `${canvasH}px`;
+        canvas.style.width = w;
+        canvas.style.height = h;
+        canvas.style.minWidth = w;
+        canvas.style.maxWidth = w;
+      }
+      canvas.hidden = badges.length === 0;
+
+      if (badges.length > 0) {
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.clearRect(0, 0, canvasW, canvasH);
+
+        drawCompactStatusBadgeRow(
+          ctx,
+          outlinePad,
+          outlinePad,
+          visible,
+          overflowCount,
+          scale,
+          {
+            iconSize: PARTY_HUD_STATUS_BADGE_ICON_SIZE,
+            rowOverlap: theme.statusBadgeOverlap,
+            overlayColor: theme.statusBadgeOverlay,
+            iconOutlineColor: theme.statusIconOutlineColor,
+            iconOutlineWidth: theme.statusIconOutlineWidth,
+            iconFallbackAlpha: theme.statusIconFallbackAlpha,
+            resolveIconFallbackColor: (category) =>
+              resolveStatusIconFallbackColor(category, theme),
+          },
+          badgeLayoutConfig,
+        );
+      }
     }
-    canvas.hidden = badges.length === 0;
+
     if (badges.length === 0) {
       slot.statusBadgeHitLayer.replaceChildren();
       slot.statusBadgeHitSignature = null;
       return;
     }
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, canvasW, canvasH);
-
-    drawCompactStatusBadgeRow(
-      ctx,
-      outlinePad,
-      outlinePad,
-      visible,
-      overflowCount,
-      scale,
-      {
-        iconSize: PARTY_HUD_STATUS_BADGE_ICON_SIZE,
-        rowOverlap: theme.statusBadgeOverlap,
-        overlayColor: theme.statusBadgeOverlay,
-        iconOutlineColor: theme.statusIconOutlineColor,
-        iconOutlineWidth: theme.statusIconOutlineWidth,
-        iconFallbackAlpha: theme.statusIconFallbackAlpha,
-        resolveIconFallbackColor: (category) =>
-          resolveStatusIconFallbackColor(category, theme),
-      },
-      badgeLayoutConfig,
-    );
-
-    slot.statusBadgeHitSignature = renderSignature;
-    syncPartyHudStatusBadgeHits(
-      slot.statusBadgeHitLayer,
-      badges,
-      visible,
-      overflowCount,
-      PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT,
-      theme,
-      slot.slotIndex,
-    );
+    if (!hitsUnchanged) {
+      slot.statusBadgeHitSignature = hitSignature;
+      syncPartyHudStatusBadgeHits(
+        slot.statusBadgeHitLayer,
+        badges,
+        visible,
+        overflowCount,
+        PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT,
+        theme,
+        slot.slotIndex,
+        this.options.floatingTooltip ?? null,
+      );
+    }
   }
 
   private updateRecastGrid(slot: SlotElements, entry: PartyHudEntry): void {

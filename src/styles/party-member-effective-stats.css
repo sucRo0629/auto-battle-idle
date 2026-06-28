@@ -1,12 +1,10 @@
 .party-member-effective-stats {
   position: absolute;
-  bottom: 100%;
-  left: 0;
-  z-index: 3;
+  z-index: 20;
   box-sizing: border-box;
   width: max-content;
   max-width: min(220px, calc(100vw - 16px));
-  margin-bottom: 4px;
+  margin-top: -4px;
   padding: 8px 10px;
   border: 1px solid var(--canvas-border-color);
   border-radius: 2px;
@@ -15,6 +13,7 @@
   color: #e8ecf1;
   font-family: var(--hud-font-family, 'Segoe UI', system-ui, sans-serif);
   pointer-events: auto;
+  transform: translate(0, -100%);
 }
 
 .party-member-effective-stats[hidden] {
@@ -96,6 +95,5 @@
 }
 
 .party-member-effective-stats--align-end {
-  left: auto;
-  right: 0;
+  transform: translate(-100%, -100%);
 }

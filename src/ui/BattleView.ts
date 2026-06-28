@@ -1,4 +1,5 @@
 import "../styles/battle-view.css";
+import "../styles/party-hud-floating-tooltip.css";
 import type { BattleEngine } from "../battle/BattleEngine.ts";
 import type { BattleEvent } from "../battle/events.ts";
 import { resolveSkillRangePx } from "../battle/skills/rangeUtils.ts";
@@ -35,7 +36,7 @@ import {
 } from "./partyHudTypes.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import { BattleStatsDrawer } from "./BattleStatsDrawer.ts";
-import type { PartyMemberStatsFrame } from "./PartyMemberStatsDisplay.ts";
+import { PartyHudFloatingTooltip } from "./partyHudFloatingTooltip.ts";
 import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 
@@ -80,6 +81,8 @@ export class BattleView {
   private readonly debugMenu: DebugMenuPanel;
   private readonly battleXDebugCanvas: BattleXDebugCanvas;
   private readonly statsDrawer: BattleStatsDrawer;
+  private readonly hudFloatingTooltip: PartyHudFloatingTooltip;
+  private readonly canvasFrame: HTMLElement;
   private hoveredMemberStatsSlotIndex: number | null = null;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastStageLabel = "";
@@ -127,6 +130,7 @@ export class BattleView {
 
     const canvasFrame = document.createElement("div");
     canvasFrame.className = "battle-canvas-frame";
+    this.canvasFrame = canvasFrame;
 
     const canvasWrap = document.createElement("div");
     canvasWrap.className = "battle-canvas-wrap";
@@ -195,6 +199,8 @@ export class BattleView {
     hudStack.className = "battle-hud-stack";
     canvasFrame.appendChild(hudStack);
 
+    this.hudFloatingTooltip = new PartyHudFloatingTooltip(canvasFrame);
+
     this.partyHud = new PartyHudPanel(this.canvasHost, {
       onMemberStatsHoverStart: (slotIndex) => {
         this.showMemberStatsPanel(slotIndex);
@@ -202,20 +208,29 @@ export class BattleView {
       onMemberStatsHoverEnd: () => {
         this.scheduleMemberStatsHide();
       },
+      floatingTooltip: this.hudFloatingTooltip,
+      onScrollReposition: () => {
+        if (this.memberStatsPanel.isVisible()) {
+          this.memberStatsPanel.reposition();
+        }
+      },
     });
     this.partyHud.mount(hudStack);
 
-    this.statsDrawer = new BattleStatsDrawer(this.gameData, {
-      getDisplayRows: () =>
-        verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
-      getAllySnapshots: () => this.engine.getSnapshot().allies,
-      getCurrentStageId: () =>
-        verifyModeControls?.getCurrentStageId?.() ??
-        this.getSave().stageProgress.currentStageId,
+    this.statsDrawer = new BattleStatsDrawer({
       onOpenChange: (open) => {
+        this.partyHud.setMode(open ? "detail" : "compact");
+        if (open) {
+          const snapshot = this.engine.getSnapshot();
+          this.partyHud.updateDetailMetrics({
+            snapshots: snapshot.allies,
+            displayRows:
+              verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
+          });
+        }
         verifyModeControls?.onStatsDrawerOpenChange?.(open);
       },
-    }, { themeHost: this.root });
+    });
     this.statsDrawer.mount(hudStack);
 
     const statsPanelStorage = document.createElement('div');
@@ -226,6 +241,7 @@ export class BattleView {
       statsPanelStorage,
       this.root,
       {
+        frameMount: canvasFrame,
         onHoverStart: () => {
           this.clearMemberStatsHideTimer();
         },
@@ -631,12 +647,11 @@ export class BattleView {
     }
 
     if (this.statsDrawer.isOpen()) {
-      const statsFrame: PartyMemberStatsFrame = {
+      this.partyHud.updateDetailMetrics({
         snapshots: snapshot.allies,
         displayRows:
           this.verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
-      };
-      this.statsDrawer.update(statsFrame);
+      });
     }
     this.refreshMemberStatsPanel();
   }
@@ -667,6 +682,7 @@ export class BattleView {
 
   destroy(): void {
     this.clearMemberStatsHideTimer();
+    this.hudFloatingTooltip.destroy();
     this.statsDrawer.destroy();
     this.memberStatsPanel.destroy();
     this.canvas.destroy();

@@ -121,7 +121,7 @@ export class GameSession {
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
         onStatsDrawerOpenChange: (open) => {
           this.statsDrawerOpen = open;
-          this.view.setStatsDrawerDisabled(open || this.metaMenuOpen);
+          this.view.setStatsDrawerDisabled(this.metaMenuOpen);
           this.view.setMenuButtonDisabled(open || this.metaMenuOpen);
         },
       },
@@ -138,7 +138,7 @@ export class GameSession {
       onOpenChange: (open) => {
         this.metaMenuOpen = open;
         this.view.setMenuButtonDisabled(open || this.statsDrawerOpen);
-        this.view.setStatsDrawerDisabled(open || this.statsDrawerOpen);
+        this.view.setStatsDrawerDisabled(open);
       },
     });
 
