@@ -8,6 +8,67 @@
   width: 100%;
 }
 
+.battle-hud-toolbar {
+  -webkit-app-region: no-drag;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px calc(var(--hud-backdrop-pad-x) * 1px) 3px;
+  background: var(--hud-backdrop-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
+  font-family: var(--hud-font-family);
+}
+
+.battle-hud-toolbar-leading {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.battle-hud-toolbar-level {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  color: rgba(227, 227, 227, 0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.battle-party-menu-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 2px;
+  background: rgba(22, 33, 62, 0.92);
+  color: rgba(227, 227, 227, 0.92);
+  font-family: var(--hud-font-family);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.battle-party-menu-button:hover:not(:disabled) {
+  background: rgba(45, 58, 79, 0.95);
+}
+
+.battle-party-menu-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
 .party-hud-panel-slots {
   display: contents;
 }
@@ -54,13 +115,18 @@
   cursor: default;
 }
 
-.party-hud-drawer-tab-icon {
-  font-family: 'Material Symbols Outlined';
-  font-weight: normal;
-  font-style: normal;
-  font-size: 18px;
-  line-height: 1;
-  letter-spacing: normal;
+.party-hud-drawer-tab-chevron {
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform 0.12s ease;
+}
+
+.party-hud-drawer-tab-chevron--open {
+  transform: rotate(180deg);
 }
 
 .party-hud-panel .party-hud-detail-threat,

@@ -35,6 +35,7 @@ import {
   buildPartyHudMetaBySlot,
 } from "./partyHudTypes.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
+import { resolvePlayerDisplayLevel } from "../progression/resolvePlayerDisplayLevel.ts";
 import { BattleStatsDrawer } from "./BattleStatsDrawer.ts";
 import { PartyHudFloatingTooltip } from "./partyHudFloatingTooltip.ts";
 import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
@@ -74,7 +75,7 @@ export class BattleView {
   private readonly stageLabelEl: HTMLElement;
   private readonly verifyModeInput: HTMLInputElement;
   private readonly menuButton: HTMLButtonElement;
-  private readonly enhancementTreeButton: HTMLButtonElement;
+  private readonly hudToolbarLevelEl: HTMLElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
   private readonly memberStatsPanel: PartyMemberEffectiveStatsPanel;
@@ -86,6 +87,7 @@ export class BattleView {
   private hoveredMemberStatsSlotIndex: number | null = null;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastStageLabel = "";
+  private lastHudToolbarLevel = -1;
   private readonly verifyModeControls?: VerifyModeControls;
 
   constructor(
@@ -140,25 +142,6 @@ export class BattleView {
     this.stageLabelEl.className = "battle-stage-label";
     canvasWrap.appendChild(this.stageLabelEl);
 
-    const menuButtons = document.createElement("div");
-    menuButtons.className = "battle-menu-buttons";
-
-    this.enhancementTreeButton = this.createBattleMenuButton(
-      "flowchart",
-      "強化ツリー（準備中）"
-    );
-    this.enhancementTreeButton.disabled = true;
-
-    this.menuButton = this.createBattleMenuButton("group", "パーティ");
-    this.menuButton.addEventListener("click", () => {
-      verifyModeControls?.onOpenMetaMenu();
-    });
-
-    menuButtons.append(
-      this.enhancementTreeButton,
-      this.menuButton,
-    );
-    canvasWrap.appendChild(menuButtons);
     canvasFrame.appendChild(canvasWrap);
     this.canvasHost.appendChild(canvasFrame);
 
@@ -198,6 +181,26 @@ export class BattleView {
     const hudStack = document.createElement("div");
     hudStack.className = "battle-hud-stack";
     canvasFrame.appendChild(hudStack);
+
+    const hudToolbar = document.createElement("div");
+    hudToolbar.className = "battle-hud-toolbar";
+
+    const hudToolbarLeading = document.createElement("div");
+    hudToolbarLeading.className = "battle-hud-toolbar-leading";
+
+    this.hudToolbarLevelEl = document.createElement("span");
+    this.hudToolbarLevelEl.className = "battle-hud-toolbar-level";
+
+    hudToolbarLeading.appendChild(this.hudToolbarLevelEl);
+
+    this.menuButton = this.createPartyMenuButton();
+    this.menuButton.addEventListener("click", () => {
+      verifyModeControls?.onOpenMetaMenu();
+    });
+
+    hudToolbar.append(hudToolbarLeading, this.menuButton);
+    hudStack.appendChild(hudToolbar);
+    this.syncHudToolbarLevel(this.getSave().party);
 
     this.hudFloatingTooltip = new PartyHudFloatingTooltip(canvasFrame);
 
@@ -626,6 +629,8 @@ export class BattleView {
       this.stageLabelEl.textContent = stageLabel;
     }
 
+    this.syncHudToolbarLevel(save.party);
+
     const debugEnabled = this.verifyModeControls?.isVerifyMode() ?? false;
 
     this.canvas.syncFromSnapshot(snapshot);
@@ -664,19 +669,21 @@ export class BattleView {
     this.statsDrawer.setDisabled(disabled);
   }
 
-  private createBattleMenuButton(
-    iconName: string,
-    ariaLabel: string
-  ): HTMLButtonElement {
+  private syncHudToolbarLevel(
+    party: ReturnType<BattleView["getSave"]>["party"] | undefined,
+  ): void {
+    const level = resolvePlayerDisplayLevel(party ?? []);
+    if (level === this.lastHudToolbarLevel) return;
+    this.lastHudToolbarLevel = level;
+    this.hudToolbarLevelEl.textContent = `プレイヤー Lv ${level}`;
+  }
+
+  private createPartyMenuButton(): HTMLButtonElement {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = "battle-menu-button";
-    button.setAttribute("aria-label", ariaLabel);
-    const icon = document.createElement("span");
-    icon.className = "material-symbols-outlined";
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = iconName;
-    button.appendChild(icon);
+    button.className = "battle-party-menu-button";
+    button.setAttribute("aria-label", "パーティ編成");
+    button.textContent = "編成";
     return button;
   }
 

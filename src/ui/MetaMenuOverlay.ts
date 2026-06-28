@@ -112,13 +112,7 @@ export class MetaMenuOverlay {
     partyButton.textContent = "パーティ";
     partyButton.addEventListener("click", () => this.openParty());
 
-    const enhancementButton = document.createElement("button");
-    enhancementButton.type = "button";
-    enhancementButton.className = "meta-menu-item meta-menu-item--disabled";
-    enhancementButton.disabled = true;
-    enhancementButton.textContent = "強化ツリー（準備中）";
-
-    hub.append(partyButton, enhancementButton);
+    hub.append(partyButton);
     this.bodyEl.appendChild(hub);
   }
 

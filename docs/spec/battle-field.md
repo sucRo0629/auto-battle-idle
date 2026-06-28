@@ -469,8 +469,9 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 
 | 要素 | 内容 |
 | ---- | ---- |
-| 起動 | Party HUD（`.party-hud-panel`）直下の **ドロワータブ**（`.party-hud-drawer-tab`、シェブロンアイコンのみ）。`Escape` または同タブで閉じる |
-| 配置 | `battle-canvas-frame` 内の `.battle-hud-stack` — 上: Party HUD（コンパクト / 詳細を **同一枠内で切替**）、下: ドロワータブのみ。キャンバス幅（最大 480px）に揃える |
+| 起動 | Party HUD（`.party-hud-panel`）直下の **ドロワータブ**（`.party-hud-drawer-tab`、CSS シェブロンのみ）。`Escape` または同タブで閉じる |
+| 配置 | `battle-canvas-frame` 内の `.battle-hud-stack` — 上: **パーティ帯**（`.battle-hud-toolbar`：左に `プレイヤー Lv {n}`、右に **編成** ボタン）、Party HUD（コンパクト / 詳細を **同一枠内で切替**）、下: ドロワータブのみ。キャンバス幅（最大 480px）に揃える |
+| パーティ帯 | Party HUD **直上**のヘッダー行。**左:** `プレイヤー Lv {n}` のみ（`resolvePlayerDisplayLevel`）。**右:** `.battle-party-menu-button`（テキスト「編成」のみ）→ `MetaMenuOverlay`（`initialView: "party"`）。帯左側の表示内容は **暫定**（将来見直し可）。**アイコンフォントは使わない** |
 | 表示切替 | **詳細**（**起動時デフォルト**）= メンバー縦リスト（同一 `.party-hud-panel` 枠）。**コンパクト** = 横 4 列（HP・リキャスト・簡易バッジ）。下のタブで排他切替。別パネルの積み増しはしない |
 | メンバー行（詳細） | 編成スロット順。**行 1:** 24px クラスアイコン + `displayName` + HP / リキャスト（コンパクトと同 DOM）+ Threat バー + 与ダメ / 被ダメバー。**行 2:** 状態バッジ帯（debuff / buff ラベル付き・全件）。**Exp 数値・メンバー別 Lv・epithetEn は表示しない** |
 | 状態バッジ帯 | debuff / buff でラベル行を分ける（例: Debuff / Buff）。パネル横幅いっぱいで flex-wrap 折り返し。**簡易 3+N 省略なし**（[combat.md](combat.md) HUD バッジ §簡易/詳細） |

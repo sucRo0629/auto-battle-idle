@@ -34,10 +34,8 @@ export class BattleStatsDrawer {
     });
 
     this.tabIcon = document.createElement('span');
-    this.tabIcon.className =
-      'party-hud-drawer-tab-icon material-symbols-outlined';
+    this.tabIcon.className = 'party-hud-drawer-tab-chevron';
     this.tabIcon.setAttribute('aria-hidden', 'true');
-    this.tabIcon.textContent = 'expand_more';
     this.tabButton.appendChild(this.tabIcon);
 
     this.root.appendChild(this.tabButton);
@@ -76,7 +74,7 @@ export class BattleStatsDrawer {
       'aria-label',
       open ? '戦闘詳細を閉じる' : '戦闘詳細を開く',
     );
-    this.tabIcon.textContent = open ? 'expand_less' : 'expand_more';
+    this.tabIcon.classList.toggle("party-hud-drawer-tab-chevron--open", open);
 
     if (this.mounted) {
       if (open) {
