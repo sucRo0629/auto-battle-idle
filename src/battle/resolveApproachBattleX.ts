@@ -174,18 +174,17 @@ export function resolveEnemyChaseTargetPlayer(
   return pickTargetFromPool(spec, enemy, pool);
 }
 
-/** 敵: 射程内プレイヤーからヘイト最大（Threat ヒステリシス付き） */
+/** 敵: ChaseTarget が射程内のときのみ返す（Threat フォーカス対象と Attack を単一化） */
 export function resolveEnemyAttackTargetPlayer(
   enemy: CombatantState,
   players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
 ): CombatantState | null {
-  const spec = resolveUnitTargetSpec(enemy, players, enemies, gameData);
+  const chase = resolveEnemyChaseTargetPlayer(enemy, players, enemies, gameData);
+  if (!chase) return null;
   const range = resolveApproachRangePx(enemy, gameData);
-  const pool = getAttackablePool(spec, enemy, players, enemies, range);
-  if (pool.length === 0) return null;
-  return pickTargetFromPool(spec, enemy, pool);
+  return isWithinSkillRange(enemy, chase, range) ? chase : null;
 }
 
 /** @deprecated resolveEnemyAttackTargetPlayer を使用 */

@@ -260,7 +260,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 ## ヘイト（Threat）
 
-味方のみランタイムで `threat` / `baseThreat` を保持。敵のデフォルトターゲット（`targetRuleOverride` なし・`distance/enemy/nearest`）は **射程内でヘイト最大の味方**（実装：`src/battle/threat.ts` の `pickHighestThreatAlly`）。
+味方のみランタイムで `threat` / `baseThreat` を保持。敵のデフォルトターゲット（`targetRuleOverride` なし・`distance/enemy/nearest`）は **全局 Threat 最大の味方**（Chase / Attack 共通・ヒステリシス付き）。Attack はそのフォーカス対象が射程内にいるときのみ成立し、射程外の間は接近継続・他味方は攻撃しない（実装：`resolveEnemyChaseTargetPlayer` / `resolveEnemyAttackTargetPlayer`）。
 
 ### 設計意図
 
@@ -307,7 +307,13 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 
 ### 敵ターゲット選定
 
-`pickHighestThreatAlly`: 生存味方のうち射程内プールから `threat ?? baseThreat ?? 0` が最大の 1 体を選ぶ（決定論的）。同率タイは `battleX` が大きい方（前線側）→ `id` 辞書順。ヘイト 2 位以降が選ばれることはない。
+Chase / Attack は同一フォーカス対象を共有する。
+
+1. **ChaseTarget** — 全生存味方（rear assault 除外等の既存プール）から Threat 最大（`pickThreatTargetWithHysteresis`）
+2. **AttackTarget** — ChaseTarget が `effectiveRangePx` 内にいるときのみその 1 体。それ以外は null（射程内の別味方は攻撃しない）
+3. **接近停止** — AttackTarget !== null のときのみ（フォーカス対象が射程外の間は接近継続）
+
+`pickHighestThreatAlly`: 与えられたプール内で `threat ?? baseThreat ?? 0` が最大の 1 体を選ぶ汎用ヘルパー（決定論的）。同率タイは `battleX` が大きい方（前線側）→ `id` 辞書順。敵 AI の chase / attack にはヒステリシス版を使用し、射程内プール独立選定は行わない。
 
 `targetRuleOverride` 等で `distance/enemy/farthest`（または `nearest` + `moveAnchor`）に上書きされた場合は、敵 actor も使用者との `battleX` 距離で至近/最遠を選ぶ（ヘイトは使わない）。
 

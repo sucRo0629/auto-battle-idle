@@ -4,6 +4,7 @@ import {
   resolveEnemyApproachBattleX,
   resolveEnemyAttackTargetPlayer,
   resolveEnemyChaseTargetPlayer,
+  shouldSkipEngagedAutoApproach,
 } from './resolveApproachBattleX.ts';
 import { mockApproachCombatant as mockCombatant, mockApproachGameData } from './testFixtures.ts';
 
@@ -331,7 +332,60 @@ describe('resolveEnemyChaseTargetPlayer', () => {
 });
 
 describe('resolveEnemyAttackTargetPlayer', () => {
-  it('picks highest-threat player among in-range pool only', () => {
+  it('returns null when chase target is out of range even if another ally is in range', () => {
+    const tank = mockCombatant({
+      id: 'tank',
+      formationRow: 'front',
+      battleX: 200,
+      threat: 120,
+      baseThreat: 120,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const striker = mockCombatant({
+      id: 'striker',
+      formationRow: 'front',
+      battleX: 250,
+      threat: 40,
+      baseThreat: 40,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 250,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    expect(
+      resolveEnemyChaseTargetPlayer(meleeEnemy, [tank, striker], [meleeEnemy], gameData)?.id,
+    ).toBe('tank');
+    expect(
+      resolveEnemyAttackTargetPlayer(meleeEnemy, [tank, striker], [meleeEnemy], gameData),
+    ).toBeNull();
+    expect(
+      shouldSkipEngagedAutoApproach(meleeEnemy, [tank, striker], [meleeEnemy], gameData),
+    ).toBe(false);
+  });
+
+  it('attacks chase target when both are in range and chase has highest threat', () => {
     const tank = mockCombatant({
       id: 'tank',
       formationRow: 'front',
@@ -381,6 +435,59 @@ describe('resolveEnemyAttackTargetPlayer', () => {
     );
 
     expect(target?.id).toBe('tank');
+    expect(
+      shouldSkipEngagedAutoApproach(meleeEnemy, [tank, striker], [meleeEnemy], gameData),
+    ).toBe(true);
+  });
+
+  it('attacks chase target when chase target enters range', () => {
+    const tank = mockCombatant({
+      id: 'tank',
+      formationRow: 'front',
+      battleX: 250,
+      threat: 120,
+      baseThreat: 120,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const striker = mockCombatant({
+      id: 'striker',
+      formationRow: 'front',
+      battleX: 200,
+      threat: 40,
+      baseThreat: 40,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const meleeEnemy = mockCombatant({
+      id: 'melee',
+      isEnemy: true,
+      battleX: 250,
+      traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
+      cooldowns: [{ skillId: 'basic_melee', remaining: 0, slotKind: 'basic' }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    expect(
+      resolveEnemyAttackTargetPlayer(meleeEnemy, [tank, striker], [meleeEnemy], gameData)?.id,
+    ).toBe('tank');
+    expect(
+      shouldSkipEngagedAutoApproach(meleeEnemy, [tank, striker], [meleeEnemy], gameData),
+    ).toBe(true);
   });
 });
 

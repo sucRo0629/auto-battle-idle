@@ -307,14 +307,14 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | Intent           | この章での用途                 | 正本                                                                                          |
 | ---------------- | ------------------------------ | --------------------------------------------------------------------------------------------- |
 | `ChaseTarget`    | 自動接近で追う相手             | 敵は Threat、味方は target spec / target rule                                                 |
-| `AttackTarget`   | 射程内停止と実際の攻撃対象     | `ChaseTarget` と同じ target spec 系の射程内プール。敵の対プレイヤーは Threat 優先             |
+| `AttackTarget`   | 射程内停止と実際の攻撃対象     | 敵は `ChaseTarget` の射程内判定。味方は同じ target spec 系の attack プール                     |
 | `MoveAnchor`     | スキル `move` の到達基準       | 使用者との `battleX` 距離。Threat は使わない                                                  |
 | `FrontlineOwner` | 現在その戦線を保持している味方 | `resolvePlayerFrontlineOwners`（`combatPosition.ts`）。rear assault アクセス中は含めない      |
 | `DisplayAnchor`  | 遠隔敵の表示凍結・VFX 基準     | 描画専用。`engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper）。戦闘判定へ逆流させない |
 
 | 側                                     | chase（毎 tick 再評価）                                                                                                                       | attack / 停止判定                                                   |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| 敵                                     | 全生存プレイヤーからヘイト最大（`resolveEnemyChaseTargetPlayer`）                                                                             | 射程内プレイヤーからヘイト最大（`resolveEnemyAttackTargetPlayer`）  |
+| 敵                                     | 全生存プレイヤーからヘイト最大（`resolveEnemyChaseTargetPlayer`）                                                                             | `ChaseTarget` が射程内のときのみその 1 体（`resolveEnemyAttackTargetPlayer`） |
 | 味方（全ロール共通）                   | target spec / target rule の敵プールから `ChaseTarget` を選ぶ。既定 `distance/enemy/nearest` は battle-line depth の **奥**（`battleX` 最大） | 同じ target spec 系の attack プールで `effectiveRangePx` 内なら停止 |
 | 味方（ally-heal 通常攻撃の supporter） | 射程外の **PHT**（[combat.md](combat.md) §回復 PHT）へ接近。全員健康なら **現位置維持**（敵 chase しない）                                      | 射程内に **PHT** がいれば停止（`shouldSkipEngagedAutoApproach`）。任意の軽傷者では停止しない |
 
