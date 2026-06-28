@@ -12,8 +12,8 @@
     "chance": 0.2,
     "debuffDotDurationSec": 5,
     "debuffDotAmount": {
-      "kind": "flat",
-      "flatAmount": 10
+      "kind": "atkBased",
+      "atkScale": 0.1
     },
     "debuffDotDamageType": "magic",
     "debuffDotFlavor": "poison"

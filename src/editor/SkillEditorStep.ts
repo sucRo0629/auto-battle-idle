@@ -3463,13 +3463,13 @@ export class SkillEditorStep {
         appendResourceAmountFields(
           effectGrid,
           passive.debuffDotAmount ?? defaultResourceAmount(10, "flat"),
-          (debuffDotAmount) => {
+          (debuffDotAmount, options) => {
             this.patchPassive(
               index,
               (current) => {
                 current.debuffDotAmount = debuffDotAmount;
               },
-              { rerender: false }
+              options
             );
           }
         );
@@ -4087,13 +4087,13 @@ export class SkillEditorStep {
         appendResourceAmountFields(
           effectGrid,
           passive.healAmount ?? defaultResourceAmount(0.75),
-          (healAmount) => {
+          (healAmount, options) => {
             this.patchPassive(
               index,
               (current) => {
                 current.healAmount = healAmount;
               },
-              { rerender: false }
+              options
             );
           }
         );
@@ -4120,13 +4120,13 @@ export class SkillEditorStep {
         appendResourceAmountFields(
           effectGrid,
           passive.barrierAmount ?? defaultResourceAmount(0.85),
-          (barrierAmount) => {
+          (barrierAmount, options) => {
             this.patchPassive(
               index,
               (current) => {
                 current.barrierAmount = barrierAmount;
               },
-              { rerender: false }
+              options
             );
           }
         );
@@ -4135,13 +4135,13 @@ export class SkillEditorStep {
         appendResourceAmountFields(
           effectGrid,
           passive.healAmount ?? defaultResourceAmount(0.65),
-          (healAmount) => {
+          (healAmount, options) => {
             this.patchPassive(
               index,
               (current) => {
                 current.healAmount = healAmount;
               },
-              { rerender: false }
+              options
             );
           }
         );

@@ -106,7 +106,7 @@
         "stayEffects": [
           {
             "type": "dotExtend",
-            "extendRatio": 1.25,
+            "extendRatio": 1.5,
             "target": {
               "kind": "all",
               "side": "enemy"
@@ -160,7 +160,7 @@
   },
   {
     "id": "at_hunter_active_4",
-    "name": "毒収穫",
+    "name": "再利用",
     "trigger": {
       "kind": "time",
       "value": 12
