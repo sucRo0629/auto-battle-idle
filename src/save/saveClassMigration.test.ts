@@ -7,6 +7,13 @@ import {
 } from './saveClassMigration.ts';
 
 describe('saveClassMigration', () => {
+  it('maps at_warrior to at_swordsman', () => {
+    expect(migrateLegacyClassId('at_warrior')).toBe('at_swordsman');
+    expect(migrateLegacySkillId('at_warrior_active_1')).toBe(
+      'at_swordsman_active_1',
+    );
+  });
+
   it('maps at_sniper to at_ballista', () => {
     expect(migrateLegacyClassId('at_sniper')).toBe('at_ballista');
     expect(migrateLegacyClassId('at_ballista')).toBe('at_ballista');

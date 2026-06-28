@@ -53,37 +53,37 @@ describe('balanceReference', () => {
     const rows = [
       row('df_guardian', 'defender'),
       row('df_paladin', 'defender'),
-      row('at_warrior', 'attacker'),
+      row('at_swordsman', 'attacker'),
       row('sp_cleric', 'supporter', 2),
     ];
     expect(
       filterBalanceRowsForDisplay(rows, 1, 'all').map((entry) => entry.id),
-    ).toEqual(['df_guardian', 'df_paladin', 'at_warrior']);
+    ).toEqual(['df_guardian', 'df_paladin', 'at_swordsman']);
     expect(
       filterBalanceRowsForDisplay(rows, 1, 'byRole').map((entry) => entry.id),
-    ).toEqual(['df_guardian', 'df_paladin', 'at_warrior']);
+    ).toEqual(['df_guardian', 'df_paladin', 'at_swordsman']);
     expect(
       filterBalanceRowsForDisplay(rows, 1, 'reference').map((entry) => entry.id),
-    ).toEqual(['df_guardian', 'at_warrior']);
+    ).toEqual(['df_guardian', 'at_swordsman']);
   });
 
   it('sortBalanceRowsByClassOrder follows class list order', () => {
-    const classOrder = ['at_warrior', 'df_guardian', 'sp_cleric'];
+    const classOrder = ['at_swordsman', 'df_guardian', 'sp_cleric'];
     const rows = [
       row('sp_cleric', 'supporter'),
       row('df_guardian', 'defender'),
-      row('at_warrior', 'attacker'),
+      row('at_swordsman', 'attacker'),
     ];
     expect(
       sortBalanceRowsByClassOrder(rows, classOrder).map((entry) => entry.id),
-    ).toEqual(['at_warrior', 'df_guardian', 'sp_cleric']);
+    ).toEqual(['at_swordsman', 'df_guardian', 'sp_cleric']);
   });
 
   it('groupBalanceRowsByRole buckets by role using class list order', () => {
     const classOrder = [
       'df_guardian',
       'df_paladin',
-      'at_warrior',
+      'at_swordsman',
       'at_ranger',
       'at_sorcerer',
       'sp_cleric',
@@ -93,14 +93,14 @@ describe('balanceReference', () => {
       row('at_sorcerer', 'attacker'),
       row('at_ranger', 'attacker'),
       row('df_guardian', 'defender'),
-      row('at_warrior', 'attacker'),
+      row('at_swordsman', 'attacker'),
     ];
     const grouped = groupBalanceRowsByRole(rows, classOrder);
     expect(grouped.get('defender')!.map((entry) => entry.id)).toEqual([
       'df_guardian',
     ]);
     expect(grouped.get('attacker')!.map((entry) => entry.id)).toEqual([
-      'at_warrior',
+      'at_swordsman',
       'at_ranger',
       'at_sorcerer',
     ]);

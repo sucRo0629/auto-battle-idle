@@ -8,7 +8,7 @@ export const BALANCE_RANGE_COLUMN_HINT = `射程列: ${configurableRangeHintJa()
 
 export const BALANCE_REFERENCE_CLASS_IDS: readonly ClassId[] = [
   'df_guardian',
-  'at_warrior',
+  'at_swordsman',
   'at_ranger',
   'at_sorcerer',
   'sp_cleric',
@@ -18,7 +18,7 @@ const REFERENCE_ID_SET = new Set<ClassId>(BALANCE_REFERENCE_CLASS_IDS);
 
 export const BALANCE_REFERENCE_DISPLAY_NAMES: Record<ClassId, string> = {
   df_guardian: '鉄衛士',
-  at_warrior: '剣術士',
+  at_swordsman: '剣術士',
   at_ranger: '弓術士',
   at_sorcerer: '魔術師',
   sp_cleric: '療養師',

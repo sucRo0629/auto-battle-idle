@@ -303,7 +303,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 - 被弾による Threat 維持・上昇は Defender の役割差として扱い、passive `threatControl` または skill で明示する
 - Guardian（`df_guardian_passive_2`）は main tank として被弾・ブロックで Threat を維持し、減衰も遅くする
 - Paladin は `frontThreatFloor` / `frontThreatDecayMultiplier` で前列を sub-defender 化し、Lv0 では前列 block 付与で物理被害を抑える。前列ダメージ軽減は `threatControl` には含めず、必要なら `damageReduction` passive として分離する
-- 剣術士（`at_warrior_active_1`）は `threatBurstScale` で burst 時のみ一時 overtaking する
+- 剣術士（`at_swordsman_active_1`）は `threatBurstScale` で burst 時のみ一時 overtaking する
 
 ### 敵ターゲット選定
 

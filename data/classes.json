@@ -171,7 +171,7 @@
     }
   },
   {
-    "id": "at_warrior",
+    "id": "at_swordsman",
     "role": "attacker",
     "displayName": "剣術士",
     "epithetEn": "Swordsman",
@@ -188,29 +188,29 @@
     "reg": 0,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
-    "basicAttackSkillId": "at_warrior_basic_attack",
+    "basicAttackSkillId": "at_swordsman_basic_attack",
     "skills": [
       {
         "level": 0,
         "skillIds": [
-          "at_warrior_passive_1",
-          "at_warrior_passive_2",
-          "at_warrior_active_1",
-          "at_warrior_active_2"
+          "at_swordsman_passive_1",
+          "at_swordsman_passive_2",
+          "at_swordsman_active_1",
+          "at_swordsman_active_2"
         ]
       },
       {
         "level": 10,
         "skillIds": [
-          "at_warrior_passive_3",
-          "at_warrior_active_3"
+          "at_swordsman_passive_3",
+          "at_swordsman_active_3"
         ]
       },
       {
         "level": 20,
         "skillIds": [
-          "at_warrior_passive_4",
-          "at_warrior_active_4"
+          "at_swordsman_passive_4",
+          "at_swordsman_active_4"
         ]
       }
     ],
@@ -220,10 +220,10 @@
       "def": 2
     },
     "passiveIds": [
-      "at_warrior_passive_1",
-      "at_warrior_passive_2",
-      "at_warrior_passive_3",
-      "at_warrior_passive_4"
+      "at_swordsman_passive_1",
+      "at_swordsman_passive_2",
+      "at_swordsman_passive_3",
+      "at_swordsman_passive_4"
     ],
     "summary": {
       "ja": "Targeted Kill。高 DEF 前衛・重装敵の防御突破担当。DEF を下げず無視し、無視した装甲を火力源に変換する。"

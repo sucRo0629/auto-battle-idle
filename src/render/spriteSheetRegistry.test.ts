@@ -17,11 +17,11 @@ describe('spriteSheetRegistry attack variants', () => {
   });
 
   it('collects attack and attack_N variant keys sorted', () => {
-    __registerAttackVariantForTest('at_warrior', 'attack_3', mockImage(192));
-    __registerAttackVariantForTest('at_warrior', 'attack', mockImage(192));
-    __registerAttackVariantForTest('at_warrior', 'attack_2', mockImage(192));
+    __registerAttackVariantForTest('at_swordsman', 'attack_3', mockImage(192));
+    __registerAttackVariantForTest('at_swordsman', 'attack', mockImage(192));
+    __registerAttackVariantForTest('at_swordsman', 'attack_2', mockImage(192));
 
-    expect(getAttackVariantKeys('at_warrior')).toEqual([
+    expect(getAttackVariantKeys('at_swordsman')).toEqual([
       'attack',
       'attack_2',
       'attack_3',
@@ -29,20 +29,20 @@ describe('spriteSheetRegistry attack variants', () => {
   });
 
   it('returns single variant without randomness', () => {
-    __registerAttackVariantForTest('at_warrior', 'attack', mockImage(192));
+    __registerAttackVariantForTest('at_swordsman', 'attack', mockImage(192));
     vi.spyOn(Math, 'random').mockReturnValue(0.99);
 
-    expect(pickRandomAttackVariant('at_warrior')).toBe('attack');
+    expect(pickRandomAttackVariant('at_swordsman')).toBe('attack');
   });
 
   it('randomly picks among multiple variants', () => {
-    __registerAttackVariantForTest('at_warrior', 'attack', mockImage(192));
-    __registerAttackVariantForTest('at_warrior', 'attack_2', mockImage(192));
+    __registerAttackVariantForTest('at_swordsman', 'attack', mockImage(192));
+    __registerAttackVariantForTest('at_swordsman', 'attack_2', mockImage(192));
 
     vi.spyOn(Math, 'random').mockReturnValue(0);
-    expect(pickRandomAttackVariant('at_warrior')).toBe('attack');
+    expect(pickRandomAttackVariant('at_swordsman')).toBe('attack');
 
     vi.spyOn(Math, 'random').mockReturnValue(0.99);
-    expect(pickRandomAttackVariant('at_warrior')).toBe('attack_2');
+    expect(pickRandomAttackVariant('at_swordsman')).toBe('attack_2');
   });
 });

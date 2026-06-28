@@ -79,7 +79,7 @@ describe('arenaDominance', () => {
 
   it('reduces damage to marked enemy from non-duelist by 50%', () => {
     const duelist = mockUnit({ id: 'duelist' });
-    const ally = mockUnit({ id: 'ally', classId: 'at_warrior' });
+    const ally = mockUnit({ id: 'ally', classId: 'at_swordsman' });
     const boss = mockUnit({ id: 'boss', isEnemy: true, atk: 50 });
     grantArenaMark(boss, duelist.id, arenaSkill.id, 15);
 

@@ -378,9 +378,9 @@ describe('collectSkillsFromDrafts threat fields', () => {
   it('preserves threatBurstScale on damage effect save', () => {
     const entries: SkillDraftEntry[] = [
       {
-        ref: { skillId: 'at_warrior_active_1', kind: 'active' },
+        ref: { skillId: 'at_swordsman_active_1', kind: 'active' },
         active: {
-          id: 'at_warrior_active_1',
+          id: 'at_swordsman_active_1',
           name: '叩き付け',
           trigger: { kind: 'basicAttackCount', value: 5 },
           effect: [
@@ -430,9 +430,9 @@ describe('collectSkillsFromDrafts threat fields', () => {
   it('preserves fireConditions compare gte on save', () => {
     const entries: SkillDraftEntry[] = [
       {
-        ref: { skillId: 'at_warrior_active_1', kind: 'active' },
+        ref: { skillId: 'at_swordsman_active_1', kind: 'active' },
         active: {
-          id: 'at_warrior_active_1',
+          id: 'at_swordsman_active_1',
           name: '叩き付け',
           trigger: { kind: 'basicAttackCount', value: 5 },
           firePolicy: 'smart',

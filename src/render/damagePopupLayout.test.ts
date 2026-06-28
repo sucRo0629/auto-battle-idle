@@ -32,7 +32,7 @@ describe('computeDamagePopupBaseAnchorY', () => {
   it('uses sheet cell height for normal sprites and skill strip height during skill anim', () => {
     const baseLayout = {
       y: 100,
-      spriteKey: 'at_warrior',
+      spriteKey: 'at_swordsman',
       anim: 'idle' as const,
       animFrame: 0,
     };

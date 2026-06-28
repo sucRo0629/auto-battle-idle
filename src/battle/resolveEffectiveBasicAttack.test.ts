@@ -39,7 +39,7 @@ function mockUnit(statusEffects: CombatantState['statusEffects'] = []): Combatan
     isAlive: true,
     barrierHp: 0,
     role: 'attacker',
-    classId: 'at_warrior',
+    classId: 'at_swordsman',
     formationRow: 'front',
     traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
     build: { learnedActiveIds: [], learnedPassiveIds: [], equippedActiveSlots: [] },

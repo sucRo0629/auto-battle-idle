@@ -392,8 +392,8 @@ describe('basicAttackTransform', () => {
       skillRegistry: {
         passives: {},
         actives: {
-          at_warrior_basic_attack: {
-            id: 'at_warrior_basic_attack',
+          at_swordsman_basic_attack: {
+            id: 'at_swordsman_basic_attack',
             name: '打撃',
             trigger: { kind: 'time', value: 2 },
             effect: [
@@ -414,7 +414,7 @@ describe('basicAttackTransform', () => {
       formationRow: 'back',
       battleX: 52,
       traits: { rangePx: 128, damageType: 'magic', basicAttackVfx: { enabled: true } },
-      cooldowns: [{ skillId: 'at_warrior_basic_attack', remaining: 0, slotKind: 'basic' }],
+      cooldowns: [{ skillId: 'at_swordsman_basic_attack', remaining: 0, slotKind: 'basic' }],
       statusEffects: [
         {
           id: 'transform',

@@ -74,7 +74,7 @@ describe('lastStandRecovery', () => {
     const frontWarrior = {
       ...mockPaladin('warrior'),
       role: 'attacker' as const,
-      classId: 'at_warrior',
+      classId: 'at_swordsman',
       formationRow: 'front' as const,
       build: {
         learnedPassiveIds: [],

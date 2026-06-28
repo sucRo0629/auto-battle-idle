@@ -94,7 +94,7 @@
 - `持続` — 効果残り秒（`buffDurationSec` 等の最大）。`useDurationSec`（硬直）とは分ける
 - `硬直` — `useDurationSec`。`useDurationPauseApproach` 時は `硬直・移動停止N秒`（秒数は末尾）。それ以外は `硬直N秒`
 - `発動条件` — `firePolicy: smart` の `fireConditions` 要約（例: `対象のHPが50%以上`）
-- `[効果…]` — コンパクト表記。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージを与える`（至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`multiLock` は `敵N体に…` + 不足時再命中の 2 行（`formatSkillCardLines`）
+- `[効果…]` — コンパクト表記。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージを与える`（至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `敵N体に…` + 不足時再命中の 2 行（`formatSkillCardLines`）
 
 **Passive**
 
@@ -107,7 +107,7 @@
 - `damageTaken` stat の倍率は `被ダメ×N` ではなく、`<1` → `ダメージ軽減N%`、`>1` → `被ダメージ増加N%`（N = |1 − 倍率| × 100）
 - その他 stat（`atk` / `def` / `reg` / `attackSpeed` / `hp`）は略称（`ATK` 等）を使わず表示名（`攻撃力` / `防御力` / `魔法耐性` / `攻撃速度` / `HP`）。flat は `魔法耐性+20`、乗算 buff は `防御力+20%`（N = |1 − 倍率| × 100）、resource の atk/def scale は `攻撃力90%`（scale をそのまま % 化）
 - ブロック率に「（加算）」は各スキル説明に書かない（barrier の加算表記は既存どおり）
-- 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` / `at_warrior` / `sp_cleric` テスト
+- 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` / `at_swordsman` / `sp_cleric` テスト
 - `targetRuleOverride`（stat 最高値）— `最も{stat}が高い敵を優先して攻撃する`
 - `targetRuleOverride`（`attackType.ranged`）— `遠隔攻撃の敵を優先して攻撃する`
 - 常時 self stat buff — `攻撃速度+25%` 等（対象・常時の冗長表記は省略）
@@ -118,7 +118,8 @@
 #### 運用
 
 - 新 effect / ターゲット形状を足す **データ PR ごと** に `formatSkillText` とテストを同梱（[phase-roadmap.md §4b](../plans/phase-roadmap.md#4b--スキル説明自動生成随時)）
-- クラス単位で文案をテスト固定し、全クラス一括 polish は Phase 7a 前でよい
+- **Phase 4b の目視 polish は Lv0 スキルのみ**（passive 1–2 / active 1–2）。`formatSkillText` のテンプレ変更は **全習得段階**（Lv10 / Lv20 含む）に自動適用する
+- クラス単位で **Lv0 文案**をテスト固定する。Lv10+ の個別 polish は Phase 7a 前でよい
 - Phase 4d 以降: 編成 UI のスキルカードは [party-formation-ui.md §6.3](party-formation-ui.md#63-習得スキル閲覧専用) の **効果単位改行**（`formatSkillCardLines` — API は [§6.3 formatSkillCardLines](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。4b の 1 行出力は当面 tooltip / エディタ互換として維持
 
 ## スキル機能レイヤー
@@ -264,7 +265,7 @@ Kill Layer は、敵 HP を直接減少させることを主目的とする処�
 
 #### ③ Targeted Kill（対象特化型）
 
-- 剣術士（`at_warrior`）
+- 剣術士（`at_swordsman`）
 - 双刃士（`at_assassin`）
 - 弓術士（`at_ranger`）
 - 弩砲士（`at_ballista`）
@@ -277,7 +278,7 @@ Kill Layer は、敵 HP を直接減少させることを主目的とする処�
 
 | クラス | classId       | 優先ターゲット                |
 | ------ | ------------- | ----------------------------- |
-| 剣術士 | `at_warrior`  | 高 DEF 敵                     |
+| 剣術士 | `at_swordsman`  | 高 DEF 敵                     |
 | 双刃士 | `at_assassin` | 瀕死の敵                      |
 | 弓術士 | `at_ranger`   | 遠隔敵                        |
 | 弩砲士 | `at_ballista` | Max HP が高い敵（ボス・強敵） |
@@ -608,7 +609,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 
 | classId        | 表示名 | epithetEn | 列    | 射程     | パッシブ（Lv0 代表）                                             | アクティブ（Lv0）                          |
 | -------------- | ------ | --------- | ----- | -------- | ---------------------------------------------------------------- | ------------------------------------------ |
-| `at_warrior`   | 剣術士 | Swordsman | front | 近接     | 最高 DEF 狙い + DEF 無視                                         | 叩き付け／薙ぎ払い                         |
+| `at_swordsman`   | 剣術士 | Swordsman | front | 近接     | 最高 DEF 狙い + DEF 無視                                         | 叩き付け／薙ぎ払い                         |
 | `at_assassin`  | 双刃士 | Assassin  | front | 近接     | 最低 HP 比率狙い + 回避                                          | 引き裂き／影の刃                           |
 | `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura                    | 号令／崩勢／鼓舞／追撃                     |
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                                       | 連射／連ね矢                               |
@@ -637,7 +638,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | 枠  | classId       | 表示名 |
 | --- | ------------- | ------ |
 | 1   | `df_guardian` | 鉄衛士 |
-| 2   | `at_warrior`  | 剣術士 |
+| 2   | `at_swordsman`  | 剣術士 |
 | 3   | `sp_cleric`   | 療養師 |
 | 4   | `at_ranger`   | 弓術士 |
 
@@ -938,7 +939,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 
 ### Targeted Kill の passive 段階（設計ルール）
 
-**適用対象:** 処理対象を持つ Targeted Kill — `at_warrior` / `at_assassin` / `at_ranger` / `at_ballista`。
+**適用対象:** 処理対象を持つ Targeted Kill — `at_swordsman` / `at_assassin` / `at_ranger` / `at_ballista`。
 
 **非適用:** Flow 職（`at_lancer` / `at_hunter` / `at_conductor` 等）は処理対象を持たないため、この passive 枠割りは使わない。
 
@@ -955,13 +956,13 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 - P3 は「誰を狙うか」ではなく「処理対象に当たったときどれだけ効くか」の段階強化。
 - active 側は回転・火力形状を担い、passive の特効とは役割分担する。
 
-**参照例（詳細は各クラス節のスキル表を正とする）:** [剣術士](#剣術士at_warrior基礎近接) P1=重装狙い / P3=穿甲の一撃 / P4=剛剣の冴え、[双刃士](#双刃士at_assassin拡張近接) P1=手負い狩り / P3=刈り取り / P4=無慈悲な刃、[弓術士](#弓術士at_ranger基礎遠隔) P1=射手排除 / P3=遠隔狩り / P4=二の矢。
+**参照例（詳細は各クラス節のスキル表を正とする）:** [剣術士](#剣術士at_swordsman基礎近接) P1=重装狙い / P3=穿甲の一撃 / P4=剛剣の冴え、[双刃士](#双刃士at_assassin拡張近接) P1=手負い狩り / P3=刈り取り / P4=無慈悲な刃、[弓術士](#弓術士at_ranger基礎遠隔) P1=射手排除 / P3=遠隔狩り / P4=二の矢。
 
 ### 三分類と classId
 
 | 系統         | classId       | 表示名 |
 | ------------ | ------------- | ------ |
-| 基礎（近接） | `at_warrior`  | 剣術士 |
+| 基礎（近接） | `at_swordsman`  | 剣術士 |
 | 拡張（近接） | `at_assassin` | 双刃士 |
 | 変則（近接） | `at_lancer`   | 槍術士 |
 | 基礎（遠隔） | `at_ranger`   | 弓術士 |
@@ -985,7 +986,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 
 Hit と Attack は分離され、Hit 単位で追加効果やゲージ処理が発生する。
 
-### 剣術士（`at_warrior`・基礎・近接）
+### 剣術士（`at_swordsman`・基礎・近接）
 
 #### コンセプト
 
@@ -1001,15 +1002,15 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 
 | 枠             | ID                        | 名称       | 概要                                                           |
 | -------------- | ------------------------- | ---------- | -------------------------------------------------------------- |
-| basic          | `at_warrior_basic_attack` | 斬撃       | 標準物理単体                                                   |
-| passive 1 Lv0  | `at_warrior_passive_1`    | 重装狙い   | 高 DEF 優先 `targetRuleOverride`                               |
-| passive 2 Lv0  | `at_warrior_passive_2`    | 鎧砕き     | 常時 DEF 25% 無視                                              |
-| passive 3 Lv10 | `at_warrior_passive_3`    | 穿甲の一撃 | DEF 100% 無視（`chance: 0.15`）                                |
-| passive 4 Lv20 | `at_warrior_passive_4`    | 剛剣の冴え | `ignoredDefBonusDamage` — 無視 DEF × 0.5 追加ダメ              |
-| active 1 Lv0   | `at_warrior_active_1`     | 叩き付け   | 高 HP 単体重撃 + burst ヘイト                                  |
-| active 2 Lv0   | `at_warrior_active_2`     | 薙ぎ払い   | 近接複数対応（弱め）                                           |
-| active 3 Lv10  | `at_warrior_active_3`     | 突き通し   | BAC 7・小前進 + DEF 100% 無視単体（回転核）                    |
-| active 4 Lv20  | `at_warrior_active_4`     | 断鉄       | BAC 14・溜め斬り・DEF 100% 無視 + 全軽減貫通フラグ（回避除く） |
+| basic          | `at_swordsman_basic_attack` | 斬撃       | 標準物理単体                                                   |
+| passive 1 Lv0  | `at_swordsman_passive_1`    | 重装狙い   | 高 DEF 優先 `targetRuleOverride`                               |
+| passive 2 Lv0  | `at_swordsman_passive_2`    | 鎧砕き     | 常時 DEF 25% 無視                                              |
+| passive 3 Lv10 | `at_swordsman_passive_3`    | 穿甲の一撃 | DEF 100% 無視（`chance: 0.15`）                                |
+| passive 4 Lv20 | `at_swordsman_passive_4`    | 剛剣の冴え | `ignoredDefBonusDamage` — 無視 DEF × 0.5 追加ダメ              |
+| active 1 Lv0   | `at_swordsman_active_1`     | 叩き付け   | 高 HP 単体重撃 + burst ヘイト                                  |
+| active 2 Lv0   | `at_swordsman_active_2`     | 薙ぎ払い   | 近接複数対応（弱め）                                           |
+| active 3 Lv10  | `at_swordsman_active_3`     | 突き通し   | BAC 7・小前進 + DEF 100% 無視単体（回転核）                    |
+| active 4 Lv20  | `at_swordsman_active_4`     | 断鉄       | BAC 14・溜め斬り・DEF 100% 無視 + 全軽減貫通フラグ（回避除く） |
 
 新 effect: `ignoredDefBonusDamage` / `pierceBarrier` / `pierceWard` / `pierceBlock` / `ignoreDamageTakenReduction`（[combat.md](combat.md) 物理ダメージ節）。
 
@@ -1232,7 +1233,7 @@ Hunter = poison Field（P2/A1）+ 任意 dot 延長・圧縮（A2/A3）+ 毒収�
 
 | classId       | 個性     | 設計の柱           | 処理対象       |
 | ------------- | -------- | ------------------ | -------------- |
-| `at_warrior`  | 単体安定 | DEF 貫通・固定 DPS | 高 DEF 単体    |
+| `at_swordsman`  | 単体安定 | DEF 貫通・固定 DPS | 高 DEF 単体    |
 | `at_assassin` | 高速処理 | Hit 数・コンボ加速 | 瀕死の敵       |
 | `at_ranger`   | 連射変形 | 攻撃回数・遠隔制圧 | 遠隔敵         |
 | `at_ballista` | 貫通重撃 | 時間圧縮・貫通範囲 | 高 Max HP 対象 |
@@ -1687,7 +1688,7 @@ interface CharacterBuild {
 
 ```json
 {
-  "id": "at_warrior_active_1",
+  "id": "at_swordsman_active_1",
   "trigger": { "kind": "basicAttackCount", "value": 4 },
   "effect": [ ... ]
 }

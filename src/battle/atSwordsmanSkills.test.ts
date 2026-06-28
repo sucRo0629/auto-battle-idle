@@ -6,11 +6,11 @@ import { applyWardBarrierToIncomingDamage } from './wardBarrier.ts';
 import { mockCombatant } from './testFixtures.ts';
 import type { PassiveSkillDef } from './types.ts';
 
-describe('at_warrior combat mechanics', () => {
+describe('at_swordsman combat mechanics', () => {
   const attacker = mockCombatant({
     atk: 100,
     build: {
-      learnedPassiveIds: ['at_warrior_passive_4'],
+      learnedPassiveIds: ['at_swordsman_passive_4'],
       learnedActiveIds: [],
       equippedActiveSlots: [],
     },
@@ -18,8 +18,8 @@ describe('at_warrior combat mechanics', () => {
   const highDefTarget = mockCombatant({ def: 80, isEnemy: true });
   const lowDefTarget = mockCombatant({ def: 5, isEnemy: true });
   const passives: Record<string, PassiveSkillDef> = {
-    at_warrior_passive_4: {
-      id: 'at_warrior_passive_4',
+    at_swordsman_passive_4: {
+      id: 'at_swordsman_passive_4',
       name: '剛剣の冴え',
       effect: 'ignoredDefBonusDamage',
       ignoredDefBonusScale: 0.5,
@@ -52,8 +52,8 @@ describe('at_warrior combat mechanics', () => {
   it('P3 applies 100% DEF ignore only when chance roll succeeds', () => {
     vi.restoreAllMocks();
     const p3Passives: Record<string, PassiveSkillDef> = {
-      at_warrior_passive_3: {
-        id: 'at_warrior_passive_3',
+      at_swordsman_passive_3: {
+        id: 'at_swordsman_passive_3',
         name: '穿甲の一撃',
         effect: 'defenseIgnore',
         defenseIgnore: {
@@ -65,7 +65,7 @@ describe('at_warrior combat mechanics', () => {
     const warrior = mockCombatant({
       atk: 100,
       build: {
-        learnedPassiveIds: ['at_warrior_passive_3'],
+        learnedPassiveIds: ['at_swordsman_passive_3'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },

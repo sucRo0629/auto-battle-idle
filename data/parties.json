@@ -11,7 +11,7 @@
         }
       },
       {
-        "classId": "at_warrior",
+        "classId": "at_swordsman",
         "build": {
           "learnedPassiveIds": [],
           "learnedActiveIds": [],

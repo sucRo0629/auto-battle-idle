@@ -64,7 +64,7 @@ Hensei Only の開発フェーズ一覧。**Phase 1〜12 は番号順**（概要
 | ------- | ------ |
 | `df_guardian` | 鉄衛士 |
 | `df_paladin` | 護法士 |
-| `at_warrior` | 剣術士 |
+| `at_swordsman` | 剣術士 |
 | `at_assassin` | 双刃士 |
 | `at_ranger` | 弓術士 |
 | `at_sorcerer` | 魔術師 |
@@ -151,7 +151,7 @@ Hensei Only の開発フェーズ一覧。**Phase 1〜12 は番号順**（概要
 | classId       | 表示名 |
 | ------------- | ------ |
 | `df_guardian` | 鉄衛士 |
-| `at_warrior`  | 剣術士 |
+| `at_swordsman`  | 剣術士 |
 | `sp_cleric`   | 療養師 |
 | `at_ranger`   | 弓術士 |
 
@@ -294,11 +294,11 @@ data/
   skills/
     passives/
       df_guardian.json         # スキル ID 先頭2セグメント単位
-      at_warrior.json
+      at_swordsman.json
       …
     actives/
       df_guardian.json         # スキル ID 先頭2セグメント単位（17 ファイル）
-      at_warrior.json
+      at_swordsman.json
       …
   classes.json                 # 据え置き（~600 行）
 ```

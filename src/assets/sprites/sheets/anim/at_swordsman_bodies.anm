@@ -1,4 +1,4 @@
-;EDGEópÉAÉjÉÅÅ[ÉVÉáÉìÉfÅ[É^
+;EDGEÔøΩpÔøΩAÔøΩjÔøΩÔøΩÔøΩ[ÔøΩVÔøΩÔøΩÔøΩÔøΩÔøΩfÔøΩ[ÔøΩ^
 ANIME_VERSION=1
 
 
@@ -6,8 +6,8 @@ ANIME_VERSION=1
 PATTERN_NAME=noname000
 
 	FRAME_NUMBER=1
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_warrior_bodies.edg
-		WIN_TITLE=at_warrior_bodies.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_swordsman_bodies.edg
+		WIN_TITLE=at_swordsman_bodies.edg
 		SRC_X=0
 		SRC_Y=0
 		LAYER_NUM=0
@@ -21,8 +21,8 @@ PATTERN_NAME=noname000
 		CKEY_NUM=0
 
 	FRAME_NUMBER=2
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_warrior_bodies.edg
-		WIN_TITLE=at_warrior_bodies.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_swordsman_bodies.edg
+		WIN_TITLE=at_swordsman_bodies.edg
 		SRC_X=48
 		SRC_Y=0
 		LAYER_NUM=0
@@ -36,8 +36,8 @@ PATTERN_NAME=noname000
 		CKEY_NUM=0
 
 	FRAME_NUMBER=3
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_warrior_bodies.edg
-		WIN_TITLE=at_warrior_bodies.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_swordsman_bodies.edg
+		WIN_TITLE=at_swordsman_bodies.edg
 		SRC_X=96
 		SRC_Y=0
 		LAYER_NUM=0
@@ -51,8 +51,8 @@ PATTERN_NAME=noname000
 		CKEY_NUM=0
 
 	FRAME_NUMBER=4
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_warrior_bodies.edg
-		WIN_TITLE=at_warrior_bodies.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_swordsman_bodies.edg
+		WIN_TITLE=at_swordsman_bodies.edg
 		SRC_X=144
 		SRC_Y=0
 		LAYER_NUM=0
@@ -70,8 +70,8 @@ PATTERN_NAME=noname000
 PATTERN_NAME=noname001
 
 	FRAME_NUMBER=1
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_warrior_bodies.edg
-		WIN_TITLE=at_warrior_bodies.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_swordsman_bodies.edg
+		WIN_TITLE=at_swordsman_bodies.edg
 		SRC_X=0
 		SRC_Y=48
 		LAYER_NUM=2
@@ -85,8 +85,8 @@ PATTERN_NAME=noname001
 		CKEY_NUM=0
 
 	FRAME_NUMBER=2
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_warrior_bodies.edg
-		WIN_TITLE=at_warrior_bodies.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_swordsman_bodies.edg
+		WIN_TITLE=at_swordsman_bodies.edg
 		SRC_X=48
 		SRC_Y=48
 		LAYER_NUM=2
@@ -100,8 +100,8 @@ PATTERN_NAME=noname001
 		CKEY_NUM=0
 
 	FRAME_NUMBER=3
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_warrior_bodies.edg
-		WIN_TITLE=at_warrior_bodies.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_swordsman_bodies.edg
+		WIN_TITLE=at_swordsman_bodies.edg
 		SRC_X=96
 		SRC_Y=48
 		LAYER_NUM=2
@@ -115,8 +115,8 @@ PATTERN_NAME=noname001
 		CKEY_NUM=0
 
 	FRAME_NUMBER=4
-		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_warrior_bodies.edg
-		WIN_TITLE=at_warrior_bodies.edg
+		FILENAME=E:\Users\sucRo\Desktop\auto-battle-idle\src\assets\sprites\sheets\at_swordsman_bodies.edg
+		WIN_TITLE=at_swordsman_bodies.edg
 		SRC_X=144
 		SRC_Y=48
 		LAYER_NUM=2

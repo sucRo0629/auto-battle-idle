@@ -5,7 +5,7 @@ import {
 } from './classListOrder.ts';
 
 describe('classListOrder', () => {
-  const classOrder = ['df_guardian', 'at_warrior', 'at_ranger', 'sp_cleric'];
+  const classOrder = ['df_guardian', 'at_swordsman', 'at_ranger', 'sp_cleric'];
 
   it('sortClassIdsByListOrder follows classes.json order', () => {
     expect(

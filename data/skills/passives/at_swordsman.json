@@ -1,6 +1,6 @@
 [
   {
-    "id": "at_warrior_passive_1",
+    "id": "at_swordsman_passive_1",
     "name": "重装狙い",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
@@ -12,7 +12,7 @@
     "targetRuleOverrideApplyTo": "enemy"
   },
   {
-    "id": "at_warrior_passive_2",
+    "id": "at_swordsman_passive_2",
     "name": "鎧砕き",
     "effect": "defenseIgnore",
     "defenseIgnore": {
@@ -23,7 +23,7 @@
     }
   },
   {
-    "id": "at_warrior_passive_3",
+    "id": "at_swordsman_passive_3",
     "name": "穿甲の一撃",
     "effect": "defenseIgnore",
     "defenseIgnore": {
@@ -35,7 +35,7 @@
     }
   },
   {
-    "id": "at_warrior_passive_4",
+    "id": "at_swordsman_passive_4",
     "name": "剛剣の冴え",
     "effect": "ignoredDefBonusDamage",
     "ignoredDefBonusScale": 0.5

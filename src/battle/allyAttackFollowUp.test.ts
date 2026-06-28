@@ -73,7 +73,7 @@ describe("allyAttackFollowUp", () => {
       ],
     };
     const warriorBasic: ActiveSkillDef = {
-      id: "at_warrior_basic_attack",
+      id: "at_swordsman_basic_attack",
       name: "warrior basic",
       trigger: { kind: "time", value: 2 },
       effect: [

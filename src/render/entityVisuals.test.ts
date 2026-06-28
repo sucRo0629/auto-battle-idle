@@ -26,8 +26,8 @@ const defenderPreset = {
   traits: testTraits,
 };
 
-const warriorPreset = {
-  id: 'at_warrior',
+const swordsmanPreset = {
+  id: 'at_swordsman',
   role: 'attacker' as const,
   traits: testTraits,
 };
@@ -47,7 +47,7 @@ describe('entityVisuals', () => {
   });
 
   it('falls back to role placeholder when class icon asset is missing', () => {
-    expect(resolveClassIconKey(warriorPreset)).toBe(
+    expect(resolveClassIconKey(swordsmanPreset)).toBe(
       PLACEHOLDER_SPRITE_KEYS.attackerMelee,
     );
   });
@@ -59,7 +59,7 @@ describe('entityVisuals', () => {
   });
 
   it('falls back to role placeholder when sprite asset is missing', () => {
-    expect(resolveClassSpriteKey(warriorPreset)).toBe(
+    expect(resolveClassSpriteKey(swordsmanPreset)).toBe(
       PLACEHOLDER_SPRITE_KEYS.attackerMelee,
     );
   });

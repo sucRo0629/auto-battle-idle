@@ -11,7 +11,7 @@ import {
 const POLISHED_CLASS_LV10_PLUS: Record<string, readonly string[]> = {
   df_guardian: ['active_3', 'active_4', 'passive_3', 'passive_4'],
   df_paladin: ['active_3', 'active_4', 'passive_3', 'passive_4'],
-  at_warrior: ['active_3', 'active_4', 'passive_3', 'passive_4'],
+  at_swordsman: ['active_3', 'active_4', 'passive_3', 'passive_4'],
   sp_cleric: ['active_3', 'active_4', 'passive_3', 'passive_4'],
   at_ranger: ['active_3', 'active_4', 'passive_3', 'passive_4'],
 };
@@ -67,7 +67,7 @@ const LV10_PLUS_SKILL_ASSERTIONS: Record<
     active_4: ({ card }) =>
       expect(card.effectLines).toContain('1回チャージ可能'),
   },
-  at_warrior: {
+  at_swordsman: {
     active_3: ({ desc }) => {
       expect(desc).toContain('通常攻撃7回');
       expect(desc).toContain('攻撃力の150%の物理ダメージを与える');
@@ -191,7 +191,7 @@ describe('formatPassiveDescription', () => {
 describe('formatActiveDescription', () => {
   it('formats aoe physical damage', () => {
     const def: ActiveSkillDef = {
-      id: 'at_warrior_active_2',
+      id: 'at_swordsman_active_2',
       name: '薙ぎ払い',
       trigger: { kind: 'time', value: 11 },
       effect: [
@@ -295,11 +295,11 @@ describe('formatActiveDescription', () => {
       id: 'passive_override',
       name: '強化',
       effect: 'skillAmountOverride',
-      targetSkillId: 'at_warrior_active_1',
+      targetSkillId: 'at_swordsman_active_1',
       amount: { kind: 'atkBased', atkScale: 2.5 },
     };
     const desc = formatPassiveDescription(def);
-    expect(desc).toContain('at_warrior_active_1');
+    expect(desc).toContain('at_swordsman_active_1');
     expect(desc).toContain('攻撃力250%');
   });
 
@@ -375,11 +375,11 @@ describe('formatActiveDescription', () => {
       name: 'チャージ強化',
       effect: 'skillPropertyOverride',
       maxChargesBonus: 1,
-      skillPropertyTargetSkillIds: ['at_warrior_active_1'],
+      skillPropertyTargetSkillIds: ['at_swordsman_active_1'],
     };
     const desc = formatPassiveDescription(def);
     expect(desc).toContain('maxCharges +1');
-    expect(desc).toContain('at_warrior_active_1');
+    expect(desc).toContain('at_swordsman_active_1');
   });
 
   it('formats counter passive with slash-separated summary', () => {
@@ -642,13 +642,13 @@ describe('formatActiveDescription', () => {
     expect(formatPassiveDescription(p3!)).toBe(`効果：${card.effectLines[0]}`);
   });
 
-  it('formats at_warrior Lv0 skills with 4b polish', async () => {
+  it('formats at_swordsman Lv0 skills with 4b polish', async () => {
     const { loadGameData } = await import('../battle/data/loadGameData.ts');
     const gameData = await loadGameData();
-    const a1 = gameData.skillRegistry.actives.at_warrior_active_1;
-    const a2 = gameData.skillRegistry.actives.at_warrior_active_2;
-    const p1 = gameData.skillRegistry.passives.at_warrior_passive_1;
-    const p2 = gameData.skillRegistry.passives.at_warrior_passive_2;
+    const a1 = gameData.skillRegistry.actives.at_swordsman_active_1;
+    const a2 = gameData.skillRegistry.actives.at_swordsman_active_2;
+    const p1 = gameData.skillRegistry.passives.at_swordsman_passive_1;
+    const p2 = gameData.skillRegistry.passives.at_swordsman_passive_2;
     expect(a1).toBeDefined();
     expect(a2).toBeDefined();
     expect(p1).toBeDefined();

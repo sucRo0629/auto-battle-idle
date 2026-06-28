@@ -181,14 +181,14 @@ describe('runUnitSkills fire gate', () => {
     expect(activeCd.remaining).toBe(8);
   });
 
-  it('stage 1-1 engaged: at_warrior nagihara gate sees two in-range enemies', () => {
+  it('stage 1-1 engaged: at_swordsman nagihara gate sees two in-range enemies', () => {
     const engine = createStage1Engine();
     waitForEngaged(engine);
     for (let i = 0; i < 120; i++) engine.tick(TICK_DT);
 
     const internals = asBattleEngineInternals(engine);
-    const warrior = internals.players.find((p) => p.classId === 'at_warrior');
-    const skill = internals.gameData.skillRegistry.actives.at_warrior_active_2;
+    const warrior = internals.players.find((p) => p.classId === 'at_swordsman');
+    const skill = internals.gameData.skillRegistry.actives.at_swordsman_active_2;
     expect(warrior).toBeDefined();
     expect(skill).toBeDefined();
     skill!.firePolicy = nagiharaSkill.firePolicy;

@@ -1,6 +1,6 @@
 [
   {
-    "id": "at_warrior_basic_attack",
+    "id": "at_swordsman_basic_attack",
     "name": "斬撃",
     "trigger": {
       "kind": "time",
@@ -23,7 +23,7 @@
     ]
   },
   {
-    "id": "at_warrior_active_1",
+    "id": "at_swordsman_active_1",
     "name": "叩き付け",
     "trigger": {
       "kind": "basicAttackCount",
@@ -57,7 +57,7 @@
     ]
   },
   {
-    "id": "at_warrior_active_2",
+    "id": "at_swordsman_active_2",
     "name": "薙ぎ払い",
     "trigger": {
       "kind": "time",
@@ -83,7 +83,7 @@
     ]
   },
   {
-    "id": "at_warrior_active_3",
+    "id": "at_swordsman_active_3",
     "name": "突き通し",
     "trigger": {
       "kind": "basicAttackCount",
@@ -126,7 +126,7 @@
     }
   },
   {
-    "id": "at_warrior_active_4",
+    "id": "at_swordsman_active_4",
     "name": "断鉄",
     "trigger": {
       "kind": "basicAttackCount",

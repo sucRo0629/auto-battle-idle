@@ -4,7 +4,7 @@ import type { PartySlotState } from "../battle/types.ts";
 
 function member(level: number): PartySlotState {
   return {
-    classId: "at_warrior",
+    classId: "at_swordsman",
     progress: { level, exp: 0 },
     build: { equippedActiveSlots: [] },
   };

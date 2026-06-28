@@ -3,9 +3,9 @@ import { loadGameData } from '../battle/data/loadGameData.ts';
 import { getClassSkillIds } from './skillUnlocks.ts';
 import { expectUnlockTiersMatchGameData } from '../test/gameDataResilience.ts';
 
-describe('at_warrior passive / active unlock structure', () => {
+describe('at_swordsman passive / active unlock structure', () => {
   const gameData = loadGameData();
-  const warriorClass = gameData.classRegistry['at_warrior'];
+  const warriorClass = gameData.classRegistry['at_swordsman'];
   const { passives, actives } = gameData.skillRegistry;
 
   it('loads class skills with expected roles', () => {
@@ -16,19 +16,19 @@ describe('at_warrior passive / active unlock structure', () => {
       expect(passives[id] ?? actives[id]).toBeDefined();
     }
 
-    expect(actives['at_warrior_basic_attack']?.effect[0]?.type).toBe('damage');
-    expect(passives['at_warrior_passive_3']?.effect).toBe('defenseIgnore');
-    expect(passives['at_warrior_passive_4']?.effect).toBe('ignoredDefBonusDamage');
-    expect(actives['at_warrior_active_3']?.trigger?.kind).toBe('basicAttackCount');
-    expect(actives['at_warrior_active_4']?.effect[0]?.type).toBe('damage');
+    expect(actives['at_swordsman_basic_attack']?.effect[0]?.type).toBe('damage');
+    expect(passives['at_swordsman_passive_3']?.effect).toBe('defenseIgnore');
+    expect(passives['at_swordsman_passive_4']?.effect).toBe('ignoredDefBonusDamage');
+    expect(actives['at_swordsman_active_3']?.trigger?.kind).toBe('basicAttackCount');
+    expect(actives['at_swordsman_active_4']?.effect[0]?.type).toBe('damage');
   });
 
   it('syncs member build with resolveLearnedSkills at each unlock tier', () => {
-    expectUnlockTiersMatchGameData('at_warrior', gameData);
+    expectUnlockTiersMatchGameData('at_swordsman', gameData);
   });
 
   it('active_4 sets all pierce flags for full mitigation bypass', () => {
-    const damage = actives['at_warrior_active_4']!.effect[0];
+    const damage = actives['at_swordsman_active_4']!.effect[0];
     expect(damage?.type).toBe('damage');
     if (damage?.type !== 'damage') return;
     expect(damage.pierceBarrier).toBe(true);

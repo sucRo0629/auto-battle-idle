@@ -33,7 +33,7 @@ function makeActor(overrides: Partial<CombatantState> = {}): CombatantState {
     statusEffects: [],
     cooldowns: [],
     corpseVisible: true,
-    spriteKey: 'at_warrior',
+    spriteKey: 'at_swordsman',
     iconKey: 'placeholder',
     traits: {
       rangePx: 40,

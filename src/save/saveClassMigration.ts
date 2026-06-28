@@ -2,6 +2,7 @@ import type { ClassId, PartyMemberState, SaveGameState } from '../battle/types.t
 
 /** クラス ID リネーム（セーブ互換）。キーは旧 ID。 */
 const LEGACY_CLASS_ID_ALIASES: Readonly<Record<string, ClassId>> = {
+  at_warrior: 'at_swordsman',
   at_sniper: 'at_ballista',
   at_enchanter: 'at_sigilist',
   sp_abjurer: 'sp_wardweaver',

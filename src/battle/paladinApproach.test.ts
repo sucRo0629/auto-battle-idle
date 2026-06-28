@@ -34,7 +34,7 @@ function createDefenderMeleeFrontRowEngine(
 
 describe('paladin approach (2-unit front row)', () => {
   it('does not slide left off screen with swordsman', () => {
-    const engine = createDefenderMeleeFrontRowEngine('df_paladin', 'at_warrior');
+    const engine = createDefenderMeleeFrontRowEngine('df_paladin', 'at_swordsman');
     reachWave1Engage(engine);
 
     let minAllyX = Infinity;
