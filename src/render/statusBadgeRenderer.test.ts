@@ -162,6 +162,8 @@ describe('drawStatusBadgeBlock', () => {
       fillRect() {},
       globalAlpha: 1,
       globalCompositeOperation: 'source-over',
+      save() {},
+      restore() {},
     };
     vi.stubGlobal('document', {
       createElement: () => ({
@@ -202,6 +204,8 @@ describe('drawStatusBadgeBlock', () => {
         drawImages.push({ x: arg2, y: arg3, width: arg4, height: arg5 ?? arg4 });
       },
       fillRect() {},
+      save() {},
+      restore() {},
     } as unknown as CanvasRenderingContext2D;
 
     try {
@@ -294,6 +298,8 @@ describe('drawCompactStatusBadgeRow', () => {
       fillRect() {},
       globalAlpha: 1,
       globalCompositeOperation: 'source-over',
+      save() {},
+      restore() {},
     };
     vi.stubGlobal('document', {
       createElement: () => ({
@@ -322,6 +328,8 @@ describe('drawCompactStatusBadgeRow', () => {
       lineWidth: 1,
       strokeStyle: '#000',
       fillStyle: '#fff',
+      save() {},
+      restore() {},
       drawImage(
         _image: CanvasImageSource,
         arg2: number,

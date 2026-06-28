@@ -20,6 +20,9 @@ export {
 
 export const STATUS_BADGE_GAP = 0;
 
+/** パッシブ由来バッジ（`isPassive`）の描画不透明度 */
+export const STATUS_BADGE_PASSIVE_ALPHA = 0.55;
+
 /** バッジスロット（オーバーレイ・累積数の基準枠） */
 export const STATUS_BADGE_SLOT_PX = 20;
 /** 五角形背景 PNG の描画サイズ（スロットと同一） */
@@ -746,6 +749,11 @@ function paintStatusBadgeBuffer(
 
   bufferCtx.clearRect(0, 0, badgeSize, rowHeight);
 
+  if (badge.isPassive) {
+    bufferCtx.save();
+    bufferCtx.globalAlpha = STATUS_BADGE_PASSIVE_ALPHA;
+  }
+
   const pentagon = getStatusBadgePentagonImage(badge.kind, badge.isPassive);
   if (pentagon) {
     drawImagePixelated(
@@ -791,6 +799,10 @@ function paintStatusBadgeBuffer(
       badge.stackCount,
       theme,
     );
+  }
+
+  if (badge.isPassive) {
+    bufferCtx.restore();
   }
 }
 

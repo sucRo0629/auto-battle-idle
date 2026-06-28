@@ -58,6 +58,7 @@ interface SlotElements {
   statusBadgeHitSignature: string | null;
   statusBadgeRenderSignature: string | null;
   hpBarSignature: string | null;
+  recastGrid: HTMLElement;
   recastCells: RecastCellElements[];
   threat: ThreatBarRefs;
   damage: DamageBarRefs;
@@ -141,7 +142,7 @@ export class PartyHudPanel {
   private readonly slots: SlotElements[] = [];
   private theme!: BattleHudTheme;
   private lastEntries: (PartyHudEntry | null)[] = [];
-  private mode: PartyHudPanelMode = 'compact';
+  private mode: PartyHudPanelMode = 'detail';
   private lastDetailFrame: PartyHudDetailFrame | null = null;
   private readonly unsubscribeStatusIconsReady: () => void;
 
@@ -166,6 +167,7 @@ export class PartyHudPanel {
     const root = document.createElement('div');
     this.root = root;
     root.className = 'party-hud-panel';
+    root.classList.toggle('party-hud-panel--detail', this.mode === 'detail');
 
     const slotsBody = document.createElement('div');
     slotsBody.className = 'party-hud-panel-slots';
@@ -387,6 +389,7 @@ export class PartyHudPanel {
       statusBadgeHitSignature: null,
       statusBadgeRenderSignature: null,
       hpBarSignature: null,
+      recastGrid,
       recastCells,
       threat,
       damage,
@@ -557,15 +560,26 @@ export class PartyHudPanel {
   }
 
   private updateRecastGrid(slot: SlotElements, entry: PartyHudEntry): void {
+    const slotCount = entry.unlockedActiveSlotCount;
     const bySlot = new Map(
       entry.activeCooldowns.map((cd) => [cd.slotIndex, cd] as const),
     );
 
     for (let i = 0; i < slot.recastCells.length; i++) {
       const { cell, fill, stockPips } = slot.recastCells[i];
-      const cd = bySlot.get(i);
       stockPips.replaceChildren();
 
+      if (i >= slotCount) {
+        cell.hidden = true;
+        fill.style.width = '0%';
+        fill.dataset.state = 'empty';
+        delete fill.dataset.pausedMax;
+        cell.classList.remove('party-hud-recast-cell--fire-hold');
+        continue;
+      }
+
+      cell.hidden = false;
+      const cd = bySlot.get(i);
       if (!cd) {
         fill.style.width = '0%';
         fill.dataset.state = 'empty';
@@ -597,5 +611,7 @@ export class PartyHudPanel {
         delete fill.dataset.pausedMax;
       }
     }
+
+    slot.recastGrid.hidden = slotCount === 0;
   }
 }

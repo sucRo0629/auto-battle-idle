@@ -1875,8 +1875,16 @@ export class BattleEngine {
     if (this.waveAnnouncementActive) {
       this.tickWaveAnnouncement(deltaTime);
     }
+    const units = [...this.players, ...this.enemies];
+    const useLockSnapshot = new Map(
+      units.map(
+        (unit) =>
+          [unit.id, this.skillSequenceRunner.isActorUseLocked(unit.id)] as const,
+      ),
+    );
+    this.tickBattleTimers(deltaTime);
     if (!this.shouldSuppressCombatSkills()) {
-      this.tickSkillSequences(deltaTime);
+      this.tickSkillSequences(deltaTime, units, useLockSnapshot);
     }
     if (this.pendingVictoryTimer > 0) {
       this.tickPostCombatSettle(deltaTime);
@@ -2029,21 +2037,23 @@ export class BattleEngine {
     );
   }
 
-  private tickSkillSequences(deltaTime: number): void {
-    const units = [...this.players, ...this.enemies];
-    const wasUseLocked = (actorId: string) =>
-      this.skillSequenceRunner.isActorUseLocked(actorId);
-    const useLockSnapshot = new Map(
-      units.map((unit) => [unit.id, wasUseLocked(unit.id)]),
-    );
+  /** use lock / anim lock / 効果ゲージは戦闘時間で常時進行（非接敵中も） */
+  private tickBattleTimers(deltaTime: number): void {
     this.skillSequenceRunner.tickUseLocks(deltaTime);
+    this.skillSequenceRunner.tickAnimLocks(deltaTime);
+    this.skillSequenceRunner.tickActiveEffectGauges(deltaTime);
+  }
+
+  private tickSkillSequences(
+    deltaTime: number,
+    units: CombatantState[],
+    useLockSnapshot: Map<string, boolean>,
+  ): void {
     tickNextOutgoingDamageArming(
       units,
       (actorId) => useLockSnapshot.get(actorId) === true,
       (actorId) => this.skillSequenceRunner.isActorUseLocked(actorId),
     );
-    this.skillSequenceRunner.tickAnimLocks(deltaTime);
-    this.skillSequenceRunner.tickActiveEffectGauges(deltaTime);
     this.skillSequenceRunner.tickMoves(deltaTime, units, ({ unit, beforeX }) => {
       this.recordBattleXDebugChange(unit, beforeX, "skillMove", {
         bodyAnimMarching: this.resolveBodyAnimMarching(unit),

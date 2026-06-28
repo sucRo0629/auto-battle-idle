@@ -45,9 +45,13 @@ export function resolveRecastFillView(
   }
 
   const ready = cd.remaining <= 0;
-  const chargeRatio = ready
-    ? 1
-    : Math.max(0, Math.min(1, 1 - cd.remaining / cd.triggerValue));
+  const triggerValue = cd.triggerValue;
+  const chargeRatio =
+    ready || triggerValue <= 0
+      ? ready
+        ? 1
+        : 0
+      : Math.max(0, Math.min(1, 1 - cd.remaining / triggerValue));
 
   if (useLocked) {
     return {

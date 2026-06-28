@@ -4,14 +4,23 @@ export interface BattleStatsDrawerCallbacks {
   onOpenChange: (open: boolean) => void;
 }
 
+export interface BattleStatsDrawerOptions {
+  defaultOpen?: boolean;
+}
+
 export class BattleStatsDrawer {
   private readonly root: HTMLElement;
   private readonly tabButton: HTMLButtonElement;
   private readonly tabIcon: HTMLElement;
   private readonly onEscapeKey: (event: KeyboardEvent) => void;
-  private open = false;
+  private open: boolean;
+  private mounted = false;
 
-  constructor(private readonly callbacks: BattleStatsDrawerCallbacks) {
+  constructor(
+    private readonly callbacks: BattleStatsDrawerCallbacks,
+    options: BattleStatsDrawerOptions = {},
+  ) {
+    this.open = options.defaultOpen ?? true;
     this.root = document.createElement('div');
     this.root.className = 'party-hud-drawer';
 
@@ -42,6 +51,8 @@ export class BattleStatsDrawer {
 
   mount(parent: HTMLElement): void {
     parent.appendChild(this.root);
+    this.mounted = true;
+    this.applyOpenState(this.open, true);
   }
 
   isOpen(): boolean {
@@ -54,6 +65,10 @@ export class BattleStatsDrawer {
 
   setOpen(open: boolean): void {
     if (this.open === open) return;
+    this.applyOpenState(open, true);
+  }
+
+  private applyOpenState(open: boolean, notify: boolean): void {
     this.open = open;
     this.root.classList.toggle('party-hud-drawer--open', open);
     this.tabButton.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -63,13 +78,17 @@ export class BattleStatsDrawer {
     );
     this.tabIcon.textContent = open ? 'expand_less' : 'expand_more';
 
-    if (open) {
-      document.addEventListener('keydown', this.onEscapeKey);
-    } else {
-      document.removeEventListener('keydown', this.onEscapeKey);
+    if (this.mounted) {
+      if (open) {
+        document.addEventListener('keydown', this.onEscapeKey);
+      } else {
+        document.removeEventListener('keydown', this.onEscapeKey);
+      }
     }
 
-    this.callbacks.onOpenChange(open);
+    if (notify) {
+      this.callbacks.onOpenChange(open);
+    }
   }
 
   setDisabled(disabled: boolean): void {

@@ -127,8 +127,10 @@ describe('buildPartyHudEntries', () => {
 
     expect(entries).toHaveLength(PARTY_SLOT_COUNT);
     expect(entries[0]?.displayName).toBe('双刃士');
+    expect(entries[0]?.unlockedActiveSlotCount).toBe(2);
     expect(entries[1]).toBeNull();
     expect(entries[2]).toBeNull();
     expect(entries[3]?.displayName).toBe('魔術師');
+    expect(entries[3]?.unlockedActiveSlotCount).toBe(2);
   });
 });

@@ -199,6 +199,30 @@ describe('statusEffectDisplay', () => {
     expect(badges[0]?.stackCount).toBe(2);
   });
 
+  it('uses active badge styling when passive and active share a category', () => {
+    const badges = collectStatusEffectBadgeDisplays(
+      [
+        statEffect({
+          id: 'passive_buff_aura_atk',
+          kind: 'buff',
+          stat: 'atk',
+          multiplier: 1.1,
+        }),
+        statEffect({
+          id: 'active_atk_up',
+          kind: 'buff',
+          stat: 'atk',
+          multiplier: 1.2,
+        }),
+      ],
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges).toHaveLength(1);
+    expect(badges[0]?.category).toBe('atk');
+    expect(badges[0]?.isPassive).toBe(false);
+  });
+
   it('collects one badge per status effect and keeps passives on the left', () => {
     const badges = collectStatusEffectBadgeDisplays(
       [

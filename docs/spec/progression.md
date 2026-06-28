@@ -128,7 +128,7 @@ interface ClassSkillUnlock {
 
 - 戦闘参加は **`learnedActiveIds`**（習得即参加）。
 - 段階解放: Lv0=2 / Lv10=3 / Lv20=4（`getUnlockedActiveSlotCount`）。
-- Party HUD: 2×2 リキャスト + 多段チャージストックピップ（`maxCharges > 0` 時）。
+- Party HUD: Lv 帯解放枠数（Lv1=2 / Lv10=3 / Lv20=4）の 2 列リキャスト + 多段チャージストックピップ（`maxCharges > 0` 時）。
 
 ### 習得済みビルドの永続化
 

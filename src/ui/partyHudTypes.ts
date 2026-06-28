@@ -6,10 +6,12 @@ import type {
   StatusEffect,
 } from '../battle/types.ts';
 import { PARTY_SLOT_COUNT } from '../battle/types.ts';
+import { getUnlockedSkillSlotCount } from '../progression/skillBuild.ts';
 
 export interface PartyHudMeta {
   displayName: string;
   epithetEn?: string;
+  unlockedActiveSlotCount: number;
 }
 
 export interface PartyHudEntry {
@@ -24,6 +26,8 @@ export interface PartyHudEntry {
   reg: number;
   isAlive: boolean;
   useLocked: boolean;
+  /** Lv 帯で解放済みのアクティブ枠数（Lv1=2, Lv10=3, Lv20=4） */
+  unlockedActiveSlotCount: number;
   statusEffects: StatusEffect[];
   activeCooldowns: {
     skillId: string;
@@ -52,6 +56,7 @@ export function buildPartyHudMetaBySlot(
     return {
       displayName: preset?.displayName ?? member.classId,
       epithetEn: preset?.epithetEn,
+      unlockedActiveSlotCount: getUnlockedSkillSlotCount(member.progress.level),
     };
   });
 }
@@ -81,6 +86,7 @@ export function buildPartyHudEntries(
       reg: ally.reg,
       isAlive: ally.hp > 0,
       useLocked: ally.useLocked ?? false,
+      unlockedActiveSlotCount: meta.unlockedActiveSlotCount,
       statusEffects: ally.statusEffects,
       activeCooldowns: ally.activeCooldowns,
     };

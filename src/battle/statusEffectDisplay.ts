@@ -458,8 +458,8 @@ export function collectStatusEffectBadgeDisplays(
       stackCount += effectStackContribution(effect);
     }
 
-    // 代表値: グループ内に passive があれば passive 表示（passive 優先）
-    const isPassive = group.some(({ badge }) => badge.isPassive);
+    // 代表値: 同一カテゴリに active 由来が 1 つでもあれば active 表示
+    const isPassive = group.every(({ badge }) => badge.isPassive);
     const kind = group[0]!.badge.kind;
     const minIndex = Math.min(...group.map(({ index }) => index));
 

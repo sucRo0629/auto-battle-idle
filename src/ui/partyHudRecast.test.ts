@@ -5,8 +5,8 @@ const baseCd = {
   skillId: 'df_duelist_active_4',
   remaining: 0,
   triggerKind: 'time' as const,
-  triggerValue: 0,
-  slotIndex: 3,
+  triggerValue: 8,
+  slotIndex: 0,
 };
 
 describe('resolveRecastFillView', () => {
@@ -27,6 +27,32 @@ describe('resolveRecastFillView', () => {
     expect(resolveRecastFillView(baseCd, false)).toEqual({
       widthPct: 100,
       state: 'ready',
+      showFireHold: false,
+    });
+  });
+
+  it('shows charging fill while cooldown is recovering', () => {
+    expect(resolveRecastFillView({ ...baseCd, remaining: 4 }, false)).toEqual({
+      widthPct: 50,
+      state: 'charging',
+      showFireHold: false,
+    });
+  });
+
+  it('avoids NaN fill when triggerValue is zero while remaining is positive', () => {
+    expect(
+      resolveRecastFillView(
+        {
+          ...baseCd,
+          remaining: 3,
+          triggerKind: 'time',
+          triggerValue: 0,
+        },
+        false,
+      ),
+    ).toEqual({
+      widthPct: 0,
+      state: 'charging',
       showFireHold: false,
     });
   });
