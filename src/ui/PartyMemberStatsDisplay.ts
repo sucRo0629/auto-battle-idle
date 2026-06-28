@@ -1,6 +1,7 @@
 import '../styles/party-member-stats.css';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
-import type { CombatantSnapshot } from '../battle/types.ts';
+import { pickHighestThreatAlly } from '../battle/threat.ts';
+import type { CombatantSnapshot, CombatantState } from '../battle/types.ts';
 import type { StatusEffectBadgeDisplay } from '../battle/statusEffectDisplay.ts';
 import {
   collectStatusEffectBadgeDisplays,
@@ -269,6 +270,10 @@ export function syncThreatBars(
       snapshot.baseThreat ?? 0,
     ]),
   );
+  const highestThreatAlly = pickHighestThreatAlly(
+    livingThreats as CombatantState[],
+  );
+  const highestThreatSlotIndex = highestThreatAlly?.partySlotIndex;
 
   for (const snapshot of partyThreats) {
     const refs = threatByPartyIndex.get(snapshot.partySlotIndex!);
@@ -277,6 +282,10 @@ export function syncThreatBars(
     const base = Math.round(snapshot.baseThreat ?? 0);
     const down = isAllyDown(snapshot);
     refs.root.classList.toggle('is-down', down);
+    refs.root.classList.toggle(
+      'is-highest',
+      !down && snapshot.partySlotIndex === highestThreatSlotIndex,
+    );
 
     const syncKey = `${down}:${threat}:${base}:${livingMaxScale}`;
     if (refs.lastSyncKey === syncKey) continue;

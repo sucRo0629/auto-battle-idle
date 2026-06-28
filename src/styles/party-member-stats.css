@@ -132,7 +132,11 @@
   width: 0;
   border-radius: 0;
   background: #4a90d9;
-  transition: width 0.12s ease-out;
+  transition: width 0.12s ease-out, background 0.12s ease-out;
+}
+
+.party-stats-threat.is-highest .party-stats-threat-fill {
+  background: #e74c3c;
 }
 
 .party-stats-threat-base {
