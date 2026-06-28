@@ -94,7 +94,7 @@
 - `持続` — 効果残り秒（`buffDurationSec` 等の最大）。`useDurationSec`（硬直）とは分ける
 - `硬直` — `useDurationSec`。`useDurationPauseApproach` 時は `硬直・移動停止N秒`（秒数は末尾）。それ以外は `硬直N秒`
 - `発動条件` — `firePolicy: smart` の `fireConditions` 要約（例: `対象のHPが50%以上`）
-- `[効果…]` — コンパクト表記。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージを与える`（至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `敵N体に…` + 不足時再命中の 2 行（`formatSkillCardLines`）
+- `[効果…]` — コンパクト表記。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージを与える`（至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は 2 行：`敵N体に対して攻撃力のN%の…ダメージを与える` + `対象が不足している場合、同じ対象を再度攻撃する`（`formatSkillCardLines`）
 
 **Passive**
 

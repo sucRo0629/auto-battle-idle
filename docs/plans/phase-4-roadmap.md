@@ -174,7 +174,7 @@ data/classes.json
 - [x] 薙ぎ払い: multiLock 2 行 + 不足時再命中注記
 - [x] 重装狙い / 鎧砕き: 自然文 passive
 - [x] Lv10+（穿甲の一撃 / 剛剣の冴え / 突き通し / 断鉄）— 共通テンプレのみ適用
-- [ ] **再検討:** multiLock 説明文の言い回し（他クラス multiLock へ波及済み）
+- [x] multiLock 説明文（暫定）: `対象が不足している場合、同じ対象を再度攻撃する`（他クラス multiLock へ波及済み）
 
 #### 療養師（`sp_cleric`）— 目視 polish メモ
 

@@ -240,7 +240,7 @@ describe('formatActiveDescription', () => {
     expect(desc).toContain('再使用：9秒');
     expect(desc).toContain('アンカー +32px');
     expect(desc).toContain('敵3体に対して攻撃力の70%の物理ダメージを与える');
-    expect(desc).toContain('発動時に攻撃可能な対象が少なかった場合、再度同じ対象にダメージを与える');
+    expect(desc).toContain('対象が不足している場合、同じ対象を再度攻撃する');
   });
 
   it('formats buff with flat bonus before multiplier', () => {
@@ -665,7 +665,7 @@ describe('formatActiveDescription', () => {
     expect(nagihara.metaLine).toBe('再使用：10秒');
     expect(nagihara.effectLines).toEqual([
       '敵2体に対して攻撃力の60%の物理ダメージを与える',
-      '発動時に攻撃可能な対象が少なかった場合、再度同じ対象にダメージを与える',
+      '対象が不足している場合、同じ対象を再度攻撃する',
     ]);
 
     expect(formatPassiveDescription(p1!)).toBe(

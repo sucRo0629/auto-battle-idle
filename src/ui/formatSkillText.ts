@@ -313,7 +313,7 @@ function formatExcessHealToBarrierPassive(def: PassiveSkillDef): string {
 const ACTIVE_SKILL_RECAST_META_LABEL = "再使用";
 
 const MULTI_LOCK_UNDERFLOW_NOTE =
-  "発動時に攻撃可能な対象が少なかった場合、再度同じ対象にダメージを与える";
+  "対象が不足している場合、同じ対象を再度攻撃する";
 
 function formatCompactBarrierBuffLabel(
   amount: ResourceAmountSpec | undefined,
