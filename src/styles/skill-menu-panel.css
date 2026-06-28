@@ -162,14 +162,6 @@
   color: #b8c0cc;
 }
 
-.skill-menu-formation-summary {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: #c8d0dc;
-  line-height: 1.4;
-}
-
 .skill-menu-formation-note {
   margin: 0;
   font-size: 11px;
@@ -242,6 +234,22 @@
 .skill-menu-class-info-text {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.skill-menu-class-info-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.skill-menu-class-info-identity {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
   min-width: 0;
   flex: 1;
@@ -266,8 +274,8 @@
 }
 
 .skill-menu-open-picker-button {
+  flex-shrink: 0;
   align-self: flex-start;
-  margin-top: 4px;
   padding: 8px 14px;
   border: 1px solid var(--canvas-border-color);
   border-radius: 2px;
@@ -276,6 +284,11 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+}
+
+.skill-menu-open-picker-button--inline {
+  padding: 4px 10px;
+  font-size: 12px;
 }
 
 .skill-menu-open-picker-button:hover {

@@ -76,7 +76,6 @@ export interface SkillMenuPanelOptions {
 export class SkillMenuPanel {
   private readonly root: HTMLElement;
   private readonly formationBlockEl: HTMLElement;
-  private readonly summaryEl: HTMLElement;
   private readonly rosterSlotsEl: HTMLElement;
   private readonly detailWrapEl: HTMLElement;
   private readonly bodyEl: HTMLElement;
@@ -116,10 +115,6 @@ export class SkillMenuPanel {
     this.formationBlockEl = document.createElement("div");
     this.formationBlockEl.className = "skill-menu-formation-block";
     this.formationBlockEl.dataset.section = "roster";
-
-    this.summaryEl = document.createElement("p");
-    this.summaryEl.className = "skill-menu-formation-summary";
-    this.summaryEl.dataset.section = "formation-summary";
 
     const noteEl = document.createElement("p");
     noteEl.className = "skill-menu-formation-note";
@@ -192,11 +187,7 @@ export class SkillMenuPanel {
     });
     this.gameTermPanel.mount();
 
-    this.formationBlockEl.append(
-      this.rosterSlotsEl,
-      this.summaryEl,
-      noteEl
-    );
+    this.formationBlockEl.append(this.rosterSlotsEl, noteEl);
     this.root.append(
       this.formationBlockEl,
       this.detailWrapEl
@@ -226,7 +217,6 @@ export class SkillMenuPanel {
 
   private render(): void {
     this.renderRoster();
-    this.renderFormationSummary();
     this.renderBody();
     this.renderPickerOverlay();
   }
@@ -343,53 +333,6 @@ export class SkillMenuPanel {
     return character;
   }
 
-  private renderFormationSummary(): void {
-    let frontCount = 0;
-    let backCount = 0;
-    let middleCount = 0;
-    const roleCounts = { defender: 0, attacker: 0, supporter: 0 };
-    let emptyCount = 0;
-
-    for (const member of this.draftParty) {
-      if (!member) {
-        emptyCount++;
-        continue;
-      }
-      const preset = this.gameData.classRegistry[member.classId];
-      if (!preset) continue;
-      if (preset.formationRow === "front") frontCount++;
-      else if (preset.formationRow === "back") backCount++;
-      else middleCount++;
-      if (preset.role in roleCounts) {
-        roleCounts[preset.role as keyof typeof roleCounts]++;
-      }
-    }
-
-    const rowParts: string[] = [];
-    if (middleCount > 0) {
-      rowParts.push(`前衛 ${frontCount} / 中衛 ${middleCount} / 後衛 ${backCount}`);
-    } else {
-      rowParts.push(`前衛 ${frontCount} / 後衛 ${backCount}`);
-    }
-
-    const segments = [rowParts.join("")];
-    if (roleCounts.defender > 0) {
-      segments.push(`ディフェンダー ${roleCounts.defender}`);
-    }
-    if (roleCounts.attacker > 0) {
-      segments.push(`アタッカー ${roleCounts.attacker}`);
-    }
-    if (roleCounts.supporter > 0) {
-      segments.push(`サポーター ${roleCounts.supporter}`);
-    }
-
-    let text = segments.join("　");
-    if (emptyCount > 0) {
-      text += `（${emptyCount}枠空き）`;
-    }
-    this.summaryEl.textContent = text;
-  }
-
   private renderBody(): void {
     this.bodyEl.replaceChildren();
     const member = this.draftParty[this.selectedIndex];
@@ -455,6 +398,12 @@ export class SkillMenuPanel {
     const textWrap = document.createElement("div");
     textWrap.className = "skill-menu-class-info-text";
 
+    const topRow = document.createElement("div");
+    topRow.className = "skill-menu-class-info-top-row";
+
+    const identityWrap = document.createElement("div");
+    identityWrap.className = "skill-menu-class-info-identity";
+
     const nameEl = document.createElement("div");
     nameEl.className = "skill-menu-class-info-name";
     nameEl.textContent = preset.displayName;
@@ -463,20 +412,25 @@ export class SkillMenuPanel {
     epithetEl.className = "skill-menu-class-info-epithet";
     epithetEl.textContent = preset.epithetEn ?? "";
 
+    identityWrap.append(nameEl, epithetEl);
+
+    const changeButton = document.createElement("button");
+    changeButton.type = "button";
+    changeButton.className =
+      "skill-menu-open-picker-button skill-menu-open-picker-button--inline";
+    changeButton.dataset.action = "open-class-picker";
+    changeButton.textContent = "変更";
+
+    topRow.append(identityWrap, changeButton);
+
     const metaEl = document.createElement("div");
     metaEl.className = "skill-menu-class-info-meta";
     metaEl.textContent = this.formatClassFormationRole(preset);
 
-    textWrap.append(nameEl, epithetEl, metaEl);
+    textWrap.append(topRow, metaEl);
     header.appendChild(textWrap);
 
-    const changeButton = document.createElement("button");
-    changeButton.type = "button";
-    changeButton.className = "skill-menu-open-picker-button";
-    changeButton.dataset.action = "open-class-picker";
-    changeButton.textContent = "クラスを変更";
-
-    section.append(heading, header, changeButton);
+    section.append(heading, header);
     return section;
   }
 
