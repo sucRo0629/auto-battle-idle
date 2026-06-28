@@ -1,4 +1,6 @@
-export const VERIFY_MODE_STORAGE_KEY = 'auto-battle-idle:verify-mode';
+import { projectStorageKey } from '../projectIdentity.ts';
+
+export const VERIFY_MODE_STORAGE_KEY = projectStorageKey('verify-mode');
 export const RELEASE_PARTY_ID = 'demo';
 
 export function isVerifyModeEnabled(): boolean {
@@ -25,6 +27,6 @@ export function partyIdForVerifyMode(_verifyMode: boolean): string {
 
 export function saveStorageKey(verifyMode: boolean): string {
   return verifyMode
-    ? 'auto-battle-idle:save:verify'
-    : 'auto-battle-idle:save:release';
+    ? projectStorageKey('save:verify')
+    : projectStorageKey('save:release');
 }

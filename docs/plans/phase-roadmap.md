@@ -1,6 +1,6 @@
 # フェーズロードマップ
 
-Auto Battle Idle の開発フェーズ一覧。**Phase 1〜12 は番号順**（概要表の並び = 依存のおおまかな順）。ゲームルールは [spec](../spec/README.md) を参照。
+Hensei Only の開発フェーズ一覧。**Phase 1〜12 は番号順**（概要表の並び = 依存のおおまかな順）。ゲームルールは [spec](../spec/README.md) を参照。
 
 **旧番号からの変更（2026-06）:** 旧 Phase 8（Electron）→ **Phase 7**。旧 Phase 7a バランス → **Phase 6c / 8c** に分割。ステージ作成 → **Phase 6（体験版）** と **Phase 8（本編）** に分離。旧 Phase 7b/7c → **Phase 9**。旧 Phase 9 ローグ → **Phase 10**。旧 Phase 10 → **Phase 11**。旧 Phase 11 メタ → **Phase 12**。
 

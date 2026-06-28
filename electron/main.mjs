@@ -56,7 +56,7 @@ function createMenuWindow() {
 function createTray() {
   const icon = nativeImage.createEmpty();
   tray = new Tray(icon);
-  tray.setToolTip('Auto Battle Idle');
+  tray.setToolTip('Hensei Only');
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {

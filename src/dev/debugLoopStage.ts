@@ -1,5 +1,7 @@
-export const DEBUG_LOOP_STAGE_STORAGE_KEY = 'auto-battle-idle:debug-loop-stage';
-export const DEBUG_LOOP_WAVE_STORAGE_KEY = 'auto-battle-idle:debug-loop-wave';
+import { projectStorageKey } from '../projectIdentity.ts';
+
+export const DEBUG_LOOP_STAGE_STORAGE_KEY = projectStorageKey('debug-loop-stage');
+export const DEBUG_LOOP_WAVE_STORAGE_KEY = projectStorageKey('debug-loop-wave');
 
 export function getDebugLoopStageId(): string | null {
   try {

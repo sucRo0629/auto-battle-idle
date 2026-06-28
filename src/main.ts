@@ -1,4 +1,7 @@
 import './styles/app-base.css';
+import { migrateLegacyProjectStorage } from './projectIdentity.ts';
+
+migrateLegacyProjectStorage();
 import {
   renderGameDataLoadError,
   tryLoadGameData,

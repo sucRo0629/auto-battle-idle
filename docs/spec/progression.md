@@ -51,8 +51,10 @@ interface PlayerProgress {
 
 | モード         | キー                            |
 | -------------- | ------------------------------- |
-| 確認モード     | `auto-battle-idle:save:verify`  |
-| リリースモード | `auto-battle-idle:save:release` |
+| 確認モード     | `hensei-only:save:verify`  |
+| リリースモード | `hensei-only:save:release` |
+
+起動時に `migrateLegacyProjectStorage()` が旧 `auto-battle-idle:*` キーを上記 prefix へ移行する（`src/projectIdentity.ts`）。
 
 ```typescript
 interface SaveGameState {

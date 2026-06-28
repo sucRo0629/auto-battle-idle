@@ -8,9 +8,10 @@ import {
   mergeMigrationUnlockedClassIds,
   normalizePartySlots,
 } from '../progression/partyCompose.ts';
+import { projectStorageKey } from '../projectIdentity.ts';
 import { migrateSaveClassIds } from './saveClassMigration.ts';
 
-export const SAVE_STORAGE_KEY = 'auto-battle-idle:save';
+export const SAVE_STORAGE_KEY = projectStorageKey('save');
 
 export class SaveManager {
   load(storageKey = SAVE_STORAGE_KEY): SaveGameState | null {

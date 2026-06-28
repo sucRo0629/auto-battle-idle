@@ -1,4 +1,4 @@
-# Auto Battle Idle — ドキュメント
+# Hensei Only — ドキュメント
 
 トピックごとに **分割** してあり、作業時は必要なファイルだけ開く（Cursor ルール: `.cursor/rules/documentation-index.mdc`）。
 

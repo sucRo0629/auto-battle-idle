@@ -2,6 +2,7 @@ import type { AttackSpeedTier, EnemyTemplate } from '../battle/types.ts';
 import { DEFAULT_BASIC_ATTACK_INTERVAL_SEC } from '../battle/data/synthesizeBasicAttack.ts';
 import { normalizePassiveSkillForEditor } from '../battle/data/validateGameData.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
+import { projectStorageKey } from '../projectIdentity.ts';
 import type { BalanceDisplayMode } from './balanceReference.ts';
 import { BalanceEditorStep } from './BalanceEditorStep.ts';
 import { ClassEditorStep, loadClassDraftById } from './ClassEditorStep.ts';
@@ -57,7 +58,7 @@ import { createActionButton, createButton, createEl, preserveScrollDuring } from
 
 type EditorTab = 'class' | 'enemy' | 'balance' | 'statusIcons';
 
-const EDITOR_SESSION_KEY = 'auto-battle-idle:editor-session';
+const EDITOR_SESSION_KEY = projectStorageKey('editor-session');
 
 interface EditorSessionState {
   tab?: EditorTab;

@@ -1,6 +1,6 @@
 # Plans（開発計画）
 
-Auto Battle Idle の開発ロードマップ。
+Hensei Only の開発ロードマップ。
 
 - **[フェーズロードマップ](phase-roadmap.md)** — Phase 1〜12 の内容・状態・依存関係（**番号順**）
 - **[Release マイルストーン](phase-roadmap.md#release-マイルストーン)** — M1 体験版 / M2 初版 Chapter 1

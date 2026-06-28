@@ -19,6 +19,7 @@ import {
 } from "../progression/stageProgression.ts";
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
 import { BattleCanvas } from "../render/BattleCanvas.ts";
+import { PROJECT_DISPLAY_NAME } from "../projectIdentity.ts";
 import {
   buildSkillPresentationContext,
   isOverlayTickSkillEvent,
@@ -101,7 +102,7 @@ export class BattleView {
 
     const title = document.createElement("span");
     title.className = "battle-header-title";
-    title.textContent = "Auto Battle Idle";
+    title.textContent = PROJECT_DISPLAY_NAME;
     header.appendChild(title);
 
     const verifyLabel = document.createElement("label");

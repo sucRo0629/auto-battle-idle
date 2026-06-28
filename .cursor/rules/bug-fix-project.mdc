@@ -1,9 +1,9 @@
 ---
-description: auto-battle-idle の不具合修正 — 設計書正本・spec 同期・battle 具体例
+description: Hensei Only の不具合修正 — 設計書正本・spec 同期・battle 具体例
 alwaysApply: true
 ---
 
-# Bug Fix — auto-battle-idle
+# Bug Fix — Hensei Only
 
 汎用手順はユーザールール `bug-fix-root-cause` に従う。ここは本プロジェクト固有の判断基準。
 
