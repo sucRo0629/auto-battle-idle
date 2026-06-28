@@ -7,6 +7,14 @@ import {
   measureStatusBadgeBlock,
   PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
   resolveBadgeLabelFontSize,
+  STATUS_BADGE_EFFECT_ICON_INSET_PX,
+  STATUS_BADGE_EFFECT_ICON_PX,
+  STATUS_BADGE_PENTAGON_BUFF_OFFSET_PX,
+  STATUS_BADGE_PENTAGON_DEBUFF_OFFSET_PX,
+  STATUS_BADGE_PENTAGON_PX,
+  STATUS_BADGE_ROW_PAD_Y,
+  STATUS_BADGE_SLOT_PX,
+  statusBadgeDrawableRowHeight,
   statusBadgeRowWidth,
   statusBadgeStride,
   statusBadgeWidth,
@@ -20,6 +28,22 @@ const passiveAtk = { category: 'atk' as const, kind: 'buff' as const, remainingR
 describe('statusBadgeWidth', () => {
   it('matches icon size at scale 1', () => {
     expect(statusBadgeWidth(1, 16)).toBe(16);
+  });
+});
+
+describe('status badge icon layout', () => {
+  it('uses 12px icons inset 4px in 20px slot', () => {
+    expect(STATUS_BADGE_EFFECT_ICON_PX).toBe(12);
+    expect(STATUS_BADGE_EFFECT_ICON_INSET_PX).toBe(4);
+  });
+
+  it('uses 20px slot and pentagon with 2px row padding', () => {
+    expect(STATUS_BADGE_SLOT_PX).toBe(20);
+    expect(STATUS_BADGE_PENTAGON_PX).toBe(STATUS_BADGE_SLOT_PX);
+    expect(STATUS_BADGE_ROW_PAD_Y).toBe(2);
+    expect(statusBadgeDrawableRowHeight(1, STATUS_BADGE_SLOT_PX)).toBe(24);
+    expect(STATUS_BADGE_PENTAGON_BUFF_OFFSET_PX).toBe(-2);
+    expect(STATUS_BADGE_PENTAGON_DEBUFF_OFFSET_PX).toBe(2);
   });
 });
 
@@ -160,7 +184,7 @@ describe('measureCompactStatusBadgeRow', () => {
         0,
       ),
     );
-    expect(layout.totalHeight).toBe(16);
+    expect(layout.totalHeight).toBe(20);
   });
 
   it('uses five slots for Party HUD layout', () => {

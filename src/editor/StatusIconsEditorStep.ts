@@ -18,6 +18,8 @@ import {
 import {
   drawStatusBadgeBlock,
   measureStatusBadgeBlock,
+  STATUS_BADGE_EFFECT_ICON_PX,
+  STATUS_BADGE_PENTAGON_PX,
   statusBadgeOutlinePad,
   type StatusBadgeDrawItem,
   type StatusBadgeTheme,
@@ -177,7 +179,7 @@ export class StatusIconsEditorStep {
     const intro = createEl(
       'p',
       'editor-subtitle status-icons-preview-intro',
-      'src/assets/status-icons/*.png の生 PNG と、戦闘 HUD（×1）と同じ statusBadgeRenderer 描画を並べます。バッジは 16×16px（五角形 PNG + 効果アイコン）。五角形素材は pentagon-*.png を差し替えてください。',
+      'src/assets/status-icons/*.png の生 PNG と、戦闘 HUD（×1）と同じ statusBadgeRenderer 描画を並べます。バッジは 20×20px スロット（行高 24px、五角形 20×20 + 効果アイコン 12×12 中央）。buff 五角形は上 2px、debuff は下 2px。pentagon-*.png / {category}.png を差し替えてください。',
     );
     this.host.appendChild(intro);
 
@@ -248,7 +250,7 @@ export class StatusIconsEditorStep {
   private renderPentagonGrid(): void {
     if (!this.pentagonGrid) return;
     const hudTheme = readBattleHudTheme(this.themeHost);
-    const size = hudTheme.statusBadgeIconSize * this.scale;
+    const size = STATUS_BADGE_PENTAGON_PX * this.scale;
     this.pentagonGrid.replaceChildren();
 
     for (const entry of PENTAGON_PREVIEW_SLOTS) {
@@ -298,8 +300,8 @@ export class StatusIconsEditorStep {
       const rawImg = document.createElement('img');
       rawImg.className = 'status-icons-preview-raw-img';
       rawImg.alt = category;
-      rawImg.width = hudTheme.statusBadgeIconSize * this.scale;
-      rawImg.height = hudTheme.statusBadgeIconSize * this.scale;
+      rawImg.width = STATUS_BADGE_EFFECT_ICON_PX * this.scale;
+      rawImg.height = STATUS_BADGE_EFFECT_ICON_PX * this.scale;
       const image = getStatusIconImage(category);
       if (image) {
         rawImg.src = image.src;

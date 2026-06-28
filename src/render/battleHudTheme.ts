@@ -206,7 +206,7 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     ),
     skillRecastReady: readString(style, "--hud-skill-recast-ready", "#9aa3b0"),
     iconFrame: readString(style, "--hud-icon-frame", "#1a1a1a"),
-    statusBadgeIconSize: readNumber(style, "--status-badge-icon-size", 16),
+    statusBadgeIconSize: readNumber(style, "--status-badge-icon-size", 20),
     statusBadgeOverlap: readNumber(style, "--status-badge-overlap", 0),
     popupFontSize: readNumber(style, "--popup-font-size", 20),
     popupOutlineWidth: readNumber(style, "--popup-outline-width", 1),
