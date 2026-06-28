@@ -33,7 +33,8 @@ import {
   buildPartyHudMetaBySlot,
 } from "./partyHudTypes.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
-import { BattleStatsOverlay } from "./BattleStatsOverlay.ts";
+import { BattleStatsDrawer } from "./BattleStatsDrawer.ts";
+import type { PartyMemberStatsFrame } from "./PartyMemberStatsDisplay.ts";
 import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 
@@ -48,7 +49,7 @@ export interface VerifyModeControls {
   onLoopWaveChange?: (waveIndex: number | null) => void;
   getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
   getCurrentStageId?: () => string;
-  onStatsOverlayOpenChange?: (open: boolean) => void;
+  onStatsDrawerOpenChange?: (open: boolean) => void;
 }
 
 function resolveSkillRangePxFromSnapshot(
@@ -71,14 +72,13 @@ export class BattleView {
   private readonly stageLabelEl: HTMLElement;
   private readonly verifyModeInput: HTMLInputElement;
   private readonly menuButton: HTMLButtonElement;
-  private readonly statsButton: HTMLButtonElement;
   private readonly enhancementTreeButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
   private readonly memberStatsPanel: PartyMemberEffectiveStatsPanel;
   private readonly debugMenu: DebugMenuPanel;
   private readonly battleXDebugCanvas: BattleXDebugCanvas;
-  private statsOverlay: BattleStatsOverlay | null = null;
+  private readonly statsDrawer: BattleStatsDrawer;
   private hoveredMemberStatsSlotIndex: number | null = null;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastStageLabel = "";
@@ -149,15 +149,9 @@ export class BattleView {
       verifyModeControls?.onOpenMetaMenu();
     });
 
-    this.statsButton = this.createBattleMenuButton("analytics", "戦闘詳細");
-    this.statsButton.addEventListener("click", () => {
-      this.openStatsOverlay(verifyModeControls);
-    });
-
     menuButtons.append(
       this.enhancementTreeButton,
       this.menuButton,
-      this.statsButton
     );
     canvasWrap.appendChild(menuButtons);
     canvasFrame.appendChild(canvasWrap);
@@ -168,9 +162,6 @@ export class BattleView {
     this.debugMenu = new DebugMenuPanel(this.gameData, {
       isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
       getSave: this.getSave,
-      getAllySnapshots: () => this.engine.getSnapshot().allies,
-      getStageDamageDisplayRows: () =>
-        verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
       getLoopStageId: () => verifyModeControls?.getLoopStageId?.() ?? null,
       getLoopWaveIndex: () => verifyModeControls?.getLoopWaveIndex?.() ?? null,
       onLoopStageChange: (stageId) => {
@@ -199,6 +190,10 @@ export class BattleView {
     this.canvas = new BattleCanvas();
     this.canvas.mount(canvasWrap);
 
+    const hudStack = document.createElement("div");
+    hudStack.className = "battle-hud-stack";
+    canvasFrame.appendChild(hudStack);
+
     this.partyHud = new PartyHudPanel(this.canvasHost, {
       onMemberStatsHoverStart: (slotIndex) => {
         this.showMemberStatsPanel(slotIndex);
@@ -207,7 +202,20 @@ export class BattleView {
         this.scheduleMemberStatsHide();
       },
     });
-    this.partyHud.mount(canvasFrame);
+    this.partyHud.mount(hudStack);
+
+    this.statsDrawer = new BattleStatsDrawer(this.gameData, {
+      getDisplayRows: () =>
+        verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
+      getAllySnapshots: () => this.engine.getSnapshot().allies,
+      getCurrentStageId: () =>
+        verifyModeControls?.getCurrentStageId?.() ??
+        this.getSave().stageProgress.currentStageId,
+      onOpenChange: (open) => {
+        verifyModeControls?.onStatsDrawerOpenChange?.(open);
+      },
+    }, { themeHost: this.root });
+    this.statsDrawer.mount(hudStack);
 
     const statsPanelStorage = document.createElement('div');
     statsPanelStorage.hidden = true;
@@ -620,8 +628,15 @@ export class BattleView {
     if (debugEnabled) {
       this.battleXDebugCanvas.tick(deltaMs);
     }
-    this.debugMenu.updateStatsDisplay();
-    this.statsOverlay?.update();
+
+    if (this.statsDrawer.isOpen()) {
+      const statsFrame: PartyMemberStatsFrame = {
+        snapshots: snapshot.allies,
+        displayRows:
+          this.verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
+      };
+      this.statsDrawer.update(statsFrame);
+    }
     this.refreshMemberStatsPanel();
   }
 
@@ -629,33 +644,8 @@ export class BattleView {
     this.menuButton.disabled = disabled;
   }
 
-  setStatsButtonDisabled(disabled: boolean): void {
-    this.statsButton.disabled = disabled;
-  }
-
-  private openStatsOverlay(controls?: VerifyModeControls): void {
-    if (
-      this.statsOverlay ||
-      !controls?.getStageDamageDisplayRows ||
-      !controls.getCurrentStageId
-    ) {
-      return;
-    }
-
-    controls.onStatsOverlayOpenChange?.(true);
-    this.statsOverlay = new BattleStatsOverlay(document.body, this.gameData, {
-      getDisplayRows: controls.getStageDamageDisplayRows,
-      getAllySnapshots: () => this.engine.getSnapshot().allies,
-      getCurrentStageId: controls.getCurrentStageId,
-      onClose: () => this.closeStatsOverlay(controls),
-    });
-  }
-
-  private closeStatsOverlay(controls?: VerifyModeControls): void {
-    if (!this.statsOverlay) return;
-    this.statsOverlay.destroy();
-    this.statsOverlay = null;
-    controls?.onStatsOverlayOpenChange?.(false);
+  setStatsDrawerDisabled(disabled: boolean): void {
+    this.statsDrawer.setDisabled(disabled);
   }
 
   private createBattleMenuButton(
@@ -676,8 +666,7 @@ export class BattleView {
 
   destroy(): void {
     this.clearMemberStatsHideTimer();
-    this.statsOverlay?.destroy();
-    this.statsOverlay = null;
+    this.statsDrawer.destroy();
     this.memberStatsPanel.destroy();
     this.canvas.destroy();
     this.battleXDebugCanvas.destroy();

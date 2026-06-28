@@ -112,6 +112,16 @@ vi.mock("../ui/PartyMemberEffectiveStatsPanel.ts", () => ({
   })),
 }));
 
+vi.mock("../ui/BattleStatsDrawer.ts", () => ({
+  BattleStatsDrawer: vi.fn().mockImplementation(() => ({
+    mount: vi.fn(),
+    isOpen: vi.fn(() => false),
+    setDisabled: vi.fn(),
+    update: vi.fn(),
+    destroy: vi.fn(),
+  })),
+}));
+
 vi.mock("../ui/DebugMenuPanel.ts", () => ({
   DebugMenuPanel: vi.fn().mockImplementation(() => ({
     mount: vi.fn(),

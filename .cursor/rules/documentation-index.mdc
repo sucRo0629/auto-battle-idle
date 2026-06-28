@@ -16,7 +16,7 @@ alwaysApply: false
 | `data/levelCurves.json`, ステ計算, `growthTier` | `docs/spec/stats.md` |
 | `src/battle/combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット | `docs/spec/combat.md` |
 | `battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `BattleCanvas.ts` | `docs/spec/battle-field.md` |
-| `BattleStatsOverlay.ts`, `PartyMemberStatsDisplay.ts` | `docs/spec/battle-field.md` |
+| `BattleStatsDrawer.ts`, `PartyMemberStatsDisplay.ts` | `docs/spec/battle-field.md` |
 | `data/stages.json`, セーブ, EXP, LvUP | `docs/spec/progression.md` |
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts` | `docs/spec/party-formation-ui.md` |
 | ローグライクモード | `docs/spec/roguelike-mode.md` |

@@ -1,6 +1,7 @@
 import '../styles/party-member-stats.css';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 import type { CombatantSnapshot } from '../battle/types.ts';
+import type { StatusEffectBadgeDisplay } from '../battle/statusEffectDisplay.ts';
 import {
   collectStatusEffectBadgeDisplays,
   sortBadgesForDetailView,
@@ -11,14 +12,21 @@ import {
   readBattleHudTheme,
   resolveClassIconPlaceholderColor,
   resolveStatusIconFallbackColor,
+  type BattleHudTheme,
 } from '../render/battleHudTheme.ts';
 import {
   drawStatusBadgeWrap,
   measureStatusBadgeWrap,
   PARTY_HUD_STATUS_BADGE_ICON_SIZE,
   prepareStatusBadgeCanvasContext,
+  quantizeBadgeOverlayStep,
   statusBadgeOutlinePad,
 } from '../render/statusBadgeRenderer.ts';
+
+export interface PartyMemberStatsFrame {
+  snapshots: CombatantSnapshot[];
+  displayRows: StageDamageDisplayRow[];
+}
 
 export interface PartyMemberStatsRowSpec {
   slotIndex: number;
@@ -40,6 +48,7 @@ export interface ThreatBarRefs {
   fill: HTMLElement;
   baseMarker: HTMLElement;
   label: HTMLElement;
+  lastSyncKey?: string;
 }
 
 export interface DamageBarRefs {
@@ -47,15 +56,30 @@ export interface DamageBarRefs {
   dealtFill: HTMLElement;
   takenFill: HTMLElement;
   label: HTMLElement;
+  lastSyncKey?: string;
 }
 
 export interface StatusBadgeRefs {
   root: HTMLElement;
   debuffCanvas: HTMLCanvasElement;
   buffCanvas: HTMLCanvasElement;
+  debuffRenderSignature?: string;
+  buffRenderSignature?: string;
 }
 
 const STATUS_WRAP_MAX_WIDTH = 280;
+
+export function buildDetailStatusBadgeSignature(
+  badges: StatusEffectBadgeDisplay[],
+): string {
+  if (badges.length === 0) return '';
+  return badges
+    .map(
+      (badge) =>
+        `${badge.category}:${badge.kind}:${badge.isPassive ? 1 : 0}:${badge.stackCount ?? 1}:${quantizeBadgeOverlayStep(badge.remainingRatio)}`,
+    )
+    .join('|');
+}
 
 function isAllyDown(snapshot: CombatantSnapshot): boolean {
   return snapshot.hp <= 0;
@@ -239,6 +263,10 @@ export function syncThreatBars(
     const down = isAllyDown(snapshot);
     refs.root.classList.toggle('is-down', down);
 
+    const syncKey = `${down}:${threat}:${base}:${livingMaxScale}`;
+    if (refs.lastSyncKey === syncKey) continue;
+    refs.lastSyncKey = syncKey;
+
     if (down) {
       const localMax = Math.max(threat, base, 1);
       refs.fill.style.width = `${(threat / localMax) * 100}%`;
@@ -270,6 +298,10 @@ export function syncDamageBars(
     const down = downBySlot.get(row.slotIndex) ?? false;
     refs.root.classList.toggle('is-down', down);
 
+    const syncKey = `${down}:${row.damageDealt}:${row.damageTaken}:${maxDealt}:${maxTaken}`;
+    if (refs.lastSyncKey === syncKey) continue;
+    refs.lastSyncKey = syncKey;
+
     const dealtPct = Math.min(100, (row.damageDealt / maxDealt) * 100);
     const takenPct = Math.min(100, (row.damageTaken / maxTaken) * 100);
     refs.dealtFill.style.width = `${dealtPct}%`;
@@ -286,7 +318,7 @@ export function syncDamageBars(
 function drawStatusBadgeCanvas(
   canvas: HTMLCanvasElement,
   badges: ReturnType<typeof collectStatusEffectBadgeDisplays>,
-  themeHost: HTMLElement | null,
+  theme: BattleHudTheme,
 ): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -301,11 +333,6 @@ function drawStatusBadgeCanvas(
     return;
   }
 
-  const themeHostEl =
-    themeHost ?? document.querySelector('.battle-view');
-  if (!(themeHostEl instanceof HTMLElement)) return;
-
-  const theme = readBattleHudTheme(themeHostEl);
   const scale = 1;
   const badgeTheme = {
     iconSize: PARTY_HUD_STATUS_BADGE_ICON_SIZE,
@@ -352,7 +379,7 @@ function drawStatusBadgeCanvas(
 export function syncStatusBadges(
   statusByPartyIndex: Map<number, StatusBadgeRefs>,
   snapshots: CombatantSnapshot[],
-  themeHost: HTMLElement | null,
+  theme: BattleHudTheme | null,
 ): void {
   for (const snapshot of snapshots) {
     if (snapshot.partySlotIndex === undefined) continue;
@@ -374,12 +401,22 @@ export function syncStatusBadges(
 
     refs.root.classList.toggle('is-down', isAllyDown(snapshot));
     refs.root.hidden = allBadges.length === 0;
-
-    drawStatusBadgeCanvas(refs.debuffCanvas, debuffBadges, themeHost);
-    drawStatusBadgeCanvas(refs.buffCanvas, buffBadges, themeHost);
-
     refs.debuffCanvas.parentElement!.hidden = debuffBadges.length === 0;
     refs.buffCanvas.parentElement!.hidden = buffBadges.length === 0;
+
+    if (!theme) continue;
+
+    const debuffSignature = buildDetailStatusBadgeSignature(debuffBadges);
+    if (refs.debuffRenderSignature !== debuffSignature) {
+      refs.debuffRenderSignature = debuffSignature;
+      drawStatusBadgeCanvas(refs.debuffCanvas, debuffBadges, theme);
+    }
+
+    const buffSignature = buildDetailStatusBadgeSignature(buffBadges);
+    if (refs.buffRenderSignature !== buffSignature) {
+      refs.buffRenderSignature = buffSignature;
+      drawStatusBadgeCanvas(refs.buffCanvas, buffBadges, theme);
+    }
   }
 }
 
@@ -392,20 +429,46 @@ export class PartyMemberStatsDisplay {
   private readonly statusByPartyIndex = new Map<number, StatusBadgeRefs>();
   private readonly unsubscribeStatusIconsReady: () => void;
   private lastSource: PartyMemberStatsDataSource | null = null;
+  private theme: BattleHudTheme | null = null;
+  private memberDownSignature = '';
 
   constructor(
     host: HTMLElement,
     options?: { listClass?: string; themeHost?: HTMLElement },
   ) {
     this.themeHost = options?.themeHost ?? host.closest('.battle-view');
+    this.refreshTheme();
     this.listEl = document.createElement('div');
     this.listEl.className = options?.listClass ?? 'party-stats-rows';
     host.appendChild(this.listEl);
     this.unsubscribeStatusIconsReady = onStatusIconsReady(() => {
+      this.refreshTheme();
+      this.invalidateStatusBadgeRenderSignatures();
       if (this.lastSource) {
         this.update(this.lastSource);
       }
     });
+  }
+
+  private refreshTheme(): void {
+    const host = this.resolveThemeHost();
+    if (!host) return;
+    this.theme = readBattleHudTheme(host);
+  }
+
+  private resolveThemeHost(): HTMLElement | null {
+    if (this.themeHost instanceof HTMLElement) {
+      return this.themeHost;
+    }
+    const battleView = document.querySelector('.battle-view');
+    return battleView instanceof HTMLElement ? battleView : null;
+  }
+
+  private invalidateStatusBadgeRenderSignatures(): void {
+    for (const refs of this.statusByPartyIndex.values()) {
+      refs.debuffRenderSignature = undefined;
+      refs.buffRenderSignature = undefined;
+    }
   }
 
   rebuild(specs: PartyMemberStatsRowSpec[]): Map<number, HTMLElement> {
@@ -431,18 +494,29 @@ export class PartyMemberStatsDisplay {
     return rowElements;
   }
 
-  update(source: PartyMemberStatsDataSource): void {
+  update(
+    source: PartyMemberStatsDataSource,
+    frame?: PartyMemberStatsFrame,
+  ): void {
     this.lastSource = source;
-    const snapshots = source.getAllySnapshots();
+    if (!this.theme && this.resolveThemeHost()) {
+      this.refreshTheme();
+      this.invalidateStatusBadgeRenderSignatures();
+    }
+    const snapshots = frame?.snapshots ?? source.getAllySnapshots();
+    const displayRows = frame?.displayRows ?? source.getDisplayRows();
     const downBySlot = buildDownBySlot(snapshots);
-    syncMemberDownState(this.memberByPartyIndex, downBySlot);
+    const downSignature = [...downBySlot.entries()]
+      .sort(([a], [b]) => a - b)
+      .map(([slot, down]) => `${slot}:${down ? 1 : 0}`)
+      .join('|');
+    if (downSignature !== this.memberDownSignature) {
+      this.memberDownSignature = downSignature;
+      syncMemberDownState(this.memberByPartyIndex, downBySlot);
+    }
     syncThreatBars(this.threatByPartyIndex, snapshots);
-    syncDamageBars(
-      this.damageByPartyIndex,
-      source.getDisplayRows(),
-      downBySlot,
-    );
-    syncStatusBadges(this.statusByPartyIndex, snapshots, this.themeHost);
+    syncDamageBars(this.damageByPartyIndex, displayRows, downBySlot);
+    syncStatusBadges(this.statusByPartyIndex, snapshots, this.theme);
   }
 
   clear(): void {
@@ -452,6 +526,7 @@ export class PartyMemberStatsDisplay {
     this.damageByPartyIndex.clear();
     this.statusByPartyIndex.clear();
     this.lastSource = null;
+    this.memberDownSignature = '';
   }
 
   destroy(): void {

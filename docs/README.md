@@ -20,7 +20,7 @@
 | `data/levelCurves.json`, ステ計算                                                 | [spec/stats.md](spec/stats.md)                                                  |
 | `combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット                             | [spec/combat.md](spec/combat.md)                                                |
 | `battleLayout.ts`, `combatPosition.ts`, `SpriteAnimator`, `IBattleRenderer`, 描画 | [spec/battle-field.md](spec/battle-field.md)                                    |
-| `BattleStatsOverlay.ts`, `PartyMemberStatsDisplay.ts`, 戦闘中統計 DOM           | [spec/battle-field.md](spec/battle-field.md#7-戦闘中統計-ui)                    |
+| `BattleStatsDrawer.ts`, `PartyMemberStatsDisplay.ts`, 戦闘中統計 DOM           | [spec/battle-field.md](spec/battle-field.md#7-戦闘中統計-ui)                    |
 | `vfxAnimRegistry.ts`, `VfxPlaybackManager`, `presentation/`, `sheets/vfx/`        | [spec/classes-and-skills.md](spec/classes-and-skills.md#スプライト演出アセット) |
 | `data/stages.json`, セーブ, EXP, LvUP                                             | [spec/progression.md](spec/progression.md)                                      |
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, `gameTermGlossary.ts` 等、編成メニュー DOM | [spec/party-formation-ui.md](spec/party-formation-ui.md)（用語辞書: [classes-and-skills.md §UI 用語辞書](spec/classes-and-skills.md#ui-用語辞書)） |

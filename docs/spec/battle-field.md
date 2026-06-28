@@ -2,7 +2,7 @@
 
 実装：`src/battle/battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `bodyAnimMarching.ts`, `BattleEngine.ts`
 描画：`src/render/BattleCanvas.ts`（`screenX = battleX`）
-戦闘中統計 UI：`src/ui/BattleStatsOverlay.ts`, `PartyMemberStatsDisplay.ts`, `PartyMemberEffectiveStatsPanel.ts`, `combatantBattleStatsDisplay.ts`, `src/styles/battle-stats-overlay.css`, `party-member-stats.css`, `party-member-effective-stats.css`
+戦闘中統計 UI：`src/ui/BattleStatsDrawer.ts`, `PartyMemberStatsDisplay.ts`, `PartyMemberEffectiveStatsPanel.ts`, `combatantBattleStatsDisplay.ts`, `src/styles/battle-stats-drawer.css`, `party-member-stats.css`, `party-member-effective-stats.css`
 
 本ドキュメントは **横 1 軸のバトルライン** における座標・隊形・Wave・接敵・描画の設計正本。ダメージ/CD/脅威等は [combat.md](combat.md) を参照。
 
@@ -463,21 +463,20 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 
 ## 7. 戦闘中統計 UI（戦闘詳細）
 
-戦闘画面の **戦闘詳細**オーバーレイ（`BattleStatsOverlay`）と、メンバー行コンポーネント（`PartyMemberStatsDisplay`）の画面設計正本。脅威・ダメージの計算は [combat.md](combat.md)。DOM UI の共通デザイン言語は [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) を参照（Phase 4d で編成 UI と揃える）。
+戦闘画面の **戦闘詳細**ドロワー（`BattleStatsDrawer`）と、メンバー行コンポーネント（`PartyMemberStatsDisplay`）の画面設計正本。脅威・ダメージの計算は [combat.md](combat.md)。DOM UI の共通デザイン言語は [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) を参照（Phase 4d で編成 UI と揃える）。
 
 ### 7.1 役割とデータ
 
 | 要素 | 内容 |
 | ---- | ---- |
-| 起動 | 戦闘画面メニューの「戦闘詳細」ボタン（`BattleView`） |
-| タイトル | オーバーレイ見出し **戦闘詳細**。サブタイトルはステージ表示名（`stages.json` の `displayName`） |
-| メンバー行 | 編成スロット順。**統計オーバーレイのみ** 24px クラスアイコン + `displayName`、Threat バー、与ダメ / 被ダメバー、**状態バッジ帯（全件）**。**Exp 数値・メンバー別 Lv・epithetEn は表示しない**（プレイヤー共通 Exp バーは戦闘 HUD — [progression.md](progression.md)「進行 UI」）。`DebugMenuPanel` にはアイコンなし |
+| 起動 | Party HUD（`.party-hud-panel`）直下の **ドロワータブ**（`.party-hud-drawer-tab`、シェブロンアイコンのみ）。`Escape` または同タブで閉じる |
+| 配置 | `battle-canvas-frame` 内の `.battle-hud-stack` — 上: Party HUD、下: ドロワータブ + 展開パネル。キャンバス幅（最大 480px）に揃える |
+| タイトル | 展開パネル見出し **戦闘詳細**。サブタイトルはステージ表示名（`stages.json` の `displayName`） |
+| メンバー行 | 編成スロット順。**24px クラスアイコン** + `displayName`、Threat バー、与ダメ / 被ダメバー、**状態バッジ帯（全件）**。**Exp 数値・メンバー別 Lv・epithetEn は表示しない**（プレイヤー共通 Exp バーは戦闘 HUD — [progression.md](progression.md)「進行 UI」） |
 | 状態バッジ帯 | debuff / buff でラベル行を分ける（例: Debuff / Buff）。パネル横幅いっぱいで flex-wrap 折り返し。**簡易 3+N 省略なし**（[combat.md](combat.md) HUD バッジ §簡易/詳細） |
-| 更新 | オーバーレイ表示中は `update()` で Threat / ダメージと同様に状態バッジも refresh |
+| 更新 | ドロワー展開中は `update()` で Threat / ダメージと同様に状態バッジも refresh |
 | データ源 | `getStageDamageDisplayRows`（ステージ内累計与ダメ / 被ダメ）、`CombatantSnapshot`（Threat・`statusEffects`）。**Exp / `partyProgress` は統計 UI スコープ外** |
 | 確認モード | 現行は verify 経路でダメージ行が供給される。本番 Stage Records は **Phase 11** |
-
-`DebugMenuPanel` も同一 `PartyMemberStatsDisplay` を使う。CSS 刷新時は **両方を同スタイル**にする（状態バッジ帯含む）。
 
 #### 7.1.1 戦闘中ステータス（Party HUD クリック）
 
@@ -498,8 +497,8 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 
 | 現行（避ける） | 目標 |
 | -------------- | ---- |
-| 中央モーダル + 強 backdrop + 大角丸 + 強 box-shadow | **情報パネル** — 枠は控えめ、パネル内は縦積み |
-| ダッシュボード風 title bar（角丸 `×` ボタン等） | 閉じる操作は最小限。装飾より可読性 |
+| 中央モーダル + 強 backdrop + 大角丸 + 強 box-shadow | **HUD 直下の情報パネル** — 枠は控えめ、パネル内は縦積み |
+| ダッシュボード風 title bar（角丸 `×` ボタン等） | 閉じる操作は **ドロワータブ** と `Escape` のみ。装飾より可読性 |
 | メンバー行の角丸グラデーション棒のみの区切り | **細セパレーター + 余白**で行を分ける |
 | カードグリッド風の横並びダッシュボード | 1 列の **縦リスト**（メンバー行内は epithet + 名前 / Threat / ダメージを横サブ列） |
 
@@ -507,10 +506,10 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 
 ### 7.3 受け入れ条件（Phase 4d — 統計部分）
 
-1. オーバーレイが Web モーダル / ダッシュボード風に見えない（§11 準拠）
+1. 戦闘詳細が Web モーダル / ダッシュボード風に見えない（§11 準拠）。Party HUD 直下のドロワーとして展開する
 2. 4 人分の名前・Threat・与ダメ / 被ダメ・**全状態バッジ（debuff/buff ラベル付き）**が **縦リスト**で読める（Exp 数値・メンバー別 Lv・epithetEn なし）
-3. `party-member-stats.css` の変更が `DebugMenuPanel` 内 stats 行にも反映される
-4. 閉じる操作（backdrop / 閉じるボタン）が機能する
+3. `party-member-stats.css` が戦闘詳細ドロワーに反映される
+4. ドロワータブ / `Escape` で閉じられる
 
 ---
 

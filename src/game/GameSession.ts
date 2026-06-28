@@ -55,7 +55,7 @@ export class GameSession {
   readonly view: BattleView;
   private autoSaveTimer: ReturnType<typeof setInterval> | null = null;
   private metaMenuOpen = false;
-  private statsOverlayOpen = false;
+  private statsDrawerOpen = false;
   private readonly stageDamageStats = new StageDamageStatsTracker();
   private readonly menuHost: MenuHost;
 
@@ -119,9 +119,9 @@ export class GameSession {
             this.gameData.classRegistry,
           ),
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
-        onStatsOverlayOpenChange: (open) => {
-          this.statsOverlayOpen = open;
-          this.view.setStatsButtonDisabled(open || this.metaMenuOpen);
+        onStatsDrawerOpenChange: (open) => {
+          this.statsDrawerOpen = open;
+          this.view.setStatsDrawerDisabled(open || this.metaMenuOpen);
           this.view.setMenuButtonDisabled(open || this.metaMenuOpen);
         },
       },
@@ -137,8 +137,8 @@ export class GameSession {
         this.updatePartySlot(slotIndex, member),
       onOpenChange: (open) => {
         this.metaMenuOpen = open;
-        this.view.setMenuButtonDisabled(open || this.statsOverlayOpen);
-        this.view.setStatsButtonDisabled(open || this.statsOverlayOpen);
+        this.view.setMenuButtonDisabled(open || this.statsDrawerOpen);
+        this.view.setStatsDrawerDisabled(open || this.statsDrawerOpen);
       },
     });
 

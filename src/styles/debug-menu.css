@@ -1,5 +1,3 @@
-@import './party-member-stats.css';
-
 .debug-menu {
   -webkit-app-region: no-drag;
   padding: 8px 10px;
@@ -20,17 +18,6 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-}
-
-.debug-menu-stats-rows {
-  --party-stats-metric-col: 88px;
-  gap: 0;
-}
-
-.debug-menu-stats-rows .party-stats-row {
-  column-gap: 8px;
-  align-items: center;
-  padding: 6px 0;
 }
 
 .debug-menu-level-row {

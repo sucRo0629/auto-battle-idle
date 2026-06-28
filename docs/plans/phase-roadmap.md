@@ -152,7 +152,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 | **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                                                                                                                                            | **確定済**（13 クラス。印術師・法陣師は Phase 7b/7c 送り） |
 | **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                                                                                                                                                    | **完了**                                                   |
 | **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish                                                                                                                                                           | **随時**（コア済）                                         |
-| **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsOverlay`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **ほぼ完了**（§11 視覚 polish 残確認）                     |
+| **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsDrawer`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **ほぼ完了**（§11 視覚 polish 残確認）                     |
 
 ### クラスマスタ（確定済）
 
@@ -271,12 +271,12 @@ data/
 | 項目         | 仕様                                                                                                                                                                                                  |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | デザイン言語 | [party-formation-ui.md §11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通) と同一（縦情報パネル・細セパレーター・大角丸 / 強 shadow 禁止）                                                 |
-| オーバーレイ | Web モーダル風を避け、**情報パネル**として閉じる。タイトル **戦闘詳細**                                                                                                                               |
+| オーバーレイ | Web モーダル風を避け、**Party HUD 直下のドロワー**として展開。タイトル **戦闘詳細**                                                                                                                               |
 | メンバー行   | `PartyMemberStatsDisplay` 共通 — 名前（`displayName`）、Threat / 与ダメ・被ダメバー、**状態バッジ帯（全件・debuff/buff ラベル）**。行は **細い区切り + 余白**（Exp / epithetEn / メンバー別 Lv なし） |
 | バー         | 角丸グラデーションのダッシュボード棒を控えめに。色意味（Threat 青・与ダメ橙・被ダメ青等）は維持可                                                                                                     |
-| 共有 CSS     | `battle-stats-overlay.css` + `party-member-stats.css`。`DebugMenuPanel` 内 stats 行も同スタイル                                                                                                       |
+| 共有 CSS     | `battle-stats-drawer.css` + `party-member-stats.css`                                                                                                       |
 
-**実装タッチポイント（統計）:** `BattleStatsOverlay.ts`, `PartyMemberStatsDisplay.ts`, `battle-stats-overlay.css`, `party-member-stats.css`（必要なら `DebugMenuPanel.ts` の stats ホスト）。
+**実装タッチポイント（統計）:** `BattleStatsDrawer.ts`, `PartyMemberStatsDisplay.ts`, `battle-stats-drawer.css`, `party-member-stats.css`。
 
 **4d スコープ外**
 
