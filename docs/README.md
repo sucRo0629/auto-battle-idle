@@ -2,7 +2,7 @@
 
 トピックごとに **分割** してあり、作業時は必要なファイルだけ開く（Cursor ルール: `.cursor/rules/documentation-index.mdc`）。
 
-- **[Plans](plans/README.md)** — 開発ロードマップ（[フェーズ詳細](plans/phase-roadmap.md)）
+- **[Plans](plans/README.md)** — 開発ロードマップ（[フェーズ詳細](plans/phase-roadmap.md)、[Phase 4 詳細](plans/phase-4-roadmap.md)）
 - **[Spec](spec/README.md)** — ゲーム設計リファレンス（ステータス・戦闘・クラス・進行）
 - **[Design Philosophy](design-philosophy.md)** — コアコンセプト（編成への思考圧縮）、評価軸、設計判断基準
 - **[Combat Architecture](combat-architecture.md)** — 戦闘システム全体の上位構造（Kill / Flow / Survival）
@@ -27,6 +27,7 @@
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, `gameTermGlossary.ts` 等、編成メニュー DOM | [spec/party-formation-ui.md](spec/party-formation-ui.md)（用語辞書: [classes-and-skills.md §UI 用語辞書](spec/classes-and-skills.md#ui-用語辞書)） |
 | `data/enemies.json`, 敵編成・ボス設計の方針                                       | [enemy-design-concept.md](enemy-design-concept.md)                              |
 | ローグライクモード（ラン・問題生成・報酬）                                        | [spec/roguelike-mode.md](spec/roguelike-mode.md)                                |
+| `formatSkillText.ts`, 4b 説明文 / 4e i18n                                      | [plans/phase-4-roadmap.md](plans/phase-4-roadmap.md)                          |
 | フェーズ・作業順                                                                  | [plans/phase-roadmap.md](plans/phase-roadmap.md)                                |
 
 ## JSON の読み方（トークン節約）
@@ -47,6 +48,7 @@
 | トピック           | ファイル                                                 |
 | ------------------ | -------------------------------------------------------- |
 | フェーズ状況       | [plans/phase-roadmap.md](plans/phase-roadmap.md)         |
+| Phase 4 作業順     | [plans/phase-4-roadmap.md](plans/phase-4-roadmap.md)     |
 | コアコンセプト・設計哲学 | [design-philosophy.md](design-philosophy.md)         |
 | 戦闘アーキテクチャ | [combat-architecture.md](combat-architecture.md)         |
 | 共通戦闘メカニクス | [system-mechanics.md](system-mechanics.md)               |

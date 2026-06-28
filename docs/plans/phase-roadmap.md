@@ -241,6 +241,8 @@ Phase 3 の Caster pass は **`at_sorcerer` のみ** を対象とする。印術
 
 ## Phase 4 — クラスマスタ + スキル
 
+**詳細な作業順・チェックリスト:** [phase-4-roadmap.md](phase-4-roadmap.md)
+
 Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON を確定する。**一次職 / 二次職の区別は廃止**し、`jobTier` / `promotion` / `promotesFrom` の予約は行わない。
 
 | サブフェーズ | 内容                                                                                                                                                                                                                                    | 状態                                                       |
@@ -249,7 +251,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 | **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                                                                                                                                                    | **完了**                                                   |
 | **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 6c / 8c 前 polish                                                                                                                                                     | **随時**（コア済）                                         |
 | **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsDrawer`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **ほぼ完了**（§11 視覚 polish 残確認）                     |
-| **4e**       | **多言語（英語）** — i18n 基盤、UI / ゲームデータ / スキル説明の locale 化（**Release M1 必須**）                                                                                                                                    | **未着手**                                                 |
+| **4e**       | **英語 i18n のみ** — i18n 基盤、UI / ゲームデータ / スキル説明の locale 化（**Release M1 必須**。4b 日本語確定後）                                                                                                                    | **未着手**                                                 |
 
 ### クラスマスタ（確定済）
 
@@ -272,6 +274,8 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 スキル JSON に `description` フィールドは持たず、UI は `src/ui/formatSkillText.ts` から説明文を組み立てる（`SkillMenuPanel` ツールチップ・`SkillEditorStep` テキストプレビュー）。
 
 **方針:** コア（自動生成 + エディタプレビュー）は **既に稼働**。新 effect / ターゲット形状を足す **データ PR ごと** に `formatSkillText` とテストを同梱。全クラス目視の仕上げは **Phase 6c / 8c 前** でよい。1 行テンプレ・表記ルールは [classes-and-skills.md §スキル説明自動生成（Phase 4b）](../spec/classes-and-skills.md#スキル説明自動生成phase-4b) を正とする。
+
+**4e との順序:** i18n は **Phase 4e で英語のみ**（3 言語目以降はスコープ外）。**4e に入る前に** DOM UI 文言と `formatSkillText` の **日本語文案を先に確定** する（英語は日本語確定後の翻訳・locale 分岐）。
 
 **4b スコープ外**
 
@@ -384,11 +388,16 @@ data/
 
 **タイミング:** 4a データ形安定後、**Phase 6 より前**。4b（説明文）と並行可。Phase 5（演出 PNG）とは独立。
 
-### 4e — 多言語（英語）— Release M1 向け
+### 4e — 英語 i18n — Release M1 向け
+
+**方針:** i18n は **Phase 4 からのみ** 着手し、対象言語は **`en` のみ**（中国語・韓国語等は Phase 4 スコープ外）。
 
 **ゴール:** 海外向け itch.io 公開のため、**日本語 + 英語** の 2 言語をサポートする。Release M1（体験版）の **必須条件**。
 
-**着手条件:** 4d の編成 UI 骨格が安定していること（文言差し替え先が存在すること）。
+**着手条件:**
+
+- 4d の編成 UI 骨格が安定していること（文言差し替え先が存在すること）
+- **4b** — M1 対象範囲の **日本語 UI 文案**（特に `formatSkillText`・用語辞書 `ja`）が確定していること
 
 | レイヤ | 内容 |
 | ------ | ---- |
@@ -400,9 +409,10 @@ data/
 
 **進め方（推奨）**
 
-1. i18n 基盤 + DOM UI の英語（プレイに必要な最短経路）
-2. `formatSkillText` / クラス名 — M1 解禁 8 クラス分から
-3. M2 前に 13 クラス分へ拡張
+1. **4b / 4d（先行）** — 日本語の UI 固定文言・`formatSkillText` 出力・`gameTermGlossary` の `ja` を確定（翻訳元の正本）
+2. **4e-a** — i18n 基盤 + DOM UI の英語（プレイに必要な最短経路）
+3. **4e-b** — `formatSkillText` / クラス名 / 用語辞書 `en` — M1 解禁 **8 クラス**分から
+4. M2 前に **13 クラス**分へ拡張
 
 **4e スコープ外（初期）**
 
@@ -852,7 +862,7 @@ Phase 5（演出 PNG）・5d は M1 / M2 と **並行可**。
 ```
 Phase 1 → 2 → 3 → 3d
     ↓
-Phase 4（4a 確定 → 4c 完了 → 4b 随時 → 4d / 4e）
+Phase 4（4a 確定 → 4c 完了 → 4b 日本語文案 → 4d → 4e 英語のみ）
     ↓
 Phase 5（演出・VFX）  ← 4 と並行可
     ↓

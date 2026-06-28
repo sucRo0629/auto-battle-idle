@@ -330,7 +330,7 @@ Phase 4d 当初案にあった表示例（参考）:
 | 項目 | 理由 |
 | ---- | ---- |
 | Canvas HUD バッジのクリック説明 | DOM 用語パネルとは別 UI。必要なら別タスク |
-| 英語 UI | 辞書形状のみ locale 対応。v1 表示は `ja` 固定 |
+| 英語 UI | **Phase 4e**（`en` のみ）。4d までは `ja` 固定。辞書形状は locale キー対応済み |
 | スキル JSON への用語説明フィールド | 辞書 + `formatSkillText` 方針 |
 
 ---
@@ -480,6 +480,7 @@ Picker 表示中も **上部ロスター帯は背面に見える**。他 3 人�
 | [classes-and-skills.md](classes-and-skills.md)  | UI ロール、スキル習得、**UI 用語辞書** |
 | [progression.md](progression.md)                | セーブ、`playerProgress`、進行 UI      |
 | [phase-roadmap.md](../plans/phase-roadmap.md)   | Phase 4d 実装タイミング                |
+| [phase-4-roadmap.md](../plans/phase-4-roadmap.md) | Phase 4 作業順・4d/4b/4e チェックリスト |
 
 ---
 

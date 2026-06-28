@@ -41,7 +41,7 @@
 
 | 項目        | 内容                                                                                                                                                                                                                                                                      |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 表示言語    | **日本語のみ**（`locale: "ja"`）。他 locale は未実装                                                                                                                                                                                                                      |
+| 表示言語    | **4d まで `ja` 固定**。**4e** で `en` のみ追加（[phase-roadmap.md §4e](../plans/phase-roadmap.md#4e--英語-i18n--release-m1-向け)）                                                                                                                                      |
 | 適用面      | 編成 UI のスキルカード説明文（Phase 4d）。エディタのスキル説明プレビューは同辞書で揃える                                                                                                                                                                                  |
 | 説明文生成  | 1 行: `formatActiveDescription` / `formatPassiveDescription`。カード改行: `formatSkillCardLines`（[party-formation-ui.md §6.3](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。辞書は **事後マッチ** または `formatSkillCardLines` 構造化出力と接続 |
 | スキル JSON | 用語説明フィールドは **持たない**（4b 方針と同様。説明は生成 + 辞書）                                                                                                                                                                                                     |
@@ -58,7 +58,7 @@
 | `aliases`         | `{ ja: ["スタン"], … }` — 本文中でリンク化する表記。**長い語を先**にマッチ                                                                                      |
 | `statusCategory?` | 状態系のみ。[combat.md §ステータス効果](combat.md#ステータス効果) の `StatusDisplayCategory` と対応。`StatusIconRegistry` に PNG が登録されているときのみ用語パネル見出しに表示 |
 
-**多言語:** v1 では i18n ライブラリは導入しない。型・データ形状だけ locale キーを持ち、将来 `en` 等を追加できるようにする。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。
+**多言語:** **Phase 4b / 4d** までは表示は **`ja` 固定**（型・データ形状だけ locale キーを持つ）。**Phase 4e** で **`en` のみ** 追加（3 言語目以降はスコープ外）。4e 着手前に **日本語文案**（特に `formatSkillText`・辞書 `ja`）を確定し、英語はその翻訳・locale 分岐とする。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。
 
 #### 混同禁止（別 ID 必須）
 

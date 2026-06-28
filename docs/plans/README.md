@@ -3,6 +3,7 @@
 Hensei Only の開発ロードマップ。
 
 - **[フェーズロードマップ](phase-roadmap.md)** — Phase 1〜12 の内容・状態・依存関係（**番号順**）
+- **[Phase 4 ロードマップ](phase-4-roadmap.md)** — 4a〜4e の作業順・チェックリスト・完了条件
 - **[Release マイルストーン](phase-roadmap.md#release-マイルストーン)** — M1 体験版 / M2 初版 Chapter 1
 
 ## 概要（番号順）
