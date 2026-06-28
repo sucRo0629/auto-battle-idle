@@ -8,17 +8,17 @@ describe("segmentTextByGameTerms", () => {
   it("prefers longer aliases at the same offset", () => {
     const segments = segmentTextByGameTerms("ブロック率+50%", "ja");
     expect(segments).toEqual([
-      { kind: "term", termId: "block", matchedText: "ブロック率" },
-      { kind: "text", text: "+50%" },
+      { kind: "term", termId: "block", matchedText: "ブロック" },
+      { kind: "text", text: "率+50%" },
     ]);
   });
 
   it("matches multiple non-overlapping terms", () => {
-    const text = "ダメージ軽減25%、スタン3秒";
+    const text = "バリア付与、スタン3秒";
     const segments = segmentTextByGameTerms(text, "ja");
     expect(segments).toEqual([
-      { kind: "term", termId: "damageReduction", matchedText: "ダメージ軽減" },
-      { kind: "text", text: "25%、" },
+      { kind: "term", termId: "barrier", matchedText: "バリア" },
+      { kind: "text", text: "付与、" },
       { kind: "term", termId: "stun", matchedText: "スタン" },
       { kind: "text", text: "3秒" },
     ]);
@@ -66,39 +66,97 @@ describe("segmentTextByGameTerms", () => {
     expect(segments).toEqual([{ kind: "text", text: "ダメージ軽減25%" }]);
   });
 
-  it("links ダメージ軽減 and 被ダメージ増加 separately", () => {
-    expect(segmentTextByGameTerms("ダメージ軽減 20%", "ja")[0]).toEqual({
+  it("does not link damageReduction or damageIncrease in skill text", () => {
+    expect(segmentTextByGameTerms("ダメージ軽減 20%", "ja")).toEqual([
+      { kind: "text", text: "ダメージ軽減 20%" },
+    ]);
+    expect(segmentTextByGameTerms("被ダメージ増加 15%", "ja")).toEqual([
+      { kind: "text", text: "被ダメージ増加 15%" },
+    ]);
+  });
+
+  it("separates physical block and magicBlock ids", () => {
+    expect(segmentTextByGameTerms("ブロック率+10%", "ja")).toEqual([
+      { kind: "term", termId: "block", matchedText: "ブロック" },
+      { kind: "text", text: "率+10%" },
+    ]);
+
+    expect(segmentTextByGameTerms("魔法ブロック", "ja")[0]).toEqual({
       kind: "term",
-      termId: "damageReduction",
-      matchedText: "ダメージ軽減",
+      termId: "magicBlock",
+      matchedText: "魔法ブロック",
     });
 
-    expect(segmentTextByGameTerms("被ダメージ増加 15%", "ja")[0]).toEqual({
+    const mixed = segmentTextByGameTerms(
+      "周囲のブロック率+5%、魔法ブロックを可能にする",
+      "ja",
+    );
+    expect(mixed).toEqual([
+      { kind: "text", text: "周囲の" },
+      { kind: "term", termId: "block", matchedText: "ブロック" },
+      { kind: "text", text: "率+5%、" },
+      { kind: "term", termId: "magicBlock", matchedText: "魔法ブロック" },
+      { kind: "text", text: "を可能にする" },
+    ]);
+  });
+
+  it("links block, threat, basicAttack, and charge terms", () => {
+    expect(segmentTextByGameTerms("ブロック+10%", "ja")[0]).toEqual({
       kind: "term",
-      termId: "damageIncrease",
-      matchedText: "被ダメージ増加",
+      termId: "block",
+      matchedText: "ブロック",
     });
 
-    expect(segmentTextByGameTerms("ダメージ軽減25%", "ja")[0]).toEqual({
+    expect(segmentTextByGameTerms("周囲のヘイト下限", "ja")[1]).toEqual({
       kind: "term",
-      termId: "damageReduction",
-      matchedText: "ダメージ軽減",
+      termId: "threat",
+      matchedText: "ヘイト",
     });
 
-    expect(segmentTextByGameTerms("被ダメージ増加20%", "ja")[0]).toEqual({
+    expect(segmentTextByGameTerms("通常攻撃5回", "ja")[0]).toEqual({
       kind: "term",
-      termId: "damageIncrease",
-      matchedText: "被ダメージ増加",
+      termId: "basicAttack",
+      matchedText: "通常攻撃",
     });
+
+    expect(segmentTextByGameTerms("1回チャージ可能", "ja")[1]).toEqual({
+      kind: "term",
+      termId: "charge",
+      matchedText: "チャージ",
+    });
+  });
+
+  it("does not link atk, def, or reg stat display names in skill text", () => {
+    expect(segmentTextByGameTerms("攻撃力+20%", "ja")).toEqual([
+      { kind: "text", text: "攻撃力+20%" },
+    ]);
+    expect(segmentTextByGameTerms("防御力+25%", "ja")).toEqual([
+      { kind: "text", text: "防御力+25%" },
+    ]);
+    expect(segmentTextByGameTerms("魔法耐性を20%無視", "ja")).toEqual([
+      { kind: "text", text: "魔法耐性を20%無視" },
+    ]);
   });
 });
 
 describe("gameTermGlossary locale shape", () => {
-  it("registers ja aliases only for v1 matching", async () => {
+  it("registers ja title and description for every entry", async () => {
     const { GAME_TERM_ENTRIES } = await import("./gameTermGlossary.ts");
     for (const entry of GAME_TERM_ENTRIES) {
       expect(entry.title.ja.length).toBeGreaterThan(0);
       expect(entry.description.ja.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("registers ja link aliases except HUD-only entries", async () => {
+    const { GAME_TERM_ENTRIES, GAME_TERM_NO_TEXT_LINK_IDS } = await import(
+      "./gameTermGlossary.ts"
+    );
+    for (const entry of GAME_TERM_ENTRIES) {
+      if (GAME_TERM_NO_TEXT_LINK_IDS.has(entry.id)) {
+        expect(entry.aliases.ja).toEqual([]);
+        continue;
+      }
       expect(entry.aliases.ja.length).toBeGreaterThan(0);
     }
   });
@@ -135,5 +193,12 @@ describe("gameTermGlossary locale shape", () => {
     expect(stun!.statusCategory).toBe("stun");
     expect(hasStatusIcon("stun")).toBe(true);
     expect(resolveGameTermStatusIconUrl(stun!)).toBeTruthy();
+
+    const magicBlock = GAME_TERM_ENTRIES.find(
+      (entry) => entry.id === "magicBlock",
+    );
+    expect(magicBlock).toBeDefined();
+    expect(magicBlock!.statusIconCategory).toBe("block");
+    expect(resolveGameTermStatusIconUrl(magicBlock!)).toBeTruthy();
   });
 });

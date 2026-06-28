@@ -1853,7 +1853,7 @@ function formatPassiveEffect(
           parts.push("周囲のブロック率");
         }
         if (def.frontBlockAuraMagicBlock) {
-          parts.push("魔法ブロック");
+          parts.push("魔法ブロックを可能にする");
         }
         return parts.join("、");
       }

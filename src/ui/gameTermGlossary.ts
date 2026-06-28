@@ -16,6 +16,10 @@ export type GameTermId =
   | "earthMark"
   | "arenaMark"
   | "block"
+  | "magicBlock"
+  | "threat"
+  | "basicAttack"
+  | "charge"
   | "stun"
   | "dot"
   | "damageReduction"
@@ -56,14 +60,29 @@ export interface GameTermEntry {
   description: Record<GameTermLocale, string>;
   aliases: Record<GameTermLocale, readonly string[]>;
   statusCategory?: StatusDisplayCategory;
+  /** 用語パネル見出しアイコン用。HUD カテゴリと別 ID の用語が同じ PNG を使うときに指定。 */
+  statusIconCategory?: StatusDisplayCategory;
 }
+
+/** HUD 等で表示名を持つが、スキル説明文内では用語リンクしない ID。 */
+export const GAME_TERM_NO_TEXT_LINK_IDS = new Set<GameTermId>([
+  "atk",
+  "def",
+  "reg",
+  "damageReduction",
+  "damageIncrease",
+  "damageTaken",
+]);
+
+/** @deprecated 後方互換。`GAME_TERM_NO_TEXT_LINK_IDS` を正とする。 */
+export const GAME_TERM_HUD_ONLY_STAT_IDS = GAME_TERM_NO_TEXT_LINK_IDS;
 
 export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
   {
     id: "barrier",
     title: { ja: "バリア" },
     description: {
-      ja: "HPより先に消費されるダメージ吸収量。回復ではなく、被ダメージを直接減らすシールド層。",
+      ja: "HPとは別の被ダメージを受け止める値。HPより先に消費される。バリアが付与されている対象に更にバリアが付与される場合、原則バリア量が多い方のバリアで置き換えられる。",
     },
     aliases: { ja: ["バリア"] },
   },
@@ -107,12 +126,43 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "block",
     title: { ja: "ブロック" },
     description: {
-      ja: "攻撃を受けた際に一定確率で発動し、被ダメージを大幅に軽減する。ブロック率は加算で積み上がる。",
+      ja: "物理攻撃を受けた際に一定確率で発動し、被ダメージを（25%＋攻撃力1につき1%、上限100%）軽減する。ブロック率は加算で積み上がる。",
     },
-    aliases: {
-      ja: ["前列ブロック率", "ブロック率", "魔法ブロック", "ブロック"],
-    },
+    aliases: { ja: ["ブロック"] },
     statusCategory: "block",
+  },
+  {
+    id: "magicBlock",
+    title: { ja: "魔法ブロック" },
+    description: {
+      ja: "魔法攻撃を受けた際に一定確率で発動し、被ダメージを15%軽減する。魔法ブロック率は加算で積み上がる。物理ブロックとは別判定。",
+    },
+    aliases: { ja: ["魔法ブロック"] },
+    statusIconCategory: "block",
+  },
+  {
+    id: "threat",
+    title: { ja: "ヘイト" },
+    description: {
+      ja: "敵が誰を攻撃するかを決める優先度。射程内の味方のうち、ヘイトが最も高い者が通常の攻撃対象になる。与ダメージやデバフの付与などで上昇し、時間とともに基準値まで減衰する。",
+    },
+    aliases: { ja: ["ヘイト"] },
+  },
+  {
+    id: "basicAttack",
+    title: { ja: "通常攻撃" },
+    description: {
+      ja: "スキルを使用していない際に行う基本的な攻撃。攻撃頻度はキャラクターの攻撃速度を元に決定される。",
+    },
+    aliases: { ja: ["通常攻撃"] },
+  },
+  {
+    id: "charge",
+    title: { ja: "チャージ" },
+    description: {
+      ja: "スキルを追加で使用できる回数や、再使用までの充填。スキルごとに条件が異なる。（文案仮）",
+    },
+    aliases: { ja: ["チャージ"] },
   },
   {
     id: "stun",
@@ -127,7 +177,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "dot",
     title: { ja: "DoT" },
     description: {
-      ja: "継続ダメージ（Damage over Time）。一定間隔で HP を減らす状態効果の総称。",
+      ja: "継続ダメージ（Damage over Time）の意。効果時間中毎秒ダメージを与え続ける状態効果の総称。",
     },
     aliases: { ja: ["DoT圧縮", "DoT延長", "DoT収穫", "DoT"] },
     statusCategory: "dot",
@@ -138,7 +188,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     description: {
       ja: "受けるダメージ量を減らす buff。被ダメ倍率が 1 未満の stat 効果や、パッシブ damageReduction として HUD に表示される。",
     },
-    aliases: { ja: ["ダメージ軽減"] },
+    aliases: { ja: [] },
     statusCategory: "damageReduction",
   },
   {
@@ -147,7 +197,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     description: {
       ja: "受けるダメージ量を増やす debuff。被ダメ倍率が 1 を超える stat 効果として HUD に表示される。",
     },
-    aliases: { ja: ["被ダメージ増加"] },
+    aliases: { ja: [] },
     statusCategory: "damageIncrease",
   },
   {
@@ -156,7 +206,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     description: {
       ja: "被ダメージ倍率（damageTaken）stat。倍率 < 1 はダメージ軽減、> 1 は被ダメージ増加としてスキル説明に展開する。",
     },
-    aliases: { ja: ["被ダメ"] },
+    aliases: { ja: [] },
   },
   {
     id: "counter",
@@ -207,7 +257,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "poison",
     title: { ja: "毒" },
     description: {
-      ja: "時間経過でダメージを与える DoT の一種。蔓延・収穫など毒専用効果と連動することがある。",
+      ja: "DoTの一種。",
     },
     aliases: { ja: ["毒蔓延", "毒"] },
     statusCategory: "poison",
@@ -216,7 +266,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "bleed",
     title: { ja: "出血" },
     description: {
-      ja: "時間経過でダメージを与える DoT の一種。",
+      ja: "DoTの一種。",
     },
     aliases: { ja: ["出血"] },
     statusCategory: "bleed",
@@ -280,7 +330,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     description: {
       ja: "攻撃力（ATK）の flat 加算または乗算バフ・debuff。与ダメージ計算の基礎 stat。",
     },
-    aliases: { ja: ["ATK", "攻撃力", "攻撃"] },
+    aliases: { ja: [] },
     statusCategory: "atk",
   },
   {
@@ -289,7 +339,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     description: {
       ja: "物理防御（DEF）の flat 加算または乗算バフ・debuff。物理被ダメージの軽減に寄与する。",
     },
-    aliases: { ja: ["DEF", "防御力", "防御"] },
+    aliases: { ja: [] },
     statusCategory: "def",
   },
   {
@@ -298,7 +348,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     description: {
       ja: "魔法耐性（REG）の flat 加算または乗算バフ・debuff。魔法被ダメージの軽減に寄与する。",
     },
-    aliases: { ja: ["REG", "魔法耐性"] },
+    aliases: { ja: [] },
     statusCategory: "reg",
   },
   {
@@ -359,7 +409,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "seedFlame",
     title: { ja: "種火" },
     description: {
-      ja: "魔術師の種火 DoT。stack 上限に達すると熾火へ変換される。active Hit のみで付与・連動する。",
+      ja: "魔術師固有のDoT。1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える。最大スタック数：5。スタック上限に達すると「熾火」に変換される。",
     },
     aliases: { ja: ["種火"] },
     statusCategory: "seedFlame",
@@ -368,7 +418,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "blazingFlame",
     title: { ja: "熾火" },
     description: {
-      ja: "魔術師の上位 DoT。stack ごとに魔法被ダメを増加させ、DoT 圧縮の対象外。種火から変換または起爆連鎖で増減する。",
+      ja: "魔術師固有のDoT。1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える。さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる。最大スタック数：1。",
     },
     aliases: { ja: ["熾火上限解除", "熾火起爆", "熾火"] },
     statusCategory: "blazingFlame",
@@ -506,8 +556,9 @@ export function getGameTermEntry(id: GameTermId): GameTermEntry | undefined {
 export function resolveGameTermStatusIconUrl(
   entry: GameTermEntry,
 ): string | undefined {
-  if (!entry.statusCategory) return undefined;
-  return getStatusIconUrl(entry.statusCategory);
+  const category = entry.statusCategory ?? entry.statusIconCategory;
+  if (!category) return undefined;
+  return getStatusIconUrl(category);
 }
 
 export function getGameTermIds(): GameTermId[] {

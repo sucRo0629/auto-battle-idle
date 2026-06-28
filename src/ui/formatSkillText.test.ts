@@ -857,7 +857,7 @@ describe('formatActiveDescription', () => {
       '効果：周囲のヘイト下限を自身の72%に引き上げ、周囲のヘイト減衰速度低下',
     );
     expect(formatPassiveDescription(p3!)).toBe(
-      '効果：周囲のブロック率+5%、魔法ブロック',
+      '効果：周囲のブロック率+5%、魔法ブロックを可能にする',
     );
     expect(formatPassiveDescription(p4!)).toBe(
       '効果：HPが0以下になるダメージを受けた際、HP50%復活（Wave 1回まで）、自己ダメージ軽減50%、周囲ダメージ軽減25%、5秒',

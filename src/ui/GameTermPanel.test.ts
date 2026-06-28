@@ -148,4 +148,18 @@ describe("GameTermPanel", () => {
     expect(iconEl.hidden).toBe(false);
     expect(iconEl.getAttribute("src")).toBeTruthy();
   });
+
+  it("shows block status icon for magicBlock term", () => {
+    setupPanel();
+    panel.openFromTerm("magicBlock", createAnchor("魔法ブロック"));
+
+    const iconEl = host.querySelector(
+      ".game-term-panel-icon",
+    ) as HTMLImageElement;
+    expect(iconEl.hidden).toBe(false);
+    expect(iconEl.getAttribute("src")).toBeTruthy();
+    expect(host.querySelector(".game-term-panel-title")?.textContent).toBe(
+      "魔法ブロック",
+    );
+  });
 });
