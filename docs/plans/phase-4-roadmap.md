@@ -28,11 +28,11 @@ Phase 3 の習得機構とキャラクターデータ GUI を土台に、**プ�
 | ---- | ---- | ---- |
 | **4a** | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` | **確定済**（combat 実装 13。印術師・法陣師は Phase 9 送り） |
 | **4c** | 巨大 JSON のファイル分割 | **完了** |
-| **4b** | `formatSkillText` によるスキル説明自動生成 | **随時**（コア済。日本語 polish 継続） |
+| **4b** | `formatSkillText` によるスキル説明自動生成 | **完了**（M1 8 クラス Lv0 日本語確定。以降はデータ PR 同梱のみ） |
 | **4d** | `SkillMenuPanel` + `BattleStatsDrawer` + 状態バッジ HUD | **ほぼ完了**（§11 視覚 polish 残確認） |
-| **4e** | 英語 i18n（`ja` + `en`） | **未着手**（4b 日本語確定後） |
+| **4e** | 英語 i18n（`ja` + `en`） | **未着手**（4b 日本語確定済み → 着手可） |
 
-**いまの焦点:** **4d 仕上げ → 4b 日本語確定（M1 8 クラス）→ 4e 英語**
+**いまの焦点:** **4d 仕上げ → 4e 英語**
 
 ---
 
@@ -43,10 +43,10 @@ flowchart TD
   subgraph done [完了]
     A4a[4a クラスマスタ]
     A4c[4c JSON 分割]
+    B4b[4b 日本語説明文]
   end
   subgraph wip [進行中]
     B4d[4d 編成・統計・HUD]
-    B4b[4b 日本語説明文]
   end
   subgraph next [次]
     E4e[4e 英語 i18n]
@@ -109,13 +109,15 @@ data/classes.json
 
 ---
 
-## 4b — スキル説明自動生成（日本語）
+## 4b — スキル説明自動生成（日本語）— **完了（2026-06）**
 
 **正本:** [classes-and-skills.md §スキル説明自動生成](../spec/classes-and-skills.md#スキル説明自動生成phase-4b)
 
 **実装:** `src/ui/formatSkillText.ts`（`formatActiveDescription` / `formatPassiveDescription` / `formatSkillCardLines`）
 
-**方針**
+**完了内容:** M1 8 クラス Lv0 文案確定 + `formatSkillText.test.ts` 固定。M1 完了後に `formatSkillText` 内の重複ヘルパ整理（`formatDispelTagsLabel`・防壁持続ラベル・アクティブ効果行の共有経路）を実施済み。
+
+**継続方針（4e 以降も）**
 
 - スキル JSON に `description` フィールドは **持たない**
 - 新 effect / ターゲット形状の **データ PR ごと** に `formatSkillText` + テストを同梱
@@ -134,25 +136,25 @@ data/classes.json
 
 | classId | 表示名 | 4b 日本語 | 4e 英語 |
 | ------- | ------ | --------- | ------- |
-| `df_guardian` | 鉄衛士 | テストあり。Lv0 目視 polish 済 | 未 |
-| `df_paladin` | 護法士 | テストあり。Lv0 目視 polish 済 | 未 |
-| `at_swordsman` | 剣術士 | テストあり。Lv0 目視 polish 済 | 未 |
-| `at_assassin` | 双刃士 | テストあり。Lv0 目視 polish 済 | 未 |
-| `at_ranger` | 弓術士 | テストあり。Lv0 目視 polish 済 | 未 |
-| `at_sorcerer` | 魔術師 | テストあり。Lv0 目視 polish 済 | 未 |
-| `sp_cleric` | 療養師 | テストあり。Lv0 目視 polish 済 | 未 |
-| `sp_wardweaver` | 結界師 | テストあり。Lv0 目視 polish 済 | 未 |
+| `df_guardian` | 鉄衛士 | **完了** | 未 |
+| `df_paladin` | 護法士 | **完了** | 未 |
+| `at_swordsman` | 剣術士 | **完了** | 未 |
+| `at_assassin` | 双刃士 | **完了** | 未 |
+| `at_ranger` | 弓術士 | **完了** | 未 |
+| `at_sorcerer` | 魔術師 | **完了** | 未 |
+| `sp_cleric` | 療養師 | **完了** | 未 |
+| `sp_wardweaver` | 結界師 | **完了** | 未 |
 
 ### 4b チェックリスト（クラスごと）
 
 **Lv0（目視 polish 対象）:** 編成 UI で passive 1–2 / active 1–2 を開き、次を確認する。
 
-- [ ] 全 active / passive が **破綻なく生成**される（未定義 effect がない）
-- [ ] **効果単位改行**が自然（1 段落に潰れていない）
-- [ ] 数値・単位・% 表記が [classes-and-skills.md](../spec/classes-and-skills.md) のテンプレ方針と一致
-- [ ] 頻出用語が `gameTermGlossary` にあり、クリックでパネルが開く
-- [ ] `formatSkillText.test.ts` に **Lv0 代表スキル**の assertion がある（`formatSkillCardLines` 優先）
-- [ ] エディタ `SkillEditorStep` プレビューと編成 UI の文言が一致
+- [x] 全 active / passive が **破綻なく生成**される（未定義 effect がない）
+- [x] **効果単位改行**が自然（1 段落に潰れていない）
+- [x] 数値・単位・% 表記が [classes-and-skills.md](../spec/classes-and-skills.md) のテンプレ方針と一致
+- [x] 頻出用語が `gameTermGlossary` にあり、クリックでパネルが開く
+- [x] `formatSkillText.test.ts` に **Lv0 代表スキル**の assertion がある（`formatSkillCardLines` 優先）
+- [x] エディタ `SkillEditorStep` プレビューと編成 UI の文言が一致
 
 **Lv10 / Lv20（本フェーズ）:** 個別 polish はしない。上記テンプレ変更が **生成破綻なく適用**されていることのみ確認（テストまたは目視 1 回で可）。
 

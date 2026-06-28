@@ -27,6 +27,7 @@ import type {
   DamageIncreaseSpec,
   DamageIncreaseCondition,
   DamageType,
+  DebuffFilterTag,
   FireCondition,
   PassiveSkillDef,
   PassiveEffectKind,
@@ -110,17 +111,6 @@ function formatStatMultiplierLabel(
   const suffix = formatStatMultiplierSuffix(mul);
   if (!suffix) return label;
   return `${label}${suffix}`;
-}
-
-function formatTriggerLabel(kind: SkillTriggerKind, value: number): string {
-  switch (kind) {
-    case "time":
-      return value === 0 ? "チャージなし" : `${value}s`;
-    case "basicAttackCount":
-      return `${value}攻撃`;
-    case "hitsTaken":
-      return `${value}被攻撃`;
-  }
 }
 
 function formatFireConditionSummary(condition: FireCondition): string {
@@ -565,12 +555,22 @@ function collectEffectDurationSec(
   }
 }
 
+function formatBlockResonanceStanceDurationLabel(
+  def: ActiveSkillDef,
+  options?: { useDurationFallback?: boolean }
+): string {
+  const fallback = options?.useDurationFallback
+    ? def.useDurationSec || 2
+    : 2;
+  const base = def.blockResonanceStanceDurationBaseSec ?? fallback;
+  return `${base}+防壁スタック数秒`;
+}
+
 function resolveActiveSkillDurationLabel(
   def: ActiveSkillDef
 ): string | undefined {
   if (def.effect.some((effect) => effect.type === "blockResonanceConsume")) {
-    const base = def.blockResonanceStanceDurationBaseSec ?? 2;
-    return `${base}+防壁スタック数秒`;
+    return formatBlockResonanceStanceDurationLabel(def);
   }
   let maxSec = 0;
   for (const effect of def.effect) {
@@ -590,7 +590,9 @@ function formatActiveSkillLockMetaPart(def: ActiveSkillDef): string | undefined 
   if (useSec <= 0 && !hasConsume) return undefined;
 
   const durationLabel = hasConsume
-    ? `${def.blockResonanceStanceDurationBaseSec ?? (useSec || 2)}+防壁スタック数秒`
+    ? formatBlockResonanceStanceDurationLabel(def, {
+        useDurationFallback: true,
+      })
     : formatSecondsLabel(useSec);
 
   if (def.useDurationPauseApproach) {
@@ -608,33 +610,82 @@ function formatBlockResonanceConsumeSkillEffect(def: ActiveSkillDef): string {
   )}のダメージ+ノックバック`;
 }
 
-function formatActiveSkillEffectBody(def: ActiveSkillDef): string {
-  if (def.effect.some((effect) => effect.type === "blockResonanceConsume")) {
-    return formatBlockResonanceConsumeSkillEffect(def);
+function resolveActiveSkillSpecialEffectLines(
+  def: ActiveSkillDef
+): string[] | null {
+  const hasConsume = def.effect.some(
+    (effect) => effect.type === "blockResonanceConsume"
+  );
+  const mappableEffects = def.effect.filter(
+    (effect) => effect.type !== "blockResonanceConsume"
+  );
+  if (hasConsume && mappableEffects.length === 0) {
+    return [formatBlockResonanceConsumeSkillEffect(def)];
   }
+
   const polishedSequentialLines = tryFormatPolishedSequentialEffectLines(def);
   if (polishedSequentialLines) {
     const maxChargesLine = formatActiveSkillMaxChargesLine(def);
-    const lines = maxChargesLine
+    return maxChargesLine
       ? [...polishedSequentialLines, maxChargesLine]
       : polishedSequentialLines;
-    return lines.join("、");
   }
+  return null;
+}
+
+function formatActiveSkillDefaultEffectLines(
+  def: ActiveSkillDef,
+  options?: { includeMaxCharges?: boolean }
+): string[] {
+  const mappableEffects = def.effect.filter(
+    (effect) => effect.type !== "blockResonanceConsume"
+  );
   const scopePrefix = resolveActiveSkillScopePrefix(def);
-  const effectParts = def.effect
-    .map((effect) =>
-      formatActiveEffectDetail(effect, {
-        compact: true,
-        scopePrefix,
-        inheritTarget: def.target,
-      })
-    )
-    .filter(Boolean)
-    .join("、");
-  if (scopePrefix && effectParts) {
-    return joinActiveSkillScopePrefix(scopePrefix, effectParts);
+  const lines: string[] = [];
+  let scopeApplied = false;
+
+  for (const effect of mappableEffects) {
+    const multiLockLines = formatMultiLockDamageEffectLines(effect);
+    if (multiLockLines) {
+      if (scopePrefix && !scopeApplied) {
+        lines.push(`${scopePrefix}${multiLockLines[0]}`);
+        scopeApplied = true;
+        lines.push(...multiLockLines.slice(1));
+      } else {
+        lines.push(...multiLockLines);
+      }
+      continue;
+    }
+
+    const line = formatActiveEffectDetail(effect, {
+      compact: true,
+      scopePrefix,
+      inheritTarget: def.target,
+    });
+    if (!line) continue;
+    if (scopePrefix && !scopeApplied) {
+      lines.push(joinActiveSkillScopePrefix(scopePrefix, line));
+      scopeApplied = true;
+    } else {
+      lines.push(line);
+    }
   }
-  return effectParts;
+
+  if (options?.includeMaxCharges) {
+    const maxChargesLine = formatActiveSkillMaxChargesLine(def);
+    if (maxChargesLine) {
+      lines.push(maxChargesLine);
+    }
+  }
+  return lines;
+}
+
+function formatActiveSkillEffectBody(def: ActiveSkillDef): string {
+  const specialLines = resolveActiveSkillSpecialEffectLines(def);
+  if (specialLines) {
+    return specialLines.join("、");
+  }
+  return formatActiveSkillDefaultEffectLines(def).join("、");
 }
 
 function formatTarget(
@@ -649,6 +700,13 @@ function formatDispelPriorityLabel(
 ): string {
   if (!priority || priority === "longest") return "";
   return ` ${DISPEL_PRIORITY_LABELS[priority]}優先`;
+}
+
+function formatDispelTagsLabel(tags: DebuffFilterTag[] | undefined): string {
+  if (tags && tags.length > 0) {
+    return tags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join("・");
+  }
+  return "全デバフ";
 }
 
 function formatPercent(value: number): string {
@@ -1159,16 +1217,12 @@ function formatActiveEffectDetail(
           extras.push(effect.buffDisplayName);
         }
       } else if (effect.healSubKind === "dispel") {
-        const tags =
-          effect.dispelTags && effect.dispelTags.length > 0
-            ? effect.dispelTags
-                .map((t) => DEBUFF_FILTER_TAG_LABELS[t])
-                .join("・")
-            : "全デバフ";
         extras.push(
-          `${HEAL_SUB_KIND_LABELS.dispel} ${tags} ×${
-            effect.dispelCount ?? 0
-          }${formatDispelPriorityLabel(effect.dispelPriority)}`
+          `${HEAL_SUB_KIND_LABELS.dispel} ${formatDispelTagsLabel(
+            effect.dispelTags
+          )} ×${effect.dispelCount ?? 0}${formatDispelPriorityLabel(
+            effect.dispelPriority
+          )}`
         );
       } else if (compact) {
         if (
@@ -1474,14 +1528,10 @@ function formatActiveEffectDetail(
       extras.push(`${effect.distancePx}px+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`);
       break;
     case "dispel": {
-      const tags =
-        effect.dispelTags && effect.dispelTags.length > 0
-          ? effect.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join("・")
-          : "全デバフ";
       extras.push(
-        `${tags} ×${effect.dispelCount}${formatDispelPriorityLabel(
-          effect.dispelPriority
-        )}`
+        `${formatDispelTagsLabel(effect.dispelTags)} ×${
+          effect.dispelCount
+        }${formatDispelPriorityLabel(effect.dispelPriority)}`
       );
       break;
     }
@@ -1697,10 +1747,7 @@ function formatPassiveEffect(
       )} 追加 Hit（非再帰）`;
     }
     case "periodicDispel": {
-      const tags =
-        def.dispelTags && def.dispelTags.length > 0
-          ? def.dispelTags.map((t) => DEBUFF_FILTER_TAG_LABELS[t]).join("・")
-          : "全デバフ";
+      const tags = formatDispelTagsLabel(def.dispelTags);
       const target = def.dispelTargetRule
         ? ` → ${formatTarget(def.dispelTargetRule, { kind: "self" })}`
         : "";
@@ -2208,22 +2255,9 @@ function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
 }
 
 function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
-  const hasConsume = def.effect.some(
-    (effect) => effect.type === "blockResonanceConsume"
-  );
-  const mappableEffects = def.effect.filter(
-    (effect) => effect.type !== "blockResonanceConsume"
-  );
-  if (hasConsume && mappableEffects.length === 0) {
-    return [formatBlockResonanceConsumeSkillEffect(def)];
-  }
-
-  const polishedSequentialLines = tryFormatPolishedSequentialEffectLines(def);
-  if (polishedSequentialLines) {
-    const maxChargesLine = formatActiveSkillMaxChargesLine(def);
-    return maxChargesLine
-      ? [...polishedSequentialLines, maxChargesLine]
-      : polishedSequentialLines;
+  const specialLines = resolveActiveSkillSpecialEffectLines(def);
+  if (specialLines) {
+    return specialLines;
   }
 
   const selfOriginAoeBuffLines = formatSelfOriginAoeBuffCardLines(def);
@@ -2234,42 +2268,7 @@ function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
       : selfOriginAoeBuffLines;
   }
 
-  const scopePrefix = resolveActiveSkillScopePrefix(def);
-  const lines: string[] = [];
-  let scopeApplied = false;
-
-  for (const effect of mappableEffects) {
-    const multiLockLines = formatMultiLockDamageEffectLines(effect);
-    if (multiLockLines) {
-      if (scopePrefix && !scopeApplied) {
-        lines.push(`${scopePrefix}${multiLockLines[0]}`);
-        scopeApplied = true;
-        lines.push(...multiLockLines.slice(1));
-      } else {
-        lines.push(...multiLockLines);
-      }
-      continue;
-    }
-
-    const line = formatActiveEffectDetail(effect, {
-      compact: true,
-      scopePrefix,
-      inheritTarget: def.target,
-    });
-    if (!line) continue;
-    if (scopePrefix && !scopeApplied) {
-      lines.push(joinActiveSkillScopePrefix(scopePrefix, line));
-      scopeApplied = true;
-    } else {
-      lines.push(line);
-    }
-  }
-
-  const maxChargesLine = formatActiveSkillMaxChargesLine(def);
-  if (maxChargesLine) {
-    lines.push(maxChargesLine);
-  }
-  return lines;
+  return formatActiveSkillDefaultEffectLines(def, { includeMaxCharges: true });
 }
 
 function formatPassiveSkillMetaLine(def: PassiveSkillDef): string {
