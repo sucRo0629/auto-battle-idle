@@ -176,13 +176,16 @@
   letter-spacing: 0.03em;
 }
 
-.skill-menu-roster-card-meta {
+.skill-menu-roster-card-summary {
   max-width: 100%;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 400;
+  line-height: 1.35;
   color: #b8c0cc;
 }
 
@@ -292,9 +295,11 @@
   letter-spacing: 0.03em;
 }
 
-.skill-menu-class-info-meta {
-  font-size: 13px;
-  color: #b8c0cc;
+.skill-menu-class-info-summary {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9aa3b0;
 }
 
 .skill-menu-open-picker-button {
@@ -571,9 +576,14 @@
 
 .skill-menu-picker-row--icon {
   display: grid;
-  grid-template-columns: 24px 1fr;
+  grid-template-columns: 24px minmax(0, 11rem) minmax(0, 1fr);
   column-gap: 12px;
   align-items: start;
+}
+
+.skill-menu-picker-row--icon.skill-menu-picker-row--action,
+.skill-menu-picker-row--icon.skill-menu-picker-row--no-summary {
+  grid-template-columns: 24px 1fr;
 }
 
 .skill-menu-picker-row--icon > .skill-menu-tab-icon {
@@ -584,6 +594,19 @@
 .skill-menu-picker-row--icon > .skill-menu-picker-row-text {
   grid-column: 2;
   grid-row: 1;
+}
+
+.skill-menu-picker-row--icon > .skill-menu-picker-row-summary {
+  grid-column: 3;
+  grid-row: 1;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #9aa3b0;
+}
+
+.skill-menu-picker-row--action > .skill-menu-picker-row-text {
+  grid-column: 2 / -1;
 }
 
 .skill-menu-picker-row-text {

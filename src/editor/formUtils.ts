@@ -191,6 +191,28 @@ export function createTextInput(
   return input;
 }
 
+export function createTextarea(
+  value: string,
+  onInput: (value: string) => void,
+  options?: {
+    id?: string;
+    field?: string;
+    placeholder?: string;
+    rows?: number;
+    readonly?: boolean;
+  },
+): HTMLTextAreaElement {
+  const textarea = createEl('textarea', 'editor-input') as HTMLTextAreaElement;
+  textarea.value = value;
+  textarea.rows = options?.rows ?? 3;
+  if (options?.id) textarea.id = options.id;
+  if (options?.field) textarea.dataset.field = options.field;
+  if (options?.placeholder) textarea.placeholder = options.placeholder;
+  if (options?.readonly) textarea.readOnly = true;
+  textarea.addEventListener('input', () => onInput(textarea.value));
+  return textarea;
+}
+
 export function createNumberInput(
   value: number,
   onInput: (value: number) => void,

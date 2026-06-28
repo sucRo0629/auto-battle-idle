@@ -58,6 +58,7 @@ import {
   createSection,
   createSelect,
   createTextInput,
+  createTextarea,
   preserveScrollDuring,
 } from "./formUtils.ts";
 
@@ -382,6 +383,24 @@ export class ClassEditorStep {
         )
       );
     }
+    basicBody.appendChild(
+      createFieldRow(
+        "クラス要約（編成 UI）",
+        createTextarea(draft.class.summary?.ja ?? "", (summaryJa) => {
+          commitDraft((next) => {
+            const trimmed = summaryJa.trim();
+            if (trimmed) {
+              next.class.summary = {
+                ja: trimmed,
+                ...(next.class.summary?.en ? { en: next.class.summary.en } : {}),
+              };
+            } else {
+              delete next.class.summary;
+            }
+          });
+        }, { rows: 3, placeholder: "1〜2 文。パーティ設定のロスター・詳細・クラス選択に表示。" })
+      )
+    );
     identityGrid.appendChild(
       createFieldRow(
         "ロール",

@@ -90,12 +90,20 @@ export interface GrowthTierSet {
 /** role=attacker のみ。未指定は attacker（物理） */
 export type GrowthPresetKey = "attacker" | "caster";
 
+/** locale キー付き UI 文案（v1 表示は ja 固定） */
+export interface ClassLocaleText {
+  ja: string;
+  en?: string;
+}
+
 export interface ClassPreset extends CombatStats {
   id: ClassId;
   role: Role;
   displayName: string;
   /** 英語職名（UI ルビ上段。表示リファクタ時に使用） */
   epithetEn?: string;
+  /** 編成 UI 向けクラス要約（1〜2 文） */
+  summary?: ClassLocaleText;
   formationRow: FormationRow;
   traits: NormalizedEntityTraits;
   /** 未指定時は `{id}_basic_attack` */

@@ -40,14 +40,9 @@ import {
 } from "../progression/skillBuild.ts";
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
 import { formatSkillCardLines } from "./formatSkillText.ts";
+import { formatClassSummary } from "./formatClassSummary.ts";
 import { annotateGameTerms } from "./annotateGameTerms.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
-
-const FORMATION_ROW_LABELS: Record<string, string> = {
-  front: "前衛",
-  middle: "中衛",
-  back: "後衛",
-};
 
 const ROLE_LABELS: Record<string, string> = {
   defender: "ディフェンダー",
@@ -127,8 +122,7 @@ export class SkillMenuPanel {
 
     const noteEl = document.createElement("p");
     noteEl.className = "skill-menu-formation-note";
-    noteEl.textContent =
-      "メンバー枠の並びは戦闘位置に影響しません。前衛 / 後衛はクラスごとに決まります。";
+    noteEl.textContent = "戦闘位置はクラスごとに決まります。";
 
     this.rosterSlotsEl = document.createElement("div");
     this.rosterSlotsEl.className = "skill-menu-roster-slots";
@@ -248,11 +242,10 @@ export class SkillMenuPanel {
       button.dataset.memberIndex = String(index);
 
       if (member && preset) {
-        const ariaParts = [
-          preset.displayName,
-          FORMATION_ROW_LABELS[preset.formationRow] ?? preset.formationRow,
-          ROLE_LABELS[preset.role] ?? preset.role,
-        ];
+        const summary = formatClassSummary(preset);
+        const ariaParts = summary
+          ? [preset.displayName, summary]
+          : [preset.displayName];
         button.setAttribute("aria-label", ariaParts.join(" "));
         button.appendChild(this.createRosterRoleIcon(preset.role));
         button.appendChild(this.createRosterCharacterDisplay(preset));
@@ -303,11 +296,16 @@ export class SkillMenuPanel {
     epithetEl.className = "skill-menu-roster-card-epithet";
     epithetEl.textContent = preset.epithetEn ?? "";
 
-    const metaEl = document.createElement("span");
-    metaEl.className = "skill-menu-roster-card-meta";
-    metaEl.textContent = this.formatClassFormationRole(preset);
+    wrap.append(nameEl, epithetEl);
 
-    wrap.append(nameEl, epithetEl, metaEl);
+    const summary = formatClassSummary(preset);
+    if (summary) {
+      const summaryEl = document.createElement("span");
+      summaryEl.className = "skill-menu-roster-card-summary";
+      summaryEl.textContent = summary;
+      wrap.appendChild(summaryEl);
+    }
+
     return wrap;
   }
 
@@ -451,11 +449,16 @@ export class SkillMenuPanel {
 
     topRow.append(identityWrap, changeButton);
 
-    const metaEl = document.createElement("div");
-    metaEl.className = "skill-menu-class-info-meta";
-    metaEl.textContent = this.formatClassFormationRole(preset);
+    textWrap.appendChild(topRow);
 
-    textWrap.append(topRow, metaEl);
+    const summary = formatClassSummary(preset);
+    if (summary) {
+      const summaryEl = document.createElement("p");
+      summaryEl.className = "skill-menu-class-info-summary";
+      summaryEl.textContent = summary;
+      textWrap.appendChild(summaryEl);
+    }
+
     header.appendChild(textWrap);
 
     section.append(heading, header);
@@ -799,7 +802,7 @@ export class SkillMenuPanel {
     actions.className = "skill-menu-picker-actions";
     actions.append(
       this.createCancelPickerRow(),
-      this.createClassPickerRow("外す", "スロットを空にする", "")
+      this.createActionPickerRow("外す", "スロットを空にする", { classId: "" })
     );
 
     const assignable = getAssignableClassIds(
@@ -833,7 +836,6 @@ export class SkillMenuPanel {
         list.appendChild(
           this.createClassPickerRow(
             preset?.displayName ?? classId,
-            this.formatClassFormationRole(preset),
             classId,
             preset
           )
@@ -848,19 +850,27 @@ export class SkillMenuPanel {
     this.pickerOverlayEl.appendChild(modal);
   }
 
-  private formatClassFormationRole(preset: ClassPreset | undefined): string {
-    if (!preset) return "";
-    const row =
-      FORMATION_ROW_LABELS[preset.formationRow] ?? preset.formationRow;
-    const role = ROLE_LABELS[preset.role] ?? preset.role;
-    return `${row} / ${role}`;
+  private createCancelPickerRow(): HTMLElement {
+    return this.createActionPickerRow("キャンセル", "変更せず戻る", {
+      pickerAction: "cancel",
+    });
   }
 
-  private createCancelPickerRow(): HTMLElement {
+  private createActionPickerRow(
+    name: string,
+    description: string,
+    options: { pickerAction?: string; classId?: string },
+  ): HTMLElement {
     const row = document.createElement("button");
     row.type = "button";
-    row.className = "skill-menu-picker-row skill-menu-picker-row--icon";
-    row.dataset.pickerAction = "cancel";
+    row.className =
+      "skill-menu-picker-row skill-menu-picker-row--icon skill-menu-picker-row--action";
+    if (options.pickerAction) {
+      row.dataset.pickerAction = options.pickerAction;
+    }
+    if (options.classId !== undefined) {
+      row.dataset.classId = options.classId;
+    }
 
     row.appendChild(this.createIconWrap(undefined, ""));
 
@@ -869,11 +879,11 @@ export class SkillMenuPanel {
 
     const nameEl = document.createElement("div");
     nameEl.className = "skill-menu-skill-name";
-    nameEl.textContent = "キャンセル";
+    nameEl.textContent = name;
 
     const descEl = document.createElement("div");
     descEl.className = "skill-menu-skill-desc";
-    descEl.textContent = "変更せず戻る";
+    descEl.textContent = description;
 
     text.append(nameEl, descEl);
     row.appendChild(text);
@@ -882,7 +892,6 @@ export class SkillMenuPanel {
 
   private createClassPickerRow(
     name: string,
-    description: string,
     classId: string,
     preset?: ClassPreset
   ): HTMLElement {
@@ -907,12 +916,19 @@ export class SkillMenuPanel {
     nameEl.className = "skill-menu-skill-name";
     nameEl.textContent = name;
 
-    const descEl = document.createElement("div");
-    descEl.className = "skill-menu-skill-desc";
-    descEl.textContent = description;
-
-    text.append(nameEl, descEl);
+    text.appendChild(nameEl);
     row.appendChild(text);
+
+    const summary = preset ? formatClassSummary(preset) : "";
+    if (summary) {
+      const summaryEl = document.createElement("div");
+      summaryEl.className = "skill-menu-picker-row-summary";
+      summaryEl.textContent = summary;
+      row.appendChild(summaryEl);
+    } else {
+      row.classList.add("skill-menu-picker-row--no-summary");
+    }
+
     return row;
   }
 

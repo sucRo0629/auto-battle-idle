@@ -1613,7 +1613,8 @@ reg: number;     // 固定（成長なし）。許容値: 0, 5, 10, 15, 20
 growthTier: GrowthTierSet;
 growthPresetKey?: "attacker" | "caster"; // 魔術系（at_sorcerer 等）の成長合成
 attackSpeedTier?: AttackSpeedTier;       // 未指定 = normal
-epithetEn?: string;   // 英語肩書き（UI 未接続）
+epithetEn?: string;   // 英語肩書き
+summary?: { ja: string; en?: string }; // 編成 UI 要約。正本は classes.json。ClassEditorStep で編集
 passiveIds?: string[]; // クラス固有パッシブ（`data/skills/passives/<stem>.json` への参照）
 ```
 

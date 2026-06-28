@@ -53,6 +53,9 @@
       "maxHp": 3,
       "atk": 1,
       "def": 3
+    },
+    "summary": {
+      "ja": "単一路線に対して絶対的な耐久と押し返し性能を持つ前線構築型ディフェンダー。"
     }
   },
   {
@@ -106,6 +109,9 @@
       "maxHp": 2,
       "atk": 2,
       "def": 2
+    },
+    "summary": {
+      "ja": "単体防御ではなく、範囲攻撃や魔法ダメージを含む戦場全体の被害を緩和し、戦線の安定性を底上げする補助型ディフェンダー。"
     }
   },
   {
@@ -159,6 +165,9 @@
       "maxHp": 2,
       "atk": 3,
       "def": 1
+    },
+    "summary": {
+      "ja": "防御性能を持ちながらも攻撃性と制圧能力に重点を置き、単体強敵との戦闘で主導権を握る攻撃的ディフェンダー。"
     }
   },
   {
@@ -215,7 +224,10 @@
       "at_warrior_passive_2",
       "at_warrior_passive_3",
       "at_warrior_passive_4"
-    ]
+    ],
+    "summary": {
+      "ja": "Targeted Kill。高 DEF 前衛・重装敵の防御突破担当。DEF を下げず無視し、無視した装甲を火力源に変換する。"
+    }
   },
   {
     "id": "at_assassin",
@@ -271,6 +283,9 @@
       "maxHp": 1,
       "atk": 3,
       "def": 1
+    },
+    "summary": {
+      "ja": "ヒット数とコンボ加速によって戦闘密度を上げる高速連撃型。"
     }
   },
   {
@@ -327,6 +342,9 @@
       "maxHp": 2,
       "atk": 2,
       "def": 2
+    },
+    "summary": {
+      "ja": "前線そのものに干渉し、バフとデバフを通じて戦線の“位置と圧力”を制御する前線指揮型ファイター。"
     }
   },
   {
@@ -380,6 +398,9 @@
       "maxHp": 1,
       "atk": 2,
       "def": 1
+    },
+    "summary": {
+      "ja": "攻撃回数と攻撃速度を軸に、連射によって火力を積み上げるコンボ型遠隔 DPS。"
     }
   },
   {
@@ -433,6 +454,9 @@
       "maxHp": 1,
       "atk": 3,
       "def": 1
+    },
+    "summary": {
+      "ja": "フィールド端から端まで届く貫通範囲攻撃によって、Max HP が高い対象（ボス・強敵）を圧殺する攻城射撃職。"
     }
   },
   {
@@ -486,6 +510,9 @@
       "maxHp": 2,
       "atk": 2,
       "def": 1
+    },
+    "summary": {
+      "ja": "毒（poison）と局所持続範囲（placedField）で戦場の DoT 密度と時間圧縮を操作する Field Flow 遠隔職。"
     }
   },
   {
@@ -541,7 +568,10 @@
       "atk": 3,
       "def": 1
     },
-    "growthPresetKey": "caster"
+    "growthPresetKey": "caster",
+    "summary": {
+      "ja": "魔力をそのまま火力へ変換する、純粋出力型キャスター。"
+    }
   },
   {
     "id": "at_sigilist",
@@ -575,7 +605,10 @@
       "atk": 3,
       "def": 1
     },
-    "growthPresetKey": "caster"
+    "growthPresetKey": "caster",
+    "summary": {
+      "ja": "対象の条件を読み取り、攻撃式・対象形状・副次効果をより有利な形へ分岐させる柔軟適応型キャスター。"
+    }
   },
   {
     "id": "at_conductor",
@@ -606,7 +639,10 @@
       "atk": 1,
       "def": 1
     },
-    "growthPresetKey": "caster"
+    "growthPresetKey": "caster",
+    "summary": {
+      "ja": "自身でダメージを与えず、戦場のダメージの流れを観測・蓄積し、法陣で集中・分散・再循環させる Damage Routing 特化クラス。"
+    }
   },
   {
     "id": "sp_cleric",
@@ -663,7 +699,10 @@
       "sp_cleric_passive_2",
       "sp_cleric_passive_3",
       "sp_cleric_passive_4"
-    ]
+    ],
+    "summary": {
+      "ja": "欠損後の復元。大きく減った HP を即時に戻し、戦線崩壊後の損失を回収する。"
+    }
   },
   {
     "id": "sp_wardweaver",
@@ -716,6 +755,9 @@
       "maxHp": 2,
       "atk": 1,
       "def": 3
+    },
+    "summary": {
+      "ja": "崩壊前の猶予作成。barrier / 軽減で HP 欠損が致命化する前に余裕を作る。"
     }
   },
   {
@@ -769,6 +811,9 @@
       "maxHp": 3,
       "atk": 2,
       "def": 2
+    },
+    "summary": {
+      "ja": "長期維持と継戦リズム調整。薬効スタック蓄積・HoT 特化で戦線を長く保つ。"
     }
   }
 ]

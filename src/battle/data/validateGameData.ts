@@ -23,6 +23,7 @@ import type {
   AttackSpeedTier,
   BasicAttackTransformPrimaryPatch,
   BasicAttackTransformSpec,
+  ClassLocaleText,
   ClassPreset,
   ClassSkillUnlock,
   DamageType,
@@ -5143,6 +5144,20 @@ function injectSynthesizedBasicAttacks(
   }
 }
 
+function parseClassSummary(
+  raw: unknown,
+  context: string,
+): ClassLocaleText | undefined {
+  if (raw === undefined) return undefined;
+  const obj = requireRecord(raw, `${context}.summary`);
+  const ja = requireString(obj, 'ja', `${context}.summary`);
+  const en =
+    obj.en === undefined
+      ? undefined
+      : requireString(obj, 'en', `${context}.summary.en`);
+  return { ja, ...(en !== undefined ? { en } : {}) };
+}
+
 function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
   if (!Array.isArray(raw)) {
     throw new Error('classes.json must be an array');
@@ -5157,6 +5172,7 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       obj.epithetEn === undefined
         ? undefined
         : requireString(obj, 'epithetEn', context);
+    const summary = parseClassSummary(obj.summary, context);
     const formationRow = requireEnum(obj, 'formationRow', context, FORMATION_ROWS_SET);
     const traitsRaw = parseEntityTraits(obj.traits, `${context}.traits`);
     const maxHp = requireNumber(obj, 'maxHp', context);
@@ -5220,6 +5236,7 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       role,
       displayName,
       ...(epithetEn !== undefined ? { epithetEn } : {}),
+      ...(summary !== undefined ? { summary } : {}),
       formationRow,
       traits: traitsRaw,
       maxHp,
