@@ -11,7 +11,7 @@
     "name": "護法陣",
     "effect": "threatControl",
     "frontThreatFloor": 0.7,
-    "frontThreatDecayMultiplier": 0.65,
+    "frontThreatDecayMultiplier": 0.5,
     "frontThreatAuraRadiusPx": 50
   },
   {

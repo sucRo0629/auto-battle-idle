@@ -854,9 +854,7 @@ export class BattleEngine {
   }
 
   private updateEngagedBattleMovement(deltaTime: number): void {
-    const enemyContact = getEnemyContactX(this.enemies);
     const playerContact = getPlayerFrontlineContactX(this.players, this.enemies);
-    if (enemyContact === null || playerContact === null) return;
     const units = [...this.players, ...this.enemies];
     const beforeById = this.captureBattleXDebugBefore(units);
     const detailsById = beforeById
@@ -864,9 +862,11 @@ export class BattleEngine {
       : undefined;
 
     this.engagedFrontLineAnchor =
-      this.engagedFrontLineAnchor === null
-        ? playerContact
-        : Math.max(this.engagedFrontLineAnchor, playerContact);
+      playerContact === null
+        ? this.engagedFrontLineAnchor
+        : this.engagedFrontLineAnchor === null
+          ? playerContact
+          : Math.max(this.engagedFrontLineAnchor, playerContact);
 
     const moveStep = moveDeltaPx(MOVE_PX_PER_SEC, deltaTime);
     const playerApproachTargets = resolveAllPlayerApproachBattleX(
@@ -886,6 +886,7 @@ export class BattleEngine {
         this.players,
         this.enemies,
         this.gameData,
+        { approachTargetX: target },
       );
       detailsById?.set(ally.id, {
         approachTargetX: target,
@@ -1910,6 +1911,7 @@ export class BattleEngine {
           .map((unit) => [unit.id, unit.battleX] as const),
       );
       if (!this.enemies.some((enemy) => enemy.isAlive)) {
+        this.updateEngagedBattleMovement(deltaTime);
         this.checkBattleEnd();
         if (this.isPostCombatSettling()) {
           this.tickPostCombatSettle(deltaTime);

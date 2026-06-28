@@ -5,7 +5,7 @@ import {
   resolvePlayerApproachBattleX,
   shouldSkipEngagedAutoApproach,
 } from "./resolveApproachBattleX.ts";
-import { updateUnitApproach } from "./combatPosition.ts";
+import { updateUnitApproach, isPlayerRearAssaultAccess } from "./combatPosition.ts";
 import { isWithinSkillRange } from "./skills/rangeUtils.ts";
 import {
   mockApproachCombatant as mockCombatant,
@@ -1042,7 +1042,13 @@ describe("resolvePlayerApproachBattleX", () => {
           for (const unit of players) {
             const target = targets.get(unit.id);
             expect(target, scenario.name).toBeDefined();
-            expect(target!).toBeGreaterThanOrEqual(unit.battleX);
+            const battleContext = { players, enemies };
+            const rearReturn =
+              isPlayerRearAssaultAccess(unit, battleContext) &&
+              target! < unit.battleX;
+            if (!rearReturn) {
+              expect(target!).toBeGreaterThanOrEqual(unit.battleX);
+            }
             expect(target!).toBeLessThanOrEqual(livingEnemyMaxX);
 
             const beforeX = unit.battleX;

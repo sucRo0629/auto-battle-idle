@@ -396,6 +396,23 @@ function capFrontRowSupporterBehindMeleeFront(
   return Math.min(approachX, maxMeleeFrontX - FORMATION_DEPTH_STEP_PX);
 }
 
+function resolvePartyReturnAnchorBattleX(
+  player: CombatantState,
+  players: CombatantState[],
+): number {
+  const living = players.filter((ally) => ally.isAlive);
+  const formation = computePartyFormationBattleX(
+    living.map((ally) => ({
+      id: ally.id,
+      role: ally.role,
+      rangePx: resolveFormationRangePx(ally),
+      damageType: ally.traits.damageType,
+      formationRow: ally.formationRow,
+    })),
+  );
+  return formation.get(player.id) ?? player.battleX;
+}
+
 function resolveRearAssaultReturnApproachBattleX(
   player: CombatantState,
   players: CombatantState[],
@@ -404,19 +421,58 @@ function resolveRearAssaultReturnApproachBattleX(
   contact: number,
 ): number | null {
   if (!isPlayerRearAssaultAccess(player, { players, enemies })) return null;
+  const partyReturnX = resolvePartyReturnAnchorBattleX(player, players);
   const chase = resolvePlayerChaseTargetEnemy(
     player,
     players,
     enemies,
     gameData,
   );
-  const anchorX = chase?.battleX ?? contact;
-  return resolveAttackBattleX(
+  if (!chase) return partyReturnX;
+  const enemyReturnX = resolveApproachAttackBattleX(
     player,
-    anchorX,
+    chase.battleX,
     gameData,
     livingAllyCount(players),
+    contact,
   );
+  if (enemyReturnX >= player.battleX) return partyReturnX;
+  return Math.min(enemyReturnX, partyReturnX);
+}
+
+function resolvePlayerApproachWithoutEnemyContact(
+  players: CombatantState[],
+): Map<string, number> {
+  const living = players.filter((player) => player.isAlive);
+  if (living.length === 0) {
+    return new Map(players.map((player) => [player.id, player.battleX]));
+  }
+  const formation = computePartyFormationBattleX(
+    living.map((player) => ({
+      id: player.id,
+      role: player.role,
+      rangePx: resolveFormationRangePx(player),
+      damageType: player.traits.damageType,
+      formationRow: player.formationRow,
+    })),
+  );
+  const partyFrontDeployX = Math.max(...formation.values());
+  const targets = new Map<string, number>();
+  for (const player of living) {
+    const deployX = formation.get(player.id) ?? player.battleX;
+    if (player.battleX > partyFrontDeployX + FORMATION_DEPTH_STEP_PX) {
+      targets.set(player.id, deployX);
+    } else {
+      targets.set(player.id, player.battleX);
+    }
+  }
+  for (const player of players) {
+    if (!player.isAlive) continue;
+    if (!targets.has(player.id)) {
+      targets.set(player.id, player.battleX);
+    }
+  }
+  return targets;
 }
 
 /** 列内スペーシング前の個別接近目標 X */
@@ -482,7 +538,7 @@ export function resolveAllPlayerApproachBattleX(
 ): Map<string, number> {
   const contact = getEnemyContactX(enemies);
   if (contact === null) {
-    return new Map(players.map((p) => [p.id, p.battleX]));
+    return resolvePlayerApproachWithoutEnemyContact(players);
   }
 
   const battleContext: PlayerRearAssaultBattleContext = { players, enemies };
@@ -639,8 +695,17 @@ export function shouldSkipEngagedAutoApproach(
   players: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
+  options?: { approachTargetX?: number },
 ): boolean {
   if (isStationaryUnit(unit)) return true;
+  const approachTargetX = options?.approachTargetX;
+  if (
+    !unit.isEnemy &&
+    approachTargetX !== undefined &&
+    approachTargetX < unit.battleX - APPROACH_SETTLE_EPSILON_PX
+  ) {
+    return false;
+  }
   if (unit.isEnemy) {
     return (
       resolveEnemyAttackTargetPlayer(unit, players, enemies, gameData) !== null
