@@ -420,6 +420,8 @@ export interface StatusEffect {
   dotTickDamageMul?: number;
   /** dot overlay: Hunter dotCompress 対象外 */
   dotCompressImmune?: boolean;
+  /** blazingFlame dot: stack ごとの被魔法ダメ加算（付与時コピー） */
+  blazingFlameMagicTakenPerStack?: number;
 }
 
 /** 反撃対象の近接／遠隔帯フィルタ（OR。両方未指定 = 全区間） */
@@ -1027,6 +1029,18 @@ export interface PassiveSkillDef {
   blazingFlameDetonateMultiplier?: number;
   /** blazingFlameDetonate: 熾火 stack 上限解除（P4） */
   blazingFlameUncap?: boolean;
+  /** seedFlameOnActiveHit: 種火 stack 上限（未指定 = 5） */
+  seedFlameMaxStacks?: number;
+  /** seedFlameOnActiveHit: 種火 overlay 持続（秒。未指定 = 10） */
+  seedFlameDurationSec?: number;
+  /** seedFlameOnActiveHit: 種火 DoT tick = 付与者 ATK × scale（未指定 = 0.05） */
+  seedFlameDotAtkScale?: number;
+  /** seedFlameOnActiveHit: 熾火 DoT tick = 付与者 ATK × scale（未指定 = 0.35） */
+  blazingFlameDotAtkScale?: number;
+  /** seedFlameOnActiveHit: 熾火 stack ごとの被魔法ダメ加算（未指定 = 0.1） */
+  blazingFlameMagicTakenPerStack?: number;
+  /** seedFlameOnActiveHit: P4 未習得時の熾火 stack 上限（未指定 = 1） */
+  blazingFlameMaxStacksDefault?: number;
   /** bloodlustDuelist: block 率（未指定 = 0.05） */
   bloodlustBlockChance?: number;
   /** bloodlustDuelist: DEF バフ（maxBuffAtHpRatio / buffMultiplierMax） */

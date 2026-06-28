@@ -27,6 +27,15 @@ export interface BlazingFlameDetonateConfig {
   explosionMultiplier: number;
 }
 
+export interface SorcererFlameDotConfig {
+  seedFlameMaxStacks: number;
+  seedFlameDurationSec: number;
+  seedFlameDotAtkScale: number;
+  blazingFlameDotAtkScale: number;
+  blazingFlameMagicTakenPerStack: number;
+  blazingFlameMaxStacksDefault: number;
+}
+
 export interface SorcererActiveHitOutcome {
   pendingHits: PendingSkillHit[];
   explosionDamageByTargetId: Map<string, number>;
@@ -75,7 +84,8 @@ export function getBlazingFlameMaxStacks(
   if (hasBlazingFlameUncap(actor, passives)) {
     return Number.MAX_SAFE_INTEGER;
   }
-  return BLAZING_FLAME_MAX_STACKS_DEFAULT;
+  const dotConfig = mergeSorcererFlameDotConfig(getPassiveDefs(actor, passives));
+  return dotConfig.blazingFlameMaxStacksDefault;
 }
 
 function mergeBlazingFlameDetonateConfig(
@@ -92,9 +102,40 @@ function mergeBlazingFlameDetonateConfig(
   return undefined;
 }
 
+export function mergeSorcererFlameDotConfig(
+  passives: PassiveSkillDef[],
+): SorcererFlameDotConfig {
+  for (const passive of passives) {
+    if (passive.effect !== 'seedFlameOnActiveHit') continue;
+    return {
+      seedFlameMaxStacks: passive.seedFlameMaxStacks ?? SEED_FLAME_MAX_STACKS,
+      seedFlameDurationSec:
+        passive.seedFlameDurationSec ?? SEED_FLAME_DURATION_SEC,
+      seedFlameDotAtkScale:
+        passive.seedFlameDotAtkScale ?? SEED_FLAME_DOT_ATK_SCALE,
+      blazingFlameDotAtkScale:
+        passive.blazingFlameDotAtkScale ?? BLAZING_FLAME_DOT_ATK_SCALE,
+      blazingFlameMagicTakenPerStack:
+        passive.blazingFlameMagicTakenPerStack ??
+        BLAZING_FLAME_MAGIC_TAKEN_PER_STACK,
+      blazingFlameMaxStacksDefault:
+        passive.blazingFlameMaxStacksDefault ?? BLAZING_FLAME_MAX_STACKS_DEFAULT,
+    };
+  }
+  return {
+    seedFlameMaxStacks: SEED_FLAME_MAX_STACKS,
+    seedFlameDurationSec: SEED_FLAME_DURATION_SEC,
+    seedFlameDotAtkScale: SEED_FLAME_DOT_ATK_SCALE,
+    blazingFlameDotAtkScale: BLAZING_FLAME_DOT_ATK_SCALE,
+    blazingFlameMagicTakenPerStack: BLAZING_FLAME_MAGIC_TAKEN_PER_STACK,
+    blazingFlameMaxStacksDefault: BLAZING_FLAME_MAX_STACKS_DEFAULT,
+  };
+}
+
 function createSeedFlameEffect(
   source: CombatantState,
   target: CombatantState,
+  config: SorcererFlameDotConfig,
 ): StatusEffect {
   return {
     id: seedFlameEffectId(target.id),
@@ -104,10 +145,10 @@ function createSeedFlameEffect(
     stacks: 1,
     sourceId: source.id,
     damageType: 'magic',
-    amount: { kind: 'atkBased', atkScale: SEED_FLAME_DOT_ATK_SCALE },
+    amount: { kind: 'atkBased', atkScale: config.seedFlameDotAtkScale },
     multiplier: 1,
-    durationSec: SEED_FLAME_DURATION_SEC,
-    remainingSec: SEED_FLAME_DURATION_SEC,
+    durationSec: config.seedFlameDurationSec,
+    remainingSec: config.seedFlameDurationSec,
     tickSec: 1,
     displayName: SEED_FLAME_DISPLAY_NAME,
   };
@@ -117,6 +158,7 @@ function createBlazingFlameEffect(
   source: CombatantState,
   target: CombatantState,
   stacks: number,
+  config: SorcererFlameDotConfig,
 ): StatusEffect {
   return {
     id: blazingFlameEffectId(target.id),
@@ -127,12 +169,13 @@ function createBlazingFlameEffect(
     stacks,
     sourceId: source.id,
     damageType: 'magic',
-    amount: { kind: 'atkBased', atkScale: BLAZING_FLAME_DOT_ATK_SCALE },
+    amount: { kind: 'atkBased', atkScale: config.blazingFlameDotAtkScale },
     multiplier: 1,
     durationSec: BLAZING_FLAME_DURATION_SEC,
     remainingSec: BLAZING_FLAME_DURATION_SEC,
     tickSec: 1,
     displayName: BLAZING_FLAME_DISPLAY_NAME,
+    blazingFlameMagicTakenPerStack: config.blazingFlameMagicTakenPerStack,
   };
 }
 
@@ -164,6 +207,7 @@ export function applyBlazingFlameStack(
   amount: number,
 ): boolean {
   if (amount <= 0) return false;
+  const dotConfig = mergeSorcererFlameDotConfig(getPassiveDefs(source, passives));
   const max = getBlazingFlameMaxStacks(source, passives);
   const id = blazingFlameEffectId(target.id);
   const existing = target.statusEffects.find((e) => e.id === id);
@@ -175,8 +219,16 @@ export function applyBlazingFlameStack(
     existing.stacks = next;
     existing.remainingSec = BLAZING_FLAME_DURATION_SEC;
     existing.durationSec = BLAZING_FLAME_DURATION_SEC;
+    existing.amount = {
+      kind: 'atkBased',
+      atkScale: dotConfig.blazingFlameDotAtkScale,
+    };
+    existing.blazingFlameMagicTakenPerStack =
+      dotConfig.blazingFlameMagicTakenPerStack;
   } else {
-    target.statusEffects.push(createBlazingFlameEffect(source, target, next));
+    target.statusEffects.push(
+      createBlazingFlameEffect(source, target, next, dotConfig),
+    );
   }
   return true;
 }
@@ -186,8 +238,9 @@ export function tryConvertSeedFlameToBlazingFlame(
   target: CombatantState,
   passives: Record<string, PassiveSkillDef>,
 ): boolean {
+  const dotConfig = mergeSorcererFlameDotConfig(getPassiveDefs(source, passives));
   const seedStacks = getSeedFlameStacks(target);
-  if (seedStacks < SEED_FLAME_MAX_STACKS) return false;
+  if (seedStacks < dotConfig.seedFlameMaxStacks) return false;
 
   const maxBlazing = getBlazingFlameMaxStacks(source, passives);
   if (getBlazingFlameStacks(target) >= maxBlazing) {
@@ -204,20 +257,22 @@ export function applySeedFlameStack(
   target: CombatantState,
   passives: Record<string, PassiveSkillDef>,
 ): boolean {
+  const dotConfig = mergeSorcererFlameDotConfig(getPassiveDefs(source, passives));
   const id = seedFlameEffectId(target.id);
   let effect = target.statusEffects.find((e) => e.id === id);
 
   if (effect) {
-    const max = SEED_FLAME_MAX_STACKS;
+    const max = dotConfig.seedFlameMaxStacks;
     effect.stacks = Math.min(max, (effect.stacks ?? 0) + 1);
-    effect.remainingSec = SEED_FLAME_DURATION_SEC;
-    effect.durationSec = SEED_FLAME_DURATION_SEC;
+    effect.remainingSec = dotConfig.seedFlameDurationSec;
+    effect.durationSec = dotConfig.seedFlameDurationSec;
+    effect.amount = { kind: 'atkBased', atkScale: dotConfig.seedFlameDotAtkScale };
   } else {
-    effect = createSeedFlameEffect(source, target);
+    effect = createSeedFlameEffect(source, target, dotConfig);
     target.statusEffects.push(effect);
   }
 
-  if ((effect.stacks ?? 0) >= SEED_FLAME_MAX_STACKS) {
+  if ((effect.stacks ?? 0) >= dotConfig.seedFlameMaxStacks) {
     tryConvertSeedFlameToBlazingFlame(source, target, passives);
   }
   return true;
@@ -226,9 +281,14 @@ export function applySeedFlameStack(
 export function resolveBlazingFlameMagicDamageTakenMultiplier(
   target: CombatantState,
 ): number {
-  const stacks = getBlazingFlameStacks(target);
+  const effect = target.statusEffects.find(
+    (e) => e.id === blazingFlameEffectId(target.id) && e.remainingSec > 0,
+  );
+  const stacks = effect?.stacks ?? 0;
   if (stacks <= 0) return 1;
-  return 1 + stacks * BLAZING_FLAME_MAGIC_TAKEN_PER_STACK;
+  const perStack =
+    effect?.blazingFlameMagicTakenPerStack ?? BLAZING_FLAME_MAGIC_TAKEN_PER_STACK;
+  return 1 + stacks * perStack;
 }
 
 export function resolveDetonateExplosionDamage(

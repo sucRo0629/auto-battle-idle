@@ -580,6 +580,12 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.bonusBasicAttackHpRatio ??= 0.3;
       break;
     case "seedFlameOnActiveHit":
+      passive.seedFlameMaxStacks ??= 5;
+      passive.seedFlameDurationSec ??= 10;
+      passive.seedFlameDotAtkScale ??= 0.05;
+      passive.blazingFlameDotAtkScale ??= 0.35;
+      passive.blazingFlameMagicTakenPerStack ??= 0.1;
+      passive.blazingFlameMaxStacksDefault ??= 1;
       break;
     case "bonusActiveOnHit":
       passive.bonusActiveSkillId ??= "at_sorcerer_active_1";
@@ -3303,7 +3309,121 @@ export class SkillEditorStep {
           createEl(
             "p",
             "editor-hint",
-            "active ダメージ Hit ごとに種火 +1 stack（basic 非対象）。種火上限 5、熾火上限 1（P4 未習得時既定）。"
+            "active ダメージ Hit ごとに種火 +1 stack（basic 非対象）。P4 未習得時の熾火上限は blazingFlameMaxStacksDefault。"
+          )
+        );
+        effectGrid.appendChild(
+          createEl("p", "editor-hint", "— 種火 DoT —")
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            "seedFlameMaxStacks",
+            createNumberInput(
+              passive.seedFlameMaxStacks ?? 5,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.seedFlameMaxStacks = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 1, min: 1 }
+            )
+          )
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            "seedFlameDurationSec",
+            createNumberInput(
+              passive.seedFlameDurationSec ?? 10,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.seedFlameDurationSec = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 0.5, min: 0.1 }
+            )
+          )
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            "seedFlameDotAtkScale",
+            createNumberInput(
+              passive.seedFlameDotAtkScale ?? 0.05,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.seedFlameDotAtkScale = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 0.01, min: 0 }
+            )
+          )
+        );
+        effectGrid.appendChild(
+          createEl("p", "editor-hint", "— 熾火 DoT —")
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            "blazingFlameDotAtkScale",
+            createNumberInput(
+              passive.blazingFlameDotAtkScale ?? 0.35,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.blazingFlameDotAtkScale = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 0.01, min: 0 }
+            )
+          )
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            "blazingFlameMagicTakenPerStack",
+            createNumberInput(
+              passive.blazingFlameMagicTakenPerStack ?? 0.1,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.blazingFlameMagicTakenPerStack = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 0.01, min: 0 }
+            )
+          )
+        );
+        effectGrid.appendChild(
+          createFieldRow(
+            "blazingFlameMaxStacksDefault",
+            createNumberInput(
+              passive.blazingFlameMaxStacksDefault ?? 1,
+              (value) => {
+                this.patchPassive(
+                  index,
+                  (current) => {
+                    current.blazingFlameMaxStacksDefault = value;
+                  },
+                  { rerender: false }
+                );
+              },
+              { step: 1, min: 1 }
+            )
           )
         );
         break;

@@ -4681,8 +4681,56 @@ function requirePassiveEffectParams(
         ...(auraConditions !== undefined ? { auraConditions } : {}),
       };
     }
-    case 'seedFlameOnActiveHit':
-      return base;
+    case 'seedFlameOnActiveHit': {
+      const seedFlameMaxStacks = parseOptionalPositiveNumber(
+        obj,
+        context,
+        'seedFlameMaxStacks',
+      );
+      const seedFlameDurationSec = parseOptionalPositiveNumber(
+        obj,
+        context,
+        'seedFlameDurationSec',
+      );
+      const seedFlameDotAtkScale =
+        obj.seedFlameDotAtkScale === undefined
+          ? {}
+          : { seedFlameDotAtkScale: requireNumber(obj, 'seedFlameDotAtkScale', context) };
+      const blazingFlameDotAtkScale =
+        obj.blazingFlameDotAtkScale === undefined
+          ? {}
+          : {
+              blazingFlameDotAtkScale: requireNumber(
+                obj,
+                'blazingFlameDotAtkScale',
+                context,
+              ),
+            };
+      const blazingFlameMagicTakenPerStack =
+        obj.blazingFlameMagicTakenPerStack === undefined
+          ? {}
+          : {
+              blazingFlameMagicTakenPerStack: requireNumber(
+                obj,
+                'blazingFlameMagicTakenPerStack',
+                context,
+              ),
+            };
+      const blazingFlameMaxStacksDefault = parseOptionalPositiveNumber(
+        obj,
+        context,
+        'blazingFlameMaxStacksDefault',
+      );
+      return {
+        ...base,
+        ...seedFlameMaxStacks,
+        ...seedFlameDurationSec,
+        ...seedFlameDotAtkScale,
+        ...blazingFlameDotAtkScale,
+        ...blazingFlameMagicTakenPerStack,
+        ...blazingFlameMaxStacksDefault,
+      };
+    }
     case 'bonusActiveOnHit': {
       const bonusActiveSkillId = requireString(
         obj,

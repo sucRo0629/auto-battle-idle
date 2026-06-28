@@ -488,12 +488,12 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 ### 種火 / 熾火（魔術師 `at_sorcerer`）
 
-実装: `src/battle/sorcererFlame.ts`。overlay は `dot` + `dotFlavor: seedFlame | blazingFlame`。
+実装: `src/battle/sorcererFlame.ts`。overlay は `dot` + `dotFlavor: seedFlame | blazingFlame`。DoT 数値の既定はコード内定数。`seedFlameOnActiveHit` passive の各フィールドで上書き可（エディタ編集可）。
 
 | 状態 | stack 上限 | DoT（1 stack / tick） | その他 |
 | ---- | ---------- | --------------------- | ------ |
-| **種火** | 5 | 付与者 ATK×0.05 magic / 10s（リフレッシュ） | max 到達で熾火 +1 へ変換。熾火が上限なら種火は max のまま据え置き |
-| **熾火** | P4 未習得: 1 / P4 後: 無制限 | 付与者 ATK×0.35 magic / tick | 被**魔法**ダメ +10%/stack（`damageTaken` stat とは分離）。`dotCompressImmune` |
+| **種火** | 5（`seedFlameMaxStacks`） | 付与者 ATK×0.05 magic / 10s（`seedFlameDotAtkScale` / `seedFlameDurationSec`。リフレッシュ） | max 到達で熾火 +1 へ変換。熾火が上限なら種火は max のまま据え置き |
+| **熾火** | P4 未習得: 1（`blazingFlameMaxStacksDefault`） / P4 後: 無制限 | 付与者 ATK×0.35 magic / tick（`blazingFlameDotAtkScale`） | 被**魔法**ダメ +10%/stack（`blazingFlameMagicTakenPerStack`。`damageTaken` stat とは分離）。`dotCompressImmune` |
 
 **active Hit のみ**（`slotKind: active`）で P2/P3/P4 が発動。basic では種火付与・連なる炎・花開く炎は走らない。
 
