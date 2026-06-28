@@ -1,6 +1,6 @@
 # Phase 4 ロードマップ — クラスマスタ + UI + 英語 i18n
 
-Phase 4 専用の作業順・完了条件。**全体の Phase 1〜12 は [phase-roadmap.md](phase-roadmap.md)** を正とする。ゲームルールは [spec](../spec/README.md)。
+Phase 4 専用の作業順・完了条件。**Release M1（体験版）** のスコープ正本は [phase-roadmap.md §M1 — 体験版](phase-roadmap.md#m1--体験版)。全体 Phase 1〜12 は [phase-roadmap.md](phase-roadmap.md)。ゲームルールは [spec](../spec/README.md)。
 
 **最終更新:** 2026-06
 
@@ -14,8 +14,8 @@ Phase 3 の習得機構とキャラクターデータ GUI を土台に、**プ�
 | ------ | ------------ |
 | クラス・スキル JSON + 編集 GUI | **4a**（確定済） |
 | `data/skills/` 分割 | **4c**（完了） |
-| 日本語スキル説明の自動生成 | **4b** |
-| 編成 UI・統計 UI・HUD 刷新 | **4d** |
+| 日本語スキル説明の自動生成 | **4b**（**完了** — M1 8 クラス Lv0） |
+| 編成 UI・統計 UI・HUD 刷新 | **4d**（ほぼ完了） |
 | 英語 i18n（`en` のみ） | **4e** |
 
 **一次職 / 二次職の区別は廃止**（`jobTier` / `promotion` / `promotesFrom` は予約しない）。
@@ -36,6 +36,21 @@ Phase 3 の習得機構とキャラクターデータ GUI を土台に、**プ�
 
 ---
 
+## Release M1 サマリ（Phase 4 との関係）
+
+[phase-roadmap.md §M1 — 体験版](phase-roadmap.md#m1--体験版) のうち、**Phase 4 が担う部分**のみ要約。プレイ範囲・解禁 8 / グレー 5 / 非表示 2・Phase 6 / 7 の詳細は phase-roadmap を正とする。
+
+| 項目 | 内容 |
+| ---- | ---- |
+| **M1 状態** | **準備中** — 4b 完了 → 4d 仕上げ → 4e → Phase 6 / 7 |
+| **4b（日本語 Lv0）** | M1 解禁 **8 クラス** — **完了**（[§4b](#4b--スキル説明自動生成日本語--完了2026-06)） |
+| **4d（編成・統計・HUD）** | **ほぼ完了** — [§4d](#4d--編成-ui--統計-ui--hudほぼ完了) 残タスク |
+| **4e（英語 i18n）** | **次** — M1 **必須**（[§4e](#4e--英語-i18n-en-のみ)） |
+| **クラス別 4b / 4e 進捗** | [§M1 対象クラス](#m1-対象クラス4b--4e-の第一優先) |
+| **Phase 4 完了 = M1 への Exit #1〜3 充足 + #4〜6（4e）** | [Exit 条件](#phase-4-完了条件exit) |
+
+---
+
 ## 依存関係
 
 ```mermaid
@@ -43,7 +58,7 @@ flowchart TD
   subgraph done [完了]
     A4a[4a クラスマスタ]
     A4c[4c JSON 分割]
-    B4b[4b 日本語説明文]
+    B4b[4b 日本語説明文 M1 Lv0]
   end
   subgraph wip [進行中]
     B4d[4d 編成・統計・HUD]
@@ -54,7 +69,6 @@ flowchart TD
   A4a --> A4c
   A4a --> B4d
   A4c --> B4b
-  B4d --> B4b
   B4b --> E4e
   B4d --> E4e
 ```
@@ -62,7 +76,7 @@ flowchart TD
 **原則**
 
 - i18n は **Phase 4e のみ** 着手。対象は **`en` のみ**（3 言語目以降はスコープ外）。
-- **日本語文案を先に確定** → 英語は翻訳・locale 分岐（特に `formatSkillText` と用語辞書）。
+- M1 8 クラス Lv0 **日本語文案は確定済み**（4b）。4e ではこれを翻訳正本とし locale 分岐（`formatSkillText`・用語辞書）。
 - 数値バランスの最終版は Phase 4 外（**6c 体験版** / **8c 本編**）。
 
 ---
@@ -73,11 +87,9 @@ flowchart TD
 | -- | ------ | ---- | ---- |
 | 1 | 4d 受け入れ条件の目視確認 | 4d | [party-formation-ui.md §13](../spec/party-formation-ui.md#13-受け入れ条件phase-4d-完了) |
 | 2 | DOM §11 polish 残確認 | 4d | 編成・用語パネル・ヘッダーが統計 UI と同系か |
-| 3 | M1 8 クラスの日本語説明文 polish | 4b | 下表「4b チェックリスト」 |
-| 4 | 用語辞書 `ja` の頻出語追加 | 4b | `formatSkillText` 出力と同期 |
-| 5 | i18n 基盤 + DOM UI 英語（最短経路） | 4e-a | `t(key)` / locale 切替 |
-| 6 | M1 8 クラスの英語（説明・クラス名・用語） | 4e-b | 4b 確定文案を正本に |
-| 7 | M2 前に残り 5 クラスへ英語拡張 | 4e | グレーアウト 5 は M1 でもロスター表示あり |
+| 3 | i18n 基盤 + DOM UI 英語（最短経路） | 4e-a | `t(key)` / locale 切替 |
+| 4 | M1 8 クラスの英語（説明・クラス名・用語） | 4e-b | [§4b 確定文案](#4b--スキル説明自動生成日本語--完了2026-06)を翻訳正本に |
+| 5 | M2 前に残り 5 クラスへ英語拡張 | 4e | グレーアウト 5 は M1 でもロスター表示あり |
 
 ---
 
@@ -122,7 +134,7 @@ data/classes.json
 - スキル JSON に `description` フィールドは **持たない**
 - 新 effect / ターゲット形状の **データ PR ごと** に `formatSkillText` + テストを同梱
 - 編成 UI は効果単位改行（`formatSkillCardLines`）。tooltip / エディタは 1 行互換を維持
-- **4e 前に** M1 対象の日本語文案を確定する
+- M1 8 クラス Lv0 日本語文案は **確定済み**（下表・チェックリスト参照）。4e はこれを翻訳正本とする
 - **目視 polish（文案確定）の対象は Lv0 のみ** — passive 1–2 / active 1–2（各クラス習得時 2 枠×2）
 - **`formatSkillText` のテンプレ変更は全習得段階に自動適用** — Lv10 / Lv20 スキルも同じ表記ルール（`再使用`・`周囲`・バリア表記等）が効く。本フェーズでは Lv10+ の個別目視 polish は行わない
 
@@ -133,6 +145,8 @@ data/classes.json
 - Canvas 演出プレビュー（Phase 5）
 
 ### M1 対象クラス（4b / 4e の第一優先）
+
+Release M1 解禁 8 クラスの一覧・グレーアウト 5・非表示 2 は [phase-roadmap.md §M1 — 体験版](phase-roadmap.md#m1--体験版) を正とする。
 
 | classId | 表示名 | 4b 日本語 | 4e 英語 |
 | ------- | ------ | --------- | ------- |
@@ -158,7 +172,7 @@ data/classes.json
 
 **Lv10 / Lv20（本フェーズ）:** 個別 polish はしない。上記テンプレ変更が **生成破綻なく適用**されていることのみ確認（テストまたは目視 1 回で可）。
 
-**一括 polish の締切:** Phase **6c / 8c** 前でもよいが、**4e 着手前** に M1 8 クラスの **Lv0 文案**は完了させる。
+**M1 Lv0 文案:** **完了**（2026-06）。残り 5 クラス（M2 解禁分）の Lv0 polish は **6c / 8c 前** でよい。
 
 #### 鉄衛士（`df_guardian`）— 目視 polish メモ
 
@@ -263,8 +277,8 @@ data/classes.json
 
 **着手条件**
 
-- 4d の DOM UI 骨格が安定（文言差し替え先が存在）
-- 4b — M1 8 クラスの **日本語文案**（特に `formatSkillText`・辞書 `ja`）が確定
+- 4d の DOM UI 骨格が安定（文言差し替え先が存在）— **4d 目視確認中**
+- **4b** — M1 8 クラス Lv0 日本語文案 — **充足済み**（[§4b](#4b--スキル説明自動生成日本語--完了2026-06)）
 
 ### レイヤ別タスク
 
@@ -299,8 +313,8 @@ data/classes.json
 | # | 条件 |
 | - | ---- |
 | 1 | 4d 受け入れ条件を満たし、目視確認済み |
-| 2 | M1 8 クラスの `formatSkillText` 日本語が確定（テスト + 目視） |
-| 3 | M1 8 クラス分の用語辞書 `ja` が説明文と整合 |
+| 2 | M1 8 クラスの `formatSkillText` 日本語が確定（テスト + 目視） — **4b 完了** |
+| 3 | M1 8 クラス分の用語辞書 `ja` が説明文と整合 — **4b 完了** |
 | 4 | `ja` / `en` 切替が動作し、M1 プレイ経路の DOM UI が英語表示可能 |
 | 5 | M1 8 クラスのスキル説明・クラス表示名が `en` で破綻なく表示 |
 | 6 | `npm test`（`formatSkillText` 含む）と手動スモーク（編成 → 戦闘 → 統計）が通る |
@@ -323,6 +337,7 @@ data/classes.json
 
 | ドキュメント | 用途 |
 | ------------ | ---- |
+| [phase-roadmap.md §M1 — 体験版](phase-roadmap.md#m1--体験版) | Release M1 プレイ範囲・解禁クラス・Phase 6 / 7 |
 | [phase-roadmap.md](phase-roadmap.md) | Phase 1〜12 全体・Release M1/M2 |
 | [classes-and-skills.md](../spec/classes-and-skills.md) | クラス・スキル schema、用語辞書、4b テンプレ |
 | [party-formation-ui.md](../spec/party-formation-ui.md) | 4d 仕様・受け入れ条件 |

@@ -58,7 +58,7 @@
 | `aliases`         | `{ ja: ["スタン"], … }` — 本文中でリンク化する表記。**長い語を先**にマッチ                                                                                      |
 | `statusCategory?` | 状態系のみ。[combat.md §ステータス効果](combat.md#ステータス効果) の `StatusDisplayCategory` と対応。`StatusIconRegistry` に PNG が登録されているときのみ用語パネル見出しに表示 |
 
-**多言語:** **Phase 4b / 4d** までは表示は **`ja` 固定**（型・データ形状だけ locale キーを持つ）。**Phase 4e** で **`en` のみ** 追加（3 言語目以降はスコープ外）。4e 着手前に **日本語文案**（特に `formatSkillText`・辞書 `ja`）を確定し、英語はその翻訳・locale 分岐とする。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。
+**多言語:** **Phase 4b / 4d** までは表示は **`ja` 固定**（型・データ形状だけ locale キーを持つ）。**Phase 4e** で **`en` のみ** 追加（3 言語目以降はスコープ外）。M1 8 クラス Lv0 の **日本語文案は確定済み**（2026-06、[phase-4-roadmap.md §4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)）。4e ではこれを翻訳正本とし locale 分岐する。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。
 
 #### 混同禁止（別 ID 必須）
 
@@ -126,7 +126,7 @@
 
 #### 運用
 
-- 新 effect / ターゲット形状を足す **データ PR ごと** に `formatSkillText` とテストを同梱（[phase-roadmap.md §4b](../plans/phase-roadmap.md#4b--スキル説明自動生成随時)）
+- 新 effect / ターゲット形状を足す **データ PR ごと** に `formatSkillText` とテストを同梱（[phase-4-roadmap.md §4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)）
 - **Phase 4b の目視 polish は Lv0 スキルのみ**（passive 1–2 / active 1–2）。`formatSkillText` のテンプレ変更は **全習得段階**（Lv10 / Lv20 含む）に自動適用する
 - クラス単位で **Lv0 文案**をテスト固定する。Lv10+ の個別 polish は Phase 7a 前でよい
 - Phase 4d 以降: 編成 UI のスキルカードは [party-formation-ui.md §6.3](party-formation-ui.md#63-習得スキル閲覧専用) の **効果単位改行**（`formatSkillCardLines` — API は [§6.3 formatSkillCardLines](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。4b の 1 行出力は当面 tooltip / エディタ互換として維持

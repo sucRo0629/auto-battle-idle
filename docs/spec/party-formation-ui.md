@@ -250,7 +250,7 @@ Phase 4d 当初案にあった表示例（参考）:
 | 3+     | 説明文（`formatSkillText` 系。**効果単位で改行**。1 段落にまとめない）                     |
 | フッタ | 習得に必要だった **プレイヤー Lv**（わかる場合） / 未解放枠は `{スキル名}　プレイヤー Lv10 で追加` 等 |
 
-説明文の文面生成は [Phase 4b](../plans/phase-roadmap.md)（`formatSkillText`）。**効果単位改行**は `formatSkillCardLines`（`src/ui/formatSkillText.ts`）でエディタプレビューと編成 UI を揃える。
+説明文の文面生成は [Phase 4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)（`formatSkillText`、M1 8 クラス Lv0 日本語 **完了**）。**効果単位改行**は `formatSkillCardLines`（`src/ui/formatSkillText.ts`）でエディタプレビューと編成 UI を揃える。
 
 #### `formatSkillCardLines` API（Phase 4d PR1-1 確定）
 
@@ -482,7 +482,7 @@ Picker 表示中も **上部ロスター帯は背面に見える**。他 3 人�
 | [classes-and-skills.md](classes-and-skills.md)  | UI ロール、スキル習得、**UI 用語辞書** |
 | [progression.md](progression.md)                | セーブ、`playerProgress`、進行 UI      |
 | [phase-roadmap.md](../plans/phase-roadmap.md)   | Phase 4d 実装タイミング                |
-| [phase-4-roadmap.md](../plans/phase-4-roadmap.md) | Phase 4 作業順・4d/4b/4e チェックリスト |
+| [phase-4-roadmap.md](../plans/phase-4-roadmap.md) | Phase 4 作業順・[M1 対象クラス](../plans/phase-4-roadmap.md#m1-対象クラス4b--4e-の第一優先)・4d/4b/4e チェックリスト |
 
 ---
 
