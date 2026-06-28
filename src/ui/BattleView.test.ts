@@ -44,13 +44,23 @@ vi.mock("../render/skillPresentation.ts", () => ({
       canvas.showHealPopup(request.targetId, request.amount);
       return;
     }
-    if (request.effect.type === "damage" || request.effect.type === "dot") {
+    const isDebuffDot =
+      request.effect.type === "debuff" &&
+      request.effect.debuffSubKind === "dot";
+    const isDotPopup =
+      request.kind === "dot" ||
+      request.effect.type === "dot" ||
+      isDebuffDot;
+    const isDamagePopup =
+      request.kind === "damage" || request.effect.type === "damage";
+    if (isDotPopup || isDamagePopup) {
       canvas.showDamagePopup(
         request.targetId,
         request.amount,
-        request.kind === "dot" || request.effect.type === "dot"
-          ? "dot"
-          : "damage",
+        isDotPopup ? "dot" : "damage",
+        isDotPopup
+          ? (request.dotFlavor ?? request.effect.dotFlavor)
+          : undefined,
       );
     }
   }),
@@ -177,6 +187,7 @@ describe("BattleView", () => {
       "target-1",
       42,
       "damage",
+      undefined,
     );
   });
 

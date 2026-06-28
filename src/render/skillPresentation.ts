@@ -63,6 +63,38 @@ function buildVfxInstanceId(
 const DAMAGE_POPUP_DEDUPE_WINDOW_MS = 50;
 const recentDamagePopupTimes = new Map<string, number>();
 
+function isDebuffDotEffect(effect: SkillEffectDef): boolean {
+  return effect.type === "debuff" && effect.debuffSubKind === "dot";
+}
+
+function resolveDamagePopupKind(
+  kind: SkillHitFeedbackRequest["kind"],
+  effect: SkillEffectDef,
+): "damage" | "dot" | null {
+  if (kind === "dot" || effect.type === "dot" || isDebuffDotEffect(effect)) {
+    return "dot";
+  }
+  if (kind === "damage" || effect.type === "damage") {
+    return "damage";
+  }
+  return null;
+}
+
+function resolveDotPopupFlavor(
+  request: Pick<SkillHitFeedbackRequest, "kind" | "dotFlavor">,
+  effect: SkillEffectDef,
+): import("../battle/types.ts").DotFlavor | undefined {
+  if (request.dotFlavor !== undefined) return request.dotFlavor;
+  if (
+    request.kind === "dot" ||
+    effect.type === "dot" ||
+    isDebuffDotEffect(effect)
+  ) {
+    return effect.dotFlavor;
+  }
+  return undefined;
+}
+
 function effectKindForPresentation(effect: SkillEffectDef): SkillVfxContext["effectKind"] {
   return effect.type === "move" ? "move" : effect.type;
 }
@@ -238,30 +270,29 @@ export function playSkillHitFeedback(
     return;
   }
 
-  if (effect.type === "damage" || effect.type === "dot") {
-    if (request.popupDedupeKey) {
-      const now = performance.now();
-      for (const [key, lastShownAt] of recentDamagePopupTimes) {
-        if (now - lastShownAt > DAMAGE_POPUP_DEDUPE_WINDOW_MS) {
-          recentDamagePopupTimes.delete(key);
-        }
+  const popupKind = resolveDamagePopupKind(kind, effect);
+  if (popupKind === null) return;
+
+  if (request.popupDedupeKey) {
+    const now = performance.now();
+    for (const [key, lastShownAt] of recentDamagePopupTimes) {
+      if (now - lastShownAt > DAMAGE_POPUP_DEDUPE_WINDOW_MS) {
+        recentDamagePopupTimes.delete(key);
       }
-      const lastShownAt = recentDamagePopupTimes.get(request.popupDedupeKey);
-      if (
-        lastShownAt !== undefined &&
-        now - lastShownAt <= DAMAGE_POPUP_DEDUPE_WINDOW_MS
-      ) {
-        return;
-      }
-      recentDamagePopupTimes.set(request.popupDedupeKey, now);
     }
-    canvas.showDamagePopup(
-      targetId,
-      amount,
-      kind === "dot" || effect.type === "dot" ? "dot" : "damage",
-      kind === "dot" || effect.type === "dot"
-        ? (request.dotFlavor ?? effect.dotFlavor)
-        : undefined,
-    );
+    const lastShownAt = recentDamagePopupTimes.get(request.popupDedupeKey);
+    if (
+      lastShownAt !== undefined &&
+      now - lastShownAt <= DAMAGE_POPUP_DEDUPE_WINDOW_MS
+    ) {
+      return;
+    }
+    recentDamagePopupTimes.set(request.popupDedupeKey, now);
   }
+  canvas.showDamagePopup(
+    targetId,
+    amount,
+    popupKind,
+    popupKind === "dot" ? resolveDotPopupFlavor(request, effect) : undefined,
+  );
 }

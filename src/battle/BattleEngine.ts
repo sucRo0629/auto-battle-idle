@@ -2272,6 +2272,10 @@ export class BattleEngine {
         skillName,
         effect: "dot",
         amount,
+        ...(effect.effectIndex !== undefined
+          ? { effectIndex: effect.effectIndex }
+          : {}),
+        statusEffectId: effect.id,
         ...(effect.dotFlavor ? { dotFlavor: effect.dotFlavor } : {}),
       });
       this.emit({ type: "hurt", targetId: target.id });

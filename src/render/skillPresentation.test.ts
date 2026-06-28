@@ -304,4 +304,105 @@ describe("playSkillHitFeedback", () => {
     );
     expect(canvas.showHealPopup).toHaveBeenCalledWith("guardian", 42);
   });
+
+  it("shows dot popup for debuff dot effects when kind is dot", () => {
+    const canvas = {
+      playSkillVfx: vi.fn(),
+      showDamagePopup: vi.fn(),
+      showHealPopup: vi.fn(),
+    };
+    const effect = {
+      type: "debuff",
+      debuffSubKind: "dot",
+      dotFlavor: "bleed",
+    } as never;
+    const presentation = {} as never;
+
+    playSkillHitFeedback(canvas, {
+      sourceId: "assassin",
+      targetId: "enemy-1",
+      presentation,
+      effect,
+      skillId: "at_assassin_active_1",
+      effectIndex: 1,
+      amount: 12,
+      kind: "dot",
+    });
+
+    expect(canvas.showDamagePopup).toHaveBeenCalledWith(
+      "enemy-1",
+      12,
+      "dot",
+      "bleed",
+    );
+  });
+
+  it("shows dot popup for placedField parent effect when kind is dot", () => {
+    const canvas = {
+      playSkillVfx: vi.fn(),
+      showDamagePopup: vi.fn(),
+      showHealPopup: vi.fn(),
+    };
+    const effect = { type: "placedField" } as never;
+    const presentation = {} as never;
+
+    playSkillHitFeedback(canvas, {
+      sourceId: "hunter",
+      targetId: "enemy-1",
+      presentation,
+      effect,
+      skillId: "at_hunter_active_1",
+      effectIndex: 0,
+      amount: 8,
+      kind: "dot",
+      dotFlavor: "poison",
+    });
+
+    expect(canvas.showDamagePopup).toHaveBeenCalledWith(
+      "enemy-1",
+      8,
+      "dot",
+      "poison",
+    );
+  });
+
+  it("allows separate dot popups for stacked instances with distinct dedupe keys", () => {
+    const canvas = {
+      playSkillVfx: vi.fn(),
+      showDamagePopup: vi.fn(),
+      showHealPopup: vi.fn(),
+    };
+    const effect = { type: "placedField" } as never;
+    const presentation = {} as never;
+    const now = vi.spyOn(performance, "now");
+    now.mockReturnValueOnce(100);
+    now.mockReturnValueOnce(105);
+
+    playSkillHitFeedback(canvas, {
+      sourceId: "hunter",
+      targetId: "enemy-1",
+      presentation,
+      effect,
+      skillId: "at_hunter_active_1",
+      effectIndex: 0,
+      amount: 8,
+      kind: "dot",
+      dotFlavor: "poison",
+      popupDedupeKey: "dot-instance-a:enemy-1:8",
+    });
+    playSkillHitFeedback(canvas, {
+      sourceId: "hunter",
+      targetId: "enemy-1",
+      presentation,
+      effect,
+      skillId: "at_hunter_active_1",
+      effectIndex: 0,
+      amount: 8,
+      kind: "dot",
+      dotFlavor: "poison",
+      popupDedupeKey: "dot-instance-b:enemy-1:8",
+    });
+
+    expect(canvas.showDamagePopup).toHaveBeenCalledTimes(2);
+  });
 });

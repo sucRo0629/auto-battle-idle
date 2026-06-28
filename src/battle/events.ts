@@ -26,6 +26,8 @@ export type BattleEvent =
       hitIndex?: number;
       /** chain/pierce 等: VFX セグメントの起点（未指定時は actorId） */
       vfxSourceId?: string;
+      /** overlay DoT/HoT tick: 個別 instance の popup dedupe 用 */
+      statusEffectId?: string;
     }
   | { type: 'basicAttackCountCharged'; actorId: string }
   | { type: 'hurt'; targetId: string }

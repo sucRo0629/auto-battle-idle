@@ -344,15 +344,21 @@ export class BattleView {
           popupDedupeKey:
             event.amount !== undefined &&
             (event.effect === "damage" || event.effect === "dot")
-              ? [
-                  event.vfxSourceId ?? event.actorId,
-                  event.targetId,
-                  event.skillId,
-                  event.effectIndex ?? 0,
-                  event.hitIndex ?? -1,
-                  event.effect,
-                  event.amount,
-                ].join(":")
+              ? event.effect === "dot" && event.statusEffectId
+                ? [
+                    event.statusEffectId,
+                    event.targetId,
+                    event.amount,
+                  ].join(":")
+                : [
+                    event.vfxSourceId ?? event.actorId,
+                    event.targetId,
+                    event.skillId,
+                    event.effectIndex ?? 0,
+                    event.hitIndex ?? -1,
+                    event.effect,
+                    event.amount,
+                  ].join(":")
               : undefined,
           skipMainVfx: (event.hitIndex ?? 0) > 0,
         });
