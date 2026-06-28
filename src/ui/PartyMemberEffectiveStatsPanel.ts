@@ -17,6 +17,11 @@ export interface PartyMemberEffectiveStatsPanelData {
   attackSpeedTier: AttackSpeedTier;
 }
 
+export interface PartyMemberEffectiveStatsPanelOptions {
+  onHoverStart?: () => void;
+  onHoverEnd?: () => void;
+}
+
 export class PartyMemberEffectiveStatsPanel {
   private readonly root: HTMLElement;
   private readonly titleEl: HTMLElement;
@@ -25,24 +30,28 @@ export class PartyMemberEffectiveStatsPanel {
   private readonly gridEl: HTMLElement;
   private readonly themeHost: HTMLElement;
   private readonly storageHost: HTMLElement;
-  private readonly onClose: () => void;
   private visible = false;
   private anchoredSlot: HTMLElement | null = null;
 
   constructor(
     storageHost: HTMLElement,
     themeHost: HTMLElement,
-    onClose: () => void,
+    options: PartyMemberEffectiveStatsPanelOptions = {},
   ) {
     this.themeHost = themeHost;
     this.storageHost = storageHost;
-    this.onClose = onClose;
 
     this.root = document.createElement('aside');
     this.root.className = 'party-member-effective-stats';
     this.root.hidden = true;
-    this.root.setAttribute('role', 'dialog');
+    this.root.setAttribute('role', 'tooltip');
     this.root.setAttribute('aria-label', '戦闘中ステータス');
+    this.root.addEventListener('mouseenter', () => {
+      options.onHoverStart?.();
+    });
+    this.root.addEventListener('mouseleave', () => {
+      options.onHoverEnd?.();
+    });
 
     const header = document.createElement('div');
     header.className = 'party-member-effective-stats-header';
@@ -173,11 +182,5 @@ export class PartyMemberEffectiveStatsPanel {
 
     fragment.append(dt, valueDd, deltaDd);
     return fragment;
-  }
-
-  handleEscape(): boolean {
-    if (!this.visible) return false;
-    this.onClose();
-    return true;
   }
 }

@@ -884,7 +884,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | 枠        | 名称       | 内容                                                                                                                                                                  |
 | --------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | passive_1 | 薬効の香り | `herbalPotency` — aura HoT + 蓄積基礎（max 6）                                                                                                                        |
-| passive_2 | 健康体     | 最高 HP 味方 `hp` ×1.05                                                                                                                                               |
+| passive_2 | 健康体     | 最高 HP 味方 `hp` ×1.05。HUD: `hp` パッシブ buff アイコン                                                                                                                                               |
 | passive_3 | 毒消し     | `periodicDispel` dot 限定（Wave 回数上限）                                                                                                                            |
 | passive_4 | 薬草の極意 | `herbalPotency` — max 9 + 体質閾値                                                                                                                                    |
 | basic     | 薬手当て   | PHT へ短い `percentMaxHp` HoT（`stat` ally / `order: ratio`）。ally-heal 接近・停止の正本は [combat.md](combat.md) §回復 PHT |

@@ -247,6 +247,7 @@ export class PresentationPreviewRunner {
       hp: 100,
       maxHp: 100,
       barrierHp: 0,
+      baseMaxHp: 100,
       atk: 10,
       def: 5,
       reg: 0,

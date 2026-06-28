@@ -17,6 +17,7 @@ export interface PartyHudEntry {
   iconKey: string;
   hp: number;
   maxHp: number;
+  baseMaxHp: number;
   barrierHp: number;
   atk: number;
   def: number;
@@ -73,6 +74,7 @@ export function buildPartyHudEntries(
       iconKey: ally.iconKey,
       hp: ally.hp,
       maxHp: ally.maxHp,
+      baseMaxHp: ally.baseMaxHp,
       barrierHp: ally.barrierHp,
       atk: ally.atk,
       def: ally.def,

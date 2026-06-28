@@ -324,6 +324,7 @@ export class BattleCanvas implements IBattleRenderer {
           spriteKey: enemy.spriteKey,
           hp: enemy.hp,
           maxHp: enemy.maxHp,
+          baseMaxHp: enemy.baseMaxHp,
           barrierHp: enemy.barrierHp,
           atk: enemy.atk,
           def: enemy.def,
@@ -369,6 +370,7 @@ export class BattleCanvas implements IBattleRenderer {
         spriteKey: player.spriteKey,
         hp: player.hp,
         maxHp: player.maxHp,
+        baseMaxHp: player.baseMaxHp,
         barrierHp: player.barrierHp,
         atk: player.atk,
         def: player.def,
@@ -779,6 +781,7 @@ export class BattleCanvas implements IBattleRenderer {
       if (!layout.isEnemy || !layout.isAlive) continue;
 
       const badges = collectStatusEffectBadgeDisplays(layout.statusEffects, {
+        baseMaxHp: layout.baseMaxHp,
         atk: layout.atk,
         def: layout.def,
         reg: layout.reg,

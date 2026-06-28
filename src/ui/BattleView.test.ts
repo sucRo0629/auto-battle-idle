@@ -97,7 +97,6 @@ vi.mock("../ui/PartyMemberEffectiveStatsPanel.ts", () => ({
     hide: vi.fn(),
     update: vi.fn(),
     isVisible: vi.fn(() => false),
-    handleEscape: vi.fn(() => false),
     destroy: vi.fn(),
   })),
 }));

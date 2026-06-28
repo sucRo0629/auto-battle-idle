@@ -122,6 +122,7 @@ describe('backstab evasion buff badge', () => {
     expect(evasion?.id.startsWith('passive_')).toBe(false);
 
     const badges = aggregateStatStatusEffects(actor.statusEffects, {
+      baseMaxHp: actor.maxHp,
       atk: actor.atk,
       def: actor.def,
       reg: actor.reg,
@@ -165,6 +166,7 @@ describe('backstab evasion buff badge', () => {
     });
 
     const badges = aggregateStatStatusEffects(actor.statusEffects, {
+      baseMaxHp: actor.maxHp,
       atk: actor.atk,
       def: actor.def,
       reg: actor.reg,
@@ -206,6 +208,7 @@ describe('backstab evasion buff badge', () => {
       if (activeEvasion) {
         sawActiveEvasion = true;
         const badges = aggregateStatStatusEffects(assassin.statusEffects, {
+          baseMaxHp: assassin.maxHp,
           atk: assassin.atk,
           def: assassin.def,
           reg: assassin.reg,

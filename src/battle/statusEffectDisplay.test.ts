@@ -24,6 +24,25 @@ function statEffect(
 }
 
 describe('statusEffectDisplay', () => {
+  it('collects passive hp buff badge', () => {
+    const badges = collectStatusEffectBadgeDisplays(
+      [
+        statEffect({
+          id: 'passive_buff_aura_herb_sp_alchemist_passive_2_hp_0',
+          kind: 'buff',
+          stat: 'hp',
+          multiplier: 1.05,
+        }),
+      ],
+      { baseMaxHp: 200, atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges).toHaveLength(1);
+    expect(badges[0]?.category).toBe('hp');
+    expect(badges[0]?.kind).toBe('buff');
+    expect(badges[0]?.isPassive).toBe(true);
+  });
+
   it('aggregates reg buff as magic resistance increase', () => {
     const badges = aggregateStatStatusEffects(
       [
@@ -34,7 +53,7 @@ describe('statusEffectDisplay', () => {
           multiplier: 2,
         }),
       ],
-      { atk: 10, def: 10, reg: 10 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 10 },
     );
 
     const regBadge = badges.find((badge) => badge.category === 'reg');
@@ -52,7 +71,7 @@ describe('statusEffectDisplay', () => {
           multiplier: 1.5,
         }),
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges).toHaveLength(1);
@@ -70,7 +89,7 @@ describe('statusEffectDisplay', () => {
           multiplier: 0.75,
         }),
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges).toHaveLength(1);
@@ -91,7 +110,7 @@ describe('statusEffectDisplay', () => {
           remainingSec: 3,
         },
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges.map((badge) => badge.category)).toEqual(['block']);
@@ -119,7 +138,7 @@ describe('statusEffectDisplay', () => {
           remainingSec: 99999,
         },
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges).toEqual([]);
@@ -138,7 +157,7 @@ describe('statusEffectDisplay', () => {
           remainingSec: 99999,
         },
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges).toHaveLength(1);
@@ -168,7 +187,7 @@ describe('statusEffectDisplay', () => {
           remainingSec: 2,
         },
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges).toHaveLength(1);
@@ -192,7 +211,7 @@ describe('statusEffectDisplay', () => {
           multiplier: 1.5,
         }),
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges).toHaveLength(2);
@@ -215,7 +234,7 @@ describe('statusEffectDisplay', () => {
           remainingSec: 5,
         },
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges.map((badge) => badge.category)).toEqual(['damageDelay']);
@@ -234,7 +253,7 @@ describe('statusEffectDisplay', () => {
           remainingSec: 0.8,
         },
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges.map((badge) => badge.category)).toEqual(['stun']);
@@ -262,7 +281,7 @@ describe('statusEffectDisplay', () => {
           remainingSec: 1,
         },
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges.map((badge) => badge.category)).toEqual(['stun', 'moveLock']);
@@ -281,7 +300,7 @@ describe('statusEffectDisplay', () => {
           remainingSec: 3,
         },
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges).toHaveLength(1);
@@ -313,7 +332,7 @@ describe('statusEffectDisplay', () => {
             remainingSec: 4,
           },
         ],
-        { atk: 10, def: 10, reg: 0 },
+        { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
       );
       expect(badges).toHaveLength(1);
       expect(badges[0]?.category).toBe(category);
@@ -343,7 +362,7 @@ describe('statusEffectDisplay', () => {
           remainingSec: 6,
         },
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges.map((badge) => badge.category)).toEqual([
@@ -366,7 +385,7 @@ describe('statusEffectDisplay', () => {
           remainingSec: 10,
         },
       ],
-      { atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
     );
 
     expect(badges).toHaveLength(1);

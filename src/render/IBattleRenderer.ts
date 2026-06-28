@@ -20,6 +20,7 @@ export interface CombatantLayout {
   spriteKey: string;
   hp: number;
   maxHp: number;
+  baseMaxHp: number;
   barrierHp: number;
   atk: number;
   def: number;

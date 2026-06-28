@@ -377,6 +377,7 @@ describe('passiveEffects', () => {
     expect(blockEffect?.stat).toBeUndefined();
 
     const badges = aggregateStatStatusEffects(guard.statusEffects, {
+      baseMaxHp: guard.maxHp,
       atk: guard.atk,
       def: guard.def,
       reg: guard.reg,
@@ -786,6 +787,7 @@ describe('passiveEffects', () => {
     const atkEffect = warrior.statusEffects.find((e) => e.stat === 'atk');
     expect(atkEffect?.multiplier).toBeCloseTo(1.5, 5);
     const badges = aggregateStatStatusEffects(warrior.statusEffects, {
+      baseMaxHp: warrior.maxHp,
       atk: warrior.atk,
       def: warrior.def,
       reg: warrior.reg,

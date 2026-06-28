@@ -157,6 +157,7 @@
   --icon-supporter: #1e8449;
   --icon-attacker-ranged: #922b21;
   --icon-default: #888888;
+  --status-icon-hp: #e74c3c;
   --status-icon-atk: #c0392b;
   --status-icon-def: #2980b9;
   --status-icon-reg: #9b59b6;
@@ -386,7 +387,6 @@
 
 .party-hud-label {
   min-width: 0;
-  width: 100%;
   font-size: calc(var(--hud-header-font-size) * 1px);
   color: var(--hud-name-color);
   line-height: 1.1;
@@ -409,8 +409,6 @@
   box-shadow:
     inset 0 0 0 1px var(--hud-icon-border),
     0 0 0 1px var(--hud-icon-frame);
-  line-height: 0;
-  padding: 0;
 }
 
 .party-hud-icon {

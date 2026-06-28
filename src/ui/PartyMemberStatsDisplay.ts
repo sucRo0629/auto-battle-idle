@@ -360,6 +360,7 @@ export function syncStatusBadges(
     if (!refs) continue;
 
     const allBadges = collectStatusEffectBadgeDisplays(snapshot.statusEffects, {
+      baseMaxHp: snapshot.baseMaxHp,
       atk: snapshot.atk,
       def: snapshot.def,
       reg: snapshot.reg,

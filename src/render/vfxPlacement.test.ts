@@ -10,6 +10,7 @@ function layout(id: string, x: number, y: number): CombatantLayout {
     spriteKey: 'test',
     hp: 100,
     maxHp: 100,
+    baseMaxHp: 100,
     barrierHp: 0,
     atk: 10,
     def: 5,

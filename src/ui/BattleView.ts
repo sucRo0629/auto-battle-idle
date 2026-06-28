@@ -78,7 +78,8 @@ export class BattleView {
   private readonly debugMenu: DebugMenuPanel;
   private readonly battleXDebugCanvas: BattleXDebugCanvas;
   private statsOverlay: BattleStatsOverlay | null = null;
-  private selectedMemberStatsSlotIndex: number | null = null;
+  private hoveredMemberStatsSlotIndex: number | null = null;
+  private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly verifyModeControls?: VerifyModeControls;
 
   constructor(
@@ -197,8 +198,11 @@ export class BattleView {
     this.canvas.mount(canvasWrap);
 
     this.partyHud = new PartyHudPanel(this.canvasHost, {
-      onMemberHeaderClick: (slotIndex) => {
-        this.toggleMemberStatsPanel(slotIndex);
+      onMemberStatsHoverStart: (slotIndex) => {
+        this.showMemberStatsPanel(slotIndex);
+      },
+      onMemberStatsHoverEnd: () => {
+        this.scheduleMemberStatsHide();
       },
     });
     this.partyHud.mount(canvasFrame);
@@ -210,56 +214,66 @@ export class BattleView {
     this.memberStatsPanel = new PartyMemberEffectiveStatsPanel(
       statsPanelStorage,
       this.root,
-      () => this.closeMemberStatsPanel(),
+      {
+        onHoverStart: () => {
+          this.clearMemberStatsHideTimer();
+        },
+        onHoverEnd: () => {
+          this.scheduleMemberStatsHide();
+        },
+      },
     );
-
-    this.root.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape") return;
-      if (this.memberStatsPanel.handleEscape()) {
-        event.stopPropagation();
-      }
-    });
 
     this.engine.onEvent((event) => this.onBattleEvent(event));
   }
 
-  private toggleMemberStatsPanel(slotIndex: number): void {
-    this.selectedMemberStatsSlotIndex =
-      this.selectedMemberStatsSlotIndex === slotIndex ? null : slotIndex;
-    this.syncMemberStatsPanel();
+  private clearMemberStatsHideTimer(): void {
+    if (this.memberStatsHideTimer === null) return;
+    clearTimeout(this.memberStatsHideTimer);
+    this.memberStatsHideTimer = null;
   }
 
-  private closeMemberStatsPanel(): void {
-    if (this.selectedMemberStatsSlotIndex === null) return;
-    this.selectedMemberStatsSlotIndex = null;
+  private scheduleMemberStatsHide(): void {
+    this.clearMemberStatsHideTimer();
+    this.memberStatsHideTimer = setTimeout(() => {
+      this.memberStatsHideTimer = null;
+      this.hoveredMemberStatsSlotIndex = null;
+      this.syncMemberStatsPanel();
+    }, 80);
+  }
+
+  private showMemberStatsPanel(slotIndex: number): void {
+    this.clearMemberStatsHideTimer();
+    this.hoveredMemberStatsSlotIndex = slotIndex;
     this.syncMemberStatsPanel();
   }
 
   private syncMemberStatsPanel(): void {
-    if (this.selectedMemberStatsSlotIndex === null) {
+    if (this.hoveredMemberStatsSlotIndex === null) {
       this.memberStatsPanel.hide();
       return;
     }
 
     const data = this.resolveMemberStatsPanelData(
-      this.selectedMemberStatsSlotIndex,
+      this.hoveredMemberStatsSlotIndex,
     );
     if (!data) {
-      this.selectedMemberStatsSlotIndex = null;
+      this.hoveredMemberStatsSlotIndex = null;
       this.memberStatsPanel.hide();
       return;
     }
+
+    const slotRoot = this.partyHud.getSlotRoot(this.hoveredMemberStatsSlotIndex);
+    this.memberStatsPanel.attachToSlot(
+      slotRoot,
+      this.hoveredMemberStatsSlotIndex,
+    );
 
     if (this.memberStatsPanel.isVisible()) {
       this.memberStatsPanel.update(data);
       return;
     }
 
-    const slotRoot = this.partyHud.getSlotRoot(this.selectedMemberStatsSlotIndex);
-    this.memberStatsPanel.attachToSlot(
-      slotRoot,
-      this.selectedMemberStatsSlotIndex,
-    );
     this.memberStatsPanel.show(data);
   }
 
@@ -291,12 +305,13 @@ export class BattleView {
   }
 
   private refreshMemberStatsPanel(): void {
-    if (this.selectedMemberStatsSlotIndex === null) return;
+    if (this.hoveredMemberStatsSlotIndex === null) return;
     const data = this.resolveMemberStatsPanelData(
-      this.selectedMemberStatsSlotIndex,
+      this.hoveredMemberStatsSlotIndex,
     );
     if (!data) {
-      this.closeMemberStatsPanel();
+      this.hoveredMemberStatsSlotIndex = null;
+      this.memberStatsPanel.hide();
       return;
     }
     this.memberStatsPanel.update(data);
@@ -610,6 +625,7 @@ export class BattleView {
   }
 
   destroy(): void {
+    this.clearMemberStatsHideTimer();
     this.statsOverlay?.destroy();
     this.statsOverlay = null;
     this.memberStatsPanel.destroy();

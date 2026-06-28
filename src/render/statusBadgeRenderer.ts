@@ -91,6 +91,7 @@ function statusBadgeUsesWhiteSilhouette(
   category: StatusDisplayCategory
 ): boolean {
   return (
+    category === "hp" ||
     category === "atk" ||
     category === "def" ||
     category === "reg" ||

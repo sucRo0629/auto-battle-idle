@@ -1,4 +1,5 @@
 import atkIconUrl from "../assets/status-icons/atk.png";
+import hpIconUrl from "../assets/status-icons/hp.png";
 import defIconUrl from "../assets/status-icons/def.png";
 import regIconUrl from "../assets/status-icons/reg.png";
 import attackSpeedIconUrl from "../assets/status-icons/attackSpeed.png";
@@ -40,6 +41,7 @@ import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
 export type { StatusDisplayCategory };
 
 const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
+  hp: hpIconUrl,
   atk: atkIconUrl,
   def: defIconUrl,
   reg: regIconUrl,

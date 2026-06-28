@@ -106,6 +106,7 @@ export interface BattleHudTheme {
   iconSupporter: string;
   iconAttackerRanged: string;
   iconDefault: string;
+  statusIconHp: string;
   statusIconAtk: string;
   statusIconDef: string;
   statusIconReg: string;
@@ -364,6 +365,7 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     iconSupporter: readString(style, "--icon-supporter", "#1e8449"),
     iconAttackerRanged: readString(style, "--icon-attacker-ranged", "#922b21"),
     iconDefault: readString(style, "--icon-default", "#888888"),
+    statusIconHp: readString(style, "--status-icon-hp", "#e74c3c"),
     statusIconAtk: readString(style, "--status-icon-atk", "#c0392b"),
     statusIconDef: readString(style, "--status-icon-def", "#2980b9"),
     statusIconReg: readString(style, "--status-icon-reg", "#9b59b6"),
@@ -433,6 +435,7 @@ export function resolveStatusIconFallbackColor(
   theme: BattleHudTheme
 ): string {
   const colors: Record<StatusDisplayCategory, string> = {
+    hp: theme.statusIconHp,
     atk: theme.statusIconAtk,
     def: theme.statusIconDef,
     reg: theme.statusIconReg,

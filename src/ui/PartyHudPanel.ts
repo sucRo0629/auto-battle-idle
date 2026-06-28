@@ -32,8 +32,9 @@ interface RecastCellElements {
 interface SlotElements {
   root: HTMLElement;
   slotIndex: number;
-  label: HTMLButtonElement;
-  iconWrap: HTMLButtonElement;
+  label: HTMLElement;
+  bodyRow: HTMLElement;
+  iconWrap: HTMLElement;
   icon: HTMLImageElement;
   hpFill: HTMLElement;
   barrierLayer: HTMLElement;
@@ -42,7 +43,8 @@ interface SlotElements {
 }
 
 export interface PartyHudPanelOptions {
-  onMemberHeaderClick?: (slotIndex: number) => void;
+  onMemberStatsHoverStart?: (slotIndex: number) => void;
+  onMemberStatsHoverEnd?: () => void;
 }
 
 export class PartyHudPanel {
@@ -110,12 +112,13 @@ export class PartyHudPanel {
     head.className = 'party-hud-head';
     root.appendChild(head);
 
-    const label = document.createElement('button');
-    label.type = 'button';
-    label.className = 'party-hud-label party-hud-stat-trigger';
-    label.setAttribute('aria-label', '戦闘中ステータスを表示');
-    label.addEventListener('click', () => {
-      this.options.onMemberHeaderClick?.(slotIndex);
+    const label = document.createElement('div');
+    label.className = 'party-hud-label';
+    label.addEventListener('mouseenter', () => {
+      this.options.onMemberStatsHoverStart?.(slotIndex);
+    });
+    label.addEventListener('mouseleave', () => {
+      this.options.onMemberStatsHoverEnd?.();
     });
     head.appendChild(label);
 
@@ -125,16 +128,17 @@ export class PartyHudPanel {
 
     const bodyRow = document.createElement('div');
     bodyRow.className = 'party-hud-body-row';
+    bodyRow.addEventListener('mouseenter', () => {
+      this.options.onMemberStatsHoverStart?.(slotIndex);
+    });
+    bodyRow.addEventListener('mouseleave', () => {
+      this.options.onMemberStatsHoverEnd?.();
+    });
     root.appendChild(bodyRow);
 
-    const iconWrap = document.createElement('button');
-    iconWrap.type = 'button';
+    const iconWrap = document.createElement('div');
     iconWrap.className =
-      'party-hud-icon-wrap pixel-icon-frame pixel-icon-frame--24 party-hud-stat-trigger';
-    iconWrap.setAttribute('aria-label', '戦闘中ステータスを表示');
-    iconWrap.addEventListener('click', () => {
-      this.options.onMemberHeaderClick?.(slotIndex);
-    });
+      'party-hud-icon-wrap pixel-icon-frame pixel-icon-frame--24';
     bodyRow.appendChild(iconWrap);
 
     const icon = document.createElement('img');
@@ -189,6 +193,7 @@ export class PartyHudPanel {
       root,
       slotIndex,
       label,
+      bodyRow,
       iconWrap,
       icon,
       hpFill,
@@ -245,6 +250,7 @@ export class PartyHudPanel {
 
   private updateStatusBadges(slot: SlotElements, entry: PartyHudEntry): void {
     const badges = collectStatusEffectBadgeDisplays(entry.statusEffects, {
+      baseMaxHp: entry.baseMaxHp,
       atk: entry.atk,
       def: entry.def,
       reg: entry.reg,

@@ -1,6 +1,7 @@
 import type { StatusEffect } from "./types.ts";
 
 export type StatusDisplayCategory =
+  | "hp"
   | "atk"
   | "def"
   | "reg"
@@ -36,6 +37,7 @@ export type StatusDisplayCategory =
   | "nextOutgoingDamage";
 
 export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
+  "hp",
   "atk",
   "def",
   "reg",
@@ -78,6 +80,7 @@ export const STATUS_DISPLAY_CATEGORY_LABELS: Record<
   StatusDisplayCategory,
   string
 > = {
+  hp: "HP",
   atk: "攻撃",
   def: "防御",
   reg: "耐魔",
@@ -146,6 +149,7 @@ export interface AggregatedCategoryEffect {
 }
 
 export interface StatBadgeBaseStats {
+  baseMaxHp: number;
   atk: number;
   def: number;
   reg: number;
@@ -218,7 +222,7 @@ function effectKindFromEffectiveStat(
 function statusEffectBadgeForStat(
   effect: StatusEffect,
   base: number,
-  category: "atk" | "def" | "reg" | "attackSpeed",
+  category: "hp" | "atk" | "def" | "reg" | "attackSpeed",
 ): StatusEffectBadgeDisplay | null {
   const agg = aggregateStatEffects([effect], category);
   const kind = effectKindFromEffectiveStat(base, computeEffectiveStat(base, agg));
@@ -420,6 +424,9 @@ function statusEffectBadgeForEffect(
   effect: StatusEffect,
   baseStats: StatBadgeBaseStats,
 ): StatusEffectBadgeDisplay | null {
+  if (effect.stat === "hp") {
+    return statusEffectBadgeForStat(effect, baseStats.baseMaxHp, "hp");
+  }
   if (effect.stat === "atk") {
     return statusEffectBadgeForStat(effect, baseStats.atk, "atk");
   }
@@ -539,6 +546,9 @@ function effectsForCategory(
         effect.overlay === "dot" && effect.dotFlavor === "blazingFlame",
     );
   }
+  if (category === "hp") {
+    return effects.filter((effect) => effect.stat === "hp");
+  }
   if (category === "atk") {
     return effects.filter((effect) => effect.stat === "atk");
   }
@@ -645,7 +655,7 @@ export function categoryRemainingRatio(
 
 function aggregateStatCategory(
   effects: StatusEffect[],
-  category: "atk" | "def" | "reg" | "attackSpeed",
+  category: "hp" | "atk" | "def" | "reg" | "attackSpeed",
   base: number
 ): AggregatedCategoryEffect | null {
   const agg = aggregateStatEffects(effects, category);
@@ -764,6 +774,13 @@ export function aggregateStatStatusEffects(
     (effect) => !isPassiveAuraStatusEffect(effect)
   );
   const result: AggregatedCategoryEffect[] = [];
+
+  const hpBadge = aggregateStatCategory(
+    displayEffects,
+    "hp",
+    baseStats.baseMaxHp,
+  );
+  if (hpBadge) result.push(hpBadge);
 
   for (const category of ["atk", "def", "reg"] as const) {
     const badge = aggregateStatCategory(

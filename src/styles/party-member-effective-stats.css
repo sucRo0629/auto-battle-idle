@@ -99,29 +99,3 @@
   left: auto;
   right: 0;
 }
-
-.party-hud-stat-trigger {
-  appearance: none;
-  border: none;
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  cursor: pointer;
-}
-
-.party-hud-label.party-hud-stat-trigger {
-  display: block;
-  width: 100%;
-  font-size: calc(var(--hud-header-font-size) * 1px);
-  font-family: var(--hud-font-family);
-  font-weight: normal;
-  color: var(--hud-name-color);
-  line-height: 1.1;
-  text-align: left;
-}
-
-.party-hud-stat-trigger:focus-visible {
-  outline: 1px solid #8eb8e8;
-  outline-offset: 1px;
-  border-radius: 1px;
-}
