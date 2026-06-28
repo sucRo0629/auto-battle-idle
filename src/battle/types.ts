@@ -1724,6 +1724,8 @@ export interface CombatantSnapshot {
   name: string;
   hp: number;
   maxHp: number;
+  /** バフ/debuff 前の MaxHP（`maxHp` は実効値） */
+  baseMaxHp: number;
   barrierHp: number;
   atk: number;
   def: number;

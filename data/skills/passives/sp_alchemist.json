@@ -28,7 +28,7 @@
     "buffTargetRule": {
       "kind": "stat",
       "side": "ally",
-      "stat": "hp",
+      "stat": "maxHp",
       "order": "highest"
     }
   },

@@ -26,10 +26,12 @@ import {
   resolveSkillPresentation,
 } from "../render/skillPresentation.ts";
 import { PartyHudPanel } from "./PartyHudPanel.ts";
+import { PartyMemberEffectiveStatsPanel } from "./PartyMemberEffectiveStatsPanel.ts";
 import {
   buildPartyHudEntries,
   buildPartyHudMetaBySlot,
 } from "./partyHudTypes.ts";
+import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import { BattleStatsOverlay } from "./BattleStatsOverlay.ts";
 import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
@@ -64,6 +66,7 @@ function resolveSkillRangePxFromSnapshot(
 export class BattleView {
   private readonly root: HTMLElement;
   private readonly canvasHost: HTMLElement;
+  private readonly canvasWrap: HTMLElement;
   private readonly stageLabelEl: HTMLElement;
   private readonly verifyModeInput: HTMLInputElement;
   private readonly menuButton: HTMLButtonElement;
@@ -71,9 +74,11 @@ export class BattleView {
   private readonly enhancementTreeButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
+  private readonly memberStatsPanel: PartyMemberEffectiveStatsPanel;
   private readonly debugMenu: DebugMenuPanel;
   private readonly battleXDebugCanvas: BattleXDebugCanvas;
   private statsOverlay: BattleStatsOverlay | null = null;
+  private selectedMemberStatsSlotIndex: number | null = null;
   private readonly verifyModeControls?: VerifyModeControls;
 
   constructor(
@@ -121,6 +126,7 @@ export class BattleView {
 
     const canvasWrap = document.createElement("div");
     canvasWrap.className = "battle-canvas-wrap";
+    this.canvasWrap = canvasWrap;
 
     this.stageLabelEl = document.createElement("div");
     this.stageLabelEl.className = "battle-stage-label";
@@ -190,10 +196,110 @@ export class BattleView {
     this.canvas = new BattleCanvas();
     this.canvas.mount(canvasWrap);
 
-    this.partyHud = new PartyHudPanel(this.canvasHost);
+    this.partyHud = new PartyHudPanel(this.canvasHost, {
+      onMemberHeaderClick: (slotIndex) => {
+        this.toggleMemberStatsPanel(slotIndex);
+      },
+    });
     this.partyHud.mount(canvasFrame);
 
+    const statsPanelStorage = document.createElement('div');
+    statsPanelStorage.hidden = true;
+    canvasFrame.appendChild(statsPanelStorage);
+
+    this.memberStatsPanel = new PartyMemberEffectiveStatsPanel(
+      statsPanelStorage,
+      this.root,
+      () => this.closeMemberStatsPanel(),
+    );
+
+    this.root.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      if (this.memberStatsPanel.handleEscape()) {
+        event.stopPropagation();
+      }
+    });
+
     this.engine.onEvent((event) => this.onBattleEvent(event));
+  }
+
+  private toggleMemberStatsPanel(slotIndex: number): void {
+    this.selectedMemberStatsSlotIndex =
+      this.selectedMemberStatsSlotIndex === slotIndex ? null : slotIndex;
+    this.syncMemberStatsPanel();
+  }
+
+  private closeMemberStatsPanel(): void {
+    if (this.selectedMemberStatsSlotIndex === null) return;
+    this.selectedMemberStatsSlotIndex = null;
+    this.syncMemberStatsPanel();
+  }
+
+  private syncMemberStatsPanel(): void {
+    if (this.selectedMemberStatsSlotIndex === null) {
+      this.memberStatsPanel.hide();
+      return;
+    }
+
+    const data = this.resolveMemberStatsPanelData(
+      this.selectedMemberStatsSlotIndex,
+    );
+    if (!data) {
+      this.selectedMemberStatsSlotIndex = null;
+      this.memberStatsPanel.hide();
+      return;
+    }
+
+    if (this.memberStatsPanel.isVisible()) {
+      this.memberStatsPanel.update(data);
+      return;
+    }
+
+    const slotRoot = this.partyHud.getSlotRoot(this.selectedMemberStatsSlotIndex);
+    this.memberStatsPanel.attachToSlot(
+      slotRoot,
+      this.selectedMemberStatsSlotIndex,
+    );
+    this.memberStatsPanel.show(data);
+  }
+
+  private resolveMemberStatsPanelData(slotIndex: number) {
+    const snapshot = this.engine.getSnapshot();
+    const save = this.getSave();
+    const partyMeta = buildPartyHudMetaBySlot(
+      save.party,
+      this.gameData.classRegistry,
+    );
+    const meta = partyMeta[slotIndex];
+    const member = save.party[slotIndex];
+    if (!meta || !member) return null;
+
+    const ally = snapshot.allies.find(
+      (unit) => unit.partySlotIndex === slotIndex,
+    );
+    if (!ally) return null;
+
+    const preset = this.gameData.classRegistry[member.classId];
+    if (!preset) return null;
+
+    return {
+      displayName: meta.displayName,
+      iconKey: ally.iconKey,
+      ally,
+      attackSpeedTier: resolveAttackSpeedTier(preset),
+    };
+  }
+
+  private refreshMemberStatsPanel(): void {
+    if (this.selectedMemberStatsSlotIndex === null) return;
+    const data = this.resolveMemberStatsPanelData(
+      this.selectedMemberStatsSlotIndex,
+    );
+    if (!data) {
+      this.closeMemberStatsPanel();
+      return;
+    }
+    this.memberStatsPanel.update(data);
   }
 
   private flashDebugSkillRange(
@@ -451,6 +557,7 @@ export class BattleView {
     this.debugMenu.updateExpDisplay();
     this.debugMenu.updateDamageDisplay();
     this.statsOverlay?.update();
+    this.refreshMemberStatsPanel();
   }
 
   setMenuButtonDisabled(disabled: boolean): void {
@@ -505,6 +612,7 @@ export class BattleView {
   destroy(): void {
     this.statsOverlay?.destroy();
     this.statsOverlay = null;
+    this.memberStatsPanel.destroy();
     this.canvas.destroy();
     this.battleXDebugCanvas.destroy();
     this.partyHud.destroy();

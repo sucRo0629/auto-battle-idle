@@ -1761,6 +1761,7 @@ export class BattleEngine {
       name: c.name,
       hp: c.hp,
       maxHp: getEffectiveMaxHp(c),
+      baseMaxHp: c.maxHp,
       barrierHp: c.barrierHp,
       atk: c.atk,
       def: c.def,

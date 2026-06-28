@@ -31,12 +31,18 @@ interface RecastCellElements {
 
 interface SlotElements {
   root: HTMLElement;
-  label: HTMLElement;
+  slotIndex: number;
+  label: HTMLButtonElement;
+  iconWrap: HTMLButtonElement;
   icon: HTMLImageElement;
   hpFill: HTMLElement;
   barrierLayer: HTMLElement;
   statusCanvas: HTMLCanvasElement;
   recastCells: RecastCellElements[];
+}
+
+export interface PartyHudPanelOptions {
+  onMemberHeaderClick?: (slotIndex: number) => void;
 }
 
 export class PartyHudPanel {
@@ -46,7 +52,10 @@ export class PartyHudPanel {
   private lastEntries: (PartyHudEntry | null)[] = [];
   private readonly unsubscribeStatusIconsReady: () => void;
 
-  constructor(private readonly themeHost: HTMLElement) {
+  constructor(
+    private readonly themeHost: HTMLElement,
+    private readonly options: PartyHudPanelOptions = {},
+  ) {
     this.unsubscribeStatusIconsReady = onStatusIconsReady(() => {
       if (this.lastEntries.length > 0) {
         this.update(this.lastEntries);
@@ -61,7 +70,7 @@ export class PartyHudPanel {
     root.className = 'party-hud-panel';
 
     for (let i = 0; i < 4; i++) {
-      this.slots.push(this.createSlot());
+      this.slots.push(this.createSlot(i));
       root.appendChild(this.slots[i].root);
     }
 
@@ -84,12 +93,16 @@ export class PartyHudPanel {
     }
   }
 
+  getSlotRoot(slotIndex: number): HTMLElement | null {
+    return this.slots[slotIndex]?.root ?? null;
+  }
+
   destroy(): void {
     this.unsubscribeStatusIconsReady();
     this.root.remove();
   }
 
-  private createSlot(): SlotElements {
+  private createSlot(slotIndex: number): SlotElements {
     const root = document.createElement('div');
     root.className = 'party-hud-slot';
 
@@ -97,8 +110,13 @@ export class PartyHudPanel {
     head.className = 'party-hud-head';
     root.appendChild(head);
 
-    const label = document.createElement('div');
-    label.className = 'party-hud-label';
+    const label = document.createElement('button');
+    label.type = 'button';
+    label.className = 'party-hud-label party-hud-stat-trigger';
+    label.setAttribute('aria-label', '戦闘中ステータスを表示');
+    label.addEventListener('click', () => {
+      this.options.onMemberHeaderClick?.(slotIndex);
+    });
     head.appendChild(label);
 
     const statusCanvas = document.createElement('canvas');
@@ -109,9 +127,14 @@ export class PartyHudPanel {
     bodyRow.className = 'party-hud-body-row';
     root.appendChild(bodyRow);
 
-    const iconWrap = document.createElement('div');
+    const iconWrap = document.createElement('button');
+    iconWrap.type = 'button';
     iconWrap.className =
-      'party-hud-icon-wrap pixel-icon-frame pixel-icon-frame--24';
+      'party-hud-icon-wrap pixel-icon-frame pixel-icon-frame--24 party-hud-stat-trigger';
+    iconWrap.setAttribute('aria-label', '戦闘中ステータスを表示');
+    iconWrap.addEventListener('click', () => {
+      this.options.onMemberHeaderClick?.(slotIndex);
+    });
     bodyRow.appendChild(iconWrap);
 
     const icon = document.createElement('img');
@@ -164,7 +187,9 @@ export class PartyHudPanel {
 
     return {
       root,
+      slotIndex,
       label,
+      iconWrap,
       icon,
       hpFill,
       barrierLayer,

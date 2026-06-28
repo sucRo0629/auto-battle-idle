@@ -2,7 +2,7 @@
 
 実装：`src/battle/battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `bodyAnimMarching.ts`, `BattleEngine.ts`
 描画：`src/render/BattleCanvas.ts`（`screenX = battleX`）
-戦闘中統計 UI：`src/ui/BattleStatsOverlay.ts`, `PartyMemberStatsDisplay.ts`, `src/styles/battle-stats-overlay.css`, `party-member-stats.css`
+戦闘中統計 UI：`src/ui/BattleStatsOverlay.ts`, `PartyMemberStatsDisplay.ts`, `PartyMemberEffectiveStatsPanel.ts`, `combatantBattleStatsDisplay.ts`, `src/styles/battle-stats-overlay.css`, `party-member-stats.css`, `party-member-effective-stats.css`
 
 本ドキュメントは **横 1 軸のバトルライン** における座標・隊形・Wave・接敵・描画の設計正本。ダメージ/CD/脅威等は [combat.md](combat.md) を参照。
 
@@ -478,6 +478,19 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 | 確認モード | 現行は verify 経路でダメージ行が供給される。本番 Stage Records は **Phase 11** |
 
 `DebugMenuPanel` も同一 `PartyMemberStatsDisplay` を使う。CSS 刷新時は **両方を同スタイル**にする（状態バッジ帯含む）。
+
+#### 7.1.1 戦闘中ステータス（Party HUD クリック）
+
+| 要素 | 内容 |
+| ---- | ---- |
+| 起動 | Party HUD の **クラス名** または **24px クラスアイコン** クリック（同一スロット再クリックで閉じる）。`Escape` でも閉じる |
+| 配置 | 選択スロットの **クラス名行の直上**（`.party-hud-slot` 内、`bottom: 100%`）。Canvas 上ではなく HUD 列にアンカー |
+| 対象 | **選択中スロット 1 人のみ** |
+| 表示項目 | **HP**（`現在HP / 実効MaxHP`）、**攻撃力 / 防御力 / 魔法耐性 / 攻撃速度**（5 段階 tier ラベル）。**射程・基本攻撃は表示しない** |
+| 補正列 | 各ステの右に `(+N)` / `(-N)`（REG は `(+N%)`）。SPD buff/debuff は **`(×倍率)`**（例: `(×1.25)`）。差分 0 は空 |
+| 色 | 上昇（buff）= やや青（`#8eb8e8`）、低下（debuff）= やや赤（`#e89595`）。中央の実効値は通常色 |
+| データ | `CombatantSnapshot`（`baseMaxHp` + `statusEffects` + ベース atk/def/reg）とクラス `attackSpeedTier`。実効計算は [combat.md](combat.md) の `getEffective*` / `aggregateStatEffects` と同一 |
+| 更新 | パネル表示中は `BattleView.tick` 毎に refresh |
 
 ### 7.2 デザイン方針（Phase 4d 刷新）
 

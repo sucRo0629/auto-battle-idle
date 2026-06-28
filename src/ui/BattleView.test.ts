@@ -85,6 +85,19 @@ vi.mock("../ui/PartyHudPanel.ts", () => ({
   PartyHudPanel: vi.fn().mockImplementation(() => ({
     mount: vi.fn(),
     update: vi.fn(),
+    getSlotRoot: vi.fn(() => null),
+    destroy: vi.fn(),
+  })),
+}));
+
+vi.mock("../ui/PartyMemberEffectiveStatsPanel.ts", () => ({
+  PartyMemberEffectiveStatsPanel: vi.fn().mockImplementation(() => ({
+    attachToSlot: vi.fn(),
+    show: vi.fn(),
+    hide: vi.fn(),
+    update: vi.fn(),
+    isVisible: vi.fn(() => false),
+    handleEscape: vi.fn(() => false),
     destroy: vi.fn(),
   })),
 }));

@@ -97,11 +97,11 @@ interface SaveGameState {
 
 - 現在ステージ名（Canvas 左上）
 - **プレイヤー共通 Lv（数値）+ Exp バー（戦闘 HUD）** — Exp バーの具体レイアウトは **TBD**（HUD 内の共通表示 1 か所を想定）
-- **パーティ HUD スロット行** — クラス名 + HP 等。**メンバー別 `Lv{n}` 表記は廃止**。プレイヤー Lv / Exp は HUD 内の共通表示（レイアウト TBD）
+- **パーティ HUD スロット行** — クラス名 + HP 等。**メンバー別 `Lv{n}` 表記は廃止**。プレイヤー Lv / Exp は HUD 内の共通表示（レイアウト TBD）。**クラス名またはクラスアイコン**クリックで **当該スロットのクラス名直上**に **戦闘中実効ステ**（HP 現在/Max・ATK/DEF/REG/SPD + 右列補正）— [battle-field.md §7.1.1](battle-field.md#711-戦闘中ステータスparty-hud-クリック)
 - **パーティ編成メニュー**（`SkillMenuPanel`）— 画面設計の正本は [party-formation-ui.md](party-formation-ui.md)（Phase 4d）。ヘッダーに **`プレイヤー Lv {n}` のみ**（Exp バーは編成画面に出さない）
   - **HP** のみ英字表記、それ以外は日本語（攻撃力 / 防御力 / 魔法耐性 / 攻撃速度）
   - 攻撃速度は内部略称 **SPD**（`attackSpeedTier`）。UI では 5 段階ラベル（遅い〜早い）
-  - 編成画面ではスキル buff 込みの実効値は表示しない（素のクラス + `playerProgress.level`）
+  - 編成画面ではスキル buff 込みの実効値は表示しない（素のクラス + `playerProgress.level`）。**戦闘 HUD クリックパネル**は buff/debuff 込みの実効値 + 補正差分を表示（[battle-field.md §7.1.1](battle-field.md#711-戦闘中ステータスparty-hud-クリック)）
 - ステージクリア / LvUP / ステージロールバックのログ（console）
 
 ---
