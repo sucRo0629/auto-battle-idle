@@ -5,7 +5,7 @@
 ## Phase 1（完了）
 
 - セーブなし・EXP/Lv なしの戦闘サンドボックス。
-- Victory / Defeat 後、3 秒待って HP 全回復し同一ウェーブ再スポーン。
+- Victory / Defeat 後、3 秒待って HP 全回復し同一ウェーブ再スポーン（**Phase 6d 以降はリザルト → マップ導線に置換**）。
 - 描画：アニメーション基盤 + ロール別プレースホルダー（本番スプライトは Phase 6）。
 
 ---
@@ -15,9 +15,29 @@
 ### ステージ進行
 
 - `stages.json` に順序付きステージを定義。
-- **Victory** → 次のステージへ進行（最終ステージの次は同ステージを周回）。`totalClears` を +1。
-- **Defeat** → `currentStageId` を 1 つ前のステージへロールバック（先頭ステージでは据え置き）。
-- 戦闘終了後は 3 秒待って HP 全回復し再スポーン（Phase 1 と同様）。
+
+**Phase 2（放置 MVP）— レガシー。Release M1 前の Phase 6d で置き換え**
+
+以下は **Phase 2 当時の放置型プロトタイプ** 向けルール。現行コードに残っているが、**本番導線（Phase 6d）の正本ではない**。
+
+| ルール | レガシー挙動（現行コード） | Phase 6d 以降（目標） |
+| ------ | -------------------------- | --------------------- |
+| Victory 後 | `currentStageId` を **自動で次ステージ**へ更新（最終後は同ステージ周回）。`totalClears` +1 | 報酬・クリア記録は即時。**次ステージの出撃はマップ選択**（自動で `currentStageId` を進めない） |
+| Defeat 後 | `currentStageId` を **1 つ前へ自動ロールバック**（先頭は据え置き） | ロールバックルール自体は維持可。**リザルト → マップ**で明示。戦闘への即再開なし |
+| 戦闘終了後 | **3 秒待機 → HP 全回復 → 同一画面で再スポーン**（Phase 1 継承） | 勝利演出後 **リザルト画面**。再戦は **マップ → 編成 → 出撃** |
+
+**レガシー実装の主な所在（Phase 6d で改修）**
+
+| 箇所 | 内容 |
+| ---- | ---- |
+| `BattleEngine` | `RESTART_DELAY_SEC = 3` → `respawnAfterEnd()` で **無入力再開** |
+| `applyVictoryRewards` / `handleVictory` | 勝利時に `getNextStageId` で **`currentStageId` 自動更新** |
+| `applyStageRollbackOnDefeat` / `handleDefeat` | 敗北時に **自動ロールバック**（セーブ更新） |
+| ステージ選択（リリース） | **UI なし**。`currentStageId` は自動進行のみ |
+| `DebugMenuPanel` | **verify ON 時のみ**。「周回ステージ」`<select>` + Wave 固定（`setLoopStage` / `setLoopWave`）。本番マップ（6d）の暫定代替 |
+| `GameSession.start()` | 起動 **即 `startBattle()`**（トップ / マップなし） |
+
+詳細な画面遷移は [phase-roadmap.md §6d](../plans/phase-roadmap.md#6d--画面構成導線release-m1) を正とする。
 
 ### EXP 報酬
 
@@ -65,7 +85,7 @@ interface SaveGameState {
     classId: ClassId;
     build: CharacterBuild;
   }[];
-  stageRecords?: Record<StageId, StageRecord>; // Phase 11c
+  stageRecords?: Record<StageId, StageRecord>; // Phase 6d 記録 / Phase 12c UI 拡張
   options?: {
     instantLv20?: boolean;
     levelSync?: boolean;
@@ -98,6 +118,7 @@ interface SaveGameState {
 ### 進行 UI
 
 - 現在ステージ名（Canvas 左上）
+- **ステージ選択** — **本番 UI なし**。リリースモードではセーブ上の `currentStageId` と勝利時自動進行のみ。**確認モード（verify ON）** では `DebugMenuPanel`（`BattleView` 内）の **周回ステージ** `<select>` で任意ステージをピン留め可能（`GameSession.setLoopStage`）。Wave 固定・プレイヤー Lv 変更も同パネル。**Phase 6d** でリリース向けマップ選択を追加し、本番導線では `DebugMenuPanel` を出さない（**Phase 7** demo ビルド）
 - **プレイヤー共通 Lv（数値）+ Exp バー（戦闘 HUD）** — Exp バーの具体レイアウトは **TBD**（HUD 内の共通表示 1 か所を想定）
 - **パーティ HUD スロット行** — クラス名 + HP 等。**メンバー別 `Lv{n}` 表記は廃止**。プレイヤー Lv / Exp は HUD 内の共通表示（レイアウト TBD）。**クラス名またはアイコン+HP 行**へマウスオーバーで **当該スロットのクラス名直上**に **戦闘中実効ステ**（HP 現在/Max・ATK/DEF/REG/SPD + 右列補正）— [battle-field.md §7.1.1](battle-field.md#711-戦闘中ステータスparty-hud-クリック)
 - **パーティ編成メニュー**（`SkillMenuPanel`）— 画面設計の正本は [party-formation-ui.md](party-formation-ui.md)（Phase 4d）。ヘッダーに **`プレイヤー Lv {n}` のみ**（Exp バーは編成画面に出さない）
@@ -241,30 +262,107 @@ finalStat = Lv1 基準値（classes.json）
 
 ---
 
-## Phase 11 — 解法評価メタ（07582b6）
+## Phase 12 — 解法評価メタ（07582b6）
 
-Phase 6 完了後に着手。**Lv / Exp 正本は Phase 2 の `playerProgress`**（[上記](#プレイヤーレベルplayerprogress)）。本 Phase は Stage Records とオプションの **実装**（schema 移行・`resolveEffectiveLevel`・HUD Exp 表示等）。タスク境界は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 11b / 11c。設計思想は [design-philosophy.md](../design-philosophy.md)、Player Level / Stage Records の概要は [system-mechanics.md](../system-mechanics.md)。
+Phase 8 完了後に着手（[phase-roadmap.md](../plans/phase-roadmap.md) Phase **12b / 12c**）。**Lv / Exp 正本は Phase 2 の `playerProgress`**（[上記](#プレイヤーレベルplayerprogress)）。Stage Records の **データ更新は Phase 6d（Victory 時）** から開始。Instant Lv20 / Level Sync の戦闘反映と横断 UI は 12b / 12c。設計思想は [design-philosophy.md](../design-philosophy.md)、概要は [system-mechanics.md](../system-mechanics.md)。
 
 ### Instant Lv20 / Level Sync
 
-- **Instant Lv20** — 任意オプション。戦闘計算・習得表示を Lv20 扱いにする（編成検証・周回削減用）。セーブ上の実 `playerProgress.level` は変えない。
-- **Level Sync** — 任意オプション。`effectiveLevel = min(playerProgress.level, stage.recommendedLevel)` で戦闘ステ・習得判定を行う。育成差を除外し編成解法を検証する。
+- **Instant Lv20** — 任意オプション（**Phase 12b**）。戦闘計算・習得表示を Lv20 扱いにする（編成検証・周回削減用）。セーブ上の実 `playerProgress.level` は変えない。
+- **Level Sync** — **出撃ごと** にステージ詳細のチェックで指定（[stage-selection-ui.md §4](stage-selection-ui.md#4-レベルシンクチェックボックス)）。`effectiveLevel = min(playerProgress.level, stage.recommendedLevel)` で戦闘ステ・習得判定。`levelSyncUsed` を履歴に記録。
 
 ### Stage Records
 
-ステージ ID ごとに攻略履歴を保持する。主要指標は **最低クリアレベル**（`playerProgress.level` の実値。Level Sync 中の effective Lv ではない）。
+ステージ ID ごとに **2 枠のベスト記録** を保持する。各枠は **更新されるまでずっと残す**（新規クリアがその枠を上回らなければ上書きしない）。集約指標の主指標は **最低クリアレベル** = 低レベル枠の `clearLevel`。
+
+#### 記録するレベル（`clearLevel`）
+
+**`clearLevel` = その出撃でステージをクリアした実効レベル**（戦闘・習得判定に使った Lv）。`playerProgress.level`（アカウント Lv）そのものではない。
+
+Victory 確定時に、当該 sortie のオプションを入力として **`resolveEffectiveLevel`**（Phase 12b で単一経路化）と同じ式で求める。
+
+| 出撃オプション | `clearLevel` |
+| -------------- | ------------ |
+| Level Sync **OFF** | `playerProgress.level` |
+| Level Sync **ON** | `min(playerProgress.level, stage.recommendedLevel)` |
+| Instant Lv20 **ON**（Phase 12b） | `20`（他オプションと併用時の優先順位は 12b で `resolveEffectiveLevel` に固定） |
+
+例: アカウント Lv 35・想定 Lv 20・Level Sync ON → **`clearLevel = 20`**（記録・☆・最低 Lv 集計すべて 20 として扱う）。
+
+#### データ形状
 
 ```typescript
+/** ステージ JSON（6b / 8b 以降） */
+interface StageDef {
+  id: string;
+  displayName: string;
+  waves: StageWave[];
+  recommendedLevel?: number; // 想定レベル。☆ 判定・Level Sync 上限
+}
+
+/** 1 回の勝利ごとに 1 件追加 */
+interface StageClearEntry {
+  clearLevel: number; // 勝利時の実効 Lv（上記 §記録するレベル）
+  clearTimeMs: number; // 戦闘開始〜全 Wave クリア
+  partyClassIds: ClassId[]; // 編成 4 スロット順（空き枠は null 不可 — 勝利時 4 人前提）
+  levelSyncUsed: boolean;
+  atRecommendedLevel: boolean; // clearLevel <= recommendedLevel（実効 Lv 基準）
+}
+
 interface StageRecord {
-  firstClearLevel?: number;
-  lowestClearLevel?: number;
-  bestTimeMs?: number;
-  latestPartyClassIds?: ClassId[];
-  levelSyncClear?: boolean;
+  /** 低レベルクリア枠（1 件）— 史上最低 clearLevel の run */
+  lowestLevelClear?: StageClearEntry;
+  /** 最短タイム枠（1 件）— 史上最短 clearTimeMs の run */
+  fastestTimeClear?: StageClearEntry;
 }
 ```
 
-`stages.json` に `recommendedLevel` を追加する。ソート既定: `lowestClearLevel ASC` → `bestTimeMs ASC`。
+同一 run が両枠を保持しているときは **同内容を 2 フィールドに持ってよい**（リザルト表示では 1 行にまとめてよい）。
+
+セーブ: `stageRecords?: Record<StageId, StageRecord>`。
+
+#### 2 枠の更新ルール（Victory 時）
+
+新規 `StageClearEntry` を生成したあと、枠ごとに **現 holder と比較** する。敗北では更新しない。
+
+| 枠 | 更新条件（新記録が現 holder を置き換える） |
+| -- | -------------------------------------------- |
+| **低レベルクリア** (`lowestLevelClear`) | `clearLevel` がより **低い**。同 Lv なら `clearTimeMs` がより **短い** |
+| **最短タイム** (`fastestTimeClear`) | `clearTimeMs` がより **短い**。同タイムなら `clearLevel` がより **低い** |
+
+- 枠が空（初クリア）ならその run で埋める。
+- 条件を満たさない新規クリアは **その枠を更新しない**（他枠のみ更新されうる）。
+- **Release M1（体験版）** からリザルト記録・2 枠表示を **必須**（Phase **6d**）。
+
+#### Victory 時の手順
+
+1. 勝利確定後、当該 sortie から **`clearLevel`（実効 Lv）** を算出。
+2. `StageClearEntry` を 1 件生成（`atRecommendedLevel` = `recommendedLevel` ありかつ `clearLevel <= recommendedLevel`）。
+3. 上記 **2 枠の更新ルール** で `lowestLevelClear` / `fastestTimeClear` をそれぞれ判定・更新。
+4. 敗北では更新しない。
+
+#### リザルト・詳細の表示
+
+- **最大 2 行**（低レベル枠・最短枠。同一 run なら **1 行** にまとめてよい）。
+- ラベル例: 「最低 Lv」「最速」— i18n は **4e**。
+- 行内ソート（2 行あるとき）: **`clearLevel` ASC** → **`clearTimeMs` ASC**。
+- マップ一覧のサマリー: `lowestLevelClear.clearLevel` / `fastestTimeClear.clearTimeMs`。
+
+ステージ横断の Records 一覧（Phase 12c）は、各ステージの低レベル枠・最短枠を集約して表示する。マップ一覧のステージ並びは **JSON 配列順** のまま（[stage-selection-ui.md §2](stage-selection-ui.md#2-マップ一覧)）。
+
+#### 適正クリアマーク（☆）
+
+- **適正クリア:** `atRecommendedLevel === true` — 記録 **`clearLevel`（実効 Lv）≤ `recommendedLevel`**。
+- UI: 履歴行とマップ一覧に ☆（[stage-selection-ui.md §5](stage-selection-ui.md#5-適正クリアマーク)）。
+- Level Sync ON で実 Lv が想定超過でも、**`clearLevel` が想定以下なら ☆ あり**（実際にその Lv 帯でクリアした記録として扱う）。
+
+#### 実装フェーズ
+
+| 内容 | Phase |
+| ---- | ----- |
+| `recommendedLevel` 投入（体験版ステージ） | **6b** |
+| Victory 時 `stageRecords` 更新、リザルト / 詳細の **2 枠** 表示（**M1 必須**） | **6d** |
+| Instant Lv20、横断 Records UI、`resolveEffectiveLevel` 一本化 | **12b / 12c** |
 
 ---
 
@@ -287,3 +385,6 @@ Phase 9 完了後に着手。メインモードのステージ進行・EXP と�
 | 統計 UI Exp 行 | なし（戦闘詳細は Threat / ダメージ / 全状態バッジ） | `PartyMemberStatsDisplay` の Exp ラベル（あれば） |
 | Victory EXP | `playerProgress.exp` 加算 | `member.progress.exp` への加算 |
 | 習得 / 成長 Lv 入力 | `playerProgress.level` | `member.progress.level`（`skillBuild.ts` / `entities.ts` 等） |
+| ステージ進行 UX | Phase 6d — マップハブ・リザルト経由 | Phase 2 放置 MVP — 勝利で `currentStageId` 自動更新 + 3 秒後 `respawnAfterEnd`（[§ステージ進行](#ステージ進行)） |
+| ステージ選択 UI | Phase 6d マップ + 詳細 spec | 本番 UI なし + verify 時 `DebugMenuPanel`（[§進行 UI](#進行-ui)） |
+| `stageRecords` | Phase 6d — **2 枠**（低レベル / 最速）、M1 必須 | 未実装 |

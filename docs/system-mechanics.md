@@ -72,49 +72,37 @@ passive / active は付け替え・セット・装備変更ではなく、**習�
 
 ## Stage Records
 
-プレイヤーの攻略履歴を保存する。
+プレイヤーの攻略履歴を保存する。本作はタイムアタックではなく、攻略理解度を評価する。
 
-本作はタイムアタックではなく、攻略理解度を評価する。
+**正本:** データ形状・Victory 更新・ソート・☆ 判定は [spec/progression.md §Stage Records](spec/progression.md#stage-records)。ステージ詳細 / マップ / リザルト UI は [spec/stage-selection-ui.md](spec/stage-selection-ui.md)。
 
-保存項目は次の通り。
+### 保存単位
 
-- First Clear Level
-- Lowest Clear Level
-- Best Time
-- Latest Party
-- Level Sync Clear
+- ステージごとに **2 枠** — **低レベルクリア 1 件**と**最短タイム 1 件**。各枠は **更新されるまでずっと保持**（[progression.md §2 枠の更新ルール](spec/progression.md#2-枠の更新ルールvictory-時)）。
+- 1 勝利 = 両枠を個別に判定。同一 run が両方を持てば **実質 1 行**表示。
+
+### 表示
+
+- **リザルト / 詳細:** 最大 2 行（ラベル「最低 Lv」「最速」）。2 行あるときの並び: **クリア Lv 昇順 → タイム昇順**。
+- **☆:** 各記録の `atRecommendedLevel`、またはマップ一覧で適正クリア履歴あり。
+- **集約:** 低レベル枠の Lv / 最短枠のタイムをマップサマリーに表示。
 
 ### Record Example
 
-Stage 5-12
+Stage 5-12（想定 Lv 20）
 
-First Clear Lv: 24
+| 枠 | ☆ | Lv | タイム | 編成 |
+| -- | - | -- | ------ | ---- |
+| 最低 Lv | ☆ | 20 | 01:43 | 剣術士 / 鉄衛士 / 療養師 / 弓術士 |
+| 最速 |   | 22 | 01:12 | 剣術士 / 護法士 / 療養師 / 魔術師 |
 
-Lowest Clear Lv: 20
-
-Best Time: 01:43
-
-Latest Party:
-
-- Warrior
-- Defender
-- Geomancer
-- Healer
-- Ballista
-
-Level Sync Clear: ✓
-
-### ソート順
-
-デフォルト表示順は `Lowest Clear Level ASC`、次に `Best Time ASC` とする。
+同一 run が両記録なら **1 行**（最低 Lv + 最速）。
 
 ### 設計意図
 
-最低クリアレベルを主達成指標とする。
+最低クリアレベルを主達成指標とする（[design-philosophy.md](design-philosophy.md) §5）。
 
-クリアタイムは補助的な遊び方として扱う。
-
-レベルシンククリアは高難度達成として扱う。
+クリアタイムは補助指標。レベルシンクは出撃前チェックで任意（記録は `levelSyncUsed`）。
 
 ## 確率判定と確定結果
 

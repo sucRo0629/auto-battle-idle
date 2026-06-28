@@ -15,7 +15,7 @@ Hensei Only の開発フェーズ一覧。**Phase 1〜12 は番号順**（概要
 | **3**  | Lv アップ時スキル習得、習得済み passive / active 常時使用枠（各最大 4）+ クラス別スキル再設定 | **完了**                        |
 | **4**  | クラスマスタ + スキル説明 + 編成 UI + **i18n（4e）**；4a **確定済** / 4c **完了** / 4b 説明 / **4d ほぼ完了** | **進行中**（4d 目視確認・**4e / Release M1 準備**） |
 | **5**  | 演出アセット + VFX PNG + **演出調整ツール**；**5d Combat Feedback**（Damage / Event Popup）   | **基盤のみ**（本番 PNG 未実装） |
-| **6**  | **体験版コンテンツ（Release M1）** — 敵・**体験版専用ステージ**・Lv1 バランス（8 クラス）     | 未着手                          |
+| **6**  | **体験版コンテンツ（Release M1）** — 敵・**体験版専用ステージ**・Lv1 バランス（8 クラス）・**画面導線** | 未着手                          |
 | **7**  | **デスクトップ配布** — Electron パッケージ（itch 向け zip）                                   | 未着手（Release M1 直前）       |
 | **8**  | **初版本編コンテンツ（Release M2）** — 敵拡張・**本編 Chapter 1 ステージ**・Lv1 バランス（13 クラス）・編集 GUI | 未着手                          |
 | **9**  | 印術師・法陣師の独自システム実装（**9a** / **9b**）                                         | 未着手                          |
@@ -25,7 +25,7 @@ Hensei Only の開発フェーズ一覧。**Phase 1〜12 は番号順**（概要
 
 全フェーズ共通のスコープ外：アイテム、装備、ショップ、インベントリ、クリティカル、命中/回避ロール。
 
-**開発優先:** **Release M1（体験版）** へ向けて **Phase 4d 仕上げ → Phase 4e（英語 i18n）→ Phase 6（体験版ステージ・敵・バランス）→ Phase 7（zip ビルド）→ itch.io 公開**。**Release M2** は **Phase 8（本編ステージ・13 クラスバランス）**。体験版と本編のステージ JSON は **別管理**（§Phase 6 / §Phase 8）。ジャンルは **編成解法型オートバトル RPG**。最初の完成単位は **Lv1 章**（Lv10 / Lv20 スキルは実装済みだがコンテンツ・調整は M3 以降）。
+**開発優先:** **Release M1（体験版）** へ向けて **Phase 4d 仕上げ → Phase 4e（英語 i18n）→ Phase 6（体験版ステージ・敵・画面導線・バランス）→ Phase 7（zip ビルド）→ itch.io 公開**。**Release M2** は **Phase 8（本編ステージ・13 クラスバランス）**。体験版と本編のステージ JSON は **別管理**（§Phase 6 / §Phase 8）。ジャンルは **編成解法型オートバトル RPG**。最初の完成単位は **Lv1 章**（Lv10 / Lv20 スキルは実装済みだがコンテンツ・調整は M3 以降）。
 
 ---
 
@@ -102,6 +102,7 @@ Hensei Only の開発フェーズ一覧。**Phase 1〜12 は番号順**（概要
 - **6a** — 体験版に必要な敵テンプレ
 - **6b** — **体験版専用**ステージ（`data/stages-demo.json` 等。**本編 `stages.json` とは別**）
 - **6c** — Lv1・解禁 8 クラスのバランス + M1 ステージ調整
+- **6d** — **画面構成・導線**（トップ → マップ選択 → 編成 → 戦闘 → **リザルト（2 枠記録: 低レベル / 最速）** → マップ）
 - **7** — `BUILD_FLAVOR=demo`、デバッグ UI 無効、体験版終了画面、itch 用 Windows zip
 
 **M1 スコープ外:** 変則 4・弩砲士・Chapter 1 後半、Lv10 / Lv20 進行、印術師・法陣師、Steam、DLsite（任意）
@@ -137,11 +138,11 @@ Hensei Only の開発フェーズ一覧。**Phase 1〜12 は番号順**（概要
 - スキル枠：**basic**（非表示・常時稼働）+ **習得済み passive / active 枠**（各 Lv 段階解放、HUD に active CD 表示）
 - パッシブも active と同じ Lv0=2 / Lv10=3 / Lv20=4 の段階解放
 - ステータス効果：`atk`, `def`, `damageTaken` への buff / debuff
-- Victory / Defeat → 3 秒待機 → HP 全回復 → 再スポーン（Phase 2 でセーブ連動の進行ルールを追加）
+- Victory / Defeat → 3 秒待機 → HP 全回復 → 再スポーン（Phase 2 でセーブ連動の進行ルールを追加。**本番 UX は Phase 6d で刷新**）
 - Canvas 2D：**アニメーション基盤**（`SpriteAnimator`、イベント連動、近接突進/遠隔弾、ダメージポップアップ）
 - **プレースホルダースプライト**（ロール別色分け PNG。本番ドット絵は Phase 5）
-- **戦闘 VFX**（PNG strip `sheets/vfx/`、64×64）
-- buff VFX：対象スプライトの白い光（約 0.8 秒）
+- **戦闘 VFX**（PNG strip `sheets/vfx/`、64×64）— パイプライン基盤のみ。本番 PNG は Phase 5
+- **確認用 buff glow（暫定）:** `showBuffGlow` 白い光（約 0.8 秒）。VFX 未投入時の目視検証用。本番は `vfx` / `hitVfx` で置換（[combat.md](../spec/combat.md#確認用プレースホルダー演出vfx--body-strip-未投入時)）
 - Canvas UI：ステージ名（左上）、パーティ HUD（クラス名 / Exp / HP / スキル CD）
 - バトルログ：**console のみ**（DOM ログは意図的に未実装）
 
@@ -172,8 +173,7 @@ data/    → loadGameData.ts が JSON マスタを読み込み
 
 - オートセーブ / ロード（`localStorage`、確認/リリース別キー）
 - 複数ステージ：`stages.json` の順序で `currentStageId` を管理
-- **Victory** → 次ステージへ進行（最終後は同ステージ周回、`totalClears` +1）
-- **Defeat** → 1 つ前のステージへロールバック（先頭では据え置き）
+- **Victory / Defeat の自動進行・3 秒再スポーン** — Phase 2 放置 MVP。**Phase 6d で UX 刷新**（[progression.md](../spec/progression.md) §ステージ進行）
 - 勝利時、撃破敵 `exp` 合計を **`playerProgress.exp` に加算**（[progression.md](../spec/progression.md)）。メンバー別 LvUP は廃止
 - LvUP で **maxHp / atk / def のみ上昇**（スキル習得は Phase 3）
 - 進行 UI：ステージ名、プレイヤー共通 Lv / Exp（戦闘 HUD）。編成は Lv のみ
@@ -477,7 +477,7 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 2. インフラ — `entityAnimLayout.json`、body atlas 描画、スキル strip 64px、`animStartFrame`
 3. 演出調整ツール MVP（プレースホルダー PNG でもタイミング調整可）
 4. VFX PNG — `sheets/vfx/` に strip 投入、スキル JSON の `vfx` / `hitVfx` / `basicAttackVfx` と対応付け
-5. 確定クラス / 敵ごと — `bodies/` → `basic_attack` → 各 active → VFX → 演出ラボで詰め → 本番 battle 目視
+5. 確定クラス / 敵ごと — `bodies/` → `basic_attack` → 各 active → VFX → 演出ラボで詰め → 本番 battle 目視。スキル単位で VFX / body strip が揃った effect は確認用 `showBuffGlow`・attack 跳ねに頼らない（[combat.md §確認用プレースホルダー](../spec/combat.md#確認用プレースホルダー演出vfx--body-strip-未投入時)）
 
 ### Phase 1 との境界
 
@@ -528,13 +528,14 @@ Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦�
 
 体験版は **ビルド側でステージ上限** を設けるだけでなく、**コンテンツ JSON 自体を本編と分ける**。本編 `stages.json` に体験版用ステージを混在させない。
 
-進行ルールは [progression.md](../spec/progression.md) Phase 2 の `currentStageId` 連鎖を正とする（demo 用セーブキーは Release 節参照）。
+進行ルールの **データ正本**（Exp・ロールバック・`totalClears`）は [progression.md](../spec/progression.md) を参照。**戦闘後の自動次ステージ進行・即再スポーンは Phase 2 レガシー** — Phase 6d で廃止（同 doc §ステージ進行）。
 
 | サブフェーズ | 内容 | Release |
 | ------------ | ---- | ------- |
 | **6a** | 敵テンプレ — 体験版ステージに必要な `enemies.json` エントリ。`EnemyEditorStep` 経由 | M1 |
 | **6b** | **体験版固定ステージ** — `stages-demo.json`（または同等）。M1 解禁 8 クラス・Lv0 スキルのみで解ける問題。変則・弩砲不要 | M1 |
 | **6c** | **体験版バランス** — Lv1 キャップ、解禁 8 クラス、6b ステージの数値 polish | M1 |
+| **6d** | **画面構成・導線** — トップ / マップ選択 / 編成 / 戦闘 / リザルトの遷移。M1 体験版のプレイ導線 | M1 |
 
 ### 6a — 敵テンプレ（体験版）
 
@@ -545,7 +546,8 @@ Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦�
 ### 6b — 体験版ステージ
 
 - **本編 `stages.json` とは別ファイル** に Chapter 1 **体験版分** のみ定義
-- 各ステージ：`id` / `displayName` / `waves[]` / `enemies[]`（`templateId` + `spawnX`）。座標は [battle-field.md](../spec/battle-field.md)
+- 各ステージ：`id` / `displayName` / `waves[]` / `enemies[]`（`templateId` + `spawnX`）。**`recommendedLevel`（想定 Lv）** — Stage Records・☆・Level Sync に必須（[progression.md](../spec/progression.md)、[stage-selection-ui.md](../spec/stage-selection-ui.md)）
+- 座標は [battle-field.md](../spec/battle-field.md)
 - 解法は M1 解禁 8 クラス・Lv0 スキルのみで完結。体験版終了画面で初版（M2）へ誘導
 - 英語 `displayName` は **Phase 4e** と同期
 
@@ -556,11 +558,108 @@ Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦�
 - 解禁 **8 クラス**・**Lv0 スキル**威力 + 6b 敵 `exp`・難易度カーブ
 - **passive / active 枠**（Lv0=2）の UI / 戦闘整合確認
 
+### 6d — 画面構成・導線（Release M1）
+
+**ゴール:** 体験版として **起動からクリアまでの画面遷移** を定義し、現行の「起動即戦闘・敗北後も同一画面で再スポーン」から、プレイヤーが **どこにいるか分かる本番導線** へ移す。
+
+**現状（Phase 4d まで）— Phase 2 放置 MVP のレガシー**
+
+- `GameSession` 起動 → 即 `BattleView` / 自動戦闘開始
+- 編成は戦闘中の Party HUD **編成** ボタン → `MetaMenuOverlay`（[party-formation-ui.md](../spec/party-formation-ui.md) §3）
+- **Victory** → セーブ上の `currentStageId` が **自動で次ステージ**へ（`applyVictoryRewards` / `resolveVictoryNextStageId`）。`BattleEngine` が 3 秒後 **`respawnAfterEnd()`** で **無入力再開**（最終ステージは同ステージ周回）
+- **Defeat** → `currentStageId` **自動ロールバック** 後、同様に 3 秒で再スポーン
+- **ステージ選択 UI なし（リリース経路）** — セーブの `currentStageId` と勝利時の自動進行のみ。**任意ステージの手動選択は確認モード（verify）の `DebugMenuPanel` のみ**（`BattleView` 内・「周回ステージ」`<select>` + 任意で Wave 固定）。開発・検証用の暫定 UI であり、本番マップ画面の代わりではない
+- 専用リザルト / マップ画面なし（[progression.md](../spec/progression.md) §ステージ進行「レガシー」表）
+
+**現状のステージ選択（開発 vs 本番）**
+
+| 経路 | ステージの決まり方 | UI |
+| ---- | ------------------ | -- |
+| **リリースモード**（verify OFF） | 初回は `stages[0]`。以降は勝利で自動次ステージ / 敗北でロールバック | **選択 UI なし**（Canvas 左上にステージ名表示のみ） |
+| **確認モード**（verify ON） | `DebugMenuPanel` で **周回ステージ** をピン留め可能（`GameSession.setLoopStage`）。未選択時は上記と同じ自動進行 | `src/ui/DebugMenuPanel.ts` — 全ステージ `<select>`、「通常進行」、Wave 固定、プレイヤー Lv 変更 |
+
+Phase 6d の **マップ選択** は上記リリース経路向けの本番 UI。`DebugMenuPanel` のステージ選択は **Phase 7（`BUILD_FLAVOR=demo`）で無効化** 対象の開発 UI として残すか、verify 専用に限定する。
+
+**Phase 6d で廃止するレガシー**
+
+| 廃止対象 | 現行 | 6d 後 |
+| -------- | ---- | ----- |
+| 勝利後の自動 `currentStageId` 更新 | クリアと同時に次 ID へ | クリア記録・解放のみ。**出撃ステージはマップで選択** |
+| `BattleEngine.respawnAfterEnd` による連戦 | 3 秒待ち → `reloadBattlefield()` | リザルト表示 → プレイヤー操作でマップへ |
+| 起動即戦闘 | `GameSession.start()` → `startBattle()` | トップ / マップ経由で初回出撃 |
+| 本番向けステージ選択 UI | **なし**（自動進行のみ）。開発時は `DebugMenuPanel`（verify ON 時のみ） | **マップ選択**（`DebugMenuPanel` の周回ステージは verify 専用に残す想定） |
+
+**目標フロー（M1 ざっくり）**
+
+メインモードのループは **マップ選択をハブ** にする。
+
+```mermaid
+flowchart LR
+  title["トップ画面"]
+  map["マップ選択"]
+  party["編成選択"]
+  battle["戦闘"]
+  result["戦闘結果"]
+  demoEnd["体験版終了"]
+
+  title -->|"Continue / 初回"| map
+  map -->|"出撃（ステージ確定）"| party
+  party -->|"戦闘開始"| battle
+  battle -->|"勝敗確定"| result
+  result -->|"続ける"| map
+  map -->|"最終ステージクリア後"| demoEnd
+```
+
+| 画面（案） | 役割 | 備考 |
+| ---------- | ---- | ---- |
+| **トップ** | 起動・タイトル・Continue / New Game・設定（locale 等） | セーブあり時は Continue を主導線 |
+| **マップ選択** | `stages-demo.json` のステージ一覧・**詳細（想定 Lv・敵・履歴・Level Sync）**・出撃 | [stage-selection-ui.md](../spec/stage-selection-ui.md)。`recommendedLevel` は **6b** |
+| **編成選択** | 4 人編成の確認・変更 | UI 正本は [party-formation-ui.md](../spec/party-formation-ui.md)（`SkillMenuPanel`）。**戦闘前の必須通過点** |
+| **戦闘** | 既存 `BattleView` + Canvas | 自動戦闘。戦闘中の編成ショートカットは **維持可**（マップ経由が主、HUD は差し替え用） |
+| **戦闘結果** | 勝敗・Exp・**ベスト 2 枠**（低レベル / 最速）・☆ | **M1 必須。** Victory 時 `stageRecords` 更新（[progression.md §Stage Records](../spec/progression.md#stage-records)） |
+| **体験版終了** | M1 最終ステージクリア後の初版誘導 | 文言・ストアリンクは **Phase 7**（`BUILD_FLAVOR=demo`）と一体 |
+
+**遷移ルール（案）**
+
+- **マップ → 編成 → 戦闘:** 出撃時に選択ステージを `currentStageId` に反映してから battle 開始。**現行の `DebugMenuPanel` 周回ステージは開発用** — 本番はマップ画面が同等の役割を担う
+- **戦闘 → リザルト:** `battleEnd` 後、進行・報酬適用（既存 `handleVictory` / `handleDefeat`）を済ませてから表示
+- **リザルト → マップ:** 「続ける」でマップへ。戦闘画面への **即再スポーンは廃止**（マップ or 再出撃経由）
+- **最終クリア:** マップから体験版終了画面へ（6b のチェーン末尾と連動）
+
+**実装の切り口（案）**
+
+- `GameSession` 上に **画面状態**（`title` / `map` / `party` / `battle` / `result` / `demoEnd`）を持ち、DOM ルートを切り替える
+- **レガシー削除:** `BattleEngine` の `restartTimer` / `respawnAfterEnd` をリリースビルドでは **リザルト待ち** に差し替え（verify モードはループ検証用に旧経路を残すか要判断）
+- **進行更新の分離:** 勝利報酬（Exp・`totalClears`・クリアフラグ）と **`currentStageId` の更新タイミング** を分ける — ID 更新は **マップで出撃確定時**（またはリザルトから「次へ」明示時）。`applyVictoryRewards` 内の `getNextStageId` 自動代入は廃止
+- 編成は `MetaMenuOverlay` の **ウィンドウ表示を再利用** し、独立画面として `party` 状態で全画面表示
+- マップ・トップ・リザルトは新規 DOM 画面（Canvas 戦闘と排他表示）
+- i18n（**4e**）の対象画面にトップ / マップ / リザルトを追加
+
+**6d と他フェーズの境界**
+
+| 項目 | Phase 6d（M1） | 後続 |
+| ---- | -------------- | ---- |
+| マップ / ステージ詳細 | 一覧・想定 Lv・敵編成・敵概要・Level Sync チェック・出撃 | UI polish・Instant Lv20（**12b**） |
+| クリア履歴 | **M1 必須。** **2 枠**（低レベル 1 / 最速 1、更新されるまで保持）、リザルト / 詳細に表示、☆ | **12c** — 全ステージ横断 Records ビュー |
+| `recommendedLevel` | **6b** で体験版ステージに投入 | **8b** 本編ステージ |
+| 体験版終了 | 遷移先の存在定義 | **Phase 7** — demo ビルド |
+| 編成画面 | [party-formation-ui.md](../spec/party-formation-ui.md) 準拠 | §3 入口更新 |
+
+**6d スコープ外（初期）**
+
+- ワールドマップのビジュアル演出・ノード分岐（リスト選択で足りる）
+- 敵ステータス数値の詳細パネル（概要のみ）
+- 戦闘ログ DOM・リプレイ
+- ローグライク用の分岐マップ（**Phase 10**）
+- 本編（M2）専用の追加画面（8b ステージ数増にマップ UI を流用）
+- Instant Lv20 トグル（**12b**）
+
 ### 進め方
 
 1. **6a** — 6b 設計に必要な敵テンプレのみ
 2. **6b** — 体験版チェーンを JSON 投入 → validate / 戦闘目視
-3. **6c** — 6b と **反復**（ステージ骨格 → 数値 polish）
+3. **6d** — 画面導線の骨格（トップ / マップ / 編成通過 / リザルト）。**6b のステージ ID が決まってから** マップ UI を接続
+4. **6c** — 6b と **反復**（ステージ骨格 → 数値 polish）。導線込みの通しプレイ確認
 
 ### スコープ外（Phase 6）
 
@@ -568,6 +667,7 @@ Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦�
 - ステージ編集 GUI（**Phase 8d**）
 - ローグライク（**Phase 10**）
 - 敵・味方の本番演出 PNG（**Phase 5**）
+- 全ステージ横断 Stage Records UI（**Phase 12c**）
 
 ---
 
@@ -702,7 +802,7 @@ Phase 3 で設計確定済みの **印術師・法陣師** の combat 実装。*
 | サブフェーズ | 内容 | 状態 |
 | ------------ | ---- | ---- |
 | **12b** | schema + `resolveEffectiveLevel` + Instant Lv20 / Level Sync | 未着手 |
-| **12c** | Stage Records — `recommendedLevel`、クリア履歴 UI | 未着手 |
+| **12c** | Stage Records — 全ステージ横断 UI、Instant Lv20 併記 | 未着手 |
 
 **正本:** [progression.md](../spec/progression.md)、[system-mechanics.md](../system-mechanics.md)。Combat Feedback は **Phase 5d**。
 
@@ -711,10 +811,11 @@ Phase 3 で設計確定済みの **印術師・法陣師** の combat 実装。*
 - `playerProgress` 型・マイグレーション・`resolveEffectiveLevel` 単一経路
 - Victory 時 EXP、HUD 共通 Lv / Exp 表示
 
-### 12c — Stage Records
+### 12c — Stage Records（UI 拡張）
 
-- `stages.json` に `recommendedLevel`
-- クリア履歴セーブ、ステージ選択 / リザルト UI（最小 MVP）
+- **6d** で実装する per-stage 履歴・☆ を前提に、**全ステージ横断**の Records 一覧・ソート UI
+- Instant Lv20 との併記（**12b** 後）
+- ステージ選択 / リザルトは [stage-selection-ui.md](../spec/stage-selection-ui.md) を拡張
 
 ### スコープ外（Phase 12）
 
@@ -731,7 +832,7 @@ Phase 3 で設計確定済みの **印術師・法陣師** の combat 実装。*
 ```
 Phase 4d / 4e（編成 UI + 英語 i18n）
     ↓
-Phase 6a → 6b → 6c（体験版 敵 / stages-demo / バランス）
+Phase 6a → 6b → 6d → 6c（体験版 敵 / stages-demo / 画面導線 / バランス）
     ↓
 Phase 7（Electron demo zip）
     ↓

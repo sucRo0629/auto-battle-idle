@@ -22,7 +22,8 @@
 | `battleLayout.ts`, `combatPosition.ts`, `SpriteAnimator`, `IBattleRenderer`, 描画 | [spec/battle-field.md](spec/battle-field.md)                                    |
 | `BattleStatsDrawer.ts`, `PartyMemberStatsDisplay.ts`, 戦闘中統計 DOM           | [spec/battle-field.md](spec/battle-field.md#7-戦闘中統計-ui)                    |
 | `vfxAnimRegistry.ts`, `VfxPlaybackManager`, `presentation/`, `sheets/vfx/`        | [spec/classes-and-skills.md](spec/classes-and-skills.md#スプライト演出アセット) |
-| `data/stages.json`, セーブ, EXP, LvUP                                             | [spec/progression.md](spec/progression.md)                                      |
+| `data/stages.json`, セーブ, EXP, LvUP, `stageRecords`                          | [spec/progression.md](spec/progression.md)                                      |
+| マップ選択・ステージ詳細・リザルト履歴 DOM（Phase 6d 予定）                    | [spec/stage-selection-ui.md](spec/stage-selection-ui.md)                        |
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, `gameTermGlossary.ts` 等、編成メニュー DOM | [spec/party-formation-ui.md](spec/party-formation-ui.md)（用語辞書: [classes-and-skills.md §UI 用語辞書](spec/classes-and-skills.md#ui-用語辞書)） |
 | `data/enemies.json`, 敵編成・ボス設計の方針                                       | [enemy-design-concept.md](enemy-design-concept.md)                              |
 | ローグライクモード（ラン・問題生成・報酬）                                        | [spec/roguelike-mode.md](spec/roguelike-mode.md)                                |
@@ -56,4 +57,5 @@
 | 戦場・座標         | [spec/battle-field.md](spec/battle-field.md)             |
 | セーブ・EXP        | [spec/progression.md](spec/progression.md)               |
 | パーティ編成 UI    | [spec/party-formation-ui.md](spec/party-formation-ui.md) |
+| ステージ選択 UI    | [spec/stage-selection-ui.md](spec/stage-selection-ui.md) |
 | ローグライクモード | [spec/roguelike-mode.md](spec/roguelike-mode.md)         |

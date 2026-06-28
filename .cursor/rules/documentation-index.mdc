@@ -17,7 +17,8 @@ alwaysApply: false
 | `src/battle/combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット | `docs/spec/combat.md` |
 | `battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `BattleCanvas.ts` | `docs/spec/battle-field.md` |
 | `BattleStatsDrawer.ts`, `PartyMemberStatsDisplay.ts` | `docs/spec/battle-field.md` |
-| `data/stages.json`, セーブ, EXP, LvUP | `docs/spec/progression.md` |
+| `data/stages.json`, セーブ, EXP, LvUP, `stageRecords` | `docs/spec/progression.md` |
+| マップ選択・ステージ詳細・リザルト履歴 UI（Phase 6d） | `docs/spec/stage-selection-ui.md` |
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts` | `docs/spec/party-formation-ui.md` |
 | ローグライクモード | `docs/spec/roguelike-mode.md` |
 | フェーズ計画・完了マーク・次の作業 | `docs/plans/phase-roadmap.md` |

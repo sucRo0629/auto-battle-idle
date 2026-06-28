@@ -1478,6 +1478,8 @@ Conductor は自身でダメージを与えるキャスターではない。
 
 アセットパス・寸法の詳細は [sheets/README.md](../../src/assets/sprites/sheets/README.md)。フェーズ計画は [phase-roadmap.md](../plans/phase-roadmap.md) Phase 6 / 7。
 
+**VFX / body strip 未配置時**の Canvas 暫定演出（白い光・attack 跳ね等）は確認用プレースホルダー。本番は本節のアセット + `playSkillHitFeedback` が正本。発火条件・廃止方針は [combat.md](combat.md#確認用プレースホルダー演出vfx--body-strip-未投入時) を参照。
+
 ### entity 本体（idle / move / death）
 
 - **1 枚 PNG / entity:** `sheets/bodies/{classId|enemyId}.png`

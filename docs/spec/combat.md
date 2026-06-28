@@ -664,8 +664,8 @@ DoT フレーバーは HUD バッジ（`bleed` / `poison` / 汎用 `dot` アイ�
 | 現象 | フィードバック |
 | --- | --- |
 | バリア付与 | HUD バー tier 変化 + VFX（あれば）。console log（確認モード） |
-| buff / debuff 付与 | `showBuffGlow` + HUD バッジ |
-| HoT 付与（初回） | buff glow。tick から heal 数値 popup |
+| buff / debuff 付与 | HUD バッジ + VFX（あれば）。**VFX 未配置時** は確認用 `showBuffGlow`（[§確認用プレースホルダー演出](#確認用プレースホルダー演出vfx--body-strip-未投入時)） |
+| HoT 付与（初回） | 同上（暫定 glow 可）。tick から heal 数値 popup |
 
 ### 確認モード（popup 外）
 
@@ -681,15 +681,24 @@ VFX パラメータ調整・プレビューは **Phase 6 演出調整ツール**
 
 | イベント                 | 演出                                                                                                                       |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| ダメージ（通常攻撃含む） | skill strip（あれば）+ VFX + ダメージポップアップ。`applyFrame` あり時は strip を先に再生し VFX・ポップアップは apply コマ |
-| ダメージ（active）       | skill strip + VFX                                                                                                          |
+| ダメージ（通常攻撃含む） | skill strip（あれば）+ VFX + ダメージポップアップ。`applyFrame` あり時は strip を先に再生し VFX・ポップアップは apply コマ。**strip 未配置時** は確認用 attack 跳ね（[§確認用プレースホルダー演出](#確認用プレースホルダー演出vfx--body-strip-未投入時)） |
+| ダメージ（active）       | skill strip + VFX（未配置時は同上の暫定跳ね）                                                                              |
 | 回復                     | skill strip または VFX + 緑数値ポップアップ（Event ラベルなし）                                                            |
 | バリア付与               | skill strip または VFX + HUD バー tier（数値・Event popup なし）                                                           |
-| buff / debuff            | 対象の白い光（約 0.8 秒）+ HUD バッジ                                                                                      |
+| buff / debuff            | VFX（`vfx` / `hitVfx` 等）+ HUD バッジ。**VFX 未配置時** は確認用白い光（約 0.8 秒）                                       |
 | 回避 / block / 反撃等    | Event ポップアップ（上記 Combat Feedback §）                                                                               |
 | スタン（CC）             | オーバーレイ `stun`                                                                                                        |
 | 死亡                     | entity death 行（body atlas）                                                                                              |
 
 **VFX 再生（`playSkillHitFeedback`）:** `skill` イベントごとに main（actor placement・1 跳目のみ）と hit（target placement・`hitVfx` 未指定時は `vfx` フォールバック）を PNG strip で再生。`scatter` / `chain` / `hitCount` 分散時は各適用タイミングで hit VFX を独立インスタンスとして重ね表示可。
+
+### 確認用プレースホルダー演出（VFX / body strip 未投入時）
+
+付与・命中の**本番**瞬間演出は **スキル VFX**（`playSkillHitFeedback`）および **body strip**（`sheets/skills/`）。`sheets/vfx/` や skill strip が未配置の間、目視検証用に次の Canvas 暫定演出を使う。**本番アセット投入後は VFX / strip へ置き換え、暫定演出は廃止する。**
+
+| 暫定 | 実装 | 主な発火 | 本番置換 |
+| --- | --- | --- | --- |
+| 対象スプライトの白い光（約 0.8 秒） | `BuffGlowManager` / `BattleCanvas.showBuffGlow` | buff / debuff / HoT 初回付与（`BattleView`） | effect `vfx` / `hitVfx` + particles |
+| attack 縦跳ね / idle 揺れ | `placeholderSpriteAnim.ts` | body strip 未設定時の `attack` / `idle` anim | `sheets/skills/{skillId}.png` body strip |
 
 ロジックは `BattleEvent` を発火；`BattleView` が `BattleCanvas` を駆動。`render/` に戦闘ルールは置かない。
