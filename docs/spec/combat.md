@@ -302,7 +302,7 @@ defender のみ baseThreat = floor(baseThreat × 1.2)
 - **被ダメージそのものを全ロール共通の Threat 上昇要因にはしない**
 - 被弾による Threat 維持・上昇は Defender の役割差として扱い、passive `threatControl` または skill で明示する
 - Guardian（`df_guardian_passive_2`）は main tank として被弾・ブロックで Threat を維持し、減衰も遅くする
-- Paladin は `frontThreatFloor` / `frontThreatDecayMultiplier` で前列を sub-defender 化し、Lv0 では前列 block 付与で物理被害を抑える。前列被ダメ軽減は `threatControl` には含めず、必要なら `damageReduction` passive として分離する
+- Paladin は `frontThreatFloor` / `frontThreatDecayMultiplier` で前列を sub-defender 化し、Lv0 では前列 block 付与で物理被害を抑える。前列ダメージ軽減は `threatControl` には含めず、必要なら `damageReduction` passive として分離する
 - 剣術士（`at_warrior_active_1`）は `threatBurstScale` で burst 時のみ一時 overtaking する
 
 ### 敵ターゲット選定
@@ -331,7 +331,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 
 | 表示 | 場所 | ルール |
 | ---- | ---- | ------ |
-| **簡易（Party HUD）** | `PartyHudPanel` | 固定 **1 行・5 スロット幅**（最大 4 バッジ + 第 5 枠 `+N`）。クラス名・バッジ行はスロット全幅、24px クラスアイコンは HP/リキャスト行の左（下端揃え）。`overflowCount = max(0, badges.length − 4)` |
+| **簡易（Party HUD）** | `PartyHudPanel` | 固定 **1 行・5 スロット幅**（最大 4 バッジ + 第 5 枠 `+N`）。クラス名・バッジ行はスロット全幅、24px クラスアイコンは HP/リキャスト行の左（下端揃え）。`overflowCount = max(0, badges.length − 4)`。**各バッジ（および `+N` 枠）ホバーで表示名ツールチップ**（バッジ直上・クラス名付近、`resolveStatusDisplayCategoryLabel` / `+N` は省略分を `、` 連結） |
 | **簡易（敵）** | `BattleCanvas` HP バー直上 | **14×14px** スロット（`FIELD_ENEMY_STATUS_BADGE_ICON_SIZE`）。累積数・`+N` は **12×12px 枠**・**1px** ビットマップアウトライン（`FIELD_ENEMY_STACK_LABEL_*`）。Party HUD 累積数は 20px 枠・2px アウトラインのまま。固定 **1 行・4 スロット幅**（最大 3 バッジ + 第 4 枠 `+N`）。HP バー top を anchor に `STATUS_BADGE_GAP` 分だけ上へ配置。**重なり時も位置調整しない**。`overflowCount = max(0, badges.length − 3)` |
 | **詳細** | 戦闘詳細（`BattleStatsOverlay` / `DebugMenuPanel` 内 `PartyMemberStatsDisplay`） | **全件**表示。debuff / buff でラベル付き行を分け、パネル幅内で flex-wrap 折り返し |
 
@@ -526,9 +526,9 @@ multiLock × P3 × P4 の複数 Hit ごとに P2/P3/P4 は意図通り独立発�
 
 **HP ゲート省略規則:** `bonusBasicAttackConditions` のみで `bonusBasicAttackHpRatio` を省略した場合は HP ゲートをスキップ（例: 弓術士 P4 二の矢）。conditions も HP も省略時は従来どおり `bonusBasicAttackHpRatio` 未指定 = 0.3（双刃士 P4 無慈悲な刃）。
 
-### 追撃モード（`buffSubKind: "allyAttackFollowUp"`）
+### 追撃状態（`buffSubKind: "allyAttackFollowUp"`）
 
-アクティブ effect。自身へ overlay `allyAttackFollowUp`（表示名例: 追撃モード）を付与し、持続中のみ近傍味方の通常攻撃を監視して追撃する。槍術士 A4（`at_lancer_active_4`）が正本。
+アクティブ effect。自身へ overlay `allyAttackFollowUp`（表示名例: 追撃状態）を付与し、持続中のみ近傍味方の通常攻撃を監視して追撃する。槍術士 A4（`at_lancer_active_4`）が正本。
 
 | 項目 | 挙動 |
 | ---- | ---- |
@@ -538,7 +538,7 @@ multiLock × P3 × P4 の複数 Hit ごとに P2/P3/P4 は意図通り独立発�
 | 追撃内容 | 槍術士が **通常攻撃（basic）を 1 回**、**味方と同じターゲット**へ実行（`pendingHitQueue`） |
 | 頻度 | 味方 1 攻撃につき最大 1 回（chance なし） |
 | 非再帰 | 追撃由来 basic は `suppressAllyAttackFollowUp` 付き pending Hit とし、再度追撃を発火しない |
-| DEF debuff | 追撃モード中、槍術士自身の basic（追撃含む）が敵に `appliedDamage > 0` で命中した相手へ DEF stat debuff。倍率 `followUpDefDebuffMultiplier`（未指定 **0.95**）、持続 `followUpDefDebuffDurationSec`（未指定 5 秒） |
+| DEF debuff | 追撃状態中、槍術士自身の basic（追撃含む）が敵に `appliedDamage > 0` で命中した相手へ DEF stat debuff。倍率 `followUpDefDebuffMultiplier`（未指定 **0.95**）、持続 `followUpDefDebuffDurationSec`（未指定 5 秒） |
 
 `knockback` は A2 崩勢へ移管済み。A4 には含めない。
 

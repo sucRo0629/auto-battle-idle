@@ -27,25 +27,25 @@ describe("segmentTextByGameTerms", () => {
 
   it("separates barrier and wardBarrier ids", () => {
     const barrierSegments = segmentTextByGameTerms("バリア×2", "ja");
-    expect(barrierSegments.some((s) => s.kind === "term" && s.termId === "barrier")).toBe(
-      true,
-    );
+    expect(
+      barrierSegments.some((s) => s.kind === "term" && s.termId === "barrier")
+    ).toBe(true);
 
     const wardSegments = segmentTextByGameTerms("障壁1スタック", "ja");
-    expect(wardSegments.some((s) => s.kind === "term" && s.termId === "wardBarrier")).toBe(
-      true,
-    );
+    expect(
+      wardSegments.some((s) => s.kind === "term" && s.termId === "wardBarrier")
+    ).toBe(true);
   });
 
   it("separates mark and arenaMark ids", () => {
     const markSegments = segmentTextByGameTerms("印を付与", "ja");
-    expect(markSegments.some((s) => s.kind === "term" && s.termId === "mark")).toBe(
-      true,
-    );
+    expect(
+      markSegments.some((s) => s.kind === "term" && s.termId === "mark")
+    ).toBe(true);
 
     const arenaSegments = segmentTextByGameTerms("闘士の指名", "ja");
     expect(
-      arenaSegments.some((s) => s.kind === "term" && s.termId === "arenaMark"),
+      arenaSegments.some((s) => s.kind === "term" && s.termId === "arenaMark")
     ).toBe(true);
   });
 
@@ -54,12 +54,12 @@ describe("segmentTextByGameTerms", () => {
     expect(segments).toEqual([{ kind: "text", text: "被ダメ×0.75" }]);
   });
 
-  it("prefers 被ダメ軽減 over 被ダメ when both could match", () => {
-    const segments = segmentTextByGameTerms("被ダメ軽減 20%", "ja");
+  it("prefers ダメージ軽減 over 被ダメ when both could match", () => {
+    const segments = segmentTextByGameTerms("ダメージ軽減 20%", "ja");
     expect(segments[0]).toEqual({
       kind: "term",
       termId: "damageTaken",
-      matchedText: "被ダメ軽減",
+      matchedText: "ダメージ軽減",
     });
   });
 });

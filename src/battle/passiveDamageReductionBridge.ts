@@ -59,7 +59,7 @@ function defaultDamageReductionTargetRule(): TargetSpec {
   return { kind: "self" };
 }
 
-/** ターゲット解決用（常時 の被ダメ軽減） */
+/** ターゲット解決用（常時 のダメージ軽減） */
 export function passiveDamageReductionToEffectDef(
   passive: PassiveSkillDef
 ): BuffSkillEffect {

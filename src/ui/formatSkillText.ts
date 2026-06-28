@@ -189,9 +189,11 @@ function isSelfTargetSpec(spec: TargetSpec): boolean {
 
 function resolveEffectTargetSpec(
   effect: SkillEffectDef,
-  inheritTarget?: TargetSpec,
+  inheritTarget?: TargetSpec
 ): TargetSpec {
-  return effect.target ?? inheritTarget ?? defaultTargetForEffectType(effect.type);
+  return (
+    effect.target ?? inheritTarget ?? defaultTargetForEffectType(effect.type)
+  );
 }
 
 function formatCompactTargetHint(spec: TargetSpec): string {
@@ -201,7 +203,11 @@ function formatCompactTargetHint(spec: TargetSpec): string {
       if (spec.order === "selfOrigin") return "自身起点";
       return "";
     case "stat":
-      if (spec.side === "ally" && spec.stat === "hp" && spec.order === "ratio") {
+      if (
+        spec.side === "ally" &&
+        spec.stat === "hp" &&
+        spec.order === "ratio"
+      ) {
         return "最低HP味方";
       }
       return "";
@@ -212,7 +218,9 @@ function formatCompactTargetHint(spec: TargetSpec): string {
   }
 }
 
-function resolveActiveSkillScopePrefix(def: ActiveSkillDef): string | undefined {
+function resolveActiveSkillScopePrefix(
+  def: ActiveSkillDef
+): string | undefined {
   if (
     def.target?.kind === "distance" &&
     def.target.order === "selfOrigin" &&
@@ -233,7 +241,7 @@ function resolveActiveSkillScopePrefix(def: ActiveSkillDef): string | undefined 
 
 function collectEffectDurationSec(
   effect: SkillEffectDef,
-  visit: (sec: number) => void,
+  visit: (sec: number) => void
 ): void {
   switch (effect.type) {
     case "buff":
@@ -242,7 +250,10 @@ function collectEffectDurationSec(
       }
       break;
     case "debuff":
-      if (effect.debuffDurationSec !== undefined && effect.debuffDurationSec > 0) {
+      if (
+        effect.debuffDurationSec !== undefined &&
+        effect.debuffDurationSec > 0
+      ) {
         visit(effect.debuffDurationSec);
       }
       if (effect.durationSec !== undefined && effect.durationSec > 0) {
@@ -270,7 +281,7 @@ function collectEffectDurationSec(
 }
 
 function resolveActiveSkillDurationLabel(
-  def: ActiveSkillDef,
+  def: ActiveSkillDef
 ): string | undefined {
   if (def.effect.some((effect) => effect.type === "blockResonanceConsume")) {
     const base = def.blockResonanceStanceDurationBaseSec ?? 2;
@@ -288,7 +299,7 @@ function resolveActiveSkillDurationLabel(
 
 function resolveActiveSkillLockLabel(def: ActiveSkillDef): string | undefined {
   const hasConsume = def.effect.some(
-    (effect) => effect.type === "blockResonanceConsume",
+    (effect) => effect.type === "blockResonanceConsume"
   );
   const useSec = def.useDurationSec ?? 0;
   if (useSec <= 0 && !hasConsume) return undefined;
@@ -306,13 +317,10 @@ function resolveActiveSkillLockLabel(def: ActiveSkillDef): string | undefined {
   return label;
 }
 
-function formatBlockResonanceConsumeSkillEffect(
-  def: ActiveSkillDef,
-): string {
+function formatBlockResonanceConsumeSkillEffect(def: ActiveSkillDef): string {
   const radius = def.blockResonanceOnBlockKnockbackRadiusPx ?? 50;
   const damage = def.blockResonanceOnBlockDamage;
-  const defScale =
-    damage?.kind === "defBased" ? (damage.defScale ?? 1) : 1;
+  const defScale = damage?.kind === "defBased" ? damage.defScale ?? 1 : 1;
   return `「城塞の構え」：ブロック時半径${radius}px内の敵にDEF×${defScale}ダメ+ノックバック`;
 }
 
@@ -327,7 +335,7 @@ function formatActiveSkillEffectBody(def: ActiveSkillDef): string {
         compact: true,
         scopePrefix,
         inheritTarget: def.target,
-      }),
+      })
     )
     .filter(Boolean)
     .join("、");
@@ -434,22 +442,24 @@ function formatStatsWithModifier(
   flatBonus: number | undefined
 ): string {
   return formatStatBuffModifierEntries(
-    parseStatBuffModifiers({ buffStat: stat, buffMultiplier: multiplier, buffFlatBonus: flatBonus }),
-    formatStatWithModifier,
+    parseStatBuffModifiers({
+      buffStat: stat,
+      buffMultiplier: multiplier,
+      buffFlatBonus: flatBonus,
+    }),
+    formatStatWithModifier
   );
 }
 
-function formatBuffStatModifiersFromDef(
-  def: {
-    buffStatModifiers?: import("../battle/types.ts").StatBuffModifierEntry[];
-    buffStat?: BuffTargetKind | BuffTargetKind[];
-    buffMultiplier?: number;
-    buffFlatBonus?: number;
-  },
-): string {
+function formatBuffStatModifiersFromDef(def: {
+  buffStatModifiers?: import("../battle/types.ts").StatBuffModifierEntry[];
+  buffStat?: BuffTargetKind | BuffTargetKind[];
+  buffMultiplier?: number;
+  buffFlatBonus?: number;
+}): string {
   return formatStatBuffModifierEntries(
     parseStatBuffModifiers(def),
-    formatStatWithModifier,
+    formatStatWithModifier
   );
 }
 
@@ -612,7 +622,7 @@ function formatActiveEffectDetail(
     compact?: boolean;
     scopePrefix?: string;
     inheritTarget?: TargetSpec;
-  },
+  }
 ): string {
   const compact = options?.compact ?? false;
   const inheritTarget = options?.inheritTarget;
@@ -634,7 +644,7 @@ function formatActiveEffectDetail(
   const targetSpec = resolveEffectTargetSpec(effect, inheritTarget);
   const target = formatTarget(
     effect.target ?? inheritTarget,
-    defaultTargetForEffectType(effect.type),
+    defaultTargetForEffectType(effect.type)
   );
   const shape = formatTargetShape(effect);
   const extras: string[] = [];
@@ -711,7 +721,7 @@ function formatActiveEffectDetail(
           extras.push(
             `${formatResourceAmount(effect.amount)}${
               effect.barrierStack ? "（加算）" : ""
-            }`,
+            }`
           );
         } else {
           extras.push(
@@ -731,9 +741,9 @@ function formatActiveEffectDetail(
           extras.push(`ブロック率+${formatPercent(effect.chance ?? 0)}`);
         } else {
           extras.push(
-            `${BUFF_SUB_KIND_LABELS.block} ${formatPercent(effect.chance ?? 0)} ${
-              effect.buffDurationSec ?? 0
-            }s`
+            `${BUFF_SUB_KIND_LABELS.block} ${formatPercent(
+              effect.chance ?? 0
+            )} ${effect.buffDurationSec ?? 0}s`
           );
         }
       } else if (effect.buffSubKind === "evasion") {
@@ -766,9 +776,9 @@ function formatActiveEffectDetail(
           extras.push(compactStatEffectLabel(statLabel));
         } else {
           extras.push(
-            `${BUFF_SUB_KIND_LABELS[effect.buffSubKind ?? "stat"]} ${statLabel} ${
-              effect.buffDurationSec ?? 0
-            }s`
+            `${
+              BUFF_SUB_KIND_LABELS[effect.buffSubKind ?? "stat"]
+            } ${statLabel} ${effect.buffDurationSec ?? 0}s`
           );
         }
       }
@@ -783,12 +793,10 @@ function formatActiveEffectDetail(
               ? DAMAGE_TYPE_LABELS[override.damageType]
               : "";
             parts.push(
-              `通常攻撃→${dmgType}${formatResourceAmount(override.amount)}`,
+              `通常攻撃→${dmgType}${formatResourceAmount(override.amount)}`
             );
           } else if (override.type === "heal") {
-            parts.push(
-              `通常攻撃→${formatResourceAmount(override.amount)}回復`,
-            );
+            parts.push(`通常攻撃→${formatResourceAmount(override.amount)}回復`);
           }
         } else if (effect.primaryPatch !== undefined) {
           const patchParts: string[] = ["通常攻撃→"];
@@ -803,13 +811,16 @@ function formatActiveEffectDetail(
           }
           parts.push(patchParts.join(""));
         }
-        if (effect.appendEffects !== undefined && effect.appendEffects.length > 0) {
+        if (
+          effect.appendEffects !== undefined &&
+          effect.appendEffects.length > 0
+        ) {
           for (const appendEffect of effect.appendEffects) {
             parts.push(
               formatActiveEffectDetail(appendEffect, {
                 compact: true,
                 inheritTarget: appendEffect.target,
-              }),
+              })
             );
           }
         }
@@ -1018,7 +1029,11 @@ function formatActiveEffectDetail(
       extras.push(`収穫${Math.round(effect.harvestRatio * 100)}%`);
       break;
     case "poisonSpread":
-      extras.push(`蔓延${effect.spreadRadiusPx}px/${Math.round(effect.spreadDurationRatio * 100)}%`);
+      extras.push(
+        `蔓延${effect.spreadRadiusPx}px/${Math.round(
+          effect.spreadDurationRatio * 100
+        )}%`
+      );
       break;
   }
 
@@ -1088,7 +1103,7 @@ function formatEffectKindLabel(kind: SkillEffectDef["type"]): string {
     case "arenaDominance":
       return "闘技場の掟";
     case "grantNextOutgoingDamage":
-      return "次与ダメ増加";
+      return "次のダメージ増加";
     case "placedField":
       return "持続罠";
     case "dotCompress":
@@ -1139,7 +1154,7 @@ function formatPassiveEffect(
         "特効ダメージ"
       );
     case "damageReduction":
-      return `被ダメ軽減 ${formatPercent(
+      return `ダメージ軽減 ${formatPercent(
         def.damageReductionPercent ?? 0
       )} → ${formatTarget(def.damageReductionTargetRule, { kind: "self" })}（${[
         formatTargetShape(passiveDamageReductionToEffectDef(def)),
@@ -1161,9 +1176,7 @@ function formatPassiveEffect(
       const conditions = def.bonusBasicAttackConditions ?? [];
       const parts: string[] = [];
       if (conditions.length > 0) {
-        parts.push(
-          conditions.map(formatDamageIncreaseCondition).join("・"),
-        );
+        parts.push(conditions.map(formatDamageIncreaseCondition).join("・"));
       }
       if (def.bonusBasicAttackHpRatio !== undefined) {
         parts.push(`HP≤${formatPercent(def.bonusBasicAttackHpRatio)}`);
@@ -1171,7 +1184,9 @@ function formatPassiveEffect(
         parts.push(`HP≤${formatPercent(0.3)}`);
       }
       const gate = parts.length > 0 ? parts.join("・") : "—";
-      return `通常攻撃 Hit 後 ${gate} で ${formatPercent(chance)} 追加 Hit（非再帰）`;
+      return `通常攻撃 Hit 後 ${gate} で ${formatPercent(
+        chance
+      )} 追加 Hit（非再帰）`;
     }
     case "periodicDispel": {
       const tags =
@@ -1262,9 +1277,9 @@ function formatPassiveEffect(
           def.lastStandRecoveryFrontAllyDamageTakenMultiplier ?? 0.75;
         const duration = def.lastStandRecoveryDurationSec ?? 5;
         return `HPが0以下になるダメージを受けた際、HP${formatPercent(
-          hpRatio,
+          hpRatio
         )}復活（Wave 1回まで）、自己被ダメ×${selfMul}、前列被ダメ×${frontMul}、${formatSecondsLabel(
-          duration,
+          duration
         )}`;
       }
       if (def.effect === "frontBlockAura") {
@@ -1288,7 +1303,9 @@ function formatPassiveEffect(
         const perStack = def.blockResonanceDamageTakenPerStack ?? 0.03;
         const decay = def.blockResonanceDecayIntervalSec ?? 8;
         parts.push(
-          `ブロック時「防壁」1スタック（上限${maxStacks})。「防壁」：1スタックごとに被ダメ-${formatPercent(perStack)}。${decay}秒ごとに1スタック消失`,
+          `ブロック時「防壁」1スタック（上限${maxStacks})。「防壁」：1スタックごとに被ダメ-${formatPercent(
+            perStack
+          )}。${decay}秒ごとに1スタック消失`
         );
         return parts.join("/");
       }
@@ -1328,7 +1345,9 @@ function formatPassiveEffect(
         potencyParts.push(`aura HoT ${formatSecondsLabel(hotTickSec)} tick`);
       }
       potencyParts.push(
-        `薬効蓄積 ${formatSecondsLabel(accumulateSec)}（実時間・HoT tick 非連動）`
+        `薬効蓄積 ${formatSecondsLabel(
+          accumulateSec
+        )}（実時間・HoT tick 非連動）`
       );
       const potencySuffix =
         potencyParts.length > 0 ? ` · ${potencyParts.join(" · ")}` : "";
@@ -1395,21 +1414,22 @@ function formatPassiveEffect(
       const chance = formatPercent(def.chance ?? 0.2);
       const dur = def.debuffDotDurationSec ?? 5;
       const amount = formatResourceAmount(
-        def.debuffDotAmount ?? { kind: "flat", flatAmount: 10 },
+        def.debuffDotAmount ?? { kind: "flat", flatAmount: 10 }
       );
       return `味方物理basic ${chance}でpoison ${amount}/${dur}s`;
     }
     case "dotDurationMultiplierOnApply": {
       const dur = def.dotDurationMultiplierOnApply ?? 1.5;
       const heal = def.dottedEnemyHealReceivedMultiplier;
-      const healPart =
-        heal !== undefined ? ` / dot中被回復×${heal}` : "";
+      const healPart = heal !== undefined ? ` / dot中被回復×${heal}` : "";
       return `味方dot付与duration×${dur}${healPart}`;
     }
     case "dottedEnemyHealReceivedDebuff":
       return `dot中被回復×${def.dottedEnemyHealReceivedMultiplier ?? 0.8}`;
     case "conditionalEnemyDamageTakenAura":
-      return `仕留め aura（hasDot+HP≤50% → 被ダメ×${def.enemyDamageTakenMultiplier ?? 1.2}）`;
+      return `仕留め aura（hasDot+HP≤50% → 被ダメ×${
+        def.enemyDamageTakenMultiplier ?? 1.2
+      }）`;
     case "seedFlameOnActiveHit":
       return "active ダメージ Hit ごとに種火 +1 stack";
     case "bonusActiveOnHit":
@@ -1492,7 +1512,9 @@ function formatPassiveEffect(
         "常時"
       );
       metaParts.push(triggerLabel);
-      return `バフ ${formatBuffStatModifiersFromDef(def)} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
+      return `バフ ${formatBuffStatModifiersFromDef(
+        def
+      )} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
     }
     case "debuff": {
       const effectView = passiveDebuffToEffectDef(def);
@@ -1612,7 +1634,7 @@ export type SkillCardLines = {
 };
 
 function isActiveSkillDef(
-  def: ActiveSkillDef | PassiveSkillDef,
+  def: ActiveSkillDef | PassiveSkillDef
 ): def is ActiveSkillDef {
   return Array.isArray(def.effect);
 }
@@ -1634,7 +1656,7 @@ function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
   if ((def.firePolicy ?? "immediate") === "smart") {
     const condSummary = formatFireConditionsSummary(
       def.fireConditions,
-      def.fireConditionMatch ?? "all",
+      def.fireConditionMatch ?? "all"
     );
     if (condSummary) {
       parts.push(`条件：${condSummary}`);
@@ -1646,10 +1668,10 @@ function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
 
 function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
   const hasConsume = def.effect.some(
-    (effect) => effect.type === "blockResonanceConsume",
+    (effect) => effect.type === "blockResonanceConsume"
   );
   const mappableEffects = def.effect.filter(
-    (effect) => effect.type !== "blockResonanceConsume",
+    (effect) => effect.type !== "blockResonanceConsume"
   );
   if (hasConsume && mappableEffects.length === 0) {
     return [formatBlockResonanceConsumeSkillEffect(def)];
@@ -1662,7 +1684,7 @@ function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
         compact: true,
         scopePrefix,
         inheritTarget: def.target,
-      }),
+      })
     )
     .filter(Boolean);
   if (scopePrefix && lines.length > 0) {
@@ -1682,7 +1704,7 @@ function formatPassiveSkillMetaLine(def: PassiveSkillDef): string {
 
 export function formatSkillCardLines(
   def: ActiveSkillDef | PassiveSkillDef,
-  options: { locale: SkillCardLocale },
+  options: { locale: SkillCardLocale }
 ): SkillCardLines {
   if (options.locale !== "ja") {
     throw new Error(`Unsupported skill card locale: ${options.locale}`);

@@ -1,17 +1,17 @@
 import {
   actorHasSorcererFlamePassives,
   processSorcererActiveDamageHit,
-} from '../sorcererFlame.ts';
-import type { BattleEventListener } from '../events.ts';
-import { applyIncomingDamage } from '../damageDelay.ts';
-import { shouldTriggerBonusBasicAttackOnHit } from '../bonusBasicAttackOnHit.ts';
+} from "../sorcererFlame.ts";
+import type { BattleEventListener } from "../events.ts";
+import { applyIncomingDamage } from "../damageDelay.ts";
+import { shouldTriggerBonusBasicAttackOnHit } from "../bonusBasicAttackOnHit.ts";
 import {
   ALLY_ATTACK_FOLLOW_UP_OVERLAY,
   applyFollowUpDefDebuffOnHit,
   buildAllyAttackFollowUpPendingHit,
   findFollowUpLancersForAllyBasic,
   getAllyAttackFollowUpConfig,
-} from '../allyAttackFollowUp.ts';
+} from "../allyAttackFollowUp.ts";
 import {
   applyBarrierToTarget,
   applyHealToTarget,
@@ -22,35 +22,38 @@ import {
   resolveHealAmount,
   resolveResourceAmount,
   applyConfirmedHpDamage,
-} from '../combatMath.ts';
+} from "../combatMath.ts";
 import {
   applyKnockbackToTarget,
   applyStunToTarget,
   isUnitStunned,
-} from '../ccEffects.ts';
+} from "../ccEffects.ts";
 import {
   applyDirectHealWithExcess,
   sameSideAlliesFrom,
-} from '../instantHealExcess.ts';
-import { grantHealReservationStacks } from '../healReservation.ts';
+} from "../instantHealExcess.ts";
+import { grantHealReservationStacks } from "../healReservation.ts";
 import {
   rollsEvasion,
   getPassiveSpecialEffectMultiplier,
   stripPassivesAurasFromSource,
   type PassiveDamageContext,
-} from '../passiveEffects.ts';
-import { dispelDebuffsOnTarget } from '../debuffDispel.ts';
-import { applyBlockToPhysicalDamage, applyBlockToMagicDamage } from '../blockMitigation.ts';
-import { grantCounterStatus } from '../counterEffects.ts';
+} from "../passiveEffects.ts";
+import { dispelDebuffsOnTarget } from "../debuffDispel.ts";
+import {
+  applyBlockToPhysicalDamage,
+  applyBlockToMagicDamage,
+} from "../blockMitigation.ts";
+import { grantCounterStatus } from "../counterEffects.ts";
 import {
   applyWardBarrierToTarget,
   applyWardBarrierToIncomingDamage,
-} from '../wardBarrier.ts';
+} from "../wardBarrier.ts";
 import {
   addHerbalPotencyStacks,
   consumeAllAllyHerbalPotencyStacks,
   resolvePartyHerbalPotencyConfig,
-} from '../herbalPotency.ts';
+} from "../herbalPotency.ts";
 import {
   addBlockResonanceStacksOnBlock,
   applyBlockResonanceStance,
@@ -59,9 +62,9 @@ import {
   hasBlockResonanceStance,
   resolveBlockResonanceConfigForUnit,
   resolveEffectiveUseDurationSec,
-} from '../blockResonance.ts';
-import { mitigateIncomingDamage } from '../incomingDamageMitigation.ts';
-import { resolveLowHpCoverTarget } from '../lowHpCover.ts';
+} from "../blockResonance.ts";
+import { mitigateIncomingDamage } from "../incomingDamageMitigation.ts";
+import { resolveLowHpCoverTarget } from "../lowHpCover.ts";
 import {
   applyArenaDominanceDamageMitigation,
   applyArenaMarkDamageMitigation,
@@ -72,18 +75,18 @@ import {
   resolveArenaDominanceDurationSec,
   resolveArenaDominanceNonMarkMultiplier,
   consumeActiveStageTrigger,
-} from '../arenaDominance.ts';
+} from "../arenaDominance.ts";
 import {
   findBallistaMarkSplashTargets,
   isBallistaMarked,
   mergeBallistaMarkPassive,
   resolveBallistaMarkSourceId,
   resolveBallistaMarkSplashDamage,
-} from '../ballistaMark.ts';
+} from "../ballistaMark.ts";
 import {
   collectAllyBasicAttackDotProcs,
   rollAllyBasicAttackDotProc,
-} from '../allyBasicAttackDotProc.ts';
+} from "../allyBasicAttackDotProc.ts";
 import {
   clonePoisonDotForSpread,
   compressAllDotsOnUnit,
@@ -91,43 +94,41 @@ import {
   harvestDotRemainingDamage,
   resolveDotDurationOnApply,
   resolveHunterDotCompressRatio,
-} from '../dotMechanics.ts';
-import {
-  spawnPlacedField,
-  resolvePlacedFieldCenterX,
-} from '../placedField.ts';
-import { resetIdleAtkRampOnAttack } from '../idleAtkRamp.ts';
-import {
-  scheduleNextOutgoingDamageCharge,
-} from '../nextOutgoingDamage.ts';
-import { applyEnemyReelIn } from '../enemyReelIn.ts';
-import { resolveEffectiveAmountSpecForActiveEffect } from '../skillAmountOverride.ts';
-import { resolveEffectiveBasicAttackSkill } from '../resolveEffectiveBasicAttack.ts';
-import { basicAttackTransformSpecFromEffect } from '../resolveEffectiveBasicAttack.ts';
+} from "../dotMechanics.ts";
+import { spawnPlacedField, resolvePlacedFieldCenterX } from "../placedField.ts";
+import { resetIdleAtkRampOnAttack } from "../idleAtkRamp.ts";
+import { scheduleNextOutgoingDamageCharge } from "../nextOutgoingDamage.ts";
+import { applyEnemyReelIn } from "../enemyReelIn.ts";
+import { resolveEffectiveAmountSpecForActiveEffect } from "../skillAmountOverride.ts";
+import { resolveEffectiveBasicAttackSkill } from "../resolveEffectiveBasicAttack.ts";
+import { basicAttackTransformSpecFromEffect } from "../resolveEffectiveBasicAttack.ts";
 import {
   resolveAttackBattleX,
   resolveMoveBattleX,
   isHostileRearAssaultMove,
   setPlayerRearAssaultAccess,
   clearPlayerRearAssaultAccess,
-} from '../combatPosition.ts';
+} from "../combatPosition.ts";
 import {
   battleDistance,
   isWithinSkillRange,
   resolveSkillRangePx,
-} from './rangeUtils.ts';
+} from "./rangeUtils.ts";
 import {
   chargeBasicAttackCountOnHit,
   resetCooldownAfterFire,
-} from '../skillTrigger.ts';
-import { consumeActiveChargeOnFire, hasAvailableActiveCharge } from './chargeBank.ts';
+} from "../skillTrigger.ts";
+import {
+  consumeActiveChargeOnFire,
+  hasAvailableActiveCharge,
+} from "./chargeBank.ts";
 import {
   resolveConditionalBranchEffects,
   targetPassesEffectConditions,
   type ConditionEvalContext,
-} from './effectConditions.ts';
-import { resolvePresentationLockSec } from './presentationLock.ts';
-import { resolveEffectApplyDelaySec } from '../../render/skillAnimPlayback.ts';
+} from "./effectConditions.ts";
+import { resolvePresentationLockSec } from "./presentationLock.ts";
+import { resolveEffectApplyDelaySec } from "../../render/skillAnimPlayback.ts";
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -138,14 +139,14 @@ import type {
   SkillEffectDef,
   SkillSlotKind,
   StatusEffect,
-} from '../types.ts';
-import { asStatusEffectStatList } from '../types.ts';
-import { parseStatBuffModifiers } from '../statBuffModifiers.ts';
+} from "../types.ts";
+import { asStatusEffectStatList } from "../types.ts";
+import { parseStatBuffModifiers } from "../statBuffModifiers.ts";
 import {
   buildPendingHitsFromResolution,
   findCombatantById,
-} from './pendingSkillHits.ts';
-import { resolveSkillDamageType } from './damageTypeUtils.ts';
+} from "./pendingSkillHits.ts";
+import { resolveSkillDamageType } from "./damageTypeUtils.ts";
 import {
   buildSkillSequence,
   type PendingSkillStep,
@@ -156,14 +157,14 @@ import {
   type SkillSequenceRunner,
   skillHasMoveEffect,
   resolveSequenceStepAnchor,
-} from './skillSequence.ts';
+} from "./skillSequence.ts";
 import {
   extractResolutionHitUnits,
   resolutionHasTargets,
   resolveEffectResolution,
   resolveEffectTargetSpec,
-} from './targeting.ts';
-import { ensureSharedTargetingLock } from './skillSharedTargeting.ts';
+} from "./targeting.ts";
+import { ensureSharedTargetingLock } from "./skillSharedTargeting.ts";
 
 interface ApplyResolvedEffectStepResult {
   applied: boolean;
@@ -172,7 +173,7 @@ interface ApplyResolvedEffectStepResult {
 
 function skillHitEventFields(
   hitIndex?: number,
-  vfxSourceId?: string,
+  vfxSourceId?: string
 ): {
   hitIndex?: number;
   vfxSourceId?: string;
@@ -184,9 +185,9 @@ function skillHitEventFields(
 }
 
 function usesSegmentVfxSource(
-  targetShape: SkillEffectDef['targetShape'],
+  targetShape: SkillEffectDef["targetShape"]
 ): boolean {
-  return targetShape === 'chain' || targetShape === 'pierce';
+  return targetShape === "chain" || targetShape === "pierce";
 }
 
 export interface SkillExecutorDeps {
@@ -201,7 +202,7 @@ export interface SkillExecutorDeps {
     target: CombatantState,
     amount: number,
     meta?: {
-      attackKind: 'damage' | 'dot';
+      attackKind: "damage" | "dot";
       isCounterDamage?: boolean;
       hpDamage?: number;
       attackRangePx?: number;
@@ -210,18 +211,18 @@ export interface SkillExecutorDeps {
       threatBurstScale?: number;
       barrierHpBefore?: number;
       barrierDamage?: number;
-    },
+    }
   ) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
   onTargetReceivedDebuff?: (target: CombatantState) => void;
   onHealApplied?: (target: CombatantState) => void;
   onUnitDied?: (unit: CombatantState) => void;
   onLastStandGuts?: (targetId: string) => void;
-  addPlacedField?: (field: import('../types.ts').PlacedFieldInstance) => void;
+  addPlacedField?: (field: import("../types.ts").PlacedFieldInstance) => void;
   onBattleXChanged?: (
     unit: CombatantState,
     beforeX: number,
-    reason: "knockback" | "enemyReelIn",
+    reason: "knockback" | "enemyReelIn"
   ) => void;
 }
 
@@ -231,17 +232,17 @@ function shouldDeferUntilHostileToAnchorInRange(
   allies: CombatantState[],
   enemies: CombatantState[],
   gameData: GameData,
-  passives: ReturnType<typeof getPassiveDefs>,
+  passives: ReturnType<typeof getPassiveDefs>
 ): boolean {
   for (const effectDef of skill.effect) {
-    if (effectDef.type !== 'move') continue;
-    if ((effectDef.moveMode ?? 'engage') !== 'toAnchor') continue;
+    if (effectDef.type !== "move") continue;
+    if ((effectDef.moveMode ?? "engage") !== "toAnchor") continue;
     const spec = resolveEffectTargetSpec(
       effectDef,
       actor,
       allies,
       enemies,
-      passives,
+      passives
     );
     const anchor = resolveSequenceStepAnchor(
       effectDef,
@@ -249,14 +250,19 @@ function shouldDeferUntilHostileToAnchorInRange(
       actor,
       allies,
       enemies,
-      gameData,
+      gameData
     );
     if (!anchor || anchor.isEnemy === actor.isEnemy) continue;
     const offset = effectDef.anchorOffsetPx ?? 0;
     const idealAnchorX = actor.isEnemy
       ? anchor.battleX - offset
       : anchor.battleX + offset;
-    const resolvedMoveX = resolveMoveBattleX(actor, anchor, effectDef, gameData);
+    const resolvedMoveX = resolveMoveBattleX(
+      actor,
+      anchor,
+      effectDef,
+      gameData
+    );
     if (Math.abs(resolvedMoveX - idealAnchorX) > 0.5) {
       return true;
     }
@@ -271,14 +277,14 @@ export class SkillExecutor {
   constructor(
     private readonly gameData: GameData,
     private readonly emit: BattleEventListener,
-    private readonly deps: SkillExecutorDeps,
+    private readonly deps: SkillExecutorDeps
   ) {}
 
   tryExecute(
     actor: CombatantState,
     cd: SkillCooldown,
     allies: CombatantState[],
-    enemies: CombatantState[],
+    enemies: CombatantState[]
   ): boolean {
     if (!actor.isAlive) return false;
     if (isUnitStunned(actor)) return false;
@@ -286,34 +292,38 @@ export class SkillExecutor {
     const baseSkill = this.gameData.skillRegistry.actives[cd.skillId];
     if (!baseSkill || baseSkill.effect.length === 0) return false;
     const skill =
-      cd.slotKind === 'basic'
+      cd.slotKind === "basic"
         ? resolveEffectiveBasicAttackSkill(actor, baseSkill)
         : baseSkill;
 
     const passives = getPassiveDefs(
       actor,
-      this.gameData.skillRegistry.passives,
+      this.gameData.skillRegistry.passives
     );
 
     if (
-      cd.slotKind === 'active' &&
+      cd.slotKind === "active" &&
       !hasAvailableActiveCharge(
         cd,
         skill,
         passives,
-        actor.build.learnedActiveIds,
+        actor.build.learnedActiveIds
       )
     ) {
       return false;
     }
-    if (cd.slotKind !== 'active' && cd.remaining > 0) return false;
-    if (cd.slotKind === 'active' && cd.remaining > 0 && (cd.storedCharges ?? 0) <= 0) {
+    if (cd.slotKind !== "active" && cd.remaining > 0) return false;
+    if (
+      cd.slotKind === "active" &&
+      cd.remaining > 0 &&
+      (cd.storedCharges ?? 0) <= 0
+    ) {
       return false;
     }
 
     const runner = this.deps.getSequenceRunner();
     if (runner.isActorBusy(actor.id)) return false;
-    if (cd.slotKind === 'basic' && runner.isBasicAttackBlocked(actor.id)) {
+    if (cd.slotKind === "basic" && runner.isBasicAttackBlocked(actor.id)) {
       return false;
     }
 
@@ -325,7 +335,7 @@ export class SkillExecutor {
           allies,
           enemies,
           this.gameData,
-          passives,
+          passives
         )
       ) {
         return false;
@@ -338,7 +348,7 @@ export class SkillExecutor {
         this.gameData,
         passives,
         this.deps.getBattleTimeSec(),
-        cd,
+        cd
       );
       if (!sequence) return false;
       this.beginSkillUseIfActive(actor.id, skill, cd.slotKind);
@@ -353,8 +363,15 @@ export class SkillExecutor {
     this.potencyStacksConsumed.clear();
     this.blockResonanceStacksConsumed.clear();
     const effectHitPools = new Map<number, CombatantState[]>();
-    const sharedTargetingLocks = new Map<string, import('../types.ts').SkillEffectResolution>();
-    for (let effectIndex = 0; effectIndex < skill.effect.length; effectIndex++) {
+    const sharedTargetingLocks = new Map<
+      string,
+      import("../types.ts").SkillEffectResolution
+    >();
+    for (
+      let effectIndex = 0;
+      effectIndex < skill.effect.length;
+      effectIndex++
+    ) {
       const effectDef = skill.effect[effectIndex]!;
       const result = this.applyResolvedEffectStep(
         actor,
@@ -366,10 +383,10 @@ export class SkillExecutor {
         cd,
         passives,
         effectHitPools,
-        sharedTargetingLocks,
+        sharedTargetingLocks
       );
       if (
-        effectDef.type !== 'conditionalEffect' &&
+        effectDef.type !== "conditionalEffect" &&
         result.hitUnits.length > 0
       ) {
         effectHitPools.set(effectIndex, result.hitUnits);
@@ -384,17 +401,17 @@ export class SkillExecutor {
       this.beginActiveEffectGaugeIfNeeded(actor.id, cd, skill);
       this.beginPresentationLockIfNeeded(actor, skill, cd.slotKind);
       this.beginSkillAnimLockIfNeeded(actor.id, skill);
-      if (cd.slotKind === 'active') {
+      if (cd.slotKind === "active") {
         consumeActiveChargeOnFire(
           cd,
           skill,
           passives,
-          actor.build.learnedActiveIds,
+          actor.build.learnedActiveIds
         );
       } else {
         resetCooldownAfterFire(cd, skill);
       }
-      if (cd.slotKind === 'basic') {
+      if (cd.slotKind === "basic") {
         this.deps.onBasicAttackExecuted?.(actor.id);
       }
       return true;
@@ -407,7 +424,7 @@ export class SkillExecutor {
     allies: CombatantState[],
     enemies: CombatantState[],
     passives: ReturnType<typeof getPassiveDefs>,
-    referenceEffect?: import('../types.ts').SkillEffectDef,
+    referenceEffect?: import("../types.ts").SkillEffectDef
   ): ConditionEvalContext {
     return {
       actor,
@@ -429,10 +446,16 @@ export class SkillExecutor {
     cd: SkillCooldown,
     passives: ReturnType<typeof getPassiveDefs>,
     priorEffectHitPools?: ReadonlyMap<number, readonly CombatantState[]>,
-    sharedTargetingLocks?: Map<string, import('../types.ts').SkillEffectResolution>,
+    sharedTargetingLocks?: Map<
+      string,
+      import("../types.ts").SkillEffectResolution
+    >
   ): ApplyResolvedEffectStepResult {
-    const empty: ApplyResolvedEffectStepResult = { applied: false, hitUnits: [] };
-    if (effectDef.type === 'herbalPotencyConsume') {
+    const empty: ApplyResolvedEffectStepResult = {
+      applied: false,
+      hitUnits: [],
+    };
+    if (effectDef.type === "herbalPotencyConsume") {
       if (sharedTargetingLocks) {
         ensureSharedTargetingLock(
           skill,
@@ -448,9 +471,9 @@ export class SkillExecutor {
               passives,
               skill.effect,
               priorEffectHitPools,
-              skill,
+              skill
             ),
-          sharedTargetingLocks,
+          sharedTargetingLocks
         );
       }
       const resolution = resolveEffectResolution(
@@ -464,11 +487,11 @@ export class SkillExecutor {
         skill.effect,
         priorEffectHitPools,
         skill,
-        sharedTargetingLocks,
+        sharedTargetingLocks
       );
       if (!resolutionHasTargets(resolution)) return empty;
       const targets = resolution!.waves.flatMap((wave) =>
-        wave.targets.map((entry) => entry.unit),
+        wave.targets.map((entry) => entry.unit)
       );
       const consumed = consumeAllAllyHerbalPotencyStacks(allies, targets);
       for (const [targetId, stacks] of consumed) {
@@ -480,7 +503,7 @@ export class SkillExecutor {
       };
     }
 
-    if (effectDef.type === 'blockResonanceConsume') {
+    if (effectDef.type === "blockResonanceConsume") {
       const stacks = consumeBlockResonanceStacks(actor);
       if (stacks <= 0) return empty;
       this.blockResonanceStacksConsumed.set(actor.id, stacks);
@@ -488,7 +511,7 @@ export class SkillExecutor {
       return { applied: true, hitUnits: [] };
     }
 
-    if (effectDef.type === 'placedField') {
+    if (effectDef.type === "placedField") {
       const centerX = resolvePlacedFieldCenterX(actor, effectDef, enemies);
       if (centerX === null) return empty;
       const field = spawnPlacedField(
@@ -501,17 +524,17 @@ export class SkillExecutor {
         enemies,
         Object.fromEntries(passives.map((p) => [p.id, p])),
         this.gameData.skillRegistry.actives,
-        (target) => this.deps.onTargetReceivedDebuff?.(target),
+        (target) => this.deps.onTargetReceivedDebuff?.(target)
       );
       this.deps.addPlacedField?.(field);
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: actor.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'placedField',
+        effect: "placedField",
         effectIndex,
         range: effectDef.range,
         ...skillHitEventFields(undefined, undefined),
@@ -519,23 +542,23 @@ export class SkillExecutor {
       return { applied: true, hitUnits: [] };
     }
 
-    if (effectDef.type === 'grantNextOutgoingDamage') {
+    if (effectDef.type === "grantNextOutgoingDamage") {
       const multiplier = effectDef.nextOutgoingDamageMultiplier ?? 1.3;
       const useSec = skill.useDurationSec ?? 0;
       scheduleNextOutgoingDamageCharge(
         actor,
         multiplier,
         skill.id,
-        useSec <= 0,
+        useSec <= 0
       );
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: actor.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'grantNextOutgoingDamage',
+        effect: "grantNextOutgoingDamage",
         effectIndex,
         amount: multiplier,
         ...skillHitEventFields(undefined, undefined),
@@ -543,7 +566,7 @@ export class SkillExecutor {
       return { applied: true, hitUnits: [] };
     }
 
-    if (effectDef.type === 'conditionalEffect') {
+    if (effectDef.type === "conditionalEffect") {
       const branchEffects = resolveConditionalBranchEffects(
         effectDef,
         this.buildConditionEvalContext(
@@ -551,8 +574,8 @@ export class SkillExecutor {
           allies,
           enemies,
           passives,
-          effectDef.thenEffects[0] ?? effectDef.elseEffects[0],
-        ),
+          effectDef.thenEffects[0] ?? effectDef.elseEffects[0]
+        )
       );
       let appliedAny = false;
       for (const branchEffect of branchEffects) {
@@ -566,7 +589,7 @@ export class SkillExecutor {
           cd,
           passives,
           priorEffectHitPools,
-          sharedTargetingLocks,
+          sharedTargetingLocks
         );
         if (branchResult.applied) {
           appliedAny = true;
@@ -590,9 +613,9 @@ export class SkillExecutor {
             passives,
             skill.effect,
             priorEffectHitPools,
-            skill,
+            skill
           ),
-        sharedTargetingLocks,
+        sharedTargetingLocks
       );
     }
     const resolution = resolveEffectResolution(
@@ -606,7 +629,7 @@ export class SkillExecutor {
       skill.effect,
       priorEffectHitPools,
       skill,
-      sharedTargetingLocks,
+      sharedTargetingLocks
     );
     if (!resolutionHasTargets(resolution)) return empty;
     const hitUnits = extractResolutionHitUnits(resolution!);
@@ -614,13 +637,10 @@ export class SkillExecutor {
     const applyDelaySec = resolveEffectApplyDelaySec(
       skill.id,
       effectIndex,
-      effectDef,
+      effectDef
     );
     const spread = resolution!.spreadDurationSec;
-    if (
-      (spread !== undefined && spread > 0) ||
-      applyDelaySec > 0
-    ) {
+    if ((spread !== undefined && spread > 0) || applyDelaySec > 0) {
       const pending = buildPendingHitsFromResolution(
         resolution!,
         this.deps.getBattleTimeSec(),
@@ -628,7 +648,7 @@ export class SkillExecutor {
         skill,
         effectDef,
         cd,
-        { effectIndex, baseDelaySec: applyDelaySec },
+        { effectIndex, baseDelaySec: applyDelaySec }
       );
       if (pending.length > 0) {
         if (applyDelaySec > 0) {
@@ -641,11 +661,8 @@ export class SkillExecutor {
     }
 
     const crowdHitCount =
-      effectDef.type === 'damage'
-        ? resolution!.waves.reduce(
-            (sum, wave) => sum + wave.targets.length,
-            0,
-          )
+      effectDef.type === "damage"
+        ? resolution!.waves.reduce((sum, wave) => sum + wave.targets.length, 0)
         : undefined;
     const damageContext: PassiveDamageContext = {
       skill,
@@ -662,14 +679,16 @@ export class SkillExecutor {
         allies,
         enemies,
         passives,
-        effectDef,
+        effectDef
       ),
       skill,
       effectIndex,
     };
     for (const wave of resolution!.waves) {
       for (const { unit, powerMultiplierOverride } of wave.targets) {
-        if (!targetPassesEffectConditions(effectConditionCtx, effectDef, unit)) {
+        if (
+          !targetPassesEffectConditions(effectConditionCtx, effectDef, unit)
+        ) {
           continue;
         }
         const vfxSourceId = usesSegmentVfxSource(effectDef.targetShape)
@@ -686,7 +705,7 @@ export class SkillExecutor {
             powerMultiplierOverride,
             wave.hitIndex,
             vfxSourceId,
-            damageContext,
+            damageContext
           )
         ) {
           appliedAny = true;
@@ -704,12 +723,12 @@ export class SkillExecutor {
     skill: ActiveSkillDef,
     effectIndex: number,
     cd: SkillCooldown,
-    resolution: NonNullable<ReturnType<typeof resolveEffectResolution>>,
+    resolution: NonNullable<ReturnType<typeof resolveEffectResolution>>
   ): void {
     const firstTarget = resolution.waves[0]?.targets[0]?.unit;
     if (!firstTarget) return;
     this.emit({
-      type: 'skillWindup',
+      type: "skillWindup",
       actorId: actor.id,
       targetId: firstTarget.id,
       skillId: skill.id,
@@ -724,7 +743,10 @@ export class SkillExecutor {
     allies: CombatantState[],
     enemies: CombatantState[],
     effectHitPools?: Map<number, CombatantState[]>,
-    sharedTargetingLocks?: Map<string, import('../types.ts').SkillEffectResolution>,
+    sharedTargetingLocks?: Map<
+      string,
+      import("../types.ts").SkillEffectResolution
+    >
   ): void {
     const actor = findCombatantById(step.actorId, allies, enemies);
     if (!actor?.isAlive) return;
@@ -734,10 +756,10 @@ export class SkillExecutor {
 
     const passives = getPassiveDefs(
       actor,
-      this.gameData.skillRegistry.passives,
+      this.gameData.skillRegistry.passives
     );
 
-    if (step.effectDef.type === 'move') {
+    if (step.effectDef.type === "move") {
       if (isUnitStunned(actor)) return;
       let target = findCombatantById(step.targetId, allies, enemies);
       if (!target?.isAlive) {
@@ -746,7 +768,7 @@ export class SkillExecutor {
           actor,
           allies,
           enemies,
-          passives,
+          passives
         );
         target = resolveSequenceStepAnchor(
           step.effectDef,
@@ -754,7 +776,7 @@ export class SkillExecutor {
           actor,
           allies,
           enemies,
-          this.gameData,
+          this.gameData
         );
       }
       if (!target?.isAlive) return;
@@ -764,7 +786,7 @@ export class SkillExecutor {
         skill,
         step.effectDef,
         step.cd,
-        step.effectIndex,
+        step.effectIndex
       );
       return;
     }
@@ -779,11 +801,11 @@ export class SkillExecutor {
       step.cd,
       passives,
       effectHitPools,
-      sharedTargetingLocks,
+      sharedTargetingLocks
     );
     if (
       effectHitPools &&
-      step.effectDef.type !== 'conditionalEffect' &&
+      step.effectDef.type !== "conditionalEffect" &&
       result.hitUnits.length > 0
     ) {
       effectHitPools.set(step.effectIndex, result.hitUnits);
@@ -810,8 +832,7 @@ export class SkillExecutor {
       slotKind: hit.slotKind,
     };
 
-    const effectIndex =
-      hit.effectIndex >= 0 ? hit.effectIndex : 0;
+    const effectIndex = hit.effectIndex >= 0 ? hit.effectIndex : 0;
     let appliedAny = false;
     for (const entry of hit.targets) {
       const target = findCombatantById(entry.targetId, allies, enemies);
@@ -831,7 +852,7 @@ export class SkillExecutor {
             suppressBonusBasicAttack: hit.suppressBonusBasicAttack === true,
             suppressAllyAttackFollowUp: hit.suppressAllyAttackFollowUp === true,
             suppressBonusActiveOnHit: hit.suppressBonusActiveOnHit === true,
-          },
+          }
         )
       ) {
         appliedAny = true;
@@ -859,23 +880,28 @@ export class SkillExecutor {
     skill: ActiveSkillDef,
     effectDef: MoveSkillEffect,
     cd: SkillCooldown,
-    effectIndex: number,
+    effectIndex: number
   ): void {
     const toX = resolveMoveBattleX(actor, anchor, effectDef, this.gameData);
     const fromX = actor.battleX;
     const rangePx = resolveSkillRangePx(actor, effectDef);
     const moveDeltaPx = Math.abs(toX - fromX);
-    const engageToX = resolveAttackBattleX(actor, anchor.battleX, this.gameData, rangePx);
+    const engageToX = resolveAttackBattleX(
+      actor,
+      anchor.battleX,
+      this.gameData,
+      rangePx
+    );
     if (fromX === toX) {
       this.applyRearAssaultAccessFromMove(actor, anchor, effectDef);
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: anchor.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'move',
+        effect: "move",
         effectIndex,
       });
       return;
@@ -892,13 +918,13 @@ export class SkillExecutor {
     });
 
     this.emit({
-      type: 'skill',
+      type: "skill",
       actorId: actor.id,
       targetId: anchor.id,
       skillId: skill.id,
       skillName: skill.name,
       slotKind: cd.slotKind,
-      effect: 'move',
+      effect: "move",
       effectIndex,
     });
   }
@@ -906,7 +932,7 @@ export class SkillExecutor {
   private applyRearAssaultAccessFromMove(
     actor: CombatantState,
     anchor: CombatantState,
-    effectDef: MoveSkillEffect,
+    effectDef: MoveSkillEffect
   ): void {
     if (isHostileRearAssaultMove(actor, anchor, effectDef)) {
       setPlayerRearAssaultAccess(actor);
@@ -925,55 +951,56 @@ export class SkillExecutor {
     powerMultiplierOverride?: number,
     hitIndex?: number,
     vfxSourceId?: string,
-    damageContext: PassiveDamageContext = {},
+    damageContext: PassiveDamageContext = {}
   ): boolean {
-    if (effectDef.type === 'move') {
+    if (effectDef.type === "move") {
       return false;
     }
 
-    if (effectDef.type === 'dotHarvest') {
+    if (effectDef.type === "dotHarvest") {
       const passives = this.gameData.skillRegistry.passives;
       const harvestAmount = harvestDotRemainingDamage(
         actor,
         target,
         passives,
-        effectDef.harvestRatio,
+        effectDef.harvestRatio
       );
       if (harvestAmount <= 0) return false;
       const damageResult = applyConfirmedHpDamage(target, harvestAmount);
       const applied = damageResult.hpDamage + damageResult.barrierDamage;
       if (applied <= 0) return false;
       this.deps.onDamageApplied?.(actor, target, applied, {
-        attackKind: 'damage',
+        attackKind: "damage",
         hpDamage: damageResult.hpDamage,
         attackRangePx: effectDef.range ?? actor.traits.rangePx,
       });
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'dotHarvest',
+        effect: "dotHarvest",
         effectIndex,
         amount: harvestAmount,
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
-      this.emit({ type: 'hurt', targetId: target.id });
+      this.emit({ type: "hurt", targetId: target.id });
       if (damageResult.lethal) {
         target.isAlive = false;
         this.deps.getSequenceRunner().clearForActor(target.id);
         this.deps.onUnitDied?.(target);
-        this.emit({ type: 'death', targetId: target.id });
+        this.emit({ type: "death", targetId: target.id });
       }
       return true;
     }
 
-    if (effectDef.type === 'poisonSpread') {
+    if (effectDef.type === "poisonSpread") {
       const poisonDots = target.statusEffects.filter(
-        (e) => e.overlay === 'dot' && e.dotFlavor === 'poison' && e.remainingSec > 0,
+        (e) =>
+          e.overlay === "dot" && e.dotFlavor === "poison" && e.remainingSec > 0
       );
       if (poisonDots.length === 0) return false;
       const hostiles = this.deps
@@ -991,7 +1018,7 @@ export class SkillExecutor {
             dot,
             actor.id,
             skill.id,
-            effectDef.spreadDurationRatio,
+            effectDef.spreadDurationRatio
           );
           if (!clone) continue;
           enemy.statusEffects.push(clone);
@@ -1000,13 +1027,13 @@ export class SkillExecutor {
       }
       if (spreadCount === 0) return false;
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'poisonSpread',
+        effect: "poisonSpread",
         effectIndex,
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
@@ -1014,22 +1041,22 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'dotCompress') {
+    if (effectDef.type === "dotCompress") {
       const passives = this.gameData.skillRegistry.passives;
       const ratio = resolveHunterDotCompressRatio(
         actor,
         passives,
-        effectDef.compressRatio,
+        effectDef.compressRatio
       );
       if (compressAllDotsOnUnit(target, ratio) <= 0) return false;
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'dotCompress',
+        effect: "dotCompress",
         effectIndex,
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
@@ -1038,16 +1065,16 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'dotExtend') {
+    if (effectDef.type === "dotExtend") {
       if (extendAllDotsOnUnit(target, effectDef.extendRatio) <= 0) return false;
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'dotExtend',
+        effect: "dotExtend",
         effectIndex,
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
@@ -1055,20 +1082,20 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'enemyReelIn') {
+    if (effectDef.type === "enemyReelIn") {
       if (!target.isEnemy || actor.isEnemy) return false;
       const beforeX = target.battleX;
       const delta = applyEnemyReelIn(actor, target, this.gameData);
       if (delta === 0) return false;
-      this.deps.onBattleXChanged?.(target, beforeX, 'enemyReelIn');
+      this.deps.onBattleXChanged?.(target, beforeX, "enemyReelIn");
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'enemyReelIn',
+        effect: "enemyReelIn",
         effectIndex,
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
@@ -1076,7 +1103,7 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'arenaDominance') {
+    if (effectDef.type === "arenaDominance") {
       const enemies = this.deps
         .getAllCombatants()
         .filter((unit) => unit.isEnemy);
@@ -1093,28 +1120,34 @@ export class SkillExecutor {
       }
       consumeActiveStageTrigger(actor, skill);
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: actor.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'arenaDominance',
+        effect: "arenaDominance",
         effectIndex,
-        statusLabel: 'arenaDominance',
+        statusLabel: "arenaDominance",
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
 
-    if (effectDef.type === 'damage') {
+    if (effectDef.type === "damage") {
       const passives = this.gameData.skillRegistry.passives;
-      const partyAllies = this.deps.getAllCombatants().filter((u) => !u.isEnemy);
-      const coverResult = resolveLowHpCoverTarget(target, partyAllies, passives);
+      const partyAllies = this.deps
+        .getAllCombatants()
+        .filter((u) => !u.isEnemy);
+      const coverResult = resolveLowHpCoverTarget(
+        target,
+        partyAllies,
+        passives
+      );
       const damageTarget = coverResult.target;
 
       if (rollsEvasion(damageTarget, passives)) {
-        this.emit({ type: 'evade', targetId: damageTarget.id });
+        this.emit({ type: "evade", targetId: damageTarget.id });
         return false;
       }
 
@@ -1126,7 +1159,7 @@ export class SkillExecutor {
           skill,
           effectDef,
           effectIndex,
-          effectDef.amount,
+          effectDef.amount
         ),
       };
       const afterDr = resolveDamage(
@@ -1141,22 +1174,22 @@ export class SkillExecutor {
           effectDefenseIgnore: effectDef.defenseIgnore,
           ignoreDamageTakenReduction:
             effectDef.ignoreDamageTakenReduction === true,
-        },
+        }
       );
 
       let finalDamage = afterDr;
       let didBlock = false;
       const damageType = resolveSkillDamageType(actor, effectDef);
       if (effectDef.pierceBlock !== true) {
-        if (damageType === 'physical') {
+        if (damageType === "physical") {
           const blockResult = applyBlockToPhysicalDamage(
             damageTarget,
             afterDr,
-            passives,
+            passives
           );
           finalDamage = blockResult.finalDamage;
           didBlock = blockResult.didBlock;
-        } else if (damageType === 'magic') {
+        } else if (damageType === "magic") {
           const blockResult = applyBlockToMagicDamage(damageTarget, afterDr);
           finalDamage = blockResult.finalDamage;
           didBlock = blockResult.didBlock;
@@ -1165,7 +1198,7 @@ export class SkillExecutor {
       if (effectDef.pierceWard !== true) {
         const wardResult = applyWardBarrierToIncomingDamage(
           damageTarget,
-          finalDamage,
+          finalDamage
         );
         finalDamage = wardResult.damage;
       }
@@ -1173,78 +1206,78 @@ export class SkillExecutor {
         finalDamage = applyArenaMarkDamageMitigation(
           damageTarget,
           actor,
-          finalDamage,
+          finalDamage
         );
       }
       if (didBlock) {
-        this.emit({ type: 'block', targetId: damageTarget.id });
+        this.emit({ type: "block", targetId: damageTarget.id });
         const blockResonanceConfig = resolveBlockResonanceConfigForUnit(
           damageTarget,
-          passives,
+          passives
         );
         if (blockResonanceConfig.maxStacks > 0) {
           addBlockResonanceStacksOnBlock(damageTarget, blockResonanceConfig);
         }
         if (hasBlockResonanceStance(damageTarget)) {
-            const stanceSkill =
-              this.gameData.skillRegistry.actives[
-                damageTarget.statusEffects.find(
-                  (effect) =>
-                    effect.overlay === 'blockResonanceStance' &&
-                    effect.remainingSec > 0,
-                )?.skillId ?? ''
-              ];
-            if (stanceSkill) {
-              applyBlockResonanceStanceOnBlock(
-                damageTarget,
-                enemies,
-                stanceSkill,
-                passives,
-                (defender, enemy, counterAmount) => {
-                  const ward = applyWardBarrierToIncomingDamage(
-                    enemy,
-                    counterAmount,
-                  );
-                  const mitigation = mitigateIncomingDamage(
-                    enemy,
-                    ward.damage,
-                    passives,
-                  );
-                  if (mitigation.lastStandTriggered) {
-                    this.emit({ type: 'invulnerable', targetId: enemy.id });
+          const stanceSkill =
+            this.gameData.skillRegistry.actives[
+              damageTarget.statusEffects.find(
+                (effect) =>
+                  effect.overlay === "blockResonanceStance" &&
+                  effect.remainingSec > 0
+              )?.skillId ?? ""
+            ];
+          if (stanceSkill) {
+            applyBlockResonanceStanceOnBlock(
+              damageTarget,
+              enemies,
+              stanceSkill,
+              passives,
+              (defender, enemy, counterAmount) => {
+                const ward = applyWardBarrierToIncomingDamage(
+                  enemy,
+                  counterAmount
+                );
+                const mitigation = mitigateIncomingDamage(
+                  enemy,
+                  ward.damage,
+                  passives
+                );
+                if (mitigation.lastStandTriggered) {
+                  this.emit({ type: "invulnerable", targetId: enemy.id });
+                }
+                const incoming = applyIncomingDamage(
+                  enemy,
+                  mitigation.finalDamage
+                );
+                const { damageResult } = incoming;
+                const appliedCounterDamage =
+                  damageResult.hpDamage + damageResult.barrierDamage;
+                this.deps.onDamageApplied?.(
+                  defender,
+                  enemy,
+                  appliedCounterDamage,
+                  {
+                    attackKind: "damage",
+                    hpDamage: damageResult.hpDamage,
+                    attackRangePx: defender.traits.rangePx,
                   }
-                  const incoming = applyIncomingDamage(
-                    enemy,
-                    mitigation.finalDamage,
-                  );
-                  const { damageResult } = incoming;
-                  const appliedCounterDamage =
-                    damageResult.hpDamage + damageResult.barrierDamage;
-                  this.deps.onDamageApplied?.(
-                    defender,
-                    enemy,
-                    appliedCounterDamage,
-                    {
-                      attackKind: 'damage',
-                      hpDamage: damageResult.hpDamage,
-                      attackRangePx: defender.traits.rangePx,
-                    },
-                  );
-                  if (damageResult.lethal) {
-                    enemy.isAlive = false;
-                    this.deps.getSequenceRunner().clearForActor(enemy.id);
-                    this.deps.onUnitDied?.(enemy);
-                    this.emit({ type: 'death', targetId: enemy.id });
-                  }
-                },
-              );
-            }
+                );
+                if (damageResult.lethal) {
+                  enemy.isAlive = false;
+                  this.deps.getSequenceRunner().clearForActor(enemy.id);
+                  this.deps.onUnitDied?.(enemy);
+                  this.emit({ type: "death", targetId: enemy.id });
+                }
+              }
+            );
+          }
         }
       }
       if (actor.isEnemy && !damageTarget.isEnemy) {
         const dominanceOverlay = damageTarget.statusEffects.find(
           (effect) =>
-            effect.overlay === 'arenaDominance' && effect.remainingSec > 0,
+            effect.overlay === "arenaDominance" && effect.remainingSec > 0
         );
         if (dominanceOverlay) {
           const overlaySkill = dominanceOverlay.skillId
@@ -1252,8 +1285,8 @@ export class SkillExecutor {
             : undefined;
           const mul = overlaySkill
             ? resolveArenaDominanceNonMarkMultiplier(
-                { type: 'arenaDominance' },
-                overlaySkill,
+                { type: "arenaDominance" },
+                overlaySkill
               )
             : undefined;
           if (mul !== undefined) {
@@ -1261,22 +1294,27 @@ export class SkillExecutor {
               damageTarget,
               actor,
               finalDamage,
-              mul,
+              mul
             );
           }
         }
       }
-      const mitigation = mitigateIncomingDamage(damageTarget, finalDamage, passives, {
-        allies: partyAllies,
-      });
+      const mitigation = mitigateIncomingDamage(
+        damageTarget,
+        finalDamage,
+        passives,
+        {
+          allies: partyAllies,
+        }
+      );
       if (mitigation.lastStandTriggered) {
-        this.emit({ type: 'invulnerable', targetId: damageTarget.id });
+        this.emit({ type: "invulnerable", targetId: damageTarget.id });
       }
       if (mitigation.lastStandRecoveryTriggered) {
-        this.emit({ type: 'lastStandRecovery', targetId: damageTarget.id });
+        this.emit({ type: "lastStandRecovery", targetId: damageTarget.id });
       }
       if (mitigation.lastStandGutsTriggered) {
-        this.emit({ type: 'lastStandGuts', targetId: damageTarget.id });
+        this.emit({ type: "lastStandGuts", targetId: damageTarget.id });
         this.deps.onLastStandGuts?.(damageTarget.id);
       }
       finalDamage = mitigation.finalDamage;
@@ -1290,7 +1328,7 @@ export class SkillExecutor {
         damageResult.barrierDamage +
         incoming.delayedDamage;
       this.deps.onDamageApplied?.(actor, damageTarget, appliedDamage, {
-        attackKind: 'damage',
+        attackKind: "damage",
         hpDamage: damageResult.hpDamage,
         attackRangePx: effectDef.range ?? actor.traits.rangePx,
         didBlock,
@@ -1300,31 +1338,31 @@ export class SkillExecutor {
         barrierDamage: damageResult.barrierDamage,
       });
       const { lethal } = damageResult;
-      if (cd.slotKind === 'basic') {
+      if (cd.slotKind === "basic") {
         this.chargeBasicAttackCountForHit(actor);
       }
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: damageTarget.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'damage',
+        effect: "damage",
         effectIndex,
         amount: finalDamage,
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
-      this.emit({ type: 'hurt', targetId: damageTarget.id });
+      this.emit({ type: "hurt", targetId: damageTarget.id });
       if (
-        (cd.slotKind === 'basic' || cd.slotKind === 'active') &&
+        (cd.slotKind === "basic" || cd.slotKind === "active") &&
         appliedDamage > 0
       ) {
         resetIdleAtkRampOnAttack(actor);
       }
       if (
-        cd.slotKind === 'active' &&
+        cd.slotKind === "active" &&
         appliedDamage > 0 &&
         damageTarget.isAlive &&
         actorHasSorcererFlamePassives(actor, passives)
@@ -1341,27 +1379,30 @@ export class SkillExecutor {
             battleTimeSec: this.deps.getBattleTimeSec(),
             suppressBonusActiveOnHit:
               damageContext.suppressBonusActiveOnHit === true,
-          },
+          }
         );
         if (flameOutcome.pendingHits.length > 0) {
           this.deps.enqueuePendingHits(flameOutcome.pendingHits);
         }
-        for (const [targetId, explosionDamage] of flameOutcome.explosionDamageByTargetId) {
+        for (const [
+          targetId,
+          explosionDamage,
+        ] of flameOutcome.explosionDamageByTargetId) {
           const explosionTarget = findCombatantById(
             targetId,
             partyAlliesForHook,
-            enemiesForHook,
+            enemiesForHook
           );
           if (!explosionTarget?.isAlive || explosionDamage <= 0) continue;
           const explosionMitigation = mitigateIncomingDamage(
             explosionTarget,
             explosionDamage,
             passives,
-            { allies: partyAlliesForHook },
+            { allies: partyAlliesForHook }
           );
           const explosionIncoming = applyIncomingDamage(
             explosionTarget,
-            explosionMitigation.finalDamage,
+            explosionMitigation.finalDamage
           );
           const explosionApplied =
             explosionIncoming.damageResult.hpDamage +
@@ -1373,30 +1414,30 @@ export class SkillExecutor {
             explosionTarget,
             explosionApplied,
             {
-              attackKind: 'damage',
+              attackKind: "damage",
               hpDamage: explosionIncoming.damageResult.hpDamage,
               attackRangePx: effectDef.range ?? actor.traits.rangePx,
-            },
+            }
           );
           this.emit({
-            type: 'skill',
+            type: "skill",
             actorId: actor.id,
             targetId: explosionTarget.id,
             skillId: skill.id,
             skillName: skill.name,
             slotKind: cd.slotKind,
-            effect: 'damage',
+            effect: "damage",
             effectIndex,
             amount: explosionMitigation.finalDamage,
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId),
           });
-          this.emit({ type: 'hurt', targetId: explosionTarget.id });
+          this.emit({ type: "hurt", targetId: explosionTarget.id });
           if (explosionIncoming.damageResult.lethal) {
             explosionTarget.isAlive = false;
             this.deps.getSequenceRunner().clearForActor(explosionTarget.id);
             this.deps.onUnitDied?.(explosionTarget);
-            this.emit({ type: 'death', targetId: explosionTarget.id });
+            this.emit({ type: "death", targetId: explosionTarget.id });
           }
         }
         if (flameOutcome.debuffChanged) {
@@ -1404,7 +1445,7 @@ export class SkillExecutor {
         }
       }
       const ballistaConfig = mergeBallistaMarkPassive(
-        getPassiveDefs(actor, passives),
+        getPassiveDefs(actor, passives)
       );
       if (
         ballistaConfig &&
@@ -1416,44 +1457,44 @@ export class SkillExecutor {
         const splashTargets = findBallistaMarkSplashTargets(
           damageTarget,
           enemies,
-          ballistaConfig.splashRadiusPx,
+          ballistaConfig.splashRadiusPx
         );
         const splashDamage = resolveBallistaMarkSplashDamage(
           appliedDamage,
-          ballistaConfig.splashDamageScale,
+          ballistaConfig.splashDamageScale
         );
         for (const splashTarget of splashTargets) {
           const splashResult = applyConfirmedHpDamage(
             splashTarget,
-            splashDamage,
+            splashDamage
           );
           const splashApplied =
             splashResult.hpDamage + splashResult.barrierDamage;
           if (splashApplied <= 0) continue;
           this.deps.onDamageApplied?.(actor, splashTarget, splashApplied, {
-            attackKind: 'damage',
+            attackKind: "damage",
             hpDamage: splashResult.hpDamage,
             attackRangePx: effectDef.range ?? actor.traits.rangePx,
           });
           this.emit({
-            type: 'skill',
+            type: "skill",
             actorId: actor.id,
             targetId: splashTarget.id,
             skillId: skill.id,
             skillName: skill.name,
             slotKind: cd.slotKind,
-            effect: 'damage',
+            effect: "damage",
             effectIndex,
             amount: splashDamage,
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId),
           });
-          this.emit({ type: 'hurt', targetId: splashTarget.id });
+          this.emit({ type: "hurt", targetId: splashTarget.id });
           if (splashResult.lethal) {
             splashTarget.isAlive = false;
             this.deps.getSequenceRunner().clearForActor(splashTarget.id);
             this.deps.onUnitDied?.(splashTarget);
-            this.emit({ type: 'death', targetId: splashTarget.id });
+            this.emit({ type: "death", targetId: splashTarget.id });
           }
         }
       }
@@ -1462,36 +1503,33 @@ export class SkillExecutor {
         if (!damageTarget.isEnemy) {
           stripPassivesAurasFromSource(
             damageTarget.id,
-            this.deps.getAllCombatants(),
+            this.deps.getAllCombatants()
           );
         }
         this.deps.getSequenceRunner().clearForActor(damageTarget.id);
         this.deps.onUnitDied?.(damageTarget);
-        this.emit({ type: 'death', targetId: damageTarget.id });
+        this.emit({ type: "death", targetId: damageTarget.id });
       }
       if (
-        cd.slotKind === 'basic' &&
+        cd.slotKind === "basic" &&
         appliedDamage > 0 &&
         damageTarget.isEnemy &&
         damageTarget.isAlive &&
-        damageType === 'physical'
+        damageType === "physical"
       ) {
-        const dotProcs = collectAllyBasicAttackDotProcs(
-          partyAllies,
-          passives,
-        );
+        const dotProcs = collectAllyBasicAttackDotProcs(partyAllies, passives);
         const proc = rollAllyBasicAttackDotProc(dotProcs);
         if (proc) {
           const procDuration = resolveDotDurationOnApply(
             partyAllies,
             passives,
-            proc.durationSec,
+            proc.durationSec
           );
           const appliedAt = Date.now();
           damageTarget.statusEffects.push({
             id: `${proc.passiveId}_proc_dot_${appliedAt}`,
-            kind: 'debuff',
-            overlay: 'dot',
+            kind: "debuff",
+            overlay: "dot",
             multiplier: 1,
             durationSec: procDuration,
             remainingSec: procDuration,
@@ -1506,7 +1544,7 @@ export class SkillExecutor {
         }
       }
       if (
-        cd.slotKind === 'basic' &&
+        cd.slotKind === "basic" &&
         !damageContext.suppressBonusBasicAttack &&
         damageTarget.isAlive &&
         shouldTriggerBonusBasicAttackOnHit(actor, damageTarget, passives)
@@ -1519,7 +1557,7 @@ export class SkillExecutor {
             skillName: skill.name,
             effectDef,
             effectIndex,
-            slotKind: 'basic',
+            slotKind: "basic",
             hitIndex: hitIndex ?? 0,
             vfxSourceId,
             suppressBonusBasicAttack: true,
@@ -1528,7 +1566,7 @@ export class SkillExecutor {
         ]);
       }
       if (
-        cd.slotKind === 'basic' &&
+        cd.slotKind === "basic" &&
         appliedDamage > 0 &&
         damageTarget.isEnemy &&
         !actor.isEnemy
@@ -1543,7 +1581,7 @@ export class SkillExecutor {
         }
       }
       if (
-        cd.slotKind === 'basic' &&
+        cd.slotKind === "basic" &&
         appliedDamage > 0 &&
         damageTarget.isEnemy &&
         !actor.isEnemy &&
@@ -1554,7 +1592,7 @@ export class SkillExecutor {
           .filter((unit) => !unit.isEnemy);
         const followUpLancers = findFollowUpLancersForAllyBasic(
           actor,
-          partyAllies,
+          partyAllies
         );
         if (followUpLancers.length > 0) {
           const pendingHits = followUpLancers
@@ -1563,8 +1601,8 @@ export class SkillExecutor {
                 lancer,
                 damageTarget.id,
                 this.gameData,
-                this.deps.getBattleTimeSec(),
-              ),
+                this.deps.getBattleTimeSec()
+              )
             )
             .filter((hit): hit is NonNullable<typeof hit> => hit !== undefined);
           if (pendingHits.length > 0) {
@@ -1575,42 +1613,41 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'heal') {
+    if (effectDef.type === "heal") {
       if (isAllySupportBlockedDuringArenaDominance(target, actor)) {
         return false;
       }
-      if ((effectDef.healSubKind ?? 'instant') === 'hot') {
+      if ((effectDef.healSubKind ?? "instant") === "hot") {
         const passives = this.gameData.skillRegistry.passives;
         const baseSpec =
-          effectDef.amount ??
-          ({ kind: 'flat', flatAmount: 0 } as const);
+          effectDef.amount ?? ({ kind: "flat", flatAmount: 0 } as const);
         let amountSpec = resolveEffectiveAmountSpecForActiveEffect(
           actor,
           passives,
           skill,
           effectDef,
           effectIndex,
-          baseSpec,
+          baseSpec
         );
         if (effectDef.potencyStackScale) {
           const stacks = this.potencyStacksConsumed.get(target.id) ?? 0;
           if (stacks <= 0) return false;
-          if (amountSpec.kind === 'percentMaxHp') {
+          if (amountSpec.kind === "percentMaxHp") {
             amountSpec = {
               ...amountSpec,
               percentOfMaxHp: amountSpec.percentOfMaxHp * stacks,
             };
-          } else if (amountSpec.kind === 'atkBased') {
+          } else if (amountSpec.kind === "atkBased") {
             amountSpec = {
               ...amountSpec,
               atkScale: amountSpec.atkScale * stacks,
             };
-          } else if (amountSpec.kind === 'flat') {
+          } else if (amountSpec.kind === "flat") {
             amountSpec = {
               ...amountSpec,
               flatAmount: amountSpec.flatAmount * stacks,
             };
-          } else if (amountSpec.kind === 'defBased') {
+          } else if (amountSpec.kind === "defBased") {
             amountSpec = {
               ...amountSpec,
               defScale: amountSpec.defScale * stacks,
@@ -1622,8 +1659,8 @@ export class SkillExecutor {
         const appliedAt = Date.now();
         target.statusEffects.push({
           id: `${skill.id}_hot_${appliedAt}`,
-          kind: 'buff',
-          overlay: 'hot',
+          kind: "buff",
+          overlay: "hot",
           multiplier: 1,
           durationSec: duration,
           remainingSec: duration,
@@ -1639,49 +1676,49 @@ export class SkillExecutor {
         if (effectDef.stackOnApply && effectDef.stackOnApply > 0) {
           const config = resolvePartyHerbalPotencyConfig(
             sameSideAlliesFrom(this.deps.getAllCombatants(), actor),
-            passives,
+            passives
           );
           if (config.maxStacks > 0) {
             addHerbalPotencyStacks(
               target,
               effectDef.stackOnApply,
               config.maxStacks,
-              actor.id,
+              actor.id
             );
           }
         }
         this.emit({
-          type: 'skill',
+          type: "skill",
           actorId: actor.id,
           targetId: target.id,
           skillId: skill.id,
           skillName: skill.name,
           slotKind: cd.slotKind,
-          effect: 'heal',
+          effect: "heal",
           effectIndex,
-          statusLabel: 'hot',
+          statusLabel: "hot",
           range: effectDef.range,
           ...skillHitEventFields(hitIndex, vfxSourceId),
         });
         return true;
       }
-      if ((effectDef.healSubKind ?? 'instant') === 'dispel') {
+      if ((effectDef.healSubKind ?? "instant") === "dispel") {
         const removed = dispelDebuffsOnTarget(
           target,
           effectDef.dispelCount ?? 0,
           effectDef.dispelTags,
           actor.id,
-          effectDef.dispelPriority,
+          effectDef.dispelPriority
         );
         if (removed <= 0) return false;
         this.emit({
-          type: 'skill',
+          type: "skill",
           actorId: actor.id,
           targetId: target.id,
           skillId: skill.id,
           skillName: skill.name,
           slotKind: cd.slotKind,
-          effect: 'dispel',
+          effect: "dispel",
           effectIndex,
           amount: removed,
           range: effectDef.range,
@@ -1696,7 +1733,7 @@ export class SkillExecutor {
         skill,
         effectDef,
         effectIndex,
-        effectDef.amount ?? ({ kind: 'flat', flatAmount: 0 } as const),
+        effectDef.amount ?? ({ kind: "flat", flatAmount: 0 } as const)
       );
       const amount = resolveHealAmount(
         actor,
@@ -1706,13 +1743,13 @@ export class SkillExecutor {
         {
           atkScaleOverride: powerMultiplierOverride,
           effectSpecialIncrease: effectDef.damageIncrease,
-        },
+        }
       );
       if (amount <= 0) return false;
       const targetHpRatioBeforeHeal = currentHpRatio(target);
       const sameSideAllies = sameSideAlliesFrom(
         this.deps.getAllCombatants(),
-        actor,
+        actor
       );
       const healResult = applyDirectHealWithExcess(
         actor,
@@ -1720,7 +1757,7 @@ export class SkillExecutor {
         amount,
         sameSideAllies,
         passives,
-        { allowRedirect: true },
+        { allowRedirect: true }
       );
       if (
         healResult.healed <= 0 &&
@@ -1733,17 +1770,17 @@ export class SkillExecutor {
         actor,
         target,
         targetHpRatioBeforeHeal,
-        passives,
+        passives
       );
       this.deps.onHealApplied?.(target);
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'heal',
+        effect: "heal",
         effectIndex,
         amount,
         range: effectDef.range,
@@ -1753,18 +1790,19 @@ export class SkillExecutor {
         grantHealReservationStacks(
           actor,
           healResult.redirectTarget,
-          healResult.redirectHpRatioBeforeHeal ?? currentHpRatio(healResult.redirectTarget),
-          passives,
+          healResult.redirectHpRatioBeforeHeal ??
+            currentHpRatio(healResult.redirectTarget),
+          passives
         );
         this.deps.onHealApplied?.(healResult.redirectTarget);
         this.emit({
-          type: 'skill',
+          type: "skill",
           actorId: actor.id,
           targetId: healResult.redirectTarget.id,
           skillId: skill.id,
           skillName: skill.name,
           slotKind: cd.slotKind,
-          effect: 'heal',
+          effect: "heal",
           effectIndex,
           amount: healResult.redirectAmount,
           range: effectDef.range,
@@ -1774,15 +1812,15 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'basicAttackTransform') {
+    if (effectDef.type === "basicAttackTransform") {
       const duration = effectDef.buffDurationSec ?? 0;
       const transformSpec = basicAttackTransformSpecFromEffect(effectDef);
       if (duration <= 0 || !transformSpec) return false;
       const appliedAt = Date.now();
       target.statusEffects.push({
         id: `${skill.id}_basicAttackTransform_${appliedAt}`,
-        kind: 'buff',
-        overlay: 'basicAttackTransform',
+        kind: "buff",
+        overlay: "basicAttackTransform",
         multiplier: 1,
         durationSec: duration,
         remainingSec: duration,
@@ -1791,25 +1829,25 @@ export class SkillExecutor {
         basicAttackTransform: structuredClone(transformSpec),
       });
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'buff',
+        effect: "buff",
         effectIndex,
-        statusLabel: 'basicAttackTransform',
+        statusLabel: "basicAttackTransform",
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
 
-    if (effectDef.type === 'buff' || effectDef.type === 'debuff') {
-      if (effectDef.type === 'buff') {
-        const subKind = effectDef.buffSubKind ?? 'stat';
-        if (subKind === 'barrier') {
+    if (effectDef.type === "buff" || effectDef.type === "debuff") {
+      if (effectDef.type === "buff") {
+        const subKind = effectDef.buffSubKind ?? "stat";
+        if (subKind === "barrier") {
           if (isAllySupportBlockedDuringArenaDominance(target, actor)) {
             return false;
           }
@@ -1820,35 +1858,34 @@ export class SkillExecutor {
             skill,
             effectDef,
             effectIndex,
-            effectDef.amount ??
-              ({ kind: 'flat', flatAmount: 0 } as const),
+            effectDef.amount ?? ({ kind: "flat", flatAmount: 0 } as const)
           );
           const baseGrant = resolveResourceAmount(
             actor,
             target,
             amountSpec,
             passives,
-            powerMultiplierOverride,
+            powerMultiplierOverride
           );
           const grant = Math.floor(
             baseGrant *
               getPassiveSpecialEffectMultiplier(
-                'barrier',
+                "barrier",
                 actor,
                 target,
-                passives,
-              ),
+                passives
+              )
           );
           if (grant <= 0) return false;
           applyBarrierToTarget(target, grant, effectDef.barrierStack);
           this.emit({
-            type: 'skill',
+            type: "skill",
             actorId: actor.id,
             targetId: target.id,
             skillId: skill.id,
             skillName: skill.name,
             slotKind: cd.slotKind,
-            effect: 'barrier',
+            effect: "barrier",
             effectIndex,
             amount: grant,
             range: effectDef.range,
@@ -1856,41 +1893,35 @@ export class SkillExecutor {
           });
           return true;
         }
-        if (subKind === 'wardBarrier') {
+        if (subKind === "wardBarrier") {
           const stacks = effectDef.stacks ?? 1;
           const ratio = effectDef.damageReductionRatio ?? 0.1;
-          applyWardBarrierToTarget(
-            target,
-            stacks,
-            ratio,
-            skill.id,
-            actor.id,
-          );
+          applyWardBarrierToTarget(target, stacks, ratio, skill.id, actor.id);
           this.emit({
-            type: 'skill',
+            type: "skill",
             actorId: actor.id,
             targetId: target.id,
             skillId: skill.id,
             skillName: skill.name,
             slotKind: cd.slotKind,
-            effect: 'buff',
+            effect: "buff",
             effectIndex,
-            statusLabel: 'wardBarrier',
+            statusLabel: "wardBarrier",
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
-        if (subKind === 'block' || subKind === 'evasion') {
+        if (subKind === "block" || subKind === "evasion") {
           const chance = effectDef.chance ?? 0;
           const duration = effectDef.buffDurationSec ?? 0;
           if (chance <= 0 || duration <= 0) return false;
           const appliedAt = Date.now();
           target.statusEffects.push({
             id: `${skill.id}_${subKind}_${appliedAt}`,
-            kind: 'buff',
+            kind: "buff",
             overlay: subKind,
-            ...(subKind === 'block'
+            ...(subKind === "block"
               ? { blockChance: chance }
               : { evasionChance: chance }),
             multiplier: 1,
@@ -1900,13 +1931,13 @@ export class SkillExecutor {
             skillId: skill.id,
           });
           this.emit({
-            type: 'skill',
+            type: "skill",
             actorId: actor.id,
             targetId: target.id,
             skillId: skill.id,
             skillName: skill.name,
             slotKind: cd.slotKind,
-            effect: subKind === 'block' ? 'block' : 'buff',
+            effect: subKind === "block" ? "block" : "buff",
             effectIndex,
             statusLabel: subKind,
             range: effectDef.range,
@@ -1914,15 +1945,15 @@ export class SkillExecutor {
           });
           return true;
         }
-        if (subKind === 'damageDelay') {
+        if (subKind === "damageDelay") {
           const ratio = effectDef.ratio ?? 0;
           const duration = effectDef.buffDurationSec ?? 0;
           if (ratio <= 0 || duration <= 0) return false;
           const appliedAt = Date.now();
           target.statusEffects.push({
             id: `${skill.id}_damageDelay_${appliedAt}`,
-            kind: 'buff',
-            overlay: 'damageDelay',
+            kind: "buff",
+            overlay: "damageDelay",
             ratio,
             multiplier: 1,
             durationSec: duration,
@@ -1931,21 +1962,21 @@ export class SkillExecutor {
             skillId: skill.id,
           });
           this.emit({
-            type: 'skill',
+            type: "skill",
             actorId: actor.id,
             targetId: target.id,
             skillId: skill.id,
             skillName: skill.name,
             slotKind: cd.slotKind,
-            effect: 'buff',
+            effect: "buff",
             effectIndex,
-            statusLabel: 'damageDelay',
+            statusLabel: "damageDelay",
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
-        if (subKind === 'allyAttackFollowUp') {
+        if (subKind === "allyAttackFollowUp") {
           const duration = effectDef.buffDurationSec ?? 0;
           const radiusPx = effectDef.allyFollowUpRadiusPx ?? 70;
           const defDebuffMultiplier =
@@ -1955,11 +1986,11 @@ export class SkillExecutor {
           if (duration <= 0) return false;
           const appliedAt = Date.now();
           target.statusEffects = target.statusEffects.filter(
-            (effect) => effect.overlay !== ALLY_ATTACK_FOLLOW_UP_OVERLAY,
+            (effect) => effect.overlay !== ALLY_ATTACK_FOLLOW_UP_OVERLAY
           );
           target.statusEffects.push({
             id: `${skill.id}_allyAttackFollowUp_${appliedAt}`,
-            kind: 'buff',
+            kind: "buff",
             overlay: ALLY_ATTACK_FOLLOW_UP_OVERLAY,
             multiplier: 1,
             durationSec: duration,
@@ -1969,27 +2000,27 @@ export class SkillExecutor {
             allyFollowUpRadiusPx: radiusPx,
             followUpDefDebuffMultiplier: defDebuffMultiplier,
             followUpDefDebuffDurationSec: defDebuffDurationSec,
-            displayName: '追撃モード',
+            displayName: "追撃状態",
           });
           this.emit({
-            type: 'skill',
+            type: "skill",
             actorId: actor.id,
             targetId: target.id,
             skillId: skill.id,
             skillName: skill.name,
             slotKind: cd.slotKind,
-            effect: 'buff',
+            effect: "buff",
             effectIndex,
-            statusLabel: 'allyAttackFollowUp',
+            statusLabel: "allyAttackFollowUp",
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           return true;
         }
       }
-      if (effectDef.type === 'debuff') {
-        const subKind = effectDef.debuffSubKind ?? 'stat';
-        if (subKind === 'dot') {
+      if (effectDef.type === "debuff") {
+        const subKind = effectDef.debuffSubKind ?? "stat";
+        if (subKind === "dot") {
           const baseDuration = effectDef.durationSec ?? 0;
           const passives = this.gameData.skillRegistry.passives;
           const partyAllies = this.deps
@@ -1998,14 +2029,14 @@ export class SkillExecutor {
           const duration = resolveDotDurationOnApply(
             partyAllies,
             passives,
-            baseDuration,
+            baseDuration
           );
           const baseSpec =
             effectDef.amount ??
             (effectDef.powerMultiplier !== undefined &&
             effectDef.powerMultiplier > 0
               ? ({
-                  kind: 'atkBased',
+                  kind: "atkBased",
                   atkScale: effectDef.powerMultiplier,
                 } as const)
               : undefined);
@@ -2016,13 +2047,13 @@ export class SkillExecutor {
             skill,
             effectDef,
             effectIndex,
-            baseSpec,
+            baseSpec
           );
           const appliedAt = Date.now();
           target.statusEffects.push({
             id: `${skill.id}_dot_${appliedAt}`,
-            kind: 'debuff',
-            overlay: 'dot',
+            kind: "debuff",
+            overlay: "dot",
             multiplier: 1,
             durationSec: duration,
             remainingSec: duration,
@@ -2040,22 +2071,22 @@ export class SkillExecutor {
               : {}),
           });
           this.emit({
-            type: 'skill',
+            type: "skill",
             actorId: actor.id,
             targetId: target.id,
             skillId: skill.id,
             skillName: skill.name,
             slotKind: cd.slotKind,
-            effect: 'dot',
+            effect: "dot",
             effectIndex,
-            statusLabel: 'dot',
+            statusLabel: "dot",
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId),
           });
           this.deps.onTargetReceivedDebuff?.(target);
           return true;
         }
-        if (subKind === 'stun') {
+        if (subKind === "stun") {
           const duration = effectDef.durationSec ?? 0;
           if (duration <= 0) return false;
           const applied = applyStunToTarget(
@@ -2065,19 +2096,19 @@ export class SkillExecutor {
               skillId: skill.id,
               sourceId: actor.id,
             },
-            { actives: this.gameData.skillRegistry.actives },
+            { actives: this.gameData.skillRegistry.actives }
           );
           if (!applied) return false;
           this.emit({
-            type: 'skill',
+            type: "skill",
             actorId: actor.id,
             targetId: target.id,
             skillId: skill.id,
             skillName: skill.name,
             slotKind: cd.slotKind,
-            effect: 'stun',
+            effect: "stun",
             effectIndex,
-            statusLabel: 'stun',
+            statusLabel: "stun",
             range: effectDef.range,
             ...skillHitEventFields(hitIndex, vfxSourceId),
           });
@@ -2085,7 +2116,7 @@ export class SkillExecutor {
           return true;
         }
       }
-      const isBuff = effectDef.type === 'buff';
+      const isBuff = effectDef.type === "buff";
       const buffModifiers = isBuff ? parseStatBuffModifiers(effectDef) : [];
       const stats = isBuff
         ? buffModifiers.map((entry) => entry.stat)
@@ -2118,7 +2149,7 @@ export class SkillExecutor {
           }
           const effect: StatusEffect = {
             id: `${skill.id}_${entry.stat}_${appliedAt}_${i}`,
-            kind: 'buff',
+            kind: "buff",
             stat: entry.stat,
             multiplier: entryMultiplier ?? 1,
             durationSec: duration,
@@ -2129,7 +2160,7 @@ export class SkillExecutor {
           };
           target.statusEffects.push(effect);
           statusLabels.push(
-            formatStatusLabel(entry.stat, entryMultiplier, entryFlatBonus),
+            formatStatusLabel(entry.stat, entryMultiplier, entryFlatBonus)
           );
         }
       } else {
@@ -2137,12 +2168,14 @@ export class SkillExecutor {
           const stat = stats[i]!;
           const effect: StatusEffect = {
             id: `${skill.id}_${stat}_${appliedAt}_${i}`,
-            kind: 'debuff',
+            kind: "debuff",
             stat,
             multiplier: multiplier ?? 1,
             durationSec: duration,
             remainingSec: duration,
-            ...(flatBonus !== undefined ? { flatBonus: Math.abs(flatBonus) } : {}),
+            ...(flatBonus !== undefined
+              ? { flatBonus: Math.abs(flatBonus) }
+              : {}),
           };
           target.statusEffects.push(effect);
           statusLabels.push(formatStatusLabel(stat, multiplier, flatBonus));
@@ -2152,7 +2185,7 @@ export class SkillExecutor {
       clampHpToEffectiveMax(target);
 
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
@@ -2160,7 +2193,7 @@ export class SkillExecutor {
         slotKind: cd.slotKind,
         effect: effectDef.type,
         effectIndex,
-        statusLabel: statusLabels.join(', '),
+        statusLabel: statusLabels.join(", "),
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
@@ -2173,7 +2206,7 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'stun') {
+    if (effectDef.type === "stun") {
       const applied = applyStunToTarget(
         target,
         effectDef.durationSec,
@@ -2181,19 +2214,19 @@ export class SkillExecutor {
           skillId: skill.id,
           sourceId: actor.id,
         },
-        { actives: this.gameData.skillRegistry.actives },
+        { actives: this.gameData.skillRegistry.actives }
       );
       if (!applied) return false;
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'stun',
+        effect: "stun",
         effectIndex,
-        statusLabel: 'stun',
+        statusLabel: "stun",
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
@@ -2201,22 +2234,22 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'knockback') {
+    if (effectDef.type === "knockback") {
       const beforeX = target.battleX;
       const applied = applyKnockbackToTarget(target, effectDef.distancePx, {
         skillId: skill.id,
         sourceId: actor.id,
       });
       if (!applied) return false;
-      this.deps.onBattleXChanged?.(target, beforeX, 'knockback');
+      this.deps.onBattleXChanged?.(target, beforeX, "knockback");
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'knockback',
+        effect: "knockback",
         effectIndex,
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
@@ -2224,23 +2257,23 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'dispel') {
+    if (effectDef.type === "dispel") {
       const removed = dispelDebuffsOnTarget(
         target,
         effectDef.dispelCount,
         effectDef.dispelTags,
         actor.id,
-        effectDef.dispelPriority,
+        effectDef.dispelPriority
       );
       if (removed <= 0) return false;
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'dispel',
+        effect: "dispel",
         effectIndex,
         amount: removed,
         range: effectDef.range,
@@ -2249,12 +2282,12 @@ export class SkillExecutor {
       return true;
     }
 
-    if (effectDef.type === 'block') {
+    if (effectDef.type === "block") {
       const appliedAt = Date.now();
       target.statusEffects.push({
         id: `${skill.id}_block_${appliedAt}`,
-        kind: 'buff',
-        overlay: 'block',
+        kind: "buff",
+        overlay: "block",
         blockChance: effectDef.blockChance,
         multiplier: 1,
         durationSec: effectDef.durationSec,
@@ -2263,22 +2296,22 @@ export class SkillExecutor {
         skillId: skill.id,
       });
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'block',
+        effect: "block",
         effectIndex,
-        statusLabel: 'block',
+        statusLabel: "block",
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
 
-    if (effectDef.type === 'counter') {
+    if (effectDef.type === "counter") {
       grantCounterStatus(actor, {
         responses: effectDef.responses,
         durationSec: effectDef.durationSec,
@@ -2289,27 +2322,27 @@ export class SkillExecutor {
         sourceId: actor.id,
       });
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: actor.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'counter',
+        effect: "counter",
         effectIndex,
-        statusLabel: 'counter',
+        statusLabel: "counter",
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
       return true;
     }
 
-    if (effectDef.type === 'dot') {
+    if (effectDef.type === "dot") {
       const appliedAt = Date.now();
       target.statusEffects.push({
         id: `${skill.id}_dot_${appliedAt}`,
-        kind: 'debuff',
-        overlay: 'dot',
+        kind: "debuff",
+        overlay: "dot",
         multiplier: 1,
         durationSec: effectDef.durationSec,
         remainingSec: effectDef.durationSec,
@@ -2323,15 +2356,15 @@ export class SkillExecutor {
         ...(effectDef.dotFlavor ? { dotFlavor: effectDef.dotFlavor } : {}),
       });
       this.emit({
-        type: 'skill',
+        type: "skill",
         actorId: actor.id,
         targetId: target.id,
         skillId: skill.id,
         skillName: skill.name,
         slotKind: cd.slotKind,
-        effect: 'dot',
+        effect: "dot",
         effectIndex,
-        statusLabel: 'dot',
+        statusLabel: "dot",
         range: effectDef.range,
         ...skillHitEventFields(hitIndex, vfxSourceId),
       });
@@ -2344,7 +2377,7 @@ export class SkillExecutor {
   private beginPresentationLockIfNeeded(
     actor: CombatantState,
     skill: ActiveSkillDef,
-    slotKind: SkillSlotKind,
+    slotKind: SkillSlotKind
   ): void {
     const duration = resolvePresentationLockSec(skill, actor, slotKind);
     if (duration > 0) {
@@ -2355,13 +2388,13 @@ export class SkillExecutor {
   private beginSkillUseIfActive(
     actorId: string,
     skill: ActiveSkillDef,
-    slotKind: SkillSlotKind,
+    slotKind: SkillSlotKind
   ): void {
-    if (slotKind === 'basic') return;
+    if (slotKind === "basic") return;
     const useSec = resolveEffectiveUseDurationSec(
       skill,
       actorId,
-      this.blockResonanceStacksConsumed,
+      this.blockResonanceStacksConsumed
     );
     if (useSec <= 0) return;
     const duration = Math.max(useSec, resolveSequenceWallClockSec(skill));
@@ -2373,9 +2406,9 @@ export class SkillExecutor {
   private beginActiveEffectGaugeIfNeeded(
     actorId: string,
     cd: SkillCooldown,
-    skill: ActiveSkillDef,
+    skill: ActiveSkillDef
   ): void {
-    if (cd.slotKind !== 'active') return;
+    if (cd.slotKind !== "active") return;
     const totalSec = resolveActiveEffectGaugeDurationSec(skill);
     if (totalSec <= 0) return;
     this.deps
@@ -2385,16 +2418,16 @@ export class SkillExecutor {
 
   private beginSkillAnimLockIfNeeded(
     actorId: string,
-    skill: ActiveSkillDef,
+    skill: ActiveSkillDef
   ): void {
     this.deps.getSequenceRunner().beginSkillAnimLockIfNeeded(actorId, skill, 0);
   }
 }
 
 function formatStatusLabel(
-  stat: NonNullable<StatusEffect['stat']>,
+  stat: NonNullable<StatusEffect["stat"]>,
   multiplier: number | undefined,
-  flatBonus: number | undefined,
+  flatBonus: number | undefined
 ): string {
   const parts: string[] = [stat];
   if (multiplier !== undefined && multiplier !== 1) {
@@ -2403,5 +2436,5 @@ function formatStatusLabel(
   if (flatBonus !== undefined) {
     parts.push(`+${Math.abs(flatBonus)}`);
   }
-  return parts.join(' ');
+  return parts.join(" ");
 }

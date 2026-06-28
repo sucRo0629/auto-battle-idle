@@ -3,6 +3,8 @@ import {
   aggregateStatStatusEffects,
   assignCompactBadgeTier,
   collectStatusEffectBadgeDisplays,
+  resolveCompactStatusOverflowTooltipLabel,
+  resolveStatusBadgeTooltipLabel,
   resolveStatusDisplayCategoryLabel,
   selectCompactStatusBadges,
   sortBadgesForCompactView,
@@ -485,5 +487,42 @@ describe('compact status badge selection', () => {
         STATUS_DISPLAY_CATEGORY_LABELS[category],
       );
     }
+  });
+
+  it('formats badge tooltip labels with optional stack count', () => {
+    expect(
+      resolveStatusBadgeTooltipLabel({
+        category: 'blockResonance',
+        kind: 'buff',
+        remainingRatio: 1,
+        isPassive: true,
+      }),
+    ).toBe('防壁');
+
+    expect(
+      resolveStatusBadgeTooltipLabel({
+        category: 'blockResonance',
+        kind: 'buff',
+        remainingRatio: 1,
+        isPassive: true,
+        stackCount: 3,
+      }),
+    ).toBe('防壁 ×3');
+  });
+
+  it('joins overflow badge tooltip labels for hidden compact badges', () => {
+    const badges = [
+      badge({ category: 'hot', kind: 'buff' }),
+      badge({ category: 'block', kind: 'buff' }),
+      badge({ category: 'stun', kind: 'debuff' }),
+      badge({ category: 'poison', kind: 'debuff' }),
+      badge({ category: 'bleed', kind: 'debuff' }),
+    ];
+    const expected = sortBadgesForCompactView(badges)
+      .slice(4)
+      .map(resolveStatusBadgeTooltipLabel)
+      .join('、');
+    expect(resolveCompactStatusOverflowTooltipLabel(badges, 4)).toBe(expected);
+    expect(expected.length).toBeGreaterThan(0);
   });
 });

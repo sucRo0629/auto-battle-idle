@@ -22,6 +22,7 @@ import {
 } from '../render/statusBadgeRenderer.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
 import { resolveRecastFillView } from './partyHudRecast.ts';
+import { syncPartyHudStatusBadgeHits, buildPartyHudStatusBadgeHitSignature } from './partyHudStatusBadgeHits.ts';
 
 interface RecastCellElements {
   cell: HTMLElement;
@@ -38,7 +39,10 @@ interface SlotElements {
   icon: HTMLImageElement;
   hpFill: HTMLElement;
   barrierLayer: HTMLElement;
+  statusBadgeWrap: HTMLElement;
   statusCanvas: HTMLCanvasElement;
+  statusBadgeHitLayer: HTMLElement;
+  statusBadgeHitSignature: string | null;
   recastCells: RecastCellElements[];
 }
 
@@ -122,9 +126,17 @@ export class PartyHudPanel {
     });
     head.appendChild(label);
 
+    const statusBadgeWrap = document.createElement('div');
+    statusBadgeWrap.className = 'party-hud-status-badges-wrap';
+    head.appendChild(statusBadgeWrap);
+
     const statusCanvas = document.createElement('canvas');
     statusCanvas.className = 'party-hud-status-badges status-badge-canvas';
-    head.appendChild(statusCanvas);
+    statusBadgeWrap.appendChild(statusCanvas);
+
+    const statusBadgeHitLayer = document.createElement('div');
+    statusBadgeHitLayer.className = 'party-hud-status-badge-hits';
+    statusBadgeWrap.appendChild(statusBadgeHitLayer);
 
     const bodyRow = document.createElement('div');
     bodyRow.className = 'party-hud-body-row';
@@ -198,7 +210,10 @@ export class PartyHudPanel {
       icon,
       hpFill,
       barrierLayer,
+      statusBadgeWrap,
       statusCanvas,
+      statusBadgeHitLayer,
+      statusBadgeHitSignature: null,
       recastCells,
     };
   }
@@ -291,6 +306,10 @@ export class PartyHudPanel {
       canvas.style.maxWidth = w;
     }
     canvas.hidden = badges.length === 0;
+    if (badges.length === 0) {
+      slot.statusBadgeHitLayer.replaceChildren();
+      slot.statusBadgeHitSignature = null;
+    }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -316,6 +335,28 @@ export class PartyHudPanel {
           resolveStatusIconFallbackColor(category, theme),
       },
       badgeLayoutConfig,
+    );
+
+    const hitSignature = buildPartyHudStatusBadgeHitSignature(
+      visible,
+      overflowCount,
+      slot.slotIndex,
+      canvasW,
+      canvasH,
+    );
+    if (hitSignature === slot.statusBadgeHitSignature) {
+      return;
+    }
+
+    slot.statusBadgeHitSignature = hitSignature;
+    syncPartyHudStatusBadgeHits(
+      slot.statusBadgeHitLayer,
+      badges,
+      visible,
+      overflowCount,
+      PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT,
+      theme,
+      slot.slotIndex,
     );
   }
 

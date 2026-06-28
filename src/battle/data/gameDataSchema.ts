@@ -383,7 +383,7 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   allyBasicAttackDotProc: "味方基本攻撃Dot付与",
   dotDurationMultiplierOnApply: "Dot延長",
   dottedEnemyHealReceivedDebuff: "DoT中被回復減",
-  conditionalEnemyDamageTakenAura: "条件付き被ダメ増加",
+  conditionalEnemyDamageTakenAura: "条件付き被ダメージ増加",
   seedFlameOnActiveHit: "種火付与",
   bonusActiveOnHit: "アクティブ誘発",
   blazingFlameDetonate: "熾火起爆",
@@ -418,7 +418,7 @@ export const BUFF_SUB_KIND_LABELS: Record<BuffSubKind, string> = {
   block: "ブロック",
   evasion: "回避",
   damageDelay: "ダメージ遅延",
-  allyAttackFollowUp: "追撃モード",
+  allyAttackFollowUp: "追撃状態",
 };
 
 export const DEBUFF_SUB_KINDS = [
@@ -433,7 +433,10 @@ export const DEBUFF_SUB_KIND_LABELS: Record<DebuffSubKind, string> = {
   stun: "スタン",
 };
 
-export const DOT_FLAVORS = ["bleed", "poison"] as const satisfies readonly DotFlavor[];
+export const DOT_FLAVORS = [
+  "bleed",
+  "poison",
+] as const satisfies readonly DotFlavor[];
 
 export const DOT_FLAVOR_LABELS: Record<DotFlavor, string> = {
   bleed: "出血",
@@ -538,7 +541,7 @@ export const EDITOR_ACTIVE_EFFECT_CATEGORY_LABELS: Record<
   blockResonanceConsume: "迎撃消費",
   enemyReelIn: "敵引き寄せ",
   arenaDominance: "闘技場の掟",
-  grantNextOutgoingDamage: "次与ダメ増加",
+  grantNextOutgoingDamage: "次のダメージ増加",
   placedField: "設置フィールド",
   dotCompress: "Dot圧縮",
   dotExtend: "Dot延長",
@@ -891,7 +894,13 @@ export const TARGET_DISTANCE_ORDER_OPTIONS = [
   "farthest",
   "selfOrigin",
 ] as const;
-export const TARGET_STAT_OPTIONS = ["hp", "maxHp", "atk", "def", "reg"] as const;
+export const TARGET_STAT_OPTIONS = [
+  "hp",
+  "maxHp",
+  "atk",
+  "def",
+  "reg",
+] as const;
 export const TARGET_STAT_ORDER_OPTIONS = [
   "highest",
   "lowest",

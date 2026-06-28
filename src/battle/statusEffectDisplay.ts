@@ -83,10 +83,10 @@ export const STATUS_DISPLAY_CATEGORY_LABELS: Record<
   hp: "HP",
   atk: "攻撃",
   def: "防御",
-  reg: "耐魔",
+  reg: "魔法耐性",
   attackSpeed: "攻撃速度",
-  damageReduction: "被ダメ軽減",
-  damageIncrease: "被ダメ増加",
+  damageReduction: "ダメージ軽減",
+  damageIncrease: "被ダメージ増加",
   hot: "HoT",
   healReservation: "ヒール予約",
   damageDelay: "ダメージ遅延",
@@ -104,8 +104,8 @@ export const STATUS_DISPLAY_CATEGORY_LABELS: Record<
   seedFlame: "種火",
   blazingFlame: "熾火",
   ballistaMark: "砲撃標的",
-  allyAttackFollowUp: "追撃モード",
-  nextOutgoingDamage: "次与ダメ増加",
+  allyAttackFollowUp: "追撃状態",
+  nextOutgoingDamage: "次のダメージ増加",
   dot: "DoT",
   bleed: "出血",
   poison: "毒",
@@ -117,7 +117,7 @@ export const STATUS_DISPLAY_CATEGORY_LABELS: Record<
 };
 
 export function resolveStatusDisplayCategoryLabel(
-  category: StatusDisplayCategory,
+  category: StatusDisplayCategory
 ): string {
   return STATUS_DISPLAY_CATEGORY_LABELS[category];
 }
@@ -125,7 +125,7 @@ export function resolveStatusDisplayCategoryLabel(
 const NEUTRAL_EPSILON = 0.001;
 
 function resolveDotDisplayCategory(
-  effect: StatusEffect,
+  effect: StatusEffect
 ): "dot" | "bleed" | "poison" | "seedFlame" | "blazingFlame" {
   if (effect.dotFlavor === "bleed") return "bleed";
   if (effect.dotFlavor === "poison") return "poison";
@@ -210,7 +210,7 @@ function statusEffectRemainingRatio(effect: StatusEffect): number {
 function effectKindFromEffectiveStat(
   base: number,
   effective: number,
-  reversed = false,
+  reversed = false
 ): "buff" | "debuff" | null {
   if (Math.abs(effective - base) < NEUTRAL_EPSILON) return null;
   if (reversed) {
@@ -222,10 +222,13 @@ function effectKindFromEffectiveStat(
 function statusEffectBadgeForStat(
   effect: StatusEffect,
   base: number,
-  category: "hp" | "atk" | "def" | "reg" | "attackSpeed",
+  category: "hp" | "atk" | "def" | "reg" | "attackSpeed"
 ): StatusEffectBadgeDisplay | null {
   const agg = aggregateStatEffects([effect], category);
-  const kind = effectKindFromEffectiveStat(base, computeEffectiveStat(base, agg));
+  const kind = effectKindFromEffectiveStat(
+    base,
+    computeEffectiveStat(base, agg)
+  );
   if (!kind) return null;
   return {
     category,
@@ -236,7 +239,7 @@ function statusEffectBadgeForStat(
 }
 
 function statusEffectBadgeForDamageTaken(
-  effect: StatusEffect,
+  effect: StatusEffect
 ): StatusEffectBadgeDisplay | null {
   const agg = aggregateStatEffects([effect], "damageTaken");
   const effective = computeEffectiveStat(1, agg);
@@ -251,7 +254,7 @@ function statusEffectBadgeForDamageTaken(
 }
 
 function statusEffectBadgeForOverlay(
-  effect: StatusEffect,
+  effect: StatusEffect
 ): StatusEffectBadgeDisplay | null {
   switch (effect.overlay) {
     case "hot":
@@ -422,7 +425,7 @@ function statusEffectBadgeForOverlay(
 
 function statusEffectBadgeForEffect(
   effect: StatusEffect,
-  baseStats: StatBadgeBaseStats,
+  baseStats: StatBadgeBaseStats
 ): StatusEffectBadgeDisplay | null {
   if (effect.stat === "hp") {
     return statusEffectBadgeForStat(effect, baseStats.baseMaxHp, "hp");
@@ -447,7 +450,7 @@ function statusEffectBadgeForEffect(
 
 export function collectStatusEffectBadgeDisplays(
   effects: StatusEffect[],
-  baseStats: StatBadgeBaseStats,
+  baseStats: StatBadgeBaseStats
 ): StatusEffectBadgeDisplay[] {
   const entries: Array<{
     badge: StatusEffectBadgeDisplay;
@@ -522,28 +525,28 @@ function effectsForCategory(
   }
   if (category === "dot") {
     return effects.filter(
-      (effect) => effect.overlay === "dot" && !effect.dotFlavor,
+      (effect) => effect.overlay === "dot" && !effect.dotFlavor
     );
   }
   if (category === "bleed") {
     return effects.filter(
-      (effect) => effect.overlay === "dot" && effect.dotFlavor === "bleed",
+      (effect) => effect.overlay === "dot" && effect.dotFlavor === "bleed"
     );
   }
   if (category === "poison") {
     return effects.filter(
-      (effect) => effect.overlay === "dot" && effect.dotFlavor === "poison",
+      (effect) => effect.overlay === "dot" && effect.dotFlavor === "poison"
     );
   }
   if (category === "seedFlame") {
     return effects.filter(
-      (effect) => effect.overlay === "dot" && effect.dotFlavor === "seedFlame",
+      (effect) => effect.overlay === "dot" && effect.dotFlavor === "seedFlame"
     );
   }
   if (category === "blazingFlame") {
     return effects.filter(
       (effect) =>
-        effect.overlay === "dot" && effect.dotFlavor === "blazingFlame",
+        effect.overlay === "dot" && effect.dotFlavor === "blazingFlame"
     );
   }
   if (category === "hp") {
@@ -596,7 +599,7 @@ function effectsForCategory(
   }
   if (category === "blockResonanceStance") {
     return effects.filter(
-      (effect) => effect.overlay === "blockResonanceStance",
+      (effect) => effect.overlay === "blockResonanceStance"
     );
   }
   if (category === "invulnerable") {
@@ -616,21 +619,17 @@ function effectsForCategory(
   }
   if (category === "basicAttackTransform") {
     return effects.filter(
-      (effect) => effect.overlay === "basicAttackTransform",
+      (effect) => effect.overlay === "basicAttackTransform"
     );
   }
   if (category === "ballistaMark") {
     return effects.filter((effect) => effect.overlay === "ballistaMark");
   }
   if (category === "allyAttackFollowUp") {
-    return effects.filter(
-      (effect) => effect.overlay === "allyAttackFollowUp",
-    );
+    return effects.filter((effect) => effect.overlay === "allyAttackFollowUp");
   }
   if (category === "nextOutgoingDamage") {
-    return effects.filter(
-      (effect) => effect.overlay === "nextOutgoingDamage",
-    );
+    return effects.filter((effect) => effect.overlay === "nextOutgoingDamage");
   }
   return [];
 }
@@ -778,7 +777,7 @@ export function aggregateStatStatusEffects(
   const hpBadge = aggregateStatCategory(
     displayEffects,
     "hp",
-    baseStats.baseMaxHp,
+    baseStats.baseMaxHp
   );
   if (hpBadge) result.push(hpBadge);
 
@@ -840,16 +839,14 @@ const COMPACT_TIER3_DOT: ReadonlySet<StatusDisplayCategory> = new Set([
   "blazingFlame",
 ]);
 
-function statusBadgeSlotOrderIndex(
-  category: StatusDisplayCategory,
-): number {
+function statusBadgeSlotOrderIndex(category: StatusDisplayCategory): number {
   const index = STATUS_BADGE_SLOT_ORDER.indexOf(category);
   return index >= 0 ? index : STATUS_BADGE_SLOT_ORDER.length;
 }
 
 /** 簡易表示（Party HUD / 敵頭上）用の優先度 tier。小さいほど先に表示。 */
 export function assignCompactBadgeTier(
-  badge: StatusEffectBadgeDisplay,
+  badge: StatusEffectBadgeDisplay
 ): number {
   if (COMPACT_TIER1_CC.has(badge.category)) return 1;
 
@@ -874,7 +871,7 @@ export function assignCompactBadgeTier(
 }
 
 export function sortBadgesForCompactView(
-  badges: StatusEffectBadgeDisplay[],
+  badges: StatusEffectBadgeDisplay[]
 ): StatusEffectBadgeDisplay[] {
   return badges.slice().sort((a, b) => {
     const tierDiff = assignCompactBadgeTier(a) - assignCompactBadgeTier(b);
@@ -887,7 +884,7 @@ export function sortBadgesForCompactView(
 }
 
 export function sortBadgesForDetailView(
-  badges: StatusEffectBadgeDisplay[],
+  badges: StatusEffectBadgeDisplay[]
 ): StatusEffectBadgeDisplay[] {
   return badges.slice().sort((a, b) => {
     if (a.kind !== b.kind) {
@@ -905,6 +902,26 @@ export interface CompactStatusBadgeSelection {
   overflowCount: number;
 }
 
+export function resolveStatusBadgeTooltipLabel(
+  badge: StatusEffectBadgeDisplay
+): string {
+  const label = resolveStatusDisplayCategoryLabel(badge.category);
+  if (badge.stackCount !== undefined && badge.stackCount > 1) {
+    return `${label} ×${badge.stackCount}`;
+  }
+  return label;
+}
+
+export function resolveCompactStatusOverflowTooltipLabel(
+  badges: StatusEffectBadgeDisplay[],
+  visibleCount: number
+): string {
+  return sortBadgesForCompactView(badges)
+    .slice(visibleCount)
+    .map(resolveStatusBadgeTooltipLabel)
+    .join("、");
+}
+
 /** 敵頭上等のフィールド簡易表示: 3 +N（計 4 スロット） */
 export const FIELD_COMPACT_STATUS_VISIBLE_COUNT = 3;
 
@@ -918,7 +935,7 @@ export interface CompactStatusBadgeSelectOptions {
 /** 簡易表示: 最大 visibleCount バッジ + overflowCount（最終枠は +N 専用）。 */
 export function selectCompactStatusBadges(
   badges: StatusEffectBadgeDisplay[],
-  options: CompactStatusBadgeSelectOptions = {},
+  options: CompactStatusBadgeSelectOptions = {}
 ): CompactStatusBadgeSelection {
   const visibleCount =
     options.visibleCount ?? FIELD_COMPACT_STATUS_VISIBLE_COUNT;

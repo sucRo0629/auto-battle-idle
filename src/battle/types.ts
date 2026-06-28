@@ -536,11 +536,11 @@ export function isStatusEffectStat(value: string): value is StatusEffectStat {
 }
 
 export function filterStatusEffectStats(
-  stat: BuffTargetKind | BuffTargetKind[] | undefined,
+  stat: BuffTargetKind | BuffTargetKind[] | undefined
 ): StatusEffectStat[] {
   const list = Array.isArray(stat) ? stat : stat !== undefined ? [stat] : [];
   return list.filter((entry): entry is StatusEffectStat =>
-    isStatusEffectStat(entry),
+    isStatusEffectStat(entry)
   );
 }
 
@@ -746,7 +746,7 @@ export interface PassiveSkillDef {
   hotScatterSpreadRate?: number;
   /** hot: 付与 HoT の効果時間（秒）。0 または未指定 = 無限 */
   hotDurationSec?: number;
-  /** damageReduction: 被ダメ軽減率（0.2 = 20% 軽減） */
+  /** damageReduction: ダメージ軽減率（0.2 = 20% 軽減） */
   damageReductionPercent?: number;
   damageReductionTargetRule?: TargetSpec;
   damageReductionTargetShape?: TargetShape;
@@ -858,7 +858,7 @@ export interface PassiveSkillDef {
   frontThreatFloor?: number;
   /** threatControl: 生存中、前列味方の threat 減衰倍率（1 = 既定） */
   frontThreatDecayMultiplier?: number;
-  /** threatControl: 生存中、前列味方の被ダメ軽減率（0.08 = 8%） */
+  /** threatControl: 生存中、前列味方のダメージ軽減率（0.08 = 8%） */
   frontDamageTakenReduction?: number;
   dispelTargetRule?: TargetSpec;
   /** アクティブ effect.targetShape に対応 */
@@ -978,7 +978,7 @@ export interface PassiveSkillDef {
   herbalPotencyConstitutionHpMultipliers?: number[];
   /** blockResonance: スタック上限 */
   blockResonanceMaxStacks?: number;
-  /** blockResonance: stack ごとの被ダメ軽減率（0.03 = 3%/stack） */
+  /** blockResonance: stack ごとのダメージ軽減率（0.03 = 3%/stack） */
   blockResonanceDamageTakenPerStack?: number;
   /** blockResonance: stack 減衰間隔（秒） */
   blockResonanceDecayIntervalSec?: number;
@@ -1201,26 +1201,26 @@ interface SkillEffectCommon extends AnimPhaseFields {
 export type SkillSharedTargetingFields = Partial<
   Pick<
     SkillEffectDef,
-    | 'target'
-    | 'targetRule'
-    | 'targetShape'
-    | 'range'
-    | 'aoeRadiusPx'
-    | 'hitCount'
-    | 'hitDurationSec'
-    | 'piercePowerStepMultiplier'
-    | 'piercePowerStepMode'
-    | 'pierceDurationSec'
-    | 'chainCount'
-    | 'chainMaxDistancePx'
-    | 'chainPowerStepMultiplier'
-    | 'chainPowerStepMode'
-    | 'chainDurationSec'
-    | 'scatterRadiusPx'
-    | 'scatterSpreadRadiusPx'
-    | 'scatterHitCount'
-    | 'scatterDurationSec'
-    | 'scatterSpreadRate'
+    | "target"
+    | "targetRule"
+    | "targetShape"
+    | "range"
+    | "aoeRadiusPx"
+    | "hitCount"
+    | "hitDurationSec"
+    | "piercePowerStepMultiplier"
+    | "piercePowerStepMode"
+    | "pierceDurationSec"
+    | "chainCount"
+    | "chainMaxDistancePx"
+    | "chainPowerStepMultiplier"
+    | "chainPowerStepMode"
+    | "chainDurationSec"
+    | "scatterRadiusPx"
+    | "scatterSpreadRadiusPx"
+    | "scatterHitCount"
+    | "scatterDurationSec"
+    | "scatterSpreadRate"
   >
 >;
 
@@ -1602,7 +1602,7 @@ export interface ActiveSkillDef extends SkillSharedTargetingFields {
   maxCharges?: number;
   /** blockResonanceConsume: 態勢の基礎持続秒（+消費 stack） */
   blockResonanceStanceDurationBaseSec?: number;
-  /** blockResonanceConsume: 態勢中 stack あたりの被ダメ軽減率 */
+  /** blockResonanceConsume: 態勢中 stack あたりのダメージ軽減率 */
   blockResonanceStanceDamageTakenPerStack?: number;
   /** blockResonanceConsume: 態勢中 stack あたりの DEF 倍率加算 */
   blockResonanceStanceDefPerStack?: number;

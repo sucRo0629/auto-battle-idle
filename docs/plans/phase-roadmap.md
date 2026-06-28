@@ -11,7 +11,7 @@ Auto Battle Idle の開発フェーズ一覧。ゲームルールは [spec](../s
 | **2b** | 戦闘計算（`combatMath` 等）                                                                   | **完了**                        |
 | **2c** | JSON 駆動クラス、ビルドのハードコード排除                                                     | **完了**                        |
 | **3**  | Lv アップ時スキル習得、習得済み passive / active 常時使用枠（各最大 4）+ クラス別スキル再設定 | **完了**                        |
-| **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **確定済** / 4c **完了** / 4b 説明 / **4d ほぼ完了** | **進行中**（4d 目視確認）       |
+| **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **確定済** / 4c **完了** / 4b 説明 / **4d ほぼ完了**  | **進行中**（4d 目視確認）       |
 | **5**  | 演出アセット + VFX PNG + **演出調整ツール**；**5d Combat Feedback**（Damage / Event Popup）   | **基盤のみ**（本番 PNG 未実装） |
 | **6**  | ステージ作成 — 敵テンプレート・固定ステージコンテンツ・ステージ編集 GUI                       | 未着手（4a 後）                 |
 | **9**  | ローグライクモード（仮称）— 既存 effect 中心 13 クラス向けランダム問題・ラン進行              | 未着手                          |
@@ -106,7 +106,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 - 付け替え・セット・装備変更は行わない。`equippedActiveSlots` は歴史的互換のみで、設計上の戦闘参加判定には使わない
 - セーブに `CharacterBuild` を含め、ロード時 `reconcilePartyBuilds` でレベルと整合
 - 13 クラス（effect 中心）の passive / active 4 枠化 — [skill-finalization-table.md](./skill-finalization-table.md) の各 pass **実装済**
-- 槍術士（`at_lancer`）: pierce approach、[classes-and-skills.md §槍術士](../spec/classes-and-skills.md#槍術士at_lancer変則近接)・[combat.md](../spec/combat.md) §追撃モード 含む 4 枠化 **実装済**
+- 槍術士（`at_lancer`）: pierce approach、[classes-and-skills.md §槍術士](../spec/classes-and-skills.md#槍術士at_lancer変則近接)・[combat.md](../spec/combat.md) §追撃状態 含む 4 枠化 **実装済**
 - `classes.json` 習得テーブルと `data/skills/` の効果・ターゲット・数値フィールドを [classes-and-skills.md](../spec/classes-and-skills.md) と整合
 
 ### 経緯（2026-06 再オープン → 完了）
@@ -147,12 +147,12 @@ Phase 3 の Caster pass は **`at_sorcerer` のみ** を対象とする。印術
 
 Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON を確定する。**一次職 / 二次職の区別は廃止**し、`jobTier` / `promotion` / `promotesFrom` の予約は行わない。
 
-| サブフェーズ | 内容                                                                                                        | 状態                    |
-| ------------ | ----------------------------------------------------------------------------------------------------------- | ----------------------- |
-| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                | **確定済**（13 クラス。印術師・法陣師は Phase 7b/7c 送り） |
-| **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                        | **完了**                |
-| **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish                               | **随時**（コア済）      |
-| **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsOverlay`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **ほぼ完了**（§11 視覚 polish 残確認） |
+| サブフェーズ | 内容                                                                                                                                                                                                                                    | 状態                                                       |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **4a**       | クラス 15 種・スキル JSON・GUI・validate・`epithetEn` データ                                                                                                                                                                            | **確定済**（13 クラス。印術師・法陣師は Phase 7b/7c 送り） |
+| **4c**       | 巨大 JSON のファイル分割（AI / エディタ / Git のトークン・差分効率）                                                                                                                                                                    | **完了**                                                   |
+| **4b**       | スキル説明の自動生成（`formatSkillText`）— データ PR 同梱・Phase 7a 前 polish                                                                                                                                                           | **随時**（コア済）                                         |
+| **4d**       | パーティ編成 UI（`SkillMenuPanel`）+ **統計 UI**（`BattleStatsOverlay`）+ **状態バッジ HUD** 刷新 — 編成は [party-formation-ui.md](../spec/party-formation-ui.md)、統計は [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | **ほぼ完了**（§11 視覚 polish 残確認）                     |
 
 ### クラスマスタ（確定済）
 
@@ -250,17 +250,17 @@ data/
 
 正本: [combat.md §ステータス効果](../spec/combat.md#ステータス効果)（HUD バッジ）、[combat.md §Damage Popup](../spec/combat.md#damage-popup)（DoT 色）。
 
-| 項目 | 仕様 |
-| --- | --- |
-| 集約 | 同一 `StatusDisplayCategory` あたり **アイコン 1 つ**（旧「stack 数ぶん横並び」例外は廃止） |
-| buff / debuff | **上向き / 下向き五角形背景** + 中央に効果アイコン。active buff = **青**、active debuff = **赤** |
-| パッシブ | buff/debuff の色相は維持し、五角形のみ **彩度・明度を下げた同系色**。アイコン縁は黒で統一（`--status-icon-passive-outline-color` は廃止） |
-| stat 系 | atk / def / reg / attackSpeed は **tint なし**（白シルエット + 黒縁）。その他 PNG は既存カラー + 黒縁のまま |
-| スタック表示 | `stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数。**1 スタックは非表示** |
-| 残時間 | 同一カテゴリ内の **最短** `remainingRatio` を、上端からの暗化オーバーレイで表示（現行方式） |
-| DoT ポップアップ | `dotFlavor: bleed` / 未指定 generic dot → **赤**。`dotFlavor: poison` → **紫**（状態バッジの debuff 五角形は赤のまま） |
-| 簡易表示 | Party HUD: **4 +N**（計 5 スロット・全幅バッジ行・20px）。敵 HP バー上: **3 +N**（計 4 スロット・14px）。tier 優先度は [combat.md](../spec/combat.md#ステータス効果) |
-| Party HUD レイアウト | 上段: `displayName` + バッジ行（全幅）。下段: 24px クラスアイコン + HP/リキャスト（アイコン下端 = バー列下端） |
+| 項目                 | 仕様                                                                                                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 集約                 | 同一 `StatusDisplayCategory` あたり **アイコン 1 つ**（旧「stack 数ぶん横並び」例外は廃止）                                                                          |
+| buff / debuff        | **上向き / 下向き五角形背景** + 中央に効果アイコン。active buff = **青**、active debuff = **赤**                                                                     |
+| パッシブ             | buff/debuff の色相は維持し、五角形のみ **彩度・明度を下げた同系色**。アイコン縁は黒で統一（`--status-icon-passive-outline-color` は廃止）                            |
+| stat 系              | atk / def / reg / attackSpeed は **tint なし**（白シルエット + 黒縁）。その他 PNG は既存カラー + 黒縁のまま                                                          |
+| スタック表示         | `stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数。**1 スタックは非表示**                                                                        |
+| 残時間               | 同一カテゴリ内の **最短** `remainingRatio` を、上端からの暗化オーバーレイで表示（現行方式）                                                                          |
+| DoT ポップアップ     | `dotFlavor: bleed` / 未指定 generic dot → **赤**。`dotFlavor: poison` → **紫**（状態バッジの debuff 五角形は赤のまま）                                               |
+| 簡易表示             | Party HUD: **4 +N**（計 5 スロット・全幅バッジ行・20px）。敵 HP バー上: **3 +N**（計 4 スロット・14px）。tier 優先度は [combat.md](../spec/combat.md#ステータス効果) |
+| Party HUD レイアウト | 上段: `displayName` + バッジ行（全幅）。下段: 24px クラスアイコン + HP/リキャスト（アイコン下端 = バー列下端）                                                       |
 
 **実装タッチポイント（HUD）:** `statusEffectDisplay.ts`（`selectCompactStatusBadges` 等）, `statusBadgeRenderer.ts`, `PartyHudPanel`, `BattleCanvas`, `battle-view.css` / `battleHudTheme.ts`, `DamagePopup.ts`（DoT tick に `dotFlavor` 伝播）。**HUD 簡易/詳細分割 — 実装済み（2026-06）。** 旧「4 個折り返し」は廃止。
 
@@ -268,13 +268,13 @@ data/
 
 正本: [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui)。表示項目・集計ルールは [combat.md](../spec/combat.md)（脅威・ダメージ）と現行実装を維持。**見た目のみ**刷新。
 
-| 項目 | 仕様 |
-| --- | --- |
-| デザイン言語 | [party-formation-ui.md §11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通) と同一（縦情報パネル・細セパレーター・大角丸 / 強 shadow 禁止） |
-| オーバーレイ | Web モーダル風を避け、**情報パネル**として閉じる。タイトル **戦闘詳細** |
-| メンバー行 | `PartyMemberStatsDisplay` 共通 — 名前（`displayName`）、Threat / 与ダメ・被ダメバー、**状態バッジ帯（全件・debuff/buff ラベル）**。行は **細い区切り + 余白**（Exp / epithetEn / メンバー別 Lv なし） |
-| バー | 角丸グラデーションのダッシュボード棒を控えめに。色意味（Threat 青・与ダメ橙・被ダメ青等）は維持可 |
-| 共有 CSS | `battle-stats-overlay.css` + `party-member-stats.css`。`DebugMenuPanel` 内 stats 行も同スタイル |
+| 項目         | 仕様                                                                                                                                                                                                  |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| デザイン言語 | [party-formation-ui.md §11](../spec/party-formation-ui.md#11-デザイン方針dom-ui-共通) と同一（縦情報パネル・細セパレーター・大角丸 / 強 shadow 禁止）                                                 |
+| オーバーレイ | Web モーダル風を避け、**情報パネル**として閉じる。タイトル **戦闘詳細**                                                                                                                               |
+| メンバー行   | `PartyMemberStatsDisplay` 共通 — 名前（`displayName`）、Threat / 与ダメ・被ダメバー、**状態バッジ帯（全件・debuff/buff ラベル）**。行は **細い区切り + 余白**（Exp / epithetEn / メンバー別 Lv なし） |
+| バー         | 角丸グラデーションのダッシュボード棒を控えめに。色意味（Threat 青・与ダメ橙・被ダメ青等）は維持可                                                                                                     |
+| 共有 CSS     | `battle-stats-overlay.css` + `party-member-stats.css`。`DebugMenuPanel` 内 stats 行も同スタイル                                                                                                       |
 
 **実装タッチポイント（統計）:** `BattleStatsOverlay.ts`, `PartyMemberStatsDisplay.ts`, `battle-stats-overlay.css`, `party-member-stats.css`（必要なら `DebugMenuPanel.ts` の stats ホスト）。
 
@@ -330,12 +330,12 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 
 **ゴール:** [combat-architecture.md](../combat-architecture.md) §8 の HUD / Damage Popup / Event Popup 分離を戦闘描画へ反映する。正本は §8（07582b6）。
 
-| 項目         | 内容                                                                     | 状態                                                                     |
-| ------------ | ------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| Damage Popup | Damage / Heal / DoT の数値のみ。頭上表示。内訳・Barrier 吸収量は出さない | 基盤済み（`DamagePopupManager`）。**DoT フレーバー色**（出血=赤・毒=紫）は **Phase 4d** と同タイミング（[combat.md §Damage Popup](../spec/combat.md#damage-popup)） |
-| Event Popup  | v1 対象 8 種（回避・block・反撃・無敵・再起・不屈・引き寄せ・ノックバック）。Damage より上 | 基盤済み（`CombatReactionPopupManager`）。v1 対象外 Event の追加はしない |
-| レイアウト   | `damagePopupLayout` と reaction popup の Y 衝突回避を regression 化      | 未着手                                                                   |
-| HUD 境界     | Barrier 残量・Buff / Debuff は HUD のみ（ポップアップに出さない）        | 要確認                                                                   |
+| 項目         | 内容                                                                                       | 状態                                                                                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Damage Popup | Damage / Heal / DoT の数値のみ。頭上表示。内訳・Barrier 吸収量は出さない                   | 基盤済み（`DamagePopupManager`）。**DoT フレーバー色**（出血=赤・毒=紫）は **Phase 4d** と同タイミング（[combat.md §Damage Popup](../spec/combat.md#damage-popup)） |
+| Event Popup  | v1 対象 8 種（回避・block・反撃・無敵・再起・不屈・引き寄せ・ノックバック）。Damage より上 | 基盤済み（`CombatReactionPopupManager`）。v1 対象外 Event の追加はしない                                                                                            |
+| レイアウト   | `damagePopupLayout` と reaction popup の Y 衝突回避を regression 化                        | 未着手                                                                                                                                                              |
+| HUD 境界     | Barrier 残量・Buff / Debuff は HUD のみ（ポップアップに出さない）                          | 要確認                                                                                                                                                              |
 
 **VFX なし v1:** 本番 VFX 未投入のため popup / HUD が目視検証の主手段。詳細は [combat-architecture.md](../combat-architecture.md) §8、[combat.md](../spec/combat.md#combat-feedbackvfx-なしv1)。
 

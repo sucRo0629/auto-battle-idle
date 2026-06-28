@@ -732,7 +732,7 @@ export function appendPassiveThreatControlFields(
   );
   appendOptionalPassiveNumberField(
     parent,
-    "前列被ダメ軽減率（0〜1）",
+    "前列ダメージ軽減率（0〜1）",
     passive.frontDamageTakenReduction,
     (frontDamageTakenReduction) => {
       patchPassive((current) => {
@@ -1823,7 +1823,7 @@ const PASSIVE_BUFF_STAT_OPTIONS: Array<{
   { value: "hp", label: "HP" },
   { value: "atk", label: "攻撃" },
   { value: "def", label: "防御" },
-  { value: "reg", label: "耐魔" },
+  { value: "reg", label: "魔法耐性" },
   { value: "damageTaken", label: "被ダメ" },
   { value: "attackSpeed", label: "攻撃速度" },
 ];
@@ -2280,7 +2280,7 @@ export function appendPassiveDebuffFields(
         [
           { value: "atk", label: "攻撃" },
           { value: "def", label: "防御" },
-          { value: "reg", label: "耐魔" },
+          { value: "reg", label: "魔法耐性" },
           { value: "damageTaken", label: "被ダメ" },
           { value: "attackSpeed", label: "攻撃速度" },
         ],
@@ -2844,7 +2844,7 @@ export function appendActiveBlockResonanceStanceFields(
   );
   grid.appendChild(
     createFieldRow(
-      "態勢中 stack あたり被ダメ軽減率",
+      "態勢中 stack あたりダメージ軽減率",
       createNumberInput(
         active.blockResonanceStanceDamageTakenPerStack ?? 0.04,
         (value) => {

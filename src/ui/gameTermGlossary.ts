@@ -63,7 +63,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "arenaMark",
     title: { ja: "闘士の指名" },
     description: {
-      ja: "闘技士が付与する指名マーク。指名対象への被ダメ増加や、非指名対象への被ダメ減少と連動する。印（Mark）とは別体系。",
+      ja: "闘技士が付与する指名マーク。指名対象への被ダメージ増加や、非指名対象への被ダメ減少と連動する。印（Mark）とは別体系。",
     },
     aliases: { ja: ["闘士の指名", "闘技場の指名"] },
     statusCategory: "arenaMark",
@@ -103,7 +103,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     description: {
       ja: "受けるダメージ量の倍率。1未満で軽減、1超で増加。バフ・デバフ・スキル効果で変動する。",
     },
-    aliases: { ja: ["被ダメ軽減", "被ダメ"] },
+    aliases: { ja: ["ダメージ軽減", "被ダメ"] },
   },
   {
     id: "counter",
@@ -206,7 +206,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
 ];
 
 const ENTRY_BY_ID = new Map<GameTermId, GameTermEntry>(
-  GAME_TERM_ENTRIES.map((entry) => [entry.id, entry]),
+  GAME_TERM_ENTRIES.map((entry) => [entry.id, entry])
 );
 
 export function getGameTermEntry(id: GameTermId): GameTermEntry | undefined {
