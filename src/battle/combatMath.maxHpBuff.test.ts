@@ -29,7 +29,6 @@ function mockUnit(
     iconKey: 'warrior',
     isEnemy: false,
     battleX: 200,
-    visualX: 200,
     corpseVisible: false,
     isAlive: partial.isAlive ?? true,
     ...partial,

@@ -32,7 +32,6 @@ function mockUnit(
     iconKey: 'placeholder',
     isEnemy: true,
     battleX: 200,
-    visualX: 200,
     corpseVisible: true,
     ...overrides,
   };

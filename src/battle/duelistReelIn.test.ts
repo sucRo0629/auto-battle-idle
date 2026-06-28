@@ -34,7 +34,6 @@ function mockDuelist(battleX: number): CombatantState {
     iconKey: "df_duelist",
     isEnemy: false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }
@@ -73,7 +72,6 @@ function mockEnemy(
     iconKey: "enemy",
     isEnemy: true,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }

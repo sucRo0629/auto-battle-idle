@@ -39,7 +39,6 @@ function mockUnit(
     iconKey: 'df_guardian',
     isEnemy: false,
     battleX: 100,
-    visualX: 100,
     corpseVisible: true,
     ...overrides,
   };

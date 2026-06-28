@@ -54,7 +54,6 @@ function previewEntityToActorStub(entity: PreviewEntity): CombatantState {
     spriteKey: entity.entityId,
     iconKey: entity.entityId,
     battleX: resolvePreviewActorBattleX(entity.isEnemy),
-    visualX: resolvePreviewActorBattleX(entity.isEnemy),
     threat: 0,
     partySlotIndex: 0,
   };

@@ -112,7 +112,6 @@ export function createAllyFromMember(
     iconKey: resolveClassIconKey(classPreset),
     isEnemy: false,
     battleX: 0,
-    visualX: 0,
     corpseVisible: true,
   };
 }
@@ -195,7 +194,6 @@ export function createEnemyFromTemplate(
     iconKey: 'default',
     isEnemy: true,
     battleX,
-    visualX: battleX,
     spawnX: spawnOffset,
     corpseVisible: true,
   };

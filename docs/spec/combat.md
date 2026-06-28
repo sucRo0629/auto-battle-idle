@@ -580,7 +580,7 @@ multiLock × P3 × P4 の複数 Hit ごとに P2/P3/P4 は意図通り独立発�
 
 ## 座標・移動・戦闘フェーズ
 
-横 1 軸のバトルライン、座標層（`battleX` 正本 / `visualX` snapshot 互換 / `screenX = battleX`）、Wave・`spawnX`、隊形スロット、接敵トリガー、BattlePhase FSM、生死表示は **[battle-field.md](battle-field.md)** を正本とする。
+横 1 軸のバトルライン、座標層（`battleX` 正本 / `screenX = battleX`）、Wave・`spawnX`、隊形スロット、接敵トリガー、BattlePhase FSM、生死表示は **[battle-field.md](battle-field.md)** を正本とする。
 
 ### 射程（要約）
 
@@ -598,7 +598,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 `move` を 1 つでも含むアクティブは、発動時に effect 列を battle 時間でスケジュールし順に適用する。
 
 1. 各 effect の anchor を事前解決（move は射程外でも選択可）
-2. `move` は `moveDurationSec` で `battleX` を線形補間（`visualX` は snapshot 互換ミラー。layout とは分離 — battle-field.md §4.5）
+2. `move` は `moveDurationSec` で `battleX` を線形補間（layout とは分離 — battle-field.md §4.5）
 3. 次の effect の `applyAt` = 直前 move 完了時刻（move 連続時は累積）
 4. 全 step 完了後に CD リセット（途中キャンセルは死亡時のみ）
 

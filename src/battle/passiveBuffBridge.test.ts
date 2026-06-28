@@ -35,7 +35,6 @@ function mockUnit(
     iconKey: 'placeholder',
     isEnemy: overrides.isEnemy ?? false,
     battleX: overrides.battleX,
-    visualX: overrides.battleX,
     corpseVisible: true,
     ...overrides,
   };
@@ -153,7 +152,6 @@ describe('passiveBuffBridge', () => {
     );
 
     source.battleX = 160;
-    source.visualX = 160;
     syncBuffAuras([source, nearAlly, farAlly], [], passives, gameData);
     expect(nearAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
       false,
@@ -215,7 +213,6 @@ describe('passiveBuffBridge', () => {
     );
 
     source.battleX = 150;
-    source.visualX = 150;
     syncBuffAuras([source, nearAlly, midAlly, farAlly], [], passives, gameData);
     expect(nearAlly.statusEffects.some((effect) => effect.stat === 'def')).toBe(
       false,

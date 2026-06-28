@@ -5,32 +5,24 @@ import {
 } from './resolveApproachBattleX.ts';
 import type { CombatantState, FormationRow, GameData } from './types.ts';
 
-/** DisplayAnchor 読取（優先: engagedDisplayAnchorPlayerId → engagedVisualTargetPlayerId → engagedVisualTargetAllyId） */
+/** DisplayAnchor 読取 */
 export function getEngagedDisplayAnchorPlayerId(
   enemy: CombatantState,
 ): string | undefined {
-  return (
-    enemy.engagedDisplayAnchorPlayerId ??
-    enemy.engagedVisualTargetPlayerId ??
-    enemy.engagedVisualTargetAllyId
-  );
+  return enemy.engagedDisplayAnchorPlayerId;
 }
 
-/** DisplayAnchor 書込（移行中互換: 新旧 alias すべてに代入） */
+/** DisplayAnchor 書込 */
 export function setEngagedDisplayAnchorPlayerId(
   enemy: CombatantState,
   playerId: string,
 ): void {
   enemy.engagedDisplayAnchorPlayerId = playerId;
-  enemy.engagedVisualTargetPlayerId = playerId;
-  enemy.engagedVisualTargetAllyId = playerId;
 }
 
-/** DisplayAnchor クリア（新旧 alias すべてを undefined に） */
+/** DisplayAnchor クリア */
 export function clearEngagedDisplayAnchor(enemy: CombatantState): void {
   enemy.engagedDisplayAnchorPlayerId = undefined;
-  enemy.engagedVisualTargetPlayerId = undefined;
-  enemy.engagedVisualTargetAllyId = undefined;
 }
 
 /**

@@ -34,7 +34,6 @@ function mockAlly(overrides: Partial<CombatantState> & { id: string }): Combatan
     iconKey: 'placeholder',
     isEnemy: false,
     battleX: 100,
-    visualX: 100,
     corpseVisible: true,
     ...overrides,
   };

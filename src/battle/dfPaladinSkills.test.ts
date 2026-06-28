@@ -32,7 +32,6 @@ function mockUnit(
     iconKey: 'df_paladin',
     isEnemy: false,
     battleX: 100,
-    visualX: 100,
     corpseVisible: true,
     ...overrides,
   };

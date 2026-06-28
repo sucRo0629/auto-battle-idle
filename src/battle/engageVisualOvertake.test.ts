@@ -237,15 +237,6 @@ describe('engage visual sync & overtaking', () => {
     }
     expect(meleeWiped).toBe(true);
 
-    for (let i = 0; i < 1800; i++) {
-      engine.tick(TICK_DT);
-      const snap = engine.getSnapshot();
-      if (!snap.engaged) continue;
-      for (const unit of [...snap.allies, ...snap.enemies].filter((u) => u.hp > 0)) {
-        expect(unit.visualX).toBe(unit.battleX);
-      }
-    }
-
     assertNoFrontOvertake(engine, { maxTicks: 1800 });
   });
 });

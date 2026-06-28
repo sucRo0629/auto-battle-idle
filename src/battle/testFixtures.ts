@@ -50,7 +50,6 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         iconKey: 'placeholder',
         isEnemy: false,
         battleX: 60,
-        visualX: 60,
         corpseVisible: true,
       };
     case 'meleeFront':
@@ -77,7 +76,6 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         iconKey: 'placeholder',
         isEnemy: false,
         battleX: 180,
-        visualX: 180,
         corpseVisible: true,
       };
     case 'counterDefender':
@@ -104,7 +102,6 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         iconKey: 'placeholder',
         isEnemy: false,
         battleX: 0,
-        visualX: 0,
         corpseVisible: true,
       };
     case 'supporter':
@@ -131,7 +128,6 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         iconKey: 'placeholder',
         isEnemy: false,
         battleX: 0,
-        visualX: 0,
         corpseVisible: true,
       };
     case 'stageTracker':
@@ -158,7 +154,6 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         iconKey: 'swordsman',
         isEnemy: false,
         battleX: 0,
-        visualX: 0,
         corpseVisible: true,
       };
     case 'neutral':
@@ -186,7 +181,6 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         iconKey: 'placeholder',
         isEnemy: false,
         battleX: 0,
-        visualX: 0,
         corpseVisible: true,
       };
   }
@@ -205,7 +199,6 @@ export function mockCombatant(
     id,
     name: overrides.name ?? id,
     battleX,
-    visualX: overrides.visualX ?? battleX,
     isAlive: overrides.isAlive ?? (overrides.hp !== undefined ? overrides.hp > 0 : base.isAlive),
   };
 }
@@ -234,7 +227,6 @@ export function mockUnit(
   return mockCombatant({
     id,
     battleX,
-    visualX: battleX,
     hp,
     maxHp,
     atk: opts.atk ?? 10,

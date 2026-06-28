@@ -597,7 +597,6 @@ describe('combatPosition', () => {
       isAlive: false,
       hp: 0,
       battleX: 200,
-      visualX: 200,
     });
     freezeEnemyCorpseBattleAnchor(enemy);
     expect(enemy.corpseBattleAnchorX).toBe(200);

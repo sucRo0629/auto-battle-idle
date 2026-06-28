@@ -33,10 +33,6 @@ function isStillChasingApproachTarget(
   return Math.abs(unit.battleX - target) > SETTLED_PX;
 }
 
-function syncFieldX(unit: { battleX: number; visualX: number }): void {
-  unit.visualX = unit.battleX;
-}
-
 describe('battle-field §4.4 rear row attack during approach', () => {
   it('§4.4: back row (rangePx 100) attacks while front row chase stop X not reached', () => {
     const engine = createStage1Engine();
@@ -53,13 +49,10 @@ describe('battle-field §4.4 rear row attack during approach', () => {
 
     for (const unit of front) {
       unit.battleX = 40;
-      syncFieldX(unit);
     }
     rear!.battleX = 180;
-    syncFieldX(rear!);
     for (const enemy of internal.enemies.filter((e) => e.isAlive)) {
       enemy.battleX = 220;
-      syncFieldX(enemy);
     }
 
     const rearRange = resolveMaxEffectiveRangePx(rear!, gameData);
@@ -98,17 +91,13 @@ describe('battle-field §4.4 rear row attack during approach', () => {
 
     for (const unit of front) {
       unit.battleX = 30;
-      syncFieldX(unit);
     }
     archer!.battleX = 120;
-    syncFieldX(archer!);
     longRangeEnemy!.battleX = 155;
-    syncFieldX(longRangeEnemy!);
     internal.enemies
       .filter((e) => e.isAlive && e.id !== longRangeEnemy!.id)
       .forEach((e) => {
         e.battleX = 400;
-        syncFieldX(e);
       });
 
     const archerRange = resolveMaxEffectiveRangePx(archer!, gameData);

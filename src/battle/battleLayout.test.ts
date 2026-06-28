@@ -5,7 +5,6 @@ import {
 } from './battleConstants.ts';
 import {
   getBattleContactPlayerVisual,
-  syncAllFieldX,
 } from './combatPosition.ts';
 import { hideFallenAllyCorpses } from './entities.ts';
 import type { CombatantState, GameData } from './types.ts';
@@ -333,35 +332,15 @@ describe('battle contact (R1-fix: battleX single)', () => {
       id: 'guard',
       formationRow: 'front',
       battleX: 180,
-      visualX: 200,
     });
     const archer = mockCombatant({
       id: 'archer',
       formationRow: 'back',
       traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
       battleX: 220,
-      visualX: 120,
     });
     const contact = getBattleContactPlayerVisual([guard, archer], gameData);
     expect(contact?.battleX).toBe(220);
-  });
-
-  it('syncAllFieldX mirrors battleX into visualX', () => {
-    const guard = mockCombatant({
-      id: 'guard',
-      formationRow: 'front',
-      battleX: 180,
-      visualX: 200,
-    });
-    const enemy = mockCombatant({
-      id: 'enemy',
-      isEnemy: true,
-      battleX: 250,
-      visualX: 0,
-    });
-    syncAllFieldX([guard, enemy]);
-    expect(guard.visualX).toBe(180);
-    expect(enemy.visualX).toBe(250);
   });
 });
 

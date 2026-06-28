@@ -64,7 +64,6 @@ function mockHealCleric(
     iconKey: 'placeholder',
     isEnemy: false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
     ...overrides,
   };
@@ -106,7 +105,6 @@ function mockSorcerer(battleX: number): CombatantState {
     iconKey: 'placeholder',
     isEnemy: false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }
@@ -147,7 +145,6 @@ function mockMeleeEnemy(battleX: number, id = 'enemy'): CombatantState {
     iconKey: 'placeholder',
     isEnemy: true,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }
@@ -188,7 +185,6 @@ function mockGuardian(
     iconKey: 'placeholder',
     isEnemy: false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }
@@ -323,7 +319,6 @@ describe('heal basic attack approach', () => {
       iconKey: 'placeholder',
       isEnemy: true,
       battleX: 280,
-      visualX: 280,
       corpseVisible: true,
     };
 
@@ -371,7 +366,6 @@ describe('heal basic attack approach', () => {
       iconKey: 'placeholder',
       isEnemy: true,
       battleX: 320,
-      visualX: 320,
       corpseVisible: true,
     };
 
@@ -404,7 +398,6 @@ describe('heal basic attack approach', () => {
       ...frontEnemy,
       id: 'deep',
       battleX: 364,
-      visualX: 364,
     };
 
     const approachX = resolvePlayerApproachBattleX(

@@ -47,7 +47,6 @@ function mockDuelist(cdRemaining: number): CombatantState {
     iconKey: 'placeholder',
     isEnemy: false,
     battleX: 100,
-    visualX: 100,
     corpseVisible: true,
   };
 }
@@ -88,7 +87,6 @@ describe('finalWaveStart active cooldown', () => {
       id: 'enemy',
       isEnemy: true,
       battleX: 200,
-      visualX: 200,
     };
     const { executor } = createExecutor(gameData);
 
@@ -108,7 +106,6 @@ describe('finalWaveStart active cooldown', () => {
       isEnemy: true,
       atk: 40,
       battleX: 200,
-      visualX: 200,
     };
     const { executor } = createExecutor(gameData);
 
@@ -139,7 +136,6 @@ describe('finalWaveStart active cooldown', () => {
       id: 'enemy',
       isEnemy: true,
       battleX: 200,
-      visualX: 200,
     };
     const { executor } = createExecutor(gameData);
 

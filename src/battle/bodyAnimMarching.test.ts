@@ -26,7 +26,6 @@ function makeUnit(
     isEnemy: overrides.isEnemy ?? false,
     isAlive: overrides.isAlive ?? true,
     battleX: overrides.battleX ?? 100,
-    visualX: overrides.visualX ?? overrides.battleX ?? 100,
     spriteKey: overrides.spriteKey ?? 'df_guardian',
     iconKey: overrides.iconKey ?? 'df_guardian',
     cooldowns: [],

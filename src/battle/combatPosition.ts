@@ -326,17 +326,6 @@ export function getBattleContactPlayerVisual(
 }
 
 
-/** R1-fix: snapshot 互換のため visualX を battleX に同期 */
-export function syncFieldX(unit: CombatantState): void {
-  unit.visualX = unit.battleX;
-}
-
-export function syncAllFieldX(units: CombatantState[]): void {
-  for (const unit of units) {
-    syncFieldX(unit);
-  }
-}
-
 /** 敵死亡: 以降の battleX を固定 */
 export function freezeEnemyCorpseBattleAnchor(
   enemy: CombatantState,
@@ -346,7 +335,6 @@ export function freezeEnemyCorpseBattleAnchor(
     enemy.corpseBattleAnchorX = enemy.battleX;
   }
   enemy.battleX = enemy.corpseBattleAnchorX;
-  enemy.visualX = enemy.battleX;
 }
 
 /** 死体 battleX をアンカーから再同期 */
@@ -356,7 +344,6 @@ export function syncDeadEnemyCorpseBattleX(
   for (const enemy of enemies) {
     if (enemy.isAlive || enemy.corpseBattleAnchorX === undefined) continue;
     enemy.battleX = enemy.corpseBattleAnchorX;
-    enemy.visualX = enemy.battleX;
   }
 }
 
@@ -736,7 +723,6 @@ export function placePartyOffScreenForDeploy(
     const target = targets.get(player.id);
     if (target === undefined) continue;
     player.battleX = target - resolvePartyDeployTravelPx();
-    player.visualX = player.battleX;
   }
 }
 
@@ -775,7 +761,6 @@ export function placeEnemiesOffScreenForDeploy(
     const target = targets.get(enemy.id);
     if (target === undefined) continue;
     enemy.battleX = enemyDeployOffScreenBattleX(target);
-    enemy.visualX = enemy.battleX;
   }
 }
 

@@ -35,7 +35,6 @@ function mockUnit(
     iconKey: 'placeholder',
     isEnemy: overrides.isEnemy ?? false,
     battleX: overrides.battleX,
-    visualX: overrides.battleX,
     corpseVisible: true,
     ...overrides,
   };
@@ -145,7 +144,6 @@ describe('passiveDebuffBridge', () => {
     );
 
     source.battleX = 150;
-    source.visualX = 150;
     syncDebuffAuras([source], [near, far], passives, gameData);
     expect(near.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(
       false,
@@ -200,9 +198,7 @@ describe('passiveDebuffBridge', () => {
     );
 
     enemyNear.battleX = 122;
-    enemyNear.visualX = 122;
     enemyFar.battleX = 170;
-    enemyFar.visualX = 170;
 
     syncDebuffAuras([source], [enemyNear, enemyFar], passives, gameData);
     expect(enemyNear.statusEffects.some((effect) => effect.kind === 'debuff')).toBe(

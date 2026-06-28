@@ -34,8 +34,6 @@ import {
   isMeleeUnit,
   updateUnitApproach,
   capEngagedEnemyApproachBattleX,
-  syncFieldX,
-  syncAllFieldX,
   freezeEnemyCorpseBattleAnchor,
   syncDeadEnemyCorpseBattleX,
   resolvePartyDeployTargets,
@@ -809,7 +807,6 @@ export class BattleEngine {
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
       enemy.battleX = this.clampEnemyFieldOnScreen(enemy.battleX);
-      syncFieldX(enemy);
     }
   }
 
@@ -840,7 +837,6 @@ export class BattleEngine {
     for (const ally of this.players) {
       if (livingOnly && !ally.isAlive) continue;
       ally.battleX += step;
-      syncFieldX(ally);
     }
     this.recordBattleXDebugChanges(this.players, beforeById, "victoryExit");
   }
@@ -1325,7 +1321,6 @@ export class BattleEngine {
     const layout = this.resolveEngagedLayoutForEvent();
     if (layout !== null) {
       this.applyEngagedFormationLayout(layout);
-      syncAllFieldX([...this.players, ...this.enemies]);
     }
     resetPassiveDispelTriggerLimits(
       [...this.players, ...this.enemies],
@@ -1444,14 +1439,12 @@ export class BattleEngine {
       const x = partyDeployTargets.get(ally.id);
       if (x === undefined) continue;
       ally.battleX = x;
-      syncFieldX(ally);
     }
     for (const enemy of this.enemies) {
       if (!enemy.isAlive) continue;
       const x = enemyDeployTargets.get(enemy.id);
       if (x === undefined) continue;
       enemy.battleX = x;
-      syncFieldX(enemy);
     }
     this.recordBattleXDebugChanges(units, beforeById, "deploy");
   }
@@ -1499,7 +1492,6 @@ export class BattleEngine {
       const target = this.partyDeployTargets.get(ally.id);
       if (target === undefined) continue;
       updateUnitApproach(ally, target, step);
-      syncFieldX(ally);
       if (Math.abs(ally.battleX - target) > BODY_ANIM_APPROACH_SETTLED_PX) {
         allSettled = false;
       }
@@ -1509,7 +1501,6 @@ export class BattleEngine {
       const target = this.enemyDeployTargets.get(enemy.id);
       if (target === undefined) continue;
       updateUnitApproach(enemy, target, step);
-      syncFieldX(enemy);
       if (Math.abs(enemy.battleX - target) > BODY_ANIM_APPROACH_SETTLED_PX) {
         allSettled = false;
       }
@@ -1598,7 +1589,6 @@ export class BattleEngine {
     this.partyDeploySettled = false;
     this.partyDeployTargets.clear();
     this.enemyDeployTargets.clear();
-    syncAllFieldX(this.players);
     this.phase = "victory";
     this.engaged = false;
     this.clearEngagedVisualState();
@@ -1778,7 +1768,6 @@ export class BattleEngine {
       formationRow: c.formationRow,
       isEnemy: c.isEnemy,
       battleX: c.battleX,
-      visualX: c.battleX,
       bodyAnimMarching: this.resolveBodyAnimMarching(c),
       corpseVisible: c.isEnemy ? undefined : c.corpseVisible,
       ...(c.isEnemy
@@ -1967,7 +1956,6 @@ export class BattleEngine {
         overlapBeforeById,
         "overlap",
       );
-      syncAllFieldX([...this.players, ...this.enemies]);
       this.syncDeadEnemyCorpseBattleXForDebug();
       this.tickAllyThreat(deltaTime);
       this.checkBattleEnd();

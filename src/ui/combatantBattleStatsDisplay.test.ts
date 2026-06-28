@@ -23,7 +23,6 @@ function mockAlly(
     formationRow: 'front',
     isEnemy: false,
     battleX: 0,
-    visualX: 0,
     bodyAnimMarching: false,
     partySlotIndex: 0,
     statusEffects: [],

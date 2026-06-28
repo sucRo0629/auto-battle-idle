@@ -1,5 +1,4 @@
 import { isUnitMovementBlocked } from '../ccEffects.ts';
-import { syncFieldX } from '../combatPosition.ts';
 import type {
   ActiveSkillDef,
   CombatantState,
@@ -502,13 +501,11 @@ export class SkillSequenceRunner {
           ? 1
           : 1 - move.remainingSec / move.totalSec;
       unit.battleX = move.fromX + (move.toX - move.fromX) * progress;
-      syncFieldX(unit);
 
       if (move.remainingSec > 0) {
         kept.push(move);
       } else {
         unit.battleX = move.toX;
-        syncFieldX(unit);
       }
       onBattleXChanged?.({ unit, beforeX });
     }

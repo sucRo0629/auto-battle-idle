@@ -48,7 +48,6 @@ function mockAlly(
     iconKey: 'placeholder',
     isEnemy: false,
     battleX: 0,
-    visualX: 0,
     corpseVisible: true,
     ...overrides,
   };
@@ -683,7 +682,6 @@ describe('passiveEffects', () => {
       id: 'lancer',
       role: 'attacker',
       battleX: 100,
-      visualX: 100,
       build: {
         learnedPassiveIds: ['at_lancer_passive_2', 'at_lancer_passive_2_periodic'],
         learnedActiveIds: [],
@@ -693,7 +691,6 @@ describe('passiveEffects', () => {
     const ally = mockAlly({
       id: 'ally',
       battleX: 118,
-      visualX: 118,
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],
@@ -703,7 +700,6 @@ describe('passiveEffects', () => {
     const farAlly = mockAlly({
       id: 'far',
       battleX: 180,
-      visualX: 180,
       build: {
         learnedPassiveIds: [],
         learnedActiveIds: [],

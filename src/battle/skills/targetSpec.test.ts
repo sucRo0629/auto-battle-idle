@@ -59,7 +59,6 @@ function mockUnit(
     iconKey: 'placeholder',
     isEnemy: opts.isEnemy ?? false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
     ...(opts.threat !== undefined ? { threat: opts.threat } : {}),
   };

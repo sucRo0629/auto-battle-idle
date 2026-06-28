@@ -574,18 +574,12 @@ export interface CombatantState extends Combatant {
   isEnemy: boolean;
   /** 戦闘ロジック用 1D 座標（大きいほど前方＝右） */
   battleX: number;
-  /** snapshot 互換ミラー。runtime 正本は battleX */
-  visualX: number;
   /** 接敵中: battleX 基準線からのレーンずれ（接敵開始時に固定） */
   engagedBattleLaneX?: number;
   /** 近接敵: 最前列からの奥行きスロット（接敵開始時に固定、0=最前列） */
   engagedMeleeDepthSlot?: number;
   /** 遠距離敵: DisplayAnchor（描画・VFX 基準プレイヤー id。接敵開始時に固定） */
   engagedDisplayAnchorPlayerId?: string;
-  /** @deprecated engagedDisplayAnchorPlayerId */
-  engagedVisualTargetPlayerId?: string;
-  /** @deprecated engagedDisplayAnchorPlayerId */
-  engagedVisualTargetAllyId?: string;
   /** 味方: Wave 中の death スプライト表示。Wave 移行で false（HP0・HUD は維持） */
   corpseVisible: boolean;
   /** 敵のみ: ステージ配置のスポーン battleX */
@@ -1744,8 +1738,6 @@ export interface CombatantSnapshot {
   formationRow: FormationRow;
   isEnemy: boolean;
   battleX: number;
-  /** snapshot 互換。battleX と同値 */
-  visualX: number;
   /** entity body の move 再生（自動接近・PartyDeploy・スキル move 等） */
   bodyAnimMarching: boolean;
   /** 味方のみ: フィールド上に death スプライトを描くか */

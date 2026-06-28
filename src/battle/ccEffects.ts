@@ -1,4 +1,4 @@
-import { getBattleX, syncFieldX } from './combatPosition.ts';
+import { getBattleX } from './combatPosition.ts';
 import type { ActiveSkillDef, CombatantState, StatusEffect } from './types.ts';
 import { BATTLE_ENEMY_MARCH_VISIBLE_MIN_X } from './battleConstants.ts';
 
@@ -127,7 +127,6 @@ export function applyKnockbackToTarget(
   } else {
     target.battleX = nextX;
   }
-  syncFieldX(target);
 
   applyMoveLockToTarget(
     target,

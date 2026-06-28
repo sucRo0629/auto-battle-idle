@@ -45,7 +45,7 @@ export const BACK_ROW_NAMES = ["療養師", "弓術士"] as const;
 
 /** screenX = battleX（カメラ廃止） */
 export function screenX(
-  unit: Pick<CombatantSnapshot, "visualX" | "battleX">,
+  unit: Pick<CombatantSnapshot, "battleX">,
   _combatCameraX: number = 0,
 ): number {
   return unit.battleX;
@@ -390,18 +390,6 @@ export function measureAllyBattleXDriftAfterShortRangeWipe(
   return { wipeTick, maxLeftDrift, maxRightDrift };
 }
 
-/** Snapshot 版: R1-fix 後は常に 0（battleX === visualX） */
-export function battleVisualOffsetFromSnapshot(
-  allies: CombatantSnapshot[],
-): number | null {
-  const living = allies.filter((a) => a.hp > 0);
-  if (living.length === 0) return null;
-  for (const unit of living) {
-    if (Math.abs(unit.visualX - unit.battleX) > 0.01) return null;
-  }
-  return 0;
-}
-
 export interface EngagedVisualAssertOptions {
   maxTicks?: number;
   /** 接敵開始直後の 1 tick 再配置を許容 */
@@ -409,7 +397,7 @@ export interface EngagedVisualAssertOptions {
 }
 
 /**
- * R1-fix: 接敵中 battleX === visualX かつ敵 screenX の 1-tick 変化が閾値以内。
+ * 接敵中: 敵 screenX の 1-tick 変化が閾値以内。
  * 構成変化時の layout bake 1 回分を許容するため skip / 閾値を緩める。
  */
 export function assertEngagedEnemyScreenStable(
@@ -434,12 +422,6 @@ export function assertEngagedEnemyScreenStable(
       continue;
     }
     engagedTicks += 1;
-
-    for (const unit of [...snap.allies, ...snap.enemies].filter(
-      (u) => u.hp > 0,
-    )) {
-      expect(unit.visualX).toBe(unit.battleX);
-    }
 
     const enemySignature = snap.enemies
       .filter((e) => e.hp > 0)

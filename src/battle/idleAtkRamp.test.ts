@@ -31,7 +31,6 @@ function mockUnit(): CombatantState {
     iconKey: 'at_ballista',
     isEnemy: false,
     battleX: 40,
-    visualX: 40,
     corpseVisible: true,
   };
 }

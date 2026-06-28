@@ -35,7 +35,6 @@ function mockUnit(
     iconKey: 'placeholder',
     isEnemy: overrides.isEnemy ?? false,
     battleX: overrides.battleX,
-    visualX: overrides.battleX,
     corpseVisible: true,
     ...overrides,
   };

@@ -81,7 +81,6 @@ function mockAlchemist(battleX: number, overrides: Partial<CombatantState> = {})
     iconKey: 'placeholder',
     isEnemy: false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
     ...overrides,
   } satisfies CombatantState;

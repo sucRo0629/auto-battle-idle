@@ -36,7 +36,6 @@ function mockUnit(
     spriteKey: partial.id,
     iconKey: partial.id,
     battleX: partial.battleX ?? 0,
-    visualX: partial.visualX ?? 0,
     corpseVisible: true,
     ...partial,
   } as CombatantState;

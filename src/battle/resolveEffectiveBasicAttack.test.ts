@@ -49,7 +49,6 @@ function mockUnit(statusEffects: CombatantState['statusEffects'] = []): Combatan
     iconKey: '',
     isEnemy: false,
     battleX: 0,
-    visualX: 0,
     corpseVisible: false,
   };
 }

@@ -44,7 +44,6 @@ function mockAlchemist(
     iconKey: 'placeholder',
     isEnemy: false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
     ...overrides,
   };
@@ -82,7 +81,6 @@ function mockGuardian(battleX: number, hp: number, maxHp = 235): CombatantState 
     iconKey: 'placeholder',
     isEnemy: false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }
@@ -127,7 +125,6 @@ function mockSorcerer(
     iconKey: 'placeholder',
     isEnemy: false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }
@@ -164,7 +161,6 @@ function mockDuelist(battleX: number): CombatantState {
     iconKey: 'placeholder',
     isEnemy: false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }
@@ -205,7 +201,6 @@ function mockEnemy(battleX: number): CombatantState {
     iconKey: 'placeholder',
     isEnemy: true,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }

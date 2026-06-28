@@ -24,7 +24,6 @@ function mockDuelist(battleX: number): CombatantState {
     iconKey: 'df_duelist',
     isEnemy: false,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }
@@ -51,7 +50,6 @@ function mockEnemy(battleX: number): CombatantState {
     iconKey: 'enemy',
     isEnemy: true,
     battleX,
-    visualX: battleX,
     corpseVisible: true,
   };
 }
@@ -67,7 +65,7 @@ describe('enemyReelIn', () => {
     const delta = applyEnemyReelIn(duelist, enemy, gameData);
     expect(delta).toBeLessThan(0);
     expect(enemy.battleX).toBe(80);
-    expect(enemy.visualX).toBe(80);
+    expect(enemy.battleX).toBe(80);
   });
 
   it('uses actor traits.rangePx for destination, not skill targeting range', () => {

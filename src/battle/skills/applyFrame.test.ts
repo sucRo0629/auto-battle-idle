@@ -22,7 +22,6 @@ function makeActor(overrides: Partial<CombatantState> = {}): CombatantState {
     classId: 'test',
     formationRow: 'front',
     battleX: 100,
-    visualX: 100,
     hp: 100,
     maxHp: 100,
     barrierHp: 0,
@@ -52,7 +51,6 @@ function makeEnemy(): CombatantState {
     name: 'e1',
     isEnemy: true,
     battleX: 130,
-    visualX: 130,
     role: 'attacker',
     spriteKey: 'enemy_grunt',
   });

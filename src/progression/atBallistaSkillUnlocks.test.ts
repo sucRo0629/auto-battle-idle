@@ -44,7 +44,6 @@ function mockBallista(id: string): CombatantState {
     iconKey: "at_ballista",
     isEnemy: false,
     battleX: 50,
-    visualX: 50,
     corpseVisible: true,
   };
 }

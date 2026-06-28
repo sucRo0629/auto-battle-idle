@@ -222,7 +222,7 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 - Stage 1 Wave 2 の `test_to_ranged` 残存時に鉄衛士が不連続に接敵しないことを regression 化する
 - Phase 3d 後 regression として、Engaged 中 overlap 補正は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、front row spacing が `battleX` を 32px 級で snap したり 2 倍速に見える加速を起こしたりしないことを固定する
 
-**Phase 3d 後 cleanup:** `battleX` 単一正本の runtime 整理は [master-work-order.md](./master-work-order.md) の battle-field cleanup 表を正とする。`battleCamera.ts` と skill move の旧 visual フィールドは削除済み。`visualX` は snapshot 互換ミラー、`engagedVisualTarget*` は deprecated alias として次フェーズ送り。
+**Phase 3d 後 cleanup（完了）:** `battleX` 単一正本の runtime 整理は完了。`battleCamera.ts`、skill move の旧 visual フィールド、`visualX` snapshot ミラー、`engagedVisualTarget*` deprecated alias を削除済み。正本は [`docs/spec/battle-field.md`](../spec/battle-field.md)。
 
 **Phase 3d 延長 — 回復 PHT 整合（完了）:** Priority Heal Target（PHT）を [combat.md](../spec/combat.md) §回復 PHT に正本化。Task 0–7 実装済（spec / 接近 / withhold / selfOrigin 棚卸し / 薬草師整合 / battleX debug PHT・withhold 表示 / sp_cleric 等回帰）。
 
@@ -258,7 +258,7 @@ Phase 3 の習得機構 + **キャラクターデータ GUI** でクラス JSON 
 ロスター全表は [classes-and-skills.md](../spec/classes-and-skills.md) を正とする。`displayName`（漢字）+ `epithetEn`（英語肩書き）を `classes.json` に保持し、デモ編成は `parties.json` の最新構成（鉄衛士 / 剣術士 / 療養師 / 弓術士）とする。
 
 - 旧デモ 4 クラス（Bulwark 等）は削除済み
-- `epithetEn` の 2 段ルビ UI は master-work-order Phase 3c
+- `epithetEn` の 2 段ルビ UI は Phase 3c 完了（スプライト本番化は Phase 5）
 - 数値バランスの最終版は **Phase 6c（体験版）** / **Phase 8c（本編）**
 
 ### 4a — クラスデータ + GUI（確定済）

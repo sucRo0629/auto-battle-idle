@@ -16,7 +16,7 @@ import { mockCombatant } from '../testFixtures.ts';
 
 function mockUnit(overrides: Partial<CombatantState> & { id: string }): CombatantState {
   return mockCombatant(
-    { atk: 20, battleX: 200, visualX: 200, ...overrides },
+    { atk: 20, battleX: 200, ...overrides },
     'meleeFront',
   );
 }
