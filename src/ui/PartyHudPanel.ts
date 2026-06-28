@@ -17,6 +17,7 @@ import {
   drawCompactStatusBadgeRow,
   measureCompactStatusBadgeRow,
   PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
+  PARTY_HUD_STATUS_BADGE_ICON_SIZE,
   statusBadgeOutlinePad,
 } from '../render/statusBadgeRenderer.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
@@ -233,7 +234,7 @@ export class PartyHudPanel {
 
     const badgeLayout = measureCompactStatusBadgeRow(
       scale,
-      theme.statusBadgeIconSize,
+      PARTY_HUD_STATUS_BADGE_ICON_SIZE,
       theme.statusIconOutlineWidth,
       theme.statusBadgeOverlap,
       badgeLayoutConfig,
@@ -244,8 +245,20 @@ export class PartyHudPanel {
 
     canvas.width = canvasW;
     canvas.height = canvasH;
-    canvas.style.width = badges.length === 0 ? '' : `${canvasW}px`;
-    canvas.style.height = badges.length === 0 ? '' : `${canvasH}px`;
+    if (badges.length === 0) {
+      canvas.style.width = '';
+      canvas.style.height = '';
+      canvas.style.minWidth = '';
+      canvas.style.maxWidth = '';
+    } else {
+      const w = `${canvasW}px`;
+      const h = `${canvasH}px`;
+      canvas.style.width = w;
+      canvas.style.height = h;
+      // .status-badge-canvas の max-width:100% による縮小を防ぐ
+      canvas.style.minWidth = w;
+      canvas.style.maxWidth = w;
+    }
     canvas.hidden = badges.length === 0;
 
     const ctx = canvas.getContext('2d');
@@ -262,7 +275,7 @@ export class PartyHudPanel {
       overflowCount,
       scale,
       {
-        iconSize: theme.statusBadgeIconSize,
+        iconSize: PARTY_HUD_STATUS_BADGE_ICON_SIZE,
         rowOverlap: theme.statusBadgeOverlap,
         overlayColor: theme.statusBadgeOverlay,
         iconOutlineColor: theme.statusIconOutlineColor,

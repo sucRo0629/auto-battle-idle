@@ -332,7 +332,7 @@ Threat 値は毎 tick 再評価されうるが、敵の chase / attack target �
 | 表示 | 場所 | ルール |
 | ---- | ---- | ------ |
 | **簡易（Party HUD）** | `PartyHudPanel` | 固定 **1 行・5 スロット幅**（最大 4 バッジ + 第 5 枠 `+N`）。クラス名・バッジ行はスロット全幅、24px クラスアイコンは HP/リキャスト行の左（下端揃え）。`overflowCount = max(0, badges.length − 4)` |
-| **簡易（敵）** | `BattleCanvas` HP バー直上 | **14×14px** スロット（`FIELD_ENEMY_STATUS_BADGE_ICON_SIZE`。Party HUD 20px より小さめ）。累積数・`+N` ラベルも 20px 正本から比例縮小。固定 **1 行・4 スロット幅**（最大 3 バッジ + 第 4 枠 `+N`）。HP バー top を anchor に `STATUS_BADGE_GAP` 分だけ上へ配置。水平重なり時は半分重ねてさらに上へ。`overflowCount = max(0, badges.length − 3)` |
+| **簡易（敵）** | `BattleCanvas` HP バー直上 | **14×14px** スロット（`FIELD_ENEMY_STATUS_BADGE_ICON_SIZE`）。累積数・`+N` は **12×12px 枠**・**1px** ビットマップアウトライン（`FIELD_ENEMY_STACK_LABEL_*`）。Party HUD 累積数は 20px 枠・2px アウトラインのまま。固定 **1 行・4 スロット幅**（最大 3 バッジ + 第 4 枠 `+N`）。HP バー top を anchor に `STATUS_BADGE_GAP` 分だけ上へ配置。**重なり時も位置調整しない**。`overflowCount = max(0, badges.length − 3)` |
 | **詳細** | 戦闘詳細（`BattleStatsOverlay` / `DebugMenuPanel` 内 `PartyMemberStatsDisplay`） | **全件**表示。debuff / buff でラベル付き行を分け、パネル幅内で flex-wrap 折り返し |
 
 いずれの簡易表示も折り返しなし。`+N` 枠が不要（overflow 0）のときは最終枠を空（透明スロットで幅固定）。

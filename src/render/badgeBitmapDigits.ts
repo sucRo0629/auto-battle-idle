@@ -15,12 +15,17 @@ const GLYPH_ROWS: Record<string, readonly string[]> = {
 
 const GLYPH_HEIGHT = 7;
 const GLYPH_GAP = 1;
-const OUTLINE_THICKNESS = 2;
+export const BADGE_BITMAP_LABEL_DEFAULT_OUTLINE_PX = 2;
 
 export const BADGE_BITMAP_LABEL_HEIGHT = GLYPH_HEIGHT;
 
 /** 累積数ラベルの正本バッジ幅（`STATUS_BADGE_SLOT_PX` と同値） */
 export const BADGE_LABEL_REFERENCE_PX = 20;
+
+export interface BadgeBitmapLabelDrawOptions {
+  pixelScale: number;
+  outlineThickness?: number;
+}
 
 interface ParsedGlyph {
   white: ReadonlySet<string>;
@@ -32,6 +37,10 @@ interface ParsedGlyph {
 }
 
 const PARSED_GLYPHS = new Map<string, ParsedGlyph>();
+
+function glyphCacheKey(char: string, outlineThickness: number): string {
+  return `${char}:${outlineThickness}`;
+}
 
 function computeBounds(keys: Iterable<string>): {
   minX: number;
@@ -53,8 +62,9 @@ function computeBounds(keys: Iterable<string>): {
   return { minX, maxX, minY, maxY };
 }
 
-function parseGlyph(char: string): ParsedGlyph {
-  const cached = PARSED_GLYPHS.get(char);
+function parseGlyph(char: string, outlineThickness: number): ParsedGlyph {
+  const cacheKey = glyphCacheKey(char, outlineThickness);
+  const cached = PARSED_GLYPHS.get(cacheKey);
   if (cached) return cached;
 
   const rows = GLYPH_ROWS[char];
@@ -67,7 +77,7 @@ function parseGlyph(char: string): ParsedGlyph {
       minY: 0,
       maxY: -1,
     };
-    PARSED_GLYPHS.set(char, empty);
+    PARSED_GLYPHS.set(cacheKey, empty);
     return empty;
   }
 
@@ -82,8 +92,8 @@ function parseGlyph(char: string): ParsedGlyph {
   const black = new Set<string>();
   for (const key of white) {
     const [sx, sy] = key.split(',').map(Number);
-    for (let dy = -OUTLINE_THICKNESS; dy <= OUTLINE_THICKNESS; dy++) {
-      for (let dx = -OUTLINE_THICKNESS; dx <= OUTLINE_THICKNESS; dx++) {
+    for (let dy = -outlineThickness; dy <= outlineThickness; dy++) {
+      for (let dx = -outlineThickness; dx <= outlineThickness; dx++) {
         const neighbor = `${sx + dx},${sy + dy}`;
         if (!white.has(neighbor)) black.add(neighbor);
       }
@@ -93,30 +103,35 @@ function parseGlyph(char: string): ParsedGlyph {
   const allKeys = [...white, ...black];
   const { minX, maxX, minY, maxY } = computeBounds(allKeys);
   const parsed = { white, black, minX, maxX, minY, maxY };
-  PARSED_GLYPHS.set(char, parsed);
+  PARSED_GLYPHS.set(cacheKey, parsed);
   return parsed;
 }
 
-/** 20px バッジ基準の整数 upscaling（14px 等は drawBadgeBitmapLabelForBadgeSize で比例縮小） */
+/** 20px バッジ基準の整数 pixelScale（20px 未満は 1x のまま描画して潰れを防ぐ） */
 export function resolveBadgeLabelPixelScale(badgeSize: number): number {
-  return Math.max(1, Math.round(badgeSize / BADGE_LABEL_REFERENCE_PX));
+  if (badgeSize >= BADGE_LABEL_REFERENCE_PX) {
+    return Math.max(1, Math.round(badgeSize / BADGE_LABEL_REFERENCE_PX));
+  }
+  return 1;
 }
 
-/** バッジサイズに比例したラベル表示倍率（20px = 1） */
+/** バッジサイズに比例したラベル表示倍率（20px = 1）。20px 未満は整数 1x 描画。 */
 export function resolveBadgeLabelLayoutScale(badgeSize: number): number {
-  return badgeSize / BADGE_LABEL_REFERENCE_PX;
+  if (badgeSize >= BADGE_LABEL_REFERENCE_PX) {
+    return badgeSize / BADGE_LABEL_REFERENCE_PX;
+  }
+  return 1;
 }
 
 /** @deprecated resolveBadgeLabelPixelScale のエイリアス（テスト互換） */
 export function resolveBadgeLabelFontSize(badgeSize: number): number {
-  return Math.round(
-    BADGE_BITMAP_LABEL_HEIGHT * resolveBadgeLabelLayoutScale(badgeSize),
-  );
+  return BADGE_BITMAP_LABEL_HEIGHT * resolveBadgeLabelPixelScale(badgeSize);
 }
 
 export function measureBadgeBitmapLabel(
   text: string,
   pixelScale: number,
+  outlineThickness = BADGE_BITMAP_LABEL_DEFAULT_OUTLINE_PX,
 ): { width: number; height: number } {
   const chars = [...text];
   if (chars.length === 0) return { width: 0, height: 0 };
@@ -124,7 +139,10 @@ export function measureBadgeBitmapLabel(
   let width = 0;
   let maxHeight = 0;
   for (let i = 0; i < chars.length; i++) {
-    const { minX, maxX, minY, maxY } = parseGlyph(chars[i]!);
+    const { minX, maxX, minY, maxY } = parseGlyph(
+      chars[i]!,
+      outlineThickness,
+    );
     width += (maxX - minX + 1) * pixelScale;
     if (i > 0) width += GLYPH_GAP * pixelScale;
     maxHeight = Math.max(maxHeight, (maxY - minY + 1) * pixelScale);
@@ -140,8 +158,9 @@ function drawGlyph(
   pixelScale: number,
   minX: number,
   minY: number,
+  outlineThickness: number,
 ): void {
-  const { white, black } = parseGlyph(char);
+  const { white, black } = parseGlyph(char, outlineThickness);
 
   ctx.fillStyle = '#000000';
   for (const key of black) {
@@ -166,14 +185,33 @@ function drawGlyph(
   }
 }
 
+function resolveBadgeBitmapLabelDrawOptions(
+  pixelScaleOrOptions: number | BadgeBitmapLabelDrawOptions,
+): Required<BadgeBitmapLabelDrawOptions> {
+  if (typeof pixelScaleOrOptions === 'number') {
+    return {
+      pixelScale: pixelScaleOrOptions,
+      outlineThickness: BADGE_BITMAP_LABEL_DEFAULT_OUTLINE_PX,
+    };
+  }
+  return {
+    pixelScale: pixelScaleOrOptions.pixelScale,
+    outlineThickness:
+      pixelScaleOrOptions.outlineThickness ??
+      BADGE_BITMAP_LABEL_DEFAULT_OUTLINE_PX,
+  };
+}
+
 /** 文字列右端・下端を anchorRight / anchorBottom に揃えて描画 */
 export function drawBadgeBitmapLabel(
   ctx: CanvasRenderingContext2D,
   text: string,
   anchorRight: number,
   anchorBottom: number,
-  pixelScale: number,
+  pixelScaleOrOptions: number | BadgeBitmapLabelDrawOptions,
 ): void {
+  const { pixelScale, outlineThickness } =
+    resolveBadgeBitmapLabelDrawOptions(pixelScaleOrOptions);
   const chars = [...text];
   if (chars.length === 0) return;
 
@@ -183,36 +221,25 @@ export function drawBadgeBitmapLabel(
 
   for (let i = chars.length - 1; i >= 0; i--) {
     const char = chars[i]!;
-    const { minX, maxX, minY, maxY } = parseGlyph(char);
+    const { minX, maxX, minY, maxY } = parseGlyph(char, outlineThickness);
     const originX = cursorRight - (maxX - minX + 1) * pixelScale;
     const originY = anchorY - (maxY - minY + 1) * pixelScale;
-    drawGlyph(ctx, char, originX, originY, pixelScale, minX, minY);
+    drawGlyph(
+      ctx,
+      char,
+      originX,
+      originY,
+      pixelScale,
+      minX,
+      minY,
+      outlineThickness,
+    );
     cursorRight = originX;
     if (i > 0) cursorRight -= GLYPH_GAP * pixelScale;
   }
 }
 
-let badgeLabelDrawBuffer: HTMLCanvasElement | null = null;
-
-function getBadgeLabelDrawBuffer(
-  width: number,
-  height: number,
-): CanvasRenderingContext2D {
-  if (!badgeLabelDrawBuffer) {
-    badgeLabelDrawBuffer = document.createElement('canvas');
-  }
-
-  badgeLabelDrawBuffer.width = width;
-  badgeLabelDrawBuffer.height = height;
-
-  const bufferCtx = badgeLabelDrawBuffer.getContext('2d');
-  if (!bufferCtx) throw new Error('Canvas 2D unavailable');
-
-  bufferCtx.clearRect(0, 0, width, height);
-  return bufferCtx;
-}
-
-/** バッジサイズに比例して累積数 / +N を描画（20px 正本） */
+/** バッジサイズに応じた累積数 / +N（整数 pixelScale のみ） */
 export function drawBadgeBitmapLabelForBadgeSize(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -220,56 +247,11 @@ export function drawBadgeBitmapLabelForBadgeSize(
   anchorBottom: number,
   badgeSize: number,
 ): void {
-  const layoutScale = resolveBadgeLabelLayoutScale(badgeSize);
-  const basePixelScale = 1;
-  const measured = measureBadgeBitmapLabel(text, basePixelScale);
-
-  if (Math.abs(layoutScale - 1) < 0.001) {
-    drawBadgeBitmapLabel(
-      ctx,
-      text,
-      anchorRight,
-      anchorBottom,
-      basePixelScale,
-    );
-    return;
-  }
-
-  if (layoutScale > 1 && Math.abs(layoutScale - Math.round(layoutScale)) < 0.001) {
-    drawBadgeBitmapLabel(
-      ctx,
-      text,
-      anchorRight,
-      anchorBottom,
-      Math.round(layoutScale),
-    );
-    return;
-  }
-
-  const bufferCtx = getBadgeLabelDrawBuffer(measured.width, measured.height);
   drawBadgeBitmapLabel(
-    bufferCtx,
+    ctx,
     text,
-    measured.width,
-    measured.height,
-    basePixelScale,
-  );
-
-  const destW = Math.max(1, Math.round(measured.width * layoutScale));
-  const destH = Math.max(1, Math.round(measured.height * layoutScale));
-  const destX = Math.round(anchorRight) - destW;
-  const destY = Math.round(anchorBottom) - destH;
-
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(
-    badgeLabelDrawBuffer!,
-    0,
-    0,
-    measured.width,
-    measured.height,
-    destX,
-    destY,
-    destW,
-    destH,
+    anchorRight,
+    anchorBottom,
+    resolveBadgeLabelPixelScale(badgeSize),
   );
 }

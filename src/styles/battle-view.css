@@ -344,6 +344,7 @@
 }
 
 .party-hud-panel {
+  --status-badge-icon-size: 20;
   position: relative;
   z-index: 1;
   display: grid;
@@ -460,6 +461,8 @@
 
 .party-hud-status-badges {
   pointer-events: none;
+  flex-shrink: 0;
+  max-width: none;
 }
 
 .party-hud-recast-grid {

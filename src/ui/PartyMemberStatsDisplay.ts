@@ -15,6 +15,7 @@ import {
 import {
   drawStatusBadgeWrap,
   measureStatusBadgeWrap,
+  PARTY_HUD_STATUS_BADGE_ICON_SIZE,
   prepareStatusBadgeCanvasContext,
   statusBadgeOutlinePad,
 } from '../render/statusBadgeRenderer.ts';
@@ -307,7 +308,7 @@ function drawStatusBadgeCanvas(
   const theme = readBattleHudTheme(themeHostEl);
   const scale = 1;
   const badgeTheme = {
-    iconSize: theme.statusBadgeIconSize,
+    iconSize: PARTY_HUD_STATUS_BADGE_ICON_SIZE,
     rowOverlap: theme.statusBadgeOverlap,
     overlayColor: theme.statusBadgeOverlay,
     iconOutlineColor: theme.statusIconOutlineColor,
@@ -322,7 +323,7 @@ function drawStatusBadgeCanvas(
     badges,
     STATUS_WRAP_MAX_WIDTH,
     scale,
-    theme.statusBadgeIconSize,
+    PARTY_HUD_STATUS_BADGE_ICON_SIZE,
     theme.statusIconOutlineWidth,
     theme.statusBadgeOverlap,
   );

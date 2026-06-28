@@ -3,6 +3,7 @@ import {
   type StatusDisplayCategory,
 } from "../battle/statusEffectDisplay.ts";
 import {
+  drawBadgeBitmapLabel,
   drawBadgeBitmapLabelForBadgeSize,
 } from "./badgeBitmapDigits.ts";
 import {
@@ -39,9 +40,16 @@ function statusBadgePentagonOffsetY(kind: "buff" | "debuff"): number {
     : STATUS_BADGE_PENTAGON_DEBUFF_OFFSET_PX;
 }
 
-/** iconSize に対する 20px 正本レイアウトの倍率 */
+/** Party HUD / 詳細 UI の正本スロット（敵フィールド 14px とは独立） */
+export const PARTY_HUD_STATUS_BADGE_ICON_SIZE = 20;
+
+/** iconSize に対する 20px 正本レイアウトの倍率（20px 未満の敵フィールド用） */
 export function statusBadgeLayoutScale(iconSize: number): number {
   return iconSize / STATUS_BADGE_SLOT_PX;
+}
+
+export function isCompactStatusBadgeIconSize(iconSize: number): boolean {
+  return iconSize < STATUS_BADGE_SLOT_PX;
 }
 
 /** 1 行の描画高さ（スロット + 上下パディング） */
@@ -49,6 +57,9 @@ export function statusBadgeDrawableRowHeight(
   scale: number,
   slotPx: number,
 ): number {
+  if (!isCompactStatusBadgeIconSize(slotPx)) {
+    return slotPx * scale + STATUS_BADGE_ROW_PAD_Y * 2 * scale;
+  }
   const layoutScale = statusBadgeLayoutScale(slotPx);
   return Math.round(
     slotPx * scale + STATUS_BADGE_ROW_PAD_Y * 2 * layoutScale * scale,
@@ -57,6 +68,10 @@ export function statusBadgeDrawableRowHeight(
 
 /** 敵 HP バー上フィールド用（Party HUD 20px より小さめ） */
 export const FIELD_ENEMY_STATUS_BADGE_ICON_SIZE = 14;
+/** 敵フィールドの累積数 / +N ラベル枠（px） */
+export const FIELD_ENEMY_STACK_LABEL_SLOT_PX = 12;
+/** 敵フィールドの累積数ビットマップアウトライン（px） */
+export const FIELD_ENEMY_STACK_LABEL_OUTLINE_PX = 1;
 
 /** Canvas 描画を DOM の pixel-icon-img と同様 nearest-neighbor（等倍）にする */
 export function prepareStatusBadgeCanvasContext(
@@ -318,12 +333,13 @@ export function drawOverflowCountBadge(
   const layoutScale = statusBadgeLayoutScale(theme.iconSize);
   const badgeSize = theme.iconSize * scale;
   const slotY = y + STATUS_BADGE_ROW_PAD_Y * layoutScale * scale;
-  drawBadgeBitmapLabelForBadgeSize(
+  drawStatusStackLabel(
     ctx,
     `+${overflowCount}`,
     x + badgeSize,
     slotY + badgeSize,
     badgeSize,
+    theme,
   );
 }
 
@@ -442,6 +458,10 @@ export interface StatusBadgeTheme {
   iconOutlineWidth: number;
   iconFallbackAlpha: number;
   resolveIconFallbackColor: (category: StatusDisplayCategory) => string;
+  /** 累積数 / +N の描画枠（px）。未指定時は badge スロットに追随 */
+  stackLabelSlotPx?: number;
+  /** 累積数ビットマップのアウトライン（px）。未指定時は 2 */
+  stackLabelOutlinePx?: number;
 }
 
 /** 縁取りがキャンバス端で切れないよう確保する余白（px） */
@@ -563,19 +583,47 @@ export function drawStatusBadgeRow(
   }
 }
 
+function drawStatusStackLabel(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  anchorRight: number,
+  anchorBottom: number,
+  badgeSize: number,
+  theme: StatusBadgeTheme,
+): void {
+  if (theme.stackLabelSlotPx !== undefined) {
+    drawBadgeBitmapLabel(ctx, text, anchorRight, anchorBottom, {
+      pixelScale: 1,
+      outlineThickness:
+        theme.stackLabelOutlinePx ?? FIELD_ENEMY_STACK_LABEL_OUTLINE_PX,
+    });
+    return;
+  }
+
+  drawBadgeBitmapLabelForBadgeSize(
+    ctx,
+    text,
+    anchorRight,
+    anchorBottom,
+    badgeSize,
+  );
+}
+
 function drawStackCountLabel(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   size: number,
-  stackCount: number
+  stackCount: number,
+  theme: StatusBadgeTheme,
 ): void {
-  drawBadgeBitmapLabelForBadgeSize(
+  drawStatusStackLabel(
     ctx,
     String(stackCount),
     x + size,
     y + size,
     size,
+    theme,
   );
 }
 
@@ -588,14 +636,29 @@ function drawStatusBadge(
   theme: StatusBadgeTheme
 ): void {
   const outlineColor = theme.iconOutlineColor;
-  const layoutScale = statusBadgeLayoutScale(theme.iconSize);
+  const compact = isCompactStatusBadgeIconSize(theme.iconSize);
+  const layoutScale = compact ? statusBadgeLayoutScale(theme.iconSize) : 1;
   const badgeSize = theme.iconSize * scale;
   const rowHeight = statusBadgeDrawableRowHeight(scale, theme.iconSize);
-  const slotY = STATUS_BADGE_ROW_PAD_Y * layoutScale * scale;
-  const pentagonPx = STATUS_BADGE_PENTAGON_PX * layoutScale;
-  const pentagonOffsetY = statusBadgePentagonOffsetY(badge.kind) * layoutScale;
-  const iconDrawSize = STATUS_BADGE_EFFECT_ICON_PX * layoutScale;
-  const iconInset = STATUS_BADGE_EFFECT_ICON_INSET_PX * layoutScale;
+  const slotY = compact
+    ? STATUS_BADGE_ROW_PAD_Y * layoutScale * scale
+    : STATUS_BADGE_ROW_PAD_Y * scale;
+  const pentagonPx = compact
+    ? STATUS_BADGE_PENTAGON_PX * layoutScale
+    : STATUS_BADGE_PENTAGON_PX;
+  const pentagonOffsetY = compact
+    ? statusBadgePentagonOffsetY(badge.kind) * layoutScale
+    : statusBadgePentagonOffsetY(badge.kind);
+  const iconDrawSize = compact
+    ? STATUS_BADGE_EFFECT_ICON_PX * layoutScale
+    : STATUS_BADGE_EFFECT_ICON_PX;
+  const iconInset = compact
+    ? STATUS_BADGE_EFFECT_ICON_INSET_PX * layoutScale
+    : STATUS_BADGE_EFFECT_ICON_INSET_PX;
+  const iconOutlineWidth = compact
+    ? theme.iconOutlineWidth * layoutScale
+    : theme.iconOutlineWidth *
+      (iconDrawSize / Math.max(1, theme.iconSize));
 
   const bufferCtx = getBadgeDrawBuffer(badgeSize, rowHeight);
 
@@ -627,7 +690,7 @@ function drawStatusBadge(
     iconTint,
     theme,
     outlineColor,
-    theme.iconOutlineWidth * layoutScale,
+    iconOutlineWidth,
   );
 
   applyRemainingOverlayPixels(
@@ -639,7 +702,7 @@ function drawStatusBadge(
   );
 
   if (badge.stackCount !== undefined && badge.stackCount > 1) {
-    drawStackCountLabel(bufferCtx, 0, slotY, badgeSize, badge.stackCount);
+    drawStackCountLabel(bufferCtx, 0, slotY, badgeSize, badge.stackCount, theme);
   }
 
   prepareStatusBadgeCanvasContext(ctx);

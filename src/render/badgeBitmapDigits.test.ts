@@ -17,9 +17,9 @@ describe('resolveBadgeLabelPixelScale', () => {
 describe('resolveBadgeLabelFontSize', () => {
   it('returns glyph height scaled to 20px reference badge', () => {
     expect(resolveBadgeLabelFontSize(20)).toBe(7);
-    expect(resolveBadgeLabelFontSize(16)).toBe(6);
-    expect(resolveBadgeLabelFontSize(14)).toBe(5);
-    expect(resolveBadgeLabelFontSize(32)).toBe(11);
+    expect(resolveBadgeLabelFontSize(16)).toBe(7);
+    expect(resolveBadgeLabelFontSize(14)).toBe(7);
+    expect(resolveBadgeLabelFontSize(32)).toBe(14);
   });
 });
 
@@ -28,6 +28,10 @@ describe('measureBadgeBitmapLabel', () => {
     expect(measureBadgeBitmapLabel('3', 1)).toEqual({ width: 9, height: 11 });
     expect(measureBadgeBitmapLabel('12', 1)).toEqual({ width: 17, height: 11 });
     expect(measureBadgeBitmapLabel('+2', 1)).toEqual({ width: 19, height: 11 });
+  });
+
+  it('uses thinner outline for enemy field stack labels', () => {
+    expect(measureBadgeBitmapLabel('3', 1, 1)).toEqual({ width: 7, height: 9 });
   });
 });
 

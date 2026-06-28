@@ -44,11 +44,13 @@ import {
 } from "./enemyHpBarLayout.ts";
 import { collectStatusEffectBadgeDisplays, selectCompactStatusBadges } from "../battle/statusEffectDisplay.ts";
 import {
-  computeStatusBadgeTops,
+  computeFixedStatusBadgeTops,
   type StatusBadgeLayoutInput,
 } from "./statusBadgeLayout.ts";
 import {
   drawCompactStatusBadgeRow,
+  FIELD_ENEMY_STACK_LABEL_OUTLINE_PX,
+  FIELD_ENEMY_STACK_LABEL_SLOT_PX,
   FIELD_ENEMY_STATUS_BADGE_ICON_SIZE,
   measureCompactStatusBadgeRow,
   statusBadgeOutlinePad,
@@ -767,7 +769,6 @@ export class BattleCanvas implements IBattleRenderer {
     );
 
     const badgeInputs: StatusBadgeLayoutInput[] = [];
-    const rowWidthById = new Map<string, number>();
     const rowHeightById = new Map<string, number>();
     const compactById = new Map<
       string,
@@ -798,7 +799,6 @@ export class BattleCanvas implements IBattleRenderer {
         this.theme.statusIconOutlineWidth,
         scale,
       );
-      rowWidthById.set(layout.id, badgeLayout.totalWidth + outlinePad * 2);
       rowHeightById.set(layout.id, badgeLayout.totalHeight + outlinePad * 2);
       compactById.set(layout.id, compact);
       badgeInputs.push({
@@ -808,12 +808,10 @@ export class BattleCanvas implements IBattleRenderer {
       });
     }
 
-    const badgeTops = computeStatusBadgeTops(
+    const badgeTops = computeFixedStatusBadgeTops(
       badgeInputs,
-      rowWidthById,
-      scale,
-      SPRITE_SIZE,
       rowHeightById,
+      scale,
     );
 
     for (const layout of this.layouts) {
@@ -851,6 +849,8 @@ export class BattleCanvas implements IBattleRenderer {
           iconOutlineColor: this.theme.statusIconOutlineColor,
           iconOutlineWidth: this.theme.statusIconOutlineWidth,
           iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
+          stackLabelSlotPx: FIELD_ENEMY_STACK_LABEL_SLOT_PX,
+          stackLabelOutlinePx: FIELD_ENEMY_STACK_LABEL_OUTLINE_PX,
           resolveIconFallbackColor: (category) =>
             resolveStatusIconFallbackColor(category, this.theme),
         },

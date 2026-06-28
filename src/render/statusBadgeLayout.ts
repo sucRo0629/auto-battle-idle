@@ -46,6 +46,20 @@ export function statusBadgeRect(
   };
 }
 
+/** HP バー top を anchor に、重なり調整なしでバッジ top を確定する。 */
+export function computeFixedStatusBadgeTops(
+  units: StatusBadgeLayoutInput[],
+  rowHeightById: Map<string, number>,
+  scale: number,
+): Map<string, number> {
+  const tops = new Map<string, number>();
+  for (const unit of units) {
+    const rowHeight = rowHeightById.get(unit.id) ?? STATUS_BADGE_H * scale;
+    tops.set(unit.id, defaultStatusBadgeTop(unit, scale, rowHeight));
+  }
+  return tops;
+}
+
 /** 前線（右）→ 後方（左）の順にバッジ top を確定。水平重なり時は半分重ねて上へずらす。 */
 export function computeStatusBadgeTops(
   units: StatusBadgeLayoutInput[],

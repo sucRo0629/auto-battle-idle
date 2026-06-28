@@ -10,6 +10,7 @@ import {
   overlayMultiplyFillStyle,
   parseOverlayDarkenAlpha,
   PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
+  PARTY_HUD_STATUS_BADGE_ICON_SIZE,
   resolveBadgeLabelFontSize,
   STATUS_BADGE_EFFECT_ICON_INSET_PX,
   STATUS_BADGE_EFFECT_ICON_PX,
@@ -234,6 +235,18 @@ describe('measureCompactStatusBadgeRow', () => {
     expect(layout.totalHeight).toBe(19);
   });
 
+  it('uses five slots for Party HUD layout at 20px', () => {
+    const layout = measureCompactStatusBadgeRow(
+      1,
+      PARTY_HUD_STATUS_BADGE_ICON_SIZE,
+      1,
+      0,
+      PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
+    );
+    expect(layout.totalHeight).toBe(24);
+    expect(layout.totalWidth).toBeGreaterThanOrEqual(100);
+  });
+
   it('uses five slots for Party HUD layout', () => {
     const layout = measureCompactStatusBadgeRow(
       1,
@@ -349,11 +362,10 @@ describe('drawCompactStatusBadgeRow', () => {
 });
 
 describe('badge label font size', () => {
-  it('scales bitmap label height with badge size (20px reference)', () => {
+  it('uses 1x bitmap labels below 20px badges to avoid squash', () => {
     expect(resolveBadgeLabelFontSize(20)).toBe(7);
-    expect(resolveBadgeLabelFontSize(16)).toBe(6);
-    expect(resolveBadgeLabelFontSize(14)).toBe(5);
-    expect(resolveBadgeLabelFontSize(32)).toBe(11);
+    expect(resolveBadgeLabelFontSize(14)).toBe(7);
+    expect(resolveBadgeLabelFontSize(32)).toBe(14);
   });
 });
 
