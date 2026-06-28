@@ -600,7 +600,7 @@ export const MEMBER_STAT_LABELS = {
   reg: "魔法耐性",
   spd: "攻撃速度",
   range: "射程",
-  basicAttack: "基本攻撃",
+  basicAttack: "通常攻撃",
 } as const;
 
 export const ATTACK_SPEED_TIER_OPTIONS: AttackSpeedTier[] = [

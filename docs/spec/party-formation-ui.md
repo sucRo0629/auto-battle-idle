@@ -225,7 +225,7 @@ Phase 4d 当初案にあった表示例（参考）:
 - 見出しは **`ステータス`** のみ
 - HP（ラベル `HP`）/ 攻撃力 / 防御力 / 魔法耐性（`REG`）/ 攻撃速度（SPD 5 段階ラベル）
 - **射程** — 基本攻撃の実効射程 + 近接帯 / 遠隔帯（数値は px 単位だが UI では `px` 表記しない。`traits.rangePx` または basic effect の `range`）
-- **基本攻撃** — 通常攻撃の属性（`物理` / `魔法` / `回復`）。primary effect が `heal` なら回復、それ以外は effect / traits の `damageType`
+- **通常攻撃** — 通常攻撃の属性（`物理` / `魔法` / `回復`）。primary effect が `heal` なら回復、それ以外は effect / traits の `damageType`
 
 ### 6.3 習得スキル（閲覧専用）
 
