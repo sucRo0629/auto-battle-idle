@@ -21,7 +21,10 @@ export function buildPartyHudStatusBadgeHitSignature(
   canvasHeight: number,
 ): string {
   const badgePart = visible
-    .map((badge) => `${badge.category}:${badge.stackCount ?? 1}`)
+    .map(
+      (badge) =>
+        `${badge.category}:${badge.stackCount ?? 1}:${Math.floor((1 - (badge.remainingRatio ?? 1)) * 12)}`,
+    )
     .join('|');
   return `${slotIndex};${canvasWidth}x${canvasHeight};${overflowCount};${badgePart}`;
 }

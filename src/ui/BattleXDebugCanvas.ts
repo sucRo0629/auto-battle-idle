@@ -43,6 +43,7 @@ export class BattleXDebugCanvas {
   private followLatest = true;
   private selectedIndex = 0;
   private liveFrame: BattleXDebugReplayFrame | null = null;
+  private lastTraceRenderKey = "";
 
   mount(parent: HTMLElement): void {
     this.root = document.createElement("section");
@@ -80,6 +81,7 @@ export class BattleXDebugCanvas {
       this.selectedIndex = 0;
       this.liveFrame = null;
       this.selectedTraceEntries = [];
+      this.lastTraceRenderKey = "";
     }
     if (visible) {
       this.updateReplayControls();
@@ -105,7 +107,8 @@ export class BattleXDebugCanvas {
     } else if (this.selectedIndex > this.replayBuffer.latestIndex) {
       this.selectedIndex = this.replayBuffer.latestIndex;
     }
-    this.applySelectedFrame();
+    this.applySelectedFrameState();
+    this.renderTraceTableIfChanged();
     this.updateReplayControls();
   }
 
@@ -119,13 +122,12 @@ export class BattleXDebugCanvas {
   }
 
   syncFromSnapshot(snapshot: BattleSnapshot): void {
+    if (!this.visible) return;
     if (this.snapshot?.waveIndex !== snapshot.waveIndex) {
       this.resetLanes();
     }
     this.snapshot = snapshot;
     this.ensureLanes(snapshot);
-    this.draw();
-    this.renderTraceTable();
   }
 
   flashSkillRange(actorId: string, rangePx: number): void {
@@ -166,14 +168,38 @@ export class BattleXDebugCanvas {
     this.elapsedMs = 0;
   }
 
-  private applySelectedFrame(): void {
+  private applySelectedFrameState(): void {
     const frame =
       this.replayBuffer.getFrame(this.selectedIndex) ?? this.liveFrame;
     if (!frame) return;
     this.snapshot = frame.snapshot;
     this.selectedTraceEntries = frame.traceEntries;
     this.ensureLanes(frame.snapshot);
+  }
+
+  private applySelectedFrame(): void {
+    this.applySelectedFrameState();
+    this.renderTraceTableIfChanged();
     this.draw();
+  }
+
+  private traceRenderKey(): string {
+    const frame =
+      this.replayBuffer.getFrame(this.selectedIndex) ?? this.liveFrame;
+    const tick = frame?.tickIndex ?? -1;
+    const rows = this.selectedTraceEntries.filter(isBattleXTraceTableRowVisible);
+    if (rows.length === 0) return `${tick}:0`;
+    const parts = rows.map(
+      (entry) =>
+        `${entry.unitId}|${entry.tickIndex}|${entry.reason}|${entry.afterX.toFixed(1)}`,
+    );
+    return `${tick}:${parts.join(";")}`;
+  }
+
+  private renderTraceTableIfChanged(): void {
+    const key = this.traceRenderKey();
+    if (key === this.lastTraceRenderKey) return;
+    this.lastTraceRenderKey = key;
     this.renderTraceTable();
   }
 

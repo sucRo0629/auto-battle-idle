@@ -1,6 +1,7 @@
 import '../styles/debug-menu.css';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 import type { CombatantSnapshot, GameData, SaveGameState } from '../battle/types.ts';
+import { resolvePlayerDisplayLevel } from '../progression/resolvePlayerDisplayLevel.ts';
 import {
   PartyMemberStatsDisplay,
   type PartyMemberStatsDataSource,
@@ -16,7 +17,7 @@ export interface DebugMenuControls {
   getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
   onLoopStageChange: (stageId: string | null) => void;
   onLoopWaveChange: (waveIndex: number | null) => void;
-  onMemberLevelChange: (partyIndex: number, level: number) => void;
+  onPlayerLevelChange: (level: number) => void;
 }
 
 export class DebugMenuPanel {
@@ -71,7 +72,7 @@ export class DebugMenuPanel {
     this.updateStatsDisplay();
   }
 
-  private updateStatsDisplay(): void {
+  updateStatsDisplay(): void {
     if (!this.controls.isVerifyMode()) return;
     this.statsDisplay.update(this.dataSource);
   }
@@ -165,7 +166,8 @@ export class DebugMenuPanel {
       }
     }
 
-    this.rowsHost.append(this.statsHost);
+    const playerLevel = resolvePlayerDisplayLevel(save.party);
+    this.rowsHost.append(this.createPlayerLevelRow(playerLevel), this.statsHost);
 
     const specs: PartyMemberStatsRowSpec[] = [];
     save.party.forEach((member, partyIndex) => {
@@ -177,78 +179,68 @@ export class DebugMenuPanel {
       });
     });
 
-    const rowElements = this.statsDisplay.rebuild(specs);
+    this.statsDisplay.rebuild(specs);
+    this.statsDisplay.update(this.dataSource);
+  }
 
-    save.party.forEach((member, partyIndex) => {
-      if (!member) return;
+  private createPlayerLevelRow(currentLevel: number): HTMLElement {
+    const levelRow = document.createElement('div');
+    levelRow.className = 'debug-menu-level-row';
 
-      const preset = this.gameData.classRegistry[member.classId];
-      const displayName = preset?.displayName ?? member.classId;
-      const row = rowElements.get(partyIndex);
-      if (!row) return;
+    const levelLabel = document.createElement('label');
+    levelLabel.className = 'debug-menu-level-label';
+    levelLabel.textContent = 'プレイヤー Lv';
 
-      const levelLabel = document.createElement('label');
-      levelLabel.className = 'debug-menu-level-label';
-      levelLabel.textContent = 'Lv';
+    const levelInput = document.createElement('input');
+    levelInput.type = 'number';
+    levelInput.className = 'debug-menu-level-input';
+    levelInput.min = '1';
+    levelInput.max = '99';
+    levelInput.step = '1';
+    levelInput.value = String(currentLevel);
 
-      const levelInput = document.createElement('input');
-      levelInput.type = 'number';
-      levelInput.className = 'debug-menu-level-input';
-      levelInput.min = '1';
-      levelInput.max = '99';
-      levelInput.step = '1';
-      levelInput.value = String(member.progress.level);
+    const applyLevel = (): void => {
+      const parsed = Number.parseInt(levelInput.value, 10);
+      if (Number.isNaN(parsed)) {
+        levelInput.value = String(currentLevel);
+        return;
+      }
+      const clamped = Math.max(1, Math.min(99, parsed));
+      levelInput.value = String(clamped);
+      if (clamped === currentLevel) return;
+      this.controls.onPlayerLevelChange(clamped);
+    };
 
-      const applyLevel = (): void => {
-        const parsed = Number.parseInt(levelInput.value, 10);
-        if (Number.isNaN(parsed)) {
-          levelInput.value = String(member.progress.level);
-          return;
-        }
-        const clamped = Math.max(1, Math.min(99, parsed));
-        levelInput.value = String(clamped);
-        if (clamped === member.progress.level) return;
-        this.controls.onMemberLevelChange(partyIndex, clamped);
-      };
-
-      levelInput.addEventListener('change', applyLevel);
-      levelInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          applyLevel();
-          levelInput.blur();
-        }
-      });
-
-      const decButton = document.createElement('button');
-      decButton.type = 'button';
-      decButton.className = 'debug-menu-level-button';
-      decButton.textContent = '−';
-      decButton.setAttribute('aria-label', `${displayName} のレベルを下げる`);
-      decButton.addEventListener('click', () => {
-        const next = Math.max(1, member.progress.level - 1);
-        this.controls.onMemberLevelChange(partyIndex, next);
-      });
-
-      const incButton = document.createElement('button');
-      incButton.type = 'button';
-      incButton.className = 'debug-menu-level-button';
-      incButton.textContent = '+';
-      incButton.setAttribute('aria-label', `${displayName} のレベルを上げる`);
-      incButton.addEventListener('click', () => {
-        const next = Math.min(99, member.progress.level + 1);
-        this.controls.onMemberLevelChange(partyIndex, next);
-      });
-
-      levelLabel.appendChild(levelInput);
-
-      const levelControls = document.createElement('div');
-      levelControls.className = 'debug-menu-level-controls';
-      levelControls.append(levelLabel, decButton, incButton);
-      row.appendChild(levelControls);
+    levelInput.addEventListener('change', applyLevel);
+    levelInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        applyLevel();
+        levelInput.blur();
+      }
     });
 
-    this.statsDisplay.update(this.dataSource);
+    const decButton = document.createElement('button');
+    decButton.type = 'button';
+    decButton.className = 'debug-menu-level-button';
+    decButton.textContent = '−';
+    decButton.setAttribute('aria-label', 'プレイヤーレベルを下げる');
+    decButton.addEventListener('click', () => {
+      this.controls.onPlayerLevelChange(Math.max(1, currentLevel - 1));
+    });
+
+    const incButton = document.createElement('button');
+    incButton.type = 'button';
+    incButton.className = 'debug-menu-level-button';
+    incButton.textContent = '+';
+    incButton.setAttribute('aria-label', 'プレイヤーレベルを上げる');
+    incButton.addEventListener('click', () => {
+      this.controls.onPlayerLevelChange(Math.min(99, currentLevel + 1));
+    });
+
+    levelLabel.appendChild(levelInput);
+    levelRow.append(levelLabel, decButton, incButton);
+    return levelRow;
   }
 
   destroy(): void {

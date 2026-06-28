@@ -21,6 +21,7 @@ import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
 import { BattleCanvas } from "../render/BattleCanvas.ts";
 import {
   buildSkillPresentationContext,
+  isOverlayTickSkillEvent,
   playSkillBody,
   playSkillHitFeedback,
   resolveSkillPresentation,
@@ -40,7 +41,7 @@ export interface VerifyModeControls {
   isVerifyMode: () => boolean;
   onVerifyModeChange: (enabled: boolean) => void;
   onOpenMetaMenu: () => void;
-  onMemberLevelChange?: (partyIndex: number, level: number) => void;
+  onPlayerLevelChange?: (level: number) => void;
   getLoopStageId?: () => string | null;
   getLoopWaveIndex?: () => number | null;
   onLoopStageChange?: (stageId: string | null) => void;
@@ -80,6 +81,7 @@ export class BattleView {
   private statsOverlay: BattleStatsOverlay | null = null;
   private hoveredMemberStatsSlotIndex: number | null = null;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastStageLabel = "";
   private readonly verifyModeControls?: VerifyModeControls;
 
   constructor(
@@ -179,8 +181,8 @@ export class BattleView {
         verifyModeControls?.onLoopWaveChange?.(waveIndex);
         this.debugMenu.refresh();
       },
-      onMemberLevelChange: (partyIndex, level) => {
-        verifyModeControls?.onMemberLevelChange?.(partyIndex, level);
+      onPlayerLevelChange: (level) => {
+        verifyModeControls?.onPlayerLevelChange?.(level);
         this.debugMenu.refresh();
       },
     });
@@ -365,6 +367,7 @@ export class BattleView {
     if (event.type === "skill") {
       const slotLabel =
         event.slotKind === "basic" ? "通常攻撃" : event.skillName;
+      const overlayTick = isOverlayTickSkillEvent(event);
       if (event.effect === "counter") {
         this.canvas.showCounterPopup(event.actorId);
       }
@@ -377,28 +380,35 @@ export class BattleView {
       ) {
         this.canvas.showKnockbackPopup(event.targetId);
       }
-      if (event.effect === "damage" || event.effect === "dot") {
-        if (event.amount !== undefined) {
-          this.pushLog(`${slotLabel} → ${event.amount} dmg`);
-        }
-      } else if (event.effect === "heal") {
-        if (event.amount !== undefined) {
-          this.pushLog(`${slotLabel} → +${event.amount} HP`);
-        } else if (event.statusLabel === "hot") {
-          this.pushLog(`${slotLabel} → HoT`);
+      if (!overlayTick) {
+        if (event.effect === "damage" || event.effect === "dot") {
+          if (event.amount !== undefined) {
+            this.pushLog(`${slotLabel} → ${event.amount} dmg`);
+          }
+        } else if (event.effect === "heal") {
+          if (event.amount !== undefined) {
+            this.pushLog(`${slotLabel} → +${event.amount} HP`);
+          } else if (event.statusLabel === "hot") {
+            this.pushLog(`${slotLabel} → HoT`);
+            this.canvas.showBuffGlow(event.targetId);
+          }
+        } else if (event.effect === "barrier") {
+          if (event.amount !== undefined) {
+            this.pushLog(`${slotLabel} → +${event.amount} barrier`);
+          }
+        } else if (event.effect === "buff" || event.effect === "debuff") {
+          this.pushLog(`${slotLabel} → ${event.statusLabel ?? event.effect}`);
           this.canvas.showBuffGlow(event.targetId);
+        } else if (event.effect === "move") {
+          this.pushLog(`${slotLabel} → 移動`);
+        } else {
+          this.pushLog(`${slotLabel} (${event.effect})`);
         }
-      } else if (event.effect === "barrier") {
-        if (event.amount !== undefined) {
-          this.pushLog(`${slotLabel} → +${event.amount} barrier`);
-        }
-      } else if (event.effect === "buff" || event.effect === "debuff") {
-        this.pushLog(`${slotLabel} → ${event.statusLabel ?? event.effect}`);
-        this.canvas.showBuffGlow(event.targetId);
-      } else if (event.effect === "move") {
-        this.pushLog(`${slotLabel} → 移動`);
-      } else {
-        this.pushLog(`${slotLabel} (${event.effect})`);
+      }
+
+      if (overlayTick) {
+        this.playOverlayTickFeedback(event);
+        return;
       }
 
       const snapshot = this.engine.getSnapshot();
@@ -415,6 +425,8 @@ export class BattleView {
             "dot",
             event.dotFlavor,
           );
+        } else if (event.effect === "heal" && event.amount !== undefined) {
+          this.canvas.showHealPopup(event.targetId, event.amount);
         }
         return;
       }
@@ -462,25 +474,7 @@ export class BattleView {
                   : undefined,
           dotFlavor:
             event.effect === "dot" ? event.dotFlavor : undefined,
-          popupDedupeKey:
-            event.amount !== undefined &&
-            (event.effect === "damage" || event.effect === "dot")
-              ? event.effect === "dot" && event.statusEffectId
-                ? [
-                    event.statusEffectId,
-                    event.targetId,
-                    event.amount,
-                  ].join(":")
-                : [
-                    event.vfxSourceId ?? event.actorId,
-                    event.targetId,
-                    event.skillId,
-                    event.effectIndex ?? 0,
-                    event.hitIndex ?? -1,
-                    event.effect,
-                    event.amount,
-                  ].join(":")
-              : undefined,
+          popupDedupeKey: this.resolveSkillPopupDedupeKey(event),
           skipMainVfx: (event.hitIndex ?? 0) > 0,
         });
       }
@@ -536,7 +530,59 @@ export class BattleView {
   }
 
   private pushLog(message: string): void {
+    if (!(this.verifyModeControls?.isVerifyMode() ?? false)) return;
     console.log(`[battle] ${message}`);
+  }
+
+  private resolveSkillPopupDedupeKey(
+    event: Extract<BattleEvent, { type: "skill" }>,
+  ): string | undefined {
+    if (event.amount === undefined) return undefined;
+    if (event.effect === "dot" && event.statusEffectId) {
+      return [event.statusEffectId, event.targetId, event.amount].join(":");
+    }
+    if (
+      event.effect === "heal" &&
+      event.statusLabel === "hot" &&
+      event.amount !== undefined
+    ) {
+      return ["hot", event.targetId, event.amount].join(":");
+    }
+    if (event.effect !== "damage" && event.effect !== "dot") {
+      return undefined;
+    }
+    return [
+      event.vfxSourceId ?? event.actorId,
+      event.targetId,
+      event.skillId,
+      event.effectIndex ?? 0,
+      event.hitIndex ?? -1,
+      event.effect,
+      event.amount,
+    ].join(":");
+  }
+
+  private playOverlayTickFeedback(
+    event: Extract<BattleEvent, { type: "skill" }>,
+  ): void {
+    if (event.amount === undefined) return;
+    const effect =
+      event.effect === "dot"
+        ? ({ type: "dot", dotFlavor: event.dotFlavor } as SkillEffectDef)
+        : ({ type: "heal" } as SkillEffectDef);
+    playSkillHitFeedback(this.canvas, {
+      sourceId: event.vfxSourceId ?? event.actorId,
+      targetId: event.targetId,
+      presentation: {},
+      effect,
+      skillId: event.skillId,
+      effectIndex: event.effectIndex ?? 0,
+      amount: event.amount,
+      kind: event.effect === "dot" ? "dot" : "heal",
+      dotFlavor: event.dotFlavor,
+      overlayTick: true,
+      popupDedupeKey: this.resolveSkillPopupDedupeKey(event),
+    });
   }
 
   tick(deltaMs: number): void {
@@ -550,18 +596,20 @@ export class BattleView {
     const waveNum = snapshot.waveIndex + 1;
     const waveTotal = snapshot.waveCount;
     const stageLabel = `${stageName}  Wave ${waveNum}/${waveTotal}`;
-    this.stageLabelEl.textContent = stageLabel;
+    if (stageLabel !== this.lastStageLabel) {
+      this.lastStageLabel = stageLabel;
+      this.stageLabelEl.textContent = stageLabel;
+    }
 
     const debugEnabled = this.verifyModeControls?.isVerifyMode() ?? false;
-    if (debugEnabled) {
-      this.battleXDebugCanvas.recordLiveFrame(snapshot);
-    }
-    const debugSnapshot = debugEnabled
-      ? this.battleXDebugCanvas.resolveDisplaySnapshot(snapshot)
-      : snapshot;
 
     this.canvas.syncFromSnapshot(snapshot);
-    this.battleXDebugCanvas.syncFromSnapshot(debugSnapshot);
+    if (debugEnabled) {
+      this.battleXDebugCanvas.recordLiveFrame(snapshot);
+      const debugSnapshot =
+        this.battleXDebugCanvas.resolveDisplaySnapshot(snapshot);
+      this.battleXDebugCanvas.syncFromSnapshot(debugSnapshot);
+    }
     this.partyHud.update(
       buildPartyHudEntries(
         snapshot,
@@ -569,10 +617,10 @@ export class BattleView {
       ),
     );
     this.canvas.tick(deltaMs);
-    this.battleXDebugCanvas.tick(deltaMs);
-    this.debugMenu.updateThreatDisplay();
-    this.debugMenu.updateExpDisplay();
-    this.debugMenu.updateDamageDisplay();
+    if (debugEnabled) {
+      this.battleXDebugCanvas.tick(deltaMs);
+    }
+    this.debugMenu.updateStatsDisplay();
     this.statsOverlay?.update();
     this.refreshMemberStatsPanel();
   }

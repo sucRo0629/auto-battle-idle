@@ -38,6 +38,16 @@ vi.mock("../render/BattleCanvas.ts", () => ({
 
 vi.mock("../render/skillPresentation.ts", () => ({
   buildSkillPresentationContext: vi.fn(),
+  isOverlayTickSkillEvent: (event: {
+    effect: string;
+    amount?: number;
+    statusLabel?: string;
+    statusEffectId?: string;
+  }) =>
+    (event.effect === "dot" && event.statusEffectId !== undefined) ||
+    (event.effect === "heal" &&
+      event.statusLabel === "hot" &&
+      event.amount !== undefined),
   playSkillBody: vi.fn(() => ({})),
   playSkillHitFeedback: vi.fn((canvas, request) => {
     if (request.amount === undefined) return;

@@ -13,6 +13,8 @@ import {
 } from "./damagePopupLayout.ts";
 
 const POPUP_DURATION_MS = BATTLE_POPUP_DURATION_MS;
+/** 重なりレイアウト計算と描画負荷の上限 */
+const MAX_ACTIVE_POPUPS = 64;
 const ORIGIN_JITTER_X = 20;
 const ORIGIN_JITTER_Y = 20;
 const DOT_FALL_DELAY_MIN_MS = 80;
@@ -73,6 +75,9 @@ export class DamagePopupManager {
           : 0,
       dotFallSpeed: kind === "dot" ? 0.75 + Math.random() * 0.5 : 1,
     });
+    if (this.popups.length > MAX_ACTIVE_POPUPS) {
+      this.popups.splice(0, this.popups.length - MAX_ACTIVE_POPUPS);
+    }
   }
 
   tick(deltaMs: number): void {
@@ -89,6 +94,7 @@ export class DamagePopupManager {
     scale: number,
     theme: BattleHudTheme
   ): void {
+    const layoutById = new Map(layouts.map((layout) => [layout.id, layout]));
     const drawable: {
       popup: PopupEntry;
       layout: CombatantLayout;
@@ -98,7 +104,7 @@ export class DamagePopupManager {
 
     for (let index = 0; index < this.popups.length; index++) {
       const popup = this.popups[index]!;
-      const layout = layouts.find((l) => l.id === popup.targetId);
+      const layout = layoutById.get(popup.targetId);
       if (!layout) continue;
       const fallY =
         popup.kind === "dot"

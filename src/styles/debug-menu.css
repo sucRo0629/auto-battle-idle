@@ -28,22 +28,18 @@
 }
 
 .debug-menu-stats-rows .party-stats-row {
-  grid-template-columns:
-    var(--party-stats-name-col)
-    var(--party-stats-metric-col)
-    var(--party-stats-metric-col)
-    auto;
   column-gap: 8px;
   align-items: center;
   padding: 6px 0;
 }
 
-.debug-menu-stats-rows .debug-menu-level-controls {
-  grid-column: 4;
-  display: inline-flex;
+.debug-menu-level-row {
+  display: flex;
   align-items: center;
-  gap: 4px;
-  justify-self: end;
+  gap: 6px;
+  margin-bottom: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--canvas-border-color);
 }
 
 .debug-menu-stage-row {

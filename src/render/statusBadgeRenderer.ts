@@ -770,8 +770,10 @@ function getBadgeDrawBuffer(
     badgeDrawBuffer = document.createElement("canvas");
   }
 
-  badgeDrawBuffer.width = width;
-  badgeDrawBuffer.height = height;
+  if (badgeDrawBuffer.width !== width || badgeDrawBuffer.height !== height) {
+    badgeDrawBuffer.width = width;
+    badgeDrawBuffer.height = height;
+  }
 
   const bufferCtx = badgeDrawBuffer.getContext("2d");
   if (!bufferCtx) throw new Error("Canvas 2D unavailable");
@@ -788,8 +790,10 @@ function getTintBuffer(
     tintBuffer = document.createElement("canvas");
   }
 
-  tintBuffer.width = width;
-  tintBuffer.height = height;
+  if (tintBuffer.width !== width || tintBuffer.height !== height) {
+    tintBuffer.width = width;
+    tintBuffer.height = height;
+  }
 
   const bufferCtx = tintBuffer.getContext("2d");
   if (!bufferCtx) throw new Error("Canvas 2D unavailable");
@@ -846,9 +850,11 @@ export function applyRemainingOverlayPixels(
   const bandBottom = Math.min(height, Math.ceil(height * elapsedRatio));
   if (bandBottom <= 0) return;
 
-  const imageData = ctx.getImageData(0, 0, width, bandBottom);
-  darkenBadgeOverlayBand(imageData.data, width, bandBottom, overlayColor);
-  ctx.putImageData(imageData, 0, 0);
+  ctx.save();
+  ctx.globalCompositeOperation = "multiply";
+  ctx.fillStyle = overlayMultiplyFillStyle(overlayColor);
+  ctx.fillRect(0, 0, width, bandBottom);
+  ctx.restore();
 }
 
 function resolveImageSourceSize(

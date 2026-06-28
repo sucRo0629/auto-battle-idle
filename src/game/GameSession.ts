@@ -10,7 +10,7 @@ import {
   normalizeActiveSlots,
   reconcilePartyBuilds,
 } from '../progression/skillBuild.ts';
-import { applyDebugMemberLevel } from '../dev/debugLevel.ts';
+import { applyDebugPlayerLevel } from '../dev/debugLevel.ts';
 import {
   getDebugLoopStageId,
   getDebugLoopWaveIndex,
@@ -108,8 +108,7 @@ export class GameSession {
         isVerifyMode: () => this.verifyMode,
         onVerifyModeChange: (enabled) => this.setVerifyMode(enabled),
         onOpenMetaMenu: () => this.openPartyMenu(),
-        onMemberLevelChange: (partyIndex, level) =>
-          this.setMemberLevel(partyIndex, level),
+        onPlayerLevelChange: (level) => this.setPlayerLevel(level),
         getLoopStageId: () => this.getLoopStageId(),
         getLoopWaveIndex: () => this.getLoopWaveIndex(),
         onLoopStageChange: (stageId) => this.setLoopStage(stageId),
@@ -227,18 +226,13 @@ export class GameSession {
     this.engine.restartBattle();
   }
 
-  setMemberLevel(partyIndex: number, level: number): void {
+  setPlayerLevel(level: number): void {
     if (!this.verifyMode) return;
 
-    const member = this.save.party[partyIndex];
-    if (!member) return;
-
-    applyDebugMemberLevel(member, level, this.gameData);
+    applyDebugPlayerLevel(this.save.party, level, this.gameData);
     this.persistSave();
     this.engine.restartBattle();
-    console.log(
-      `[debug] ${this.gameData.classRegistry[member.classId]?.displayName ?? member.classId} → Lv ${member.progress.level}`,
-    );
+    console.log(`[debug] Player → Lv ${level}`);
   }
 
   getLoopStageId(): string | null {

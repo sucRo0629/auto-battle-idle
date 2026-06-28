@@ -159,6 +159,38 @@ describe("playSkillHitFeedback", () => {
     );
   });
 
+  it("skips VFX for overlay DoT/HoT ticks but still shows popups", () => {
+    __registerVfxAnimForTest("test_skill_0_vfx", mockImage(128));
+    __registerVfxAnimForTest("test_skill_0_vfx_hit", mockImage(128));
+    const canvas = {
+      playSkillVfx: vi.fn(),
+      showDamagePopup: vi.fn(),
+      showHealPopup: vi.fn(),
+    };
+    const effect = { type: "dot" } as never;
+    const presentation = { vfx: {}, hitVfx: {} } as never;
+
+    playSkillHitFeedback(canvas, {
+      sourceId: "source-1",
+      targetId: "target-1",
+      presentation,
+      effect,
+      skillId: "test_skill",
+      effectIndex: 0,
+      amount: 7,
+      kind: "dot",
+      overlayTick: true,
+    });
+
+    expect(canvas.playSkillVfx).not.toHaveBeenCalled();
+    expect(canvas.showDamagePopup).toHaveBeenCalledWith(
+      "target-1",
+      7,
+      "dot",
+      undefined,
+    );
+  });
+
   it("suppresses immediate duplicate damage popups with the same key", () => {
     const canvas = {
       playSkillVfx: vi.fn(),

@@ -43,6 +43,8 @@ interface SlotElements {
   statusCanvas: HTMLCanvasElement;
   statusBadgeHitLayer: HTMLElement;
   statusBadgeHitSignature: string | null;
+  statusBadgeRenderSignature: string | null;
+  hpBarSignature: string | null;
   recastCells: RecastCellElements[];
 }
 
@@ -85,7 +87,6 @@ export class PartyHudPanel {
 
   update(entries: (PartyHudEntry | null)[]): void {
     this.lastEntries = entries;
-    this.theme = readBattleHudTheme(this.themeHost);
 
     for (let i = 0; i < this.slots.length; i++) {
       const slot = this.slots[i];
@@ -214,6 +215,8 @@ export class PartyHudPanel {
       statusCanvas,
       statusBadgeHitLayer,
       statusBadgeHitSignature: null,
+      statusBadgeRenderSignature: null,
+      hpBarSignature: null,
       recastCells,
     };
   }
@@ -241,6 +244,10 @@ export class PartyHudPanel {
   }
 
   private updateHpBar(slot: SlotElements, entry: PartyHudEntry): void {
+    const signature = `${entry.hp}|${entry.maxHp}|${entry.barrierHp}|${entry.isAlive}`;
+    if (signature === slot.hpBarSignature) return;
+    slot.hpBarSignature = signature;
+
     const layout = layoutHpBarBarrier(0, 100, entry.hp, entry.maxHp, entry.barrierHp);
     slot.hpFill.style.width = layout ? `${layout.hpWidth}%` : '0%';
 
@@ -288,6 +295,17 @@ export class PartyHudPanel {
     const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
     const canvasW = badgeLayout.totalWidth + outlinePad * 2;
     const canvasH = badgeLayout.totalHeight + outlinePad * 2;
+    const renderSignature = buildPartyHudStatusBadgeHitSignature(
+      visible,
+      overflowCount,
+      slot.slotIndex,
+      canvasW,
+      canvasH,
+    );
+    if (renderSignature === slot.statusBadgeRenderSignature) {
+      return;
+    }
+    slot.statusBadgeRenderSignature = renderSignature;
 
     canvas.width = canvasW;
     canvas.height = canvasH;
@@ -309,13 +327,13 @@ export class PartyHudPanel {
     if (badges.length === 0) {
       slot.statusBadgeHitLayer.replaceChildren();
       slot.statusBadgeHitSignature = null;
+      return;
     }
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvasW, canvasH);
-    if (badges.length === 0) return;
 
     drawCompactStatusBadgeRow(
       ctx,
@@ -337,18 +355,7 @@ export class PartyHudPanel {
       badgeLayoutConfig,
     );
 
-    const hitSignature = buildPartyHudStatusBadgeHitSignature(
-      visible,
-      overflowCount,
-      slot.slotIndex,
-      canvasW,
-      canvasH,
-    );
-    if (hitSignature === slot.statusBadgeHitSignature) {
-      return;
-    }
-
-    slot.statusBadgeHitSignature = hitSignature;
+    slot.statusBadgeHitSignature = renderSignature;
     syncPartyHudStatusBadgeHits(
       slot.statusBadgeHitLayer,
       badges,

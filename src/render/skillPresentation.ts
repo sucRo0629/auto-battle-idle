@@ -47,6 +47,22 @@ export interface SkillHitFeedbackRequest {
   dotFlavor?: import("../battle/types.ts").DotFlavor;
   popupDedupeKey?: string;
   skipMainVfx?: boolean;
+  /** overlay DoT/HoT の periodic tick。VFX は出さず popup のみ */
+  overlayTick?: boolean;
+}
+
+export function isOverlayTickSkillEvent(event: {
+  effect: SkillEffectDef["type"] | string;
+  amount?: number;
+  statusLabel?: string;
+  statusEffectId?: string;
+}): boolean {
+  return (
+    (event.effect === "dot" && event.statusEffectId !== undefined) ||
+    (event.effect === "heal" &&
+      event.statusLabel === "hot" &&
+      event.amount !== undefined)
+  );
 }
 
 function buildVfxInstanceId(
@@ -223,8 +239,13 @@ export function playSkillHitFeedback(
   } = request;
   const hitIndex = request.hitIndex ?? 0;
   const vfxOptions = { skillId, effectIndex };
+  const overlayTick = request.overlayTick ?? false;
 
-  if (!request.skipMainVfx && isVfxDefActive(presentation.vfx)) {
+  if (
+    !overlayTick &&
+    !request.skipMainVfx &&
+    isVfxDefActive(presentation.vfx)
+  ) {
     canvas.playSkillVfx(
       buildVfxInstanceId(
         sourceId,
@@ -241,11 +262,13 @@ export function playSkillHitFeedback(
     );
   }
 
-  const hitVfx = resolveHitVfxForFeedback(presentation, {
-    skillId,
-    effectIndex,
-    skipMainVfx: request.skipMainVfx ?? false,
-  });
+  const hitVfx = overlayTick
+    ? null
+    : resolveHitVfxForFeedback(presentation, {
+        skillId,
+        effectIndex,
+        skipMainVfx: request.skipMainVfx ?? false,
+      });
   if (hitVfx) {
     canvas.playSkillVfx(
       buildVfxInstanceId(
