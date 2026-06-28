@@ -9,6 +9,7 @@ export { STATUS_BADGE_GAP, STATUS_BADGE_H };
 export interface StatusBadgeLayoutInput {
   id: string;
   x: number;
+  /** バッジ行の直下 anchor Y。敵は HP バー top、旧 head 配置はスプライト top */
   y: number;
 }
 

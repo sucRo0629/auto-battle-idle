@@ -15,9 +15,11 @@ describe('resolveBadgeLabelPixelScale', () => {
 });
 
 describe('resolveBadgeLabelFontSize', () => {
-  it('returns pixel height for compatibility', () => {
-    expect(resolveBadgeLabelFontSize(16)).toBe(7);
-    expect(resolveBadgeLabelFontSize(32)).toBe(14);
+  it('returns glyph height scaled to 20px reference badge', () => {
+    expect(resolveBadgeLabelFontSize(20)).toBe(7);
+    expect(resolveBadgeLabelFontSize(16)).toBe(6);
+    expect(resolveBadgeLabelFontSize(14)).toBe(5);
+    expect(resolveBadgeLabelFontSize(32)).toBe(11);
   });
 });
 

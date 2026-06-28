@@ -19,6 +19,9 @@ const OUTLINE_THICKNESS = 2;
 
 export const BADGE_BITMAP_LABEL_HEIGHT = GLYPH_HEIGHT;
 
+/** 累積数ラベルの正本バッジ幅（`STATUS_BADGE_SLOT_PX` と同値） */
+export const BADGE_LABEL_REFERENCE_PX = 20;
+
 interface ParsedGlyph {
   white: ReadonlySet<string>;
   black: ReadonlySet<string>;
@@ -94,14 +97,21 @@ function parseGlyph(char: string): ParsedGlyph {
   return parsed;
 }
 
-/** 16px バッジ基準の整数スケール（8px バッジは 1、16px は 1、32px は 2） */
+/** 20px バッジ基準の整数 upscaling（14px 等は drawBadgeBitmapLabelForBadgeSize で比例縮小） */
 export function resolveBadgeLabelPixelScale(badgeSize: number): number {
-  return Math.max(1, Math.round(badgeSize / 16));
+  return Math.max(1, Math.round(badgeSize / BADGE_LABEL_REFERENCE_PX));
+}
+
+/** バッジサイズに比例したラベル表示倍率（20px = 1） */
+export function resolveBadgeLabelLayoutScale(badgeSize: number): number {
+  return badgeSize / BADGE_LABEL_REFERENCE_PX;
 }
 
 /** @deprecated resolveBadgeLabelPixelScale のエイリアス（テスト互換） */
 export function resolveBadgeLabelFontSize(badgeSize: number): number {
-  return resolveBadgeLabelPixelScale(badgeSize) * BADGE_BITMAP_LABEL_HEIGHT;
+  return Math.round(
+    BADGE_BITMAP_LABEL_HEIGHT * resolveBadgeLabelLayoutScale(badgeSize),
+  );
 }
 
 export function measureBadgeBitmapLabel(
@@ -180,4 +190,86 @@ export function drawBadgeBitmapLabel(
     cursorRight = originX;
     if (i > 0) cursorRight -= GLYPH_GAP * pixelScale;
   }
+}
+
+let badgeLabelDrawBuffer: HTMLCanvasElement | null = null;
+
+function getBadgeLabelDrawBuffer(
+  width: number,
+  height: number,
+): CanvasRenderingContext2D {
+  if (!badgeLabelDrawBuffer) {
+    badgeLabelDrawBuffer = document.createElement('canvas');
+  }
+
+  badgeLabelDrawBuffer.width = width;
+  badgeLabelDrawBuffer.height = height;
+
+  const bufferCtx = badgeLabelDrawBuffer.getContext('2d');
+  if (!bufferCtx) throw new Error('Canvas 2D unavailable');
+
+  bufferCtx.clearRect(0, 0, width, height);
+  return bufferCtx;
+}
+
+/** バッジサイズに比例して累積数 / +N を描画（20px 正本） */
+export function drawBadgeBitmapLabelForBadgeSize(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  anchorRight: number,
+  anchorBottom: number,
+  badgeSize: number,
+): void {
+  const layoutScale = resolveBadgeLabelLayoutScale(badgeSize);
+  const basePixelScale = 1;
+  const measured = measureBadgeBitmapLabel(text, basePixelScale);
+
+  if (Math.abs(layoutScale - 1) < 0.001) {
+    drawBadgeBitmapLabel(
+      ctx,
+      text,
+      anchorRight,
+      anchorBottom,
+      basePixelScale,
+    );
+    return;
+  }
+
+  if (layoutScale > 1 && Math.abs(layoutScale - Math.round(layoutScale)) < 0.001) {
+    drawBadgeBitmapLabel(
+      ctx,
+      text,
+      anchorRight,
+      anchorBottom,
+      Math.round(layoutScale),
+    );
+    return;
+  }
+
+  const bufferCtx = getBadgeLabelDrawBuffer(measured.width, measured.height);
+  drawBadgeBitmapLabel(
+    bufferCtx,
+    text,
+    measured.width,
+    measured.height,
+    basePixelScale,
+  );
+
+  const destW = Math.max(1, Math.round(measured.width * layoutScale));
+  const destH = Math.max(1, Math.round(measured.height * layoutScale));
+  const destX = Math.round(anchorRight) - destW;
+  const destY = Math.round(anchorBottom) - destH;
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(
+    badgeLabelDrawBuffer!,
+    0,
+    0,
+    measured.width,
+    measured.height,
+    destX,
+    destY,
+    destW,
+    destH,
+  );
 }

@@ -49,6 +49,7 @@ import {
 } from "./statusBadgeLayout.ts";
 import {
   drawCompactStatusBadgeRow,
+  FIELD_ENEMY_STATUS_BADGE_ICON_SIZE,
   measureCompactStatusBadgeRow,
   statusBadgeOutlinePad,
 } from "./statusBadgeRenderer.ts";
@@ -752,6 +753,19 @@ export class BattleCanvas implements IBattleRenderer {
   }
 
   private drawStatusBadges(scale: number): void {
+    const enemyIconSize = FIELD_ENEMY_STATUS_BADGE_ICON_SIZE;
+    const enemyBarTops = computeEnemyHpBarTops(
+      this.layouts
+        .filter((layout) => layout.isEnemy && layout.isAlive)
+        .map((layout) => ({
+          id: layout.id,
+          x: layout.x,
+          y: spriteDrawY(layout),
+        })),
+      scale,
+      SPRITE_SIZE,
+    );
+
     const badgeInputs: StatusBadgeLayoutInput[] = [];
     const rowWidthById = new Map<string, number>();
     const rowHeightById = new Map<string, number>();
@@ -771,9 +785,12 @@ export class BattleCanvas implements IBattleRenderer {
       const compact = selectCompactStatusBadges(badges);
       if (badges.length === 0) continue;
 
+      const hpBarTop = enemyBarTops.get(layout.id);
+      if (hpBarTop === undefined) continue;
+
       const badgeLayout = measureCompactStatusBadgeRow(
         scale,
-        this.theme.statusBadgeIconSize,
+        enemyIconSize,
         this.theme.statusIconOutlineWidth,
         this.theme.statusBadgeOverlap,
       );
@@ -787,7 +804,7 @@ export class BattleCanvas implements IBattleRenderer {
       badgeInputs.push({
         id: layout.id,
         x: layout.x,
-        y: spriteDrawY(layout),
+        y: hpBarTop,
       });
     }
 
@@ -808,7 +825,7 @@ export class BattleCanvas implements IBattleRenderer {
 
       const badgeLayout = measureCompactStatusBadgeRow(
         scale,
-        this.theme.statusBadgeIconSize,
+        enemyIconSize,
         this.theme.statusIconOutlineWidth,
         this.theme.statusBadgeOverlap,
       );
@@ -828,7 +845,7 @@ export class BattleCanvas implements IBattleRenderer {
         compact.overflowCount,
         scale,
         {
-          iconSize: this.theme.statusBadgeIconSize,
+          iconSize: enemyIconSize,
           rowOverlap: this.theme.statusBadgeOverlap,
           overlayColor: this.theme.statusBadgeOverlay,
           iconOutlineColor: this.theme.statusIconOutlineColor,
