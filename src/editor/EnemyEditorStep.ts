@@ -22,6 +22,7 @@ import {
   type EnemyDraft,
   type DraftChangeOptions,
 } from './editorApi.ts';
+import { editorFieldLabel } from './editorFieldLabels.ts';
 import {
   appendGrid,
   createActionButton,
@@ -143,7 +144,7 @@ export class EnemyEditorStep {
     if (!hidePicker || hideSkillIds) {
       identityGrid.appendChild(
         createFieldRow(
-          'enemyId',
+          editorFieldLabel('enemyId'),
           createTextInput(draft.enemy.id, (id) => {
             commitDraft((next) => {
               next.enemy.id = id;
@@ -167,7 +168,7 @@ export class EnemyEditorStep {
     const statsGrid = appendGrid(statsSection);
     statsGrid.appendChild(
       createFieldRow(
-        'maxHp',
+        editorFieldLabel('maxHp'),
         createNumberInput(draft.enemy.maxHp, (maxHp) => {
           commitDraft((next) => {
             next.enemy.maxHp = maxHp;
@@ -177,7 +178,7 @@ export class EnemyEditorStep {
     );
     statsGrid.appendChild(
       createFieldRow(
-        'atk',
+        editorFieldLabel('atk'),
         createNumberInput(draft.enemy.atk, (atk) => {
           commitDraft((next) => {
             next.enemy.atk = atk;
@@ -187,7 +188,7 @@ export class EnemyEditorStep {
     );
     statsGrid.appendChild(
       createFieldRow(
-        'def',
+        editorFieldLabel('def'),
         createNumberInput(draft.enemy.def, (def) => {
           commitDraft((next) => {
             next.enemy.def = def;
@@ -197,7 +198,7 @@ export class EnemyEditorStep {
     );
     statsGrid.appendChild(
       createFieldRow(
-        'reg',
+        editorFieldLabel('reg'),
         createSelect(
           draft.enemy.reg,
           REG_OPTIONS.map((value) => ({ value, label: String(value) })),
@@ -211,7 +212,7 @@ export class EnemyEditorStep {
     );
     statsGrid.appendChild(
       createFieldRow(
-        'exp',
+        editorFieldLabel('exp'),
         createNumberInput(draft.enemy.exp, (exp) => {
           commitDraft((next) => {
             next.enemy.exp = exp;

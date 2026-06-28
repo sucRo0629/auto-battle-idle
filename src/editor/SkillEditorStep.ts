@@ -121,6 +121,7 @@ import {
   appendThreatBurstFields,
   appendDamagePierceFields,
 } from "./skillEditorCombatFields.ts";
+import { editorFieldLabel } from "./editorFieldLabels.ts";
 import {
   appendGrid,
   createActionButton,
@@ -1078,7 +1079,7 @@ function appendBasicAttackTransformFields(
   if (primaryMode === "inherit") {
     detailGrid.appendChild(
       createFieldRow(
-        "primary damageType",
+        editorFieldLabel("primary damageType"),
         createSelect(
           effect.primaryPatch?.damageType ?? "",
           [
@@ -1114,7 +1115,7 @@ function appendBasicAttackTransformFields(
   if (primaryMode === "inherit") {
     detailGrid.appendChild(
       createFieldRow(
-        "primary atkScale",
+        editorFieldLabel("primary atkScale"),
         createNumberInput(
           effect.primaryPatch?.amount?.atkScale ?? 1,
           (atkScale) =>
@@ -1149,7 +1150,7 @@ function appendBasicAttackTransformFields(
     );
     detailGrid.appendChild(
       createFieldRow(
-        "primary hitCount",
+        editorFieldLabel("primary hitCount"),
         createNumberInput(
           effect.primaryPatch?.hitCount ?? 0,
           (hitCount) =>
@@ -1176,7 +1177,7 @@ function appendBasicAttackTransformFields(
     );
     detailGrid.appendChild(
       createFieldRow(
-        "primary hitDurationSec",
+        editorFieldLabel("primary hitDurationSec"),
         createNumberInput(
           effect.primaryPatch?.hitDurationSec ?? 0,
           (hitDurationSec) =>
@@ -1265,7 +1266,7 @@ function appendBasicAttackTransformFields(
     }
     detailGrid.appendChild(
       createFieldRow(
-        "primary targetShape",
+        editorFieldLabel("primary targetShape"),
         createSelect(
           effect.primaryPatch?.targetShape ?? "",
           [
@@ -1308,7 +1309,7 @@ function appendBasicAttackTransformFields(
     if (effect.primaryPatch?.targetShape === "aoe") {
       detailGrid.appendChild(
         createFieldRow(
-          "primary aoe 半径 px",
+          editorFieldLabel("primary aoe 半径 px"),
           createNumberInput(
             effect.primaryPatch?.aoeRadiusPx ?? 70,
             (aoeRadiusPx) =>
@@ -1381,7 +1382,7 @@ function appendBasicAttackTransformFields(
     } else {
       detailGrid.appendChild(
         createFieldRow(
-          "primary atkScale",
+          editorFieldLabel("primary atkScale"),
           createNumberInput(
             effect.primaryEffectOverride?.amount?.atkScale ??
               overrideDefaultAtkScale,
@@ -2091,7 +2092,7 @@ export function renderClassIdentity(
     const grid = appendGrid(parent);
     grid.appendChild(
       createFieldRow(
-        "classId",
+        editorFieldLabel("classId"),
         createTextInput(classIdentity.classId, (classId) => {
           classIdentity.onClassIdChange(classId);
         })
@@ -2602,7 +2603,7 @@ export class SkillEditorStep {
     );
     grid.appendChild(
       createFieldRow(
-        "iconKey",
+        editorFieldLabel("iconKey"),
         createTextInput(passive.iconKey ?? "", (iconKey) => {
           this.patchPassive(
             index,
@@ -2716,7 +2717,7 @@ export class SkillEditorStep {
       case "ignoredDefBonusDamage":
         effectGrid.appendChild(
           createFieldRow(
-            "ignoredDefBonusScale",
+            editorFieldLabel("ignoredDefBonusScale"),
             createNumberInput(
               passive.ignoredDefBonusScale ?? 0.5,
               (value) => {
@@ -2736,7 +2737,7 @@ export class SkillEditorStep {
       case "bonusBasicAttackOnHit":
         effectGrid.appendChild(
           createFieldRow(
-            "chance",
+            editorFieldLabel("chance"),
             createNumberInput(
               passive.chance ?? 0.5,
               (value) => {
@@ -2754,7 +2755,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "bonusBasicAttackHpRatio（省略可）",
+            editorFieldLabel("bonusBasicAttackHpRatio（省略可）"),
             createNumberInput(
               passive.bonusBasicAttackHpRatio ?? 0.3,
               (value) => {
@@ -2844,7 +2845,7 @@ export class SkillEditorStep {
       case "blockResonance":
         effectGrid.appendChild(
           createFieldRow(
-            "chance",
+            editorFieldLabel("chance"),
             createNumberInput(
               passive.chance ?? 0.1,
               (value) => {
@@ -2862,7 +2863,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "blockResonanceMaxStacks",
+            editorFieldLabel("blockResonanceMaxStacks"),
             createNumberInput(
               passive.blockResonanceMaxStacks ?? 6,
               (value) => {
@@ -2880,7 +2881,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "blockResonanceDamageTakenPerStack",
+            editorFieldLabel("blockResonanceDamageTakenPerStack"),
             createNumberInput(
               passive.blockResonanceDamageTakenPerStack ?? 0.03,
               (value) => {
@@ -2898,7 +2899,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "blockResonanceDecayIntervalSec",
+            editorFieldLabel("blockResonanceDecayIntervalSec"),
             createNumberInput(
               passive.blockResonanceDecayIntervalSec ?? 8,
               (value) => {
@@ -2927,7 +2928,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "chance",
+            editorFieldLabel("chance"),
             createNumberInput(
               passive.chance ?? 0.1,
               (value) => {
@@ -2963,7 +2964,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "frontBlockAuraMagicBlock",
+            editorFieldLabel("frontBlockAuraMagicBlock"),
             createSelect(
               passive.frontBlockAuraMagicBlock ? "true" : "false",
               [
@@ -2990,7 +2991,7 @@ export class SkillEditorStep {
       case "lastStandRecovery":
         effectGrid.appendChild(
           createFieldRow(
-            "lastStandRecoveryHpRatio",
+            editorFieldLabel("lastStandRecoveryHpRatio"),
             createNumberInput(
               passive.lastStandRecoveryHpRatio ?? 0.5,
               (value) => {
@@ -3008,7 +3009,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "lastStandRecoverySelfDamageTakenMultiplier",
+            editorFieldLabel("lastStandRecoverySelfDamageTakenMultiplier"),
             createNumberInput(
               passive.lastStandRecoverySelfDamageTakenMultiplier ?? 0.5,
               (value) => {
@@ -3026,7 +3027,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "lastStandRecoveryFrontAllyDamageTakenMultiplier",
+            editorFieldLabel("lastStandRecoveryFrontAllyDamageTakenMultiplier"),
             createNumberInput(
               passive.lastStandRecoveryFrontAllyDamageTakenMultiplier ?? 0.75,
               (value) => {
@@ -3045,7 +3046,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "lastStandRecoveryDurationSec",
+            editorFieldLabel("lastStandRecoveryDurationSec"),
             createNumberInput(
               passive.lastStandRecoveryDurationSec ?? 5,
               (value) => {
@@ -3065,7 +3066,7 @@ export class SkillEditorStep {
       case "duelistPride":
         effectGrid.appendChild(
           createFieldRow(
-            "prideHpRatioMin",
+            editorFieldLabel("prideHpRatioMin"),
             createNumberInput(
               passive.prideHpRatioMin ?? 0.5,
               (value) => {
@@ -3083,7 +3084,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "prideHealMultiplier",
+            editorFieldLabel("prideHealMultiplier"),
             createNumberInput(
               passive.prideHealMultiplier ?? 0.25,
               (value) => {
@@ -3103,7 +3104,7 @@ export class SkillEditorStep {
       case "lowHpCover":
         effectGrid.appendChild(
           createFieldRow(
-            "coverHpRatioThreshold",
+            editorFieldLabel("coverHpRatioThreshold"),
             createNumberInput(
               passive.coverHpRatioThreshold ?? 0.35,
               (value) => {
@@ -3121,7 +3122,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "coverWaveLimit",
+            editorFieldLabel("coverWaveLimit"),
             createNumberInput(
               passive.coverWaveLimit ?? 3,
               (value) => {
@@ -3141,7 +3142,7 @@ export class SkillEditorStep {
       case "lastStandGuts":
         effectGrid.appendChild(
           createFieldRow(
-            "lastStandGutsDurationSec",
+            editorFieldLabel("lastStandGutsDurationSec"),
             createNumberInput(
               passive.lastStandGutsDurationSec ?? 4,
               (value) => {
@@ -3159,7 +3160,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "lastStandGutsEndStunSec",
+            editorFieldLabel("lastStandGutsEndStunSec"),
             createNumberInput(
               passive.lastStandGutsEndStunSec ?? 1.5,
               (value) => {
@@ -3177,7 +3178,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "lastStandGutsEndKnockbackPx",
+            editorFieldLabel("lastStandGutsEndKnockbackPx"),
             createNumberInput(
               passive.lastStandGutsEndKnockbackPx ?? 15,
               (value) => {
@@ -3197,7 +3198,7 @@ export class SkillEditorStep {
       case "bloodlustDuelist":
         effectGrid.appendChild(
           createFieldRow(
-            "bloodlustBlockChance",
+            editorFieldLabel("bloodlustBlockChance"),
             createNumberInput(
               passive.bloodlustBlockChance ?? 0.05,
               (value) => {
@@ -3287,7 +3288,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "bloodlustAtkBuffCurveExponent",
+            editorFieldLabel("bloodlustAtkBuffCurveExponent"),
             createNumberInput(
               passive.bloodlustAtkBuffCurveExponent ?? 1,
               (value) => {
@@ -3309,7 +3310,7 @@ export class SkillEditorStep {
           createEl(
             "p",
             "editor-hint",
-            "active ダメージ Hit ごとに種火 +1 stack（basic 非対象）。P4 未習得時の熾火上限は blazingFlameMaxStacksDefault。"
+            "active ダメージ Hit ごとに種火 +1 stack（basic 非対象）。P4 未習得時の熾火上限は「熾火 stack 上限（P4未習得）」。"
           )
         );
         effectGrid.appendChild(
@@ -3317,7 +3318,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "seedFlameMaxStacks",
+            editorFieldLabel("seedFlameMaxStacks"),
             createNumberInput(
               passive.seedFlameMaxStacks ?? 5,
               (value) => {
@@ -3335,7 +3336,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "seedFlameDurationSec",
+            editorFieldLabel("seedFlameDurationSec"),
             createNumberInput(
               passive.seedFlameDurationSec ?? 10,
               (value) => {
@@ -3353,7 +3354,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "seedFlameDotAtkScale",
+            editorFieldLabel("seedFlameDotAtkScale"),
             createNumberInput(
               passive.seedFlameDotAtkScale ?? 0.05,
               (value) => {
@@ -3374,7 +3375,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "blazingFlameDotAtkScale",
+            editorFieldLabel("blazingFlameDotAtkScale"),
             createNumberInput(
               passive.blazingFlameDotAtkScale ?? 0.35,
               (value) => {
@@ -3392,7 +3393,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "blazingFlameMagicTakenPerStack",
+            editorFieldLabel("blazingFlameMagicTakenPerStack"),
             createNumberInput(
               passive.blazingFlameMagicTakenPerStack ?? 0.1,
               (value) => {
@@ -3410,7 +3411,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "blazingFlameMaxStacksDefault",
+            editorFieldLabel("blazingFlameMaxStacksDefault"),
             createNumberInput(
               passive.blazingFlameMaxStacksDefault ?? 1,
               (value) => {
@@ -3430,7 +3431,7 @@ export class SkillEditorStep {
       case "bonusActiveOnHit":
         effectGrid.appendChild(
           createFieldRow(
-            "bonusActiveSkillId",
+            editorFieldLabel("bonusActiveSkillId"),
             createTextInput(
               passive.bonusActiveSkillId ?? "",
               (bonusActiveSkillId) => {
@@ -3449,7 +3450,7 @@ export class SkillEditorStep {
       case "blazingFlameDetonate":
         effectGrid.appendChild(
           createFieldRow(
-            "blazingFlameDetonateSpreadRadiusPx",
+            editorFieldLabel("blazingFlameDetonateSpreadRadiusPx"),
             createNumberInput(
               passive.blazingFlameDetonateSpreadRadiusPx ?? 50,
               (value) => {
@@ -3467,7 +3468,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "blazingFlameDetonatePerSeedScale",
+            editorFieldLabel("blazingFlameDetonatePerSeedScale"),
             createNumberInput(
               passive.blazingFlameDetonatePerSeedScale ?? 0.5,
               (value) => {
@@ -3485,7 +3486,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "blazingFlameDetonateMultiplier",
+            editorFieldLabel("blazingFlameDetonateMultiplier"),
             createNumberInput(
               passive.blazingFlameDetonateMultiplier ?? 1.3,
               (value) => {
@@ -3503,7 +3504,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "blazingFlameUncap",
+            editorFieldLabel("blazingFlameUncap"),
             createSelect(
               passive.blazingFlameUncap ? "true" : "false",
               [
@@ -3526,7 +3527,7 @@ export class SkillEditorStep {
       case "dotCompressAssist":
         effectGrid.appendChild(
           createFieldRow(
-            "dotCompressRatio",
+            editorFieldLabel("dotCompressRatio"),
             createNumberInput(
               passive.dotCompressRatio ?? 0.7,
               (value) => {
@@ -3546,7 +3547,7 @@ export class SkillEditorStep {
       case "allyBasicAttackDotProc":
         effectGrid.appendChild(
           createFieldRow(
-            "chance",
+            editorFieldLabel("chance"),
             createNumberInput(
               passive.chance ?? 0.2,
               (value) => {
@@ -3564,7 +3565,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "debuffDotDurationSec",
+            editorFieldLabel("debuffDotDurationSec"),
             createNumberInput(
               passive.debuffDotDurationSec ?? 5,
               (value) => {
@@ -3595,7 +3596,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "debuffDotDamageType",
+            editorFieldLabel("debuffDotDamageType"),
             createSelect(
               passive.debuffDotDamageType ?? "magic",
               DAMAGE_TYPE_OPTIONS.map((value) => ({ value, label: value })),
@@ -3614,7 +3615,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "debuffDotFlavor",
+            editorFieldLabel("debuffDotFlavor"),
             createSelect(
               passive.debuffDotFlavor ?? "poison",
               DOT_FLAVORS.map((value) => ({
@@ -3637,7 +3638,7 @@ export class SkillEditorStep {
       case "dotDurationMultiplierOnApply":
         effectGrid.appendChild(
           createFieldRow(
-            "dotDurationMultiplierOnApply",
+            editorFieldLabel("dotDurationMultiplierOnApply"),
             createNumberInput(
               passive.dotDurationMultiplierOnApply ?? 1.5,
               (value) => {
@@ -3655,7 +3656,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "dottedEnemyHealReceivedMultiplier",
+            editorFieldLabel("dottedEnemyHealReceivedMultiplier"),
             createNumberInput(
               passive.dottedEnemyHealReceivedMultiplier ?? 0.8,
               (value) => {
@@ -3675,7 +3676,7 @@ export class SkillEditorStep {
       case "dottedEnemyHealReceivedDebuff":
         effectGrid.appendChild(
           createFieldRow(
-            "dottedEnemyHealReceivedMultiplier",
+            editorFieldLabel("dottedEnemyHealReceivedMultiplier"),
             createNumberInput(
               passive.dottedEnemyHealReceivedMultiplier ?? 0.8,
               (value) => {
@@ -3695,7 +3696,7 @@ export class SkillEditorStep {
       case "conditionalEnemyDamageTakenAura":
         effectGrid.appendChild(
           createFieldRow(
-            "enemyDamageTakenMultiplier",
+            editorFieldLabel("enemyDamageTakenMultiplier"),
             createNumberInput(
               passive.enemyDamageTakenMultiplier ?? 1.2,
               (value) => {
@@ -3756,7 +3757,7 @@ export class SkillEditorStep {
       case "excessHealToBarrier":
         effectGrid.appendChild(
           createFieldRow(
-            "barrierScale",
+            editorFieldLabel("barrierScale"),
             createNumberInput(
               passive.barrierScale ?? 1,
               (barrierScale) => {
@@ -3889,7 +3890,7 @@ export class SkillEditorStep {
       case "excessHealRedirect":
         effectGrid.appendChild(
           createFieldRow(
-            "redirectScale",
+            editorFieldLabel("redirectScale"),
             createNumberInput(
               passive.redirectScale ?? 0.5,
               (redirectScale) => {
@@ -4278,7 +4279,7 @@ export class SkillEditorStep {
       case "aoeCrowdBonus":
         effectGrid.appendChild(
           createFieldRow(
-            "perExtraTargetScale",
+            editorFieldLabel("perExtraTargetScale"),
             createNumberInput(
               passive.perExtraTargetScale ?? 0.1,
               (perExtraTargetScale) => {
@@ -4296,7 +4297,7 @@ export class SkillEditorStep {
         );
         effectGrid.appendChild(
           createFieldRow(
-            "maxExtraTargets",
+            editorFieldLabel("maxExtraTargets"),
             createNumberInput(
               passive.maxExtraTargets ?? 4,
               (maxExtraTargets) => {
@@ -4674,7 +4675,7 @@ export class SkillEditorStep {
 
     grid.appendChild(
       createFieldRow(
-        "iconKey",
+        editorFieldLabel("iconKey"),
         createTextInput(
           active.iconKey ?? "",
           (iconKey) => {
@@ -5991,7 +5992,7 @@ export class SkillEditorStep {
           if (effect.buffSubKind === "damageDelay") {
             detailGrid.appendChild(
               createFieldRow(
-                "ratio",
+                editorFieldLabel("ratio"),
                 createNumberInput(
                   effect.ratio ?? 0.1,
                   (ratio) =>
@@ -6511,7 +6512,7 @@ export class SkillEditorStep {
         case "grantNextOutgoingDamage":
           detailGrid.appendChild(
             createFieldRow(
-              "nextOutgoingDamageMultiplier",
+              editorFieldLabel("nextOutgoingDamageMultiplier"),
               createNumberInput(
                 effect.nextOutgoingDamageMultiplier ?? 1.3,
                 (nextOutgoingDamageMultiplier) =>
@@ -6536,7 +6537,7 @@ export class SkillEditorStep {
             );
             detailGrid.appendChild(
               createFieldRow(
-                "fieldRadiusPx",
+                editorFieldLabel("fieldRadiusPx"),
                 createNumberInput(
                   normalizedEffect.fieldRadiusPx ?? 70,
                   (fieldRadiusPx) =>
@@ -6551,7 +6552,7 @@ export class SkillEditorStep {
             );
             detailGrid.appendChild(
               createFieldRow(
-                "fieldDurationSec",
+                editorFieldLabel("fieldDurationSec"),
                 createNumberInput(
                   normalizedEffect.fieldDurationSec ?? 5,
                   (fieldDurationSec) =>
@@ -6566,7 +6567,7 @@ export class SkillEditorStep {
             );
             detailGrid.appendChild(
               createFieldRow(
-                "stayTickIntervalSec",
+                editorFieldLabel("stayTickIntervalSec"),
                 createNumberInput(
                   normalizedEffect.stayTickIntervalSec ?? 1,
                   (stayTickIntervalSec) =>
@@ -6581,7 +6582,7 @@ export class SkillEditorStep {
             );
             detailGrid.appendChild(
               createFieldRow(
-                "stayCompressRatioBonusPerTick",
+                editorFieldLabel("stayCompressRatioBonusPerTick"),
                 createNumberInput(
                   normalizedEffect.stayCompressRatioBonusPerTick ?? 0,
                   (stayCompressRatioBonusPerTick) =>
@@ -6639,7 +6640,7 @@ export class SkillEditorStep {
         case "dotCompress":
           detailGrid.appendChild(
             createFieldRow(
-              "compressRatio",
+              editorFieldLabel("compressRatio"),
               createNumberInput(
                 effect.compressRatio ?? 0.5,
                 (compressRatio) =>
@@ -6656,7 +6657,7 @@ export class SkillEditorStep {
         case "dotExtend":
           detailGrid.appendChild(
             createFieldRow(
-              "extendRatio",
+              editorFieldLabel("extendRatio"),
               createNumberInput(
                 effect.extendRatio ?? 1.25,
                 (extendRatio) =>
@@ -6671,7 +6672,7 @@ export class SkillEditorStep {
         case "dotHarvest":
           detailGrid.appendChild(
             createFieldRow(
-              "harvestRatio",
+              editorFieldLabel("harvestRatio"),
               createNumberInput(
                 effect.harvestRatio ?? 0.1,
                 (harvestRatio) =>
@@ -6688,7 +6689,7 @@ export class SkillEditorStep {
         case "poisonSpread":
           detailGrid.appendChild(
             createFieldRow(
-              "spreadRadiusPx",
+              editorFieldLabel("spreadRadiusPx"),
               createNumberInput(
                 effect.spreadRadiusPx ?? 70,
                 (spreadRadiusPx) =>
@@ -6703,7 +6704,7 @@ export class SkillEditorStep {
           );
           detailGrid.appendChild(
             createFieldRow(
-              "spreadDurationRatio",
+              editorFieldLabel("spreadDurationRatio"),
               createNumberInput(
                 effect.spreadDurationRatio ?? 0.5,
                 (spreadDurationRatio) =>
@@ -6718,7 +6719,7 @@ export class SkillEditorStep {
           );
           detailGrid.appendChild(
             createFieldRow(
-              "dotFlavor",
+              editorFieldLabel("dotFlavor"),
               createSelect(
                 effect.dotFlavor ?? "poison",
                 DOT_FLAVORS.map((value) => ({

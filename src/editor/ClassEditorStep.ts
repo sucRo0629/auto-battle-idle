@@ -1,3 +1,4 @@
+import { editorFieldLabel } from "./editorFieldLabels.ts";
 import {
   ATTACK_SPEED_TIER_LABELS,
   ATTACK_SPEED_TIER_OPTIONS,
@@ -346,7 +347,7 @@ export class ClassEditorStep {
     if (!hidePicker) {
       identityGrid.appendChild(
         createFieldRow(
-          "classId",
+          editorFieldLabel("classId"),
           createTextInput(draft.class.id, (id) => {
             commitDraft((next) => {
               next.class.id = id;
@@ -509,7 +510,7 @@ export class ClassEditorStep {
     );
     identityGrid.appendChild(
       createFieldRow(
-        "jobTier",
+        editorFieldLabel("jobTier"),
         createTextInput("1", () => {}, { readonly: true })
       )
     );
@@ -532,7 +533,7 @@ export class ClassEditorStep {
     const statsGrid = appendGrid(statsBody);
     statsGrid.appendChild(
       createFieldRow(
-        "maxHp",
+        editorFieldLabel("maxHp"),
         createNumberInput(
           draft.class.maxHp,
           (maxHp) => {
@@ -549,7 +550,7 @@ export class ClassEditorStep {
     );
     statsGrid.appendChild(
       createFieldRow(
-        "atk",
+        editorFieldLabel("atk"),
         createNumberInput(
           draft.class.atk,
           (atk) => {
@@ -566,7 +567,7 @@ export class ClassEditorStep {
     );
     statsGrid.appendChild(
       createFieldRow(
-        "def",
+        editorFieldLabel("def"),
         createNumberInput(
           draft.class.def,
           (def) => {
@@ -583,7 +584,7 @@ export class ClassEditorStep {
     );
     statsGrid.appendChild(
       createFieldRow(
-        "reg",
+        editorFieldLabel("reg"),
         createSelect(
           draft.class.reg,
           REG_OPTIONS.map((value) => ({ value, label: String(value) })),

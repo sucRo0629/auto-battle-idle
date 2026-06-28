@@ -86,6 +86,7 @@ import type {
   StatusEffectStat,
   TargetSpec,
 } from "../battle/types.ts";
+import { editorFieldLabel } from "./editorFieldLabels.ts";
 import { attackTypeRangedBandEditorHintJa } from "../battle/rangeLimits.ts";
 import {
   HERBAL_POTENCY_ACCUMULATE_SEC,
@@ -1210,7 +1211,7 @@ export function appendHerbalPotencyPassiveFields(
   );
   parent.appendChild(
     createFieldRow(
-      "herbalPotencyMaxStacks",
+      editorFieldLabel("herbalPotencyMaxStacks"),
       createNumberInput(
         passive.herbalPotencyMaxStacks ?? 6,
         (value) => {
@@ -1224,7 +1225,7 @@ export function appendHerbalPotencyPassiveFields(
   );
   parent.appendChild(
     createFieldRow(
-      "herbalPotencyHotPerStackPercent",
+      editorFieldLabel("herbalPotencyHotPerStackPercent"),
       createNumberInput(
         passive.herbalPotencyHotPerStackPercent ?? 0.0005,
         (value) => {
@@ -1239,7 +1240,7 @@ export function appendHerbalPotencyPassiveFields(
   if (passive.hotAmount) {
     parent.appendChild(
       createFieldRow(
-        "herbalPotencyHotTickSec",
+        editorFieldLabel("herbalPotencyHotTickSec"),
         createNumberInput(
           passive.herbalPotencyHotTickSec ?? HERBAL_POTENCY_HOT_TICK_SEC,
           (value) => {
@@ -1254,7 +1255,7 @@ export function appendHerbalPotencyPassiveFields(
   }
   parent.appendChild(
     createFieldRow(
-      "herbalPotencyAccumulateSec",
+      editorFieldLabel("herbalPotencyAccumulateSec"),
       createNumberInput(
         passive.herbalPotencyAccumulateSec ?? HERBAL_POTENCY_ACCUMULATE_SEC,
         (value) => {
@@ -1269,7 +1270,7 @@ export function appendHerbalPotencyPassiveFields(
   appendAnnotatedHint(parent, HERBAL_POTENCY_BUFF_SUMMARY_HINT);
   parent.appendChild(
     createFieldRow(
-      "herbalPotencyConstitutionThresholds（カンマ区切り）",
+      editorFieldLabel("herbalPotencyConstitutionThresholds（カンマ区切り）"),
       createTextInput(
         (passive.herbalPotencyConstitutionThresholds ?? []).join(", "),
         (raw) => {
@@ -1302,7 +1303,7 @@ export function appendHerbalPotencyPassiveFields(
   );
   parent.appendChild(
     createFieldRow(
-      "herbalPotencyConstitutionHpMultipliers（カンマ区切り）",
+      editorFieldLabel("herbalPotencyConstitutionHpMultipliers（カンマ区切り）"),
       createTextInput(
         (passive.herbalPotencyConstitutionHpMultipliers ?? []).join(", "),
         (raw) => {
@@ -2102,7 +2103,7 @@ export function appendPassiveBuffFields(
   if (subKind === "damageDelay") {
     parent.appendChild(
       createFieldRow(
-        "ratio",
+        editorFieldLabel("ratio"),
         createNumberInput(
           passive.ratio ?? 0.1,
           (ratio) => {
@@ -2975,7 +2976,7 @@ export function appendPassiveSkillPropertyOverrideFields(
 ): void {
   parent.appendChild(
     createFieldRow(
-      "maxCharges 加算",
+      editorFieldLabel("maxCharges 加算"),
       createNumberInput(
         passive.maxChargesBonus ?? 1,
         (maxChargesBonus) => {
