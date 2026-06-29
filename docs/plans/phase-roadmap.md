@@ -234,11 +234,11 @@ Phase 1 の時点で `src/battle/combatMath.ts` に実装済み。数値の体�
 
 ### スコープ外（Phase 3）— 独自システムクラス
 
-`at_sigilist`（印術師）と `at_conductor`（法陣師）は、乾印 / 坤印（`windMark` / `earthMark`）・Earth / Wind Branch 分岐・damage reservoir / routing 系など **戦闘エンジン拡張を伴う独自システム** を持つ。設計確定（[skill-finalization-table.md](./skill-finalization-table.md)）は Phase 3 で行うが、**combat 実装・`data/skills/` 投入・tooling 本番化は Phase 9a / 9b 以降** とする。
+`at_sigilist`（印術師）と `at_conductor`（法陣師）は、乾印 / 坤印（`windMark` / `earthMark`）・手動 / 自動起爆、damage reservoir / routing 系など **戦闘エンジン拡張を伴う独自システム** を持つ。設計確定（[skill-finalization-table.md](./skill-finalization-table.md)）は Phase 3 で行うが、**combat 実装・`data/skills/` 投入・tooling 本番化は Phase 9a / 9b 以降** とする。
 
 | classId        | Phase 3 で行うこと                                                     | Phase 9a / 9b 以降へ送ること                                                                            |
 | -------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `at_sigilist`  | 枠設計・乾印 / 坤印 / Branch 仕様の docs 確定。現行 JSON active は廃棄済み | `windMark` / `earthMark` state / effect、conditionalEffect tooling、passive / active JSON |
+| `at_sigilist`  | 枠設計・乾印 / 坤印 / 印術・起爆仕様の docs 確定。現行 JSON active は廃棄済み | `windMark` / `earthMark`、印術 basic、手動起爆 effect、passive / active JSON |
 | `at_conductor` | 枠設計・蓄積プール / 法陣仕様の docs 確定。現行 JSON active は廃棄済み | damage reservoir、observation / concentration / distribution / recycling、非 damage basic、地点指定範囲 |
 
 Phase 3 の Caster pass は **`at_sorcerer` のみ** を対象とする。印術師・法陣師はクラスマスタ上は存在するが、スキル未実装のまま据え置き可。
@@ -761,12 +761,13 @@ Phase 3 で設計確定済みの **印術師・法陣師** の combat 実装。*
 
 | サブフェーズ | 内容 | 状態 |
 | ------------ | ---- | ---- |
-| **9a** | 印術師 — 乾印 / 坤印、Earth / Wind Branch、`conditionalEffect` tooling | 未着手 |
+| **9a** | 印術師 — 乾印 / 坤印、印術通常攻撃、手動 / 自動起爆 | 未着手 |
 | **9b** | 法陣師 — damage reservoir、法陣 routing / distribution / recycling | 未着手 |
 
 ### 9a — 印術師
 
-- Earth / Wind Branch 分岐、乾印（`windMark`）/ 坤印（`earthMark`）付与・起爆
+- 敵数連動の乾印（`windMark`）/ 坤印（`earthMark`）付与、手動 / 自動起爆、P1〜P4 / A1〜A4 スキル
+- 数値 TBD（閾値・持続・ダメージ式等）は **本フェーズ実装時に決定**。それまでは [classes-and-skills.md §数値 TBD](../spec/classes-and-skills.md#数値tbd実装まで保留) のとおり仕様書に先回りして書かない
 - `SkillEditorStep`・validate・`formatSkillText`・関連 spec の同期
 
 ### 9b — 法陣師

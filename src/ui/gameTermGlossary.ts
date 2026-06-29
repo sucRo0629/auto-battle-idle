@@ -98,7 +98,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "windMark",
     title: { ja: "乾印" },
     description: {
-      ja: "印術師が Wind Branch 分岐で付与する印。拡散・変化・流動側。overlay ID は windMark。弩砲士・闘技士のマーク系とは別体系。",
+      ja: "印術師が付与する印（拡散側・風）。多数戦向け。overlay ID は windMark。手動起爆は範囲攻撃。自動起爆は周囲へ拡散（ダメージなし）。弩砲士・闘技士のマーク系とは別体系。",
     },
     aliases: { ja: ["乾印"] },
     statusCategory: "windMark",
@@ -107,7 +107,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "earthMark",
     title: { ja: "坤印" },
     description: {
-      ja: "印術師が Earth Branch 分岐で付与する印。集中・安定・収束側。overlay ID は earthMark。弩砲士・闘技士のマーク系とは別体系。",
+      ja: "印術師が付与する印（収束側・地）。少数戦向け。overlay ID は earthMark。手動起爆は単体攻撃。自動起爆は同対象へ収束し stack 増（ダメージなし）。弩砲士・闘技士のマーク系とは別体系。",
     },
     aliases: { ja: ["坤印"] },
     statusCategory: "earthMark",

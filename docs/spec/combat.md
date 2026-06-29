@@ -179,7 +179,7 @@ remaining -= barrierDamage
 hp = max(0, hp - remaining)
 ```
 
-**障壁（wardBarrier）** — バリア（`barrierHp`）より上位のスタック資源。印術師の **乾印**（`windMark`）/ **坤印**（`earthMark`）は別 overlay・別ルール（[classes-and-skills.md §印術師](classes-and-skills.md#印乾印坤印)）。HUD は `barrierHp` とは別バッジ（`wardBarrier` アイコン + `stacks`、2 以上のみ数字表示）。`barrierDepletionHeal` / `barrierBreakRegen` の対象外（`barrierHp` 完全消失のみ）。
+**障壁（wardBarrier）** — バリア（`barrierHp`）より上位のスタック資源。印術師の **乾印**（`windMark`）/ **坤印**（`earthMark`）は別 overlay・別ルール（[classes-and-skills.md §印術師](classes-and-skills.md#印術師at_sigilist拡張)）。HUD は `barrierHp` とは別バッジ（`wardBarrier` アイコン + `stacks`、2 以上のみ数字表示）。`barrierDepletionHeal` / `barrierBreakRegen` の対象外（`barrierHp` 完全消失のみ）。
 
 **パッシブ `barrierDepletionHeal`** — 味方 `barrierHp` が被ダメで完全消失したとき、パーティ内結界師（ATK 最大）が ATK 基準 instant heal を 1 回（味方ごと Wave 1 回・`barrierDepletionHealUsed`）。
 
@@ -374,12 +374,72 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 ### 印術師の印（乾印・坤印）
 
-実装: **Phase 7b 以降**（設計正本: [classes-and-skills.md §印](classes-and-skills.md#印乾印坤印)）
+実装: **Phase 9a 以降**（設計正本: [classes-and-skills.md §印術師](classes-and-skills.md#印術師at_sigilist拡張)）
 
-- 印術師（`at_sigilist`）が敵へ付与する overlay は **`windMark`（乾印）** と **`earthMark`（坤印）** の 2 種のみ
-- Earth / Wind Branch 分岐で選ばれた側に対応する印を付与（Wind → 乾印、Earth → 坤印）
-- 主火力は印の付与と起爆。乾印と坤印は別 overlay・別 HUD バッジ・別起爆ルールを持ちうる
-- `ballistaMark`（弩砲士）・`arenaMark`（闘技士）とは ID・ combat ルールとも独立
+印術師（`at_sigilist`）が敵へ付与する overlay は **`windMark`（乾印）** と **`earthMark`（坤印）** の 2 種のみ。`ballistaMark` / `arenaMark` とは独立。
+
+#### 印の保持
+
+- 敵ごとに独立。同一敵に乾印・坤印を同時保持できる
+- stack として表現する（HUD: 2 以上で累積数表示）
+- 残り時間（`remainingSec`）を持つ。0 以下で **自動起爆**
+
+#### 乾印 / 坤印の選択（印術）
+
+P1 **印術** による通常攻撃・敵数連動 active（刻み直し等）で、**現在の生存敵数**に応じて扱う印属性を決める。
+
+- **多数戦** → 乾印（`windMark`）
+- **少数戦** → 坤印（`earthMark`）
+- 敵数閾値は **実装（Phase 9a）まで保留**（[classes-and-skills.md §数値 TBD](classes-and-skills.md#数値tbd実装まで保留)）
+
+#### 手動起爆
+
+印術師の **同属性** 攻撃（通常攻撃の印術、および将来の同属性 effect）が敵に命中したとき:
+
+1. 命中対象に **同属性の印**（stack ≥1）があれば、その印を **手動起爆** する
+2. 手動起爆は **ダメージを与える**（唯一の印術師ダメージ源）
+3. 乾印の手動起爆 → **範囲攻撃**。坤印の手動起爆 → **単体攻撃**
+4. 手動起爆の stack 消費数・ダメージ式は **実装まで保留**。P3 **共鳴する印** は手動起爆数に応じてダメージボーナス（自動起爆は対象外）
+5. P1 のみ（刻み返し未習得）: 手動起爆後は **再付与しない**（付与 → 起爆の交互サイクル）
+6. P2 **刻み返し** 習得後: 手動起爆後、同対象へ **同属性印を再付与**（起爆 → 再付与 → 次も起爆の連続サイクル）
+7. 印がない、または対応属性の印がない場合: 命中対象へ **対応属性の印を 1 stack 付与**（直接ダメージなし）
+
+active スキル（刻み直し / 重ね刻み / 早鳴りの印等）は **手動起爆を発生させない**（重ね鳴りは次の手動起爆を増幅するバフのみ）。
+
+#### 自動起爆
+
+印の `remainingSec` が 0 以下になったとき **自動起爆**。**ダメージは発生しない**。
+
+| 印     | 自動起爆の挙動 |
+| ------ | -------------- |
+| 乾印   | 元対象から乾印が消える。周囲の敵へ乾印を拡散（付与 stack は実装まで保留） |
+| 坤印   | 同じ対象へ坤印を収束。坤印 stack を増加 |
+
+A4 **早鳴りの印** は戦場の全乾印・坤印の残り時間を短縮し、上記自動起爆を早める。
+
+#### 重ね鳴り（A3）
+
+次に発生する **手動起爆** に対し、元起爆数の **半分（切り上げ）** の追加手動起爆を発生させる（例: 9 stack 起爆 → 追加 ceil(9/2)=5）。1 stack 起爆でも追加 1。発動後バフは消費。自動起爆には適用しない。
+
+**共鳴する印（P3）との併用:** 追加起爆にも共鳴ボーナスを適用。参照起爆数は **重ね鳴りを発動させた元の手動起爆数**（上記例では 9 を両方に使用）。
+
+#### P4 印術の完成
+
+通常攻撃（印術）の **命中形状** のみ変化。起爆ダメージ・手動 / 自動起爆ルールは不変。
+
+- 乾印選択時: 通常攻撃が **AoE** 化（多数の印を同時に拾いやすい）
+- 坤印選択時: 通常攻撃が **multiLock** 化（少数対象へ収束しやすい）
+
+#### 数値 TBD（実装まで保留）
+
+ルール・スキル枠は [classes-and-skills.md §印術師](classes-and-skills.md#印術師at_sigilist拡張) で確定済み。以下の数値は **Phase 9a の combat / JSON 実装時まで保留**し、仕様書に先回りして書かない。
+
+- 多数戦 / 少数戦の敵数閾値
+- 印の持続時間・stack 上限
+- 手動起爆の stack 消費数とダメージ式（ATK 倍率等）
+- 乾印手動起爆の範囲半径・乾印自動拡散の半径と付与 stack
+- 共鳴する印のボーナス係数
+- 早鳴りの印の時間短縮量
 
 ### 闘技士 v1 専用メカニクス
 

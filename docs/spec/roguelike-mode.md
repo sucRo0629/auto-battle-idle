@@ -234,13 +234,13 @@
 | 単体時 Lock 挙動変更 | 敵が 1 体のときの再配分・集中ルール変更 |
 | Lock 優先対象変更 | ターゲット選定（nearest / 低 HP 等）の上書き |
 
-### 9.2 印術師（`at_sigilist`）— 条件分岐軸
+### 9.2 印術師（`at_sigilist`）— 印起爆軸
 
 | 変化例 | 内容 |
 | ------ | ---- |
-| 条件判定追加 | `conditionalEffect` の分岐条件拡張 |
-| 印保持数増加 | 乾印 / 坤印（`windMark` / `earthMark`）等の同時保持上限 |
-| 印持続変更 | 乾印 / 坤印 / debuff の持続時間・ tick ルール |
+| 印 stack 上限増加 | 乾印 / 坤印（`windMark` / `earthMark`）の同時保持上限 |
+| 印持続変更 | 乾印 / 坤印の持続時間・自動起爆タイミング |
+| 手動起爆補助 | 共鳴ボーナス・重ね鳴り・早鳴り系の係数拡張 |
 
 ### 9.3 法陣師（`at_conductor`）— Flow / damage routing 軸
 
@@ -266,7 +266,7 @@ Hunter / Defender / Healer 等も、既存の Kill / Flow / Survival 機構に�
 | ---------- | ---- | -------------- |
 | 潮流異常 | Conductor 関連 effect の強化 | Flow（damage routing） |
 | 魔力暴走 | Sorcerer 関連 effect の強化 | Kill（multiLock 純出力） |
-| 印共鳴 | Sigilist 関連 effect の強化 | Kill（条件分岐最適化） |
+| 印共鳴 | Sigilist 関連 effect の強化 | Kill（印起爆・手動起爆最適化） |
 
 名称・効果量・スタック可否はデータ化時に確定する。上記 3 つに限定しない。
 
