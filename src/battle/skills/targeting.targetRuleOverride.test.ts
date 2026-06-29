@@ -43,10 +43,10 @@ describe('targetRuleOverride apply scope', () => {
     expect(resolution?.waves[0]?.targets[0]?.unit.id).toBe('e-low');
   });
 
-  it('enemy actor override picks farthest player ally over highest threat', () => {
+  it('enemy actor override picks farthest player ally', () => {
     const enemyActor = mockUnit('e1', 400, { isEnemy: true });
-    const front = mockUnit('front', 350, { threat: 100 });
-    const back = mockUnit('back', 200, { threat: 10 });
+    const front = mockUnit('front', 350);
+    const back = mockUnit('back', 200);
     const farthestPassive: PassiveSkillDef = {
       id: 'passive_farthest',
       name: '狙撃',

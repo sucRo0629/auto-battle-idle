@@ -11,14 +11,14 @@
         "target": {
           "kind": "distance",
           "side": "enemy",
-          "order": "selfOrigin"
+          "order": "nearest"
         },
         "type": "damage",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.5
+          "atkScale": 1
         },
-        "targetShape": "pierce"
+        "targetShape": "single"
       }
     ]
   },

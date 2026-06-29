@@ -1,7 +1,6 @@
 import '../styles/party-member-stats.css';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
-import { pickHighestThreatAlly } from '../battle/threat.ts';
-import type { CombatantSnapshot, CombatantState } from '../battle/types.ts';
+import type { CombatantSnapshot } from '../battle/types.ts';
 import type { StatusEffectBadgeDisplay } from '../battle/statusEffectDisplay.ts';
 import {
   collectStatusEffectBadgeDisplays,
@@ -257,53 +256,14 @@ export function syncThreatBars(
   threatByPartyIndex: Map<number, ThreatBarRefs>,
   snapshots: CombatantSnapshot[],
 ): void {
-  const partyThreats = snapshots.filter(
-    (snapshot) => snapshot.partySlotIndex !== undefined,
-  );
-  const livingThreats = partyThreats.filter(
-    (snapshot) => !isAllyDown(snapshot),
-  );
-  const livingMaxScale = Math.max(
-    1,
-    ...livingThreats.flatMap((snapshot) => [
-      snapshot.threat ?? 0,
-      snapshot.baseThreat ?? 0,
-    ]),
-  );
-  const highestThreatAlly = pickHighestThreatAlly(
-    livingThreats as CombatantState[],
-  );
-  const highestThreatSlotIndex = highestThreatAlly?.partySlotIndex;
-
-  for (const snapshot of partyThreats) {
-    const refs = threatByPartyIndex.get(snapshot.partySlotIndex!);
+  for (const snapshot of snapshots) {
+    if (snapshot.partySlotIndex === undefined) continue;
+    const refs = threatByPartyIndex.get(snapshot.partySlotIndex);
     if (!refs) continue;
-    const threat = Math.round(snapshot.threat ?? 0);
-    const base = Math.round(snapshot.baseThreat ?? 0);
     const down = isAllyDown(snapshot);
     refs.root.classList.toggle('is-down', down);
-    refs.root.classList.toggle(
-      'is-highest',
-      !down && snapshot.partySlotIndex === highestThreatSlotIndex,
-    );
-
-    const syncKey = `${down}:${threat}:${base}:${livingMaxScale}`;
-    if (refs.lastSyncKey === syncKey) continue;
-    refs.lastSyncKey = syncKey;
-
-    if (down) {
-      const localMax = Math.max(threat, base, 1);
-      refs.fill.style.width = `${(threat / localMax) * 100}%`;
-      refs.baseMarker.style.left = `${(base / localMax) * 100}%`;
-      refs.label.textContent = `Hate ${threat} · base ${base} (倒)`;
-      continue;
-    }
-
-    const fillPct = Math.min(100, (threat / livingMaxScale) * 100);
-    const basePct = Math.min(100, (base / livingMaxScale) * 100);
-    refs.fill.style.width = `${fillPct}%`;
-    refs.baseMarker.style.left = `${basePct}%`;
-    refs.label.textContent = `Hate ${threat} · base ${base}`;
+    refs.root.classList.toggle('is-highest', false);
+    refs.root.hidden = true;
   }
 }
 

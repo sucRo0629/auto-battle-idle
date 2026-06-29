@@ -25,7 +25,6 @@ function mockUnit(
     statusEffects: partial.statusEffects ?? [],
     cooldowns: partial.cooldowns ?? [],
     build: partial.build ?? { learnedPassiveIds: [], learnedActiveIds: [] },
-    threat: partial.threat ?? 0,
     barrierBreakRegenUsed: partial.barrierBreakRegenUsed,
   } as CombatantState;
 }

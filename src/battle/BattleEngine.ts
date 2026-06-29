@@ -78,7 +78,6 @@ import {
   syncBuffAuras,
   syncDebuffAuras,
   syncDamageReductionAuras,
-  syncFrontThreatControlAuras,
   syncSelfHpRatioBuffAuras,
 } from "./passiveEffects.ts";
 import {
@@ -119,18 +118,6 @@ import { tryTriggerHealReservation, grantHealReservationStacks } from "./healRes
 import { tryTriggerBarrierBreakRegen } from "./barrierBreakRegen.ts";
 import { tryTriggerBarrierDepletionHeal } from "./barrierDepletionHeal.ts";
 import { applyWardBarrierToIncomingDamage } from "./wardBarrier.ts";
-import {
-  applyThreatFromDamage,
-  applyThreatFromDebuffApply,
-  applyThreatControlOnBlock,
-  applyThreatControlOnDamageTaken,
-  applyThreatBurst,
-  applyFrontThreatFloor,
-  initializeAllyThreat,
-  refreshAlliesBaseThreat,
-  resolveAllyThreatDecayMultiplier,
-  tickAllyThreatDecay,
-} from "./threat.ts";
 import { deathAnimDurationMs } from "../render/deathPlayback.ts";
 import {
   clearEngagedDisplayAnchor,
@@ -305,10 +292,7 @@ export class BattleEngine {
         this.emit({ type: 'basicAttackCountCharged', actorId });
       },
       onDamageApplied: (actor, target, amount, meta) => {
-        this.handleDamageThreat(actor, target, amount, meta);
-      },
-      onDebuffApplied: (actor) => {
-        applyThreatFromDebuffApply(actor);
+        this.handleDamageApplied(actor, target, amount, meta);
       },
       onTargetReceivedDebuff: (target) => {
         this.handlePassiveDispelOnDebuffReceived(target);
@@ -330,7 +314,7 @@ export class BattleEngine {
     this.reloadBattlefield();
   }
 
-  private handleDamageThreat(
+  private handleDamageApplied(
     actor: CombatantState,
     target: CombatantState,
     amount: number,
@@ -340,29 +324,10 @@ export class BattleEngine {
       hpDamage?: number;
       attackRangePx?: number;
       didBlock?: boolean;
-      threatBurstFlat?: number;
-      threatBurstScale?: number;
       barrierHpBefore?: number;
       barrierDamage?: number;
     },
   ): void {
-    applyThreatFromDamage(actor, target, amount);
-    if (!actor.isEnemy && actor.isAlive && amount > 0) {
-      applyThreatBurst(actor, amount, {
-        threatBurstFlat: meta?.threatBurstFlat,
-        threatBurstScale: meta?.threatBurstScale,
-      });
-    }
-    if (!target.isEnemy && target.isAlive && amount > 0) {
-      const targetPassives = getPassiveDefs(
-        target,
-        this.gameData.skillRegistry.passives,
-      );
-      applyThreatControlOnDamageTaken(target, amount, targetPassives);
-      if (meta?.didBlock) {
-        applyThreatControlOnBlock(target, targetPassives);
-      }
-    }
     if (amount > 0 && meta?.attackKind) {
       const counterCallbacks = {
         emit: (event: Parameters<BattleEventListener>[0]) => this.emit(event),
@@ -377,7 +342,7 @@ export class BattleEngine {
             hpDamage?: number;
           },
         ) => {
-          this.handleDamageThreat(
+          this.handleDamageApplied(
             counterActor,
             counterTarget,
             counterAmount,
@@ -393,9 +358,6 @@ export class BattleEngine {
           this.skillSequenceRunner.clearForActor(unit.id);
           this.noteEnemyCorpseAnchor(unit);
           this.emit({ type: "death", targetId: unit.id });
-        },
-        onDebuffApplied: (counterActor: CombatantState) => {
-          applyThreatFromDebuffApply(counterActor);
         },
         onTargetReceivedDebuff: (debuffTarget: CombatantState) => {
           this.handlePassiveDispelOnDebuffReceived(debuffTarget);
@@ -720,7 +682,6 @@ export class BattleEngine {
     syncBuffAuras(this.players, this.enemies, passives, this.gameData);
     syncDebuffAuras(this.players, this.enemies, passives, this.gameData);
     syncDamageReductionAuras(this.players, this.enemies, passives, this.gameData);
-    syncFrontThreatControlAuras(this.players, passives);
     syncFrontBlockAuras(this.players, passives);
     syncPoisonWeaponAuras(this.players, passives);
     syncSelfHpRatioBuffAuras(this.players, this.enemies, passives);
@@ -753,8 +714,6 @@ export class BattleEngine {
   private initBattlePassiveState(): void {
     const passives = this.gameData.skillRegistry.passives;
     const actives = this.gameData.skillRegistry.actives;
-    initializeAllyThreat(this.players);
-    applyFrontThreatFloor(this.players, passives);
     this.syncContinuousPassiveAuras();
     resetPassiveDispelTriggerLimits(
       [...this.players, ...this.enemies],
@@ -1765,8 +1724,6 @@ export class BattleEngine {
       ...(c.isEnemy
         ? {}
         : {
-            threat: c.threat,
-            baseThreat: c.baseThreat,
             partySlotIndex: c.partySlotIndex,
             useLocked: this.skillSequenceRunner.isActorUseLocked(c.id),
           }),
@@ -1944,7 +1901,6 @@ export class BattleEngine {
         "overlap",
       );
       this.syncDeadEnemyCorpseBattleXForDebug();
-      this.tickAllyThreat(deltaTime);
       this.checkBattleEnd();
     }
   }
@@ -1986,22 +1942,6 @@ export class BattleEngine {
     this.syncContinuousPassiveAuras();
     this.tickCooldowns(this.players, deltaTime);
     this.tickCooldowns(this.enemies, deltaTime);
-  }
-
-  private tickAllyThreat(deltaTime: number): void {
-    const passivesRegistry = this.gameData.skillRegistry.passives;
-    refreshAlliesBaseThreat(this.players);
-    for (const ally of this.players) {
-      const ownPassives = getPassiveDefs(ally, passivesRegistry);
-      const decayMultiplier = resolveAllyThreatDecayMultiplier(
-        ally,
-        this.players,
-        passivesRegistry,
-        ownPassives,
-      );
-      tickAllyThreatDecay(ally, deltaTime, decayMultiplier);
-    }
-    applyFrontThreatFloor(this.players, passivesRegistry);
   }
 
   private tickPendingHitQueue(): void {
@@ -2244,7 +2184,7 @@ export class BattleEngine {
       const damageResult = applyDamageToTarget(target, mitigation.finalDamage);
       const appliedDamage =
         damageResult.hpDamage + damageResult.barrierDamage;
-      this.handleDamageThreat(source, target, appliedDamage, {
+      this.handleDamageApplied(source, target, appliedDamage, {
         attackKind: "dot",
         hpDamage: damageResult.hpDamage,
         attackRangePx: source.traits.rangePx,

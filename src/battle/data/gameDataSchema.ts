@@ -319,7 +319,6 @@ export const PASSIVE_EFFECT_KINDS = [
   "barrierDepletionHeal",
   "skillAmountOverride",
   "skillPropertyOverride",
-  "threatControl",
   "herbalPotency",
   "blockResonance",
   "lastStandInvulnerable",
@@ -367,7 +366,6 @@ export const PASSIVE_EFFECT_KIND_LABELS: Record<
   barrierDepletionHeal: "バリア枯渇回復",
   skillAmountOverride: "スキル効果量上書き",
   skillPropertyOverride: "スキル属性上書き",
-  threatControl: "ヘイト制御",
   herbalPotency: "薬効浸潤",
   blockResonance: "迎撃態勢",
   lastStandInvulnerable: "不撓の誓い",
@@ -731,7 +729,6 @@ export const PASSIVE_EFFECT_KIND_OPTIONS: PassiveEffectKind[] = [
 export const EDITOR_PASSIVE_CLASS_SPECIFIC_EFFECT_KINDS = [
   "excessHealToBarrier",
   "excessHealRedirect",
-  "threatControl",
   "ignoredDefBonusDamage",
   "bonusBasicAttackOnHit",
   "selfHpRatioBuff",

@@ -202,7 +202,7 @@ describe("duelist + assassin front row", () => {
     expect(duelistDealt).toBe(true);
   });
 
-  it("enemies prefer duelist threat when both are in range", () => {
+  it("enemies prefer duelist defender role when both are in range", () => {
     const engine = createDuelistAssassinEngine();
     engine.startBattle();
     reachWave1Engage(engine);

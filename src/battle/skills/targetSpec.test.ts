@@ -25,7 +25,6 @@ function mockUnit(
     damageType?: 'physical' | 'magic';
     statusEffects?: CombatantState['statusEffects'];
     barrierHp?: number;
-    threat?: number;
   } = {},
 ): CombatantState {
   const maxHp = opts.maxHp ?? 100;
@@ -60,7 +59,6 @@ function mockUnit(
     isEnemy: opts.isEnemy ?? false,
     battleX,
     corpseVisible: true,
-    ...(opts.threat !== undefined ? { threat: opts.threat } : {}),
   };
 }
 
@@ -303,8 +301,8 @@ describe('getTargetPool / pickTargetFromPool', () => {
 
   it('enemy distance/enemy/farthest picks farthest player ally by battleX distance', () => {
     const enemyActor = mockUnit('e1', 400, { isEnemy: true });
-    const front = mockUnit('front', 350, { threat: 100 });
-    const back = mockUnit('back', 200, { threat: 10 });
+    const front = mockUnit('front', 350);
+    const back = mockUnit('back', 200);
     const spec = { kind: 'distance', side: 'enemy', order: 'farthest' } as const;
     const pool = getTargetPool(spec, enemyActor, [front, back], [enemyActor]);
     const picked = pickTargetFromPool(spec, enemyActor, pool);

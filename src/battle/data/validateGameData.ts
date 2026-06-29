@@ -2750,18 +2750,6 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         ? undefined
         : requireEnum(obj, 'damageType', context, DAMAGE_TYPES_SET);
     const amount = parseEffectAmount(obj, context, 'damage');
-    const threatBurstFlat = parseOptionalNumber(obj, 'threatBurstFlat', context);
-    const threatBurstScale = parseOptionalNumber(
-      obj,
-      'threatBurstScale',
-      context,
-    );
-    if (threatBurstFlat !== undefined && threatBurstFlat < 0) {
-      invalidField(context, 'threatBurstFlat', 'must be non-negative');
-    }
-    if (threatBurstScale !== undefined && threatBurstScale < 0) {
-      invalidField(context, 'threatBurstScale', 'must be non-negative');
-    }
     const pierceBarrier = obj.pierceBarrier === true ? true : undefined;
     const pierceWard = obj.pierceWard === true ? true : undefined;
     const pierceBlock = obj.pierceBlock === true ? true : undefined;
@@ -2774,8 +2762,6 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       type,
       ...(damageType !== undefined ? { damageType } : {}),
       amount,
-      ...(threatBurstFlat !== undefined ? { threatBurstFlat } : {}),
-      ...(threatBurstScale !== undefined ? { threatBurstScale } : {}),
       ...(pierceBarrier ? { pierceBarrier } : {}),
       ...(pierceWard ? { pierceWard } : {}),
       ...(pierceBlock ? { pierceBlock } : {}),
@@ -4356,122 +4342,6 @@ function requirePassiveEffectParams(
         ...(counterRange !== undefined ? { counterRange } : {}),
         ...(counterTrigger !== undefined ? { counterTrigger } : {}),
         ...parseCounterAttackRangeBandFields(obj, context),
-      };
-    }
-    case 'threatControl': {
-      const onDamageTakenFlat = parseOptionalNumber(
-        obj,
-        'onDamageTakenFlat',
-        context,
-      );
-      const onDamageTakenScale = parseOptionalNumber(
-        obj,
-        'onDamageTakenScale',
-        context,
-      );
-      const onBlockFlat = parseOptionalNumber(obj, 'onBlockFlat', context);
-      const threatDecayMultiplier = parseOptionalNumber(
-        obj,
-        'threatDecayMultiplier',
-        context,
-      );
-      const frontThreatFloor = parseOptionalNumber(
-        obj,
-        'frontThreatFloor',
-        context,
-      );
-      const frontThreatDecayMultiplier = parseOptionalNumber(
-        obj,
-        'frontThreatDecayMultiplier',
-        context,
-      );
-      const frontThreatAuraRadiusPx = parseOptionalNumber(
-        obj,
-        'frontThreatAuraRadiusPx',
-        context,
-      );
-      const frontDamageTakenReduction = parseOptionalNumber(
-        obj,
-        'frontDamageTakenReduction',
-        context,
-      );
-      if (
-        onDamageTakenFlat === undefined &&
-        onDamageTakenScale === undefined &&
-        onBlockFlat === undefined &&
-        threatDecayMultiplier === undefined &&
-        frontThreatFloor === undefined &&
-        frontThreatDecayMultiplier === undefined &&
-        frontDamageTakenReduction === undefined
-      ) {
-        invalidField(
-          context,
-          'effect',
-          'threatControl requires at least one configured field',
-        );
-      }
-      if (onDamageTakenScale !== undefined && onDamageTakenScale < 0) {
-        invalidField(context, 'onDamageTakenScale', 'must be non-negative');
-      }
-      if (onBlockFlat !== undefined && onBlockFlat < 0) {
-        invalidField(context, 'onBlockFlat', 'must be non-negative');
-      }
-      if (
-        threatDecayMultiplier !== undefined &&
-        threatDecayMultiplier <= 0
-      ) {
-        invalidField(context, 'threatDecayMultiplier', 'must be positive');
-      }
-      if (
-        frontThreatFloor !== undefined &&
-        (frontThreatFloor <= 0 || frontThreatFloor > 1)
-      ) {
-        invalidField(context, 'frontThreatFloor', 'must be between 0 and 1');
-      }
-      if (
-        frontThreatDecayMultiplier !== undefined &&
-        frontThreatDecayMultiplier <= 0
-      ) {
-        invalidField(
-          context,
-          'frontThreatDecayMultiplier',
-          'must be positive',
-        );
-      }
-      if (
-        frontThreatAuraRadiusPx !== undefined &&
-        frontThreatAuraRadiusPx <= 0
-      ) {
-        invalidField(context, 'frontThreatAuraRadiusPx', 'must be positive');
-      }
-      if (
-        frontDamageTakenReduction !== undefined &&
-        (frontDamageTakenReduction < 0 || frontDamageTakenReduction >= 1)
-      ) {
-        invalidField(
-          context,
-          'frontDamageTakenReduction',
-          'must be between 0 and 1 (exclusive of 1)',
-        );
-      }
-      return {
-        ...base,
-        ...(onDamageTakenFlat !== undefined ? { onDamageTakenFlat } : {}),
-        ...(onDamageTakenScale !== undefined ? { onDamageTakenScale } : {}),
-        ...(onBlockFlat !== undefined ? { onBlockFlat } : {}),
-        ...(threatDecayMultiplier !== undefined
-          ? { threatDecayMultiplier }
-          : {}),
-        ...(frontThreatFloor !== undefined ? { frontThreatFloor } : {}),
-        ...(frontThreatDecayMultiplier !== undefined
-          ? { frontThreatDecayMultiplier }
-          : {}),
-        ...(frontThreatAuraRadiusPx !== undefined
-          ? { frontThreatAuraRadiusPx }
-          : {}),
-        ...(frontDamageTakenReduction !== undefined
-          ? { frontDamageTakenReduction }
-          : {}),
       };
     }
     case 'excessHealRedirect': {

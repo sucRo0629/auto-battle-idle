@@ -18,7 +18,6 @@ import {
   resolvePassiveDispelTargets,
 } from './passiveDispelBridge.ts';
 import { isAllyWithinBattleXRadius } from './combatPosition.ts';
-import { DEFAULT_FRONT_THREAT_AURA_RADIUS_PX } from './threat.ts';
 import {
   stripHerbalPotencyAurasFromSource,
 } from './herbalPotency.ts';
@@ -524,45 +523,6 @@ export function syncDamageReductionAuras(
       for (const target of targets) {
         target.statusEffects.push(
           createPassiveDamageReductionEffect(source, passive.id, percent),
-        );
-      }
-    }
-  }
-}
-
-export function syncFrontThreatControlAuras(
-  allies: CombatantState[],
-  passives: Record<string, PassiveSkillDef>,
-): void {
-  for (const unit of allies) {
-    unit.statusEffects = unit.statusEffects.filter(
-      (effect) => !effect.id.startsWith('passive_front_threat_dmg_reduction_'),
-    );
-  }
-
-  for (const source of allies) {
-    if (!source.isAlive) continue;
-    for (const passive of getPassiveDefs(source, passives)) {
-      if (passive.effect !== 'threatControl') continue;
-      const percent = passive.frontDamageTakenReduction;
-      if (percent === undefined || percent <= 0) continue;
-      for (const target of allies) {
-        if (
-          !isAllyWithinBattleXRadius(
-            source,
-            target,
-            DEFAULT_FRONT_THREAT_AURA_RADIUS_PX,
-          )
-        ) {
-          continue;
-        }
-        target.statusEffects.push(
-          createPassiveDamageReductionEffect(
-            source,
-            passive.id,
-            percent,
-            'passive_front_threat_dmg_reduction_',
-          ),
         );
       }
     }

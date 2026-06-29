@@ -374,59 +374,7 @@ describe('resyncEnemyBasicAttackEntry', () => {
   });
 });
 
-describe('collectSkillsFromDrafts threat fields', () => {
-  it('preserves threatBurstScale on damage effect save', () => {
-    const entries: SkillDraftEntry[] = [
-      {
-        ref: { skillId: 'at_swordsman_active_1', kind: 'active' },
-        active: {
-          id: 'at_swordsman_active_1',
-          name: '叩き付け',
-          trigger: { kind: 'basicAttackCount', value: 5 },
-          effect: [
-            {
-              target: { kind: 'distance', side: 'enemy', order: 'nearest' },
-              type: 'damage',
-              damageType: 'physical',
-              amount: { kind: 'atkBased', atkScale: 1.8 },
-              threatBurstScale: 1.25,
-            },
-          ],
-        },
-      },
-    ];
-
-    const { actives } = collectSkillsFromDrafts(entries);
-    const effect = actives[0]?.effect[0];
-    expect(effect?.type).toBe('damage');
-    if (effect?.type !== 'damage') return;
-    expect(effect.threatBurstScale).toBe(1.25);
-  });
-
-  it('preserves threatControl passive fields on save', () => {
-    const entries: SkillDraftEntry[] = [
-      {
-        ref: { skillId: 'df_guardian_passive_5', kind: 'passive' },
-        passive: {
-          id: 'df_guardian_passive_5',
-          name: '鉄壁の挑発',
-          effect: 'threatControl',
-          onDamageTakenScale: 0.5,
-          onBlockFlat: 5,
-          threatDecayMultiplier: 0.5,
-        },
-      },
-    ];
-
-    const { passives } = collectSkillsFromDrafts(entries);
-    expect(passives[0]).toMatchObject({
-      effect: 'threatControl',
-      onDamageTakenScale: 0.5,
-      onBlockFlat: 5,
-      threatDecayMultiplier: 0.5,
-    });
-  });
-
+describe('collectSkillsFromDrafts fireConditions', () => {
   it('preserves fireConditions compare gte on save', () => {
     const entries: SkillDraftEntry[] = [
       {

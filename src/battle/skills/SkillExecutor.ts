@@ -207,8 +207,6 @@ export interface SkillExecutorDeps {
       hpDamage?: number;
       attackRangePx?: number;
       didBlock?: boolean;
-      threatBurstFlat?: number;
-      threatBurstScale?: number;
       barrierHpBefore?: number;
       barrierDamage?: number;
     }
@@ -1113,11 +1111,6 @@ export class SkillExecutor {
       if (markTarget) {
         grantArenaMark(markTarget, actor.id, skill.id, duration);
       }
-      for (const enemy of enemies) {
-        if (enemy.isAlive) {
-          enemy.threatFocusTargetId = actor.id;
-        }
-      }
       consumeActiveStageTrigger(actor, skill);
       this.emit({
         type: "skill",
@@ -1335,8 +1328,6 @@ export class SkillExecutor {
         hpDamage: damageResult.hpDamage,
         attackRangePx: effectDef.range ?? actor.traits.rangePx,
         didBlock,
-        threatBurstFlat: effectDef.threatBurstFlat,
-        threatBurstScale: effectDef.threatBurstScale,
         barrierHpBefore,
         barrierDamage: damageResult.barrierDamage,
       });

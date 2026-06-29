@@ -11,7 +11,7 @@
         "enabled": true
       }
     },
-    "maxHp": 285,
+    "maxHp": 300,
     "atk": 11,
     "def": 27,
     "reg": 0,
@@ -67,7 +67,7 @@
     "traits": {
       "rangePx": 30
     },
-    "maxHp": 250,
+    "maxHp": 280,
     "atk": 15,
     "def": 22,
     "reg": 10,
@@ -106,7 +106,7 @@
       }
     ],
     "growthTier": {
-      "maxHp": 2,
+      "maxHp": 3,
       "atk": 2,
       "def": 2
     },
@@ -123,7 +123,7 @@
     "traits": {
       "rangePx": 30
     },
-    "maxHp": 200,
+    "maxHp": 220,
     "atk": 19,
     "def": 18,
     "reg": 0,
@@ -182,8 +182,8 @@
         "enabled": true
       }
     },
-    "maxHp": 165,
-    "atk": 30,
+    "maxHp": 170,
+    "atk": 32,
     "def": 16,
     "reg": 0,
     "jobTier": 1,
@@ -241,9 +241,9 @@
         "enabled": true
       }
     },
-    "maxHp": 100,
+    "maxHp": 110,
     "atk": 27,
-    "def": 9,
+    "def": 10,
     "reg": 5,
     "jobTier": 1,
     "attackSpeedTier": "fast",
@@ -522,7 +522,7 @@
     "epithetEn": "Sorcerer",
     "formationRow": "back",
     "traits": {
-      "rangePx": 150,
+      "rangePx": 200,
       "damageType": "magic"
     },
     "maxHp": 80,
@@ -580,7 +580,7 @@
     "epithetEn": "Sigilist",
     "formationRow": "back",
     "traits": {
-      "rangePx": 150,
+      "rangePx": 200,
       "damageType": "magic",
       "basicAttackVfx": {
         "enabled": true
@@ -588,7 +588,7 @@
     },
     "maxHp": 78,
     "atk": 22,
-    "def": 6,
+    "def": 5,
     "reg": 20,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
@@ -617,7 +617,7 @@
     "epithetEn": "Conductor",
     "formationRow": "back",
     "traits": {
-      "rangePx": 120,
+      "rangePx": 300,
       "damageType": "magic"
     },
     "maxHp": 72,

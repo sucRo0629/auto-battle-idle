@@ -28,8 +28,6 @@ function makeActor(overrides: Partial<CombatantState> = {}): CombatantState {
     atk: 20,
     def: 5,
     reg: 0,
-    threat: 0,
-    baseThreat: 0,
     statusEffects: [],
     cooldowns: [],
     corpseVisible: true,

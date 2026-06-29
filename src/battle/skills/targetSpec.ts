@@ -451,24 +451,17 @@ export function applyIncludeSelfFilter(
   return filtered;
 }
 
-export type ThreatSwitchMarginContext = {
-  allies: CombatantState[];
-  passivesRegistry: Record<string, import("../types.ts").PassiveSkillDef>;
-};
-
 export type PickTargetOptions = {
   /**
    * Target Intent: MoveAnchor.
    * MoveAnchor は移動の到達基準であり、AttackTarget / ChaseTarget とは別責務。
-   * 至近/最遠は使用者との battleX 距離で決め、Threat や接近 chase の編成奥選択を使わない。
+   * 至近/最遠は使用者との battleX 距離で決め、接近 chase の編成奥選択を使わない。
    */
   moveAnchor?: boolean;
   /** heal 等：味方 stat / distance 対象で使用者を候補プールに含める */
   includeActorInAllyPool?: boolean;
   /** 単体攻撃ターゲット選定（闘技場の掟の強制ターゲット用） */
   singleTargetAttack?: boolean;
-  /** 敵 AI: 護法陣 shared tank 等のヘイト切替マージン */
-  threatSwitchMarginContext?: ThreatSwitchMarginContext;
 };
 
 /** 回復 effect は味方対象に使用者自身も含める。単体 damage は闘技場の掟判定用 */

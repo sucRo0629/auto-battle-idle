@@ -163,8 +163,6 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       id: 'guard',
       formationRow: 'front',
       battleX: 200,
-      threat: 100,
-      baseThreat: 100,
       traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
@@ -177,8 +175,6 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       id: 'assassin',
       formationRow: 'front',
       battleX: 280,
-      threat: 300,
-      baseThreat: 300,
       traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
@@ -215,8 +211,6 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       id: 'guard',
       formationRow: 'front',
       battleX: 200,
-      threat: 100,
-      baseThreat: 100,
       traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
@@ -230,8 +224,6 @@ describe('resolveEnemyChaseTargetPlayer', () => {
       formationRow: 'front',
       battleX: 200,
       accessState: 'rearAssault',
-      threat: 300,
-      baseThreat: 300,
       traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
@@ -553,8 +545,6 @@ describe('resolveEnemyApproachBattleX', () => {
       id: 'guard',
       formationRow: 'front',
       battleX: 200,
-      threat: 100,
-      baseThreat: 100,
       traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {
@@ -707,8 +697,6 @@ describe('resolveEnemyApproachBattleX', () => {
       id: 'assassin',
       formationRow: 'front',
       battleX: 280,
-      threat: 300,
-      baseThreat: 300,
       traits: { rangePx: 0, damageType: 'physical', basicAttackVfx: { enabled: true } },
       cooldowns: [],
       build: {

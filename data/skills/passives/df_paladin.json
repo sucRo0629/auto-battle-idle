@@ -10,7 +10,7 @@
     "id": "df_paladin_passive_2",
     "name": "護法陣",
     "effect": "damageReduction",
-    "damageReductionPercent": 0.1,
+    "damageReductionPercent": 0.05,
     "damageReductionTargetShape": "aoe",
     "damageReductionAoeRadiusPx": 50,
     "damageReductionTargetRule": {

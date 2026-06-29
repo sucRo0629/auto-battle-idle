@@ -12,9 +12,13 @@
   {
     "id": "df_guardian_passive_2",
     "name": "立ちはだかる壁",
-    "effect": "damageReduction",
-    "damageReductionPercent": 0.08,
-    "damageReductionTargetRule": {
+    "effect": "buff",
+    "buffSubKind": "stat",
+    "buffStat": [
+      "hp"
+    ],
+    "buffMultiplier": 1.05,
+    "buffTargetRule": {
       "kind": "self"
     }
   },

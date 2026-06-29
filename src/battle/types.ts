@@ -564,7 +564,7 @@ export function asStatusEffectStatList(
   return Array.isArray(stat) ? stat : [stat];
 }
 
-/** runtime-only: Threat / FrontlineOwner から除外する一時アクセス（シリアライズしない） */
+/** runtime-only: FrontlineOwner から除外する一時アクセス（シリアライズしない） */
 export type CombatantAccessState = "normal" | "rearAssault";
 
 export interface CombatantState extends Combatant {
@@ -596,12 +596,6 @@ export interface CombatantState extends Combatant {
   spawnX?: number;
   /** 敵 dead: 死亡時に固定する battleX */
   corpseBattleAnchorX?: number;
-  /** 味方のみ: 敵 AI ヘイト（ランタイム） */
-  threat?: number;
-  /** 味方のみ: 減衰の目標ヘイト */
-  baseThreat?: number;
-  /** 敵のみ: Threat ヒステリシス用の現在フォーカス対象 id */
-  threatFocusTargetId?: string;
   /** runtime-only: 背後滞在など一時アクセス。`isPlayerRearAssaultAccess` battle context の入力 */
   accessState?: CombatantAccessState;
   /** periodicDispel: Wave 内の残り発動回数（passiveId → 残数） */
@@ -665,7 +659,6 @@ export type PassiveEffectKind =
   | "barrierDepletionHeal"
   | "skillAmountOverride"
   | "skillPropertyOverride"
-  | "threatControl"
   /** @deprecated 読み込み互換 */
   | "evasionChance"
   | "block"
@@ -853,22 +846,6 @@ export interface PassiveSkillDef {
   intervalSec?: number;
   /** hot / buff / debuff / periodicDispel: Stage/Wave 開始時発動。未指定 = 常時（barrier は未指定 = stageStart） */
   periodicTrigger?: PassivePeriodicTriggerKind;
-  /** threatControl: 被ダメ時の固定 threat 加算 */
-  onDamageTakenFlat?: number;
-  /** threatControl: 被ダメ量に対する threat 係数 */
-  onDamageTakenScale?: number;
-  /** threatControl: ブロック成功時の固定 threat 加算 */
-  onBlockFlat?: number;
-  /** threatControl: threat 減衰倍率（1 = 既定。0.5 = 半減速） */
-  threatDecayMultiplier?: number;
-  /** threatControl: 生存中、周囲味方の threat 下限（source threat × ratio） */
-  frontThreatFloor?: number;
-  /** threatControl: 周囲 aura 半径（px）。未指定 = 50（障身法 AoE 同値） */
-  frontThreatAuraRadiusPx?: number;
-  /** threatControl: 生存中、周囲味方の threat 減衰倍率（1 = 既定） */
-  frontThreatDecayMultiplier?: number;
-  /** threatControl: 生存中、前列味方のダメージ軽減率（0.08 = 8%） */
-  frontDamageTakenReduction?: number;
   dispelTargetRule?: TargetSpec;
   /** アクティブ effect.targetShape に対応 */
   dispelTargetShape?: TargetShape;
@@ -1295,10 +1272,6 @@ export interface DamageSkillEffect extends SkillEffectCommon {
   /** 省略時 = actor.traits.damageType */
   damageType?: DamageType;
   amount: ResourceAmountSpec;
-  /** 与ダメ成功時の追加 threat（固定）。basic には付けない */
-  threatBurstFlat?: number;
-  /** 与ダメ成功時の追加 threat（appliedDamage × scale）。basic には付けない */
-  threatBurstScale?: number;
   /** barrierHp 吸収をスキップ */
   pierceBarrier?: boolean;
   /** wardBarrier 軽減をスキップ */
@@ -1770,9 +1743,6 @@ export interface CombatantSnapshot {
   bodyAnimMarching: boolean;
   /** 味方のみ: フィールド上に death スプライトを描くか */
   corpseVisible?: boolean;
-  /** 味方のみ: デバッグ用ヘイト */
-  threat?: number;
-  baseThreat?: number;
   partySlotIndex?: number;
   /** 味方のみ: 停止時間（useDurationSec）中 */
   useLocked?: boolean;

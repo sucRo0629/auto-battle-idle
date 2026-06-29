@@ -36,7 +36,6 @@ function unit(partial: Partial<CombatantState> & Pick<CombatantState, 'id'>): Co
     cooldowns: partial.cooldowns ?? [],
     spriteKey: 'placeholder',
     iconKey: 'placeholder',
-    threat: partial.threat ?? 0,
   };
 }
 
