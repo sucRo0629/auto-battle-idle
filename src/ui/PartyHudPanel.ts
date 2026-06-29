@@ -25,6 +25,7 @@ import {
 import type { PartyHudEntry } from './partyHudTypes.ts';
 import { resolveRecastFillView } from './partyHudRecast.ts';
 import { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
+import type { GameTermPanel } from './GameTermPanel.ts';
 import { syncPartyHudStatusBadgeHits, buildPartyHudStatusBadgeCanvasSignature, buildPartyHudStatusBadgeHitSignature } from './partyHudStatusBadgeHits.ts';
 import {
   buildDownBySlot,
@@ -73,6 +74,7 @@ export interface PartyHudPanelOptions {
   onMemberStatsHoverStart?: (slotIndex: number) => void;
   onMemberStatsHoverEnd?: () => void;
   floatingTooltip?: PartyHudFloatingTooltip;
+  gameTermPanel?: GameTermPanel;
   onScrollReposition?: () => void;
 }
 
@@ -225,7 +227,10 @@ export class PartyHudPanel {
       statusByPartyIndex,
       frame.snapshots,
       this.theme,
-      this.options.floatingTooltip ?? null,
+      {
+        floatingTooltip: this.options.floatingTooltip ?? null,
+        gameTermPanel: this.options.gameTermPanel ?? null,
+      },
     );
   }
 
@@ -532,7 +537,10 @@ export class PartyHudPanel {
         PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT,
         theme,
         slot.slotIndex,
-        this.options.floatingTooltip ?? null,
+        {
+          floatingTooltip: this.options.floatingTooltip ?? null,
+          gameTermPanel: this.options.gameTermPanel ?? null,
+        },
       );
     }
   }

@@ -493,6 +493,16 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | データ | `CombatantSnapshot`（`baseMaxHp` + `statusEffects` + ベース atk/def/reg）とクラス `attackSpeedTier`。実効計算は [combat.md](combat.md) の `getEffective*` / `aggregateStatEffects` と同一 |
 | 更新 | パネル表示中は `BattleView.tick` 毎に refresh |
 
+#### 7.1.2 状態バッジクリック（用語パネル）
+
+| 要素 | 内容 |
+| ---- | ---- |
+| 起動 | Party HUD（コンパクト / 詳細）の **状態バッジ**（`.party-hud-status-badge-hit--interactive`）を **クリック**。辞書 `statusCategory` 対応エントリに **`description` があるときのみ** |
+| パネル | 編成 UI と同じ **`GameTermPanel`**（`BattleView` が `canvasFrame` に 1 インスタンス）。見出し・本文・パネル内用語リンク・戻るは [party-formation-ui.md §6.4](party-formation-ui.md#64-インライン用語パネル) に準拠 |
+| クリック不可 | `description` 省略の HUD 表示名のみ（例: stat 系 `hp` / `atk`）は **ホバーで表示名 tooltip のみ**（`resolveStatusBadgeTooltipLabel`） |
+| `+N` 省略枠 | **ホバーのみ** — 省略分の表示名を `、` 連結（従来どおり）。個別の用語パネルは開かない |
+| 演出 | クリック可能バッジは `cursor: pointer` + ホバー / 展開時のアウトライン（`battle-view.css`） |
+
 ### 7.2 デザイン方針（Phase 4d 刷新）
 
 [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) と同一。統計 UI 固有の目標:

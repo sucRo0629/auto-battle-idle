@@ -407,6 +407,27 @@
   pointer-events: auto;
 }
 
+.party-hud-status-badge-hit--interactive {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 2px;
+}
+
+.party-hud-status-badge-hit--interactive:hover,
+.party-hud-status-badge-hit--interactive:focus-visible {
+  outline: 1px solid rgba(142, 184, 232, 0.85);
+  outline-offset: 1px;
+}
+
+.party-hud-status-badge-hit--interactive[aria-expanded="true"] {
+  outline: 1px solid rgba(142, 184, 232, 1);
+  outline-offset: 1px;
+}
+
 .party-hud-status-badge-tooltip {
   position: absolute;
   left: 50%;

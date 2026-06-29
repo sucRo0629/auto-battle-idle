@@ -28,7 +28,7 @@ export class GameTermPanel {
   private mounted = false;
   private isOpen = false;
   private currentTermId: GameTermId | null = null;
-  private anchorButton: HTMLButtonElement | null = null;
+  private anchor: HTMLElement | null = null;
   private history: GameTermId[] = [];
 
   private readonly onDocumentPointerDown = (event: PointerEvent) => {
@@ -37,6 +37,12 @@ export class GameTermPanel {
     if (!(target instanceof Node)) return;
     if (this.root.contains(target)) return;
     if (target instanceof HTMLElement && target.closest(".game-term-link")) {
+      return;
+    }
+    if (
+      target instanceof HTMLElement &&
+      target.closest(".party-hud-status-badge-hit--interactive")
+    ) {
       return;
     }
     this.close();
@@ -125,23 +131,19 @@ export class GameTermPanel {
     return this.panelId;
   }
 
-  openFromTerm(termId: GameTermId, anchor: HTMLButtonElement): void {
+  openFromTerm(termId: GameTermId, anchor: HTMLElement): void {
     if (this.isOpen && this.currentTermId === termId) {
       this.close();
       return;
     }
 
-    if (
-      this.isOpen &&
-      this.anchorButton &&
-      this.anchorButton !== anchor
-    ) {
-      this.setAnchorExpanded(this.anchorButton, false);
+    if (this.isOpen && this.anchor && this.anchor !== anchor) {
+      this.setAnchorExpanded(this.anchor, false);
     }
 
     this.history = [];
     this.currentTermId = termId;
-    this.anchorButton = anchor;
+    this.anchor = anchor;
     this.renderCurrentTerm();
     this.positionNearAnchor(anchor);
     this.root.hidden = false;
@@ -180,8 +182,8 @@ export class GameTermPanel {
       this.currentTermId = null;
       return;
     }
-    this.setAnchorExpanded(this.anchorButton, false);
-    this.anchorButton = null;
+    this.setAnchorExpanded(this.anchor, false);
+    this.anchor = null;
     this.history = [];
     this.currentTermId = null;
     this.root.hidden = true;
@@ -271,7 +273,7 @@ export class GameTermPanel {
   }
 
   private setAnchorExpanded(
-    anchor: HTMLButtonElement | null,
+    anchor: HTMLElement | null,
     expanded: boolean,
   ): void {
     if (!anchor) return;

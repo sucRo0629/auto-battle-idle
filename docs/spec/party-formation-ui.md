@@ -329,9 +329,10 @@ Phase 4d 当初案にあった表示例（参考）:
 
 | 項目 | 理由 |
 | ---- | ---- |
-| Canvas HUD バッジのクリック説明 | DOM 用語パネルとは別 UI。必要なら別タスク |
 | 英語 UI | **Phase 4e**（`en` のみ）。4d までは `ja` 固定。辞書形状は locale キー対応済み |
 | スキル JSON への用語説明フィールド | 辞書 + `formatSkillText` 方針 |
+
+**戦闘 HUD 状態バッジ**のクリック説明は [combat.md §簡易表示 vs 詳細表示](combat.md#簡易表示-vs-詳細表示)・[battle-field.md §7.1.2](battle-field.md#712-状態バッジクリック用語パネル) を正とする（編成 UI と同じ `GameTermPanel` を `BattleView` で共有）。
 
 ---
 

@@ -26,8 +26,8 @@ import {
   DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH,
   buildDetailStatusBadgeHitSignature,
   syncDetailStatusBadgeHits,
+  type PartyHudStatusBadgeHitContext,
 } from './partyHudStatusBadgeHits.ts';
-import type { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
 
 export interface PartyMemberStatsFrame {
   snapshots: CombatantSnapshot[];
@@ -333,7 +333,10 @@ export function syncStatusBadges(
   statusByPartyIndex: Map<number, StatusBadgeRefs>,
   snapshots: CombatantSnapshot[],
   theme: BattleHudTheme | null,
-  floatingTooltip: PartyHudFloatingTooltip | null = null,
+  hitContext: PartyHudStatusBadgeHitContext = {
+    floatingTooltip: null,
+    gameTermPanel: null,
+  },
 ): void {
   for (const snapshot of snapshots) {
     if (snapshot.partySlotIndex === undefined) continue;
@@ -379,7 +382,7 @@ export function syncStatusBadges(
         refs.debuffHitLayer,
         debuffBadges,
         theme,
-        floatingTooltip,
+        hitContext,
       );
     }
 
@@ -396,7 +399,7 @@ export function syncStatusBadges(
         refs.buffHitLayer,
         buffBadges,
         theme,
-        floatingTooltip,
+        hitContext,
       );
     }
   }

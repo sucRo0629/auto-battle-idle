@@ -133,6 +133,34 @@ describe("GameTermPanel", () => {
     );
   });
 
+  it("does not close when clicking status badge anchor", () => {
+    setupPanel();
+    const badgeHit = document.createElement("button");
+    badgeHit.type = "button";
+    badgeHit.className = "party-hud-status-badge-hit--interactive";
+    document.body.appendChild(badgeHit);
+    badgeHit.getBoundingClientRect = () =>
+      ({
+        top: 80,
+        left: 80,
+        bottom: 100,
+        right: 100,
+        width: 20,
+        height: 20,
+        x: 80,
+        y: 80,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    panel.openFromTerm("stun", badgeHit);
+    const panelEl = host.querySelector(".game-term-panel") as HTMLElement;
+
+    badgeHit.dispatchEvent(
+      new PointerEvent("pointerdown", { bubbles: true, cancelable: true }),
+    );
+    expect(panelEl.hidden).toBe(false);
+  });
+
   it("shows status icon only when HUD PNG is registered", () => {
     setupPanel();
     const anchor = createAnchor("バリア");

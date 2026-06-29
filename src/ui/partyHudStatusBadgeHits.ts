@@ -1,6 +1,8 @@
 import {
   resolveCompactStatusOverflowTooltipLabel,
+  resolveStatusBadgeGameTermId,
   resolveStatusBadgeTooltipLabel,
+  statusBadgeHasClickableGameTerm,
 } from "./gameTermGlossary.ts";
 import type { StatusEffectBadgeDisplay } from '../battle/statusEffectDisplay.ts';
 import { quantizeBadgeOverlayStep } from '../render/statusBadgeRenderer.ts';
@@ -15,12 +17,98 @@ import {
   statusBadgeStride,
   statusBadgeWidth,
 } from '../render/statusBadgeRenderer.ts';
+import type { GameTermPanel } from './GameTermPanel.ts';
 import type { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
 
 export const DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH = 280;
 
+export interface PartyHudStatusBadgeHitContext {
+  floatingTooltip: PartyHudFloatingTooltip | null;
+  gameTermPanel: GameTermPanel | null;
+}
+
 function badgeIdentityPart(badge: StatusEffectBadgeDisplay): string {
   return `${badge.category}:${badge.stackCount ?? 1}`;
+}
+
+function createStatusBadgeHitElement(
+  tag: 'button' | 'span',
+): HTMLButtonElement | HTMLSpanElement {
+  const hit = document.createElement(tag);
+  hit.className = 'party-hud-status-badge-hit';
+  if (tag === 'button') {
+    hit.type = 'button';
+    hit.classList.add('party-hud-status-badge-hit--interactive');
+    hit.setAttribute('aria-expanded', 'false');
+  }
+  return hit;
+}
+
+function positionStatusBadgeHit(
+  hit: HTMLElement,
+  left: number,
+  top: number,
+  width: number,
+  height: number,
+  alignEnd: boolean,
+): void {
+  if (alignEnd) {
+    hit.classList.add('party-hud-status-badge-hit--align-end');
+  }
+  hit.style.left = `${left}px`;
+  hit.style.top = `${top}px`;
+  hit.style.width = `${width}px`;
+  hit.style.height = `${height}px`;
+}
+
+function bindHoverTooltipHit(
+  hit: HTMLElement,
+  text: string,
+  context: PartyHudStatusBadgeHitContext,
+  options: { wide?: boolean; alignEnd?: boolean; placement?: 'above' | 'below' },
+): void {
+  if (context.floatingTooltip) {
+    context.floatingTooltip.bindHit(hit, text, options);
+    return;
+  }
+
+  const tooltip = document.createElement('span');
+  tooltip.className = 'party-hud-status-badge-tooltip';
+  if (options.wide) {
+    tooltip.classList.add('party-hud-status-badge-tooltip--wide');
+  }
+  tooltip.textContent = text;
+  hit.appendChild(tooltip);
+}
+
+function bindIndividualStatusBadgeHit(
+  hit: HTMLElement,
+  badge: StatusEffectBadgeDisplay,
+  context: PartyHudStatusBadgeHitContext,
+  options: { alignEnd?: boolean; placement?: 'above' | 'below' },
+): void {
+  const label = resolveStatusBadgeTooltipLabel(badge);
+
+  if (statusBadgeHasClickableGameTerm(badge)) {
+    const termId = resolveStatusBadgeGameTermId(badge);
+    const panel = context.gameTermPanel;
+    if (!termId || !panel) {
+      return;
+    }
+
+    hit.setAttribute('aria-label', label);
+    if (panel.getPanelId()) {
+      hit.setAttribute('aria-controls', panel.getPanelId());
+    }
+
+    hit.addEventListener('click', (event) => {
+      event.stopPropagation();
+      panel.openFromTerm(termId, hit);
+    });
+    return;
+  }
+
+  bindHoverTooltipHit(hit, label, context, options);
 }
 
 export function buildPartyHudStatusBadgeCanvasSignature(
@@ -63,7 +151,7 @@ export function syncPartyHudStatusBadgeHits(
   visibleCount: number,
   theme: BattleHudTheme,
   slotIndex: number,
-  floatingTooltip: PartyHudFloatingTooltip | null,
+  context: PartyHudStatusBadgeHitContext,
 ): void {
   hitLayer.replaceChildren();
   if (badges.length === 0) return;
@@ -87,46 +175,39 @@ export function syncPartyHudStatusBadgeHits(
   const badgeW = statusBadgeWidth(scale, iconSize);
   const alignEnd = slotIndex >= 2;
 
-  const attachHit = (left: number, text: string, wide: boolean): void => {
-    const hit = document.createElement('span');
-    hit.className = 'party-hud-status-badge-hit';
-    if (alignEnd) {
-      hit.classList.add('party-hud-status-badge-hit--align-end');
-    }
-    hit.style.left = `${left}px`;
-    hit.style.top = `${outlinePad}px`;
-    hit.style.width = `${badgeW}px`;
-    hit.style.height = `${layout.totalHeight}px`;
-
-    if (floatingTooltip) {
-      floatingTooltip.bindHit(hit, text, { wide, alignEnd });
-    } else {
-      const tooltip = document.createElement('span');
-      tooltip.className = 'party-hud-status-badge-tooltip';
-      if (wide) {
-        tooltip.classList.add('party-hud-status-badge-tooltip--wide');
-      }
-      tooltip.textContent = text;
-      hit.appendChild(tooltip);
-    }
-
-    hitLayer.appendChild(hit);
-  };
-
   for (let i = 0; i < visible.length; i++) {
-    attachHit(
+    const badge = visible[i]!;
+    const clickable = statusBadgeHasClickableGameTerm(badge);
+    const hit = createStatusBadgeHitElement(clickable ? 'button' : 'span');
+    positionStatusBadgeHit(
+      hit,
       outlinePad + i * stride,
-      resolveStatusBadgeTooltipLabel(visible[i]!),
-      false,
+      outlinePad,
+      badgeW,
+      layout.totalHeight,
+      alignEnd,
     );
+    bindIndividualStatusBadgeHit(hit, badge, context, { alignEnd });
+    hitLayer.appendChild(hit);
   }
 
   if (overflowCount > 0) {
-    attachHit(
+    const hit = createStatusBadgeHitElement('span');
+    positionStatusBadgeHit(
+      hit,
       outlinePad + visibleCount * stride,
-      resolveCompactStatusOverflowTooltipLabel(badges, visibleCount),
-      true,
+      outlinePad,
+      badgeW,
+      layout.totalHeight,
+      alignEnd,
     );
+    bindHoverTooltipHit(
+      hit,
+      resolveCompactStatusOverflowTooltipLabel(badges, visibleCount),
+      context,
+      { wide: true, alignEnd },
+    );
+    hitLayer.appendChild(hit);
   }
 }
 
@@ -134,7 +215,7 @@ export function syncDetailStatusBadgeHits(
   hitLayer: HTMLElement,
   badges: StatusEffectBadgeDisplay[],
   theme: BattleHudTheme,
-  floatingTooltip: PartyHudFloatingTooltip | null,
+  context: PartyHudStatusBadgeHitContext,
   maxWidth = DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH,
 ): void {
   hitLayer.replaceChildren();
@@ -165,23 +246,10 @@ export function syncDetailStatusBadgeHits(
   for (const row of layout.rows) {
     let left = outlinePad;
     for (const badge of row) {
-      const hit = document.createElement('span');
-      hit.className = 'party-hud-status-badge-hit';
-      hit.style.left = `${left}px`;
-      hit.style.top = `${rowTop}px`;
-      hit.style.width = `${badgeW}px`;
-      hit.style.height = `${rowHeight}px`;
-
-      const text = resolveStatusBadgeTooltipLabel(badge);
-      if (floatingTooltip) {
-        floatingTooltip.bindHit(hit, text, { placement: 'above' });
-      } else {
-        const tooltip = document.createElement('span');
-        tooltip.className = 'party-hud-status-badge-tooltip';
-        tooltip.textContent = text;
-        hit.appendChild(tooltip);
-      }
-
+      const clickable = statusBadgeHasClickableGameTerm(badge);
+      const hit = createStatusBadgeHitElement(clickable ? 'button' : 'span');
+      positionStatusBadgeHit(hit, left, rowTop, badgeW, rowHeight, false);
+      bindIndividualStatusBadgeHit(hit, badge, context, { placement: 'above' });
       hitLayer.appendChild(hit);
       left += stride;
     }

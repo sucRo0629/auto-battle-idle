@@ -55,7 +55,7 @@
 | `id`              | 言語非依存の辞書キー（例: `stun`, `barrier`, `wardBarrier`）                                                                                                    |
 | `title`           | `{ ja: "スタン", … }` — 用語パネル見出し                                                                                                                        |
 | `description?`    | `{ ja: "…", … }` — 用語パネル本文（1〜3 文の要約）。改行は `\n`（表示は `white-space: pre-line`）。locale ごとに改行位置を持つ。**HUD 表示名のみの ID（下記例外）は省略可** |
-| `aliases?`        | `{ ja: ["スタン"], … }` — 本文中でリンク化する表記。**長い語を先**にマッチ。`description` 省略時は省略可 |
+| `aliases?`        | `{ ja: ["スタン"], … }` — 本文中でリンク化する表記。**長い語を先**にマッチ。省略時はスキル説明ではリンク化しない（HUD バッジクリック等で補足可） |
 | `statusCategory?` | 状態系のみ。[combat.md §ステータス効果](combat.md#ステータス効果) の `StatusDisplayCategory` と対応。`StatusIconRegistry` に PNG が登録されているときのみ用語パネル見出しに表示 |
 | `statusIconCategory?` | 用語パネル見出しアイコンのみ。HUD カテゴリと別 ID の用語が同じ PNG を使うとき（例: `magicBlock` → `block`） |
 
@@ -77,7 +77,7 @@
 #### 登録方針
 
 - 初版は `formatSkillText` 出力で **頻出する用語** から段階追加（全用語一括は不要）
-- **`StatusDisplayCategory` 全件**（HUD 状態アイコン）には `statusCategory` 付き辞書エントリを用意する。HUD 表示名のみのエントリは `description` / `aliases` を省略し、スキル説明文内では用語リンクしない（`annotateGameTerms` は `aliases` 登録分のみマッチ）
+- **`StatusDisplayCategory` 全件**（HUD 状態アイコン）には `statusCategory` 付き辞書エントリを用意する。HUD 表示名のみのエントリは `description` / `aliases` を省略し、スキル説明文内では用語リンクしない（`annotateGameTerms` は `aliases` 登録分のみマッチ）。表示名のみのバッジは戦闘 HUD で **ホバー tooltip**（表示名）。**`description` あり・`aliases` なし** のエントリも同様に本文リンク化しないが、戦闘 HUD バッジ **クリック** で用語パネルを開ける（[combat.md §簡易表示 vs 詳細表示](combat.md#簡易表示-vs-詳細表示)）
 - 頻出の非 stat 用語（**ブロック** / **魔法ブロック**・**defender 優先ターゲット**・**通常攻撃**・**種火** / **熾火** 等）も `gameTermGlossary.ts` に登録する
 - ルール変更時は **本書 / combat.md と辞書の `ja` を同作業内で更新**
 - 状態アイコン・カテゴリの正本は [combat.md §ステータス効果](combat.md#ステータス効果) の HUD バッジ節。辞書の `statusCategory` はそれに従う

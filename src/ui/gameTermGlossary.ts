@@ -61,7 +61,7 @@ export interface GameTermEntry {
   title: Record<GameTermLocale, string>;
   /** 用語パネル本文。`\n` で改行（表示は `white-space: pre-line`）。HUD 表示名のみの ID は省略可。 */
   description?: Record<GameTermLocale, string>;
-  /** 本文中でリンク化する表記。`description` があるとき必須。省略時は HUD 表示名のみ。 */
+  /** 本文中でリンク化する表記。省略時はスキル説明ではリンク化しない（HUD バッジクリック等で補足）。 */
   aliases?: Record<GameTermLocale, readonly string[]>;
   statusCategory?: StatusDisplayCategory;
   /** 用語パネル見出しアイコン用。HUD カテゴリと別 ID の用語が同じ PNG を使うときに指定。 */
@@ -478,6 +478,35 @@ export function resolveStatusDisplayCategoryLabel(
     throw new Error(`Missing glossary entry for status category: ${category}`);
   }
   return entry.title[locale];
+}
+
+export function resolveGameTermIdForStatusCategory(
+  category: StatusDisplayCategory
+): GameTermId | undefined {
+  return ENTRY_BY_STATUS_CATEGORY.get(category)?.id;
+}
+
+export function hasGameTermDescription(
+  termId: GameTermId,
+  locale: GameTermLocale = "ja"
+): boolean {
+  const description = getGameTermEntry(termId)?.description?.[locale];
+  return description !== undefined && description.length > 0;
+}
+
+export function resolveStatusBadgeGameTermId(
+  badge: StatusEffectBadgeDisplay
+): GameTermId | undefined {
+  return resolveGameTermIdForStatusCategory(badge.category);
+}
+
+/** HUD バッジクリックで用語パネルを開けるか（辞書に `description` があるか） */
+export function statusBadgeHasClickableGameTerm(
+  badge: StatusEffectBadgeDisplay,
+  locale: GameTermLocale = "ja"
+): boolean {
+  const termId = resolveStatusBadgeGameTermId(badge);
+  return termId !== undefined && hasGameTermDescription(termId, locale);
 }
 
 export function resolveStatusBadgeTooltipLabel(

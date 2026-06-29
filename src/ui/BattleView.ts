@@ -38,6 +38,8 @@ import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import { resolvePlayerDisplayLevel } from "../progression/resolvePlayerDisplayLevel.ts";
 import { BattleStatsDrawer } from "./BattleStatsDrawer.ts";
 import { PartyHudFloatingTooltip } from "./partyHudFloatingTooltip.ts";
+import { GameTermPanel } from "./GameTermPanel.ts";
+import "../styles/game-term-panel.css";
 import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 
@@ -83,6 +85,7 @@ export class BattleView {
   private readonly battleXDebugCanvas: BattleXDebugCanvas;
   private readonly statsDrawer: BattleStatsDrawer;
   private readonly hudFloatingTooltip: PartyHudFloatingTooltip;
+  private readonly gameTermPanel: GameTermPanel;
   private readonly canvasFrame: HTMLElement;
   private hoveredMemberStatsSlotIndex: number | null = null;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
@@ -204,6 +207,9 @@ export class BattleView {
 
     this.hudFloatingTooltip = new PartyHudFloatingTooltip(canvasFrame);
 
+    this.gameTermPanel = new GameTermPanel(canvasFrame, { locale: "ja" });
+    this.gameTermPanel.mount();
+
     this.partyHud = new PartyHudPanel(this.canvasHost, {
       onMemberStatsHoverStart: (slotIndex) => {
         this.showMemberStatsPanel(slotIndex);
@@ -212,6 +218,7 @@ export class BattleView {
         this.scheduleMemberStatsHide();
       },
       floatingTooltip: this.hudFloatingTooltip,
+      gameTermPanel: this.gameTermPanel,
       onScrollReposition: () => {
         if (this.memberStatsPanel.isVisible()) {
           this.memberStatsPanel.reposition();
@@ -690,6 +697,7 @@ export class BattleView {
   destroy(): void {
     this.clearMemberStatsHideTimer();
     this.hudFloatingTooltip.destroy();
+    this.gameTermPanel.destroy();
     this.statsDrawer.destroy();
     this.memberStatsPanel.destroy();
     this.canvas.destroy();
