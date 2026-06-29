@@ -8,6 +8,21 @@ import {
 } from './PartyMemberStatsDisplay.ts';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 
+function mockDisplayRow(
+  overrides: Partial<StageDamageDisplayRow> & Pick<StageDamageDisplayRow, 'slotIndex' | 'classId' | 'displayName'>,
+): StageDamageDisplayRow {
+  return {
+    role: overrides.isHealer ? 'supporter' : 'attacker',
+    isHealer: false,
+    damageDealt: 0,
+    damageTaken: 0,
+    healingDealt: 0,
+    dealtRatio: 0,
+    takenRatio: 0,
+    ...overrides,
+  };
+}
+
 describe('PartyHudPanel detail damage metrics', () => {
   let host: HTMLElement;
   let panel: PartyHudPanel;
@@ -29,16 +44,17 @@ describe('PartyHudPanel detail damage metrics', () => {
 
   it('updates assassin slot inline damage values from displayRows', () => {
     const rows: StageDamageDisplayRow[] = [
-      {
+      mockDisplayRow({
         slotIndex: 0,
         classId: 'df_guardian',
         displayName: '鉄衛士',
+        role: 'defender',
         damageDealt: 1200,
         damageTaken: 400,
         dealtRatio: 0.4,
         takenRatio: 0.8,
-      },
-      {
+      }),
+      mockDisplayRow({
         slotIndex: 1,
         classId: 'at_assassin',
         displayName: '双刃士',
@@ -46,7 +62,7 @@ describe('PartyHudPanel detail damage metrics', () => {
         damageTaken: 50,
         dealtRatio: 1,
         takenRatio: 0.1,
-      },
+      }),
     ];
 
     panel.update([
@@ -109,6 +125,7 @@ describe('syncDamageBars', () => {
   function makeRefs(): DamageBarRefs {
     const {
       bars,
+      dealtBar,
       dealtFill,
       takenFill,
       dealtValue,
@@ -118,7 +135,7 @@ describe('syncDamageBars', () => {
     const root = document.createElement('div');
     root.className = 'party-stats-damage';
     root.append(bars, label);
-    return { root, dealtFill, takenFill, dealtValue, takenValue, label };
+    return { root, dealtBar, dealtFill, takenFill, dealtValue, takenValue, label };
   }
 
   it('maps rows by slotIndex not array order', () => {
@@ -127,7 +144,7 @@ describe('syncDamageBars', () => {
       [3, makeRefs()],
     ]);
     const rows: StageDamageDisplayRow[] = [
-      {
+      mockDisplayRow({
         slotIndex: 3,
         classId: 'at_assassin',
         displayName: '双刃士',
@@ -135,8 +152,8 @@ describe('syncDamageBars', () => {
         damageTaken: 1,
         dealtRatio: 1,
         takenRatio: 1,
-      },
-      {
+      }),
+      mockDisplayRow({
         slotIndex: 0,
         classId: 'at_ranger',
         displayName: '弓術士',
@@ -144,7 +161,7 @@ describe('syncDamageBars', () => {
         damageTaken: 10,
         dealtRatio: 0.1,
         takenRatio: 0.1,
-      },
+      }),
     ];
 
     syncDamageBars(refsBySlot, rows, new Map());
@@ -153,5 +170,62 @@ describe('syncDamageBars', () => {
     expect(refsBySlot.get(3)?.takenValue?.textContent).toBe('1');
     expect(refsBySlot.get(0)?.dealtValue?.textContent).toBe('100');
     expect(refsBySlot.get(0)?.takenValue?.textContent).toBe('10');
+  });
+
+  it('shows healing dealt for a lone healer with a full dealt bar', () => {
+    const refs = makeRefs();
+    syncDamageBars(
+      new Map([[0, refs]]),
+      [
+        mockDisplayRow({
+          slotIndex: 0,
+          classId: 'sp_cleric',
+          displayName: '治癒師',
+          role: 'supporter',
+          isHealer: true,
+          healingDealt: 120,
+          damageTaken: 30,
+        }),
+      ],
+      new Map(),
+    );
+
+    expect(refs.dealtValue?.textContent).toBe('120');
+    expect(refs.dealtFill.style.width).toBe('100%');
+    expect(refs.dealtBar.classList.contains('party-stats-damage-bar--dealt-heal')).toBe(true);
+    expect(refs.label.textContent).toContain('120');
+  });
+
+  it('compares healing bars among multiple healers', () => {
+    const low = makeRefs();
+    const high = makeRefs();
+    syncDamageBars(
+      new Map([
+        [0, low],
+        [1, high],
+      ]),
+      [
+        mockDisplayRow({
+          slotIndex: 0,
+          classId: 'sp_cleric',
+          displayName: '治癒師',
+          role: 'supporter',
+          isHealer: true,
+          healingDealt: 100,
+        }),
+        mockDisplayRow({
+          slotIndex: 1,
+          classId: 'sp_alchemist',
+          displayName: '錬金術士',
+          role: 'supporter',
+          isHealer: true,
+          healingDealt: 300,
+        }),
+      ],
+      new Map(),
+    );
+
+    expect(parseFloat(low.dealtFill.style.width)).toBeCloseTo(33.333, 2);
+    expect(high.dealtFill.style.width).toBe('100%');
   });
 });

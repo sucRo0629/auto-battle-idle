@@ -55,12 +55,14 @@ export interface MemberRowRefs {
 
 export interface DamageBarRefs {
   root: HTMLElement;
+  dealtBar: HTMLElement;
   dealtFill: HTMLElement;
   takenFill: HTMLElement;
   dealtValue?: HTMLElement;
   takenValue?: HTMLElement;
   label: HTMLElement;
   lastSyncKey?: string;
+  lastDealtMode?: 'damage' | 'heal';
 }
 
 export interface StatusBadgeRefs {
@@ -102,24 +104,47 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+function createDealtDamageTag(): HTMLElement {
+  const tag = el('span', 'party-stats-damage-bar-tag party-stats-damage-bar-tag--dealt');
+  tag.setAttribute('role', 'img');
+  tag.setAttribute('aria-label', t('hud.damageDealtShort'));
+  const icon = el('span', 'party-stats-damage-bar-tag-icon party-stats-damage-bar-tag-icon--dealt');
+  const atkUrl = getStatusIconUrl('atk');
+  if (atkUrl) {
+    icon.style.maskImage = `url("${atkUrl}")`;
+    icon.style.webkitMaskImage = `url("${atkUrl}")`;
+  }
+  tag.appendChild(icon);
+  return tag;
+}
+
+function createDealtHealTag(): HTMLElement {
+  const tag = el('span', 'party-stats-damage-bar-tag party-stats-damage-bar-tag--heal');
+  tag.setAttribute('role', 'img');
+  tag.setAttribute('aria-label', t('hud.healingDealtShort'));
+  const hotUrl = getStatusIconUrl('hot');
+  const img = document.createElement('img');
+  img.className = 'party-stats-damage-bar-tag-icon party-stats-damage-bar-tag-icon--heal';
+  if (hotUrl) {
+    img.src = hotUrl;
+  }
+  img.width = 12;
+  img.height = 12;
+  img.alt = '';
+  img.decoding = 'async';
+  img.setAttribute('aria-hidden', 'true');
+  tag.appendChild(img);
+  return tag;
+}
+
 function createDamageBarTag(kind: 'dealt' | 'taken'): HTMLElement {
+  if (kind === 'dealt') {
+    return createDealtDamageTag();
+  }
+
   const tag = el('span', `party-stats-damage-bar-tag party-stats-damage-bar-tag--${kind}`);
   tag.setAttribute('role', 'img');
-  tag.setAttribute(
-    'aria-label',
-    t(kind === 'dealt' ? 'hud.damageDealtShort' : 'hud.damageTakenShort'),
-  );
-
-  if (kind === 'dealt') {
-    const icon = el('span', 'party-stats-damage-bar-tag-icon party-stats-damage-bar-tag-icon--dealt');
-    const atkUrl = getStatusIconUrl('atk');
-    if (atkUrl) {
-      icon.style.maskImage = `url("${atkUrl}")`;
-      icon.style.webkitMaskImage = `url("${atkUrl}")`;
-    }
-    tag.appendChild(icon);
-    return tag;
-  }
+  tag.setAttribute('aria-label', t('hud.damageTakenShort'));
 
   const dotUrl = getStatusIconUrl('dot');
   const img = document.createElement('img');
@@ -136,7 +161,28 @@ function createDamageBarTag(kind: 'dealt' | 'taken'): HTMLElement {
   return tag;
 }
 
+function syncDealtBarMode(refs: DamageBarRefs, isHealer: boolean): void {
+  const mode = isHealer ? 'heal' : 'damage';
+  if (refs.lastDealtMode === mode) return;
+  refs.lastDealtMode = mode;
+
+  refs.dealtBar.classList.toggle('party-stats-damage-bar--dealt-heal', isHealer);
+  refs.dealtFill.classList.toggle('party-stats-damage-fill--dealt', !isHealer);
+  refs.dealtFill.classList.toggle('party-stats-damage-fill--heal', isHealer);
+
+  const leading = refs.dealtBar.querySelector('.party-stats-damage-bar-leading');
+  if (!(leading instanceof HTMLElement)) return;
+
+  const tag = isHealer ? createDealtHealTag() : createDealtDamageTag();
+  leading.replaceChildren(tag);
+  if (refs.dealtValue) {
+    leading.append(refs.dealtValue);
+  }
+}
+
 export function syncDamageBarTagAriaLabels(root: HTMLElement): void {
+  const dealtBar = root.querySelector('.party-stats-damage-bar--dealt');
+  const isHealer = dealtBar?.classList.contains('party-stats-damage-bar--dealt-heal') ?? false;
   const dealtTag = root.querySelector(
     '.party-stats-damage-bar--dealt .party-stats-damage-bar-tag',
   );
@@ -144,7 +190,10 @@ export function syncDamageBarTagAriaLabels(root: HTMLElement): void {
     '.party-stats-damage-bar--taken .party-stats-damage-bar-tag',
   );
   if (dealtTag instanceof HTMLElement) {
-    dealtTag.setAttribute('aria-label', t('hud.damageDealtShort'));
+    dealtTag.setAttribute(
+      'aria-label',
+      t(isHealer ? 'hud.healingDealtShort' : 'hud.damageDealtShort'),
+    );
   }
   if (takenTag instanceof HTMLElement) {
     takenTag.setAttribute('aria-label', t('hud.damageTakenShort'));
@@ -153,6 +202,7 @@ export function syncDamageBarTagAriaLabels(root: HTMLElement): void {
 
 export function buildDetailDamageBarElements(): {
   bars: HTMLElement;
+  dealtBar: HTMLElement;
   dealtFill: HTMLElement;
   takenFill: HTMLElement;
   dealtValue: HTMLElement;
@@ -165,7 +215,7 @@ export function buildDetailDamageBarElements(): {
     'party-stats-damage-bar party-stats-damage-bar--dealt',
   );
   const dealtLeading = el('div', 'party-stats-damage-bar-leading');
-  const dealtTag = createDamageBarTag('dealt');
+  const dealtTag = createDealtDamageTag();
   const dealtValue = el('span', 'party-stats-damage-bar-value', '—');
   const dealtFill = el(
     'div',
@@ -188,7 +238,7 @@ export function buildDetailDamageBarElements(): {
   takenBar.append(takenLeading, takenFill);
   bars.append(dealtBar, takenBar);
   const label = el('span', 'party-stats-damage-label', t('hud.damageEmpty'));
-  return { bars, dealtFill, takenFill, dealtValue, takenValue, label };
+  return { bars, dealtBar, dealtFill, takenFill, dealtValue, takenValue, label };
 }
 
 function createClassIcon(iconKey: string): HTMLElement {
@@ -278,6 +328,7 @@ export function createPartyMemberStatsRow(
   const damageEl = el('div', 'party-stats-damage');
   const {
     bars,
+    dealtBar,
     dealtFill,
     takenFill,
     dealtValue,
@@ -299,6 +350,7 @@ export function createPartyMemberStatsRow(
       member: { root: memberEl },
       damage: {
         root: damageEl,
+        dealtBar,
         dealtFill,
         takenFill,
         dealtValue,
@@ -340,7 +392,11 @@ export function syncDamageBars(
   rows: StageDamageDisplayRow[],
   downBySlot: Map<number, boolean>,
 ): void {
-  const maxDealt = Math.max(1, ...rows.map((row) => row.damageDealt));
+  const healerRows = rows.filter((row) => row.isHealer);
+  const nonHealerRows = rows.filter((row) => !row.isHealer);
+  const healerCount = healerRows.length;
+  const maxDealt = Math.max(1, ...nonHealerRows.map((row) => row.damageDealt));
+  const maxHealing = Math.max(1, ...healerRows.map((row) => row.healingDealt));
   const maxTaken = Math.max(1, ...rows.map((row) => row.damageTaken));
 
   for (const row of rows) {
@@ -349,17 +405,27 @@ export function syncDamageBars(
 
     const down = downBySlot.get(row.slotIndex) ?? false;
     refs.root.classList.toggle('is-down', down);
+    syncDealtBarMode(refs, row.isHealer);
 
-    const syncKey = `${getLocale()}:${down}:${row.damageDealt}:${row.damageTaken}:${maxDealt}:${maxTaken}`;
+    const dealtMetric = row.isHealer ? row.healingDealt : row.damageDealt;
+    const syncKey = `${getLocale()}:${down}:${row.isHealer ? 1 : 0}:${dealtMetric}:${row.damageTaken}:${maxDealt}:${maxHealing}:${maxTaken}:${healerCount}`;
     if (refs.lastSyncKey === syncKey) continue;
     refs.lastSyncKey = syncKey;
 
-    const dealtPct = Math.min(100, (row.damageDealt / maxDealt) * 100);
+    let dealtPct: number;
+    if (row.isHealer) {
+      dealtPct =
+        healerCount === 1
+          ? 100
+          : Math.min(100, (row.healingDealt / maxHealing) * 100);
+    } else {
+      dealtPct = Math.min(100, (row.damageDealt / maxDealt) * 100);
+    }
     const takenPct = Math.min(100, (row.damageTaken / maxTaken) * 100);
     refs.dealtFill.style.width = `${dealtPct}%`;
     refs.takenFill.style.width = `${takenPct}%`;
 
-    const dealtLabel = row.damageDealt.toLocaleString();
+    const dealtLabel = dealtMetric.toLocaleString();
     const takenLabel = row.damageTaken.toLocaleString();
     if (refs.dealtValue) {
       refs.dealtValue.textContent = dealtLabel;
@@ -367,9 +433,21 @@ export function syncDamageBars(
     if (refs.takenValue) {
       refs.takenValue.textContent = takenLabel;
     }
-    refs.label.textContent = down
-      ? t('hud.damageDealtTakenDown', { dealt: dealtLabel, taken: takenLabel })
-      : t('hud.damageDealtTaken', { dealt: dealtLabel, taken: takenLabel });
+    if (row.isHealer) {
+      refs.label.textContent = down
+        ? t('hud.healingDealtTakenDown', {
+            healed: dealtLabel,
+            taken: takenLabel,
+          })
+        : t('hud.healingDealtTaken', {
+            healed: dealtLabel,
+            taken: takenLabel,
+          });
+    } else {
+      refs.label.textContent = down
+        ? t('hud.damageDealtTakenDown', { dealt: dealtLabel, taken: takenLabel })
+        : t('hud.damageDealtTaken', { dealt: dealtLabel, taken: takenLabel });
+    }
   }
 }
 

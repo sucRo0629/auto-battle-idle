@@ -97,6 +97,9 @@ export class GameSession {
         onDamageApplied: (actor, target, amount) => {
           this.stageDamageStats.recordDamage(actor, target, amount);
         },
+        onHealRecorded: (actor, _target, amount) => {
+          this.stageDamageStats.recordHeal(actor, amount);
+        },
         getLoopWaveIndex: () =>
           this.verifyMode ? this.loopWaveIndex : null,
         getBattleXDebugEnabled: () =>

@@ -1,3 +1,5 @@
+/* Party formation tactical board */
+
 .meta-menu-screen.skill-menu-panel {
   position: relative;
   display: flex;
@@ -8,22 +10,110 @@
   min-width: 0;
   width: 100%;
   overflow: hidden;
-  gap: 14px;
+}
+
+.skill-menu-tactical-board {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  border: 2px solid rgba(58, 68, 88, 0.9);
+  background:
+    linear-gradient(180deg, rgba(18, 22, 34, 0.98) 0%, rgba(10, 12, 20, 0.99) 100%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 23px,
+      rgba(255, 255, 255, 0.018) 23px,
+      rgba(255, 255, 255, 0.018) 24px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 23px,
+      rgba(255, 255, 255, 0.018) 23px,
+      rgba(255, 255, 255, 0.018) 24px
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 2px 0 rgba(255, 255, 255, 0.04);
+}
+
+.skill-menu-board-upper {
+  display: grid;
+  grid-template-columns: minmax(268px, 34%) minmax(300px, 1fr);
+  flex: 0 0 auto;
+  align-items: stretch;
+  min-height: clamp(280px, 42vh, 400px);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.42);
+}
+
+.skill-menu-zone {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.skill-menu-zone--formation {
+  border-right: 2px solid rgba(0, 0, 0, 0.42);
+  background: rgba(8, 10, 18, 0.35);
+  min-height: 0;
+}
+
+.skill-menu-zone--class-archive {
+  background: rgba(6, 8, 14, 0.42);
+  min-height: 0;
+}
+
+.skill-menu-zone--detail {
+  flex: 1 1 240px;
+  min-height: 0;
+  overflow: hidden;
+  background: rgba(8, 10, 18, 0.28);
+}
+
+.skill-menu-zone-header {
+  flex-shrink: 0;
+  padding: 7px 12px 6px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.38);
+  background: linear-gradient(
+    180deg,
+    rgba(28, 34, 48, 0.92) 0%,
+    rgba(16, 20, 30, 0.95) 100%
+  );
+  color: #a8b0be;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
 }
 
 .skill-menu-formation-block {
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  gap: 8px;
+  flex: 1;
+  gap: 6px;
+  min-height: 0;
   min-width: 0;
+  padding: 8px 10px 8px;
+  overflow: hidden;
 }
 
 .skill-menu-roster-slots {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(96px, 1fr));
+  gap: 0;
+  flex: 1 1 auto;
+  min-height: 196px;
   min-width: 0;
+  border: 1px solid rgba(58, 68, 88, 0.75);
+  background: rgba(4, 6, 12, 0.45);
 }
 
 .skill-menu-roster-card {
@@ -32,36 +122,75 @@
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 4px;
-  min-height: 100px;
-  padding: 8px 6px 10px;
-  border: var(--game-panel-border);
+  gap: 2px;
+  min-height: 96px;
+  padding: 18px 6px 8px;
+  margin: 0;
+  border: none;
+  border-right: 1px solid rgba(58, 68, 88, 0.55);
+  border-bottom: 1px solid rgba(58, 68, 88, 0.55);
   border-radius: 0;
-  background: var(--game-slot-bg);
+  background: rgba(14, 17, 28, 0.82);
   color: var(--app-text);
   font-size: 11px;
   font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
   text-align: center;
-  box-shadow:
-    inset 0 1px 0 var(--game-bevel-light),
-    inset 0 -1px 0 var(--game-bevel-dark);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.skill-menu-roster-card:nth-child(2n) {
+  border-right: none;
+}
+
+.skill-menu-roster-card:nth-child(n + 3) {
+  border-bottom: none;
+}
+
+.skill-menu-roster-card:hover:not(.skill-menu-roster-card--active) {
+  background: rgba(22, 28, 42, 0.9);
 }
 
 .skill-menu-roster-card--active {
-  border-color: var(--game-slot-border-active);
   background: var(--game-slot-bg-active);
+  box-shadow:
+    inset 0 0 0 2px var(--game-slot-border-active),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  z-index: 1;
+}
+
+.skill-menu-roster-card-slot-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 3px 6px;
+  border-bottom: 1px solid rgba(58, 68, 88, 0.45);
+  background: rgba(8, 10, 18, 0.55);
+  color: #7a8494;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  pointer-events: none;
+}
+
+.skill-menu-roster-card--active .skill-menu-roster-card-slot-label {
+  color: #9ec8f0;
+  border-bottom-color: rgba(74, 144, 217, 0.35);
+  background: rgba(20, 36, 58, 0.55);
 }
 
 .skill-menu-roster-card-role-icon {
   position: absolute;
-  top: 4px;
-  left: 4px;
+  top: 22px;
+  left: 5px;
   box-sizing: content-box;
   width: 12px;
   height: 12px;
-  opacity: 0.5;
+  opacity: 0.55;
   pointer-events: none;
   line-height: 0;
   font-size: 0;
@@ -79,20 +208,24 @@
 
 .skill-menu-roster-card--empty {
   justify-content: center;
-  opacity: 0.75;
-  border-style: dashed;
+  padding-top: 24px;
+  background: rgba(10, 12, 20, 0.65);
+}
+
+.skill-menu-roster-card--empty .skill-menu-roster-card-slot-label {
+  color: #6a7484;
 }
 
 .skill-menu-roster-card-plus {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 400;
   line-height: 1;
-  color: #9aa3b0;
+  color: #8a939f;
 }
 
 .skill-menu-roster-card-empty-label {
-  font-size: 11px;
-  color: #9aa3b0;
+  font-size: 10px;
+  color: #8a939f;
 }
 
 .skill-menu-roster-card-character {
@@ -100,7 +233,7 @@
   align-items: flex-end;
   justify-content: center;
   width: 100%;
-  min-height: 52px;
+  min-height: 46px;
 }
 
 .skill-menu-roster-card-sprite {
@@ -120,8 +253,8 @@
   display: block;
   flex: none;
   box-sizing: content-box;
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   object-position: center bottom;
   image-rendering: pixelated;
@@ -164,7 +297,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
 }
 
@@ -173,18 +306,160 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 500;
-  color: #9aa3b0;
+  color: #8a939f;
   letter-spacing: 0.03em;
 }
 
 .skill-menu-formation-note {
   margin: 0;
-  font-size: 11px;
-  color: #7a8494;
+  padding: 4px 6px 0;
+  border-top: 1px solid rgba(58, 68, 88, 0.35);
+  font-size: 10px;
+  color: #6e7888;
   line-height: 1.35;
 }
+
+/* Class archive (inline choose-class zone) */
+
+.skill-menu-class-archive-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 8px 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.skill-menu-class-archive-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 10px 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.35);
+  background: rgba(8, 10, 18, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.skill-menu-class-archive-clear {
+  min-width: 88px;
+}
+
+.skill-menu-picker-role-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.skill-menu-picker-role-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid rgba(58, 68, 88, 0.7);
+  background: rgba(6, 8, 14, 0.5);
+}
+
+.skill-menu-picker-role-heading {
+  margin: 0;
+  padding: 5px 8px 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+  background: rgba(16, 20, 30, 0.85);
+  font-size: 10px;
+  font-weight: 700;
+  color: #8f98a8;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.skill-menu-picker-role-subheading {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 5px 8px 3px;
+  border-top: 1px solid rgba(58, 68, 88, 0.4);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.25);
+  background: rgba(10, 12, 20, 0.65);
+  font-size: 9px;
+  font-weight: 600;
+  color: #6e7888;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.skill-menu-picker-role-subheading:first-child {
+  border-top: none;
+}
+
+.skill-menu-picker-role-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 0;
+}
+
+.skill-menu-picker-list-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 40px;
+  padding: 5px 6px;
+  margin: 0;
+  border: none;
+  border-right: 1px solid rgba(58, 68, 88, 0.4);
+  border-bottom: 1px solid rgba(58, 68, 88, 0.4);
+  border-radius: 0;
+  background: rgba(12, 15, 24, 0.75);
+  color: var(--app-text);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.skill-menu-picker-list-item:hover {
+  background: rgba(22, 28, 42, 0.92);
+  box-shadow:
+    inset 0 0 0 1px rgba(74, 144, 217, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  z-index: 1;
+}
+
+.skill-menu-picker-list-item--active {
+  background: var(--game-slot-bg-active);
+  box-shadow:
+    inset 0 0 0 2px var(--game-slot-border-active),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  z-index: 2;
+}
+
+.skill-menu-picker-list-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.skill-menu-picker-list-item-epithet {
+  font-size: 8px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: #7a8494;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-menu-picker-list-item-name {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Tactical data (detail zone) */
 
 .skill-menu-detail-wrap {
   position: relative;
@@ -193,6 +468,46 @@
   flex: 1;
   min-height: 0;
   min-width: 0;
+  margin: 0 10px 10px;
+  border: 1px solid rgba(58, 68, 88, 0.65);
+  background: rgba(4, 6, 12, 0.42);
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.skill-menu-detail-wrap::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  height: 36px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(4, 6, 12, 0) 0%,
+    rgba(4, 6, 12, 0.65) 45%,
+    rgba(4, 6, 12, 0.95) 100%
+  );
+}
+
+.skill-menu-detail-wrap::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  right: 3px;
+  width: 1px;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(58, 68, 88, 0.15) 0%,
+    rgba(58, 68, 88, 0.45) 20%,
+    rgba(58, 68, 88, 0.45) 80%,
+    rgba(58, 68, 88, 0.15) 100%
+  );
 }
 
 .skill-menu-body {
@@ -201,10 +516,10 @@
   flex: 1;
   min-height: 0;
   min-width: 0;
-  gap: 16px;
+  gap: 12px;
   overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 10px 10px 18px;
   scrollbar-width: none;
 }
 
@@ -215,15 +530,22 @@
 .skill-menu-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   overflow: visible;
 }
 
 .skill-menu-section-title {
   margin: 0;
-  font-size: 13px;
+  padding: 4px 8px;
+  border: 1px solid rgba(58, 68, 88, 0.55);
+  border-bottom: none;
+  background: rgba(16, 20, 30, 0.85);
+  font-size: 10px;
   font-weight: 700;
-  color: #9aa3b0;
+  color: #8f98a8;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .skill-menu-class-stats-row {
@@ -232,17 +554,23 @@
   gap: 0;
   align-items: start;
   min-width: 0;
+  border: 1px solid rgba(58, 68, 88, 0.55);
+  background: rgba(10, 12, 20, 0.45);
 }
 
 .skill-menu-class-stats-row > .skill-menu-class-info {
   min-width: 0;
-  padding-right: 12px;
+  padding: 10px 12px;
 }
 
 .skill-menu-class-stats-row > .skill-menu-stats {
   min-width: 0;
-  padding-left: 12px;
-  border-left: 2px solid rgba(0, 0, 0, 0.35);
+  padding: 10px 12px;
+  border-left: 1px solid rgba(58, 68, 88, 0.55);
+}
+
+.skill-menu-class-stats-row > .skill-menu-section-title {
+  margin: 0;
 }
 
 .skill-menu-class-info-header {
@@ -250,6 +578,7 @@
   align-items: flex-start;
   gap: 10px;
   min-width: 0;
+  padding-top: 2px;
 }
 
 .skill-menu-class-info-text {
@@ -277,15 +606,15 @@
 }
 
 .skill-menu-class-info-name {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.2;
 }
 
 .skill-menu-class-info-epithet {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
-  color: #9aa3b0;
+  color: #8a939f;
   letter-spacing: 0.03em;
 }
 
@@ -297,52 +626,36 @@
   white-space: pre-line;
 }
 
-.skill-menu-open-picker-button {
-  flex-shrink: 0;
-  align-self: flex-start;
-  padding: 8px 14px;
-  border: 1px solid var(--canvas-border-color);
-  border-radius: 2px;
-  background: rgba(15, 15, 26, 0.55);
-  color: var(--app-text);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.skill-menu-open-picker-button--inline {
-  padding: 4px 10px;
-  font-size: 12px;
-}
-
-.skill-menu-open-picker-button:hover {
-  border-color: rgba(74, 144, 217, 0.65);
-  background: rgba(74, 144, 217, 0.12);
+.skill-menu-empty-slot {
+  padding: 16px 14px;
+  border: 1px dashed rgba(90, 110, 140, 0.45);
+  background: rgba(8, 10, 18, 0.4);
 }
 
 .skill-menu-empty-slot-message {
   margin: 0;
-  font-size: 15px;
-  color: #b8c0cc;
+  font-size: 14px;
+  color: #9aa3b0;
 }
 
 .skill-menu-stats {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .skill-menu-stats-grid {
   display: grid;
   grid-template-columns: auto auto;
-  gap: 4px 10px;
+  gap: 3px 10px;
   margin: 0;
+  padding-top: 2px;
 }
 
 .skill-menu-stats-label {
   margin: 0;
-  font-size: 12px;
-  color: #8a939f;
+  font-size: 11px;
+  color: #7a8494;
 }
 
 .skill-menu-stats-label--latin {
@@ -352,77 +665,87 @@
 
 .skill-menu-stats-value {
   margin: 0;
-  font-size: 12px;
-  color: #e8ecf1;
+  font-size: 11px;
+  color: #e0e4ec;
   text-align: left;
   font-variant-numeric: tabular-nums;
   word-break: break-word;
 }
 
+.skill-menu-skill-section {
+  border: 1px solid rgba(58, 68, 88, 0.55);
+  background: rgba(8, 10, 18, 0.35);
+  padding-bottom: 8px;
+}
+
+.skill-menu-skill-section > .skill-menu-section-title {
+  border-left: none;
+  border-right: none;
+  border-top: none;
+}
+
 .skill-menu-skill-view-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
+  padding: 0 8px;
 }
 
 .skill-menu-skill-view-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 12px 14px;
-  border: var(--game-panel-border);
+  gap: 5px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  border: 1px solid rgba(58, 68, 88, 0.6);
   border-radius: 0;
-  background: var(--game-slot-bg);
+  background: rgba(12, 15, 24, 0.82);
   color: var(--app-text);
   box-shadow:
-    inset 0 1px 0 var(--game-bevel-light),
-    inset 0 -1px 0 var(--game-bevel-dark);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
 }
 
 .skill-menu-skill-view-card--compact {
-  padding: 10px 12px;
-  gap: 5px;
+  padding: 8px 10px;
+  gap: 4px;
 }
 
 .skill-menu-skill-view-card--locked {
-  opacity: 0.55;
+  opacity: 0.5;
   border-style: dashed;
-  padding: 10px 14px;
+  padding: 8px 12px;
 }
 
 .skill-menu-skill-view-card-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(58, 68, 88, 0.4);
 }
 
 .skill-menu-skill-view-card-name {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 1.25;
   min-width: 0;
 }
 
 .skill-menu-skill-view-card--compact .skill-menu-skill-view-card-name {
-  font-size: 14px;
-}
-
-.skill-menu-skill-view-card-meta {
-  font-size: 12px;
-  color: #9aa3b0;
-  line-height: 1.35;
+  font-size: 13px;
 }
 
 .skill-menu-skill-view-card-effects {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .skill-menu-skill-view-card-effect-line {
   font-size: 13px;
-  color: #d8dde6;
+  color: #d4dae4;
   line-height: 1.45;
 }
 
@@ -430,12 +753,12 @@
   list-style: none;
   margin: 2px 0 0;
   padding: 4px 0 4px 10px;
-  border-left: 2px solid rgba(122, 132, 148, 0.38);
+  border-left: 2px solid rgba(90, 110, 140, 0.35);
   display: flex;
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
-  color: #d8dde6;
+  color: #d4dae4;
   line-height: 1.45;
 }
 
@@ -467,8 +790,10 @@
 
 .skill-menu-skill-view-card-footer {
   margin-top: 2px;
-  font-size: 11px;
-  color: #7a8494;
+  padding-top: 4px;
+  border-top: 1px solid rgba(58, 68, 88, 0.35);
+  font-size: 10px;
+  color: #6e7888;
 }
 
 .skill-menu-tab-icon {
@@ -481,7 +806,7 @@
   width: 24px;
   height: 24px;
   border: none;
-  border-radius: 4px;
+  border-radius: 0;
   background: transparent;
   box-shadow: inset 0 0 0 1px var(--hud-icon-border, #4a5568);
   overflow: hidden;
@@ -515,223 +840,3 @@
   outline-offset: -1px;
   opacity: 0.55;
 }
-
-.skill-menu-picker-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 1100;
-  display: flex;
-  align-items: stretch;
-  justify-content: center;
-  padding: 12px;
-  background: rgba(4, 6, 12, 0.72);
-  overflow: hidden;
-  pointer-events: auto;
-}
-
-.skill-menu-picker-overlay[hidden] {
-  display: none;
-}
-
-.skill-menu-picker-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  width: min(1080px, 100%);
-  max-height: 100%;
-  min-height: 0;
-  margin: auto 0;
-  overflow: hidden;
-}
-
-.skill-menu-picker-panel-title {
-  margin: 0;
-  padding: 12px 16px 10px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--app-text);
-  border-bottom: 2px solid rgba(0, 0, 0, 0.35);
-  background: rgba(8, 10, 18, 0.45);
-  box-shadow: inset 0 1px 0 var(--game-bevel-light);
-}
-
-.skill-menu-picker-split {
-  display: grid;
-  grid-template-columns: minmax(220px, 34%) minmax(0, 1fr);
-  flex: 1;
-  min-height: 0;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.35);
-}
-
-.skill-menu-picker-list-pane {
-  min-height: 0;
-  max-height: min(62vh, 560px);
-  padding: 10px 8px 12px 12px;
-  border-right: 2px solid rgba(0, 0, 0, 0.35);
-  background: rgba(8, 10, 18, 0.28);
-}
-
-.skill-menu-picker-detail-pane {
-  min-height: 0;
-  max-height: min(62vh, 560px);
-  padding: 14px 16px 16px;
-}
-
-.skill-menu-picker-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 10px 14px 12px;
-  background: rgba(8, 10, 18, 0.35);
-  box-shadow: inset 0 1px 0 var(--game-bevel-light);
-}
-
-.skill-menu-picker-role-blocks {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.skill-menu-picker-role-heading {
-  margin: 0 0 4px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #8f98a8;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.skill-menu-picker-role-subheading {
-  margin: 6px 0 2px;
-  padding-top: 6px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 10px;
-  font-weight: 600;
-  color: #7a8494;
-  letter-spacing: 0.04em;
-}
-
-.skill-menu-picker-role-subheading:first-child {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: none;
-}
-
-.skill-menu-picker-role-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.skill-menu-picker-list-item {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 6px 8px;
-  border: 2px solid transparent;
-  border-radius: 0;
-  background: transparent;
-  color: var(--app-text);
-  text-align: left;
-  cursor: pointer;
-}
-
-.skill-menu-picker-list-item:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(74, 144, 217, 0.35);
-}
-
-.skill-menu-picker-list-item--active {
-  border-color: var(--game-slot-border-active);
-  background: var(--game-slot-bg-active);
-  box-shadow: inset 0 1px 0 var(--game-bevel-light);
-}
-
-.skill-menu-picker-list-item-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-}
-
-.skill-menu-picker-list-item-epithet {
-  font-size: 9px;
-  font-weight: 500;
-  line-height: 1.1;
-  color: #8a939f;
-  letter-spacing: 0.04em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.skill-menu-picker-list-item-name {
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.2;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.skill-menu-picker-detail {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 100%;
-}
-
-.skill-menu-picker-detail-empty {
-  margin: 0;
-  font-size: 13px;
-  color: #8a939f;
-  line-height: 1.45;
-}
-
-.skill-menu-picker-detail-header {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.skill-menu-picker-detail-identity {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.skill-menu-picker-detail-role {
-  font-size: 11px;
-  font-weight: 700;
-  color: #8f98a8;
-  letter-spacing: 0.04em;
-}
-
-.skill-menu-picker-detail-name {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.skill-menu-picker-detail-epithet {
-  font-size: 12px;
-  font-weight: 500;
-  color: #9aa3b0;
-  letter-spacing: 0.03em;
-}
-
-.skill-menu-picker-detail-summary {
-  font-size: 13px;
-  line-height: 1.5;
-  color: #c4cad4;
-  white-space: pre-line;
-}
-
-.skill-menu-picker-detail-summary .game-term-link {
-  color: inherit;
-}
-

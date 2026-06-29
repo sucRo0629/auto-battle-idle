@@ -449,6 +449,10 @@
   color: rgba(232, 176, 136, 0.95);
 }
 
+.party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-bar--dealt-heal .party-stats-damage-bar-value {
+  color: rgba(136, 216, 168, 0.96);
+}
+
 .party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-bar--taken .party-stats-damage-bar-value {
   color: rgba(232, 144, 144, 0.95);
 }
@@ -465,6 +469,10 @@
 
 .party-hud-panel--detail .party-hud-detail-damage.is-down .party-stats-damage-bar-value {
   color: rgba(138, 148, 162, 0.88);
+}
+
+.party-hud-panel--detail .party-hud-detail-damage.is-down .party-stats-damage-bar--dealt-heal .party-stats-damage-bar-value {
+  color: rgba(108, 138, 118, 0.9);
 }
 
 .party-hud-panel--detail .party-stats-status-group--empty .party-stats-status-label {

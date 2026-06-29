@@ -66,6 +66,25 @@
   );
 }
 
+.game-ui-button--danger {
+  border-color: rgba(160, 72, 72, 0.85);
+  background: linear-gradient(
+    180deg,
+    rgba(88, 42, 42, 0.95) 0%,
+    rgba(58, 28, 28, 0.95) 100%
+  );
+  color: #f0d8d8;
+}
+
+.game-ui-button--danger:hover:not(:disabled) {
+  border-color: rgba(200, 96, 96, 0.85);
+  background: linear-gradient(
+    180deg,
+    rgba(108, 52, 52, 0.98) 0%,
+    rgba(72, 34, 34, 0.98) 100%
+  );
+}
+
 .game-ui-scroll-pane {
   overflow-x: hidden;
   overflow-y: auto;

@@ -95,9 +95,9 @@
   {
     "id": "enemy_at_hunter",
     "displayName": "デバフ確認",
-    "maxHp": 500,
+    "maxHp": 200,
     "atk": 10,
-    "def": 50,
+    "def": 30,
     "reg": 0,
     "exp": 0,
     "basicAttackSkillId": "at_hunter_basic_attack",

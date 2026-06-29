@@ -41,6 +41,22 @@ const classRegistry = {
     starterActiveIds: [],
     classSkillIds: [],
   },
+  cleric: {
+    id: 'cleric',
+    displayName: '治癒師',
+    role: 'supporter',
+    formationRow: 'back',
+    traits: { rangePx: 128, damageType: 'magic', basicAttackVfx: { enabled: true } },
+    maxHp: 70,
+    atk: 16,
+    def: 4,
+    reg: 0,
+    basicAttackSkillId: 'basic',
+    skills: [],
+    starterPassiveIds: [],
+    starterActiveIds: [],
+    classSkillIds: [],
+  },
 } as Record<string, import('./types.ts').ClassPreset>;
 
 describe('StageDamageStatsTracker', () => {
@@ -83,6 +99,44 @@ describe('StageDamageStatsTracker', () => {
     expect(rows[1]?.damageTaken).toBe(25);
     expect(rows[0]?.dealtRatio).toBe(1);
     expect(rows[1]?.takenRatio).toBe(1);
+  });
+
+  it('records healing dealt for allies and marks supporter rows as healers', () => {
+    const tracker = new StageDamageStatsTracker();
+    tracker.resetForStage('stage-1');
+
+    const healer = mockCombatant({
+      partySlotIndex: 0,
+      classId: 'cleric',
+    });
+    const target = mockCombatant({
+      id: 'ally-2',
+      partySlotIndex: 1,
+      classId: 'archer',
+    });
+
+    tracker.recordHeal(healer, 40);
+    tracker.recordHeal(healer, 15);
+
+    const party: PartySlotState[] = [
+      { classId: 'cleric', progress: { level: 1, exp: 0 }, build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      } },
+      { classId: 'archer', progress: { level: 1, exp: 0 }, build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      } },
+      null,
+      null,
+    ];
+
+    const rows = tracker.getDisplayRows(party, classRegistry);
+    expect(rows[0]?.isHealer).toBe(true);
+    expect(rows[0]?.healingDealt).toBe(55);
+    expect(rows[1]?.isHealer).toBe(false);
   });
 
   it('returns rows in party slot order and skips empty slots', () => {

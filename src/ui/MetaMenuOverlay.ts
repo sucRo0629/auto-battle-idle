@@ -34,7 +34,10 @@ export interface MetaMenuOverlayCallbacks {
 export class MetaMenuOverlay {
   private readonly root: HTMLElement;
   private readonly windowEl: HTMLElement;
+  private readonly brandEl: HTMLElement;
   private readonly titleEl: HTMLElement;
+  private readonly subtitleEl: HTMLElement;
+  private readonly statusEl: HTMLElement;
   private readonly playerLevelEl: HTMLElement;
   private readonly bodyEl: HTMLElement;
   private readonly footerEl: HTMLElement;
@@ -79,14 +82,31 @@ export class MetaMenuOverlay {
     const titleBar = document.createElement("div");
     titleBar.className = "meta-menu-window-bar";
 
+    const brandGroup = document.createElement("div");
+    brandGroup.className = "meta-menu-board-brand-group";
+
+    this.brandEl = document.createElement("span");
+    this.brandEl.className = "meta-menu-board-brand";
+    this.brandEl.hidden = true;
+
     this.titleEl = document.createElement("h2");
-    this.titleEl.className = "meta-menu-title";
+    this.titleEl.className = "meta-menu-title meta-menu-board-title";
+
+    this.subtitleEl = document.createElement("span");
+    this.subtitleEl.className = "meta-menu-board-subtitle";
+    this.subtitleEl.hidden = true;
+
+    brandGroup.append(this.brandEl, this.titleEl, this.subtitleEl);
+
+    this.statusEl = document.createElement("span");
+    this.statusEl.className = "meta-menu-board-status";
+    this.statusEl.hidden = true;
 
     this.playerLevelEl = document.createElement("span");
     this.playerLevelEl.className = "meta-menu-player-level";
     this.playerLevelEl.hidden = true;
 
-    titleBar.append(this.titleEl, this.playerLevelEl);
+    titleBar.append(brandGroup, this.statusEl, this.playerLevelEl);
 
     this.bodyEl = document.createElement("div");
     this.bodyEl.className = "meta-menu-window-body";
@@ -117,7 +137,7 @@ export class MetaMenuOverlay {
   private refreshLocale(): void {
     this.refreshChrome();
     if (this.skillPanel) {
-      this.updatePartyHeader();
+      this.updatePartyChrome();
       this.updatePlayerLevelDisplay();
       this.updateFooterButton();
       return;
@@ -131,11 +151,21 @@ export class MetaMenuOverlay {
 
   private updatePartyHeader(): void {
     if (!this.skillPanel) return;
-    this.titleEl.textContent = t("party.headerStatus", {
+    this.statusEl.textContent = t("party.headerStatus", {
       filled: this.skillPanel.getFilledSlotCount(),
       total: 4,
       slot: this.skillPanel.getSelectedSlotIndex() + 1,
     });
+  }
+
+  private updatePartyChrome(): void {
+    this.brandEl.textContent = t("party.boardBrand");
+    this.brandEl.hidden = false;
+    this.titleEl.textContent = t("party.boardTitle");
+    this.subtitleEl.textContent = t("party.boardSubtitle");
+    this.subtitleEl.hidden = false;
+    this.statusEl.hidden = false;
+    this.updatePartyHeader();
   }
 
   private updateFooterButton(): void {
@@ -169,6 +199,9 @@ export class MetaMenuOverlay {
     this.destroySkillPanel();
     this.windowEl.classList.remove("meta-menu-window--party");
     this.refreshChrome();
+    this.brandEl.hidden = true;
+    this.subtitleEl.hidden = true;
+    this.statusEl.hidden = true;
     this.titleEl.textContent = t("menu.title");
     this.playerLevelEl.hidden = true;
     this.updateFooterButton();
@@ -224,8 +257,6 @@ export class MetaMenuOverlay {
   private openParty(): void {
     this.windowEl.classList.add("meta-menu-window--party");
     this.refreshChrome();
-    this.updatePlayerLevelDisplay();
-    this.updateFooterButton();
     this.bodyEl.replaceChildren();
     this.skillPanel = new SkillMenuPanel(
       this.bodyEl,
@@ -259,7 +290,9 @@ export class MetaMenuOverlay {
         },
       },
     );
-    this.updatePartyHeader();
+    this.updatePartyChrome();
+    this.updatePlayerLevelDisplay();
+    this.updateFooterButton();
   }
 
   private destroySkillPanel(): void {

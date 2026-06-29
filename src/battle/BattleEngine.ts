@@ -206,6 +206,11 @@ export interface BattleEngineOptions {
     target: CombatantState,
     amount: number,
   ) => void;
+  onHealRecorded?: (
+    actor: CombatantState,
+    target: CombatantState,
+    amount: number,
+  ) => void;
   /** 確認モード: 特定 Wave のみ周回（null = ステージ全 Wave） */
   getLoopWaveIndex?: () => number | null;
   /** battleX debug 表示時のみ tick 内の位置変更を記録する */
@@ -266,6 +271,11 @@ export class BattleEngine {
     target: CombatantState,
     amount: number,
   ) => void;
+  private readonly onHealRecorded?: (
+    actor: CombatantState,
+    target: CombatantState,
+    amount: number,
+  ) => void;
   private readonly getLoopWaveIndex?: () => number | null;
   private readonly getBattleXDebugEnabled?: () => boolean;
 
@@ -278,6 +288,7 @@ export class BattleEngine {
   ) {
     this.stageId = getStageId();
     this.onDamageApplied = options.onDamageApplied;
+    this.onHealRecorded = options.onHealRecorded;
     this.getLoopWaveIndex = options.getLoopWaveIndex;
     this.getBattleXDebugEnabled = options.getBattleXDebugEnabled;
     this.executor = new SkillExecutor(gameData, (e) => this.emit(e), {
@@ -297,8 +308,8 @@ export class BattleEngine {
       onTargetReceivedDebuff: (target) => {
         this.handlePassiveDispelOnDebuffReceived(target);
       },
-      onHealApplied: () => {
-        this.refreshSelfHpRatioBuffAuras();
+      onHealApplied: (actor, target, amount) => {
+        this.notifyHealRecorded(actor, target, amount);
       },
       onUnitDied: (unit) => {
         clearPlayerRearAssaultAccess(unit);
@@ -418,7 +429,10 @@ export class BattleEngine {
         this.gameData.skillRegistry.passives,
       );
       if (reservation.healed > 0 && reservation.healerId) {
-        this.refreshSelfHpRatioBuffAuras();
+        const healer = this.findCombatant(reservation.healerId);
+        if (healer) {
+          this.notifyHealRecorded(healer, target, reservation.healed);
+        }
         this.emit({
           type: "skill",
           actorId: reservation.healerId,
@@ -440,6 +454,11 @@ export class BattleEngine {
         ) {
           const healer = this.findCombatant(reservation.healerId);
           if (healer) {
+            this.notifyHealRecorded(
+              healer,
+              reservation.redirectTarget,
+              reservation.redirectHealed,
+            );
             grantHealReservationStacks(
               healer,
               reservation.redirectTarget,
@@ -500,6 +519,10 @@ export class BattleEngine {
         this.gameData.skillRegistry.passives,
       );
       if (depletionHeal.healed > 0 && depletionHeal.sourceId) {
+        const healer = this.findCombatant(depletionHeal.sourceId);
+        if (healer) {
+          this.notifyHealRecorded(healer, target, depletionHeal.healed);
+        }
         this.emit({
           type: "skill",
           actorId: depletionHeal.sourceId,
@@ -517,6 +540,16 @@ export class BattleEngine {
     }
     this.refreshSelfHpRatioBuffAuras();
     this.onDamageApplied?.(actor, target, amount);
+  }
+
+  private notifyHealRecorded(
+    actor: CombatantState,
+    target: CombatantState,
+    amount: number,
+  ): void {
+    if (amount <= 0) return;
+    this.refreshSelfHpRatioBuffAuras();
+    this.onHealRecorded?.(actor, target, amount);
   }
 
   private isBattleXDebugEnabled(): boolean {
@@ -2143,7 +2176,7 @@ export class BattleEngine {
       if (amount <= 0) return;
       const healed = applyHealToTarget(target, amount);
       if (healed <= 0) return;
-      this.refreshSelfHpRatioBuffAuras();
+      this.notifyHealRecorded(source, target, healed);
       this.emit({
         type: "skill",
         actorId: source.id,

@@ -118,6 +118,7 @@ function createDetailDamageBar(): DamageBarRefs {
   const damageEl = el('div', 'party-stats-damage party-hud-detail-damage');
   const {
     bars,
+    dealtBar,
     dealtFill,
     takenFill,
     dealtValue,
@@ -125,7 +126,7 @@ function createDetailDamageBar(): DamageBarRefs {
     label,
   } = buildDetailDamageBarElements();
   damageEl.append(bars, label);
-  return { root: damageEl, dealtFill, takenFill, dealtValue, takenValue, label };
+  return { root: damageEl, dealtBar, dealtFill, takenFill, dealtValue, takenValue, label };
 }
 
 export class PartyHudPanel {

@@ -5146,8 +5146,14 @@ function injectSynthesizedBasicAttacks(
     );
   }
   for (const enemy of enemies) {
-    const traits = normalizeEntityTraits(enemy.traits);
     const basicId = enemy.basicAttackSkillId;
+    const ownedBasicId = defaultBasicAttackId(enemy.id);
+    // Enemies may reference a class (or other entity) basic attack by ID.
+    // Re-synthesizing with enemy.id would replace the map entry with a mismatched skill.id.
+    if (basicId !== ownedBasicId) {
+      continue;
+    }
+    const traits = normalizeEntityTraits(enemy.traits);
     const jsonOverride = activesById.get(basicId);
     activesById.set(
       basicId,

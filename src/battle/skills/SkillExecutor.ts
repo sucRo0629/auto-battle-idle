@@ -213,7 +213,11 @@ export interface SkillExecutorDeps {
   ) => void;
   onDebuffApplied?: (actor: CombatantState) => void;
   onTargetReceivedDebuff?: (target: CombatantState) => void;
-  onHealApplied?: (target: CombatantState) => void;
+  onHealApplied?: (
+    actor: CombatantState,
+    target: CombatantState,
+    amount: number,
+  ) => void;
   onUnitDied?: (unit: CombatantState) => void;
   onLastStandGuts?: (targetId: string) => void;
   addPlacedField?: (field: import("../types.ts").PlacedFieldInstance) => void;
@@ -1766,7 +1770,7 @@ export class SkillExecutor {
         targetHpRatioBeforeHeal,
         passives
       );
-      this.deps.onHealApplied?.(target);
+      this.deps.onHealApplied?.(actor, target, healResult.healed);
       this.emit({
         type: "skill",
         actorId: actor.id,
@@ -1788,7 +1792,11 @@ export class SkillExecutor {
             currentHpRatio(healResult.redirectTarget),
           passives
         );
-        this.deps.onHealApplied?.(healResult.redirectTarget);
+        this.deps.onHealApplied?.(
+          actor,
+          healResult.redirectTarget,
+          healResult.redirectHealed,
+        );
         this.emit({
           type: "skill",
           actorId: actor.id,

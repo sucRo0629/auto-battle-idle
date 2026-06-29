@@ -3,6 +3,7 @@ import type {
   ClassPreset,
   CombatantState,
   PartySlotState,
+  Role,
 } from './types.ts';
 import { PARTY_SLOT_COUNT } from './types.ts';
 
@@ -10,6 +11,7 @@ export interface SlotDamageStats {
   classId: ClassId;
   damageDealt: number;
   damageTaken: number;
+  healingDealt: number;
 }
 
 export interface StageDamageDisplayRow {
@@ -17,8 +19,11 @@ export interface StageDamageDisplayRow {
   classId: ClassId;
   displayName: string;
   epithetEn?: string;
+  role: Role;
+  isHealer: boolean;
   damageDealt: number;
   damageTaken: number;
+  healingDealt: number;
   dealtRatio: number;
   takenRatio: number;
 }
@@ -67,6 +72,23 @@ export class StageDamageStatsTracker {
     }
   }
 
+  recordHeal(actor: CombatantState | undefined, amount: number): void {
+    if (amount <= 0) return;
+
+    if (
+      actor &&
+      !actor.isEnemy &&
+      actor.partySlotIndex !== undefined
+    ) {
+      this.addToSlot(
+        actor.partySlotIndex,
+        actor.classId,
+        'healingDealt',
+        amount,
+      );
+    }
+  }
+
   getDisplayRows(
     party: PartySlotState[],
     classRegistry: Record<ClassId, ClassPreset>,
@@ -77,15 +99,19 @@ export class StageDamageStatsTracker {
       const member = party[slotIndex];
       if (!member) continue;
 
+      const preset = classRegistry[member.classId];
+      const role = preset?.role ?? 'attacker';
       const stats = this.bySlot.get(slotIndex);
       rows.push({
         slotIndex,
         classId: member.classId,
-        displayName:
-          classRegistry[member.classId]?.displayName ?? member.classId,
-        epithetEn: classRegistry[member.classId]?.epithetEn,
+        displayName: preset?.displayName ?? member.classId,
+        epithetEn: preset?.epithetEn,
+        role,
+        isHealer: role === 'supporter',
         damageDealt: stats?.damageDealt ?? 0,
         damageTaken: stats?.damageTaken ?? 0,
+        healingDealt: stats?.healingDealt ?? 0,
         dealtRatio: 0,
         takenRatio: 0,
       });
@@ -104,7 +130,7 @@ export class StageDamageStatsTracker {
   private addToSlot(
     slotIndex: number,
     classId: ClassId,
-    field: 'damageDealt' | 'damageTaken',
+    field: 'damageDealt' | 'damageTaken' | 'healingDealt',
     amount: number,
   ): void {
     const existing = this.bySlot.get(slotIndex);
@@ -118,6 +144,7 @@ export class StageDamageStatsTracker {
       classId,
       damageDealt: field === 'damageDealt' ? amount : 0,
       damageTaken: field === 'damageTaken' ? amount : 0,
+      healingDealt: field === 'healingDealt' ? amount : 0,
     });
   }
 }
