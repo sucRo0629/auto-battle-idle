@@ -47,8 +47,10 @@ import {
   type SkillCardEffectLine,
 } from "./formatSkillText.ts";
 import { formatClassSummary, formatClassSummaryForAria } from "./formatClassSummary.ts";
+import { formatClassCardIdentity, readClassDisplayLabel } from "./classDisplayName.ts";
 import { annotateGameTerms } from "./annotateGameTerms.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
+import type { GameTermLocale } from "./gameTermGlossary.ts";
 
 const PICKER_ROLES: ClassPreset["role"][] = [
   "defender",
@@ -209,7 +211,7 @@ export class SkillMenuPanel {
     this.detailWrapEl.append(this.bodyEl);
 
     this.gameTermPanel = new GameTermPanel(this.root, {
-      locale: "ja",
+      locale: getLocale() as GameTermLocale,
       detailScrollRoot: this.bodyEl,
     });
     this.gameTermPanel.mount();
@@ -655,7 +657,7 @@ export class SkillMenuPanel {
     card.appendChild(header);
 
     if (def) {
-      const lines = formatSkillCardLines(def, { locale: "ja" });
+      const lines = formatSkillCardLines(def, { locale: getLocale() });
 
       const metaEl = document.createElement("div");
       metaEl.className = "skill-menu-skill-view-card-meta";
@@ -685,7 +687,7 @@ export class SkillMenuPanel {
     parent.appendChild(
       annotateGameTerms(
         text,
-        "ja",
+        getLocale() as GameTermLocale,
         (termId, anchor) => {
           this.gameTermPanel.openFromTerm(termId, anchor);
         },

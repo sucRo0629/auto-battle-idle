@@ -21,8 +21,9 @@ import {
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
 import { BattleCanvas } from "../render/BattleCanvas.ts";
 import { PROJECT_DISPLAY_NAME } from "../projectIdentity.ts";
-import { subscribeLocaleChange } from "../i18n/locale.ts";
+import { subscribeLocaleChange, getLocale } from "../i18n/locale.ts";
 import { t } from "../i18n/t.ts";
+import type { GameTermLocale } from "./gameTermGlossary.ts";
 import {
   buildSkillPresentationContext,
   isOverlayTickSkillEvent,
@@ -211,7 +212,9 @@ export class BattleView {
 
     this.hudFloatingTooltip = new PartyHudFloatingTooltip(canvasFrame);
 
-    this.gameTermPanel = new GameTermPanel(canvasFrame, { locale: "ja" });
+    this.gameTermPanel = new GameTermPanel(canvasFrame, {
+      locale: getLocale() as GameTermLocale,
+    });
     this.gameTermPanel.mount();
 
     this.partyHud = new PartyHudPanel(this.canvasHost, {

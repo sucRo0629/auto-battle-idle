@@ -5,9 +5,10 @@ import {
   type StatusEffectBadgeDisplay,
 } from "../battle/statusEffectDisplay.ts";
 import { getStatusIconUrl } from "../render/StatusIconRegistry.ts";
+import { GAME_TERM_EN_SUPPLEMENT } from "./gameTermGlossaryEn.ts";
 
-/** v1 display locale. Shape supports future `en` etc. */
-export type GameTermLocale = "ja";
+/** Display locale for game terms (`ja` + `en` in Phase 4e). */
+export type GameTermLocale = "ja" | "en";
 
 export type GameTermId =
   | "barrier"
@@ -68,7 +69,16 @@ export interface GameTermEntry {
   statusIconCategory?: StatusDisplayCategory;
 }
 
-export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
+type GameTermEntrySource = Omit<
+  GameTermEntry,
+  "title" | "description" | "aliases"
+> & {
+  title: { ja: string };
+  description?: { ja: string };
+  aliases?: { ja: readonly string[] };
+};
+
+const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   {
     id: "barrier",
     title: { ja: "バリア" },
@@ -416,6 +426,31 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
   },
 ];
 
+function mergeGameTermEn(entry: GameTermEntrySource): GameTermEntry {
+  const en = GAME_TERM_EN_SUPPLEMENT[entry.id];
+  return {
+    ...entry,
+    title: { ...entry.title, en: en.title },
+    description:
+      entry.description !== undefined
+        ? {
+            ...entry.description,
+            ...(en.description !== undefined ? { en: en.description } : {}),
+          }
+        : undefined,
+    aliases:
+      entry.aliases !== undefined
+        ? {
+            ...entry.aliases,
+            ...(en.aliases !== undefined ? { en: en.aliases } : {}),
+          }
+        : undefined,
+  };
+}
+
+export const GAME_TERM_ENTRIES: readonly GameTermEntry[] =
+  GAME_TERM_ENTRIES_BASE.map(mergeGameTermEn);
+
 const ENTRY_BY_ID = new Map<GameTermId, GameTermEntry>(
   GAME_TERM_ENTRIES.map((entry) => [entry.id, entry])
 );
@@ -428,7 +463,7 @@ export function resolveGameTermTitle(
   if (!entry) {
     throw new Error(`Missing glossary entry: ${id}`);
   }
-  return entry.title[locale];
+  return entry.title[locale] ?? entry.title.ja;
 }
 
 const STATUS_EFFECT_STAT_TERM_ID: Record<StatusEffectStat, GameTermId> = {
@@ -477,7 +512,7 @@ export function resolveStatusDisplayCategoryLabel(
   if (!entry) {
     throw new Error(`Missing glossary entry for status category: ${category}`);
   }
-  return entry.title[locale];
+  return entry.title[locale] ?? entry.title.ja;
 }
 
 export function resolveGameTermIdForStatusCategory(
@@ -510,9 +545,10 @@ export function statusBadgeHasClickableGameTerm(
 }
 
 export function resolveStatusBadgeTooltipLabel(
-  badge: StatusEffectBadgeDisplay
+  badge: StatusEffectBadgeDisplay,
+  locale: GameTermLocale = "ja",
 ): string {
-  const label = resolveStatusDisplayCategoryLabel(badge.category);
+  const label = resolveStatusDisplayCategoryLabel(badge.category, locale);
   if (badge.stackCount !== undefined && badge.stackCount > 1) {
     return `${label} ×${badge.stackCount}`;
   }
@@ -521,12 +557,13 @@ export function resolveStatusBadgeTooltipLabel(
 
 export function resolveCompactStatusOverflowTooltipLabel(
   badges: StatusEffectBadgeDisplay[],
-  visibleCount: number
+  visibleCount: number,
+  locale: GameTermLocale = "ja",
 ): string {
   return sortBadgesForCompactView(badges)
     .slice(visibleCount)
-    .map(resolveStatusBadgeTooltipLabel)
-    .join("、");
+    .map((badge) => resolveStatusBadgeTooltipLabel(badge, locale))
+    .join(locale === "en" ? ", " : "、");
 }
 
 export function getGameTermEntry(id: GameTermId): GameTermEntry | undefined {

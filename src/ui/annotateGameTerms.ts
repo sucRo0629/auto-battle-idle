@@ -49,10 +49,6 @@ export function segmentTextByGameTerms(
   text: string,
   locale: GameTermLocale,
 ): GameTermTextSegment[] {
-  if (locale !== "ja") {
-    return text.length > 0 ? [{ kind: "text", text }] : [];
-  }
-
   const aliases = getSortedAliases(locale);
   if (aliases.length === 0 || text.length === 0) {
     return text.length > 0 ? [{ kind: "text", text }] : [];

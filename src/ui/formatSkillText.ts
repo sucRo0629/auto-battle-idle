@@ -64,10 +64,19 @@ import { passiveDebuffToEffectDef } from "../battle/passiveDebuffBridge.ts";
 import { passiveDamageReductionToEffectDef } from "../battle/passiveDamageReductionBridge.ts";
 import { passiveDispelToEffectDef } from "../battle/passiveDispelBridge.ts";
 import { passiveHotToEffectDef } from "../battle/passiveHotBridge.ts";
+import type { GameTermLocale } from "./gameTermGlossary.ts";
 import {
   resolveGameTermTitle,
   resolveStatusEffectStatDisplayName,
 } from "./gameTermGlossary.ts";
+import {
+  getSkillTextLocale,
+  runWithSkillTextLocale,
+  skillText,
+  type SkillCardLocale,
+} from "./skillTextLocale.ts";
+
+export type { SkillCardLocale };
 
 function formatPassiveTriggerLabel(
   trigger: PassivePeriodicTriggerKind | undefined,
@@ -92,8 +101,12 @@ function formatPassiveTriggerSummary(
 }
 
 const DAMAGE_TYPE_LABELS: Record<DamageType, string> = {
-  physical: "物理",
-  magic: "魔法",
+  get physical() {
+    return skillText().damagePhysical;
+  },
+  get magic() {
+    return skillText().damageMagic;
+  },
 };
 
 function formatStatFlatSuffix(flat: number): string {
@@ -112,7 +125,7 @@ function formatStatMultiplierLabel(
   stat: StatusEffectStat,
   mul: number
 ): string {
-  const label = resolveStatusEffectStatDisplayName(stat);
+  const label = resolveStatusEffectStatDisplayName(stat, getSkillTextLocale());
   const suffix = formatStatMultiplierSuffix(mul);
   if (!suffix) return label;
   return `${label}${suffix}`;
@@ -182,20 +195,18 @@ function formatFireConditionsSummary(
 
 function formatSecondsLabel(value: number): string {
   const rounded = Math.round(value * 100) / 100;
-  if (Number.isInteger(rounded)) {
-    return `${rounded}秒`;
-  }
-  return `${rounded}秒`;
+  return skillText().seconds(rounded);
 }
 
 function formatCdLabel(kind: SkillTriggerKind, value: number): string {
+  const st = skillText();
   switch (kind) {
     case "time":
-      return value === 0 ? "チャージなし" : formatSecondsLabel(value);
+      return value === 0 ? st.noCharge : formatSecondsLabel(value);
     case "basicAttackCount":
-      return `通常攻撃${value}回`;
+      return st.basicAttackCount(value);
     case "hitsTaken":
-      return `被攻撃${value}回`;
+      return st.hitsTakenCount(value);
   }
 }
 
@@ -378,8 +389,6 @@ function formatExcessHealToBarrierPassive(def: PassiveSkillDef): string {
   const sourceLabels = sources.map((s) => (s === "outgoing" ? "与" : "被"));
   return `余剰回復バリア ${scalePct}（${sourceLabels.join("・")}）`;
 }
-
-const ACTIVE_SKILL_RECAST_META_LABEL = "再使用";
 
 function formatMultiLockSubjectPrefix(
   hitCount: number,
@@ -2316,8 +2325,6 @@ function formatPassiveSkillEffectLines(def: PassiveSkillDef): SkillCardEffectLin
   return [formatPassiveEffect(def.effect, def)];
 }
 
-export type SkillCardLocale = "ja";
-
 export type SkillCardLines = {
   metaLine: string;
   effectLines: SkillCardEffectLine[];
@@ -2330,14 +2337,15 @@ function isActiveSkillDef(
 }
 
 function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
+  const st = skillText();
   const trigger = resolveSkillTrigger(def);
   const parts: string[] = [
-    `${ACTIVE_SKILL_RECAST_META_LABEL}：${formatCdLabel(trigger.kind, trigger.value)}`,
+    `${st.recast}${st.labelColon}${formatCdLabel(trigger.kind, trigger.value)}`,
   ];
 
   const duration = resolveActiveSkillDurationLabel(def);
   if (duration) {
-    parts.push(`持続：${duration}`);
+    parts.push(`${st.duration}${st.labelColon}${duration}`);
   }
 
   const lock = formatActiveSkillLockMetaPart(def);
@@ -2351,11 +2359,11 @@ function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
       def.fireConditionMatch ?? "all"
     );
     if (condSummary) {
-      parts.push(`発動条件：${condSummary}`);
+      parts.push(`${st.fireCondition}${st.labelColon}${condSummary}`);
     }
   }
 
-  return parts.join(" / ");
+  return parts.join(st.metaJoiner);
 }
 
 function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
@@ -2376,10 +2384,11 @@ function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
 }
 
 function formatPassiveSkillMetaLine(def: PassiveSkillDef): string {
+  const st = skillText();
   if (def.effect === "counter" || def.effect === "counterChance") {
     return def.counterTrigger === "frontAllyDamaged"
-      ? "周囲の味方被弾時"
-      : "被攻撃時";
+      ? st.passiveFrontAllyHit
+      : st.passiveOnHit;
   }
   return formatPassiveTriggerSummary(def, resolvePassivePeriodicTrigger(def));
 }
@@ -2388,34 +2397,36 @@ export function formatSkillCardLines(
   def: ActiveSkillDef | PassiveSkillDef,
   options: { locale: SkillCardLocale }
 ): SkillCardLines {
-  if (options.locale !== "ja") {
-    throw new Error(`Unsupported skill card locale: ${options.locale}`);
-  }
+  return runWithSkillTextLocale(options.locale, () => {
+    if (isActiveSkillDef(def)) {
+      return {
+        metaLine: formatActiveSkillMetaLine(def),
+        effectLines: formatActiveSkillEffectLines(def),
+      };
+    }
 
-  if (isActiveSkillDef(def)) {
     return {
-      metaLine: formatActiveSkillMetaLine(def),
-      effectLines: formatActiveSkillEffectLines(def),
+      metaLine: formatPassiveSkillMetaLine(def),
+      effectLines: formatPassiveSkillEffectLines(def),
     };
-  }
-
-  return {
-    metaLine: formatPassiveSkillMetaLine(def),
-    effectLines: formatPassiveSkillEffectLines(def),
-  };
+  });
 }
 
 export function formatPassiveDescription(def: PassiveSkillDef): string {
-  return `効果：${formatPassiveEffect(def.effect, def)}`;
+  return runWithSkillTextLocale(getSkillTextLocale(), () =>
+    `${skillText().passiveEffectPrefix}${formatPassiveEffect(def.effect, def)}`,
+  );
 }
 
 export function formatActiveDescription(def: ActiveSkillDef): string {
-  const parts = [formatActiveSkillMetaLine(def)];
+  return runWithSkillTextLocale(getSkillTextLocale(), () => {
+    const parts = [formatActiveSkillMetaLine(def)];
 
-  const effects = formatActiveSkillEffectBody(def);
-  if (effects) {
-    parts.push(effects);
-  }
+    const effects = formatActiveSkillEffectBody(def);
+    if (effects) {
+      parts.push(effects);
+    }
 
-  return `${parts.join(" / ")} /`;
+    return `${parts.join(skillText().metaJoiner)} /`;
+  });
 }

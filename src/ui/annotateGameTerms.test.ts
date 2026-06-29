@@ -172,12 +172,16 @@ describe("segmentTextByGameTerms", () => {
 });
 
 describe("gameTermGlossary locale shape", () => {
-  it("registers ja title for every entry; description when present must be non-empty", async () => {
+  it("registers ja and en titles for every entry", async () => {
     const { GAME_TERM_ENTRIES } = await import("./gameTermGlossary.ts");
     for (const entry of GAME_TERM_ENTRIES) {
       expect(entry.title.ja.length).toBeGreaterThan(0);
+      expect(entry.title.en.length).toBeGreaterThan(0);
       if (entry.description !== undefined) {
         expect(entry.description.ja.length).toBeGreaterThan(0);
+        if (entry.aliases !== undefined) {
+          expect(entry.description.en?.length ?? 0).toBeGreaterThan(0);
+        }
       }
     }
   });
@@ -190,6 +194,9 @@ describe("gameTermGlossary locale shape", () => {
         continue;
       }
       expect(entry.aliases?.ja.length).toBeGreaterThan(0);
+      if (entry.description.en !== undefined) {
+        expect(entry.aliases?.en?.length).toBeGreaterThan(0);
+      }
     }
   });
 

@@ -860,13 +860,19 @@ describe('formatActiveDescription', () => {
     ]);
   });
 
-  it('formatSkillCardLines requires locale ja', async () => {
+  it('formatSkillCardLines supports locale en for meta lines', async () => {
     const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const { setLocale, resetLocaleStateForTests, resolveLocale } = await import(
+      '../i18n/locale.ts'
+    );
+    resetLocaleStateForTests();
+    resolveLocale('');
+    setLocale('en');
     const gameData = await loadGameData();
     const a1 = gameData.skillRegistry.actives.df_guardian_active_1;
-    expect(() =>
-      formatSkillCardLines(a1!, { locale: 'en' as 'ja' }),
-    ).toThrow(/Unsupported skill card locale/);
+    const card = formatSkillCardLines(a1!, { locale: 'en' });
+    expect(card.metaLine).toBe('Recast: 8s / Duration: 5s');
+    resetLocaleStateForTests();
   });
 
   it('formats df_paladin passives with 効果 prefix', async () => {
