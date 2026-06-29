@@ -962,6 +962,8 @@ export interface PassiveSkillDef {
   herbalPotencyConstitutionThresholds?: number[];
   /** herbalPotency: 体質段階ごとの hp 乗算（閾値と同順） */
   herbalPotencyConstitutionHpMultipliers?: number[];
+  /** herbalPotency: 体質段階バフの HUD 表示名（未指定 = 「頑健」） */
+  herbalPotencyConstitutionDisplayName?: string;
   /** blockResonance: スタック上限 */
   blockResonanceMaxStacks?: number;
   /** blockResonance: stack ごとのダメージ軽減率（0.03 = 3%/stack） */

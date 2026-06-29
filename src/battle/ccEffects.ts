@@ -1,4 +1,5 @@
 import { getBattleX } from './combatPosition.ts';
+import { resetCooldownAfterFire } from './skillTrigger.ts';
 import type { ActiveSkillDef, CombatantState, StatusEffect } from './types.ts';
 import { BATTLE_ENEMY_MARCH_VISIBLE_MIN_X } from './battleConstants.ts';
 
@@ -40,8 +41,18 @@ export function clampStunDurationSec(durationSec: number): number {
   return Math.min(Math.max(0, durationSec), STUN_MAX_DURATION_SEC);
 }
 
+export function resetBasicCooldownOnStun(
+  target: CombatantState,
+  actives: Record<string, ActiveSkillDef>,
+): void {
+  const basicCd = target.cooldowns.find((cd) => cd.slotKind === 'basic');
+  if (!basicCd) return;
+  const skill = actives[basicCd.skillId];
+  if (!skill) return;
+  resetCooldownAfterFire(basicCd, skill);
+}
+
 export interface ApplyStunOptions {
-  /** Backward-compatible call shape; stun no longer mutates cooldowns. */
   actives?: Record<string, ActiveSkillDef>;
 }
 
@@ -49,7 +60,7 @@ export function applyStunToTarget(
   target: CombatantState,
   durationSec: number,
   source: { skillId: string; sourceId: string },
-  _options?: ApplyStunOptions,
+  options?: ApplyStunOptions,
 ): boolean {
   const clamped = clampStunDurationSec(durationSec);
   if (!target.isAlive || clamped <= 0) return false;
@@ -61,6 +72,9 @@ export function applyStunToTarget(
     if (clamped > existing.remainingSec) {
       existing.remainingSec = clamped;
       existing.durationSec = clamped;
+    }
+    if (options?.actives) {
+      resetBasicCooldownOnStun(target, options.actives);
     }
     return true;
   }
@@ -76,6 +90,9 @@ export function applyStunToTarget(
     sourceId: source.sourceId,
   };
   target.statusEffects.push(effect);
+  if (options?.actives) {
+    resetBasicCooldownOnStun(target, options.actives);
+  }
   return true;
 }
 

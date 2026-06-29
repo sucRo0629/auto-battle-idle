@@ -111,10 +111,10 @@ describe('stun cooldown side effects', () => {
     expect(activeCd.remaining).toBe(6);
   });
 
-  it('ticks basic cooldown while stunned without stun reset', () => {
+  it('resets basic cooldown on stun apply then continues ticking while stunned', () => {
     const basicCd: SkillCooldown = {
       skillId: 'test_basic',
-      remaining: 2,
+      remaining: 0,
       slotKind: 'basic',
     };
     const unit = mockUnit([basicCd]);

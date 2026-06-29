@@ -96,7 +96,7 @@ describe('ccEffects', () => {
     expect(target.statusEffects[0]?.remainingSec).toBe(5);
   });
 
-  it('applyStunToTarget does not reset basic cooldown when actives provided', () => {
+  it('applyStunToTarget resets basic cooldown when actives provided', () => {
     const target = mockUnit({ id: 'enemy', isEnemy: true });
     const basicCd = target.cooldowns.find((cd) => cd.slotKind === 'basic')!;
     basicCd.remaining = 0;
@@ -106,7 +106,45 @@ describe('ccEffects', () => {
       { skillId: 'bash', sourceId: 'ally' },
       { actives },
     );
-    expect(basicCd.remaining).toBe(0);
+    expect(basicCd.remaining).toBe(2);
+  });
+
+  it('applyStunToTarget does not reset active cooldown when actives provided', () => {
+    const target = mockUnit({
+      id: 'enemy',
+      isEnemy: true,
+      cooldowns: [
+        {
+          skillId: 'test_basic',
+          remaining: 0,
+          slotKind: 'basic',
+        },
+        {
+          skillId: 'test_active',
+          remaining: 0,
+          slotKind: 'active',
+          slotIndex: 0,
+        },
+      ],
+    });
+    const activeCd = target.cooldowns.find((cd) => cd.slotKind === 'active')!;
+    applyStunToTarget(
+      target,
+      1,
+      { skillId: 'bash', sourceId: 'ally' },
+      {
+        actives: {
+          ...actives,
+          test_active: {
+            id: 'test_active',
+            name: 'test_active',
+            trigger: { kind: 'time' as const, value: 8 },
+            effect: [],
+          },
+        },
+      },
+    );
+    expect(activeCd.remaining).toBe(0);
   });
 
   it('applyKnockbackToTarget pushes each side toward rear', () => {

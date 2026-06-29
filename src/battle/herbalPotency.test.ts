@@ -7,6 +7,8 @@ import {
   getHerbalPotencyStacks,
   mergeHerbalPotencyPassives,
   resolveHerbalPotencyHotBonus,
+  HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME,
+  resolveHerbalPotencyConstitutionDisplayName,
   syncHerbalPotencyAuras,
   tickHerbalPotencyAccumulation,
 } from './herbalPotency.ts';
@@ -68,6 +70,41 @@ describe('herbalPotency merge', () => {
     ] as PassiveSkillDef[]);
     expect(merged.hotTickSec).toBe(1.5);
     expect(merged.accumulateSec).toBe(2);
+  });
+
+  it('merges constitutionDisplayName from passives (last wins)', () => {
+    const merged = mergeHerbalPotencyPassives([
+      {
+        id: 'p1',
+        name: 'p1',
+        effect: 'herbalPotency',
+        herbalPotencyMaxStacks: 6,
+        herbalPotencyConstitutionDisplayName: '旧名',
+      },
+      {
+        id: 'p4',
+        name: 'p4',
+        effect: 'herbalPotency',
+        herbalPotencyMaxStacks: 9,
+        herbalPotencyConstitutionDisplayName: '薬草の極意',
+      },
+    ] as PassiveSkillDef[]);
+    expect(merged.constitutionDisplayName).toBe('薬草の極意');
+    expect(resolveHerbalPotencyConstitutionDisplayName(merged)).toBe('薬草の極意');
+  });
+
+  it('falls back to default constitution display name', () => {
+    const merged = mergeHerbalPotencyPassives([
+      {
+        id: 'p1',
+        name: 'p1',
+        effect: 'herbalPotency',
+        herbalPotencyMaxStacks: 6,
+      },
+    ] as PassiveSkillDef[]);
+    expect(resolveHerbalPotencyConstitutionDisplayName(merged)).toBe(
+      HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME,
+    );
   });
 });
 
@@ -204,5 +241,32 @@ describe('syncHerbalPotencyAuras', () => {
       (e) => e.overlay === 'hot' && e.skillId === 'sp_alchemist_passive_1',
     );
     expect(hot?.tickSec).toBe(1);
+  });
+
+  it('applies constitution buff with configurable display name', () => {
+    const gameData = loadGameData();
+    const passives = {
+      ...gameData.skillRegistry.passives,
+      sp_alchemist_passive_4: {
+        ...gameData.skillRegistry.passives.sp_alchemist_passive_4!,
+        herbalPotencyConstitutionDisplayName: '極意体質',
+      },
+    };
+    const herbalist = mockAlly({
+      id: 'herb',
+      classId: 'sp_alchemist',
+      build: {
+        learnedPassiveIds: ['sp_alchemist_passive_4'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const ally = mockAlly({ id: 'ally1' });
+    addHerbalPotencyStacks(ally, 3, 9, herbalist.id);
+    syncHerbalPotencyAuras([herbalist, ally], [], passives, gameData);
+    const constitutionBuff = ally.statusEffects.find((e) =>
+      e.id.startsWith('herbal_potency_constitution_'),
+    );
+    expect(constitutionBuff?.displayName).toBe('極意体質');
   });
 });

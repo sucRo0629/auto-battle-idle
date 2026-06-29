@@ -59,7 +59,7 @@ describe('healReservation', () => {
     grantOnHealMaxHpRatio: 0.6,
     stackDurationSec: 8,
     triggerHpRatio: 0.35,
-    buffDisplayName: '癒しの残響',
+    buffDisplayName: '治癒の残響',
     healAmount: { kind: 'flat', flatAmount: 40 },
   };
   const passives = { reservation_passive: passive };
@@ -70,7 +70,7 @@ describe('healReservation', () => {
     grantHealReservationStacks(healer, target, 0.5, passives);
     const stack = target.statusEffects.find((e) => e.overlay === 'healReservation');
     expect(stack).toBeDefined();
-    expect(stack?.displayName).toBe('癒しの残響');
+    expect(stack?.displayName).toBe('治癒の残響');
   });
 
   it('does not grant when pre-heal HP ratio is above threshold', () => {

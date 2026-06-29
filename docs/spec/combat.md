@@ -24,7 +24,7 @@
 
 **回避:** 直接 `damage` の物理/魔法問わず（DoT tick 非対象）。`SkillExecutor` で `resolveDamage`（①〜⑨）**前**（直接 `damage` パイプライン先頭）に判定。
 
-**ブロック（物理）:** 直接 `damage` かつ `damageType: physical`。⑨の後・⑪で判定（DoT 非対象）。`overlay: block` の `blockChance` を合算して 1 回ロール。
+**ブロック（物理）:** 直接 `damage` かつ `damageType: physical`。⑨の後・⑪で判定（DoT 非対象）。`overlay: block` の `blockChance` を合算して 1 回ロール。成功時 `blocked = floor(afterDR × mitigationRatio)`。`mitigationRatio = min(1, 0.25 + effectiveAtk / 1000)`（25% ベース + 有効攻撃力 1 あたり 0.1%、上限 100%）。実装: `blockMitigation.ts`。
 
 **ブロック（魔法）:** 直接 `damage` かつ `damageType: magic`。`blocksMagic: true` の overlay の `blockChance` のみ合算して 1 回ロール。軽減率は固定 15%。`frontBlockAura`（護法士 P3 真言加護）で前列に付与。
 
@@ -256,7 +256,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 **Party HUD（アクティブ）:** Lv 帯で解放済みのアクティブ枠数だけ表示（**Lv1=2 / Lv10=3 / Lv20=4**、最大 4）。`getUnlockedSkillSlotCount` と同じ。未習得の解放枠は **empty トラック** のみ。戦闘参加中スキルは CD 充填中も表示（charging / paused / ready / active）。2 列グリッドで行数は枠数に応じて可変（slot 0=左上, 1=右上, 2=左下, 3=右下）。解放 0 件のときリキャスト行ごと非表示。各セル左 = CD fill、右 = `storedCharges > 0` のときのみ 3px 幅ストックピップ。`fireHold` 時は fill + ピップを tint / 点滅。`stageTriggerLimit` を持つスキルで Stage 内残回数が 0 のときは fill を **empty（トラック色のみ・最暗）** のまま表示し、`ready` / `fireHold` にしない。
 
-**スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、使用者として通常攻撃・アクティブを発動せず、ターゲット選択も行わない。スタン中のユニットは他ユニットからの攻撃・回復・効果対象にはなり得る。スタンは CD 停止効果を持たない。
+**スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、使用者として通常攻撃・アクティブを発動せず、ターゲット選択も行わない。スタン中のユニットは他ユニットからの攻撃・回復・効果対象にはなり得る。スタンは **CD 進行の停止** 効果を持たない。**付与成功時** に対象の **通常攻撃 CD のみ** 満タンにリセットする（アクティブ CD・イベントゲージはリセット／停止しない）。
 
 ## 敵の単体ターゲット選定
 
@@ -473,13 +473,13 @@ A4 **早鳴りの印** は戦場の全乾印・坤印の残り時間を短縮し
 | 通常攻撃変形          | `effect: "basicAttackTransform"` + `buffDurationSec` 等 — バフ持続中のみ通常攻撃 effect を実行時マージ（下記）。付与対象は自身固定                                                                                                                                                                                                                                                                                                                         |
 | 条件分岐              | `effect: "conditionalEffect"` + `conditions` / `thenEffects` / `elseEffects` — 戦況条件で branch effect を 1 系統だけ実行。branch 内 `conditionalEffect` の入れ子は不可。skill 直下 `fireConditions` は発動ゲート専用                                                                                                                                                                                                                                      |
 | debuff                | `effect: "debuff"` + `debuffStat` / `debuffMultiplier` / `debuffDurationSec`                                                                                                                                                                                                                                                                                                                                                                               |
-| スタン                | `effect: "stun"` + `durationSec`（**上限 5 秒**）— `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は使用者としての通常攻撃・アクティブ発動・ターゲット選択不可。CD は停止しない                                                                                                                                                                                                                                                                       |
+| スタン                | `effect: "stun"` + `durationSec`（**上限 5 秒**）— `StatusEffect.kind: "cc"`, `overlay: "stun"`。持続中は使用者としての通常攻撃・アクティブ発動・ターゲット選択不可。**付与成功時**に対象の **通常攻撃 CD のみ** 満タンにリセット。スタン中も **アクティブ CD・イベントゲージは戦闘時間どおり進行**（停止しない）                                                                                                                                                                                                                                                                       |
 | 凍結 / 時間停止系拘束 | **未実装・予約概念**。CD 停止が必要な場合はスタンではなく別 `StatusEffect` として定義する。スタンとは別物で、Flow 系上位制御など時間進行そのものへ干渉する効果として個別仕様化する                                                                                                                                                                                                                                                                         |
 | 反撃                  | `effect: "counter"` + `amount` / `durationSec` — `StatusEffect.overlay: "counter"`。バフ/デバフタグ対象外。詳細は下記                                                                                                                                                                                                                                                                                                                                      |
 | デバフ解除            | `effect: "dispel"` — `dispelCount=0` で対象タグ全解除、`N>0` で `dispelPriority` に従い N 件（`longest` = 残り時間最長、`strongest` = 効果量最大。未指定は `longest`）。対象タグに `attackSpeed`（SPD デバフ）可。パッシブ `periodicDispel` は `stageStart` / `waveStart` / `onDebuffReceived` で `dispelTargetRule` + 形状・射程（接頭辞 `dispel`、[classes-and-skills.md](classes-and-skills.md)）で対象選択。`dispelTriggerLimit` = Wave 内発動回数上限 |
 | ノックバック          | `effect: "knockback"` + `distancePx` — 各陣営の **後方** へ `battleX` を即時移動（プレイヤーは左 `-X`、敵は右 `+X`）。敵は進軍表示下限未満にならない。**付与成功時**に移動硬直 **1.5 秒**（`StatusEffect.overlay: "moveLock"`）。移動硬直中は接敵接近・スキル `move` を停止するが、通常攻撃・アクティブは可能。オートバトルにおける CC 評価原則は [design-philosophy.md](../design-philosophy.md) §8。詳細は [battle-field.md](battle-field.md) §4.4                                                                                                           |
 
-**スタンと凍結の境界:** スタンは行動不能だけを扱い、CD 停止・時間停止・ゲージ停止を持たない。CD 停止を行うデバフが必要になった場合は、`freeze` など別状態として追加し、CD 進行停止対象（basic CD / active CD / イベントゲージ / DoT/HoT tick 等）を個別に定義する。
+**スタンと凍結の境界:** スタンは行動不能と **通常攻撃 CD の付与時リセット** のみを扱い、CD 進行の停止・時間停止・ゲージ停止は持たない。CD 進行停止を行うデバフが必要になった場合は、`freeze` など別状態として追加し、CD 進行停止対象（basic CD / active CD / イベントゲージ / DoT/HoT tick 等）を個別に定義する。
 
 ### 反撃（`counter`）
 

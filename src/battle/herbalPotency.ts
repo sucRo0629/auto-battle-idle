@@ -16,6 +16,7 @@ import type {
 
 export const HERBAL_POTENCY_HOT_TICK_SEC = 1;
 export const HERBAL_POTENCY_ACCUMULATE_SEC = 3;
+export const HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME = '頑健';
 export const HERBAL_POTENCY_AURA_PREFIX = 'herbal_potency_aura_';
 export const HERBAL_POTENCY_STACKS_ID_PREFIX = 'herbal_potency_stacks_';
 export const HERBAL_POTENCY_CONSTITUTION_ID_PREFIX = 'herbal_potency_constitution_';
@@ -30,6 +31,15 @@ export interface MergedHerbalPotencyConfig {
   auraPassive?: PassiveSkillDef;
   constitutionThresholds: number[];
   constitutionHpMultipliers: number[];
+  constitutionDisplayName?: string;
+}
+
+export function resolveHerbalPotencyConstitutionDisplayName(
+  config: Pick<MergedHerbalPotencyConfig, 'constitutionDisplayName'>,
+): string {
+  return (
+    config.constitutionDisplayName ?? HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME
+  );
 }
 
 export function isHerbalPotencyPassive(passive: PassiveSkillDef): boolean {
@@ -68,6 +78,7 @@ export function mergeHerbalPotencyPassives(
   let auraPassive: PassiveSkillDef | undefined;
   const constitutionThresholds: number[] = [];
   const constitutionHpMultipliers: number[] = [];
+  let constitutionDisplayName: string | undefined;
 
   for (const passive of passives) {
     if (!isHerbalPotencyPassive(passive)) continue;
@@ -99,6 +110,9 @@ export function mergeHerbalPotencyPassives(
         constitutionHpMultipliers.push(m);
       }
     }
+    if (passive.herbalPotencyConstitutionDisplayName) {
+      constitutionDisplayName = passive.herbalPotencyConstitutionDisplayName;
+    }
   }
 
   constitutionThresholds.sort((a, b) => a - b);
@@ -112,6 +126,7 @@ export function mergeHerbalPotencyPassives(
     auraPassive,
     constitutionThresholds,
     constitutionHpMultipliers,
+    constitutionDisplayName,
   };
 }
 
@@ -207,6 +222,7 @@ function syncConstitutionBuff(
   target: CombatantState,
   tier: number,
   multiplier: number,
+  displayName: string,
 ): void {
   const effectId = `${HERBAL_POTENCY_CONSTITUTION_ID_PREFIX}${target.id}`;
   target.statusEffects = target.statusEffects.filter((e) => e.id !== effectId);
@@ -219,7 +235,7 @@ function syncConstitutionBuff(
     sourceId: target.id,
     durationSec: HERBAL_POTENCY_AURA_DURATION_SEC,
     remainingSec: HERBAL_POTENCY_AURA_DURATION_SEC,
-    displayName: '薬効体質',
+    displayName,
   });
 }
 
@@ -240,7 +256,12 @@ function updateConstitutionTier(
   if (tier <= 0) return;
   const multiplier =
     config.constitutionHpMultipliers[tier - 1] ?? 1;
-  syncConstitutionBuff(target, tier, multiplier);
+  syncConstitutionBuff(
+    target,
+    tier,
+    multiplier,
+    resolveHerbalPotencyConstitutionDisplayName(config),
+  );
 }
 
 function applyHerbalPotencyAura(

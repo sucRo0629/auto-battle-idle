@@ -29,7 +29,7 @@ function getSortedAliases(locale: GameTermLocale): AliasMatch[] {
 
   const matches: AliasMatch[] = [];
   for (const entry of GAME_TERM_ENTRIES) {
-    const aliases = entry.aliases[locale];
+    const aliases = entry.aliases?.[locale];
     if (!aliases) continue;
     for (const alias of aliases) {
       if (alias.length === 0) continue;

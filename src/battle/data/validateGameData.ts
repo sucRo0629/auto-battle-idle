@@ -4003,6 +4003,11 @@ function requirePassiveEffectParams(
         obj.herbalPotencyConstitutionHpMultipliers,
         `${context}.herbalPotencyConstitutionHpMultipliers`,
       );
+      const constitutionDisplayName =
+        typeof obj.herbalPotencyConstitutionDisplayName === 'string' &&
+        obj.herbalPotencyConstitutionDisplayName.length > 0
+          ? obj.herbalPotencyConstitutionDisplayName
+          : undefined;
       if (
         constitutionThresholds !== undefined &&
         constitutionHpMultipliers !== undefined &&
@@ -4048,6 +4053,9 @@ function requirePassiveEffectParams(
           : {}),
         ...(constitutionHpMultipliers !== undefined
           ? { herbalPotencyConstitutionHpMultipliers: constitutionHpMultipliers }
+          : {}),
+        ...(constitutionDisplayName !== undefined
+          ? { herbalPotencyConstitutionDisplayName: constitutionDisplayName }
           : {}),
         ...(hotDurationSec !== undefined ? { hotDurationSec } : {}),
       };

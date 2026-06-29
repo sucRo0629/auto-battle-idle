@@ -114,7 +114,7 @@ import {
   initActiveStageTriggerLimits,
   isAllySupportBlockedDuringArenaDominance,
 } from "./arenaDominance.ts";
-import { tryTriggerHealReservation, grantHealReservationStacks } from "./healReservation.ts";
+import { tryTriggerHealReservation, grantHealReservationStacks, HEAL_RESERVATION_BUFF_DISPLAY_NAME } from "./healReservation.ts";
 import { tryTriggerBarrierBreakRegen } from "./barrierBreakRegen.ts";
 import { tryTriggerBarrierDepletionHeal } from "./barrierDepletionHeal.ts";
 import { applyWardBarrierToIncomingDamage } from "./wardBarrier.ts";
@@ -429,7 +429,7 @@ export class BattleEngine {
             (reservation.passiveId
               ? this.gameData.skillRegistry.passives[reservation.passiveId]?.name
               : undefined) ??
-            "癒しの残響",
+            HEAL_RESERVATION_BUFF_DISPLAY_NAME,
           effect: "heal",
           amount: reservation.healed,
         });
@@ -459,7 +459,7 @@ export class BattleEngine {
                 ? this.gameData.skillRegistry.passives[reservation.passiveId]
                     ?.name
                 : undefined) ??
-              "癒しの残響",
+              HEAL_RESERVATION_BUFF_DISPLAY_NAME,
             effect: "heal",
             amount: reservation.redirectAmount ?? reservation.redirectHealed,
           });
@@ -1501,6 +1501,7 @@ export class BattleEngine {
       this.enemies,
       config.endStunSec,
       config.endKnockbackPx,
+      this.gameData.skillRegistry.actives,
     );
     this.recordBattleXDebugChanges(this.enemies, beforeById, "knockback");
   }

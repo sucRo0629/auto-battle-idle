@@ -120,7 +120,7 @@ describe("segmentTextByGameTerms", () => {
     });
   });
 
-  it("does not link atk, def, or reg stat display names in skill text", () => {
+  it("does not link atk, def, reg, hp, or attackSpeed in skill text", () => {
     expect(segmentTextByGameTerms("攻撃力+20%", "ja")).toEqual([
       { kind: "text", text: "攻撃力+20%" },
     ]);
@@ -130,28 +130,66 @@ describe("segmentTextByGameTerms", () => {
     expect(segmentTextByGameTerms("魔法耐性を20%無視", "ja")).toEqual([
       { kind: "text", text: "魔法耐性を20%無視" },
     ]);
+    expect(segmentTextByGameTerms("味方のHPを攻撃力の175%で回復", "ja")).toEqual([
+      { kind: "text", text: "味方のHPを攻撃力の175%で回復" },
+    ]);
+    expect(segmentTextByGameTerms("攻撃速度+25%", "ja")).toEqual([
+      { kind: "text", text: "攻撃速度+25%" },
+    ]);
+  });
+
+  it("preserves newlines in text segments", () => {
+    const text = "1行目\nバリア付与\n3行目";
+    const segments = segmentTextByGameTerms(text, "ja");
+    expect(segments).toEqual([
+      { kind: "text", text: "1行目\n" },
+      { kind: "term", termId: "barrier", matchedText: "バリア" },
+      { kind: "text", text: "付与\n3行目" },
+    ]);
+    expect(segmentsToPlainText(segments)).toBe(text);
+  });
+
+  it("links multiLock, skillLock, moveLock, and dotCompress terms", () => {
+    expect(segmentTextByGameTerms("敵2体をマルチロックして", "ja")[1]).toEqual({
+      kind: "term",
+      termId: "multiLock",
+      matchedText: "マルチロック",
+    });
+
+    expect(segmentTextByGameTerms("硬直・移動停止5秒", "ja")).toEqual([
+      { kind: "term", termId: "skillLock", matchedText: "硬直" },
+      { kind: "text", text: "・" },
+      { kind: "term", termId: "moveLock", matchedText: "移動停止" },
+      { kind: "text", text: "5秒" },
+    ]);
+
+    expect(segmentTextByGameTerms("DoT圧縮基準×0.7", "ja")[0]).toEqual({
+      kind: "term",
+      termId: "dotCompress",
+      matchedText: "DoT圧縮",
+    });
   });
 });
 
 describe("gameTermGlossary locale shape", () => {
-  it("registers ja title and description for every entry", async () => {
+  it("registers ja title for every entry; description when present must be non-empty", async () => {
     const { GAME_TERM_ENTRIES } = await import("./gameTermGlossary.ts");
     for (const entry of GAME_TERM_ENTRIES) {
       expect(entry.title.ja.length).toBeGreaterThan(0);
-      expect(entry.description.ja.length).toBeGreaterThan(0);
+      if (entry.description !== undefined) {
+        expect(entry.description.ja.length).toBeGreaterThan(0);
+      }
     }
   });
 
-  it("registers ja link aliases except HUD-only entries", async () => {
-    const { GAME_TERM_ENTRIES, GAME_TERM_NO_TEXT_LINK_IDS } = await import(
-      "./gameTermGlossary.ts"
-    );
+  it("requires ja aliases only when description is present", async () => {
+    const { GAME_TERM_ENTRIES } = await import("./gameTermGlossary.ts");
     for (const entry of GAME_TERM_ENTRIES) {
-      if (GAME_TERM_NO_TEXT_LINK_IDS.has(entry.id)) {
-        expect(entry.aliases.ja).toEqual([]);
+      if (entry.description === undefined) {
+        expect(entry.aliases).toBeUndefined();
         continue;
       }
-      expect(entry.aliases.ja.length).toBeGreaterThan(0);
+      expect(entry.aliases?.ja.length).toBeGreaterThan(0);
     }
   });
 

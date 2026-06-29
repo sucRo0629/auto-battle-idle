@@ -2,7 +2,7 @@ import { getEffectiveAtk } from './combatMath.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 
 const BLOCK_ATK_BASE_RATIO = 0.25;
-const BLOCK_ATK_DIVISOR = 100;
+const BLOCK_ATK_DIVISOR = 1000;
 export const MAGIC_BLOCK_MITIGATION_RATIO = 0.15;
 
 function sumBlockChanceFromEffects(

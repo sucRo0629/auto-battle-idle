@@ -71,6 +71,7 @@
   font-size: 13px;
   line-height: 1.5;
   color: #c4cad4;
+  white-space: pre-line;
 }
 
 .game-term-link {

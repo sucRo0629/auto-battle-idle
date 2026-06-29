@@ -149,6 +149,16 @@ describe("GameTermPanel", () => {
     expect(iconEl.getAttribute("src")).toBeTruthy();
   });
 
+  it("shows title only when glossary entry has no description", () => {
+    setupPanel();
+    panel.openFromTerm("nextOutgoingDamage", createAnchor("次のダメージ増加"));
+
+    expect(host.querySelector(".game-term-panel-title")?.textContent).toBe(
+      "次のダメージ増加",
+    );
+    expect(host.querySelector(".game-term-panel-body")?.textContent).toBe("");
+  });
+
   it("shows block status icon for magicBlock term", () => {
     setupPanel();
     panel.openFromTerm("magicBlock", createAnchor("魔法ブロック"));

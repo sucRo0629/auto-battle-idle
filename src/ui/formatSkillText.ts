@@ -6,8 +6,17 @@ import { resolveSkillTrigger } from "../battle/skillTrigger.ts";
 import { KNOCKBACK_MOVE_LOCK_SEC } from "../battle/ccEffects.ts";
 import {
   HERBAL_POTENCY_ACCUMULATE_SEC,
+  HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME,
   HERBAL_POTENCY_HOT_TICK_SEC,
 } from "../battle/herbalPotency.ts";
+import {
+  BLAZING_FLAME_DOT_ATK_SCALE,
+  BLAZING_FLAME_MAGIC_TAKEN_PER_STACK,
+  BLAZING_FLAME_MAX_STACKS_DEFAULT,
+  SEED_FLAME_DOT_ATK_SCALE,
+  SEED_FLAME_DURATION_SEC,
+  SEED_FLAME_MAX_STACKS,
+} from "../battle/sorcererFlame.ts";
 import {
   BUFF_SUB_KIND_LABELS,
   DEBUFF_FILTER_TAG_LABELS,
@@ -293,6 +302,50 @@ function formatBarrierDepletionHealPassive(def: PassiveSkillDef): string {
   return formatBarrierDepletionHealEffectLines(def).join("、");
 }
 
+/** スキルカード effectLines のインデント行プレフィックス（表示時は CSS で字下げ） */
+export const SKILL_CARD_INDENT_PREFIX = "\u3000";
+
+function formatSkillCardIndentLine(text: string): string {
+  return `${SKILL_CARD_INDENT_PREFIX}${text}`;
+}
+
+function formatSeedFlameOnActiveHitEffectLines(def: PassiveSkillDef): string[] {
+  const seedFlameMaxStacks = def.seedFlameMaxStacks ?? SEED_FLAME_MAX_STACKS;
+  const seedFlameDurationSec = def.seedFlameDurationSec ?? SEED_FLAME_DURATION_SEC;
+  const seedFlameDotPct = formatPercent(
+    def.seedFlameDotAtkScale ?? SEED_FLAME_DOT_ATK_SCALE
+  );
+  const blazingFlameDotPct = formatPercent(
+    def.blazingFlameDotAtkScale ?? BLAZING_FLAME_DOT_ATK_SCALE
+  );
+  const blazingFlameMagicTakenPct = formatPercent(
+    def.blazingFlameMagicTakenPerStack ?? BLAZING_FLAME_MAGIC_TAKEN_PER_STACK
+  );
+  const blazingFlameMaxStacks =
+    def.blazingFlameMaxStacksDefault ?? BLAZING_FLAME_MAX_STACKS_DEFAULT;
+
+  return [
+    "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする",
+    `- 種火：1スタックごとに${seedFlameDurationSec}秒間毎秒攻撃力の${seedFlameDotPct}の魔法ダメージを与える`,
+    formatSkillCardIndentLine(`最大スタック数：${seedFlameMaxStacks}`),
+    `- 熾火：1スタックごとに無期限で毎秒攻撃力の${blazingFlameDotPct}の魔法ダメージを与える`,
+    formatSkillCardIndentLine(
+      `さらに1スタックごとに魔法攻撃の被ダメージを${blazingFlameMagicTakenPct}増加させる`
+    ),
+    formatSkillCardIndentLine(`最大スタック数：${blazingFlameMaxStacks}`),
+  ];
+}
+
+function formatSeedFlameOnActiveHitPassive(def: PassiveSkillDef): string {
+  return formatSeedFlameOnActiveHitEffectLines(def)
+    .map((line) =>
+      line.startsWith(SKILL_CARD_INDENT_PREFIX)
+        ? line.slice(SKILL_CARD_INDENT_PREFIX.length)
+        : line.replace(/^- /, "")
+    )
+    .join("、");
+}
+
 function formatExcessHealToBarrierPassive(def: PassiveSkillDef): string {
   const scalePct = formatPercent(def.barrierScale ?? 1);
   const sources = def.excessHealSources ?? ["outgoing"];
@@ -305,8 +358,45 @@ function formatExcessHealToBarrierPassive(def: PassiveSkillDef): string {
 
 const ACTIVE_SKILL_RECAST_META_LABEL = "再使用";
 
-const MULTI_LOCK_UNDERFLOW_NOTE =
-  "対象が不足している場合、同じ対象を再度攻撃する";
+function formatMultiLockSubjectPrefix(
+  hitCount: number,
+  side: TargetSpec["side"],
+): string {
+  if (side === "ally") {
+    return `味方${hitCount}体をマルチロックして`;
+  }
+  return `敵${hitCount}体をマルチロックして`;
+}
+
+function formatMultiLockEffectLine(
+  effect: SkillEffectDef,
+  targetSpec: TargetSpec,
+): string | null {
+  if ((effect.targetShape ?? "single") !== "multiLock") return null;
+  const hitCount = effect.hitCount ?? 1;
+  if (hitCount <= 1) return null;
+  const prefix = formatMultiLockSubjectPrefix(hitCount, targetSpec.side);
+
+  if (effect.type === "damage") {
+    return `${prefix}${formatCompactAtkBasedDamageSentence(
+      effect.amount,
+      effect.damageType,
+    )}`;
+  }
+  if (effect.type === "heal") {
+    return `${prefix}${formatCompactAtkBasedHealSentence(
+      effect.amount,
+      targetSpec,
+    )}`;
+  }
+  if (effect.type === "buff" && effect.buffSubKind === "barrier") {
+    return `${prefix}${formatCompactBarrierBuffLabel(
+      effect.amount,
+      effect.barrierStack,
+    )}`;
+  }
+  return null;
+}
 
 function formatCompactBarrierBuffLabel(
   amount: ResourceAmountSpec | undefined,
@@ -390,19 +480,12 @@ function formatCompactSingleTargetDamageSentence(
 }
 
 function formatMultiLockDamageEffectLines(
-  effect: SkillEffectDef
+  effect: SkillEffectDef,
+  inheritTarget?: TargetSpec,
 ): string[] | null {
-  if (effect.type !== "damage") return null;
-  if ((effect.targetShape ?? "single") !== "multiLock") return null;
-  const hitCount = effect.hitCount ?? 1;
-  if (hitCount <= 1) return null;
-  return [
-    `敵${hitCount}体に対して${formatCompactAtkBasedDamageSentence(
-      effect.amount,
-      effect.damageType
-    )}`,
-    MULTI_LOCK_UNDERFLOW_NOTE,
-  ];
+  const targetSpec = resolveEffectTargetSpec(effect, inheritTarget);
+  const line = formatMultiLockEffectLine(effect, targetSpec);
+  return line ? [line] : null;
 }
 
 function resolveTargetStatDisplayName(stat: TargetStat): string {
@@ -655,7 +738,7 @@ function formatActiveSkillDefaultEffectLines(
   let scopeApplied = false;
 
   for (const effect of mappableEffects) {
-    const multiLockLines = formatMultiLockDamageEffectLines(effect);
+    const multiLockLines = formatMultiLockDamageEffectLines(effect, def.target);
     if (multiLockLines) {
       if (scopePrefix && !scopeApplied) {
         lines.push(`${scopePrefix}${multiLockLines[0]}`);
@@ -1167,7 +1250,10 @@ function formatActiveEffectDetail(
         : "";
       const amount = formatResourceAmount(effect.amount);
       if (compact) {
-        const multiLockLines = formatMultiLockDamageEffectLines(effect);
+        const multiLockLines = formatMultiLockDamageEffectLines(
+          effect,
+          inheritTarget,
+        );
         if (
           multiLockLines &&
           isOmittableDefaultEnemyTarget(targetSpec)
@@ -1921,8 +2007,11 @@ function formatPassiveEffect(
         );
       }
       if (def.herbalPotencyConstitutionThresholds?.length) {
+        const constitutionName =
+          def.herbalPotencyConstitutionDisplayName ??
+          HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME;
         potencyParts.push(
-          `薬効体質 ${def.herbalPotencyConstitutionThresholds.join("/")}`
+          `${constitutionName} ${def.herbalPotencyConstitutionThresholds.join("/")}`
         );
       }
       const hotTickSec =
@@ -2016,7 +2105,7 @@ function formatPassiveEffect(
         def.enemyDamageTakenMultiplier ?? 1.2
       )}）`;
     case "seedFlameOnActiveHit":
-      return "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする";
+      return formatSeedFlameOnActiveHitPassive(def);
     case "bonusActiveOnHit":
       return `active Hit 後 ${def.bonusActiveSkillId ?? "—"} 追撃（非再帰）`;
     case "blazingFlameDetonate": {
@@ -2031,8 +2120,8 @@ function formatPassiveEffect(
       const trigger = formatPercent(def.triggerHpRatio ?? 0.35);
       const duration = def.stackDurationSec ?? 8;
       const amount = formatResourceAmount(def.healAmount);
-      const buffName = def.buffDisplayName ?? "癒しの残響";
-      return `ヒール予約（回復時 対象HP${grant}以下で「${buffName}」付与 / ${duration}秒 / 被ダメ後HP${trigger}以下で${amount}回復）`;
+      const buffName = def.buffDisplayName ?? "治癒の残響";
+      return `回復時 対象HP${grant}以下で「${buffName}」1スタック付与（${duration}秒 / 被ダメ後HP${trigger}以下で${amount}回復）`;
     }
     case "barrierBreakRegen": {
       const amount = formatResourceAmount(
@@ -2197,6 +2286,9 @@ function formatPassiveEffect(
 function formatPassiveSkillEffectLines(def: PassiveSkillDef): string[] {
   if (def.effect === "barrierDepletionHeal") {
     return formatBarrierDepletionHealEffectLines(def);
+  }
+  if (def.effect === "seedFlameOnActiveHit") {
+    return formatSeedFlameOnActiveHitEffectLines(def);
   }
   return [formatPassiveEffect(def.effect, def)];
 }

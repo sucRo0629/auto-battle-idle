@@ -14,7 +14,7 @@ import type {
   ResourceAmountSpec,
 } from './types.ts';
 
-export const HEAL_RESERVATION_BUFF_DISPLAY_NAME = '癒しの残響';
+export const HEAL_RESERVATION_BUFF_DISPLAY_NAME = '治癒の残響';
 
 export function resolveHealReservationBuffDisplayName(
   passive: PassiveSkillDef,

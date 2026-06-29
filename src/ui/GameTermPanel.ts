@@ -199,7 +199,7 @@ export class GameTermPanel {
     }
 
     const title = entry.title[this.locale];
-    const description = entry.description[this.locale];
+    const description = entry.description?.[this.locale];
     this.titleEl.textContent = title;
     this.titleEl.id = `${this.panelId}-title`;
     this.root.setAttribute("aria-labelledby", this.titleEl.id);
@@ -228,11 +228,13 @@ export class GameTermPanel {
     }
 
     this.bodyEl.replaceChildren();
-    this.bodyEl.appendChild(
-      annotateGameTerms(description, this.locale, (termId) => {
-        this.navigateToTerm(termId);
-      }, { panelId: this.panelId }),
-    );
+    if (description) {
+      this.bodyEl.appendChild(
+        annotateGameTerms(description, this.locale, (termId) => {
+          this.navigateToTerm(termId);
+        }, { panelId: this.panelId }),
+      );
+    }
   }
 
   private positionNearAnchor(anchor: HTMLElement): void {

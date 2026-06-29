@@ -670,7 +670,7 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
       passive.stackDurationSec ??= 8;
       passive.triggerHpRatio ??= 0.35;
       passive.healAmount ??= defaultResourceAmount(0.75);
-      passive.buffDisplayName ??= "癒しの残響";
+      passive.buffDisplayName ??= "治癒の残響";
       break;
     case "barrierBreakRegen":
       passive.barrierAmount ??= defaultResourceAmount(0.85);
@@ -4198,7 +4198,7 @@ export class SkillEditorStep {
           createFieldRow(
             "付与バフ名",
             createTextInput(
-              passive.buffDisplayName ?? "癒しの残響",
+              passive.buffDisplayName ?? "治癒の残響",
               (buffDisplayName) => {
                 this.patchPassive(
                   index,

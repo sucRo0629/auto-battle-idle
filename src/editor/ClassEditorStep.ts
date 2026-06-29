@@ -399,7 +399,7 @@ export class ClassEditorStep {
               delete next.class.summary;
             }
           });
-        }, { rows: 5, placeholder: "数文のプレイヤー向け解説。役割・特徴・成長の示唆を含めてよい。詳細・クラス選択に表示。" })
+        }, { rows: 5, placeholder: "数文のプレイヤー向け解説。Enter で改行。詳細・クラス選択に表示。" })
       )
     );
     identityGrid.appendChild(

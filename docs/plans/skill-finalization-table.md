@@ -65,7 +65,7 @@
 | `at_sorcerer`   | 種火 / 熾火 + active 連鎖（Phase 3 実装済）                                | **実装済**。passive×4 + active×4 + basic                                                                                                            |
 | `at_sigilist`   | P1 印術が通常攻撃を置換（設計確定）                                        | **確定**（2026 再設計）。combat / JSON は Phase 9a |
 | `at_conductor`  | AoE crowd bonus、AoE / scatter 攻撃寄り active（旧 `at_geomancer`）        | **置換**。既存攻撃スキルは正本にしない。Conductor は自身で damage を出さず、観測・蓄積・法陣による damage routing / distribution / recycling を扱う |
-| `sp_cleric`     | 低 HP heal 強化、余剰 heal → barrier、Lv10 余剰 heal 転送、Lv20 癒しの残響 | **残す / 実装済**。Recovery Control の核。passive 3 = `excessHealRedirect`、passive 4 = `healReservation`                                           |
+| `sp_cleric`     | 低 HP heal 強化、余剰 heal → barrier、Lv10 余剰 heal 転送、Lv20 治癒の残響 | **残す / 実装済**。Recovery Control の核。passive 3 = `excessHealRedirect`、passive 4 = `healReservation`                                           |
 | `sp_wardweaver` | 低 HP barrier 特効、枯渇回復、障壁（ward）、先読み smart                   | **実装済**（Stability Control リデザイン）                                                                                                          |
 | `sp_alchemist`  | party HoT aura、高 HP ally DEF、Wave 回数限定の debuff cleanse             | **残す**。debuff cleanse は薬草師専用の補助個性だが、必須インフラにはしない                                                                         |
 
@@ -262,7 +262,7 @@ Supporter 3 種は「回復量の大小」ではなく、損失を処理する�
 | `sp_cleric`     | basic               | 最低 HP 比率の味方へ小さな即時 heal。Recovery の常時基礎                                                                     | 現行 `sp_cleric_basic_attack` を **残す**                         |
 | `sp_cleric`     | Lv0 passive 1-2     | 低 HP heal 強化、余剰 heal → barrier                                                                                         | 現行 `sp_cleric_passive_1` / `sp_cleric_passive_2` を **残す**    |
 | `sp_cleric`     | Lv10 passive 3      | オーバーヒールの一部を次低 HP 味方へ転送（`excessHealRedirect`、1 ホップ）。残り余剰は barrier 等へ                          | `sp_cleric_passive_3`（生命調律）を **実装**                      |
-| `sp_cleric`     | Lv20 passive 4      | 低 HP 回復時にバフ「癒しの残響」を付与。被ダメ後の短期保険回復（`healReservation`、蘇生ではない）                            | `sp_cleric_passive_4`（ヒール予約）を **実装**                    |
+| `sp_cleric`     | Lv20 passive 4      | 低 HP 回復時にバフ「治癒の残響」を付与。被ダメ後の短期保険回復（`healReservation`、蘇生ではない）                            | `sp_cleric_passive_4`（ヒール予約）を **実装**                    |
 | `sp_cleric`     | Lv0 active 1        | 単体欠損を戻す主 heal。対象は最低 HP 比率、即時 heal + 短い HoT                                                              | 現行 `sp_cleric_active_1`（癒しの光）を **残す**                  |
 | `sp_cleric`     | Lv0 active 2        | 低 HP の味方だけに反応する救命 heal。真の被ダメ反応 trigger は使わず、`time` + `firePolicy: smart` + `fireConditions` で先行 | **追加**。`sp_cleric_active_2` をこの役割へ再定義する案           |
 | `sp_cleric`     | Lv10 active 3       | Recovery の範囲化・維持化。全体または複数対象の HoT / heal                                                                   | 現行 `sp_cleric_active_2`（広域治療）は Lv10 枠へ **移動 / 改番** |

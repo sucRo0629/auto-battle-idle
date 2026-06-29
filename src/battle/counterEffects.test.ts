@@ -205,7 +205,7 @@ describe('applyCounterRetaliation', () => {
     expect(attacker.statusEffects.some((e) => e.overlay === 'stun')).toBe(true);
     expect(
       attacker.cooldowns.find((cd) => cd.slotKind === 'basic')?.remaining,
-    ).toBe(0);
+    ).toBe(2);
   });
 
   it('applies debuff response to attacker', () => {

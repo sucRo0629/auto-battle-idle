@@ -40,8 +40,8 @@ import {
   normalizeActiveSlots,
 } from "../progression/skillBuild.ts";
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
-import { formatSkillCardLines } from "./formatSkillText.ts";
-import { formatClassSummary } from "./formatClassSummary.ts";
+import { formatSkillCardLines, SKILL_CARD_INDENT_PREFIX } from "./formatSkillText.ts";
+import { formatClassSummary, formatClassSummaryForAria } from "./formatClassSummary.ts";
 import { annotateGameTerms } from "./annotateGameTerms.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
 
@@ -260,7 +260,7 @@ export class SkillMenuPanel {
       if (member && preset) {
         const summary = formatClassSummary(preset);
         const ariaParts = summary
-          ? [preset.displayName, summary]
+          ? [preset.displayName, formatClassSummaryForAria(summary)]
           : [preset.displayName];
         button.setAttribute("aria-label", ariaParts.join(" "));
         button.appendChild(this.createRosterRoleIcon(preset.role));
@@ -655,10 +655,17 @@ export class SkillMenuPanel {
       effectsEl.className = "skill-menu-skill-view-card-effects";
       for (const line of lines.effectLines) {
         const lineEl = document.createElement("div");
+        const isIndent = line.startsWith(SKILL_CARD_INDENT_PREFIX);
         lineEl.className = "skill-menu-skill-view-card-effect-line";
+        if (isIndent) {
+          lineEl.classList.add("skill-menu-skill-view-card-effect-line--indent");
+        }
+        const displayLine = isIndent
+          ? line.slice(SKILL_CARD_INDENT_PREFIX.length)
+          : line;
         lineEl.appendChild(
           annotateGameTerms(
-            line,
+            displayLine,
             "ja",
             (termId, anchor) => {
               this.gameTermPanel.openFromTerm(termId, anchor);

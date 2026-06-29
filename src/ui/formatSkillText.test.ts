@@ -254,8 +254,7 @@ describe('formatActiveDescription', () => {
     const desc = formatActiveDescription(def);
     expect(desc).toContain('再使用：9秒');
     expect(desc).toContain('アンカー +32px');
-    expect(desc).toContain('敵3体に対して攻撃力の70%の物理ダメージを与える');
-    expect(desc).toContain('対象が不足している場合、同じ対象を再度攻撃する');
+    expect(desc).toContain('敵3体をマルチロックして攻撃力の70%の物理ダメージを与える');
   });
 
   it('formats buff with flat bonus before multiplier', () => {
@@ -674,8 +673,7 @@ describe('formatActiveDescription', () => {
     const nagihara = formatSkillCardLines(a2!, { locale: 'ja' });
     expect(nagihara.metaLine).toBe('再使用：10秒');
     expect(nagihara.effectLines).toEqual([
-      '敵2体に対して攻撃力の60%の物理ダメージを与える',
-      '対象が不足している場合、同じ対象を再度攻撃する',
+      '敵2体をマルチロックして攻撃力の60%の物理ダメージを与える',
     ]);
 
     expect(formatPassiveDescription(p1!)).toBe(
@@ -829,7 +827,7 @@ describe('formatActiveDescription', () => {
       '効果：攻撃時、対象の魔法耐性を20%無視する',
     );
     expect(formatPassiveDescription(p2!)).toBe(
-      '効果：敵に攻撃スキルが1回命中するごとに「種火」を1スタックする',
+      '効果：敵に攻撃スキルが1回命中するごとに「種火」を1スタックする、種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える、最大スタック数：5、熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える、さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる、最大スタック数：1',
     );
 
     const card1 = formatSkillCardLines(p1!, { locale: 'ja' });
@@ -842,6 +840,11 @@ describe('formatActiveDescription', () => {
     expect(card2.metaLine).toBe('常時');
     expect(card2.effectLines).toEqual([
       '敵に攻撃スキルが1回命中するごとに「種火」を1スタックする',
+      '- 種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える',
+      '\u3000最大スタック数：5',
+      '- 熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える',
+      '\u3000さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる',
+      '\u3000最大スタック数：1',
     ]);
   });
 

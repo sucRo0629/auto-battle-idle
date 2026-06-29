@@ -1,6 +1,6 @@
 import { getPassiveDefs } from './combatMath.ts';
 import { applyKnockbackToTarget, applyStunToTarget } from './ccEffects.ts';
-import type { CombatantState, PassiveSkillDef } from './types.ts';
+import type { ActiveSkillDef, CombatantState, PassiveSkillDef } from './types.ts';
 
 export const LAST_STAND_GUTS_DURATION_SEC_DEFAULT = 4;
 export const LAST_STAND_GUTS_END_STUN_SEC_DEFAULT = 1.5;
@@ -129,6 +129,7 @@ export function applyLastStandGutsEndEffects(
   enemies: CombatantState[],
   endStunSec: number,
   endKnockbackPx: number,
+  actives: Record<string, ActiveSkillDef>,
 ): void {
   for (const enemy of enemies) {
     if (!enemy.isAlive) continue;
@@ -136,7 +137,7 @@ export function applyLastStandGutsEndEffects(
       enemy,
       endStunSec,
       { skillId: 'last_stand_guts_end', sourceId: duelist.id },
-      { actives: {} },
+      { actives },
     );
     applyKnockbackToTarget(enemy, endKnockbackPx, {
       sourceId: duelist.id,

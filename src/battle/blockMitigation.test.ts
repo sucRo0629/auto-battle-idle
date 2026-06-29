@@ -44,11 +44,12 @@ function mockUnit(
 const passives: Record<string, PassiveSkillDef> = {};
 
 describe('blockMitigation', () => {
-  it('computeBlockMitigationRatio uses 0.25 + atk/100 capped at 1', () => {
+  it('computeBlockMitigationRatio uses 0.25 + atk/1000 capped at 1', () => {
     expect(computeBlockMitigationRatio(mockUnit({ id: 'a', atk: 0 }))).toBe(0.25);
-    expect(computeBlockMitigationRatio(mockUnit({ id: 'b', atk: 50 }))).toBe(0.75);
-    expect(computeBlockMitigationRatio(mockUnit({ id: 'c', atk: 100 }))).toBe(1);
-    expect(computeBlockMitigationRatio(mockUnit({ id: 'd', atk: 200 }))).toBe(1);
+    expect(computeBlockMitigationRatio(mockUnit({ id: 'b', atk: 50 }))).toBe(0.3);
+    expect(computeBlockMitigationRatio(mockUnit({ id: 'c', atk: 100 }))).toBe(0.35);
+    expect(computeBlockMitigationRatio(mockUnit({ id: 'd', atk: 750 }))).toBe(1);
+    expect(computeBlockMitigationRatio(mockUnit({ id: 'e', atk: 1000 }))).toBe(1);
   });
 
   it('getBlockChance sums block status effects capped at 1', () => {
@@ -124,8 +125,8 @@ describe('blockMitigation', () => {
     });
     const result = applyBlockToPhysicalDamage(defender, 80, passives);
     expect(result.didBlock).toBe(true);
-    expect(result.blockedAmount).toBe(80);
-    expect(result.finalDamage).toBe(0);
+    expect(result.blockedAmount).toBe(28);
+    expect(result.finalDamage).toBe(52);
     vi.restoreAllMocks();
   });
 

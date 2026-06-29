@@ -91,6 +91,7 @@ import { editorFieldLabel } from "./editorFieldLabels.ts";
 import { attackTypeRangedBandEditorHintJa } from "../battle/rangeLimits.ts";
 import {
   HERBAL_POTENCY_ACCUMULATE_SEC,
+  HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME,
   HERBAL_POTENCY_HOT_TICK_SEC,
 } from "../battle/herbalPotency.ts";
 import {
@@ -1011,7 +1012,7 @@ export type AppendEditorAnnotatedHint = (
 ) => void;
 
 const HERBAL_POTENCY_BUFF_SUMMARY_HINT =
-  "累積バフ: 薬効 — 薬草師由来 HoT 維持中に実時間で stack +1。stack ごとに HoT 回復量を加算（上限は習得パッシブの herbalPotencyMaxStacks 最大値）。薬効体質 — 薬効 stack が閾値に達すると maxHp 乗算バフ。到達段階は薬効顕現（stack 消費）後も維持。";
+  "累積バフ: 薬効 — 薬草師由来 HoT 維持中に実時間で stack +1。stack ごとに HoT 回復量を加算（上限は習得パッシブの herbalPotencyMaxStacks 最大値）。頑健 — 薬効 stack が閾値に達すると maxHp 乗算バフ。到達段階は薬効顕現（stack 消費）後も維持。";
 
 export function appendHerbalPotencyPassiveFields(
   parent: HTMLElement,
@@ -1094,6 +1095,28 @@ export function appendHerbalPotencyPassiveFields(
     ),
   );
   appendAnnotatedHint(parent, HERBAL_POTENCY_BUFF_SUMMARY_HINT);
+  parent.appendChild(
+    createFieldRow(
+      editorFieldLabel("herbalPotencyConstitutionDisplayName"),
+      createTextInput(
+        passive.herbalPotencyConstitutionDisplayName ??
+          HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME,
+        (raw) => {
+          patchPassive((current) => {
+            const trimmed = raw.trim();
+            if (
+              !trimmed ||
+              trimmed === HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME
+            ) {
+              delete current.herbalPotencyConstitutionDisplayName;
+              return;
+            }
+            current.herbalPotencyConstitutionDisplayName = trimmed;
+          }, { rerender: false });
+        },
+      ),
+    ),
+  );
   parent.appendChild(
     createFieldRow(
       editorFieldLabel("herbalPotencyConstitutionThresholds（カンマ区切り）"),

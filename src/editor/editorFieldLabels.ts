@@ -75,9 +75,10 @@ export const EDITOR_FIELD_LABELS = {
   herbalPotencyHotTickSec: "aura HoT tick 間隔（秒）",
   herbalPotencyAccumulateSec: "薬効蓄積間隔（秒）",
   "herbalPotencyConstitutionThresholds（カンマ区切り）":
-    "薬効体質 閾値（カンマ区切り）",
+    "頑健 閾値（カンマ区切り）",
   "herbalPotencyConstitutionHpMultipliers（カンマ区切り）":
-    "薬効体質 HP倍率（カンマ区切り）",
+    "頑健 HP倍率（カンマ区切り）",
+  herbalPotencyConstitutionDisplayName: "頑健 表示名",
 } as const satisfies Record<string, string>;
 
 export type EditorFieldLabelKey = keyof typeof EDITOR_FIELD_LABELS;
