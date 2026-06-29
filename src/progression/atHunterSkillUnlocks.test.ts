@@ -70,7 +70,7 @@ describe('at_hunter passive / active unlock structure', () => {
     expect(actives['at_hunter_active_3']?.name).toBe('追い込み');
 
     const a4 = actives['at_hunter_active_4'];
-    expect(a4?.name).toBe('毒収穫');
+    expect(a4?.name).toBe('再利用');
     expect(a4?.firePolicy).toBe('smart');
     expect(a4?.effect.some((e) => e.type === 'dotHarvest')).toBe(true);
     expect(a4?.effect.some((e) => e.type === 'poisonSpread')).toBe(true);

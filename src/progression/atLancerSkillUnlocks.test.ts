@@ -56,7 +56,15 @@ describe('at_lancer passive / active unlock structure', () => {
     const a2 = actives['at_lancer_active_2'];
     expect(a2?.name).toBe('崩勢');
     const a2Effects = a2?.effect ?? [];
-    expect(a2Effects.some((e) => e.type === 'damage')).toBe(false);
+    expect(a2Effects.some((e) => e.type === 'damage')).toBe(true);
+    expect(
+      a2Effects.some(
+        (e) =>
+          e.type === 'damage' &&
+          e.amount?.kind === 'atkBased' &&
+          e.amount.atkScale === 0.2,
+      ),
+    ).toBe(true);
     expect(
       a2Effects.some((e) => e.type === 'debuff' && e.debuffSubKind === 'stun'),
     ).toBe(true);

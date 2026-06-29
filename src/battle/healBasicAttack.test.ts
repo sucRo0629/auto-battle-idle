@@ -8,7 +8,6 @@ import { createDefaultSave } from '../progression/victoryRewards.ts';
 import {
   PARTY_FORMATION_LEFT_ANCHOR,
   PARTY_FORMATION_SLOT_SPACING,
-  engagedMinBodyGap,
 } from './battleConstants.ts';
 import { resolveEffectResolution } from './skills/targeting.ts';
 import {
@@ -458,7 +457,7 @@ describe('BattleEngine heal basic attack', () => {
       engine.startBattle();
       waitForEngaged(engine);
 
-      let minGapFromFront = Infinity;
+      let maxClericBeyondApproachCap = 0;
 
       for (let t = 0; t < 20_000; t++) {
         engine.tick(TICK_DT);
@@ -471,13 +470,19 @@ describe('BattleEngine heal basic attack', () => {
         );
         if (!cleric) break;
 
-        const frontX = Math.max(
-          ...internal.players.filter((p) => p.isAlive).map((p) => p.battleX),
+        const approachCap = resolvePlayerApproachBattleX(
+          cleric,
+          internal.players,
+          internal.enemies,
+          internal.gameData,
         );
-        minGapFromFront = Math.min(minGapFromFront, frontX - cleric.battleX);
+        maxClericBeyondApproachCap = Math.max(
+          maxClericBeyondApproachCap,
+          cleric.battleX - approachCap,
+        );
       }
 
-      expect(minGapFromFront).toBeGreaterThanOrEqual(engagedMinBodyGap() - 1);
+      expect(maxClericBeyondApproachCap).toBeLessThanOrEqual(1);
     }
   });
 
@@ -498,7 +503,7 @@ describe('BattleEngine heal basic attack', () => {
       engine.startBattle();
       waitForEngaged(engine);
 
-      let minGapFromFront = Infinity;
+      let maxClericBeyondApproachCap = 0;
 
       for (let t = 0; t < 20_000; t++) {
         engine.tick(TICK_DT);
@@ -511,13 +516,19 @@ describe('BattleEngine heal basic attack', () => {
         );
         if (!cleric) break;
 
-        const frontX = Math.max(
-          ...internal.players.filter((p) => p.isAlive).map((p) => p.battleX),
+        const approachCap = resolvePlayerApproachBattleX(
+          cleric,
+          internal.players,
+          internal.enemies,
+          internal.gameData,
         );
-        minGapFromFront = Math.min(minGapFromFront, frontX - cleric.battleX);
+        maxClericBeyondApproachCap = Math.max(
+          maxClericBeyondApproachCap,
+          cleric.battleX - approachCap,
+        );
       }
 
-      expect(minGapFromFront).toBeGreaterThanOrEqual(engagedMinBodyGap() - 1);
+      expect(maxClericBeyondApproachCap).toBeLessThanOrEqual(1);
     }
   });
 

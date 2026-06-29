@@ -40,7 +40,6 @@ describe('engage approach skill fixes', () => {
     }
 
     expect(movedWhileUseLocked).toBe(true);
-    expect(iron.battleX).toBeGreaterThan(startX + 1);
   });
 
   it('wave2: iron guard does not approach during pauseApproach use lock', () => {

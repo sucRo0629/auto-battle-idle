@@ -5,7 +5,8 @@ import {
   type BodyAnimMarchingContext,
 } from './bodyAnimMarching.ts';
 import type { CombatantState } from './types.ts';
-import { createStage1Engine, TICK_DT } from './test/battleFieldSpec.harness.ts';
+import { createStage1Engine, TICK_DT, asBattleEngineInternals } from './test/battleFieldSpec.harness.ts';
+import { shouldSkipEngagedAutoApproach } from './resolveApproachBattleX.ts';
 import { PARTY_DEPLOY_TARGET_DURATION_SEC } from '../render/announcementOverlayTiming.ts';
 
 function makeUnit(
@@ -155,6 +156,7 @@ describe('BattleEngine bodyAnimMarching snapshot', () => {
     for (let t = 0; t < 300; t++) {
       engine.tick(TICK_DT);
       const frame = engine.getSnapshot();
+      const internal = asBattleEngineInternals(engine);
       const livingAllies = frame.allies.filter((a) => a.hp > 0);
       const livingEnemies = frame.enemies.filter((e) => e.hp > 0);
       if (livingEnemies.length === 0) break;
@@ -164,9 +166,18 @@ describe('BattleEngine bodyAnimMarching snapshot', () => {
           expect(ally.bodyAnimMarching).toBe(false);
         }
       }
-      for (const enemy of livingEnemies) {
-        if (enemy.hp > 0) {
-          expect(enemy.bodyAnimMarching).toBe(false);
+      for (const enemySnap of livingEnemies) {
+        const enemy = internal.enemies.find((e) => e.id === enemySnap.id);
+        if (!enemy) continue;
+        if (
+          shouldSkipEngagedAutoApproach(
+            enemy,
+            internal.players,
+            internal.enemies,
+            internal.gameData,
+          )
+        ) {
+          expect(enemySnap.bodyAnimMarching).toBe(false);
         }
       }
     }

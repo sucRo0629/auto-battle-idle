@@ -134,9 +134,11 @@ describe('herbalPotency accumulation tick', () => {
     });
     const gameData = loadGameData();
     const passives = gameData.skillRegistry.passives;
-    tickHerbalPotencyAccumulation([herbalist, ally], passives, 3);
+    const accumulateSec =
+      passives.sp_alchemist_passive_1?.herbalPotencyAccumulateSec ?? 3;
+    tickHerbalPotencyAccumulation([herbalist, ally], passives, accumulateSec);
     expect(getHerbalPotencyStacks(ally)).toBe(1);
-    tickHerbalPotencyAccumulation([herbalist, ally], passives, 3);
+    tickHerbalPotencyAccumulation([herbalist, ally], passives, accumulateSec);
     expect(getHerbalPotencyStacks(ally)).toBe(2);
   });
 });

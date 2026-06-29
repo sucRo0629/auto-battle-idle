@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyHotEffectToPassive,
   passiveHotToEffectDef,
-  resolvePassiveHotTargets,
+  resolvePassiveAuraHotTargets,
 } from './passiveHotBridge.ts';
 import { syncHotAuras } from './passiveEffects.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
@@ -95,12 +95,11 @@ describe('passiveHotBridge', () => {
       },
     };
     const gameData = mockTargetingGameData();
-    const targets = resolvePassiveHotTargets(
+    const targets = resolvePassiveAuraHotTargets(
       source,
       passives.aura,
       [source, nearAlly, farAlly],
       [],
-      gameData,
     );
     expect(targets.length).toBeGreaterThan(0);
     expect(targets.every((unit) => unit.id !== 'far')).toBe(true);

@@ -543,10 +543,10 @@ describe('formatActiveDescription', () => {
     expect(a4).toBeDefined();
 
     expect(formatActiveDescription(a1!)).toBe(
-      '再使用：8秒 / 持続：5秒 / 防御力+20% /',
+      '再使用：8秒 / 持続：5秒 / 防御力+15% /',
     );
     expect(formatActiveDescription(a2!)).toBe(
-      '再使用：被攻撃8回 / 持続：5秒 / 硬直・移動停止5秒 / 防御力+25%、ブロック率+50% /',
+      '再使用：被攻撃8回 / 持続：5秒 / 硬直・移動停止5秒 / 防御力+20%、ブロック率+50% /',
     );
     expect(formatActiveDescription(a3!)).toBe(
       '再使用：12秒 / 持続：5秒 / 発動条件：自身のHPが80%以下 / ダメージ軽減25% /',
@@ -567,9 +567,7 @@ describe('formatActiveDescription', () => {
     const p4 = gameData.skillRegistry.passives.df_guardian_passive_4;
 
     expect(formatPassiveDescription(p1!)).toBe('効果：ブロック率+20%');
-    expect(formatPassiveDescription(p2!)).toBe(
-      '効果：自身のダメージ軽減8%',
-    );
+    expect(formatPassiveDescription(p2!)).toBe('効果：HP+5%');
     expect(formatPassiveDescription(p3!)).toContain('効果：ブロック率+10%');
     expect(formatPassiveDescription(p3!)).toContain('8秒ごとに1スタック消失');
     expect(formatPassiveDescription(p4!)).toBe(
@@ -613,19 +611,19 @@ describe('formatActiveDescription', () => {
 
     const card1 = formatSkillCardLines(a1!, { locale: 'ja' });
     expect(card1.metaLine).toBe('再使用：8秒 / 持続：5秒');
-    expect(card1.effectLines).toEqual(['防御力+20%']);
+    expect(card1.effectLines).toEqual(['防御力+15%']);
     expect(card1.effectLines.length).toBe(1);
 
     const card2 = formatSkillCardLines(a2!, { locale: 'ja' });
     expect(card2.metaLine).toBe('再使用：被攻撃8回 / 持続：5秒 / 硬直・移動停止5秒');
     expect(card2.effectLines.length).toBe(2);
-    expect(card2.effectLines[0]).toContain('防御力+25%');
+    expect(card2.effectLines[0]).toContain('防御力+20%');
     expect(card2.effectLines[1]).toContain('ブロック率+50%');
 
     const p2 = gameData.skillRegistry.passives.df_guardian_passive_2;
     expect(p2).toBeDefined();
     const wallCard = formatSkillCardLines(p2!, { locale: 'ja' });
-    expect(wallCard.effectLines).toEqual(['自身のダメージ軽減8%']);
+    expect(wallCard.effectLines).toEqual(['HP+5%']);
   });
 
   it('formatSkillCardLines keeps blockResonance passive as one effect line', async () => {
@@ -850,7 +848,7 @@ describe('formatActiveDescription', () => {
     const p4 = gameData.skillRegistry.passives.df_paladin_passive_4;
 
     expect(formatPassiveDescription(p1!)).toBe('効果：周囲のブロック率+10%');
-    expect(formatPassiveDescription(p2!)).toBe('効果：周囲のダメージ軽減10%');
+    expect(formatPassiveDescription(p2!)).toBe('効果：周囲のダメージ軽減5%');
     expect(formatPassiveDescription(p3!)).toBe(
       '効果：周囲のブロック率+5%、魔法ブロックを可能にする',
     );
@@ -896,7 +894,7 @@ describe('formatActiveDescription', () => {
 
     const passive2 = formatSkillCardLines(p2!, { locale: 'ja' });
     expect(passive2.metaLine).toBe('常時');
-    expect(passive2.effectLines).toEqual(['周囲のダメージ軽減10%']);
+    expect(passive2.effectLines).toEqual(['周囲のダメージ軽減5%']);
   });
 
   it.each(Object.entries(POLISHED_CLASS_LV10_PLUS))(
