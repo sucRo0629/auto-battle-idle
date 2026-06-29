@@ -20,7 +20,6 @@ import {
 } from "../progression/stageProgression.ts";
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
 import { BattleCanvas } from "../render/BattleCanvas.ts";
-import { PROJECT_DISPLAY_NAME } from "../projectIdentity.ts";
 import { subscribeLocaleChange, getLocale } from "../i18n/locale.ts";
 import { t } from "../i18n/t.ts";
 import type { GameTermLocale } from "./gameTermGlossary.ts";
@@ -77,9 +76,9 @@ export class BattleView {
   private readonly root: HTMLElement;
   private readonly canvasHost: HTMLElement;
   private readonly canvasWrap: HTMLElement;
-  private readonly stageLabelEl: HTMLElement;
+  private readonly headerStageEl: HTMLElement;
+  private readonly headerLevelEl: HTMLElement;
   private readonly verifyModeInput: HTMLInputElement;
-  private readonly verifyModeTextEl: HTMLElement;
   private readonly menuButton: HTMLButtonElement;
   private readonly hudToolbarLevelEl: HTMLElement;
   private readonly canvas: BattleCanvas;
@@ -113,13 +112,15 @@ export class BattleView {
     const header = document.createElement("header");
     header.className = "battle-header";
 
-    const title = document.createElement("span");
-    title.className = "battle-header-title";
-    title.textContent = PROJECT_DISPLAY_NAME;
-    header.appendChild(title);
+    this.headerLevelEl = document.createElement("span");
+    this.headerLevelEl.className = "battle-header-level";
+
+    this.headerStageEl = document.createElement("span");
+    this.headerStageEl.className = "battle-header-stage";
 
     const verifyLabel = document.createElement("label");
     verifyLabel.className = "verify-mode-toggle";
+    verifyLabel.hidden = !verifyModeControls;
 
     this.verifyModeInput = document.createElement("input");
     this.verifyModeInput.type = "checkbox";
@@ -128,11 +129,11 @@ export class BattleView {
       verifyModeControls?.onVerifyModeChange(this.verifyModeInput.checked);
     });
 
-    const verifyText = document.createElement("span");
-    this.verifyModeTextEl = verifyText;
+    verifyLabel.appendChild(this.verifyModeInput);
+    verifyLabel.setAttribute("aria-label", t("battle.verifyMode"));
+    verifyLabel.title = t("battle.verifyMode");
 
-    verifyLabel.append(this.verifyModeInput, verifyText);
-    header.appendChild(verifyLabel);
+    header.append(this.headerLevelEl, this.headerStageEl, verifyLabel);
     this.root.appendChild(header);
 
     this.canvasHost = document.createElement("div");
@@ -145,10 +146,6 @@ export class BattleView {
     const canvasWrap = document.createElement("div");
     canvasWrap.className = "battle-canvas-wrap";
     this.canvasWrap = canvasWrap;
-
-    this.stageLabelEl = document.createElement("div");
-    this.stageLabelEl.className = "battle-stage-label";
-    canvasWrap.appendChild(this.stageLabelEl);
 
     canvasFrame.appendChild(canvasWrap);
     this.canvasHost.appendChild(canvasFrame);
@@ -288,9 +285,11 @@ export class BattleView {
   }
 
   private refreshLocaleChrome(): void {
-    this.verifyModeTextEl.textContent = t("battle.verifyMode");
     this.menuButton.textContent = t("battle.formation");
     this.menuButton.setAttribute("aria-label", t("battle.formationAria"));
+    const verifyLabel = this.verifyModeInput.parentElement;
+    verifyLabel?.setAttribute("aria-label", t("battle.verifyMode"));
+    verifyLabel?.setAttribute("title", t("battle.verifyMode"));
   }
 
   private clearMemberStatsHideTimer(): void {
@@ -662,7 +661,7 @@ export class BattleView {
     const stageLabel = `${stageName}  Wave ${waveNum}/${waveTotal}`;
     if (stageLabel !== this.lastStageLabel) {
       this.lastStageLabel = stageLabel;
-      this.stageLabelEl.textContent = stageLabel;
+      this.headerStageEl.textContent = stageLabel;
     }
 
     this.syncHudToolbarLevel(save.party);
@@ -711,7 +710,9 @@ export class BattleView {
     const level = resolvePlayerDisplayLevel(party ?? []);
     if (level === this.lastHudToolbarLevel) return;
     this.lastHudToolbarLevel = level;
-    this.hudToolbarLevelEl.textContent = t("common.playerLevel", { level });
+    const levelLabel = t("common.playerLevel", { level });
+    this.headerLevelEl.textContent = levelLabel;
+    this.hudToolbarLevelEl.textContent = levelLabel;
   }
 
   private createPartyMenuButton(): HTMLButtonElement {

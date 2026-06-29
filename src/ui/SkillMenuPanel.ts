@@ -1,3 +1,5 @@
+import "../styles/game-ui-chrome.css";
+import "../styles/game-term-tooltip.css";
 import "../styles/skill-menu-panel.css";
 import { getMemberStatLabels } from "../i18n/memberStatLabels.ts";
 import { getLocale, subscribeLocaleChange } from "../i18n/locale.ts";
@@ -44,13 +46,19 @@ import {
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
 import {
   formatSkillCardLines,
-  type SkillCardEffectLine,
 } from "./formatSkillText.ts";
 import { formatClassSummary, formatClassSummaryForAria } from "./formatClassSummary.ts";
-import { formatClassCardIdentity, readClassDisplayLabel } from "./classDisplayName.ts";
-import { annotateGameTerms } from "./annotateGameTerms.ts";
+import { annotateGameTerms, annotateGameTermsWithTooltip } from "./annotateGameTerms.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
+import { GameTermTooltip } from "./GameTermTooltip.ts";
 import type { GameTermLocale } from "./gameTermGlossary.ts";
+import {
+  resolveSkillCardDisplay,
+  resolveStatusChipTooltip,
+  resolveTagTooltip,
+  type SkillCardStatusChip,
+  type SkillCardTag,
+} from "./skillCardDisplay.ts";
 
 const PICKER_ROLES: ClassPreset["role"][] = [
   "defender",
@@ -94,6 +102,7 @@ export interface SkillMenuPanelCallbacks {
     build: PartyMemberState["build"]
   ) => void;
   onPartySlotChanged: (slotIndex: number, member: PartySlotState) => void;
+  onPartyDraftChange?: () => void;
 }
 
 export interface SkillMenuPanelOptions {
@@ -110,12 +119,15 @@ export class SkillMenuPanel {
   private readonly pickerOverlayEl: HTMLElement;
   private readonly pickerHost: HTMLElement;
   private readonly gameTermPanel: GameTermPanel;
+  private readonly gameTermTooltip: GameTermTooltip;
   private readonly formationNoteEl: HTMLElement;
   private readonly unsubscribeLocale: () => void;
   private readonly draftParty: PartySlotState[];
   private readonly unlockedClassIds: ClassId[];
   private selectedIndex = 0;
   private pickerTarget: PickerTarget = null;
+  private pickerPreviewClassId: ClassId | null = null;
+  private userSelectedRoster = false;
 
   constructor(
     private readonly container: HTMLElement,
@@ -158,12 +170,16 @@ export class SkillMenuPanel {
       if (!(card instanceof HTMLButtonElement)) return;
       const index = Number(card.dataset.memberIndex);
       if (Number.isNaN(index)) return;
+      const wasSelected = index === this.selectedIndex;
       this.selectedIndex = index;
       if (!this.draftParty[index]) {
-        this.pickerTarget = { kind: "class" };
+        this.openClassPicker();
+      } else if (wasSelected && this.userSelectedRoster) {
+        this.openClassPicker();
       } else {
-        this.pickerTarget = null;
+        this.closeClassPicker();
       }
+      this.userSelectedRoster = true;
       this.render();
     });
 
@@ -175,7 +191,7 @@ export class SkillMenuPanel {
         '[data-action="open-class-picker"]'
       );
       if (openPicker instanceof HTMLElement) {
-        this.pickerTarget = { kind: "class" };
+        this.openClassPicker();
         this.render();
       }
     });
@@ -185,25 +201,35 @@ export class SkillMenuPanel {
     this.pickerOverlayEl.hidden = true;
     this.pickerOverlayEl.addEventListener("click", (event) => {
       if (event.target === this.pickerOverlayEl) {
-        this.pickerTarget = null;
+        this.closeClassPicker();
         this.render();
         return;
       }
 
-      const pickerRow = (event.target as Element | null)?.closest(
-        ".skill-menu-picker-row"
+      const actionButton = (event.target as Element | null)?.closest(
+        "[data-picker-action]"
       );
-      if (!(pickerRow instanceof HTMLElement)) return;
-
-      if (pickerRow.dataset.pickerAction === "cancel") {
-        this.pickerTarget = null;
-        this.render();
+      if (actionButton instanceof HTMLButtonElement) {
+        const action = actionButton.dataset.pickerAction;
+        if (action === "cancel") {
+          this.closeClassPicker();
+          this.render();
+        } else if (action === "confirm" && this.pickerPreviewClassId) {
+          this.handleClassPickerSelection(this.pickerPreviewClassId);
+        } else if (action === "clear") {
+          this.handleClassPickerSelection("");
+        }
         return;
       }
 
-      if (pickerRow.dataset.classId !== undefined) {
-        this.handleClassPickerSelection(pickerRow.dataset.classId);
-      }
+      const listItem = (event.target as Element | null)?.closest(
+        ".skill-menu-picker-list-item"
+      );
+      if (!(listItem instanceof HTMLButtonElement)) return;
+      const classId = listItem.dataset.pickerPreviewClassId;
+      if (!classId || classId === this.pickerPreviewClassId) return;
+      this.pickerPreviewClassId = classId;
+      this.renderPickerOverlay();
     });
 
     this.detailWrapEl = document.createElement("div");
@@ -215,6 +241,11 @@ export class SkillMenuPanel {
       detailScrollRoot: this.bodyEl,
     });
     this.gameTermPanel.mount();
+    this.gameTermTooltip = new GameTermTooltip(this.root);
+    this.bodyEl.addEventListener("scroll", () => {
+      this.gameTermTooltip.reposition();
+      this.gameTermTooltip.hide();
+    });
 
     this.formationBlockEl.append(this.rosterSlotsEl, noteEl);
     this.root.append(
@@ -231,6 +262,38 @@ export class SkillMenuPanel {
     return resolvePlayerDisplayLevel(this.draftParty);
   }
 
+  getFilledSlotCount(): number {
+    return this.draftParty.filter((member) => member !== null).length;
+  }
+
+  getSelectedSlotIndex(): number {
+    return this.selectedIndex;
+  }
+
+  private getAssignableClassIdsForPicker(): ClassId[] {
+    return getAssignableClassIds(
+      this.draftParty,
+      this.unlockedClassIds,
+      this.selectedIndex,
+      this.gameData.classOrder
+    );
+  }
+
+  private openClassPicker(): void {
+    const assignable = this.getAssignableClassIdsForPicker();
+    const current = this.draftParty[this.selectedIndex]?.classId ?? null;
+    this.pickerPreviewClassId =
+      current && assignable.includes(current)
+        ? current
+        : assignable[0] ?? null;
+    this.pickerTarget = { kind: "class" };
+  }
+
+  private closeClassPicker(): void {
+    this.pickerTarget = null;
+    this.pickerPreviewClassId = null;
+  }
+
   private handleClassPickerSelection(classId: string): void {
     const slotIndex = this.selectedIndex;
     if (classId) {
@@ -241,7 +304,7 @@ export class SkillMenuPanel {
       this.draftParty[slotIndex] = null;
       this.callbacks.onPartySlotChanged(slotIndex, null);
     }
-    this.pickerTarget = null;
+    this.closeClassPicker();
     this.render();
   }
 
@@ -250,6 +313,7 @@ export class SkillMenuPanel {
     this.renderRoster();
     this.renderBody();
     this.renderPickerOverlay();
+    this.callbacks.onPartyDraftChange?.();
   }
 
   private renderRoster(): void {
@@ -413,13 +477,7 @@ export class SkillMenuPanel {
     message.className = "skill-menu-empty-slot-message";
     message.textContent = t("party.selectClassPrompt");
 
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "skill-menu-open-picker-button";
-    button.dataset.action = "open-class-picker";
-    button.textContent = t("party.selectClassButton");
-
-    section.append(message, button);
+    section.appendChild(message);
     return section;
   }
 
@@ -460,14 +518,7 @@ export class SkillMenuPanel {
 
     identityWrap.append(nameEl, epithetEl);
 
-    const changeButton = document.createElement("button");
-    changeButton.type = "button";
-    changeButton.className =
-      "skill-menu-open-picker-button skill-menu-open-picker-button--inline";
-    changeButton.dataset.action = "open-class-picker";
-    changeButton.textContent = t("party.change");
-
-    topRow.append(identityWrap, changeButton);
+    topRow.appendChild(identityWrap);
 
     textWrap.appendChild(topRow);
 
@@ -658,16 +709,35 @@ export class SkillMenuPanel {
 
     if (def) {
       const lines = formatSkillCardLines(def, { locale: getLocale() });
+      const display = resolveSkillCardDisplay(
+        lines,
+        def,
+        getLocale() as GameTermLocale
+      );
+      const kindLabel =
+        def && "cooldownSec" in def ? "Active" : "Passive";
 
       const metaEl = document.createElement("div");
-      metaEl.className = "skill-menu-skill-view-card-meta";
-      metaEl.textContent = lines.metaLine;
+      metaEl.className = "skill-menu-skill-view-card-kind-meta";
+      metaEl.textContent = `${kindLabel} / ${display.metaLine}`;
       card.appendChild(metaEl);
 
       const effectsEl = document.createElement("div");
       effectsEl.className = "skill-menu-skill-view-card-effects";
-      this.appendSkillCardEffectLines(effectsEl, lines.effectLines);
+      for (const headline of display.headlineLines) {
+        const lineEl = document.createElement("div");
+        lineEl.className = "skill-menu-skill-view-card-effect-line";
+        this.appendSkillCardAnnotatedText(lineEl, headline);
+        effectsEl.appendChild(lineEl);
+      }
       card.appendChild(effectsEl);
+
+      if (display.statusChips.length > 0) {
+        card.appendChild(this.createStatusChipSection(display.statusChips));
+      }
+      if (display.tags.length > 0) {
+        card.appendChild(this.createTagSection(display.tags));
+      }
     }
 
     const footer = document.createElement("div");
@@ -683,6 +753,79 @@ export class SkillMenuPanel {
     return card;
   }
 
+  private appendSkillCardAnnotatedText(parent: HTMLElement, text: string): void {
+    parent.appendChild(
+      annotateGameTermsWithTooltip(
+        text,
+        getLocale() as GameTermLocale,
+        this.gameTermTooltip
+      )
+    );
+  }
+
+  private createStatusChipSection(
+    chips: SkillCardStatusChip[]
+  ): HTMLElement {
+    const section = document.createElement("div");
+    section.className = "skill-menu-skill-view-card-status";
+
+    const label = document.createElement("p");
+    label.className = "skill-menu-skill-view-card-status-label";
+    label.textContent = t("party.skillCardStatus");
+    section.appendChild(label);
+
+    for (const chip of chips) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "skill-menu-status-chip";
+
+      const nameEl = document.createElement("span");
+      nameEl.className = "skill-menu-status-chip-name";
+      nameEl.textContent = chip.title;
+
+      button.appendChild(nameEl);
+      if (chip.summary.length > 0) {
+        const summaryEl = document.createElement("span");
+        summaryEl.className = "skill-menu-status-chip-summary";
+        summaryEl.textContent = chip.summary;
+        button.appendChild(summaryEl);
+      }
+
+      this.gameTermTooltip.bind(button, () =>
+        resolveStatusChipTooltip(chip, getLocale() as GameTermLocale)
+      );
+      section.appendChild(button);
+    }
+
+    return section;
+  }
+
+  private createTagSection(tags: SkillCardTag[]): HTMLElement {
+    const section = document.createElement("div");
+    section.className = "skill-menu-skill-view-card-tags";
+
+    const label = document.createElement("p");
+    label.className = "skill-menu-skill-view-card-tags-label";
+    label.textContent = t("party.skillCardTags");
+    section.appendChild(label);
+
+    for (const tag of tags) {
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "skill-menu-tag-chip";
+      chip.textContent = tag.label;
+
+      const tooltip = resolveTagTooltip(tag, getLocale() as GameTermLocale);
+      if (tooltip) {
+        this.gameTermTooltip.bind(chip, () => tooltip);
+      }
+
+      section.appendChild(chip);
+    }
+
+    return section;
+  }
+
   private appendAnnotatedSkillText(parent: HTMLElement, text: string): void {
     parent.appendChild(
       annotateGameTerms(
@@ -694,43 +837,6 @@ export class SkillMenuPanel {
         { panelId: this.gameTermPanel.getPanelId() },
       ),
     );
-  }
-
-  private appendSkillCardEffectLines(
-    container: HTMLElement,
-    lines: SkillCardEffectLine[],
-  ): void {
-    for (const line of lines) {
-      if (typeof line === "string") {
-        const lineEl = document.createElement("div");
-        lineEl.className = "skill-menu-skill-view-card-effect-line";
-        this.appendAnnotatedSkillText(lineEl, line);
-        container.appendChild(lineEl);
-        continue;
-      }
-
-      const listEl = document.createElement("ul");
-      listEl.className = "skill-menu-skill-view-card-effect-list";
-      for (const item of line.items) {
-        const itemEl = document.createElement("li");
-        itemEl.className = "skill-menu-skill-view-card-effect-list-item";
-        this.appendAnnotatedSkillText(itemEl, item.text);
-        if (item.details && item.details.length > 0) {
-          const subListEl = document.createElement("ul");
-          subListEl.className = "skill-menu-skill-view-card-effect-sublist";
-          for (const detail of item.details) {
-            const detailEl = document.createElement("li");
-            detailEl.className =
-              "skill-menu-skill-view-card-effect-sublist-item";
-            this.appendAnnotatedSkillText(detailEl, detail);
-            subListEl.appendChild(detailEl);
-          }
-          itemEl.appendChild(subListEl);
-        }
-        listEl.appendChild(itemEl);
-      }
-      container.appendChild(listEl);
-    }
   }
 
   private createLockedSlotCard(
@@ -848,31 +954,59 @@ export class SkillMenuPanel {
     this.pickerOverlayEl.hidden = false;
     this.pickerOverlayEl.replaceChildren();
 
-    const modal = document.createElement("div");
-    modal.className = "skill-menu-picker-modal";
+    const panel = document.createElement("div");
+    panel.className = "skill-menu-picker-panel game-panel-surface";
+    panel.addEventListener("click", (event) => event.stopPropagation());
 
     const heading = document.createElement("h3");
-    heading.className = "skill-menu-picker-modal-title";
+    heading.className = "skill-menu-picker-panel-title";
     heading.textContent = t("party.pickClass");
 
-    const actions = document.createElement("div");
-    actions.className = "skill-menu-picker-actions";
-    actions.append(
-      this.createCancelPickerRow(),
-      this.createActionPickerRow(
-        t("party.clearSlot"),
-        t("party.clearSlotDescription"),
-        { classId: "" },
-      )
-    );
+    const split = document.createElement("div");
+    split.className = "skill-menu-picker-split";
 
-    const assignable = getAssignableClassIds(
-      this.draftParty,
-      this.unlockedClassIds,
-      this.selectedIndex,
-      this.gameData.classOrder
-    );
+    const listPane = document.createElement("div");
+    listPane.className =
+      "skill-menu-picker-list-pane game-ui-scroll-pane";
+    listPane.appendChild(this.createPickerRoleBlocks());
 
+    const detailPane = document.createElement("div");
+    detailPane.className =
+      "skill-menu-picker-detail-pane game-ui-scroll-pane";
+    detailPane.appendChild(this.createPickerDetailContent());
+
+    split.append(listPane, detailPane);
+
+    const footer = document.createElement("div");
+    footer.className = "skill-menu-picker-footer";
+
+    const cancelButton = document.createElement("button");
+    cancelButton.type = "button";
+    cancelButton.className = "game-ui-button";
+    cancelButton.dataset.pickerAction = "cancel";
+    cancelButton.textContent = t("party.back");
+
+    const clearButton = document.createElement("button");
+    clearButton.type = "button";
+    clearButton.className = "game-ui-button";
+    clearButton.dataset.pickerAction = "clear";
+    clearButton.textContent = t("party.clearSlot");
+    clearButton.disabled = !this.draftParty[this.selectedIndex];
+
+    const confirmButton = document.createElement("button");
+    confirmButton.type = "button";
+    confirmButton.className = "game-ui-button game-ui-button--primary";
+    confirmButton.dataset.pickerAction = "confirm";
+    confirmButton.textContent = t("party.confirmClass");
+    confirmButton.disabled = !this.pickerPreviewClassId;
+
+    footer.append(cancelButton, clearButton, confirmButton);
+    panel.append(heading, split, footer);
+    this.pickerOverlayEl.appendChild(panel);
+  }
+
+  private createPickerRoleBlocks(): HTMLElement {
+    const assignable = this.getAssignableClassIdsForPicker();
     const blocks = document.createElement("div");
     blocks.className = "skill-menu-picker-role-blocks";
 
@@ -910,7 +1044,7 @@ export class SkillMenuPanel {
           for (const classId of subClassIds) {
             const preset = this.gameData.classRegistry[classId];
             list.appendChild(
-              this.createClassPickerRow(
+              this.createPickerListItem(
                 preset?.displayName ?? classId,
                 classId,
                 preset
@@ -922,7 +1056,7 @@ export class SkillMenuPanel {
         for (const classId of classIds) {
           const preset = this.gameData.classRegistry[classId];
           list.appendChild(
-            this.createClassPickerRow(
+            this.createPickerListItem(
               preset?.displayName ?? classId,
               classId,
               preset
@@ -934,98 +1068,96 @@ export class SkillMenuPanel {
       blocks.appendChild(blockEl);
     }
 
-    modal.append(heading, actions, blocks);
-    modal.scrollTop = 0;
-    this.pickerOverlayEl.appendChild(modal);
+    return blocks;
   }
 
-  private createCancelPickerRow(): HTMLElement {
-    return this.createActionPickerRow(
-      t("party.cancel"),
-      t("party.cancelDescription"),
-      {
-      pickerAction: "cancel",
-    });
-  }
-
-  private createActionPickerRow(
-    name: string,
-    description: string,
-    options: { pickerAction?: string; classId?: string },
-  ): HTMLElement {
-    const row = document.createElement("button");
-    row.type = "button";
-    row.className =
-      "skill-menu-picker-row skill-menu-picker-row--icon skill-menu-picker-row--action";
-    if (options.pickerAction) {
-      row.dataset.pickerAction = options.pickerAction;
-    }
-    if (options.classId !== undefined) {
-      row.dataset.classId = options.classId;
-    }
-
-    row.appendChild(this.createIconWrap(undefined, ""));
-
-    const text = document.createElement("div");
-    text.className = "skill-menu-picker-row-text";
-
-    const nameEl = document.createElement("div");
-    nameEl.className = "skill-menu-skill-name";
-    nameEl.textContent = name;
-
-    const descEl = document.createElement("div");
-    descEl.className = "skill-menu-skill-desc";
-    descEl.textContent = description;
-
-    text.append(nameEl, descEl);
-    row.appendChild(text);
-    return row;
-  }
-
-  private createClassPickerRow(
+  private createPickerListItem(
     name: string,
     classId: string,
     preset?: ClassPreset
   ): HTMLElement {
     const row = document.createElement("button");
     row.type = "button";
-    row.className = "skill-menu-picker-row skill-menu-picker-row--icon";
-    row.dataset.classId = classId;
+    row.className = "skill-menu-picker-list-item";
+    row.dataset.pickerPreviewClassId = classId;
+    if (classId === this.pickerPreviewClassId) {
+      row.classList.add("skill-menu-picker-list-item--active");
+    }
 
     row.appendChild(this.createIconWrap(preset, name));
 
     const text = document.createElement("div");
-    text.className = "skill-menu-picker-row-text";
+    text.className = "skill-menu-picker-list-item-text";
 
     if (preset?.epithetEn) {
       const epithetEl = document.createElement("div");
-      epithetEl.className = "skill-menu-picker-row-epithet";
+      epithetEl.className = "skill-menu-picker-list-item-epithet";
       epithetEl.textContent = preset.epithetEn;
       text.appendChild(epithetEl);
     }
 
     const nameEl = document.createElement("div");
-    nameEl.className = "skill-menu-skill-name";
+    nameEl.className = "skill-menu-picker-list-item-name";
     nameEl.textContent = name;
-
     text.appendChild(nameEl);
-    row.appendChild(text);
 
-    const summary = preset ? formatClassSummary(preset, getLocale()) : "";
-    if (summary) {
-      const summaryEl = document.createElement("div");
-      summaryEl.className = "skill-menu-picker-row-summary";
-      summaryEl.textContent = summary;
-      row.appendChild(summaryEl);
-    } else {
-      row.classList.add("skill-menu-picker-row--no-summary");
+    row.appendChild(text);
+    return row;
+  }
+
+  private createPickerDetailContent(): HTMLElement {
+    const wrap = document.createElement("div");
+    wrap.className = "skill-menu-picker-detail";
+
+    const preset = this.pickerPreviewClassId
+      ? this.gameData.classRegistry[this.pickerPreviewClassId]
+      : undefined;
+
+    if (!preset) {
+      const empty = document.createElement("p");
+      empty.className = "skill-menu-picker-detail-empty";
+      empty.textContent = t("party.pickerDetailEmpty");
+      wrap.appendChild(empty);
+      return wrap;
     }
 
-    return row;
+    const header = document.createElement("div");
+    header.className = "skill-menu-picker-detail-header";
+    header.appendChild(this.createIconWrap(preset, preset.displayName));
+
+    const identity = document.createElement("div");
+    identity.className = "skill-menu-picker-detail-identity";
+
+    const roleEl = document.createElement("div");
+    roleEl.className = "skill-menu-picker-detail-role";
+    roleEl.textContent = roleLabel(preset.role);
+
+    const nameEl = document.createElement("div");
+    nameEl.className = "skill-menu-picker-detail-name";
+    nameEl.textContent = preset.displayName;
+
+    const epithetEl = document.createElement("div");
+    epithetEl.className = "skill-menu-picker-detail-epithet";
+    epithetEl.textContent = preset.epithetEn ?? "";
+
+    identity.append(roleEl, nameEl, epithetEl);
+    header.appendChild(identity);
+    wrap.appendChild(header);
+
+    const summary = formatClassSummary(preset, getLocale());
+    if (summary) {
+      const summaryEl = document.createElement("div");
+      summaryEl.className = "skill-menu-picker-detail-summary";
+      this.appendAnnotatedSkillText(summaryEl, summary);
+      wrap.appendChild(summaryEl);
+    }
+
+    return wrap;
   }
 
   destroy(): void {
     this.unsubscribeLocale();
+    this.gameTermTooltip.destroy();
     this.gameTermPanel.destroy();
     this.pickerOverlayEl.remove();
     this.root.remove();

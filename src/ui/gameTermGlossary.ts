@@ -62,6 +62,8 @@ export interface GameTermEntry {
   title: Record<GameTermLocale, string>;
   /** 用語パネル本文。`\n` で改行（表示は `white-space: pre-line`）。HUD 表示名のみの ID は省略可。 */
   description?: Record<GameTermLocale, string>;
+  /** スキルカード内ホバー用の短い説明（2〜3行）。省略時は `description` 先頭行から生成。 */
+  tooltip?: Record<GameTermLocale, string>;
   /** 本文中でリンク化する表記。省略時はスキル説明ではリンク化しない（HUD バッジクリック等で補足）。 */
   aliases?: Record<GameTermLocale, readonly string[]>;
   statusCategory?: StatusDisplayCategory;
@@ -71,10 +73,11 @@ export interface GameTermEntry {
 
 type GameTermEntrySource = Omit<
   GameTermEntry,
-  "title" | "description" | "aliases"
+  "title" | "description" | "tooltip" | "aliases"
 > & {
   title: { ja: string };
   description?: { ja: string };
+  tooltip?: { ja: string };
   aliases?: { ja: readonly string[] };
 };
 
@@ -186,6 +189,9 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   {
     id: "multiLock",
     title: { ja: "マルチロック" },
+    tooltip: {
+      ja: "複数対象へ効果を適用する。\n対象が不足している場合、同じ対象へ再度適用する。",
+    },
     description: {
       ja: "N体に対して効果を適用する。対象が不足している場合、再度同じ対象に対して順番に効果を適用する。",
     },
@@ -393,11 +399,25 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   {
     id: "seedFlame",
     title: { ja: "種火" },
+    tooltip: {
+      ja: "攻撃スキル命中ごとに付与する魔法DoT。\n10秒間、毎秒ATK比例ダメージ。",
+    },
+    description: {
+      ja: "攻撃スキルが命中するたびにスタックする魔法DoT。\n1スタックごとに10秒間、毎秒攻撃力の一定割合の魔法ダメージを与える。\n最大スタック数は5。",
+    },
+    aliases: { ja: ["種火"] },
     statusCategory: "seedFlame",
   },
   {
     id: "blazingFlame",
     title: { ja: "熾火" },
+    tooltip: {
+      ja: "種火から昇格する強力な魔法DoT。\n魔法被ダメージ増加を伴う。",
+    },
+    description: {
+      ja: "種火から昇格する強力な魔法DoT。\n1スタックごとに無期限で毎秒攻撃力の一定割合の魔法ダメージを与える。\nさらに魔法攻撃の被ダメージを増加させる。最大スタック数は1。",
+    },
+    aliases: { ja: ["熾火"] },
     statusCategory: "blazingFlame",
   },
   {
@@ -438,6 +458,13 @@ function mergeGameTermEn(entry: GameTermEntrySource): GameTermEntry {
             ...(en.description !== undefined ? { en: en.description } : {}),
           }
         : undefined,
+    tooltip:
+      entry.tooltip !== undefined || en.tooltip !== undefined
+        ? {
+            ...(entry.tooltip ?? {}),
+            ...(en.tooltip !== undefined ? { en: en.tooltip } : {}),
+          }
+        : undefined,
     aliases:
       entry.aliases !== undefined
         ? {
@@ -445,7 +472,7 @@ function mergeGameTermEn(entry: GameTermEntrySource): GameTermEntry {
             ...(en.aliases !== undefined ? { en: en.aliases } : {}),
           }
         : undefined,
-  };
+  } as GameTermEntry;
 }
 
 export const GAME_TERM_ENTRIES: readonly GameTermEntry[] =
@@ -464,6 +491,46 @@ export function resolveGameTermTitle(
     throw new Error(`Missing glossary entry: ${id}`);
   }
   return entry.title[locale] ?? entry.title.ja;
+}
+
+function firstDescriptionLines(
+  description: string,
+  maxLines = 2
+): string {
+  return description
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+    .slice(0, maxLines)
+    .join("\n");
+}
+
+export function resolveGameTermDescription(
+  id: GameTermId,
+  locale: GameTermLocale = "ja"
+): string | undefined {
+  const description = getGameTermEntry(id)?.description?.[locale];
+  if (!description || description.trim().length === 0) return undefined;
+  return description.trim();
+}
+
+export function resolveGameTermTooltip(
+  id: GameTermId,
+  locale: GameTermLocale = "ja"
+): string {
+  const entry = getGameTermEntry(id);
+  if (!entry) return "";
+  const tooltip = entry.tooltip?.[locale] ?? entry.tooltip?.ja;
+  if (tooltip && tooltip.trim().length > 0) return tooltip.trim();
+  const description = entry.description?.[locale] ?? entry.description?.ja;
+  if (description && description.trim().length > 0) {
+    return firstDescriptionLines(description.trim());
+  }
+  return entry.title[locale] ?? entry.title.ja;
+}
+
+export function getGameTermEntry(id: GameTermId): GameTermEntry | undefined {
+  return ENTRY_BY_ID.get(id);
 }
 
 const STATUS_EFFECT_STAT_TERM_ID: Record<StatusEffectStat, GameTermId> = {
@@ -564,10 +631,6 @@ export function resolveCompactStatusOverflowTooltipLabel(
     .slice(visibleCount)
     .map((badge) => resolveStatusBadgeTooltipLabel(badge, locale))
     .join(locale === "en" ? ", " : "、");
-}
-
-export function getGameTermEntry(id: GameTermId): GameTermEntry | undefined {
-  return ENTRY_BY_ID.get(id);
 }
 
 /** 用語パネル見出し用。HUD PNG が登録されているときのみ URL を返す。 */

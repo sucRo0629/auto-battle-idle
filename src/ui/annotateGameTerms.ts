@@ -1,5 +1,6 @@
 import {
   GAME_TERM_ENTRIES,
+  resolveGameTermTooltip,
   type GameTermId,
   type GameTermLocale,
 } from "./gameTermGlossary.ts";
@@ -124,6 +125,39 @@ export function annotateGameTerms(
       event.stopPropagation();
       onTermClick(segment.termId, button);
     });
+    fragment.appendChild(button);
+  }
+
+  return fragment;
+}
+
+export function annotateGameTermsWithTooltip(
+  text: string,
+  locale: GameTermLocale,
+  tooltip: {
+    bind: (
+      hit: HTMLElement,
+      resolveContent: () => { title: string; body: string } | null,
+    ) => void;
+  },
+): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+
+  for (const segment of segmentTextByGameTerms(text, locale)) {
+    if (segment.kind === "text") {
+      fragment.appendChild(document.createTextNode(segment.text));
+      continue;
+    }
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "game-term-link";
+    button.textContent = segment.matchedText;
+    button.dataset.gameTermId = segment.termId;
+    tooltip.bind(button, () => ({
+      title: segment.matchedText,
+      body: resolveGameTermTooltip(segment.termId, locale),
+    }));
     fragment.appendChild(button);
   }
 

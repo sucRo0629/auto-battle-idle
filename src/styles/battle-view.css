@@ -1,3 +1,4 @@
+@import './game-ui-chrome.css';
 @import './pixel-icon-frame.css';
 @import './party-member-effective-stats.css';
 
@@ -10,14 +11,37 @@
 
 .battle-header {
   -webkit-app-region: drag;
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
   padding: 8px 12px;
   background: var(--battle-header-bg);
-  border-radius: 2px;
+  border: var(--game-panel-border);
+  border-radius: 0;
   font-weight: 600;
+  box-shadow:
+    inset 0 1px 0 var(--game-bevel-light),
+    inset 0 -1px 0 var(--game-bevel-dark);
+}
+
+.battle-header-level {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: nowrap;
+}
+
+.battle-header-stage {
+  min-width: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .battle-header-title {
@@ -29,18 +53,22 @@
   -webkit-app-region: no-drag;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: calc(var(--verify-toggle-font-size) * 1px);
-  font-weight: 500;
-  color: var(--verify-toggle-color);
+  justify-content: center;
+  width: 20px;
+  height: 20px;
   cursor: pointer;
   user-select: none;
-  white-space: nowrap;
 }
 
 .verify-mode-toggle input {
   margin: 0;
   cursor: pointer;
+  width: 14px;
+  height: 14px;
+}
+
+.verify-mode-toggle[hidden] {
+  display: none;
 }
 
 .battle-canvas-host {

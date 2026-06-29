@@ -35,20 +35,23 @@
   gap: 4px;
   min-height: 100px;
   padding: 8px 6px 10px;
-  border: 1px solid var(--canvas-border-color);
-  border-radius: 2px;
-  background: rgba(15, 15, 26, 0.65);
+  border: var(--game-panel-border);
+  border-radius: 0;
+  background: var(--game-slot-bg);
   color: var(--app-text);
   font-size: 11px;
   font-weight: 600;
   line-height: 1.2;
   cursor: pointer;
   text-align: center;
+  box-shadow:
+    inset 0 1px 0 var(--game-bevel-light),
+    inset 0 -1px 0 var(--game-bevel-dark);
 }
 
 .skill-menu-roster-card--active {
-  border-color: rgba(74, 144, 217, 0.65);
-  background: rgba(74, 144, 217, 0.12);
+  border-color: var(--game-slot-border-active);
+  background: var(--game-slot-bg-active);
 }
 
 .skill-menu-roster-card-role-icon {
@@ -201,8 +204,12 @@
   gap: 16px;
   overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 12px;
-  scrollbar-gutter: stable;
+  padding-right: 4px;
+  scrollbar-width: none;
+}
+
+.skill-menu-body::-webkit-scrollbar {
+  display: none;
 }
 
 .skill-menu-section {
@@ -235,7 +242,7 @@
 .skill-menu-class-stats-row > .skill-menu-stats {
   min-width: 0;
   padding-left: 12px;
-  border-left: 1px solid var(--canvas-border-color);
+  border-left: 2px solid rgba(0, 0, 0, 0.35);
 }
 
 .skill-menu-class-info-header {
@@ -363,10 +370,13 @@
   flex-direction: column;
   gap: 6px;
   padding: 12px 14px;
-  border: 1px solid var(--canvas-border-color);
-  border-radius: 2px;
-  background: rgba(15, 15, 26, 0.55);
+  border: var(--game-panel-border);
+  border-radius: 0;
+  background: var(--game-slot-bg);
   color: var(--app-text);
+  box-shadow:
+    inset 0 1px 0 var(--game-bevel-light),
+    inset 0 -1px 0 var(--game-bevel-dark);
 }
 
 .skill-menu-skill-view-card--compact {
@@ -511,10 +521,10 @@
   inset: 0;
   z-index: 1100;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  padding: 16px;
-  background: rgba(8, 10, 18, 0.5);
+  padding: 12px;
+  background: rgba(4, 6, 12, 0.72);
   overflow: hidden;
   pointer-events: auto;
 }
@@ -523,59 +533,83 @@
   display: none;
 }
 
-.skill-menu-picker-modal {
+.skill-menu-picker-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  max-width: 100%;
-  max-height: calc(100vh - 32px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  flex-shrink: 1;
+  gap: 0;
+  width: min(1080px, 100%);
+  max-height: 100%;
   min-height: 0;
-  padding: 14px 16px 16px;
-  border: 1px solid var(--canvas-border-color);
-  border-radius: 2px;
-  background: rgba(15, 18, 28, 0.97);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  margin: auto 0;
+  overflow: hidden;
 }
 
-.skill-menu-picker-modal-title {
+.skill-menu-picker-panel-title {
   margin: 0;
-  font-size: 16px;
+  padding: 12px 16px 10px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--app-text);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.35);
+  background: rgba(8, 10, 18, 0.45);
+  box-shadow: inset 0 1px 0 var(--game-bevel-light);
 }
 
-.skill-menu-picker-actions {
+.skill-menu-picker-split {
+  display: grid;
+  grid-template-columns: minmax(220px, 34%) minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.35);
+}
+
+.skill-menu-picker-list-pane {
+  min-height: 0;
+  max-height: min(62vh, 560px);
+  padding: 10px 8px 12px 12px;
+  border-right: 2px solid rgba(0, 0, 0, 0.35);
+  background: rgba(8, 10, 18, 0.28);
+}
+
+.skill-menu-picker-detail-pane {
+  min-height: 0;
+  max-height: min(62vh, 560px);
+  padding: 14px 16px 16px;
+}
+
+.skill-menu-picker-footer {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  background: rgba(8, 10, 18, 0.35);
+  box-shadow: inset 0 1px 0 var(--game-bevel-light);
 }
 
 .skill-menu-picker-role-blocks {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
 }
 
 .skill-menu-picker-role-heading {
-  margin: 0 0 6px;
-  font-size: 12px;
+  margin: 0 0 4px;
+  font-size: 11px;
   font-weight: 700;
-  color: #9aa3b0;
-  letter-spacing: 0.02em;
+  color: #8f98a8;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .skill-menu-picker-role-subheading {
-  margin: 8px 0 4px;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  font-size: 11px;
+  margin: 6px 0 2px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 10px;
   font-weight: 600;
   color: #7a8494;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
 }
 
 .skill-menu-picker-role-subheading:first-child {
@@ -587,88 +621,117 @@
 .skill-menu-picker-role-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
-.skill-menu-skill-name {
-  font-size: 15px;
-  font-weight: 700;
-}
-
-.skill-menu-skill-desc {
-  margin-top: 4px;
-  font-size: 13px;
-  color: #9aa3b0;
-}
-
-.skill-menu-picker-row {
-  display: flex;
-  flex-direction: column;
+.skill-menu-picker-list-item {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
   width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--canvas-border-color);
-  border-radius: 2px;
-  background: rgba(15, 15, 26, 0.55);
+  padding: 6px 8px;
+  border: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
   color: var(--app-text);
   text-align: left;
   cursor: pointer;
 }
 
-.skill-menu-picker-row--icon {
+.skill-menu-picker-list-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(74, 144, 217, 0.35);
+}
+
+.skill-menu-picker-list-item--active {
+  border-color: var(--game-slot-border-active);
+  background: var(--game-slot-bg-active);
+  box-shadow: inset 0 1px 0 var(--game-bevel-light);
+}
+
+.skill-menu-picker-list-item-text {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.skill-menu-picker-list-item-epithet {
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.1;
+  color: #8a939f;
+  letter-spacing: 0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-menu-picker-list-item-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-menu-picker-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+}
+
+.skill-menu-picker-detail-empty {
+  margin: 0;
+  font-size: 13px;
+  color: #8a939f;
+  line-height: 1.45;
+}
+
+.skill-menu-picker-detail-header {
+  display: flex;
   align-items: flex-start;
   gap: 12px;
 }
 
-.skill-menu-picker-row--icon > .skill-menu-tab-icon {
-  flex: 0 0 24px;
-}
-
-.skill-menu-picker-row--icon > .skill-menu-picker-row-text {
-  flex: 0 0 4rem;
-  width: 4rem;
+.skill-menu-picker-detail-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
   min-width: 0;
 }
 
-.skill-menu-picker-row--icon > .skill-menu-picker-row-summary {
-  flex: 1 1 0;
-  min-width: 0;
+.skill-menu-picker-detail-role {
+  font-size: 11px;
+  font-weight: 700;
+  color: #8f98a8;
+  letter-spacing: 0.04em;
+}
+
+.skill-menu-picker-detail-name {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.skill-menu-picker-detail-epithet {
   font-size: 12px;
-  line-height: 1.45;
+  font-weight: 500;
   color: #9aa3b0;
+  letter-spacing: 0.03em;
+}
+
+.skill-menu-picker-detail-summary {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #c4cad4;
   white-space: pre-line;
 }
 
-.skill-menu-picker-row--icon.skill-menu-picker-row--action > .skill-menu-picker-row-text,
-.skill-menu-picker-row--icon.skill-menu-picker-row--no-summary > .skill-menu-picker-row-text {
-  flex: 1 1 0;
-  width: auto;
+.skill-menu-picker-detail-summary .game-term-link {
+  color: inherit;
 }
 
-.skill-menu-picker-row-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.skill-menu-picker-row--icon > .skill-menu-picker-row-text .skill-menu-skill-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.skill-menu-picker-row-epithet {
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.1;
-  color: #9aa3b0;
-  letter-spacing: 0.03em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.skill-menu-picker-row:hover {
-  border-color: #4a90d9;
-}

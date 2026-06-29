@@ -3,6 +3,7 @@ import type { GameTermId } from "./gameTermGlossary.ts";
 export interface GameTermEnSupplement {
   title: string;
   description?: string;
+  tooltip?: string;
   aliases?: readonly string[];
 }
 
@@ -81,6 +82,8 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   },
   multiLock: {
     title: "Multi-Lock",
+    tooltip:
+      "Applies effects to multiple targets.\nIf there are fewer valid targets, hits the same target again.",
     description:
       "Applies effects to N targets. If there are fewer valid targets, effects are applied repeatedly to the same targets in order.",
     aliases: ["Multi-Lock"],
@@ -193,8 +196,22 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
       "While HP is above a ratio threshold, amplifies instant heals and HoT ticks for the Gladiator. Weaker self-heal boost than Arena Law.",
     aliases: ["Duelist's Pride"],
   },
-  seedFlame: { title: "Seed Flame" },
-  blazingFlame: { title: "Blazing Flame" },
+  seedFlame: {
+    title: "Seed Flame",
+    tooltip:
+      "Magic DoT applied on each attack-skill hit.\nLasts 10s with ATK-scaled damage per second.",
+    description:
+      "Stacks on each attack-skill hit.\nEach stack deals magic damage every second for 10s based on ATK.\nMax stacks: 5.",
+    aliases: ["Seed Flame"],
+  },
+  blazingFlame: {
+    title: "Blazing Flame",
+    tooltip:
+      "Strong magic DoT upgraded from Seed Flame.\nAlso increases magic damage taken.",
+    description:
+      "Strong magic DoT upgraded from Seed Flame.\nEach stack deals indefinite ATK-scaled magic damage per second and increases magic damage taken.\nMax stacks: 1.",
+    aliases: ["Blazing Flame"],
+  },
   ballistaMark: { title: "Barrage Mark" },
   allyAttackFollowUp: {
     title: "Follow-Up Ready",

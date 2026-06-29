@@ -1,3 +1,4 @@
+import "../styles/game-ui-chrome.css";
 import "../styles/meta-menu-overlay.css";
 import type {
   CharacterBuild,
@@ -36,7 +37,8 @@ export class MetaMenuOverlay {
   private readonly titleEl: HTMLElement;
   private readonly playerLevelEl: HTMLElement;
   private readonly bodyEl: HTMLElement;
-  private readonly closeButton: HTMLButtonElement;
+  private readonly footerEl: HTMLElement;
+  private readonly footerButton: HTMLButtonElement;
   private backdrop: HTMLButtonElement | null = null;
   private skillPanel: SkillMenuPanel | null = null;
   private readonly directPartyEntry: boolean;
@@ -84,18 +86,22 @@ export class MetaMenuOverlay {
     this.playerLevelEl.className = "meta-menu-player-level";
     this.playerLevelEl.hidden = true;
 
-    this.closeButton = document.createElement("button");
-    this.closeButton.type = "button";
-    this.closeButton.className = "meta-menu-close";
-    this.closeButton.textContent = "×";
-    this.closeButton.addEventListener("click", () => this.callbacks.onClose());
-
-    titleBar.append(this.titleEl, this.playerLevelEl, this.closeButton);
+    titleBar.append(this.titleEl, this.playerLevelEl);
 
     this.bodyEl = document.createElement("div");
     this.bodyEl.className = "meta-menu-window-body";
 
-    this.windowEl.append(titleBar, this.bodyEl);
+    this.footerEl = document.createElement("div");
+    this.footerEl.className = "meta-menu-window-footer";
+
+    this.footerButton = document.createElement("button");
+    this.footerButton.type = "button";
+    this.footerButton.className = "game-ui-button meta-menu-footer-button";
+    this.footerButton.addEventListener("click", () => this.handleFooterAction());
+
+    this.footerEl.appendChild(this.footerButton);
+
+    this.windowEl.append(titleBar, this.bodyEl, this.footerEl);
     this.root.appendChild(this.windowEl);
     this.host.appendChild(this.root);
 
@@ -111,23 +117,61 @@ export class MetaMenuOverlay {
   private refreshLocale(): void {
     this.refreshChrome();
     if (this.skillPanel) {
-      this.titleEl.textContent = t("party.title");
+      this.updatePartyHeader();
       this.updatePlayerLevelDisplay();
+      this.updateFooterButton();
       return;
     }
     this.renderHub();
   }
 
   private refreshChrome(): void {
-    this.closeButton.setAttribute("aria-label", t("menu.close"));
     this.backdrop?.setAttribute("aria-label", t("menu.closeBackdrop"));
+  }
+
+  private updatePartyHeader(): void {
+    if (!this.skillPanel) return;
+    this.titleEl.textContent = t("party.headerStatus", {
+      filled: this.skillPanel.getFilledSlotCount(),
+      total: 4,
+      slot: this.skillPanel.getSelectedSlotIndex() + 1,
+    });
+  }
+
+  private updateFooterButton(): void {
+    if (this.skillPanel) {
+      this.footerButton.textContent = this.directPartyEntry
+        ? t("menu.close")
+        : t("party.back");
+      this.footerButton.setAttribute(
+        "aria-label",
+        this.directPartyEntry ? t("menu.close") : t("party.back")
+      );
+      return;
+    }
+    this.footerButton.textContent = t("menu.close");
+    this.footerButton.setAttribute("aria-label", t("menu.close"));
+  }
+
+  private handleFooterAction(): void {
+    if (this.skillPanel) {
+      if (this.directPartyEntry) {
+        this.callbacks.onClose();
+      } else {
+        this.renderHub();
+      }
+      return;
+    }
+    this.callbacks.onClose();
   }
 
   private renderHub(): void {
     this.destroySkillPanel();
+    this.windowEl.classList.remove("meta-menu-window--party");
     this.refreshChrome();
     this.titleEl.textContent = t("menu.title");
     this.playerLevelEl.hidden = true;
+    this.updateFooterButton();
     this.bodyEl.replaceChildren();
 
     const hub = document.createElement("div");
@@ -178,9 +222,10 @@ export class MetaMenuOverlay {
   }
 
   private openParty(): void {
-    this.titleEl.textContent = t("party.title");
+    this.windowEl.classList.add("meta-menu-window--party");
     this.refreshChrome();
     this.updatePlayerLevelDisplay();
+    this.updateFooterButton();
     this.bodyEl.replaceChildren();
     this.skillPanel = new SkillMenuPanel(
       this.bodyEl,
@@ -209,8 +254,12 @@ export class MetaMenuOverlay {
           this.updatePlayerLevelDisplay();
           this.callbacks.onPartySlotChanged(slotIndex, member);
         },
+        onPartyDraftChange: () => {
+          this.updatePartyHeader();
+        },
       },
     );
+    this.updatePartyHeader();
   }
 
   private destroySkillPanel(): void {
