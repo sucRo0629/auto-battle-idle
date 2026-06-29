@@ -671,13 +671,16 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 **前提:** 本番 VFX PNG 未投入（Phase 5a–5c / 7）。popup と HUD がスキル・パッシブ検証の主要手段。本番 VFX 投入後、Event Popup の一部は専用 VFX で省略しうる（Damage 数値 popup は別判断）。
 
-### 3 層
+**SE（初期版・体験版）:** 確認用の短い効果音。設計正本は [combat-architecture.md §8.8](../combat-architecture.md#88-sound初期版体験版)。VFX と異なりスキル単位ではなく `SoundEvent` 意味カテゴリに紐づける。実装未着手。
+
+### 3 層 + SE
 
 | 層 | 内容 | 実装 |
 | --- | --- | --- |
 | HUD | HP / バリア tier / 状態バッジ（パッシブ overlay 含む） | `PartyHudPanel`, `BattleCanvas` 頭上バッジ |
 | Damage Popup | damage / heal / dot の**確定数値のみ** | `DamagePopupManager` |
 | Event Popup | 瞬間イベントの短いラベル | `CombatReactionPopupManager` |
+| SE | 戦闘イベントの意味カテゴリ（`hit` / `bigHit` / `block` 等） | 未実装 — `src/assets/sounds/` |
 
 HUD 情報は原則 popup しない。スキル名・ダメージ内訳・Barrier 吸収量は Damage Popup に載せない。
 

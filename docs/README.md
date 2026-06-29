@@ -22,6 +22,7 @@
 | `battleLayout.ts`, `combatPosition.ts`, `SpriteAnimator`, `IBattleRenderer`, 描画 | [spec/battle-field.md](spec/battle-field.md)                                    |
 | `BattleStatsDrawer.ts`, `PartyMemberStatsDisplay.ts`, 戦闘中統計 DOM           | [spec/battle-field.md](spec/battle-field.md#7-戦闘中統計-ui)                    |
 | `vfxAnimRegistry.ts`, `VfxPlaybackManager`, `presentation/`, `sheets/vfx/`        | [spec/classes-and-skills.md](spec/classes-and-skills.md#スプライト演出アセット) |
+| SE / BGM（`src/assets/sounds/`、再生制御・音量設定）                              | [combat-architecture.md](combat-architecture.md#88-sound初期版体験版)（設定 UI: [party-formation-ui.md §16](spec/party-formation-ui.md#16-音声設定体験版)） |
 | `data/stages.json`, セーブ, EXP, LvUP, `stageRecords`                          | [spec/progression.md](spec/progression.md)                                      |
 | マップ選択・ステージ詳細・リザルト履歴 DOM（Phase 6d 予定）                    | [spec/stage-selection-ui.md](spec/stage-selection-ui.md)                        |
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, `gameTermGlossary.ts` 等、編成メニュー DOM | [spec/party-formation-ui.md](spec/party-formation-ui.md)（用語辞書: [classes-and-skills.md §UI 用語辞書](spec/classes-and-skills.md#ui-用語辞書)） |

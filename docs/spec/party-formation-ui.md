@@ -486,6 +486,7 @@ Picker 表示中も **上部ロスター帯は背面に見える**。他 3 人�
 | [progression.md](progression.md)                | セーブ、`playerProgress`、進行 UI      |
 | [phase-roadmap.md](../plans/phase-roadmap.md)   | Phase 4d 実装タイミング                |
 | [phase-4-roadmap.md](../plans/phase-4-roadmap.md) | Phase 4 作業順・[M1 対象クラス](../plans/phase-4-roadmap.md#m1-対象クラス4b--4e-の第一優先)・4d/4b/4e チェックリスト |
+| [combat-architecture.md](../combat-architecture.md) §8.8 | SE / BGM 方針（体験版） |
 
 ---
 
@@ -536,7 +537,24 @@ Picker 表示中も **上部ロスター帯は背面に見える**。他 3 人�
 
 ---
 
-## 16. 未確定・TBD
+## 16. 音声設定（体験版）
+
+**スコープ:** Phase 4d 外。SE / BGM の設計正本は [combat-architecture.md §8.8](../combat-architecture.md#88-sound初期版体験版)。
+
+初期版・体験版では SE を確認用フィードバックとして導入する。BGM は必須ではない。導入する場合も **SE と BGM を分離** し、それぞれ音量調整・ミュートできるようにする。
+
+| 項目 | 方針 |
+| ---- | ---- |
+| SE ミュート | 戦闘確認音のみ止める。popup / HUD は維持 |
+| BGM ミュート | 環境音・ループのみ止める |
+| 設定 UI の配置 | **未確定** — `MetaMenuOverlay` 配下、別 Settings 画面、または Phase 6d 以降の共通設定 UI のいずれか。実装着手時に本節を更新する |
+| 永続化 | セーブまたは localStorage。キー名は実装時に `projectIdentity.ts` の prefix に合わせる |
+
+編成画面そのものに音量スライダーを置く必要はない。プレイヤーが編成に集中できるよう、設定は戦闘 HUD 近傍またはメニューから 1 か所で触れる形を想定する。
+
+---
+
+## 17. 未確定・TBD
 
 | 項目                                | メモ                                                       |
 | ----------------------------------- | ---------------------------------------------------------- |
