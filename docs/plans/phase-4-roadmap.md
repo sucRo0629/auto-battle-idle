@@ -279,6 +279,8 @@ Release M1 解禁 8 クラスの一覧・グレーアウト 5・非表示 2 は 
 
 **ゴール:** Release M1（体験版）の **必須条件**。`ja` + `en` の 2 言語。
 
+**文案方針（正本）:** [i18n-en.md](../spec/i18n-en.md) — 日本語を翻訳正本とし、命令形・短句・用語表厳守。曖昧な箇所は `NEEDS_REVIEW`。エージェント向けは `.cursor/rules/i18n-en.mdc`。
+
 **着手条件**
 
 - 4d の DOM UI 骨格が安定（文言差し替え先が存在）— **充足済み**（§13 目視・§11 polish・800px 確認 2026-06）
@@ -344,6 +346,7 @@ Release M1 解禁 8 クラスの一覧・グレーアウト 5・非表示 2 は 
 | [phase-roadmap.md §M1 — 体験版](phase-roadmap.md#m1--体験版) | Release M1 プレイ範囲・解禁クラス・Phase 6 / 7 |
 | [phase-roadmap.md](phase-roadmap.md) | Phase 1〜12 全体・Release M1/M2 |
 | [classes-and-skills.md](../spec/classes-and-skills.md) | クラス・スキル schema、用語辞書、4b テンプレ |
+| [i18n-en.md](../spec/i18n-en.md) | 4e 英語文案方針・用語表・`NEEDS_REVIEW` |
 | [party-formation-ui.md](../spec/party-formation-ui.md) | 4d 仕様・受け入れ条件 |
 | [battle-field.md §7](../spec/battle-field.md#7-戦闘中統計-ui) | 統計 UI |
 | [skill-finalization-table.md](skill-finalization-table.md) | スキル設計確定表（データ PR 時） |

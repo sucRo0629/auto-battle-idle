@@ -59,7 +59,7 @@
 | `statusCategory?` | 状態系のみ。[combat.md §ステータス効果](combat.md#ステータス効果) の `StatusDisplayCategory` と対応。`StatusIconRegistry` に PNG が登録されているときのみ用語パネル見出しに表示 |
 | `statusIconCategory?` | 用語パネル見出しアイコンのみ。HUD カテゴリと別 ID の用語が同じ PNG を使うとき（例: `magicBlock` → `block`） |
 
-**多言語:** **Phase 4b / 4d** までは表示は **`ja` 固定**（型・データ形状だけ locale キーを持つ）。**Phase 4e** で **`en` のみ** 追加（3 言語目以降はスコープ外）。M1 8 クラス Lv0 の **日本語文案は確定済み**（2026-06、[phase-4-roadmap.md §4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)）。4e ではこれを翻訳正本とし locale 分岐する。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。
+**多言語:** **Phase 4b / 4d** までは表示は **`ja` 固定**（型・データ形状だけ locale キーを持つ）。**Phase 4e** で **`en` のみ** 追加（3 言語目以降はスコープ外）。M1 8 クラス Lv0 の **日本語文案は確定済み**（2026-06、[phase-4-roadmap.md §4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)）。4e ではこれを翻訳正本とし locale 分岐する。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。**英語文案の書き方**（命令形・用語表・`NEEDS_REVIEW`）は [i18n-en.md](i18n-en.md) を正とする。
 
 #### 混同禁止（別 ID 必須）
 
@@ -84,7 +84,7 @@
 
 ### スキル説明自動生成（Phase 4b）
 
-スキル JSON に `description` フィールドは持たない。説明文は `src/ui/formatSkillText.ts` の `formatActiveDescription` / `formatPassiveDescription` で組み立てる（現行: `SkillMenuPanel` ツールチップ・`SkillEditorStep` プレビュー）。戦闘ルールの正本は [combat.md](combat.md) および本書の effect 定義。**数値・確定文案の正本は JSON と `src/ui/formatSkillText.test.ts`**。本節はテンプレ方針のみ（スキル一覧への文案転記はしない）。
+スキル JSON に `description` フィールドは持たない。説明文は `src/ui/formatSkillText.ts` の `formatActiveDescription` / `formatPassiveDescription` で組み立てる（現行: `SkillMenuPanel` ツールチップ・`SkillEditorStep` プレビュー）。戦闘ルールの正本は [combat.md](combat.md) および本書の effect 定義。**数値・確定文案の正本は JSON と `src/ui/formatSkillText.test.ts`**。本節はテンプレ方針のみ（スキル一覧への文案転記はしない）。**英語（4e）** は日本語出力を翻訳正本とし、[i18n-en.md](i18n-en.md) の効果文ルールに従う（`skillTextPhrases.ts`）。
 
 #### 出力テンプレ（v1・1 行）
 

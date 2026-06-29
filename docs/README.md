@@ -28,7 +28,7 @@
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, `gameTermGlossary.ts` 等、編成メニュー DOM | [spec/party-formation-ui.md](spec/party-formation-ui.md)（用語辞書: [classes-and-skills.md §UI 用語辞書](spec/classes-and-skills.md#ui-用語辞書)） |
 | `data/enemies.json`, 敵編成・ボス設計の方針                                       | [enemy-design-concept.md](enemy-design-concept.md)                              |
 | ローグライクモード（ラン・問題生成・報酬）                                        | [spec/roguelike-mode.md](spec/roguelike-mode.md)                                |
-| `formatSkillText.ts`, 4b 説明文 / 4e i18n（**M1 8 クラス**）                      | [plans/phase-4-roadmap.md](plans/phase-4-roadmap.md)（M1: [§M1 対象クラス](plans/phase-4-roadmap.md#m1-対象クラス4b--4e-の第一優先)） |
+| `formatSkillText.ts`, 4b 説明文 / 4e i18n（**M1 8 クラス**）                      | [spec/i18n-en.md](spec/i18n-en.md)（進捗: [phase-4-roadmap.md §4e](plans/phase-4-roadmap.md#4e--英語-i18n-en-のみ)） |
 | Release M1 / M2 スコープ・配信方針                                                | [plans/phase-roadmap.md §Release マイルストーン](plans/phase-roadmap.md#release-マイルストーン) |
 | フェーズ・作業順                                                                  | [plans/phase-roadmap.md](plans/phase-roadmap.md)                                |
 | itch.io ストア・Devlog（M1 公開前）                                               | [plans/itch-io-devlog.md](plans/itch-io-devlog.md)                              |
