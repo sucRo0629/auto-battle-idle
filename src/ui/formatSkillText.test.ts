@@ -255,7 +255,8 @@ describe('formatActiveDescription', () => {
     const desc = formatActiveDescription(def);
     expect(desc).toContain('再使用：9秒');
     expect(desc).toContain('アンカー +32px');
-    expect(desc).toContain('敵3体をマルチロックして攻撃力の70%の物理ダメージを与える');
+    expect(desc).toContain('敵3体に攻撃力の70%の物理ダメージを与える');
+    expect(desc).not.toContain('対象不足分は同一対象へ再命中');
   });
 
   it('formats buff with flat bonus before multiplier', () => {
@@ -674,7 +675,7 @@ describe('formatActiveDescription', () => {
     const nagihara = formatSkillCardLines(a2!, { locale: 'ja' });
     expect(nagihara.metaLine).toBe('再使用：10秒');
     expect(nagihara.effectLines).toEqual([
-      '敵2体をマルチロックして攻撃力の60%の物理ダメージを与える',
+      '敵2体に攻撃力の60%の物理ダメージを与える',
     ]);
 
     expect(formatPassiveDescription(p1!)).toBe(
@@ -828,7 +829,7 @@ describe('formatActiveDescription', () => {
       '効果：攻撃時、対象の魔法耐性を20%無視する',
     );
     expect(formatPassiveDescription(p2!)).toBe(
-      '効果：敵に攻撃スキルが1回命中するごとに「種火」を1スタックする、種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える、最大スタック数：5、熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える、さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる、最大スタック数：1',
+      '効果：敵に攻撃スキルが1回命中するごとに「種火」を1スタックする、種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える、最大スタック数：5、最大スタック数到達時に「熾火」を1スタック付与する。熾火が上限（1）のときは種火は最大のまま据え置き。、熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える、さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる、最大スタック数：1',
     );
 
     const card1 = formatSkillCardLines(p1!, { locale: 'ja' });
@@ -846,7 +847,10 @@ describe('formatActiveDescription', () => {
         items: [
           {
             text: '種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える',
-            details: ['最大スタック数：5'],
+            details: [
+              '最大スタック数：5',
+              '最大スタック数到達時に「熾火」を1スタック付与する。熾火が上限（1）のときは種火は最大のまま据え置き。',
+            ],
           },
           {
             text: '熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える',
@@ -948,7 +952,7 @@ describe('formatActiveDescription', () => {
     const card2 = formatSkillCardLines(a2!, { locale: 'en' });
     expect(card2.metaLine).toBe('Recast: 10s');
     expect(card2.effectLines).toEqual([
-      'Multi-Locks 2 enemies and Deals 60% ATK as physical damage',
+      'Deals 60% ATK as physical damage to 2 enemies',
     ]);
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
@@ -1055,7 +1059,7 @@ describe('formatActiveDescription', () => {
     const card2 = formatSkillCardLines(a2!, { locale: 'en' });
     expect(card2.metaLine).toBe('Recast: 10s');
     expect(card2.effectLines).toEqual([
-      'Multi-Locks 2 enemies and Deals 90% ATK as magic damage',
+      'Deals 90% ATK as magic damage to 2 enemies',
     ]);
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
@@ -1073,7 +1077,10 @@ describe('formatActiveDescription', () => {
         items: [
           {
             text: 'Seed Flame: For each stack, deals 5% ATK as magic damage every second for 10s',
-            details: ['Max stacks: 5'],
+            details: [
+              'Max stacks: 5',
+              'At max stacks, applies 1 Blazing Flame. If Blazing Flame is capped at 1, Seed Flame stays at max.',
+            ],
           },
           {
             text: 'Blazing Flame: For each stack, deals 35% ATK as magic damage every second indefinitely',
@@ -1142,7 +1149,7 @@ describe('formatActiveDescription', () => {
     const card2 = formatSkillCardLines(a2!, { locale: 'en' });
     expect(card2.metaLine).toBe('Recast: 10s / Condition: Target HP ≤80%');
     expect(card2.effectLines).toEqual([
-      'Multi-Locks 2 allies and Barrier equal to 200% of ATK',
+      'Barrier equal to 200% of ATK to 2 allies',
     ]);
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });

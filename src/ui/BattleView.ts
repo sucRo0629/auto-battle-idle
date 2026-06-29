@@ -76,9 +76,9 @@ export class BattleView {
   private readonly root: HTMLElement;
   private readonly canvasHost: HTMLElement;
   private readonly canvasWrap: HTMLElement;
-  private readonly headerStageEl: HTMLElement;
-  private readonly headerLevelEl: HTMLElement;
-  private readonly verifyModeInput: HTMLInputElement;
+  private readonly canvasHudStageEl: HTMLElement;
+  private readonly canvasHudWaveEl: HTMLElement;
+  private readonly verifyBadgeEl: HTMLButtonElement;
   private readonly menuButton: HTMLButtonElement;
   private readonly hudToolbarLevelEl: HTMLElement;
   private readonly canvas: BattleCanvas;
@@ -92,7 +92,8 @@ export class BattleView {
   private readonly canvasFrame: HTMLElement;
   private hoveredMemberStatsSlotIndex: number | null = null;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
-  private lastStageLabel = "";
+  private lastStageName = "";
+  private lastWaveLabel = "";
   private lastHudToolbarLevel = -1;
   private readonly unsubscribeLocale: () => void;
   private readonly verifyModeControls?: VerifyModeControls;
@@ -109,33 +110,6 @@ export class BattleView {
     this.root = document.createElement("div");
     this.root.className = "battle-view";
 
-    const header = document.createElement("header");
-    header.className = "battle-header";
-
-    this.headerLevelEl = document.createElement("span");
-    this.headerLevelEl.className = "battle-header-level";
-
-    this.headerStageEl = document.createElement("span");
-    this.headerStageEl.className = "battle-header-stage";
-
-    const verifyLabel = document.createElement("label");
-    verifyLabel.className = "verify-mode-toggle";
-    verifyLabel.hidden = !verifyModeControls;
-
-    this.verifyModeInput = document.createElement("input");
-    this.verifyModeInput.type = "checkbox";
-    this.verifyModeInput.checked = verifyModeControls?.isVerifyMode() ?? true;
-    this.verifyModeInput.addEventListener("change", () => {
-      verifyModeControls?.onVerifyModeChange(this.verifyModeInput.checked);
-    });
-
-    verifyLabel.appendChild(this.verifyModeInput);
-    verifyLabel.setAttribute("aria-label", t("battle.verifyMode"));
-    verifyLabel.title = t("battle.verifyMode");
-
-    header.append(this.headerLevelEl, this.headerStageEl, verifyLabel);
-    this.root.appendChild(header);
-
     this.canvasHost = document.createElement("div");
     this.canvasHost.className = "battle-canvas-host";
 
@@ -146,6 +120,33 @@ export class BattleView {
     const canvasWrap = document.createElement("div");
     canvasWrap.className = "battle-canvas-wrap";
     this.canvasWrap = canvasWrap;
+
+    const canvasHud = document.createElement("div");
+    canvasHud.className = "battle-canvas-hud";
+
+    this.canvasHudStageEl = document.createElement("span");
+    this.canvasHudStageEl.className = "battle-canvas-hud-stage";
+
+    this.canvasHudWaveEl = document.createElement("span");
+    this.canvasHudWaveEl.className = "battle-canvas-hud-wave";
+
+    this.verifyBadgeEl = document.createElement("button");
+    this.verifyBadgeEl.type = "button";
+    this.verifyBadgeEl.className = "battle-verify-badge";
+    this.verifyBadgeEl.hidden = !verifyModeControls;
+    this.verifyBadgeEl.addEventListener("click", () => {
+      if (!verifyModeControls) return;
+      verifyModeControls.onVerifyModeChange(
+        !verifyModeControls.isVerifyMode()
+      );
+    });
+
+    canvasHud.append(
+      this.canvasHudStageEl,
+      this.canvasHudWaveEl,
+      this.verifyBadgeEl
+    );
+    canvasWrap.appendChild(canvasHud);
 
     canvasFrame.appendChild(canvasWrap);
     this.canvasHost.appendChild(canvasFrame);
@@ -287,9 +288,7 @@ export class BattleView {
   private refreshLocaleChrome(): void {
     this.menuButton.textContent = t("battle.formation");
     this.menuButton.setAttribute("aria-label", t("battle.formationAria"));
-    const verifyLabel = this.verifyModeInput.parentElement;
-    verifyLabel?.setAttribute("aria-label", t("battle.verifyMode"));
-    verifyLabel?.setAttribute("title", t("battle.verifyMode"));
+    this.syncVerifyBadgeState();
   }
 
   private clearMemberStatsHideTimer(): void {
@@ -658,13 +657,21 @@ export class BattleView {
     const stageName = stage?.displayName ?? save.stageProgress.currentStageId;
     const waveNum = snapshot.waveIndex + 1;
     const waveTotal = snapshot.waveCount;
-    const stageLabel = `${stageName}  Wave ${waveNum}/${waveTotal}`;
-    if (stageLabel !== this.lastStageLabel) {
-      this.lastStageLabel = stageLabel;
-      this.headerStageEl.textContent = stageLabel;
+    const waveLabel = t("battle.waveProgress", {
+      current: waveNum,
+      total: waveTotal,
+    });
+    if (stageName !== this.lastStageName) {
+      this.lastStageName = stageName;
+      this.canvasHudStageEl.textContent = stageName;
+    }
+    if (waveLabel !== this.lastWaveLabel) {
+      this.lastWaveLabel = waveLabel;
+      this.canvasHudWaveEl.textContent = waveLabel;
     }
 
     this.syncHudToolbarLevel(save.party);
+    this.syncVerifyBadgeState();
 
     const debugEnabled = this.verifyModeControls?.isVerifyMode() ?? false;
 
@@ -711,8 +718,26 @@ export class BattleView {
     if (level === this.lastHudToolbarLevel) return;
     this.lastHudToolbarLevel = level;
     const levelLabel = t("common.playerLevel", { level });
-    this.headerLevelEl.textContent = levelLabel;
     this.hudToolbarLevelEl.textContent = levelLabel;
+  }
+
+  private syncVerifyBadgeState(): void {
+    if (!this.verifyModeControls) {
+      this.verifyBadgeEl.hidden = true;
+      return;
+    }
+
+    this.verifyBadgeEl.hidden = false;
+    const enabled = this.verifyModeControls.isVerifyMode();
+    this.verifyBadgeEl.classList.toggle("battle-verify-badge--on", enabled);
+    this.verifyBadgeEl.classList.toggle("battle-verify-badge--off", !enabled);
+    this.verifyBadgeEl.textContent = enabled
+      ? t("battle.verifyBadge")
+      : t("battle.debugBadge");
+    this.verifyBadgeEl.setAttribute("aria-label", t("battle.verifyMode"));
+    this.verifyBadgeEl.title = enabled
+      ? t("battle.verifyMode")
+      : t("battle.verifyMode");
   }
 
   private createPartyMenuButton(): HTMLButtonElement {
@@ -737,9 +762,9 @@ export class BattleView {
   }
 
   syncVerifyModeToggle(enabled: boolean): void {
-    this.verifyModeInput.checked = enabled;
     this.battleXDebugCanvas.setVisible(enabled);
     this.debugMenu.refresh();
+    this.syncVerifyBadgeState();
   }
 
   isBattleXDebugReplayPaused(): boolean {

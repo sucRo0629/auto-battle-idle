@@ -1,4 +1,4 @@
-import type { ActiveSkillDef, PassiveSkillDef } from "../battle/types.ts";
+import type { ActiveSkillDef, PassiveSkillDef, TargetShape } from "../battle/types.ts";
 import {
   isSkillCardEffectList,
   type SkillCardEffectLine,
@@ -7,11 +7,16 @@ import {
 } from "./formatSkillText.ts";
 import type { GameTermId, GameTermLocale } from "./gameTermGlossary.ts";
 import {
-  resolveGameTermDescription,
   resolveGameTermTitle,
   resolveGameTermTooltip,
+  resolveStatusDefinition,
 } from "./gameTermGlossary.ts";
 import { segmentTextByGameTerms } from "./annotateGameTerms.ts";
+import {
+  isSkillCardStatusChipTermId,
+  isSkillCardTagTermId,
+  SKILL_CARD_STATUS_CHIP_TERM_IDS,
+} from "./skillCardDisplayRules.ts";
 
 const MAX_HEADLINE_LINES = 3;
 
@@ -55,13 +60,22 @@ function resolveTermIdFromListItemText(
   text: string,
   locale: GameTermLocale
 ): GameTermId | undefined {
+  const prefix = text.split(/[：:]/)[0]?.trim();
+  if (prefix) {
+    for (const termId of SKILL_CARD_STATUS_CHIP_TERM_IDS) {
+      if (resolveGameTermTitle(termId, locale) === prefix) {
+        return termId;
+      }
+    }
+  }
+
   for (const segment of segmentTextByGameTerms(text, locale)) {
     if (segment.kind === "term") return segment.termId;
   }
-  const prefix = text.split(/[：:]/)[0]?.trim();
-  if (!prefix) return undefined;
-  for (const segment of segmentTextByGameTerms(prefix, locale)) {
-    if (segment.kind === "term") return segment.termId;
+  if (prefix) {
+    for (const segment of segmentTextByGameTerms(prefix, locale)) {
+      if (segment.kind === "term") return segment.termId;
+    }
   }
   return undefined;
 }
@@ -101,6 +115,13 @@ function buildChipSummary(
       detail.toLowerCase().includes("damage taken")
     ) {
       parts.push(locale === "ja" ? "魔法被ダメ増加" : "Magic taken+");
+      continue;
+    }
+    if (
+      detail.includes("熾火") ||
+      detail.toLowerCase().includes("blazing flame")
+    ) {
+      parts.push(locale === "ja" ? "→熾火" : "→Blazing");
     }
   }
 
@@ -112,7 +133,7 @@ function listItemToStatusChip(
   locale: GameTermLocale
 ): SkillCardStatusChip | null {
   const termId = resolveTermIdFromListItemText(item.text, locale);
-  if (!termId) return null;
+  if (!termId || !isSkillCardStatusChipTermId(termId)) return null;
   const summary = buildChipSummary(item, locale);
   return {
     termId,
@@ -121,46 +142,17 @@ function listItemToStatusChip(
   };
 }
 
-function parseHeadlineWithTags(
-  line: string,
-  locale: GameTermLocale
-): { headline: string; tags: SkillCardTag[] } {
-  const tags: SkillCardTag[] = [];
+function multiLockTagLabel(hitCount: string, locale: GameTermLocale): string {
+  return locale === "ja"
+    ? `マルチロック${hitCount}`
+    : `Multi-Lock ${hitCount}`;
+}
 
-  if (locale === "en") {
-    const multiLock = line.match(/^Multi-Locks (\d+) (allies|enemies) and (.+)$/i);
-    if (multiLock) {
-      tags.push({ termId: "multiLock", label: `Multi-Lock ${multiLock[1]}` });
-      const headline = multiLock[3]!.trim();
-      if (/magic/i.test(headline)) {
-        tags.push({ label: "Magic damage" });
-      }
-      return { headline, tags };
-    }
-  } else {
-    const multiLock =
-      line.match(/^味方(\d+)体をマルチロックして(.+)$/) ??
-      line.match(/^敵(\d+)体をマルチロックして(.+)$/);
-    if (multiLock) {
-      tags.push({ termId: "multiLock", label: `マルチロック ${multiLock[1]}` });
-      const headline = multiLock[2]!.trim();
-      if (headline.includes("魔法")) {
-        tags.push({ label: "魔法ダメージ" });
-      }
-      return { headline, tags };
-    }
-  }
-
-  if (
-    line.includes("魔法ダメージ") ||
-    line.toLowerCase().includes("magic damage")
-  ) {
-    tags.push({
-      label: locale === "ja" ? "魔法ダメージ" : "Magic damage",
-    });
-  }
-
-  return { headline: line, tags };
+function resolveEffectTargetShape(
+  effect: ActiveSkillDef["effect"][number],
+  def: ActiveSkillDef
+): TargetShape {
+  return effect.targetShape ?? def.targetShape ?? "single";
 }
 
 function extractEffectTags(
@@ -168,23 +160,34 @@ function extractEffectTags(
   locale: GameTermLocale
 ): SkillCardTag[] {
   const tags: SkillCardTag[] = [];
+  const seen = new Set<GameTermId>();
+  const defShape = def.targetShape ?? "single";
+
+  const pushTag = (termId: GameTermId, label: string) => {
+    if (!isSkillCardTagTermId(termId) || seen.has(termId)) return;
+    seen.add(termId);
+    tags.push({ termId, label });
+  };
+
+  if (defShape === "aoe") {
+    pushTag("aoe", resolveGameTermTitle("aoe", locale));
+  }
+
   for (const effect of def.effect) {
-    const hitCount = effect.hitCount ?? 1;
-    if (effect.targetShape === "multiLock" && hitCount > 1) {
-      tags.push({
-        termId: "multiLock",
-        label:
-          locale === "ja"
-            ? `マルチロック ${hitCount}`
-            : `Multi-Lock ${hitCount}`,
-      });
+    const shape = resolveEffectTargetShape(effect, def);
+    const hitCount = effect.hitCount ?? def.hitCount ?? 1;
+
+    if (shape === "multiLock" && hitCount > 1) {
+      pushTag("multiLock", multiLockTagLabel(String(hitCount), locale));
     }
-    if (effect.type === "damage" && effect.damageType === "magic") {
-      tags.push({
-        label: locale === "ja" ? "魔法ダメージ" : "Magic damage",
-      });
+    if (shape === "aoe") {
+      pushTag("aoe", resolveGameTermTitle("aoe", locale));
+    }
+    if (shape === "pierce") {
+      pushTag("pierce", resolveGameTermTitle("pierce", locale));
     }
   }
+
   return tags;
 }
 
@@ -201,17 +204,19 @@ export function resolveSkillCardDisplay(
     if (isSkillCardEffectList(line)) {
       for (const item of line.items) {
         const chip = listItemToStatusChip(item, locale);
-        if (chip) statusChips.push(chip);
+        if (chip) {
+          statusChips.push(chip);
+          continue;
+        }
+        if (headlineLines.length < MAX_HEADLINE_LINES) {
+          headlineLines.push(item.text);
+        }
       }
       continue;
     }
 
     if (headlineLines.length >= MAX_HEADLINE_LINES) continue;
-    const parsed = parseHeadlineWithTags(line, locale);
-    if (parsed.headline.length > 0) {
-      headlineLines.push(parsed.headline);
-    }
-    tags.push(...parsed.tags);
+    headlineLines.push(line);
   }
 
   if (def && isActiveSkillDef(def)) {
@@ -230,10 +235,10 @@ export function resolveStatusChipTooltip(
   chip: SkillCardStatusChip,
   locale: GameTermLocale
 ): { title: string; body: string } {
-  const description = resolveGameTermDescription(chip.termId, locale);
+  const body = resolveStatusDefinition(chip.termId, locale);
   return {
     title: chip.title,
-    body: description ?? resolveGameTermTooltip(chip.termId, locale),
+    body: body ?? "",
   };
 }
 

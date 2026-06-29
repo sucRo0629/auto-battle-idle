@@ -31,6 +31,8 @@ export type GameTermId =
   | "moveLock"
   | "skillLock"
   | "multiLock"
+  | "aoe"
+  | "pierce"
   | "dotCompress"
   | "hot"
   | "poison"
@@ -60,10 +62,12 @@ export type GameTermId =
 export interface GameTermEntry {
   id: GameTermId;
   title: Record<GameTermLocale, string>;
-  /** 用語パネル本文。`\n` で改行（表示は `white-space: pre-line`）。HUD 表示名のみの ID は省略可。 */
+  /** 用語辞典（用語パネル・HUD クリック説明）。ゲーム全体の共通用語向け。 */
   description?: Record<GameTermLocale, string>;
-  /** スキルカード内ホバー用の短い説明（2〜3行）。省略時は `description` 先頭行から生成。 */
+  /** 用語ホバー（スキルカード本文・タグの短い説明）。省略時は `description` 先頭行から生成。 */
   tooltip?: Record<GameTermLocale, string>;
+  /** 状態辞典（状態チップホバー）。状態定義のみ。固有状態の正本。 */
+  statusDefinition?: Record<GameTermLocale, string>;
   /** 本文中でリンク化する表記。省略時はスキル説明ではリンク化しない（HUD バッジクリック等で補足）。 */
   aliases?: Record<GameTermLocale, readonly string[]>;
   statusCategory?: StatusDisplayCategory;
@@ -73,11 +77,12 @@ export interface GameTermEntry {
 
 type GameTermEntrySource = Omit<
   GameTermEntry,
-  "title" | "description" | "tooltip" | "aliases"
+  "title" | "description" | "tooltip" | "statusDefinition" | "aliases"
 > & {
   title: { ja: string };
   description?: { ja: string };
   tooltip?: { ja: string };
+  statusDefinition?: { ja: string };
   aliases?: { ja: readonly string[] };
 };
 
@@ -190,12 +195,26 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "multiLock",
     title: { ja: "マルチロック" },
     tooltip: {
-      ja: "複数対象へ効果を適用する。\n対象が不足している場合、同じ対象へ再度適用する。",
+      ja: "対象数まで効果を適用する。\n対象が不足している場合、不足分は同じ対象へ再度適用する。",
     },
     description: {
-      ja: "N体に対して効果を適用する。対象が不足している場合、再度同じ対象に対して順番に効果を適用する。",
+      ja: "対象数まで効果を適用する。対象が不足している場合、不足分は同じ対象へ再度適用する。",
     },
     aliases: { ja: ["マルチロック"] },
+  },
+  {
+    id: "aoe",
+    title: { ja: "AoE" },
+    tooltip: {
+      ja: "範囲内の対象へ効果を適用する形状。",
+    },
+  },
+  {
+    id: "pierce",
+    title: { ja: "Pierce" },
+    tooltip: {
+      ja: "貫通し、複数対象へ順に効果を適用する形状。",
+    },
   },
   {
     id: "skillLock",
@@ -399,25 +418,17 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   {
     id: "seedFlame",
     title: { ja: "種火" },
-    tooltip: {
-      ja: "攻撃スキル命中ごとに付与する魔法DoT。\n10秒間、毎秒ATK比例ダメージ。",
+    statusDefinition: {
+      ja: "魔法DoT。\n\n・毎秒攻撃力5%の魔法ダメージ\n・10秒持続\n・最大5スタック\n\n最大スタック時、新たに付与される代わりに「熾火」へ変化する。",
     },
-    description: {
-      ja: "攻撃スキルが命中するたびにスタックする魔法DoT。\n1スタックごとに10秒間、毎秒攻撃力の一定割合の魔法ダメージを与える。\n最大スタック数は5。",
-    },
-    aliases: { ja: ["種火"] },
     statusCategory: "seedFlame",
   },
   {
     id: "blazingFlame",
     title: { ja: "熾火" },
-    tooltip: {
-      ja: "種火から昇格する強力な魔法DoT。\n魔法被ダメージ増加を伴う。",
+    statusDefinition: {
+      ja: "種火から昇格する魔法DoT。\n\n・毎秒攻撃力35%の魔法ダメージ（無期限）\n・1スタックごとに魔法攻撃の被ダメージを10%増加\n・最大1スタック",
     },
-    description: {
-      ja: "種火から昇格する強力な魔法DoT。\n1スタックごとに無期限で毎秒攻撃力の一定割合の魔法ダメージを与える。\nさらに魔法攻撃の被ダメージを増加させる。最大スタック数は1。",
-    },
-    aliases: { ja: ["熾火"] },
     statusCategory: "blazingFlame",
   },
   {
@@ -463,6 +474,15 @@ function mergeGameTermEn(entry: GameTermEntrySource): GameTermEntry {
         ? {
             ...(entry.tooltip ?? {}),
             ...(en.tooltip !== undefined ? { en: en.tooltip } : {}),
+          }
+        : undefined,
+    statusDefinition:
+      entry.statusDefinition !== undefined || en.statusDefinition !== undefined
+        ? {
+            ...(entry.statusDefinition ?? {}),
+            ...(en.statusDefinition !== undefined
+              ? { en: en.statusDefinition }
+              : {}),
           }
         : undefined,
     aliases:
@@ -512,6 +532,19 @@ export function resolveGameTermDescription(
   const description = getGameTermEntry(id)?.description?.[locale];
   if (!description || description.trim().length === 0) return undefined;
   return description.trim();
+}
+
+export function resolveStatusDefinition(
+  id: GameTermId,
+  locale: GameTermLocale = "ja"
+): string | undefined {
+  const entry = getGameTermEntry(id);
+  const statusDefinition =
+    entry?.statusDefinition?.[locale] ?? entry?.statusDefinition?.ja;
+  if (statusDefinition && statusDefinition.trim().length > 0) {
+    return statusDefinition.trim();
+  }
+  return resolveGameTermDescription(id, locale);
 }
 
 export function resolveGameTermTooltip(

@@ -35,7 +35,147 @@
 
 スキル説明など DOM UI 上の **ゲーム用語** を、クリックで補足説明できるようにするための辞書。戦闘ルールの正本は引き続き [combat.md](combat.md) および本書の各節。辞書は **プレイヤー向け要約** を載せ、詳細数式・パイプラインは spec へ委ねる。
 
-**実装:** `src/ui/gameTermGlossary.ts`（辞書）、`src/ui/annotateGameTerms.ts`（本文へのリンク化）、`src/ui/GameTermPanel.ts`（用語パネル）、`src/styles/game-term-panel.css`。画面振る舞いは [party-formation-ui.md §6.4](party-formation-ui.md#64-インライン用語パネル) を正とする。
+**実装:** `src/ui/gameTermGlossary.ts`（辞書）、`src/ui/annotateGameTerms.ts`（本文へのリンク化）、`src/ui/GameTermPanel.ts`（用語パネル）、`src/styles/game-term-panel.css`。画面振る舞いは [party-formation-ui.md §6.4](party-formation-ui.md#64-用語注釈スキルカード) を正とする。**表示分類の正本**は下記 [ゲーム用語表（表示分類）](#ゲーム用語表表示分類)。
+
+#### ゲーム用語表（表示分類）
+
+Hensei Only のゲーム用語は、プレイヤー向け UI 上で次の **5 分類** で扱う。日本語表示を正本とし、英語は [i18n-en.md](i18n-en.md) の制御英語に従う。一般 RPG 用語で補完しない。
+
+| 分類 | 役割 |
+| ---- | ---- |
+| **本文** | 何が起きるか（スキル効果そのもの） |
+| **タグ** | 処理形状・対象形状・発動形状の特殊メカニクス |
+| **状態チップ** | 名前を持つ固有バフ・固有デバフ・固有状態 |
+| **ツールチップ** | 共通用語の短い注釈（2〜3 行） |
+| **状態ツールチップ** | 固有状態の定義（効果・持続・スタック・変化・消滅）。スキルカード上は状態チップのホバー |
+| **HUD バッジ** | 戦闘中に実際にユニットへ付いている状態 |
+
+**情報責務・重複禁止**（本文 / タグ / タグツールチップ / 状態チップの正本配置）: [party-formation-ui.md §スキルカード情報設計](party-formation-ui.md#スキルカード情報設計)。
+
+**辞書データ:** `gameTermGlossary.ts` / `gameTermGlossaryEn.ts`（`GameTermId`）。`description` = 用語辞典、`tooltip` = 用語ホバー、`statusDefinition` = 状態辞典。**固有状態**は `statusDefinition` のみ（`description` / `aliases` / `tooltip` 禁止。[§固有状態（辞書データ）](party-formation-ui.md#固有状態辞書データ)）。**スキルカードへの割当:** `skillCardDisplayRules.ts`（実装側 allowlist。本表と同期すること）。
+
+##### 本文に残す用語
+
+以下はスキル効果そのものを構成するため **タグ化しない**。必要に応じてツールチップリンク化してよい。
+
+HP / ATK / DEF / REG / Max HP / Attack Speed / Range / 物理ダメージ / 魔法ダメージ / 被ダメージ / 回復 / ブロック / バリア / 障壁 / ダメージ軽減 / 被ダメージ増加 / DoT / HoT / 毒 / 出血 / スタン / ノックバック / 回避 / 反撃 / 通常攻撃 / 攻撃スキル / Hit / Recast / Duration / チャージ / 防御無視・DEF 無視 / 特効
+
+##### タグにする用語
+
+タグは **処理形状・対象形状・発動形状** の特殊メカニクスに限定する。
+
+**タグ化してよい（候補）**
+
+| 表示名 | 備考 |
+| ------ | ---- |
+| Multi-Lock | `GameTermId: multiLock`。**実装済み** |
+| AoE | `GameTermId: aoe`。**実装済み** |
+| Pierce | `GameTermId: pierce`。**実装済み** |
+| Chain | 未実装 |
+| Scatter | 未実装 |
+| Pool Each | 未実装 |
+| Trigger | 未実装 |
+| Counter-trigger | 未実装。反撃効果そのものではなく発動条件 |
+| On hit taken | 未実装 |
+| Front ally hit | 未実装 |
+| Hold / Lockout | `GameTermId: skillLock`（英: Lockout）。タグ化は未実装 |
+
+**タグ化しない:** Magic damage / Physical damage / Block / Heal / Barrier / Ward / Buff / Debuff / DoT / HoT / Poison / Bleed / Stun / Knockback / Counter / Evasion
+
+**注意:** `Counter`（反撃）は単体ではタグ化しない。「反撃時に発動する」**条件**を示す場合のみ `Counter-trigger` 等の発動条件タグとして扱う。
+
+##### 状態チップにする用語
+
+**専用名を持つ固有状態**に限定する。DoT・毒・出血・スタン・ノックバック等の **汎用状態** はスキルカード本文に残す（戦闘 HUD バッジ表示は可）。
+
+**状態ツールチップ**（状態定義のみ。スキル付与条件は含めない）: [party-formation-ui.md §状態ツールチップ](party-formation-ui.md#状態ツールチップ)。スキルカード本文中の固有状態名は **用語ホバー化しない**（状態チップのホバーで定義を示す）。
+
+**固有状態の辞書ルール**（`description` / `aliases` 禁止、`statusDefinition` のみ）: [party-formation-ui.md §固有状態（辞書データ）](party-formation-ui.md#固有状態辞書データ)。
+
+| 日本語 | English | `GameTermId` |
+| ------ | ------- | ------------ |
+| 種火 | Seed Flame | `seedFlame` |
+| 熾火 | Blazing Flame | `blazingFlame` |
+| 乾印 | Qian Mark | `windMark` |
+| 坤印 | Kun Mark | `earthMark` |
+| 闘士の指名 | Gladiator's Mark | `arenaMark` |
+| 砲撃標的 | Barrage Mark | `ballistaMark` |
+| 防壁 | Bulwark | `blockResonance` |
+| 城塞の構え | Citadel Stance | `blockResonanceStance` |
+| 治癒の残響 | Healing Echo | `healReservation` |
+| 薬効 | Herbal Potency | `herbalPotency` |
+| 頑健 | Hardy | `herbalPotencyConstitution` |
+| 追撃状態 | Follow-Up Ready | `allyAttackFollowUp` |
+| 毒の武器 | Poison Weapon | `poisonWeapon` |
+| 次のダメージ増加 | Next Hit Amp | `nextOutgoingDamage` |
+| 不屈 | Last Stand | `lastStandGuts` |
+| 闘技場の掟 | Arena Law | `arenaDominance` |
+| 闘士の矜持 | Duelist's Pride | `duelistPride` |
+| ダメージ遅延 | Damage Delay | `damageDelay` |
+| 通常攻撃変形 | Basic Attack Transform | `basicAttackTransform` |
+
+##### ツールチップ対象
+
+共通用語として **短い説明**（2〜3 行）を付けてよい候補。処理順・例外・内部実装は入れない。
+
+| 候補 | `GameTermId` | 備考 |
+| ---- | ------------ | ---- |
+| Multi-Lock | `multiLock` | 登録済 |
+| Barrier | `barrier` | 登録済 |
+| Ward | `wardBarrier` | 登録済（英 title: Ward） |
+| Block | `block` | 登録済 |
+| Magic Block | `magicBlock` | 登録済 |
+| Basic Attack | `basicAttack` | 登録済 |
+| Attack Skill | — | **辞書未登録**（文案のみ使用） |
+| Hit | — | **辞書未登録** |
+| Recast | — | **辞書未登録**（`metaLine` ラベルは `Recast`） |
+| Duration | — | **辞書未登録** |
+| Charge | `charge` | 登録済 |
+| Stun | `stun` | 登録済 |
+| DoT | `dot` | 登録済 |
+| HoT | `hot` | 登録済 |
+| Poison | `poison` | 登録済 |
+| Bleed | `bleed` | 登録済 |
+| Lockout | `skillLock` | 登録済 |
+| Root | `moveLock` | 登録済 |
+| Counter | `counter` | 登録済 |
+| Evasion | `evasion` | 登録済 |
+| Invulnerable | `invulnerable` | 登録済 |
+| Damage Delay | `damageDelay` | 登録済 |
+
+##### HUD バッジ
+
+戦闘中に **実際に付与されている状態** を表示する。スキルカードのタグとは **別物**。表示可否は「戦闘中に状態として存在するか」で判断し、スキルカード上のタグ化可否とは連動させない。
+
+例: バリア / 障壁 / ブロック / 毒 / 出血 / スタン / 種火 / 熾火 / 闘士の指名 / ダメージ遅延
+
+HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易表示 vs 詳細表示](combat.md#簡易表示-vs-詳細表示)・[battle-field.md §7.1.2](battle-field.md#712-状態バッジクリック用語パネル) を正とする。
+
+##### 表記統一
+
+| 項目 | ルール |
+| ---- | ------ |
+| 再使用 | **Recast**（Cooldown / CD は UI 表示に使わない） |
+| 継続ダメージ | **DoT**（Dot / dot は使わない） |
+| 複数対象 | 表示名 **Multi-Lock**（MultiLock / Multi-Locks は使わない。**動詞化しない**） |
+| 被ダメ | **damage taken**（incoming damage と混在しない） |
+| 防御系 | Ward = 障壁 / Barrier = バリア / Bulwark = 防壁 |
+| ステ略称 | ATK / DEF / REG / HP を維持 |
+| REG | **EN:** REG。**JA:** 魔法耐性（攻撃力・防御力と同様、日本語は略称にしない） |
+| Attack Speed | UI 表示名。**内部キー `spd` / `attackSpeed` と混同しない** |
+
+#### 混同禁止（別 ID 必須）
+
+| ID（例）      | 日本語              | 正本                                                                                     |
+| ------------- | ------------------- | ---------------------------------------------------------------------------------------- |
+| `barrier`     | **バリア**          | `barrierHp` — HP より先に消費されるダメージ吸収（[combat.md §バリア](combat.md#バリア)） |
+| `wardBarrier` | **障壁**            | `wardBarrier` スタック — ダメージ軽減。バリアより先に消費（本書 結界師節）               |
+| `windMark`    | **乾印**            | 印術師専用 overlay。拡散側（[§印術師](#印術師at_sigilist拡張)）                          |
+| `earthMark`   | **坤印**            | 印術師専用 overlay。収束側（同上）                                                       |
+| `ballistaMark`| **砲撃標的**        | 弩砲士専用。乾印・坤印と混同しない                                                       |
+| `arenaMark`   | **闘士の指名** 等   | 闘技士 `arenaDominance` 系。印術師の印と混同しない                                       |
+| `damageReduction` | **ダメージ軽減** | `damageTaken` stat の軽減 buff / パッシブ `damageReduction`。倍率 `<1` は `ダメージ軽減N%` と表記 |
+| `damageIncrease`  | **被ダメージ増加** | `damageTaken` stat の増加 debuff。倍率 `>1` は `被ダメージ増加N%` と表記 |
 
 #### スコープ（v1）
 
@@ -61,19 +201,6 @@
 
 **多言語:** **Phase 4b / 4d** までは表示は **`ja` 固定**（型・データ形状だけ locale キーを持つ）。**Phase 4e** で **`en` のみ** 追加（3 言語目以降はスコープ外）。M1 8 クラス Lv0 の **日本語文案は確定済み**（2026-06、[phase-4-roadmap.md §4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)）。4e ではこれを翻訳正本とし locale 分岐する。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。**英語文案の書き方**（命令形・用語表・`NEEDS_REVIEW`）は [i18n-en.md](i18n-en.md) を正とする。
 
-#### 混同禁止（別 ID 必須）
-
-| ID（例）      | 日本語              | 正本                                                                                     |
-| ------------- | ------------------- | ---------------------------------------------------------------------------------------- |
-| `barrier`     | **バリア**          | `barrierHp` — HP より先に消費されるダメージ吸収（[combat.md §バリア](combat.md#バリア)） |
-| `wardBarrier` | **障壁**            | `wardBarrier` スタック — ダメージ軽減。バリアより先に消費（本書 結界師節）               |
-| `windMark`    | **乾印**            | 印術師専用 overlay。拡散側（[§印術師](#印術師at_sigilist拡張)）                          |
-| `earthMark`   | **坤印**            | 印術師専用 overlay。収束側（同上）                                                       |
-| `ballistaMark`| **砲撃標的**        | 弩砲士専用。乾印・坤印と混同しない                                                       |
-| `arenaMark`   | **闘士の指名** 等   | 闘技士 `arenaDominance` 系。印術師の印と混同しない                                       |
-| `damageReduction` | **ダメージ軽減** | `damageTaken` stat の軽減 buff / パッシブ `damageReduction`。倍率 `<1` は `ダメージ軽減N%` と表記 |
-| `damageIncrease`  | **被ダメージ増加** | `damageTaken` stat の増加 debuff。倍率 `>1` は `被ダメージ増加N%` と表記 |
-
 #### 登録方針
 
 - 初版は `formatSkillText` 出力で **頻出する用語** から段階追加（全用語一括は不要）
@@ -96,7 +223,7 @@
 - `持続` — 効果残り秒（`buffDurationSec` 等の最大）。`useDurationSec`（硬直）とは分ける
 - `硬直` — `useDurationSec`。`useDurationPauseApproach` 時は `硬直・移動停止N秒`（秒数は末尾）。それ以外は `硬直N秒`
 - `発動条件` — `firePolicy: smart` の `fireConditions` 要約（例: `対象のHPが50%以上`）
-- `[効果…]` — コンパクト表記。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージを与える`（至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `敵N体をマルチロックして…`（味方対象は `味方N体をマルチロックして…`）。不足時の再配分は用語 **マルチロック** の説明を正とする（`formatSkillCardLines`）
+- `[効果…]` — コンパクト表記。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージを与える`（至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `敵N体に…`（味方対象は `味方N体に…`）。不足対象時の再配分は本文に書かず **Multi-Lock タグ tooltip** へ（[ゲーム用語表](classes-and-skills.md#ゲーム用語表表示分類)）。タグは **マルチロックN** / **Multi-Lock N**
 
 **Passive**
 

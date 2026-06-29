@@ -68,9 +68,11 @@ Proper nouns (Seed Flame, marks, etc.): use `gameTermGlossaryEn.ts` `title` / [c
 
 ## Examples
 
-JA: 敵2体にATK 90%の魔法ダメージ。対象不足分は同一対象へ再命中。
+JA (body): 敵2体に攻撃力90%の魔法ダメージを与える。
 
-EN: Deal 90% ATK magic damage to 2 enemies. If targets are insufficient, repeat hits on the same target.
+EN (body): Deal 90% ATK magic damage to 2 enemies.
+
+Multi-Lock tag tooltip (not body): 対象数まで効果を適用する。対象が不足している場合、不足分は同じ対象へ再度適用する。
 
 JA: 攻撃スキルのHitごとに、敵へ種火を付与する。
 

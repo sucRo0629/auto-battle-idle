@@ -148,8 +148,12 @@ function createFakeElement() {
     textContent: "",
     checked: false,
     disabled: false,
+    hidden: false,
     type: "",
     style: {},
+    classList: {
+      toggle: vi.fn(),
+    },
     appendChild: vi.fn(),
     append: vi.fn(),
     addEventListener: vi.fn(),

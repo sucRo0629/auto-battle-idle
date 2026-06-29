@@ -4,6 +4,7 @@ export interface GameTermEnSupplement {
   title: string;
   description?: string;
   tooltip?: string;
+  statusDefinition?: string;
   aliases?: readonly string[];
 }
 
@@ -83,10 +84,20 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   multiLock: {
     title: "Multi-Lock",
     tooltip:
-      "Applies effects to multiple targets.\nIf there are fewer valid targets, hits the same target again.",
+      "Applies effects up to the target count.\nIf targets are insufficient, remaining applications hit the same target again.",
     description:
-      "Applies effects to N targets. If there are fewer valid targets, effects are applied repeatedly to the same targets in order.",
+      "Applies effects up to the target count. If targets are insufficient, remaining applications hit the same target again.",
     aliases: ["Multi-Lock"],
+  },
+  aoe: {
+    title: "AoE",
+    tooltip: "Applies effects to targets in an area.",
+    aliases: ["AoE"],
+  },
+  pierce: {
+    title: "Pierce",
+    tooltip: "Applies effects through targets in line.",
+    aliases: ["Pierce"],
   },
   skillLock: {
     title: "Lockout",
@@ -198,19 +209,13 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   },
   seedFlame: {
     title: "Seed Flame",
-    tooltip:
-      "Magic DoT applied on each attack-skill hit.\nLasts 10s with ATK-scaled damage per second.",
-    description:
-      "Stacks on each attack-skill hit.\nEach stack deals magic damage every second for 10s based on ATK.\nMax stacks: 5.",
-    aliases: ["Seed Flame"],
+    statusDefinition:
+      "Magic DoT.\n\n· Magic damage equal to 5% ATK per second\n· Lasts 10s\n· Max 5 stacks\n\nAt max stacks, further applications convert to Blazing Flame instead.",
   },
   blazingFlame: {
     title: "Blazing Flame",
-    tooltip:
-      "Strong magic DoT upgraded from Seed Flame.\nAlso increases magic damage taken.",
-    description:
-      "Strong magic DoT upgraded from Seed Flame.\nEach stack deals indefinite ATK-scaled magic damage per second and increases magic damage taken.\nMax stacks: 1.",
-    aliases: ["Blazing Flame"],
+    statusDefinition:
+      "Magic DoT upgraded from Seed Flame.\n\n· Magic damage equal to 35% ATK per second (indefinite)\n· +10% magic damage taken per stack\n· Max 1 stack",
   },
   ballistaMark: { title: "Barrage Mark" },
   allyAttackFollowUp: {

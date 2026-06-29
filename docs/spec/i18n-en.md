@@ -66,7 +66,7 @@ Use controlled, concise game-effect English.
 | 被ダメージ | damage taken |
 | 継続ダメージ | DoT |
 | 持続時間 | duration |
-| 再使用時間 | recast |
+| 再使用時間 | Recast |
 | スタック | stack |
 | 最大スタック | max stacks |
 | 対象 | target |
@@ -82,18 +82,28 @@ Use controlled, concise game-effect English.
 
 **Examples:**
 
-Japanese:
+Japanese (body):
 
 ```
-敵2体にATK 90%の魔法ダメージ。
-対象不足分は同一対象へ再命中。
+敵2体に攻撃力90%の魔法ダメージを与える。
 ```
 
-English:
+English (body):
 
 ```
 Deal 90% ATK magic damage to 2 enemies.
-If targets are insufficient, repeat hits on the same target.
+```
+
+Multi-Lock tag tooltip (not body):
+
+```
+対象数まで効果を適用する。
+対象が不足している場合、不足分は同じ対象へ再度適用する。
+```
+
+```
+Applies effects up to the target count.
+If targets are insufficient, remaining applications hit the same target again.
 ```
 
 Japanese:
@@ -108,6 +118,46 @@ English:
 Apply Seed Flame to the enemy for each attack skill hit.
 ```
 
+## 表記統一（ゲーム用語）
+
+[classes-and-skills.md §ゲーム用語表（表示分類）](classes-and-skills.md#ゲーム用語表表示分類) の表記統一に従う。英語文案で特に固定する項目:
+
+| 項目 | English |
+| ---- | ------- |
+| 再使用 | **Recast**（Cooldown / CD は UI に使わない） |
+| 継続ダメージ | **DoT** |
+| 複数対象 | **Multi-Lock**（MultiLock / Multi-Locks / 動詞化しない） |
+| 被ダメージ | **damage taken** |
+| 障壁 / バリア / 防壁 | Ward / Barrier / Bulwark |
+| ステ略称 | ATK / DEF / REG / HP |
+
+## スキルカード英語文案
+
+スキルカード表示の分類は [party-formation-ui.md §6.4](party-formation-ui.md#64-用語注釈スキルカード)（[§スキルカード情報設計](party-formation-ui.md#スキルカード情報設計) が正本）を正とする。
+
+- 日本語を正本とする。意訳しすぎない
+- 主語を省いた命令形を基本にする
+- 数値・対象数・持続時間・スタック数を変えない
+- 用語表の表記を固定する
+- 曖昧な場合は `NEEDS_REVIEW` とする
+
+**Multi-Lock の書き方:** 本文に対象数と効果を書き、タグラベルは名詞 `Multi-Lock N`（日本語 `マルチロックN`）のみ。**動詞化しない**。不足対象時の再配分は **タグ tooltip** に書き、本文へ重複させない。
+
+良い例（本文）:
+
+```
+Deal 90% ATK magic damage to 2 enemies.
+```
+
+悪い例（本文）:
+
+```
+Multi-Locks 2 enemies and deals 90% ATK magic damage.
+If targets are insufficient, repeat hits on the same target.
+```
+
+理由: `Multi-Lock` を動詞化しており、メカニクス説明を本文へ重複している。
+
 ## `NEEDS_REVIEW`
 
 日本語源が複数解釈できる・effect 定義と突き合わせが必要な場合、推測訳を入れず `NEEDS_REVIEW` を文案またはコメントに残す。テスト固定前に人間または combat spec で解消する。
@@ -119,5 +169,7 @@ Apply Seed Flame to the enemy for each attack skill hit.
 ## 関連
 
 - 4e 進捗・Exit 条件: [phase-4-roadmap.md §4e](../plans/phase-4-roadmap.md#4e--英語-i18n-en-のみ)
+- ゲーム用語表（表示分類）: [classes-and-skills.md §ゲーム用語表](classes-and-skills.md#ゲーム用語表表示分類)
+- スキルカード表示分類: [party-formation-ui.md §6.4](party-formation-ui.md#64-用語注釈スキルカード)
 - 用語辞書データ形状: [classes-and-skills.md §UI 用語辞書](classes-and-skills.md#ui-用語辞書)
 - Cursor ルール: `.cursor/rules/i18n-en.mdc`

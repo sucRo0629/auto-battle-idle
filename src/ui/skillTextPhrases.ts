@@ -35,9 +35,9 @@ export function skillTargetStat(stat: TargetStat): string {
   const ja: Record<TargetStat, string> = {
     hp: "HP",
     maxHp: "最大HP",
-    atk: "ATK",
-    def: "DEF",
-    reg: "REG",
+    atk: "攻撃力",
+    def: "防御力",
+    reg: "魔法耐性",
   };
   return ja[stat] ?? stat;
 }
@@ -107,18 +107,28 @@ export function phraseAtkBasedBarrier(
   return `攻撃力の${pct}のバリア${stackSuffix}`;
 }
 
-export function phraseMultiLockPrefix(
+export function phraseMultiLockTargetPhrase(
   hitCount: number,
   side: "ally" | "enemy",
 ): string {
   if (L() === "en") {
     const noun = side === "ally" ? "allies" : "enemies";
-    return `Multi-Locks ${hitCount} ${noun} and `;
+    return ` to ${hitCount} ${noun}`;
   }
-  if (side === "ally") {
-    return `味方${hitCount}体をマルチロックして`;
+  const label = side === "ally" ? "味方" : "敵";
+  return `${label}${hitCount}体に`;
+}
+
+export function phraseMultiLockEffectSentence(
+  coreSentence: string,
+  hitCount: number,
+  side: "ally" | "enemy",
+): string {
+  const targetPhrase = phraseMultiLockTargetPhrase(hitCount, side);
+  if (L() === "en") {
+    return `${coreSentence}${targetPhrase}`;
   }
-  return `敵${hitCount}体をマルチロックして`;
+  return `${targetPhrase}${coreSentence}`;
 }
 
 export function phraseChargesAvailable(count: number): string {
@@ -336,6 +346,15 @@ export function phraseBlazingFlameMagicTakenPerStack(pct: string): string {
 
 export function phraseMaxStacks(count: number): string {
   return L() === "en" ? `Max stacks: ${count}` : `最大スタック数：${count}`;
+}
+
+export function phraseSeedFlameUpgradeToBlazing(
+  blazingMaxStacks: number,
+): string {
+  if (L() === "en") {
+    return `At max stacks, applies 1 ${skillTerm("blazingFlame")}. If ${skillTerm("blazingFlame")} is capped at ${blazingMaxStacks}, Seed Flame stays at max.`;
+  }
+  return `最大スタック数到達時に「${skillTerm("blazingFlame")}」を1スタック付与する。熾火が上限（${blazingMaxStacks}）のときは種火は最大のまま据え置き。`;
 }
 
 export function phraseAtkBasedHealAmount(pct: string): string {

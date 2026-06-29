@@ -25,7 +25,7 @@
 | SE / BGM（`src/assets/sounds/`、再生制御・音量設定）                              | [combat-architecture.md](combat-architecture.md#88-sound初期版体験版)（設定 UI: [party-formation-ui.md §16](spec/party-formation-ui.md#16-音声設定体験版)） |
 | `data/stages.json`, セーブ, EXP, LvUP, `stageRecords`                          | [spec/progression.md](spec/progression.md)                                      |
 | マップ選択・ステージ詳細・リザルト履歴 DOM（Phase 6d 予定）                    | [spec/stage-selection-ui.md](spec/stage-selection-ui.md)                        |
-| `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, `gameTermGlossary.ts` 等、編成メニュー DOM | [spec/party-formation-ui.md](spec/party-formation-ui.md)（用語辞書: [classes-and-skills.md §UI 用語辞書](spec/classes-and-skills.md#ui-用語辞書)） |
+| `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, `gameTermGlossary.ts` 等、編成メニュー DOM | [spec/party-formation-ui.md](spec/party-formation-ui.md)（用語表: [classes-and-skills.md §ゲーム用語表](spec/classes-and-skills.md#ゲーム用語表表示分類)） |
 | `data/enemies.json`, 敵編成・ボス設計の方針                                       | [enemy-design-concept.md](enemy-design-concept.md)                              |
 | ローグライクモード（ラン・問題生成・報酬）                                        | [spec/roguelike-mode.md](spec/roguelike-mode.md)                                |
 | `formatSkillText.ts`, 4b 説明文 / 4e i18n（**M1 8 クラス**）                      | [spec/i18n-en.md](spec/i18n-en.md)（進捗: [phase-4-roadmap.md §4e](plans/phase-4-roadmap.md#4e--英語-i18n-en-のみ)） |

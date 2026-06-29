@@ -45,11 +45,18 @@ function getSortedAliases(locale: GameTermLocale): AliasMatch[] {
   return matches;
 }
 
+export interface SegmentTextByGameTermsOptions {
+  /** Skill card body: proprietary status names are not term-linked. */
+  excludeTermIds?: ReadonlySet<GameTermId>;
+}
+
 /** Pure segmentation for tests and annotateGameTerms. Longest alias wins at each offset. */
 export function segmentTextByGameTerms(
   text: string,
   locale: GameTermLocale,
+  options?: SegmentTextByGameTermsOptions,
 ): GameTermTextSegment[] {
+  const excludeTermIds = options?.excludeTermIds;
   const aliases = getSortedAliases(locale);
   if (aliases.length === 0 || text.length === 0) {
     return text.length > 0 ? [{ kind: "text", text }] : [];
@@ -63,6 +70,7 @@ export function segmentTextByGameTerms(
 
     for (const candidate of aliases) {
       if (!text.startsWith(candidate.alias, pos)) continue;
+      if (excludeTermIds?.has(candidate.termId)) continue;
       matched = { termId: candidate.termId, matchedText: candidate.alias };
       break;
     }
@@ -81,10 +89,10 @@ export function segmentTextByGameTerms(
     while (nextPos < text.length) {
       let foundAhead = false;
       for (const candidate of aliases) {
-        if (text.startsWith(candidate.alias, nextPos)) {
-          foundAhead = true;
-          break;
-        }
+        if (!text.startsWith(candidate.alias, nextPos)) continue;
+        if (excludeTermIds?.has(candidate.termId)) continue;
+        foundAhead = true;
+        break;
       }
       if (foundAhead) break;
       nextPos += 1;
@@ -140,10 +148,11 @@ export function annotateGameTermsWithTooltip(
       resolveContent: () => { title: string; body: string } | null,
     ) => void;
   },
+  options?: SegmentTextByGameTermsOptions,
 ): DocumentFragment {
   const fragment = document.createDocumentFragment();
 
-  for (const segment of segmentTextByGameTerms(text, locale)) {
+  for (const segment of segmentTextByGameTerms(text, locale, options)) {
     if (segment.kind === "text") {
       fragment.appendChild(document.createTextNode(segment.text));
       continue;

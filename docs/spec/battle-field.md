@@ -471,8 +471,9 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | 要素 | 内容 |
 | ---- | ---- |
 | 起動 | Party HUD（`.party-hud-panel`）直下の **ドロワータブ**（`.party-hud-drawer-tab`、CSS シェブロンのみ）。`Escape` または同タブで閉じる |
-| 配置 | `battle-canvas-frame` 内の `.battle-hud-stack` — 上: **パーティ帯**（`.battle-hud-toolbar`：左に `プレイヤー Lv {n}`、右に **編成** ボタン）、Party HUD（コンパクト / 詳細を **同一枠内で切替**）、下: ドロワータブのみ。キャンバス幅（最大 480px）に揃える |
-| パーティ帯 | Party HUD **直上**のヘッダー行。**左:** `プレイヤー Lv {n}` のみ（`resolvePlayerDisplayLevel`）。**右:** `.battle-party-menu-button`（テキスト「編成」のみ）→ `MetaMenuOverlay`（`initialView: "party"`）。帯左側の表示内容は **暫定**（将来見直し可）。**アイコンフォントは使わない** |
+| 配置 | `battle-canvas-frame` 内 — **上:** キャンバスオーバーレイ HUD（`.battle-canvas-hud`：左上ステージ名・中央上 Wave・右上 VERIFY バッジ）、`.battle-hud-stack`（パーティ帯 + Party HUD + ドロワータブ）。キャンバス幅（最大 480px）に揃える |
+| キャンバス HUD | 戦闘キャンバス **内**オーバーレイ。**左:** ステージ表示名。**中央:** `Wave {n}/{total}`。**右上:** 確認モード切替バッジ — ON 時 `VERIFY`（琥珀）、OFF 時 `DEBUG`（控えめ）。クリックでトグル。独立した画面上部ヘッダー帯は **使わない** |
+| パーティ帯 | Party HUD **直上**の帯。**左:** `プレイヤー Lv {n}` のみ（`resolvePlayerDisplayLevel`）。**右:** `.battle-party-menu-button`（テキスト「編成」のみ）→ `MetaMenuOverlay`（`initialView: "party"`）。**アイコンフォントは使わない** |
 | 表示切替 | **詳細**（**起動時デフォルト**）= メンバー縦リスト（同一 `.party-hud-panel` 枠）。**コンパクト** = 横 4 列（HP・リキャスト・簡易バッジ）。下のタブで排他切替。別パネルの積み増しはしない |
 | メンバー行（詳細） | 編成スロット順。**行 1:** 24px クラスアイコン + `displayName` + HP / リキャスト（コンパクトと同 DOM）+ 与ダメ / 被ダメバー。**行 2:** 状態バッジ帯（debuff / buff ラベル付き・全件）。**Exp 数値・メンバー別 Lv・epithetEn は表示しない** |
 | 状態バッジ帯 | debuff / buff でラベル行を分ける（例: Debuff / Buff）。パネル横幅いっぱいで flex-wrap 折り返し。**簡易 3+N 省略なし**（[combat.md](combat.md) HUD バッジ §簡易/詳細） |

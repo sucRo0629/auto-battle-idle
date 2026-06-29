@@ -59,6 +59,7 @@ import {
   type SkillCardStatusChip,
   type SkillCardTag,
 } from "./skillCardDisplay.ts";
+import { SKILL_CARD_BODY_TERM_EXCLUDE_IDS } from "./skillCardDisplayRules.ts";
 
 const PICKER_ROLES: ClassPreset["role"][] = [
   "defender",
@@ -758,7 +759,8 @@ export class SkillMenuPanel {
       annotateGameTermsWithTooltip(
         text,
         getLocale() as GameTermLocale,
-        this.gameTermTooltip
+        this.gameTermTooltip,
+        { excludeTermIds: SKILL_CARD_BODY_TERM_EXCLUDE_IDS },
       )
     );
   }
@@ -956,7 +958,6 @@ export class SkillMenuPanel {
 
     const panel = document.createElement("div");
     panel.className = "skill-menu-picker-panel game-panel-surface";
-    panel.addEventListener("click", (event) => event.stopPropagation());
 
     const heading = document.createElement("h3");
     heading.className = "skill-menu-picker-panel-title";

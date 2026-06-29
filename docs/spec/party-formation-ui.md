@@ -1,6 +1,6 @@
 # パーティ編成 UI
 
-実装：`src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`, `src/ui/gameTermGlossary.ts`, `src/ui/annotateGameTerms.ts`, `src/ui/GameTermPanel.ts`, `src/styles/game-term-panel.css`。**Phase 4d PR1:** 上ロスター（`formationBlockEl`）+ 下詳細（`bodyEl`）の flex 縦積み・詳細のみ scroll・ヘッダー Lv。**PR2:** ロスターカード・注記・Picker オーバーレイ・閲覧スキルカード（`formatSkillCardLines`）。**PR3:** インライン用語パネル（§6.4）。
+実装：`src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`, `src/ui/gameTermGlossary.ts`, `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/annotateGameTerms.ts`, `src/ui/GameTermPanel.ts`, `src/styles/game-term-panel.css`.**Phase 4d PR1:** 上ロスター（`formationBlockEl`）+ 下詳細（`bodyEl`）の flex 縦積み・詳細のみ scroll・ヘッダー Lv。**PR2:** ロスターカード・注記・Picker オーバーレイ・閲覧スキルカード（`formatSkillCardLines`）。**PR3:** インライン用語パネル（§6.4）。
 
 本ドキュメントは **メタメニューから開くパーティ編成画面**（`SkillMenuPanel`）の画面設計正本。戦闘フィールド上の隊形・座標は [battle-field.md](battle-field.md)、クラス・ロール・スキル習得は [classes-and-skills.md](classes-and-skills.md)、セーブ・Lv は [progression.md](progression.md) を参照。
 
@@ -248,7 +248,7 @@ Phase 4d 当初案にあった表示例（参考）:
 | 2      | `Active` / `Passive` + 種別補足（再使用条件 / 発動タイミング要約）                         |
 | 3+     | **主要効果 1〜3 行**（`resolveSkillCardDisplay` で短文化）                                 |
 | 状態   | 固有バフ/デバフを **状態チップ**（短い要約 + ホバーで詳細）                                |
-| Tags   | Multi-Lock・ダメージ種別などの **タグチップ**（ホバーで短い用語説明）                      |
+| Tags   | **特殊メカニクス**（Multi-Lock 等）。ダメージ種別・ブロック・DoT 等の汎用効果は本文に残す |
 | フッタ | 習得に必要だった **プレイヤー Lv**                                                         |
 
 説明文の文面生成は [Phase 4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)（`formatSkillText`、M1 8 クラス Lv0 日本語 **完了**）。**効果単位改行**は `formatSkillCardLines`（`src/ui/formatSkillText.ts`）でエディタプレビューと編成 UI を揃える。
@@ -279,26 +279,175 @@ Phase 4d 当初案にあった表示例（参考）:
 
 ### 6.4 用語注釈（スキルカード）
 
-スキルカード内の情報は **本文・状態チップ・タグ** に分離する。
+スキルカード内の情報は **本文・タグ・状態チップ** に分離する。**責務分担と重複禁止** の正本は [§スキルカード情報設計](#スキルカード情報設計)。用語の **5 分類**（本文 / タグ / 状態チップ / ツールチップ / HUD バッジ）と表記統一は [classes-and-skills.md §ゲーム用語表（表示分類）](classes-and-skills.md#ゲーム用語表表示分類) を参照。
 
 | 層 | 内容 | 注釈 UI |
 | -- | ---- | ------- |
-| 本文（1〜3 行） | 主要効果の短文 | 共通用語は **ホバー/フォーカス tooltip**（2〜3 行、`resolveGameTermTooltip`） |
-| 状態チップ | 固有バフ/デバフ（`種火` 等）の短い要約 | ホバー/フォーカスで **詳細説明**（`resolveGameTermDescription`） |
-| Tags | Multi-Lock・魔法ダメージ等 | 用語 ID があるものは短い tooltip |
+| 本文（1〜3 行） | 主要効果の短文 | **共通用語**のみ用語ツールチップ（`annotateGameTermsWithTooltip`）。固有状態名はホバー化しない |
+| 状態チップ | 固有バフ/デバフ（`種火` 等）の短い要約 | **状態ツールチップ**（状態定義のみ、`resolveStatusChipTooltip`） |
+| Tags | 処理形状・対象形状・発動形状の特殊メカニクス | **タグツールチップ**（`resolveTagTooltip`） |
 
-**実装:** `src/ui/skillCardDisplay.ts`, `src/ui/GameTermTooltip.ts`, `src/ui/annotateGameTerms.ts`（`annotateGameTermsWithTooltip`）
+**実装:** `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/GameTermTooltip.ts`, `src/ui/annotateGameTerms.ts`（`annotateGameTermsWithTooltip`）
 
 **クラス要約・用語パネル:** クラス `summary` や戦闘 HUD バッジは従来どおり **クリック用語パネル**（`GameTermPanel`）を維持。
 
+#### スキルカード情報設計
+
+スキルカード上の情報の **責務分担** と **重複禁止** の正本。用語の allowlist・表記は [classes-and-skills.md §ゲーム用語表（表示分類）](classes-and-skills.md#ゲーム用語表表示分類) を参照。
+
+##### 情報責務
+
+**本文**
+
+スキル本文は、そのスキルが直接行う効果のみを記載する。
+
+**タグ**
+
+タグは特殊メカニクスを示す。
+
+**タグツールチップ**
+
+タグの意味・処理ルールを説明する。
+
+**状態チップ**
+
+固有状態の概要を示す。
+
+**状態ツールチップ**
+
+その状態自体の定義のみを説明する。
+
+##### 状態ツールチップ
+
+状態ツールチップは、その状態自体の定義のみを説明する。
+
+**記載する内容**
+
+- 状態の効果
+- 持続時間
+- スタック
+- 上位状態への変化
+- 消滅条件（状態固有の場合）
+
+**記載しない内容**
+
+- どのスキルが付与するか
+- どの条件で付与されるか
+- どのクラスが使用するか
+- スキル固有の発動条件
+
+これらは **スキル本文** の責務とする。
+
+##### 用語ツールチップと状態ツールチップ
+
+| 種類 | 対象 | 説明する内容 |
+| ---- | ---- | ------------ |
+| **用語ツールチップ** | ゲーム全体の共通用語（Multi-Lock、バリア、DoT 等） | ゲーム全体のルール |
+| **状態ツールチップ** | 固有状態（種火、熾火、防壁 等） | その状態の定義だけ |
+
+スキルカード本文では、固有状態名を **用語ホバー化しない**（状態チップのホバーで定義を示す）。共通用語のみ `annotateGameTermsWithTooltip` で用語ツールチップを付ける。
+
+**例: 焼き尽くす熾火**
+
+本文:
+
+```
+敵に攻撃スキルが1回命中するごとに「種火」を1スタックする
+```
+
+種火の状態ホバー:
+
+```
+種火
+
+魔法DoT。
+
+・毎秒 ATK ○% の魔法ダメージ
+・10秒持続
+・最大5スタック
+
+最大スタック時、新たに付与される代わりに「熾火」へ変化する。
+```
+
+- 本文中の「種火」に **用語ホバーは付けない**（魔術士専用の固有状態であり、ゲーム全体の用語ではない）
+- 付与条件（攻撃スキル命中ごと）は本文の責務。状態ホバーには書かない
+
+##### 固有状態（辞書データ）
+
+`skillCardDisplayRules.ts` の状態チップ allowlist に載る **固有状態** は、ゲーム全体の用語辞典に載せない。`gameTermGlossary.ts` では次のみとする。
+
+| フィールド | 固有状態 |
+| ---------- | -------- |
+| `statusDefinition` | **必須**（状態辞典の正本） |
+| `description` | **禁止** |
+| `aliases` | **禁止** |
+| `tooltip` | **禁止** |
+
+- 用語ホバー・用語パネル・HUD クリック説明の導線は設けない
+- 状態の説明は **状態チップのホバー**（`statusDefinition`）のみ
+
+例: `seedFlame`（種火）／`blazingFlame`（熾火）
+
+##### 重複禁止
+
+同一情報を本文・タグ・タグツールチップ・状態チップへ重複表示しない。
+
+各情報は 1 か所のみを正本とする。
+
+| 用語 | 正本 | 禁止 |
+| ---- | ---- | ---- |
+| Multi-Lock | タグ + タグツールチップ | 本文にも説明を書く |
+| Seed Flame（種火） | 状態チップ + 状態ツールチップ | 本文へ詳細を書く |
+| Barrier（バリア） | 本文 | タグ |
+
+#### スキルカード表示分類ルール
+
+[スキルカード情報設計](#スキルカード情報設計) と [ゲーム用語表](classes-and-skills.md#ゲーム用語表表示分類) に従った具体例。
+
+**本文** — スキルで何が起きるか。ダメージ種別・ブロック・DoT 等は本文に残す。
+
+```
+敵2体に攻撃力90%の魔法ダメージを与える。
+```
+
+**タグ** — 特殊メカニクス（処理形状・対象形状・発動形状）。効果種別はタグにしない。
+
+```
+[マルチロック2]
+```
+
+- Multi-Lock はタグ化してよいが、本文側にも **対象数** を残す
+- メカニクス説明（対象不足時の再配分等）は **タグの tooltip** に書き、本文へ重複させない
+- `Magic damage` / `Block` / `DoT` 等はタグにしない
+
+**状態チップ** — 固有状態のみ。
+
+```
+状態:
+- 種火: DoT / 10s / Max 5
+- 熾火: 強DoT / 魔法被ダメージ増加 / Max 1
+```
+
+汎用 DoT・毒・スタン等は状態チップにせず本文に残す。
+
+**用語ツールチップ** — タグ・共通用語の短い注釈（2〜3 行）。
+
+```
+マルチロック:
+対象数まで効果を適用する。
+対象が不足している場合、不足分は同じ対象へ再度適用する。
+```
+
 #### スキルカード用 tooltip の方針
 
-| 項目 | 内容 |
-| ---- | ---- |
-| 長さ | 2〜3 行。処理順・内部実装は入れない |
-| 見た目 | 濃色背景・強めの枠・用語名見出し（`game-term-tooltip.css`） |
-| 起動 | ホバー + キーボードフォーカス |
-| 辞書 | `gameTermGlossary.ts` の `tooltip` フィールド。省略時は `description` 先頭行 |
+| 種類 | 項目 | 内容 |
+| ---- | ---- | ---- |
+| 用語 / タグ | 長さ | 2〜3 行。処理順・内部実装は入れない |
+| 用語 / タグ | 辞書 | `gameTermGlossary.ts` の `tooltip`。省略時は `description` 先頭行 |
+| 状態 | 内容 | [状態ツールチップ](#状態ツールチップ) — 状態定義のみ。スキル付与条件は含めない |
+| 状態 | 辞書 | `gameTermGlossary.ts` の `statusDefinition`（状態辞典・状態定義のみ） |
+| 共通 | 見た目 | 濃色背景・強めの枠・用語名見出し（`game-term-tooltip.css`） |
+| 共通 | 起動 | ホバー + キーボードフォーカス |
 
 #### 旧インライン用語パネル（スキルカード）
 

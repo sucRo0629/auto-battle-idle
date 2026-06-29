@@ -108,12 +108,13 @@ import {
   phraseMaxStacks,
   phraseMoveBehindTargetThen,
   phraseMultiHitDamage,
-  phraseMultiLockPrefix,
+  phraseMultiLockEffectSentence,
   phraseOverhealToBarrier,
   phraseScopeAllAllies,
   phraseScopeSelfOrigin,
   phraseSeedFlameDotPerStack,
   phraseSeedFlameStackOnHit,
+  phraseSeedFlameUpgradeToBlazing,
   phraseSelfDamageReduction,
   phraseSurroundingBlockRateBuff,
   phraseSurroundingDamageReduction,
@@ -433,7 +434,10 @@ function formatSeedFlameOnActiveHitEffectLines(
             config.seedFlameDurationSec,
             seedFlameDotPct,
           ),
-          details: [phraseMaxStacks(config.seedFlameMaxStacks)],
+          details: [
+            phraseMaxStacks(config.seedFlameMaxStacks),
+            phraseSeedFlameUpgradeToBlazing(config.blazingFlameMaxStacksDefault),
+          ],
         },
         {
           text: phraseBlazingFlameDotPerStack(blazingFlameDotPct),
@@ -463,41 +467,26 @@ function formatExcessHealToBarrierPassive(def: PassiveSkillDef): string {
   return `余剰回復バリア ${scalePct}（${sourceLabels.join("・")}）`;
 }
 
-function formatMultiLockSubjectPrefix(
-  hitCount: number,
-  side: TargetSpec["side"],
-): string {
-  return phraseMultiLockPrefix(hitCount, side === "ally" ? "ally" : "enemy");
-}
-
-function formatMultiLockEffectLine(
+function formatMultiLockEffectLines(
   effect: SkillEffectDef,
   targetSpec: TargetSpec,
-): string | null {
+): string[] | null {
   if ((effect.targetShape ?? "single") !== "multiLock") return null;
   const hitCount = effect.hitCount ?? 1;
   if (hitCount <= 1) return null;
-  const prefix = formatMultiLockSubjectPrefix(hitCount, targetSpec.side);
+  const side = targetSpec.side === "ally" ? "ally" : "enemy";
 
+  let core: string | null = null;
   if (effect.type === "damage") {
-    return `${prefix}${formatCompactAtkBasedDamageSentence(
-      effect.amount,
-      effect.damageType,
-    )}`;
+    core = formatCompactAtkBasedDamageSentence(effect.amount, effect.damageType);
+  } else if (effect.type === "heal") {
+    core = formatCompactAtkBasedHealSentence(effect.amount, targetSpec);
+  } else if (effect.type === "buff" && effect.buffSubKind === "barrier") {
+    core = formatCompactBarrierBuffLabel(effect.amount, effect.barrierStack);
   }
-  if (effect.type === "heal") {
-    return `${prefix}${formatCompactAtkBasedHealSentence(
-      effect.amount,
-      targetSpec,
-    )}`;
-  }
-  if (effect.type === "buff" && effect.buffSubKind === "barrier") {
-    return `${prefix}${formatCompactBarrierBuffLabel(
-      effect.amount,
-      effect.barrierStack,
-    )}`;
-  }
-  return null;
+  if (!core) return null;
+
+  return [phraseMultiLockEffectSentence(core, hitCount, side)];
 }
 
 function formatCompactBarrierBuffLabel(
@@ -590,8 +579,7 @@ function formatMultiLockDamageEffectLines(
   inheritTarget?: TargetSpec,
 ): string[] | null {
   const targetSpec = resolveEffectTargetSpec(effect, inheritTarget);
-  const line = formatMultiLockEffectLine(effect, targetSpec);
-  return line ? [line] : null;
+  return formatMultiLockEffectLines(effect, targetSpec);
 }
 
 function resolveTargetStatDisplayName(stat: TargetStat): string {

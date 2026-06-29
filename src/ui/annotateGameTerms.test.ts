@@ -3,6 +3,7 @@ import {
   segmentTextByGameTerms,
   segmentsToPlainText,
 } from "./annotateGameTerms.ts";
+import { SKILL_CARD_BODY_TERM_EXCLUDE_IDS } from "./skillCardDisplayRules.ts";
 
 describe("segmentTextByGameTerms", () => {
   it("prefers longer aliases at the same offset", () => {
@@ -149,11 +150,41 @@ describe("segmentTextByGameTerms", () => {
     expect(segmentsToPlainText(segments)).toBe(text);
   });
 
+  it("does not link proprietary status names excluded from skill card body", () => {
+    expect(
+      segmentTextByGameTerms(
+        "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする",
+        "ja",
+        { excludeTermIds: SKILL_CARD_BODY_TERM_EXCLUDE_IDS },
+      ),
+    ).toEqual([
+      {
+        kind: "text",
+        text: "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする",
+      },
+    ]);
+  });
+
+  it("does not link proprietary status names without aliases", () => {
+    expect(segmentTextByGameTerms("種火を付与", "ja")).toEqual([
+      { kind: "text", text: "種火を付与" },
+    ]);
+  });
+
+  it("keeps seedFlame as status-dictionary-only entry", async () => {
+    const { getGameTermEntry } = await import("./gameTermGlossary.ts");
+    const entry = getGameTermEntry("seedFlame");
+    expect(entry?.statusDefinition?.ja).toContain("魔法DoT");
+    expect(entry?.description).toBeUndefined();
+    expect(entry?.aliases).toBeUndefined();
+    expect(entry?.tooltip).toBeUndefined();
+  });
+
   it("links multiLock, skillLock, moveLock, and dotCompress terms", () => {
-    expect(segmentTextByGameTerms("敵2体をマルチロックして", "ja")[1]).toEqual({
+    expect(segmentTextByGameTerms("Multi-Lock", "en")[0]).toEqual({
       kind: "term",
       termId: "multiLock",
-      matchedText: "マルチロック",
+      matchedText: "Multi-Lock",
     });
 
     expect(segmentTextByGameTerms("硬直・移動停止5秒", "ja")).toEqual([
