@@ -21,6 +21,8 @@ import {
 import type { StageDamageDisplayRow } from "../battle/stageDamageStats.ts";
 import { BattleCanvas } from "../render/BattleCanvas.ts";
 import { PROJECT_DISPLAY_NAME } from "../projectIdentity.ts";
+import { subscribeLocaleChange } from "../i18n/locale.ts";
+import { t } from "../i18n/t.ts";
 import {
   buildSkillPresentationContext,
   isOverlayTickSkillEvent,
@@ -76,6 +78,7 @@ export class BattleView {
   private readonly canvasWrap: HTMLElement;
   private readonly stageLabelEl: HTMLElement;
   private readonly verifyModeInput: HTMLInputElement;
+  private readonly verifyModeTextEl: HTMLElement;
   private readonly menuButton: HTMLButtonElement;
   private readonly hudToolbarLevelEl: HTMLElement;
   private readonly canvas: BattleCanvas;
@@ -91,6 +94,7 @@ export class BattleView {
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastStageLabel = "";
   private lastHudToolbarLevel = -1;
+  private readonly unsubscribeLocale: () => void;
   private readonly verifyModeControls?: VerifyModeControls;
 
   constructor(
@@ -124,7 +128,7 @@ export class BattleView {
     });
 
     const verifyText = document.createElement("span");
-    verifyText.textContent = "確認モード";
+    this.verifyModeTextEl = verifyText;
 
     verifyLabel.append(this.verifyModeInput, verifyText);
     header.appendChild(verifyLabel);
@@ -262,6 +266,28 @@ export class BattleView {
     );
 
     this.engine.onEvent((event) => this.onBattleEvent(event));
+
+    this.unsubscribeLocale = subscribeLocaleChange(() => {
+      this.refreshLocaleChrome();
+      this.lastHudToolbarLevel = -1;
+      this.syncHudToolbarLevel(this.getSave().party);
+      this.partyHud.refreshLocale();
+      const snapshot = this.engine.getSnapshot();
+      if (this.statsDrawer.isOpen()) {
+        this.partyHud.updateDetailMetrics({
+          snapshots: snapshot.allies,
+          displayRows:
+            this.verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
+        });
+      }
+    });
+    this.refreshLocaleChrome();
+  }
+
+  private refreshLocaleChrome(): void {
+    this.verifyModeTextEl.textContent = t("battle.verifyMode");
+    this.menuButton.textContent = t("battle.formation");
+    this.menuButton.setAttribute("aria-label", t("battle.formationAria"));
   }
 
   private clearMemberStatsHideTimer(): void {
@@ -401,7 +427,7 @@ export class BattleView {
     }
     if (event.type === "skill") {
       const slotLabel =
-        event.slotKind === "basic" ? "通常攻撃" : event.skillName;
+        event.slotKind === "basic" ? t("battle.basicAttack") : event.skillName;
       const overlayTick = isOverlayTickSkillEvent(event);
       if (event.effect === "counter") {
         this.canvas.showCounterPopup(event.actorId);
@@ -435,7 +461,7 @@ export class BattleView {
           this.pushLog(`${slotLabel} → ${event.statusLabel ?? event.effect}`);
           this.canvas.showBuffGlow(event.targetId);
         } else if (event.effect === "move") {
-          this.pushLog(`${slotLabel} → 移動`);
+          this.pushLog(`${slotLabel} → ${t("battle.move")}`);
         } else {
           this.pushLog(`${slotLabel} (${event.effect})`);
         }
@@ -682,19 +708,18 @@ export class BattleView {
     const level = resolvePlayerDisplayLevel(party ?? []);
     if (level === this.lastHudToolbarLevel) return;
     this.lastHudToolbarLevel = level;
-    this.hudToolbarLevelEl.textContent = `プレイヤー Lv ${level}`;
+    this.hudToolbarLevelEl.textContent = t("common.playerLevel", { level });
   }
 
   private createPartyMenuButton(): HTMLButtonElement {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "battle-party-menu-button";
-    button.setAttribute("aria-label", "パーティ編成");
-    button.textContent = "編成";
     return button;
   }
 
   destroy(): void {
+    this.unsubscribeLocale();
     this.clearMemberStatsHideTimer();
     this.hudFloatingTooltip.destroy();
     this.gameTermPanel.destroy();

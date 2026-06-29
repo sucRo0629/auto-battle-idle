@@ -1,5 +1,7 @@
 import "../styles/skill-menu-panel.css";
-import { MEMBER_STAT_LABELS } from "../battle/data/gameDataSchema.ts";
+import { getMemberStatLabels } from "../i18n/memberStatLabels.ts";
+import { getLocale, subscribeLocaleChange } from "../i18n/locale.ts";
+import { t } from "../i18n/t.ts";
 import {
   resolveClassIconKey,
   resolveClassSpriteKey,
@@ -48,38 +50,39 @@ import { formatClassSummary, formatClassSummaryForAria } from "./formatClassSumm
 import { annotateGameTerms } from "./annotateGameTerms.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
 
-const ROLE_LABELS: Record<string, string> = {
-  defender: "ディフェンダー",
-  attacker: "アタッカー",
-  supporter: "サポーター",
-};
-
-const ROLE_STATUS_ICON: Record<Role, StatusDisplayCategory> = {
-  defender: "def",
-  attacker: "atk",
-  supporter: "hot",
-};
-
-const PICKER_ROLE_BLOCKS: { role: ClassPreset["role"]; label: string }[] = [
-  { role: "defender", label: "ディフェンダー" },
-  { role: "attacker", label: "アタッカー" },
-  { role: "supporter", label: "サポーター" },
+const PICKER_ROLES: ClassPreset["role"][] = [
+  "defender",
+  "attacker",
+  "supporter",
 ];
 
 type AttackerSubRole = "fighter" | "shooter" | "caster";
 
-const ATTACKER_SUB_ROLE_BLOCKS: { subRole: AttackerSubRole; label: string }[] =
-  [
-    { subRole: "fighter", label: "ファイター" },
-    { subRole: "shooter", label: "シューター" },
-    { subRole: "caster", label: "キャスター" },
-  ];
+const ATTACKER_SUB_ROLES: AttackerSubRole[] = [
+  "fighter",
+  "shooter",
+  "caster",
+];
+
+function roleLabel(role: Role): string {
+  return t(`role.${role}`);
+}
+
+function attackerSubRoleLabel(subRole: AttackerSubRole): string {
+  return t(`role.${subRole}`);
+}
 
 function resolveAttackerSubRole(preset: ClassPreset): AttackerSubRole {
   if (preset.traits.damageType === "magic") return "caster";
   if (isMeleeRangePx(preset.traits.rangePx)) return "fighter";
   return "shooter";
 }
+
+const ROLE_STATUS_ICON: Record<Role, StatusDisplayCategory> = {
+  defender: "def",
+  attacker: "atk",
+  supporter: "hot",
+};
 
 type PickerTarget = { kind: "class" } | null;
 
@@ -105,6 +108,8 @@ export class SkillMenuPanel {
   private readonly pickerOverlayEl: HTMLElement;
   private readonly pickerHost: HTMLElement;
   private readonly gameTermPanel: GameTermPanel;
+  private readonly formationNoteEl: HTMLElement;
+  private readonly unsubscribeLocale: () => void;
   private readonly draftParty: PartySlotState[];
   private readonly unlockedClassIds: ClassId[];
   private selectedIndex = 0;
@@ -141,7 +146,7 @@ export class SkillMenuPanel {
 
     const noteEl = document.createElement("p");
     noteEl.className = "skill-menu-formation-note";
-    noteEl.textContent = "戦闘位置はクラスごとに決まります。";
+    this.formationNoteEl = noteEl;
 
     this.rosterSlotsEl = document.createElement("div");
     this.rosterSlotsEl.className = "skill-menu-roster-slots";
@@ -216,6 +221,7 @@ export class SkillMenuPanel {
     );
     this.pickerHost.appendChild(this.pickerOverlayEl);
     this.container.appendChild(this.root);
+    this.unsubscribeLocale = subscribeLocaleChange(() => this.render());
     this.render();
   }
 
@@ -238,6 +244,7 @@ export class SkillMenuPanel {
   }
 
   private render(): void {
+    this.formationNoteEl.textContent = t("party.formationNote");
     this.renderRoster();
     this.renderBody();
     this.renderPickerOverlay();
@@ -261,7 +268,7 @@ export class SkillMenuPanel {
       button.dataset.memberIndex = String(index);
 
       if (member && preset) {
-        const summary = formatClassSummary(preset);
+        const summary = formatClassSummary(preset, getLocale());
         const ariaParts = summary
           ? [preset.displayName, formatClassSummaryForAria(summary)]
           : [preset.displayName];
@@ -270,14 +277,14 @@ export class SkillMenuPanel {
         button.appendChild(this.createRosterCharacterDisplay(preset));
         button.appendChild(this.createRosterTextBlock(preset));
       } else {
-        button.setAttribute("aria-label", "空き枠");
+        button.setAttribute("aria-label", t("party.emptySlot"));
         const plusEl = document.createElement("span");
         plusEl.className = "skill-menu-roster-card-plus";
         plusEl.textContent = "＋";
         plusEl.setAttribute("aria-hidden", "true");
         const hintEl = document.createElement("span");
         hintEl.className = "skill-menu-roster-card-empty-label";
-        hintEl.textContent = "クラスを追加";
+        hintEl.textContent = t("party.addClass");
         button.append(plusEl, hintEl);
       }
 
@@ -402,13 +409,13 @@ export class SkillMenuPanel {
 
     const message = document.createElement("p");
     message.className = "skill-menu-empty-slot-message";
-    message.textContent = "クラスを選んでください";
+    message.textContent = t("party.selectClassPrompt");
 
     const button = document.createElement("button");
     button.type = "button";
     button.className = "skill-menu-open-picker-button";
     button.dataset.action = "open-class-picker";
-    button.textContent = "クラスを選ぶ";
+    button.textContent = t("party.selectClassButton");
 
     section.append(message, button);
     return section;
@@ -423,7 +430,7 @@ export class SkillMenuPanel {
 
     const heading = document.createElement("h3");
     heading.className = "skill-menu-section-title";
-    heading.textContent = "クラス情報";
+    heading.textContent = t("party.classInfo");
 
     const header = document.createElement("div");
     header.className = "skill-menu-class-info-header";
@@ -456,13 +463,13 @@ export class SkillMenuPanel {
     changeButton.className =
       "skill-menu-open-picker-button skill-menu-open-picker-button--inline";
     changeButton.dataset.action = "open-class-picker";
-    changeButton.textContent = "変更";
+    changeButton.textContent = t("party.change");
 
     topRow.append(identityWrap, changeButton);
 
     textWrap.appendChild(topRow);
 
-    const summary = formatClassSummary(preset);
+    const summary = formatClassSummary(preset, getLocale());
     if (summary) {
       const summaryEl = document.createElement("p");
       summaryEl.className = "skill-menu-class-info-summary";
@@ -489,18 +496,19 @@ export class SkillMenuPanel {
 
     const heading = document.createElement("h3");
     heading.className = "skill-menu-section-title";
-    heading.textContent = "ステータス";
+    heading.textContent = t("party.stats");
     section.appendChild(heading);
 
     const grid = document.createElement("dl");
     grid.className = "skill-menu-stats-grid";
 
+    const statLabels = getMemberStatLabels();
     const rows: { label: string; value: string; latin?: boolean }[] = [
-      { label: MEMBER_STAT_LABELS.hp, value: String(stats.maxHp), latin: true },
-      { label: MEMBER_STAT_LABELS.atk, value: String(stats.atk) },
-      { label: MEMBER_STAT_LABELS.def, value: String(stats.def) },
-      { label: MEMBER_STAT_LABELS.reg, value: String(stats.reg) + "%" },
-      { label: MEMBER_STAT_LABELS.spd, value: stats.spdLabel },
+      { label: statLabels.hp, value: String(stats.maxHp), latin: true },
+      { label: statLabels.atk, value: String(stats.atk) },
+      { label: statLabels.def, value: String(stats.def) },
+      { label: statLabels.reg, value: String(stats.reg) + "%" },
+      { label: statLabels.spd, value: stats.spdLabel },
     ];
 
     const basicAttack = resolveMemberBasicAttackDisplay(
@@ -509,9 +517,9 @@ export class SkillMenuPanel {
     );
     if (basicAttack) {
       rows.push(
-        { label: MEMBER_STAT_LABELS.range, value: basicAttack.rangeLabel },
+        { label: statLabels.range, value: basicAttack.rangeLabel },
         {
-          label: MEMBER_STAT_LABELS.basicAttack,
+          label: statLabels.basicAttack,
           value: basicAttack.attributeLabel,
         }
       );
@@ -550,7 +558,7 @@ export class SkillMenuPanel {
 
     const heading = document.createElement("h3");
     heading.className = "skill-menu-section-title";
-    heading.textContent = "Active Skills";
+    heading.textContent = t("party.activeSkills");
 
     const list = document.createElement("div");
     list.className = "skill-menu-skill-view-list";
@@ -589,7 +597,7 @@ export class SkillMenuPanel {
 
     const heading = document.createElement("h3");
     heading.className = "skill-menu-section-title";
-    heading.textContent = "Passive Skills";
+    heading.textContent = t("party.passiveSkills");
 
     const list = document.createElement("div");
     list.className = "skill-menu-skill-view-list";
@@ -665,8 +673,8 @@ export class SkillMenuPanel {
     if (unlockLevel !== undefined) {
       footer.textContent =
         unlockLevel <= 0
-          ? "初期習得"
-          : `プレイヤー Lv${unlockLevel} で習得`;
+          ? t("party.skillLearnedAtStart")
+          : t("party.skillUnlockAtLevel", { level: unlockLevel });
     }
     card.appendChild(footer);
 
@@ -732,7 +740,7 @@ export class SkillMenuPanel {
     card.className =
       "skill-menu-skill-view-card skill-menu-skill-view-card--locked";
     card.setAttribute("role", "group");
-    card.setAttribute("aria-label", "未解放枠");
+    card.setAttribute("aria-label", t("party.lockedSlot"));
 
     const footer = document.createElement("div");
     footer.className = "skill-menu-skill-view-card-footer";
@@ -747,7 +755,7 @@ export class SkillMenuPanel {
     kind: "active" | "passive"
   ): string {
     const unlockLevel = slotIndex < 2 ? 0 : slotIndex === 2 ? 10 : 20;
-    const unlockText = `プレイヤー Lv${unlockLevel} で追加`;
+    const unlockText = t("party.slotUnlockAtLevel", { level: unlockLevel });
     const skillName = this.resolveLockedSlotSkillName(preset, slotIndex, kind);
     return skillName ? `${skillName}　${unlockText}` : unlockText;
   }
@@ -843,13 +851,17 @@ export class SkillMenuPanel {
 
     const heading = document.createElement("h3");
     heading.className = "skill-menu-picker-modal-title";
-    heading.textContent = "クラスを選ぶ";
+    heading.textContent = t("party.pickClass");
 
     const actions = document.createElement("div");
     actions.className = "skill-menu-picker-actions";
     actions.append(
       this.createCancelPickerRow(),
-      this.createActionPickerRow("外す", "スロットを空にする", { classId: "" })
+      this.createActionPickerRow(
+        t("party.clearSlot"),
+        t("party.clearSlotDescription"),
+        { classId: "" },
+      )
     );
 
     const assignable = getAssignableClassIds(
@@ -862,9 +874,9 @@ export class SkillMenuPanel {
     const blocks = document.createElement("div");
     blocks.className = "skill-menu-picker-role-blocks";
 
-    for (const block of PICKER_ROLE_BLOCKS) {
+    for (const role of PICKER_ROLES) {
       const classIds = assignable.filter(
-        (classId) => this.gameData.classRegistry[classId]?.role === block.role
+        (classId) => this.gameData.classRegistry[classId]?.role === role
       );
       if (classIds.length === 0) continue;
 
@@ -873,24 +885,24 @@ export class SkillMenuPanel {
 
       const blockHeading = document.createElement("h4");
       blockHeading.className = "skill-menu-picker-role-heading";
-      blockHeading.textContent = block.label;
+      blockHeading.textContent = roleLabel(role);
       blockEl.appendChild(blockHeading);
 
       const list = document.createElement("div");
       list.className = "skill-menu-picker-role-list";
-      if (block.role === "attacker") {
-        for (const subBlock of ATTACKER_SUB_ROLE_BLOCKS) {
+      if (role === "attacker") {
+        for (const subRole of ATTACKER_SUB_ROLES) {
           const subClassIds = classIds.filter((classId) => {
             const preset = this.gameData.classRegistry[classId];
             return (
-              preset && resolveAttackerSubRole(preset) === subBlock.subRole
+              preset && resolveAttackerSubRole(preset) === subRole
             );
           });
           if (subClassIds.length === 0) continue;
 
           const subHeading = document.createElement("div");
           subHeading.className = "skill-menu-picker-role-subheading";
-          subHeading.textContent = subBlock.label;
+          subHeading.textContent = attackerSubRoleLabel(subRole);
           list.appendChild(subHeading);
 
           for (const classId of subClassIds) {
@@ -926,7 +938,10 @@ export class SkillMenuPanel {
   }
 
   private createCancelPickerRow(): HTMLElement {
-    return this.createActionPickerRow("キャンセル", "変更せず戻る", {
+    return this.createActionPickerRow(
+      t("party.cancel"),
+      t("party.cancelDescription"),
+      {
       pickerAction: "cancel",
     });
   }
@@ -994,7 +1009,7 @@ export class SkillMenuPanel {
     text.appendChild(nameEl);
     row.appendChild(text);
 
-    const summary = preset ? formatClassSummary(preset) : "";
+    const summary = preset ? formatClassSummary(preset, getLocale()) : "";
     if (summary) {
       const summaryEl = document.createElement("div");
       summaryEl.className = "skill-menu-picker-row-summary";
@@ -1008,6 +1023,7 @@ export class SkillMenuPanel {
   }
 
   destroy(): void {
+    this.unsubscribeLocale();
     this.gameTermPanel.destroy();
     this.pickerOverlayEl.remove();
     this.root.remove();

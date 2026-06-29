@@ -1,4 +1,4 @@
-import { ATTACK_SPEED_TIER_LABELS } from '../battle/data/gameDataSchema.ts';
+import { getAttackSpeedTierLabel } from '../i18n/memberStatLabels.ts';
 import type { AttackSpeedTier, ClassPreset } from '../battle/types.ts';
 import { computeStatsAtLevel, type LevelCurvesConfig } from './levelGrowth.ts';
 
@@ -39,6 +39,6 @@ export function resolveMemberDisplayStats(
     atk: stats.atk,
     def: stats.def,
     reg: stats.reg,
-    spdLabel: ATTACK_SPEED_TIER_LABELS[tier],
+    spdLabel: getAttackSpeedTierLabel(tier),
   };
 }

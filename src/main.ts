@@ -1,7 +1,9 @@
 import './styles/app-base.css';
+import { resolveLocale } from './i18n/locale.ts';
 import { migrateLegacyProjectStorage } from './projectIdentity.ts';
 
 migrateLegacyProjectStorage();
+resolveLocale();
 import {
   renderGameDataLoadError,
   tryLoadGameData,

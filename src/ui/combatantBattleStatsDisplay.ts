@@ -1,7 +1,5 @@
-import {
-  ATTACK_SPEED_TIER_LABELS,
-  MEMBER_STAT_LABELS,
-} from '../battle/data/gameDataSchema.ts';
+import { getMemberStatLabels, getAttackSpeedTierLabel } from '../i18n/memberStatLabels.ts';
+import { getLocale } from '../i18n/locale.ts';
 import {
   aggregateStatEffects,
   computeEffectiveStat,
@@ -75,6 +73,7 @@ function buildNumericStatRow(
 }
 
 function buildHpRow(ally: CombatantSnapshot): CombatantBattleStatRow {
+  const labels = getMemberStatLabels();
   const baseMaxHp = ally.baseMaxHp;
   const aggregation = aggregateStatEffects(ally.statusEffects, 'hp');
   const effectKind = statEffectKind(baseMaxHp, 'hp', aggregation);
@@ -89,7 +88,7 @@ function buildHpRow(ally: CombatantSnapshot): CombatantBattleStatRow {
         : numericKind;
 
   return {
-    label: MEMBER_STAT_LABELS.hp,
+    label: labels.hp,
     valueText: `${Math.round(ally.hp)} / ${Math.round(ally.maxHp)}`,
     deltaText,
     deltaKind,
@@ -120,10 +119,11 @@ function buildSpdRow(
   const tier = resolveAttackSpeedTier({ attackSpeedTier });
   const { text: deltaText, kind: deltaKind } =
     formatAttackSpeedMultiplierDelta(multiplier);
+  const labels = getMemberStatLabels();
 
   return {
-    label: MEMBER_STAT_LABELS.spd,
-    valueText: ATTACK_SPEED_TIER_LABELS[tier],
+    label: labels.spd,
+    valueText: getAttackSpeedTierLabel(tier, getLocale()),
     deltaText,
     deltaKind,
   };
@@ -133,22 +133,23 @@ export function buildCombatantBattleStatRows(
   ally: CombatantSnapshot,
   attackSpeedTier: AttackSpeedTier,
 ): CombatantBattleStatRow[] {
+  const labels = getMemberStatLabels();
   return [
     buildHpRow(ally),
     buildNumericStatRow(
-      MEMBER_STAT_LABELS.atk,
+      labels.atk,
       ally.atk,
       'atk',
       ally.statusEffects,
     ),
     buildNumericStatRow(
-      MEMBER_STAT_LABELS.def,
+      labels.def,
       ally.def,
       'def',
       ally.statusEffects,
     ),
     buildNumericStatRow(
-      MEMBER_STAT_LABELS.reg,
+      labels.reg,
       ally.reg,
       'reg',
       ally.statusEffects,

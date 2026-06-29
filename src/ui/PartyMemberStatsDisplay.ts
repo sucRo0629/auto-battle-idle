@@ -28,6 +28,8 @@ import {
   syncDetailStatusBadgeHits,
   type PartyHudStatusBadgeHitContext,
 } from './partyHudStatusBadgeHits.ts';
+import { t } from '../i18n/t.ts';
+import { getLocale } from '../i18n/locale.ts';
 
 export interface PartyMemberStatsFrame {
   snapshots: CombatantSnapshot[];
@@ -189,12 +191,12 @@ export function createPartyMemberStatsRow(
   dealtBar.appendChild(dealtFill);
   takenBar.appendChild(takenFill);
   bars.append(dealtBar, takenBar);
-  const damageLabel = el('span', 'party-stats-damage-label', '与 — · 被 —');
+  const damageLabel = el('span', 'party-stats-damage-label', t('hud.damageEmpty'));
   damageEl.append(bars, damageLabel);
 
   const statusEl = el('div', 'party-stats-status');
-  const debuffGroup = createStatusBadgeGroupWithHits('Debuff');
-  const buffGroup = createStatusBadgeGroupWithHits('Buff');
+  const debuffGroup = createStatusBadgeGroupWithHits(t('hud.debuff'));
+  const buffGroup = createStatusBadgeGroupWithHits(t('hud.buff'));
   statusEl.append(debuffGroup.group, buffGroup.group);
 
   row.append(memberEl, damageEl, statusEl);
@@ -249,7 +251,7 @@ export function syncDamageBars(
     const down = downBySlot.get(row.slotIndex) ?? false;
     refs.root.classList.toggle('is-down', down);
 
-    const syncKey = `${down}:${row.damageDealt}:${row.damageTaken}:${maxDealt}:${maxTaken}`;
+    const syncKey = `${getLocale()}:${down}:${row.damageDealt}:${row.damageTaken}:${maxDealt}:${maxTaken}`;
     if (refs.lastSyncKey === syncKey) continue;
     refs.lastSyncKey = syncKey;
 
@@ -261,8 +263,8 @@ export function syncDamageBars(
     const dealtLabel = row.damageDealt.toLocaleString();
     const takenLabel = row.damageTaken.toLocaleString();
     refs.label.textContent = down
-      ? `与 ${dealtLabel} · 被 ${takenLabel} (倒)`
-      : `与 ${dealtLabel} · 被 ${takenLabel}`;
+      ? t('hud.damageDealtTakenDown', { dealt: dealtLabel, taken: takenLabel })
+      : t('hud.damageDealtTaken', { dealt: dealtLabel, taken: takenLabel });
   }
 }
 

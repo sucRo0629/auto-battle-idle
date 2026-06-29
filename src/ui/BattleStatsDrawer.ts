@@ -1,4 +1,6 @@
 import '../styles/battle-stats-drawer.css';
+import { subscribeLocaleChange } from '../i18n/locale.ts';
+import { t } from '../i18n/t.ts';
 
 export interface BattleStatsDrawerCallbacks {
   onOpenChange: (open: boolean) => void;
@@ -13,6 +15,7 @@ export class BattleStatsDrawer {
   private readonly tabButton: HTMLButtonElement;
   private readonly tabIcon: HTMLElement;
   private readonly onEscapeKey: (event: KeyboardEvent) => void;
+  private readonly unsubscribeLocale: () => void;
   private open: boolean;
   private mounted = false;
 
@@ -27,7 +30,6 @@ export class BattleStatsDrawer {
     this.tabButton = document.createElement('button');
     this.tabButton.type = 'button';
     this.tabButton.className = 'party-hud-drawer-tab';
-    this.tabButton.setAttribute('aria-label', '戦闘詳細を開く');
     this.tabButton.setAttribute('aria-expanded', 'false');
     this.tabButton.addEventListener('click', () => {
       this.toggle();
@@ -45,6 +47,11 @@ export class BattleStatsDrawer {
       event.preventDefault();
       this.setOpen(false);
     };
+
+    this.unsubscribeLocale = subscribeLocaleChange(() => {
+      this.refreshTabAriaLabel();
+    });
+    this.refreshTabAriaLabel();
   }
 
   mount(parent: HTMLElement): void {
@@ -66,14 +73,18 @@ export class BattleStatsDrawer {
     this.applyOpenState(open, true);
   }
 
+  private refreshTabAriaLabel(): void {
+    this.tabButton.setAttribute(
+      'aria-label',
+      this.open ? t('battle.statsClose') : t('battle.statsOpen'),
+    );
+  }
+
   private applyOpenState(open: boolean, notify: boolean): void {
     this.open = open;
     this.root.classList.toggle('party-hud-drawer--open', open);
     this.tabButton.setAttribute('aria-expanded', open ? 'true' : 'false');
-    this.tabButton.setAttribute(
-      'aria-label',
-      open ? '戦闘詳細を閉じる' : '戦闘詳細を開く',
-    );
+    this.refreshTabAriaLabel();
     this.tabIcon.classList.toggle("party-hud-drawer-tab-chevron--open", open);
 
     if (this.mounted) {
@@ -94,6 +105,7 @@ export class BattleStatsDrawer {
   }
 
   destroy(): void {
+    this.unsubscribeLocale();
     document.removeEventListener('keydown', this.onEscapeKey);
     this.root.remove();
   }

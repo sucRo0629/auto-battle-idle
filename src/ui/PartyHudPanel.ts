@@ -35,6 +35,7 @@ import {
   type DamageBarRefs,
   type StatusBadgeRefs,
 } from './PartyMemberStatsDisplay.ts';
+import { t } from '../i18n/t.ts';
 
 interface RecastCellElements {
   cell: HTMLElement;
@@ -91,8 +92,8 @@ function el<K extends keyof HTMLElementTagNameMap>(
 
 function createDetailStatusBadges(): StatusBadgeRefs {
   const statusEl = el('div', 'party-stats-status party-hud-detail-status');
-  const debuffGroup = createStatusBadgeGroupWithHits('Debuff');
-  const buffGroup = createStatusBadgeGroupWithHits('Buff');
+  const debuffGroup = createStatusBadgeGroupWithHits(t('hud.debuff'));
+  const buffGroup = createStatusBadgeGroupWithHits(t('hud.buff'));
   statusEl.append(debuffGroup.group, buffGroup.group);
   return {
     root: statusEl,
@@ -119,7 +120,7 @@ function createDetailDamageBar(): DamageBarRefs {
   dealtBar.appendChild(dealtFill);
   takenBar.appendChild(takenFill);
   bars.append(dealtBar, takenBar);
-  const damageLabel = el('span', 'party-stats-damage-label', '与 — · 被 —');
+  const damageLabel = el('span', 'party-stats-damage-label', t('hud.damageEmpty'));
   damageEl.append(bars, damageLabel);
   return { root: damageEl, dealtFill, takenFill, label: damageLabel };
 }
@@ -193,6 +194,25 @@ export class PartyHudPanel {
 
   getMode(): PartyHudPanelMode {
     return this.mode;
+  }
+
+  refreshLocale(): void {
+    for (const slot of this.slots) {
+      slot.damage.label.textContent = t('hud.damageEmpty');
+      slot.damage.lastSyncKey = undefined;
+      const statusLabels = slot.detailStatus.root.querySelectorAll(
+        '.party-stats-status-label',
+      );
+      if (statusLabels[0] instanceof HTMLElement) {
+        statusLabels[0].textContent = t('hud.debuff');
+      }
+      if (statusLabels[1] instanceof HTMLElement) {
+        statusLabels[1].textContent = t('hud.buff');
+      }
+    }
+    if (this.mode === 'detail' && this.lastDetailFrame) {
+      this.updateDetailMetrics(this.lastDetailFrame);
+    }
   }
 
   update(entries: (PartyHudEntry | null)[]): void {
