@@ -1,7 +1,11 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach } from 'vitest';
 import { PartyHudPanel } from './PartyHudPanel.ts';
-import { syncDamageBars, type DamageBarRefs } from './PartyMemberStatsDisplay.ts';
+import {
+  buildDetailDamageBarElements,
+  syncDamageBars,
+  type DamageBarRefs,
+} from './PartyMemberStatsDisplay.ts';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 
 describe('PartyHudPanel detail damage metrics', () => {
@@ -23,7 +27,7 @@ describe('PartyHudPanel detail damage metrics', () => {
     host.remove();
   });
 
-  it('updates assassin slot damage label from displayRows', () => {
+  it('updates assassin slot inline damage values from displayRows', () => {
     const rows: StageDamageDisplayRow[] = [
       {
         slotIndex: 0,
@@ -84,25 +88,37 @@ describe('PartyHudPanel detail damage metrics', () => {
 
     panel.updateDetailMetrics({ snapshots: [], displayRows: rows });
 
-    const labels = [...host.querySelectorAll('.party-stats-damage-label')].map(
-      (node) => node.textContent,
-    );
-    expect(labels[0]).toBe('与 1,200 · 被 400');
-    expect(labels[1]).toBe('与 3,000 · 被 50');
+    const dealtValues = [
+      ...host.querySelectorAll(
+        '.party-hud-detail-damage .party-stats-damage-bar--dealt .party-stats-damage-bar-value',
+      ),
+    ].map((node) => node.textContent);
+    const takenValues = [
+      ...host.querySelectorAll(
+        '.party-hud-detail-damage .party-stats-damage-bar--taken .party-stats-damage-bar-value',
+      ),
+    ].map((node) => node.textContent);
+    expect(dealtValues[0]).toBe('1,200');
+    expect(takenValues[0]).toBe('400');
+    expect(dealtValues[1]).toBe('3,000');
+    expect(takenValues[1]).toBe('50');
   });
 });
 
 describe('syncDamageBars', () => {
   function makeRefs(): DamageBarRefs {
+    const {
+      bars,
+      dealtFill,
+      takenFill,
+      dealtValue,
+      takenValue,
+      label,
+    } = buildDetailDamageBarElements();
     const root = document.createElement('div');
     root.className = 'party-stats-damage';
-    const dealtFill = document.createElement('div');
-    const takenFill = document.createElement('div');
-    const label = document.createElement('span');
-    label.className = 'party-stats-damage-label';
-    label.textContent = '与 — · 被 —';
-    root.append(dealtFill, takenFill, label);
-    return { root, dealtFill, takenFill, label };
+    root.append(bars, label);
+    return { root, dealtFill, takenFill, dealtValue, takenValue, label };
   }
 
   it('maps rows by slotIndex not array order', () => {
@@ -133,7 +149,9 @@ describe('syncDamageBars', () => {
 
     syncDamageBars(refsBySlot, rows, new Map());
 
-    expect(refsBySlot.get(3)?.label.textContent).toBe('与 999 · 被 1');
-    expect(refsBySlot.get(0)?.label.textContent).toBe('与 100 · 被 10');
+    expect(refsBySlot.get(3)?.dealtValue?.textContent).toBe('999');
+    expect(refsBySlot.get(3)?.takenValue?.textContent).toBe('1');
+    expect(refsBySlot.get(0)?.dealtValue?.textContent).toBe('100');
+    expect(refsBySlot.get(0)?.takenValue?.textContent).toBe('10');
   });
 });

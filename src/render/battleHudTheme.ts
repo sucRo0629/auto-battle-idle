@@ -202,10 +202,10 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     skillRecastTrack: readString(style, "--hud-skill-recast-track", "#2a2a35"),
     skillRecastCharging: readString(
       style,
-      "--hud-skill-recast-charging",
-      "#5a6270"
+      "--hud-skill-recast-charging-hi",
+      "#556878"
     ),
-    skillRecastReady: readString(style, "--hud-skill-recast-ready", "#9aa3b0"),
+    skillRecastReady: readString(style, "--hud-skill-recast-ready", "#cdd8e8"),
     iconFrame: readString(style, "--hud-icon-frame", "#1a1a1a"),
     statusBadgeIconSize: readNumber(style, "--status-badge-icon-size", 20),
     statusBadgeOverlap: readNumber(style, "--status-badge-overlap", 0),

@@ -883,8 +883,15 @@ export interface CompactStatusBadgeSelection {
 /** 敵頭上等のフィールド簡易表示: 3 +N（計 4 スロット） */
 export const FIELD_COMPACT_STATUS_VISIBLE_COUNT = 3;
 
-/** Party HUD 簡易表示: 4 +N（計 5 スロット） */
-export const PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT = 4;
+/** Party HUD 簡易表示: 省略なし時は最大 4、+N 時は 3 + 第 4 枠 */
+export const PARTY_HUD_COMPACT_STATUS_MAX_VISIBLE = 4;
+
+/** Party HUD 簡易表示: +N 発生時の表示バッジ数 */
+export const PARTY_HUD_COMPACT_STATUS_OVERFLOW_VISIBLE = 3;
+
+/** @deprecated PARTY_HUD_COMPACT_STATUS_MAX_VISIBLE を参照 */
+export const PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT =
+  PARTY_HUD_COMPACT_STATUS_MAX_VISIBLE;
 
 export interface CompactStatusBadgeSelectOptions {
   visibleCount?: number;
@@ -902,5 +909,23 @@ export function selectCompactStatusBadges(
   return {
     visible: sorted.slice(0, visibleCount),
     overflowCount,
+  };
+}
+
+/** Party HUD 簡易表示: 4 件以下は全表示、5 件以上は 3 +N（計 4 スロット幅）。 */
+export function selectPartyHudCompactStatusBadges(
+  badges: StatusEffectBadgeDisplay[],
+): CompactStatusBadgeSelection {
+  const sorted = sortBadgesForCompactView(badges);
+  if (sorted.length <= PARTY_HUD_COMPACT_STATUS_MAX_VISIBLE) {
+    return {
+      visible: sorted.slice(0, PARTY_HUD_COMPACT_STATUS_MAX_VISIBLE),
+      overflowCount: 0,
+    };
+  }
+  return {
+    visible: sorted.slice(0, PARTY_HUD_COMPACT_STATUS_OVERFLOW_VISIBLE),
+    overflowCount:
+      sorted.length - PARTY_HUD_COMPACT_STATUS_OVERFLOW_VISIBLE,
   };
 }

@@ -48,6 +48,8 @@ import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 export interface VerifyModeControls {
   isVerifyMode: () => boolean;
   onVerifyModeChange: (enabled: boolean) => void;
+  isBattleXDebugDisplayEnabled?: () => boolean;
+  onBattleXDebugDisplayChange?: (enabled: boolean) => void;
   onOpenMetaMenu: () => void;
   onPlayerLevelChange?: (level: number) => void;
   getLoopStageId?: () => string | null;
@@ -155,6 +157,11 @@ export class BattleView {
 
     this.debugMenu = new DebugMenuPanel(this.gameData, {
       isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
+      isBattleXDebugDisplayEnabled: () =>
+        this.isBattleXDebugDisplayActive(),
+      onBattleXDebugDisplayChange: (enabled) => {
+        verifyModeControls?.onBattleXDebugDisplayChange?.(enabled);
+      },
       getSave: this.getSave,
       getLoopStageId: () => verifyModeControls?.getLoopStageId?.() ?? null,
       getLoopWaveIndex: () => verifyModeControls?.getLoopWaveIndex?.() ?? null,
@@ -175,9 +182,7 @@ export class BattleView {
 
     this.battleXDebugCanvas = new BattleXDebugCanvas();
     this.battleXDebugCanvas.mount(this.root);
-    this.battleXDebugCanvas.setVisible(
-      verifyModeControls?.isVerifyMode() ?? false,
-    );
+    this.syncBattleXDebugDisplay();
 
     container.appendChild(this.root);
 
@@ -673,7 +678,7 @@ export class BattleView {
     this.syncHudToolbarLevel(save.party);
     this.syncVerifyBadgeState();
 
-    const debugEnabled = this.verifyModeControls?.isVerifyMode() ?? false;
+    const debugEnabled = this.isBattleXDebugDisplayActive();
 
     this.canvas.syncFromSnapshot(snapshot);
     if (debugEnabled) {
@@ -761,10 +766,21 @@ export class BattleView {
     this.root.remove();
   }
 
-  syncVerifyModeToggle(enabled: boolean): void {
-    this.battleXDebugCanvas.setVisible(enabled);
+  syncVerifyModeToggle(_enabled: boolean): void {
+    this.syncBattleXDebugDisplay();
     this.debugMenu.refresh();
     this.syncVerifyBadgeState();
+  }
+
+  syncBattleXDebugDisplay(): void {
+    this.battleXDebugCanvas.setVisible(this.isBattleXDebugDisplayActive());
+  }
+
+  private isBattleXDebugDisplayActive(): boolean {
+    return (
+      (this.verifyModeControls?.isVerifyMode() ?? false) &&
+      (this.verifyModeControls?.isBattleXDebugDisplayEnabled?.() ?? true)
+    );
   }
 
   isBattleXDebugReplayPaused(): boolean {

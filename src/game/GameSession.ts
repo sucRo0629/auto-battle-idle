@@ -18,6 +18,10 @@ import {
   setDebugLoopWaveIndex,
 } from '../dev/debugLoopStage.ts';
 import {
+  isBattleXDebugDisplayEnabled,
+  setBattleXDebugDisplayEnabled,
+} from '../dev/battleXDebugDisplay.ts';
+import {
   isVerifyModeEnabled,
   partyIdForVerifyMode,
   saveStorageKey,
@@ -49,6 +53,7 @@ export class GameSession {
   private readonly levelCurves: LevelCurvesConfig;
   private save: SaveGameState;
   private verifyMode: boolean;
+  private battleXDebugDisplayEnabled: boolean;
   private loopStageId: string | null;
   private loopWaveIndex: number | null;
   private readonly engine: BattleEngine;
@@ -64,6 +69,7 @@ export class GameSession {
   ) {
     this.levelCurves = loadLevelCurves(levelCurvesJson);
     this.verifyMode = isVerifyModeEnabled();
+    this.battleXDebugDisplayEnabled = isBattleXDebugDisplayEnabled();
     this.loopStageId = this.verifyMode ? getDebugLoopStageId() : null;
     this.loopWaveIndex = this.verifyMode ? getDebugLoopWaveIndex() : null;
     this.save = this.loadSaveForMode(this.verifyMode);
@@ -93,7 +99,8 @@ export class GameSession {
         },
         getLoopWaveIndex: () =>
           this.verifyMode ? this.loopWaveIndex : null,
-        getBattleXDebugEnabled: () => this.verifyMode,
+        getBattleXDebugEnabled: () =>
+          this.verifyMode && this.battleXDebugDisplayEnabled,
       },
     );
 
@@ -106,6 +113,9 @@ export class GameSession {
       {
         isVerifyMode: () => this.verifyMode,
         onVerifyModeChange: (enabled) => this.setVerifyMode(enabled),
+        isBattleXDebugDisplayEnabled: () => this.battleXDebugDisplayEnabled,
+        onBattleXDebugDisplayChange: (enabled) =>
+          this.setBattleXDebugDisplay(enabled),
         onOpenMetaMenu: () => this.openPartyMenu(),
         onPlayerLevelChange: (level) => this.setPlayerLevel(level),
         getLoopStageId: () => this.getLoopStageId(),
@@ -187,6 +197,13 @@ export class GameSession {
     this.engine.restartBattle();
     this.persistSave();
     this.view.syncVerifyModeToggle(enabled);
+  }
+
+  setBattleXDebugDisplay(enabled: boolean): void {
+    if (this.battleXDebugDisplayEnabled === enabled) return;
+    this.battleXDebugDisplayEnabled = enabled;
+    setBattleXDebugDisplayEnabled(enabled);
+    this.view.syncBattleXDebugDisplay();
   }
 
   start(): void {

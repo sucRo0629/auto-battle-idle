@@ -124,10 +124,19 @@
   --enemy-barrier-fill: #ff8a80;
   --enemy-barrier-overflow-fill: #ffcdd2;
   --hud-bar-border: #1a1a1a;
-  --hud-bar-track: #333333;
-  --hud-skill-recast-track: #2a2a35;
-  --hud-skill-recast-charging: #5a6270;
-  --hud-skill-recast-ready: #9aa3b0;
+  --hud-bar-track: #2a2a2a;
+  --hud-hp-bar-track-shadow: rgba(0, 0, 0, 0.45);
+  --hud-hp-bar-track-highlight: rgba(255, 255, 255, 0.05);
+  --hud-skill-recast-track: #14141c;
+  --hud-skill-recast-border: rgba(90, 100, 120, 0.55);
+  --hud-skill-recast-charging-lo: #3d4a5c;
+  --hud-skill-recast-charging-hi: #556878;
+  --hud-skill-recast-charging: var(--hud-skill-recast-charging-hi);
+  --hud-skill-recast-ready: #cdd8e8;
+  --hud-skill-recast-charge: #f0b030;
+  --hud-skill-recast-charge-hi: #ffe078;
+  --hud-recast-charge-seg-min: 4;
+  --hud-recast-charge-seg-cap: 5;
   --hud-skill-recast-paused-tint: #b8a030;
   --hud-skill-recast-paused-mix: 38;
   --hud-skill-recast-paused-max-mix: 58;
@@ -179,12 +188,13 @@
   --attack-impale-tip: #5d6d7e;
   --status-badge-icon-size: 20;
   --status-badge-overlap: 0;
-  --status-badge-overlay: rgba(0, 0, 0, 0.55);
+  --status-badge-overlay: rgba(0, 0, 0, 0.42);
   --status-icon-outline-color: #000000;
   --status-icon-outline-width: 1;
   --status-icon-fallback-alpha: 0.35;
   --hud-status-badge-gap: 2;
-  --hud-compact-badge-slots: 5;
+  --hud-compact-badge-slots: 4;
+  --hud-recast-slot-rows: 2;
   --hud-body-bar-h: 24;
   --hurt-tint-r: 255;
   --hurt-tint-g: 0;
@@ -402,7 +412,7 @@
   z-index: 1;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  gap: 5px;
   width: 100%;
   margin-top: 0;
   padding: calc(var(--hud-backdrop-pad-y) * 1px)
@@ -421,18 +431,49 @@
   flex-direction: column;
   gap: calc(var(--hud-header-block-gap) * 1px);
   min-width: 0;
+  padding: 4px 5px 5px;
+  border-radius: 3px;
+  background: rgba(8, 10, 18, 0.42);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 1px 0 rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+
+.party-hud-panel:not(.party-hud-panel--detail) .party-hud-hp-track {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.party-hud-panel:not(.party-hud-panel--detail) .party-hud-recast-grid {
+  flex: 0 0 var(--hud-recast-grid-h);
+  min-height: var(--hud-recast-grid-h);
+  height: var(--hud-recast-grid-h);
+}
+
+.party-hud-panel:not(.party-hud-panel--detail) .party-hud-label {
+  display: none;
 }
 
 .party-hud-slot--dead {
   opacity: var(--dead-alpha);
 }
 
-.party-hud-head {
+.party-hud-detail-top {
   display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: calc(var(--hud-icon-bar-gap) * 1px);
   min-width: 0;
-  overflow: visible;
+}
+
+.party-hud-detail-class-col {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.party-hud-panel:not(.party-hud-panel--detail) .party-hud-detail-damage {
+  display: none;
 }
 
 .party-hud-status-badges-wrap {
@@ -475,6 +516,13 @@
 .party-hud-status-badge-hit--interactive[aria-expanded="true"] {
   outline: 1px solid rgba(142, 184, 232, 1);
   outline-offset: 1px;
+}
+
+.party-hud-status-badge-hit--overflow {
+  border: 1px dashed rgba(143, 168, 200, 0.42);
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.28);
+  box-sizing: border-box;
 }
 
 .party-hud-status-badge-tooltip {
@@ -531,11 +579,15 @@
   text-overflow: ellipsis;
 }
 
+.party-hud-body-row,
+.party-hud-detail-top {
+  min-width: 0;
+}
+
 .party-hud-body-row {
   display: flex;
   align-items: flex-end;
   gap: calc(var(--hud-icon-bar-gap) * 1px);
-  min-width: 0;
 }
 
 .party-hud-icon-wrap {
@@ -561,14 +613,31 @@
   display: flex;
   flex-direction: column;
   gap: calc(var(--hud-bar-skill-gap) * 1px);
+  --hud-recast-grid-h: calc(
+    var(--hud-recast-slot-rows) * var(--hud-recast-bar-h) * 1px +
+      (var(--hud-recast-slot-rows) - 1) * var(--hud-recast-gap) * 1px
+  );
+}
+
+.party-hud-hp-row {
+  display: flex;
+  align-items: stretch;
+  gap: calc(var(--hud-bar-skill-gap) * 1px);
+  min-width: 0;
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 .party-hud-hp-track {
   position: relative;
   flex: 1 1 0;
   min-height: 2px;
+  min-width: 0;
   background: var(--hud-bar-track);
-  box-shadow: 0 0 0 1px var(--hud-bar-border);
+  box-shadow:
+    inset 0 1px 0 var(--hud-hp-bar-track-shadow),
+    inset 0 -1px 0 var(--hud-hp-bar-track-highlight),
+    0 0 0 1px var(--hud-bar-border);
 }
 
 .party-hud-hp-fill {
@@ -577,6 +646,7 @@
   top: 0;
   bottom: 0;
   background: var(--hud-hp-bar-fill);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18);
 }
 
 .party-hud-barrier-layer {
@@ -608,28 +678,31 @@
 }
 
 .party-hud-recast-grid {
-  flex: 0 0 auto;
+  flex: 0 0 var(--hud-recast-grid-h);
+  min-height: var(--hud-recast-grid-h);
+  height: var(--hud-recast-grid-h);
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-auto-rows: calc(var(--hud-recast-bar-h) * 1px);
+  grid-template-rows: repeat(
+    var(--hud-recast-slot-rows),
+    calc(var(--hud-recast-bar-h) * 1px)
+  );
   gap: calc(var(--hud-recast-gap) * 1px);
 }
 
 .party-hud-recast-cell {
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
-  gap: 1px;
+  position: relative;
   height: calc(var(--hud-recast-bar-h) * 1px);
   min-height: calc(var(--hud-recast-bar-h) * 1px);
+  overflow: visible;
 }
 
-.party-hud-recast-cell[hidden] {
-  display: none !important;
+.party-hud-recast-cell--locked {
+  visibility: hidden;
 }
 
 .party-hud-recast-cell--fire-hold .party-hud-recast-fill[data-state='ready'],
-.party-hud-recast-cell--fire-hold .party-hud-recast-stock-pip {
+.party-hud-recast-cell--fire-hold .party-hud-recast-charge-marker::before {
   animation: party-hud-recast-fire-hold 0.8s ease-in-out infinite alternate;
 }
 
@@ -643,27 +716,62 @@
 }
 
 .party-hud-recast-fill-track {
-  flex: 1 1 auto;
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
   min-width: 0;
   height: calc(var(--hud-recast-bar-h) * 1px);
   background: var(--hud-skill-recast-track);
-  box-shadow: 0 0 0 1px var(--hud-bar-border);
+  box-shadow:
+    inset 0 0 0 1px var(--hud-skill-recast-border),
+    0 0 0 1px var(--hud-bar-border);
+  overflow: visible;
 }
 
-.party-hud-recast-stock-pips {
+.party-hud-recast-charge-markers {
+  position: absolute;
+  left: 1px;
+  top: 0;
+  bottom: 0;
+  z-index: 3;
   display: flex;
   flex-direction: row;
   align-items: stretch;
   gap: 1px;
-  flex: 0 0 auto;
+  height: 100%;
+  pointer-events: none;
 }
 
-.party-hud-recast-stock-pip {
-  flex: 0 0 3px;
-  width: 3px;
-  height: calc(var(--hud-recast-bar-h) * 1px);
-  background: var(--hud-skill-recast-ready);
-  box-shadow: 0 0 0 1px var(--hud-bar-border);
+.party-hud-recast-charge-marker {
+  flex: 0 0 clamp(
+    calc(var(--hud-recast-charge-seg-min) * 1px),
+    calc((50cqi - 3px) / 3),
+    calc(var(--hud-recast-charge-seg-cap) * 1px)
+  );
+  width: clamp(
+    calc(var(--hud-recast-charge-seg-min) * 1px),
+    calc((50cqi - 3px) / 3),
+    calc(var(--hud-recast-charge-seg-cap) * 1px)
+  );
+  height: 100%;
+  display: block;
+}
+
+.party-hud-recast-charge-marker::before {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 1px;
+  background: linear-gradient(
+    180deg,
+    var(--hud-skill-recast-charge-hi) 0%,
+    var(--hud-skill-recast-charge) 55%,
+    #c88818 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 210, 0.5),
+    0 0 0 1px rgba(0, 0, 0, 0.8);
 }
 
 .party-hud-recast-row {
@@ -680,13 +788,25 @@
   height: calc(var(--hud-recast-bar-h) * 1px);
   min-height: calc(var(--hud-recast-bar-h) * 1px);
   background: var(--hud-skill-recast-track);
-  box-shadow: 0 0 0 1px var(--hud-bar-border);
+  box-shadow:
+    inset 0 0 0 1px var(--hud-skill-recast-border),
+    0 0 0 1px var(--hud-bar-border);
 }
 
 .party-hud-recast-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
   height: 100%;
   width: 0%;
-  background: var(--hud-skill-recast-charging);
+  background: linear-gradient(
+    90deg,
+    var(--hud-skill-recast-charging-lo) 0%,
+    var(--hud-skill-recast-charging-hi) 100%
+  );
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  z-index: 1;
 }
 
 .party-hud-recast-fill[data-state='ready'] {
@@ -698,11 +818,22 @@
 }
 
 .party-hud-recast-fill[data-state='paused'] {
-  background: color-mix(
-    in srgb,
-    var(--hud-skill-recast-paused-tint)
-      calc(var(--hud-skill-recast-paused-mix) * 1%),
-    var(--hud-skill-recast-charging)
+  background: linear-gradient(
+    90deg,
+    color-mix(
+        in srgb,
+        var(--hud-skill-recast-paused-tint)
+          calc(var(--hud-skill-recast-paused-mix) * 1%),
+        var(--hud-skill-recast-charging-lo)
+      )
+      0%,
+    color-mix(
+        in srgb,
+        var(--hud-skill-recast-paused-tint)
+          calc(var(--hud-skill-recast-paused-mix) * 1%),
+        var(--hud-skill-recast-charging-hi)
+      )
+      100%
   );
 }
 

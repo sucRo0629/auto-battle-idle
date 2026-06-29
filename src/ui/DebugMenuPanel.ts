@@ -4,6 +4,8 @@ import { resolvePlayerDisplayLevel } from '../progression/resolvePlayerDisplayLe
 
 export interface DebugMenuControls {
   isVerifyMode: () => boolean;
+  isBattleXDebugDisplayEnabled: () => boolean;
+  onBattleXDebugDisplayChange: (enabled: boolean) => void;
   getSave: () => SaveGameState;
   getLoopStageId: () => string | null;
   getLoopWaveIndex: () => number | null;
@@ -46,6 +48,8 @@ export class DebugMenuPanel {
 
     const save = this.controls.getSave();
     this.rowsHost.replaceChildren();
+
+    this.rowsHost.append(this.createBattleXDebugToggleRow());
 
     const stageRow = document.createElement('div');
     stageRow.className = 'debug-menu-stage-row';
@@ -129,6 +133,29 @@ export class DebugMenuPanel {
 
     const playerLevel = resolvePlayerDisplayLevel(save.party);
     this.rowsHost.append(this.createPlayerLevelRow(playerLevel));
+  }
+
+  private createBattleXDebugToggleRow(): HTMLElement {
+    const row = document.createElement('div');
+    row.className = 'debug-menu-toggle-row';
+
+    const label = document.createElement('label');
+    label.className = 'debug-menu-toggle-label';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'debug-menu-toggle-checkbox';
+    checkbox.checked = this.controls.isBattleXDebugDisplayEnabled();
+    checkbox.addEventListener('change', () => {
+      this.controls.onBattleXDebugDisplayChange(checkbox.checked);
+    });
+
+    const text = document.createElement('span');
+    text.textContent = 'BattleX debug';
+
+    label.append(checkbox, text);
+    row.appendChild(label);
+    return row;
   }
 
   private createPlayerLevelRow(currentLevel: number): HTMLElement {

@@ -112,16 +112,16 @@ describe('quantizeBadgeOverlayStep', () => {
 });
 
 describe('statusBadgeRowWidth', () => {
-  it('includes outline clearance between adjacent badges', () => {
-    expect(statusBadgeRowWidth([hot, dot], 1, 16, 1, 0)).toBe(36);
+  it('includes outline clearance and 1px gap between adjacent badges', () => {
+    expect(statusBadgeRowWidth([hot, dot], 1, 16, 1, 0)).toBe(37);
   });
 
-  it('matches legacy width when outline is disabled', () => {
-    expect(statusBadgeRowWidth([hot, dot], 1, 16, 0, 0)).toBe(32);
+  it('includes 1px gap when outline is disabled', () => {
+    expect(statusBadgeRowWidth([hot, dot], 1, 16, 0, 0)).toBe(33);
   });
 
-  it('adds outline clearance for each additional badge', () => {
-    expect(statusBadgeRowWidth([atk, hot, dot], 1, 16, 1, 0)).toBe(56);
+  it('adds outline clearance and gap for each additional badge', () => {
+    expect(statusBadgeRowWidth([atk, hot, dot], 1, 16, 1, 0)).toBe(58);
   });
 });
 
@@ -255,7 +255,7 @@ describe('measureCompactStatusBadgeRow', () => {
     expect(layout.totalHeight).toBe(19);
   });
 
-  it('uses five slots for Party HUD layout at 20px', () => {
+  it('uses four slots for Party HUD layout at 20px', () => {
     const layout = measureCompactStatusBadgeRow(
       1,
       PARTY_HUD_STATUS_BADGE_ICON_SIZE,
@@ -264,10 +264,10 @@ describe('measureCompactStatusBadgeRow', () => {
       PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
     );
     expect(layout.totalHeight).toBe(24);
-    expect(layout.totalWidth).toBeGreaterThanOrEqual(100);
+    expect(layout.totalWidth).toBeGreaterThanOrEqual(80);
   });
 
-  it('uses five slots for Party HUD layout', () => {
+  it('uses four slots for Party HUD layout', () => {
     const layout = measureCompactStatusBadgeRow(
       1,
       16,
@@ -277,7 +277,7 @@ describe('measureCompactStatusBadgeRow', () => {
     );
     expect(layout.totalWidth).toBe(
       statusBadgeRowWidth(
-        Array.from({ length: 5 }, () => ({ category: 'hot' as const })),
+        Array.from({ length: 4 }, () => ({ category: 'hot' as const })),
         1,
         16,
         1,
@@ -285,6 +285,7 @@ describe('measureCompactStatusBadgeRow', () => {
       ),
     );
     expect(PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT.visibleCount).toBe(4);
+    expect(PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT.slotCount).toBe(4);
     expect(FIELD_COMPACT_STATUS_BADGE_LAYOUT.slotCount).toBe(4);
   });
 });
@@ -319,6 +320,7 @@ describe('drawCompactStatusBadgeRow', () => {
       moveTo() {},
       lineTo() {},
       fillRect() {},
+      strokeRect() {},
       strokeText() {},
       fillText() {},
       font: 'bold 9px sans-serif',
@@ -394,7 +396,7 @@ describe('badge label font size', () => {
 });
 
 describe('statusBadgeStride', () => {
-  it('adds 2px outline pad per side between icons', () => {
-    expect(statusBadgeStride(1, 16, 1, 0)).toBe(20);
+  it('adds 2px outline pad per side and 1px gap between icons', () => {
+    expect(statusBadgeStride(1, 16, 1, 0)).toBe(21);
   });
 });

@@ -11,7 +11,7 @@ import type { BattleHudTheme } from '../render/battleHudTheme.ts';
 import {
   measureCompactStatusBadgeRow,
   measureStatusBadgeWrap,
-  PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
+  type CompactStatusBadgeLayout,
   PARTY_HUD_STATUS_BADGE_ICON_SIZE,
   statusBadgeDrawableRowHeight,
   statusBadgeOutlinePad,
@@ -155,7 +155,7 @@ export function syncPartyHudStatusBadgeHits(
   badges: StatusEffectBadgeDisplay[],
   visible: StatusEffectBadgeDisplay[],
   overflowCount: number,
-  visibleCount: number,
+  badgeLayout: CompactStatusBadgeLayout,
   theme: BattleHudTheme,
   slotIndex: number,
   context: PartyHudStatusBadgeHitContext,
@@ -170,7 +170,7 @@ export function syncPartyHudStatusBadgeHits(
     iconSize,
     theme.statusIconOutlineWidth,
     theme.statusBadgeOverlap,
-    PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
+    badgeLayout,
   );
   const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
   const stride = statusBadgeStride(
@@ -181,6 +181,7 @@ export function syncPartyHudStatusBadgeHits(
   );
   const badgeW = statusBadgeWidth(scale, iconSize);
   const alignEnd = slotIndex >= 2;
+  const { visibleCount } = badgeLayout;
 
   for (let i = 0; i < visible.length; i++) {
     const badge = visible[i]!;
@@ -200,6 +201,7 @@ export function syncPartyHudStatusBadgeHits(
 
   if (overflowCount > 0) {
     const hit = createStatusBadgeHitElement('span');
+    hit.classList.add('party-hud-status-badge-hit--overflow');
     positionStatusBadgeHit(
       hit,
       outlinePad + visibleCount * stride,

@@ -4,6 +4,7 @@ import {
   assignCompactBadgeTier,
   collectStatusEffectBadgeDisplays,
   selectCompactStatusBadges,
+  selectPartyHudCompactStatusBadges,
   sortBadgesForCompactView,
   STATUS_BADGE_SLOT_ORDER,
   type StatusEffectBadgeDisplay,
@@ -483,19 +484,27 @@ describe('compact status badge selection', () => {
     expect(selection.overflowCount).toBe(2);
   });
 
-  it('selects four visible badges for Party HUD compact', () => {
-    const selection = selectCompactStatusBadges(
-      [
-        badge({ category: 'stun', kind: 'debuff' }),
-        badge({ category: 'def', kind: 'debuff' }),
-        badge({ category: 'dot', kind: 'debuff' }),
-        badge({ category: 'windMark', kind: 'debuff' }),
-        badge({ category: 'atk', kind: 'buff' }),
-      ],
-      { visibleCount: 4 },
-    );
+  it('selects four visible badges for Party HUD compact when four or fewer', () => {
+    const selection = selectPartyHudCompactStatusBadges([
+      badge({ category: 'stun', kind: 'debuff' }),
+      badge({ category: 'def', kind: 'debuff' }),
+      badge({ category: 'dot', kind: 'debuff' }),
+      badge({ category: 'windMark', kind: 'debuff' }),
+    ]);
     expect(selection.visible).toHaveLength(4);
-    expect(selection.overflowCount).toBe(1);
+    expect(selection.overflowCount).toBe(0);
+  });
+
+  it('selects three visible badges and overflow for Party HUD when five or more', () => {
+    const selection = selectPartyHudCompactStatusBadges([
+      badge({ category: 'stun', kind: 'debuff' }),
+      badge({ category: 'def', kind: 'debuff' }),
+      badge({ category: 'dot', kind: 'debuff' }),
+      badge({ category: 'windMark', kind: 'debuff' }),
+      badge({ category: 'atk', kind: 'buff' }),
+    ]);
+    expect(selection.visible).toHaveLength(3);
+    expect(selection.overflowCount).toBe(2);
   });
 
   it('leaves overflow at zero when three or fewer badges', () => {

@@ -3,7 +3,12 @@
  */
 import { afterEach, describe, expect, it } from 'vitest';
 import type { StatusEffectBadgeDisplay } from '../battle/statusEffectDisplay.ts';
+import { selectPartyHudCompactStatusBadges } from '../battle/statusEffectDisplay.ts';
 import { readBattleHudTheme } from '../render/battleHudTheme.ts';
+import {
+  PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
+  resolvePartyHudCompactStatusBadgeLayout,
+} from '../render/statusBadgeRenderer.ts';
 import { GameTermPanel } from './GameTermPanel.ts';
 import {
   syncDetailStatusBadgeHits,
@@ -62,7 +67,7 @@ describe('partyHudStatusBadgeHits DOM', () => {
       badges,
       badges,
       0,
-      2,
+      PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
       theme,
       0,
       { floatingTooltip: tooltip, gameTermPanel: panel },
@@ -126,7 +131,7 @@ describe('partyHudStatusBadgeHits DOM', () => {
       [badge('stun')],
       [badge('stun')],
       0,
-      1,
+      PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
       theme,
       0,
       { floatingTooltip: null, gameTermPanel: panel },
@@ -149,7 +154,7 @@ describe('partyHudStatusBadgeHits DOM', () => {
       [badge('stun')],
       [badge('stun')],
       0,
-      1,
+      PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
       theme,
       0,
       { floatingTooltip: tooltip, gameTermPanel: panel },
@@ -189,7 +194,7 @@ describe('partyHudStatusBadgeHits DOM', () => {
       [badge('hp')],
       [badge('hp')],
       0,
-      1,
+      PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
       theme,
       0,
       { floatingTooltip: null, gameTermPanel: panel },
@@ -205,25 +210,25 @@ describe('partyHudStatusBadgeHits DOM', () => {
     setup();
     const theme = readBattleHudTheme(themeHost);
     const badges = [badge('stun'), badge('hot'), badge('dot'), badge('block'), badge('evasion')];
+    const { visible, overflowCount } = selectPartyHudCompactStatusBadges(badges);
 
     syncPartyHudStatusBadgeHits(
       host,
       badges,
-      badges.slice(0, 4),
-      1,
-      4,
+      visible,
+      overflowCount,
+      resolvePartyHudCompactStatusBadgeLayout(overflowCount),
       theme,
       0,
       { floatingTooltip: tooltip, gameTermPanel: panel },
     );
 
-    const interactive = host.querySelectorAll(
-      '.party-hud-status-badge-hit--interactive',
+    expect(host.querySelectorAll('.party-hud-status-badge-hit')).toHaveLength(
+      visible.length + 1,
     );
-    expect(interactive).toHaveLength(4);
 
     const overflowHit = host.querySelector(
-      '.party-hud-status-badge-hit:not(.party-hud-status-badge-hit--interactive)',
+      '.party-hud-status-badge-hit--overflow',
     );
     expect(overflowHit).toBeTruthy();
     expect(overflowHit?.tagName).toBe('SPAN');

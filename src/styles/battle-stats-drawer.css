@@ -140,81 +140,142 @@
   flex-direction: column;
   gap: 0;
   overflow: visible;
+  --hud-detail-class-col: 72px;
+  --hud-detail-bar-col: 210px;
+  --hud-detail-damage-col: 120px;
+  --hud-detail-col-gap: 8px;
+  --hud-detail-bars-col: calc(
+    var(--hud-detail-bar-col) + var(--hud-detail-col-gap) +
+      var(--hud-detail-damage-col)
+  );
+  --hud-recast-bar-h: 8;
+  --hud-recast-charge-seg-min: 5;
+  --hud-recast-charge-seg-cap: 7;
+  --hud-body-bar-h: 42;
 }
 
 .party-hud-panel--detail .party-hud-panel-slots {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  max-height: min(50vh, 420px);
-  overflow-x: hidden;
-  overflow-y: auto;
+  gap: 5px;
+  overflow: visible;
 }
 
 .party-hud-panel--detail .party-hud-slot {
-  display: grid;
-  grid-template-columns:
-    calc(var(--hud-icon-size) * 1px)
-    minmax(0, 5.5rem)
-    minmax(0, 1fr)
-    minmax(72px, 88px);
-  column-gap: 6px;
-  row-gap: 4px;
-  align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
   width: 100%;
-  padding: 6px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.party-hud-panel--detail .party-hud-slot:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.party-hud-panel--detail .party-hud-head {
-  display: contents;
 }
 
 .party-hud-panel--detail .party-hud-status-badges-wrap {
   display: none;
 }
 
-.party-hud-panel--detail .party-hud-label {
-  grid-column: 2;
-  grid-row: 1;
-  align-self: center;
+.party-hud-panel--detail .party-hud-detail-top {
+  display: grid;
+  grid-template-columns: var(--hud-detail-class-col) var(--hud-detail-bars-col);
+  column-gap: var(--hud-detail-col-gap);
+  align-items: start;
+  width: min(
+    100%,
+    calc(
+      var(--hud-detail-class-col) + var(--hud-detail-bars-col) +
+        var(--hud-detail-col-gap)
+    )
+  );
 }
 
-.party-hud-panel--detail .party-hud-body-row {
-  display: contents;
+.party-hud-panel--detail .party-hud-detail-class-col {
+  display: grid;
+  grid-template-columns: calc(var(--hud-icon-size) * 1px) minmax(0, 1fr);
+  column-gap: 4px;
+  align-items: start;
+  width: var(--hud-detail-class-col);
+  min-width: var(--hud-detail-class-col);
+  max-width: var(--hud-detail-class-col);
 }
 
-.party-hud-panel--detail .party-hud-icon-wrap {
+.party-hud-panel--detail .party-hud-detail-class-col .party-hud-icon-wrap {
   grid-column: 1;
   grid-row: 1;
-  align-self: center;
+}
+
+.party-hud-panel--detail .party-hud-detail-class-col .party-hud-label {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  font-size: calc(var(--hud-header-font-size) * 1px);
+  line-height: 1.1;
 }
 
 .party-hud-panel--detail .party-hud-bars {
-  grid-column: 3;
-  grid-row: 1;
-  align-self: center;
+  display: grid;
+  grid-template-columns: var(--hud-detail-bar-col) var(--hud-detail-damage-col);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'hp damage'
+    'recast damage';
+  column-gap: var(--hud-detail-col-gap);
+  row-gap: calc(var(--hud-bar-skill-gap) * 1px);
+  align-items: stretch;
+  width: var(--hud-detail-bars-col);
+  min-width: var(--hud-detail-bars-col);
+  max-width: var(--hud-detail-bars-col);
+  min-height: calc(var(--hud-body-bar-h) * 1px);
+}
+
+.party-hud-panel--detail .party-hud-hp-row {
+  grid-area: hp;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  min-height: 0;
+}
+
+.party-hud-panel--detail .party-hud-hp-track {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  min-height: 0;
+  height: 100%;
+}
+
+.party-hud-panel--detail .party-hud-recast-grid {
+  grid-area: recast;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
 }
 
 .party-hud-panel--detail .party-hud-detail-damage {
+  grid-area: damage;
   display: flex;
-  grid-column: 4;
-  grid-row: 1;
-  align-self: center;
+  width: var(--hud-detail-damage-col);
+  min-width: var(--hud-detail-damage-col);
+  max-width: var(--hud-detail-damage-col);
+  min-height: 0;
+  height: 100%;
+  align-self: stretch;
+  justify-content: center;
+  align-items: stretch;
 }
 
 .party-hud-panel--detail .party-hud-detail-status {
   display: flex;
-  grid-column: 1 / -1;
-  grid-row: 2;
   width: 100%;
   max-width: 100%;
-  padding-top: 2px;
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.party-hud-panel--detail .party-hud-detail-status .party-stats-status {
+  padding-top: 4px;
+  border-top: none;
+  gap: 7px;
 }
 
 .party-hud-panel--detail .party-hud-detail-status .party-stats-status {
@@ -222,10 +283,70 @@
   padding-top: 0;
 }
 
-.party-hud-panel--detail .party-hud-detail-damage {
-  min-width: 0;
+.party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-bars {
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-bar {
+  grid-template-columns: auto 3ch 1fr;
+  gap: 4px;
+}
+
+.party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-bar-leading {
+  display: contents;
+}
+
+.party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-bar-tag {
+  grid-column: 1;
+  min-width: auto;
+  font-size: 10px;
+}
+
+.party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-bar-value {
+  display: block;
+  grid-column: 2;
+  width: 3ch;
+  min-width: 3ch;
+  max-width: 3ch;
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: clip;
+  color: rgba(214, 224, 240, 0.92);
+}
+
+.party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-bar--dealt .party-stats-damage-bar-value {
+  color: rgba(232, 176, 136, 0.95);
+}
+
+.party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-bar--taken .party-stats-damage-bar-value {
+  color: rgba(152, 196, 232, 0.95);
+}
+
+.party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-bar::after,
+.party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-fill {
+  grid-column: 3;
+  height: 8px;
 }
 
 .party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-label {
-  font-size: 9px;
+  display: none;
+}
+
+.party-hud-panel--detail .party-hud-detail-damage.is-down .party-stats-damage-bar-value {
+  color: rgba(138, 148, 162, 0.88);
+}
+
+.party-hud-panel--detail .party-stats-status-group--empty .party-stats-status-label {
+  opacity: 0.34;
+  color: rgba(150, 166, 190, 0.72);
+}
+
+.party-hud-panel--detail .party-stats-status-group--empty .party-stats-status-canvas-wrap {
+  min-height: calc(var(--status-badge-icon-size) * 1px);
 }

@@ -55,6 +55,8 @@ export interface DamageBarRefs {
   root: HTMLElement;
   dealtFill: HTMLElement;
   takenFill: HTMLElement;
+  dealtValue?: HTMLElement;
+  takenValue?: HTMLElement;
   label: HTMLElement;
   lastSyncKey?: string;
 }
@@ -96,6 +98,46 @@ function el<K extends keyof HTMLElementTagNameMap>(
   node.className = className;
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+export function buildDetailDamageBarElements(): {
+  bars: HTMLElement;
+  dealtFill: HTMLElement;
+  takenFill: HTMLElement;
+  dealtValue: HTMLElement;
+  takenValue: HTMLElement;
+  label: HTMLElement;
+} {
+  const bars = el('div', 'party-stats-damage-bars');
+  const dealtBar = el(
+    'div',
+    'party-stats-damage-bar party-stats-damage-bar--dealt',
+  );
+  const dealtLeading = el('div', 'party-stats-damage-bar-leading');
+  const dealtTag = el('span', 'party-stats-damage-bar-tag', t('hud.damageDealtShort'));
+  const dealtValue = el('span', 'party-stats-damage-bar-value', '—');
+  const dealtFill = el(
+    'div',
+    'party-stats-damage-fill party-stats-damage-fill--dealt',
+  );
+  const takenBar = el(
+    'div',
+    'party-stats-damage-bar party-stats-damage-bar--taken',
+  );
+  const takenLeading = el('div', 'party-stats-damage-bar-leading');
+  const takenTag = el('span', 'party-stats-damage-bar-tag', t('hud.damageTakenShort'));
+  const takenValue = el('span', 'party-stats-damage-bar-value', '—');
+  const takenFill = el(
+    'div',
+    'party-stats-damage-fill party-stats-damage-fill--taken',
+  );
+  dealtLeading.append(dealtTag, dealtValue);
+  takenLeading.append(takenTag, takenValue);
+  dealtBar.append(dealtLeading, dealtFill);
+  takenBar.append(takenLeading, takenFill);
+  bars.append(dealtBar, takenBar);
+  const label = el('span', 'party-stats-damage-label', t('hud.damageEmpty'));
+  return { bars, dealtFill, takenFill, dealtValue, takenValue, label };
 }
 
 function createClassIcon(iconKey: string): HTMLElement {
@@ -183,15 +225,14 @@ export function createPartyMemberStatsRow(
   appendMemberIdentity(memberEl, displayName, iconKey);
 
   const damageEl = el('div', 'party-stats-damage');
-  const bars = el('div', 'party-stats-damage-bars');
-  const dealtBar = el('div', 'party-stats-damage-bar');
-  const dealtFill = el('div', 'party-stats-damage-fill party-stats-damage-fill--dealt');
-  const takenBar = el('div', 'party-stats-damage-bar');
-  const takenFill = el('div', 'party-stats-damage-fill party-stats-damage-fill--taken');
-  dealtBar.appendChild(dealtFill);
-  takenBar.appendChild(takenFill);
-  bars.append(dealtBar, takenBar);
-  const damageLabel = el('span', 'party-stats-damage-label', t('hud.damageEmpty'));
+  const {
+    bars,
+    dealtFill,
+    takenFill,
+    dealtValue,
+    takenValue,
+    label: damageLabel,
+  } = buildDetailDamageBarElements();
   damageEl.append(bars, damageLabel);
 
   const statusEl = el('div', 'party-stats-status');
@@ -205,7 +246,14 @@ export function createPartyMemberStatsRow(
     row,
     refs: {
       member: { root: memberEl },
-      damage: { root: damageEl, dealtFill, takenFill, label: damageLabel },
+      damage: {
+        root: damageEl,
+        dealtFill,
+        takenFill,
+        dealtValue,
+        takenValue,
+        label: damageLabel,
+      },
       status: {
         root: statusEl,
         debuffCanvas: debuffGroup.canvas,
@@ -262,6 +310,12 @@ export function syncDamageBars(
 
     const dealtLabel = row.damageDealt.toLocaleString();
     const takenLabel = row.damageTaken.toLocaleString();
+    if (refs.dealtValue) {
+      refs.dealtValue.textContent = dealtLabel;
+    }
+    if (refs.takenValue) {
+      refs.takenValue.textContent = takenLabel;
+    }
     refs.label.textContent = down
       ? t('hud.damageDealtTakenDown', { dealt: dealtLabel, taken: takenLabel })
       : t('hud.damageDealtTaken', { dealt: dealtLabel, taken: takenLabel });
@@ -331,6 +385,11 @@ function drawStatusBadgeCanvas(
   );
 }
 
+export interface SyncStatusBadgesOptions {
+  /** Party HUD detail: keep DEBUFF/BUFF label rows visible when empty. */
+  preserveEmptyGroups?: boolean;
+}
+
 export function syncStatusBadges(
   statusByPartyIndex: Map<number, StatusBadgeRefs>,
   snapshots: CombatantSnapshot[],
@@ -339,6 +398,7 @@ export function syncStatusBadges(
     floatingTooltip: null,
     gameTermPanel: null,
   },
+  options?: SyncStatusBadgesOptions,
 ): void {
   for (const snapshot of snapshots) {
     if (snapshot.partySlotIndex === undefined) continue;
@@ -358,15 +418,38 @@ export function syncStatusBadges(
       allBadges.filter((badge) => badge.kind === 'buff'),
     );
 
+    const preserveEmptyGroups = options?.preserveEmptyGroups === true;
+
     refs.root.classList.toggle('is-down', isAllyDown(snapshot));
-    refs.root.hidden = allBadges.length === 0;
     const debuffGroup = refs.debuffCanvas.closest('.party-stats-status-group');
     const buffGroup = refs.buffCanvas.closest('.party-stats-status-group');
-    if (debuffGroup instanceof HTMLElement) {
-      debuffGroup.hidden = debuffBadges.length === 0;
-    }
-    if (buffGroup instanceof HTMLElement) {
-      buffGroup.hidden = buffBadges.length === 0;
+
+    if (preserveEmptyGroups) {
+      refs.root.hidden = false;
+      if (debuffGroup instanceof HTMLElement) {
+        debuffGroup.hidden = false;
+        debuffGroup.classList.toggle(
+          'party-stats-status-group--empty',
+          debuffBadges.length === 0,
+        );
+      }
+      if (buffGroup instanceof HTMLElement) {
+        buffGroup.hidden = false;
+        buffGroup.classList.toggle(
+          'party-stats-status-group--empty',
+          buffBadges.length === 0,
+        );
+      }
+    } else {
+      refs.root.hidden = allBadges.length === 0;
+      if (debuffGroup instanceof HTMLElement) {
+        debuffGroup.hidden = debuffBadges.length === 0;
+        debuffGroup.classList.remove('party-stats-status-group--empty');
+      }
+      if (buffGroup instanceof HTMLElement) {
+        buffGroup.hidden = buffBadges.length === 0;
+        buffGroup.classList.remove('party-stats-status-group--empty');
+      }
     }
 
     if (!theme) continue;

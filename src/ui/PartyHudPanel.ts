@@ -1,7 +1,6 @@
 import {
   collectStatusEffectBadgeDisplays,
-  PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT,
-  selectCompactStatusBadges,
+  selectPartyHudCompactStatusBadges,
 } from '../battle/statusEffectDisplay.ts';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 import type { CombatantSnapshot } from '../battle/types.ts';
@@ -19,6 +18,7 @@ import {
   drawCompactStatusBadgeRow,
   measureCompactStatusBadgeRow,
   PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT,
+  resolvePartyHudCompactStatusBadgeLayout,
   PARTY_HUD_STATUS_BADGE_ICON_SIZE,
   statusBadgeOutlinePad,
 } from '../render/statusBadgeRenderer.ts';
@@ -32,6 +32,7 @@ import {
   createStatusBadgeGroupWithHits,
   syncDamageBars,
   syncStatusBadges,
+  buildDetailDamageBarElements,
   type DamageBarRefs,
   type StatusBadgeRefs,
 } from './PartyMemberStatsDisplay.ts';
@@ -40,14 +41,15 @@ import { t } from '../i18n/t.ts';
 interface RecastCellElements {
   cell: HTMLElement;
   fill: HTMLElement;
-  stockPips: HTMLElement;
+  chargeMarkers: HTMLElement;
 }
 
 interface SlotElements {
   root: HTMLElement;
   slotIndex: number;
   label: HTMLElement;
-  bodyRow: HTMLElement;
+  detailTop: HTMLElement;
+  classCol: HTMLElement;
   iconWrap: HTMLElement;
   icon: HTMLImageElement;
   hpFill: HTMLElement;
@@ -106,23 +108,16 @@ function createDetailStatusBadges(): StatusBadgeRefs {
 
 function createDetailDamageBar(): DamageBarRefs {
   const damageEl = el('div', 'party-stats-damage party-hud-detail-damage');
-  const bars = el('div', 'party-stats-damage-bars');
-  const dealtBar = el('div', 'party-stats-damage-bar');
-  const dealtFill = el(
-    'div',
-    'party-stats-damage-fill party-stats-damage-fill--dealt',
-  );
-  const takenBar = el('div', 'party-stats-damage-bar');
-  const takenFill = el(
-    'div',
-    'party-stats-damage-fill party-stats-damage-fill--taken',
-  );
-  dealtBar.appendChild(dealtFill);
-  takenBar.appendChild(takenFill);
-  bars.append(dealtBar, takenBar);
-  const damageLabel = el('span', 'party-stats-damage-label', t('hud.damageEmpty'));
-  damageEl.append(bars, damageLabel);
-  return { root: damageEl, dealtFill, takenFill, label: damageLabel };
+  const {
+    bars,
+    dealtFill,
+    takenFill,
+    dealtValue,
+    takenValue,
+    label,
+  } = buildDetailDamageBarElements();
+  damageEl.append(bars, label);
+  return { root: damageEl, dealtFill, takenFill, dealtValue, takenValue, label };
 }
 
 export class PartyHudPanel {
@@ -200,6 +195,21 @@ export class PartyHudPanel {
     for (const slot of this.slots) {
       slot.damage.label.textContent = t('hud.damageEmpty');
       slot.damage.lastSyncKey = undefined;
+      if (slot.damage.dealtValue) {
+        slot.damage.dealtValue.textContent = '—';
+      }
+      if (slot.damage.takenValue) {
+        slot.damage.takenValue.textContent = '—';
+      }
+      const damageTags = slot.damage.root.querySelectorAll(
+        '.party-stats-damage-bar-tag',
+      );
+      if (damageTags[0] instanceof HTMLElement) {
+        damageTags[0].textContent = t('hud.damageDealtShort');
+      }
+      if (damageTags[1] instanceof HTMLElement) {
+        damageTags[1].textContent = t('hud.damageTakenShort');
+      }
       slot.statusBadgeHitSignature = null;
       slot.detailStatus.debuffHitSignature = undefined;
       slot.detailStatus.buffHitSignature = undefined;
@@ -259,6 +269,7 @@ export class PartyHudPanel {
         floatingTooltip: this.options.floatingTooltip ?? null,
         gameTermPanel: this.options.gameTermPanel ?? null,
       },
+      { preserveEmptyGroups: true },
     );
   }
 
@@ -299,18 +310,9 @@ export class PartyHudPanel {
     const root = document.createElement('div');
     root.className = 'party-hud-slot';
 
-    const head = document.createElement('div');
-    head.className = 'party-hud-head';
-    root.appendChild(head);
-
-    const label = document.createElement('div');
-    label.className = 'party-hud-label';
-    this.bindMemberStatsHover(label, slotIndex);
-    head.appendChild(label);
-
     const statusBadgeWrap = document.createElement('div');
     statusBadgeWrap.className = 'party-hud-status-badges-wrap';
-    head.appendChild(statusBadgeWrap);
+    root.appendChild(statusBadgeWrap);
 
     const statusCanvas = document.createElement('canvas');
     statusCanvas.className = 'party-hud-status-badges status-badge-canvas';
@@ -320,14 +322,22 @@ export class PartyHudPanel {
     statusBadgeHitLayer.className = 'party-hud-status-badge-hits';
     statusBadgeWrap.appendChild(statusBadgeHitLayer);
 
-    const bodyRow = document.createElement('div');
-    bodyRow.className = 'party-hud-body-row';
-    root.appendChild(bodyRow);
+    const detailTop = document.createElement('div');
+    detailTop.className = 'party-hud-detail-top';
+    root.appendChild(detailTop);
+
+    const classCol = document.createElement('div');
+    classCol.className = 'party-hud-detail-class-col';
+    detailTop.appendChild(classCol);
 
     const iconWrap = document.createElement('div');
     iconWrap.className =
       'party-hud-icon-wrap pixel-icon-frame pixel-icon-frame--24';
-    bodyRow.appendChild(iconWrap);
+    classCol.appendChild(iconWrap);
+
+    const label = document.createElement('div');
+    label.className = 'party-hud-label';
+    classCol.appendChild(label);
 
     const icon = document.createElement('img');
     icon.className = 'party-hud-icon pixel-icon-img pixel-icon-img--24';
@@ -339,14 +349,18 @@ export class PartyHudPanel {
 
     const bars = document.createElement('div');
     bars.className = 'party-hud-bars';
-    bodyRow.appendChild(bars);
+    detailTop.appendChild(bars);
 
     this.bindMemberStatsHover(iconWrap, slotIndex);
     this.bindMemberStatsHover(bars, slotIndex);
 
+    const hpRow = document.createElement('div');
+    hpRow.className = 'party-hud-hp-row';
+    bars.appendChild(hpRow);
+
     const hpTrack = document.createElement('div');
     hpTrack.className = 'party-hud-hp-track';
-    bars.appendChild(hpTrack);
+    hpRow.appendChild(hpTrack);
 
     const hpFill = document.createElement('div');
     hpFill.className = 'party-hud-hp-fill';
@@ -370,18 +384,19 @@ export class PartyHudPanel {
       const fill = document.createElement('div');
       fill.className = 'party-hud-recast-fill';
       track.appendChild(fill);
+
+      const chargeMarkers = document.createElement('div');
+      chargeMarkers.className = 'party-hud-recast-charge-markers';
+      track.appendChild(chargeMarkers);
+
       cell.appendChild(track);
 
-      const stockPips = document.createElement('div');
-      stockPips.className = 'party-hud-recast-stock-pips';
-      cell.appendChild(stockPips);
-
       recastGrid.appendChild(cell);
-      recastCells.push({ cell, fill, stockPips });
+      recastCells.push({ cell, fill, chargeMarkers });
     }
 
     const damage = createDetailDamageBar();
-    root.appendChild(damage.root);
+    bars.appendChild(damage.root);
 
     const detailStatus = createDetailStatusBadges();
     root.appendChild(detailStatus.root);
@@ -390,7 +405,8 @@ export class PartyHudPanel {
       root,
       slotIndex,
       label,
-      bodyRow,
+      detailTop,
+      classCol,
       iconWrap,
       icon,
       hpFill,
@@ -465,13 +481,13 @@ export class PartyHudPanel {
       def: entry.def,
       reg: entry.reg,
     });
-    const { visible, overflowCount } = selectCompactStatusBadges(badges, {
-      visibleCount: PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT,
-    });
+    const { visible, overflowCount } = selectPartyHudCompactStatusBadges(badges);
     const canvas = slot.statusCanvas;
     const theme = this.theme;
     const scale = 1;
-    const badgeLayoutConfig = PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT;
+    const badgeLayoutConfig = resolvePartyHudCompactStatusBadgeLayout(
+      overflowCount,
+    );
 
     const badgeLayout = measureCompactStatusBadgeRow(
       scale,
@@ -562,7 +578,7 @@ export class PartyHudPanel {
         badges,
         visible,
         overflowCount,
-        PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT,
+        badgeLayoutConfig,
         theme,
         slot.slotIndex,
         {
@@ -580,11 +596,11 @@ export class PartyHudPanel {
     );
 
     for (let i = 0; i < slot.recastCells.length; i++) {
-      const { cell, fill, stockPips } = slot.recastCells[i];
-      stockPips.replaceChildren();
+      const { cell, fill, chargeMarkers } = slot.recastCells[i];
+      chargeMarkers.replaceChildren();
 
       if (i >= slotCount) {
-        cell.hidden = true;
+        cell.classList.add('party-hud-recast-cell--locked');
         fill.style.width = '0%';
         fill.dataset.state = 'empty';
         delete fill.dataset.pausedMax;
@@ -592,7 +608,7 @@ export class PartyHudPanel {
         continue;
       }
 
-      cell.hidden = false;
+      cell.classList.remove('party-hud-recast-cell--locked');
       const cd = bySlot.get(i);
       if (!cd) {
         fill.style.width = '0%';
@@ -605,10 +621,10 @@ export class PartyHudPanel {
       const maxCharges = cd.maxCharges ?? 0;
       const storedCharges = cd.storedCharges ?? 0;
       if (maxCharges > 0 && storedCharges > 0) {
-        for (let pip = 0; pip < storedCharges; pip++) {
+        for (let charge = 0; charge < storedCharges; charge++) {
           const el = document.createElement('div');
-          el.className = 'party-hud-recast-stock-pip';
-          stockPips.appendChild(el);
+          el.className = 'party-hud-recast-charge-marker';
+          chargeMarkers.appendChild(el);
         }
       }
 
@@ -626,6 +642,5 @@ export class PartyHudPanel {
       }
     }
 
-    slot.recastGrid.hidden = slotCount === 0;
   }
 }

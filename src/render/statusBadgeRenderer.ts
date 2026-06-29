@@ -18,10 +18,16 @@ export {
   resolveBadgeLabelPixelScale,
 } from "./badgeBitmapDigits.ts";
 
-export const STATUS_BADGE_GAP = 0;
+export const STATUS_BADGE_GAP = 1;
 
-/** パッシブ由来バッジ（`isPassive`）の描画不透明度 */
-export const STATUS_BADGE_PASSIVE_ALPHA = 0.55;
+/** パッシブ由来バッジの五角形背景不透明度 */
+export const STATUS_BADGE_PASSIVE_PENTAGON_ALPHA = 0.5;
+
+/** パッシブ由来バッジの効果アイコン不透明度（背景より判別しやすく） */
+export const STATUS_BADGE_PASSIVE_ICON_ALPHA = 0.88;
+
+/** @deprecated STATUS_BADGE_PASSIVE_PENTAGON_ALPHA を参照 */
+export const STATUS_BADGE_PASSIVE_ALPHA = STATUS_BADGE_PASSIVE_PENTAGON_ALPHA;
 
 /** バッジスロット（オーバーレイ・累積数の基準枠） */
 export const STATUS_BADGE_SLOT_PX = 20;
@@ -237,11 +243,20 @@ export const FIELD_COMPACT_STATUS_BADGE_LAYOUT: CompactStatusBadgeLayout = {
   slotCount: 4,
 };
 
-/** Party HUD: 4 +N（計 5 スロット） */
+/** Party HUD: 省略なし 4 枠 / +N 時 3 + 第 4 枠（計 4 スロット幅） */
 export const PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT: CompactStatusBadgeLayout = {
   visibleCount: 4,
-  slotCount: 5,
+  slotCount: 4,
 };
+
+export function resolvePartyHudCompactStatusBadgeLayout(
+  overflowCount: number,
+): CompactStatusBadgeLayout {
+  if (overflowCount > 0) {
+    return { visibleCount: 3, slotCount: 4 };
+  }
+  return PARTY_HUD_COMPACT_STATUS_BADGE_LAYOUT;
+}
 
 /** @deprecated FIELD_COMPACT_STATUS_BADGE_LAYOUT.visibleCount を参照 */
 export const COMPACT_STATUS_BADGE_VISIBLE_COUNT =
@@ -331,6 +346,18 @@ export function drawOverflowCountBadge(
   const layoutScale = statusBadgeLayoutScale(theme.iconSize);
   const badgeSize = theme.iconSize * scale;
   const slotY = y + STATUS_BADGE_ROW_PAD_Y * layoutScale * scale;
+
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+  ctx.fillRect(Math.round(x), Math.round(slotY), badgeSize, badgeSize);
+  ctx.strokeStyle = 'rgba(143, 168, 200, 0.42)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(
+    Math.round(x) + 0.5,
+    Math.round(slotY) + 0.5,
+    badgeSize - 1,
+    badgeSize - 1,
+  );
+
   drawStatusStackLabel(
     ctx,
     `+${overflowCount}`,
@@ -749,13 +776,12 @@ function paintStatusBadgeBuffer(
 
   bufferCtx.clearRect(0, 0, badgeSize, rowHeight);
 
-  if (badge.isPassive) {
-    bufferCtx.save();
-    bufferCtx.globalAlpha = STATUS_BADGE_PASSIVE_ALPHA;
-  }
-
   const pentagon = getStatusBadgePentagonImage(badge.kind, badge.isPassive);
   if (pentagon) {
+    bufferCtx.save();
+    bufferCtx.globalAlpha = badge.isPassive
+      ? STATUS_BADGE_PASSIVE_PENTAGON_ALPHA
+      : 1;
     drawImagePixelated(
       bufferCtx,
       pentagon,
@@ -764,11 +790,17 @@ function paintStatusBadgeBuffer(
       pentagonPx,
       pentagonPx,
     );
+    bufferCtx.restore();
   }
 
   const iconTint = statusBadgeUsesWhiteSilhouette(badge.category)
     ? "#ffffff"
     : undefined;
+
+  if (badge.isPassive) {
+    bufferCtx.save();
+    bufferCtx.globalAlpha = STATUS_BADGE_PASSIVE_ICON_ALPHA;
+  }
 
   drawStatusIcon(
     bufferCtx,
@@ -781,6 +813,10 @@ function paintStatusBadgeBuffer(
     outlineColor,
     iconOutlineWidth,
   );
+
+  if (badge.isPassive) {
+    bufferCtx.restore();
+  }
 
   applyRemainingOverlayPixels(
     bufferCtx,
@@ -799,10 +835,6 @@ function paintStatusBadgeBuffer(
       badge.stackCount,
       theme,
     );
-  }
-
-  if (badge.isPassive) {
-    bufferCtx.restore();
   }
 }
 
