@@ -77,7 +77,7 @@
 #### 登録方針
 
 - 初版は `formatSkillText` 出力で **頻出する用語** から段階追加（全用語一括は不要）
-- **`StatusDisplayCategory` 全件**（HUD 状態アイコン）には `statusCategory` 付き辞書エントリを用意する。HUD 表示名のみのエントリは `description` / `aliases` を省略し、スキル説明文内では用語リンクしない（`annotateGameTerms` は `aliases` 登録分のみマッチ）。表示名のみのバッジは戦闘 HUD で **ホバー tooltip**（表示名）。**`description` あり・`aliases` なし** のエントリも同様に本文リンク化しないが、戦闘 HUD バッジ **クリック** で用語パネルを開ける（[combat.md §簡易表示 vs 詳細表示](combat.md#簡易表示-vs-詳細表示)）
+- **`StatusDisplayCategory` 全件**（HUD 状態アイコン）には `statusCategory` 付き辞書エントリを用意する。HUD 表示名のみのエントリは `description` / `aliases` を省略し、スキル説明文内では用語リンクしない（`annotateGameTerms` は `aliases` 登録分のみマッチ）。**全バッジ**は戦闘 HUD で **ホバー tooltip**（表示名）。**`description` あり・`aliases` なし** のエントリも同様に本文リンク化しないが、加えて戦闘 HUD バッジ **クリック** で用語パネルを開ける（[combat.md §簡易表示 vs 詳細表示](combat.md#簡易表示-vs-詳細表示)）
 - 頻出の非 stat 用語（**ブロック** / **魔法ブロック**・**defender 優先ターゲット**・**通常攻撃**・**種火** / **熾火** 等）も `gameTermGlossary.ts` に登録する
 - ルール変更時は **本書 / combat.md と辞書の `ja` を同作業内で更新**
 - 状態アイコン・カテゴリの正本は [combat.md §ステータス効果](combat.md#ステータス効果) の HUD バッジ節。辞書の `statusCategory` はそれに従う

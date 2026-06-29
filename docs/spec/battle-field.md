@@ -499,7 +499,8 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | ---- | ---- |
 | 起動 | Party HUD（コンパクト / 詳細）の **状態バッジ**（`.party-hud-status-badge-hit--interactive`）を **クリック**。辞書 `statusCategory` 対応エントリに **`description` があるときのみ** |
 | パネル | 編成 UI と同じ **`GameTermPanel`**（`BattleView` が `canvasFrame` に 1 インスタンス）。見出し・本文・パネル内用語リンク・戻るは [party-formation-ui.md §6.4](party-formation-ui.md#64-インライン用語パネル) に準拠 |
-| クリック不可 | `description` 省略の HUD 表示名のみ（例: stat 系 `hp` / `atk`）は **ホバーで表示名 tooltip のみ**（`resolveStatusBadgeTooltipLabel`） |
+| クリック不可 | `description` 省略の HUD 表示名のみ（例: stat 系 `hp` / `atk`）は **ホバーで表示名 tooltip のみ**（クリックで用語パネルは開かない） |
+| ホバー | **全バッジ** — 表示名 tooltip（`resolveStatusBadgeTooltipLabel`）。`description` ありのバッジも同様 |
 | `+N` 省略枠 | **ホバーのみ** — 省略分の表示名を `、` 連結（従来どおり）。個別の用語パネルは開かない |
 | 演出 | クリック可能バッジは `cursor: pointer` + ホバー / 展開時のアウトライン（`battle-view.css`） |
 

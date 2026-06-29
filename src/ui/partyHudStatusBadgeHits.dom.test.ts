@@ -117,6 +117,69 @@ describe('partyHudStatusBadgeHits DOM', () => {
     );
   });
 
+  it('shows hover tooltip for glossary entries with description', () => {
+    setup();
+    const theme = readBattleHudTheme(themeHost);
+
+    syncPartyHudStatusBadgeHits(
+      host,
+      [badge('stun')],
+      [badge('stun')],
+      0,
+      1,
+      theme,
+      0,
+      { floatingTooltip: null, gameTermPanel: panel },
+    );
+
+    const hit = host.querySelector(
+      '.party-hud-status-badge-hit--interactive',
+    ) as HTMLButtonElement;
+    const inlineTooltip = hit.querySelector('.party-hud-status-badge-tooltip');
+    expect(hit.tagName).toBe('BUTTON');
+    expect(inlineTooltip?.textContent).toBe('スタン');
+  });
+
+  it('binds floating tooltip for interactive badges', () => {
+    setup();
+    const theme = readBattleHudTheme(themeHost);
+
+    syncPartyHudStatusBadgeHits(
+      host,
+      [badge('stun')],
+      [badge('stun')],
+      0,
+      1,
+      theme,
+      0,
+      { floatingTooltip: tooltip, gameTermPanel: panel },
+    );
+
+    const hit = host.querySelector(
+      '.party-hud-status-badge-hit--interactive',
+    ) as HTMLButtonElement;
+    hit.getBoundingClientRect = () =>
+      ({
+        top: 80,
+        left: 80,
+        bottom: 100,
+        right: 100,
+        width: 20,
+        height: 20,
+        x: 80,
+        y: 80,
+        toJSON: () => ({}),
+      }) as DOMRect;
+
+    hit.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+    expect(mount.querySelector('.party-hud-floating-tooltip')?.hidden).toBe(
+      false,
+    );
+    expect(mount.querySelector('.party-hud-floating-tooltip')?.textContent).toBe(
+      'スタン',
+    );
+  });
+
   it('shows hover tooltip for title-only glossary entries', () => {
     setup();
     const theme = readBattleHudTheme(themeHost);

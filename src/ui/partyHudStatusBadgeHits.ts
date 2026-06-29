@@ -89,26 +89,27 @@ function bindIndividualStatusBadgeHit(
 ): void {
   const label = resolveStatusBadgeTooltipLabel(badge);
 
-  if (statusBadgeHasClickableGameTerm(badge)) {
-    const termId = resolveStatusBadgeGameTermId(badge);
-    const panel = context.gameTermPanel;
-    if (!termId || !panel) {
-      return;
-    }
+  bindHoverTooltipHit(hit, label, context, options);
 
-    hit.setAttribute('aria-label', label);
-    if (panel.getPanelId()) {
-      hit.setAttribute('aria-controls', panel.getPanelId());
-    }
-
-    hit.addEventListener('click', (event) => {
-      event.stopPropagation();
-      panel.openFromTerm(termId, hit);
-    });
+  if (!statusBadgeHasClickableGameTerm(badge)) {
     return;
   }
 
-  bindHoverTooltipHit(hit, label, context, options);
+  const termId = resolveStatusBadgeGameTermId(badge);
+  const panel = context.gameTermPanel;
+  if (!termId || !panel) {
+    return;
+  }
+
+  hit.setAttribute('aria-label', label);
+  if (panel.getPanelId()) {
+    hit.setAttribute('aria-controls', panel.getPanelId());
+  }
+
+  hit.addEventListener('click', (event) => {
+    event.stopPropagation();
+    panel.openFromTerm(termId, hit);
+  });
 }
 
 export function buildPartyHudStatusBadgeCanvasSignature(
