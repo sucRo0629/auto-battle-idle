@@ -22,11 +22,12 @@ describe('battleDistance / isWithinSkillRange', () => {
     expect(isWithinSkillRange(ally, enemy, 80)).toBe(false);
   });
 
-  it('hostile targets use forward segment, not battleDistance sign', () => {
+  it('hostile targets use abs battleX delta, including behind actor', () => {
     const ally = mockUnit('ally', 200);
     const enemyBehind = mockUnit('e-behind', 100, { isEnemy: true });
     expect(battleDistance(ally, enemyBehind)).toBe(100);
-    expect(isWithinSkillRange(ally, enemyBehind, 120)).toBe(false);
+    expect(isWithinSkillRange(ally, enemyBehind, 120)).toBe(true);
+    expect(isWithinSkillRange(ally, enemyBehind, 80)).toBe(false);
   });
 
   it('ally 52 vs enemy 360 with range 100 is out of range', () => {

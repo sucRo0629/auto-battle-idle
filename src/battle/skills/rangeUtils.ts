@@ -45,10 +45,7 @@ export function isWithinSkillRange(
   rangePx: number,
 ): boolean {
   if (actor.id === target.id) return true;
-  if (actor.isEnemy === target.isEnemy) {
-    return Math.abs(getBattleX(actor) - getBattleX(target)) <= rangePx;
-  }
-  return isInForwardSegment(actor, target, rangePx);
+  return Math.abs(getBattleX(actor) - getBattleX(target)) <= rangePx;
 }
 const DEFAULT_PARTY_SIZE_FOR_HEAL_RANGE = 5;
 

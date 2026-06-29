@@ -428,7 +428,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 | 項目          | 挙動                                                                                                                                                                                   |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 付与対象      | 常に自身（`target: self`）                                                                                                                                                             |
-| 射程          | `resolveCounterRangePx(counter.range, 持有者)` — 未指定・`0` = 持有者 `traits.rangePx`。正の値は絶対 px。距離判定は `isWithinSkillRange`（`battleDistance <= effectiveRangePx`）で行う |
+| 射程          | `resolveCounterRangePx(counter.range, 持有者)` — 未指定・`0` = 持有者 `traits.rangePx`。正の値は絶対 px。距離判定は `isWithinSkillRange`（`|getBattleX(actor) - getBattleX(target)| <= effectiveRangePx`）で行う |
 | 種別フィルタ  | `matchesCounterAttackRangeBand` → `isRangedAttack(attackRangePx)`。距離計算とは分離し、近接帯/遠隔帯の分類のみで使う                                                                   |
 | レスポンス    | `damage` / `debuff` / `dot` / `stun` / `knockback` から 1 種別以上。被攻撃 1 回で選択種別を同時適用                                                                                    |
 | トリガー      | 直接 `damage` および DoT tick                                                                                                                                                          |
@@ -578,7 +578,8 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 通常攻撃（合成 basic）は effect に `range` を持たず、常に `traits.rangePx` を参照する。
 
-- 命中: `battleDistance(actor, target) <= effectiveRangePx`
+- 命中: `Math.abs(getBattleX(actor) - getBattleX(target)) <= effectiveRangePx`（`isWithinSkillRange`。敵対・味方問わず 1D 絶対距離）
+- `pierce` 形状のみ使用者前方セグメント（`isInForwardSegment`）— 一般命中・反撃射程とは分離
 - 攻撃可能位置・自動接近・接敵開始条件は [battle-field.md](battle-field.md) §2.5・§4.3–§4.4
 
 ### スキルシーケンス（move 含むスキル）

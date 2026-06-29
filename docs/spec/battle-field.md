@@ -98,7 +98,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 攻撃・回復・自動接近・engage move はこの共通式で扱う。
 
-- 射程内: `battleDistance(actor, target) <= effectiveRangePx`
+- 射程内: `Math.abs(getBattleX(actor) - getBattleX(target)) <= effectiveRangePx`（`isWithinSkillRange`。敵対・味方問わず 1D 絶対距離）
 - 停止 `battleX`（プレイヤー → 対象）: `target.battleX - effectiveRangePx`
 - 停止 `battleX`（敵 → 対象）: `target.battleX + effectiveRangePx`
 

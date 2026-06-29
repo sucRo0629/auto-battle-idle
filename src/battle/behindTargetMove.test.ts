@@ -82,38 +82,45 @@ describe("toAnchor offset move", () => {
     expect(maxXDuringMotion).toBeGreaterThan(startX + 50);
   });
 
-  it("returns toward nearest player after backstab toAnchor step", () => {
+  it("attacks from behind after backstab toAnchor while in range", () => {
     const engine = createAssassinFrontEngine();
     reachWave2Engage(engine);
     const internal = asBattleEngineInternals(engine);
     const assassin = internal.players.find((p) => p.name === "双刃士")!;
+    const enemy = internal.enemies.find((e) => e.isAlive)!;
     const activeCd = assassin.cooldowns.find(
       (cd) => cd.skillId === "at_assassin_active_2"
     );
     activeCd!.remaining = 0;
 
     const startX = assassin.battleX;
+    const hpBefore = enemy.hp;
     let peakX = assassin.battleX;
-    let returnedTowardEngage = false;
+    let damagedWhileBehind = false;
 
     for (let t = 0; t < 900; t++) {
       engine.tick(TICK_DT);
       peakX = Math.max(peakX, assassin.battleX);
-      if (peakX > startX + 50 && assassin.battleX < peakX - 20) {
-        returnedTowardEngage = true;
+      if (
+        peakX > startX + 50 &&
+        assassin.battleX >= enemy.battleX + 8 &&
+        enemy.hp < hpBefore
+      ) {
+        damagedWhileBehind = true;
         break;
       }
     }
 
     expect(peakX).toBeGreaterThan(startX + 50);
-    expect(returnedTowardEngage).toBe(true);
+    expect(damagedWhileBehind).toBe(true);
   });
 
-  it("waits after damage before engage clamp pulls actor back", () => {
+  it("holds behind position through damage waitAfterSec on wave 2", () => {
     const engine = createAssassinFrontEngine();
     reachWave2Engage(engine);
     const internal = asBattleEngineInternals(engine);
     const assassin = internal.players.find((p) => p.name === "双刃士")!;
+    const enemy = internal.enemies.find((e) => e.isAlive)!;
     const activeCd = assassin.cooldowns.find(
       (cd) => cd.skillId === "at_assassin_active_2"
     );
@@ -122,9 +129,9 @@ describe("toAnchor offset move", () => {
     const startX = assassin.battleX;
     let peakX = assassin.battleX;
     let peakTick = -1;
-    let returnStartTick = -1;
+    let heldBehindDuringWait = false;
 
-    for (let t = 0; t < 120; t++) {
+    for (let t = 0; t < 200; t++) {
       engine.tick(TICK_DT);
       if (assassin.battleX > peakX + 0.5) {
         peakX = assassin.battleX;
@@ -132,17 +139,16 @@ describe("toAnchor offset move", () => {
       }
       if (
         peakTick >= 0 &&
-        returnStartTick < 0 &&
-        assassin.battleX < peakX - 3
+        t > peakTick &&
+        t <= peakTick + 28 &&
+        assassin.battleX >= enemy.battleX + 8
       ) {
-        returnStartTick = t;
-        break;
+        heldBehindDuringWait = true;
       }
     }
 
     expect(peakX).toBeGreaterThan(startX + 50);
-    expect(returnStartTick).toBeGreaterThan(peakTick);
-    expect(returnStartTick - peakTick).toBeGreaterThanOrEqual(28);
+    expect(heldBehindDuringWait).toBe(true);
   });
 
   it("stays behind training dummy through damage waitAfterSec", () => {
@@ -188,6 +194,58 @@ describe("toAnchor offset move", () => {
 
     expect(rearAssaultStateDuringWait).toBe(true);
     expect(behindDuringWait).toBe(true);
+  });
+
+  it("at_assassin_active_2 damage hits enemy after move behind", () => {
+    const engine = createAssassinFrontEngine();
+    reachWave2Engage(engine);
+    const internal = asBattleEngineInternals(engine);
+
+    const assassin = internal.players.find((p) => p.name === "双刃士")!;
+    const activeCd = assassin.cooldowns.find(
+      (cd) => cd.skillId === "at_assassin_active_2"
+    );
+    expect(activeCd).toBeDefined();
+    activeCd!.remaining = 0;
+
+    let shadowBladeStarted = false;
+    let reachedBehind = false;
+    let hpWhenShadowStarted = 0;
+    let damageAfterBehindMove = false;
+
+    const sumEnemyHp = () =>
+      internal.enemies
+        .filter((e) => e.isAlive)
+        .reduce((sum, e) => sum + e.hp, 0);
+
+    const unsub = engine.onEvent((event) => {
+      if (event.type !== "skill" || event.actorId !== assassin.id) return;
+      if (event.skillId === "at_assassin_active_2" && !shadowBladeStarted) {
+        shadowBladeStarted = true;
+        hpWhenShadowStarted = sumEnemyHp();
+      }
+    });
+
+    for (let t = 0; t < 900; t++) {
+      engine.tick(TICK_DT);
+      if (!shadowBladeStarted) continue;
+
+      const frontEnemyX = Math.max(
+        ...internal.enemies.filter((e) => e.isAlive).map((e) => e.battleX),
+      );
+      if (!reachedBehind && assassin.battleX >= frontEnemyX + 8) {
+        reachedBehind = true;
+      }
+      if (reachedBehind && sumEnemyHp() < hpWhenShadowStarted) {
+        damageAfterBehindMove = true;
+        break;
+      }
+    }
+    unsub();
+
+    expect(shadowBladeStarted).toBe(true);
+    expect(reachedBehind).toBe(true);
+    expect(damageAfterBehindMove).toBe(true);
   });
 
   it("sets runtime accessState on rear assault and clears after engage return", () => {
