@@ -78,7 +78,7 @@
 
 - 初版は `formatSkillText` 出力で **頻出する用語** から段階追加（全用語一括は不要）
 - **`StatusDisplayCategory` 全件**（HUD 状態アイコン）には `statusCategory` 付き辞書エントリを用意する。**スキル説明文内で用語リンクしない例外:** `atk` / `def` / `reg` / `damageReduction` / `damageIncrease` / `damageTaken`（HUD 表示名のみ）
-- 頻出の非 stat 用語（**ブロック** / **魔法ブロック**・**ヘイト**・**通常攻撃**・**種火** / **熾火** 等）も `gameTermGlossary.ts` に登録する
+- 頻出の非 stat 用語（**ブロック** / **魔法ブロック**・**defender 優先ターゲット**・**通常攻撃**・**種火** / **熾火** 等）も `gameTermGlossary.ts` に登録する
 - ルール変更時は **本書 / combat.md と辞書の `ja` を同作業内で更新**
 - 状態アイコン・カテゴリの正本は [combat.md §ステータス効果](combat.md#ステータス効果) の HUD バッジ節。辞書の `statusCategory` はそれに従う
 
@@ -611,7 +611,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | classId       | 表示名 | epithetEn | 列    | 射程 | パッシブ（Lv0 代表）             | アクティブ（Lv0）  |
 | ------------- | ------ | --------- | ----- | ---- | -------------------------------- | ------------------ |
 | `df_guardian` | 鉄衛士 | Guardian  | front | 近接 | 共有 block + 追加 block          | 防御強化／防御専念 |
-| `df_paladin`  | 護法士 | Paladin   | front | 近接 | front Threat 制御 + 前列 block   | 光明剣／障身法     |
+| `df_paladin`  | 護法士 | Paladin   | front | 近接 | 護法陣 DR aura + 前列 block      | 光明剣／障身法     |
 | `df_duelist`  | 闘技士 | Gladiator | front | 近接 | 低 HP 時 DEF 上昇（`passive_2`） | 戦叫び／体力温存   |
 
 ※ ディフェンダー 3 クラス（鉄衛士 / 護法士 / 闘技士）の設計思想・三分類・TBD は **§クラスディフェンダー設計方針** を正とする。
@@ -684,11 +684,11 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 
 Defender は共通して「前列で被害入口を作る」役割を持つが、初期 passive は全員同一の block にしない。Lv0 passive は 2 枠までであり、各 Defender の受け口設計に合わせて分ける。
 
-- Guardian は、受け止め続けることで Threat を保持する main tank
-- Paladin は、front 全体の被害分担を安定させる shared tank。自己 block（盾受け）ではなく、front Threat 制御 + 前列 block 付与を初期 passive の柱にする。block は Lv0 では物理直接ダメージ対策に留め、魔法も block 可能にする拡張は後半 passive 候補とする
+- Guardian は、`role: defender` と敵の default ターゲット（[combat.md](combat.md) §敵の単体ターゲット選定）により単体の主受け口となる main tank。`df_guardian_passive_1` の block 等で一点を維持する
+- Paladin は、front 全体の被害分担を安定させる shared tank。自己 block（盾受け）ではなく、**護法陣**（半径 50px `damageReduction` aura）+ 前列 block 付与を初期 passive の柱にする。block は Lv0 では物理直接ダメージ対策に留め、魔法も block 可能にする拡張は後半 passive 候補とする
 - Duelist は、被弾を control / counter へ変換する local tank
 
-このため、Defender 共通 passive と各 Defender の Threat 挙動は同一視しない。被弾による Threat 維持・上昇は、必要に応じてクラス固有 passive / skill で明示する。
+Defender 共通 passive と各 Defender の受け口設計は同一視しない。単体ターゲット固定は敵 AI の defender 優先で表現し、範囲・魔法の軽減は Paladin 護法陣等の passive で表現する。
 
 ### 鉄衛士（`df_guardian`・基礎）
 
@@ -722,7 +722,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | -------------- | -------------------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
 | basic          | `df_guardian_basic_attack` | —              | 最近接 physical                                                                                          |
 | passive 1 Lv0  | `df_guardian_passive_1`    | 大盾使い       | 自己 block                                                                                               |
-| passive 2 Lv0  | `df_guardian_passive_2`    | 立ちはだかる壁 | `threatControl`（被弾 / block で Threat 維持）                                                           |
+| passive 2 Lv0  | `df_guardian_passive_2`    | 立ちはだかる壁 | **廃止予定** — 旧 `threatControl`。鉄衛士の main tank は defender 優先ターゲット + P1 block で表現。実装時に Lv0 passive 2 枠を差し替え |
 | active 1 Lv0   | `df_guardian_active_1`     | 防御強化       | 自己 DEF buff                                                                                            |
 | active 2 Lv0   | `df_guardian_active_2`     | 防御専念       | `hitsTaken` + DEF / block + `useDurationSec`                                                             |
 | passive 3 Lv10 | `df_guardian_passive_3`    | 迎撃態勢       | 常時 block +10% + `blockResonance`（block 成功で stack 蓄積・減衰・ダメージ軽減）                        |
@@ -766,7 +766,7 @@ Defender は共通して「前列で被害入口を作る」役割を持つが�
 | -------------- | ------------------------- | -------- | -------------------------------------------------------------------------------------------------------------- |
 | basic          | `df_paladin_basic_attack` | —        | 最近接 physical                                                                                                |
 | passive 1 Lv0  | `df_paladin_passive_1`    | 護身手   | `frontBlockAura`（前列 block chance 0.10・物理直接）                                                           |
-| passive 2 Lv0  | `df_paladin_passive_2`    | 護法陣   | `threatControl`（`frontThreatFloor` + `frontThreatDecayMultiplier` のみ）                                      |
+| passive 2 Lv0  | `df_paladin_passive_2`    | 護法陣   | passive `damageReduction`（`damageReductionTargetShape: aoe`、`damageReductionAoeRadiusPx: 50`、自身起点・味方対象。物理・魔法の `damageTaken` 軽減） |
 | active 1 Lv0   | `df_paladin_active_1`     | 光明剣   | 低 HP 味方 heal + 最近接 magic damage                                                                          |
 | active 2 Lv0   | `df_paladin_active_2`     | 障身法   | `hitsTaken` + smart。自身起点 AoE 50px 内の近傍味方へ REG / ダメージ軽減 / barrier stack（前列全体が入る半径） |
 | passive 3 Lv10 | `df_paladin_passive_3`    | 真言加護 | P1 強化: block +0.05 + 魔法直接も block                                                                        |
@@ -1018,7 +1018,7 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 | passive 2 Lv0  | `at_swordsman_passive_2`    | 鎧砕き     | 常時 DEF 25% 無視                                              |
 | passive 3 Lv10 | `at_swordsman_passive_3`    | 穿甲の一撃 | DEF 100% 無視（`chance: 0.15`）                                |
 | passive 4 Lv20 | `at_swordsman_passive_4`    | 剛剣の冴え | `ignoredDefBonusDamage` — 無視 DEF × 0.5 追加ダメ              |
-| active 1 Lv0   | `at_swordsman_active_1`     | 叩き付け   | 高 HP 単体重撃 + burst ヘイト                                  |
+| active 1 Lv0   | `at_swordsman_active_1`     | 叩き付け   | 高 HP 単体重撃（`threatBurst*` は廃止）                        |
 | active 2 Lv0   | `at_swordsman_active_2`     | 薙ぎ払い   | 近接複数対応（弱め）                                           |
 | active 3 Lv10  | `at_swordsman_active_3`     | 突き通し   | BAC 7・小前進 + DEF 100% 無視単体（回転核）                    |
 | active 4 Lv20  | `at_swordsman_active_4`     | 断鉄       | BAC 14・溜め斬り・DEF 100% 無視 + 全軽減貫通フラグ（回避除く） |
@@ -1474,11 +1474,11 @@ Conductor は自身でダメージを与えるキャスターではない。
 | `attacker`  | 近接帯（`rangePx < 100`）→ `front`、遠隔帯（`rangePx >= 100`）→ `back` |
 | `supporter` | `back`（**例外:** `sp_alchemist` は近接帯のため `front`）              |
 
-敵のデフォルトターゲットは射程内でヘイト最大（[combat.md](combat.md) の Threat 節）。近接 Kill / Flow クラスが前列にいても、`defender` UI ロールがヘイトを引きつける想定。
+敵のデフォルト単体ターゲットは [combat.md](combat.md) §敵の単体ターゲット選定 — 生存 `defender` がいればその中の最近傍、いなければプール内最近傍。近接 Kill / Flow が前列にいても、defender ロールが単体の主受け口になる。
 
 同一 `formationRow` 内の X 深度（左＝後方、右＝前方）は [battle-field.md](battle-field.md) §2.6（`partyFormation.ts` の近接帯深度）を正とする。
 
-味方の heal / move 向け `closestAlly` は **battleX 距離**が最小の味方。敵の `closestAlly` は **ヘイト加重抽選**（[combat.md](combat.md) の Threat 節）。
+味方の heal / move 向け `closestAlly` は **battleX 距離**が最小の味方。敵の `closestAlly` も **battleX 距離**最小（ヘイト加重抽選は廃止）。
 
 ### EntityTraits（PC・敵共通）
 
@@ -1801,7 +1801,7 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `selfHpRatioBuff`          | `buffStat`, `buffMultiplierMax?` / `buffFlatBonusMax?`, `maxBuffAtHpRatio`                                                                                                                                        | 自身 HP 割合（`hp/maxHp`。バリア非含有）に応じた常時バフ（対象・形状は自身単体固定）。満タン時は中立、指定 HP 割合以下で最大                                                                                                                                                                                                                                                             |
 | `skillAmountOverride`      | `targetSkillId`, `amount`, `effectIndex?`, `passiveAmountField?`                                                                                                                                                  | 指定スキル（アクティブ / 取得済みパッシブ）の `ResourceAmountSpec` を完全上書き。アクティブは `effectIndex` 省略で amount 持ち effect すべて。パッシブは `hotAmount` / `barrierAmount`。複数時は `learnedPassiveIds` の後方優先。反撃 `counterResponses` は対象外                                                                                                                        |
 | `skillPropertyOverride`    | `maxChargesBonus`, `skillPropertyTargetSkillIds?`                                                                                                                                                                 | 対象アクティブの `maxCharges` 加算（上限 3）                                                                                                                                                                                                                                                                                                                                             |
-| `threatControl`            | `onDamageTakenFlat?`, `onDamageTakenScale?`, `onBlockFlat?`, `threatDecayMultiplier?`, `frontThreatFloor?`, `frontThreatAuraRadiusPx?`, `frontThreatDecayMultiplier?`, `frontDamageTakenReduction?`                                           | Defender 等のヘイト維持・上昇。被ダメ / ブロック成功時にヘイト加算。`threatDecayMultiplier` は自身の tick 減衰倍率。`frontThreatFloor` は生存中 source threat × ratio を **周囲**（source から `frontThreatAuraRadiusPx` 以内、未指定 50px）味方の下限に。`frontThreatDecayMultiplier` は同半径内味方の減衰倍率。aura 内でヘイト逆転した味方は敵ターゲット切替マージン 0。`frontDamageTakenReduction` は互換用フィールドであり、新規スキル定義では使わず、ダメージ軽減は `damageReduction` passive として分離する |
+| `threatControl`            | —                                                                                                                                                                                                                                                 | **廃止**（ヘイトランタイム削除）。旧: 被弾 / block によるヘイト維持・`frontThreatFloor` aura。護法陣は `damageReduction` passive へ移行（[combat.md](combat.md)） |
 | `blockResonance`           | `chance?`, `blockResonanceMaxStacks`, `blockResonanceDamageTakenPerStack`, `blockResonanceDecayIntervalSec?`                                                                                                      | 常時 block（`chance`）+ 物理直接ダメージの block 成功で stack 蓄積。stack ごとにダメージ軽減。`overlay: blockResonance`。減衰タイマーは `herbalPotency` とは別。実装: `blockResonance.ts`                                                                                                                                                                                                |
 | `herbalPotency`            | `hotAmount?`, `hotTargetRule?`, `herbalPotencyMaxStacks`, `herbalPotencyHotPerStackPercent?`, `herbalPotencyHotTickSec?`, `herbalPotencyAccumulateSec?`, `herbalPotencyConstitutionThresholds?` / `HpMultipliers` | aura HoT + **薬効** stack 蓄積 + **薬効体質**（hp 乗算）。習得済みパッシブを合成（`maxStacks` は最大値、間隔系は後勝ち）。実装: `herbalPotency.ts`                                                                                                                                                                                                                                       |
 | `lastStandInvulnerable`    | （フィールドなし）                                                                                                                                                                                                | 致死ダメージ直前に Wave 1 回だけダメージ 0 + 3 秒 `overlay: invulnerable`。実装: `lastStandInvulnerable.ts`                                                                                                                                                                                                                                                                              |
@@ -1995,7 +1995,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `defenseIgnore`                                              | 任意。`damage` / `dot` 用 DEF / REG 無視                                                                                                                                                 |
 | `pierceBarrier` / `pierceWard` / `pierceBlock`               | 任意。`damage` のみ。⑨ 後の barrier / wardBarrier / block を個別スキップ                                                                                                                 |
 | `ignoreDamageTakenReduction`                                 | 任意。`damage` のみ。⑨ で `damageTakenMul` を 1.0 として計算                                                                                                                             |
-| `threatBurstFlat` / `threatBurstScale`                       | 任意。`damage` effect の追加ヘイト（`appliedDamage` 成功時）。basic には付けない。burst 用 active のみ                                                                                   |
+| `threatBurstFlat` / `threatBurstScale`                       | —                                                                                                                                                                                        | **廃止**（damage effect の追加ヘイト。旧: `appliedDamage` 成功時）                                                                                                                     |
 | `targetShape`                                                | `single`（既定）／`aoe`／`multiLock`／`pierce`／`chain`／`scatter`／`poolEach`（プール全員各 1 Hit）                                                                                     |
 | `aoeRadiusPx`                                                | `aoe` 必須。anchor の X から ±px                                                                                                                                                         |
 | `hitCount`                                                   | `multiLock` 必須（整数 ≥ 2）。`single` / `aoe` 任意（整数 ≥ 2、省略=1）                                                                                                                  |

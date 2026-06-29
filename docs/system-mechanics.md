@@ -116,7 +116,7 @@ Stage 5-12（想定 Lv 20）
 
 - `chance` はスキル定義・パッシブ定義上の判定パラメータであり、戦闘状態として未判定のまま保持しない。
 - 判定後は、成功 / 失敗、適用 / 非適用、発動 / 非発動のいずれかに必ず確定する。
-- HP、barrier、StatusEffect、Threat、位置、BattleSnapshot、戦闘ログには確定結果のみを反映する。
+- HP、barrier、StatusEffect、位置、BattleSnapshot、戦闘ログには確定結果のみを反映する。
 - 最終ダメージ・回復量そのものには乱数ブレを置かない。
 
 この整理は、[combat-architecture.md](combat-architecture.md) の「確定結果レイヤー」と [spec/combat.md](spec/combat.md) の「確率判定と確定状態」を正本とする。
@@ -129,11 +129,11 @@ Stage 5-12（想定 Lv 20）
 
 同じ `TargetSpec` でも、何のために対象を選ぶかで評価軸を分ける。
 
-| Intent | 役割 | 距離 / Threat の扱い |
-| ------ | ---- | -------------------- |
-| `AttackTarget` | damage / heal / buff / debuff の実対象 | 射程内プールから選ぶ。敵の対プレイヤー通常対象は Threat 優先 |
-| `MoveAnchor` | `move` の到達基準 | 射程外も anchor にできる。Threat ではなく使用者との `battleX` 距離 |
-| `ChaseTarget` | 自動接近の追跡対象 | 敵は Threat、味方はスキル / 通常攻撃の target spec |
+| Intent | 役割 | 距離 / ターゲットの扱い |
+| ------ | ---- | ----------------------- |
+| `AttackTarget` | damage / heal / buff / debuff の実対象 | 射程内プールから選ぶ。敵の対プレイヤー通常対象は [combat.md](spec/combat.md) §敵の単体ターゲット選定 |
+| `MoveAnchor` | `move` の到達基準 | 射程外も anchor にできる。使用者との `battleX` 距離 |
+| `ChaseTarget` | 自動接近の追跡対象 | 敵は上記 combat 節、味方はスキル / 通常攻撃の target spec |
 | `DisplayAnchor` | VFX・描画凍結用 | 戦闘判定へ逆流させない。実装: `CombatantState.engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper） |
 
 これにより、Flow の移動が発生しても「移動先」「攻撃対象」「追跡対象」「表示基準」を同一概念へ潰さない。
@@ -323,6 +323,6 @@ chain と multiLock は、単なる演出ではなくターゲット形状シス
 | 項目                                                | 状態                                                             |
 | --------------------------------------------------- | ---------------------------------------------------------------- |
 | 味方回復 PHT（接近・withhold・selfOrigin aoe）      | 仕様確定済 — [combat.md](spec/combat.md) §回復 PHT。実装整合は Phase 3d 延長作業 |
-| 敵側優先ターゲット（高 MaxHP 等）の詳細             | TBD。Threat / TargetSpec との対応は要確認                        |
+| 敵側優先ターゲット（高 MaxHP 等）の詳細             | `targetRuleOverride` / `resolveUnitTargetSpec` — [combat.md](spec/combat.md) §敵の単体ターゲット選定 手順 3 |
 | Attack / Hit / Gauge の厳密な内部仕様ドキュメント化 | TBD。ただし `hitCount` とカウントトリガーの現行仕様は存在する    |
 | 戦闘中の attackSpeed tier 変更                      | 未実装                                                           |

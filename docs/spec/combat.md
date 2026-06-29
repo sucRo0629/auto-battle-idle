@@ -67,7 +67,7 @@
 **責務分離:**
 
 - 確率判定責務 — `chance` を読み、成功 / 失敗をその場で確定する。
-- 効果適用責務 — 判定済みの成功結果だけを HP、barrier、StatusEffect、CD、Threat、位置へ反映する。
+- 効果適用責務 — 判定済みの成功結果だけを HP、barrier、StatusEffect、CD、位置へ反映する。
 - 状態保持責務 — 反映後の確定値だけを保持する。未判定の確率状態は保持しない。
 - ログ / イベント責務 — 戦闘ログと `BattleEvent` には確定結果のみを出す。例: `evaded`、`debuff applied`、`counter triggered`、`counter not triggered`。確率値や未判定状態はログ上の戦闘結果として扱わない。
 
@@ -258,73 +258,54 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 **スタン中:** `tickCooldowns` は継続（時間 CD は減る）。`runUnitSkills` / `SkillExecutor.tryExecute` はスキップするため、使用者として通常攻撃・アクティブを発動せず、ターゲット選択も行わない。スタン中のユニットは他ユニットからの攻撃・回復・効果対象にはなり得る。スタンは CD 停止効果を持たない。
 
-## ヘイト（Threat）
+## 敵の単体ターゲット選定
 
-味方のみランタイムで `threat` / `baseThreat` を保持。敵のデフォルトターゲット（`targetRuleOverride` なし・`distance/enemy/nearest`）は **全局 Threat 最大の味方**（Chase / Attack 共通・ヒステリシス付き）。Attack はそのフォーカス対象が射程内にいるときのみ成立し、射程外の間は接近継続・他味方は攻撃しない（実装：`resolveEnemyChaseTargetPlayer` / `resolveEnemyAttackTargetPlayer`）。
+**ヘイト（Threat）ランタイムは廃止する。** オートバトルでは Kill 職が単体攻撃の主ターゲットになることを避け、Survival の **被害入口** は `role: defender` とスキル由来のターゲット上書きで表現する。
+
+実装：`resolveEnemyChaseTargetPlayer` / `resolveEnemyAttackTargetPlayer`（`resolveApproachBattleX.ts`）、`pickTargetFromPool`（`src/battle/skills/targetSpec.ts`）。
 
 ### 設計意図
 
-Threat は、敵 AI が「誰を優先して攻撃するか」を決めるための **受け口設計値** である。これは Position（どこにいるか）、Move（どこへ移動するか）、Frontline ownership（誰が戦線を保持しているか）とは分けて扱う。
+- **単体攻撃の主受け口** — 生存中の `defender` がいれば、敵の Chase / Attack は基本的に defender のみを狙う
+- **被害チャンネルの分離** — 単体（defender 固定）と範囲・貫通・魔法等の巻き込み（軽減・barrier・護法陣 aura）を分ける。与ダメ量でターゲットが奪われる仕組みは持たない
+- **Position / Move / Target の分離** — [system-mechanics.md](../system-mechanics.md) §Target Intent を正とする
 
-- Threat は **敵のデフォルトターゲット優先度** を決める
-- Position は **射程内に入るか、どこで戦うか** を決める
-- Move は **どこへ侵入し、どこへ戻るか** を決める
-- これらを同一の意味へ畳み込まない
+移動型アタッカーや背後侵入は恒久的な被害入口にならない。双刃士などの rear assault は **短時間アクセスによる Kill 成立** として扱う。
+座標・接敵は [battle-field.md](battle-field.md) を正本とする。敵 chase の候補は敵前方側プレイヤー（`enemyForwardFacingPool`）。背後侵入中は `isPlayerRearAssaultAccess` により Chase / 前線所有者から除外する。
 
-移動型アタッカーや背後侵入スキルを成立させるため、前進・背後侵入・一時的な接敵は、そのまま「新しい被害入口になった」とは解釈しない。双刃士などの rear assault は、戦線保持ではなく **短時間アクセスによる Kill 成立** として扱う。
-座標・接敵側の具体ルールは [battle-field.md](battle-field.md) を正本とし、敵のデフォルト chase は敵の前方側にいる候補から Threat を選ぶ。背後侵入中のユニットは Threat 値を持っていても、その位置だけで敵の新しい追跡入口や前線所有者にはならない。同期間は `isPlayerRearAssaultAccess(player, { players, enemies })` により formation / overlap / march follow の基準からも除外する（敵 anchor 用の数値 overload とは別）。Threat / target / contact / frontline owner は攻撃・接近・表示・clamp の入力であり、Engaged 中の座標 snap 理由にはしない。背後侵入完了後の復帰は専用 move step ではなく、`battleX` が敵最前線より右に残っている間 `resolveApproachAttackBattleX` が後退を許可する通常 approach が正本。
+### 判定順（敵 → プレイヤー、Chase / Attack 共通）
 
-### baseThreat（戦闘開始・前列圧力更新時）
+毎 tick、対象敵ごとに次の順で 1 体を選ぶ。`threat` / `threatFocusTargetId` / ヒステリシスは **使わない**。
 
-```
-statComponent = floor(maxHp × 0.1 + def × 2)
-baseThreat = statComponent + frontRowPressureBonus
-defender のみ baseThreat = floor(baseThreat × 1.2)
-```
+1. **プール** — 生存プレイヤーから `enemyForwardFacingPool`（rear assault 除外）
+2. **闘技場の掟** — 単体 chase / attack のとき、生存中かつ `arenaDominance` 有効な闘技士がいれば **闘技士固定**（`targetRuleOverride` より優先。既存 [§闘技士 v1](#闘技士-v1-専用メカニクス) どおり）
+3. **優先ターゲット（`targetRuleOverride` 等）** — `resolveUnitTargetSpec(敵)` が default `distance/enemy/nearest` **以外** のとき、既存 `pickTargetFromPool` で spec どおりに選ぶ。候補 0 なら手順 4 へフォールバック
+   - 敵もプレイヤーと同じクラスデータを使うため、例: 剣術士の「DEF 最高」、弓術士の「遠隔攻撃」、最低 HP 比率優先などがそのまま例外になる
+   - `side: "enemy"` は敵 actor 視点で **プレイヤー側** を指す（`factionPool`）
+4. **デフォルト（defender 優先・最近傍）** — spec が default nearest のとき:
+   - プール内に生存 `defender` が 1 人以上いれば、その中から **当該敵との `battleX` 距離** `|enemy.battleX − player.battleX|` が最小の defender
+   - いなければ、プール内の生存プレイヤーで同様に最近傍
+   - 同距離タイ — `id` 辞書順
 
-- `frontRowPressureBonus` — 最前線 `battleX` 帯の味方のみ。同帯の他味方の `1 - hp/maxHp` の最大値 × 自 statComponent
-- `defender` ロール — `statComponent + frontRowPressureBonus` の合計に `× 1.2`（`floor`）を適用
+### Chase / Attack の関係
 
-### 変動と減衰
-
-| イベント                      | 変化                                                                                                                                   |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 与ダメ（actor）               | 味方 actor に `floor(damage × 0.5)` を加算（全ロール共通）                                                                             |
-| 与ダメ burst（active effect） | 上記に加え `threatBurstFlat` / `floor(appliedDamage × threatBurstScale)` を加算（高火力 active 専用）                                  |
-| 被ダメ（target）              | **共通ルールでは加算しない**。Defender 等は passive `threatControl` で明示                                                             |
-| debuff 付与成功               | actor に `+15` 固定                                                                                                                    |
-| 毎 tick                       | `threat > baseThreat` なら `threat -= 20 × deltaTime × threatDecayMultiplier`、下限 `baseThreat`（`threatDecayMultiplier` 未指定 = 1） |
-
-**Threat 変動の原則:**
-
-- Threat の変動は、原則として **敵へ圧力をかけた行動** によって発生させる
-- 与ダメ、debuff 成功、高火力スキル使用などは Threat 上昇要因になりうる
-- **被ダメージそのものを全ロール共通の Threat 上昇要因にはしない**
-- 被弾による Threat 維持・上昇は Defender の役割差として扱い、passive `threatControl` または skill で明示する
-- Guardian（`df_guardian_passive_2`）は main tank として被弾・ブロックで Threat を維持し、減衰も遅くする
-- Paladin は `frontThreatFloor` / `frontThreatDecayMultiplier` で **source から `frontThreatAuraRadiusPx`（未指定 50px）以内**の味方を sub-defender 化し、Lv0 では `frontBlockAura` で block 付与。前列ダメージ軽減は `threatControl` には含めず、必要なら `damageReduction` passive として分離する
-- 護法陣 aura 内でヘイトが現フォーカスを上回った味方へは、敵 AI のターゲット切替マージン 50 を **バイパス**（shared tank）
-- 剣術士（`at_swordsman_active_1`）は `threatBurstScale` で burst 時のみ一時 overtaking する
-
-### 敵ターゲット選定
-
-Chase / Attack は同一フォーカス対象を共有する。
-
-1. **ChaseTarget** — 全生存味方（rear assault 除外等の既存プール）から Threat 最大（`pickThreatTargetWithHysteresis`）
+1. **ChaseTarget** — 上記手順で選んだ 1 体
 2. **AttackTarget** — ChaseTarget が `effectiveRangePx` 内にいるときのみその 1 体。それ以外は null（射程内の別味方は攻撃しない）
-3. **接近停止** — AttackTarget !== null のときのみ（フォーカス対象が射程外の間は接近継続）
+3. **接近停止** — AttackTarget !== null のときのみ（フォーカスが射程外の間は接近継続）
 
-`pickHighestThreatAlly`: 与えられたプール内で `threat ?? baseThreat ?? 0` が最大の 1 体を選ぶ汎用ヘルパー（決定論的）。同率タイは `battleX` が大きい方（前線側）→ `id` 辞書順。敵 AI の chase / attack にはヒステリシス版を使用し、射程内プール独立選定は行わない。
+`moveAnchor` 向けの `distance/enemy/farthest` 等は従来どおり使用者との `battleX` 距離で選び、手順 4 とは独立。
 
-`targetRuleOverride` 等で `distance/enemy/farthest`（または `nearest` + `moveAnchor`）に上書きされた場合は、敵 actor も使用者との `battleX` 距離で至近/最遠を選ぶ（ヘイトは使わない）。
+### Defender 三分岐（Survival）
 
-### Threat とターゲット切替
+攻撃の種類（単体・範囲・分散）に応じた分業は [classes-and-skills.md](classes-and-skills.md) §ディフェンダー設計方針を正とする。
 
-Threat 値は毎 tick 再評価されうるが、敵の chase / attack target は単純な「その瞬間の最大値」へ常時即時切替する前提では扱わない。Defender の受け口維持と Fighter の瞬間的なヘイト奪取を両立するため、ターゲット切替には **閾値ヒステリシス** を適用する。
+| 職 | 単体ターゲット | 範囲・巻き込み被害 |
+| ---- | -------------- | ------------------ |
+| 鉄衛士 | 敵の default で最前線 defender として主に被弾 | block / 被弾耐性で一点を維持 |
+| 護法士 | 同上（絶対壁ではない） | **護法陣** — 自身起点半径 50px 内味方へ `damageReduction` aura（物理・魔法いずれの被ダメも `damageTaken` 軽減） |
+| 闘技士 | 通常は defender 枠。`arenaDominance` 中は単体固定 | `lowHpCover` 等の被弾起点制圧 |
 
-- 実装: `pickThreatTargetWithHysteresis`（`src/battle/threat.ts`）。敵 `CombatantState.threatFocusTargetId` に現在フォーカスを保持
-- 切替条件: 新候補の threat が現フォーカスより **`THREAT_TARGET_SWITCH_MARGIN`（50）以上** 高いときのみ切替。フォーカス対象が死亡・プール外のときは即再選定
-- `pickHighestThreatAlly` は threat 値そのものの決定論的比較用。敵 AI の chase / attack にはヒステリシス版を使用
+護法陣（`df_paladin_passive_2`）は `threatControl` ではなく passive `damageReduction`（`damageReductionTargetShape: aoe`、`damageReductionAoeRadiusPx: 50`、自身起点の味方対象）として定義する。
 
 ## ステータス効果
 

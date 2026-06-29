@@ -382,7 +382,7 @@ Phase 9 完了後に着手。メインモードのステージ進行・EXP と�
 | ---- | -------- | -------------------- |
 | `SaveGameState` | `playerProgress` 直下 | `party[].progress` 残存 |
 | 表示 Lv | `playerProgress.level`（Party HUD スロット行に Lv は出さない） | `resolvePlayerDisplayLevel`、旧 HUD `Lv{n}` |
-| 統計 UI Exp 行 | なし（戦闘詳細は Threat / ダメージ / 全状態バッジ） | `PartyMemberStatsDisplay` の Exp ラベル（あれば） |
+| 統計 UI Exp 行 | なし（戦闘詳細は与ダメ / 被ダメ / 全状態バッジ） | `PartyMemberStatsDisplay` の Exp ラベル（あれば） |
 | Victory EXP | `playerProgress.exp` 加算 | `member.progress.exp` への加算 |
 | 習得 / 成長 Lv 入力 | `playerProgress.level` | `member.progress.level`（`skillBuild.ts` / `entities.ts` 等） |
 | ステージ進行 UX | Phase 6d — マップハブ・リザルト経由 | Phase 2 放置 MVP — 勝利で `currentStageId` 自動更新 + 3 秒後 `respawnAfterEnd`（[§ステージ進行](#ステージ進行)） |

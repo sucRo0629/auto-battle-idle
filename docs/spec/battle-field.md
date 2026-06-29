@@ -215,7 +215,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 1. **X 配置正本** — 全生存味方を **射程降順（長い＝左）** で一列。同射程は **物理 `attacker`** を左
 2. **スロット間隔** — 左端 `PARTY_FORMATION_LEFT_ANCHOR`（20px）、以降 `+32px`
-3. **`formationRow`** — Y 描画・クラス既定の編成分類（`classes.json`）。**X 深度・接敵・Threat・aura 範囲には使わない**
+3. **`formationRow`** — Y 描画・クラス既定の編成分類（`classes.json`）。**X 深度・接敵・aura 範囲には使わない**
 4. **overlap 解消** — §4.2（接敵時プレイヤー必須）
 
 分類用途の `isMeleeRangePx` / `isMeleeUnit` は本書の距離計算・layout 正本から除外し、[combat.md](combat.md) / [classes-and-skills.md](classes-and-skills.md) に委譲する。
@@ -260,7 +260,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | 通常 Wave 接敵開始               | しない      | `setupEngagedCombat`（凍結・署名のみ）                                                 |
 | 訓練ステージ                     | する        | `prepareTrainingWave` → `resolveEngagedLayoutForEvent` + `applyEngagedFormationLayout` |
 | 初期配置                         | する        | 同上（訓練と同経路）                                                                   |
-| **Engaged 中の前列死亡**         | **禁止**    | `maybeRecomputeEngagedLayout` — target / threat / contact / 凍結のみ                   |
+| **Engaged 中の前列死亡**         | **禁止**    | `maybeRecomputeEngagedLayout` — target / contact / 凍結のみ                   |
 | **Engaged 中の敵近接死亡**       | **禁止**    | 同上                                                                                   |
 | **Engaged 中の構成変化**         | **禁止**    | 同上（署名更新・`freezeEngagedMeleeVisualSlots`・ranged display target 更新）          |
 
@@ -281,7 +281,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 **Engaged 中の構成変化時（前列死亡・敵近接死亡含む）：**
 
-- target / threat / contact / frontline owner の再評価のみ
+- target / contact / frontline owner の再評価のみ
 - `freezeEngagedMeleeVisualSlots`（敵近接構成変化時）
 - `engagedDisplayAnchorPlayerId` の再凍結（`freezeRangedTargets`）
 - 生存ユニットの `battleX` を formation snap **しない**
@@ -306,26 +306,26 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 | Intent           | この章での用途                 | 正本                                                                                          |
 | ---------------- | ------------------------------ | --------------------------------------------------------------------------------------------- |
-| `ChaseTarget`    | 自動接近で追う相手             | 敵は Threat、味方は target spec / target rule                                                 |
+| `ChaseTarget`    | 自動接近で追う相手             | 敵は [combat.md](combat.md) §敵の単体ターゲット選定、味方は target spec / target rule |
 | `AttackTarget`   | 射程内停止と実際の攻撃対象     | 敵は `ChaseTarget` の射程内判定。味方は同じ target spec 系の attack プール                     |
-| `MoveAnchor`     | スキル `move` の到達基準       | 使用者との `battleX` 距離。Threat は使わない                                                  |
+| `MoveAnchor`     | スキル `move` の到達基準       | 使用者との `battleX` 距離                                                          |
 | `FrontlineOwner` | 現在その戦線を保持している味方 | `resolvePlayerFrontlineOwners`（`combatPosition.ts`）。rear assault アクセス中は含めない      |
 | `DisplayAnchor`  | 遠隔敵の表示凍結・VFX 基準     | 描画専用。`engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper）。戦闘判定へ逆流させない |
 
 | 側                                     | chase（毎 tick 再評価）                                                                                                                       | attack / 停止判定                                                   |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| 敵                                     | 全生存プレイヤーからヘイト最大（`resolveEnemyChaseTargetPlayer`）                                                                             | `ChaseTarget` が射程内のときのみその 1 体（`resolveEnemyAttackTargetPlayer`） |
+| 敵                                     | [combat.md](combat.md) §敵の単体ターゲット選定（`resolveEnemyChaseTargetPlayer`）                                                             | `ChaseTarget` が射程内のときのみその 1 体（`resolveEnemyAttackTargetPlayer`） |
 | 味方（全ロール共通）                   | target spec / target rule の敵プールから `ChaseTarget` を選ぶ。既定 `distance/enemy/nearest` は battle-line depth の **奥**（`battleX` 最大） | 同じ target spec 系の attack プールで `effectiveRangePx` 内なら停止 |
 | 味方（ally-heal 通常攻撃の supporter） | 射程外の **PHT**（[combat.md](combat.md) §回復 PHT）へ接近。全員健康なら **現位置維持**（敵 chase しない）                                      | 射程内に **PHT** がいれば停止（`shouldSkipEngagedAutoApproach`）。任意の軽傷者では停止しない |
 
-敵の Threat chase は敵の前方側にいるプレイヤー候補から選ぶ。rear assault アクセス中のプレイヤーは敵の新しい `ChaseTarget` や前線所有者にはしない。
+敵の chase 候補は敵の前方側にいるプレイヤー（`enemyForwardFacingPool`）。rear assault アクセス中のプレイヤーは敵の新しい `ChaseTarget` や前線所有者にはしない。
 
 **rear assault アクセス状態（runtime）:** 背後滞在の runtime フラグは `CombatantState.accessState === "rearAssault"`（`setPlayerRearAssaultAccess` / `clearPlayerRearAssaultAccess`）。**戦線外判定の正本は `isPlayerRearAssaultAccess` のみ**（`combatPosition.ts`）。
 
 | 呼び出し | 用途 |
 | -------- | ---- |
 | `isPlayerRearAssaultAccess(player, enemyAnchorX)` | 敵 anchor 基準（`enemyForwardFacingPool` 等） |
-| `isPlayerRearAssaultAccess(player, { players, enemies })` | 接敵中の統一判定。Threat / `FrontlineOwner` / formation / overlap / march follow / approach clamp |
+| `isPlayerRearAssaultAccess(player, { players, enemies })` | 接敵中の統一判定。`FrontlineOwner` / formation / overlap / march follow / approach clamp |
 
 接敵 context の判定順: (1) `accessState === "rearAssault"` (2) 生存味方 peer 集合の固定点から「最前線 + `PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX`（3px）より前方」を除外 (3) **単独生存時のみ** `battleX > getEnemyContactX` fallback。遠隔だけ残って contact が大きく振れても、peer frontline で戦線外を判定する。
 
@@ -352,7 +352,7 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 - 接近ターゲットの depth-order clamp は全 on-field ユニット共通で、`applyPartyFormationApproachSpacing`（partyFormation ソート順）の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
 - rear assault 中の味方は `applyFormationMarchFollow` の leader / follower から除外。`baseApproach` は formation chain 用に clamp し、背後位置を他ユニットの spacing 基準にしない
 
-**敵の追い替え：** Threat は毎 tick 再評価するが、chase / attack には [combat.md](combat.md) の **閾値ヒステリシス**（`pickThreatTargetWithHysteresis` / `threatFocusTargetId`）を適用する。ヘイト 1 位が瞬間的に入れ替わっただけでは chase target を即切替しない。射程内に入ったら attack プールで停止・攻撃。
+**敵の追い替え：** 毎 tick 手順 4（defender 優先・最近傍）または `targetRuleOverride` / 闘技場の掟で再選定する。ヒステリシスや `threatFocusTargetId` は使わない（[combat.md](combat.md) §敵の単体ターゲット選定）。射程内に入ったら attack プールで停止・攻撃。
 
 **遠隔敵の表示凍結：** 接敵開始時 `engagedDisplayAnchorPlayerId`（`battleDisplay.getEngagedDisplayAnchorPlayerId` / `setEngagedDisplayAnchorPlayerId`）は attack プール → なければ chase（`battleDisplay.freezeRangedTargets`）。接敵中の攻撃ターゲット解決とは独立。DisplayAnchor は描画専用で `AttackTarget` / `ChaseTarget` / `MoveAnchor` へ逆流させない。
 
@@ -369,7 +369,7 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 | forced movement | `ccEffects.applyKnockbackToTarget` / `enemyReelIn.applyEnemyReelIn`                               | effect 成功時に `battleX` を即時更新。layout bake ではない     |
 | overlap         | `resolveEngagedFormationOverlaps`（frontline melee クラスタ限定・生存のみ・skill motion / rear assault 除外） | 味方同士・敵同士の重なり解消だけ。射程停止・target 選択・死体固定には使わない。Engaged 中は approach と合算した 1 tick の総移動量を自動接近 step 内に制限し、formation snap や 32px 級の直接押し出し、不自然な加速を起こさない |
 
-target / threat / contact / frontline owner は **座標 snap の理由ではない**。approach / attack / display / clamp の入力として毎 tick 再評価するが、Engaged 中の生存ユニットを layout bake で再配置しない。
+target / contact / frontline owner は **座標 snap の理由ではない**。approach / attack / display / clamp の入力として毎 tick 再評価するが、Engaged 中の生存ユニットを layout bake で再配置しない。
 
 死亡敵は生存ユニット更新系統から外れ、`freezeEnemyCorpseBattleAnchor` / `syncDeadEnemyCorpseBattleX` が死亡時の `corpseBattleAnchorX` に `battleX` を固定する。これは死体表示の固定アンカーであり、`screenX` / camera の互換経路ではない。
 
@@ -417,7 +417,7 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 - `battleLayout` が `visualX` を正本として layout bake と approach が乖離
 - 後衛が隊形深度 cap で射程停止より前方へ引きずられる問題
 - **接敵開始時のワープ** — `setupEngagedCombat` で layout bake せず deploy 終点のまま `Engaged` へ遷移。接敵接近は自動接近のみ（§3.4・§4.3）
-- **Engaged 中の構成変化 layout bake** — 前列死亡・敵近接死亡・構成変化で `applyEngagedFormationToBattleX` を呼ばない。target / threat / contact / 凍結のみ
+- **Engaged 中の構成変化 layout bake** — 前列死亡・敵近接死亡・構成変化で `applyEngagedFormationToBattleX` を呼ばない。target / contact / 凍結のみ
 - **Engaged 中の直接 mutation clamp** — 旧 `clampEngagedFrontRowBattleX` を廃止。contact cap は approach target 解決（`capOnFieldBeforeEnemyContact`）に統合
 
 **監視中：**
@@ -462,7 +462,9 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 
 ## 7. 戦闘中統計 UI（戦闘詳細）
 
-戦闘画面の **戦闘詳細**（`PartyHudPanel` 詳細モード + `BattleStatsDrawer` タブ）の画面設計正本。Threat / ダメージ / 詳細バッジの sync は `PartyMemberStatsDisplay.ts` の関数を流用。脅威・ダメージの計算は [combat.md](combat.md)。DOM UI の共通デザイン言語は [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) を参照（Phase 4d で編成 UI と揃える）。
+戦闘画面の **戦闘詳細**（`PartyHudPanel` 詳細モード + `BattleStatsDrawer` タブ）の画面設計正本。与ダメ / 被ダメ / 詳細バッジの sync は `PartyMemberStatsDisplay.ts` の関数を流用。ダメージ集計は [combat.md](combat.md)。DOM UI の共通デザイン言語は [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) を参照（Phase 4d で編成 UI と揃える）。
+
+**ヘイト廃止に伴う UI:** 詳細行の Threat バーは削除する（与ダメ / 被ダメバーのみ）。実装移行はヘイト廃止タスクに含める。
 
 ### 7.1 役割とデータ
 
@@ -472,10 +474,10 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 | 配置 | `battle-canvas-frame` 内の `.battle-hud-stack` — 上: **パーティ帯**（`.battle-hud-toolbar`：左に `プレイヤー Lv {n}`、右に **編成** ボタン）、Party HUD（コンパクト / 詳細を **同一枠内で切替**）、下: ドロワータブのみ。キャンバス幅（最大 480px）に揃える |
 | パーティ帯 | Party HUD **直上**のヘッダー行。**左:** `プレイヤー Lv {n}` のみ（`resolvePlayerDisplayLevel`）。**右:** `.battle-party-menu-button`（テキスト「編成」のみ）→ `MetaMenuOverlay`（`initialView: "party"`）。帯左側の表示内容は **暫定**（将来見直し可）。**アイコンフォントは使わない** |
 | 表示切替 | **詳細**（**起動時デフォルト**）= メンバー縦リスト（同一 `.party-hud-panel` 枠）。**コンパクト** = 横 4 列（HP・リキャスト・簡易バッジ）。下のタブで排他切替。別パネルの積み増しはしない |
-| メンバー行（詳細） | 編成スロット順。**行 1:** 24px クラスアイコン + `displayName` + HP / リキャスト（コンパクトと同 DOM）+ Threat バー + 与ダメ / 被ダメバー。**行 2:** 状態バッジ帯（debuff / buff ラベル付き・全件）。**Exp 数値・メンバー別 Lv・epithetEn は表示しない** |
+| メンバー行（詳細） | 編成スロット順。**行 1:** 24px クラスアイコン + `displayName` + HP / リキャスト（コンパクトと同 DOM）+ 与ダメ / 被ダメバー。**行 2:** 状態バッジ帯（debuff / buff ラベル付き・全件）。**Exp 数値・メンバー別 Lv・epithetEn は表示しない** |
 | 状態バッジ帯 | debuff / buff でラベル行を分ける（例: Debuff / Buff）。パネル横幅いっぱいで flex-wrap 折り返し。**簡易 3+N 省略なし**（[combat.md](combat.md) HUD バッジ §簡易/詳細） |
-| 更新 | 詳細モード中は `PartyHudPanel.updateDetailMetrics` で Threat / ダメージ / 全バッジを refresh。HP / リキャストはコンパクトと同経路 |
-| データ源 | `getStageDamageDisplayRows`（ステージ内累計与ダメ / 被ダメ）、`CombatantSnapshot`（Threat・`statusEffects`）。**Exp / `partyProgress` は統計 UI スコープ外** |
+| 更新 | 詳細モード中は `PartyHudPanel.updateDetailMetrics` で与ダメ / 被ダメ / 全バッジを refresh。HP / リキャストはコンパクトと同経路 |
+| データ源 | `getStageDamageDisplayRows`（ステージ内累計与ダメ / 被ダメ）、`CombatantSnapshot`（`statusEffects`）。**Exp / `partyProgress` は統計 UI スコープ外** |
 | 確認モード | 現行は verify 経路でダメージ行が供給される。本番 Stage Records は **Phase 12** |
 
 #### 7.1.1 戦闘中ステータス（Party HUD クリック）
@@ -500,15 +502,15 @@ target / threat / contact / frontline owner は **座標 snap の理由ではな
 | 中央モーダル + 強 backdrop + 大角丸 + 強 box-shadow | **HUD 直下の同一枠** — コンパクト / 詳細を排他切替。枠は控えめ |
 | ダッシュボード風 title bar（角丸 `×` ボタン等） | 閉じる操作は **ドロワータブ** と `Escape` のみ。装飾より可読性 |
 | メンバー行の角丸グラデーション棒のみの区切り | **細セパレーター + 余白**で行を分ける |
-| カードグリッド風の横並びダッシュボード | 詳細は **縦リスト**（行 1 = アイコン + 名前 + HP/リキャスト + Threat / ダメージを横並び、行 2 = 全バッジ） |
+| カードグリッド風の横並びダッシュボード | 詳細は **縦リスト**（行 1 = アイコン + 名前 + HP/リキャスト + 与ダメ/被ダメを横並び、行 2 = 全バッジ） |
 
-**スコープ:** 表示項目・集計ロジックは変更しない（見た目のみ）。バー色の意味（Threat・与ダメ・被ダメ・down 時の減衰）は維持してよい。
+**スコープ:** 表示項目・集計ロジックは変更しない（見た目のみ）。バー色の意味（与ダメ・被ダメ・down 時の減衰）は維持してよい。
 
 ### 7.3 受け入れ条件（Phase 4d — 統計部分）
 
 1. 戦闘詳細が Web モーダル / ダッシュボード風に見えない（§11 準拠）。Party HUD **同一枠**でコンパクト / 詳細を切替する
-2. 詳細モードで 4 人分の名前・Threat・与ダメ / 被ダメ・**全状態バッジ（debuff/buff ラベル付き）**・**HP / リキャスト**が **縦リスト**で読める。コンパクトモードのホバー（§7.1.1）も維持
-3. `party-member-stats.css` の Threat / ダメージ / 詳細バッジスタイルが Party HUD 詳細行に反映される
+2. 詳細モードで 4 人分の名前・与ダメ / 被ダメ・**全状態バッジ（debuff/buff ラベル付き）**・**HP / リキャスト**が **縦リスト**で読める。コンパクトモードのホバー（§7.1.1）も維持
+3. `party-member-stats.css` のダメージ / 詳細バッジスタイルが Party HUD 詳細行に反映される
 4. ドロワータブ / `Escape` で詳細モードを閉じられる
 
 ---
