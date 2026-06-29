@@ -5,8 +5,21 @@ import {
 } from './combatPosition.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 
-const FRONT_BLOCK_AURA_ID_PREFIX = 'front_block_aura_';
+const FRONT_BLOCK_AURA_ID_SEGMENT = 'frontBlockAura';
+const LEGACY_FRONT_BLOCK_AURA_ID_PREFIX = 'front_block_aura_';
 const FRONT_BLOCK_AURA_DURATION_SEC = 99999;
+
+function frontBlockAuraEffectId(sourceId: string, targetId: string): string {
+  return `passive_buff_aura_${sourceId}_${FRONT_BLOCK_AURA_ID_SEGMENT}_${targetId}`;
+}
+
+function isFrontBlockAuraEffectId(id: string): boolean {
+  return (
+    id.startsWith(LEGACY_FRONT_BLOCK_AURA_ID_PREFIX) ||
+    (id.startsWith('passive_buff_aura_') &&
+      id.includes(`_${FRONT_BLOCK_AURA_ID_SEGMENT}_`))
+  );
+}
 
 export function isFrontBlockAuraPassive(passive: PassiveSkillDef): boolean {
   return passive.effect === 'frontBlockAura';
@@ -49,7 +62,7 @@ export function resolveFrontBlockAuraConfigForUnit(
 function stripFrontBlockAuras(units: CombatantState[]): void {
   for (const unit of units) {
     unit.statusEffects = unit.statusEffects.filter(
-      (effect) => !effect.id.startsWith(FRONT_BLOCK_AURA_ID_PREFIX),
+      (effect) => !isFrontBlockAuraEffectId(effect.id),
     );
   }
 }
@@ -93,9 +106,12 @@ export function syncFrontBlockAuras(
     const radiusPx = resolveFrontBlockAuraRadiusPx(source, passives);
 
     for (const target of allies) {
-      if (!isAllyWithinBattleXRadius(source, target, radiusPx)) continue;
+      const withinRadius =
+        target.id === source.id ||
+        isAllyWithinBattleXRadius(source, target, radiusPx);
+      if (!withinRadius) continue;
       target.statusEffects.push({
-        id: `${FRONT_BLOCK_AURA_ID_PREFIX}${source.id}_${target.id}`,
+        id: frontBlockAuraEffectId(source.id, target.id),
         kind: 'buff',
         overlay: 'block',
         blockChance: config.blockChance,

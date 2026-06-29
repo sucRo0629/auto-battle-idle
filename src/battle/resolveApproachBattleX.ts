@@ -3,6 +3,7 @@ import { getPassiveDefs } from "./combatMath.ts";
 import {
   getEnemyContactX,
   isPlayerRearAssaultAccess,
+  PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX,
   type PlayerRearAssaultBattleContext,
   resolveApproachAttackBattleX,
   resolveApproachFormationRangePx,
@@ -548,26 +549,30 @@ export function resolveAllPlayerApproachBattleX(
       contact,
     );
     if (isPlayerRearAssaultAccess(player, battleContext)) {
-      const rearReturn = resolveRearAssaultReturnApproachBattleX(
-        player,
-        players,
-        enemies,
-        gameData,
-        contact,
-      );
-      if (rearReturn !== null && rearReturn < player.battleX) {
-        base = rearReturn;
-      } else {
-        base = Math.min(
-          base,
-          resolveApproachAttackBattleX(
-            player,
-            contact,
-            gameData,
-            livingAllyCount(players),
-            contact,
-          ),
+      const behindEnemyContact =
+        player.battleX > contact + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX;
+      if (behindEnemyContact) {
+        const rearReturn = resolveRearAssaultReturnApproachBattleX(
+          player,
+          players,
+          enemies,
+          gameData,
+          contact,
         );
+        if (rearReturn !== null && rearReturn < player.battleX) {
+          base = rearReturn;
+        } else {
+          base = Math.min(
+            base,
+            resolveApproachAttackBattleX(
+              player,
+              contact,
+              gameData,
+              livingAllyCount(players),
+              contact,
+            ),
+          );
+        }
       }
     }
     baseApproach.set(player.id, base);

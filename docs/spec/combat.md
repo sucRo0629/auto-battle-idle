@@ -359,7 +359,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 実装: `src/battle/frontBlockAura.ts`
 
-- 生存中の持有者が **source から `frontBlockAuraRadiusPx`（未指定 50px）以内**の味方へ `overlay: block` を同期（`syncBuffAuras` とは別モジュール）
+- 生存中の持有者が **自身および source から `frontBlockAuraRadiusPx`（未指定 50px）以内**の味方へ `overlay: block` を同期（`syncBuffAuras` とは別モジュール。護法陣 `damageReduction` の selfOrigin AoE と同様に持有者自身も対象）
 - P1 のみ: `chance` 0.10、物理直接ダメージのみ block
 - P1 + P3（`frontBlockAuraMagicBlock: true`）: chance 合算 0.15、魔法直接ダメージも block 対象（軽減は上記魔法 block 定数）
 

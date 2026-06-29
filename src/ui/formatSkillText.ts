@@ -19,6 +19,7 @@ import {
   HEAL_SUB_KIND_LABELS,
   SPECIAL_EFFECT_APPLY_TO_LABELS,
   TARGET_SHAPE_LABELS,
+  TARGET_STAT_LABELS,
 } from "../battle/data/gameDataSchema.ts";
 import type {
   ActiveSkillDef,
@@ -37,10 +38,12 @@ import type {
   DispelPriority,
   StatusEffectStat,
   TargetSpec,
+  TargetStat,
 } from "../battle/types.ts";
 import {
   asStatusEffectStatList,
   filterStatusEffectStats,
+  isStatusEffectStat,
 } from "../battle/types.ts";
 import {
   formatStatBuffModifierEntries,
@@ -402,6 +405,13 @@ function formatMultiLockDamageEffectLines(
   ];
 }
 
+function resolveTargetStatDisplayName(stat: TargetStat): string {
+  if (isStatusEffectStat(stat)) {
+    return resolveStatusEffectStatDisplayName(stat);
+  }
+  return TARGET_STAT_LABELS[stat];
+}
+
 function formatTargetRuleOverridePassive(def: PassiveSkillDef): string {
   const rule = def.targetRuleOverride;
   if (!rule) return "ターゲット上書き";
@@ -418,7 +428,7 @@ function formatTargetRuleOverridePassive(def: PassiveSkillDef): string {
     rule.side === "enemy" &&
     rule.order === "highest"
   ) {
-    const statLabel = resolveStatusEffectStatDisplayName(rule.stat);
+    const statLabel = resolveTargetStatDisplayName(rule.stat);
     return `最も${statLabel}が高い敵を優先して攻撃する`;
   }
   if (rule.kind === "attackType" && rule.ranged && !rule.melee) {

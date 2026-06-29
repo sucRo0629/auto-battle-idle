@@ -3,6 +3,7 @@ import {
   mergeFrontBlockAuraPassives,
   syncFrontBlockAuras,
 } from './frontBlockAura.ts';
+import { collectStatusEffectBadgeDisplays } from './statusEffectDisplay.ts';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
 
 function mockAlly(
@@ -72,7 +73,7 @@ describe('frontBlockAura', () => {
     });
   });
 
-  it('applies block overlay to allies within aura radius', () => {
+  it('applies block overlay to the aura source and allies within radius', () => {
     const paladin = mockAlly({
       id: 'paladin',
       battleX: 200,
@@ -97,6 +98,11 @@ describe('frontBlockAura', () => {
 
     syncFrontBlockAuras([paladin, nearbyWarrior, farCleric], passives);
 
+    expect(
+      paladin.statusEffects.some(
+        (fx) => fx.overlay === 'block' && fx.blockChance === 0.1,
+      ),
+    ).toBe(true);
     expect(
       nearbyWarrior.statusEffects.some(
         (fx) => fx.overlay === 'block' && fx.blockChance === 0.1,
@@ -127,5 +133,61 @@ describe('frontBlockAura', () => {
     const blockFx = frontWarrior.statusEffects.find((fx) => fx.overlay === 'block');
     expect(blockFx?.blockChance).toBe(0.15);
     expect(blockFx?.blocksMagic).toBe(true);
+  });
+
+  it('shows front block aura as a passive block badge', () => {
+    const paladin = mockAlly({
+      id: 'paladin',
+      build: {
+        learnedPassiveIds: ['df_paladin_passive_1'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    syncFrontBlockAuras([paladin], passives);
+
+    const badges = collectStatusEffectBadgeDisplays(
+      paladin.statusEffects,
+      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
+    );
+
+    expect(badges).toHaveLength(1);
+    expect(badges[0]?.category).toBe('block');
+    expect(badges[0]?.isPassive).toBe(true);
+    expect(paladin.statusEffects[0]?.id).toBe(
+      'passive_buff_aura_paladin_frontBlockAura_paladin',
+    );
+  });
+
+  it('strips legacy front_block_aura_ effect ids on resync', () => {
+    const paladin = mockAlly({
+      id: 'paladin',
+      statusEffects: [
+        {
+          id: 'front_block_aura_paladin_paladin',
+          kind: 'buff',
+          overlay: 'block',
+          blockChance: 0.1,
+          multiplier: 1,
+          durationSec: 99999,
+          remainingSec: 99999,
+        },
+      ],
+      build: {
+        learnedPassiveIds: ['df_paladin_passive_1'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+
+    syncFrontBlockAuras([paladin], passives);
+
+    expect(
+      paladin.statusEffects.some((fx) => fx.id.startsWith('front_block_aura_')),
+    ).toBe(false);
+    expect(paladin.statusEffects[0]?.id).toBe(
+      'passive_buff_aura_paladin_frontBlockAura_paladin',
+    );
   });
 });

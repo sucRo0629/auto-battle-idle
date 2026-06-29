@@ -116,6 +116,21 @@ describe('formatPassiveDescription', () => {
       fragments: ['最も攻撃力が高い敵を優先して攻撃する'],
     },
     {
+      name: 'target rule override maxHp',
+      def: {
+        id: 'at_ballista_passive_1',
+        name: '城落としの弩',
+        effect: 'targetRuleOverride',
+        targetRuleOverride: {
+          kind: 'stat',
+          side: 'enemy',
+          stat: 'maxHp',
+          order: 'highest',
+        },
+      } satisfies PassiveSkillDef,
+      fragments: ['最も最大HPが高い敵を優先して攻撃する'],
+    },
+    {
       name: 'damage delay',
       def: {
         id: 'test_damage_delay',
