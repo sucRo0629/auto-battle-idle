@@ -100,17 +100,11 @@ describe("segmentTextByGameTerms", () => {
     ]);
   });
 
-  it("links block, threat, basicAttack, and charge terms", () => {
+  it("links block, basicAttack, and charge terms", () => {
     expect(segmentTextByGameTerms("ブロック+10%", "ja")[0]).toEqual({
       kind: "term",
       termId: "block",
       matchedText: "ブロック",
-    });
-
-    expect(segmentTextByGameTerms("周囲のヘイト下限", "ja")[1]).toEqual({
-      kind: "term",
-      termId: "threat",
-      matchedText: "ヘイト",
     });
 
     expect(segmentTextByGameTerms("通常攻撃5回", "ja")[0]).toEqual({

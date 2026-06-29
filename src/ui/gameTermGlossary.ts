@@ -17,7 +17,6 @@ export type GameTermId =
   | "arenaMark"
   | "block"
   | "magicBlock"
-  | "threat"
   | "basicAttack"
   | "charge"
   | "stun"
@@ -139,14 +138,6 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     },
     aliases: { ja: ["魔法ブロック"] },
     statusIconCategory: "block",
-  },
-  {
-    id: "threat",
-    title: { ja: "ヘイト" },
-    description: {
-      ja: "敵が誰を攻撃するかを決める優先度。ヘイトが最も高い者が原則ターゲットになる。攻撃できる範囲内にいない場合は、その方向へ接敵する。与ダメージやデバフの付与などで上昇し、時間とともに基準値まで減衰する。",
-    },
-    aliases: { ja: ["ヘイト"] },
   },
   {
     id: "basicAttack",

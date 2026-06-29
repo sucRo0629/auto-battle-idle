@@ -129,7 +129,6 @@
   transform: rotate(180deg);
 }
 
-.party-hud-panel .party-hud-detail-threat,
 .party-hud-panel .party-hud-detail-damage,
 .party-hud-panel .party-hud-detail-status {
   display: none;
@@ -157,7 +156,6 @@
     calc(var(--hud-icon-size) * 1px)
     minmax(0, 5.5rem)
     minmax(0, 1fr)
-    minmax(72px, 88px)
     minmax(72px, 88px);
   column-gap: 6px;
   row-gap: 4px;
@@ -202,16 +200,9 @@
   align-self: center;
 }
 
-.party-hud-panel--detail .party-hud-detail-threat {
-  display: flex;
-  grid-column: 4;
-  grid-row: 1;
-  align-self: center;
-}
-
 .party-hud-panel--detail .party-hud-detail-damage {
   display: flex;
-  grid-column: 5;
+  grid-column: 4;
   grid-row: 1;
   align-self: center;
 }
@@ -230,12 +221,10 @@
   padding-top: 0;
 }
 
-.party-hud-panel--detail .party-hud-detail-threat,
 .party-hud-panel--detail .party-hud-detail-damage {
   min-width: 0;
 }
 
-.party-hud-panel--detail .party-hud-detail-threat .party-stats-threat-label,
 .party-hud-panel--detail .party-hud-detail-damage .party-stats-damage-label {
   font-size: 9px;
 }

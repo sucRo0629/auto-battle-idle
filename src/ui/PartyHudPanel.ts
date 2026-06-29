@@ -31,10 +31,8 @@ import {
   createStatusBadgeGroupWithHits,
   syncDamageBars,
   syncStatusBadges,
-  syncThreatBars,
   type DamageBarRefs,
   type StatusBadgeRefs,
-  type ThreatBarRefs,
 } from './PartyMemberStatsDisplay.ts';
 
 interface RecastCellElements {
@@ -60,7 +58,6 @@ interface SlotElements {
   hpBarSignature: string | null;
   recastGrid: HTMLElement;
   recastCells: RecastCellElements[];
-  threat: ThreatBarRefs;
   damage: DamageBarRefs;
   detailStatus: StatusBadgeRefs;
 }
@@ -102,17 +99,6 @@ function createDetailStatusBadges(): StatusBadgeRefs {
     debuffHitLayer: debuffGroup.hitLayer,
     buffHitLayer: buffGroup.hitLayer,
   };
-}
-
-function createDetailThreatBar(): ThreatBarRefs {
-  const threatEl = el('div', 'party-stats-threat party-hud-detail-threat');
-  const threatBar = el('div', 'party-stats-threat-bar');
-  const threatFill = el('div', 'party-stats-threat-fill');
-  const baseMarker = el('div', 'party-stats-threat-base');
-  const threatLabel = el('span', 'party-stats-threat-label', 'Hate —');
-  threatBar.append(threatFill, baseMarker);
-  threatEl.append(threatBar, threatLabel);
-  return { root: threatEl, fill: threatFill, baseMarker, label: threatLabel };
 }
 
 function createDetailDamageBar(): DamageBarRefs {
@@ -226,9 +212,6 @@ export class PartyHudPanel {
     this.lastDetailFrame = frame;
     if (this.mode !== 'detail') return;
 
-    const threatByPartyIndex = new Map(
-      this.slots.map((slot) => [slot.slotIndex, slot.threat] as const),
-    );
     const damageByPartyIndex = new Map(
       this.slots.map((slot) => [slot.slotIndex, slot.damage] as const),
     );
@@ -237,7 +220,6 @@ export class PartyHudPanel {
     );
     const downBySlot = buildDownBySlot(frame.snapshots);
 
-    syncThreatBars(threatByPartyIndex, frame.snapshots);
     syncDamageBars(damageByPartyIndex, frame.displayRows, downBySlot);
     syncStatusBadges(
       statusByPartyIndex,
@@ -365,9 +347,6 @@ export class PartyHudPanel {
       recastCells.push({ cell, fill, stockPips });
     }
 
-    const threat = createDetailThreatBar();
-    root.appendChild(threat.root);
-
     const damage = createDetailDamageBar();
     root.appendChild(damage.root);
 
@@ -391,7 +370,6 @@ export class PartyHudPanel {
       hpBarSignature: null,
       recastGrid,
       recastCells,
-      threat,
       damage,
       detailStatus,
     };

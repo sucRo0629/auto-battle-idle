@@ -14,7 +14,6 @@
   display: grid;
   grid-template-columns:
     var(--party-stats-name-col)
-    var(--party-stats-metric-col)
     var(--party-stats-metric-col);
   column-gap: var(--party-stats-col-gap);
   align-items: start;
@@ -106,77 +105,8 @@
   opacity: 0.55;
 }
 
-.party-stats-threat {
-  grid-column: 2;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.party-stats-threat-bar {
-  position: relative;
-  width: 100%;
-  height: 6px;
-  border-radius: 1px;
-  background: rgba(8, 12, 22, 0.85);
-  border: 1px solid rgba(74, 144, 217, 0.2);
-  overflow: hidden;
-}
-
-.party-stats-threat-fill {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 0;
-  border-radius: 0;
-  background: #4a90d9;
-  transition: width 0.12s ease-out, background 0.12s ease-out;
-}
-
-.party-stats-threat.is-highest .party-stats-threat-fill {
-  background: #e74c3c;
-}
-
-.party-stats-threat-base {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 2px;
-  margin-left: -1px;
-  background: #e8c547;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.party-stats-threat-label {
-  font-size: 10px;
-  line-height: 1.2;
-  color: #8fa8c8;
-  white-space: nowrap;
-}
-
-.party-stats-threat.is-down .party-stats-threat-bar {
-  opacity: 0.45;
-  border-color: rgba(120, 120, 120, 0.35);
-}
-
-.party-stats-threat.is-down .party-stats-threat-fill {
-  background: #6a6a7a;
-}
-
-.party-stats-threat.is-down .party-stats-threat-base {
-  background: #a89850;
-}
-
-.party-stats-threat.is-down .party-stats-threat-label {
-  color: #6a7588;
-}
-
 .party-stats-damage {
-  grid-column: 3;
+  grid-column: 2;
   min-width: 0;
   display: flex;
   flex-direction: column;

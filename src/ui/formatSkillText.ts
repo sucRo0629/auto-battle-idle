@@ -2179,48 +2179,12 @@ function formatPassiveEffect(
         .filter(Boolean)
         .join(" / ");
     }
-    case "threatControl":
-      return formatThreatControlEffectParts(def).join("、");
     default:
       return effect;
   }
 }
 
-function formatThreatControlEffectParts(
-  def: PassiveSkillDef
-): string[] {
-  const parts: string[] = [];
-  if (
-    def.onDamageTakenFlat !== undefined ||
-    def.onDamageTakenScale !== undefined ||
-    def.onBlockFlat !== undefined
-  ) {
-    parts.push("被ダメ・ブロック成功でヘイト上昇");
-  }
-  if (
-    def.threatDecayMultiplier !== undefined &&
-    def.threatDecayMultiplier < 1
-  ) {
-    parts.push("ヘイト減衰速度低下");
-  }
-  if (def.frontThreatFloor !== undefined) {
-    parts.push(
-      `周囲のヘイト下限を自身の${formatPercent(def.frontThreatFloor)}に引き上げ`
-    );
-  }
-  if (
-    def.frontThreatDecayMultiplier !== undefined &&
-    def.frontThreatDecayMultiplier < 1
-  ) {
-    parts.push("周囲のヘイト減衰速度低下");
-  }
-  return parts.length > 0 ? parts : ["ヘイト制御"];
-}
-
 function formatPassiveSkillEffectLines(def: PassiveSkillDef): string[] {
-  if (def.effect === "threatControl") {
-    return formatThreatControlEffectParts(def);
-  }
   if (def.effect === "barrierDepletionHeal") {
     return formatBarrierDepletionHealEffectLines(def);
   }

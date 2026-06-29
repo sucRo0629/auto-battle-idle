@@ -49,14 +49,6 @@ export interface MemberRowRefs {
   root: HTMLElement;
 }
 
-export interface ThreatBarRefs {
-  root: HTMLElement;
-  fill: HTMLElement;
-  baseMarker: HTMLElement;
-  label: HTMLElement;
-  lastSyncKey?: string;
-}
-
 export interface DamageBarRefs {
   root: HTMLElement;
   dealtFill: HTMLElement;
@@ -179,7 +171,6 @@ export function createPartyMemberStatsRow(
   row: HTMLElement;
   refs: {
     member: MemberRowRefs;
-    threat: ThreatBarRefs;
     damage: DamageBarRefs;
     status: StatusBadgeRefs;
   };
@@ -188,14 +179,6 @@ export function createPartyMemberStatsRow(
 
   const memberEl = el('div', 'party-stats-member');
   appendMemberIdentity(memberEl, displayName, iconKey);
-
-  const threatEl = el('div', 'party-stats-threat');
-  const threatBar = el('div', 'party-stats-threat-bar');
-  const threatFill = el('div', 'party-stats-threat-fill');
-  const baseMarker = el('div', 'party-stats-threat-base');
-  const threatLabel = el('span', 'party-stats-threat-label', 'Hate —');
-  threatBar.append(threatFill, baseMarker);
-  threatEl.append(threatBar, threatLabel);
 
   const damageEl = el('div', 'party-stats-damage');
   const bars = el('div', 'party-stats-damage-bars');
@@ -214,13 +197,12 @@ export function createPartyMemberStatsRow(
   const buffGroup = createStatusBadgeGroupWithHits('Buff');
   statusEl.append(debuffGroup.group, buffGroup.group);
 
-  row.append(memberEl, threatEl, damageEl, statusEl);
+  row.append(memberEl, damageEl, statusEl);
 
   return {
     row,
     refs: {
       member: { root: memberEl },
-      threat: { root: threatEl, fill: threatFill, baseMarker, label: threatLabel },
       damage: { root: damageEl, dealtFill, takenFill, label: damageLabel },
       status: {
         root: statusEl,
@@ -249,21 +231,6 @@ export function syncMemberDownState(
 ): void {
   for (const [slotIndex, refs] of memberByPartyIndex) {
     refs.root.classList.toggle('is-down', downBySlot.get(slotIndex) ?? false);
-  }
-}
-
-export function syncThreatBars(
-  threatByPartyIndex: Map<number, ThreatBarRefs>,
-  snapshots: CombatantSnapshot[],
-): void {
-  for (const snapshot of snapshots) {
-    if (snapshot.partySlotIndex === undefined) continue;
-    const refs = threatByPartyIndex.get(snapshot.partySlotIndex);
-    if (!refs) continue;
-    const down = isAllyDown(snapshot);
-    refs.root.classList.toggle('is-down', down);
-    refs.root.classList.toggle('is-highest', false);
-    refs.root.hidden = true;
   }
 }
 
@@ -439,7 +406,6 @@ export class PartyMemberStatsDisplay {
   private readonly listEl: HTMLElement;
   private readonly themeHost: HTMLElement | null;
   private readonly memberByPartyIndex = new Map<number, MemberRowRefs>();
-  private readonly threatByPartyIndex = new Map<number, ThreatBarRefs>();
   private readonly damageByPartyIndex = new Map<number, DamageBarRefs>();
   private readonly statusByPartyIndex = new Map<number, StatusBadgeRefs>();
   private readonly unsubscribeStatusIconsReady: () => void;
@@ -491,7 +457,6 @@ export class PartyMemberStatsDisplay {
   rebuild(specs: PartyMemberStatsRowSpec[]): Map<number, HTMLElement> {
     this.listEl.replaceChildren();
     this.memberByPartyIndex.clear();
-    this.threatByPartyIndex.clear();
     this.damageByPartyIndex.clear();
     this.statusByPartyIndex.clear();
 
@@ -502,7 +467,6 @@ export class PartyMemberStatsDisplay {
         spec.iconKey,
       );
       this.memberByPartyIndex.set(spec.slotIndex, refs.member);
-      this.threatByPartyIndex.set(spec.slotIndex, refs.threat);
       this.damageByPartyIndex.set(spec.slotIndex, refs.damage);
       this.statusByPartyIndex.set(spec.slotIndex, refs.status);
       this.listEl.appendChild(row);
@@ -531,7 +495,6 @@ export class PartyMemberStatsDisplay {
       this.memberDownSignature = downSignature;
       syncMemberDownState(this.memberByPartyIndex, downBySlot);
     }
-    syncThreatBars(this.threatByPartyIndex, snapshots);
     syncDamageBars(this.damageByPartyIndex, displayRows, downBySlot);
     syncStatusBadges(this.statusByPartyIndex, snapshots, this.theme);
   }
@@ -539,7 +502,6 @@ export class PartyMemberStatsDisplay {
   clear(): void {
     this.listEl.replaceChildren();
     this.memberByPartyIndex.clear();
-    this.threatByPartyIndex.clear();
     this.damageByPartyIndex.clear();
     this.statusByPartyIndex.clear();
     this.lastSource = null;
