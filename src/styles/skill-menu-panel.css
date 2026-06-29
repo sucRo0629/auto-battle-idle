@@ -287,6 +287,7 @@
   font-size: 12px;
   line-height: 1.45;
   color: #9aa3b0;
+  white-space: pre-line;
 }
 
 .skill-menu-open-picker-button {
@@ -601,6 +602,7 @@
   font-size: 12px;
   line-height: 1.45;
   color: #9aa3b0;
+  white-space: pre-line;
 }
 
 .skill-menu-picker-row--icon.skill-menu-picker-row--action > .skill-menu-picker-row-text,

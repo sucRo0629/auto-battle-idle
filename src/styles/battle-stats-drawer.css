@@ -51,7 +51,7 @@
   padding: 4px 10px;
   border: 1px solid var(--canvas-border-color);
   border-radius: 2px;
-  background: rgba(22, 33, 62, 0.92);
+  background: rgba(15, 15, 26, 0.55);
   color: rgba(227, 227, 227, 0.92);
   font-family: var(--hud-font-family);
   font-size: 12px;
@@ -61,7 +61,8 @@
 }
 
 .battle-party-menu-button:hover:not(:disabled) {
-  background: rgba(45, 58, 79, 0.95);
+  border-color: rgba(74, 144, 217, 0.65);
+  background: rgba(74, 144, 217, 0.12);
 }
 
 .battle-party-menu-button:disabled {

@@ -28,6 +28,9 @@ export type GameTermId =
   | "evasion"
   | "invulnerable"
   | "moveLock"
+  | "skillLock"
+  | "multiLock"
+  | "dotCompress"
   | "hot"
   | "poison"
   | "bleed"
@@ -68,6 +71,8 @@ export const GAME_TERM_NO_TEXT_LINK_IDS = new Set<GameTermId>([
   "atk",
   "def",
   "reg",
+  "hp",
+  "attackSpeed",
   "damageReduction",
   "damageIncrease",
   "damageTaken",
@@ -81,7 +86,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "barrier",
     title: { ja: "バリア" },
     description: {
-      ja: "HPとは別の被ダメージを受け止める値。HPより先に消費される。バリアが付与されている対象に更にバリアが付与される場合、原則バリア量が多い方のバリアで置き換えられる。",
+      ja: "HPとは別の被ダメージを受け止める値。HPより先に消費される。HUDではHPバーに重なる明るいバーとして表示される。バリアが付与されている対象に更にバリアが付与される場合、原則付与する量が多い方のバリアで置き換えられる。",
     },
     aliases: { ja: ["バリア"] },
   },
@@ -170,8 +175,32 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     description: {
       ja: "継続ダメージ（Damage over Time）の意。効果時間中毎秒ダメージを与え続ける状態効果の総称。",
     },
-    aliases: { ja: ["DoT圧縮", "DoT延長", "DoT収穫", "DoT"] },
+    aliases: { ja: ["DoT延長", "DoT収穫", "DoT"] },
     statusCategory: "dot",
+  },
+  {
+    id: "dotCompress",
+    title: { ja: "DoT圧縮" },
+    description: {
+      ja: "対象のDoTの残り効果時間を圧縮し、短時間にダメージを集中させる効果。圧縮対象外のDoT（熾火など）は除く。",
+    },
+    aliases: { ja: ["DoT圧縮"] },
+  },
+  {
+    id: "multiLock",
+    title: { ja: "マルチロック" },
+    description: {
+      ja: "N体に対して効果を適用する。対象が不足している場合、再度同じ対象に対して順番に効果を適用する。",
+    },
+    aliases: { ja: ["マルチロック"] },
+  },
+  {
+    id: "skillLock",
+    title: { ja: "硬直" },
+    description: {
+      ja: "スキル使用後、一定時間スキルと通常攻撃の発動を止める効果。",
+    },
+    aliases: { ja: ["硬直"] },
   },
   {
     id: "damageReduction",
@@ -230,7 +259,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     id: "moveLock",
     title: { ja: "移動停止" },
     description: {
-      ja: "自動接近・位置移動を停止する効果。スキル硬直と併用されることが多い。",
+      ja: "自動接近・位置移動を停止する効果。",
     },
     aliases: { ja: ["移動停止"] },
     statusCategory: "moveLock",
@@ -312,7 +341,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     description: {
       ja: "最大 HP の flat 加算または乗算バフ・debuff。HUD では HP アイコンで表示される。",
     },
-    aliases: { ja: ["HP"] },
+    aliases: { ja: [] },
     statusCategory: "hp",
   },
   {
@@ -348,7 +377,7 @@ export const GAME_TERM_ENTRIES: readonly GameTermEntry[] = [
     description: {
       ja: "通常攻撃・スキルの再使用間隔に影響する攻撃速度（SPD）バフ・debuff。",
     },
-    aliases: { ja: ["SPD", "攻撃速度"] },
+    aliases: { ja: [] },
     statusCategory: "attackSpeed",
   },
   {

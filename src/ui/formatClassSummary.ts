@@ -14,6 +14,11 @@ export function formatClassSummary(
   return text.trim();
 }
 
+/** aria-label 用。表示用の改行を空白に正規化する */
+export function formatClassSummaryForAria(summary: string): string {
+  return summary.replace(/\s+/g, ' ').trim();
+}
+
 export function readClassSummaryJa(summary: ClassLocaleText | undefined): string {
   return summary?.ja.trim() ?? '';
 }
