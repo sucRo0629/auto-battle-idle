@@ -34,7 +34,7 @@
         "damageType": "magic",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.15
+          "atkScale": 1.1
         },
         "vfx": {
           "enabled": true

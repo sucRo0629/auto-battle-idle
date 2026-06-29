@@ -399,7 +399,7 @@ export class ClassEditorStep {
               delete next.class.summary;
             }
           });
-        }, { rows: 3, placeholder: "1〜2 文。パーティ設定のロスター・詳細・クラス選択に表示。" })
+        }, { rows: 5, placeholder: "数文のプレイヤー向け解説。役割・特徴・成長の示唆を含めてよい。詳細・クラス選択に表示。" })
       )
     );
     identityGrid.appendChild(

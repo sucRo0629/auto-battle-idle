@@ -259,6 +259,7 @@ Release M1 解禁 8 クラスの一覧・グレーアウト 5・非表示 2 は 
 
 ### 4d 残タスク
 
+- [x] 全 15 クラスの `summary.ja` を `classes.json` に設定（編成 UI 詳細・Picker 表示）
 - [ ] [party-formation-ui.md §13](../spec/party-formation-ui.md#13-受け入れ条件phase-4d-完了) 受け入れ条件 1〜14 の目視確認
 - [ ] §11 デザイン方針どおりの視覚 polish（角丸 2px・弱 shadow・控えめ backdrop）
 - [ ] 最小幅 ~800px でのレイアウト確認

@@ -590,8 +590,8 @@
 }
 
 .skill-menu-picker-row--icon > .skill-menu-picker-row-text {
-  flex: 0 0 3rem;
-  width: 3rem;
+  flex: 0 0 4rem;
+  width: 4rem;
   min-width: 0;
 }
 

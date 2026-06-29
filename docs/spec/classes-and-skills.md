@@ -602,6 +602,8 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 
 クラス ID と表示名、ロール、射程、スキル習得は `classes.json` を正とする。将来の追加クラスは同じ形式で拡張する。
 
+**クラス要約（`summary.ja`）:** 編成 UI（詳細・Picker）向けのプレイヤー向け解説。全 15 種に設定済み。本文の正本は `classes.json` のみ（本 spec へ転記しない）。
+
 ### クラスマスタ（15 種）
 
 表示名の英語肩書きは `epithetEn`（UI 表示は Phase 3c 以降）。
@@ -1675,7 +1677,7 @@ growthTier: GrowthTierSet;
 growthPresetKey?: "attacker" | "caster"; // 魔術系（at_sorcerer 等）の成長合成
 attackSpeedTier?: AttackSpeedTier;       // 未指定 = normal
 epithetEn?: string;   // 英語肩書き
-summary?: { ja: string; en?: string }; // 編成 UI 要約。正本は classes.json。ClassEditorStep で編集
+summary: { ja: string; en?: string }; // 編成 UI 要約（必須）。正本は classes.json。ClassEditorStep で編集
 passiveIds?: string[]; // クラス固有パッシブ（`data/skills/passives/<stem>.json` への参照）
 ```
 

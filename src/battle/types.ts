@@ -102,7 +102,7 @@ export interface ClassPreset extends CombatStats {
   displayName: string;
   /** 英語職名（UI ルビ上段。表示リファクタ時に使用） */
   epithetEn?: string;
-  /** 編成 UI 向けクラス要約（1〜2 文） */
+  /** 編成 UI 向けクラス要約（数文。全クラス必須） */
   summary?: ClassLocaleText;
   formationRow: FormationRow;
   traits: NormalizedEntityTraits;
