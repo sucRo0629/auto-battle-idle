@@ -87,6 +87,32 @@ describe('collectSkillsFromDrafts basic attack', () => {
 });
 
 describe('collectSkillsFromDrafts passive sanitize', () => {
+  it('preserves damageReduction aoe fields on save (護法陣 shape)', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'df_paladin_passive_2', kind: 'passive' },
+        passive: {
+          id: 'df_paladin_passive_2',
+          name: '護法陣',
+          effect: 'damageReduction',
+          damageReductionPercent: 0.05,
+          damageReductionTargetShape: 'aoe',
+          damageReductionAoeRadiusPx: 50,
+          damageReductionTargetRule: { kind: 'all', side: 'ally' },
+        },
+      },
+    ];
+
+    const { passives } = collectSkillsFromDrafts(entries);
+    expect(passives[0]).toMatchObject({
+      effect: 'damageReduction',
+      damageReductionPercent: 0.05,
+      damageReductionTargetShape: 'aoe',
+      damageReductionAoeRadiusPx: 50,
+      damageReductionTargetRule: { kind: 'all', side: 'ally' },
+    });
+  });
+
   it('strips orphan fields from excessHealToBarrier passive on save', () => {
     const entries: SkillDraftEntry[] = [
       {
@@ -142,6 +168,37 @@ describe('collectSkillsFromDrafts passive sanitize', () => {
     const { passives } = collectSkillsFromDrafts(entries);
     expect(passives[0]).not.toHaveProperty('targetRuleOverride');
     expect(passives[0]?.effect).toBe('specialEffect');
+  });
+});
+
+describe('collectSkillsFromDrafts deprecated threat fields', () => {
+  it('strips threatBurst fields from damage effects on save', () => {
+    const entries: SkillDraftEntry[] = [
+      {
+        ref: { skillId: 'at_swordsman_active_1', kind: 'active' },
+        active: {
+          id: 'at_swordsman_active_1',
+          name: '叩き付け',
+          trigger: { kind: 'time', value: 8 },
+          effect: [
+            {
+              target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+              type: 'damage',
+              damageType: 'physical',
+              amount: { kind: 'atkBased', atkScale: 1.5 },
+              threatBurstFlat: 10,
+              threatBurstScale: 1.25,
+            },
+          ],
+        },
+      },
+    ];
+
+    const { actives } = collectSkillsFromDrafts(entries);
+    const effect = actives[0]?.effect[0];
+    expect(effect?.type).toBe('damage');
+    expect(effect).not.toHaveProperty('threatBurstFlat');
+    expect(effect).not.toHaveProperty('threatBurstScale');
   });
 });
 

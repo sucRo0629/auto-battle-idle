@@ -27,7 +27,7 @@
     "name": "迎撃態勢",
     "effect": "blockResonance",
     "blockResonanceMaxStacks": 6,
-    "blockResonanceDamageTakenPerStack": 0.03,
+    "blockResonanceDamageTakenPerStack": 0.02,
     "blockResonanceDecayIntervalSec": 8,
     "chance": 0.1
   },

@@ -4,6 +4,7 @@ import {
   normalizeActiveSkillEffectForEditor,
   sanitizeBasicAttackSkillForJson,
   sanitizePassiveSkillForJson,
+  stripDeprecatedThreatFieldsFromEffect,
 } from '../battle/data/validateGameData.ts';
 import { assertConfigurableRangePx } from '../battle/rangeLimits.ts';
 import type {
@@ -969,7 +970,11 @@ export function collectSkillsFromDrafts(entries: SkillDraftEntry[]): {
     if (entry.active) {
       const active = {
         ...entry.active,
-        effect: entry.active.effect.map(normalizeActiveSkillEffectForEditor),
+        effect: entry.active.effect.map((effect) =>
+          stripDeprecatedThreatFieldsFromEffect(
+            normalizeActiveSkillEffectForEditor(effect),
+          ),
+        ),
       };
       actives.push(
         isBasicAttackSkillIdPattern(active.id)

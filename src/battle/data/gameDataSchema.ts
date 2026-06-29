@@ -232,6 +232,27 @@ export const DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS = [
   "durationMs",
 ] as const;
 
+/** ヘイトランタイム削除に伴い廃止した passive effect（validateGameData で拒否） */
+export const DEPRECATED_THREAT_PASSIVE_EFFECT = "threatControl" as const;
+
+/** 廃止 threatControl passive に紐づくフィールド（他 effect への混入も validate で拒否） */
+export const DEPRECATED_THREAT_PASSIVE_FIELD_KEYS = [
+  "onDamageTakenFlat",
+  "onDamageTakenScale",
+  "onBlockFlat",
+  "threatDecayMultiplier",
+  "frontThreatFloor",
+  "frontThreatAuraRadiusPx",
+  "frontThreatDecayMultiplier",
+  "frontDamageTakenReduction",
+] as const;
+
+/** 廃止 damage effect の追加ヘイトフィールド（validateGameData で拒否） */
+export const DEPRECATED_THREAT_DAMAGE_FIELD_KEYS = [
+  "threatBurstFlat",
+  "threatBurstScale",
+] as const;
+
 export const TARGET_RULES = [
   "closestAlly",
   "frontEnemy",

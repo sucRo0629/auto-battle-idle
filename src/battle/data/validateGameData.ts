@@ -109,6 +109,9 @@ import {
   VFX_ANCHORS,
   VFX_LAYERS,
   DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS,
+  DEPRECATED_THREAT_DAMAGE_FIELD_KEYS,
+  DEPRECATED_THREAT_PASSIVE_EFFECT,
+  DEPRECATED_THREAT_PASSIVE_FIELD_KEYS,
   PARTICLE_PRESET_IDS,
   VFX_PARTICLE_DEF_FIELD_KEYS,
   DEBUFF_FILTER_TAG_OPTIONS,
@@ -318,6 +321,7 @@ const REMOVED_PASSIVE_EFFECTS = new Set([
   'block',
   'counterChance',
   'damageTakenToHeal',
+  DEPRECATED_THREAT_PASSIVE_EFFECT,
 ]);
 const RESOURCE_AMOUNT_KINDS_SET = new Set<ResourceAmountKind>(
   RESOURCE_AMOUNT_KINDS,
@@ -1257,6 +1261,36 @@ function rejectDeprecatedSkillVfxFields(
         context,
         key,
         'is deprecated (Canvas preset VFX was removed)',
+      );
+    }
+  }
+}
+
+function rejectDeprecatedThreatPassiveFields(
+  obj: Record<string, unknown>,
+  context: string,
+): void {
+  for (const key of DEPRECATED_THREAT_PASSIVE_FIELD_KEYS) {
+    if (obj[key] !== undefined) {
+      invalidField(
+        context,
+        key,
+        'is deprecated (threatControl was removed; use damageReduction for ally DR auras)',
+      );
+    }
+  }
+}
+
+function rejectDeprecatedThreatDamageFields(
+  obj: Record<string, unknown>,
+  context: string,
+): void {
+  for (const key of DEPRECATED_THREAT_DAMAGE_FIELD_KEYS) {
+    if (obj[key] !== undefined) {
+      invalidField(
+        context,
+        key,
+        'is deprecated (threatBurst* was removed)',
       );
     }
   }
@@ -2745,6 +2779,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
   const sequenceTiming = parseOptionalWaitAfterSec(obj, context);
 
   if (type === 'damage') {
+    rejectDeprecatedThreatDamageFields(obj, context);
     const damageType =
       obj.damageType === undefined
         ? undefined
@@ -5002,11 +5037,23 @@ function isBasicAttackSkillId(skillId: string, entityIds: Set<string>): boolean 
   return false;
 }
 
+/** damage effect から廃止 threatBurst* を除去（エディタ保存用） */
+export function stripDeprecatedThreatFieldsFromEffect(
+  effect: SkillEffectDef,
+): SkillEffectDef {
+  if (effect.type !== 'damage') return effect;
+  const next = { ...effect };
+  for (const key of DEPRECATED_THREAT_DAMAGE_FIELD_KEYS) {
+    delete (next as Record<string, unknown>)[key];
+  }
+  return next;
+}
+
 /** 通常攻撃 JSON から traits 由来のフィールドを除去（エディタ保存・ロード用） */
 export function stripBasicAttackTraitFieldsFromEffect(
   effect: SkillEffectDef,
 ): SkillEffectDef {
-  const next = { ...effect };
+  const next = stripDeprecatedThreatFieldsFromEffect(effect);
   delete (next as { damageType?: unknown }).damageType;
   delete (next as { range?: unknown }).range;
   delete (next as { vfx?: unknown }).vfx;
@@ -5236,12 +5283,14 @@ function parsePassives(raw: unknown): PassiveSkillDef[] {
     };
 
     if (REMOVED_PASSIVE_EFFECTS.has(normalizedEffect)) {
-      invalidField(
-        context,
-        'effect',
-        `${effectRaw} was removed; migrate to specialEffect/buff/debuff/counter as needed`,
-      );
+      const migrationHint =
+        normalizedEffect === DEPRECATED_THREAT_PASSIVE_EFFECT
+          ? `${effectRaw} was removed; migrate ally DR to passive damageReduction (see combat.md)`
+          : `${effectRaw} was removed; migrate to specialEffect/buff/debuff/counter as needed`;
+      invalidField(context, 'effect', migrationHint);
     }
+
+    rejectDeprecatedThreatPassiveFields(effectObj, context);
 
     normalizeLegacyPassivePeriodicFields(effectObj);
 

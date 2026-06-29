@@ -36,7 +36,7 @@
         },
         "type": "buff",
         "buffStat": "def",
-        "buffMultiplier": 1.2,
+        "buffMultiplier": 1.15,
         "buffDurationSec": 5,
         "buffSubKind": "stat"
       }
@@ -59,7 +59,7 @@
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "def",
-        "buffMultiplier": 1.25,
+        "buffMultiplier": 1.2,
         "buffDurationSec": 5,
         "animStartFrame": 1,
         "animLoopFrame": 2,

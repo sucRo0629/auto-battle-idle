@@ -115,10 +115,8 @@ import {
   appendActiveBlockResonanceStanceFields,
   appendConditionListFields,
   appendPassiveSkillPropertyOverrideFields,
-  appendPassiveThreatControlFields,
   appendTargetSpecFields,
   appendSkillSharedTargetingFields,
-  appendThreatBurstFields,
   appendDamagePierceFields,
 } from "./skillEditorCombatFields.ts";
 import { editorFieldLabel } from "./editorFieldLabels.ts";
@@ -611,19 +609,6 @@ function applyPassiveEffectDefaults(passive: PassiveSkillDef): void {
     case "damageReduction":
       passive.damageReductionTargetRule ??= { kind: "self" };
       passive.damageReductionPercent ??= 0.2;
-      break;
-    case "threatControl":
-      if (
-        passive.onDamageTakenFlat === undefined &&
-        passive.onDamageTakenScale === undefined &&
-        passive.onBlockFlat === undefined &&
-        passive.threatDecayMultiplier === undefined &&
-        passive.frontThreatFloor === undefined &&
-        passive.frontThreatDecayMultiplier === undefined &&
-        passive.frontDamageTakenReduction === undefined
-      ) {
-        passive.onDamageTakenScale = 0.5;
-      }
       break;
     case "excessHealToBarrier":
       passive.barrierScale ??= 1;
@@ -3745,15 +3730,6 @@ export class SkillEditorStep {
           { traitsRangePx: this.resolveTraitsRangePx() }
         );
         break;
-      case "threatControl":
-        appendPassiveThreatControlFields(
-          effectGrid,
-          passive,
-          (mutate, options) => {
-            this.patchPassive(index, mutate, options);
-          }
-        );
-        break;
       case "excessHealToBarrier":
         effectGrid.appendChild(
           createFieldRow(
@@ -5822,11 +5798,6 @@ export class SkillEditorStep {
             }
           );
           if (!isBasicAttack) {
-            appendThreatBurstFields(
-              detailGrid,
-              effect as Extract<SkillEffectDef, { type: "damage" }>,
-              patchEffect
-            );
             appendDamagePierceFields(
               detailGrid,
               effect as Extract<SkillEffectDef, { type: "damage" }>,
