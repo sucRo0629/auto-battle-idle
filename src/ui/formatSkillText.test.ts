@@ -860,20 +860,35 @@ describe('formatActiveDescription', () => {
     ]);
   });
 
-  it('formatSkillCardLines supports locale en for meta lines', async () => {
+  it('formatSkillCardLines applies common en templates for df_guardian Lv0', async () => {
     const { loadGameData } = await import('../battle/data/loadGameData.ts');
-    const { setLocale, resetLocaleStateForTests, resolveLocale } = await import(
-      '../i18n/locale.ts'
-    );
-    resetLocaleStateForTests();
-    resolveLocale('');
-    setLocale('en');
     const gameData = await loadGameData();
     const a1 = gameData.skillRegistry.actives.df_guardian_active_1;
-    const card = formatSkillCardLines(a1!, { locale: 'en' });
-    expect(card.metaLine).toBe('Recast: 8s / Duration: 5s');
-    expect(card.effectLines).toEqual(['DEF+15%']);
-    resetLocaleStateForTests();
+    const a2 = gameData.skillRegistry.actives.df_guardian_active_2;
+    const p1 = gameData.skillRegistry.passives.df_guardian_passive_1;
+    const p2 = gameData.skillRegistry.passives.df_guardian_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
+    expect(card1.metaLine).toBe('Recast: 8s / Duration: 5s');
+    expect(card1.effectLines).toEqual(['DEF+15%']);
+
+    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
+    expect(card2.metaLine).toBe(
+      'Recast: After 8 hits taken / Duration: 5s / 硬直・移動停止5s',
+    );
+    expect(card2.effectLines).toEqual(['DEF+20%', 'ブロック率+50%']);
+
+    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
+    expect(passive1.metaLine).toBe('Always');
+    expect(passive1.effectLines).toEqual(['ブロック率+20%']);
+
+    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
+    expect(passive2.metaLine).toBe('Always');
+    expect(passive2.effectLines).toEqual(['HP+5%']);
   });
 
   it('formatSkillCardLines applies common en templates for df_paladin Lv0', async () => {
@@ -910,6 +925,238 @@ describe('formatActiveDescription', () => {
     const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
     expect(passive2.metaLine).toBe('Always');
     expect(passive2.effectLines).toEqual(['Nearby allies: 5% Damage Reduction']);
+  });
+
+  it('formatSkillCardLines applies common en templates for at_swordsman Lv0', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.at_swordsman_active_1;
+    const a2 = gameData.skillRegistry.actives.at_swordsman_active_2;
+    const p1 = gameData.skillRegistry.passives.at_swordsman_passive_1;
+    const p2 = gameData.skillRegistry.passives.at_swordsman_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
+    expect(card1.metaLine).toBe(
+      'Recast: After 5 basic attacks / Condition: Target HP ≥50%',
+    );
+    expect(card1.effectLines).toEqual(['Deals 180% ATK as physical damage']);
+
+    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
+    expect(card2.metaLine).toBe('Recast: 10s');
+    expect(card2.effectLines).toEqual([
+      'Multi-Locks 2 enemies and Deals 60% ATK as physical damage',
+    ]);
+
+    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
+    expect(passive1.metaLine).toBe('Always');
+    expect(passive1.effectLines).toEqual([
+      'Prioritizes the enemy with the highest DEF',
+    ]);
+
+    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
+    expect(passive2.metaLine).toBe('Always');
+    expect(passive2.effectLines).toEqual([
+      'On attack, ignores 25% of target DEF',
+    ]);
+  });
+
+  it('formatSkillCardLines applies common en templates for at_assassin Lv0', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.at_assassin_active_1;
+    const a2 = gameData.skillRegistry.actives.at_assassin_active_2;
+    const p1 = gameData.skillRegistry.passives.at_assassin_passive_1;
+    const p2 = gameData.skillRegistry.passives.at_assassin_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
+    expect(card1.metaLine).toBe('Recast: After 8 basic attacks / Duration: 5s');
+    expect(card1.effectLines).toEqual([
+      'Deals 115% ATK as physical damage',
+      '対象に出血が付与されているなら、このダメージは+130%される',
+      'その後攻撃した対象に5秒間毎秒攻撃力の30%のphysicalダメージを与える出血を付与する',
+    ]);
+
+    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
+    expect(card2.metaLine).toBe(
+      'Recast: After 14 basic attacks / Duration: 1.5s / 硬直2s',
+    );
+    expect(card2.effectLines).toEqual([
+      '1.5秒間回避+100%',
+      '対象の背後に移動した後、Deals 110% ATK as physical damage',
+      '対象のHPが30%以下なら、このダメージは+200%される',
+    ]);
+
+    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
+    expect(passive1.metaLine).toBe('Always');
+    expect(passive1.effectLines).toEqual([
+      'Prioritizes the enemy with the lowest HP ratio',
+    ]);
+
+    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
+    expect(passive2.metaLine).toBe('Always');
+    expect(passive2.effectLines).toEqual(['回避+20%']);
+  });
+
+  it('formatSkillCardLines applies common en templates for at_ranger Lv0', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.at_ranger_active_1;
+    const a2 = gameData.skillRegistry.actives.at_ranger_active_2;
+    const p1 = gameData.skillRegistry.passives.at_ranger_passive_1;
+    const p2 = gameData.skillRegistry.passives.at_ranger_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
+    expect(card1.metaLine).toBe('Recast: After 5 basic attacks');
+    expect(card1.effectLines).toEqual([
+      '2 hits: Deals 125% ATK as physical damage',
+    ]);
+
+    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
+    expect(card2.metaLine).toBe('Recast: 10s / Duration: 5s');
+    expect(card2.effectLines).toEqual(['通常攻撃が2回連続攻撃になる']);
+
+    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
+    expect(passive1.metaLine).toBe('Always');
+    expect(passive1.effectLines).toEqual(['Prioritizes ranged attackers']);
+
+    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
+    expect(passive2.metaLine).toBe('Always');
+    expect(passive2.effectLines).toEqual(['Attack Speed+25%']);
+  });
+
+  it('formatSkillCardLines applies common en templates for at_sorcerer Lv0', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.at_sorcerer_active_1;
+    const a2 = gameData.skillRegistry.actives.at_sorcerer_active_2;
+    const p1 = gameData.skillRegistry.passives.at_sorcerer_passive_1;
+    const p2 = gameData.skillRegistry.passives.at_sorcerer_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
+    expect(card1.metaLine).toBe('Recast: 8s');
+    expect(card1.effectLines).toEqual(['Deals 110% ATK as magic damage']);
+
+    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
+    expect(card2.metaLine).toBe('Recast: 10s');
+    expect(card2.effectLines).toEqual([
+      'Multi-Locks 2 enemies and Deals 90% ATK as magic damage',
+    ]);
+
+    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
+    expect(passive1.metaLine).toBe('Always');
+    expect(passive1.effectLines).toEqual([
+      'On attack, ignores 20% of target REG',
+    ]);
+
+    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
+    expect(passive2.metaLine).toBe('Always');
+    expect(passive2.effectLines).toEqual([
+      '敵に攻撃スキルが1回命中するごとに「種火」を1スタックする',
+      {
+        kind: 'list',
+        items: [
+          {
+            text: '種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える',
+            details: ['最大スタック数：5'],
+          },
+          {
+            text: '熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える',
+            details: [
+              'さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる',
+              '最大スタック数：1',
+            ],
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('formatSkillCardLines applies common en templates for sp_cleric Lv0', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.sp_cleric_active_1;
+    const a2 = gameData.skillRegistry.actives.sp_cleric_active_2;
+    const p1 = gameData.skillRegistry.passives.sp_cleric_passive_1;
+    const p2 = gameData.skillRegistry.passives.sp_cleric_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
+    expect(card1.metaLine).toBe('Recast: 8s');
+    expect(card1.effectLines).toEqual(['Heals an ally for 175% of ATK']);
+
+    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
+    expect(card2.metaLine).toBe('Recast: 10s / Condition: Target HP ≤50%');
+    expect(card2.effectLines).toEqual(['Heals an ally for 200% of ATK']);
+
+    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
+    expect(passive1.metaLine).toBe('Always');
+    expect(passive1.effectLines).toEqual([
+      'HPが50%以下の味方を回復時、HP回復効果+25%',
+    ]);
+
+    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
+    expect(passive2.metaLine).toBe('Always');
+    expect(passive2.effectLines).toEqual([
+      '味方を回復時、最大HPを超えた回復量の80%をバリアとして対象に付与する',
+    ]);
+  });
+
+  it('formatSkillCardLines applies common en templates for sp_wardweaver Lv0', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.sp_wardweaver_active_1;
+    const a2 = gameData.skillRegistry.actives.sp_wardweaver_active_2;
+    const p1 = gameData.skillRegistry.passives.sp_wardweaver_passive_1;
+    const p2 = gameData.skillRegistry.passives.sp_wardweaver_passive_2;
+    expect(a1).toBeDefined();
+    expect(a2).toBeDefined();
+    expect(p1).toBeDefined();
+    expect(p2).toBeDefined();
+
+    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
+    expect(card1.metaLine).toBe('Recast: 8s');
+    expect(card1.effectLines).toEqual([
+      'Heals an ally for 35% of ATK',
+      'Barrier equal to 190% of ATK',
+    ]);
+
+    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
+    expect(card2.metaLine).toBe('Recast: 10s / Condition: Target HP ≤80%');
+    expect(card2.effectLines).toEqual([
+      'Multi-Locks 2 allies and Barrier equal to 200% of ATK',
+    ]);
+
+    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
+    expect(passive1.metaLine).toBe('Always');
+    expect(passive1.effectLines).toEqual([
+      'HPが50%以下の味方にバリア付与時、バリア量+20%',
+    ]);
+
+    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
+    expect(passive2.metaLine).toBe('Always');
+    expect(passive2.effectLines).toEqual([
+      '味方に付与したバリアが完全に消失した時、対象を攻撃力の65%で回復（味方ごとにWave1回まで）',
+      'この効果は「障壁」の消失では誘発しない',
+    ]);
   });
 
   it('formats df_paladin passives with 効果 prefix', async () => {
