@@ -872,7 +872,44 @@ describe('formatActiveDescription', () => {
     const a1 = gameData.skillRegistry.actives.df_guardian_active_1;
     const card = formatSkillCardLines(a1!, { locale: 'en' });
     expect(card.metaLine).toBe('Recast: 8s / Duration: 5s');
+    expect(card.effectLines).toEqual(['DEF+15%']);
     resetLocaleStateForTests();
+  });
+
+  it('formatSkillCardLines applies common en templates for df_paladin Lv0', async () => {
+    const { loadGameData } = await import('../battle/data/loadGameData.ts');
+    const gameData = await loadGameData();
+    const a1 = gameData.skillRegistry.actives.df_paladin_active_1;
+    const a2 = gameData.skillRegistry.actives.df_paladin_active_2;
+    const p1 = gameData.skillRegistry.passives.df_paladin_passive_1;
+    const p2 = gameData.skillRegistry.passives.df_paladin_passive_2;
+
+    const card1 = formatSkillCardLines(a1!, { locale: 'en' });
+    expect(card1.metaLine).toBe('Recast: 5s');
+    expect(card1.effectLines).toEqual([
+      'Deals 100% ATK as magic damage',
+      'Heals an ally for 125% of ATK',
+      '1 charge available',
+    ]);
+
+    const card2 = formatSkillCardLines(a2!, { locale: 'en' });
+    expect(card2.metaLine).toBe(
+      'Recast: After 8 hits taken / Duration: 5s / Condition: Self HP ≤80%',
+    );
+    expect(card2.effectLines).toEqual([
+      'Grants the following effects to nearby allies:',
+      'REG+10',
+      '5% Damage Reduction',
+      'Barrier equal to 20% of ATK (stacking)',
+    ]);
+
+    const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
+    expect(passive1.metaLine).toBe('Always');
+    expect(passive1.effectLines).toEqual(['Nearby allies: Block rate+10%']);
+
+    const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
+    expect(passive2.metaLine).toBe('Always');
+    expect(passive2.effectLines).toEqual(['Nearby allies: 5% Damage Reduction']);
   });
 
   it('formats df_paladin passives with 効果 prefix', async () => {

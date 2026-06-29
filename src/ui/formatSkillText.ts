@@ -75,6 +75,37 @@ import {
   skillText,
   type SkillCardLocale,
 } from "./skillTextLocale.ts";
+import {
+  phraseAoeAuraIntro,
+  phraseAtkBasedBarrier,
+  phraseAtkBasedDamage,
+  phraseAtkBasedHeal,
+  phraseBlockChance,
+  phraseBlockRate,
+  phraseChargesAvailable,
+  phraseDamageReductionRate,
+  phraseDefenseIgnorePercent,
+  phraseDefenseIgnoreRegPercent,
+  phraseEvasionBuff,
+  phraseFireConditionSelfHp,
+  phraseFireConditionTargetHp,
+  phraseFlatHeal,
+  phraseMagicBlockEnable,
+  phraseMultiHitDamage,
+  phraseMultiLockPrefix,
+  phraseScopeAllAllies,
+  phraseScopeSelfOrigin,
+  phraseSelfDamageReduction,
+  phraseSurroundingBlockRateBuff,
+  phraseSurroundingDamageReduction,
+  phraseSurroundingPrefix,
+  phraseTargetHighestStatEnemy,
+  phraseTargetLowestHpRatioEnemy,
+  phraseTargetRangedEnemy,
+  skillStat,
+  skillTargetStat,
+  skillTerm,
+} from "./skillTextPhrases.ts";
 
 export type { SkillCardLocale };
 
@@ -89,9 +120,12 @@ function formatPassiveTriggerLabel(
 function formatPassiveTriggerSummary(
   passive: PassiveSkillDef,
   trigger: PassivePeriodicTriggerKind | undefined,
-  fallback = "常時"
+  fallback?: string
 ): string {
-  const triggerLabel = formatPassiveTriggerLabel(trigger, fallback);
+  const triggerLabel = formatPassiveTriggerLabel(
+    trigger,
+    fallback ?? skillText().passiveAlways
+  );
   if (!usesPassiveTriggerChance(passive)) return triggerLabel;
   const chance = passive.chance;
   if (chance !== undefined && chance < 1) {
@@ -125,7 +159,7 @@ function formatStatMultiplierLabel(
   stat: StatusEffectStat,
   mul: number
 ): string {
-  const label = resolveStatusEffectStatDisplayName(stat, getSkillTextLocale());
+  const label = skillStat(stat);
   const suffix = formatStatMultiplierSuffix(mul);
   if (!suffix) return label;
   return `${label}${suffix}`;
@@ -143,15 +177,11 @@ function formatFireConditionSummary(condition: FireCondition): string {
     }
     case "targetHp": {
       const pct = Math.round(condition.maxHpRatio * 100);
-      return condition.compare === "gte"
-        ? `対象のHPが${pct}%以上`
-        : `対象のHPが${pct}%以下`;
+      return phraseFireConditionTargetHp(pct, condition.compare);
     }
     case "selfHp": {
       const pct = Math.round(condition.maxHpRatio * 100);
-      return condition.compare === "gte"
-        ? `自身のHPが${pct}%以上`
-        : `自身のHPが${pct}%以下`;
+      return phraseFireConditionSelfHp(pct, condition.compare);
     }
     case "minTargets":
       return `対象≥${condition.count}`;
@@ -241,12 +271,11 @@ function formatCompactAtkBasedHealSentence(
 ): string {
   if (amount?.kind === "atkBased") {
     const pct = formatPercent(amount.atkScale ?? 1);
-    if (targetSpec && isAllAllyTarget(targetSpec)) {
-      return `味方全体のHPを攻撃力の${pct}で回復`;
-    }
-    return `味方のHPを攻撃力の${pct}で回復`;
+    const scope =
+      targetSpec && isAllAllyTarget(targetSpec) ? "allAllies" : "ally";
+    return phraseAtkBasedHeal(pct, scope);
   }
-  return `${formatResourceAmount(amount)}回復`;
+  return phraseFlatHeal(formatResourceAmount(amount));
 }
 
 function joinActiveSkillScopePrefix(
@@ -254,7 +283,22 @@ function joinActiveSkillScopePrefix(
   effectParts: string
 ): string {
   if (!scopePrefix || !effectParts) return effectParts;
-  if (scopePrefix === "味方全体" && effectParts.startsWith("味方")) {
+  const allAllies = phraseScopeAllAllies();
+  if (scopePrefix === allAllies && effectParts.startsWith(allAllies)) {
+    return effectParts;
+  }
+  if (
+    getSkillTextLocale() === "ja" &&
+    scopePrefix === "味方全体" &&
+    effectParts.startsWith("味方")
+  ) {
+    return effectParts;
+  }
+  if (
+    getSkillTextLocale() === "en" &&
+    scopePrefix === "All allies" &&
+    effectParts.startsWith("Heals all allies")
+  ) {
     return effectParts;
   }
   return `${scopePrefix}${effectParts}`;
@@ -394,10 +438,7 @@ function formatMultiLockSubjectPrefix(
   hitCount: number,
   side: TargetSpec["side"],
 ): string {
-  if (side === "ally") {
-    return `味方${hitCount}体をマルチロックして`;
-  }
-  return `敵${hitCount}体をマルチロックして`;
+  return phraseMultiLockPrefix(hitCount, side === "ally" ? "ally" : "enemy");
 }
 
 function formatMultiLockEffectLine(
@@ -434,11 +475,15 @@ function formatCompactBarrierBuffLabel(
   amount: ResourceAmountSpec | undefined,
   stack?: boolean
 ): string {
-  const stackSuffix = stack ? "（加算）" : "";
   if (amount?.kind === "atkBased") {
     const pct = formatPercent(amount.atkScale ?? 1);
-    return `攻撃力の${pct}のバリア${stackSuffix}`;
+    return phraseAtkBasedBarrier(pct, stack);
   }
+  const stackSuffix = stack
+    ? getSkillTextLocale() === "en"
+      ? " (stacking)"
+      : "（加算）"
+    : "";
   return `${formatResourceAmount(amount)}${stackSuffix}`;
 }
 
@@ -454,7 +499,7 @@ function formatSelfOriginAoeBuffCardLines(def: ActiveSkillDef): string[] | null 
     return null;
   }
 
-  const lines: string[] = ["周囲に以下の効果を付与する"];
+  const lines: string[] = [phraseAoeAuraIntro()];
   for (const effect of def.effect) {
     if (effect.type !== "buff") continue;
     if (effect.buffSubKind === "barrier") {
@@ -473,7 +518,7 @@ function formatSelfOriginAoeBuffCardLines(def: ActiveSkillDef): string[] | null 
 
 function formatActiveSkillMaxChargesLine(def: ActiveSkillDef): string | null {
   if (def.maxCharges === undefined || def.maxCharges <= 0) return null;
-  return `${def.maxCharges}回チャージ可能`;
+  return phraseChargesAvailable(def.maxCharges);
 }
 
 function formatCompactAtkBasedDamageSentence(
@@ -483,13 +528,13 @@ function formatCompactAtkBasedDamageSentence(
   if (amount?.kind === "atkBased") {
     const scale = amount.atkScale ?? 1;
     const pct = formatPercent(scale);
-    const dmgLabel = damageType
-      ? `${DAMAGE_TYPE_LABELS[damageType]}ダメージ`
-      : "ダメージ";
-    return `攻撃力の${pct}の${dmgLabel}を与える`;
+    return phraseAtkBasedDamage(pct, damageType);
   }
-  const dmgPrefix = damageType ? `${DAMAGE_TYPE_LABELS[damageType]}` : "";
-  return `${dmgPrefix}${formatResourceAmount(amount)}のダメージを与える`;
+  const dmgPrefix = damageType ? `${DAMAGE_TYPE_LABELS[damageType]} ` : "";
+  if (getSkillTextLocale() === "en") {
+    return `Deals ${dmgPrefix}${formatResourceAmount(amount)} damage`;
+  }
+  return `${dmgPrefix.trim()}${formatResourceAmount(amount)}のダメージを与える`;
 }
 
 function formatCompactSingleTargetDamageSentence(
@@ -506,7 +551,7 @@ function formatCompactSingleTargetDamageSentence(
   );
   const hitCount = effect.hitCount ?? 1;
   if (hitCount > 1) {
-    return `${hitCount}回連続で${sentence}`;
+    return phraseMultiHitDamage(hitCount, sentence);
   }
   return sentence;
 }
@@ -522,9 +567,9 @@ function formatMultiLockDamageEffectLines(
 
 function resolveTargetStatDisplayName(stat: TargetStat): string {
   if (isStatusEffectStat(stat)) {
-    return resolveStatusEffectStatDisplayName(stat);
+    return skillStat(stat);
   }
-  return TARGET_STAT_LABELS[stat];
+  return skillTargetStat(stat);
 }
 
 function formatTargetRuleOverridePassive(def: PassiveSkillDef): string {
@@ -536,7 +581,7 @@ function formatTargetRuleOverridePassive(def: PassiveSkillDef): string {
     rule.stat === "hp" &&
     rule.order === "ratio"
   ) {
-    return "最もHP割合が低い敵を優先して攻撃する";
+    return phraseTargetLowestHpRatioEnemy();
   }
   if (
     rule.kind === "stat" &&
@@ -544,10 +589,10 @@ function formatTargetRuleOverridePassive(def: PassiveSkillDef): string {
     rule.order === "highest"
   ) {
     const statLabel = resolveTargetStatDisplayName(rule.stat);
-    return `最も${statLabel}が高い敵を優先して攻撃する`;
+    return phraseTargetHighestStatEnemy(statLabel);
   }
   if (rule.kind === "attackType" && rule.ranged && !rule.melee) {
-    return "遠隔攻撃の敵を優先して攻撃する";
+    return phraseTargetRangedEnemy();
   }
   const scope = def.targetRuleOverrideApplyTo ?? "enemy";
   const scopeLabel = scope === "ally" ? "味方向け" : "敵向け";
@@ -577,12 +622,10 @@ function formatPassiveDefenseIgnore(def: PassiveSkillDef): string {
     return formatDefenseIgnoreSpec(spec) || "防御無視";
   }
   if (spec.def?.mode === "percent") {
-    return `攻撃時、対象の防御力を${formatPercent(spec.def.amount)}無視する`;
+    return phraseDefenseIgnorePercent(formatPercent(spec.def.amount));
   }
   if (spec.reg?.percent !== undefined) {
-    return `攻撃時、対象の${resolveStatusEffectStatDisplayName(
-      "reg"
-    )}を${formatPercent(spec.reg.percent)}無視する`;
+    return phraseDefenseIgnoreRegPercent(formatPercent(spec.reg.percent));
   }
   return formatDefenseIgnoreSpec(spec) || "防御無視";
 }
@@ -627,14 +670,14 @@ function resolveActiveSkillScopePrefix(
     (def.targetShape ?? "single") === "aoe"
   ) {
     const radius = def.aoeRadiusPx;
-    return radius !== undefined ? `自身起点±${radius}px：` : "自身起点：";
+    return phraseScopeSelfOrigin(radius);
   }
   if (def.effect.length > 0) {
     const allAllyAll = def.effect.every((effect) => {
       const target = resolveEffectTargetSpec(effect, def.target);
       return target.kind === "all" && target.side === "ally";
     });
-    if (allAllyAll) return "味方全体";
+    if (allAllyAll) return phraseScopeAllAllies();
   }
   return undefined;
 }
@@ -847,29 +890,32 @@ function formatPercent(value: number): string {
 /** damageTaken multiplier → ダメージ軽減N% / 被ダメージ増加N% */
 function formatDamageTakenMultiplierLabel(mul: number): string {
   if (mul < 1) {
-    return `${resolveGameTermTitle("damageReduction")}${formatPercent(1 - mul)}`;
+    return phraseDamageReductionRate(formatPercent(1 - mul));
   }
   if (mul > 1) {
-    return `${resolveGameTermTitle("damageIncrease")}${formatPercent(mul - 1)}`;
+    if (getSkillTextLocale() === "en") {
+      return `${formatPercent(mul - 1)} ${skillTerm("damageIncrease")}`;
+    }
+    return `${skillTerm("damageIncrease")}${formatPercent(mul - 1)}`;
   }
-  return resolveStatusEffectStatDisplayName("damageTaken");
+  return skillStat("damageTaken");
 }
 
 /** wardBarrier 等: 軽減率そのもの（0.1 = 10% 軽減） */
 function formatDamageTakenReductionRateLabel(rate: number): string {
-  return `${resolveGameTermTitle("damageReduction")}${formatPercent(rate)}`;
+  return phraseDamageReductionRate(formatPercent(rate));
 }
 
 function formatAtkScale(scale: number | undefined): string {
   const s = scale ?? 1;
-  if (s === 1) return resolveStatusEffectStatDisplayName("atk");
-  return `${resolveStatusEffectStatDisplayName("atk")}${formatPercent(s)}`;
+  if (s === 1) return skillStat("atk");
+  return `${skillStat("atk")}${formatPercent(s)}`;
 }
 
 function formatDefScale(scale: number | undefined): string {
   const s = scale ?? 1;
-  if (s === 1) return resolveStatusEffectStatDisplayName("def");
-  return `${resolveStatusEffectStatDisplayName("def")}${formatPercent(s)}`;
+  if (s === 1) return skillStat("def");
+  return `${skillStat("def")}${formatPercent(s)}`;
 }
 
 function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
@@ -880,7 +926,7 @@ function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
       const offset = amount.atkOffset ?? 0;
       if (offset === 0) return formatAtkScale(scale);
       const sign = offset > 0 ? "+" : "";
-      return `(${resolveStatusEffectStatDisplayName("atk")}${sign}${offset})${formatPercent(
+      return `(${skillStat("atk")}${sign}${offset})${formatPercent(
         scale
       )}`;
     }
@@ -889,7 +935,7 @@ function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
       const offset = amount.defOffset ?? 0;
       if (offset === 0) return formatDefScale(scale);
       const sign = offset > 0 ? "+" : "";
-      return `(${resolveStatusEffectStatDisplayName("def")}${sign}${offset})${formatPercent(
+      return `(${skillStat("def")}${sign}${offset})${formatPercent(
         scale
       )}`;
     }
@@ -906,7 +952,7 @@ function formatStatusStats(
   stat: StatusEffectStat | StatusEffectStat[] | undefined
 ): string {
   return asStatusEffectStatList(stat)
-    .map((s) => resolveStatusEffectStatDisplayName(s))
+    .map((s) => skillStat(s))
     .join("・");
 }
 
@@ -920,20 +966,20 @@ function formatStatWithModifier(
 
   if (stat === "damageTaken") {
     if (mul === 1 && flat === 0) {
-      return resolveStatusEffectStatDisplayName("damageTaken");
+      return skillStat("damageTaken");
     }
     if (flat === 0) return formatDamageTakenMultiplierLabel(mul);
     if (mul === 1) {
-      return `${resolveStatusEffectStatDisplayName("damageTaken")}${formatStatFlatSuffix(
+      return `${skillStat("damageTaken")}${formatStatFlatSuffix(
         flat
       )}`;
     }
-    return `( ${resolveStatusEffectStatDisplayName("damageTaken")}${formatStatFlatSuffix(
+    return `( ${skillStat("damageTaken")}${formatStatFlatSuffix(
       flat
     )} ) ${formatDamageTakenMultiplierLabel(mul)}`;
   }
 
-  const label = resolveStatusEffectStatDisplayName(stat);
+  const label = skillStat(stat);
 
   if (mul === 1 && flat === 0) return label;
   if (flat === 0) return formatStatMultiplierLabel(stat, mul);
@@ -1831,9 +1877,9 @@ function formatPassiveEffect(
     case "targetRuleOverride":
       return formatTargetRuleOverridePassive(def);
     case "evasionChance":
-      return `回避 +${formatPercent(legacy.evasionChance ?? 0)}`;
+      return phraseEvasionBuff(formatPercent(legacy.evasionChance ?? 0));
     case "block":
-      return `ブロック ${formatPercent(legacy.blockChance ?? 0)}`;
+      return phraseBlockChance(formatPercent(legacy.blockChance ?? 0));
     case "damageIncrease":
       return (
         formatSpecialEffectSpec("damage", legacy.damageIncrease) ||
@@ -1849,14 +1895,12 @@ function formatPassiveEffect(
         rule.order === "selfOrigin" &&
         shape === "aoe"
       ) {
-        return `周囲の${formatDamageTakenReductionRateLabel(percent)}`;
+        return phraseSurroundingDamageReduction(formatPercent(percent));
       }
       if (rule.kind === "self" && shape === "single") {
-        return `自身の${formatDamageTakenReductionRateLabel(percent)}`;
+        return phraseSelfDamageReduction(formatPercent(percent));
       }
-      return `${resolveGameTermTitle("damageReduction")}${formatPercent(
-        percent
-      )} → ${formatTarget(rule, { kind: "self" })}（${[
+      return `${phraseDamageReductionRate(formatPercent(percent))} → ${formatTarget(rule, { kind: "self" })}（${[
         formatTargetShape(passiveDamageReductionToEffectDef(def)),
         def.damageReductionRange !== undefined
           ? `${def.damageReductionRange}px`
@@ -1991,19 +2035,25 @@ function formatPassiveEffect(
       if (def.effect === "frontBlockAura") {
         const parts: string[] = [];
         if (def.chance !== undefined) {
-          parts.push(`周囲のブロック率+${formatPercent(def.chance)}`);
+          parts.push(
+            phraseSurroundingBlockRateBuff(formatPercent(def.chance)),
+          );
         } else {
-          parts.push("周囲のブロック率");
+          parts.push(`${phraseSurroundingPrefix()}${phraseBlockRate()}`);
         }
         if (def.frontBlockAuraMagicBlock) {
-          parts.push("魔法ブロックを可能にする");
+          parts.push(phraseMagicBlockEnable());
         }
-        return parts.join("、");
+        return parts.join(getSkillTextLocale() === "en" ? ", " : "、");
       }
       if (def.effect === "blockResonance") {
         const parts: string[] = [];
         if (def.chance !== undefined) {
-          parts.push(`ブロック率+${formatPercent(def.chance)}`);
+          const rateLabel =
+            getSkillTextLocale() === "en"
+              ? `${phraseBlockRate()}+${formatPercent(def.chance)}`
+              : `ブロック率+${formatPercent(def.chance)}`;
+          parts.push(rateLabel);
         }
         const maxStacks = def.blockResonanceMaxStacks ?? 6;
         const perStack = def.blockResonanceDamageTakenPerStack ?? 0.03;
