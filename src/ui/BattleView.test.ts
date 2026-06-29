@@ -99,6 +99,7 @@ vi.mock("../ui/PartyHudPanel.ts", () => ({
     setMode: vi.fn(),
     updateDetailMetrics: vi.fn(),
     getSlotRoot: vi.fn(() => null),
+    refreshLocale: vi.fn(),
     destroy: vi.fn(),
   })),
 }));
@@ -127,6 +128,15 @@ vi.mock("../ui/DebugMenuPanel.ts", () => ({
   DebugMenuPanel: vi.fn().mockImplementation(() => ({
     mount: vi.fn(),
     refresh: vi.fn(),
+  })),
+}));
+
+vi.mock("../ui/GameTermPanel.ts", () => ({
+  GameTermPanel: vi.fn().mockImplementation(() => ({
+    mount: vi.fn(),
+    destroy: vi.fn(),
+    getPanelId: vi.fn(() => ""),
+    openFromTerm: vi.fn(),
   })),
 }));
 

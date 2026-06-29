@@ -274,15 +274,15 @@ export class BattleView {
       this.refreshLocaleChrome();
       this.lastHudToolbarLevel = -1;
       this.syncHudToolbarLevel(this.getSave().party);
-      this.partyHud.refreshLocale();
       const snapshot = this.engine.getSnapshot();
-      if (this.statsDrawer.isOpen()) {
-        this.partyHud.updateDetailMetrics({
-          snapshots: snapshot.allies,
-          displayRows:
-            this.verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
-        });
-      }
+      const save = this.getSave();
+      const partyMeta = buildPartyHudMetaBySlot(
+        save.party,
+        this.gameData.classRegistry,
+      );
+      this.partyHud.update(buildPartyHudEntries(snapshot, partyMeta));
+      this.partyHud.refreshLocale();
+      this.refreshMemberStatsPanel();
     });
     this.refreshLocaleChrome();
   }

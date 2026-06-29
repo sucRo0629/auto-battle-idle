@@ -16,7 +16,7 @@ Phase 3 の習得機構とキャラクターデータ GUI を土台に、**プ�
 | `data/skills/` 分割 | **4c**（完了） |
 | 日本語スキル説明の自動生成 | **4b**（**完了** — M1 8 クラス Lv0） |
 | 編成 UI・統計 UI・HUD 刷新 | **4d**（ほぼ完了） |
-| 英語 i18n（`en` のみ） | **4e** |
+| 英語 i18n（`en` のみ） | **4e**（**進行中**） |
 
 **一次職 / 二次職の区別は廃止**（`jobTier` / `promotion` / `promotesFrom` は予約しない）。
 
@@ -30,9 +30,9 @@ Phase 3 の習得機構とキャラクターデータ GUI を土台に、**プ�
 | **4c** | 巨大 JSON のファイル分割 | **完了** |
 | **4b** | `formatSkillText` によるスキル説明自動生成 | **完了**（M1 8 クラス Lv0 日本語確定。以降はデータ PR 同梱のみ） |
 | **4d** | `SkillMenuPanel` + `BattleStatsDrawer` + 状態バッジ HUD | **完了**（§13 目視・§11 polish・800px 確認済み 2026-06） |
-| **4e** | 英語 i18n（`ja` + `en`） | **未着手**（4b・4d 充足済み → **着手可**） |
+| **4e** | 英語 i18n（`ja` + `en`） | **進行中** — 4e-a 基盤・主要 DOM 着手済 / 4e-b M1 Lv0 説明文 **完了**（[§4e](#4e--英語-i18n-en-のみ)） |
 
-**いまの焦点:** **4e 英語 i18n**
+**いまの焦点:** **4e-a** M1 プレイ経路 DOM の英語確認 + **Exit #4〜6**（手動スモーク）
 
 ---
 
@@ -42,10 +42,10 @@ Phase 3 の習得機構とキャラクターデータ GUI を土台に、**プ�
 
 | 項目 | 内容 |
 | ---- | ---- |
-| **M1 状態** | **準備中** — 4b・4d 完了 → **4e** → Phase 6 / 7 |
+| **M1 状態** | **準備中** — 4b・4d 完了、**4e 進行中** → Exit #4〜6 充足後 Phase 6 / 7 |
 | **4b（日本語 Lv0）** | M1 解禁 **8 クラス** — **完了**（[§4b](#4b--スキル説明自動生成日本語--完了2026-06)） |
 | **4d（編成・統計・HUD）** | **完了**（[§4d](#4d--編成-ui--統計-ui--hud完了)） |
-| **4e（英語 i18n）** | **次** — M1 **必須**（[§4e](#4e--英語-i18n-en-のみ)） |
+| **4e（英語 i18n）** | **進行中** — M1 **必須**（[§4e](#4e--英語-i18n-en-のみ)）。Lv0 説明文 en は完了、DOM・Exit 確認が残り |
 | **クラス別 4b / 4e 進捗** | [§M1 対象クラス](#m1-対象クラス4b--4e-の第一優先) |
 | **Phase 4 完了 = M1 への Exit #1〜3 充足 + #4〜6（4e）** | [Exit 条件](#phase-4-完了条件exit) |
 
@@ -61,14 +61,16 @@ flowchart TD
     B4b[4b 日本語説明文 M1 Lv0]
     B4d[4d 編成・統計・HUD]
   end
-  subgraph next [次]
-    E4e[4e 英語 i18n]
+  subgraph wip [進行中]
+    E4eA[4e-a DOM 英語]
+    E4eB[4e-b Lv0 説明 en]
   end
   A4a --> A4c
   A4a --> B4d
   A4c --> B4b
-  B4b --> E4e
-  B4d --> E4e
+  B4b --> E4eB
+  B4d --> E4eA
+  E4eB --> E4eA
 ```
 
 **原則**
@@ -85,8 +87,9 @@ flowchart TD
 | -- | ------ | ---- | ---- |
 | ~~1~~ | ~~4d 受け入れ条件の目視確認~~ | 4d | **完了**（2026-06） |
 | ~~2~~ | ~~DOM §11 polish 残確認~~ | 4d | **完了**（2026-06） |
-| 1 | i18n 基盤 + DOM UI 英語（最短経路） | 4e-a | `t(key)` / locale 切替 |
-| 2 | M1 8 クラスの英語（説明・クラス名・用語） | 4e-b | [§4b 確定文案](#4b--スキル説明自動生成日本語--完了2026-06)を翻訳正本に |
+| 1 | i18n 基盤 + DOM UI 英語（最短経路） | 4e-a | `t(key)` / locale 切替 — **着手済**、M1 経路の目視・スモークが残り |
+| ~~2~~ | ~~M1 8 クラス Lv0 `formatSkillCardLines` en~~ | 4e-b | **完了**（`skillTextPhrases.ts` + `formatSkillText.test.ts` 8 職固定） |
+| 2 | クラス表示名・用語パネル・スキル名の en 整合 + Exit 確認 | 4e-b | `epithetEn` / `gameTermGlossaryEn.ts`。Lv10+ 説明 polish は **M1 範囲外** |
 | 3 | M2 前に残り 5 クラスへ英語拡張 | 4e | グレーアウト 5 は M1 でもロスター表示あり |
 
 ---
@@ -146,16 +149,18 @@ data/classes.json
 
 Release M1 解禁 8 クラスの一覧・グレーアウト 5・非表示 2 は [phase-roadmap.md §M1 — 体験版](phase-roadmap.md#m1--体験版) を正とする。
 
-| classId | 表示名 | 4b 日本語 | 4e 英語 |
-| ------- | ------ | --------- | ------- |
-| `df_guardian` | 鉄衛士 | **完了** | 未 |
-| `df_paladin` | 護法士 | **完了** | 未 |
-| `at_swordsman` | 剣術士 | **完了** | 未 |
-| `at_assassin` | 双刃士 | **完了** | 未 |
-| `at_ranger` | 弓術士 | **完了** | 未 |
-| `at_sorcerer` | 魔術師 | **完了** | 未 |
-| `sp_cleric` | 療養師 | **完了** | 未 |
-| `sp_wardweaver` | 結界師 | **完了** | 未 |
+| classId | 表示名 | 4b 日本語 | 4e 英語（Lv0 説明） |
+| ------- | ------ | --------- | ------------------- |
+| `df_guardian` | 鉄衛士 | **完了** | **完了** |
+| `df_paladin` | 護法士 | **完了** | **完了** |
+| `at_swordsman` | 剣術士 | **完了** | **完了** |
+| `at_assassin` | 双刃士 | **完了** | **完了** |
+| `at_ranger` | 弓術士 | **完了** | **完了** |
+| `at_sorcerer` | 魔術師 | **完了** | **完了** |
+| `sp_cleric` | 療養師 | **完了** | **完了** |
+| `sp_wardweaver` | 結界師 | **完了** | **完了** |
+
+**4e 英語の注記:** 上表は `formatSkillCardLines` **Lv0（active 1–2 / passive 1–2）** のみ。クラス表示名（`epithetEn`）・スキル JSON `name`・Lv10+ 固有 polish 文は別途（Exit #5 / 4e-b 残）。
 
 ### 4b チェックリスト（クラスごと）
 
@@ -283,17 +288,17 @@ Release M1 解禁 8 クラスの一覧・グレーアウト 5・非表示 2 は 
 
 | レイヤ | 内容 | 状態 |
 | ------ | ---- | ---- |
-| **基盤** | locale 選択（`ja` / `en`）、`t(key)` または同等。体験版 zip は既定 `en` 推奨 | 未 |
-| **DOM UI** | `SkillMenuPanel`、`MetaMenuOverlay`、`BattleStatsDrawer`、HUD ラベル、体験版終了画面 | 未 |
-| **ゲームデータ** | `displayName` / `epithetEn` 整理、スキル名・説明の locale 分岐 | 未 |
-| **用語** | `gameTermGlossary.ts` の `en` エントリ | 未 |
-| **ストア** | itch.io ページ・キャッチコピー・Devlog（[itch-io-devlog.md](./itch-io-devlog.md)） | 未 |
+| **基盤** | locale 選択（`ja` / `en`）、`t(key)` または同等。体験版 zip は既定 `en` 推奨 | **着手済**（`src/i18n/locale.ts`, `t.ts`, `uiMessages.ts`） |
+| **DOM UI** | `SkillMenuPanel`、`MetaMenuOverlay`、`BattleStatsDrawer`、HUD ラベル、体験版終了画面 | **着手済** — M1 最短経路の **目視・スモーク未記録** |
+| **ゲームデータ** | `displayName` / `epithetEn` 整理、スキル名・説明の locale 分岐 | **一部** — Lv0 説明は `formatSkillText` en 完了。スキル `name` は JSON 日本語のまま |
+| **用語** | `gameTermGlossary.ts` の `en` エントリ | **着手済**（`gameTermGlossaryEn.ts`）。説明文リンクとの目視整合は残り |
+| **ストア** | itch.io ページ・キャッチコピー・Devlog（[itch-io-devlog.md](./itch-io-devlog.md)） | 未（Exit #1〜6 外） |
 
 ### 4e 進め方
 
-1. **4e-a** — i18n 基盤 + プレイ最短経路の DOM 英語
-2. **4e-b** — `formatSkillText` / クラス名 / 用語辞書 `en`（M1 8 クラス）
-3. M2 前 — 残り解禁クラス（計 13）へ拡張
+1. **4e-a** — i18n 基盤 + プレイ最短経路の DOM 英語（**着手済** → Exit #4 目視）
+2. **4e-b** — `formatSkillText` Lv0 en（M1 8 クラス）— **完了** / クラス名・用語・スキル名 — **残り**
+3. M2 前 — 残り解禁クラス（計 13）へ拡張（**Phase 4 Exit 外**）
 
 ### 4e スコープ外
 
@@ -309,14 +314,14 @@ Release M1 解禁 8 クラスの一覧・グレーアウト 5・非表示 2 は 
 
 次をすべて満たしたら Phase 4 を完了とみなし、Phase 6（体験版コンテンツ）へ主軸を移す。
 
-| # | 条件 |
-| - | ---- |
-| 1 | 4d 受け入れ条件を満たし、目視確認済み — **4d 完了**（2026-06） |
-| 2 | M1 8 クラスの `formatSkillText` 日本語が確定（テスト + 目視） — **4b 完了** |
-| 3 | M1 8 クラス分の用語辞書 `ja` が説明文と整合 — **4b 完了** |
-| 4 | `ja` / `en` 切替が動作し、M1 プレイ経路の DOM UI が英語表示可能 |
-| 5 | M1 8 クラスのスキル説明・クラス表示名が `en` で破綻なく表示 |
-| 6 | `npm test`（`formatSkillText` 含む）と手動スモーク（編成 → 戦闘 → 統計）が通る |
+| # | 条件 | 状態 |
+| - | ---- | ---- |
+| 1 | 4d 受け入れ条件を満たし、目視確認済み | **完了**（2026-06） |
+| 2 | M1 8 クラスの `formatSkillText` 日本語が確定（テスト + 目視） | **完了**（4b） |
+| 3 | M1 8 クラス分の用語辞書 `ja` が説明文と整合 | **完了**（4b） |
+| 4 | `ja` / `en` 切替が動作し、M1 プレイ経路の DOM UI が英語表示可能 | **未確認**（基盤・主要 DOM は実装済） |
+| 5 | M1 8 クラスのスキル説明・クラス表示名が `en` で破綻なく表示 | **一部** — Lv0 説明 en テスト固定済。表示名・スキル名の目視が残り |
+| 6 | `npm test`（`formatSkillText` 含む）と手動スモーク（編成 → 戦闘 → 統計）が通る | **テスト可** / **スモーク未記録** |
 
 ---
 
@@ -347,9 +352,10 @@ Release M1 解禁 8 クラスの一覧・グレーアウト 5・非表示 2 は 
 
 | 領域 | パス |
 | ---- | ---- |
-| スキル説明 | `src/ui/formatSkillText.ts`, `src/ui/formatSkillText.test.ts` |
-| 用語辞書 | `src/ui/gameTermGlossary.ts` |
-| 編成 UI | `src/ui/SkillMenuPanel.ts` |
+| スキル説明 | `src/ui/formatSkillText.ts`, `src/ui/skillTextPhrases.ts`, `src/ui/skillTextLocale.ts`, `src/ui/formatSkillText.test.ts` |
+| 用語辞書 | `src/ui/gameTermGlossary.ts`, `src/ui/gameTermGlossaryEn.ts` |
+| i18n 基盤 | `src/i18n/locale.ts`, `src/i18n/t.ts`, `src/i18n/uiMessages.ts` |
+| 編成 UI | `src/ui/SkillMenuPanel.ts`, `src/ui/MetaMenuOverlay.ts` |
 | クラス表示名 | `src/ui/classDisplayName.ts` |
 | スキルデータ | `data/skills/`, `data/classes.json` |
 | データ編集 | `src/editor/SkillEditorStep.ts`, `src/editor/ClassEditorStep.ts` |

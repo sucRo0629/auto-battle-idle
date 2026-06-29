@@ -1,4 +1,7 @@
-import { formatRangeBandJa } from '../battle/rangeLimits.ts';
+import type { AppLocale } from '../i18n/locale.ts';
+import { getLocale } from '../i18n/locale.ts';
+import { getBasicAttackAttributeLabel } from '../i18n/memberStatLabels.ts';
+import { formatRangeBand } from '../battle/rangeLimits.ts';
 import type {
   ActiveSkillDef,
   ClassPreset,
@@ -9,6 +12,7 @@ import type {
 
 export type MemberBasicAttackAttribute = 'physical' | 'magic' | 'heal';
 
+/** @deprecated use {@link getBasicAttackAttributeLabel} */
 export const MEMBER_BASIC_ATTACK_ATTRIBUTE_LABELS: Record<
   MemberBasicAttackAttribute,
   string
@@ -56,22 +60,28 @@ export function resolveMemberBasicAttackAttribute(
 export function resolveMemberBasicAttackDisplay(
   preset: ClassPreset,
   skillRegistry: SkillRegistry,
+  locale: AppLocale = getLocale(),
 ): MemberBasicAttackDisplay | null {
   const skill = skillRegistry.actives[preset.basicAttackSkillId];
   if (!skill) return null;
 
   const rangePx = resolveBasicAttackRangePx(preset, skill);
   const attribute = resolveMemberBasicAttackAttribute(preset, skill);
+  const bandLabel = formatRangeBand(rangePx, locale);
 
   return {
-    rangeLabel: `${rangePx}（${formatRangeBandJa(rangePx)}）`,
-    attributeLabel: MEMBER_BASIC_ATTACK_ATTRIBUTE_LABELS[attribute],
+    rangeLabel:
+      locale === 'en'
+        ? `${rangePx} (${bandLabel})`
+        : `${rangePx}（${bandLabel}）`,
+    attributeLabel: getBasicAttackAttributeLabel(attribute, locale),
   };
 }
 
 export function resolveMemberBasicAttackRangeLabel(
   preset: ClassPreset,
   skillRegistry: SkillRegistry,
+  locale: AppLocale = getLocale(),
 ): string | null {
-  return resolveMemberBasicAttackDisplay(preset, skillRegistry)?.rangeLabel ?? null;
+  return resolveMemberBasicAttackDisplay(preset, skillRegistry, locale)?.rangeLabel ?? null;
 }

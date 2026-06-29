@@ -200,6 +200,9 @@ export class PartyHudPanel {
     for (const slot of this.slots) {
       slot.damage.label.textContent = t('hud.damageEmpty');
       slot.damage.lastSyncKey = undefined;
+      slot.statusBadgeHitSignature = null;
+      slot.detailStatus.debuffHitSignature = undefined;
+      slot.detailStatus.buffHitSignature = undefined;
       const statusLabels = slot.detailStatus.root.querySelectorAll(
         '.party-stats-status-label',
       );
@@ -209,6 +212,11 @@ export class PartyHudPanel {
       if (statusLabels[1] instanceof HTMLElement) {
         statusLabels[1].textContent = t('hud.buff');
       }
+    }
+    this.invalidateCompactStatusRenderSignatures();
+    this.invalidateDetailStatusSignatures();
+    if (this.lastEntries.length > 0) {
+      this.update(this.lastEntries);
     }
     if (this.mode === 'detail' && this.lastDetailFrame) {
       this.updateDetailMetrics(this.lastDetailFrame);

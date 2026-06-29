@@ -2,6 +2,7 @@ import {
   CANVAS_W,
   PARTY_FORMATION_LEFT_ANCHOR,
 } from './battleConstants.ts';
+import type { AppLocale } from '../i18n/locale.ts';
 import {
   isMeleeRangePx,
   MELEE_RANGE_MAX_PX,
@@ -13,8 +14,19 @@ export const CONFIGURABLE_RANGE_PX_MAX =
   CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR;
 
 /** traits.rangePx の近接帯 / 遠隔帯ラベル */
-export function formatRangeBandJa(rangePx: number): string {
+export function formatRangeBand(
+  rangePx: number,
+  locale: AppLocale = 'ja',
+): string {
+  if (locale === 'en') {
+    return isMeleeRangePx(rangePx) ? 'Melee band' : 'Ranged band';
+  }
   return isMeleeRangePx(rangePx) ? '近接帯' : '遠隔帯';
+}
+
+/** @deprecated use {@link formatRangeBand} */
+export function formatRangeBandJa(rangePx: number): string {
+  return formatRangeBand(rangePx, 'ja');
 }
 
 /** エディタ補足・バリデーション文言用 */

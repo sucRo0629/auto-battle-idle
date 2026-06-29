@@ -3,6 +3,39 @@ import { PARTY_SLOT_COUNT } from '../battle/types.ts';
 import { buildPartyHudEntries, buildPartyHudMetaBySlot } from './partyHudTypes.ts';
 
 describe('buildPartyHudEntries', () => {
+  const classRegistry = {
+    at_assassin: {
+      id: 'at_assassin',
+      displayName: '双刃士',
+      epithetEn: 'Twinblade',
+      role: 'attacker' as const,
+      formationRow: 'front' as const,
+      traits: {},
+      maxHp: 100,
+      atk: 20,
+      def: 8,
+      reg: 0,
+      basicAttackSkillId: 'at_assassin_basic_attack',
+      skills: [],
+      growthTier: { maxHp: 1, atk: 2, def: 1 },
+    },
+    at_sorcerer: {
+      id: 'at_sorcerer',
+      displayName: '魔術師',
+      epithetEn: 'Arcanist',
+      role: 'attacker' as const,
+      formationRow: 'back' as const,
+      traits: {},
+      maxHp: 80,
+      atk: 24,
+      def: 6,
+      reg: 0,
+      basicAttackSkillId: 'at_sorcerer_basic_attack',
+      skills: [],
+      growthTier: { maxHp: 1, atk: 2, def: 1 },
+    },
+  };
+
   it('aligns HUD slots to party indices and hides vacant slots', () => {
     const partyMeta = buildPartyHudMetaBySlot(
       [
@@ -27,36 +60,7 @@ describe('buildPartyHudEntries', () => {
           },
         },
       ],
-      {
-        at_assassin: {
-          id: 'at_assassin',
-          displayName: '双刃士',
-          role: 'attacker',
-          formationRow: 'front',
-          traits: {},
-          maxHp: 100,
-          atk: 20,
-          def: 8,
-          reg: 0,
-          basicAttackSkillId: 'at_assassin_basic_attack',
-          skills: [],
-          growthTier: { maxHp: 1, atk: 2, def: 1 },
-        },
-        at_sorcerer: {
-          id: 'at_sorcerer',
-          displayName: '魔術師',
-          role: 'attacker',
-          formationRow: 'back',
-          traits: {},
-          maxHp: 80,
-          atk: 24,
-          def: 6,
-          reg: 0,
-          basicAttackSkillId: 'at_sorcerer_basic_attack',
-          skills: [],
-          growthTier: { maxHp: 1, atk: 2, def: 1 },
-        },
-      },
+      classRegistry,
     );
 
     const entries = buildPartyHudEntries(
@@ -130,5 +134,25 @@ describe('buildPartyHudEntries', () => {
     expect(entries[2]).toBeNull();
     expect(entries[3]?.displayName).toBe('魔術師');
     expect(entries[3]?.unlockedActiveSlotCount).toBe(2);
+  });
+
+  it('uses epithetEn for HUD display names in English locale', () => {
+    const partyMeta = buildPartyHudMetaBySlot(
+      [
+        {
+          classId: 'at_assassin',
+          progress: { level: 1, exp: 0 },
+          build: {
+            learnedPassiveIds: [],
+            learnedActiveIds: [],
+            equippedActiveSlots: [],
+          },
+        },
+      ],
+      classRegistry,
+      'en',
+    );
+
+    expect(partyMeta[0]?.displayName).toBe('Twinblade');
   });
 });

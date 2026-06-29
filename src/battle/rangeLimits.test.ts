@@ -44,6 +44,12 @@ describe('rangeLimits', () => {
     expect(formatRangeBandJa(RANGED_ATTACK_MIN_PX)).toBe('遠隔帯');
   });
 
+  it('formatRangeBand returns English band labels', async () => {
+    const { formatRangeBand } = await import('./rangeLimits.ts');
+    expect(formatRangeBand(8, 'en')).toBe('Melee band');
+    expect(formatRangeBand(RANGED_ATTACK_MIN_PX, 'en')).toBe('Ranged band');
+  });
+
   it('assertConfigurableRangePx rejects out-of-range values', () => {
     expect(() =>
       assertConfigurableRangePx('射程', CONFIGURABLE_RANGE_PX_MAX + 1),

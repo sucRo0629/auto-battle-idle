@@ -4,7 +4,8 @@ import {
   resolveStatusBadgeTooltipLabel,
   statusBadgeHasClickableGameTerm,
 } from "./gameTermGlossary.ts";
-import type { StatusEffectBadgeDisplay } from '../battle/statusEffectDisplay.ts';
+import type { GameTermLocale } from "./gameTermGlossary.ts";
+import { getLocale } from '../i18n/locale.ts';
 import { quantizeBadgeOverlayStep } from '../render/statusBadgeRenderer.ts';
 import type { BattleHudTheme } from '../render/battleHudTheme.ts';
 import {
@@ -81,17 +82,22 @@ function bindHoverTooltipHit(
   hit.appendChild(tooltip);
 }
 
+function resolveBadgeLocale(): GameTermLocale {
+  return getLocale();
+}
+
 function bindIndividualStatusBadgeHit(
   hit: HTMLElement,
   badge: StatusEffectBadgeDisplay,
   context: PartyHudStatusBadgeHitContext,
   options: { alignEnd?: boolean; placement?: 'above' | 'below' },
 ): void {
-  const label = resolveStatusBadgeTooltipLabel(badge);
+  const locale = resolveBadgeLocale();
+  const label = resolveStatusBadgeTooltipLabel(badge, locale);
 
   bindHoverTooltipHit(hit, label, context, options);
 
-  if (!statusBadgeHasClickableGameTerm(badge)) {
+  if (!statusBadgeHasClickableGameTerm(badge, locale)) {
     return;
   }
 
@@ -134,14 +140,14 @@ export function buildPartyHudStatusBadgeHitSignature(
   slotIndex: number,
 ): string {
   const badgePart = visible.map((badge) => badgeIdentityPart(badge)).join('|');
-  return `${slotIndex};${overflowCount};${badgePart}`;
+  return `${getLocale()};${slotIndex};${overflowCount};${badgePart}`;
 }
 
 export function buildDetailStatusBadgeHitSignature(
   badges: StatusEffectBadgeDisplay[],
 ): string {
   if (badges.length === 0) return '';
-  return badges.map((badge) => badgeIdentityPart(badge)).join('|');
+  return `${getLocale()};${badges.map((badge) => badgeIdentityPart(badge)).join('|')}`;
 }
 
 export function syncPartyHudStatusBadgeHits(
@@ -178,7 +184,7 @@ export function syncPartyHudStatusBadgeHits(
 
   for (let i = 0; i < visible.length; i++) {
     const badge = visible[i]!;
-    const clickable = statusBadgeHasClickableGameTerm(badge);
+    const clickable = statusBadgeHasClickableGameTerm(badge, resolveBadgeLocale());
     const hit = createStatusBadgeHitElement(clickable ? 'button' : 'span');
     positionStatusBadgeHit(
       hit,
@@ -204,7 +210,11 @@ export function syncPartyHudStatusBadgeHits(
     );
     bindHoverTooltipHit(
       hit,
-      resolveCompactStatusOverflowTooltipLabel(badges, visibleCount),
+      resolveCompactStatusOverflowTooltipLabel(
+        badges,
+        visibleCount,
+        resolveBadgeLocale(),
+      ),
       context,
       { wide: true, alignEnd },
     );
@@ -247,7 +257,7 @@ export function syncDetailStatusBadgeHits(
   for (const row of layout.rows) {
     let left = outlinePad;
     for (const badge of row) {
-      const clickable = statusBadgeHasClickableGameTerm(badge);
+      const clickable = statusBadgeHasClickableGameTerm(badge, resolveBadgeLocale());
       const hit = createStatusBadgeHitElement(clickable ? 'button' : 'span');
       positionStatusBadgeHit(hit, left, rowTop, badgeW, rowHeight, false);
       bindIndividualStatusBadgeHit(hit, badge, context, { placement: 'above' });

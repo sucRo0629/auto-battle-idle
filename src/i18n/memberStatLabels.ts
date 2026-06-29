@@ -45,3 +45,16 @@ export function getAttackSpeedTierLabel(
 ): string {
   return messageForLocale(locale, ATTACK_SPEED_TIER_KEYS[tier]);
 }
+
+const BASIC_ATTACK_ATTRIBUTE_KEYS = {
+  physical: 'basicAttackAttribute.physical',
+  magic: 'basicAttackAttribute.magic',
+  heal: 'basicAttackAttribute.heal',
+} as const satisfies Record<'physical' | 'magic' | 'heal', UiMessageKey>;
+
+export function getBasicAttackAttributeLabel(
+  attribute: keyof typeof BASIC_ATTACK_ATTRIBUTE_KEYS,
+  locale: AppLocale = getLocale(),
+): string {
+  return messageForLocale(locale, BASIC_ATTACK_ATTRIBUTE_KEYS[attribute]);
+}

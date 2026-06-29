@@ -6,7 +6,10 @@ import type {
   StatusEffect,
 } from '../battle/types.ts';
 import { PARTY_SLOT_COUNT } from '../battle/types.ts';
+import type { AppLocale } from '../i18n/locale.ts';
+import { getLocale } from '../i18n/locale.ts';
 import { getUnlockedSkillSlotCount } from '../progression/skillBuild.ts';
+import { readClassDisplayLabel } from './classDisplayName.ts';
 
 export interface PartyHudMeta {
   displayName: string;
@@ -48,14 +51,16 @@ export interface PartyHudEntry {
 export function buildPartyHudMetaBySlot(
   party: PartySlotState[],
   classRegistry: Record<string, ClassPreset>,
+  locale: AppLocale = getLocale(),
 ): (PartyHudMeta | null)[] {
   return Array.from({ length: PARTY_SLOT_COUNT }, (_, slotIndex) => {
     const member = party[slotIndex];
     if (!member) return null;
     const preset = classRegistry[member.classId];
+    const label = readClassDisplayLabel(preset, member.classId, locale);
     return {
-      displayName: preset?.displayName ?? member.classId,
-      epithetEn: preset?.epithetEn,
+      displayName: label.displayName,
+      epithetEn: label.epithetEn,
       unlockedActiveSlotCount: getUnlockedSkillSlotCount(member.progress.level),
     };
   });

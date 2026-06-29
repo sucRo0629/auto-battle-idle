@@ -120,6 +120,37 @@ describe('resolveMemberBasicAttackDisplay', () => {
     });
   });
 
+  it('formats English range band and attribute labels', () => {
+    const skillId = 'test_warrior_basic_attack';
+    const registry: SkillRegistry = {
+      actives: {
+        [skillId]: {
+          id: skillId,
+          name: skillId,
+          trigger: { kind: 'time', value: 2 },
+          effect: [
+            {
+              type: 'damage',
+              damageType: 'physical',
+              amount: { kind: 'atkBased', atkScale: 1 },
+            },
+          ],
+        } satisfies ActiveSkillDef,
+      },
+      passives: {},
+    };
+    const preset = mockPreset({
+      id: 'test_warrior',
+      basicAttackSkillId: skillId,
+      traits: { rangePx: 8, damageType: 'physical' },
+    });
+
+    expect(resolveMemberBasicAttackDisplay(preset, registry, 'en')).toEqual({
+      rangeLabel: '8 (Melee band)',
+      attributeLabel: 'Physical',
+    });
+  });
+
   it('returns null when basic attack skill is missing', () => {
     const preset = mockPreset({
       id: 'test_missing',
