@@ -878,13 +878,13 @@ describe('formatActiveDescription', () => {
 
     const card2 = formatSkillCardLines(a2!, { locale: 'en' });
     expect(card2.metaLine).toBe(
-      'Recast: After 8 hits taken / Duration: 5s / 硬直・移動停止5s',
+      'Recast: After 8 hits taken / Duration: 5s / Lockout + Root 5s',
     );
-    expect(card2.effectLines).toEqual(['DEF+20%', 'ブロック率+50%']);
+    expect(card2.effectLines).toEqual(['DEF+20%', 'Block rate+50%']);
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
     expect(passive1.metaLine).toBe('Always');
-    expect(passive1.effectLines).toEqual(['ブロック率+20%']);
+    expect(passive1.effectLines).toEqual(['Block rate+20%']);
 
     const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
     expect(passive2.metaLine).toBe('Always');
@@ -980,18 +980,18 @@ describe('formatActiveDescription', () => {
     expect(card1.metaLine).toBe('Recast: After 8 basic attacks / Duration: 5s');
     expect(card1.effectLines).toEqual([
       'Deals 115% ATK as physical damage',
-      '対象に出血が付与されているなら、このダメージは+130%される',
-      'その後攻撃した対象に5秒間毎秒攻撃力の30%のphysicalダメージを与える出血を付与する',
+      'If the target has Bleed, this damage is increased by +130%',
+      'Then applies Bleed to the attacked target, dealing 30% ATK as physical damage every second for 5s',
     ]);
 
     const card2 = formatSkillCardLines(a2!, { locale: 'en' });
     expect(card2.metaLine).toBe(
-      'Recast: After 14 basic attacks / Duration: 1.5s / 硬直2s',
+      'Recast: After 14 basic attacks / Duration: 1.5s / Lockout 2s',
     );
     expect(card2.effectLines).toEqual([
-      '1.5秒間回避+100%',
-      '対象の背後に移動した後、Deals 110% ATK as physical damage',
-      '対象のHPが30%以下なら、このダメージは+200%される',
+      '1.5s Evasion +100%',
+      'After moving behind the target, Deals 110% ATK as physical damage',
+      'If target HP ≤30%, this damage is increased by +200%',
     ]);
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
@@ -1002,7 +1002,7 @@ describe('formatActiveDescription', () => {
 
     const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
     expect(passive2.metaLine).toBe('Always');
-    expect(passive2.effectLines).toEqual(['回避+20%']);
+    expect(passive2.effectLines).toEqual(['Evasion +20%']);
   });
 
   it('formatSkillCardLines applies common en templates for at_ranger Lv0', async () => {
@@ -1025,7 +1025,7 @@ describe('formatActiveDescription', () => {
 
     const card2 = formatSkillCardLines(a2!, { locale: 'en' });
     expect(card2.metaLine).toBe('Recast: 10s / Duration: 5s');
-    expect(card2.effectLines).toEqual(['通常攻撃が2回連続攻撃になる']);
+    expect(card2.effectLines).toEqual(['Basic attacks hit 2 times in a row']);
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
     expect(passive1.metaLine).toBe('Always');
@@ -1067,19 +1067,19 @@ describe('formatActiveDescription', () => {
     const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
     expect(passive2.metaLine).toBe('Always');
     expect(passive2.effectLines).toEqual([
-      '敵に攻撃スキルが1回命中するごとに「種火」を1スタックする',
+      'Stacks Seed Flame on the enemy for each hit from an attack skill',
       {
         kind: 'list',
         items: [
           {
-            text: '種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える',
-            details: ['最大スタック数：5'],
+            text: 'Seed Flame: For each stack, deals 5% ATK as magic damage every second for 10s',
+            details: ['Max stacks: 5'],
           },
           {
-            text: '熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える',
+            text: 'Blazing Flame: For each stack, deals 35% ATK as magic damage every second indefinitely',
             details: [
-              'さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる',
-              '最大スタック数：1',
+              'Additionally, +10% magic damage taken per stack',
+              'Max stacks: 1',
             ],
           },
         ],
@@ -1110,13 +1110,13 @@ describe('formatActiveDescription', () => {
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
     expect(passive1.metaLine).toBe('Always');
     expect(passive1.effectLines).toEqual([
-      'HPが50%以下の味方を回復時、HP回復効果+25%',
+      'When healing an ally at ≤50% HP, heal potency +25%',
     ]);
 
     const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
     expect(passive2.metaLine).toBe('Always');
     expect(passive2.effectLines).toEqual([
-      '味方を回復時、最大HPを超えた回復量の80%をバリアとして対象に付与する',
+      'When healing an ally, converts 80% of overheal into barrier on the target',
     ]);
   });
 
@@ -1148,14 +1148,14 @@ describe('formatActiveDescription', () => {
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
     expect(passive1.metaLine).toBe('Always');
     expect(passive1.effectLines).toEqual([
-      'HPが50%以下の味方にバリア付与時、バリア量+20%',
+      'When granting a barrier to an ally at ≤50% HP, barrier amount +20%',
     ]);
 
     const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
     expect(passive2.metaLine).toBe('Always');
     expect(passive2.effectLines).toEqual([
-      '味方に付与したバリアが完全に消失した時、対象を攻撃力の65%で回復（味方ごとにWave1回まで）',
-      'この効果は「障壁」の消失では誘発しない',
+      'When a barrier you granted fully depletes, heals the target for 65% of ATK (once per ally per wave)',
+      'Does not trigger on Ward depletion',
     ]);
   });
 

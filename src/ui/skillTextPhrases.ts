@@ -190,7 +190,159 @@ export function phraseDefenseIgnoreRegPercent(pct: string): string {
 }
 
 export function phraseEvasionBuff(pct: string): string {
-  return L() === "en" ? `Evasion +${pct}` : `回避 +${pct}`;
+  return L() === "en" ? `Evasion +${pct}` : `回避+${pct}`;
+}
+
+export function phraseBlockRateBuff(pct: string): string {
+  return `${phraseBlockRate()}+${pct}`;
+}
+
+export function phraseTimedEvasionBuff(durationSec: number, pct: string): string {
+  if (L() === "en") {
+    return `${durationSec}s ${phraseEvasionBuff(pct)}`;
+  }
+  return `${durationSec}秒間${phraseEvasionBuff(pct)}`;
+}
+
+export function phraseDamageIncreaseIfCondition(
+  condition: string,
+  bonusPct: string,
+): string {
+  if (L() === "en") {
+    return `${condition}, this damage is increased by +${bonusPct}`;
+  }
+  return `${condition}、このダメージは+${bonusPct}される`;
+}
+
+export function phraseIfTargetHasDebuff(debuffName: string): string {
+  return L() === "en"
+    ? `If the target has ${debuffName}`
+    : `対象に${debuffName}が付与されているなら`;
+}
+
+export function phraseIfTargetHp(
+  pct: number,
+  compare: "gte" | "lte",
+): string {
+  if (L() === "en") {
+    const op = compare === "gte" ? "≥" : "≤";
+    return `If target HP ${op}${pct}%`;
+  }
+  return compare === "gte"
+    ? `対象のHPが${pct}%以上なら`
+    : `対象のHPが${pct}%以下なら`;
+}
+
+export function phraseApplyDotAfterAttack(
+  durationSec: number,
+  pct: string,
+  damageType: DamageType | undefined,
+  dotName: string,
+): string {
+  if (L() === "en") {
+    const typePart = damageType ? ` ${damageTypeWord(damageType)}` : "";
+    return `Then applies ${dotName} to the attacked target, dealing ${pct} ${skillStat("atk")} as${typePart} damage every second for ${durationSec}s`;
+  }
+  const dmgLabel = damageType
+    ? `${damageTypeWord(damageType)}ダメージ`
+    : "ダメージ";
+  return `その後攻撃した対象に${durationSec}秒間毎秒攻撃力の${pct}の${dmgLabel}を与える${dotName}を付与する`;
+}
+
+export function phraseMoveBehindTargetThen(sentence: string): string {
+  return L() === "en"
+    ? `After moving behind the target, ${sentence}`
+    : `対象の背後に移動した後、${sentence}`;
+}
+
+export function phraseBasicAttackMultiHit(count: number): string {
+  return L() === "en"
+    ? `Basic attacks hit ${count} times in a row`
+    : `通常攻撃が${count}回連続攻撃になる`;
+}
+
+export function phraseHealPotencyBonusOnLowHpAlly(
+  hpPct: number,
+  compare: "gte" | "lte",
+  bonusPct: string,
+): string {
+  if (L() === "en") {
+    const op = compare === "gte" ? "≥" : "≤";
+    return `When healing an ally at ${op}${hpPct}% HP, heal potency +${bonusPct}`;
+  }
+  const suffix = compare === "gte" ? "以上" : "以下";
+  return `HPが${hpPct}%${suffix}の味方を回復時、HP回復効果+${bonusPct}`;
+}
+
+export function phraseBarrierAmountBonusOnLowHpAlly(
+  hpPct: number,
+  compare: "gte" | "lte",
+  bonusPct: string,
+): string {
+  if (L() === "en") {
+    const op = compare === "gte" ? "≥" : "≤";
+    return `When granting a barrier to an ally at ${op}${hpPct}% HP, barrier amount +${bonusPct}`;
+  }
+  const suffix = compare === "gte" ? "以上" : "以下";
+  return `HPが${hpPct}%${suffix}の味方にバリア付与時、バリア量+${bonusPct}`;
+}
+
+export function phraseOverhealToBarrier(scalePct: string): string {
+  return L() === "en"
+    ? `When healing an ally, converts ${scalePct} of overheal into barrier on the target`
+    : `味方を回復時、最大HPを超えた回復量の${scalePct}をバリアとして対象に付与する`;
+}
+
+export function phraseBarrierDepletionHeal(healSentence: string): string {
+  return L() === "en"
+    ? `When a barrier you granted fully depletes, heals the target for ${healSentence} (once per ally per wave)`
+    : `味方に付与したバリアが完全に消失した時、対象を${healSentence}（味方ごとにWave1回まで）`;
+}
+
+export function phraseBarrierDepletionWardExclusion(): string {
+  return L() === "en"
+    ? `Does not trigger on ${skillTerm("wardBarrier")} depletion`
+    : `この効果は「${skillTerm("wardBarrier")}」の消失では誘発しない`;
+}
+
+export function phraseSeedFlameStackOnHit(): string {
+  return L() === "en"
+    ? `Stacks ${skillTerm("seedFlame")} on the enemy for each hit from an attack skill`
+    : `敵に攻撃スキルが1回命中するごとに「${skillTerm("seedFlame")}」を1スタックする`;
+}
+
+export function phraseSeedFlameDotPerStack(
+  durationSec: number,
+  pct: string,
+): string {
+  if (L() === "en") {
+    return `${skillTerm("seedFlame")}: For each stack, deals ${pct} ${skillStat("atk")} as magic damage every second for ${durationSec}s`;
+  }
+  return `${skillTerm("seedFlame")}：1スタックごとに${durationSec}秒間毎秒攻撃力の${pct}の魔法ダメージを与える`;
+}
+
+export function phraseBlazingFlameDotPerStack(pct: string): string {
+  if (L() === "en") {
+    return `${skillTerm("blazingFlame")}: For each stack, deals ${pct} ${skillStat("atk")} as magic damage every second indefinitely`;
+  }
+  return `${skillTerm("blazingFlame")}：1スタックごとに無期限で毎秒攻撃力の${pct}の魔法ダメージを与える`;
+}
+
+export function phraseBlazingFlameMagicTakenPerStack(pct: string): string {
+  return L() === "en"
+    ? `Additionally, +${pct} magic damage taken per stack`
+    : `さらに1スタックごとに魔法攻撃の被ダメージを${pct}増加させる`;
+}
+
+export function phraseMaxStacks(count: number): string {
+  return L() === "en" ? `Max stacks: ${count}` : `最大スタック数：${count}`;
+}
+
+export function phraseAtkBasedHealAmount(pct: string): string {
+  if (L() === "en") {
+    return `${pct} of ${skillStat("atk")}`;
+  }
+  return `攻撃力の${pct}で回復`;
 }
 
 export function phraseBlockChance(pct: string): string {

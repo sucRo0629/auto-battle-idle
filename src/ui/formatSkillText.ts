@@ -80,9 +80,19 @@ import {
   phraseAtkBasedBarrier,
   phraseAtkBasedDamage,
   phraseAtkBasedHeal,
+  phraseAtkBasedHealAmount,
+  phraseBarrierAmountBonusOnLowHpAlly,
+  phraseBarrierDepletionHeal,
+  phraseBarrierDepletionWardExclusion,
+  phraseBasicAttackMultiHit,
+  phraseBlazingFlameDotPerStack,
+  phraseBlazingFlameMagicTakenPerStack,
   phraseBlockChance,
   phraseBlockRate,
+  phraseBlockRateBuff,
+  phraseApplyDotAfterAttack,
   phraseChargesAvailable,
+  phraseDamageIncreaseIfCondition,
   phraseDamageReductionRate,
   phraseDefenseIgnorePercent,
   phraseDefenseIgnoreRegPercent,
@@ -90,11 +100,20 @@ import {
   phraseFireConditionSelfHp,
   phraseFireConditionTargetHp,
   phraseFlatHeal,
+  phraseHealPotencyBonusOnLowHpAlly,
+  phraseHealSuffix,
+  phraseIfTargetHasDebuff,
+  phraseIfTargetHp,
   phraseMagicBlockEnable,
+  phraseMaxStacks,
+  phraseMoveBehindTargetThen,
   phraseMultiHitDamage,
   phraseMultiLockPrefix,
+  phraseOverhealToBarrier,
   phraseScopeAllAllies,
   phraseScopeSelfOrigin,
+  phraseSeedFlameDotPerStack,
+  phraseSeedFlameStackOnHit,
   phraseSelfDamageReduction,
   phraseSurroundingBlockRateBuff,
   phraseSurroundingDamageReduction,
@@ -102,6 +121,7 @@ import {
   phraseTargetHighestStatEnemy,
   phraseTargetLowestHpRatioEnemy,
   phraseTargetRangedEnemy,
+  phraseTimedEvasionBuff,
   skillStat,
   skillTargetStat,
   skillTerm,
@@ -311,8 +331,11 @@ function formatPassiveSpecialEffectHeal(def: PassiveSkillDef): string {
   for (const condition of spec.conditions ?? []) {
     if (condition.kind !== "targetHp") continue;
     const pct = Math.round(condition.maxHpRatio * 100);
-    const suffix = condition.compare === "gte" ? "以上" : "以下";
-    return `HPが${pct}%${suffix}の味方を回復時、HP回復効果+${bonusPct}`;
+    return phraseHealPotencyBonusOnLowHpAlly(
+      pct,
+      condition.compare === "gte" ? "gte" : "lte",
+      bonusPct,
+    );
   }
   return formatSpecialEffectSpec(def.specialEffectApplyTo, spec) || "特効回復";
 }
@@ -324,8 +347,11 @@ function formatPassiveSpecialEffectBarrier(def: PassiveSkillDef): string {
   for (const condition of spec.conditions ?? []) {
     if (condition.kind !== "targetHp") continue;
     const pct = Math.round(condition.maxHpRatio * 100);
-    const suffix = condition.compare === "gte" ? "以上" : "以下";
-    return `HPが${pct}%${suffix}の味方にバリア付与時、バリア量+${bonusPct}`;
+    return phraseBarrierAmountBonusOnLowHpAlly(
+      pct,
+      condition.compare === "gte" ? "gte" : "lte",
+      bonusPct,
+    );
   }
   return formatSpecialEffectSpec("barrier", spec) || "特効バリア";
 }
@@ -333,16 +359,16 @@ function formatPassiveSpecialEffectBarrier(def: PassiveSkillDef): string {
 function formatBarrierDepletionHealHealSentence(def: PassiveSkillDef): string {
   if (def.healAmount?.kind === "atkBased") {
     const pct = formatPercent(def.healAmount.atkScale ?? 1);
-    return `攻撃力の${pct}で回復`;
+    return phraseAtkBasedHealAmount(pct);
   }
-  return `${formatResourceAmount(def.healAmount)}回復`;
+  return `${formatResourceAmount(def.healAmount)}${phraseHealSuffix()}`;
 }
 
 function formatBarrierDepletionHealEffectLines(def: PassiveSkillDef): string[] {
   const heal = formatBarrierDepletionHealHealSentence(def);
   return [
-    `味方に付与したバリアが完全に消失した時、対象を${heal}（味方ごとにWave1回まで）`,
-    "この効果は「障壁」の消失では誘発しない",
+    phraseBarrierDepletionHeal(heal),
+    phraseBarrierDepletionWardExclusion(),
   ];
 }
 
@@ -398,19 +424,22 @@ function formatSeedFlameOnActiveHitEffectLines(
   );
 
   return [
-    "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする",
+    phraseSeedFlameStackOnHit(),
     {
       kind: "list",
       items: [
         {
-          text: `種火：1スタックごとに${config.seedFlameDurationSec}秒間毎秒攻撃力の${seedFlameDotPct}の魔法ダメージを与える`,
-          details: [`最大スタック数：${config.seedFlameMaxStacks}`],
+          text: phraseSeedFlameDotPerStack(
+            config.seedFlameDurationSec,
+            seedFlameDotPct,
+          ),
+          details: [phraseMaxStacks(config.seedFlameMaxStacks)],
         },
         {
-          text: `熾火：1スタックごとに無期限で毎秒攻撃力の${blazingFlameDotPct}の魔法ダメージを与える`,
+          text: phraseBlazingFlameDotPerStack(blazingFlameDotPct),
           details: [
-            `さらに1スタックごとに魔法攻撃の被ダメージを${blazingFlameMagicTakenPct}増加させる`,
-            `最大スタック数：${config.blazingFlameMaxStacksDefault}`,
+            phraseBlazingFlameMagicTakenPerStack(blazingFlameMagicTakenPct),
+            phraseMaxStacks(config.blazingFlameMaxStacksDefault),
           ],
         },
       ],
@@ -428,7 +457,7 @@ function formatExcessHealToBarrierPassive(def: PassiveSkillDef): string {
   const scalePct = formatPercent(def.barrierScale ?? 1);
   const sources = def.excessHealSources ?? ["outgoing"];
   if (sources.length === 1 && sources[0] === "outgoing") {
-    return `味方を回復時、最大HPを超えた回復量の${scalePct}をバリアとして対象に付与する`;
+    return phraseOverhealToBarrier(scalePct);
   }
   const sourceLabels = sources.map((s) => (s === "outgoing" ? "与" : "被"));
   return `余剰回復バリア ${scalePct}（${sourceLabels.join("・")}）`;
@@ -757,16 +786,20 @@ function formatActiveSkillLockMetaPart(def: ActiveSkillDef): string | undefined 
   const useSec = def.useDurationSec ?? 0;
   if (useSec <= 0 && !hasConsume) return undefined;
 
-  const durationLabel = hasConsume
-    ? formatBlockResonanceStanceDurationLabel(def, {
-        useDurationFallback: true,
-      })
-    : formatSecondsLabel(useSec);
+  if (hasConsume) {
+    const durationLabel = formatBlockResonanceStanceDurationLabel(def, {
+      useDurationFallback: true,
+    });
+    if (def.useDurationPauseApproach) {
+      return `${skillText().skillLock}・${skillText().moveLock}${durationLabel}`;
+    }
+    return `${skillText().skillLock}${durationLabel}`;
+  }
 
   if (def.useDurationPauseApproach) {
-    return `硬直・移動停止${durationLabel}`;
+    return skillText().skillLockAndMoveLock(useSec);
   }
-  return `硬直${durationLabel}`;
+  return skillText().skillLockOnly(useSec);
 }
 
 function formatBlockResonanceConsumeSkillEffect(def: ActiveSkillDef): string {
@@ -1016,6 +1049,21 @@ function formatBuffStatModifiersFromDef(def: {
   );
 }
 
+function formatDebuffFilterTagProseLabel(tag: DebuffFilterTag): string {
+  switch (tag) {
+    case "bleed":
+      return skillTerm("bleed");
+    case "poison":
+      return skillTerm("poison");
+    case "seedFlame":
+      return skillTerm("seedFlame");
+    case "dot":
+      return skillTerm("dot");
+    default:
+      return DEBUFF_FILTER_TAG_LABELS[tag];
+  }
+}
+
 function formatDamageIncreaseConditionProse(
   conditions: DamageIncreaseCondition[]
 ): string | null {
@@ -1024,16 +1072,20 @@ function formatDamageIncreaseConditionProse(
   switch (condition.kind) {
     case "debuff": {
       if (condition.tags.length !== 1) return null;
-      const tag =
-        DEBUFF_FILTER_TAG_LABELS[condition.tags[0]] ?? condition.tags[0];
-      const prefix = condition.selfAppliedOnly ? "自身付与の" : "";
-      return `対象に${prefix}${tag}が付与されているなら`;
+      const tag = formatDebuffFilterTagProseLabel(condition.tags[0]);
+      if (condition.selfAppliedOnly) {
+        return getSkillTextLocale() === "en"
+          ? `If the target has self-applied ${tag}`
+          : `対象に自身付与の${tag}が付与されているなら`;
+      }
+      return phraseIfTargetHasDebuff(tag);
     }
     case "targetHp": {
       const pct = Math.round(condition.maxHpRatio * 100);
-      return condition.compare === "gte"
-        ? `対象のHPが${pct}%以上なら`
-        : `対象のHPが${pct}%以下なら`;
+      return phraseIfTargetHp(
+        pct,
+        condition.compare === "gte" ? "gte" : "lte",
+      );
     }
     default:
       return null;
@@ -1046,22 +1098,31 @@ function formatCompactDamageIncreaseBonusLine(
   if (!spec) return null;
   const conditionText = formatDamageIncreaseConditionProse(spec.conditions);
   if (!conditionText) return null;
-  return `${conditionText}、このダメージは+${formatPercent(spec.scale)}される`;
+  return phraseDamageIncreaseIfCondition(
+    conditionText,
+    formatPercent(spec.scale),
+  );
 }
 
 function formatCompactBleedDotApplyLine(effect: SkillEffectDef): string | null {
   if (effect.type !== "debuff" || effect.debuffSubKind !== "dot") return null;
   const duration = effect.durationSec ?? effect.debuffDurationSec ?? 0;
   const flavor =
-    effect.buffDisplayName ??
-    (effect.dotFlavor ? DOT_FLAVOR_LABELS[effect.dotFlavor] : null);
+    effect.dotFlavor && getSkillTextLocale() === "en"
+      ? formatDebuffFilterTagProseLabel(effect.dotFlavor)
+      : effect.buffDisplayName ??
+        (effect.dotFlavor
+          ? formatDebuffFilterTagProseLabel(effect.dotFlavor)
+          : null);
   if (!flavor) return null;
-  const dmgLabel = effect.damageType
-    ? `${DAMAGE_TYPE_LABELS[effect.damageType]}ダメージ`
-    : "ダメージ";
   if (effect.amount?.kind !== "atkBased") return null;
   const pct = formatPercent(effect.amount.atkScale ?? 1);
-  return `その後攻撃した対象に${duration}秒間毎秒攻撃力の${pct}の${dmgLabel}を与える${flavor}を付与する`;
+  return phraseApplyDotAfterAttack(
+    duration,
+    pct,
+    effect.damageType,
+    flavor,
+  );
 }
 
 function formatCompactTimedEvasionBuffLine(
@@ -1069,7 +1130,7 @@ function formatCompactTimedEvasionBuffLine(
 ): string | null {
   if (effect.type !== "buff" || effect.buffSubKind !== "evasion") return null;
   const duration = effect.buffDurationSec ?? 0;
-  return `${duration}秒間回避+${formatPercent(effect.chance ?? 0)}`;
+  return phraseTimedEvasionBuff(duration, formatPercent(effect.chance ?? 0));
 }
 
 function formatCompactMoveThenDamageLine(
@@ -1082,7 +1143,7 @@ function formatCompactMoveThenDamageLine(
     damage.amount,
     damage.damageType
   );
-  return `対象の背後に移動した後、${dmgSentence}`;
+  return phraseMoveBehindTargetThen(dmgSentence);
 }
 
 function tryFormatDamageThenBleedDotLines(
@@ -1446,7 +1507,7 @@ function formatActiveEffectDetail(
         );
       } else if (effect.buffSubKind === "block") {
         if (compact) {
-          extras.push(`ブロック率+${formatPercent(effect.chance ?? 0)}`);
+          extras.push(phraseBlockRateBuff(formatPercent(effect.chance ?? 0)));
         } else {
           extras.push(
             `${BUFF_SUB_KIND_LABELS.block} ${formatPercent(
@@ -1507,7 +1568,7 @@ function formatActiveEffectDetail(
           effect.hitCountMultiplier > 1
         ) {
           parts.push(
-            `通常攻撃が${effect.hitCountMultiplier}回連続攻撃になる`
+            phraseBasicAttackMultiHit(effect.hitCountMultiplier)
           );
         }
         if (effect.primaryEffectOverride !== undefined) {
@@ -2224,7 +2285,7 @@ function formatPassiveEffect(
       const range = def.buffRange !== undefined ? `${def.buffRange}px` : null;
       const metaParts = [shape, range];
       if (def.buffSubKind === "block") {
-        return `ブロック率+${formatPercent(def.chance ?? 0)}`;
+        return phraseBlockRateBuff(formatPercent(def.chance ?? 0));
       }
       if (def.buffSubKind === "evasion") {
         const target = def.buffTargetRule ?? { kind: "self" };
@@ -2232,7 +2293,7 @@ function formatPassiveEffect(
           target.kind === "self" &&
           resolvePassivePeriodicTrigger(def) === undefined
         ) {
-          return `回避+${formatPercent(def.chance ?? 0)}`;
+          return phraseEvasionBuff(formatPercent(def.chance ?? 0));
         }
       }
       if (def.buffSubKind === "evasion") {
