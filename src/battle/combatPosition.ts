@@ -137,7 +137,7 @@ export type PlayerRearAssaultBattleContext = {
  * プレイヤーが rear assault / 戦線外アクセス中か（正本）。
  *
  * - `number`: 敵 anchor 基準（`battleX > anchor`）。`enemyForwardFacingPool` 等。
- * - `PlayerRearAssaultBattleContext`: 接敵中の統一判定。Threat / FrontlineOwner /
+ * - `PlayerRearAssaultBattleContext`: 接敵中の統一判定。defender 優先ターゲット / FrontlineOwner /
  *   formation / overlap / march follow / approach clamp はこちらを使う。
  *
  * Battle context の判定:
