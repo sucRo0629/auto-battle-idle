@@ -33,6 +33,7 @@ import {
   syncDamageBars,
   syncStatusBadges,
   buildDetailDamageBarElements,
+  syncDamageBarTagAriaLabels,
   type DamageBarRefs,
   type StatusBadgeRefs,
 } from './PartyMemberStatsDisplay.ts';
@@ -48,7 +49,7 @@ interface SlotElements {
   root: HTMLElement;
   slotIndex: number;
   label: HTMLElement;
-  detailTop: HTMLElement;
+  unitPlate: HTMLElement;
   classCol: HTMLElement;
   iconWrap: HTMLElement;
   icon: HTMLImageElement;
@@ -81,6 +82,11 @@ export interface PartyHudPanelOptions {
   onScrollReposition?: () => void;
 }
 
+/** リキャスト 2×2 の最大行数。2 スロット時は 1 行にし、差分は HP バー高さが吸収する。 */
+export function resolvePartyHudRecastSlotRows(unlockedActiveSlotCount: number): number {
+  return unlockedActiveSlotCount <= 2 ? 1 : 2;
+}
+
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
   className: string,
@@ -95,8 +101,10 @@ function el<K extends keyof HTMLElementTagNameMap>(
 function createDetailStatusBadges(): StatusBadgeRefs {
   const statusEl = el('div', 'party-stats-status party-hud-detail-status');
   const debuffGroup = createStatusBadgeGroupWithHits(t('hud.debuff'));
+  debuffGroup.group.classList.add('party-stats-status-group--debuff');
   const buffGroup = createStatusBadgeGroupWithHits(t('hud.buff'));
-  statusEl.append(debuffGroup.group, buffGroup.group);
+  buffGroup.group.classList.add('party-stats-status-group--buff');
+  statusEl.append(buffGroup.group, debuffGroup.group);
   return {
     root: statusEl,
     debuffCanvas: debuffGroup.canvas,
@@ -201,15 +209,7 @@ export class PartyHudPanel {
       if (slot.damage.takenValue) {
         slot.damage.takenValue.textContent = '—';
       }
-      const damageTags = slot.damage.root.querySelectorAll(
-        '.party-stats-damage-bar-tag',
-      );
-      if (damageTags[0] instanceof HTMLElement) {
-        damageTags[0].textContent = t('hud.damageDealtShort');
-      }
-      if (damageTags[1] instanceof HTMLElement) {
-        damageTags[1].textContent = t('hud.damageTakenShort');
-      }
+      syncDamageBarTagAriaLabels(slot.damage.root);
       slot.statusBadgeHitSignature = null;
       slot.detailStatus.debuffHitSignature = undefined;
       slot.detailStatus.buffHitSignature = undefined;
@@ -217,10 +217,10 @@ export class PartyHudPanel {
         '.party-stats-status-label',
       );
       if (statusLabels[0] instanceof HTMLElement) {
-        statusLabels[0].textContent = t('hud.debuff');
+        statusLabels[0].textContent = t('hud.buff');
       }
       if (statusLabels[1] instanceof HTMLElement) {
-        statusLabels[1].textContent = t('hud.buff');
+        statusLabels[1].textContent = t('hud.debuff');
       }
     }
     this.invalidateCompactStatusRenderSignatures();
@@ -322,13 +322,13 @@ export class PartyHudPanel {
     statusBadgeHitLayer.className = 'party-hud-status-badge-hits';
     statusBadgeWrap.appendChild(statusBadgeHitLayer);
 
-    const detailTop = document.createElement('div');
-    detailTop.className = 'party-hud-detail-top';
-    root.appendChild(detailTop);
+    const unitPlate = document.createElement('div');
+    unitPlate.className = 'party-hud-unit';
+    root.appendChild(unitPlate);
 
     const classCol = document.createElement('div');
     classCol.className = 'party-hud-detail-class-col';
-    detailTop.appendChild(classCol);
+    unitPlate.appendChild(classCol);
 
     const iconWrap = document.createElement('div');
     iconWrap.className =
@@ -349,7 +349,7 @@ export class PartyHudPanel {
 
     const bars = document.createElement('div');
     bars.className = 'party-hud-bars';
-    detailTop.appendChild(bars);
+    unitPlate.appendChild(bars);
 
     this.bindMemberStatsHover(iconWrap, slotIndex);
     this.bindMemberStatsHover(bars, slotIndex);
@@ -396,16 +396,16 @@ export class PartyHudPanel {
     }
 
     const damage = createDetailDamageBar();
-    bars.appendChild(damage.root);
+    unitPlate.appendChild(damage.root);
 
     const detailStatus = createDetailStatusBadges();
-    root.appendChild(detailStatus.root);
+    unitPlate.appendChild(detailStatus.root);
 
     return {
       root,
       slotIndex,
       label,
-      detailTop,
+      unitPlate,
       classCol,
       iconWrap,
       icon,
@@ -591,6 +591,11 @@ export class PartyHudPanel {
 
   private updateRecastGrid(slot: SlotElements, entry: PartyHudEntry): void {
     const slotCount = entry.unlockedActiveSlotCount;
+    const recastSlotRows = resolvePartyHudRecastSlotRows(slotCount);
+    slot.recastGrid.parentElement?.style.setProperty(
+      '--hud-recast-slot-rows',
+      String(recastSlotRows),
+    );
     const bySlot = new Map(
       entry.activeCooldowns.map((cd) => [cd.slotIndex, cd] as const),
     );

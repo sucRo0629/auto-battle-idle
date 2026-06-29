@@ -91,5 +91,24 @@
     "passiveSkillIds": [
       "test_to_ranged_passive_1"
     ]
+  },
+  {
+    "id": "enemy_at_hunter",
+    "displayName": "デバフ確認",
+    "maxHp": 500,
+    "atk": 10,
+    "def": 50,
+    "reg": 0,
+    "exp": 0,
+    "basicAttackSkillId": "at_hunter_basic_attack",
+    "traits": {
+      "rangePx": 300,
+      "damageType": "physical",
+      "stationary": false
+    },
+    "attackSpeedTier": "normal",
+    "activeSkillIds": [
+      "at_hunter_active_1"
+    ]
   }
 ]

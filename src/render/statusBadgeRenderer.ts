@@ -20,14 +20,8 @@ export {
 
 export const STATUS_BADGE_GAP = 1;
 
-/** パッシブ由来バッジの五角形背景不透明度 */
-export const STATUS_BADGE_PASSIVE_PENTAGON_ALPHA = 0.5;
-
-/** パッシブ由来バッジの効果アイコン不透明度（背景より判別しやすく） */
-export const STATUS_BADGE_PASSIVE_ICON_ALPHA = 0.88;
-
-/** @deprecated STATUS_BADGE_PASSIVE_PENTAGON_ALPHA を参照 */
-export const STATUS_BADGE_PASSIVE_ALPHA = STATUS_BADGE_PASSIVE_PENTAGON_ALPHA;
+/** パッシブ由来バッジ（`isPassive`）の描画不透明度 */
+export const STATUS_BADGE_PASSIVE_ALPHA = 0.55;
 
 /** バッジスロット（オーバーレイ・累積数の基準枠） */
 export const STATUS_BADGE_SLOT_PX = 20;
@@ -407,13 +401,30 @@ function packBadgesIntoRows(
   return rows;
 }
 
+export function resolveStatusBadgeWrapRowGap(
+  scale: number,
+  rowGap?: number,
+): number {
+  return rowGap ?? Math.max(2, scale * 2);
+}
+
+export function resolveStatusBadgeWrapRowHeight(
+  scale: number,
+  iconSize: number,
+  rowHeight?: number,
+): number {
+  return rowHeight ?? statusBadgeDrawableRowHeight(scale, iconSize);
+}
+
 export function measureStatusBadgeWrap(
   badges: StatusBadgeDrawItem[],
   maxWidth: number,
   scale: number,
   iconSize: number,
   outlineWidth: number,
-  rowOverlap = 0
+  rowOverlap = 0,
+  rowGap?: number,
+  rowHeight?: number,
 ): StatusBadgeWrapLayout {
   const rows = packBadgesIntoRows(
     badges,
@@ -423,8 +434,12 @@ export function measureStatusBadgeWrap(
     outlineWidth,
     rowOverlap
   );
-  const rowHeight = statusBadgeDrawableRowHeight(scale, iconSize);
-  const rowGap = Math.max(2, scale * 2);
+  const resolvedRowHeight = resolveStatusBadgeWrapRowHeight(
+    scale,
+    iconSize,
+    rowHeight,
+  );
+  const resolvedRowGap = resolveStatusBadgeWrapRowGap(scale, rowGap);
   const rowWidths = rows.map((row) =>
     statusBadgeRowWidth(row, scale, iconSize, outlineWidth, rowOverlap)
   );
@@ -433,7 +448,8 @@ export function measureStatusBadgeWrap(
     totalWidth: rowWidths.length > 0 ? Math.max(...rowWidths) : 0,
     totalHeight:
       rows.length > 0
-        ? rowHeight * rows.length + rowGap * (rows.length - 1)
+        ? resolvedRowHeight * rows.length +
+          resolvedRowGap * (rows.length - 1)
         : 0,
   };
 }
@@ -445,7 +461,10 @@ export function drawStatusBadgeWrap(
   badges: StatusBadgeDrawItem[],
   maxWidth: number,
   scale: number,
-  theme: StatusBadgeTheme
+  theme: StatusBadgeTheme,
+  rowGap?: number,
+  rowHeight?: number,
+  drawTopOffset = 0,
 ): StatusBadgeWrapLayout {
   prepareStatusBadgeCanvasContext(ctx);
   const layout = measureStatusBadgeWrap(
@@ -454,11 +473,17 @@ export function drawStatusBadgeWrap(
     scale,
     theme.iconSize,
     theme.iconOutlineWidth,
-    theme.rowOverlap
+    theme.rowOverlap,
+    rowGap,
+    rowHeight,
   );
-  const rowHeight = statusBadgeDrawableRowHeight(scale, theme.iconSize);
-  const rowGap = Math.max(2, scale * 2);
-  let rowTop = top;
+  const resolvedRowHeight = resolveStatusBadgeWrapRowHeight(
+    scale,
+    theme.iconSize,
+    rowHeight,
+  );
+  const resolvedRowGap = resolveStatusBadgeWrapRowGap(scale, rowGap);
+  let rowTop = top + drawTopOffset;
 
   for (const row of layout.rows) {
     const rowW = statusBadgeRowWidth(
@@ -469,7 +494,7 @@ export function drawStatusBadgeWrap(
       theme.rowOverlap
     );
     drawStatusBadgeRow(ctx, left + rowW / 2, rowTop, row, scale, theme);
-    rowTop += rowHeight + rowGap;
+    rowTop += resolvedRowHeight + resolvedRowGap;
   }
 
   return layout;
@@ -776,12 +801,13 @@ function paintStatusBadgeBuffer(
 
   bufferCtx.clearRect(0, 0, badgeSize, rowHeight);
 
+  if (badge.isPassive) {
+    bufferCtx.save();
+    bufferCtx.globalAlpha = STATUS_BADGE_PASSIVE_ALPHA;
+  }
+
   const pentagon = getStatusBadgePentagonImage(badge.kind, badge.isPassive);
   if (pentagon) {
-    bufferCtx.save();
-    bufferCtx.globalAlpha = badge.isPassive
-      ? STATUS_BADGE_PASSIVE_PENTAGON_ALPHA
-      : 1;
     drawImagePixelated(
       bufferCtx,
       pentagon,
@@ -790,17 +816,11 @@ function paintStatusBadgeBuffer(
       pentagonPx,
       pentagonPx,
     );
-    bufferCtx.restore();
   }
 
   const iconTint = statusBadgeUsesWhiteSilhouette(badge.category)
     ? "#ffffff"
     : undefined;
-
-  if (badge.isPassive) {
-    bufferCtx.save();
-    bufferCtx.globalAlpha = STATUS_BADGE_PASSIVE_ICON_ALPHA;
-  }
 
   drawStatusIcon(
     bufferCtx,
@@ -813,10 +833,6 @@ function paintStatusBadgeBuffer(
     outlineColor,
     iconOutlineWidth,
   );
-
-  if (badge.isPassive) {
-    bufferCtx.restore();
-  }
 
   applyRemainingOverlayPixels(
     bufferCtx,
@@ -835,6 +851,10 @@ function paintStatusBadgeBuffer(
       badge.stackCount,
       theme,
     );
+  }
+
+  if (badge.isPassive) {
+    bufferCtx.restore();
   }
 }
 

@@ -27,6 +27,7 @@
 | マップ選択・ステージ詳細・リザルト履歴 DOM（Phase 6d 予定）                    | [spec/stage-selection-ui.md](spec/stage-selection-ui.md)                        |
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, `gameTermGlossary.ts` 等、編成メニュー DOM | [spec/party-formation-ui.md](spec/party-formation-ui.md)（用語表: [classes-and-skills.md §ゲーム用語表](spec/classes-and-skills.md#ゲーム用語表表示分類)） |
 | `data/enemies.json`, 敵編成・ボス設計の方針                                       | [enemy-design-concept.md](enemy-design-concept.md)                              |
+| `EnemyEditorStep`, `editorApi`（敵テンプレ編集）                                  | [plans/enemy-editor-refactor.md](plans/enemy-editor-refactor.md)                |
 | ローグライクモード（ラン・問題生成・報酬）                                        | [spec/roguelike-mode.md](spec/roguelike-mode.md)                                |
 | `formatSkillText.ts`, 4b 説明文 / 4e i18n（**M1 8 クラス**）                      | [spec/i18n-en.md](spec/i18n-en.md)（進捗: [phase-4-roadmap.md §4e](plans/phase-4-roadmap.md#4e--英語-i18n-en-のみ)） |
 | Release M1 / M2 スコープ・配信方針                                                | [plans/phase-roadmap.md §Release マイルストーン](plans/phase-roadmap.md#release-マイルストーン) |

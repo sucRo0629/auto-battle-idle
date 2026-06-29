@@ -7,6 +7,7 @@ Hensei Only の開発ロードマップ。
 - **[Release マイルストーン](phase-roadmap.md#release-マイルストーン)** — M1 体験版 / M2 初版 Chapter 1（Phase 4 詳細: [§Release M1 サマリ](phase-4-roadmap.md#release-m1-サマリphase-4-との関係)）
 - **[itch.io Devlog 方針](itch-io-devlog.md)** — ストアページ・Devlog の開始タイミングと M1 チェックリスト
 - **[マスター作業順（完了）](master-work-order.md)** — Phase 1〜3 + battle-field cleanup アーカイブ
+- **[敵エディタ改修計画](enemy-editor-refactor.md)** — クラススキル参照モデルへの tooling 移行（未着手）
 
 ## 概要（番号順）
 

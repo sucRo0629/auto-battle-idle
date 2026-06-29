@@ -2,7 +2,7 @@
 
 この文書は、敵ユニットをどう設計・編成するかの上位方針を整理する設計思想メモである。
 
-個別の敵テンプレート、ステージ JSON、EXP 付与は [spec/progression.md](spec/progression.md) と `data/enemies.json` / `data/stages.json` を正本とする。クラス定義・スキルは [spec/classes-and-skills.md](spec/classes-and-skills.md)、Kill / Flow / Survival 構造は [combat-architecture.md](combat-architecture.md)、ローグライクの問題生成は [spec/roguelike-mode.md](spec/roguelike-mode.md) を参照する。
+個別の敵テンプレート、ステージ JSON、EXP 付与は [spec/progression.md](spec/progression.md) と `data/enemies.json` / `data/stages.json` を正本とする。クラス定義・スキルは [spec/classes-and-skills.md](spec/classes-and-skills.md)、Kill / Flow / Survival 構造は [combat-architecture.md](combat-architecture.md)、ローグライクの問題生成は [spec/roguelike-mode.md](spec/roguelike-mode.md) を参照する。敵データ編集ツールの改修計画は [plans/enemy-editor-refactor.md](plans/enemy-editor-refactor.md)。
 
 ここでは数値や JSON スキーマではなく、**敵が何のために存在するか** と **どう構成するか** を扱う。
 
@@ -325,3 +325,15 @@ Sorcerer 敵がいる場合
 敵は「倒す対象」ではなく、
 
 **解法を提示するシミュレーション相手**として設計する。
+
+---
+
+## 15. データ編集ツール
+
+敵テンプレの正本は `data/enemies.json`。スキル定義は `data/skills/`（クラスと共有レジストリ）。
+
+現行の敵エディタ（`EnemyEditorStep`）はクラスエディタと同様 **敵 1 体 = 専用スキル JSON 1 ファイル** を前提としており、[§3](#3-敵クラス構成) の「クラススキルを流用」と整合しない。クラススキル ID を敵に付けて保存するとスキル定義の上書き事故が起きうる。
+
+**改修計画（未着手）:** [plans/enemy-editor-refactor.md](plans/enemy-editor-refactor.md)
+
+**改修完了までの運用:** `enemies.json` で既存スキル ID を参照する。`data/skills/actives/enemy_*.json` にクラススキル ID を複製しない。詳細は改修計画の「移行期の運用」を参照。

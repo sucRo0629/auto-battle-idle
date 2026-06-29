@@ -13,15 +13,46 @@ import {
   measureStatusBadgeWrap,
   type CompactStatusBadgeLayout,
   PARTY_HUD_STATUS_BADGE_ICON_SIZE,
-  statusBadgeDrawableRowHeight,
+  STATUS_BADGE_ROW_PAD_Y,
   statusBadgeOutlinePad,
   statusBadgeStride,
   statusBadgeWidth,
+  isCompactStatusBadgeIconSize,
+  statusBadgeLayoutScale,
 } from '../render/statusBadgeRenderer.ts';
 import type { GameTermPanel } from './GameTermPanel.ts';
 import type { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
 
 export const DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH = 280;
+/** 詳細 HUD バッジ折り返し行間（コンパクト HUD 既定 2px より詰める） */
+export const DETAIL_STATUS_BADGE_ROW_GAP = 1;
+
+/**
+ * 詳細 HUD の canvas 行高。
+ * 内部描画は 24px（下パッド 2px 含む）だが、canvas 高さは 22px に切り、
+ * 下の透明余白だけ落とす。上はオフセットせず buff/debuff とも表示を維持する。
+ */
+export function detailStatusBadgeLayoutRowHeight(
+  scale: number,
+  slotPx: number,
+): number {
+  if (!isCompactStatusBadgeIconSize(slotPx)) {
+    return slotPx * scale + STATUS_BADGE_ROW_PAD_Y * scale;
+  }
+  const layoutScale = statusBadgeLayoutScale(slotPx);
+  return Math.round(
+    slotPx * scale + STATUS_BADGE_ROW_PAD_Y * layoutScale * scale,
+  );
+}
+
+/** 詳細 HUD canvas 横余白（縁取り切れ防止は 1px 残す） */
+export function detailStatusBadgeCanvasPad(
+  outlineWidth: number,
+  scale = 1,
+): number {
+  const pad = statusBadgeOutlinePad(outlineWidth, scale);
+  return pad > 0 ? Math.max(1, pad - 1) : 0;
+}
 
 export interface PartyHudStatusBadgeHitContext {
   floatingTooltip: PartyHudFloatingTooltip | null;
@@ -236,6 +267,7 @@ export function syncDetailStatusBadgeHits(
 
   const scale = 1;
   const iconSize = PARTY_HUD_STATUS_BADGE_ICON_SIZE;
+  const rowHeight = detailStatusBadgeLayoutRowHeight(scale, iconSize);
   const layout = measureStatusBadgeWrap(
     badges,
     maxWidth,
@@ -243,8 +275,13 @@ export function syncDetailStatusBadgeHits(
     iconSize,
     theme.statusIconOutlineWidth,
     theme.statusBadgeOverlap,
+    DETAIL_STATUS_BADGE_ROW_GAP,
+    rowHeight,
   );
-  const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
+  const outlinePad = detailStatusBadgeCanvasPad(
+    theme.statusIconOutlineWidth,
+    scale,
+  );
   const stride = statusBadgeStride(
     scale,
     iconSize,
@@ -252,10 +289,9 @@ export function syncDetailStatusBadgeHits(
     theme.statusBadgeOverlap,
   );
   const badgeW = statusBadgeWidth(scale, iconSize);
-  const rowHeight = statusBadgeDrawableRowHeight(scale, iconSize);
-  const rowGap = Math.max(2, scale * 2);
+  const rowGap = DETAIL_STATUS_BADGE_ROW_GAP;
 
-  let rowTop = outlinePad;
+  let rowTop = 0;
   for (const row of layout.rows) {
     let left = outlinePad;
     for (const badge of row) {

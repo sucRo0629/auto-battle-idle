@@ -111,7 +111,7 @@
   --hud-header-block-gap: 2;
   --hud-exp-hp-gap: 2;
   --hud-recast-bar-h: 3;
-  --hud-recast-gap: 1;
+  --hud-recast-gap: 2;
   --hud-font-family: 'Segoe UI', system-ui, sans-serif;
   --hud-icon-border: #4a5568;
   --hud-name-color: #ffffff;
@@ -129,10 +129,18 @@
   --hud-hp-bar-track-highlight: rgba(255, 255, 255, 0.05);
   --hud-skill-recast-track: #14141c;
   --hud-skill-recast-border: rgba(90, 100, 120, 0.55);
-  --hud-skill-recast-charging-lo: #3d4a5c;
-  --hud-skill-recast-charging-hi: #556878;
-  --hud-skill-recast-charging: var(--hud-skill-recast-charging-hi);
   --hud-skill-recast-ready: #cdd8e8;
+  --hud-skill-recast-charging-base: color-mix(
+    in srgb,
+    var(--hud-skill-recast-ready) 52%,
+    var(--hud-skill-recast-track)
+  );
+  --hud-skill-recast-charging-edge: color-mix(
+    in srgb,
+    var(--hud-skill-recast-ready) 68%,
+    var(--hud-skill-recast-track)
+  );
+  --hud-skill-recast-charging: var(--hud-skill-recast-charging-edge);
   --hud-skill-recast-charge: #f0b030;
   --hud-skill-recast-charge-hi: #ffe078;
   --hud-recast-charge-seg-min: 4;
@@ -459,7 +467,7 @@
   opacity: var(--dead-alpha);
 }
 
-.party-hud-detail-top {
+.party-hud-unit {
   display: flex;
   flex-direction: row;
   align-items: flex-start;
@@ -580,7 +588,7 @@
 }
 
 .party-hud-body-row,
-.party-hud-detail-top {
+.party-hud-unit {
   min-width: 0;
 }
 
@@ -698,7 +706,7 @@
 }
 
 .party-hud-recast-cell--locked {
-  visibility: hidden;
+  display: none;
 }
 
 .party-hud-recast-cell--fire-hold .party-hud-recast-fill[data-state='ready'],
@@ -802,10 +810,10 @@
   width: 0%;
   background: linear-gradient(
     90deg,
-    var(--hud-skill-recast-charging-lo) 0%,
-    var(--hud-skill-recast-charging-hi) 100%
+    var(--hud-skill-recast-charging-base) 0%,
+    var(--hud-skill-recast-charging-base) 72%,
+    var(--hud-skill-recast-charging-edge) 100%
   );
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
   z-index: 1;
 }
 
@@ -824,14 +832,21 @@
         in srgb,
         var(--hud-skill-recast-paused-tint)
           calc(var(--hud-skill-recast-paused-mix) * 1%),
-        var(--hud-skill-recast-charging-lo)
+        var(--hud-skill-recast-charging-base)
       )
       0%,
     color-mix(
         in srgb,
         var(--hud-skill-recast-paused-tint)
           calc(var(--hud-skill-recast-paused-mix) * 1%),
-        var(--hud-skill-recast-charging-hi)
+        var(--hud-skill-recast-charging-base)
+      )
+      72%,
+    color-mix(
+        in srgb,
+        var(--hud-skill-recast-paused-tint)
+          calc(var(--hud-skill-recast-paused-mix) * 1%),
+        var(--hud-skill-recast-charging-edge)
       )
       100%
   );

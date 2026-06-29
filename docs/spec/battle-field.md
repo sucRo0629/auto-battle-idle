@@ -475,10 +475,10 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | キャンバス HUD | 戦闘キャンバス **内**オーバーレイ。**左:** ステージ表示名。**中央:** `Wave {n}/{total}`。**右上:** 確認モード切替バッジ — ON 時 `VERIFY`（琥珀）、OFF 時 `DEBUG`（控えめ）。クリックでトグル。独立した画面上部ヘッダー帯は **使わない** |
 | パーティ帯 | Party HUD **直上**の帯。**左:** `プレイヤー Lv {n}` のみ（`resolvePlayerDisplayLevel`）。**右:** `.battle-party-menu-button`（テキスト「編成」のみ）→ `MetaMenuOverlay`（`initialView: "party"`）。**アイコンフォントは使わない** |
 | 表示切替 | **詳細**（**起動時デフォルト**）= メンバー縦リスト（同一 `.party-hud-panel` 枠）。**コンパクト** = 横 4 列（HP・リキャスト・簡易バッジ）。下のタブで排他切替。別パネルの積み増しはしない |
-| メンバー行（詳細） | 編成スロット順。**上段（固定 2 カラム）:** クラス列 72px（24px アイコン + `displayName`）／バー列 338px（上段 = HP 210px + 与ダメ・被ダメ 120px、下段 = リキャスト 2×2・210px 幅・左端揃え）。与ダメ・被ダメのラベル・数値・ゲージサイズは従来どおり。**下段（全幅）:** 状態バッジ帯（debuff / buff ラベル付き・全件）。**Exp 数値・メンバー別 Lv・epithetEn は表示しない** |
-| 状態バッジ帯 | debuff / buff でラベル行を分ける（例: Debuff / Buff）。上段 2 カラムとは別の **全幅** エリア。ラベル・アイコン列の左端はユニットプレート内で揃える。**空の debuff 行もラベルは維持**（低コントラスト）。**簡易 3+N 省略なし**（[combat.md](combat.md) HUD バッジ §簡易/詳細） |
+| メンバー行（詳細） | 編成スロット順。`.party-hud-panel-slots` が **3 列トラック**（class **固定**（24px アイコン + 4px + **8ch** 名前幅。英語 `Swordsman` 基準、`--hud-header-font-size` 基準。§7.1.3）／bars **min 168px・`max(168px, 210px − class 拡張分)`・`1fr`**／damage 120px）の親グリッド、**`width: 100%`**。各 `.party-hud-slot` → `.party-hud-unit` は **`subgrid`** で同一トラックを共有し **bar 列開始 X は全ユニットで揃える**。class 列を広げた分は bars 最小幅から差し引く（合計幅不変）。**上段:** `"class bars damage"` × 2 行 — bars = HP + リキャスト 2×2。**下段 `status`:** 同一 3 列 `subgrid` — DEBUFF/BUFF ラベルは class 列、アイコン列は bars+damage 列。アイコン列は canvas 透過余白 + ゲージ外枠分を `margin-left` で左補正。与ダメ/被ダメは damage 列内で tag / 数値 / ゲージの固定幅グリッド。**Exp・メンバー別 Lv は表示しない**（クラス表示名は 1 行・`readClassDisplayLabel`） |
+| 状態バッジ帯 | debuff / buff でラベル行を分ける（例: Debuff / Buff）。`status` 行は unit と同じ 3 列 `subgrid` — ラベルは class 列、アイコンは bars+damage 列。**空行もラベルは維持**（低コントラスト）。**アイコン 0 件のときアイコン列は非表示・高さ 0**。詳細 HUD のバッジ canvas 行高 **22px**（内部 24px 描画の下透明 2px のみクロップ。buff/debuff 共通）。buff アイコン列下・debuff アイコン列上の行間はそれぞれ `--hud-detail-buff-icons-bottom-pull` / `--hud-detail-debuff-icons-top-pull`（各 3px）で CSS 負 margin。Debuff ラベル上 margin は buff アイコンあり時 0。行間 1px。**簡易 3+N 省略なし**（[combat.md](combat.md) HUD バッジ §簡易/詳細） |
 | 更新 | 詳細モード中は `PartyHudPanel.updateDetailMetrics` で与ダメ / 被ダメ / 全バッジを refresh。HP / リキャストはコンパクトと同経路 |
-| HP / リキャスト枠 | コンパクト・詳細とも **リキャスト領域の高さは最大 4 スロット（2×2）時で固定**（`--hud-recast-grid-h`）。解放スロット数が少なくてもグリッド行は潰さず、差分は **HP バー高さ**が吸収する。未解放セルは `party-hud-recast-cell--locked`（`visibility: hidden`）でレイアウト占有のみ |
+| HP / リキャスト枠 | コンパクト・詳細とも **`.party-hud-bars` 全体の高さ**（`--hud-body-bar-h`）は最大 4 スロット（2×2）時で固定。解放 2 スロット時は `--hud-recast-slot-rows: 1` に下げ、リキャスト領域を 1 行分だけ低くし、差分は **HP バー高さ**（`flex: 1`）が吸収する。3〜4 スロット時は 2 行。未解放セルは `party-hud-recast-cell--locked`（`display: none`） |
 | データ源 | `getStageDamageDisplayRows`（ステージ内累計与ダメ / 被ダメ）、`CombatantSnapshot`（`statusEffects`）。**Exp / `partyProgress` は統計 UI スコープ外** |
 | 確認モード | 現行は verify 経路でダメージ行が供給される。本番 Stage Records は **Phase 12** |
 
@@ -506,6 +506,18 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | `+N` 省略枠 | **ホバーのみ** — 省略分の表示名を `、` 連結（従来どおり）。個別の用語パネルは開かない |
 | 演出 | クリック可能バッジは `cursor: pointer` + ホバー / 展開時のアウトライン（`battle-view.css`） |
 
+#### 7.1.3 詳細 HUD — class 列幅
+
+詳細 HUD の class 列は、英語クラス名 **`Swordsman` が収まる幅**を基準に **固定**する（`--hud-detail-class-name-ch: 8` @ `--hud-header-font-size`）。
+
+| 項目 | 方針 |
+| ---- | ---- |
+| 目的 | 日本語名・英語名のどちらでもレイアウトが崩れない。全ユニットで **HP バー（bar 列）の開始 X を揃える**。詳細 HUD 全体をグリッドとして安定させる |
+| 幅 | **固定**。クラス名の長さで bar 列開始位置を変えない |
+| 日本語名 | 短い表示名では class 列内に余白が出ても **許容**（日本語名だけに幅を詰めない） |
+| 長い名前 | **折り返さない**。`white-space: nowrap` + `text-overflow: ellipsis`。正式名は §7.1.1 ステータスパネル見出しで確認（ラベルへの `title` は付けない） |
+| やらない | 名前の 2 行表示。クラスごとに可変幅にして bar 列をずらす |
+
 ### 7.2 デザイン方針（Phase 4d 刷新）
 
 [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) と同一。統計 UI 固有の目標:
@@ -515,7 +527,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | 中央モーダル + 強 backdrop + 大角丸 + 強 box-shadow | **HUD 直下の同一枠** — コンパクト / 詳細を排他切替。枠は控えめ |
 | ダッシュボード風 title bar（角丸 `×` ボタン等） | 閉じる操作は **ドロワータブ** と `Escape` のみ。装飾より可読性 |
 | メンバー行の角丸グラデーション棒のみの区切り | **コンパクトと同じ控えめなメンバー枠**（`party-hud-slot`・inset 枠線 + 角丸 3px）で縦に並べる。枠間は `gap: 5px` |
-| カードグリッド風の横並びダッシュボード | 詳細は **縦リスト**（上段 = 固定 2 カラム 72 / 338px、下段 = 全幅状態帯） |
+| カードグリッド風の横並びダッシュボード | 詳細は **縦リスト**（各 `.party-hud-unit` = `grid-template-areas` による 3 列プレート + 全幅 status 行） |
 
 **スコープ:** 表示項目・集計ロジックは変更しない（見た目のみ）。バー色の意味（与ダメ・被ダメ・down 時の減衰）は維持してよい。
 

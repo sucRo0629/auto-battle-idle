@@ -169,7 +169,7 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     headerBlockGap: readNumber(style, "--hud-header-block-gap", 2),
     expHpGap: readNumber(style, "--hud-exp-hp-gap", 2),
     recastBarH: readNumber(style, "--hud-recast-bar-h", 3),
-    recastGap: readNumber(style, "--hud-recast-gap", 1),
+    recastGap: readNumber(style, "--hud-recast-gap", 2),
     fontFamily: readString(
       style,
       "--hud-font-family",
@@ -202,8 +202,8 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     skillRecastTrack: readString(style, "--hud-skill-recast-track", "#2a2a35"),
     skillRecastCharging: readString(
       style,
-      "--hud-skill-recast-charging-hi",
-      "#556878"
+      "--hud-skill-recast-charging",
+      "#7a8698"
     ),
     skillRecastReady: readString(style, "--hud-skill-recast-ready", "#cdd8e8"),
     iconFrame: readString(style, "--hud-icon-frame", "#1a1a1a"),

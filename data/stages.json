@@ -42,6 +42,10 @@
           {
             "templateId": "test_to_ranged",
             "spawnX": 100
+          },
+          {
+            "templateId": "enemy_at_hunter",
+            "spawnX": 160
           }
         ]
       }
@@ -64,6 +68,10 @@
           {
             "templateId": "test_ranged",
             "spawnX": 200
+          },
+          {
+            "templateId": "enemy_at_hunter",
+            "spawnX": 160
           }
         ]
       },

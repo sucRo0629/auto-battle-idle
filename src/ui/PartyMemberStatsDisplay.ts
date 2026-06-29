@@ -7,7 +7,7 @@ import {
   sortBadgesForDetailView,
 } from '../battle/statusEffectDisplay.ts';
 import { getClassIconUrl } from '../render/IconRegistry.ts';
-import { onStatusIconsReady } from '../render/StatusIconRegistry.ts';
+import { getStatusIconUrl, onStatusIconsReady } from '../render/StatusIconRegistry.ts';
 import {
   readBattleHudTheme,
   resolveClassIconPlaceholderColor,
@@ -20,11 +20,13 @@ import {
   PARTY_HUD_STATUS_BADGE_ICON_SIZE,
   prepareStatusBadgeCanvasContext,
   quantizeBadgeOverlayStep,
-  statusBadgeOutlinePad,
 } from '../render/statusBadgeRenderer.ts';
 import {
+  DETAIL_STATUS_BADGE_ROW_GAP,
   DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH,
   buildDetailStatusBadgeHitSignature,
+  detailStatusBadgeCanvasPad,
+  detailStatusBadgeLayoutRowHeight,
   syncDetailStatusBadgeHits,
   type PartyHudStatusBadgeHitContext,
 } from './partyHudStatusBadgeHits.ts';
@@ -100,6 +102,55 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+function createDamageBarTag(kind: 'dealt' | 'taken'): HTMLElement {
+  const tag = el('span', `party-stats-damage-bar-tag party-stats-damage-bar-tag--${kind}`);
+  tag.setAttribute('role', 'img');
+  tag.setAttribute(
+    'aria-label',
+    t(kind === 'dealt' ? 'hud.damageDealtShort' : 'hud.damageTakenShort'),
+  );
+
+  if (kind === 'dealt') {
+    const icon = el('span', 'party-stats-damage-bar-tag-icon party-stats-damage-bar-tag-icon--dealt');
+    const atkUrl = getStatusIconUrl('atk');
+    if (atkUrl) {
+      icon.style.maskImage = `url("${atkUrl}")`;
+      icon.style.webkitMaskImage = `url("${atkUrl}")`;
+    }
+    tag.appendChild(icon);
+    return tag;
+  }
+
+  const dotUrl = getStatusIconUrl('dot');
+  const img = document.createElement('img');
+  img.className = 'party-stats-damage-bar-tag-icon party-stats-damage-bar-tag-icon--taken';
+  if (dotUrl) {
+    img.src = dotUrl;
+  }
+  img.width = 12;
+  img.height = 12;
+  img.alt = '';
+  img.decoding = 'async';
+  img.setAttribute('aria-hidden', 'true');
+  tag.appendChild(img);
+  return tag;
+}
+
+export function syncDamageBarTagAriaLabels(root: HTMLElement): void {
+  const dealtTag = root.querySelector(
+    '.party-stats-damage-bar--dealt .party-stats-damage-bar-tag',
+  );
+  const takenTag = root.querySelector(
+    '.party-stats-damage-bar--taken .party-stats-damage-bar-tag',
+  );
+  if (dealtTag instanceof HTMLElement) {
+    dealtTag.setAttribute('aria-label', t('hud.damageDealtShort'));
+  }
+  if (takenTag instanceof HTMLElement) {
+    takenTag.setAttribute('aria-label', t('hud.damageTakenShort'));
+  }
+}
+
 export function buildDetailDamageBarElements(): {
   bars: HTMLElement;
   dealtFill: HTMLElement;
@@ -114,7 +165,7 @@ export function buildDetailDamageBarElements(): {
     'party-stats-damage-bar party-stats-damage-bar--dealt',
   );
   const dealtLeading = el('div', 'party-stats-damage-bar-leading');
-  const dealtTag = el('span', 'party-stats-damage-bar-tag', t('hud.damageDealtShort'));
+  const dealtTag = createDamageBarTag('dealt');
   const dealtValue = el('span', 'party-stats-damage-bar-value', '—');
   const dealtFill = el(
     'div',
@@ -125,7 +176,7 @@ export function buildDetailDamageBarElements(): {
     'party-stats-damage-bar party-stats-damage-bar--taken',
   );
   const takenLeading = el('div', 'party-stats-damage-bar-leading');
-  const takenTag = el('span', 'party-stats-damage-bar-tag', t('hud.damageTakenShort'));
+  const takenTag = createDamageBarTag('taken');
   const takenValue = el('span', 'party-stats-damage-bar-value', '—');
   const takenFill = el(
     'div',
@@ -353,6 +404,10 @@ function drawStatusBadgeCanvas(
     >[0]) => resolveStatusIconFallbackColor(category, theme),
   };
 
+  const layoutRowHeight = detailStatusBadgeLayoutRowHeight(
+    scale,
+    PARTY_HUD_STATUS_BADGE_ICON_SIZE,
+  );
   const layout = measureStatusBadgeWrap(
     badges,
     DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH,
@@ -360,12 +415,17 @@ function drawStatusBadgeCanvas(
     PARTY_HUD_STATUS_BADGE_ICON_SIZE,
     theme.statusIconOutlineWidth,
     theme.statusBadgeOverlap,
+    DETAIL_STATUS_BADGE_ROW_GAP,
+    layoutRowHeight,
   );
-  const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
+  const outlinePad = detailStatusBadgeCanvasPad(
+    theme.statusIconOutlineWidth,
+    scale,
+  );
   const canvasW =
     Math.min(DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH, layout.totalWidth) +
     outlinePad * 2;
-  const canvasH = layout.totalHeight + outlinePad * 2;
+  const canvasH = layout.totalHeight;
 
   canvas.width = canvasW;
   canvas.height = canvasH;
@@ -377,11 +437,13 @@ function drawStatusBadgeCanvas(
   drawStatusBadgeWrap(
     ctx,
     outlinePad,
-    outlinePad,
+    0,
     badges,
     DETAIL_STATUS_BADGE_WRAP_MAX_WIDTH,
     scale,
     badgeTheme,
+    DETAIL_STATUS_BADGE_ROW_GAP,
+    layoutRowHeight,
   );
 }
 

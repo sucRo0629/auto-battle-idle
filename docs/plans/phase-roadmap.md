@@ -561,6 +561,7 @@ Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦�
 - [enemy-design-concept.md](../enemy-design-concept.md) に沿い、**6b が要求する編成パターン** に必要な敵のみ整備
 - 既存 **`EnemyEditorStep`** + validate。本編向けボス・高 Max HP テンプレは **Phase 8a** へ送る
 - test / 検証用ダミー敵と M1 用テンプレの整理
+- **ツール改修:** 現行敵エディタはクラスと同様「敵専用スキル JSON」を前提とする。[enemy-editor-refactor.md](enemy-editor-refactor.md) でクラススキル参照モデルへ移行予定。**改修完了までは** `enemies.json` 手編集 + クラススキル ID 参照を正とする（エディタ保存でクラススキルを複製しない）
 
 ### 6b — 体験版ステージ
 
