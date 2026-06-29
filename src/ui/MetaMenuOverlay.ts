@@ -17,12 +17,13 @@ import type { LevelCurvesConfig } from "../progression/levelGrowth.ts";
 import { resolvePlayerDisplayLevel } from "../progression/resolvePlayerDisplayLevel.ts";
 import { SkillMenuPanel } from "./SkillMenuPanel.ts";
 
-export type MetaMenuPresentation = "modal" | "window";
+export type MetaMenuPresentation = "modal" | "window" | "formation-screen";
 export type MetaMenuInitialView = "hub" | "party";
 
 export interface MetaMenuOverlayOptions {
   presentation?: MetaMenuPresentation;
   initialView?: MetaMenuInitialView;
+  isVerifyMode?: () => boolean;
 }
 
 export interface MetaMenuOverlayCallbacks {
@@ -45,6 +46,7 @@ export class MetaMenuOverlay {
   private backdrop: HTMLButtonElement | null = null;
   private skillPanel: SkillMenuPanel | null = null;
   private readonly directPartyEntry: boolean;
+  private readonly isVerifyMode: () => boolean;
   private readonly unsubscribeLocale: () => void;
 
   constructor(
@@ -59,12 +61,16 @@ export class MetaMenuOverlay {
     const presentation = options.presentation ?? "modal";
     const initialView = options.initialView ?? "hub";
     this.directPartyEntry = initialView === "party";
+    this.isVerifyMode = options.isVerifyMode ?? (() => false);
 
     this.root = document.createElement("div");
-    this.root.className =
-      presentation === "window"
-        ? "meta-menu-overlay meta-menu-overlay--window"
-        : "meta-menu-overlay";
+    const overlayClasses = ["meta-menu-overlay"];
+    if (presentation === "window") {
+      overlayClasses.push("meta-menu-overlay--window");
+    } else if (presentation === "formation-screen") {
+      overlayClasses.push("meta-menu-overlay--formation-screen");
+    }
+    this.root.className = overlayClasses.join(" ");
 
     if (presentation === "modal") {
       const backdrop = document.createElement("button");
@@ -77,6 +83,9 @@ export class MetaMenuOverlay {
 
     this.windowEl = document.createElement("div");
     this.windowEl.className = "meta-menu-window";
+    if (presentation === "formation-screen") {
+      this.windowEl.classList.add("meta-menu-window--party");
+    }
     this.windowEl.addEventListener("click", (event) => event.stopPropagation());
 
     const titleBar = document.createElement("div");
@@ -159,11 +168,11 @@ export class MetaMenuOverlay {
   }
 
   private updatePartyChrome(): void {
-    this.brandEl.textContent = t("party.boardBrand");
-    this.brandEl.hidden = false;
+    this.brandEl.hidden = true;
     this.titleEl.textContent = t("party.boardTitle");
-    this.subtitleEl.textContent = t("party.boardSubtitle");
-    this.subtitleEl.hidden = false;
+    const subtitle = t("party.boardSubtitle");
+    this.subtitleEl.textContent = subtitle;
+    this.subtitleEl.hidden = subtitle.length === 0;
     this.statusEl.hidden = false;
     this.updatePartyHeader();
   }
@@ -289,6 +298,7 @@ export class MetaMenuOverlay {
           this.updatePartyHeader();
         },
       },
+      { isVerifyMode: this.isVerifyMode },
     );
     this.updatePartyChrome();
     this.updatePlayerLevelDisplay();

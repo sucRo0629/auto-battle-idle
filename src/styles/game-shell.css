@@ -1,0 +1,46 @@
+#app.game-app {
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+  width: 100%;
+  min-height: 100vh;
+  padding: 0;
+}
+
+.game-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.game-shell__battle {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.game-shell__battle[hidden] {
+  display: none !important;
+}
+
+.game-shell__formation {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: var(--app-bg);
+}
+
+.game-shell__formation[hidden] {
+  display: none !important;
+}

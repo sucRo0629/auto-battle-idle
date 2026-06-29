@@ -1,7 +1,7 @@
 import { MetaMenuOverlay } from '../ui/MetaMenuOverlay.ts';
 import type { MenuHost, MenuHostContext, MetaMenuInitialView } from './menuHost.ts';
 
-export class DomModalMenuHost implements MenuHost {
+export class DomFormationScreenHost implements MenuHost {
   private overlay: MetaMenuOverlay | null = null;
   private opened = false;
 
@@ -10,9 +10,9 @@ export class DomModalMenuHost implements MenuHost {
   open(initialView: MetaMenuInitialView = 'hub'): void {
     if (this.opened) return;
     this.opened = true;
-    this.context.onOpenChange(true);
+    this.context.onScreenChange('formation');
     this.overlay = new MetaMenuOverlay(
-      document.body,
+      this.context.formationHost,
       this.context.gameData,
       this.context.levelCurves,
       this.context.getParty,
@@ -26,7 +26,11 @@ export class DomModalMenuHost implements MenuHost {
         },
         onClose: () => this.close(),
       },
-      { presentation: 'modal', initialView },
+      {
+        presentation: 'formation-screen',
+        initialView,
+        isVerifyMode: this.context.isVerifyMode,
+      },
     );
   }
 
@@ -35,10 +39,13 @@ export class DomModalMenuHost implements MenuHost {
     this.overlay?.destroy();
     this.overlay = null;
     this.opened = false;
-    this.context.onOpenChange(false);
+    this.context.onScreenChange('battle');
   }
 
   isOpen(): boolean {
     return this.opened;
   }
 }
+
+/** @deprecated Use DomFormationScreenHost */
+export { DomFormationScreenHost as DomModalMenuHost };

@@ -716,6 +716,11 @@ export class BattleView {
     this.statsDrawer.setDisabled(disabled);
   }
 
+  setVisible(visible: boolean): void {
+    this.root.hidden = !visible;
+    this.root.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  }
+
   private syncHudToolbarLevel(
     party: ReturnType<BattleView["getSave"]>["party"] | undefined,
   ): void {

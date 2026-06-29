@@ -9,7 +9,7 @@
 | Battle | `dist/index.html` | 戦闘表示（常に前面・frameless） |
 | Menu | `dist/menu.html` | メニュー / スキル管理（第2ウィンドウ） |
 
-ブラウザ開発時は `DomModalMenuHost` が従来どおり DOM モーダルを表示します。
+ブラウザ開発時は `DomFormationScreenHost` が戦闘画面と切り替える **Formation Screen**（フルスクリーン HTML UI）を表示します。
 Electron 起動時は `ElectronBattleMenuHost` が第2ウィンドウを開きます。
 
 ## 起動
@@ -46,4 +46,4 @@ Menu Window (menu.html)
   └─ セット変更 → IPC menu:build-changed → GameSession.updateMemberBuild
 ```
 
-`src/platform/menuHost.ts` が実行環境に応じて `DomModalMenuHost` / `ElectronBattleMenuHost` を切り替えます。
+`src/platform/menuHost.ts` が実行環境に応じて `DomFormationScreenHost` / `ElectronBattleMenuHost` を切り替えます。

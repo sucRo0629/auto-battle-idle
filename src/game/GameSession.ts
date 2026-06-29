@@ -44,6 +44,8 @@ import {
 import { createMenuHost, type MenuHost } from '../platform/menuHost.ts';
 import { SaveManager } from '../save/SaveManager.ts';
 import { BattleView } from '../ui/BattleView.ts';
+import type { GameScreen } from './gameScreen.ts';
+import '../styles/game-shell.css';
 import levelCurvesJson from '../../data/levelCurves.json';
 
 const AUTO_SAVE_INTERVAL_MS = 60_000;
@@ -59,7 +61,9 @@ export class GameSession {
   private readonly engine: BattleEngine;
   readonly view: BattleView;
   private autoSaveTimer: ReturnType<typeof setInterval> | null = null;
-  private metaMenuOpen = false;
+  private currentScreen: GameScreen = 'battle';
+  private readonly battleHost: HTMLElement;
+  private readonly formationHost: HTMLElement;
   private readonly stageDamageStats = new StageDamageStatsTracker();
   private readonly menuHost: MenuHost;
 
@@ -73,6 +77,20 @@ export class GameSession {
     this.loopStageId = this.verifyMode ? getDebugLoopStageId() : null;
     this.loopWaveIndex = this.verifyMode ? getDebugLoopWaveIndex() : null;
     this.save = this.loadSaveForMode(this.verifyMode);
+
+    container.classList.add('game-app');
+    const shell = document.createElement('div');
+    shell.className = 'game-shell';
+    container.appendChild(shell);
+
+    this.battleHost = document.createElement('div');
+    this.battleHost.className = 'game-shell__battle';
+
+    this.formationHost = document.createElement('div');
+    this.formationHost.className = 'game-shell__formation';
+    this.formationHost.hidden = true;
+
+    shell.append(this.battleHost, this.formationHost);
 
     if (this.verifyMode && this.loopStageId) {
       const loopStage = getStageById(this.gameData.stages, this.loopStageId);
@@ -108,7 +126,7 @@ export class GameSession {
     );
 
     this.view = new BattleView(
-      container,
+      this.battleHost,
       this.engine,
       gameData,
       this.levelCurves,
@@ -133,22 +151,19 @@ export class GameSession {
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
       },
     );
-    this.view.setStatsDrawerDisabled(this.metaMenuOpen);
-    this.view.setMenuButtonDisabled(this.metaMenuOpen);
+    this.setGameScreen('battle');
 
     this.menuHost = createMenuHost({
       gameData,
       levelCurves: this.levelCurves,
+      formationHost: this.formationHost,
       getParty: () => this.save.party,
+      isVerifyMode: () => this.verifyMode,
       onBuildChanged: (partyIndex, build) => this.updateMemberBuild(partyIndex, build),
       getUnlockedClassIds: () => this.save.unlockedClassIds,
       onPartySlotChanged: (slotIndex, member) =>
         this.updatePartySlot(slotIndex, member),
-      onOpenChange: (open) => {
-        this.metaMenuOpen = open;
-        this.view.setMenuButtonDisabled(open);
-        this.view.setStatsDrawerDisabled(open);
-      },
+      onScreenChange: (screen) => this.setGameScreen(screen),
     });
 
     this.engine.onEvent((event) => {
@@ -213,8 +228,13 @@ export class GameSession {
     this.engine.startBattle();
   }
 
+  getCurrentScreen(): GameScreen {
+    return this.currentScreen;
+  }
+
+  /** @deprecated Use getCurrentScreen() === 'formation' */
   isMetaMenuOpen(): boolean {
-    return this.metaMenuOpen;
+    return this.currentScreen === 'formation';
   }
 
   openPartyMenu(): void {
@@ -223,6 +243,15 @@ export class GameSession {
 
   closeMetaMenu(): void {
     this.menuHost.close();
+  }
+
+  private setGameScreen(screen: GameScreen): void {
+    if (this.currentScreen === screen) return;
+    this.currentScreen = screen;
+    const onFormation = screen === 'formation';
+    this.battleHost.hidden = onFormation;
+    this.formationHost.hidden = !onFormation;
+    this.view.setVisible(!onFormation);
   }
 
   updateMemberBuild(partyIndex: number, build: CharacterBuild): void {
@@ -320,7 +349,7 @@ export class GameSession {
   tick(deltaSec: number, deltaMs: number): void {
     const debugReplayPaused =
       this.verifyMode && this.view.isBattleXDebugReplayPaused();
-    if (!this.metaMenuOpen && !debugReplayPaused) {
+    if (this.currentScreen === 'battle' && !debugReplayPaused) {
       this.engine.tick(deltaSec);
     }
     this.view.tick(deltaMs);

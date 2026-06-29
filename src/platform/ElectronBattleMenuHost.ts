@@ -26,14 +26,14 @@ export class ElectronBattleMenuHost implements MenuHost {
     if (!api) return;
 
     this.opened = true;
-    this.context.onOpenChange(true);
+    this.context.onScreenChange('formation');
     void api.openMenu(initialView);
   }
 
   close(): void {
     if (!this.opened) return;
     this.opened = false;
-    this.context.onOpenChange(false);
+    this.context.onScreenChange('battle');
   }
 
   isOpen(): boolean {

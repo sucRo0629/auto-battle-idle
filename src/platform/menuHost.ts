@@ -4,22 +4,25 @@ import type {
   GameData,
   PartySlotState,
 } from '../battle/types.ts';
+import type { GameScreen } from '../game/gameScreen.ts';
 import type { LevelCurvesConfig } from '../progression/levelGrowth.ts';
 import type { MetaMenuInitialView } from '../ui/MetaMenuOverlay.ts';
-import { DomModalMenuHost } from './DomModalMenuHost.ts';
+import { DomFormationScreenHost } from './DomFormationScreenHost.ts';
 import { ElectronBattleMenuHost } from './ElectronBattleMenuHost.ts';
 import { isElectronBattle } from './electronApi.ts';
 
-export type { MetaMenuInitialView };
+export type { GameScreen, MetaMenuInitialView };
 
 export interface MenuHostContext {
   gameData: GameData;
   levelCurves: LevelCurvesConfig;
+  formationHost: HTMLElement;
   getParty: () => PartySlotState[];
   getUnlockedClassIds: () => ClassId[];
+  isVerifyMode: () => boolean;
   onBuildChanged: (partyIndex: number, build: CharacterBuild) => void;
   onPartySlotChanged: (slotIndex: number, member: PartySlotState) => void;
-  onOpenChange: (open: boolean) => void;
+  onScreenChange: (screen: GameScreen) => void;
 }
 
 export interface MenuHost {
@@ -32,5 +35,5 @@ export function createMenuHost(context: MenuHostContext): MenuHost {
   if (isElectronBattle()) {
     return new ElectronBattleMenuHost(context);
   }
-  return new DomModalMenuHost(context);
+  return new DomFormationScreenHost(context);
 }

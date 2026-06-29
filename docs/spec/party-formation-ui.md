@@ -1,6 +1,6 @@
 # パーティ編成 UI
 
-実装：`src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`, `src/ui/gameTermGlossary.ts`, `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/annotateGameTerms.ts`, `src/ui/GameTermPanel.ts`, `src/styles/game-term-panel.css`.**Phase 4d PR1:** 上ロスター（`formationBlockEl`）+ 下詳細（`bodyEl`）の flex 縦積み・詳細のみ scroll・ヘッダー Lv。**PR2:** ロスターカード・注記・Picker オーバーレイ・閲覧スキルカード（`formatSkillCardLines`）。**PR3:** インライン用語パネル（§6.4）。
+実装：`src/game/gameScreen.ts`, `src/game/GameSession.ts`, `src/platform/DomFormationScreenHost.ts`, `src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/game-shell.css`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`, `src/ui/gameTermGlossary.ts`, `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/annotateGameTerms.ts`, `src/ui/GameTermPanel.ts`, `src/styles/game-term-panel.css`.**Phase 4d PR1:** 上ロスター（`formationBlockEl`）+ 下詳細（`bodyEl`）の flex 縦積み・詳細のみ scroll・ヘッダー Lv。**PR2:** ロスターカード・注記・Picker オーバーレイ・閲覧スキルカード（`formatSkillCardLines`）。**PR3:** インライン用語パネル（§6.4）。
 
 本ドキュメントは **メタメニューから開くパーティ編成画面**（`SkillMenuPanel`）の画面設計正本。戦闘フィールド上の隊形・座標は [battle-field.md](battle-field.md)、クラス・ロール・スキル習得は [classes-and-skills.md](classes-and-skills.md)、セーブ・Lv は [progression.md](progression.md) を参照。
 
@@ -8,7 +8,7 @@
 
 **現行コードとの関係:** 本書は目標仕様（**v0.4**）。Phase 4d PR1–3 で骨格・ロスター・Picker・閲覧スキルカード・用語パネル（§6.4）を実装済み。
 
-**配信形態:** **Release M1** 体験版 → **Release M2** 初版（itch.io 第一、Steam 後回し）。デスクトップ zip は **Phase 7**（Electron、常駐 UI は廃止）。編成画面は **十分な幅のウィンドウ**（`MetaMenuOverlay` の `presentation: "window"`）で見せる。レイアウトの正本は **上: ロスター / 下: 詳細** の縦積み（§4）。Release スコープは [phase-roadmap.md §Release マイルストーン](../plans/phase-roadmap.md#release-マイルストーン) を正とする。
+**配信形態:** **Release M1** 体験版 → **Release M2** 初版（itch.io 第一、Steam 後回し）。デスクトップ zip は **Phase 7**（Electron、常駐 UI は廃止）。編成画面は **独立した Formation Screen**（`GameScreen: 'formation'`、`DomFormationScreenHost` / `presentation: "formation-screen"`）として **画面全体** を使う。戦闘中は `GameScreen: 'battle'` の Canvas + HTML HUD。レイアウトの正本は **上: ロスター / 下: 詳細** の縦積み（§4）。Release スコープは [phase-roadmap.md §Release マイルストーン](../plans/phase-roadmap.md#release-マイルストーン) を正とする。
 
 ---
 
@@ -49,10 +49,11 @@
 
 | 項目       | 内容                                                                               |
 | ---------- | ---------------------------------------------------------------------------------- |
-| 開き方     | 戦闘画面 Party HUD 直上の **編成** ボタン（`.battle-party-menu-button`）→ `MetaMenuOverlay`（ウィンドウ想定） |
-| Hub        | 「パーティ」で `SkillMenuPanel` を表示。`initialView: "party"` 時は Hub をスキップ |
+| 開き方     | 戦闘画面 Party HUD 直上の **編成** ボタン → `GameScreen` を `'formation'` に切替（モーダルではなく画面遷移） |
+| 表示形態   | **フルスクリーン Formation Screen**（`meta-menu-overlay--formation-screen`）。backdrop・中央浮きパネル・背景クリック閉じ・右上 × は **用いない** |
+| Hub        | Electron 専用メニューウィンドウのみ（`presentation: "window"`）。ブラウザ戦闘起動時は `initialView: "party"` で Hub をスキップ |
 | タイトル   | 編成状況（`編成 {filled}/{total} · 枠 {slot}`）+ **`プレイヤー Lv {n}`**（§5.0） |
-| 閉じる     | 画面下部の **戻る / 閉じる** ボタン。**右上 × は用いない**。Hub へ戻るは Party 画面下部の戻る |
+| 閉じる     | 画面下部の **戻る / 閉じる** ボタンで `GameScreen: 'battle'` へ。**右上 × は用いない** |
 | 保存       | クラス差し替え時に即時セーブ（[progression.md](progression.md)）                   |
 
 ### 3.1 ウィンドウサイズ
@@ -81,7 +82,7 @@ flowchart TB
       roster["左: PARTY SETUP（2×2 枠）"]
       archive["右: CHOOSE CLASS（ロール別セル）"]
     end
-    detail["下段: TACTICAL DATA（詳細 scroll）"]
+    detail["下段: 詳細（固定ボード・スクロールなし）"]
   end
 ```
 
@@ -89,16 +90,16 @@ flowchart TB
 | ---- | ---- |
 | **ヘッダー** | ブランド + `PARTY FORMATION` + 編成状況 + `プレイヤー Lv`。**ステージ名・難度・開始ボタンは置かない** |
 | **左 · Party Setup** | 4 枠（2×2 盤面セル + `枠 {n}` ラベル）+ 注記 |
-| **右 · Choose Class** | UI ロール別クラスセル。クリックで選択中枠に即反映。「外す」でクリア |
-| **下段 · Tactical Data** | §6（クラス情報 / ステ / スキル）。縦スクロール |
+| **右 · Choose Class** | UI ロール別クラスセル。クリックで選択中枠に即反映 |
+| **下段 · 詳細** | §6（クラス要約 / ステ / スキル要約カード）。**主要情報はスクロールなし**。長文・補足は tooltip |
 
 ### 4.2 レイアウト方針
 
 | 方針 | 内容 |
 | ---- | ---- |
-| **左編成 / 右クラス / 下詳細** | 上段 2 列 + 下段 `flex: 1`。盤面は隣接枠線のプレート（浮遊カード・大角丸・shadow 頼みにしない） |
+| **左編成 / 右クラス / 下詳細** | 上段 2 列（約 52%）+ 下段詳細（約 44%）。下段は固定情報ボード |
 | **Class Archive は常時表示** | 中央オーバーレイ Picker は使わない |
-| **上段は固定** | 詳細のみスクロール |
+| **下段は固定** | クラス要約・ステ・スキル要約はスクロールなし。補足は tooltip |
 
 ### 4.3 視線誘導
 
@@ -184,21 +185,20 @@ Phase 4d 当初案にあった表示例（参考）:
 
 `selectedIndex` のメンバーを表示。空き枠選択時は「クラスを選んでください」+ Picker 誘導のみ。
 
-**情報の順序（固定）:** 詳細エリア全体を縦スクロール対象とし、次の順で並べる。
+**情報の順序（固定）:** 詳細（Tactical Data）エリアは **スクロールしない固定ボード**。上段にクラス要約 + ステ、下段にスキル要約カード一覧。
 
-1. **クラス情報**（§6.1）
-2. **ステータス**（§6.2）
-3. **Active Skills**（§6.3）
-4. **Passive Skills**（§6.3）
+1. **上段 · クラス要約 + ステータス**（§6.1–6.2）— 横並び
+2. **下段 · スキル要約**（§6.3）— Active / Passive を区別したコンパクトカードのグリッド
 
-個別スキルカードに高さ制限や「もっと見る」は設けない。長い説明は詳細エリアのスクロールで吸収する。
+長いクラス要約・スキル効果全文は **tooltip**（ホバー）で確認する。カード内には編成判断に必要な短い要約のみ常時表示する。
 
 ### 6.1 クラス情報
 
 | 要素                        | 備考                                                          |
 | --------------------------- | ------------------------------------------------------------- |
 | `displayName` + `epithetEn` | 2 段表示                                                      |
-| `summary.ja`                | クラス要約（数文。役割・特徴・成長の示唆を含む）。`ClassEditorStep` で編集。改行は `\n`（表示は `white-space: pre-line`）。locale ごとに改行位置を持つ。全 15 種必須 |
+| UI ロール                   | `defender` / `attacker` / `supporter`（アタッカーは下位ロール併記可） |
+| `summary.ja`                | **最大 2 行**で表示。全文は tooltip                           |
 | クラス変更                  | ボタン 1 つ → Picker オーバーレイ                             |
 
 **Lv は表示しない**（§5.0）。
@@ -219,24 +219,20 @@ Phase 4d 当初案にあった表示例（参考）:
 
 #### レイアウト
 
-- **Active** と **Passive** は **縦方向にセクション分割**する（見出しで区切る）。
-- 各セクション内は **縦リスト**（**2 列グリッドにしない**）。
-- Active / Passive とも **閲覧専用カード**で統一する。Passive は Active よりややコンパクトでもよいが、**情報密度・デザイン言語は統一**する。
+- **上段:** クラス要約（左）+ ステータス（右）
+- **下段:** スキル要約カードを **3 列グリッド**（罫線プレート）。Active / Passive はカード行の `meta` で区別
+- **スクロールなし** — M1 想定の習得スキル数は初期表示に収める
+- 長文効果・未習得詳細は tooltip / 用語チップへ逃がす
 
-段階解放: Lv0=2 / Lv10=+1 / Lv20=+1（プレイヤーレベル基準。`getUnlockedActiveSlotCount` と同型の passive 側）。
+#### スキル要約カード（1 スキルあたり）
 
-#### スキルカード（1 スキルあたり）
-
-ホバー tooltip に依存しない。**カード内に常時表示**する。
-
-| 行     | 内容                                                                                       |
-| ------ | ------------------------------------------------------------------------------------------ |
-| 1      | スキル名 + スキルアイコン（あれば）                                                        |
-| 2      | `Active` / `Passive` + 種別補足（再使用条件 / 発動タイミング要約）                         |
-| 3+     | **主要効果 1〜3 行**（`resolveSkillCardDisplay` で短文化）                                 |
-| 状態   | 固有バフ/デバフを **状態チップ**（短い要約 + ホバーで詳細）                                |
-| Tags   | **特殊メカニクス**（Multi-Lock 等）。ダメージ種別・ブロック・DoT 等の汎用効果は本文に残す |
-| フッタ | 習得に必要だった **プレイヤー Lv**                                                         |
+| 行 | 内容 |
+| -- | ---- |
+| 1 | スキル名 + アイコン |
+| 2 | `アクティブ` / `パッシブ` + `metaLine`（CD・発動条件など） |
+| 3 | 主要効果 **1 行**（`headlineLines[0]`、最大 2 行 clamp） |
+| 4 | 状態チップ・タグ（コンパクト、tooltip で詳細） |
+| tooltip | カードホバーで `metaLine` + 全 `headlineLines` |
 
 説明文の文面生成は [Phase 4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)（`formatSkillText`、M1 8 クラス Lv0 日本語 **完了**）。**効果単位改行**は `formatSkillCardLines`（`src/ui/formatSkillText.ts`）でエディタプレビューと編成 UI を揃える。
 
@@ -450,9 +446,9 @@ Phase 4d 当初案にあった表示例（参考）:
 
 - 左枠クリックで `partySlotIndex` を選択
 - 右のクラスセルクリックで **選択中枠に即時反映**（即セーブ）
-- 右下 **外す** で `null` メンバー
+- **外す**（スロットを `null` にする）は **確認モード（verify mode）有効時のみ** Choose Class 下段に表示。通常プレイ UI では非表示（4 人固定編成の誤読を防ぐ）
 
-**不採用:** 中央オーバーレイ Picker、決定/戻るの 2 段確認
+**不採用:** 中央オーバーレイ Picker、決定/戻るの 2 段確認、通常 UI での常時「外す」表示
 
 ### 7.2 リスト内容
 
@@ -525,12 +521,12 @@ Party Setup と Class Archive は **同一ボード上段**に並列表示する
 
 | 指針 | 内容 |
 | ---- | ---- |
-| 印象 | Web アプリのモーダル / 設定一覧ではなく **編成盤・兵科名簿・戦術パネル** |
-| 情報の載せ方 | クラス選択は **左コンパクト名簿 + 右詳細**。説明の長文は右ペインへ |
-| 区切り | **2px 枠** + 内側ハイライト（`game-ui-chrome.css`）。押し込み感のある下部ボタン |
+| 印象 | **ゲーム内メニュー画面**（`game-ui-chrome.css` のパネル・スロット言語）。Web のカード UI・角丸・浮遊 shadow は使わない |
+| 情報の載せ方 | 左ロスター + 右クラス一覧 + 下詳細。区切りは **2px 枠とプレートの段差** |
+| 区切り | `border-radius: 0`。見出し帯 + 沈み込みパネル。選択は **インセット枠** |
 | スクロール | 標準スクロールバーの露出を抑える（`game-ui-scroll-pane`） |
-| 装飾 | 大きな角丸・右上 ×・細い 1px カード枠の縦リストは避ける |
-| インタラクション | ホバー・選択は軽い発光や色変化。過度なアニメーションは行わない |
+| 装飾 | 角丸・ドロップ shadow・ピル型バッジ・余白だけのカード分割は避ける |
+| インタラクション | ホバー・選択は背景とインセット枠の変化のみ |
 | 用語 | 説明文内のゲーム用語は **クリック** で用語パネル（§6.4） |
 
 ---
@@ -568,7 +564,7 @@ Party Setup と Class Archive は **同一ボード上段**に並列表示する
 7. スキル付け替え UI が存在しない
 8. **`プレイヤー Lv {n}`** がヘッダーに 1 か所のみ（Exp バー・詳細 Lv なし）
 9. ステは `playerProgress.level` 基準の素ステ（[progression.md](progression.md) 一致）
-10. 詳細スクロール時も **ロスター帯が固定**される
+10. 詳細エリアの **主要情報**（クラス要約・ステ・スキル要約）は **スクロールなし**で読める
 11. 最小幅おおよそ 800px で破綻しない
 12. スキル説明内の辞書登録用語が **クリックで用語パネル** を開く（ホバー説明なし）
 13. 用語パネル内の別用語もクリックでき、**履歴 + 戻る** で遷移できる

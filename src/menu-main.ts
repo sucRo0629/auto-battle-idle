@@ -6,6 +6,7 @@ import {
 import type { ClassId, PartySlotState } from './battle/types.ts';
 import { loadLevelCurves } from './progression/levelGrowth.ts';
 import { isElectronMenu } from './platform/electronApi.ts';
+import { isVerifyModeEnabled } from './dev/verifyMode.ts';
 import { MetaMenuOverlay } from './ui/MetaMenuOverlay.ts';
 import levelCurvesJson from '../data/levelCurves.json';
 
@@ -49,6 +50,7 @@ if (!loaded.ok) {
       {
         presentation: 'window',
         initialView: menuInitialView,
+        isVerifyMode: isVerifyModeEnabled,
       },
     );
   }
