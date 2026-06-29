@@ -1,21 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { CombatantState, PassiveSkillDef } from './types.ts';
-import { syncFrontThreatControlAuras } from './passiveEffects.ts';
+import { syncDamageReductionAuras } from './passiveEffects.ts';
 import { resolveEnemyChaseTargetPlayer } from './resolveApproachBattleX.ts';
 import { mockApproachGameData } from './testFixtures.ts';
 import {
   THREAT_DAMAGE_SCALE,
   THREAT_TARGET_SWITCH_MARGIN,
-  applyFrontThreatFloor,
   applyThreatBurst,
   applyThreatFromDamage,
   applyThreatControlOnDamageTaken,
-  computeAllyBaseThreat,
   initializeAllyThreat,
   pickHighestThreatAlly,
   pickThreatTargetWithHysteresis,
-  resolveAllyThreatDecayMultiplier,
-  tickAllyThreatDecay,
 } from './threat.ts';
 
 function mockAlly(
@@ -51,26 +47,31 @@ function mockAlly(
 }
 
 const guardianThreatControl: PassiveSkillDef = {
-  id: 'df_guardian_passive_2',
-  name: '鉄壁の挑発',
+  id: 'test_threat_control',
+  name: 'Test Threat',
   effect: 'threatControl',
   onDamageTakenScale: 0.5,
   onBlockFlat: 5,
   threatDecayMultiplier: 0.5,
 };
 
-const paladinFrontSharing: PassiveSkillDef = {
+const paladinDamageReductionAura: PassiveSkillDef = {
   id: 'df_paladin_passive_2',
   name: '護法陣',
-  effect: 'threatControl',
-  frontThreatFloor: 0.72,
-  frontThreatAuraRadiusPx: 50,
-  frontThreatDecayMultiplier: 0.65,
+  effect: 'damageReduction',
+  damageReductionPercent: 0.1,
+  damageReductionTargetShape: 'aoe',
+  damageReductionAoeRadiusPx: 50,
+  damageReductionTargetRule: {
+    kind: 'distance',
+    side: 'ally',
+    order: 'selfOrigin',
+  },
 };
 
 const passivesRegistry: Record<string, PassiveSkillDef> = {
-  df_guardian_passive_2: guardianThreatControl,
-  df_paladin_passive_2: paladinFrontSharing,
+  df_paladin_passive_2: paladinDamageReductionAura,
+  test_threat_control: guardianThreatControl,
 };
 
 describe('threat phase 2', () => {
@@ -79,11 +80,6 @@ describe('threat phase 2', () => {
       id: 'guardian',
       maxHp: 235,
       def: 26,
-      build: {
-        learnedPassiveIds: ['df_guardian_passive_2'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
     });
     const warrior = mockAlly({
       id: 'warrior',
@@ -120,70 +116,12 @@ describe('threat phase 2', () => {
     expect(pickHighestThreatAlly([guardian, warrior])?.id).toBe('warrior');
   });
 
-  it('paladin raises nearby warrior threat floor toward shared tank level', () => {
-    const paladin = mockAlly({
-      id: 'paladin',
-      maxHp: 220,
-      def: 22,
-      battleX: 200,
-      build: {
-        learnedPassiveIds: ['df_paladin_passive_2'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
-    });
-    const warrior = mockAlly({
-      id: 'warrior',
-      role: 'attacker',
-      maxHp: 165,
-      def: 14,
-      formationRow: 'back',
-      battleX: 230,
-    });
-    initializeAllyThreat([paladin, warrior]);
-    warrior.threat = warrior.baseThreat;
-    applyFrontThreatFloor([paladin, warrior], passivesRegistry);
-    const expectedFloor = Math.floor(
-      (paladin.threat ?? paladin.baseThreat ?? 0) * 0.72,
-    );
-    expect(warrior.threat).toBe(expectedFloor);
-    expect(warrior.threat!).toBeGreaterThan(warrior.baseThreat!);
-  });
-
-  it('paladin threat floor does not apply outside aura radius', () => {
-    const paladin = mockAlly({
-      id: 'paladin',
-      battleX: 200,
-      build: {
-        learnedPassiveIds: ['df_paladin_passive_2'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
-    });
-    const farAlly = mockAlly({
-      id: 'far',
-      role: 'attacker',
-      formationRow: 'front',
-      battleX: 100,
-    });
-    initializeAllyThreat([paladin, farAlly]);
-    const baseBefore = farAlly.baseThreat!;
-    farAlly.threat = baseBefore;
-    applyFrontThreatFloor([paladin, farAlly], passivesRegistry);
-    expect(farAlly.threat).toBe(baseBefore);
-  });
-
   it('enemy chase picks defender over nearer attacker (not threat hysteresis)', () => {
     const paladin = mockAlly({
       id: 'paladin',
       threat: 100,
       baseThreat: 100,
       battleX: 200,
-      build: {
-        learnedPassiveIds: ['df_paladin_passive_2'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
     });
     const warrior = mockAlly({
       id: 'warrior',
@@ -205,77 +143,49 @@ describe('threat phase 2', () => {
       meleeEnemy,
       [paladin, warrior],
       [meleeEnemy],
-      {
-        ...gameData,
-        skillRegistry: {
-          ...gameData.skillRegistry,
-          passives: passivesRegistry,
-        },
-      },
+      gameData,
     );
     expect(target?.id).toBe('paladin');
   });
 
-  it('paladin front sharing slows front ally threat decay', () => {
+  it('護法陣 applies damageTaken reduction aura to allies within 50px', () => {
     const paladin = mockAlly({
       id: 'paladin',
+      battleX: 200,
       build: {
         learnedPassiveIds: ['df_paladin_passive_2'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },
     });
-    const warrior = mockAlly({
-      id: 'warrior',
+    const nearAlly = mockAlly({
+      id: 'near',
       role: 'attacker',
       formationRow: 'front',
-      threat: 200,
-      baseThreat: 48,
+      battleX: 230,
     });
-    const decayMul = resolveAllyThreatDecayMultiplier(
-      warrior,
-      [paladin, warrior],
-      passivesRegistry,
+    const farAlly = mockAlly({
+      id: 'far',
+      role: 'attacker',
+      formationRow: 'front',
+      battleX: 100,
+    });
+    const gameData = mockApproachGameData();
+    syncDamageReductionAuras(
+      [paladin, nearAlly, farAlly],
       [],
-    );
-    expect(decayMul).toBe(0.65);
-    tickAllyThreatDecay(warrior, 1, decayMul);
-    expect(warrior.threat).toBe(187);
-  });
-
-  it('護法陣 does not apply front damage taken reduction aura', () => {
-    const paladin = mockAlly({
-      id: 'paladin',
-      build: {
-        learnedPassiveIds: ['df_paladin_passive_2'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
-    });
-    const warrior = mockAlly({
-      id: 'warrior',
-      role: 'attacker',
-      formationRow: 'front',
-    });
-    const backline = mockAlly({
-      id: 'cleric',
-      role: 'supporter',
-      formationRow: 'back',
-    });
-    syncFrontThreatControlAuras(
-      [paladin, warrior, backline],
       passivesRegistry,
+      gameData,
     );
-    expect(
-      warrior.statusEffects.some((fx) =>
-        fx.id.startsWith('passive_front_threat_dmg_reduction_'),
-      ),
-    ).toBe(false);
-    expect(
-      backline.statusEffects.some((fx) =>
-        fx.id.startsWith('passive_front_threat_dmg_reduction_'),
-      ),
-    ).toBe(false);
+    const nearMul = nearAlly.statusEffects.find((fx) => fx.stat === 'damageTaken')
+      ?.multiplier;
+    const farMul = farAlly.statusEffects.find((fx) => fx.stat === 'damageTaken')
+      ?.multiplier;
+    const selfMul = paladin.statusEffects.find((fx) => fx.stat === 'damageTaken')
+      ?.multiplier;
+    expect(nearMul).toBe(0.9);
+    expect(selfMul).toBe(0.9);
+    expect(farMul).toBeUndefined();
   });
 
   it('duelist does not become main tank from being hit alone', () => {
@@ -283,11 +193,6 @@ describe('threat phase 2', () => {
       id: 'guardian',
       maxHp: 235,
       def: 26,
-      build: {
-        learnedPassiveIds: ['df_guardian_passive_2'],
-        learnedActiveIds: [],
-        equippedActiveSlots: [],
-      },
     });
     const duelist = mockAlly({
       id: 'duelist',
@@ -333,7 +238,7 @@ describe('threat phase 2', () => {
     expect(result.target?.id).toBe('tank');
   });
 
-  it('guardian threat sustain from damage taken keeps main tank role', () => {
+  it('threatControl on damage taken still sustains main tank role when configured', () => {
     const guardian = mockAlly({
       id: 'guardian',
       maxHp: 235,
@@ -341,7 +246,7 @@ describe('threat phase 2', () => {
       threat: 92,
       baseThreat: 92,
       build: {
-        learnedPassiveIds: ['df_guardian_passive_2'],
+        learnedPassiveIds: ['test_threat_control'],
         learnedActiveIds: [],
         equippedActiveSlots: [],
       },

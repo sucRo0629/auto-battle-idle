@@ -722,7 +722,7 @@ Defender 共通 passive と各 Defender の受け口設計は同一視しない�
 | -------------- | -------------------------- | -------------- | -------------------------------------------------------------------------------------------------------- |
 | basic          | `df_guardian_basic_attack` | —              | 最近接 physical                                                                                          |
 | passive 1 Lv0  | `df_guardian_passive_1`    | 大盾使い       | 自己 block                                                                                               |
-| passive 2 Lv0  | `df_guardian_passive_2`    | 立ちはだかる壁 | **廃止予定** — 旧 `threatControl`。鉄衛士の main tank は defender 優先ターゲット + P1 block で表現。実装時に Lv0 passive 2 枠を差し替え |
+| passive 2 Lv0  | `df_guardian_passive_2`    | 立ちはだかる壁 | passive `damageReduction`（自身対象・常時 `damageTaken` 軽減 8%）。main tank は defender 優先ターゲット + P1 block |
 | active 1 Lv0   | `df_guardian_active_1`     | 防御強化       | 自己 DEF buff                                                                                            |
 | active 2 Lv0   | `df_guardian_active_2`     | 防御専念       | `hitsTaken` + DEF / block + `useDurationSec`                                                             |
 | passive 3 Lv10 | `df_guardian_passive_3`    | 迎撃態勢       | 常時 block +10% + `blockResonance`（block 成功で stack 蓄積・減衰・ダメージ軽減）                        |

@@ -568,7 +568,7 @@ describe('formatActiveDescription', () => {
 
     expect(formatPassiveDescription(p1!)).toBe('効果：ブロック率+20%');
     expect(formatPassiveDescription(p2!)).toBe(
-      '効果：被ダメ・ブロック成功でヘイト上昇、ヘイト減衰速度低下',
+      '効果：自身のダメージ軽減8%',
     );
     expect(formatPassiveDescription(p3!)).toContain('効果：ブロック率+10%');
     expect(formatPassiveDescription(p3!)).toContain('8秒ごとに1スタック消失');
@@ -625,10 +625,7 @@ describe('formatActiveDescription', () => {
     const p2 = gameData.skillRegistry.passives.df_guardian_passive_2;
     expect(p2).toBeDefined();
     const wallCard = formatSkillCardLines(p2!, { locale: 'ja' });
-    expect(wallCard.effectLines).toEqual([
-      '被ダメ・ブロック成功でヘイト上昇',
-      'ヘイト減衰速度低下',
-    ]);
+    expect(wallCard.effectLines).toEqual(['自身のダメージ軽減8%']);
   });
 
   it('formatSkillCardLines keeps blockResonance passive as one effect line', async () => {
@@ -853,9 +850,7 @@ describe('formatActiveDescription', () => {
     const p4 = gameData.skillRegistry.passives.df_paladin_passive_4;
 
     expect(formatPassiveDescription(p1!)).toBe('効果：周囲のブロック率+10%');
-    expect(formatPassiveDescription(p2!)).toBe(
-      '効果：周囲のヘイト下限を自身の72%に引き上げ、周囲のヘイト減衰速度低下',
-    );
+    expect(formatPassiveDescription(p2!)).toBe('効果：周囲のダメージ軽減10%');
     expect(formatPassiveDescription(p3!)).toBe(
       '効果：周囲のブロック率+5%、魔法ブロックを可能にする',
     );
@@ -901,10 +896,7 @@ describe('formatActiveDescription', () => {
 
     const passive2 = formatSkillCardLines(p2!, { locale: 'ja' });
     expect(passive2.metaLine).toBe('常時');
-    expect(passive2.effectLines).toEqual([
-      '周囲のヘイト下限を自身の72%に引き上げ',
-      '周囲のヘイト減衰速度低下',
-    ]);
+    expect(passive2.effectLines).toEqual(['周囲のダメージ軽減10%']);
   });
 
   it.each(Object.entries(POLISHED_CLASS_LV10_PLUS))(

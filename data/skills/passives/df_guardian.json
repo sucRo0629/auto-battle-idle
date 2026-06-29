@@ -12,10 +12,11 @@
   {
     "id": "df_guardian_passive_2",
     "name": "立ちはだかる壁",
-    "effect": "threatControl",
-    "onDamageTakenScale": 0.5,
-    "onBlockFlat": 5,
-    "threatDecayMultiplier": 0.5
+    "effect": "damageReduction",
+    "damageReductionPercent": 0.08,
+    "damageReductionTargetRule": {
+      "kind": "self"
+    }
   },
   {
     "id": "df_guardian_passive_3",

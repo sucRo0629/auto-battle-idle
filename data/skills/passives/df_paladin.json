@@ -9,10 +9,15 @@
   {
     "id": "df_paladin_passive_2",
     "name": "護法陣",
-    "effect": "threatControl",
-    "frontThreatFloor": 0.7,
-    "frontThreatDecayMultiplier": 0.5,
-    "frontThreatAuraRadiusPx": 50
+    "effect": "damageReduction",
+    "damageReductionPercent": 0.1,
+    "damageReductionTargetShape": "aoe",
+    "damageReductionAoeRadiusPx": 50,
+    "damageReductionTargetRule": {
+      "kind": "distance",
+      "side": "ally",
+      "order": "selfOrigin"
+    }
   },
   {
     "id": "df_paladin_passive_3",

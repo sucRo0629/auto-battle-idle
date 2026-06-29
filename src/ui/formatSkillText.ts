@@ -1711,10 +1711,24 @@ function formatPassiveEffect(
         formatSpecialEffectSpec("damage", legacy.damageIncrease) ||
         "特効ダメージ"
       );
-    case "damageReduction":
+    case "damageReduction": {
+      const percent = def.damageReductionPercent ?? 0;
+      const rule = def.damageReductionTargetRule ?? { kind: "self" };
+      const shape = def.damageReductionTargetShape ?? "single";
+      if (
+        rule.kind === "distance" &&
+        rule.side === "ally" &&
+        rule.order === "selfOrigin" &&
+        shape === "aoe"
+      ) {
+        return `周囲の${formatDamageTakenReductionRateLabel(percent)}`;
+      }
+      if (rule.kind === "self" && shape === "single") {
+        return `自身の${formatDamageTakenReductionRateLabel(percent)}`;
+      }
       return `${resolveGameTermTitle("damageReduction")}${formatPercent(
-        def.damageReductionPercent ?? 0
-      )} → ${formatTarget(def.damageReductionTargetRule, { kind: "self" })}（${[
+        percent
+      )} → ${formatTarget(rule, { kind: "self" })}（${[
         formatTargetShape(passiveDamageReductionToEffectDef(def)),
         def.damageReductionRange !== undefined
           ? `${def.damageReductionRange}px`
@@ -1723,6 +1737,7 @@ function formatPassiveEffect(
       ]
         .filter(Boolean)
         .join(" · ")}）`;
+    }
     case "defenseIgnore":
       return formatPassiveDefenseIgnore(def);
     case "ignoredDefBonusDamage":
