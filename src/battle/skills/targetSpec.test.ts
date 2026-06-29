@@ -243,13 +243,24 @@ describe('getTargetPool / pickTargetFromPool', () => {
     expect(pool.map((u) => u.id)).toEqual(['e3']);
   });
 
-  it('enemy basic attack pools and picks player allies', () => {
+  it('enemy basic attack pools and picks nearest defender by battleX', () => {
     const enemyActor = mockUnit('e1', 300, { isEnemy: true });
-    const guard = mockUnit('guard', 200, { threat: 80 });
-    const healer = mockUnit('healer', 250, { threat: 20 });
+    const guard = mockUnit('guard', 200, { def: 50 });
+    const healer = mockUnit('healer', 250, { def: 5 });
     const spec = { kind: 'distance', side: 'enemy', order: 'nearest' } as const;
     const pool = getTargetPool(spec, enemyActor, [guard, healer], [enemyActor]);
     expect(pool.map((u) => u.id).sort()).toEqual(['guard', 'healer']);
+    const picked = pickTargetFromPool(spec, enemyActor, pool);
+    expect(picked?.id).toBe('healer');
+  });
+
+  it('enemy default nearest prefers defender role over nearer attacker', () => {
+    const enemyActor = mockUnit('e1', 300, { isEnemy: true });
+    const guard = mockUnit('guard', 200, { def: 50 });
+    guard.role = 'defender';
+    const striker = mockUnit('striker', 260, { def: 5 });
+    const spec = { kind: 'distance', side: 'enemy', order: 'nearest' } as const;
+    const pool = getTargetPool(spec, enemyActor, [guard, striker], [enemyActor]);
     const picked = pickTargetFromPool(spec, enemyActor, pool);
     expect(picked?.id).toBe('guard');
   });

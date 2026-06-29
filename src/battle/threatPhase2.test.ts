@@ -173,7 +173,7 @@ describe('threat phase 2', () => {
     expect(farAlly.threat).toBe(baseBefore);
   });
 
-  it('shared tank aura lets nearby ally steal focus below default margin', () => {
+  it('enemy chase picks defender over nearer attacker (not threat hysteresis)', () => {
     const paladin = mockAlly({
       id: 'paladin',
       threat: 100,
@@ -213,7 +213,7 @@ describe('threat phase 2', () => {
         },
       },
     );
-    expect(target?.id).toBe('warrior');
+    expect(target?.id).toBe('paladin');
   });
 
   it('paladin front sharing slows front ally threat decay', () => {

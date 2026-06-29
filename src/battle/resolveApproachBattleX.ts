@@ -14,6 +14,7 @@ import { pickTargetFromPool, resolvePriorityHealTarget, resolveTargetSpec } from
 import {
   getEffectTarget,
   getTargetPool,
+  pickEnemySingleTargetFromPool,
   resolveApproachTargetSpec,
 } from "./skills/targetSpec.ts";
 import { getAttackablePool, isWithinSkillRange } from "./skills/rangeUtils.ts";
@@ -162,7 +163,7 @@ export function resolvePlayerAttackTargetEnemy(
   return pickTargetFromPool(spec, player, pool);
 }
 
-/** 敵: 全生存プレイヤーからヘイト最大を chase（Threat ヒステリシス付き） */
+/** 敵: combat.md §敵の単体ターゲット選定 — defender 優先・最近傍 chase */
 export function resolveEnemyChaseTargetPlayer(
   enemy: CombatantState,
   players: CombatantState[],
@@ -171,15 +172,10 @@ export function resolveEnemyChaseTargetPlayer(
 ): CombatantState | null {
   const spec = resolveUnitTargetSpec(enemy, players, enemies, gameData);
   const pool = getTargetPool(spec, enemy, players, enemies);
-  return pickTargetFromPool(spec, enemy, pool, {
-    threatSwitchMarginContext: {
-      allies: players,
-      passivesRegistry: gameData.skillRegistry.passives,
-    },
-  });
+  return pickEnemySingleTargetFromPool(enemy, spec, pool);
 }
 
-/** 敵: ChaseTarget が射程内のときのみ返す（Threat フォーカス対象と Attack を単一化） */
+/** 敵: ChaseTarget が effectiveRangePx 内のときのみ返す */
 export function resolveEnemyAttackTargetPlayer(
   enemy: CombatantState,
   players: CombatantState[],
