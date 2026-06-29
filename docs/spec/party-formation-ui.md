@@ -259,7 +259,7 @@ Phase 4d 当初案にあった表示例（参考）:
 | モジュール | `src/ui/formatSkillText.ts` |
 | シグネチャ | `formatSkillCardLines(def: ActiveSkillDef \| PassiveSkillDef, options: { locale: SkillCardLocale }): SkillCardLines` |
 | `SkillCardLocale` | v1 は `'ja'` のみ（将来 `en` 拡張可能） |
-| `SkillCardLines` | `{ metaLine: string; effectLines: string[] }` |
+| `SkillCardLines` | `{ metaLine: string; effectLines: SkillCardEffectLine[] }` — 各要素は plain `string` または `{ kind: "list"; items: { text; details? }[] }`（焼き尽くす熾火の種火 / 熾火など） |
 
 **行の意味（§6.3 行 2 / 行 3+ に対応）**
 
@@ -268,7 +268,7 @@ Phase 4d 当初案にあった表示例（参考）:
 | `metaLine` | 再使用・持続・硬直・発動条件を `/` 区切り 1 行（効果本文は含めない） | 発動タイミング要約（`formatPassiveTriggerSummary` 等） |
 | `effectLines` | `def.effect[]` を 1 effect 1 行（`formatActiveEffectDetail` compact）。`blockResonanceConsume` は map から除外；consume 専用スキルは特殊 1 行 | `[formatPassiveEffect(...)]` 1 要素（`効果：` プレフィックスなし） |
 
-- 文節 split 禁止 — 改行単位は **effect 配列要素**（Passive は effect 種別 1 行）
+- 文節 split 禁止 — 改行単位は **effect 配列要素**（Passive は effect 種別 1 行）。リストが必要な passive は `effectLines` に `kind: "list"` ブロックを返し、UI は `<ul>` / `<li>` で描画する
 - 1 行説明の `formatActiveDescription` / `formatPassiveDescription` は tooltip・エディタ互換として維持
 
 **UI 表現:**

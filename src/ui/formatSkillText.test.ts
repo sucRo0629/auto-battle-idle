@@ -3,6 +3,7 @@ import type { ActiveSkillDef, PassiveSkillDef } from '../battle/types.ts';
 import {
   formatActiveDescription,
   formatPassiveDescription,
+  flattenSkillCardEffectLines,
   formatSkillCardLines,
   type SkillCardLines,
 } from './formatSkillText.ts';
@@ -29,7 +30,7 @@ function assertNoLegacy4bLabels(text: string): void {
 function assertGlobal4bActiveRules(desc: string, card: SkillCardLines): void {
   assertNoLegacy4bLabels(desc);
   assertNoLegacy4bLabels(card.metaLine);
-  for (const line of card.effectLines) {
+  for (const line of flattenSkillCardEffectLines(card.effectLines)) {
     assertNoLegacy4bLabels(line);
   }
   expect(desc).toContain('再使用：');
@@ -38,7 +39,7 @@ function assertGlobal4bActiveRules(desc: string, card: SkillCardLines): void {
 function assertGlobal4bPassiveRules(desc: string, card: SkillCardLines): void {
   assertNoLegacy4bLabels(desc);
   assertNoLegacy4bLabels(card.metaLine);
-  for (const line of card.effectLines) {
+  for (const line of flattenSkillCardEffectLines(card.effectLines)) {
     assertNoLegacy4bLabels(line);
   }
   expect(desc).toMatch(/^効果：/);
@@ -840,11 +841,22 @@ describe('formatActiveDescription', () => {
     expect(card2.metaLine).toBe('常時');
     expect(card2.effectLines).toEqual([
       '敵に攻撃スキルが1回命中するごとに「種火」を1スタックする',
-      '- 種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える',
-      '\u3000最大スタック数：5',
-      '- 熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える',
-      '\u3000さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる',
-      '\u3000最大スタック数：1',
+      {
+        kind: 'list',
+        items: [
+          {
+            text: '種火：1スタックごとに10秒間毎秒攻撃力の5%の魔法ダメージを与える',
+            details: ['最大スタック数：5'],
+          },
+          {
+            text: '熾火：1スタックごとに無期限で毎秒攻撃力の35%の魔法ダメージを与える',
+            details: [
+              'さらに1スタックごとに魔法攻撃の被ダメージを10%増加させる',
+              '最大スタック数：1',
+            ],
+          },
+        ],
+      },
     ]);
   });
 

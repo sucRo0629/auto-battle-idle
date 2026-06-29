@@ -9,14 +9,7 @@ import {
   HERBAL_POTENCY_CONSTITUTION_DISPLAY_NAME,
   HERBAL_POTENCY_HOT_TICK_SEC,
 } from "../battle/herbalPotency.ts";
-import {
-  BLAZING_FLAME_DOT_ATK_SCALE,
-  BLAZING_FLAME_MAGIC_TAKEN_PER_STACK,
-  BLAZING_FLAME_MAX_STACKS_DEFAULT,
-  SEED_FLAME_DOT_ATK_SCALE,
-  SEED_FLAME_DURATION_SEC,
-  SEED_FLAME_MAX_STACKS,
-} from "../battle/sorcererFlame.ts";
+import { mergeSorcererFlameDotConfig } from "../battle/sorcererFlame.ts";
 import {
   BUFF_SUB_KIND_LABELS,
   DEBUFF_FILTER_TAG_LABELS,
@@ -302,48 +295,78 @@ function formatBarrierDepletionHealPassive(def: PassiveSkillDef): string {
   return formatBarrierDepletionHealEffectLines(def).join("、");
 }
 
-/** スキルカード effectLines のインデント行プレフィックス（表示時は CSS で字下げ） */
-export const SKILL_CARD_INDENT_PREFIX = "\u3000";
+export type SkillCardListItem = {
+  text: string;
+  details?: string[];
+};
 
-function formatSkillCardIndentLine(text: string): string {
-  return `${SKILL_CARD_INDENT_PREFIX}${text}`;
+export type SkillCardEffectList = {
+  kind: "list";
+  items: SkillCardListItem[];
+};
+
+export type SkillCardEffectLine = string | SkillCardEffectList;
+
+export function isSkillCardEffectList(
+  line: SkillCardEffectLine
+): line is SkillCardEffectList {
+  return typeof line === "object" && line.kind === "list";
 }
 
-function formatSeedFlameOnActiveHitEffectLines(def: PassiveSkillDef): string[] {
-  const seedFlameMaxStacks = def.seedFlameMaxStacks ?? SEED_FLAME_MAX_STACKS;
-  const seedFlameDurationSec = def.seedFlameDurationSec ?? SEED_FLAME_DURATION_SEC;
-  const seedFlameDotPct = formatPercent(
-    def.seedFlameDotAtkScale ?? SEED_FLAME_DOT_ATK_SCALE
-  );
-  const blazingFlameDotPct = formatPercent(
-    def.blazingFlameDotAtkScale ?? BLAZING_FLAME_DOT_ATK_SCALE
-  );
+export function flattenSkillCardEffectLines(
+  lines: SkillCardEffectLine[]
+): string[] {
+  const out: string[] = [];
+  for (const line of lines) {
+    if (typeof line === "string") {
+      out.push(line);
+      continue;
+    }
+    for (const item of line.items) {
+      out.push(item.text);
+      if (item.details) {
+        out.push(...item.details);
+      }
+    }
+  }
+  return out;
+}
+
+function formatSeedFlameOnActiveHitEffectLines(
+  def: PassiveSkillDef
+): SkillCardEffectLine[] {
+  const config = mergeSorcererFlameDotConfig([def]);
+  const seedFlameDotPct = formatPercent(config.seedFlameDotAtkScale);
+  const blazingFlameDotPct = formatPercent(config.blazingFlameDotAtkScale);
   const blazingFlameMagicTakenPct = formatPercent(
-    def.blazingFlameMagicTakenPerStack ?? BLAZING_FLAME_MAGIC_TAKEN_PER_STACK
+    config.blazingFlameMagicTakenPerStack
   );
-  const blazingFlameMaxStacks =
-    def.blazingFlameMaxStacksDefault ?? BLAZING_FLAME_MAX_STACKS_DEFAULT;
 
   return [
     "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする",
-    `- 種火：1スタックごとに${seedFlameDurationSec}秒間毎秒攻撃力の${seedFlameDotPct}の魔法ダメージを与える`,
-    formatSkillCardIndentLine(`最大スタック数：${seedFlameMaxStacks}`),
-    `- 熾火：1スタックごとに無期限で毎秒攻撃力の${blazingFlameDotPct}の魔法ダメージを与える`,
-    formatSkillCardIndentLine(
-      `さらに1スタックごとに魔法攻撃の被ダメージを${blazingFlameMagicTakenPct}増加させる`
-    ),
-    formatSkillCardIndentLine(`最大スタック数：${blazingFlameMaxStacks}`),
+    {
+      kind: "list",
+      items: [
+        {
+          text: `種火：1スタックごとに${config.seedFlameDurationSec}秒間毎秒攻撃力の${seedFlameDotPct}の魔法ダメージを与える`,
+          details: [`最大スタック数：${config.seedFlameMaxStacks}`],
+        },
+        {
+          text: `熾火：1スタックごとに無期限で毎秒攻撃力の${blazingFlameDotPct}の魔法ダメージを与える`,
+          details: [
+            `さらに1スタックごとに魔法攻撃の被ダメージを${blazingFlameMagicTakenPct}増加させる`,
+            `最大スタック数：${config.blazingFlameMaxStacksDefault}`,
+          ],
+        },
+      ],
+    },
   ];
 }
 
 function formatSeedFlameOnActiveHitPassive(def: PassiveSkillDef): string {
-  return formatSeedFlameOnActiveHitEffectLines(def)
-    .map((line) =>
-      line.startsWith(SKILL_CARD_INDENT_PREFIX)
-        ? line.slice(SKILL_CARD_INDENT_PREFIX.length)
-        : line.replace(/^- /, "")
-    )
-    .join("、");
+  return flattenSkillCardEffectLines(
+    formatSeedFlameOnActiveHitEffectLines(def)
+  ).join("、");
 }
 
 function formatExcessHealToBarrierPassive(def: PassiveSkillDef): string {
@@ -2283,7 +2306,7 @@ function formatPassiveEffect(
   }
 }
 
-function formatPassiveSkillEffectLines(def: PassiveSkillDef): string[] {
+function formatPassiveSkillEffectLines(def: PassiveSkillDef): SkillCardEffectLine[] {
   if (def.effect === "barrierDepletionHeal") {
     return formatBarrierDepletionHealEffectLines(def);
   }
@@ -2297,7 +2320,7 @@ export type SkillCardLocale = "ja";
 
 export type SkillCardLines = {
   metaLine: string;
-  effectLines: string[];
+  effectLines: SkillCardEffectLine[];
 };
 
 function isActiveSkillDef(

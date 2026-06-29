@@ -40,7 +40,10 @@ import {
   normalizeActiveSlots,
 } from "../progression/skillBuild.ts";
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
-import { formatSkillCardLines, SKILL_CARD_INDENT_PREFIX } from "./formatSkillText.ts";
+import {
+  formatSkillCardLines,
+  type SkillCardEffectLine,
+} from "./formatSkillText.ts";
 import { formatClassSummary, formatClassSummaryForAria } from "./formatClassSummary.ts";
 import { annotateGameTerms } from "./annotateGameTerms.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
@@ -653,28 +656,7 @@ export class SkillMenuPanel {
 
       const effectsEl = document.createElement("div");
       effectsEl.className = "skill-menu-skill-view-card-effects";
-      for (const line of lines.effectLines) {
-        const lineEl = document.createElement("div");
-        const isIndent = line.startsWith(SKILL_CARD_INDENT_PREFIX);
-        lineEl.className = "skill-menu-skill-view-card-effect-line";
-        if (isIndent) {
-          lineEl.classList.add("skill-menu-skill-view-card-effect-line--indent");
-        }
-        const displayLine = isIndent
-          ? line.slice(SKILL_CARD_INDENT_PREFIX.length)
-          : line;
-        lineEl.appendChild(
-          annotateGameTerms(
-            displayLine,
-            "ja",
-            (termId, anchor) => {
-              this.gameTermPanel.openFromTerm(termId, anchor);
-            },
-            { panelId: this.gameTermPanel.getPanelId() },
-          ),
-        );
-        effectsEl.appendChild(lineEl);
-      }
+      this.appendSkillCardEffectLines(effectsEl, lines.effectLines);
       card.appendChild(effectsEl);
     }
 
@@ -689,6 +671,56 @@ export class SkillMenuPanel {
     card.appendChild(footer);
 
     return card;
+  }
+
+  private appendAnnotatedSkillText(parent: HTMLElement, text: string): void {
+    parent.appendChild(
+      annotateGameTerms(
+        text,
+        "ja",
+        (termId, anchor) => {
+          this.gameTermPanel.openFromTerm(termId, anchor);
+        },
+        { panelId: this.gameTermPanel.getPanelId() },
+      ),
+    );
+  }
+
+  private appendSkillCardEffectLines(
+    container: HTMLElement,
+    lines: SkillCardEffectLine[],
+  ): void {
+    for (const line of lines) {
+      if (typeof line === "string") {
+        const lineEl = document.createElement("div");
+        lineEl.className = "skill-menu-skill-view-card-effect-line";
+        this.appendAnnotatedSkillText(lineEl, line);
+        container.appendChild(lineEl);
+        continue;
+      }
+
+      const listEl = document.createElement("ul");
+      listEl.className = "skill-menu-skill-view-card-effect-list";
+      for (const item of line.items) {
+        const itemEl = document.createElement("li");
+        itemEl.className = "skill-menu-skill-view-card-effect-list-item";
+        this.appendAnnotatedSkillText(itemEl, item.text);
+        if (item.details && item.details.length > 0) {
+          const subListEl = document.createElement("ul");
+          subListEl.className = "skill-menu-skill-view-card-effect-sublist";
+          for (const detail of item.details) {
+            const detailEl = document.createElement("li");
+            detailEl.className =
+              "skill-menu-skill-view-card-effect-sublist-item";
+            this.appendAnnotatedSkillText(detailEl, detail);
+            subListEl.appendChild(detailEl);
+          }
+          itemEl.appendChild(subListEl);
+        }
+        listEl.appendChild(itemEl);
+      }
+      container.appendChild(listEl);
+    }
   }
 
   private createLockedSlotCard(
