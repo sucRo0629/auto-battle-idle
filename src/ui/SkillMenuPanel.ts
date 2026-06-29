@@ -4,10 +4,7 @@ import "../styles/skill-menu-panel.css";
 import { getMemberStatLabels } from "../i18n/memberStatLabels.ts";
 import { getLocale, subscribeLocaleChange } from "../i18n/locale.ts";
 import { t } from "../i18n/t.ts";
-import {
-  resolveClassIconKey,
-  resolveClassSpriteKey,
-} from "../render/entityVisuals.ts";
+import { resolveClassIconKey, resolveClassSpriteKey } from "../render/entityVisuals.ts";
 import {
   isMeleeRangePx,
   type ActiveSkillDef,
@@ -29,10 +26,8 @@ import {
 } from "../render/entityAtlas.ts";
 import { getSpriteUrl } from "../render/SpriteRegistry.ts";
 import { getStatusIconUrl } from "../render/StatusIconRegistry.ts";
-import {
-  createMemberFromClass,
-  getAssignableClassIds,
-} from "../progression/partyCompose.ts";
+import { sortClassIdsByListOrder } from "../battle/data/classListOrder.ts";
+import { createMemberFromClass } from "../progression/partyCompose.ts";
 import { type LevelCurvesConfig } from "../progression/levelGrowth.ts";
 import { resolveMemberDisplayStats } from "../progression/memberStatsDisplay.ts";
 import { resolveMemberBasicAttackDisplay } from "../progression/memberBasicAttackDisplay.ts";
@@ -46,7 +41,10 @@ import {
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
 import {
   formatSkillCardLines,
+  isSkillCardEffectList,
+  type SkillCardEffectLine,
 } from "./formatSkillText.ts";
+import { annotateGameTerms } from "./annotateGameTerms.ts";
 import { formatClassSummary, formatClassSummaryForAria } from "./formatClassSummary.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
 import { GameTermTooltip } from "./GameTermTooltip.ts";
@@ -195,7 +193,7 @@ export class SkillMenuPanel {
 
     this.classArchiveListEl = document.createElement("div");
     this.classArchiveListEl.className =
-      "skill-menu-class-archive-list game-ui-scroll-pane";
+      "skill-menu-class-archive-list";
     this.classArchiveListEl.addEventListener("click", (event) => {
       const listItem = (event.target as Element | null)?.closest(
         ".skill-menu-picker-list-item"
@@ -268,26 +266,31 @@ export class SkillMenuPanel {
     return resolvePlayerDisplayLevel(this.draftParty);
   }
 
-  getFilledSlotCount(): number {
-    return this.draftParty.filter((member) => member !== null).length;
-  }
-
   getSelectedSlotIndex(): number {
     return this.selectedIndex;
   }
 
-  private getAssignableClassIdsForPicker(): ClassId[] {
-    return getAssignableClassIds(
-      this.draftParty,
+  private getPickerVisibleClassIds(): ClassId[] {
+    return sortClassIdsByListOrder(
       this.unlockedClassIds,
-      this.selectedIndex,
       this.gameData.classOrder
     );
+  }
+
+  private getClassIdsUsedElsewhere(): Set<ClassId> {
+    const used = new Set<ClassId>();
+    this.draftParty.forEach((member, index) => {
+      if (index !== this.selectedIndex && member) {
+        used.add(member.classId);
+      }
+    });
+    return used;
   }
 
   private assignClassToSlot(classId: string): void {
     const slotIndex = this.selectedIndex;
     if (classId) {
+      if (this.getClassIdsUsedElsewhere().has(classId)) return;
       const member = createMemberFromClass(classId, this.gameData);
       this.draftParty[slotIndex] = member;
       this.callbacks.onPartySlotChanged(slotIndex, structuredClone(member));
@@ -330,33 +333,77 @@ export class SkillMenuPanel {
       }
       if (index === this.selectedIndex) {
         button.classList.add("skill-menu-roster-card--active");
+        button.setAttribute("aria-current", "true");
+      } else {
+        button.removeAttribute("aria-current");
       }
       button.dataset.memberIndex = String(index);
 
-      const slotLabelEl = document.createElement("span");
-      slotLabelEl.className = "skill-menu-roster-card-slot-label";
-      slotLabelEl.textContent = t("party.slotLabel", { n: index + 1 });
-      button.appendChild(slotLabelEl);
-
       if (member && preset) {
         const summary = formatClassSummary(preset, getLocale());
-        const ariaParts = summary
-          ? [preset.displayName, formatClassSummaryForAria(summary)]
-          : [preset.displayName];
+        const ariaParts = [preset.displayName];
+        if (preset.epithetEn) ariaParts.push(preset.epithetEn);
+        if (summary) ariaParts.push(formatClassSummaryForAria(summary));
         button.setAttribute("aria-label", ariaParts.join(" "));
-        button.appendChild(this.createRosterRoleIcon(preset.role));
-        button.appendChild(this.createRosterCharacterDisplay(preset));
-        button.appendChild(this.createRosterTextBlock(preset));
+
+        const visual = document.createElement("div");
+        visual.className = "skill-menu-roster-card-visual";
+        visual.append(
+          this.createRosterCharacterDisplay(preset),
+          this.createRosterRoleIcon(preset.role)
+        );
+
+        const iconEl = this.createIconWrap(preset, preset.displayName);
+        iconEl.classList.add("skill-menu-roster-card-icon");
+
+        const textWrap = document.createElement("span");
+        textWrap.className = "skill-menu-roster-card-text";
+
+        const nameEl = document.createElement("span");
+        nameEl.className = "skill-menu-roster-card-name";
+        nameEl.dataset.i18nRole = "primary";
+        nameEl.textContent = preset.displayName;
+
+        textWrap.appendChild(nameEl);
+        if (preset.epithetEn) {
+          const epithetEl = document.createElement("span");
+          epithetEl.className = "skill-menu-roster-card-epithet";
+          epithetEl.dataset.i18nRole = "secondary";
+          epithetEl.textContent = preset.epithetEn;
+          textWrap.appendChild(epithetEl);
+        }
+
+        const footer = document.createElement("div");
+        footer.className = "skill-menu-roster-card-footer";
+        footer.append(iconEl, textWrap);
+
+        button.append(visual, footer);
       } else {
         button.setAttribute("aria-label", t("party.emptySlot"));
-        const plusEl = document.createElement("span");
-        plusEl.className = "skill-menu-roster-card-plus";
-        plusEl.textContent = "＋";
-        plusEl.setAttribute("aria-hidden", "true");
+
+        const visual = document.createElement("div");
+        visual.className =
+          "skill-menu-roster-card-visual skill-menu-roster-card-visual--empty";
+        const spritePlaceholder = document.createElement("span");
+        spritePlaceholder.className = "skill-menu-roster-card-character";
+        spritePlaceholder.setAttribute("aria-hidden", "true");
+        visual.appendChild(spritePlaceholder);
+
+        const iconEl = document.createElement("span");
+        iconEl.className =
+          "skill-menu-roster-card-icon skill-menu-tab-icon skill-menu-tab-icon--empty";
+        iconEl.setAttribute("aria-hidden", "true");
+
         const hintEl = document.createElement("span");
         hintEl.className = "skill-menu-roster-card-empty-label";
         hintEl.textContent = t("party.addClass");
-        button.append(plusEl, hintEl);
+
+        const footer = document.createElement("div");
+        footer.className =
+          "skill-menu-roster-card-footer skill-menu-roster-card-footer--empty";
+        footer.append(iconEl, hintEl);
+
+        button.append(visual, footer);
       }
 
       this.rosterSlotsEl.appendChild(button);
@@ -377,23 +424,6 @@ export class SkillMenuPanel {
       img.decoding = "async";
       wrap.appendChild(img);
     }
-
-    return wrap;
-  }
-
-  private createRosterTextBlock(preset: ClassPreset): HTMLElement {
-    const wrap = document.createElement("span");
-    wrap.className = "skill-menu-roster-card-text";
-
-    const nameEl = document.createElement("span");
-    nameEl.className = "skill-menu-roster-card-name";
-    nameEl.textContent = preset.displayName;
-
-    const epithetEl = document.createElement("span");
-    epithetEl.className = "skill-menu-roster-card-epithet";
-    epithetEl.textContent = preset.epithetEn ?? "";
-
-    wrap.append(nameEl, epithetEl);
 
     return wrap;
   }
@@ -463,22 +493,24 @@ export class SkillMenuPanel {
     const layout = document.createElement("div");
     layout.className = "skill-menu-tactical-layout";
 
-    const upper = document.createElement("div");
-    upper.className = "skill-menu-tactical-upper";
+    layout.appendChild(this.createClassSummaryBand(preset));
 
-    const classStatsRow = document.createElement("div");
-    classStatsRow.className = "skill-menu-class-stats-row";
-    classStatsRow.append(
-      this.createClassInfoSection(member, preset),
-      this.createStatsSection(preset)
+    const playerLevel = this.getPlayerLevel();
+    const learned = resolveLearnedSkills(
+      preset,
+      playerLevel,
+      this.gameData.skillRegistry
     );
-    upper.appendChild(classStatsRow);
+    const unlockedSlots = getUnlockedSkillSlotCount(playerLevel);
 
-    const lower = document.createElement("div");
-    lower.className = "skill-menu-tactical-lower";
-    lower.appendChild(this.createSkillsSummarySection(preset));
+    const skillsWrap = document.createElement("div");
+    skillsWrap.className = "skill-menu-tactical-skills";
+    skillsWrap.append(
+      this.createSkillKindSection("passive", preset, learned, unlockedSlots),
+      this.createSkillKindSection("active", preset, learned, unlockedSlots)
+    );
+    layout.appendChild(skillsWrap);
 
-    layout.append(upper, lower);
     this.bodyEl.appendChild(layout);
   }
 
@@ -494,98 +526,81 @@ export class SkillMenuPanel {
     return section;
   }
 
-  private createClassInfoSection(
-    _member: PartyMemberState,
-    preset: ClassPreset
-  ): HTMLElement {
+  private createClassSummaryBand(preset: ClassPreset): HTMLElement {
     const section = document.createElement("section");
-    section.className = "skill-menu-section skill-menu-class-info";
+    section.className = "skill-menu-class-summary-band";
 
     const heading = document.createElement("h3");
-    heading.className = "skill-menu-section-title";
+    heading.className = "skill-menu-section-title skill-menu-class-summary-band-title";
     heading.textContent = t("party.classSummary");
 
-    const header = document.createElement("div");
-    header.className = "skill-menu-class-info-header";
+    const identityEl = document.createElement("div");
+    identityEl.className = "skill-menu-class-summary-identity";
 
-    header.appendChild(
-      this.createIconWrap(preset, preset.displayName)
-    );
+    const namePart = document.createElement("span");
+    namePart.className = "skill-menu-class-summary-name";
+    namePart.dataset.i18nRole = "primary";
+    namePart.textContent = preset.displayName;
 
-    const textWrap = document.createElement("div");
-    textWrap.className = "skill-menu-class-info-text";
-
-    const topRow = document.createElement("div");
-    topRow.className = "skill-menu-class-info-top-row";
-
-    const identityWrap = document.createElement("div");
-    identityWrap.className = "skill-menu-class-info-identity";
-
-    const nameEl = document.createElement("div");
-    nameEl.className = "skill-menu-class-info-name";
-    nameEl.textContent = preset.displayName;
-
-    const epithetEl = document.createElement("div");
-    epithetEl.className = "skill-menu-class-info-epithet";
-    epithetEl.textContent = preset.epithetEn ?? "";
-
-    const roleEl = document.createElement("div");
-    roleEl.className = "skill-menu-class-info-role";
+    const rolePart = document.createElement("span");
+    rolePart.className = "skill-menu-class-summary-role";
     if (preset.role === "attacker") {
-      roleEl.textContent = `${roleLabel(preset.role)} · ${attackerSubRoleLabel(resolveAttackerSubRole(preset))}`;
+      rolePart.textContent = `${roleLabel(preset.role)} · ${attackerSubRoleLabel(resolveAttackerSubRole(preset))}`;
     } else {
-      roleEl.textContent = roleLabel(preset.role);
+      rolePart.textContent = roleLabel(preset.role);
     }
 
-    identityWrap.append(nameEl, epithetEl, roleEl);
+    identityEl.appendChild(namePart);
+    if (preset.epithetEn) {
+      const epithetPart = document.createElement("span");
+      epithetPart.className = "skill-menu-class-summary-epithet";
+      epithetPart.dataset.i18nRole = "secondary";
+      epithetPart.textContent = preset.epithetEn;
+      identityEl.append(document.createTextNode(" "), epithetPart);
+    }
+    identityEl.append(document.createTextNode(" / "));
+    identityEl.appendChild(rolePart);
 
-    topRow.appendChild(identityWrap);
+    section.appendChild(heading);
 
-    textWrap.appendChild(topRow);
+    const body = document.createElement("div");
+    body.className = "skill-menu-class-summary-body";
+    body.appendChild(identityEl);
 
     const summary = formatClassSummary(preset, getLocale());
     if (summary) {
       const summaryEl = document.createElement("p");
-      summaryEl.className = "skill-menu-class-info-summary";
+      summaryEl.className = "skill-menu-class-summary-text";
       summaryEl.textContent = summary;
       this.gameTermTooltip.bind(summaryEl, () => ({
         title: preset.displayName,
         body: summary,
       }));
-      textWrap.appendChild(summaryEl);
+      body.appendChild(summaryEl);
     }
 
-    header.appendChild(textWrap);
-
-    section.append(heading, header);
+    body.appendChild(this.createStatChipRow(preset));
+    section.appendChild(body);
     return section;
   }
 
-  private createStatsSection(preset: ClassPreset): HTMLElement {
+  private createStatChipRow(preset: ClassPreset): HTMLElement {
     const playerLevel = this.getPlayerLevel();
     const stats = resolveMemberDisplayStats(
       preset,
       playerLevel,
       this.levelCurves
     );
-
-    const section = document.createElement("section");
-    section.className = "skill-menu-stats";
-
-    const heading = document.createElement("h3");
-    heading.className = "skill-menu-section-title";
-    heading.textContent = t("party.stats");
-    section.appendChild(heading);
-
-    const grid = document.createElement("dl");
-    grid.className = "skill-menu-stats-grid";
-
     const statLabels = getMemberStatLabels();
-    const rows: { label: string; value: string; latin?: boolean }[] = [
-      { label: statLabels.hp, value: String(stats.maxHp), latin: true },
+
+    const row = document.createElement("div");
+    row.className = "skill-menu-class-summary-stats";
+
+    const chips: { label: string; value: string }[] = [
+      { label: statLabels.hp, value: String(stats.maxHp) },
       { label: statLabels.atk, value: String(stats.atk) },
       { label: statLabels.def, value: String(stats.def) },
-      { label: statLabels.reg, value: String(stats.reg) + "%" },
+      { label: statLabels.reg, value: `${stats.reg}%` },
       { label: statLabels.spd, value: stats.spdLabel },
     ];
 
@@ -594,7 +609,7 @@ export class SkillMenuPanel {
       this.gameData.skillRegistry
     );
     if (basicAttack) {
-      rows.push(
+      chips.push(
         { label: statLabels.range, value: basicAttack.rangeLabel },
         {
           label: statLabels.basicAttack,
@@ -603,76 +618,76 @@ export class SkillMenuPanel {
       );
     }
 
-    for (const row of rows) {
-      const dt = document.createElement("dt");
-      dt.className = "skill-menu-stats-label";
-      if (row.latin) {
-        dt.classList.add("skill-menu-stats-label--latin");
-      }
-      dt.textContent = row.label;
-
-      const dd = document.createElement("dd");
-      dd.className = "skill-menu-stats-value";
-      dd.textContent = row.value;
-
-      grid.append(dt, dd);
+    for (const chip of chips) {
+      const el = document.createElement("span");
+      el.className = "skill-menu-stat-chip";
+      el.textContent = `${chip.label} ${chip.value}`;
+      row.appendChild(el);
     }
 
-    section.appendChild(grid);
-    return section;
+    return row;
   }
 
-  private createSkillsSummarySection(preset: ClassPreset): HTMLElement {
-    const playerLevel = this.getPlayerLevel();
-    const learned = resolveLearnedSkills(
-      preset,
-      playerLevel,
-      this.gameData.skillRegistry
-    );
-    const unlockedSlots = getUnlockedSkillSlotCount(playerLevel);
-
+  private createSkillKindSection(
+    kind: "active" | "passive",
+    preset: ClassPreset,
+    learned: ReturnType<typeof resolveLearnedSkills>,
+    unlockedSlots: number
+  ): HTMLElement {
     const section = document.createElement("section");
-    section.className = "skill-menu-skill-summary-section";
+    section.className = "skill-menu-skill-kind-section";
 
     const heading = document.createElement("h3");
     heading.className = "skill-menu-section-title";
-    heading.textContent = t("party.skills");
+    heading.textContent =
+      kind === "active" ? t("party.activeSkills") : t("party.passiveSkills");
+
+    const body = document.createElement("div");
+    body.className = "skill-menu-skill-kind-body";
 
     const grid = document.createElement("div");
     grid.className = "skill-menu-skill-summary-grid";
 
-    for (const skillId of learned.learnedActiveIds) {
-      const def = this.gameData.skillRegistry.actives[skillId];
-      grid.appendChild(
-        this.createSkillSummaryCard({
-          skillId,
-          def,
-          preset,
-          kind: "active",
-        })
+    const skillIds =
+      kind === "active"
+        ? learned.learnedActiveIds
+        : learned.learnedPassiveIds;
+    const registry =
+      kind === "active"
+        ? this.gameData.skillRegistry.actives
+        : this.gameData.skillRegistry.passives;
+
+    const learnedCount = skillIds.length;
+    if (learnedCount > 0) {
+      grid.style.setProperty(
+        "--skill-learned-cols",
+        String(Math.min(2, learnedCount))
+      );
+      for (const skillId of skillIds) {
+        grid.appendChild(
+          this.createSkillSummaryCard({
+            skillId,
+            def: registry[skillId],
+            preset,
+            kind,
+          })
+        );
+      }
+      body.appendChild(grid);
+    }
+
+    const lockedList = document.createElement("div");
+    lockedList.className = "skill-menu-skill-locked-list";
+    for (let slotIndex = unlockedSlots; slotIndex < MAX_ACTIVE_SLOTS; slotIndex++) {
+      lockedList.appendChild(
+        this.createLockedSkillRow(slotIndex, preset, kind)
       );
     }
-
-    for (const skillId of learned.learnedPassiveIds) {
-      const def = this.gameData.skillRegistry.passives[skillId];
-      grid.appendChild(
-        this.createSkillSummaryCard({
-          skillId,
-          def,
-          preset,
-          kind: "passive",
-        })
-      );
+    if (lockedList.childElementCount > 0) {
+      body.appendChild(lockedList);
     }
 
-    for (let slotIndex = unlockedSlots; slotIndex < MAX_ACTIVE_SLOTS; slotIndex++) {
-      grid.appendChild(this.createLockedSlotCard(slotIndex, preset, "active"));
-    }
-    for (let slotIndex = unlockedSlots; slotIndex < MAX_ACTIVE_SLOTS; slotIndex++) {
-      grid.appendChild(this.createLockedSlotCard(slotIndex, preset, "passive"));
-    }
-
-    section.append(heading, grid);
+    section.append(heading, body);
     return section;
   }
 
@@ -682,9 +697,8 @@ export class SkillMenuPanel {
     preset: ClassPreset;
     kind: "active" | "passive";
   }): HTMLElement {
-    const { skillId, def, preset, kind } = options;
+    const { skillId, def, preset } = options;
     const label = def?.name ?? skillId;
-    const kindLabel = kind === "active" ? t("party.activeSkills") : t("party.passiveSkills");
 
     const card = document.createElement("article");
     card.className = "skill-menu-skill-summary-card";
@@ -712,18 +726,14 @@ export class SkillMenuPanel {
         getLocale() as GameTermLocale
       );
 
-      const metaEl = document.createElement("div");
-      metaEl.className = "skill-menu-skill-summary-card-meta";
-      metaEl.textContent = `${kindLabel} · ${display.metaLine}`;
-      card.appendChild(metaEl);
-
-      const headline = display.headlineLines[0];
-      if (headline) {
-        const headlineEl = document.createElement("p");
-        headlineEl.className = "skill-menu-skill-summary-card-headline";
-        headlineEl.textContent = headline;
-        card.appendChild(headlineEl);
+      if (display.metaLine) {
+        const metaEl = document.createElement("div");
+        metaEl.className = "skill-menu-skill-summary-card-meta";
+        metaEl.textContent = display.metaLine;
+        card.appendChild(metaEl);
       }
+
+      this.appendSkillCardEffects(card, lines.effectLines);
 
       const chipsRow = document.createElement("div");
       chipsRow.className = "skill-menu-skill-summary-card-chips";
@@ -757,61 +767,93 @@ export class SkillMenuPanel {
       if (hasChips) {
         card.appendChild(chipsRow);
       }
-
-      this.gameTermTooltip.bind(card, () => ({
-        title: label,
-        body: this.buildSkillSummaryTooltipBody(display),
-      }));
     }
 
     return card;
   }
 
-  private buildSkillSummaryTooltipBody(display: {
-    metaLine: string;
-    headlineLines: string[];
-  }): string {
-    return [display.metaLine, ...display.headlineLines]
-      .filter((line) => line.length > 0)
-      .join("\n");
+  private appendSkillCardEffects(
+    card: HTMLElement,
+    effectLines: SkillCardEffectLine[]
+  ): void {
+    if (effectLines.length === 0) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "skill-menu-skill-summary-card-effects";
+
+    for (const line of effectLines) {
+      if (isSkillCardEffectList(line)) {
+        const list = document.createElement("ul");
+        list.className = "skill-menu-skill-summary-card-effect-list";
+        for (const item of line.items) {
+          const li = document.createElement("li");
+          li.className = "skill-menu-skill-summary-card-effect-line";
+          li.appendChild(this.createAnnotatedFragment(item.text));
+          if (item.details?.length) {
+            const details = document.createElement("ul");
+            details.className = "skill-menu-skill-summary-card-effect-details";
+            for (const detail of item.details) {
+              const detailItem = document.createElement("li");
+              detailItem.className = "skill-menu-skill-summary-card-effect-line";
+              detailItem.appendChild(this.createAnnotatedFragment(detail));
+              details.appendChild(detailItem);
+            }
+            li.appendChild(details);
+          }
+          list.appendChild(li);
+        }
+        wrap.appendChild(list);
+        continue;
+      }
+
+      const paragraph = document.createElement("p");
+      paragraph.className = "skill-menu-skill-summary-card-effect-line";
+      paragraph.appendChild(this.createAnnotatedFragment(line));
+      wrap.appendChild(paragraph);
+    }
+
+    card.appendChild(wrap);
   }
 
-  private createLockedSlotCard(
+  private createAnnotatedFragment(text: string): DocumentFragment {
+    return annotateGameTerms(
+      text,
+      getLocale() as GameTermLocale,
+      (termId, anchor) => this.gameTermPanel.openFromTerm(termId, anchor),
+      { panelId: this.gameTermPanel.getPanelId() }
+    );
+  }
+
+  private createLockedSkillRow(
     slotIndex: number,
     preset: ClassPreset,
     kind: "active" | "passive"
   ): HTMLElement {
-    const kindLabel =
-      kind === "active" ? t("party.activeSkills") : t("party.passiveSkills");
-    const footerText = this.formatLockedSlotFooter(slotIndex, preset, kind);
-
-    const card = document.createElement("article");
-    card.className =
-      "skill-menu-skill-summary-card skill-menu-skill-summary-card--locked";
-    card.setAttribute("role", "group");
-    card.setAttribute("aria-label", t("party.lockedSlot"));
-
-    const nameEl = document.createElement("div");
-    nameEl.className = "skill-menu-skill-summary-card-name";
-    nameEl.textContent = t("party.lockedSlot");
-
-    const metaEl = document.createElement("div");
-    metaEl.className = "skill-menu-skill-summary-card-meta";
-    metaEl.textContent = `${kindLabel} · ${footerText}`;
-
-    card.append(nameEl, metaEl);
-    return card;
-  }
-
-  private formatLockedSlotFooter(
-    slotIndex: number,
-    preset: ClassPreset,
-    kind: "active" | "passive"
-  ): string {
     const unlockLevel = slotIndex < 2 ? 0 : slotIndex === 2 ? 10 : 20;
-    const unlockText = t("party.slotUnlockAtLevel", { level: unlockLevel });
     const skillName = this.resolveLockedSlotSkillName(preset, slotIndex, kind);
-    return skillName ? `${skillName}　${unlockText}` : unlockText;
+
+    const row = document.createElement("div");
+    row.className = "skill-menu-skill-locked-row";
+    row.setAttribute(
+      "aria-label",
+      skillName
+        ? t("party.skillLockedPreview", { level: unlockLevel, name: skillName })
+        : t("party.slotUnlockAtLevel", { level: unlockLevel })
+    );
+
+    const prefix = document.createElement("span");
+    prefix.className = "skill-menu-skill-locked-prefix";
+    prefix.textContent = "+";
+    prefix.setAttribute("aria-hidden", "true");
+
+    const text = document.createElement("span");
+    text.className = "skill-menu-skill-locked-text";
+    text.textContent = skillName
+      ? t("party.skillLockedPreview", { level: unlockLevel, name: skillName })
+      : t("party.slotUnlockAtLevel", { level: unlockLevel });
+
+    row.append(prefix, text);
+    return row;
   }
 
   private resolveLockedSlotSkillName(
@@ -882,12 +924,13 @@ export class SkillMenuPanel {
   }
 
   private createPickerRoleBlocks(): HTMLElement {
-    const assignable = this.getAssignableClassIdsForPicker();
+    const visible = this.getPickerVisibleClassIds();
+    const usedElsewhere = this.getClassIdsUsedElsewhere();
     const blocks = document.createElement("div");
     blocks.className = "skill-menu-picker-role-blocks";
 
     for (const role of PICKER_ROLES) {
-      const classIds = assignable.filter(
+      const classIds = visible.filter(
         (classId) => this.gameData.classRegistry[classId]?.role === role
       );
       if (classIds.length === 0) continue;
@@ -923,7 +966,8 @@ export class SkillMenuPanel {
               this.createPickerListItem(
                 preset?.displayName ?? classId,
                 classId,
-                preset
+                preset,
+                usedElsewhere.has(classId)
               )
             );
           }
@@ -935,7 +979,8 @@ export class SkillMenuPanel {
             this.createPickerListItem(
               preset?.displayName ?? classId,
               classId,
-              preset
+              preset,
+              usedElsewhere.has(classId)
             )
           );
         }
@@ -950,7 +995,8 @@ export class SkillMenuPanel {
   private createPickerListItem(
     name: string,
     classId: string,
-    preset?: ClassPreset
+    preset?: ClassPreset,
+    usedElsewhere = false
   ): HTMLElement {
     const row = document.createElement("button");
     row.type = "button";
@@ -959,6 +1005,10 @@ export class SkillMenuPanel {
     const assignedClassId = this.draftParty[this.selectedIndex]?.classId;
     if (classId === assignedClassId) {
       row.classList.add("skill-menu-picker-list-item--active");
+    } else if (usedElsewhere) {
+      row.classList.add("skill-menu-picker-list-item--unavailable");
+      row.disabled = true;
+      row.title = t("party.classInParty");
     }
 
     row.appendChild(this.createIconWrap(preset, name));

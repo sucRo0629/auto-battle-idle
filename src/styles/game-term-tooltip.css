@@ -102,7 +102,19 @@
   text-decoration-color: rgba(140, 180, 220, 0.55);
 }
 
+.skill-menu-skill-summary-card-effect-line .game-term-link {
+  font-size: inherit;
+  line-height: inherit;
+  text-decoration: underline dotted;
+  text-decoration-color: rgba(140, 180, 220, 0.55);
+}
+
 .skill-menu-skill-view-card-effect-line .game-term-link:hover,
 .skill-menu-skill-view-card-effect-line .game-term-link:focus-visible {
+  color: #a8d4ff;
+}
+
+.skill-menu-skill-summary-card-effect-line .game-term-link:hover,
+.skill-menu-skill-summary-card-effect-line .game-term-link:focus-visible {
   color: #a8d4ff;
 }
