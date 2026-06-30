@@ -83,6 +83,7 @@ import {
 import {
   phraseAtkBasedBarrier,
   phraseAtkBasedDamage,
+  phraseAtkBasedDamageNoun,
   phraseAtkBasedHeal,
   phraseAtkBasedHealAmount,
   phraseBarrierAmountBonusOnLowHpAlly,
@@ -96,6 +97,7 @@ import {
   phraseBlockRateBuff,
   phraseApplyDotAfterAttack,
   phraseChargesAvailable,
+  phraseCounterLabel,
   phraseDamageIncreaseIfCondition,
   phraseDamageReductionRate,
   phraseDefenseIgnorePercent,
@@ -108,6 +110,7 @@ import {
   phraseHealSuffix,
   phraseIfTargetHasDebuff,
   phraseIfTargetHp,
+  phraseKnockbackLabel,
   phraseMagicBlockEnable,
   phraseMaxStacks,
   phraseMoveBehindTargetThen,
@@ -120,6 +123,7 @@ import {
   phraseSeedFlameStackOnHit,
   phraseSeedFlameUpgradeToBlazing,
   phraseSelfDamageReduction,
+  phraseStunDuration,
   phraseSurroundingBlockRateBuff,
   phraseSurroundingDamageReduction,
   phraseSurroundingPrefix,
@@ -251,6 +255,12 @@ function formatFireConditionsSummary(
 function formatSecondsLabel(value: number): string {
   const rounded = Math.round(value * 100) / 100;
   return skillText().seconds(rounded);
+}
+
+function joinSkillCardSegments(
+  ...parts: Array<string | null | undefined | false>
+): string {
+  return parts.filter((part): part is string => Boolean(part)).join(" / ");
 }
 
 function formatCdLabel(kind: SkillTriggerKind, value: number): string {
@@ -521,13 +531,13 @@ function formatCompactAtkBasedDamageSentence(
   if (amount?.kind === "atkBased") {
     const scale = amount.atkScale ?? 1;
     const pct = formatPercent(scale);
-    return phraseAtkBasedDamage(pct, damageType);
+    return phraseAtkBasedDamageNoun(pct, damageType);
   }
   const dmgPrefix = damageType ? `${DAMAGE_TYPE_LABELS[damageType]} ` : "";
   if (getSkillTextLocale() === "en") {
-    return `Deals ${dmgPrefix}${formatResourceAmount(amount)} damage`;
+    return `${dmgPrefix}${formatResourceAmount(amount)} damage`.trim();
   }
-  return `${dmgPrefix.trim()}${formatResourceAmount(amount)}のダメージを与える`;
+  return `${dmgPrefix.trim()}${formatResourceAmount(amount)}のダメージ`;
 }
 
 function formatCompactSingleTargetDamageSentence(
@@ -1325,25 +1335,64 @@ function compactStatEffectLabel(label: string): string {
     .replace(/\s+\)/g, ")");
 }
 
-function formatDefenseIgnoreSpec(
+function formatDefenseIgnoreModifierSegments(
   spec: PassiveSkillDef["defenseIgnore"] | SkillEffectDef["defenseIgnore"]
-): string {
-  if (!spec) return "";
-  const parts: string[] = [];
+): string[] {
+  if (!spec) return [];
+  const segments: string[] = [];
   if (spec.def) {
-    parts.push(
+    const value =
       spec.def.mode === "flat"
-        ? `DEF無視${spec.def.amount}`
-        : `DEF無視${formatPercent(spec.def.amount)}`
+        ? String(spec.def.amount)
+        : formatPercent(spec.def.amount);
+    segments.push(
+      getSkillTextLocale() === "en"
+        ? `DEF Ignore ${value}`
+        : `DEF無視 ${value}`
     );
   }
   if (spec.reg) {
-    parts.push(`REG無視${formatPercent(spec.reg.percent)}`);
+    const value = formatPercent(spec.reg.percent);
+    segments.push(
+      getSkillTextLocale() === "en" ? `REG Ignore ${value}` : `REG無視 ${value}`
+    );
   }
   if (spec.chance !== undefined && spec.chance < 1) {
-    parts.unshift(`${formatPercent(spec.chance)}で`);
+    segments.unshift(
+      getSkillTextLocale() === "en"
+        ? `${formatPercent(spec.chance)} chance`
+        : `${formatPercent(spec.chance)}で`
+    );
   }
-  return parts.join(" ");
+  return segments;
+}
+
+function formatDamagePierceModifierSegments(effect: SkillEffectDef): string[] {
+  if (effect.type !== "damage") return [];
+  const segments: string[] = [];
+  if (effect.ignoreDamageTakenReduction) {
+    segments.push(
+      getSkillTextLocale() === "en" ? "DR Ignore" : "軽減無視"
+    );
+  }
+  if (effect.pierceBlock) {
+    segments.push(getSkillTextLocale() === "en" ? "Block Pierce" : "block貫通");
+  }
+  if (effect.pierceWard) {
+    segments.push(getSkillTextLocale() === "en" ? "Ward Pierce" : "障壁貫通");
+  }
+  if (effect.pierceBarrier) {
+    segments.push(getSkillTextLocale() === "en" ? "Barrier Pierce" : "バリア無視");
+  }
+  return segments;
+}
+
+function formatDefenseIgnoreSpec(
+  spec: PassiveSkillDef["defenseIgnore"] | SkillEffectDef["defenseIgnore"]
+): string {
+  const segments = formatDefenseIgnoreModifierSegments(spec);
+  if (segments.length === 0) return "";
+  return segments.join(" ");
 }
 
 function formatTargetShape(effect: SkillEffectDef): string {
@@ -1446,6 +1495,12 @@ function formatTargetFramedDetail(
   targetSpec: TargetSpec,
   options?: ActiveEffectDetailOptions
 ): string {
+  if (
+    options?.compact &&
+    (effect.type === "damage" || effect.type === "dot")
+  ) {
+    return detail;
+  }
   if (!shouldShowTargetSideInFrameDetail(effect, options)) return detail;
   const side = resolveTargetSideLabel(targetSpec);
   if (!side) return detail;
@@ -1564,6 +1619,12 @@ function formatCounterRangeSummary(range: number | undefined): string {
 function formatCounterResponse(response: CounterResponseDef): string {
   switch (response.kind) {
     case "damage": {
+      if (response.amount?.kind === "atkBased") {
+        return formatCompactAtkBasedDamageSentence(
+          response.amount,
+          response.damageType
+        );
+      }
       const dmgType = response.damageType
         ? DAMAGE_TYPE_LABELS[response.damageType]
         : "";
@@ -1577,7 +1638,7 @@ function formatCounterResponse(response: CounterResponseDef): string {
     case "dot":
       return `DoT×${response.powerMultiplier} ${response.durationSec}s`;
     case "stun":
-      return `スタン${response.durationSec}s`;
+      return phraseStunDuration(response.durationSec);
     case "knockback":
       return `ノック${formatUiDistanceValue(response.distancePx)}+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`;
   }
@@ -1623,8 +1684,12 @@ function formatActiveEffectDetail(
         : "";
       const amount = formatResourceAmount(effect.amount);
       if (compact) {
+        const segments: string[] = [
+          ...formatDefenseIgnoreModifierSegments(effect.defenseIgnore),
+          ...formatDamagePierceModifierSegments(effect),
+        ];
         if (targetFrame && effect.amount?.kind === "atkBased") {
-          extras.push(
+          segments.push(
             formatCompactAtkBasedDamageSentence(effect.amount, effect.damageType)
           );
         } else if (
@@ -1635,7 +1700,7 @@ function formatActiveEffectDetail(
             effect,
             targetSpec
           );
-          extras.push(
+          segments.push(
             singleSentence ??
               formatCompactAtkBasedDamageSentence(
                 effect.amount,
@@ -1644,24 +1709,29 @@ function formatActiveEffectDetail(
           );
         } else {
           const hint = formatCompactTargetHint(targetSpec);
-          extras.push(`${hint}${dmgType}${amount}`);
+          segments.push(`${hint}${dmgType}${amount}`);
         }
+        const inc =
+          formatCompactDamageIncreaseBonusLine(effect.damageIncrease) ??
+          formatDamageIncreaseSpec(effect.damageIncrease);
+        if (inc) segments.push(inc);
+        extras.push(...segments);
       } else {
         const power = dmgType ? `${dmgType} ${amount}` : amount;
         extras.push(power);
+        const inc =
+          formatCompactDamageIncreaseBonusLine(effect.damageIncrease) ??
+          formatDamageIncreaseSpec(effect.damageIncrease);
+        if (inc) extras.push(inc);
+        const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);
+        if (ign) extras.push(ign);
+        const pierceLabels: string[] = [];
+        if (effect.ignoreDamageTakenReduction) pierceLabels.push("DR無視");
+        if (effect.pierceBlock) pierceLabels.push("block貫通");
+        if (effect.pierceWard) pierceLabels.push("障壁貫通");
+        if (effect.pierceBarrier) pierceLabels.push("barrier貫通");
+        if (pierceLabels.length > 0) extras.push(pierceLabels.join("・"));
       }
-      const inc =
-        formatCompactDamageIncreaseBonusLine(effect.damageIncrease) ??
-        formatDamageIncreaseSpec(effect.damageIncrease);
-      if (inc) extras.push(inc);
-      const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);
-      if (ign) extras.push(ign);
-      const pierceLabels: string[] = [];
-      if (effect.ignoreDamageTakenReduction) pierceLabels.push("DR無視");
-      if (effect.pierceBlock) pierceLabels.push("block貫通");
-      if (effect.pierceWard) pierceLabels.push("障壁貫通");
-      if (effect.pierceBarrier) pierceLabels.push("barrier貫通");
-      if (pierceLabels.length > 0) extras.push(pierceLabels.join("・"));
       break;
     }
     case "heal":
@@ -1983,10 +2053,18 @@ function formatActiveEffectDetail(
       break;
     }
     case "stun":
-      extras.push(`${effect.durationSec}s`);
+      extras.push(
+        compact
+          ? phraseStunDuration(effect.durationSec)
+          : `${effect.durationSec}s`
+      );
       break;
     case "knockback":
-      extras.push(`${formatUiDistanceValue(effect.distancePx)}+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`);
+      extras.push(
+        compact
+          ? phraseKnockbackLabel()
+          : `${formatUiDistanceValue(effect.distancePx)}+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`
+      );
       break;
     case "dispel": {
       extras.push(
@@ -2002,16 +2080,30 @@ function formatActiveEffectDetail(
       );
       break;
     case "counter": {
-      const responseParts = effect.responses.map(formatCounterResponse);
-      extras.push(
-        [
-          responseParts.join(" / "),
-          `${effect.durationSec}s`,
-          formatCounterRangeSummary(effect.range),
-        ]
-          .filter(Boolean)
-          .join(" ")
-      );
+      if (compact) {
+        const responseParts = effect.responses.map(formatCounterResponse);
+        extras.push(
+          joinSkillCardSegments(
+            phraseCounterLabel(),
+            ...responseParts,
+            effect.durationSec !== undefined
+              ? `${effect.durationSec}${getSkillTextLocale() === "en" ? "s" : "秒"}`
+              : null,
+            formatCounterRangeSummary(effect.range) || null
+          )
+        );
+      } else {
+        const responseParts = effect.responses.map(formatCounterResponse);
+        extras.push(
+          [
+            responseParts.join(" / "),
+            `${effect.durationSec}s`,
+            formatCounterRangeSummary(effect.range),
+          ]
+            .filter(Boolean)
+            .join(" ")
+        );
+      }
       break;
     }
     case "enemyReelIn":
@@ -2068,15 +2160,15 @@ function formatActiveEffectDetail(
   }
 
   const kindLabel = formatEffectKindLabel(effect.type);
-  const detail = extras.filter(Boolean).join(" ");
+  const detail = compact
+    ? joinSkillCardSegments(...extras)
+    : extras.filter(Boolean).join(" ");
   if (compact) {
     if (targetFrame) {
-      return `${targetFrame} / ${formatTargetFramedDetail(
-        detail,
-        effect,
-        targetSpec,
-        options
-      )}`;
+      return joinSkillCardSegments(
+        targetFrame,
+        formatTargetFramedDetail(detail, effect, targetSpec, options)
+      );
     }
     if (
       options?.scopePrefix &&

@@ -1,4 +1,5 @@
 import "../styles/battle-view.css";
+import "../styles/enemy-hud-overlay.css";
 import "../styles/party-hud-overlay.css";
 import "../styles/party-hud-floating-tooltip.css";
 import type { BattleEngine } from "../battle/BattleEngine.ts";
@@ -31,6 +32,8 @@ import {
   playSkillHitFeedback,
   resolveSkillPresentation,
 } from "../render/skillPresentation.ts";
+import { EnemyHudPanel } from "./EnemyHudPanel.ts";
+import { buildEnemyHudEntries } from "./enemyHudTypes.ts";
 import { PartyHudPanel } from "./PartyHudPanel.ts";
 import { formatPartyHudSkillSlotTooltip } from "./partyHudSkillGaugeTooltip.ts";
 import { PartyMemberEffectiveStatsPanel } from "./PartyMemberEffectiveStatsPanel.ts";
@@ -90,6 +93,7 @@ export class BattleView {
   private readonly hudToolbarLevelEl: HTMLElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
+  private readonly enemyHud: EnemyHudPanel;
   private readonly memberStatsPanel: PartyMemberEffectiveStatsPanel;
   private readonly debugMenu: DebugMenuPanel;
   private readonly battleXDebugCanvas: BattleXDebugCanvas;
@@ -98,6 +102,7 @@ export class BattleView {
   private readonly gameTermPanel: GameTermPanel;
   private readonly canvasFrame: HTMLElement;
   private readonly partyHudSlotEl: HTMLElement;
+  private readonly enemyHudSlotEl: HTMLElement;
   private hoveredMemberStatsSlotIndex: number | null = null;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastStageName = "";
@@ -151,9 +156,9 @@ export class BattleView {
     this.partyHudSlotEl = partyHudSlot;
 
     const enemyHudSlot = document.createElement("div");
-    enemyHudSlot.className = "enemy-hud-slot battle-hud-slot battle-hud-slot--enemy";
+    enemyHudSlot.className = "battle-hud-slot battle-hud-slot--enemy";
     enemyHudSlot.setAttribute("data-battle-hud-slot", "enemy");
-    enemyHudSlot.setAttribute("aria-hidden", "true");
+    this.enemyHudSlotEl = enemyHudSlot;
 
     const battleTopInfo = document.createElement("div");
     battleTopInfo.className = "battle-top-info";
@@ -306,6 +311,12 @@ export class BattleView {
     });
     this.partyHud.mount(this.partyHudSlotEl);
 
+    this.enemyHud = new EnemyHudPanel(this.canvasHost, {
+      floatingTooltip: this.hudFloatingTooltip,
+      gameTermPanel: this.gameTermPanel,
+    });
+    this.enemyHud.mount(this.enemyHudSlotEl);
+
     this.statsDrawer = new BattleStatsDrawer({
       onOpenChange: (open) => {
         verifyModeControls?.onStatsDrawerOpenChange?.(open);
@@ -345,6 +356,7 @@ export class BattleView {
       );
       this.partyHud.update(buildPartyHudEntries(snapshot, partyMeta));
       this.partyHud.refreshLocale();
+      this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies));
       this.refreshMemberStatsPanel();
     });
     this.refreshLocaleChrome();
@@ -482,6 +494,7 @@ export class BattleView {
         buildPartyHudMetaBySlot(save.party, this.gameData.classRegistry),
       ),
     );
+    this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies));
   }
 
   private onBattleEvent(event: BattleEvent): void {
@@ -772,6 +785,7 @@ export class BattleView {
       displayRows:
         this.verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
     });
+    this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies));
     this.canvas.tick(deltaMs);
     if (debugEnabled) {
       this.battleXDebugCanvas.tick(deltaMs);
@@ -841,6 +855,7 @@ export class BattleView {
     this.canvas.destroy();
     this.battleXDebugCanvas.destroy();
     this.partyHud.destroy();
+    this.enemyHud.destroy();
     this.debugMenu.destroy();
     this.root.remove();
   }

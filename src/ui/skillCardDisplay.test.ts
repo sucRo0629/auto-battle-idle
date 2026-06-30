@@ -73,7 +73,7 @@ describe("resolveSkillCardDisplay", () => {
     const display = resolveSkillCardDisplay(lines, def, "en");
 
     expect(display.headlineLines).toEqual([
-      "Multi-Lock 2 / To enemies: Deals 90% ATK as magic damage",
+      "Multi-Lock 2 / 90% ATK magic damage",
     ]);
     expect(resolveGameTermTooltip("multiLock", "en")).toContain(
       "remaining applications hit the same target again"

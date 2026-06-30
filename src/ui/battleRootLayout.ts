@@ -51,6 +51,15 @@ export const ENEMY_HUD_SLOT_RECT: BattleRootRect = {
   h: 608,
 };
 
+/** Fixed enemy row height inside enemyHud (battle-field.md §8.8). */
+export const ENEMY_HUD_SLOT_HEIGHT = 52;
+
+/** Vertical gap between enemy rows inside enemyHud. */
+export const ENEMY_HUD_SLOT_GAP = 6;
+
+/** Maximum enemy rows shown in the enemyHud list. */
+export const ENEMY_HUD_MAX_SLOTS = 10;
+
 export function battleRootRectStyle(rect: BattleRootRect): string {
   return [
     `left:${rect.x}px`,

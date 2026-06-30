@@ -3,6 +3,9 @@ import {
   BATTLE_BACKGROUND_RECT,
   BATTLE_LANE_RECT,
   BATTLE_TOP_INFO_RECT,
+  ENEMY_HUD_MAX_SLOTS,
+  ENEMY_HUD_SLOT_GAP,
+  ENEMY_HUD_SLOT_HEIGHT,
   ENEMY_HUD_SLOT_RECT,
   PARTY_HUD_ALLY_CARD_GAP,
   PARTY_HUD_ALLY_CARD_HEIGHT,
@@ -40,6 +43,13 @@ describe("battleRootLayout", () => {
     expect(
       4 * PARTY_HUD_ALLY_CARD_HEIGHT + 3 * PARTY_HUD_ALLY_CARD_GAP,
     ).toBe(PARTY_HUD_SLOT_RECT.h);
+  });
+
+  it("sizes enemy rows to fit within the enemyHud slot height", () => {
+    expect(
+      ENEMY_HUD_MAX_SLOTS * ENEMY_HUD_SLOT_HEIGHT +
+        (ENEMY_HUD_MAX_SLOTS - 1) * ENEMY_HUD_SLOT_GAP,
+    ).toBeLessThanOrEqual(ENEMY_HUD_SLOT_RECT.h);
   });
 
   it("serializes rects for inline style", () => {

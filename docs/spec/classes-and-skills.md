@@ -222,7 +222,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - `持続` — 効果残り秒（`buffDurationSec` 等の最大）。`useDurationSec`（硬直）とは分ける
 - `硬直` — `useDurationSec`。`useDurationPauseApproach` 時は `硬直・移動停止N秒`（秒数は末尾）。それ以外は `硬直N秒`
 - `発動条件` — `firePolicy: smart` の `fireConditions` 要約（例: `対象のHPが50%以上`）
-- `[効果…]` — コンパクト表記。[ゲーム用語表 §表示フォーマット](classes-and-skills.md#ゲーム用語表表示分類) に従う。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージ`（至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `[マルチロック] N / {効果}`（対象数はラベル直後）。不足対象時の再配分は本文に書かず **Inline Term Label の tooltip** へ
+- `[効果…]` — コンパクト表記。[ゲーム用語表 §表示フォーマット](classes-and-skills.md#ゲーム用語表表示分類) に従う。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージ`（名詞形・至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `マルチロック N / {効果}`（対象数はラベル直後）。計算修飾（`DEF無視 N%` 等）は基礎効果の前に ` / ` 区切りで並べる。不足対象時の再配分は本文に書かず **Inline Term Label の tooltip** へ
 
 **Passive**
 

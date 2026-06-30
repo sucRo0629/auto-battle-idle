@@ -190,12 +190,12 @@ export function syncPartyHudStatusBadgeHits(
   theme: BattleHudTheme,
   slotIndex: number,
   context: PartyHudStatusBadgeHitContext,
+  iconSize: number = PARTY_HUD_STATUS_BADGE_ICON_SIZE,
 ): void {
   hitLayer.replaceChildren();
   if (badges.length === 0) return;
 
   const scale = 1;
-  const iconSize = PARTY_HUD_STATUS_BADGE_ICON_SIZE;
   const layout = measureCompactStatusBadgeRow(
     scale,
     iconSize,

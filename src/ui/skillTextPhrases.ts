@@ -70,6 +70,36 @@ export function phraseAtkBasedDamage(
   return `攻撃力の${pct}の${dmgLabel}を与える`;
 }
 
+/** Skill card compact noun form (no verb / no を与える). */
+export function phraseAtkBasedDamageNoun(
+  pct: string,
+  damageType?: DamageType,
+): string {
+  if (L() === "en") {
+    const typePart = damageType ? ` ${damageTypeWord(damageType)}` : "";
+    return `${pct} ${skillStat("atk")}${typePart} damage`;
+  }
+  const dmgLabel = damageType
+    ? `${damageTypeWord(damageType)}ダメージ`
+    : "ダメージ";
+  return `攻撃力の${pct}の${dmgLabel}`;
+}
+
+export function phraseStunDuration(sec: number): string {
+  if (L() === "en") {
+    return `Stun ${sec}s`;
+  }
+  return `スタン ${sec}秒`;
+}
+
+export function phraseKnockbackLabel(): string {
+  return L() === "en" ? "Knockback" : "ノックバック";
+}
+
+export function phraseCounterLabel(): string {
+  return L() === "en" ? "Counter" : "反撃";
+}
+
 export function phraseMultiHitDamage(hitCount: number, sentence: string): string {
   if (L() === "en") {
     return `${hitCount} hits: ${sentence}`;

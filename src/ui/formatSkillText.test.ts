@@ -74,7 +74,7 @@ const LV10_PLUS_SKILL_ASSERTIONS: Record<
   at_swordsman: {
     active_3: ({ desc }) => {
       expect(desc).toContain('通常攻撃7回');
-      expect(desc).toContain('攻撃力の150%の物理ダメージを与える');
+      expect(desc).toContain('攻撃力の150%の物理ダメージ');
     },
     active_4: ({ desc }) => expect(desc).toContain('通常攻撃14回'),
     passive_4: ({ desc }) =>
@@ -226,7 +226,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatActiveDescription(def);
     expect(desc).toContain('再使用：11秒');
-    expect(desc).toContain('攻撃力の90%の物理ダメージを与える');
+    expect(desc).toContain('攻撃力の90%の物理ダメージ');
   });
 
   it('formats move + multi-lock damage', () => {
@@ -255,7 +255,7 @@ describe('formatActiveDescription', () => {
     const desc = formatActiveDescription(def);
     expect(desc).toContain('再使用：9秒');
     expect(desc).toContain('アンカー +3.2');
-    expect(desc).toContain('敵3体に攻撃力の70%の物理ダメージを与える');
+    expect(desc).toContain('敵3体に攻撃力の70%の物理ダメージ');
     expect(desc).not.toContain('対象不足分は同一対象へ再命中');
   });
 
@@ -362,7 +362,7 @@ describe('formatActiveDescription', () => {
       ],
     };
     const desc = formatActiveDescription(def);
-    expect(desc).toContain('攻撃力の110%の物理ダメージを与える');
+    expect(desc).toContain('攻撃力の110%の物理ダメージ');
   });
 
   it('formats non-single target frames in skill card lines', () => {
@@ -397,7 +397,7 @@ describe('formatActiveDescription', () => {
     });
 
     expect(card.effectLines).toEqual([
-      '貫通 / 攻撃力の50%の物理ダメージを与える',
+      '貫通 / 攻撃力の50%の物理ダメージ',
       'AoE 5 / 味方の攻撃力+15%',
     ]);
   });
@@ -425,7 +425,7 @@ describe('formatActiveDescription', () => {
     });
 
     expect(card.effectLines).toEqual([
-      '貫通 射程+3 / 攻撃力の50%の物理ダメージを与える',
+      '貫通 射程+3 / 攻撃力の50%の物理ダメージ',
     ]);
   });
 
@@ -441,7 +441,7 @@ describe('formatActiveDescription', () => {
     expect(card.effectLines.filter((line) => line.includes('貫通'))).toHaveLength(1);
     expect(card.effectLines).toContain('スタン 2s');
     expect(card.effectLines.some((line) =>
-      line.includes('攻撃力の20%の物理ダメージを与える'),
+      line.includes('攻撃力の20%の物理ダメージ'),
     )).toBe(true);
   });
 
@@ -522,7 +522,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatPassiveDescription(def);
     expect(desc).toBe(
-      '効果：被攻撃時 33% で反撃 / 物理攻撃力 / 射程+0 / 対象遠隔',
+      '効果：被攻撃時 33% で反撃 / 攻撃力の100%の物理ダメージ / 射程+0 / 対象遠隔',
     );
   });
 
@@ -707,7 +707,7 @@ describe('formatActiveDescription', () => {
     expect(a4).toBeDefined();
 
     expect(formatActiveDescription(a1!)).toBe(
-      '再使用：5秒 / 攻撃力の100%の魔法ダメージを与える、味方のHPを攻撃力の125%で回復 /',
+      '再使用：5秒 / 攻撃力の100%の魔法ダメージ、味方のHPを攻撃力の125%で回復 /',
     );
     expect(formatActiveDescription(a2!)).toBe(
       '再使用：被攻撃8回 / 持続：5秒 / 発動条件：自身のHPが80%以下 / 自身起点±5：魔法耐性+10、ダメージ軽減5%、攻撃力の20%のバリア（加算） /',
@@ -772,13 +772,13 @@ describe('formatActiveDescription', () => {
     expect(p2).toBeDefined();
 
     expect(formatActiveDescription(a1!)).toBe(
-      '再使用：通常攻撃5回 / 発動条件：対象のHPが50%以上 / 攻撃力の180%の物理ダメージを与える /',
+      '再使用：通常攻撃5回 / 発動条件：対象のHPが50%以上 / 攻撃力の180%の物理ダメージ /',
     );
 
     const nagihara = formatSkillCardLines(a2!, { locale: 'ja' });
     expect(nagihara.metaLine).toBe('再使用：10秒');
     expect(nagihara.effectLines).toEqual([
-      'マルチロック 2 / 敵に攻撃力の60%の物理ダメージを与える',
+      'マルチロック 2 / 攻撃力の60%の物理ダメージ',
     ]);
 
     expect(formatPassiveDescription(p1!)).toBe(
@@ -857,13 +857,13 @@ describe('formatActiveDescription', () => {
     expect(p2).toBeDefined();
 
     expect(formatActiveDescription(a1!)).toBe(
-      '再使用：通常攻撃5回 / 2回連続で攻撃力の125%の物理ダメージを与える /',
+      '再使用：通常攻撃5回 / 2回連続で攻撃力の125%の物理ダメージ /',
     );
 
     const rensha = formatSkillCardLines(a1!, { locale: 'ja' });
     expect(rensha.metaLine).toBe('再使用：通常攻撃5回');
     expect(rensha.effectLines).toEqual([
-      '2回連続で攻撃力の125%の物理ダメージを与える',
+      '2回連続で攻撃力の125%の物理ダメージ',
     ]);
 
     expect(formatActiveDescription(a2!)).toBe(
@@ -895,7 +895,7 @@ describe('formatActiveDescription', () => {
     const hikisaki = formatSkillCardLines(a1!, { locale: 'ja' });
     expect(hikisaki.metaLine).toBe('再使用：通常攻撃8回 / 持続：5秒');
     expect(hikisaki.effectLines).toEqual([
-      '攻撃力の115%の物理ダメージを与える',
+      '攻撃力の115%の物理ダメージ',
       '対象に出血が付与されているなら、このダメージは+130%される',
       'その後攻撃した対象に5秒間毎秒攻撃力の30%の物理ダメージを与える出血を付与する',
     ]);
@@ -906,7 +906,7 @@ describe('formatActiveDescription', () => {
     );
     expect(kageNoHa.effectLines).toEqual([
       '1.5秒間回避+100%',
-      '対象の背後に移動した後、攻撃力の110%の物理ダメージを与える',
+      '対象の背後に移動した後、攻撃力の110%の物理ダメージ',
       '対象のHPが30%以下なら、このダメージは+200%される',
     ]);
 
@@ -1009,7 +1009,7 @@ describe('formatActiveDescription', () => {
     const card1 = formatSkillCardLines(a1!, { locale: 'en' });
     expect(card1.metaLine).toBe('Recast: 5s');
     expect(card1.effectLines).toEqual([
-      'Deals 100% ATK as magic damage',
+      '100% ATK magic damage',
       'Heals an ally for 125% of ATK',
       '1 charge available',
     ]);
@@ -1050,12 +1050,12 @@ describe('formatActiveDescription', () => {
     expect(card1.metaLine).toBe(
       'Recast: After 5 basic attacks / Condition: Target HP ≥50%',
     );
-    expect(card1.effectLines).toEqual(['Deals 180% ATK as physical damage']);
+    expect(card1.effectLines).toEqual(['180% ATK physical damage']);
 
     const card2 = formatSkillCardLines(a2!, { locale: 'en' });
     expect(card2.metaLine).toBe('Recast: 10s');
     expect(card2.effectLines).toEqual([
-      'Multi-Lock 2 / To enemies: Deals 60% ATK as physical damage',
+      'Multi-Lock 2 / 60% ATK physical damage',
     ]);
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
@@ -1086,7 +1086,7 @@ describe('formatActiveDescription', () => {
     const card1 = formatSkillCardLines(a1!, { locale: 'en' });
     expect(card1.metaLine).toBe('Recast: After 8 basic attacks / Duration: 5s');
     expect(card1.effectLines).toEqual([
-      'Deals 115% ATK as physical damage',
+      '115% ATK physical damage',
       'If the target has Bleed, this damage is increased by +130%',
       'Then applies Bleed to the attacked target, dealing 30% ATK as physical damage every second for 5s',
     ]);
@@ -1097,7 +1097,7 @@ describe('formatActiveDescription', () => {
     );
     expect(card2.effectLines).toEqual([
       '1.5s Evasion +100%',
-      'After moving behind the target, Deals 110% ATK as physical damage',
+      'After moving behind the target, 110% ATK physical damage',
       'If target HP ≤30%, this damage is increased by +200%',
     ]);
 
@@ -1127,7 +1127,7 @@ describe('formatActiveDescription', () => {
     const card1 = formatSkillCardLines(a1!, { locale: 'en' });
     expect(card1.metaLine).toBe('Recast: After 5 basic attacks');
     expect(card1.effectLines).toEqual([
-      '2 hits: Deals 125% ATK as physical damage',
+      '2 hits: 125% ATK physical damage',
     ]);
 
     const card2 = formatSkillCardLines(a2!, { locale: 'en' });
@@ -1157,12 +1157,12 @@ describe('formatActiveDescription', () => {
 
     const card1 = formatSkillCardLines(a1!, { locale: 'en' });
     expect(card1.metaLine).toBe('Recast: 8s');
-    expect(card1.effectLines).toEqual(['Deals 110% ATK as magic damage']);
+    expect(card1.effectLines).toEqual(['110% ATK magic damage']);
 
     const card2 = formatSkillCardLines(a2!, { locale: 'en' });
     expect(card2.metaLine).toBe('Recast: 10s');
     expect(card2.effectLines).toEqual([
-      'Multi-Lock 2 / To enemies: Deals 90% ATK as magic damage',
+      'Multi-Lock 2 / 90% ATK magic damage',
     ]);
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
@@ -1302,7 +1302,7 @@ describe('formatActiveDescription', () => {
     const card1 = formatSkillCardLines(a1!, { locale: 'ja' });
     expect(card1.metaLine).toBe('再使用：5秒');
     expect(card1.effectLines).toEqual([
-      '攻撃力の100%の魔法ダメージを与える',
+      '攻撃力の100%の魔法ダメージ',
       '味方のHPを攻撃力の125%で回復',
       '1回チャージ可能',
     ]);
