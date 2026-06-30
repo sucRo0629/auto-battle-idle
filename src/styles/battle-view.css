@@ -129,6 +129,9 @@
   --attack-orb-highlight: #ffffff;
   --attack-orb-alpha: 0.85;
   --attack-orb-highlight-alpha: 0.45;
+  --hover-highlight-outline: rgba(180, 210, 255, 0.55);
+  --hover-highlight-glow: rgba(140, 180, 255, 0.28);
+  --target-indicator-ring-width: 2;
   --attack-arrow-shaft: #c8a165;
   --attack-arrow-tip: #8b6914;
   --attack-chain-lightning-core: #fff9c4;
@@ -1016,5 +1019,7 @@
   border-radius: 4px 4px 0 0;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  pointer-events: auto;
+  cursor: default;
 }
 

@@ -856,6 +856,8 @@ HUD スロットと戦闘フィールド上スプライトの対応を示す UI 
 - 戦闘フィールド上の敵スプライトにホバーしたとき、対応する右 HUD スロットをハイライトする
 - 味方 HUD と味方スプライトでも同様に対応表示できるなら実装対象にしてよい
 
+実装：`BattleView.ts` が `hoverHighlight` / `targetIndicator` を別状態で保持し、`BattleCanvas.ts`（フィールド描画）、`EnemyHudPanel.ts` / `PartyHudPanel.ts`（スロット CSS）へ配信する。`targetIndicator` は `skillWindup` / `skill` イベント由来の UI 表示（戦闘ロジックは変更しない）。
+
 ### 8.11 上部情報
 
 上部情報は戦闘画面上部のオーバーレイとして扱う。

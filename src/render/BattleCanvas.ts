@@ -50,7 +50,11 @@ import {
 import { VictoryOverlay } from "./VictoryOverlay.ts";
 import { WaveOverlay } from "./WaveOverlay.ts";
 import { DeathPlaybackManager } from "./deathPlayback.ts";
-import { drawBattleFieldBackground } from "./battleFieldBackground.ts";
+import { pickCombatantAtCanvasPoint } from "./battleCanvasHitTest.ts";
+import {
+  drawHoverHighlightForLayout,
+  drawTargetIndicatorForLayout,
+} from "./battleFieldIndicatorDraw.ts";
 import { sortForSpriteDraw } from "./spriteDrawOrder.ts";
 import {
   applyVisualDepthOffsets,
@@ -82,6 +86,30 @@ export class BattleCanvas implements IBattleRenderer {
   private isMarching = new Map<string, boolean>();
   private marchIdleHoldFrames = new Map<string, number>();
   private static readonly MARCH_IDLE_HOLD_FRAMES = 4;
+  private hoverHighlightUnitId: string | null = null;
+  private targetIndicatorUnitIds = new Set<string>();
+  private onFieldHoverChange: ((unitId: string | null) => void) | null = null;
+
+  private readonly handleCanvasPointerMove = (event: MouseEvent): void => {
+    if (!this.onFieldHoverChange) return;
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return;
+    const canvasX =
+      ((event.clientX - rect.left) / rect.width) * this.canvas.width;
+    const canvasY =
+      ((event.clientY - rect.top) / rect.height) * this.canvas.height;
+    const hit = pickCombatantAtCanvasPoint(
+      this.layouts,
+      canvasX,
+      canvasY,
+      SPRITE_SCALE,
+    );
+    this.onFieldHoverChange(hit?.id ?? null);
+  };
+
+  private readonly handleCanvasPointerLeave = (): void => {
+    this.onFieldHoverChange?.(null);
+  };
 
   mount(container: HTMLElement): void {
     this.theme = readBattleHudTheme(container);
@@ -94,6 +122,22 @@ export class BattleCanvas implements IBattleRenderer {
     if (!ctx) throw new Error("Canvas 2D unavailable");
     this.ctx = ctx;
     this.ctx.imageSmoothingEnabled = false;
+    this.canvas.addEventListener("mousemove", this.handleCanvasPointerMove);
+    this.canvas.addEventListener("mouseleave", this.handleCanvasPointerLeave);
+  }
+
+  setFieldHoverListener(
+    listener: ((unitId: string | null) => void) | null,
+  ): void {
+    this.onFieldHoverChange = listener;
+  }
+
+  setHoverHighlightUnitId(unitId: string | null): void {
+    this.hoverHighlightUnitId = unitId;
+  }
+
+  setTargetIndicatorUnitIds(unitIds: readonly string[]): void {
+    this.targetIndicatorUnitIds = new Set(unitIds);
   }
 
   setCombatants(layout: CombatantLayout[]): void {
@@ -258,6 +302,8 @@ export class BattleCanvas implements IBattleRenderer {
   }
 
   destroy(): void {
+    this.canvas.removeEventListener("mousemove", this.handleCanvasPointerMove);
+    this.canvas.removeEventListener("mouseleave", this.handleCanvasPointerLeave);
     this.canvas.remove();
   }
 
@@ -480,6 +526,31 @@ export class BattleCanvas implements IBattleRenderer {
     }
     for (const layout of playerLayouts) {
       this.drawSprite(layout, layout.x, spriteDrawY(layout), SPRITE_SCALE);
+    }
+
+    for (const layout of this.layouts) {
+      if (this.targetIndicatorUnitIds.has(layout.id)) {
+        drawTargetIndicatorForLayout(
+          this.ctx,
+          layout,
+          SPRITE_SCALE,
+          this.theme,
+        );
+      }
+    }
+
+    if (this.hoverHighlightUnitId) {
+      const highlighted = this.layouts.find(
+        (layout) => layout.id === this.hoverHighlightUnitId,
+      );
+      if (highlighted) {
+        drawHoverHighlightForLayout(
+          this.ctx,
+          highlighted,
+          SPRITE_SCALE,
+          this.theme,
+        );
+      }
     }
 
     this.vfxPlayback.draw(this.ctx, "front", SPRITE_SCALE);

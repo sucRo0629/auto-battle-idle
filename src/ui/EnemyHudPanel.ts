@@ -45,6 +45,8 @@ interface SlotElements {
 export interface EnemyHudPanelOptions {
   floatingTooltip?: PartyHudFloatingTooltip;
   gameTermPanel?: GameTermPanel;
+  onHoverHighlightStart?: (unitId: string) => void;
+  onHoverHighlightEnd?: () => void;
 }
 
 export class EnemyHudPanel {
@@ -53,6 +55,8 @@ export class EnemyHudPanel {
   private readonly slots: SlotElements[] = [];
   private theme!: BattleHudTheme;
   private lastEntries: EnemyHudEntry[] = [];
+  private hoverHighlightUnitId: string | null = null;
+  private targetIndicatorUnitIds = new Set<string>();
   private readonly unsubscribeStatusIconsReady: () => void;
 
   constructor(
@@ -98,7 +102,27 @@ export class EnemyHudPanel {
         continue;
       }
       slot.root.hidden = false;
+      slot.root.dataset.enemyUnitId = entry.id;
       this.updateSlot(slot, entry);
+      this.syncSlotHighlightClasses(slot, entry.id);
+    }
+  }
+
+  setHoverHighlightUnitId(unitId: string | null): void {
+    this.hoverHighlightUnitId = unitId;
+    for (let i = 0; i < this.slots.length; i++) {
+      const entry = this.lastEntries[i];
+      if (!entry) continue;
+      this.syncSlotHighlightClasses(this.slots[i], entry.id);
+    }
+  }
+
+  setTargetIndicatorUnitIds(unitIds: readonly string[]): void {
+    this.targetIndicatorUnitIds = new Set(unitIds);
+    for (let i = 0; i < this.slots.length; i++) {
+      const entry = this.lastEntries[i];
+      if (!entry) continue;
+      this.syncSlotHighlightClasses(this.slots[i], entry.id);
     }
   }
 
@@ -172,6 +196,7 @@ export class EnemyHudPanel {
     root.appendChild(main);
 
     this.bindSlotStatusTooltip(body, slotIndex);
+    this.bindFieldLinkHover(root, slotIndex);
 
     return {
       root,
@@ -366,5 +391,27 @@ export class EnemyHudPanel {
       !active,
     );
     slot.dangerTelegraphFill.style.width = active ? `${progress * 100}%` : '0%';
+  }
+
+  private bindFieldLinkHover(root: HTMLElement, slotIndex: number): void {
+    root.addEventListener('mouseenter', () => {
+      const entry = this.lastEntries[slotIndex];
+      if (!entry) return;
+      this.options.onHoverHighlightStart?.(entry.id);
+    });
+    root.addEventListener('mouseleave', () => {
+      this.options.onHoverHighlightEnd?.();
+    });
+  }
+
+  private syncSlotHighlightClasses(slot: SlotElements, unitId: string): void {
+    slot.root.classList.toggle(
+      'enemy-hud-slot--hover-highlight',
+      this.hoverHighlightUnitId === unitId,
+    );
+    slot.root.classList.toggle(
+      'enemy-hud-slot--target-indicator',
+      this.targetIndicatorUnitIds.has(unitId),
+    );
   }
 }

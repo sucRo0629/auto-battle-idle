@@ -50,6 +50,13 @@ import "../styles/game-term-panel.css";
 import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 import { applyBattleRootScale } from "./battleRootScale.ts";
+import {
+  createEmptyHoverHighlight,
+  isSameHoverHighlight,
+  type BattleHoverHighlightSource,
+  type BattleHoverHighlightState,
+} from "./battleHoverHighlight.ts";
+import { BattleTargetIndicatorTracker } from "./battleTargetIndicator.ts";
 
 export interface VerifyModeControls {
   isVerifyMode: () => boolean;
@@ -104,6 +111,9 @@ export class BattleView {
   private readonly partyHudSlotEl: HTMLElement;
   private readonly enemyHudSlotEl: HTMLElement;
   private hoveredMemberStatsSlotIndex: number | null = null;
+  private hoverHighlight: BattleHoverHighlightState = createEmptyHoverHighlight();
+  private readonly targetIndicatorTracker = new BattleTargetIndicatorTracker();
+  private battleElapsedMs = 0;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastStageName = "";
   private lastWaveLabel = "";
@@ -250,6 +260,9 @@ export class BattleView {
 
     this.canvas = new BattleCanvas();
     this.canvas.mount(canvasWrap);
+    this.canvas.setFieldHoverListener((unitId) => {
+      this.setHoverHighlight(unitId, unitId ? "field" : null);
+    });
 
     const hudStack = document.createElement("div");
     hudStack.className = "battle-hud-stack";
@@ -292,6 +305,14 @@ export class BattleView {
       onMemberStatsHoverEnd: () => {
         this.scheduleMemberStatsHide();
       },
+      onHoverHighlightStart: (unitId) => {
+        this.setHoverHighlight(unitId, "hud");
+      },
+      onHoverHighlightEnd: () => {
+        if (this.hoverHighlight.source === "hud") {
+          this.setHoverHighlight(null, null);
+        }
+      },
       floatingTooltip: this.hudFloatingTooltip,
       gameTermPanel: this.gameTermPanel,
       onScrollReposition: () => {
@@ -314,6 +335,14 @@ export class BattleView {
     this.enemyHud = new EnemyHudPanel(this.canvasHost, {
       floatingTooltip: this.hudFloatingTooltip,
       gameTermPanel: this.gameTermPanel,
+      onHoverHighlightStart: (unitId) => {
+        this.setHoverHighlight(unitId, "hud");
+      },
+      onHoverHighlightEnd: () => {
+        if (this.hoverHighlight.source === "hud") {
+          this.setHoverHighlight(null, null);
+        }
+      },
     });
     this.enemyHud.mount(this.enemyHudSlotEl);
 
@@ -497,8 +526,44 @@ export class BattleView {
     this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies));
   }
 
+  private setHoverHighlight(
+    unitId: string | null,
+    source: BattleHoverHighlightSource | null,
+  ): void {
+    const next = { unitId, source };
+    if (isSameHoverHighlight(this.hoverHighlight, next)) return;
+    this.hoverHighlight = next;
+    this.applyHoverHighlight();
+  }
+
+  private applyHoverHighlight(): void {
+    const { unitId } = this.hoverHighlight;
+    this.canvas.setHoverHighlightUnitId(unitId);
+    this.enemyHud.setHoverHighlightUnitId(unitId);
+    this.partyHud.setHoverHighlightUnitId(unitId);
+  }
+
+  private noteTargetIndicator(actorId: string, targetId: string): void {
+    const changed = this.targetIndicatorTracker.note(
+      actorId,
+      targetId,
+      this.battleElapsedMs,
+    );
+    if (changed) {
+      this.applyTargetIndicators();
+    }
+  }
+
+  private applyTargetIndicators(): void {
+    const targetedUnitIds = this.targetIndicatorTracker.getTargetedUnitIds();
+    this.canvas.setTargetIndicatorUnitIds(targetedUnitIds);
+    this.enemyHud.setTargetIndicatorUnitIds(targetedUnitIds);
+    this.partyHud.setTargetIndicatorUnitIds(targetedUnitIds);
+  }
+
   private onBattleEvent(event: BattleEvent): void {
     if (event.type === 'skillWindup') {
+      this.noteTargetIndicator(event.actorId, event.targetId);
       const slotKind = event.slotKind ?? "active";
       const snapshot = this.engine.getSnapshot();
       const actor = [...snapshot.allies, ...snapshot.enemies].find(
@@ -519,6 +584,7 @@ export class BattleView {
       return;
     }
     if (event.type === "skill") {
+      this.noteTargetIndicator(event.actorId, event.targetId);
       const slotLabel =
         event.slotKind === "basic" ? t("battle.basicAttack") : event.skillName;
       const overlayTick = isOverlayTickSkillEvent(event);
@@ -740,6 +806,14 @@ export class BattleView {
   }
 
   tick(deltaMs: number): void {
+    this.battleElapsedMs += deltaMs;
+    const targetIndicatorsChanged = this.targetIndicatorTracker.prune(
+      this.battleElapsedMs,
+    );
+    if (targetIndicatorsChanged) {
+      this.applyTargetIndicators();
+    }
+
     const snapshot = this.engine.getSnapshot();
     const save = this.getSave();
     const stage = getStageById(

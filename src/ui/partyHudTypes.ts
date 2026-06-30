@@ -18,6 +18,7 @@ export interface PartyHudMeta {
 }
 
 export interface PartyHudEntry {
+  unitId: string;
   displayName: string;
   iconKey: string;
   hp: number;
@@ -80,6 +81,7 @@ export function buildPartyHudEntries(
     if (!ally) return null;
 
     return {
+      unitId: ally.id,
       displayName: meta.displayName,
       iconKey: ally.iconKey,
       hp: ally.hp,

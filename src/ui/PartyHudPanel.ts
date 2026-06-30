@@ -89,6 +89,8 @@ export interface PartyHudPanelOptions {
   layout?: PartyHudPanelLayout;
   onMemberStatsHoverStart?: (slotIndex: number) => void;
   onMemberStatsHoverEnd?: () => void;
+  onHoverHighlightStart?: (unitId: string) => void;
+  onHoverHighlightEnd?: () => void;
   floatingTooltip?: PartyHudFloatingTooltip;
   gameTermPanel?: GameTermPanel;
   onScrollReposition?: () => void;
@@ -155,6 +157,8 @@ export class PartyHudPanel {
   private lastEntries: (PartyHudEntry | null)[] = [];
   private mode: PartyHudPanelMode = 'detail';
   private lastDetailFrame: PartyHudDetailFrame | null = null;
+  private hoverHighlightUnitId: string | null = null;
+  private targetIndicatorUnitIds = new Set<string>();
   private readonly layout: PartyHudPanelLayout;
   private readonly unsubscribeStatusIconsReady: () => void;
 
@@ -274,7 +278,27 @@ export class PartyHudPanel {
         continue;
       }
       slot.root.hidden = false;
+      slot.root.dataset.partyUnitId = entry.unitId;
       this.updateSlot(slot, entry);
+      this.syncSlotHighlightClasses(slot, entry.unitId);
+    }
+  }
+
+  setHoverHighlightUnitId(unitId: string | null): void {
+    this.hoverHighlightUnitId = unitId;
+    for (let i = 0; i < this.slots.length; i++) {
+      const entry = this.lastEntries[i];
+      if (!entry) continue;
+      this.syncSlotHighlightClasses(this.slots[i], entry.unitId);
+    }
+  }
+
+  setTargetIndicatorUnitIds(unitIds: readonly string[]): void {
+    this.targetIndicatorUnitIds = new Set(unitIds);
+    for (let i = 0; i < this.slots.length; i++) {
+      const entry = this.lastEntries[i];
+      if (!entry) continue;
+      this.syncSlotHighlightClasses(this.slots[i], entry.unitId);
     }
   }
 
@@ -432,6 +456,8 @@ export class PartyHudPanel {
 
     const detailStatus = createDetailStatusBadges();
     unitPlate.appendChild(detailStatus.root);
+
+    this.bindFieldLinkHover(root, slotIndex);
 
     return {
       root,
@@ -817,5 +843,27 @@ export class PartyHudPanel {
         },
       );
     }
+  }
+
+  private bindFieldLinkHover(root: HTMLElement, slotIndex: number): void {
+    root.addEventListener('mouseenter', () => {
+      const entry = this.lastEntries[slotIndex];
+      if (!entry) return;
+      this.options.onHoverHighlightStart?.(entry.unitId);
+    });
+    root.addEventListener('mouseleave', () => {
+      this.options.onHoverHighlightEnd?.();
+    });
+  }
+
+  private syncSlotHighlightClasses(slot: SlotElements, unitId: string): void {
+    slot.root.classList.toggle(
+      'party-hud-slot--hover-highlight',
+      this.hoverHighlightUnitId === unitId,
+    );
+    slot.root.classList.toggle(
+      'party-hud-slot--target-indicator',
+      this.targetIndicatorUnitIds.has(unitId),
+    );
   }
 }

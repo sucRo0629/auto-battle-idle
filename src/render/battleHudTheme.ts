@@ -73,6 +73,9 @@ export interface BattleHudTheme {
   attackOrbHighlight: string;
   attackOrbAlpha: number;
   attackOrbHighlightAlpha: number;
+  hoverHighlightOutline: string;
+  hoverHighlightGlow: string;
+  targetIndicatorRingWidth: number;
   attackArrowShaft: string;
   attackArrowTip: string;
   attackChainLightningCore: string;
@@ -287,6 +290,21 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
       style,
       "--attack-orb-highlight-alpha",
       0.45
+    ),
+    hoverHighlightOutline: readString(
+      style,
+      "--hover-highlight-outline",
+      "rgba(180, 210, 255, 0.55)",
+    ),
+    hoverHighlightGlow: readString(
+      style,
+      "--hover-highlight-glow",
+      "rgba(140, 180, 255, 0.28)",
+    ),
+    targetIndicatorRingWidth: readNumber(
+      style,
+      "--target-indicator-ring-width",
+      2,
     ),
     attackArrowShaft: readString(style, "--attack-arrow-shaft", "#c8a165"),
     attackArrowTip: readString(style, "--attack-arrow-tip", "#8b6914"),

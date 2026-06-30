@@ -23,6 +23,9 @@ const mocks = vi.hoisted(() => {
     tick: vi.fn(),
     destroy: vi.fn(),
     syncFromSnapshot: vi.fn(),
+    setFieldHoverListener: vi.fn(),
+    setHoverHighlightUnitId: vi.fn(),
+    setTargetIndicatorUnitIds: vi.fn(),
   };
   return {
     canvasInstance,
@@ -99,6 +102,8 @@ vi.mock("../ui/PartyHudPanel.ts", () => ({
     setMode: vi.fn(),
     updateDetailMetrics: vi.fn(),
     getSlotRoot: vi.fn(() => null),
+    setHoverHighlightUnitId: vi.fn(),
+    setTargetIndicatorUnitIds: vi.fn(),
     refreshLocale: vi.fn(),
     destroy: vi.fn(),
   })),
@@ -108,6 +113,8 @@ vi.mock("../ui/EnemyHudPanel.ts", () => ({
   EnemyHudPanel: vi.fn().mockImplementation(() => ({
     mount: vi.fn(),
     update: vi.fn(),
+    setHoverHighlightUnitId: vi.fn(),
+    setTargetIndicatorUnitIds: vi.fn(),
     destroy: vi.fn(),
   })),
 }));
