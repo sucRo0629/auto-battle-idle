@@ -38,6 +38,12 @@ export const PARTY_HUD_SLOT_RECT: BattleRootRect = {
   h: 608,
 };
 
+/** Fixed ally card height inside partyHud (battle-field.md §8). */
+export const PARTY_HUD_ALLY_CARD_HEIGHT = 146;
+
+/** Vertical gap between ally cards inside partyHud. */
+export const PARTY_HUD_ALLY_CARD_GAP = 8;
+
 export const ENEMY_HUD_SLOT_RECT: BattleRootRect = {
   x: 956,
   y: 64,

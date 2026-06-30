@@ -74,7 +74,10 @@ export interface PartyHudDetailFrame {
   displayRows: StageDamageDisplayRow[];
 }
 
+export type PartyHudPanelLayout = 'lane' | 'overlay';
+
 export interface PartyHudPanelOptions {
+  layout?: PartyHudPanelLayout;
   onMemberStatsHoverStart?: (slotIndex: number) => void;
   onMemberStatsHoverEnd?: () => void;
   floatingTooltip?: PartyHudFloatingTooltip;
@@ -137,12 +140,17 @@ export class PartyHudPanel {
   private lastEntries: (PartyHudEntry | null)[] = [];
   private mode: PartyHudPanelMode = 'detail';
   private lastDetailFrame: PartyHudDetailFrame | null = null;
+  private readonly layout: PartyHudPanelLayout;
   private readonly unsubscribeStatusIconsReady: () => void;
 
   constructor(
     private readonly themeHost: HTMLElement,
     private readonly options: PartyHudPanelOptions = {},
   ) {
+    this.layout = options.layout ?? 'lane';
+    if (this.layout === 'overlay') {
+      this.mode = 'compact';
+    }
     this.unsubscribeStatusIconsReady = onStatusIconsReady(() => {
       this.invalidateCompactStatusRenderSignatures();
       if (this.lastEntries.length > 0) {
@@ -161,6 +169,7 @@ export class PartyHudPanel {
     this.root = root;
     root.className = 'party-hud-panel';
     root.classList.toggle('party-hud-panel--detail', this.mode === 'detail');
+    root.classList.toggle('party-hud-panel--overlay', this.layout === 'overlay');
 
     const slotsBody = document.createElement('div');
     slotsBody.className = 'party-hud-panel-slots';
@@ -181,6 +190,7 @@ export class PartyHudPanel {
   }
 
   setMode(mode: PartyHudPanelMode): void {
+    if (this.layout === 'overlay') return;
     if (this.mode === mode) return;
     this.mode = mode;
     this.root.classList.toggle('party-hud-panel--detail', mode === 'detail');
@@ -255,17 +265,18 @@ export class PartyHudPanel {
 
   updateDetailMetrics(frame: PartyHudDetailFrame): void {
     this.lastDetailFrame = frame;
-    if (this.mode !== 'detail') return;
 
     const damageByPartyIndex = new Map(
       this.slots.map((slot) => [slot.slotIndex, slot.damage] as const),
     );
+    const downBySlot = buildDownBySlot(frame.snapshots);
+    syncDamageBars(damageByPartyIndex, frame.displayRows, downBySlot);
+
+    if (this.layout === 'overlay' || this.mode !== 'detail') return;
+
     const statusByPartyIndex = new Map(
       this.slots.map((slot) => [slot.slotIndex, slot.detailStatus] as const),
     );
-    const downBySlot = buildDownBySlot(frame.snapshots);
-
-    syncDamageBars(damageByPartyIndex, frame.displayRows, downBySlot);
     syncStatusBadges(
       statusByPartyIndex,
       frame.snapshots,
@@ -596,7 +607,10 @@ export class PartyHudPanel {
 
   private updateRecastGrid(slot: SlotElements, entry: PartyHudEntry): void {
     const slotCount = entry.unlockedActiveSlotCount;
-    const recastSlotRows = resolvePartyHudRecastSlotRows(slotCount);
+    const recastSlotRows =
+      this.layout === 'overlay'
+        ? 2
+        : resolvePartyHudRecastSlotRows(slotCount);
     slot.recastGrid.parentElement?.style.setProperty(
       '--hud-recast-slot-rows',
       String(recastSlotRows),

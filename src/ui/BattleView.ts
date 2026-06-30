@@ -1,4 +1,5 @@
 import "../styles/battle-view.css";
+import "../styles/party-hud-overlay.css";
 import "../styles/party-hud-floating-tooltip.css";
 import type { BattleEngine } from "../battle/BattleEngine.ts";
 import type { BattleEvent } from "../battle/events.ts";
@@ -95,6 +96,7 @@ export class BattleView {
   private readonly hudFloatingTooltip: PartyHudFloatingTooltip;
   private readonly gameTermPanel: GameTermPanel;
   private readonly canvasFrame: HTMLElement;
+  private readonly partyHudSlotEl: HTMLElement;
   private hoveredMemberStatsSlotIndex: number | null = null;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastStageName = "";
@@ -143,9 +145,9 @@ export class BattleView {
     battleHudLayer.className = "battle-layer battle-layer--hud";
 
     const partyHudSlot = document.createElement("div");
-    partyHudSlot.className = "party-hud-slot battle-hud-slot battle-hud-slot--party";
+    partyHudSlot.className = "battle-hud-slot battle-hud-slot--party";
     partyHudSlot.setAttribute("data-battle-hud-slot", "party");
-    partyHudSlot.setAttribute("aria-hidden", "true");
+    this.partyHudSlotEl = partyHudSlot;
 
     const enemyHudSlot = document.createElement("div");
     enemyHudSlot.className = "enemy-hud-slot battle-hud-slot battle-hud-slot--enemy";
@@ -277,6 +279,7 @@ export class BattleView {
     this.gameTermPanel.mount();
 
     this.partyHud = new PartyHudPanel(this.canvasHost, {
+      layout: "overlay",
       onMemberStatsHoverStart: (slotIndex) => {
         this.showMemberStatsPanel(slotIndex);
       },
@@ -291,19 +294,10 @@ export class BattleView {
         }
       },
     });
-    this.partyHud.mount(hudStack);
+    this.partyHud.mount(this.partyHudSlotEl);
 
     this.statsDrawer = new BattleStatsDrawer({
       onOpenChange: (open) => {
-        this.partyHud.setMode(open ? "detail" : "compact");
-        if (open) {
-          const snapshot = this.engine.getSnapshot();
-          this.partyHud.updateDetailMetrics({
-            snapshots: snapshot.allies,
-            displayRows:
-              verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
-          });
-        }
         verifyModeControls?.onStatsDrawerOpenChange?.(open);
       },
     });
@@ -763,18 +757,16 @@ export class BattleView {
         buildPartyHudMetaBySlot(save.party, this.gameData.classRegistry),
       ),
     );
+    this.partyHud.updateDetailMetrics({
+      snapshots: snapshot.allies,
+      displayRows:
+        this.verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
+    });
     this.canvas.tick(deltaMs);
     if (debugEnabled) {
       this.battleXDebugCanvas.tick(deltaMs);
     }
 
-    if (this.statsDrawer.isOpen()) {
-      this.partyHud.updateDetailMetrics({
-        snapshots: snapshot.allies,
-        displayRows:
-          this.verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
-      });
-    }
     this.refreshMemberStatsPanel();
   }
 

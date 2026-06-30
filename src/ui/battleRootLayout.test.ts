@@ -4,6 +4,8 @@ import {
   BATTLE_LANE_RECT,
   BATTLE_TOP_INFO_RECT,
   ENEMY_HUD_SLOT_RECT,
+  PARTY_HUD_ALLY_CARD_GAP,
+  PARTY_HUD_ALLY_CARD_HEIGHT,
   PARTY_HUD_SLOT_RECT,
   battleRootRectStyle,
 } from "./battleRootLayout.ts";
@@ -32,6 +34,12 @@ describe("battleRootLayout", () => {
     expect(BATTLE_TOP_INFO_RECT).toEqual({ x: 24, y: 16, w: 1232, h: 40 });
     expect(PARTY_HUD_SLOT_RECT).toEqual({ x: 24, y: 64, w: 300, h: 608 });
     expect(ENEMY_HUD_SLOT_RECT).toEqual({ x: 956, y: 64, w: 300, h: 608 });
+  });
+
+  it("sizes ally cards to fill the partyHud slot height", () => {
+    expect(
+      4 * PARTY_HUD_ALLY_CARD_HEIGHT + 3 * PARTY_HUD_ALLY_CARD_GAP,
+    ).toBe(PARTY_HUD_SLOT_RECT.h);
   });
 
   it("serializes rects for inline style", () => {
