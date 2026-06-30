@@ -28,6 +28,13 @@ import { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
 import type { GameTermPanel } from './GameTermPanel.ts';
 import { syncPartyHudStatusBadgeHits, buildPartyHudStatusBadgeCanvasSignature, buildPartyHudStatusBadgeHitSignature } from './partyHudStatusBadgeHits.ts';
 import {
+  drawPartyHudOverlayStatusGrid,
+  measurePartyHudOverlayStatusGrid,
+  selectPartyHudOverlayStatusBadges,
+  syncPartyHudOverlayStatusBadgeHits,
+} from './partyHudOverlayStatusGrid.ts';
+import type { PartyHudActiveCooldown } from './partyHudRecast.ts';
+import {
   buildDownBySlot,
   createStatusBadgeGroupWithHits,
   syncDamageBars,
@@ -41,8 +48,10 @@ import { t } from '../i18n/t.ts';
 
 interface RecastCellElements {
   cell: HTMLElement;
+  track: HTMLElement;
   fill: HTMLElement;
   chargeMarkers: HTMLElement;
+  cellIndex: number;
 }
 
 interface SlotElements {
@@ -83,6 +92,12 @@ export interface PartyHudPanelOptions {
   floatingTooltip?: PartyHudFloatingTooltip;
   gameTermPanel?: GameTermPanel;
   onScrollReposition?: () => void;
+  resolveSkillSlotTooltip?: (
+    slotIndex: number,
+    cellIndex: number,
+    cd: PartyHudActiveCooldown | undefined,
+    inactive: boolean,
+  ) => string | null;
 }
 
 /** リキャスト 2×2 の最大行数。2 スロット時は 1 行にし、差分は HP バー高さが吸収する。 */
@@ -408,7 +423,8 @@ export class PartyHudPanel {
       cell.appendChild(track);
 
       recastGrid.appendChild(cell);
-      recastCells.push({ cell, fill, chargeMarkers });
+      recastCells.push({ cell, track, fill, chargeMarkers, cellIndex: slot });
+      this.bindRecastCellTooltip(slotIndex, track);
     }
 
     const damage = createDetailDamageBar();
@@ -456,7 +472,9 @@ export class PartyHudPanel {
       );
     }
 
-    if (this.mode === 'compact') {
+    if (this.mode === 'compact' && this.layout === 'overlay') {
+      this.updateOverlayStatusBadges(slot, entry);
+    } else if (this.mode === 'compact') {
       this.updateCompactStatusBadges(slot, entry);
     }
     this.updateHpBar(slot, entry);
@@ -607,10 +625,10 @@ export class PartyHudPanel {
 
   private updateRecastGrid(slot: SlotElements, entry: PartyHudEntry): void {
     const slotCount = entry.unlockedActiveSlotCount;
-    const recastSlotRows =
-      this.layout === 'overlay'
-        ? 2
-        : resolvePartyHudRecastSlotRows(slotCount);
+    const isOverlay = this.layout === 'overlay';
+    const recastSlotRows = isOverlay
+      ? 2
+      : resolvePartyHudRecastSlotRows(slotCount);
     slot.recastGrid.parentElement?.style.setProperty(
       '--hud-recast-slot-rows',
       String(recastSlotRows),
@@ -622,9 +640,11 @@ export class PartyHudPanel {
     for (let i = 0; i < slot.recastCells.length; i++) {
       const { cell, fill, chargeMarkers } = slot.recastCells[i];
       chargeMarkers.replaceChildren();
+      const inactive = i >= slotCount;
 
-      if (i >= slotCount) {
-        cell.classList.add('party-hud-recast-cell--locked');
+      if (inactive) {
+        cell.classList.toggle('party-hud-recast-cell--locked', !isOverlay);
+        cell.classList.toggle('party-hud-recast-cell--inactive', isOverlay);
         fill.style.width = '0%';
         fill.dataset.state = 'empty';
         delete fill.dataset.pausedMax;
@@ -633,6 +653,7 @@ export class PartyHudPanel {
       }
 
       cell.classList.remove('party-hud-recast-cell--locked');
+      cell.classList.remove('party-hud-recast-cell--inactive');
       const cd = bySlot.get(i);
       if (!cd) {
         fill.style.width = '0%';
@@ -665,6 +686,136 @@ export class PartyHudPanel {
         delete fill.dataset.pausedMax;
       }
     }
+  }
 
+  private bindRecastCellTooltip(
+    partySlotIndex: number,
+    track: HTMLElement,
+  ): void {
+    track.addEventListener('mouseenter', () => {
+      this.showRecastCellTooltip(partySlotIndex, track);
+    });
+    track.addEventListener('mouseleave', () => {
+      this.options.floatingTooltip?.hide();
+    });
+  }
+
+  private showRecastCellTooltip(
+    partySlotIndex: number,
+    track: HTMLElement,
+  ): void {
+    const resolver = this.options.resolveSkillSlotTooltip;
+    const floatingTooltip = this.options.floatingTooltip;
+    if (!resolver || !floatingTooltip) return;
+
+    const slot = this.slots[partySlotIndex];
+    const entry = this.lastEntries[partySlotIndex];
+    if (!slot || !entry) return;
+
+    const cell = slot.recastCells.find(({ track: cellTrack }) => cellTrack === track);
+    if (!cell) return;
+
+    const slotCount = entry.unlockedActiveSlotCount;
+    const inactive = cell.cellIndex >= slotCount;
+    const cd = inactive
+      ? undefined
+      : entry.activeCooldowns.find((item) => item.slotIndex === cell.cellIndex);
+    const text = resolver(partySlotIndex, cell.cellIndex, cd, inactive);
+    if (!text) return;
+    floatingTooltip.show(track, text, { placement: 'below' });
+  }
+
+  private updateOverlayStatusBadges(slot: SlotElements, entry: PartyHudEntry): void {
+    const badges = collectStatusEffectBadgeDisplays(entry.statusEffects, {
+      baseMaxHp: entry.baseMaxHp,
+      atk: entry.atk,
+      def: entry.def,
+      reg: entry.reg,
+    });
+    const { visible, overflowCount } = selectPartyHudOverlayStatusBadges(badges);
+    const canvas = slot.statusCanvas;
+    const theme = this.theme;
+    const scale = 1;
+    const gridLayout = measurePartyHudOverlayStatusGrid(
+      scale,
+      PARTY_HUD_STATUS_BADGE_ICON_SIZE,
+      theme.statusIconOutlineWidth,
+      theme.statusBadgeOverlap,
+    );
+    const canvasW = gridLayout.totalWidth;
+    const canvasH = gridLayout.totalHeight;
+    const canvasSignature = buildPartyHudStatusBadgeCanvasSignature(
+      visible,
+      overflowCount,
+      slot.slotIndex,
+      canvasW,
+      canvasH,
+    );
+    const hitSignature = buildPartyHudStatusBadgeHitSignature(
+      visible,
+      overflowCount,
+      slot.slotIndex,
+    );
+    const canvasUnchanged = canvasSignature === slot.statusBadgeRenderSignature;
+    const hitsUnchanged = hitSignature === slot.statusBadgeHitSignature;
+    if (canvasUnchanged && hitsUnchanged) {
+      return;
+    }
+
+    if (!canvasUnchanged) {
+      slot.statusBadgeRenderSignature = canvasSignature;
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+      const w = `${canvasW}px`;
+      const h = `${canvasH}px`;
+      canvas.style.width = w;
+      canvas.style.height = h;
+      canvas.style.minWidth = w;
+      canvas.style.maxWidth = w;
+      canvas.hidden = false;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvasW, canvasH);
+      drawPartyHudOverlayStatusGrid(
+        ctx,
+        0,
+        0,
+        visible,
+        overflowCount,
+        scale,
+        {
+          iconSize: PARTY_HUD_STATUS_BADGE_ICON_SIZE,
+          rowOverlap: theme.statusBadgeOverlap,
+          overlayColor: theme.statusBadgeOverlay,
+          iconOutlineColor: theme.statusIconOutlineColor,
+          iconOutlineWidth: theme.statusIconOutlineWidth,
+          iconFallbackAlpha: theme.statusIconFallbackAlpha,
+          resolveIconFallbackColor: (category) =>
+            resolveStatusIconFallbackColor(category, theme),
+        },
+      );
+    }
+
+    if (badges.length === 0) {
+      slot.statusBadgeHitLayer.replaceChildren();
+      slot.statusBadgeHitSignature = null;
+      return;
+    }
+
+    if (!hitsUnchanged) {
+      slot.statusBadgeHitSignature = hitSignature;
+      syncPartyHudOverlayStatusBadgeHits(
+        slot.statusBadgeHitLayer,
+        badges,
+        visible,
+        overflowCount,
+        theme,
+        {
+          floatingTooltip: this.options.floatingTooltip ?? null,
+          gameTermPanel: this.options.gameTermPanel ?? null,
+        },
+      );
+    }
   }
 }

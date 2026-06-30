@@ -7,7 +7,7 @@
 .party-hud-panel--overlay {
   --party-hud-overlay-card-h: 146px;
   --party-hud-overlay-card-gap: 8px;
-  --party-hud-overlay-status-h: 22px;
+  --party-hud-overlay-status-h: 49px;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -49,10 +49,12 @@
   min-height: var(--party-hud-overlay-status-h);
   width: 100%;
   max-width: 100%;
+  overflow: hidden;
 }
 
 .party-hud-panel--overlay .party-hud-status-badges {
   display: block;
+  vertical-align: top;
 }
 
 .party-hud-panel--overlay .party-hud-status-badges[hidden] {
@@ -108,12 +110,32 @@
   min-height: calc(var(--hud-body-bar-h) * 1px);
 }
 
-.party-hud-panel--overlay .party-hud-recast-cell--locked {
-  display: block;
+.party-hud-panel--overlay .party-hud-recast-grid {
+  flex: 0 0 var(--hud-recast-grid-h);
+  min-height: var(--hud-recast-grid-h);
+  height: var(--hud-recast-grid-h);
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: repeat(2, calc(var(--hud-recast-bar-h) * 1px));
 }
 
-.party-hud-panel--overlay .party-hud-recast-cell--locked .party-hud-recast-fill-track {
-  opacity: 0.22;
+.party-hud-panel--overlay .party-hud-recast-cell--locked {
+  display: none;
+}
+
+.party-hud-panel--overlay .party-hud-recast-cell--inactive .party-hud-recast-fill-track {
+  background: rgba(14, 16, 24, 0.92);
+  opacity: 1;
+  box-shadow:
+    inset 0 0 0 1px rgba(55, 65, 82, 0.42),
+    inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.party-hud-panel--overlay .party-hud-recast-cell--inactive .party-hud-recast-fill {
+  opacity: 0;
+}
+
+.party-hud-panel--overlay .party-hud-recast-fill-track {
+  pointer-events: auto;
 }
 
 .party-hud-panel--overlay .party-hud-detail-damage {

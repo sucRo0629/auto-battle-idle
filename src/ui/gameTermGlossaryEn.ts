@@ -92,11 +92,13 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   aoe: {
     title: "AoE",
     tooltip: "Applies effects to targets in an area.",
+    description: "Applies effects to targets in an area.",
     aliases: ["AoE"],
   },
   pierce: {
     title: "Pierce",
     tooltip: "Applies effects through targets in line.",
+    description: "Applies effects through targets in line.",
     aliases: ["Pierce"],
   },
   skillLock: {
@@ -226,4 +228,28 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   },
   poisonWeapon: { title: "Poison Weapon" },
   nextOutgoingDamage: { title: "Next Hit Amp" },
+  knockback: {
+    title: "Knockback",
+    tooltip: "Pushes the target backward. Distance varies by skill.",
+    description: "Pushes the target backward. Distance varies by skill.",
+    aliases: ["Knockback"],
+  },
+  defenseIgnoreDef: {
+    title: "DEF Ignore",
+    tooltip: "Ignores a portion of the target's DEF on hit.",
+    description: "Ignores a portion of the target's DEF on hit.",
+    aliases: ["DEF Ignore"],
+  },
+  damageReductionIgnore: {
+    title: "DR Ignore",
+    tooltip: "Ignores the target's damage reduction when dealing damage.",
+    description: "Ignores the target's damage reduction when dealing damage.",
+    aliases: ["DR Ignore"],
+  },
+  barrierPierce: {
+    title: "Barrier Pierce",
+    tooltip: "Bypasses barrier and deals damage to HP.",
+    description: "Bypasses barrier and deals damage to HP.",
+    aliases: ["Barrier Pierce"],
+  },
 };

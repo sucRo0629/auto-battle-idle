@@ -42,7 +42,7 @@ import {
 } from "../progression/skillBuild.ts";
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
 import { formatSkillCardLines } from "./formatSkillText.ts";
-import { annotateGameTerms } from "./annotateGameTerms.ts";
+import { annotateGameTermsWithTooltip } from "./annotateGameTerms.ts";
 import { formatClassSummary, formatClassSummaryForAria } from "./formatClassSummary.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
 import { GameTermTooltip } from "./GameTermTooltip.ts";
@@ -50,8 +50,11 @@ import type { GameTermLocale } from "./gameTermGlossary.ts";
 import {
   resolveSkillCardDisplay,
   resolveStatusChipTooltip,
-  resolveTagTooltip,
 } from "./skillCardDisplay.ts";
+import {
+  SKILL_CARD_BODY_TERM_EXCLUDE_IDS,
+  SKILL_CARD_BODY_TERM_INCLUDE_IDS,
+} from "./skillCardDisplayRules.ts";
 
 const PICKER_ROLES: ClassPreset["role"][] = [
   "defender",
@@ -911,19 +914,6 @@ export class SkillMenuPanel {
         chipsRow.appendChild(button);
       }
 
-      for (const tag of display.tags) {
-        hasChips = true;
-        const chip = document.createElement("button");
-        chip.type = "button";
-        chip.className = "skill-menu-tag-chip skill-menu-tag-chip--compact";
-        chip.textContent = tag.label;
-        const tooltip = resolveTagTooltip(tag, getLocale() as GameTermLocale);
-        if (tooltip) {
-          this.gameTermTooltip.bind(chip, () => tooltip);
-        }
-        chipsRow.appendChild(chip);
-      }
-
       if (hasChips) {
         card.appendChild(chipsRow);
       }
@@ -952,11 +942,14 @@ export class SkillMenuPanel {
   }
 
   private createAnnotatedFragment(text: string): DocumentFragment {
-    return annotateGameTerms(
+    return annotateGameTermsWithTooltip(
       text,
       getLocale() as GameTermLocale,
-      (termId, anchor) => this.gameTermPanel.openFromTerm(termId, anchor),
-      { panelId: this.gameTermPanel.getPanelId() }
+      this.gameTermTooltip,
+      {
+        excludeTermIds: SKILL_CARD_BODY_TERM_EXCLUDE_IDS,
+        includeTermIds: SKILL_CARD_BODY_TERM_INCLUDE_IDS,
+      },
     );
   }
 

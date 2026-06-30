@@ -889,6 +889,15 @@ export const PARTY_HUD_COMPACT_STATUS_MAX_VISIBLE = 4;
 /** Party HUD 簡易表示: +N 発生時の表示バッジ数 */
 export const PARTY_HUD_COMPACT_STATUS_OVERFLOW_VISIBLE = 3;
 
+/** Party HUD overlay: 2 行 × 10 列の固定状態スロット数 */
+export const PARTY_HUD_OVERLAY_STATUS_ROWS = 2;
+export const PARTY_HUD_OVERLAY_STATUS_COLS = 10;
+export const PARTY_HUD_OVERLAY_STATUS_SLOT_COUNT =
+  PARTY_HUD_OVERLAY_STATUS_ROWS * PARTY_HUD_OVERLAY_STATUS_COLS;
+
+/** Party HUD overlay: +N 用に確保する末尾スロット数 */
+export const PARTY_HUD_OVERLAY_STATUS_OVERFLOW_RESERVE = 1;
+
 /** @deprecated PARTY_HUD_COMPACT_STATUS_MAX_VISIBLE を参照 */
 export const PARTY_HUD_COMPACT_STATUS_VISIBLE_COUNT =
   PARTY_HUD_COMPACT_STATUS_MAX_VISIBLE;
@@ -927,5 +936,26 @@ export function selectPartyHudCompactStatusBadges(
     visible: sorted.slice(0, PARTY_HUD_COMPACT_STATUS_OVERFLOW_VISIBLE),
     overflowCount:
       sorted.length - PARTY_HUD_COMPACT_STATUS_OVERFLOW_VISIBLE,
+  };
+}
+
+/** Party HUD overlay: 20 枠固定。21 件以上は 19 +N。 */
+export function selectPartyHudOverlayStatusBadges(
+  badges: StatusEffectBadgeDisplay[],
+): CompactStatusBadgeSelection {
+  const sorted = sortBadgesForCompactView(badges);
+  if (sorted.length <= PARTY_HUD_OVERLAY_STATUS_SLOT_COUNT) {
+    return {
+      visible: sorted.slice(0, PARTY_HUD_OVERLAY_STATUS_SLOT_COUNT),
+      overflowCount: 0,
+    };
+  }
+
+  const visibleCount =
+    PARTY_HUD_OVERLAY_STATUS_SLOT_COUNT -
+    PARTY_HUD_OVERLAY_STATUS_OVERFLOW_RESERVE;
+  return {
+    visible: sorted.slice(0, visibleCount),
+    overflowCount: sorted.length - visibleCount,
   };
 }

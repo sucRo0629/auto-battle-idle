@@ -3,7 +3,7 @@ import {
   segmentTextByGameTerms,
   segmentsToPlainText,
 } from "./annotateGameTerms.ts";
-import { SKILL_CARD_BODY_TERM_EXCLUDE_IDS } from "./skillCardDisplayRules.ts";
+import { SKILL_CARD_BODY_TERM_EXCLUDE_IDS, SKILL_CARD_BODY_TERM_INCLUDE_IDS } from "./skillCardDisplayRules.ts";
 
 describe("segmentTextByGameTerms", () => {
   it("prefers longer aliases at the same offset", () => {
@@ -178,6 +178,23 @@ describe("segmentTextByGameTerms", () => {
     expect(entry?.description).toBeUndefined();
     expect(entry?.aliases).toBeUndefined();
     expect(entry?.tooltip).toBeUndefined();
+  });
+
+  it("links only inline term labels when includeTermIds is set", () => {
+    expect(
+      segmentTextByGameTerms("マルチロック 2 / 攻撃力の90%の魔法ダメージ", "ja", {
+        includeTermIds: SKILL_CARD_BODY_TERM_INCLUDE_IDS,
+      }),
+    ).toEqual([
+      { kind: "term", termId: "multiLock", matchedText: "マルチロック" },
+      { kind: "text", text: " 2 / 攻撃力の90%の魔法ダメージ" },
+    ]);
+    expect(
+      segmentTextByGameTerms("バリアを付与", "ja", {
+        includeTermIds: SKILL_CARD_BODY_TERM_INCLUDE_IDS,
+        excludeTermIds: SKILL_CARD_BODY_TERM_EXCLUDE_IDS,
+      }),
+    ).toEqual([{ kind: "text", text: "バリアを付与" }]);
   });
 
   it("links multiLock, skillLock, moveLock, and dotCompress terms", () => {

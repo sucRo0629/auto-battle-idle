@@ -48,6 +48,8 @@ function getSortedAliases(locale: GameTermLocale): AliasMatch[] {
 export interface SegmentTextByGameTermsOptions {
   /** Skill card body: proprietary status names are not term-linked. */
   excludeTermIds?: ReadonlySet<GameTermId>;
+  /** Skill card body: only link allowlisted inline term labels. */
+  includeTermIds?: ReadonlySet<GameTermId>;
 }
 
 /** Pure segmentation for tests and annotateGameTerms. Longest alias wins at each offset. */
@@ -57,6 +59,7 @@ export function segmentTextByGameTerms(
   options?: SegmentTextByGameTermsOptions,
 ): GameTermTextSegment[] {
   const excludeTermIds = options?.excludeTermIds;
+  const includeTermIds = options?.includeTermIds;
   const aliases = getSortedAliases(locale);
   if (aliases.length === 0 || text.length === 0) {
     return text.length > 0 ? [{ kind: "text", text }] : [];
@@ -71,6 +74,7 @@ export function segmentTextByGameTerms(
     for (const candidate of aliases) {
       if (!text.startsWith(candidate.alias, pos)) continue;
       if (excludeTermIds?.has(candidate.termId)) continue;
+      if (includeTermIds && !includeTermIds.has(candidate.termId)) continue;
       matched = { termId: candidate.termId, matchedText: candidate.alias };
       break;
     }
@@ -91,6 +95,7 @@ export function segmentTextByGameTerms(
       for (const candidate of aliases) {
         if (!text.startsWith(candidate.alias, nextPos)) continue;
         if (excludeTermIds?.has(candidate.termId)) continue;
+        if (includeTermIds && !includeTermIds.has(candidate.termId)) continue;
         foundAhead = true;
         break;
       }

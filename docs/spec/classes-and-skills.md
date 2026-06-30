@@ -39,58 +39,48 @@
 
 #### ゲーム用語表（表示分類）
 
-Hensei Only のゲーム用語は、プレイヤー向け UI 上で次の **5 分類** で扱う。日本語表示を正本とし、英語は [i18n-en.md](i18n-en.md) の制御英語に従う。一般 RPG 用語で補完しない。
+Hensei Only のスキルカード表示は、プレイヤー向け UI 上で次の **3 系統** に整理する。日本語表示を正本とし、英語は [i18n-en.md](i18n-en.md) の制御英語に従う。一般 RPG 用語で補完しない。
 
-| 分類 | 役割 |
+| 系統 | 役割 |
 | ---- | ---- |
-| **本文** | 何が起きるか（スキル効果そのもの） |
-| **タグ** | 処理形状・対象形状・発動形状の特殊メカニクス |
-| **状態チップ** | 名前を持つ固有バフ・固有デバフ・固有状態 |
-| **ツールチップ** | 共通用語の短い注釈（2〜3 行） |
-| **状態ツールチップ** | 固有状態の定義（効果・持続・スタック・変化・消滅）。スキルカード上は状態チップのホバー |
-| **HUD バッジ** | 戦闘中に実際にユニットへ付いている状態 |
+| **Inline Term Label** | 効果本文中の tooltip trigger 付き短い用語ラベル（ゲーム固有ルール） |
+| **State Chip** | 戦闘中に状態として保持されるもの（別枠・状態 tooltip） |
+| **Plain Text** | tooltip なしの基本語（本文中の通常テキスト） |
 
-**情報責務・重複禁止**（本文 / タグ / タグツールチップ / 状態チップの正本配置）: [party-formation-ui.md §スキルカード情報設計](party-formation-ui.md#スキルカード情報設計)。
+**戦闘 HUD** では、実際にユニットへ付いている状態を **HUD バッジ** として別表示する（スキルカードの 3 系統とは独立）。
 
-**辞書データ:** `gameTermGlossary.ts` / `gameTermGlossaryEn.ts`（`GameTermId`）。`description` = 用語辞典、`tooltip` = 用語ホバー、`statusDefinition` = 状態辞典。**固有状態**は `statusDefinition` のみ（`description` / `aliases` / `tooltip` 禁止。[§固有状態（辞書データ）](party-formation-ui.md#固有状態辞書データ)）。**スキルカードへの割当:** `skillCardDisplayRules.ts`（実装側 allowlist。本表と同期すること）。
+**情報責務・重複禁止:** [party-formation-ui.md §スキルカード情報設計](party-formation-ui.md#スキルカード情報設計)。
 
-##### 本文に残す用語
+**辞書データ:** `gameTermGlossary.ts` / `gameTermGlossaryEn.ts`（`GameTermId`）。`description` = 用語辞典（用語パネル）、`tooltip` = Inline Term Label 用ホバー、`statusDefinition` = State Chip 用状態辞典。**固有状態**は `statusDefinition` のみ（`description` / `aliases` / `tooltip` 禁止。[§固有状態（辞書データ）](party-formation-ui.md#固有状態辞書データ)）。**スキルカードへの割当:** `skillCardDisplayRules.ts`（実装側 allowlist。本節と同期すること）。
 
-以下はスキル効果そのものを構成するため **タグ化しない**。必要に応じてツールチップリンク化してよい。
+##### 1. Inline Term Label
 
-HP / ATK / DEF / REG / Max HP / Attack Speed / Range / 物理ダメージ / 魔法ダメージ / 被ダメージ / 回復 / ブロック / バリア / 障壁 / ダメージ軽減 / 被ダメージ増加 / DoT / HoT / 毒 / 出血 / スタン / ノックバック / 回避 / 反撃 / 通常攻撃 / 攻撃スキル / Hit / Recast / Duration / チャージ / 防御無視・DEF 無視 / 特効
+効果本文中に表示される **tooltip trigger 付き** の短い用語ラベル。対象形状・範囲形状・攻撃の当たり方・計算修飾・行動制御・特殊挙動など、**ゲーム固有ルールの説明が必要なもの** を対象にする。
 
-##### タグにする用語
+**対象例（固定リストではない）:** マルチロック / AoE / 貫通 / DEF無視 / 軽減無視 / バリア無視 / スタン / ノックバック / 反撃 / 回避
 
-タグは **処理形状・対象形状・発動形状** の特殊メカニクスに限定する。
+**注意:**
 
-**タグ化してよい（候補）**
+- 上記は例であり、固定リストとして扱わない
+- 実際に tooltip trigger 化するかは **glossary / `gameTerm` 定義**（`tooltip` または `description` の有無 + `skillCardDisplayRules` の inline allowlist）に基づく
+- スタン・ノックバック・反撃・回避は一般ゲーム用語に見えるが、Hensei Only では **処理差が大きい特殊挙動** として Inline Term Label に含める
+- **別枠タグ行は持たない**。形状ラベルは本文行内に置き、同じ情報を二重表示しない
 
-| 表示名 | 備考 |
-| ------ | ---- |
-| Multi-Lock | `GameTermId: multiLock`。**実装済み** |
-| AoE | `GameTermId: aoe`。**実装済み** |
-| Pierce | `GameTermId: pierce`。**実装済み** |
-| Chain | 未実装 |
-| Scatter | 未実装 |
-| Pool Each | 未実装 |
-| Trigger | 未実装 |
-| Counter-trigger | 未実装。反撃効果そのものではなく発動条件 |
-| On hit taken | 未実装 |
-| Front ally hit | 未実装 |
-| Hold / Lockout | `GameTermId: skillLock`（英: Lockout）。タグ化は未実装 |
+**tooltip 内容:** 2〜3 行。処理順・例外・内部実装は入れない。`gameTermGlossary.ts` の `tooltip`（省略時は `description` 先頭行）。
 
-**タグ化しない:** Magic damage / Physical damage / Block / Heal / Barrier / Ward / Buff / Debuff / DoT / HoT / Poison / Bleed / Stun / Knockback / Counter / Evasion
+##### 2. State Chip
 
-**注意:** `Counter`（反撃）は単体ではタグ化しない。「反撃時に発動する」**条件**を示す場合のみ `Counter-trigger` 等の発動条件タグとして扱う。
+戦闘中に **状態として保持される** もの。状態名・概要・State tooltip を持つ。Inline Term Label とは **別系統**。
 
-##### 状態チップにする用語
+**対象例（固定リストではない）:** バリア / 障壁 / 防壁 / DoT / HoT / 毒 / 出血 / 種火 / 熾火 / 印 / 薬効
 
-**専用名を持つ固有状態**に限定する。DoT・毒・出血・スタン・ノックバック等の **汎用状態** はスキルカード本文に残す（戦闘 HUD バッジ表示は可）。
+**注意:**
 
-**状態ツールチップ**（状態定義のみ。スキル付与条件は含めない）: [party-formation-ui.md §状態ツールチップ](party-formation-ui.md#状態ツールチップ)。スキルカード本文中の固有状態名は **用語ホバー化しない**（状態チップのホバーで定義を示す）。
+- State Chip にする状態名は、本文中の Inline Term Label として **重複表示しない**
+- 状態の詳細説明は **State tooltip**（`statusDefinition`）を正本にする
+- 本文には **何を付与するか** だけを書く（持続・スタック・変化・消滅の詳細は State tooltip へ）
 
-**固有状態の辞書ルール**（`description` / `aliases` 禁止、`statusDefinition` のみ）: [party-formation-ui.md §固有状態（辞書データ）](party-formation-ui.md#固有状態辞書データ)。
+**固有状態の辞書ルール**（`description` / `aliases` / `tooltip` 禁止、`statusDefinition` のみ）: [party-formation-ui.md §固有状態（辞書データ）](party-formation-ui.md#固有状態辞書データ)。
 
 | 日本語 | English | `GameTermId` |
 | ------ | ------- | ------------ |
@@ -114,38 +104,47 @@ HP / ATK / DEF / REG / Max HP / Attack Speed / Range / 物理ダメージ / 魔�
 | ダメージ遅延 | Damage Delay | `damageDelay` |
 | 通常攻撃変形 | Basic Attack Transform | `basicAttackTransform` |
 
-##### ツールチップ対象
+汎用状態（バリア / 障壁 / DoT / HoT / 毒 / 出血 等）も State Chip 対象になりうる。`statusDefinition` または `description` + `statusCategory` で定義する。
 
-共通用語として **短い説明**（2〜3 行）を付けてよい候補。処理順・例外・内部実装は入れない。
+##### 3. Plain Text
 
-| 候補 | `GameTermId` | 備考 |
-| ---- | ------------ | ---- |
-| Multi-Lock | `multiLock` | 登録済 |
-| Barrier | `barrier` | 登録済 |
-| Ward | `wardBarrier` | 登録済（英 title: Ward） |
-| Block | `block` | 登録済 |
-| Magic Block | `magicBlock` | 登録済 |
-| Basic Attack | `basicAttack` | 登録済 |
-| Attack Skill | — | **辞書未登録**（文案のみ使用） |
-| Hit | — | **辞書未登録** |
-| Recast | — | **辞書未登録**（`metaLine` ラベルは `Recast`） |
-| Duration | — | **辞書未登録** |
-| Charge | `charge` | 登録済 |
-| Stun | `stun` | 登録済 |
-| DoT | `dot` | 登録済 |
-| HoT | `hot` | 登録済 |
-| Poison | `poison` | 登録済 |
-| Bleed | `bleed` | 登録済 |
-| Lockout | `skillLock` | 登録済 |
-| Root | `moveLock` | 登録済 |
-| Counter | `counter` | 登録済 |
-| Evasion | `evasion` | 登録済 |
-| Invulnerable | `invulnerable` | 登録済 |
-| Damage Delay | `damageDelay` | 登録済 |
+tooltip を読まなくても意味が分かる **基本語**。本文中に通常テキストとして表示する。glossary の `aliases` に載せても **スキルカード本文ではリンク化しない**。
+
+**対象例:** 物理ダメージ / 魔法ダメージ / 攻撃力 / HP / 防御力 / 魔法耐性 / 回復 / ダメージを与える / 付与する
+
+##### 表示フォーマット（効果行）
+
+`formatSkillCardLines` の `effectLines` および 1 行説明の効果部は次を基本とする。
+
+- 並び順: **特殊ルール → 計算修飾 → 基礎効果 → 追加効果**
+- Inline Term Label の **直後** に対応する数値を置く（ラベルと数値を分離）
+- 複数要素は ` / ` で区切る
+- 割合には `%` を付ける。個数・対象数には `%` を付けない
+- 仕様書・設計メモでは Inline Term Label を `[ラベル]` と表記してよい（UI 上は tooltip 付きボタンとして描画）
+
+**例（`[]` は Inline Term Label の表記）:**
+
+```
+[マルチロック] 2 / 攻撃力の120%の魔法ダメージ
+[マルチロック] 2 / [DEF無視] 25% / 攻撃力の160%の物理ダメージ
+[AoE] 5 / 味方の攻撃力+20%
+[貫通] / 攻撃力の140%の物理ダメージ / [ノックバック]
+[スタン] 1.5秒
+[反撃] / 攻撃力の80%の物理ダメージ
+[回避] +20%
+```
+
+##### 重複禁止
+
+| 禁止 | 正本 |
+| ---- | ---- |
+| Inline Term Label と別枠タグで同じ情報を二重表示 | 本文内 Inline Term Label のみ |
+| State Chip と本文中ラベルで同じ状態名を二重表示 | State Chip（本文は付与の要約のみ） |
+| State tooltip の詳細を本文へ長く重複記載 | State tooltip |
 
 ##### HUD バッジ
 
-戦闘中に **実際に付与されている状態** を表示する。スキルカードのタグとは **別物**。表示可否は「戦闘中に状態として存在するか」で判断し、スキルカード上のタグ化可否とは連動させない。
+戦闘中に **実際に付与されている状態** を表示する。スキルカードの 3 系統とは **別物**。表示可否は「戦闘中に状態として存在するか」で判断する。
 
 例: バリア / 障壁 / ブロック / 毒 / 出血 / スタン / 種火 / 熾火 / 闘士の指名 / ダメージ遅延
 
@@ -183,7 +182,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 表示言語    | **4d まで `ja` 固定**。**4e** で `en` のみ追加（[phase-roadmap.md §4e](../plans/phase-roadmap.md#4e--英語-i18n--release-m1-向け)）                                                                                                                                      |
 | 適用面      | 編成 UI のスキルカード説明文（Phase 4d）。エディタのスキル説明プレビューは同辞書で揃える                                                                                                                                                                                  |
-| 説明文生成  | 1 行: `formatActiveDescription` / `formatPassiveDescription`。カード改行: `formatSkillCardLines`（[party-formation-ui.md §6.3](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。辞書は **事後マッチ** または `formatSkillCardLines` 構造化出力と接続 |
+| 説明文生成  | 1 行: `formatActiveDescription` / `formatPassiveDescription`。カード改行: `formatSkillCardLines`（[party-formation-ui.md §6.3](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。本文の Inline Term Label は `annotateGameTermsWithTooltip` + `skillCardDisplayRules` の inline allowlist。State Chip は `resolveSkillCardDisplay` が分離 |
 | スキル JSON | 用語説明フィールドは **持たない**（4b 方針と同様。説明は生成 + 辞書）                                                                                                                                                                                                     |
 
 #### エントリ形状（locale キー付き）
@@ -223,7 +222,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - `持続` — 効果残り秒（`buffDurationSec` 等の最大）。`useDurationSec`（硬直）とは分ける
 - `硬直` — `useDurationSec`。`useDurationPauseApproach` 時は `硬直・移動停止N秒`（秒数は末尾）。それ以外は `硬直N秒`
 - `発動条件` — `firePolicy: smart` の `fireConditions` 要約（例: `対象のHPが50%以上`）
-- `[効果…]` — コンパクト表記。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージを与える`（至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `敵N体に…`（味方対象は `味方N体に…`）。不足対象時の再配分は本文に書かず **Multi-Lock タグ tooltip** へ（[ゲーム用語表](classes-and-skills.md#ゲーム用語表表示分類)）。タグは **マルチロックN** / **Multi-Lock N**
+- `[効果…]` — コンパクト表記。[ゲーム用語表 §表示フォーマット](classes-and-skills.md#ゲーム用語表表示分類) に従う。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージ`（至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `[マルチロック] N / {効果}`（対象数はラベル直後）。不足対象時の再配分は本文に書かず **Inline Term Label の tooltip** へ
 
 **Passive**
 

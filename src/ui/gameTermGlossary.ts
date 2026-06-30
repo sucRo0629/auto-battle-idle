@@ -57,7 +57,11 @@ export type GameTermId =
   | "ballistaMark"
   | "allyAttackFollowUp"
   | "poisonWeapon"
-  | "nextOutgoingDamage";
+  | "nextOutgoingDamage"
+  | "knockback"
+  | "defenseIgnoreDef"
+  | "damageReductionIgnore"
+  | "barrierPierce";
 
 export interface GameTermEntry {
   id: GameTermId;
@@ -168,6 +172,9 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   {
     id: "stun",
     title: { ja: "スタン" },
+    tooltip: {
+      ja: "行動不能状態。スキル発動・通常攻撃・移動が停止する。",
+    },
     description: {
       ja: "行動不能状態。スキル発動・通常攻撃・移動が停止し、通常攻撃の再使用時間のみリセットされる。\nただしアクティブスキルの再使用時間は停止せず、リセットもされない。",
     },
@@ -208,6 +215,10 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     tooltip: {
       ja: "範囲内の対象へ効果を適用する形状。",
     },
+    description: {
+      ja: "範囲内の対象へ効果を適用する形状。",
+    },
+    aliases: { ja: ["AoE"] },
   },
   {
     id: "pierce",
@@ -215,6 +226,10 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     tooltip: {
       ja: "貫通し、複数対象へ順に効果を適用する形状。",
     },
+    description: {
+      ja: "貫通し、複数対象へ順に効果を適用する形状。",
+    },
+    aliases: { ja: ["貫通"] },
   },
   {
     id: "skillLock",
@@ -241,6 +256,9 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   {
     id: "counter",
     title: { ja: "反撃" },
+    tooltip: {
+      ja: "攻撃を受けた際、攻撃者へスキルで設定した効果を返す。",
+    },
     description: {
       ja: "攻撃を受けた際、攻撃者にスキルで設定した効果を与える反撃効果。",
     },
@@ -250,6 +268,9 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   {
     id: "evasion",
     title: { ja: "回避" },
+    tooltip: {
+      ja: "攻撃を完全に避け、ダメージを受けない確率。",
+    },
     description: {
       ja: "攻撃を完全に避け、ダメージを受けない確率。",
     },
@@ -300,6 +321,50 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     },
     aliases: { ja: ["出血"] },
     statusCategory: "bleed",
+  },
+  {
+    id: "knockback",
+    title: { ja: "ノックバック" },
+    tooltip: {
+      ja: "対象を後方へ押し出す効果。距離はスキルごとに異なる。",
+    },
+    description: {
+      ja: "対象を後方へ押し出す効果。距離はスキルごとに異なる。",
+    },
+    aliases: { ja: ["ノックバック"] },
+  },
+  {
+    id: "defenseIgnoreDef",
+    title: { ja: "DEF無視" },
+    tooltip: {
+      ja: "攻撃時、対象の防御力を一定割合無視する。",
+    },
+    description: {
+      ja: "攻撃時、対象の防御力を一定割合無視する。",
+    },
+    aliases: { ja: ["DEF無視"] },
+  },
+  {
+    id: "damageReductionIgnore",
+    title: { ja: "軽減無視" },
+    tooltip: {
+      ja: "対象のダメージ軽減効果を無視してダメージを与える。",
+    },
+    description: {
+      ja: "対象のダメージ軽減効果を無視してダメージを与える。",
+    },
+    aliases: { ja: ["軽減無視", "DR無視"] },
+  },
+  {
+    id: "barrierPierce",
+    title: { ja: "バリア無視" },
+    tooltip: {
+      ja: "対象のバリアを貫通してHPへダメージを与える。",
+    },
+    description: {
+      ja: "対象のバリアを貫通してHPへダメージを与える。",
+    },
+    aliases: { ja: ["バリア無視", "barrier貫通"] },
   },
   {
     id: "healReservation",

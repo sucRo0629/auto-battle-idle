@@ -32,6 +32,7 @@ import {
   resolveSkillPresentation,
 } from "../render/skillPresentation.ts";
 import { PartyHudPanel } from "./PartyHudPanel.ts";
+import { formatPartyHudSkillSlotTooltip } from "./partyHudSkillGaugeTooltip.ts";
 import { PartyMemberEffectiveStatsPanel } from "./PartyMemberEffectiveStatsPanel.ts";
 import {
   buildPartyHudEntries,
@@ -293,6 +294,15 @@ export class BattleView {
           this.memberStatsPanel.reposition();
         }
       },
+      resolveSkillSlotTooltip: (_partySlot, cellIndex, cd, inactive) =>
+        formatPartyHudSkillSlotTooltip(
+          cellIndex,
+          cd,
+          cd?.skillId
+            ? this.gameData.skillRegistry.actives[cd.skillId]
+            : undefined,
+          inactive,
+        ),
     });
     this.partyHud.mount(this.partyHudSlotEl);
 

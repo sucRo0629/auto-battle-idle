@@ -133,7 +133,7 @@ Apply Seed Flame to the enemy for each attack skill hit.
 
 ## スキルカード英語文案
 
-スキルカード表示の分類は [party-formation-ui.md §6.4](party-formation-ui.md#64-用語注釈スキルカード)（[§スキルカード情報設計](party-formation-ui.md#スキルカード情報設計) が正本）を正とする。
+スキルカード表示の分類は [party-formation-ui.md §6.4](party-formation-ui.md#64-用語注釈スキルカード)（[§スキルカード情報設計](party-formation-ui.md#スキルカード情報設計) が正本）を正とする。3 系統: **Inline Term Label / State Chip / Plain Text**。
 
 - 日本語を正本とする。意訳しすぎない
 - 主語を省いた命令形を基本にする
@@ -141,18 +141,18 @@ Apply Seed Flame to the enemy for each attack skill hit.
 - 用語表の表記を固定する
 - 曖昧な場合は `NEEDS_REVIEW` とする
 
-**Multi-Lock の書き方:** 本文に対象数と効果を書き、タグラベルは名詞 `Multi-Lock N`（日本語 `マルチロックN`）のみ。**動詞化しない**。不足対象時の再配分は **タグ tooltip** に書き、本文へ重複させない。
+**Multi-Lock の書き方:** 本文に `[Multi-Lock] N / {効果}` と書き、不足対象時の再配分は **Inline Term Label tooltip** に書き、本文へ重複させない。別枠タグ行は持たない。
 
-良い例（本文）:
-
-```
-Deal 90% ATK magic damage to 2 enemies.
-```
-
-悪い例（本文）:
+良い例（効果行）:
 
 ```
-Multi-Locks 2 enemies and deals 90% ATK magic damage.
+Multi-Lock 2 / 120% ATK magic damage
+```
+
+悪い例（効果行）:
+
+```
+Multi-Locks 2 enemies and deals 120% ATK magic damage.
 If targets are insufficient, repeat hits on the same target.
 ```
 

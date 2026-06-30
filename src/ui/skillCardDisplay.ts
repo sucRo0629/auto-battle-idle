@@ -8,13 +8,11 @@ import {
 import type { GameTermId, GameTermLocale } from "./gameTermGlossary.ts";
 import {
   resolveGameTermTitle,
-  resolveGameTermTooltip,
   resolveStatusDefinition,
 } from "./gameTermGlossary.ts";
 import { segmentTextByGameTerms } from "./annotateGameTerms.ts";
 import {
   isSkillCardStatusChipTermId,
-  isSkillCardTagTermId,
   SKILL_CARD_STATUS_CHIP_TERM_IDS,
 } from "./skillCardDisplayRules.ts";
 
@@ -26,34 +24,16 @@ export type SkillCardStatusChip = {
   summary: string;
 };
 
-export type SkillCardTag = {
-  termId?: GameTermId;
-  label: string;
-};
-
 export type SkillCardDisplay = {
   metaLine: string;
   headlineLines: string[];
   statusChips: SkillCardStatusChip[];
-  tags: SkillCardTag[];
 };
 
 function isActiveSkillDef(
   def: ActiveSkillDef | PassiveSkillDef
 ): def is ActiveSkillDef {
   return "effect" in def && Array.isArray(def.effect);
-}
-
-function dedupeTags(tags: SkillCardTag[]): SkillCardTag[] {
-  const seen = new Set<string>();
-  const out: SkillCardTag[] = [];
-  for (const tag of tags) {
-    const key = tag.label;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(tag);
-  }
-  return out;
 }
 
 function resolveTermIdFromListItemText(
@@ -142,57 +122,13 @@ function listItemToStatusChip(
   };
 }
 
-function resolveEffectTargetShape(
-  effect: ActiveSkillDef["effect"][number],
-  def: ActiveSkillDef
-): TargetShape {
-  return effect.targetShape ?? def.targetShape ?? "single";
-}
-
-function extractEffectTags(
-  def: ActiveSkillDef,
-  locale: GameTermLocale
-): SkillCardTag[] {
-  const tags: SkillCardTag[] = [];
-  const seen = new Set<GameTermId>();
-  const defShape = def.targetShape ?? "single";
-
-  const pushTag = (termId: GameTermId, label: string) => {
-    if (!isSkillCardTagTermId(termId) || seen.has(termId)) return;
-    seen.add(termId);
-    tags.push({ termId, label });
-  };
-
-  if (defShape === "aoe") {
-    pushTag("aoe", resolveGameTermTitle("aoe", locale));
-  }
-
-  for (const effect of def.effect) {
-    const shape = resolveEffectTargetShape(effect, def);
-    const hitCount = effect.hitCount ?? def.hitCount ?? 1;
-
-    if (shape === "multiLock" && hitCount > 1) {
-      pushTag("multiLock", resolveGameTermTitle("multiLock", locale));
-    }
-    if (shape === "aoe") {
-      pushTag("aoe", resolveGameTermTitle("aoe", locale));
-    }
-    if (shape === "pierce") {
-      pushTag("pierce", resolveGameTermTitle("pierce", locale));
-    }
-  }
-
-  return tags;
-}
-
 export function resolveSkillCardDisplay(
   lines: SkillCardLines,
-  def: ActiveSkillDef | PassiveSkillDef | undefined,
+  _def: ActiveSkillDef | PassiveSkillDef | undefined,
   locale: GameTermLocale
 ): SkillCardDisplay {
   const headlineLines: string[] = [];
   const statusChips: SkillCardStatusChip[] = [];
-  const tags: SkillCardTag[] = [];
 
   for (const line of lines.effectLines) {
     if (isSkillCardEffectList(line)) {
@@ -213,15 +149,10 @@ export function resolveSkillCardDisplay(
     headlineLines.push(line);
   }
 
-  if (def && isActiveSkillDef(def)) {
-    tags.push(...extractEffectTags(def, locale));
-  }
-
   return {
     metaLine: lines.metaLine,
     headlineLines,
     statusChips,
-    tags: dedupeTags(tags),
   };
 }
 
@@ -233,19 +164,6 @@ export function resolveStatusChipTooltip(
   return {
     title: chip.title,
     body: body ?? "",
-  };
-}
-
-export function resolveTagTooltip(
-  tag: SkillCardTag,
-  locale: GameTermLocale
-): { title: string; body: string } | null {
-  if (!tag.termId) return null;
-  const body = resolveGameTermTooltip(tag.termId, locale);
-  if (!body) return null;
-  return {
-    title: resolveGameTermTitle(tag.termId, locale),
-    body,
   };
 }
 

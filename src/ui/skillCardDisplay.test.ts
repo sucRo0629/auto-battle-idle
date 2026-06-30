@@ -1,44 +1,36 @@
 import { describe, expect, it } from "vitest";
 import { formatSkillCardLines } from "./formatSkillText.ts";
 import {
+  isSkillCardInlineTermLabelId,
   isSkillCardStatusChipTermId,
-  isSkillCardTagTermId,
+  SKILL_CARD_INLINE_TERM_LABEL_IDS,
   SKILL_CARD_STATUS_CHIP_TERM_IDS,
-  SKILL_CARD_TAG_TERM_IDS,
 } from "./skillCardDisplayRules.ts";
 import { resolveSkillCardDisplay, resolveStatusChipTooltip } from "./skillCardDisplay.ts";
 import { resolveGameTermTooltip } from "./gameTermGlossary.ts";
 
 describe("skillCardDisplayRules", () => {
-  it("keeps generic effect terms out of tag and status-chip allowlists", () => {
-    const genericTerms = [
-      "barrier",
-      "wardBarrier",
-      "block",
-      "dot",
-      "hot",
-      "poison",
-      "bleed",
-      "stun",
-      "counter",
-      "evasion",
-    ] as const;
+  it("keeps plain-text stats out of inline label and status-chip allowlists", () => {
+    const plainTextTerms = ["hp", "atk", "def", "reg", "attackSpeed"] as const;
 
-    for (const termId of genericTerms) {
-      expect(isSkillCardTagTermId(termId)).toBe(false);
+    for (const termId of plainTextTerms) {
+      expect(isSkillCardInlineTermLabelId(termId)).toBe(false);
       expect(isSkillCardStatusChipTermId(termId)).toBe(false);
     }
   });
 
-  it("allows shape tags for multiLock, aoe, and pierce", () => {
-    expect(SKILL_CARD_TAG_TERM_IDS).toEqual(["multiLock", "aoe", "pierce"]);
+  it("allows inline labels for shape and special-behavior terms", () => {
+    expect(SKILL_CARD_INLINE_TERM_LABEL_IDS).toContain("multiLock");
+    expect(SKILL_CARD_INLINE_TERM_LABEL_IDS).toContain("stun");
+    expect(SKILL_CARD_INLINE_TERM_LABEL_IDS).toContain("knockback");
+    expect(SKILL_CARD_INLINE_TERM_LABEL_IDS).not.toContain("barrier");
   });
 
-  it("lists proprietary named states for status chips", () => {
+  it("lists battle states for state chips including generic states", () => {
     expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).toContain("seedFlame");
-    expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).toContain("blazingFlame");
-    expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).not.toContain("dot");
-    expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).not.toContain("poison");
+    expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).toContain("barrier");
+    expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).toContain("dot");
+    expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).not.toContain("multiLock");
   });
 });
 
@@ -69,10 +61,9 @@ describe("resolveSkillCardDisplay", () => {
     expect(seedTooltip.body).toContain("「熾火」へ変化する");
     expect(seedTooltip.body).not.toContain("攻撃スキル");
     expect(display.statusChips[1]?.termId).toBe("blazingFlame");
-    expect(display.tags).toEqual([]);
   });
 
-  it("extracts Multi-Lock tag from effect lines without verb phrasing", async () => {
+  it("keeps multi-lock shape text in headline without separate tag row", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.at_sorcerer_active_2;
@@ -84,8 +75,6 @@ describe("resolveSkillCardDisplay", () => {
     expect(display.headlineLines).toEqual([
       "Multi-Lock 2 / To enemies: Deals 90% ATK as magic damage",
     ]);
-    expect(display.tags.map((tag) => tag.label)).toEqual(["Multi-Lock"]);
-    expect(display.tags.map((tag) => tag.termId)).toEqual(["multiLock"]);
     expect(resolveGameTermTooltip("multiLock", "en")).toContain(
       "remaining applications hit the same target again"
     );
@@ -94,7 +83,7 @@ describe("resolveSkillCardDisplay", () => {
     );
   });
 
-  it("does not tag magic damage, block, or generic DoT terms", async () => {
+  it("does not treat magic damage as a separate tag row", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.at_sorcerer_active_1;
@@ -103,7 +92,6 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "en" });
     const display = resolveSkillCardDisplay(lines, def, "en");
 
-    expect(display.tags).toEqual([]);
     expect(display.statusChips).toEqual([]);
     expect(display.headlineLines[0]).toContain("magic damage");
   });
@@ -117,10 +105,6 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.tags.find((tag) => tag.termId === "multiLock")).toBeDefined();
-    expect(display.tags.find((tag) => tag.termId === "multiLock")?.label).toBe(
-      "マルチロック"
-    );
     expect(display.headlineLines.some((line) => line.includes("マルチロック"))).toBe(
       true
     );
@@ -135,7 +119,7 @@ describe("resolveSkillCardDisplay", () => {
     );
   });
 
-  it("adds AoE tag for skill-level aoe shape", async () => {
+  it("keeps AoE shape text in headline without separate tag row", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.df_paladin_active_2;
@@ -144,24 +128,10 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "en" });
     const display = resolveSkillCardDisplay(lines, def, "en");
 
-    expect(display.tags.map((tag) => tag.termId)).toContain("aoe");
-    expect(display.tags.map((tag) => tag.label)).toContain("AoE");
+    expect(display.headlineLines.some((line) => /aoe/i.test(line))).toBe(true);
   });
 
-  it("adds Pierce tag for pierce damage effects", async () => {
-    const { loadGameData } = await import("../battle/data/loadGameData.ts");
-    const gameData = await loadGameData();
-    const def = gameData.skillRegistry.actives.at_ballista_active_4;
-    expect(def).toBeDefined();
-
-    const lines = formatSkillCardLines(def!, { locale: "en" });
-    const display = resolveSkillCardDisplay(lines, def, "en");
-
-    expect(display.tags.map((tag) => tag.termId)).toContain("pierce");
-    expect(display.tags.map((tag) => tag.label)).toContain("Pierce");
-  });
-
-  it("uses Japanese label for Pierce tag", async () => {
+  it("keeps pierce shape text in headline without separate tag row", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.at_ballista_active_4;
@@ -170,7 +140,8 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.tags.map((tag) => tag.termId)).toContain("pierce");
-    expect(display.tags.map((tag) => tag.label)).toContain("貫通");
+    expect(display.headlineLines.some((line) => line.includes("貫通"))).toBe(
+      true
+    );
   });
 });

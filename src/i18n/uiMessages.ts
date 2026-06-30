@@ -93,6 +93,13 @@ export const UI_MESSAGE_KEYS = [
   'hud.healingDealtTakenDown',
   'hud.debuff',
   'hud.buff',
+  'hud.skillSlotUnlocksAt',
+  'hud.skillReady',
+  'hud.skillRecastRemaining',
+  'hud.skillRecastSeconds',
+  'hud.skillRecastBasicAttacks',
+  'hud.skillRecastHits',
+  'hud.skillActiveRemaining',
 ] as const;
 
 export type UiMessageKey = (typeof UI_MESSAGE_KEYS)[number];
@@ -192,6 +199,13 @@ const JA_MESSAGES = {
   'hud.healingDealtTakenDown': '癒 {healed} · 被 {taken} (倒)',
   'hud.debuff': 'Debuff',
   'hud.buff': 'Buff',
+  'hud.skillSlotUnlocksAt': 'Lv{level} で解放',
+  'hud.skillReady': '使用可能',
+  'hud.skillRecastRemaining': '残り {remaining}',
+  'hud.skillRecastSeconds': '{seconds}秒',
+  'hud.skillRecastBasicAttacks': '通常攻撃 {count} 回',
+  'hud.skillRecastHits': '被弾 {count} 回',
+  'hud.skillActiveRemaining': '効果残り {remaining}/{total}秒',
 } satisfies MessageTable;
 
 const EN_MESSAGES = {
@@ -287,6 +301,13 @@ const EN_MESSAGES = {
   'hud.healingDealtTakenDown': 'Heal {healed} · In {taken} (down)',
   'hud.debuff': 'Debuff',
   'hud.buff': 'Buff',
+  'hud.skillSlotUnlocksAt': 'Unlocks at Lv{level}',
+  'hud.skillReady': 'Ready',
+  'hud.skillRecastRemaining': '{remaining} remaining',
+  'hud.skillRecastSeconds': '{seconds}s',
+  'hud.skillRecastBasicAttacks': '{count} basic attacks',
+  'hud.skillRecastHits': '{count} hits taken',
+  'hud.skillActiveRemaining': 'Effect {remaining}/{total}s',
 } satisfies MessageTable;
 
 export const UI_MESSAGES: Record<AppLocale, MessageTable> = {
