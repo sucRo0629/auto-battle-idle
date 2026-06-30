@@ -159,7 +159,7 @@
   );
   --hud-detail-damage-col: 120px;
   --hud-detail-damage-tag-col: 12px;
-  --hud-detail-damage-value-col: 3ch;
+  --hud-detail-damage-value-col: 4.4ch;
   --hud-detail-col-gap: 8px;
   /* バッジ canvas 透過余白 + ゲージ外枠 box-shadow（0 0 0 1px）分、アイコン起点を左へ */
   --hud-detail-bar-visual-outset: 1px;

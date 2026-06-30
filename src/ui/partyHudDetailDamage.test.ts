@@ -114,10 +114,17 @@ describe('PartyHudPanel detail damage metrics', () => {
         '.party-hud-detail-damage .party-stats-damage-bar--taken .party-stats-damage-bar-value',
       ),
     ].map((node) => node.textContent);
-    expect(dealtValues[0]).toBe('1,200');
+    expect(dealtValues[0]).toBe('1.2k');
     expect(takenValues[0]).toBe('400');
-    expect(dealtValues[1]).toBe('3,000');
+    expect(dealtValues[1]).toBe('3k');
     expect(takenValues[1]).toBe('50');
+    expect(
+      host
+        .querySelector(
+          '.party-hud-detail-damage .party-stats-damage-bar--dealt .party-stats-damage-bar-value',
+        )
+        ?.getAttribute('aria-label'),
+    ).toBe('1,200');
   });
 });
 
@@ -170,6 +177,30 @@ describe('syncDamageBars', () => {
     expect(refsBySlot.get(3)?.takenValue?.textContent).toBe('1');
     expect(refsBySlot.get(0)?.dealtValue?.textContent).toBe('100');
     expect(refsBySlot.get(0)?.takenValue?.textContent).toBe('10');
+  });
+
+  it('keeps compact inline labels readable while preserving full values', () => {
+    const refs = makeRefs();
+    syncDamageBars(
+      new Map([[0, refs]]),
+      [
+        mockDisplayRow({
+          slotIndex: 0,
+          classId: 'at_ballista',
+          displayName: '弩砲士',
+          damageDealt: 1234,
+          damageTaken: 12345,
+        }),
+      ],
+      new Map(),
+    );
+
+    expect(refs.dealtValue?.textContent).toBe('1.2k');
+    expect(refs.takenValue?.textContent).toBe('12k');
+    expect(refs.dealtValue?.title).toBe('1,234');
+    expect(refs.takenValue?.getAttribute('aria-label')).toBe('12,345');
+    expect(refs.label.textContent).toContain('1,234');
+    expect(refs.label.textContent).toContain('12,345');
   });
 
   it('shows healing dealt for a lone healer with a full dealt bar', () => {

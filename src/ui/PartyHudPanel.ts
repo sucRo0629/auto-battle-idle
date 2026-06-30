@@ -206,9 +206,13 @@ export class PartyHudPanel {
       slot.damage.lastSyncKey = undefined;
       if (slot.damage.dealtValue) {
         slot.damage.dealtValue.textContent = '—';
+        slot.damage.dealtValue.removeAttribute('title');
+        slot.damage.dealtValue.removeAttribute('aria-label');
       }
       if (slot.damage.takenValue) {
         slot.damage.takenValue.textContent = '—';
+        slot.damage.takenValue.removeAttribute('title');
+        slot.damage.takenValue.removeAttribute('aria-label');
       }
       syncDamageBarTagAriaLabels(slot.damage.root);
       slot.statusBadgeHitSignature = null;

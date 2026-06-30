@@ -104,6 +104,25 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return node;
 }
 
+function formatInlineDamageValue(value: number): string {
+  const rounded = Math.max(0, Math.round(value));
+  if (rounded < 1000) return rounded.toLocaleString();
+
+  if (rounded < 9950) {
+    return `${(rounded / 1000).toFixed(1).replace(/\.0$/, '')}k`;
+  }
+
+  if (rounded < 995000) {
+    return `${Math.round(rounded / 1000)}k`;
+  }
+
+  if (rounded < 9950000) {
+    return `${(rounded / 1000000).toFixed(1).replace(/\.0$/, '')}m`;
+  }
+
+  return `${Math.round(rounded / 1000000)}m`;
+}
+
 function createDealtDamageTag(): HTMLElement {
   const tag = el('span', 'party-stats-damage-bar-tag party-stats-damage-bar-tag--dealt');
   tag.setAttribute('role', 'img');
@@ -427,11 +446,17 @@ export function syncDamageBars(
 
     const dealtLabel = dealtMetric.toLocaleString();
     const takenLabel = row.damageTaken.toLocaleString();
+    const inlineDealtLabel = formatInlineDamageValue(dealtMetric);
+    const inlineTakenLabel = formatInlineDamageValue(row.damageTaken);
     if (refs.dealtValue) {
-      refs.dealtValue.textContent = dealtLabel;
+      refs.dealtValue.textContent = inlineDealtLabel;
+      refs.dealtValue.title = dealtLabel;
+      refs.dealtValue.setAttribute('aria-label', dealtLabel);
     }
     if (refs.takenValue) {
-      refs.takenValue.textContent = takenLabel;
+      refs.takenValue.textContent = inlineTakenLabel;
+      refs.takenValue.title = takenLabel;
+      refs.takenValue.setAttribute('aria-label', takenLabel);
     }
     if (row.isHealer) {
       refs.label.textContent = down
