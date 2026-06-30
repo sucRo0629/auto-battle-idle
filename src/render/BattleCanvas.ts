@@ -36,23 +36,6 @@ import { getParticlePresetDef } from "./particlePresets.ts";
 import { resolveVfxWorldPosition } from "./vfxPlacement.ts";
 import { CombatReactionPopupManager } from "./CombatReactionPopup.ts";
 import { DamagePopupManager } from "./DamagePopup.ts";
-import {
-  computeEnemyHpBarTops,
-  defaultEnemyHpBarTop,
-  enemyHpBarLeft,
-  ENEMY_HP_BAR_H,
-  ENEMY_HP_BAR_W,
-} from "./enemyHpBarLayout.ts";
-import { collectStatusEffectBadgeDisplays, selectCompactStatusBadges } from "../battle/statusEffectDisplay.ts";
-import {
-  computeFixedStatusBadgeTops,
-  type StatusBadgeLayoutInput,
-} from "./statusBadgeLayout.ts";
-import {
-  drawCompactStatusBadgeRow,
-  measureCompactStatusBadgeRow,
-  statusBadgeOutlinePad,
-} from "./statusBadgeRenderer.ts";
 import type {
   AnimState,
   CombatantLayout,
@@ -62,14 +45,12 @@ import type {
 import {
   readBattleHudTheme,
   resolveSpritePlaceholderColor,
-  resolveStatusIconFallbackColor,
   type BattleHudTheme,
 } from "./battleHudTheme.ts";
 import { VictoryOverlay } from "./VictoryOverlay.ts";
 import { WaveOverlay } from "./WaveOverlay.ts";
 import { DeathPlaybackManager } from "./deathPlayback.ts";
 import { drawBattleFieldBackground } from "./battleFieldBackground.ts";
-import { layoutHpBarBarrier } from "./hpBarBarrierLayout.ts";
 import { sortForSpriteDraw } from "./spriteDrawOrder.ts";
 import {
   applyVisualDepthOffsets,
@@ -483,18 +464,6 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawBackground();
 
-    const enemyBarTops = computeEnemyHpBarTops(
-      this.layouts
-        .filter((layout) => layout.isEnemy && layout.isAlive)
-        .map((layout) => ({
-          id: layout.id,
-          x: layout.x,
-          y: spriteDrawY(layout),
-        })),
-      SPRITE_SCALE,
-      SPRITE_SIZE
-    );
-
     const enemyLayouts = sortForSpriteDraw(
       this.layouts.filter((layout) => layout.isEnemy),
     );
@@ -505,18 +474,9 @@ export class BattleCanvas implements IBattleRenderer {
     this.vfxPlayback.draw(this.ctx, "behind", SPRITE_SCALE);
     this.particlePlayback.draw(this.ctx, "behind", SPRITE_SCALE);
 
+    // battle-field.md §8.9 — enemy HP/status live on the right Enemy HUD overlay.
     for (const layout of enemyLayouts) {
-      const spriteY = spriteDrawY(layout);
-      this.drawSprite(layout, layout.x, spriteY, SPRITE_SCALE);
-      if (layout.isAlive) {
-        this.drawHpBar(
-          layout,
-          layout.x,
-          spriteY,
-          SPRITE_SCALE,
-          enemyBarTops.get(layout.id)
-        );
-      }
+      this.drawSprite(layout, layout.x, spriteDrawY(layout), SPRITE_SCALE);
     }
     for (const layout of playerLayouts) {
       this.drawSprite(layout, layout.x, spriteDrawY(layout), SPRITE_SCALE);
@@ -524,8 +484,6 @@ export class BattleCanvas implements IBattleRenderer {
 
     this.vfxPlayback.draw(this.ctx, "front", SPRITE_SCALE);
     this.particlePlayback.draw(this.ctx, "front", SPRITE_SCALE);
-
-    this.drawStatusBadges(SPRITE_SCALE);
 
     this.damagePopups.draw(
       this.ctx,
@@ -556,41 +514,6 @@ export class BattleCanvas implements IBattleRenderer {
       canvas.height,
       this.theme,
     );
-  }
-
-  private fillHpBarWithBarrier(
-    x: number,
-    y: number,
-    barW: number,
-    barH: number,
-    hp: number,
-    maxHp: number,
-    barrierHp: number,
-    hpFill: string,
-    barrierFill: string,
-    barrierOverflowFill: string,
-  ): void {
-    const { ctx } = this;
-    if (maxHp <= 0) return;
-
-    const layout = layoutHpBarBarrier(x, barW, hp, maxHp, barrierHp);
-    if (!layout) return;
-
-    ctx.fillStyle = hpFill;
-    ctx.fillRect(x, y, layout.hpWidth, barH);
-
-    if (layout.tier1.length === 0) return;
-
-    ctx.fillStyle = barrierFill;
-    for (const segment of layout.tier1) {
-      ctx.fillRect(segment.x, y, segment.width, barH);
-    }
-
-    const overflowRatio = Math.max(0, barrierHp - maxHp) / maxHp;
-    if (overflowRatio > 0) {
-      ctx.fillStyle = barrierOverflowFill;
-      ctx.fillRect(x, y, barW * overflowRatio, barH);
-    }
   }
 
   private drawSprite(
@@ -723,134 +646,6 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.restore();
   }
 
-  private drawHpBar(
-    layout: CombatantLayout,
-    spriteX: number,
-    spriteY: number,
-    scale: number,
-    barTop?: number
-  ): void {
-    const { ctx } = this;
-    const barW = ENEMY_HP_BAR_W * scale;
-    const barH = ENEMY_HP_BAR_H * scale;
-    const x = enemyHpBarLeft(spriteX, scale, SPRITE_SIZE);
-    const y = barTop ?? defaultEnemyHpBarTop(spriteY, scale, SPRITE_SIZE);
-
-    ctx.fillStyle = this.theme.barTrack;
-    ctx.fillRect(x, y, barW, barH);
-
-    this.fillHpBarWithBarrier(
-      x,
-      y,
-      barW,
-      barH,
-      layout.hp,
-      layout.maxHp,
-      layout.barrierHp,
-      this.theme.enemyHpBarFill,
-      this.theme.enemyBarrierFill,
-      this.theme.enemyBarrierOverflowFill,
-    );
-
-    ctx.strokeStyle = this.theme.enemyHpBarOutline;
-    ctx.lineWidth = this.theme.enemyHpBarOutlineWidth;
-    ctx.strokeRect(x - 0.5, y - 0.5, barW + 1, barH + 1);
-  }
-
-  private drawStatusBadges(scale: number): void {
-    const enemyIconSize = this.theme.statusBadgeIconSize;
-    const enemyBarTops = computeEnemyHpBarTops(
-      this.layouts
-        .filter((layout) => layout.isEnemy && layout.isAlive)
-        .map((layout) => ({
-          id: layout.id,
-          x: layout.x,
-          y: spriteDrawY(layout),
-        })),
-      scale,
-      SPRITE_SIZE,
-    );
-
-    const badgeInputs: StatusBadgeLayoutInput[] = [];
-    const rowHeightById = new Map<string, number>();
-    const compactById = new Map<
-      string,
-      ReturnType<typeof selectCompactStatusBadges>
-    >();
-
-    for (const layout of this.layouts) {
-      if (!layout.isEnemy || !layout.isAlive) continue;
-
-      const badges = collectStatusEffectBadgeDisplays(layout.statusEffects, {
-        baseMaxHp: layout.baseMaxHp,
-        atk: layout.atk,
-        def: layout.def,
-        reg: layout.reg,
-      });
-      const compact = selectCompactStatusBadges(badges);
-      if (badges.length === 0) continue;
-
-      const hpBarTop = enemyBarTops.get(layout.id);
-      if (hpBarTop === undefined) continue;
-
-      const badgeLayout = measureCompactStatusBadgeRow(
-        scale,
-        enemyIconSize,
-        this.theme.statusIconOutlineWidth,
-        this.theme.statusBadgeOverlap,
-      );
-      const outlinePad = statusBadgeOutlinePad(
-        this.theme.statusIconOutlineWidth,
-        scale,
-      );
-      rowHeightById.set(layout.id, badgeLayout.totalHeight + outlinePad * 2);
-      compactById.set(layout.id, compact);
-      badgeInputs.push({
-        id: layout.id,
-        x: layout.x,
-        y: hpBarTop,
-      });
-    }
-
-    const badgeTops = computeFixedStatusBadgeTops(
-      badgeInputs,
-      rowHeightById,
-      scale,
-    );
-
-    for (const layout of this.layouts) {
-      if (!layout.isEnemy || !layout.isAlive) continue;
-
-      const compact = compactById.get(layout.id);
-      const top = badgeTops.get(layout.id);
-      if (!compact || top === undefined) continue;
-
-      const outlinePad = statusBadgeOutlinePad(
-        this.theme.statusIconOutlineWidth,
-        scale,
-      );
-      const left = enemyHpBarLeft(layout.x, scale, SPRITE_SIZE) + outlinePad;
-
-      drawCompactStatusBadgeRow(
-        this.ctx,
-        left,
-        top + outlinePad,
-        compact.visible,
-        compact.overflowCount,
-        scale,
-        {
-          iconSize: enemyIconSize,
-          rowOverlap: this.theme.statusBadgeOverlap,
-          overlayColor: this.theme.statusBadgeOverlay,
-          iconOutlineColor: this.theme.statusIconOutlineColor,
-          iconOutlineWidth: this.theme.statusIconOutlineWidth,
-          iconFallbackAlpha: this.theme.statusIconFallbackAlpha,
-          resolveIconFallbackColor: (category) =>
-            resolveStatusIconFallbackColor(category, this.theme),
-        },
-      );
-    }
-  }
 }
 
 export { CANVAS_W, CANVAS_H };
