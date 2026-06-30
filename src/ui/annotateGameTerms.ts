@@ -1,7 +1,5 @@
 import {
   GAME_TERM_ENTRIES,
-  resolveGameTermTitle,
-  resolveGameTermTooltip,
   type GameTermId,
   type GameTermLocale,
 } from "./gameTermGlossary.ts";
@@ -136,16 +134,21 @@ export function segmentTextByGameTerms(
   return segments;
 }
 
+export interface AnnotateGameTermsOptions {
+  panelId?: string;
+  excludeTermIds?: ReadonlySet<GameTermId>;
+}
+
 export function annotateGameTerms(
   text: string,
   locale: GameTermLocale,
   onTermClick: GameTermClickHandler,
-  options?: { panelId?: string },
+  options?: AnnotateGameTermsOptions,
 ): DocumentFragment {
   const fragment = document.createDocumentFragment();
   const panelId = options?.panelId;
 
-  for (const segment of segmentTextByGameTerms(text, locale)) {
+  for (const segment of segmentTextByGameTerms(text, locale, options)) {
     if (segment.kind === "text") {
       fragment.appendChild(document.createTextNode(segment.text));
       continue;
@@ -164,40 +167,6 @@ export function annotateGameTerms(
       event.stopPropagation();
       onTermClick(segment.termId, button);
     });
-    fragment.appendChild(button);
-  }
-
-  return fragment;
-}
-
-export function annotateGameTermsWithTooltip(
-  text: string,
-  locale: GameTermLocale,
-  tooltip: {
-    bind: (
-      hit: HTMLElement,
-      resolveContent: () => { title: string; body: string } | null,
-    ) => void;
-  },
-  options?: SegmentTextByGameTermsOptions,
-): DocumentFragment {
-  const fragment = document.createDocumentFragment();
-
-  for (const segment of segmentTextByGameTerms(text, locale, options)) {
-    if (segment.kind === "text") {
-      fragment.appendChild(document.createTextNode(segment.text));
-      continue;
-    }
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "game-term-link";
-    button.textContent = segment.matchedText;
-    button.dataset.gameTermId = segment.termId;
-    tooltip.bind(button, () => ({
-      title: resolveGameTermTitle(segment.termId, locale),
-      body: resolveGameTermTooltip(segment.termId, locale),
-    }));
     fragment.appendChild(button);
   }
 

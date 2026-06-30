@@ -654,7 +654,12 @@
   min-height: 0;
   min-width: 0;
   overflow: auto;
-  padding: 6px 8px 8px;
+  padding: 6px 0 8px 8px;
+  scrollbar-width: none;
+}
+
+.skill-menu-body::-webkit-scrollbar {
+  display: none;
 }
 
 .skill-menu-tactical-layout {
@@ -839,7 +844,7 @@
   align-items: stretch;
   align-content: start;
   gap: 6px;
-  padding: 5px 7px 3px;
+  padding: 5px 0 3px 7px;
 }
 
 .skill-menu-skill-locked-list {
@@ -848,7 +853,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 3px 5px;
-  padding: 1px 7px 5px;
+  padding: 1px 0 5px 7px;
   background: transparent;
 }
 
@@ -1035,7 +1040,7 @@
   line-clamp: 1;
 }
 
-/* Active: 段落ごと 1 行省略。Inline Term Label の枠線が切れないよう block 表示 */
+/* Active: 段落ごと 1 行省略 */
 .skill-menu-skill-summary-card--active .skill-menu-skill-summary-card-effect-line {
   display: block;
   line-height: 17px;
@@ -1271,6 +1276,6 @@
 
   .skill-menu-skill-summary-grid {
     gap: 4px;
-    padding: 4px 6px 2px;
+    padding: 4px 0 2px 6px;
   }
 }

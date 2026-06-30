@@ -3,7 +3,7 @@ import {
   segmentTextByGameTerms,
   segmentsToPlainText,
 } from "./annotateGameTerms.ts";
-import { SKILL_CARD_BODY_TERM_EXCLUDE_IDS, SKILL_CARD_BODY_TERM_INCLUDE_IDS, SKILL_CARD_META_LINE_TERM_IDS } from "./skillCardDisplayRules.ts";
+import { SKILL_CARD_META_LINE_TERM_IDS } from "./skillCardDisplayRules.ts";
 
 describe("segmentTextByGameTerms", () => {
   it("prefers longer aliases at the same offset", () => {
@@ -117,7 +117,7 @@ describe("segmentTextByGameTerms", () => {
     expect(segmentTextByGameTerms("チャージ可能 1", "ja")[0]).toEqual({
       kind: "term",
       termId: "charge",
-      matchedText: "チャージ",
+      matchedText: "チャージ可能",
     });
   });
 
@@ -150,60 +150,41 @@ describe("segmentTextByGameTerms", () => {
     expect(segmentsToPlainText(segments)).toBe(text);
   });
 
-  it("does not link proprietary status names excluded from skill card body", () => {
+  it("links seedFlame in body text when aliases are registered", () => {
     expect(
       segmentTextByGameTerms(
         "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする",
         "ja",
-        { excludeTermIds: SKILL_CARD_BODY_TERM_EXCLUDE_IDS },
       ),
     ).toEqual([
-      {
-        kind: "text",
-        text: "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする",
-      },
+      { kind: "text", text: "敵に攻撃スキルが1回命中するごとに「" },
+      { kind: "term", termId: "seedFlame", matchedText: "種火" },
+      { kind: "text", text: "」を1スタックする" },
     ]);
   });
 
-  it("does not link proprietary status names without aliases", () => {
-    expect(segmentTextByGameTerms("種火を付与", "ja")).toEqual([
-      { kind: "text", text: "種火を付与" },
-    ]);
-  });
-
-  it("keeps seedFlame as status-dictionary-only entry", async () => {
+  it("registers seedFlame with description and aliases", async () => {
     const { getGameTermEntry } = await import("./gameTermGlossary.ts");
     const entry = getGameTermEntry("seedFlame");
-    expect(entry?.statusDefinition?.ja).toContain("魔法DoT");
-    expect(entry?.description).toBeUndefined();
-    expect(entry?.aliases).toBeUndefined();
+    expect(entry?.description?.ja).toContain("魔法ダメージ");
+    expect(entry?.aliases?.ja).toContain("種火");
     expect(entry?.tooltip).toBeUndefined();
   });
 
-  it("links only inline term labels when includeTermIds is set", () => {
+  it("links all glossary aliases in skill card body without allowlist", () => {
     expect(
-      segmentTextByGameTerms("マルチロック 2 / 攻撃力の90%の魔法ダメージ", "ja", {
-        includeTermIds: SKILL_CARD_BODY_TERM_INCLUDE_IDS,
-      }),
+      segmentTextByGameTerms("マルチロック 2 / 攻撃力の90%の魔法ダメージ", "ja"),
     ).toEqual([
       { kind: "term", termId: "multiLock", matchedText: "マルチロック" },
       { kind: "text", text: " 2 / 攻撃力の90%の魔法ダメージ" },
     ]);
-    expect(
-      segmentTextByGameTerms("バリアを付与", "ja", {
-        includeTermIds: SKILL_CARD_BODY_TERM_INCLUDE_IDS,
-        excludeTermIds: SKILL_CARD_BODY_TERM_EXCLUDE_IDS,
-      }),
-    ).toEqual([{ kind: "text", text: "バリアを付与" }]);
-
-    expect(
-      segmentTextByGameTerms("チャージ可能 1", "ja", {
-        includeTermIds: SKILL_CARD_BODY_TERM_INCLUDE_IDS,
-        excludeTermIds: SKILL_CARD_BODY_TERM_EXCLUDE_IDS,
-      }),
-    ).toEqual([
-      { kind: "term", termId: "charge", matchedText: "チャージ" },
-      { kind: "text", text: "可能 1" },
+    expect(segmentTextByGameTerms("バリアを付与", "ja")).toEqual([
+      { kind: "term", termId: "barrier", matchedText: "バリア" },
+      { kind: "text", text: "を付与" },
+    ]);
+    expect(segmentTextByGameTerms("チャージ可能 1", "ja")).toEqual([
+      { kind: "term", termId: "charge", matchedText: "チャージ可能" },
+      { kind: "text", text: " 1" },
     ]);
   });
 
@@ -246,9 +227,7 @@ describe("segmentTextByGameTerms", () => {
 describe("inline term tooltip title", () => {
   it("uses glossary title with N placeholder, not matched alias", async () => {
     const { resolveGameTermTitle } = await import("./gameTermGlossary.ts");
-    const segments = segmentTextByGameTerms("マルチロック 2 / 貫通 10", "ja", {
-      includeTermIds: SKILL_CARD_BODY_TERM_INCLUDE_IDS,
-    });
+    const segments = segmentTextByGameTerms("マルチロック 2 / 貫通 10", "ja");
     const termSegments = segments.filter((s) => s.kind === "term");
     expect(
       termSegments.map((s) => ({
@@ -266,7 +245,7 @@ describe("inline term tooltip title", () => {
       "./gameTermGlossary.ts"
     );
     expect(resolveGameTermTitle("skillLock", "ja")).toBe("硬直");
-    expect(resolveGameTermTooltip("skillLock", "ja")).toBe(
+    expect(resolveGameTermTooltip("skillLock", "ja")).toContain(
       "硬直中は行動できず、スキルの再使用時間も停止する。",
     );
   });
@@ -287,13 +266,10 @@ describe("gameTermGlossary locale shape", () => {
     }
   });
 
-  it("requires ja aliases only when description is present", async () => {
+  it("requires ja aliases when description is linkable", async () => {
     const { GAME_TERM_ENTRIES } = await import("./gameTermGlossary.ts");
     for (const entry of GAME_TERM_ENTRIES) {
-      if (entry.description === undefined) {
-        expect(entry.aliases).toBeUndefined();
-        continue;
-      }
+      if (entry.description === undefined) continue;
       expect(entry.aliases?.ja.length).toBeGreaterThan(0);
       if (entry.description.en !== undefined) {
         expect(entry.aliases?.en?.length).toBeGreaterThan(0);

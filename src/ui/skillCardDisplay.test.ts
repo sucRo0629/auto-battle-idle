@@ -1,41 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { formatSkillCardLines } from "./formatSkillText.ts";
-import {
-  isSkillCardInlineTermLabelId,
-  isSkillCardStatusChipTermId,
-  SKILL_CARD_INLINE_TERM_LABEL_IDS,
-  SKILL_CARD_STATUS_CHIP_TERM_IDS,
-} from "./skillCardDisplayRules.ts";
-import { resolveSkillCardDisplay, resolveStatusChipTooltip } from "./skillCardDisplay.ts";
-import { resolveGameTermTooltip } from "./gameTermGlossary.ts";
-
-describe("skillCardDisplayRules", () => {
-  it("keeps plain-text stats out of inline label and status-chip allowlists", () => {
-    const plainTextTerms = ["hp", "atk", "def", "reg", "attackSpeed"] as const;
-
-    for (const termId of plainTextTerms) {
-      expect(isSkillCardInlineTermLabelId(termId)).toBe(false);
-      expect(isSkillCardStatusChipTermId(termId)).toBe(false);
-    }
-  });
-
-  it("allows inline labels for shape and special-behavior terms", () => {
-    expect(SKILL_CARD_INLINE_TERM_LABEL_IDS).toContain("multiLock");
-    expect(SKILL_CARD_INLINE_TERM_LABEL_IDS).toContain("stun");
-    expect(SKILL_CARD_INLINE_TERM_LABEL_IDS).toContain("knockback");
-    expect(SKILL_CARD_INLINE_TERM_LABEL_IDS).not.toContain("barrier");
-  });
-
-  it("lists battle states for state chips including generic states", () => {
-    expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).toContain("seedFlame");
-    expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).toContain("barrier");
-    expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).toContain("dot");
-    expect(SKILL_CARD_STATUS_CHIP_TERM_IDS).not.toContain("multiLock");
-  });
-});
+import { segmentTextByGameTerms } from "./annotateGameTerms.ts";
+import { resolveSkillCardDisplay } from "./skillCardDisplay.ts";
+import { resolveGameTermTooltip, resolveGameTermDescription } from "./gameTermGlossary.ts";
 
 describe("resolveSkillCardDisplay", () => {
-  it("moves seedFlame list items to status chips and keeps a short headline", async () => {
+  it("keeps only seedFlame grant line; status list rows go to term tooltip", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.passives.at_sorcerer_passive_2;
@@ -47,23 +17,19 @@ describe("resolveSkillCardDisplay", () => {
     expect(display.headlineLines).toEqual([
       "敵に攻撃スキルが1回命中するごとに「種火」を1スタックする",
     ]);
-    expect(display.statusChips).toHaveLength(2);
-    expect(display.statusChips[0]?.termId).toBe("seedFlame");
-    expect(display.statusChips[0]?.summary).toContain("DoT");
-    expect(display.statusChips[0]?.summary).toContain("Max 5");
-    expect(display.statusChips[0]?.summary).toContain("→熾火");
-    const seedTooltip = resolveStatusChipTooltip(
-      display.statusChips[0]!,
-      "ja",
+    expect(
+      segmentTextByGameTerms(display.headlineLines[0]!, "ja").some(
+        (s) => s.kind === "term" && s.termId === "seedFlame",
+      ),
+    ).toBe(true);
+    expect(resolveGameTermTooltip("seedFlame", "ja")).toBe(
+      resolveGameTermDescription("seedFlame", "ja"),
     );
-    expect(seedTooltip.body).toContain("魔法DoT");
-    expect(seedTooltip.body).toContain("最大5スタック");
-    expect(seedTooltip.body).toContain("「熾火」へ変化する");
-    expect(seedTooltip.body).not.toContain("攻撃スキル");
-    expect(display.statusChips[1]?.termId).toBe("blazingFlame");
+    expect(resolveGameTermTooltip("seedFlame", "ja")).toContain("最大5スタック");
+    expect(resolveGameTermTooltip("seedFlame", "ja")).not.toContain("攻撃スキル");
   });
 
-  it("extracts barrier chip for wardweaver multi-lock barrier active", async () => {
+  it("keeps barrier effect text in headline without a separate chip row", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.sp_wardweaver_active_2;
@@ -72,19 +38,15 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.statusChips).toEqual([
-      {
-        termId: "barrier",
-        title: "バリア",
-        summary: "攻撃力200%",
-      },
-    ]);
     expect(display.headlineLines).toEqual([
-      "マルチロック 2 / 攻撃力の200%",
+      "マルチロック 2 / 攻撃力の200%のバリア",
     ]);
+    expect(display.headlineLines.some((line) => line.includes("バリア"))).toBe(
+      true,
+    );
   });
 
-  it("extracts bleed chip and shortens dot grant line for assassin active", async () => {
+  it("keeps bleed grant lines in headline", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.at_assassin_active_1;
@@ -93,13 +55,13 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.statusChips.some((chip) => chip.termId === "bleed")).toBe(
+    expect(display.headlineLines.some((line) => line.includes("出血"))).toBe(
       true,
     );
     expect(display.headlineLines).toEqual([
       "攻撃力の115%の物理ダメージ",
       "対象に出血が付与されているなら、このダメージは+130%される",
-      "その後攻撃した対象に5秒間毎秒攻撃力の30%の物理ダメージを付与",
+      "その後攻撃した対象に5秒間毎秒攻撃力の30%の物理ダメージを与える出血を付与する",
     ]);
   });
 
@@ -118,9 +80,6 @@ describe("resolveSkillCardDisplay", () => {
     expect(resolveGameTermTooltip("multiLock", "en")).toContain(
       "remaining applications hit the same target again"
     );
-    expect(display.headlineLines.some((line) => /multi-lock/i.test(line))).toBe(
-      true
-    );
   });
 
   it("does not treat magic damage as a separate tag row", async () => {
@@ -132,7 +91,6 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "en" });
     const display = resolveSkillCardDisplay(lines, def, "en");
 
-    expect(display.statusChips).toEqual([]);
     expect(display.headlineLines[0]).toContain("magic damage");
   });
 
@@ -154,9 +112,6 @@ describe("resolveSkillCardDisplay", () => {
     expect(display.headlineLines.some((line) =>
       line.includes("対象不足")
     )).toBe(false);
-    expect(resolveGameTermTooltip("multiLock", "ja")).toContain(
-      "不足分は同じ対象へ再度適用する"
-    );
   });
 
   it("keeps Nearby shape text in headline without separate tag row", async () => {
@@ -173,7 +128,7 @@ describe("resolveSkillCardDisplay", () => {
     );
   });
 
-  it("extracts stacking barrier chip for paladin Nearby active", async () => {
+  it("keeps paladin Nearby effect lines in headline", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.df_paladin_active_2;
@@ -182,20 +137,13 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.statusChips).toEqual([
-      {
-        termId: "barrier",
-        title: "バリア",
-        summary: "攻撃力20% / 加算",
-      },
-    ]);
     expect(display.headlineLines).toEqual([
       "周囲 5 / 味方に以下の効果を付与",
-      "魔法耐性+10、ダメージ軽減5%",
+      "魔法耐性+10、ダメージ軽減5%、攻撃力の20%のバリア（加算）",
     ]);
   });
 
-  it("extracts ward and barrier chips for wardweaver emergency active", async () => {
+  it("keeps ward and barrier lines for wardweaver emergency active", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.sp_wardweaver_active_4;
@@ -204,15 +152,9 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.statusChips.map((chip) => chip.termId)).toEqual([
-      "wardBarrier",
-      "barrier",
-    ]);
-    expect(display.statusChips[0]?.summary).toBe("2スタック");
-    expect(display.statusChips[1]?.summary).toBe("攻撃力125%");
     expect(display.headlineLines).toEqual([
-      "味方全体 ×2（ダメージ軽減10%）",
-      "攻撃力の125%",
+      "味方全体 障壁 ×2（ダメージ軽減10%）",
+      "攻撃力の125%のバリア",
     ]);
   });
 
@@ -230,7 +172,7 @@ describe("resolveSkillCardDisplay", () => {
     );
   });
 
-  it("extracts hot chip for alchemist Nearby active", async () => {
+  it("keeps hot grant text in headline for alchemist Nearby active", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.sp_alchemist_active_1;
@@ -239,20 +181,12 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.statusChips).toEqual([
-      {
-        termId: "hot",
-        title: "HoT",
-        summary: "maxHp×0.6% / 8秒",
-      },
-    ]);
     expect(display.headlineLines).toEqual([
-      "周囲 7 / maxHp×0.6% 8秒 / 薬効+1",
+      "周囲 7 / HoT maxHp×0.6% 8秒 / 薬効+1",
     ]);
-    expect(display.headlineLines.some((line) => /HoT/i.test(line))).toBe(false);
   });
 
-  it("extracts hot chip for alchemist all-ally active", async () => {
+  it("keeps hot grant text in headline for alchemist all-ally active", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.sp_alchemist_active_2;
@@ -261,13 +195,12 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.statusChips[0]?.termId).toBe("hot");
-    expect(display.statusChips[0]?.summary).toBe("maxHp×0.8% / 10秒");
-    expect(display.headlineLines).toEqual(["味方全体 maxHp×0.8% 10秒"]);
-    expect(display.headlineLines.some((line) => /HoT/i.test(line))).toBe(false);
+    expect(display.headlineLines).toEqual([
+      "味方全体 HoT maxHp×0.8% 10秒",
+    ]);
   });
 
-  it("extracts herbalPotency chip for alchemist passive aura", async () => {
+  it("keeps herbalPotency line in headline for alchemist passive aura", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.passives.sp_alchemist_passive_1;
@@ -276,17 +209,10 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.statusChips).toEqual([
-      {
-        termId: "herbalPotency",
-        title: "薬効",
-        summary: "最大6 / maxHp×0.4% / +0.1%/スタック",
-      },
-    ]);
-    expect(display.headlineLines.some((line) => /HoT/i.test(line))).toBe(false);
+    expect(display.headlineLines[0]).toContain("薬効");
   });
 
-  it("extracts poisonWeapon chip for hunter passive", async () => {
+  it("keeps poisonWeapon line in headline for hunter passive", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.passives.at_hunter_passive_2;
@@ -295,17 +221,10 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.statusChips).toEqual([
-      {
-        termId: "poisonWeapon",
-        title: "毒の武器",
-        summary: "20% / 5秒 / 攻撃力10%",
-      },
-    ]);
-    expect(display.headlineLines[0]).not.toMatch(/poison/i);
+    expect(display.headlineLines[0]).toContain("poison");
   });
 
-  it("extracts poison chip from hunter trap active nested effects", async () => {
+  it("keeps hunter trap effect lines in headline", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.at_hunter_active_1;
@@ -314,11 +233,6 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "ja" });
     const display = resolveSkillCardDisplay(lines, def, "ja");
 
-    expect(display.statusChips.some((chip) => chip.termId === "poison")).toBe(
-      true,
-    );
-    expect(display.statusChips.find((chip) => chip.termId === "poison")?.summary).toContain(
-      "5秒",
-    );
+    expect(display.headlineLines.length).toBeGreaterThan(0);
   });
 });

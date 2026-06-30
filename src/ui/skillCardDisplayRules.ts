@@ -1,25 +1,13 @@
 import type { GameTermId } from "./gameTermGlossary.ts";
 
 /**
- * Skill card display classification (party-formation-ui.md §6.4,
- * classes-and-skills.md §ゲーム用語表).
+ * Skill card display classification (party-formation-ui.md §6.4).
  *
- * - Inline Term Label: game-specific rules in body text (tooltip trigger)
- * - State Chip: persistent battle states (separate row)
- * - Plain Text: basic terms without tooltip in skill card body
- *
- * Lists below are implementation allowlists synced with spec examples;
- * they are not exhaustive fixed rosters. Glossary `tooltip` / `statusDefinition`
- * is the source for whether a term can be annotated.
+ * - In-text term link: glossary `aliases` in body text (click tooltip)
+ * - Plain Text: basic terms without glossary alias in skill card body
  */
 
-export type SkillCardStatusChip = {
-  termId: GameTermId;
-  title: string;
-  summary: string;
-};
-
-/** Meta line — only skillLock gets a term tooltip link (party-formation-ui.md §6.4). */
+/** Meta line — skillLock (硬直) gets an in-text term link (party-formation-ui.md §6.4). */
 export const SKILL_CARD_META_LINE_TERM_IDS = [
   "skillLock",
 ] as const satisfies readonly GameTermId[];
@@ -37,35 +25,11 @@ export function isSkillCardMetaLineTermId(
   return META_LINE_TERM_ID_SET.has(termId);
 }
 
-/** Inline term labels — tooltip triggers embedded in effect body lines. */
-export const SKILL_CARD_INLINE_TERM_LABEL_IDS = [
-  "multiLock",
-  "aoe",
-  "surrounding",
-  "fieldLocation",
-  "pierce",
-  "stun",
-  "knockback",
-  "counter",
-  "evasion",
-  "defenseIgnoreDef",
-  "damageReductionIgnore",
-  "barrierPierce",
-  "moveLock",
-  "skillLock",
-  "dotCompress",
-  "charge",
-  "block",
-] as const satisfies readonly GameTermId[];
-
-export type SkillCardInlineTermLabelId =
-  (typeof SKILL_CARD_INLINE_TERM_LABEL_IDS)[number];
-
 /**
- * State chips — battle states shown outside effect lines.
- * Includes generic states (barrier, DoT, …) and proprietary named states.
+ * `formatSkillCardLines` list rows whose text is a status definition (種火 / 熾火 等).
+ * Omitted from skill card body; full text lives in term tooltip (`description`).
  */
-export const SKILL_CARD_STATUS_CHIP_TERM_IDS = [
+export const SKILL_CARD_STATUS_LIST_TERM_IDS = [
   "barrier",
   "wardBarrier",
   "blockResonance",
@@ -93,43 +57,15 @@ export const SKILL_CARD_STATUS_CHIP_TERM_IDS = [
   "basicAttackTransform",
 ] as const satisfies readonly GameTermId[];
 
-export type SkillCardStatusChipTermId =
-  (typeof SKILL_CARD_STATUS_CHIP_TERM_IDS)[number];
+export type SkillCardStatusListTermId =
+  (typeof SKILL_CARD_STATUS_LIST_TERM_IDS)[number];
 
-const INLINE_TERM_LABEL_ID_SET = new Set<GameTermId>(
-  SKILL_CARD_INLINE_TERM_LABEL_IDS
-);
-const STATUS_CHIP_TERM_ID_SET = new Set<GameTermId>(
-  SKILL_CARD_STATUS_CHIP_TERM_IDS
+const STATUS_LIST_TERM_ID_SET = new Set<GameTermId>(
+  SKILL_CARD_STATUS_LIST_TERM_IDS
 );
 
-/** State chip names must not appear as inline term labels in skill card body. */
-export const SKILL_CARD_BODY_TERM_EXCLUDE_IDS: ReadonlySet<GameTermId> =
-  STATUS_CHIP_TERM_ID_SET;
-
-export const SKILL_CARD_BODY_TERM_INCLUDE_IDS: ReadonlySet<GameTermId> =
-  INLINE_TERM_LABEL_ID_SET;
-
-export function isSkillCardInlineTermLabelId(
+export function isSkillCardStatusListTermId(
   termId: GameTermId
-): termId is SkillCardInlineTermLabelId {
-  return INLINE_TERM_LABEL_ID_SET.has(termId);
+): termId is SkillCardStatusListTermId {
+  return STATUS_LIST_TERM_ID_SET.has(termId);
 }
-
-export function isSkillCardStatusChipTermId(
-  termId: GameTermId
-): termId is SkillCardStatusChipTermId {
-  return STATUS_CHIP_TERM_ID_SET.has(termId);
-}
-
-/** @deprecated Use isSkillCardInlineTermLabelId */
-export function isSkillCardTagTermId(
-  termId: GameTermId
-): termId is SkillCardInlineTermLabelId {
-  return isSkillCardInlineTermLabelId(termId);
-}
-
-/** @deprecated Use SKILL_CARD_INLINE_TERM_LABEL_IDS */
-export const SKILL_CARD_TAG_TERM_IDS = SKILL_CARD_INLINE_TERM_LABEL_IDS;
-
-export type SkillCardTagTermId = SkillCardInlineTermLabelId;

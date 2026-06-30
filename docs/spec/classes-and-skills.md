@@ -43,44 +43,36 @@ Hensei Only のスキルカード表示は、プレイヤー向け UI 上で次�
 
 | 系統 | 役割 |
 | ---- | ---- |
-| **Inline Term Label** | 効果本文中の tooltip trigger 付き短い用語ラベル（ゲーム固有ルール） |
-| **State Chip** | 戦闘中に状態として保持されるもの（別枠・状態 tooltip） |
-| **Plain Text** | tooltip なしの基本語（本文中の通常テキスト） |
+| **文中リンク** | 効果本文中の白 1.5px 下線 + 下→上 白（透明度 50%→100%）グラデ背景付き用語（`aliases` 登録語。クリックで tooltip） |
+| **Plain Text** | `aliases` 未登録の基本語（本文中の通常テキスト） |
 
-**戦闘 HUD** では、実際にユニットへ付いている状態を **HUD バッジ** として別表示する（スキルカードの 3 系統とは独立）。
+**戦闘 HUD** では、実際にユニットへ付いている状態を **HUD バッジ** として別表示する（スキルカード UI とは独立）。
 
-**情報責務・重複禁止:** [party-formation-ui.md §スキルカード情報設計](party-formation-ui.md#スキルカード情報設計)。
+**情報責務:** [party-formation-ui.md §スキルカード情報設計](party-formation-ui.md#スキルカード情報設計)。
 
-**辞書データ:** `gameTermGlossary.ts` / `gameTermGlossaryEn.ts`（`GameTermId`）。`description` = 用語辞典（用語パネル）、`tooltip` = Inline Term Label 用ホバー、`statusDefinition` = State Chip 用状態辞典。**固有状態**は `statusDefinition` のみ（`description` / `aliases` / `tooltip` 禁止。[§固有状態（辞書データ）](party-formation-ui.md#固有状態辞書データ)）。**スキルカードへの割当:** `skillCardDisplayRules.ts`（inline / State Chip allowlist。本節と同期すること）。State Chip の `def` 抽出・本文サニタイズは `skillCardStatusChipExtract.ts`
+**辞書データ:** `gameTermGlossary.ts` / `gameTermGlossaryEn.ts`（`GameTermId`）。`description` = 用語辞典（用語パネル・状態説明の正本）、`tooltip` = 文中リンク tooltip 用短文化。文中リンク化は **`aliases` 登録** で判定。[party-formation-ui.md §6.4](party-formation-ui.md#64-用語注釈スキルカード) を正とする。
 
-##### 1. Inline Term Label
+##### 1. 文中リンク
 
-効果本文中に表示される **tooltip trigger 付き** の短い用語ラベル。対象形状・範囲形状・攻撃の当たり方・計算修飾・行動制御・特殊挙動など、**ゲーム固有ルールの説明が必要なもの** を対象にする。
+効果本文中に表示される **`aliases` 登録語** の白 1.5px 下線 + 下→上 白（透明度 50%→100%）グラデ背景リンク。クリックで tooltip（2〜3 行）。対象形状・範囲形状・攻撃の当たり方・計算修飾・行動制御・特殊挙動・状態名（`aliases` あり）など。
 
-**対象例（固定リストではない）:** マルチロック / AoE / 周囲 / 地点 / 貫通 / 防御力無視 / 軽減無視 / バリア無視 / スタン / ノックバック / 反撃 / 回避
+**対象例（固定リストではない）:** マルチロック / AoE / 周囲 / 地点 / 貫通 / 防御力無視 / 種火 / バリア 等
 
 **注意:**
 
 - 上記は例であり、固定リストとして扱わない
-- 実際に tooltip trigger 化するかは **glossary / `gameTerm` 定義**（`tooltip` または `description` の有無 + `skillCardDisplayRules` の inline allowlist）に基づく
-- スタン・ノックバック・反撃・回避は一般ゲーム用語に見えるが、Hensei Only では **処理差が大きい特殊挙動** として Inline Term Label に含める
+- リンク化するかは **glossary の `aliases`** に基づく（`skillCardDisplayRules` の inline allowlist は廃止）
 - **別枠タグ行は持たない**。形状ラベルは本文行内に置き、同じ情報を二重表示しない
 
-**tooltip 内容:** 2〜3 行。処理順・例外・内部実装は入れない。**`description` より短く書くときだけ** `tooltip` を指定する（同文なら `description` のみ。ホバーは `resolveGameTermTooltip` が `description` 先頭 2 行から生成）。
+**tooltip 内容:** ルール用語は `description` の先頭 2 行要約。`statusCategory` 付き状態は `description` **全文**。**`description` より短く書くときだけ** `tooltip` を指定する。
 
-##### 2. State Chip
+##### 2. 戦闘 HUD 状態（参考）
 
-戦闘中に **状態として保持される** もの。状態名・概要・State tooltip を持つ。Inline Term Label とは **別系統**。
+戦闘中に **状態として保持される** もの。HUD バッジ + 用語パネル / ホバー tooltip で表示。**スキルカード編成 UI では State Chip 行を持たない**（状態定義は文中リンク tooltip へ統合）。
 
 **対象例（固定リストではない）:** バリア / 障壁 / 防壁 / DoT / HoT / 毒 / 出血 / 種火 / 熾火 / 印 / 薬効
 
-**注意:**
-
-- State Chip にする状態名は、本文中の Inline Term Label として **重複表示しない**
-- 状態の詳細説明は **State tooltip**（`statusDefinition`）を正本にする
-- 本文には **何を付与するか** だけを書く（持続・スタック・変化・消滅の詳細は State tooltip へ）
-
-**固有状態の辞書ルール**（`description` / `aliases` / `tooltip` 禁止、`statusDefinition` のみ）: [party-formation-ui.md §固有状態（辞書データ）](party-formation-ui.md#固有状態辞書データ)。
+**辞書:** 状態も `description` を正本とする。スキルカードでは `aliases` + 文中リンク tooltip で参照。
 
 | 日本語 | English | `GameTermId` |
 | ------ | ------- | ------------ |
@@ -104,11 +96,11 @@ Hensei Only のスキルカード表示は、プレイヤー向け UI 上で次�
 | ダメージ遅延 | Damage Delay | `damageDelay` |
 | 通常攻撃変形 | Basic Attack Transform | `basicAttackTransform` |
 
-汎用状態（バリア / 障壁 / DoT / HoT / 毒 / 出血 等）も State Chip 対象になりうる。`statusDefinition` または `description` + `statusCategory` で定義する。
+汎用状態（バリア / 障壁 / DoT / HoT / 毒 / 出血 等）も State Chip 対象になりうる。`description` + `statusCategory` で定義する。
 
 ##### 3. Plain Text
 
-tooltip を読まなくても意味が分かる **基本語**。本文中に通常テキストとして表示する。glossary の `aliases` に載せても **スキルカード本文ではリンク化しない**。
+tooltip を読まなくても意味が分かる **基本語**。glossary の `aliases` **未登録** の語は Plain Text として表示する（`aliases` 登録語は文中リンク）。
 
 **対象例:** 物理ダメージ / 魔法ダメージ / 攻撃力 / HP / 防御力 / 魔法耐性 / 回復 / ダメージを与える / 付与する
 
@@ -195,7 +187,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 表示言語    | **4d まで `ja` 固定**。**4e** で `en` のみ追加（[phase-roadmap.md §4e](../plans/phase-roadmap.md#4e--英語-i18n--release-m1-向け)）                                                                                                                                      |
 | 適用面      | 編成 UI のスキルカード説明文（Phase 4d）。エディタのスキル説明プレビューは同辞書で揃える                                                                                                                                                                                  |
-| 説明文生成  | 1 行: `formatActiveDescription` / `formatPassiveDescription`。カード改行: `formatSkillCardLines`（[party-formation-ui.md §6.3](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。本文の Inline Term Label は `annotateGameTermsWithTooltip` + `skillCardDisplayRules` の inline allowlist。State Chip は `resolveSkillCardDisplay`（`skillCardStatusChipExtract.ts` で `def` から抽出し本文から状態名を除去）が分離 |
+| 説明文生成  | 1 行: `formatActiveDescription` / `formatPassiveDescription`。カード改行: `formatSkillCardLines`（[party-formation-ui.md §6.3](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。本文の文中リンクは `annotateGameTerms` + glossary `aliases`（クリック tooltip）。`resolveSkillCardDisplay` が list 行を含む `headlineLines` を flatten |
 | スキル JSON | 用語説明フィールドは **持たない**（4b 方針と同様。説明は生成 + 辞書）                                                                                                                                                                                                     |
 
 #### エントリ形状（locale キー付き）
@@ -206,7 +198,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`              | 言語非依存の辞書キー（例: `stun`, `barrier`, `wardBarrier`）                                                                                                    |
 | `title`           | `{ ja: "スタン", … }` — 用語パネル見出し                                                                                                                        |
-| `description?`    | `{ ja: "…", … }` — 用語パネル本文（正本）。1〜3 文の要約。改行は `\n`（表示は `white-space: pre-line`）。Inline ホバーは省略時ここから先頭 2 行を流用。**HUD 表示名のみの ID（下記例外）は省略可** |
+| `description?`    | `{ ja: "…", … }` — 用語パネル本文（正本）。ルール用語は 1〜3 文の要約、状態は持続・スタック等を含む全文可。改行は `\n`（表示は `white-space: pre-line`）。文中リンク tooltip は省略時 `description` から生成（ルール用語は先頭 2 行、`statusCategory` 付きは全文）。**HUD 表示名のみの ID（下記例外）は省略可** |
 | `tooltip?`        | Inline Term Label ホバー専用の短文化（2〜3 行）。**パネルと同文なら省略**（`description` に一本化） |
 | `aliases?`        | `{ ja: ["スタン"], … }` — 本文中でリンク化する表記。**長い語を先**にマッチ。省略時はスキル説明ではリンク化しない（HUD バッジクリック等で補足可） |
 | `statusCategory?` | 状態系のみ。[combat.md §ステータス効果](combat.md#ステータス効果) の `StatusDisplayCategory` と対応。`StatusIconRegistry` に PNG が登録されているときのみ用語パネル見出しに表示 |

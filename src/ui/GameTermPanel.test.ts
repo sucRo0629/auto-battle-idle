@@ -65,6 +65,18 @@ describe("GameTermPanel", () => {
     expect(anchor.getAttribute("aria-expanded")).toBe("false");
   });
 
+  it("does not link the currently open term in panel body", () => {
+    setupPanel();
+    const anchor = createAnchor("バリア");
+    panel.openFromTerm("barrier", anchor);
+
+    expect(
+      host.querySelector(
+        '.game-term-panel-body .game-term-link[data-game-term-id="barrier"]',
+      ),
+    ).toBeNull();
+  });
+
   it("navigates with history and Escape pops one level", () => {
     setupPanel();
     const anchor = createAnchor("障壁");

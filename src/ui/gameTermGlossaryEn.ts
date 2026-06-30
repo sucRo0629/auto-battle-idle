@@ -6,7 +6,6 @@ export interface GameTermEnSupplement {
   description?: string;
   /** ホバー専用短文化。パネルと同文なら省略。 */
   tooltip?: string;
-  statusDefinition?: string;
   aliases?: readonly string[];
 }
 
@@ -225,13 +224,15 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   },
   seedFlame: {
     title: "Seed Flame",
-    statusDefinition:
+    description:
       "Magic DoT.\n\n· Magic damage equal to 5% ATK per second\n· Lasts 10s\n· Max 5 stacks\n\nAt max stacks, further applications convert to Blazing Flame instead.",
+    aliases: ["Seed Flame"],
   },
   blazingFlame: {
     title: "Blazing Flame",
-    statusDefinition:
+    description:
       "Magic DoT upgraded from Seed Flame.\n\n· Magic damage equal to 35% ATK per second (indefinite)\n· +10% magic damage taken per stack\n· Max 1 stack",
+    aliases: ["Blazing Flame"],
   },
   ballistaMark: { title: "Barrage Mark" },
   allyAttackFollowUp: {

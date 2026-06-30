@@ -133,7 +133,7 @@ Apply Seed Flame to the enemy for each attack skill hit.
 
 ## スキルカード英語文案
 
-スキルカード表示の分類は [party-formation-ui.md §6.4](party-formation-ui.md#64-用語注釈スキルカード)（[§スキルカード情報設計](party-formation-ui.md#スキルカード情報設計) が正本）を正とする。3 系統: **Inline Term Label / State Chip / Plain Text**。
+スキルカード表示の分類は [party-formation-ui.md §6.4](party-formation-ui.md#64-用語注釈スキルカード)（[§スキルカード情報設計](party-formation-ui.md#スキルカード情報設計) が正本）を正とする。2 系統: **文中リンク / Plain Text**（スキルカード）。戦闘 HUD 状態バッジは別系統。
 
 - 日本語を正本とする。意訳しすぎない
 - 主語を省いた命令形を基本にする

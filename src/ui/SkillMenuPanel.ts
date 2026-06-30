@@ -42,18 +42,15 @@ import {
 } from "../progression/skillBuild.ts";
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
 import { formatSkillCardLines } from "./formatSkillText.ts";
-import { annotateGameTermsWithTooltip } from "./annotateGameTerms.ts";
+import { annotateGameTerms } from "./annotateGameTerms.ts";
 import { formatClassSummary, formatClassSummaryForAria } from "./formatClassSummary.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
 import { GameTermTooltip } from "./GameTermTooltip.ts";
-import type { GameTermLocale } from "./gameTermGlossary.ts";
+import type { GameTermId, GameTermLocale } from "./gameTermGlossary.ts";
 import {
   resolveSkillCardDisplay,
-  resolveStatusChipTooltip,
 } from "./skillCardDisplay.ts";
 import {
-  SKILL_CARD_BODY_TERM_EXCLUDE_IDS,
-  SKILL_CARD_BODY_TERM_INCLUDE_IDS,
   SKILL_CARD_META_LINE_TERM_IDS,
 } from "./skillCardDisplayRules.ts";
 
@@ -897,39 +894,14 @@ export class SkillMenuPanel {
         const metaEl = document.createElement("div");
         metaEl.className = "skill-menu-skill-summary-card-meta";
         metaEl.appendChild(
-          annotateGameTermsWithTooltip(
-            display.metaLine,
-            getLocale() as GameTermLocale,
-            this.gameTermTooltip,
-            {
-              includeTermIds: new Set(SKILL_CARD_META_LINE_TERM_IDS),
-            },
-          ),
+          this.createAnnotatedFragment(display.metaLine, {
+            includeTermIds: new Set(SKILL_CARD_META_LINE_TERM_IDS),
+          }),
         );
         body.appendChild(metaEl);
       }
 
       this.appendSkillCardEffects(body, display.headlineLines);
-
-      const chipsRow = document.createElement("div");
-      chipsRow.className = "skill-menu-skill-summary-card-chips";
-      let hasChips = false;
-
-      for (const chip of display.statusChips) {
-        hasChips = true;
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "skill-menu-status-chip skill-menu-status-chip--compact";
-        button.textContent = chip.title;
-        this.gameTermTooltip.bind(button, () =>
-          resolveStatusChipTooltip(chip, getLocale() as GameTermLocale)
-        );
-        chipsRow.appendChild(button);
-      }
-
-      if (hasChips) {
-        body.appendChild(chipsRow);
-      }
 
       if (body.childElementCount > 0) {
         card.appendChild(body);
@@ -958,15 +930,18 @@ export class SkillMenuPanel {
     card.appendChild(wrap);
   }
 
-  private createAnnotatedFragment(text: string): DocumentFragment {
-    return annotateGameTermsWithTooltip(
+  private createAnnotatedFragment(
+    text: string,
+    options?: { includeTermIds?: ReadonlySet<GameTermId> },
+  ): DocumentFragment {
+    const locale = getLocale() as GameTermLocale;
+    return annotateGameTerms(
       text,
-      getLocale() as GameTermLocale,
-      this.gameTermTooltip,
-      {
-        excludeTermIds: SKILL_CARD_BODY_TERM_EXCLUDE_IDS,
-        includeTermIds: SKILL_CARD_BODY_TERM_INCLUDE_IDS,
+      locale,
+      (termId, anchor) => {
+        this.gameTermTooltip.openFromTerm(termId, anchor, locale);
       },
+      options,
     );
   }
 

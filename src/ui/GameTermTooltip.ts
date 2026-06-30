@@ -1,4 +1,11 @@
 import "../styles/game-term-tooltip.css";
+import { annotateGameTerms } from "./annotateGameTerms.ts";
+import {
+  resolveGameTermTitle,
+  resolveGameTermTooltip,
+  type GameTermId,
+  type GameTermLocale,
+} from "./gameTermGlossary.ts";
 
 export interface GameTermTooltipContent {
   title: string;
@@ -10,12 +17,43 @@ export class GameTermTooltip {
   private readonly titleEl: HTMLElement;
   private readonly bodyEl: HTMLElement;
   private anchor: HTMLElement | null = null;
+  private currentTermId: GameTermId | null = null;
+  private locale: GameTermLocale = "ja";
+  private history: GameTermId[] = [];
+  private listenersAttached = false;
+
+  private readonly onDocumentPointerDown = (event: PointerEvent) => {
+    if (this.root.hidden) return;
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+    if (this.root.contains(target)) return;
+    if (target instanceof HTMLElement && target.closest(".game-term-link")) {
+      return;
+    }
+    this.hide();
+  };
+
+  private readonly onDocumentKeyDown = (event: KeyboardEvent) => {
+    if (this.root.hidden || event.key !== "Escape") return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.history.length > 0) {
+      this.currentTermId = this.history.pop() ?? null;
+      if (this.currentTermId) {
+        this.renderTermContent();
+        this.reposition();
+        return;
+      }
+    }
+    this.hide();
+  };
 
   constructor(private readonly mount: HTMLElement) {
     this.root = document.createElement("div");
     this.root.className = "game-term-tooltip";
     this.root.hidden = true;
-    this.root.setAttribute("role", "tooltip");
+    this.root.setAttribute("role", "dialog");
+    this.root.setAttribute("aria-modal", "false");
 
     this.titleEl = document.createElement("div");
     this.titleEl.className = "game-term-tooltip-title";
@@ -25,10 +63,80 @@ export class GameTermTooltip {
 
     this.root.append(this.titleEl, this.bodyEl);
     mount.appendChild(this.root);
+    this.attachGlobalListeners();
+  }
+
+  private attachGlobalListeners(): void {
+    if (this.listenersAttached) return;
+    document.addEventListener("pointerdown", this.onDocumentPointerDown, true);
+    document.addEventListener("keydown", this.onDocumentKeyDown, true);
+    this.listenersAttached = true;
+  }
+
+  private detachGlobalListeners(): void {
+    if (!this.listenersAttached) return;
+    document.removeEventListener("pointerdown", this.onDocumentPointerDown, true);
+    document.removeEventListener("keydown", this.onDocumentKeyDown, true);
+    this.listenersAttached = false;
+  }
+
+  openFromTerm(
+    termId: GameTermId,
+    anchor: HTMLElement,
+    locale: GameTermLocale,
+  ): void {
+    if (
+      !this.root.hidden &&
+      this.anchor === anchor &&
+      this.currentTermId === termId &&
+      this.history.length === 0
+    ) {
+      this.hide();
+      return;
+    }
+
+    this.currentTermId = termId;
+    this.anchor = anchor;
+    this.locale = locale;
+    this.history = [];
+    this.renderTermContent();
+    this.root.hidden = false;
+    this.reposition();
+  }
+
+  private navigateToTerm(termId: GameTermId): void {
+    if (!this.currentTermId || termId === this.currentTermId) return;
+    this.history.push(this.currentTermId);
+    this.currentTermId = termId;
+    this.renderTermContent();
+    this.reposition();
+  }
+
+  private renderTermContent(): void {
+    if (!this.currentTermId) return;
+    const termId = this.currentTermId;
+    const title = resolveGameTermTitle(termId, this.locale);
+    const body = resolveGameTermTooltip(termId, this.locale);
+    this.titleEl.textContent = title;
+    this.bodyEl.replaceChildren();
+    if (body.length > 0) {
+      this.bodyEl.appendChild(
+        annotateGameTerms(
+          body,
+          this.locale,
+          (linkedTermId) => {
+            this.navigateToTerm(linkedTermId);
+          },
+          { excludeTermIds: new Set([termId]) },
+        ),
+      );
+    }
   }
 
   show(anchor: HTMLElement, content: GameTermTooltipContent): void {
     this.anchor = anchor;
+    this.currentTermId = null;
+    this.history = [];
     this.titleEl.textContent = content.title;
     this.bodyEl.textContent = content.body;
     this.root.hidden = false;
@@ -37,7 +145,10 @@ export class GameTermTooltip {
 
   hide(): void {
     this.anchor = null;
+    this.currentTermId = null;
+    this.history = [];
     this.root.hidden = true;
+    this.bodyEl.replaceChildren();
   }
 
   isVisible(): boolean {
@@ -66,6 +177,7 @@ export class GameTermTooltip {
     this.root.style.top = `${top}px`;
   }
 
+  /** Hover tooltip for static content (e.g. State Chip). */
   bind(
     hit: HTMLElement,
     resolveContent: () => GameTermTooltipContent | null,
@@ -86,6 +198,8 @@ export class GameTermTooltip {
   }
 
   destroy(): void {
+    this.detachGlobalListeners();
+    this.hide();
     this.root.remove();
   }
 }

@@ -69,16 +69,14 @@ export interface GameTermEntry {
   title: Record<GameTermLocale, string>;
   /**
    * 用語パネル・HUD バッジクリック時の本文（正本）。
-   * Inline Term Label のホバーは `resolveGameTermTooltip` がここから先頭 2 行を流用する。
+   * 文中リンク tooltip は `resolveGameTermTooltip` がここから生成する。
    */
   description?: Record<GameTermLocale, string>;
   /**
-   * Inline Term Label ホバー専用の短文化（2〜3 行）。
+   * 文中リンク tooltip 専用の短文化（2〜3 行）。
    * パネル本文より短く書くときだけ指定する。同文なら省略（`description` に一本化）。
    */
   tooltip?: Record<GameTermLocale, string>;
-  /** 状態辞典（状態チップホバー）。状態定義のみ。固有状態の正本。 */
-  statusDefinition?: Record<GameTermLocale, string>;
   /** 本文中でリンク化する表記。省略時はスキル説明ではリンク化しない（HUD バッジクリック等で補足）。 */
   aliases?: Record<GameTermLocale, readonly string[]>;
   statusCategory?: StatusDisplayCategory;
@@ -88,12 +86,11 @@ export interface GameTermEntry {
 
 type GameTermEntrySource = Omit<
   GameTermEntry,
-  "title" | "description" | "tooltip" | "statusDefinition" | "aliases"
+  "title" | "description" | "tooltip" | "aliases"
 > & {
   title: { ja: string };
   description?: { ja: string };
   tooltip?: { ja: string };
-  statusDefinition?: { ja: string };
   aliases?: { ja: readonly string[] };
 };
 
@@ -472,17 +469,19 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   {
     id: "seedFlame",
     title: { ja: "種火" },
-    statusDefinition: {
-      ja: "魔法DoT。\n\n・毎秒攻撃力5%の魔法ダメージ\n・10秒持続\n・最大5スタック\n\n最大スタック時、新たに付与される代わりに「熾火」へ変化する。",
+    description: {
+      ja: "魔術師固有の。\n\n・毎秒攻撃力5%の魔法ダメージ\n・10秒持続\n・最大5スタック\n\n最大スタック時、新たに付与される代わりに「熾火」へ変化する。",
     },
+    aliases: { ja: ["種火"] },
     statusCategory: "seedFlame",
   },
   {
     id: "blazingFlame",
     title: { ja: "熾火" },
-    statusDefinition: {
+    description: {
       ja: "種火から昇格する魔法DoT。\n\n・毎秒攻撃力35%の魔法ダメージ（無期限）\n・1スタックごとに魔法攻撃の被ダメージを10%増加\n・最大1スタック",
     },
+    aliases: { ja: ["熾火"] },
     statusCategory: "blazingFlame",
   },
   {
@@ -528,15 +527,6 @@ function mergeGameTermEn(entry: GameTermEntrySource): GameTermEntry {
         ? {
             ...(entry.tooltip ?? {}),
             ...(en.tooltip !== undefined ? { en: en.tooltip } : {}),
-          }
-        : undefined,
-    statusDefinition:
-      entry.statusDefinition !== undefined || en.statusDefinition !== undefined
-        ? {
-            ...(entry.statusDefinition ?? {}),
-            ...(en.statusDefinition !== undefined
-              ? { en: en.statusDefinition }
-              : {}),
           }
         : undefined,
     aliases:
@@ -585,19 +575,6 @@ export function resolveGameTermDescription(
   return description.trim();
 }
 
-export function resolveStatusDefinition(
-  id: GameTermId,
-  locale: GameTermLocale = "ja"
-): string | undefined {
-  const entry = getGameTermEntry(id);
-  const statusDefinition =
-    entry?.statusDefinition?.[locale] ?? entry?.statusDefinition?.ja;
-  if (statusDefinition && statusDefinition.trim().length > 0) {
-    return statusDefinition.trim();
-  }
-  return resolveGameTermDescription(id, locale);
-}
-
 export function resolveGameTermTooltip(
   id: GameTermId,
   locale: GameTermLocale = "ja"
@@ -608,7 +585,9 @@ export function resolveGameTermTooltip(
   if (tooltip && tooltip.trim().length > 0) return tooltip.trim();
   const description = entry.description?.[locale] ?? entry.description?.ja;
   if (description && description.trim().length > 0) {
-    return firstDescriptionLines(description.trim());
+    const trimmed = description.trim();
+    if (entry.statusCategory) return trimmed;
+    return firstDescriptionLines(trimmed);
   }
   return entry.title[locale] ?? entry.title.ja;
 }

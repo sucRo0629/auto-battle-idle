@@ -234,7 +234,10 @@ export class GameTermPanel {
       this.bodyEl.appendChild(
         annotateGameTerms(description, this.locale, (termId) => {
           this.navigateToTerm(termId);
-        }, { panelId: this.panelId }),
+        }, {
+          panelId: this.panelId,
+          excludeTermIds: new Set([this.currentTermId]),
+        }),
       );
     }
   }
