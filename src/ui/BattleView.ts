@@ -110,6 +110,9 @@ export class BattleView {
   private readonly canvasFrame: HTMLElement;
   private readonly partyHudSlotEl: HTMLElement;
   private readonly enemyHudSlotEl: HTMLElement;
+  private readonly battleDebugOverlay: HTMLElement;
+  private readonly battleDebugShell: HTMLElement;
+  private readonly debugMenuDock: HTMLElement;
   private hoveredMemberStatsSlotIndex: number | null = null;
   private hoverHighlight: BattleHoverHighlightState = createEmptyHoverHighlight();
   private readonly targetIndicatorTracker = new BattleTargetIndicatorTracker();
@@ -176,6 +179,12 @@ export class BattleView {
     const battleDebugOverlay = document.createElement("div");
     battleDebugOverlay.className = "battle-debug-overlay";
     battleDebugOverlay.setAttribute("aria-hidden", "true");
+    this.battleDebugOverlay = battleDebugOverlay;
+
+    const battleDebugShell = document.createElement("div");
+    battleDebugShell.className = "battle-debug-shell";
+    this.battleDebugShell = battleDebugShell;
+    battleDebugOverlay.appendChild(battleDebugShell);
 
     const canvasFrame = document.createElement("div");
     canvasFrame.className = "battle-canvas-frame battle-canvas-frame--lane-hud";
@@ -250,10 +259,29 @@ export class BattleView {
         this.debugMenu.refresh();
       },
     });
-    this.debugMenu.mount(this.root);
+
+    const debugMenuDock = document.createElement("div");
+    debugMenuDock.className = "battle-debug-menu-dock";
+    this.debugMenuDock = debugMenuDock;
+
+    const debugMenuToggle = document.createElement("button");
+    debugMenuToggle.type = "button";
+    debugMenuToggle.className = "battle-debug-menu-toggle";
+    debugMenuToggle.textContent = "Debug";
+    debugMenuToggle.addEventListener("click", () => {
+      debugMenuDock.classList.toggle("battle-debug-menu-dock--open");
+      const expanded = debugMenuDock.classList.contains(
+        "battle-debug-menu-dock--open",
+      );
+      debugMenuToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+    });
+    debugMenuToggle.setAttribute("aria-expanded", "false");
+    debugMenuDock.appendChild(debugMenuToggle);
+    this.debugMenu.mount(debugMenuDock);
+    battleDebugShell.appendChild(debugMenuDock);
 
     this.battleXDebugCanvas = new BattleXDebugCanvas();
-    this.battleXDebugCanvas.mount(this.root);
+    this.battleXDebugCanvas.mount(battleDebugShell);
     this.syncBattleXDebugDisplay();
 
     container.appendChild(this.root);
@@ -351,7 +379,7 @@ export class BattleView {
         verifyModeControls?.onStatsDrawerOpenChange?.(open);
       },
     });
-    this.statsDrawer.mount(hudStack);
+    this.statsDrawer.mount(battleDebugShell);
 
     const statsPanelStorage = document.createElement('div');
     statsPanelStorage.hidden = true;
@@ -908,6 +936,7 @@ export class BattleView {
     this.verifyBadgeEl.title = enabled
       ? t("battle.verifyMode")
       : t("battle.verifyMode");
+    this.debugMenuDock.hidden = !enabled;
   }
 
   private createPartyMenuButton(): HTMLButtonElement {

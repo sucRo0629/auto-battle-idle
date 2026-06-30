@@ -23,9 +23,9 @@ export class BattleStatsDrawer {
     private readonly callbacks: BattleStatsDrawerCallbacks,
     options: BattleStatsDrawerOptions = {},
   ) {
-    this.open = options.defaultOpen ?? true;
+    this.open = options.defaultOpen ?? false;
     this.root = document.createElement('div');
-    this.root.className = 'party-hud-drawer';
+    this.root.className = 'battle-stats-drawer party-hud-drawer';
 
     this.tabButton = document.createElement('button');
     this.tabButton.type = 'button';

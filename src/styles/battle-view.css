@@ -286,12 +286,99 @@
   justify-self: end;
 }
 
-/* Layer 5 — debug overlay reservation (content stays outside battle-root for now) */
+/* Layer 5 — dev / debug overlay (does not affect HUD layout) */
 .battle-debug-overlay {
   position: absolute;
   inset: 0;
   z-index: 5;
   pointer-events: none;
+  overflow: visible;
+}
+
+.battle-debug-shell {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.battle-debug-shell > .battle-stats-drawer,
+.battle-debug-shell > .battle-debug-menu-dock,
+.battle-debug-shell > .battle-x-debug {
+  pointer-events: auto;
+}
+
+.battle-debug-shell > .battle-stats-drawer {
+  position: absolute;
+  left: 340px;
+  bottom: 80px;
+  width: 600px;
+  max-width: calc(100% - 680px);
+  z-index: 3;
+}
+
+.battle-debug-menu-dock {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: min(320px, calc(100% - 16px));
+}
+
+.battle-debug-menu-toggle {
+  -webkit-app-region: no-drag;
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border: 1px solid var(--canvas-border-color);
+  border-radius: 2px;
+  background: rgba(15, 18, 28, 0.94);
+  color: #a8b8d0;
+  font-family: var(--hud-font-family, "Segoe UI", system-ui, sans-serif);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.battle-debug-menu-toggle:hover {
+  border-color: rgba(74, 144, 217, 0.65);
+  color: #d9e4f5;
+}
+
+.battle-debug-menu-dock .debug-menu {
+  display: none;
+  max-height: min(280px, 40vh);
+  overflow: auto;
+}
+
+.battle-debug-menu-dock--open .debug-menu {
+  display: block;
+}
+
+.battle-debug-menu-dock[hidden] {
+  display: none !important;
+}
+
+.battle-debug-shell > .battle-x-debug {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 80px;
+  z-index: 2;
+  max-height: min(320px, 42vh);
+  overflow: auto;
+  padding: 4px;
+  border-radius: 4px;
+  background: rgba(8, 10, 18, 0.92);
+  box-sizing: border-box;
+}
+
+.battle-debug-shell > .battle-x-debug[hidden] {
+  display: none !important;
 }
 
 .battle-root canvas,
@@ -419,6 +506,9 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .battle-x-debug-replay {

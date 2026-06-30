@@ -891,6 +891,8 @@ topInfo:
 | 禁止 | デバッグ UI が本体戦闘 HUD を押し下げること、1280×720 本番 HUD を変形させること |
 | 開発中表示 | 必要な表示は残してよいが、ゲーム HUD と混ぜない |
 
+実装：`BattleView.ts` の `.battle-debug-overlay` / `.battle-debug-shell`（`battle-canvas-host` 内 z-index 5）に `BattleStatsDrawer`、`DebugMenuPanel`（折りたたみドック）、`BattleXDebugCanvas` を overlay 配置する。本体 HUD スロット座標は `battleRootLayout.ts` の固定 rect のまま。
+
 #### 8.12.1 `BattleStatsDrawer` の扱い
 
 `BattleStatsDrawer` は新しい常時 HUD 内には統合しない。開発用または詳細確認用のドロワーとして扱い、本体 HUD の 1280×720 レイアウトを押し下げない。

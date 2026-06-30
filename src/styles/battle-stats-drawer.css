@@ -85,6 +85,18 @@
   font-family: var(--hud-font-family);
 }
 
+.battle-stats-drawer {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.battle-stats-drawer .party-hud-drawer-tab {
+  border-radius: 4px 4px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.28);
+}
+
 .party-hud-drawer-tab {
   -webkit-app-region: no-drag;
   display: flex;
