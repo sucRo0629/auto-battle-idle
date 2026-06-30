@@ -44,6 +44,7 @@ import { GameTermPanel } from "./GameTermPanel.ts";
 import "../styles/game-term-panel.css";
 import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
+import { applyBattleRootScale } from "./battleRootScale.ts";
 
 export interface VerifyModeControls {
   isVerifyMode: () => boolean;
@@ -76,6 +77,8 @@ function resolveSkillRangePxFromSnapshot(
 
 export class BattleView {
   private readonly root: HTMLElement;
+  private readonly battleViewport: HTMLElement;
+  private readonly battleRoot: HTMLElement;
   private readonly canvasHost: HTMLElement;
   private readonly canvasWrap: HTMLElement;
   private readonly canvasHudStageEl: HTMLElement;
@@ -99,6 +102,7 @@ export class BattleView {
   private lastHudToolbarLevel = -1;
   private readonly unsubscribeLocale: () => void;
   private readonly verifyModeControls?: VerifyModeControls;
+  private battleRootResizeObserver: ResizeObserver | null = null;
 
   constructor(
     container: HTMLElement,
@@ -112,29 +116,66 @@ export class BattleView {
     this.root = document.createElement("div");
     this.root.className = "battle-view";
 
+    this.battleViewport = document.createElement("div");
+    this.battleViewport.className = "battle-viewport";
+
+    this.battleRoot = document.createElement("div");
+    this.battleRoot.className = "battle-root";
+
     this.canvasHost = document.createElement("div");
     this.canvasHost.className = "battle-canvas-host";
 
+    const battleBackground = document.createElement("div");
+    battleBackground.className = "battle-background";
+    battleBackground.setAttribute("aria-hidden", "true");
+
+    const battleLaneLayer = document.createElement("div");
+    battleLaneLayer.className = "battle-layer battle-layer--lane";
+
+    const battleLane = document.createElement("div");
+    battleLane.className = "battle-lane";
+
+    const battleFxLayer = document.createElement("div");
+    battleFxLayer.className = "battle-layer battle-layer--fx";
+    battleFxLayer.setAttribute("aria-hidden", "true");
+
+    const battleHudLayer = document.createElement("div");
+    battleHudLayer.className = "battle-layer battle-layer--hud";
+
+    const partyHudSlot = document.createElement("div");
+    partyHudSlot.className = "party-hud-slot battle-hud-slot battle-hud-slot--party";
+    partyHudSlot.setAttribute("data-battle-hud-slot", "party");
+    partyHudSlot.setAttribute("aria-hidden", "true");
+
+    const enemyHudSlot = document.createElement("div");
+    enemyHudSlot.className = "enemy-hud-slot battle-hud-slot battle-hud-slot--enemy";
+    enemyHudSlot.setAttribute("data-battle-hud-slot", "enemy");
+    enemyHudSlot.setAttribute("aria-hidden", "true");
+
+    const battleTopInfo = document.createElement("div");
+    battleTopInfo.className = "battle-top-info";
+
+    const battleDebugOverlay = document.createElement("div");
+    battleDebugOverlay.className = "battle-debug-overlay";
+    battleDebugOverlay.setAttribute("aria-hidden", "true");
+
     const canvasFrame = document.createElement("div");
-    canvasFrame.className = "battle-canvas-frame";
+    canvasFrame.className = "battle-canvas-frame battle-canvas-frame--lane-hud";
     this.canvasFrame = canvasFrame;
 
     const canvasWrap = document.createElement("div");
     canvasWrap.className = "battle-canvas-wrap";
     this.canvasWrap = canvasWrap;
 
-    const canvasHud = document.createElement("div");
-    canvasHud.className = "battle-canvas-hud";
-
     this.canvasHudStageEl = document.createElement("span");
-    this.canvasHudStageEl.className = "battle-canvas-hud-stage";
+    this.canvasHudStageEl.className = "battle-canvas-hud-stage battle-top-info-stage";
 
     this.canvasHudWaveEl = document.createElement("span");
-    this.canvasHudWaveEl.className = "battle-canvas-hud-wave";
+    this.canvasHudWaveEl.className = "battle-canvas-hud-wave battle-top-info-wave";
 
     this.verifyBadgeEl = document.createElement("button");
     this.verifyBadgeEl.type = "button";
-    this.verifyBadgeEl.className = "battle-verify-badge";
+    this.verifyBadgeEl.className = "battle-verify-badge battle-top-info-verify";
     this.verifyBadgeEl.hidden = !verifyModeControls;
     this.verifyBadgeEl.addEventListener("click", () => {
       if (!verifyModeControls) return;
@@ -143,17 +184,30 @@ export class BattleView {
       );
     });
 
-    canvasHud.append(
+    battleTopInfo.append(
       this.canvasHudStageEl,
       this.canvasHudWaveEl,
-      this.verifyBadgeEl
+      this.verifyBadgeEl,
     );
-    canvasWrap.appendChild(canvasHud);
 
-    canvasFrame.appendChild(canvasWrap);
-    this.canvasHost.appendChild(canvasFrame);
+    battleLane.appendChild(canvasWrap);
 
-    this.root.appendChild(this.canvasHost);
+    battleLaneLayer.appendChild(battleLane);
+    battleHudLayer.append(partyHudSlot, enemyHudSlot);
+
+    this.canvasHost.append(
+      battleBackground,
+      battleLaneLayer,
+      battleFxLayer,
+      battleHudLayer,
+      battleTopInfo,
+      battleDebugOverlay,
+    );
+
+    this.battleRoot.appendChild(this.canvasHost);
+    this.battleViewport.appendChild(this.battleRoot);
+    this.root.appendChild(this.battleViewport);
+    this.mountBattleRootScale();
 
     this.debugMenu = new DebugMenuPanel(this.gameData, {
       isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
@@ -191,7 +245,6 @@ export class BattleView {
 
     const hudStack = document.createElement("div");
     hudStack.className = "battle-hud-stack";
-    canvasFrame.appendChild(hudStack);
 
     const hudToolbar = document.createElement("div");
     hudToolbar.className = "battle-hud-toolbar";
@@ -212,6 +265,9 @@ export class BattleView {
     hudToolbar.append(hudToolbarLeading, this.menuButton);
     hudStack.appendChild(hudToolbar);
     this.syncHudToolbarLevel(this.getSave().party);
+
+    canvasFrame.appendChild(hudStack);
+    battleLane.appendChild(canvasFrame);
 
     this.hudFloatingTooltip = new PartyHudFloatingTooltip(canvasFrame);
 
@@ -288,6 +344,20 @@ export class BattleView {
       this.refreshMemberStatsPanel();
     });
     this.refreshLocaleChrome();
+  }
+
+  private mountBattleRootScale(): void {
+    const updateScale = (): void => {
+      applyBattleRootScale(
+        this.battleRoot,
+        this.battleViewport.clientWidth,
+        this.battleViewport.clientHeight,
+      );
+    };
+
+    updateScale();
+    this.battleRootResizeObserver = new ResizeObserver(updateScale);
+    this.battleRootResizeObserver.observe(this.battleViewport);
   }
 
   private refreshLocaleChrome(): void {
@@ -759,6 +829,8 @@ export class BattleView {
 
   destroy(): void {
     this.unsubscribeLocale();
+    this.battleRootResizeObserver?.disconnect();
+    this.battleRootResizeObserver = null;
     this.clearMemberStatsHideTimer();
     this.hudFloatingTooltip.destroy();
     this.gameTermPanel.destroy();

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
   const canvasInstance = {
@@ -150,7 +150,11 @@ function createFakeElement() {
     disabled: false,
     hidden: false,
     type: "",
-    style: {},
+    style: {
+      setProperty: vi.fn(),
+    },
+    clientWidth: 1280,
+    clientHeight: 720,
     classList: {
       toggle: vi.fn(),
     },
@@ -162,10 +166,20 @@ function createFakeElement() {
   };
 }
 
+class ResizeObserverMock {
+  observe = vi.fn();
+  disconnect = vi.fn();
+  constructor(_callback: ResizeObserverCallback) {}
+}
+
 describe("BattleView", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.clearAllMocks();
+  });
+
+  beforeEach(() => {
+    vi.stubGlobal("ResizeObserver", ResizeObserverMock);
   });
 
   it("shows a damage popup only once per skill damage event", () => {
