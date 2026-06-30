@@ -340,7 +340,7 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 | 3+ | `headlineLines`（主要効果の短文、**14px** 前後・行間 1.55。スキルが何をするかは hover なしで読めること） |
 | 末尾 | State Chip（状態として保持される効果。状態定義は State tooltip で補足） |
 
-説明文の文面生成は [Phase 4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)（`formatSkillText`、M1 8 クラス Lv0 日本語 **完了**）。**効果単位改行**は `formatSkillCardLines`（`src/ui/formatSkillText.ts`）でエディタプレビューと編成 UI を揃える。
+説明文の文面生成は [Phase 4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)（`formatSkillText`、M1 8 クラス Lv0 日本語 **完了**）。**編成 UI** は `formatSkillCardLines`。**エディタ**（`SkillEditorStep`）は 1 行の `formatActiveDescription` / `formatPassiveDescription`（[classes-and-skills.md §出力 API](../spec/classes-and-skills.md#出力-api責務分担)）。
 
 #### `formatSkillCardLines` API（Phase 4d PR1-1 確定）
 
@@ -348,7 +348,7 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 | ---- | ---- |
 | モジュール | `src/ui/formatSkillText.ts` |
 | シグネチャ | `formatSkillCardLines(def: ActiveSkillDef \| PassiveSkillDef, options: { locale: SkillCardLocale; basicAttackRangePx?: number }): SkillCardLines` |
-| `SkillCardLocale` | v1 は `'ja'` のみ（将来 `en` 拡張可能） |
+| `SkillCardLocale` | `'ja'` \| `'en'`（4e。`skillTextLocale` / `skillTextPhrases`） |
 | `SkillCardLines` | `{ metaLine: string; effectLines: SkillCardEffectLine[] }` — 各要素は plain `string` または `{ kind: "list"; items: { text; details? }[] }`（焼き尽くす熾火の種火 / 熾火など）。画面表示では `resolveSkillCardDisplay` が headlineLines（Plain Text + Inline Term Label）と State Chip へ分類する |
 
 **行の意味（§6.3 行 2 / 行 3+ に対応）**
@@ -364,7 +364,7 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 - 並び順: 特殊ルール → 計算修飾 → 基礎効果 → 追加効果。複数要素は ` / ` 区切り
 - 同じ形状枠が連続する場合は、形状を各行へ重複表示せず `[形状] / {対象}に以下の効果を付与/適用` + 効果行へ畳む（例: `[AoE] 5 / 味方に以下の効果を付与` → `攻撃力+20%` → `攻撃速度+15%`）
 - **別枠タグ行は持たない**。形状・特殊ルールは本文内 Inline Term Label のみ
-- 1 行説明の `formatActiveDescription` / `formatPassiveDescription` は tooltip・エディタ互換として維持
+- 1 行説明の `formatActiveDescription` / `formatPassiveDescription` は **エディタ**互換として維持（編成 UI は上記 `formatSkillCardLines`）
 
 **UI 表現:**
 

@@ -255,7 +255,7 @@ describe('formatActiveDescription', () => {
     const desc = formatActiveDescription(def);
     expect(desc).toContain('再使用：9秒');
     expect(desc).toContain('アンカー +3.2');
-    expect(desc).toContain('敵3体に攻撃力の70%の物理ダメージ');
+    expect(desc).toContain('マルチロック 3 / 攻撃力の70%の物理ダメージ');
     expect(desc).not.toContain('対象不足分は同一対象へ再命中');
   });
 
@@ -439,7 +439,7 @@ describe('formatActiveDescription', () => {
 
     expect(card.effectLines[0]).toBe('貫通 / 敵に以下の効果を適用');
     expect(card.effectLines.filter((line) => line.includes('貫通'))).toHaveLength(1);
-    expect(card.effectLines).toContain('スタン 2s');
+    expect(card.effectLines).toContain('スタン 2秒');
     expect(card.effectLines.some((line) =>
       line.includes('攻撃力の20%の物理ダメージ'),
     )).toBe(true);
@@ -710,7 +710,7 @@ describe('formatActiveDescription', () => {
       '再使用：5秒 / 攻撃力の100%の魔法ダメージ、味方のHPを攻撃力の125%で回復 /',
     );
     expect(formatActiveDescription(a2!)).toBe(
-      '再使用：被攻撃8回 / 持続：5秒 / 発動条件：自身のHPが80%以下 / 自身起点±5：魔法耐性+10、ダメージ軽減5%、攻撃力の20%のバリア（加算） /',
+      '再使用：被攻撃8回 / 持続：5秒 / 発動条件：自身のHPが80%以下 / AoE 5 / 味方に以下の効果を付与、魔法耐性+10、ダメージ軽減5%、攻撃力の20%のバリア（加算） /',
     );
     expect(formatActiveDescription(a3!)).toBe(
       '再使用：12秒 / 持続：5秒 / 発動条件：対象のHPが80%以下 / 味方全体ダメージ軽減10%、魔法耐性+20 /',

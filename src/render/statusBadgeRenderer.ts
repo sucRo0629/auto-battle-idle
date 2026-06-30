@@ -893,7 +893,7 @@ function getCachedStatusBadgeImage(
   return canvas;
 }
 
-function drawStatusBadge(
+export function drawStatusBadge(
   ctx: CanvasRenderingContext2D,
   x: number,
   rowTop: number,

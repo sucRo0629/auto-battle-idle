@@ -972,6 +972,57 @@ topInfo:
 20. 危険予兆バーは現時点では実データ未接続の予約枠であり、通常スキルリキャストへ接続しないことが明記されている
 21. UI 改修の実装優先順位が明記されている
 
+### 8.17 Task 9 — 統合確認・引き継ぎ（2026-06）
+
+Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `src/ui/battleRootLayout.ts`。
+
+#### 実装完了（Task 1〜8）
+
+| Task | 内容 | 主要ファイル |
+| ---- | ---- | ------------ |
+| 1 | 1280×720 `battle-root` + 等比スケール | `battleRootScale.ts`, `BattleView.ts`, `battle-view.css` |
+| 2 | レイヤー + `battleLane` | `battleRootLayout.ts`, `battle-view.css` |
+| 3 | 左 Party HUD 4 カード overlay | `PartyHudPanel.ts`, `party-hud-overlay.css` |
+| 4 | スキルゲージ 2×2 固定 + 状態 2 行固定 | `party-hud-overlay.css`, `partyHudOverlayStatusGrid.ts` |
+| 5 | 右 Enemy HUD（最大 10 体） | `EnemyHudPanel.ts`, `enemy-hud-overlay.css`, `enemyHudTypes.ts` |
+| 6 | 敵スプライト付近 HP/状態停止 | `BattleCanvas.ts` |
+| 7 | `hoverHighlight` / `targetIndicator` 分離 | `BattleView.ts`, `battleHoverHighlight.ts`, `battleTargetIndicator.ts`, `battleFieldIndicatorDraw.ts` |
+| 8 | `BattleStatsDrawer` / Debug UI overlay 分離 | `BattleView.ts`, `battle-view.css`, `BattleStatsDrawer.ts` |
+
+#### 自動テスト（受け入れ補助）
+
+- レイアウト rect / スケール: `battleRootLayout.test.ts`, `battleRootScale.test.ts`
+- Debug overlay が HUD rect を変えない: `battleDebugOverlay.test.ts`
+- hover / target UI: `battleTargetIndicator.test.ts`, `battleCanvasHitTest.test.ts`
+- BattleView イベント配線: `BattleView.test.ts`
+
+#### 残 TODO（後続）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 常時 targetIndicator | エンジン snapshot から `ChaseTarget` / `AttackTarget` を UI 公開する場合は戦闘側 API 追加が必要（現状は `skillWindup` / `skill` イベント + TTL） |
+| BattleStatsDrawer 本体 | タブのみ。与ダメ / 被ダメ詳細パネルは §7 詳細モード内容の overlay 統合が未着手 |
+| 危険予兆 | `EnemyHudPanel` の `dangerTelegraph` は予約枠（非アクティブ）。戦闘データ未接続 |
+| battle-x-debug 同時表示 | verify 時に battle-x-debug と stats drawer タブが近接。軽微な z-index / bottom 調整済み、実戦闘での重なりは目視確認推奨 |
+
+#### 後続 UI polish 候補
+
+- 1280×720 以外 viewport（800×600、超ワイド）での overlay 視認性
+- 味方 / 敵 hoverHighlight の同時表示（同一ユニットで target + hover 重なり）のコントラスト
+- Enemy HUD `+N` tooltip と状態アイコン密度（10 体 × 多状態）
+- `BattleStatsDrawer` 開閉時の詳細統計 DOM 実装
+- 英語 i18n（Phase 4e）— 戦闘 HUD ラベル・tooltip
+
+#### 目視確認チェックリスト
+
+1. 1280×720 基準で partyHud / enemyHud / battleLane / topInfo が §8 座標どおり
+2. viewport リサイズで `battle-root` 全体が等比スケール（歪みなし）
+3. スプライト・24px アイコン・状態バッジが pixelated（ぼやけなし）
+4. 敵フィールド HP/状態なし、右 HUD に集約
+5. 敵 HUD ホバー ↔ スプライト hoverHighlight 双方向
+6. 攻撃時 targetIndicator（足元リング + HUD 小リング）が hover と区別できる
+7. verify ON 時 debug ドック / battle-x-debug が本体 HUD を押し下げない
+
 ---
 
 ## 付録 A. 業界参考（補足）

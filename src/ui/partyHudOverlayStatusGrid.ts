@@ -3,7 +3,6 @@ import {
   PARTY_HUD_OVERLAY_STATUS_COLS,
   PARTY_HUD_OVERLAY_STATUS_ROWS,
   PARTY_HUD_OVERLAY_STATUS_SLOT_COUNT,
-  selectPartyHudOverlayStatusBadges,
 } from '../battle/statusEffectDisplay.ts';
 import type { BattleHudTheme } from '../render/battleHudTheme.ts';
 import { resolveStatusIconFallbackColor } from '../render/battleHudTheme.ts';
@@ -271,3 +270,5 @@ export {
   buildPartyHudStatusBadgeCanvasSignature,
   buildPartyHudStatusBadgeHitSignature,
 };
+
+export { selectPartyHudOverlayStatusBadges } from '../battle/statusEffectDisplay.ts';

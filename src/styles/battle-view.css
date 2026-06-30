@@ -367,9 +367,10 @@
   position: absolute;
   left: 24px;
   right: 24px;
-  bottom: 80px;
+  /* Above battleLane-bottom stats drawer tab (~18px) */
+  bottom: 98px;
   z-index: 2;
-  max-height: min(320px, 42vh);
+  max-height: min(300px, 40vh);
   overflow: auto;
   padding: 4px;
   border-radius: 4px;

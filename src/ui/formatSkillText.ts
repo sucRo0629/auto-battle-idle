@@ -231,9 +231,9 @@ function formatFireConditionSummary(condition: FireCondition): string {
       return `敵数${range}(${scope})`;
     }
     case "pendingIncomingDamage":
-      return `先読み被ダメ≥${Math.round(condition.maxHpRatio * 100)}%/${
+      return `先読み被ダメ≥${Math.round(condition.maxHpRatio * 100)}%/${formatSecondsLabel(
         condition.windowSec
-      }s`;
+      )}`;
     case "targetBarrierBelowGrant":
       return "付与量>現バリア";
     case "blockResonanceStacks":
@@ -963,7 +963,9 @@ function formatActiveSkillEffectBody(def: ActiveSkillDef): string {
   if (specialLines) {
     return specialLines.join("、");
   }
-  return formatActiveSkillDefaultEffectLines(def).join("、");
+  return formatActiveSkillDefaultEffectLines(def, { showTargetFrame: true }).join(
+    "、"
+  );
 }
 
 function formatTarget(
@@ -1416,7 +1418,7 @@ function formatTargetShape(effect: SkillEffectDef): string {
         effect.pierceDurationSec !== undefined &&
         effect.pierceDurationSec > 0
       ) {
-        parts.push(`${effect.pierceDurationSec}s`);
+        parts.push(formatSecondsLabel(effect.pierceDurationSec));
       }
       break;
     case "chain":
@@ -1632,15 +1634,19 @@ function formatCounterResponse(response: CounterResponseDef): string {
       return dmgType ? `${dmgType}${amount}` : amount;
     }
     case "debuff":
-      return `デバフ${formatStatusStats(response.debuffStat)} ${
+      return `デバフ${formatStatusStats(response.debuffStat)} ${formatSecondsLabel(
         response.debuffDurationSec
-      }s`;
+      )}`;
     case "dot":
-      return `DoT×${response.powerMultiplier} ${response.durationSec}s`;
+      return `DoT×${response.powerMultiplier} ${formatSecondsLabel(
+        response.durationSec
+      )}`;
     case "stun":
       return phraseStunDuration(response.durationSec);
     case "knockback":
-      return `ノック${formatUiDistanceValue(response.distancePx)}+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`;
+      return `ノック${formatUiDistanceValue(response.distancePx)}+移動硬直${formatSecondsLabel(
+        KNOCKBACK_MOVE_LOCK_SEC
+      )}`;
   }
 }
 
@@ -1737,9 +1743,9 @@ function formatActiveEffectDetail(
     case "heal":
       if (effect.healSubKind === "hot") {
         extras.push(
-          `${HEAL_SUB_KIND_LABELS.hot} ${formatResourceAmount(effect.amount)} ${
+          `${HEAL_SUB_KIND_LABELS.hot} ${formatResourceAmount(effect.amount)} ${formatSecondsLabel(
             effect.durationSec ?? 0
-          }s`
+          )}`
         );
         if (effect.stackOnApply) {
           extras.push(`薬効+${effect.stackOnApply}`);
@@ -1811,7 +1817,7 @@ function formatActiveEffectDetail(
           extras.push(
             `${BUFF_SUB_KIND_LABELS.block} ${formatPercent(
               effect.chance ?? 0
-            )} ${effect.buffDurationSec ?? 0}s`
+            )} ${formatSecondsLabel(effect.buffDurationSec ?? 0)}`
           );
         }
       } else if (effect.buffSubKind === "evasion") {
@@ -1822,21 +1828,21 @@ function formatActiveEffectDetail(
           extras.push(
             `${BUFF_SUB_KIND_LABELS.evasion} ${formatPercent(
               effect.chance ?? 0
-            )} ${effect.buffDurationSec ?? 0}s`
+            )} ${formatSecondsLabel(effect.buffDurationSec ?? 0)}`
           );
         }
       } else if (effect.buffSubKind === "damageDelay") {
         extras.push(
           `${BUFF_SUB_KIND_LABELS.damageDelay} ${formatPercent(
             effect.ratio ?? 0
-          )} ${effect.buffDurationSec ?? 0}s`
+          )} ${formatSecondsLabel(effect.buffDurationSec ?? 0)}`
         );
       } else if (effect.buffSubKind === "allyAttackFollowUp") {
         const radius = effect.allyFollowUpRadiusPx ?? 70;
         extras.push(
-          `${BUFF_SUB_KIND_LABELS.allyAttackFollowUp} ${
+          `${BUFF_SUB_KIND_LABELS.allyAttackFollowUp} ${formatSecondsLabel(
             effect.buffDurationSec ?? 8
-          }s 半径${formatUiDistanceValue(radius)} ${formatStatMultiplierLabel(
+          )} 半径${formatUiDistanceValue(radius)} ${formatStatMultiplierLabel(
             "def",
             effect.followUpDefDebuffMultiplier ?? 0.95
           )}`
@@ -1853,7 +1859,7 @@ function formatActiveEffectDetail(
           extras.push(
             `${
               BUFF_SUB_KIND_LABELS[effect.buffSubKind ?? "stat"]
-            } ${statLabel} ${effect.buffDurationSec ?? 0}s`
+            } ${statLabel} ${formatSecondsLabel(effect.buffDurationSec ?? 0)}`
           );
         }
       }
@@ -1959,7 +1965,7 @@ function formatActiveEffectDetail(
             patchParts.push(`${effect.primaryPatch.hitCount}Hit`);
           }
           if (effect.primaryPatch.hitDurationSec !== undefined) {
-            patchParts.push(`${effect.primaryPatch.hitDurationSec}s`);
+            patchParts.push(formatSecondsLabel(effect.primaryPatch.hitDurationSec));
           }
           if (patchParts.length > 0) {
             parts.push(patchParts.join(" "));
@@ -1971,7 +1977,7 @@ function formatActiveEffectDetail(
         ) {
           parts.push(`+${effect.appendEffects.length}効果`);
         }
-        extras.push(`${parts.join(" ")} ${effect.buffDurationSec ?? 0}s`);
+        extras.push(`${parts.join(" ")} ${formatSecondsLabel(effect.buffDurationSec ?? 0)}`);
       }
       break;
     }
@@ -1996,7 +2002,7 @@ function formatActiveEffectDetail(
           const flavorLabel = effect.dotFlavor
             ? DOT_FLAVOR_LABELS[effect.dotFlavor]
             : DEBUFF_SUB_KIND_LABELS.dot;
-          extras.push(`${flavorLabel} ${power} ${effect.durationSec ?? 0}s`);
+          extras.push(`${flavorLabel} ${power} ${formatSecondsLabel(effect.durationSec ?? 0)}`);
           if (effect.buffDisplayName) {
             extras.push(effect.buffDisplayName);
           }
@@ -2009,7 +2015,7 @@ function formatActiveEffectDetail(
         if (ign) extras.push(ign);
       } else if (effect.debuffSubKind === "stun") {
         extras.push(
-          `${DEBUFF_SUB_KIND_LABELS.stun} ${effect.durationSec ?? 0}s`
+          `${DEBUFF_SUB_KIND_LABELS.stun} ${formatSecondsLabel(effect.durationSec ?? 0)}`
         );
       } else {
         const statLabel = formatStatsWithModifier(
@@ -2020,7 +2026,7 @@ function formatActiveEffectDetail(
         extras.push(
           `${
             DEBUFF_SUB_KIND_LABELS[effect.debuffSubKind ?? "stat"]
-          } ${statLabel} ${effect.debuffDurationSec ?? 0}s`
+          } ${statLabel} ${formatSecondsLabel(effect.debuffDurationSec ?? 0)}`
         );
       }
       break;
@@ -2031,7 +2037,7 @@ function formatActiveEffectDetail(
       const power = dmgType
         ? `${dmgType} ×${effect.powerMultiplier}`
         : `×${effect.powerMultiplier}`;
-      extras.push(`${power} ${effect.durationSec}s`);
+      extras.push(`${power} ${formatSecondsLabel(effect.durationSec)}`);
       const inc = formatDamageIncreaseSpec(effect.damageIncrease);
       if (inc) extras.push(inc);
       const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);
@@ -2049,21 +2055,23 @@ function formatActiveEffectDetail(
             ? `アンカー ${formatSignedUiDistanceValue(effect.anchorOffsetPx)}`
             : "アンカー"
           : "接敵";
-      extras.push(`${mode} ${effect.moveDurationSec}s`);
+      extras.push(`${mode} ${formatSecondsLabel(effect.moveDurationSec)}`);
       break;
     }
     case "stun":
       extras.push(
         compact
           ? phraseStunDuration(effect.durationSec)
-          : `${effect.durationSec}s`
+          : formatSecondsLabel(effect.durationSec)
       );
       break;
     case "knockback":
       extras.push(
         compact
           ? phraseKnockbackLabel()
-          : `${formatUiDistanceValue(effect.distancePx)}+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`
+          : `${formatUiDistanceValue(effect.distancePx)}+移動硬直${formatSecondsLabel(
+            KNOCKBACK_MOVE_LOCK_SEC
+          )}`
       );
       break;
     case "dispel": {
@@ -2076,7 +2084,7 @@ function formatActiveEffectDetail(
     }
     case "block":
       extras.push(
-        `${formatPercent(effect.blockChance)} ${effect.durationSec}s`
+        `${formatPercent(effect.blockChance)} ${formatSecondsLabel(effect.durationSec)}`
       );
       break;
     case "counter": {
@@ -2087,7 +2095,7 @@ function formatActiveEffectDetail(
             phraseCounterLabel(),
             ...responseParts,
             effect.durationSec !== undefined
-              ? `${effect.durationSec}${getSkillTextLocale() === "en" ? "s" : "秒"}`
+              ? formatSecondsLabel(effect.durationSec)
               : null,
             formatCounterRangeSummary(effect.range) || null
           )
@@ -2097,7 +2105,7 @@ function formatActiveEffectDetail(
         extras.push(
           [
             responseParts.join(" / "),
-            `${effect.durationSec}s`,
+            formatSecondsLabel(effect.durationSec),
             formatCounterRangeSummary(effect.range),
           ]
             .filter(Boolean)
@@ -2110,7 +2118,7 @@ function formatActiveEffectDetail(
       break;
     case "arenaDominance": {
       if (effect.durationSec !== undefined) {
-        extras.push(`${effect.durationSec}s`);
+        extras.push(formatSecondsLabel(effect.durationSec));
       }
       extras.push("闘士の指名");
       extras.push(`闘技士以外${resolveGameTermTitle("damageReduction")}50%`);
@@ -2131,9 +2139,11 @@ function formatActiveEffectDetail(
       break;
     }
     case "placedField": {
-      extras.push(`${formatUiDistanceValue(effect.fieldRadiusPx)}/${effect.fieldDurationSec}s`);
+      extras.push(
+        `${formatUiDistanceValue(effect.fieldRadiusPx)}/${formatSecondsLabel(effect.fieldDurationSec)}`
+      );
       if (effect.stayTickIntervalSec !== undefined) {
-        extras.push(`滞在${effect.stayTickIntervalSec}s`);
+        extras.push(`滞在${formatSecondsLabel(effect.stayTickIntervalSec)}`);
       }
       break;
     }
@@ -2468,7 +2478,7 @@ function formatPassiveEffect(
         return HEAL_SUB_KIND_LABELS[def.healSubKind ?? "instant"];
       }
       const duration = def.hotDurationSec ?? 0;
-      const durationLabel = duration <= 0 ? "無限" : `${duration}s`;
+      const durationLabel = duration <= 0 ? "無限" : formatSecondsLabel(duration);
       const amount = def.hotAmount ? formatResourceAmount(def.hotAmount) : "—";
       const target = formatTarget(def.hotTargetRule, { kind: "self" });
       const hotMeta = [
@@ -2571,7 +2581,7 @@ function formatPassiveEffect(
       const amount = formatResourceAmount(
         def.debuffDotAmount ?? { kind: "flat", flatAmount: 10 }
       );
-      return `味方物理basic ${chance}でpoison ${amount}/${dur}s`;
+      return `味方物理basic ${chance}でpoison ${amount}/${formatSecondsLabel(dur)}`;
     }
     case "dotDurationMultiplierOnApply": {
       const dur = def.dotDurationMultiplierOnApply ?? 1.5;
@@ -2735,7 +2745,7 @@ function formatPassiveEffect(
       )} → ${target}${meta ? `（${meta}）` : ""}`;
     }
     case "extendSelfAppliedDebuff": {
-      const parts = [`付与デバフ +${legacy.extendSec ?? 0}s`];
+      const parts = [`付与デバフ +${formatSecondsLabel(legacy.extendSec ?? 0)}`];
       if (
         legacy.durationMultiplier !== undefined &&
         legacy.durationMultiplier !== 1

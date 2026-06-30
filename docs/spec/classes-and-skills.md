@@ -210,7 +210,16 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 
 ### スキル説明自動生成（Phase 4b）
 
-スキル JSON に `description` フィールドは持たない。説明文は `src/ui/formatSkillText.ts` の `formatActiveDescription` / `formatPassiveDescription` で組み立てる（現行: `SkillMenuPanel` ツールチップ・`SkillEditorStep` プレビュー）。戦闘ルールの正本は [combat.md](combat.md) および本書の effect 定義。**数値・確定文案の正本は JSON と `src/ui/formatSkillText.test.ts`**。本節はテンプレ方針のみ（スキル一覧への文案転記はしない）。**英語（4e）** は日本語出力を翻訳正本とし、[i18n-en.md](i18n-en.md) の効果文ルールに従う（`skillTextPhrases.ts`）。
+スキル JSON に `description` フィールドは持たない。説明文は `src/ui/formatSkillText.ts` で組み立てる。戦闘ルールの正本は [combat.md](combat.md) および本書の effect 定義。**数値・確定文案の正本は JSON と `src/ui/formatSkillText.test.ts`**。本節はテンプレ方針のみ（スキル一覧への文案転記はしない）。**英語（4e）** は日本語出力を翻訳正本とし、[i18n-en.md](i18n-en.md) の効果文ルールに従う（`skillTextPhrases.ts`）。
+
+#### 出力 API（責務分担）
+
+| API | 用途 | 出力形 |
+| --- | ---- | ------ |
+| `formatSkillCardLines` | **編成 UI**（`SkillMenuPanel`）のスキルカード | `metaLine` + `effectLines`（効果単位改行。詳細は [party-formation-ui.md §6.3](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)） |
+| `formatActiveDescription` / `formatPassiveDescription` | **エディタ**（`SkillEditorStep`）の 1 行プレビュー・折りたたみサマリ | 下記 1 行テンプレ |
+
+編成 UI とエディタは **別 API** だが、効果部のコンパクト表記（§表示フォーマット）は同じ `formatActiveEffectDetail`（compact）経路を共有する。Passive カードは `metaLine` にトリガー要約、`effectLines` には `効果：` プレフィックスを付けない（1 行の `効果：` とは異なる）。
 
 #### 出力テンプレ（v1・1 行）
 
@@ -222,18 +231,19 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - `持続` — 効果残り秒（`buffDurationSec` 等の最大）。`useDurationSec`（硬直）とは分ける
 - `硬直` — `useDurationSec`。`useDurationPauseApproach` 時は `硬直・移動停止N秒`（秒数は末尾）。それ以外は `硬直N秒`
 - `発動条件` — `firePolicy: smart` の `fireConditions` 要約（例: `対象のHPが50%以上`）
-- `[効果…]` — コンパクト表記。[ゲーム用語表 §表示フォーマット](classes-and-skills.md#ゲーム用語表表示分類) に従う。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージ`（名詞形・至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `マルチロック N / {効果}`（対象数はラベル直後）。計算修飾（`DEF無視 N%` 等）は基礎効果の前に ` / ` 区切りで並べる。不足対象時の再配分は本文に書かず **Inline Term Label の tooltip** へ
+- `[効果…]` — コンパクト表記。[ゲーム用語表 §表示フォーマット](classes-and-skills.md#ゲーム用語表表示分類) に従う（1 行・カード行で同じ形状ラベル規則）。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージ`（名詞形・至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `マルチロック N / {効果}`（対象数はラベル直後）。計算修飾（`DEF無視 N%` 等）は基礎効果の前に ` / ` 区切りで並べる。不足対象時の再配分は本文に書かず **Inline Term Label の tooltip** へ
+- 複数 effect を 1 行に畳むとき、effect 同士は `、` 区切り（メタ部との区切りは ` / ` のまま）
 
 **Passive**
 
-`効果：[説明]`
+`効果：[説明]`（1 行 API）。カードの `effectLines` には `効果：` を付けず、トリガーは `metaLine` へ分離（[party-formation-ui.md §6.3](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。counter 等は 1 行ではトリガーを `効果：` 本文に含めてよい
 
 #### 表記ルール
 
 - 対象「自身」は effect 表示から省略（compact 時）
-- 秒表記は `秒`（`s` 表記にしない）
+- 秒表記は `秒`（`s` 表記にしない）。**英語（4e）** は `Ns`（`skillTextLocale`）
 - `damageTaken` stat の倍率は `被ダメ×N` ではなく、`<1` → `ダメージ軽減N%`、`>1` → `被ダメージ増加N%`（N = |1 − 倍率| × 100）
-- その他 stat（`atk` / `def` / `reg` / `attackSpeed` / `hp`）は略称（`ATK` 等）を使わず表示名（`攻撃力` / `防御力` / `魔法耐性` / `攻撃速度` / `HP`）。flat は `魔法耐性+20`、乗算 buff は `防御力+20%`（N = |1 − 倍率| × 100）、resource の atk/def scale は `攻撃力90%`（scale をそのまま % 化）
+- その他 stat（`atk` / `def` / `reg` / `attackSpeed` / `hp`）は略称（`ATK` 等）を使わず表示名（`攻撃力` / `防御力` / `魔法耐性` / `攻撃速度` / `HP`）。flat は `魔法耐性+20`、乗算 buff は `防御力+20%`（N = |1 − 倍率| × 100）、resource の atk/def scale は `攻撃力90%`（scale をそのまま % 化）。**Active 効果行の計算修飾**（`DEF無視` / `REG無視` 等）は §表示フォーマット例どおり略称ラベルを使う
 - ブロック率に「（加算）」は各スキル説明に書かない（barrier の加算表記は既存どおり）
 - 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` / `at_swordsman` / `sp_cleric` テスト
 - `targetRuleOverride`（stat 最高値）— `最も{stat}が高い敵を優先して攻撃する`
@@ -257,7 +267,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - 新 effect / ターゲット形状を足す **データ PR ごと** に `formatSkillText` とテストを同梱（[phase-4-roadmap.md §4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)）
 - **Phase 4b の目視 polish は Lv0 スキルのみ**（passive 1–2 / active 1–2）。`formatSkillText` のテンプレ変更は **全習得段階**（Lv10 / Lv20 含む）に自動適用する
 - クラス単位で **Lv0 文案**をテスト固定する。Lv10+ の個別 polish は Phase 7a 前でよい
-- Phase 4d 以降: 編成 UI のスキルカードは [party-formation-ui.md §6.3](party-formation-ui.md#63-習得スキル閲覧専用) の **効果単位改行**（`formatSkillCardLines` — API は [§6.3 formatSkillCardLines](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。4b の 1 行出力は当面 tooltip / エディタ互換として維持
+- Phase 4d 以降: 編成 UI のスキルカードは [party-formation-ui.md §6.3](party-formation-ui.md#63-習得スキル閲覧専用) の **効果単位改行**（`formatSkillCardLines` — API は [§6.3 formatSkillCardLines](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。1 行 API は **エディタ**互換として維持（上記 [出力 API](#出力-api責務分担)）
 
 ## スキル機能レイヤー
 
