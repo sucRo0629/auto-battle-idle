@@ -13,10 +13,36 @@ import type { GameTermId } from "./gameTermGlossary.ts";
  * is the source for whether a term can be annotated.
  */
 
+export type SkillCardStatusChip = {
+  termId: GameTermId;
+  title: string;
+  summary: string;
+};
+
+/** Meta line — only skillLock gets a term tooltip link (party-formation-ui.md §6.4). */
+export const SKILL_CARD_META_LINE_TERM_IDS = [
+  "skillLock",
+] as const satisfies readonly GameTermId[];
+
+export type SkillCardMetaLineTermId =
+  (typeof SKILL_CARD_META_LINE_TERM_IDS)[number];
+
+const META_LINE_TERM_ID_SET = new Set<GameTermId>(
+  SKILL_CARD_META_LINE_TERM_IDS
+);
+
+export function isSkillCardMetaLineTermId(
+  termId: GameTermId
+): termId is SkillCardMetaLineTermId {
+  return META_LINE_TERM_ID_SET.has(termId);
+}
+
 /** Inline term labels — tooltip triggers embedded in effect body lines. */
 export const SKILL_CARD_INLINE_TERM_LABEL_IDS = [
   "multiLock",
   "aoe",
+  "surrounding",
+  "fieldLocation",
   "pierce",
   "stun",
   "knockback",
@@ -28,6 +54,8 @@ export const SKILL_CARD_INLINE_TERM_LABEL_IDS = [
   "moveLock",
   "skillLock",
   "dotCompress",
+  "charge",
+  "block",
 ] as const satisfies readonly GameTermId[];
 
 export type SkillCardInlineTermLabelId =
@@ -69,10 +97,10 @@ export type SkillCardStatusChipTermId =
   (typeof SKILL_CARD_STATUS_CHIP_TERM_IDS)[number];
 
 const INLINE_TERM_LABEL_ID_SET = new Set<GameTermId>(
-  SKILL_CARD_INLINE_TERM_LABEL_IDS,
+  SKILL_CARD_INLINE_TERM_LABEL_IDS
 );
 const STATUS_CHIP_TERM_ID_SET = new Set<GameTermId>(
-  SKILL_CARD_STATUS_CHIP_TERM_IDS,
+  SKILL_CARD_STATUS_CHIP_TERM_IDS
 );
 
 /** State chip names must not appear as inline term labels in skill card body. */
@@ -83,20 +111,20 @@ export const SKILL_CARD_BODY_TERM_INCLUDE_IDS: ReadonlySet<GameTermId> =
   INLINE_TERM_LABEL_ID_SET;
 
 export function isSkillCardInlineTermLabelId(
-  termId: GameTermId,
+  termId: GameTermId
 ): termId is SkillCardInlineTermLabelId {
   return INLINE_TERM_LABEL_ID_SET.has(termId);
 }
 
 export function isSkillCardStatusChipTermId(
-  termId: GameTermId,
+  termId: GameTermId
 ): termId is SkillCardStatusChipTermId {
   return STATUS_CHIP_TERM_ID_SET.has(termId);
 }
 
 /** @deprecated Use isSkillCardInlineTermLabelId */
 export function isSkillCardTagTermId(
-  termId: GameTermId,
+  termId: GameTermId
 ): termId is SkillCardInlineTermLabelId {
   return isSkillCardInlineTermLabelId(termId);
 }

@@ -30,7 +30,7 @@ import {
   SKILL_TRIGGER_KIND_LABELS,
   SKILL_TRIGGER_KIND_OPTIONS,
   SKILL_TRIGGER_VALUE_LABELS,
-  STATUS_EFFECT_STAT_OPTIONS,
+  STAT_BUFF_TARGET_OPTIONS,
   TARGET_RULE_OVERRIDE_APPLY_TO_LABELS,
   TARGET_RULE_OVERRIDE_APPLY_TO_OPTIONS,
   TARGET_SHAPE_LABELS,
@@ -69,6 +69,7 @@ import type {
   SkillEffectKind,
   SkillTriggerKind,
   StatusEffectStat,
+  StatBuffTarget,
   TargetShape,
   PowerStepMode,
 } from "../battle/types.ts";
@@ -141,8 +142,12 @@ const STAT_LABELS: Record<StatusEffectStat, string> = {
   atk: "攻撃",
   def: "防御",
   reg: "魔法耐性",
-  damageTaken: "被ダメ",
   attackSpeed: "攻撃速度",
+};
+
+const STAT_BUFF_TARGET_LABELS: Record<StatBuffTarget, string> = {
+  ...STAT_LABELS,
+  damageTaken: "被ダメ",
 };
 
 const DEFAULT_DOT_DURATION_SEC = 5;
@@ -417,9 +422,9 @@ function appendCounterEffectFields(
             Array.isArray(response.debuffStat)
               ? response.debuffStat[0] ?? "atk"
               : response.debuffStat,
-            STATUS_EFFECT_STAT_OPTIONS.map((value) => ({
+            STAT_BUFF_TARGET_OPTIONS.map((value) => ({
               value,
-              label: STAT_LABELS[value],
+              label: STAT_BUFF_TARGET_LABELS[value],
             })),
             (debuffStat) =>
               patchEffect((prev) => ({
@@ -3790,9 +3795,9 @@ export class SkillEditorStep {
               Array.isArray(passive.buffStat)
                 ? passive.buffStat[0] ?? "atk"
                 : passive.buffStat ?? "atk",
-              STATUS_EFFECT_STAT_OPTIONS.map((value) => ({
+              STAT_BUFF_TARGET_OPTIONS.map((value) => ({
                 value,
-                label: STAT_LABELS[value],
+                label: STAT_BUFF_TARGET_LABELS[value],
               })),
               (buffStat) => {
                 this.patchPassive(
@@ -6064,9 +6069,9 @@ export class SkillEditorStep {
                 Array.isArray(effect.buffStat)
                   ? effect.buffStat[0]!
                   : effect.buffStat ?? "atk",
-                STATUS_EFFECT_STAT_OPTIONS.map((value) => ({
+                STAT_BUFF_TARGET_OPTIONS.map((value) => ({
                   value,
-                  label: STAT_LABELS[value],
+                  label: STAT_BUFF_TARGET_LABELS[value],
                 })),
                 (buffStat) =>
                   patchEffect((prev) =>
@@ -6258,9 +6263,9 @@ export class SkillEditorStep {
                 Array.isArray(effect.debuffStat)
                   ? effect.debuffStat[0]!
                   : effect.debuffStat ?? "atk",
-                STATUS_EFFECT_STAT_OPTIONS.map((value) => ({
+                STAT_BUFF_TARGET_OPTIONS.map((value) => ({
                   value,
-                  label: STAT_LABELS[value],
+                  label: STAT_BUFF_TARGET_LABELS[value],
                 })),
                 (debuffStat) =>
                   patchEffect((prev) =>

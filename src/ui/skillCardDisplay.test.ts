@@ -63,6 +63,46 @@ describe("resolveSkillCardDisplay", () => {
     expect(display.statusChips[1]?.termId).toBe("blazingFlame");
   });
 
+  it("extracts barrier chip for wardweaver multi-lock barrier active", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.actives.sp_wardweaver_active_2;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "ja" });
+    const display = resolveSkillCardDisplay(lines, def, "ja");
+
+    expect(display.statusChips).toEqual([
+      {
+        termId: "barrier",
+        title: "バリア",
+        summary: "攻撃力200%",
+      },
+    ]);
+    expect(display.headlineLines).toEqual([
+      "マルチロック 2 / 攻撃力の200%",
+    ]);
+  });
+
+  it("extracts bleed chip and shortens dot grant line for assassin active", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.actives.at_assassin_active_1;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "ja" });
+    const display = resolveSkillCardDisplay(lines, def, "ja");
+
+    expect(display.statusChips.some((chip) => chip.termId === "bleed")).toBe(
+      true,
+    );
+    expect(display.headlineLines).toEqual([
+      "攻撃力の115%の物理ダメージ",
+      "対象に出血が付与されているなら、このダメージは+130%される",
+      "その後攻撃した対象に5秒間毎秒攻撃力の30%の物理ダメージを付与",
+    ]);
+  });
+
   it("keeps multi-lock shape text in headline without separate tag row", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
@@ -119,7 +159,7 @@ describe("resolveSkillCardDisplay", () => {
     );
   });
 
-  it("keeps AoE shape text in headline without separate tag row", async () => {
+  it("keeps Nearby shape text in headline without separate tag row", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();
     const def = gameData.skillRegistry.actives.df_paladin_active_2;
@@ -128,7 +168,52 @@ describe("resolveSkillCardDisplay", () => {
     const lines = formatSkillCardLines(def!, { locale: "en" });
     const display = resolveSkillCardDisplay(lines, def, "en");
 
-    expect(display.headlineLines.some((line) => /aoe/i.test(line))).toBe(true);
+    expect(display.headlineLines.some((line) => /nearby/i.test(line))).toBe(
+      true
+    );
+  });
+
+  it("extracts stacking barrier chip for paladin Nearby active", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.actives.df_paladin_active_2;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "ja" });
+    const display = resolveSkillCardDisplay(lines, def, "ja");
+
+    expect(display.statusChips).toEqual([
+      {
+        termId: "barrier",
+        title: "バリア",
+        summary: "攻撃力20% / 加算",
+      },
+    ]);
+    expect(display.headlineLines).toEqual([
+      "周囲 5 / 味方に以下の効果を付与",
+      "魔法耐性+10、ダメージ軽減5%",
+    ]);
+  });
+
+  it("extracts ward and barrier chips for wardweaver emergency active", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.actives.sp_wardweaver_active_4;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "ja" });
+    const display = resolveSkillCardDisplay(lines, def, "ja");
+
+    expect(display.statusChips.map((chip) => chip.termId)).toEqual([
+      "wardBarrier",
+      "barrier",
+    ]);
+    expect(display.statusChips[0]?.summary).toBe("2スタック");
+    expect(display.statusChips[1]?.summary).toBe("攻撃力125%");
+    expect(display.headlineLines).toEqual([
+      "味方全体 ×2（ダメージ軽減10%）",
+      "攻撃力の125%",
+    ]);
   });
 
   it("keeps pierce shape text in headline without separate tag row", async () => {
@@ -142,6 +227,98 @@ describe("resolveSkillCardDisplay", () => {
 
     expect(display.headlineLines.some((line) => line.includes("貫通"))).toBe(
       true
+    );
+  });
+
+  it("extracts hot chip for alchemist Nearby active", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.actives.sp_alchemist_active_1;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "ja" });
+    const display = resolveSkillCardDisplay(lines, def, "ja");
+
+    expect(display.statusChips).toEqual([
+      {
+        termId: "hot",
+        title: "HoT",
+        summary: "maxHp×0.6% / 8秒",
+      },
+    ]);
+    expect(display.headlineLines).toEqual([
+      "周囲 7 / maxHp×0.6% 8秒 / 薬効+1",
+    ]);
+    expect(display.headlineLines.some((line) => /HoT/i.test(line))).toBe(false);
+  });
+
+  it("extracts hot chip for alchemist all-ally active", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.actives.sp_alchemist_active_2;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "ja" });
+    const display = resolveSkillCardDisplay(lines, def, "ja");
+
+    expect(display.statusChips[0]?.termId).toBe("hot");
+    expect(display.statusChips[0]?.summary).toBe("maxHp×0.8% / 10秒");
+    expect(display.headlineLines).toEqual(["味方全体 maxHp×0.8% 10秒"]);
+    expect(display.headlineLines.some((line) => /HoT/i.test(line))).toBe(false);
+  });
+
+  it("extracts herbalPotency chip for alchemist passive aura", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.passives.sp_alchemist_passive_1;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "ja" });
+    const display = resolveSkillCardDisplay(lines, def, "ja");
+
+    expect(display.statusChips).toEqual([
+      {
+        termId: "herbalPotency",
+        title: "薬効",
+        summary: "最大6 / maxHp×0.4% / +0.1%/スタック",
+      },
+    ]);
+    expect(display.headlineLines.some((line) => /HoT/i.test(line))).toBe(false);
+  });
+
+  it("extracts poisonWeapon chip for hunter passive", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.passives.at_hunter_passive_2;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "ja" });
+    const display = resolveSkillCardDisplay(lines, def, "ja");
+
+    expect(display.statusChips).toEqual([
+      {
+        termId: "poisonWeapon",
+        title: "毒の武器",
+        summary: "20% / 5秒 / 攻撃力10%",
+      },
+    ]);
+    expect(display.headlineLines[0]).not.toMatch(/poison/i);
+  });
+
+  it("extracts poison chip from hunter trap active nested effects", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.actives.at_hunter_active_1;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "ja" });
+    const display = resolveSkillCardDisplay(lines, def, "ja");
+
+    expect(display.statusChips.some((chip) => chip.termId === "poison")).toBe(
+      true,
+    );
+    expect(display.statusChips.find((chip) => chip.termId === "poison")?.summary).toContain(
+      "5秒",
     );
   });
 });

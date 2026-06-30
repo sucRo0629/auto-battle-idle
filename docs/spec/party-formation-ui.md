@@ -1,6 +1,6 @@
 # パーティ編成 UI
 
-実装：`src/game/gameScreen.ts`, `src/game/GameSession.ts`, `src/platform/DomFormationScreenHost.ts`, `src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/game-shell.css`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`, `src/ui/gameTermGlossary.ts`, `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/annotateGameTerms.ts`, `src/ui/GameTermPanel.ts`, `src/styles/game-term-panel.css`.**現行正本:** Class Select（直接選択 + 下部 Class Summary）+ Skills + Party Summary（4 影 + キャラ画像）。**Phase 4d:** 閲覧スキルカード（`formatSkillCardLines`）とインライン用語パネル（§6.4）を継続使用。
+実装：`src/game/gameScreen.ts`, `src/game/GameSession.ts`, `src/platform/DomFormationScreenHost.ts`, `src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/game-shell.css`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`, `src/ui/gameTermGlossary.ts`, `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/skillCardStatusChipExtract.ts`, `src/ui/annotateGameTerms.ts`, `src/ui/GameTermPanel.ts`, `src/styles/game-term-panel.css`.**現行正本:** Class Select（直接選択 + 下部 Class Summary）+ Skills + Party Summary（4 影 + キャラ画像）。**Phase 4d:** 閲覧スキルカード（`formatSkillCardLines`）とインライン用語パネル（§6.4）を継続使用。
 
 本ドキュメントは **メタメニューから開くパーティ編成画面**（`SkillMenuPanel`）の画面設計正本。戦闘フィールド上の隊形・座標は [battle-field.md](battle-field.md)、クラス・ロール・スキル習得は [classes-and-skills.md](classes-and-skills.md)、セーブ・Lv は [progression.md](progression.md) を参照。
 
@@ -329,7 +329,7 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 - **解放済み:** セクション内に **gap を空けた戦術カード**（最大 **2 列**）。隣接カードの共有罫線・表セル化はしない
 - **未解放:** カード群の下に **小さなチップ / ロック行**（`+ Lv{n}: {name}`）。通常カードと同じ面積を取らない
 - **スクロール:** **1280×720** 基準で M1 想定の習得スキル数の主要情報を読めること（§4.4.4）。完全表示が難しい場合のみ Detail area **限定スクロール** を許容
-- スキル本文は `resolveSkillCardDisplay().headlineLines` をカード内表示。`formatSkillCardLines` のうち状態定義に当たるリスト行は State Chip + State tooltip に分離し、情報欠けなく確認できるようにする
+- スキル本文は `resolveSkillCardDisplay().headlineLines` をカード内表示。`formatSkillCardLines` のうち状態定義に当たるリスト行は State Chip + State tooltip に分離し、情報欠けなく確認できるようにする（`skillCardStatusChipExtract.ts` が `def` から Chip を抽出し、本文から状態名を除去）
 
 #### スキル要約カード（1 スキルあたり）
 
@@ -355,14 +355,14 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 
 | フィールド | Active | Passive |
 | ---------- | ------ | ------- |
-| `metaLine` | 再使用・持続・硬直・発動条件を `/` 区切り 1 行（効果本文は含めない） | 発動タイミング要約（`formatPassiveTriggerSummary` 等） |
+| `metaLine` | 再使用・持続・硬直・移動停止あり・発動条件を `/` 区切り 1 行（効果本文は含めない） | 発動タイミング要約（`formatPassiveTriggerSummary` 等） |
 | `effectLines` | `def.effect[]` を 1 effect 1 行（`formatActiveEffectDetail` compact）。`blockResonanceConsume` は map から除外；consume 専用スキルは特殊 1 行 | `[formatPassiveEffect(...)]` 1 要素（`効果：` プレフィックスなし） |
 
 - 文節 split 禁止 — 改行単位は **effect 配列要素**（Passive は effect 種別 1 行）。リストが必要な passive は `effectLines` に `kind: "list"` ブロックを返す。State Chip 化できる項目は本文から状態名を除外し、状態定義は State tooltip 側で表示する
 - プレイヤー向けの距離・範囲・射程差分は内部 `px / 10` の単位なし数値で表示する（例: `50px` → `5`、`+30px` → `+3`）。`px` や `m` はスキル本文へ出さない
-- Active の `targetShape` が Multi-Lock / AoE / Pierce の場合、効果行は `[形状ラベル] {数値} / {効果}` 形式にする（[classes-and-skills.md §表示フォーマット](classes-and-skills.md#ゲーム用語表表示分類)）。Pierce の射程は `basicAttackRangePx` と同じなら省略し、差分がある場合のみ `射程+3` / `射程-3` のように表示する
+- Active の `targetShape` が Multi-Lock / AoE / 周囲 / 地点 / Pierce の場合、効果行は `[形状ラベル] {数値} / {効果}` 形式にする（[classes-and-skills.md §表示フォーマット](classes-and-skills.md#ゲーム用語表表示分類)）。Pierce の射程は `basicAttackRangePx` が渡されているとき **常に** 効果距離の絶対値で `貫通 3` のように表示する（未指定 `range` は持有者射程を用いる）
 - 並び順: 特殊ルール → 計算修飾 → 基礎効果 → 追加効果。複数要素は ` / ` 区切り
-- 同じ形状枠が連続する場合は、形状を各行へ重複表示せず `[形状] / {対象}に以下の効果を付与/適用` + 効果行へ畳む（例: `[AoE] 5 / 味方に以下の効果を付与` → `攻撃力+20%` → `攻撃速度+15%`）
+- 同じ形状枠が連続する場合は、形状を各行へ重複表示せず `[形状] / {対象}に以下の効果を付与/適用` + 続く効果を **1 行に「、」区切り**で畳む（例: `[周囲] 5 / 味方に以下の効果を付与` → `攻撃力+20%、攻撃速度+15%`）
 - **別枠タグ行は持たない**。形状・特殊ルールは本文内 Inline Term Label のみ
 - 1 行説明の `formatActiveDescription` / `formatPassiveDescription` は **エディタ**互換として維持（編成 UI は上記 `formatSkillCardLines`）
 
@@ -377,10 +377,11 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 
 | 層 | 内容 | 注釈 UI |
 | -- | ---- | ------- |
+| `metaLine`（基本情報） | 再使用・持続・硬直・移動停止あり・発動条件 | 原則リンクなし。**例外:** `硬直` のみ用語 tooltip（`SKILL_CARD_META_LINE_TERM_IDS`） |
 | 効果行（Plain Text + Inline Term Label） | 主要効果の短文。特殊ルールは本文内ラベル + tooltip | Inline Term Label のみ **用語 tooltip**（`annotateGameTermsWithTooltip` + inline allowlist） |
 | State Chip | 戦闘中に保持される状態の短い要約 | **State tooltip**（`resolveStatusChipTooltip` / `statusDefinition`） |
 
-**実装:** `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/GameTermTooltip.ts`, `src/ui/annotateGameTerms.ts`（`annotateGameTermsWithTooltip`）
+**実装:** `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/skillCardStatusChipExtract.ts`, `src/ui/GameTermTooltip.ts`, `src/ui/annotateGameTerms.ts`（`annotateGameTermsWithTooltip`）
 
 **クラス要約・用語パネル:** クラス `summary` や戦闘 HUD バッジは従来どおり **クリック用語パネル**（`GameTermPanel`）を維持。
 
@@ -431,7 +432,7 @@ State tooltip は、その状態自体の定義のみを説明する。
 
 | 種類 | 対象 | 説明する内容 |
 | ---- | ---- | ------------ |
-| **Inline Term Label tooltip** | ゲーム固有ルール（Multi-Lock、貫通、DEF無視 等） | ルールの要約（2〜3 行） |
+| **Inline Term Label tooltip** | ゲーム固有ルール（Multi-Lock、貫通、防御力無視 等） | ルールの要約（2〜3 行） |
 | **State tooltip** | 戦闘中に保持される状態（バリア、種火、DoT 等） | その状態の定義だけ |
 
 スキルカード本文では、State Chip 対象の状態名を **Inline Term Label 化しない**。本文には付与の要約のみ。Plain Text（物理ダメージ、攻撃力 等）はリンク化しない。
@@ -495,15 +496,15 @@ State tooltip は、その状態自体の定義のみを説明する。
 
 ```
 [マルチロック] 2 / 攻撃力の90%の魔法ダメージ
-[貫通] 射程+3 / 攻撃力の50%の物理ダメージ
-[AoE] 5 / 味方の攻撃力+15%
-[AoE] 5 / 味方に以下の効果を付与
+[貫通] 13 / 攻撃力の50%の物理ダメージ
+[周囲] 5 / 味方の攻撃力+15%
+[周囲] 5 / 味方に以下の効果を付与
 攻撃力+20%
 攻撃速度+15%
 [スタン] 1.5秒
 ```
 
-- Multi-Lock / AoE / Pierce は本文内 Inline Term Label。対象数・範囲・射程差分はラベル直後の数値
+- Multi-Lock / AoE / 周囲 / 地点 / Pierce は本文内 Inline Term Label。対象数・範囲・射程差分はラベル直後の数値
 - メカニクス説明（対象不足時の再配分等）は **Inline tooltip** に書き、本文へ重複させない
 - 物理ダメージ / 魔法ダメージ / 攻撃力 等は Plain Text（リンク化しない）
 
@@ -531,7 +532,7 @@ State tooltip は、その状態自体の定義のみを説明する。
 | 種類 | 項目 | 内容 |
 | ---- | ---- | ---- |
 | Inline Term Label | 長さ | 2〜3 行。処理順・内部実装は入れない |
-| Inline Term Label | 辞書 | `gameTermGlossary.ts` の `tooltip`。省略時は `description` 先頭行 |
+| Inline Term Label | 辞書 | `description`（正本）。`tooltip` は短文化が必要なときのみ。ホバーは `resolveGameTermTooltip` |
 | State Chip | 内容 | [State tooltip](#state-tooltip) — 状態定義のみ。スキル付与条件は含めない |
 | State Chip | 辞書 | `gameTermGlossary.ts` の `statusDefinition` または状態用 `description` |
 | 共通 | 見た目 | 濃色背景・強めの枠・用語名見出し（`game-term-tooltip.css`） |

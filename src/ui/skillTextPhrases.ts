@@ -7,13 +7,21 @@ import {
 } from "./gameTermGlossary.ts";
 import { formatUiDistanceValue } from "./formatUiDistance.ts";
 import { getSkillTextLocale } from "./skillTextLocale.ts";
-import type { StatusEffectStat } from "../battle/types.ts";
+import type { StatusEffectStat, StatBuffTarget } from "../battle/types.ts";
+import { BUFF_TARGET_KIND_LABELS } from "../battle/data/gameDataSchema.ts";
 
 function L() {
   return getSkillTextLocale();
 }
 
 export function skillStat(stat: StatusEffectStat): string {
+  return resolveStatusEffectStatDisplayName(stat, L());
+}
+
+export function skillStatBuffTarget(stat: StatBuffTarget): string {
+  if (stat === "damageTaken") {
+    return BUFF_TARGET_KIND_LABELS.damageTaken;
+  }
   return resolveStatusEffectStatDisplayName(stat, L());
 }
 
@@ -164,9 +172,9 @@ export function phraseMultiLockEffectSentence(
 
 export function phraseChargesAvailable(count: number): string {
   if (L() === "en") {
-    return `${count} charge${count === 1 ? "" : "s"} available`;
+    return `Charge available ${count}`;
   }
-  return `${count}回チャージ可能`;
+  return `チャージ可能 ${count}`;
 }
 
 export function phraseAoeAuraIntro(): string {

@@ -24,7 +24,6 @@ export type GameTermId =
   | "dot"
   | "damageReduction"
   | "damageIncrease"
-  | "damageTaken"
   | "counter"
   | "evasion"
   | "invulnerable"
@@ -32,6 +31,8 @@ export type GameTermId =
   | "skillLock"
   | "multiLock"
   | "aoe"
+  | "surrounding"
+  | "fieldLocation"
   | "pierce"
   | "dotCompress"
   | "hot"
@@ -66,9 +67,15 @@ export type GameTermId =
 export interface GameTermEntry {
   id: GameTermId;
   title: Record<GameTermLocale, string>;
-  /** 用語辞典（用語パネル・HUD クリック説明）。ゲーム全体の共通用語向け。 */
+  /**
+   * 用語パネル・HUD バッジクリック時の本文（正本）。
+   * Inline Term Label のホバーは `resolveGameTermTooltip` がここから先頭 2 行を流用する。
+   */
   description?: Record<GameTermLocale, string>;
-  /** 用語ホバー（スキルカード本文・タグの短い説明）。省略時は `description` 先頭行から生成。 */
+  /**
+   * Inline Term Label ホバー専用の短文化（2〜3 行）。
+   * パネル本文より短く書くときだけ指定する。同文なら省略（`description` に一本化）。
+   */
   tooltip?: Record<GameTermLocale, string>;
   /** 状態辞典（状態チップホバー）。状態定義のみ。固有状態の正本。 */
   statusDefinition?: Record<GameTermLocale, string>;
@@ -95,7 +102,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "barrier",
     title: { ja: "バリア" },
     description: {
-      ja: "HPとは別の被ダメージを受け止める値。HPより先に消費される。\nHUDではHPバーに重なる明るいバーとして表示される。\nバリアが付与されている対象に更にバリアが付与される場合、原則付与する量が多い方のバリアで置き換えられる。",
+      ja: "HPより先にダメージを受け止める値。\nすでにバリアがある場合は、現在値と付与量のうち大きい方を残す。\nHUDではHPバーに重なる明るいバーとして表示される。",
     },
     aliases: { ja: ["バリア"] },
   },
@@ -103,7 +110,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "wardBarrier",
     title: { ja: "障壁" },
     description: {
-      ja: "被ダメージを大きく軽減するスタック型の防御バフ。\nバリアより先に消費され、1回の攻撃につき1つ消費される。",
+      ja: "次に受ける攻撃の被ダメージを90%軽減する結界師固有の状態。\nバリアより先に効果を発揮し、攻撃1回につき1つ消費される。",
     },
     aliases: { ja: ["障壁"] },
     statusCategory: "wardBarrier",
@@ -112,7 +119,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "windMark",
     title: { ja: "乾印" },
     description: {
-      ja: "印術師が付与する多数戦向けの風属性の印。\n起爆により範囲攻撃を発生させる。\n自動起爆した場合は攻撃を行わず周囲へ拡散しスタックを伝播させる。",
+      ja: "次に同じ属性の攻撃を受けると起爆する、印術師固有の風属性の印。\n多数戦向けで、起爆すると範囲攻撃を発生させる。\n効果時間中に起爆しなかった場合、ダメージを与えず周囲の対象へ移動する。",
     },
     aliases: { ja: ["乾印"] },
     statusCategory: "windMark",
@@ -121,7 +128,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "earthMark",
     title: { ja: "坤印" },
     description: {
-      ja: "印術師が付与する少数戦向けの地属性の印。\n起爆により単体攻撃を発生させる。\n自動起爆した場合は攻撃を行わず同対象へ収束しスタックを増加させる。",
+      ja: "次に同じ属性の攻撃を受けると起爆する、印術師固有の地属性の印。\n少数戦向けて、起爆すると単体攻撃を発生させる。\n効果時間中に起爆しなかった場合、ダメージを与えず同じ対象の坤印スタックを増加させる。",
     },
     aliases: { ja: ["坤印"] },
     statusCategory: "earthMark",
@@ -139,7 +146,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "block",
     title: { ja: "ブロック" },
     description: {
-      ja: "物理攻撃を受けた際に一定確率で発動し、被ダメージを（25%＋攻撃力1につき0.1%、上限100%）軽減する。\nブロック率は加算で積み上がる。",
+      ja: "物理攻撃を受けた時、一定確率で発動する軽減効果。\n発動時、25%＋攻撃力1につき0.1%軽減する。上限は100%。\nブロック率は加算で積み上がる。",
     },
     aliases: { ja: ["ブロック"] },
     statusCategory: "block",
@@ -148,7 +155,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "magicBlock",
     title: { ja: "魔法ブロック" },
     description: {
-      ja: "魔法攻撃を受けた際に一定確率で発動し、被ダメージを15%軽減する。\n魔法ブロック率は加算で積み上がる。物理ブロックとは別判定。",
+      ja: "魔法攻撃を受けた時、一定確率で発動する護法士固有の軽減効果。\n発動時、ダメージを15%軽減する。\n魔法ブロック率は加算で積み上がる。通常のブロックとは別判定。",
     },
     aliases: { ja: ["魔法ブロック"] },
     statusIconCategory: "block",
@@ -163,20 +170,17 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   },
   {
     id: "charge",
-    title: { ja: "チャージ" },
+    title: { ja: "チャージ可能 N" },
     description: {
-      ja: "「N回チャージ可能」と表示されるスキルのストック機能。\n再使用準備が整っても発動条件を満たさない場合、使用可能な1回分をストックに蓄え、次の再使用ゲージを進められる。\n発動条件が成立すればストックから優先して発動する。",
+      ja: "スキルを保持できる機能（N = 最大保持数）。\n再使用準備が整っても発動条件を満たさない場合、使用可能回数を蓄えて次の再使用ゲージを進められる。\n発動時は、蓄えた使用可能回数から優先して消費する。",
     },
-    aliases: { ja: ["チャージ"] },
+    aliases: { ja: ["チャージ可能"] },
   },
   {
     id: "stun",
-    title: { ja: "スタン" },
-    tooltip: {
-      ja: "行動不能状態。スキル発動・通常攻撃・移動が停止する。",
-    },
+    title: { ja: "スタン N" },
     description: {
-      ja: "行動不能状態。スキル発動・通常攻撃・移動が停止し、通常攻撃の再使用時間のみリセットされる。\nただしアクティブスキルの再使用時間は停止せず、リセットもされない。",
+      ja: "一定時間、行動できなくなる状態（N = 効果時間）。\nスキル発動・通常攻撃・移動を行わない。通常攻撃の再使用時間はリセットされ、スキルの再使用時間は進行する。",
     },
     aliases: { ja: ["スタン"] },
     statusCategory: "stun",
@@ -185,7 +189,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "dot",
     title: { ja: "DoT" },
     description: {
-      ja: "継続ダメージ（Damage over Time）の意。効果時間中毎秒ダメージを与え続ける状態効果の総称。",
+      ja: "効果時間中毎秒ダメージを与え続ける状態効果の総称。",
     },
     aliases: { ja: ["DoT"] },
     statusCategory: "dot",
@@ -200,42 +204,49 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   },
   {
     id: "multiLock",
-    title: { ja: "マルチロック" },
-    tooltip: {
-      ja: "対象数まで効果を適用する。\n対象が不足している場合、不足分は同じ対象へ再度適用する。",
-    },
+    title: { ja: "マルチロック N" },
     description: {
-      ja: "対象数まで効果を適用する。対象が不足している場合、不足分は同じ対象へ再度適用する。",
+      ja: "複数の対象に効果を適用する（N = 対象数）。\n対象が不足している場合、不足分は同じ対象へ再度適用する。",
     },
     aliases: { ja: ["マルチロック"] },
   },
   {
     id: "aoe",
-    title: { ja: "AoE" },
-    tooltip: {
-      ja: "範囲内の対象へ効果を適用する形状。",
-    },
+    title: { ja: "AoE N" },
     description: {
-      ja: "範囲内の対象へ効果を適用する形状。",
+      ja: "対象を中心に効果を適用する（N = 半径）。",
     },
     aliases: { ja: ["AoE"] },
   },
   {
-    id: "pierce",
-    title: { ja: "貫通" },
-    tooltip: {
-      ja: "貫通し、複数対象へ順に効果を適用する形状。",
-    },
+    id: "surrounding",
+    title: { ja: "周囲 N" },
     description: {
-      ja: "貫通し、複数対象へ順に効果を適用する形状。",
+      ja: "使用者を中心に効果を適用する（N = 半径）。",
+    },
+    aliases: { ja: ["周囲"] },
+  },
+  {
+    id: "fieldLocation",
+    title: { ja: "地点 M" },
+    description: {
+      ja: "戦場上の指定座標を中心に効果を適用する（N = 半径）。",
+    },
+    aliases: { ja: ["地点"] },
+  },
+  {
+    id: "pierce",
+    title: { ja: "貫通 N" },
+    description: {
+      ja: "使用者起点として効果を適用する（N = 射程）。",
     },
     aliases: { ja: ["貫通"] },
   },
   {
     id: "skillLock",
     title: { ja: "硬直" },
-    description: {
-      ja: "スキル使用後、一定時間スキルと通常攻撃の発動を止める効果。",
+    tooltip: {
+      ja: "硬直中は行動できず、スキルの再使用時間も停止する。\n移動停止ありの効果では、移動も行わない。",
     },
     aliases: { ja: ["硬直"] },
   },
@@ -250,17 +261,10 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     statusCategory: "damageIncrease",
   },
   {
-    id: "damageTaken",
-    title: { ja: "被ダメ" },
-  },
-  {
     id: "counter",
     title: { ja: "反撃" },
     tooltip: {
       ja: "攻撃を受けた際、攻撃者へスキルで設定した効果を返す。",
-    },
-    description: {
-      ja: "攻撃を受けた際、攻撃者にスキルで設定した効果を与える反撃効果。",
     },
     aliases: { ja: ["反撃"] },
     statusCategory: "counter",
@@ -268,11 +272,8 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   {
     id: "evasion",
     title: { ja: "回避" },
-    tooltip: {
-      ja: "攻撃を完全に避け、ダメージを受けない確率。",
-    },
     description: {
-      ja: "攻撃を完全に避け、ダメージを受けない確率。",
+      ja: "攻撃を受けた時、一定確率で発動する攻撃無効効果。\n発動時、その攻撃は当たらなかったことになる。",
     },
     aliases: { ja: ["回避"] },
     statusCategory: "evasion",
@@ -310,7 +311,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     description: {
       ja: "DoTの一種。内容はスキルごとに異なる。",
     },
-    aliases: { ja: ["毒蔓延", "毒"] },
+    aliases: { ja: ["毒"] },
     statusCategory: "poison",
   },
   {
@@ -324,47 +325,35 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   },
   {
     id: "knockback",
-    title: { ja: "ノックバック" },
-    tooltip: {
-      ja: "対象を後方へ押し出す効果。距離はスキルごとに異なる。",
-    },
+    title: { ja: "ノックバック N" },
     description: {
-      ja: "対象を後方へ押し出す効果。距離はスキルごとに異なる。",
+      ja: "対象を距離Nだけ後方に移動させ、その後移動を1.5秒止める効果。",
     },
     aliases: { ja: ["ノックバック"] },
   },
   {
     id: "defenseIgnoreDef",
-    title: { ja: "DEF無視" },
-    tooltip: {
-      ja: "攻撃時、対象の防御力を一定割合無視する。",
-    },
+    title: { ja: "防御力無視" },
     description: {
       ja: "攻撃時、対象の防御力を一定割合無視する。",
     },
-    aliases: { ja: ["DEF無視"] },
+    aliases: { ja: ["防御力無視"] },
   },
   {
     id: "damageReductionIgnore",
     title: { ja: "軽減無視" },
-    tooltip: {
-      ja: "対象のダメージ軽減効果を無視してダメージを与える。",
-    },
     description: {
       ja: "対象のダメージ軽減効果を無視してダメージを与える。",
     },
-    aliases: { ja: ["軽減無視", "DR無視"] },
+    aliases: { ja: ["軽減無視"] },
   },
   {
     id: "barrierPierce",
     title: { ja: "バリア無視" },
-    tooltip: {
-      ja: "対象のバリアを貫通してHPへダメージを与える。",
-    },
     description: {
-      ja: "対象のバリアを貫通してHPへダメージを与える。",
+      ja: "対象のバリアを無視してHPへダメージを与える。",
     },
-    aliases: { ja: ["バリア無視", "barrier貫通"] },
+    aliases: { ja: ["バリア無視"] },
   },
   {
     id: "healReservation",
@@ -578,10 +567,7 @@ export function resolveGameTermTitle(
   return entry.title[locale] ?? entry.title.ja;
 }
 
-function firstDescriptionLines(
-  description: string,
-  maxLines = 2
-): string {
+function firstDescriptionLines(description: string, maxLines = 2): string {
   return description
     .split("\n")
     .map((line) => line.trim())
@@ -636,7 +622,6 @@ const STATUS_EFFECT_STAT_TERM_ID: Record<StatusEffectStat, GameTermId> = {
   atk: "atk",
   def: "def",
   reg: "reg",
-  damageTaken: "damageTaken",
   attackSpeed: "attackSpeed",
 };
 
@@ -711,7 +696,7 @@ export function statusBadgeHasClickableGameTerm(
 
 export function resolveStatusBadgeTooltipLabel(
   badge: StatusEffectBadgeDisplay,
-  locale: GameTermLocale = "ja",
+  locale: GameTermLocale = "ja"
 ): string {
   const label = resolveStatusDisplayCategoryLabel(badge.category, locale);
   if (badge.stackCount !== undefined && badge.stackCount > 1) {
@@ -723,7 +708,7 @@ export function resolveStatusBadgeTooltipLabel(
 export function resolveCompactStatusOverflowTooltipLabel(
   badges: StatusEffectBadgeDisplay[],
   visibleCount: number,
-  locale: GameTermLocale = "ja",
+  locale: GameTermLocale = "ja"
 ): string {
   return sortBadgesForCompactView(badges)
     .slice(visibleCount)

@@ -7,6 +7,7 @@ import type {
   SkillRegistry,
   StatusEffect,
   StatusEffectStat,
+  StatBuffTarget,
 } from '../battle/types.ts';
 import { asStatusEffectStatList, filterStatusEffectStats } from '../battle/types.ts';
 import { parseStatBuffModifiers } from '../battle/statBuffModifiers.ts';
@@ -47,7 +48,7 @@ function isSelfTargetRule(
 
 function pushStatBuffEffect(
   effects: StatusEffect[],
-  stat: StatusEffectStat,
+  stat: StatBuffTarget,
   multiplier?: number,
   flatBonus?: number,
 ): void {

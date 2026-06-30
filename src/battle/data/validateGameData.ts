@@ -99,7 +99,7 @@ import {
   DEBUFF_SUB_KINDS,
   SPECIAL_EFFECT_APPLY_TO_OPTIONS,
   BUFF_TARGET_KINDS,
-  STATUS_EFFECT_STATS,
+  STAT_BUFF_TARGETS,
   TARGET_RULES,
   MOVE_MODES,
   ALL_SKILL_EFFECT_ANIM_IDS,
@@ -156,7 +156,7 @@ const SKILL_EFFECT_ANIM_IDS_SET = new Set<SkillEffectAnimId>(
 );
 const SKILL_TRIGGER_KINDS_SET = new Set<SkillTriggerKind>(SKILL_TRIGGER_KINDS);
 const PASSIVE_EFFECTS = new Set<PassiveEffectKind>(PASSIVE_EFFECT_KINDS);
-const STATUS_EFFECT_STATS_SET = new Set<string>(STATUS_EFFECT_STATS);
+const STAT_BUFF_TARGETS_SET = new Set<string>(STAT_BUFF_TARGETS);
 const VALID_REG = new Set<number>(VALID_REG_VALUES);
 const GROWTH_TIERS = new Set<GrowthTier>([1, 2, 3]);
 const GROWTH_PRESET_KEYS = new Set<GrowthPresetKey>(['attacker', 'caster']);
@@ -434,7 +434,7 @@ function parseStatBuffModifierEntry(
     invalidField(entryContext, 'entry', 'must be an object');
   }
   const obj = entry as Record<string, unknown>;
-  const stat = requireStatusEffectStat(obj, 'stat', entryContext);
+  const stat = requireStatBuffTarget(obj, 'stat', entryContext);
   if (Array.isArray(stat)) {
     invalidField(entryContext, 'stat', 'must be a single status stat');
   }
@@ -477,21 +477,21 @@ function parseStatBuffModifierEntries(
   );
 }
 
-function requireStatusEffectStat(
+function requireStatBuffTarget(
   obj: Record<string, unknown>,
   key: string,
   context: string,
-): StatusEffectStat | StatusEffectStat[] {
+): import('../types.ts').StatBuffTarget | import('../types.ts').StatBuffTarget[] {
   const value = obj[key];
   if (typeof value === 'string') {
-    if (!STATUS_EFFECT_STATS_SET.has(value)) {
+    if (!STAT_BUFF_TARGETS_SET.has(value)) {
       invalidField(
         context,
         key,
-        `must be one of ${[...STATUS_EFFECT_STATS_SET].join(', ')}`,
+        `must be one of ${[...STAT_BUFF_TARGETS_SET].join(', ')}`,
       );
     }
-    return value as StatusEffectStat;
+    return value as import('../types.ts').StatBuffTarget;
   }
   if (Array.isArray(value)) {
     if (value.length === 0) {
@@ -499,15 +499,15 @@ function requireStatusEffectStat(
     }
     for (let i = 0; i < value.length; i++) {
       const item = value[i];
-      if (typeof item !== 'string' || !STATUS_EFFECT_STATS_SET.has(item)) {
+      if (typeof item !== 'string' || !STAT_BUFF_TARGETS_SET.has(item)) {
         invalidField(
           context,
           `${key}[${i}]`,
-          `must be one of ${[...STATUS_EFFECT_STATS_SET].join(', ')}`,
+          `must be one of ${[...STAT_BUFF_TARGETS_SET].join(', ')}`,
         );
       }
     }
-    return value as StatusEffectStat[];
+    return value as import('../types.ts').StatBuffTarget[];
   }
   missingField(context, key);
 }
@@ -2177,7 +2177,7 @@ function parseCounterResponseEntry(
   }
 
   if (kind === 'debuff') {
-    const debuffStat = requireStatusEffectStat(obj, 'debuffStat', context);
+    const debuffStat = requireStatBuffTarget(obj, 'debuffStat', context);
     const debuffDurationSec = requireNumber(obj, 'debuffDurationSec', context);
     requireBuffOrDebuffModifier(
       obj,
@@ -2916,7 +2916,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
         ? 'stat'
         : requireEnum(obj, 'buffSubKind', context, BUFF_SUB_KINDS_SET);
     if (buffSubKind === 'stat') {
-      const buffStat = requireStatusEffectStat(obj, 'buffStat', context);
+      const buffStat = requireStatBuffTarget(obj, 'buffStat', context);
       const buffDurationSec = requireNumber(obj, 'buffDurationSec', context);
       requireBuffOrDebuffModifier(
         obj,
@@ -3329,7 +3329,7 @@ export function parseSkillEffect(entry: unknown, context: string): SkillEffectDe
       ? 'stat'
       : requireEnum(obj, 'debuffSubKind', context, DEBUFF_SUB_KINDS_SET);
   if (debuffSubKind === 'stat') {
-    const debuffStat = requireStatusEffectStat(obj, 'debuffStat', context);
+    const debuffStat = requireStatBuffTarget(obj, 'debuffStat', context);
     const debuffDurationSec = requireNumber(obj, 'debuffDurationSec', context);
     requireBuffOrDebuffModifier(
       obj,
@@ -3841,7 +3841,7 @@ function requirePassiveEffectParams(
           debuffTargetRule,
           ...targetingFields,
           ...periodicFields,
-          debuffStat: requireStatusEffectStat(obj, 'debuffStat', context),
+          debuffStat: requireStatBuffTarget(obj, 'debuffStat', context),
           ...(() => {
             requireBuffOrDebuffModifier(
               obj,
@@ -4783,7 +4783,7 @@ function requirePassiveEffectParams(
       };
     }
     case 'selfHpRatioBuff': {
-      const buffStat = requireStatusEffectStat(obj, 'buffStat', context);
+      const buffStat = requireStatBuffTarget(obj, 'buffStat', context);
       const buffMultiplierMax = parseOptionalNumber(
         obj,
         'buffMultiplierMax',

@@ -14,16 +14,17 @@ import { segmentTextByGameTerms } from "./annotateGameTerms.ts";
 import {
   isSkillCardStatusChipTermId,
   SKILL_CARD_STATUS_CHIP_TERM_IDS,
+  type SkillCardStatusChip,
 } from "./skillCardDisplayRules.ts";
+import {
+  extractStatusChipsFromSkillDef,
+  mergeStatusChips,
+  sanitizeHeadlineLineForStatusChips,
+} from "./skillCardStatusChipExtract.ts";
 
 const MAX_HEADLINE_LINES = 3;
 
-export type SkillCardStatusChip = {
-  termId: GameTermId;
-  title: string;
-  summary: string;
-};
-
+export type { SkillCardStatusChip };
 export type SkillCardDisplay = {
   metaLine: string;
   headlineLines: string[];
@@ -124,18 +125,18 @@ function listItemToStatusChip(
 
 export function resolveSkillCardDisplay(
   lines: SkillCardLines,
-  _def: ActiveSkillDef | PassiveSkillDef | undefined,
+  def: ActiveSkillDef | PassiveSkillDef | undefined,
   locale: GameTermLocale
 ): SkillCardDisplay {
   const headlineLines: string[] = [];
-  const statusChips: SkillCardStatusChip[] = [];
+  const listChips: SkillCardStatusChip[] = [];
 
   for (const line of lines.effectLines) {
     if (isSkillCardEffectList(line)) {
       for (const item of line.items) {
         const chip = listItemToStatusChip(item, locale);
         if (chip) {
-          statusChips.push(chip);
+          listChips.push(chip);
           continue;
         }
         if (headlineLines.length < MAX_HEADLINE_LINES) {
@@ -149,9 +150,15 @@ export function resolveSkillCardDisplay(
     headlineLines.push(line);
   }
 
+  const defChips = def ? extractStatusChipsFromSkillDef(def, locale) : [];
+  const statusChips = mergeStatusChips(listChips, defChips);
+  const sanitizedHeadlines = headlineLines.map((line) =>
+    sanitizeHeadlineLineForStatusChips(line, statusChips, locale)
+  );
+
   return {
     metaLine: lines.metaLine,
-    headlineLines,
+    headlineLines: sanitizedHeadlines,
     statusChips,
   };
 }

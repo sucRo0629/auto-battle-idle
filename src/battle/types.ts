@@ -155,7 +155,7 @@ export type TargetStat = "hp" | "maxHp" | "atk" | "def" | "reg";
 export type TargetStatOrder = "highest" | "lowest" | "ratio";
 
 /** バフフィルタタグ（gameDataSchema.BUFF_FILTER_TAGS と同期） */
-export type BuffFilterTag = StatusEffectStat | "hot" | "block" | "evasion";
+export type BuffFilterTag = StatBuffTarget | "hot" | "block" | "evasion";
 
 export type TargetSpec =
   | { kind: "self" }
@@ -337,7 +337,7 @@ export interface StatusEffect {
   id: string;
   kind: "buff" | "debuff" | "cc";
   /** buff/debuff 用（stat 系） */
-  stat?: StatusEffectStat;
+  stat?: StatBuffTarget;
   /** HoT/DoT/CC バッジ用 */
   overlay?:
     | "hot"
@@ -435,19 +435,24 @@ export type StatusEffectStat =
   | "atk"
   | "def"
   | "reg"
-  | "damageTaken"
   | "attackSpeed";
+
+/** 被ダメージ倍率（StatusEffectStat とは別系統） */
+export type DamageTakenStat = "damageTaken";
+
+/** stat buff/debuff の対象（スキル buffStat/debuffStat・StatusEffect.stat） */
+export type StatBuffTarget = StatusEffectStat | DamageTakenStat;
 
 /** stat buff: ステごとの倍率/固定値。2件以上は正本、1件は buffStat レガシーでも可 */
 export interface StatBuffModifierEntry {
-  stat: StatusEffectStat;
+  stat: StatBuffTarget;
   multiplier?: number;
   flatBonus?: number;
 }
 
 /** デバフフィルタタグ（gameDataSchema.DEBUFF_FILTER_TAGS と同期） */
 export type DebuffFilterTag =
-  | StatusEffectStat
+  | StatBuffTarget
   | "dot"
   | "bleed"
   | "poison"
@@ -517,7 +522,7 @@ export interface BasicAttackTransformSpec {
 }
 export type DebuffSubKind = "stat" | "dot" | "stun";
 
-export type BuffTargetKind = StatusEffectStat | "evasion" | "block";
+export type BuffTargetKind = StatBuffTarget | "evasion" | "block";
 
 export interface DefenseIgnoreDefSpec {
   mode: "flat" | "percent";
@@ -540,12 +545,20 @@ const STATUS_EFFECT_STAT_VALUES: readonly StatusEffectStat[] = [
   "atk",
   "def",
   "reg",
-  "damageTaken",
   "attackSpeed",
+];
+
+const STAT_BUFF_TARGET_VALUES: readonly StatBuffTarget[] = [
+  ...STATUS_EFFECT_STAT_VALUES,
+  "damageTaken",
 ];
 
 export function isStatusEffectStat(value: string): value is StatusEffectStat {
   return (STATUS_EFFECT_STAT_VALUES as readonly string[]).includes(value);
+}
+
+export function isStatBuffTarget(value: string): value is StatBuffTarget {
+  return (STAT_BUFF_TARGET_VALUES as readonly string[]).includes(value);
 }
 
 export function filterStatusEffectStats(
@@ -557,11 +570,27 @@ export function filterStatusEffectStats(
   );
 }
 
-export function asStatusEffectStatList(
-  stat: StatusEffectStat | StatusEffectStat[] | undefined
-): StatusEffectStat[] {
+export function filterStatBuffTargets(
+  stat: BuffTargetKind | BuffTargetKind[] | undefined
+): StatBuffTarget[] {
+  const list = Array.isArray(stat) ? stat : stat !== undefined ? [stat] : [];
+  return list.filter((entry): entry is StatBuffTarget =>
+    isStatBuffTarget(entry)
+  );
+}
+
+export function asStatBuffTargetList(
+  stat: StatBuffTarget | StatBuffTarget[] | undefined
+): StatBuffTarget[] {
   if (!stat) return [];
   return Array.isArray(stat) ? stat : [stat];
+}
+
+/** @deprecated use asStatBuffTargetList */
+export function asStatusEffectStatList(
+  stat: StatBuffTarget | StatBuffTarget[] | undefined
+): StatBuffTarget[] {
+  return asStatBuffTargetList(stat);
 }
 
 /** runtime-only: FrontlineOwner から除外する一時アクセス（シリアライズしない） */
@@ -830,7 +859,7 @@ export interface PassiveSkillDef {
   debuffScatterHitCount?: number;
   debuffScatterDurationSec?: number;
   debuffScatterSpreadRate?: number;
-  debuffStat?: StatusEffectStat | StatusEffectStat[];
+  debuffStat?: StatBuffTarget | StatBuffTarget[];
   debuffMultiplier?: number;
   debuffFlatBonus?: number;
   /** stat debuff 持続（秒）。aura 未指定時は無限、定期発動時は必須 */
@@ -1337,7 +1366,7 @@ export interface BasicAttackTransformSkillEffect extends SkillEffectCommon {
 export interface DebuffSkillEffect extends SkillEffectCommon {
   type: "debuff";
   debuffSubKind?: DebuffSubKind;
-  debuffStat?: StatusEffectStat | StatusEffectStat[];
+  debuffStat?: StatBuffTarget | StatBuffTarget[];
   debuffMultiplier?: number;
   debuffFlatBonus?: number;
   debuffDurationSec?: number;
@@ -1425,7 +1454,7 @@ export type CounterResponseDef =
     }
   | {
       kind: "debuff";
-      debuffStat: StatusEffectStat | StatusEffectStat[];
+      debuffStat: StatBuffTarget | StatBuffTarget[];
       debuffMultiplier?: number;
       debuffFlatBonus?: number;
       debuffDurationSec: number;

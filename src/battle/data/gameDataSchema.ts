@@ -25,6 +25,7 @@ import type {
   SkillTriggerKind,
   SpecialEffectApplyTo,
   StatusEffectStat,
+  StatBuffTarget,
   TargetRule,
   TargetShape,
   TargetSide,
@@ -572,9 +573,13 @@ export const STATUS_EFFECT_STATS = [
   "atk",
   "def",
   "reg",
-  "damageTaken",
   "attackSpeed",
 ] as const satisfies readonly StatusEffectStat[];
+
+export const STAT_BUFF_TARGETS = [
+  ...STATUS_EFFECT_STATS,
+  "damageTaken",
+] as const satisfies readonly StatBuffTarget[];
 export const VALID_REG_VALUES = [0, 5, 10, 15, 20] as const;
 export const JOB_TIERS = [1, 2] as const;
 
@@ -817,6 +822,10 @@ export const EDITOR_PASSIVE_EFFECT_KIND_OPTIONS: (typeof EDITOR_PASSIVE_EFFECT_K
 
 export const STATUS_EFFECT_STAT_OPTIONS: StatusEffectStat[] = [
   ...STATUS_EFFECT_STATS,
+];
+
+export const STAT_BUFF_TARGET_OPTIONS: StatBuffTarget[] = [
+  ...STAT_BUFF_TARGETS,
 ];
 
 /** デバフフィルタ用タグ（新デバフ種追加時はここと debuffMatching.ts を更新） */

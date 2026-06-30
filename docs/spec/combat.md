@@ -309,7 +309,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 ## ステータス効果
 
-対象ステ：`atk`, `def`, `reg`, `damageTaken`, `attackSpeed`（攻撃速度。基本攻撃 CD 回復倍率に適用）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
+対象ステ：`StatusEffectStat`（`hp` / `atk` / `def` / `reg` / `attackSpeed`）または `damageTaken`（`StatBuffTarget`）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
 
 複数ステを異なる倍率/固定値で上げるパッシブ buff は `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1ステのみの場合は従来の `buffStat` + `buffMultiplier` / `buffFlatBonus` でも可（実装: `parseStatBuffModifiers`）。
 

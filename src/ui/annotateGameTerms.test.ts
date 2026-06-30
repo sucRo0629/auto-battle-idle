@@ -3,7 +3,7 @@ import {
   segmentTextByGameTerms,
   segmentsToPlainText,
 } from "./annotateGameTerms.ts";
-import { SKILL_CARD_BODY_TERM_EXCLUDE_IDS, SKILL_CARD_BODY_TERM_INCLUDE_IDS } from "./skillCardDisplayRules.ts";
+import { SKILL_CARD_BODY_TERM_EXCLUDE_IDS, SKILL_CARD_BODY_TERM_INCLUDE_IDS, SKILL_CARD_META_LINE_TERM_IDS } from "./skillCardDisplayRules.ts";
 
 describe("segmentTextByGameTerms", () => {
   it("prefers longer aliases at the same offset", () => {
@@ -114,7 +114,7 @@ describe("segmentTextByGameTerms", () => {
       matchedText: "通常攻撃",
     });
 
-    expect(segmentTextByGameTerms("1回チャージ可能", "ja")[1]).toEqual({
+    expect(segmentTextByGameTerms("チャージ可能 1", "ja")[0]).toEqual({
       kind: "term",
       termId: "charge",
       matchedText: "チャージ",
@@ -195,27 +195,80 @@ describe("segmentTextByGameTerms", () => {
         excludeTermIds: SKILL_CARD_BODY_TERM_EXCLUDE_IDS,
       }),
     ).toEqual([{ kind: "text", text: "バリアを付与" }]);
+
+    expect(
+      segmentTextByGameTerms("チャージ可能 1", "ja", {
+        includeTermIds: SKILL_CARD_BODY_TERM_INCLUDE_IDS,
+        excludeTermIds: SKILL_CARD_BODY_TERM_EXCLUDE_IDS,
+      }),
+    ).toEqual([
+      { kind: "term", termId: "charge", matchedText: "チャージ" },
+      { kind: "text", text: "可能 1" },
+    ]);
   });
 
-  it("links multiLock, skillLock, moveLock, and dotCompress terms", () => {
+  it("links skillLock in meta line and does not link moveLockPresent", () => {
+    expect(
+      segmentTextByGameTerms("硬直：5秒", "ja", {
+        includeTermIds: new Set(SKILL_CARD_META_LINE_TERM_IDS),
+      }),
+    ).toEqual([
+      { kind: "term", termId: "skillLock", matchedText: "硬直" },
+      { kind: "text", text: "：5秒" },
+    ]);
+
+    expect(
+      segmentTextByGameTerms("移動停止あり", "ja", {
+        includeTermIds: new Set(SKILL_CARD_META_LINE_TERM_IDS),
+      }),
+    ).toEqual([{ kind: "text", text: "移動停止あり" }]);
+
+    expect(segmentTextByGameTerms("移動停止あり", "ja")).toEqual([
+      { kind: "text", text: "移動停止あり" },
+    ]);
+  });
+
+  it("links multiLock and dotCompress terms", () => {
     expect(segmentTextByGameTerms("Multi-Lock", "en")[0]).toEqual({
       kind: "term",
       termId: "multiLock",
       matchedText: "Multi-Lock",
     });
 
-    expect(segmentTextByGameTerms("硬直・移動停止5秒", "ja")).toEqual([
-      { kind: "term", termId: "skillLock", matchedText: "硬直" },
-      { kind: "text", text: "・" },
-      { kind: "term", termId: "moveLock", matchedText: "移動停止" },
-      { kind: "text", text: "5秒" },
-    ]);
-
     expect(segmentTextByGameTerms("DoT圧縮基準×0.7", "ja")[0]).toEqual({
       kind: "term",
       termId: "dotCompress",
       matchedText: "DoT圧縮",
     });
+  });
+});
+
+describe("inline term tooltip title", () => {
+  it("uses glossary title with N placeholder, not matched alias", async () => {
+    const { resolveGameTermTitle } = await import("./gameTermGlossary.ts");
+    const segments = segmentTextByGameTerms("マルチロック 2 / 貫通 10", "ja", {
+      includeTermIds: SKILL_CARD_BODY_TERM_INCLUDE_IDS,
+    });
+    const termSegments = segments.filter((s) => s.kind === "term");
+    expect(
+      termSegments.map((s) => ({
+        matched: s.matchedText,
+        title: resolveGameTermTitle(s.termId, "ja"),
+      })),
+    ).toEqual([
+      { matched: "マルチロック", title: "マルチロック N" },
+      { matched: "貫通", title: "貫通 N" },
+    ]);
+  });
+
+  it("uses skillLock tooltip copy for meta-line lockout term", async () => {
+    const { resolveGameTermTitle, resolveGameTermTooltip } = await import(
+      "./gameTermGlossary.ts"
+    );
+    expect(resolveGameTermTitle("skillLock", "ja")).toBe("硬直");
+    expect(resolveGameTermTooltip("skillLock", "ja")).toBe(
+      "硬直中は行動できず、スキルの再使用時間も停止する。",
+    );
   });
 });
 
@@ -244,6 +297,20 @@ describe("gameTermGlossary locale shape", () => {
       expect(entry.aliases?.ja.length).toBeGreaterThan(0);
       if (entry.description.en !== undefined) {
         expect(entry.aliases?.en?.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it("does not duplicate description text in tooltip", async () => {
+    const { GAME_TERM_ENTRIES } = await import("./gameTermGlossary.ts");
+    const normalize = (text: string) => text.replace(/\s+/g, "").trim();
+    for (const entry of GAME_TERM_ENTRIES) {
+      if (entry.tooltip === undefined || entry.description === undefined) continue;
+      for (const locale of ["ja", "en"] as const) {
+        const tooltip = entry.tooltip[locale] ?? entry.tooltip.ja;
+        const description = entry.description[locale] ?? entry.description.ja;
+        if (!tooltip || !description) continue;
+        expect(normalize(tooltip)).not.toBe(normalize(description));
       }
     }
   });

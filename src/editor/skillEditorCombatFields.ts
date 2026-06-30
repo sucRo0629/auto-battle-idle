@@ -85,6 +85,7 @@ import type {
   ResourceAmountSpec,
   SkillEffectDef,
   StatusEffectStat,
+  StatBuffTarget,
   TargetSpec,
 } from "../battle/types.ts";
 import { editorFieldLabel } from "./editorFieldLabels.ts";
@@ -1667,7 +1668,7 @@ export function appendPassiveDefenseIgnoreFields(
 }
 
 const PASSIVE_BUFF_STAT_OPTIONS: Array<{
-  value: StatusEffectStat;
+  value: StatBuffTarget;
   label: string;
 }> = [
   { value: "hp", label: "HP" },

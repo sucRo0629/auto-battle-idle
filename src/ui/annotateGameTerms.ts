@@ -1,5 +1,6 @@
 import {
   GAME_TERM_ENTRIES,
+  resolveGameTermTitle,
   resolveGameTermTooltip,
   type GameTermId,
   type GameTermLocale,
@@ -52,6 +53,21 @@ export interface SegmentTextByGameTermsOptions {
   includeTermIds?: ReadonlySet<GameTermId>;
 }
 
+function isAliasMatchBlocked(
+  text: string,
+  pos: number,
+  alias: string,
+  termId: GameTermId,
+): boolean {
+  if (termId === "surrounding" && text[pos + alias.length] === "の") {
+    return true;
+  }
+  if (termId === "moveLock" && text.startsWith("あり", pos + alias.length)) {
+    return true;
+  }
+  return false;
+}
+
 /** Pure segmentation for tests and annotateGameTerms. Longest alias wins at each offset. */
 export function segmentTextByGameTerms(
   text: string,
@@ -73,6 +89,11 @@ export function segmentTextByGameTerms(
 
     for (const candidate of aliases) {
       if (!text.startsWith(candidate.alias, pos)) continue;
+      if (
+        isAliasMatchBlocked(text, pos, candidate.alias, candidate.termId)
+      ) {
+        continue;
+      }
       if (excludeTermIds?.has(candidate.termId)) continue;
       if (includeTermIds && !includeTermIds.has(candidate.termId)) continue;
       matched = { termId: candidate.termId, matchedText: candidate.alias };
@@ -94,6 +115,11 @@ export function segmentTextByGameTerms(
       let foundAhead = false;
       for (const candidate of aliases) {
         if (!text.startsWith(candidate.alias, nextPos)) continue;
+        if (
+          isAliasMatchBlocked(text, nextPos, candidate.alias, candidate.termId)
+        ) {
+          continue;
+        }
         if (excludeTermIds?.has(candidate.termId)) continue;
         if (includeTermIds && !includeTermIds.has(candidate.termId)) continue;
         foundAhead = true;
@@ -169,7 +195,7 @@ export function annotateGameTermsWithTooltip(
     button.textContent = segment.matchedText;
     button.dataset.gameTermId = segment.termId;
     tooltip.bind(button, () => ({
-      title: segment.matchedText,
+      title: resolveGameTermTitle(segment.termId, locale),
       body: resolveGameTermTooltip(segment.termId, locale),
     }));
     fragment.appendChild(button);

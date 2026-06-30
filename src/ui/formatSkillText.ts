@@ -39,6 +39,7 @@ import type {
   SkillTriggerKind,
   DispelPriority,
   StatusEffectStat,
+  StatBuffTarget,
   TargetShape,
   TargetSpec,
   TargetStat,
@@ -46,6 +47,7 @@ import type {
 import {
   asStatusEffectStatList,
   filterStatusEffectStats,
+  filterStatBuffTargets,
   isStatusEffectStat,
 } from "../battle/types.ts";
 import {
@@ -132,6 +134,7 @@ import {
   phraseTargetRangedEnemy,
   phraseTimedEvasionBuff,
   skillStat,
+  skillStatBuffTarget,
   skillTargetStat,
   skillTerm,
 } from "./skillTextPhrases.ts";
@@ -336,7 +339,7 @@ function joinActiveSkillScopePrefix(
   ) {
     return effectParts;
   }
-  return `${scopePrefix}${effectParts}`;
+  return `${scopePrefix} ${effectParts}`;
 }
 
 function formatPassiveSpecialEffectHeal(def: PassiveSkillDef): string {
@@ -785,7 +788,9 @@ function resolveActiveSkillDurationLabel(
   return formatSecondsLabel(maxSec);
 }
 
-function formatActiveSkillLockMetaPart(def: ActiveSkillDef): string | undefined {
+function resolveActiveSkillLockDurationLabel(
+  def: ActiveSkillDef
+): string | undefined {
   const hasConsume = def.effect.some(
     (effect) => effect.type === "blockResonanceConsume"
   );
@@ -793,19 +798,23 @@ function formatActiveSkillLockMetaPart(def: ActiveSkillDef): string | undefined 
   if (useSec <= 0 && !hasConsume) return undefined;
 
   if (hasConsume) {
-    const durationLabel = formatBlockResonanceStanceDurationLabel(def, {
+    return formatBlockResonanceStanceDurationLabel(def, {
       useDurationFallback: true,
     });
-    if (def.useDurationPauseApproach) {
-      return `${skillText().skillLock}・${skillText().moveLock}${durationLabel}`;
-    }
-    return `${skillText().skillLock}${durationLabel}`;
   }
+  return formatSecondsLabel(useSec);
+}
 
+function formatActiveSkillLockMetaParts(def: ActiveSkillDef): string[] {
+  const durationLabel = resolveActiveSkillLockDurationLabel(def);
+  if (!durationLabel) return [];
+
+  const st = skillText();
+  const parts = [`${st.skillLock}${st.labelColon}${durationLabel}`];
   if (def.useDurationPauseApproach) {
-    return skillText().skillLockAndMoveLock(useSec);
+    parts.push(st.moveLockPresent);
   }
-  return skillText().skillLockOnly(useSec);
+  return parts;
 }
 
 function formatBlockResonanceConsumeSkillEffect(def: ActiveSkillDef): string {
@@ -879,12 +888,12 @@ function formatActiveSkillDefaultEffectLines(
       pushLine(`${group.frame} / ${group.details[0]}`, true);
       return;
     }
-    pushLine(formatTargetFrameGroupIntro(group.frame, group.targetSide), true);
-    lines.push(
-      ...group.details.map((detail) =>
-        stripGroupedTargetSidePrefix(detail, group.targetSide)
-      )
+    const strippedDetails = group.details.map((detail) =>
+      stripGroupedTargetSidePrefix(detail, group.targetSide)
     );
+    const detailSep = getSkillTextLocale() === "en" ? ", " : "、";
+    pushLine(formatTargetFrameGroupIntro(group.frame, group.targetSide), true);
+    lines.push(strippedDetails.join(detailSep));
   };
 
   for (const effect of mappableEffects) {
@@ -1010,7 +1019,7 @@ function formatDamageTakenMultiplierLabel(mul: number): string {
     }
     return `${skillTerm("damageIncrease")}${formatPercent(mul - 1)}`;
   }
-  return skillStat("damageTaken");
+  return skillStatBuffTarget("damageTaken");
 }
 
 /** wardBarrier 等: 軽減率そのもの（0.1 = 10% 軽減） */
@@ -1061,15 +1070,15 @@ function formatResourceAmount(amount: ResourceAmountSpec | undefined): string {
 }
 
 function formatStatusStats(
-  stat: StatusEffectStat | StatusEffectStat[] | undefined
+  stat: StatBuffTarget | StatBuffTarget[] | undefined
 ): string {
   return asStatusEffectStatList(stat)
-    .map((s) => skillStat(s))
+    .map((s) => skillStatBuffTarget(s))
     .join("・");
 }
 
 function formatStatWithModifier(
-  stat: StatusEffectStat,
+  stat: StatBuffTarget,
   multiplier: number | undefined,
   flatBonus: number | undefined
 ): string {
@@ -1078,15 +1087,15 @@ function formatStatWithModifier(
 
   if (stat === "damageTaken") {
     if (mul === 1 && flat === 0) {
-      return skillStat("damageTaken");
+      return skillStatBuffTarget("damageTaken");
     }
     if (flat === 0) return formatDamageTakenMultiplierLabel(mul);
     if (mul === 1) {
-      return `${skillStat("damageTaken")}${formatStatFlatSuffix(
+      return `${skillStatBuffTarget("damageTaken")}${formatStatFlatSuffix(
         flat
       )}`;
     }
-    return `( ${skillStat("damageTaken")}${formatStatFlatSuffix(
+    return `( ${skillStatBuffTarget("damageTaken")}${formatStatFlatSuffix(
       flat
     )} ) ${formatDamageTakenMultiplierLabel(mul)}`;
   }
@@ -1102,7 +1111,7 @@ function formatStatWithModifier(
 }
 
 function formatStatsWithModifier(
-  stat: StatusEffectStat | StatusEffectStat[] | undefined,
+  stat: StatBuffTarget | StatBuffTarget[] | undefined,
   multiplier: number | undefined,
   flatBonus: number | undefined
 ): string {
@@ -1323,7 +1332,7 @@ function formatBuffTargetStats(
   multiplier: number | undefined,
   flatBonus: number | undefined
 ): string {
-  const stats = filterStatusEffectStats(stat);
+  const stats = filterStatBuffTargets(stat);
   if (stats.length === 0) return "—";
   return formatStatsWithModifier(stats, multiplier, flatBonus);
 }
@@ -1350,7 +1359,7 @@ function formatDefenseIgnoreModifierSegments(
     segments.push(
       getSkillTextLocale() === "en"
         ? `DEF Ignore ${value}`
-        : `DEF無視 ${value}`
+        : `${resolveGameTermTitle("defenseIgnoreDef")} ${value}`
     );
   }
   if (spec.reg) {
@@ -1451,6 +1460,36 @@ type ActiveEffectDetailOptions = {
   basicAttackRangePx?: number;
 };
 
+function isSelfOriginDistanceTarget(
+  spec: TargetSpec | undefined
+): boolean {
+  return spec?.kind === "distance" && spec.order === "selfOrigin";
+}
+
+function formatAoeOrSurroundingFrameLabel(
+  radiusPx: number | undefined,
+  targetSpec: TargetSpec | undefined
+): string {
+  const locale = getSkillTextLocale();
+  const range =
+    radiusPx !== undefined ? ` ${formatUiDistanceValue(radiusPx)}` : "";
+  if (isSelfOriginDistanceTarget(targetSpec)) {
+    return `${locale === "en" ? "Nearby" : "周囲"}${range}`;
+  }
+  return `AoE${range}`;
+}
+
+function formatPlacedFieldFrameLabel(
+  effect: Extract<SkillEffectDef, { type: "placedField" }>
+): string {
+  const locale = getSkillTextLocale();
+  const range =
+    effect.fieldRadiusPx !== undefined
+      ? ` ${formatUiDistanceValue(effect.fieldRadiusPx)}`
+      : "";
+  return locale === "en" ? `Field${range}` : `地点${range}`;
+}
+
 function formatTargetFrameLabel(
   effect: SkillEffectDef,
   options?: ActiveEffectDetailOptions
@@ -1465,18 +1504,24 @@ function formatTargetFrameLabel(
       return `${locale === "en" ? "Multi-Lock" : "マルチロック"}${count}`;
     }
     case "aoe": {
-      const radius = effect.aoeRadiusPx ?? options?.inheritAoeRadiusPx;
-      const range = radius !== undefined ? ` ${formatUiDistanceValue(radius)}` : "";
-      return `AoE${range}`;
+      const targetSpec = resolveEffectTargetSpec(
+        effect,
+        options?.inheritTarget
+      );
+      return formatAoeOrSurroundingFrameLabel(
+        effect.aoeRadiusPx ?? options?.inheritAoeRadiusPx,
+        targetSpec
+      );
     }
     case "pierce": {
-      const range = effect.range ?? options?.inheritRange;
+      const explicitRange = effect.range ?? options?.inheritRange;
       const baseRange = options?.basicAttackRangePx;
-      const diff =
-        range !== undefined && baseRange !== undefined ? range - baseRange : 0;
-      const rangeDiff =
-        diff === 0 ? "" : ` 射程${formatSignedUiDistanceValue(diff)}`;
-      return `${locale === "en" ? "Pierce" : "貫通"}${rangeDiff}`;
+      if (baseRange !== undefined) {
+        const effectiveRange = explicitRange ?? baseRange;
+        const rangeLabel = ` ${formatPierceRangeSummary(effectiveRange, locale)}`;
+        return `${locale === "en" ? "Pierce" : "貫通"}${rangeLabel}`;
+      }
+      return locale === "en" ? "Pierce" : "貫通";
     }
     default:
       return null;
@@ -1499,7 +1544,10 @@ function formatTargetFramedDetail(
 ): string {
   if (
     options?.compact &&
-    (effect.type === "damage" || effect.type === "dot")
+    (effect.type === "damage" ||
+      effect.type === "dot" ||
+      (effect.type === "buff" && effect.buffSubKind === "barrier") ||
+      (effect.type === "heal" && effect.healSubKind === "hot"))
   ) {
     return detail;
   }
@@ -1577,6 +1625,7 @@ function formatPassiveTargetFrame(
     aoeRadiusPx?: number;
     hitCount?: number;
     pierceDurationSec?: number;
+    targetRule?: TargetSpec;
   }
 ): string | null {
   switch (shape ?? "single") {
@@ -1588,11 +1637,10 @@ function formatPassiveTargetFrame(
       return `${getSkillTextLocale() === "en" ? "Multi-Lock" : "マルチロック"}${count}`;
     }
     case "aoe": {
-      const radius =
-        options?.aoeRadiusPx !== undefined
-          ? ` ${formatUiDistanceValue(options.aoeRadiusPx)}`
-          : "";
-      return `AoE${radius}`;
+      return formatAoeOrSurroundingFrameLabel(
+        options?.aoeRadiusPx,
+        options?.targetRule
+      );
     }
     case "pierce":
       return getSkillTextLocale() === "en" ? "Pierce" : "貫通";
@@ -1616,6 +1664,14 @@ function formatFramedPassiveLine(
 function formatCounterRangeSummary(range: number | undefined): string {
   if (range === undefined || range === 0) return "射程+0";
   return `射程${formatUiDistanceValue(range)}`;
+}
+
+/** Pierce 射程: 効果距離の絶対値（例: 貫通 3） */
+function formatPierceRangeSummary(
+  effectiveRangePx: number,
+  _locale: ReturnType<typeof getSkillTextLocale> = getSkillTextLocale()
+): string {
+  return formatUiDistanceValue(effectiveRangePx);
 }
 
 function formatCounterResponse(response: CounterResponseDef): string {
@@ -1679,7 +1735,9 @@ function formatActiveEffectDetail(
   const shape = formatTargetShape(effect);
   const targetFrame =
     compact && options?.showTargetFrame
-      ? formatTargetFrameLabel(effect, options)
+      ? effect.type === "placedField"
+        ? formatPlacedFieldFrameLabel(effect)
+        : formatTargetFrameLabel(effect, options)
       : null;
   const extras: string[] = [];
 
@@ -2295,6 +2353,7 @@ function formatPassiveEffect(
         return formatFramedPassiveLine(
           formatPassiveTargetFrame(shape, {
             aoeRadiusPx: def.damageReductionAoeRadiusPx,
+            targetRule: rule,
           }),
           rule,
           phraseDamageReductionRate(formatPercent(percent))
@@ -2450,6 +2509,7 @@ function formatPassiveEffect(
         return formatFramedPassiveLine(
           formatPassiveTargetFrame("aoe", {
             aoeRadiusPx: def.frontBlockAuraRadiusPx ?? 50,
+            targetRule: { kind: "distance", side: "ally", order: "selfOrigin" },
           }),
           { kind: "distance", side: "ally", order: "selfOrigin" },
           parts.join(getSkillTextLocale() === "en" ? ", " : "、")
@@ -2530,7 +2590,7 @@ function formatPassiveEffect(
       return formatExcessHealToBarrierPassive(def);
     case "selfHpRatioBuff": {
       const statsLabel = formatStatsWithModifier(
-        (def.buffStat as StatusEffectStat | StatusEffectStat[] | undefined) ??
+        (def.buffStat as StatBuffTarget | StatBuffTarget[] | undefined) ??
           undefined,
         def.buffMultiplierMax,
         def.buffFlatBonusMax
@@ -2692,6 +2752,7 @@ function formatPassiveEffect(
           aoeRadiusPx: def.buffAoeRadiusPx,
           hitCount: def.buffHitCount,
           pierceDurationSec: def.buffPierceDurationSec,
+          targetRule: def.buffTargetRule,
         }),
         def.buffTargetRule,
         formatBuffStatModifiersFromDef(def)
@@ -2731,6 +2792,7 @@ function formatPassiveEffect(
           aoeRadiusPx: def.debuffAoeRadiusPx,
           hitCount: def.debuffHitCount,
           pierceDurationSec: def.debuffPierceDurationSec,
+          targetRule: def.debuffTargetRule,
         }),
         def.debuffTargetRule,
         debuffDetail
@@ -2839,10 +2901,7 @@ function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
     parts.push(`${st.duration}${st.labelColon}${duration}`);
   }
 
-  const lock = formatActiveSkillLockMetaPart(def);
-  if (lock) {
-    parts.push(lock);
-  }
+  parts.push(...formatActiveSkillLockMetaParts(def));
 
   if ((def.firePolicy ?? "immediate") === "smart") {
     const condSummary = formatFireConditionsSummary(

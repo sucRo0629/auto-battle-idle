@@ -782,7 +782,7 @@
 .skill-menu-skill-kind-section {
   display: flex;
   flex-direction: column;
-  flex: 1 1 0;
+  flex: 0 0 auto;
   min-height: 0;
   border: 1px solid var(--party-line-soft);
   border-radius: 0;
@@ -794,6 +794,10 @@
 
 .skill-menu-skill-kind-section > .skill-menu-section-title {
   flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: 26px;
   margin: 0;
   padding: 3px 8px;
   border: none;
@@ -802,6 +806,7 @@
   background: rgba(20, 16, 12, 0.92);
   font-size: 11px;
   font-weight: 700;
+  line-height: 1.2;
   color: var(--party-text-heading);
   letter-spacing: 0.02em;
   text-transform: none;
@@ -811,19 +816,27 @@
 .skill-menu-skill-kind-body {
   display: flex;
   flex-direction: column;
-  flex: 1 1 0;
+  flex: 0 0 auto;
   min-height: 0;
   gap: 3px;
   justify-content: flex-start;
 }
 
+.skill-menu-skill-kind-section--passive .skill-menu-skill-summary-grid {
+  --skill-card-row-height: 108px;
+}
+
+.skill-menu-skill-kind-section--active .skill-menu-skill-summary-grid {
+  --skill-card-row-height: 172px;
+}
+
 .skill-menu-skill-summary-grid {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   min-height: 0;
   display: grid;
   grid-template-columns: repeat(var(--skill-learned-cols, 2), minmax(0, 1fr));
-  grid-auto-rows: auto;
-  align-items: start;
+  grid-auto-rows: var(--skill-card-row-height, auto);
+  align-items: stretch;
   align-content: start;
   gap: 6px;
   padding: 5px 7px 3px;
@@ -840,18 +853,23 @@
 }
 
 .skill-menu-skill-locked-row {
+  box-sizing: border-box;
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 3px;
-  padding: 2px 7px;
+  height: 28px;
+  min-height: 28px;
+  max-height: 28px;
+  padding: 0 7px;
   border: none;
   border-radius: 0;
   background: rgba(6, 5, 4, 0.55);
   box-shadow: inset 0 0 0 1px rgba(72, 62, 48, 0.28);
   font-size: 9px;
   font-weight: 500;
-  line-height: 1.35;
+  line-height: 1.2;
   color: #6a6058;
+  overflow: hidden;
 }
 
 .skill-menu-skill-locked-prefix {
@@ -862,23 +880,89 @@
 
 .skill-menu-skill-locked-text {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .skill-menu-skill-summary-card {
+  --skill-card-height: 108px;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
   min-height: 0;
-  height: auto;
-  padding: 0 8px 7px;
+  height: var(--skill-card-height);
+  max-height: var(--skill-card-height);
+  padding: 0 8px;
   border: 1px solid var(--party-card-border);
   border-radius: 0;
   background: rgba(16, 13, 10, 0.9);
   color: var(--app-text);
+  overflow: hidden;
   box-shadow:
     inset 0 1px 0 rgba(255, 248, 230, 0.04),
     0 1px 3px rgba(0, 0, 0, 0.2);
   cursor: default;
+}
+
+.skill-menu-skill-summary-card--passive {
+  --skill-card-height: 108px;
+}
+
+.skill-menu-skill-summary-card--active {
+  --skill-card-height: 172px;
+}
+
+.skill-menu-skill-summary-card-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 4px;
+}
+
+/* Passive: meta + State Chip を 1 行にまとめ、本文 2 行分の縦幅を確保する */
+.skill-menu-skill-summary-card--passive
+  .skill-menu-skill-summary-card-body:has(.skill-menu-skill-summary-card-chips) {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 6px;
+  row-gap: 2px;
+}
+
+.skill-menu-skill-summary-card--passive
+  .skill-menu-skill-summary-card-body:has(.skill-menu-skill-summary-card-chips)
+  .skill-menu-skill-summary-card-meta {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.skill-menu-skill-summary-card--passive
+  .skill-menu-skill-summary-card-body:has(.skill-menu-skill-summary-card-chips)
+  .skill-menu-skill-summary-card-chips {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+}
+
+.skill-menu-skill-summary-card--passive
+  .skill-menu-skill-summary-card-body:has(.skill-menu-skill-summary-card-chips)
+  .skill-menu-skill-summary-card-effects {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  flex: none;
+}
+
+/* Active: 長い meta は折り返し、Chip は独立行（Chip 改行を防ぐ） */
+.skill-menu-skill-summary-card--active
+  .skill-menu-skill-summary-card-body:has(.skill-menu-skill-summary-card-chips) {
+  display: flex;
+  flex-direction: column;
 }
 
 .skill-menu-skill-summary-card-header {
@@ -886,9 +970,9 @@
   align-items: center;
   gap: 5px;
   min-width: 0;
-  flex-shrink: 0;
+  flex: 0 0 auto;
   margin: 0 -8px 0;
-  padding: 5px 8px 4px;
+  padding: 4px 8px 3px;
   border-bottom: 1px solid rgba(196, 168, 106, 0.14);
   background: linear-gradient(
     180deg,
@@ -909,26 +993,105 @@
 }
 
 .skill-menu-skill-summary-card-meta {
-  flex-shrink: 0;
+  flex: 0 0 auto;
   font-size: clamp(10px, 0.85vw, 11px);
   font-weight: 600;
   color: #9a9088;
   line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-menu-skill-summary-card--active .skill-menu-skill-summary-card-meta {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .skill-menu-skill-summary-card-effects {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  flex: 0 1 auto;
+  gap: 2px;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
+  padding: 0 1px;
 }
 
 .skill-menu-skill-summary-card-effect-line {
+  box-sizing: border-box;
   margin: 0;
+  padding: 2px 2px 1px;
   font-size: clamp(11px, 0.95vw, 13px);
-  line-height: 1.4;
+  line-height: 1.55;
   color: #ddd0bc;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+/* Active: 段落ごと 1 行省略。Inline Term Label の枠線が切れないよう block 表示 */
+.skill-menu-skill-summary-card--active .skill-menu-skill-summary-card-effect-line {
+  display: block;
+  min-height: calc(1.55em + 4px);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+.skill-menu-skill-summary-card--active
+  .skill-menu-skill-summary-card-effect-line:only-child {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+/* Passive: 複数段落は折り返し表示（傷塞ぎ等）。単段落は最大 2 行 */
+.skill-menu-skill-summary-card--passive .skill-menu-skill-summary-card-effect-line {
+  white-space: normal;
+}
+
+.skill-menu-skill-summary-card--passive
+  .skill-menu-skill-summary-card-effect-line:only-child {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.skill-menu-skill-summary-card--passive
+  .skill-menu-skill-summary-card-effect-line:first-child:nth-last-child(2) {
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.skill-menu-skill-summary-card--passive
+  .skill-menu-skill-summary-card-effect-line:nth-child(2):nth-last-child(1) {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.skill-menu-skill-summary-card--passive
+  .skill-menu-skill-summary-card-effect-line:nth-child(n + 3) {
+  display: none;
+}
+
+.skill-menu-skill-summary-card--active
+  .skill-menu-skill-summary-card-effect-line:nth-child(n + 4) {
+  display: none;
+}
+
+.skill-menu-skill-summary-card--active
+  .skill-menu-skill-summary-card-effect-line:not(:only-child) {
+  display: block;
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
 }
 
 .skill-menu-skill-summary-card-effect-list {
@@ -980,10 +1143,11 @@
 
 .skill-menu-skill-summary-card-chips {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   min-width: 0;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  overflow: hidden;
 }
 
 .skill-menu-status-chip--compact,

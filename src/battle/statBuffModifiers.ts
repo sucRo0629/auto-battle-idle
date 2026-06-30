@@ -1,9 +1,9 @@
 import type {
   PassiveSkillDef,
   StatBuffModifierEntry,
-  StatusEffectStat,
+  StatBuffTarget,
 } from './types.ts';
-import { filterStatusEffectStats } from './types.ts';
+import { filterStatBuffTargets } from './types.ts';
 
 export interface StatBuffModifierSource {
   buffStatModifiers?: StatBuffModifierEntry[];
@@ -23,7 +23,7 @@ export function parseStatBuffModifiers(
     return source.buffStatModifiers;
   }
 
-  const stats = filterStatusEffectStats(source.buffStat);
+  const stats = filterStatBuffTargets(source.buffStat);
   const multiplier = source.buffMultiplier;
   const flatBonus = source.buffFlatBonus;
   if (stats.length === 0) return [];
@@ -79,7 +79,7 @@ export function syncPassiveBuffStatModifiers(
 export function formatStatBuffModifierEntries(
   entries: StatBuffModifierEntry[],
   formatEntry: (
-    stat: StatusEffectStat,
+    stat: StatBuffTarget,
     multiplier: number | undefined,
     flatBonus: number | undefined,
   ) => string,

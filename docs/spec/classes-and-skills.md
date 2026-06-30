@@ -51,13 +51,13 @@ Hensei Only のスキルカード表示は、プレイヤー向け UI 上で次�
 
 **情報責務・重複禁止:** [party-formation-ui.md §スキルカード情報設計](party-formation-ui.md#スキルカード情報設計)。
 
-**辞書データ:** `gameTermGlossary.ts` / `gameTermGlossaryEn.ts`（`GameTermId`）。`description` = 用語辞典（用語パネル）、`tooltip` = Inline Term Label 用ホバー、`statusDefinition` = State Chip 用状態辞典。**固有状態**は `statusDefinition` のみ（`description` / `aliases` / `tooltip` 禁止。[§固有状態（辞書データ）](party-formation-ui.md#固有状態辞書データ)）。**スキルカードへの割当:** `skillCardDisplayRules.ts`（実装側 allowlist。本節と同期すること）。
+**辞書データ:** `gameTermGlossary.ts` / `gameTermGlossaryEn.ts`（`GameTermId`）。`description` = 用語辞典（用語パネル）、`tooltip` = Inline Term Label 用ホバー、`statusDefinition` = State Chip 用状態辞典。**固有状態**は `statusDefinition` のみ（`description` / `aliases` / `tooltip` 禁止。[§固有状態（辞書データ）](party-formation-ui.md#固有状態辞書データ)）。**スキルカードへの割当:** `skillCardDisplayRules.ts`（inline / State Chip allowlist。本節と同期すること）。State Chip の `def` 抽出・本文サニタイズは `skillCardStatusChipExtract.ts`
 
 ##### 1. Inline Term Label
 
 効果本文中に表示される **tooltip trigger 付き** の短い用語ラベル。対象形状・範囲形状・攻撃の当たり方・計算修飾・行動制御・特殊挙動など、**ゲーム固有ルールの説明が必要なもの** を対象にする。
 
-**対象例（固定リストではない）:** マルチロック / AoE / 貫通 / DEF無視 / 軽減無視 / バリア無視 / スタン / ノックバック / 反撃 / 回避
+**対象例（固定リストではない）:** マルチロック / AoE / 周囲 / 地点 / 貫通 / 防御力無視 / 軽減無視 / バリア無視 / スタン / ノックバック / 反撃 / 回避
 
 **注意:**
 
@@ -66,7 +66,7 @@ Hensei Only のスキルカード表示は、プレイヤー向け UI 上で次�
 - スタン・ノックバック・反撃・回避は一般ゲーム用語に見えるが、Hensei Only では **処理差が大きい特殊挙動** として Inline Term Label に含める
 - **別枠タグ行は持たない**。形状ラベルは本文行内に置き、同じ情報を二重表示しない
 
-**tooltip 内容:** 2〜3 行。処理順・例外・内部実装は入れない。`gameTermGlossary.ts` の `tooltip`（省略時は `description` 先頭行）。
+**tooltip 内容:** 2〜3 行。処理順・例外・内部実装は入れない。**`description` より短く書くときだけ** `tooltip` を指定する（同文なら `description` のみ。ホバーは `resolveGameTermTooltip` が `description` 先頭 2 行から生成）。
 
 ##### 2. State Chip
 
@@ -117,18 +117,31 @@ tooltip を読まなくても意味が分かる **基本語**。本文中に通�
 `formatSkillCardLines` の `effectLines` および 1 行説明の効果部は次を基本とする。
 
 - 並び順: **特殊ルール → 計算修飾 → 基礎効果 → 追加効果**
+- `maxCharges > 0` のアクティブは効果行末に `チャージ可能 N`（N = `maxCharges`、英語 `Charge available N`）を付ける
 - Inline Term Label の **直後** に対応する数値を置く（ラベルと数値を分離）
 - 複数要素は ` / ` で区切る
 - 割合には `%` を付ける。個数・対象数には `%` を付けない
 - 仕様書・設計メモでは Inline Term Label を `[ラベル]` と表記してよい（UI 上は tooltip 付きボタンとして描画）
 
+**範囲形状ラベル（中心の違い）:**
+
+| Inline Label | 中心 | 内部 | 例 |
+| ------------ | ---- | ---- | -- |
+| **AoE** | 選ばれた対象（anchor） | `targetShape: aoe` + `nearest` / `farthest` / `stat` 等 | `[AoE] 5 / 敵の攻撃力-10%` |
+| **周囲** | 使用者 | `targetShape: aoe` + `order: selfOrigin` | `[周囲] 5 / 味方の攻撃力+5%` |
+| **地点** | 戦場座標（持続） | `placedField`（`clusterCenter` 等） | `[地点] 7 / 5秒 / 毒` |
+
+AoE・周囲・地点は半径の中心が異なるため、同一ラベルにまとめない。
+
 **例（`[]` は Inline Term Label の表記）:**
 
 ```
 [マルチロック] 2 / 攻撃力の120%の魔法ダメージ
-[マルチロック] 2 / [DEF無視] 25% / 攻撃力の160%の物理ダメージ
-[AoE] 5 / 味方の攻撃力+20%
-[貫通] / 攻撃力の140%の物理ダメージ / [ノックバック]
+[マルチロック] 2 / [防御力無視] 25% / 攻撃力の160%の物理ダメージ
+[AoE] 5 / 敵の攻撃力-20%
+[周囲] 5 / 味方の攻撃力+20%
+[地点] 7 / 5秒 / 毒
+[貫通] 3 / 攻撃力の140%の物理ダメージ / [ノックバック]
 [スタン] 1.5秒
 [反撃] / 攻撃力の80%の物理ダメージ
 [回避] +20%
@@ -182,7 +195,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 表示言語    | **4d まで `ja` 固定**。**4e** で `en` のみ追加（[phase-roadmap.md §4e](../plans/phase-roadmap.md#4e--英語-i18n--release-m1-向け)）                                                                                                                                      |
 | 適用面      | 編成 UI のスキルカード説明文（Phase 4d）。エディタのスキル説明プレビューは同辞書で揃える                                                                                                                                                                                  |
-| 説明文生成  | 1 行: `formatActiveDescription` / `formatPassiveDescription`。カード改行: `formatSkillCardLines`（[party-formation-ui.md §6.3](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。本文の Inline Term Label は `annotateGameTermsWithTooltip` + `skillCardDisplayRules` の inline allowlist。State Chip は `resolveSkillCardDisplay` が分離 |
+| 説明文生成  | 1 行: `formatActiveDescription` / `formatPassiveDescription`。カード改行: `formatSkillCardLines`（[party-formation-ui.md §6.3](party-formation-ui.md#formatskillcardlines-apiphase-4d-pr1-1-確定)）。本文の Inline Term Label は `annotateGameTermsWithTooltip` + `skillCardDisplayRules` の inline allowlist。State Chip は `resolveSkillCardDisplay`（`skillCardStatusChipExtract.ts` で `def` から抽出し本文から状態名を除去）が分離 |
 | スキル JSON | 用語説明フィールドは **持たない**（4b 方針と同様。説明は生成 + 辞書）                                                                                                                                                                                                     |
 
 #### エントリ形状（locale キー付き）
@@ -193,7 +206,8 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `id`              | 言語非依存の辞書キー（例: `stun`, `barrier`, `wardBarrier`）                                                                                                    |
 | `title`           | `{ ja: "スタン", … }` — 用語パネル見出し                                                                                                                        |
-| `description?`    | `{ ja: "…", … }` — 用語パネル本文（1〜3 文の要約）。改行は `\n`（表示は `white-space: pre-line`）。locale ごとに改行位置を持つ。**HUD 表示名のみの ID（下記例外）は省略可** |
+| `description?`    | `{ ja: "…", … }` — 用語パネル本文（正本）。1〜3 文の要約。改行は `\n`（表示は `white-space: pre-line`）。Inline ホバーは省略時ここから先頭 2 行を流用。**HUD 表示名のみの ID（下記例外）は省略可** |
+| `tooltip?`        | Inline Term Label ホバー専用の短文化（2〜3 行）。**パネルと同文なら省略**（`description` に一本化） |
 | `aliases?`        | `{ ja: ["スタン"], … }` — 本文中でリンク化する表記。**長い語を先**にマッチ。省略時はスキル説明ではリンク化しない（HUD バッジクリック等で補足可） |
 | `statusCategory?` | 状態系のみ。[combat.md §ステータス効果](combat.md#ステータス効果) の `StatusDisplayCategory` と対応。`StatusIconRegistry` に PNG が登録されているときのみ用語パネル見出しに表示 |
 | `statusIconCategory?` | 用語パネル見出しアイコンのみ。HUD カテゴリと別 ID の用語が同じ PNG を使うとき（例: `magicBlock` → `block`） |
@@ -225,13 +239,14 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 
 **Active**
 
-`再使用：[時間|被攻撃N回|通常攻撃N回] / 持続：[あれば] / 硬直[・移動停止][秒数]：[あれば] / 発動条件：[あれば] / [効果…] /`
+`再使用：[時間|被攻撃N回|通常攻撃N回] / 持続：[あれば] / 硬直：[秒数][あれば] / 移動停止あり：[useDurationPauseApproach 時] / 発動条件：[あれば] / [効果…] /`
 
 - `再使用` — スキル再発動までの条件（旧表記 `CD` は使わない）。`time` → `N秒`、`hitsTaken` → `被攻撃N回`、`basicAttackCount` → `通常攻撃N回`
 - `持続` — 効果残り秒（`buffDurationSec` 等の最大）。`useDurationSec`（硬直）とは分ける
-- `硬直` — `useDurationSec`。`useDurationPauseApproach` 時は `硬直・移動停止N秒`（秒数は末尾）。それ以外は `硬直N秒`
+- `硬直` — `useDurationSec`（SkillHold）。`硬直：N秒` と単独項目で表示。基本情報欄の `硬直` のみ用語 tooltip 対象（[party-formation-ui.md §6.4](party-formation-ui.md#64-用語注釈スキルカード)）
+- `移動停止あり` — `useDurationPauseApproach: true` の追加フラグ。硬直中の自動接近停止を示す。単体の状態名・効果名としては表示しない。用語 tooltip は付けない
 - `発動条件` — `firePolicy: smart` の `fireConditions` 要約（例: `対象のHPが50%以上`）
-- `[効果…]` — コンパクト表記。[ゲーム用語表 §表示フォーマット](classes-and-skills.md#ゲーム用語表表示分類) に従う（1 行・カード行で同じ形状ラベル規則）。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージ`（名詞形・至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `マルチロック N / {効果}`（対象数はラベル直後）。計算修飾（`DEF無視 N%` 等）は基礎効果の前に ` / ` 区切りで並べる。不足対象時の再配分は本文に書かず **Inline Term Label の tooltip** へ
+- `[効果…]` — コンパクト表記。[ゲーム用語表 §表示フォーマット](classes-and-skills.md#ゲーム用語表表示分類) に従う（1 行・カード行で同じ形状ラベル規則）。`atkBased` 単体ダメージ（既定 nearest 敵）は `攻撃力のN%の物理ダメージ`（名詞形・至近等の省略）。`atkBased` 即時 heal（既定 lowest HP 味方）は `味方のHPを攻撃力のN%で回復`（最低HP味方の省略）。`target: all ally` heal は `味方全体のHPを攻撃力のN%で回復`。`multiLock` は `マルチロック N / {効果}`（対象数はラベル直後）。計算修飾（`防御力無視 N%` 等）は基礎効果の前に ` / ` 区切りで並べる。不足対象時の再配分は本文に書かず **Inline Term Label の tooltip** へ
 - 複数 effect を 1 行に畳むとき、effect 同士は `、` 区切り（メタ部との区切りは ` / ` のまま）
 
 **Passive**
@@ -243,7 +258,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - 対象「自身」は effect 表示から省略（compact 時）
 - 秒表記は `秒`（`s` 表記にしない）。**英語（4e）** は `Ns`（`skillTextLocale`）
 - `damageTaken` stat の倍率は `被ダメ×N` ではなく、`<1` → `ダメージ軽減N%`、`>1` → `被ダメージ増加N%`（N = |1 − 倍率| × 100）
-- その他 stat（`atk` / `def` / `reg` / `attackSpeed` / `hp`）は略称（`ATK` 等）を使わず表示名（`攻撃力` / `防御力` / `魔法耐性` / `攻撃速度` / `HP`）。flat は `魔法耐性+20`、乗算 buff は `防御力+20%`（N = |1 − 倍率| × 100）、resource の atk/def scale は `攻撃力90%`（scale をそのまま % 化）。**Active 効果行の計算修飾**（`DEF無視` / `REG無視` 等）は §表示フォーマット例どおり略称ラベルを使う
+- その他 stat（`atk` / `def` / `reg` / `attackSpeed` / `hp`）は略称（`ATK` 等）を使わず表示名（`攻撃力` / `防御力` / `魔法耐性` / `攻撃速度` / `HP`）。flat は `魔法耐性+20`、乗算 buff は `防御力+20%`（N = |1 − 倍率| × 100）、resource の atk/def scale は `攻撃力90%`（scale をそのまま % 化）。**Active 効果行の計算修飾**（`防御力無視` / `REG無視` 等）は §表示フォーマット例どおり用語表ラベルを使う
 - ブロック率に「（加算）」は各スキル説明に書かない（barrier の加算表記は既存どおり）
 - 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` / `at_swordsman` / `sp_cleric` テスト
 - `targetRuleOverride`（stat 最高値）— `最も{stat}が高い敵を優先して攻撃する`
@@ -906,7 +921,7 @@ Defender 共通 passive と各 Defender の受け口設計は同一視しない�
 | passive 1 Lv0  | `df_paladin_passive_1`    | 護身手   | `frontBlockAura`（前列 block chance 0.10・物理直接）                                                           |
 | passive 2 Lv0  | `df_paladin_passive_2`    | 護法陣   | passive `damageReduction`（`damageReductionTargetShape: aoe`、`damageReductionAoeRadiusPx: 50`、自身起点・味方対象。物理・魔法の `damageTaken` 軽減） |
 | active 1 Lv0   | `df_paladin_active_1`     | 光明剣   | 低 HP 味方 heal + 最近接 magic damage                                                                          |
-| active 2 Lv0   | `df_paladin_active_2`     | 障身法   | `hitsTaken` + smart。自身起点 AoE 50px 内の近傍味方へ REG / ダメージ軽減 / barrier stack（前列全体が入る半径） |
+| active 2 Lv0   | `df_paladin_active_2`     | 障身法   | `hitsTaken` + smart。自身起点 周囲 50px 内の近傍味方へ REG / ダメージ軽減 / barrier stack（前列全体が入る半径） |
 | passive 3 Lv10 | `df_paladin_passive_3`    | 真言加護 | P1 強化: block +0.05 + 魔法直接も block                                                                        |
 | active 3 Lv10  | `df_paladin_active_3`     | 慈光     | 味方全体 被ダメ −10% + REG+20（バリアなし）                                                                    |
 | passive 4 Lv20 | `df_paladin_passive_4`    | 不退転   | `lastStandRecovery`（致死半復活 + 自己/前列 DR）                                                               |
@@ -1908,7 +1923,7 @@ interface CharacterBuild {
 
 | サブ種別 (`buffSubKind`) | 対象・効果                                                                  | 主なパラメータ                                                                                            | 重複・スタックルール                                                                                                                                                                    | 備考                                                                                                                                                                    |
 | :----------------------- | :-------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `stat`                   | ステータス（`hp`, `atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の上昇 | `buffStat`<br>`buffMultiplier`<br>`buffFlatBonus`<br>`buffStatModifiers?`                                 | `multiplier` は乗算、`flatBonus` は代数和。複数ステを別々に上げるときは `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1 ステのみは従来 3 フィールドでも可。 | `hp` は maxHp 上昇（`effectiveMaxHp`）。`damageTaken` の減少（ダメージ軽減）や `attackSpeed`（攻撃速度）の上昇もこれに含みます。                                        |
+| `stat`                   | ステータス（`StatusEffectStat` または `damageTaken`）の上昇 | `buffStat`<br>`buffMultiplier`<br>`buffFlatBonus`<br>`buffStatModifiers?`                                 | `multiplier` は乗算、`flatBonus` は代数和。複数ステを別々に上げるときは `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1 ステのみは従来 3 フィールドでも可。 | `hp` は maxHp 上昇（`effectiveMaxHp`）。`damageTaken`（`StatBuffTarget`）の減少（ダメージ軽減）や `attackSpeed` の上昇もこれに含みます。                                        |
 | `barrier`                | ダメージを身代わりに受けるバリアを付与                                      | `ResourceAmountSpec`                                                                                      | 既定は max(既存, 付与量)。`barrierStack: true` で加算。                                                                                                                                 | 持続時間制限なし（消費されるまで維持）。詳細は後述の「バリア」参照。                                                                                                    |
 | `block`                  | 物理直接ダメージのブロック率を上昇                                          | `chance`（0〜1）                                                                                          | 複数ソースは加算（上限 1.0）。                                                                                                                                                          | 成功時、DEF 適用後の物理直接ダメージを一定割合カット。DoT は対象外。魔法 block は Paladin 後半 passive 候補で、採用時は新フィールドまたは新 effect として別途定義する。 |
 | `evasion`                | 直接ダメージ（物理/魔法）の回避率を上昇                                     | `chance`（0〜1）                                                                                          | 複数ソースは加算（上限 1.0）。                                                                                                                                                          | 成功時、直接ダメージを完全に無効化。DoT は対象外。                                                                                                                      |
@@ -1924,7 +1939,7 @@ interface CharacterBuild {
 
 | サブ種別 (`debuffSubKind`) | 対象・効果                                                                  | 主なパラメータ                                             | 重複・スタックルール                                                                    | 備考                                                                                                                         |
 | :------------------------- | :-------------------------------------------------------------------------- | :--------------------------------------------------------- | :-------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------- |
-| `stat`                     | ステータス（`hp`, `atk`, `def`, `reg`, `damageTaken`, `attackSpeed`）の低下 | `debuffStat`<br>`debuffMultiplier`<br>`debuffFlatBonus`    | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。                     | `hp` は maxHp 低下（`effectiveMaxHp`）。`damageTaken` の増加（被ダメ UP）や `attackSpeed` の低下（スロウ）もこれに含みます。 |
+| `stat`                     | ステータス（`StatusEffectStat` または `damageTaken`）の低下 | `debuffStat`<br>`debuffMultiplier`<br>`debuffFlatBonus`    | `multiplier` は乗算、`flatBonus` は代数和。持続時間は長い方を優先。                     | `hp` は maxHp 低下（`effectiveMaxHp`）。`damageTaken`（`StatBuffTarget`）の増加（被ダメ UP）や `attackSpeed` の低下（スロウ）もこれに含みます。 |
 | `dot`                      | 持続ダメージ（Damage over Time）を付与                                      | `ResourceAmountSpec`<br>`dotFlavor?`（`bleed` / `poison`） | **累積**: 同一対象へ独立 StatusEffect を追加し各实例が tick（stat/stun 等は長い方優先） | 1 秒ごとにダメージを再計算。`dotFlavor` 未指定 = 汎用 DoT。HUD はフレーバー別アイコン（`bleed` / `poison` / 未指定 `dot`）。 |
 | `stun`                     | 行動不能（CC）状態にする                                                    | `durationSec`（上限 5 秒）                                 | 持続時間の長い方を優先。                                                                | 使用者として通常攻撃・アクティブ発動・ターゲット選択不可。付与成功時に **通常攻撃 CD のみ** 満タンリセット。アクティブ CD・イベントゲージは停止しない。                                                  |
 | `freeze`                   | 時間停止系拘束（予約概念）                                                  | 未定                                                       | 未定                                                                                    | CD 停止が必要な場合は stun ではなく別状態として定義する。現行 JSON では未使用。                                              |

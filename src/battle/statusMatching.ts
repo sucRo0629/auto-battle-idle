@@ -7,10 +7,10 @@ import type {
   CombatantState,
   DebuffFilterTag,
   StatusEffect,
-  StatusEffectStat,
+  StatBuffTarget,
 } from './types.ts';
 
-const STAT_TAGS = new Set<StatusEffectStat>([
+const STAT_TAGS = new Set<StatBuffTarget>([
   'hp',
   'atk',
   'def',
@@ -35,7 +35,7 @@ function matchesDebuffTag(
 ): boolean {
   if (effect.remainingSec <= 0) return false;
 
-  if (STAT_TAGS.has(tag as StatusEffectStat)) {
+  if (STAT_TAGS.has(tag as StatBuffTarget)) {
     return effect.kind === 'debuff' && effect.stat === tag;
   }
 
@@ -69,7 +69,7 @@ function matchesDebuffTag(
 function matchesBuffTag(effect: StatusEffect, tag: BuffFilterTag): boolean {
   if (effect.remainingSec <= 0) return false;
 
-  if (STAT_TAGS.has(tag as StatusEffectStat)) {
+  if (STAT_TAGS.has(tag as StatBuffTarget)) {
     return effect.kind === 'buff' && effect.stat === tag;
   }
 

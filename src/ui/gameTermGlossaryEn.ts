@@ -2,7 +2,9 @@ import type { GameTermId } from "./gameTermGlossary.ts";
 
 export interface GameTermEnSupplement {
   title: string;
+  /** 用語パネル本文。Inline ホバーは省略時 `description` 先頭行から生成。 */
   description?: string;
+  /** ホバー専用短文化。パネルと同文なら省略。 */
   tooltip?: string;
   statusDefinition?: string;
   aliases?: readonly string[];
@@ -61,7 +63,7 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   charge: {
     title: "Charge",
     description:
-      "Stock mechanic shown as \"N charges available\".\nIf recast is ready but conditions fail, one usable charge is stored and the next recast gauge can advance.\nWhen conditions are met, stored charges are spent first.",
+      "Stock mechanic shown as \"Charge available N\" (N = stock cap).\nIf recast is ready but conditions fail, one usable charge is stored and the next recast gauge can advance.\nWhen conditions are met, stored charges are spent first.",
     aliases: ["Charge"],
   },
   stun: {
@@ -82,28 +84,40 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
     aliases: ["DoT Compression"],
   },
   multiLock: {
-    title: "Multi-Lock",
-    tooltip:
-      "Applies effects up to the target count.\nIf targets are insufficient, remaining applications hit the same target again.",
+    title: "Multi-Lock N",
     description:
-      "Applies effects up to the target count. If targets are insufficient, remaining applications hit the same target again.",
+      "Applies effects up to the target count.\nIf targets are insufficient, remaining applications hit the same target again.",
     aliases: ["Multi-Lock"],
   },
   aoe: {
-    title: "AoE",
-    tooltip: "Applies effects to targets in an area.",
-    description: "Applies effects to targets in an area.",
+    title: "AoE N",
+    description:
+      "Applies effects to targets within radius N of the selected anchor.",
     aliases: ["AoE"],
   },
+  surrounding: {
+    title: "Nearby N",
+    description:
+      "Applies effects to targets within radius N of the caster.",
+    aliases: ["Nearby"],
+  },
+  fieldLocation: {
+    title: "Field M",
+    description:
+      "Places a persistent area at a battlefield coordinate. Effects apply to targets inside the radius.",
+    aliases: ["Field"],
+  },
   pierce: {
-    title: "Pierce",
-    tooltip: "Applies effects through targets in line.",
+    title: "Pierce N",
     description: "Applies effects through targets in line.",
     aliases: ["Pierce"],
   },
   skillLock: {
     title: "Lockout",
-    description: "After using a skill, prevents skills and basic attacks for a set time.",
+    tooltip:
+      "While locked out, the unit cannot act and active skill recast timers pause.",
+    description:
+      "SkillHold after using a skill. While locked out, the unit cannot act and active skill recast timers pause.",
     aliases: ["Lockout"],
   },
   damageReduction: { title: "Damage Reduction" },
@@ -229,26 +243,22 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   poisonWeapon: { title: "Poison Weapon" },
   nextOutgoingDamage: { title: "Next Hit Amp" },
   knockback: {
-    title: "Knockback",
-    tooltip: "Pushes the target backward. Distance varies by skill.",
+    title: "Knockback N",
     description: "Pushes the target backward. Distance varies by skill.",
     aliases: ["Knockback"],
   },
   defenseIgnoreDef: {
     title: "DEF Ignore",
-    tooltip: "Ignores a portion of the target's DEF on hit.",
     description: "Ignores a portion of the target's DEF on hit.",
     aliases: ["DEF Ignore"],
   },
   damageReductionIgnore: {
     title: "DR Ignore",
-    tooltip: "Ignores the target's damage reduction when dealing damage.",
     description: "Ignores the target's damage reduction when dealing damage.",
     aliases: ["DR Ignore"],
   },
   barrierPierce: {
     title: "Barrier Pierce",
-    tooltip: "Bypasses barrier and deals damage to HP.",
     description: "Bypasses barrier and deals damage to HP.",
     aliases: ["Barrier Pierce"],
   },

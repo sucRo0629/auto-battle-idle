@@ -54,6 +54,7 @@ import {
 import {
   SKILL_CARD_BODY_TERM_EXCLUDE_IDS,
   SKILL_CARD_BODY_TERM_INCLUDE_IDS,
+  SKILL_CARD_META_LINE_TERM_IDS,
 } from "./skillCardDisplayRules.ts";
 
 const PICKER_ROLES: ClassPreset["role"][] = [
@@ -795,7 +796,7 @@ export class SkillMenuPanel {
     unlockedSlots: number
   ): HTMLElement {
     const section = document.createElement("section");
-    section.className = "skill-menu-skill-kind-section";
+    section.className = `skill-menu-skill-kind-section skill-menu-skill-kind-section--${kind}`;
 
     const heading = document.createElement("h3");
     heading.className = "skill-menu-section-title";
@@ -861,7 +862,7 @@ export class SkillMenuPanel {
     const label = def?.name ?? skillId;
 
     const card = document.createElement("article");
-    card.className = "skill-menu-skill-summary-card";
+    card.className = `skill-menu-skill-summary-card skill-menu-skill-summary-card--${options.kind}`;
     card.setAttribute("role", "group");
     card.setAttribute("aria-label", label);
 
@@ -889,14 +890,26 @@ export class SkillMenuPanel {
         getLocale() as GameTermLocale
       );
 
+      const body = document.createElement("div");
+      body.className = "skill-menu-skill-summary-card-body";
+
       if (display.metaLine) {
         const metaEl = document.createElement("div");
         metaEl.className = "skill-menu-skill-summary-card-meta";
-        metaEl.textContent = display.metaLine;
-        card.appendChild(metaEl);
+        metaEl.appendChild(
+          annotateGameTermsWithTooltip(
+            display.metaLine,
+            getLocale() as GameTermLocale,
+            this.gameTermTooltip,
+            {
+              includeTermIds: new Set(SKILL_CARD_META_LINE_TERM_IDS),
+            },
+          ),
+        );
+        body.appendChild(metaEl);
       }
 
-      this.appendSkillCardEffects(card, display.headlineLines);
+      this.appendSkillCardEffects(body, display.headlineLines);
 
       const chipsRow = document.createElement("div");
       chipsRow.className = "skill-menu-skill-summary-card-chips";
@@ -915,7 +928,11 @@ export class SkillMenuPanel {
       }
 
       if (hasChips) {
-        card.appendChild(chipsRow);
+        body.appendChild(chipsRow);
+      }
+
+      if (body.childElementCount > 0) {
+        card.appendChild(body);
       }
     }
 
