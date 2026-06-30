@@ -12,11 +12,11 @@ import {
   type ClassPreset,
   type GameData,
   type PassiveSkillDef,
+  PARTY_SLOT_COUNT,
   type PartyMemberState,
   type PartySlotState,
   type Role,
 } from "../battle/types.ts";
-import type { StatusDisplayCategory } from "../battle/statusEffectDisplay.ts";
 import { getClassIconUrl, getSkillIconUrlForSkill } from "../render/IconRegistry.ts";
 import {
   getEntityAnimLayout,
@@ -25,8 +25,10 @@ import {
   hasEntityBodyAtlas,
 } from "../render/entityAtlas.ts";
 import { getSpriteUrl } from "../render/SpriteRegistry.ts";
-import { getStatusIconUrl } from "../render/StatusIconRegistry.ts";
-import { sortClassIdsByListOrder } from "../battle/data/classListOrder.ts";
+import {
+  compareByClassListOrder,
+  sortClassIdsByListOrder,
+} from "../battle/data/classListOrder.ts";
 import { createMemberFromClass } from "../progression/partyCompose.ts";
 import { type LevelCurvesConfig } from "../progression/levelGrowth.ts";
 import { resolveMemberDisplayStats } from "../progression/memberStatsDisplay.ts";
@@ -39,11 +41,7 @@ import {
   normalizeActiveSlots,
 } from "../progression/skillBuild.ts";
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
-import {
-  formatSkillCardLines,
-  isSkillCardEffectList,
-  type SkillCardEffectLine,
-} from "./formatSkillText.ts";
+import { formatSkillCardLines } from "./formatSkillText.ts";
 import { annotateGameTerms } from "./annotateGameTerms.ts";
 import { formatClassSummary, formatClassSummaryForAria } from "./formatClassSummary.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
@@ -83,12 +81,6 @@ function resolveAttackerSubRole(preset: ClassPreset): AttackerSubRole {
   return "shooter";
 }
 
-const ROLE_STATUS_ICON: Record<Role, StatusDisplayCategory> = {
-  defender: "def",
-  attacker: "atk",
-  supporter: "hot",
-};
-
 export interface SkillMenuPanelCallbacks {
   onBuildChanged: (
     partyIndex: number,
@@ -101,7 +93,7 @@ export interface SkillMenuPanelCallbacks {
 export interface SkillMenuPanelOptions {
   /** @deprecated Picker is inline; host is unused. */
   pickerHost?: HTMLElement;
-  /** 確認モード（デバッグ）時のみスロットクリア UI を表示 */
+  /** 確認モードでは4人未満でも戦闘へ戻れる。解除 UI は Class Select 再クリックのみ。 */
   isVerifyMode?: () => boolean;
 }
 
@@ -113,8 +105,7 @@ export class SkillMenuPanel {
   private readonly rosterSlotsEl: HTMLElement;
   private readonly classArchiveHeaderEl: HTMLElement;
   private readonly classArchiveListEl: HTMLElement;
-  private readonly classArchiveFooterEl: HTMLElement;
-  private readonly classArchiveClearButton: HTMLButtonElement;
+  private readonly classArchiveSummaryEl: HTMLElement;
   private readonly detailZoneHeaderEl: HTMLElement;
   private readonly detailWrapEl: HTMLElement;
   private readonly bodyEl: HTMLElement;
@@ -125,7 +116,10 @@ export class SkillMenuPanel {
   private readonly draftParty: PartySlotState[];
   private readonly unlockedClassIds: ClassId[];
   private readonly isVerifyMode: () => boolean;
-  private selectedIndex = 0;
+  private selectedClassIds: ClassId[];
+  private focusedClassId: ClassId | null = null;
+  private rosterAnimationFromSlots: (ClassId | null)[] | null = null;
+  private selectionFeedback = "";
 
   constructor(
     private readonly container: HTMLElement,
@@ -138,15 +132,21 @@ export class SkillMenuPanel {
   ) {
     this.isVerifyMode = options.isVerifyMode ?? (() => false);
     this.unlockedClassIds = [...unlockedClassIds];
-    this.draftParty = sourceParty.map((member) =>
-      member
+    this.draftParty = Array.from({ length: PARTY_SLOT_COUNT }, (_, index) => {
+      const member = sourceParty[index];
+      return member
         ? {
             classId: member.classId,
             progress: structuredClone(member.progress),
             build: normalizeActiveSlots(cloneBuild(member.build)),
           }
-        : null
-    );
+        : null;
+    });
+    this.selectedClassIds = this.draftParty
+      .flatMap((member) => (member ? [member.classId] : []))
+      .slice(0, 4);
+    this.focusedClassId =
+      this.selectedClassIds[0] ?? this.getPickerVisibleClassIds()[0] ?? null;
 
     this.root = document.createElement("div");
     this.root.className = "meta-menu-screen skill-menu-panel";
@@ -178,10 +178,9 @@ export class SkillMenuPanel {
     this.rosterSlotsEl.addEventListener("click", (event) => {
       const card = (event.target as Element | null)?.closest(".skill-menu-roster-card");
       if (!(card instanceof HTMLButtonElement)) return;
-      const index = Number(card.dataset.memberIndex);
-      if (Number.isNaN(index)) return;
-      this.selectedIndex = index;
-      this.render();
+      const classId = card.dataset.summaryClassId;
+      if (!classId) return;
+      this.focusClass(classId);
     });
 
     const classArchiveEl = document.createElement("section");
@@ -201,32 +200,38 @@ export class SkillMenuPanel {
       if (!(listItem instanceof HTMLButtonElement)) return;
       const classId = listItem.dataset.pickerClassId;
       if (!classId) return;
-      this.assignClassToSlot(classId);
+      this.toggleClassSelection(classId);
+    });
+    this.classArchiveListEl.addEventListener("mouseover", (event) => {
+      const listItem = (event.target as Element | null)?.closest(
+        ".skill-menu-picker-list-item"
+      );
+      if (!(listItem instanceof HTMLButtonElement)) return;
+      const classId = listItem.dataset.pickerClassId;
+      if (!classId) return;
+      this.focusClass(classId);
+    });
+    this.classArchiveListEl.addEventListener("focusin", (event) => {
+      const listItem = (event.target as Element | null)?.closest(
+        ".skill-menu-picker-list-item"
+      );
+      if (!(listItem instanceof HTMLButtonElement)) return;
+      const classId = listItem.dataset.pickerClassId;
+      if (!classId) return;
+      this.focusClass(classId);
     });
 
-    this.classArchiveFooterEl = document.createElement("div");
-    this.classArchiveFooterEl.className = "skill-menu-class-archive-footer";
-    this.classArchiveFooterEl.hidden = true;
-
-    this.classArchiveClearButton = document.createElement("button");
-    this.classArchiveClearButton.type = "button";
-    this.classArchiveClearButton.className =
-      "game-ui-button game-ui-button--danger skill-menu-class-archive-clear";
-    this.classArchiveClearButton.addEventListener("click", () => {
-      this.assignClassToSlot("");
-    });
-    this.classArchiveFooterEl.appendChild(this.classArchiveClearButton);
+    this.classArchiveSummaryEl = document.createElement("div");
+    this.classArchiveSummaryEl.className = "skill-menu-class-archive-summary";
 
     classArchiveEl.append(
       this.classArchiveHeaderEl,
       this.classArchiveListEl,
-      this.classArchiveFooterEl
+      this.classArchiveSummaryEl
     );
 
-    this.formationBlockEl.append(this.rosterSlotsEl, noteEl);
-    formationZoneEl.append(this.formationZoneHeaderEl, this.formationBlockEl);
-
-    boardUpperEl.append(formationZoneEl, classArchiveEl);
+    this.formationBlockEl.append(noteEl, this.rosterSlotsEl);
+    formationZoneEl.append(this.formationBlockEl);
 
     const detailZoneEl = document.createElement("section");
     detailZoneEl.className = "skill-menu-zone skill-menu-zone--detail";
@@ -247,6 +252,7 @@ export class SkillMenuPanel {
     this.detailWrapEl.append(this.bodyEl);
 
     detailZoneEl.append(this.detailZoneHeaderEl, this.detailWrapEl);
+    boardUpperEl.append(classArchiveEl, detailZoneEl);
 
     this.gameTermPanel = new GameTermPanel(this.root, {
       locale: getLocale() as GameTermLocale,
@@ -255,7 +261,7 @@ export class SkillMenuPanel {
     this.gameTermPanel.mount();
     this.gameTermTooltip = new GameTermTooltip(this.root);
 
-    this.boardEl.append(boardUpperEl, detailZoneEl);
+    this.boardEl.append(boardUpperEl, formationZoneEl);
     this.root.appendChild(this.boardEl);
     this.container.appendChild(this.root);
     this.unsubscribeLocale = subscribeLocaleChange(() => this.render());
@@ -267,7 +273,14 @@ export class SkillMenuPanel {
   }
 
   getSelectedSlotIndex(): number {
-    return this.selectedIndex;
+    const focusedIndex = this.draftParty.findIndex(
+      (member) => member?.classId === this.focusedClassId
+    );
+    return focusedIndex >= 0 ? focusedIndex : 0;
+  }
+
+  canReturnToBattle(): boolean {
+    return this.isVerifyMode() || this.selectedClassIds.length === 4;
   }
 
   private getPickerVisibleClassIds(): ClassId[] {
@@ -277,69 +290,152 @@ export class SkillMenuPanel {
     );
   }
 
-  private getClassIdsUsedElsewhere(): Set<ClassId> {
-    const used = new Set<ClassId>();
-    this.draftParty.forEach((member, index) => {
-      if (index !== this.selectedIndex && member) {
-        used.add(member.classId);
-      }
-    });
-    return used;
+  private focusClass(classId: ClassId): void {
+    if (this.focusedClassId === classId) return;
+    this.focusedClassId = classId;
+    this.renderRoster();
+    this.renderClassArchiveSummary();
+    this.renderBody();
+    this.refreshClassArchiveFocusStyles();
   }
 
-  private assignClassToSlot(classId: string): void {
-    const slotIndex = this.selectedIndex;
-    if (classId) {
-      if (this.getClassIdsUsedElsewhere().has(classId)) return;
-      const member = createMemberFromClass(classId, this.gameData);
-      this.draftParty[slotIndex] = member;
-      this.callbacks.onPartySlotChanged(slotIndex, structuredClone(member));
-    } else {
-      this.draftParty[slotIndex] = null;
-      this.callbacks.onPartySlotChanged(slotIndex, null);
+  private toggleClassSelection(classId: ClassId): void {
+    this.focusedClassId = classId;
+    const selectedIndex = this.selectedClassIds.indexOf(classId);
+    if (selectedIndex >= 0) {
+      this.rosterAnimationFromSlots = this.getSummarySlots();
+      this.selectedClassIds.splice(selectedIndex, 1);
+      this.selectionFeedback = "";
+      this.syncDraftPartyToSelection();
+      this.render();
+      return;
     }
+
+    if (this.selectedClassIds.length >= 4) {
+      this.selectionFeedback = t("party.partyFull");
+      this.render();
+      return;
+    }
+
+    this.rosterAnimationFromSlots = this.getSummarySlots();
+    this.selectedClassIds.push(classId);
+    this.selectionFeedback = "";
+    this.syncDraftPartyToSelection();
     this.render();
   }
 
-  private render(): void {
-    this.formationZoneHeaderEl.textContent = t("party.zonePartySetup");
-    this.classArchiveHeaderEl.textContent = t("party.zoneChooseClass");
-    this.detailZoneHeaderEl.textContent = t("party.zoneTacticalData");
-    const verifyMode = this.isVerifyMode();
-    this.classArchiveFooterEl.hidden = !verifyMode;
-    if (verifyMode) {
-      this.classArchiveClearButton.textContent = t("party.clearSlot");
-      this.classArchiveClearButton.disabled =
-        !this.draftParty[this.selectedIndex];
+  private syncDraftPartyToSelection(): void {
+    const existingByClassId = new Map<ClassId, PartyMemberState>();
+    for (const member of this.draftParty) {
+      if (member) existingByClassId.set(member.classId, structuredClone(member));
     }
-    this.formationNoteEl.textContent = t("party.formationNote");
+
+    const sortedClassIds = this.getSummaryClassIds();
+    const nextParty: PartySlotState[] = Array.from(
+      { length: this.draftParty.length },
+      () => null
+    );
+    const startIndex = Math.max(0, nextParty.length - sortedClassIds.length);
+
+    sortedClassIds.forEach((classId, index) => {
+      nextParty[startIndex + index] =
+        existingByClassId.get(classId) ??
+        createMemberFromClass(classId, this.gameData);
+    });
+
+    nextParty.forEach((member, index) => {
+      const current = this.draftParty[index];
+      if (current?.classId === member?.classId) {
+        this.draftParty[index] = member;
+        return;
+      }
+      this.draftParty[index] = member;
+      this.callbacks.onPartySlotChanged(
+        index,
+        member ? structuredClone(member) : null
+      );
+    });
+  }
+
+  private getSummaryClassIds(): ClassId[] {
+    return [...this.selectedClassIds].sort((aId, bId) => {
+      const a = this.gameData.classRegistry[aId];
+      const b = this.gameData.classRegistry[bId];
+      const rangeDelta = (b?.traits.rangePx ?? 0) - (a?.traits.rangePx ?? 0);
+      if (rangeDelta !== 0) return rangeDelta;
+      return compareByClassListOrder(aId, bId, this.gameData.classOrder);
+    });
+  }
+
+  private getSummarySlots(): (ClassId | null)[] {
+    const sortedClassIds = this.getSummaryClassIds();
+    const emptyCount = Math.max(0, 4 - sortedClassIds.length);
+    return [
+      ...Array.from({ length: emptyCount }, () => null),
+      ...sortedClassIds,
+    ];
+  }
+
+  private render(): void {
+    this.formationZoneHeaderEl.textContent = t("party.zonePartySummary");
+    this.classArchiveHeaderEl.textContent = t("party.zoneClassSelect");
+    this.detailZoneHeaderEl.textContent = t("party.skills");
+    this.formationNoteEl.textContent = this.selectionFeedback;
     this.renderRoster();
     this.renderClassArchive();
+    this.renderClassArchiveSummary();
     this.renderBody();
     this.callbacks.onPartyDraftChange?.();
   }
 
+  private refreshClassArchiveFocusStyles(): void {
+    const rows = Array.from(
+      this.classArchiveListEl.querySelectorAll(".skill-menu-picker-list-item")
+    );
+    for (const row of rows) {
+      if (!(row instanceof HTMLButtonElement)) continue;
+      row.classList.toggle(
+        "skill-menu-picker-list-item--focused",
+        row.dataset.pickerClassId === this.focusedClassId
+      );
+    }
+  }
+
   private renderRoster(): void {
+    const animationFromSlots = this.rosterAnimationFromSlots;
+    this.rosterAnimationFromSlots = null;
+
     this.rosterSlotsEl.replaceChildren();
-    this.draftParty.forEach((member, index) => {
-      const preset = member
-        ? this.gameData.classRegistry[member.classId]
+    this.getSummarySlots().forEach((classId) => {
+      const preset = classId
+        ? this.gameData.classRegistry[classId]
         : undefined;
       const button = document.createElement("button");
       button.type = "button";
       button.className = "skill-menu-roster-card";
-      if (!member) {
+      if (!classId) {
         button.classList.add("skill-menu-roster-card--empty");
       }
-      if (index === this.selectedIndex) {
+      if (classId && classId === this.focusedClassId) {
         button.classList.add("skill-menu-roster-card--active");
         button.setAttribute("aria-current", "true");
       } else {
         button.removeAttribute("aria-current");
       }
-      button.dataset.memberIndex = String(index);
+      if (classId) {
+        button.dataset.summaryClassId = classId;
+      } else {
+        button.disabled = true;
+      }
 
-      if (member && preset) {
+      const ground = document.createElement("span");
+      ground.className = "skill-menu-roster-card-ground";
+      ground.setAttribute("aria-hidden", "true");
+
+      const motion = document.createElement("div");
+      motion.className = "skill-menu-roster-card-motion";
+
+      if (classId && preset) {
         const summary = formatClassSummary(preset, getLocale());
         const ariaParts = [preset.displayName];
         if (preset.epithetEn) ariaParts.push(preset.epithetEn);
@@ -349,8 +445,8 @@ export class SkillMenuPanel {
         const visual = document.createElement("div");
         visual.className = "skill-menu-roster-card-visual";
         visual.append(
-          this.createRosterCharacterDisplay(preset),
-          this.createRosterRoleIcon(preset.role)
+          ground,
+          this.createRosterCharacterDisplay(preset)
         );
 
         const iconEl = this.createIconWrap(preset, preset.displayName);
@@ -377,55 +473,92 @@ export class SkillMenuPanel {
         footer.className = "skill-menu-roster-card-footer";
         footer.append(iconEl, textWrap);
 
-        button.append(visual, footer);
+        motion.append(visual, footer);
+        button.appendChild(motion);
       } else {
         button.setAttribute("aria-label", t("party.emptySlot"));
 
         const visual = document.createElement("div");
         visual.className =
           "skill-menu-roster-card-visual skill-menu-roster-card-visual--empty";
-        const spritePlaceholder = document.createElement("span");
-        spritePlaceholder.className = "skill-menu-roster-card-character";
-        spritePlaceholder.setAttribute("aria-hidden", "true");
-        visual.appendChild(spritePlaceholder);
-
-        const iconEl = document.createElement("span");
-        iconEl.className =
-          "skill-menu-roster-card-icon skill-menu-tab-icon skill-menu-tab-icon--empty";
-        iconEl.setAttribute("aria-hidden", "true");
-
-        const hintEl = document.createElement("span");
-        hintEl.className = "skill-menu-roster-card-empty-label";
-        hintEl.textContent = t("party.addClass");
-
-        const footer = document.createElement("div");
-        footer.className =
-          "skill-menu-roster-card-footer skill-menu-roster-card-footer--empty";
-        footer.append(iconEl, hintEl);
-
-        button.append(visual, footer);
+        visual.appendChild(ground);
+        motion.appendChild(visual);
+        button.appendChild(motion);
       }
 
       this.rosterSlotsEl.appendChild(button);
     });
+    this.animateRosterReorder(animationFromSlots);
   }
 
-  private createRosterRoleIcon(role: Role): HTMLElement {
-    const wrap = document.createElement("span");
-    wrap.className = "skill-menu-roster-card-role-icon";
-    wrap.setAttribute("aria-hidden", "true");
+  private animateRosterReorder(fromSlots: (ClassId | null)[] | null): void {
+    if (!fromSlots) return;
 
-    const url = getStatusIconUrl(ROLE_STATUS_ICON[role]);
-    if (url) {
-      const img = document.createElement("img");
-      img.className = "skill-menu-roster-card-role-icon-img";
-      img.src = url;
-      img.alt = "";
-      img.decoding = "async";
-      wrap.appendChild(img);
+    const slotCards = Array.from(
+      this.rosterSlotsEl.querySelectorAll(".skill-menu-roster-card")
+    );
+    const slotRects = slotCards.map((card) => card.getBoundingClientRect());
+
+    for (const card of slotCards) {
+      if (!(card instanceof HTMLButtonElement)) continue;
+      const classId = card.dataset.summaryClassId;
+      if (!classId) continue;
+      const fromIndex = fromSlots.indexOf(classId);
+      if (fromIndex < 0) {
+        this.animateRosterCardEnter(card);
+        continue;
+      }
+
+      const current = card.getBoundingClientRect();
+      const previous = slotRects[fromIndex];
+      const deltaX = previous.left - current.left;
+      if (Math.abs(deltaX) < 1) continue;
+
+      const motion = card.querySelector(".skill-menu-roster-card-motion");
+      if (!(motion instanceof HTMLElement)) continue;
+      motion.style.setProperty("--summary-slide-x", `${deltaX}px`);
+      motion.classList.remove("skill-menu-roster-card-motion--slide");
+      void motion.offsetWidth;
+      motion.classList.add("skill-menu-roster-card-motion--slide");
+      motion.addEventListener(
+        "animationend",
+        () => {
+          motion.classList.remove("skill-menu-roster-card-motion--slide");
+          motion.style.removeProperty("--summary-slide-x");
+        },
+        { once: true }
+      );
+    }
+  }
+
+  private animateRosterCardEnter(card: HTMLButtonElement): void {
+    const character = card.querySelector(".skill-menu-roster-card-character");
+    if (character instanceof HTMLElement) {
+      character.classList.remove("skill-menu-roster-card-character--enter");
+      void character.offsetWidth;
+      character.classList.add("skill-menu-roster-card-character--enter");
+      character.addEventListener(
+        "animationend",
+        () => {
+          character.classList.remove("skill-menu-roster-card-character--enter");
+        },
+        { once: true }
+      );
     }
 
-    return wrap;
+    const footer = card.querySelector(".skill-menu-roster-card-footer");
+    if (footer instanceof HTMLElement) {
+      footer.classList.remove("skill-menu-roster-card-footer--enter");
+      void footer.offsetWidth;
+      footer.classList.add("skill-menu-roster-card-footer--enter");
+      footer.addEventListener(
+        "animationend",
+        () => {
+          footer.classList.remove("skill-menu-roster-card-footer--enter");
+        },
+        { once: true }
+      );
+    }
   }
 
   private createRosterCharacterDisplay(preset: ClassPreset): HTMLElement {
@@ -480,20 +613,19 @@ export class SkillMenuPanel {
 
   private renderBody(): void {
     this.bodyEl.replaceChildren();
-    const member = this.draftParty[this.selectedIndex];
+    const focusedClassId =
+      this.focusedClassId ?? this.selectedClassIds[0] ?? this.getPickerVisibleClassIds()[0];
 
-    if (!member) {
+    if (!focusedClassId) {
       this.bodyEl.appendChild(this.createEmptySlotDetail());
       return;
     }
 
-    const preset = this.gameData.classRegistry[member.classId];
+    const preset = this.gameData.classRegistry[focusedClassId];
     if (!preset) return;
 
     const layout = document.createElement("div");
     layout.className = "skill-menu-tactical-layout";
-
-    layout.appendChild(this.createClassSummaryBand(preset));
 
     const playerLevel = this.getPlayerLevel();
     const learned = resolveLearnedSkills(
@@ -512,6 +644,23 @@ export class SkillMenuPanel {
     layout.appendChild(skillsWrap);
 
     this.bodyEl.appendChild(layout);
+  }
+
+  private renderClassArchiveSummary(): void {
+    this.classArchiveSummaryEl.replaceChildren();
+    const focusedClassId =
+      this.focusedClassId ??
+      this.selectedClassIds[0] ??
+      this.getPickerVisibleClassIds()[0];
+
+    if (!focusedClassId) {
+      this.classArchiveSummaryEl.appendChild(this.createEmptySlotDetail());
+      return;
+    }
+
+    const preset = this.gameData.classRegistry[focusedClassId];
+    if (!preset) return;
+    this.classArchiveSummaryEl.appendChild(this.createClassSummaryBand(preset));
   }
 
   private createEmptySlotDetail(): HTMLElement {
@@ -560,6 +709,14 @@ export class SkillMenuPanel {
     }
     identityEl.append(document.createTextNode(" / "));
     identityEl.appendChild(rolePart);
+
+    const selectionState = document.createElement("span");
+    selectionState.className = "skill-menu-class-summary-selection";
+    selectionState.textContent = this.selectedClassIds.includes(preset.id)
+      ? t("party.selectedState")
+      : t("party.notSelectedState");
+    identityEl.append(document.createTextNode(" "));
+    identityEl.appendChild(selectionState);
 
     section.appendChild(heading);
 
@@ -733,7 +890,7 @@ export class SkillMenuPanel {
         card.appendChild(metaEl);
       }
 
-      this.appendSkillCardEffects(card, lines.effectLines);
+      this.appendSkillCardEffects(card, display.headlineLines);
 
       const chipsRow = document.createElement("div");
       chipsRow.className = "skill-menu-skill-summary-card-chips";
@@ -774,7 +931,7 @@ export class SkillMenuPanel {
 
   private appendSkillCardEffects(
     card: HTMLElement,
-    effectLines: SkillCardEffectLine[]
+    effectLines: string[]
   ): void {
     if (effectLines.length === 0) return;
 
@@ -782,30 +939,6 @@ export class SkillMenuPanel {
     wrap.className = "skill-menu-skill-summary-card-effects";
 
     for (const line of effectLines) {
-      if (isSkillCardEffectList(line)) {
-        const list = document.createElement("ul");
-        list.className = "skill-menu-skill-summary-card-effect-list";
-        for (const item of line.items) {
-          const li = document.createElement("li");
-          li.className = "skill-menu-skill-summary-card-effect-line";
-          li.appendChild(this.createAnnotatedFragment(item.text));
-          if (item.details?.length) {
-            const details = document.createElement("ul");
-            details.className = "skill-menu-skill-summary-card-effect-details";
-            for (const detail of item.details) {
-              const detailItem = document.createElement("li");
-              detailItem.className = "skill-menu-skill-summary-card-effect-line";
-              detailItem.appendChild(this.createAnnotatedFragment(detail));
-              details.appendChild(detailItem);
-            }
-            li.appendChild(details);
-          }
-          list.appendChild(li);
-        }
-        wrap.appendChild(list);
-        continue;
-      }
-
       const paragraph = document.createElement("p");
       paragraph.className = "skill-menu-skill-summary-card-effect-line";
       paragraph.appendChild(this.createAnnotatedFragment(line));
@@ -925,7 +1058,6 @@ export class SkillMenuPanel {
 
   private createPickerRoleBlocks(): HTMLElement {
     const visible = this.getPickerVisibleClassIds();
-    const usedElsewhere = this.getClassIdsUsedElsewhere();
     const blocks = document.createElement("div");
     blocks.className = "skill-menu-picker-role-blocks";
 
@@ -966,8 +1098,7 @@ export class SkillMenuPanel {
               this.createPickerListItem(
                 preset?.displayName ?? classId,
                 classId,
-                preset,
-                usedElsewhere.has(classId)
+                preset
               )
             );
           }
@@ -979,8 +1110,7 @@ export class SkillMenuPanel {
             this.createPickerListItem(
               preset?.displayName ?? classId,
               classId,
-              preset,
-              usedElsewhere.has(classId)
+              preset
             )
           );
         }
@@ -995,20 +1125,25 @@ export class SkillMenuPanel {
   private createPickerListItem(
     name: string,
     classId: string,
-    preset?: ClassPreset,
-    usedElsewhere = false
+    preset?: ClassPreset
   ): HTMLElement {
     const row = document.createElement("button");
     row.type = "button";
     row.className = "skill-menu-picker-list-item";
     row.dataset.pickerClassId = classId;
-    const assignedClassId = this.draftParty[this.selectedIndex]?.classId;
-    if (classId === assignedClassId) {
+    const isSelected = this.selectedClassIds.includes(classId);
+    const isFocused = this.focusedClassId === classId;
+    const isAtCapacity = this.selectedClassIds.length >= 4;
+    row.setAttribute("aria-pressed", isSelected ? "true" : "false");
+    if (isSelected) {
       row.classList.add("skill-menu-picker-list-item--active");
-    } else if (usedElsewhere) {
-      row.classList.add("skill-menu-picker-list-item--unavailable");
-      row.disabled = true;
       row.title = t("party.classInParty");
+    } else if (isAtCapacity) {
+      row.classList.add("skill-menu-picker-list-item--unavailable");
+      row.title = t("party.partyFull");
+    }
+    if (isFocused) {
+      row.classList.add("skill-menu-picker-list-item--focused");
     }
 
     row.appendChild(this.createIconWrap(preset, name));
@@ -1016,17 +1151,17 @@ export class SkillMenuPanel {
     const text = document.createElement("div");
     text.className = "skill-menu-picker-list-item-text";
 
+    const nameEl = document.createElement("div");
+    nameEl.className = "skill-menu-picker-list-item-name";
+    nameEl.textContent = name;
+    text.appendChild(nameEl);
+
     if (preset?.epithetEn) {
       const epithetEl = document.createElement("div");
       epithetEl.className = "skill-menu-picker-list-item-epithet";
       epithetEl.textContent = preset.epithetEn;
       text.appendChild(epithetEl);
     }
-
-    const nameEl = document.createElement("div");
-    nameEl.className = "skill-menu-picker-list-item-name";
-    nameEl.textContent = name;
-    text.appendChild(nameEl);
 
     row.appendChild(text);
     return row;

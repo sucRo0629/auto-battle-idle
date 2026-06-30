@@ -265,11 +265,11 @@ Release M1 解禁 8 クラスの一覧・グレーアウト 5・非表示 2 は 
 - [x] 全 15 クラスの `summary.ja` を `classes.json` に設定（編成 UI 詳細・Picker 表示）
 - [x] [party-formation-ui.md §13](../spec/party-formation-ui.md#13-受け入れ条件phase-4d-完了) 受け入れ条件 1〜14 の目視確認
 - [x] §11 デザイン方針どおりの視覚 polish（角丸 2px・弱 shadow・控えめ backdrop）
-- [x] 最小幅 ~800px でのレイアウト確認（Phase 4d 当時。Electron 向け再基準は [party-formation-ui.md §4.4](../spec/party-formation-ui.md#44-デスクトップレスポンシブレイアウト正本) — **1280×720 以上**）
+- [x] 最小幅 ~800px でのレイアウト確認（Phase 4d 当時。Electron 向け再基準は [party-formation-ui.md §4.4](../spec/party-formation-ui.md#44-デスクトップレスポンシブレイアウト正本) — **1280×720 を設計基準 / 最小保証**）
 
 ### 4d フォロー（Electron 向けレイアウト）
 
-- [ ] [party-formation-ui.md §4.4.7](../spec/party-formation-ui.md#447-受け入れ条件レイアウト) — **1280×720 / 1366×768 / 1600×900** での目視。開発用特殊アスペクト比だけに最適化しない
+- [ ] [party-formation-ui.md §4.4.7](../spec/party-formation-ui.md#447-受け入れ条件レイアウト) — **1280×720 / 1600×900 / 1920×1080** での目視。1366×768 は中間確認扱いで、開発用特殊アスペクト比だけに最適化しない
 
 ### 4d スコープ外（Phase 4 でやらない）
 

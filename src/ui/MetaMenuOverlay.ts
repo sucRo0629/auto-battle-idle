@@ -150,13 +150,19 @@ export class MetaMenuOverlay {
             : t("party.back");
       this.footerButton.textContent = exitLabel;
       this.footerButton.setAttribute("aria-label", exitLabel);
+      this.footerButton.disabled =
+        this.directPartyEntry &&
+        this.presentation === "formation-screen" &&
+        !this.skillPanel.canReturnToBattle();
       return;
     }
     this.footerButton.textContent = t("menu.close");
     this.footerButton.setAttribute("aria-label", t("menu.close"));
+    this.footerButton.disabled = false;
   }
 
   private handleFooterAction(): void {
+    if (this.footerButton.disabled) return;
     if (this.skillPanel) {
       if (this.directPartyEntry) {
         this.callbacks.onClose();
@@ -249,6 +255,7 @@ export class MetaMenuOverlay {
           this.getParty()[slotIndex] = member ? structuredClone(member) : null;
           this.callbacks.onPartySlotChanged(slotIndex, member);
         },
+        onPartyDraftChange: () => this.updateFooterButton(),
       },
       { isVerifyMode: this.isVerifyMode },
     );
