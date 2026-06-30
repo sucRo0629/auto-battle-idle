@@ -10,7 +10,7 @@
 |----------|------|
 | [stats.md](stats.md) | 基礎ステ（Lv1）、成長段階、growthPresets、SPD（attackSpeedTier） |
 | [combat.md](combat.md) | ダメージ、回復、CD、ステータス効果 |
-| [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン）、**戦闘中統計 UI**（Phase 4d） |
+| [battle-field.md](battle-field.md) | 戦闘フィールド（座標、隊形、Wave、接敵、描画パイプライン）、**戦闘画面 UI / HUD**、戦闘中統計 UI |
 | [classes-and-skills.md](classes-and-skills.md) | ロール、クラス、スキル JSON スキーマ、**UI 用語辞書**、**ゲーム用語表（表示分類）**、**スプライト・演出アセット** |
 | [i18n-en.md](i18n-en.md) | **英語 i18n 文案方針**（Phase 4e）— スキル効果文・用語・表記統一・スキルカード英語 |
 | [progression.md](progression.md) | EXP、レベル、セーブ、Stage Records、Phase 2〜12 |

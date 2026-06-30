@@ -77,6 +77,10 @@ import {
   type SkillCardLocale,
 } from "./skillTextLocale.ts";
 import {
+  formatSignedUiDistanceValue,
+  formatUiDistanceValue,
+} from "./formatUiDistance.ts";
+import {
   phraseAtkBasedBarrier,
   phraseAtkBasedDamage,
   phraseAtkBasedHeal,
@@ -798,7 +802,7 @@ function formatBlockResonanceConsumeSkillEffect(def: ActiveSkillDef): string {
   const radius = def.blockResonanceOnBlockKnockbackRadiusPx ?? 50;
   const damage = def.blockResonanceOnBlockDamage;
   const defScale = damage?.kind === "defBased" ? damage.defScale ?? 1 : 1;
-  return `「城塞の構え」：ブロック時半径${radius}px内の敵に${formatDefScale(
+  return `「城塞の構え」：ブロック時半径${formatUiDistanceValue(radius)}内の敵に${formatDefScale(
     defScale
   )}のダメージ+ノックバック`;
 }
@@ -1349,7 +1353,7 @@ function formatTargetShape(effect: SkillEffectDef): string {
   switch (shape) {
     case "aoe":
       if (effect.aoeRadiusPx !== undefined) {
-        parts.push(`±${effect.aoeRadiusPx}px`);
+        parts.push(`±${formatUiDistanceValue(effect.aoeRadiusPx)}`);
       }
       break;
     case "single":
@@ -1376,7 +1380,7 @@ function formatTargetShape(effect: SkillEffectDef): string {
         parts.push(`×${effect.scatterHitCount}`);
       }
       if (effect.scatterRadiusPx !== undefined) {
-        parts.push(`半径${effect.scatterRadiusPx}px`);
+        parts.push(`半径${formatUiDistanceValue(effect.scatterRadiusPx)}`);
       }
       break;
   }
@@ -1411,7 +1415,7 @@ function formatTargetFrameLabel(
     }
     case "aoe": {
       const radius = effect.aoeRadiusPx ?? options?.inheritAoeRadiusPx;
-      const range = radius !== undefined ? ` ${radius}px` : "";
+      const range = radius !== undefined ? ` ${formatUiDistanceValue(radius)}` : "";
       return `AoE${range}`;
     }
     case "pierce": {
@@ -1420,7 +1424,7 @@ function formatTargetFrameLabel(
       const diff =
         range !== undefined && baseRange !== undefined ? range - baseRange : 0;
       const rangeDiff =
-        diff === 0 ? "" : ` 射程${diff > 0 ? "+" : ""}${diff}px`;
+        diff === 0 ? "" : ` 射程${formatSignedUiDistanceValue(diff)}`;
       return `${locale === "en" ? "Pierce" : "貫通"}${rangeDiff}`;
     }
     default:
@@ -1528,7 +1532,9 @@ function formatPassiveTargetFrame(
     }
     case "aoe": {
       const radius =
-        options?.aoeRadiusPx !== undefined ? ` ${options.aoeRadiusPx}px` : "";
+        options?.aoeRadiusPx !== undefined
+          ? ` ${formatUiDistanceValue(options.aoeRadiusPx)}`
+          : "";
       return `AoE${radius}`;
     }
     case "pierce":
@@ -1552,7 +1558,7 @@ function formatFramedPassiveLine(
 /** 反撃射程: 0 / 未指定 = 持有者 traits.rangePx（エディタ +0 と同義） */
 function formatCounterRangeSummary(range: number | undefined): string {
   if (range === undefined || range === 0) return "射程+0";
-  return `射程${range}`;
+  return `射程${formatUiDistanceValue(range)}`;
 }
 
 function formatCounterResponse(response: CounterResponseDef): string {
@@ -1573,7 +1579,7 @@ function formatCounterResponse(response: CounterResponseDef): string {
     case "stun":
       return `スタン${response.durationSec}s`;
     case "knockback":
-      return `ノック${response.distancePx}px+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`;
+      return `ノック${formatUiDistanceValue(response.distancePx)}+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`;
   }
 }
 
@@ -1756,12 +1762,11 @@ function formatActiveEffectDetail(
           )} ${effect.buffDurationSec ?? 0}s`
         );
       } else if (effect.buffSubKind === "allyAttackFollowUp") {
+        const radius = effect.allyFollowUpRadiusPx ?? 70;
         extras.push(
           `${BUFF_SUB_KIND_LABELS.allyAttackFollowUp} ${
             effect.buffDurationSec ?? 8
-          }s 半径${
-            effect.allyFollowUpRadiusPx ?? 70
-          }px ${formatStatMultiplierLabel(
+          }s 半径${formatUiDistanceValue(radius)} ${formatStatMultiplierLabel(
             "def",
             effect.followUpDefDebuffMultiplier ?? 0.95
           )}`
@@ -1971,9 +1976,7 @@ function formatActiveEffectDetail(
       const mode =
         effect.moveMode === "toAnchor"
           ? effect.anchorOffsetPx !== undefined && effect.anchorOffsetPx !== 0
-            ? `アンカー ${effect.anchorOffsetPx > 0 ? "+" : ""}${
-                effect.anchorOffsetPx
-              }px`
+            ? `アンカー ${formatSignedUiDistanceValue(effect.anchorOffsetPx)}`
             : "アンカー"
           : "接敵";
       extras.push(`${mode} ${effect.moveDurationSec}s`);
@@ -1983,7 +1986,7 @@ function formatActiveEffectDetail(
       extras.push(`${effect.durationSec}s`);
       break;
     case "knockback":
-      extras.push(`${effect.distancePx}px+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`);
+      extras.push(`${formatUiDistanceValue(effect.distancePx)}+移動硬直${KNOCKBACK_MOVE_LOCK_SEC}s`);
       break;
     case "dispel": {
       extras.push(
@@ -2036,7 +2039,7 @@ function formatActiveEffectDetail(
       break;
     }
     case "placedField": {
-      extras.push(`${effect.fieldRadiusPx}px/${effect.fieldDurationSec}s`);
+      extras.push(`${formatUiDistanceValue(effect.fieldRadiusPx)}/${effect.fieldDurationSec}s`);
       if (effect.stayTickIntervalSec !== undefined) {
         extras.push(`滞在${effect.stayTickIntervalSec}s`);
       }
@@ -2053,7 +2056,7 @@ function formatActiveEffectDetail(
       break;
     case "poisonSpread":
       extras.push(
-        `蔓延${effect.spreadRadiusPx}px/${Math.round(
+        `蔓延${formatUiDistanceValue(effect.spreadRadiusPx)}/${Math.round(
           effect.spreadDurationRatio * 100
         )}%`
       );
@@ -2061,7 +2064,7 @@ function formatActiveEffectDetail(
   }
 
   if (effect.range !== undefined && effect.type !== "counter" && !compact) {
-    extras.push(`射程${effect.range}px`);
+    extras.push(`射程${formatUiDistanceValue(effect.range)}`);
   }
 
   const kindLabel = formatEffectKindLabel(effect.type);
@@ -2201,7 +2204,7 @@ function formatPassiveEffect(
       return `${phraseDamageReductionRate(formatPercent(percent))} → ${formatTarget(rule, { kind: "self" })}（${[
         formatTargetShape(passiveDamageReductionToEffectDef(def)),
         def.damageReductionRange !== undefined
-          ? `${def.damageReductionRange}px`
+          ? formatUiDistanceValue(def.damageReductionRange)
           : null,
         "常時",
       ]
@@ -2238,7 +2241,9 @@ function formatPassiveEffect(
         : "";
       const dispelMeta = [
         formatTargetShape(passiveDispelToEffectDef(def)),
-        def.dispelRange !== undefined ? `${def.dispelRange}px` : null,
+        def.dispelRange !== undefined
+          ? formatUiDistanceValue(def.dispelRange)
+          : null,
       ]
         .filter(Boolean)
         .join(" · ");
@@ -2376,7 +2381,7 @@ function formatPassiveEffect(
       const target = formatTarget(def.hotTargetRule, { kind: "self" });
       const hotMeta = [
         formatTargetShape(passiveHotToEffectDef(def)),
-        def.hotRange !== undefined ? `${def.hotRange}px` : null,
+        def.hotRange !== undefined ? formatUiDistanceValue(def.hotRange) : null,
       ]
         .filter(Boolean)
         .join(" · ");
@@ -2461,7 +2466,7 @@ function formatPassiveEffect(
       const radius = def.ballistaMarkSplashRadiusPx ?? 50;
       const splash = formatPercent(def.ballistaMarkSplashDamageScale ?? 0.3);
       const spd = def.ballistaMarkSelfAttackSpeedMul ?? 0.85;
-      return `砲撃標的（着弾${radius}px内飛散${splash} / 自身${formatStatMultiplierLabel(
+      return `砲撃標的（着弾${formatUiDistanceValue(radius)}内飛散${splash} / 自身${formatStatMultiplierLabel(
         "attackSpeed",
         spd
       )}）`;
@@ -2497,7 +2502,7 @@ function formatPassiveEffect(
       const n = def.blazingFlameDetonatePerSeedScale ?? 0.5;
       const mul = def.blazingFlameDetonateMultiplier ?? 1.3;
       const uncap = def.blazingFlameUncap ? " / 熾火上限解除" : "";
-      return `熾火起爆（(ATK+種火×ATK×${n})×${mul} / spread${radius}px）${uncap}`;
+      return `熾火起爆（(ATK+種火×ATK×${n})×${mul} / spread${formatUiDistanceValue(radius)}）${uncap}`;
     }
     case "healReservation": {
       const grant = formatPercent(def.grantOnHealMaxHpRatio ?? 1);
@@ -2523,7 +2528,8 @@ function formatPassiveEffect(
       const effectView = passiveBuffToEffectDef(def);
       const target = formatTarget(def.buffTargetRule, { kind: "self" });
       const shape = formatTargetShape(effectView);
-      const range = def.buffRange !== undefined ? `${def.buffRange}px` : null;
+      const range =
+        def.buffRange !== undefined ? formatUiDistanceValue(def.buffRange) : null;
       const metaParts = [shape, range];
       if (def.buffSubKind === "block") {
         return phraseBlockRateBuff(formatPercent(def.chance ?? 0));
@@ -2604,7 +2610,9 @@ function formatPassiveEffect(
       });
       const shape = formatTargetShape(effectView);
       const range =
-        def.debuffRange !== undefined ? `${def.debuffRange}px` : null;
+        def.debuffRange !== undefined
+          ? formatUiDistanceValue(def.debuffRange)
+          : null;
       const triggerLabel = formatPassiveTriggerSummary(
         def,
         resolvePassivePeriodicTrigger(def),

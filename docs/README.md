@@ -20,6 +20,7 @@
 | `data/levelCurves.json`, ステ計算                                                 | [spec/stats.md](spec/stats.md)                                                  |
 | `combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット                             | [spec/combat.md](spec/combat.md)                                                |
 | `battleLayout.ts`, `combatPosition.ts`, `SpriteAnimator`, `IBattleRenderer`, 描画 | [spec/battle-field.md](spec/battle-field.md)                                    |
+| `BattleView.ts`, `BattleCanvas.ts`, `PartyHudPanel.ts`, 戦闘画面 HUD / レイヤー | [spec/battle-field.md §8](spec/battle-field.md#8-戦闘画面-ui1280720-hud) |
 | `BattleStatsDrawer.ts`, `PartyMemberStatsDisplay.ts`, 戦闘中統計 DOM           | [spec/battle-field.md](spec/battle-field.md#7-戦闘中統計-ui)                    |
 | `vfxAnimRegistry.ts`, `VfxPlaybackManager`, `presentation/`, `sheets/vfx/`        | [spec/classes-and-skills.md](spec/classes-and-skills.md#スプライト演出アセット) |
 | SE / BGM（`src/assets/sounds/`、再生制御・音量設定）                              | [combat-architecture.md](combat-architecture.md#88-sound初期版体験版)（設定 UI: [party-formation-ui.md §16](spec/party-formation-ui.md#16-音声設定体験版)） |
@@ -61,7 +62,7 @@
 | 敵設計コンセプト   | [enemy-design-concept.md](enemy-design-concept.md)       |
 | デモ編成・スキル   | [spec/classes-and-skills.md](spec/classes-and-skills.md) |
 | ダメージ・バフ     | [spec/combat.md](spec/combat.md)                         |
-| 戦場・座標         | [spec/battle-field.md](spec/battle-field.md)             |
+| 戦場・座標 / 戦闘画面 HUD | [spec/battle-field.md](spec/battle-field.md)             |
 | セーブ・EXP        | [spec/progression.md](spec/progression.md)               |
 | パーティ編成 UI    | [spec/party-formation-ui.md](spec/party-formation-ui.md) |
 | ステージ選択 UI    | [spec/stage-selection-ui.md](spec/stage-selection-ui.md) |

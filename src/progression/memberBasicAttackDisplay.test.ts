@@ -51,7 +51,7 @@ describe('resolveMemberBasicAttackDisplay', () => {
     });
 
     expect(resolveMemberBasicAttackDisplay(preset, registry)).toEqual({
-      rangeLabel: '8（近接帯）',
+      rangeLabel: '0.8（近接帯）',
       attributeLabel: '物理',
     });
   });
@@ -115,7 +115,7 @@ describe('resolveMemberBasicAttackDisplay', () => {
     });
 
     expect(resolveMemberBasicAttackDisplay(preset, registry)).toEqual({
-      rangeLabel: '128（遠隔帯）',
+      rangeLabel: '12.8（遠隔帯）',
       attributeLabel: '回復',
     });
   });
@@ -146,7 +146,7 @@ describe('resolveMemberBasicAttackDisplay', () => {
     });
 
     expect(resolveMemberBasicAttackDisplay(preset, registry, 'en')).toEqual({
-      rangeLabel: '8 (Melee band)',
+      rangeLabel: '0.8 (Melee band)',
       attributeLabel: 'Physical',
     });
   });

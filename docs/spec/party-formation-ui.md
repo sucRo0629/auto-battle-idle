@@ -315,6 +315,7 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 - **`playerProgress.level`** で計算した **素ステ**
 - **独立した大カラムは持たない**。クラスサマリー帯の下段に **横並びチップ**（例: `HP 300` `ATK 11` …）
 - HP / ATK / DEF / REG / SPD / 射程 / 通常攻撃属性を 1 行（折り返し可）で表示
+- 射程チップは `memberBasicAttackDisplay` 経由で `rangePx / 10` の単位なし数値 + 近接帯/遠隔帯（例: `12.8（遠隔帯）`）
 - 見出し `ステータス` は **使わない**（チップラベルで足りる）
 
 ### 6.3 習得スキル（閲覧専用）
@@ -358,9 +359,10 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 | `effectLines` | `def.effect[]` を 1 effect 1 行（`formatActiveEffectDetail` compact）。`blockResonanceConsume` は map から除外；consume 専用スキルは特殊 1 行 | `[formatPassiveEffect(...)]` 1 要素（`効果：` プレフィックスなし） |
 
 - 文節 split 禁止 — 改行単位は **effect 配列要素**（Passive は effect 種別 1 行）。リストが必要な passive は `effectLines` に `kind: "list"` ブロックを返す。UI は状態チップ化できる項目を本文から除外し、状態定義は tooltip 側で表示する。本文に残るリストは通常本文より小さく薄い補助注記として描画する
-- Active の `targetShape` が Multi-Lock / AoE / Pierce の場合、カード本文は `{形状} {補足} / {効果}` 形式にする。Pierce の射程は `basicAttackRangePx` と同じなら省略し、差分がある場合のみ `射程+30px` / `射程-30px` のように表示する
-- AoE / Multi-Lock は本文側に敵味方も含める（例: `AoE 50px / 味方の攻撃力+5%`、`マルチロック 2 / 敵に攻撃力の90%...`）。Pierce は効果文に必要な場合のみ敵味方を含める
-- 同じ形状枠が連続する場合は、形状を各行へ重複表示せず `{形状} / {対象}に以下の効果を付与/適用` + 効果行へ畳む（例: `AoE 50px / 味方に以下の効果を付与` → `攻撃力+20%` → `攻撃速度+15%`）
+- プレイヤー向けの距離・範囲・射程差分は内部 `px / 10` の単位なし数値で表示する（例: `50px` → `5`、`+30px` → `+3`）。`px` や `m` はスキル本文へ出さない
+- Active の `targetShape` が Multi-Lock / AoE / Pierce の場合、カード本文は `{形状} {補足} / {効果}` 形式にする。Pierce の射程は `basicAttackRangePx` と同じなら省略し、差分がある場合のみ `射程+3` / `射程-3` のように表示する
+- AoE / Multi-Lock は本文側に敵味方も含める（例: `AoE 5 / 味方の攻撃力+5%`、`マルチロック 2 / 敵に攻撃力の90%...`）。Pierce は効果文に必要な場合のみ敵味方を含める
+- 同じ形状枠が連続する場合は、形状を各行へ重複表示せず `{形状} / {対象}に以下の効果を付与/適用` + 効果行へ畳む（例: `AoE 5 / 味方に以下の効果を付与` → `攻撃力+20%` → `攻撃速度+15%`）
 - 1 行説明の `formatActiveDescription` / `formatPassiveDescription` は tooltip・エディタ互換として維持
 
 **UI 表現:**
@@ -499,9 +501,9 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 
 ```
 マルチロック 2 / 敵に攻撃力の90%の魔法ダメージを与える
-貫通 射程+30px / 攻撃力の50%の物理ダメージを与える
-AoE 50px / 味方の攻撃力+15%
-AoE 50px / 味方に以下の効果を付与
+貫通 射程+3 / 攻撃力の50%の物理ダメージを与える
+AoE 5 / 味方の攻撃力+15%
+AoE 5 / 味方に以下の効果を付与
 攻撃力+20%
 攻撃速度+15%
 ```
@@ -637,7 +639,7 @@ Class Select・Class Detail ではロール表示に **サポーター** を用�
 
 ## 11. デザイン方針（DOM UI 共通）
 
-編成画面および戦闘中の統計オーバーレイ（[battle-field.md §7](battle-field.md#7-戦闘中統計-ui)）は、Web アプリ風ダッシュボードではなく、**PC 向け RPG の情報パネル**を基調とする。Phase 4d では編成・統計・HUD バッジでこの言語を揃える。
+編成画面および戦闘中の統計オーバーレイ（[battle-field.md §7](battle-field.md#7-戦闘中統計-ui)）は、Web アプリ風ダッシュボードではなく、**PC 向け RPG の情報パネル**を基調とする。Phase 4d では編成・統計・HUD バッジでこの言語を揃える。戦闘画面全体の次期 HUD レイアウト（1280×720 固定座標、左右 HUD オーバーレイ、敵 HUD）は [battle-field.md §8](battle-field.md#8-戦闘画面-ui1280720-hud) を正本とする。
 
 | 指針 | 内容 |
 | ---- | ---- |
@@ -704,7 +706,7 @@ Class Select・Class Detail ではロール表示に **サポーター** を用�
 | ドキュメント                                    | 関係                                   |
 | ----------------------------------------------- | -------------------------------------- |
 | [design-philosophy.md](../design-philosophy.md) | 編成解法・理解度向上                   |
-| [battle-field.md](battle-field.md)              | `partySlotIndex`、隊形、`formationRow`、**統計 UI §7** |
+| [battle-field.md](battle-field.md)              | `partySlotIndex`、隊形、`formationRow`、**統計 UI §7**、**戦闘画面 HUD §8** |
 | [classes-and-skills.md](classes-and-skills.md)  | UI ロール、スキル習得、**UI 用語辞書** |
 | [progression.md](progression.md)                | セーブ、`playerProgress`、進行 UI      |
 | [phase-roadmap.md](../plans/phase-roadmap.md)   | Phase 4d 実装タイミング                |

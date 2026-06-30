@@ -5,6 +5,7 @@ import {
   resolveStatusEffectStatDisplayName,
   type GameTermId,
 } from "./gameTermGlossary.ts";
+import { formatUiDistanceValue } from "./formatUiDistance.ts";
 import { getSkillTextLocale } from "./skillTextLocale.ts";
 import type { StatusEffectStat } from "../battle/types.ts";
 
@@ -151,10 +152,12 @@ export function phraseScopeAllAllies(): string {
 export function phraseScopeSelfOrigin(radius?: number): string {
   if (L() === "en") {
     return radius !== undefined
-      ? `Self-origin ±${radius}px: `
+      ? `Self-origin ±${formatUiDistanceValue(radius)}: `
       : "Self-origin: ";
   }
-  return radius !== undefined ? `自身起点±${radius}px：` : "自身起点：";
+  return radius !== undefined
+    ? `自身起点±${formatUiDistanceValue(radius)}：`
+    : "自身起点：";
 }
 
 export function phraseSurroundingPrefix(): string {

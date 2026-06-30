@@ -66,7 +66,7 @@ const LV10_PLUS_SKILL_ASSERTIONS: Record<
     },
   },
   df_paladin: {
-    passive_3: ({ desc }) => expect(desc).toContain('AoE 50px / 味方のブロック率'),
+    passive_3: ({ desc }) => expect(desc).toContain('AoE 5 / 味方のブロック率'),
     passive_4: ({ desc }) => expect(desc).toContain('周囲ダメージ軽減'),
     active_4: ({ card }) =>
       expect(card.effectLines).toContain('1回チャージ可能'),
@@ -254,7 +254,7 @@ describe('formatActiveDescription', () => {
     };
     const desc = formatActiveDescription(def);
     expect(desc).toContain('再使用：9秒');
-    expect(desc).toContain('アンカー +32px');
+    expect(desc).toContain('アンカー +3.2');
     expect(desc).toContain('敵3体に攻撃力の70%の物理ダメージを与える');
     expect(desc).not.toContain('対象不足分は同一対象へ再命中');
   });
@@ -398,7 +398,7 @@ describe('formatActiveDescription', () => {
 
     expect(card.effectLines).toEqual([
       '貫通 / 攻撃力の50%の物理ダメージを与える',
-      'AoE 50px / 味方の攻撃力+15%',
+      'AoE 5 / 味方の攻撃力+15%',
     ]);
   });
 
@@ -425,7 +425,7 @@ describe('formatActiveDescription', () => {
     });
 
     expect(card.effectLines).toEqual([
-      '貫通 射程+30px / 攻撃力の50%の物理ダメージを与える',
+      '貫通 射程+3 / 攻撃力の50%の物理ダメージを与える',
     ]);
   });
 
@@ -459,10 +459,10 @@ describe('formatActiveDescription', () => {
       '貫通 / 敵の攻撃力-5%',
     ]);
     expect(formatSkillCardLines(passive2!, { locale: 'ja' }).effectLines).toEqual([
-      'AoE 50px / 味方の攻撃力+5%',
+      'AoE 5 / 味方の攻撃力+5%',
     ]);
     expect(formatSkillCardLines(active3!, { locale: 'ja' }).effectLines).toEqual([
-      'AoE 50px / 味方に以下の効果を付与',
+      'AoE 5 / 味方に以下の効果を付与',
       '攻撃力+20%',
       '攻撃速度+15%',
     ]);
@@ -710,7 +710,7 @@ describe('formatActiveDescription', () => {
       '再使用：5秒 / 攻撃力の100%の魔法ダメージを与える、味方のHPを攻撃力の125%で回復 /',
     );
     expect(formatActiveDescription(a2!)).toBe(
-      '再使用：被攻撃8回 / 持続：5秒 / 発動条件：自身のHPが80%以下 / 自身起点±50px：魔法耐性+10、ダメージ軽減5%、攻撃力の20%のバリア（加算） /',
+      '再使用：被攻撃8回 / 持続：5秒 / 発動条件：自身のHPが80%以下 / 自身起点±5：魔法耐性+10、ダメージ軽減5%、攻撃力の20%のバリア（加算） /',
     );
     expect(formatActiveDescription(a3!)).toBe(
       '再使用：12秒 / 持続：5秒 / 発動条件：対象のHPが80%以下 / 味方全体ダメージ軽減10%、魔法耐性+20 /',
@@ -1019,7 +1019,7 @@ describe('formatActiveDescription', () => {
       'Recast: After 8 hits taken / Duration: 5s / Condition: Self HP ≤80%',
     );
     expect(card2.effectLines).toEqual([
-      'AoE 50px / Grants the following effects to allies',
+      'AoE 5 / Grants the following effects to allies',
       'REG+10',
       '5% Damage Reduction',
       'Barrier equal to 20% of ATK (stacking)',
@@ -1027,11 +1027,11 @@ describe('formatActiveDescription', () => {
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
     expect(passive1.metaLine).toBe('Always');
-    expect(passive1.effectLines).toEqual(['AoE 50px / Allied Block rate+10%']);
+    expect(passive1.effectLines).toEqual(['AoE 5 / Allied Block rate+10%']);
 
     const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
     expect(passive2.metaLine).toBe('Always');
-    expect(passive2.effectLines).toEqual(['AoE 50px / Allied 5% Damage Reduction']);
+    expect(passive2.effectLines).toEqual(['AoE 5 / Allied 5% Damage Reduction']);
   });
 
   it('formatSkillCardLines applies common en templates for at_swordsman Lv0', async () => {
@@ -1277,10 +1277,10 @@ describe('formatActiveDescription', () => {
     const p3 = gameData.skillRegistry.passives.df_paladin_passive_3;
     const p4 = gameData.skillRegistry.passives.df_paladin_passive_4;
 
-    expect(formatPassiveDescription(p1!)).toBe('効果：AoE 50px / 味方のブロック率+10%');
-    expect(formatPassiveDescription(p2!)).toBe('効果：AoE 50px / 味方のダメージ軽減5%');
+    expect(formatPassiveDescription(p1!)).toBe('効果：AoE 5 / 味方のブロック率+10%');
+    expect(formatPassiveDescription(p2!)).toBe('効果：AoE 5 / 味方のダメージ軽減5%');
     expect(formatPassiveDescription(p3!)).toBe(
-      '効果：AoE 50px / 味方のブロック率+5%、魔法ブロックを可能にする',
+      '効果：AoE 5 / 味方のブロック率+5%、魔法ブロックを可能にする',
     );
     expect(formatPassiveDescription(p4!)).toBe(
       '効果：HPが0以下になるダメージを受けた際、HP50%復活（Wave 1回まで）、自己ダメージ軽減50%、周囲ダメージ軽減25%、5秒',
@@ -1312,7 +1312,7 @@ describe('formatActiveDescription', () => {
       '再使用：被攻撃8回 / 持続：5秒 / 発動条件：自身のHPが80%以下',
     );
     expect(card2.effectLines).toEqual([
-      'AoE 50px / 味方に以下の効果を付与',
+      'AoE 5 / 味方に以下の効果を付与',
       '魔法耐性+10',
       'ダメージ軽減5%',
       '攻撃力の20%のバリア（加算）',
@@ -1320,11 +1320,11 @@ describe('formatActiveDescription', () => {
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'ja' });
     expect(passive1.metaLine).toBe('常時');
-    expect(passive1.effectLines).toEqual(['AoE 50px / 味方のブロック率+10%']);
+    expect(passive1.effectLines).toEqual(['AoE 5 / 味方のブロック率+10%']);
 
     const passive2 = formatSkillCardLines(p2!, { locale: 'ja' });
     expect(passive2.metaLine).toBe('常時');
-    expect(passive2.effectLines).toEqual(['AoE 50px / 味方のダメージ軽減5%']);
+    expect(passive2.effectLines).toEqual(['AoE 5 / 味方のダメージ軽減5%']);
   });
 
   it.each(Object.entries(POLISHED_CLASS_LV10_PLUS))(
