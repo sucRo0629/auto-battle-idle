@@ -82,16 +82,16 @@ describe("resolveSkillCardDisplay", () => {
     const display = resolveSkillCardDisplay(lines, def, "en");
 
     expect(display.headlineLines).toEqual([
-      "Deals 90% ATK as magic damage to 2 enemies",
+      "Multi-Lock 2 / To enemies: Deals 90% ATK as magic damage",
     ]);
-    expect(display.tags.map((tag) => tag.label)).toEqual(["Multi-Lock 2"]);
+    expect(display.tags.map((tag) => tag.label)).toEqual(["Multi-Lock"]);
     expect(display.tags.map((tag) => tag.termId)).toEqual(["multiLock"]);
     expect(resolveGameTermTooltip("multiLock", "en")).toContain(
       "remaining applications hit the same target again"
     );
-    expect(
-      display.headlineLines.some((line) => /multi-lock/i.test(line))
-    ).toBe(false);
+    expect(display.headlineLines.some((line) => /multi-lock/i.test(line))).toBe(
+      true
+    );
   });
 
   it("does not tag magic damage, block, or generic DoT terms", async () => {
@@ -119,13 +119,13 @@ describe("resolveSkillCardDisplay", () => {
 
     expect(display.tags.find((tag) => tag.termId === "multiLock")).toBeDefined();
     expect(display.tags.find((tag) => tag.termId === "multiLock")?.label).toBe(
-      "マルチロック2"
+      "マルチロック"
     );
     expect(display.headlineLines.some((line) => line.includes("マルチロック"))).toBe(
-      false
+      true
     );
     expect(display.headlineLines.some((line) => /敵\d+体に/.test(line))).toBe(
-      true
+      false
     );
     expect(display.headlineLines.some((line) =>
       line.includes("対象不足")
@@ -159,5 +159,18 @@ describe("resolveSkillCardDisplay", () => {
 
     expect(display.tags.map((tag) => tag.termId)).toContain("pierce");
     expect(display.tags.map((tag) => tag.label)).toContain("Pierce");
+  });
+
+  it("uses Japanese label for Pierce tag", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.actives.at_ballista_active_4;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "ja" });
+    const display = resolveSkillCardDisplay(lines, def, "ja");
+
+    expect(display.tags.map((tag) => tag.termId)).toContain("pierce");
+    expect(display.tags.map((tag) => tag.label)).toContain("貫通");
   });
 });

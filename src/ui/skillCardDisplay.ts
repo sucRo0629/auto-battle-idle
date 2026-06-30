@@ -142,12 +142,6 @@ function listItemToStatusChip(
   };
 }
 
-function multiLockTagLabel(hitCount: string, locale: GameTermLocale): string {
-  return locale === "ja"
-    ? `マルチロック${hitCount}`
-    : `Multi-Lock ${hitCount}`;
-}
-
 function resolveEffectTargetShape(
   effect: ActiveSkillDef["effect"][number],
   def: ActiveSkillDef
@@ -178,7 +172,7 @@ function extractEffectTags(
     const hitCount = effect.hitCount ?? def.hitCount ?? 1;
 
     if (shape === "multiLock" && hitCount > 1) {
-      pushTag("multiLock", multiLockTagLabel(String(hitCount), locale));
+      pushTag("multiLock", resolveGameTermTitle("multiLock", locale));
     }
     if (shape === "aoe") {
       pushTag("aoe", resolveGameTermTitle("aoe", locale));

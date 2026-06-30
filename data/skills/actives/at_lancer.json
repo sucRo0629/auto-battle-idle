@@ -72,41 +72,30 @@
     },
     "effect": [
       {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "selfOrigin"
-        },
         "type": "debuff",
         "debuffSubKind": "stun",
-        "durationSec": 2,
-        "targetShape": "pierce"
+        "durationSec": 2
       },
       {
         "type": "knockback",
-        "distancePx": 25,
-        "targetShape": "pierce",
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "selfOrigin"
-        }
+        "distancePx": 25
       },
       {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "selfOrigin"
-        },
         "type": "damage",
         "damageType": "physical",
         "amount": {
           "kind": "atkBased",
           "atkScale": 0.2
-        },
-        "targetShape": "pierce"
+        }
       }
-    ]
+    ],
+    "target": {
+      "kind": "distance",
+      "side": "enemy",
+      "order": "selfOrigin"
+    },
+    "targetShape": "pierce",
+    "pierceDurationSec": 0.1
   },
   {
     "id": "at_lancer_active_3",

@@ -211,7 +211,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
   },
   {
     id: "pierce",
-    title: { ja: "Pierce" },
+    title: { ja: "貫通" },
     tooltip: {
       ja: "貫通し、複数対象へ順に効果を適用する形状。",
     },

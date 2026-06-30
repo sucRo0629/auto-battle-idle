@@ -39,6 +39,7 @@ import type {
   SkillTriggerKind,
   DispelPriority,
   StatusEffectStat,
+  TargetShape,
   TargetSpec,
   TargetStat,
 } from "../battle/types.ts";
@@ -76,7 +77,6 @@ import {
   type SkillCardLocale,
 } from "./skillTextLocale.ts";
 import {
-  phraseAoeAuraIntro,
   phraseAtkBasedBarrier,
   phraseAtkBasedDamage,
   phraseAtkBasedHeal,
@@ -505,35 +505,6 @@ function formatCompactBarrierBuffLabel(
   return `${formatResourceAmount(amount)}${stackSuffix}`;
 }
 
-function formatSelfOriginAoeBuffCardLines(def: ActiveSkillDef): string[] | null {
-  if (
-    def.target?.kind !== "distance" ||
-    def.target.order !== "selfOrigin" ||
-    (def.targetShape ?? "single") !== "aoe"
-  ) {
-    return null;
-  }
-  if (def.effect.length <= 1 || !def.effect.every((effect) => effect.type === "buff")) {
-    return null;
-  }
-
-  const lines: string[] = [phraseAoeAuraIntro()];
-  for (const effect of def.effect) {
-    if (effect.type !== "buff") continue;
-    if (effect.buffSubKind === "barrier") {
-      lines.push(formatCompactBarrierBuffLabel(effect.amount, effect.barrierStack));
-      continue;
-    }
-    const statLabel = formatBuffTargetStats(
-      effect.buffStat,
-      effect.buffMultiplier,
-      effect.buffFlatBonus
-    );
-    lines.push(compactStatEffectLabel(statLabel));
-  }
-  return lines;
-}
-
 function formatActiveSkillMaxChargesLine(def: ActiveSkillDef): string | null {
   if (def.maxCharges === undefined || def.maxCharges <= 0) return null;
   return phraseChargesAvailable(def.maxCharges);
@@ -676,6 +647,39 @@ function formatCompactTargetHint(spec: TargetSpec): string {
     default:
       return "";
   }
+}
+
+function resolveTargetSideLabel(spec: TargetSpec): "ally" | "enemy" | null {
+  switch (spec.kind) {
+    case "distance":
+    case "stat":
+    case "status":
+    case "all":
+      return spec.side;
+    default:
+      return null;
+  }
+}
+
+function targetSideNoun(side: "ally" | "enemy"): string {
+  if (getSkillTextLocale() === "en") {
+    return side === "ally" ? "Allies" : "Enemies";
+  }
+  return side === "ally" ? "味方" : "敵";
+}
+
+function targetSidePossessivePrefix(side: "ally" | "enemy"): string {
+  if (getSkillTextLocale() === "en") {
+    return side === "ally" ? "Allied " : "Enemy ";
+  }
+  return `${targetSideNoun(side)}の`;
+}
+
+function targetSideApplyPrefix(side: "ally" | "enemy"): string {
+  if (getSkillTextLocale() === "en") {
+    return side === "ally" ? "To allies: " : "To enemies: ";
+  }
+  return `${targetSideNoun(side)}に`;
 }
 
 function resolveActiveSkillScopePrefix(
@@ -822,9 +826,14 @@ function resolveActiveSkillSpecialEffectLines(
   return null;
 }
 
+type SkillCardFormatContext = {
+  basicAttackRangePx?: number;
+  showTargetFrame?: boolean;
+};
+
 function formatActiveSkillDefaultEffectLines(
   def: ActiveSkillDef,
-  options?: { includeMaxCharges?: boolean }
+  options?: { includeMaxCharges?: boolean } & SkillCardFormatContext
 ): string[] {
   const mappableEffects = def.effect.filter(
     (effect) => effect.type !== "blockResonanceConsume"
@@ -832,33 +841,99 @@ function formatActiveSkillDefaultEffectLines(
   const scopePrefix = resolveActiveSkillScopePrefix(def);
   const lines: string[] = [];
   let scopeApplied = false;
+  let pendingTargetFrameGroup: {
+    frame: string;
+    details: string[];
+    targetSide: "ally" | "enemy" | null;
+  } | null = null;
 
-  for (const effect of mappableEffects) {
-    const multiLockLines = formatMultiLockDamageEffectLines(effect, def.target);
-    if (multiLockLines) {
-      if (scopePrefix && !scopeApplied) {
-        lines.push(`${scopePrefix}${multiLockLines[0]}`);
-        scopeApplied = true;
-        lines.push(...multiLockLines.slice(1));
-      } else {
-        lines.push(...multiLockLines);
-      }
-      continue;
-    }
-
-    const line = formatActiveEffectDetail(effect, {
-      compact: true,
-      scopePrefix,
-      inheritTarget: def.target,
-    });
-    if (!line) continue;
-    if (scopePrefix && !scopeApplied) {
+  const pushLine = (line: string, suppressScopePrefix = false): void => {
+    if (scopePrefix && !scopeApplied && !suppressScopePrefix) {
       lines.push(joinActiveSkillScopePrefix(scopePrefix, line));
       scopeApplied = true;
     } else {
       lines.push(line);
+      if (scopePrefix && suppressScopePrefix) scopeApplied = true;
     }
+  };
+
+  const flushTargetFrameGroup = (): void => {
+    if (!pendingTargetFrameGroup) return;
+    const group = pendingTargetFrameGroup;
+    pendingTargetFrameGroup = null;
+    if (group.details.length === 1) {
+      pushLine(`${group.frame} / ${group.details[0]}`, true);
+      return;
+    }
+    pushLine(formatTargetFrameGroupIntro(group.frame, group.targetSide), true);
+    lines.push(
+      ...group.details.map((detail) =>
+        stripGroupedTargetSidePrefix(detail, group.targetSide)
+      )
+    );
+  };
+
+  for (const effect of mappableEffects) {
+    if (!options?.showTargetFrame) {
+      const multiLockLines = formatMultiLockDamageEffectLines(effect, def.target);
+      if (multiLockLines) {
+        flushTargetFrameGroup();
+        if (scopePrefix && !scopeApplied) {
+          lines.push(`${scopePrefix}${multiLockLines[0]}`);
+          scopeApplied = true;
+          lines.push(...multiLockLines.slice(1));
+        } else {
+          lines.push(...multiLockLines);
+        }
+        continue;
+      }
+    }
+
+    const detailOptions: ActiveEffectDetailOptions = {
+      compact: true,
+      scopePrefix,
+      inheritTarget: def.target,
+      inheritTargetShape: def.targetShape,
+      inheritRange: def.range,
+      inheritAoeRadiusPx: def.aoeRadiusPx,
+      inheritHitCount: def.hitCount,
+      inheritPierceDurationSec: def.pierceDurationSec,
+      basicAttackRangePx: options?.basicAttackRangePx,
+      showTargetFrame: options?.showTargetFrame,
+    };
+    const line = formatActiveEffectDetail(effect, detailOptions);
+    if (!line) continue;
+    const targetFrame = options?.showTargetFrame
+      ? formatTargetFrameLabel(effect, detailOptions)
+      : null;
+    if (targetFrame) {
+      const prefix = `${targetFrame} / `;
+      if (line.startsWith(prefix)) {
+        const detail = line.slice(prefix.length);
+        const targetSide = resolveTargetSideLabel(
+          resolveEffectTargetSpec(effect, def.target)
+        );
+        if (
+          pendingTargetFrameGroup?.frame === targetFrame &&
+          pendingTargetFrameGroup.targetSide === targetSide
+        ) {
+          pendingTargetFrameGroup.details.push(detail);
+        } else {
+          flushTargetFrameGroup();
+          pendingTargetFrameGroup = {
+            frame: targetFrame,
+            details: [detail],
+            targetSide,
+          };
+        }
+        continue;
+      }
+    }
+    flushTargetFrameGroup();
+    pushLine(line);
   }
+
+  flushTargetFrameGroup();
 
   if (options?.includeMaxCharges) {
     const maxChargesLine = formatActiveSkillMaxChargesLine(def);
@@ -1309,6 +1384,171 @@ function formatTargetShape(effect: SkillEffectDef): string {
   return parts.join(" ");
 }
 
+type ActiveEffectDetailOptions = {
+  compact?: boolean;
+  scopePrefix?: string;
+  inheritTarget?: TargetSpec;
+  inheritTargetShape?: TargetShape;
+  inheritRange?: number;
+  inheritAoeRadiusPx?: number;
+  inheritHitCount?: number;
+  inheritPierceDurationSec?: number;
+  basicAttackRangePx?: number;
+};
+
+function formatTargetFrameLabel(
+  effect: SkillEffectDef,
+  options?: ActiveEffectDetailOptions
+): string | null {
+  const shape = effect.targetShape ?? options?.inheritTargetShape ?? "single";
+  const locale = getSkillTextLocale();
+
+  switch (shape) {
+    case "multiLock": {
+      const hitCount = effect.hitCount ?? options?.inheritHitCount;
+      const count = hitCount !== undefined && hitCount > 1 ? ` ${hitCount}` : "";
+      return `${locale === "en" ? "Multi-Lock" : "マルチロック"}${count}`;
+    }
+    case "aoe": {
+      const radius = effect.aoeRadiusPx ?? options?.inheritAoeRadiusPx;
+      const range = radius !== undefined ? ` ${radius}px` : "";
+      return `AoE${range}`;
+    }
+    case "pierce": {
+      const range = effect.range ?? options?.inheritRange;
+      const baseRange = options?.basicAttackRangePx;
+      const diff =
+        range !== undefined && baseRange !== undefined ? range - baseRange : 0;
+      const rangeDiff =
+        diff === 0 ? "" : ` 射程${diff > 0 ? "+" : ""}${diff}px`;
+      return `${locale === "en" ? "Pierce" : "貫通"}${rangeDiff}`;
+    }
+    default:
+      return null;
+  }
+}
+
+function shouldShowTargetSideInFrameDetail(
+  effect: SkillEffectDef,
+  options?: ActiveEffectDetailOptions
+): boolean {
+  const shape = effect.targetShape ?? options?.inheritTargetShape ?? "single";
+  return shape === "aoe" || shape === "multiLock";
+}
+
+function formatTargetFramedDetail(
+  detail: string,
+  effect: SkillEffectDef,
+  targetSpec: TargetSpec,
+  options?: ActiveEffectDetailOptions
+): string {
+  if (!shouldShowTargetSideInFrameDetail(effect, options)) return detail;
+  const side = resolveTargetSideLabel(targetSpec);
+  if (!side) return detail;
+  const noun = targetSideNoun(side);
+  const possessive = targetSidePossessivePrefix(side);
+  const apply = targetSideApplyPrefix(side);
+  if (
+    detail.startsWith(noun) ||
+    detail.startsWith(possessive) ||
+    detail.startsWith(apply)
+  ) {
+    return detail;
+  }
+
+  switch (effect.type) {
+    case "buff":
+      if (effect.buffSubKind === "barrier") {
+        return `${apply}${detail}`;
+      }
+      return `${possessive}${detail}`;
+    case "debuff":
+      return `${possessive}${detail}`;
+    case "heal":
+    case "barrier":
+      return `${apply}${detail}`;
+    case "damage":
+    case "dot":
+    case "stun":
+    case "knockback":
+    case "dispel":
+    case "block":
+      return `${apply}${detail}`;
+    default:
+      return detail;
+  }
+}
+
+function stripGroupedTargetSidePrefix(
+  detail: string,
+  side: "ally" | "enemy" | null
+): string {
+  if (!side) return detail;
+  const prefixes = [targetSidePossessivePrefix(side), targetSideApplyPrefix(side)];
+  for (const prefix of prefixes) {
+    if (detail.startsWith(prefix)) return detail.slice(prefix.length);
+  }
+  return detail;
+}
+
+function formatTargetFrameGroupIntro(
+  frame: string,
+  side: "ally" | "enemy" | null
+): string {
+  if (side) {
+    if (getSkillTextLocale() === "en") {
+      return `${frame} / ${
+        side === "ally" ? "Grants the following effects to allies" : "Applies the following effects to enemies"
+      }`;
+    }
+    return `${frame} / ${targetSideNoun(side)}に以下の効果を${
+      side === "ally" ? "付与" : "適用"
+    }`;
+  }
+  return getSkillTextLocale() === "en"
+    ? `${frame}: Applies the following effects`
+    : `${frame}で以下の効果を適用する`;
+}
+
+function formatPassiveTargetFrame(
+  shape: TargetShape | undefined,
+  options?: {
+    aoeRadiusPx?: number;
+    hitCount?: number;
+    pierceDurationSec?: number;
+  }
+): string | null {
+  switch (shape ?? "single") {
+    case "multiLock": {
+      const count =
+        options?.hitCount !== undefined && options.hitCount > 1
+          ? ` ${options.hitCount}`
+          : "";
+      return `${getSkillTextLocale() === "en" ? "Multi-Lock" : "マルチロック"}${count}`;
+    }
+    case "aoe": {
+      const radius =
+        options?.aoeRadiusPx !== undefined ? ` ${options.aoeRadiusPx}px` : "";
+      return `AoE${radius}`;
+    }
+    case "pierce":
+      return getSkillTextLocale() === "en" ? "Pierce" : "貫通";
+    default:
+      return null;
+  }
+}
+
+function formatFramedPassiveLine(
+  frame: string | null,
+  targetRule: TargetSpec | undefined,
+  detail: string
+): string {
+  if (!frame) return detail;
+  const side = targetRule ? resolveTargetSideLabel(targetRule) : null;
+  if (!side) return `${frame} / ${detail}`;
+  return `${frame} / ${targetSidePossessivePrefix(side)}${detail}`;
+}
+
 /** 反撃射程: 0 / 未指定 = 持有者 traits.rangePx（エディタ +0 と同義） */
 function formatCounterRangeSummary(range: number | undefined): string {
   if (range === undefined || range === 0) return "射程+0";
@@ -1339,11 +1579,7 @@ function formatCounterResponse(response: CounterResponseDef): string {
 
 function formatActiveEffectDetail(
   effect: SkillEffectDef,
-  options?: {
-    compact?: boolean;
-    scopePrefix?: string;
-    inheritTarget?: TargetSpec;
-  }
+  options?: ActiveEffectDetailOptions
 ): string {
   const compact = options?.compact ?? false;
   const inheritTarget = options?.inheritTarget;
@@ -1368,6 +1604,10 @@ function formatActiveEffectDetail(
     defaultTargetForEffectType(effect.type)
   );
   const shape = formatTargetShape(effect);
+  const targetFrame =
+    compact && options?.showTargetFrame
+      ? formatTargetFrameLabel(effect, options)
+      : null;
   const extras: string[] = [];
 
   switch (effect.type) {
@@ -1377,15 +1617,10 @@ function formatActiveEffectDetail(
         : "";
       const amount = formatResourceAmount(effect.amount);
       if (compact) {
-        const multiLockLines = formatMultiLockDamageEffectLines(
-          effect,
-          inheritTarget,
-        );
-        if (
-          multiLockLines &&
-          isOmittableDefaultEnemyTarget(targetSpec)
-        ) {
-          extras.push(multiLockLines.join("、"));
+        if (targetFrame && effect.amount?.kind === "atkBased") {
+          extras.push(
+            formatCompactAtkBasedDamageSentence(effect.amount, effect.damageType)
+          );
         } else if (
           effect.amount?.kind === "atkBased" &&
           isOmittableDefaultEnemyTarget(targetSpec)
@@ -1832,6 +2067,14 @@ function formatActiveEffectDetail(
   const kindLabel = formatEffectKindLabel(effect.type);
   const detail = extras.filter(Boolean).join(" ");
   if (compact) {
+    if (targetFrame) {
+      return `${targetFrame} / ${formatTargetFramedDetail(
+        detail,
+        effect,
+        targetSpec,
+        options
+      )}`;
+    }
     if (
       options?.scopePrefix &&
       targetSpec.kind === "all" &&
@@ -1944,7 +2187,13 @@ function formatPassiveEffect(
         rule.order === "selfOrigin" &&
         shape === "aoe"
       ) {
-        return phraseSurroundingDamageReduction(formatPercent(percent));
+        return formatFramedPassiveLine(
+          formatPassiveTargetFrame(shape, {
+            aoeRadiusPx: def.damageReductionAoeRadiusPx,
+          }),
+          rule,
+          phraseDamageReductionRate(formatPercent(percent))
+        );
       }
       if (rule.kind === "self" && shape === "single") {
         return phraseSelfDamageReduction(formatPercent(percent));
@@ -2084,16 +2333,20 @@ function formatPassiveEffect(
       if (def.effect === "frontBlockAura") {
         const parts: string[] = [];
         if (def.chance !== undefined) {
-          parts.push(
-            phraseSurroundingBlockRateBuff(formatPercent(def.chance)),
-          );
+          parts.push(phraseBlockRateBuff(formatPercent(def.chance)));
         } else {
-          parts.push(`${phraseSurroundingPrefix()}${phraseBlockRate()}`);
+          parts.push(phraseBlockRate());
         }
         if (def.frontBlockAuraMagicBlock) {
           parts.push(phraseMagicBlockEnable());
         }
-        return parts.join(getSkillTextLocale() === "en" ? ", " : "、");
+        return formatFramedPassiveLine(
+          formatPassiveTargetFrame("aoe", {
+            aoeRadiusPx: def.frontBlockAuraRadiusPx ?? 50,
+          }),
+          { kind: "distance", side: "ally", order: "selfOrigin" },
+          parts.join(getSkillTextLocale() === "en" ? ", " : "、")
+        );
       }
       if (def.effect === "blockResonance") {
         const parts: string[] = [];
@@ -2326,6 +2579,18 @@ function formatPassiveEffect(
         "常時"
       );
       metaParts.push(triggerLabel);
+      const framedBuff = formatFramedPassiveLine(
+        formatPassiveTargetFrame(def.buffTargetShape, {
+          aoeRadiusPx: def.buffAoeRadiusPx,
+          hitCount: def.buffHitCount,
+          pierceDurationSec: def.buffPierceDurationSec,
+        }),
+        def.buffTargetRule,
+        formatBuffStatModifiersFromDef(def)
+      );
+      if (framedBuff !== formatBuffStatModifiersFromDef(def)) {
+        return framedBuff;
+      }
       return `バフ ${formatBuffStatModifiersFromDef(
         def
       )} → ${target}（${metaParts.filter(Boolean).join(" · ")}）`;
@@ -2346,6 +2611,23 @@ function formatPassiveEffect(
         "常時"
       );
       const meta = [shape, range, triggerLabel].filter(Boolean).join(" · ");
+      const debuffDetail = formatStatsWithModifier(
+        def.debuffStat,
+        def.debuffMultiplier,
+        def.debuffFlatBonus
+      );
+      const framedDebuff = formatFramedPassiveLine(
+        formatPassiveTargetFrame(def.debuffTargetShape, {
+          aoeRadiusPx: def.debuffAoeRadiusPx,
+          hitCount: def.debuffHitCount,
+          pierceDurationSec: def.debuffPierceDurationSec,
+        }),
+        def.debuffTargetRule,
+        debuffDetail
+      );
+      if (framedDebuff !== debuffDetail) {
+        return framedDebuff;
+      }
       return `デバフ ${formatStatsWithModifier(
         def.debuffStat,
         def.debuffMultiplier,
@@ -2465,21 +2747,20 @@ function formatActiveSkillMetaLine(def: ActiveSkillDef): string {
   return parts.join(st.metaJoiner);
 }
 
-function formatActiveSkillEffectLines(def: ActiveSkillDef): string[] {
+function formatActiveSkillEffectLines(
+  def: ActiveSkillDef,
+  context: SkillCardFormatContext = {}
+): string[] {
   const specialLines = resolveActiveSkillSpecialEffectLines(def);
   if (specialLines) {
     return specialLines;
   }
 
-  const selfOriginAoeBuffLines = formatSelfOriginAoeBuffCardLines(def);
-  if (selfOriginAoeBuffLines) {
-    const maxChargesLine = formatActiveSkillMaxChargesLine(def);
-    return maxChargesLine
-      ? [...selfOriginAoeBuffLines, maxChargesLine]
-      : selfOriginAoeBuffLines;
-  }
-
-  return formatActiveSkillDefaultEffectLines(def, { includeMaxCharges: true });
+  return formatActiveSkillDefaultEffectLines(def, {
+    includeMaxCharges: true,
+    ...context,
+    showTargetFrame: true,
+  });
 }
 
 function formatPassiveSkillMetaLine(def: PassiveSkillDef): string {
@@ -2494,13 +2775,13 @@ function formatPassiveSkillMetaLine(def: PassiveSkillDef): string {
 
 export function formatSkillCardLines(
   def: ActiveSkillDef | PassiveSkillDef,
-  options: { locale: SkillCardLocale }
+  options: { locale: SkillCardLocale } & SkillCardFormatContext
 ): SkillCardLines {
   return runWithSkillTextLocale(options.locale, () => {
     if (isActiveSkillDef(def)) {
       return {
         metaLine: formatActiveSkillMetaLine(def),
-        effectLines: formatActiveSkillEffectLines(def),
+        effectLines: formatActiveSkillEffectLines(def, options),
       };
     }
 

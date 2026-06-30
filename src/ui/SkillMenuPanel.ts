@@ -876,7 +876,10 @@ export class SkillMenuPanel {
     card.appendChild(header);
 
     if (def) {
-      const lines = formatSkillCardLines(def, { locale: getLocale() });
+      const lines = formatSkillCardLines(def, {
+        locale: getLocale(),
+        basicAttackRangePx: options.preset.traits.rangePx,
+      });
       const display = resolveSkillCardDisplay(
         lines,
         def,

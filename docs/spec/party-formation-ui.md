@@ -346,7 +346,7 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 | 項目 | 内容 |
 | ---- | ---- |
 | モジュール | `src/ui/formatSkillText.ts` |
-| シグネチャ | `formatSkillCardLines(def: ActiveSkillDef \| PassiveSkillDef, options: { locale: SkillCardLocale }): SkillCardLines` |
+| シグネチャ | `formatSkillCardLines(def: ActiveSkillDef \| PassiveSkillDef, options: { locale: SkillCardLocale; basicAttackRangePx?: number }): SkillCardLines` |
 | `SkillCardLocale` | v1 は `'ja'` のみ（将来 `en` 拡張可能） |
 | `SkillCardLines` | `{ metaLine: string; effectLines: SkillCardEffectLine[] }` — 各要素は plain `string` または `{ kind: "list"; items: { text; details? }[] }`（焼き尽くす熾火の種火 / 熾火など）。画面表示では `resolveSkillCardDisplay` が本文・状態チップ・タグへ分類する |
 
@@ -358,6 +358,9 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 | `effectLines` | `def.effect[]` を 1 effect 1 行（`formatActiveEffectDetail` compact）。`blockResonanceConsume` は map から除外；consume 専用スキルは特殊 1 行 | `[formatPassiveEffect(...)]` 1 要素（`効果：` プレフィックスなし） |
 
 - 文節 split 禁止 — 改行単位は **effect 配列要素**（Passive は effect 種別 1 行）。リストが必要な passive は `effectLines` に `kind: "list"` ブロックを返す。UI は状態チップ化できる項目を本文から除外し、状態定義は tooltip 側で表示する。本文に残るリストは通常本文より小さく薄い補助注記として描画する
+- Active の `targetShape` が Multi-Lock / AoE / Pierce の場合、カード本文は `{形状} {補足} / {効果}` 形式にする。Pierce の射程は `basicAttackRangePx` と同じなら省略し、差分がある場合のみ `射程+30px` / `射程-30px` のように表示する
+- AoE / Multi-Lock は本文側に敵味方も含める（例: `AoE 50px / 味方の攻撃力+5%`、`マルチロック 2 / 敵に攻撃力の90%...`）。Pierce は効果文に必要な場合のみ敵味方を含める
+- 同じ形状枠が連続する場合は、形状を各行へ重複表示せず `{形状} / {対象}に以下の効果を付与/適用` + 効果行へ畳む（例: `AoE 50px / 味方に以下の効果を付与` → `攻撃力+20%` → `攻撃速度+15%`）
 - 1 行説明の `formatActiveDescription` / `formatPassiveDescription` は tooltip・エディタ互換として維持
 
 **UI 表現:**
@@ -371,7 +374,7 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 
 | 層 | 内容 | 注釈 UI |
 | -- | ---- | ------- |
-| 本文（1〜3 行） | 主要効果の短文 | **共通用語**のみ用語ツールチップ（`annotateGameTermsWithTooltip`）。固有状態名はホバー化しない |
+| 本文（1〜3 行） | 主要効果の短文。単体ではない範囲形状は `{形状} {補足} / {効果}` で先頭に形状枠を置く | **共通用語**のみ用語ツールチップ（`annotateGameTermsWithTooltip`）。固有状態名はホバー化しない |
 | 状態チップ | 固有バフ/デバフ（`種火` 等）の短い要約 | **状態ツールチップ**（状態定義のみ、`resolveStatusChipTooltip`） |
 | Tags | 処理形状・対象形状・発動形状の特殊メカニクス | **タグツールチップ**（`resolveTagTooltip`） |
 
@@ -484,7 +487,7 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 
 | 用語 | 正本 | 禁止 |
 | ---- | ---- | ---- |
-| Multi-Lock | タグ + タグツールチップ | 本文にも説明を書く |
+| Multi-Lock | 本文の対象枠 + タグ + タグツールチップ | 本文に対象不足時の再配分などのメカニクス説明を書く |
 | Seed Flame（種火） | 状態チップ + 状態ツールチップ | 本文へ詳細を書く |
 | Barrier（バリア） | 本文 | タグ |
 
@@ -495,16 +498,22 @@ Class Summary は Class Select 下部に表示する。右列 Skills 領域に�
 **本文** — スキルで何が起きるか。ダメージ種別・ブロック・DoT 等は本文に残す。
 
 ```
-敵2体に攻撃力90%の魔法ダメージを与える。
+マルチロック 2 / 敵に攻撃力の90%の魔法ダメージを与える
+貫通 射程+30px / 攻撃力の50%の物理ダメージを与える
+AoE 50px / 味方の攻撃力+15%
+AoE 50px / 味方に以下の効果を付与
+攻撃力+20%
+攻撃速度+15%
 ```
 
 **タグ** — 特殊メカニクス（処理形状・対象形状・発動形状）。効果種別はタグにしない。
 
 ```
-[マルチロック2]
+[マルチロック]
 ```
 
-- Multi-Lock はタグ化してよいが、本文側にも **対象数** を残す
+- Multi-Lock / AoE / Pierce はタグ化してよいが、本文側の **対象枠** に対象数・範囲・射程差分などを残す
+- Multi-Lock タグ自体は対象数を持たず、`マルチロック` のみ表示する
 - メカニクス説明（対象不足時の再配分等）は **タグの tooltip** に書き、本文へ重複させない
 - `Magic damage` / `Block` / `DoT` 等はタグにしない
 
