@@ -19,7 +19,6 @@ export interface BattleHudTheme {
   expHpGap: number;
   recastBarH: number;
   recastGap: number;
-  fontFamily: string;
   overlayFontFamily: string;
   iconBorder: string;
   nameColor: string;
@@ -174,11 +173,6 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     expHpGap: readNumber(style, "--hud-exp-hp-gap", 2),
     recastBarH: readNumber(style, "--hud-recast-bar-h", 3),
     recastGap: readNumber(style, "--hud-recast-gap", 2),
-    fontFamily: readString(
-      style,
-      "--hud-font-family",
-      '"M PLUS 1p", "Noto Sans JP", system-ui, sans-serif'
-    ),
     overlayFontFamily: readString(
       style,
       "--overlay-font-family",
@@ -223,7 +217,7 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
     popupFontFamily: readString(
       style,
       "--popup-font-family",
-      '"PixelMplus10", "M PLUS 1p", "Noto Sans JP", monospace'
+      '"M PLUS 1p", "Noto Sans JP", system-ui, sans-serif'
     ),
     popupDamageFill: readString(style, "--popup-damage-fill", "#ffffff"),
     popupDamageStroke: readString(style, "--popup-damage-stroke", "#000000"),

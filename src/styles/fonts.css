@@ -1,32 +1,10 @@
-/* UI font policy — docs/spec/ui-fonts.md §0
- * Base: M PLUS 1p (--font-body). PixelMplus10: HUD accent only, >=16px short text/numbers/headings.
- * Never pixel: skill body/summary, meta row, status/tag chips, term links, tooltip body. */
+/* UI font policy — docs/spec/ui-fonts.md
+ * Single stack: M PLUS 1p (--font-body). */
 
 @import url("https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap");
 
-/* PixelMplus10 — public/fonts/ (M+ FONT LICENSE, see PixelMplus10-LICENSE.txt) */
-@font-face {
-  font-family: "PixelMplus10";
-  src: url("/fonts/PixelMplus10-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "PixelMplus10";
-  src: url("/fonts/PixelMplus10-Bold.ttf") format("truetype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
 :root {
   --font-body: "M PLUS 1p", "Noto Sans JP", system-ui, sans-serif;
-  --font-ui: "PixelMplus10", "M PLUS 1p", "Noto Sans JP", monospace;
-  --font-number: "PixelMplus10", "M PLUS 1p", "Noto Sans JP", monospace;
-  /* PixelMplus は DOM でも Canvas でもこのサイズ未満では使わない */
-  --font-pixel-min-size: 16px;
   /* 日本語本文（--font-body）の最小サイズ。編成・戦闘 HUD DOM はこれ未満にしない */
   --font-body-min-size: 12px;
 }
@@ -38,7 +16,6 @@
   text-rendering: optimizeLegibility;
 }
 
-/* All game UI panels default to body. Pixel is opt-in at >=16px only. */
 .game-shell,
 .meta-menu-overlay,
 .battle-view,
@@ -122,9 +99,3 @@
 .party-stats-member-name {
   font-family: var(--font-body);
 }
-
-/*
- * Pixel accent (DOM): §0 — only >=16px short text / numbers / headings.
- * Excluded forever (body): skill description, summary, meta row, status/tag chips, term links, tooltips.
- * Canvas popup numbers: --popup-font-family at 18px.
- */

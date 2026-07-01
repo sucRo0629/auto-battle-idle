@@ -546,7 +546,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 
 ## 8. 戦闘画面 UI（1280×720 HUD）
 
-**フォント:** `--font-body` / `--font-ui` / `--font-number` の割当は [ui-fonts.md](ui-fonts.md)。Canvas HUD テーマは `--hud-font-family`（UI アクセント）、`--popup-font-family`（ダメージ数値）。
+**フォント:** [ui-fonts.md](ui-fonts.md)（`--font-body`）。Canvas HUD テーマは `--popup-font-family`（ポップアップ）、`--overlay-font-family`（Wave / Victory / Defeat）。
 
 ### 8.1 目的と正本
 

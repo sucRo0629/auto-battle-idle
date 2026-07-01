@@ -57,7 +57,6 @@
   --hud-exp-hp-gap: 2;
   --hud-recast-bar-h: 3;
   --hud-recast-gap: 2;
-  --hud-font-family: var(--font-ui);
   --hud-icon-border: #4a5568;
   --hud-name-color: #ffffff;
   --hud-epithet-color: rgba(255, 255, 255, 0.65);
@@ -96,7 +95,7 @@
   --hud-icon-frame: #1a1a1a;
   --popup-font-size: 18;
   --popup-outline-width: 1;
-  --popup-font-family: var(--font-number);
+  --popup-font-family: var(--font-body);
   --popup-damage-fill: #ffffff;
   --popup-damage-stroke: #000000;
   --popup-dot-fill: #ff3333;
