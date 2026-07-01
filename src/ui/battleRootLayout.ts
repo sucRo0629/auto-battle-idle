@@ -1,15 +1,30 @@
 import {
   BATTLE_ROOT_HEIGHT,
   BATTLE_ROOT_WIDTH,
-  snapHudCanvasCssSize,
 } from "./battleRootScale.ts";
+import {
+  BATTLE_CANVAS_HEIGHT,
+  BATTLE_LANE_TOP_INSET,
+} from "../battle/battleConstants.ts";
 import {
   BATTLE_FIELD_SPRITE_SCALE,
   battleCanvasHeight,
 } from "../render/formationLayout.ts";
-import { CANVAS_W } from "../battle/battleConstants.ts";
-import { PARTY_HUD_STATUS_BADGE_ICON_SIZE } from "../render/statusBadgeRenderer.ts";
-import { measurePartyHudOverlayStatusGrid } from "./partyHudOverlayStatusGrid.ts";
+import {
+  BATTLE_HUD_OVERLAY_CARD_PAD_X,
+  BATTLE_HUD_SIDE_MARGIN,
+  BATTLE_HUD_STATUS_WRAP_PAD_X,
+  BATTLE_SIDE_HUD_WIDTH,
+  computeBattleSideHudWidth,
+} from "./battleHudGeometry.ts";
+
+export {
+  BATTLE_HUD_OVERLAY_CARD_PAD_X,
+  BATTLE_HUD_SIDE_MARGIN,
+  BATTLE_HUD_STATUS_WRAP_PAD_X,
+  BATTLE_SIDE_HUD_WIDTH,
+  computeBattleSideHudWidth,
+} from "./battleHudGeometry.ts";
 
 export interface BattleRootRect {
   x: number;
@@ -18,35 +33,6 @@ export interface BattleRootRect {
   h: number;
 }
 
-/** Left / right inset of side HUD columns from the battle-root edge (px). */
-export const BATTLE_HUD_SIDE_MARGIN = 24;
-
-/** Horizontal padding inside overlay `.party-hud-status-badges-wrap` (1px per side). */
-export const BATTLE_HUD_STATUS_WRAP_PAD_X = 2;
-
-/** Horizontal padding inside overlay `.party-hud-slot` (5px per side). */
-export const BATTLE_HUD_OVERLAY_CARD_PAD_X = 10;
-
-/** Side HUD column width — party overlay status icon grid + frame padding. */
-export function computeBattleSideHudWidth(
-  iconSize = PARTY_HUD_STATUS_BADGE_ICON_SIZE,
-  statusIconOutlineWidth = 1,
-  statusBadgeOverlap = 0,
-): number {
-  const grid = measurePartyHudOverlayStatusGrid(
-    1,
-    iconSize,
-    statusIconOutlineWidth,
-    statusBadgeOverlap,
-  );
-  const canvasW = snapHudCanvasCssSize(grid.totalWidth);
-  return (
-    canvasW + BATTLE_HUD_STATUS_WRAP_PAD_X + BATTLE_HUD_OVERLAY_CARD_PAD_X
-  );
-}
-
-export const BATTLE_SIDE_HUD_WIDTH = computeBattleSideHudWidth();
-
 export const BATTLE_BACKGROUND_RECT: BattleRootRect = {
   x: 0,
   y: 0,
@@ -54,20 +40,15 @@ export const BATTLE_BACKGROUND_RECT: BattleRootRect = {
   h: BATTLE_ROOT_HEIGHT,
 };
 
-/** Gap between side HUD column and battle lane (px). */
-export const BATTLE_LANE_SIDE_GAP = 4;
-
 /** Top inset of battle lane below topInfo (px). */
-export const BATTLE_LANE_TOP = 52;
+export const BATTLE_LANE_TOP = BATTLE_LANE_TOP_INSET;
 
-/** Extra height below BattleCanvas inside battleLane (frame / border). */
-export const BATTLE_LANE_FRAME_PAD = 14;
-
+/** Full-bleed battle lane: HUD はオーバーレイ、キャンバスは root 全幅・高さを使う */
 export const BATTLE_LANE_RECT: BattleRootRect = {
-  x: BATTLE_HUD_SIDE_MARGIN + BATTLE_SIDE_HUD_WIDTH + BATTLE_LANE_SIDE_GAP,
+  x: 0,
   y: BATTLE_LANE_TOP,
-  w: CANVAS_W,
-  h: battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE) + BATTLE_LANE_FRAME_PAD,
+  w: BATTLE_ROOT_WIDTH,
+  h: BATTLE_CANVAS_HEIGHT,
 };
 
 export const BATTLE_TOP_INFO_RECT: BattleRootRect = {
@@ -122,7 +103,7 @@ export function computeEnemyHudPanelHeight(aliveCount: number): number {
 /** battle-x-debug panel top — left column, aligned with partyHud slot. */
 export const BATTLE_X_DEBUG_PANEL_TOP = PARTY_HUD_SLOT_RECT.y;
 
-/** battle-hud-toolbar top edge in battle-root coordinates (lane top + field canvas). */
+/** battle lane 下端（キャンバス下端）の battle-root Y */
 export function battleHudToolbarTopY(
   spriteScale = BATTLE_FIELD_SPRITE_SCALE,
 ): number {
@@ -136,7 +117,7 @@ export function battleXDebugCanvasMaxDisplayWidth(
   return PARTY_HUD_SLOT_RECT.w - panelPaddingHorizontalPx;
 }
 
-/** Max CSS display height for battle-x-debug canvas (no scroll; toolbar ceiling). */
+/** Max CSS display height for battle-x-debug canvas (no scroll; lane ceiling). */
 export function battleXDebugCanvasMaxDisplayHeight(
   panelPaddingTopPx = 4,
 ): number {

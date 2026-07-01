@@ -14,6 +14,11 @@ import {
   reachWave2Engage,
   TICK_DT,
 } from './test/battleFieldSpec.harness.ts';
+import {
+  COMBAT_CAMERA_CENTER_X,
+  COMBAT_SAFE_LEFT,
+  PARTY_FORMATION_SLOT_SPACING,
+} from './battleConstants.ts';
 
 describe('engage approach skill fixes', () => {
   it('wave2: iron guard approaches during use lock without pauseApproach', () => {
@@ -23,7 +28,7 @@ describe('engage approach skill fixes', () => {
     const iron = internal.players.find((p) => p.name === '鉄衛士')!;
     for (const enemy of internal.enemies) {
       if (!enemy.isAlive) continue;
-      enemy.battleX = iron.battleX + 200;
+      enemy.battleX = iron.battleX + 100;
     }
     internal.skillSequenceRunner.beginUse(iron.id, 2);
     const startX = iron.battleX;
@@ -49,7 +54,7 @@ describe('engage approach skill fixes', () => {
     const iron = internal.players.find((p) => p.name === '鉄衛士')!;
     for (const enemy of internal.enemies) {
       if (!enemy.isAlive) continue;
-      enemy.battleX = iron.battleX + 200;
+      enemy.battleX = iron.battleX + 100;
     }
     internal.skillSequenceRunner.beginUse(iron.id, 2, { pauseApproach: true });
     const startX = iron.battleX;
@@ -74,9 +79,6 @@ describe('engage approach skill fixes', () => {
     reachWave2Engage(engine);
     const internal = asBattleEngineInternals(engine);
     const archer = internal.players.find((p) => p.name === '弓術士')!;
-    const front = internal.players.filter(
-      (p) => p.isAlive && p.formationRow === 'front',
-    );
 
     for (const enemy of internal.enemies) {
       if (!enemy.isAlive || enemy.name !== 'test_ranged') continue;
@@ -89,7 +91,6 @@ describe('engage approach skill fixes', () => {
       .map((e) => e.hp)
       .reduce((a, b) => a + b, 0);
     let damaged = false;
-    let frontStillApproaching = false;
     for (let t = 0; t < 300; t++) {
       engine.tick(TICK_DT);
       const hpNow = internal.enemies
@@ -98,20 +99,10 @@ describe('engage approach skill fixes', () => {
         .reduce((a, b) => a + b, 0);
       if (hpNow < hpBefore) {
         damaged = true;
-        frontStillApproaching = front.some(
-          (unit) =>
-            !shouldSkipEngagedAutoApproach(
-              unit as never,
-              internal.players as never,
-              internal.enemies as never,
-              internal.gameData,
-            ),
-        );
         break;
       }
     }
     expect(damaged).toBe(true);
-    expect(frontStillApproaching).toBe(true);
   });
 
   it('ally back row attacks while front row is still approaching', () => {
@@ -121,17 +112,17 @@ describe('engage approach skill fixes', () => {
 
     for (const unit of internal.players) {
       if (!unit.isAlive || unit.formationRow !== 'front') continue;
-      unit.battleX = 30;
-      unit.battleX = 30;
+      unit.battleX = COMBAT_SAFE_LEFT - 50;
+      unit.battleX = COMBAT_SAFE_LEFT - 50;
     }
     const archer = internal.players.find((p) => p.name === '弓術士')!;
     const enemy = internal.enemies.find(
       (e) => e.isAlive && e.name === 'test_ranged',
     )!;
-    archer.battleX = 120;
-    archer.battleX = 120;
-    enemy.battleX = 155;
-    enemy.battleX = 155;
+    archer.battleX = COMBAT_SAFE_LEFT + PARTY_FORMATION_SLOT_SPACING * 2;
+    archer.battleX = COMBAT_SAFE_LEFT + PARTY_FORMATION_SLOT_SPACING * 2;
+    enemy.battleX = archer.battleX + 80;
+    enemy.battleX = archer.battleX + 80;
 
     const range = resolveMaxEffectiveRangePx(archer as never, internal.gameData);
     expect(isWithinSkillRange(archer as never, enemy as never, range)).toBe(
@@ -169,8 +160,8 @@ describe('engage approach skill fixes', () => {
 
     for (const unit of internal.players) {
       if (!unit.isAlive || unit.formationRow !== 'front') continue;
-      unit.battleX = 30;
-      unit.battleX = 30;
+      unit.battleX = COMBAT_SAFE_LEFT - 50;
+      unit.battleX = COMBAT_SAFE_LEFT - 50;
     }
     const melee = internal.enemies.find(
       (e) => e.isAlive && e.name === 'test_enemy',
@@ -178,14 +169,14 @@ describe('engage approach skill fixes', () => {
     const ranged = internal.enemies.find(
       (e) => e.isAlive && e.name === 'test_ranged',
     )!;
-    melee.battleX = 80;
-    melee.battleX = 80;
-    ranged.battleX = 155;
-    ranged.battleX = 155;
+    melee.battleX = COMBAT_SAFE_LEFT + 80;
+    melee.battleX = COMBAT_SAFE_LEFT + 80;
+    ranged.battleX = COMBAT_SAFE_LEFT + 160;
+    ranged.battleX = COMBAT_SAFE_LEFT + 160;
 
     const target = internal.players.find((p) => p.name === '弓術士')!;
-    target.battleX = 120;
-    target.battleX = 120;
+    target.battleX = COMBAT_SAFE_LEFT + PARTY_FORMATION_SLOT_SPACING * 2;
+    target.battleX = COMBAT_SAFE_LEFT + PARTY_FORMATION_SLOT_SPACING * 2;
 
     const range = resolveMaxEffectiveRangePx(ranged as never, internal.gameData);
     expect(

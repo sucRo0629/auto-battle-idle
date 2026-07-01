@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CANVAS_W,
   PARTY_FORMATION_LEFT_ANCHOR,
 } from './battleConstants.ts';
+import { COMBAT_SAFE_RIGHT } from './combatSafeArea.ts';
 import {
   attackTypeRangedBandEditorHintJa,
   CONFIGURABLE_RANGE_PX_MAX,
@@ -15,9 +15,9 @@ import {
 import { RANGED_ATTACK_MIN_PX } from './types.ts';
 
 describe('rangeLimits', () => {
-  it('CONFIGURABLE_RANGE_PX_MAX spans left anchor to canvas right edge', () => {
+  it('CONFIGURABLE_RANGE_PX_MAX spans safe area from party anchor to right edge', () => {
     expect(CONFIGURABLE_RANGE_PX_MAX).toBe(
-      CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR,
+      COMBAT_SAFE_RIGHT - PARTY_FORMATION_LEFT_ANCHOR,
     );
   });
 

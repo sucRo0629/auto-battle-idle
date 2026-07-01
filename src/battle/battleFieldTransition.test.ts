@@ -20,7 +20,11 @@ import {
   waitForEngaged,
   asBattleEngineInternals,
 } from "./test/battleFieldSpec.harness.ts";
-import { CANVAS_W, MOVE_PX_PER_SEC } from "./battleConstants.ts";
+import {
+  CANVAS_W,
+  COMBAT_CAMERA_CENTER_X,
+  MOVE_PX_PER_SEC,
+} from "./battleConstants.ts";
 import { resolveEnemyDeployTargets } from "./combatPosition.ts";
 
 function createStage1FastMeleeWipeEngine(): BattleEngine {
@@ -240,20 +244,20 @@ describe(
       expect(sawBattleXChange || partyResourceDrop).toBe(true);
     });
 
-    it("T-deploy-01: enemies start off-screen right during PartyDeploy", () => {
+    it("T-deploy-01: enemies approach deploy targets from the right during PartyDeploy", () => {
       const engine = createStage1Engine();
-      let sawOffScreenEnemy = false;
+      let sawRightDeploy = false;
       for (let i = 0; i < 5000; i++) {
         engine.tick(TICK_DT);
         const snap = engine.getSnapshot();
         if (!snap.partyDeployActive) continue;
         for (const enemy of snap.enemies.filter((e) => e.hp > 0)) {
-          if (enemy.battleX > CANVAS_W) {
-            sawOffScreenEnemy = true;
+          if (enemy.battleX > COMBAT_CAMERA_CENTER_X) {
+            sawRightDeploy = true;
           }
         }
       }
-      expect(sawOffScreenEnemy).toBe(true);
+      expect(sawRightDeploy).toBe(true);
     });
 
     it("T-deploy-02: ally and enemy deploy finish together before engage", () => {

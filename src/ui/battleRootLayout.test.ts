@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BATTLE_BACKGROUND_RECT,
-  BATTLE_LANE_FRAME_PAD,
   BATTLE_LANE_RECT,
-  BATTLE_LANE_SIDE_GAP,
   BATTLE_LANE_TOP,
   BATTLE_TOP_INFO_RECT,
   BATTLE_HUD_SIDE_MARGIN,
@@ -28,7 +26,10 @@ import {
   BATTLE_FIELD_SPRITE_SCALE,
   battleCanvasHeight,
 } from "../render/formationLayout.ts";
-import { CANVAS_W } from "../battle/battleConstants.ts";
+import {
+  BATTLE_CANVAS_HEIGHT,
+  CANVAS_W,
+} from "../battle/battleConstants.ts";
 
 describe("battleRootLayout", () => {
   it("covers the full 1280x720 battle root with the background rect", () => {
@@ -40,15 +41,15 @@ describe("battleRootLayout", () => {
     });
   });
 
-  it("uses the spec battleLane coordinates", () => {
+  it("uses full-bleed battleLane under the HUD overlays", () => {
     expect(BATTLE_LANE_RECT).toEqual({
-      x: BATTLE_HUD_SIDE_MARGIN + BATTLE_SIDE_HUD_WIDTH + BATTLE_LANE_SIDE_GAP,
+      x: 0,
       y: BATTLE_LANE_TOP,
-      w: CANVAS_W,
-      h: battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE) + BATTLE_LANE_FRAME_PAD,
+      w: BATTLE_ROOT_WIDTH,
+      h: BATTLE_CANVAS_HEIGHT,
     });
-    expect(BATTLE_LANE_RECT.w).toBeGreaterThan(600);
-    expect(BATTLE_LANE_RECT.h).toBeGreaterThan(250);
+    expect(BATTLE_LANE_RECT.w).toBe(CANVAS_W);
+    expect(BATTLE_LANE_RECT.h).toBeGreaterThan(600);
   });
 
   it("reserves topInfo and HUD slot rects", () => {
@@ -99,7 +100,7 @@ describe("battleRootLayout", () => {
     );
   });
 
-  it("aligns battle-x-debug canvas ceiling with battle-hud-toolbar top", () => {
+  it("aligns battle-x-debug canvas ceiling with battle lane bottom", () => {
     expect(battleHudToolbarTopY()).toBe(
       BATTLE_LANE_RECT.y + battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE),
     );

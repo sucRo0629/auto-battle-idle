@@ -61,7 +61,7 @@ import {
   drawHoverHighlightForLayout,
   drawTargetIndicatorForLayout,
 } from "./battleFieldIndicatorDraw.ts";
-import { sortForSpriteDraw } from "./spriteDrawOrder.ts";
+import { sortForSpriteDrawPass } from "./spriteDrawOrder.ts";
 import {
   applyVisualDepthOffsets,
   spriteDrawY,
@@ -517,21 +517,13 @@ export class BattleCanvas implements IBattleRenderer {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     this.drawBackground();
 
-    const enemyLayouts = sortForSpriteDraw(
-      this.layouts.filter((layout) => layout.isEnemy),
-    );
-    const playerLayouts = sortForSpriteDraw(
-      this.layouts.filter((layout) => !layout.isEnemy),
-    );
+    const drawOrderLayouts = sortForSpriteDrawPass(this.layouts);
 
     this.vfxPlayback.draw(this.ctx, "behind", SPRITE_SCALE);
     this.particlePlayback.draw(this.ctx, "behind", SPRITE_SCALE);
 
-    // battle-field.md §8.9 — enemy HP/status live on the right Enemy HUD overlay.
-    for (const layout of enemyLayouts) {
-      this.drawSprite(layout, layout.x, spriteDrawY(layout), SPRITE_SCALE);
-    }
-    for (const layout of playerLayouts) {
+    // battle-field.md §2.7 — depthOffsetY で陣営横断の前後を決め、同深度のみ §2.7 キーでタイブレーク
+    for (const layout of drawOrderLayouts) {
       this.drawSprite(layout, layout.x, spriteDrawY(layout), SPRITE_SCALE);
     }
 

@@ -58,6 +58,7 @@ import {
 } from "./resolveApproachBattleX.ts";
 import {
   CANVAS_W as BATTLE_CANVAS_W,
+  COMBAT_SAFE_RIGHT,
   MOVE_PX_PER_SEC,
   moveDeltaPx,
 } from "./battleConstants.ts";
@@ -788,7 +789,7 @@ export class BattleEngine {
 
 
   private clampEnemyFieldOnScreen(battleX: number): number {
-    if (battleX > BATTLE_CANVAS_W) return BATTLE_CANVAS_W;
+    if (battleX > COMBAT_SAFE_RIGHT) return COMBAT_SAFE_RIGHT;
     if (this.engaged && battleX <= -SPRITE_WIDTH) {
       return -SPRITE_WIDTH + 0.01;
     }

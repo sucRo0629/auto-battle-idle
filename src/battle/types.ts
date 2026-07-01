@@ -1,8 +1,10 @@
 export type Role = "defender" | "attacker" | "supporter";
 export type ClassId = string;
 export type FormationRow = "front" | "back";
-/** 遠隔帯の下限（px）。`rangePx >= RANGED_ATTACK_MIN_PX` が遠隔帯 */
+/** 遠隔帯の下限（px）。`rangePx >= RANGED_ATTACK_MIN_PX` が遠隔帯（100 含む） */
 export const RANGED_ATTACK_MIN_PX = 100;
+/** {@link RANGED_ATTACK_MIN_PX} の別名（遠距離判定閾値） */
+export const LONG_RANGE_THRESHOLD_PX = RANGED_ATTACK_MIN_PX;
 /** 近接帯の上限（px）。rangePx < RANGED_ATTACK_MIN_PX */
 export const MELEE_RANGE_MAX_PX = RANGED_ATTACK_MIN_PX - 1;
 /** @deprecated 互換用。近接帯上限 = MELEE_RANGE_MAX_PX */

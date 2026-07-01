@@ -75,7 +75,7 @@ describe('battle-field integration spec (I-*)', { timeout: LONG_BATTLE_TIMEOUT_M
       const living = snap.enemies.filter((e) => e.hp > 0);
       for (const enemy of living) {
         const sx = enemyScreenX(enemy);
-        expect(sx).toBeLessThan(520);
+        expect(sx).toBeLessThanOrEqual(SCREEN_MAX_X);
         const prev = prevScreenX.get(enemy.id);
         if (prev !== undefined) {
           maxSingleTickDelta = Math.max(maxSingleTickDelta, Math.abs(sx - prev));

@@ -208,8 +208,8 @@
   background-image: linear-gradient(
     to bottom,
     var(--scene-sky-fill, #87ceeb) 0%,
-    var(--scene-sky-fill, #87ceeb) 78%,
-    var(--scene-ground-fill, #4aa83f) 78%,
+    var(--scene-sky-fill, #87ceeb) 82%,
+    var(--scene-ground-fill, #4aa83f) 82%,
     var(--scene-ground-fill, #4aa83f) 100%
   );
 }
@@ -227,12 +227,9 @@
 
 .battle-lane {
   position: absolute;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
+  display: block;
   pointer-events: auto;
-  overflow: visible;
+  overflow: hidden;
 }
 
 /* Layer 2 — field feedback (drawn on BattleCanvas; DOM placeholder) */
@@ -248,6 +245,24 @@
 .battle-hud-slot {
   position: absolute;
   pointer-events: none;
+}
+
+.battle-transient-controls-dock {
+  -webkit-app-region: no-drag;
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 5;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: flex-end;
+  gap: 6px;
+  max-width: min(360px, calc(100% - 16px));
+  pointer-events: none;
+}
+
+.battle-transient-controls-dock > * {
+  pointer-events: auto;
 }
 
 .battle-hud-slot--party {
@@ -342,7 +357,7 @@
   inset: 0;
   pointer-events: none;
   overflow: visible;
-  --battle-hud-toolbar-top: 229px;
+  --battle-hud-toolbar-top: 720px;
   --battle-x-debug-top: 64px;
   --battle-x-debug-column-width: var(--battle-side-hud-width, 260px);
 }
@@ -380,9 +395,9 @@
 }
 
 .battle-debug-menu-dock {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
+  position: relative;
+  right: auto;
+  bottom: auto;
   z-index: 4;
   display: flex;
   flex-direction: column;
@@ -531,10 +546,10 @@
 }
 
 .battle-canvas-wrap {
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 0;
   line-height: 0;
-  flex: 0 0 auto;
 }
 
 .battle-x-debug-canvas-wrap {
@@ -1147,9 +1162,11 @@
 }
 
 .battle-canvas {
-  border: calc(var(--canvas-border-width) * 1px) solid var(--canvas-border-color);
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 0;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   pointer-events: auto;

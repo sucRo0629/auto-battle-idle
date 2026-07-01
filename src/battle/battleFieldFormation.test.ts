@@ -40,7 +40,7 @@ describe('battle-field formation spec (F-*)', () => {
     expect(positions.get('ranger')!).toBeLessThan(positions.get('cleric')!);
   });
 
-  it('F-3.3-03: left anchor is 20px with 32px slot spacing (back to front)', () => {
+  it('F-3.3-03: left anchor uses PARTY_FORMATION_LEFT_ANCHOR and slot spacing', () => {
     const positions = computePlayerPositions([
       { id: 'a', role: 'attacker', formationRow: 'front', rangePx: 60, isAlive: true },
       { id: 'b', role: 'attacker', formationRow: 'back', rangePx: 80, isAlive: true },
@@ -74,7 +74,7 @@ describe('battle-field formation spec (F-*)', () => {
     );
   });
 
-  it('F-3.2-01: stage enemy spawnX is center-relative offset 0..240', () => {
+  it('F-3.2-01: stage enemy spawnX is center-relative offset within SPAWN_X_MAX', () => {
     const gameData = loadGameData();
     const stage1 = gameData.stages.find((s) => s.id === '1');
     expect(stage1).toBeDefined();

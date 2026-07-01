@@ -76,7 +76,7 @@ describe('partyFormation', () => {
     expect(sorted.map((u) => u.id)).toEqual(['at_ranger', 'sp_cleric']);
   });
 
-  it('assigns 5-slot party with 32px spacing from anchor 20', () => {
+  it('assigns 5-slot party with configured spacing from left anchor', () => {
     const units = Array.from({ length: 5 }, (_, i) => ({
       id: `u${i}`,
       role: 'attacker' as const,

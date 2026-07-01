@@ -257,7 +257,7 @@
     "epithetEn": "Assassin",
     "formationRow": "front",
     "traits": {
-      "rangePx": 30,
+      "rangePx": 25,
       "basicAttackVfx": {
         "enabled": true
       }

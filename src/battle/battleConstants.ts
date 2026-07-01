@@ -1,31 +1,44 @@
 import type { FormationRow } from './types.ts';
 import { PARTY_DEPLOY_TARGET_DURATION_SEC } from '../render/announcementOverlayTiming.ts';
 import { SPRITE_LAYOUT_SIZE } from '../render/spriteLayout.ts';
+import {
+  COMBAT_SAFE_CENTER_X,
+  COMBAT_SAFE_LEFT,
+  COMBAT_SAFE_RIGHT,
+} from './combatSafeArea.ts';
 
-/** 旧 480px 幅時代の戦闘ゾーン幾何（接敵 gap 維持の基準） */
-const LEGACY_CANVAS_W = 480;
-const LEGACY_COMBAT_CENTER_X = LEGACY_CANVAS_W / 2;
-const LEGACY_PARTY_FORMATION_LEFT_ANCHOR = 20;
+/** 1280×720 battle-root の戦闘キャンバス幅（全幅フィールド） */
+export const CANVAS_W = 1280;
 
-/** 戦闘キャンバス幅（px）— 1280×720 中央レーンに合わせて拡大 */
-export const CANVAS_W = 704;
-const COMBAT_ZONE_SIDE_PADDING = (CANVAS_W - LEGACY_CANVAS_W) / 2;
+/** battleLane 上端から下端までのキャンバス高さ（topInfo 直下〜root 下端） */
+export const BATTLE_LANE_TOP_INSET = 52;
+export const BATTLE_ROOT_REF_HEIGHT = 720;
+export const BATTLE_CANVAS_HEIGHT =
+  BATTLE_ROOT_REF_HEIGHT - BATTLE_LANE_TOP_INSET;
 
-/** 画面中央（敵 spawn オフセット基準） */
-export const COMBAT_CAMERA_CENTER_X =
-  LEGACY_COMBAT_CENTER_X + COMBAT_ZONE_SIDE_PADDING;
+/** 敵 spawn オフセット基準（HUD 間の安全領域中央） */
+export const COMBAT_CAMERA_CENTER_X = COMBAT_SAFE_CENTER_X;
 
-/** 味方隊列: 最後列（左端）の battleX */
-export const PARTY_FORMATION_LEFT_ANCHOR =
-  LEGACY_PARTY_FORMATION_LEFT_ANCHOR + COMBAT_ZONE_SIDE_PADDING;
-/** 味方隊列: スロット間隔（px） */
-export const PARTY_FORMATION_SLOT_SPACING = 32;
+/** 味方隊列: 最後列（左端）の battleX — HUD 右端 + gap */
+export const PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT;
+/** 味方隊列: スロット間隔（px）— 広い戦場で射程差が見えるよう拡大 */
+export const PARTY_FORMATION_SLOT_SPACING = 48;
 
 /** 周囲 aura 既定半径（障身法 AoE / 護法陣 / 援護系と同値） */
 export const DEFAULT_SURROUND_AURA_RADIUS_PX = 50;
 
-/** 敵 spawnX: 画面中心からの右オフセット上限（接敵 gap 維持のため legacy 240px 固定） */
-export const SPAWN_X_MAX = LEGACY_COMBAT_CENTER_X;
+/**
+ * 敵 spawnX: 安全領域中央からの右オフセット上限。
+ * 敵 deploy 目標が COMBAT_SAFE_RIGHT を超えないよう導出。
+ */
+export const SPAWN_X_MAX = COMBAT_SAFE_RIGHT - COMBAT_CAMERA_CENTER_X;
+
+export {
+  COMBAT_SAFE_LEFT,
+  COMBAT_SAFE_RIGHT,
+  COMBAT_SAFE_WIDTH,
+  COMBAT_SAFE_CENTER_X,
+} from './combatSafeArea.ts';
 
 export const SPRITE_WIDTH = SPRITE_LAYOUT_SIZE;
 export const SPRITE_GAP = 38;

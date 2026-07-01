@@ -8,7 +8,11 @@ import { loadGameData } from "../data/loadGameData.ts";
 import { loadLevelCurves } from "../../progression/levelGrowth.ts";
 import levelCurvesJson from "../../../data/levelCurves.json";
 import { createDefaultSave } from "../../progression/victoryRewards.ts";
-import { SPRITE_WIDTH } from "../battleConstants.ts";
+import {
+  CANVAS_W,
+  COMBAT_CAMERA_CENTER_X,
+  SPRITE_WIDTH,
+} from "../battleConstants.ts";
 import type { SkillSequenceRunner } from "../skills/skillSequence.ts";
 import {
   DEFAULT_MELEE_RANGE_PX,
@@ -37,8 +41,8 @@ export function asBattleEngineInternals(
 
 export const LONG_BATTLE_TIMEOUT_MS = 120_000;
 export const SCREEN_MIN_X = -18;
-export const SCREEN_MAX_X = 496;
-export const MARCH_MAX_ALLY_SCREEN_X = 280;
+export const SCREEN_MAX_X = CANVAS_W + 32;
+export const MARCH_MAX_ALLY_SCREEN_X = COMBAT_CAMERA_CENTER_X - 360;
 export const TICK_DT = 1 / 60;
 
 export const BACK_ROW_NAMES = ["療養師", "弓術士"] as const;

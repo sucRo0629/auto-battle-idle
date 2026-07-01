@@ -38,12 +38,13 @@ function enemyRangeBackDepth(layout: SpriteDrawOrderInput): number {
 }
 
 /**
- * キャンバス描画順（先頭＝下層・奥、末尾＝上層・手前）。
+ * キャンバス描画順のタイブレーク（先頭＝下層・奥、末尾＝上層・手前）。
+ * 描画パス正本は sortForSpriteDrawPass（depthOffsetY 降順）。同深度時のみ本比較を使う。
  *
- * 1. 敵陣営を先に描画（プレイヤー側が上）
- * 2. 味方はロール帯で重なり（近接アタッカーが最前面）
- * 3. 敵は射程の長い方を先に描画
- * 4. 同一帯内は後方ユニットを先に描画（手前ユニットが上）
+ * 1. 味方はロール帯で重なり（近接アタッカーが最前面）
+ * 2. 敵は射程の長い方を先に描画
+ * 3. 同一帯内は後方ユニットを先に描画（手前ユニットが上）
+ * 4. 敵味方同深度は敵を先（味方が上）
  */
 export function compareSpriteDrawOrder(
   a: SpriteDrawOrderInput,
@@ -69,4 +70,16 @@ export function sortForSpriteDraw<T extends SpriteDrawOrderInput>(
   layouts: readonly T[],
 ): T[] {
   return [...layouts].sort(compareSpriteDrawOrder);
+}
+
+/** 描画パス用: depthOffsetY が大きい（画面上で奥）ほど先に描画。同深度は compareSpriteDrawOrder */
+export function sortForSpriteDrawPass<
+  T extends SpriteDrawOrderInput & { depthOffsetY?: number },
+>(layouts: readonly T[]): T[] {
+  return [...layouts].sort((a, b) => {
+    const depthA = a.depthOffsetY ?? 0;
+    const depthB = b.depthOffsetY ?? 0;
+    if (depthA !== depthB) return depthB - depthA;
+    return compareSpriteDrawOrder(a, b);
+  });
 }

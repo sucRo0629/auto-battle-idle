@@ -1,15 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import {
   ANNOUNCEMENT_TOTAL_MS,
-  PARTY_DEPLOY_TARGET_DURATION_SEC,
   POST_ANNOUNCEMENT_ENGAGE_START_MS,
   POST_DEPLOY_SETTLE_DELAY_SEC,
 } from '../render/announcementOverlayTiming.ts';
-import { CANVAS_W } from './battleConstants.ts';
-import { createStage1Engine, TICK_DT } from './test/battleFieldSpec.harness.ts';
+import { CANVAS_W, MOVE_PX_PER_SEC } from './battleConstants.ts';
+import { resolvePartyDeployTargets } from './combatPosition.ts';
+import { resolvePartyDeployMarchDistancePx } from './partyFormation.ts';
+import {
+  asBattleEngineInternals,
+  createStage1Engine,
+  TICK_DT,
+} from './test/battleFieldSpec.harness.ts';
 
 function msToTicks(ms: number): number {
   return Math.ceil(ms / (TICK_DT * 1000));
+}
+
+function estimatePartyDeployFinishMs(
+  engine: ReturnType<typeof createStage1Engine>,
+): number {
+  const { players } = asBattleEngineInternals(engine);
+  const targets = resolvePartyDeployTargets(players);
+  const distancePx = resolvePartyDeployMarchDistancePx(targets);
+  return (distancePx / MOVE_PX_PER_SEC) * 1000;
 }
 
 describe('BattleEngine wave announcement', () => {
@@ -56,10 +70,9 @@ describe('BattleEngine wave announcement', () => {
 
   it('engages after deploy settle + post-deploy delay when announcement gate passed', () => {
     const engine = createStage1Engine();
-    const deployFinishMs = PARTY_DEPLOY_TARGET_DURATION_SEC * 1000;
+    const deployFinishMs = estimatePartyDeployFinishMs(engine);
     const engageStartMs =
-      deployFinishMs +
-      POST_DEPLOY_SETTLE_DELAY_SEC * 1000;
+      deployFinishMs + POST_DEPLOY_SETTLE_DELAY_SEC * 1000;
     expect(engageStartMs).toBeGreaterThan(POST_ANNOUNCEMENT_ENGAGE_START_MS);
     const engageTicks = msToTicks(engageStartMs) + 5;
     for (let i = 0; i < engageTicks; i++) {
@@ -71,7 +84,7 @@ describe('BattleEngine wave announcement', () => {
 
   it('waits after deploy settles before engaging', () => {
     const engine = createStage1Engine();
-    const deployFinishMs = PARTY_DEPLOY_TARGET_DURATION_SEC * 1000;
+    const deployFinishMs = estimatePartyDeployFinishMs(engine);
     const deployFinishTicks = msToTicks(deployFinishMs);
     let sawSettled = false;
     for (let i = 0; i < deployFinishTicks + 30; i++) {

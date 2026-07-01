@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { PARTY_FORMATION_SLOT_SPACING } from '../battleConstants.ts';
 import { resolveMaxEffectiveRangePx } from '../combatPosition.ts';
 import type { CombatantState } from '../types.ts';
 import { mockUnit } from '../testFixtures.ts';
@@ -88,7 +89,7 @@ describe('resolveSkillRangePx', () => {
         },
         4,
       ),
-    ).toBe(96);
+    ).toBe(PARTY_FORMATION_SLOT_SPACING * 3);
   });
 
   it('extends ally-targeted buff range to party formation depth', () => {
@@ -106,6 +107,6 @@ describe('resolveSkillRangePx', () => {
         },
         4,
       ),
-    ).toBe(96);
+    ).toBe(PARTY_FORMATION_SLOT_SPACING * 3);
   });
 });

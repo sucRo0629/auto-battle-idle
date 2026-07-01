@@ -5,16 +5,38 @@ import {
   compareSpriteDrawOrder,
   factionBackDepth,
   sortForSpriteDraw,
+  sortForSpriteDrawPass,
 } from './spriteDrawOrder.ts';
 
 describe('spriteDrawOrder', () => {
-  it('draws enemies before allies so player sprites appear on top', () => {
-    const enemy = { id: 'e1', x: 300, isEnemy: true };
-    const ally = { id: 'a1', x: 80, isEnemy: false };
+  it('breaks ties at same depthOffsetY with enemy before ally', () => {
+    const enemy = { id: 'e1', x: 300, isEnemy: true, depthOffsetY: 0 };
+    const ally = { id: 'a1', x: 80, isEnemy: false, depthOffsetY: 0 };
     expect(compareSpriteDrawOrder(enemy, ally)).toBeLessThan(0);
-    expect(sortForSpriteDraw([ally, enemy]).map((l) => l.id)).toEqual([
+    expect(sortForSpriteDrawPass([ally, enemy]).map((l) => l.id)).toEqual([
       'e1',
       'a1',
+    ]);
+  });
+
+  it('draws shallower depthOffsetY in front across factions', () => {
+    const ironGuard = {
+      id: 'guard',
+      x: 450,
+      isEnemy: false,
+      role: 'defender' as const,
+      depthOffsetY: 20,
+    };
+    const enemy = {
+      id: 'enemy',
+      x: 420,
+      isEnemy: true,
+      rangePx: 40,
+      depthOffsetY: 0,
+    };
+    expect(sortForSpriteDrawPass([ironGuard, enemy]).map((l) => l.id)).toEqual([
+      'guard',
+      'enemy',
     ]);
   });
 

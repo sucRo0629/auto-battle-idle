@@ -1,4 +1,4 @@
-import type { CombatantLayout } from "./IBattleRenderer.ts";
+import { clampCombatDisplayX } from "../battle/combatSafeArea.ts";
 import type { DotFlavor } from "../battle/types.ts";
 import type { BattleHudTheme } from "./battleHudTheme.ts";
 import {
@@ -155,11 +155,11 @@ export class DamagePopupManager {
       const progress = popup.elapsedMs / POPUP_DURATION_MS;
       const alpha = computeBattlePopupAlpha(progress);
       const popupScaleValue = computeBattlePopupScale(progress);
-      const centerX = layout.x + spriteSize / 2 + popup.offsetX;
       const anchorY = anchorYById.get(index)!;
 
       const text =
         popup.kind === "heal" ? `${popup.amount}` : String(popup.amount);
+      const rawCenterX = layout.x + spriteSize / 2 + popup.offsetX;
       const fill =
         popup.kind === "heal"
           ? theme.popupHealFill
@@ -177,6 +177,10 @@ export class DamagePopupManager {
             : theme.popupDotStroke
           : theme.popupDamageStroke;
       ctx.save();
+      const centerX = clampCombatDisplayX(
+        rawCenterX,
+        (ctx.measureText(text).width * popupScaleValue) / 2,
+      );
       ctx.translate(centerX, anchorY);
       ctx.scale(popupScaleValue, popupScaleValue);
       ctx.globalAlpha = alpha;

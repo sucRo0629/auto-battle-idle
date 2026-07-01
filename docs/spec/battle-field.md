@@ -115,14 +115,16 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 | 定数                                 | 用途                                                                                                            |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `CANVAS_W`（704）                    | 戦闘キャンバス幅（px）。左右 HUD 間の最大幅に合わせて拡大                                                                 |
-| `COMBAT_CAMERA_CENTER_X`（352）      | 敵 spawn オフセット基準（カメラは廃止、名前のみ残す）                                                           |
-| `PARTY_FORMATION_LEFT_ANCHOR`（132） | 味方隊列左端（射程最長ユニット）。旧 20px 相当ゾーンをキャンバス中央へ平行移動した値 |
-| `PARTY_FORMATION_SLOT_SPACING`（32） | 味方隊列スロット間隔                                                                                            |
-| `SPAWN_X_MAX`（240）                 | 敵 `spawnX` 上限（中心からの右オフセット。接敵 gap 維持のため legacy 240px 固定）                              |
+| `CANVAS_W`（1280）                   | 戦闘キャンバス幅（px）。背景描画の全幅 |
+| `BATTLE_CANVAS_HEIGHT`（668）        | 戦闘キャンバス高さ（px）。topInfo 直下〜 root 下端 |
+| `COMBAT_SAFE_LEFT` / `COMBAT_SAFE_RIGHT` | HUD を避けたユニット配置帯（`combatSafeArea.ts`）。Party HUD 右端 + 48px / Enemy HUD 左端 − 48px |
+| `COMBAT_CAMERA_CENTER_X`             | 安全領域中央（敵 spawn オフセット基準） |
+| `PARTY_FORMATION_LEFT_ANCHOR`       | `COMBAT_SAFE_LEFT`（味方隊列左端） |
+| `PARTY_FORMATION_SLOT_SPACING`（48） | 味方隊列スロット間隔（広い戦場で奥行きを見せる） |
+| `SPAWN_X_MAX`                        | 敵 `spawnX` 上限（`COMBAT_SAFE_RIGHT - COMBAT_CAMERA_CENTER_X`） |
 | `BATTLE_FIELD_SPRITE_SCALE`（2）     | 戦闘フィールド描画スケール（32px スプライトを 2 倍表示。`battleX` は 1:1 のまま）                               |
 | `PLAYER_VISUAL_MIN_GAP`              | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`）。射程加算には使わない                               |
-| `CONFIGURABLE_RANGE_PX_MAX`          | `traits.rangePx` / `effect.range` の設定上限（`CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`）                        |
+| `CONFIGURABLE_RANGE_PX_MAX`          | `traits.rangePx` / `effect.range` の設定上限（`COMBAT_SAFE_RIGHT - PARTY_FORMATION_LEFT_ANCHOR`）                        |
 | `MOVE_PX_PER_SEC`（120）             | 1 秒あたりの戦闘移動量（px）。進軍・接敵接近・PartyDeploy・隊形復帰に使用。Victory 退場は `MOVE_PX_PER_SEC × 2` |
 
 `formationRow` は Y 描画・ターゲット用。X 深度の正本は射程順一列（`partyFormation.ts`）。
@@ -143,17 +145,18 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 
 | 優先 | ルール                           | 意味                                     |
 | ---- | -------------------------------- | ---------------------------------------- |
-| 1    | **敵を先に描画**                 | プレイヤー側スプライトが敵より手前（上） |
-| 2    | **味方はロール帯で重なり**       | 下表の順で手前に重なる（上→下）          |
-| 3    | **敵内は射程が長い方を先に描画** | 射程の短い敵ほど上に重なる               |
-| 4    | **同一帯内は後方を先に描画**     | 手前に立つユニットが後方ユニットより上   |
+| 1    | **`depthOffsetY` の大きい順に描画** | 画面上で奥（§2.8）のユニットを先に描き、手前が上に重なる（陣営横断） |
+| 2    | **同深度は §2.7 キーでタイブレーク** | 下表のロール帯・射程帯・battleX 奥行き。同深度かつ敵味方では敵を先に描画（味方が上） |
+| 3    | **味方はロール帯で重なり**       | 下表の順で手前に重なる（上→下）          |
+| 4    | **敵内は射程が長い方を先に描画** | 射程の短い敵ほど上に重なる               |
+| 5    | **同一帯内は後方を先に描画**     | 手前に立つユニットが後方ユニットより上   |
 
 **味方のロール帯（手前＝上層 → 奥＝下層）：**
 
 | 手前（上） | ロール帯                  | 判定                                        |
 | ---------- | ------------------------- | ------------------------------------------- |
-| 1          | 近接 `attacker` UI ロール | `role === "attacker"` かつ `rangePx < 100`  |
-| 2          | 遠隔 `attacker` UI ロール | `role === "attacker"` かつ `rangePx >= 100` |
+| 1          | 近接 `attacker` UI ロール | `role === "attacker"` かつ `rangePx < RANGED_ATTACK_MIN_PX` |
+| 2          | 遠隔 `attacker` UI ロール | `role === "attacker"` かつ `rangePx >= RANGED_ATTACK_MIN_PX` |
 | 3          | ディフェンダー            | `role === "defender"`                       |
 | 4          | `supporter` UI ロール     | `role === "supporter"`                      |
 
@@ -164,7 +167,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | プレイヤー側 | 小さい `battleX`（画面左）         | 大きい `battleX`（敵寄り）         |
 | 敵           | 大きい `battleX`（画面右・退却側） | 小さい `battleX`（プレイヤー寄り） |
 
-ソートキーはまず陣営で分け、味方同士は `allyRoleBackDepth`（0〜3 の昇順）、敵同士は `rangePx` の降順（長い方が下層）、同一帯内は `factionBackDepth`：`isEnemy ? -battleX : battleX` の昇順。同深度は `id` 辞書順。
+ソートキーは `assignVisualDepthOffsets` で陣営ごとに `depthOffsetY` を割当（§2.8）。**描画パス**は `depthOffsetY` 降順（奥→手前）。同深度のタイブレークは `compareSpriteDrawOrder`：味方同士は `allyRoleBackDepth`（0〜3 の昇順）、敵同士は `rangePx` の降順（長い方が下層）、同一帯内は `factionBackDepth`：`isEnemy ? -battleX : battleX` の昇順。敵味方が同深度のときは敵を先に描画（味方が上）。同深度は `id` 辞書順。
 
 ### 2.8 擬似奥行き（Y オフセット）
 
@@ -210,7 +213,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 }
 ```
 
-- `spawnX` — **`COMBAT_CAMERA_CENTER_X` からの右オフセット**。`0 <= spawnX <= SPAWN_X_MAX`（240）。`battleX = COMBAT_CAMERA_CENTER_X + spawnX`
+- `spawnX` — **`COMBAT_CAMERA_CENTER_X` からの右オフセット**。`0 <= spawnX <= SPAWN_X_MAX`（320）。`battleX = COMBAT_CAMERA_CENTER_X + spawnX`
 
 ### 3.3 プレイヤー隊形（射程順一列）
 
@@ -614,9 +617,13 @@ CSS では Canvas / 画像に `image-rendering: pixelated` と `image-rendering:
 
 #### 8.3.1 `BattleCanvas` 大型化（中央主役）
 
-1280×720 `battle-root` の中央 `battleLane` に、戦闘観察用の大型 `BattleCanvas` を配置する。内部基準幅 `CANVAS_W`（704px）・描画スケール `BATTLE_FIELD_SPRITE_SCALE`（2）で 32px スプライトを観察しやすいサイズにする。
+1280×720 `battle-root` に **全幅・高さ一杯** の `BattleCanvas` を敷き、左右 HUD はその上に浮かせる。内部基準 `CANVAS_W`（1280px）× `BATTLE_CANVAS_HEIGHT`（668px）・描画スケール `BATTLE_FIELD_SPRITE_SCALE`（2）で 32px スプライトを観察しやすいサイズにする。
 
-**接敵テンポ維持:** キャンバス幅拡大に伴い `PARTY_FORMATION_LEFT_ANCHOR` / `COMBAT_CAMERA_CENTER_X` を legacy 480px 時代の戦闘ゾーンと同じ相対配置になるよう平行移動する。`SPAWN_X_MAX` は 240px 固定のままとし、開幕接敵 gap を変えない。
+**戦闘空間の使い方:** 背景・Canvas は 1280px 全幅。ユニット配置・接敵・spawn は `combatSafeArea.ts` の `COMBAT_SAFE_LEFT`〜`COMBAT_SAFE_RIGHT`（左右 HUD + 48px gap）を正本とする。HUD 幾何の正本は `battleHudGeometry.ts`（`battleRootLayout` と同期）。`PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT`。`SPAWN_X_MAX = COMBAT_SAFE_RIGHT - COMBAT_CAMERA_CENTER_X`。PartyDeploy 左外開始距離は `resolvePartyDeployMarchDistancePx`（最前列 target が画面外左に収まるまで延長。移動速度は `MOVE_PX_PER_SEC` のまま）。
+
+**遠距離判定:** `RANGED_ATTACK_MIN_PX`（= `LONG_RANGE_THRESHOLD_PX`、100）。`rangePx >= 100` が遠隔帯（100 含む）。閾値は `types.ts` の単一定数。
+
+**Canvas 外枠:** `battle-canvas` に枠線・下部帯を付けない。編成ボタンは暫定導線として `battle-transient-controls-dock`（右下・Debug 付近の操作 UI レイヤ）。Party / Enemy HUD・中央戦場とは混ぜない。プレイヤー Lv 表示は戦闘 HUD から外す。
 
 **変更しないもの（戦闘ルール）:**
 
@@ -666,10 +673,10 @@ partyHud:
   h: 608
 
 battleLane:
-  x: 288 # BATTLE_HUD_SIDE_MARGIN + BATTLE_SIDE_HUD_WIDTH + BATTLE_LANE_SIDE_GAP
+  x: 0
   y: 52
-  w: 704 # CANVAS_W（1:1 表示）
-  h: 280 # battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE) + BATTLE_LANE_FRAME_PAD（導出値）
+  w: 1280 # CANVAS_W（全幅フィールド）
+  h: 668 # BATTLE_CANVAS_HEIGHT
 
 enemyHud:
   x: 996 # 1280 - 24 - partyHud.w
@@ -994,7 +1001,7 @@ topInfo:
 14. HUD 要素の高さを内容量で変えない方針が明記されている
 15. デバッグ UI を本体 HUD から分離する方針が明記されている
 16. 今回変更しない戦闘ロジック範囲が明記されている
-17. `BattleCanvas` は `CANVAS_W` 704px・`BATTLE_FIELD_SPRITE_SCALE` 2 で中央主役サイズ。接敵 gap は legacy 480px ゾーンと同等になるようアンカー平行移動が明記されている
+17. `BattleCanvas` は `CANVAS_W` 1280px × `BATTLE_CANVAS_HEIGHT` 668px・`BATTLE_FIELD_SPRITE_SCALE` 2 で全幅主役。味方左アンカー + 敵 spawn で戦場横幅を使う
 18. `BattleStatsDrawer` は常時 HUD へ統合せず、詳細確認 / 開発用ドロワーとして分離する方針が明記されている
 19. 敵 HUD の詳細表示は初期実装では hover tooltip を基本とし、選択固定の詳細パネルは後続検討でよいことが明記されている
 20. 危険予兆バーは現時点では実データ未接続の予約枠であり、通常スキルリキャストへ接続しないことが明記されている

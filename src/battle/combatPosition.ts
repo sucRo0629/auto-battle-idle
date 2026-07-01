@@ -18,6 +18,7 @@ import {
 } from './battleConstants.ts';
 import {
   computePartyFormationBattleX,
+  resolvePartyDeployMarchDistancePx,
   type PartyFormationUnit,
 } from './partyFormation.ts';
 import { resolveSkillRangePx } from './skills/rangeUtils.ts';
@@ -807,11 +808,12 @@ export function placePartyOffScreenForDeploy(
   players: CombatantState[],
   targets: Map<string, number>,
 ): void {
+  const marchDistance = resolvePartyDeployMarchDistancePx(targets);
   for (const player of players) {
     if (!player.isAlive) continue;
     const target = targets.get(player.id);
     if (target === undefined) continue;
-    player.battleX = target - resolvePartyDeployTravelPx();
+    player.battleX = target - marchDistance;
   }
 }
 

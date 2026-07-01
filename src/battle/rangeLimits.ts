@@ -2,6 +2,7 @@ import {
   CANVAS_W,
   PARTY_FORMATION_LEFT_ANCHOR,
 } from './battleConstants.ts';
+import { COMBAT_SAFE_RIGHT } from './combatSafeArea.ts';
 import type { AppLocale } from '../i18n/locale.ts';
 import {
   isMeleeRangePx,
@@ -9,9 +10,9 @@ import {
   RANGED_ATTACK_MIN_PX,
 } from './types.ts';
 
-/** traits.rangePx / スキル effect.range の設定上限（px）。左端隊列アンカーからキャンバス右端まで。 */
+/** traits.rangePx / スキル effect.range の設定上限（px）。安全領域左端から右端まで。 */
 export const CONFIGURABLE_RANGE_PX_MAX =
-  CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR;
+  COMBAT_SAFE_RIGHT - PARTY_FORMATION_LEFT_ANCHOR;
 
 /** traits.rangePx の近接帯 / 遠隔帯ラベル */
 export function formatRangeBand(

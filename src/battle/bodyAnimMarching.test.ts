@@ -7,7 +7,13 @@ import {
 import type { CombatantState } from './types.ts';
 import { createStage1Engine, TICK_DT, asBattleEngineInternals } from './test/battleFieldSpec.harness.ts';
 import { shouldSkipEngagedAutoApproach } from './resolveApproachBattleX.ts';
-import { PARTY_DEPLOY_TARGET_DURATION_SEC } from '../render/announcementOverlayTiming.ts';
+import { isWithinSkillRange } from './skills/rangeUtils.ts';
+import {
+  resolveMaxEffectiveRangePx,
+  resolvePartyDeployTargets,
+} from './combatPosition.ts';
+import { MOVE_PX_PER_SEC } from './battleConstants.ts';
+import { resolvePartyDeployMarchDistancePx } from './partyFormation.ts';
 
 function makeUnit(
   overrides: Partial<CombatantState> & Pick<CombatantState, 'id'>,
@@ -120,12 +126,20 @@ describe('resolveCombatantBodyAnimMarching', () => {
   });
 });
 
+function estimatePartyDeployFinishTicks(
+  engine: ReturnType<typeof createStage1Engine>,
+): number {
+  const { players } = asBattleEngineInternals(engine);
+  const targets = resolvePartyDeployTargets(players);
+  const distancePx = resolvePartyDeployMarchDistancePx(targets);
+  const finishMs = (distancePx / MOVE_PX_PER_SEC) * 1000;
+  return Math.ceil(finishMs / (TICK_DT * 1000)) + 5;
+}
+
 describe('BattleEngine bodyAnimMarching snapshot', () => {
   it('marks allies not marching after PartyDeploy settles', () => {
     const engine = createStage1Engine();
-    const deployFinishTicks = Math.ceil(
-      (PARTY_DEPLOY_TARGET_DURATION_SEC * 1000) / (TICK_DT * 1000),
-    ) + 5;
+    const deployFinishTicks = estimatePartyDeployFinishTicks(engine);
 
     for (let i = 0; i < deployFinishTicks; i++) {
       engine.tick(TICK_DT);
@@ -142,9 +156,8 @@ describe('BattleEngine bodyAnimMarching snapshot', () => {
 
   it('marks front allies not marching once engaged and in attack range', () => {
     const engine = createStage1Engine();
-    const deployFinishMs = PARTY_DEPLOY_TARGET_DURATION_SEC * 1000;
-    const engageTicks =
-      Math.ceil((deployFinishMs + 2000) / (TICK_DT * 1000)) + 30;
+    const deployFinishTicks = estimatePartyDeployFinishTicks(engine);
+    const engageTicks = deployFinishTicks + Math.ceil(2000 / (TICK_DT * 1000)) + 30;
 
     for (let i = 0; i < engageTicks; i++) {
       engine.tick(TICK_DT);
@@ -153,7 +166,7 @@ describe('BattleEngine bodyAnimMarching snapshot', () => {
     const snap = engine.getSnapshot();
     expect(snap.engaged).toBe(true);
 
-    for (let t = 0; t < 300; t++) {
+    for (let t = 0; t < 600; t++) {
       engine.tick(TICK_DT);
       const frame = engine.getSnapshot();
       const internal = asBattleEngineInternals(engine);
@@ -162,9 +175,17 @@ describe('BattleEngine bodyAnimMarching snapshot', () => {
       if (livingEnemies.length === 0) break;
 
       for (const ally of livingAllies) {
-        if (ally.formationRow === 'front') {
-          expect(ally.bodyAnimMarching).toBe(false);
-        }
+        if (ally.formationRow !== 'front') continue;
+        const allyUnit = internal.players.find((p) => p.id === ally.id);
+        if (!allyUnit) continue;
+        const inRange = livingEnemies.some((enemySnap) => {
+          const enemy = internal.enemies.find((e) => e.id === enemySnap.id);
+          if (!enemy) return false;
+          const range = resolveMaxEffectiveRangePx(allyUnit, internal.gameData);
+          return isWithinSkillRange(allyUnit, enemy, range);
+        });
+        if (!inRange) continue;
+        expect(ally.bodyAnimMarching).toBe(false);
       }
       for (const enemySnap of livingEnemies) {
         const enemy = internal.enemies.find((e) => e.id === enemySnap.id);

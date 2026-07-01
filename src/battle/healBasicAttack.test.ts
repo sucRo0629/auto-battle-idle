@@ -6,6 +6,7 @@ import levelCurvesJson from '../../data/levelCurves.json';
 import { createMemberFromClass } from '../progression/partyCompose.ts';
 import { createDefaultSave } from '../progression/victoryRewards.ts';
 import {
+  COMBAT_CAMERA_CENTER_X,
   PARTY_FORMATION_LEFT_ANCHOR,
   PARTY_FORMATION_SLOT_SPACING,
 } from './battleConstants.ts';
@@ -227,7 +228,7 @@ describe('resolveSkillRangePx ally heal', () => {
       },
       4,
     );
-    expect(range).toBe(96);
+    expect(range).toBe(PARTY_FORMATION_SLOT_SPACING * 3);
   });
 });
 
@@ -420,8 +421,8 @@ describe('heal basic attack approach', () => {
     );
     const players = [sorcerer, cleric, guardian];
     const enemies = [
-      mockMeleeEnemy(320, 'near'),
-      mockMeleeEnemy(400, 'deep'),
+      mockMeleeEnemy(COMBAT_CAMERA_CENTER_X + 80, 'near'),
+      mockMeleeEnemy(COMBAT_CAMERA_CENTER_X + 160, 'deep'),
     ];
 
     const allTargets = resolveAllPlayerApproachBattleX(

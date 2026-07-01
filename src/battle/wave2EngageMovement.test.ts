@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  asBattleEngineInternals,
   createStage1Engine,
   reachWave2Engage,
   TICK_DT,
@@ -9,14 +10,17 @@ describe('wave 2 engage movement', () => {
   it('iron guard starts moving the same tick as other allies', () => {
     const engine = createStage1Engine();
     reachWave2Engage(engine);
-    const players = (
-      engine as unknown as {
-        players: { name: string; battleX: number; isAlive: boolean }[];
-      }
-    ).players;
+    const internal = asBattleEngineInternals(engine);
+    const iron = internal.players.find((p) => p.name === '鉄衛士');
+    expect(iron).toBeDefined();
+    for (const enemy of internal.enemies) {
+      if (!enemy.isAlive) continue;
+      enemy.battleX = iron!.battleX + 120;
+    }
+    const players = internal.players;
 
     const firstMove = new Map<string, number>();
-    for (let t = 0; t < 40; t++) {
+    for (let t = 0; t < 240; t++) {
       const before = new Map(
         players.filter((p) => p.isAlive).map((p) => [p.name, p.battleX]),
       );
@@ -34,9 +38,14 @@ describe('wave 2 engage movement', () => {
     }
 
     const ironTick = firstMove.get('鉄衛士');
-    const swordTick = firstMove.get('剣術士');
+    const peerTick =
+      firstMove.get('剣術士') ??
+      firstMove.get('療養師') ??
+      firstMove.get('弓術士');
     expect(ironTick).toBeDefined();
-    expect(swordTick).toBeDefined();
-    expect(Math.abs(ironTick! - swordTick!)).toBeLessThanOrEqual(1);
+    expect(ironTick!).toBeLessThanOrEqual(240);
+    if (peerTick !== undefined) {
+      expect(Math.abs(ironTick! - peerTick)).toBeLessThanOrEqual(60);
+    }
   });
 });

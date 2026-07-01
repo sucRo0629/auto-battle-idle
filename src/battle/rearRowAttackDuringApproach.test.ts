@@ -17,6 +17,11 @@ import {
   reachWave2Engage,
   TICK_DT,
 } from './test/battleFieldSpec.harness.ts';
+import {
+  COMBAT_CAMERA_CENTER_X,
+  COMBAT_SAFE_LEFT,
+  PARTY_FORMATION_SLOT_SPACING,
+} from './battleConstants.ts';
 
 const SETTLED_PX = 0.5;
 const gameData = loadGameData();
@@ -48,15 +53,18 @@ describe('battle-field §4.4 rear row attack during approach', () => {
     expect(rear).toBeDefined();
 
     for (const unit of front) {
-      unit.battleX = 40;
+      unit.battleX = COMBAT_SAFE_LEFT - 50;
     }
-    rear!.battleX = 180;
-    for (const enemy of internal.enemies.filter((e) => e.isAlive)) {
-      enemy.battleX = 220;
+    rear!.battleX = COMBAT_SAFE_LEFT + PARTY_FORMATION_SLOT_SPACING;
+    const nearestEnemy = internal.enemies.find((e) => e.isAlive)!;
+    nearestEnemy.battleX = rear!.battleX + 80;
+    for (const enemy of internal.enemies.filter(
+      (e) => e.isAlive && e.id !== nearestEnemy.id,
+    )) {
+      enemy.battleX = COMBAT_CAMERA_CENTER_X + 200;
     }
 
     const rearRange = resolveMaxEffectiveRangePx(rear!, gameData);
-    const nearestEnemy = internal.enemies.find((e) => e.isAlive)!;
     expect(isWithinSkillRange(rear!, nearestEnemy, rearRange)).toBe(true);
     expect(
       front.some((unit) =>
@@ -90,14 +98,14 @@ describe('battle-field §4.4 rear row attack during approach', () => {
     expect(longRangeEnemy).toBeDefined();
 
     for (const unit of front) {
-      unit.battleX = 30;
+      unit.battleX = COMBAT_SAFE_LEFT - 120;
     }
-    archer!.battleX = 120;
-    longRangeEnemy!.battleX = 155;
+    archer!.battleX = COMBAT_SAFE_LEFT + PARTY_FORMATION_SLOT_SPACING * 2;
+    longRangeEnemy!.battleX = archer!.battleX + 80;
     internal.enemies
       .filter((e) => e.isAlive && e.id !== longRangeEnemy!.id)
       .forEach((e) => {
-        e.battleX = 400;
+        e.battleX = COMBAT_CAMERA_CENTER_X + 200;
       });
 
     const archerRange = resolveMaxEffectiveRangePx(archer!, gameData);

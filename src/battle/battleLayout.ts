@@ -24,6 +24,7 @@ import {
   engagedMinBodyGap,
   enemyRangedRearGap,
 } from './battleConstants.ts';
+import { COMBAT_SAFE_LEFT, COMBAT_SAFE_RIGHT } from './combatSafeArea.ts';
 import {
   compareFormationRowSlot,
   comparePartyFormationSlot,
@@ -1063,11 +1064,11 @@ function resolveRemainingOverlapCorrectionPx(
   return Math.max(0, maxCorrectionPx - spentMovementPx);
 }
 
-/** 接敵中: 敵グループを canvas 幅内に clamp（battleX 正本） */
+/** 接敵中: 敵グループを安全領域内に clamp（battleX 正本） */
 export function clampEngagedEnemyGroupOnScreen(
   enemies: Array<{ id: string; battleX: number; isAlive: boolean }>,
-  maxScreenX: number = CANVAS_W,
-  minScreenX: number = -SPRITE_WIDTH,
+  maxScreenX: number = COMBAT_SAFE_RIGHT,
+  minScreenX: number = COMBAT_SAFE_LEFT - SPRITE_WIDTH,
 ): Map<string, number> {
   let positions = separateEngagedSprites(enemies);
   if (positions.size === 0) return positions;

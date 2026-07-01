@@ -42,7 +42,6 @@ import {
   buildPartyHudMetaBySlot,
 } from "./partyHudTypes.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
-import { resolvePlayerDisplayLevel } from "../progression/resolvePlayerDisplayLevel.ts";
 import { PartyHudFloatingTooltip } from "./partyHudFloatingTooltip.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
 import "../styles/game-term-panel.css";
@@ -106,7 +105,6 @@ export class BattleView {
   private readonly stagePlateWaveEl: HTMLElement;
   private readonly verifyBadgeEl: HTMLButtonElement;
   private readonly menuButton: HTMLButtonElement;
-  private readonly hudToolbarLevelEl: HTMLElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
   private readonly enemyHud: EnemyHudPanel;
@@ -116,7 +114,6 @@ export class BattleView {
   private readonly hudFloatingTooltip: PartyHudFloatingTooltip;
   private readonly gameTermPanel: GameTermPanel;
   private readonly hudTooltipLayer: HTMLElement;
-  private readonly canvasFrame: HTMLElement;
   private readonly partyHudSlotEl: HTMLElement;
   private readonly enemyHudSlotEl: HTMLElement;
   private readonly battleDebugOverlay: HTMLElement;
@@ -129,7 +126,6 @@ export class BattleView {
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastStagePlateLabel = "";
   private lastWavePlateLabel = "";
-  private lastHudToolbarLevel = -1;
   private readonly unsubscribeLocale: () => void;
   private readonly verifyModeControls?: VerifyModeControls;
   private battleRootResizeObserver: ResizeObserver | null = null;
@@ -225,10 +221,6 @@ export class BattleView {
     this.battleDebugShell = battleDebugShell;
     battleDebugOverlay.appendChild(battleDebugShell);
 
-    const canvasFrame = document.createElement("div");
-    canvasFrame.className = "battle-canvas-frame battle-canvas-frame--lane-hud";
-    this.canvasFrame = canvasFrame;
-
     const canvasWrap = document.createElement("div");
     canvasWrap.className = "battle-canvas-wrap";
     this.canvasWrap = canvasWrap;
@@ -260,6 +252,7 @@ export class BattleView {
     battleLane.appendChild(canvasWrap);
 
     battleLaneLayer.appendChild(battleLane);
+
     battleHudLayer.append(partyHudSlot, enemyHudSlot);
 
     this.canvasHost.append(
@@ -301,6 +294,15 @@ export class BattleView {
       },
     });
 
+    const transientControlsDock = document.createElement("div");
+    transientControlsDock.className = "battle-transient-controls-dock";
+
+    this.menuButton = this.createPartyMenuButton();
+    this.menuButton.addEventListener("click", () => {
+      verifyModeControls?.onOpenMetaMenu();
+    });
+    transientControlsDock.appendChild(this.menuButton);
+
     const debugMenuDock = document.createElement("div");
     debugMenuDock.className = "battle-debug-menu-dock";
     this.debugMenuDock = debugMenuDock;
@@ -319,7 +321,8 @@ export class BattleView {
     debugMenuToggle.setAttribute("aria-expanded", "false");
     debugMenuDock.appendChild(debugMenuToggle);
     this.debugMenu.mount(debugMenuDock);
-    battleDebugShell.appendChild(debugMenuDock);
+    transientControlsDock.appendChild(debugMenuDock);
+    battleDebugShell.appendChild(transientControlsDock);
     battleDebugShell.appendChild(this.verifyBadgeEl);
 
     this.battleXDebugCanvas = new BattleXDebugCanvas();
@@ -342,32 +345,6 @@ export class BattleView {
       }
       this.setHoverHighlight(unitId, "field");
     });
-
-    const hudStack = document.createElement("div");
-    hudStack.className = "battle-hud-stack";
-
-    const hudToolbar = document.createElement("div");
-    hudToolbar.className = "battle-hud-toolbar";
-
-    const hudToolbarLeading = document.createElement("div");
-    hudToolbarLeading.className = "battle-hud-toolbar-leading";
-
-    this.hudToolbarLevelEl = document.createElement("span");
-    this.hudToolbarLevelEl.className = "battle-hud-toolbar-level";
-
-    hudToolbarLeading.appendChild(this.hudToolbarLevelEl);
-
-    this.menuButton = this.createPartyMenuButton();
-    this.menuButton.addEventListener("click", () => {
-      verifyModeControls?.onOpenMetaMenu();
-    });
-
-    hudToolbar.append(hudToolbarLeading, this.menuButton);
-    hudStack.appendChild(hudToolbar);
-    this.syncHudToolbarLevel(this.getSave().party);
-
-    canvasFrame.appendChild(hudStack);
-    battleLane.appendChild(canvasFrame);
 
     this.hudFloatingTooltip = new PartyHudFloatingTooltip(this.hudTooltipLayer);
 
@@ -439,8 +416,6 @@ export class BattleView {
 
     this.unsubscribeLocale = subscribeLocaleChange(() => {
       this.refreshLocaleChrome();
-      this.lastHudToolbarLevel = -1;
-      this.syncHudToolbarLevel(this.getSave().party);
       const snapshot = this.engine.getSnapshot();
       const save = this.getSave();
       const partyMeta = buildPartyHudMetaBySlot(
@@ -918,7 +893,6 @@ export class BattleView {
       this.stagePlateWaveEl.textContent = wavePlateLabel;
     }
 
-    this.syncHudToolbarLevel(save.party);
     this.syncVerifyBadgeState();
 
     const debugEnabled = this.isBattleXDebugDisplayActive();
@@ -959,16 +933,6 @@ export class BattleView {
   setVisible(visible: boolean): void {
     this.root.hidden = !visible;
     this.root.setAttribute('aria-hidden', visible ? 'false' : 'true');
-  }
-
-  private syncHudToolbarLevel(
-    party: ReturnType<BattleView["getSave"]>["party"] | undefined,
-  ): void {
-    const level = resolvePlayerDisplayLevel(party ?? []);
-    if (level === this.lastHudToolbarLevel) return;
-    this.lastHudToolbarLevel = level;
-    const levelLabel = t("common.playerLevel", { level });
-    this.hudToolbarLevelEl.textContent = levelLabel;
   }
 
   private syncVerifyBadgeState(): void {

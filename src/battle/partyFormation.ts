@@ -1,6 +1,7 @@
 import type { DamageType, FormationRow, Role } from './types.ts';
 import { RANGED_ATTACK_MIN_PX } from './types.ts';
 import {
+  BATTLE_ALLY_MARCH_VISIBLE_MIN_X,
   resolvePartyDeployTravelPx,
   PARTY_FORMATION_LEFT_ANCHOR,
   PARTY_FORMATION_SLOT_SPACING,
@@ -98,6 +99,18 @@ export function resolvePartyDeployOffscreenOffset(
 
 export function partyDeployOffScreenBattleX(targetBattleX: number): number {
   return targetBattleX - resolvePartyDeployTravelPx();
+}
+
+/** 全員が画面外左から進軍する距離（最前列 target が HUD 内に見えないよう確保） */
+export function resolvePartyDeployMarchDistancePx(
+  partyDeployTargets: ReadonlyMap<string, number>,
+): number {
+  let maxTarget = 0;
+  for (const x of partyDeployTargets.values()) {
+    if (x > maxTarget) maxTarget = x;
+  }
+  const minDistance = maxTarget - BATTLE_ALLY_MARCH_VISIBLE_MIN_X;
+  return Math.max(resolvePartyDeployTravelPx(), minDistance);
 }
 
 /** 隊列の最大奥行き（遠隔敵 cap 用） */

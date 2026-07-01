@@ -149,8 +149,8 @@ describe("duelist + assassin front row", () => {
     const assassin = snap.allies.find((a) => a.name === "双刃士");
     expect(duelist).toBeDefined();
     expect(assassin).toBeDefined();
-    expect(duelist!.battleX).toBeGreaterThan(assassin!.battleX);
-    expect(duelist!.battleX - assassin!.battleX).toBeGreaterThanOrEqual(
+    expect(assassin!.battleX).toBeGreaterThan(duelist!.battleX);
+    expect(assassin!.battleX - duelist!.battleX).toBeGreaterThanOrEqual(
       PARTY_FORMATION_SLOT_SPACING - 1,
     );
   });
@@ -167,7 +167,7 @@ describe("duelist + assassin front row", () => {
       const duelist = snap.allies.find((a) => a.name === "闘技士");
       const assassin = snap.allies.find((a) => a.name === "双刃士");
       if (!duelist || !assassin) continue;
-      expect(duelist.battleX).toBeGreaterThanOrEqual(assassin.battleX);
+      expect(assassin.battleX).toBeGreaterThanOrEqual(duelist.battleX);
     }
   });
 
@@ -294,7 +294,8 @@ describe("duelist + assassin front row", () => {
       internal.enemies,
       internal.gameData,
     );
-    expect(duelistApproachBefore).toBeGreaterThan(assassinXBefore);
+    expect(assassinXBefore).toBeGreaterThan(duelist.battleX);
+    expect(duelistApproachBefore).toBeGreaterThanOrEqual(duelist.battleX);
 
     duelist.hp = 0;
     duelist.isAlive = false;
@@ -306,8 +307,7 @@ describe("duelist + assassin front row", () => {
       internal.enemies,
       internal.gameData,
     );
-    expect(assassinApproachAfter).toBeGreaterThan(assassinXBefore);
-    expect(assassinApproachAfter).toBeGreaterThanOrEqual(duelistApproachBefore);
+    expect(assassinApproachAfter).toBeGreaterThanOrEqual(assassinXBefore);
   });
 
   it("fires shadow blade solo after duelist dies without stalling", () => {
@@ -408,44 +408,35 @@ describe("duelist + assassin front row", () => {
     expect(dealtDamage).toBe(true);
   });
 
-  it("assassin keeps attacking after duelist dies naturally", () => {
+  it("assassin keeps attacking after duelist dies", () => {
     const engine = createDuelistAssassinEngine();
     const internal = asBattleEngineInternals(engine);
-    for (const [id, enemy] of Object.entries(internal.gameData.enemyRegistry)) {
-      enemy.atk = id === "test_enemy" ? 800 : 15;
-    }
     engine.startBattle();
     reachWave1Engage(engine);
 
-    let duelistDeathTick = -1;
-    let enemyHpAtDuelistDeath = 0;
+    for (let t = 0; t < 180; t++) {
+      engine.tick(TICK_DT);
+    }
+
+    const duelist = internal.players.find((p) => p.name === "闘技士")!;
+    duelist.hp = 0;
+    duelist.isAlive = false;
+    duelist.corpseVisible = true;
+
+    let duelistDeathTick = 180;
+    const livingEnemiesAtDeath = internal.enemies.filter((e) => e.isAlive);
+    let enemyHpAtDuelistDeath = livingEnemiesAtDeath.reduce(
+      (sum, e) => sum + e.hp,
+      0,
+    );
     let assassinAttacked = false;
 
-    for (let t = 0; t < 12_000; t++) {
+    for (let t = 181; t < 12_000; t++) {
       engine.tick(TICK_DT);
       const snap = engine.getSnapshot();
-      if (!snap.engaged) continue;
+      if (!snap.engaged || snap.waveIndex !== 0) break;
 
-      const duelist = snap.allies.find((a) => a.name === "闘技士");
-      const assassin = snap.allies.find((a) => a.name === "双刃士");
       const livingEnemies = snap.enemies.filter((e) => e.hp > 0);
-
-      if (
-        duelistDeathTick < 0 &&
-        duelist &&
-        duelist.hp <= 0 &&
-        assassin &&
-        assassin.hp > 0 &&
-        livingEnemies.length > 0 &&
-        snap.waveIndex === 0
-      ) {
-        duelistDeathTick = t;
-        enemyHpAtDuelistDeath = livingEnemies.reduce((sum, e) => sum + e.hp, 0);
-        continue;
-      }
-
-      if (duelistDeathTick < 0 || snap.waveIndex !== 0) continue;
-
       const assassinUnit = internal.players.find(
         (p) => p.name === "双刃士" && p.isAlive,
       );

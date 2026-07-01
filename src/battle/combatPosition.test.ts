@@ -92,23 +92,23 @@ describe('combatPosition', () => {
       { id: 'a', spawnX: 120, isAlive: true },
       { id: 'b', spawnX: 160, isAlive: true },
     ]);
-    expect(positions.get('a')).toBe(360);
-    expect(positions.get('b')).toBe(400);
+    expect(positions.get('a')).toBe(760);
+    expect(positions.get('b')).toBe(800);
   });
 
   it('separateByGap spreads enemy spawns right to stay off-screen', () => {
     const separated = separateByGap(
       [
-        { id: 'front', battleX: 580, isAlive: true },
-        { id: 'mid', battleX: 600, isAlive: true },
-        { id: 'ranged', battleX: 640, isAlive: true },
+        { id: 'front', battleX: 1320, isAlive: true },
+        { id: 'mid', battleX: 1340, isAlive: true },
+        { id: 'ranged', battleX: 1360, isAlive: true },
       ],
       SPRITE_GAP,
     );
     for (const id of ['front', 'mid', 'ranged']) {
       expect(separated.get(id)!).toBeGreaterThan(BATTLE_ENEMY_VISIBLE_MAX_X);
     }
-    expect(separated.get('front')!).toBe(580);
+    expect(separated.get('front')!).toBe(1320);
   });
 
   it('detects enemy on screen', () => {
