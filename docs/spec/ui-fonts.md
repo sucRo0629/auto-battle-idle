@@ -82,5 +82,6 @@
 ## 5. 関連ドキュメント
 
 - [party-formation-ui.md](party-formation-ui.md) — 編成画面レイアウト・スキルカード
+- [ui-visual-rules.md](ui-visual-rules.md) — 全 UI 共通ビジュアル（Web アプリ風禁止）
 - [battle-field.md](battle-field.md) — 戦闘 HUD・ポップアップ
 - [i18n-en.md](i18n-en.md) — 英語文案

@@ -462,7 +462,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 
 ## 7. 戦闘中統計 UI（戦闘詳細）
 
-戦闘画面の **戦闘詳細**（`PartyHudPanel` 詳細モード）の Phase 4d 仕様。与ダメ / 被ダメ / 詳細バッジの sync は `PartyMemberStatsDisplay.ts` の関数を流用。ダメージ集計は [combat.md](combat.md)。DOM UI の共通デザイン言語は [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) を参照（Phase 4d で編成 UI と揃える）。
+戦闘画面の **戦闘詳細**（`PartyHudPanel` 詳細モード）の Phase 4d 仕様。与ダメ / 被ダメ / 詳細バッジの sync は `PartyMemberStatsDisplay.ts` の関数を流用。ダメージ集計は [combat.md](combat.md)。DOM UI の共通デザイン言語は [ui-visual-rules.md](ui-visual-rules.md) を参照（Phase 4d で編成 UI と揃える）。
 
 **新方針との関係：** 戦闘画面全体の次期レイアウト正本は §8。§7 は既存 Party HUD / 統計 UI の履歴と流用元として扱う。§7 内の「キャンバス幅に揃える」「未解放セルを消す」「状態 0 件で高さ 0」「BattleStatsDrawer を Party HUD 直下の本体表示として扱う」など、§8 の固定 HUD 方針と矛盾する項目は次期戦闘画面 UI では §8 を優先する。
 
@@ -524,7 +524,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 
 ### 7.2 デザイン方針（Phase 4d 刷新）
 
-[party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) と同一。統計 UI 固有の目標:
+[ui-visual-rules.md](ui-visual-rules.md) に準拠。統計 UI 固有の目標:
 
 | 現行（避ける） | 目標 |
 | -------------- | ---- |
@@ -537,7 +537,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 
 ### 7.3 受け入れ条件（Phase 4d — 統計部分）
 
-1. 戦闘詳細が Web モーダル / ダッシュボード風に見えない（§11 準拠）。Party HUD **同一枠**でコンパクト / 詳細を切替する
+1. 戦闘詳細が Web モーダル / ダッシュボード風に見えない（[ui-visual-rules.md](ui-visual-rules.md) 準拠）。Party HUD **同一枠**でコンパクト / 詳細を切替する
 2. 詳細モードで 4 人分の名前・与ダメ / 被ダメ・**全状態バッジ（debuff/buff ラベル付き）**・**HP / リキャスト**が **縦リスト**で読める。コンパクトモードのホバー（§7.1.1）も維持
 3. `party-member-stats.css` のダメージ / 詳細バッジスタイルが Party HUD 詳細行に反映される
 4. 詳細モードが Party HUD 固定枠内で常時表示される（§8 準拠）
@@ -1072,6 +1072,7 @@ A-/F- で代替した旧 I-\*（§4.6 カメラ、§3.3 隊形順、振動 sign-
 ## 関連ドキュメント
 
 - [combat.md](combat.md) — ダメージ、CD、脅威、ステータス（座標節は本書へ委譲）
-- [party-formation-ui.md](party-formation-ui.md) — DOM UI 共通デザイン（§11）、編成画面
+- [ui-visual-rules.md](ui-visual-rules.md) — 全 UI 共通ビジュアル
+- [party-formation-ui.md](party-formation-ui.md) — 編成画面
 - [classes-and-skills.md](classes-and-skills.md) — スキル `move` スキーマ
 - `data/stages.json` — Wave / `spawnX`

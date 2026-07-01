@@ -100,21 +100,19 @@ export class MetaMenuOverlay {
 
     this.footerEl = document.createElement("div");
     this.footerEl.className = "meta-menu-window-footer";
-    if (presentation === "formation-screen") {
-      this.footerEl.classList.add("meta-menu-window-footer--formation-screen");
-    }
 
     this.footerButton = document.createElement("button");
     this.footerButton.type = "button";
-    this.footerButton.className =
-      presentation === "formation-screen"
-        ? "meta-menu-footer-button meta-menu-footer-button--screen-exit"
-        : "game-ui-button meta-menu-footer-button";
+    this.footerButton.className = "game-ui-button meta-menu-footer-button";
     this.footerButton.addEventListener("click", () => this.handleFooterAction());
 
     this.footerEl.appendChild(this.footerButton);
 
-    this.windowEl.append(titleBar, this.bodyEl, this.footerEl);
+    const windowChildren: HTMLElement[] = [titleBar, this.bodyEl];
+    if (presentation !== "formation-screen") {
+      windowChildren.push(this.footerEl);
+    }
+    this.windowEl.append(...windowChildren);
     this.root.appendChild(this.windowEl);
     this.host.appendChild(this.root);
 
@@ -142,18 +140,15 @@ export class MetaMenuOverlay {
 
   private updateFooterButton(): void {
     if (this.skillPanel) {
-      const exitLabel =
-        this.directPartyEntry && this.presentation === "formation-screen"
-          ? t("party.backToBattle")
-          : this.directPartyEntry
-            ? t("menu.close")
-            : t("party.back");
+      if (this.presentation === "formation-screen") {
+        return;
+      }
+      const exitLabel = this.directPartyEntry
+        ? t("menu.close")
+        : t("party.back");
       this.footerButton.textContent = exitLabel;
       this.footerButton.setAttribute("aria-label", exitLabel);
-      this.footerButton.disabled =
-        this.directPartyEntry &&
-        this.presentation === "formation-screen" &&
-        !this.skillPanel.canReturnToBattle();
+      this.footerButton.disabled = false;
       return;
     }
     this.footerButton.textContent = t("menu.close");
@@ -257,7 +252,18 @@ export class MetaMenuOverlay {
         },
         onPartyDraftChange: () => this.updateFooterButton(),
       },
-      { isVerifyMode: this.isVerifyMode },
+      {
+        isVerifyMode: this.isVerifyMode,
+        returnToBattle:
+          this.presentation === "formation-screen" && this.directPartyEntry
+            ? {
+                onClick: () => {
+                  if (!this.skillPanel?.canReturnToBattle()) return;
+                  this.callbacks.onClose();
+                },
+              }
+            : undefined,
+      },
     );
     this.updateFooterButton();
   }

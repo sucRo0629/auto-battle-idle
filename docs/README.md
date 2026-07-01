@@ -28,6 +28,7 @@
 | マップ選択・ステージ詳細・リザルト履歴 DOM（Phase 6d 予定）                    | [spec/stage-selection-ui.md](spec/stage-selection-ui.md)                        |
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts`, `gameTermGlossary.ts` 等、編成メニュー DOM | [spec/party-formation-ui.md](spec/party-formation-ui.md)（用語表: [classes-and-skills.md §ゲーム用語表](spec/classes-and-skills.md#ゲーム用語表表示分類)） |
 | `fonts.css`, UI `font-family`, 戦闘 HUD フォントテーマ | [spec/ui-fonts.md](spec/ui-fonts.md) |
+| `game-ui-chrome.css`, DOM / Canvas UI 見た目・ツールチップ方針 | [spec/ui-visual-rules.md](spec/ui-visual-rules.md) |
 | `data/enemies.json`, 敵編成・ボス設計の方針                                       | [enemy-design-concept.md](enemy-design-concept.md)                              |
 | `EnemyEditorStep`, `editorApi`（敵テンプレ編集）                                  | [plans/enemy-editor-refactor.md](plans/enemy-editor-refactor.md)                |
 | ローグライクモード（ラン・問題生成・報酬）                                        | [spec/roguelike-mode.md](spec/roguelike-mode.md)                                |
@@ -67,5 +68,6 @@
 | セーブ・EXP        | [spec/progression.md](spec/progression.md)               |
 | パーティ編成 UI    | [spec/party-formation-ui.md](spec/party-formation-ui.md) |
 | UI フォント方針    | [spec/ui-fonts.md](spec/ui-fonts.md) |
+| UI ビジュアルルール（全画面共通） | [spec/ui-visual-rules.md](spec/ui-visual-rules.md) |
 | ステージ選択 UI    | [spec/stage-selection-ui.md](spec/stage-selection-ui.md) |
 | ローグライクモード | [spec/roguelike-mode.md](spec/roguelike-mode.md)         |

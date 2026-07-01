@@ -1,0 +1,41 @@
+---
+description: 全 UI 共通のビジュアル禁止・推奨。Web アプリ風にしない。
+alwaysApply: true
+---
+
+# UI Visual Rules（全画面共通）
+
+正本: [docs/spec/ui-visual-rules.md](../../docs/spec/ui-visual-rules.md)
+
+Hensei-Only の UI は Web アプリ・管理画面・ダッシュボード風にしない。HTML/CSS でも **ゲーム内 UI** として設計する。
+
+## Avoid
+
+- button-like info labels
+- badge / chip / pill labels（Web 管理画面のタグ UI。ゲーム HUD 状態プレートは別）
+- rounded web cards
+- Bootstrap / Tailwind style panels
+- dashboard sidebars, lists, and tables
+- plain text HTML-like tooltips
+- UI blocks made only with padding, gap, border-radius, and box-shadow
+
+## Prefer
+
+- game HUD plates（`game-ui-chrome.css` の `game-panel-surface` 等）
+- framed panels, gauges, slots, meters
+- tabs as game UI plates（Web pill タブではない）
+- pixel frames, inset highlights
+- angular, stepped, or clipped corners（`border-radius: 0` 基本）
+
+## Tooltips
+
+- プレーンテキスト Web tooltip にしない
+- HUD 情報プレート・固定詳細エリア・枠付きポップオーバー（`GameTermPanel` 等）を使う
+
+## Important
+
+- 「clean UI」≠ モダン Web UI
+- 実際のボタン以外を Web ボタン風に見せない
+- 重要情報はゲームインターフェースの一部に見えること
+
+画面固有レイアウトは各 UI spec を参照。フォントは [ui-fonts.md](../../docs/spec/ui-fonts.md)。

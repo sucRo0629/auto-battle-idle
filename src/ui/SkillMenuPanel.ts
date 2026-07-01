@@ -91,17 +91,25 @@ export interface SkillMenuPanelCallbacks {
   onPartyDraftChange?: () => void;
 }
 
+export interface SkillMenuPanelReturnToBattleOptions {
+  onClick: () => void;
+}
+
 export interface SkillMenuPanelOptions {
   /** @deprecated Picker is inline; host is unused. */
   pickerHost?: HTMLElement;
   /** 確認モードでは4人未満でも戦闘へ戻れる。解除 UI は Class Select 再クリックのみ。 */
   isVerifyMode?: () => boolean;
+  /** Formation Screen: Party Summary ヘッダー右端の補助導線 */
+  returnToBattle?: SkillMenuPanelReturnToBattleOptions;
 }
 
 export class SkillMenuPanel {
   private readonly root: HTMLElement;
   private readonly boardEl: HTMLElement;
   private readonly formationZoneHeaderEl: HTMLElement;
+  private readonly formationZoneHeaderTitleEl: HTMLElement;
+  private readonly returnToBattleButton: HTMLButtonElement | null;
   private readonly formationBlockEl: HTMLElement;
   private readonly rosterSlotsEl: HTMLElement;
   private readonly classArchiveHeaderEl: HTMLElement;
@@ -164,6 +172,27 @@ export class SkillMenuPanel {
 
     this.formationZoneHeaderEl = document.createElement("div");
     this.formationZoneHeaderEl.className = "skill-menu-zone-header";
+
+    this.formationZoneHeaderTitleEl = document.createElement("span");
+    this.formationZoneHeaderTitleEl.className = "skill-menu-zone-header-title";
+
+    if (options.returnToBattle) {
+      const returnToBattleButton = document.createElement("button");
+      returnToBattleButton.type = "button";
+      returnToBattleButton.className = "skill-menu-return-to-battle-button";
+      returnToBattleButton.addEventListener("click", () => {
+        if (returnToBattleButton.disabled) return;
+        options.returnToBattle?.onClick();
+      });
+      this.returnToBattleButton = returnToBattleButton;
+      this.formationZoneHeaderEl.append(
+        this.formationZoneHeaderTitleEl,
+        returnToBattleButton
+      );
+    } else {
+      this.returnToBattleButton = null;
+      this.formationZoneHeaderEl.append(this.formationZoneHeaderTitleEl);
+    }
 
     this.formationBlockEl = document.createElement("div");
     this.formationBlockEl.className = "skill-menu-formation-block";
@@ -232,7 +261,7 @@ export class SkillMenuPanel {
     );
 
     this.formationBlockEl.append(noteEl, this.rosterSlotsEl);
-    formationZoneEl.append(this.formationBlockEl);
+    formationZoneEl.append(this.formationZoneHeaderEl, this.formationBlockEl);
 
     const detailZoneEl = document.createElement("section");
     detailZoneEl.className = "skill-menu-zone skill-menu-zone--detail";
@@ -282,6 +311,14 @@ export class SkillMenuPanel {
 
   canReturnToBattle(): boolean {
     return this.isVerifyMode() || this.selectedClassIds.length === 4;
+  }
+
+  private updateReturnToBattleButton(): void {
+    if (!this.returnToBattleButton) return;
+    const label = t("party.backToBattle");
+    this.returnToBattleButton.textContent = label;
+    this.returnToBattleButton.setAttribute("aria-label", label);
+    this.returnToBattleButton.disabled = !this.canReturnToBattle();
   }
 
   private getPickerVisibleClassIds(): ClassId[] {
@@ -378,7 +415,8 @@ export class SkillMenuPanel {
   }
 
   private render(): void {
-    this.formationZoneHeaderEl.textContent = t("party.zonePartySummary");
+    this.formationZoneHeaderTitleEl.textContent = t("party.zonePartySummary");
+    this.updateReturnToBattleButton();
     this.classArchiveHeaderEl.textContent = t("party.zoneClassSelect");
     this.detailZoneHeaderEl.textContent = t("party.skills");
     this.formationNoteEl.textContent = this.selectionFeedback;

@@ -12,7 +12,7 @@
   --party-text-muted: #9a9080;
   --party-text-soft: #b8aea0;
   --party-text-heading: #ddd0c0;
-  --class-archive-summary-anchor-height: clamp(160px, 25vh, 180px);
+  --class-archive-summary-anchor-height: clamp(168px, 26vh, 188px);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -26,7 +26,7 @@
 
 .skill-menu-tactical-board {
   display: grid;
-  grid-template-rows: minmax(0, 1fr) clamp(118px, 17vh, 170px);
+  grid-template-rows: minmax(0, 1fr) clamp(132px, 19vh, 182px);
   grid-template-columns: minmax(320px, 38%) minmax(0, 1fr);
   flex: 1;
   min-height: 0;
@@ -123,7 +123,71 @@
 }
 
 .skill-menu-zone--formation .skill-menu-zone-header {
-  display: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  padding: 4px 8px;
+}
+
+.skill-menu-zone-header-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.skill-menu-return-to-battle-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 104px;
+  height: 28px;
+  padding: 0 12px;
+  margin: 0;
+  border: 1px solid rgba(88, 76, 58, 0.78);
+  border-radius: 0;
+  background: rgba(18, 15, 11, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 230, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.24);
+  color: #ddd0bc;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  white-space: nowrap;
+  appearance: none;
+}
+
+.skill-menu-return-to-battle-button:hover:not(:disabled) {
+  border-color: rgba(150, 126, 78, 0.72);
+  background: rgba(28, 22, 16, 0.94);
+  color: #f0e8dc;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 248, 230, 0.09),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28);
+}
+
+.skill-menu-return-to-battle-button:active:not(:disabled) {
+  transform: translateY(1px);
+  background: rgba(14, 12, 18, 0.95);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.42);
+}
+
+.skill-menu-return-to-battle-button:disabled {
+  opacity: 0.44;
+  cursor: not-allowed;
+}
+
+.skill-menu-return-to-battle-button:focus-visible {
+  outline: 2px solid rgba(196, 168, 106, 0.42);
+  outline-offset: 2px;
 }
 
 .skill-menu-formation-block {
@@ -218,7 +282,7 @@
   justify-content: center;
   flex: 1 1 auto;
   width: 100%;
-  min-height: 60px;
+  min-height: 66px;
   padding-top: 0;
   transform: translateY(-6px);
 }
@@ -1040,22 +1104,37 @@
   line-clamp: 1;
 }
 
-/* Active: 段落ごと 1 行省略 */
+/* Active: 効果段落は折り返し（出血 DoT 等の長文） */
 .skill-menu-skill-summary-card--active .skill-menu-skill-summary-card-effect-line {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
   line-height: 17px;
   min-height: 17px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  -webkit-line-clamp: unset;
-  line-clamp: unset;
+  white-space: normal;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .skill-menu-skill-summary-card--active
   .skill-menu-skill-summary-card-effect-line:only-child {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  white-space: normal;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+}
+
+.skill-menu-skill-summary-card--active
+  .skill-menu-skill-summary-card-effect-line:first-child:nth-last-child(3) {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.skill-menu-skill-summary-card--active
+  .skill-menu-skill-summary-card-effect-line:nth-child(2):nth-last-child(2) {
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.skill-menu-skill-summary-card--active
+  .skill-menu-skill-summary-card-effect-line:nth-child(3):nth-last-child(1) {
   -webkit-line-clamp: 3;
   line-clamp: 3;
 }
@@ -1091,13 +1170,6 @@
 .skill-menu-skill-summary-card--active
   .skill-menu-skill-summary-card-effect-line:nth-child(n + 4) {
   display: none;
-}
-
-.skill-menu-skill-summary-card--active
-  .skill-menu-skill-summary-card-effect-line:not(:only-child) {
-  display: block;
-  -webkit-line-clamp: unset;
-  line-clamp: unset;
 }
 
 .skill-menu-skill-summary-card-effect-list {

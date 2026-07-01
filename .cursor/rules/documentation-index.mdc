@@ -23,6 +23,7 @@ alwaysApply: false
 | マップ選択・ステージ詳細・リザルト履歴 UI（Phase 6d） | `docs/spec/stage-selection-ui.md` |
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts` | `docs/spec/party-formation-ui.md` |
 | `fonts.css`, UI typography / `--font-*` | `docs/spec/ui-fonts.md` |
+| `game-ui-chrome.css`, DOM / Canvas UI の見た目・ツールチップ | `docs/spec/ui-visual-rules.md` |
 | ローグライクモード | `docs/spec/roguelike-mode.md` |
 | `formatSkillText.ts`, `gameTermGlossary.ts`, 4b / 4e | `docs/spec/i18n-en.md` + `docs/spec/classes-and-skills.md`（進捗: `docs/plans/phase-4-roadmap.md`） |
 | フェーズ計画・完了マーク・次の作業 | `docs/plans/phase-roadmap.md` |

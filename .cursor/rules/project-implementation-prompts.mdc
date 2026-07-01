@@ -22,6 +22,7 @@ alwaysApply: true
 - JSON の扱い: `.cursor/rules/data-json-lightweight.mdc`
 - バグ修正: ユーザールール `bug-fix-root-cause`、`.cursor/rules/bug-fix-project.mdc`
 - 英語 i18n 文案: `.cursor/rules/i18n-en.mdc`、`docs/spec/i18n-en.md`
+- UI ビジュアル: `.cursor/rules/ui-visual-rules.mdc`、`docs/spec/ui-visual-rules.md`
 
 ## 実装プロンプトの追加チェック
 
