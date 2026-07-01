@@ -1,5 +1,6 @@
 import "../styles/game-term-panel.css";
 import { annotateGameTerms } from "./annotateGameTerms.ts";
+import { clampElementToMountBounds } from "./clampElementToMountBounds.ts";
 import {
   getGameTermEntry,
   type GameTermId,
@@ -11,7 +12,11 @@ export interface GameTermPanelOptions {
   locale: GameTermLocale;
   /** Scroll on this element closes the panel and clears history (e.g. skill-menu-body). */
   detailScrollRoot?: HTMLElement | null;
+  /** When set, panel uses absolute coords inside this layer (battle HUD tooltip layer). */
+  frameMount?: HTMLElement | null;
 }
+
+const HUD_LAYER_ANCHOR_GAP_PX = 12;
 
 let panelCounter = 0;
 
@@ -24,6 +29,7 @@ export class GameTermPanel {
   private readonly bodyEl: HTMLElement;
   private readonly locale: GameTermLocale;
   private readonly detailScrollRoot: HTMLElement | null;
+  private readonly frameMount: HTMLElement | null;
 
   private mounted = false;
   private isOpen = false;
@@ -67,6 +73,7 @@ export class GameTermPanel {
   ) {
     this.locale = options.locale;
     this.detailScrollRoot = options.detailScrollRoot ?? null;
+    this.frameMount = options.frameMount ?? null;
     this.panelId = `game-term-panel-${++panelCounter}`;
 
     this.root = document.createElement("div");
@@ -108,7 +115,11 @@ export class GameTermPanel {
 
   mount(): void {
     if (this.mounted) return;
-    this.host.appendChild(this.root);
+    const mountParent = this.frameMount ?? this.host;
+    mountParent.appendChild(this.root);
+    if (this.frameMount) {
+      this.root.classList.add("game-term-panel--hud-layer");
+    }
     document.addEventListener("pointerdown", this.onDocumentPointerDown, true);
     document.addEventListener("keydown", this.onDocumentKeyDown, true);
     this.detailScrollRoot?.addEventListener("scroll", this.onDetailScroll, {
@@ -146,6 +157,9 @@ export class GameTermPanel {
     this.anchor = anchor;
     this.renderCurrentTerm();
     this.positionNearAnchor(anchor);
+    if (this.frameMount) {
+      this.frameMount.appendChild(this.root);
+    }
     this.root.hidden = false;
     this.isOpen = true;
     this.setAnchorExpanded(anchor, true);
@@ -243,6 +257,11 @@ export class GameTermPanel {
   }
 
   private positionNearAnchor(anchor: HTMLElement): void {
+    if (this.frameMount) {
+      this.positionNearAnchorInFrame(anchor);
+      return;
+    }
+
     const rect = anchor.getBoundingClientRect();
     const margin = 8;
     const viewportWidth = window.innerWidth;
@@ -273,6 +292,46 @@ export class GameTermPanel {
 
     this.root.style.top = `${top}px`;
     this.root.style.left = `${left}px`;
+  }
+
+  private positionNearAnchorInFrame(anchor: HTMLElement): void {
+    const mount = this.frameMount;
+    if (!mount) return;
+
+    const margin = 8;
+    const gap = HUD_LAYER_ANCHOR_GAP_PX;
+    const frame = mount.getBoundingClientRect();
+    const rect = anchor.getBoundingClientRect();
+
+    this.root.style.visibility = "hidden";
+    this.root.hidden = false;
+    const panelRect = this.root.getBoundingClientRect();
+    this.root.hidden = true;
+    this.root.style.visibility = "";
+
+    let top = rect.bottom - frame.top + gap;
+    let left = rect.left - frame.left;
+
+    const mountH = mount.clientHeight || frame.height;
+    const mountW = mount.clientWidth || frame.width;
+
+    if (left + panelRect.width > mountW - margin) {
+      left = Math.max(margin, mountW - panelRect.width - margin);
+    }
+    if (left < margin) {
+      left = margin;
+    }
+
+    if (top + panelRect.height > mountH - margin) {
+      const above = rect.top - frame.top - gap - panelRect.height;
+      if (above >= margin) {
+        top = above;
+      }
+    }
+
+    this.root.style.left = `${left}px`;
+    this.root.style.top = `${top}px`;
+    clampElementToMountBounds(this.root, mount, { margin });
   }
 
   private setAnchorExpanded(

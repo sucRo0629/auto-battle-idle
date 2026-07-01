@@ -12,7 +12,10 @@
   {
     "id": "at_sorcerer_passive_2",
     "name": "焼き尽くす熾火",
-    "effect": "seedFlameOnActiveHit"
+    "effect": "seedFlameOnActiveHit",
+    "seedFlameDurationSec": 5,
+    "seedFlameDotAtkScale": 0.01,
+    "blazingFlameDotAtkScale": 0.1
   },
   {
     "id": "at_sorcerer_passive_3",

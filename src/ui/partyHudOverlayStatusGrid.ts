@@ -163,11 +163,14 @@ function bindHoverTooltipHit(
   hit: HTMLElement,
   text: string,
   context: PartyHudStatusBadgeHitContext,
-  options: { wide?: boolean } = {},
+  options: { wide?: boolean; placement?: 'above' | 'below' } = {},
 ): void {
   const floatingTooltip = context.floatingTooltip;
   if (floatingTooltip) {
-    floatingTooltip.bindHit(hit, text, options);
+    floatingTooltip.bindHit(hit, text, {
+      placement: 'below',
+      ...options,
+    });
     return;
   }
 
@@ -200,8 +203,10 @@ function bindIndividualStatusBadgeHit(
     hit.setAttribute('aria-controls', panel.getPanelId());
   }
 
-  hit.addEventListener('click', (event) => {
+  hit.addEventListener('pointerdown', (event) => {
+    if (event.button !== 0) return;
     event.stopPropagation();
+    context.floatingTooltip?.hide();
     panel.openFromTerm(termId, hit);
   });
 }

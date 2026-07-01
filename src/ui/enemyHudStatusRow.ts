@@ -8,10 +8,6 @@ import {
 import type { BattleHudTheme } from '../render/battleHudTheme.ts';
 import { resolveStatusIconFallbackColor } from '../render/battleHudTheme.ts';
 import {
-  resolveStatusBadgeTooltipLabel,
-  type GameTermLocale,
-} from './gameTermGlossary.ts';
-import {
   buildPartyHudStatusBadgeCanvasSignature,
   buildPartyHudStatusBadgeHitSignature,
   syncPartyHudStatusBadgeHits,
@@ -56,16 +52,6 @@ export function selectEnemyHudStatusBadges(
     visible: sorted.slice(0, ENEMY_HUD_STATUS_OVERFLOW_VISIBLE),
     overflowCount: sorted.length - ENEMY_HUD_STATUS_OVERFLOW_VISIBLE,
   };
-}
-
-export function resolveEnemyHudAllStatusTooltipLabel(
-  badges: StatusEffectBadgeDisplay[],
-  locale: GameTermLocale,
-): string {
-  if (badges.length === 0) return '';
-  return sortBadgesForCompactView(badges)
-    .map((badge) => resolveStatusBadgeTooltipLabel(badge, locale))
-    .join('\n');
 }
 
 export function drawEnemyHudStatusRow(

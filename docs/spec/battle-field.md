@@ -660,7 +660,7 @@ topInfo:
 partyHud:
   x: 24
   y: 64
-  w: 300
+  w: 260 # computeBattleSideHudWidth() — overlay 状態 2 行×10 列グリッド幅 + 枠余白
   h: 608
 
 battleLane:
@@ -670,13 +670,15 @@ battleLane:
   h: 560
 
 enemyHud:
-  x: 956
+  x: 996 # 1280 - 24 - partyHud.w
   y: 64
-  w: 300
+  w: 260 # partyHud と同一（BATTLE_SIDE_HUD_WIDTH）
   h: 608
 ```
 
 この寸法は三カラム分割ではなく、1280×720 基準座標上のオーバーレイ配置。背景は `battleLane` に限定せず、画面全幅に敷く。`battleLane` は中央の読み取り領域であり、戦闘背景そのものの境界ではない。
+
+**左右 HUD 幅:** 味方 overlay の状態アイコン 2 行×10 列グリッド（`measurePartyHudOverlayStatusGrid`）の canvas 幅 + カード枠余白を `computeBattleSideHudWidth()`（`battleRootLayout.ts`）で正本化する。敵 HUD も同幅。
 
 ### 8.6 HUD 固定スロット方針
 
@@ -689,7 +691,8 @@ enemyHud:
 | 状態アイコン欄 | 固定枠。状態がない場合も占有領域を維持 |
 | 危険予兆バー欄 | 固定枠。予兆がない場合も占有領域を維持 |
 | 与ダメ / 被ダメ欄 | 固定枠。数値量でカード高さを変えない |
-| 敵スロット | 敵数や状態数で高さを変えない |
+| 敵スロット（1 体分） | 敵数や状態数で **スロット内部** の高さを変えない |
+| 敵 HUD パネル | 生存敵数に応じて **パネル全体** の高さのみ可変（各 enemySlot 高さは固定） |
 
 ### 8.7 味方 HUD
 
@@ -703,7 +706,7 @@ enemyHud:
 partyHud:
   x: 24
   y: 64
-  w: 300
+  w: 260 # computeBattleSideHudWidth()
   h: 608
 
 allyCard:
@@ -715,7 +718,20 @@ total:
   4 * 146 + 3 * 8 = 608
 ```
 
-味方 1 人カードに表示するもの:
+味方 1 人カード（`allyCard`）の縦 4 段構造:
+
+```text
+allyCard
+┌────────────────────────────┐
+│ [icon] className   HP bar   │  ← 1. キャラ識別 + 生存状況
+│ [state icons ............]  │  ← 2. 状態
+│ [active_1] [active_2]      │  ← 3. スキルゲージ
+│ [active_3] [active_4]      │
+│ dmg dealt / dmg taken      │  ← 4. 補助統計（横並び 2 列）
+└────────────────────────────┘
+```
+
+表示要素:
 
 - クラスアイコン
 - クラス名
@@ -741,7 +757,7 @@ active_3  active_4
 | Lv10 | `active_3` を有効表示。`active_4` は非アクティブ枠 |
 | Lv20 | 4 枠すべて有効表示 |
 | 未習得枠 | 薄い空ゲージ、暗い溝、低 opacity など。ロックアイコンなどの強い記号は原則使わない |
-| 詳細 | ホバー時ツールチップは **対象スキルの表示名のみ**（`formatPartyHudSkillSlotTooltip`）。未解放枠・未習得枠は tooltip なし。残り時間・効果説明はゲージ表示・編成 UI 等で確認 |
+| 詳細 | スキルゲージ hover では **文字 tooltip・HUD 情報プレート・戦闘中ステータスパネルを出さない**（ゲージ表示のみで観察）。スキル名・残り時間・効果説明は編成 UI 等で確認 |
 
 レベルや習得数によってスキルゲージ欄の高さや配置を変えない。敵 HUD には通常スキルリキャストバーを表示しないため、本仕様は味方 HUD 専用。
 
@@ -762,21 +778,27 @@ active_3  active_4
 
 ### 8.8 敵 HUD
 
-敵 HUD は右側オーバーレイに新設し、最大 10 体程度の敵を一覧表示する。1 列 10 段を基本とし、各敵スロットの高さは固定する。敵が少ない場合も、スロット高さの設計は変えない。
+敵 HUD は右側オーバーレイに新設し、最大 10 体程度の敵を **生存中のみ** 索引表示する。各敵スロットの高さは固定する。パネル全体の高さは生存敵数に応じて可変とし、Wave 開始時は上端固定で上から下へ展開、Wave 内の生存敵が 0 になったら下から上へ閉じる。撃破した敵スロットはグレーアウトせず HUD から除去し、残存スロットを上方向へ詰める（表示リストのみ。戦闘ロジック上の enemy entity には影響しない）。
 
 初期寸法目安:
 
 ```yaml
 enemyHud:
-  x: 956
+  x: 996
   y: 64
-  w: 300
-  h: 608
+  w: 260          # partyHud と同一幅
+  h: 608          # 予約最大高（パネルは生存敵数で可変）
 
 enemySlot:
-  count: up to 10
+  count: up to 10 # 同時表示は生存敵のみ
   height: 52
   gap: 6
+
+panelHeight:
+  formula: framePadding + n * slotHeight + (n - 1) * gap
+  framePadding: 8
+  collapse: wave 内生存敵 0 で高さ 0 へ
+  expand: wave 開始で上端固定・上から展開
 ```
 
 各敵スロットに表示するもの:
@@ -798,11 +820,11 @@ enemySlot:
 | 体系 | 状態アイコンの意味、buff / debuff の背景表現は味方 / 敵で可能な限り共通 |
 | 役割 | プレイヤーの編成意図や状態付与が成功しているかを確認する情報 |
 | 一覧表示 | 常時表示は 6〜8 個程度。収まらない場合は `+N` |
-| 詳細 | 初期実装は hover tooltip。全状態、スタック数、残り時間を確認 |
+| 詳細 | 個別バッジ hover tooltip + `+N` hover tooltip。**辞書に `description` があるバッジは §7.1.2 と同様にクリックで用語パネル** |
 
 敵状態アイコンは単なる敵情報ではなく、こちらの編成結果を観測するための情報。一覧性のために敵側の表示数は絞ってよいが、詳細確認の逃げ道を持たせる。
 
-初期実装では、敵 HUD スロットにホバーしたとき、全状態、スタック数、残り時間を確認できる tooltip を表示する。状態アイコンが敵スロット内に収まりきらない場合は `+N` 表示にし、`+N` の内容も hover tooltip で確認できるようにする。`hoverHighlight` により、右 HUD の敵スロットと戦闘フィールド上の敵スプライトを対応表示する。
+個別の状態アイコンは味方 HUD と同じ `.party-hud-status-badge-hit` 経路でホバー tooltip と用語パネル（`GameTermPanel`）を開く。状態アイコンが敵スロット内に収まりきらない場合は `+N` 表示にし、`+N` の内容も hover tooltip で確認できる。敵 HUD スロット全体のホバーで全状態をまとめて表示する tooltip は廃止。`hoverHighlight` により、右 HUD の敵スロットと戦闘フィールド上の敵スプライトを対応表示する。
 
 初期実装では、敵をクリック / 選択して固定表示する詳細パネルは必須にしない。後続検討として、右 HUD 内または右下の選択中敵詳細パネル、ボスや危険行動持ちの敵だけ詳細枠を拡張する仕様を検討する。
 
@@ -851,7 +873,6 @@ enemySlot:
 
 - 対象の足元リング
 - 対象周囲の照準マーカー
-- HUD スロット上の小さなターゲット表示
 
 表示条件:
 
@@ -869,7 +890,7 @@ HUD スロットと戦闘フィールド上スプライトの対応を示す UI 
 - 戦闘フィールド上の敵スプライトにホバーしたとき、対応する右 HUD スロットをハイライトする
 - 味方 HUD と味方スプライトでも同様に対応表示できるなら実装対象にしてよい
 
-実装：`BattleView.ts` が `hoverHighlight` / `targetIndicator` を別状態で保持し、`BattleCanvas.ts`（フィールド描画）、`EnemyHudPanel.ts` / `PartyHudPanel.ts`（スロット CSS）へ配信する。`targetIndicator` は `skillWindup` / `skill` イベント由来の UI 表示（戦闘ロジックは変更しない）。
+実装：`BattleView.ts` が `hoverHighlight` / `targetIndicator` を別状態で保持し、`BattleCanvas.ts`（フィールド描画）へ `targetIndicator` を配信する。`targetIndicator` は `skillWindup` / `skill` イベント由来の UI 表示（戦闘ロジックは変更しない）。
 
 ### 8.11 上部情報
 
@@ -885,14 +906,14 @@ topInfo:
   h: 40
 ```
 
-表示候補:
+上部情報は戦闘画面上部中央の **stage plate**（1 枚の銘板）として扱う。
 
-- Stage
-- Wave
-- Verify / Clear / Failed などの検証状態
-- 必要最小限の戦闘状態
-
-上部情報は戦闘レーンを押し下げる通常 DOM 領域ではなく、オーバーレイとして扱う。長い説明文を常時表示しない。詳細情報は必要に応じて別パネルやツールチップに逃がす。
+| 項目 | 方針 |
+| ---- | ---- |
+| Stage | `STAGE {id}` 形式（例: `STAGE 1`）。20〜24px 目安 |
+| Wave | `WAVE {current} / {total}` 形式。14〜16px 目安 |
+| 表現 | 角丸タグ・ボタン風チップではなく、直線フレーム付き HUD 銘板（`border-radius: 0`、角欠け / 二重枠 / 内側ハイライト） |
+| Verify / DEBUG | 通常 HUD から分離し `.battle-debug-overlay` 右上に配置（Layer 5） |
 
 ### 8.12 デバッグ UI
 
@@ -1024,7 +1045,7 @@ Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `s
 3. スプライト・24px アイコン・状態バッジが pixelated（ぼやけなし）
 4. 敵フィールド HP/状態なし、右 HUD に集約
 5. 敵 HUD ホバー ↔ スプライト hoverHighlight 双方向
-6. 攻撃時 targetIndicator（足元リング + HUD 小リング）が hover と区別できる
+6. 攻撃時 targetIndicator（足元リング）が hover と区別できる
 7. verify ON 時 debug ドック / battle-x-debug が本体 HUD を押し下げない
 
 ---

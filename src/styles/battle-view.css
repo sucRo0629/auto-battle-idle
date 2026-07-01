@@ -191,7 +191,11 @@
   inset: 0;
   z-index: 6;
   pointer-events: none;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.battle-layer--tooltip > .game-term-panel--hud-layer {
+  pointer-events: auto;
 }
 
 /* Layer 0 — full-root background (1280×720) */
@@ -253,15 +257,16 @@
 .battle-hud-slot--party {
   left: 24px;
   top: 64px;
-  width: 300px;
+  width: var(--battle-side-hud-width, 260px);
   height: 608px;
 }
 
 .battle-hud-slot--enemy {
-  left: 956px;
+  left: var(--battle-enemy-hud-x, 996px);
   top: 64px;
-  width: 300px;
-  height: 608px;
+  width: var(--battle-side-hud-width, 260px);
+  height: auto;
+  max-height: 608px;
 }
 
 /* Layer 4 — top info overlay */
@@ -273,25 +278,58 @@
   width: 1232px;
   height: 40px;
   z-index: 4;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 0 8px;
+  justify-content: center;
+  padding: 0;
   box-sizing: border-box;
   pointer-events: none;
 }
 
-.battle-top-info-stage {
-  justify-self: start;
+.battle-stage-plate {
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 168px;
+  padding: 3px 18px 4px;
+  border-radius: 0;
+  clip-path: polygon(
+    0 4px,
+    4px 0,
+    calc(100% - 4px) 0,
+    100% 4px,
+    100% calc(100% - 4px),
+    calc(100% - 4px) 100%,
+    4px 100%,
+    0 calc(100% - 4px)
+  );
+  box-shadow:
+    inset 0 1px 0 var(--game-bevel-light),
+    inset 0 -1px 0 var(--game-bevel-dark),
+    0 0 0 1px rgba(0, 0, 0, 0.55);
 }
 
-.battle-top-info-wave {
-  justify-self: center;
+.battle-stage-plate-stage {
+  color: #f2f6fc;
+  font-family: var(--font-body);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.05;
+  white-space: nowrap;
 }
 
-.battle-top-info-verify {
-  justify-self: end;
+.battle-stage-plate-wave {
+  color: rgba(232, 238, 248, 0.88);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 /* Layer 5 — dev / debug overlay (does not affect HUD layout) */
@@ -310,13 +348,39 @@
   overflow: visible;
   --battle-hud-toolbar-top: 229px;
   --battle-x-debug-top: 64px;
-  --battle-x-debug-column-width: 300px;
+  --battle-x-debug-column-width: var(--battle-side-hud-width, 260px);
 }
 
 .battle-debug-shell > .battle-debug-menu-dock,
-.battle-debug-shell > .battle-x-debug-canvas-panel,
-.battle-debug-shell > .battle-x-debug-tools {
+.battle-debug-shell > .battle-x-debug-tools,
+.battle-debug-shell > .battle-debug-verify-badge {
   pointer-events: auto;
+}
+
+/* Visual-only X trace chart — must not block side HUD hover (§8.12). */
+.battle-debug-shell > .battle-x-debug-canvas-panel {
+  pointer-events: none;
+}
+
+.battle-debug-verify-badge {
+  -webkit-app-region: no-drag;
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 3;
+  padding: 3px 8px;
+  border: 2px solid rgba(90, 110, 140, 0.55);
+  border-radius: 0;
+  background: rgba(18, 22, 34, 0.88);
+  color: #9aa3b0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.2;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.45);
 }
 
 .battle-debug-menu-dock {
@@ -431,72 +495,26 @@
   pointer-events: none;
 }
 
-.battle-canvas-hud-stage {
-  justify-self: start;
-  max-width: 100%;
-  padding: 3px 8px;
-  border: 2px solid rgba(0, 0, 0, 0.45);
-  background: rgba(8, 10, 18, 0.72);
-  color: #f0f4fa;
-  font-family: var(--font-body);
-  font-size: var(--font-body-min-size);
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.battle-canvas-hud-wave {
-  justify-self: center;
-  padding: 3px 8px;
-  border: 2px solid rgba(0, 0, 0, 0.45);
-  background: rgba(8, 10, 18, 0.72);
-  color: rgba(240, 244, 250, 0.92);
-  font-family: var(--font-body);
-  font-size: var(--font-body-min-size);
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.battle-verify-badge {
-  -webkit-app-region: no-drag;
-  pointer-events: auto;
-  justify-self: end;
-  padding: 2px 6px;
-  border: 2px solid rgba(90, 110, 140, 0.55);
-  background: rgba(18, 22, 34, 0.88);
-  color: #9aa3b0;
-  font-size: 9px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  line-height: 1.2;
-  cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-}
-
-.battle-verify-badge--on {
-  border-color: rgba(180, 120, 40, 0.75);
-  background: rgba(48, 32, 8, 0.88);
-  color: #f5c842;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.battle-verify-badge--on:hover {
-  border-color: rgba(245, 200, 66, 0.9);
-  color: #ffe08a;
-}
-
-.battle-verify-badge--off:hover {
-  border-color: rgba(74, 144, 217, 0.65);
-  color: #c8daf0;
+.battle-canvas-hud-stage,
+.battle-canvas-hud-wave,
+.battle-top-info-stage,
+.battle-top-info-wave,
+.battle-top-info-verify {
+  display: none;
 }
 
 .battle-verify-badge[hidden] {
   display: none;
+}
+
+.battle-debug-verify-badge.battle-verify-badge--on:hover {
+  border-color: rgba(245, 200, 66, 0.9);
+  color: #ffe08a;
+}
+
+.battle-debug-verify-badge.battle-verify-badge--off:hover {
+  border-color: rgba(74, 144, 217, 0.65);
+  color: #c8daf0;
 }
 
 .battle-canvas-frame {
@@ -720,18 +738,18 @@
   box-sizing: border-box;
 }
 
-.party-hud-panel:not(.party-hud-panel--detail) .party-hud-hp-track {
+.party-hud-panel:not(.party-hud-panel--detail):not(.party-hud-panel--overlay) .party-hud-hp-track {
   flex: 1 1 0;
   min-height: 0;
 }
 
-.party-hud-panel:not(.party-hud-panel--detail) .party-hud-recast-grid {
+.party-hud-panel:not(.party-hud-panel--detail):not(.party-hud-panel--overlay) .party-hud-recast-grid {
   flex: 0 0 var(--hud-recast-grid-h);
   min-height: var(--hud-recast-grid-h);
   height: var(--hud-recast-grid-h);
 }
 
-.party-hud-panel:not(.party-hud-panel--detail) .party-hud-label {
+.party-hud-panel:not(.party-hud-panel--detail):not(.party-hud-panel--overlay) .party-hud-label {
   display: none;
 }
 
@@ -752,7 +770,7 @@
   min-width: 0;
 }
 
-.party-hud-panel:not(.party-hud-panel--detail) .party-hud-detail-damage {
+.party-hud-panel:not(.party-hud-panel--detail):not(.party-hud-panel--overlay) .party-hud-detail-damage {
   display: none;
 }
 
@@ -810,7 +828,7 @@
   left: 50%;
   bottom: calc(100% + 2px);
   transform: translateX(-50%);
-  z-index: 4;
+  z-index: 8;
   box-sizing: border-box;
   max-width: min(200px, calc(100vw - 16px));
   padding: 3px 7px;

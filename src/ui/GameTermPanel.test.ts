@@ -212,4 +212,28 @@ describe("GameTermPanel", () => {
       "魔法ブロック",
     );
   });
+
+  it("positions within frameMount for battle HUD layer", () => {
+    const frame = document.createElement("div");
+    frame.style.cssText = "position:relative;width:400px;height:300px;";
+    document.body.appendChild(frame);
+
+    panel = new GameTermPanel(frame, {
+      locale: "ja",
+      frameMount: frame,
+    });
+    panel.mount();
+
+    const anchor = createAnchor();
+    panel.openFromTerm("stun", anchor);
+
+    const panelEl = frame.querySelector(
+      ".game-term-panel--hud-layer",
+    ) as HTMLElement;
+    expect(panelEl.hidden).toBe(false);
+    expect(panelEl.parentElement).toBe(frame);
+    expect(frame.lastElementChild).toBe(panelEl);
+    expect(Number.parseFloat(panelEl.style.top)).toBeGreaterThanOrEqual(0);
+    expect(Number.parseFloat(panelEl.style.left)).toBeGreaterThanOrEqual(0);
+  });
 });

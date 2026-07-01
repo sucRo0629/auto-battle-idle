@@ -1,22 +1,42 @@
-/* Right enemyHud overlay — battle-field.md §8.8 (Task 5) */
+/* Right enemyHud overlay — battle-field.md §8.8 */
 
 .battle-hud-slot--enemy {
+  -webkit-app-region: no-drag;
   pointer-events: auto;
 }
 
 .enemy-hud-panel {
+  --enemy-hud-panel-h: 0px;
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  height: var(--enemy-hud-panel-h);
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  background: rgba(10, 12, 20, 0.58);
-  border-radius: 4px;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 2px 10px rgba(0, 0, 0, 0.28);
+  border-radius: 0;
+  overflow: hidden;
+  transition: height 260ms ease-out;
+  clip-path: polygon(
+    0 6px,
+    6px 0,
+    calc(100% - 6px) 0,
+    100% 6px,
+    100% calc(100% - 6px),
+    calc(100% - 6px) 100%,
+    6px 100%,
+    0 calc(100% - 6px)
+  );
+}
+
+.enemy-hud-panel--collapsed {
+  height: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.enemy-hud-panel--expanding,
+.enemy-hud-panel--collapsing {
   overflow: hidden;
 }
 
@@ -24,10 +44,9 @@
   display: flex;
   flex-direction: column;
   gap: var(--enemy-hud-slot-gap, 6px);
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: 0 0 auto;
   width: 100%;
-  padding: 0;
+  padding: 4px 0;
   box-sizing: border-box;
 }
 
@@ -38,17 +57,14 @@
   min-height: var(--enemy-hud-slot-h);
   max-height: var(--enemy-hud-slot-h);
   box-sizing: border-box;
-  padding: 3px 5px;
-  border-radius: 3px;
-  background: rgba(8, 10, 18, 0.42);
+  padding: 3px 6px;
+  border-radius: 0;
+  background: rgba(6, 8, 14, 0.72);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
-    0 1px 0 rgba(0, 0, 0, 0.35);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.42);
   overflow: hidden;
-}
-
-.enemy-hud-slot--dead {
-  opacity: var(--dead-alpha, 0.45);
 }
 
 .enemy-hud-slot-main {
@@ -127,6 +143,7 @@
 
 .enemy-hud-status-badges-wrap {
   position: relative;
+  z-index: 2;
   height: 16px;
   min-height: 16px;
   max-width: 100%;
@@ -136,13 +153,14 @@
 .enemy-hud-status-badges {
   display: block;
   vertical-align: top;
+  pointer-events: none;
 }
 
 .enemy-hud-danger-telegraph {
   position: relative;
   height: 4px;
   min-height: 4px;
-  border-radius: 1px;
+  border-radius: 0;
   overflow: hidden;
   box-sizing: border-box;
 }
@@ -180,27 +198,12 @@
   opacity: 0;
 }
 
-/* UI field-link highlight (hoverHighlight — not combat targetIndicator) */
-.enemy-hud-slot--hover-highlight {
+.enemy-hud-slot.enemy-hud-slot--hover-highlight {
   box-shadow:
-    inset 0 0 0 1px rgba(160, 200, 255, 0.55),
-    0 0 8px rgba(120, 170, 255, 0.22);
-  background: rgba(24, 34, 52, 0.72);
-}
-
-.enemy-hud-slot--target-indicator::after {
-  content: "";
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
-  border: 1.5px solid var(--attack-orb-fill, #74b9ff);
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.45),
-    0 0 4px rgba(116, 185, 255, 0.55);
-  pointer-events: none;
+    inset 0 0 0 1px var(--hover-highlight-outline, rgba(160, 200, 255, 0.55)),
+    inset 0 0 0 2px var(--hover-highlight-glow, rgba(120, 170, 255, 0.18)),
+    0 0 8px var(--hover-highlight-glow, rgba(120, 170, 255, 0.28));
+  background: rgba(20, 30, 48, 0.88);
 }
 
 .enemy-hud-slot {

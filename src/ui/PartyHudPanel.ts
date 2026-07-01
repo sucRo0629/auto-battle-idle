@@ -34,7 +34,6 @@ import {
   selectPartyHudOverlayStatusBadges,
   syncPartyHudOverlayStatusBadgeHits,
 } from './partyHudOverlayStatusGrid.ts';
-import type { PartyHudActiveCooldown } from './partyHudRecast.ts';
 import {
   buildDownBySlot,
   createStatusBadgeGroupWithHits,
@@ -60,7 +59,7 @@ interface SlotElements {
   slotIndex: number;
   label: HTMLElement;
   unitPlate: HTMLElement;
-  classCol: HTMLElement;
+  classCol?: HTMLElement;
   iconWrap: HTMLElement;
   icon: HTMLImageElement;
   hpFill: HTMLElement;
@@ -74,7 +73,7 @@ interface SlotElements {
   recastGrid: HTMLElement;
   recastCells: RecastCellElements[];
   damage: DamageBarRefs;
-  detailStatus: StatusBadgeRefs;
+  detailStatus?: StatusBadgeRefs;
 }
 
 export type PartyHudPanelMode = 'compact' | 'detail';
@@ -95,12 +94,6 @@ export interface PartyHudPanelOptions {
   floatingTooltip?: PartyHudFloatingTooltip;
   gameTermPanel?: GameTermPanel;
   onScrollReposition?: () => void;
-  resolveSkillSlotTooltip?: (
-    slotIndex: number,
-    cellIndex: number,
-    cd: PartyHudActiveCooldown | undefined,
-    inactive: boolean,
-  ) => string | null;
 }
 
 /** リキャスト 2×2 の最大行数。2 スロット時は 1 行にし、差分は HP バー高さが吸収する。 */
@@ -159,7 +152,7 @@ export class PartyHudPanel {
   private mode: PartyHudPanelMode = 'detail';
   private lastDetailFrame: PartyHudDetailFrame | null = null;
   private hoverHighlightUnitId: string | null = null;
-  private targetIndicatorUnitIds = new Set<string>();
+  private hoveredFieldLinkSlotIndex: number | null = null;
   private readonly layout: PartyHudPanelLayout;
   private readonly unsubscribeStatusIconsReady: () => void;
 
@@ -207,6 +200,7 @@ export class PartyHudPanel {
       this.options.floatingTooltip?.reposition();
       this.options.onScrollReposition?.();
     });
+    this.bindPanelFieldLinkHover();
   }
 
   setMode(mode: PartyHudPanelMode): void {
@@ -246,16 +240,18 @@ export class PartyHudPanel {
       }
       syncDamageBarTagAriaLabels(slot.damage.root);
       slot.statusBadgeHitSignature = null;
-      slot.detailStatus.debuffHitSignature = undefined;
-      slot.detailStatus.buffHitSignature = undefined;
-      const statusLabels = slot.detailStatus.root.querySelectorAll(
-        '.party-stats-status-label',
-      );
-      if (statusLabels[0] instanceof HTMLElement) {
-        statusLabels[0].textContent = t('hud.buff');
-      }
-      if (statusLabels[1] instanceof HTMLElement) {
-        statusLabels[1].textContent = t('hud.debuff');
+      if (slot.detailStatus) {
+        slot.detailStatus.debuffHitSignature = undefined;
+        slot.detailStatus.buffHitSignature = undefined;
+        const statusLabels = slot.detailStatus.root.querySelectorAll(
+          '.party-stats-status-label',
+        );
+        if (statusLabels[0] instanceof HTMLElement) {
+          statusLabels[0].textContent = t('hud.buff');
+        }
+        if (statusLabels[1] instanceof HTMLElement) {
+          statusLabels[1].textContent = t('hud.debuff');
+        }
       }
     }
     this.invalidateCompactStatusRenderSignatures();
@@ -294,15 +290,6 @@ export class PartyHudPanel {
     }
   }
 
-  setTargetIndicatorUnitIds(unitIds: readonly string[]): void {
-    this.targetIndicatorUnitIds = new Set(unitIds);
-    for (let i = 0; i < this.slots.length; i++) {
-      const entry = this.lastEntries[i];
-      if (!entry) continue;
-      this.syncSlotHighlightClasses(this.slots[i], entry.unitId);
-    }
-  }
-
   updateDetailMetrics(frame: PartyHudDetailFrame): void {
     this.lastDetailFrame = frame;
 
@@ -321,8 +308,8 @@ export class PartyHudPanel {
     const statusByPartyIndex = new Map<number, StatusBadgeRefs>();
     for (let i = 0; i < this.slots.length; i++) {
       const entry = this.lastEntries[i];
-      if (entry) {
-        statusByPartyIndex.set(entry.partySlotIndex, this.slots[i].detailStatus);
+      if (entry && this.slots[i].detailStatus) {
+        statusByPartyIndex.set(entry.partySlotIndex, this.slots[i].detailStatus!);
       }
     }
     syncStatusBadges(
@@ -354,6 +341,7 @@ export class PartyHudPanel {
 
   private invalidateDetailStatusSignatures(): void {
     for (const slot of this.slots) {
+      if (!slot.detailStatus) continue;
       slot.detailStatus.debuffRenderSignature = undefined;
       slot.detailStatus.buffRenderSignature = undefined;
       slot.detailStatus.debuffHitSignature = undefined;
@@ -371,12 +359,74 @@ export class PartyHudPanel {
   }
 
   private createSlot(slotIndex: number): SlotElements {
-    const root = document.createElement('div');
-    root.className = 'party-hud-slot';
+    if (this.layout === 'overlay') {
+      return this.createOverlaySlot(slotIndex);
+    }
+    return this.createLaneSlot(slotIndex);
+  }
 
+  private createHpRow(slotIndex: number): {
+    hpRow: HTMLElement;
+    hpFill: HTMLElement;
+    barrierLayer: HTMLElement;
+  } {
+    const hpRow = document.createElement('div');
+    hpRow.className = 'party-hud-hp-row';
+    this.bindMemberStatsHover(hpRow, slotIndex);
+
+    const hpTrack = document.createElement('div');
+    hpTrack.className = 'party-hud-hp-track';
+    hpRow.appendChild(hpTrack);
+
+    const hpFill = document.createElement('div');
+    hpFill.className = 'party-hud-hp-fill';
+    hpTrack.appendChild(hpFill);
+
+    const barrierLayer = document.createElement('div');
+    barrierLayer.className = 'party-hud-barrier-layer';
+    hpTrack.appendChild(barrierLayer);
+
+    return { hpRow, hpFill, barrierLayer };
+  }
+
+  private createRecastGrid(): {
+    recastGrid: HTMLElement;
+    recastCells: RecastCellElements[];
+  } {
+    const recastGrid = document.createElement('div');
+    recastGrid.className = 'party-hud-recast-grid';
+    const recastCells: RecastCellElements[] = [];
+
+    for (let slot = 0; slot < MAX_ACTIVE_SLOTS; slot++) {
+      const cell = document.createElement('div');
+      cell.className = 'party-hud-recast-cell';
+
+      const track = document.createElement('div');
+      track.className = 'party-hud-recast-fill-track';
+      const fill = document.createElement('div');
+      fill.className = 'party-hud-recast-fill';
+      track.appendChild(fill);
+
+      const chargeMarkers = document.createElement('div');
+      chargeMarkers.className = 'party-hud-recast-charge-markers';
+      track.appendChild(chargeMarkers);
+
+      cell.appendChild(track);
+      recastGrid.appendChild(cell);
+      recastCells.push({ cell, track, fill, chargeMarkers, cellIndex: slot });
+      this.bindRecastCellHoverGuard(track);
+    }
+
+    return { recastGrid, recastCells };
+  }
+
+  private createStatusBadgeWrap(): {
+    statusBadgeWrap: HTMLElement;
+    statusCanvas: HTMLCanvasElement;
+    statusBadgeHitLayer: HTMLElement;
+  } {
     const statusBadgeWrap = document.createElement('div');
     statusBadgeWrap.className = 'party-hud-status-badges-wrap';
-    root.appendChild(statusBadgeWrap);
 
     const statusCanvas = document.createElement('canvas');
     statusCanvas.className = 'party-hud-status-badges status-badge-canvas';
@@ -385,6 +435,82 @@ export class PartyHudPanel {
     const statusBadgeHitLayer = document.createElement('div');
     statusBadgeHitLayer.className = 'party-hud-status-badge-hits';
     statusBadgeWrap.appendChild(statusBadgeHitLayer);
+
+    return { statusBadgeWrap, statusCanvas, statusBadgeHitLayer };
+  }
+
+  /** §8.7 allyCard — 縦 4 段: 識別+HP / 状態 / スキルゲージ / 与被ダメ */
+  private createOverlaySlot(slotIndex: number): SlotElements {
+    const root = document.createElement('div');
+    root.className = 'party-hud-slot';
+
+    const unitPlate = document.createElement('div');
+    unitPlate.className = 'party-hud-unit party-hud-card';
+    root.appendChild(unitPlate);
+
+    const headerRow = document.createElement('div');
+    headerRow.className = 'party-hud-header-row';
+    unitPlate.appendChild(headerRow);
+
+    const iconWrap = document.createElement('div');
+    iconWrap.className =
+      'party-hud-icon-wrap pixel-icon-frame pixel-icon-frame--24';
+    headerRow.appendChild(iconWrap);
+    this.bindMemberStatsHover(iconWrap, slotIndex);
+
+    const label = document.createElement('div');
+    label.className = 'party-hud-label';
+    headerRow.appendChild(label);
+
+    const icon = document.createElement('img');
+    icon.className = 'party-hud-icon pixel-icon-img pixel-icon-img--24';
+    const iconSize = this.theme.iconSize;
+    icon.width = iconSize;
+    icon.height = iconSize;
+    icon.alt = '';
+    iconWrap.appendChild(icon);
+
+    const { hpRow, hpFill, barrierLayer } = this.createHpRow(slotIndex);
+    headerRow.appendChild(hpRow);
+
+    const { statusBadgeWrap, statusCanvas, statusBadgeHitLayer } =
+      this.createStatusBadgeWrap();
+    unitPlate.appendChild(statusBadgeWrap);
+
+    const { recastGrid, recastCells } = this.createRecastGrid();
+    unitPlate.appendChild(recastGrid);
+
+    const damage = createDetailDamageBar();
+    unitPlate.appendChild(damage.root);
+
+    return {
+      root,
+      slotIndex,
+      label,
+      unitPlate,
+      iconWrap,
+      icon,
+      hpFill,
+      barrierLayer,
+      statusBadgeWrap,
+      statusCanvas,
+      statusBadgeHitLayer,
+      statusBadgeHitSignature: null,
+      statusBadgeRenderSignature: null,
+      hpBarSignature: null,
+      recastGrid,
+      recastCells,
+      damage,
+    };
+  }
+
+  private createLaneSlot(slotIndex: number): SlotElements {
+    const root = document.createElement('div');
+    root.className = 'party-hud-slot';
+
+    const { statusBadgeWrap, statusCanvas, statusBadgeHitLayer } =
+      this.createStatusBadgeWrap();
+    root.appendChild(statusBadgeWrap);
 
     const unitPlate = document.createElement('div');
     unitPlate.className = 'party-hud-unit';
@@ -416,57 +542,18 @@ export class PartyHudPanel {
     unitPlate.appendChild(bars);
 
     this.bindMemberStatsHover(iconWrap, slotIndex);
-    this.bindMemberStatsHover(bars, slotIndex);
 
-    const hpRow = document.createElement('div');
-    hpRow.className = 'party-hud-hp-row';
+    const { hpRow, hpFill, barrierLayer } = this.createHpRow(slotIndex);
     bars.appendChild(hpRow);
 
-    const hpTrack = document.createElement('div');
-    hpTrack.className = 'party-hud-hp-track';
-    hpRow.appendChild(hpTrack);
-
-    const hpFill = document.createElement('div');
-    hpFill.className = 'party-hud-hp-fill';
-    hpTrack.appendChild(hpFill);
-
-    const barrierLayer = document.createElement('div');
-    barrierLayer.className = 'party-hud-barrier-layer';
-    hpTrack.appendChild(barrierLayer);
-
-    const recastGrid = document.createElement('div');
-    recastGrid.className = 'party-hud-recast-grid';
+    const { recastGrid, recastCells } = this.createRecastGrid();
     bars.appendChild(recastGrid);
-
-    const recastCells: RecastCellElements[] = [];
-    for (let slot = 0; slot < MAX_ACTIVE_SLOTS; slot++) {
-      const cell = document.createElement('div');
-      cell.className = 'party-hud-recast-cell';
-
-      const track = document.createElement('div');
-      track.className = 'party-hud-recast-fill-track';
-      const fill = document.createElement('div');
-      fill.className = 'party-hud-recast-fill';
-      track.appendChild(fill);
-
-      const chargeMarkers = document.createElement('div');
-      chargeMarkers.className = 'party-hud-recast-charge-markers';
-      track.appendChild(chargeMarkers);
-
-      cell.appendChild(track);
-
-      recastGrid.appendChild(cell);
-      recastCells.push({ cell, track, fill, chargeMarkers, cellIndex: slot });
-      this.bindRecastCellTooltip(slotIndex, track);
-    }
 
     const damage = createDetailDamageBar();
     unitPlate.appendChild(damage.root);
 
     const detailStatus = createDetailStatusBadges();
     unitPlate.appendChild(detailStatus.root);
-
-    this.bindFieldLinkHover(root, slotIndex);
 
     return {
       root,
@@ -723,41 +810,15 @@ export class PartyHudPanel {
     }
   }
 
-  private bindRecastCellTooltip(
-    partySlotIndex: number,
-    track: HTMLElement,
-  ): void {
-    track.addEventListener('mouseenter', () => {
-      this.showRecastCellTooltip(partySlotIndex, track);
-    });
-    track.addEventListener('mouseleave', () => {
-      this.options.floatingTooltip?.hide();
-    });
+  private dismissHudHoverOverlays(): void {
+    this.options.onMemberStatsHoverEnd?.();
+    this.options.floatingTooltip?.hide();
   }
 
-  private showRecastCellTooltip(
-    partySlotIndex: number,
-    track: HTMLElement,
-  ): void {
-    const resolver = this.options.resolveSkillSlotTooltip;
-    const floatingTooltip = this.options.floatingTooltip;
-    if (!resolver || !floatingTooltip) return;
-
-    const slot = this.slots[partySlotIndex];
-    const entry = this.lastEntries[partySlotIndex];
-    if (!slot || !entry) return;
-
-    const cell = slot.recastCells.find(({ track: cellTrack }) => cellTrack === track);
-    if (!cell) return;
-
-    const slotCount = entry.unlockedActiveSlotCount;
-    const inactive = cell.cellIndex >= slotCount;
-    const cd = inactive
-      ? undefined
-      : entry.activeCooldowns.find((item) => item.slotIndex === cell.cellIndex);
-    const text = resolver(partySlotIndex, cell.cellIndex, cd, inactive);
-    if (!text) return;
-    floatingTooltip.show(track, text, { placement: 'below' });
+  private bindRecastCellHoverGuard(track: HTMLElement): void {
+    track.addEventListener('mouseenter', () => {
+      this.dismissHudHoverOverlays();
+    });
   }
 
   private updateOverlayStatusBadges(slot: SlotElements, entry: PartyHudEntry): void {
@@ -854,25 +915,47 @@ export class PartyHudPanel {
     }
   }
 
-  private bindFieldLinkHover(root: HTMLElement, slotIndex: number): void {
-    root.addEventListener('mouseenter', () => {
+  private bindPanelFieldLinkHover(): void {
+    this.slotsBody.addEventListener('mouseover', (event) => {
+      const slot = (event.target as Element).closest('.party-hud-slot');
+      if (!slot || !this.slotsBody.contains(slot)) return;
+      const slotIndex = this.slots.findIndex((candidate) => candidate.root === slot);
+      if (slotIndex < 0 || this.hoveredFieldLinkSlotIndex === slotIndex) return;
       const entry = this.lastEntries[slotIndex];
       if (!entry) return;
+      this.hoveredFieldLinkSlotIndex = slotIndex;
       this.options.onHoverHighlightStart?.(entry.unitId);
     });
-    root.addEventListener('mouseleave', () => {
+    this.slotsBody.addEventListener('mouseout', (event) => {
+      const slot = (event.target as Element).closest('.party-hud-slot');
+      if (!slot) return;
+      const related = event.relatedTarget;
+      if (related instanceof Node && slot.contains(related)) return;
+      if (this.shouldRetainFieldLinkHover(related)) return;
+      if (related instanceof Element) {
+        const relatedSlot = related.closest('.party-hud-slot');
+        if (relatedSlot && this.slotsBody.contains(relatedSlot)) return;
+      }
+      if (this.hoveredFieldLinkSlotIndex === null) return;
+      this.hoveredFieldLinkSlotIndex = null;
       this.options.onHoverHighlightEnd?.();
     });
+  }
+
+  /** Keep field link while pointer moves to HUD-linked overlays (stats / tooltips). */
+  private shouldRetainFieldLinkHover(relatedTarget: EventTarget | null): boolean {
+    if (!(relatedTarget instanceof Element)) return false;
+    return (
+      relatedTarget.closest('.party-member-effective-stats') !== null ||
+      relatedTarget.closest('.party-hud-floating-tooltip') !== null ||
+      relatedTarget.closest('.game-term-panel--hud-layer') !== null
+    );
   }
 
   private syncSlotHighlightClasses(slot: SlotElements, unitId: string): void {
     slot.root.classList.toggle(
       'party-hud-slot--hover-highlight',
       this.hoverHighlightUnitId === unitId,
-    );
-    slot.root.classList.toggle(
-      'party-hud-slot--target-indicator',
-      this.targetIndicatorUnitIds.has(unitId),
     );
   }
 }

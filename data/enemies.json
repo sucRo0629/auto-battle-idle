@@ -2,7 +2,7 @@
   {
     "id": "test_enemy",
     "displayName": "test_enemy",
-    "maxHp": 200,
+    "maxHp": 300,
     "atk": 50,
     "def": 4,
     "reg": 0,
@@ -30,7 +30,7 @@
   {
     "id": "stage1_1",
     "displayName": "stage1_1",
-    "maxHp": 90,
+    "maxHp": 250,
     "atk": 45,
     "def": 5,
     "reg": 0,
@@ -44,8 +44,8 @@
   {
     "id": "test_ranged",
     "displayName": "test_ranged",
-    "maxHp": 100,
-    "atk": 10,
+    "maxHp": 200,
+    "atk": 30,
     "def": 5,
     "reg": 0,
     "exp": 0,
@@ -73,8 +73,8 @@
   {
     "id": "test_to_ranged",
     "displayName": "遠隔狙い",
-    "maxHp": 100,
-    "atk": 10,
+    "maxHp": 200,
+    "atk": 30,
     "def": 5,
     "reg": 0,
     "exp": 0,
@@ -96,7 +96,7 @@
     "id": "enemy_at_hunter",
     "displayName": "デバフ確認",
     "maxHp": 200,
-    "atk": 10,
+    "atk": 30,
     "def": 30,
     "reg": 0,
     "exp": 0,

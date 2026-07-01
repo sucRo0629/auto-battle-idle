@@ -134,7 +134,9 @@ export class BattleCanvas implements IBattleRenderer {
   }
 
   setHoverHighlightUnitId(unitId: string | null): void {
+    if (this.hoverHighlightUnitId === unitId) return;
     this.hoverHighlightUnitId = unitId;
+    this.draw();
   }
 
   setTargetIndicatorUnitIds(unitIds: readonly string[]): void {

@@ -406,6 +406,24 @@ export function syncMemberDownState(
   }
 }
 
+function applyDamageFillWidth(
+  fill: HTMLElement,
+  percent: number,
+  useScaleTransform: boolean,
+): void {
+  fill.hidden = percent <= 0;
+  if (useScaleTransform) {
+    fill.style.width = '100%';
+    fill.style.transform = percent <= 0 ? 'scaleX(0)' : `scaleX(${percent / 100})`;
+    fill.style.transformOrigin = 'left center';
+    return;
+  }
+
+  fill.style.width = `${percent}%`;
+  fill.style.transform = '';
+  fill.style.transformOrigin = '';
+}
+
 export function syncDamageBars(
   damageByPartyIndex: Map<number, DamageBarRefs>,
   rows: StageDamageDisplayRow[],
@@ -441,8 +459,10 @@ export function syncDamageBars(
       dealtPct = Math.min(100, (row.damageDealt / maxDealt) * 100);
     }
     const takenPct = Math.min(100, (row.damageTaken / maxTaken) * 100);
-    refs.dealtFill.style.width = `${dealtPct}%`;
-    refs.takenFill.style.width = `${takenPct}%`;
+    const useOverlayFillScale =
+      refs.root.closest('.party-hud-panel--overlay') !== null;
+    applyDamageFillWidth(refs.dealtFill, dealtPct, useOverlayFillScale);
+    applyDamageFillWidth(refs.takenFill, takenPct, false);
 
     const dealtLabel = dealtMetric.toLocaleString();
     const takenLabel = row.damageTaken.toLocaleString();

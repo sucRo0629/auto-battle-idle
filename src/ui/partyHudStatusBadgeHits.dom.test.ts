@@ -115,7 +115,9 @@ describe('partyHudStatusBadgeHits DOM', () => {
         toJSON: () => ({}),
       }) as DOMRect;
 
-    hit.click();
+    hit.dispatchEvent(
+      new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0 }),
+    );
     expect(mount.querySelector('.game-term-panel')?.hidden).toBe(false);
     expect(mount.querySelector('.game-term-panel-title')?.textContent).toBe(
       'スタン',

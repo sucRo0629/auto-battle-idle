@@ -36,7 +36,6 @@ import {
 import { EnemyHudPanel } from "./EnemyHudPanel.ts";
 import { buildEnemyHudEntries } from "./enemyHudTypes.ts";
 import { PartyHudPanel } from "./PartyHudPanel.ts";
-import { formatPartyHudSkillSlotTooltip } from "./partyHudSkillGaugeTooltip.ts";
 import { PartyMemberEffectiveStatsPanel } from "./PartyMemberEffectiveStatsPanel.ts";
 import {
   buildPartyHudEntries,
@@ -51,7 +50,9 @@ import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 import { applyBattleRootScale } from "./battleRootScale.ts";
 import {
+  BATTLE_SIDE_HUD_WIDTH,
   BATTLE_X_DEBUG_PANEL_TOP,
+  ENEMY_HUD_SLOT_RECT,
   battleHudToolbarTopY,
   PARTY_HUD_SLOT_RECT,
 } from "./battleRootLayout.ts";
@@ -97,8 +98,9 @@ export class BattleView {
   private readonly battleRoot: HTMLElement;
   private readonly canvasHost: HTMLElement;
   private readonly canvasWrap: HTMLElement;
-  private readonly canvasHudStageEl: HTMLElement;
-  private readonly canvasHudWaveEl: HTMLElement;
+  private readonly stagePlateEl: HTMLElement;
+  private readonly stagePlateStageEl: HTMLElement;
+  private readonly stagePlateWaveEl: HTMLElement;
   private readonly verifyBadgeEl: HTMLButtonElement;
   private readonly menuButton: HTMLButtonElement;
   private readonly hudToolbarLevelEl: HTMLElement;
@@ -122,8 +124,8 @@ export class BattleView {
   private readonly targetIndicatorTracker = new BattleTargetIndicatorTracker();
   private battleElapsedMs = 0;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
-  private lastStageName = "";
-  private lastWaveLabel = "";
+  private lastStagePlateLabel = "";
+  private lastWavePlateLabel = "";
   private lastHudToolbarLevel = -1;
   private readonly unsubscribeLocale: () => void;
   private readonly verifyModeControls?: VerifyModeControls;
@@ -146,6 +148,14 @@ export class BattleView {
 
     this.battleRoot = document.createElement("div");
     this.battleRoot.className = "battle-root";
+    this.battleRoot.style.setProperty(
+      "--battle-side-hud-width",
+      `${BATTLE_SIDE_HUD_WIDTH}px`,
+    );
+    this.battleRoot.style.setProperty(
+      "--battle-enemy-hud-x",
+      `${ENEMY_HUD_SLOT_RECT.x}px`,
+    );
 
     this.canvasHost = document.createElement("div");
     this.canvasHost.className = "battle-canvas-host";
@@ -215,15 +225,20 @@ export class BattleView {
     canvasWrap.className = "battle-canvas-wrap";
     this.canvasWrap = canvasWrap;
 
-    this.canvasHudStageEl = document.createElement("span");
-    this.canvasHudStageEl.className = "battle-canvas-hud-stage battle-top-info-stage";
+    this.stagePlateEl = document.createElement("div");
+    this.stagePlateEl.className = "battle-stage-plate game-panel-surface";
 
-    this.canvasHudWaveEl = document.createElement("span");
-    this.canvasHudWaveEl.className = "battle-canvas-hud-wave battle-top-info-wave";
+    this.stagePlateStageEl = document.createElement("div");
+    this.stagePlateStageEl.className = "battle-stage-plate-stage";
+
+    this.stagePlateWaveEl = document.createElement("div");
+    this.stagePlateWaveEl.className = "battle-stage-plate-wave";
+
+    this.stagePlateEl.append(this.stagePlateStageEl, this.stagePlateWaveEl);
 
     this.verifyBadgeEl = document.createElement("button");
     this.verifyBadgeEl.type = "button";
-    this.verifyBadgeEl.className = "battle-verify-badge battle-top-info-verify";
+    this.verifyBadgeEl.className = "battle-verify-badge battle-debug-verify-badge";
     this.verifyBadgeEl.hidden = !verifyModeControls;
     this.verifyBadgeEl.addEventListener("click", () => {
       if (!verifyModeControls) return;
@@ -232,11 +247,7 @@ export class BattleView {
       );
     });
 
-    battleTopInfo.append(
-      this.canvasHudStageEl,
-      this.canvasHudWaveEl,
-      this.verifyBadgeEl,
-    );
+    battleTopInfo.append(this.stagePlateEl);
 
     battleLane.appendChild(canvasWrap);
 
@@ -301,6 +312,7 @@ export class BattleView {
     debugMenuDock.appendChild(debugMenuToggle);
     this.debugMenu.mount(debugMenuDock);
     battleDebugShell.appendChild(debugMenuDock);
+    battleDebugShell.appendChild(this.verifyBadgeEl);
 
     this.battleXDebugCanvas = new BattleXDebugCanvas();
     this.battleXDebugCanvas.mount(battleDebugShell);
@@ -311,7 +323,16 @@ export class BattleView {
     this.canvas = new BattleCanvas();
     this.canvas.mount(canvasWrap);
     this.canvas.setFieldHoverListener((unitId) => {
-      this.setHoverHighlight(unitId, unitId ? "field" : null);
+      if (unitId === null) {
+        if (this.hoverHighlight.source === "field") {
+          this.setHoverHighlight(null, null);
+        }
+        return;
+      }
+      if (this.hoverHighlight.source === "hud") {
+        return;
+      }
+      this.setHoverHighlight(unitId, "field");
     });
 
     const hudStack = document.createElement("div");
@@ -342,8 +363,9 @@ export class BattleView {
 
     this.hudFloatingTooltip = new PartyHudFloatingTooltip(this.hudTooltipLayer);
 
-    this.gameTermPanel = new GameTermPanel(canvasFrame, {
+    this.gameTermPanel = new GameTermPanel(this.canvasHost, {
       locale: getLocale() as GameTermLocale,
+      frameMount: this.hudTooltipLayer,
     });
     this.gameTermPanel.mount();
 
@@ -370,15 +392,6 @@ export class BattleView {
           this.memberStatsPanel.reposition();
         }
       },
-      resolveSkillSlotTooltip: (_partySlot, cellIndex, cd, inactive) =>
-        formatPartyHudSkillSlotTooltip(
-          cellIndex,
-          cd,
-          cd?.skillId
-            ? this.gameData.skillRegistry.actives[cd.skillId]
-            : undefined,
-          inactive,
-        ),
     });
     this.partyHud.mount(this.partyHudSlotEl);
 
@@ -428,7 +441,9 @@ export class BattleView {
       );
       this.partyHud.update(buildPartyHudEntries(snapshot, partyMeta));
       this.partyHud.refreshLocale();
-      this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies));
+      this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies), {
+        waveIndex: snapshot.waveIndex,
+      });
       this.refreshMemberStatsPanel();
     });
     this.refreshLocaleChrome();
@@ -570,7 +585,9 @@ export class BattleView {
         buildPartyHudMetaBySlot(save.party, this.gameData.classRegistry),
       ),
     );
-    this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies));
+    this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies), {
+      waveIndex: snapshot.waveIndex,
+    });
   }
 
   private setHoverHighlight(
@@ -605,8 +622,6 @@ export class BattleView {
   private applyTargetIndicators(): void {
     const targetedUnitIds = this.resolveVisibleTargetIndicatorUnitIds();
     this.canvas.setTargetIndicatorUnitIds(targetedUnitIds);
-    this.enemyHud.setTargetIndicatorUnitIds(targetedUnitIds);
-    this.partyHud.setTargetIndicatorUnitIds(targetedUnitIds);
   }
 
   private resolveVisibleTargetIndicatorUnitIds(): string[] {
@@ -878,20 +893,21 @@ export class BattleView {
       this.gameData.stages,
       save.stageProgress.currentStageId
     );
-    const stageName = stage?.displayName ?? save.stageProgress.currentStageId;
+    const stageId = stage?.id ?? save.stageProgress.currentStageId;
     const waveNum = snapshot.waveIndex + 1;
     const waveTotal = snapshot.waveCount;
-    const waveLabel = t("battle.waveProgress", {
+    const stagePlateLabel = t("battle.stagePlate", { stage: stageId });
+    const wavePlateLabel = t("battle.wavePlate", {
       current: waveNum,
       total: waveTotal,
     });
-    if (stageName !== this.lastStageName) {
-      this.lastStageName = stageName;
-      this.canvasHudStageEl.textContent = stageName;
+    if (stagePlateLabel !== this.lastStagePlateLabel) {
+      this.lastStagePlateLabel = stagePlateLabel;
+      this.stagePlateStageEl.textContent = stagePlateLabel;
     }
-    if (waveLabel !== this.lastWaveLabel) {
-      this.lastWaveLabel = waveLabel;
-      this.canvasHudWaveEl.textContent = waveLabel;
+    if (wavePlateLabel !== this.lastWavePlateLabel) {
+      this.lastWavePlateLabel = wavePlateLabel;
+      this.stagePlateWaveEl.textContent = wavePlateLabel;
     }
 
     this.syncHudToolbarLevel(save.party);
@@ -917,7 +933,9 @@ export class BattleView {
       displayRows:
         this.verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
     });
-    this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies));
+    this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies), {
+      waveIndex: snapshot.waveIndex,
+    });
     this.canvas.tick(deltaMs);
     if (debugEnabled) {
       this.battleXDebugCanvas.tick(deltaMs);

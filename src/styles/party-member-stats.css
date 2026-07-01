@@ -113,7 +113,7 @@
   gap: 3px;
 }
 
-.party-hud-detail-damage.party-stats-damage,
+.party-hud-panel:not(.party-hud-panel--overlay) .party-hud-detail-damage.party-stats-damage,
 .party-hud-panel--detail .party-hud-detail-damage {
   gap: 3px;
   border-radius: 3px;

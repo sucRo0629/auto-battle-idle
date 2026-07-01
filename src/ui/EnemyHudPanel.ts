@@ -14,15 +14,13 @@ import {
   buildPartyHudStatusBadgeHitSignature,
   drawEnemyHudStatusRow,
   measureEnemyHudStatusRow,
-  resolveEnemyHudAllStatusTooltipLabel,
   selectEnemyHudStatusBadges,
   syncEnemyHudStatusBadgeHits,
 } from './enemyHudStatusRow.ts';
 import type { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
 import { snapHudCanvasCssSize } from './battleRootScale.ts';
+import { computeEnemyHudPanelHeight } from './battleRootLayout.ts';
 import type { GameTermPanel } from './GameTermPanel.ts';
-import { getLocale } from '../i18n/locale.ts';
-import type { GameTermLocale } from './gameTermGlossary.ts';
 
 interface SlotElements {
   root: HTMLElement;
@@ -50,14 +48,21 @@ export interface EnemyHudPanelOptions {
   onHoverHighlightEnd?: () => void;
 }
 
+export interface EnemyHudUpdateContext {
+  waveIndex: number;
+}
+
+const ENEMY_HUD_PANEL_TRANSITION_MS = 260;
+
 export class EnemyHudPanel {
   private root!: HTMLElement;
   private slotsBody!: HTMLElement;
   private readonly slots: SlotElements[] = [];
   private theme!: BattleHudTheme;
-  private lastEntries: EnemyHudEntry[] = [];
+  private lastDisplayedEntries: EnemyHudEntry[] = [];
+  private lastWaveIndex = -1;
+  private panelCollapseTimer: ReturnType<typeof setTimeout> | null = null;
   private hoverHighlightUnitId: string | null = null;
-  private targetIndicatorUnitIds = new Set<string>();
   private readonly unsubscribeStatusIconsReady: () => void;
 
   constructor(
@@ -66,8 +71,8 @@ export class EnemyHudPanel {
   ) {
     this.unsubscribeStatusIconsReady = onStatusIconsReady(() => {
       this.invalidateStatusRenderSignatures();
-      if (this.lastEntries.length > 0) {
-        this.update(this.lastEntries);
+      if (this.lastDisplayedEntries.length > 0) {
+        this.updateDisplayedEntries(this.lastDisplayedEntries, this.lastWaveIndex);
       }
     });
   }
@@ -76,7 +81,7 @@ export class EnemyHudPanel {
     this.theme = readBattleHudTheme(this.themeHost);
     const root = document.createElement('div');
     this.root = root;
-    root.className = 'enemy-hud-panel';
+    root.className = 'enemy-hud-panel game-panel-surface';
 
     const slotsBody = document.createElement('div');
     slotsBody.className = 'enemy-hud-panel-slots';
@@ -86,50 +91,104 @@ export class EnemyHudPanel {
     parent.appendChild(root);
   }
 
-  update(entries: EnemyHudEntry[]): void {
-    this.lastEntries = entries;
+  update(entries: EnemyHudEntry[], context?: EnemyHudUpdateContext): void {
+    const waveIndex = context?.waveIndex ?? this.lastWaveIndex;
+    const aliveEntries = entries.filter((entry) => entry.isAlive);
+    const prevAliveCount = this.lastDisplayedEntries.length;
+    const nextAliveCount = aliveEntries.length;
+    const waveChanged =
+      waveIndex !== this.lastWaveIndex && this.lastWaveIndex >= 0;
+    const waveInitialized = this.lastWaveIndex >= 0;
 
-    while (this.slots.length < entries.length) {
+    if (waveChanged || (!waveInitialized && nextAliveCount > 0)) {
+      this.clearPanelCollapseTimer();
+      this.root.classList.remove('enemy-hud-panel--collapsed');
+      this.root.classList.add('enemy-hud-panel--expanding');
+    } else if (prevAliveCount > 0 && nextAliveCount === 0) {
+      this.triggerPanelCollapse();
+    }
+
+    this.lastWaveIndex = waveIndex;
+    this.updateDisplayedEntries(aliveEntries, waveIndex);
+  }
+
+  setHoverHighlightUnitId(unitId: string | null): void {
+    this.hoverHighlightUnitId = unitId;
+    for (const entry of this.lastDisplayedEntries) {
+      const slot = this.findSlotForUnitId(entry.id);
+      if (slot) this.syncSlotHighlightClasses(slot, entry.id);
+    }
+  }
+
+  destroy(): void {
+    this.clearPanelCollapseTimer();
+    this.unsubscribeStatusIconsReady();
+    this.root.remove();
+  }
+
+  private clearPanelCollapseTimer(): void {
+    if (this.panelCollapseTimer === null) return;
+    clearTimeout(this.panelCollapseTimer);
+    this.panelCollapseTimer = null;
+  }
+
+  private triggerPanelCollapse(): void {
+    this.clearPanelCollapseTimer();
+    this.root.classList.add('enemy-hud-panel--collapsing');
+    this.root.classList.remove('enemy-hud-panel--expanding');
+    this.syncPanelHeight(0);
+    this.panelCollapseTimer = setTimeout(() => {
+      this.panelCollapseTimer = null;
+      this.root.classList.add('enemy-hud-panel--collapsed');
+      this.root.classList.remove('enemy-hud-panel--collapsing');
+    }, ENEMY_HUD_PANEL_TRANSITION_MS);
+  }
+
+  private updateDisplayedEntries(
+    aliveEntries: EnemyHudEntry[],
+    _waveIndex: number,
+  ): void {
+    this.lastDisplayedEntries = aliveEntries;
+
+    while (this.slots.length < aliveEntries.length) {
       const slot = this.createSlot(this.slots.length);
       this.slots.push(slot);
       this.slotsBody.appendChild(slot.root);
     }
 
-    for (let i = 0; i < this.slots.length; i++) {
+    for (let i = 0; i < aliveEntries.length; i++) {
       const slot = this.slots[i];
-      const entry = entries[i];
-      if (!entry) {
-        slot.root.hidden = true;
-        continue;
-      }
+      const entry = aliveEntries[i];
       slot.root.hidden = false;
       slot.root.dataset.enemyUnitId = entry.id;
       this.updateSlot(slot, entry);
       this.syncSlotHighlightClasses(slot, entry.id);
+      this.slotsBody.appendChild(slot.root);
     }
+
+    for (let i = aliveEntries.length; i < this.slots.length; i++) {
+      this.slots[i].root.hidden = true;
+    }
+
+    if (aliveEntries.length > 0) {
+      this.syncPanelHeight(aliveEntries.length);
+      this.root.classList.remove('enemy-hud-panel--collapsed');
+      window.requestAnimationFrame(() => {
+        this.root.classList.remove('enemy-hud-panel--expanding');
+      });
+    }
+
   }
 
-  setHoverHighlightUnitId(unitId: string | null): void {
-    this.hoverHighlightUnitId = unitId;
-    for (let i = 0; i < this.slots.length; i++) {
-      const entry = this.lastEntries[i];
-      if (!entry) continue;
-      this.syncSlotHighlightClasses(this.slots[i], entry.id);
-    }
+  private syncPanelHeight(aliveCount: number): void {
+    const height = computeEnemyHudPanelHeight(aliveCount);
+    this.root.style.setProperty('--enemy-hud-panel-h', `${height}px`);
   }
 
-  setTargetIndicatorUnitIds(unitIds: readonly string[]): void {
-    this.targetIndicatorUnitIds = new Set(unitIds);
-    for (let i = 0; i < this.slots.length; i++) {
-      const entry = this.lastEntries[i];
-      if (!entry) continue;
-      this.syncSlotHighlightClasses(this.slots[i], entry.id);
-    }
-  }
-
-  destroy(): void {
-    this.unsubscribeStatusIconsReady();
-    this.root.remove();
+  private findSlotForUnitId(unitId: string): SlotElements | undefined {
+    return this.slots.find(
+      (slot) => !slot.root.hidden && slot.root.dataset.enemyUnitId === unitId,
+    );
   }
 
   private invalidateStatusRenderSignatures(): void {
@@ -196,7 +255,6 @@ export class EnemyHudPanel {
     main.append(iconWrap, body);
     root.appendChild(main);
 
-    this.bindSlotStatusTooltip(body, slotIndex);
     this.bindFieldLinkHover(root, slotIndex);
 
     return {
@@ -219,34 +277,7 @@ export class EnemyHudPanel {
     };
   }
 
-  private bindSlotStatusTooltip(body: HTMLElement, slotIndex: number): void {
-    body.addEventListener('mouseenter', () => {
-      const floatingTooltip = this.options.floatingTooltip;
-      if (!floatingTooltip) return;
-
-      const entry = this.lastEntries[slotIndex];
-      if (!entry) return;
-
-      const badges = collectStatusEffectBadgeDisplays(entry.statusEffects, {
-        baseMaxHp: entry.baseMaxHp,
-        atk: entry.atk,
-        def: entry.def,
-        reg: entry.reg,
-      });
-      const text = resolveEnemyHudAllStatusTooltipLabel(
-        badges,
-        getLocale() as GameTermLocale,
-      );
-      if (!text) return;
-      floatingTooltip.show(body, text, { wide: true, alignEnd: true, placement: 'below' });
-    });
-    body.addEventListener('mouseleave', () => {
-      this.options.floatingTooltip?.hide();
-    });
-  }
-
   private updateSlot(slot: SlotElements, entry: EnemyHudEntry): void {
-    slot.root.classList.toggle('enemy-hud-slot--dead', !entry.isAlive);
     slot.root.dataset.enemyId = entry.id;
     slot.label.textContent = entry.displayName;
 
@@ -396,23 +427,28 @@ export class EnemyHudPanel {
 
   private bindFieldLinkHover(root: HTMLElement, slotIndex: number): void {
     root.addEventListener('mouseenter', () => {
-      const entry = this.lastEntries[slotIndex];
+      const entry = this.lastDisplayedEntries[slotIndex];
       if (!entry) return;
       this.options.onHoverHighlightStart?.(entry.id);
     });
-    root.addEventListener('mouseleave', () => {
+    root.addEventListener('mouseleave', (event) => {
+      if (this.shouldRetainFieldLinkHover(event.relatedTarget)) return;
       this.options.onHoverHighlightEnd?.();
     });
+  }
+
+  private shouldRetainFieldLinkHover(relatedTarget: EventTarget | null): boolean {
+    if (!(relatedTarget instanceof Element)) return false;
+    return (
+      relatedTarget.closest('.party-hud-floating-tooltip') !== null ||
+      relatedTarget.closest('.game-term-panel--hud-layer') !== null
+    );
   }
 
   private syncSlotHighlightClasses(slot: SlotElements, unitId: string): void {
     slot.root.classList.toggle(
       'enemy-hud-slot--hover-highlight',
       this.hoverHighlightUnitId === unitId,
-    );
-    slot.root.classList.toggle(
-      'enemy-hud-slot--target-indicator',
-      this.targetIndicatorUnitIds.has(unitId),
     );
   }
 }

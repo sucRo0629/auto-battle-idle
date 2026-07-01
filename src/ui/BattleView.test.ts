@@ -103,7 +103,6 @@ vi.mock("../ui/PartyHudPanel.ts", () => ({
     updateDetailMetrics: vi.fn(),
     getSlotRoot: vi.fn(() => null),
     setHoverHighlightUnitId: vi.fn(),
-    setTargetIndicatorUnitIds: vi.fn(),
     refreshLocale: vi.fn(),
     destroy: vi.fn(),
   })),
@@ -114,7 +113,6 @@ vi.mock("../ui/EnemyHudPanel.ts", () => ({
     mount: vi.fn(),
     update: vi.fn(),
     setHoverHighlightUnitId: vi.fn(),
-    setTargetIndicatorUnitIds: vi.fn(),
     destroy: vi.fn(),
   })),
 }));
