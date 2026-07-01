@@ -54,23 +54,29 @@ export const BATTLE_TOP_INFO_RECT: BattleRootRect = {
 export const ENEMY_HUD_TOP_Y =
   BATTLE_TOP_INFO_RECT.y + BATTLE_TOP_INFO_RECT.h;
 
-/** Fixed enemy slot height inside top enemyHud (compact horizontal row). */
-export const ENEMY_HUD_SLOT_HEIGHT = 52;
+import {
+  computeEnemyHudCardStackFootprint,
+  ENEMY_HUD_MAX_VISIBLE_STACK,
+} from './enemyHudCardStack.ts';
 
-/** Horizontal gap between enemy slots inside enemyHud. */
+/** Fixed enemy group footprint height inside top enemyHud (card stack). */
+export const ENEMY_HUD_SLOT_HEIGHT = computeEnemyHudCardStackFootprint(
+  ENEMY_HUD_MAX_VISIBLE_STACK,
+).height;
+
+/** Horizontal gap between enemy group stacks inside enemyHud. */
 export const ENEMY_HUD_SLOT_GAP = 4;
 
-/** Maximum enemy slots shown in the enemyHud list. */
+/** Maximum enemy group stacks shown in the enemyHud list. */
 export const ENEMY_HUD_MAX_SLOTS = 10;
 
 /** Left + right inset inside the enemyHud panel frame (px). */
 export const ENEMY_HUD_PANEL_FRAME_PADDING = 8;
 
-/** Fixed per-enemy slot width — does not grow when fewer enemies are alive. */
-export const ENEMY_HUD_SLOT_WIDTH = Math.floor(
-  (BATTLE_TOP_INFO_RECT.w - (ENEMY_HUD_MAX_SLOTS - 1) * ENEMY_HUD_SLOT_GAP) /
-    ENEMY_HUD_MAX_SLOTS,
-);
+/** Fixed per-group stack width — max visible stack footprint; does not shrink for solo enemies. */
+export const ENEMY_HUD_SLOT_WIDTH = computeEnemyHudCardStackFootprint(
+  ENEMY_HUD_MAX_VISIBLE_STACK,
+).width;
 
 /** Reserved top enemyHud band height (single-row strip; battle-field.md §8 Phase 2). */
 export const ENEMY_HUD_SLOT_BAND_HEIGHT = 72;

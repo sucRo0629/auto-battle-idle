@@ -14,7 +14,10 @@ import {
   type PartyHudStatusBadgeHitContext,
 } from './partyHudStatusBadgeHits.ts';
 
-/** Enemy HUD row status icon size (fits 52px slot height). */
+/** Status badge row height in front enemy card (px). */
+export const ENEMY_HUD_STATUS_ROW_HEIGHT = 18;
+
+/** Enemy HUD row status icon size (fits status row height). */
 export const ENEMY_HUD_STATUS_ICON_SIZE = 14;
 
 /** Visible badges before +N when overflow occurs. */

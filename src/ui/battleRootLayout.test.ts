@@ -137,13 +137,11 @@ describe("battleRootLayout", () => {
     expect(BATTLE_GROUND_LINE_SCREEN_Y).toBeLessThan(PARTY_HUD_SLOT_RECT.y);
   });
 
-  it("sizes enemy slots to fit within the top enemyHud band", () => {
+  it('sizes enemy group stacks to fit within the top enemyHud band', () => {
     expect(ENEMY_HUD_SLOT_HEIGHT).toBeLessThanOrEqual(ENEMY_HUD_SLOT_BAND_HEIGHT);
     expect(computeEnemyHudSlotWidth(3)).toBe(ENEMY_HUD_SLOT_WIDTH);
-    const rowWidth =
-      ENEMY_HUD_MAX_SLOTS * ENEMY_HUD_SLOT_WIDTH +
-      (ENEMY_HUD_MAX_SLOTS - 1) * ENEMY_HUD_SLOT_GAP;
-    expect(rowWidth).toBeLessThanOrEqual(ENEMY_HUD_SLOT_RECT.w);
+    expect(ENEMY_HUD_SLOT_WIDTH).toBe(152);
+    expect(ENEMY_HUD_SLOT_HEIGHT).toBe(68);
   });
 
   it("computes enemyHud panel height as fixed band when alive", () => {

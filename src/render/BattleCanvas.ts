@@ -91,7 +91,7 @@ export class BattleCanvas implements IBattleRenderer {
   private isMarching = new Map<string, boolean>();
   private marchIdleHoldFrames = new Map<string, number>();
   private static readonly MARCH_IDLE_HOLD_FRAMES = 4;
-  private hoverHighlightUnitId: string | null = null;
+  private hoverHighlightUnitIds: ReadonlySet<string> = new Set();
   private targetIndicatorUnitIds = new Set<string>();
   private onFieldHoverChange: ((unitId: string | null) => void) | null = null;
 
@@ -138,8 +138,18 @@ export class BattleCanvas implements IBattleRenderer {
   }
 
   setHoverHighlightUnitId(unitId: string | null): void {
-    if (this.hoverHighlightUnitId === unitId) return;
-    this.hoverHighlightUnitId = unitId;
+    this.setHoverHighlightUnitIds(unitId ? [unitId] : null);
+  }
+
+  setHoverHighlightUnitIds(unitIds: readonly string[] | null): void {
+    const next = new Set(unitIds ?? []);
+    if (
+      next.size === this.hoverHighlightUnitIds.size &&
+      [...next].every((id) => this.hoverHighlightUnitIds.has(id))
+    ) {
+      return;
+    }
+    this.hoverHighlightUnitIds = next;
     this.draw();
   }
 
@@ -538,14 +548,12 @@ export class BattleCanvas implements IBattleRenderer {
       }
     }
 
-    if (this.hoverHighlightUnitId) {
-      const highlighted = this.layouts.find(
-        (layout) => layout.id === this.hoverHighlightUnitId,
-      );
-      if (highlighted) {
+    if (this.hoverHighlightUnitIds.size > 0) {
+      for (const layout of this.layouts) {
+        if (!this.hoverHighlightUnitIds.has(layout.id)) continue;
         drawHoverHighlightForLayout(
           this.ctx,
-          highlighted,
+          layout,
           SPRITE_SCALE,
           this.theme,
         );

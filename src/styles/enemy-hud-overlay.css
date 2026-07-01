@@ -1,4 +1,4 @@
-/* Top enemyHud overlay — battle-field.md §8.8 Phase 2 */
+/* Top enemyHud overlay — battle-field.md §8.8 Phase 3 card stacks */
 
 .battle-hud-slot--enemy {
   -webkit-app-region: no-drag;
@@ -82,39 +82,71 @@
   box-shadow: none;
 }
 
-.enemy-hud-slot {
-  --enemy-hud-slot-h: 52px;
-  flex: 0 0 var(--enemy-hud-slot-h);
-  height: var(--enemy-hud-slot-h);
-  min-height: var(--enemy-hud-slot-h);
-  max-height: var(--enemy-hud-slot-h);
+.enemy-hud-slot.enemy-hud-group {
+  position: relative;
+  flex: 0 0 var(--enemy-hud-slot-w, 152px);
+  width: var(--enemy-hud-slot-w, 152px);
+  min-width: var(--enemy-hud-slot-w, 152px);
+  max-width: var(--enemy-hud-slot-w, 152px);
+  height: var(--enemy-hud-slot-h, 68px);
+  min-height: var(--enemy-hud-slot-h, 68px);
+  max-height: var(--enemy-hud-slot-h, 68px);
   box-sizing: border-box;
-  padding: 3px 6px;
+  padding: 0;
   border-radius: 0;
-  background: rgba(6, 8, 14, 0.72);
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  will-change: transform;
+}
+
+.enemy-hud-panel--overlay-top .enemy-hud-panel-slots > .enemy-hud-slot.enemy-hud-group {
+  --enemy-hud-slot-h: 68px;
+}
+
+.enemy-hud-card-stack {
+  position: relative;
+  box-sizing: border-box;
+}
+
+.enemy-hud-group {
+  pointer-events: auto;
+}
+
+/* Full enemy card — same structure for front / back; HP row pinned to bottom */
+.enemy-hud-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--enemy-hud-card-w, 136px);
+  height: var(--enemy-hud-card-h, 48px);
+  box-sizing: border-box;
+  padding: 3px 5px 3px 6px;
+  border-radius: 0;
+  background: rgba(6, 8, 14, 0.78);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 0 0 1px rgba(0, 0, 0, 0.42);
   overflow: hidden;
+  pointer-events: none;
+  transition:
+    left 260ms ease-out,
+    top 260ms ease-out;
 }
 
-.enemy-hud-panel--overlay-top .enemy-hud-panel-slots > .enemy-hud-slot {
-  --enemy-hud-slot-h: 52px;
-  flex: 0 0 var(--enemy-hud-slot-w, 119px);
-  width: var(--enemy-hud-slot-w, 119px);
-  min-width: var(--enemy-hud-slot-w, 119px);
-  max-width: var(--enemy-hud-slot-w, 119px);
-  height: var(--enemy-hud-slot-h);
-  min-height: var(--enemy-hud-slot-h);
-  max-height: var(--enemy-hud-slot-h);
-  padding: 3px 4px;
-  overflow: hidden;
+.enemy-hud-card--front {
+  overflow: visible;
 }
 
-.enemy-hud-slot-main {
+.enemy-hud-card--back {
+  background: rgba(8, 10, 18, 0.82);
+  opacity: 0.94;
+}
+
+.enemy-hud-card-main {
   display: grid;
-  grid-template-columns: min-content 1fr;
+  grid-template-columns: 24px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   gap: 4px;
   height: 100%;
@@ -122,62 +154,85 @@
   min-width: 0;
 }
 
-.enemy-hud-panel--overlay-top .enemy-hud-slot-main {
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 3px;
-  overflow: hidden;
-}
-
 .enemy-hud-icon-wrap {
   grid-row: 1 / 2;
   align-self: start;
-}
-
-.enemy-hud-panel--overlay-top .enemy-hud-icon-wrap {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
   flex-shrink: 0;
+  overflow: visible;
+  border: none;
+  box-shadow:
+    inset 0 0 0 1px var(--hud-icon-border, #4a5568),
+    0 0 0 1px var(--hud-icon-frame, #1a1a1a);
 }
 
-.enemy-hud-panel--overlay-top .enemy-hud-icon-wrap.pixel-icon-frame--24 {
-  width: 20px;
-  height: 20px;
-}
-
-.enemy-hud-panel--overlay-top .enemy-hud-icon-wrap .enemy-hud-icon.pixel-icon-img--24 {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  min-height: 20px;
-  max-width: 20px;
-  max-height: 20px;
-}
-
-.enemy-hud-slot-body {
-  display: grid;
-  grid-template-rows: auto 8px 16px 4px;
-  gap: 1px;
+.enemy-hud-card-body {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
-.enemy-hud-panel--overlay-top .enemy-hud-slot-body {
-  grid-template-rows: minmax(0, auto) 5px minmax(0, 12px) 2px;
+.enemy-hud-card-info {
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-rows: minmax(0, auto) var(--enemy-hud-status-h, 18px) 2px;
   gap: 1px;
-  width: 100%;
-  max-width: 100%;
+  min-height: 0;
+  min-width: 0;
   overflow: hidden;
   align-content: start;
 }
 
+.enemy-hud-card--back .enemy-hud-card-info,
+.enemy-hud-card--back .enemy-hud-icon-wrap {
+  display: none;
+}
+
+.enemy-hud-card--back .enemy-hud-card-main {
+  grid-template-columns: 1fr;
+}
+
+.enemy-hud-hp-row {
+  flex: 0 0 auto;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+}
+
 .enemy-hud-label {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
   min-width: 0;
   font-size: calc(var(--hud-header-font-size, 12) * 1px);
   line-height: 1.1;
   overflow: hidden;
+  color: var(--hud-header-color, #e8ecf1);
+}
+
+.enemy-hud-label-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--hud-header-color, #e8ecf1);
+}
+
+.enemy-hud-count-badge {
+  flex: 0 0 auto;
+  font-family: var(--font-ui-mono, monospace);
+  font-size: calc((var(--hud-header-font-size, 11) - 1) * 1px);
+  line-height: 1;
+  color: rgba(200, 210, 230, 0.88);
+  letter-spacing: 0.02em;
 }
 
 .enemy-hud-panel--overlay-top .enemy-hud-label {
@@ -186,23 +241,17 @@
 
 .enemy-hud-hp-track {
   position: relative;
-  height: 8px;
-  min-height: 8px;
-  background: var(--hud-bar-track);
-  box-shadow:
-    inset 0 1px 0 var(--hud-hp-bar-track-shadow),
-    inset 0 -1px 0 var(--hud-hp-bar-track-highlight),
-    0 0 0 1px var(--hud-bar-border);
-}
-
-.enemy-hud-panel--overlay-top .enemy-hud-hp-track {
   width: 100%;
-  max-width: 100%;
   height: 5px;
   min-height: 5px;
   max-height: 5px;
   box-sizing: border-box;
   overflow: hidden;
+  background: var(--hud-bar-track);
+  box-shadow:
+    inset 0 1px 0 var(--hud-hp-bar-track-shadow),
+    inset 0 -1px 0 var(--hud-hp-bar-track-highlight),
+    0 0 0 1px var(--hud-bar-border);
 }
 
 .enemy-hud-hp-fill {
@@ -239,18 +288,11 @@
 .enemy-hud-status-badges-wrap {
   position: relative;
   z-index: 2;
-  height: 16px;
-  min-height: 16px;
+  height: var(--enemy-hud-status-h, 18px);
+  min-height: var(--enemy-hud-status-h, 18px);
+  max-height: var(--enemy-hud-status-h, 18px);
   max-width: 100%;
   overflow: visible;
-}
-
-.enemy-hud-panel--overlay-top .enemy-hud-status-badges-wrap {
-  height: 12px;
-  min-height: 12px;
-  max-height: 12px;
-  max-width: 100%;
-  overflow: hidden;
 }
 
 .enemy-hud-status-badges {
@@ -259,21 +301,32 @@
   pointer-events: none;
 }
 
-.enemy-hud-danger-telegraph {
-  position: relative;
-  height: 4px;
-  min-height: 4px;
-  border-radius: 0;
+.enemy-hud-card-status-mini {
+  height: 10px;
+  min-height: 10px;
+  max-height: 10px;
   overflow: hidden;
-  box-sizing: border-box;
+  opacity: 0.9;
 }
 
-.enemy-hud-panel--overlay-top .enemy-hud-danger-telegraph {
+.enemy-hud-card--front .enemy-hud-card-status-mini {
+  display: none;
+}
+
+.enemy-hud-card-status-mini-canvas {
+  display: block;
+  vertical-align: top;
+  pointer-events: none;
+}
+
+.enemy-hud-danger-telegraph {
+  position: relative;
   height: 2px;
   min-height: 2px;
   max-height: 2px;
   width: 100%;
-  max-width: 100%;
+  border-radius: 0;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -306,18 +359,42 @@
   transition: width 0.08s linear;
 }
 
+.enemy-hud-card--front .party-hud-status-badge-hits {
+  pointer-events: auto;
+}
+
 .enemy-hud-danger-telegraph--inactive .enemy-hud-danger-telegraph-fill {
   opacity: 0;
 }
 
-.enemy-hud-slot.enemy-hud-slot--hover-highlight {
+.enemy-hud-stack-overflow {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  z-index: 25;
+  padding: 0 3px;
+  font-family: var(--font-ui-mono, monospace);
+  font-size: 9px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+  color: rgba(210, 218, 235, 0.92);
+  background: rgba(10, 12, 20, 0.88);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.enemy-hud-slot.enemy-hud-group.enemy-hud-slot--hover-highlight .enemy-hud-card--front {
   box-shadow:
     inset 0 0 0 1px var(--hover-highlight-outline, rgba(160, 200, 255, 0.55)),
     inset 0 0 0 2px var(--hover-highlight-glow, rgba(120, 170, 255, 0.18)),
     0 0 8px var(--hover-highlight-glow, rgba(120, 170, 255, 0.28));
-  background: rgba(20, 30, 48, 0.88);
+  background: rgba(20, 30, 48, 0.9);
 }
 
-.enemy-hud-slot {
-  position: relative;
+.enemy-hud-slot.enemy-hud-group.enemy-hud-slot--hover-highlight .enemy-hud-card--back {
+  box-shadow:
+    inset 0 0 0 1px var(--hover-highlight-outline, rgba(160, 200, 255, 0.35)),
+    0 0 4px var(--hover-highlight-glow, rgba(120, 170, 255, 0.15));
 }

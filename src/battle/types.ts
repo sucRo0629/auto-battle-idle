@@ -1761,6 +1761,10 @@ export interface BattleXDebugTraceEntry {
 export interface CombatantSnapshot {
   id: string;
   name: string;
+  /** 敵 HUD groupBy 用。敵は template id、味方は class id。 */
+  classId?: ClassId;
+  /** 将来: ステージ固有の敵種別。未指定時は classId を group key に使う。 */
+  enemyTypeId?: string;
   hp: number;
   maxHp: number;
   /** バフ/debuff 前の MaxHP（`maxHp` は実効値） */

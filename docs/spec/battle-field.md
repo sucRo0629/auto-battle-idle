@@ -800,7 +800,11 @@ active_3  active_4
 
 ### 8.8 敵 HUD
 
-敵 HUD は **画面上部**（topInfo 直下）に配置し、最大 10 体程度の敵を **生存中のみ** 横並びで索引表示する。**全体を包む外枠パネルは表示しない**（各 `enemySlot` のみ個別枠）。各敵スロットの高さは固定（52px コンパクト行）。帯領域（`ENEMY_HUD_SLOT_BAND_HEIGHT`）はレイアウト予約のみで、パネル背景・枠線は描画しない。Wave 開始時はスロット列を展開、Wave 内の生存敵が 0 になったら閉じる。撃破した敵スロットはグレーアウトせず HUD から除去し、残存スロットを左方向へ詰める（表示リストのみ。戦闘ロジック上の enemy entity には影響しない）。敵が多い場合は暫定的に `flex-wrap` 折り返しで対応する（横スクロールは使わない）。同種敵のグループ化・カード束化は Phase 2 以降。
+敵 HUD は **画面上部**（topInfo 直下）に配置し、最大 10 group 程度の敵を **生存中のみ** 横並びで索引表示する。**全体を包む外枠パネルは表示しない**（各 group はカード束のみ）。group コンテナ footprint は固定（152×68px、帯 72px 内）。帯領域（`ENEMY_HUD_SLOT_BAND_HEIGHT`）はレイアウト予約のみで、パネル背景・枠線は描画しない。Wave 開始時はスロット列を展開、Wave 内の生存敵が 0 になったら閉じる。撃破した敵スロットはグレーアウトせず HUD から除去し、残存スロットを左方向へ詰める（表示リストのみ。戦闘ロジック上の enemy entity には影響しない）。**同一 Wave 内**の group 並び替え時は FLIP スライド（`enemyHudGroupSlide.ts`、260ms）で横移動する。敵が多い場合は暫定的に `flex-wrap` 折り返しで対応する（横スクロールは使わない）。
+
+**Phase 3 — 表示専用 groupBy:** 同種敵は HUD 表示用の `enemyGroup` にまとめる。group key は `enemyTypeId ?? classId`（未指定時は snapshot の `classId`、敵は template id）。`enemyGroup` は **HUD 専用** — 戦闘ロジック・ターゲット選定・勝敗判定では enemy entity 単位のまま。各 group は `groupId`、代表アイコン / 名前、`count`、グループ内 alive `enemies[]`、`representativeEnemy`、集約 `dangerState` / `importantStates` を持つ。撃破で `count` が減り、0 体の group は非表示。group hover 時はグループ内全敵を `hoverHighlight`（個体 hover は後続 Task）。**hover ではカード束を展開しない**（click 展開・Pause は後続 Task）。
+
+**Phase 3 Task 2 — カード束表示:** 各 `enemyGroup` は上部 HUD で **同一 `enemyCard` 要素**を `stackOffset`（8px）でずらして重ねる（HP 専用レーンは使わない）。先頭カードは icon / 名前 / `×N` / 集約状態 / 危険予兆枠 + HP。背面カードは同一 DOM だが CSS で情報欄を隠し HP 行のみ露出。HP 行はカード下端に固定し、重ねると各体の HP バーが下方向に露出してすべて読める。`maxVisibleStack` = 3、超過は `+N`。icon は `pixel-icon-frame--24` 等倍（24×24）。寸法: card 136×48、group footprint 152×64。
 
 初期寸法目安:
 
@@ -812,11 +816,18 @@ enemyHud:
   h: 72          # 固定帯（ENEMY_HUD_SLOT_BAND_HEIGHT）
 
 enemySlot:
-  count: up to 10   # 同時表示は生存敵のみ
+  count: up to 10   # 同時表示は生存敵 group 数（1 group = 同種複数体のカード束）
   layout: row       # 横並び（overlay-top）
-  height: 52
+  groupFootprint:   # 最大 visible stack 時の group コンテナ
+    w: 152          # ENEMY_HUD_SLOT_WIDTH
+    h: 68           # ENEMY_HUD_SLOT_HEIGHT（帯 72px 内）
+  enemyCard:
+    w: 136          # ENEMY_HUD_CARD_WIDTH
+    h: 52           # ENEMY_HUD_CARD_HEIGHT — HP row pinned to bottom
+  statusRowH: 18    # ENEMY_HUD_STATUS_ROW_HEIGHT
+  stackOffset: { x: 8, y: 8 }
+  maxVisibleStack: 3
   gap: 4
-  slotWidth: 119   # ENEMY_HUD_SLOT_WIDTH — fixed per enemy, no outer panel frame
 
 panelHeight:
   formula: ENEMY_HUD_SLOT_BAND_HEIGHT when alive > 0, else 0
@@ -1033,7 +1044,7 @@ Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `s
 | 2 | レイヤー + 大型 `battleLane` / `BattleCanvas` | `battleRootLayout.ts`, `battle-view.css`, `battleConstants.ts`, `formationLayout.ts`, `BattleCanvas.ts` |
 | 3 | 左 Party HUD 4 カード overlay | `PartyHudPanel.ts`, `party-hud-overlay.css` |
 | 4 | スキルゲージ 2×2 固定 + 状態 2 行固定 | `party-hud-overlay.css`, `partyHudOverlayStatusGrid.ts` |
-| 5 | 上部 Enemy HUD（最大 10 体・横並び） | `EnemyHudPanel.ts`, `enemy-hud-overlay.css`, `enemyHudTypes.ts` |
+| 5 | 上部 Enemy HUD（最大 10 group・カード束・表示専用 groupBy） | `EnemyHudPanel.ts`, `enemy-hud-overlay.css`, `enemyHudTypes.ts`, `enemyHudCardStack.ts` |
 | 6 | 敵スプライト付近 HP/状態停止 | `BattleCanvas.ts` |
 | 7 | `hoverHighlight` / `targetIndicator` 分離 | `BattleView.ts`, `battleHoverHighlight.ts`, `battleTargetIndicator.ts`, `battleFieldIndicatorDraw.ts` |
 | 8 | Debug UI overlay 分離 | `BattleView.ts`, `battle-view.css` |

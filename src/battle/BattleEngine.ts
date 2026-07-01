@@ -1737,6 +1737,7 @@ export class BattleEngine {
     return {
       id: c.id,
       name: c.name,
+      classId: c.classId,
       hp: c.hp,
       maxHp: getEffectiveMaxHp(c),
       baseMaxHp: c.maxHp,

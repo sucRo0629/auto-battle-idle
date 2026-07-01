@@ -8,7 +8,19 @@ import {
   type BattleHudTheme,
 } from '../render/battleHudTheme.ts';
 import { statusBadgeOutlinePad } from '../render/statusBadgeRenderer.ts';
-import type { EnemyHudEntry } from './enemyHudTypes.ts';
+import type { EnemyHudEntry, EnemyHudGroup } from './enemyHudTypes.ts';
+import {
+  ENEMY_HUD_CARD_HEIGHT,
+  ENEMY_HUD_CARD_STACK_OFFSET_X,
+  ENEMY_HUD_CARD_STACK_OFFSET_Y,
+  ENEMY_HUD_CARD_WIDTH,
+  ENEMY_HUD_MAX_VISIBLE_STACK,
+  enemyHudCardStackOffset,
+  resolveEnemyHudCardStackLayout,
+} from './enemyHudCardStack.ts';
+import {
+  ENEMY_HUD_STATUS_ROW_HEIGHT,
+} from './enemyHudStatusRow.ts';
 import {
   buildPartyHudStatusBadgeCanvasSignature,
   buildPartyHudStatusBadgeHitSignature,
@@ -22,16 +34,22 @@ import { snapHudCanvasCssSize } from './battleRootScale.ts';
 import {
   computeEnemyHudPanelHeight,
   ENEMY_HUD_SLOT_GAP,
+  ENEMY_HUD_SLOT_HEIGHT,
   ENEMY_HUD_SLOT_WIDTH,
 } from './battleRootLayout.ts';
 import type { GameTermPanel } from './GameTermPanel.ts';
+import {
+  captureEnemyHudGroupRects,
+  hasEnemyHudGroupOrderChanged,
+  playEnemyHudGroupSlide,
+  resetEnemyHudGroupSlideTransforms,
+} from './enemyHudGroupSlide.ts';
 
-interface SlotElements {
+interface EnemyCardElements {
   root: HTMLElement;
-  slotIndex: number;
-  label: HTMLElement;
-  body: HTMLElement;
-  iconWrap: HTMLElement;
+  variant: 'front' | 'back';
+  labelName: HTMLElement;
+  countBadge: HTMLElement;
   icon: HTMLImageElement;
   hpFill: HTMLElement;
   barrierLayer: HTMLElement;
@@ -41,15 +59,32 @@ interface SlotElements {
   statusBadgeRenderSignature: string | null;
   statusBadgeHitSignature: string | null;
   hpBarSignature: string | null;
+  statusMiniWrap: HTMLElement;
+  statusMiniCanvas: HTMLCanvasElement;
+  statusMiniSignature: string | null;
   dangerTelegraph: HTMLElement;
   dangerTelegraphFill: HTMLElement;
 }
+
+interface GroupSlotElements {
+  root: HTMLElement;
+  slotIndex: number;
+  stackRoot: HTMLElement;
+  stackOverflow: HTMLElement;
+  frontCard: EnemyCardElements;
+  backCards: EnemyCardElements[];
+}
+
+type HpBarHost = Pick<
+  EnemyCardElements,
+  'hpFill' | 'barrierLayer' | 'hpBarSignature'
+>;
 
 export interface EnemyHudPanelOptions {
   layout?: 'overlay-top';
   floatingTooltip?: PartyHudFloatingTooltip;
   gameTermPanel?: GameTermPanel;
-  onHoverHighlightStart?: (unitId: string) => void;
+  onHoverHighlightStart?: (unitIds: readonly string[]) => void;
   onHoverHighlightEnd?: () => void;
 }
 
@@ -62,12 +97,12 @@ const ENEMY_HUD_PANEL_TRANSITION_MS = 260;
 export class EnemyHudPanel {
   private root!: HTMLElement;
   private slotsBody!: HTMLElement;
-  private readonly slots: SlotElements[] = [];
+  private readonly slots: GroupSlotElements[] = [];
   private theme!: BattleHudTheme;
-  private lastDisplayedEntries: EnemyHudEntry[] = [];
+  private lastDisplayedGroups: EnemyHudGroup[] = [];
   private lastWaveIndex = -1;
   private panelCollapseTimer: ReturnType<typeof setTimeout> | null = null;
-  private hoverHighlightUnitId: string | null = null;
+  private hoverHighlightUnitIds: ReadonlySet<string> = new Set();
   private readonly unsubscribeStatusIconsReady: () => void;
 
   constructor(
@@ -76,8 +111,8 @@ export class EnemyHudPanel {
   ) {
     this.unsubscribeStatusIconsReady = onStatusIconsReady(() => {
       this.invalidateStatusRenderSignatures();
-      if (this.lastDisplayedEntries.length > 0) {
-        this.updateDisplayedEntries(this.lastDisplayedEntries, this.lastWaveIndex);
+      if (this.lastDisplayedGroups.length > 0) {
+        this.updateDisplayedGroups(this.lastDisplayedGroups, null);
       }
     });
   }
@@ -91,6 +126,21 @@ export class EnemyHudPanel {
       root.classList.add('enemy-hud-panel--overlay-top');
       root.style.setProperty('--enemy-hud-slot-gap', `${ENEMY_HUD_SLOT_GAP}px`);
       root.style.setProperty('--enemy-hud-slot-w', `${ENEMY_HUD_SLOT_WIDTH}px`);
+      root.style.setProperty('--enemy-hud-slot-h', `${ENEMY_HUD_SLOT_HEIGHT}px`);
+      root.style.setProperty('--enemy-hud-card-w', `${ENEMY_HUD_CARD_WIDTH}px`);
+      root.style.setProperty('--enemy-hud-card-h', `${ENEMY_HUD_CARD_HEIGHT}px`);
+      root.style.setProperty(
+        '--enemy-hud-status-h',
+        `${ENEMY_HUD_STATUS_ROW_HEIGHT}px`,
+      );
+      root.style.setProperty(
+        '--enemy-hud-stack-offset-x',
+        `${ENEMY_HUD_CARD_STACK_OFFSET_X}px`,
+      );
+      root.style.setProperty(
+        '--enemy-hud-stack-offset-y',
+        `${ENEMY_HUD_CARD_STACK_OFFSET_Y}px`,
+      );
     }
 
     const slotsBody = document.createElement('div');
@@ -101,14 +151,29 @@ export class EnemyHudPanel {
     parent.appendChild(root);
   }
 
-  update(entries: EnemyHudEntry[], context?: EnemyHudUpdateContext): void {
+  update(groups: EnemyHudGroup[], context?: EnemyHudUpdateContext): void {
     const waveIndex = context?.waveIndex ?? this.lastWaveIndex;
-    const aliveEntries = entries.filter((entry) => entry.isAlive);
-    const prevAliveCount = this.lastDisplayedEntries.length;
-    const nextAliveCount = aliveEntries.length;
+    const aliveGroups = groups.filter((group) => group.count > 0);
+    const prevAliveCount = this.lastDisplayedGroups.length;
+    const nextAliveCount = aliveGroups.length;
     const waveChanged =
       waveIndex !== this.lastWaveIndex && this.lastWaveIndex >= 0;
     const waveInitialized = this.lastWaveIndex >= 0;
+    const groupOrderChanged = hasEnemyHudGroupOrderChanged(
+      this.lastDisplayedGroups.map((group) => group.groupId),
+      aliveGroups.map((group) => group.groupId),
+    );
+    const slideGroups =
+      waveInitialized &&
+      !waveChanged &&
+      groupOrderChanged &&
+      this.lastDisplayedGroups.length > 0;
+    const slotRoots = this.slots.map((slot) => slot.root);
+    let groupRectsBeforeUpdate: Map<string, DOMRect> | null = null;
+    if (slideGroups) {
+      resetEnemyHudGroupSlideTransforms(slotRoots);
+      groupRectsBeforeUpdate = captureEnemyHudGroupRects(slotRoots);
+    }
 
     if (waveChanged || (!waveInitialized && nextAliveCount > 0)) {
       this.clearPanelCollapseTimer();
@@ -119,14 +184,18 @@ export class EnemyHudPanel {
     }
 
     this.lastWaveIndex = waveIndex;
-    this.updateDisplayedEntries(aliveEntries, waveIndex);
+    this.updateDisplayedGroups(aliveGroups, groupRectsBeforeUpdate);
   }
 
   setHoverHighlightUnitId(unitId: string | null): void {
-    this.hoverHighlightUnitId = unitId;
-    for (const entry of this.lastDisplayedEntries) {
-      const slot = this.findSlotForUnitId(entry.id);
-      if (slot) this.syncSlotHighlightClasses(slot, entry.id);
+    this.setHoverHighlightUnitIds(unitId ? [unitId] : []);
+  }
+
+  setHoverHighlightUnitIds(unitIds: readonly string[]): void {
+    this.hoverHighlightUnitIds = new Set(unitIds);
+    for (const group of this.lastDisplayedGroups) {
+      const slot = this.findSlotForGroupId(group.groupId);
+      if (slot) this.syncSlotHighlightClasses(slot, group);
     }
   }
 
@@ -154,40 +223,52 @@ export class EnemyHudPanel {
     }, ENEMY_HUD_PANEL_TRANSITION_MS);
   }
 
-  private updateDisplayedEntries(
-    aliveEntries: EnemyHudEntry[],
-    _waveIndex: number,
+  private updateDisplayedGroups(
+    aliveGroups: EnemyHudGroup[],
+    groupRectsBeforeUpdate: Map<string, DOMRect> | null,
   ): void {
-    this.lastDisplayedEntries = aliveEntries;
+    this.lastDisplayedGroups = aliveGroups;
 
-    while (this.slots.length < aliveEntries.length) {
-      const slot = this.createSlot(this.slots.length);
+    while (this.slots.length < aliveGroups.length) {
+      const slot = this.createGroupSlot(this.slots.length);
       this.slots.push(slot);
       this.slotsBody.appendChild(slot.root);
     }
 
-    for (let i = 0; i < aliveEntries.length; i++) {
+    for (let i = 0; i < aliveGroups.length; i++) {
       const slot = this.slots[i];
-      const entry = aliveEntries[i];
+      const group = aliveGroups[i];
       slot.root.hidden = false;
-      slot.root.dataset.enemyUnitId = entry.id;
-      this.updateSlot(slot, entry);
-      this.syncSlotHighlightClasses(slot, entry.id);
+      slot.root.dataset.enemyGroupId = group.groupId;
+      slot.root.dataset.enemyUnitId = group.representativeEnemy.id;
+      this.updateGroupSlot(slot, group);
+      this.syncSlotHighlightClasses(slot, group);
       this.slotsBody.appendChild(slot.root);
     }
 
-    for (let i = aliveEntries.length; i < this.slots.length; i++) {
+    for (let i = aliveGroups.length; i < this.slots.length; i++) {
       this.slots[i].root.hidden = true;
     }
 
-    if (aliveEntries.length > 0) {
-      this.syncPanelLayout(aliveEntries.length);
+    if (aliveGroups.length > 0) {
+      this.syncPanelLayout(aliveGroups.length);
       this.root.classList.remove('enemy-hud-panel--collapsed');
       window.requestAnimationFrame(() => {
         this.root.classList.remove('enemy-hud-panel--expanding');
+        if (groupRectsBeforeUpdate) {
+          playEnemyHudGroupSlide(
+            this.slots.map((slot) => slot.root),
+            groupRectsBeforeUpdate,
+          );
+        }
       });
     }
+  }
 
+  private findSlotForGroupId(groupId: string): GroupSlotElements | undefined {
+    return this.slots.find(
+      (slot) => !slot.root.hidden && slot.root.dataset.enemyGroupId === groupId,
+    );
   }
 
   private syncPanelLayout(aliveCount: number): void {
@@ -201,25 +282,61 @@ export class EnemyHudPanel {
     this.root.style.setProperty('--enemy-hud-panel-h', `${height}px`);
   }
 
-  private findSlotForUnitId(unitId: string): SlotElements | undefined {
-    return this.slots.find(
-      (slot) => !slot.root.hidden && slot.root.dataset.enemyUnitId === unitId,
-    );
-  }
-
   private invalidateStatusRenderSignatures(): void {
     for (const slot of this.slots) {
-      slot.statusBadgeRenderSignature = null;
+      slot.frontCard.statusBadgeRenderSignature = null;
+      for (const back of slot.backCards) {
+        back.statusMiniSignature = null;
+      }
     }
   }
 
-  private createSlot(slotIndex: number): SlotElements {
+  private createGroupSlot(slotIndex: number): GroupSlotElements {
     const root = document.createElement('div');
-    root.className = 'enemy-hud-slot';
+    root.className = 'enemy-hud-slot enemy-hud-group';
     root.dataset.enemyHudSlotIndex = String(slotIndex);
 
+    const stackRoot = document.createElement('div');
+    stackRoot.className = 'enemy-hud-card-stack';
+
+    const stackOverflow = document.createElement('span');
+    stackOverflow.className = 'enemy-hud-stack-overflow';
+    stackOverflow.hidden = true;
+
+    const backCards: EnemyCardElements[] = [];
+    for (let i = 0; i < ENEMY_HUD_MAX_VISIBLE_STACK - 1; i++) {
+      backCards.push(this.createEnemyCard('back'));
+    }
+
+    const frontCard = this.createEnemyCard('front');
+    stackRoot.append(
+      stackOverflow,
+      ...backCards.map((card) => card.root),
+      frontCard.root,
+    );
+    root.appendChild(stackRoot);
+
+    this.bindFieldLinkHover(root, slotIndex);
+
+    return {
+      root,
+      slotIndex,
+      stackRoot,
+      stackOverflow,
+      frontCard,
+      backCards,
+    };
+  }
+
+  private createEnemyCard(variant: 'front' | 'back'): EnemyCardElements {
+    const root = document.createElement('div');
+    root.className =
+      variant === 'front'
+        ? 'enemy-hud-card enemy-hud-card--front'
+        : 'enemy-hud-card enemy-hud-card--back';
+
     const main = document.createElement('div');
-    main.className = 'enemy-hud-slot-main';
+    main.className = 'enemy-hud-card-main';
 
     const iconWrap = document.createElement('div');
     iconWrap.className =
@@ -227,28 +344,27 @@ export class EnemyHudPanel {
 
     const icon = document.createElement('img');
     icon.className = 'enemy-hud-icon pixel-icon-img pixel-icon-img--24';
-    const iconSize = this.theme.iconSize;
-    icon.width = iconSize;
-    icon.height = iconSize;
+    icon.width = 24;
+    icon.height = 24;
     icon.alt = '';
     iconWrap.appendChild(icon);
 
     const body = document.createElement('div');
-    body.className = 'enemy-hud-slot-body';
+    body.className = 'enemy-hud-card-body';
+
+    const info = document.createElement('div');
+    info.className = 'enemy-hud-card-info';
 
     const label = document.createElement('div');
     label.className = 'enemy-hud-label';
 
-    const hpTrack = document.createElement('div');
-    hpTrack.className = 'enemy-hud-hp-track';
+    const labelName = document.createElement('span');
+    labelName.className = 'enemy-hud-label-name';
 
-    const hpFill = document.createElement('div');
-    hpFill.className = 'enemy-hud-hp-fill';
-    hpTrack.appendChild(hpFill);
-
-    const barrierLayer = document.createElement('div');
-    barrierLayer.className = 'enemy-hud-barrier-layer';
-    hpTrack.appendChild(barrierLayer);
+    const countBadge = document.createElement('span');
+    countBadge.className = 'enemy-hud-count-badge';
+    countBadge.hidden = true;
+    label.append(labelName, countBadge);
 
     const statusBadgeWrap = document.createElement('div');
     statusBadgeWrap.className = 'enemy-hud-status-badges-wrap';
@@ -262,23 +378,45 @@ export class EnemyHudPanel {
     statusBadgeWrap.appendChild(statusBadgeHitLayer);
 
     const dangerTelegraph = document.createElement('div');
-    dangerTelegraph.className = 'enemy-hud-danger-telegraph enemy-hud-danger-telegraph--inactive';
+    dangerTelegraph.className =
+      'enemy-hud-danger-telegraph enemy-hud-danger-telegraph--inactive';
     const dangerTelegraphFill = document.createElement('div');
     dangerTelegraphFill.className = 'enemy-hud-danger-telegraph-fill';
     dangerTelegraph.appendChild(dangerTelegraphFill);
 
-    body.append(label, hpTrack, statusBadgeWrap, dangerTelegraph);
+    info.append(label, statusBadgeWrap, dangerTelegraph);
+
+    const hpRow = document.createElement('div');
+    hpRow.className = 'enemy-hud-hp-row';
+
+    const hpTrack = document.createElement('div');
+    hpTrack.className = 'enemy-hud-hp-track';
+
+    const hpFill = document.createElement('div');
+    hpFill.className = 'enemy-hud-hp-fill';
+    hpTrack.appendChild(hpFill);
+
+    const barrierLayer = document.createElement('div');
+    barrierLayer.className = 'enemy-hud-barrier-layer';
+    hpTrack.appendChild(barrierLayer);
+
+    const statusMiniWrap = document.createElement('div');
+    statusMiniWrap.className = 'enemy-hud-card-status-mini';
+
+    const statusMiniCanvas = document.createElement('canvas');
+    statusMiniCanvas.className = 'enemy-hud-card-status-mini-canvas';
+    statusMiniWrap.appendChild(statusMiniCanvas);
+
+    hpRow.append(hpTrack, statusMiniWrap);
+    body.append(info, hpRow);
     main.append(iconWrap, body);
     root.appendChild(main);
 
-    this.bindFieldLinkHover(root, slotIndex);
-
     return {
       root,
-      slotIndex,
-      label,
-      body,
-      iconWrap,
+      variant,
+      labelName,
+      countBadge,
       icon,
       hpFill,
       barrierLayer,
@@ -288,41 +426,105 @@ export class EnemyHudPanel {
       statusBadgeRenderSignature: null,
       statusBadgeHitSignature: null,
       hpBarSignature: null,
+      statusMiniWrap,
+      statusMiniCanvas,
+      statusMiniSignature: null,
       dangerTelegraph,
       dangerTelegraphFill,
     };
   }
 
-  private updateSlot(slot: SlotElements, entry: EnemyHudEntry): void {
-    slot.root.dataset.enemyId = entry.id;
-    slot.label.textContent = entry.displayName;
+  private updateGroupSlot(slot: GroupSlotElements, group: EnemyHudGroup): void {
+    const stackLayout = resolveEnemyHudCardStackLayout(group.count);
+    const { footprint, visibleCount, hiddenCount } = stackLayout;
 
-    const iconUrl = getClassIconUrl(entry.iconKey);
-    if (iconUrl) {
-      slot.icon.src = iconUrl;
-      slot.icon.style.backgroundColor = '';
+    slot.stackRoot.style.width = `${footprint.width}px`;
+    slot.stackRoot.style.height = `${footprint.height}px`;
+
+    if (hiddenCount > 0) {
+      slot.stackOverflow.hidden = false;
+      slot.stackOverflow.textContent = `+${hiddenCount}`;
     } else {
-      slot.icon.removeAttribute('src');
-      slot.icon.style.backgroundColor = resolveClassIconPlaceholderColor(
-        entry.iconKey,
+      slot.stackOverflow.hidden = true;
+      slot.stackOverflow.textContent = '';
+    }
+
+    const backCount = Math.max(0, visibleCount - 1);
+    for (let i = 0; i < slot.backCards.length; i++) {
+      const card = slot.backCards[i]!;
+      if (i < backCount) {
+        const entry = group.enemies[i + 1]!;
+        this.positionStackCard(card.root, i + 1, visibleCount);
+        card.root.hidden = false;
+        this.updateBackCard(card, entry);
+      } else {
+        card.root.hidden = true;
+      }
+    }
+
+    this.positionStackCard(slot.frontCard.root, 0, visibleCount);
+    this.updateFrontCard(slot, group);
+
+    slot.root.dataset.enemyId = group.representativeEnemy.id;
+  }
+
+  private positionStackCard(
+    card: HTMLElement,
+    depth: number,
+    visibleCount: number,
+  ): void {
+    const offset = enemyHudCardStackOffset(depth);
+    card.style.left = `${offset.x}px`;
+    card.style.top = `${offset.y}px`;
+    card.style.zIndex = String(visibleCount - depth);
+  }
+
+  private updateFrontCard(slot: GroupSlotElements, group: EnemyHudGroup): void {
+    const card = slot.frontCard;
+    const entry = group.representativeEnemy;
+
+    card.labelName.textContent = group.representativeName;
+    if (group.count > 1) {
+      card.countBadge.hidden = false;
+      card.countBadge.textContent = `×${group.count}`;
+    } else {
+      card.countBadge.hidden = true;
+      card.countBadge.textContent = '';
+    }
+
+    const iconUrl = getClassIconUrl(group.representativeIcon);
+    if (iconUrl) {
+      card.icon.src = iconUrl;
+      card.icon.style.backgroundColor = '';
+    } else {
+      card.icon.removeAttribute('src');
+      card.icon.style.backgroundColor = resolveClassIconPlaceholderColor(
+        group.representativeIcon,
         this.theme,
       );
     }
 
-    this.updateHpBar(slot, entry);
-    this.updateStatusBadges(slot, entry);
-    this.updateDangerTelegraph(slot, entry);
+    this.updateHpBar(card, entry);
+    card.statusMiniWrap.hidden = true;
+    card.statusMiniCanvas.hidden = true;
+    this.updateFrontStatusBadges(slot, group);
+    this.updateDangerTelegraph(card, group);
   }
 
-  private updateHpBar(slot: SlotElements, entry: EnemyHudEntry): void {
+  private updateBackCard(card: EnemyCardElements, entry: EnemyHudEntry): void {
+    this.updateHpBar(card, entry);
+    this.updateBackStatusMini(card, entry);
+  }
+
+  private updateHpBar(host: HpBarHost, entry: EnemyHudEntry): void {
     const signature = `${entry.hp}|${entry.maxHp}|${entry.barrierHp}|${entry.isAlive}`;
-    if (signature === slot.hpBarSignature) return;
-    slot.hpBarSignature = signature;
+    if (signature === host.hpBarSignature) return;
+    host.hpBarSignature = signature;
 
     const layout = layoutHpBarBarrier(0, 100, entry.hp, entry.maxHp, entry.barrierHp);
-    slot.hpFill.style.width = layout ? `${layout.hpWidth}%` : '0%';
+    host.hpFill.style.width = layout ? `${layout.hpWidth}%` : '0%';
 
-    slot.barrierLayer.replaceChildren();
+    host.barrierLayer.replaceChildren();
     if (!layout) return;
 
     for (const segment of layout.tier1) {
@@ -330,26 +532,31 @@ export class EnemyHudPanel {
       seg.className = 'enemy-hud-barrier-seg';
       seg.style.left = `${segment.x}%`;
       seg.style.width = `${segment.width}%`;
-      slot.barrierLayer.appendChild(seg);
+      host.barrierLayer.appendChild(seg);
     }
 
     if (entry.maxHp > 0 && entry.barrierHp > entry.maxHp) {
       const overflow = document.createElement('div');
       overflow.className = 'enemy-hud-barrier-overflow';
       overflow.style.width = `${((entry.barrierHp - entry.maxHp) / entry.maxHp) * 100}%`;
-      slot.barrierLayer.appendChild(overflow);
+      host.barrierLayer.appendChild(overflow);
     }
   }
 
-  private updateStatusBadges(slot: SlotElements, entry: EnemyHudEntry): void {
-    const badges = collectStatusEffectBadgeDisplays(entry.statusEffects, {
+  private updateFrontStatusBadges(
+    slot: GroupSlotElements,
+    group: EnemyHudGroup,
+  ): void {
+    const card = slot.frontCard;
+    const entry = group.representativeEnemy;
+    const badges = collectStatusEffectBadgeDisplays(group.importantStates, {
       baseMaxHp: entry.baseMaxHp,
       atk: entry.atk,
       def: entry.def,
       reg: entry.reg,
     });
     const { visible, overflowCount } = selectEnemyHudStatusBadges(badges);
-    const canvas = slot.statusCanvas;
+    const canvas = card.statusCanvas;
     const theme = this.theme;
     const scale = 1;
     const rowLayout = measureEnemyHudStatusRow(scale, theme, overflowCount);
@@ -368,14 +575,14 @@ export class EnemyHudPanel {
       overflowCount,
       slot.slotIndex,
     );
-    const canvasUnchanged = canvasSignature === slot.statusBadgeRenderSignature;
-    const hitsUnchanged = hitSignature === slot.statusBadgeHitSignature;
+    const canvasUnchanged = canvasSignature === card.statusBadgeRenderSignature;
+    const hitsUnchanged = hitSignature === card.statusBadgeHitSignature;
     if (canvasUnchanged && hitsUnchanged) {
       return;
     }
 
     if (!canvasUnchanged) {
-      slot.statusBadgeRenderSignature = canvasSignature;
+      card.statusBadgeRenderSignature = canvasSignature;
       canvas.width = canvasW;
       canvas.height = canvasH;
       const w = `${canvasW}px`;
@@ -401,15 +608,16 @@ export class EnemyHudPanel {
     }
 
     if (badges.length === 0) {
-      slot.statusBadgeHitLayer.replaceChildren();
-      slot.statusBadgeHitSignature = null;
+      card.statusBadgeHitLayer.replaceChildren();
+      card.statusBadgeHitSignature = null;
+      canvas.hidden = true;
       return;
     }
 
     if (!hitsUnchanged) {
-      slot.statusBadgeHitSignature = hitSignature;
+      card.statusBadgeHitSignature = hitSignature;
       syncEnemyHudStatusBadgeHits(
-        slot.statusBadgeHitLayer,
+        card.statusBadgeHitLayer,
         badges,
         visible,
         overflowCount,
@@ -423,29 +631,83 @@ export class EnemyHudPanel {
     }
   }
 
-  private updateDangerTelegraph(slot: SlotElements, entry: EnemyHudEntry): void {
-    const active = entry.dangerTelegraphActive === true;
+  private updateBackStatusMini(card: EnemyCardElements, entry: EnemyHudEntry): void {
+    const badges = collectStatusEffectBadgeDisplays(entry.statusEffects, {
+      baseMaxHp: entry.baseMaxHp,
+      atk: entry.atk,
+      def: entry.def,
+      reg: entry.reg,
+    });
+    const signature = badges.map((b) => b.id).join('|');
+    if (signature === card.statusMiniSignature) return;
+    card.statusMiniSignature = signature;
+
+    const canvas = card.statusMiniCanvas;
+    if (badges.length === 0) {
+      canvas.hidden = true;
+      card.statusMiniWrap.hidden = true;
+      return;
+    }
+
+    card.statusMiniWrap.hidden = false;
+    canvas.hidden = false;
+    const theme = this.theme;
+    const scale = 1;
+    const miniVisible = badges.slice(0, 2);
+    const miniOverflow = badges.length > 2 ? badges.length - 2 : 0;
+    const rowLayout = measureEnemyHudStatusRow(scale, theme, miniOverflow);
+    const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
+    const canvasW = snapHudCanvasCssSize(rowLayout.totalWidth + outlinePad * 2);
+    const canvasH = snapHudCanvasCssSize(rowLayout.totalHeight + outlinePad * 2);
+    canvas.width = canvasW;
+    canvas.height = canvasH;
+    const w = `${canvasW}px`;
+    const h = `${canvasH}px`;
+    canvas.style.width = w;
+    canvas.style.height = h;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.clearRect(0, 0, canvasW, canvasH);
+    drawEnemyHudStatusRow(
+      ctx,
+      outlinePad,
+      outlinePad,
+      miniVisible,
+      miniOverflow,
+      scale,
+      theme,
+    );
+  }
+
+  private updateDangerTelegraph(
+    card: EnemyCardElements,
+    group: EnemyHudGroup,
+  ): void {
+    const active = group.dangerState.telegraphActive === true;
     const progress = Math.max(
       0,
-      Math.min(1, entry.dangerTelegraphProgress ?? 0),
+      Math.min(1, group.dangerState.telegraphProgress),
     );
 
-    slot.dangerTelegraph.classList.toggle(
+    card.dangerTelegraph.classList.toggle(
       'enemy-hud-danger-telegraph--active',
       active,
     );
-    slot.dangerTelegraph.classList.toggle(
+    card.dangerTelegraph.classList.toggle(
       'enemy-hud-danger-telegraph--inactive',
       !active,
     );
-    slot.dangerTelegraphFill.style.width = active ? `${progress * 100}%` : '0%';
+    card.dangerTelegraphFill.style.width = active ? `${progress * 100}%` : '0%';
   }
 
   private bindFieldLinkHover(root: HTMLElement, slotIndex: number): void {
     root.addEventListener('mouseenter', () => {
-      const entry = this.lastDisplayedEntries[slotIndex];
-      if (!entry) return;
-      this.options.onHoverHighlightStart?.(entry.id);
+      const group = this.lastDisplayedGroups[slotIndex];
+      if (!group) return;
+      this.options.onHoverHighlightStart?.(
+        group.enemies.map((enemy) => enemy.id),
+      );
     });
     root.addEventListener('mouseleave', (event) => {
       if (this.shouldRetainFieldLinkHover(event.relatedTarget)) return;
@@ -461,10 +723,13 @@ export class EnemyHudPanel {
     );
   }
 
-  private syncSlotHighlightClasses(slot: SlotElements, unitId: string): void {
-    slot.root.classList.toggle(
-      'enemy-hud-slot--hover-highlight',
-      this.hoverHighlightUnitId === unitId,
+  private syncSlotHighlightClasses(
+    slot: GroupSlotElements,
+    group: EnemyHudGroup,
+  ): void {
+    const highlighted = group.enemies.some((enemy) =>
+      this.hoverHighlightUnitIds.has(enemy.id),
     );
+    slot.root.classList.toggle('enemy-hud-slot--hover-highlight', highlighted);
   }
 }

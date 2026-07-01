@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => {
     syncFromSnapshot: vi.fn(),
     setFieldHoverListener: vi.fn(),
     setHoverHighlightUnitId: vi.fn(),
+    setHoverHighlightUnitIds: vi.fn(),
     setTargetIndicatorUnitIds: vi.fn(),
   };
   return {
@@ -113,6 +114,7 @@ vi.mock("../ui/EnemyHudPanel.ts", () => ({
     mount: vi.fn(),
     update: vi.fn(),
     setHoverHighlightUnitId: vi.fn(),
+    setHoverHighlightUnitIds: vi.fn(),
     destroy: vi.fn(),
   })),
 }));

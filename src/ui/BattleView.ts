@@ -34,7 +34,7 @@ import {
   resolveSkillPresentation,
 } from "../render/skillPresentation.ts";
 import { EnemyHudPanel } from "./EnemyHudPanel.ts";
-import { buildEnemyHudEntries } from "./enemyHudTypes.ts";
+import { buildEnemyHudGroups } from "./enemyHudTypes.ts";
 import { PartyHudPanel } from "./PartyHudPanel.ts";
 import { PartyMemberEffectiveStatsPanel } from "./PartyMemberEffectiveStatsPanel.ts";
 import {
@@ -68,6 +68,7 @@ import { CANVAS_W } from "../battle/battleConstants.ts";
 import {
   createEmptyHoverHighlight,
   isSameHoverHighlight,
+  resolveHoverHighlightUnitIds,
   type BattleHoverHighlightSource,
   type BattleHoverHighlightState,
 } from "./battleHoverHighlight.ts";
@@ -426,8 +427,8 @@ export class BattleView {
       layout: "overlay-top",
       floatingTooltip: this.hudFloatingTooltip,
       gameTermPanel: this.gameTermPanel,
-      onHoverHighlightStart: (unitId) => {
-        this.setHoverHighlight(unitId, "hud");
+      onHoverHighlightStart: (unitIds) => {
+        this.setHoverHighlight(unitIds[0] ?? null, "hud", unitIds);
       },
       onHoverHighlightEnd: () => {
         if (this.hoverHighlight.source === "hud") {
@@ -467,7 +468,7 @@ export class BattleView {
       );
       this.partyHud.update(buildPartyHudEntries(snapshot, partyMeta));
       this.partyHud.refreshLocale();
-      this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies), {
+      this.enemyHud.update(buildEnemyHudGroups(snapshot.enemies), {
         waveIndex: snapshot.waveIndex,
       });
       this.refreshMemberStatsPanel();
@@ -613,7 +614,7 @@ export class BattleView {
         buildPartyHudMetaBySlot(save.party, this.gameData.classRegistry),
       ),
     );
-    this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies), {
+    this.enemyHud.update(buildEnemyHudGroups(snapshot.enemies), {
       waveIndex: snapshot.waveIndex,
     });
   }
@@ -621,8 +622,9 @@ export class BattleView {
   private setHoverHighlight(
     unitId: string | null,
     source: BattleHoverHighlightSource | null,
+    highlightUnitIds: readonly string[] = unitId ? [unitId] : [],
   ): void {
-    const next = { unitId, source };
+    const next = { unitId, source, highlightUnitIds };
     if (isSameHoverHighlight(this.hoverHighlight, next)) return;
     this.hoverHighlight = next;
     this.applyHoverHighlight();
@@ -631,8 +633,11 @@ export class BattleView {
 
   private applyHoverHighlight(): void {
     const { unitId } = this.hoverHighlight;
-    this.canvas.setHoverHighlightUnitId(unitId);
-    this.enemyHud.setHoverHighlightUnitId(unitId);
+    const highlightUnitIds = resolveHoverHighlightUnitIds(this.hoverHighlight);
+    this.canvas.setHoverHighlightUnitIds(
+      highlightUnitIds.length > 0 ? highlightUnitIds : null,
+    );
+    this.enemyHud.setHoverHighlightUnitIds(highlightUnitIds);
     this.partyHud.setHoverHighlightUnitId(unitId);
   }
 
@@ -960,7 +965,7 @@ export class BattleView {
       displayRows:
         this.verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
     });
-    this.enemyHud.update(buildEnemyHudEntries(snapshot.enemies), {
+    this.enemyHud.update(buildEnemyHudGroups(snapshot.enemies), {
       waveIndex: snapshot.waveIndex,
     });
     this.canvas.tick(deltaMs);
