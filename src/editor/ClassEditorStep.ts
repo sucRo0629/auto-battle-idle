@@ -402,6 +402,36 @@ export class ClassEditorStep {
         }, { rows: 5, placeholder: "数文のプレイヤー向け解説。Enter で改行。詳細・クラス選択に表示。" })
       )
     );
+    basicBody.appendChild(
+      createFieldRow(
+        "戦闘傾向タグ（編成 UI）",
+        createTextarea(
+          draft.class.featureTags?.ja?.join(" / ") ?? "",
+          (raw) => {
+            commitDraft((next) => {
+              const tags = raw
+                .split(/[/／,、|｜\n]+/)
+                .map((tag) => tag.trim())
+                .filter(Boolean);
+              if (tags.length > 0) {
+                next.class.featureTags = {
+                  ja: tags,
+                  ...(next.class.featureTags?.en
+                    ? { en: next.class.featureTags.en }
+                    : {}),
+                };
+              } else {
+                delete next.class.featureTags;
+              }
+            });
+          },
+          {
+            rows: 2,
+            placeholder: "低HP狙い / 回避 / 出血 / 背後移動（スキル名は使わない）",
+          }
+        )
+      )
+    );
     identityGrid.appendChild(
       createFieldRow(
         "ロール",

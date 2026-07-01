@@ -96,6 +96,12 @@ export interface ClassLocaleText {
   en?: string;
 }
 
+/** 編成 UI 概要向けの戦闘傾向タグ（スキル名の再掲はしない） */
+export interface ClassFeatureTags {
+  ja: string[];
+  en?: string[];
+}
+
 export interface ClassPreset extends CombatStats {
   id: ClassId;
   role: Role;
@@ -104,6 +110,8 @@ export interface ClassPreset extends CombatStats {
   epithetEn?: string;
   /** 編成 UI 向けクラス要約（数文。全クラス必須） */
   summary?: ClassLocaleText;
+  /** 編成 UI 概要の短い戦闘傾向タグ（任意） */
+  featureTags?: ClassFeatureTags;
   formationRow: FormationRow;
   traits: NormalizedEntityTraits;
   /** 未指定時は `{id}_basic_attack` */

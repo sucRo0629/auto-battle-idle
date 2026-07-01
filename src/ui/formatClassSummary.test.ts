@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatClassSummary, formatClassSummaryForAria } from './formatClassSummary.ts';
+import { formatClassFeatureTags, formatClassSummary, formatClassSummaryForAria } from './formatClassSummary.ts';
 
 describe('formatClassSummary', () => {
   it('returns trimmed ja summary', () => {
@@ -29,5 +29,28 @@ describe('formatClassSummary', () => {
 describe('formatClassSummaryForAria', () => {
   it('collapses newlines and repeated spaces', () => {
     expect(formatClassSummaryForAria('一行目。\n二行目。')).toBe('一行目。 二行目。');
+  });
+});
+
+describe('formatClassFeatureTags', () => {
+  it('returns ja tags by default', () => {
+    expect(
+      formatClassFeatureTags({
+        featureTags: { ja: ['低HP狙い', '回避'] },
+      }),
+    ).toEqual(['低HP狙い', '回避']);
+  });
+
+  it('falls back to ja when en is missing', () => {
+    expect(
+      formatClassFeatureTags(
+        { featureTags: { ja: ['近接'] } },
+        'en',
+      ),
+    ).toEqual(['近接']);
+  });
+
+  it('returns empty array when featureTags is missing', () => {
+    expect(formatClassFeatureTags(undefined)).toEqual([]);
   });
 });

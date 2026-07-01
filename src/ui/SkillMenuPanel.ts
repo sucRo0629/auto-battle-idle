@@ -43,7 +43,7 @@ import {
 import { resolveLearnedSkills } from "../progression/skillUnlocks.ts";
 import { formatSkillCardLines } from "./formatSkillText.ts";
 import { annotateGameTerms } from "./annotateGameTerms.ts";
-import { formatClassSummary, formatClassSummaryForAria } from "./formatClassSummary.ts";
+import { formatClassFeatureTags, formatClassSummary, formatClassSummaryForAria } from "./formatClassSummary.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
 import { GameTermTooltip } from "./GameTermTooltip.ts";
 import type { GameTermId, GameTermLocale } from "./gameTermGlossary.ts";
@@ -100,7 +100,7 @@ export interface SkillMenuPanelOptions {
   pickerHost?: HTMLElement;
   /** 確認モードでは4人未満でも戦闘へ戻れる。解除 UI は Class Select 再クリックのみ。 */
   isVerifyMode?: () => boolean;
-  /** Formation Screen: Party Summary ヘッダー右端の補助導線 */
+  /** Formation Screen: 左ペイン最下部フッターの補助導線 */
   returnToBattle?: SkillMenuPanelReturnToBattleOptions;
 }
 
@@ -109,6 +109,7 @@ export class SkillMenuPanel {
   private readonly boardEl: HTMLElement;
   private readonly formationZoneHeaderEl: HTMLElement;
   private readonly formationZoneHeaderTitleEl: HTMLElement;
+  private readonly leftRailFooterEl: HTMLElement | null;
   private readonly returnToBattleButton: HTMLButtonElement | null;
   private readonly formationBlockEl: HTMLElement;
   private readonly rosterSlotsEl: HTMLElement;
@@ -164,36 +165,34 @@ export class SkillMenuPanel {
     this.boardEl = document.createElement("div");
     this.boardEl.className = "skill-menu-tactical-board";
 
-    const boardUpperEl = document.createElement("div");
-    boardUpperEl.className = "skill-menu-board-upper";
-
     const formationZoneEl = document.createElement("section");
     formationZoneEl.className =
       "skill-menu-zone skill-menu-zone--formation";
 
     this.formationZoneHeaderEl = document.createElement("div");
     this.formationZoneHeaderEl.className = "skill-menu-zone-header";
-
     this.formationZoneHeaderTitleEl = document.createElement("span");
     this.formationZoneHeaderTitleEl.className = "skill-menu-zone-header-title";
+    this.formationZoneHeaderEl.append(this.formationZoneHeaderTitleEl);
 
+    let leftRailFooterEl: HTMLElement | null = null;
+    let returnToBattleButton: HTMLButtonElement | null = null;
     if (options.returnToBattle) {
-      const returnToBattleButton = document.createElement("button");
+      leftRailFooterEl = document.createElement("div");
+      leftRailFooterEl.className = "skill-menu-left-rail-footer";
+      leftRailFooterEl.dataset.section = "left-rail-footer";
+
+      returnToBattleButton = document.createElement("button");
       returnToBattleButton.type = "button";
       returnToBattleButton.className = "skill-menu-return-to-battle-button";
       returnToBattleButton.addEventListener("click", () => {
-        if (returnToBattleButton.disabled) return;
+        if (returnToBattleButton?.disabled) return;
         options.returnToBattle?.onClick();
       });
-      this.returnToBattleButton = returnToBattleButton;
-      this.formationZoneHeaderEl.append(
-        this.formationZoneHeaderTitleEl,
-        returnToBattleButton
-      );
-    } else {
-      this.returnToBattleButton = null;
-      this.formationZoneHeaderEl.append(this.formationZoneHeaderTitleEl);
+      leftRailFooterEl.appendChild(returnToBattleButton);
     }
+    this.leftRailFooterEl = leftRailFooterEl;
+    this.returnToBattleButton = returnToBattleButton;
 
     this.formationBlockEl = document.createElement("div");
     this.formationBlockEl.className = "skill-menu-formation-block";
@@ -286,8 +285,15 @@ export class SkillMenuPanel {
     this.detailWrapEl.className = "skill-menu-detail-wrap";
     this.detailWrapEl.append(this.detailOverviewEl, this.detailScrollEl);
 
+    const leftRailEl = document.createElement("div");
+    leftRailEl.className = "skill-menu-left-rail";
+
     detailZoneEl.append(this.detailZoneHeaderEl, this.detailWrapEl);
-    boardUpperEl.append(classArchiveEl, detailZoneEl);
+    leftRailEl.append(classArchiveEl, formationZoneEl);
+    if (this.leftRailFooterEl) {
+      leftRailEl.appendChild(this.leftRailFooterEl);
+    }
+    this.boardEl.append(leftRailEl, detailZoneEl);
 
     this.gameTermPanel = new GameTermPanel(this.root, {
       locale: getLocale() as GameTermLocale,
@@ -296,7 +302,6 @@ export class SkillMenuPanel {
     this.gameTermPanel.mount();
     this.gameTermTooltip = new GameTermTooltip(this.root);
 
-    this.boardEl.append(boardUpperEl, formationZoneEl);
     this.root.appendChild(this.boardEl);
     this.container.appendChild(this.root);
     this.unsubscribeLocale = subscribeLocaleChange(() => this.render());
@@ -493,6 +498,10 @@ export class SkillMenuPanel {
         const ariaParts = [preset.displayName];
         if (preset.epithetEn) ariaParts.push(preset.epithetEn);
         if (summary) ariaParts.push(formatClassSummaryForAria(summary));
+        const featureTags = formatClassFeatureTags(preset, getLocale());
+        if (featureTags.length > 0) {
+          ariaParts.push(featureTags.join(" / "));
+        }
         button.setAttribute("aria-label", ariaParts.join(" "));
 
         const visual = document.createElement("div");
@@ -679,19 +688,7 @@ export class SkillMenuPanel {
     const preset = this.gameData.classRegistry[focusedClassId];
     if (!preset) return;
 
-    const playerLevel = this.getPlayerLevel();
-    const learned = resolveLearnedSkills(
-      preset,
-      playerLevel,
-      this.gameData.skillRegistry
-    );
-
-    const overviewParts = [
-      this.createClassSummaryBand(preset),
-      this.createMajorSkillsPreview(preset, learned),
-      this.createBasicAttackSection(preset),
-    ].filter((node): node is HTMLElement => node !== null);
-    this.detailOverviewEl.append(...overviewParts);
+    this.detailOverviewEl.appendChild(this.createClassSummaryBand(preset));
     requestAnimationFrame(() => this.updateDetailScrollFade());
   }
 
@@ -794,106 +791,45 @@ export class SkillMenuPanel {
 
     const body = document.createElement("div");
     body.className = "skill-menu-class-summary-body";
-    body.appendChild(identityEl);
+
+    const textCol = document.createElement("div");
+    textCol.className = "skill-menu-class-summary-text-col";
+    textCol.appendChild(identityEl);
 
     const summary = formatClassSummary(preset, getLocale());
     if (summary) {
       const summaryEl = document.createElement("p");
       summaryEl.className = "skill-menu-class-summary-text";
       summaryEl.textContent = summary;
-      this.gameTermTooltip.bind(summaryEl, () => ({
-        title: preset.displayName,
-        body: summary,
-      }));
-      body.appendChild(summaryEl);
+      textCol.appendChild(summaryEl);
     }
 
-    body.appendChild(this.createStatChipRow(preset));
+    const featureTags = formatClassFeatureTags(preset, getLocale());
+    if (featureTags.length > 0) {
+      const featuresEl = document.createElement("div");
+      featuresEl.className = "skill-menu-class-features";
+
+      const labelEl = document.createElement("span");
+      labelEl.className = "skill-menu-class-features-label";
+      labelEl.textContent = t("party.classFeatures");
+
+      const tagsEl = document.createElement("p");
+      tagsEl.className = "skill-menu-class-features-tags";
+      tagsEl.textContent = featureTags.join(" / ");
+
+      featuresEl.append(labelEl, tagsEl);
+      textCol.appendChild(featuresEl);
+    }
+
+    const columns = document.createElement("div");
+    columns.className = "skill-menu-class-summary-columns";
+    columns.append(textCol, this.createStatColumn(preset));
+    body.appendChild(columns);
     section.appendChild(body);
     return section;
   }
 
-  private createMajorSkillsPreview(
-    preset: ClassPreset,
-    learned: ReturnType<typeof resolveLearnedSkills>
-  ): HTMLElement | null {
-    if (!this.shouldHideFutureSkillSlots()) return null;
-    const skillEntries: { skillId: string; def: PassiveSkillDef | ActiveSkillDef }[] =
-      [];
-    for (const skillId of learned.learnedPassiveIds) {
-      const def = this.gameData.skillRegistry.passives[skillId];
-      if (def) skillEntries.push({ skillId, def });
-    }
-    for (const skillId of learned.learnedActiveIds) {
-      if (skillId === preset.basicAttackSkillId) continue;
-      const def = this.gameData.skillRegistry.actives[skillId];
-      if (def) skillEntries.push({ skillId, def });
-    }
-    if (skillEntries.length === 0) return null;
-
-    const section = document.createElement("section");
-    section.className = "skill-menu-major-skills";
-
-    const list = document.createElement("ul");
-    list.className = "skill-menu-major-skills-list";
-
-    for (const { def } of skillEntries) {
-      const lines = formatSkillCardLines(def, {
-        locale: getLocale(),
-        basicAttackRangePx: preset.traits.rangePx,
-      });
-      const display = resolveSkillCardDisplay(
-        lines,
-        def,
-        getLocale() as GameTermLocale
-      );
-      const summaryLine = display.headlineLines[0]?.trim();
-      if (!summaryLine) continue;
-
-      const item = document.createElement("li");
-      item.className = "skill-menu-major-skills-item";
-
-      const nameEl = document.createElement("span");
-      nameEl.className = "skill-menu-major-skills-name";
-      nameEl.textContent = def.name ?? "";
-
-      const roleEl = document.createElement("span");
-      roleEl.className = "skill-menu-major-skills-role";
-      roleEl.textContent = summaryLine;
-
-      item.append(nameEl, document.createTextNode("　"), roleEl);
-      list.appendChild(item);
-    }
-
-    if (list.childElementCount === 0) return null;
-    section.appendChild(list);
-    return section;
-  }
-
-  private createBasicAttackSection(preset: ClassPreset): HTMLElement | null {
-    const skill = this.gameData.skillRegistry.actives[preset.basicAttackSkillId];
-    if (!skill) return null;
-
-    const section = document.createElement("section");
-    section.className = "skill-menu-basic-attack-section";
-
-    const heading = document.createElement("h3");
-    heading.className = "skill-menu-section-title skill-menu-basic-attack-title";
-    heading.textContent = getMemberStatLabels().basicAttack;
-
-    const card = this.createSkillSummaryCard({
-      skillId: preset.basicAttackSkillId,
-      def: skill,
-      preset,
-      kind: "active",
-    });
-    card.classList.add("skill-menu-skill-summary-card--basic-attack");
-
-    section.append(heading, card);
-    return section;
-  }
-
-  private createStatChipRow(preset: ClassPreset): HTMLElement {
+  private createStatColumn(preset: ClassPreset): HTMLElement {
     const playerLevel = this.getPlayerLevel();
     const stats = resolveMemberDisplayStats(
       preset,
@@ -902,33 +838,75 @@ export class SkillMenuPanel {
     );
     const statLabels = getMemberStatLabels();
 
-    const row = document.createElement("div");
-    row.className = "skill-menu-class-summary-stats";
+    const column = document.createElement("div");
+    column.className = "skill-menu-class-summary-stats";
 
-    const chips: { label: string; value: string }[] = [
+    const rows: { label: string; value: string }[] = [
       { label: statLabels.hp, value: String(stats.maxHp) },
       { label: statLabels.atk, value: String(stats.atk) },
       { label: statLabels.def, value: String(stats.def) },
       { label: statLabels.reg, value: `${stats.reg}%` },
-      { label: statLabels.spd, value: stats.spdLabel },
     ];
+
+    const basicAttackLine = this.formatBasicAttackSummary(preset);
+    if (basicAttackLine) {
+      rows.push({ label: statLabels.basicAttack, value: basicAttackLine });
+    }
+
+    rows.push({ label: statLabels.spd, value: stats.spdLabel });
 
     const basicAttack = resolveMemberBasicAttackDisplay(
       preset,
       this.gameData.skillRegistry
     );
     if (basicAttack) {
-      chips.push({ label: statLabels.range, value: basicAttack.rangeLabel });
+      rows.push({ label: statLabels.range, value: basicAttack.rangeLabel });
     }
 
-    for (const chip of chips) {
-      const el = document.createElement("span");
-      el.className = "skill-menu-stat-chip";
-      el.textContent = `${chip.label} ${chip.value}`;
-      row.appendChild(el);
+    for (const row of rows) {
+      const rowEl = document.createElement("div");
+      rowEl.className = "skill-menu-stat-row";
+
+      const labelEl = document.createElement("span");
+      labelEl.className = "skill-menu-stat-row-label";
+      labelEl.textContent = row.label;
+
+      const valueEl = document.createElement("span");
+      valueEl.className = "skill-menu-stat-row-value";
+      valueEl.textContent = row.value;
+
+      rowEl.append(labelEl, valueEl);
+      column.appendChild(rowEl);
     }
 
-    return row;
+    return column;
+  }
+
+  private formatBasicAttackSummary(preset: ClassPreset): string | null {
+    const skill = this.gameData.skillRegistry.actives[preset.basicAttackSkillId];
+    if (!skill) return null;
+
+    const basicAttack = resolveMemberBasicAttackDisplay(
+      preset,
+      this.gameData.skillRegistry
+    );
+    const lines = formatSkillCardLines(skill, {
+      locale: getLocale(),
+      basicAttackRangePx: preset.traits.rangePx,
+    });
+    const display = resolveSkillCardDisplay(
+      lines,
+      skill,
+      getLocale() as GameTermLocale
+    );
+
+    const effectParts = display.headlineLines.filter(Boolean);
+    const detailParts = [
+      basicAttack?.attributeLabel,
+      ...effectParts,
+    ].filter((part): part is string => Boolean(part && part.trim()));
+
+    return detailParts.length > 0 ? detailParts.join(" / ") : null;
   }
 
   private createSkillKindSection(

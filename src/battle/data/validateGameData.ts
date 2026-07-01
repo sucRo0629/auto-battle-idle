@@ -23,6 +23,7 @@ import type {
   AttackSpeedTier,
   BasicAttackTransformPrimaryPatch,
   BasicAttackTransformSpec,
+  ClassFeatureTags,
   ClassLocaleText,
   ClassPreset,
   ClassSkillUnlock,
@@ -5183,6 +5184,20 @@ function parseClassSummary(
   return { ja, ...(en !== undefined ? { en } : {}) };
 }
 
+function parseClassFeatureTags(
+  raw: unknown,
+  context: string,
+): ClassFeatureTags | undefined {
+  if (raw === undefined) return undefined;
+  const obj = requireRecord(raw, context);
+  const ja = requireStringArray(obj, 'ja', `${context}.ja`, 1);
+  const en =
+    obj.en === undefined
+      ? undefined
+      : requireStringArray(obj, 'en', `${context}.en`, 1);
+  return { ja, ...(en !== undefined ? { en } : {}) };
+}
+
 function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
   if (!Array.isArray(raw)) {
     throw new Error('classes.json must be an array');
@@ -5201,6 +5216,7 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       missingField(context, 'summary');
     }
     const summary = parseClassSummary(obj.summary, context);
+    const featureTags = parseClassFeatureTags(obj.featureTags, `${context}.featureTags`);
     const formationRow = requireEnum(obj, 'formationRow', context, FORMATION_ROWS_SET);
     const traitsRaw = parseEntityTraits(obj.traits, `${context}.traits`);
     const maxHp = requireNumber(obj, 'maxHp', context);
@@ -5265,6 +5281,7 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       displayName,
       ...(epithetEn !== undefined ? { epithetEn } : {}),
       summary,
+      ...(featureTags !== undefined ? { featureTags } : {}),
       formationRow,
       traits: traitsRaw,
       maxHp,
