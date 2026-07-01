@@ -8,5 +8,5 @@ export function formatPartyHudSkillSlotTooltip(
   inactive: boolean,
 ): string | null {
   if (inactive || !cd?.skillId) return null;
-  return skillDef?.displayName ?? cd.skillId;
+  return skillDef?.name ?? cd.skillId;
 }

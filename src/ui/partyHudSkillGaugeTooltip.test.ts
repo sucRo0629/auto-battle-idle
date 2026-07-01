@@ -7,7 +7,7 @@ describe('formatPartyHudSkillSlotTooltip', () => {
     expect(formatPartyHudSkillSlotTooltip(3, undefined, undefined, true)).toBeNull();
   });
 
-  it('returns only the skill display name for active slots', () => {
+  it('returns only the skill name for active slots', () => {
     const text = formatPartyHudSkillSlotTooltip(
       0,
       {
@@ -17,13 +17,13 @@ describe('formatPartyHudSkillSlotTooltip', () => {
         triggerValue: 10,
         slotIndex: 0,
       },
-      { displayName: 'Test Skill' } as never,
+      { name: 'Test Skill' } as never,
       false,
     );
     expect(text).toBe('Test Skill');
   });
 
-  it('falls back to skillId when displayName is missing', () => {
+  it('falls back to skillId when name is missing', () => {
     const text = formatPartyHudSkillSlotTooltip(
       0,
       {
