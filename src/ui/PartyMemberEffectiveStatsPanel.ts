@@ -1,4 +1,5 @@
 import '../styles/party-member-effective-stats.css';
+import { clampElementToMountBounds } from './clampElementToMountBounds.ts';
 import type { AttackSpeedTier, CombatantSnapshot } from '../battle/types.ts';
 import { getClassIconUrl } from '../render/IconRegistry.ts';
 import {
@@ -104,6 +105,9 @@ export class PartyMemberEffectiveStatsPanel {
   show(data: PartyMemberEffectiveStatsPanelData): void {
     this.visible = true;
     this.root.hidden = false;
+    if (this.frameMount) {
+      this.frameMount.appendChild(this.root);
+    }
     this.render(data);
     this.reposition();
   }
@@ -139,6 +143,7 @@ export class PartyMemberEffectiveStatsPanel {
       this.root.style.left = `${slot.left - frame.left}px`;
     }
     this.root.style.top = `${slot.top - frame.top}px`;
+    clampElementToMountBounds(this.root, this.frameMount);
   }
 
   destroy(): void {

@@ -506,6 +506,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | パネル | 編成 UI と同じ **`GameTermPanel`**（`BattleView` が `canvasFrame` に 1 インスタンス）。見出し・本文・パネル内用語リンク・戻るは [party-formation-ui.md §6.4](party-formation-ui.md#64-インライン用語パネル) に準拠 |
 | クリック不可 | `description` 省略の HUD 表示名のみ（例: stat 系 `hp` / `atk`）は **ホバーで表示名 tooltip のみ**（クリックで用語パネルは開かない） |
 | ホバー | **全バッジ** — 表示名 tooltip（`resolveStatusBadgeTooltipLabel`）。`description` ありのバッジも同様 |
+| tooltip 配置 | `PartyHudFloatingTooltip` / `PartyMemberEffectiveStatsPanel` は `battle-canvas-host` 内 **最前面レイヤー**（`.battle-layer--tooltip`、z-index 6）にマウント。表示時はレイヤー末尾へ移動。**1280×720 Canvas 外へはみ出さない**（`clampElementToMountBounds`） |
 | `+N` 省略枠 | **ホバーのみ** — 省略分の表示名を `、` 連結（従来どおり）。個別の用語パネルは開かない |
 | 演出 | クリック可能バッジは `cursor: pointer` + ホバー / 展開時のアウトライン（`battle-view.css`） |
 
@@ -576,13 +577,15 @@ scale = min(
 )
 ```
 
-ピクセルアート表示を前提に、拡大時は nearest-neighbor / pixelated 表示を維持する。
+実装（`battleRootScale.ts`）では **12 / 20 / 24px HUD アイコンが CSS 整数ピクセルに乗るよう `1/4` 刻みへ切り下げ** してから `--battle-scale` に入れる。`.battle-root` は `transform: scale()` ではなく **`zoom: var(--battle-scale)`** で拡縮する（`transform: scale()` は DOM の `image-rendering: pixelated` を無効化しやすい）。
+
+ピクセルアート表示を前提に、拡大時は nearest-neighbor / pixelated 表示を維持する。**DOM のクラス/スキル/状態アイコンは `pixel-icon-frame.css` を正本**とし、`image-rendering: pixelated` + `crisp-edges` と `object-fit: none`（等倍ネイティブ）を必須とする。
 
 ```text
 ctx.imageSmoothingEnabled = false
 ```
 
-CSS では Canvas / 画像に `image-rendering: pixelated` と `image-rendering: crisp-edges` の考え方を反映する。
+CSS では Canvas / 画像に `image-rendering: pixelated` と `image-rendering: crisp-edges` を反映する。`<img>` ピクセルアイコンは `object-fit: none; object-position: 0 0` とする（`fill` / `contain` による補間を禁止）。
 
 ### 8.3 基本構造
 
@@ -738,7 +741,7 @@ active_3  active_4
 | Lv10 | `active_3` を有効表示。`active_4` は非アクティブ枠 |
 | Lv20 | 4 枠すべて有効表示 |
 | 未習得枠 | 薄い空ゲージ、暗い溝、低 opacity など。ロックアイコンなどの強い記号は原則使わない |
-| 詳細 | スキル名、残り時間、効果説明はホバー時ツールチップで確認 |
+| 詳細 | ホバー時ツールチップは **対象スキルの表示名のみ**（`formatPartyHudSkillSlotTooltip`）。未解放枠・未習得枠は tooltip なし。残り時間・効果説明はゲージ表示・編成 UI 等で確認 |
 
 レベルや習得数によってスキルゲージ欄の高さや配置を変えない。敵 HUD には通常スキルリキャストバーを表示しないため、本仕様は味方 HUD 専用。
 

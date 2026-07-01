@@ -1,9 +1,9 @@
 .party-member-effective-stats {
   position: absolute;
-  z-index: 20;
+  z-index: 1;
   box-sizing: border-box;
   width: max-content;
-  max-width: min(220px, calc(100vw - 16px));
+  max-width: min(220px, calc(100% - 8px));
   margin-top: -4px;
   padding: 8px 10px;
   border: 1px solid var(--canvas-border-color);

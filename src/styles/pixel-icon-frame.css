@@ -1,4 +1,5 @@
 /* 24px ピクセルアート用の共通アイコン枠（border-box グローバル設定の影響を受けない） */
+
 .pixel-icon-frame {
   display: inline-flex;
   align-items: center;
@@ -13,7 +14,8 @@
   display: block;
   flex: none;
   box-sizing: content-box;
-  /* 24×24 ネイティブをそのまま描画（object-fit: none は高 DPI で崩れやすい） */
+  /* 24×24 ネイティブをそのまま描画（object-fit: none は高 DPI / zoom で崩れやすい） */
+  image-rendering: -moz-crisp-edges;
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }

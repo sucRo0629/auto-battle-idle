@@ -128,7 +128,7 @@
 
 | 現象 | 典型原因 | 対処 |
 | ---- | -------- | ---- |
-| **ガタつき**（階段状・硬い輪郭） | 12px 未満の Web フォントヒンティング、戦闘 HUD の `transform: scale(--battle-scale)` による非整数倍拡縮 | `.game-shell` で `-webkit-font-smoothing: antialiased` 等を適用。`.battle-root` から `image-rendering` を外し `canvas`/`img` のみに限定。**本文は `--font-body-min-size`（12px）以上** |
+| **ガタつき**（階段状・硬い輪郭） | 12px 未満の Web フォントヒンティング、戦闘 HUD の非整数倍拡縮 | `.game-shell` で `-webkit-font-smoothing: antialiased` 等を適用。`.battle-root` から `image-rendering` を外し `canvas`/`img` のみに限定。**本文は `--font-body-min-size`（12px）以上**。拡縮は `zoom: var(--battle-scale)` + `battleRootScale.ts` の 1/4 刻みスナップ（`transform: scale()` は使わない） |
 | **にじみ**（ぼやけ） | 過度な AA・ブラー・低解像度での拡大 | 本プロジェクトの本文方針では主因になりにくい |
 
 戦闘画面は 1280×720 をビューポートに合わせて **一括スケール** するため、ウィンドウサイズが基準の整数倍でないと DOM 文字がジャギやすい（構造上の制約）。編成画面はスケールなし。

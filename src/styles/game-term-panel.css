@@ -1,3 +1,5 @@
+@import './pixel-icon-frame.css';
+
 .game-term-panel {
   position: fixed;
   z-index: 1200;
@@ -49,7 +51,6 @@
   display: block;
   width: 24px;
   height: 24px;
-  image-rendering: pixelated;
 }
 
 .game-term-panel-icon[hidden] {

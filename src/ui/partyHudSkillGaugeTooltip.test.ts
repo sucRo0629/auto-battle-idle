@@ -2,16 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { formatPartyHudSkillSlotTooltip } from './partyHudSkillGaugeTooltip.ts';
 
 describe('formatPartyHudSkillSlotTooltip', () => {
-  it('describes inactive slots by unlock level', () => {
-    expect(formatPartyHudSkillSlotTooltip(2, undefined, undefined, true)).toContain(
-      '10',
-    );
-    expect(formatPartyHudSkillSlotTooltip(3, undefined, undefined, true)).toContain(
-      '20',
-    );
+  it('returns null for inactive slots', () => {
+    expect(formatPartyHudSkillSlotTooltip(2, undefined, undefined, true)).toBeNull();
+    expect(formatPartyHudSkillSlotTooltip(3, undefined, undefined, true)).toBeNull();
   });
 
-  it('includes skill name and remaining progress for active slots', () => {
+  it('returns only the skill display name for active slots', () => {
     const text = formatPartyHudSkillSlotTooltip(
       0,
       {
@@ -24,7 +20,22 @@ describe('formatPartyHudSkillSlotTooltip', () => {
       { displayName: 'Test Skill' } as never,
       false,
     );
-    expect(text).toContain('Test Skill');
-    expect(text).toMatch(/3|秒|s/);
+    expect(text).toBe('Test Skill');
+  });
+
+  it('falls back to skillId when displayName is missing', () => {
+    const text = formatPartyHudSkillSlotTooltip(
+      0,
+      {
+        skillId: 'test_skill',
+        remaining: 0,
+        triggerKind: 'time',
+        triggerValue: 10,
+        slotIndex: 0,
+      },
+      undefined,
+      false,
+    );
+    expect(text).toBe('test_skill');
   });
 });

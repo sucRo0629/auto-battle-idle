@@ -171,8 +171,6 @@
   flex: none;
   width: 12px;
   height: 12px;
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
 
 .party-stats-damage-bar-tag-icon--dealt {
@@ -188,8 +186,8 @@
 .party-stats-damage-bar-tag-icon--taken {
   width: 12px;
   height: 12px;
-  object-fit: contain;
-  object-position: center;
+  object-fit: none;
+  object-position: 0 0;
 }
 
 .party-stats-damage-bar::after {
@@ -207,8 +205,8 @@
 .party-stats-damage-bar-tag-icon--heal {
   width: 12px;
   height: 12px;
-  object-fit: contain;
-  object-position: center;
+  object-fit: none;
+  object-position: 0 0;
 }
 
 .party-stats-damage-bar--dealt::after {

@@ -110,6 +110,7 @@ export class BattleView {
   private readonly battleXDebugCanvas: BattleXDebugCanvas;
   private readonly hudFloatingTooltip: PartyHudFloatingTooltip;
   private readonly gameTermPanel: GameTermPanel;
+  private readonly hudTooltipLayer: HTMLElement;
   private readonly canvasFrame: HTMLElement;
   private readonly partyHudSlotEl: HTMLElement;
   private readonly enemyHudSlotEl: HTMLElement;
@@ -184,6 +185,11 @@ export class BattleView {
     battleDebugOverlay.setAttribute("aria-hidden", "true");
     this.battleDebugOverlay = battleDebugOverlay;
 
+    const hudTooltipLayer = document.createElement("div");
+    hudTooltipLayer.className = "battle-layer battle-layer--tooltip";
+    hudTooltipLayer.setAttribute("aria-hidden", "true");
+    this.hudTooltipLayer = hudTooltipLayer;
+
     const battleDebugShell = document.createElement("div");
     battleDebugShell.className = "battle-debug-shell";
     battleDebugShell.style.setProperty(
@@ -244,6 +250,7 @@ export class BattleView {
       battleHudLayer,
       battleTopInfo,
       battleDebugOverlay,
+      hudTooltipLayer,
     );
 
     this.battleRoot.appendChild(this.canvasHost);
@@ -333,7 +340,7 @@ export class BattleView {
     canvasFrame.appendChild(hudStack);
     battleLane.appendChild(canvasFrame);
 
-    this.hudFloatingTooltip = new PartyHudFloatingTooltip(canvasFrame);
+    this.hudFloatingTooltip = new PartyHudFloatingTooltip(this.hudTooltipLayer);
 
     this.gameTermPanel = new GameTermPanel(canvasFrame, {
       locale: getLocale() as GameTermLocale,
@@ -391,13 +398,13 @@ export class BattleView {
 
     const statsPanelStorage = document.createElement('div');
     statsPanelStorage.hidden = true;
-    canvasFrame.appendChild(statsPanelStorage);
+    this.hudTooltipLayer.appendChild(statsPanelStorage);
 
     this.memberStatsPanel = new PartyMemberEffectiveStatsPanel(
       statsPanelStorage,
       this.root,
       {
-        frameMount: canvasFrame,
+        frameMount: this.hudTooltipLayer,
         onHoverStart: () => {
           this.clearMemberStatsHideTimer();
         },

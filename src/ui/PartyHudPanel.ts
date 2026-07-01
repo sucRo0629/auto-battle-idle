@@ -24,6 +24,7 @@ import {
 } from '../render/statusBadgeRenderer.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
 import { resolveRecastFillView } from './partyHudRecast.ts';
+import { snapHudCanvasCssSize } from './battleRootScale.ts';
 import { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
 import type { GameTermPanel } from './GameTermPanel.ts';
 import { syncPartyHudStatusBadgeHits, buildPartyHudStatusBadgeCanvasSignature, buildPartyHudStatusBadgeHitSignature } from './partyHudStatusBadgeHits.ts';
@@ -565,8 +566,8 @@ export class PartyHudPanel {
       badgeLayoutConfig,
     );
     const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
-    const canvasW = badgeLayout.totalWidth + outlinePad * 2;
-    const canvasH = badgeLayout.totalHeight + outlinePad * 2;
+    const canvasW = snapHudCanvasCssSize(badgeLayout.totalWidth + outlinePad * 2);
+    const canvasH = snapHudCanvasCssSize(badgeLayout.totalHeight + outlinePad * 2);
     const canvasSignature = buildPartyHudStatusBadgeCanvasSignature(
       visible,
       overflowCount,
@@ -776,8 +777,8 @@ export class PartyHudPanel {
       theme.statusIconOutlineWidth,
       theme.statusBadgeOverlap,
     );
-    const canvasW = gridLayout.totalWidth;
-    const canvasH = gridLayout.totalHeight;
+    const canvasW = snapHudCanvasCssSize(gridLayout.totalWidth);
+    const canvasH = snapHudCanvasCssSize(gridLayout.totalHeight);
     const canvasSignature = buildPartyHudStatusBadgeCanvasSignature(
       visible,
       overflowCount,

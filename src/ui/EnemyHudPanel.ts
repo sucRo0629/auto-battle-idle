@@ -19,6 +19,7 @@ import {
   syncEnemyHudStatusBadgeHits,
 } from './enemyHudStatusRow.ts';
 import type { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
+import { snapHudCanvasCssSize } from './battleRootScale.ts';
 import type { GameTermPanel } from './GameTermPanel.ts';
 import { getLocale } from '../i18n/locale.ts';
 import type { GameTermLocale } from './gameTermGlossary.ts';
@@ -306,8 +307,8 @@ export class EnemyHudPanel {
     const scale = 1;
     const rowLayout = measureEnemyHudStatusRow(scale, theme, overflowCount);
     const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
-    const canvasW = rowLayout.totalWidth + outlinePad * 2;
-    const canvasH = rowLayout.totalHeight + outlinePad * 2;
+    const canvasW = snapHudCanvasCssSize(rowLayout.totalWidth + outlinePad * 2);
+    const canvasH = snapHudCanvasCssSize(rowLayout.totalHeight + outlinePad * 2);
     const canvasSignature = buildPartyHudStatusBadgeCanvasSignature(
       visible,
       overflowCount,

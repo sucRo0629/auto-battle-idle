@@ -14,6 +14,7 @@ alwaysApply: false
    - `.meta-menu-window` を `transform: translate(-50%, -50%)` で中央寄せすると、内側の 24px アイコンが **上半分だけ欠ける**（Chromium / Windows で再現）
    - **中央寄せは overlay の flex（`align-items` / `justify-content: center`）で行い、window に transform を付けない**
    - `meta-menu-overlay.css` を参照
+   - 戦闘 HUD も `.battle-root` に **`transform: scale()` を付けない**（`zoom: var(--battle-scale)` + `battleRootScale.ts` の 1/4 刻みスナップ）。`scale()` は子の `image-rendering` を無効化しやすい
 
 2. **グローバル `box-sizing: border-box`**（`app-base.css`）の影響
    - 24px 枠は `content-box` + 24×24 を前提
@@ -23,10 +24,10 @@ alwaysApply: false
 3. **空の `<img>` を出さない**
    - URL がないときは `img` なし + `.skill-menu-tab-icon--empty`（破線プレースホルダー）
 
-4. **等倍 24×24 のみ**
-   - `width/height: 24px` + `image-rendering: pixelated`
-   - スキルメニューは `.skill-menu-tab-icon-img` で `object-fit: none; object-position: 0 0`（transform なし前提）
-   - 2倍拡大（`scale(2)` / 48px CSS サイズ）は使わない
+4. **等倍ネイティブサイズ + ニアレストネイバー必須**
+   - DOM: `pixel-icon-frame.css` の `image-rendering: pixelated / crisp-edges` + `object-fit: none`（`object-position: 0 0`）
+   - Canvas / 状態バッジ: `ctx.imageSmoothingEnabled = false`（`prepareStatusBadgeCanvasContext` 等）
+   - 24px クラス/スキルは `width/height: 24px` のみ。2倍拡大（`scale(2)` / 48px CSS サイズ）は使わない
 
 5. **スタイルの分担**
    - **スキルメニュー**: `skill-menu-panel.css` の `.skill-menu-tab-icon` / `.skill-menu-tab-icon-img` を正とする（`pixel-icon-frame` とは分離）

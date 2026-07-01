@@ -1,3 +1,5 @@
+import { clampElementToMountBounds } from './clampElementToMountBounds.ts';
+
 export interface PartyHudFloatingTooltipOptions {
   wide?: boolean;
   alignEnd?: boolean;
@@ -36,6 +38,7 @@ export class PartyHudFloatingTooltip {
       options.placement === 'below',
     );
     this.root.hidden = false;
+    this.mount.appendChild(this.root);
     this.reposition();
   }
 
@@ -70,6 +73,8 @@ export class PartyHudFloatingTooltip {
     } else {
       this.root.style.top = `${rect.top - frame.top - 2}px`;
     }
+
+    clampElementToMountBounds(this.root, this.mount);
   }
 
   bindHit(
