@@ -3,18 +3,18 @@ import {
   BATTLE_HUD_SIDE_MARGIN,
   BATTLE_LANE_RECT,
   BATTLE_LANE_TOP,
-  BATTLE_SIDE_HUD_WIDTH,
+  ENEMY_HUD_SLOT_BAND_HEIGHT,
   ENEMY_HUD_SLOT_RECT,
+  ENEMY_HUD_TOP_Y,
   PARTY_HUD_SLOT_RECT,
 } from "./battleRootLayout.ts";
-import { BATTLE_ROOT_WIDTH } from "./battleRootScale.ts";
 import {
   BATTLE_CANVAS_HEIGHT,
   CANVAS_W,
 } from "../battle/battleConstants.ts";
 
 describe("battle debug overlay layout invariants", () => {
-  it("keeps HUD rects aligned without shifting debug overlay by partyHud move", () => {
+  it("keeps HUD rects aligned with top enemyHud and bottom partyHud", () => {
     expect(PARTY_HUD_SLOT_RECT).toEqual({
       x: BATTLE_HUD_SIDE_MARGIN,
       y: BATTLE_LANE_TOP + BATTLE_CANVAS_HEIGHT,
@@ -22,10 +22,10 @@ describe("battle debug overlay layout invariants", () => {
       h: 142,
     });
     expect(ENEMY_HUD_SLOT_RECT).toEqual({
-      x: BATTLE_ROOT_WIDTH - BATTLE_HUD_SIDE_MARGIN - BATTLE_SIDE_HUD_WIDTH,
-      y: 64,
-      w: BATTLE_SIDE_HUD_WIDTH,
-      h: 608,
+      x: BATTLE_HUD_SIDE_MARGIN,
+      y: ENEMY_HUD_TOP_Y,
+      w: 1232,
+      h: ENEMY_HUD_SLOT_BAND_HEIGHT,
     });
     expect(BATTLE_LANE_RECT).toEqual({
       x: 0,

@@ -66,12 +66,16 @@
             "spawnX": 120
           },
           {
+            "templateId": "test_enemy",
+            "spawnX": 150
+          },
+          {
             "templateId": "test_ranged",
             "spawnX": 200
           },
           {
-            "templateId": "enemy_at_hunter",
-            "spawnX": 160
+            "templateId": "test_ranged",
+            "spawnX": 240
           }
         ]
       },
@@ -88,6 +92,10 @@
           {
             "templateId": "test_to_ranged",
             "spawnX": 220
+          },
+          {
+            "templateId": "enemy_at_hunter",
+            "spawnX": 160
           }
         ]
       }

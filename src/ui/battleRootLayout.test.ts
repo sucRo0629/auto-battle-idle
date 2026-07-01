@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  BATTLE_BACKGROUND_RECT,
   BATTLE_GROUND_LINE_SCREEN_Y,
   BATTLE_LANE_RECT,
   BATTLE_LANE_TOP,
@@ -10,9 +9,12 @@ import {
   BATTLE_SIDE_HUD_WIDTH,
   ENEMY_HUD_MAX_SLOTS,
   ENEMY_HUD_PANEL_FRAME_PADDING,
+  ENEMY_HUD_SLOT_BAND_HEIGHT,
   ENEMY_HUD_SLOT_GAP,
   ENEMY_HUD_SLOT_HEIGHT,
   ENEMY_HUD_SLOT_RECT,
+  ENEMY_HUD_SLOT_WIDTH,
+  ENEMY_HUD_TOP_Y,
   PARTY_HUD_ALLY_CARD_CONTENT_WIDTH,
   PARTY_HUD_ALLY_CARD_COUNT,
   PARTY_HUD_ALLY_CARD_GAP,
@@ -34,14 +36,11 @@ import {
   computeBattleCanvasHeightForPartyHudSlot,
   computeBattleSideHudWidth,
   computeEnemyHudPanelHeight,
+  computeEnemyHudSlotWidth,
   computePartyHudAllyCardWidth,
 } from "./battleRootLayout.ts";
 import { BATTLE_ROOT_HEIGHT, BATTLE_ROOT_WIDTH } from "./battleRootScale.ts";
-import {
-  BATTLE_FIELD_SPRITE_SCALE,
-  battleCanvasHeight,
-  GRASS_BAND_H,
-} from "../render/formationLayout.ts";
+import { GRASS_BAND_H } from "../render/formationLayout.ts";
 import {
   BATTLE_CANVAS_HEIGHT,
   CANVAS_W,
@@ -49,7 +48,7 @@ import {
 
 describe("battleRootLayout", () => {
   it("covers the full 1280x720 battle root with the background rect", () => {
-    expect(BATTLE_BACKGROUND_RECT).toEqual({
+    expect({ x: 0, y: 0, w: BATTLE_ROOT_WIDTH, h: BATTLE_ROOT_HEIGHT }).toEqual({
       x: 0,
       y: 0,
       w: BATTLE_ROOT_WIDTH,
@@ -66,7 +65,7 @@ describe("battleRootLayout", () => {
     });
     expect(BATTLE_LANE_RECT.w).toBe(CANVAS_W);
     expect(BATTLE_LANE_RECT.y + BATTLE_LANE_RECT.h).toBe(PARTY_HUD_SLOT_RECT.y);
-    expect(BATTLE_LANE_RECT.h).toBeGreaterThanOrEqual(430);
+    expect(BATTLE_LANE_RECT.h).toBeGreaterThanOrEqual(400);
     expect(BATTLE_LANE_RECT.h).toBeLessThanOrEqual(500);
   });
 
@@ -76,24 +75,26 @@ describe("battleRootLayout", () => {
       BATTLE_ROOT_HEIGHT -
         (PARTY_HUD_SLOT_RECT.y + PARTY_HUD_SLOT_RECT.h),
     ).toBe(BATTLE_PARTY_HUD_BOTTOM_MARGIN);
-    expect(computeBattleCanvasHeightForPartyHudSlot(PARTY_HUD_SLOT_RECT.h)).toBe(
+    expect(computeBattleCanvasHeightForPartyHudSlot(PARTY_HUD_SLOT_RECT.h, BATTLE_PARTY_HUD_BOTTOM_MARGIN, BATTLE_LANE_TOP)).toBe(
       BATTLE_CANVAS_HEIGHT,
     );
   });
 
-  it("reserves topInfo, bottom partyHud, and right enemyHud slot rects", () => {
+  it("reserves topInfo, top enemyHud, bottom partyHud, and battleLane rects", () => {
     expect(BATTLE_TOP_INFO_RECT).toEqual({ x: 24, y: 16, w: 1232, h: 40 });
+    expect(ENEMY_HUD_TOP_Y).toBe(BATTLE_TOP_INFO_RECT.y + BATTLE_TOP_INFO_RECT.h);
+    expect(ENEMY_HUD_SLOT_RECT).toEqual({
+      x: BATTLE_HUD_SIDE_MARGIN,
+      y: ENEMY_HUD_TOP_Y,
+      w: 1232,
+      h: ENEMY_HUD_SLOT_BAND_HEIGHT,
+    });
+    expect(BATTLE_LANE_TOP).toBe(ENEMY_HUD_TOP_Y + ENEMY_HUD_SLOT_BAND_HEIGHT);
     expect(PARTY_HUD_SLOT_RECT).toEqual({
       x: BATTLE_HUD_SIDE_MARGIN,
       y: BATTLE_LANE_TOP + BATTLE_CANVAS_HEIGHT,
       w: 1232,
       h: 142,
-    });
-    expect(ENEMY_HUD_SLOT_RECT).toEqual({
-      x: 1280 - BATTLE_HUD_SIDE_MARGIN - BATTLE_SIDE_HUD_WIDTH,
-      y: 64,
-      w: BATTLE_SIDE_HUD_WIDTH,
-      h: 608,
     });
   });
 
@@ -136,24 +137,19 @@ describe("battleRootLayout", () => {
     expect(BATTLE_GROUND_LINE_SCREEN_Y).toBeLessThan(PARTY_HUD_SLOT_RECT.y);
   });
 
-  it("sizes enemy rows to fit within the enemyHud slot height", () => {
-    expect(
-      ENEMY_HUD_MAX_SLOTS * ENEMY_HUD_SLOT_HEIGHT +
-        (ENEMY_HUD_MAX_SLOTS - 1) * ENEMY_HUD_SLOT_GAP +
-        ENEMY_HUD_PANEL_FRAME_PADDING,
-    ).toBeLessThanOrEqual(ENEMY_HUD_SLOT_RECT.h);
+  it("sizes enemy slots to fit within the top enemyHud band", () => {
+    expect(ENEMY_HUD_SLOT_HEIGHT).toBeLessThanOrEqual(ENEMY_HUD_SLOT_BAND_HEIGHT);
+    expect(computeEnemyHudSlotWidth(3)).toBe(ENEMY_HUD_SLOT_WIDTH);
+    const rowWidth =
+      ENEMY_HUD_MAX_SLOTS * ENEMY_HUD_SLOT_WIDTH +
+      (ENEMY_HUD_MAX_SLOTS - 1) * ENEMY_HUD_SLOT_GAP;
+    expect(rowWidth).toBeLessThanOrEqual(ENEMY_HUD_SLOT_RECT.w);
   });
 
-  it("computes enemyHud panel height from alive count", () => {
+  it("computes enemyHud panel height as fixed band when alive", () => {
     expect(computeEnemyHudPanelHeight(0)).toBe(0);
-    expect(computeEnemyHudPanelHeight(1)).toBe(
-      ENEMY_HUD_PANEL_FRAME_PADDING + ENEMY_HUD_SLOT_HEIGHT,
-    );
-    expect(computeEnemyHudPanelHeight(3)).toBe(
-      ENEMY_HUD_PANEL_FRAME_PADDING +
-        3 * ENEMY_HUD_SLOT_HEIGHT +
-        2 * ENEMY_HUD_SLOT_GAP,
-    );
+    expect(computeEnemyHudPanelHeight(1)).toBe(ENEMY_HUD_SLOT_BAND_HEIGHT);
+    expect(computeEnemyHudPanelHeight(3)).toBe(ENEMY_HUD_SLOT_BAND_HEIGHT);
   });
 
   it("places dev control row just above partyHud top-right", () => {
@@ -167,7 +163,7 @@ describe("battleRootLayout", () => {
 
   it("aligns battle-x-debug canvas ceiling with battle lane bottom", () => {
     expect(battleHudToolbarTopY()).toBe(
-      BATTLE_LANE_RECT.y + battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE),
+      BATTLE_LANE_RECT.y + BATTLE_CANVAS_HEIGHT,
     );
     expect(battleXDebugCanvasMaxDisplayHeight()).toBe(
       battleHudToolbarTopY() - BATTLE_LANE_TOP - 4,

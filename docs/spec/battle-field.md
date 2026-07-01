@@ -116,8 +116,9 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | 定数                                 | 用途                                                                                                            |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | `CANVAS_W`（1280）                   | 戦闘キャンバス幅（px）。背景描画の全幅 |
-| `BATTLE_CANVAS_HEIGHT`（490）        | 戦闘キャンバス高さ（px）。topInfo 直下〜下部 partyHud 直上。下端余白は左右余白（24px）と同値 |
-| `COMBAT_SAFE_LEFT` / `COMBAT_SAFE_RIGHT` | HUD を避けたユニット配置帯（`combatSafeArea.ts`）。画面左マージン + 48px / Enemy HUD 左端 − 48px |
+| `BATTLE_CANVAS_HEIGHT`（`battleRootLayout` 導出） | 戦闘キャンバス高さ（px）。上部 enemyHud 下端〜下部 partyHud 直上。下端余白は左右余白（24px）と同値 |
+| `COMBAT_SAFE_LEFT` / `COMBAT_SAFE_RIGHT` | ユニット配置帯（`combatSafeArea.ts`）。左・右とも画面マージン + 48px gap（左右 HUD 列なし） |
+| `COMBAT_SAFE_SCREEN_TOP_Y` / `COMBAT_SAFE_SCREEN_GROUND_Y` | 縦方向の安全領域（battle-root 座標）。上部 enemyHud 下端 / 草ライン（partyHud 直上） |
 | `COMBAT_CAMERA_CENTER_X`             | 安全領域中央（敵 spawn オフセット基準） |
 | `PARTY_FORMATION_LEFT_ANCHOR`       | `COMBAT_SAFE_LEFT`（味方隊列左端） |
 | `PARTY_FORMATION_SLOT_SPACING`（48） | 味方隊列スロット間隔（広い戦場で奥行きを見せる） |
@@ -593,33 +594,35 @@ CSS では Canvas / 画像に `image-rendering: pixelated` と `image-rendering:
 
 ### 8.3 基本構造
 
-戦闘画面は CSS Grid 的な三カラム分割ではなく、**全幅の戦闘背景の上に左右 HUD をオーバーレイする構造** とする。
+戦闘画面は CSS Grid 的な三カラム分割ではなく、**全幅の戦闘背景の上に上部敵 HUD・下部味方 HUD をオーバーレイする構造** とする。
 
 ```text
 ┌──────────────────────────────────────────────┐
-│ 背景は全幅                                     │
-│ ┌────味方HUD────┐  戦闘レーン  ┌────敵情報────┐ │
-│ │              │             │              │ │
-│ │              │             │              │ │
-│ └──────────────┘             └──────────────┘ │
+│ Stage / Wave（topInfo）                        │
+│ 敵1  敵2  敵3  敵4  …（enemyHud 横並び）         │
+│ ─────────────────────────────────────────── │
+│              戦闘レーン（全幅）                  │
+│              地面                              │
+│ ─────────────────────────────────────────── │
+│ 味方1      味方2      味方3      味方4（partyHud）│
 └──────────────────────────────────────────────┘
 ```
 
 | 領域 | 方針 |
 | ---- | ---- |
 | 背景 / 戦闘空間 | 画面全幅に敷く。HUD の矩形に背景を制限しない |
-| 味方 HUD | 左側オーバーレイ。編成結果を読む詳細監視用 HUD |
-| 敵 HUD | 右側オーバーレイ。残敵・HP・状態・脅威を読む状況確認用 HUD |
-| 戦闘レーン | 中央の読み取り領域。背景そのものではなく、視線上の主戦場 |
+| 味方 HUD | 画面下部オーバーレイ。編成結果を読む詳細監視用 HUD（横 4 枚） |
+| 敵 HUD | 画面上部オーバーレイ（topInfo 直下）。残敵・HP・状態・脅威を読む状況確認用 HUD（生存敵を横並び） |
+| 戦闘レーン | top enemyHud 下端〜 bottom partyHud 上端。背景そのものではなく、視線上の主戦場 |
 | HUD 表現 | 戦場を分断するカラムではなく、戦場上に浮く監視パネル。半透明、薄い枠、背景となじむ面でゲーム HUD らしく扱う |
 
 **やらない:** Web ツール的な三分割レイアウト、各カラムの可変幅、HUD によって戦場背景を分断する見せ方。
 
 #### 8.3.1 `BattleCanvas` 大型化（中央主役）
 
-1280×720 `battle-root` に **全幅・高さ一杯** の `BattleCanvas` を敷き、左右 HUD はその上に浮かせる。内部基準 `CANVAS_W`（1280px）× `BATTLE_CANVAS_HEIGHT`（668px）・描画スケール `BATTLE_FIELD_SPRITE_SCALE`（2）で 32px スプライトを観察しやすいサイズにする。
+1280×720 `battle-root` に **全幅・高さ一杯** の `BattleCanvas` を敷き、上部敵 HUD / 下部味方 HUD はその上に浮かせる。内部基準 `CANVAS_W`（1280px）× `BATTLE_CANVAS_HEIGHT`（`battleRootLayout.ts` 導出）・描画スケール `BATTLE_FIELD_SPRITE_SCALE`（2）で 32px スプライトを観察しやすいサイズにする。
 
-**戦闘空間の使い方:** 背景・Canvas は 1280px 全幅。ユニット配置・接敵・spawn は `combatSafeArea.ts` の `COMBAT_SAFE_LEFT`〜`COMBAT_SAFE_RIGHT`（左は画面マージン + 48px gap、右は Enemy HUD + 48px gap）を正本とする。HUD 幾何の正本は `battleHudGeometry.ts`（`battleRootLayout` と同期）。`PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT`。`SPAWN_X_MAX = COMBAT_SAFE_RIGHT - COMBAT_CAMERA_CENTER_X`。PartyDeploy 左外開始距離は `resolvePartyDeployMarchDistancePx`（最前列 target が画面外左に収まるまで延長。移動速度は `MOVE_PX_PER_SEC` のまま）。
+**戦闘空間の使い方:** 背景・Canvas は 1280px 全幅。ユニット配置・接敵・spawn は `combatSafeArea.ts` の `COMBAT_SAFE_LEFT`〜`COMBAT_SAFE_RIGHT`（左・右とも画面マージン + 48px gap。右 HUD 列は Phase 2 以降なし）を正本とする。HUD 幾何の正本は `battleHudGeometry.ts`（`battleRootLayout` と同期）。`PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT`。`SPAWN_X_MAX = COMBAT_SAFE_RIGHT - COMBAT_CAMERA_CENTER_X`。PartyDeploy 左外開始距離は `resolvePartyDeployMarchDistancePx`（最前列 target が画面外左に収まるまで延長。移動速度は `MOVE_PX_PER_SEC` のまま）。
 
 **遠距離判定:** `RANGED_ATTACK_MIN_PX`（= `LONG_RANGE_THRESHOLD_PX`、100）。`rangePx >= 100` が遠隔帯（100 含む）。閾値は `types.ts` の単一定数。
 
@@ -666,6 +669,12 @@ topInfo:
   w: 1232
   h: 40
 
+enemyHud:
+  x: 24
+  y: 56   # topInfo 直下（ENEMY_HUD_TOP_Y）
+  w: 1232
+  h: 72   # ENEMY_HUD_SLOT_BAND_HEIGHT（固定帯）
+
 partyHud:
   x: 24
   y: 554
@@ -675,23 +684,17 @@ partyHud:
 
 battleLane:
   x: 0
-  y: 64
+  y: 128  # BATTLE_LANE_TOP（enemyHud 下端）
   w: 1280 # CANVAS_W（全幅フィールド）
-  h: 490 # BATTLE_CANVAS_HEIGHT（下部 partyHud 直上まで）
+  h: 426  # BATTLE_CANVAS_HEIGHT（下部 partyHud 直上まで）
 
 groundLine:
   screenY: 530 # BATTLE_GROUND_LINE_SCREEN_Y（partyHud 直上の草ライン）
-
-enemyHud:
-  x: 996 # 1280 - 24 - enemyHud.w
-  y: 64
-  w: 260 # BATTLE_SIDE_HUD_WIDTH
-  h: 608
 ```
 
 この寸法は三カラム分割ではなく、1280×720 基準座標上のオーバーレイ配置。背景は `battleLane` に限定せず、画面全幅に敷く。`battleLane` は中央の読み取り領域であり、戦闘背景そのものの境界ではない。
 
-**左右 HUD 幅:** 敵 HUD は overlay 状態アイコン列幅 + 枠余白を `computeBattleSideHudWidth()`（`battleHudGeometry.ts`）で正本化。味方 HUD は画面下部全幅（`PARTY_HUD_SLOT_RECT.w` = topInfo と同幅 1232px）。
+**左右 HUD 幅:** 味方 HUD は画面下部全幅（`PARTY_HUD_SLOT_RECT.w` = topInfo と同幅 1232px）。敵 HUD も同幅の上部帯（Phase 2 Task 1）。`BATTLE_SIDE_HUD_WIDTH` は battle-x-debug 等の旧サイド列幅にのみ使用。
 
 ### 8.6 HUD 固定スロット方針
 
@@ -705,7 +708,7 @@ enemyHud:
 | 危険予兆バー欄 | 固定枠。予兆がない場合も占有領域を維持 |
 | 与ダメ / 被ダメ欄 | 固定枠。数値量でカード高さを変えない |
 | 敵スロット（1 体分） | 敵数や状態数で **スロット内部** の高さを変えない |
-| 敵 HUD パネル | 生存敵数に応じて **パネル全体** の高さのみ可変（各 enemySlot 高さは固定） |
+| 敵 HUD パネル | 上部帯の高さは固定（`ENEMY_HUD_SLOT_BAND_HEIGHT`）。生存敵は横並び。Wave 内生存敵 0 で帯を閉じる |
 
 ### 8.7 味方 HUD
 
@@ -797,27 +800,28 @@ active_3  active_4
 
 ### 8.8 敵 HUD
 
-敵 HUD は右側オーバーレイに新設し、最大 10 体程度の敵を **生存中のみ** 索引表示する。各敵スロットの高さは固定する。パネル全体の高さは生存敵数に応じて可変とし、Wave 開始時は上端固定で上から下へ展開、Wave 内の生存敵が 0 になったら下から上へ閉じる。撃破した敵スロットはグレーアウトせず HUD から除去し、残存スロットを上方向へ詰める（表示リストのみ。戦闘ロジック上の enemy entity には影響しない）。
+敵 HUD は **画面上部**（topInfo 直下）に配置し、最大 10 体程度の敵を **生存中のみ** 横並びで索引表示する。**全体を包む外枠パネルは表示しない**（各 `enemySlot` のみ個別枠）。各敵スロットの高さは固定（52px コンパクト行）。帯領域（`ENEMY_HUD_SLOT_BAND_HEIGHT`）はレイアウト予約のみで、パネル背景・枠線は描画しない。Wave 開始時はスロット列を展開、Wave 内の生存敵が 0 になったら閉じる。撃破した敵スロットはグレーアウトせず HUD から除去し、残存スロットを左方向へ詰める（表示リストのみ。戦闘ロジック上の enemy entity には影響しない）。敵が多い場合は暫定的に `flex-wrap` 折り返しで対応する（横スクロールは使わない）。同種敵のグループ化・カード束化は Phase 2 以降。
 
 初期寸法目安:
 
 ```yaml
 enemyHud:
-  x: 996
-  y: 64
-  w: 260          # partyHud と同一幅
-  h: 608          # 予約最大高（パネルは生存敵数で可変）
+  x: 24
+  y: 56
+  w: 1232
+  h: 72          # 固定帯（ENEMY_HUD_SLOT_BAND_HEIGHT）
 
 enemySlot:
-  count: up to 10 # 同時表示は生存敵のみ
+  count: up to 10   # 同時表示は生存敵のみ
+  layout: row       # 横並び（overlay-top）
   height: 52
-  gap: 6
+  gap: 4
+  slotWidth: 119   # ENEMY_HUD_SLOT_WIDTH — fixed per enemy, no outer panel frame
 
 panelHeight:
-  formula: framePadding + n * slotHeight + (n - 1) * gap
-  framePadding: 8
+  formula: ENEMY_HUD_SLOT_BAND_HEIGHT when alive > 0, else 0
   collapse: wave 内生存敵 0 で高さ 0 へ
-  expand: wave 開始で上端固定・上から展開
+  expand: wave 開始で帯を展開
 ```
 
 各敵スロットに表示するもの:
@@ -843,7 +847,7 @@ panelHeight:
 
 敵状態アイコンは単なる敵情報ではなく、こちらの編成結果を観測するための情報。一覧性のために敵側の表示数は絞ってよいが、詳細確認の逃げ道を持たせる。
 
-個別の状態アイコンは味方 HUD と同じ `.party-hud-status-badge-hit` 経路でホバー tooltip と用語パネル（`GameTermPanel`）を開く。状態アイコンが敵スロット内に収まりきらない場合は `+N` 表示にし、`+N` の内容も hover tooltip で確認できる。敵 HUD スロット全体のホバーで全状態をまとめて表示する tooltip は廃止。`hoverHighlight` により、右 HUD の敵スロットと戦闘フィールド上の敵スプライトを対応表示する。
+個別の状態アイコンは味方 HUD と同じ `.party-hud-status-badge-hit` 経路でホバー tooltip と用語パネル（`GameTermPanel`）を開く。状態アイコンが敵スロット内に収まりきらない場合は `+N` 表示にし、`+N` の内容も hover tooltip で確認できる。敵 HUD スロット全体のホバーで全状態をまとめて表示する tooltip は廃止。`hoverHighlight` により、上部敵 HUD の敵スロットと戦闘フィールド上の敵スプライトを対応表示する。
 
 初期実装では、敵をクリック / 選択して固定表示する詳細パネルは必須にしない。後続検討として、右 HUD 内または右下の選択中敵詳細パネル、ボスや危険行動持ちの敵だけ詳細枠を拡張する仕様を検討する。
 
@@ -865,7 +869,7 @@ panelHeight:
 
 ### 8.9 フィールド上の敵付近 HUD
 
-敵 HP と状態は右側敵 HUD に集約する。戦闘フィールド上は、位置、演出、攻撃結果を読む場所にする。
+敵 HP と状態は上部敵 HUD に集約する。戦闘フィールド上は、位置、演出、攻撃結果を読む場所にする。
 
 | 分類 | 方針 |
 | ---- | ---- |
@@ -998,7 +1002,7 @@ topInfo:
 1. 1280×720 基準解像度と 16:9 基準アスペクト比が明記されている
 2. 絶対 px 座標と等比スケール方針が明記されている
 3. pixelated / nearest-neighbor 表示方針が明記されている
-4. 全幅背景 + 左右 HUD オーバーレイ構造が明記されている
+4. 全幅背景 + 上部敵 HUD / 下部味方 HUD オーバーレイ構造が明記されている
 5. 三カラム分割ではないことが明記されている
 6. 味方 HUD の固定カード仕様が明記されている
 7. 味方スキルゲージの 2×2 固定配置が明記されている
@@ -1011,7 +1015,7 @@ topInfo:
 14. HUD 要素の高さを内容量で変えない方針が明記されている
 15. デバッグ UI を本体 HUD から分離する方針が明記されている
 16. 今回変更しない戦闘ロジック範囲が明記されている
-17. `BattleCanvas` は `CANVAS_W` 1280px × `BATTLE_CANVAS_HEIGHT` 668px・`BATTLE_FIELD_SPRITE_SCALE` 2 で全幅主役。味方左アンカー + 敵 spawn で戦場横幅を使う
+17. `BattleCanvas` は `CANVAS_W` 1280px × `BATTLE_CANVAS_HEIGHT`（`battleRootLayout` 導出）・`BATTLE_FIELD_SPRITE_SCALE` 2 で全幅主役。左右マージン基準の combat safe で戦場横幅を使う
 18. `BattleStatsDrawer` は常時 HUD へ統合せず、詳細確認 / 開発用ドロワーとして分離する方針が明記されている
 19. 敵 HUD の詳細表示は初期実装では hover tooltip を基本とし、選択固定の詳細パネルは後続検討でよいことが明記されている
 20. 危険予兆バーは現時点では実データ未接続の予約枠であり、通常スキルリキャストへ接続しないことが明記されている
@@ -1029,7 +1033,7 @@ Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `s
 | 2 | レイヤー + 大型 `battleLane` / `BattleCanvas` | `battleRootLayout.ts`, `battle-view.css`, `battleConstants.ts`, `formationLayout.ts`, `BattleCanvas.ts` |
 | 3 | 左 Party HUD 4 カード overlay | `PartyHudPanel.ts`, `party-hud-overlay.css` |
 | 4 | スキルゲージ 2×2 固定 + 状態 2 行固定 | `party-hud-overlay.css`, `partyHudOverlayStatusGrid.ts` |
-| 5 | 右 Enemy HUD（最大 10 体） | `EnemyHudPanel.ts`, `enemy-hud-overlay.css`, `enemyHudTypes.ts` |
+| 5 | 上部 Enemy HUD（最大 10 体・横並び） | `EnemyHudPanel.ts`, `enemy-hud-overlay.css`, `enemyHudTypes.ts` |
 | 6 | 敵スプライト付近 HP/状態停止 | `BattleCanvas.ts` |
 | 7 | `hoverHighlight` / `targetIndicator` 分離 | `BattleView.ts`, `battleHoverHighlight.ts`, `battleTargetIndicator.ts`, `battleFieldIndicatorDraw.ts` |
 | 8 | Debug UI overlay 分離 | `BattleView.ts`, `battle-view.css` |
@@ -1062,7 +1066,7 @@ Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `s
 1. 1280×720 基準で partyHud / enemyHud / battleLane / topInfo が §8 座標どおり
 2. viewport リサイズで `battle-root` 全体が等比スケール（歪みなし）
 3. スプライト・24px アイコン・状態バッジが pixelated（ぼやけなし）
-4. 敵フィールド HP/状態なし、右 HUD に集約
+4. 敵フィールド HP/状態なし、上部 HUD に集約
 5. 敵 HUD ホバー ↔ スプライト hoverHighlight 双方向
 6. 攻撃時 targetIndicator（足元リング）が hover と区別できる
 7. verify ON 時 debug ドック / battle-x-debug が本体 HUD を押し下げない

@@ -10,15 +10,10 @@ import {
 /** 1280×720 battle-root の戦闘キャンバス幅（全幅フィールド） */
 export const CANVAS_W = 1280;
 
-/** battleLane 上端（battle-root Y）。topInfo 直下。 */
-export const BATTLE_LANE_TOP_INSET = 64;
-export const BATTLE_ROOT_REF_HEIGHT = 720;
-/**
- * 戦闘キャンバス高さ（px）。
- * partyHud 下端の battle-root 下余白が左右余白（24px）と揃うよう導出。
- * 正本式: `computeBattleCanvasHeightForPartyHudSlot`（`battleHudGeometry.ts`）。
- */
-export const BATTLE_CANVAS_HEIGHT = 490;
+export {
+  BATTLE_CANVAS_HEIGHT,
+  BATTLE_LANE_TOP as BATTLE_LANE_TOP_INSET,
+} from '../ui/battleRootLayout.ts';
 
 /** 敵 spawn オフセット基準（HUD 間の安全領域中央） */
 export const COMBAT_CAMERA_CENTER_X = COMBAT_SAFE_CENTER_X;

@@ -1,5 +1,6 @@
 import '../styles/debug-menu.css';
 import type { GameData, SaveGameState } from '../battle/types.ts';
+import { t } from '../i18n/t.ts';
 import { resolvePlayerDisplayLevel } from '../progression/resolvePlayerDisplayLevel.ts';
 
 export interface DebugMenuControls {
@@ -21,19 +22,35 @@ export class DebugMenuPanel {
   constructor(
     private readonly gameData: GameData,
     private readonly controls: DebugMenuControls,
+    private readonly onRequestClose?: () => void,
   ) {
     this.root = document.createElement('aside');
     this.root.className = 'debug-menu';
     this.root.hidden = true;
 
+    const header = document.createElement('div');
+    header.className = 'debug-menu-header';
+
     const title = document.createElement('div');
     title.className = 'debug-menu-title';
     title.textContent = 'デバッグ';
 
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'debug-menu-close';
+    closeButton.textContent = '×';
+    closeButton.setAttribute('aria-label', t('menu.close'));
+    closeButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      this.onRequestClose?.();
+    });
+
+    header.append(title, closeButton);
+
     this.rowsHost = document.createElement('div');
     this.rowsHost.className = 'debug-menu-rows';
 
-    this.root.append(title, this.rowsHost);
+    this.root.append(header, this.rowsHost);
   }
 
   mount(parent: HTMLElement): void {

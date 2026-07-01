@@ -36,10 +36,17 @@ describe('party-hud-overlay.css allyCard layout regression', () => {
     );
   });
 
-  it('scales overlay skill gauges to 90% of the baseline row height', () => {
-    expect(css).toMatch(/--party-hud-overlay-recast-scale:\s*0\.9/);
+  it('keeps overlay recast grid fixed while sizing gauge bodies for 2px gaps', () => {
+    expect(css).toMatch(/--party-hud-overlay-recast-h:\s*21\.6/);
     expect(css).toMatch(
-      /--hud-recast-bar-h:\s*calc\(11 \* var\(--party-hud-overlay-recast-scale\)\)/,
+      /--hud-recast-grid-h:\s*calc\(var\(--party-hud-overlay-recast-h\) \* 1px\)/,
+    );
+    expect(css).toMatch(/--hud-recast-gap:\s*2;/);
+    expect(css).toMatch(
+      /--hud-recast-bar-h:\s*calc\([\s\S]*--party-hud-overlay-recast-h[\s\S]*--hud-recast-gap/,
+    );
+    expect(css).toMatch(
+      /--hud-recast-bar-w:\s*calc\([\s\S]*--party-hud-overlay-content-w[\s\S]*--hud-recast-gap/,
     );
   });
 

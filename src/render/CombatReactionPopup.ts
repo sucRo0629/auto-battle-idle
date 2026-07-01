@@ -1,3 +1,4 @@
+import { clampCombatDisplayX } from "../battle/combatSafeArea.ts";
 import type { CombatantLayout } from "./IBattleRenderer.ts";
 import type { BattleHudTheme } from "./battleHudTheme.ts";
 import {
@@ -88,11 +89,16 @@ export class CombatReactionPopupManager {
       const alpha = computeBattlePopupAlpha(progress);
       const popupScaleValue = computeBattlePopupScale(progress);
       const bob = getPlaceholderSpriteYOffset(layout, scale);
-      const centerX = layout.x + spriteSize / 2;
-      const anchorY = spriteDrawY(layout) + bob + HEAD_LABEL_OFFSET_Y;
       const text = getCombatReactionText(popup.kind);
+      const rawCenterX = layout.x + spriteSize / 2;
+      const rawAnchorY = spriteDrawY(layout) + bob + HEAD_LABEL_OFFSET_Y;
 
       ctx.save();
+      const centerX = clampCombatDisplayX(
+        rawCenterX,
+        (ctx.measureText(text).width * popupScaleValue) / 2,
+      );
+      const anchorY = rawAnchorY;
       ctx.translate(centerX, anchorY);
       ctx.scale(popupScaleValue, popupScaleValue);
       ctx.globalAlpha = alpha;

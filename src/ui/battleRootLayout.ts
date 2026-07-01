@@ -3,15 +3,6 @@ import {
   BATTLE_ROOT_WIDTH,
 } from "./battleRootScale.ts";
 import {
-  BATTLE_CANVAS_HEIGHT,
-  BATTLE_LANE_TOP_INSET,
-} from "../battle/battleConstants.ts";
-import {
-  BATTLE_FIELD_SPRITE_SCALE,
-  battleCanvasHeight,
-  GRASS_BAND_H,
-} from "../render/formationLayout.ts";
-import {
   BATTLE_HUD_OVERLAY_CARD_PAD_X,
   BATTLE_HUD_SIDE_MARGIN,
   BATTLE_HUD_STATUS_WRAP_PAD_X,
@@ -22,6 +13,9 @@ import {
   computeBattleCanvasHeightForPartyHudSlot,
   BATTLE_PARTY_HUD_BOTTOM_MARGIN,
 } from "./battleHudGeometry.ts";
+
+/** 草タイル描画帯の高さ — `formationLayout.GRASS_BAND_H` と同値（import 循環回避） */
+const GRASS_BAND_H = 24;
 
 export {
   BATTLE_HUD_OVERLAY_CARD_PAD_X,
@@ -49,23 +43,51 @@ export const BATTLE_BACKGROUND_RECT: BattleRootRect = {
   h: BATTLE_ROOT_HEIGHT,
 };
 
-/** Top inset of battle lane below topInfo (px). */
-export const BATTLE_LANE_TOP = BATTLE_LANE_TOP_INSET;
-
-/** Full-bleed battle lane: HUD はオーバーレイ、キャンバスは root 全幅。高さは下部 partyHud 直上まで。 */
-export const BATTLE_LANE_RECT: BattleRootRect = {
-  x: 0,
-  y: BATTLE_LANE_TOP,
-  w: BATTLE_ROOT_WIDTH,
-  h: BATTLE_CANVAS_HEIGHT,
-};
-
 export const BATTLE_TOP_INFO_RECT: BattleRootRect = {
   x: 24,
   y: 16,
   w: 1232,
   h: 40,
 };
+
+/** Top edge of enemyHud band — directly below topInfo (battle-field.md §8 Phase 2). */
+export const ENEMY_HUD_TOP_Y =
+  BATTLE_TOP_INFO_RECT.y + BATTLE_TOP_INFO_RECT.h;
+
+/** Fixed enemy slot height inside top enemyHud (compact horizontal row). */
+export const ENEMY_HUD_SLOT_HEIGHT = 52;
+
+/** Horizontal gap between enemy slots inside enemyHud. */
+export const ENEMY_HUD_SLOT_GAP = 4;
+
+/** Maximum enemy slots shown in the enemyHud list. */
+export const ENEMY_HUD_MAX_SLOTS = 10;
+
+/** Left + right inset inside the enemyHud panel frame (px). */
+export const ENEMY_HUD_PANEL_FRAME_PADDING = 8;
+
+/** Fixed per-enemy slot width — does not grow when fewer enemies are alive. */
+export const ENEMY_HUD_SLOT_WIDTH = Math.floor(
+  (BATTLE_TOP_INFO_RECT.w - (ENEMY_HUD_MAX_SLOTS - 1) * ENEMY_HUD_SLOT_GAP) /
+    ENEMY_HUD_MAX_SLOTS,
+);
+
+/** Reserved top enemyHud band height (single-row strip; battle-field.md §8 Phase 2). */
+export const ENEMY_HUD_SLOT_BAND_HEIGHT = 72;
+
+/** Top enemyHud — horizontal alive-enemy strip (battle-field.md §8 Phase 2 Task 1). */
+export const ENEMY_HUD_SLOT_RECT: BattleRootRect = {
+  x: BATTLE_HUD_SIDE_MARGIN,
+  y: ENEMY_HUD_TOP_Y,
+  w: BATTLE_TOP_INFO_RECT.w,
+  h: ENEMY_HUD_SLOT_BAND_HEIGHT,
+};
+
+/** battleLane 上端 — below top enemyHud band. */
+export const BATTLE_LANE_TOP = ENEMY_HUD_TOP_Y + ENEMY_HUD_SLOT_BAND_HEIGHT;
+
+/** @deprecated Use `BATTLE_LANE_TOP` — kept for battleConstants re-export. */
+export const BATTLE_LANE_TOP_INSET = BATTLE_LANE_TOP;
 
 /** Vertical gap between allyCard sections (party-hud-overlay.css). */
 export const PARTY_HUD_OVERLAY_CARD_SECTION_GAP = 2;
@@ -129,6 +151,24 @@ export function computePartyHudSlotHeight(): number {
 /** Bottom partyHud — horizontal 4 ally cards (battle-field.md §8 Phase 1 Task 1). */
 export const PARTY_HUD_SLOT_HEIGHT = computePartyHudSlotHeight();
 
+/**
+ * 戦闘キャンバス高さ（px）。
+ * partyHud 下端の battle-root 下余白が左右余白（24px）と揃うよう導出。
+ */
+export const BATTLE_CANVAS_HEIGHT = computeBattleCanvasHeightForPartyHudSlot(
+  PARTY_HUD_SLOT_HEIGHT,
+  BATTLE_PARTY_HUD_BOTTOM_MARGIN,
+  BATTLE_LANE_TOP,
+);
+
+/** Full-bleed battle lane: HUD はオーバーレイ、キャンバスは root 全幅。高さは下部 partyHud 直上まで。 */
+export const BATTLE_LANE_RECT: BattleRootRect = {
+  x: 0,
+  y: BATTLE_LANE_TOP,
+  w: BATTLE_ROOT_WIDTH,
+  h: BATTLE_CANVAS_HEIGHT,
+};
+
 export const PARTY_HUD_SLOT_RECT: BattleRootRect = {
   x: BATTLE_HUD_SIDE_MARGIN,
   y: BATTLE_LANE_TOP + BATTLE_CANVAS_HEIGHT,
@@ -191,36 +231,20 @@ export const BATTLE_TRANSIENT_CONTROLS_TOP =
   BATTLE_TRANSIENT_CONTROLS_ROW_HEIGHT -
   BATTLE_TRANSIENT_CONTROLS_GAP_ABOVE_PARTY_HUD;
 
-export const ENEMY_HUD_SLOT_RECT: BattleRootRect = {
-  x: BATTLE_ROOT_WIDTH - BATTLE_HUD_SIDE_MARGIN - BATTLE_SIDE_HUD_WIDTH,
-  y: 64,
-  w: BATTLE_SIDE_HUD_WIDTH,
-  h: 608,
-};
-
-/** Fixed enemy row height inside enemyHud (battle-field.md §8.8). */
-export const ENEMY_HUD_SLOT_HEIGHT = 52;
-
-/** Vertical gap between enemy rows inside enemyHud. */
-export const ENEMY_HUD_SLOT_GAP = 6;
-
-/** Maximum enemy rows shown in the enemyHud list. */
-export const ENEMY_HUD_MAX_SLOTS = 10;
-
-/** Top + bottom inset inside the enemyHud panel frame (px). */
-export const ENEMY_HUD_PANEL_FRAME_PADDING = 8;
-
-/** Visible enemyHud panel height for `aliveCount` living enemies (0 when empty). */
-export function computeEnemyHudPanelHeight(aliveCount: number): number {
-  if (aliveCount <= 0) return 0;
-  return (
-    ENEMY_HUD_PANEL_FRAME_PADDING +
-    aliveCount * ENEMY_HUD_SLOT_HEIGHT +
-    (aliveCount - 1) * ENEMY_HUD_SLOT_GAP
-  );
+/** @deprecated Use `ENEMY_HUD_SLOT_WIDTH` — kept for layout tests. */
+export function computeEnemyHudSlotWidth(
+  _aliveCount?: number,
+): number {
+  return ENEMY_HUD_SLOT_WIDTH;
 }
 
-/** battle-x-debug panel top — left column, below topInfo. */
+/** Visible enemyHud panel height — fixed band when alive, 0 when empty (wave collapse). */
+export function computeEnemyHudPanelHeight(aliveCount: number): number {
+  if (aliveCount <= 0) return 0;
+  return ENEMY_HUD_SLOT_BAND_HEIGHT;
+}
+
+/** battle-x-debug panel top — left column, below top enemyHud. */
 export const BATTLE_X_DEBUG_PANEL_TOP = BATTLE_LANE_TOP;
 
 /** Ground line Y on battle-root screen coordinates (above bottom partyHud). */
@@ -232,10 +256,8 @@ export const BATTLE_GROUND_LINE_SCREEN_RATIO =
   (BATTLE_GROUND_LINE_SCREEN_Y / BATTLE_ROOT_HEIGHT) * 100;
 
 /** battle lane 下端（キャンバス下端）の battle-root Y */
-export function battleHudToolbarTopY(
-  spriteScale = BATTLE_FIELD_SPRITE_SCALE,
-): number {
-  return BATTLE_LANE_RECT.y + battleCanvasHeight(spriteScale);
+export function battleHudToolbarTopY(): number {
+  return BATTLE_LANE_RECT.y + BATTLE_CANVAS_HEIGHT;
 }
 
 /** Max CSS display width for battle-x-debug canvas (left debug column). */

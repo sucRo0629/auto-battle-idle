@@ -19,7 +19,11 @@ import {
 } from './enemyHudStatusRow.ts';
 import type { PartyHudFloatingTooltip } from './partyHudFloatingTooltip.ts';
 import { snapHudCanvasCssSize } from './battleRootScale.ts';
-import { computeEnemyHudPanelHeight } from './battleRootLayout.ts';
+import {
+  computeEnemyHudPanelHeight,
+  ENEMY_HUD_SLOT_GAP,
+  ENEMY_HUD_SLOT_WIDTH,
+} from './battleRootLayout.ts';
 import type { GameTermPanel } from './GameTermPanel.ts';
 
 interface SlotElements {
@@ -42,6 +46,7 @@ interface SlotElements {
 }
 
 export interface EnemyHudPanelOptions {
+  layout?: 'overlay-top';
   floatingTooltip?: PartyHudFloatingTooltip;
   gameTermPanel?: GameTermPanel;
   onHoverHighlightStart?: (unitId: string) => void;
@@ -81,7 +86,12 @@ export class EnemyHudPanel {
     this.theme = readBattleHudTheme(this.themeHost);
     const root = document.createElement('div');
     this.root = root;
-    root.className = 'enemy-hud-panel game-panel-surface';
+    root.className = 'enemy-hud-panel';
+    if (this.options.layout === 'overlay-top') {
+      root.classList.add('enemy-hud-panel--overlay-top');
+      root.style.setProperty('--enemy-hud-slot-gap', `${ENEMY_HUD_SLOT_GAP}px`);
+      root.style.setProperty('--enemy-hud-slot-w', `${ENEMY_HUD_SLOT_WIDTH}px`);
+    }
 
     const slotsBody = document.createElement('div');
     slotsBody.className = 'enemy-hud-panel-slots';
@@ -136,7 +146,7 @@ export class EnemyHudPanel {
     this.clearPanelCollapseTimer();
     this.root.classList.add('enemy-hud-panel--collapsing');
     this.root.classList.remove('enemy-hud-panel--expanding');
-    this.syncPanelHeight(0);
+    this.syncPanelLayout(0);
     this.panelCollapseTimer = setTimeout(() => {
       this.panelCollapseTimer = null;
       this.root.classList.add('enemy-hud-panel--collapsed');
@@ -171,7 +181,7 @@ export class EnemyHudPanel {
     }
 
     if (aliveEntries.length > 0) {
-      this.syncPanelHeight(aliveEntries.length);
+      this.syncPanelLayout(aliveEntries.length);
       this.root.classList.remove('enemy-hud-panel--collapsed');
       window.requestAnimationFrame(() => {
         this.root.classList.remove('enemy-hud-panel--expanding');
@@ -180,8 +190,14 @@ export class EnemyHudPanel {
 
   }
 
-  private syncPanelHeight(aliveCount: number): void {
+  private syncPanelLayout(aliveCount: number): void {
     const height = computeEnemyHudPanelHeight(aliveCount);
+    if (this.options.layout === 'overlay-top') {
+      if (aliveCount <= 0) {
+        this.root.style.setProperty('--enemy-hud-panel-h', '0px');
+      }
+      return;
+    }
     this.root.style.setProperty('--enemy-hud-panel-h', `${height}px`);
   }
 

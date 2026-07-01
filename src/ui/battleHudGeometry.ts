@@ -85,17 +85,19 @@ export function computePartyHudOverlayCardPadXPerSide(
   return Math.max(0, (slotWidth - contentWidth) / 2);
 }
 
-/** battleLane 上端（battle-root Y）— `battleConstants.BATTLE_LANE_TOP_INSET` と同値。 */
-const BATTLE_LANE_TOP_INSET = 64;
-
 /** battleLane height so partyHud sits with bottom margin equal to side margin. */
 export function computeBattleCanvasHeightForPartyHudSlot(
   partyHudSlotHeight: number,
   bottomMargin = BATTLE_PARTY_HUD_BOTTOM_MARGIN,
-  laneTop = BATTLE_LANE_TOP_INSET,
+  laneTop: number,
   rootHeight = BATTLE_ROOT_HEIGHT,
 ): number {
   return rootHeight - bottomMargin - laneTop - partyHudSlotHeight;
+}
+
+/** Combat safe right edge — screen right margin (no right-side HUD column). */
+export function combatSafeRightScreenEdge(): number {
+  return BATTLE_ROOT_WIDTH - BATTLE_HUD_SIDE_MARGIN;
 }
 
 export function partyHudRightEdge(): number {
@@ -103,6 +105,7 @@ export function partyHudRightEdge(): number {
   return BATTLE_HUD_SIDE_MARGIN + BATTLE_SIDE_HUD_WIDTH;
 }
 
+/** @deprecated Phase 2: enemy HUD is top horizontal; use `combatSafeRightScreenEdge`. */
 export function enemyHudLeftEdge(): number {
-  return BATTLE_ROOT_WIDTH - BATTLE_HUD_SIDE_MARGIN - BATTLE_SIDE_HUD_WIDTH;
+  return combatSafeRightScreenEdge();
 }

@@ -175,10 +175,6 @@ export class BattleView {
       `${PARTY_HUD_OVERLAY_CARD_PAD_SCALE}`,
     );
     this.battleRoot.style.setProperty(
-      "--battle-enemy-hud-x",
-      `${ENEMY_HUD_SLOT_RECT.x}px`,
-    );
-    this.battleRoot.style.setProperty(
       "--battle-canvas-width",
       `${CANVAS_W}px`,
     );
@@ -217,6 +213,7 @@ export class BattleView {
     const enemyHudSlot = document.createElement("div");
     enemyHudSlot.className = "battle-hud-slot battle-hud-slot--enemy";
     enemyHudSlot.setAttribute("data-battle-hud-slot", "enemy");
+    enemyHudSlot.style.cssText = battleRootRectStyle(ENEMY_HUD_SLOT_RECT);
     this.enemyHudSlotEl = enemyHudSlot;
 
     const battleTopInfo = document.createElement("div");
@@ -306,29 +303,6 @@ export class BattleView {
     this.root.appendChild(this.battleViewport);
     this.mountBattleRootScale();
 
-    this.debugMenu = new DebugMenuPanel(this.gameData, {
-      isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
-      isBattleXDebugDisplayEnabled: () =>
-        this.isBattleXDebugDisplayActive(),
-      onBattleXDebugDisplayChange: (enabled) => {
-        verifyModeControls?.onBattleXDebugDisplayChange?.(enabled);
-      },
-      getSave: this.getSave,
-      getLoopStageId: () => verifyModeControls?.getLoopStageId?.() ?? null,
-      getLoopWaveIndex: () => verifyModeControls?.getLoopWaveIndex?.() ?? null,
-      onLoopStageChange: (stageId) => {
-        verifyModeControls?.onLoopStageChange?.(stageId);
-        this.debugMenu.refresh();
-      },
-      onLoopWaveChange: (waveIndex) => {
-        verifyModeControls?.onLoopWaveChange?.(waveIndex);
-        this.debugMenu.refresh();
-      },
-      onPlayerLevelChange: (level) => {
-        verifyModeControls?.onPlayerLevelChange?.(level);
-        this.debugMenu.refresh();
-      },
-    });
 
     const transientControlsDock = document.createElement("div");
     transientControlsDock.className = "battle-transient-controls-dock";
@@ -341,15 +315,47 @@ export class BattleView {
     debugMenuToggle.type = "button";
     debugMenuToggle.className = "battle-debug-menu-toggle";
     debugMenuToggle.textContent = "Debug";
+    const setDebugMenuDockOpen = (open: boolean) => {
+      debugMenuDock.classList.toggle("battle-debug-menu-dock--open", open);
+      debugMenuToggle.setAttribute("aria-expanded", open ? "true" : "false");
+    };
     debugMenuToggle.addEventListener("click", () => {
-      debugMenuDock.classList.toggle("battle-debug-menu-dock--open");
-      const expanded = debugMenuDock.classList.contains(
-        "battle-debug-menu-dock--open",
+      setDebugMenuDockOpen(
+        !debugMenuDock.classList.contains("battle-debug-menu-dock--open"),
       );
-      debugMenuToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
     });
     debugMenuToggle.setAttribute("aria-expanded", "false");
     debugMenuDock.appendChild(debugMenuToggle);
+
+    this.debugMenu = new DebugMenuPanel(
+      this.gameData,
+      {
+        isVerifyMode: () => verifyModeControls?.isVerifyMode() ?? false,
+        isBattleXDebugDisplayEnabled: () =>
+          this.isBattleXDebugDisplayActive(),
+        onBattleXDebugDisplayChange: (enabled) => {
+          verifyModeControls?.onBattleXDebugDisplayChange?.(enabled);
+        },
+        getSave: this.getSave,
+        getLoopStageId: () => verifyModeControls?.getLoopStageId?.() ?? null,
+        getLoopWaveIndex: () => verifyModeControls?.getLoopWaveIndex?.() ?? null,
+        onLoopStageChange: (stageId) => {
+          verifyModeControls?.onLoopStageChange?.(stageId);
+          this.debugMenu.refresh();
+        },
+        onLoopWaveChange: (waveIndex) => {
+          verifyModeControls?.onLoopWaveChange?.(waveIndex);
+          this.debugMenu.refresh();
+        },
+        onPlayerLevelChange: (level) => {
+          verifyModeControls?.onPlayerLevelChange?.(level);
+          this.debugMenu.refresh();
+        },
+      },
+      () => {
+        setDebugMenuDockOpen(false);
+      },
+    );
     this.debugMenu.mount(debugMenuDock);
 
     this.menuButton = this.createPartyMenuButton();
@@ -417,6 +423,7 @@ export class BattleView {
     this.partyHud.mount(this.partyHudSlotEl);
 
     this.enemyHud = new EnemyHudPanel(this.canvasHost, {
+      layout: "overlay-top",
       floatingTooltip: this.hudFloatingTooltip,
       gameTermPanel: this.gameTermPanel,
       onHoverHighlightStart: (unitId) => {

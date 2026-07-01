@@ -268,11 +268,7 @@
 }
 
 .battle-hud-slot--enemy {
-  left: var(--battle-enemy-hud-x, 996px);
-  top: 64px;
-  width: var(--battle-side-hud-width, 260px);
-  height: auto;
-  max-height: 608px;
+  /* Position/size from battleRootRectStyle(ENEMY_HUD_SLOT_RECT) in BattleView */
 }
 
 /* Layer 4 — top info overlay */
