@@ -116,8 +116,8 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | 定数                                 | 用途                                                                                                            |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | `CANVAS_W`（1280）                   | 戦闘キャンバス幅（px）。背景描画の全幅 |
-| `BATTLE_CANVAS_HEIGHT`（668）        | 戦闘キャンバス高さ（px）。topInfo 直下〜 root 下端 |
-| `COMBAT_SAFE_LEFT` / `COMBAT_SAFE_RIGHT` | HUD を避けたユニット配置帯（`combatSafeArea.ts`）。Party HUD 右端 + 48px / Enemy HUD 左端 − 48px |
+| `BATTLE_CANVAS_HEIGHT`（490）        | 戦闘キャンバス高さ（px）。topInfo 直下〜下部 partyHud 直上。下端余白は左右余白（24px）と同値 |
+| `COMBAT_SAFE_LEFT` / `COMBAT_SAFE_RIGHT` | HUD を避けたユニット配置帯（`combatSafeArea.ts`）。画面左マージン + 48px / Enemy HUD 左端 − 48px |
 | `COMBAT_CAMERA_CENTER_X`             | 安全領域中央（敵 spawn オフセット基準） |
 | `PARTY_FORMATION_LEFT_ANCHOR`       | `COMBAT_SAFE_LEFT`（味方隊列左端） |
 | `PARTY_FORMATION_SLOT_SPACING`（48） | 味方隊列スロット間隔（広い戦場で奥行きを見せる） |
@@ -493,8 +493,8 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 
 | 要素 | 内容 |
 | ---- | ---- |
-| 起動 | Party HUD の **アイコン+HP/リキャスト行**（`.party-hud-icon-wrap` / `.party-hud-bars`）へ **マウスオーバー**。詳細モードでも同じ。パネル上にカーソルがあれば表示維持。離れたら非表示 |
-| 配置 | 選択スロットの **クラス名行の直上**（`.party-hud-slot` 内、`bottom: 100%`）。Canvas 上ではなく HUD 列にアンカー |
+| 起動 | **overlay（戦闘画面）:** `.party-hud-header-row`（アイコン・クラス名・HP バーを含む識別行）へ **マウスオーバー**。**lane 詳細:** `.party-hud-icon-wrap` / `.party-hud-bars` へマウスオーバー。パネル上にカーソルがあれば表示維持。離れたら非表示 |
+| 配置 | 選択スロットの **識別行の直上**（overlay は `.party-hud-header-row` 基準。lane は `.party-hud-slot` 内、`bottom: 100%`）。Canvas 上ではなく HUD 列にアンカー |
 | 対象 | **選択中スロット 1 人のみ** |
 | 表示項目 | **HP**（`現在HP / 実効MaxHP`）、**攻撃力 / 防御力 / 魔法耐性 / 攻撃速度**（5 段階 tier ラベル）。**射程・基本攻撃は表示しない** |
 | 補正列 | 各ステの右に `(+N)` / `(-N)`（REG は `(+N%)`）。SPD buff/debuff は **`(×倍率)`**（例: `(×1.25)`）。差分 0 は空 |
@@ -619,11 +619,11 @@ CSS では Canvas / 画像に `image-rendering: pixelated` と `image-rendering:
 
 1280×720 `battle-root` に **全幅・高さ一杯** の `BattleCanvas` を敷き、左右 HUD はその上に浮かせる。内部基準 `CANVAS_W`（1280px）× `BATTLE_CANVAS_HEIGHT`（668px）・描画スケール `BATTLE_FIELD_SPRITE_SCALE`（2）で 32px スプライトを観察しやすいサイズにする。
 
-**戦闘空間の使い方:** 背景・Canvas は 1280px 全幅。ユニット配置・接敵・spawn は `combatSafeArea.ts` の `COMBAT_SAFE_LEFT`〜`COMBAT_SAFE_RIGHT`（左右 HUD + 48px gap）を正本とする。HUD 幾何の正本は `battleHudGeometry.ts`（`battleRootLayout` と同期）。`PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT`。`SPAWN_X_MAX = COMBAT_SAFE_RIGHT - COMBAT_CAMERA_CENTER_X`。PartyDeploy 左外開始距離は `resolvePartyDeployMarchDistancePx`（最前列 target が画面外左に収まるまで延長。移動速度は `MOVE_PX_PER_SEC` のまま）。
+**戦闘空間の使い方:** 背景・Canvas は 1280px 全幅。ユニット配置・接敵・spawn は `combatSafeArea.ts` の `COMBAT_SAFE_LEFT`〜`COMBAT_SAFE_RIGHT`（左は画面マージン + 48px gap、右は Enemy HUD + 48px gap）を正本とする。HUD 幾何の正本は `battleHudGeometry.ts`（`battleRootLayout` と同期）。`PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT`。`SPAWN_X_MAX = COMBAT_SAFE_RIGHT - COMBAT_CAMERA_CENTER_X`。PartyDeploy 左外開始距離は `resolvePartyDeployMarchDistancePx`（最前列 target が画面外左に収まるまで延長。移動速度は `MOVE_PX_PER_SEC` のまま）。
 
 **遠距離判定:** `RANGED_ATTACK_MIN_PX`（= `LONG_RANGE_THRESHOLD_PX`、100）。`rangePx >= 100` が遠隔帯（100 含む）。閾値は `types.ts` の単一定数。
 
-**Canvas 外枠:** `battle-canvas` に枠線・下部帯を付けない。編成ボタンは暫定導線として `battle-transient-controls-dock`（右下・Debug 付近の操作 UI レイヤ）。Party / Enemy HUD・中央戦場とは混ぜない。プレイヤー Lv 表示は戦闘 HUD から外す。
+**Canvas 外枠:** `battle-canvas` に枠線・下部帯を付けない。編成ボタン・Debug トグルは暫定 / 開発用として `battle-transient-controls-dock`（味方 HUD **右上**・カード列の外、`battleRootLayout.ts` の `BATTLE_TRANSIENT_CONTROLS_TOP`）。Party / Enemy HUD・中央戦場とは混ぜない。プレイヤー Lv 表示は戦闘 HUD から外す。
 
 **変更しないもの（戦闘ルール）:**
 
@@ -668,26 +668,30 @@ topInfo:
 
 partyHud:
   x: 24
-  y: 64
-  w: 260 # computeBattleSideHudWidth() — overlay 状態 2 行×10 列グリッド幅 + 枠余白
-  h: 608
+  y: 554
+  w: 1232
+  h: 142
+  bottomMargin: 24   # BATTLE_PARTY_HUD_BOTTOM_MARGIN (= side margin)
 
 battleLane:
   x: 0
-  y: 52
+  y: 64
   w: 1280 # CANVAS_W（全幅フィールド）
-  h: 668 # BATTLE_CANVAS_HEIGHT
+  h: 490 # BATTLE_CANVAS_HEIGHT（下部 partyHud 直上まで）
+
+groundLine:
+  screenY: 530 # BATTLE_GROUND_LINE_SCREEN_Y（partyHud 直上の草ライン）
 
 enemyHud:
-  x: 996 # 1280 - 24 - partyHud.w
+  x: 996 # 1280 - 24 - enemyHud.w
   y: 64
-  w: 260 # partyHud と同一（BATTLE_SIDE_HUD_WIDTH）
+  w: 260 # BATTLE_SIDE_HUD_WIDTH
   h: 608
 ```
 
 この寸法は三カラム分割ではなく、1280×720 基準座標上のオーバーレイ配置。背景は `battleLane` に限定せず、画面全幅に敷く。`battleLane` は中央の読み取り領域であり、戦闘背景そのものの境界ではない。
 
-**左右 HUD 幅:** 味方 overlay の状態アイコン 2 行×10 列グリッド（`measurePartyHudOverlayStatusGrid`）の canvas 幅 + カード枠余白を `computeBattleSideHudWidth()`（`battleRootLayout.ts`）で正本化する。敵 HUD も同幅。
+**左右 HUD 幅:** 敵 HUD は overlay 状態アイコン列幅 + 枠余白を `computeBattleSideHudWidth()`（`battleHudGeometry.ts`）で正本化。味方 HUD は画面下部全幅（`PARTY_HUD_SLOT_RECT.w` = topInfo と同幅 1232px）。
 
 ### 8.6 HUD 固定スロット方針
 
@@ -705,26 +709,31 @@ enemyHud:
 
 ### 8.7 味方 HUD
 
-味方 HUD は左側オーバーレイに固定し、4 人固定パーティを縦並びで表示する。既存の味方 1 人 HUD 構造は流用してよいが、各ユニットカードは固定高さとし、内容量でカード高さを変えない。
+味方 HUD は **画面下部** に固定し、4 人固定パーティを **横 4 枚** で表示する。既存の allyCard 内部構造（識別行・状態欄・味方スキルゲージ 2×2・与被ダメ）は流用する。各ユニットカードは固定高さとし、内容量でカード高さを変えない。**スロット枠**は gap 0 で横に接続し、**内容列幅**は状態アイコングリッド（`computePartyHudOverlayStatusColumnWidth`）に揃える。スロットの **適用 padding** は nominal `pad-x` × `PARTY_HUD_OVERLAY_CARD_PAD_SCALE`（**0.3**）。nominal `pad-x` は内容列をスロット中央に置くときの左右余白目安。**partyHud 全体**（`.battle-hud-slot--party`）の battle-root 下余白は `BATTLE_PARTY_HUD_BOTTOM_MARGIN`（**24px**、左右 `BATTLE_HUD_SIDE_MARGIN` と同値）。
 
-**縦並び順:** 上から **射程の短い順**（`traits.rangePx` 昇順）。同射程は `partySlotIndex` 昇順。空き編成スロットは末尾。`partySlotIndex` は与ダメ統計・ホバー詳細のキーであり、visual 行番号の正本ではない（§1 `partySlotIndex` とスロットの違い）。
+**並び順:** **右を先頭**に **射程昇順**（`traits.rangePx` 昇順）。同射程は `partySlotIndex` 昇順。空き編成スロットは左端（先頭の反対側）。`partySlotIndex` は与ダメ統計・ホバー詳細のキーであり、visual 列番号の正本ではない（§1 `partySlotIndex` とスロットの違い）。
 
 初期寸法目安:
 
 ```yaml
 partyHud:
   x: 24
-  y: 64
-  w: 260 # computeBattleSideHudWidth()
-  h: 608
+  y: 554
+  w: 1232
+  h: 142
 
 allyCard:
   count: 4
-  height: 146
-  gap: 8
+  layout: row
+  slotWidth: 308   # 1232 / 4 — slots abut (gap 0)
+  contentWidth: 250   # status icon grid + wrap padding (computePartyHudOverlayStatusColumnWidth)
+  padX: 29            # nominal per-side inset — centers content in slot
+  padScale: 0.3         # applied padding = padX * padScale (~8.7px)
+  height: 142           # content blocks + 2 * applied pad (computePartyHudSlotHeight)
+  gap: 0
 
 total:
-  4 * 146 + 3 * 8 = 608
+  4 * 308 = 1232
 ```
 
 味方 1 人カード（`allyCard`）の縦 4 段構造:
@@ -761,6 +770,7 @@ active_3  active_4
 | 項目 | 方針 |
 | ---- | ---- |
 | 枠数 | 最大 4 スキル枠を常時表示 |
+| 行高（オーバーレイ） | 基準 11px 行 ×2 + 1px 行間を `--party-hud-overlay-recast-scale`（**0.9**）で縮小。習得数では変えない |
 | ラベル | 常時ラベルは表示しない。配置位置で `active_1`〜`active_4` を表す |
 | Lv0 | `active_1` / `active_2` のみ有効表示。`active_3` / `active_4` は非アクティブ枠 |
 | Lv10 | `active_3` を有効表示。`active_4` は非アクティブ枠 |

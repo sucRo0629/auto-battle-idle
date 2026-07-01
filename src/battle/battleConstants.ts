@@ -10,16 +10,20 @@ import {
 /** 1280×720 battle-root の戦闘キャンバス幅（全幅フィールド） */
 export const CANVAS_W = 1280;
 
-/** battleLane 上端から下端までのキャンバス高さ（topInfo 直下〜root 下端） */
-export const BATTLE_LANE_TOP_INSET = 52;
+/** battleLane 上端（battle-root Y）。topInfo 直下。 */
+export const BATTLE_LANE_TOP_INSET = 64;
 export const BATTLE_ROOT_REF_HEIGHT = 720;
-export const BATTLE_CANVAS_HEIGHT =
-  BATTLE_ROOT_REF_HEIGHT - BATTLE_LANE_TOP_INSET;
+/**
+ * 戦闘キャンバス高さ（px）。
+ * partyHud 下端の battle-root 下余白が左右余白（24px）と揃うよう導出。
+ * 正本式: `computeBattleCanvasHeightForPartyHudSlot`（`battleHudGeometry.ts`）。
+ */
+export const BATTLE_CANVAS_HEIGHT = 490;
 
 /** 敵 spawn オフセット基準（HUD 間の安全領域中央） */
 export const COMBAT_CAMERA_CENTER_X = COMBAT_SAFE_CENTER_X;
 
-/** 味方隊列: 最後列（左端）の battleX — HUD 右端 + gap */
+/** 味方隊列: 最後列（左端）の battleX — 画面左マージン + gap */
 export const PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT;
 /** 味方隊列: スロット間隔（px）— 広い戦場で射程差が見えるよう拡大 */
 export const PARTY_FORMATION_SLOT_SPACING = 48;

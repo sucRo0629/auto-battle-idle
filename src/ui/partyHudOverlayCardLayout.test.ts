@@ -5,7 +5,7 @@ import '../styles/party-member-stats.css';
 import '../styles/party-hud-overlay.css';
 import { PartyHudPanel } from './PartyHudPanel.ts';
 import type { PartyHudEntry } from './partyHudTypes.ts';
-import { BATTLE_SIDE_HUD_WIDTH } from './battleRootLayout.ts';
+import { PARTY_HUD_SLOT_RECT } from './battleRootLayout.ts';
 import type { StageDamageDisplayRow } from '../battle/stageDamageStats.ts';
 
 function sampleEntry(overrides: Partial<PartyHudEntry> = {}): PartyHudEntry {
@@ -66,12 +66,13 @@ describe('PartyHudPanel overlay allyCard layout', () => {
   beforeEach(() => {
     host = document.createElement('div');
     host.className = 'battle-view';
-    host.style.width = `${BATTLE_SIDE_HUD_WIDTH}px`;
+    host.style.width = `${PARTY_HUD_SLOT_RECT.w}px`;
+    host.style.height = `${PARTY_HUD_SLOT_RECT.h}px`;
     host.style.setProperty('--hud-icon-size', '24');
     host.style.setProperty('--hud-header-font-size', '12');
     host.style.setProperty('--hud-body-bar-h', '14');
-    host.style.setProperty('--hud-recast-bar-h', '11');
-    host.style.setProperty('--hud-recast-gap', '1');
+    host.style.setProperty('--hud-recast-bar-h', '9.9');
+    host.style.setProperty('--hud-recast-gap', '0.9');
     document.body.appendChild(host);
     panel = new PartyHudPanel(host, { layout: 'overlay' });
     panel.mount(host);
@@ -115,6 +116,12 @@ describe('PartyHudPanel overlay allyCard layout', () => {
     expect(activeFills[0]?.style.width).not.toBe('0%');
     expect(activeFills[0]?.dataset.state).not.toBe('empty');
     expect(activeFills[1]?.dataset.state).not.toBe('empty');
+  });
+
+  it('anchors member stats hover to the overlay header row', () => {
+    panel.update([sampleEntry(), null, null, null]);
+    const anchor = panel.getMemberStatsAnchor(0);
+    expect(anchor?.classList.contains('party-hud-header-row')).toBe(true);
   });
 
   it('shows synced damage metrics in the overlay damage row', () => {

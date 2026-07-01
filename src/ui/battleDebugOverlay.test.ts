@@ -14,12 +14,12 @@ import {
 } from "../battle/battleConstants.ts";
 
 describe("battle debug overlay layout invariants", () => {
-  it("keeps side HUD rects aligned to the status icon grid width", () => {
+  it("keeps HUD rects aligned without shifting debug overlay by partyHud move", () => {
     expect(PARTY_HUD_SLOT_RECT).toEqual({
       x: BATTLE_HUD_SIDE_MARGIN,
-      y: 64,
-      w: BATTLE_SIDE_HUD_WIDTH,
-      h: 608,
+      y: BATTLE_LANE_TOP + BATTLE_CANVAS_HEIGHT,
+      w: 1232,
+      h: 142,
     });
     expect(ENEMY_HUD_SLOT_RECT).toEqual({
       x: BATTLE_ROOT_WIDTH - BATTLE_HUD_SIDE_MARGIN - BATTLE_SIDE_HUD_WIDTH,
@@ -33,5 +33,6 @@ describe("battle debug overlay layout invariants", () => {
       w: CANVAS_W,
       h: BATTLE_CANVAS_HEIGHT,
     });
+    expect(BATTLE_LANE_RECT.y + BATTLE_LANE_RECT.h).toBe(PARTY_HUD_SLOT_RECT.y);
   });
 });

@@ -1,14 +1,14 @@
 import {
+  BATTLE_HUD_SIDE_MARGIN,
   enemyHudLeftEdge,
-  partyHudRightEdge,
 } from '../ui/battleHudGeometry.ts';
 
 /** HUD パネル外縁とユニット配置帯の間隔（px） */
 export const COMBAT_SAFE_AREA_HUD_GAP = 48;
 
-/** 左右 HUD を避けたユニット配置・接敵の左端（battleX） */
+/** ユニット配置・接敵の左端（battleX）— 画面左マージン + gap（下部 partyHud は戦場横幅に含めない） */
 export const COMBAT_SAFE_LEFT =
-  partyHudRightEdge() + COMBAT_SAFE_AREA_HUD_GAP;
+  BATTLE_HUD_SIDE_MARGIN + COMBAT_SAFE_AREA_HUD_GAP;
 
 /** 左右 HUD を避けたユニット配置・接敵の右端（battleX） */
 export const COMBAT_SAFE_RIGHT =

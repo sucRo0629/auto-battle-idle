@@ -60,6 +60,8 @@ interface SlotElements {
   label: HTMLElement;
   unitPlate: HTMLElement;
   classCol?: HTMLElement;
+  /** overlay allyCard 識別行 — 戦闘中ステータス hover の正本 */
+  headerRow?: HTMLElement;
   iconWrap: HTMLElement;
   icon: HTMLImageElement;
   hpFill: HTMLElement;
@@ -328,6 +330,13 @@ export class PartyHudPanel {
     return this.slots[slotIndex]?.root ?? null;
   }
 
+  /** Anchor for §7.1.1 effective-stats panel — overlay uses `.party-hud-header-row`. */
+  getMemberStatsAnchor(visualSlotIndex: number): HTMLElement | null {
+    const slot = this.slots[visualSlotIndex];
+    if (!slot) return null;
+    return slot.headerRow ?? slot.root;
+  }
+
   destroy(): void {
     this.unsubscribeStatusIconsReady();
     this.root.remove();
@@ -353,9 +362,17 @@ export class PartyHudPanel {
     element.addEventListener('mouseenter', () => {
       this.options.onMemberStatsHoverStart?.(slotIndex);
     });
-    element.addEventListener('mouseleave', () => {
+    element.addEventListener('mouseleave', (event) => {
+      if (this.shouldRetainMemberStatsHover(event.relatedTarget)) return;
       this.options.onMemberStatsHoverEnd?.();
     });
+  }
+
+  private shouldRetainMemberStatsHover(
+    relatedTarget: EventTarget | null,
+  ): boolean {
+    if (!(relatedTarget instanceof Element)) return false;
+    return relatedTarget.closest('.party-member-effective-stats') !== null;
   }
 
   private createSlot(slotIndex: number): SlotElements {
@@ -365,14 +382,19 @@ export class PartyHudPanel {
     return this.createLaneSlot(slotIndex);
   }
 
-  private createHpRow(slotIndex: number): {
+  private createHpRow(
+    slotIndex: number,
+    options: { bindMemberStatsHover?: boolean } = {},
+  ): {
     hpRow: HTMLElement;
     hpFill: HTMLElement;
     barrierLayer: HTMLElement;
   } {
     const hpRow = document.createElement('div');
     hpRow.className = 'party-hud-hp-row';
-    this.bindMemberStatsHover(hpRow, slotIndex);
+    if (options.bindMemberStatsHover !== false) {
+      this.bindMemberStatsHover(hpRow, slotIndex);
+    }
 
     const hpTrack = document.createElement('div');
     hpTrack.className = 'party-hud-hp-track';
@@ -456,7 +478,6 @@ export class PartyHudPanel {
     iconWrap.className =
       'party-hud-icon-wrap pixel-icon-frame pixel-icon-frame--24';
     headerRow.appendChild(iconWrap);
-    this.bindMemberStatsHover(iconWrap, slotIndex);
 
     const label = document.createElement('div');
     label.className = 'party-hud-label';
@@ -470,8 +491,11 @@ export class PartyHudPanel {
     icon.alt = '';
     iconWrap.appendChild(icon);
 
-    const { hpRow, hpFill, barrierLayer } = this.createHpRow(slotIndex);
+    const { hpRow, hpFill, barrierLayer } = this.createHpRow(slotIndex, {
+      bindMemberStatsHover: false,
+    });
     headerRow.appendChild(hpRow);
+    this.bindMemberStatsHover(headerRow, slotIndex);
 
     const { statusBadgeWrap, statusCanvas, statusBadgeHitLayer } =
       this.createStatusBadgeWrap();
@@ -488,6 +512,7 @@ export class PartyHudPanel {
       slotIndex,
       label,
       unitPlate,
+      headerRow,
       iconWrap,
       icon,
       hpFill,

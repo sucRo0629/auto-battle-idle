@@ -1,4 +1,4 @@
-/* Left partyHud overlay — battle-field.md §8.7 allyCard */
+/* Bottom partyHud overlay — battle-field.md §8.7 allyCard (horizontal 4-up) */
 
 .battle-hud-slot--party {
   -webkit-app-region: no-drag;
@@ -6,12 +6,19 @@
 }
 
 .party-hud-panel--overlay {
-  --party-hud-overlay-card-h: 146px;
-  --party-hud-overlay-card-gap: 8px;
+  --party-hud-overlay-card-h: 142px;
+  --party-hud-overlay-card-gap: 0;
+  --party-hud-overlay-content-w: 250px;
+  --party-hud-overlay-card-pad-x: 29px;
+  --party-hud-overlay-card-pad-scale: 0.3;
+  --party-hud-overlay-card-pad: calc(
+    var(--party-hud-overlay-card-pad-x) * var(--party-hud-overlay-card-pad-scale)
+  );
   --party-hud-overlay-header-h: 26px;
   --party-hud-overlay-status-h: 49px;
-  --party-hud-overlay-recast-h: 24px;
-  --party-hud-overlay-damage-h: 30px;
+  --party-hud-overlay-recast-h: 21.6px;
+  --party-hud-overlay-recast-scale: 0.9;
+  --party-hud-overlay-damage-h: 22px;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -40,8 +47,9 @@
 
 .party-hud-panel--overlay .party-hud-panel-slots {
   display: flex;
-  flex-direction: column;
-  gap: 0;
+  flex-direction: row-reverse;
+  align-items: stretch;
+  gap: var(--party-hud-overlay-card-gap);
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
@@ -49,17 +57,17 @@
   box-sizing: border-box;
 }
 
-.party-hud-panel--overlay .party-hud-panel-slots > .party-hud-slot:not(:last-child) {
-  margin-bottom: var(--party-hud-overlay-card-gap);
-}
-
 .party-hud-panel--overlay .party-hud-panel-slots > .party-hud-slot {
-  flex: 0 0 var(--party-hud-overlay-card-h);
-  height: var(--party-hud-overlay-card-h);
-  min-height: var(--party-hud-overlay-card-h);
-  max-height: var(--party-hud-overlay-card-h);
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
   overflow: hidden;
-  padding: 3px 5px 3px;
+  align-items: center;
+  justify-content: flex-start;
+  padding: var(--party-hud-overlay-card-pad);
   gap: 0;
   border-radius: 0;
   background: rgba(6, 8, 14, 0.72);
@@ -68,12 +76,12 @@
   contain: paint;
 }
 
-/* allyCard — 縦 4 段 */
+/* allyCard — 縦 4 段; 横幅は状態アイコングリッドに揃える */
 .party-hud-panel--overlay .party-hud-card {
   --hud-body-bar-h: 14;
   --hud-recast-slot-rows: 2;
-  --hud-recast-bar-h: 11;
-  --hud-recast-gap: 1;
+  --hud-recast-bar-h: calc(11 * var(--party-hud-overlay-recast-scale));
+  --hud-recast-gap: calc(1 * var(--party-hud-overlay-recast-scale));
   --hud-recast-grid-h: calc(
     var(--hud-recast-slot-rows) * var(--hud-recast-bar-h) * 1px +
       (var(--hud-recast-slot-rows) - 1) * var(--hud-recast-gap) * 1px
@@ -82,10 +90,13 @@
   flex-direction: column;
   align-items: stretch;
   gap: 2px;
-  width: 100%;
-  height: 100%;
+  width: var(--party-hud-overlay-content-w);
+  max-width: 100%;
+  height: auto;
+  flex: 0 0 auto;
   min-height: 0;
   min-width: 0;
+  align-self: center;
 }
 
 /* 1. キャラ識別 + 生存状況 */
@@ -161,7 +172,7 @@
   visibility: hidden;
 }
 
-/* 3. スキルゲージ 2×2 */
+/* 3. 味方スキルゲージ 2×2 */
 .party-hud-panel--overlay .party-hud-recast-grid {
   display: grid;
   flex: 0 0 var(--hud-recast-grid-h);
@@ -199,7 +210,7 @@
   box-shadow: inset 0 0 0 1px var(--hud-skill-recast-border);
 }
 
-/* 4. 与被ダメ要約（横並び） */
+/* 4. 与被ダメ要約 — 各行: アイコン | バー | 数値 */
 .party-hud-panel--overlay .party-hud-detail-damage.party-stats-damage {
   flex: 0 0 var(--party-hud-overlay-damage-h);
   display: flex !important;
@@ -209,7 +220,8 @@
   width: 100%;
   min-width: 0;
   min-height: var(--party-hud-overlay-damage-h);
-  padding: 2px 3px;
+  max-height: var(--party-hud-overlay-damage-h);
+  padding: 1px 3px;
   border-radius: 0;
   background: rgba(8, 10, 18, 0.55);
   box-shadow: none;
@@ -220,7 +232,7 @@
 .party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-bars {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
   min-width: 0;
   overflow: hidden;
@@ -228,12 +240,15 @@
 
 .party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-bar {
   display: grid;
-  grid-template-columns: 12px minmax(0, 1fr);
-  grid-template-rows: auto 5px;
-  gap: 1px 0;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  grid-template-rows: 12px;
+  gap: 0 3px;
   align-items: center;
   width: 100%;
   min-width: 0;
+  height: 12px;
+  min-height: 12px;
+  max-height: 12px;
   overflow: hidden;
   contain: paint;
   isolation: isolate;
@@ -246,11 +261,12 @@
 .party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-bar-tag {
   grid-column: 1;
   grid-row: 1;
+  align-self: center;
   overflow: hidden;
 }
 
 .party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-bar--taken {
-  padding-left: 1px;
+  padding-left: 0;
   box-sizing: border-box;
 }
 
@@ -263,17 +279,30 @@
   overflow: hidden;
 }
 
-.party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-bar-value {
-  display: block;
+.party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-fill {
   grid-column: 2;
   grid-row: 1;
+  align-self: center;
+  width: 0;
   min-width: 0;
-  padding-left: 4px;
+  max-width: 100%;
+  height: 4px;
+  justify-self: start;
+}
+
+.party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-bar-value {
+  display: block;
+  grid-column: 3;
+  grid-row: 1;
+  flex: 0 0 auto;
+  min-width: 0;
+  max-width: 4.5ch;
+  padding-left: 0;
   box-sizing: border-box;
   font-size: var(--font-body-min-size);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  line-height: 1.1;
+  line-height: 1;
   text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -294,16 +323,6 @@
 
 .party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-bar::after {
   display: none;
-}
-
-.party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-fill {
-  grid-column: 2;
-  grid-row: 2;
-  width: 0;
-  min-width: 0;
-  max-width: 100%;
-  height: 5px;
-  justify-self: start;
 }
 
 .party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-label {

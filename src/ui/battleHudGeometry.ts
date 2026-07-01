@@ -1,8 +1,11 @@
-import { BATTLE_ROOT_WIDTH, snapHudCanvasCssSize } from './battleRootScale.ts';
 import { PARTY_HUD_OVERLAY_STATUS_COLS } from '../battle/statusEffectDisplay.ts';
+import { BATTLE_ROOT_HEIGHT, BATTLE_ROOT_WIDTH, snapHudCanvasCssSize } from './battleRootScale.ts';
 
 /** Left / right inset of side HUD columns from the battle-root edge (px). */
 export const BATTLE_HUD_SIDE_MARGIN = 24;
+
+/** Bottom inset of partyHud from the battle-root edge — matches side margin. */
+export const BATTLE_PARTY_HUD_BOTTOM_MARGIN = BATTLE_HUD_SIDE_MARGIN;
 
 /** Horizontal padding inside overlay `.party-hud-status-badges-wrap` (1px per side). */
 export const BATTLE_HUD_STATUS_WRAP_PAD_X = 2;
@@ -59,7 +62,44 @@ export function computeBattleSideHudWidth(
 
 export const BATTLE_SIDE_HUD_WIDTH = computeBattleSideHudWidth();
 
+/** Party overlay allyCard content width — status badge canvas + wrap padding. */
+export function computePartyHudOverlayStatusColumnWidth(
+  iconSize = PARTY_HUD_STATUS_BADGE_ICON_SIZE,
+  statusIconOutlineWidth = 1,
+  statusBadgeOverlap = 0,
+): number {
+  const gridWidth = measurePartyHudOverlayStatusGridWidth(
+    1,
+    iconSize,
+    statusIconOutlineWidth,
+    statusBadgeOverlap,
+  );
+  return snapHudCanvasCssSize(gridWidth) + BATTLE_HUD_STATUS_WRAP_PAD_X;
+}
+
+/** Per-side horizontal padding so slot chrome fills partyHud with no inter-card gap. */
+export function computePartyHudOverlayCardPadXPerSide(
+  slotWidth: number,
+  contentWidth = computePartyHudOverlayStatusColumnWidth(),
+): number {
+  return Math.max(0, (slotWidth - contentWidth) / 2);
+}
+
+/** battleLane 上端（battle-root Y）— `battleConstants.BATTLE_LANE_TOP_INSET` と同値。 */
+const BATTLE_LANE_TOP_INSET = 64;
+
+/** battleLane height so partyHud sits with bottom margin equal to side margin. */
+export function computeBattleCanvasHeightForPartyHudSlot(
+  partyHudSlotHeight: number,
+  bottomMargin = BATTLE_PARTY_HUD_BOTTOM_MARGIN,
+  laneTop = BATTLE_LANE_TOP_INSET,
+  rootHeight = BATTLE_ROOT_HEIGHT,
+): number {
+  return rootHeight - bottomMargin - laneTop - partyHudSlotHeight;
+}
+
 export function partyHudRightEdge(): number {
+  /** @deprecated 下部横並び partyHud 移行後は combat safe left に使わない */
   return BATTLE_HUD_SIDE_MARGIN + BATTLE_SIDE_HUD_WIDTH;
 }
 

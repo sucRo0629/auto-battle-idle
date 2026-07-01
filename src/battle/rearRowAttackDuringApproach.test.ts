@@ -13,6 +13,7 @@ import { RANGED_ATTACK_MIN_PX } from './types.ts';
 import {
   asBattleEngineInternals,
   createStage1Engine,
+  createStage1Wave1MeleeFirstDeathEngine,
   reachWave1Engage,
   reachWave2Engage,
   TICK_DT,
@@ -52,9 +53,6 @@ describe('battle-field §4.4 rear row attack during approach', () => {
     );
     expect(rear).toBeDefined();
 
-    for (const unit of front) {
-      unit.battleX = COMBAT_SAFE_LEFT - 50;
-    }
     rear!.battleX = COMBAT_SAFE_LEFT + PARTY_FORMATION_SLOT_SPACING;
     const nearestEnemy = internal.enemies.find((e) => e.isAlive)!;
     nearestEnemy.battleX = rear!.battleX + 80;
@@ -62,6 +60,16 @@ describe('battle-field §4.4 rear row attack during approach', () => {
       (e) => e.isAlive && e.id !== nearestEnemy.id,
     )) {
       enemy.battleX = COMBAT_CAMERA_CENTER_X + 200;
+    }
+
+    for (const unit of front) {
+      const stopX = resolvePlayerApproachBattleX(
+        unit,
+        internal.players,
+        internal.enemies,
+        gameData,
+      );
+      unit.battleX = stopX - 80;
     }
 
     const rearRange = resolveMaxEffectiveRangePx(rear!, gameData);
@@ -80,7 +88,7 @@ describe('battle-field §4.4 rear row attack during approach', () => {
   });
 
   it('§4.4 wave 2: archer (rangePx 100) damages enemy (rangePx 100) while front chase stop X not reached', () => {
-    const engine = createStage1Engine();
+    const engine = createStage1Wave1MeleeFirstDeathEngine();
     reachWave2Engage(engine);
     const internal = asBattleEngineInternals(engine);
 
@@ -96,9 +104,10 @@ describe('battle-field §4.4 rear row attack during approach', () => {
     );
     expect(archer).toBeDefined();
     expect(longRangeEnemy).toBeDefined();
+    expect(front.length).toBeGreaterThan(0);
 
     for (const unit of front) {
-      unit.battleX = COMBAT_SAFE_LEFT - 120;
+      unit.battleX = COMBAT_SAFE_LEFT - 200;
     }
     archer!.battleX = COMBAT_SAFE_LEFT + PARTY_FORMATION_SLOT_SPACING * 2;
     longRangeEnemy!.battleX = archer!.battleX + 80;

@@ -49,12 +49,19 @@ import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 import { applyBattleRootScale } from "./battleRootScale.ts";
 import {
+  BATTLE_GROUND_LINE_SCREEN_RATIO,
+  BATTLE_HUD_SIDE_MARGIN,
   BATTLE_LANE_RECT,
   BATTLE_SIDE_HUD_WIDTH,
+  BATTLE_TRANSIENT_CONTROLS_TOP,
   BATTLE_X_DEBUG_PANEL_TOP,
   ENEMY_HUD_SLOT_RECT,
   battleHudToolbarTopY,
   battleRootRectStyle,
+  PARTY_HUD_ALLY_CARD_CONTENT_WIDTH,
+  PARTY_HUD_ALLY_CARD_PAD,
+  PARTY_HUD_ALLY_CARD_PAD_X,
+  PARTY_HUD_OVERLAY_CARD_PAD_SCALE,
   PARTY_HUD_SLOT_RECT,
 } from "./battleRootLayout.ts";
 import { CANVAS_W } from "../battle/battleConstants.ts";
@@ -152,12 +159,32 @@ export class BattleView {
       `${BATTLE_SIDE_HUD_WIDTH}px`,
     );
     this.battleRoot.style.setProperty(
+      "--party-hud-overlay-content-w",
+      `${PARTY_HUD_ALLY_CARD_CONTENT_WIDTH}px`,
+    );
+    this.battleRoot.style.setProperty(
+      "--party-hud-overlay-card-pad-x",
+      `${PARTY_HUD_ALLY_CARD_PAD_X}px`,
+    );
+    this.battleRoot.style.setProperty(
+      "--party-hud-overlay-card-pad",
+      `${PARTY_HUD_ALLY_CARD_PAD}px`,
+    );
+    this.battleRoot.style.setProperty(
+      "--party-hud-overlay-card-pad-scale",
+      `${PARTY_HUD_OVERLAY_CARD_PAD_SCALE}`,
+    );
+    this.battleRoot.style.setProperty(
       "--battle-enemy-hud-x",
       `${ENEMY_HUD_SLOT_RECT.x}px`,
     );
     this.battleRoot.style.setProperty(
       "--battle-canvas-width",
       `${CANVAS_W}px`,
+    );
+    this.battleRoot.style.setProperty(
+      "--battle-ground-line-ratio",
+      `${BATTLE_GROUND_LINE_SCREEN_RATIO}%`,
     );
 
     this.canvasHost = document.createElement("div");
@@ -184,6 +211,7 @@ export class BattleView {
     const partyHudSlot = document.createElement("div");
     partyHudSlot.className = "battle-hud-slot battle-hud-slot--party";
     partyHudSlot.setAttribute("data-battle-hud-slot", "party");
+    partyHudSlot.style.cssText = battleRootRectStyle(PARTY_HUD_SLOT_RECT);
     this.partyHudSlotEl = partyHudSlot;
 
     const enemyHudSlot = document.createElement("div");
@@ -216,7 +244,15 @@ export class BattleView {
     );
     battleDebugShell.style.setProperty(
       "--battle-x-debug-column-width",
-      `${PARTY_HUD_SLOT_RECT.w}px`,
+      `${BATTLE_SIDE_HUD_WIDTH}px`,
+    );
+    battleDebugShell.style.setProperty(
+      "--battle-transient-controls-top",
+      `${BATTLE_TRANSIENT_CONTROLS_TOP}px`,
+    );
+    battleDebugShell.style.setProperty(
+      "--battle-transient-controls-right",
+      `${BATTLE_HUD_SIDE_MARGIN}px`,
     );
     this.battleDebugShell = battleDebugShell;
     battleDebugOverlay.appendChild(battleDebugShell);
@@ -297,12 +333,6 @@ export class BattleView {
     const transientControlsDock = document.createElement("div");
     transientControlsDock.className = "battle-transient-controls-dock";
 
-    this.menuButton = this.createPartyMenuButton();
-    this.menuButton.addEventListener("click", () => {
-      verifyModeControls?.onOpenMetaMenu();
-    });
-    transientControlsDock.appendChild(this.menuButton);
-
     const debugMenuDock = document.createElement("div");
     debugMenuDock.className = "battle-debug-menu-dock";
     this.debugMenuDock = debugMenuDock;
@@ -321,7 +351,13 @@ export class BattleView {
     debugMenuToggle.setAttribute("aria-expanded", "false");
     debugMenuDock.appendChild(debugMenuToggle);
     this.debugMenu.mount(debugMenuDock);
+
+    this.menuButton = this.createPartyMenuButton();
+    this.menuButton.addEventListener("click", () => {
+      verifyModeControls?.onOpenMetaMenu();
+    });
     transientControlsDock.appendChild(debugMenuDock);
+    transientControlsDock.appendChild(this.menuButton);
     battleDebugShell.appendChild(transientControlsDock);
     battleDebugShell.appendChild(this.verifyBadgeEl);
 
@@ -488,7 +524,9 @@ export class BattleView {
       return;
     }
 
-    const slotRoot = this.partyHud.getSlotRoot(this.hoveredMemberStatsSlotIndex);
+    const slotRoot = this.partyHud.getMemberStatsAnchor(
+      this.hoveredMemberStatsSlotIndex,
+    );
     this.memberStatsPanel.attachToSlot(
       slotRoot,
       this.hoveredMemberStatsSlotIndex,

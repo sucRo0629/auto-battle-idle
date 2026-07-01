@@ -41,7 +41,7 @@ describe('buildPartyHudEntries', () => {
     },
   };
 
-  it('sorts HUD rows by ascending rangePx with vacant trailing slots', () => {
+  it('sorts HUD rows by ascending rangePx with vacant slots on the left (head right)', () => {
     const partyMeta = buildPartyHudMetaBySlot(
       [
         {

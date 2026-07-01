@@ -208,8 +208,8 @@
   background-image: linear-gradient(
     to bottom,
     var(--scene-sky-fill, #87ceeb) 0%,
-    var(--scene-sky-fill, #87ceeb) 82%,
-    var(--scene-ground-fill, #4aa83f) 82%,
+    var(--scene-sky-fill, #87ceeb) var(--battle-ground-line-ratio, 71.11%),
+    var(--scene-ground-fill, #4aa83f) var(--battle-ground-line-ratio, 71.11%),
     var(--scene-ground-fill, #4aa83f) 100%
   );
 }
@@ -250,12 +250,14 @@
 .battle-transient-controls-dock {
   -webkit-app-region: no-drag;
   position: absolute;
-  right: 8px;
-  bottom: 8px;
+  top: var(--battle-transient-controls-top, 506px);
+  right: var(--battle-transient-controls-right, 24px);
+  bottom: auto;
   z-index: 5;
   display: flex;
-  flex-direction: row-reverse;
-  align-items: flex-end;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: flex-end;
   gap: 6px;
   max-width: min(360px, calc(100% - 16px));
   pointer-events: none;
@@ -263,13 +265,6 @@
 
 .battle-transient-controls-dock > * {
   pointer-events: auto;
-}
-
-.battle-hud-slot--party {
-  left: 24px;
-  top: 64px;
-  width: var(--battle-side-hud-width, 260px);
-  height: 608px;
 }
 
 .battle-hud-slot--enemy {
@@ -400,7 +395,7 @@
   bottom: auto;
   z-index: 4;
   display: flex;
-  flex-direction: column;
+  flex-direction: column-reverse;
   align-items: flex-end;
   gap: 4px;
   max-width: min(320px, calc(100% - 16px));

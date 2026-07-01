@@ -79,7 +79,7 @@ function comparePartyHudEntryByRange(
   return a.partySlotIndex - b.partySlotIndex;
 }
 
-/** 味方 HUD 縦並び: 射程の短い順（同射程は編成スロット昇順） */
+/** 味方 HUD: 射程昇順（同射程は partySlotIndex 昇順）。entries[0] が視覚先頭（右端） */
 export function sortPartyHudEntriesByRange(
   entries: (PartyHudEntry | null)[],
 ): (PartyHudEntry | null)[] {
