@@ -16,12 +16,13 @@ alwaysApply: false
 | `data/levelCurves.json`, ステ計算, `growthTier` | `docs/spec/stats.md` |
 | `src/battle/combatMath.ts`, `SkillExecutor.ts`, 効果・ターゲット | `docs/spec/combat.md` |
 | `battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `BattleCanvas.ts` | `docs/spec/battle-field.md` |
-| `BattleStatsDrawer.ts`, `PartyMemberStatsDisplay.ts` | `docs/spec/battle-field.md` |
+| `PartyMemberStatsDisplay.ts` | `docs/spec/battle-field.md` |
 | `data/stages.json`, セーブ, EXP, LvUP, `stageRecords` | `docs/spec/progression.md` |
 | `data/enemies.json`, 敵編成方針 | `docs/enemy-design-concept.md` |
 | `EnemyEditorStep.ts`, `editorApi.ts`（敵テンプレ保存） | `docs/plans/enemy-editor-refactor.md` |
 | マップ選択・ステージ詳細・リザルト履歴 UI（Phase 6d） | `docs/spec/stage-selection-ui.md` |
 | `MetaMenuOverlay.ts`, `SkillMenuPanel.ts` | `docs/spec/party-formation-ui.md` |
+| `fonts.css`, UI typography / `--font-*` | `docs/spec/ui-fonts.md` |
 | ローグライクモード | `docs/spec/roguelike-mode.md` |
 | `formatSkillText.ts`, `gameTermGlossary.ts`, 4b / 4e | `docs/spec/i18n-en.md` + `docs/spec/classes-and-skills.md`（進捗: `docs/plans/phase-4-roadmap.md`） |
 | フェーズ計画・完了マーク・次の作業 | `docs/plans/phase-roadmap.md` |

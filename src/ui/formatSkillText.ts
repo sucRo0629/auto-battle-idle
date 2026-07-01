@@ -90,7 +90,6 @@ import {
   phraseAtkBasedHealAmount,
   phraseBarrierAmountBonusOnLowHpAlly,
   phraseBarrierDepletionHeal,
-  phraseBarrierDepletionWardExclusion,
   phraseBasicAttackMultiHit,
   phraseBlazingFlameDotPerStack,
   phraseBlazingFlameMagicTakenPerStack,
@@ -133,6 +132,7 @@ import {
   phraseTargetLowestHpRatioEnemy,
   phraseTargetRangedEnemy,
   phraseTimedEvasionBuff,
+  phraseWardBarrierBuff,
   skillStat,
   skillStatBuffTarget,
   skillTargetStat,
@@ -384,10 +384,7 @@ function formatBarrierDepletionHealHealSentence(def: PassiveSkillDef): string {
 
 function formatBarrierDepletionHealEffectLines(def: PassiveSkillDef): string[] {
   const heal = formatBarrierDepletionHealHealSentence(def);
-  return [
-    phraseBarrierDepletionHeal(heal),
-    phraseBarrierDepletionWardExclusion(),
-  ];
+  return [phraseBarrierDepletionHeal(heal)];
 }
 
 function formatBarrierDepletionHealPassive(def: PassiveSkillDef): string {
@@ -1789,11 +1786,7 @@ function formatActiveEffectDetail(
         if (inc) extras.push(inc);
         const ign = formatDefenseIgnoreSpec(effect.defenseIgnore);
         if (ign) extras.push(ign);
-        const pierceLabels: string[] = [];
-        if (effect.ignoreDamageTakenReduction) pierceLabels.push("DR無視");
-        if (effect.pierceBlock) pierceLabels.push("block貫通");
-        if (effect.pierceWard) pierceLabels.push("障壁貫通");
-        if (effect.pierceBarrier) pierceLabels.push("barrier貫通");
+        const pierceLabels = formatDamagePierceModifierSegments(effect);
         if (pierceLabels.length > 0) extras.push(pierceLabels.join("・"));
       }
       break;
@@ -1855,18 +1848,19 @@ function formatActiveEffectDetail(
           );
         } else {
           extras.push(
-            `${BUFF_SUB_KIND_LABELS.barrier} ${formatResourceAmount(
+            `${skillTerm("barrier")} ${formatResourceAmount(
               effect.amount
-            )}${effect.barrierStack ? "（加算）" : ""}`
+            )}${effect.barrierStack ? (getSkillTextLocale() === "en" ? " (stacking)" : "（加算）") : ""}`
           );
         }
       } else if (effect.buffSubKind === "wardBarrier") {
         extras.push(
-          `${BUFF_SUB_KIND_LABELS.wardBarrier} ×${
-            effect.stacks ?? 1
-          }（${formatDamageTakenReductionRateLabel(
-            effect.damageReductionRatio ?? 0.1
-          )}）`
+          phraseWardBarrierBuff(
+            effect.stacks ?? 1,
+            formatDamageTakenReductionRateLabel(
+              effect.damageReductionRatio ?? 0.1
+            )
+          )
         );
       } else if (effect.buffSubKind === "block") {
         if (compact) {

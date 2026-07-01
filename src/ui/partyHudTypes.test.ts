@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { PARTY_SLOT_COUNT } from '../battle/types.ts';
-import { buildPartyHudEntries, buildPartyHudMetaBySlot } from './partyHudTypes.ts';
+import {
+  buildPartyHudEntries,
+  buildPartyHudMetaBySlot,
+  sortPartyHudEntriesByRange,
+  type PartyHudEntry,
+} from './partyHudTypes.ts';
 
 describe('buildPartyHudEntries', () => {
   const classRegistry = {
@@ -36,7 +41,7 @@ describe('buildPartyHudEntries', () => {
     },
   };
 
-  it('aligns HUD slots to party indices and hides vacant slots', () => {
+  it('sorts HUD rows by ascending rangePx with vacant trailing slots', () => {
     const partyMeta = buildPartyHudMetaBySlot(
       [
         {
@@ -91,6 +96,7 @@ describe('buildPartyHudEntries', () => {
             atk: 20,
             def: 8,
             reg: 0,
+            rangePx: 30,
             iconKey: 'at_assassin',
             spriteKey: 'at_assassin',
             formationRow: 'front',
@@ -111,6 +117,7 @@ describe('buildPartyHudEntries', () => {
             atk: 24,
             def: 6,
             reg: 0,
+            rangePx: 100,
             iconKey: 'at_sorcerer',
             spriteKey: 'at_sorcerer',
             formationRow: 'back',
@@ -129,11 +136,51 @@ describe('buildPartyHudEntries', () => {
 
     expect(entries).toHaveLength(PARTY_SLOT_COUNT);
     expect(entries[0]?.displayName).toBe('双刃士');
+    expect(entries[0]?.partySlotIndex).toBe(0);
+    expect(entries[0]?.rangePx).toBe(30);
     expect(entries[0]?.unlockedActiveSlotCount).toBe(2);
-    expect(entries[1]).toBeNull();
+    expect(entries[1]?.displayName).toBe('魔術師');
+    expect(entries[1]?.partySlotIndex).toBe(3);
+    expect(entries[1]?.rangePx).toBe(100);
+    expect(entries[1]?.unlockedActiveSlotCount).toBe(2);
     expect(entries[2]).toBeNull();
-    expect(entries[3]?.displayName).toBe('魔術師');
-    expect(entries[3]?.unlockedActiveSlotCount).toBe(2);
+    expect(entries[3]).toBeNull();
+  });
+
+  it('sortPartyHudEntriesByRange breaks ties by partySlotIndex', () => {
+    const makeEntry = (
+      partySlotIndex: number,
+      rangePx: number,
+    ): PartyHudEntry => ({
+      unitId: `u${partySlotIndex}`,
+      partySlotIndex,
+      rangePx,
+      displayName: `Unit ${partySlotIndex}`,
+      iconKey: 'at_assassin',
+      hp: 100,
+      maxHp: 100,
+      baseMaxHp: 100,
+      barrierHp: 0,
+      atk: 10,
+      def: 5,
+      reg: 0,
+      isAlive: true,
+      useLocked: false,
+      unlockedActiveSlotCount: 2,
+      statusEffects: [],
+      activeCooldowns: [],
+    });
+
+    const sorted = sortPartyHudEntriesByRange([
+      makeEntry(2, 30),
+      null,
+      makeEntry(0, 30),
+      makeEntry(3, 100),
+    ]);
+
+    expect(sorted.map((entry) => entry?.partySlotIndex ?? null)).toEqual([
+      0, 2, 3, null,
+    ]);
   });
 
   it('uses epithetEn for HUD display names in English locale', () => {

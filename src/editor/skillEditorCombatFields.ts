@@ -113,7 +113,13 @@ import {
   createTextInput,
 } from "./formUtils.ts";
 import { appendSkillEffectTargetingFields } from "./effectTargetingFields.ts";
-import type { ActiveSkillDef } from "../battle/types.ts";
+import type { TargetSide } from "../battle/types.ts";
+import {
+  effectOverridesSkillTarget,
+  hasSkillSharedTargeting,
+  mergeEffectWithSkillTargeting,
+  SKILL_SHARED_TARGETING_KEYS,
+} from "../battle/skills/skillSharedTargeting.ts";
 
 function defaultDamageIncrease(): DamageIncreaseSpec {
   return {
@@ -1310,6 +1316,53 @@ export interface AppendTargetSpecFieldsOptions {
   effectIndex?: number;
 }
 
+/** 貫通形状選択時に effect / スキル共通ターゲットへ selfOrigin を揃える */
+export function targetSpecForPierceShape(
+  target: TargetSpec | undefined,
+  fallbackSide: TargetSide = "enemy",
+): TargetSpec {
+  const current =
+    target ?? ({ kind: "distance", side: fallbackSide, order: "nearest" } as const);
+  if (current.kind === "distance") {
+    return {
+      kind: "distance",
+      side: current.side,
+      order: "selfOrigin",
+      ...(current.includeSelf === true ? { includeSelf: true } : {}),
+    };
+  }
+  if (current.kind === "all" || current.kind === "stat") {
+    return { kind: "distance", side: current.side, order: "selfOrigin" };
+  }
+  return { kind: "distance", side: fallbackSide, order: "selfOrigin" };
+}
+
+function clearSkillSharedTargetingFields(skill: ActiveSkillDef): void {
+  for (const key of SKILL_SHARED_TARGETING_KEYS) {
+    delete skill[key];
+  }
+}
+
+function materializeInheritedEffectTargeting(skill: ActiveSkillDef): void {
+  for (const effect of skill.effect) {
+    if (effectOverridesSkillTarget(effect)) continue;
+    const merged = mergeEffectWithSkillTargeting(skill, effect);
+    for (const key of SKILL_SHARED_TARGETING_KEYS) {
+      const value = merged[key];
+      if (value !== undefined) {
+        (effect as Record<string, unknown>)[key] = value;
+      }
+    }
+  }
+}
+
+function defaultSharedTargetingForSkill(_skill: ActiveSkillDef): Partial<ActiveSkillDef> {
+  return {
+    target: { kind: "distance", side: "enemy", order: "nearest" },
+    targetShape: "single",
+  };
+}
+
 export function appendSkillSharedTargetingFields(
   parent: HTMLElement,
   skill: ActiveSkillDef,
@@ -1319,32 +1372,78 @@ export function appendSkillSharedTargetingFields(
   ) => void,
   options: { traitsRangePx: number },
 ): void {
-  parent.appendChild(
-    createEl(
-      'p',
-      'editor-hint',
-      '複数 effect が同じ対象集合へ効果を付与する場合、ここで target / 形状を 1 箇所だけ指定します。各 effect は「スキル共通ターゲットを使う」が ON のとき継承します。',
-    ),
-  );
-  appendTargetSpecFields(
-    parent,
-    skill.target ?? { kind: 'distance', side: 'enemy', order: 'nearest' },
-    (target) => {
-      patchActive((current) => {
-        current.target = target;
-      }, { rerender: true });
-    },
-  );
-  appendSkillEffectTargetingFields(
-    parent,
-    skill,
-    (patch, patchOptions) => {
-      patchActive((current) => {
-        Object.assign(current, patch(current));
-      }, patchOptions);
-    },
-    options,
-  );
+  const fieldsWrap = createEl("div", "editor-shared-targeting-fields");
+  parent.appendChild(fieldsWrap);
+
+  const renderFields = (): void => {
+    fieldsWrap.replaceChildren();
+    fieldsWrap.appendChild(
+      createEl(
+        "p",
+        "editor-hint",
+        "複数 effect が同じ対象集合へ効果を付与する場合、ここで target / 形状を 1 箇所だけ指定します（味方: 障身法型 aoe、敵: 崩勢型 pierce など）。各 effect は「スキル共通ターゲットを使う」が ON のとき継承します。",
+      ),
+    );
+
+    const lockSelfOrigin = (skill.targetShape ?? "single") === "pierce";
+    appendTargetSpecFields(
+      fieldsWrap,
+      skill.target ?? { kind: "distance", side: "enemy", order: "nearest" },
+      (target) => {
+        patchActive((current) => {
+          current.target = lockSelfOrigin
+            ? targetSpecForPierceShape(target)
+            : target;
+        }, { rerender: true });
+      },
+      { lockSelfOrigin },
+    );
+    appendSkillEffectTargetingFields(
+      fieldsWrap,
+      skill,
+      (patch, patchOptions) => {
+        patchActive((current) => {
+          const prev = { ...current };
+          const next = patch(current);
+          if (next.targetShape === "pierce" && prev.targetShape !== "pierce") {
+            next.target = targetSpecForPierceShape(next.target ?? prev.target);
+          }
+          Object.assign(current, next);
+        }, patchOptions);
+      },
+      options,
+    );
+  };
+
+  const enableRow = createEl("div", "editor-field-row editor-field-checkbox");
+  const enableInput = createEl("input") as HTMLInputElement;
+  enableInput.type = "checkbox";
+  enableInput.checked = hasSkillSharedTargeting(skill);
+  enableInput.addEventListener("change", () => {
+    patchActive((current) => {
+      if (enableInput.checked) {
+        Object.assign(current, defaultSharedTargetingForSkill(current));
+      } else {
+        materializeInheritedEffectTargeting(current);
+        clearSkillSharedTargetingFields(current);
+      }
+    }, { rerender: true });
+  });
+  enableRow.appendChild(createEl("label", undefined, "共通ターゲットを使う"));
+  enableRow.appendChild(enableInput);
+  parent.insertBefore(enableRow, fieldsWrap);
+
+  if (hasSkillSharedTargeting(skill)) {
+    renderFields();
+  } else {
+    fieldsWrap.appendChild(
+      createEl(
+        "p",
+        "editor-hint",
+        "OFF のときは各 effect が個別に target / 形状を持ちます。ON にするとスキル直下へ 1 箇所だけ設定し、effect 側は継承できます。",
+      ),
+    );
+  }
 }
 
 export function appendTargetSpecFields(

@@ -1,4 +1,5 @@
 import "../styles/battle-view.css";
+import "../styles/battle-stats-drawer.css";
 import "../styles/enemy-hud-overlay.css";
 import "../styles/party-hud-overlay.css";
 import "../styles/party-hud-floating-tooltip.css";
@@ -43,13 +44,17 @@ import {
 } from "./partyHudTypes.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import { resolvePlayerDisplayLevel } from "../progression/resolvePlayerDisplayLevel.ts";
-import { BattleStatsDrawer } from "./BattleStatsDrawer.ts";
 import { PartyHudFloatingTooltip } from "./partyHudFloatingTooltip.ts";
 import { GameTermPanel } from "./GameTermPanel.ts";
 import "../styles/game-term-panel.css";
 import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 import { applyBattleRootScale } from "./battleRootScale.ts";
+import {
+  BATTLE_X_DEBUG_PANEL_TOP,
+  battleHudToolbarTopY,
+  PARTY_HUD_SLOT_RECT,
+} from "./battleRootLayout.ts";
 import {
   createEmptyHoverHighlight,
   isSameHoverHighlight,
@@ -71,7 +76,6 @@ export interface VerifyModeControls {
   onLoopWaveChange?: (waveIndex: number | null) => void;
   getStageDamageDisplayRows?: () => StageDamageDisplayRow[];
   getCurrentStageId?: () => string;
-  onStatsDrawerOpenChange?: (open: boolean) => void;
 }
 
 function resolveSkillRangePxFromSnapshot(
@@ -104,7 +108,6 @@ export class BattleView {
   private readonly memberStatsPanel: PartyMemberEffectiveStatsPanel;
   private readonly debugMenu: DebugMenuPanel;
   private readonly battleXDebugCanvas: BattleXDebugCanvas;
-  private readonly statsDrawer: BattleStatsDrawer;
   private readonly hudFloatingTooltip: PartyHudFloatingTooltip;
   private readonly gameTermPanel: GameTermPanel;
   private readonly canvasFrame: HTMLElement;
@@ -183,6 +186,18 @@ export class BattleView {
 
     const battleDebugShell = document.createElement("div");
     battleDebugShell.className = "battle-debug-shell";
+    battleDebugShell.style.setProperty(
+      "--battle-hud-toolbar-top",
+      `${battleHudToolbarTopY()}px`,
+    );
+    battleDebugShell.style.setProperty(
+      "--battle-x-debug-top",
+      `${BATTLE_X_DEBUG_PANEL_TOP}px`,
+    );
+    battleDebugShell.style.setProperty(
+      "--battle-x-debug-column-width",
+      `${PARTY_HUD_SLOT_RECT.w}px`,
+    );
     this.battleDebugShell = battleDebugShell;
     battleDebugOverlay.appendChild(battleDebugShell);
 
@@ -374,13 +389,6 @@ export class BattleView {
     });
     this.enemyHud.mount(this.enemyHudSlotEl);
 
-    this.statsDrawer = new BattleStatsDrawer({
-      onOpenChange: (open) => {
-        verifyModeControls?.onStatsDrawerOpenChange?.(open);
-      },
-    });
-    this.statsDrawer.mount(battleDebugShell);
-
     const statsPanelStorage = document.createElement('div');
     statsPanelStorage.hidden = true;
     canvasFrame.appendChild(statsPanelStorage);
@@ -489,19 +497,23 @@ export class BattleView {
     this.memberStatsPanel.show(data);
   }
 
-  private resolveMemberStatsPanelData(slotIndex: number) {
+  private resolveMemberStatsPanelData(visualSlotIndex: number) {
     const snapshot = this.engine.getSnapshot();
     const save = this.getSave();
     const partyMeta = buildPartyHudMetaBySlot(
       save.party,
       this.gameData.classRegistry,
     );
-    const meta = partyMeta[slotIndex];
-    const member = save.party[slotIndex];
+    const hudEntry = buildPartyHudEntries(snapshot, partyMeta)[visualSlotIndex];
+    if (!hudEntry) return null;
+
+    const partySlotIndex = hudEntry.partySlotIndex;
+    const meta = partyMeta[partySlotIndex];
+    const member = save.party[partySlotIndex];
     if (!meta || !member) return null;
 
     const ally = snapshot.allies.find(
-      (unit) => unit.partySlotIndex === slotIndex,
+      (unit) => unit.partySlotIndex === partySlotIndex,
     );
     if (!ally) return null;
 
@@ -562,6 +574,7 @@ export class BattleView {
     if (isSameHoverHighlight(this.hoverHighlight, next)) return;
     this.hoverHighlight = next;
     this.applyHoverHighlight();
+    this.applyTargetIndicators();
   }
 
   private applyHoverHighlight(): void {
@@ -583,10 +596,20 @@ export class BattleView {
   }
 
   private applyTargetIndicators(): void {
-    const targetedUnitIds = this.targetIndicatorTracker.getTargetedUnitIds();
+    const targetedUnitIds = this.resolveVisibleTargetIndicatorUnitIds();
     this.canvas.setTargetIndicatorUnitIds(targetedUnitIds);
     this.enemyHud.setTargetIndicatorUnitIds(targetedUnitIds);
     this.partyHud.setTargetIndicatorUnitIds(targetedUnitIds);
+  }
+
+  private resolveVisibleTargetIndicatorUnitIds(): string[] {
+    if (this.hoverHighlight.source !== "hud" || !this.hoverHighlight.unitId) {
+      return [];
+    }
+    const targetId = this.targetIndicatorTracker.getTargetIdForActor(
+      this.hoverHighlight.unitId,
+    );
+    return targetId ? [targetId] : [];
   }
 
   private onBattleEvent(event: BattleEvent): void {
@@ -900,10 +923,6 @@ export class BattleView {
     this.menuButton.disabled = disabled;
   }
 
-  setStatsDrawerDisabled(disabled: boolean): void {
-    this.statsDrawer.setDisabled(disabled);
-  }
-
   setVisible(visible: boolean): void {
     this.root.hidden = !visible;
     this.root.setAttribute('aria-hidden', visible ? 'false' : 'true');
@@ -953,7 +972,6 @@ export class BattleView {
     this.clearMemberStatsHideTimer();
     this.hudFloatingTooltip.destroy();
     this.gameTermPanel.destroy();
-    this.statsDrawer.destroy();
     this.memberStatsPanel.destroy();
     this.canvas.destroy();
     this.battleXDebugCanvas.destroy();

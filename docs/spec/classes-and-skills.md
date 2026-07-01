@@ -254,7 +254,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - ブロック率に「（加算）」は各スキル説明に書かない（barrier の加算表記は既存どおり）
 - 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` / `at_swordsman` / `sp_cleric` テスト
 - `targetRuleOverride`（stat 最高値）— `最も{stat}が高い敵を優先して攻撃する`
-- `targetRuleOverride`（`stat: hp` + `order: ratio`）— `最もHP割合が低い敵を優先して攻撃する`
+- `targetRuleOverride`（`stat: hp` + `order: lowest`）— `最もHPが低い敵を優先して攻撃する`（現在 HP 絶対値。例: 双刃士 P1）
 - `targetRuleOverride`（`attackType.ranged`）— `遠隔攻撃の敵を優先して攻撃する`
 - 常時 self evasion buff — `回避+20%` 等（対象・常時の冗長表記は省略）
 - active `damageIncrease`（単一条件）— `対象に{状態}が付与されているなら、このダメージは+{scale%}される` / `対象のHPがN%以下なら、このダメージは+{scale%}される`
@@ -266,7 +266,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - `seedFlameOnActiveHit` — トリガー 1 行 + `種火` / `熾火` を `effectLines` のリストブロック（`kind: "list"`）で表示。数値は passive JSON の `seedFlame*` / `blazingFlame*` を `mergeSorcererFlameDotConfig` で解決（戦闘と同経路）
 - `specialEffect` heal（低 HP 条件）— `HPがN%以下の味方を回復時、HP回復効果+{bonus}`
 - `specialEffect` barrier（低 HP 条件）— `HPがN%以下の味方にバリア付与時、バリア量+{bonus}`
-- `barrierDepletionHeal` — `味方に付与したバリアが完全に消失した時、対象を攻撃力のN%で回復（味方ごとにWave1回まで）` + `この効果は「障壁」の消失では誘発しない`（2 行）
+- `barrierDepletionHeal` — `味方に付与したバリアが完全に消失した時、対象を攻撃力のN%で回復（味方ごとにWave1回まで）`
 - `excessHealToBarrier`（与）— `味方を回復時、最大HPを超えた回復量のN%をバリアとして対象に付与する`
 
 #### 運用
@@ -766,7 +766,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | classId        | 表示名 | epithetEn | 列    | 射程     | パッシブ（Lv0 代表）                                             | アクティブ（Lv0）                          |
 | -------------- | ------ | --------- | ----- | -------- | ---------------------------------------------------------------- | ------------------------------------------ |
 | `at_swordsman`   | 剣術士 | Swordsman | front | 近接     | 最高 DEF 狙い + DEF 無視                                         | 叩き付け／薙ぎ払い                         |
-| `at_assassin`  | 双刃士 | Assassin  | front | 近接     | 最低 HP 比率狙い + 回避                                          | 引き裂き／影の刃                           |
+| `at_assassin`  | 双刃士 | Assassin  | front | 近接     | 最低 HP（現在値）狙い + 回避                                     | 引き裂き／影の刃                           |
 | `at_lancer`    | 槍術士 | Lancer    | front | 近接     | 貫通範囲 近傍 ATK debuff + 近傍 ATK buff aura                    | 号令／崩勢／鼓舞／追撃                     |
 | `at_ranger`    | 弓術士 | Ranger    | back  | 遠隔物理 | 遠隔敵優先 + 攻撃速度 buff                                       | 連射／連ね矢                               |
 | `at_ballista`  | 弩砲士 | Ballista  | back  | 遠隔物理 | 高 Max HP 狙い + 待機蓄積 + 砲撃標的                             | 破城矢装填／重矢                           |
@@ -1112,7 +1112,7 @@ Defender 共通 passive と各 Defender の受け口設計は同一視しない�
 - P3 は「誰を狙うか」ではなく「処理対象に当たったときどれだけ効くか」の段階強化。
 - active 側は回転・火力形状を担い、passive の特効とは役割分担する。
 
-**参照例（詳細は各クラス節のスキル表を正とする）:** [剣術士](#剣術士at_swordsman基礎近接) P1=重装狙い / P3=穿甲の一撃 / P4=剛剣の冴え、[双刃士](#双刃士at_assassin拡張近接) P1=手負い狩り / P3=刈り取り / P4=無慈悲な刃、[弓術士](#弓術士at_ranger基礎遠隔) P1=射手排除 / P3=遠隔狩り / P4=二の矢。
+**参照例（詳細は各クラス節のスキル表を正とする）:** [剣術士](#剣術士at_swordsman基礎近接) P1=重装狙い / P3=穿甲の一撃 / P4=剛剣の冴え、[双刃士](#双刃士at_assassin拡張近接) P1=薄命狩り / P3=刈り取り / P4=無慈悲な刃、[弓術士](#弓術士at_ranger基礎遠隔) P1=射手排除 / P3=遠隔狩り / P4=二の矢。
 
 ### 三分類と classId
 
@@ -1200,7 +1200,7 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 | 枠             | ID                         | 名称       | 概要                                                                       |
 | -------------- | -------------------------- | ---------- | -------------------------------------------------------------------------- |
 | basic          | `at_assassin_basic_attack` | —          | 2 Hit 標準物理単体                                                         |
-| passive 1 Lv0  | `at_assassin_passive_1`    | 手負い狩り | 低 HP 比率優先 `targetRuleOverride`                                        |
+| passive 1 Lv0  | `at_assassin_passive_1`    | 薄命狩り | 低 HP（現在値）優先 `targetRuleOverride`（`stat: hp` + `order: lowest`）   |
 | passive 2 Lv0  | `at_assassin_passive_2`    | 影の歩み   | 回避 buff（`chance: 0.2`）                                                 |
 | passive 3 Lv10 | `at_assassin_passive_3`    | 刈り取り   | HP≤30% 対象 damage×1.2 + 条件成立時 DEF 100% 無視（複合 passive）          |
 | passive 4 Lv20 | `at_assassin_passive_4`    | 無慈悲な刃 | `bonusBasicAttackOnHit` — 瀕死対象 basic Hit 後 50% で追加 1 Hit（非再帰） |
@@ -2116,7 +2116,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `kind`       | 説明                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest/**selfOrigin**）。`selfOrigin` = 使用者位置・向きを効果範囲の起点とする（aoe / pierce / single）。`includeSelf`（任意）= 味方 side 時、最終対象に使用者を含める（既定 false）                                                                                                                                                |
-| `stat`       | `side` + `stat`（hp/maxHp/atk/def/reg）+ `order`（highest/lowest/ratio）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`maxHp` は effective maxHp 比較。**heal** の味方 stat は使用者も候補に含む。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外。`poolFromEffectIndex`（任意）= 同一スキル内の先行 effect 命中プール内だけで stat 選定 |
+| `stat`       | `side` + `stat`（hp/maxHp/atk/def/reg）+ `order`（highest/lowest/ratio）。`stat: hp` + `lowest` = 現在 HP 絶対値（`unit.hp`）最小（例: `lowestHpEnemy` / 双刃士 P1）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`maxHp` は effective maxHp 比較。**heal** の味方 stat は使用者も候補に含む。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外。`poolFromEffectIndex`（任意）= 同一スキル内の先行 effect 命中プール内だけで stat 選定 |
 | `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。フィルタ後 anchor は最前線                                                                                                                                                                                                                                                   |
 | `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR。`DEBUFF_FILTER_TAGS` / `BUFF_FILTER_TAGS` 参照）。フィルタ後 anchor は最前線                                                                                                                                                                                                                                            |
 | `self`       | 自身                                                                                                                                                                                                                                                                                                                                                                         |

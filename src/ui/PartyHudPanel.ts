@@ -305,17 +305,25 @@ export class PartyHudPanel {
   updateDetailMetrics(frame: PartyHudDetailFrame): void {
     this.lastDetailFrame = frame;
 
-    const damageByPartyIndex = new Map(
-      this.slots.map((slot) => [slot.slotIndex, slot.damage] as const),
-    );
+    const damageByPartyIndex = new Map<number, DamageBarRefs>();
+    for (let i = 0; i < this.slots.length; i++) {
+      const entry = this.lastEntries[i];
+      if (entry) {
+        damageByPartyIndex.set(entry.partySlotIndex, this.slots[i].damage);
+      }
+    }
     const downBySlot = buildDownBySlot(frame.snapshots);
     syncDamageBars(damageByPartyIndex, frame.displayRows, downBySlot);
 
     if (this.layout === 'overlay' || this.mode !== 'detail') return;
 
-    const statusByPartyIndex = new Map(
-      this.slots.map((slot) => [slot.slotIndex, slot.detailStatus] as const),
-    );
+    const statusByPartyIndex = new Map<number, StatusBadgeRefs>();
+    for (let i = 0; i < this.slots.length; i++) {
+      const entry = this.lastEntries[i];
+      if (entry) {
+        statusByPartyIndex.set(entry.partySlotIndex, this.slots[i].detailStatus);
+      }
+    }
     syncStatusBadges(
       statusByPartyIndex,
       frame.snapshots,

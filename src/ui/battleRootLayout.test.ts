@@ -10,9 +10,13 @@ import {
   PARTY_HUD_ALLY_CARD_GAP,
   PARTY_HUD_ALLY_CARD_HEIGHT,
   PARTY_HUD_SLOT_RECT,
+  battleHudToolbarTopY,
   battleRootRectStyle,
+  battleXDebugCanvasMaxDisplayHeight,
+  battleXDebugCanvasMaxDisplayWidth,
 } from "./battleRootLayout.ts";
 import { BATTLE_ROOT_HEIGHT, BATTLE_ROOT_WIDTH } from "./battleRootScale.ts";
+import { battleCanvasHeight } from "../render/formationLayout.ts";
 
 describe("battleRootLayout", () => {
   it("covers the full 1280x720 battle root with the background rect", () => {
@@ -50,6 +54,18 @@ describe("battleRootLayout", () => {
       ENEMY_HUD_MAX_SLOTS * ENEMY_HUD_SLOT_HEIGHT +
         (ENEMY_HUD_MAX_SLOTS - 1) * ENEMY_HUD_SLOT_GAP,
     ).toBeLessThanOrEqual(ENEMY_HUD_SLOT_RECT.h);
+  });
+
+  it("aligns battle-x-debug canvas ceiling with battle-hud-toolbar top", () => {
+    expect(battleHudToolbarTopY()).toBe(
+      BATTLE_LANE_RECT.y + battleCanvasHeight(1),
+    );
+    expect(battleXDebugCanvasMaxDisplayHeight()).toBe(
+      battleHudToolbarTopY() - PARTY_HUD_SLOT_RECT.y - 4,
+    );
+    expect(battleXDebugCanvasMaxDisplayWidth()).toBe(
+      PARTY_HUD_SLOT_RECT.w - 8,
+    );
   });
 
   it("serializes rects for inline style", () => {

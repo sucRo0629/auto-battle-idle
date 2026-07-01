@@ -119,6 +119,7 @@ import {
   appendTargetSpecFields,
   appendSkillSharedTargetingFields,
   appendDamagePierceFields,
+  targetSpecForPierceShape,
 } from "./skillEditorCombatFields.ts";
 import { editorFieldLabel } from "./editorFieldLabels.ts";
 import {
@@ -5164,7 +5165,10 @@ export class SkillEditorStep {
             : effect
         );
         const lockSelfOrigin =
-          (normalizedEffect.targetShape ?? "single") === "pierce";
+          ((activeSkill
+            ? mergeEffectWithSkillTargeting(activeSkill, normalizedEffect)
+                .targetShape
+            : normalizedEffect.targetShape) ?? "single") === "pierce";
         appendTargetSpecFields(
           grid,
           effectTarget,
@@ -5286,25 +5290,7 @@ export class SkillEditorStep {
                 next.scatterDurationSec = 1;
                 next.scatterSpreadRate = 1;
               } else if (shape === "pierce") {
-                const currentTarget = getEffectTarget(next);
-                const side =
-                  currentTarget.kind === "distance"
-                    ? currentTarget.side
-                    : currentTarget.kind === "all" ||
-                      currentTarget.kind === "stat"
-                    ? currentTarget.side
-                    : "enemy";
-                const includeSelf =
-                  currentTarget.kind === "distance" &&
-                  currentTarget.includeSelf === true
-                    ? true
-                    : undefined;
-                next.target = {
-                  kind: "distance",
-                  side,
-                  order: "selfOrigin",
-                  ...(includeSelf !== undefined ? { includeSelf } : {}),
-                };
+                next.target = targetSpecForPierceShape(getEffectTarget(next));
               }
               return next;
             },

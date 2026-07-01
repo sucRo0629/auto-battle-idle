@@ -2,7 +2,7 @@
 
 実装：`src/battle/battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `bodyAnimMarching.ts`, `BattleEngine.ts`
 描画：`src/render/BattleCanvas.ts`（`screenX = battleX`）
-戦闘画面 UI / 戦闘中統計 UI：`src/ui/PartyHudPanel.ts`, `BattleStatsDrawer.ts`, `PartyMemberStatsDisplay.ts`（sync ヘルパー）, `PartyMemberEffectiveStatsPanel.ts`, `combatantBattleStatsDisplay.ts`, `src/ui/BattleView.ts`, `src/render/BattleCanvas.ts`, `src/styles/battle-view.css`, `src/styles/battle-stats-drawer.css`, `party-member-stats.css`, `party-member-effective-stats.css`
+戦闘画面 UI / 戦闘中統計 UI：`src/ui/PartyHudPanel.ts`, `PartyMemberStatsDisplay.ts`（sync ヘルパー）, `PartyMemberEffectiveStatsPanel.ts`, `combatantBattleStatsDisplay.ts`, `src/ui/BattleView.ts`, `src/render/BattleCanvas.ts`, `src/styles/battle-view.css`, `src/styles/battle-stats-drawer.css`, `party-member-stats.css`, `party-member-effective-stats.css`
 
 本ドキュメントは **横 1 軸のバトルライン** における座標・隊形・Wave・接敵・描画、および **戦闘画面 UI / HUD** の設計正本。ダメージ/CD/脅威等は [combat.md](combat.md) を参照。編成画面 DOM UI の設計は [party-formation-ui.md](party-formation-ui.md) を参照。
 
@@ -462,7 +462,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 
 ## 7. 戦闘中統計 UI（戦闘詳細）
 
-戦闘画面の **戦闘詳細**（`PartyHudPanel` 詳細モード + `BattleStatsDrawer` タブ）の Phase 4d 仕様。与ダメ / 被ダメ / 詳細バッジの sync は `PartyMemberStatsDisplay.ts` の関数を流用。ダメージ集計は [combat.md](combat.md)。DOM UI の共通デザイン言語は [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) を参照（Phase 4d で編成 UI と揃える）。
+戦闘画面の **戦闘詳細**（`PartyHudPanel` 詳細モード）の Phase 4d 仕様。与ダメ / 被ダメ / 詳細バッジの sync は `PartyMemberStatsDisplay.ts` の関数を流用。ダメージ集計は [combat.md](combat.md)。DOM UI の共通デザイン言語は [party-formation-ui.md §11](party-formation-ui.md#11-デザイン方針dom-ui-共通) を参照（Phase 4d で編成 UI と揃える）。
 
 **新方針との関係：** 戦闘画面全体の次期レイアウト正本は §8。§7 は既存 Party HUD / 統計 UI の履歴と流用元として扱う。§7 内の「キャンバス幅に揃える」「未解放セルを消す」「状態 0 件で高さ 0」「BattleStatsDrawer を Party HUD 直下の本体表示として扱う」など、§8 の固定 HUD 方針と矛盾する項目は次期戦闘画面 UI では §8 を優先する。
 
@@ -472,12 +472,12 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 
 | 要素 | 内容 |
 | ---- | ---- |
-| 起動 | Party HUD（`.party-hud-panel`）直下の **ドロワータブ**（`.party-hud-drawer-tab`、CSS シェブロンのみ）。`Escape` または同タブで閉じる |
-| 配置 | `battle-canvas-frame` 内 — **上:** キャンバスオーバーレイ HUD（`.battle-canvas-hud`：左上ステージ名・中央上 Wave・右上 VERIFY バッジ）、`.battle-hud-stack`（パーティ帯 + Party HUD + ドロワータブ）。キャンバス幅（最大 480px）に揃える |
+| 起動 | **詳細モードは常時表示**（§8 固定 HUD）。旧 `.party-hud-drawer-tab` は廃止 |
+| 配置 | `battle-canvas-frame` 内 — **上:** キャンバスオーバーレイ HUD（`.battle-canvas-hud`：左上ステージ名・中央上 Wave・右上 VERIFY バッジ）、`.battle-hud-stack`（パーティ帯 + Party HUD）。キャンバス幅（最大 480px）に揃える |
 | キャンバス HUD | 戦闘キャンバス **内**オーバーレイ。**左:** ステージ表示名。**中央:** `Wave {n}/{total}`。**右上:** 確認モード切替バッジ — ON 時 `VERIFY`（琥珀）、OFF 時 `DEBUG`（控えめ）。クリックでトグル。独立した画面上部ヘッダー帯は **使わない** |
 | パーティ帯 | Party HUD **直上**の帯。**左:** `プレイヤー Lv {n}` のみ（`resolvePlayerDisplayLevel`）。**右:** `.battle-party-menu-button`（テキスト「編成」のみ）→ `MetaMenuOverlay`（`initialView: "party"`）。**アイコンフォントは使わない** |
 | 表示切替 | **詳細**（**起動時デフォルト**）= メンバー縦リスト（同一 `.party-hud-panel` 枠）。**コンパクト** = 横 4 列（HP・リキャスト・簡易バッジ）。下のタブで排他切替。別パネルの積み増しはしない |
-| メンバー行（詳細） | 編成スロット順。`.party-hud-panel-slots` が **3 列トラック**（class **固定**（24px アイコン + 4px + **8ch** 名前幅。英語 `Swordsman` 基準、`--hud-header-font-size` 基準。§7.1.3）／bars **min 168px・`max(168px, 210px − class 拡張分)`・`1fr`**／damage 120px）の親グリッド、**`width: 100%`**。各 `.party-hud-slot` → `.party-hud-unit` は **`subgrid`** で同一トラックを共有し **bar 列開始 X は全ユニットで揃える**。class 列を広げた分は bars 最小幅から差し引く（合計幅不変）。**上段:** `"class bars damage"` × 2 行 — bars = HP + リキャスト 2×2。**下段 `status`:** 同一 3 列 `subgrid` — DEBUFF/BUFF ラベルは class 列、アイコン列は bars+damage 列。アイコン列は canvas 透過余白 + ゲージ外枠分を `margin-left` で左補正。**与列:** 非ヒーラー = 与ダメ（ATK タグ）、**ヒーラー（`role: supporter`）= 与回復量**（HoT タグ・短ラベル **癒**）。**被列:** 全員被ダメ。damage 列内は tag / 数値 / ゲージの固定幅グリッド。inline 数値は 4 桁以上を `1.2k` / `12k` のように短縮表示し、内部データ・非表示ラベル・アクセシビリティ用ラベルはステージ内累計値を保持する。**Exp・メンバー別 Lv は表示しない**（クラス表示名は 1 行・`readClassDisplayLabel`） |
+| メンバー行（詳細） | **射程の短い順**（同射程は `partySlotIndex` 昇順）。空きスロットは末尾。`.party-hud-panel-slots` が **3 列トラック**（class **固定**（24px アイコン + 4px + **8ch** 名前幅。英語 `Swordsman` 基準、`--hud-header-font-size` 基準。§7.1.3）／bars **min 168px・`max(168px, 210px − class 拡張分)`・`1fr`**／damage 120px）の親グリッド、**`width: 100%`**。各 `.party-hud-slot` → `.party-hud-unit` は **`subgrid`** で同一トラックを共有し **bar 列開始 X は全ユニットで揃える**。class 列を広げた分は bars 最小幅から差し引く（合計幅不変）。**上段:** `"class bars damage"` × 2 行 — bars = HP + リキャスト 2×2。**下段 `status`:** 同一 3 列 `subgrid` — DEBUFF/BUFF ラベルは class 列、アイコン列は bars+damage 列。アイコン列は canvas 透過余白 + ゲージ外枠分を `margin-left` で左補正。**与列:** 非ヒーラー = 与ダメ（ATK タグ）、**ヒーラー（`role: supporter`）= 与回復量**（HoT タグ・短ラベル **癒**）。**被列:** 全員被ダメ。damage 列内は tag / 数値 / ゲージの固定幅グリッド。inline 数値は 4 桁以上を `1.2k` / `12k` のように短縮表示し、内部データ・非表示ラベル・アクセシビリティ用ラベルはステージ内累計値を保持する。**Exp・メンバー別 Lv は表示しない**（クラス表示名は 1 行・`readClassDisplayLabel`） |
 | 与回復バー | ヒーラー同士で相対比較（与ダメと同型）。**ヒーラー 1 人のみ**のとき与列バーは **常に 100%**。集計は `StageDamageStatsTracker.recordHeal` — 実 HP 回復量（instant / HoT tick / heal 予約 / バリア枯渇 heal 等） |
 | 状態バッジ帯 | debuff / buff でラベル行を分ける（例: Debuff / Buff）。`status` 行は unit と同じ 3 列 `subgrid` — ラベルは class 列、アイコンは bars+damage 列。**空行もラベルは維持**（低コントラスト）。**アイコン 0 件のときアイコン列は非表示・高さ 0**。詳細 HUD のバッジ canvas 行高 **22px**（内部 24px 描画の下透明 2px のみクロップ。buff/debuff 共通）。buff アイコン列下・debuff アイコン列上の行間はそれぞれ `--hud-detail-buff-icons-bottom-pull` / `--hud-detail-debuff-icons-top-pull`（各 3px）で CSS 負 margin。Debuff ラベル上 margin は buff アイコンあり時 0。行間 1px。**簡易 3+N 省略なし**（[combat.md](combat.md) HUD バッジ §簡易/詳細） |
 | 更新 | 詳細モード中は `PartyHudPanel.updateDetailMetrics` で与ダメ / 与回復 / 被ダメ / 全バッジを refresh。HP / リキャストはコンパクトと同経路 |
@@ -528,7 +528,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | 現行（避ける） | 目標 |
 | -------------- | ---- |
 | 中央モーダル + 強 backdrop + 大角丸 + 強 box-shadow | **HUD 直下の同一枠** — コンパクト / 詳細を排他切替。枠は控えめ |
-| ダッシュボード風 title bar（角丸 `×` ボタン等） | 閉じる操作は **ドロワータブ** と `Escape` のみ。装飾より可読性 |
+| ダッシュボード風 title bar（角丸 `×` ボタン等） | 閉じる操作は **設けない**（§8 固定 HUD）。装飾より可読性 |
 | メンバー行の角丸グラデーション棒のみの区切り | **コンパクトと同じ控えめなメンバー枠**（`party-hud-slot`・inset 枠線 + 角丸 3px）で縦に並べる。枠間は `gap: 5px` |
 | カードグリッド風の横並びダッシュボード | 詳細は **縦リスト**（各 `.party-hud-unit` = `grid-template-areas` による 3 列プレート + 全幅 status 行） |
 
@@ -539,11 +539,13 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 1. 戦闘詳細が Web モーダル / ダッシュボード風に見えない（§11 準拠）。Party HUD **同一枠**でコンパクト / 詳細を切替する
 2. 詳細モードで 4 人分の名前・与ダメ / 被ダメ・**全状態バッジ（debuff/buff ラベル付き）**・**HP / リキャスト**が **縦リスト**で読める。コンパクトモードのホバー（§7.1.1）も維持
 3. `party-member-stats.css` のダメージ / 詳細バッジスタイルが Party HUD 詳細行に反映される
-4. ドロワータブ / `Escape` で詳細モードを閉じられる
+4. 詳細モードが Party HUD 固定枠内で常時表示される（§8 準拠）
 
 ---
 
 ## 8. 戦闘画面 UI（1280×720 HUD）
+
+**フォント:** `--font-body` / `--font-ui` / `--font-number` の割当は [ui-fonts.md](ui-fonts.md)。Canvas HUD テーマは `--hud-font-family`（UI アクセント）、`--popup-font-family`（ダメージ数値）。
 
 ### 8.1 目的と正本
 
@@ -689,6 +691,8 @@ enemyHud:
 ### 8.7 味方 HUD
 
 味方 HUD は左側オーバーレイに固定し、4 人固定パーティを縦並びで表示する。既存の味方 1 人 HUD 構造は流用してよいが、各ユニットカードは固定高さとし、内容量でカード高さを変えない。
+
+**縦並び順:** 上から **射程の短い順**（`traits.rangePx` 昇順）。同射程は `partySlotIndex` 昇順。空き編成スロットは末尾。`partySlotIndex` は与ダメ統計・ホバー詳細のキーであり、visual 行番号の正本ではない（§1 `partySlotIndex` とスロットの違い）。
 
 初期寸法目安:
 
@@ -846,6 +850,12 @@ enemySlot:
 - 対象周囲の照準マーカー
 - HUD スロット上の小さなターゲット表示
 
+表示条件:
+
+- **常時表示しない**。Party HUD / Enemy HUD のスロットにホバーしたときのみ、そのホバー中ユニット（actor）が直近 `skillWindup` / `skill` で狙った相手（target）にマーカーを出す
+- フィールド上スプライトのホバー（`hoverHighlight` source `field`）では `targetIndicator` は出さない
+- ホバー解除後はマーカーを消す（トラッカー内の actor→target ペアは TTL まで保持し、再ホバー時に再利用）
+
 #### 8.10.2 `hoverHighlight`
 
 HUD スロットと戦闘フィールド上スプライトの対応を示す UI 補助。
@@ -891,19 +901,11 @@ topInfo:
 | 禁止 | デバッグ UI が本体戦闘 HUD を押し下げること、1280×720 本番 HUD を変形させること |
 | 開発中表示 | 必要な表示は残してよいが、ゲーム HUD と混ぜない |
 
-実装：`BattleView.ts` の `.battle-debug-overlay` / `.battle-debug-shell`（`battle-canvas-host` 内 z-index 5）に `BattleStatsDrawer`、`DebugMenuPanel`（折りたたみドック）、`BattleXDebugCanvas` を overlay 配置する。本体 HUD スロット座標は `battleRootLayout.ts` の固定 rect のまま。
+実装：`BattleView.ts` の `.battle-debug-overlay` / `.battle-debug-shell`（`battle-canvas-host` 内 z-index 5）に `DebugMenuPanel`（折りたたみドック）、`BattleXDebugCanvas` を overlay 配置する。本体 HUD スロット座標は `battleRootLayout.ts` の固定 rect のまま。
 
-#### 8.12.1 `BattleStatsDrawer` の扱い
+#### 8.12.1 詳細統計 overlay（将来）
 
-`BattleStatsDrawer` は新しい常時 HUD 内には統合しない。開発用または詳細確認用のドロワーとして扱い、本体 HUD の 1280×720 レイアウトを押し下げない。
-
-| 項目 | 方針 |
-| ---- | ---- |
-| 位置づけ | 開発用 / 詳細確認用ドロワー |
-| 表示形式 | 折りたたみ式、別レイヤ、開発用 overlay など |
-| 本体 HUD | HP、状態、スキルゲージ、敵一覧、危険予兆などの観察に必要な情報を優先 |
-| 詳細情報 | 詳細統計やデバッグ情報は `BattleStatsDrawer` 側へ逃がす |
-| 禁止 | `BattleStatsDrawer` が本体 HUD を押し下げること、常時 HUD の固定座標を変形させること |
+詳細統計の overlay 分離は §8 方針どおり本体 HUD から切り離す。旧 `BattleStatsDrawer`（`.party-hud-drawer-tab` のみ）は廃止済み。将来の開発用 / 詳細確認用ドロワーは別コンポーネントとして再設計する。
 
 ### 8.13 既存処理の流用方針
 
@@ -987,7 +989,7 @@ Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `s
 | 5 | 右 Enemy HUD（最大 10 体） | `EnemyHudPanel.ts`, `enemy-hud-overlay.css`, `enemyHudTypes.ts` |
 | 6 | 敵スプライト付近 HP/状態停止 | `BattleCanvas.ts` |
 | 7 | `hoverHighlight` / `targetIndicator` 分離 | `BattleView.ts`, `battleHoverHighlight.ts`, `battleTargetIndicator.ts`, `battleFieldIndicatorDraw.ts` |
-| 8 | `BattleStatsDrawer` / Debug UI overlay 分離 | `BattleView.ts`, `battle-view.css`, `BattleStatsDrawer.ts` |
+| 8 | Debug UI overlay 分離 | `BattleView.ts`, `battle-view.css` |
 
 #### 自動テスト（受け入れ補助）
 
@@ -1000,17 +1002,16 @@ Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `s
 
 | 項目 | 内容 |
 | ---- | ---- |
-| 常時 targetIndicator | エンジン snapshot から `ChaseTarget` / `AttackTarget` を UI 公開する場合は戦闘側 API 追加が必要（現状は `skillWindup` / `skill` イベント + TTL） |
-| BattleStatsDrawer 本体 | タブのみ。与ダメ / 被ダメ詳細パネルは §7 詳細モード内容の overlay 統合が未着手 |
+| 常時 targetIndicator | §8.10.1 のとおり HUD ホバー時のみ表示。エンジン snapshot から `ChaseTarget` / `AttackTarget` を常時 UI 公開する場合は戦闘側 API 追加が必要（現状は `skillWindup` / `skill` イベント + TTL） |
+| 詳細統計 overlay | 旧 `BattleStatsDrawer` タブは廃止。与ダメ / 被ダメ詳細の overlay 統合は未着手 |
 | 危険予兆 | `EnemyHudPanel` の `dangerTelegraph` は予約枠（非アクティブ）。戦闘データ未接続 |
-| battle-x-debug 同時表示 | verify 時に battle-x-debug と stats drawer タブが近接。軽微な z-index / bottom 調整済み、実戦闘での重なりは目視確認推奨 |
 
 #### 後続 UI polish 候補
 
 - 1280×720 以外 viewport（800×600、超ワイド）での overlay 視認性
 - 味方 / 敵 hoverHighlight の同時表示（同一ユニットで target + hover 重なり）のコントラスト
 - Enemy HUD `+N` tooltip と状態アイコン密度（10 体 × 多状態）
-- `BattleStatsDrawer` 開閉時の詳細統計 DOM 実装
+- 詳細統計 overlay の DOM 実装（§8.12.1）
 - 英語 i18n（Phase 4e）— 戦闘 HUD ラベル・tooltip
 
 #### 目視確認チェックリスト

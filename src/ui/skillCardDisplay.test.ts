@@ -158,6 +158,21 @@ describe("resolveSkillCardDisplay", () => {
     ]);
   });
 
+  it("keeps Ward and Barrier distinct in English for wardweaver emergency active", async () => {
+    const { loadGameData } = await import("../battle/data/loadGameData.ts");
+    const gameData = await loadGameData();
+    const def = gameData.skillRegistry.actives.sp_wardweaver_active_4;
+    expect(def).toBeDefined();
+
+    const lines = formatSkillCardLines(def!, { locale: "en" });
+    const display = resolveSkillCardDisplay(lines, def, "en");
+
+    expect(display.headlineLines).toEqual([
+      "All allies Ward ×2 (10% Damage Reduction)",
+      "Barrier equal to 125% of ATK",
+    ]);
+  });
+
   it("keeps pierce shape text in headline without separate tag row", async () => {
     const { loadGameData } = await import("../battle/data/loadGameData.ts");
     const gameData = await loadGameData();

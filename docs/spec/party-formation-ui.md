@@ -1,6 +1,6 @@
 # パーティ編成 UI
 
-実装：`src/game/gameScreen.ts`, `src/game/GameSession.ts`, `src/platform/DomFormationScreenHost.ts`, `src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/game-shell.css`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`, `src/ui/gameTermGlossary.ts`, `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/annotateGameTerms.ts`, `src/ui/GameTermTooltip.ts`, `src/ui/GameTermPanel.ts`, `src/styles/game-term-panel.css`.**現行正本:** Class Select（直接選択 + 下部 Class Summary）+ Skills + Party Summary（4 影 + キャラ画像）。**Phase 4d:** 閲覧スキルカード（`formatSkillCardLines`）とインライン用語パネル（§6.4）を継続使用。
+実装：`src/game/gameScreen.ts`, `src/game/GameSession.ts`, `src/platform/DomFormationScreenHost.ts`, `src/ui/MetaMenuOverlay.ts`, `src/ui/SkillMenuPanel.ts`, `src/styles/fonts.css`, `src/styles/game-shell.css`, `src/styles/skill-menu-panel.css`, `src/styles/meta-menu-overlay.css`, `src/ui/gameTermGlossary.ts`, `src/ui/skillCardDisplay.ts`, `src/ui/skillCardDisplayRules.ts`, `src/ui/annotateGameTerms.ts`, `src/ui/GameTermTooltip.ts`, `src/ui/GameTermPanel.ts`, `src/styles/game-term-panel.css`.**現行正本:** Class Select（直接選択 + 下部 Class Summary）+ Skills + Party Summary（4 影 + キャラ画像）。**Phase 4d:** 閲覧スキルカード（`formatSkillCardLines`）とインライン用語パネル（§6.4）を継続使用。**フォント:** [ui-fonts.md](ui-fonts.md)。
 
 本ドキュメントは **メタメニューから開くパーティ編成画面**（`SkillMenuPanel`）の画面設計正本。戦闘フィールド上の隊形・座標は [battle-field.md](battle-field.md)、クラス・ロール・スキル習得は [classes-and-skills.md](classes-and-skills.md)、セーブ・Lv は [progression.md](progression.md) を参照。
 

@@ -29,7 +29,7 @@
     "name": "引き裂き",
     "trigger": {
       "kind": "basicAttackCount",
-      "value": 8
+      "value": 6
     },
     "effect": [
       {
@@ -37,24 +37,13 @@
         "damageType": "physical",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.15
+          "atkScale": 1
         },
         "targetShape": "single",
         "target": {
           "kind": "distance",
           "side": "enemy",
           "order": "nearest"
-        },
-        "damageIncrease": {
-          "scale": 1.3,
-          "conditions": [
-            {
-              "kind": "debuff",
-              "tags": [
-                "bleed"
-              ]
-            }
-          ]
         }
       },
       {
@@ -73,7 +62,7 @@
         "durationSec": 5,
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.3
+          "atkScale": 0.1
         },
         "damageType": "physical"
       }
@@ -87,7 +76,7 @@
     "name": "影の刃",
     "trigger": {
       "kind": "basicAttackCount",
-      "value": 14
+      "value": 10
     },
     "effect": [
       {
@@ -105,21 +94,11 @@
         "type": "move",
         "moveMode": "toAnchor",
         "moveDurationSec": 0.2,
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "range": 100,
+        "range": 150,
         "anchorOffsetPx": 32,
         "waitAfterSec": 0.2
       },
       {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
         "type": "damage",
         "damageType": "physical",
         "amount": {
@@ -132,34 +111,46 @@
           "conditions": [
             {
               "kind": "targetHp",
-              "maxHpRatio": 0.3
+              "maxHpRatio": 0.25
             }
           ]
-        }
+        },
+        "pierceBlock": true
       }
     ],
     "vfx": {
       "enabled": true
     },
-    "useDurationSec": 2
+    "useDurationSec": 2,
+    "target": {
+      "kind": "distance",
+      "side": "enemy",
+      "order": "nearest"
+    },
+    "targetShape": "single"
   },
   {
     "id": "at_assassin_active_3",
     "name": "失血刻印",
     "trigger": {
       "kind": "basicAttackCount",
-      "value": 18
+      "value": 16
     },
     "firePolicy": "smart",
     "fireConditions": [
       {
-        "kind": "debuff",
-        "tags": [
-          "bleed"
-        ]
+        "kind": "targetHp",
+        "maxHpRatio": 0.5
       }
     ],
     "effect": [
+      {
+        "type": "debuff",
+        "debuffSubKind": "stat",
+        "debuffStat": "damageTaken",
+        "debuffMultiplier": 1.2,
+        "debuffDurationSec": 5
+      },
       {
         "target": {
           "kind": "distance",
@@ -167,15 +158,28 @@
           "order": "nearest"
         },
         "type": "debuff",
-        "debuffSubKind": "stat",
-        "debuffStat": "damageTaken",
-        "debuffMultiplier": 1.2,
-        "debuffDurationSec": 5
+        "debuffSubKind": "dot",
+        "debuffStat": "def",
+        "debuffMultiplier": 0.8,
+        "debuffDurationSec": 5,
+        "durationSec": 5,
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.3
+        },
+        "damageType": "physical",
+        "dotFlavor": "bleed"
       }
     ],
     "vfx": {
       "enabled": true
-    }
+    },
+    "target": {
+      "kind": "distance",
+      "side": "enemy",
+      "order": "nearest"
+    },
+    "targetShape": "single"
   },
   {
     "id": "at_assassin_active_4",
@@ -189,15 +193,6 @@
       {
         "type": "damage",
         "damageType": "physical",
-        "targetShape": "multiLock",
-        "hitCount": 3,
-        "range": 100,
-        "target": {
-          "kind": "stat",
-          "side": "enemy",
-          "stat": "hp",
-          "order": "ratio"
-        },
         "amount": {
           "kind": "atkBased",
           "atkScale": 1.5
@@ -208,35 +203,21 @@
             {
               "kind": "debuff",
               "tags": [
-                "def",
-                "bleed"
+                "bleed",
+                "damageTaken"
               ]
             }
           ]
-        }
-      },
-      {
+        },
+        "pierceBlock": true,
         "target": {
           "kind": "stat",
           "side": "enemy",
           "stat": "hp",
-          "order": "ratio"
+          "order": "lowest"
         },
-        "type": "debuff",
-        "debuffSubKind": "dot",
-        "debuffStat": "def",
-        "debuffMultiplier": 0.8,
-        "debuffDurationSec": 5,
         "targetShape": "multiLock",
-        "hitCount": 3,
-        "durationSec": 5,
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.5
-        },
-        "damageType": "physical",
-        "dotFlavor": "bleed",
-        "buffDisplayName": "出血"
+        "hitCount": 3
       }
     ],
     "vfx": {

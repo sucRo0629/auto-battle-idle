@@ -9,6 +9,7 @@ import {
   type BattleXDebugReplayFrame,
 } from "../battle/battleXDebugReplayBuffer.ts";
 import type { BattleSnapshot, CombatantSnapshot } from "../battle/types.ts";
+import { battleXDebugCanvasMaxDisplayHeight, battleXDebugCanvasMaxDisplayWidth } from "./battleRootLayout.ts";
 
 const CANVAS_W = 480;
 const MIN_CANVAS_H = 157;
@@ -22,7 +23,9 @@ const DEAD_ENEMY_ALPHA = 0.35;
 const SKILL_RANGE_FLASH_MS = 1000;
 
 export class BattleXDebugCanvas {
-  private root: HTMLElement | null = null;
+  private canvasPanel: HTMLElement | null = null;
+  private toolsPanel: HTMLElement | null = null;
+  private canvasWrap: HTMLElement | null = null;
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
   private tableBody: HTMLTableSectionElement | null = null;
@@ -46,19 +49,29 @@ export class BattleXDebugCanvas {
   private lastTraceRenderKey = "";
 
   mount(parent: HTMLElement): void {
-    this.root = document.createElement("section");
-    this.root.className = "battle-x-debug";
-    this.root.hidden = !this.visible;
+    this.canvasPanel = document.createElement("section");
+    this.canvasPanel.className = "battle-x-debug-canvas-panel";
+    this.canvasPanel.hidden = !this.visible;
+
+    this.canvasWrap = document.createElement("div");
+    this.canvasWrap.className = "battle-x-debug-canvas-wrap";
 
     this.canvas = document.createElement("canvas");
     this.canvas.width = CANVAS_W;
     this.canvas.height = MIN_CANVAS_H;
     this.canvas.className = "battle-x-debug-canvas";
     this.canvas.hidden = !this.visible;
-    this.root.appendChild(this.canvas);
-    this.mountReplayControls(this.root);
-    this.mountTraceTable(this.root);
-    parent.appendChild(this.root);
+    this.canvasWrap.appendChild(this.canvas);
+    this.canvasPanel.appendChild(this.canvasWrap);
+
+    this.toolsPanel = document.createElement("section");
+    this.toolsPanel.className = "battle-x-debug-tools";
+    this.toolsPanel.hidden = !this.visible;
+    this.mountReplayControls(this.toolsPanel);
+    this.mountTraceTable(this.toolsPanel);
+
+    parent.appendChild(this.canvasPanel);
+    parent.appendChild(this.toolsPanel);
 
     const ctx = this.canvas.getContext("2d");
     if (!ctx) throw new Error("Canvas 2D unavailable");
@@ -69,11 +82,17 @@ export class BattleXDebugCanvas {
 
   setVisible(visible: boolean): void {
     this.visible = visible;
-    if (this.root) {
-      this.root.hidden = !visible;
+    if (this.canvasPanel) {
+      this.canvasPanel.hidden = !visible;
+    }
+    if (this.toolsPanel) {
+      this.toolsPanel.hidden = !visible;
     }
     if (this.canvas) {
       this.canvas.hidden = !visible;
+    }
+    if (this.canvasWrap) {
+      this.canvasWrap.hidden = !visible;
     }
     if (!visible) {
       this.replayBuffer.clear();
@@ -148,8 +167,11 @@ export class BattleXDebugCanvas {
   }
 
   destroy(): void {
-    this.root?.remove();
-    this.root = null;
+    this.canvasPanel?.remove();
+    this.toolsPanel?.remove();
+    this.canvasPanel = null;
+    this.toolsPanel = null;
+    this.canvasWrap = null;
     this.canvas = null;
     this.ctx = null;
     this.tableBody = null;
@@ -501,7 +523,12 @@ export class BattleXDebugCanvas {
 
   private draw(): void {
     const { canvas, ctx, snapshot } = this;
-    if (!canvas || !ctx || !snapshot) return;
+    if (!canvas || !ctx) return;
+
+    if (!snapshot) {
+      this.syncCanvasDisplayScale();
+      return;
+    }
 
     const units = [...snapshot.allies, ...snapshot.enemies];
     this.ensureCanvasHeight(canvas, this.nextLane);
@@ -521,6 +548,28 @@ export class BattleXDebugCanvas {
     this.drawUnits(ctx, units);
 
     ctx.restore();
+    this.syncCanvasDisplayScale();
+  }
+
+  private syncCanvasDisplayScale(): void {
+    const { canvas, canvasWrap } = this;
+    if (!canvas || !canvasWrap) return;
+
+    const maxDisplayWidth = battleXDebugCanvasMaxDisplayWidth();
+    const maxDisplayHeight = battleXDebugCanvasMaxDisplayHeight();
+    const intrinsicW = canvas.width;
+    const intrinsicH = canvas.height;
+    const scale = Math.min(
+      1,
+      maxDisplayWidth / intrinsicW,
+      maxDisplayHeight / intrinsicH,
+    );
+
+    canvas.style.width = `${intrinsicW}px`;
+    canvas.style.height = `${intrinsicH}px`;
+    canvas.style.transform = scale < 1 ? `scale(${scale})` : "";
+    canvasWrap.style.width = `${Math.round(intrinsicW * scale)}px`;
+    canvasWrap.style.height = `${Math.round(intrinsicH * scale)}px`;
   }
 
   private drawHeader(ctx: CanvasRenderingContext2D): void {

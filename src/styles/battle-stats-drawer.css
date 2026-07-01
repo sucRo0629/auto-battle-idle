@@ -20,7 +20,6 @@
   background: var(--hud-backdrop-color);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   box-sizing: border-box;
-  font-family: var(--hud-font-family);
 }
 
 .battle-hud-toolbar-leading {
@@ -53,7 +52,6 @@
   border-radius: 2px;
   background: rgba(15, 15, 26, 0.55);
   color: rgba(227, 227, 227, 0.92);
-  font-family: var(--hud-font-family);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -76,70 +74,6 @@
 
 .battle-hud-stack .party-hud-panel {
   border-radius: 0;
-}
-
-.party-hud-drawer {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  font-family: var(--hud-font-family);
-}
-
-.battle-stats-drawer {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.battle-stats-drawer .party-hud-drawer-tab {
-  border-radius: 4px 4px 0 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  border-bottom: none;
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.28);
-}
-
-.party-hud-drawer-tab {
-  -webkit-app-region: no-drag;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 14px;
-  padding: 2px 0 3px;
-  border: none;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 0 0 4px 4px;
-  background: var(--hud-backdrop-color);
-  color: rgba(227, 227, 227, 0.62);
-  cursor: pointer;
-  line-height: 1;
-}
-
-.party-hud-drawer--open .party-hud-drawer-tab {
-  border-radius: 0 0 4px 4px;
-}
-
-.party-hud-drawer-tab:hover:not(:disabled) {
-  color: rgba(227, 227, 227, 0.88);
-  background: rgba(22, 33, 62, 0.94);
-}
-
-.party-hud-drawer-tab:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-
-.party-hud-drawer-tab-chevron {
-  display: block;
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid currentColor;
-  transition: transform 0.12s ease;
-}
-
-.party-hud-drawer-tab-chevron--open {
-  transform: rotate(180deg);
 }
 
 .party-hud-panel .party-hud-detail-damage,
@@ -446,7 +380,7 @@
   width: var(--hud-detail-damage-value-col);
   min-width: var(--hud-detail-damage-value-col);
   max-width: var(--hud-detail-damage-value-col);
-  font-size: 10px;
+  font-size: var(--font-body-min-size);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1;

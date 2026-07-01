@@ -14,7 +14,7 @@
     "maxHp": 300,
     "atk": 11,
     "def": 27,
-    "reg": 0,
+    "reg": 5,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "df_guardian_basic_attack",
@@ -123,9 +123,9 @@
     "traits": {
       "rangePx": 30
     },
-    "maxHp": 220,
+    "maxHp": 250,
     "atk": 19,
-    "def": 18,
+    "def": 20,
     "reg": 0,
     "jobTier": 1,
     "attackSpeedTier": "normal",
@@ -412,9 +412,9 @@
     "traits": {
       "rangePx": 400
     },
-    "maxHp": 88,
+    "maxHp": 160,
     "atk": 33,
-    "def": 5,
+    "def": 10,
     "reg": 0,
     "jobTier": 1,
     "attackSpeedTier": "slow",
@@ -451,7 +451,7 @@
       }
     ],
     "growthTier": {
-      "maxHp": 1,
+      "maxHp": 3,
       "atk": 3,
       "def": 1
     },

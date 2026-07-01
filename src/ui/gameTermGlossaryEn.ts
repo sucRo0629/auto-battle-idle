@@ -14,13 +14,13 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   barrier: {
     title: "Barrier",
     description:
-      "Absorbs damage separately from HP and is spent before HP.\nShown on the HUD as a bright overlay on the HP bar.\nWhen a target already has a barrier, a new barrier generally replaces the old one only if the new amount is larger.",
+      "Absorbs damage separately from HP and is spent before HP.\nShown on the HUD as a bright overlay on the HP bar.\nWhen a target already has Barrier, a new Barrier generally replaces the old one only if the new amount is larger.",
     aliases: ["Barrier"],
   },
   wardBarrier: {
     title: "Ward",
     description:
-      "A stack-based defensive buff that greatly reduces damage taken.\nConsumed before barriers, one stack per hit.",
+      "A stack-based defensive buff that greatly reduces damage taken.\nConsumed before Barrier, one stack per hit.",
     aliases: ["Ward"],
   },
   windMark: {

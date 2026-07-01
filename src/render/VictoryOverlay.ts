@@ -119,7 +119,7 @@ export class VictoryOverlay {
     ctx.globalAlpha = alpha;
     ctx.translate(centerX, centerY);
     ctx.scale(scale, scale);
-    ctx.font = `bold ${theme.victoryFontSize}px ${theme.fontFamily}`;
+    ctx.font = `bold ${theme.victoryFontSize}px ${theme.overlayFontFamily}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.lineWidth = theme.victoryOutlineWidth;

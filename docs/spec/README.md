@@ -15,5 +15,6 @@
 | [i18n-en.md](i18n-en.md) | **英語 i18n 文案方針**（Phase 4e）— スキル効果文・用語・表記統一・スキルカード英語 |
 | [progression.md](progression.md) | EXP、レベル、セーブ、Stage Records、Phase 2〜12 |
 | [party-formation-ui.md](party-formation-ui.md) | パーティ編成メニュー（`SkillMenuPanel`）の画面設計 — Phase 4d |
+| [ui-fonts.md](ui-fonts.md) | **UI フォント方針**（本文 / アクセント / 数値、`--font-*`） |
 | [stage-selection-ui.md](stage-selection-ui.md) | マップ選択・ステージ詳細・Level Sync・リザルト履歴 — Phase 6d |
 | [roguelike-mode.md](roguelike-mode.md) | ローグライクモード（仮称）— ランダム問題・ラン進行・報酬設計（Phase 10） |

@@ -1,13 +1,13 @@
 [
   {
     "id": "at_assassin_passive_1",
-    "name": "手負い狩り",
+    "name": "薄命狩り",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
       "kind": "stat",
       "side": "enemy",
       "stat": "hp",
-      "order": "ratio"
+      "order": "lowest"
     }
   },
   {
@@ -26,11 +26,11 @@
     "effect": "specialEffect",
     "specialEffectApplyTo": "damage",
     "specialEffect": {
-      "scale": 1.2,
+      "scale": 1.5,
       "conditions": [
         {
           "kind": "targetHp",
-          "maxHpRatio": 0.3
+          "maxHpRatio": 0.25
         }
       ]
     },

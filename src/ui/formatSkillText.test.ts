@@ -855,7 +855,7 @@ describe('formatActiveDescription', () => {
       '効果：HPが50%以下の味方にバリア付与時、バリア量+20%',
     );
     expect(formatPassiveDescription(p2!)).toBe(
-      '効果：味方に付与したバリアが完全に消失した時、対象を攻撃力の65%で回復（味方ごとにWave1回まで）、この効果は「障壁」の消失では誘発しない',
+      '効果：味方に付与したバリアが完全に消失した時、対象を攻撃力の65%で回復（味方ごとにWave1回まで）',
     );
 
     const card1 = formatSkillCardLines(p1!, { locale: 'ja' });
@@ -868,7 +868,6 @@ describe('formatActiveDescription', () => {
     expect(card2.metaLine).toBe('常時');
     expect(card2.effectLines).toEqual([
       '味方に付与したバリアが完全に消失した時、対象を攻撃力の65%で回復（味方ごとにWave1回まで）',
-      'この効果は「障壁」の消失では誘発しない',
     ]);
   });
 
@@ -1252,7 +1251,7 @@ describe('formatActiveDescription', () => {
     const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
     expect(passive2.metaLine).toBe('Always');
     expect(passive2.effectLines).toEqual([
-      'When healing an ally, converts 80% of overheal into barrier on the target',
+      'When healing an ally, converts 80% of overheal into Barrier on the target',
     ]);
   });
 
@@ -1284,14 +1283,13 @@ describe('formatActiveDescription', () => {
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
     expect(passive1.metaLine).toBe('Always');
     expect(passive1.effectLines).toEqual([
-      'When granting a barrier to an ally at ≤50% HP, barrier amount +20%',
+      'When granting Barrier to an ally at ≤50% HP, Barrier amount +20%',
     ]);
 
     const passive2 = formatSkillCardLines(p2!, { locale: 'en' });
     expect(passive2.metaLine).toBe('Always');
     expect(passive2.effectLines).toEqual([
-      'When a barrier you granted fully depletes, heals the target for 65% of ATK (once per ally per wave)',
-      'Does not trigger on Ward depletion',
+      'When a Barrier you granted fully depletes, heals the target for 65% of ATK (once per ally per wave)',
     ]);
   });
 

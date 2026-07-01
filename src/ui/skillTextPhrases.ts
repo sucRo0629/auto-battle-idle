@@ -141,9 +141,9 @@ export function phraseAtkBasedBarrier(
       : "（加算）"
     : "";
   if (L() === "en") {
-    return `Barrier equal to ${pct} of ${skillStat("atk")}${stackSuffix}`;
+    return `${skillTerm("barrier")} equal to ${pct} of ${skillStat("atk")}${stackSuffix}`;
   }
-  return `攻撃力の${pct}のバリア${stackSuffix}`;
+  return `攻撃力の${pct}の${skillTerm("barrier")}${stackSuffix}`;
 }
 
 export function phraseMultiLockTargetPhrase(
@@ -332,28 +332,34 @@ export function phraseBarrierAmountBonusOnLowHpAlly(
 ): string {
   if (L() === "en") {
     const op = compare === "gte" ? "≥" : "≤";
-    return `When granting a barrier to an ally at ${op}${hpPct}% HP, barrier amount +${bonusPct}`;
+    const barrier = skillTerm("barrier");
+    return `When granting ${barrier} to an ally at ${op}${hpPct}% HP, ${barrier} amount +${bonusPct}`;
   }
   const suffix = compare === "gte" ? "以上" : "以下";
-  return `HPが${hpPct}%${suffix}の味方にバリア付与時、バリア量+${bonusPct}`;
+  return `HPが${hpPct}%${suffix}の味方に${skillTerm("barrier")}付与時、${skillTerm("barrier")}量+${bonusPct}`;
 }
 
 export function phraseOverhealToBarrier(scalePct: string): string {
   return L() === "en"
-    ? `When healing an ally, converts ${scalePct} of overheal into barrier on the target`
-    : `味方を回復時、最大HPを超えた回復量の${scalePct}をバリアとして対象に付与する`;
+    ? `When healing an ally, converts ${scalePct} of overheal into ${skillTerm("barrier")} on the target`
+    : `味方を回復時、最大HPを超えた回復量の${scalePct}を${skillTerm("barrier")}として対象に付与する`;
 }
 
 export function phraseBarrierDepletionHeal(healSentence: string): string {
   return L() === "en"
-    ? `When a barrier you granted fully depletes, heals the target for ${healSentence} (once per ally per wave)`
-    : `味方に付与したバリアが完全に消失した時、対象を${healSentence}（味方ごとにWave1回まで）`;
+    ? `When a ${skillTerm("barrier")} you granted fully depletes, heals the target for ${healSentence} (once per ally per wave)`
+    : `味方に付与した${skillTerm("barrier")}が完全に消失した時、対象を${healSentence}（味方ごとにWave1回まで）`;
 }
 
-export function phraseBarrierDepletionWardExclusion(): string {
-  return L() === "en"
-    ? `Does not trigger on ${skillTerm("wardBarrier")} depletion`
-    : `この効果は「${skillTerm("wardBarrier")}」の消失では誘発しない`;
+export function phraseWardBarrierBuff(
+  stacks: number,
+  reductionLabel: string,
+): string {
+  const ward = skillTerm("wardBarrier");
+  if (L() === "en") {
+    return `${ward} ×${stacks} (${reductionLabel})`;
+  }
+  return `${ward} ×${stacks}（${reductionLabel}）`;
 }
 
 export function phraseSeedFlameStackOnHit(): string {

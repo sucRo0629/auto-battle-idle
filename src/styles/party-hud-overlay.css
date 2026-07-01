@@ -84,7 +84,7 @@
 .party-hud-panel--overlay .party-hud-label {
   display: block;
   max-width: 52px;
-  font-size: calc(var(--hud-header-font-size, 10) * 1px);
+  font-size: calc(var(--hud-header-font-size, 12) * 1px);
   line-height: 1.1;
   text-align: center;
   overflow: hidden;
@@ -171,7 +171,7 @@
 .party-hud-panel--overlay .party-hud-detail-damage .party-stats-damage-bar-value {
   display: block;
   min-width: 0;
-  font-size: 8px;
+  font-size: var(--font-body-min-size);
   line-height: 1.1;
   text-align: right;
   overflow: hidden;

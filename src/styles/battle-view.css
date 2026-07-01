@@ -30,8 +30,6 @@
   height: 720px;
   transform-origin: center center;
   transform: translate(-50%, -50%) scale(var(--battle-scale));
-  image-rendering: pixelated;
-  image-rendering: crisp-edges;
   overflow: hidden;
 }
 
@@ -57,7 +55,7 @@
   --hud-exp-hp-gap: 2;
   --hud-recast-bar-h: 3;
   --hud-recast-gap: 2;
-  --hud-font-family: 'Segoe UI', system-ui, sans-serif;
+  --hud-font-family: var(--font-ui);
   --hud-icon-border: #4a5568;
   --hud-name-color: #ffffff;
   --hud-epithet-color: rgba(255, 255, 255, 0.65);
@@ -96,7 +94,7 @@
   --hud-icon-frame: #1a1a1a;
   --popup-font-size: 18;
   --popup-outline-width: 1;
-  --popup-font-family: 'Segoe UI', system-ui, sans-serif;
+  --popup-font-family: var(--font-number);
   --popup-damage-fill: #ffffff;
   --popup-damage-stroke: #000000;
   --popup-dot-fill: #ff3333;
@@ -113,6 +111,7 @@
   --enemy-hp-bar-outline: #000000;
   --enemy-hp-bar-outline-width: 1;
   --victory-font-size: 48;
+  --overlay-font-family: var(--font-body);
   --victory-fill: #ffffff;
   --victory-stroke: rgba(0, 0, 0, 0.65);
   --victory-outline-width: 3;
@@ -271,7 +270,6 @@
   padding: 0 8px;
   box-sizing: border-box;
   pointer-events: none;
-  font-family: var(--hud-font-family, 'Segoe UI', system-ui, sans-serif);
 }
 
 .battle-top-info-stage {
@@ -300,21 +298,15 @@
   inset: 0;
   pointer-events: none;
   overflow: visible;
+  --battle-hud-toolbar-top: 229px;
+  --battle-x-debug-top: 64px;
+  --battle-x-debug-column-width: 300px;
 }
 
-.battle-debug-shell > .battle-stats-drawer,
 .battle-debug-shell > .battle-debug-menu-dock,
-.battle-debug-shell > .battle-x-debug {
+.battle-debug-shell > .battle-x-debug-canvas-panel,
+.battle-debug-shell > .battle-x-debug-tools {
   pointer-events: auto;
-}
-
-.battle-debug-shell > .battle-stats-drawer {
-  position: absolute;
-  left: 340px;
-  bottom: 80px;
-  width: 600px;
-  max-width: calc(100% - 680px);
-  z-index: 3;
 }
 
 .battle-debug-menu-dock {
@@ -337,7 +329,6 @@
   border-radius: 2px;
   background: rgba(15, 18, 28, 0.94);
   color: #a8b8d0;
-  font-family: var(--hud-font-family, "Segoe UI", system-ui, sans-serif);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
@@ -363,22 +354,49 @@
   display: none !important;
 }
 
-.battle-debug-shell > .battle-x-debug {
+.battle-debug-shell > .battle-x-debug-canvas-panel {
+  position: absolute;
+  left: 24px;
+  top: var(--battle-x-debug-top);
+  z-index: 2;
+  width: var(--battle-x-debug-column-width);
+  max-width: var(--battle-x-debug-column-width);
+  max-height: calc(var(--battle-hud-toolbar-top) - var(--battle-x-debug-top));
+  overflow: hidden;
+  padding: 4px;
+  border-radius: 4px;
+  background: rgba(8, 10, 18, 0.92);
+  box-sizing: border-box;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.battle-debug-shell > .battle-x-debug-canvas-panel[hidden] {
+  display: none !important;
+}
+
+.battle-debug-shell > .battle-x-debug-tools {
   position: absolute;
   left: 24px;
   right: 24px;
-  /* Above battleLane-bottom stats drawer tab (~18px) */
   bottom: 98px;
   z-index: 2;
-  max-height: min(300px, 40vh);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: min(280px, 40vh);
   overflow: auto;
   padding: 4px;
   border-radius: 4px;
   background: rgba(8, 10, 18, 0.92);
   box-sizing: border-box;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
-.battle-debug-shell > .battle-x-debug[hidden] {
+.battle-debug-shell > .battle-x-debug-tools[hidden] {
   display: none !important;
 }
 
@@ -401,7 +419,6 @@
   gap: 6px;
   padding: 6px 8px;
   pointer-events: none;
-  font-family: var(--hud-font-family, 'Segoe UI', system-ui, sans-serif);
 }
 
 .battle-canvas-hud-stage {
@@ -411,7 +428,8 @@
   border: 2px solid rgba(0, 0, 0, 0.45);
   background: rgba(8, 10, 18, 0.72);
   color: #f0f4fa;
-  font-size: 11px;
+  font-family: var(--font-body);
+  font-size: var(--font-body-min-size);
   font-weight: 700;
   line-height: 1.2;
   white-space: nowrap;
@@ -426,7 +444,8 @@
   border: 2px solid rgba(0, 0, 0, 0.45);
   background: rgba(8, 10, 18, 0.72);
   color: rgba(240, 244, 250, 0.92);
-  font-size: 11px;
+  font-family: var(--font-body);
+  font-size: var(--font-body-min-size);
   font-weight: 600;
   line-height: 1.2;
   white-space: nowrap;
@@ -494,22 +513,23 @@
   flex: 0 0 auto;
 }
 
+.battle-x-debug-canvas-wrap {
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
 .battle-x-debug-canvas {
   display: block;
-  width: 100%;
-  height: auto;
   border: 1px solid var(--canvas-border-color);
   border-radius: 2px;
   box-sizing: border-box;
+  transform-origin: top left;
 }
 
-.battle-x-debug {
+.battle-x-debug-tools {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
 .battle-x-debug-replay {
@@ -535,7 +555,7 @@
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.06);
   color: #d9e4f5;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.68rem;
   cursor: pointer;
 }
@@ -576,7 +596,7 @@
 
 .battle-x-debug-replay__info {
   color: #9fb0c8;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.68rem;
   font-variant-numeric: tabular-nums;
   line-height: 1.35;
@@ -604,7 +624,7 @@
   width: 100%;
   border-collapse: collapse;
   color: #d9e4f5;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.68rem;
   font-variant-numeric: tabular-nums;
 }
@@ -672,7 +692,6 @@
   background: var(--hud-backdrop-color);
   border-radius: 0 0 4px 4px;
   box-sizing: border-box;
-  font-family: var(--hud-font-family);
   overflow: visible;
 }
 
@@ -790,8 +809,7 @@
   background: rgba(15, 18, 28, 0.97);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   color: #e8ecf1;
-  font-family: var(--hud-font-family);
-  font-size: 11px;
+  font-size: var(--font-body-min-size);
   line-height: 1.3;
   white-space: nowrap;
   pointer-events: none;

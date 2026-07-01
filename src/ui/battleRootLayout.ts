@@ -2,6 +2,7 @@ import {
   BATTLE_ROOT_HEIGHT,
   BATTLE_ROOT_WIDTH,
 } from "./battleRootScale.ts";
+import { battleCanvasHeight } from "../render/formationLayout.ts";
 
 export interface BattleRootRect {
   x: number;
@@ -59,6 +60,30 @@ export const ENEMY_HUD_SLOT_GAP = 6;
 
 /** Maximum enemy rows shown in the enemyHud list. */
 export const ENEMY_HUD_MAX_SLOTS = 10;
+
+/** battle-x-debug panel top — left column, aligned with partyHud slot. */
+export const BATTLE_X_DEBUG_PANEL_TOP = PARTY_HUD_SLOT_RECT.y;
+
+/** battle-hud-toolbar top edge in battle-root coordinates (lane top + field canvas). */
+export function battleHudToolbarTopY(spriteScale = 1): number {
+  return BATTLE_LANE_RECT.y + battleCanvasHeight(spriteScale);
+}
+
+/** Max CSS display width for battle-x-debug canvas (partyHud column). */
+export function battleXDebugCanvasMaxDisplayWidth(
+  panelPaddingHorizontalPx = 8,
+): number {
+  return PARTY_HUD_SLOT_RECT.w - panelPaddingHorizontalPx;
+}
+
+/** Max CSS display height for battle-x-debug canvas (no scroll; toolbar ceiling). */
+export function battleXDebugCanvasMaxDisplayHeight(
+  panelPaddingTopPx = 4,
+): number {
+  return (
+    battleHudToolbarTopY() - BATTLE_X_DEBUG_PANEL_TOP - panelPaddingTopPx
+  );
+}
 
 export function battleRootRectStyle(rect: BattleRootRect): string {
   return [

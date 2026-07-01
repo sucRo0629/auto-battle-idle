@@ -11,7 +11,6 @@
   background: rgba(15, 18, 28, 0.97);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   color: #e8ecf1;
-  font-family: var(--hud-font-family, 'Segoe UI', system-ui, sans-serif);
   pointer-events: auto;
   transform: translate(0, -100%);
 }
@@ -58,7 +57,7 @@
 
 .party-member-effective-stats-label {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-body-min-size);
   color: #8a939f;
   line-height: 1.3;
 }
@@ -70,7 +69,7 @@
 
 .party-member-effective-stats-value {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-body-min-size);
   color: #e8ecf1;
   text-align: right;
   font-variant-numeric: tabular-nums;
@@ -80,7 +79,7 @@
 .party-member-effective-stats-delta {
   margin: 0;
   min-width: 2.5em;
-  font-size: 11px;
+  font-size: var(--font-body-min-size);
   text-align: right;
   font-variant-numeric: tabular-nums;
   line-height: 1.3;

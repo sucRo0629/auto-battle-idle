@@ -19,6 +19,7 @@ alwaysApply: true
 | クラス・ロール・スキル JSON スキーマ・用語 | `docs/spec/classes-and-skills.md` |
 | 英語 i18n 文案（4e） | `docs/spec/i18n-en.md` |
 | パーティ編成メニュー UI（`SkillMenuPanel`） | `docs/spec/party-formation-ui.md` |
+| UI フォント方針・`--font-*`・役割別 typography | `docs/spec/ui-fonts.md` |
 | マップ選択・ステージ詳細・リザルト履歴 UI | `docs/spec/stage-selection-ui.md` |
 | EXP・セーブ・ステージ進行・Stage Records | `docs/spec/progression.md` |
 | フェーズ状態・ロードマップ・作業順 | `docs/plans/phase-roadmap.md`（必要なら `master-work-order.md`） |

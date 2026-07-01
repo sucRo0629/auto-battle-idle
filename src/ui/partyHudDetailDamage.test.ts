@@ -67,6 +67,9 @@ describe('PartyHudPanel detail damage metrics', () => {
 
     panel.update([
       {
+        unitId: 'g0',
+        partySlotIndex: 0,
+        rangePx: 30,
         displayName: '鉄衛士',
         iconKey: 'df_guardian',
         hp: 80,
@@ -83,6 +86,9 @@ describe('PartyHudPanel detail damage metrics', () => {
         activeCooldowns: [],
       },
       {
+        unitId: 'a1',
+        partySlotIndex: 1,
+        rangePx: 30,
         displayName: '双刃士',
         iconKey: 'at_assassin',
         hp: 90,

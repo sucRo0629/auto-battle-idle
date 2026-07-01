@@ -47,6 +47,10 @@ export class BattleTargetIndicatorTracker {
     return [...ids];
   }
 
+  getTargetIdForActor(actorId: string): string | null {
+    return this.byActor.get(actorId)?.targetId ?? null;
+  }
+
   getSignature(): string {
     return this.lastSignature;
   }

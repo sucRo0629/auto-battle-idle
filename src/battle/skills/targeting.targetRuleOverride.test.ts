@@ -19,7 +19,7 @@ describe('targetRuleOverride apply scope', () => {
 
   const enemyLowestHpPassive: PassiveSkillDef = {
     id: 'passive_target_lowest_hp',
-    name: '手負い狩り',
+    name: '薄命狩り',
     effect: 'targetRuleOverride',
     targetRuleOverrideApplyTo: 'enemy',
     targetRuleOverride: {

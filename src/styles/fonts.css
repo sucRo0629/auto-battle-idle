@@ -1,0 +1,130 @@
+/* UI font policy — docs/spec/ui-fonts.md §0
+ * Base: M PLUS 1p (--font-body). PixelMplus10: HUD accent only, >=16px short text/numbers/headings.
+ * Never pixel: skill body/summary, meta row, status/tag chips, term links, tooltip body. */
+
+@import url("https://fonts.googleapis.com/css2?family=M+PLUS+1p:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;600;700&display=swap");
+
+/* PixelMplus10 — public/fonts/ (M+ FONT LICENSE, see PixelMplus10-LICENSE.txt) */
+@font-face {
+  font-family: "PixelMplus10";
+  src: url("/fonts/PixelMplus10-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "PixelMplus10";
+  src: url("/fonts/PixelMplus10-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-body: "M PLUS 1p", "Noto Sans JP", system-ui, sans-serif;
+  --font-ui: "PixelMplus10", "M PLUS 1p", "Noto Sans JP", monospace;
+  --font-number: "PixelMplus10", "M PLUS 1p", "Noto Sans JP", monospace;
+  /* PixelMplus は DOM でも Canvas でもこのサイズ未満では使わない */
+  --font-pixel-min-size: 16px;
+  /* 日本語本文（--font-body）の最小サイズ。編成・戦闘 HUD DOM はこれ未満にしない */
+  --font-body-min-size: 12px;
+}
+
+/* Smooth body AA — jagged stair-steps at 10–12px are often fractional scale or hinting, not “blur” */
+.game-shell {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* All game UI panels default to body. Pixel is opt-in at >=16px only. */
+.game-shell,
+.meta-menu-overlay,
+.battle-view,
+.game-term-tooltip,
+.game-term-panel,
+.enemy-hud-panel,
+.party-hud-panel,
+.battle-hud-toolbar,
+.battle-hud-stack,
+.battle-top-info,
+.battle-canvas-hud,
+.party-member-effective-stats,
+.game-ui-button,
+.meta-menu-board-title,
+.meta-menu-window-footer button,
+.skill-menu-zone-header,
+.skill-menu-section-title,
+.skill-menu-skill-kind-section > .skill-menu-section-title,
+.skill-menu-class-summary-band-title,
+.skill-menu-class-summary-role,
+.skill-menu-class-summary-selection,
+.skill-menu-skill-summary-card-meta,
+.skill-menu-skill-view-card-kind-meta,
+.skill-menu-skill-view-card-status-label,
+.skill-menu-skill-view-card-tags-label,
+.party-stats-status-label,
+.party-stats-damage-label,
+.battle-party-menu-button,
+.battle-debug-menu-toggle,
+.meta-menu-player-level,
+.party-stats-damage-bar-value,
+.party-member-effective-stats-value,
+.party-member-effective-stats-delta,
+.party-member-effective-stats-label {
+  font-family: var(--font-body);
+}
+
+.game-term-tooltip-body,
+.game-term-panel-body,
+.skill-menu-class-summary-text,
+.skill-menu-class-archive-summary .skill-menu-class-summary-text,
+.skill-menu-skill-summary-card-effect-line,
+.skill-menu-skill-summary-card-effect-list > .skill-menu-skill-summary-card-effect-line,
+.skill-menu-skill-summary-card-effect-details .skill-menu-skill-summary-card-effect-line,
+.skill-menu-skill-view-card-effect-line,
+.skill-menu-formation-note,
+.skill-menu-empty-slot-message,
+.party-hud-status-badge-tooltip,
+.party-hud-floating-tooltip,
+.party-member-effective-stats-title,
+.battle-canvas-hud-stage,
+.battle-canvas-hud-wave,
+.battle-top-info-stage,
+.battle-top-info-wave,
+.battle-hud-toolbar-level,
+.battle-verify-badge,
+.party-hud-label,
+.enemy-hud-label,
+.party-stats-member-epithet,
+.skill-menu-skill-locked-row,
+.skill-menu-picker-list-item,
+.skill-menu-picker-list-item-name,
+.skill-menu-picker-list-item-epithet,
+.skill-menu-roster-card-epithet,
+.skill-menu-roster-card-footer,
+.skill-menu-status-chip,
+.skill-menu-tag-chip,
+.skill-menu-stat-chip,
+.meta-menu-board-brand,
+.meta-menu-board-subtitle,
+.meta-menu-title,
+.meta-menu-item,
+.meta-menu-locale-label,
+.meta-menu-locale-button,
+.skill-menu-skill-summary-card-name,
+.skill-menu-class-summary-name,
+.skill-menu-class-summary-identity,
+.skill-menu-roster-card-name,
+.game-term-tooltip-title,
+.game-term-panel-title,
+.party-stats-member-name {
+  font-family: var(--font-body);
+}
+
+/*
+ * Pixel accent (DOM): §0 — only >=16px short text / numbers / headings.
+ * Excluded forever (body): skill description, summary, meta row, status/tag chips, term links, tooltips.
+ * Canvas popup numbers: --popup-font-family at 18px.
+ */

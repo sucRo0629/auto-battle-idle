@@ -14,6 +14,15 @@ describe("BattleTargetIndicatorTracker", () => {
     expect(tracker.getTargetedUnitIds().sort()).toEqual(["ally-2", "enemy-1"]);
   });
 
+  it("returns the latest target for a given actor", () => {
+    const tracker = new BattleTargetIndicatorTracker();
+    tracker.note("ally-1", "enemy-1", 1000);
+    tracker.note("ally-1", "enemy-2", 1500);
+
+    expect(tracker.getTargetIdForActor("ally-1")).toBe("enemy-2");
+    expect(tracker.getTargetIdForActor("missing")).toBeNull();
+  });
+
   it("expires stale indicators independently per actor", () => {
     const tracker = new BattleTargetIndicatorTracker();
     tracker.note("ally-1", "enemy-1", 0, 1000);

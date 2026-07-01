@@ -19,6 +19,10 @@ export interface PartyHudMeta {
 
 export interface PartyHudEntry {
   unitId: string;
+  /** 編成スロット（0〜3）。HUD 縦位置の正本ではない */
+  partySlotIndex: number;
+  /** クラス traits.rangePx（戦闘中 HUD 並び順の正本） */
+  rangePx: number;
   displayName: string;
   iconKey: string;
   hp: number;
@@ -67,11 +71,38 @@ export function buildPartyHudMetaBySlot(
   });
 }
 
+function comparePartyHudEntryByRange(
+  a: PartyHudEntry,
+  b: PartyHudEntry,
+): number {
+  if (a.rangePx !== b.rangePx) return a.rangePx - b.rangePx;
+  return a.partySlotIndex - b.partySlotIndex;
+}
+
+/** 味方 HUD 縦並び: 射程の短い順（同射程は編成スロット昇順） */
+export function sortPartyHudEntriesByRange(
+  entries: (PartyHudEntry | null)[],
+): (PartyHudEntry | null)[] {
+  const occupied = entries.filter(
+    (entry): entry is PartyHudEntry => entry !== null,
+  );
+  occupied.sort(comparePartyHudEntryByRange);
+
+  const sorted: (PartyHudEntry | null)[] = Array.from(
+    { length: entries.length },
+    () => null,
+  );
+  occupied.forEach((entry, visualIndex) => {
+    sorted[visualIndex] = entry;
+  });
+  return sorted;
+}
+
 export function buildPartyHudEntries(
   snapshot: BattleSnapshot,
   partyMetaBySlot: (PartyHudMeta | null)[] = [],
 ): (PartyHudEntry | null)[] {
-  return Array.from({ length: PARTY_SLOT_COUNT }, (_, slotIndex) => {
+  const byPartySlot = Array.from({ length: PARTY_SLOT_COUNT }, (_, slotIndex) => {
     const meta = partyMetaBySlot[slotIndex];
     if (!meta) return null;
 
@@ -82,6 +113,8 @@ export function buildPartyHudEntries(
 
     return {
       unitId: ally.id,
+      partySlotIndex: slotIndex,
+      rangePx: ally.rangePx,
       displayName: meta.displayName,
       iconKey: ally.iconKey,
       hp: ally.hp,
@@ -98,4 +131,6 @@ export function buildPartyHudEntries(
       activeCooldowns: ally.activeCooldowns,
     };
   });
+
+  return sortPartyHudEntriesByRange(byPartySlot);
 }

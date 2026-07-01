@@ -86,6 +86,73 @@ describe('skill shared targeting', () => {
     expect(merged.aoeRadiusPx).toBe(50);
   });
 
+  it('applies all inherited effects to the same enemy pierce set (崩勢型)', () => {
+    const actives = readActiveFile('at_lancer');
+    const active2 = actives.find((a) => a.id === 'at_lancer_active_2')!;
+    const lancer = mockUnit({
+      id: 'lancer',
+      classId: 'at_lancer',
+      battleX: 100,
+      traits: { rangePx: 130, damageType: 'physical', basicAttackVfx: { enabled: true } },
+    });
+    const nearEnemy = mockUnit({
+      id: 'near',
+      isEnemy: true,
+      role: 'attacker',
+      formationRow: 'front',
+      battleX: 150,
+    });
+    const farEnemy = mockUnit({
+      id: 'far',
+      isEnemy: true,
+      role: 'supporter',
+      formationRow: 'back',
+      battleX: 180,
+    });
+    const enemies = [nearEnemy, farEnemy];
+
+    const sharedLocks = new Map<string, import('../types.ts').SkillEffectResolution>();
+    const hitSets = active2.effect.map((effectDef) => {
+      ensureSharedTargetingLock(
+        active2,
+        effectDef,
+        () =>
+          resolveEffectResolution(
+            effectDef,
+            lancer,
+            [lancer],
+            enemies,
+            gameData,
+            Math.random,
+            [],
+            active2.effect,
+            undefined,
+            active2,
+          ),
+        sharedLocks,
+      );
+      const resolution = resolveEffectResolution(
+        effectDef,
+        lancer,
+        [lancer],
+        enemies,
+        gameData,
+        Math.random,
+        [],
+        active2.effect,
+        undefined,
+        active2,
+        sharedLocks,
+      );
+      return extractResolutionHitUnits(resolution!).map((u) => u.id).sort();
+    });
+
+    expect(hitSets[0]).toEqual(['far', 'near']);
+    expect(hitSets[1]).toEqual(hitSets[0]);
+    expect(hitSets[2]).toEqual(hitSets[0]);
+    expect(sharedLocks.size).toBe(1);
+  });
+
   it('applies all inherited effects to the same unit set (障身法型)', () => {
     const actives = readActiveFile('df_paladin');
     const active2 = actives.find((a) => a.id === 'df_paladin_active_2')!;

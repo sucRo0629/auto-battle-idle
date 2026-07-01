@@ -164,7 +164,10 @@ import {
   resolveEffectResolution,
   resolveEffectTargetSpec,
 } from "./targeting.ts";
-import { ensureSharedTargetingLock } from "./skillSharedTargeting.ts";
+import {
+  ensureSharedTargetingLock,
+  mergeEffectWithSkillTargeting,
+} from "./skillSharedTargeting.ts";
 
 interface ApplyResolvedEffectStepResult {
   applied: boolean;
@@ -244,7 +247,8 @@ function shouldDeferUntilHostileToAnchorInRange(
       actor,
       allies,
       enemies,
-      passives
+      passives,
+      skill,
     );
     const anchor = resolveSequenceStepAnchor(
       effectDef,
@@ -255,14 +259,18 @@ function shouldDeferUntilHostileToAnchorInRange(
       gameData
     );
     if (!anchor || anchor.isEnemy === actor.isEnemy) continue;
-    const offset = effectDef.anchorOffsetPx ?? 0;
+    const mergedMove = mergeEffectWithSkillTargeting(
+      skill,
+      effectDef,
+    ) as MoveSkillEffect;
+    const offset = mergedMove.anchorOffsetPx ?? 0;
     const idealAnchorX = actor.isEnemy
       ? anchor.battleX - offset
       : anchor.battleX + offset;
     const resolvedMoveX = resolveMoveBattleX(
       actor,
       anchor,
-      effectDef,
+      mergedMove,
       gameData
     );
     if (Math.abs(resolvedMoveX - idealAnchorX) > 0.5) {
@@ -770,7 +778,8 @@ export class SkillExecutor {
           actor,
           allies,
           enemies,
-          passives
+          passives,
+          skill,
         );
         target = resolveSequenceStepAnchor(
           step.effectDef,
@@ -884,9 +893,13 @@ export class SkillExecutor {
     cd: SkillCooldown,
     effectIndex: number
   ): void {
-    const toX = resolveMoveBattleX(actor, anchor, effectDef, this.gameData);
+    const mergedMove = mergeEffectWithSkillTargeting(
+      skill,
+      effectDef,
+    ) as MoveSkillEffect;
+    const toX = resolveMoveBattleX(actor, anchor, mergedMove, this.gameData);
     const fromX = actor.battleX;
-    const rangePx = resolveSkillRangePx(actor, effectDef);
+    const rangePx = resolveSkillRangePx(actor, mergedMove);
     const moveDeltaPx = Math.abs(toX - fromX);
     const engageToX = resolveAttackBattleX(
       actor,

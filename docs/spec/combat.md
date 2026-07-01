@@ -280,7 +280,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 1. **プール** — 生存プレイヤーから `enemyForwardFacingPool`（rear assault 除外）
 2. **闘技場の掟** — 単体 chase / attack のとき、生存中かつ `arenaDominance` 有効な闘技士がいれば **闘技士固定**（`targetRuleOverride` より優先。既存 [§闘技士 v1](#闘技士-v1-専用メカニクス) どおり）
 3. **優先ターゲット（`targetRuleOverride` 等）** — `resolveUnitTargetSpec(敵)` が default `distance/enemy/nearest` **以外** のとき、既存 `pickTargetFromPool` で spec どおりに選ぶ。候補 0 なら手順 4 へフォールバック
-   - 敵もプレイヤーと同じクラスデータを使うため、例: 剣術士の「DEF 最高」、弓術士の「遠隔攻撃」、最低 HP 比率優先などがそのまま例外になる
+   - 敵もプレイヤーと同じクラスデータを使うため、例: 剣術士の「DEF 最高」、弓術士の「遠隔攻撃」、双刃士の「最低 HP（現在値）」優先などがそのまま例外になる
    - `side: "enemy"` は敵 actor 視点で **プレイヤー側** を指す（`factionPool`）
 4. **デフォルト（defender 優先・最近傍）** — spec が default nearest のとき:
    - プール内に生存 `defender` が 1 人以上いれば、その中から **当該敵との `battleX` 距離** `|enemy.battleX − player.battleX|` が最小の defender
