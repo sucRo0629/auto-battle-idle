@@ -10,8 +10,7 @@ import {
 } from "../battle/battleXDebugReplayBuffer.ts";
 import type { BattleSnapshot, CombatantSnapshot } from "../battle/types.ts";
 import { battleXDebugCanvasMaxDisplayHeight, battleXDebugCanvasMaxDisplayWidth } from "./battleRootLayout.ts";
-
-const CANVAS_W = 480;
+import { CANVAS_W } from "../battle/battleConstants.ts";
 const MIN_CANVAS_H = 157;
 const DOT_RADIUS = 4;
 const LABEL_FONT = "11px 'Segoe UI', system-ui, sans-serif";

@@ -17,8 +17,13 @@ import {
 } from "./spriteLayout.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
 import type { SkillAnimPlaybackOptions } from "./skillAnimPlayback.ts";
-import { BATTLE_ALLY_MARCH_VISIBLE_MIN_X, BATTLE_ENEMY_MARCH_VISIBLE_MAX_X } from "../battle/battleConstants.ts";
 import {
+  BATTLE_ALLY_MARCH_VISIBLE_MIN_X,
+  BATTLE_ENEMY_MARCH_VISIBLE_MAX_X,
+  CANVAS_W,
+} from "../battle/battleConstants.ts";
+import {
+  BATTLE_FIELD_SPRITE_SCALE,
   groundY,
   groundLineY,
   battleCanvasHeight,
@@ -62,10 +67,9 @@ import {
   spriteDrawY,
 } from "./spriteVisualDepth.ts";
 
-const CANVAS_W = 480;
-const CANVAS_H = battleCanvasHeight(1);
+const CANVAS_H = battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE);
 const SPRITE_SIZE = SPRITE_LAYOUT_SIZE;
-const SPRITE_SCALE = 1;
+const SPRITE_SCALE = BATTLE_FIELD_SPRITE_SCALE;
 
 export class BattleCanvas implements IBattleRenderer {
   private canvas!: HTMLCanvasElement;

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   BATTLE_BACKGROUND_RECT,
+  BATTLE_LANE_FRAME_PAD,
   BATTLE_LANE_RECT,
+  BATTLE_LANE_SIDE_GAP,
+  BATTLE_LANE_TOP,
   BATTLE_TOP_INFO_RECT,
   BATTLE_HUD_SIDE_MARGIN,
   BATTLE_SIDE_HUD_WIDTH,
@@ -21,7 +24,11 @@ import {
   computeEnemyHudPanelHeight,
 } from "./battleRootLayout.ts";
 import { BATTLE_ROOT_HEIGHT, BATTLE_ROOT_WIDTH } from "./battleRootScale.ts";
-import { battleCanvasHeight } from "../render/formationLayout.ts";
+import {
+  BATTLE_FIELD_SPRITE_SCALE,
+  battleCanvasHeight,
+} from "../render/formationLayout.ts";
+import { CANVAS_W } from "../battle/battleConstants.ts";
 
 describe("battleRootLayout", () => {
   it("covers the full 1280x720 battle root with the background rect", () => {
@@ -35,11 +42,13 @@ describe("battleRootLayout", () => {
 
   it("uses the spec battleLane coordinates", () => {
     expect(BATTLE_LANE_RECT).toEqual({
-      x: 340,
-      y: 80,
-      w: 600,
-      h: 560,
+      x: BATTLE_HUD_SIDE_MARGIN + BATTLE_SIDE_HUD_WIDTH + BATTLE_LANE_SIDE_GAP,
+      y: BATTLE_LANE_TOP,
+      w: CANVAS_W,
+      h: battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE) + BATTLE_LANE_FRAME_PAD,
     });
+    expect(BATTLE_LANE_RECT.w).toBeGreaterThan(600);
+    expect(BATTLE_LANE_RECT.h).toBeGreaterThan(250);
   });
 
   it("reserves topInfo and HUD slot rects", () => {
@@ -92,7 +101,7 @@ describe("battleRootLayout", () => {
 
   it("aligns battle-x-debug canvas ceiling with battle-hud-toolbar top", () => {
     expect(battleHudToolbarTopY()).toBe(
-      BATTLE_LANE_RECT.y + battleCanvasHeight(1),
+      BATTLE_LANE_RECT.y + battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE),
     );
     expect(battleXDebugCanvasMaxDisplayHeight()).toBe(
       battleHudToolbarTopY() - PARTY_HUD_SLOT_RECT.y - 4,
@@ -104,7 +113,7 @@ describe("battleRootLayout", () => {
 
   it("serializes rects for inline style", () => {
     expect(battleRootRectStyle(BATTLE_LANE_RECT)).toBe(
-      "left:340px;top:80px;width:600px;height:560px",
+      `left:${BATTLE_LANE_RECT.x}px;top:${BATTLE_LANE_RECT.y}px;width:${BATTLE_LANE_RECT.w}px;height:${BATTLE_LANE_RECT.h}px`,
     );
   });
 });

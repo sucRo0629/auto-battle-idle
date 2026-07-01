@@ -50,12 +50,15 @@ import { BattleXDebugCanvas } from "./BattleXDebugCanvas.ts";
 import { DebugMenuPanel } from "./DebugMenuPanel.ts";
 import { applyBattleRootScale } from "./battleRootScale.ts";
 import {
+  BATTLE_LANE_RECT,
   BATTLE_SIDE_HUD_WIDTH,
   BATTLE_X_DEBUG_PANEL_TOP,
   ENEMY_HUD_SLOT_RECT,
   battleHudToolbarTopY,
+  battleRootRectStyle,
   PARTY_HUD_SLOT_RECT,
 } from "./battleRootLayout.ts";
+import { CANVAS_W } from "../battle/battleConstants.ts";
 import {
   createEmptyHoverHighlight,
   isSameHoverHighlight,
@@ -156,6 +159,10 @@ export class BattleView {
       "--battle-enemy-hud-x",
       `${ENEMY_HUD_SLOT_RECT.x}px`,
     );
+    this.battleRoot.style.setProperty(
+      "--battle-canvas-width",
+      `${CANVAS_W}px`,
+    );
 
     this.canvasHost = document.createElement("div");
     this.canvasHost.className = "battle-canvas-host";
@@ -169,6 +176,7 @@ export class BattleView {
 
     const battleLane = document.createElement("div");
     battleLane.className = "battle-lane";
+    battleLane.style.cssText = battleRootRectStyle(BATTLE_LANE_RECT);
 
     const battleFxLayer = document.createElement("div");
     battleFxLayer.className = "battle-layer battle-layer--fx";

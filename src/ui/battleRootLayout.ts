@@ -3,7 +3,11 @@ import {
   BATTLE_ROOT_WIDTH,
   snapHudCanvasCssSize,
 } from "./battleRootScale.ts";
-import { battleCanvasHeight } from "../render/formationLayout.ts";
+import {
+  BATTLE_FIELD_SPRITE_SCALE,
+  battleCanvasHeight,
+} from "../render/formationLayout.ts";
+import { CANVAS_W } from "../battle/battleConstants.ts";
 import { PARTY_HUD_STATUS_BADGE_ICON_SIZE } from "../render/statusBadgeRenderer.ts";
 import { measurePartyHudOverlayStatusGrid } from "./partyHudOverlayStatusGrid.ts";
 
@@ -50,11 +54,20 @@ export const BATTLE_BACKGROUND_RECT: BattleRootRect = {
   h: BATTLE_ROOT_HEIGHT,
 };
 
+/** Gap between side HUD column and battle lane (px). */
+export const BATTLE_LANE_SIDE_GAP = 4;
+
+/** Top inset of battle lane below topInfo (px). */
+export const BATTLE_LANE_TOP = 52;
+
+/** Extra height below BattleCanvas inside battleLane (frame / border). */
+export const BATTLE_LANE_FRAME_PAD = 14;
+
 export const BATTLE_LANE_RECT: BattleRootRect = {
-  x: 340,
-  y: 80,
-  w: 600,
-  h: 560,
+  x: BATTLE_HUD_SIDE_MARGIN + BATTLE_SIDE_HUD_WIDTH + BATTLE_LANE_SIDE_GAP,
+  y: BATTLE_LANE_TOP,
+  w: CANVAS_W,
+  h: battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE) + BATTLE_LANE_FRAME_PAD,
 };
 
 export const BATTLE_TOP_INFO_RECT: BattleRootRect = {
@@ -110,7 +123,9 @@ export function computeEnemyHudPanelHeight(aliveCount: number): number {
 export const BATTLE_X_DEBUG_PANEL_TOP = PARTY_HUD_SLOT_RECT.y;
 
 /** battle-hud-toolbar top edge in battle-root coordinates (lane top + field canvas). */
-export function battleHudToolbarTopY(spriteScale = 1): number {
+export function battleHudToolbarTopY(
+  spriteScale = BATTLE_FIELD_SPRITE_SCALE,
+): number {
   return BATTLE_LANE_RECT.y + battleCanvasHeight(spriteScale);
 }
 

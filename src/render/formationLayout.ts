@@ -10,11 +10,13 @@ export { CANVAS_W, SPRITE_GAP, SPRITE_WIDTH } from '../battle/battleConstants.ts
 
 export const ENEMY_VISIBLE_MIN_X = -32;
 
-/** 草タイル描画帯の高さ（HUD に隠れる前提で最小化） */
-export const GRASS_BAND_H = 12;
+/** 草タイル描画帯の高さ */
+export const GRASS_BAND_H = 20;
 /** @deprecated GRASS_BAND_H と同義（旧 HUD 込み下端余白） */
 export const BATTLE_GROUND_MARGIN = GRASS_BAND_H;
-const BASE_BATTLE_TOP_PAD = 43;
+/** 戦闘フィールド描画スケール（32px スプライトを 2 倍表示） */
+export const BATTLE_FIELD_SPRITE_SCALE = 2;
+const BASE_BATTLE_TOP_PAD = 120;
 export const BATTLE_TOP_PAD =
   BASE_BATTLE_TOP_PAD + spriteSheetMaxOverflowTop() + VISUAL_DEPTH_TOP_PAD_PX;
 export const STATUS_BADGE_H = 8;

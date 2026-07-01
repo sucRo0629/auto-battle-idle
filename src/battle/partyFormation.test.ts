@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  COMBAT_CAMERA_CENTER_X,
   PARTY_FORMATION_LEFT_ANCHOR,
   PARTY_FORMATION_SLOT_SPACING,
   SPAWN_X_MAX,
@@ -90,10 +91,14 @@ describe('partyFormation', () => {
   });
 
   it('resolveEnemySpawnBattleX maps offset to center-relative battleX', () => {
-    expect(resolveEnemySpawnBattleX(0)).toBe(240);
-    expect(resolveEnemySpawnBattleX(SPAWN_X_MAX)).toBe(480);
-    expect(resolveEnemySpawnBattleX(999)).toBe(480);
-    expect(resolveEnemySpawnBattleX(-10)).toBe(240);
+    expect(resolveEnemySpawnBattleX(0)).toBe(COMBAT_CAMERA_CENTER_X);
+    expect(resolveEnemySpawnBattleX(SPAWN_X_MAX)).toBe(
+      COMBAT_CAMERA_CENTER_X + SPAWN_X_MAX,
+    );
+    expect(resolveEnemySpawnBattleX(999)).toBe(
+      COMBAT_CAMERA_CENTER_X + SPAWN_X_MAX,
+    );
+    expect(resolveEnemySpawnBattleX(-10)).toBe(COMBAT_CAMERA_CENTER_X);
   });
 
   it('partyDeployOffScreenBattleX shifts left by speed-scaled deploy travel', () => {

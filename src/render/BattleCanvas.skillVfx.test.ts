@@ -9,6 +9,7 @@ import {
 } from './vfxAnimRegistry.ts';
 import { getParticlePresetDef } from './particlePresets.ts';
 import { SPRITE_LAYOUT_SIZE } from './spriteLayout.ts';
+import { BATTLE_FIELD_SPRITE_SCALE } from './formationLayout.ts';
 
 function mockImage(width: number): HTMLImageElement {
   return { width, height: 64 } as HTMLImageElement;
@@ -130,7 +131,9 @@ describe('BattleCanvas.playSkillVfx', () => {
     );
 
     const worldPos = particleSpawn.mock.calls[0]?.[1];
-    expect(worldPos?.x).toBe(260 + SPRITE_LAYOUT_SIZE / 2);
+    expect(worldPos?.x).toBe(
+      260 + (SPRITE_LAYOUT_SIZE * BATTLE_FIELD_SPRITE_SCALE) / 2,
+    );
     expect(particleSpawn.mock.calls[0]?.[2]).toBe('front');
   });
 

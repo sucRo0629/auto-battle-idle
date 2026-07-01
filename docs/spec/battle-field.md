@@ -115,11 +115,12 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 
 | 定数                                 | 用途                                                                                                            |
 | ------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `CANVAS_W`（480）                    | 画面幅                                                                                                          |
-| `COMBAT_CAMERA_CENTER_X`（240）      | 敵 spawn オフセット基準（カメラは廃止、名前のみ残す）                                                           |
-| `PARTY_FORMATION_LEFT_ANCHOR`（20）  | 味方隊列左端（射程最長ユニット）                                                                                |
+| `CANVAS_W`（704）                    | 戦闘キャンバス幅（px）。左右 HUD 間の最大幅に合わせて拡大                                                                 |
+| `COMBAT_CAMERA_CENTER_X`（352）      | 敵 spawn オフセット基準（カメラは廃止、名前のみ残す）                                                           |
+| `PARTY_FORMATION_LEFT_ANCHOR`（132） | 味方隊列左端（射程最長ユニット）。旧 20px 相当ゾーンをキャンバス中央へ平行移動した値 |
 | `PARTY_FORMATION_SLOT_SPACING`（32） | 味方隊列スロット間隔                                                                                            |
-| `SPAWN_X_MAX`（240）                 | 敵 `spawnX` 上限（中心からの右オフセット）                                                                      |
+| `SPAWN_X_MAX`（240）                 | 敵 `spawnX` 上限（中心からの右オフセット。接敵 gap 維持のため legacy 240px 固定）                              |
+| `BATTLE_FIELD_SPRITE_SCALE`（2）     | 戦闘フィールド描画スケール（32px スプライトを 2 倍表示。`battleX` は 1:1 のまま）                               |
 | `PLAYER_VISUAL_MIN_GAP`              | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`）。射程加算には使わない                               |
 | `CONFIGURABLE_RANGE_PX_MAX`          | `traits.rangePx` / `effect.range` の設定上限（`CANVAS_W - PARTY_FORMATION_LEFT_ANCHOR`）                        |
 | `MOVE_PX_PER_SEC`（120）             | 1 秒あたりの戦闘移動量（px）。進軍・接敵接近・PartyDeploy・隊形復帰に使用。Victory 退場は `MOVE_PX_PER_SEC × 2` |
@@ -209,7 +210,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 }
 ```
 
-- `spawnX` — **画面中心（240px）からの右オフセット**。`0 <= spawnX <= 240`。`battleX = 240 + spawnX`（240 で中央、240 で右端 480）
+- `spawnX` — **`COMBAT_CAMERA_CENTER_X` からの右オフセット**。`0 <= spawnX <= SPAWN_X_MAX`（240）。`battleX = COMBAT_CAMERA_CENTER_X + spawnX`
 
 ### 3.3 プレイヤー隊形（射程順一列）
 
@@ -611,21 +612,22 @@ CSS では Canvas / 画像に `image-rendering: pixelated` と `image-rendering:
 
 **やらない:** Web ツール的な三分割レイアウト、各カラムの可変幅、HUD によって戦場背景を分断する見せ方。
 
-#### 8.3.1 `BattleCanvas` 480px 基準の扱い
+#### 8.3.1 `BattleCanvas` 大型化（中央主役）
 
-既存 `BattleCanvas` の内部基準幅 480px は、今回の UI 改修では即座に 1280×720 座標へ移行しない。外側の戦闘画面 UI として 1280×720 基準の `battle-root` を新設し、その中に中央 `battleLane` を配置する。既存 `BattleCanvas` は、まず `battleLane` 内に収める。
+1280×720 `battle-root` の中央 `battleLane` に、戦闘観察用の大型 `BattleCanvas` を配置する。内部基準幅 `CANVAS_W`（704px）・描画スケール `BATTLE_FIELD_SPRITE_SCALE`（2）で 32px スプライトを観察しやすいサイズにする。
 
-今回できるだけ変更しないもの:
+**接敵テンポ維持:** キャンバス幅拡大に伴い `PARTY_FORMATION_LEFT_ANCHOR` / `COMBAT_CAMERA_CENTER_X` を legacy 480px 時代の戦闘ゾーンと同じ相対配置になるよう平行移動する。`SPAWN_X_MAX` は 240px 固定のままとし、開幕接敵 gap を変えない。
 
-- `BattleCanvas` 内部の座標系
-- ユニット位置
-- 移動
-- 射程
-- エフェクト
-- ダメージポップ
-- 既存の `CANVAS_W`（480）を前提にした戦闘描画・距離計算
+**変更しないもの（戦闘ルール）:**
 
-今回の対象は外側 HUD 構造と情報配置の改修であり、戦闘描画座標系の全面移行ではない。UI 改修と戦闘描画リファクタを同時に行わず、既存戦闘挙動への影響を最小化する。まず 1280×720 の外側 HUD 構造を安定させる。
+- `battleX` と射程・移動速度の意味（1 battle 単位 ≒ 1 px）
+- ダメージ / スキル / ターゲット選定 / CD / AI
+
+**変更するもの（描画・レイアウト）:**
+
+- `CANVAS_W`、キャンバス高さ（空・草帯余白）、`BATTLE_FIELD_SPRITE_SCALE`
+- `battleLane` 寸法（`battleRootLayout.ts` が `CANVAS_W` と `battleCanvasHeight` から導出）
+- 背景・エフェクト・ダメージポップ・`targetIndicator` / `hoverHighlight` の描画位置（スケール追従）
 
 ### 8.4 レイヤー構造
 
@@ -664,10 +666,10 @@ partyHud:
   h: 608
 
 battleLane:
-  x: 340
-  y: 80
-  w: 600
-  h: 560
+  x: 288 # BATTLE_HUD_SIDE_MARGIN + BATTLE_SIDE_HUD_WIDTH + BATTLE_LANE_SIDE_GAP
+  y: 52
+  w: 704 # CANVAS_W（1:1 表示）
+  h: 280 # battleCanvasHeight(BATTLE_FIELD_SPRITE_SCALE) + BATTLE_LANE_FRAME_PAD（導出値）
 
 enemyHud:
   x: 996 # 1280 - 24 - partyHud.w
@@ -992,7 +994,7 @@ topInfo:
 14. HUD 要素の高さを内容量で変えない方針が明記されている
 15. デバッグ UI を本体 HUD から分離する方針が明記されている
 16. 今回変更しない戦闘ロジック範囲が明記されている
-17. 既存 `BattleCanvas` の 480px 内部基準は維持し、まず `battleLane` 内へ収める方針が明記されている
+17. `BattleCanvas` は `CANVAS_W` 704px・`BATTLE_FIELD_SPRITE_SCALE` 2 で中央主役サイズ。接敵 gap は legacy 480px ゾーンと同等になるようアンカー平行移動が明記されている
 18. `BattleStatsDrawer` は常時 HUD へ統合せず、詳細確認 / 開発用ドロワーとして分離する方針が明記されている
 19. 敵 HUD の詳細表示は初期実装では hover tooltip を基本とし、選択固定の詳細パネルは後続検討でよいことが明記されている
 20. 危険予兆バーは現時点では実データ未接続の予約枠であり、通常スキルリキャストへ接続しないことが明記されている
@@ -1007,7 +1009,7 @@ Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `s
 | Task | 内容 | 主要ファイル |
 | ---- | ---- | ------------ |
 | 1 | 1280×720 `battle-root` + 等比スケール | `battleRootScale.ts`, `BattleView.ts`, `battle-view.css` |
-| 2 | レイヤー + `battleLane` | `battleRootLayout.ts`, `battle-view.css` |
+| 2 | レイヤー + 大型 `battleLane` / `BattleCanvas` | `battleRootLayout.ts`, `battle-view.css`, `battleConstants.ts`, `formationLayout.ts`, `BattleCanvas.ts` |
 | 3 | 左 Party HUD 4 カード overlay | `PartyHudPanel.ts`, `party-hud-overlay.css` |
 | 4 | スキルゲージ 2×2 固定 + 状態 2 行固定 | `party-hud-overlay.css`, `partyHudOverlayStatusGrid.ts` |
 | 5 | 右 Enemy HUD（最大 10 体） | `EnemyHudPanel.ts`, `enemy-hud-overlay.css`, `enemyHudTypes.ts` |

@@ -227,10 +227,6 @@
 
 .battle-lane {
   position: absolute;
-  left: 340px;
-  top: 80px;
-  width: 600px;
-  height: 560px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -523,7 +519,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 480px;
+  width: var(--battle-canvas-width, 704px);
   max-width: 100%;
   line-height: normal;
   overflow: visible;
@@ -531,7 +527,7 @@
 
 .battle-canvas-frame--lane-hud {
   flex: 0 0 auto;
-  width: 480px;
+  width: var(--battle-canvas-width, 704px);
 }
 
 .battle-canvas-wrap {
