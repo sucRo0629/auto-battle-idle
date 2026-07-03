@@ -318,12 +318,13 @@ interface StageEnemyGroup {
 
 | 経路 | データ | 戦闘生成（実装フェーズ） |
 | ---- | ------ | ------------------------ |
-| **新** | `enemyGroups` + `recommendedLevel` | **Phase B1** — `expandEnemyGroups` で中間スペック展開。**Phase B2** — `createEnemyFromClassGroup` / `createEnemiesForStage` 分岐で `CombatantState` 生成・stats × scale（配置は暫定 `spawnX: 0`）。**Phase C** — 射程自動配置。**Phase D/E** — デバッグ表示・エディタ |
+| **新** | `enemyGroups` + `recommendedLevel` | **Phase B1** — `expandEnemyGroups` で中間スペック展開。**Phase B2** — `createEnemyFromClassGroup` / `createEnemiesForStage` 分岐で `CombatantState` 生成・stats × scale。**Phase C** — `enemyFormation.ts` で射程昇順 spawnX 自動配置（legacy `spawnX` 経路は不変）。**Phase D/E** — デバッグ表示・エディタ |
 | **legacy** | `waves[].enemies[]` の `templateId` + `spawnX` | 現行どおり `enemies.json` テンプレから生成 |
 
 - **Phase A（現状）:** 型・validate のみ。戦闘生成・射程配置・UI は未接続。
 - **Phase B1:** `expandEnemyGroups`（`src/battle/enemyGroupSpawn.ts`）が `StageDef.enemyGroups` を `ResolvedEnemySpawnSpec[]` へ展開。`recommendedLevel` を `level` に使用。`enemyGroups` 未設定時は空配列（legacy フォールバックなし）。
-- **Phase B2（現状）:** `createEnemiesForStage` が `enemyGroups` あり & `waveIndex === 0` のとき `expandEnemyGroups` → `createEnemyFromClassGroup` で敵を生成。`computeStatsAtLevel` 後に各 scale を乗算（未指定 scale = 1、`Math.round`）。スキルは `resolveLearnedSkills` + `getUnlockedSkillSlotCount(level)`。配置は暫定 `spawnX: 0`（射程自動配置は Phase C）。`waveIndex > 0` は空配列。legacy 経路は不変。
+- **Phase B2:** `createEnemiesForStage` が `enemyGroups` あり & `waveIndex === 0` のとき `expandEnemyGroups` → `createEnemyFromClassGroup` で敵を生成。`computeStatsAtLevel` 後に各 scale を乗算（未指定 scale = 1、`Math.round`）。スキルは `resolveLearnedSkills` + `getUnlockedSkillSlotCount(level)`。`waveIndex > 0` は空配列。legacy 経路は不変。
+- **Phase C（現状）:** `enemyFormation.ts` が `traits.rangePx` 昇順（同射程は group 順）で `PARTY_FORMATION_SLOT_SPACING` 間隔の spawnX を割当。`SPAWN_X_MAX` で clamp。`createEnemiesFromEnemyGroups` から接続。legacy `waves[].spawnX` は不変。
 - **未確定（Phase B2）:** `enemyGroups` ステージの撃破 EXP（`computeStageExpReward` は現状 legacy `waves` / `templateId` のみ集計）。
 
 - `enemyGroups` ありのステージは `recommendedLevel` **必須**（validate）。

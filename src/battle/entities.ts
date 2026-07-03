@@ -17,6 +17,7 @@ import {
   applyEnemyStatScales,
   expandEnemyGroups,
 } from './enemyGroupSpawn.ts';
+import { resolveEnemyGroupSpawnX } from './enemyFormation.ts';
 import {
   resolveClassIconKey,
   resolveClassSpriteKey,
@@ -212,12 +213,13 @@ function enemyTraitsFromTemplate(
   return copyNormalizedTraits(template.traits);
 }
 
-/** Phase B2: enemyGroups 中間スペックから CombatantState を生成（配置は暫定 spawnX: 0） */
+/** Phase B2+: enemyGroups 中間スペックから CombatantState を生成 */
 export function createEnemyFromClassGroup(
   spec: ResolvedEnemySpawnSpec,
   classPreset: ClassPreset,
   gameData: GameData,
   curves: LevelCurvesConfig,
+  spawnOffset = 0,
 ): CombatantState {
   const baseStats = computeStatsAtLevel(
     classPreset,
@@ -238,7 +240,6 @@ export function createEnemyFromClassGroup(
     equippedActiveSlots: [],
   };
   const activeSkillIds = resolveBattleActiveSkillIds(build, unlockedSlots);
-  const spawnOffset = 0;
   const battleX = resolveEnemySpawnBattleX(spawnOffset);
   const cooldowns = createCooldowns(
     classPreset.basicAttackSkillId,
@@ -278,12 +279,26 @@ function createEnemiesFromEnemyGroups(
   curves: LevelCurvesConfig,
 ): CombatantState[] {
   const specs = expandEnemyGroups(stage);
+  const spawnXByKey = resolveEnemyGroupSpawnX(specs, (classId) => {
+    const preset = gameData.classRegistry[classId];
+    if (!preset) {
+      throw new Error(`Class not found for enemy group: ${classId}`);
+    }
+    return preset.traits.rangePx;
+  });
   return specs.map((spec) => {
     const preset = gameData.classRegistry[spec.classId];
     if (!preset) {
       throw new Error(`Class not found for enemy group: ${spec.classId}`);
     }
-    return createEnemyFromClassGroup(spec, preset, gameData, curves);
+    const spawnOffset = spawnXByKey.get(spec.spawnUnitKey) ?? 0;
+    return createEnemyFromClassGroup(
+      spec,
+      preset,
+      gameData,
+      curves,
+      spawnOffset,
+    );
   });
 }
 
