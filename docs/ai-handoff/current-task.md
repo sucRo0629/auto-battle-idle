@@ -9,7 +9,7 @@
 ## 2. 作業テーマ
 
 - 作業名: Phase 6b — M1 体験版ステージ構成（`stages-demo.json` 向け）
-- 状態: **Phase A〜E5 完了** → **6b-0a〜6b-1 完了** → **6b-3 調査完了** → **6b-4（`BUILD_FLAVOR=demo` 読込分離実装）完了**
+- 状態: **Phase A〜E5 完了** → **6b-0a〜6b-1 完了** → **6b-3 調査完了** → **6b-4（`BUILD_FLAVOR=demo` 読込分離実装）完了** → **6b-5（demo runtime smoke テスト）完了**
 - 対象: M1 体験版ステージ構成、`data/stages-demo.json`、`BUILD_FLAVOR=demo` 読込分離
 - 完了条件: M1 stage 草案確定 → `stages-demo.json` スケルトン作成（**6b-1 完了**）→ demo 読込分離（§7 参照）
 - スコープ外（6b）: レベル実装・EXP 集計・`computeStageExpReward`・進行報酬・`recommendedLevel` の実ゲーム接続・`stages.json` 変更
@@ -224,6 +224,16 @@
 - editor / validate / JSON 本体は未変更
 - 確認: `validateGameData.test.ts` pass。`vite build` で full→`eg_smoke` 同梱・demo→`demo_ch1_*` 同梱（`stages.json` 非同梱）。`npm run build:*` は `tsc` 段階で既存 test 型エラーにより fail（本変更前から同様）
 
+### Phase 6b-5 — demo runtime smoke テスト（完了）
+
+- 追加: `src/battle/data/loadGameData.flavor.test.ts`
+- 方針: vitest は `vite.config.ts` の `@game-data/stages` alias をそのまま使う。**同一プロセス内での alias 切替は不可**（`BUILD_FLAVOR` は vitest 起動前に決定）
+- full（デフォルト `npm test`）: `loadGameData()` が `eg_smoke` を含み `demo_ch1_*` を含まない
+- demo（`BUILD_FLAVOR=demo vitest run src/battle/data/loadGameData.flavor.test.ts`）: `demo_ch1_01`〜`07` の 7 件のみ・`eg_smoke` なし
+- build artifact 手動確認: `BUILD_FLAVOR=demo|full vite build` 成功。demo chunk に `demo_ch1_01`〜`07`、full chunk に `eg_smoke`（相互に片方のみ）
+- 既存 `validateGameData.test.ts` の `stages-demo.json validation` は変更なし・pass
+- 未採用: build artifact 文字列の自動テスト（別 script / CI 化は今回スコープ外）
+
 ### Phase E5（完了）
 
 **データ**
@@ -262,7 +272,8 @@
 
 ### 推奨
 
-- [ ] **Phase 6b-2 — `stages-demo.json` validate テスト追加** — 7 stage の `enemyGroups` / `recommendedLevel` / M1 classId 制約を固定するテスト。今回は未実装
+- [x] **Phase 6b-2 — `stages-demo.json` validate テスト追加** — `validateGameData.test.ts` に存在（6b-5 で pass 確認）
+- [x] **Phase 6b-5 — demo runtime smoke テスト** — `loadGameData.flavor.test.ts` 追加
 
 ### 次点
 
@@ -307,8 +318,8 @@
 ## 10. ChatGPT へ戻すときのメモ
 
 - 目的: M1 体験版ステージ（`stages-demo.json`）の構成確定とデータ化
-- 現在地: **Phase 6b-4 完了** — ランタイム stages 読込分離済み（alias + npm scripts）
-- 次（推奨）: **Phase 6b-2 — `stages-demo.json` validate テスト追加**（handoff §7 では未チェック。テスト本体は既に存在する可能性あり → 6b-2 実装時に確認）
+- 現在地: **Phase 6b-5 完了** — `loadGameData` の full/demo smoke テスト追加済み
+- 次（推奨）: Phase 6c バランス / Phase 6d マップ選択 UI
 - 次（次点）: Phase 6d マップ選択 UI / 6c バランス
 - 後回し: EXP 集計、`test`/`1`/`2` 移行、legacy 変換 UI
 - 判断待ち: §9 未対応・未確定事項（6c 数値・6d 導線は別フェーズ）
