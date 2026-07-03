@@ -9,7 +9,7 @@
 ## 2. 作業テーマ
 
 - 作業名: Phase 6b — M1 体験版ステージ構成（`stages-demo.json` 向け）
-- 状態: **Phase A〜E5 完了** → **6b-0a〜6b-1 完了** → **6b-3 調査完了** → **6b-4（`BUILD_FLAVOR=demo` 読込分離実装）完了** → **6b-5（demo runtime smoke テスト）完了**
+- 状態: **Phase A〜E5 完了** → **6b-0a〜6b-1 完了** → **6b-3 調査完了** → **6b-4（`BUILD_FLAVOR=demo` 読込分離実装）完了** → **6b-5（demo runtime smoke テスト）完了** → **6b-6（demo 初期 stage 選択経路調査）完了**
 - 対象: M1 体験版ステージ構成、`data/stages-demo.json`、`BUILD_FLAVOR=demo` 読込分離
 - 完了条件: M1 stage 草案確定 → `stages-demo.json` スケルトン作成（**6b-1 完了**）→ demo 読込分離（§7 参照）
 - スコープ外（6b）: レベル実装・EXP 集計・`computeStageExpReward`・進行報酬・`recommendedLevel` の実ゲーム接続・`stages.json` 変更
@@ -234,6 +234,66 @@
 - 既存 `validateGameData.test.ts` の `stages-demo.json validation` は変更なし・pass
 - 未採用: build artifact 文字列の自動テスト（別 script / CI 化は今回スコープ外）
 
+### Phase 6b-6 — demo runtime 初期 stage 選択経路調査（完了）
+
+**経路（新規 / 初回セーブ）**
+
+1. `main.ts` → `tryLoadGameData()` → `new GameSession(gameData)`
+2. `GameSession.loadSaveForMode` — localStorage 無しなら `createDefaultSave(gameData, partyId)`
+3. `createDefaultSave`（`victoryRewards.ts`）— **`currentStageId = gameData.stages[0].id`**（固定 id 文字列ではない・配列先頭）
+4. 起動直後 `resolveKnownStageId(gameData.stages, save.stageProgress.currentStageId)` で既知 id に正規化し **即 persist**
+
+**full / demo の起点**
+
+| build | `stages[0].id` | 新規セーブ起点 |
+| ----- | -------------- | -------------- |
+| full（`stages.json`） | `test` | `test` → 勝利で `ranged_test` → `1` → `2` → `eg_smoke` |
+| demo（`stages-demo.json`） | `demo_ch1_01` | `demo_ch1_01` → 勝利で `demo_ch1_02` … `07`（最終は同 id 周回） |
+
+**既存セーブ + flavor 不整合**
+
+- `SaveManager` は `currentStageId` を **存在チェックせず** 文字列として読む
+- `GameSession.loadSaveForMode` の `resolveKnownStageId` が **未知 id → `stages[0].id` に fallback**（例: full セーブ `currentStageId: "2"` を demo build で開く → `demo_ch1_01` に書き換えて保存）
+- 勝利 / 敗北時も `getNextStageId` / `getPreviousStageId` が未知 id 時 `stages[0]` へ fallback
+- **クラッシュより進行位置リセット** — fallback あり。`stages` が空のときだけ `resolveKnownStageId` が `null` を返し未修正 id のまま → `createEnemiesForStage` が throw（現データでは非該当）
+
+**結論**
+
+| 項目 | 判定 |
+| ---- | ---- |
+| demo 新規は `demo_ch1_01` から始まるか | **はい**（`BUILD_FLAVOR=demo` ビルド + 該当 save slot 空 + verify OFF の通常進行） |
+| 既存セーブ持ち越し | **壊れにくい**が **stage 位置は先頭へリセット**（EXP・パーティは維持） |
+| 追加 fallback 必須か | **現状不要**（`resolveKnownStageId` が既に単一経路）。改善するなら flavor 切替時の明示マイグレーション or ログ |
+| `npm run dev` | **full のまま**（`BUILD_FLAVOR` 未設定）。demo 進行の手元確認は `build:demo` または `BUILD_FLAVOR=demo vitest` 系 |
+| verify モード | デフォルト **ON**（`verifyMode.ts`）。save slot は `save:verify` / `save:release` で分離。通常進行の確認は verify OFF |
+
+**次に必要な最小実装案（任意）**
+
+- **テスト追加のみで足りる可能性大**: `createDefaultSave` + demo stages で `demo_ch1_01`；`resolveKnownStageId` で full id → demo `stages[0]`
+- 実装が要るとすれば: flavor 切替時にユーザーへリセット通知、または `stageProgress` に flavor タグを持たせる（**6b-6 スコープ外・仕様判断待ち**）
+
+**触るべきファイル候補（実装時）**
+
+- `src/progression/stageProgression.test.ts` / 新規 `createDefaultSave` flavor テスト
+- 任意: `src/game/GameSession.ts`（明示マイグレーション・ログのみ）
+
+**触らない方がよい範囲**
+
+- `loadGameData` / alias / JSON 本体 / editor / `stageProgression.ts` の fallback ロジック自体（既存で足りる）
+- EXP / `recommendedLevel` 接続 / map UI
+
+**テスト候補**
+
+- `BUILD_FLAVOR=demo` で `createDefaultSave(loadGameData()).stageProgress.currentStageId === 'demo_ch1_01'`
+- `resolveKnownStageId(demoStages, 'test') === 'demo_ch1_01'`
+- 統合: demo stages + `GameSession` 相当の load パスで `createEnemiesForStage` が敵を生成（`enemyGroups` + 空 placeholder `waves`）
+
+**未確定点**
+
+- demo 初回起動で verify デフォルト ON のまま体験版として問題ないか（Phase 7 / 6d）
+- flavor 切替時の stage リセットをユーザーに見せるか
+- `npm run dev` で demo を試す手段（`dev:demo` は今回スコープ外）
+
 ### Phase E5（完了）
 
 **データ**
@@ -274,9 +334,11 @@
 
 - [x] **Phase 6b-2 — `stages-demo.json` validate テスト追加** — `validateGameData.test.ts` に存在（6b-5 で pass 確認）
 - [x] **Phase 6b-5 — demo runtime smoke テスト** — `loadGameData.flavor.test.ts` 追加
+- [x] **Phase 6b-6 — demo 初期 stage 選択経路調査** — §6b-6。fallback 既存・新規 demo は `demo_ch1_01` 見込み
 
 ### 次点
 
+- [ ] **Phase 6b-7（案）— 進行接続テスト** — `createDefaultSave` / `resolveKnownStageId` の demo flavor テスト + 初回戦闘 spawn smoke
 - [x] **`BUILD_FLAVOR=demo` 読込分離調査（6b-3）** — 経路洗い出し完了（§6b-3）。実装は次タスク
 - [x] **`BUILD_FLAVOR=demo` 読込分離実装（6b-4）** — `vite.config.ts` alias + `loadGameData.ts` + `build:demo` / `build:full`
 
@@ -318,8 +380,8 @@
 ## 10. ChatGPT へ戻すときのメモ
 
 - 目的: M1 体験版ステージ（`stages-demo.json`）の構成確定とデータ化
-- 現在地: **Phase 6b-5 完了** — `loadGameData` の full/demo smoke テスト追加済み
-- 次（推奨）: Phase 6c バランス / Phase 6d マップ選択 UI
+- 現在地: **Phase 6b-6 完了** — demo 初回 stage は `stages[0]`（`demo_ch1_01`）。既存 fallback で持ち越しは先頭リセット
+- 次（推奨）: 6b-7 進行接続テスト、または Phase 6c バランス / Phase 6d マップ選択 UI
 - 次（次点）: Phase 6d マップ選択 UI / 6c バランス
 - 後回し: EXP 集計、`test`/`1`/`2` 移行、legacy 変換 UI
 - 判断待ち: §9 未対応・未確定事項（6c 数値・6d 導線は別フェーズ）
