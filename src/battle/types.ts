@@ -1695,6 +1695,28 @@ export interface StageEnemyGroup {
   regScale?: number;
 }
 
+/**
+ * enemyGroups 展開後の 1 体分スポーン仕様（CombatantState 生成前の中間表現）。
+ * Phase B1: 配置・stats 計算は含まない。
+ */
+export interface ResolvedEnemySpawnSpec {
+  classId: ClassId;
+  /** stage.recommendedLevel をそのまま使用 */
+  level: number;
+  hpScale?: number;
+  atkScale?: number;
+  defScale?: number;
+  regScale?: number;
+  /** enemyGroups 配列内の 0-based インデックス */
+  groupIndex: number;
+  /** 同一 group 内の 0-based インデックス */
+  indexInGroup: number;
+  /** 元 StageEnemyGroup.count */
+  groupCount: number;
+  /** CombatantState.id 等の安定キー生成用（`g{groupIndex}_i{indexInGroup}`） */
+  spawnUnitKey: string;
+}
+
 export interface StageDef {
   id: string;
   displayName: string;

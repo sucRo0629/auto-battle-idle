@@ -9,7 +9,7 @@
 ## 2. 作業テーマ
 
 - 作業名: 敵エディタ v0.3.2 — ステージ `enemyGroups` 編成
-- 状態: **Phase A 完了・Phase B 未着手**
+- 状態: **Phase A 完了・Phase B1 完了・Phase B2 未着手**
 - 対象: ステージ敵編成、`enemyGroups`、戦闘生成、デバッグ表示、データ編集ツール
 - 完了条件: Phase A〜E の完了条件（§6 参照）
 
@@ -46,14 +46,16 @@
 | ステージ編集 | 手編集のみ。editor API に stages なし |
 | 敵生成 | `createEnemyFromTemplate`（classRegistry 非使用） |
 | 配置 | 手動 `spawnX` |
-| `enemyGroups` / `recommendedLevel` | 型・validate 実装済み（Phase A）。戦闘生成は Phase B |
+| `enemyGroups` / `recommendedLevel` | 型・validate 実装済み（Phase A） |
+| `expandEnemyGroups` | 中間スペック展開のみ（Phase B1）。戦闘生成未接続 |
 
 ## 6. 実装フェーズ
 
 | Phase | 内容 | 状態 |
 | ----- | ---- | ---- |
 | **A** | 型・validate・`progression.md` 追記 | [x] |
-| **B** | `enemyGroups` → `CombatantState` 展開（配置仮） | [ ] |
+| **B1** | `enemyGroups` → `ResolvedEnemySpawnSpec[]` 展開（純粋関数） | [x] |
+| **B2** | 中間スペック → `CombatantState`（配置仮） | [ ] |
 | **C** | 射程自動配置（enemyGroups 経路のみ） | [ ] |
 | **D** | `DebugMenuPanel` 編成・補正表示 | [ ] |
 | **E** | ステージ敵編成エディタ + stages 保存 API | [ ] |
@@ -68,13 +70,22 @@
 - **触る:** `types.ts`, `validateGameData.ts`, `validateGameData.test.ts`, `progression.md`
 - **完了:** fixture 合法/非法（classId・count・scale・5体以上）、legacy 回帰、doc 形状追記
 
-### Phase B — 戦闘ユニット展開
+### Phase B1 — 中間スペック展開
 
-- `expandEnemyGroups` + `createEnemyFromClassGroup`
+- `ResolvedEnemySpawnSpec` 型（`types.ts`）
+- `expandEnemyGroups(stage)` 純粋関数（`enemyGroupSpawn.ts`）
+- `recommendedLevel` → `level`、`count` 分展開、`groupIndex` / `indexInGroup` / scales 保持
+- `enemyGroups` 未設定 → 空配列（legacy フォールバックなし）
+- **触る:** `types.ts`, `enemyGroupSpawn.ts`, `enemyGroupSpawn.test.ts`, `progression.md`
+- **完了:** 7 tests、legacy 経路無変更
+
+### Phase B2 — 戦闘ユニット展開
+
+- `createEnemyFromClassGroup`（中間スペック → `CombatantState`）
 - `createEnemiesForStage`: `enemyGroups` あり & `waveIndex===0` → 新経路、else legacy
 - stats × scale、スキルは `resolveLearnedSkills` + `getUnlockedSkillSlotCount(level)`
 - 配置は暫定 `spawnX: 0`（Phase C で置換）
-- **触る:** `entities.ts`（+ `enemySpawn.ts` 推奨）, 新規テスト
+- **触る:** `entities.ts`（+ `enemyGroupSpawn.ts` 拡張）, 新規テスト
 - **完了:** Lv/scale/スキル枠テスト、legacy 戦闘回帰
 
 ### Phase C — 射程自動配置
@@ -101,7 +112,8 @@
 ## 7. 次にやること
 
 - [x] **Phase A** 実装（最小差分: types + validate + tests + `progression.md`）
-- [ ] **Phase B** 実装（`enemyGroups` → `CombatantState` 展開）
+- [x] **Phase B1** 実装（`expandEnemyGroups` + 中間型 + tests）
+- [ ] **Phase B2** 実装（中間スペック → `CombatantState` + `createEnemiesForStage` 分岐）
 
 ## 8. やらないこと（全体）
 
@@ -116,7 +128,7 @@
 
 | レイヤ | 方針 |
 | ------ | ---- |
-| 戦闘 | `enemyGroups` あり & wave 0 → 新経路。else legacy |
+| 戦闘 | `enemyGroups` あり & wave 0 → 新経路（**B2 以降**）。else legacy |
 | データ | `enemies.json`, `waves`/`templateId`/`spawnX` 残す |
 | 配置 | enemyGroups = 射程自動。legacy = `spawnX` |
 
@@ -154,6 +166,7 @@ Phase A のみ（戦闘・UI に触らない）:
 ## 14. ChatGPT へ戻すときのメモ
 
 - 目的: v0.3.2 敵編成の段階実装
-- 現在地: Phase A 完了（types + validate + 14 tests + progression.md）
-- 次: Phase B（`expandEnemyGroups` + 戦闘生成）
+- 現在地: Phase B1 完了（`ResolvedEnemySpawnSpec` + `expandEnemyGroups` + 7 tests）
+- 次: Phase B2（中間スペック → `CombatantState` + `createEnemiesForStage` 分岐）
 - 判断待ち: EXP、旧エディタ UI 扱い。**waves:** 正本は enemyGroups ありなら省略可。移行期 validate はプレースホルダ要求
+- B1 戻り値: `enemyGroups` なし → `[]`（空配列）。legacy フォールバックは B2 の `createEnemiesForStage` 側で行う
