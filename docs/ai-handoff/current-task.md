@@ -9,7 +9,7 @@
 ## 2. 作業テーマ
 
 - 作業名: 敵エディタ v0.3.2 — ステージ `enemyGroups` 編成
-- 状態: **Phase A〜C 完了・Phase D 完了・Phase E3（b/c/d）完了・Phase E4b 完了**
+- 状態: **Phase A〜C 完了・Phase D 完了・Phase E3（b/c/d）完了・Phase E4b 完了・Phase E5b 完了**
 - 対象: ステージ敵編成、`enemyGroups`、戦闘生成、デバッグ表示、データ編集ツール
 - 完了条件: Phase A〜E の完了条件（§6 参照）
 
@@ -59,7 +59,8 @@
 | **E3c** | `recommendedLevel` / `enemyGroups` 編集・保存 | [x] |
 | **E3d** | preview / warning / tests 整理 | [x] |
 | **E4b** | タブ文言・導線整理（旧敵テンプレ UI 残置） | [x] |
-| **E 残** | `stages.json` enemyGroups 移行調査・実データ移行など | [ ] |
+| **E5b** | pilot stage `eg_smoke` 追加（enemyGroups のみ・実データ smoke） | [x] |
+| **E 残** | legacy ステージ移行・`stages-demo.json` 分離など | [ ] |
 
 ### Phase E3d（完了）
 
@@ -70,9 +71,14 @@
 
 ## 7. 次にやること
 
-- [ ] **Phase E 残** — `stages.json` の `enemyGroups` 移行調査（現状全ステージ legacy。移行対象・手順・検証方針）
-- [ ] `stages.json` 実データの `enemyGroups` 移行（必要ステージから）
+- [ ] **Phase E 残** — legacy ステージの `enemyGroups` 移行（`eg_smoke` 以外。`test` / `ranged_test` / `1` / `2` は未変更）
 - [ ] `stages-demo.json` 分離（roadmap 6b、タイミング未確定）
+
+### Phase E5b（完了）
+
+- `data/stages.json` に pilot stage `eg_smoke` を 1 件追加（`recommendedLevel: 10`、`df_guardian` + `at_hunter` 各 1、`waves` は空 placeholder のみ・templateId なし）
+- `entities.enemyGroups.test.ts` に実データ smoke（`loadGameData` + `createEnemiesForStage`）を追加
+- legacy ステージ・`enemies.json` / `classes.json` / エディタ UI / 戦闘ロジックは未変更
 
 ### Phase E4b（完了）
 
@@ -102,6 +108,6 @@
 ## 10. ChatGPT へ戻すときのメモ
 
 - 目的: v0.3.2 敵編成の段階実装
-- 現在地: Phase E4b 完了。タブ・説明文で legacy 敵テンプレとステージ enemyGroups の役割分担を明示
-- 次: **Phase E 残**（`stages.json` enemyGroups 移行調査 → 実データ移行）
+- 現在地: Phase E5b 完了。`eg_smoke` が stages.json 上の初の enemyGroups 実データ pilot
+- 次: **Phase E 残**（legacy ステージ移行・`stages-demo.json` 分離）
 - 判断待ち: 上記 §9 未確定事項

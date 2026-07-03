@@ -264,3 +264,42 @@ describe('createEnemiesForStage enemyGroups path', () => {
     expect(activeIdsAt(20).every((id) => allLearned.includes(id))).toBe(true);
   });
 });
+
+describe('eg_smoke pilot stage (stages.json)', () => {
+  beforeEach(() => {
+    resetEntityIdCounter();
+  });
+
+  it('validates and spawns via enemyGroups path from real game data', () => {
+    const gameData = loadGameData();
+    const stage = gameData.stages.find((s) => s.id === 'eg_smoke');
+
+    expect(stage).toMatchObject({
+      id: 'eg_smoke',
+      recommendedLevel: 10,
+      enemyGroups: [
+        { classId: 'df_guardian', count: 1 },
+        { classId: 'at_hunter', count: 1 },
+      ],
+      waves: [{ enemies: [] }],
+    });
+    expect(stage!.waves[0]?.enemies).toHaveLength(0);
+
+    const enemies = createEnemiesForStage(
+      gameData,
+      'eg_smoke',
+      0,
+      levelCurves,
+    );
+
+    expect(enemies).toHaveLength(2);
+    expect(enemies.every((e) => e.isEnemy)).toBe(true);
+    expect(enemies.map((e) => e.classId).sort()).toEqual([
+      'at_hunter',
+      'df_guardian',
+    ]);
+    const specs = expandEnemyGroups(stage!);
+    expect(specs).toHaveLength(2);
+    expect(specs.every((s) => s.level === 10)).toBe(true);
+  });
+});

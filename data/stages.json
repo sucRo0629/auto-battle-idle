@@ -134,5 +134,33 @@
         ]
       }
     ]
+  },
+  {
+    "id": "eg_smoke",
+    "displayName": "EG Smoke",
+    "recommendedLevel": 10,
+    "enemyGroups": [
+      {
+        "classId": "df_guardian",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "regScale": 1.0
+      },
+      {
+        "classId": "at_hunter",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "regScale": 1.0
+      }
+    ],
+    "waves": [
+      {
+        "enemies": []
+      }
+    ]
   }
 ]
