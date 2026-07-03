@@ -474,7 +474,7 @@ Phase 1 の `render/` 基盤（`SpriteAnimator`, `IBattleRenderer`, イベント
 
 - `presentation-lab.html` — Vite 別エントリ（`npm run dev` → `/presentation-lab.html`）
 - `src/presentation/PresentationPreviewRunner.ts` — 擬似 2 体配置 + `BattleCanvas.play*`
-- `src/presentation/PresentationLabApp.ts` — classId / enemyId・skill・effect 選択、▶ / ↺、JSON 編集・保存
+- `src/presentation/PresentationLabApp.ts` — classId / enemyId・skill・effect 選択、**entity body（idle / move / death）プレビュー**、▶ / ↺、JSON 編集・保存
 - `PUT /__editor/presentation-skill` — `skillsJsonFs` upsert + validate
 - SkillEditorStep effect 演出セクションから演出ラボ deep link（任意）
 

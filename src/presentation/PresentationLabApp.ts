@@ -31,10 +31,15 @@ import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 import { resolveSkillAnimKey, hasSkillAnimKey } from '../render/skillAnimRegistry.ts';
 import { supportsSkillEffectVfx } from '../render/skillVfx/resolveEffectPresentation.ts';
 import { resolveVfxAnimKey, hasVfxAnimKey } from '../render/vfxAnimRegistry.ts';
+import type { EntityBodyAnim } from '../render/entityAtlas.ts';
 import {
   PresentationPreviewRunner,
   type PreviewPlayMode,
 } from './PresentationPreviewRunner.ts';
+import {
+  computeEntityBodyTimeline,
+  type EntityBodyTimeline,
+} from './entityBodyTimeline.ts';
 import {
   resolvePreviewBattleLayout,
   resolvePreviewBattleLayoutFallback,
@@ -47,26 +52,43 @@ import {
 } from './presentationSaveValidation.ts';
 
 type EntityKind = 'class' | 'enemy';
+type LabPreviewMode = 'skill' | 'entityBody';
+
+const ENTITY_BODY_ANIM_OPTIONS: { value: EntityBodyAnim; label: string }[] = [
+  { value: 'idle', label: 'idle' },
+  { value: 'move', label: 'move' },
+  { value: 'death', label: 'death' },
+];
 
 interface LabSelection {
+  previewMode: LabPreviewMode;
   entityKind: EntityKind;
   entityId: string;
   skillId: string;
   effectIndex: number;
+  entityBodyAnim: EntityBodyAnim;
 }
 
 interface LabQuery {
+  previewMode?: LabPreviewMode;
   entityKind?: EntityKind;
   entityId?: string;
   skillId?: string;
   effectIndex?: number;
+  entityAnim?: EntityBodyAnim;
 }
 
 function readLabQuery(): LabQuery {
   const params = new URLSearchParams(window.location.search);
   const entityKind = params.get('entityKind');
+  const previewMode = params.get('previewMode');
+  const entityAnim = params.get('entityAnim');
   const effectIndexRaw = params.get('effectIndex');
   return {
+    previewMode:
+      previewMode === 'skill' || previewMode === 'entityBody'
+        ? previewMode
+        : undefined,
     entityKind:
       entityKind === 'class' || entityKind === 'enemy' ? entityKind : undefined,
     entityId: params.get('entityId') ?? undefined,
@@ -74,6 +96,10 @@ function readLabQuery(): LabQuery {
     effectIndex:
       effectIndexRaw !== null && effectIndexRaw.length > 0
         ? Number.parseInt(effectIndexRaw, 10)
+        : undefined,
+    entityAnim:
+      entityAnim === 'idle' || entityAnim === 'move' || entityAnim === 'death'
+        ? entityAnim
         : undefined,
   };
 }
@@ -115,6 +141,8 @@ export class PresentationLabApp {
 
   private entityKind: EntityKind = 'class';
   private entityId = '';
+  private previewMode: LabPreviewMode = 'skill';
+  private entityBodyAnim: EntityBodyAnim = 'idle';
   private skillId = '';
   private effectIndex = 0;
   private skillDraft: ActiveSkillDef | null = null;
@@ -137,7 +165,7 @@ export class PresentationLabApp {
     title.textContent = '演出ラボ';
     const subtitle = createEl('p', 'presentation-lab-subtitle');
     subtitle.textContent =
-      'BattleEngine を回さず 1 effect の Canvas プレビューと VFX / タイミング JSON 編集';
+      'BattleEngine を回さず Canvas プレビュー — スキル effect / entity body（idle・move・death）';
     header.append(title, subtitle);
 
     const toolbar = createEl('div', 'presentation-lab-toolbar');
@@ -178,18 +206,22 @@ export class PresentationLabApp {
 
   private captureSelection(): LabSelection {
     return {
+      previewMode: this.previewMode,
       entityKind: this.entityKind,
       entityId: this.entityId,
       skillId: this.skillId,
       effectIndex: this.effectIndex,
+      entityBodyAnim: this.entityBodyAnim,
     };
   }
 
   private restoreSelection(selection: LabSelection): void {
+    this.previewMode = selection.previewMode;
     this.entityKind = selection.entityKind;
     this.entityId = selection.entityId;
     this.skillId = selection.skillId;
     this.effectIndex = selection.effectIndex;
+    this.entityBodyAnim = selection.entityBodyAnim;
     this.reconcileSelection();
   }
 
@@ -219,11 +251,16 @@ export class PresentationLabApp {
   private syncLabQueryToUrl(): void {
     if (!this.entityId) return;
     const params = new URLSearchParams({
+      previewMode: this.previewMode,
       entityKind: this.entityKind,
       entityId: this.entityId,
-      skillId: this.skillId,
-      effectIndex: String(this.effectIndex),
     });
+    if (this.previewMode === 'entityBody') {
+      params.set('entityAnim', this.entityBodyAnim);
+    } else {
+      params.set('skillId', this.skillId);
+      params.set('effectIndex', String(this.effectIndex));
+    }
     const next = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, '', next);
   }
@@ -252,6 +289,16 @@ export class PresentationLabApp {
   }
 
   private applyInitialSelection(query: LabQuery): void {
+    if (query.previewMode) {
+      this.previewMode = query.previewMode;
+    }
+    if (
+      query.entityAnim &&
+      ENTITY_BODY_ANIM_OPTIONS.some((option) => option.value === query.entityAnim)
+    ) {
+      this.entityBodyAnim = query.entityAnim;
+    }
+
     if (query.entityKind && query.entityId) {
       this.entityKind = query.entityKind;
       this.entityId = query.entityId;
@@ -427,6 +474,22 @@ export class PresentationLabApp {
     const selectsRow = createEl('div', 'presentation-lab-toolbar-selects');
     const actionsRow = createEl('div', 'presentation-lab-toolbar-actions');
 
+    const previewModeSelect = createSelect(
+      this.previewMode,
+      [
+        { value: 'skill', label: 'スキル effect' },
+        { value: 'entityBody', label: 'entity body' },
+      ],
+      (value) => {
+        this.previewMode = value as LabPreviewMode;
+        this.onSelectionChanged();
+        this.renderToolbar(toolbar);
+        this.renderForm();
+        this.syncPreviewEntities();
+        this.refreshTimeline();
+      },
+    );
+
     const entityKindSelect = createSelect(
       this.entityKind,
       [
@@ -476,6 +539,43 @@ export class PresentationLabApp {
       this.refreshTimeline();
     });
 
+    selectsRow.append(
+      createFieldRow('プレビュー', previewModeSelect),
+      createFieldRow('種別', entityKindSelect),
+      createFieldRow('entity', entitySelect),
+    );
+
+    if (this.previewMode === 'entityBody') {
+      const entityAnimSelect = createSelect(
+        this.entityBodyAnim,
+        ENTITY_BODY_ANIM_OPTIONS,
+        (value) => {
+          this.entityBodyAnim = value as EntityBodyAnim;
+          this.onSelectionChanged();
+          this.renderForm();
+          this.refreshTimeline();
+        },
+      );
+      selectsRow.append(createFieldRow('anim', entityAnimSelect));
+
+      const playBtn = createActionButton('▶ 再生', 'editor-btn', () => {
+        this.runner.playEntityBody(this.entityBodyAnim);
+      });
+      playBtn.classList.add('presentation-lab-play-btn');
+
+      const resetBtn = createButton('↺ リセット', 'editor-btn', () => {
+        this.runner.reset();
+      });
+
+      const reloadBtn = createButton('再読込', 'editor-btn', () => {
+        void this.reloadFromServer();
+      });
+
+      actionsRow.append(playBtn, resetBtn, reloadBtn);
+      toolbar.append(selectsRow, actionsRow);
+      return;
+    }
+
     const skillOptions = this.currentSkillOptions().map((skill) => ({
       value: skill.id,
       label: skill.name ? `${skill.name} (${skill.id})` : skill.id,
@@ -504,8 +604,6 @@ export class PresentationLabApp {
     });
 
     selectsRow.append(
-      createFieldRow('種別', entityKindSelect),
-      createFieldRow('entity', entitySelect),
       createFieldRow('skill', skillSelect),
       createFieldRow('effect', effectSelect),
     );
@@ -548,6 +646,12 @@ export class PresentationLabApp {
 
   private renderForm(): void {
     this.formHost.replaceChildren();
+
+    if (this.previewMode === 'entityBody') {
+      this.formHost.append(this.buildEntityBodySection());
+      return;
+    }
+
     const skill = this.skillDraft;
     const effect = this.currentEffect();
     if (!skill || !effect) {
@@ -572,6 +676,46 @@ export class PresentationLabApp {
       '保存先: data/skills/actives/（該当 stem ファイルへ upsert）。通常攻撃 VFX は classes.json / enemies.json の traits.basicAttackVfx';
 
     this.formHost.append(columns, labLink);
+  }
+
+  private buildEntityBodySection(): HTMLElement {
+    const section = createEl('section', 'presentation-lab-section');
+    const heading = createEl('h2', 'presentation-lab-section-title');
+    heading.textContent = 'Entity body（bodies atlas）';
+    section.appendChild(heading);
+
+    const timeline = computeEntityBodyTimeline(this.entityId, this.entityBodyAnim);
+    appendAssetState(
+      section,
+      'body atlas',
+      `sheets/bodies/${this.entityId}.png`,
+      timeline.hasBodyAtlas,
+    );
+
+    const grid = createEl('div', 'editor-grid');
+    section.appendChild(grid);
+    appendHintLines(grid, [
+      ['anim', timeline.anim],
+      ['frames', String(timeline.frames)],
+      ['fps', String(timeline.fps)],
+      ['loop', timeline.loop ? 'yes' : 'no'],
+      ['1 cycle', formatSec(timeline.playbackSec)],
+      [
+        'cell',
+        `${timeline.cellWidth}×${timeline.cellHeight}px（entityAnimLayout.json 共通）`,
+      ],
+      [
+        'layout 正本',
+        'data/entityAnimLayout.json — idle / move / death の行・コマ数は全 entity 共通',
+      ],
+    ]);
+
+    const hint = createEl('p', 'presentation-lab-hint');
+    hint.textContent =
+      'PNG 未配置時は旧 sheets/{id}/{anim}.png または静止画フォールバック。death 再生後は ↺ リセットで idle に戻す。';
+    section.appendChild(hint);
+
+    return section;
   }
 
   private buildBodySection(
@@ -881,6 +1025,12 @@ export class PresentationLabApp {
 
   private refreshTimeline(): void {
     this.timelineHost.replaceChildren();
+
+    if (this.previewMode === 'entityBody') {
+      this.renderEntityBodyTimeline();
+      return;
+    }
+
     const skill = this.skillDraft;
     if (!skill) return;
 
@@ -965,6 +1115,50 @@ export class PresentationLabApp {
     );
     for (const segment of buildTimelineSegments(timeline)) {
       if (segment.sec <= 0) continue;
+      const bar = createEl('div', 'presentation-lab-timeline-bar');
+      bar.style.width = `${(segment.sec / maxSec) * 100}%`;
+      bar.style.background = segment.color;
+      bar.title = `${segment.label}: ${formatSec(segment.sec)}`;
+      const label = createEl('span', 'presentation-lab-timeline-bar-label');
+      label.textContent = segment.label;
+      bar.appendChild(label);
+      track.appendChild(bar);
+    }
+    this.timelineHost.appendChild(track);
+  }
+
+  private renderEntityBodyTimeline(): void {
+    const timeline = computeEntityBodyTimeline(this.entityId, this.entityBodyAnim);
+
+    const title = createEl('h2', 'presentation-lab-section-title');
+    title.textContent = 'タイムライン（entity body）';
+    this.timelineHost.appendChild(title);
+
+    const list = createEl('ul', 'presentation-lab-timeline-list');
+    list.append(
+      this.timelineItem(
+        'body atlas',
+        timeline.hasBodyAtlas ? 'PNG あり' : 'PNG なし（フォールバック）',
+        null,
+      ),
+      this.timelineItem(
+        'playback',
+        `${timeline.frames} frames @ ${timeline.fps} fps (${timeline.loop ? 'loop' : 'once'})`,
+        timeline.playbackSec,
+      ),
+    );
+    this.timelineHost.appendChild(list);
+
+    appendHintLines(this.timelineHost, [
+      [
+        'playback',
+        '1 サイクル分の秒数。loop アニメは Canvas 上で繰り返し再生される。',
+      ],
+    ]);
+
+    const track = createEl('div', 'presentation-lab-timeline-track');
+    const maxSec = Math.max(timeline.playbackSec, 0.5);
+    for (const segment of buildEntityBodyTimelineSegments(timeline)) {
       const bar = createEl('div', 'presentation-lab-timeline-bar');
       bar.style.width = `${(segment.sec / maxSec) * 100}%`;
       bar.style.background = segment.color;
@@ -1384,6 +1578,18 @@ function appendVfxEnabledRow(
       })(),
     ),
   );
+}
+
+function buildEntityBodyTimelineSegments(
+  timeline: EntityBodyTimeline,
+): { label: string; sec: number; color: string }[] {
+  return [
+    {
+      label: timeline.anim,
+      sec: timeline.playbackSec,
+      color: '#4a90d9',
+    },
+  ];
 }
 
 function buildTimelineSegments(

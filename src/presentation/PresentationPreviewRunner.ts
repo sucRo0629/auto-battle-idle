@@ -1,4 +1,5 @@
 import type { ActiveSkillDef, SkillSlotKind } from '../battle/types.ts';
+import type { EntityBodyAnim } from '../render/entityAtlas.ts';
 import { BattleCanvas } from '../render/BattleCanvas.ts';
 import { BATTLE_FIELD_SPRITE_SCALE, groundY } from '../render/formationLayout.ts';
 import type { CombatantLayout } from '../render/IBattleRenderer.ts';
@@ -123,6 +124,13 @@ export class PresentationPreviewRunner {
       );
     }
     return computePresentationTimeline(skill, effectIndex, actor, slotKind);
+  }
+
+  playEntityBody(anim: EntityBodyAnim): void {
+    if (!this.actor) return;
+    this.resetCanvas();
+    this.applyIdleLayouts();
+    this.canvas.playAnim(PREVIEW_ACTOR_ID, anim);
   }
 
   play(request: PreviewPlayRequest): void {
