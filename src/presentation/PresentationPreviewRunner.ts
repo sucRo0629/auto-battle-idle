@@ -1,11 +1,15 @@
 import type { ActiveSkillDef, SkillSlotKind } from '../battle/types.ts';
 import { BattleCanvas } from '../render/BattleCanvas.ts';
-import { battleCanvasHeight, groundY } from '../render/formationLayout.ts';
+import { BATTLE_FIELD_SPRITE_SCALE, groundY } from '../render/formationLayout.ts';
 import type { CombatantLayout } from '../render/IBattleRenderer.ts';
 import { resolveEffectApplyDelaySec } from '../render/skillAnimPlayback.ts';
 import {
+  PREVIEW_CANVAS_H,
+  PREVIEW_CANVAS_W,
   PREVIEW_ENEMY_ANCHOR_X,
   PREVIEW_PLAYER_ANCHOR_X,
+  resolvePreviewCameraOriginX,
+  toPreviewCanvasX,
   type PreviewBattleLayout,
 } from './previewLayout.ts';
 import {
@@ -29,7 +33,7 @@ const DEFAULT_PREVIEW_LAYOUT: PreviewBattleLayout = {
   targetX: PREVIEW_ENEMY_ANCHOR_X,
   rangePx: PREVIEW_ENEMY_ANCHOR_X - PREVIEW_PLAYER_ANCHOR_X,
 };
-const SPRITE_SCALE = 1;
+const SPRITE_SCALE = BATTLE_FIELD_SPRITE_SCALE;
 
 function resolvePreviewSlotKind(
   skillId: string,
@@ -54,20 +58,38 @@ export class PresentationPreviewRunner {
   private rafId: number | null = null;
   private lastTs = 0;
   private applyDelayTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  private readonly groundY: number;
   private actor: PreviewEntity | null = null;
   private target: PreviewEntity | null = null;
   private layout: PreviewBattleLayout = DEFAULT_PREVIEW_LAYOUT;
 
   constructor(private readonly host: HTMLElement) {
-    this.groundY = groundY(battleCanvasHeight(SPRITE_SCALE), SPRITE_SCALE);
     this.canvas = this.mountCanvas();
+  }
+
+  private get previewGroundY(): number {
+    return groundY(PREVIEW_CANVAS_H, SPRITE_SCALE);
   }
 
   private mountCanvas(): BattleCanvas {
     const canvas = new BattleCanvas();
     canvas.mount(this.host);
+    this.applyPreviewCanvasViewport(canvas);
     return canvas;
+  }
+
+  /** 演出ラボ専用: host 内 1:1 表示 + 中央フォーカスの切り詰め viewport。 */
+  private applyPreviewCanvasViewport(canvas: BattleCanvas): void {
+    const el = this.host.querySelector('.battle-canvas');
+    if (!(el instanceof HTMLCanvasElement)) {
+      throw new Error('.battle-canvas not found in presentation-lab host');
+    }
+    el.classList.add('presentation-lab-preview-canvas');
+    el.width = PREVIEW_CANVAS_W;
+    el.height = PREVIEW_CANVAS_H;
+    el.style.width = `${PREVIEW_CANVAS_W}px`;
+    el.style.height = `${PREVIEW_CANVAS_H}px`;
+    applyPresentationLabNearestNeighborContext(el);
+    canvas.setWorldOffset(resolvePreviewCameraOriginX());
   }
 
   setEntities(
@@ -229,8 +251,8 @@ export class PresentationPreviewRunner {
     const target = this.target;
     if (!actor || !target) return;
     this.canvas.setCombatants([
-      this.toLayout(PREVIEW_ACTOR_ID, actor, this.layout.actorX),
-      this.toLayout(PREVIEW_TARGET_ID, target, this.layout.targetX),
+      this.toLayout(PREVIEW_ACTOR_ID, actor, toPreviewCanvasX(this.layout.actorX)),
+      this.toLayout(PREVIEW_TARGET_ID, target, toPreviewCanvasX(this.layout.targetX)),
     ]);
   }
 
@@ -242,7 +264,7 @@ export class PresentationPreviewRunner {
     return {
       id,
       x,
-      y: this.groundY,
+      y: this.previewGroundY,
       spriteKey: entity.entityId,
       hp: 100,
       maxHp: 100,
@@ -262,4 +284,15 @@ export class PresentationPreviewRunner {
       statusEffects: [],
     };
   }
+}
+
+/** canvas.width/height 変更で context がリセットされるため、描画直前に再適用する。 */
+function applyPresentationLabNearestNeighborContext(
+  canvas: HTMLCanvasElement,
+): void {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Canvas 2D unavailable');
+  }
+  ctx.imageSmoothingEnabled = false;
 }

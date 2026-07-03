@@ -1,10 +1,26 @@
+import { CANVAS_W } from '../battle/battleConstants.ts';
 import { getEffectTarget, targetSpecFaction } from '../battle/skills/targetSpec.ts';
 import { resolveSkillRangePx } from '../battle/skills/rangeUtils.ts';
 import type { CombatantState, SkillEffectDef } from '../battle/types.ts';
 import type { PreviewEntity } from './presentationTimeline.ts';
 
-export const PREVIEW_PLAYER_ANCHOR_X = 140;
-export const PREVIEW_ENEMY_ANCHOR_X = 340;
+/** BattleCanvas と同幅の中央。プレビュー 2 体配置の基準。 */
+export const PREVIEW_BATTLE_CENTER_X = CANVAS_W / 2;
+
+/**
+ * 演出ラボ host の content box に収まる 1:1 表示サイズ（padding 12px ×2 を除いた 928×452 想定）。
+ * BattleCanvas 本体は触らず、マウント後に buffer をこのサイズへ切り詰める。
+ */
+export const PREVIEW_CANVAS_W = 904;
+export const PREVIEW_CANVAS_H = 428;
+
+/** 既定の actor–target 間隔（旧 140 / 340 の差分） */
+export const PREVIEW_DEFAULT_RANGE_PX = 200;
+
+export const PREVIEW_PLAYER_ANCHOR_X =
+  PREVIEW_BATTLE_CENTER_X - PREVIEW_DEFAULT_RANGE_PX / 2;
+export const PREVIEW_ENEMY_ANCHOR_X =
+  PREVIEW_BATTLE_CENTER_X + PREVIEW_DEFAULT_RANGE_PX / 2;
 
 export interface PreviewBattleLayout {
   actorX: number;
@@ -14,6 +30,16 @@ export interface PreviewBattleLayout {
 
 export function resolvePreviewActorBattleX(actorIsEnemy: boolean): number {
   return actorIsEnemy ? PREVIEW_ENEMY_ANCHOR_X : PREVIEW_PLAYER_ANCHOR_X;
+}
+
+/** プレビュー canvas 左端の battle 世界 X（中央フォーカス）。 */
+export function resolvePreviewCameraOriginX(): number {
+  return PREVIEW_BATTLE_CENTER_X - PREVIEW_CANVAS_W / 2;
+}
+
+/** battle 世界 X → プレビュー canvas 座標（1 canvas px = 1 CSS px）。 */
+export function toPreviewCanvasX(worldX: number): number {
+  return worldX - resolvePreviewCameraOriginX();
 }
 
 export function resolvePreviewTargetBattleX(
@@ -80,7 +106,11 @@ export function resolvePreviewBattleLayout(
   const actorX = resolvePreviewActorBattleX(actor.isEnemy);
   const rangePx = resolvePreviewSkillRangePx(actor, effect);
   if (isPreviewSelfTarget(actor, effect)) {
-    return { actorX, targetX: actorX, rangePx };
+    return {
+      actorX: PREVIEW_BATTLE_CENTER_X,
+      targetX: PREVIEW_BATTLE_CENTER_X,
+      rangePx,
+    };
   }
   return {
     actorX,

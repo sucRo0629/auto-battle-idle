@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { SkillEffectDef } from '../battle/types.ts';
 import {
+  PREVIEW_BATTLE_CENTER_X,
+  PREVIEW_CANVAS_W,
   PREVIEW_ENEMY_ANCHOR_X,
   PREVIEW_PLAYER_ANCHOR_X,
   resolvePreviewBattleLayout,
   resolvePreviewBattleLayoutFallback,
+  resolvePreviewCameraOriginX,
   resolvePreviewTargetBattleX,
+  toPreviewCanvasX,
 } from './previewLayout.ts';
 import type { PreviewEntity } from './presentationTimeline.ts';
 
@@ -35,17 +39,26 @@ const damageEffect = (
   ...(range !== undefined ? { range } : {}),
 });
 
+describe('preview canvas viewport', () => {
+  it('focuses battle center in the cropped preview canvas', () => {
+    expect(resolvePreviewCameraOriginX()).toBe(
+      PREVIEW_BATTLE_CENTER_X - PREVIEW_CANVAS_W / 2,
+    );
+    expect(toPreviewCanvasX(PREVIEW_BATTLE_CENTER_X)).toBe(PREVIEW_CANVAS_W / 2);
+  });
+});
+
 describe('resolvePreviewTargetBattleX', () => {
   it('places ally target to the right by rangePx', () => {
     expect(
       resolvePreviewTargetBattleX(PREVIEW_PLAYER_ANCHOR_X, 100, false),
-    ).toBe(240);
+    ).toBe(PREVIEW_PLAYER_ANCHOR_X + 100);
   });
 
   it('places enemy target to the left by rangePx', () => {
     expect(
       resolvePreviewTargetBattleX(PREVIEW_ENEMY_ANCHOR_X, 100, true),
-    ).toBe(240);
+    ).toBe(PREVIEW_ENEMY_ANCHOR_X - 100);
   });
 });
 
@@ -89,13 +102,14 @@ describe('resolvePreviewBattleLayout', () => {
     });
   });
 
-  it('overlaps actor and target for self-target effects', () => {
+  it('centers actor and target for self-target effects', () => {
     const layout = resolvePreviewBattleLayout(allyActor, {
       type: 'heal',
       target: { kind: 'self' },
       amount: { kind: 'atkScale', scale: 0.5 },
     });
     expect(layout.targetX).toBe(layout.actorX);
+    expect(layout.actorX).toBe(PREVIEW_BATTLE_CENTER_X);
   });
 });
 

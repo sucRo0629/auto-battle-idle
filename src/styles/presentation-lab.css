@@ -72,15 +72,24 @@
 .presentation-lab-canvas-host {
   display: flex;
   justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  width: 100%;
   margin-bottom: 20px;
   padding: 12px;
   background: #121820;
   border: 1px solid #2d3a4f;
   border-radius: 8px;
+  overflow: hidden;
 }
 
-.presentation-lab-canvas-host .battle-canvas {
+.presentation-lab-canvas-host .battle-canvas,
+.presentation-lab-canvas-host .presentation-lab-preview-canvas {
   display: block;
+  flex: 0 0 auto;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
 
 .presentation-lab-section {
