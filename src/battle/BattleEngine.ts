@@ -1561,6 +1561,7 @@ export class BattleEngine {
       this.gameData,
       this.stageId,
       this.waveIndex,
+      this.levelCurves,
     );
     this.resetEnemyBattlePositions();
     this.applyEnemyFieldFromBattle();

@@ -7,11 +7,16 @@ import type {
   PartyMemberDef,
   PartyMemberState,
   PartySlotState,
+  ResolvedEnemySpawnSpec,
   SkillCooldown,
 } from './types.ts';
 import { resolveEnemySpawnBattleX } from './battleConstants.ts';
 import { copyNormalizedTraits } from './data/entityTraits.ts';
 import type { NormalizedEntityTraits } from './types.ts';
+import {
+  applyEnemyStatScales,
+  expandEnemyGroups,
+} from './enemyGroupSpawn.ts';
 import {
   resolveClassIconKey,
   resolveClassSpriteKey,
@@ -24,8 +29,10 @@ import {
 import { resolveBattleActiveSkillIds } from '../progression/battleActiveSkills.ts';
 import {
   getUnlockedActiveSlotCount,
+  getUnlockedSkillSlotCount,
   MAX_ACTIVE_SLOTS,
 } from '../progression/skillBuild.ts';
+import { resolveLearnedSkills } from '../progression/skillUnlocks.ts';
 
 let idCounter = 0;
 
@@ -205,15 +212,104 @@ function enemyTraitsFromTemplate(
   return copyNormalizedTraits(template.traits);
 }
 
+/** Phase B2: enemyGroups 中間スペックから CombatantState を生成（配置は暫定 spawnX: 0） */
+export function createEnemyFromClassGroup(
+  spec: ResolvedEnemySpawnSpec,
+  classPreset: ClassPreset,
+  gameData: GameData,
+  curves: LevelCurvesConfig,
+): CombatantState {
+  const baseStats = computeStatsAtLevel(
+    classPreset,
+    classPreset,
+    spec.level,
+    curves,
+  );
+  const stats = applyEnemyStatScales(baseStats, spec);
+  const learned = resolveLearnedSkills(
+    classPreset,
+    spec.level,
+    gameData.skillRegistry,
+  );
+  const unlockedSlots = getUnlockedSkillSlotCount(spec.level);
+  const build: CharacterBuild = {
+    learnedPassiveIds: [...learned.learnedPassiveIds],
+    learnedActiveIds: [...learned.learnedActiveIds],
+    equippedActiveSlots: [],
+  };
+  const activeSkillIds = resolveBattleActiveSkillIds(build, unlockedSlots);
+  const spawnOffset = 0;
+  const battleX = resolveEnemySpawnBattleX(spawnOffset);
+  const cooldowns = createCooldowns(
+    classPreset.basicAttackSkillId,
+    build,
+    activeSkillIds,
+  );
+
+  return {
+    id: nextId(classPreset.id),
+    name: classPreset.displayName,
+    role: classPreset.role,
+    classId: classPreset.id,
+    formationRow: classPreset.formationRow,
+    traits: copyTraits(classPreset.traits),
+    build,
+    maxHp: stats.maxHp,
+    atk: stats.atk,
+    def: stats.def,
+    reg: stats.reg,
+    hp: stats.maxHp,
+    barrierHp: 0,
+    isAlive: true,
+    cooldowns,
+    statusEffects: [],
+    spriteKey: resolveClassSpriteKey(classPreset),
+    iconKey: resolveClassIconKey(classPreset),
+    isEnemy: true,
+    battleX,
+    spawnX: spawnOffset,
+    corpseVisible: true,
+  };
+}
+
+function createEnemiesFromEnemyGroups(
+  stage: NonNullable<GameData['stages'][number]>,
+  gameData: GameData,
+  curves: LevelCurvesConfig,
+): CombatantState[] {
+  const specs = expandEnemyGroups(stage);
+  return specs.map((spec) => {
+    const preset = gameData.classRegistry[spec.classId];
+    if (!preset) {
+      throw new Error(`Class not found for enemy group: ${spec.classId}`);
+    }
+    return createEnemyFromClassGroup(spec, preset, gameData, curves);
+  });
+}
+
 export function createEnemiesForStage(
   gameData: GameData,
   stageId: string,
   waveIndex = 0,
+  levelCurves?: LevelCurvesConfig,
 ): CombatantState[] {
   const stage = gameData.stages.find((s) => s.id === stageId);
   if (!stage || stage.waves.length === 0) {
     throw new Error(`Stage not found: ${stageId}`);
   }
+
+  if (stage.enemyGroups) {
+    if (waveIndex !== 0) {
+      return [];
+    }
+    if (!levelCurves) {
+      throw new Error(
+        `levelCurves is required for enemyGroups spawn (stage: ${stageId})`,
+      );
+    }
+    return createEnemiesFromEnemyGroups(stage, gameData, levelCurves);
+  }
+
   const wave = stage.waves[waveIndex];
   if (!wave) {
     throw new Error(`Wave not found: ${stageId} wave ${waveIndex}`);

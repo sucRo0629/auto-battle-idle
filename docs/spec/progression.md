@@ -318,11 +318,13 @@ interface StageEnemyGroup {
 
 | 経路 | データ | 戦闘生成（実装フェーズ） |
 | ---- | ------ | ------------------------ |
-| **新** | `enemyGroups` + `recommendedLevel` | **Phase B1** — `expandEnemyGroups` で中間スペック展開（stats・配置・CombatantState 未接続）。**Phase B2** — `CombatantState` 展開・stats × scale。**Phase C** — 射程自動配置。**Phase D/E** — デバッグ表示・エディタ |
+| **新** | `enemyGroups` + `recommendedLevel` | **Phase B1** — `expandEnemyGroups` で中間スペック展開。**Phase B2** — `createEnemyFromClassGroup` / `createEnemiesForStage` 分岐で `CombatantState` 生成・stats × scale（配置は暫定 `spawnX: 0`）。**Phase C** — 射程自動配置。**Phase D/E** — デバッグ表示・エディタ |
 | **legacy** | `waves[].enemies[]` の `templateId` + `spawnX` | 現行どおり `enemies.json` テンプレから生成 |
 
 - **Phase A（現状）:** 型・validate のみ。戦闘生成・射程配置・UI は未接続。
-- **Phase B1（現状）:** `expandEnemyGroups`（`src/battle/enemyGroupSpawn.ts`）が `StageDef.enemyGroups` を `ResolvedEnemySpawnSpec[]` へ展開。`recommendedLevel` を `level` に使用。`enemyGroups` 未設定時は空配列（legacy フォールバックなし）。stats 計算・配置・CombatantState 生成は未接続。
+- **Phase B1:** `expandEnemyGroups`（`src/battle/enemyGroupSpawn.ts`）が `StageDef.enemyGroups` を `ResolvedEnemySpawnSpec[]` へ展開。`recommendedLevel` を `level` に使用。`enemyGroups` 未設定時は空配列（legacy フォールバックなし）。
+- **Phase B2（現状）:** `createEnemiesForStage` が `enemyGroups` あり & `waveIndex === 0` のとき `expandEnemyGroups` → `createEnemyFromClassGroup` で敵を生成。`computeStatsAtLevel` 後に各 scale を乗算（未指定 scale = 1、`Math.round`）。スキルは `resolveLearnedSkills` + `getUnlockedSkillSlotCount(level)`。配置は暫定 `spawnX: 0`（射程自動配置は Phase C）。`waveIndex > 0` は空配列。legacy 経路は不変。
+- **未確定（Phase B2）:** `enemyGroups` ステージの撃破 EXP（`computeStageExpReward` は現状 legacy `waves` / `templateId` のみ集計）。
 
 - `enemyGroups` ありのステージは `recommendedLevel` **必須**（validate）。
 - **正本:** `enemyGroups` があれば **`waves` は不要**（省略可）。体験版は 1 stage = 1 `enemyGroups` 配列。

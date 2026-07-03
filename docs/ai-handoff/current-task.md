@@ -9,7 +9,7 @@
 ## 2. 作業テーマ
 
 - 作業名: 敵エディタ v0.3.2 — ステージ `enemyGroups` 編成
-- 状態: **Phase A 完了・Phase B1 完了・Phase B2 未着手**
+- 状態: **Phase A 完了・Phase B1 完了・Phase B2 完了・Phase C 未着手**
 - 対象: ステージ敵編成、`enemyGroups`、戦闘生成、デバッグ表示、データ編集ツール
 - 完了条件: Phase A〜E の完了条件（§6 参照）
 
@@ -47,7 +47,7 @@
 | 敵生成 | `createEnemyFromTemplate`（classRegistry 非使用） |
 | 配置 | 手動 `spawnX` |
 | `enemyGroups` / `recommendedLevel` | 型・validate 実装済み（Phase A） |
-| `expandEnemyGroups` | 中間スペック展開のみ（Phase B1）。戦闘生成未接続 |
+| `expandEnemyGroups` | Phase B2 で `createEnemiesForStage` から接続済み |
 
 ## 6. 実装フェーズ
 
@@ -55,7 +55,7 @@
 | ----- | ---- | ---- |
 | **A** | 型・validate・`progression.md` 追記 | [x] |
 | **B1** | `enemyGroups` → `ResolvedEnemySpawnSpec[]` 展開（純粋関数） | [x] |
-| **B2** | 中間スペック → `CombatantState`（配置仮） | [ ] |
+| **B2** | 中間スペック → `CombatantState`（配置仮） | [x] |
 | **C** | 射程自動配置（enemyGroups 経路のみ） | [ ] |
 | **D** | `DebugMenuPanel` 編成・補正表示 | [ ] |
 | **E** | ステージ敵編成エディタ + stages 保存 API | [ ] |
@@ -113,7 +113,8 @@
 
 - [x] **Phase A** 実装（最小差分: types + validate + tests + `progression.md`）
 - [x] **Phase B1** 実装（`expandEnemyGroups` + 中間型 + tests）
-- [ ] **Phase B2** 実装（中間スペック → `CombatantState` + `createEnemiesForStage` 分岐）
+- [x] **Phase B2** 実装（中間スペック → `CombatantState` + `createEnemiesForStage` 分岐）
+- [ ] **Phase C** 実装（射程自動配置）
 
 ## 8. やらないこと（全体）
 
@@ -166,7 +167,7 @@ Phase A のみ（戦闘・UI に触らない）:
 ## 14. ChatGPT へ戻すときのメモ
 
 - 目的: v0.3.2 敵編成の段階実装
-- 現在地: Phase B1 完了（`ResolvedEnemySpawnSpec` + `expandEnemyGroups` + 7 tests）
-- 次: Phase B2（中間スペック → `CombatantState` + `createEnemiesForStage` 分岐）
+- 現在地: Phase B2 完了（`createEnemyFromClassGroup` + `createEnemiesForStage` 分岐 + tests）
+- 次: Phase C（射程自動配置）
 - 判断待ち: EXP、旧エディタ UI 扱い。**waves:** 正本は enemyGroups ありなら省略可。移行期 validate はプレースホルダ要求
 - B1 戻り値: `enemyGroups` なし → `[]`（空配列）。legacy フォールバックは B2 の `createEnemiesForStage` 側で行う

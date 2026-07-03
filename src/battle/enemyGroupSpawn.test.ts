@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { expandEnemyGroups } from './enemyGroupSpawn.ts';
+import {
+  applyEnemyStatScales,
+  expandEnemyGroups,
+  resolveEnemyStatScale,
+} from './enemyGroupSpawn.ts';
 import type { StageDef } from './types.ts';
 
 function stageWithEnemyGroups(
@@ -121,5 +125,27 @@ describe('expandEnemyGroups', () => {
     };
 
     expect(expandEnemyGroups(stage)).toEqual([]);
+  });
+});
+
+describe('applyEnemyStatScales', () => {
+  it('multiplies stats and rounds to integers', () => {
+    const result = applyEnemyStatScales(
+      { maxHp: 100, atk: 11, def: 7, reg: 3 },
+      { hpScale: 1.5, atkScale: 2, defScale: 0.8, regScale: 1.2 },
+    );
+
+    expect(result).toEqual({
+      maxHp: 150,
+      atk: 22,
+      def: 6,
+      reg: 4,
+    });
+  });
+
+  it('treats undefined scale as 1', () => {
+    const stats = { maxHp: 80, atk: 12, def: 5, reg: 2 };
+    expect(applyEnemyStatScales(stats, {})).toEqual(stats);
+    expect(resolveEnemyStatScale(undefined)).toBe(1);
   });
 });

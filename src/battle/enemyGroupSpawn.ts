@@ -1,4 +1,32 @@
-import type { ResolvedEnemySpawnSpec, StageDef } from './types.ts';
+import type {
+  CombatStats,
+  ResolvedEnemySpawnSpec,
+  StageDef,
+} from './types.ts';
+
+/** scale 未指定時は 1（乗算なし） */
+export function resolveEnemyStatScale(scale: number | undefined): number {
+  return scale ?? 1;
+}
+
+/**
+ * computeStatsAtLevel 後に group の scale を乗算する。
+ * 小数は Math.round（既存のステータスは整数前提）。
+ */
+export function applyEnemyStatScales(
+  stats: CombatStats,
+  spec: Pick<
+    ResolvedEnemySpawnSpec,
+    'hpScale' | 'atkScale' | 'defScale' | 'regScale'
+  >,
+): CombatStats {
+  return {
+    maxHp: Math.round(stats.maxHp * resolveEnemyStatScale(spec.hpScale)),
+    atk: Math.round(stats.atk * resolveEnemyStatScale(spec.atkScale)),
+    def: Math.round(stats.def * resolveEnemyStatScale(spec.defScale)),
+    reg: Math.round(stats.reg * resolveEnemyStatScale(spec.regScale)),
+  };
+}
 
 /**
  * stage.enemyGroups を敵生成用の中間スペック配列へ展開する。
