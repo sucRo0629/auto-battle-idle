@@ -8,11 +8,12 @@
 
 ## 2. 作業テーマ
 
-- 作業名: Phase 6b — M1 体験版ステージ構成（`stages-demo.json` 向け）
-- 状態: **Phase A〜E5 完了** → **6b-0a〜6b-1 完了** → **6b-3 調査完了** → **6b-4（`BUILD_FLAVOR=demo` 読込分離実装）完了** → **6b-5（demo runtime smoke テスト）完了** → **6b-6（demo 初期 stage 選択経路調査）完了** → **6b-7（demo flavor 初期 stage / fallback テスト）完了** → **6b-8（demo 初回戦闘 spawn smoke）完了**
-- 対象: M1 体験版ステージ構成、`data/stages-demo.json`、`BUILD_FLAVOR=demo` 読込分離
-- 完了条件: M1 stage 草案確定 → `stages-demo.json` スケルトン作成（**6b-1 完了**）→ demo 読込分離（§7 参照）
-- スコープ外（6b）: レベル実装・EXP 集計・`computeStageExpReward`・進行報酬・`recommendedLevel` の実ゲーム接続・`stages.json` 変更
+- 作業名: **Phase 6b 完了** → 次は **Phase 6c / Phase 7**（6c バランス / demo app flow）
+- 状態: **6b-1〜6b-8 完了**（`stages-demo.json` データ化、`BUILD_FLAVOR=demo` 読込分離、flavor テスト、初回 spawn smoke）
+- **2026-07 roadmap 改定:** [phase-roadmap.md](../plans/phase-roadmap.md) — 旧 6d → **Phase 7**（app flow）、新 **Phase 8**（presentation）、旧 Electron → **Phase 9**（packaging）。本編は **Phase 10** へ
+- 対象（6b で完了）: M1 体験版ステージ構成、`data/stages-demo.json`、`BUILD_FLAVOR=demo` ランタイム読込分離
+- M1 方針（6b で固定）: **M1 ではレベル実装しない**。EXP / `computeStageExpReward` / レベル報酬 / progression 接続は対象外。`recommendedLevel` は data 上最低 1、当面は表示・設計メモ・将来拡張用
+- スコープ外（6b 全体）: 上記 M1 方針に加え、`stages.json` 変更・map UI・editor demo 切替・Electron packaging
 
 ## 3. 参照すべき正本
 
@@ -49,6 +50,7 @@
 | pilot / 移行済み stage | `eg_smoke`（pilot）、`ranged_test`（classId ベース `enemyGroups`） |
 | legacy 維持 stage | `test` / `1` / `2`（`waves` + `templateId`） |
 | M1 コンテンツ stage | **`data/stages-demo.json` に 7 件**（`demo_ch1_01`〜`07`）。`stages.json` は未変更 |
+| demo flavor | `BUILD_FLAVOR=demo` で alias 切替。flavor テスト 3 ファイル pass（§7） |
 | 通常進行（現状） | `stages.json` 配列順 → `test` → `ranged_test` → `1` → `2` → `eg_smoke`（`stageProgression.ts` / `stages[0]` 起点） |
 | `attackSpeed` scale | `StageEnemyGroup` 型にフィールドなし。未実装 |
 
@@ -68,8 +70,17 @@
 | **6b-0a（F1）** | 現行 `stages.json` 棚卸し・M1 導線ギャップ整理 | [x] |
 | **6b-0b** | M1 stage 構成ドラフト（`demo_ch1_01`〜`07`） | [x] |
 | **6b-1** | `data/stages-demo.json` スケルトン作成（7 stage 確定データ） | [x] |
+| **6b-2** | `stages-demo.json` validate テスト | [x] |
+| **6b-3** | `BUILD_FLAVOR=demo` 読込分離調査 | [x] |
+| **6b-4** | `BUILD_FLAVOR=demo` 読込分離実装 | [x] |
+| **6b-5** | demo runtime smoke テスト（`loadGameData.flavor.test.ts`） | [x] |
+| **6b-6** | demo 初期 stage 選択経路調査 | [x] |
+| **6b-7** | demo flavor 初期 stage / fallback テスト | [x] |
+| **6b-8** | demo 初回戦闘 spawn smoke | [x] |
 
 ### Phase F1 — 現行 stages 棚卸し（6b-0a 完了）
+
+> 6b-0a 時点の記録。M1 データ・flavor 実装の現状は **§7**。
 
 **結論**
 
@@ -141,15 +152,17 @@
 | `demo_ch1_06` | 混成部隊 | `df_paladin` ×1, `at_ranger` ×1, `at_sorcerer` ×1 |
 | `demo_ch1_07` | 護法の陣 | `df_paladin` ×1, `at_swordsman` ×1, `at_sorcerer` ×1, `sp_cleric` ×1 |
 
-**未確定（6b-2 以降で詰める）**
+**6c / 以降に送る（6b スコープ外）**
 
 - 各 stage `displayName` の 4e 英語
 - 敵 `count` の微調整・5 体以上にするか（v0.3.2 は入力可・warning のみ）
 - `hpScale` 等の難易度カーブ（**6c**）
 - `enemies.json` テンプレ要否（`enemyGroups` + `classId` 直参照なら **6a は最小**）
-- `stages-demo.json` 専用 validate テスト（**6b-2**）
+- ~~`stages-demo.json` 専用 validate テスト~~ — **6b-2 完了**（`validateGameData.test.ts`）
 
 ### Phase 6b-3 — `BUILD_FLAVOR=demo` 読込分離調査（完了）
+
+> 6b-3 調査時点の記録。実装は **6b-4 完了**（§6b-4）。現状サマリは **§7**。
 
 **`stages.json` / `stages-demo.json` の読込経路**
 
@@ -208,12 +221,11 @@
 - 追加候補: `loadGameData` + `BUILD_FLAVOR=demo` で 7 stage・`demo_ch1_01` 存在（vitest `env` または alias モック）
 - `stages-demo.json` validate は **6b-2 で追加済み**（`validateGameData.test.ts`）
 
-**未確定点**
+**6b-4 で確定**
 
-- dev サーバーで demo 進行を試す `dev:demo` が必要か
-- electron パッケージ時の `BUILD_FLAVOR` 伝播（Phase 7）
-- demo ビルドに `stages.json` を同梱するか（alias なら不要が望ましい）
-- editor で `stages-demo` を編集する時期（6d / 7 か、専用 `GET/PUT` か）
+- demo ビルドは alias により `stages.json` を**非同梱**（6b-5 で build artifact 確認済み）
+
+**Phase 7 以降に送る** — §7 参照
 
 ### Phase 6b-4 — `BUILD_FLAVOR=demo` 読込分離実装（完了）
 
@@ -267,32 +279,13 @@
 | `npm run dev` | **full のまま**（`BUILD_FLAVOR` 未設定）。demo 進行の手元確認は `build:demo` または `BUILD_FLAVOR=demo vitest` 系 |
 | verify モード | デフォルト **ON**（`verifyMode.ts`）。save slot は `save:verify` / `save:release` で分離。通常進行の確認は verify OFF |
 
-**次に必要な最小実装案（任意）**
+**6b-7 / 6b-8 でテスト済み**
 
-- **テスト追加のみで足りる可能性大**: `createDefaultSave` + demo stages で `demo_ch1_01`；`resolveKnownStageId` で full id → demo `stages[0]`
-- 実装が要るとすれば: flavor 切替時にユーザーへリセット通知、または `stageProgress` に flavor タグを持たせる（**6b-6 スコープ外・仕様判断待ち**）
+- `createDefaultSave` + demo stages → `demo_ch1_01`（`stageProgression.flavor.test.ts`）
+- `resolveKnownStageId('test')` → demo `stages[0]`（同上）
+- `createEnemiesForStage` で `demo_ch1_01` の `at_swordsman` ×2 spawn（`entities.enemyGroups.flavor.test.ts`）
 
-**触るべきファイル候補（実装時）**
-
-- `src/progression/stageProgression.test.ts` / 新規 `createDefaultSave` flavor テスト
-- 任意: `src/game/GameSession.ts`（明示マイグレーション・ログのみ）
-
-**触らない方がよい範囲**
-
-- `loadGameData` / alias / JSON 本体 / editor / `stageProgression.ts` の fallback ロジック自体（既存で足りる）
-- EXP / `recommendedLevel` 接続 / map UI
-
-**テスト候補**
-
-- `BUILD_FLAVOR=demo` で `createDefaultSave(loadGameData()).stageProgress.currentStageId === 'demo_ch1_01'`
-- `resolveKnownStageId(demoStages, 'test') === 'demo_ch1_01'`
-- 統合: demo stages + `GameSession` 相当の load パスで `createEnemiesForStage` が敵を生成（`enemyGroups` + 空 placeholder `waves`）
-
-**未確定点**
-
-- demo 初回起動で verify デフォルト ON のまま体験版として問題ないか（Phase 7 / 6d）
-- flavor 切替時の stage リセットをユーザーに見せるか
-- `npm run dev` で demo を試す手段（`dev:demo` は今回スコープ外）
+**Phase 7 以降に送る** — §7 参照（`GameSession` 統合、verify 初回体験、flavor 切替通知、`dev:demo`）
 
 ### Phase 6b-7 — demo flavor 初期 stage / fallback テスト（完了）
 
@@ -308,7 +301,7 @@
 - demo（`BUILD_FLAVOR=demo`）: `loadGameData()` の `stages[0]` が `demo_ch1_01`；`createDefaultSave` の初期 stage が `demo_ch1_01`；`createEnemiesForStage` で `demo_ch1_01` の `enemyGroups` から `at_swordsman` ×2 が生成される
 - full（デフォルト）: `demo_ch1_*` を含まない；`eg_smoke` が従来どおり 2 体 spawn
 - 実行: full — `entities.enemyGroups.flavor.test.ts` + 関連 3 ファイル **17 passed**；demo — `BUILD_FLAVOR=demo` で flavor 3 ファイル **5 passed**
-- 未確定: `GameSession` 統合経路（起動〜戦闘開始 UI）は未カバー；verify モード ON 時の初回体験は未カバー；`dev:demo` / Electron packaging / demo editor 対応は後続
+- 未カバー（Phase 7 以降）: §7「6b 未カバー」参照
 
 ### Phase E5（完了）
 
@@ -344,37 +337,49 @@
 - subtitle に stages.json を追記
 - EnemyEditorStep / StageEnemyEditorStep: legacy templateId と enemyGroups の導線を説明文で明示
 
-## 7. 次にやること
+## 7. Phase 6b 完了サマリ / Phase 7 候補
 
-### 推奨
+### 6b で確定した事実
 
-- [x] **Phase 6b-2 — `stages-demo.json` validate テスト追加** — `validateGameData.test.ts` に存在（6b-5 で pass 確認）
-- [x] **Phase 6b-5 — demo runtime smoke テスト** — `loadGameData.flavor.test.ts` 追加
-- [x] **Phase 6b-6 — demo 初期 stage 選択経路調査** — §6b-6。fallback 既存・新規 demo は `demo_ch1_01` 見込み
+| 観点 | 内容 |
+| ---- | ---- |
+| **demo データ** | `data/stages-demo.json` 存在。`demo_ch1_01`〜`07` の 7 stage。全て `enemyGroups` ベース。legacy `templateId` 未使用。`waves` は placeholder。`recommendedLevel` は全て **1** |
+| **`BUILD_FLAVOR=demo`** | `@game-data/stages` alias で `stages-demo.json` に切替（`vite.config.ts` + `loadGameData.ts`）。`build:demo` / `build:full` 追加 |
+| **flavor テスト** | `loadGameData.flavor.test.ts` — demo 7 件のみ / full は `eg_smoke` 含む・`demo_ch1_*` 不含 |
+| | `stageProgression.flavor.test.ts` — `createDefaultSave` / `resolveKnownStageId` |
+| | `entities.enemyGroups.flavor.test.ts` — `demo_ch1_01` の `createEnemiesForStage` smoke（`at_swordsman` ×2） |
+| **full 側の保護** | default / full は `stages.json`。`demo_ch1_*` は含まれない。`eg_smoke` は維持 |
+| **demo 新規進行** | 空 save slot + verify OFF → `stages[0]` = `demo_ch1_01` 起点（`createDefaultSave` + alias）。既存 save の未知 id は `stages[0]` へ fallback |
+| **M1 方針** | レベル実装なし。EXP / `computeStageExpReward` / progression 接続は対象外。`recommendedLevel` は data 上 1、表示・設計メモ・将来用 |
 
-### 次点
+### Phase 7 候補（優先順は未確定）
 
-- [x] **Phase 6b-7 — demo flavor 初期 stage / fallback テスト** — `stageProgression.flavor.test.ts` 追加
-- [x] **Phase 6b-8 — demo 初回戦闘 spawn smoke** — `entities.enemyGroups.flavor.test.ts` 追加（§6b-8）
-- [x] **`BUILD_FLAVOR=demo` 読込分離調査（6b-3）** — 経路洗い出し完了（§6b-3）。実装は次タスク
-- [x] **`BUILD_FLAVOR=demo` 読込分離実装（6b-4）** — `vite.config.ts` alias + `loadGameData.ts` + `build:demo` / `build:full`
+- [ ] **`dev:demo` / 起動導線整理** — 現行 `npm run dev` は full のまま。手元確認は `build:demo` または `BUILD_FLAVOR=demo vitest`
+- [ ] **`GameSession` 統合 smoke が必要か判断** — 起動〜戦闘開始 UI 経路は未カバー（6b-8 注記）
+- [ ] **Electron packaging への `BUILD_FLAVOR` 伝播**
+- [ ] **demo editor 対応** — 後続判断（当面 editor は `stages.json` 固定。§6b-3 参照）
+- [ ] **map selection UI** — Phase 6d
+- [ ] **save slot / flavor 切替時のユーザー通知** — fallback は動くが stage 位置リセットを見せるか
 
-### 次候補
+### 6b 未カバー（Phase 7 以降）
 
-- [ ] **Phase 6b 締め整理**
-- [ ] **Phase 7 — `dev:demo` / 起動導線整理**（`GameSession` 統合 smoke は必要なら別タスク化）
+- `GameSession` 統合経路（起動〜戦闘開始 UI）
+- verify モード **ON** 時の初回体験（デフォルト ON。save slot は `save:verify` / `save:release` で分離）
+- `dev:demo` script
+- Electron packaging への `BUILD_FLAVOR` 伝播
+- demo 用 editor 切替
+- map selection UI
+- save slot / flavor 切替時のユーザー通知
 
-### 後回し
+### 後回し（6c / 8 / バックログ）
 
-- [ ] **enemyGroups stage の EXP 集計** — `computeStageExpReward` は legacy `waves` / `templateId` のみ（`eg_smoke` / `ranged_test` / 将来 `stages-demo` で撃破 EXP 0）。6c または進行接続時
-- [ ] **`test` / `1` / `2` の legacy → `enemyGroups` 移行** — 本編 Phase 8 向け。M1 とは別経路
+- [ ] **enemyGroups stage の EXP 集計** — `computeStageExpReward` は legacy のみ。M1 ではレベル接続しない
+- [ ] **`test` / `1` / `2` の legacy → `enemyGroups` 移行** — Phase 8 向け
 - [ ] legacy ステージを stage タブで `enemyGroups` へ変換する UI
-
-### その他バックログ
-
 - [ ] validate の classId allowlist subset 化（M1 8 クラス限定）
 - [ ] 5 体以上 warning の cap 圧縮・多数敵 HUD 整理
 - [ ] `attackSpeed` scale を `StageEnemyGroup` に追加するか
+- [ ] 6c: `displayName` 4e、`count` / `hpScale` 等の難易度カーブ
 
 ## 8. やらないこと（全体）
 
@@ -385,25 +390,34 @@
 - `at_ballista` 専用 stage フラグ
 - enemy-design-concept §12 の段階サブセット（Lv0/10/20 全解放が v0.3.2 正）
 
-## 9. 未対応・未確定（Phase E 後に残す）
+## 9. 未対応・未確定
+
+### Phase 7 以降（6b では未着手）
 
 | 項目 | 内容 |
 | ---- | ---- |
-| legacy ステージ移行 | `test` / `1` / `2` は未移行。`eg_smoke` / `ranged_test` のみ `enemyGroups` 化済み |
-| `stages-demo.json` | **6b-1 完了**。`demo_ch1_01`〜`07` 確定データ（§6b-1）。次は 6b-2 validate テスト |
-| `BUILD_FLAVOR=demo` | **6b-4 実装完了**。ランタイム alias 切替 + `build:demo` / `build:full`。editor は `stages.json` 固定のまま |
-| EXP 集計 | `enemyGroups` ステージの撃破 EXP が `computeStageExpReward` 未対応（後回し） |
-| validate allowlist | classId の subset 化は未実装 |
-| 5 体以上 | エディタ warning のみ。cap 圧縮・多数敵 HUD 整理は未実装 |
-| `attackSpeed` scale | `StageEnemyGroup` 型・編集 UI とも未実装 |
-| legacy 変換 UI | stage タブで legacy → `enemyGroups` へ変換する UI は未実装（read-only 表示のみ） |
-| 旧敵テンプレ UI | E4b で導線整理済み。非表示・削除はしない |
+| 起動・体験導線 | `dev:demo`、verify ON 時の初回体験、`GameSession` 統合経路 |
+| packaging | Electron への `BUILD_FLAVOR` 伝播 |
+| editor | demo 用 `stages-demo.json` 編集切替（後続判断。当面 `stages.json` 固定） |
+| UI | map selection（6d）、flavor 切替時の stage リセット通知 |
+| EXP / レベル | `enemyGroups` の撃破 EXP、`recommendedLevel` 実接続 — **M1 対象外** |
+
+### 6c / 8 / バックログ（6b スコープ外）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| legacy ステージ移行 | `test` / `1` / `2` 未移行。`eg_smoke` / `ranged_test` のみ `enemyGroups` 化済み |
+| validate allowlist | classId subset 化未実装 |
+| 5 体以上 | エディタ warning のみ。cap 圧縮・HUD 整理未実装 |
+| `attackSpeed` scale | 型・編集 UI 未実装 |
+| legacy 変換 UI | read-only のみ |
+| 旧敵テンプレ UI | E4b 導線整理済み。非表示・削除はしない |
+| 6c 数値 | `displayName` 4e、`count` / scale 難易度カーブ |
 
 ## 10. ChatGPT へ戻すときのメモ
 
-- 目的: M1 体験版ステージ（`stages-demo.json`）の構成確定とデータ化
-- 現在地: **Phase 6b-8 完了** — `entities.enemyGroups.flavor.test.ts` で demo 初回 `demo_ch1_01` の `at_swordsman` ×2 spawn・full `eg_smoke` 2 体を固定
-- 次（推奨）: Phase 6b 締め整理、または Phase 7 `dev:demo` / 起動導線整理
-- 次（次点）: Phase 6c バランス / Phase 6d マップ選択 UI。`GameSession` 統合 smoke は必要なら別タスク
-- 後回し: EXP 集計、`test`/`1`/`2` 移行、legacy 変換 UI
-- 判断待ち: §9 未対応・未確定事項（6c 数値・6d 導線は別フェーズ）
+- **Phase 6b 完了** — 6b-1〜6b-8 済み。§7 サマリが正本
+- **次**: **Phase 6c**（バランス）または **Phase 7**（トップ / ステージ選択 / リザルト / 体験版終了など app flow）。packaging（旧 Phase 7 想定）は **Phase 9**
+- **roadmap 改定（2026-07）:** phase-roadmap.md — M1 優先は 6 → 7 → 4e → 8 → 9 → itch
+- **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
+- 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
