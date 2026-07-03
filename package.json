@@ -6,15 +6,18 @@
   "main": "electron/main.mjs",
   "scripts": {
     "dev": "vite",
+    "dev:full": "cross-env BUILD_FLAVOR=full vite",
+    "dev:demo": "cross-env BUILD_FLAVOR=demo vite",
     "build": "tsc && vite build",
-    "build:full": "tsc && BUILD_FLAVOR=full vite build",
-    "build:demo": "tsc && BUILD_FLAVOR=demo vite build",
+    "build:full": "cross-env BUILD_FLAVOR=full vite build",
+    "build:demo": "cross-env BUILD_FLAVOR=demo vite build",
     "test": "vitest run --testTimeout=120000",
     "preview": "vite preview",
     "electron": "electron electron/main.mjs",
     "electron:dev": "npm run build && electron electron/main.mjs"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "electron": "^33.2.1",
     "happy-dom": "^20.10.6",
     "typescript": "^5.6.3",
