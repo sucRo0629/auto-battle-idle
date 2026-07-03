@@ -17,6 +17,9 @@ import type {
   Role,
   SkillRegistry,
   SkillVfxDef,
+  StageDef,
+  StageEnemyGroup,
+  StageWave,
 } from '../battle/types.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
 
@@ -130,6 +133,52 @@ export async function fetchSkills(): Promise<SkillsJson> {
 export async function fetchEnemies(): Promise<EnemyTemplate[]> {
   const raw = await fetchJson<EnemyTemplateDraft[] | EnemyTemplate[]>('/__editor/enemies');
   return raw.map((entry) => normalizeEnemyTemplateForEditor(entry));
+}
+
+/** Editor draft before save. enemyGroups ステージは waves 省略可（保存時に placeholder を補う）。 */
+export type StageDraft = {
+  id: string;
+  displayName: string;
+  waves?: StageWave[];
+  recommendedLevel?: number;
+  enemyGroups?: StageEnemyGroup[];
+};
+
+const ENEMY_GROUPS_WAVE_PLACEHOLDER: StageWave[] = [{ enemies: [] }];
+
+/**
+ * enemyGroups ありで waves 未指定または空配列のとき、移行期 validate 用 placeholder を補う。
+ * legacy waves ステージは既存構造を維持する。recommendedLevel は自動補完しない。
+ */
+export function normalizeStageDraftForSave(draft: StageDraft): StageDef {
+  const copy = structuredClone(draft);
+  const hasEnemyGroups =
+    Array.isArray(copy.enemyGroups) && copy.enemyGroups.length > 0;
+
+  if (hasEnemyGroups) {
+    if (!Array.isArray(copy.waves) || copy.waves.length === 0) {
+      copy.waves = structuredClone(ENEMY_GROUPS_WAVE_PLACEHOLDER);
+    }
+  }
+
+  if (!Array.isArray(copy.waves) || copy.waves.length === 0) {
+    throw new Error('waves is required for legacy stage drafts');
+  }
+
+  return copy as StageDef;
+}
+
+export async function fetchStages(): Promise<StageDef[]> {
+  return fetchJson<StageDef[]>('/__editor/stages');
+}
+
+export async function saveStageBundle(payload: { stage: StageDraft }): Promise<void> {
+  const stage = normalizeStageDraftForSave(payload.stage);
+  await fetchJson('/__editor/stages', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stage }),
+  });
 }
 
 export const ENEMY_ATTACK_SPEED_CUSTOM = 'custom' as const;

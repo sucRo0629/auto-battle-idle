@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts';
 import type { ActiveSkillDef } from '../battle/types.ts';
 import {
   buildClassPresetFromDraft,
@@ -8,6 +9,7 @@ import {
   collectSkillsFromDrafts,
   defaultBasicAttackId,
   initClassSkillEntriesFromPreset,
+  normalizeStageDraftForSave,
   resyncEnemyBasicAttackEntry,
   toClassStatsPatch,
   type SkillDraftEntry,
@@ -502,5 +504,184 @@ describe('collectSkillsFromDrafts fireConditions', () => {
       order: 'ratio',
     });
     expect(effect.range).toBe(60);
+  });
+});
+
+describe('normalizeStageDraftForSave', () => {
+  it('adds placeholder waves when enemyGroups stage omits waves', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'demo_1',
+      displayName: 'Demo 1',
+      recommendedLevel: 10,
+      enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+    });
+
+    expect(normalized.waves).toEqual([{ enemies: [] }]);
+    expect(normalized.enemyGroups).toEqual([{ classId: 'df_paladin', count: 2 }]);
+  });
+
+  it('adds placeholder waves when enemyGroups stage has empty waves array', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'demo_1',
+      displayName: 'Demo 1',
+      recommendedLevel: 10,
+      enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+      waves: [],
+    });
+
+    expect(normalized.waves).toEqual([{ enemies: [] }]);
+  });
+
+  it('keeps existing placeholder waves for enemyGroups stage', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'demo_1',
+      displayName: 'Demo 1',
+      recommendedLevel: 10,
+      enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+      waves: [{ enemies: [] }],
+    });
+
+    expect(normalized.waves).toEqual([{ enemies: [] }]);
+  });
+
+  it('keeps legacy waves structure unchanged', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'legacy',
+      displayName: 'Legacy',
+      waves: [{ enemies: [{ templateId: 'test_dummy', spawnX: 120 }] }],
+    });
+
+    expect(normalized.waves).toEqual([
+      { enemies: [{ templateId: 'test_dummy', spawnX: 120 }] },
+    ]);
+    expect(normalized.enemyGroups).toBeUndefined();
+  });
+
+  it('throws for legacy stage without waves', () => {
+    expect(() =>
+      normalizeStageDraftForSave({
+        id: 'legacy',
+        displayName: 'Legacy',
+      }),
+    ).toThrow(/waves is required for legacy stage drafts/i);
+  });
+
+  it('normalized enemyGroups draft passes editor validate when recommendedLevel is set', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'demo_1',
+      displayName: 'Demo 1',
+      recommendedLevel: 10,
+      enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+    });
+
+    const minimalStageClass = {
+      id: 'df_paladin',
+      role: 'defender',
+      displayName: '聖騎士',
+      summary: { ja: 'test' },
+      formationRow: 'front',
+      maxHp: 100,
+      atk: 10,
+      def: 5,
+      reg: 0,
+      basicAttackSkillId: 'df_paladin_basic_attack',
+      passiveIds: [],
+      starterActiveIds: [],
+      skills: [{ level: 0, skillIds: [] }],
+      classSkillIds: [],
+    };
+
+    const result = parseAndValidateGameDataJson(
+      {
+        classes: [minimalStageClass],
+        enemies: [
+          {
+            id: 'test_dummy',
+            displayName: 'dummy',
+            maxHp: 100,
+            atk: 1,
+            def: 1,
+            reg: 0,
+            exp: 0,
+            basicAttackSkillId: 'test_dummy_basic_attack',
+            attackSpeedTier: 'normal',
+          },
+        ],
+        skills: {
+          passives: [],
+          actives: [
+            {
+              id: 'df_paladin_basic_attack',
+              name: 'basic',
+              trigger: { kind: 'time', value: 2 },
+              effect: [
+                {
+                  target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+                  type: 'damage',
+                  amount: { kind: 'atkBased', atkScale: 1 },
+                },
+              ],
+            },
+          ],
+        },
+        stages: [normalized],
+        parties: {
+          test: {
+            name: 'Test',
+            members: [{ classId: 'df_paladin', build: { activeSkillIds: [] } }],
+          },
+        },
+      },
+      { mode: 'editor' },
+    );
+
+    expect(result.stages[0]).toMatchObject({
+      id: 'demo_1',
+      recommendedLevel: 10,
+      waves: [{ enemies: [] }],
+    });
+  });
+
+  it('does not auto-fill recommendedLevel for enemyGroups draft', () => {
+    const normalized = normalizeStageDraftForSave({
+      id: 'bad',
+      displayName: 'Bad',
+      enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+    });
+
+    const minimalStageClass = {
+      id: 'df_paladin',
+      role: 'defender',
+      displayName: '聖騎士',
+      summary: { ja: 'test' },
+      formationRow: 'front',
+      maxHp: 100,
+      atk: 10,
+      def: 5,
+      reg: 0,
+      basicAttackSkillId: 'df_paladin_basic_attack',
+      passiveIds: [],
+      starterActiveIds: [],
+      skills: [{ level: 0, skillIds: [] }],
+      classSkillIds: [],
+    };
+
+    expect(() =>
+      parseAndValidateGameDataJson(
+        {
+          classes: [minimalStageClass],
+          enemies: [],
+          skills: { passives: [], actives: [] },
+          stages: [normalized],
+          parties: {
+            test: {
+              name: 'Test',
+              members: [{ classId: 'df_paladin', build: { activeSkillIds: [] } }],
+            },
+          },
+        },
+        { mode: 'editor' },
+      ),
+    ).toThrow(/recommendedLevel.*required when enemyGroups is set/i);
   });
 });

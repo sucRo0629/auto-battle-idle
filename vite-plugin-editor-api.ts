@@ -10,7 +10,11 @@ import type {
   SkillVfxDef,
 } from '../battle/types.ts';
 import type { ClassPresetBeforeEnrich } from './src/progression/skillUnlocks.ts';
-import { ensureClassGrowthFields } from './src/editor/editorApi.ts';
+import {
+  ensureClassGrowthFields,
+  normalizeStageDraftForSave,
+  type StageDraft,
+} from './src/editor/editorApi.ts';
 import {
   mergeSkillsRootAfterEntityReplace,
   readSkillsRoot,
@@ -156,6 +160,10 @@ interface ClassStatsBulkBody {
   patches: ClassStatsPatchBody[];
 }
 
+interface StageBundleBody {
+  stage: StageDraft;
+}
+
 async function applyClassBundle(
   body: ClassBundleBody,
   server?: ViteDevServer,
@@ -236,6 +244,24 @@ async function applyClassStatsBulk(
 
   writeJsonFile(READ_FILES.classes, nextClasses);
   await reloadGameDataModules(server, [READ_FILES.classes]);
+}
+
+async function applyStageBundle(
+  body: StageBundleBody,
+  server?: ViteDevServer,
+): Promise<void> {
+  const stages = readJsonFile(READ_FILES.stages) as StageDraft[];
+  const normalized = normalizeStageDraftForSave(body.stage);
+  const nextStages = upsertById(stages, normalized);
+
+  const validationBase = loadValidationPayload();
+  validateAll({
+    ...validationBase,
+    stages: nextStages,
+  });
+
+  writeJsonFile(READ_FILES.stages, nextStages);
+  await reloadGameDataModules(server, [READ_FILES.stages]);
 }
 
 async function applyEnemyBundle(
@@ -354,6 +380,10 @@ export function editorApiPlugin(): Plugin {
             sendJson(res, 200, readJsonFile(READ_FILES.enemies));
             return;
           }
+          if (req.method === 'GET' && url.pathname === '/__editor/stages') {
+            sendJson(res, 200, readJsonFile(READ_FILES.stages));
+            return;
+          }
 
           if (req.method === 'PUT' && url.pathname === '/__editor/class-bundle') {
             const body = JSON.parse(await readBody(req)) as ClassBundleBody;
@@ -370,6 +400,12 @@ export function editorApiPlugin(): Plugin {
           if (req.method === 'PUT' && url.pathname === '/__editor/enemy-bundle') {
             const body = JSON.parse(await readBody(req)) as EnemyBundleBody;
             await applyEnemyBundle(body, server);
+            sendJson(res, 200, { ok: true });
+            return;
+          }
+          if (req.method === 'PUT' && url.pathname === '/__editor/stages') {
+            const body = JSON.parse(await readBody(req)) as StageBundleBody;
+            await applyStageBundle(body, server);
             sendJson(res, 200, { ok: true });
             return;
           }
