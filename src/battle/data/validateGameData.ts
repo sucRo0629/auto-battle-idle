@@ -51,6 +51,7 @@ import type {
   SkillRegistry,
   SkillVfxDef,
   StageDef,
+  StageEnemyGroup,
   StatusEffectStat,
   StatBuffModifierEntry,
   TargetRule,
@@ -5749,6 +5750,39 @@ function parseEnemies(raw: unknown): EnemyTemplateParsed[] {
   });
 }
 
+function parseStageEnemyScale(
+  obj: Record<string, unknown>,
+  key: string,
+  context: string,
+): number {
+  const scale = parseOptionalNumber(obj, key, context) ?? 1;
+  if (scale <= 0) {
+    invalidField(context, key, 'must be a positive number');
+  }
+  return scale;
+}
+
+function parseStageEnemyGroup(entry: unknown, context: string): StageEnemyGroup {
+  const obj = requireRecord(entry, context);
+  const classId = requireString(obj, 'classId', context);
+  const count = requireNumber(obj, 'count', context);
+  if (!Number.isInteger(count) || count < 1) {
+    invalidField(context, 'count', 'must be a positive integer');
+  }
+  const hpScale = parseStageEnemyScale(obj, 'hpScale', context);
+  const atkScale = parseStageEnemyScale(obj, 'atkScale', context);
+  const defScale = parseStageEnemyScale(obj, 'defScale', context);
+  const regScale = parseStageEnemyScale(obj, 'regScale', context);
+  return {
+    classId,
+    count,
+    ...(hpScale !== 1 ? { hpScale } : {}),
+    ...(atkScale !== 1 ? { atkScale } : {}),
+    ...(defScale !== 1 ? { defScale } : {}),
+    ...(regScale !== 1 ? { regScale } : {}),
+  };
+}
+
 function parseStages(raw: unknown): StageDef[] {
   if (!Array.isArray(raw)) {
     throw new Error('stages.json must be an array');
@@ -5758,6 +5792,42 @@ function parseStages(raw: unknown): StageDef[] {
     const obj = requireRecord(entry, context);
     const id = requireString(obj, 'id', context);
     const displayName = requireString(obj, 'displayName', context);
+
+    const enemyGroupsRaw = obj.enemyGroups;
+    let enemyGroups: StageEnemyGroup[] | undefined;
+    if (enemyGroupsRaw !== undefined) {
+      if (!Array.isArray(enemyGroupsRaw) || enemyGroupsRaw.length === 0) {
+        invalidField(context, 'enemyGroups', 'must be a non-empty array');
+      }
+      enemyGroups = (enemyGroupsRaw as unknown[]).map((groupEntry, groupIndex) =>
+        parseStageEnemyGroup(groupEntry, `${context}.enemyGroups[${groupIndex}]`),
+      );
+    }
+
+    const recommendedLevelRaw = obj.recommendedLevel;
+    let recommendedLevel: number | undefined;
+    if (recommendedLevelRaw !== undefined) {
+      if (
+        typeof recommendedLevelRaw !== 'number' ||
+        Number.isNaN(recommendedLevelRaw) ||
+        !Number.isInteger(recommendedLevelRaw) ||
+        recommendedLevelRaw < 1
+      ) {
+        invalidField(context, 'recommendedLevel', 'must be a positive integer');
+      }
+      recommendedLevel = recommendedLevelRaw;
+    }
+
+    if (enemyGroups !== undefined && recommendedLevel === undefined) {
+      invalidField(
+        context,
+        'recommendedLevel',
+        'is required when enemyGroups is set',
+      );
+    }
+
+    const allowEmptyWaveEnemies = enemyGroups !== undefined;
+
     const wavesRaw = obj.waves;
     if (!Array.isArray(wavesRaw) || wavesRaw.length === 0) {
       invalidField(context, 'waves', 'must be a non-empty array');
@@ -5767,7 +5837,10 @@ function parseStages(raw: unknown): StageDef[] {
       const waveContext = `${context}.waves[${waveIndex}]`;
       const waveObj = requireRecord(waveEntry, waveContext);
       const enemiesRaw = waveObj.enemies;
-      if (!Array.isArray(enemiesRaw) || enemiesRaw.length === 0) {
+      if (!Array.isArray(enemiesRaw)) {
+        invalidField(waveContext, 'enemies', 'must be an array');
+      }
+      if (enemiesRaw.length === 0 && !allowEmptyWaveEnemies) {
         invalidField(waveContext, 'enemies', 'must be a non-empty array');
       }
 
@@ -5791,7 +5864,13 @@ function parseStages(raw: unknown): StageDef[] {
       return { enemies };
     });
 
-    return { id, displayName, waves };
+    return {
+      id,
+      displayName,
+      waves,
+      ...(recommendedLevel !== undefined ? { recommendedLevel } : {}),
+      ...(enemyGroups !== undefined ? { enemyGroups } : {}),
+    };
   });
 }
 
@@ -5996,6 +6075,13 @@ function validateReferences(
   }
 
   for (const stage of stages) {
+    stage.enemyGroups?.forEach((group, groupIndex) => {
+      if (!classById.has(group.classId)) {
+        throw new Error(
+          `Unknown classId "${group.classId}": ${stage.id} enemyGroups[${groupIndex}]`,
+        );
+      }
+    });
     stage.waves.forEach((wave, waveIndex) => {
       wave.enemies.forEach((spawn, enemyIndex) => {
         if (!enemyIds.has(spawn.templateId)) {

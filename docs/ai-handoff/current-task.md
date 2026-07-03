@@ -6,110 +6,154 @@
 - 正本仕様ではない。
 - 仕様変更が確定した場合は、必ず `docs/spec/` 配下（および `docs/` 直下の設計ドキュメント）の該当ドキュメントへ反映する。
 
-## 2. 現在の作業テーマ
+## 2. 作業テーマ
 
-- 作業名: （未記入）
-- 対象画面 / 対象機能: （未記入）
-- 目的: （未記入）
-- 完了条件: （未記入）
+- 作業名: 敵エディタ v0.3.2 — ステージ `enemyGroups` 編成
+- 状態: **Phase A 完了・Phase B 未着手**
+- 対象: ステージ敵編成、`enemyGroups`、戦闘生成、デバッグ表示、データ編集ツール
+- 完了条件: Phase A〜E の完了条件（§6 参照）
 
 ## 3. 参照すべき正本
 
-作業開始前に、今回の対象に関係するものだけを開く（全 spec 一括読み込みはしない）。
+- **v0.3.2 確定方針**（§4）
+- [docs/spec/progression.md](../spec/progression.md)
+- [docs/enemy-design-concept.md](../enemy-design-concept.md)
+- [docs/plans/enemy-editor-refactor.md](../plans/enemy-editor-refactor.md) — スキル参照分離（別 PR・本計画と並行しない）
+- [docs/plans/phase-roadmap.md](../plans/phase-roadmap.md) — Phase 6a/6b
+- 現状調査: 前回チャット（v0.3.1 調査報告）
 
-- [docs/combat-architecture.md](../combat-architecture.md) — 戦闘システム全体の上位構造（Kill / Flow / Survival）
-- [docs/class-philosophy.md](../class-philosophy.md) — 職群の設計思想
-- [docs/system-mechanics.md](../system-mechanics.md) — 複数クラスが共有する戦闘メカニクス
-- [docs/spec/classes-and-skills.md](../spec/classes-and-skills.md) — クラス・スキル JSON スキーマ・用語
-- [docs/spec/party-formation-ui.md](../spec/party-formation-ui.md) — パーティ編成メニュー UI
-- その他、今回の作業に関係するファイルがあれば追記する（例: [docs/spec/battle-field.md](../spec/battle-field.md)、[docs/spec/ui-visual-rules.md](../spec/ui-visual-rules.md)、[docs/spec/combat.md](../spec/combat.md)）
+## 4. v0.3.2 確定方針（要約）
 
-## 4. 今回の前提・決定事項
+- 新正本データ: `stages.json` ステージ直下 `enemyGroups`（wave 単位ではない）
+- 体験版: 1 stage = 1 `enemyGroups` = 1 wave 相当
+- フィールド: `classId`, `count`, `hpScale`, `atkScale`, `defScale`, `regScale`（初期 1.0）
+- 敵 Lv = `stage.recommendedLevel`。`stageLevel` / `levelOverride` は当面不要
+- スキル解放: 味方と同じ Lv0 / Lv10 / Lv20
+- stats: `computeStatsAtLevel(class, recommendedLevel)` の後に各 scale を乗算
+- 配置: 射程自動（短射程前・長射程後ろ）。同射程は group 順優先
+- 5 体以上: 入力可。注意表示可。禁止しない
+- 正本: `enemyGroups` あり → **`waves` 不要**
+- legacy 互換: `enemies.json`, `waves[].enemies[]`, `templateId`, `spawnX` は移行期残す
+- 戦闘: `enemyGroups` あり → 優先。なければ legacy
+- `at_ballista`: 体験版最終ボス枠（データ運用。専用 stage フラグは後回し）
+- ステージ画面は未実装。編成・補正はエディタ or `DebugMenuPanel` で確認
 
-- Hensei-Only は編成解法型オートバトル RPG。
-- 操作技術ではなく「誰を編成するか」が主役。
-- UI は Web アプリ風ではなく、ゲーム UI 寄りにする（[docs/spec/ui-visual-rules.md](../spec/ui-visual-rules.md)）。
-- 戦闘画面は **1280×720** 基準の絶対 px 座標で設計する（[docs/spec/battle-field.md §8](../spec/battle-field.md#8-戦闘画面-ui1280720-hud)）。
-- 実表示では画面全体を等比スケールする。
-- 要素の有無で HUD やカードの高さが戦闘中に変わらないようにする。
-- 未確定の仕様は Cursor 側で創作しない。判断できない場合は「未確定」と明記し、確認を求める。
+## 5. 現状サマリ（調査済み）
 
-## 5. 用語注意
+| 観点 | 現状 |
+| ---- | ---- |
+| エディタ | `EnemyEditorStep` = 敵テンプレ 1 件（`enemies.json`） |
+| ステージ編集 | 手編集のみ。editor API に stages なし |
+| 敵生成 | `createEnemyFromTemplate`（classRegistry 非使用） |
+| 配置 | 手動 `spawnX` |
+| `enemyGroups` / `recommendedLevel` | 型・validate 実装済み（Phase A）。戦闘生成は Phase B |
 
-- 「スキルカード」は編成画面側の用語（[docs/spec/party-formation-ui.md](../spec/party-formation-ui.md)、[docs/spec/classes-and-skills.md](../spec/classes-and-skills.md)）。
-- 戦闘画面では「スキルカード」と呼ばない。
-- 戦闘画面では必要に応じて以下のように呼ぶ。
-  - 味方スキルゲージ
-  - active 枠
-  - allyCard 内スキル欄
-  - 戦闘 HUD スキル枠
+## 6. 実装フェーズ
 
-## 6. 今回やること
+| Phase | 内容 | 状態 |
+| ----- | ---- | ---- |
+| **A** | 型・validate・`progression.md` 追記 | [x] |
+| **B** | `enemyGroups` → `CombatantState` 展開（配置仮） | [ ] |
+| **C** | 射程自動配置（enemyGroups 経路のみ） | [ ] |
+| **D** | `DebugMenuPanel` 編成・補正表示 | [ ] |
+| **E** | ステージ敵編成エディタ + stages 保存 API | [ ] |
 
-- [ ] （未記入 — ChatGPT または作業開始者が記入）
-- [ ] 
-- [ ] 
+### Phase A — 型・データ・validate
 
-## 7. 今回やらないこと
+- `StageEnemyGroup`, `StageDef` 拡張（`types.ts`）
+- `parseStages` / validate（`validateGameData.ts`）
+- `enemyGroups` あり → `recommendedLevel` 必須
+- legacy `waves` / `templateId` / `spawnX` validate 維持
+- 移行期: validate / loader 都合で `waves: [{ enemies: [] }]` プレースホルダを要求（正本では `waves` 省略可）
+- **触る:** `types.ts`, `validateGameData.ts`, `validateGameData.test.ts`, `progression.md`
+- **完了:** fixture 合法/非法（classId・count・scale・5体以上）、legacy 回帰、doc 形状追記
 
-- [ ] 正本仕様にない新仕様の追加
-- [ ] 数値バランス調整
-- [ ] unrelated なリファクタ
-- [ ] UI 全体の別案化
-- [ ] `docs/spec/` および `docs/` 設計ドキュメントと矛盾する変更
+### Phase B — 戦闘ユニット展開
 
-## 8. 触ってよいファイル
+- `expandEnemyGroups` + `createEnemyFromClassGroup`
+- `createEnemiesForStage`: `enemyGroups` あり & `waveIndex===0` → 新経路、else legacy
+- stats × scale、スキルは `resolveLearnedSkills` + `getUnlockedSkillSlotCount(level)`
+- 配置は暫定 `spawnX: 0`（Phase C で置換）
+- **触る:** `entities.ts`（+ `enemySpawn.ts` 推奨）, 新規テスト
+- **完了:** Lv/scale/スキル枠テスト、legacy 戦闘回帰
 
-- 未記入の場合、Cursor は作業前に候補を洗い出す。
-- 例:
-  - `src/...`
-  - `docs/...`
+### Phase C — 射程自動配置
 
-## 9. 触らないファイル
+- 射程昇順ソート、group 順タイブレーク、`separateByGap`
+- legacy `spawnX` 経路は不変
+- **触る:** `combatPosition.ts`（+ `enemyFormation.ts` 推奨）, 配置テスト
+- **完了:** 近接前・遠隔後、legacy 回帰
 
-- 未記入の場合、Cursor は不要なファイルを変更しない。
-- 例:
-  - `docs/spec/classes-and-skills.md`（今回の作業で spec 更新が明示されていない限り）
-  - `src/data/...` / `data/...`（今回の作業でデータ変更が明示されていない限り）
+### Phase D — デバッグ表示
 
-## 10. Cursor 作業後の報告フォーマット
+- 選択ステージの `recommendedLevel`, `enemyGroups`, 総体数
+- 5 体以上注意表示。legacy は `templateId` 一覧
+- **触る:** `DebugMenuPanel.ts`, `debug-menu.css`, プレビューヘルパー（推奨）
+- **完了:** 表示とデータ一致
 
-Cursor は作業完了後、以下の形式で報告する。
+### Phase E — エディタ化
 
-### 変更概要
+- `GET/PUT /__editor/stages`、ステージ選択・group 編集・保存
+- 旧敵テンプレ UI は移行期温存か隠すか **未確定**
+- **触る:** `EnemyEditorStep` or `StageEnemyEditorStep`, `EditorApp`, `editorApi`, `vite-plugin-editor-api`, `data/stages.json`
+- **完了:** 保存→validate→戦闘→デバッグ表示の一連
 
-- 
+## 7. 次にやること
 
-### 変更ファイル
+- [x] **Phase A** 実装（最小差分: types + validate + tests + `progression.md`）
+- [ ] **Phase B** 実装（`enemyGroups` → `CombatantState` 展開）
 
-- 
+## 8. やらないこと（全体）
 
-### 実装内容
+- legacy データの即削除
+- ステージ選択画面 UI
+- [enemy-editor-refactor.md](../plans/enemy-editor-refactor.md) のスキル参照分離（別 PR）
+- 数値バランス調整
+- `at_ballista` 専用 stage フラグ
+- enemy-design-concept §12 の段階サブセット（Lv0/10/20 全解放が v0.3.2 正）
 
-- 
+## 9. 互換性
 
-### 仕様との対応
+| レイヤ | 方針 |
+| ------ | ---- |
+| 戦闘 | `enemyGroups` あり & wave 0 → 新経路。else legacy |
+| データ | `enemies.json`, `waves`/`templateId`/`spawnX` 残す |
+| 配置 | enemyGroups = 射程自動。legacy = `spawnX` |
 
-- 
+## 10. 衝突時の優先
 
-### 未解決 / 判断保留
+**v0.3.2 > 現行実装 > 旧 doc**。legacy 読み取り経路は維持。
 
-- 
+## 11. 未確定
 
-### テスト・確認結果
+- ~~`waves` 省略~~ — **正本: enemyGroups ありなら waves 不要**。移行期 validate は非空 `waves` + 空 `enemies` プレースホルダを要求（Phase A）
+- `regScale` 適用、`scale` 下限（0 禁止か）
+- `enemyGroups` ステージの EXP 報酬
+- multi-wave + `enemyGroups`（体験版スコープ外、wave 0 のみ）
+- Phase E で旧敵テンプレ UI を残すか隠すか
+- `stages-demo.json` 分離タイミング（roadmap 6b）
+- エディタ classId allowlist を validate でも強制するか
+- 5 体警告閾値（`>= 5` vs `> 4`）
 
-- 
+## 12. リスク（要監視）
 
-### ChatGPT にレビューしてほしい点
+- `isEnemy` / 味方専用分岐（`SkillExecutor` 等）
+- スキル解放の `PartyMemberState` 前提
+- stat scale 乗算順・丸め
+- `spawnX` 依存の配置・HUD・reel-in
+- EXP が 0 になる可能性（enemyGroups に exp なし）
 
-- 
+## 13. 最初の最小差分
 
-## 11. ChatGPT へ戻すときの貼り付け用メモ
+Phase A のみ（戦闘・UI に触らない）:
 
-Cursor は必要に応じて、この節に ChatGPT へ貼るための短い要約を書く。
+1. 型追加
+2. parse / validate + テスト 2 件
+3. `progression.md` にデータ形状追記
 
-- 今回の目的:
-- 実際に変えた内容:
-- 気になる点:
-- スクショ確認が必要な箇所:
-- 次に判断したいこと:
+## 14. ChatGPT へ戻すときのメモ
+
+- 目的: v0.3.2 敵編成の段階実装
+- 現在地: Phase A 完了（types + validate + 14 tests + progression.md）
+- 次: Phase B（`expandEnemyGroups` + 戦闘生成）
+- 判断待ち: EXP、旧エディタ UI 扱い。**waves:** 正本は enemyGroups ありなら省略可。移行期 validate はプレースホルダ要求

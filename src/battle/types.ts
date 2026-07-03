@@ -1685,10 +1685,24 @@ export interface StageWave {
   enemies: StageWaveEnemy[];
 }
 
+/** ステージ直下の敵編成グループ（v0.3.2）。1 group = 同一 classId の複数体。 */
+export interface StageEnemyGroup {
+  classId: ClassId;
+  count: number;
+  hpScale?: number;
+  atkScale?: number;
+  defScale?: number;
+  regScale?: number;
+}
+
 export interface StageDef {
   id: string;
   displayName: string;
   waves: StageWave[];
+  /** 想定レベル。enemyGroups 使用時は必須。☆ 判定・Level Sync 上限にも使う。 */
+  recommendedLevel?: number;
+  /** クラスベース敵編成。体験版は 1 stage = 1 配列 = wave 0 相当。 */
+  enemyGroups?: StageEnemyGroup[];
 }
 
 export interface PartyMemberDef {

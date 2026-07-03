@@ -223,3 +223,251 @@ describe('deprecated threat validation', () => {
     ).toThrow(/frontThreatFloor.*deprecated/i);
   });
 });
+
+const minimalStageClass = {
+  id: 'df_paladin',
+  role: 'defender',
+  displayName: '聖騎士',
+  summary: { ja: 'test' },
+  formationRow: 'front',
+  maxHp: 100,
+  atk: 10,
+  def: 5,
+  reg: 0,
+  basicAttackSkillId: 'df_paladin_basic_attack',
+  passiveIds: [],
+  starterActiveIds: [],
+  skills: [{ level: 0, skillIds: [] }],
+  classSkillIds: [],
+};
+
+const minimalStageEnemy = {
+  id: 'test_dummy',
+  displayName: 'dummy',
+  maxHp: 100,
+  atk: 1,
+  def: 1,
+  reg: 0,
+  exp: 0,
+  basicAttackSkillId: 'test_dummy_basic_attack',
+  attackSpeedTier: 'normal',
+};
+
+const minimalStageSkills = {
+  passives: [],
+  actives: [
+    {
+      id: 'df_paladin_basic_attack',
+      name: 'basic',
+      trigger: { kind: 'time', value: 2 },
+      effect: [
+        {
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          type: 'damage',
+          amount: { kind: 'atkBased', atkScale: 1 },
+        },
+      ],
+    },
+    {
+      id: 'test_dummy_basic_attack',
+      name: 'basic',
+      trigger: { kind: 'time', value: 2 },
+      effect: [
+        {
+          target: { kind: 'distance', side: 'enemy', order: 'nearest' },
+          type: 'damage',
+          amount: { kind: 'atkBased', atkScale: 1 },
+        },
+      ],
+    },
+  ],
+};
+
+describe('stage enemyGroups validation', () => {
+  it('accepts enemyGroups stage with recommendedLevel and empty wave placeholder', () => {
+    const result = parseAndValidateGameDataJson(
+      {
+        classes: [minimalStageClass],
+        enemies: [minimalStageEnemy],
+        skills: minimalStageSkills,
+        stages: [
+          {
+            id: 'demo_1',
+            displayName: 'Demo 1',
+            recommendedLevel: 10,
+            enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+            waves: [{ enemies: [] }],
+          },
+        ],
+        parties: emptyGameDataShell.parties,
+      },
+      { mode: 'editor' },
+    );
+
+    expect(result.stages[0]).toMatchObject({
+      id: 'demo_1',
+      recommendedLevel: 10,
+      enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+      waves: [{ enemies: [] }],
+    });
+  });
+
+  it('rejects enemyGroups without recommendedLevel', () => {
+    expect(() =>
+      parseAndValidateGameDataJson(
+        {
+          classes: [minimalStageClass],
+          enemies: [minimalStageEnemy],
+          skills: minimalStageSkills,
+          stages: [
+            {
+              id: 'bad',
+              displayName: 'Bad',
+              enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+              waves: [{ enemies: [] }],
+            },
+          ],
+          parties: emptyGameDataShell.parties,
+        },
+        { mode: 'editor' },
+      ),
+    ).toThrow(/recommendedLevel.*required when enemyGroups is set/i);
+  });
+
+  it('keeps legacy wave templateId validation', () => {
+    const result = parseAndValidateGameDataJson(
+      {
+        classes: [minimalStageClass],
+        enemies: [minimalStageEnemy],
+        skills: minimalStageSkills,
+        stages: [
+          {
+            id: 'legacy',
+            displayName: 'Legacy',
+            waves: [{ enemies: [{ templateId: 'test_dummy', spawnX: 0 }] }],
+          },
+        ],
+        parties: emptyGameDataShell.parties,
+      },
+      { mode: 'editor' },
+    );
+
+    expect(result.stages[0]?.waves[0]?.enemies[0]).toEqual({
+      templateId: 'test_dummy',
+      spawnX: 0,
+    });
+  });
+
+  it('rejects legacy stage with empty wave enemies', () => {
+    expect(() =>
+      parseAndValidateGameDataJson(
+        {
+          classes: [minimalStageClass],
+          enemies: [minimalStageEnemy],
+          skills: minimalStageSkills,
+          stages: [
+            {
+              id: 'legacy_empty',
+              displayName: 'Legacy Empty',
+              waves: [{ enemies: [] }],
+            },
+          ],
+          parties: emptyGameDataShell.parties,
+        },
+        { mode: 'editor' },
+      ),
+    ).toThrow(/enemies.*must be a non-empty array/i);
+  });
+
+  it('rejects enemyGroups with unknown classId', () => {
+    expect(() =>
+      parseAndValidateGameDataJson(
+        {
+          classes: [minimalStageClass],
+          enemies: [minimalStageEnemy],
+          skills: minimalStageSkills,
+          stages: [
+            {
+              id: 'bad_class',
+              displayName: 'Bad Class',
+              recommendedLevel: 5,
+              enemyGroups: [{ classId: 'no_such_class', count: 1 }],
+              waves: [{ enemies: [] }],
+            },
+          ],
+          parties: emptyGameDataShell.parties,
+        },
+        { mode: 'editor' },
+      ),
+    ).toThrow(/Unknown classId "no_such_class"/i);
+  });
+
+  it('rejects enemyGroups with count 0', () => {
+    expect(() =>
+      parseAndValidateGameDataJson(
+        {
+          classes: [minimalStageClass],
+          enemies: [minimalStageEnemy],
+          skills: minimalStageSkills,
+          stages: [
+            {
+              id: 'bad_count',
+              displayName: 'Bad Count',
+              recommendedLevel: 5,
+              enemyGroups: [{ classId: 'df_paladin', count: 0 }],
+              waves: [{ enemies: [] }],
+            },
+          ],
+          parties: emptyGameDataShell.parties,
+        },
+        { mode: 'editor' },
+      ),
+    ).toThrow(/count.*must be a positive integer/i);
+  });
+
+  it('rejects enemyGroups with non-positive scale', () => {
+    expect(() =>
+      parseAndValidateGameDataJson(
+        {
+          classes: [minimalStageClass],
+          enemies: [minimalStageEnemy],
+          skills: minimalStageSkills,
+          stages: [
+            {
+              id: 'bad_scale',
+              displayName: 'Bad Scale',
+              recommendedLevel: 5,
+              enemyGroups: [{ classId: 'df_paladin', count: 1, hpScale: 0 }],
+              waves: [{ enemies: [] }],
+            },
+          ],
+          parties: emptyGameDataShell.parties,
+        },
+        { mode: 'editor' },
+      ),
+    ).toThrow(/hpScale.*must be a positive number/i);
+  });
+
+  it('accepts enemyGroups with count 5 or more', () => {
+    const result = parseAndValidateGameDataJson(
+      {
+        classes: [minimalStageClass],
+        enemies: [minimalStageEnemy],
+        skills: minimalStageSkills,
+        stages: [
+          {
+            id: 'many_enemies',
+            displayName: 'Many Enemies',
+            recommendedLevel: 10,
+            enemyGroups: [{ classId: 'df_paladin', count: 5 }],
+            waves: [{ enemies: [] }],
+          },
+        ],
+        parties: emptyGameDataShell.parties,
+      },
+      { mode: 'editor' },
+    );
+
+    expect(result.stages[0]?.enemyGroups?.[0]?.count).toBe(5);
+  });
+});

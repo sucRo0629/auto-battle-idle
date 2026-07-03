@@ -292,14 +292,44 @@ Victory 確定時に、当該 sortie のオプションを入力として **`res
 #### データ形状
 
 ```typescript
-/** ステージ JSON（6b / 8b 以降） */
+/** ステージ JSON（6b / 8b 以降）— 正本形状 */
 interface StageDef {
   id: string;
   displayName: string;
-  waves: StageWave[];
   recommendedLevel?: number; // 想定レベル。☆ 判定・Level Sync 上限
+  /** v0.3.2 — クラスベース敵編成。設定時は recommendedLevel 必須。 */
+  enemyGroups?: StageEnemyGroup[];
+  /** legacy 敵編成。新正本では enemyGroups あり時は **不要**（省略可）。 */
+  waves?: StageWave[];
 }
 
+/** v0.3.2 — ステージ直下の敵グループ（wave 単位ではない） */
+interface StageEnemyGroup {
+  classId: ClassId;
+  count: number; // 正の整数
+  hpScale?: number; // 省略時 1.0。正数
+  atkScale?: number;
+  defScale?: number;
+  regScale?: number;
+}
+```
+
+**敵編成の二系統（v0.3.2）**
+
+| 経路 | データ | 戦闘生成（実装フェーズ） |
+| ---- | ------ | ------------------------ |
+| **新** | `enemyGroups` + `recommendedLevel` | **Phase B** — `CombatantState` 展開・stats × scale。**Phase C** — 射程自動配置。**Phase D/E** — デバッグ表示・エディタ |
+| **legacy** | `waves[].enemies[]` の `templateId` + `spawnX` | 現行どおり `enemies.json` テンプレから生成 |
+
+- **Phase A（現状）:** 型・validate のみ。戦闘生成・射程配置・UI は未接続。
+
+- `enemyGroups` ありのステージは `recommendedLevel` **必須**（validate）。
+- **正本:** `enemyGroups` があれば **`waves` は不要**（省略可）。体験版は 1 stage = 1 `enemyGroups` 配列。
+- **移行期（Phase A validate / loader）:** 現行 `parseStages` が `waves` 非空配列を要求するため、データ上は `waves: [{ enemies: [] }]` プレースホルダを置く。空 wave では legacy `templateId` 検証をスキップ。将来 validate を正本に合わせて `waves` 省略可にする。
+- legacy ステージ（`enemyGroups` なし）は従来どおり `waves[].enemies` 非空必須。
+- `enemies.json` / `templateId` / `spawnX` は移行期間中も維持。
+
+```typescript
 /** 1 回の勝利ごとに 1 件追加 */
 interface StageClearEntry {
   clearLevel: number; // 勝利時の実効 Lv（上記 §記録するレベル）
