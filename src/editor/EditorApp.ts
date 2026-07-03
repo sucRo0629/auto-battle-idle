@@ -1,4 +1,4 @@
-import type { AttackSpeedTier, EnemyTemplate } from '../battle/types.ts';
+import type { AttackSpeedTier, EnemyTemplate, StageDef } from '../battle/types.ts';
 import { DEFAULT_BASIC_ATTACK_INTERVAL_SEC } from '../battle/data/synthesizeBasicAttack.ts';
 import { normalizePassiveSkillForEditor } from '../battle/data/validateGameData.ts';
 import type { ClassPresetBeforeEnrich } from '../progression/skillUnlocks.ts';
@@ -7,6 +7,7 @@ import type { BalanceDisplayMode } from './balanceReference.ts';
 import { BalanceEditorStep } from './BalanceEditorStep.ts';
 import { ClassEditorStep, loadClassDraftById } from './ClassEditorStep.ts';
 import { EnemyEditorStep, loadEnemyDraftById } from './EnemyEditorStep.ts';
+import { StageEnemyEditorStep } from './StageEnemyEditorStep.ts';
 import { StatusIconsEditorStep } from './StatusIconsEditorStep.ts';
 import {
   applyEnemyAttackSpeedTier,
@@ -23,14 +24,17 @@ import {
   defaultBasicAttackId,
   ensureClassBasicAttackPool,
   ensureClassGrowthFields,
+  createEmptyStageDraft,
   fetchClasses,
   fetchEnemies,
   fetchSkills,
+  fetchStages,
   initClassSkillEntriesFromPreset,
   initEnemySkillEntriesFromPreset,
   isBalanceRowDirty,
   isBasicAttackSkillId,
   isEnemyBasicAttackEntry,
+  loadStageDraftById,
   nextClassSkillId,
   resyncEnemyBasicAttackEntry,
   resolveEnemyAttackSpeedSelect,
@@ -45,6 +49,7 @@ import {
   type BalanceClassRow,
   type ClassDraft,
   type EnemyDraft,
+  type StageDraft,
   type SkillDraftEntry,
   type SkillSlotKind,
   type SkillsJson,
@@ -56,7 +61,7 @@ import {
 } from './SkillEditorStep.ts';
 import { createActionButton, createButton, createEl, preserveScrollDuring } from './formUtils.ts';
 
-type EditorTab = 'class' | 'enemy' | 'balance' | 'statusIcons';
+type EditorTab = 'class' | 'enemy' | 'stage' | 'balance' | 'statusIcons';
 
 const EDITOR_SESSION_KEY = projectStorageKey('editor-session');
 
@@ -64,12 +69,14 @@ interface EditorSessionState {
   tab?: EditorTab;
   selectedClassId?: string;
   selectedEnemyId?: string;
+  selectedStageId?: string;
 }
 
 export class EditorApp {
   private tab: EditorTab = 'class';
   private classes: ClassPresetBeforeEnrich[] = [];
   private enemies: EnemyTemplate[] = [];
+  private stages: StageDef[] = [];
   private skills: SkillsJson = { passives: [], actives: [] };
 
   private classDraft: ClassDraft = createEmptyClassDraft();
@@ -79,6 +86,9 @@ export class EditorApp {
   private enemyDraft: EnemyDraft = createEmptyEnemyDraft();
   private selectedEnemyId = '';
   private enemySkillEntries: SkillDraftEntry[] = [];
+
+  private stageDraft: StageDraft = createEmptyStageDraft();
+  private selectedStageId = '';
 
   private balanceRows: BalanceClassRow[] = [];
   private balanceJobTier = 1;
@@ -90,6 +100,7 @@ export class EditorApp {
 
   private classStep: ClassEditorStep | null = null;
   private enemyStep: EnemyEditorStep | null = null;
+  private stageStep: StageEnemyEditorStep | null = null;
   private skillStep: SkillEditorStep | null = null;
   private balanceStep: BalanceEditorStep | null = null;
   private statusIconsStep: StatusIconsEditorStep | null = null;
@@ -109,7 +120,13 @@ export class EditorApp {
       const raw = sessionStorage.getItem(EDITOR_SESSION_KEY);
       if (!raw) return;
       const state = JSON.parse(raw) as EditorSessionState;
-      if (state.tab === 'class' || state.tab === 'enemy' || state.tab === 'balance' || state.tab === 'statusIcons') {
+      if (
+        state.tab === 'class' ||
+        state.tab === 'enemy' ||
+        state.tab === 'stage' ||
+        state.tab === 'balance' ||
+        state.tab === 'statusIcons'
+      ) {
         this.tab = state.tab;
       }
       if (typeof state.selectedClassId === 'string') {
@@ -117,6 +134,9 @@ export class EditorApp {
       }
       if (typeof state.selectedEnemyId === 'string') {
         this.selectedEnemyId = state.selectedEnemyId;
+      }
+      if (typeof state.selectedStageId === 'string') {
+        this.selectedStageId = state.selectedStageId;
       }
     } catch {
       // ignore corrupt session data
@@ -128,6 +148,7 @@ export class EditorApp {
       tab: this.tab,
       selectedClassId: this.selectedClassId,
       selectedEnemyId: this.selectedEnemyId,
+      selectedStageId: this.selectedStageId,
     };
     sessionStorage.setItem(EDITOR_SESSION_KEY, JSON.stringify(state));
   }
@@ -152,6 +173,17 @@ export class EditorApp {
         this.enemyDraft.enemy,
         this.skills,
       );
+    }
+    if (this.stages.length > 0) {
+      if (
+        this.selectedStageId &&
+        this.stages.some((stage) => stage.id === this.selectedStageId)
+      ) {
+        this.stageDraft = loadStageDraftById(this.stages, this.selectedStageId);
+      } else {
+        this.selectedStageId = this.stages[0]!.id;
+        this.stageDraft = loadStageDraftById(this.stages, this.selectedStageId);
+      }
     }
   }
 
@@ -185,6 +217,7 @@ export class EditorApp {
     const items: { id: EditorTab; label: string }[] = [
       { id: 'class', label: 'クラス' },
       { id: 'enemy', label: '敵' },
+      { id: 'stage', label: 'ステージ' },
       { id: 'balance', label: 'バランス' },
       { id: 'statusIcons', label: '状態アイコン' },
     ];
@@ -205,13 +238,15 @@ export class EditorApp {
 
   private async loadData(): Promise<void> {
     try {
-      const [classes, enemies, skills] = await Promise.all([
+      const [classes, enemies, stages, skills] = await Promise.all([
         fetchClasses(),
         fetchEnemies(),
+        fetchStages(),
         fetchSkills(),
       ]);
       this.classes = classes;
       this.enemies = enemies;
+      this.stages = stages;
       this.skills = {
         ...skills,
         passives: skills.passives.map(normalizePassiveSkillForEditor),
@@ -257,11 +292,13 @@ export class EditorApp {
 
     this.classStep?.destroy();
     this.enemyStep?.destroy();
+    this.stageStep?.destroy();
     this.skillStep?.destroy();
     this.balanceStep?.destroy();
     this.statusIconsStep?.destroy();
     this.classStep = null;
     this.enemyStep = null;
+    this.stageStep = null;
     this.skillStep = null;
     this.balanceStep = null;
     this.statusIconsStep = null;
@@ -281,6 +318,11 @@ export class EditorApp {
 
       if (this.tab === 'balance') {
         this.renderBalanceEditor();
+        return;
+      }
+
+      if (this.tab === 'stage') {
+        this.renderStageEditor();
         return;
       }
 
@@ -400,6 +442,19 @@ export class EditorApp {
       this.tab = 'balance';
       this.render();
     }
+  }
+
+  private renderStageEditor(): void {
+    const host = createEl('div', 'editor-panel editor-panel-stage');
+    this.contentEl.appendChild(host);
+
+    this.stageStep = new StageEnemyEditorStep(host, {
+      getDraft: () => this.stageDraft,
+      stages: this.stages,
+      selectedStageId: this.selectedStageId,
+      onSelectStage: (stageId) => this.selectStage(stageId),
+      saving: this.saving,
+    });
   }
 
   private renderEnemyEditor(): void {
@@ -659,6 +714,13 @@ export class EditorApp {
       items.push({ id: selectedId, label: `${displayName} (${selectedId})` });
     }
     return items;
+  }
+
+  private selectStage(stageId: string): void {
+    this.selectedStageId = stageId;
+    this.stageDraft = loadStageDraftById(this.stages, stageId);
+    this.persistSession();
+    this.render();
   }
 
   private selectClass(classId: string): void {

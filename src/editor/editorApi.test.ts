@@ -8,7 +8,9 @@ import {
   classStatsEqual,
   collectSkillsFromDrafts,
   defaultBasicAttackId,
+  createEmptyStageDraft,
   initClassSkillEntriesFromPreset,
+  loadStageDraftById,
   normalizeStageDraftForSave,
   resyncEnemyBasicAttackEntry,
   toClassStatsPatch,
@@ -683,5 +685,38 @@ describe('normalizeStageDraftForSave', () => {
         { mode: 'editor' },
       ),
     ).toThrow(/recommendedLevel.*required when enemyGroups is set/i);
+  });
+});
+
+describe('stage draft helpers', () => {
+  const stages = [
+    {
+      id: 'demo_1',
+      displayName: 'Demo 1',
+      recommendedLevel: 10,
+      enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+      waves: [{ enemies: [] }],
+    },
+    {
+      id: 'legacy_1',
+      displayName: 'Legacy 1',
+      waves: [{ enemies: [{ templateId: 'test_dummy', spawnX: 100 }] }],
+    },
+  ];
+
+  it('createEmptyStageDraft returns blank draft', () => {
+    expect(createEmptyStageDraft()).toEqual({ id: '', displayName: '' });
+  });
+
+  it('loadStageDraftById clones matching stage', () => {
+    const draft = loadStageDraftById(stages, 'demo_1');
+    expect(draft.id).toBe('demo_1');
+    expect(draft.enemyGroups).toEqual([{ classId: 'df_paladin', count: 2 }]);
+    draft.id = 'mutated';
+    expect(stages[0]!.id).toBe('demo_1');
+  });
+
+  it('loadStageDraftById falls back to empty draft for unknown id', () => {
+    expect(loadStageDraftById(stages, 'missing')).toEqual(createEmptyStageDraft());
   });
 });

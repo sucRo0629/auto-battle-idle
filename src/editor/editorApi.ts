@@ -172,6 +172,22 @@ export async function fetchStages(): Promise<StageDef[]> {
   return fetchJson<StageDef[]>('/__editor/stages');
 }
 
+export function createEmptyStageDraft(): StageDraft {
+  return {
+    id: '',
+    displayName: '',
+  };
+}
+
+export function stageDraftFromStage(stage: StageDef): StageDraft {
+  return structuredClone(stage);
+}
+
+export function loadStageDraftById(stages: StageDef[], stageId: string): StageDraft {
+  const stage = stages.find((entry) => entry.id === stageId);
+  return stage ? stageDraftFromStage(stage) : createEmptyStageDraft();
+}
+
 export async function saveStageBundle(payload: { stage: StageDraft }): Promise<void> {
   const stage = normalizeStageDraftForSave(payload.stage);
   await fetchJson('/__editor/stages', {
