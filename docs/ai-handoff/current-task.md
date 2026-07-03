@@ -9,7 +9,7 @@
 ## 2. 作業テーマ
 
 - 作業名: Phase 6b — M1 体験版ステージ構成（`stages-demo.json` 向け）
-- 状態: **Phase A〜E5 完了** → **6b-0a〜6b-1 完了** → **6b-3 調査完了** → **6b-4（`BUILD_FLAVOR=demo` 読込分離実装）完了** → **6b-5（demo runtime smoke テスト）完了** → **6b-6（demo 初期 stage 選択経路調査）完了** → **6b-7（demo flavor 初期 stage / fallback テスト）完了**
+- 状態: **Phase A〜E5 完了** → **6b-0a〜6b-1 完了** → **6b-3 調査完了** → **6b-4（`BUILD_FLAVOR=demo` 読込分離実装）完了** → **6b-5（demo runtime smoke テスト）完了** → **6b-6（demo 初期 stage 選択経路調査）完了** → **6b-7（demo flavor 初期 stage / fallback テスト）完了** → **6b-8（demo 初回戦闘 spawn smoke）完了**
 - 対象: M1 体験版ステージ構成、`data/stages-demo.json`、`BUILD_FLAVOR=demo` 読込分離
 - 完了条件: M1 stage 草案確定 → `stages-demo.json` スケルトン作成（**6b-1 完了**）→ demo 読込分離（§7 参照）
 - スコープ外（6b）: レベル実装・EXP 集計・`computeStageExpReward`・進行報酬・`recommendedLevel` の実ゲーム接続・`stages.json` 変更
@@ -299,8 +299,16 @@
 - 追加: `src/progression/stageProgression.flavor.test.ts`（`loadGameData.flavor.test.ts` と同様の `BUILD_FLAVOR` if/else）
 - full: `createDefaultSave` → `test`、未知 id fallback → `test`
 - demo: `createDefaultSave` → `demo_ch1_01`、`resolveKnownStageId('test')` → `demo_ch1_01`、`demo_ch1_02` 維持
-- 未実施（別タスク）: 初回戦闘 spawn smoke、`GameSession` 統合テスト
 - 実行: `vitest run src/progression/stageProgression.flavor.test.ts`（full 3 / demo 3 pass）、関連 `stageProgression.test.ts`・`loadGameData.flavor.test.ts`・`validateGameData.test.ts` pass
+
+### Phase 6b-8 — demo 初回戦闘 spawn smoke（完了）
+
+- 追加: `src/battle/entities.enemyGroups.flavor.test.ts`
+- production code 変更なし
+- demo（`BUILD_FLAVOR=demo`）: `loadGameData()` の `stages[0]` が `demo_ch1_01`；`createDefaultSave` の初期 stage が `demo_ch1_01`；`createEnemiesForStage` で `demo_ch1_01` の `enemyGroups` から `at_swordsman` ×2 が生成される
+- full（デフォルト）: `demo_ch1_*` を含まない；`eg_smoke` が従来どおり 2 体 spawn
+- 実行: full — `entities.enemyGroups.flavor.test.ts` + 関連 3 ファイル **17 passed**；demo — `BUILD_FLAVOR=demo` で flavor 3 ファイル **5 passed**
+- 未確定: `GameSession` 統合経路（起動〜戦闘開始 UI）は未カバー；verify モード ON 時の初回体験は未カバー；`dev:demo` / Electron packaging / demo editor 対応は後続
 
 ### Phase E5（完了）
 
@@ -346,9 +354,15 @@
 
 ### 次点
 
-- [x] **Phase 6b-7 — demo flavor 初期 stage / fallback テスト** — `stageProgression.flavor.test.ts` 追加（spawn smoke は未実施）
+- [x] **Phase 6b-7 — demo flavor 初期 stage / fallback テスト** — `stageProgression.flavor.test.ts` 追加
+- [x] **Phase 6b-8 — demo 初回戦闘 spawn smoke** — `entities.enemyGroups.flavor.test.ts` 追加（§6b-8）
 - [x] **`BUILD_FLAVOR=demo` 読込分離調査（6b-3）** — 経路洗い出し完了（§6b-3）。実装は次タスク
 - [x] **`BUILD_FLAVOR=demo` 読込分離実装（6b-4）** — `vite.config.ts` alias + `loadGameData.ts` + `build:demo` / `build:full`
+
+### 次候補
+
+- [ ] **Phase 6b 締め整理**
+- [ ] **Phase 7 — `dev:demo` / 起動導線整理**（`GameSession` 統合 smoke は必要なら別タスク化）
 
 ### 後回し
 
@@ -388,8 +402,8 @@
 ## 10. ChatGPT へ戻すときのメモ
 
 - 目的: M1 体験版ステージ（`stages-demo.json`）の構成確定とデータ化
-- 現在地: **Phase 6b-7 完了** — `stageProgression.flavor.test.ts` で demo 新規 `demo_ch1_01`・未知 id fallback・`demo_ch1_02` 維持を固定
-- 次（推奨）: 6b-7 残（初回戦闘 spawn smoke）、Phase 6c バランス / Phase 6d マップ選択 UI
-- 次（次点）: Phase 6d マップ選択 UI / 6c バランス
+- 現在地: **Phase 6b-8 完了** — `entities.enemyGroups.flavor.test.ts` で demo 初回 `demo_ch1_01` の `at_swordsman` ×2 spawn・full `eg_smoke` 2 体を固定
+- 次（推奨）: Phase 6b 締め整理、または Phase 7 `dev:demo` / 起動導線整理
+- 次（次点）: Phase 6c バランス / Phase 6d マップ選択 UI。`GameSession` 統合 smoke は必要なら別タスク
 - 後回し: EXP 集計、`test`/`1`/`2` 移行、legacy 変換 UI
 - 判断待ち: §9 未対応・未確定事項（6c 数値・6d 導線は別フェーズ）
