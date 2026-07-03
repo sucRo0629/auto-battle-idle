@@ -1,6 +1,6 @@
 import classesJson from '../../../data/classes.json';
 import enemiesJson from '../../../data/enemies.json';
-import stagesJson from '../../../data/stages.json';
+import stagesJson from '@game-data/stages';
 import partiesJson from '../../../data/parties.json';
 import type { ActiveSkillDef, ClassPreset, EnemyTemplate, GameData, PassiveSkillDef } from '../types.ts';
 import { parseAndValidateGameDataJson } from './validateGameData.ts';

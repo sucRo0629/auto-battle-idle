@@ -1,5 +1,9 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@game-data/stages": ["data/stages.json"]
+    },
     "target": "ES2022",
     "module": "ESNext",
     "lib": ["ES2022", "DOM"],

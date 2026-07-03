@@ -3,9 +3,20 @@ import { resolve } from 'node:path';
 import { defineConfig } from 'vite';
 import { editorApiPlugin } from './vite-plugin-editor-api.ts';
 
+const buildFlavor = process.env.BUILD_FLAVOR ?? 'full';
+const stagesDataFile =
+  buildFlavor === 'demo'
+    ? resolve(__dirname, 'data/stages-demo.json')
+    : resolve(__dirname, 'data/stages.json');
+
 export default defineConfig({
   base: './',
   plugins: [editorApiPlugin()],
+  resolve: {
+    alias: {
+      '@game-data/stages': stagesDataFile,
+    },
+  },
   server: {
     watch: {
       // エディタ保存で JSON が更新されてもエディタ画面はフルリロードしない（選択状態が消えるのを防ぐ）。

@@ -9,7 +9,7 @@
 ## 2. 作業テーマ
 
 - 作業名: Phase 6b — M1 体験版ステージ構成（`stages-demo.json` 向け）
-- 状態: **Phase A〜E5 完了** → **6b-0a〜6b-1 完了** → **6b-3（`BUILD_FLAVOR=demo` 読込分離調査）完了**
+- 状態: **Phase A〜E5 完了** → **6b-0a〜6b-1 完了** → **6b-3 調査完了** → **6b-4（`BUILD_FLAVOR=demo` 読込分離実装）完了**
 - 対象: M1 体験版ステージ構成、`data/stages-demo.json`、`BUILD_FLAVOR=demo` 読込分離
 - 完了条件: M1 stage 草案確定 → `stages-demo.json` スケルトン作成（**6b-1 完了**）→ demo 読込分離（§7 参照）
 - スコープ外（6b）: レベル実装・EXP 集計・`computeStageExpReward`・進行報酬・`recommendedLevel` の実ゲーム接続・`stages.json` 変更
@@ -215,6 +215,15 @@
 - demo ビルドに `stages.json` を同梱するか（alias なら不要が望ましい）
 - editor で `stages-demo` を編集する時期（6d / 7 か、専用 `GET/PUT` か）
 
+### Phase 6b-4 — `BUILD_FLAVOR=demo` 読込分離実装（完了）
+
+- `vite.config.ts`: `BUILD_FLAVOR`（未指定=`full`）で `@game-data/stages` alias を `data/stages.json` / `data/stages-demo.json` に切替
+- `loadGameData.ts`: stages import を `@game-data/stages` 経由に変更（ランタイムのみ）
+- `tsconfig.json`: tsc 用 paths（常に `data/stages.json`）
+- `package.json`: `build:full` / `build:demo` 追加（`BUILD_FLAVOR=full|demo vite build`）。既存 `build` は変更なし
+- editor / validate / JSON 本体は未変更
+- 確認: `validateGameData.test.ts` pass。`vite build` で full→`eg_smoke` 同梱・demo→`demo_ch1_*` 同梱（`stages.json` 非同梱）。`npm run build:*` は `tsc` 段階で既存 test 型エラーにより fail（本変更前から同様）
+
 ### Phase E5（完了）
 
 **データ**
@@ -258,7 +267,7 @@
 ### 次点
 
 - [x] **`BUILD_FLAVOR=demo` 読込分離調査（6b-3）** — 経路洗い出し完了（§6b-3）。実装は次タスク
-- [ ] **`BUILD_FLAVOR=demo` 読込分離実装** — `vite.config.ts` alias + `loadGameData.ts` + `build:demo` / `build:full`
+- [x] **`BUILD_FLAVOR=demo` 読込分離実装（6b-4）** — `vite.config.ts` alias + `loadGameData.ts` + `build:demo` / `build:full`
 
 ### 後回し
 
@@ -287,7 +296,7 @@
 | ---- | ---- |
 | legacy ステージ移行 | `test` / `1` / `2` は未移行。`eg_smoke` / `ranged_test` のみ `enemyGroups` 化済み |
 | `stages-demo.json` | **6b-1 完了**。`demo_ch1_01`〜`07` 確定データ（§6b-1）。次は 6b-2 validate テスト |
-| `BUILD_FLAVOR=demo` | **6b-3 調査完了**（§6b-3）。ランタイム読込のみ差し替えが最小。editor は当面 `stages.json` 維持推奨 |
+| `BUILD_FLAVOR=demo` | **6b-4 実装完了**。ランタイム alias 切替 + `build:demo` / `build:full`。editor は `stages.json` 固定のまま |
 | EXP 集計 | `enemyGroups` ステージの撃破 EXP が `computeStageExpReward` 未対応（後回し） |
 | validate allowlist | classId の subset 化は未実装 |
 | 5 体以上 | エディタ warning のみ。cap 圧縮・多数敵 HUD 整理は未実装 |
@@ -298,8 +307,8 @@
 ## 10. ChatGPT へ戻すときのメモ
 
 - 目的: M1 体験版ステージ（`stages-demo.json`）の構成確定とデータ化
-- 現在地: **Phase 6b-3 調査完了** — 読込分離の最小差分は `vite.config` alias + `loadGameData` + npm scripts。editor / validate ロジックは変更不要
+- 現在地: **Phase 6b-4 完了** — ランタイム stages 読込分離済み（alias + npm scripts）
 - 次（推奨）: **Phase 6b-2 — `stages-demo.json` validate テスト追加**（handoff §7 では未チェック。テスト本体は既に存在する可能性あり → 6b-2 実装時に確認）
-- 次（次点）: **`BUILD_FLAVOR=demo` 読込分離実装**（6b-3 調査に基づく）
+- 次（次点）: Phase 6d マップ選択 UI / 6c バランス
 - 後回し: EXP 集計、`test`/`1`/`2` 移行、legacy 変換 UI
 - 判断待ち: §9 未対応・未確定事項（6c 数値・6d 導線は別フェーズ）
