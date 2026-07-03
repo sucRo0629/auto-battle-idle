@@ -33,7 +33,7 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         barrierHp: 0,
         atk: 10,
         def: 5,
-        reg: 0,
+        res: 0,
         isAlive: true,
         role: 'attacker',
         classId: 'test',
@@ -59,7 +59,7 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         barrierHp: 0,
         atk: 10,
         def: 5,
-        reg: 0,
+        res: 0,
         isAlive: true,
         role: 'attacker',
         classId: 'test',
@@ -85,7 +85,7 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         barrierHp: 0,
         atk: 20,
         def: 10,
-        reg: 0,
+        res: 0,
         isAlive: true,
         role: 'defender',
         classId: 'test',
@@ -111,7 +111,7 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         barrierHp: 0,
         atk: 20,
         def: 5,
-        reg: 0,
+        res: 0,
         isAlive: true,
         role: 'supporter',
         classId: 'test',
@@ -137,7 +137,7 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         barrierHp: 0,
         atk: 20,
         def: 5,
-        reg: 0,
+        res: 0,
         isAlive: true,
         role: 'attacker',
         classId: 'swordsman',
@@ -164,7 +164,7 @@ function presetBase(preset: MockCombatantPreset): Omit<CombatantState, 'id' | 'n
         barrierHp: 0,
         atk: 10,
         def: 5,
-        reg: 0,
+        res: 0,
         isAlive: true,
         role: 'attacker',
         classId: 'test',
@@ -209,7 +209,7 @@ export type MockUnitOpts = {
   isEnemy?: boolean;
   atk?: number;
   def?: number;
-  reg?: number;
+  res?: number;
   rangePx?: number;
   formationRow?: CombatantState['formationRow'];
 };
@@ -231,7 +231,7 @@ export function mockUnit(
     maxHp,
     atk: opts.atk ?? 10,
     def: opts.def ?? 5,
-    reg: opts.reg ?? 0,
+    res: opts.res ?? 0,
     isEnemy: opts.isEnemy ?? false,
     formationRow: opts.formationRow ?? 'back',
     classId: opts.isEnemy ? 'test_enemy' : 'at_sorcerer',

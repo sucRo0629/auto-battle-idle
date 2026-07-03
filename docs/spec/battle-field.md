@@ -498,9 +498,9 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | 配置 | 選択スロットの **識別行の直上**（overlay は `.party-hud-header-row` 基準。lane は `.party-hud-slot` 内、`bottom: 100%`）。Canvas 上ではなく HUD 列にアンカー |
 | 対象 | **選択中スロット 1 人のみ** |
 | 表示項目 | **HP**（`現在HP / 実効MaxHP`）、**攻撃力 / 防御力 / 魔法耐性 / 攻撃速度**（5 段階 tier ラベル）。**射程・基本攻撃は表示しない** |
-| 補正列 | 各ステの右に `(+N)` / `(-N)`（REG は `(+N%)`）。SPD buff/debuff は **`(×倍率)`**（例: `(×1.25)`）。差分 0 は空 |
+| 補正列 | 各ステの右に `(+N)` / `(-N)`（RES は `(+N%)`）。SPD buff/debuff は **`(×倍率)`**（例: `(×1.25)`）。差分 0 は空 |
 | 色 | 上昇（buff）= やや青（`#8eb8e8`）、低下（debuff）= やや赤（`#e89595`）。中央の実効値は通常色 |
-| データ | `CombatantSnapshot`（`baseMaxHp` + `statusEffects` + ベース atk/def/reg）とクラス `attackSpeedTier`。実効計算は [combat.md](combat.md) の `getEffective*` / `aggregateStatEffects` と同一 |
+| データ | `CombatantSnapshot`（`baseMaxHp` + `statusEffects` + ベース atk/def/res）とクラス `attackSpeedTier`。実効計算は [combat.md](combat.md) の `getEffective*` / `aggregateStatEffects` と同一 |
 | 更新 | パネル表示中は `BattleView.tick` 毎に refresh |
 
 #### 7.1.2 状態バッジクリック（用語パネル）

@@ -190,7 +190,7 @@ export const GAME_TERM_EN_SUPPLEMENT: Record<GameTermId, GameTermEnSupplement> =
   hp: { title: "HP" },
   atk: { title: "ATK" },
   def: { title: "DEF" },
-  reg: { title: "REG" },
+  res: { title: "RES" },
   attackSpeed: { title: "Attack Speed" },
   damageDelay: {
     title: "Damage Delay",

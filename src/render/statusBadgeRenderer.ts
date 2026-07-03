@@ -91,7 +91,7 @@ function statusBadgeUsesWhiteSilhouette(
     category === "hp" ||
     category === "atk" ||
     category === "def" ||
-    category === "reg" ||
+    category === "res" ||
     category === "attackSpeed"
   );
 }

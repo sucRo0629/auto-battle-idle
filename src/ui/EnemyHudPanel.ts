@@ -553,7 +553,7 @@ export class EnemyHudPanel {
       baseMaxHp: entry.baseMaxHp,
       atk: entry.atk,
       def: entry.def,
-      reg: entry.reg,
+      res: entry.res,
     });
     const { visible, overflowCount } = selectEnemyHudStatusBadges(badges);
     const canvas = card.statusCanvas;
@@ -636,7 +636,7 @@ export class EnemyHudPanel {
       baseMaxHp: entry.baseMaxHp,
       atk: entry.atk,
       def: entry.def,
-      reg: entry.reg,
+      res: entry.res,
     });
     const signature = badges.map((b) => b.id).join('|');
     if (signature === card.statusMiniSignature) return;

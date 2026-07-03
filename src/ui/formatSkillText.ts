@@ -102,7 +102,7 @@ import {
   phraseDamageIncreaseIfCondition,
   phraseDamageReductionRate,
   phraseDefenseIgnorePercent,
-  phraseDefenseIgnoreRegPercent,
+  phraseDefenseIgnoreResPercent,
   phraseEvasionBuff,
   phraseFireConditionSelfHp,
   phraseFireConditionTargetHp,
@@ -626,8 +626,8 @@ function formatPassiveDefenseIgnore(def: PassiveSkillDef): string {
   if (spec.def?.mode === "percent") {
     return phraseDefenseIgnorePercent(formatPercent(spec.def.amount));
   }
-  if (spec.reg?.percent !== undefined) {
-    return phraseDefenseIgnoreRegPercent(formatPercent(spec.reg.percent));
+  if (spec.res?.percent !== undefined) {
+    return phraseDefenseIgnoreResPercent(formatPercent(spec.res.percent));
   }
   return formatDefenseIgnoreSpec(spec) || "防御無視";
 }
@@ -1359,10 +1359,10 @@ function formatDefenseIgnoreModifierSegments(
         : `${resolveGameTermTitle("defenseIgnoreDef")} ${value}`
     );
   }
-  if (spec.reg) {
-    const value = formatPercent(spec.reg.percent);
+  if (spec.res) {
+    const value = formatPercent(spec.res.percent);
     segments.push(
-      getSkillTextLocale() === "en" ? `REG Ignore ${value}` : `REG無視 ${value}`
+      getSkillTextLocale() === "en" ? `RES Ignore ${value}` : `魔法耐性無視 ${value}`
     );
   }
   if (spec.chance !== undefined && spec.chance < 1) {

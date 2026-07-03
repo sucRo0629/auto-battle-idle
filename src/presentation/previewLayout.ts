@@ -33,7 +33,7 @@ function previewEntityToActorStub(entity: PreviewEntity): CombatantState {
     barrierHp: 0,
     atk: 10,
     def: 5,
-    reg: 0,
+    res: 0,
     isAlive: true,
     isEnemy: entity.isEnemy,
     role: entity.role ?? 'attacker',

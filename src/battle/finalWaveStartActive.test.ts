@@ -23,7 +23,7 @@ function mockDuelist(cdRemaining: number): CombatantState {
     barrierHp: 0,
     atk: 30,
     def: 10,
-    reg: 0,
+    res: 0,
     isAlive: true,
     role: 'defender',
     classId: 'df_duelist',

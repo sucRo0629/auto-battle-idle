@@ -99,7 +99,7 @@ describe('at_lancer passive / active unlock structure', () => {
     expect(p3?.name).toBe('堅陣');
     expect(p3?.buffStatModifiers).toEqual([
       { stat: 'def', multiplier: 1.1 },
-      { stat: 'reg', flatBonus: 5 },
+      { stat: 'res', flatBonus: 5 },
     ]);
 
     const p4 = passives['at_lancer_passive_4'];
@@ -143,11 +143,11 @@ describe('at_lancer combat helpers', () => {
 
     syncBuffAuras([lancer, nearAlly, farAlly], [], passives, mockTargetingGameData());
     const defBuff = nearAlly.statusEffects.find((e) => e.stat === 'def');
-    const regBuff = nearAlly.statusEffects.find((e) => e.stat === 'reg');
+    const resBuff = nearAlly.statusEffects.find((e) => e.stat === 'res');
     expect(defBuff?.multiplier).toBe(1.1);
     expect(defBuff?.flatBonus).toBeUndefined();
-    expect(regBuff?.flatBonus).toBe(5);
-    expect(regBuff?.multiplier).toBe(1);
+    expect(resBuff?.flatBonus).toBe(5);
+    expect(resBuff?.multiplier).toBe(1);
     expect(farAlly.statusEffects.some((e) => e.stat === 'def')).toBe(false);
   });
 

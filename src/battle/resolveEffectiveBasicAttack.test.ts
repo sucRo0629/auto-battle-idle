@@ -35,7 +35,7 @@ function mockUnit(statusEffects: CombatantState['statusEffects'] = []): Combatan
     maxHp: 100,
     atk: 50,
     def: 10,
-    reg: 5,
+    res: 5,
     isAlive: true,
     barrierHp: 0,
     role: 'attacker',

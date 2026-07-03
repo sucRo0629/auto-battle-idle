@@ -17,7 +17,7 @@ export function applyEnemyStatScales(
   stats: CombatStats,
   spec: Pick<
     ResolvedEnemySpawnSpec,
-    'hpScale' | 'atkScale' | 'defScale' | 'regScale'
+    'hpScale' | 'atkScale' | 'defScale' | 'resScale'
   >,
 ): CombatStats {
   return {
@@ -30,7 +30,7 @@ export function applyEnemyStatScales(
       Math.round(stats.atk * resolveEnemyStatScale(spec.atkScale)),
     ),
     def: Math.round(stats.def * resolveEnemyStatScale(spec.defScale)),
-    reg: Math.round(stats.reg * resolveEnemyStatScale(spec.regScale)),
+    res: Math.round(stats.res * resolveEnemyStatScale(spec.resScale)),
   };
 }
 
@@ -62,7 +62,7 @@ export function expandEnemyGroups(stage: StageDef): ResolvedEnemySpawnSpec[] {
         hpScale: group.hpScale,
         atkScale: group.atkScale,
         defScale: group.defScale,
-        regScale: group.regScale,
+        resScale: group.resScale,
         groupIndex,
         indexInGroup,
         groupCount: group.count,

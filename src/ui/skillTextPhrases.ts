@@ -34,7 +34,7 @@ const TARGET_STAT_EN: Record<TargetStat, string> = {
   maxHp: "max HP",
   atk: "ATK",
   def: "DEF",
-  reg: "REG",
+  res: "RES",
 };
 
 export function skillTargetStat(stat: TargetStat): string {
@@ -46,7 +46,7 @@ export function skillTargetStat(stat: TargetStat): string {
     maxHp: "最大HP",
     atk: "攻撃力",
     def: "防御力",
-    reg: "魔法耐性",
+    res: "魔法耐性",
   };
   return ja[stat] ?? stat;
 }
@@ -234,10 +234,10 @@ export function phraseDefenseIgnorePercent(pct: string): string {
     : `攻撃時、対象の防御力を${pct}無視する`;
 }
 
-export function phraseDefenseIgnoreRegPercent(pct: string): string {
+export function phraseDefenseIgnoreResPercent(pct: string): string {
   return L() === "en"
-    ? `On attack, ignores ${pct} of target ${skillStat("reg")}`
-    : `攻撃時、対象の${skillStat("reg")}を${pct}無視する`;
+    ? `On attack, ignores ${pct} of target ${skillStat("res")}`
+    : `攻撃時、対象の${skillStat("res")}を${pct}無視する`;
 }
 
 export function phraseEvasionBuff(pct: string): string {

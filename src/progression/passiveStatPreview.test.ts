@@ -60,7 +60,7 @@ const baseClass: ClassPresetBeforeEnrich = {
   maxHp: 100,
   atk: 10,
   def: 10,
-  reg: 0,
+  res: 0,
   basicAttackSkillId: 'preview_basic',
   growthTier: { maxHp: 1, atk: 1, def: 1 },
   passiveIds: ['preview_atk_buff', 'preview_ally_atk_buff'],

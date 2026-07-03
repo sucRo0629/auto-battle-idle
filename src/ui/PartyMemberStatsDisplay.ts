@@ -594,7 +594,7 @@ export function syncStatusBadges(
       baseMaxHp: snapshot.baseMaxHp,
       atk: snapshot.atk,
       def: snapshot.def,
-      reg: snapshot.reg,
+      res: snapshot.res,
     });
     const debuffBadges = sortBadgesForDetailView(
       allBadges.filter((badge) => badge.kind === 'debuff'),

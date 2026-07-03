@@ -16,7 +16,7 @@ function mockPreset(
     maxHp: overrides.maxHp ?? 100,
     atk: overrides.atk ?? 10,
     def: overrides.def ?? 5,
-    reg: overrides.reg ?? 0,
+    res: overrides.res ?? 0,
     growthTier: overrides.growthTier ?? { maxHp: 'mid', atk: 'mid', def: 'mid' },
     traits: overrides.traits ?? { rangePx: 5, damageType: 'physical' },
     skills: overrides.skills ?? [],

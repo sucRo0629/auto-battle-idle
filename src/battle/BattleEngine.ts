@@ -1745,7 +1745,7 @@ export class BattleEngine {
       barrierHp: c.barrierHp,
       atk: c.atk,
       def: c.def,
-      reg: c.reg,
+      res: c.res,
       role: c.isEnemy ? undefined : c.role,
       rangePx: c.traits.rangePx,
       effectiveRangePx: resolveMaxEffectiveRangePx(c, this.gameData),

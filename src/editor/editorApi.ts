@@ -242,8 +242,8 @@ export function validateStageDraftForSave(draft: StageDraft): string | null {
     if (!isPositiveStageEnemyScale(group.defScale)) {
       return `${prefix}: defScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
     }
-    if (!isPositiveStageEnemyScale(group.regScale)) {
-      return `${prefix}: regScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
+    if (!isPositiveStageEnemyScale(group.resScale)) {
+      return `${prefix}: resScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
     }
   }
 
@@ -272,7 +272,7 @@ export function normalizeEnemyTemplateForEditor(
     maxHp: raw.maxHp,
     atk: raw.atk,
     def: raw.def,
-    reg: raw.reg,
+    res: raw.res,
     exp: raw.exp,
     basicAttackSkillId,
     traits: normalizeEntityTraits(raw.traits),
@@ -367,7 +367,7 @@ export interface ClassStatsPatch {
   maxHp: number;
   atk: number;
   def: number;
-  reg: number;
+  res: number;
   rangePx: number;
   growthTier: GrowthTierSet;
   attackSpeedTier: AttackSpeedTier;
@@ -396,7 +396,7 @@ export function classStatsEqual(
     left.maxHp !== right.maxHp ||
     left.atk !== right.atk ||
     left.def !== right.def ||
-    left.reg !== right.reg ||
+    left.res !== right.res ||
     (left.traits.rangePx ?? 0) !== (right.traits.rangePx ?? 0)
   ) {
     return false;
@@ -418,7 +418,7 @@ export function toClassStatsPatch(cls: ClassPresetBeforeEnrich): ClassStatsPatch
     maxHp: copy.maxHp,
     atk: copy.atk,
     def: copy.def,
-    reg: copy.reg,
+    res: copy.res,
     rangePx: copy.traits.rangePx ?? 0,
     growthTier: structuredClone(copy.growthTier!),
     attackSpeedTier: copy.attackSpeedTier ?? 'normal',
@@ -858,7 +858,7 @@ export function createEmptyClassDraft(): ClassDraft {
       maxHp: 100,
       atk: 10,
       def: 10,
-      reg: 0,
+      res: 0,
       basicAttackSkillId: '',
       passiveIds: [],
       skills: [{ level: 0, skillIds: [] }],
@@ -917,7 +917,7 @@ export function createEmptyEnemyDraft(): EnemyDraft {
       maxHp: 100,
       atk: 10,
       def: 5,
-      reg: 0,
+      res: 0,
       exp: 1,
       basicAttackSkillId: '',
       traits: {},

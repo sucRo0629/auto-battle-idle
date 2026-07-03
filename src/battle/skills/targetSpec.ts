@@ -4,7 +4,7 @@ import {
   getEffectiveAtk,
   getEffectiveDef,
   getEffectiveMaxHp,
-  getEffectiveReg,
+  getEffectiveRes,
 } from "../combatMath.ts";
 import { getBattleX, isPlayerRearAssaultAccess } from "../combatPosition.ts";
 import { hasMatchingStatus } from "../statusMatching.ts";
@@ -70,10 +70,10 @@ function targetRuleToSpec(
       return { kind: "stat", side: "enemy", stat: "def", order: "lowest" };
     case "highestDefEnemy":
       return { kind: "stat", side: "enemy", stat: "def", order: "highest" };
-    case "lowestRegEnemy":
-      return { kind: "stat", side: "enemy", stat: "reg", order: "lowest" };
-    case "highestRegEnemy":
-      return { kind: "stat", side: "enemy", stat: "reg", order: "highest" };
+    case "lowestResEnemy":
+      return { kind: "stat", side: "enemy", stat: "res", order: "lowest" };
+    case "highestResEnemy":
+      return { kind: "stat", side: "enemy", stat: "res", order: "highest" };
     case "rangedAttackingEnemy":
       return { kind: "attackType", ranged: true };
     case "magicAttackingEnemy":
@@ -127,7 +127,7 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
         stat !== "maxHp" &&
         stat !== "atk" &&
         stat !== "def" &&
-        stat !== "reg") ||
+        stat !== "res") ||
       (order !== "highest" && order !== "lowest" && order !== "ratio")
     ) {
       throw new Error("Invalid target.stat fields");
@@ -350,8 +350,8 @@ function compareStat(unit: CombatantState, stat: TargetStat): number {
       return getEffectiveAtk(unit);
     case "def":
       return getEffectiveDef(unit);
-    case "reg":
-      return getEffectiveReg(unit);
+    case "res":
+      return getEffectiveRes(unit);
   }
 }
 
@@ -839,7 +839,7 @@ const STAT_LABELS: Record<TargetStat, string> = {
   maxHp: "最大HP",
   atk: "ATK",
   def: "DEF",
-  reg: "REG",
+  res: "RES",
 };
 
 const STAT_ORDER_LABELS: Record<TargetStatOrder, string> = {

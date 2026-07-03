@@ -19,7 +19,7 @@ function mockUnit(
     barrierHp: 0,
     atk: 50,
     def: 5,
-    reg: 0,
+    res: 0,
     isAlive: true,
     role: 'attacker',
     classId: 'at_assassin',

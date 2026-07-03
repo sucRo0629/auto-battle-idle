@@ -107,7 +107,7 @@ import {
   ALL_SKILL_EFFECT_ANIM_IDS,
   SKILL_TRIGGER_KINDS,
   TARGET_SHAPES,
-  VALID_REG_VALUES,
+  VALID_RES_VALUES,
   VFX_ANCHORS,
   VFX_LAYERS,
   DEPRECATED_SKILL_VFX_DEF_FIELD_KEYS,
@@ -159,7 +159,7 @@ const SKILL_EFFECT_ANIM_IDS_SET = new Set<SkillEffectAnimId>(
 const SKILL_TRIGGER_KINDS_SET = new Set<SkillTriggerKind>(SKILL_TRIGGER_KINDS);
 const PASSIVE_EFFECTS = new Set<PassiveEffectKind>(PASSIVE_EFFECT_KINDS);
 const STAT_BUFF_TARGETS_SET = new Set<string>(STAT_BUFF_TARGETS);
-const VALID_REG = new Set<number>(VALID_REG_VALUES);
+const VALID_RES = new Set<number>(VALID_RES_VALUES);
 const GROWTH_TIERS = new Set<GrowthTier>([1, 2, 3]);
 const GROWTH_PRESET_KEYS = new Set<GrowthPresetKey>(['attacker', 'caster']);
 const JOB_TIERS_SET = new Set<number>(JOB_TIERS);
@@ -1690,16 +1690,16 @@ function parseDefenseIgnoreSpec(
     }
     result.def = { mode, amount };
   }
-  if (obj.reg !== undefined) {
-    const regObj = requireRecord(obj.reg, `${context}.reg`);
-    const percent = requireNumber(regObj, 'percent', `${context}.reg`);
+  if (obj.res !== undefined) {
+    const resObj = requireRecord(obj.res, `${context}.res`);
+    const percent = requireNumber(resObj, 'percent', `${context}.res`);
     if (percent < 0 || percent > 1) {
-      invalidField(`${context}.reg`, 'percent', 'must be between 0 and 1');
+      invalidField(`${context}.res`, 'percent', 'must be between 0 and 1');
     }
-    result.reg = { percent };
+    result.res = { percent };
   }
-  if (!result.def && !result.reg) {
-    invalidField(context, 'defenseIgnore', 'must specify def and/or reg');
+  if (!result.def && !result.res) {
+    invalidField(context, 'defenseIgnore', 'must specify def and/or res');
   }
   return result;
 }
@@ -1793,7 +1793,7 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
       obj,
       'stat',
       context,
-      new Set(['hp', 'atk', 'def', 'reg', 'maxHp']),
+      new Set(['hp', 'atk', 'def', 'res', 'maxHp']),
     );
     const order = requireEnum(
       obj,
@@ -1821,7 +1821,7 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
     return {
       kind: 'stat',
       side,
-      stat: stat as 'hp' | 'maxHp' | 'atk' | 'def' | 'reg',
+      stat: stat as 'hp' | 'maxHp' | 'atk' | 'def' | 'res',
       order: order as 'highest' | 'lowest' | 'ratio',
       ...(typeof poolFromEffectIndex === 'number' &&
       Number.isInteger(poolFromEffectIndex) &&
@@ -3463,9 +3463,9 @@ function requireEnum<T extends string>(
   return value as T;
 }
 
-function requireReg(value: number, context: string): void {
-  if (!VALID_REG.has(value)) {
-    invalidField(context, 'reg', `must be one of ${[...VALID_REG].join(', ')}`);
+function requireRes(value: number, context: string): void {
+  if (!VALID_RES.has(value)) {
+    invalidField(context, 'res', `must be one of ${[...VALID_RES].join(', ')}`);
   }
 }
 
@@ -5223,8 +5223,8 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
     const maxHp = requireNumber(obj, 'maxHp', context);
     const atk = requireNumber(obj, 'atk', context);
     const def = requireNumber(obj, 'def', context);
-    const reg = requireNumber(obj, 'reg', context);
-    requireReg(reg, context);
+    const res = requireNumber(obj, 'res', context);
+    requireRes(res, context);
     const basicAttackSkillId =
       obj.basicAttackSkillId === undefined
         ? defaultBasicAttackId(id)
@@ -5288,7 +5288,7 @@ function parseClasses(raw: unknown): ClassPresetBeforeEnrich[] {
       maxHp,
       atk,
       def,
-      reg,
+      res,
       basicAttackSkillId,
       ...(passiveIds.length > 0 ? { passiveIds } : {}),
       skills,
@@ -5696,8 +5696,8 @@ function parseEnemies(raw: unknown): EnemyTemplateParsed[] {
     const maxHp = requireNumber(obj, 'maxHp', context);
     const atk = requireNumber(obj, 'atk', context);
     const def = requireNumber(obj, 'def', context);
-    const reg = requireNumber(obj, 'reg', context);
-    requireReg(reg, context);
+    const res = requireNumber(obj, 'res', context);
+    requireRes(res, context);
     const exp = requireNumber(obj, 'exp', context);
     if (exp < 0) {
       invalidField(context, 'exp', 'must be >= 0');
@@ -5739,7 +5739,7 @@ function parseEnemies(raw: unknown): EnemyTemplateParsed[] {
       maxHp,
       atk,
       def,
-      reg,
+      res,
       exp,
       basicAttackSkillId,
       traits: traitsRaw,
@@ -5772,14 +5772,14 @@ function parseStageEnemyGroup(entry: unknown, context: string): StageEnemyGroup 
   const hpScale = parseStageEnemyScale(obj, 'hpScale', context);
   const atkScale = parseStageEnemyScale(obj, 'atkScale', context);
   const defScale = parseStageEnemyScale(obj, 'defScale', context);
-  const regScale = parseStageEnemyScale(obj, 'regScale', context);
+  const resScale = parseStageEnemyScale(obj, 'resScale', context);
   return {
     classId,
     count,
     ...(hpScale !== 1 ? { hpScale } : {}),
     ...(atkScale !== 1 ? { atkScale } : {}),
     ...(defScale !== 1 ? { defScale } : {}),
-    ...(regScale !== 1 ? { regScale } : {}),
+    ...(resScale !== 1 ? { resScale } : {}),
   };
 }
 

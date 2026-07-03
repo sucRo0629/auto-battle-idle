@@ -610,7 +610,7 @@ describe('formatActiveDescription', () => {
         {
           type: 'buff',
           buffSubKind: 'stat',
-          buffStat: 'reg',
+          buffStat: 'res',
           buffFlatBonus: 20,
           buffDurationSec: 5,
         },
@@ -1047,7 +1047,7 @@ describe('formatActiveDescription', () => {
     );
     expect(card2.effectLines).toEqual([
       'Nearby 5 / Grants the following effects to allies',
-      'REG+10, 5% Damage Reduction, Barrier equal to 20% of ATK (stacking)',
+      'RES+10, 5% Damage Reduction, Barrier equal to 20% of ATK (stacking)',
     ]);
 
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
@@ -1193,7 +1193,7 @@ describe('formatActiveDescription', () => {
     const passive1 = formatSkillCardLines(p1!, { locale: 'en' });
     expect(passive1.metaLine).toBe('Always');
     expect(passive1.effectLines).toEqual([
-      'On attack, ignores 20% of target REG',
+      'On attack, ignores 20% of target RES',
     ]);
 
     const passive2 = formatSkillCardLines(p2!, { locale: 'en' });

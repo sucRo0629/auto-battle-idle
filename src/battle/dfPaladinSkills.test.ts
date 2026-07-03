@@ -15,7 +15,7 @@ function mockUnit(
     barrierHp: 0,
     atk: 15,
     def: 22,
-    reg: 10,
+    res: 10,
     isAlive: true,
     role: 'defender',
     classId: 'df_paladin',
@@ -106,7 +106,7 @@ describe('df_paladin skill data v1', () => {
         (e) =>
           e.type === 'buff' &&
           e.buffSubKind === 'stat' &&
-          (e.buffStat === 'damageTaken' || e.buffStat === 'reg'),
+          (e.buffStat === 'damageTaken' || e.buffStat === 'res'),
       ).length,
     ).toBe(2);
   });

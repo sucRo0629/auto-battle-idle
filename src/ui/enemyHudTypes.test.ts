@@ -17,7 +17,7 @@ function mockEnemy(overrides: Partial<CombatantSnapshot> = {}): CombatantSnapsho
     barrierHp: 0,
     atk: 10,
     def: 5,
-    reg: 0,
+    res: 0,
     rangePx: 40,
     effectiveRangePx: 40,
     damageType: 'physical',

@@ -8,7 +8,7 @@ export interface StageEnemyGroupPreviewLine {
   hpScale: number;
   atkScale: number;
   defScale: number;
-  regScale: number;
+  resScale: number;
 }
 
 export interface StageLegacyWavePreviewLine {
@@ -36,7 +36,7 @@ function toEnemyGroupLine(group: StageEnemyGroup): StageEnemyGroupPreviewLine {
     hpScale: resolveGroupScale(group.hpScale),
     atkScale: resolveGroupScale(group.atkScale),
     defScale: resolveGroupScale(group.defScale),
-    regScale: resolveGroupScale(group.regScale),
+    resScale: resolveGroupScale(group.resScale),
   };
 }
 
@@ -104,6 +104,6 @@ export function formatEnemyGroupScaleSummary(line: StageEnemyGroupPreviewLine): 
   if (line.hpScale !== DEFAULT_SCALE) parts.push(`hp×${line.hpScale}`);
   if (line.atkScale !== DEFAULT_SCALE) parts.push(`atk×${line.atkScale}`);
   if (line.defScale !== DEFAULT_SCALE) parts.push(`def×${line.defScale}`);
-  if (line.regScale !== DEFAULT_SCALE) parts.push(`reg×${line.regScale}`);
+  if (line.resScale !== DEFAULT_SCALE) parts.push(`res×${line.resScale}`);
   return parts.length > 0 ? ` (${parts.join(' ')})` : '';
 }

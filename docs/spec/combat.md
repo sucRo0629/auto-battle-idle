@@ -78,11 +78,11 @@
 ## 魔法ダメージ
 
 1. 上記と同じ `baseDamage`
-2. `effectiveReg = applyDefenseIgnore(getEffectiveReg(target))`（REG percent 無視。`chance` 判定は DEF と同様）
-3. `afterDefense = floor(baseDamage × 100 / (100 + effectiveReg))`
+2. `effectiveRes = applyDefenseIgnore(getEffectiveRes(target))`（REG percent 無視。`chance` 判定は DEF と同様）
+3. `afterDefense = floor(baseDamage × 100 / (100 + effectiveRes))`
 4. `final = max(1, floor(afterDefense × damageTakenMul))`
 
-クラスマスタ（`at_sorcerer` / `at_sigilist` / `at_conductor` 等）は `damageType: "magic"` を使用。敵の `reg` が 0 のときも上式で最低 1 ダメージ。
+クラスマスタ（`at_sorcerer` / `at_sigilist` / `at_conductor` 等）は `damageType: "magic"` を使用。敵の `res` が 0 のときも上式で最低 1 ダメージ。
 
 ## 攻撃速度と基本攻撃
 
@@ -309,11 +309,11 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 
 ## ステータス効果
 
-対象ステ：`StatusEffectStat`（`hp` / `atk` / `def` / `reg` / `attackSpeed`）または `damageTaken`（`StatBuffTarget`）。`reg` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
+対象ステ：`StatusEffectStat`（`hp` / `atk` / `def` / `res` / `attackSpeed`）または `damageTaken`（`StatBuffTarget`）。`res` の buff / debuff とも可。`buffFlatBonus` で固定加算可。
 
 複数ステを異なる倍率/固定値で上げるパッシブ buff は `buffStatModifiers`（`{ stat, multiplier?, flatBonus? }[]`）を正本とする。1ステのみの場合は従来の `buffStat` + `buffMultiplier` / `buffFlatBonus` でも可（実装: `parseStatBuffModifiers`）。
 
-**HUD バッジ表示（Phase 4d）:** 同一 `StatusDisplayCategory` あたり **1 バッジ**（**20×20px** スロット）。buff / debuff / passive buff / passive debuff 用の **五角形背景 PNG**（20×20、スロットと同一、`src/assets/status-icons/pentagon-buff.png`, `pentagon-debuff.png`, `pentagon-passive-buff.png`, `pentagon-passive-debuff.png`）を重ね、その上に効果アイコン（`{category}.png`、**12×12**、スロット内上下左右中央）を重ねる。`isPassive` 由来バッジは五角形・効果アイコン・残時間暗化・累積数を含め **全体を半透明**（`STATUS_BADGE_PASSIVE_ALPHA = 0.55`）で描画する。効果アイコンの位置は buff / debuff 共通。五角形のみ **buff 系を Y − 2px**、**debuff 系は Y 0**（スロット基準。debuff 形状の視覚バランス用）。行の描画高さは **24px**（スロット 20 + 上下パディング 2px ずつ、buff 五角形のはみ出し用）。残時間の暗化はオフスクリーン合成後に **alpha > 0 のピクセルのみ**上端から暗化（透明部分は変更しない）。累積数は 20×20 スロット枠基準。`isPassive` 由来（`effect.id` が `passive_` 始まり）は passive 用五角形 PNG を使用。**同一 `StatusDisplayCategory` に passive と active が混在する場合は active 表示**（不透明・active 五角形）を優先する。アイコン縁は黒で統一（stat 系 hp/atk/def/reg/attackSpeed は **tint なし・白シルエット**、その他は既存カラー PNG + 黒縁）。`stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数（1 スタックは非表示）。残時間は同一カテゴリ内の最短 `remainingRatio` を上端からの暗化で表示。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride` / `poisonWeapon`（`src/assets/status-icons/{category}.png`）。`herbalPotency` / `blockResonance` / `windMark` / `earthMark`（印術師・Phase 7b 以降）/ `arenaMark` / `wardBarrier` も 1 アイコン + 累積数（2 以上のみ）。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。`hp` stat buff/debuff は `hp.png`（`baseMaxHp` 基準）。
+**HUD バッジ表示（Phase 4d）:** 同一 `StatusDisplayCategory` あたり **1 バッジ**（**20×20px** スロット）。buff / debuff / passive buff / passive debuff 用の **五角形背景 PNG**（20×20、スロットと同一、`src/assets/status-icons/pentagon-buff.png`, `pentagon-debuff.png`, `pentagon-passive-buff.png`, `pentagon-passive-debuff.png`）を重ね、その上に効果アイコン（`{category}.png`、**12×12**、スロット内上下左右中央）を重ねる。`isPassive` 由来バッジは五角形・効果アイコン・残時間暗化・累積数を含め **全体を半透明**（`STATUS_BADGE_PASSIVE_ALPHA = 0.55`）で描画する。効果アイコンの位置は buff / debuff 共通。五角形のみ **buff 系を Y − 2px**、**debuff 系は Y 0**（スロット基準。debuff 形状の視覚バランス用）。行の描画高さは **24px**（スロット 20 + 上下パディング 2px ずつ、buff 五角形のはみ出し用）。残時間の暗化はオフスクリーン合成後に **alpha > 0 のピクセルのみ**上端から暗化（透明部分は変更しない）。累積数は 20×20 スロット枠基準。`isPassive` 由来（`effect.id` が `passive_` 始まり）は passive 用五角形 PNG を使用。**同一 `StatusDisplayCategory` に passive と active が混在する場合は active 表示**（不透明・active 五角形）を優先する。アイコン縁は黒で統一（stat 系 hp/atk/def/res/attackSpeed は **tint なし・白シルエット**、その他は既存カラー PNG + 黒縁）。`stacks > 1`（または同一カテゴリ複数 instance）のときのみ右下に累積数（1 スタックは非表示）。残時間は同一カテゴリ内の最短 `remainingRatio` を上端からの暗化で表示。専用アイコン overlay: `basicAttackTransform` / `blockResonanceStance` / `invulnerable` / `lastStandGuts` / `arenaDominance` / `duelistPride` / `poisonWeapon`（`src/assets/status-icons/{category}.png`）。`herbalPotency` / `blockResonance` / `windMark` / `earthMark`（印術師・Phase 7b 以降）/ `arenaMark` / `wardBarrier` も 1 アイコン + 累積数（2 以上のみ）。`collectStatusEffectBadgeDisplays` はパッシブ由来の `herbalPotency` / `blockResonance` / `duelistPride` も表示する（`aggregateStatStatusEffects` の passive 除外は集計専用のまま）。`damageTaken` stat の net 軽減は `damageReduction`、net 増加は `damageIncrease` アイコン。`hp` stat buff/debuff は `hp.png`（`baseMaxHp` 基準）。
 
 **簡易表示 vs 詳細表示:**
 
@@ -330,7 +330,7 @@ Wave 開始時の開幕効果（バリア・HoT 等）は **パッシブ `period
 | Tier | 対象 |
 | ---- | ---- |
 | 1 | CC debuff: `stun`, `moveLock`, `damageDelay` |
-| 2 | DEF/REG debuff のみ（`category` が def/reg かつ `kind` debuff） |
+| 2 | DEF/RES debuff のみ（`category` が def/res かつ `kind` debuff） |
 | 3 | 継続ダメ・被ダメ悪化: `dot`, `bleed`, `poison`, `seedFlame`, `blazingFlame`（debuff）、`damageIncrease`（`kind` debuff のみ） |
 | 4 | その他 debuff |
 | 5 | buff（passive buff 含む: `blockResonance`, `herbalPotency`, `duelistPride` 等）。`damageReduction` buff も Tier 5 |

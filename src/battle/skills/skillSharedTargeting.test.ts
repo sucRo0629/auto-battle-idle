@@ -23,7 +23,7 @@ function mockUnit(
     barrierHp: 0,
     atk: 15,
     def: 22,
-    reg: 10,
+    res: 10,
     isAlive: true,
     role: 'defender',
     classId: 'df_paladin',
@@ -74,7 +74,7 @@ describe('skill shared targeting', () => {
         {
           type: 'buff',
           buffSubKind: 'stat',
-          buffStat: 'reg',
+          buffStat: 'res',
           buffFlatBonus: 5,
           buffDurationSec: 3,
         },
@@ -225,7 +225,7 @@ describe('skill shared targeting', () => {
         {
           type: 'buff',
           buffSubKind: 'stat',
-          buffStat: 'reg',
+          buffStat: 'res',
           buffFlatBonus: 5,
           buffDurationSec: 3,
         },

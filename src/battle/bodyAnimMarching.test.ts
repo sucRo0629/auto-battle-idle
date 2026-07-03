@@ -26,7 +26,7 @@ function makeUnit(
     barrierHp: 0,
     atk: 10,
     def: 5,
-    reg: 0,
+    res: 0,
     role: overrides.role ?? 'guardian',
     traits: overrides.traits ?? { rangePx: 50, damageType: 'physical' },
     formationRow: overrides.formationRow ?? 'front',

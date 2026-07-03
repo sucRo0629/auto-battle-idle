@@ -22,7 +22,7 @@ function mockUnit(
     maxHp: partial.maxHp ?? 100,
     atk: partial.atk ?? 100,
     def: partial.def ?? 10,
-    reg: partial.reg ?? 0,
+    res: partial.res ?? 0,
     barrierHp: partial.barrierHp ?? 0,
     isAlive: partial.isAlive ?? true,
     isEnemy: partial.isEnemy ?? false,

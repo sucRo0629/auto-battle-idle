@@ -84,7 +84,7 @@
       {
         "type": "buff",
         "buffSubKind": "stat",
-        "buffStat": "reg",
+        "buffStat": "res",
         "buffFlatBonus": 10,
         "buffDurationSec": 5
       },
@@ -139,7 +139,7 @@
         },
         "type": "buff",
         "buffSubKind": "stat",
-        "buffStat": "reg",
+        "buffStat": "res",
         "buffFlatBonus": 20,
         "buffDurationSec": 5
       }

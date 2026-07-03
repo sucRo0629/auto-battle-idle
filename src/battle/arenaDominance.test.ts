@@ -27,7 +27,7 @@ function mockUnit(
     barrierHp: 0,
     atk: overrides.atk ?? 10,
     def: 5,
-    reg: 0,
+    res: 0,
     isAlive: true,
     role: 'defender',
     classId: 'df_duelist',

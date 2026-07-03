@@ -265,8 +265,8 @@ export const TARGET_RULES = [
   "highestAtkEnemy",
   "lowestDefEnemy",
   "highestDefEnemy",
-  "lowestRegEnemy",
-  "highestRegEnemy",
+  "lowestResEnemy",
+  "highestResEnemy",
   "highestHpEnemy",
   "farthestEnemy",
   "debuffedEnemy",
@@ -294,8 +294,8 @@ export const TARGET_RULE_LABELS: Record<TargetRule, string> = {
   highestAtkEnemy: "ATK最高の敵",
   lowestDefEnemy: "DEF最低の敵",
   highestDefEnemy: "DEF最高の敵",
-  lowestRegEnemy: "REG最低の敵",
-  highestRegEnemy: "REG最高の敵",
+  lowestResEnemy: "RES最低の敵",
+  highestResEnemy: "RES最高の敵",
   highestHpEnemy: "HP最高の敵",
   farthestEnemy: "最も遠い敵",
   debuffedEnemy: "デバフを受けている対象",
@@ -467,7 +467,7 @@ export const BUFF_TARGET_KINDS = [
   "hp",
   "atk",
   "def",
-  "reg",
+  "res",
   "damageTaken",
   "attackSpeed",
   "evasion",
@@ -478,7 +478,7 @@ export const BUFF_TARGET_KIND_LABELS: Record<BuffTargetKind, string> = {
   hp: "HP",
   atk: "攻撃",
   def: "防御",
-  reg: "REG",
+  res: "RES",
   damageTaken: "被ダメ",
   attackSpeed: "攻撃速度",
   evasion: "回避率",
@@ -572,7 +572,7 @@ export const STATUS_EFFECT_STATS = [
   "hp",
   "atk",
   "def",
-  "reg",
+  "res",
   "attackSpeed",
 ] as const satisfies readonly StatusEffectStat[];
 
@@ -580,7 +580,7 @@ export const STAT_BUFF_TARGETS = [
   ...STATUS_EFFECT_STATS,
   "damageTaken",
 ] as const satisfies readonly StatBuffTarget[];
-export const VALID_REG_VALUES = [0, 5, 10, 15, 20] as const;
+export const VALID_RES_VALUES = [0, 5, 10, 15, 20] as const;
 export const JOB_TIERS = [1, 2] as const;
 
 export const ATTACK_SPEED_TIERS = [
@@ -621,7 +621,7 @@ export const MEMBER_STAT_LABELS = {
   hp: "HP",
   atk: "攻撃力",
   def: "防御力",
-  reg: "魔法耐性",
+  res: "魔法耐性",
   spd: "攻撃速度",
   range: "射程",
   basicAttack: "通常攻撃",
@@ -832,7 +832,7 @@ export const STAT_BUFF_TARGET_OPTIONS: StatBuffTarget[] = [
 export const DEBUFF_FILTER_TAGS = [
   { id: "atk" as const, label: "ATKデバフ" },
   { id: "def" as const, label: "DEFデバフ" },
-  { id: "reg" as const, label: "REGデバフ" },
+  { id: "res" as const, label: "RESデバフ" },
   { id: "damageTaken" as const, label: "被ダメデバフ" },
   { id: "attackSpeed" as const, label: "SPDデバフ" },
   { id: "dot" as const, label: "DoT（全種）" },
@@ -864,7 +864,7 @@ export const DEBUFF_FILTER_TAG_LABELS: Record<DebuffFilterTag, string> =
 export const BUFF_FILTER_TAGS = [
   { id: "atk" as const, label: "ATKバフ" },
   { id: "def" as const, label: "DEFバフ" },
-  { id: "reg" as const, label: "REGバフ" },
+  { id: "res" as const, label: "RESバフ" },
   { id: "damageTaken" as const, label: "被ダメバフ" },
   { id: "hot" as const, label: "HoT" },
   { id: "block" as const, label: "ブロック" },
@@ -926,7 +926,7 @@ export const TARGET_STAT_OPTIONS = [
   "maxHp",
   "atk",
   "def",
-  "reg",
+  "res",
 ] as const;
 export const TARGET_STAT_ORDER_OPTIONS = [
   "highest",
@@ -957,14 +957,14 @@ export const POWER_STEP_MODE_LABELS: Record<
 };
 
 export const TARGET_STAT_LABELS: Record<
-  "hp" | "maxHp" | "atk" | "def" | "reg",
+  "hp" | "maxHp" | "atk" | "def" | "res",
   string
 > = {
   hp: "HP",
   maxHp: "最大HP",
   atk: "ATK",
   def: "DEF",
-  reg: "REG",
+  res: "RES",
 };
 
 export const TARGET_STAT_ORDER_LABELS: Record<
@@ -1002,5 +1002,5 @@ export const DEFENSE_IGNORE_DEF_MODE_LABELS: Record<
   flat: "固定値",
   percent: "割合",
 };
-export const REG_OPTIONS: number[] = [...VALID_REG_VALUES];
+export const RES_OPTIONS: number[] = [...VALID_RES_VALUES];
 export const JOB_TIER_OPTIONS: number[] = [...JOB_TIERS];

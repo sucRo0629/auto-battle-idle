@@ -27,7 +27,7 @@ function makeActor(overrides: Partial<CombatantState> = {}): CombatantState {
     barrierHp: 0,
     atk: 20,
     def: 5,
-    reg: 0,
+    res: 0,
     statusEffects: [],
     cooldowns: [],
     corpseVisible: true,

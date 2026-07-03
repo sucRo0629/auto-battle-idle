@@ -8,7 +8,7 @@ import {
   GROWTH_PRESET_KEY_OPTIONS,
   GROWTH_TIER_LABELS,
   GROWTH_TIER_OPTIONS,
-  REG_OPTIONS,
+  RES_OPTIONS,
   ROLE_OPTIONS,
 } from "../battle/data/gameDataSchema.ts";
 import type {
@@ -130,7 +130,7 @@ function renderGrowthPreview(
         maxHp: classPreset.maxHp,
         atk: classPreset.atk,
         def: classPreset.def,
-        reg: classPreset.reg,
+        res: classPreset.res,
       },
       classPreset,
       PREVIEW_LEVEL,
@@ -172,12 +172,12 @@ function renderGrowthPreview(
     item.textContent = formatPreviewStatLine(label, base, effective, perLevel);
     list.appendChild(item);
   }
-  if (preview && lv10.reg !== (baseStats?.reg ?? lv10.reg)) {
+  if (preview && lv10.res !== (baseStats?.res ?? lv10.res)) {
     const item = createEl("li");
     item.textContent = formatPreviewStatLine(
-      "REG",
-      baseStats?.reg ?? lv10.reg,
-      lv10.reg,
+      "RES",
+      baseStats?.res ?? lv10.res,
+      lv10.res,
       0,
     );
     list.appendChild(item);
@@ -545,7 +545,7 @@ export class ClassEditorStep {
       )
     );
 
-    const statsSummary = `HP ${draft.class.maxHp} ATK ${draft.class.atk} DEF ${draft.class.def} REG ${draft.class.reg}`;
+    const statsSummary = `HP ${draft.class.maxHp} ATK ${draft.class.atk} DEF ${draft.class.def} RES ${draft.class.res}`;
     const { details: statsDetails, body: statsBody } = createCollapsibleSection({
       id: "class-stats",
       title: "Lv1 ステータス",
@@ -557,7 +557,7 @@ export class ClassEditorStep {
       createEl(
         "p",
         "editor-hint",
-        "maxHp / atk / def は Lv1 基準値。reg と攻撃速度は Lv とともに変化しません。"
+        "maxHp / atk / def は Lv1 基準値。res（魔法耐性）と攻撃速度は Lv とともに変化しません。"
       )
     );
     const statsGrid = appendGrid(statsBody);
@@ -614,13 +614,13 @@ export class ClassEditorStep {
     );
     statsGrid.appendChild(
       createFieldRow(
-        editorFieldLabel("reg"),
+        editorFieldLabel("res"),
         createSelect(
-          draft.class.reg,
-          REG_OPTIONS.map((value) => ({ value, label: String(value) })),
+          draft.class.res,
+          RES_OPTIONS.map((value) => ({ value, label: String(value) })),
           (reg) => {
             commitDraft((next) => {
-              next.class.reg = reg;
+              next.class.res = reg;
             });
           }
         )

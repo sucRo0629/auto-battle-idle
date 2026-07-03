@@ -30,7 +30,7 @@ function mockUnit(
     barrierHp: 0,
     atk: 20,
     def: 5,
-    reg: 0,
+    res: 0,
     isAlive: true,
     role: 'attacker',
     classId: 'at_assassin',
@@ -124,7 +124,7 @@ describe('backstab evasion buff badge', () => {
       baseMaxHp: actor.maxHp,
       atk: actor.atk,
       def: actor.def,
-      reg: actor.reg,
+      res: actor.res,
     });
     expect(badges.map((b) => b.category)).toContain('evasion');
   });
@@ -168,7 +168,7 @@ describe('backstab evasion buff badge', () => {
       baseMaxHp: actor.maxHp,
       atk: actor.atk,
       def: actor.def,
-      reg: actor.reg,
+      res: actor.res,
     });
     expect(badges.map((b) => b.category)).toEqual(['evasion']);
   });
@@ -210,7 +210,7 @@ describe('backstab evasion buff badge', () => {
           baseMaxHp: assassin.maxHp,
           atk: assassin.atk,
           def: assassin.def,
-          reg: assassin.reg,
+          res: assassin.res,
         });
         expect(badges.map((badge) => badge.category)).toContain('evasion');
         break;

@@ -61,7 +61,7 @@ interface PlayerProgress {
 | ---- | ------ |
 | EXP 付与 | 勝利時、撃破敵 `exp` 合計を `playerProgress.exp` に加算（メンバー別配分なし） |
 | LvUP | `playerProgress.level` 上昇で **全クラス** の習得テーブル・枠段階が更新される |
-| ステ成長 | LvUP で **maxHp, atk, def** が上昇（**Phase 4** で成長段階 + `growthPresets` 方式。詳細は [stats.md](stats.md)）。**REG は成長しない** |
+| ステ成長 | LvUP で **maxHp, atk, def** が上昇（**Phase 4** で成長段階 + `growthPresets` 方式。詳細は [stats.md](stats.md)）。**RES（魔法耐性）は成長しない** |
 | 戦闘 Lv | `resolveEffectiveLevel` が `playerProgress.level` を基準に Level Sync / Instant Lv20 を適用（オプション詳細は [Phase 11](#phase-11--解法評価メタ07582b6)） |
 | Lv20 完成 | 習得・枠は Lv20 で頭打ち。Lv21+ はステータス救済のみ（[design-philosophy.md](../design-philosophy.md) §4） |
 
@@ -120,7 +120,7 @@ interface SaveGameState {
 - 現在ステージ名（Canvas 左上）
 - **ステージ選択** — **本番 UI なし**。リリースモードではセーブ上の `currentStageId` と勝利時自動進行のみ。**確認モード（verify ON）** では `DebugMenuPanel`（`BattleView` 内）の **周回ステージ** `<select>` で任意ステージをピン留め可能（`GameSession.setLoopStage`）。Wave 固定・プレイヤー Lv 変更も同パネル。**Phase 6d** でリリース向けマップ選択を追加し、本番導線では `DebugMenuPanel` を出さない（**Phase 7** demo ビルド）
 - **プレイヤー共通 Lv（数値）+ Exp バー（戦闘 HUD）** — Exp バーの具体レイアウトは **TBD**（HUD 内の共通表示 1 か所を想定）
-- **パーティ HUD スロット行** — クラス名 + HP 等。**メンバー別 `Lv{n}` 表記は廃止**。プレイヤー Lv / Exp は HUD 内の共通表示（レイアウト TBD）。**クラス名またはアイコン+HP 行**へマウスオーバーで **当該スロットのクラス名直上**に **戦闘中実効ステ**（HP 現在/Max・ATK/DEF/REG/SPD + 右列補正）— [battle-field.md §7.1.1](battle-field.md#711-戦闘中ステータスparty-hud-クリック)
+- **パーティ HUD スロット行** — クラス名 + HP 等。**メンバー別 `Lv{n}` 表記は廃止**。プレイヤー Lv / Exp は HUD 内の共通表示（レイアウト TBD）。**クラス名またはアイコン+HP 行**へマウスオーバーで **当該スロットのクラス名直上**に **戦闘中実効ステ**（HP 現在/Max・ATK/DEF/RES/SPD + 右列補正）— [battle-field.md §7.1.1](battle-field.md#711-戦闘中ステータスparty-hud-クリック)
 - **パーティ編成メニュー**（`SkillMenuPanel`）— 画面設計の正本は [party-formation-ui.md](party-formation-ui.md)（Phase 4d）。ヘッダーに **`プレイヤー Lv {n}` のみ**（Exp バーは編成画面に出さない）
   - **HP** のみ英字表記、それ以外は日本語（攻撃力 / 防御力 / 魔法耐性 / 攻撃速度）
   - 攻撃速度は内部略称 **SPD**（`attackSpeedTier`）。UI では 5 段階ラベル（遅い〜早い）
@@ -233,7 +233,7 @@ Phase 8（バランス調整）完了後に着手。Electron シェルは `elect
 
 - `data/enhancementTree.json`
 - globalExp を消費；**maxHp / atk / def** をパーティ全体に強化。
-- REG は対象外。
+- RES（魔法耐性）は対象外。
 
 ### オフライン報酬
 
@@ -310,7 +310,7 @@ interface StageEnemyGroup {
   hpScale?: number; // 省略時 1.0。正数
   atkScale?: number;
   defScale?: number;
-  regScale?: number;
+  resScale?: number;
 }
 ```
 
@@ -341,7 +341,7 @@ interface ResolvedEnemySpawnSpec {
   hpScale?: number;
   atkScale?: number;
   defScale?: number;
-  regScale?: number;
+  resScale?: number;
   groupIndex: number;
   indexInGroup: number;
   groupCount: number;

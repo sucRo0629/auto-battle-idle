@@ -22,7 +22,7 @@ function mockUnit(
     barrierHp: 0,
     atk: 20,
     def: 30,
-    reg: 0,
+    res: 0,
     isAlive: true,
     role: 'defender',
     classId: 'df_guardian',

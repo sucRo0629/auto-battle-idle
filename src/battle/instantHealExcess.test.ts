@@ -18,7 +18,7 @@ function unit(partial: Partial<CombatantState> & Pick<CombatantState, 'id'>): Co
     barrierHp: partial.barrierHp ?? 0,
     atk: partial.atk ?? 100,
     def: partial.def ?? 50,
-    reg: partial.reg ?? 0,
+    res: partial.res ?? 0,
     battleX: partial.battleX ?? 0,
     role: partial.role ?? 'supporter',
     formationRow: partial.formationRow ?? 'back',

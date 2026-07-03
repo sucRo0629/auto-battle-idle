@@ -7,7 +7,7 @@ export interface MemberDisplayStats {
   maxHp: number;
   atk: number;
   def: number;
-  reg: number;
+  res: number;
   spdLabel: string;
 }
 
@@ -25,7 +25,7 @@ export function resolveMemberDisplayStats(
       maxHp: preset.maxHp,
       atk: preset.atk,
       def: preset.def,
-      reg: preset.reg,
+      res: preset.res,
     },
     preset,
     level,
@@ -38,7 +38,7 @@ export function resolveMemberDisplayStats(
     maxHp: stats.maxHp,
     atk: stats.atk,
     def: stats.def,
-    reg: stats.reg,
+    res: stats.res,
     spdLabel: getAttackSpeedTierLabel(tier),
   };
 }

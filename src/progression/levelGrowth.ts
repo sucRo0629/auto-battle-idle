@@ -191,18 +191,18 @@ export function expRequiredForLevel(level: number, curves: LevelCurvesConfig): n
 }
 
 export function computeStatsAtLevel(
-  base: StatGrowth & { reg: number },
+  base: StatGrowth & { res: number },
   preset: Pick<ClassPreset, 'role' | 'growthTier' | 'growthPresetKey'>,
   level: number,
   curves: LevelCurvesConfig,
-): StatGrowth & { reg: number } {
+): StatGrowth & { res: number } {
   const growth = resolveStatGrowth(preset, curves);
   const steps = Math.max(0, level - 1);
   return {
     maxHp: base.maxHp + growth.maxHp * steps,
     atk: base.atk + growth.atk * steps,
     def: base.def + growth.def * steps,
-    reg: base.reg,
+    res: base.res,
   };
 }
 

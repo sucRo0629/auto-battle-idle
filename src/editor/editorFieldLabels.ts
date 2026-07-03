@@ -10,7 +10,7 @@ export const EDITOR_FIELD_LABELS = {
   maxHp: "最大 HP",
   atk: "攻撃力",
   def: "防御力",
-  reg: "魔法耐性",
+  res: "魔法耐性",
   "primary damageType": "primary ダメージ種",
   "primary atkScale": "primary ATK倍率",
   "primary hitCount": "primary 攻撃回数",

@@ -24,8 +24,8 @@ import {
 const SELF_HP_BUFF_NEUTRAL_EPSILON = 0.001;
 
 export interface PreviewCombatStats {
-  base: { maxHp: number; atk: number; def: number; reg: number };
-  effective: { maxHp: number; atk: number; def: number; reg: number };
+  base: { maxHp: number; atk: number; def: number; res: number };
+  effective: { maxHp: number; atk: number; def: number; res: number };
   attackSpeedMultiplier: number;
   hasPassiveStatModifiers: boolean;
 }
@@ -176,7 +176,7 @@ export function computePreviewCombatStats(
       maxHp: preset.maxHp,
       atk: preset.atk,
       def: preset.def,
-      reg: preset.reg,
+      res: preset.res,
     },
     preset,
     level,
@@ -199,7 +199,7 @@ export function computePreviewCombatStats(
     maxHp: applyPreviewStat(base.maxHp, effects, 'hp'),
     atk: applyPreviewStat(base.atk, effects, 'atk'),
     def: applyPreviewStat(base.def, effects, 'def'),
-    reg: applyPreviewStat(base.reg, effects, 'reg'),
+    res: applyPreviewStat(base.res, effects, 'res'),
   };
   const attackSpeedMultiplier = applyPreviewStat(1, effects, 'attackSpeed');
 
@@ -207,7 +207,7 @@ export function computePreviewCombatStats(
     effective.maxHp !== base.maxHp ||
     effective.atk !== base.atk ||
     effective.def !== base.def ||
-    effective.reg !== base.reg ||
+    effective.res !== base.res ||
     attackSpeedMultiplier !== 1;
 
   return {

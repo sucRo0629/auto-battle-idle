@@ -11,7 +11,7 @@ function mergeDefenseIgnoreSpecs(
 ): DefenseIgnoreSpec {
   let defFlat = 0;
   let defPercent = 0;
-  let regPercent = 0;
+  let resPercent = 0;
 
   for (const spec of specs) {
     if (!spec) continue;
@@ -20,8 +20,8 @@ function mergeDefenseIgnoreSpecs(
     } else if (spec.def?.mode === 'percent') {
       defPercent += spec.def.amount;
     }
-    if (spec.reg?.percent !== undefined) {
-      regPercent += spec.reg.percent;
+    if (spec.res?.percent !== undefined) {
+      resPercent += spec.res.percent;
     }
   }
 
@@ -36,8 +36,8 @@ function mergeDefenseIgnoreSpecs(
       // flat is applied separately via combined spec — use custom handling in apply
     }
   }
-  if (regPercent > 0) {
-    merged.reg = { percent: Math.min(1, regPercent) };
+  if (resPercent > 0) {
+    merged.res = { percent: Math.min(1, resPercent) };
   }
   return merged;
 }
@@ -125,16 +125,16 @@ export function getPassiveIgnoredDefBonusScale(
   return scale;
 }
 
-export function applyDefenseIgnoreToReg(
-  effectiveReg: number,
+export function applyDefenseIgnoreToRes(
+  effectiveRes: number,
   specs: Array<DefenseIgnoreSpec | undefined>,
 ): number {
-  let regPercent = 0;
+  let resPercent = 0;
   for (const spec of specs) {
-    if (spec?.reg?.percent !== undefined) {
-      regPercent += spec.reg.percent;
+    if (spec?.res?.percent !== undefined) {
+      resPercent += spec.res.percent;
     }
   }
-  regPercent = Math.min(1, regPercent);
-  return Math.max(0, effectiveReg * (1 - regPercent));
+  resPercent = Math.min(1, resPercent);
+  return Math.max(0, effectiveRes * (1 - resPercent));
 }

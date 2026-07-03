@@ -28,7 +28,7 @@ function mockAlly(
     barrierHp: 0,
     atk: 20,
     def: 5,
-    reg: 0,
+    res: 0,
     isAlive: true,
     role: 'attacker',
     classId: 'test',
@@ -379,7 +379,7 @@ describe('passiveEffects', () => {
       baseMaxHp: guard.maxHp,
       atk: guard.atk,
       def: guard.def,
-      reg: guard.reg,
+      res: guard.res,
     });
     expect(badges).toEqual([]);
   });
@@ -786,7 +786,7 @@ describe('passiveEffects', () => {
       baseMaxHp: warrior.maxHp,
       atk: warrior.atk,
       def: warrior.def,
-      reg: warrior.reg,
+      res: warrior.res,
     });
     expect(badges.find((b) => b.category === 'atk')).toBeUndefined();
   });

@@ -845,7 +845,7 @@ export class SkillMenuPanel {
       { label: statLabels.hp, value: String(stats.maxHp) },
       { label: statLabels.atk, value: String(stats.atk) },
       { label: statLabels.def, value: String(stats.def) },
-      { label: statLabels.reg, value: `${stats.reg}%` },
+      { label: statLabels.res, value: `${stats.res}%` },
     ];
 
     const basicAttackLine = this.formatBasicAttackSummary(preset);

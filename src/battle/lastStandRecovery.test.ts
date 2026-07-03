@@ -15,7 +15,7 @@ function mockPaladin(id: string): CombatantState {
     barrierHp: 30,
     atk: 10,
     def: 22,
-    reg: 10,
+    res: 10,
     isAlive: true,
     role: 'defender',
     classId: 'df_paladin',

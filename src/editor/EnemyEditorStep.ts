@@ -2,7 +2,7 @@ import {
   ATTACK_SPEED_TIER_LABELS,
   ATTACK_SPEED_TIER_OPTIONS,
   DAMAGE_TYPE_OPTIONS,
-  REG_OPTIONS,
+  RES_OPTIONS,
 } from '../battle/data/gameDataSchema.ts';
 import type {
   AttackSpeedTier,
@@ -207,13 +207,13 @@ export class EnemyEditorStep {
     );
     statsGrid.appendChild(
       createFieldRow(
-        editorFieldLabel('reg'),
+        editorFieldLabel('res'),
         createSelect(
-          draft.enemy.reg,
-          REG_OPTIONS.map((value) => ({ value, label: String(value) })),
+          draft.enemy.res,
+          RES_OPTIONS.map((value) => ({ value, label: String(value) })),
           (reg) => {
             commitDraft((next) => {
-              next.enemy.reg = reg;
+              next.enemy.res = reg;
             });
           },
         ),

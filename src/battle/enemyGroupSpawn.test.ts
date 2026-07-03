@@ -89,7 +89,7 @@ describe('expandEnemyGroups', () => {
           hpScale: 1.5,
           atkScale: 2,
           defScale: 0.8,
-          regScale: 1.2,
+          resScale: 1.2,
         },
       ]),
     );
@@ -100,7 +100,7 @@ describe('expandEnemyGroups', () => {
         hpScale: 1.5,
         atkScale: 2,
         defScale: 0.8,
-        regScale: 1.2,
+        resScale: 1.2,
       });
     }
   });
@@ -131,49 +131,49 @@ describe('expandEnemyGroups', () => {
 describe('applyEnemyStatScales', () => {
   it('multiplies stats and rounds to integers', () => {
     const result = applyEnemyStatScales(
-      { maxHp: 100, atk: 11, def: 7, reg: 3 },
-      { hpScale: 1.5, atkScale: 2, defScale: 0.8, regScale: 1.2 },
+      { maxHp: 100, atk: 11, def: 7, res: 3 },
+      { hpScale: 1.5, atkScale: 2, defScale: 0.8, resScale: 1.2 },
     );
 
     expect(result).toEqual({
       maxHp: 150,
       atk: 22,
       def: 6,
-      reg: 4,
+      res: 4,
     });
   });
 
   it('treats undefined scale as 1', () => {
-    const stats = { maxHp: 80, atk: 12, def: 5, reg: 2 };
+    const stats = { maxHp: 80, atk: 12, def: 5, res: 2 };
     expect(applyEnemyStatScales(stats, {})).toEqual(stats);
     expect(resolveEnemyStatScale(undefined)).toBe(1);
   });
 
   it('floors maxHp and atk to at least 1 after rounding', () => {
     const result = applyEnemyStatScales(
-      { maxHp: 100, atk: 10, def: 50, reg: 0 },
-      { hpScale: 0.001, atkScale: 0.01, defScale: 0.01, regScale: 1 },
+      { maxHp: 100, atk: 10, def: 50, res: 0 },
+      { hpScale: 0.001, atkScale: 0.01, defScale: 0.01, resScale: 1 },
     );
 
     expect(result).toEqual({
       maxHp: 1,
       atk: 1,
       def: 1,
-      reg: 0,
+      res: 0,
     });
   });
 
   it('allows def and reg to round to 0', () => {
     const result = applyEnemyStatScales(
-      { maxHp: 100, atk: 10, def: 3, reg: 0 },
-      { hpScale: 1, atkScale: 1, defScale: 0.1, regScale: 0.5 },
+      { maxHp: 100, atk: 10, def: 3, res: 0 },
+      { hpScale: 1, atkScale: 1, defScale: 0.1, resScale: 0.5 },
     );
 
     expect(result).toEqual({
       maxHp: 100,
       atk: 10,
       def: 0,
-      reg: 0,
+      res: 0,
     });
   });
 });

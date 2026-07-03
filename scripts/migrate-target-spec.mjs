@@ -7,7 +7,7 @@ const skillsDir = join(root, 'data/skills');
 const passivesDir = join(skillsDir, 'passives');
 const activesDir = join(skillsDir, 'actives');
 
-const DEBUFF_TAGS = ['atk', 'def', 'reg', 'damageTaken', 'dot', 'stun'];
+const DEBUFF_TAGS = ['atk', 'def', 'res', 'damageTaken', 'dot', 'stun'];
 
 function convertRule(rule, debuffFilter) {
   switch (rule) {
@@ -35,10 +35,10 @@ function convertRule(rule, debuffFilter) {
       return { kind: 'stat', side: 'enemy', stat: 'def', order: 'lowest' };
     case 'highestDefEnemy':
       return { kind: 'stat', side: 'enemy', stat: 'def', order: 'highest' };
-    case 'lowestRegEnemy':
-      return { kind: 'stat', side: 'enemy', stat: 'reg', order: 'lowest' };
-    case 'highestRegEnemy':
-      return { kind: 'stat', side: 'enemy', stat: 'reg', order: 'highest' };
+    case 'lowestResEnemy':
+      return { kind: 'stat', side: 'enemy', stat: 'res', order: 'lowest' };
+    case 'highestResEnemy':
+      return { kind: 'stat', side: 'enemy', stat: 'res', order: 'highest' };
     case 'rangedAttackingEnemy':
       return { kind: 'attackType', ranged: true };
     case 'magicAttackingEnemy':

@@ -24,7 +24,7 @@ export interface CombatantLayout {
   barrierHp: number;
   atk: number;
   def: number;
-  reg: number;
+  res: number;
   role?: Role;
   rangePx?: number;
   isEnemy: boolean;

@@ -5,12 +5,12 @@
 | HP | maxHp | 体力（**Lv1 基準値**。`classes.json`） |
 | ATK | atk | 攻撃力 / **`atkBased` 回復・バリア** の基礎（Lv1 基準） |
 | DEF | def | 物理防御（Lv1 基準） |
-| REG | reg | 魔法耐性。非魔法系は 0、魔法系クラスは 5/10/15/20 のいずれか。**Lv 成長しない** |
+| RES | res | 魔法耐性。非魔法系は 0、魔法系クラスは 5/10/15/20 のいずれか。**Lv 成長しない** |
 | SPD | attackSpeedTier | 攻撃速度（5 段階 enum）。**基本攻撃 CD のみ**に影響。未指定は `normal` |
 
 ## Lv 成長（Phase 4）
 
-成長対象は **HP / ATK / DEF のみ**。REG・SPD は Lv とともに変化しない。
+成長対象は **HP / ATK / DEF のみ**。RES（魔法耐性）・SPD は Lv とともに変化しない。
 
 ### 成長式（線形加算）
 

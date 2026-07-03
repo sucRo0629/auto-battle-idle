@@ -12,25 +12,25 @@ describe('parseStatBuffModifiers', () => {
       parseStatBuffModifiers({
         buffStatModifiers: [
           { stat: 'def', multiplier: 1.1 },
-          { stat: 'reg', flatBonus: 5 },
+          { stat: 'res', flatBonus: 5 },
         ],
       }),
     ).toEqual([
       { stat: 'def', multiplier: 1.1 },
-      { stat: 'reg', flatBonus: 5 },
+      { stat: 'res', flatBonus: 5 },
     ]);
   });
 
   it('falls back to legacy buffStat fields', () => {
     expect(
       parseStatBuffModifiers({
-        buffStat: ['def', 'reg'],
+        buffStat: ['def', 'res'],
         buffMultiplier: 1.1,
         buffFlatBonus: 5,
       }),
     ).toEqual([
       { stat: 'def', multiplier: 1.1, flatBonus: 5 },
-      { stat: 'reg', multiplier: 1.1, flatBonus: 5 },
+      { stat: 'res', multiplier: 1.1, flatBonus: 5 },
     ]);
   });
 });
@@ -40,13 +40,13 @@ describe('syncPassiveBuffStatModifiers', () => {
     const passive = { effect: 'buff' } as PassiveSkillDef;
     syncPassiveBuffStatModifiers(passive, [
       { stat: 'def', multiplier: 1.1 },
-      { stat: 'reg', flatBonus: 5 },
+      { stat: 'res', flatBonus: 5 },
     ]);
     expect(passive.buffStatModifiers).toEqual([
       { stat: 'def', multiplier: 1.1 },
-      { stat: 'reg', flatBonus: 5 },
+      { stat: 'res', flatBonus: 5 },
     ]);
-    expect(passive.buffStat).toEqual(['def', 'reg']);
+    expect(passive.buffStat).toEqual(['def', 'res']);
     expect(passive.buffMultiplier).toBeUndefined();
     expect(passive.buffFlatBonus).toBeUndefined();
   });

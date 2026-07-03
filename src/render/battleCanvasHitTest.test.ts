@@ -20,7 +20,7 @@ function layout(
     barrierHp: 0,
     atk: 10,
     def: 10,
-    reg: 0,
+    res: 0,
     isEnemy,
     isAlive: true,
     anim: "idle",

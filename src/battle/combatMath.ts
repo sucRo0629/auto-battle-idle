@@ -11,7 +11,7 @@ import type {
 } from './types.ts';
 import {
   applyDefenseIgnoreToDef,
-  applyDefenseIgnoreToReg,
+  applyDefenseIgnoreToRes,
   getPassiveDefenseIgnoreSpec,
   getPassiveIgnoredDefBonusScale,
   rollDefenseIgnoreSpec,
@@ -55,9 +55,9 @@ export function getEffectiveDef(combatant: CombatantState): number {
   return computeEffectiveStat(combatant.def, agg);
 }
 
-export function getEffectiveReg(combatant: CombatantState): number {
-  const agg = aggregateStatEffects(combatant.statusEffects, 'reg');
-  return computeEffectiveStat(combatant.reg, agg);
+export function getEffectiveRes(combatant: CombatantState): number {
+  const agg = aggregateStatEffects(combatant.statusEffects, 'res');
+  return computeEffectiveStat(combatant.res, agg);
 }
 
 export function getEffectiveMaxHp(combatant: CombatantState): number {
@@ -301,11 +301,11 @@ export function applyDefenseMitigation(
   if (rawDamage <= 0) return 0;
 
   const effectiveDef = getEffectiveDef(defender);
-  const effectiveReg = getEffectiveReg(defender);
+  const effectiveRes = getEffectiveRes(defender);
 
   let afterDefense: number;
   if (damageType === 'magic') {
-    afterDefense = Math.floor((rawDamage * 100) / (100 + effectiveReg));
+    afterDefense = Math.floor((rawDamage * 100) / (100 + effectiveRes));
   } else {
     const afterSubtract = rawDamage - effectiveDef;
     if (afterSubtract <= 0) {
@@ -446,15 +446,15 @@ export function resolveDamage(
   const ignoreDr = options.ignoreDamageTakenReduction === true;
   const rawDef = getEffectiveDef(target);
   const effectiveDef = applyDefenseIgnoreToDef(rawDef, ignoreSpecs);
-  const effectiveReg = applyDefenseIgnoreToReg(
-    getEffectiveReg(target),
+  const effectiveRes = applyDefenseIgnoreToRes(
+    getEffectiveRes(target),
     ignoreSpecs,
   );
 
   let afterDefense: number;
   let ignoredDefBonus = 0;
   if (damageType === 'magic') {
-    afterDefense = Math.floor((baseDamage * 100) / (100 + effectiveReg));
+    afterDefense = Math.floor((baseDamage * 100) / (100 + effectiveRes));
   } else {
     const ignoredDef = Math.max(0, rawDef - effectiveDef);
     ignoredDefBonus = Math.floor(

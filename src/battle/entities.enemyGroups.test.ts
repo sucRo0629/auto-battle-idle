@@ -107,7 +107,7 @@ describe('createEnemiesForStage enemyGroups path', () => {
       maxHp: expectedLv5.maxHp,
       atk: expectedLv5.atk,
       def: expectedLv5.def,
-      reg: expectedLv5.reg,
+      res: expectedLv5.res,
       hp: expectedLv5.maxHp,
     });
     expect(enemyLv15!.maxHp).toBeGreaterThan(enemyLv5!.maxHp);
@@ -127,7 +127,7 @@ describe('createEnemiesForStage enemyGroups path', () => {
         hpScale: 1.5,
         atkScale: 2,
         defScale: 0.8,
-        regScale: 1.2,
+        resScale: 1.2,
       },
     ]);
     const base = computeStatsAtLevel(preset, preset, 10, levelCurves);
@@ -142,7 +142,7 @@ describe('createEnemiesForStage enemyGroups path', () => {
       maxHp: Math.round(base.maxHp * 1.5),
       atk: Math.round(base.atk * 2),
       def: Math.round(base.def * 0.8),
-      reg: Math.round(base.reg * 1.2),
+      res: Math.round(base.res * 1.2),
       hp: Math.round(base.maxHp * 1.5),
     });
   });
@@ -162,7 +162,7 @@ describe('createEnemiesForStage enemyGroups path', () => {
       maxHp: base.maxHp,
       atk: base.atk,
       def: base.def,
-      reg: base.reg,
+      res: base.res,
     });
   });
 

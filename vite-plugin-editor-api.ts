@@ -149,7 +149,7 @@ interface ClassStatsPatchBody {
   maxHp: number;
   atk: number;
   def: number;
-  reg: number;
+  res: number;
   rangePx: number;
   growthTier: ClassPresetBeforeEnrich['growthTier'];
   attackSpeedTier: ClassPresetBeforeEnrich['attackSpeedTier'];
@@ -218,7 +218,7 @@ async function applyClassStatsBulk(
       maxHp: patch.maxHp,
       atk: patch.atk,
       def: patch.def,
-      reg: patch.reg,
+      res: patch.res,
       traits: {
         ...existing.traits,
         rangePx: patch.rangePx,

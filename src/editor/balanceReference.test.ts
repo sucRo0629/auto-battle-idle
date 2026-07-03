@@ -30,7 +30,7 @@ function row(
     maxHp: 100,
     atk: 10,
     def: 10,
-    reg: 0,
+    res: 0,
     jobTier,
     basicAttackSkillId: `${id}_basic`,
     skills: [],

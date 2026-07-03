@@ -16,7 +16,7 @@ function mockUnit(
     barrierHp: 0,
     atk: 10,
     def: 5,
-    reg: 0,
+    res: 0,
     isAlive: true,
     role: 'defender',
     classId: 'sp_cleric',

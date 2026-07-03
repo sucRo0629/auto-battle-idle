@@ -18,7 +18,7 @@ function sampleEntry(unitId: string, partySlotIndex: number): PartyHudEntry {
     barrierHp: 0,
     atk: 10,
     def: 10,
-    reg: 0,
+    res: 0,
     isAlive: true,
     useLocked: false,
     unlockedActiveSlotCount: 2,

@@ -20,7 +20,7 @@ function mockUnit(
     barrierHp: partial.barrierHp ?? 0,
     atk: partial.atk ?? 100,
     def: partial.def ?? 50,
-    reg: partial.reg ?? 0,
+    res: partial.res ?? 0,
     traits: partial.traits ?? { rangePx: 50 },
     statusEffects: partial.statusEffects ?? [],
     cooldowns: partial.cooldowns ?? [],

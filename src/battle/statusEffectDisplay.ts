@@ -4,7 +4,7 @@ export type StatusDisplayCategory =
   | "hp"
   | "atk"
   | "def"
-  | "reg"
+  | "res"
   | "attackSpeed"
   | "damageReduction"
   | "damageIncrease"
@@ -42,7 +42,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "hp",
   "atk",
   "def",
-  "reg",
+  "res",
   "attackSpeed",
   "damageReduction",
   "damageIncrease",
@@ -109,7 +109,7 @@ export interface StatBadgeBaseStats {
   baseMaxHp: number;
   atk: number;
   def: number;
-  reg: number;
+  res: number;
 }
 
 export interface StatusEffectBadgeDisplay {
@@ -180,7 +180,7 @@ function effectKindFromEffectiveStat(
 function statusEffectBadgeForStat(
   effect: StatusEffect,
   base: number,
-  category: "hp" | "atk" | "def" | "reg" | "attackSpeed"
+  category: "hp" | "atk" | "def" | "res" | "attackSpeed"
 ): StatusEffectBadgeDisplay | null {
   const agg = aggregateStatEffects([effect], category);
   const kind = effectKindFromEffectiveStat(
@@ -408,8 +408,8 @@ function statusEffectBadgeForEffect(
   if (effect.stat === "def") {
     return statusEffectBadgeForStat(effect, baseStats.def, "def");
   }
-  if (effect.stat === "reg") {
-    return statusEffectBadgeForStat(effect, baseStats.reg, "reg");
+  if (effect.stat === "res") {
+    return statusEffectBadgeForStat(effect, baseStats.res, "res");
   }
   if (effect.stat === "attackSpeed") {
     return statusEffectBadgeForStat(effect, 1, "attackSpeed");
@@ -530,8 +530,8 @@ function effectsForCategory(
   if (category === "def") {
     return effects.filter((effect) => effect.stat === "def");
   }
-  if (category === "reg") {
-    return effects.filter((effect) => effect.stat === "reg");
+  if (category === "res") {
+    return effects.filter((effect) => effect.stat === "res");
   }
   if (category === "attackSpeed") {
     return effects.filter((effect) => effect.stat === "attackSpeed");
@@ -632,7 +632,7 @@ export function categoryRemainingRatio(
 
 function aggregateStatCategory(
   effects: StatusEffect[],
-  category: "hp" | "atk" | "def" | "reg" | "attackSpeed",
+  category: "hp" | "atk" | "def" | "res" | "attackSpeed",
   base: number
 ): AggregatedCategoryEffect | null {
   const agg = aggregateStatEffects(effects, category);
@@ -759,7 +759,7 @@ export function aggregateStatStatusEffects(
   );
   if (hpBadge) result.push(hpBadge);
 
-  for (const category of ["atk", "def", "reg"] as const) {
+  for (const category of ["atk", "def", "res"] as const) {
     const badge = aggregateStatCategory(
       displayEffects,
       category,
@@ -829,7 +829,7 @@ export function assignCompactBadgeTier(
   if (COMPACT_TIER1_CC.has(badge.category)) return 1;
 
   if (
-    (badge.category === "def" || badge.category === "reg") &&
+    (badge.category === "def" || badge.category === "res") &&
     badge.kind === "debuff"
   ) {
     return 2;

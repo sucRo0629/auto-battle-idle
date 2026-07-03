@@ -20,7 +20,7 @@ function mockUnit(
     isEnemy?: boolean;
     atk?: number;
     def?: number;
-    reg?: number;
+    res?: number;
     rangePx?: number;
     damageType?: 'physical' | 'magic';
     statusEffects?: CombatantState['statusEffects'];
@@ -36,7 +36,7 @@ function mockUnit(
     maxHp,
     atk: opts.atk ?? 10,
     def: opts.def ?? 5,
-    reg: opts.reg ?? 0,
+    res: opts.res ?? 0,
     isAlive: hp > 0,
     role: 'attacker',
     classId: 'test',

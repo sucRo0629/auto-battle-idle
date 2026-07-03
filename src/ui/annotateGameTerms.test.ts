@@ -121,7 +121,7 @@ describe("segmentTextByGameTerms", () => {
     });
   });
 
-  it("does not link atk, def, reg, hp, or attackSpeed in skill text", () => {
+  it("does not link atk, def, res, hp, or attackSpeed in skill text", () => {
     expect(segmentTextByGameTerms("攻撃力+20%", "ja")).toEqual([
       { kind: "text", text: "攻撃力+20%" },
     ]);

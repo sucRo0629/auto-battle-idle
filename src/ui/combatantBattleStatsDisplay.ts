@@ -149,9 +149,9 @@ export function buildCombatantBattleStatRows(
       ally.statusEffects,
     ),
     buildNumericStatRow(
-      labels.reg,
-      ally.reg,
-      'reg',
+      labels.res,
+      ally.res,
+      'res',
       ally.statusEffects,
       { valueSuffix: '%' },
     ),

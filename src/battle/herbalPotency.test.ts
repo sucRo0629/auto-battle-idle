@@ -23,7 +23,7 @@ function mockAlly(overrides: Partial<CombatantState> & { id: string }): Combatan
     barrierHp: 0,
     atk: 50,
     def: 5,
-    reg: 0,
+    res: 0,
     isAlive: true,
     role: 'supporter',
     classId: overrides.classId ?? 'warrior',

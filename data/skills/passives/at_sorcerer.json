@@ -4,7 +4,7 @@
     "name": "猛火の術",
     "effect": "defenseIgnore",
     "defenseIgnore": {
-      "reg": {
+      "res": {
         "percent": 0.2
       }
     }

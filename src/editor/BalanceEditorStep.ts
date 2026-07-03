@@ -6,7 +6,7 @@ import {
   GROWTH_TIER_LABELS,
   GROWTH_TIER_OPTIONS,
   JOB_TIER_OPTIONS,
-  REG_OPTIONS,
+  RES_OPTIONS,
 } from "../battle/data/gameDataSchema.ts";
 import type {
   ClassId,
@@ -86,7 +86,7 @@ function computeRowDerived(
         maxHp: cls.maxHp,
         atk: cls.atk,
         def: cls.def,
-        reg: cls.reg,
+        res: cls.res,
       },
       cls,
       level,
@@ -233,7 +233,7 @@ export class BalanceEditorStep {
     setNumber("atk", cls.atk);
     setNumber("def", cls.def);
     setNumber("rangePx", cls.traits.rangePx ?? 0);
-    setSelect("reg", String(cls.reg));
+    setSelect("res", String(cls.res));
     setSelect("growth-maxHp", String(growthTier.maxHp));
     setSelect("growth-atk", String(growthTier.atk));
     setSelect("growth-def", String(growthTier.def));
@@ -435,7 +435,7 @@ export class BalanceEditorStep {
       { label: "Lv1 ATK", compact: true },
       { label: "Lv1 DEF", compact: true },
       { label: "射程", compact: true },
-      { label: "REG" },
+      { label: "RES" },
       { label: "HP 成長" },
       { label: "ATK 成長" },
       { label: "DEF 成長" },
@@ -549,19 +549,19 @@ export class BalanceEditorStep {
       )
     );
 
-    const regCell = createEl("td");
-    const regSelect = createSelect(
-      cls.reg,
-      REG_OPTIONS.map((value) => ({ value, label: String(value) })),
+    const resCell = createEl("td");
+    const resSelect = createSelect(
+      cls.res,
+      RES_OPTIONS.map((value) => ({ value, label: String(value) })),
       (reg) => {
         mutate((current) => {
-          current.reg = reg;
+          current.res = reg;
         });
       }
     );
-    regSelect.dataset.field = "reg";
-    regCell.appendChild(regSelect);
-    tr.appendChild(regCell);
+    resSelect.dataset.field = "res";
+    resCell.appendChild(resSelect);
+    tr.appendChild(resCell);
 
     tr.appendChild(
       this.growthCell(

@@ -22,7 +22,7 @@ Use controlled, concise game-effect English.
 - Prefer short sentences.
 - Preserve numbers, durations, stack counts, and target counts exactly.
 - Preserve game terms from the glossary exactly.
-- Do not translate ATK, DEF, REG, HP.
+- Do not translate ATK, DEF, RES, HP.
 - Do not vary terminology for style.
 - Do not use literary or flavorful wording.
 - If the Japanese source is ambiguous, mark it as `NEEDS_REVIEW` instead of guessing.

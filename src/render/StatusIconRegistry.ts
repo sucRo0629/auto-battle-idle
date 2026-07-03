@@ -46,7 +46,7 @@ const ICON_URLS: Partial<Record<StatusDisplayCategory, string>> = {
   hp: hpIconUrl,
   atk: atkIconUrl,
   def: defIconUrl,
-  reg: regIconUrl,
+  res: regIconUrl,
   attackSpeed: attackSpeedIconUrl,
   damageReduction: damageReductionIconUrl,
   damageIncrease: damageIncreaseIconUrl,

@@ -16,7 +16,7 @@ function mockAlly(
     barrierHp: 0,
     atk: 10,
     def: 10,
-    reg: 0,
+    res: 0,
     isAlive: true,
     role: 'defender',
     classId: 'df_paladin',
@@ -149,7 +149,7 @@ describe('frontBlockAura', () => {
 
     const badges = collectStatusEffectBadgeDisplays(
       paladin.statusEffects,
-      { baseMaxHp: 100, atk: 10, def: 10, reg: 0 },
+      { baseMaxHp: 100, atk: 10, def: 10, res: 0 },
     );
 
     expect(badges).toHaveLength(1);

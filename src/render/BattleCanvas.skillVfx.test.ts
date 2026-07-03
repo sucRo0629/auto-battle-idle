@@ -27,7 +27,7 @@ function layout(id: string, x: number, isEnemy: boolean): CombatantLayout {
     barrierHp: 0,
     atk: 10,
     def: 5,
-    reg: 0,
+    res: 0,
     isEnemy,
     isAlive: true,
     anim: 'idle',

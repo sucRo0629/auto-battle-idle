@@ -51,7 +51,7 @@ function mockAlchemist(battleX: number, overrides: Partial<CombatantState> = {})
     maxHp: 98,
     atk: 17,
     def: 9,
-    reg: 10,
+    res: 10,
     isAlive: true,
     role: 'supporter' as const,
     classId: 'sp_alchemist',

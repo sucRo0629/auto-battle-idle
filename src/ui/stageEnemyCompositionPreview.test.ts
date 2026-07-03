@@ -151,9 +151,9 @@ describe('formatEnemyGroupScaleSummary', () => {
       hpScale: 1,
       atkScale: 1.2,
       defScale: 1,
-      regScale: 0.8,
+      resScale: 0.8,
     });
 
-    expect(summary).toBe(' (atk×1.2 reg×0.8)');
+    expect(summary).toBe(' (atk×1.2 res×0.8)');
   });
 });

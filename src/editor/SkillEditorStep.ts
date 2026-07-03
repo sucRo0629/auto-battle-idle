@@ -142,7 +142,7 @@ const STAT_LABELS: Record<StatusEffectStat, string> = {
   hp: "HP",
   atk: "攻撃",
   def: "防御",
-  reg: "魔法耐性",
+  res: "魔法耐性",
   attackSpeed: "攻撃速度",
 };
 

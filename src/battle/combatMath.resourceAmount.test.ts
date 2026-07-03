@@ -241,7 +241,7 @@ describe('applyBarrierToTarget', () => {
 
 describe('resolveDamage defenseIgnore', () => {
   const attacker = mockCombatant({ atk: 100 });
-  const target = mockCombatant({ def: 50, reg: 20, isEnemy: true });
+  const target = mockCombatant({ def: 50, res: 20, isEnemy: true });
   const baseEffect = {
     type: 'damage' as const,
     target: { kind: "distance", side: "enemy", order: "nearest" } as const,
@@ -264,7 +264,7 @@ describe('resolveDamage defenseIgnore', () => {
   });
 
   it('ignores REG percent for magic', () => {
-    const magicTarget = mockCombatant({ def: 5, reg: 100, isEnemy: true });
+    const magicTarget = mockCombatant({ def: 5, res: 100, isEnemy: true });
     const magicEffect = { ...baseEffect, damageType: 'magic' as const };
     const withIgnore = resolveDamage(
       attacker,
@@ -272,7 +272,7 @@ describe('resolveDamage defenseIgnore', () => {
       magicEffect,
       {},
       {
-        effectDefenseIgnore: { reg: { percent: 0.5 } },
+        effectDefenseIgnore: { res: { percent: 0.5 } },
       },
     );
     const baseline = resolveDamage(attacker, magicTarget, magicEffect, {});
@@ -373,14 +373,14 @@ describe('resolveDamage defenseIgnore', () => {
       damageType: 'magic' as const,
       amount: { kind: 'flat' as const, flatAmount: 200 },
     };
-    const baselineTarget = mockCombatant({ reg: 20, isEnemy: true });
+    const baselineTarget = mockCombatant({ res: 20, isEnemy: true });
     const baseline = resolveDamage(attacker, baselineTarget, magicEffect, {});
 
-    const buffedTarget = mockCombatant({ reg: 20, isEnemy: true });
+    const buffedTarget = mockCombatant({ res: 20, isEnemy: true });
     buffedTarget.statusEffects.push({
       id: 'reg_buff',
       kind: 'buff',
-      stat: 'reg',
+      stat: 'res',
       multiplier: 2,
       durationSec: 5,
       remainingSec: 5,
@@ -388,11 +388,11 @@ describe('resolveDamage defenseIgnore', () => {
     const buffed = resolveDamage(attacker, buffedTarget, magicEffect, {});
     expect(buffed).toBeLessThan(baseline);
 
-    const debuffedTarget = mockCombatant({ reg: 20, isEnemy: true });
+    const debuffedTarget = mockCombatant({ res: 20, isEnemy: true });
     debuffedTarget.statusEffects.push({
       id: 'reg_debuff',
       kind: 'debuff',
-      stat: 'reg',
+      stat: 'res',
       multiplier: 0.5,
       durationSec: 5,
       remainingSec: 5,

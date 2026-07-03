@@ -508,32 +508,32 @@ export function appendDefenseIgnoreFields(
     );
   }
 
-  const regEnabled = Boolean(spec.reg);
-  const regEnableRow = createEl("div", "editor-field editor-field-checkbox");
-  const regEnableInput = createEl("input") as HTMLInputElement;
-  regEnableInput.type = "checkbox";
-  regEnableInput.checked = regEnabled;
-  regEnableInput.addEventListener("change", () => {
-    if (regEnableInput.checked) {
-      onChange({ ...spec, reg: { percent: 0.2 } }, { rerender: true });
+  const resEnabled = Boolean(spec.res);
+  const resEnableRow = createEl("div", "editor-field editor-field-checkbox");
+  const resEnableInput = createEl("input") as HTMLInputElement;
+  resEnableInput.type = "checkbox";
+  resEnableInput.checked = resEnabled;
+  resEnableInput.addEventListener("change", () => {
+    if (resEnableInput.checked) {
+      onChange({ ...spec, res: { percent: 0.2 } }, { rerender: true });
     } else {
       const next = { ...spec };
-      delete next.reg;
-      onChange(next.def || next.reg ? next : undefined, { rerender: true });
+      delete next.res;
+      onChange(next.def || next.res ? next : undefined, { rerender: true });
     }
   });
-  regEnableRow.appendChild(createEl("label", undefined, "REG無視"));
-  regEnableRow.appendChild(regEnableInput);
-  section.appendChild(regEnableRow);
+  resEnableRow.appendChild(createEl("label", undefined, "RES無視"));
+  resEnableRow.appendChild(resEnableInput);
+  section.appendChild(resEnableRow);
 
-  if (spec.reg) {
+  if (spec.res) {
     section.appendChild(
       createFieldRow(
-        "REG割合 (0–1)",
+        "RES割合 (0–1)",
         createNumberInput(
-          spec.reg.percent,
+          spec.res.percent,
           (percent) => {
-            onChange({ ...spec, reg: { percent } }, { rerender: false });
+            onChange({ ...spec, res: { percent } }, { rerender: false });
           },
           { min: 0, max: 1, step: 0.01 }
         )
@@ -1773,7 +1773,7 @@ const PASSIVE_BUFF_STAT_OPTIONS: Array<{
   { value: "hp", label: "HP" },
   { value: "atk", label: "攻撃" },
   { value: "def", label: "防御" },
-  { value: "reg", label: "魔法耐性" },
+  { value: "res", label: "魔法耐性" },
   { value: "damageTaken", label: "被ダメ" },
   { value: "attackSpeed", label: "攻撃速度" },
 ];
@@ -2229,7 +2229,7 @@ export function appendPassiveDebuffFields(
         [
           { value: "atk", label: "攻撃" },
           { value: "def", label: "防御" },
-          { value: "reg", label: "魔法耐性" },
+          { value: "res", label: "魔法耐性" },
           { value: "damageTaken", label: "被ダメ" },
           { value: "attackSpeed", label: "攻撃速度" },
         ],

@@ -7,7 +7,7 @@ export interface MemberStatLabels {
   hp: string;
   atk: string;
   def: string;
-  reg: string;
+  res: string;
   spd: string;
   range: string;
   basicAttack: string;
@@ -24,7 +24,7 @@ export function getMemberStatLabels(
     hp: messageForLocale(locale, 'stat.hp'),
     atk: messageForLocale(locale, 'stat.atk'),
     def: messageForLocale(locale, 'stat.def'),
-    reg: messageForLocale(locale, 'stat.reg'),
+    res: messageForLocale(locale, 'stat.res'),
     spd: messageForLocale(locale, 'stat.spd'),
     range: messageForLocale(locale, 'stat.range'),
     basicAttack: messageForLocale(locale, 'stat.basicAttack'),

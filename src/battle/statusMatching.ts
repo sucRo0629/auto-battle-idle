@@ -14,7 +14,7 @@ const STAT_TAGS = new Set<StatBuffTarget>([
   'hp',
   'atk',
   'def',
-  'reg',
+  'res',
   'damageTaken',
   'attackSpeed',
 ]);

@@ -9,7 +9,7 @@
 ## 2. 作業テーマ
 
 - 作業名: 敵エディタ v0.3.2 — ステージ `enemyGroups` 編成
-- 状態: **Phase A〜C 完了・Phase D 完了・Phase E3（b/c/d）完了・Phase E4b 完了・Phase E5b 完了・Phase E5c 完了・Phase E5d 完了**
+- 状態: **Phase A〜C 完了・Phase D 完了・Phase E3（b/c/d）完了・Phase E4b 完了・Phase E5 完了（E5b/c/d/e）**
 - 対象: ステージ敵編成、`enemyGroups`、戦闘生成、デバッグ表示、データ編集ツール
 - 完了条件: Phase A〜E の完了条件（§6 参照）
 
@@ -25,7 +25,7 @@
 
 - 新正本データ: `stages.json` ステージ直下 `enemyGroups`（wave 単位ではない）
 - 体験版: 1 stage = 1 `enemyGroups` = 1 wave 相当
-- フィールド: `classId`, `count`, `hpScale`, `atkScale`, `defScale`, `regScale`（初期 1.0）
+- フィールド: `classId`, `count`, `hpScale`, `atkScale`, `defScale`, `resScale`（初期 1.0）
 - 敵 Lv = `stage.recommendedLevel`。`stageLevel` / `levelOverride` は当面不要
 - スキル解放: 味方と同じ Lv0 / Lv10 / Lv20
 - stats: `computeStatsAtLevel(class, recommendedLevel)` の後に各 scale を乗算
@@ -45,6 +45,8 @@
 | ステージ編集 | `GET/PUT /__editor/stages`、`saveStageBundle`、一覧・選択・保存・再読込 |
 | 編成 preview | `resolveStageEnemyCompositionPreview` を `DebugMenuPanel` / `StageEnemyEditorStep` で共有 |
 | 敵生成 | `enemyGroups` 経路接続済み（Phase B2〜C） |
+| pilot / 移行済み stage | `eg_smoke`（pilot）、`ranged_test`（classId ベース `enemyGroups`） |
+| legacy 維持 stage | `test` / `1` / `2`（`waves` + `templateId`） |
 | `attackSpeed` scale | `StageEnemyGroup` 型にフィールドなし。未実装 |
 
 ## 6. 実装フェーズ
@@ -59,10 +61,28 @@
 | **E3c** | `recommendedLevel` / `enemyGroups` 編集・保存 | [x] |
 | **E3d** | preview / warning / tests 整理 | [x] |
 | **E4b** | タブ文言・導線整理（旧敵テンプレ UI 残置） | [x] |
-| **E5b** | pilot stage `eg_smoke` 追加（enemyGroups のみ・実データ smoke） | [x] |
-| **E5c** | `eg_smoke` の editor / preview / battle smoke 経路確認 | [x] |
-| **E5d** | `ranged_test` を legacy → `enemyGroups` 移行 | [x] |
-| **E 残** | legacy ステージ移行・`stages-demo.json` 分離など | [ ] |
+| **E5** | pilot stage 追加・`ranged_test` 移行・smoke 確認・handoff | [x] |
+
+### Phase E5（完了）
+
+**データ**
+
+- `eg_smoke` を enemyGroups pilot stage として `stages.json` に追加済み（`recommendedLevel: 10`、`df_guardian` + `at_hunter` 各 1、`waves` は空 placeholder）
+- `ranged_test` を existing classId ベースの `enemyGroups` stage に置き換え済み（`df_guardian` ×1 + `at_hunter` ×2、総体数 3、旧 templateId は再現しない）
+- `test` / `1` / `2` は legacy（`waves` + `templateId`）のまま維持
+
+**smoke 経路（E5b〜d で確認済み）**
+
+- editor（`StageEnemyEditorStep` / `editorApi`）
+- preview（`resolveStageEnemyCompositionPreview`）
+- `DebugMenuPanel`
+- validate（`validateGameData`）
+- battle spawn（`entities.enemyGroups` / `createEnemiesForStage`）
+
+**テスト**
+
+- E5 関連 6 ファイル・76 件すべて pass（E5e 時点で再確認）
+- 対象: `entities.enemyGroups.test.ts` / `StageEnemyEditorStep.test.ts` / `validateGameData.test.ts` / `DebugMenuPanel.test.ts` / `stageEnemyCompositionPreview.test.ts` / `editorApi.test.ts`
 
 ### Phase E3d（完了）
 
@@ -71,35 +91,29 @@
 - legacy は `enemyGroups 未設定` + templateId 一覧（read-only）。自動変換なし
 - テスト: `stageEnemyCompositionPreview.test.ts` + `StageEnemyEditorStep.test.ts`
 
-## 7. 次にやること
-
-- [ ] **Phase E 残** — legacy ステージの `enemyGroups` 移行（`test` / `1` / `2` は未変更。`eg_smoke` / `ranged_test` は移行済み）
-- [ ] `stages-demo.json` 分離（roadmap 6b、タイミング未確定）
-
-### Phase E5d（完了）
-
-- `ranged_test` を legacy templateId から `enemyGroups` へ置換（`recommendedLevel: 10`、`df_guardian` ×1 + `at_hunter` ×2、総体数 3、`waves` は空 placeholder）
-- 旧 templateId（`test_dummy` / `test_to_ranged` / `enemy_at_hunter`）は再現しない
-- 追加テスト: `entities.enemyGroups` / `validateGameData` / `StageEnemyEditorStep` / `stageEnemyCompositionPreview` / `editorApi` / `DebugMenuPanel` に `ranged_test` smoke 1 件ずつ
-- `test` / `1` / `2` / `eg_smoke`・spec・エディタ UI・戦闘ロジックは未変更
-
-### Phase E5c（完了）
-
-- `eg_smoke` を `loadGameData()` 実データで editor / preview / normalize / battle 各経路を確認。不具合なし
-- 追加テスト: `StageEnemyEditorStep` / `stageEnemyCompositionPreview` / `editorApi` / `DebugMenuPanel` / `validateGameData` に `eg_smoke` smoke 1 件ずつ（`entities.enemyGroups` は E5b 既存）
-- `data/stages.json`・`eg_smoke` データ・legacy ステージ・spec は未変更
-
-### Phase E5b（完了）
-
-- `data/stages.json` に pilot stage `eg_smoke` を 1 件追加（`recommendedLevel: 10`、`df_guardian` + `at_hunter` 各 1、`waves` は空 placeholder のみ・templateId なし）
-- `entities.enemyGroups.test.ts` に実データ smoke（`loadGameData` + `createEnemiesForStage`）を追加
-- legacy ステージ・`enemies.json` / `classes.json` / エディタ UI / 戦闘ロジックは未変更
-
 ### Phase E4b（完了）
 
 - EditorApp: タブ順を クラス → ステージ → 敵テンプレ → バランス → 状態アイコン に整理。旧「敵」→「敵テンプレ」
 - subtitle に stages.json を追記
 - EnemyEditorStep / StageEnemyEditorStep: legacy templateId と enemyGroups の導線を説明文で明示
+
+## 7. 次にやること
+
+### 推奨
+
+- [ ] **enemyGroups stage の EXP 集計** — `computeStageExpReward` は現状 legacy `waves` / `templateId` のみ。`enemyGroups` ステージ（`eg_smoke` / `ranged_test`）で撃破 EXP が 0 になる。正本: [progression.md](../spec/progression.md) §未確定（Phase B2）
+
+### 代替
+
+- [ ] **`test` / `1` / `2` の legacy → `enemyGroups` 移行調査** — 各 stage の templateId 構成・再現方針を整理してからデータ移行
+
+### その他バックログ（優先度は上記より下）
+
+- [ ] `stages-demo.json` 分離（roadmap 6b、タイミング未確定）
+- [ ] validate の classId allowlist subset 化
+- [ ] 5 体以上 warning の cap 圧縮・多数敵 HUD 整理
+- [ ] `attackSpeed` scale を `StageEnemyGroup` に追加するか
+- [ ] legacy ステージを stage タブで `enemyGroups` へ変換する UI
 
 ## 8. やらないこと（全体）
 
@@ -110,19 +124,23 @@
 - `at_ballista` 専用 stage フラグ
 - enemy-design-concept §12 の段階サブセット（Lv0/10/20 全解放が v0.3.2 正）
 
-## 9. 未確定・注意点
+## 9. 未対応・未確定（Phase E 後に残す）
 
-- 旧敵テンプレ UI は残置（E4b で導線整理済み。非表示・削除はしない）
-- `stages-demo.json` 分離タイミング
-- validate の classId allowlist subset 化
-- enemyGroups ステージの EXP 集計
-- 5 体以上 cap 圧縮の見え方・多数敵 HUD 整理
-- legacy ステージを stage タブで enemyGroups へ変換する UI を入れるか
-- `attackSpeed` scale を `StageEnemyGroup` に追加するか
+| 項目 | 内容 |
+| ---- | ---- |
+| legacy ステージ移行 | `test` / `1` / `2` は未移行。`eg_smoke` / `ranged_test` のみ `enemyGroups` 化済み |
+| `stages-demo.json` 分離 | roadmap 6b。体験版専用ステージを本編 `stages.json` から分離するタイミング未確定 |
+| EXP 集計 | `enemyGroups` ステージの撃破 EXP が `computeStageExpReward` 未対応 |
+| validate allowlist | classId の subset 化は未実装 |
+| 5 体以上 | エディタ warning のみ。cap 圧縮・多数敵 HUD 整理は未実装 |
+| `attackSpeed` scale | `StageEnemyGroup` 型・編集 UI とも未実装 |
+| legacy 変換 UI | stage タブで legacy → `enemyGroups` へ変換する UI は未実装（read-only 表示のみ） |
+| 旧敵テンプレ UI | E4b で導線整理済み。非表示・削除はしない |
 
 ## 10. ChatGPT へ戻すときのメモ
 
 - 目的: v0.3.2 敵編成の段階実装
-- 現在地: Phase E5d 完了。`ranged_test` が `enemyGroups` 移行済み
-- 次: **Phase E 残**（`test` / `1` / `2` の legacy 移行・`stages-demo.json` 分離）
-- 判断待ち: 上記 §9 未確定事項
+- 現在地: **Phase E5 完了**（pilot `eg_smoke` 追加、`ranged_test` 移行、smoke 経路・主要テスト確認済み）
+- 次（推奨）: **enemyGroups stage の EXP 集計**（`computeStageExpReward` 拡張）
+- 次（代替）: `test` / `1` / `2` の legacy 移行調査
+- 判断待ち: §9 未対応・未確定事項

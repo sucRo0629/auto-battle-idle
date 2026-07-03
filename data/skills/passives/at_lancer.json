@@ -41,13 +41,13 @@
         "multiplier": 1.1
       },
       {
-        "stat": "reg",
+        "stat": "res",
         "flatBonus": 5
       }
     ],
     "buffStat": [
       "def",
-      "reg"
+      "res"
     ],
     "buffTargetShape": "aoe",
     "buffAoeRadiusPx": 50,

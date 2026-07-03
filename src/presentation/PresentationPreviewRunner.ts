@@ -250,7 +250,7 @@ export class PresentationPreviewRunner {
       baseMaxHp: 100,
       atk: 10,
       def: 5,
-      reg: 0,
+      res: 0,
       role: entity.role,
       isEnemy: entity.isEnemy,
       isAlive: true,

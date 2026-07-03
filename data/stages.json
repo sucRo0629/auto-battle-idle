@@ -40,7 +40,7 @@
         "hpScale": 1.0,
         "atkScale": 1.0,
         "defScale": 1.0,
-        "regScale": 1.0
+        "resScale": 1.0
       },
       {
         "classId": "at_hunter",
@@ -48,7 +48,7 @@
         "hpScale": 1.0,
         "atkScale": 1.0,
         "defScale": 1.0,
-        "regScale": 1.0
+        "resScale": 1.0
       }
     ],
     "waves": [
@@ -152,7 +152,7 @@
         "hpScale": 1.0,
         "atkScale": 1.0,
         "defScale": 1.0,
-        "regScale": 1.0
+        "resScale": 1.0
       },
       {
         "classId": "at_hunter",
@@ -160,7 +160,7 @@
         "hpScale": 1.0,
         "atkScale": 1.0,
         "defScale": 1.0,
-        "regScale": 1.0
+        "resScale": 1.0
       }
     ],
     "waves": [

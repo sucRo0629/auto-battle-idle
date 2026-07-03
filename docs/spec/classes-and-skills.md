@@ -164,8 +164,8 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 | 複数対象 | 表示名 **Multi-Lock**（MultiLock / Multi-Locks は使わない。**動詞化しない**） |
 | 被ダメ | **damage taken**（incoming damage と混在しない） |
 | 防御系 | Ward = 障壁 / Barrier = バリア / Bulwark = 防壁 |
-| ステ略称 | ATK / DEF / REG / HP を維持 |
-| REG | **EN:** REG。**JA:** 魔法耐性（攻撃力・防御力と同様、日本語は略称にしない） |
+| ステ略称 | ATK / DEF / RES / HP を維持 |
+| RES | **EN:** RES。**JA:** 魔法耐性（攻撃力・防御力と同様、日本語は略称にしない） |
 | Attack Speed | UI 表示名。**内部キー `spd` / `attackSpeed` と混同しない** |
 
 #### 混同禁止（別 ID 必須）
@@ -250,7 +250,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - 対象「自身」は effect 表示から省略（compact 時）
 - 秒表記は `秒`（`s` 表記にしない）。**英語（4e）** は `Ns`（`skillTextLocale`）
 - `damageTaken` stat の倍率は `被ダメ×N` ではなく、`<1` → `ダメージ軽減N%`、`>1` → `被ダメージ増加N%`（N = |1 − 倍率| × 100）
-- その他 stat（`atk` / `def` / `reg` / `attackSpeed` / `hp`）は略称（`ATK` 等）を使わず表示名（`攻撃力` / `防御力` / `魔法耐性` / `攻撃速度` / `HP`）。flat は `魔法耐性+20`、乗算 buff は `防御力+20%`（N = |1 − 倍率| × 100）、resource の atk/def scale は `攻撃力90%`（scale をそのまま % 化）。**Active 効果行の計算修飾**（`防御力無視` / `REG無視` 等）は §表示フォーマット例どおり用語表ラベルを使う
+- その他 stat（`atk` / `def` / `res` / `attackSpeed` / `hp`）は略称（`ATK` 等）を使わず表示名（`攻撃力` / `防御力` / `魔法耐性` / `攻撃速度` / `HP`）。flat は `魔法耐性+20`、乗算 buff は `防御力+20%`（N = |1 − 倍率| × 100）、resource の atk/def scale は `攻撃力90%`（scale をそのまま % 化）。**Active 効果行の計算修飾**（`防御力無視` / `REG無視` 等）は §表示フォーマット例どおり用語表ラベルを使う
 - ブロック率に「（加算）」は各スキル説明に書かない（barrier の加算表記は既存どおり）
 - 参照実装・確定例: `formatSkillText.test.ts` の `df_guardian` / `at_swordsman` / `sp_cleric` テスト
 - `targetRuleOverride`（stat 最高値）— `最も{stat}が高い敵を優先して攻撃する`
@@ -262,7 +262,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 - active evasion buff — `{N}秒間回避+{chance%}`
 - move `toAnchor` + 直後 damage — `対象の背後に移動した後、{ダメージ文}`
 - 常時 self stat buff — `攻撃速度+25%` 等（対象・常時の冗長表記は省略）
-- 常時 `defenseIgnore` — `攻撃時、対象の防御力をN%無視する`（`def`）/ `攻撃時、対象の魔法耐性をN%無視する`（`reg`）
+- 常時 `defenseIgnore` — `攻撃時、対象の防御力をN%無視する`（`def`）/ `攻撃時、対象の魔法耐性をN%無視する`（`res`）
 - `seedFlameOnActiveHit` — トリガー 1 行 + `種火` / `熾火` を `effectLines` のリストブロック（`kind: "list"`）で表示。数値は passive JSON の `seedFlame*` / `blazingFlame*` を `mergeSorcererFlameDotConfig` で解決（戦闘と同経路）
 - `specialEffect` heal（低 HP 条件）— `HPがN%以下の味方を回復時、HP回復効果+{bonus}`
 - `specialEffect` barrier（低 HP 条件）— `HPがN%以下の味方にバリア付与時、バリア量+{bonus}`
@@ -1817,7 +1817,7 @@ interface GrowthTierSet {
 maxHp: number;   // Lv1
 atk: number;
 def: number;
-reg: number;     // 固定（成長なし）。許容値: 0, 5, 10, 15, 20
+res: number;     // 固定（成長なし）。許容値: 0, 5, 10, 15, 20
 growthTier: GrowthTierSet;
 growthPresetKey?: "attacker" | "caster"; // 魔術系（at_sorcerer 等）の成長合成
 attackSpeedTier?: AttackSpeedTier;       // 未指定 = normal
@@ -2036,14 +2036,14 @@ HP とは別の `barrierHp` プールを作成し、ダメージを肩代わり�
 | `chance`      | 発動確率（0〜1）。未指定 = 1       |
 | `def.mode`    | `flat` / `percent`                 |
 | `def.amount`  | 固定値 or 0〜1 割合                |
-| `reg.percent` | REG 無視割合（0〜1、魔法ダメージ） |
+| `res.percent` | RES 無視割合（0〜1、魔法ダメージ） |
 
 ### デバフ解除（`dispel` effect / `periodicDispel` passive）
 
 | フィールド           | 説明                                                                                                                                                                  |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `dispelCount`        | `0` = 対象タグすべて、`N>0` = 優先度に従い N 件                                                                                                                       |
-| `dispelTags`         | 未指定 = 全デバフタグ（`atk` / `def` / `reg` / `damageTaken` / `attackSpeed` / `dot` / `bleed` / `poison` / `stun`）。`dot` は全 DoT（全フレーバー + 未指定）にマッチ |
+| `dispelTags`         | 未指定 = 全デバフタグ（`atk` / `def` / `res` / `damageTaken` / `attackSpeed` / `dot` / `bleed` / `poison` / `stun`）。`dot` は全 DoT（全フレーバー + 未指定）にマッチ |
 | `dispelPriority`     | 未指定 = `longest`（最長）。`strongest` = 効果量最大を優先                                                                                                            |
 | `dispelTriggerLimit` | パッシブ `periodicDispel` のみ。1 Wave 内の発動回数上限（未指定 = 無制限）                                                                                            |
 
@@ -2119,7 +2119,7 @@ effect・パッシブのターゲットは構造化オブジェクト `target` �
 | `kind`       | 説明                                                                                                                                                                                                                                                                                                                                                                         |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `distance`   | `side`（ally/enemy）+ `order`（nearest/farthest/**selfOrigin**）。`selfOrigin` = 使用者位置・向きを効果範囲の起点とする（aoe / pierce / single）。`includeSelf`（任意）= 味方 side 時、最終対象に使用者を含める（既定 false）                                                                                                                                                |
-| `stat`       | `side` + `stat`（hp/maxHp/atk/def/reg）+ `order`（highest/lowest/ratio）。`stat: hp` + `lowest` = 現在 HP 絶対値（`unit.hp`）最小（例: `lowestHpEnemy` / 双刃士 P1）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`maxHp` は effective maxHp 比較。**heal** の味方 stat は使用者も候補に含む。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外。`poolFromEffectIndex`（任意）= 同一スキル内の先行 effect 命中プール内だけで stat 選定 |
+| `stat`       | `side` + `stat`（hp/maxHp/atk/def/res）+ `order`（highest/lowest/ratio）。`stat: hp` + `lowest` = 現在 HP 絶対値（`unit.hp`）最小（例: `lowestHpEnemy` / 双刃士 P1）。`ratio` は HP のみ（`hp/maxHp` 最小 = 最もダメージを受けた味方）。`maxHp` は effective maxHp 比較。**heal** の味方 stat は使用者も候補に含む。`multiLock` 時は満タン（`hp >= maxHp`）の味方をプールから除外。`poolFromEffectIndex`（任意）= 同一スキル内の先行 effect 命中プール内だけで stat 選定 |
 | `attackType` | `physical` / `magic` / `melee` / `ranged` チェックボックス（OR）。両グループにチェック時は AND。フィルタ後 anchor は最前線                                                                                                                                                                                                                                                   |
 | `status`     | `side`（既定 enemy）+ `debuffTags` / `buffTags`（OR。`DEBUFF_FILTER_TAGS` / `BUFF_FILTER_TAGS` 参照）。フィルタ後 anchor は最前線                                                                                                                                                                                                                                            |
 | `self`       | 自身                                                                                                                                                                                                                                                                                                                                                                         |

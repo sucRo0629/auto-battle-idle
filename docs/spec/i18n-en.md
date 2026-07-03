@@ -34,7 +34,7 @@ Use controlled, concise game-effect English.
 - Prefer short sentences.
 - Preserve numbers, durations, stack counts, and target counts exactly.
 - Preserve game terms from the glossary exactly.
-- Do not translate ATK, DEF, REG, HP.
+- Do not translate ATK, DEF, RES, HP.
 - Do not vary terminology for style.
 - Do not use literary or flavorful wording.
 - If the Japanese source is ambiguous, mark it as `NEEDS_REVIEW` instead of guessing.
@@ -129,7 +129,7 @@ Apply Seed Flame to the enemy for each attack skill hit.
 | 複数対象 | **Multi-Lock**（MultiLock / Multi-Locks / 動詞化しない） |
 | 被ダメージ | **damage taken** |
 | 障壁 / バリア / 防壁 | Ward / Barrier / Bulwark |
-| ステ略称 | ATK / DEF / REG / HP |
+| ステ略称 | ATK / DEF / RES / HP |
 
 ## スキルカード英語文案
 

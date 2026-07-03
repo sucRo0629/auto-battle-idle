@@ -178,7 +178,7 @@ describe('at_hunter combat helpers', () => {
       baseMaxHp: 100,
       atk: 30,
       def: 10,
-      reg: 0,
+      res: 0,
     });
     expect(badges.some((badge) => badge.category === 'poisonWeapon')).toBe(
       true,

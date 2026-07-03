@@ -11,7 +11,7 @@ export interface EnemyHudEntry {
   barrierHp: number;
   atk: number;
   def: number;
-  reg: number;
+  res: number;
   isAlive: boolean;
   statusEffects: StatusEffect[];
   /** Optional UI-only telegraph state (not wired from battle logic yet). */
@@ -61,7 +61,7 @@ export function combatantToEnemyHudEntry(
     barrierHp: enemy.barrierHp,
     atk: enemy.atk,
     def: enemy.def,
-    reg: enemy.reg,
+    res: enemy.res,
     isAlive: enemy.hp > 0,
     statusEffects: enemy.statusEffects,
   };

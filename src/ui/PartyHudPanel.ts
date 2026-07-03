@@ -660,7 +660,7 @@ export class PartyHudPanel {
       baseMaxHp: entry.baseMaxHp,
       atk: entry.atk,
       def: entry.def,
-      reg: entry.reg,
+      res: entry.res,
     });
     const { visible, overflowCount } = selectPartyHudCompactStatusBadges(badges);
     const canvas = slot.statusCanvas;
@@ -851,7 +851,7 @@ export class PartyHudPanel {
       baseMaxHp: entry.baseMaxHp,
       atk: entry.atk,
       def: entry.def,
-      reg: entry.reg,
+      res: entry.res,
     });
     const { visible, overflowCount } = selectPartyHudOverlayStatusBadges(badges);
     const canvas = slot.statusCanvas;

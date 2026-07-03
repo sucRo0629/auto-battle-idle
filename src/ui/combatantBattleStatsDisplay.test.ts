@@ -14,7 +14,7 @@ function mockAlly(
     barrierHp: 0,
     atk: 50,
     def: 30,
-    reg: 10,
+    res: 10,
     rangePx: 100,
     effectiveRangePx: 100,
     damageType: 'physical',
@@ -49,7 +49,7 @@ describe('buildCombatantBattleStatRows', () => {
       mockAlly({
         atk: 50,
         def: 30,
-        reg: 10,
+        res: 10,
         statusEffects: [
           {
             id: 'buff-atk',
@@ -72,7 +72,7 @@ describe('buildCombatantBattleStatRows', () => {
           {
             id: 'buff-reg',
             kind: 'buff',
-            stat: 'reg',
+            stat: 'res',
             flatBonus: 5,
             multiplier: 1,
             sourceId: 'skill',

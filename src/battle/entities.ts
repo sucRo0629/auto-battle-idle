@@ -92,7 +92,7 @@ export function createAllyFromMember(
           maxHp: classPreset.maxHp,
           atk: classPreset.atk,
           def: classPreset.def,
-          reg: classPreset.reg,
+          res: classPreset.res,
         };
 
   return {
@@ -106,7 +106,7 @@ export function createAllyFromMember(
     maxHp: stats.maxHp,
     atk: stats.atk,
     def: stats.def,
-    reg: stats.reg,
+    res: stats.res,
     hp: stats.maxHp,
     barrierHp: 0,
     isAlive: true,
@@ -192,7 +192,7 @@ export function createEnemyFromTemplate(
     maxHp: template.maxHp,
     atk: template.atk,
     def: template.def,
-    reg: template.reg,
+    res: template.res,
     hp: template.maxHp,
     barrierHp: 0,
     isAlive: true,
@@ -258,7 +258,7 @@ export function createEnemyFromClassGroup(
     maxHp: stats.maxHp,
     atk: stats.atk,
     def: stats.def,
-    reg: stats.reg,
+    res: stats.res,
     hp: stats.maxHp,
     barrierHp: 0,
     isAlive: true,

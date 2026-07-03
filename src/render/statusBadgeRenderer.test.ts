@@ -131,7 +131,7 @@ describe('measureStatusBadgeBlock', () => {
       [
         passiveAtk,
         { ...passiveAtk, category: 'def' as const },
-        { ...passiveAtk, category: 'reg' as const },
+        { ...passiveAtk, category: 'res' as const },
         { ...passiveAtk, category: 'attackSpeed' as const },
         { ...passiveAtk, category: 'damageReduction' as const },
         { ...passiveAtk, category: 'damageIncrease' as const },

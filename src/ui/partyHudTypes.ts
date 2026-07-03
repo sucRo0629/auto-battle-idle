@@ -31,7 +31,7 @@ export interface PartyHudEntry {
   barrierHp: number;
   atk: number;
   def: number;
-  reg: number;
+  res: number;
   isAlive: boolean;
   useLocked: boolean;
   /** Lv 帯で解放済みのアクティブ枠数（Lv1=2, Lv10=3, Lv20=4） */
@@ -123,7 +123,7 @@ export function buildPartyHudEntries(
       barrierHp: ally.barrierHp,
       atk: ally.atk,
       def: ally.def,
-      reg: ally.reg,
+      res: ally.res,
       isAlive: ally.hp > 0,
       useLocked: ally.useLocked ?? false,
       unlockedActiveSlotCount: meta.unlockedActiveSlotCount,

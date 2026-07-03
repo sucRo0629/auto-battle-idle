@@ -56,7 +56,7 @@ export interface CombatStats {
   maxHp: number;
   atk: number;
   def: number;
-  reg: number;
+  res: number;
 }
 
 export interface ClassSkillUnlock {
@@ -151,8 +151,8 @@ export type TargetRule =
   | "highestAtkEnemy"
   | "lowestDefEnemy"
   | "highestDefEnemy"
-  | "lowestRegEnemy"
-  | "highestRegEnemy"
+  | "lowestResEnemy"
+  | "highestResEnemy"
   | "highestHpEnemy"
   | "farthestEnemy"
   | "debuffedEnemy"
@@ -161,7 +161,7 @@ export type TargetRule =
 
 export type TargetSide = "ally" | "enemy";
 export type TargetDistanceOrder = "nearest" | "farthest" | "selfOrigin";
-export type TargetStat = "hp" | "maxHp" | "atk" | "def" | "reg";
+export type TargetStat = "hp" | "maxHp" | "atk" | "def" | "res";
 export type TargetStatOrder = "highest" | "lowest" | "ratio";
 
 /** バフフィルタタグ（gameDataSchema.BUFF_FILTER_TAGS と同期） */
@@ -444,7 +444,7 @@ export type StatusEffectStat =
   | "hp"
   | "atk"
   | "def"
-  | "reg"
+  | "res"
   | "attackSpeed";
 
 /** 被ダメージ倍率（StatusEffectStat とは別系統） */
@@ -539,7 +539,7 @@ export interface DefenseIgnoreDefSpec {
   amount: number;
 }
 
-export interface DefenseIgnoreRegSpec {
+export interface DefenseIgnoreResSpec {
   percent: number;
 }
 
@@ -547,14 +547,14 @@ export interface DefenseIgnoreSpec {
   /** 発動確率（0–1）。未指定 = 1 */
   chance?: number;
   def?: DefenseIgnoreDefSpec;
-  reg?: DefenseIgnoreRegSpec;
+  res?: DefenseIgnoreResSpec;
 }
 
 const STATUS_EFFECT_STAT_VALUES: readonly StatusEffectStat[] = [
   "hp",
   "atk",
   "def",
-  "reg",
+  "res",
   "attackSpeed",
 ];
 
@@ -1692,7 +1692,7 @@ export interface StageEnemyGroup {
   hpScale?: number;
   atkScale?: number;
   defScale?: number;
-  regScale?: number;
+  resScale?: number;
 }
 
 /**
@@ -1706,7 +1706,7 @@ export interface ResolvedEnemySpawnSpec {
   hpScale?: number;
   atkScale?: number;
   defScale?: number;
-  regScale?: number;
+  resScale?: number;
   /** enemyGroups 配列内の 0-based インデックス */
   groupIndex: number;
   /** 同一 group 内の 0-based インデックス */
@@ -1808,7 +1808,7 @@ export interface CombatantSnapshot {
   barrierHp: number;
   atk: number;
   def: number;
-  reg: number;
+  res: number;
   role?: Role;
   rangePx: number;
   /** 現在の実効射程（effect.range も含めた最大値） */

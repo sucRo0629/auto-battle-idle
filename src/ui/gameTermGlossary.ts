@@ -46,7 +46,7 @@ export type GameTermId =
   | "hp"
   | "atk"
   | "def"
-  | "reg"
+  | "res"
   | "attackSpeed"
   | "damageDelay"
   | "basicAttackTransform"
@@ -412,9 +412,9 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     statusCategory: "def",
   },
   {
-    id: "reg",
+    id: "res",
     title: { ja: "魔法耐性" },
-    statusCategory: "reg",
+    statusCategory: "res",
   },
   {
     id: "attackSpeed",
@@ -600,7 +600,7 @@ const STATUS_EFFECT_STAT_TERM_ID: Record<StatusEffectStat, GameTermId> = {
   hp: "hp",
   atk: "atk",
   def: "def",
-  reg: "reg",
+  res: "res",
   attackSpeed: "attackSpeed",
 };
 

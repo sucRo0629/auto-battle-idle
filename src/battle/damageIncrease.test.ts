@@ -12,7 +12,7 @@ function unit(
     barrierHp: 0,
     atk: 20,
     def: 5,
-    reg: 0,
+    res: 0,
     isAlive: true,
     role: 'attacker',
     classId: 'test',
