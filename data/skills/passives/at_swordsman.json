@@ -1,6 +1,6 @@
 [
   {
-    "id": "at_swordsman_passive_1",
+    "id": "at_swordsman_passive_2",
     "name": "重装狙い",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
@@ -12,7 +12,7 @@
     "targetRuleOverrideApplyTo": "enemy"
   },
   {
-    "id": "at_swordsman_passive_2",
+    "id": "at_swordsman_passive_1",
     "name": "鎧砕き",
     "effect": "defenseIgnore",
     "defenseIgnore": {

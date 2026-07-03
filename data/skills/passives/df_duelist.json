@@ -1,13 +1,13 @@
 [
   {
-    "id": "df_duelist_passive_1",
+    "id": "df_duelist_passive_2",
     "name": "闘士の矜持",
     "effect": "duelistPride",
     "prideHpRatioMin": 0.5,
     "prideHealMultiplier": 0.25
   },
   {
-    "id": "df_duelist_passive_2",
+    "id": "df_duelist_passive_1",
     "name": "剣闘士は流血で滾る",
     "effect": "bloodlustDuelist",
     "bloodlustBlockChance": 0.05,

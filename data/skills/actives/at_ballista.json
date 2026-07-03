@@ -1,5 +1,27 @@
 [
   {
+    "id": "at_ballista_basic_attack",
+    "name": "at_ballista_basic_attack",
+    "trigger": {
+      "kind": "time",
+      "value": 2
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "distance",
+          "side": "enemy",
+          "order": "nearest"
+        },
+        "type": "damage",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      }
+    ]
+  },
+  {
     "id": "at_ballista_active_1",
     "name": "破城矢装填",
     "trigger": {
@@ -107,27 +129,5 @@
       }
     ],
     "useDurationSec": 3
-  },
-  {
-    "id": "at_ballista_basic_attack",
-    "name": "at_ballista_basic_attack",
-    "trigger": {
-      "kind": "time",
-      "value": 2
-    },
-    "effect": [
-      {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
-        "type": "damage",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 1
-        }
-      }
-    ]
   }
 ]

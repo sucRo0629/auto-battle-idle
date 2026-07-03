@@ -1,6 +1,6 @@
 [
   {
-    "id": "at_assassin_passive_1",
+    "id": "at_assassin_passive_2",
     "name": "薄命狩り",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
@@ -11,7 +11,7 @@
     }
   },
   {
-    "id": "at_assassin_passive_2",
+    "id": "at_assassin_passive_1",
     "name": "影の歩み",
     "effect": "buff",
     "buffSubKind": "evasion",

@@ -72,6 +72,14 @@
     },
     "effect": [
       {
+        "type": "damage",
+        "damageType": "physical",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 0.2
+        }
+      },
+      {
         "type": "debuff",
         "debuffSubKind": "stun",
         "durationSec": 2
@@ -79,14 +87,6 @@
       {
         "type": "knockback",
         "distancePx": 25
-      },
-      {
-        "type": "damage",
-        "damageType": "physical",
-        "amount": {
-          "kind": "atkBased",
-          "atkScale": 0.2
-        }
       }
     ],
     "target": {

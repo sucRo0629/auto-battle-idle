@@ -29,8 +29,13 @@
         "level": 0,
         "skillIds": [
           "df_guardian_passive_1",
+          "df_guardian_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "df_guardian_passive_2",
-          "df_guardian_active_1",
           "df_guardian_active_2"
         ]
       },
@@ -92,8 +97,13 @@
         "level": 0,
         "skillIds": [
           "df_paladin_passive_1",
+          "df_paladin_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "df_paladin_passive_2",
-          "df_paladin_active_1",
           "df_paladin_active_2"
         ]
       },
@@ -155,8 +165,13 @@
         "level": 0,
         "skillIds": [
           "df_duelist_passive_1",
+          "df_duelist_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "df_duelist_passive_2",
-          "df_duelist_active_1",
           "df_duelist_active_2"
         ]
       },
@@ -208,8 +223,13 @@
         "level": 0,
         "skillIds": [
           "at_swordsman_passive_1",
+          "at_swordsman_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "at_swordsman_passive_2",
-          "at_swordsman_active_1",
           "at_swordsman_active_2"
         ]
       },
@@ -280,8 +300,13 @@
         "level": 0,
         "skillIds": [
           "at_assassin_passive_1",
+          "at_assassin_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "at_assassin_passive_2",
-          "at_assassin_active_1",
           "at_assassin_active_2"
         ]
       },
@@ -347,8 +372,13 @@
         "level": 0,
         "skillIds": [
           "at_lancer_passive_1",
+          "at_lancer_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "at_lancer_passive_2",
-          "at_lancer_active_1",
           "at_lancer_active_2"
         ]
       },
@@ -403,8 +433,13 @@
         "level": 0,
         "skillIds": [
           "at_ranger_passive_1",
+          "at_ranger_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "at_ranger_passive_2",
-          "at_ranger_active_1",
           "at_ranger_active_2"
         ]
       },
@@ -466,8 +501,13 @@
         "level": 0,
         "skillIds": [
           "at_ballista_passive_1",
+          "at_ballista_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "at_ballista_passive_2",
-          "at_ballista_active_1",
           "at_ballista_active_2"
         ]
       },
@@ -522,8 +562,13 @@
         "level": 0,
         "skillIds": [
           "at_hunter_passive_1",
+          "at_hunter_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "at_hunter_passive_2",
-          "at_hunter_active_1",
           "at_hunter_active_2"
         ]
       },
@@ -579,8 +624,13 @@
         "level": 0,
         "skillIds": [
           "at_sorcerer_passive_1",
+          "at_sorcerer_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "at_sorcerer_passive_2",
-          "at_sorcerer_active_1",
           "at_sorcerer_active_2"
         ]
       },
@@ -712,8 +762,13 @@
         "level": 0,
         "skillIds": [
           "sp_cleric_passive_1",
+          "sp_cleric_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "sp_cleric_passive_2",
-          "sp_cleric_active_1",
           "sp_cleric_active_2"
         ]
       },
@@ -780,8 +835,13 @@
         "level": 0,
         "skillIds": [
           "sp_wardweaver_passive_1",
+          "sp_wardweaver_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "sp_wardweaver_passive_2",
-          "sp_wardweaver_active_1",
           "sp_wardweaver_active_2"
         ]
       },
@@ -843,8 +903,13 @@
         "level": 0,
         "skillIds": [
           "sp_alchemist_passive_1",
+          "sp_alchemist_active_1"
+        ]
+      },
+      {
+        "level": 1,
+        "skillIds": [
           "sp_alchemist_passive_2",
-          "sp_alchemist_active_1",
           "sp_alchemist_active_2"
         ]
       },

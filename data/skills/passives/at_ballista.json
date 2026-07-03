@@ -1,6 +1,6 @@
 [
   {
-    "id": "at_ballista_passive_1",
+    "id": "at_ballista_passive_2",
     "name": "城落としの弩",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
@@ -12,7 +12,7 @@
     "targetRuleOverrideApplyTo": "enemy"
   },
   {
-    "id": "at_ballista_passive_2",
+    "id": "at_ballista_passive_1",
     "name": "巻き上げ機構",
     "effect": "idleAtkRamp",
     "rampToMaxSec": 2.5,

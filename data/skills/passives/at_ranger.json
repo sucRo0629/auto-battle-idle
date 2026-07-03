@@ -1,6 +1,6 @@
 [
   {
-    "id": "at_ranger_passive_1",
+    "id": "at_ranger_passive_2",
     "name": "射手優先",
     "effect": "targetRuleOverride",
     "targetRuleOverride": {
@@ -9,7 +9,7 @@
     }
   },
   {
-    "id": "at_ranger_passive_2",
+    "id": "at_ranger_passive_1",
     "name": "速射の技",
     "effect": "buff",
     "buffSubKind": "stat",

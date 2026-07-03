@@ -22,7 +22,7 @@
     }
   },
   {
-    "id": "df_duelist_active_1",
+    "id": "df_duelist_active_2",
     "name": "誘い込み",
     "trigger": {
       "kind": "time",
@@ -48,7 +48,7 @@
     ]
   },
   {
-    "id": "df_duelist_active_2",
+    "id": "df_duelist_active_1",
     "name": "体捌き",
     "trigger": {
       "kind": "hitsTaken",
