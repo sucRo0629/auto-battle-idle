@@ -206,6 +206,30 @@ describe('createEnemiesForStage enemyGroups path', () => {
     expect(enemy.id).not.toBe(spec.spawnUnitKey);
   });
 
+  it('floors scaled maxHp and atk on enemyGroups combatants', () => {
+    const gameData = loadGameData();
+    const preset = gameData.classRegistry.df_paladin!;
+    const stage = stageWithEnemyGroups([
+      {
+        classId: 'df_paladin',
+        count: 1,
+        hpScale: 0.001,
+        atkScale: 0.01,
+      },
+    ]);
+    const spec = expandEnemyGroups(stage)[0]!;
+    const enemy = createEnemyFromClassGroup(
+      spec,
+      preset,
+      gameData,
+      levelCurves,
+    );
+
+    expect(enemy.maxHp).toBe(1);
+    expect(enemy.atk).toBe(1);
+    expect(enemy.hp).toBe(enemy.maxHp);
+  });
+
   it('limits battle actives by Lv0 / Lv10 / Lv20 unlock tiers', () => {
     const gameData = loadGameData();
     const preset = gameData.classRegistry.df_paladin!;

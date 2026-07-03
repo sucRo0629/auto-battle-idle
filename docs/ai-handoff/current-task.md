@@ -9,7 +9,7 @@
 ## 2. 作業テーマ
 
 - 作業名: 敵エディタ v0.3.2 — ステージ `enemyGroups` 編成
-- 状態: **Phase A 完了・Phase B1 完了・Phase B2 完了・Phase C 未着手**
+- 状態: **Phase A 完了・Phase B1 完了・Phase B2 完了・Phase B2.5 完了・Phase C 未着手**
 - 対象: ステージ敵編成、`enemyGroups`、戦闘生成、デバッグ表示、データ編集ツール
 - 完了条件: Phase A〜E の完了条件（§6 参照）
 
@@ -56,6 +56,7 @@
 | **A** | 型・validate・`progression.md` 追記 | [x] |
 | **B1** | `enemyGroups` → `ResolvedEnemySpawnSpec[]` 展開（純粋関数） | [x] |
 | **B2** | 中間スペック → `CombatantState`（配置仮） | [x] |
+| **B2.5** | attackSpeedTier fallback・stat 最低値保証 | [x] |
 | **C** | 射程自動配置（enemyGroups 経路のみ） | [ ] |
 | **D** | `DebugMenuPanel` 編成・補正表示 | [ ] |
 | **E** | ステージ敵編成エディタ + stages 保存 API | [ ] |
@@ -88,6 +89,13 @@
 - **触る:** `entities.ts`（+ `enemyGroupSpawn.ts` 拡張）, 新規テスト
 - **完了:** Lv/scale/スキル枠テスト、legacy 戦闘回帰
 
+### Phase B2.5 — B2 確認後の小修正
+
+- `tickCooldowns`: enemyGroups 経路で `classRegistry` + `resolveAttackSpeedTier` fallback
+- `applyEnemyStatScales`: `maxHp` / `atk` 最低 1 保証（`reg` は 0 許容、`def` は 0 許容）
+- **触る:** `BattleEngine.ts`, `enemyGroupSpawn.ts`, テスト
+- **完了:** attackSpeedTier 回帰、scale 丸め最低値テスト
+
 ### Phase C — 射程自動配置
 
 - 射程昇順ソート、group 順タイブレーク、`separateByGap`
@@ -114,7 +122,21 @@
 - [x] **Phase A** 実装（最小差分: types + validate + tests + `progression.md`）
 - [x] **Phase B1** 実装（`expandEnemyGroups` + 中間型 + tests）
 - [x] **Phase B2** 実装（中間スペック → `CombatantState` + `createEnemiesForStage` 分岐）
-- [ ] **Phase C** 実装（射程自動配置）
+
+### Phase B2.5
+
+- [x] `tickCooldowns` の enemyGroups classId 経路に classRegistry fallback を追加
+- [x] `applyEnemyStatScales` の maxHp / atk 最低 1 保証を追加
+- [x] def の最低値仕様を最小範囲で確認（`stats.md` に最低値なし → 0 許容）
+- [x] enemyGroups / legacy の attackSpeedTier 回帰テスト追加
+- [x] scale 丸めの最低値テスト追加
+
+### Phase C
+
+- [ ] `enemyFormation.ts`: 射程昇順ソート + spawnX 割当
+- [ ] `createEnemiesFromEnemyGroups` / `createEnemyFromClassGroup` 接続
+- [ ] 配置テスト追加
+- [ ] legacy spawnX 経路の回帰確認
 
 ## 8. やらないこと（全体）
 
@@ -137,24 +159,58 @@
 
 **v0.3.2 > 現行実装 > 旧 doc**。legacy 読み取り経路は維持。
 
-## 11. 未確定
+## 11. 未確定・注意点
 
 - ~~`waves` 省略~~ — **正本: enemyGroups ありなら waves 不要**。移行期 validate は非空 `waves` + 空 `enemies` プレースホルダを要求（Phase A）
-- `regScale` 適用、`scale` 下限（0 禁止か）
-- `enemyGroups` ステージの EXP 報酬
 - multi-wave + `enemyGroups`（体験版スコープ外、wave 0 のみ）
 - Phase E で旧敵テンプレ UI を残すか隠すか
 - `stages-demo.json` 分離タイミング（roadmap 6b）
 - エディタ classId allowlist を validate でも強制するか
 - 5 体警告閾値（`>= 5` vs `> 4`）
 
+### Phase C 仕様未確定
+
+- enemyGroups 配置 spacing:
+  - `PARTY_FORMATION_SLOT_SPACING`(48) を第一候補。
+  - `SPRITE_GAP`(38) は重なり回避用の最小間隔として扱う案。
+- 配置ソートの range 正本:
+  - Phase C では `traits.rangePx` のみを使う案。
+  - スキル range は配置ソートに含めない案。
+- 5 体以上で `SPAWN_X_MAX` 超過時の扱い:
+  - Phase C では cap 許容。
+  - 多数敵の圧縮・重ね表示・HUD 整理は後続 Phase で検討。
+
+### Phase C 前小修正候補 / Phase B2.5（完了）
+
+- enemyGroups 敵の attackSpeedTier:
+  - `tickCooldowns` が敵で `enemyRegistry` 未ヒット時に `classRegistry` + `resolveAttackSpeedTier` へ fallback するよう修正済み。
+- stat scale 丸め後の最低値保証:
+  - `applyEnemyStatScales` で `maxHp` / `atk` を最低 1 に保証。
+  - `reg` / `def` は 0 許容（`stats.md` に DEF 最低値の規定なし）。
+
+### Phase C スコープ外
+
+- enemyGroups ステージ EXP:
+  - `computeStageExpReward` は legacy `waves[].templateId` のみ集計。
+  - enemyGroups ステージは waves placeholder のため EXP 0 になり得る。
+  - Phase C では触らない。
+  - 別 Phase で enemyGroups EXP 設計を行う。
+
 ## 12. リスク（要監視）
 
 - `isEnemy` / 味方専用分岐（`SkillExecutor` 等）
-- スキル解放の `PartyMemberState` 前提
-- stat scale 乗算順・丸め
-- `spawnX` 依存の配置・HUD・reel-in
-- EXP が 0 になる可能性（enemyGroups に exp なし）
+- スキル解放の `PartyMemberState` 前提（B2 確認済み: level 用共通関数と分離済み）
+- B2 確認（B2.5 で解消）:
+  - enemyGroups 経路で `tickCooldowns` が `enemyRegistry[classId]` のみ参照し、classPreset の attackSpeedTier が効かない → **B2.5 で fallback 追加済み**
+- B2 確認（B2.5 で解消）:
+  - stat scale が `Math.round` のみのため、極小 scale で maxHp / atk が 0 になり得る → **B2.5 で maxHp / atk 最低 1 保証済み**
+- Phase C:
+  - spawnX と battleX / deploy target を混同すると、初期位置・進軍目標・接敵後移動の挙動が崩れる。
+  - Phase C では battleX を直接調整せず、enemyGroups 経路の spawnX 割当だけに限定する。
+- Phase C:
+  - 5 体以上では `SPAWN_X_MAX` clamp により奥側配置が圧縮される可能性がある。
+  - Phase C では許容し、後続 Phase で多数敵表示と合わせて検討する。
+- EXP が 0 になる可能性（enemyGroups に exp なし。Phase C スコープ外）
 
 ## 13. 最初の最小差分
 
@@ -167,7 +223,7 @@ Phase A のみ（戦闘・UI に触らない）:
 ## 14. ChatGPT へ戻すときのメモ
 
 - 目的: v0.3.2 敵編成の段階実装
-- 現在地: Phase B2 完了（`createEnemyFromClassGroup` + `createEnemiesForStage` 分岐 + tests）
+- 現在地: Phase B2.5 完了。次は Phase C
 - 次: Phase C（射程自動配置）
-- 判断待ち: EXP、旧エディタ UI 扱い。**waves:** 正本は enemyGroups ありなら省略可。移行期 validate はプレースホルダ要求
+- 判断待ち: Phase C spacing 確定、旧エディタ UI 扱い。**EXP:** Phase C 外・別 Phase。**waves:** 正本は enemyGroups ありなら省略可。**def 最低値:** 0 許容（B2.5 確定）
 - B1 戻り値: `enemyGroups` なし → `[]`（空配列）。legacy フォールバックは B2 の `createEnemiesForStage` 側で行う

@@ -2266,6 +2266,14 @@ export class BattleEngine {
             enemyTemplate.attackSpeedTier ?? "normal",
             this.levelCurves,
           );
+        } else {
+          const classPreset = this.gameData.classRegistry[unit.classId];
+          if (classPreset) {
+            basicRate = getBasicCooldownRate(
+              resolveAttackSpeedTier(classPreset),
+              this.levelCurves,
+            );
+          }
         }
       } else {
         const classPreset = this.gameData.classRegistry[unit.classId];

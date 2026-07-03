@@ -148,4 +148,32 @@ describe('applyEnemyStatScales', () => {
     expect(applyEnemyStatScales(stats, {})).toEqual(stats);
     expect(resolveEnemyStatScale(undefined)).toBe(1);
   });
+
+  it('floors maxHp and atk to at least 1 after rounding', () => {
+    const result = applyEnemyStatScales(
+      { maxHp: 100, atk: 10, def: 50, reg: 0 },
+      { hpScale: 0.001, atkScale: 0.01, defScale: 0.01, regScale: 1 },
+    );
+
+    expect(result).toEqual({
+      maxHp: 1,
+      atk: 1,
+      def: 1,
+      reg: 0,
+    });
+  });
+
+  it('allows def and reg to round to 0', () => {
+    const result = applyEnemyStatScales(
+      { maxHp: 100, atk: 10, def: 3, reg: 0 },
+      { hpScale: 1, atkScale: 1, defScale: 0.1, regScale: 0.5 },
+    );
+
+    expect(result).toEqual({
+      maxHp: 100,
+      atk: 10,
+      def: 0,
+      reg: 0,
+    });
+  });
 });

@@ -21,8 +21,14 @@ export function applyEnemyStatScales(
   >,
 ): CombatStats {
   return {
-    maxHp: Math.round(stats.maxHp * resolveEnemyStatScale(spec.hpScale)),
-    atk: Math.round(stats.atk * resolveEnemyStatScale(spec.atkScale)),
+    maxHp: Math.max(
+      1,
+      Math.round(stats.maxHp * resolveEnemyStatScale(spec.hpScale)),
+    ),
+    atk: Math.max(
+      1,
+      Math.round(stats.atk * resolveEnemyStatScale(spec.atkScale)),
+    ),
     def: Math.round(stats.def * resolveEnemyStatScale(spec.defScale)),
     reg: Math.round(stats.reg * resolveEnemyStatScale(spec.regScale)),
   };
