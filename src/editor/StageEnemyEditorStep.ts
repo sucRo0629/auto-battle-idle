@@ -1,5 +1,8 @@
 import type { StageDef, StageEnemyGroup } from '../battle/types.ts';
-import { resolveStageEnemyCompositionPreview } from '../ui/stageEnemyCompositionPreview.ts';
+import {
+  formatEnemyGroupScaleSummary,
+  resolveStageEnemyCompositionPreview,
+} from '../ui/stageEnemyCompositionPreview.ts';
 import {
   createDefaultStageEnemyGroup,
   type StageDraft,
@@ -154,65 +157,7 @@ export class StageEnemyEditorStep {
       ),
     );
 
-    const composition = resolveStageEnemyCompositionPreview(draft as StageDef);
-    const compositionSection = createSection('編成概要');
-    this.container.appendChild(compositionSection);
-    const compositionGrid = appendGrid(compositionSection);
-    compositionGrid.appendChild(
-      createFieldRow(
-        '編成方式',
-        createEl(
-          'span',
-          'editor-readonly-value',
-          editingEnemyGroups
-            ? 'enemyGroups（編集中）'
-            : composition.usesEnemyGroups
-              ? 'enemyGroups（新正本）'
-              : 'legacy（waves / templateId）',
-        ),
-      ),
-    );
-    if (editingEnemyGroups || composition.usesEnemyGroups) {
-      const groupCount = draft.enemyGroups?.length ?? 0;
-      compositionGrid.appendChild(
-        createFieldRow(
-          'グループ数',
-          createEl('span', 'editor-readonly-value', String(groupCount)),
-        ),
-      );
-      compositionGrid.appendChild(
-        createFieldRow(
-          '総体数',
-          createEl(
-            'span',
-            'editor-readonly-value',
-            String(
-              editingEnemyGroups
-                ? (draft.enemyGroups ?? []).reduce((sum, group) => sum + group.count, 0)
-                : composition.totalEnemyCount,
-            ),
-          ),
-        ),
-      );
-    } else {
-      const waveCount = draft.waves?.length ?? 0;
-      compositionGrid.appendChild(
-        createFieldRow(
-          'waves 数',
-          createEl('span', 'editor-readonly-value', String(waveCount)),
-        ),
-      );
-      for (const line of composition.legacyWaveLines) {
-        const templateSummary =
-          line.templateIds.length > 0 ? line.templateIds.join(', ') : '（なし）';
-        compositionGrid.appendChild(
-          createFieldRow(
-            `wave ${line.waveIndex}`,
-            createEl('span', 'editor-readonly-value', templateSummary),
-          ),
-        );
-      }
-    }
+    this.appendCompositionPreview(draft, editingEnemyGroups);
 
     if (!editingEnemyGroups) {
       const legacySection = createSection('legacy waves（参照のみ）');
@@ -411,5 +356,123 @@ export class StageEnemyEditorStep {
     saveBtn.disabled = Boolean(saving) || !selectedStageId;
     actions.appendChild(saveBtn);
     this.container.appendChild(actions);
+  }
+
+  private appendCompositionPreview(draft: StageDraft, editingEnemyGroups: boolean): void {
+    const preview = resolveStageEnemyCompositionPreview(draft as StageDef);
+    const usesEnemyGroupsPreview = editingEnemyGroups || preview.usesEnemyGroups;
+    const liveTotalCount = usesEnemyGroupsPreview
+      ? (draft.enemyGroups ?? []).reduce((sum, group) => sum + group.count, 0)
+      : preview.totalEnemyCount;
+    const showLargePartyWarning = liveTotalCount >= 5;
+
+    const compositionSection = createSection('編成概要');
+    this.container.appendChild(compositionSection);
+    const compositionGrid = appendGrid(compositionSection);
+
+    const recommendedLevelLabel =
+      draft.recommendedLevel ?? preview.recommendedLevel ?? null;
+    compositionGrid.appendChild(
+      createFieldRow(
+        'recommendedLevel',
+        createEl(
+          'span',
+          'editor-readonly-value',
+          recommendedLevelLabel === null ? '—' : String(recommendedLevelLabel),
+        ),
+      ),
+    );
+    compositionGrid.appendChild(
+      createFieldRow(
+        '編成方式',
+        createEl(
+          'span',
+          'editor-readonly-value',
+          editingEnemyGroups
+            ? 'enemyGroups（編集中）'
+            : preview.usesEnemyGroups
+              ? 'enemyGroups（新正本）'
+              : 'legacy（waves / templateId）',
+        ),
+      ),
+    );
+
+    if (usesEnemyGroupsPreview) {
+      const groupCount = draft.enemyGroups?.length ?? preview.enemyGroupLines.length;
+      compositionGrid.appendChild(
+        createFieldRow(
+          'グループ数',
+          createEl('span', 'editor-readonly-value', String(groupCount)),
+        ),
+      );
+      compositionGrid.appendChild(
+        createFieldRow(
+          '総体数',
+          createEl('span', 'editor-readonly-value', String(liveTotalCount)),
+        ),
+      );
+
+      const groupLines =
+        draft.enemyGroups !== undefined
+          ? (draft.enemyGroups ?? []).map((group) => ({
+              classId: group.classId,
+              count: group.count,
+              hpScale: resolveScale(group.hpScale),
+              atkScale: resolveScale(group.atkScale),
+              defScale: resolveScale(group.defScale),
+              regScale: resolveScale(group.regScale),
+            }))
+          : preview.enemyGroupLines;
+
+      if (groupLines.length > 0) {
+        const list = createEl('ul', 'editor-preview-list');
+        for (const line of groupLines) {
+          const item = createEl('li');
+          item.textContent = `${line.classId} ×${line.count}${formatEnemyGroupScaleSummary(line)}`;
+          list.appendChild(item);
+        }
+        compositionSection.appendChild(list);
+      }
+    } else {
+      compositionGrid.appendChild(
+        createFieldRow(
+          'enemyGroups',
+          createEl('span', 'editor-readonly-value', '未設定'),
+        ),
+      );
+      compositionGrid.appendChild(
+        createFieldRow(
+          'waves 数',
+          createEl('span', 'editor-readonly-value', String(draft.waves?.length ?? 0)),
+        ),
+      );
+
+      if (preview.legacyWaveLines.length > 0) {
+        const list = createEl('ul', 'editor-preview-list');
+        for (const line of preview.legacyWaveLines) {
+          const item = createEl('li');
+          const waveLabel =
+            preview.legacyWaveLines.length === 1
+              ? ''
+              : `wave ${line.waveIndex}: `;
+          item.textContent =
+            line.templateIds.length > 0
+              ? `${waveLabel}${line.templateIds.join(', ')}`
+              : `${waveLabel}（なし）`;
+          list.appendChild(item);
+        }
+        compositionSection.appendChild(list);
+      }
+    }
+
+    if (showLargePartyWarning) {
+      compositionSection.appendChild(
+        createEl(
+          'p',
+          'editor-warning',
+          '注意: 5体以上は表示・配置の後続調整対象です（入力は許容）。',
+        ),
+      );
+    }
   }
 }

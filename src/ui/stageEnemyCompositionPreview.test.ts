@@ -90,6 +90,18 @@ describe('resolveStageEnemyCompositionPreview', () => {
     ]);
     expect(preview.totalEnemyCount).toBe(1);
   });
+
+  it('marks legacy stages without enemyGroups', () => {
+    const preview = resolveStageEnemyCompositionPreview(
+      makeStage({
+        waves: [{ enemies: [{ templateId: 'legacy_a', spawnX: 100 }] }],
+      }),
+    );
+
+    expect(preview.usesEnemyGroups).toBe(false);
+    expect(preview.recommendedLevel).toBeNull();
+    expect(preview.enemyGroupLines).toEqual([]);
+  });
 });
 
 describe('formatEnemyGroupScaleSummary', () => {
