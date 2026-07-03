@@ -42,10 +42,12 @@ import {
   saveClassBundle,
   saveClassStatsBulk,
   saveEnemyBundle,
+  saveStageBundle,
   toClassStatsPatch,
   validateClassDraftForSave,
   validateClassStatsForSave,
   validateEnemyDraftForSave,
+  validateStageDraftForSave,
   type BalanceClassRow,
   type ClassDraft,
   type EnemyDraft,
@@ -452,7 +454,12 @@ export class EditorApp {
       getDraft: () => this.stageDraft,
       stages: this.stages,
       selectedStageId: this.selectedStageId,
+      classOptions: this.buildClassPickerItems(),
       onSelectStage: (stageId) => this.selectStage(stageId),
+      onDraftChange: (draft) => {
+        this.stageDraft = draft;
+      },
+      onSave: () => void this.saveStage(),
       saving: this.saving,
     });
   }
@@ -721,6 +728,37 @@ export class EditorApp {
     this.stageDraft = loadStageDraftById(this.stages, stageId);
     this.persistSession();
     this.render();
+  }
+
+  private async saveStage(): Promise<void> {
+    if (!this.selectedStageId) {
+      this.setStatus('ステージを選択してください', true);
+      return;
+    }
+
+    const validationError = validateStageDraftForSave(this.stageDraft);
+    if (validationError) {
+      this.setStatus(validationError, true);
+      return;
+    }
+
+    this.saving = true;
+    this.render();
+    try {
+      await saveStageBundle({ stage: this.stageDraft });
+      this.stages = await fetchStages();
+      this.stageDraft = loadStageDraftById(this.stages, this.selectedStageId);
+      this.setStatus(`保存しました: ${this.stageDraft.displayName}`, false);
+      this.persistSession();
+    } catch (error) {
+      this.setStatus(
+        error instanceof Error ? error.message : '保存に失敗しました',
+        true,
+      );
+    } finally {
+      this.saving = false;
+      this.render();
+    }
   }
 
   private selectClass(classId: string): void {

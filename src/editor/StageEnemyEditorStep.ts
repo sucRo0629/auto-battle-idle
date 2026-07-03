@@ -1,20 +1,65 @@
-import type { StageDef } from '../battle/types.ts';
+import type { StageDef, StageEnemyGroup } from '../battle/types.ts';
 import { resolveStageEnemyCompositionPreview } from '../ui/stageEnemyCompositionPreview.ts';
-import { type StageDraft } from './editorApi.ts';
+import {
+  createDefaultStageEnemyGroup,
+  type StageDraft,
+} from './editorApi.ts';
 import {
   appendGrid,
   createActionButton,
+  createButton,
   createEl,
   createFieldRow,
+  createNumberInput,
   createSection,
+  createSelect,
   preserveScrollDuring,
 } from './formUtils.ts';
+
+const SCALE_MIN = 0.01;
+const DEFAULT_SCALE = 1;
+
+type ScaleKey = 'hpScale' | 'atkScale' | 'defScale' | 'regScale';
+
+const SCALE_FIELDS: { key: ScaleKey; label: string }[] = [
+  { key: 'hpScale', label: 'hp' },
+  { key: 'atkScale', label: 'attack' },
+  { key: 'defScale', label: 'defense' },
+  { key: 'regScale', label: 'regen' },
+];
+
+function resolveScale(value: number | undefined): number {
+  return value ?? DEFAULT_SCALE;
+}
+
+function setOptionalScale(group: StageEnemyGroup, key: ScaleKey, value: number): void {
+  if (value === DEFAULT_SCALE) {
+    delete group[key];
+  } else {
+    group[key] = value;
+  }
+}
+
+function parsePositiveScale(raw: string): number | null {
+  const parsed = Number(raw);
+  if (Number.isNaN(parsed)) return null;
+  return Math.max(SCALE_MIN, parsed);
+}
+
+function parsePositiveInteger(raw: string): number | null {
+  const parsed = Number(raw);
+  if (!Number.isInteger(parsed) || parsed < 1) return null;
+  return parsed;
+}
 
 export interface StageEnemyEditorStepOptions {
   getDraft: () => StageDraft;
   stages: StageDef[];
   selectedStageId: string;
+  classOptions: { id: string; label: string }[];
   onSelectStage: (stageId: string) => void;
+  onDraftChange: (draft: StageDraft) => void;
+  onSave: () => void;
   saving?: boolean;
 }
 
@@ -30,6 +75,10 @@ export class StageEnemyEditorStep {
     this.container.replaceChildren();
   }
 
+  refresh(): void {
+    this.render();
+  }
+
   private render(): void {
     preserveScrollDuring(() => {
       this.renderContent();
@@ -37,9 +86,26 @@ export class StageEnemyEditorStep {
   }
 
   private renderContent(): void {
-    const { getDraft, stages, selectedStageId, onSelectStage, saving } = this.options;
+    const {
+      getDraft,
+      stages,
+      selectedStageId,
+      classOptions,
+      onSelectStage,
+      onDraftChange,
+      onSave,
+      saving,
+    } = this.options;
     const draft = getDraft();
+    const editingEnemyGroups = draft.enemyGroups !== undefined;
     this.container.replaceChildren();
+
+    const commitDraft = (mutate: (next: StageDraft) => void, rerender = false) => {
+      const next = structuredClone(getDraft());
+      mutate(next);
+      onDraftChange(next);
+      if (rerender) this.render();
+    };
 
     const header = createEl('div', 'editor-step-header');
     header.appendChild(createEl('h2', 'editor-step-title', 'ステージ敵編成'));
@@ -47,7 +113,7 @@ export class StageEnemyEditorStep {
       createEl(
         'p',
         'editor-step-desc',
-        'ステージ一覧と編成概要を表示します。編集・保存は後続フェーズで実装します。',
+        'ステージの recommendedLevel と enemyGroups を編集します。legacy waves は参照のみです。',
       ),
     );
     this.container.appendChild(header);
@@ -87,19 +153,9 @@ export class StageEnemyEditorStep {
         createEl('span', 'editor-readonly-value', draft.displayName || '—'),
       ),
     );
-    identityGrid.appendChild(
-      createFieldRow(
-        'recommendedLevel',
-        createEl(
-          'span',
-          'editor-readonly-value',
-          draft.recommendedLevel !== undefined ? String(draft.recommendedLevel) : '—',
-        ),
-      ),
-    );
 
     const composition = resolveStageEnemyCompositionPreview(draft as StageDef);
-    const compositionSection = createSection('敵編成');
+    const compositionSection = createSection('編成概要');
     this.container.appendChild(compositionSection);
     const compositionGrid = appendGrid(compositionSection);
     compositionGrid.appendChild(
@@ -108,12 +164,15 @@ export class StageEnemyEditorStep {
         createEl(
           'span',
           'editor-readonly-value',
-          composition.usesEnemyGroups ? 'enemyGroups（新正本）' : 'legacy（waves / templateId）',
+          editingEnemyGroups
+            ? 'enemyGroups（編集中）'
+            : composition.usesEnemyGroups
+              ? 'enemyGroups（新正本）'
+              : 'legacy（waves / templateId）',
         ),
       ),
     );
-
-    if (composition.usesEnemyGroups) {
+    if (editingEnemyGroups || composition.usesEnemyGroups) {
       const groupCount = draft.enemyGroups?.length ?? 0;
       compositionGrid.appendChild(
         createFieldRow(
@@ -124,7 +183,15 @@ export class StageEnemyEditorStep {
       compositionGrid.appendChild(
         createFieldRow(
           '総体数',
-          createEl('span', 'editor-readonly-value', String(composition.totalEnemyCount)),
+          createEl(
+            'span',
+            'editor-readonly-value',
+            String(
+              editingEnemyGroups
+                ? (draft.enemyGroups ?? []).reduce((sum, group) => sum + group.count, 0)
+                : composition.totalEnemyCount,
+            ),
+          ),
         ),
       );
     } else {
@@ -147,14 +214,201 @@ export class StageEnemyEditorStep {
       }
     }
 
+    if (!editingEnemyGroups) {
+      const legacySection = createSection('legacy waves（参照のみ）');
+      this.container.appendChild(legacySection);
+      const legacyGrid = appendGrid(legacySection);
+      const waves = draft.waves ?? [];
+      if (waves.length === 0) {
+        legacyGrid.appendChild(
+          createFieldRow(
+            'waves',
+            createEl('span', 'editor-readonly-value', '（なし）'),
+          ),
+        );
+      } else {
+        for (let waveIndex = 0; waveIndex < waves.length; waveIndex += 1) {
+          const wave = waves[waveIndex]!;
+          const templateSummary =
+            wave.enemies.length > 0
+              ? wave.enemies.map((enemy) => enemy.templateId).join(', ')
+              : '（なし）';
+          legacyGrid.appendChild(
+            createFieldRow(
+              `wave ${waveIndex}`,
+              createEl('span', 'editor-readonly-value', templateSummary),
+            ),
+          );
+        }
+      }
+
+      const startActions = createEl('div', 'editor-actions');
+      startActions.appendChild(
+        createActionButton(
+          'enemyGroups 編集を開始',
+          'editor-btn',
+          () => {
+            commitDraft((next) => {
+              next.enemyGroups = [];
+            }, true);
+          },
+        ),
+      );
+      this.container.appendChild(startActions);
+    } else {
+      const editSection = createSection('enemyGroups 編集');
+      this.container.appendChild(editSection);
+      const editGrid = appendGrid(editSection);
+
+      editGrid.appendChild(
+        createFieldRow(
+          'recommendedLevel',
+          createNumberInput(
+            draft.recommendedLevel ?? 1,
+            (recommendedLevel) => {
+              commitDraft((next) => {
+                next.recommendedLevel = recommendedLevel;
+              });
+            },
+            {
+              min: 1,
+              parseInput: parsePositiveInteger,
+            },
+          ),
+        ),
+      );
+
+      const groups = draft.enemyGroups ?? [];
+      if (groups.length === 0) {
+        editGrid.appendChild(
+          createFieldRow(
+            'グループ',
+            createEl('span', 'editor-readonly-value', '（未追加）'),
+          ),
+        );
+      }
+
+      for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
+        const group = groups[groupIndex]!;
+        const groupSection = createSection(`グループ ${groupIndex + 1}`);
+        editSection.appendChild(groupSection);
+        const groupGrid = appendGrid(groupSection);
+
+        const classSelectOptions = classOptions.map((option) => ({
+          value: option.id,
+          label: option.label,
+        }));
+        if (group.classId && !classSelectOptions.some((option) => option.value === group.classId)) {
+          classSelectOptions.push({
+            value: group.classId,
+            label: group.classId,
+          });
+        }
+
+        groupGrid.appendChild(
+          createFieldRow(
+            'classId',
+            createSelect(group.classId, classSelectOptions, (classId) => {
+              commitDraft((next) => {
+                const target = next.enemyGroups?.[groupIndex];
+                if (target) target.classId = classId;
+              });
+            }),
+          ),
+        );
+
+        groupGrid.appendChild(
+          createFieldRow(
+            'count',
+            createNumberInput(group.count, (count) => {
+              commitDraft((next) => {
+                const target = next.enemyGroups?.[groupIndex];
+                if (target) target.count = count;
+              });
+            }, {
+              min: 1,
+              parseInput: parsePositiveInteger,
+            }),
+          ),
+        );
+
+        for (const scaleField of SCALE_FIELDS) {
+          groupGrid.appendChild(
+            createFieldRow(
+              scaleField.label,
+              createNumberInput(
+                resolveScale(group[scaleField.key]),
+                (value) => {
+                  commitDraft((next) => {
+                    const target = next.enemyGroups?.[groupIndex];
+                    if (target) setOptionalScale(target, scaleField.key, value);
+                  });
+                },
+                {
+                  min: SCALE_MIN,
+                  step: 0.01,
+                  emptyWhen: DEFAULT_SCALE,
+                  parseInput: parsePositiveScale,
+                },
+              ),
+            ),
+          );
+        }
+
+        const groupActions = createEl('div', 'editor-actions');
+        groupActions.appendChild(
+          createButton('グループを削除', 'editor-btn editor-btn-small', () => {
+            commitDraft((next) => {
+              next.enemyGroups = (next.enemyGroups ?? []).filter(
+                (_, index) => index !== groupIndex,
+              );
+            }, true);
+          }),
+        );
+        groupSection.appendChild(groupActions);
+      }
+
+      const addActions = createEl('div', 'editor-actions');
+      addActions.appendChild(
+        createButton('+ グループを追加', 'editor-btn editor-btn-small', () => {
+          const defaultClassId = classOptions[0]?.id ?? '';
+          commitDraft((next) => {
+            const list = next.enemyGroups ?? [];
+            list.push(createDefaultStageEnemyGroup(defaultClassId));
+            next.enemyGroups = list;
+          }, true);
+        }),
+      );
+      editSection.appendChild(addActions);
+
+      const hasLegacyTemplates = (draft.waves ?? []).some((wave) => wave.enemies.length > 0);
+      if (hasLegacyTemplates) {
+        const legacyRef = createSection('legacy waves（参照のみ・保存時は維持）');
+        this.container.appendChild(legacyRef);
+        const legacyRefGrid = appendGrid(legacyRef);
+        for (let waveIndex = 0; waveIndex < (draft.waves ?? []).length; waveIndex += 1) {
+          const wave = draft.waves![waveIndex]!;
+          const templateSummary =
+            wave.enemies.length > 0
+              ? wave.enemies.map((enemy) => enemy.templateId).join(', ')
+              : '（なし）';
+          legacyRefGrid.appendChild(
+            createFieldRow(
+              `wave ${waveIndex}`,
+              createEl('span', 'editor-readonly-value', templateSummary),
+            ),
+          );
+        }
+      }
+    }
+
     const actions = createEl('div', 'editor-actions');
     const saveBtn = createActionButton(
-      '保存（未実装）',
+      saving ? '保存中…' : '保存',
       'editor-btn editor-btn-primary',
-      () => {},
+      onSave,
     );
-    saveBtn.disabled = true;
-    if (saving) saveBtn.disabled = true;
+    saveBtn.disabled = Boolean(saving) || !selectedStageId;
     actions.appendChild(saveBtn);
     this.container.appendChild(actions);
   }

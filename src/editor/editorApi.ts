@@ -197,6 +197,63 @@ export async function saveStageBundle(payload: { stage: StageDraft }): Promise<v
   });
 }
 
+const STAGE_ENEMY_SCALE_MIN = 0.01;
+
+function isPositiveStageEnemyScale(value: number | undefined): boolean {
+  return value === undefined || (typeof value === 'number' && value >= STAGE_ENEMY_SCALE_MIN);
+}
+
+/** 保存前の軽いクライアント検証。null = OK。 */
+export function validateStageDraftForSave(draft: StageDraft): string | null {
+  if (draft.enemyGroups === undefined) {
+    return null;
+  }
+
+  if (draft.recommendedLevel === undefined) {
+    return 'recommendedLevel を入力してください';
+  }
+  if (
+    !Number.isInteger(draft.recommendedLevel) ||
+    draft.recommendedLevel < 1
+  ) {
+    return 'recommendedLevel は 1 以上の整数です';
+  }
+
+  const groups = draft.enemyGroups;
+  if (groups.length === 0) {
+    return 'enemyGroups に 1 件以上のグループを追加してください';
+  }
+
+  for (let index = 0; index < groups.length; index += 1) {
+    const group = groups[index]!;
+    const prefix = `enemyGroups[${index}]`;
+    if (!group.classId.trim()) {
+      return `${prefix}: classId を選択してください`;
+    }
+    if (!Number.isInteger(group.count) || group.count < 1) {
+      return `${prefix}: count は 1 以上の整数です`;
+    }
+    if (!isPositiveStageEnemyScale(group.hpScale)) {
+      return `${prefix}: hpScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
+    }
+    if (!isPositiveStageEnemyScale(group.atkScale)) {
+      return `${prefix}: atkScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
+    }
+    if (!isPositiveStageEnemyScale(group.defScale)) {
+      return `${prefix}: defScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
+    }
+    if (!isPositiveStageEnemyScale(group.regScale)) {
+      return `${prefix}: regScale は ${STAGE_ENEMY_SCALE_MIN} 以上です`;
+    }
+  }
+
+  return null;
+}
+
+export function createDefaultStageEnemyGroup(classId: string): StageEnemyGroup {
+  return { classId, count: 1 };
+}
+
 export const ENEMY_ATTACK_SPEED_CUSTOM = 'custom' as const;
 
 export type EnemyAttackSpeedSelect =

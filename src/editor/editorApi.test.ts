@@ -14,6 +14,7 @@ import {
   normalizeStageDraftForSave,
   resyncEnemyBasicAttackEntry,
   toClassStatsPatch,
+  validateStageDraftForSave,
   type SkillDraftEntry,
   type SkillsJson,
 } from './editorApi.ts';
@@ -718,5 +719,69 @@ describe('stage draft helpers', () => {
 
   it('loadStageDraftById falls back to empty draft for unknown id', () => {
     expect(loadStageDraftById(stages, 'missing')).toEqual(createEmptyStageDraft());
+  });
+});
+
+describe('validateStageDraftForSave', () => {
+  it('allows legacy-only draft without enemyGroups', () => {
+    expect(
+      validateStageDraftForSave({
+        id: 'legacy_1',
+        displayName: 'Legacy 1',
+        waves: [{ enemies: [{ templateId: 'test_dummy', spawnX: 100 }] }],
+      }),
+    ).toBeNull();
+  });
+
+  it('rejects enemyGroups draft without recommendedLevel', () => {
+    expect(
+      validateStageDraftForSave({
+        id: 'demo_1',
+        displayName: 'Demo 1',
+        enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+      }),
+    ).toMatch(/recommendedLevel/);
+  });
+
+  it('rejects empty enemyGroups array', () => {
+    expect(
+      validateStageDraftForSave({
+        id: 'demo_1',
+        displayName: 'Demo 1',
+        recommendedLevel: 10,
+        enemyGroups: [],
+      }),
+    ).toMatch(/1 件以上/);
+  });
+
+  it('rejects invalid count and scale', () => {
+    expect(
+      validateStageDraftForSave({
+        id: 'demo_1',
+        displayName: 'Demo 1',
+        recommendedLevel: 10,
+        enemyGroups: [{ classId: 'df_paladin', count: 0 }],
+      }),
+    ).toMatch(/count/);
+
+    expect(
+      validateStageDraftForSave({
+        id: 'demo_1',
+        displayName: 'Demo 1',
+        recommendedLevel: 10,
+        enemyGroups: [{ classId: 'df_paladin', count: 1, hpScale: 0 }],
+      }),
+    ).toMatch(/hpScale/);
+  });
+
+  it('accepts valid enemyGroups draft', () => {
+    expect(
+      validateStageDraftForSave({
+        id: 'demo_1',
+        displayName: 'Demo 1',
+        recommendedLevel: 10,
+        enemyGroups: [{ classId: 'df_paladin', count: 2, atkScale: 1.5 }],
+      }),
+    ).toBeNull();
   });
 });
