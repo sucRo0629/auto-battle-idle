@@ -116,7 +116,7 @@ export class StageEnemyEditorStep {
       createEl(
         'p',
         'editor-step-desc',
-        'ステージの recommendedLevel と enemyGroups を編集します。legacy waves は参照のみです。',
+        'ステージの recommendedLevel と enemyGroups を編集します。legacy waves は参照のみです。templateId の本体は「敵テンプレ」タブで確認・編集します。',
       ),
     );
     this.container.appendChild(header);

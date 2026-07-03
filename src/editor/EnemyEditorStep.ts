@@ -110,10 +110,19 @@ export class EnemyEditorStep {
         'p',
         'editor-step-desc',
         hideSkillIds
-          ? 'ステータス等を編集します。通常攻撃枠はスキル定義に常に含まれます。enemyId 変更時は通常攻撃 ID のみ同期されます。'
-          : '敵テンプレートとパッシブ / アクティブスキル ID を編集します。',
+          ? 'enemies.json の敵テンプレート（legacy waves の templateId 参照先）を編集します。ステージごとの enemyGroups 編成は「ステージ」タブで編集してください。'
+          : 'enemies.json の敵テンプレート（legacy waves の templateId 参照先）とパッシブ / アクティブスキル ID を編集します。ステージごとの enemyGroups 編成は「ステージ」タブで編集してください。',
       ),
     );
+    if (hideSkillIds) {
+      header.appendChild(
+        createEl(
+          'p',
+          'editor-warning',
+          '通常攻撃枠はスキル定義に常に含まれます。enemyId 変更時は通常攻撃 ID のみ同期されます。',
+        ),
+      );
+    }
     this.container.appendChild(header);
 
     if (!hidePicker) {

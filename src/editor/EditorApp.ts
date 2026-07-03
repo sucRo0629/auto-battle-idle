@@ -198,7 +198,7 @@ export class EditorApp {
       createEl(
         'p',
         'editor-subtitle',
-        'classes.json / data/skills/ / enemies.json を編集します。保存後はゲームを再読み込みしてください。',
+        'classes.json / enemies.json / stages.json / data/skills/ などの開発用エディタ。保存後はゲームを再読み込みしてください。',
       ),
     );
     this.root.appendChild(header);
@@ -218,8 +218,8 @@ export class EditorApp {
     tabs.replaceChildren();
     const items: { id: EditorTab; label: string }[] = [
       { id: 'class', label: 'クラス' },
-      { id: 'enemy', label: '敵' },
       { id: 'stage', label: 'ステージ' },
+      { id: 'enemy', label: '敵テンプレ' },
       { id: 'balance', label: 'バランス' },
       { id: 'statusIcons', label: '状態アイコン' },
     ];

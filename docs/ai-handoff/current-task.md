@@ -9,7 +9,7 @@
 ## 2. 作業テーマ
 
 - 作業名: 敵エディタ v0.3.2 — ステージ `enemyGroups` 編成
-- 状態: **Phase A〜C 完了・Phase D 完了・Phase E3（b/c/d）完了**
+- 状態: **Phase A〜C 完了・Phase D 完了・Phase E3（b/c/d）完了・Phase E4b 完了**
 - 対象: ステージ敵編成、`enemyGroups`、戦闘生成、デバッグ表示、データ編集ツール
 - 完了条件: Phase A〜E の完了条件（§6 参照）
 
@@ -58,7 +58,8 @@
 | **E3b** | stage タブ骨組み・stages 読込・一覧 | [x] |
 | **E3c** | `recommendedLevel` / `enemyGroups` 編集・保存 | [x] |
 | **E3d** | preview / warning / tests 整理 | [x] |
-| **E 残** | 旧敵テンプレ UI 扱い・データ移行など | [ ] |
+| **E4b** | タブ文言・導線整理（旧敵テンプレ UI 残置） | [x] |
+| **E 残** | `stages.json` enemyGroups 移行調査・実データ移行など | [ ] |
 
 ### Phase E3d（完了）
 
@@ -69,9 +70,15 @@
 
 ## 7. 次にやること
 
-- [ ] **Phase E 残** — 旧敵テンプレ UI を残すか隠すか決定・反映
+- [ ] **Phase E 残** — `stages.json` の `enemyGroups` 移行調査（現状全ステージ legacy。移行対象・手順・検証方針）
 - [ ] `stages.json` 実データの `enemyGroups` 移行（必要ステージから）
 - [ ] `stages-demo.json` 分離（roadmap 6b、タイミング未確定）
+
+### Phase E4b（完了）
+
+- EditorApp: タブ順を クラス → ステージ → 敵テンプレ → バランス → 状態アイコン に整理。旧「敵」→「敵テンプレ」
+- subtitle に stages.json を追記
+- EnemyEditorStep / StageEnemyEditorStep: legacy templateId と enemyGroups の導線を説明文で明示
 
 ## 8. やらないこと（全体）
 
@@ -84,7 +91,7 @@
 
 ## 9. 未確定・注意点
 
-- 旧敵テンプレ UI を残すか隠すか
+- 旧敵テンプレ UI は残置（E4b で導線整理済み。非表示・削除はしない）
 - `stages-demo.json` 分離タイミング
 - validate の classId allowlist subset 化
 - enemyGroups ステージの EXP 集計
@@ -95,6 +102,6 @@
 ## 10. ChatGPT へ戻すときのメモ
 
 - 目的: v0.3.2 敵編成の段階実装
-- 現在地: Phase E3d 完了。ステージエディタは一覧・編集・保存・preview まで動作
-- 次: **Phase E 残**（旧敵テンプレ UI 扱い、`stages.json` 移行）
+- 現在地: Phase E4b 完了。タブ・説明文で legacy 敵テンプレとステージ enemyGroups の役割分担を明示
+- 次: **Phase E 残**（`stages.json` enemyGroups 移行調査 → 実データ移行）
 - 判断待ち: 上記 §9 未確定事項
