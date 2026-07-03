@@ -164,3 +164,37 @@
 .debug-menu-level-button:hover {
   background: rgba(74, 144, 217, 0.35);
 }
+
+.debug-menu-stage-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+  padding: 6px 4px;
+  border: 1px solid var(--canvas-border-color);
+  background: rgba(20, 24, 36, 0.85);
+}
+
+.debug-menu-stage-info-title {
+  font-weight: 600;
+  color: #a8b8d0;
+}
+
+.debug-menu-stage-info-line {
+  color: #c8d6e5;
+}
+
+.debug-menu-stage-info-warning {
+  color: #e8b86d;
+  font-weight: 600;
+}
+
+.debug-menu-stage-info-list {
+  margin: 2px 0 0;
+  padding-left: 16px;
+  color: #b8c8dc;
+}
+
+.debug-menu-stage-info-list li {
+  margin: 0;
+}

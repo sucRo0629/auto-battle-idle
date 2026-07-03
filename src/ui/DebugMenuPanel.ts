@@ -1,7 +1,11 @@
 import '../styles/debug-menu.css';
-import type { GameData, SaveGameState } from '../battle/types.ts';
+import type { GameData, SaveGameState, StageDef } from '../battle/types.ts';
 import { t } from '../i18n/t.ts';
 import { resolvePlayerDisplayLevel } from '../progression/resolvePlayerDisplayLevel.ts';
+import {
+  formatEnemyGroupScaleSummary,
+  resolveStageEnemyCompositionPreview,
+} from './stageEnemyCompositionPreview.ts';
 
 export interface DebugMenuControls {
   isVerifyMode: () => boolean;
@@ -146,10 +150,89 @@ export class DebugMenuPanel {
         waveRow.appendChild(waveLabel);
         this.rowsHost.append(waveRow);
       }
+
+      if (stage) {
+        this.rowsHost.append(
+          this.createStageCompositionInfoRow(
+            stage,
+            this.controls.getLoopWaveIndex(),
+          ),
+        );
+      }
     }
 
     const playerLevel = resolvePlayerDisplayLevel(save.party);
     this.rowsHost.append(this.createPlayerLevelRow(playerLevel));
+  }
+
+  private createStageCompositionInfoRow(
+    stage: StageDef,
+    waveIndex: number | null,
+  ): HTMLElement {
+    const preview = resolveStageEnemyCompositionPreview(stage, waveIndex);
+    const row = document.createElement('div');
+    row.className = 'debug-menu-stage-info';
+
+    const title = document.createElement('div');
+    title.className = 'debug-menu-stage-info-title';
+    title.textContent = 'ステージ編成';
+    row.appendChild(title);
+
+    const recommendedLevel = document.createElement('div');
+    recommendedLevel.className = 'debug-menu-stage-info-line';
+    recommendedLevel.textContent =
+      preview.recommendedLevel === null
+        ? '推奨 Lv: —'
+        : `推奨 Lv: ${preview.recommendedLevel}`;
+    row.appendChild(recommendedLevel);
+
+    const source = document.createElement('div');
+    source.className = 'debug-menu-stage-info-line';
+    source.textContent = preview.usesEnemyGroups
+      ? '編成: enemyGroups'
+      : '編成: legacy waves';
+    row.appendChild(source);
+
+    const totalCount = document.createElement('div');
+    totalCount.className = 'debug-menu-stage-info-line';
+    totalCount.textContent = `総体数: ${preview.totalEnemyCount}`;
+    row.appendChild(totalCount);
+
+    if (preview.showLargePartyWarning) {
+      const warning = document.createElement('div');
+      warning.className = 'debug-menu-stage-info-warning';
+      warning.textContent = '注意: 5体以上（入力は許容）';
+      row.appendChild(warning);
+    }
+
+    if (preview.usesEnemyGroups) {
+      const list = document.createElement('ul');
+      list.className = 'debug-menu-stage-info-list';
+      for (const line of preview.enemyGroupLines) {
+        const item = document.createElement('li');
+        item.textContent = `${line.classId} ×${line.count}${formatEnemyGroupScaleSummary(line)}`;
+        list.appendChild(item);
+      }
+      row.appendChild(list);
+    } else if (preview.legacyWaveLines.length > 0) {
+      const list = document.createElement('ul');
+      list.className = 'debug-menu-stage-info-list';
+      for (const line of preview.legacyWaveLines) {
+        const item = document.createElement('li');
+        const waveLabel =
+          preview.legacyWaveLines.length === 1
+            ? ''
+            : `Wave ${line.waveIndex + 1}: `;
+        item.textContent =
+          line.templateIds.length > 0
+            ? `${waveLabel}${line.templateIds.join(', ')}`
+            : `${waveLabel}(なし)`;
+        list.appendChild(item);
+      }
+      row.appendChild(list);
+    }
+
+    return row;
   }
 
   private createBattleXDebugToggleRow(): HTMLElement {
