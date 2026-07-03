@@ -8,12 +8,15 @@
 
 ## 2. 作業テーマ
 
-- 作業名: **Phase 6b 完了** → 次は **Phase 6c / Phase 7**（6c バランス / demo app flow）
-- 状態: **6b-1〜6b-8 完了**（`stages-demo.json` データ化、`BUILD_FLAVOR=demo` 読込分離、flavor テスト、初回 spawn smoke）
+- 作業名: **Phase 7 分割整理**（M1 demo app flow / first-play guidance）
+- 状態: **Phase 6b 完了**（6b-1〜6b-8）。**Phase 7 は未着手** — 本 handoff で小タスク分割のみ。production code は触らない
 - **2026-07 roadmap 改定:** [phase-roadmap.md](../plans/phase-roadmap.md) — 旧 6d → **Phase 7**（app flow）、新 **Phase 8**（presentation）、旧 Electron → **Phase 9**（packaging）。本編は **Phase 10** へ
-- 対象（6b で完了）: M1 体験版ステージ構成、`data/stages-demo.json`、`BUILD_FLAVOR=demo` ランタイム読込分離
-- M1 方針（6b で固定）: **M1 ではレベル実装しない**。EXP / `computeStageExpReward` / レベル報酬 / progression 接続は対象外。`recommendedLevel` は data 上最低 1、当面は表示・設計メモ・将来拡張用
-- スコープ外（6b 全体）: 上記 M1 方針に加え、`stages.json` 変更・map UI・editor demo 切替・Electron packaging
+- **Phase 7 目的:** M1 体験版として、**起動から `demo_ch1_07` クリアまで迷わず進めるアプリ導線**を作る（配布 zip は Phase 9）
+- **現状画面:** 戦闘画面・編成画面（`MetaMenuOverlay`）のみ。**未実装:** トップ / ステージ選択 / リザルト / 体験版終了 / チュートリアル導線
+- **並行・未達:** キャラ画像（並行作業中）、VFX 未実装、効果音未実装
+- **当面方針:** 新規ソース実装は止め、Phase 7 整理後は **グラフィック準備優先**。新規画面実装はグラフィック方針整理後に再開
+- **編成画面:** 戦闘画面より見た目・読みやすさが未達。**7e2 編成画面 M1 polish** は M1 前の改善対象だが、Cursor トークン消費を避け **今すぐ大改修しない**（グラフィック方針・クラス画像反映後に棚卸し → 小改善）
+- M1 方針（6b で固定）: **M1 ではレベル実装しない**。EXP / progression 接続は Phase 7 でも触らない。`recommendedLevel` は data 上 1、表示・設計メモ・将来用
 
 ## 3. 参照すべき正本
 
@@ -337,7 +340,7 @@
 - subtitle に stages.json を追記
 - EnemyEditorStep / StageEnemyEditorStep: legacy templateId と enemyGroups の導線を説明文で明示
 
-## 7. Phase 6b 完了サマリ / Phase 7 候補
+## 7. Phase 6b 完了サマリ / Phase 7 作業計画
 
 ### 6b で確定した事実
 
@@ -352,23 +355,54 @@
 | **demo 新規進行** | 空 save slot + verify OFF → `stages[0]` = `demo_ch1_01` 起点（`createDefaultSave` + alias）。既存 save の未知 id は `stages[0]` へ fallback |
 | **M1 方針** | レベル実装なし。EXP / `computeStageExpReward` / progression 接続は対象外。`recommendedLevel` は data 上 1、表示・設計メモ・将来用 |
 
-### Phase 7 候補（優先順は未確定）
+### Phase 7 — M1 demo app flow / first-play guidance
 
-- [ ] **`dev:demo` / 起動導線整理** — 現行 `npm run dev` は full のまま。手元確認は `build:demo` または `BUILD_FLAVOR=demo vitest`
-- [ ] **`GameSession` 統合 smoke が必要か判断** — 起動〜戦闘開始 UI 経路は未カバー（6b-8 注記）
-- [ ] **Electron packaging への `BUILD_FLAVOR` 伝播**
-- [ ] **demo editor 対応** — 後続判断（当面 editor は `stages.json` 固定。§6b-3 参照）
-- [ ] **map selection UI** — Phase 6d
-- [ ] **save slot / flavor 切替時のユーザー通知** — fallback は動くが stage 位置リセットを見せるか
+**目的:** 起動 → ステージ選択 → 編成 → 戦闘 → リザルト → … → `demo_ch1_07` クリア → 体験版終了、まで **プレイヤー操作で迷わず進める**。Phase 2 レガシー（起動即戦闘・勝利後自動次ステージ・3 秒 `respawnAfterEnd`）を廃止。正本: [phase-roadmap.md §Phase 7](../plans/phase-roadmap.md)
 
-### 6b 未カバー（Phase 7 以降）
+**目標フロー（ハブ = ステージ選択）:** トップ → ステージ選択 → 編成 → 戦闘 → リザルト → ステージ選択（`demo_ch1_07` クリア後は体験版終了）
 
-- `GameSession` 統合経路（起動〜戦闘開始 UI）
-- verify モード **ON** 時の初回体験（デフォルト ON。save slot は `save:verify` / `save:release` で分離）
-- `dev:demo` script
-- Electron packaging への `BUILD_FLAVOR` 伝播
-- demo 用 editor 切替
-- map selection UI
+| 小タスク | 内容 | 状態 |
+| -------- | ---- | ---- |
+| **7a** | **demo app flow 調査** — 現行 `GameSession` / `BattleView` / `BattleEngine` の起動・勝敗・再スポーン経路を棚卸し。レガシー廃止点と verify 残置の切り分け | 未着手 |
+| **7b** | **app screen state 骨格設計** — `title` / `map` / `party` / `battle` / `result` / `demoEnd` の画面状態と DOM ルート切替。`GameSession` 上の遷移 API 案 | 未着手 |
+| **7c** | **トップ画面** — タイトル・Continue / New Game・設定入口 | 未着手 |
+| **7d** | **ステージ選択画面** — `stages-demo.json` 一覧・詳細・出撃。spec: [stage-selection-ui.md](../spec/stage-selection-ui.md) | 未着手 |
+| **7e** | **編成 → 戦闘開始導線** — 出撃確定時に `currentStageId` 反映 → battle 開始。`MetaMenuOverlay` / `SkillMenuPanel` 流用可否は 7a で判断 | 未着手 |
+| **7e2** | **編成画面 M1 polish** — 見た目・読みやすさ・**選択済み 4 人枠**・**スキル説明カード**（コアは「編成だけ」）。**今すぐ大改修しない**。グラフィック方針・クラス画像反映 **後** → 現状棚卸し → 小改善。spec: [party-formation-ui.md](../spec/party-formation-ui.md) | 保留 |
+| **7f** | **戦闘終了 → リザルト導線** — `respawnAfterEnd` 廃止、リザルト表示。Exp・`stageRecords` 更新（M1 必須 2 枠）。spec: [progression.md](../spec/progression.md) | 未着手 |
+| **7g** | **first-play guidance / 敗北時導線** — 初回短いガイダンス文。敗北リザルトから編成見直しへ戻れる導線 | 未着手 |
+| **7h** | **`demo_ch1_07` クリア後 体験版終了画面 / debug UI 整理** — 最終クリア遷移。`DebugMenuPanel` を verify 専用化（本番非表示方針。最終ゲートは Phase 9） | 未着手 |
+
+**推奨着手順:** 7a → 7b → 7c/7d（並行可）→ 7e → **7e2（グラフィック方針・クラス画像反映後）** → 7f → 7g → 7h
+
+**Phase 7 着手前に読む正本候補**
+
+| 種別 | 候補 |
+| ---- | ---- |
+| spec | [stage-selection-ui.md](../spec/stage-selection-ui.md)、[progression.md](../spec/progression.md)、[party-formation-ui.md](../spec/party-formation-ui.md) |
+| コード | `GameSession`、`BattleView`、`MetaMenuOverlay`、`DebugMenuPanel` 周辺 |
+| roadmap | [phase-roadmap.md §Phase 7](../plans/phase-roadmap.md)（本 handoff は分割メモ。詳細は roadmap 正本） |
+
+**Phase 7 未確定点（実装前に判断）**
+
+| 項目 | メモ |
+| ---- | ---- |
+| `GameSession` 統合 smoke | 起動〜戦闘開始 UI 経路は 6b 未カバー。7a 調査後にテスト要否を決める |
+| `respawnAfterEnd` | verify mode だけ旧経路（3 秒再スポーン）を残すか |
+| 勝利時 `currentStageId` 自動進行 | いつ廃止するか（7b/7f と同時が自然。出撃確定時のみ ID 更新） |
+| `DebugMenuPanel` / verify UI | 本番非表示方法（build flag / verify gate）。最終 demo ビルド無効化は Phase 9 |
+| `MetaMenuOverlay` 流用 | 戦闘前編成画面（`party` 状態）として全画面表示できるか |
+| `stageRecords` / best record | M1 でどこまで（2 枠・☆・リザルト/詳細表示は roadmap 必須。横断 Records ビューは Phase 14） |
+
+**Phase 7 スコープ外（roadmap 準拠）:** Electron / itch zip（**Phase 9**）、英語 i18n 本番（**4e** — Phase 7 後）、キャラ画像・VFX・効果音判断（**Phase 8**）、6c 数値バランス
+
+**6b 未カバー（Phase 7 / 9 に送る）**
+
+- `GameSession` 統合経路（起動〜戦闘開始 UI）— 7a で調査
+- verify モード **ON** 時の初回体験
+- `dev:demo` script — **Phase 9**
+- Electron packaging への `BUILD_FLAVOR` 伝播 — **Phase 9**
+- demo 用 editor 切替 — 後続判断
 - save slot / flavor 切替時のユーザー通知
 
 ### 後回し（6c / 8 / バックログ）
@@ -392,15 +426,22 @@
 
 ## 9. 未対応・未確定
 
-### Phase 7 以降（6b では未着手）
+### Phase 7（分割済み — §7 参照）
 
 | 項目 | 内容 |
 | ---- | ---- |
-| 起動・体験導線 | `dev:demo`、verify ON 時の初回体験、`GameSession` 統合経路 |
-| packaging | Electron への `BUILD_FLAVOR` 伝播 |
-| editor | demo 用 `stages-demo.json` 編集切替（後続判断。当面 `stages.json` 固定） |
-| UI | map selection（6d）、flavor 切替時の stage リセット通知 |
-| EXP / レベル | `enemyGroups` の撃破 EXP、`recommendedLevel` 実接続 — **M1 対象外** |
+| 小タスク | 7a〜7h + **7e2**（すべて未着手。7e2 は保留 — グラフィック準備後） |
+| 未確定 | §7「Phase 7 未確定点」表 |
+| 停止地点 | **Phase 7 分割整理まで完了**。以後しばらく **グラフィック準備優先**。新規画面実装はグラフィック方針整理後 |
+
+### Phase 9 / その他（Phase 7 外）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| packaging | `dev:demo`、Electron への `BUILD_FLAVOR` 伝播 — **Phase 9** |
+| editor | demo 用 `stages-demo.json` 編集切替（後続判断） |
+| flavor 切替 | save slot 切替時の stage リセット通知 |
+| EXP / レベル | `enemyGroups` 撃破 EXP、`recommendedLevel` 実接続 — **M1 対象外** |
 
 ### 6c / 8 / バックログ（6b スコープ外）
 
@@ -416,8 +457,9 @@
 
 ## 10. ChatGPT へ戻すときのメモ
 
-- **Phase 6b 完了** — 6b-1〜6b-8 済み。§7 サマリが正本
-- **次**: **Phase 6c**（バランス）または **Phase 7**（トップ / ステージ選択 / リザルト / 体験版終了など app flow）。packaging（旧 Phase 7 想定）は **Phase 9**
-- **roadmap 改定（2026-07）:** phase-roadmap.md — M1 優先は 6 → 7 → 4e → 8 → 9 → itch
+- **Phase 6b 完了** — 6b-1〜6b-8 済み。§7 6b サマリが正本
+- **Phase 7 分割整理済み** — 小タスク 7a〜7h + **7e2**（編成画面 M1 polish）。未確定点・着手前正本は **§7**
+- **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
+- **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
