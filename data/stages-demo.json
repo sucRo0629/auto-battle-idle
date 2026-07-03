@@ -1,0 +1,206 @@
+[
+  {
+    "id": "demo_ch1_01",
+    "displayName": "前線の足慣らし",
+    "recommendedLevel": 1,
+    "enemyGroups": [
+      {
+        "classId": "at_swordsman",
+        "count": 2,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      }
+    ],
+    "waves": [
+      {
+        "enemies": []
+      }
+    ]
+  },
+  {
+    "id": "demo_ch1_02",
+    "displayName": "弓の射程",
+    "recommendedLevel": 1,
+    "enemyGroups": [
+      {
+        "classId": "at_swordsman",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_ranger",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      }
+    ],
+    "waves": [
+      {
+        "enemies": []
+      }
+    ]
+  },
+  {
+    "id": "demo_ch1_03",
+    "displayName": "鉄の防壁",
+    "recommendedLevel": 1,
+    "enemyGroups": [
+      {
+        "classId": "df_guardian",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_swordsman",
+        "count": 2,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      }
+    ],
+    "waves": [
+      {
+        "enemies": []
+      }
+    ]
+  },
+  {
+    "id": "demo_ch1_04",
+    "displayName": "影と矢",
+    "recommendedLevel": 1,
+    "enemyGroups": [
+      {
+        "classId": "at_assassin",
+        "count": 2,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_ranger",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      }
+    ],
+    "waves": [
+      {
+        "enemies": []
+      }
+    ]
+  },
+  {
+    "id": "demo_ch1_05",
+    "displayName": "炎の詠唱",
+    "recommendedLevel": 1,
+    "enemyGroups": [
+      {
+        "classId": "at_sorcerer",
+        "count": 2,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      }
+    ],
+    "waves": [
+      {
+        "enemies": []
+      }
+    ]
+  },
+  {
+    "id": "demo_ch1_06",
+    "displayName": "混成部隊",
+    "recommendedLevel": 1,
+    "enemyGroups": [
+      {
+        "classId": "df_paladin",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_ranger",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_sorcerer",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      }
+    ],
+    "waves": [
+      {
+        "enemies": []
+      }
+    ]
+  },
+  {
+    "id": "demo_ch1_07",
+    "displayName": "護法の陣",
+    "recommendedLevel": 1,
+    "enemyGroups": [
+      {
+        "classId": "df_paladin",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_swordsman",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_sorcerer",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "sp_cleric",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "resScale": 1.0
+      }
+    ],
+    "waves": [
+      {
+        "enemies": []
+      }
+    ]
+  }
+]
