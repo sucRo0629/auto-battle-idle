@@ -1,4 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import classesJson from '../../../data/classes.json';
+import enemiesJson from '../../../data/enemies.json';
+import partiesJson from '../../../data/parties.json';
+import stagesDemoJson from '../../../data/stages-demo.json';
+import type { ActiveSkillDef, PassiveSkillDef } from '../types.ts';
 import { tryLoadGameData } from './loadGameData.ts';
 import {
   DEPRECATED_THREAT_PASSIVE_EFFECT,
@@ -8,6 +13,26 @@ import {
   parseAndValidateGameDataJson,
   parseSkillEffect,
 } from './validateGameData.ts';
+
+const passiveModules = import.meta.glob<PassiveSkillDef[]>(
+  '../../../data/skills/passives/*.json',
+  { eager: true, import: 'default' },
+);
+
+const activeModules = import.meta.glob<ActiveSkillDef[]>(
+  '../../../data/skills/actives/*.json',
+  { eager: true, import: 'default' },
+);
+
+function loadMergedSkillsForValidateTest(): {
+  passives: PassiveSkillDef[];
+  actives: ActiveSkillDef[];
+} {
+  return {
+    passives: Object.values(passiveModules).flat(),
+    actives: Object.values(activeModules).flat(),
+  };
+}
 
 const emptyGameDataShell = {
   classes: [],
@@ -504,5 +529,36 @@ describe('stage enemyGroups validation', () => {
       ],
       waves: [{ enemies: [] }],
     });
+  });
+});
+
+describe('stages-demo.json validation', () => {
+  it('parseAndValidateGameDataJson accepts stages-demo with real game data bundle', () => {
+    const result = parseAndValidateGameDataJson({
+      classes: classesJson,
+      enemies: enemiesJson,
+      skills: loadMergedSkillsForValidateTest(),
+      stages: stagesDemoJson,
+      parties: partiesJson,
+    });
+
+    expect(result.stages).toHaveLength(7);
+    expect(result.stages.map((stage) => stage.id)).toEqual([
+      'demo_ch1_01',
+      'demo_ch1_02',
+      'demo_ch1_03',
+      'demo_ch1_04',
+      'demo_ch1_05',
+      'demo_ch1_06',
+      'demo_ch1_07',
+    ]);
+
+    for (const stage of result.stages) {
+      expect(stage.recommendedLevel).toBe(1);
+      expect(stage.enemyGroups?.length).toBeGreaterThan(0);
+      expect(stage.waves).toEqual([{ enemies: [] }]);
+    }
+
+    expect(JSON.stringify(stagesDemoJson)).not.toContain('templateId');
   });
 });
