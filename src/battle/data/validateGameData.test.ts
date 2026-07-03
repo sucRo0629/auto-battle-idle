@@ -488,4 +488,21 @@ describe('stage enemyGroups validation', () => {
       waves: [{ enemies: [] }],
     });
   });
+
+  it('loads ranged_test stage in real game data bundle', () => {
+    const result = tryLoadGameData();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const stage = result.data.stages.find((entry) => entry.id === 'ranged_test');
+    expect(stage).toMatchObject({
+      id: 'ranged_test',
+      recommendedLevel: 10,
+      enemyGroups: [
+        { classId: 'df_guardian', count: 1 },
+        { classId: 'at_hunter', count: 2 },
+      ],
+      waves: [{ enemies: [] }],
+    });
+  });
 });

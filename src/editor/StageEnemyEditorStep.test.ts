@@ -106,4 +106,18 @@ describe('StageEnemyEditorStep', () => {
     expect(host.textContent).toContain('at_hunter ×1');
     expect(host.textContent).not.toContain('legacy（waves / templateId）');
   });
+
+  it('renders ranged_test as enemyGroups stage from loaded game data', () => {
+    const { stages } = loadGameData();
+    const draft = loadStageDraftById(stages, 'ranged_test');
+
+    host = document.createElement('div');
+    new StageEnemyEditorStep(host, makeOptions(draft, stages));
+
+    expect(host.textContent).toContain('enemyGroups（編集中）');
+    expect(host.textContent).toContain('10');
+    expect(host.textContent).toContain('df_guardian ×1');
+    expect(host.textContent).toContain('at_hunter ×2');
+    expect(host.textContent).not.toContain('legacy（waves / templateId）');
+  });
 });

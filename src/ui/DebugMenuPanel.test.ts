@@ -144,4 +144,25 @@ describe('DebugMenuPanel', () => {
     expect(info?.textContent).toContain('at_hunter ×1');
     expect(info?.textContent).not.toContain('編成: legacy waves');
   });
+
+  it('shows ranged_test composition from loaded game data', () => {
+    const panel = new DebugMenuPanel(
+      loadGameData(),
+      makeControls({
+        getLoopStageId: () => 'ranged_test',
+      }),
+    );
+
+    host = document.createElement('div');
+    panel.mount(host);
+    panel.refresh();
+
+    const info = host.querySelector('.debug-menu-stage-info');
+    expect(info?.textContent).toContain('推奨 Lv: 10');
+    expect(info?.textContent).toContain('編成: enemyGroups');
+    expect(info?.textContent).toContain('総体数: 3');
+    expect(info?.textContent).toContain('df_guardian ×1');
+    expect(info?.textContent).toContain('at_hunter ×2');
+    expect(info?.textContent).not.toContain('編成: legacy waves');
+  });
 });

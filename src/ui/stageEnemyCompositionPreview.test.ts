@@ -122,6 +122,25 @@ describe('resolveStageEnemyCompositionPreview', () => {
       'df_guardian',
     ]);
   });
+
+  it('resolves ranged_test stage from loaded game data', () => {
+    const stage = loadGameData().stages.find((entry) => entry.id === 'ranged_test');
+    expect(stage).toBeDefined();
+
+    const preview = resolveStageEnemyCompositionPreview(stage!);
+
+    expect(preview).toMatchObject({
+      recommendedLevel: 10,
+      usesEnemyGroups: true,
+      totalEnemyCount: 3,
+      showLargePartyWarning: false,
+      legacyWaveLines: [],
+    });
+    expect(preview.enemyGroupLines).toEqual([
+      expect.objectContaining({ classId: 'df_guardian', count: 1 }),
+      expect.objectContaining({ classId: 'at_hunter', count: 2 }),
+    ]);
+  });
 });
 
 describe('formatEnemyGroupScaleSummary', () => {

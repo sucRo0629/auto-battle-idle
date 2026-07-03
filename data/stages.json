@@ -32,22 +32,28 @@
   {
     "id": "ranged_test",
     "displayName": "ranged_test",
+    "recommendedLevel": 10,
+    "enemyGroups": [
+      {
+        "classId": "df_guardian",
+        "count": 1,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "regScale": 1.0
+      },
+      {
+        "classId": "at_hunter",
+        "count": 2,
+        "hpScale": 1.0,
+        "atkScale": 1.0,
+        "defScale": 1.0,
+        "regScale": 1.0
+      }
+    ],
     "waves": [
       {
-        "enemies": [
-          {
-            "templateId": "test_dummy",
-            "spawnX": 0
-          },
-          {
-            "templateId": "test_to_ranged",
-            "spawnX": 100
-          },
-          {
-            "templateId": "enemy_at_hunter",
-            "spawnX": 160
-          }
-        ]
+        "enemies": []
       }
     ]
   },

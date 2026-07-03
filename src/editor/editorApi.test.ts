@@ -803,4 +803,22 @@ describe('validateStageDraftForSave', () => {
       waves: [{ enemies: [] }],
     });
   });
+
+  it('round-trips ranged_test draft through normalize without losing fields', () => {
+    const draft = loadStageDraftById(loadGameData().stages, 'ranged_test');
+
+    expect(validateStageDraftForSave(draft)).toBeNull();
+
+    const normalized = normalizeStageDraftForSave(draft);
+
+    expect(normalized).toMatchObject({
+      id: 'ranged_test',
+      recommendedLevel: 10,
+      enemyGroups: [
+        { classId: 'df_guardian', count: 1 },
+        { classId: 'at_hunter', count: 2 },
+      ],
+      waves: [{ enemies: [] }],
+    });
+  });
 });
