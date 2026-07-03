@@ -204,7 +204,7 @@ HUD バッジのクリック説明・簡易/詳細表示は [combat.md §簡易�
 | `statusCategory?` | 状態系のみ。[combat.md §ステータス効果](combat.md#ステータス効果) の `StatusDisplayCategory` と対応。`StatusIconRegistry` に PNG が登録されているときのみ用語パネル見出しに表示 |
 | `statusIconCategory?` | 用語パネル見出しアイコンのみ。HUD カテゴリと別 ID の用語が同じ PNG を使うとき（例: `magicBlock` → `block`） |
 
-**多言語:** **Phase 4b / 4d** までは表示は **`ja` 固定**（型・データ形状だけ locale キーを持つ）。**Phase 4e** で **`en` のみ** 追加（3 言語目以降はスコープ外）。M1 8 クラス Lv0 の **日本語文案は確定済み**（2026-06、[phase-4-roadmap.md §4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)）。4e ではこれを翻訳正本とし locale 分岐する。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。**英語文案の書き方**（命令形・用語表・`NEEDS_REVIEW`）は [i18n-en.md](i18n-en.md) を正とする。
+**多言語:** **Phase 4b / 4d** までは表示は **`ja` 固定**（型・データ形状だけ locale キーを持つ）。**Phase 4e** で **`en` のみ** 追加（3 言語目以降はスコープ外）。**4e 本番は M1 リリース直前** — UI 調整により日本語文案が変わる可能性があるため。M1 8 クラス Lv0 の **日本語文案は現時点の正本**（2026-06、[phase-4-roadmap.md §4b](../plans/phase-4-roadmap.md#4b--スキル説明自動生成日本語--完了2026-06)）。4e では **確定後の日本語** を翻訳正本とし locale 分岐する。`aliases` のマッチは **現在 locale の aliases のみ** を使う（日本語 aliases で英語文をマッチさせない）。**英語文案の書き方**（命令形・用語表・`NEEDS_REVIEW`）は [i18n-en.md](i18n-en.md) を正とする。
 
 #### 登録方針
 

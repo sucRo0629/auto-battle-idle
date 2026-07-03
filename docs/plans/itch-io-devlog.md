@@ -27,7 +27,7 @@
 
 ## 今すぐ書かなくていい理由
 
-- まだ Phase 4d / 4e → Phase 6（体験版ステージ・画面導線）の途中で、M1 用コンテンツが揃っていない。
+- まだ Phase 6（体験版ステージ・画面導線）の途中で、M1 用コンテンツが揃っていない。
 - 「開発中です」だけの更新はフォローにも刺さりにくい。
 - Devlog は実装時間と競合する。M1 直前の polish を優先する。
 
@@ -52,13 +52,13 @@
 
 1. **何が楽しいか** — 「編成を組むことがステージ攻略そのもの」（[design-philosophy.md](../design-philosophy.md) の言葉でよい）
 2. **他作との違い** — オートバトルは結果確認用、解法探索が主役、など
-3. **見えるもの** — `SkillMenuPanel` や戦闘画面の **GIF / スクリーンショット**（英語 UI が入った **4e 後** だと M1 と一致する）
+3. **見えるもの** — `SkillMenuPanel` や戦闘画面の **GIF / スクリーンショット**（英語 UI は **4e（M1 直前）** 後だと M1 と一致する）
 
 ---
 
 ## M1 チェックリストとの関係
 
-[phase-4-roadmap.md §4e](./phase-4-roadmap.md#4e--英語-i18nrelease-m1-必須) の **ストア** 行（itch ページ・キャッチコピー・英語スクショ）と [phase-roadmap.md §Phase 4e](./phase-roadmap.md#phase-4e--英語-i18nrelease-m1-必須) は、Devlog の **延長線上** に置く。
+[phase-4-roadmap.md §4e](./phase-4-roadmap.md#4e--英語-i18n-en-のみ--m1-リリース直前) の **ストア** 行（itch ページ・キャッチコピー・英語スクショ）と [phase-roadmap.md §Phase 4e](./phase-roadmap.md#4e--英語-i18n--release-m1-向けm1-リリース直前) は、Devlog の **延長線上** に置く。
 
 | 項目 | 担当フェーズ | 備考 |
 | ---- | ------------ | ---- |
@@ -80,6 +80,6 @@
 | 用途 | ファイル |
 | ---- | -------- |
 | Release M1 / M2 スコープ | [phase-roadmap.md §Release マイルストーン](./phase-roadmap.md#release-マイルストーン) |
-| 英語 i18n・ストア行 | [phase-4-roadmap.md §4e](./phase-4-roadmap.md#4e--英語-i18nrelease-m1-必須) |
+| 英語 i18n・ストア行 | [phase-4-roadmap.md §4e](./phase-4-roadmap.md#4e--英語-i18n-en-のみ--m1-リリース直前) |
 | 配布 zip | [phase-roadmap.md §Phase 7](./phase-roadmap.md#phase-7--デスクトップ配布release-m1) |
 | コアコンセプト（Devlog 文案の正本） | [design-philosophy.md](../design-philosophy.md) |

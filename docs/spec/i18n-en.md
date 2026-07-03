@@ -2,7 +2,7 @@
 
 実装：`src/ui/skillTextPhrases.ts`, `src/ui/formatSkillText.ts`, `src/ui/gameTermGlossaryEn.ts`, `src/i18n/uiMessages.ts`, `src/ui/classDisplayName.ts`
 
-Phase 4e（[phase-4-roadmap.md §4e](../plans/phase-4-roadmap.md#4e--英語-i18n-en-のみ)）の **英語文案の正本**。対象言語は **`en` のみ**（3 言語目以降はスコープ外）。
+Phase 4e（[phase-4-roadmap.md §4e](../plans/phase-4-roadmap.md#4e--英語-i18n-en-のみ--m1-リリース直前)）の **英語文案の正本**。対象言語は **`en` のみ**（3 言語目以降はスコープ外）。**本番翻訳・整合は M1 リリース直前**（日本語 UI 確定後）。
 
 ## 適用範囲
 
@@ -14,7 +14,7 @@ Phase 4e（[phase-4-roadmap.md §4e](../plans/phase-4-roadmap.md#4e--英語-i18n
 | DOM UI ラベル | `uiMessages.ts` 等 | 短いラベル。ゲーム用語は用語表に合わせる |
 | クラス表示名 | `classes.json` の `epithetEn` | 肩書き。スキル効果文のルールは直接は当てはめない |
 
-**翻訳正本:** 日本語（4b で確定した `formatSkillText` 日本語出力・`gameTermGlossary.ts` の `ja`）。
+**翻訳正本:** 日本語（4b の `formatSkillText` 日本語出力・`gameTermGlossary.ts` の `ja`）。**4e 着手時点**の日本語を正本とする（UI 調整で更新しうる）。
 
 ## エージェント・編集者向け方針（コピペ可）
 

@@ -1070,7 +1070,7 @@ Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `s
 - 味方 / 敵 hoverHighlight の同時表示（同一ユニットで target + hover 重なり）のコントラスト
 - Enemy HUD `+N` tooltip と状態アイコン密度（10 体 × 多状態）
 - 詳細統計 overlay の DOM 実装（§8.12.1）
-- 英語 i18n（Phase 4e）— 戦闘 HUD ラベル・tooltip
+- 英語 i18n（Phase 4e — **M1 リリース直前**）— 戦闘 HUD ラベル・tooltip
 
 #### 目視確認チェックリスト
 
