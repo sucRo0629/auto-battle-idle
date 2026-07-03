@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { tryLoadGameData } from './loadGameData.ts';
 import {
   DEPRECATED_THREAT_PASSIVE_EFFECT,
   EDITOR_PASSIVE_EFFECT_KINDS,
@@ -469,5 +470,22 @@ describe('stage enemyGroups validation', () => {
     );
 
     expect(result.stages[0]?.enemyGroups?.[0]?.count).toBe(5);
+  });
+
+  it('loads eg_smoke pilot stage in real game data bundle', () => {
+    const result = tryLoadGameData();
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const stage = result.data.stages.find((entry) => entry.id === 'eg_smoke');
+    expect(stage).toMatchObject({
+      id: 'eg_smoke',
+      recommendedLevel: 10,
+      enemyGroups: [
+        { classId: 'df_guardian', count: 1 },
+        { classId: 'at_hunter', count: 1 },
+      ],
+      waves: [{ enemies: [] }],
+    });
   });
 });

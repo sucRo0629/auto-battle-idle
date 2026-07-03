@@ -2,6 +2,7 @@
  * @vitest-environment happy-dom
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { loadGameData } from '../battle/data/loadGameData.ts';
 import { DebugMenuPanel } from './DebugMenuPanel.ts';
 import type { GameData, StageDef } from '../battle/types.ts';
 
@@ -121,5 +122,26 @@ describe('DebugMenuPanel', () => {
     expect(info?.textContent).toContain('enemy_b');
     expect(info?.textContent).toContain('enemy_c');
     expect(info?.textContent).not.toContain('enemy_a');
+  });
+
+  it('shows eg_smoke composition from loaded game data', () => {
+    const panel = new DebugMenuPanel(
+      loadGameData(),
+      makeControls({
+        getLoopStageId: () => 'eg_smoke',
+      }),
+    );
+
+    host = document.createElement('div');
+    panel.mount(host);
+    panel.refresh();
+
+    const info = host.querySelector('.debug-menu-stage-info');
+    expect(info?.textContent).toContain('推奨 Lv: 10');
+    expect(info?.textContent).toContain('編成: enemyGroups');
+    expect(info?.textContent).toContain('総体数: 2');
+    expect(info?.textContent).toContain('df_guardian ×1');
+    expect(info?.textContent).toContain('at_hunter ×1');
+    expect(info?.textContent).not.toContain('編成: legacy waves');
   });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { loadGameData } from '../battle/data/loadGameData.ts';
 import {
   formatEnemyGroupScaleSummary,
   resolveStageEnemyCompositionPreview,
@@ -101,6 +102,25 @@ describe('resolveStageEnemyCompositionPreview', () => {
     expect(preview.usesEnemyGroups).toBe(false);
     expect(preview.recommendedLevel).toBeNull();
     expect(preview.enemyGroupLines).toEqual([]);
+  });
+
+  it('resolves eg_smoke pilot stage from loaded game data', () => {
+    const stage = loadGameData().stages.find((entry) => entry.id === 'eg_smoke');
+    expect(stage).toBeDefined();
+
+    const preview = resolveStageEnemyCompositionPreview(stage!);
+
+    expect(preview).toMatchObject({
+      recommendedLevel: 10,
+      usesEnemyGroups: true,
+      totalEnemyCount: 2,
+      showLargePartyWarning: false,
+      legacyWaveLines: [],
+    });
+    expect(preview.enemyGroupLines.map((line) => line.classId).sort()).toEqual([
+      'at_hunter',
+      'df_guardian',
+    ]);
   });
 });
 

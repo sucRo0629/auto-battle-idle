@@ -2,9 +2,10 @@
  * @vitest-environment happy-dom
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { loadGameData } from '../battle/data/loadGameData.ts';
 import { StageEnemyEditorStep } from './StageEnemyEditorStep.ts';
 import type { StageDef } from '../battle/types.ts';
-import type { StageDraft } from './editorApi.ts';
+import { loadStageDraftById, type StageDraft } from './editorApi.ts';
 
 function makeStage(overrides: Partial<StageDef> = {}): StageDef {
   return {
@@ -90,5 +91,19 @@ describe('StageEnemyEditorStep', () => {
     expect(host.textContent).toContain('enemy_b');
     expect(host.textContent).toContain('enemy_c');
     expect(host.textContent).not.toContain('5体以上は表示・配置の後続調整対象');
+  });
+
+  it('renders eg_smoke as enemyGroups stage from loaded game data', () => {
+    const { stages } = loadGameData();
+    const draft = loadStageDraftById(stages, 'eg_smoke');
+
+    host = document.createElement('div');
+    new StageEnemyEditorStep(host, makeOptions(draft, stages));
+
+    expect(host.textContent).toContain('enemyGroups（編集中）');
+    expect(host.textContent).toContain('10');
+    expect(host.textContent).toContain('df_guardian ×1');
+    expect(host.textContent).toContain('at_hunter ×1');
+    expect(host.textContent).not.toContain('legacy（waves / templateId）');
   });
 });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { loadGameData } from '../battle/data/loadGameData.ts';
 import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts';
 import type { ActiveSkillDef } from '../battle/types.ts';
 import {
@@ -783,5 +784,23 @@ describe('validateStageDraftForSave', () => {
         enemyGroups: [{ classId: 'df_paladin', count: 2, atkScale: 1.5 }],
       }),
     ).toBeNull();
+  });
+
+  it('round-trips eg_smoke draft through normalize without losing fields', () => {
+    const draft = loadStageDraftById(loadGameData().stages, 'eg_smoke');
+
+    expect(validateStageDraftForSave(draft)).toBeNull();
+
+    const normalized = normalizeStageDraftForSave(draft);
+
+    expect(normalized).toMatchObject({
+      id: 'eg_smoke',
+      recommendedLevel: 10,
+      enemyGroups: [
+        { classId: 'df_guardian', count: 1 },
+        { classId: 'at_hunter', count: 1 },
+      ],
+      waves: [{ enemies: [] }],
+    });
   });
 });
