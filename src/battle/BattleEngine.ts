@@ -206,11 +206,27 @@ export interface BattleEngineOptions {
     actor: CombatantState,
     target: CombatantState,
     amount: number,
+    meta?: {
+      attackKind?: CounterAttackKind;
+      slotKind?: 'basic' | 'active';
+      skillId?: string;
+      statusId?: string;
+      isCounterDamage?: boolean;
+      hpDamage?: number;
+      attackRangePx?: number;
+      didBlock?: boolean;
+      barrierHpBefore?: number;
+      barrierDamage?: number;
+    },
   ) => void;
   onHealRecorded?: (
     actor: CombatantState,
     target: CombatantState,
     amount: number,
+  ) => void;
+  onCombatActionExecuted?: (
+    actor: CombatantState,
+    info: { slotKind: "basic" | "active"; skillId: string },
   ) => void;
   /** 確認モード: 特定 Wave のみ周回（null = ステージ全 Wave） */
   getLoopWaveIndex?: () => number | null;
@@ -271,11 +287,27 @@ export class BattleEngine {
     actor: CombatantState,
     target: CombatantState,
     amount: number,
+    meta?: {
+      attackKind?: CounterAttackKind;
+      slotKind?: 'basic' | 'active';
+      skillId?: string;
+      statusId?: string;
+      isCounterDamage?: boolean;
+      hpDamage?: number;
+      attackRangePx?: number;
+      didBlock?: boolean;
+      barrierHpBefore?: number;
+      barrierDamage?: number;
+    },
   ) => void;
   private readonly onHealRecorded?: (
     actor: CombatantState,
     target: CombatantState,
     amount: number,
+  ) => void;
+  private readonly onCombatActionExecuted?: (
+    actor: CombatantState,
+    info: { slotKind: "basic" | "active"; skillId: string },
   ) => void;
   private readonly getLoopWaveIndex?: () => number | null;
   private readonly getBattleXDebugEnabled?: () => boolean;
@@ -290,6 +322,7 @@ export class BattleEngine {
     this.stageId = getStageId();
     this.onDamageApplied = options.onDamageApplied;
     this.onHealRecorded = options.onHealRecorded;
+    this.onCombatActionExecuted = options.onCombatActionExecuted;
     this.getLoopWaveIndex = options.getLoopWaveIndex;
     this.getBattleXDebugEnabled = options.getBattleXDebugEnabled;
     this.executor = new SkillExecutor(gameData, (e) => this.emit(e), {
@@ -302,6 +335,9 @@ export class BattleEngine {
       onBasicAttackExecuted: () => {},
       onBasicAttackCountCharged: (actorId) => {
         this.emit({ type: 'basicAttackCountCharged', actorId });
+      },
+      onCombatActionExecuted: (actor, info) => {
+        this.onCombatActionExecuted?.(actor, info);
       },
       onDamageApplied: (actor, target, amount, meta) => {
         this.handleDamageApplied(actor, target, amount, meta);
@@ -332,6 +368,9 @@ export class BattleEngine {
     amount: number,
     meta?: {
       attackKind: CounterAttackKind;
+      slotKind?: 'basic' | 'active';
+      skillId?: string;
+      statusId?: string;
       isCounterDamage?: boolean;
       hpDamage?: number;
       attackRangePx?: number;
@@ -540,7 +579,7 @@ export class BattleEngine {
       }
     }
     this.refreshSelfHpRatioBuffAuras();
-    this.onDamageApplied?.(actor, target, amount);
+    this.onDamageApplied?.(actor, target, amount, meta);
   }
 
   private notifyHealRecorded(
@@ -1666,6 +1705,10 @@ export class BattleEngine {
     this.phase = "idle";
   }
 
+  getBattleTimeSec(): number {
+    return this.battleTimeSec;
+  }
+
   getSnapshot(): BattleSnapshot {
     const stage = this.gameData.stages.find((s) => s.id === this.stageId);
     const waveCount = stage?.waves.length ?? 1;
@@ -2223,6 +2266,8 @@ export class BattleEngine {
         damageResult.hpDamage + damageResult.barrierDamage;
       this.handleDamageApplied(source, target, appliedDamage, {
         attackKind: "dot",
+        skillId: effect.skillId,
+        statusId: effect.id,
         hpDamage: damageResult.hpDamage,
         attackRangePx: source.traits.rangePx,
         barrierHpBefore,

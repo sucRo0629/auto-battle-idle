@@ -215,8 +215,6 @@ function formatFireConditionSummary(condition: FireCondition): string {
       const pct = Math.round(condition.maxHpRatio * 100);
       return phraseFireConditionSelfHp(pct, condition.compare);
     }
-    case "minTargets":
-      return `対象≥${condition.count}`;
     case "allyDamaged":
       return "味方被ダメ";
     case "waveStart":

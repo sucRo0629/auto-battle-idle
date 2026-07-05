@@ -236,7 +236,7 @@ HP バー: HP 減少時はバリア tier1（`min(barrierHp, maxHp)`）を現在 
 | `finalWaveStart`                                                | 最終 Wave の PartyDeploy 開始〜接敵（`beginEngaged`）まで        |
 | `waveEnd`                                                       | 敵全滅 settle〜次 Wave deploy まで                               |
 | `enemyCount`                                                    | 生存敵数（`scope: living`）または射程内敵数（`inRange`）         |
-| `targetHp` / `debuff` / `minTargets` / `selfHp` / `allyDamaged` | 各 kind の閾値・タグ                                             |
+| `targetHp` / `debuff` / `selfHp` / `allyDamaged` | 各 kind の閾値・タグ                                             |
 | `pendingIncomingDamage`                                         | 先読みキュー内の味方被ダメ見積もり（`maxHpRatio` / `windowSec`） |
 | `targetBarrierBelowGrant`                                       | 参照 effect の grant > 対象 `barrierHp`                          |
 
@@ -462,7 +462,7 @@ A4 **早鳴りの印** は戦場の全乾印・坤印の残り時間を短縮し
 | `duelistPride`     | 自身 `hp/maxHp` ≥ `prideHpRatioMin`（バリア非含有）のとき、受ける即時回復・HoT tick を `prideHealMultiplier` 倍（`arenaDominance` の味方支援拒否より弱い）                                                                                                                                                                                                                                   |
 | `bloodlustDuelist` | block + 低 HP DEF（線形）/ ATK（`bloodlustAtkBuffCurveExponent` で指数カーブ、未指定=線形）                                                                                                                                                                                                                                                                                                  |
 | `lastStandGuts`    | 致死直前 Wave 1 回 → HP 1 未満にならない状態を数秒（完全無敵ではない）。終了時生存敵全体に短 stun + KB。イベント `lastStandGuts` →「不屈！」                                                                                                                                                                                                                                                 |
-| `enemyReelIn`      | 遠隔帯の敵（`attackType.ranged`）を対象に `battleX` を使用者 `traits.rangePx` の射程内へ即時引き寄せ（進軍下限整合）。effect の `range` はターゲットプール絞り込みのみで移動先には使わない。layout bake / camera / visual 補間ではなく [battle-field.md](battle-field.md) §4.4 の forced movement。移動量 0 のときは effect 未適用（イベント・ポップアップなし）。`df_duelist_active_1` は本 effect のみの引き寄せ専用スキル。`firePolicy: smart` では `minTargets` が先頭 `enemyReelIn` の対象数を参照 |
+| `enemyReelIn`      | 遠隔帯の敵（`attackType.ranged`）を対象に `battleX` を使用者 `traits.rangePx` の射程内へ即時引き寄せ（進軍下限整合）。effect の `range` はターゲットプール絞り込みのみで移動先には使わない。layout bake / camera / visual 補間ではなく [battle-field.md](battle-field.md) §4.4 の forced movement。移動量 0 のときは effect 未適用（イベント・ポップアップなし）。`df_duelist_active_2` は本 effect のみの引き寄せ専用スキル。`firePolicy: smart` では `enemyCount` + `scope: inRange` で射程内に敵がいるまで発動保留 |
 | `arenaDominance`   | `finalWaveStart` + `stageTriggerLimit: 1` で発動。15 秒間、敵単体攻撃ターゲットを闘技士固定（AoE / `targetRuleOverride` 除外）。最高 ATK 敵に **闘士の指名**（`arenaMark`）。指名対象は闘技士以外からの被ダメ −50%。闘技士はマーク以外の敵からの被ダメ −50%。効果中、闘技士は味方（自身以外）からの回復・バリア・HoT を受けない。指名は効果終了と同時に解除                                  |
 
 `fireCondition` `finalWaveStart`: `waveIndex === stage.waves.length - 1` かつ Wave 開始フェーズ。

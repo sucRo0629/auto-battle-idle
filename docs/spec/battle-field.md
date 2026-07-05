@@ -352,7 +352,7 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 
 **味方の共有 clamp / formation レイヤ：**
 
-- 戦線 on-field ユニット（rear assault 除外）：生存敵 contact より右へ過進軍しない（`capOnFieldBeforeEnemyContact`）。`formationRow` は使わない
+- 戦線 on-field ユニット（rear assault 除外）：生存敵 contact より右へ過進軍しない（`capOnFieldBeforeEnemyContact`）。`formationRow` は使わない。**例外（遠隔 rear chase）：** 遠隔帯ユニットかつ `attackType.ranged` または敵 `farthest` 優先の ChaseTarget を持ち、ChaseTarget が敵 contact より奥にいるときは、停止 X を `ChaseTarget.battleX − effectiveRangePx` まで contact cap より前進側へ緩和する。ただし後列ユニットは `getPlayerFrontlineContactX − FORMATION_DEPTH_STEP_PX` を超えない（前列追越禁止）。近接 / defender / healer の通常接近は変更しない
 - 前列 supporter（`role: supporter`）：近接最前帯の直後へ留める（`capFrontRowSupporterBehindMeleeFront`）。battleX / 近接帯で判定し `formationRow` は使わない。これは defender 代替壁ではなく前線直後 sustain 用の formation clamp。PHT 接近は cap 位置まで試み、cap 到達後も PHT が selfOrigin aoe / basic heal 射程内に入るまで withhold で空振りしない（[combat.md](combat.md) §回復 PHT）
 - 接近ターゲットの depth-order clamp は全 on-field ユニット共通で、`applyPartyFormationApproachSpacing`（partyFormation ソート順）の後に `capApproachFormationOrder`（`resolveApproachBattleX.ts`）で適用する。supporter の個別接近意図（全員健康時の heal 静止など）を連鎖で上書きしない
 - rear assault 中の味方は `applyFormationMarchFollow` の leader / follower から除外。`baseApproach` は formation chain 用に clamp し、背後位置を他ユニットの spacing 基準にしない

@@ -28,7 +28,14 @@ function mockDuelist(battleX: number): CombatantState {
       learnedActiveIds: [],
       equippedActiveSlots: [],
     },
-    cooldowns: [],
+    cooldowns: [
+      {
+        skillId: "df_duelist_active_2",
+        remaining: 0,
+        slotKind: "active",
+        slotIndex: 0,
+      },
+    ],
     statusEffects: [],
     spriteKey: "df_duelist",
     iconKey: "df_duelist",
@@ -76,23 +83,30 @@ function mockEnemy(
   };
 }
 
-const gameData = {
-  stages: [],
-  enemyRegistry: {},
-  classRegistry: {},
-} as GameData;
-
 function loadReelInSkill(): ActiveSkillDef {
   const actives = JSON.parse(
     readFileSync("data/skills/actives/df_duelist.json", "utf8"),
   ) as ActiveSkillDef[];
-  const skill = actives.find((entry) => entry.id === "df_duelist_active_1");
-  if (!skill) throw new Error("df_duelist_active_1 not found");
+  const skill = actives.find((entry) => entry.id === "df_duelist_active_2");
+  if (!skill) throw new Error("df_duelist_active_2 not found");
   return skill;
 }
 
-describe("df_duelist_active_1 誘い込み", () => {
+function buildGameData(skill: ActiveSkillDef): GameData {
+  return {
+    stages: [],
+    enemyRegistry: {},
+    classRegistry: {},
+    skillRegistry: {
+      actives: { [skill.id]: skill },
+      passives: {},
+    },
+  } as GameData;
+}
+
+describe("df_duelist_active_2 誘い込み", () => {
   const skill = loadReelInSkill();
+  const gameData = buildGameData(skill);
   const reelInEffect = skill.effect[0]!;
 
   it("targets ranged enemy when melee is closer on the front line", () => {
@@ -128,25 +142,28 @@ describe("df_duelist_active_1 誘い込み", () => {
     ).toBeNull();
   });
 
-  it("smart fire waits until a ranged enemy exists", () => {
+  it("smart fire waits until an enemy is within range", () => {
     const duelist = mockDuelist(50);
-    const melee = mockEnemy("melee", 120, 30);
-    const ranged = mockEnemy("ranged", 250, 100);
-    const referenceEffect = skill.effect[0];
-    const minTargets = skill.fireConditions?.[0];
-    expect(minTargets?.kind).toBe("minTargets");
+    const meleeOutOfRange = mockEnemy("melee", 400, 30);
+    const rangedInRange = mockEnemy("ranged", 75, 100);
+    const fireCondition = skill.fireConditions?.[0];
+    expect(fireCondition?.kind).toBe("enemyCount");
+    expect(fireCondition).toMatchObject({
+      kind: "enemyCount",
+      min: 1,
+      scope: "inRange",
+    });
 
     const ctx = {
       actor: duelist,
       allies: [duelist],
-      enemies: [melee],
+      enemies: [meleeOutOfRange],
       passives: [],
       gameData,
-      referenceEffect,
     };
-    expect(evaluateCondition(ctx, minTargets!)).toBe(false);
+    expect(evaluateCondition(ctx, fireCondition!)).toBe(false);
 
-    ctx.enemies = [melee, ranged];
-    expect(evaluateCondition(ctx, minTargets!)).toBe(true);
+    ctx.enemies = [meleeOutOfRange, rangedInRange];
+    expect(evaluateCondition(ctx, fireCondition!)).toBe(true);
   });
 });

@@ -31,8 +31,9 @@
     "firePolicy": "smart",
     "fireConditions": [
       {
-        "kind": "minTargets",
-        "count": 1
+        "kind": "enemyCount",
+        "min": 1,
+        "scope": "inRange"
       }
     ],
     "effect": [

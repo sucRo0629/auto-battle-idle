@@ -2352,8 +2352,6 @@ function defaultFireCondition(kind: FireConditionKind): FireCondition {
     case "targetHp":
     case "selfHp":
       return { kind, maxHpRatio: 0.5 };
-    case "minTargets":
-      return { kind, count: 2 };
     case "enemyCount":
       return { kind, min: 1 };
     case "allyDamaged":
@@ -2432,18 +2430,6 @@ function appendFireConditionFields(
     case "selfHp":
       appendFireHpRatioFields(card, condition, (next) =>
         onChange({ ...condition, ...next }, { rerender: false })
-      );
-      break;
-    case "minTargets":
-      card.appendChild(
-        createFieldRow(
-          "最小ターゲット数",
-          createNumberInput(
-            condition.count,
-            (count) => onChange({ ...condition, count }, { rerender: false }),
-            { min: 1, step: 1 }
-          )
-        )
       );
       break;
     case "enemyCount": {

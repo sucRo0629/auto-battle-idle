@@ -1,14 +1,5 @@
 [
   {
-    "id": "at_ranger_passive_2",
-    "name": "射手優先",
-    "effect": "targetRuleOverride",
-    "targetRuleOverride": {
-      "kind": "attackType",
-      "ranged": true
-    }
-  },
-  {
     "id": "at_ranger_passive_1",
     "name": "速射の技",
     "effect": "buff",
@@ -19,6 +10,15 @@
     "buffMultiplier": 1.25,
     "buffTargetRule": {
       "kind": "self"
+    }
+  },
+  {
+    "id": "at_ranger_passive_2",
+    "name": "射手優先",
+    "effect": "targetRuleOverride",
+    "targetRuleOverride": {
+      "kind": "attackType",
+      "ranged": true
     }
   },
   {

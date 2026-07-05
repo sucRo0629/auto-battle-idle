@@ -10,6 +10,7 @@ import {
   resolveAttackBattleX,
   resolveApproachRangePx,
   resolveFormationRangePx,
+  resolvePlayerFrontlineOwners,
 } from "./combatPosition.ts";
 import { pickTargetFromPool, resolvePriorityHealTarget, resolveTargetSpec } from "./skills/targeting.ts";
 import {
@@ -19,7 +20,7 @@ import {
   resolveApproachTargetSpec,
 } from "./skills/targetSpec.ts";
 import { getAttackablePool, isWithinSkillRange } from "./skills/rangeUtils.ts";
-import { isStationaryUnit } from "./data/entityTraits.ts";
+import { isRangedAttack, isStationaryUnit } from "./data/entityTraits.ts";
 import { applyPartyFormationApproachSpacing } from "./battleLayout.ts";
 import { FORMATION_DEPTH_STEP_PX } from "./battleLayout.ts";
 import {
@@ -199,6 +200,108 @@ export function resolveEnemyBasicAttackTarget(
   return resolveEnemyAttackTargetPlayer(enemy, players, enemies, gameData);
 }
 
+function hasRangedPriorityChaseTargetRule(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+): boolean {
+  const spec = resolveUnitTargetSpec(player, players, enemies, gameData);
+  if (spec.kind === "attackType" && spec.ranged === true) return true;
+  return (
+    spec.kind === "distance" &&
+    spec.side === "enemy" &&
+    spec.order === "farthest"
+  );
+}
+
+/** 後列遠隔が前列味方の battleX を追い越さない上限（null = 自ユニットが前線帯） */
+function resolveAllyFrontlineSafetyCapX(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  contact: number,
+): number | null {
+  const owners = resolvePlayerFrontlineOwners(players, enemies);
+  if (owners.length === 0) return null;
+  if (owners.some((ally) => ally.id === player.id)) return null;
+
+  const allyCount = livingAllyCount(players);
+  let maxFrontlineX = Number.NEGATIVE_INFINITY;
+  for (const ally of owners) {
+    const allyApproach = resolveSharedPlayerApproachBattleX(
+      ally,
+      players,
+      enemies,
+      gameData,
+      contact,
+    );
+    const allyContactCap = resolveApproachAttackBattleX(
+      ally,
+      contact,
+      gameData,
+      allyCount,
+      contact,
+    );
+    maxFrontlineX = Math.max(
+      maxFrontlineX,
+      ally.battleX,
+      Math.min(allyApproach, allyContactCap),
+    );
+  }
+  return maxFrontlineX - FORMATION_DEPTH_STEP_PX;
+}
+
+/**
+ * contact より奥の ranged 優先 ChaseTarget 向けに cap を緩和する。
+ * chase 停止 X が contact cap より前進側なら、前列追越 cap まで許可する。
+ */
+function resolveRangedRearChaseContactCapX(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  contact: number,
+  contactCapX: number,
+): number {
+  if (!isRangedAttack(resolveApproachFormationRangePx(player))) {
+    return contactCapX;
+  }
+  if (!hasRangedPriorityChaseTargetRule(player, players, enemies, gameData)) {
+    return contactCapX;
+  }
+  const chase = resolvePlayerChaseTargetEnemy(
+    player,
+    players,
+    enemies,
+    gameData,
+  );
+  if (!chase || chase.battleX <= contact) {
+    return contactCapX;
+  }
+  const chaseStopX = resolveApproachAttackBattleX(
+    player,
+    chase.battleX,
+    gameData,
+    livingAllyCount(players),
+    contact,
+  );
+  if (chaseStopX <= contactCapX) {
+    return contactCapX;
+  }
+  const safetyCap = resolveAllyFrontlineSafetyCapX(
+    player,
+    players,
+    enemies,
+    gameData,
+    contact,
+  );
+  return safetyCap === null
+    ? chaseStopX
+    : Math.min(chaseStopX, safetyCap);
+}
+
 /**
  * 共有 clamp / formation safety layer。
  * 前衛が敵最前線を越えて過進軍しないための cap であり、ChaseTarget の正本ではない。
@@ -214,12 +317,20 @@ function capOnFieldBeforeEnemyContact(
   if (isPlayerRearAssaultAccess(player, { players, enemies })) {
     return approachX;
   }
-  const maxForward = resolveApproachAttackBattleX(
+  const contactCapX = resolveApproachAttackBattleX(
     player,
     contact,
     gameData,
     livingAllyCount(players),
     contact,
+  );
+  const maxForward = resolveRangedRearChaseContactCapX(
+    player,
+    players,
+    enemies,
+    gameData,
+    contact,
+    contactCapX,
   );
   return Math.min(approachX, maxForward);
 }
@@ -527,6 +638,40 @@ function capApproachFormationOrder(
   }
 }
 
+function capRangedRearChaseAfterFormationSpacing(
+  targets: Map<string, number>,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  gameData: GameData,
+  contact: number,
+): void {
+  const battleContext: PlayerRearAssaultBattleContext = { players, enemies };
+  for (const player of players) {
+    if (!player.isAlive) continue;
+    if (isPlayerRearAssaultAccess(player, battleContext)) continue;
+    const contactCapX = resolveApproachAttackBattleX(
+      player,
+      contact,
+      gameData,
+      livingAllyCount(players),
+      contact,
+    );
+    const maxForward = resolveRangedRearChaseContactCapX(
+      player,
+      players,
+      enemies,
+      gameData,
+      contact,
+      contactCapX,
+    );
+    if (maxForward <= contactCapX) continue;
+    const target = targets.get(player.id);
+    if (target !== undefined && target > maxForward) {
+      targets.set(player.id, maxForward);
+    }
+  }
+}
+
 /** 全味方の接敵目標 battleX（列内スペーシング適用済み） */
 export function resolveAllPlayerApproachBattleX(
   players: CombatantState[],
@@ -589,6 +734,13 @@ export function resolveAllPlayerApproachBattleX(
         player.isAlive &&
         !isPlayerRearAssaultAccess(player, battleContext),
     ),
+  );
+  capRangedRearChaseAfterFormationSpacing(
+    spaced,
+    players,
+    enemies,
+    gameData,
+    contact,
   );
 
   return spaced;

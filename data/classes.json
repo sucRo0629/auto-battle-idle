@@ -12,9 +12,9 @@
       }
     },
     "maxHp": 300,
-    "atk": 11,
-    "def": 27,
-    "res": 5,
+    "atk": 10,
+    "def": 28,
+    "res": 0,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
     "basicAttackSkillId": "df_guardian_basic_attack",
@@ -81,7 +81,7 @@
     },
     "maxHp": 280,
     "atk": 15,
-    "def": 22,
+    "def": 24,
     "res": 15,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
@@ -147,8 +147,8 @@
     "traits": {
       "rangePx": 30
     },
-    "maxHp": 250,
-    "atk": 19,
+    "maxHp": 350,
+    "atk": 21,
     "def": 20,
     "res": 0,
     "jobTier": 1,
@@ -191,7 +191,7 @@
       }
     ],
     "growthTier": {
-      "maxHp": 2,
+      "maxHp": 3,
       "atk": 3,
       "def": 1
     },
@@ -213,7 +213,7 @@
     },
     "maxHp": 170,
     "atk": 32,
-    "def": 16,
+    "def": 18,
     "res": 0,
     "jobTier": 1,
     "attackSpeedTier": "somewhatSlow",
@@ -284,7 +284,7 @@
     },
     "maxHp": 110,
     "atk": 27,
-    "def": 10,
+    "def": 14,
     "res": 0,
     "jobTier": 1,
     "attackSpeedTier": "fast",
@@ -356,7 +356,7 @@
     },
     "maxHp": 150,
     "atk": 24,
-    "def": 14,
+    "def": 16,
     "res": 0,
     "jobTier": 1,
     "attackSpeedTier": "normal",
@@ -415,9 +415,9 @@
     "traits": {
       "rangePx": 300
     },
-    "maxHp": 92,
+    "maxHp": 100,
     "atk": 20,
-    "def": 6,
+    "def": 12,
     "res": 0,
     "jobTier": 1,
     "attackSpeedTier": "fast",
@@ -483,9 +483,9 @@
     "traits": {
       "rangePx": 400
     },
-    "maxHp": 160,
+    "maxHp": 150,
     "atk": 33,
-    "def": 10,
+    "def": 14,
     "res": 0,
     "jobTier": 1,
     "attackSpeedTier": "slow",
@@ -546,7 +546,7 @@
     },
     "maxHp": 96,
     "atk": 21,
-    "def": 8,
+    "def": 11,
     "res": 0,
     "jobTier": 1,
     "attackSpeedTier": "normal",
@@ -606,10 +606,10 @@
       "rangePx": 200,
       "damageType": "magic"
     },
-    "maxHp": 80,
+    "maxHp": 72,
     "atk": 26,
-    "def": 5,
-    "res": 15,
+    "def": 3,
+    "res": 10,
     "jobTier": 1,
     "attackSpeedTier": "slow",
     "basicAttackSkillId": "at_sorcerer_basic_attack",
@@ -679,7 +679,7 @@
         "enabled": true
       }
     },
-    "maxHp": 78,
+    "maxHp": 74,
     "atk": 23,
     "def": 5,
     "res": 15,
@@ -713,7 +713,7 @@
       "rangePx": 300,
       "damageType": "magic"
     },
-    "maxHp": 90,
+    "maxHp": 80,
     "atk": 0,
     "def": 10,
     "res": 20,

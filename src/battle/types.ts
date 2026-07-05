@@ -272,7 +272,6 @@ export type FireCondition =
       selfAppliedOnly?: boolean;
     }
   | { kind: "targetHp"; maxHpRatio: number; compare?: HpRatioCompare }
-  | { kind: "minTargets"; count: number }
   | { kind: "selfHp"; maxHpRatio: number; compare?: HpRatioCompare }
   | { kind: "allyDamaged" }
   | { kind: "waveStart" }

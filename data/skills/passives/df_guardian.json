@@ -15,7 +15,7 @@
     "effect": "buff",
     "buffSubKind": "stat",
     "buffStat": [
-      "hp"
+      "def"
     ],
     "buffMultiplier": 1.05,
     "buffTargetRule": {

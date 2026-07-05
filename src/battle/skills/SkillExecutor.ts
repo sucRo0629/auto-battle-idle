@@ -200,12 +200,18 @@ export interface SkillExecutorDeps {
   getSequenceRunner: () => SkillSequenceRunner;
   onBasicAttackExecuted?: (actorId: string) => void;
   onBasicAttackCountCharged?: (actorId: string) => void;
+  onCombatActionExecuted?: (
+    actor: CombatantState,
+    info: { slotKind: "basic" | "active"; skillId: string },
+  ) => void;
   onDamageApplied?: (
     actor: CombatantState,
     target: CombatantState,
     amount: number,
     meta?: {
       attackKind: "damage" | "dot";
+      slotKind?: "basic" | "active";
+      skillId?: string;
       isCounterDamage?: boolean;
       hpDamage?: number;
       attackRangePx?: number;
@@ -423,6 +429,12 @@ export class SkillExecutor {
       }
       if (cd.slotKind === "basic") {
         this.deps.onBasicAttackExecuted?.(actor.id);
+      }
+      if (cd.slotKind === "basic" || cd.slotKind === "active") {
+        this.deps.onCombatActionExecuted?.(actor, {
+          slotKind: cd.slotKind,
+          skillId: skill.id,
+        });
       }
       return true;
     }
@@ -986,6 +998,8 @@ export class SkillExecutor {
       if (applied <= 0) return false;
       this.deps.onDamageApplied?.(actor, target, applied, {
         attackKind: "damage",
+        slotKind: cd.slotKind,
+        skillId: skill.id,
         hpDamage: damageResult.hpDamage,
         attackRangePx: effectDef.range ?? actor.traits.rangePx,
       });
@@ -1272,6 +1286,7 @@ export class SkillExecutor {
                   appliedCounterDamage,
                   {
                     attackKind: "damage",
+                    isCounterDamage: true,
                     hpDamage: damageResult.hpDamage,
                     attackRangePx: defender.traits.rangePx,
                   }
@@ -1342,6 +1357,8 @@ export class SkillExecutor {
         incoming.delayedDamage;
       this.deps.onDamageApplied?.(actor, damageTarget, appliedDamage, {
         attackKind: "damage",
+        slotKind: cd.slotKind,
+        skillId: skill.id,
         hpDamage: damageResult.hpDamage,
         attackRangePx: effectDef.range ?? actor.traits.rangePx,
         didBlock,
@@ -1426,6 +1443,8 @@ export class SkillExecutor {
             explosionApplied,
             {
               attackKind: "damage",
+              slotKind: cd.slotKind,
+              skillId: skill.id,
               hpDamage: explosionIncoming.damageResult.hpDamage,
               attackRangePx: effectDef.range ?? actor.traits.rangePx,
             }
@@ -1484,6 +1503,8 @@ export class SkillExecutor {
           if (splashApplied <= 0) continue;
           this.deps.onDamageApplied?.(actor, splashTarget, splashApplied, {
             attackKind: "damage",
+            slotKind: cd.slotKind,
+            skillId: skill.id,
             hpDamage: splashResult.hpDamage,
             attackRangePx: effectDef.range ?? actor.traits.rangePx,
           });

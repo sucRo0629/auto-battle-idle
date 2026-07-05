@@ -957,7 +957,7 @@ Defender 共通 passive と各 Defender の受け口設計は同一視しない�
 | P2 Lv0  | `df_duelist_passive_2` | 剣闘士は流血で滾る | `bloodlustDuelist`                                                                          |
 | P3 Lv10 | `df_duelist_passive_3` | 攻撃誘導           | `lowHpCover`                                                                                |
 | P4 Lv20 | `df_duelist_passive_4` | 不屈の闘士         | `lastStandGuts`                                                                             |
-| A1 Lv0  | `df_duelist_active_1`  | 誘い込み           | `enemyReelIn`（`attackType.ranged` 単体引き寄せ。`firePolicy: smart` + `minTargets`）       |
+| A2 Lv0  | `df_duelist_active_2`  | 誘い込み           | `enemyReelIn`（`attackType.ranged` 単体引き寄せ。`firePolicy: smart` + `enemyCount` / `inRange`） |
 | A2 Lv0  | `df_duelist_active_2`  | 体捌き             | `damageDelay`                                                                               |
 | A3 Lv10 | `df_duelist_active_3`  | 隙打ち             | attackSpeed buff + counter + debuff 追撃                                                    |
 | A4 Lv20 | `df_duelist_active_4`  | 闘技場の掟         | `arenaDominance`（`finalWaveStart` / `stageTriggerLimit: 1`）。最高 ATK 敵に **闘士の指名** |

@@ -15,7 +15,66 @@ import {
 const gameData = mockApproachGameData();
 
 describe("resolvePlayerApproachBattleX", () => {
-  it("applies contact cap to all on-field units regardless of formationRow", () => {
+  it("applies contact cap to melee on-field units regardless of formationRow", () => {
+    const guard = mockCombatant({
+      id: "guard",
+      formationRow: "front",
+      traits: {
+        rangePx: 0,
+        damageType: "physical",
+        basicAttackVfx: { enabled: true },
+      },
+      cooldowns: [{ skillId: "basic_melee", remaining: 0, slotKind: "basic" }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const frontMelee = mockCombatant({
+      id: "melee",
+      isEnemy: true,
+      battleX: 280,
+      traits: {
+        rangePx: 0,
+        damageType: "physical",
+        basicAttackVfx: { enabled: true },
+      },
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+      cooldowns: [],
+    });
+    const backRanged = mockCombatant({
+      id: "ranged",
+      isEnemy: true,
+      battleX: 320,
+      traits: {
+        rangePx: 100,
+        damageType: "physical",
+        basicAttackVfx: { enabled: true },
+      },
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+      cooldowns: [],
+    });
+
+    const approachX = resolvePlayerApproachBattleX(
+      guard,
+      [guard],
+      [frontMelee, backRanged],
+      gameData,
+    );
+
+    expect(approachX).toBe(280 - 0);
+  });
+
+  it("relaxes contact cap for ranged rear chase target behind enemy contact", () => {
     const archer = mockCombatant({ id: "archer" });
     const frontMelee = mockCombatant({
       id: "melee",
@@ -57,8 +116,102 @@ describe("resolvePlayerApproachBattleX", () => {
       gameData,
     );
 
-    expect(approachX).toBe(280 - 100);
-    expect(approachX).toBeLessThan(320 - 100);
+    expect(approachX).toBe(320 - 100);
+    expect(approachX).toBeGreaterThan(280 - 100);
+  });
+
+  it("does not let rear ranged overtake ally frontline when chasing rear target", () => {
+    const longRangeGameData: GameData = {
+      ...gameData,
+      skillRegistry: {
+        ...gameData.skillRegistry,
+        actives: {
+          ...gameData.skillRegistry.actives,
+          bow_long: {
+            id: "bow_long",
+            name: "long shot",
+            trigger: { kind: "time", value: 2 },
+            effect: [
+              {
+                target: { kind: "distance", side: "enemy", order: "nearest" },
+                type: "damage",
+                damageType: "physical",
+                amount: { kind: "atkBased", atkScale: 1 },
+                range: 300,
+              },
+            ],
+          },
+        },
+      },
+    };
+    const archer = mockCombatant({
+      id: "archer",
+      battleX: 120,
+      traits: {
+        rangePx: 300,
+        damageType: "physical",
+        basicAttackVfx: { enabled: true },
+      },
+      cooldowns: [{ skillId: "bow_long", remaining: 0, slotKind: "basic" }],
+    });
+    const guard = mockCombatant({
+      id: "guard",
+      formationRow: "front",
+      battleX: 206,
+      traits: {
+        rangePx: 0,
+        damageType: "physical",
+        basicAttackVfx: { enabled: true },
+      },
+      cooldowns: [{ skillId: "basic_melee", remaining: 0, slotKind: "basic" }],
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const frontMelee = mockCombatant({
+      id: "melee",
+      isEnemy: true,
+      battleX: 506,
+      traits: {
+        rangePx: 0,
+        damageType: "physical",
+        basicAttackVfx: { enabled: true },
+      },
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+      cooldowns: [],
+    });
+    const backRanged = mockCombatant({
+      id: "rear",
+      isEnemy: true,
+      battleX: 674,
+      traits: {
+        rangePx: 100,
+        damageType: "physical",
+        basicAttackVfx: { enabled: true },
+      },
+      build: {
+        learnedPassiveIds: [],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+      cooldowns: [],
+    });
+
+    const approachX = resolvePlayerApproachBattleX(
+      archer,
+      [archer, guard],
+      [frontMelee, backRanged],
+      longRangeGameData,
+    );
+
+    expect(approachX).toBe(374);
+    expect(approachX).toBeLessThan(506 - 0);
   });
 
   it("front row clamp prevents advancing beyond the enemy front line", () => {

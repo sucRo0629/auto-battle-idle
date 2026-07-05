@@ -38,7 +38,7 @@ export interface ConditionEvalContext {
   gameData: GameData;
   isWaveStartPhase?: boolean;
   isWaveEndPhase?: boolean;
-  /** minTargets / targetHp / debuff 評価の参照 effect */
+  /** targetHp / debuff 評価の参照 effect */
   referenceEffect?: SkillEffectDef;
   battleTimeSec?: number;
   pendingHitQueue?: readonly PendingSkillHit[];
@@ -142,20 +142,6 @@ function resolvePrimaryTarget(ctx: ConditionEvalContext): CombatantState | null 
   return pickTargetFromPool(spec, ctx.actor, pool);
 }
 
-function countSkillTargets(ctx: ConditionEvalContext): number {
-  const reference = ctx.referenceEffect;
-  if (!reference) return 0;
-  const spec = resolveEffectTargetSpec(
-    reference,
-    ctx.actor,
-    ctx.allies,
-    ctx.enemies,
-    ctx.passives,
-  );
-  const pool = getTargetPool(spec, ctx.actor, ctx.allies, ctx.enemies);
-  return pool.filter((u) => u.isAlive).length;
-}
-
 function enemiesInActorRange(ctx: ConditionEvalContext): CombatantState[] {
   const rangePx = resolveMaxEffectiveRangePx(ctx.actor, ctx.gameData);
   return livingUnits(ctx.enemies).filter((enemy) =>
@@ -232,8 +218,6 @@ export function evaluateCondition(
       return ctx.allies.some(
         (ally) => ally.isAlive && ally.hp < getEffectiveMaxHp(ally),
       );
-    case 'minTargets':
-      return countSkillTargets(ctx) >= condition.count;
     case 'enemyCount': {
       const scope = condition.scope ?? 'living';
       const pool =

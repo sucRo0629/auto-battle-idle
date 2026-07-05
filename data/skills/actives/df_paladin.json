@@ -93,7 +93,7 @@
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "damageTaken",
-        "buffMultiplier": 0.95,
+        "buffMultiplier": 0.9,
         "buffDurationSec": 5
       },
       {
@@ -127,10 +127,22 @@
           "kind": "all",
           "side": "ally"
         },
+        "type": "heal",
+        "healSubKind": "instant",
+        "amount": {
+          "kind": "atkBased",
+          "atkScale": 1
+        }
+      },
+      {
+        "target": {
+          "kind": "all",
+          "side": "ally"
+        },
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "damageTaken",
-        "buffMultiplier": 0.9,
+        "buffMultiplier": 0.85,
         "buffDurationSec": 5
       },
       {
@@ -141,8 +153,9 @@
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "res",
-        "buffFlatBonus": 20,
-        "buffDurationSec": 5
+        "buffFlatBonus": 30,
+        "buffDurationSec": 6,
+        "buffMultiplier": 1
       }
     ],
     "firePolicy": "smart",

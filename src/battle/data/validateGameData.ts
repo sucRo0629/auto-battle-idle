@@ -1504,13 +1504,6 @@ function parseFireCondition(raw: unknown, context: string): FireCondition {
       ...(compare === 'gte' ? { compare } : {}),
     };
   }
-  if (kind === 'minTargets') {
-    const count = requireNumber(obj, 'count', context);
-    if (!Number.isInteger(count) || count < 1) {
-      invalidField(context, 'count', 'must be a positive integer');
-    }
-    return { kind, count };
-  }
   if (kind === 'allyDamaged') return { kind: 'allyDamaged' };
   if (kind === 'waveStart') return { kind: 'waveStart' };
   if (kind === 'finalWaveStart') return { kind: 'finalWaveStart' };

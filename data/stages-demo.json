@@ -155,7 +155,7 @@
       {
         "classId": "df_paladin",
         "count": 1,
-        "hpScale": 1.0,
+        "hpScale": 1.05,
         "atkScale": 0.85,
         "defScale": 1.0,
         "resScale": 1.0
@@ -164,7 +164,7 @@
         "classId": "at_ranger",
         "count": 2,
         "hpScale": 0.85,
-        "atkScale": 0.8,
+        "atkScale": 0.85,
         "defScale": 1.0,
         "resScale": 1.0
       },
@@ -172,7 +172,7 @@
         "classId": "at_sorcerer",
         "count": 1,
         "hpScale": 0.85,
-        "atkScale": 0.8,
+        "atkScale": 0.85,
         "defScale": 1.0,
         "resScale": 1.0
       },

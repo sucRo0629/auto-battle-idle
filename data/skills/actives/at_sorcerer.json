@@ -61,7 +61,7 @@
         "damageType": "magic",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.9
+          "atkScale": 0.6
         },
         "vfx": {
           "enabled": true
@@ -89,7 +89,7 @@
         "damageType": "magic",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.1
+          "atkScale": 0.6
         },
         "vfx": {
           "enabled": true
@@ -117,7 +117,7 @@
         "damageType": "magic",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1.5
+          "atkScale": 1.2
         },
         "vfx": {
           "enabled": true

@@ -683,7 +683,6 @@ export const FIRE_POLICY_OPTIONS: FirePolicy[] = [...FIRE_POLICIES];
 export const FIRE_CONDITION_KINDS = [
   "targetHp",
   "debuff",
-  "minTargets",
   "selfHp",
   "allyDamaged",
   "waveStart",
@@ -699,7 +698,6 @@ export const FIRE_CONDITION_KINDS = [
 export const FIRE_CONDITION_KIND_LABELS: Record<FireConditionKind, string> = {
   targetHp: "対象HP割合",
   debuff: "デバフ",
-  minTargets: "最小ターゲット数",
   selfHp: "自身HP割合",
   allyDamaged: "味方被ダメ",
   waveStart: "Wave開始フェーズ",

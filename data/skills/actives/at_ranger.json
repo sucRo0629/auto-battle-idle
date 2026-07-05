@@ -49,11 +49,55 @@
         "hitCount": 2,
         "hitDurationSec": 0.25
       }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "enemyCount",
+        "min": 1,
+        "scope": "inRange"
+      }
     ]
   },
   {
     "id": "at_ranger_active_2",
     "name": "連ね矢",
+    "trigger": {
+      "kind": "time",
+      "value": 8
+    },
+    "effect": [
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "atk",
+        "buffMultiplier": 1.15,
+        "buffDurationSec": 5
+      },
+      {
+        "target": {
+          "kind": "self"
+        },
+        "type": "basicAttackTransform",
+        "buffDurationSec": 5,
+        "hitCountMultiplier": 2
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "enemyCount",
+        "min": 1,
+        "scope": "inRange"
+      }
+    ]
+  },
+  {
+    "id": "at_ranger_active_3",
+    "name": "早射ち",
     "trigger": {
       "kind": "time",
       "value": 10
@@ -63,29 +107,30 @@
         "target": {
           "kind": "self"
         },
-        "type": "basicAttackTransform",
-        "buffDurationSec": 5,
-        "hitCountMultiplier": 2
-      }
-    ]
-  },
-  {
-    "id": "at_ranger_active_3",
-    "name": "早射ち",
-    "trigger": {
-      "kind": "time",
-      "value": 12
-    },
-    "effect": [
+        "type": "buff",
+        "buffSubKind": "stat",
+        "buffStat": "atk",
+        "buffMultiplier": 1.2,
+        "buffDurationSec": 6
+      },
       {
-        "target": {
-          "kind": "self"
-        },
         "type": "buff",
         "buffSubKind": "stat",
         "buffStat": "attackSpeed",
-        "buffMultiplier": 1.25,
+        "buffMultiplier": 1.5,
         "buffDurationSec": 6
+      }
+    ],
+    "target": {
+      "kind": "self"
+    },
+    "targetShape": "single",
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "enemyCount",
+        "min": 1,
+        "scope": "inRange"
       }
     ]
   },
@@ -116,6 +161,14 @@
           "side": "enemy",
           "order": "nearest"
         }
+      }
+    ],
+    "firePolicy": "smart",
+    "fireConditions": [
+      {
+        "kind": "enemyCount",
+        "min": 1,
+        "scope": "inRange"
       }
     ]
   }
