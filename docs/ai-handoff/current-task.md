@@ -756,7 +756,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）** — ch1_05 数値調整は未着手
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）** — 体験版 spotlight 候補として採用可（必須 puzzle ではない）。**M1 ターゲット優先分類診断追加済み（§19）** — healer は現行 ranged 扱い。ch1_05 数値調整は未着手
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -894,3 +894,105 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 | `npm test -- src/battle/demoStageAssassinVsSwordsman.test.ts` | **6 passed** |
 | `npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |
 | `npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **9 passed**（Vitest worker `onTaskUpdate` timeout **ノイズ 1 件** — pass/fail 非影響、exit code 1） |
+
+## 18. demo_ch1_05 assassin 正式化診断（2026-07-06）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `docs/dev/balance-diagnostics.md` | 診断基盤方針 |
+| 3 | `data/stages-demo.json` | `demo_ch1_05` 敵編成（参照のみ・未変更） |
+| 4 | `data/parties.json` | demo 標準編成 |
+| 5 | `src/battle/test/demoStageSim.harness.ts` | シミュ harness |
+| 6 | `src/battle/demoStageAssassinCoverage.test.ts` | 既存 assassin 診断 |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| **新規** `src/battle/test/ch1_05AssassinFormalizationReport.ts` | `[demo-ch1_05-slot-comparison]` / `[demo-ch1_05-puzzle-quad]` / `[demo-ch1_05-assassin-formalization]` |
+| **新規** `src/battle/demoStageCh1_05AssassinFormalization.test.ts` | ranger slot 4 枠 + puzzle quad + cleric bad 枠 + double-finish probe |
+| `docs/dev/balance-diagnostics.md` | §5d ch1_05 formalization 追記 |
+
+**触らなかった:** `data/stages-demo.json`、`data/parties.json`、`classes.json` / skills、戦闘ロジック、UI
+
+### 既存 puzzle / spotlight 編成（ch1_05）
+
+| ラベル | 編成 | outcome（今回 run） | assassin 観点 |
+| ------ | ---- | ------------------- | ------------- |
+| **baseline** | guardian / swordsman / cleric / ranger | **victory** ~386/670 @~20s | assassin 不在 |
+| **bad** | cleric → assassin（no-healer） | **victory** ~353/680 | ROLE_UNMET（早期脱落・damage 微量） |
+| **universal** | ranger → sorcerer | victory ~44/642 @~29s | assassin 不在 |
+| **counter** | guardian → paladin | **victory** ~564/650 @~21s | assassin 不在。**puzzle counter は paladin** |
+| **spotlight** `assassin-ranger-slot` | ranger → assassin（healer 維持） | victory/defeat **RNG で揺れる** | **ROLE_OK** priority 100% |
+| **spotlight** `assassin-double-finish` | cleric + ranger → assassin×2 | defeat 多め | ROLE_OK priority 100% |
+
+### ranger slot substitute 比較
+
+| partyLabel | slot3 | 要点 |
+| ---------- | ----- | ---- |
+| `ranger-slot-baseline` | ranger | victory、backline share ~58% |
+| `ranger-slot-assassin` | assassin | **ROLE_OK** priority 100% — outcome RNG 依存 |
+| `ranger-slot-swordsman` | swordsman | victory、last-hit sorcerer+assassin |
+| `ranger-slot-sorcerer` | sorcerer | victory（低 HP 残） |
+
+### 正式化 verdict
+
+| 項目 | 判定 |
+| ---- | ---- |
+| **体験版 spotlight 候補として正式化** | **可** — `EXPERIENCE_SPOTLIGHT_SUBSTITUTE_OK` |
+| **default 負け → assassin counter 勝ち puzzle** | **不可** — baseline 勝利。puzzle counter は paladin |
+| **assassin 固有の勝ち筋** | **弱い** — ranger / swordsman / sorcerer も ranger slot で勝てる |
+| **ログで assassin を使う理由** | **説明可** — priority share / last-hit / execute band |
+| **クラス・ステージ数値** | **まだ触らない** — 編成導線（Phase 7）を先に |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm test -- src/battle/demoStageCh1_05AssassinFormalization.test.ts` | **3 passed** |
+| `npm test -- src/battle/demoStageAssassinCoverage.test.ts` | **5 passed** |
+| `npm test -- src/battle/demoStageAssassinVsSwordsman.test.ts` | **6 passed** |
+| `npm test -- src/battle/demoStageBalance.puzzle.test.ts -t demo_ch1_05` | **1 passed** |
+
+## 19. M1 ターゲット優先分類診断 — 弓術士 vs 双刃士（2026-07-06）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `docs/dev/balance-diagnostics.md` | 診断基盤 |
+| 3 | `data/skills/passives/at_ranger.json` / `at_assassin.json` | targetRuleOverride 正本 |
+| 4 | `src/battle/skills/targetSpec.ts` | `resolveTargetSpec` / `matchesAttackType` |
+| 5 | `src/battle/test/rangerTargetReport.ts` / `assassinRoleReport.ts` | 診断 band |
+| 6 | `src/battle/resolveApproachBattleX.ts` | 味方通常攻撃ターゲット経路 |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| **新規** `src/battle/test/m1TargetClassificationReport.ts` | `[demo-m1-target-classification]` |
+| **新規** `src/battle/demoStageM1TargetClassification.test.ts` | 静的 band 診断（production 非変更） |
+| `docs/dev/balance-diagnostics.md` | §7.5 M1 ターゲット優先分類表 |
+| `docs/ai-handoff/current-task.md` | 本節 |
+
+**触らなかった:** `classes.json` / stages / contact cap / approach / active_2 / 戦闘ロジック本体
+
+### 結論（要点）
+
+| 項目 | 結果 |
+| ---- | ---- |
+| 弓術士 | `at_ranger_passive_2` → `attackType.ranged`（`rangePx >= 100`） |
+| 双刃士 | `at_assassin_passive_2` → `stat.hp order lowest`（全敵） |
+| healer / support | **`sp_cleric` / `sp_wardweaver` は ranged プールに含まれる**（role ではなく rangePx） |
+| 差が最も出る相手 | **`at_ballista`**（ranger yes / assassin 開幕 low-HP になりにくい） |
+| 次 | **docs 整理優先**。`targetRuleOverride` 変更は別 PR |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm test -- src/battle/demoStageM1TargetClassification.test.ts` | **1 passed** |

@@ -2,7 +2,7 @@
 
 **正本:** 本ドキュメント（開発・運用向け。ゲーム仕様ではない）
 
-**実装:** `src/battle/demoStageBalance.smoke.test.ts` / `demoStageBalance.puzzle.test.ts` / `demoStageAssassinCoverage.test.ts` / `demoStageAssassinVsSwordsman.test.ts` / `src/battle/test/demoStageSim.harness.ts` / `src/battle/test/rangerTargetReport.ts` / `src/battle/test/assassinRoleReport.ts` / `src/battle/test/assassinVsSwordsmanReport.ts`
+**実装:** `src/battle/demoStageBalance.smoke.test.ts` / `demoStageBalance.puzzle.test.ts` / `demoStageAssassinCoverage.test.ts` / `demoStageAssassinVsSwordsman.test.ts` / `demoStageCh1_05AssassinFormalization.test.ts` / `demoStageM1TargetClassification.test.ts` / `src/battle/test/demoStageSim.harness.ts` / `src/battle/test/rangerTargetReport.ts` / `src/battle/test/assassinRoleReport.ts` / `src/battle/test/assassinVsSwordsmanReport.ts` / `src/battle/test/ch1_05AssassinFormalizationReport.ts` / `src/battle/test/m1TargetClassificationReport.ts`
 
 **データ:** `data/stages-demo.json`（`demo_ch1_01`〜`07`）
 
@@ -240,6 +240,40 @@ class coverage diagnostics でも **全 15 クラスの完全網羅は求めな�
 
 ---
 
+## 5d. demo_ch1_05 assassin formalization diagnostic
+
+**出力元:** `ch1_05AssassinFormalizationReport.ts`（`demoStageCh1_05AssassinFormalization.test.ts`）
+
+### ログタグ
+
+| タグ | 役割 |
+| ---- | ---- |
+| `[demo-ch1_05-slot-comparison]` | ranger slot（3）の baseline / assassin / swordsman / sorcerer 差し替え 1 編成 |
+| `[demo-ch1_05-puzzle-quad]` | 既存 puzzle quad（baseline / bad / universal / counter）の outcome スナップショット |
+| `[demo-ch1_05-assassin-formalization]` | ch1_05 を assassin 体験版提示枠として正式候補にできるかの verdict |
+
+### 比較枠
+
+| partyLabel | 内容 |
+| ---------- | ---- |
+| `ranger-slot-baseline` | 標準 demo（slot3 = at_ranger） |
+| `ranger-slot-assassin` | spotlight counter（`configureAssassinInsteadOfRangerParty`） |
+| `ranger-slot-swordsman` / `ranger-slot-sorcerer` | 同枠 substitute |
+| `cleric-slot-no-healer-assassin` | puzzle bad 枠（ヒーラー抜き assassin） |
+
+### summary verdict（実装と一致）
+
+| verdict | 意味 |
+| ------- | ---- |
+| `EXPERIENCE_SPOTLIGHT_CANDIDATE` | execute band がログで説明でき、体験版 spotlight 候補として採用可 |
+| `EXPERIENCE_SPOTLIGHT_SUBSTITUTE_OK` | assassin ROLE_OK だが baseline 勝利・substitute も勝てる — **必須 puzzle ではなく編成ヒント枠** |
+| `NOT_ASSASSIN_COUNTER_PUZZLE` | default 負け + assassin counter 勝利の puzzle 型ではない |
+| `ASSASSIN_ROLE_UNMET` | priority / last-hit が説明不能 |
+
+**読み方:** ch1_05 の puzzle counter は **paladin**（`configurePaladinTankParty`）。assassin は **ranger slot spotlight** で評価する。outcome は RNG で揺れるため **roleVerdict / priorityTargetDamageShare を主指標** とし、勝敗 alone で正式判定しない。
+
+---
+
 ## 6. class coverage diagnostics の役割
 
 **関連ログ:** `[demo-puzzle-stats]`、`[demo-6c-report]`、`[demo-class-coverage]`、stage 固有 `[demo-ch1_*-diag]`
@@ -328,6 +362,66 @@ M1 体験版（`demo_ch1_01`〜`07`）の puzzle / 診断ログを読むとき�
   - 結界師 — バースト・集中攻撃の事前防御
 
 **関連:** クラス設計の正本は [class-philosophy.md](../class-philosophy.md) / [classes-and-skills.md](../spec/classes-and-skills.md)。本節は M1 demo 診断ログ向けの **読み方** のみを担う。
+
+### 7.5 M1 ターゲット優先分類（弓術士 vs 双刃士）
+
+**出力:** `[demo-m1-target-classification]`（`demoStageM1TargetClassification.test.ts` / `m1TargetClassificationReport.ts`）
+
+**目的:** 弓術士（遠隔火力対策）と双刃士（低 HP・瀕死処理）の **実装差** と、診断ログ用 band の差を固定する。StageArchetype / クラス JSON 変更前の **読み取り専用** 表。
+
+#### 実装（戦闘正本）
+
+| クラス | Lv0 パッシブ | `targetRuleOverride` | 候補プール | 候補ゼロ時 |
+| ------ | ------------ | -------------------- | ---------- | ---------- |
+| **弓術士** `at_ranger` | `at_ranger_passive_2`（射手優先） | `{ kind: "attackType", ranged: true }` | 生存敵のうち **`traits.rangePx >= 100`**（`matchesAttackType` / `RANGED_ATTACK_MIN_PX`） | 通常攻撃デフォルト = **最近傍敵**（`distance.nearest`） |
+| **双刃士** `at_assassin` | `at_assassin_passive_2`（薄命狩り） | `{ kind: "stat", side: "enemy", stat: "hp", order: "lowest" }` | **全生存敵**（クラス・role フィルタなし） | 同上 |
+| **弩砲士** `at_ballista`（参考・ch1_07 敵） | `at_ballista_passive_2`（城落としの弩） | `{ kind: "stat", stat: "maxHp", order: "highest" }` | 全生存敵 | 同上 |
+
+**共通:** `resolveTargetSpec`（`targetSpec.ts`）— override は **候補が 1 体以上いるときのみ** 適用。`attackType` / `stat` 単体ターゲットは **プール先頭**（敵配列順。最近傍ソートではない）。
+
+**遠隔判定:** `role` / `formationRow` / support では **判定しない**。`rangePx >= 100` のみ（[classes-and-skills.md](../spec/classes-and-skills.md) §target.attackType と一致）。
+
+#### ヒーラー / support は遠隔扱いか
+
+| classId | rangePx（現行 `classes.json`） | 弓術士 ranged プール | 備考 |
+| ------- | ------------------------------ | -------------------- | ---- |
+| `sp_cleric` | 110 | **はい** | `role: supporter` だが rangePx で ranged 帯 |
+| `sp_wardweaver` | 100 | **はい** | 同上 |
+
+**結論（現行）:** 療養師・結界師は **support だが弓術士の遠隔優先対象に含まれる**。設計仮説どおり「ヒーラーを遠隔扱いにしない」変更をすると、弓術士は魔術師・弓術士・弩砲士等の **遠隔火力** に寄り、双刃士は HP を削った support に **execute 寄与** が分かれやすくなる。
+
+#### M1 比較 classId 分類表（2026-07 診断）
+
+| classId | 表示名 | role | rangePx | 弓術士 ranged プール | 弓術士診断 band §5 | 双刃士 low-HP プール | 双刃士診断 band §5b | 弩砲士 maxHp プール |
+| ------- | ------ | ---- | ------- | -------------------- | ------------------ | -------------------- | ------------------- | ------------------- |
+| `at_ranger` | 弓術士 | attacker | 300 | yes | yes | yes（全敵） | yes | yes |
+| `at_ballista` | 弩砲士 | attacker | 400 | yes | yes | yes（全敵） | no | yes（**優先**） |
+| `at_sorcerer` | 魔術師 | attacker | 200 | yes | yes | yes | yes | yes |
+| `sp_cleric` | 療養師 | supporter | 110 | **yes** | yes | yes | yes | yes |
+| `sp_wardweaver` | 結界師 | supporter | 100 | **yes** | yes | yes | yes | yes |
+| `at_assassin` | 双刃士 | attacker | 25 | no | no | yes | yes | yes |
+| `df_duelist` | 闘技士（M1 外） | defender | 30 | no | no | yes | no | yes |
+
+- **弓術士診断 band:** `RANGER_PRIORITY_ENEMY_CLASS_IDS` + `formationRow: back` + `rangePx >= 100`（`rangerTargetReport.ts`）。実装プールより **広い**（例: `at_sorcerer` は診断では backline だが magic 型）。
+- **双刃士診断 band:** `ASSASSIN_PRIORITY_TARGET_CLASS_IDS` — execute ログ用。実装は **全敵 lowest HP**。
+
+#### 弓術士 vs 双刃士の差が最も出る相手
+
+| 相手 | 弓術士 | 双刃士 | 読み |
+| ---- | ------ | ------ | ---- |
+| **`at_ballista`** | ranged プール **常時** | 開幕は MaxHP 高 → **lowest HP になりにくい** | 設計仮説の **最も明確な分岐** |
+| **`sp_cleric` / `sp_wardweaver`** | ranged で **優先 band** | 被ダメ後は lowest HP 候補 | **現行は両方の対象になりやすい**（overlap） |
+| **`at_sorcerer`** | ranged yes | 削れ後 execute | 中盤以降は overlap、開幕は ranger 寄り |
+| **前衛**（`df_guardian` 等） | ranged 外 → fallback nearest | 前衛が最低 HP なら対象 | 前衛吸い込み vs 後衛 execute の典型 |
+
+#### 設計仮説との差分・次アクション
+
+| 項目 | 現状 | 仮説 |
+| ---- | ---- | ---- |
+| 弓術士 | `attackType.ranged` = rangePx 帯 | **遠隔火力**（ranger / sorcerer / ballista）に絞る案 |
+| 双刃士 | 全敵 lowest HP + P3 25% 特効 | **低 HP・support・瀕死** — 現状と整合 |
+| support / healer | rangePx>=100 で ranged | **support タグで ranged から除外** すると役割分離が進む |
+| 実装タイミング | — | **まず本表で docs 整理**。`targetRuleOverride` / `matchesAttackType` 変更は 6c 以降の別 PR（contact cap / approach 非触） |
 
 ---
 
