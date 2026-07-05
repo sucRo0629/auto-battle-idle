@@ -172,7 +172,7 @@ class coverage diagnostics でも **全 15 クラスの完全網羅は求めな�
 
 **関連ログ:** `[demo-puzzle-stats]`、`[demo-6c-report]`、`[demo-class-coverage]`、stage 固有 `[demo-ch1_*-diag]`
 
-M1 demo stages を通じ、**プレイヤーが使える 8 クラス** と **demo に登場する敵クラス** が次のどれに当たるかを整理する。全クラス完全網羅は目的ではない。
+M1 demo stages を通じ、**プレイヤーが使える 8 クラス** と **demo に登場する敵クラス** が次のどれに当たるかを整理する。全クラス完全網羅は目的ではない。**クラス別の主処理対象・想定 counter・診断観点の一覧** は [§7 M1 Class Responsibility Matrix](#7-m1-class-responsibility-matrix) を正とする。
 
 ### 分類
 
@@ -192,7 +192,74 @@ M1 demo stages を通じ、**プレイヤーが使える 8 クラス** と **dem
 
 ---
 
-## 7. 診断ログを見るときの注意
+## 7. M1 Class Responsibility Matrix
+
+M1 体験版（`demo_ch1_01`〜`07`）の puzzle / 診断ログを読むとき、**各クラスが意図した対象に機能しているか** を確認するための観点表。正解編成の固定リストではない。ステージ設計・敵編成・scale 補正によって、有効な counter は揺れる。
+
+### 7.1 M1 対象範囲
+
+| 区分 | 内容 |
+| ---- | ---- |
+| ステージ | `data/stages-demo.json` の `demo_ch1_01`〜`07` |
+| 味方クラス | M1 攻略中に使える **8 クラス**（下表 Ally） |
+| 敵クラス | 上記 demo stages に登場する M1 8 クラス（ch1_07 の `at_ballista` **敵** は含む。プレイヤー側活躍表からは除外） |
+| スキル | Lv0 のみ（M1 スコープ） |
+| 非対象 | M1 外 6 クラス、`stages.json` dev / legacy stage |
+
+**M1 味方 8 クラス:** `df_guardian` `df_paladin` `at_swordsman` `at_assassin` `at_ranger` `at_sorcerer` `sp_cleric` `sp_wardweaver`
+
+**本節から除外したクラス**
+
+| classId | 表示名 | 除外理由 |
+| ------- | ------ | -------- |
+| `at_ballista` | 弩砲士 | M1 最終ステージ（`demo_ch1_07`）クリア報酬で解禁されるだけ。M1 攻略中の **味方** 活躍診断表には入れない（ch1_07 **敵** としての脅威は Enemy 表で扱う） |
+| `sp_alchemist` | 薬草師 | M1 体験版スコープ外（未解禁・demo stage 敵にも不使用） |
+
+### 7.2 Ally Class Responsibilities（味方）
+
+勝敗だけでなく、§4〜§6 のログ指標と照合して **役割対象に当たっているか** を見る。
+
+| classId | 表示名 | 主な処理対象 | 苦手になりやすい対象 | 診断観点 |
+| ------- | ------ | ------------ | -------------------- | -------- |
+| `df_guardian` | 鉄衛士 | 物理単体圧・正面接敵ライン | 後衛への迂回・範囲魔法・低 HP 集中（execute 系） | 前衛として **物理圧を受け止めているか**。`damageTaken`・survivors・block 系の寄与。bad（no-guardian）との frontliner 被ダメ差 |
+| `df_paladin` | 護法士 | 魔法・範囲・戦線全体の崩壊リスク | 開幕 burst で aura / 分担が立つ前の単体物理 | **魔法 / 範囲被害を軽減** し、前列全体の被害分散が効いているか。party 全体の `damageTaken` 分布・RES 系被ダメ |
+| `at_swordsman` | 剣術士 | 高 DEF・硬い前衛敵 | 後衛のみ・高 RES 魔法主体 | **硬い前衛を処理** できているか。`damageDealt` の主ターゲットが `df_guardian` / `at_swordsman` 等であること。duration 過長は DEF 突破不足の信号 |
+| `at_assassin` | 双刃士 | 低 HP・削れた敵 | 硬い前衛単体・フィニッシュ対象がいない持久戦 | **低 HP・削れた敵を倒し切る** か。瀕死敵への hit 密度・`killOrLastHit` 寄与。bad 編成でのみ活躍していないか |
+| `at_ranger` | 弓術士 | 後衛・遠隔敵（ranger / sorcerer / cleric / wardweaver 等） | 前衛硬体のみ・射程外停滞 | **後衛・遠隔敵を処理** しているか（§5 参照）。`backlineDamageShare`・`targetClassHitCount`。`outOfRangeSkipCount` 増加は AI 回帰疑い |
+| `at_sorcerer` | 魔術師 | 少数編成・物理耐久寄りの敵 | 高 RES 全体・弱体多数で効率が割れる編成 | **魔法火力** が意図対象に届いているか。敵 `resScale` と `damageDealt` のバランス。universal 編成の duration 過短は RES 不足の信号 |
+| `sp_cleric` | 療養師 | 味方 HP 崩壊の回復・継戦 | 回復量を上回る瞬間 burst | **HP 崩壊を戻し sustain を成立** させているか。`healingDealt` と frontliner `damageTaken` の相殺（ch1_04 / 06）。no-healer bad との outcome 差 |
+| `sp_wardweaver` | 結界師 | バースト・集中攻撃の事前防御 | 継続 chip のみで spike がない戦闘 | **バーストや集中攻撃を事前防御** できているか。spike 前のバリア / 軽減・味方 `deathSec` の遅延。healer 単独では防げない burst 局面での寄与 |
+
+### 7.3 Enemy Threat Counters（敵）
+
+敵クラスが stage 課題として機能しているか、**想定対策が puzzle / 診断ログ上で効いているか** を見る。単一正解編成ではない。
+
+| classId | 表示名 | 主な脅威 | 想定対策（例） | 診断観点 |
+| ------- | ------ | -------- | -------------- | -------- |
+| `df_guardian` | 鉄衛士 | 正面物理ラインの固定・戦闘長期化 | 剣術士・魔術師など DEF / 耐久突破 | **剣術士 / 魔術師で突破** できているか。baseline の duration・frontliner 被ダメ。counter 編成での前衛処理速度 |
+| `df_paladin` | 護法士 | 魔法・範囲圧と前列全体の安定 | 剣術士・双刃士など物理処理 / execute | **剣術士 / 双刃士で突破** できているか。魔法圧が護法士単体に吸われず戦線が崩れるか |
+| `at_swordsman` | 剣術士 | 硬い前衛 DPS・前衛維持 | 鉄衛士・療養師・結界師 | **鉄衛士 / 療養師 / 結界師で前衛維持** できるか。味方 frontliner の `deathSec`・healing 相殺 |
+| `at_assassin` | 双刃士 | 低 HP 狩り・前衛以外への差し込み | 鉄衛士・結界師・療養師 | **低 HP 狩りを防げているか**。瀕死味方の `deathSec`・バリア / heal の間に合い |
+| `at_ranger` | 弓術士 | 後衛からの継続火力・後衛狙い | 味方弓術士の backline 処理、前衛で時間を稼ぐ編成 | **後衛狙いが成立しているか**（敵 AI として）。味方側に **後衛処理 / 前衛時間確保** が必要か。§5 の backline 撃破タイミング |
+| `at_sorcerer` | 魔術師 | 魔法 AoE・RES 前提の火力 | 護法士・弓術士・双刃士 | **護法士 / 弓術士 / 双刃士が対策として機能** するか。魔法圧と後衛処理の両立 |
+| `sp_cleric` | 療養師 | 敵側 sustain・戦闘長期化 | 後衛処理・優先撃破 | **放置すると sustain で長引くか**。`durationSec` と敵 cleric の `healingDealt`。**後衛処理** が必要になっているか |
+| `sp_wardweaver` | 結界師 | バリアによる burst 無効化 | バリア突破・継続 DPS・execute | **バリア突破役が必要** になっているか。障壁消費後の spike 処理。counter 編成での breakthrough |
+
+### 7.4 注意書き
+
+- 本節は **M1 時点** の診断表である。M1 後に弩砲士（`at_ballista`）や薬草師（`sp_alchemist`）を味方診断に含める場合は **別途更新** する。
+- **Counter は単一正解ではない。** ステージ設計・敵編成・`hpScale` / `atkScale` / `defScale` / `resScale` によって有効な編成は揺れる。puzzle test の counter 例は **参考** であり、本表はログ読み取りの観点を固定する。
+- 次の **基本責務** は、揺れがあっても診断基準として扱う:
+  - 弓術士 — 後衛・遠隔敵の処理（§5）
+  - 剣術士 — 硬い前衛の処理
+  - 護法士 — 魔法圧・範囲被害の軽減
+  - 結界師 — バースト・集中攻撃の事前防御
+
+**関連:** クラス設計の正本は [class-philosophy.md](../class-philosophy.md) / [classes-and-skills.md](../spec/classes-and-skills.md)。本節は M1 demo 診断ログ向けの **読み方** のみを担う。
+
+---
+
+## 8. 診断ログを見るときの注意
 
 ### 必ず横断で見る指標
 
@@ -213,7 +280,7 @@ M1 demo stages を通じ、**プレイヤーが使える 8 クラス** と **dem
 
 ---
 
-## 8. 今後ステージを調整するときの流れ
+## 9. 今後ステージを調整するときの流れ
 
 1. **診断** — puzzle test（必要なら `-t demo_ch1_XX`）を実行し、`[demo-6c-quad]` / `[demo-ranger-target-report]` / stage diag を保存
 2. **原因分類**
@@ -228,7 +295,7 @@ M1 demo stages を通じ、**プレイヤーが使える 8 クラス** と **dem
 
 ---
 
-## 9. 非対象
+## 10. 非対象
 
 本診断基盤・本ドキュメントのスコープ外:
 
