@@ -697,6 +697,56 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - `demoStageBalance.smoke.test.ts` — 8 passed
 - `demo_ch1_07` — データ未変更、単体実行で counter 勝利 / baseline 敗北を確認
 
+## 15. demo_ch1_06 混成 puzzle 調整（2026-07-06）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `data/stages-demo.json` | `demo_ch1_06` enemyGroups |
+| 3 | `src/battle/demoStageBalance.puzzle.test.ts` | puzzle 期待値・ch1_06 診断 |
+| 4 | `src/battle/test/demoStageSim.harness.ts` | 編成 quad・6c 診断ログ |
+| 5 | `src/battle/demoStageBalance.smoke.test.ts` | smoke 回帰 |
+| 6 | （実行）`demoStageBalance.puzzle.test.ts -t demo_ch1_06` | 調整前診断ログ |
+
+### 変更
+
+- **`data/stages-demo.json` `demo_ch1_06` の `enemyGroups` scale のみ**（ch1_04 / ch1_07 / クラスデータ未変更）
+  - `df_paladin`: `hpScale 1.05→1.1`, `atkScale 0.85→1.05`, `resScale 1.0→1.18`
+  - `at_ranger` ×2: `hpScale 0.85→0.98`, `atkScale 0.85→1.02`, `resScale 1.0→1.28`
+  - `at_sorcerer`: `hpScale 0.85→0.98`, `atkScale 0.85→1.02`, `resScale 1.0→1.45`
+  - `at_swordsman`: `hpScale 0.9→0.97`, `atkScale 0.9→1.08`
+
+### 調整前後（puzzle quad）
+
+| 編成 | 調整前 | 調整後 |
+| ---- | ------ | ------ |
+| baseline | victory 670/670 **66.8s** | victory 670/670 **73.7s** |
+| bad (no-healer) | victory 272/680 **67.0s** (3 survivors) | **defeat** 0/680 **81.9s** |
+| universal | victory 451/642 **42.0s** | victory 258/642 **46.3s** (3 survivors) |
+| counter (paladin) | victory 650/650 **51.8s** | victory 608/650 **54.3s** |
+
+### 原因メモ
+
+- **bad 勝利:** 戦闘 ~67s で cleric 不在でも ranger DPS（~423）が敵を先に落とす。guardian 被ダメ（~298）が baseline（~355）より低く、assassin 死亡（110 taken / 6 dealt）でも 272 HP 残勝ち
+- **universal 余裕勝ち:** sorcerer AoE（465 dmg + dot）で **42s 決着**。cleric heal（432）が guardian 被ダメ（544）を相殺し 451 HP 残存
+- **調整方針:** 敵 `atkScale` 小幅上げで無ヒーラー／前衛被ダメ増、敵 `resScale`（RES）上げで sorcerer 短期決着を抑え、前衛 `hpScale` 微増で baseline 満血勝利維持。大幅 hpScale 増は避けた
+
+### 主要 damage / healing 差分（調整後）
+
+| 指標 | baseline | bad | universal | counter |
+| ---- | -------- | --- | --------- | ------- |
+| guardian/paladin damageTaken | 547 | 300（全滅前） | 623 | 594 |
+| sp_cleric healingDealt | 524 | — | 502 | 386 |
+| at_ranger / at_sorcerer damageDealt | 483 (ranger) | 495 (ranger) | 472 (sorcerer) | 451 (ranger) |
+
+### テスト
+
+- `demoStageBalance.puzzle.test.ts` — **9 passed**（Vitest worker `onTaskUpdate` timeout ノイズあり、pass/fail 非影響）
+- `demoStageBalance.smoke.test.ts` — **8 passed**
+- `demo_ch1_04` / `demo_ch1_07` — データ未変更、full puzzle run で回帰なし
+
 ## 11. ChatGPT へ戻すときのメモ
 
 - **Phase 6b 完了** — 6b-1〜6b-8 済み。§7 6b サマリが正本
@@ -704,5 +754,5 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。次は ch1_05 以降 or universal 満血勝ちの追加詰め（任意）
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。次は ch1_05 詰め or ch1_06 universal 3 survivors の追加調整（任意）
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）

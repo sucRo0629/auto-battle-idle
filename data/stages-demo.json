@@ -155,32 +155,32 @@
       {
         "classId": "df_paladin",
         "count": 1,
-        "hpScale": 1.05,
-        "atkScale": 0.85,
+        "hpScale": 1.1,
+        "atkScale": 1.05,
         "defScale": 1.0,
-        "resScale": 1.0
+        "resScale": 1.18
       },
       {
         "classId": "at_ranger",
         "count": 2,
-        "hpScale": 0.85,
-        "atkScale": 0.85,
+        "hpScale": 0.98,
+        "atkScale": 1.02,
         "defScale": 1.0,
-        "resScale": 1.0
+        "resScale": 1.28
       },
       {
         "classId": "at_sorcerer",
         "count": 1,
-        "hpScale": 0.85,
-        "atkScale": 0.85,
+        "hpScale": 0.98,
+        "atkScale": 1.02,
         "defScale": 1.0,
-        "resScale": 1.0
+        "resScale": 1.45
       },
       {
         "classId": "at_swordsman",
         "count": 1,
-        "hpScale": 0.9,
-        "atkScale": 0.9,
+        "hpScale": 0.97,
+        "atkScale": 1.08,
         "defScale": 1.0,
         "resScale": 1.0
       }

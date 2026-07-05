@@ -25,6 +25,7 @@ import {
   logRangerBasicAttackDiagnostics,
   logPaladinCounterDurability,
   logDemoStageQuadCompositionReports,
+  logDemoRangerTargetReportsForQuad,
   logRangerSorcererComparison,
   runDemoStageBattle,
   type DemoStageBattleResult,
@@ -46,6 +47,8 @@ interface StagePuzzleSpec {
   skipCounterVsBad?: boolean;
   /** When true, emit Ranger basic-attack delay diagnostics. */
   rangerBasicDiagnostics?: boolean;
+  /** When true, emit [demo-ranger-target-report] + class coverage summary. */
+  rangerTargetDiagnostics?: boolean;
   /** When true, emit Phase 6c quad composition reports + stage-specific diagnosis. */
   sixCDiagnostics?: boolean;
   /** When true, bad composition must lose. */
@@ -93,11 +96,19 @@ function runCompositionQuad(
   gameData: GameData,
   bad: ConfigureSave,
   counter: ConfigureSave,
-  options?: Pick<StagePuzzleSpec, 'rangerBasicDiagnostics' | 'sixCDiagnostics'>,
+  options?: Pick<
+    StagePuzzleSpec,
+    'rangerBasicDiagnostics' | 'rangerTargetDiagnostics' | 'sixCDiagnostics'
+  >,
 ) {
-  const diagOpts = options?.rangerBasicDiagnostics
-    ? { enableRangerBasicAttackDiagnostics: true as const }
-    : undefined;
+  const diagOpts =
+    options?.rangerBasicDiagnostics || options?.rangerTargetDiagnostics
+      ? {
+          enableRangerBasicAttackDiagnostics: Boolean(
+            options?.rangerBasicDiagnostics || options?.rangerTargetDiagnostics,
+          ),
+        }
+      : undefined;
   const baseline = runDemoStageBattle(stageId, { gameData, ...diagOpts });
   const badResult = runDemoStageBattle(stageId, {
     gameData,
@@ -154,6 +165,9 @@ function runCompositionQuad(
   if (options?.sixCDiagnostics) {
     emit6cStageDiagnostics(stageId, quad);
   }
+  if (options?.rangerTargetDiagnostics) {
+    logDemoRangerTargetReportsForQuad(stageId, quad, gameData);
+  }
 
   return quad;
 }
@@ -163,16 +177,19 @@ const STAGE_PUZZLES: StagePuzzleSpec[] = [
     stageId: 'demo_ch1_01',
     bad: configureNoGuardianParty,
     counter: configurePaladinTankParty,
+    rangerTargetDiagnostics: true,
   },
   {
     stageId: 'demo_ch1_02',
     bad: configureNoGuardianParty,
     counter: configureRangedCounterParty,
+    rangerTargetDiagnostics: true,
   },
   {
     stageId: 'demo_ch1_03',
     bad: configureNoGuardianParty,
     counter: configureDoubleMeleeParty,
+    rangerTargetDiagnostics: true,
   },
   {
     stageId: 'demo_ch1_05',
@@ -181,6 +198,7 @@ const STAGE_PUZZLES: StagePuzzleSpec[] = [
     // Post Ranger contact-cap: no-healer (assassin swap) can beat baseline on outcome score.
     skipBadVsBaseline: true,
     sixCDiagnostics: true,
+    rangerTargetDiagnostics: true,
   },
   {
     stageId: 'demo_ch1_06',
@@ -190,6 +208,7 @@ const STAGE_PUZZLES: StagePuzzleSpec[] = [
     skipBadVsBaseline: true,
     skipCounterVsBad: true,
     rangerBasicDiagnostics: true,
+    rangerTargetDiagnostics: true,
     sixCDiagnostics: true,
   },
 ];
@@ -209,6 +228,7 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
           spec.counter,
           {
             rangerBasicDiagnostics: spec.rangerBasicDiagnostics,
+            rangerTargetDiagnostics: spec.rangerTargetDiagnostics,
             sixCDiagnostics: spec.sixCDiagnostics,
           },
         );
@@ -264,7 +284,7 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
       gameData,
       configureNoHealerParty,
       configurePaladinTankParty,
-      { sixCDiagnostics: true },
+      { sixCDiagnostics: true, rangerTargetDiagnostics: true },
     );
     const { baseline: withHealer, badResult: withoutHealer, universalResult } = quad;
 
@@ -289,7 +309,7 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
         gameData,
         configureNoHealerParty,
         configurePaladinTankParty,
-        { sixCDiagnostics: true },
+        { sixCDiagnostics: true, rangerTargetDiagnostics: true },
       );
 
     expect(baselineResult.outcome).toBe('defeat');
@@ -303,7 +323,6 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
   it('demo_ch1_06: class damage diagnostics (baseline vs universal vs counter)', () => {
     const diagOpts = {
       enableRangerBasicAttackDiagnostics: true as const,
-      sixCDiagnostics: false as const,
     };
     const baseline = runDemoStageBattle('demo_ch1_06', { gameData, ...diagOpts });
     const bad = runDemoStageBattle('demo_ch1_06', {
@@ -329,6 +348,7 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
       counterResult: counter,
     };
     emit6cStageDiagnostics('demo_ch1_06', quad);
+    logDemoRangerTargetReportsForQuad('demo_ch1_06', quad, gameData);
 
     logDemoStageClassDiagnostics('demo_ch1_06', 'baseline', baseline);
     logDemoStageClassDiagnostics('demo_ch1_06', 'bad', bad);

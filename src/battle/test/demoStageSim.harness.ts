@@ -31,6 +31,16 @@ import {
   RANGER_A2_SKILL_ID as RANGER_A2_DIAG_SKILL_ID,
   type RangerBasicAttackDiagnostics,
 } from './rangerBasicAttackDiagnostic.ts';
+import {
+  buildDemoClassCoverageEntry,
+  logDemoClassCoverageSummary,
+  logDemoRangerTargetReport,
+  logDemoRangerTargetReportsForResult,
+  toRangerTargetReportInput,
+  type DemoClassCoverageEntry,
+  type DemoEnemyDeathRecord,
+  type DemoRangerTargetReport,
+} from './rangerTargetReport.ts';
 
 const RANGER_A2_SKILL_ID = RANGER_A2_DIAG_SKILL_ID;
 
@@ -319,6 +329,8 @@ export interface DemoStageBattleResult {
   classStats: DemoStageClassStatRow[];
   rangerA2Diagnostics?: RangerA2BattleDiagnostics;
   rangerBasicAttackDiagnostics?: RangerBasicAttackDiagnostics;
+  enemyDeaths?: DemoEnemyDeathRecord[];
+  rangerUnitId?: string | null;
 }
 
 const levelCurves = loadLevelCurves(levelCurvesJson);
@@ -346,6 +358,8 @@ export function runDemoStageBattle(
     maxTicks?: number;
     /** demo_ch1_06 Ranger basic attack delay diagnosis */
     enableRangerBasicAttackDiagnostics?: boolean;
+    /** Emit [demo-ranger-target-report] after battle when at_ranger is in party */
+    enableRangerTargetReport?: boolean;
   },
 ): DemoStageBattleResult {
   const gameData = options?.gameData ?? createDemoStageGameData();
@@ -359,6 +373,8 @@ export function runDemoStageBattle(
   const rangerBasicTracker = options?.enableRangerBasicAttackDiagnostics
     ? new RangerBasicAttackDiagnosticTracker()
     : null;
+  const enemyLastHitByAllyClass = new Map<string, ClassId>();
+  const enemyDeaths: DemoEnemyDeathRecord[] = [];
 
   const engine = new BattleEngine(
     gameData,
@@ -368,6 +384,14 @@ export function runDemoStageBattle(
     {
       onDamageApplied: (actor, target, amount, meta) => {
         const battleSec = engine.getBattleTimeSec();
+        if (
+          actor &&
+          !actor.isEnemy &&
+          target.isEnemy &&
+          actor.classId
+        ) {
+          enemyLastHitByAllyClass.set(target.id, actor.classId);
+        }
         stageDamageStats.recordDamage(
           actor,
           target,
@@ -429,6 +453,7 @@ export function runDemoStageBattle(
       const unit = [...snap.allies, ...snap.enemies].find(
         (combatant) => combatant.id === event.targetId,
       );
+      const deathSec = engine.getBattleTimeSec();
       if (
         unit &&
         !unit.isEnemy &&
@@ -438,8 +463,15 @@ export function runDemoStageBattle(
         stageDamageStats.recordAllyDeath(
           unit.partySlotIndex,
           unit.classId,
-          engine.getBattleTimeSec(),
+          deathSec,
         );
+      } else if (unit?.isEnemy && unit.classId) {
+        enemyDeaths.push({
+          unitId: unit.id,
+          classId: unit.classId,
+          deathSec,
+          lastHitByAllyClassId: enemyLastHitByAllyClass.get(unit.id),
+        });
       }
       return;
     }
@@ -485,6 +517,7 @@ export function runDemoStageBattle(
 
   const snap = engine.getSnapshot();
   const allies = snap.allies.filter((a) => a.hp > 0);
+  const rangerUnit = snap.allies.find((a) => a.classId === 'at_ranger');
   const totalRemainingHp = allies.reduce((sum, a) => sum + a.hp, 0);
   const totalMaxHp = snap.allies.reduce((sum, a) => sum + a.maxHp, 0);
 
@@ -524,7 +557,7 @@ export function runDemoStageBattle(
       damageTimelineBySourceKind: row.damageTimelineBySourceKind,
     }));
 
-  return {
+  const battleResult: DemoStageBattleResult = {
     stageId,
     outcome:
       phase === 'victory'
@@ -541,10 +574,63 @@ export function runDemoStageBattle(
     classStats,
     rangerA2Diagnostics: rangerA2Tracker?.snapshot(loadedRangerA2Definition),
     rangerBasicAttackDiagnostics: rangerBasicTracker?.snapshot(),
+    enemyDeaths: [...enemyDeaths],
+    rangerUnitId: rangerUnit?.id ?? null,
   };
+
+  if (options?.enableRangerTargetReport) {
+    logDemoRangerTargetReportsForResult(
+      stageId,
+      'battle',
+      toRangerTargetReportInput(battleResult),
+      gameData,
+    );
+  }
+
+  return battleResult;
 }
 
 export { logRangerBasicAttackDiagnostics };
+
+export {
+  buildDemoClassCoverageEntry,
+  buildDemoRangerTargetReport,
+  logDemoClassCoverageSummary,
+  logDemoRangerTargetReport,
+  toRangerTargetReportInput,
+  type DemoClassCoverageEntry,
+  type DemoEnemyDeathRecord,
+  type DemoRangerTargetReport,
+} from './rangerTargetReport.ts';
+
+/** Emit [demo-ranger-target-report] + class coverage for baseline/bad/universal/counter. */
+export function logDemoRangerTargetReportsForQuad(
+  stageId: string,
+  quad: DemoStageQuadResults,
+  gameData?: GameData,
+): DemoClassCoverageEntry[] {
+  const labels: Array<[string, DemoStageBattleResult]> = [
+    ['baseline', quad.baseline],
+    ['bad', quad.badResult],
+    ['universal', quad.universalResult],
+    ['counter', quad.counterResult],
+  ];
+  const entries = labels.map(([label, result]) =>
+    buildDemoClassCoverageEntry(
+      stageId,
+      label,
+      toRangerTargetReportInput(result),
+      gameData,
+    ),
+  );
+  for (const entry of entries) {
+    if (entry.report) {
+      logDemoRangerTargetReport(entry.report);
+    }
+  }
+  logDemoClassCoverageSummary(entries);
+  return entries;
+}
 
 export type DemoStageClassStatField =
   | 'damageDealt'
