@@ -458,6 +458,8 @@
 
 ## 10. demo stage テスト方針（2026-07 確定）
 
+**運用意図の正本:** [docs/dev/balance-diagnostics.md](../dev/balance-diagnostics.md) — smoke / puzzle / 診断ログ（`[demo-6c-report]` 等）の目的・読み方・M1 スコープ
+
 | 判断 | 内容 |
 | ---- | ---- |
 | 標準編成全勝 | **正解にしない**。Hensei Only は編成解法型 — baseline（`parties.json` demo: guardian / swordsman / cleric / ranger）で全 stage 勝利を要求しない |
