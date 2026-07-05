@@ -1,14 +1,22 @@
 [
   {
     "id": "demo_ch1_01",
-    "displayName": "前線の足慣らし",
+    "displayName": "前線の張り",
     "recommendedLevel": 1,
     "enemyGroups": [
       {
-        "classId": "at_swordsman",
-        "count": 2,
-        "hpScale": 1.0,
+        "classId": "df_guardian",
+        "count": 1,
+        "hpScale": 1.25,
         "atkScale": 1.0,
+        "defScale": 1.2,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_swordsman",
+        "count": 3,
+        "hpScale": 1.0,
+        "atkScale": 1.15,
         "defScale": 1.0,
         "resScale": 1.0
       }
@@ -21,22 +29,22 @@
   },
   {
     "id": "demo_ch1_02",
-    "displayName": "弓の射程",
+    "displayName": "遠くの矢",
     "recommendedLevel": 1,
     "enemyGroups": [
       {
-        "classId": "at_swordsman",
+        "classId": "df_guardian",
         "count": 1,
-        "hpScale": 1.0,
+        "hpScale": 1.15,
         "atkScale": 1.0,
-        "defScale": 1.0,
+        "defScale": 1.1,
         "resScale": 1.0
       },
       {
         "classId": "at_ranger",
-        "count": 1,
+        "count": 3,
         "hpScale": 1.0,
-        "atkScale": 1.0,
+        "atkScale": 1.2,
         "defScale": 1.0,
         "resScale": 1.0
       }
@@ -49,22 +57,22 @@
   },
   {
     "id": "demo_ch1_03",
-    "displayName": "鉄の防壁",
+    "displayName": "群れの侵攻",
     "recommendedLevel": 1,
     "enemyGroups": [
       {
-        "classId": "df_guardian",
-        "count": 1,
-        "hpScale": 1.0,
-        "atkScale": 1.0,
-        "defScale": 1.0,
-        "resScale": 1.0
+        "classId": "at_swordsman",
+        "count": 5,
+        "hpScale": 0.7,
+        "atkScale": 0.8,
+        "defScale": 0.85,
+        "resScale": 0.9
       },
       {
-        "classId": "at_swordsman",
+        "classId": "at_assassin",
         "count": 2,
         "hpScale": 1.0,
-        "atkScale": 1.0,
+        "atkScale": 1.05,
         "defScale": 1.0,
         "resScale": 1.0
       }
@@ -77,22 +85,30 @@
   },
   {
     "id": "demo_ch1_04",
-    "displayName": "影と矢",
+    "displayName": "持久の壁",
     "recommendedLevel": 1,
     "enemyGroups": [
       {
-        "classId": "at_assassin",
-        "count": 2,
-        "hpScale": 1.0,
+        "classId": "df_guardian",
+        "count": 1,
+        "hpScale": 1.15,
+        "atkScale": 1.0,
+        "defScale": 1.1,
+        "resScale": 1.0
+      },
+      {
+        "classId": "sp_cleric",
+        "count": 1,
+        "hpScale": 0.95,
         "atkScale": 1.0,
         "defScale": 1.0,
         "resScale": 1.0
       },
       {
-        "classId": "at_ranger",
-        "count": 1,
-        "hpScale": 1.0,
-        "atkScale": 1.0,
+        "classId": "at_swordsman",
+        "count": 2,
+        "hpScale": 0.95,
+        "atkScale": 1.05,
         "defScale": 1.0,
         "resScale": 1.0
       }
@@ -105,14 +121,22 @@
   },
   {
     "id": "demo_ch1_05",
-    "displayName": "炎の詠唱",
+    "displayName": "炎と刃",
     "recommendedLevel": 1,
     "enemyGroups": [
       {
         "classId": "at_sorcerer",
         "count": 2,
+        "hpScale": 1.05,
+        "atkScale": 1.25,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_assassin",
+        "count": 2,
         "hpScale": 1.0,
-        "atkScale": 1.0,
+        "atkScale": 1.2,
         "defScale": 1.0,
         "resScale": 1.0
       }
@@ -125,30 +149,38 @@
   },
   {
     "id": "demo_ch1_06",
-    "displayName": "混成部隊",
+    "displayName": "混成の猛威",
     "recommendedLevel": 1,
     "enemyGroups": [
       {
         "classId": "df_paladin",
         "count": 1,
         "hpScale": 1.0,
-        "atkScale": 1.0,
+        "atkScale": 0.85,
         "defScale": 1.0,
         "resScale": 1.0
       },
       {
         "classId": "at_ranger",
-        "count": 1,
-        "hpScale": 1.0,
-        "atkScale": 1.0,
+        "count": 2,
+        "hpScale": 0.85,
+        "atkScale": 0.8,
         "defScale": 1.0,
         "resScale": 1.0
       },
       {
         "classId": "at_sorcerer",
         "count": 1,
-        "hpScale": 1.0,
-        "atkScale": 1.0,
+        "hpScale": 0.85,
+        "atkScale": 0.8,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_swordsman",
+        "count": 1,
+        "hpScale": 0.9,
+        "atkScale": 0.9,
         "defScale": 1.0,
         "resScale": 1.0
       }
@@ -162,37 +194,54 @@
   {
     "id": "demo_ch1_07",
     "displayName": "護法の陣",
-    "recommendedLevel": 1,
+    "recommendedLevel": 2,
+    "unlockClassIdsOnClear": ["at_ballista"],
     "enemyGroups": [
       {
         "classId": "df_paladin",
         "count": 1,
-        "hpScale": 1.0,
-        "atkScale": 1.0,
+        "hpScale": 1.05,
+        "atkScale": 0.85,
+        "defScale": 1.05,
+        "resScale": 1.0
+      },
+      {
+        "classId": "sp_cleric",
+        "count": 1,
+        "hpScale": 0.9,
+        "atkScale": 0.85,
         "defScale": 1.0,
         "resScale": 1.0
       },
       {
-        "classId": "at_swordsman",
+        "classId": "sp_wardweaver",
         "count": 1,
-        "hpScale": 1.0,
-        "atkScale": 1.0,
+        "hpScale": 0.9,
+        "atkScale": 0.85,
+        "defScale": 1.0,
+        "resScale": 1.0
+      },
+      {
+        "classId": "at_ballista",
+        "count": 1,
+        "hpScale": 0.9,
+        "atkScale": 0.85,
         "defScale": 1.0,
         "resScale": 1.0
       },
       {
         "classId": "at_sorcerer",
         "count": 1,
-        "hpScale": 1.0,
+        "hpScale": 0.9,
         "atkScale": 1.0,
         "defScale": 1.0,
         "resScale": 1.0
       },
       {
-        "classId": "sp_cleric",
+        "classId": "at_assassin",
         "count": 1,
-        "hpScale": 1.0,
-        "atkScale": 1.0,
+        "hpScale": 0.9,
+        "atkScale": 0.95,
         "defScale": 1.0,
         "resScale": 1.0
       }

@@ -13,7 +13,8 @@
         "amount": {
           "kind": "atkBased",
           "atkScale": 1
-        }
+        },
+        "applyFrame": 2
       }
     ],
     "trigger": {

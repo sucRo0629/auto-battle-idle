@@ -1,4 +1,5 @@
 import type {
+  ClassId,
   GameData,
   PartyMemberState,
   PartySlotState,
@@ -15,7 +16,11 @@ import {
   computeStatsAtLevel,
   type LevelCurvesConfig,
 } from './levelGrowth.ts';
-import { computeStageExpReward, getNextStageId } from './stageProgression.ts';
+import {
+  computeStageExpReward,
+  getNextStageId,
+  getStageById,
+} from './stageProgression.ts';
 import { reconcileMemberBuild } from './skillBuild.ts';
 import { resolveLearnedSkills } from './skillUnlocks.ts';
 
@@ -59,6 +64,18 @@ export interface VictoryRewardResult {
   levelUps: MemberLevelUpInfo[];
   expGranted: number;
   nextStageId: string;
+  newlyUnlockedClassIds: ClassId[];
+}
+
+export function mergeUnlockedClassIds(
+  unlockedClassIds: ClassId[] | undefined,
+  toAdd: readonly ClassId[],
+): ClassId[] {
+  const ids = new Set(unlockedClassIds ?? []);
+  for (const classId of toAdd) {
+    ids.add(classId);
+  }
+  return [...ids];
 }
 
 export function createDefaultSave(
@@ -166,14 +183,20 @@ export function applyVictoryRewards(
     });
   }
 
-  const nextStageId = getNextStageId(
-    gameData.stages,
-    save.stageProgress.currentStageId,
+  const clearedStageId = save.stageProgress.currentStageId;
+  const clearedStage = getStageById(gameData.stages, clearedStageId);
+  const unlockIds = clearedStage?.unlockClassIdsOnClear ?? [];
+  const previousUnlocked = save.unlockedClassIds ?? [];
+  const newlyUnlockedClassIds = unlockIds.filter(
+    (classId) => !previousUnlocked.includes(classId),
   );
+  save.unlockedClassIds = mergeUnlockedClassIds(previousUnlocked, unlockIds);
+
+  const nextStageId = getNextStageId(gameData.stages, clearedStageId);
   save.stageProgress.currentStageId = nextStageId;
   save.stageProgress.totalClears += 1;
 
-  return { levelUps, expGranted, nextStageId };
+  return { levelUps, expGranted, nextStageId, newlyUnlockedClassIds };
 }
 
 export function formatLevelUpLog(info: MemberLevelUpInfo): string {

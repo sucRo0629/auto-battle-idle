@@ -554,10 +554,18 @@ describe('stages-demo.json validation', () => {
     ]);
 
     for (const stage of result.stages) {
-      expect(stage.recommendedLevel).toBe(1);
+      expect(stage.recommendedLevel).toBeGreaterThanOrEqual(1);
       expect(stage.enemyGroups?.length).toBeGreaterThan(0);
       expect(stage.waves).toEqual([{ enemies: [] }]);
     }
+
+    const rushStage = result.stages.find((s) => s.id === 'demo_ch1_03');
+    expect(rushStage?.enemyGroups?.reduce((sum, g) => sum + g.count, 0)).toBe(7);
+
+    const finale = result.stages.find((s) => s.id === 'demo_ch1_07');
+    expect(finale?.recommendedLevel).toBe(2);
+    expect(finale?.unlockClassIdsOnClear).toEqual(['at_ballista']);
+    expect(finale?.enemyGroups?.reduce((sum, g) => sum + g.count, 0)).toBe(6);
 
     expect(JSON.stringify(stagesDemoJson)).not.toContain('templateId');
   });

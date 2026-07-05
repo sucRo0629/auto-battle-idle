@@ -1,5 +1,16 @@
 [
   {
+    "id": "at_swordsman_passive_1",
+    "name": "鎧砕き",
+    "effect": "defenseIgnore",
+    "defenseIgnore": {
+      "def": {
+        "mode": "percent",
+        "amount": 0.15
+      }
+    }
+  },
+  {
     "id": "at_swordsman_passive_2",
     "name": "重装狙い",
     "effect": "targetRuleOverride",
@@ -12,22 +23,11 @@
     "targetRuleOverrideApplyTo": "enemy"
   },
   {
-    "id": "at_swordsman_passive_1",
-    "name": "鎧砕き",
-    "effect": "defenseIgnore",
-    "defenseIgnore": {
-      "def": {
-        "mode": "percent",
-        "amount": 0.25
-      }
-    }
-  },
-  {
     "id": "at_swordsman_passive_3",
     "name": "穿甲の一撃",
     "effect": "defenseIgnore",
     "defenseIgnore": {
-      "chance": 0.15,
+      "chance": 0.1,
       "def": {
         "mode": "percent",
         "amount": 1

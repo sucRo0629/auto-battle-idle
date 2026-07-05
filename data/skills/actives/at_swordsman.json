@@ -114,7 +114,7 @@
         "defenseIgnore": {
           "def": {
             "mode": "percent",
-            "amount": 1
+            "amount": 0.5
           },
           "chance": 1
         }

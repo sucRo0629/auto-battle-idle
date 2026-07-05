@@ -71,4 +71,28 @@ describe('saveClassMigration', () => {
     ]);
     expect(migrated.unlockedClassIds).toEqual(['df_guardian', 'at_ballista']);
   });
+
+  it('preserves existing unlockedClassIds including at_ballista on migration', () => {
+    const migrated = migrateSaveClassIds({
+      version: 2,
+      stageProgress: { currentStageId: 'demo_ch1_01', totalClears: 0 },
+      party: [
+        {
+          classId: 'df_guardian',
+          progress: { level: 1, exp: 0 },
+          build: {
+            learnedPassiveIds: [],
+            learnedActiveIds: [],
+            equippedActiveSlots: [],
+          },
+        },
+        null,
+        null,
+        null,
+      ],
+      unlockedClassIds: ['df_guardian', 'at_ballista', 'at_sniper'],
+    });
+
+    expect(migrated.unlockedClassIds).toEqual(['df_guardian', 'at_ballista']);
+  });
 });

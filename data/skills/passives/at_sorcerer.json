@@ -5,7 +5,7 @@
     "effect": "defenseIgnore",
     "defenseIgnore": {
       "res": {
-        "percent": 0.2
+        "percent": 0.1
       }
     }
   },
@@ -15,7 +15,8 @@
     "effect": "seedFlameOnActiveHit",
     "seedFlameDurationSec": 5,
     "seedFlameDotAtkScale": 0.01,
-    "blazingFlameDotAtkScale": 0.1
+    "blazingFlameDotAtkScale": 0.1,
+    "blazingFlameMagicTakenPerStack": 0.05
   },
   {
     "id": "at_sorcerer_passive_3",

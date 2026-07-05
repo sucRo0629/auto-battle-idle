@@ -1725,6 +1725,8 @@ export interface StageDef {
   recommendedLevel?: number;
   /** クラスベース敵編成。体験版は 1 stage = 1 配列 = wave 0 相当。 */
   enemyGroups?: StageEnemyGroup[];
+  /** 初回クリア時に save.unlockedClassIds へ merge する classId（任意・重複は除去） */
+  unlockClassIdsOnClear?: ClassId[];
 }
 
 export interface PartyMemberDef {

@@ -5826,6 +5826,13 @@ function parseStages(raw: unknown): StageDef[] {
       );
     }
 
+    const unlockClassIdsOnClearRaw = obj.unlockClassIdsOnClear;
+    let unlockClassIdsOnClear: string[] | undefined;
+    if (unlockClassIdsOnClearRaw !== undefined) {
+      const ids = requireStringArray(obj, 'unlockClassIdsOnClear', context, 1);
+      unlockClassIdsOnClear = [...new Set(ids)];
+    }
+
     const allowEmptyWaveEnemies = enemyGroups !== undefined;
 
     const wavesRaw = obj.waves;
@@ -5870,6 +5877,7 @@ function parseStages(raw: unknown): StageDef[] {
       waves,
       ...(recommendedLevel !== undefined ? { recommendedLevel } : {}),
       ...(enemyGroups !== undefined ? { enemyGroups } : {}),
+      ...(unlockClassIdsOnClear !== undefined ? { unlockClassIdsOnClear } : {}),
     };
   });
 }
@@ -6079,6 +6087,13 @@ function validateReferences(
       if (!classById.has(group.classId)) {
         throw new Error(
           `Unknown classId "${group.classId}": ${stage.id} enemyGroups[${groupIndex}]`,
+        );
+      }
+    });
+    stage.unlockClassIdsOnClear?.forEach((classId, index) => {
+      if (!classById.has(classId)) {
+        throw new Error(
+          `Unknown classId "${classId}": ${stage.id} unlockClassIdsOnClear[${index}]`,
         );
       }
     });

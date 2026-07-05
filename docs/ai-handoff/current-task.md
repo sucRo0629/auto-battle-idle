@@ -16,7 +16,8 @@
 - **並行・未達:** キャラ画像（並行作業中）、VFX 未実装、効果音未実装
 - **当面方針:** 新規ソース実装は止め、Phase 7 整理後は **グラフィック準備優先**。新規画面実装はグラフィック方針整理後に再開
 - **編成画面:** 戦闘画面より見た目・読みやすさが未達。**7e2 編成画面 M1 polish** は M1 前の改善対象だが、Cursor トークン消費を避け **今すぐ大改修しない**（グラフィック方針・クラス画像反映後に棚卸し → 小改善）
-- M1 方針（6b で固定）: **M1 ではレベル実装しない**。EXP / progression 接続は Phase 7 でも触らない。`recommendedLevel` は data 上 1、表示・設計メモ・将来用
+- M1 方針（6b で固定）: **M1 ではレベル実装しない**。EXP / progression 接続は Phase 7 でも触らない。`recommendedLevel` は表示・設計メモ・将来用（体験版は **Lv1 基準、終盤は Lv2**）
+- **体験版ステージ難度（6c 着手）:** 敵 **5 体以上はダミー敵で確認済み**（再調査不要）。**敵 Lv0 固定は誤り** — 通常敵は **`recommendedLevel` Lv1 以上**（雑魚は scale 低下で表現）。`enemyGroups` + `classId` 直参照のみ
 
 ## 3. 参照すべき正本
 
@@ -147,13 +148,13 @@
 
 | id | displayName | enemyGroups |
 | -- | ----------- | ----------- |
-| `demo_ch1_01` | 前線の足慣らし | `at_swordsman` ×2 |
-| `demo_ch1_02` | 弓の射程 | `at_swordsman` ×1, `at_ranger` ×1 |
-| `demo_ch1_03` | 鉄の防壁 | `df_guardian` ×1, `at_swordsman` ×2 |
-| `demo_ch1_04` | 影と矢 | `at_assassin` ×2, `at_ranger` ×1 |
-| `demo_ch1_05` | 炎の詠唱 | `at_sorcerer` ×2 |
-| `demo_ch1_06` | 混成部隊 | `df_paladin` ×1, `at_ranger` ×1, `at_sorcerer` ×1 |
-| `demo_ch1_07` | 護法の陣 | `df_paladin` ×1, `at_swordsman` ×1, `at_sorcerer` ×1, `sp_cleric` ×1 |
+| `demo_ch1_01` | 前線の張り | `df_guardian` ×1 + `at_swordsman` ×3（前衛耐久） |
+| `demo_ch1_02` | 遠くの矢 | `df_guardian` ×1 + `at_ranger` ×3（後衛遠隔） |
+| `demo_ch1_03` | 群れの侵攻 | `at_swordsman` ×5（弱 scale）+ `at_assassin` ×2（ラッシュ 7 体） |
+| `demo_ch1_04` | 持久の壁 | `df_guardian` + `sp_cleric` + `at_swordsman` ×2（回復・耐久） |
+| `demo_ch1_05` | 炎と刃 | `at_sorcerer` ×2 + `at_assassin` ×2（優先撃破） |
+| `demo_ch1_06` | 混成の猛威 | Lv2・5 体混成 |
+| `demo_ch1_07` | 護法の陣 | Lv2・6 体フルロール（最終） |
 
 **6c / 以降に送る（6b スコープ外）**
 
@@ -455,7 +456,216 @@
 | 旧敵テンプレ UI | E4b 導線整理済み。非表示・削除はしない |
 | 6c 数値 | `displayName` 4e、`count` / scale 難易度カーブ |
 
-## 10. ChatGPT へ戻すときのメモ
+## 10. demo stage テスト方針（2026-07 確定）
+
+| 判断 | 内容 |
+| ---- | ---- |
+| 標準編成全勝 | **正解にしない**。Hensei Only は編成解法型 — baseline（`parties.json` demo: guardian / swordsman / cleric / ranger）で全 stage 勝利を要求しない |
+| smoke test | **動作確認用**（`demoStageBalance.smoke.test.ts`）。victory/defeat 確定・timeout なし・極端な即終了なし・duration/survivors/remainingHp 記録。**勝利保証ではない** |
+| balance / puzzle test | **別管理**（`demoStageBalance.puzzle.test.ts`）。stage ごとに bad / baseline / counter 編成差分を見る。6c 調整対象 |
+| demo_ch1_06 / 07 | **対策編成で勝てること**を重視。baseline 敗北は許容。puzzle test は counter（例: paladin tank）勝利のみ要求 |
+
+## 12. demo_ch1_07 弩砲士ボス枠 — 調査・最小実装（2026-07-05）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 本 handoff・制約 |
+| 2 | `data/stages-demo.json` | `demo_ch1_07` 敵編成 |
+| 3 | `docs/spec/classes-and-skills.md`（弩砲士節） | classId・スキル枠・Lv 段階 |
+| 4 | `src/progression/stageProgression.ts` | ステージ進行・EXP（クリア報酬フックなし） |
+| 5 | `src/progression/victoryRewards.ts` + `src/save/SaveManager.ts` | `unlockedClassIds` 保存 |
+| 6 | `src/progression/partyCompose.ts` + `src/ui/SkillMenuPanel.ts` | 初期解禁リスト・編成 UI |
+
+### 確認結果
+
+| # | 項目 | 結果 |
+| - | ---- | ---- |
+| 1 | 弩砲士 classId | **`at_ballista`**（`docs/spec/classes-and-skills.md`・`data/skills/actives/at_ballista.json` と一致） |
+| 2 | Lv0 / Lv10 / Lv20 スキル | **Lv0:** `passive_1`・`passive_2`・`active_1`（破城矢装填）・`active_2`（重矢）。**Lv10:** `passive_3`（城塞穿ち）・`active_3`（重撃態勢）。**Lv20:** `passive_4`（粉砕する大矢）・`active_4`（**貫く一射**・`targetShape: pierce`） |
+| 3 | Lv20 貫通が体験版敵に出ないか | **`recommendedLevel` 2 の敵は `resolveLearnedSkills(class, 2)` で Lv10/20 枠を除外**。`getUnlockedSkillSlotCount(2) === 2` のため装備 active は Lv0 の 2 枠のみ。**`at_ballista_active_4` は戦闘に入らない** |
+| 4 | クラス解放を SaveData で管理しているか | **はい** — `SaveGameState.unlockedClassIds`（`SaveManager` 読書・`createDefaultSave` 初期化） |
+| 5 | 未解放クラスの UI | **`SkillMenuPanel.getPickerVisibleClassIds()` が `unlockedClassIds` のみ表示**。未解放を gray / disabled で見せる仕組みは**なし**（リスト外＝非表示） |
+| 6 | ステージクリア報酬の差し込み箇所 | **`GameSession` 勝利処理 → `applyVictoryRewards`**（EXP・`currentStageId`・`totalClears`）。**クラス解禁を追加する既存フックはない** |
+
+### クラス解禁 — 現状と最小設計案（実装は見送り）
+
+- **既存:** `unlockedClassIds` + 編成 UI フィルタはある。**ステージクリアで classId を追加する処理は未実装**。
+- **注意:** `partyCompose.DEFAULT_ROSTER_EXTRAS.demo` に **`at_ballista` を含む M1 外クラスが既に列挙**されており、新規セーブでは編成 UI から既に選べる（verify / dev 向けと推定）。M1 本番の「クリア後解禁」とは矛盾。
+- **Phase 7 以降の最小案（大改修なし）:**
+  1. `DEFAULT_ROSTER_EXTRAS.demo` から M1 外（`at_ballista` 含む）を外し、初期解禁は `parties.json` の 4 クラスのみにする
+  2. `StageDef` に任意 `unlockClassIdsOnClear?: ClassId[]` を追加（または `demo_ch1_07` 専用定数 1 件）
+  3. `applyVictoryRewards` 末尾で `unlockClassIdsOnClear` を `save.unlockedClassIds` に merge（重複除去）
+  4. 体験版終了画面（7h）で「弩砲士解禁」を案内
+- **今回スコープ外:** 上記 1〜3 のコード変更（UI 大改修・progression 接続禁止に従う）
+
+### 実装（データのみ）
+
+- **`demo_ch1_07`:** `at_ranger` ×1 を **`at_ballista` ×1** に差し替え（総数 6 維持）。役割はパラディン／サポ前衛の後方からの重撃（高 Max HP 狙い・重矢・破城矢装填）。scale: `hpScale 0.9` / `atkScale 0.85`（他 1.0）。`atkScale 1.0` では baseline 全滅となり puzzle 閾値を超えたため 6c 微調整
+- **貫通射線（Lv20）を前提にしたステージ名・課題文は変更しない**（`displayName`「護法の陣」維持）
+
+### テスト方針
+
+- `npm test -- src/battle/demoStageBalance.smoke.test.ts`
+- `validateGameData.test.ts`（stages-demo）
+- puzzle: `demo_ch1_07` counter 勝利が維持するか
+
+## 13. 体験版クラス解放状態 — 調査・最小実装案（2026-07-05）
+
+> **コード変更なし**。調査と実装案の整理のみ。§12（弩砲士敵配置）を前提とする。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | §12 前提・制約 |
+| 2 | `src/save/SaveManager.ts` | セーブ読込・v1 マイグレーション |
+| 3 | `src/progression/victoryRewards.ts` | 新規セーブ初期化・勝利報酬 |
+| 4 | `src/progression/partyCompose.ts` | `DEFAULT_ROSTER_EXTRAS`・`buildDefaultUnlockedClassIds` |
+| 5 | `src/ui/SkillMenuPanel.ts` + `src/ui/MetaMenuOverlay.ts` | 編成 UI の `unlockedClassIds` 参照 |
+| 6 | `src/game/GameSession.ts` + `data/parties.json` | 勝利フック・demo 初期パーティ |
+
+### 確認結果（6 項目）
+
+| # | 項目 | 結果 |
+| - | ---- | ---- |
+| 1 | **`DEFAULT_ROSTER_EXTRAS.demo` の定義・役割** | **定義:** `src/progression/partyCompose.ts` の定数。**役割:** `buildDefaultUnlockedClassIds` が `parties.json` の在籍 classId に加えて merge し、**新規セーブの初期 `unlockedClassIds`** を決める。`docs/spec/classes-and-skills.md` §デモ編成も「残り 11 クラスは extras でアンロック」と記載。**verify / dev 向けに全クラス近くを最初から解禁**する意図と読める |
+| 2 | **`unlockedClassIds` 初期化・マイグレーション** | **新規:** `createDefaultSave` → `buildDefaultUnlockedClassIds(party, 'demo')`。**読込 v2+:** JSON の `unlockedClassIds` をそのまま parse（空配列はエラー）。**v1 移行:** `mergeMigrationUnlockedClassIds(party)` が **全 `DEFAULT_ROSTER_EXTRAS` 値を union**（party 在籍 + extras 全 partyId 分）。その後 `migrateSaveClassIds` で classId エイリアス置換・dedupe のみ。**ロード時に extras と再同期する処理はない** |
+| 3 | **編成 UI が `unlockedClassIds` を参照するか** | **はい。** `GameSession` → `MetaMenuOverlay.openParty` → `SkillMenuPanel(unlockedClassIds)`。クラス一覧は `getPickerVisibleClassIds()` = `unlockedClassIds` を `classOrder` ソート。スロット差し替え候補は `getAssignableClassIds` も同リストを使用 |
+| 4 | **未解放の hidden / disabled 導線** | **hidden のみ（実質）。** 未解放 classId はピッカーに出ない。gray / disabled ティーザー UI は**なし**。[party-formation-ui.md](../spec/party-formation-ui.md) も「未解禁クラスは出さない」と明記。`disabled` は **4 人枠満杯時の追加不可**（別仕様） |
+| 5 | **勝利時 `applyVictoryRewards` フック** | **あり。** `GameSession.handleVictory` → `applyVictoryRewards(save, gameData, curves, survivingIndices)`。現状は EXP・`currentStageId` 進行・`totalClears++` のみ。**クラス解禁処理は未接続** |
+| 6 | **`demo_ch1_07` クリアで `at_ballista` 解禁の最小範囲** | 下記「最小実装案」参照。触るのは **extras 整理 + StageDef 1 フィールド + `applyVictoryRewards` 数行 + validate 薄い追記 + テスト** 程度。UI / SaveManager / GameSession の構造変更は不要 |
+
+### `DEFAULT_ROSTER_EXTRAS.demo` の現状（2026-07-05）
+
+```text
+parties.json demo 在籍（4）: df_guardian, at_swordsman, sp_cleric, at_ranger
+extras（11）: df_paladin, df_duelist, at_assassin, at_lancer, at_ballista,
+              at_hunter, at_sorcerer, at_sigilist, at_conductor,
+              sp_wardweaver, sp_alchemist
+→ 新規セーブ初期解禁 = 15 クラス（ほぼ全クラス）
+```
+
+**M1 方針（roadmap / handoff §6b-0）との差分**
+
+| 区分 | classId |
+| ---- | ------- |
+| M1 初期解禁 8（`at_ballista` 除く） | `df_guardian` `df_paladin` `at_swordsman` `at_assassin` `at_ranger` `at_sorcerer` `sp_cleric` `sp_wardweaver` |
+| extras にあって M1 外（初期から外す候補） | `df_duelist` `at_lancer` `at_hunter` `at_sigilist` `at_conductor` `sp_alchemist` |
+| **クリア報酬で足す** | `at_ballista`（`demo_ch1_07`） |
+
+### `unlockedClassIds` の現状フロー
+
+```text
+新規セーブ
+  createDefaultSave
+    → party（parties.json）
+    → unlockedClassIds = party 在籍 ∪ DEFAULT_ROSTER_EXTRAS.demo
+
+既存セーブ読込
+  SaveManager.parseSaveGameState
+    → unlockedClassIds は保存値をそのまま使用（extras 再計算なし）
+    → migrateSaveClassIds（エイリアスのみ）
+
+編成 UI
+  SkillMenuPanel ← save.unlockedClassIds（非解禁は非表示）
+```
+
+### 最小実装案（Phase 7 着手用）
+
+#### A. 初期解禁から `at_ballista` を外す
+
+| 変更 | 内容 |
+| ---- | ---- |
+| **`partyCompose.ts`** | `DEFAULT_ROSTER_EXTRAS.demo` を **M1 8 のうち parties.json 非在籍 4 件のみ**に縮小: `df_paladin` `at_assassin` `at_sorcerer` `sp_wardweaver`。M1 外 6 + `at_ballista` を削除 |
+| **影響ファイル** | `partyCompose.ts`（主）。`docs/spec/classes-and-skills.md` §デモ編成 1 行（extras 数・意図の更新）。`mergeMigrationUnlockedClassIds` は v1 専用のため **v1 セーブ初回ロード時の解禁集合が変わる** — 注記のみ |
+| **verify モード** | 現状 verify も同一 `createDefaultSave` 経路。**全クラス検証が必要なら** `VERIFY_ROSTER_EXTRAS` を別定数化し `buildDefaultUnlockedClassIds` で `isVerifyMode` 分岐（任意・小差分） |
+
+#### B. `demo_ch1_07` クリア報酬のデータ形式案
+
+**推奨: `StageDef` 任意フィールド（データ駆動・1 ステージ 1 配列）**
+
+```json
+{
+  "id": "demo_ch1_07",
+  "displayName": "護法の陣",
+  "recommendedLevel": 2,
+  "unlockClassIdsOnClear": ["at_ballista"],
+  "enemyGroups": [ "..."]
+}
+```
+
+| 案 | メリット | デメリット |
+| -- | -------- | ---------- |
+| **`unlockClassIdsOnClear` on StageDef**（推奨） | `stages-demo.json` だけで完結。full `stages.json` 無影響。将来ステージ報酬に拡張しやすい | `types.ts` + `validateGameData.ts` に薄い schema 追加 |
+| コード内 `const DEMO_FINALE_UNLOCK = ['at_ballista']` | validate 不要 | データとコード二重管理。editor / 手編集と乖離 |
+| `stageRecords` 側に記録 | 再クリア判定と相性良い | M1 では `stageRecords` 未接続が多く **範囲が広い** |
+
+**validate 追記（最小）:** `unlockClassIdsOnClear` は任意 `ClassId[]`。存在する classId のみ。重複は normalize で除去。
+
+#### C. 勝利報酬の差し込み最小箇所
+
+```text
+GameSession.handleVictory          … 変更不要（既に applyVictoryRewards を呼ぶ）
+applyVictoryRewards                … 末尾（totalClears++ の後）に追加
+  1. clearedStageId = save.stageProgress.currentStageId（更新前の id）
+  2. stage = getStageById(gameData.stages, clearedStageId)
+  3. for (id of stage?.unlockClassIdsOnClear ?? [])
+       save.unlockedClassIds に merge（Set dedupe）
+  4. VictoryRewardResult に newlyUnlockedClassIds?: ClassId[] を返す（任意・7f リザルト用）
+```
+
+**二重解禁:** 同ステージ再クリアでも merge のみ → 冪等。**ループ周回（`demo_ch1_07` 末尾）** でも問題なし。
+
+#### D. 既存セーブで既に `at_ballista` を持っている場合
+
+| ケース | 推奨扱い |
+| ------ | -------- |
+| `unlockedClassIds` に既に `at_ballista` あり | **維持（剥奪しない）**。ロード時に extras 再計算しないため自然に満たす |
+| パーティ枠に `at_ballista` 在籍だが `unlockedClassIds` に無い（異常） | **現状コードは strip しない**。編成 UI で再選択不可になる可能性 — **M1 では放置可**。必要なら Phase 7 で「在籍 classId は unlocked に自動追加」1 行 |
+| v1 セーブ初回マイグレーション | `mergeMigrationUnlockedClassIds` が **新 extras** を使う → M1 外が入らなくなる。**既存 v2 セーブは影響なし** |
+| `demo_ch1_07` 未クリアの新規セーブ | `at_ballista` 非表示。クリア後に初めてピッカーに出現 |
+
+#### E. UI: hidden vs disabled
+
+| 方式 | 判定 |
+| ---- | ---- |
+| **hidden（現状維持）** | **推奨。** 既存 `SkillMenuPanel` + [party-formation-ui.md](../spec/party-formation-ui.md) と一致。**UI 大改修不要** |
+| disabled + シルエット表示 | M2 グレーアウト・「Full version」文言（roadmap）向け。**新 DOM / i18n / CSS が必要** — Phase 7 スコープ外 |
+
+**クリア直後のフィードバック:** 7f リザルト or 7h 体験版終了画面で `newlyUnlockedClassIds` を表示。編成画面を開けばピッカーに出現するだけでも M1 最低限は成立。
+
+#### F. 必要なテスト（実装時）
+
+| テスト | 内容 |
+| ------ | ---- |
+| **新規** `victoryRewards.unlock.test.ts`（または既存ファイル追記） | `createDefaultSave` の `unlockedClassIds` に **`at_ballista` が含まれない**こと。M1 8 のみ含むこと |
+| 同上 | `applyVictoryRewards` を `demo_ch1_07` クリア相当で呼ぶと `at_ballista` が追加されること。2 回目は増えないこと |
+| `validateGameData.test.ts` | `stages-demo.json` の `unlockClassIdsOnClear` が parse 成功すること |
+| `saveClassMigration.test.ts` | 既存セーブの `unlockedClassIds` が load 後も維持されること（回帰） |
+| **任意** `stageProgression.flavor.test.ts` | 新規 demo セーブの解禁数が 8 であること |
+| **回帰** `demoStageBalance.*.test.ts` | 編成 harness は `createDefaultSave` 利用 — extras 変更で counter 編成が `createMemberFromClass('df_paladin')` 等できなくなる場合は **harness 側で `unlockedClassIds` を明示補完**（paladin 等は初期 8 に残るためおそらく不要） |
+
+### 触らなかった範囲（今回）
+
+- 一切の production コード・JSON 変更
+- `StageGenerator` / `StageRecipe`
+- `SkillMenuPanel` / `MetaMenuOverlay` の UI 改修
+- `SaveManager` ロードロジック変更
+- `docs/spec/progression.md` 正式追記（Phase 7 実装確定時に同期）
+- verify 用全クラス解禁の分岐実装
+
+### 残課題
+
+- **実装 PR:** §13 最小案 A〜F の適用（Phase 7f 前後が自然）
+- **verify 全クラス:** extras 縮小後の verify 編成 — 別定数 or debug 上書きの要否判断
+- **spec 同期:** `classes-and-skills.md` §デモ編成、`progression.md` に `unlockedClassIds` / ステージ解禁の 1 節（実装確定時）
+- **リザルト UI:** `newlyUnlockedClassIds` の表示（7f）
+- **体験版終了:** `demo_ch1_07` クリア後の弩砲士案内（7h）
+- **M1 外 6 クラス:** 体験版では非表示のまま（M2 以降の解禁設計は未着手）
+
+## 11. ChatGPT へ戻すときのメモ
 
 - **Phase 6b 完了** — 6b-1〜6b-8 済み。§7 6b サマリが正本
 - **Phase 7 分割整理済み** — 小タスク 7a〜7h + **7e2**（編成画面 M1 polish）。未確定点・着手前正本は **§7**

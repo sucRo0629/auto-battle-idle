@@ -29,9 +29,12 @@ describe(`initial battle spawn smoke (BUILD_FLAVOR=${buildFlavor})`, () => {
       expect(stage).toMatchObject({
         id: 'demo_ch1_01',
         recommendedLevel: 1,
-        enemyGroups: [{ classId: 'at_swordsman', count: 2 }],
         waves: [{ enemies: [] }],
       });
+      expect(stage!.enemyGroups).toEqual([
+        expect.objectContaining({ classId: 'df_guardian', count: 1 }),
+        expect.objectContaining({ classId: 'at_swordsman', count: 3 }),
+      ]);
       expect(stage!.waves[0]?.enemies).toHaveLength(0);
 
       const enemies = createEnemiesForStage(
@@ -41,13 +44,26 @@ describe(`initial battle spawn smoke (BUILD_FLAVOR=${buildFlavor})`, () => {
         levelCurves,
       );
 
-      expect(enemies).toHaveLength(2);
+      expect(enemies).toHaveLength(4);
       expect(enemies.every((e) => e.isEnemy)).toBe(true);
-      expect(enemies.every((e) => e.classId === 'at_swordsman')).toBe(true);
+      expect(enemies.filter((e) => e.classId === 'df_guardian')).toHaveLength(1);
+      expect(enemies.filter((e) => e.classId === 'at_swordsman')).toHaveLength(3);
 
       const specs = expandEnemyGroups(stage!);
-      expect(specs).toHaveLength(2);
+      expect(specs).toHaveLength(4);
       expect(specs.every((s) => s.level === 1)).toBe(true);
+
+      const rushStage = gameData.stages.find((s) => s.id === 'demo_ch1_03');
+      const rushEnemies = createEnemiesForStage(
+        gameData,
+        rushStage!.id,
+        0,
+        levelCurves,
+      );
+      expect(rushEnemies).toHaveLength(7);
+      expect(expandEnemyGroups(rushStage!).every((s) => s.level >= 1)).toBe(
+        true,
+      );
     });
   } else {
     it('still spawns eg_smoke via enemyGroups from full game data', () => {

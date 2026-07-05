@@ -800,7 +800,7 @@ Kill / Flow 主軸のクラスは、攻撃イベント・射程・ダメージ�
 | 3   | `sp_cleric`   | 療養師 |
 | 4   | `at_ranger`   | 弓術士 |
 
-未編成の残り 11 クラスは `DEFAULT_ROSTER_EXTRAS.demo` でアンロック（編成画面から選択可）。
+未編成の M1 初期 4 クラス（`df_paladin` / `at_assassin` / `at_sorcerer` / `sp_wardweaver`）は `DEFAULT_ROSTER_EXTRAS.demo` でアンロック（編成画面から選択可）。`at_ballista` は初期解禁に含めず、`demo_ch1_07` クリア報酬（`unlockClassIdsOnClear`）で追加する。
 
 詳細な設計方針・Lv 習得表・TBD は **§`sp_` クラス群 Survival 設計方針** を正とする。
 

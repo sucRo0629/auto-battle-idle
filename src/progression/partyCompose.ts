@@ -11,16 +11,9 @@ import { reconcileMemberBuildFromGameData } from './skillBuild.ts';
 export const DEFAULT_ROSTER_EXTRAS: Record<string, ClassId[]> = {
   demo: [
     'df_paladin',
-    'df_duelist',
     'at_assassin',
-    'at_lancer',
-    'at_ballista',
-    'at_hunter',
     'at_sorcerer',
-    'at_sigilist',
-    'at_conductor',
     'sp_wardweaver',
-    'sp_alchemist',
   ],
 };
 
