@@ -2,7 +2,7 @@
 
 **正本:** 本ドキュメント（開発・運用向け。ゲーム仕様ではない）
 
-**実装:** `src/battle/demoStageBalance.smoke.test.ts` / `demoStageBalance.puzzle.test.ts` / `demoStageAssassinCoverage.test.ts` / `src/battle/test/demoStageSim.harness.ts` / `src/battle/test/rangerTargetReport.ts` / `src/battle/test/assassinRoleReport.ts`
+**実装:** `src/battle/demoStageBalance.smoke.test.ts` / `demoStageBalance.puzzle.test.ts` / `demoStageAssassinCoverage.test.ts` / `demoStageAssassinVsSwordsman.test.ts` / `src/battle/test/demoStageSim.harness.ts` / `src/battle/test/rangerTargetReport.ts` / `src/battle/test/assassinRoleReport.ts` / `src/battle/test/assassinVsSwordsmanReport.ts`
 
 **データ:** `data/stages-demo.json`（`demo_ch1_01`〜`07`）
 
@@ -146,6 +146,8 @@ class coverage diagnostics でも **全 15 クラスの完全網羅は求めな�
 | `[demo-class-coverage]` | quad 横断の at_ranger 役割判定サマリ + 敵 backline 撃破タイミング比較 |
 | `[demo-assassin-role-report]` | **1 編成** の at_assassin 生存・ターゲット share・execute 寄与 |
 | `[demo-assassin-coverage-summary]` | 複数編成横断の assassin `ROLE_OK` / `ROLE_THIN` / `ROLE_UNMET` |
+| `[demo-assassin-vs-swordsman-survival]` | **1 編成×variant** の at_assassin / at_swordsman 同枠比較（生存・DPS・ターゲット share） |
+| `[demo-assassin-vs-swordsman-summary]` | 同枠比較の切り分け verdict（耐久差 vs ステージ圧 vs 編成欠陥） |
 
 ### 設計意図
 
@@ -212,6 +214,29 @@ class coverage diagnostics でも **全 15 クラスの完全網羅は求めな�
 - `ROLE_THIN` — ダメージはあるが priority 寄与が不明瞭
 - `ROLE_UNMET` — 早期脱落 + 極端に低い damage、または前衛吸い込み
 - `NO_ASSASSIN` — 当該編成に assassin 不在（baseline / counter 等）
+
+### `[demo-assassin-vs-swordsman-survival]` / `[demo-assassin-vs-swordsman-summary]`
+
+**出力元:** `assassinVsSwordsmanReport.ts`（`demoStageAssassinVsSwordsman.test.ts`）
+
+同一編成枠に `at_assassin` と `at_swordsman` を入れ替え、**早期脱落が基礎耐久差かステージ/編成要因か** を切り分ける。既存 `[demo-assassin-role-report]` とは別タグ。
+
+| 比較枠 | harness | 対象 stage |
+| ------ | ------- | ---------- |
+| `no-healer-cleric-slot` | `configureNoHealerParty` vs `configureNoHealerSwordsmanParty` | ch1_04〜07 |
+| `ranger-slot-finish` | `configureAssassinInsteadOfRangerParty` vs `configureSwordsmanInsteadOfRangerParty` | ch1_05 spotlight |
+
+**summary verdict（実装と一致）**
+
+| verdict | 意味 |
+| ------- | ---- |
+| `ASSASSIN_SURVIVAL_WEAK` | swordsman は生存・寄与、assassin のみ同条件で早期脱落 — 耐久差疑い（即クラス調整せず M1 導線で影響を報告） |
+| `BOTH_FAIL_STAGE_PRESSURE` | 両 variant が低寄与 — 敵火力・ヒーラー不在・編成不一致疑い |
+| `ASSASSIN_ROLE_OK` | assassin が priority band ≥35% 等で execute 役割達成 — 生存差は二次 |
+| `SWORDSMAN_BETTER_FRONTLINE_ONLY` | swordsman が前衛処理で安定、assassin は priority 未到達 |
+| `INCONCLUSIVE` | ログ上判断不能 |
+
+**読み方:** `damageDealt` だけで assassin 弱いと判定しない。swordsman の frontline share 高は想定内。no-healer 枠のみ落ちる場合は note に編成欠陥を残す。
 
 ---
 

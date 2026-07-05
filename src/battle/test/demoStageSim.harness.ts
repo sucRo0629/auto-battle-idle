@@ -1430,6 +1430,22 @@ export function configureAssassinDoubleFinishParty(
   save.party[3] = createMemberFromClass('at_assassin', gameData);
 }
 
+/** Diagnostic: cleric slot → swordsman (no-healer swordsman control for assassin comparison). */
+export function configureNoHealerSwordsmanParty(
+  save: SaveGameState,
+  gameData: GameData,
+): void {
+  save.party[2] = createMemberFromClass('at_swordsman', gameData);
+}
+
+/** Diagnostic: ranger slot → swordsman (same slot as configureAssassinInsteadOfRangerParty). */
+export function configureSwordsmanInsteadOfRangerParty(
+  save: SaveGameState,
+  gameData: GameData,
+): void {
+  save.party[3] = createMemberFromClass('at_swordsman', gameData);
+}
+
 export const MIN_DEMO_BATTLE_TICKS = 60;
 export const MAX_DEMO_BATTLE_TICKS = 120_000;
 

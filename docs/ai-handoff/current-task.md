@@ -756,7 +756,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。ch1_05 数値調整は未着手
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）** — ch1_05 数値調整は未着手
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -818,5 +818,79 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 | コマンド | 結果 |
 | -------- | ---- |
 | `npm test -- src/battle/demoStageAssassinCoverage.test.ts` | **5 passed** |
+| `npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |
+| `npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **9 passed**（Vitest worker `onTaskUpdate` timeout **ノイズ 1 件** — pass/fail 非影響、exit code 1） |
+
+## 17. at_assassin vs at_swordsman 同枠比較診断（2026-07-06）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `docs/dev/balance-diagnostics.md` | 診断基盤方針 |
+| 3 | `data/stages-demo.json` | ch1_04〜07 敵編成（参照のみ・未変更） |
+| 4 | `data/parties.json` | demo 標準編成 |
+| 5 | `src/battle/test/demoStageSim.harness.ts` | シミュ harness |
+| 6 | `src/battle/demoStageAssassinCoverage.test.ts` | 既存 assassin 診断 |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| **新規** `src/battle/test/assassinVsSwordsmanReport.ts` | `[demo-assassin-vs-swordsman-survival]` / `[demo-assassin-vs-swordsman-summary]` |
+| **新規** `src/battle/demoStageAssassinVsSwordsman.test.ts` | ch1_04〜07 no-healer 枠 + ch1_05 ranger-slot 比較 |
+| `src/battle/test/demoStageSim.harness.ts` | `configureNoHealerSwordsmanParty` / `configureSwordsmanInsteadOfRangerParty` |
+| `docs/dev/balance-diagnostics.md` | §5c assassin vs swordsman 診断追記 |
+
+**触らなかった:** `data/stages-demo.json`、`classes.json` / skills、戦闘ロジック、`resolveApproachBattleX.ts`、contact cap / ranged chase、active_2 条件、UI
+
+### 比較枠
+
+| partyLabel | assassin | swordsman | stages |
+| ---------- | -------- | --------- | ------ |
+| `no-healer-cleric-slot` | cleric 枠 → assassin | cleric 枠 → swordsman | ch1_04〜07 |
+| `ranger-slot-finish` | ranger 枠 → assassin | ranger 枠 → swordsman | ch1_05 |
+
+### ch1_04〜07 verdict（no-healer-cleric-slot）
+
+| stage | verdict | 読み |
+| ----- | ------- | ---- |
+| `demo_ch1_04` | **BOTH_FAIL_STAGE_PRESSURE** | 両 variant 脱落（assassin @50s dealt=122 前衛100%吸い込み / swordsman @38.6s dealt=71）。no-healer 編成欠陥 + 敵火力 |
+| `demo_ch1_05` | **ASSASSIN_ROLE_OK** | assassin @11s 脱落だが priority 100%（敵 assassin へ）。swordsman は生存・last-hit×2。**役割対象は刺さるが耐久差あり** |
+| `demo_ch1_06` | **ASSASSIN_SURVIVAL_WEAK** | swordsman 生存・172 dealt / assassin @9.3s dealt=6 前衛吸い込み。**基礎耐久差が顕著** |
+| `demo_ch1_07` | **ASSASSIN_ROLE_OK** | 両方 defeat だが assassin は priority 100%（6 dealt @10.6s）。swordsman は @39.3s まで前衛処理。**finale 火力下では編成/ステージ圧が主因** |
+
+### ch1_05 ranger-slot-finish verdict
+
+| 枠 | verdict | 読み |
+| -- | ------- | ---- |
+| `ranger-slot-finish` | **ASSASSIN_ROLE_OK** | assassin priority 100%・@19s 脱落（defeat）/ swordsman 勝利・218 dealt・last-hit sorcerer+assassin。**ch1_05 は assassin 受け皿として成立** — spotlight `assassin-ranger-slot` と整合 |
+
+### 早期脱落主因（今回ログから）
+
+| 主因 | 該当 |
+| ---- | ---- |
+| **基礎耐久差** | ch1_06（ASSASSIN_SURVIVAL_WEAK）。ch1_05 でも swordsman 生存 vs assassin @11–19s 脱落 |
+| **no-healer / 編成欠陥** | ch1_04 BOTH_FAIL（両方脱落）。全 stage の no-healer 枠で note 付与 |
+| **敵火力・ステージ圧** | ch1_04 / ch1_07（defeat または両 variant 低 HP）。ch1_06 bad 編成の文脈と一致 |
+| **接敵・移動・ターゲット** | `firstBasicActionSec` は全 run ~5.7–6.5s で遅延なし。**主因ではない** |
+| **前衛吸い込み** | ch1_04 assassin frontline 100%。ch1_06 assassin frontline 100% + 即落ち |
+
+### クラスデータ vs ステージ/編成
+
+| 判定 | 推奨 |
+| ---- | ---- |
+| ch1_05 | **ステージ/編成側を先に見る** — priority band・last-hit が機能。M1 導線で ch1_05 を assassin 受け皿として提示可能 |
+| ch1_06 | **耐久差は疑うがクラス即調整しない** — no-healer 枠 + 前衛吸い込み。puzzle bad 意図と整合 |
+| ch1_04 / ch1_07 | **編成 puzzle / ステージ圧** — クラス弱さ単独では説明不足 |
+| 全体 | `classes.json` 触る前に **healer 必須導線・ch1_05 編成ヒント・bad 枠の意図** を M1 flow（Phase 7）で整理 |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm test -- src/battle/demoStageAssassinCoverage.test.ts` | **5 passed** |
+| `npm test -- src/battle/demoStageAssassinVsSwordsman.test.ts` | **6 passed** |
 | `npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |
 | `npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **9 passed**（Vitest worker `onTaskUpdate` timeout **ノイズ 1 件** — pass/fail 非影響、exit code 1） |
