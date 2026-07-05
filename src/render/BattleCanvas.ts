@@ -378,6 +378,7 @@ export class BattleCanvas implements IBattleRenderer {
           isEnemy: true,
           rangePx: enemy.rangePx,
           isAlive: !isDead,
+          facingSign: enemy.facingSign,
           anim: animState.anim,
           animFrame: animState.frame,
           attackSheetKey: animState.attackSheetKey,
@@ -425,6 +426,7 @@ export class BattleCanvas implements IBattleRenderer {
         isEnemy: false,
           rangePx: player.rangePx,
         isAlive: player.hp > 0,
+        facingSign: player.facingSign,
         anim: animState.anim,
         animFrame: animState.frame,
         attackSheetKey: animState.attackSheetKey,
@@ -622,6 +624,10 @@ export class BattleCanvas implements IBattleRenderer {
       ? this.deathPlayback.getAlpha(layout.id)
       : null;
 
+    const flipSpriteHorizontal = layout.isEnemy
+      ? layout.facingSign === undefined || layout.facingSign < 0
+      : layout.facingSign !== undefined && layout.facingSign < 0;
+
     ctx.save();
 
     if (deathTransform) {
@@ -630,7 +636,7 @@ export class BattleCanvas implements IBattleRenderer {
       ctx.translate(pivotX, pivotY);
       ctx.rotate(deathTransform.rotationRad);
       ctx.translate(-size / 2, -size);
-      if (layout.isEnemy) {
+      if (flipSpriteHorizontal) {
         ctx.translate(size, 0);
         ctx.scale(-1, 1);
       }
@@ -638,13 +644,18 @@ export class BattleCanvas implements IBattleRenderer {
         ctx.globalAlpha = deathAlpha;
       }
     } else if (layout.isEnemy) {
-      ctx.translate(x + size, y + offsetY);
-      ctx.scale(-1, 1);
+      ctx.translate(x + (flipSpriteHorizontal ? size : 0), y + offsetY);
+      if (flipSpriteHorizontal) {
+        ctx.scale(-1, 1);
+      }
       if (!layout.isAlive) {
         ctx.globalAlpha = this.theme.deadAlpha;
       }
     } else {
-      ctx.translate(x, y + offsetY);
+      ctx.translate(x + (flipSpriteHorizontal ? size : 0), y + offsetY);
+      if (flipSpriteHorizontal) {
+        ctx.scale(-1, 1);
+      }
       if (!layout.isAlive) {
         ctx.globalAlpha = this.theme.deadAlpha;
       }

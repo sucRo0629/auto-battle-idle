@@ -17,6 +17,7 @@ import {
   pierceStepFields,
 } from './powerStep.ts';
 import { getBattleX } from '../combatPosition.ts';
+import { resolveFacingSign } from '../combatFacing.ts';
 import { getEffectiveMaxHp, currentHpRatio } from '../combatMath.ts';
 import {
   getAttackablePool,
@@ -710,8 +711,14 @@ function resolvePierceHitTargets(
     enemies,
   ).filter((unit) => unit.isAlive);
 
+  const attackable = pool.filter((unit) =>
+    isWithinSkillRange(actor, unit, rangePx),
+  );
+  const focus = pickTargetFromPool(spec, actor, attackable);
+  const facingSign = resolveFacingSign(actor, focus);
+
   const inSegment = pool
-    .filter((unit) => isInForwardSegment(actor, unit, rangePx))
+    .filter((unit) => isInForwardSegment(actor, unit, rangePx, facingSign))
     .sort((a, b) =>
       actor.isEnemy
         ? getBattleX(b) - getBattleX(a)

@@ -29,6 +29,8 @@ export interface CombatantLayout {
   rangePx?: number;
   isEnemy: boolean;
   isAlive: boolean;
+  /** 戦闘向き: 味方 +1 / −1（背後攻撃時反転）。敵は描画側で −1 固定 */
+  facingSign?: number;
   anim: AnimState;
   animFrame: number;
   attackSheetKey: string;

@@ -54,8 +54,10 @@ import {
   resolveEnemyApproachBattleX,
   resolveEnemyAttackTargetPlayer,
   resolveEnemyChaseTargetPlayer,
+  resolvePlayerAttackTargetEnemy,
   shouldSkipEngagedAutoApproach,
 } from "./resolveApproachBattleX.ts";
+import { resolveFacingSign } from "./combatFacing.ts";
 import {
   CANVAS_W as BATTLE_CANVAS_W,
   COMBAT_SAFE_RIGHT,
@@ -1778,6 +1780,10 @@ export class BattleEngine {
   }
 
   private toSnapshot(c: CombatantState) {
+    const attackFocus = c.isEnemy
+      ? resolveEnemyAttackTargetPlayer(c, this.players, this.enemies, this.gameData)
+      : resolvePlayerAttackTargetEnemy(c, this.players, this.enemies, this.gameData);
+    const facingSign = resolveFacingSign(c, attackFocus);
     return {
       id: c.id,
       name: c.name,
@@ -1799,6 +1805,7 @@ export class BattleEngine {
       formationRow: c.formationRow,
       isEnemy: c.isEnemy,
       battleX: c.battleX,
+      facingSign,
       bodyAnimMarching: this.resolveBodyAnimMarching(c),
       corpseVisible: c.isEnemy ? undefined : c.corpseVisible,
       ...(c.isEnemy

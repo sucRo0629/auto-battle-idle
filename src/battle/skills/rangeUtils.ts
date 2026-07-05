@@ -1,5 +1,6 @@
 import type { CombatantState, SkillEffectDef, TargetSpec } from '../types.ts';
 import { getBattleX } from '../combatPosition.ts';
+import { defaultFacingSign } from '../combatFacing.ts';
 import { partyFormationDepthPx } from '../partyFormation.ts';
 import {
   getEffectTarget,
@@ -19,12 +20,14 @@ export function battleDistance(
     : getBattleX(actor) - getBattleX(target);
 }
 
-/** 向き前方への距離（正 = 前方） */
+/** 向き前方への距離（正 = 前方）。`facingSign` 省略時は既定向き */
 export function forwardDistancePx(
   actor: CombatantState,
   target: CombatantState,
+  facingSign?: number,
 ): number {
-  return -battleDistance(actor, target);
+  const sign = facingSign ?? defaultFacingSign(actor);
+  return sign * (getBattleX(target) - getBattleX(actor));
 }
 
 /** 使用者の向いている方向の前方セグメント内か */
@@ -32,9 +35,10 @@ export function isInForwardSegment(
   actor: CombatantState,
   target: CombatantState,
   rangePx: number,
+  facingSign?: number,
 ): boolean {
   if (actor.id === target.id) return true;
-  const forward = forwardDistancePx(actor, target);
+  const forward = forwardDistancePx(actor, target, facingSign);
   if (forward < 0) return false;
   return forward <= rangePx;
 }

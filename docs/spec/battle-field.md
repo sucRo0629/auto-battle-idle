@@ -102,6 +102,18 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 - 停止 `battleX`（プレイヤー → 対象）: `target.battleX - effectiveRangePx`
 - 停止 `battleX`（敵 → 対象）: `target.battleX + effectiveRangePx`
 
+### 2.5.1 戦闘向き（facing）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 既定向き | 味方 **+X（右）** / 敵 **−X（左）** |
+| 反転条件 | **AttackTarget**（`resolvePlayerAttackTargetEnemy` / `resolveEnemyAttackTargetPlayer`）が既定向きの **背後** にいるとき。味方: より小さい `battleX` の敵 / 敵: より大きい `battleX` の味方 |
+| 反転時 | `facingSign` を反転（`resolveFacingSign`）。`isInForwardSegment`（`pierce` 等）とスプライト描画が反転向きを参照する |
+| 射程 | `isWithinSkillRange`（絶対距離）は向き非依存。変更しない |
+| 接敵 | **ChaseTarget / 停止 X / formation clamp / rear assault 復帰** 等の自動接近ルールは本節で変更しない |
+
+背後侵入（rear assault）で敵の背後に留まった双刃士などは、既定 +X のままだと背後側の敵が「前方セグメント」外になる。AttackTarget が射程内の背後敵なら向きを反転して攻撃・描画する。
+
 **`move` の `moveMode`（プレイヤー actor・新軸）：**
 
 | mode       | 目標 `battleX`                                                                                                                                         |

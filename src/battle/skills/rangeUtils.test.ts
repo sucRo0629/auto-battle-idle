@@ -8,7 +8,7 @@ import {
   createStage1Engine,
   reachWave2Engage,
 } from '../test/battleFieldSpec.harness.ts';
-import { battleDistance, isWithinSkillRange, resolveSkillRangePx } from './rangeUtils.ts';
+import { battleDistance, forwardDistancePx, isInForwardSegment, isWithinSkillRange, resolveSkillRangePx } from './rangeUtils.ts';
 
 function mockActor(rangePx: number): CombatantState {
   return mockUnit('ally', 0, { rangePx, formationRow: 'front' });
@@ -29,6 +29,14 @@ describe('battleDistance / isWithinSkillRange', () => {
     expect(battleDistance(ally, enemyBehind)).toBe(100);
     expect(isWithinSkillRange(ally, enemyBehind, 120)).toBe(true);
     expect(isWithinSkillRange(ally, enemyBehind, 80)).toBe(false);
+  });
+
+  it('forwardDistancePx flips with facingSign for behind hostile', () => {
+    const ally = mockUnit('ally', 225);
+    const enemy = mockUnit('e1', 200, { isEnemy: true });
+    expect(forwardDistancePx(ally, enemy)).toBeLessThan(0);
+    expect(forwardDistancePx(ally, enemy, -1)).toBeGreaterThan(0);
+    expect(isInForwardSegment(ally, enemy, 25, -1)).toBe(true);
   });
 
   it('ally 52 vs enemy 360 with range 100 is out of range', () => {

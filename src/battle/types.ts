@@ -1821,6 +1821,8 @@ export interface CombatantSnapshot {
   formationRow: FormationRow;
   isEnemy: boolean;
   battleX: number;
+  /** 戦闘向き: 味方 +1 / −1（背後の AttackTarget へ向けるとき反転） */
+  facingSign?: number;
   /** entity body の move 再生（自動接近・PartyDeploy・スキル move 等） */
   bodyAnimMarching: boolean;
   /** 味方のみ: フィールド上に death スプライトを描くか */
