@@ -2,7 +2,7 @@
 
 **正本:** 本ドキュメント（開発・運用向け。ゲーム仕様ではない）
 
-**実装:** `src/battle/demoStageBalance.smoke.test.ts` / `demoStageBalance.puzzle.test.ts` / `src/battle/test/demoStageSim.harness.ts` / `src/battle/test/rangerTargetReport.ts`
+**実装:** `src/battle/demoStageBalance.smoke.test.ts` / `demoStageBalance.puzzle.test.ts` / `demoStageAssassinCoverage.test.ts` / `src/battle/test/demoStageSim.harness.ts` / `src/battle/test/rangerTargetReport.ts` / `src/battle/test/assassinRoleReport.ts`
 
 **データ:** `data/stages-demo.json`（`demo_ch1_01`〜`07`）
 
@@ -144,6 +144,8 @@ class coverage diagnostics でも **全 15 クラスの完全網羅は求めな�
 | ---- | ---- |
 | `[demo-ranger-target-report]` | **1 編成** の at_ranger ターゲット・射程・後衛 share 分析 |
 | `[demo-class-coverage]` | quad 横断の at_ranger 役割判定サマリ + 敵 backline 撃破タイミング比較 |
+| `[demo-assassin-role-report]` | **1 編成** の at_assassin 生存・ターゲット share・execute 寄与 |
+| `[demo-assassin-coverage-summary]` | 複数編成横断の assassin `ROLE_OK` / `ROLE_THIN` / `ROLE_UNMET` |
 
 ### 設計意図
 
@@ -165,6 +167,51 @@ class coverage diagnostics でも **全 15 クラスの完全網羅は求めな�
 - `BACKLINE_OK` / `ROLE_UNMET` — ranger 編成での役割充足
 - ranger なし編成 — 敵 backline の `deathSec`（ranger あり vs なしの delta）
 - aggregate 行 — quad 全体の roleFulfilled 件数
+
+---
+
+## 5b. assassin role diagnostics の役割
+
+**主な出力元:** `assassinRoleReport.ts`（`demoStageAssassinCoverage.test.ts` および harness `logDemoAssassinRoleReportsForQuad` / `logDemoAssassinRoleReportsForRuns`）
+
+### ログタグ
+
+| タグ | 役割 |
+| ---- | ---- |
+| `[demo-assassin-role-report]` | **1 編成** の at_assassin 生存・与ダメ・ターゲット share・execute 寄与分析 |
+| `[demo-assassin-coverage-summary]` | 複数編成横断の `ROLE_OK` / `ROLE_THIN` / `ROLE_UNMET` サマリ |
+
+### 設計意図
+
+`at_assassin` は **低 HP ・後衛・優先撃破対象を仕留める execute/finish 役** として評価する。勝利編成に入っているだけでは活躍と判定しない。
+
+### 判定ルール（実装と一致）
+
+- **`damageDealt` だけで活躍判定しない**。
+- 見る指標:
+  - `priorityTargetDamageShare` — 与ダメのうち priority band（`sp_cleric` / `at_sorcerer` / `sp_wardweaver` / `at_ranger` / `at_assassin`）への割合
+  - `frontlineDamageShare` — 前衛（`df_guardian` / `df_paladin` / `at_swordsman`）への吸われ
+  - `damageByTargetClassId` / `killOrLastHitTargetClassId`
+  - `survived` / `deathTimeSec` / `damageTaken` — 早期脱落
+  - `firstBasicActionSec` / `basicActionCount` / `activeSkillUseCount`
+- **現時点の目安:** `priorityTargetDamageShare >= 35%` で execute band 充足の一要素。`frontlineDamageShare >= 65%` かつ priority 寄与なしは `ROLE_UNMET` 候補。
+- **bad（no-healer）編成でのみ assassin が出る stage** では、負け役・bad 枠としての出番かどうかを quad の `bad` 行で見る。
+
+### 診断専用編成（harness）
+
+| 関数 | 内容 |
+| ---- | ---- |
+| `configureAssassinInsteadOfRangerParty` | ranger 枠 → assassin（ch1_05 受け皿 probe） |
+| `configureAssassinDoubleFinishParty` | cleric + ranger 両方 → assassin（二体 finish probe） |
+
+`data/parties.json` / `stages-demo.json` は変更しない。player party の `configureSave` のみ。
+
+### `[demo-assassin-coverage-summary]` の読み方
+
+- `ROLE_OK` — 低 HP 狙い・後衛崩し・短期決着のいずれかに明確な寄与
+- `ROLE_THIN` — ダメージはあるが priority 寄与が不明瞭
+- `ROLE_UNMET` — 早期脱落 + 極端に低い damage、または前衛吸い込み
+- `NO_ASSASSIN` — 当該編成に assassin 不在（baseline / counter 等）
 
 ---
 

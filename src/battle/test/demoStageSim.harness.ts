@@ -32,6 +32,15 @@ import {
   type RangerBasicAttackDiagnostics,
 } from './rangerBasicAttackDiagnostic.ts';
 import {
+  buildDemoAssassinCoverageEntry,
+  logDemoAssassinCoverageSummary,
+  logDemoAssassinRoleReport,
+  logDemoAssassinRoleReportsForResult,
+  toAssassinRoleReportInput,
+  type DemoAssassinCoverageEntry,
+  type DemoAssassinRoleReport,
+} from './assassinRoleReport.ts';
+import {
   buildDemoClassCoverageEntry,
   logDemoClassCoverageSummary,
   logDemoRangerTargetReport,
@@ -331,6 +340,7 @@ export interface DemoStageBattleResult {
   rangerBasicAttackDiagnostics?: RangerBasicAttackDiagnostics;
   enemyDeaths?: DemoEnemyDeathRecord[];
   rangerUnitId?: string | null;
+  assassinUnitId?: string | null;
 }
 
 const levelCurves = loadLevelCurves(levelCurvesJson);
@@ -518,6 +528,7 @@ export function runDemoStageBattle(
   const snap = engine.getSnapshot();
   const allies = snap.allies.filter((a) => a.hp > 0);
   const rangerUnit = snap.allies.find((a) => a.classId === 'at_ranger');
+  const assassinUnit = snap.allies.find((a) => a.classId === 'at_assassin');
   const totalRemainingHp = allies.reduce((sum, a) => sum + a.hp, 0);
   const totalMaxHp = snap.allies.reduce((sum, a) => sum + a.maxHp, 0);
 
@@ -576,6 +587,7 @@ export function runDemoStageBattle(
     rangerBasicAttackDiagnostics: rangerBasicTracker?.snapshot(),
     enemyDeaths: [...enemyDeaths],
     rangerUnitId: rangerUnit?.id ?? null,
+    assassinUnitId: assassinUnit?.id ?? null,
   };
 
   if (options?.enableRangerTargetReport) {
@@ -591,6 +603,16 @@ export function runDemoStageBattle(
 }
 
 export { logRangerBasicAttackDiagnostics };
+
+export {
+  buildDemoAssassinCoverageEntry,
+  buildDemoAssassinRoleReport,
+  logDemoAssassinCoverageSummary,
+  logDemoAssassinRoleReport,
+  toAssassinRoleReportInput,
+  type DemoAssassinCoverageEntry,
+  type DemoAssassinRoleReport,
+} from './assassinRoleReport.ts';
 
 export {
   buildDemoClassCoverageEntry,
@@ -629,6 +651,54 @@ export function logDemoRangerTargetReportsForQuad(
     }
   }
   logDemoClassCoverageSummary(entries);
+  return entries;
+}
+
+/** Emit [demo-assassin-role-report] + coverage summary for baseline/bad/universal/counter. */
+export function logDemoAssassinRoleReportsForQuad(
+  stageId: string,
+  quad: DemoStageQuadResults,
+): DemoAssassinCoverageEntry[] {
+  const labels: Array<[string, DemoStageBattleResult]> = [
+    ['baseline', quad.baseline],
+    ['bad', quad.badResult],
+    ['universal', quad.universalResult],
+    ['counter', quad.counterResult],
+  ];
+  const entries = labels.map(([label, result]) =>
+    buildDemoAssassinCoverageEntry(
+      stageId,
+      label,
+      toAssassinRoleReportInput(result),
+    ),
+  );
+  for (const entry of entries) {
+    if (entry.report) {
+      logDemoAssassinRoleReport(entry.report);
+    }
+  }
+  logDemoAssassinCoverageSummary(entries);
+  return entries;
+}
+
+/** Emit reports for arbitrary labeled battle results (diagnostic-only compositions). */
+export function logDemoAssassinRoleReportsForRuns(
+  stageId: string,
+  runs: Array<{ partyLabel: string; result: DemoStageBattleResult }>,
+): DemoAssassinCoverageEntry[] {
+  const entries = runs.map(({ partyLabel, result }) =>
+    buildDemoAssassinCoverageEntry(
+      stageId,
+      partyLabel,
+      toAssassinRoleReportInput(result),
+    ),
+  );
+  for (const entry of entries) {
+    if (entry.report) {
+      logDemoAssassinRoleReport(entry.report);
+    }
+  }
+  logDemoAssassinCoverageSummary(entries);
   return entries;
 }
 
@@ -1341,6 +1411,23 @@ export function configureDoubleMeleeParty(
   gameData: GameData,
 ): void {
   save.party[3] = createMemberFromClass('at_swordsman', gameData);
+}
+
+/** Diagnostic: ranger slot → assassin (finish/backline vs ch1_05-style targets). */
+export function configureAssassinInsteadOfRangerParty(
+  save: SaveGameState,
+  gameData: GameData,
+): void {
+  save.party[3] = createMemberFromClass('at_assassin', gameData);
+}
+
+/** Diagnostic: cleric + ranger both → assassin (double finish on ch1_05). */
+export function configureAssassinDoubleFinishParty(
+  save: SaveGameState,
+  gameData: GameData,
+): void {
+  save.party[2] = createMemberFromClass('at_assassin', gameData);
+  save.party[3] = createMemberFromClass('at_assassin', gameData);
 }
 
 export const MIN_DEMO_BATTLE_TICKS = 60;

@@ -756,5 +756,67 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。次は ch1_05 詰め or ch1_06 universal 3 survivors の追加調整（任意）
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。ch1_05 数値調整は未着手
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
+
+## 16. at_assassin M1 活躍場診断（2026-07-06）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `docs/dev/balance-diagnostics.md` | 診断基盤方針 |
+| 3 | `data/stages-demo.json` | ch1_04〜07 敵編成 |
+| 4 | `data/parties.json` | demo 標準編成 |
+| 5 | `src/battle/test/demoStageSim.harness.ts` | シミュ harness |
+| 6 | `src/battle/demoStageBalance.puzzle.test.ts` | puzzle quad |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| **新規** `src/battle/test/assassinRoleReport.ts` | `[demo-assassin-role-report]` / `[demo-assassin-coverage-summary]` 生成 |
+| **新規** `src/battle/demoStageAssassinCoverage.test.ts` | ch1_04〜07 診断テスト（ログ中心・最小 assertion） |
+| `src/battle/test/demoStageSim.harness.ts` | `assassinUnitId` 追跡、`logDemoAssassinRoleReportsForQuad/ForRuns`、`configureAssassinInsteadOfRangerParty` / `configureAssassinDoubleFinishParty` |
+| `docs/dev/balance-diagnostics.md` | §5b assassin diagnostics 追記 |
+
+**触らなかった:** `data/stages-demo.json`、`data/parties.json`、`classes.json` / skills、戦闘ロジック、UI
+
+### 診断結果サマリ（puzzle quad — assassin は bad/no-healer のみ）
+
+| stage | assassin 出番 | roleVerdict | 要点 |
+| ----- | ------------- | ----------- | ---- |
+| `demo_ch1_04` | bad のみ | **ROLE_UNMET** | damageDealt=90、前衛 `at_swordsman` 100% 吸い込み。defeat @40s |
+| `demo_ch1_05` | bad のみ | **ROLE_UNMET** | 早期脱落 @12s、damageDealt=22。ただし **spotlight 編成では ROLE_OK**（下記） |
+| `demo_ch1_06` | bad のみ | **ROLE_UNMET** | 早期脱落 @9s、damageDealt=6。敵火力 + 前衛タンクで寄与前に落ちる |
+| `demo_ch1_07` | bad のみ | **ROLE_UNMET** | 早期脱落 @11s、damageDealt=6。finale 火力で execute 前に脱落 |
+
+**baseline / universal / counter には assassin 不在** — 既存 puzzle 導線では「勝ち筋編成」に assassin は入らない。
+
+### ch1_05 spotlight probe（受け皿候補）
+
+| 編成 | outcome | roleVerdict | 要点 |
+| ---- | ------- | ----------- | ---- |
+| `assassin-ranger-slot` | victory | **ROLE_OK** | priority share 100%、`at_assassin` last-hit。damageDealt=50（脱落あり） |
+| `assassin-double-finish` | defeat | **ROLE_OK** | priority share 100%、sorcerer + assassin へ分散。execute band は機能 |
+| `no-healer` | victory | **ROLE_OK** | cleric 枠 assassin でも priority 100%（ただし @18s 脱落） |
+
+**結論:** 既存 ch1_04/06/07 では **プレイヤー assassin の活躍場はない**（bad 枠のみ・ROLE_UNMET）。**`demo_ch1_05`（炎と刃 — 敵 sorcerer×2 + assassin×2）が受け皿候補** — 意図的に assassin を ranger/cleric 枠へ入れると priority ターゲット処理・last-hit が確認できる。**今回 ch1_05 数値調整は未実施**。
+
+### クラス弱い vs ステージ側に活躍場がない
+
+| 観点 | 判定 |
+| ---- | ---- |
+| ch1_05 spotlight | assassin **挙動自体は execute band に刺さる**（priority share / last-hit OK） |
+| ch1_04/06/07 bad | **ステージ設計 + 編成導線** の問題が大きい — baseline/counter に assassin を選ぶ理由がなく、bad では早期脱落 |
+| 前衛吸い込み | ch1_04 bad で `df_guardian`/`at_swordsman` 100% — 低 HP 対象到達前に前衛処理 |
+| 早期脱落 | ch1_06/07 bad は **敵火力 + ヒーラー不在** が主因。assassin 単体耐久設計の問題というより bad 編成の必然 |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm test -- src/battle/demoStageAssassinCoverage.test.ts` | **5 passed** |
+| `npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |
+| `npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **9 passed**（Vitest worker `onTaskUpdate` timeout **ノイズ 1 件** — pass/fail 非影響、exit code 1） |
