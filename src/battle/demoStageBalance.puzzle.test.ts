@@ -258,7 +258,7 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
     },
   );
 
-  it('demo_ch1_04: healer party wins; no-healer weaker (healer puzzle pending 6c)', () => {
+  it('demo_ch1_04: healer party wins; no-healer loses or barely survives (6c healer puzzle)', () => {
     const quad = runCompositionQuad(
       'demo_ch1_04',
       gameData,
@@ -270,16 +270,15 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
 
     expect(withHealer.outcome).toBe('victory');
     expect(withHealer.survivingAllies).toBeGreaterThan(0);
-    // Pre-fix: no-healer defeat. Post Ranger contact-cap: no-healer wins with lower HP.
-    // Stage sustain pressure is insufficient vs Ranger DPS — 6c should raise enemy pressure.
-    expect(withoutHealer.outcome).toBe('victory');
-    expect(withoutHealer.survivingAllies).toBeGreaterThan(0);
     expect(demoStageOutcomeScore(withoutHealer)).toBeLessThan(
       demoStageOutcomeScore(withHealer),
     );
-    expect(withoutHealer.totalRemainingHp).toBeLessThan(
-      withHealer.totalRemainingHp,
-    );
+    const noHealerMarginal =
+      withoutHealer.outcome === 'defeat' ||
+      (withoutHealer.outcome === 'victory' &&
+        withoutHealer.totalRemainingHp <= 100);
+    expect(noHealerMarginal).toBe(true);
+    expect(universalResult.durationSec).toBeGreaterThan(55);
     void universalResult;
   });
 

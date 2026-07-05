@@ -665,6 +665,38 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **体験版終了:** `demo_ch1_07` クリア後の弩砲士案内（7h）
 - **M1 外 6 クラス:** 体験版では非表示のまま（M2 以降の解禁設計は未着手）
 
+## 14. demo_ch1_04 healer puzzle 再確立（2026-07-05）
+
+### 変更
+
+- **`data/stages-demo.json` `demo_ch1_04` の `enemyGroups` scale のみ**（他 stage・クラスデータ未変更）
+  - 敵 `df_guardian`: `hpScale 1.15→1.65`, `atkScale 1.0→1.3`, `defScale 1.1→1.12`, `resScale 1.0→1.45`
+  - 敵 `sp_cleric`: `hpScale 0.95→1.38`, `resScale 1.0→1.4`
+  - 敵 `at_swordsman` ×2: `hpScale 0.95→1.12`, `atkScale 1.05→1.32`
+- **`demoStageBalance.puzzle.test.ts`**: noHealer = defeat または remainingHp≤100、universal durationSec>55 を要求
+- **`demoStageSim.harness.ts`**: ch1_04 診断ログ文言のみ
+
+### 調整前後（puzzle quad）
+
+| 編成 | 調整前 | 調整後 |
+| ---- | ------ | ------ |
+| baseline | victory 670/670 122s | victory 670/670 **164s** |
+| noHealer | victory 416/680 91s | **defeat** 0/680 **60s** |
+| universal | victory 642/642 **48s** | victory 642/642 **61s**（満血のまま） |
+| counter (paladin) | victory 650/650 72s | victory 650/650 **97s**（baseline より速く・満血 — 診断で報告） |
+
+### 原因メモ
+
+- noHealer 勝利の主因: 戦闘短縮（~90s）でガーディアン被ダメ蓄積不足 + アサシン DPS
+- 調整: 敵 HP/RES で戦闘延長、敵 ATK で無ヒーラー耐久を落とす。味方 cleric heal（~660）がガーディアン被ダメ（~700）を相殺し baseline 満血勝利を維持
+- universal: sorcerer 火力で ~61s 決着。敵 RES 上げで 48s→61s に改善するが、味方 cleric が被ダメをほぼ回復し **642 満血のまま** — 追加調整は ch1_04 導線の「やりすぎ」回避のため今回止め
+
+### テスト
+
+- `demoStageBalance.puzzle.test.ts` — 9 passed（Vitest worker `onTaskUpdate` timeout ノイズ 1 件、pass/fail には非影響）
+- `demoStageBalance.smoke.test.ts` — 8 passed
+- `demo_ch1_07` — データ未変更、単体実行で counter 勝利 / baseline 敗北を確認
+
 ## 11. ChatGPT へ戻すときのメモ
 
 - **Phase 6b 完了** — 6b-1〜6b-8 済み。§7 6b サマリが正本
@@ -672,4 +704,5 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。次は ch1_05 以降 or universal 満血勝ちの追加詰め（任意）
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）

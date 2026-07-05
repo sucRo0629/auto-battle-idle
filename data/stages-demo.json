@@ -91,24 +91,24 @@
       {
         "classId": "df_guardian",
         "count": 1,
-        "hpScale": 1.15,
-        "atkScale": 1.0,
-        "defScale": 1.1,
-        "resScale": 1.0
+        "hpScale": 1.65,
+        "atkScale": 1.3,
+        "defScale": 1.12,
+        "resScale": 1.45
       },
       {
         "classId": "sp_cleric",
         "count": 1,
-        "hpScale": 0.95,
+        "hpScale": 1.38,
         "atkScale": 1.0,
         "defScale": 1.0,
-        "resScale": 1.0
+        "resScale": 1.4
       },
       {
         "classId": "at_swordsman",
         "count": 2,
-        "hpScale": 0.95,
-        "atkScale": 1.05,
+        "hpScale": 1.12,
+        "atkScale": 1.32,
         "defScale": 1.0,
         "resScale": 1.0
       }

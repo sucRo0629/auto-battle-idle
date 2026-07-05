@@ -941,7 +941,7 @@ export function logDemoCh1_04HealerPuzzleDiagnostics(
   console.info(
     `[demo-ch1_04-diag]   ranger damage delta (noHealer - withHealer)=${rangerDelta >= 0 ? '+' : ''}${rangerDelta}; ` +
       `cleric healingDealt=${clericHeal}. ` +
-      `Both win → puzzle gap is stage sustain vs Ranger DPS; cleric heal=${clericHeal} mainly buys guardian HP (taken delta ${guardianTakenDelta}).`,
+      `Healer puzzle: cleric sustain (${clericHeal}) offsets guardian pressure (taken delta ${guardianTakenDelta}).`,
   );
   console.info(
     `[demo-ch1_04-diag]   universal=${quad.universalResult.outcome}(hp=${quad.universalResult.totalRemainingHp}, ` +
