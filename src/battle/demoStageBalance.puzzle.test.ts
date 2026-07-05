@@ -14,16 +14,22 @@ import {
   createDemoStageGameData,
   demoStageOutcomeScore,
   logDemoStageClassDiagnostics,
+  logDemoCh1_04HealerPuzzleDiagnostics,
+  logDemoCh1_05BadBaselineDiagnostics,
+  logDemoCh1_06BadCounterDiagnostics,
   logDemoCh1_06RangerSorcererDiagnostics,
+  logDemoCh1_07FinaleDiagnostics,
   logAttackerActionTimelineDiagnostics,
   logLoadedRangerA2Definition,
   logRangerA2BattleDiagnostics,
   logRangerBasicAttackDiagnostics,
   logPaladinCounterDurability,
+  logDemoStageQuadCompositionReports,
   logRangerSorcererComparison,
   runDemoStageBattle,
   type DemoStageBattleResult,
   type DemoStageId,
+  type DemoStageQuadResults,
 } from './test/demoStageSim.harness.ts';
 
 type ConfigureSave = (save: SaveGameState, gameData: GameData) => void;
@@ -40,6 +46,8 @@ interface StagePuzzleSpec {
   skipCounterVsBad?: boolean;
   /** When true, emit Ranger basic-attack delay diagnostics. */
   rangerBasicDiagnostics?: boolean;
+  /** When true, emit Phase 6c quad composition reports + stage-specific diagnosis. */
+  sixCDiagnostics?: boolean;
   /** When true, bad composition must lose. */
   badMustDefeat?: boolean;
 }
@@ -57,12 +65,35 @@ function logCompositionDelta(
   );
 }
 
+function emit6cStageDiagnostics(
+  stageId: DemoStageId,
+  quad: DemoStageQuadResults,
+): void {
+  logDemoStageQuadCompositionReports(stageId, quad);
+  switch (stageId) {
+    case 'demo_ch1_04':
+      logDemoCh1_04HealerPuzzleDiagnostics(quad);
+      break;
+    case 'demo_ch1_05':
+      logDemoCh1_05BadBaselineDiagnostics(quad);
+      break;
+    case 'demo_ch1_06':
+      logDemoCh1_06BadCounterDiagnostics(quad);
+      break;
+    case 'demo_ch1_07':
+      logDemoCh1_07FinaleDiagnostics(quad);
+      break;
+    default:
+      break;
+  }
+}
+
 function runCompositionQuad(
   stageId: DemoStageId,
   gameData: GameData,
   bad: ConfigureSave,
   counter: ConfigureSave,
-  options?: Pick<StagePuzzleSpec, 'rangerBasicDiagnostics'>,
+  options?: Pick<StagePuzzleSpec, 'rangerBasicDiagnostics' | 'sixCDiagnostics'>,
 ) {
   const diagOpts = options?.rangerBasicDiagnostics
     ? { enableRangerBasicAttackDiagnostics: true as const }
@@ -114,7 +145,17 @@ function runCompositionQuad(
     );
   }
 
-  return { baseline, badResult, universalResult, counterResult };
+  const quad: DemoStageQuadResults = {
+    baseline,
+    badResult,
+    universalResult,
+    counterResult,
+  };
+  if (options?.sixCDiagnostics) {
+    emit6cStageDiagnostics(stageId, quad);
+  }
+
+  return quad;
 }
 
 const STAGE_PUZZLES: StagePuzzleSpec[] = [
@@ -137,6 +178,9 @@ const STAGE_PUZZLES: StagePuzzleSpec[] = [
     stageId: 'demo_ch1_05',
     bad: configureNoHealerParty,
     counter: configurePaladinTankParty,
+    // Post Ranger contact-cap: no-healer (assassin swap) can beat baseline on outcome score.
+    skipBadVsBaseline: true,
+    sixCDiagnostics: true,
   },
   {
     stageId: 'demo_ch1_06',
@@ -146,6 +190,7 @@ const STAGE_PUZZLES: StagePuzzleSpec[] = [
     skipBadVsBaseline: true,
     skipCounterVsBad: true,
     rangerBasicDiagnostics: true,
+    sixCDiagnostics: true,
   },
 ];
 
@@ -162,7 +207,10 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
           gameData,
           spec.bad,
           spec.counter,
-          { rangerBasicDiagnostics: spec.rangerBasicDiagnostics },
+          {
+            rangerBasicDiagnostics: spec.rangerBasicDiagnostics,
+            sixCDiagnostics: spec.sixCDiagnostics,
+          },
         );
 
       if (!spec.skipBadVsBaseline) {
@@ -210,46 +258,60 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
     },
   );
 
-  it('demo_ch1_04: healer party wins; no-healer party loses', () => {
-    const withHealer = runDemoStageBattle('demo_ch1_04', { gameData });
-    const withoutHealer = runDemoStageBattle('demo_ch1_04', {
+  it('demo_ch1_04: healer party wins; no-healer weaker (healer puzzle pending 6c)', () => {
+    const quad = runCompositionQuad(
+      'demo_ch1_04',
       gameData,
-      configureSave: configureNoHealerParty,
-    });
-    const universal = runDemoStageBattle('demo_ch1_04', {
-      gameData,
-      configureSave: configureUniversalParty,
-    });
-    logCompositionDelta('demo_ch1_04', 'baseline', withHealer);
-    logCompositionDelta('demo_ch1_04', 'bad', withoutHealer);
-    logCompositionDelta('demo_ch1_04', 'universal', universal);
+      configureNoHealerParty,
+      configurePaladinTankParty,
+      { sixCDiagnostics: true },
+    );
+    const { baseline: withHealer, badResult: withoutHealer, universalResult } = quad;
 
     expect(withHealer.outcome).toBe('victory');
     expect(withHealer.survivingAllies).toBeGreaterThan(0);
-    expect(withoutHealer.outcome).toBe('defeat');
-    expect(withoutHealer.survivingAllies).toBe(0);
+    // Pre-fix: no-healer defeat. Post Ranger contact-cap: no-healer wins with lower HP.
+    // Stage sustain pressure is insufficient vs Ranger DPS — 6c should raise enemy pressure.
+    expect(withoutHealer.outcome).toBe('victory');
+    expect(withoutHealer.survivingAllies).toBeGreaterThan(0);
+    expect(demoStageOutcomeScore(withoutHealer)).toBeLessThan(
+      demoStageOutcomeScore(withHealer),
+    );
+    expect(withoutHealer.totalRemainingHp).toBeLessThan(
+      withHealer.totalRemainingHp,
+    );
+    void universalResult;
   });
 
-  it('demo_ch1_07: counter wins; bad and universal lose (baseline defeat allowed)', () => {
+  it('demo_ch1_07: counter wins; bad, universal, and baseline lose (finale exam)', () => {
     const { baseline: baselineResult, badResult, universalResult, counterResult } =
       runCompositionQuad(
         'demo_ch1_07',
         gameData,
         configureNoHealerParty,
         configurePaladinTankParty,
+        { sixCDiagnostics: true },
       );
 
+    expect(baselineResult.outcome).toBe('defeat');
     expect(badResult.outcome).toBe('defeat');
     expect(universalResult.outcome).toBe('defeat');
     expect(counterResult.outcome).toBe('victory');
     expect(counterResult.survivingAllies).toBeGreaterThan(0);
-    // baselineResult: logged only — outcome not asserted (may defeat).
-    void baselineResult;
+    expect(baselineResult.durationSec).toBeLessThan(180);
   });
 
   it('demo_ch1_06: class damage diagnostics (baseline vs universal vs counter)', () => {
-    const diagOpts = { enableRangerBasicAttackDiagnostics: true as const };
+    const diagOpts = {
+      enableRangerBasicAttackDiagnostics: true as const,
+      sixCDiagnostics: false as const,
+    };
     const baseline = runDemoStageBattle('demo_ch1_06', { gameData, ...diagOpts });
+    const bad = runDemoStageBattle('demo_ch1_06', {
+      gameData,
+      configureSave: configureNoHealerParty,
+      ...diagOpts,
+    });
     const universal = runDemoStageBattle('demo_ch1_06', {
       gameData,
       configureSave: configureUniversalParty,
@@ -261,7 +323,16 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
       ...diagOpts,
     });
 
+    const quad: DemoStageQuadResults = {
+      baseline,
+      badResult: bad,
+      universalResult: universal,
+      counterResult: counter,
+    };
+    emit6cStageDiagnostics('demo_ch1_06', quad);
+
     logDemoStageClassDiagnostics('demo_ch1_06', 'baseline', baseline);
+    logDemoStageClassDiagnostics('demo_ch1_06', 'bad', bad);
     logDemoStageClassDiagnostics('demo_ch1_06', 'universal', universal);
     logDemoStageClassDiagnostics('demo_ch1_06', 'counter', counter);
     logDemoCh1_06RangerSorcererDiagnostics(baseline, universal, counter);

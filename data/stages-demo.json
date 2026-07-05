@@ -225,7 +225,7 @@
         "classId": "at_ballista",
         "count": 1,
         "hpScale": 0.9,
-        "atkScale": 0.85,
+        "atkScale": 0.86,
         "defScale": 1.0,
         "resScale": 1.0
       },
@@ -233,7 +233,7 @@
         "classId": "at_sorcerer",
         "count": 1,
         "hpScale": 0.9,
-        "atkScale": 1.0,
+        "atkScale": 1.02,
         "defScale": 1.0,
         "resScale": 1.0
       },
@@ -241,7 +241,7 @@
         "classId": "at_assassin",
         "count": 1,
         "hpScale": 0.9,
-        "atkScale": 0.95,
+        "atkScale": 0.96,
         "defScale": 1.0,
         "resScale": 1.0
       }

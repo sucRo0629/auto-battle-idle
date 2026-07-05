@@ -747,6 +747,83 @@ export function logDemoCh1_06RangerSorcererDiagnostics(
   logAttackerCombatDiagnostics(stageId, 'counter', counter, 'at_ranger');
 }
 
+export interface DemoStageQuadResults {
+  baseline: DemoStageBattleResult;
+  badResult: DemoStageBattleResult;
+  universalResult: DemoStageBattleResult;
+  counterResult: DemoStageBattleResult;
+}
+
+/** Front-liner classId in party stats (guardian or paladin slot). */
+export function resolveFrontlinerClassId(
+  classStats: DemoStageClassStatRow[],
+): ClassId | undefined {
+  for (const id of ['df_guardian', 'df_paladin'] as const) {
+    if (classStats.some((row) => row.classId === id)) {
+      return id;
+    }
+  }
+  return classStats[0]?.classId;
+}
+
+/** Phase 6c — per-composition metrics for balance triage (no data changes). */
+export function logDemoStageCompositionReport(
+  stageId: string,
+  label: string,
+  result: DemoStageBattleResult,
+): void {
+  const frontlinerId = resolveFrontlinerClassId(result.classStats);
+  const frontlinerTaken = frontlinerId
+    ? statForClass(result.classStats, frontlinerId, 'damageTaken')
+    : 0;
+
+  console.info(
+    `[demo-6c-report] ${stageId}/${label}: ` +
+      `outcome=${result.outcome} ` +
+      `survivors=${result.survivingAllies} ` +
+      `remainingHp=${result.totalRemainingHp}/${result.totalMaxHp} ` +
+      `durationSec=${result.durationSec.toFixed(1)} ` +
+      `score=${demoStageOutcomeScore(result)}`,
+  );
+
+  for (const row of result.classStats) {
+    console.info(
+      `[demo-6c-report]   ${row.classId}: ` +
+        `damageDealt=${row.damageDealt} ` +
+        `damageTaken=${row.damageTaken} ` +
+        `healingDealt=${row.healingDealt} ` +
+        `basicActionCount=${row.basicActionCount} ` +
+        `activeSkillUseCountBySkillId={${formatRecordMap(row.activeSkillUseCountBySkillId)}}`,
+    );
+  }
+
+  console.info(
+    `[demo-6c-report]   frontliner(${frontlinerId ?? 'none'}): damageTaken=${frontlinerTaken}`,
+  );
+}
+
+/** Phase 6c — baseline / bad / universal / counter side-by-side reports. */
+export function logDemoStageQuadCompositionReports(
+  stageId: string,
+  quad: DemoStageQuadResults,
+): void {
+  console.info(
+    `[demo-6c-quad] ${stageId}: baseline / bad / universal / counter comparison`,
+  );
+  logDemoStageCompositionReport(stageId, 'baseline', quad.baseline);
+  logDemoStageCompositionReport(stageId, 'bad', quad.badResult);
+  logDemoStageCompositionReport(stageId, 'universal', quad.universalResult);
+  logDemoStageCompositionReport(stageId, 'counter', quad.counterResult);
+
+  console.info(
+    `[demo-6c-quad] ${stageId} summary: ` +
+      `baseline=${quad.baseline.outcome}(hp=${quad.baseline.totalRemainingHp}) ` +
+      `bad=${quad.badResult.outcome}(hp=${quad.badResult.totalRemainingHp}) ` +
+      `universal=${quad.universalResult.outcome}(hp=${quad.universalResult.totalRemainingHp}) ` +
+      `counter=${quad.counterResult.outcome}(hp=${quad.counterResult.totalRemainingHp})`,
+  );
+}
+
 export function logDemoStageClassDiagnostics(
   stageId: string,
   label: string,
@@ -800,6 +877,306 @@ export function logRangerSorcererComparison(
   );
   console.info(
     `[demo-puzzle-compare]   delta=${delta >= 0 ? '+' : ''}${delta} (${ratio}% of ranger)`,
+  );
+}
+
+/** Phase 6c — demo_ch1_04 healer puzzle ripple after Ranger contact-cap fix. */
+export function logDemoCh1_04HealerPuzzleDiagnostics(
+  quad: DemoStageQuadResults,
+): void {
+  const stageId = 'demo_ch1_04';
+  const withHealer = quad.baseline;
+  const withoutHealer = quad.badResult;
+
+  console.info(
+    `[demo-ch1_04-diag] ${stageId} healer puzzle ripple (Ranger contact-cap fix):`,
+  );
+  console.info(
+    `[demo-ch1_04-diag]   withHealer(baseline): ${withHealer.outcome} ` +
+      `score=${demoStageOutcomeScore(withHealer)} ` +
+      `remainingHp=${withHealer.totalRemainingHp}/${withHealer.totalMaxHp} ` +
+      `durationSec=${withHealer.durationSec.toFixed(1)}`,
+  );
+  console.info(
+    `[demo-ch1_04-diag]   noHealer(bad): ${withoutHealer.outcome} ` +
+      `score=${demoStageOutcomeScore(withoutHealer)} ` +
+      `remainingHp=${withoutHealer.totalRemainingHp}/${withoutHealer.totalMaxHp} ` +
+      `durationSec=${withoutHealer.durationSec.toFixed(1)}`,
+  );
+
+  for (const [label, result] of [
+    ['withHealer', withHealer],
+    ['noHealer', withoutHealer],
+  ] as const) {
+    const ranger = classStatRow(result.classStats, 'at_ranger');
+    const cleric = classStatRow(result.classStats, 'sp_cleric');
+    const guardian = classStatRow(result.classStats, 'df_guardian');
+    console.info(
+      `[demo-ch1_04-diag]   ${label} at_ranger: ` +
+        `damageDealt=${ranger?.damageDealt ?? 0} ` +
+        `basicActionCount=${ranger?.basicActionCount ?? 0} ` +
+        `firstBasicSec=${formatOptionalSec(ranger?.firstBasicActionSec)}`,
+    );
+    console.info(
+      `[demo-ch1_04-diag]   ${label} sp_cleric: healingDealt=${cleric?.healingDealt ?? 0}`,
+    );
+    console.info(
+      `[demo-ch1_04-diag]   ${label} df_guardian: damageTaken=${guardian?.damageTaken ?? 0}`,
+    );
+  }
+
+  const rangerDelta =
+    statForClass(withoutHealer.classStats, 'at_ranger', 'damageDealt') -
+    statForClass(withHealer.classStats, 'at_ranger', 'damageDealt');
+  const clericHeal = statForClass(withHealer.classStats, 'sp_cleric', 'healingDealt');
+  const durationDelta = withoutHealer.durationSec - withHealer.durationSec;
+  const guardianTakenDelta =
+    statForClass(withoutHealer.classStats, 'df_guardian', 'damageTaken') -
+    statForClass(withHealer.classStats, 'df_guardian', 'damageTaken');
+
+  console.info(
+    `[demo-ch1_04-diag]   duration delta (noHealer - withHealer)=${durationDelta >= 0 ? '+' : ''}${durationDelta.toFixed(1)}s; ` +
+      `guardian damageTaken delta=${guardianTakenDelta >= 0 ? '+' : ''}${guardianTakenDelta}`,
+  );
+  console.info(
+    `[demo-ch1_04-diag]   ranger damage delta (noHealer - withHealer)=${rangerDelta >= 0 ? '+' : ''}${rangerDelta}; ` +
+      `cleric healingDealt=${clericHeal}. ` +
+      `Both win → puzzle gap is stage sustain vs Ranger DPS; cleric heal=${clericHeal} mainly buys guardian HP (taken delta ${guardianTakenDelta}).`,
+  );
+  console.info(
+    `[demo-ch1_04-diag]   universal=${quad.universalResult.outcome}(hp=${quad.universalResult.totalRemainingHp}, ` +
+      `durationSec=${quad.universalResult.durationSec.toFixed(1)}); ` +
+      `counter=${quad.counterResult.outcome}(hp=${quad.counterResult.totalRemainingHp})`,
+  );
+}
+
+/** Phase 6c — demo_ch1_05 bad outcome score ≥ baseline (assassin swap ripple). */
+export function logDemoCh1_05BadBaselineDiagnostics(
+  quad: DemoStageQuadResults,
+): void {
+  const stageId = 'demo_ch1_05';
+  const { baseline, badResult, universalResult, counterResult } = quad;
+
+  const baselineScore = demoStageOutcomeScore(baseline);
+  const badScore = demoStageOutcomeScore(badResult);
+  const durationDelta = badResult.durationSec - baseline.durationSec;
+  const assassinDealt = statForClass(badResult.classStats, 'at_assassin', 'damageDealt');
+  const clericHeal = statForClass(baseline.classStats, 'sp_cleric', 'healingDealt');
+  const guardianBaselineTaken = statForClass(
+    baseline.classStats,
+    'df_guardian',
+    'damageTaken',
+  );
+  const guardianBadTaken = statForClass(
+    badResult.classStats,
+    'df_guardian',
+    'damageTaken',
+  );
+  const rangerBaselineDealt = statForClass(
+    baseline.classStats,
+    'at_ranger',
+    'damageDealt',
+  );
+  const rangerBadDealt = statForClass(badResult.classStats, 'at_ranger', 'damageDealt');
+
+  console.info(
+    `[demo-ch1_05-diag] ${stageId} bad vs baseline ripple (puzzle test skipBadVsBaseline=true):`,
+  );
+  console.info(
+    `[demo-ch1_05-diag]   outcome score: baseline=${baselineScore} bad=${badScore} ` +
+      `(delta=${badScore - baselineScore >= 0 ? '+' : ''}${badScore - baselineScore})`,
+  );
+  console.info(
+    `[demo-ch1_05-diag]   durationSec: baseline=${baseline.durationSec.toFixed(1)} ` +
+      `bad=${badResult.durationSec.toFixed(1)} delta=${durationDelta >= 0 ? '+' : ''}${durationDelta.toFixed(1)}`,
+  );
+  console.info(
+    `[demo-ch1_05-diag]   healer swap: baseline sp_cleric healingDealt=${clericHeal}; ` +
+      `bad at_assassin damageDealt=${assassinDealt} ` +
+      `activeSkillUse={${formatRecordMap(classStatRow(badResult.classStats, 'at_assassin')?.activeSkillUseCountBySkillId ?? {})}}`,
+  );
+  console.info(
+    `[demo-ch1_05-diag]   df_guardian damageTaken: baseline=${guardianBaselineTaken} ` +
+      `bad=${guardianBadTaken} delta=${guardianBadTaken - guardianBaselineTaken >= 0 ? '+' : ''}${guardianBadTaken - guardianBaselineTaken}`,
+  );
+  console.info(
+    `[demo-ch1_05-diag]   at_ranger damageDealt: baseline=${rangerBaselineDealt} bad=${rangerBadDealt}`,
+  );
+  console.info(
+    `[demo-ch1_05-diag]   universal=${universalResult.outcome}(hp=${universalResult.totalRemainingHp}); ` +
+      `counter=${counterResult.outcome}(hp=${counterResult.totalRemainingHp}, survivors=${counterResult.survivingAllies})`,
+  );
+  console.info(
+    `[demo-ch1_05-diag]   read: assassin burst + lower guardian taken on bad may offset missing cleric heal; ` +
+      `6c candidate = raise enemy pressure so no-healer cannot match baseline score.`,
+  );
+}
+
+/** Phase 6c — demo_ch1_06 bad victory vs counter (puzzle gap). */
+export function logDemoCh1_06BadCounterDiagnostics(
+  quad: DemoStageQuadResults,
+): void {
+  const stageId = 'demo_ch1_06';
+  const { baseline, badResult, universalResult, counterResult } = quad;
+
+  const badScore = demoStageOutcomeScore(badResult);
+  const counterScore = demoStageOutcomeScore(counterResult);
+  const guardianBaselineTaken = statForClass(
+    baseline.classStats,
+    'df_guardian',
+    'damageTaken',
+  );
+  const guardianBadTaken = statForClass(
+    badResult.classStats,
+    'df_guardian',
+    'damageTaken',
+  );
+  const paladinCounterTaken = statForClass(
+    counterResult.classStats,
+    'df_paladin',
+    'damageTaken',
+  );
+  const assassinBadDealt = statForClass(badResult.classStats, 'at_assassin', 'damageDealt');
+  const clericBaselineHeal = statForClass(
+    baseline.classStats,
+    'sp_cleric',
+    'healingDealt',
+  );
+
+  console.info(
+    `[demo-ch1_06-diag] ${stageId} bad victory puzzle gap (bad vs counter):`,
+  );
+  console.info(
+    `[demo-ch1_06-diag]   outcome: baseline=${baseline.outcome}(hp=${baseline.totalRemainingHp}) ` +
+      `bad=${badResult.outcome}(hp=${badResult.totalRemainingHp}, survivors=${badResult.survivingAllies}) ` +
+      `counter=${counterResult.outcome}(hp=${counterResult.totalRemainingHp}) ` +
+      `universal=${universalResult.outcome}(hp=${universalResult.totalRemainingHp})`,
+  );
+  console.info(
+    `[demo-ch1_06-diag]   score: bad=${badScore} counter=${counterScore} delta=${counterScore - badScore >= 0 ? '+' : ''}${counterScore - badScore}`,
+  );
+  console.info(
+    `[demo-ch1_06-diag]   durationSec: bad=${badResult.durationSec.toFixed(1)} ` +
+      `counter=${counterResult.durationSec.toFixed(1)} baseline=${baseline.durationSec.toFixed(1)}`,
+  );
+  console.info(
+    `[demo-ch1_06-diag]   frontline damageTaken: guardian baseline=${guardianBaselineTaken} ` +
+      `bad=${guardianBadTaken}; paladin counter=${paladinCounterTaken}`,
+  );
+  console.info(
+    `[demo-ch1_06-diag]   bad at_assassin damageDealt=${assassinBadDealt}; ` +
+      `baseline sp_cleric healingDealt=${clericBaselineHeal}`,
+  );
+  console.info(
+    `[demo-ch1_06-diag]   read: bad wins with fewer survivors/HP → puzzle is soft if no-healer still clears; ` +
+      `counter paladin improves margin (score delta ${counterScore - badScore}). ` +
+      `6c candidate = raise stage pressure until bad=defeat while counter stays victory.`,
+  );
+}
+
+/** Phase 6c — demo_ch1_07 finale exam margin (baseline too comfortable). */
+export function logDemoCh1_07FinaleDiagnostics(
+  quad: DemoStageQuadResults,
+): void {
+  const stageId = 'demo_ch1_07';
+  const { baseline, badResult, universalResult, counterResult } = quad;
+
+  const baselineHpPct =
+    baseline.totalMaxHp > 0
+      ? ((baseline.totalRemainingHp / baseline.totalMaxHp) * 100).toFixed(0)
+      : 'n/a';
+  const topBaselineDps = [...baseline.classStats].sort(
+    (a, b) => b.damageDealt - a.damageDealt,
+  )[0];
+  const baselineGuardianTaken = statForClass(
+    baseline.classStats,
+    'df_guardian',
+    'damageTaken',
+  );
+  const counterPaladinTaken = statForClass(
+    counterResult.classStats,
+    'df_paladin',
+    'damageTaken',
+  );
+  const baselineRangerDealt = statForClass(
+    baseline.classStats,
+    'at_ranger',
+    'damageDealt',
+  );
+  const counterRangerDealt = statForClass(
+    counterResult.classStats,
+    'at_ranger',
+    'damageDealt',
+  );
+  const universalSorcerer = classStatRow(universalResult.classStats, 'at_sorcerer');
+  const baselineClericHeal = statForClass(
+    baseline.classStats,
+    'sp_cleric',
+    'healingDealt',
+  );
+
+  console.info(
+    `[demo-ch1_07-diag] ${stageId} finale exam (counter uses demo-unlocked classes; enemy at_ballista pre-unlock):`,
+  );
+  console.info(
+    `[demo-ch1_07-diag]   design target: default/bad/universal=defeat; baseline=defeat|marginal victory; counter=victory`,
+  );
+  console.info(
+    `[demo-ch1_07-diag]   actual: baseline=${baseline.outcome}(hp=${baseline.totalRemainingHp}/${baseline.totalMaxHp} ${baselineHpPct}%, survivors=${baseline.survivingAllies}) ` +
+      `bad=${badResult.outcome} universal=${universalResult.outcome} counter=${counterResult.outcome}(hp=${counterResult.totalRemainingHp})`,
+  );
+  console.info(
+    `[demo-ch1_07-diag]   durationSec: baseline=${baseline.durationSec.toFixed(1)} ` +
+      `counter=${counterResult.durationSec.toFixed(1)} bad=${badResult.durationSec.toFixed(1)} ` +
+      `universal=${universalResult.durationSec.toFixed(1)}`,
+  );
+  console.info(
+    `[demo-ch1_07-diag]   baseline main DPS: ${topBaselineDps?.classId ?? 'none'} ` +
+      `damageDealt=${topBaselineDps?.damageDealt ?? 0} ` +
+      `at_ranger=${baselineRangerDealt}`,
+  );
+  console.info(
+    `[demo-ch1_07-diag]   baseline df_guardian damageTaken=${baselineGuardianTaken}; ` +
+      `sp_cleric healingDealt=${baselineClericHeal}; ` +
+      `counter df_paladin damageTaken=${counterPaladinTaken}`,
+  );
+  console.info(
+    `[demo-ch1_07-diag]   counter vs baseline ranger damageDealt: ${counterRangerDealt} vs ${baselineRangerDealt}; ` +
+      `counter finishes faster=${counterResult.durationSec < baseline.durationSec}`,
+  );
+  console.info(
+    `[demo-ch1_07-diag]   universal defeat: at_sorcerer damageDealt=${universalSorcerer?.damageDealt ?? 0} ` +
+      `damageTaken=${universalSorcerer?.damageTaken ?? 0} ` +
+      `durationSec=${universalResult.durationSec.toFixed(1)} — AoE lacks single-target burst vs Lv2 6-enemy wall`,
+  );
+
+  const enemyDurabilitySignal =
+    baseline.durationSec > counterResult.durationSec * 1.5;
+  const enemyFirepowerSignal =
+    badResult.outcome === 'defeat' && badResult.durationSec < baseline.durationSec * 0.5;
+
+  console.info(
+    `[demo-ch1_07-diag]   enemy pressure read: ` +
+      `durability-limited=${enemyDurabilitySignal} (long baseline ${baseline.durationSec.toFixed(0)}s); ` +
+      `firepower-adequate=${enemyFirepowerSignal || badResult.outcome === 'defeat'} (bad wipes in ${badResult.durationSec.toFixed(0)}s)`,
+  );
+
+  console.info(`[demo-ch1_07-diag]   6c adjustment direction hints (not implemented):`);
+  if (
+    baseline.outcome === 'victory' &&
+    baseline.totalRemainingHp > baseline.totalMaxHp * 0.4
+  ) {
+    console.info(
+      `[demo-ch1_07-diag]     - baseline margin high (${baselineHpPct}% HP) → raise enemy atkScale/hpScale or reduce enemy def/res softening`,
+    );
+  }
+  if (counterResult.outcome === 'victory' && baseline.outcome === 'victory') {
+    console.info(
+      `[demo-ch1_07-diag]     - counter faster/shorter (${counterResult.durationSec.toFixed(0)}s vs ${baseline.durationSec.toFixed(0)}s) → tune baseline down without breaking paladin counter`,
+    );
+  }
+  console.info(
+    `[demo-ch1_07-diag]     - keep counter=paladin (demo M1 class); do NOT require at_ballista player side`,
   );
 }
 
