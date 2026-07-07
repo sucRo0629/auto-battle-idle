@@ -1110,6 +1110,36 @@ export function logDemoCh1_04HealerPuzzleDiagnostics(
   );
 }
 
+/** Phase 6c P2 — demo_ch1_02 backline/ranged processing puzzle. */
+export function logDemoCh1_02BacklineDiagnostics(
+  quad: DemoStageQuadResults,
+): void {
+  const stageId = 'demo_ch1_02';
+  const { baseline, badResult, universalResult, counterResult } = quad;
+  const rangerDealt = statForClass(baseline.classStats, 'at_ranger', 'damageDealt');
+  const clericHeal = statForClass(baseline.classStats, 'sp_cleric', 'healingDealt');
+  const durationRatio = counterResult.durationSec / baseline.durationSec;
+
+  console.info(`[demo-ch1_02-diag] ${stageId} backline processing puzzle:`);
+  console.info(
+    `[demo-ch1_02-diag]   baseline ranger: damageDealt=${rangerDealt} cleric healingDealt=${clericHeal} ` +
+      `durationSec=${baseline.durationSec.toFixed(1)} hp=${baseline.totalRemainingHp}/${baseline.totalMaxHp}`,
+  );
+  console.info(
+    `[demo-ch1_02-diag]   counter sorcerer: durationSec=${counterResult.durationSec.toFixed(1)} ` +
+      `hp=${counterResult.totalRemainingHp}/${counterResult.totalMaxHp} ` +
+      `ratio=${durationRatio.toFixed(2)}x baseline duration`,
+  );
+  console.info(
+    `[demo-ch1_02-diag]   bad=${badResult.outcome}(hp=${badResult.totalRemainingHp}); ` +
+      `universal=${universalResult.outcome}(hp=${universalResult.totalRemainingHp})`,
+  );
+  console.info(
+    `[demo-ch1_02-diag]   read: ranger BACKLINE_OK but slow grind; sorcerer AoE ~3x faster with HP trade-off. ` +
+      `Not default-answer — counter/universal duration advantage is the puzzle axis.`,
+  );
+}
+
 /** Phase 6c — demo_ch1_05 bad outcome score ≥ baseline (assassin swap ripple). */
 export function logDemoCh1_05BadBaselineDiagnostics(
   quad: DemoStageQuadResults,
@@ -1167,8 +1197,9 @@ export function logDemoCh1_05BadBaselineDiagnostics(
       `counter=${counterResult.outcome}(hp=${counterResult.totalRemainingHp}, survivors=${counterResult.survivingAllies})`,
   );
   console.info(
-    `[demo-ch1_05-diag]   read: assassin burst + lower guardian taken on bad may offset missing cleric heal; ` +
-      `6c candidate = raise enemy pressure so no-healer cannot match baseline score.`,
+    `[demo-ch1_05-diag]   read: puzzle counter = paladin sustain (4→3 survivors, higher HP). ` +
+      `Bad no-healer must defeat — short fight + enemy burst made cleric mandatory. ` +
+      `Assassin spotlight = ranger-slot experience (formationHintJa), not puzzle counter.`,
   );
 }
 

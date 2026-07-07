@@ -94,7 +94,7 @@ class coverage diagnostics でも **全 15 クラスの完全網羅は求めな�
 
 - ch1_01〜03: bad = no guardian、counter = paladin / ranged counter / double melee
 - ch1_04: bad = no healer（assassin 差し替え）、counter = paladin
-- ch1_05: bad = no healer、counter = paladin（`skipBadVsBaseline`: Ranger contact-cap 以降 bad が baseline 以上になり得る）
+- ch1_05: bad = no healer、counter = paladin（`badMustDefeat` — §36 P2 で no-healer defeat 安定化）
 - ch1_06: bad = no healer、counter = paladin（`requireCounterVictory`）
 - ch1_07: bad = no healer、counter = paladin（finale: baseline / bad / universal は defeat、counter のみ victory）
 
@@ -453,8 +453,8 @@ resolveApproachBattleX
 | ch1_07 ranger | `primaryTarget=at_ballista`、`BACKLINE_OK`（弩砲士は弓術士 priority に残る） |
 | ch1_07 bad assassin | `priorityTargetDamageShare=100%`（§16 時 0% から改善 — support 処理がログで見える） |
 | ch1_05 formalization | `EXPERIENCE_SPOTLIGHT_SUBSTITUTE_OK` **維持** |
-| ch1_04 / ch1_06 puzzle 意図 | **§35 P1 再調整済み** — ch1_04 no-healer defeat 安定、ch1_06 bad=defeat + universal 低 HP 勝利。full puzzle 一括 pass |
-| 数値調整 | **不要**（Phase 7 で ch1_05 編成ヒント） |
+| ch1_04 / ch1_06 puzzle 意図 | **§35 P1 再調整済み** — ch1_04 no-healer defeat 安定、ch1_06 bad=defeat + universal 低 HP 勝利 |
+| ch1_02 / ch1_05 puzzle 意図 | **§36 P2 再調整済み** — ch1_02 後衛処理（ranger 遅延 vs sorcerer 速攻）、ch1_05 paladin counter + bad defeat |
 
 ---
 

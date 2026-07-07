@@ -36,17 +36,17 @@
         "classId": "df_guardian",
         "count": 1,
         "hpScale": 1.15,
-        "atkScale": 1.0,
+        "atkScale": 1.3,
         "defScale": 1.1,
-        "resScale": 1.0
+        "resScale": 1.07
       },
       {
         "classId": "at_ranger",
         "count": 3,
         "hpScale": 1.0,
-        "atkScale": 1.2,
+        "atkScale": 1.72,
         "defScale": 1.0,
-        "resScale": 1.0
+        "resScale": 1.34
       }
     ],
     "waves": [
@@ -129,15 +129,15 @@
         "classId": "at_sorcerer",
         "count": 2,
         "hpScale": 1.05,
-        "atkScale": 1.25,
+        "atkScale": 1.52,
         "defScale": 1.0,
-        "resScale": 1.0
+        "resScale": 1.18
       },
       {
         "classId": "at_assassin",
         "count": 2,
         "hpScale": 1.0,
-        "atkScale": 1.2,
+        "atkScale": 1.48,
         "defScale": 1.0,
         "resScale": 1.0
       }

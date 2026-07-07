@@ -14,6 +14,7 @@ import {
   createDemoStageGameData,
   demoStageOutcomeScore,
   logDemoStageClassDiagnostics,
+  logDemoCh1_02BacklineDiagnostics,
   logDemoCh1_04HealerPuzzleDiagnostics,
   logDemoCh1_05BadBaselineDiagnostics,
   logDemoCh1_06BadCounterDiagnostics,
@@ -74,6 +75,9 @@ function emit6cStageDiagnostics(
 ): void {
   logDemoStageQuadCompositionReports(stageId, quad);
   switch (stageId) {
+    case 'demo_ch1_02':
+      logDemoCh1_02BacklineDiagnostics(quad);
+      break;
     case 'demo_ch1_04':
       logDemoCh1_04HealerPuzzleDiagnostics(quad);
       break;
@@ -184,6 +188,7 @@ const STAGE_PUZZLES: StagePuzzleSpec[] = [
     bad: configureNoGuardianParty,
     counter: configureRangedCounterParty,
     rangerTargetDiagnostics: true,
+    sixCDiagnostics: true,
   },
   {
     stageId: 'demo_ch1_03',
@@ -195,7 +200,7 @@ const STAGE_PUZZLES: StagePuzzleSpec[] = [
     stageId: 'demo_ch1_05',
     bad: configureNoHealerParty,
     counter: configurePaladinTankParty,
-    // Post Ranger contact-cap: no-healer (assassin swap) can beat baseline on outcome score.
+    badMustDefeat: true,
     skipBadVsBaseline: true,
     sixCDiagnostics: true,
     rangerTargetDiagnostics: true,
@@ -418,6 +423,47 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
     expect(sorcererUniversal!.attackCount).toBeGreaterThanOrEqual(0);
     expect(rangerBaseline!.skillUseCount).toBeGreaterThanOrEqual(0);
     expect(sorcererUniversal!.skillUseCount).toBeGreaterThanOrEqual(0);
+  });
+
+  it('demo_ch1_02: ranger backline grind; sorcerer counter clears faster (6c backline puzzle)', () => {
+    const quad = runCompositionQuad(
+      'demo_ch1_02',
+      gameData,
+      configureNoGuardianParty,
+      configureRangedCounterParty,
+      { rangerTargetDiagnostics: true, sixCDiagnostics: true },
+    );
+    const { baseline, badResult, universalResult, counterResult } = quad;
+
+    expect(baseline.outcome).toBe('victory');
+    expect(badResult.outcome).toBe('defeat');
+    expect(counterResult.outcome).toBe('victory');
+    expect(universalResult.outcome).toBe('victory');
+    expect(baseline.durationSec).toBeGreaterThan(100);
+    expect(counterResult.durationSec).toBeLessThan(baseline.durationSec * 0.45);
+    expect(counterResult.totalRemainingHp).toBeLessThan(baseline.totalRemainingHp);
+  });
+
+  it('demo_ch1_05: paladin counter sustain; bad no-healer loses (assassin spotlight separate)', () => {
+    const quad = runCompositionQuad(
+      'demo_ch1_05',
+      gameData,
+      configureNoHealerParty,
+      configurePaladinTankParty,
+      { sixCDiagnostics: true, rangerTargetDiagnostics: true },
+    );
+    const { baseline, badResult, universalResult, counterResult } = quad;
+
+    expect(baseline.outcome).toBe('victory');
+    expect(baseline.survivingAllies).toBeLessThanOrEqual(2);
+    expect(baseline.totalRemainingHp).toBeLessThanOrEqual(200);
+    expect(badResult.outcome).toBe('defeat');
+    expect(universalResult.outcome).toBe('defeat');
+    expect(counterResult.outcome).toBe('victory');
+    expect(counterResult.survivingAllies).toBeGreaterThanOrEqual(3);
+    expect(demoStageOutcomeScore(counterResult)).toBeGreaterThan(
+      demoStageOutcomeScore(baseline),
+    );
   });
 
   it('demo_ch1_02: ranged-counter party does not fare worse than standard on remaining HP', () => {

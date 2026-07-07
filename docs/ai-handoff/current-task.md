@@ -757,7 +757,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **7c トップ / 7f リザルト / 7h 体験版終了**（§30 残タスク）。並行で **グラフィック準備** 可
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: **§35 P1** — `demo_ch1_04` / `demo_ch1_06` scale 再調整（§34 棚卸し受け）。ch1_01 のみ default-answer。§14/§15 は履歴
+- **6c 進行**: **§36 P2** — `demo_ch1_02` / `demo_ch1_05` scale 再調整（§35 P1 受け）。ch1_01 のみ default-answer。§14/§15/§35 は履歴
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -1968,4 +1968,77 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | コマンド | 結果 |
 | -------- | ---- |
 | `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **9 passed** |
+| `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |
+
+## 36. demo_ch1_02 / demo_ch1_05 — §34 P2 scale 再調整（2026-07-08）
+
+**§34 棚卸し・§35 P1 受けの P2**。`enemyGroups` scale のみ。class 数値・UI・save・他 stage 未変更。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本・§34/§35 |
+| 2 | `data/stages-demo.json` | ch1_02 / ch1_05 enemyGroups |
+| 3 | `src/battle/demoStageBalance.puzzle.test.ts` | puzzle 期待値 |
+| 4 | `src/battle/test/demoStageSim.harness.ts` | 診断 harness |
+| 5 | `docs/dev/balance-diagnostics.md` | 診断方針 |
+| 6 | `src/battle/demoStageBalance.smoke.test.ts` | smoke 回帰 |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `data/stages-demo.json` | ch1_02 / ch1_05 の `enemyGroups` scale 微調整（下表） |
+| `demoStageBalance.puzzle.test.ts` | ch1_02 後衛 puzzle / ch1_05 paladin counter 専用 assertion、ch1_05 `badMustDefeat` |
+| `demoStageSim.harness.ts` | `logDemoCh1_02BacklineDiagnostics`、ch1_05 診断 read 更新 |
+| `docs/dev/balance-diagnostics.md` | §36 P2 行追記 |
+| `docs/ai-handoff/current-task.md` | 本節 |
+
+### demo_ch1_02 scale（調整前 → 調整後）
+
+| group | 調整前 | 調整後 |
+| ----- | ------ | ------ |
+| `df_guardian` atkScale | 1.0 | **1.3** |
+| `df_guardian` resScale | 1.0 | **1.07** |
+| `at_ranger` atkScale | 1.2 | **1.72** |
+| `at_ranger` resScale | 1.0 | **1.34** |
+
+### demo_ch1_05 scale（調整前 → 調整後）
+
+| group | 調整前 | 調整後 |
+| ----- | ------ | ------ |
+| `at_sorcerer` atkScale | 1.25 | **1.52** |
+| `at_sorcerer` resScale | 1.0 | **1.18** |
+| `at_assassin` atkScale | 1.2 | **1.48** |
+
+### 調整前後（§34 診断 → §36、`BUILD_FLAVOR=demo` puzzle quad）
+
+| stage | 編成 | 調整前（§34） | 調整後（§36） |
+| ----- | ---- | ------------- | ------------- |
+| **ch1_02** | baseline | victory 670/670 @123s | victory 670/670 @~127s（満血維持・**遅延 grind**） |
+| | bad | victory 200/480 @208s | **defeat** 0/480 @~13s |
+| | universal | victory 642/642 @40s | victory **424**/642 @40s |
+| | counter | victory 642/642 @40s | victory **420**/642 @40s（**~3× 短縮**） |
+| **ch1_05** | baseline | victory 297/670 @21s（2人） | victory **110**/670 @~27s（**1人**） |
+| | bad | victory 272/680 @24s | **defeat** 0/680 @~20s |
+| | universal | defeat | **defeat** @~19s |
+| | counter | victory 546/650 @18s（4人） | victory **366**/650 @~20s（**3人**） |
+
+### 診断・判断
+
+| stage | 要点 |
+| ----- | ---- |
+| **ch1_02** | 敵 `resScale`/`atkScale` 上げで後衛が長生き＋遠隔圧力増。baseline は cleric 相殺で満血だが **127s 遅延**。sorcerer counter は **40s・HP トレードオフ** — default-answer ではない（速度で明確改善） |
+| **ch1_05** | **主題 = paladin counter puzzle**（前衛耐久＋healer で短期火力に耐える）。**assassin = experience spotlight**（`formationHintJa`・ranger slot 差し替え。puzzle counter ではない）。bad 勝利の主因は **~21s 短期決着で cleric 不要** — 敵 atk 上げで no-healer defeat 化 |
+
+### default-answer
+
+**`demo_ch1_01` のみ** — ch1_02 / ch1_05 は default-viable 以下
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **11 passed**（Vitest worker `onTaskUpdate` timeout **ノイズ 1 件**） |
 | `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |
