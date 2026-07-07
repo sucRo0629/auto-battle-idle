@@ -756,7 +756,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）** — 体験版 spotlight 候補として採用可（必須 puzzle ではない）。**M1 ターゲット優先分類診断追加済み（§19）** — healer は現行 ranged 扱い。ch1_05 数値調整は未着手
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）** — 体験版 spotlight 候補として採用可（必須 puzzle ではない）。**M1 ターゲット分類 docs 整理済み（§19・§20）** — [balance-diagnostics.md §7.5](../dev/balance-diagnostics.md) に現行 vs 設計意図を分離。**次候補:** `targetRuleOverride` / `targetSpec` で rangedDamage 整理（別 PR）。ch1_05 数値調整は未着手
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -990,6 +990,40 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 | healer / support | **`sp_cleric` / `sp_wardweaver` は ranged プールに含まれる**（role ではなく rangePx） |
 | 差が最も出る相手 | **`at_ballista`**（ranger yes / assassin 開幕 low-HP になりにくい） |
 | 次 | **docs 整理優先**。`targetRuleOverride` 変更は別 PR |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm test -- src/battle/demoStageM1TargetClassification.test.ts` | **1 passed** |
+
+## 20. M1 ターゲット分類 docs 整理（2026-07-06）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `docs/dev/balance-diagnostics.md` | §7.5 整理対象 |
+| 3 | `docs/spec/classes-and-skills.md`（参照） | P 番号・用語（実装正本は json + targetSpec） |
+| 4 | `data/classes.json`（Grep） | rangePx 正本 |
+| 5 | `src/battle/skills/targetSpec.ts` | `matchesAttackType` / `RANGED_ATTACK_MIN_PX` |
+| 6 | `src/battle/demoStageM1TargetClassification.test.ts` | 診断テスト |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `docs/dev/balance-diagnostics.md` | §7.5 を再構成 — 現行実装 vs 設計意図 vs 将来候補、classId 表、healer overlap、実装変更なし明記 |
+| `docs/ai-handoff/current-task.md` | §11 次候補更新、本節 |
+
+**触らなかった:** `targetSpec.ts` / `classes.json` / `stages-demo.json` / 戦闘ロジック / contact cap / approach / active_2 / UI
+
+### 要点
+
+- 弓術士 ranged = `rangePx >= 100`（`role` 不参照）。`sp_cleric` / `sp_wardweaver` 含む
+- 双刃士 = 全生存敵 lowest HP（P3 25% は与ダメ倍率のみ）
+- 設計仮説: support を rangedDamage から外すと弓術士・双刃士の役割分離が進む — **今回は docs のみ**
 
 ### テスト
 

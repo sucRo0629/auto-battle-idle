@@ -363,65 +363,96 @@ M1 体験版（`demo_ch1_01`〜`07`）の puzzle / 診断ログを読むとき�
 
 **関連:** クラス設計の正本は [class-philosophy.md](../class-philosophy.md) / [classes-and-skills.md](../spec/classes-and-skills.md)。本節は M1 demo 診断ログ向けの **読み方** のみを担う。
 
-### 7.5 M1 ターゲット優先分類（弓術士 vs 双刃士）
+### 7.5 M1 ターゲット優先分類（弓術士 vs 双刃士 vs 参考クラス）
 
 **出力:** `[demo-m1-target-classification]`（`demoStageM1TargetClassification.test.ts` / `m1TargetClassificationReport.ts`）
 
-**目的:** 弓術士（遠隔火力対策）と双刃士（低 HP・瀕死処理）の **実装差** と、診断ログ用 band の差を固定する。StageArchetype / クラス JSON 変更前の **読み取り専用** 表。
+**目的:** M1 範囲で、弓術士・双刃士（および ch1_07 敵ボス参考の弩砲士・剣術士）の **現行実装** と **設計意図** を分けて固定する。StageArchetype / `classes.json` / `targetSpec.ts` 変更前の **読み取り専用** 表。
 
-#### 実装（戦闘正本）
+**今回のスコープ（2026-07 docs 整理）:** 本節の追記・修正 **のみ**。`targetSpec.ts` / `classes.json` / `stages-demo.json` / contact cap / approach / active_2 条件は **触らない**。
 
-| クラス | Lv0 パッシブ | `targetRuleOverride` | 候補プール | 候補ゼロ時 |
-| ------ | ------------ | -------------------- | ---------- | ---------- |
-| **弓術士** `at_ranger` | `at_ranger_passive_2`（射手優先） | `{ kind: "attackType", ranged: true }` | 生存敵のうち **`traits.rangePx >= 100`**（`matchesAttackType` / `RANGED_ATTACK_MIN_PX`） | 通常攻撃デフォルト = **最近傍敵**（`distance.nearest`） |
-| **双刃士** `at_assassin` | `at_assassin_passive_2`（薄命狩り） | `{ kind: "stat", side: "enemy", stat: "hp", order: "lowest" }` | **全生存敵**（クラス・role フィルタなし） | 同上 |
-| **弩砲士** `at_ballista`（参考・ch1_07 敵） | `at_ballista_passive_2`（城落としの弩） | `{ kind: "stat", stat: "maxHp", order: "highest" }` | 全生存敵 | 同上 |
+#### 判定経路（現行実装の正本）
 
-**共通:** `resolveTargetSpec`（`targetSpec.ts`）— override は **候補が 1 体以上いるときのみ** 適用。`attackType` / `stat` 単体ターゲットは **プール先頭**（敵配列順。最近傍ソートではない）。
+味方通常攻撃のターゲット決定:
 
-**遠隔判定:** `role` / `formationRow` / support では **判定しない**。`rangePx >= 100` のみ（[classes-and-skills.md](../spec/classes-and-skills.md) §target.attackType と一致）。
+```text
+resolveApproachBattleX
+  → resolveUnitTargetSpec
+  → resolveTargetSpec（targetSpec.ts）
+  → matchesAttackType（attackType.ranged のとき rangePx >= RANGED_ATTACK_MIN_PX）
+```
 
-#### ヒーラー / support は遠隔扱いか
+- 正本定数: `RANGED_ATTACK_MIN_PX = 100`（`src/battle/types.ts`）。`rangePx >= 100` が遠隔帯（100 含む）。
+- `targetRuleOverride` は候補が **1 体以上** いるときのみ適用。ゼロなら通常攻撃デフォルト = **最近傍敵**（`distance.nearest`）。
+- `attackType` / `stat` 単体ターゲットは **プール先頭**（敵配列順。最近傍ソートではない）。
+- P 番号表記が [classes-and-skills.md](../spec/classes-and-skills.md) とズレる場合、**`data/classes.json` + `targetSpec.ts` を現行正本** とする。
 
-| classId | rangePx（現行 `classes.json`） | 弓術士 ranged プール | 備考 |
-| ------- | ------------------------------ | -------------------- | ---- |
-| `sp_cleric` | 110 | **はい** | `role: supporter` だが rangePx で ranged 帯 |
-| `sp_wardweaver` | 100 | **はい** | 同上 |
+#### プレイヤー側クラス — 現行実装 vs 設計意図 vs 将来候補
 
-**結論（現行）:** 療養師・結界師は **support だが弓術士の遠隔優先対象に含まれる**。設計仮説どおり「ヒーラーを遠隔扱いにしない」変更をすると、弓術士は魔術師・弓術士・弩砲士等の **遠隔火力** に寄り、双刃士は HP を削った support に **execute 寄与** が分かれやすくなる。
+| クラス | Lv0 パッシブ（実装 id） | 現行実装（候補プール） | 設計意図 | 将来候補（設計仮説・未実装） |
+| ------ | ------------------------ | ---------------------- | -------- | ---------------------------- |
+| **弓術士** `at_ranger` | `at_ranger_passive_2`（射手優先） — `targetRuleOverride: { kind: "attackType", ranged: true }` | 生存敵のうち **`traits.rangePx >= 100`**。`role: supporter` は **見ない** | **遠隔火力対策** — 後衛全般ではなく射程型 DPS / 魔法火力を優先処理 | `at_ranger` / `at_ballista` / `at_sorcerer` |
+| **双刃士** `at_assassin` | `at_assassin_passive_2`（薄命狩り） — `targetRuleOverride: { kind: "stat", stat: "hp", order: "lowest" }` | **全生存敵**から HP 最低。class / role フィルタ **なし** | **低 HP・支援・瀕死処理** — 削れた support / 後衛 / 瀕死敵の execute | `sp_cleric` / `sp_wardweaver` / wounded `at_assassin` / wounded `at_ranger` / wounded `at_sorcerer` |
+| **弩砲士** `at_ballista`（ch1_07 敵・参考） | `at_ballista_passive_2`（城落としの弩） — `stat.maxHp order highest` | 全生存敵から MaxHP 最高 | **高 MaxHP 狙い** — 硬い・厚い対象への重撃 | `at_ballista` / `df_guardian` / `df_paladin` など差分対象になりやすい |
+| **剣術士** `at_swordsman`（参考） | 通常攻撃デフォルト（最近傍）＋スキル側 DEF 参照 | パッシブ override なし — **最近傍** が基本 | **高 DEF 狙い** — 硬い前衛の処理 | `df_guardian` / `df_paladin` など |
 
-#### M1 比較 classId 分類表（2026-07 診断）
+**双刃士 P3（刈り取り）との関係:** `at_assassin_passive_3` の「対象 HP ≤ 25% maxHp」は **与ダメ倍率条件**。ターゲット選定（P2 の lowest HP）とは **別レイヤー**。
 
-| classId | 表示名 | role | rangePx | 弓術士 ranged プール | 弓術士診断 band §5 | 双刃士 low-HP プール | 双刃士診断 band §5b | 弩砲士 maxHp プール |
-| ------- | ------ | ---- | ------- | -------------------- | ------------------ | -------------------- | ------------------- | ------------------- |
-| `at_ranger` | 弓術士 | attacker | 300 | yes | yes | yes（全敵） | yes | yes |
-| `at_ballista` | 弩砲士 | attacker | 400 | yes | yes | yes（全敵） | no | yes（**優先**） |
-| `at_sorcerer` | 魔術師 | attacker | 200 | yes | yes | yes | yes | yes |
-| `sp_cleric` | 療養師 | supporter | 110 | **yes** | yes | yes | yes | yes |
-| `sp_wardweaver` | 結界師 | supporter | 100 | **yes** | yes | yes | yes | yes |
-| `at_assassin` | 双刃士 | attacker | 25 | no | no | yes | yes | yes |
-| `df_duelist` | 闘技士（M1 外） | defender | 30 | no | no | yes | no | yes |
+#### healer / support の扱い（overlap の核心）
 
-- **弓術士診断 band:** `RANGER_PRIORITY_ENEMY_CLASS_IDS` + `formationRow: back` + `rangePx >= 100`（`rangerTargetReport.ts`）。実装プールより **広い**（例: `at_sorcerer` は診断では backline だが magic 型）。
-- **双刃士診断 band:** `ASSASSIN_PRIORITY_TARGET_CLASS_IDS` — execute ログ用。実装は **全敵 lowest HP**。
+| 観点 | 現行実装 | 設計意図 |
+| ---- | -------- | -------- |
+| `sp_cleric` / `sp_wardweaver` の `role` | `supporter` | support として分類 |
+| 弓術士 ranged プール | **含まれる** — `rangePx` が 110 / 100 で `>= 100` | **遠隔火力 band からは外したい**（設計仮説） |
+| 双刃士 low-HP プール | **含まれる** — 全生存敵が候補 | 被ダメ後の **瀕死・支援処理** は双刃士側 |
+| 結果 | healer / support が **弓術士と双刃士の両方** の優先対象になりやすい | support を rangedDamage から外すと **役割分離** が進む |
 
-#### 弓術士 vs 双刃士の差が最も出る相手
+**設計仮説（未実装）:** `rangePx` を下げるより、`targetRuleOverride` / `targetSpec` 側で **rangedDamage 相当**（遠隔火力タグ）を追加・整理し、support を ranged プールから除外する方が副作用が小さい。`rangePx` 変更は接触・隊形・AI に波及するため **後回し**。
 
-| 相手 | 弓術士 | 双刃士 | 読み |
-| ---- | ------ | ------ | ---- |
-| **`at_ballista`** | ranged プール **常時** | 開幕は MaxHP 高 → **lowest HP になりにくい** | 設計仮説の **最も明確な分岐** |
-| **`sp_cleric` / `sp_wardweaver`** | ranged で **優先 band** | 被ダメ後は lowest HP 候補 | **現行は両方の対象になりやすい**（overlap） |
-| **`at_sorcerer`** | ranged yes | 削れ後 execute | 中盤以降は overlap、開幕は ranger 寄り |
-| **前衛**（`df_guardian` 等） | ranged 外 → fallback nearest | 前衛が最低 HP なら対象 | 前衛吸い込み vs 後衛 execute の典型 |
+#### M1 classId 分類表（現行実装 + 設計メモ）
 
-#### 設計仮説との差分・次アクション
+`classes.json` の `traits.rangePx` と診断テスト出力（2026-07）に基づく。**「設計上」列は仮説であり、現行コードでは未反映。**
 
-| 項目 | 現状 | 仮説 |
-| ---- | ---- | ---- |
-| 弓術士 | `attackType.ranged` = rangePx 帯 | **遠隔火力**（ranger / sorcerer / ballista）に絞る案 |
-| 双刃士 | 全敵 lowest HP + P3 25% 特効 | **低 HP・support・瀕死** — 現状と整合 |
-| support / healer | rangePx>=100 で ranged | **support タグで ranged から除外** すると役割分離が進む |
-| 実装タイミング | — | **まず本表で docs 整理**。`targetRuleOverride` / `matchesAttackType` 変更は 6c 以降の別 PR（contact cap / approach 非触） |
+| classId | 表示名 | role | rangePx | 弓術士 ranged プール（現行） | 双刃士 low-HP プール（現行） | 弩砲士 maxHp 優先（参考） | 設計上のメモ |
+| ------- | ------ | ---- | ------- | ------------------------------ | ---------------------------- | ------------------------- | ------------ |
+| `at_ranger` | 弓術士 | attacker | 300 | **yes** | yes（全敵） | yes | 弓術士・双刃士 **両方** の band。遠隔火力対策の代表 |
+| `at_ballista` | 弩砲士 | attacker | 400 | **yes** | yes だが開幕 lowest HP **になりにくい**（MaxHP 高） | **優先** | ranger vs assassin **差が最も出る** 相手 |
+| `at_sorcerer` | 魔術師 | attacker | 200 | **yes** | yes | yes | 遠隔火力。中盤以降は双刃士 overlap しやすい |
+| `sp_cleric` | 療養師 | supporter | 110 | **yes** | yes | yes | 現行 ranged yes。**設計上 support として rangedDamage から外す候補** |
+| `sp_wardweaver` | 結界師 | supporter | 100 | **yes** | yes | yes | 同上 |
+| `at_assassin` | 双刃士 | attacker | 25 | **no**（nearest fallback） | yes | yes | 弓術士 ranged 外。双刃士 execute band |
+
+**参考（M1 外）:** `df_duelist` — ranged no / assassin low-HP yes / 診断 band 外。
+
+#### 診断 band と実装プールの差（混同しない）
+
+| 種別 | 定義元 | 用途 | 実装プールとの関係 |
+| ---- | ------ | ---- | ------------------ |
+| 弓術士 **実装** ranged プール | `matchesAttackType` + `rangePx >= 100` | 戦闘正本 | — |
+| 弓術士 **診断** band §5 | `RANGER_PRIORITY_ENEMY_CLASS_IDS` + `formationRow: back` + `rangePx >= 100`（`rangerTargetReport.ts`） | `[demo-ranger-target-report]` の backline share | 実装より **広い**（classId 明示リスト + 後衛ヒューリスティック） |
+| 双刃士 **実装** low-HP プール | P2 `stat.hp order lowest` | 戦闘正本 | 全生存敵 |
+| 双刃士 **診断** band §5b | `ASSASSIN_PRIORITY_TARGET_CLASS_IDS`（`assassinRoleReport.ts`） | execute ログの priority share | 実装より **狭い**（意図 band の可視化） |
+
+#### 弓術士 vs 双刃士 — 相手別の読み方
+
+| 相手 | 弓術士（現行） | 双刃士（現行） | 設計意図での読み |
+| ---- | -------------- | -------------- | ---------------- |
+| **`at_ballista`** | ranged **常時** | 開幕 lowest HP **になりにくい** | **最も明確な分岐** — 遠隔狙い vs 厚 HP |
+| **`sp_cleric` / `sp_wardweaver`** | ranged **優先** | 被ダメ後 lowest HP 候補 | **overlap** — support を ranged から外すと分離 |
+| **`at_sorcerer`** | ranged yes | 削れ後 execute | 開幕 ranger 寄り、中盤 overlap |
+| **前衛**（`df_guardian` 等） | ranged 外 → nearest | 前衛が最低 HP なら対象 | 前衛吸い込み vs 後衛 execute |
+| **`df_guardian` / `df_paladin`** | ranged 外 | HP 次第 | 弩砲士 maxHp / 剣術士 DEF の **差分対象** になりやすい |
+
+#### 次アクション（実装は別 PR）
+
+| 項目 | 現行 | 設計仮説 | 今回 |
+| ---- | ---- | -------- | ---- |
+| 弓術士 P2 | `attackType.ranged` = `rangePx >= 100` | 遠隔**火力**（ranger / sorcerer / ballista）に絞る | **docs のみ** |
+| 双刃士 P2 | 全敵 lowest HP | 低 HP・support・瀕死 — 整合 | **docs のみ** |
+| support / healer | rangePx で ranged 含む | **rangedDamage から除外** で役割分離 | **docs のみ** |
+| コード変更 | — | `targetRuleOverride` / `targetSpec` 整理を優先。`rangePx` 変更は後回し | **未着手** |
+
+**実行例:** `npm test -- src/battle/demoStageM1TargetClassification.test.ts`
 
 ---
 
