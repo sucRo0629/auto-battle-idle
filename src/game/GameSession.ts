@@ -437,26 +437,28 @@ export class GameSession {
       return;
     }
 
-    const previousStageId = applyStageRollbackOnDefeat(
-      this.save,
-      this.gameData.stages,
-    );
-    const previousStage = getStageById(this.gameData.stages, previousStageId);
-    const previousStageName = previousStage?.displayName ?? previousStageId;
-
-    if (previousStageId === failedStageId) {
-      console.log(`[progress] Defeat at ${failedStageName} (staying)`);
-    } else {
-      this.stageDamageStats.resetForStage(previousStageId);
-      console.log(
-        `[progress] Defeat at ${failedStageName} → ${previousStageName}`,
+    if (this.verifyMode) {
+      const previousStageId = applyStageRollbackOnDefeat(
+        this.save,
+        this.gameData.stages,
       );
+      const previousStage = getStageById(this.gameData.stages, previousStageId);
+      const previousStageName = previousStage?.displayName ?? previousStageId;
+
+      if (previousStageId === failedStageId) {
+        console.log(`[progress] Defeat at ${failedStageName} (staying)`);
+      } else {
+        this.stageDamageStats.resetForStage(previousStageId);
+        console.log(
+          `[progress] Defeat at ${failedStageName} → ${previousStageName}`,
+        );
+      }
+      return;
     }
 
-    if (!this.verifyMode) {
-      this.engine.restartBattle();
-      this.menuHost.open('party');
-    }
+    console.log(`[progress] Defeat at ${failedStageName} (retry)`);
+    this.engine.restartBattle();
+    this.menuHost.open('party');
   }
 
   private handleVictory(survivingPartyIndices: number[]): void {

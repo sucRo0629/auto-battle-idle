@@ -193,7 +193,7 @@ describe('GameSession map → party → battle wire', () => {
     expect(session.getSaveState().stageProgress.currentStageId).toBe(initialStageId);
   });
 
-  it('verify OFF defeat opens formation with rolled-back currentStageId', () => {
+  it('verify OFF defeat opens formation with same currentStageId', () => {
     setVerifyModeEnabled(false);
     session = createSession();
     const gameData = tryLoadGameData();
@@ -218,7 +218,7 @@ describe('GameSession map → party → battle wire', () => {
 
     triggerDefeat(session);
 
-    expect(session.getSaveState().stageProgress.currentStageId).toBe(firstStage.id);
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(secondStage.id);
     expect(session.getCurrentScreen()).toBe('formation');
     expect(
       container.querySelector('.skill-menu-return-to-battle-button'),

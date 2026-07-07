@@ -756,7 +756,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **7c トップ / 7f リザルト / 7h 体験版終了**（§30 残タスク）。並行で **グラフィック準備** 可
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**。**verify OFF first-play guidance 最小実装済み（§29）**。**Phase 7d〜7g 導線棚卸し・main flow 成立確認済み（§30）**
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**。**verify OFF first-play guidance 最小実装済み（§29）**。**Phase 7d〜7g 導線棚卸し・main flow 成立確認済み（§30）**。**verify OFF 敗北 rollback 停止・`currentStageId` 棚卸し済み（§32）**
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -1478,13 +1478,13 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | 勝利後 | **battle 維持**。`applyVictoryRewards` で `currentStageId` 進行。`respawnAfterEnd` 経路維持 |
 | 編成 | map 不要で `openPartyMenu()` → formation → battle。**壊れていない** |
 
-### 敗北時の現状（§31 で verify OFF formation 復帰追加）
+### 敗北時の現状（§31 formation 復帰 → §32 で verify OFF rollback 停止）
 
 | 項目 | 内容 |
 | ---- | ---- |
-| verify OFF | **formation 復帰** — `handleDefeat` 末尾で `restartBattle` + `menuHost.open('party')`。自動再戦なし（`engine.tick` 停止） |
+| verify OFF | **formation 復帰** — `restartBattle` + `menuHost.open('party')`。**`currentStageId` は維持**（§32）。自動再戦なし |
 | verify ON | **battle 維持** + `respawnAfterEnd`（~3 秒後 `reloadBattlefield`）— 従来どおり |
-| 進行 | `applyStageRollbackOnDefeat` — 先頭 stage 以外は 1 つ前へ rollback。先頭は stay。**formation / 再戦の stage は rollback 後** |
+| 進行 | **verify ON のみ** `applyStageRollbackOnDefeat`（先頭 stay / それ以外 1 つ前）。verify loop 時は rollback なし |
 | 未実装 | 敗北リザルト UI・map 復帰・retry ボタン |
 
 ### 残タスク（Phase 7 以降・今回やらない範囲）
@@ -1543,16 +1543,17 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | verify ON | battle 維持。`engine.tick` 継続 → ~3 秒後 `respawnAfterEnd` |
 | verify OFF | `restartBattle`（rollback 後 stage で battlefield 再構築）→ formation。tick 停止のため自動再戦なし |
 
-### rollback 後 `currentStageId`
+### rollback 後 `currentStageId`（§32 で verify OFF は rollback 廃止）
 
-| ケース | rollback 後 id | formation / 再戦で使う stage |
-| ------ | -------------- | ---------------------------- |
-| 先頭 stage 敗北 | **同 id**（stay） | 敗北した stage のまま |
-| 2 番目以降敗北 | **1 つ前** | rollback 後（従来 auto-respawn と同じ） |
+| モード | 敗北後 id | formation / 再戦 stage |
+| ------ | --------- | ---------------------- |
+| verify OFF | **敗北 stage と同じ** | 同 stage で再挑戦 |
+| verify ON（通常） | 先頭 stay / それ以外 1 つ前 | rollback 後 + `respawnAfterEnd` |
+| verify ON（loop 固定） | **変更なし** | loop stage のまま |
 
 ### 実装判断
 
-**実装した** — `handleVictory` の verify OFF map 復帰と同型。`BattleEngine` 変更不要。rollback 後 stage で `restartBattle` するため既存 progression と整合。
+**§31:** formation 復帰を実装。**§32:** verify OFF の rollback を停止（本タスク）。
 
 ### テスト
 
@@ -1560,3 +1561,128 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | -------- | ---- |
 | `gameSessionWire.test.ts` | **8 passed** |
 | `stageSelectionWire.test.ts` | **4 passed** |
+
+## 32. currentStageId / stageProgress 棚卸し — ステージ選択型フロー再設計案（2026-07-08）
+
+**前提修正:** Hensei-Only は一本道クリア型ではなく、**ステージを選び編成相性を見て挑戦・再挑戦するゲーム**。`currentStageId` を「進行上の現在ステージ」として勝利で次へ・敗北で前へ、という Phase 2 レガシー前提は見直し対象。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本 |
+| 2 | `src/game/GameSession.ts` | sortie / 勝敗 / verify 分岐 |
+| 3 | `src/progression/stageProgression.ts` | next / previous / rollback |
+| 4 | `src/progression/victoryRewards.ts` | 初期化・勝利時進行 |
+| 5 | `src/save/SaveManager.ts` | save 読書 |
+| 6 | `src/game/gameSessionWire.test.ts` | wire 回帰 |
+
+### 変更（今回の最小実装）
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/GameSession.ts` | verify OFF 敗北時 — `applyStageRollbackOnDefeat` を**呼ばない**。同 `currentStageId` のまま `restartBattle` + formation |
+| `src/game/gameSessionWire.test.ts` | 敗北テスト期待値を「rollback 後」→「同 stage 維持」に更新 |
+| `docs/ai-handoff/current-task.md` | 本節・§30/§31 敗北行更新 |
+
+**触らなかった:** save schema、`selectedStageId` 本格導入、勝利時自動進行の変更、`stages-demo.json` / クラス数値、UI 大改修、`demo_ch1_07` 体験版終了扱い
+
+### `currentStageId` 読み書き箇所（production）
+
+| 箇所 | 操作 | 役割 |
+| ---- | ---- | ---- |
+| `SaveManager.parseStageProgress` | 読 | localStorage から復元 |
+| `SaveManager.save` | 書 | persist（値は GameSession 等が更新済み） |
+| `createDefaultSave` | 書 | 新規セーブ `stages[0].id` |
+| `resolveKnownStageId` | 読→正規化 | 未知 id → `stages[0]`（flavor 不整合 fallback） |
+| `loadSaveForMode` | 読→書 | 起動時正規化 + 即 persist |
+| `handleStageSortie` | 書 | map 出撃で選択 stage を反映 |
+| `applyVictoryRewards` | 読→書 | クリア stage 読取 → `getNextStageId` で次 id |
+| `applyStageRollbackOnDefeat` | 読→書 | **verify ON 敗北のみ**（`GameSession.handleDefeat` 経由） |
+| `GameSession` ctor / `setVerifyMode` | 書 | verify loop stage ピン留め時 |
+| `setLoopStage` | 書 | Debug 周回ステージ選択 |
+| `handleVictory` | 読 | クリア stage ログ・EXP。`resolveVictoryNextStageId` で loop 上書き可 |
+| `BattleEngine` コールバック `() => currentStageId` | 読 | 戦闘中の敵生成・wave |
+| `StageSelectionScreenHost` | 読 | map 一覧の選択ハイライト・`initialStageId` |
+| `BattleView` | 読 | HUD ステージ名。`getNextStageId` は Debug 表示用 |
+
+テスト・harness では多数の fixture 書き込みあり（本節では省略）。
+
+### `currentStageId` が兼ねている意味 — 分類
+
+| 意味 | 現状 | 該当経路 |
+| ---- | ---- | -------- |
+| **map で選択中** | **兼用** | sortie 前は前回値／勝利後は自動進行した「次」がハイライト。ユーザーが別 stage をクリックするまで sortie 対象と一致しない場合あり |
+| **次に戦う stage** | **兼用** | sortie 後〜次 sortie まで同一フィールド |
+| **戦闘中の stage** | **兼用** | `BattleEngine` が save 上の `currentStageId` を直接参照。セッション専用 `battleStageId` なし |
+| **勝利後に進む stage** | **兼用** | `applyVictoryRewards` が即 `getNextStageId` で上書き。map 復帰時にその id が選択表示される |
+| **敗北 rollback 先** | **verify ON のみ** | `applyStageRollbackOnDefeat`。**verify OFF は維持**（§32 実装） |
+| **Debug loop 用** | **兼用** | `loopStageId` 非 null 時は `setLoopStage` / 勝利 `resolveVictoryNextStageId` が `currentStageId` をピン留め |
+
+**多義性の核心:** 1 フィールドが「プレイヤー選択」「戦闘実体」「レガシー自動進行」「Debug ピン」を同時に表す。
+
+### 勝利時 `currentStageId` 自動進行
+
+| 項目 | 現状 | ステージ選択型への方向 |
+| ---- | ---- | ---------------------- |
+| `applyVictoryRewards` | クリア直後に `getNextStageId` で **必ず次 id へ**（最終 stage は同 id 周回） | **将来:** クリア記録（`clearedStageIds` / `stageRecords`）のみ更新。**`currentStageId` は変えない**か、map でユーザーが選んだ id のみ更新 |
+| verify OFF map 復帰 | 勝利後 map へ。一覧は **進行後の id** を `selectStage` | **将来:** クリアした stage のまま詳細表示、または直前選択を維持。プレイヤーが次 stage を選ぶ |
+| verify ON | 勝利後も battle。進行 + `respawnAfterEnd` | **維持** — Debug / legacy 用に `getNextStageId` + loop 上書きを残す |
+| `handleStageSortie` | 出撃時に選択 id を **上書き** | **維持** — これが「選択中 stage」の正しい書き込み経路 |
+
+**今回の判断:** 勝利時自動進行は**変更しない**（影響大・リザルト未実装）。再設計の第一歩は敗北 rollback 停止。
+
+### 敗北時 rollback
+
+| モード | §32 後 | 理由 |
+| ------ | ------ | ---- |
+| verify OFF | **rollback なし**。同 stage で formation 再挑戦 | ステージ選択型 — 敗北で「前のステージ」へ戻す一本道前提と矛盾 |
+| verify ON | **従来どおり** rollback + battle + `respawnAfterEnd` | Phase 2 放置 MVP / バランス診断の legacy 導線を壊さない |
+| verify ON + loop | rollback なし | 従来どおり |
+
+### verify OFF / ON と `getNextStageId` / `getPreviousStageId`
+
+| 関数 | verify OFF 体験版 | verify ON Debug |
+| ---- | ----------------- | --------------- |
+| `getNextStageId` | 勝利時 `applyVictoryRewards` のみ（**まだ使用中**） | 同上 + loop 時は `resolveVictoryNextStageId` が loop id を返す |
+| `getPreviousStageId` | **不使用**（§32） | 敗北 rollback で使用 |
+| 将来 | verify OFF 勝利から **外す**方向 | **残す**（自動周回・rollback・HUD 次 stage 表示） |
+
+### 将来的な最小再設計案（save schema 大変更なし・段階導入）
+
+**短期（save フィールド名は `currentStageId` のまま）**
+
+- 意味を **「最後に map で選んだ / 次に出撃する stageId」** に固定する文書化
+- verify OFF 敗北: **維持**（rollback なし）— 実装済み
+- verify OFF 勝利: **当面** 自動進行維持。7f リザルト実装時に「クリア記録のみ・id 不変」へ切替検討
+
+**中期（schema 追加は小さく、migration は薄く）**
+
+| 概念 | 置き場案 | 役割 |
+| ---- | -------- | ---- |
+| `selectedStageId` | save 新フィールド or `currentStageId` リネーム | map ハイライト・sortie 対象のみ |
+| `battleStageId` | **セッションのみ**（`GameSession` private） | sortie〜戦闘終了まで。save に書かない |
+| `clearedStageIds` | save `string[]` または `stageRecords` のキー集合 | クリア済み・解禁判定。勝利で merge |
+| `stageRecords` | 既存 spec どおり | best time / 星 / 再挑戦参考 |
+
+**導入順（推奨）**
+
+1. verify OFF 敗北 rollback 停止 — **完了（§32）**
+2. verify OFF 勝利で `currentStageId` を進めない + `clearedStageIds` に追加（`applyVictoryRewards` 分岐のみ）
+3. map `selectStage` を `selectedStageId` 専用に（sortie / 表示）。`battleStageId` は `handleStageSortie` でセット
+4. verify ON は `currentStageId` + next/previous を **Debug 専用パス**として分離（本番 save slot とは既に分離済み）
+
+**やらない（今回どおり）:** StageArchetype / Recipe / Generator、per-group level、save 大 migration、demo 終了画面
+
+### `demo_ch1_07` 体験版終了
+
+**扱っていない** — 最終 stage クリア後も map 周回・`currentStageId` 同 id ループは従来どおり。7h 体験版終了画面は未着手。
+
+### テスト（§32）
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `gameSessionWire.test.ts` | **8 passed** |
+| `stageProgression.test.ts` | **4 passed** |
+| `victoryRewards.unlock.test.ts` | **5 passed** |
+| **合計** | **17 passed** |
