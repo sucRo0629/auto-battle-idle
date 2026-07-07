@@ -48,6 +48,7 @@ flowchart LR
 | -------- | ---- | ---------- |
 | **想定レベル** | `StageDef.recommendedLevel`（ラベル例: 「想定 Lv {n}」） | ステージ JSON（6b / 8b で投入。未設定ステージは UI で「—」） |
 | **敵編成** | 全 Wave の敵テンプレート一覧（Wave 区切り・同一テンプレの人数） | `StageDef.waves[]` |
+| **編成ヒント**（任意） | `formationHintJa` があるときのみ 1 行表示。experience spotlight 用（必須 counter 表示ではない） | `StageDef.formationHintJa` |
 | **敵情報** | 各テンプレの `displayName`、UI ロール / 前後衛など編成判断に足る概要 | `enemies.json` + [enemy-design-concept.md](../enemy-design-concept.md)。**ステータス数値の一覧転記はしない** |
 | **レベルシンク** | チェックボックス（[§4](#4-レベルシンクチェックボックス)） | 当該出撃のみ有効 |
 | **クリア履歴** | ベスト **2 枠**（低レベル / 最速。[progression.md §Stage Records](progression.md#stage-records)） | セーブ `stageRecords` |

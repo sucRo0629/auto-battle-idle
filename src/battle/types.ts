@@ -1730,6 +1730,8 @@ export interface StageDef {
   enemyGroups?: StageEnemyGroup[];
   /** 初回クリア時に save.unlockedClassIds へ merge する classId（任意・重複は除去） */
   unlockClassIdsOnClear?: ClassId[];
+  /** ステージ詳細に表示する任意の編成ヒント（日本語・experience spotlight 用） */
+  formationHintJa?: string;
 }
 
 export interface PartyMemberDef {

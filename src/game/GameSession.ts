@@ -45,6 +45,7 @@ import { createMenuHost, type MenuHost } from '../platform/menuHost.ts';
 import { SaveManager } from '../save/SaveManager.ts';
 import { BattleView } from '../ui/BattleView.ts';
 import type { GameScreen } from './gameScreen.ts';
+import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
 import '../styles/game-shell.css';
 import levelCurvesJson from '../../data/levelCurves.json';
 
@@ -64,6 +65,8 @@ export class GameSession {
   private currentScreen: GameScreen = 'battle';
   private readonly battleHost: HTMLElement;
   private readonly formationHost: HTMLElement;
+  private readonly mapHost: HTMLElement;
+  private readonly stageSelectionHost: StageSelectionScreenHost;
   private readonly stageDamageStats = new StageDamageStatsTracker();
   private readonly menuHost: MenuHost;
 
@@ -90,7 +93,20 @@ export class GameSession {
     this.formationHost.className = 'game-shell__formation';
     this.formationHost.hidden = true;
 
-    shell.append(this.battleHost, this.formationHost);
+    this.mapHost = document.createElement('div');
+    this.mapHost.className = 'game-shell__map';
+    this.mapHost.hidden = true;
+
+    shell.append(this.battleHost, this.formationHost, this.mapHost);
+
+    this.stageSelectionHost = new StageSelectionScreenHost(
+      this.mapHost,
+      gameData,
+      {
+        getCurrentStageId: () => this.save.stageProgress.currentStageId,
+        onSortie: (stageId) => this.handleStageSortie(stageId),
+      },
+    );
 
     if (this.verifyMode && this.loopStageId) {
       const loopStage = getStageById(this.gameData.stages, this.loopStageId);
@@ -151,7 +167,7 @@ export class GameSession {
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
       },
     );
-    this.setGameScreen('battle');
+    this.setGameScreen(this.verifyMode ? 'battle' : 'map');
 
     this.menuHost = createMenuHost({
       gameData,
@@ -241,6 +257,10 @@ export class GameSession {
     this.menuHost.open('party');
   }
 
+  openStageSelection(): void {
+    this.setGameScreen('map');
+  }
+
   closeMetaMenu(): void {
     this.menuHost.close();
   }
@@ -248,10 +268,28 @@ export class GameSession {
   private setGameScreen(screen: GameScreen): void {
     if (this.currentScreen === screen) return;
     this.currentScreen = screen;
+    const onBattle = screen === 'battle';
     const onFormation = screen === 'formation';
-    this.battleHost.hidden = onFormation;
+    const onMap = screen === 'map';
+    this.battleHost.hidden = !onBattle;
     this.formationHost.hidden = !onFormation;
-    this.view.setVisible(!onFormation);
+    if (onMap) {
+      this.stageSelectionHost.show();
+    } else {
+      this.stageSelectionHost.hide();
+    }
+    this.view.setVisible(onBattle);
+  }
+
+  private handleStageSortie(stageId: string): void {
+    const resolvedStageId = resolveKnownStageId(this.gameData.stages, stageId);
+    if (resolvedStageId === null) return;
+
+    this.save.stageProgress.currentStageId = resolvedStageId;
+    this.stageDamageStats.resetForStage(resolvedStageId);
+    this.engine.restartBattle();
+    this.persistSave();
+    this.menuHost.open('party');
   }
 
   updateMemberBuild(partyIndex: number, build: CharacterBuild): void {
@@ -357,6 +395,7 @@ export class GameSession {
 
   destroy(): void {
     this.closeMetaMenu();
+    this.stageSelectionHost.destroy();
     window.removeEventListener('beforeunload', this.handleBeforeUnload);
     if (this.autoSaveTimer !== null) {
       clearInterval(this.autoSaveTimer);

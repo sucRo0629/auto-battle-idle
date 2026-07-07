@@ -122,6 +122,7 @@
   {
     "id": "demo_ch1_05",
     "displayName": "炎と刃",
+    "formationHintJa": "双刃士は低HPの敵を優先します。削れた後衛や瀕死の敵を仕留める役として試してみましょう。",
     "recommendedLevel": 1,
     "enemyGroups": [
       {

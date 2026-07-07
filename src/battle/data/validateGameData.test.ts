@@ -567,6 +567,16 @@ describe('stages-demo.json validation', () => {
     expect(finale?.unlockClassIdsOnClear).toEqual(['at_ballista']);
     expect(finale?.enemyGroups?.reduce((sum, g) => sum + g.count, 0)).toBe(6);
 
+    const assassinSpotlight = result.stages.find((s) => s.id === 'demo_ch1_05');
+    expect(assassinSpotlight?.formationHintJa).toBe(
+      '双刃士は低HPの敵を優先します。削れた後衛や瀕死の敵を仕留める役として試してみましょう。',
+    );
+    expect(
+      result.stages
+        .filter((stage) => stage.id !== 'demo_ch1_05')
+        .every((stage) => stage.formationHintJa === undefined),
+    ).toBe(true);
+
     expect(JSON.stringify(stagesDemoJson)).not.toContain('templateId');
   });
 });

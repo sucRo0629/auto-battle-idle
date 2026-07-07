@@ -443,6 +443,19 @@ resolveApproachBattleX
 
 **実行例:** `npm test -- src/battle/demoStageM1TargetClassification.test.ts`
 
+#### excludeRoles 後の診断スナップショット（2026-07-07）
+
+§22 実装後に demo 診断テストを再実行。クラス・ステージ JSON は未変更。
+
+| 確認項目 | 結果 |
+| -------- | ---- |
+| M1 分類 | `sp_cleric` / `sp_wardweaver` → `rangerRangedPool=false` |
+| ch1_07 ranger | `primaryTarget=at_ballista`、`BACKLINE_OK`（弩砲士は弓術士 priority に残る） |
+| ch1_07 bad assassin | `priorityTargetDamageShare=100%`（§16 時 0% から改善 — support 処理がログで見える） |
+| ch1_05 formalization | `EXPERIENCE_SPOTLIGHT_SUBSTITUTE_OK` **維持** |
+| ch1_04 / ch1_06 puzzle 意図 | 単体実行では healer puzzle / bad defeat **維持**。ch1_04 は full puzzle 一括で RNG flaky の報告あり |
+| 数値調整 | **不要**（Phase 7 で ch1_05 編成ヒント） |
+
 ---
 
 ## 8. 診断ログを見るときの注意

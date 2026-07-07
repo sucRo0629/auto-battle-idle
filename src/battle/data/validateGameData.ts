@@ -5855,6 +5855,12 @@ function parseStages(raw: unknown): StageDef[] {
       unlockClassIdsOnClear = [...new Set(ids)];
     }
 
+    const formationHintJaRaw = obj.formationHintJa;
+    let formationHintJa: string | undefined;
+    if (formationHintJaRaw !== undefined) {
+      formationHintJa = requireString(obj, 'formationHintJa', context);
+    }
+
     const allowEmptyWaveEnemies = enemyGroups !== undefined;
 
     const wavesRaw = obj.waves;
@@ -5900,6 +5906,7 @@ function parseStages(raw: unknown): StageDef[] {
       ...(recommendedLevel !== undefined ? { recommendedLevel } : {}),
       ...(enemyGroups !== undefined ? { enemyGroups } : {}),
       ...(unlockClassIdsOnClear !== undefined ? { unlockClassIdsOnClear } : {}),
+      ...(formationHintJa !== undefined ? { formationHintJa } : {}),
     };
   });
 }

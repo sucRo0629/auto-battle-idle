@@ -45,3 +45,19 @@
 .game-shell__formation[hidden] {
   display: none !important;
 }
+
+.game-shell__map {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 1rem;
+  overflow: auto;
+  background: var(--app-bg);
+}
+
+.game-shell__map[hidden] {
+  display: none !important;
+}

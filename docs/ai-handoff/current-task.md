@@ -367,8 +367,8 @@
 | **7a** | **demo app flow 調査** — 現行 `GameSession` / `BattleView` / `BattleEngine` の起動・勝敗・再スポーン経路を棚卸し。レガシー廃止点と verify 残置の切り分け | 未着手 |
 | **7b** | **app screen state 骨格設計** — `title` / `map` / `party` / `battle` / `result` / `demoEnd` の画面状態と DOM ルート切替。`GameSession` 上の遷移 API 案 | 未着手 |
 | **7c** | **トップ画面** — タイトル・Continue / New Game・設定入口 | 未着手 |
-| **7d** | **ステージ選択画面** — `stages-demo.json` 一覧・詳細・出撃。spec: [stage-selection-ui.md](../spec/stage-selection-ui.md) | 未着手 |
-| **7e** | **編成 → 戦闘開始導線** — 出撃確定時に `currentStageId` 反映 → battle 開始。`MetaMenuOverlay` / `SkillMenuPanel` 流用可否は 7a で判断 | 未着手 |
+| **7d** | **ステージ選択画面** — `stages-demo.json` 一覧・詳細・出撃。spec: [stage-selection-ui.md](../spec/stage-selection-ui.md) | **最小接続済み**（§26） |
+| **7e** | **編成 → 戦闘開始導線** — 出撃確定時に `currentStageId` 反映 → battle 開始。`MetaMenuOverlay` / `SkillMenuPanel` 流用可否は 7a で判断 | **確認済み**（§27） |
 | **7e2** | **編成画面 M1 polish** — 見た目・読みやすさ・**選択済み 4 人枠**・**スキル説明カード**（コアは「編成だけ」）。**今すぐ大改修しない**。グラフィック方針・クラス画像反映 **後** → 現状棚卸し → 小改善。spec: [party-formation-ui.md](../spec/party-formation-ui.md) | 保留 |
 | **7f** | **戦闘終了 → リザルト導線** — `respawnAfterEnd` 廃止、リザルト表示。Exp・`stageRecords` 更新（M1 必須 2 枠）。spec: [progression.md](../spec/progression.md) | 未着手 |
 | **7g** | **first-play guidance / 敗北時導線** — 初回短いガイダンス文。敗北リザルトから編成見直しへ戻れる導線 | 未着手 |
@@ -756,7 +756,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。ch1_05 数値調整は未着手
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -1080,3 +1080,257 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - 案B: `attackType.ranged` + `excludeRoles: ["supporter"]` を弓術士 P2/P3/P4 に適用
 - `sp_cleric` / `sp_wardweaver` は弓術士 ranged プール **外**。双刃士 low-HP プール **内**（変更なし）
 - グローバル `rangePx >= 100` は維持。`df_duelist_active_2` 等は波及なし
+
+## 23. excludeRoles 後 — demo バランス診断ログ再取得（2026-07-07）
+
+**コード・データ変更なし**。§22 実装後の診断テスト再実行とログ比較のみ。
+
+### 読んだファイル（6 件）
+
+| # | ファイル |
+| - | -------- |
+| 1 | `docs/ai-handoff/current-task.md` |
+| 2 | `docs/dev/balance-diagnostics.md` |
+| 3 | `src/battle/demoStageM1TargetClassification.test.ts` |
+| 4 | `src/battle/demoStageAssassinCoverage.test.ts` |
+| 5 | `src/battle/demoStageAssassinVsSwordsman.test.ts` |
+| 6 | `src/battle/demoStageBalance.puzzle.test.ts`（+ 実行で `demoStageCh1_05AssassinFormalization` / `smoke`） |
+
+### excludeRoles 後に変わった診断ログ
+
+| 観点 | §16〜18 時点 | 今回（§22 後） |
+| ---- | ------------ | -------------- |
+| M1 分類 | `sp_cleric` / `sp_wardweaver` ranger pool **yes** | **no**（`rangerRangedPool=false`） |
+| ch1_07 bad assassin | `priorityTargetDamageShare=0%`、前衛吸い込み | **`priorityTargetDamageShare=100%`**、`primaryTarget=at_assassin`（support 処理がログで見える） |
+| ch1_07 ranger | （未記録） | `primaryTarget=at_ballista`、`BACKLINE_OK`、backline share 100% |
+| ch1_05 ranger baseline | sorcerer 主対象 | 同様 — `at_sorcerer` + `at_assassin`、support なし |
+| ch1_04 bad assassin | frontline 100% ROLE_UNMET | **同様**（defeat @~52–58s、frontline 100%） |
+| ch1_05 formalization | `EXPERIENCE_SPOTLIGHT_SUBSTITUTE_OK` | **同じ** |
+| ch1_05 vs swordsman verdict | `ASSASSIN_ROLE_OK` | **同じ** |
+
+### ステージ別（puzzle quad 文脈）
+
+| stage | 変化 |
+| ----- | ---- |
+| **ch1_05** | spotlight 判断 **維持** — `EXPERIENCE_SPOTLIGHT_SUBSTITUTE_OK`。assassin ROLE_OK はログで説明可だが ranger / swordsman / sorcerer も ranger slot で勝てる |
+| **ch1_04** | no-healer 前衛吸い込み・assassin ROLE_UNMET **維持**。単体実行では bad=**defeat**（§14 意図どおり）。full puzzle 9 件一括では bad が **victory hp=120** で 1 回 flaky fail（RNG 疑い） |
+| **ch1_06** | bad=defeat、verdict `ASSASSIN_SURVIVAL_WEAK` **維持** |
+| **ch1_07** | finale 構図 **維持**（baseline/bad/universal defeat、counter victory）。ranger は **at_ballista 優先**のまま |
+
+### クラス・ステージ数値を触るべきか
+
+| 判定 | 理由 |
+| ---- | ---- |
+| **今回は触らない** | ch1_05 spotlight・ch1_06/07 puzzle 意図は維持。役割分離はログで改善 |
+| **将来候補** | ch1_04 healer puzzle が full suite で flaky なら stage scale またはテスト閾値の再確認（**今回は数値調整しない**） |
+| **Phase 7** | ch1_05 を assassin experience spotlight（編成ヒント）として M1 flow に載せる |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `demoStageM1TargetClassification.test.ts` | **1 passed** |
+| `demoStageAssassinCoverage.test.ts` | **5 passed** |
+| `demoStageAssassinVsSwordsman.test.ts` | **6 passed** |
+| `demoStageCh1_05AssassinFormalization.test.ts` | **3 passed** |
+| `demoStageBalance.smoke.test.ts` | **8 passed** |
+| `demoStageBalance.puzzle.test.ts`（full） | **8 passed / 1 failed** — ch1_04 `noHealerMarginal`（bad victory hp=120）。Vitest worker `onTaskUpdate` timeout **ノイズ 1 件** |
+| `demoStageBalance.puzzle.test.ts -t demo_ch1_04`（単体） | **1 passed** — bad=defeat hp=0 @58s |
+
+## 24. ch1_05 assassin experience spotlight — 編成ヒント導線調査（2026-07-07）
+
+**コード・データ変更なし**。Phase 7 編成ヒント向けの最小実装方針の調査のみ。
+
+### 読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `docs/spec/stage-selection-ui.md` | ステージ詳細ブロック（7d 予定） |
+| 3 | `docs/spec/party-formation-ui.md` | 編成画面責務・§5.4 拡張注記 |
+| 4 | `data/stages-demo.json`（`demo_ch1_05` のみ） | 現行 stage フィールド |
+| 5 | `src/battle/types.ts`（`StageDef`） | 型・既存任意フィールド |
+| 6 | `src/platform/menuHost.ts` + `DomFormationScreenHost.ts` + `DebugMenuPanel.ts`（Grep） | 編成 / debug 導線の現状 |
+
+### 1. ステージ別ヒント導線の現状
+
+| 画面 | 状態 |
+| ---- | ---- |
+| **ステージ選択 / 詳細** | **未実装**（7d）。`stage-selection-ui.md` は敵編成・想定 Lv・出撃のみ。**戦術ヒント / 編成ヒントのブロックなし** |
+| **編成画面**（`SkillMenuPanel` / `MetaMenuOverlay`） | **`currentStageId` 未参照**。ステージ文脈の表示導線なし |
+| **戦闘 HUD**（`BattleView`） | ステージ名プレートのみ。**ヒントなし** |
+| **DebugMenuPanel** | 選択 stage の `enemyGroups` 編成 preview（verify 専用）。**プレイヤー向けヒントではない** |
+| **7g first-play guidance** | 初回汎用ガイド予定。**ステージ別 spotlight とは別** |
+
+### 2. 既存データ構造
+
+`StageDef`（`types.ts`）の任意フィールドは **`recommendedLevel` / `enemyGroups` / `unlockClassIdsOnClear`** のみ。
+
+- `formationHint` / `tacticalHint` / `recommendedSwap` / `experienceSpotlight` 相当 — **なし**
+- `validateGameData.ts` にも hint 用 parse — **なし**
+- `party-formation-ui.md` §5.4 — 「ステージが要求する編成の正解表示や警告ではない（**Phase 6 以降の拡張**）」と明記。**experience spotlight は必須カウンターではない** 方針と整合
+
+### 3. ch1_05 ヒントを置くならどこが自然か
+
+| 案 | 評価 |
+| -- | ---- |
+| **`StageDef` 任意 `formationHintJa?: string`**（推奨） | `unlockClassIdsOnClear` と同型の薄い stage メタ。`stages-demo.json` の `demo_ch1_05` のみに 1 文。StageGenerator 不要。full `stages.json` 無影響 |
+| コード内 `const DEMO_CH1_05_HINT` | validate 不要だがデータ二重管理。editor / 手編集と乖離 |
+| `classes.json` `summary.ja`（双刃士） | **不適** — クラス一般説明であり stage spotlight ではない。「このステージで試す」文脈を載せられない |
+| `recommendedSwap` 構造（slot → classId） | **不採用** — assassin 必須 puzzle に読める。`EXPERIENCE_SPOTLIGHT_SUBSTITUTE_OK` と矛盾 |
+
+**文言の正本:** `data/stages-demo.json` `demo_ch1_05.formationHintJa`（フィールド名は実装時確定。`briefingJa` でも可）
+
+**文案（短め・推奨）:**
+
+> 双刃士は低HPの敵を優先します。削れた後衛や瀕死の敵を仕留める役として試してみましょう。
+
+（長文案も可。assassin 必須・他解法否定・必勝断定は書かない）
+
+### 4. UI 大改修なしの最小表示案
+
+| 優先 | 表示場所 | 差分規模 | 備考 |
+| ---- | -------- | -------- | ---- |
+| **A（7d 正本）** | ステージ詳細パネル「敵編成」の下に **1 行テキストプレート** | 7d 実装時に `formationHintJa` を読むだけ | `stage-selection-ui.md` §3 に 1 行追記で spec 同期 |
+| **B（7d 前の暫定）** | 編成画面上部に **細い HUD プレート**（`game-panel-surface`） | `MenuHostContext` に `getCurrentStageId` 追加 → `MetaMenuOverlay` / `SkillMenuPanel` で stage 参照・文言表示。**DOM 1 ブロック + CSS 数行** | 編成ヒント導線として最も直結。レイアウト再設計不要 |
+| **C（補助）** | 戦闘 HUD ステージプレート直下 | `BattleView` に同じフィールド表示 | 編成を開く前にも見えるが、**主目的は編成判断**のため B or A を優先 |
+
+**触るファイル（実装時・最小）:** `types.ts`、`validateGameData.ts`（任意 string 1 本）、`stages-demo.json`（ch1_05 のみ）、表示先 1 か所（B なら `menuHost.ts` / `MetaMenuOverlay.ts` または `SkillMenuPanel.ts`）、薄い CSS、任意テスト 1 件
+
+**触らない:** `classes.json` / skills、stage scale、`resolveApproachBattleX.ts`、contact cap / approach、StageGenerator、編成画面レイアウト大改修（7e2）
+
+### 5. 実装タイミング
+
+- **今回:** 調査のみ。production / JSON **未変更**
+- **推奨着手:** Phase **7d**（ステージ詳細）と同 PR、または 7d 前に **案 B 暫定** のみ先行（1 stage・1 文）
+
+### 6. テスト（今回）
+
+コード変更なしのため **テスト未実行**。
+
+## 25. ch1_05 formationHintJa 最小実装（2026-07-07）
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/battle/types.ts` | `StageDef.formationHintJa?: string` |
+| `src/battle/data/validateGameData.ts` | 任意 string として parse |
+| `data/stages-demo.json` | `demo_ch1_05` のみ `formationHintJa` 追加 |
+| `src/ui/stageDetailDom.ts` | 敵編成セクション + ヒント 1 行プレート描画 |
+| `src/ui/StageSelectionPanel.ts` | 7d 用ステージ一覧・詳細（ヒントは敵編成直下） |
+| `src/styles/stage-selection-panel.css` | 詳細・ヒント最小スタイル |
+| `src/ui/StageSelectionPanel.test.ts` | ch1_05 表示 / 他 stage 非表示 |
+| `src/battle/data/validateGameData.test.ts` | stages-demo `formationHintJa` 期待値 |
+| `docs/spec/stage-selection-ui.md` | §3 編成ヒント 1 行 |
+
+**触らなかった:** `classes.json` / skills、stage scale、`resolveApproachBattleX.ts`、contact cap / approach、編成画面、戦闘 HUD、`stages.json`、`GameSession` 導線接続（7d 本体 wire は別 PR）
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `validateGameData.test.ts` | **18 passed** |
+| `StageSelectionPanel.test.ts` | **2 passed** |
+
+## 26. Phase 7d — StageSelectionPanel demo app flow 最小接続（2026-07-07）
+
+### 読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `docs/spec/stage-selection-ui.md` | 7d 導線正本 |
+| 3 | `src/ui/StageSelectionPanel.ts` | 一覧・詳細・出撃 UI |
+| 4 | `src/game/GameSession.ts` | 画面 state・save・戦闘開始 |
+| 5 | `src/main.ts` + `src/game/gameScreen.ts` | app entry・`GameScreen` 型 |
+| 6 | `src/platform/DomFormationScreenHost.ts` + `src/ui/BattleView.ts`（Grep） | 編成導線・verify / Debug 周辺 |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/gameScreen.ts` | `GameScreen` に `'map'` 追加 |
+| `src/game/StageSelectionScreenHost.ts` | **新規** — `StageSelectionPanel` の mount / show / hide |
+| `src/game/GameSession.ts` | `mapHost`・sortie ハンドラ・非 verify 起動時 `map` 表示 |
+| `src/styles/game-shell.css` | `.game-shell__map` |
+| `src/game/stageSelectionWire.test.ts` | **新規** — currentStageId 同期・sortie callback |
+| `docs/ai-handoff/current-task.md` | 本節 |
+
+**触らなかった:** `BattleView` / 戦闘 HUD、`classes.json` / skills、`stages-demo.json` 数値、`MetaMenuOverlay` 大改修、`stageRecords` / リザルト導線、verify 時の起動画面
+
+### demo app flow / screen state 確認結果
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 起動（`main.ts`） | `GameSession` 生成 → `start()` → RAF tick |
+| 画面 state（接続前） | `'battle' \| 'formation'` のみ。`setGameScreen` で host 表示切替 |
+| verify ON（既定） | 起動 **battle**。`DebugMenuPanel` で stage loop / 編成 preview。`MetaMenuOverlay` は party ボタンから |
+| verify OFF（release） | 接続前は起動即 battle。編成は map 経由なし |
+| 勝敗後 | 勝利で `applyVictoryRewards` が `currentStageId` 自動進行（レガシー）。`respawnAfterEnd` 相当は verify 側に残置 |
+| `currentStageId` | `save.stageProgress.currentStageId`。`resolveKnownStageId` で正規化 |
+
+### 接続内容
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 接続先 | `GameSession` の新 `mapHost`（`.game-shell__map`） |
+| データ | `gameData.stages` + `save.stageProgress.currentStageId` を `StageSelectionScreenHost` 経由で `StageSelectionPanel` へ |
+| 起動画面 | **verify OFF → `map`**。verify ON → 従来どおり `battle`（Debug 導線維持） |
+| 出撃 | `currentStageId` 更新 → `restartBattle` → `menuHost.open('party')`（既存編成全画面）→ 編成の「戦闘へ」で `battle` |
+| `formationHintJa` | `StageSelectionPanel` / `stageDetailDom` 経由で **維持**（ch1_05 のみ表示） |
+| 未接続（意図的） | 勝利後 map 復帰（7f）、トップ画面（7c）、map へ戻る battle HUD ボタン、level sync、stageRecords 表示 |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `stageSelectionWire.test.ts` | **2 passed** |
+| `StageSelectionPanel.test.ts` | **2 passed** |
+
+## 27. Phase 7e — map → party → battle 導線確認（2026-07-07）
+
+### 読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `src/game/GameSession.ts` | sortie / screen state / restartBattle |
+| 3 | `src/game/StageSelectionScreenHost.ts` + `src/ui/StageSelectionPanel.ts` | map 出撃 UI |
+| 4 | `src/platform/menuHost.ts` + `DomFormationScreenHost.ts` | 編成 open / close |
+| 5 | `src/game/gameScreen.ts` | `GameScreen` 型 |
+| 6 | `src/game/stageSelectionWire.test.ts` | 既存 wire テスト |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/gameSessionWire.test.ts` | **新規** — verify ON/OFF 起動画面、sortie → formation → battle、`currentStageId` 維持 |
+| `docs/ai-handoff/current-task.md` | 本節 |
+
+**production code 変更なし** — 7d 接続で導線は成立。`restartBattle` タイミングも現状維持。
+
+### map → party → battle 確認結果
+
+| # | 項目 | 結果 |
+| - | ---- | ---- |
+| 1 | 出撃 → `menuHost.open('party')` | `handleStageSortie` → `currentStageId` 更新 → `restartBattle` → `menuHost.open('party')`。**成立** |
+| 2 | 編成中の `currentStageId` | `save.stageProgress.currentStageId` に保持。編成 UI は stage 非参照（意図どおり）。sortie 後も **維持** |
+| 3 | 編成「戦闘へ」→ 選択 stage の battle | `SkillMenuPanel` の `returnToBattle` → `MetaMenuOverlay.onClose` → `DomFormationScreenHost.close` → `setGameScreen('battle')`。`engine.tick` は battle 画面のみ。sortie 時 `restartBattle` 済みの戦場が **選択 stage** で開始 |
+| 4 | verify ON Debug 導線 | 起動 `battle` 維持。`openPartyMenu` → formation → close で **同一 `currentStageId`**。map sortie 不要。**壊れていない** |
+| 5 | verify OFF 体験版 | 起動 `map`。出撃のみが formation 入口（map 上に party ボタンなし）。**map 起点維持** |
+| 6 | `restartBattle` タイミング | **出撃時**（編成前）に 1 回。編成中スロット変更でも再実行。formation 中は `engine.tick` 停止のため戦闘は進行しない |
+| 7 | 戦闘生成を編成確認後へ寄せる案 | **今回は未実装**。verify の「戦闘中 party 確認 → close で restart しない」経路と両立するには `pendingSortie` フラグ等が必要。**構造変更が大きいため見送り** |
+
+### `restartBattle` 維持理由（1 行）
+
+verify 中の party close は restart しない設計のため、sortie 専用の「編成 close 時 restart」へ寄せると分岐が増える。出撃時 restart + formation 中 tick 停止で M1 要件は満たす。
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `gameSessionWire.test.ts` | **4 passed** |
+| `stageSelectionWire.test.ts` | **2 passed** |
+| `StageSelectionPanel.test.ts` | **2 passed** |
+
