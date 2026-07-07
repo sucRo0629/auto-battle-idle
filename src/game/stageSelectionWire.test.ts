@@ -10,6 +10,7 @@ import type { ActiveSkillDef, GameData, PassiveSkillDef } from '../battle/types.
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
+import { STAGE_FIRST_PLAY_GUIDANCE_CLASS } from '../ui/stageDetailDom.ts';
 
 const passiveModules = import.meta.glob<PassiveSkillDef[]>(
   '../../data/skills/passives/*.json',
@@ -87,6 +88,41 @@ describe('StageSelectionScreenHost', () => {
     sortieButton?.click();
 
     expect(onSortie).toHaveBeenCalledWith('demo_ch1_05');
+
+    screenHost.destroy();
+  });
+
+  it('shows first-play guidance when showFirstPlayGuidance is enabled', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+
+    const screenHost = new StageSelectionScreenHost(
+      host,
+      gameData,
+      {
+        getCurrentStageId: () => 'demo_ch1_01',
+        onSortie: vi.fn(),
+      },
+      true,
+    );
+
+    screenHost.show();
+    expect(host.querySelector(`.${STAGE_FIRST_PLAY_GUIDANCE_CLASS}`)).not.toBeNull();
+
+    screenHost.destroy();
+  });
+
+  it('hides first-play guidance when showFirstPlayGuidance is disabled', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => 'demo_ch1_01',
+      onSortie: vi.fn(),
+    });
+
+    screenHost.show();
+    expect(host.querySelector(`.${STAGE_FIRST_PLAY_GUIDANCE_CLASS}`)).toBeNull();
 
     screenHost.destroy();
   });

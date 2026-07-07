@@ -106,6 +106,7 @@ export class GameSession {
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
         onSortie: (stageId) => this.handleStageSortie(stageId),
       },
+      !this.verifyMode,
     );
 
     if (this.verifyMode && this.loopStageId) {

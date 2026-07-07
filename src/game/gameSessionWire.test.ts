@@ -4,6 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
+import { STAGE_FIRST_PLAY_GUIDANCE_CLASS } from '../ui/stageDetailDom.ts';
 import type { BattleEngine } from '../battle/BattleEngine.ts';
 import { GameSession } from './GameSession.ts';
 
@@ -73,6 +74,9 @@ describe('GameSession map → party → battle wire', () => {
 
     expect(session.getCurrentScreen()).toBe('map');
     expect(session.isVerifyMode()).toBe(false);
+    expect(
+      document.body.querySelector(`.${STAGE_FIRST_PLAY_GUIDANCE_CLASS}`),
+    ).not.toBeNull();
   });
 
   it('verify ON starts on battle (debug flow preserved)', () => {
@@ -81,6 +85,9 @@ describe('GameSession map → party → battle wire', () => {
 
     expect(session.getCurrentScreen()).toBe('battle');
     expect(session.isVerifyMode()).toBe(true);
+    expect(
+      document.body.querySelector(`.${STAGE_FIRST_PLAY_GUIDANCE_CLASS}`),
+    ).toBeNull();
   });
 
   it('sortie updates currentStageId, opens formation, then battle on confirm', () => {

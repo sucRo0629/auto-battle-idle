@@ -6,6 +6,11 @@ import {
 } from './stageEnemyCompositionPreview.ts';
 
 export const STAGE_DETAIL_FORMATION_HINT_CLASS = 'stage-detail-formation-hint';
+export const STAGE_FIRST_PLAY_GUIDANCE_CLASS = 'stage-selection-first-play-guidance';
+
+/** Generic map guidance for verify OFF release flow (not stage-specific). */
+export const FIRST_PLAY_GUIDANCE_JA =
+  'ステージ情報を見て出撃し、編成画面で役割を調整してください。戦闘は自動で進みます。';
 
 export function appendStageFormationHintPlate(
   parent: HTMLElement,

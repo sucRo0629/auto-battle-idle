@@ -371,7 +371,7 @@
 | **7e** | **編成 → 戦闘開始導線** — 出撃確定時に `currentStageId` 反映 → battle 開始。`MetaMenuOverlay` / `SkillMenuPanel` 流用可否は 7a で判断 | **確認済み**（§27） |
 | **7e2** | **編成画面 M1 polish** — 見た目・読みやすさ・**選択済み 4 人枠**・**スキル説明カード**（コアは「編成だけ」）。**今すぐ大改修しない**。グラフィック方針・クラス画像反映 **後** → 現状棚卸し → 小改善。spec: [party-formation-ui.md](../spec/party-formation-ui.md) | 保留 |
 | **7f** | **戦闘終了 → リザルト導線** — `respawnAfterEnd` 廃止、リザルト表示。Exp・`stageRecords` 更新（M1 必須 2 枠）。spec: [progression.md](../spec/progression.md) | **verify OFF 勝利後 map 復帰 最小実装済み**（§28）。リザルト画面・報酬演出は未着手 |
-| **7g** | **first-play guidance / 敗北時導線** — 初回短いガイダンス文。敗北リザルトから編成見直しへ戻れる導線 | 未着手 |
+| **7g** | **first-play guidance / 敗北時導線** — 初回短いガイダンス文。敗北リザルトから編成見直しへ戻れる導線 | **verify OFF map 汎用ガイド 最小実装済み**（§29）。敗北導線は未着手 |
 | **7h** | **`demo_ch1_07` クリア後 体験版終了画面 / debug UI 整理** — 最終クリア遷移。`DebugMenuPanel` を verify 専用化（本番非表示方針。最終ゲートは Phase 9） | 未着手 |
 
 **推奨着手順:** 7a → 7b → 7c/7d（並行可）→ 7e → **7e2（グラフィック方針・クラス画像反映後）** → 7f → 7g → 7h
@@ -756,7 +756,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**。**verify OFF first-play guidance 最小実装済み（§29）**
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -1394,3 +1394,50 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | `gameSessionWire.test.ts` | **6 passed** |
 | `stageSelectionWire.test.ts` | **2 passed** |
 | `victoryRewards.unlock.test.ts` | **5 passed** |
+
+## 29. Phase 7g — verify OFF first-play guidance 最小実装（2026-07-07）
+
+### 読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `docs/spec/stage-selection-ui.md` | map / 詳細 UI 正本 |
+| 3 | `src/ui/StageSelectionPanel.ts` | 一覧・詳細・出撃 |
+| 4 | `src/ui/stageDetailDom.ts` | 敵編成・`formationHintJa` |
+| 5 | `src/styles/stage-selection-panel.css` | 既存 panel スタイル |
+| 6 | `src/game/StageSelectionScreenHost.ts` + `GameSession.ts` | verify OFF map 導線 |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/ui/stageDetailDom.ts` | `FIRST_PLAY_GUIDANCE_JA`・`STAGE_FIRST_PLAY_GUIDANCE_CLASS` |
+| `src/ui/StageSelectionPanel.ts` | `showFirstPlayGuidance` オプション・パネル上部 1 行 |
+| `src/styles/stage-selection-panel.css` | guidance プレート・`panel-body` grid 分離 |
+| `src/game/StageSelectionScreenHost.ts` | `showFirstPlayGuidance` を panel へ転送 |
+| `src/game/GameSession.ts` | verify OFF 時 `!verifyMode` で host へ渡す |
+| `src/ui/StageSelectionPanel.test.ts` | guidance 表示 / 非表示 |
+| `src/game/stageSelectionWire.test.ts` | host 経由の ON/OFF |
+| `src/game/gameSessionWire.test.ts` | verify OFF/ON で DOM 有無 |
+| `docs/spec/stage-selection-ui.md` | §2 初回ガイド 1 行 |
+| `docs/ai-handoff/current-task.md` | 本節 |
+
+**触らなかった:** `classes.json` / skills、`stages-demo.json` 数値、save 既読フラグ、overlay / modal、編成画面、戦闘 HUD、`formationHintJa` データ・表示経路、敗北導線
+
+### first-play guidance
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 表示場所 | `StageSelectionPanel` ルート上部（一覧・詳細 grid の上） |
+| 表示条件 | **verify OFF**（`GameSession` → `StageSelectionScreenHost(..., !verifyMode)`）。既読フラグなし・常時表示 |
+| 文言 | ステージ情報を見て出撃し、編成画面で役割を調整してください。戦闘は自動で進みます。 |
+| `formationHintJa` | 敵編成直下の stage 別ヒント（ch1_05 のみ）— **別ブロック・別クラスで競合なし** |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `StageSelectionPanel.test.ts` | **4 passed** |
+| `stageSelectionWire.test.ts` | **4 passed** |
+| `gameSessionWire.test.ts` | **6 passed** |

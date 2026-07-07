@@ -1,12 +1,25 @@
 .stage-selection-panel {
-  display: grid;
-  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
   padding: 16px;
   color: var(--app-text);
+}
+
+.stage-selection-panel-body {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.stage-selection-first-play-guidance {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .stage-selection-list {

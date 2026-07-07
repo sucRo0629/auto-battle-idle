@@ -10,7 +10,9 @@ import type { ActiveSkillDef, GameData, PassiveSkillDef } from '../battle/types.
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { parseAndValidateGameDataJson } from '../battle/data/validateGameData.ts';
 import {
+  FIRST_PLAY_GUIDANCE_JA,
   STAGE_DETAIL_FORMATION_HINT_CLASS,
+  STAGE_FIRST_PLAY_GUIDANCE_CLASS,
   appendStageFormationHintPlate,
 } from './stageDetailDom.ts';
 import { StageSelectionPanel } from './StageSelectionPanel.ts';
@@ -47,6 +49,35 @@ function loadDemoGameDataForTest(): GameData {
     stages: parsed.stages,
   };
 }
+
+describe('StageSelectionPanel first-play guidance', () => {
+  it('shows generic guidance at panel top when showFirstPlayGuidance is true', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+
+    const panel = new StageSelectionPanel(host, gameData, {}, {
+      showFirstPlayGuidance: true,
+    });
+
+    const guidance = host.querySelector(`.${STAGE_FIRST_PLAY_GUIDANCE_CLASS}`);
+    expect(guidance?.textContent).toBe(FIRST_PLAY_GUIDANCE_JA);
+    expect(host.querySelector('.stage-selection-panel')?.firstElementChild).toBe(
+      guidance,
+    );
+
+    panel.destroy();
+  });
+
+  it('hides generic guidance when showFirstPlayGuidance is false', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+
+    const panel = new StageSelectionPanel(host, gameData);
+    expect(host.querySelector(`.${STAGE_FIRST_PLAY_GUIDANCE_CLASS}`)).toBeNull();
+
+    panel.destroy();
+  });
+});
 
 describe('StageSelectionPanel formationHintJa', () => {
   it('shows formationHintJa below enemy composition for demo_ch1_05 only', () => {

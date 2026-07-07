@@ -14,6 +14,7 @@ export class StageSelectionScreenHost {
     private readonly host: HTMLElement,
     private readonly gameData: GameData,
     private readonly callbacks: StageSelectionScreenHostCallbacks,
+    private readonly showFirstPlayGuidance = false,
   ) {}
 
   show(): void {
@@ -24,7 +25,10 @@ export class StageSelectionScreenHost {
         this.host,
         this.gameData,
         { onSortie: (stageId) => this.callbacks.onSortie(stageId) },
-        { initialStageId: currentStageId },
+        {
+          initialStageId: currentStageId,
+          showFirstPlayGuidance: this.showFirstPlayGuidance,
+        },
       );
       return;
     }

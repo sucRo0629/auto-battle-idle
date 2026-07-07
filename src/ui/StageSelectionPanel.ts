@@ -1,7 +1,11 @@
 import '../styles/game-ui-chrome.css';
 import '../styles/stage-selection-panel.css';
 import type { GameData, StageDef } from '../battle/types.ts';
-import { fillStageDetailEnemySection } from './stageDetailDom.ts';
+import {
+  FIRST_PLAY_GUIDANCE_JA,
+  STAGE_FIRST_PLAY_GUIDANCE_CLASS,
+  fillStageDetailEnemySection,
+} from './stageDetailDom.ts';
 
 export interface StageSelectionPanelCallbacks {
   onSortie?: (stageId: string) => void;
@@ -9,6 +13,8 @@ export interface StageSelectionPanelCallbacks {
 
 export interface StageSelectionPanelOptions {
   initialStageId?: string;
+  /** verify OFF release flow — generic map guidance (no save / read flag). */
+  showFirstPlayGuidance?: boolean;
 }
 
 export class StageSelectionPanel {
@@ -18,6 +24,7 @@ export class StageSelectionPanel {
   private readonly detailLevelEl: HTMLElement;
   private readonly detailEnemySectionEl: HTMLElement;
   private readonly sortieButton: HTMLButtonElement;
+  private readonly showFirstPlayGuidance: boolean;
   private selectedStageId: string | null;
 
   constructor(
@@ -26,11 +33,22 @@ export class StageSelectionPanel {
     private readonly callbacks: StageSelectionPanelCallbacks = {},
     options: StageSelectionPanelOptions = {},
   ) {
+    this.showFirstPlayGuidance = options.showFirstPlayGuidance ?? false;
     this.selectedStageId =
       options.initialStageId ?? gameData.stages[0]?.id ?? null;
 
     this.root = document.createElement('div');
     this.root.className = 'stage-selection-panel';
+
+    if (this.showFirstPlayGuidance) {
+      const guidance = document.createElement('p');
+      guidance.className = `${STAGE_FIRST_PLAY_GUIDANCE_CLASS} game-panel-surface`;
+      guidance.textContent = FIRST_PLAY_GUIDANCE_JA;
+      this.root.appendChild(guidance);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'stage-selection-panel-body';
 
     this.listEl = document.createElement('ul');
     this.listEl.className = 'stage-selection-list';
@@ -65,7 +83,8 @@ export class StageSelectionPanel {
       this.sortieButton,
     );
 
-    this.root.append(this.listEl, detail);
+    body.append(this.listEl, detail);
+    this.root.append(body);
     host.appendChild(this.root);
 
     this.renderStageList();
