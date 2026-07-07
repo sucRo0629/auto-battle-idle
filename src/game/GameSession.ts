@@ -446,13 +446,17 @@ export class GameSession {
 
     if (previousStageId === failedStageId) {
       console.log(`[progress] Defeat at ${failedStageName} (staying)`);
-      return;
+    } else {
+      this.stageDamageStats.resetForStage(previousStageId);
+      console.log(
+        `[progress] Defeat at ${failedStageName} → ${previousStageName}`,
+      );
     }
 
-    this.stageDamageStats.resetForStage(previousStageId);
-    console.log(
-      `[progress] Defeat at ${failedStageName} → ${previousStageName}`,
-    );
+    if (!this.verifyMode) {
+      this.engine.restartBattle();
+      this.menuHost.open('party');
+    }
   }
 
   private handleVictory(survivingPartyIndices: number[]): void {

@@ -12,7 +12,7 @@
 - 状態: **Phase 6b 完了**（6b-1〜6b-8）。**Phase 7d〜7g 最小実装済み**（§26〜29）。**§30 で verify OFF main flow 成立を確認**。残タスクは §30「残タスク」
 - **2026-07 roadmap 改定:** [phase-roadmap.md](../plans/phase-roadmap.md) — 旧 6d → **Phase 7**（app flow）、新 **Phase 8**（presentation）、旧 Electron → **Phase 9**（packaging）。本編は **Phase 10** へ
 - **Phase 7 目的:** M1 体験版として、**起動から `demo_ch1_07` クリアまで迷わず進めるアプリ導線**を作る（配布 zip は Phase 9）
-- **現状画面:** verify OFF 起動は **map**（`StageSelectionPanel`）→ 編成（`MetaMenuOverlay`）→ 戦闘。**未実装:** トップ / リザルト / 体験版終了 / 敗北→編成復帰
+- **現状画面:** verify OFF 起動は **map**（`StageSelectionPanel`）→ 編成（`MetaMenuOverlay`）→ 戦闘。**未実装:** トップ / リザルト / 体験版終了
 - **並行・未達:** キャラ画像（並行作業中）、VFX 未実装、効果音未実装
 - **当面方針:** 新規ソース実装は止め、Phase 7 整理後は **グラフィック準備優先**。新規画面実装はグラフィック方針整理後に再開
 - **編成画面:** 戦闘画面より見た目・読みやすさが未達。**7e2 編成画面 M1 polish** は M1 前の改善対象だが、Cursor トークン消費を避け **今すぐ大改修しない**（グラフィック方針・クラス画像反映後に棚卸し → 小改善）
@@ -371,7 +371,7 @@
 | **7e** | **編成 → 戦闘開始導線** — 出撃確定時に `currentStageId` 反映 → battle 開始。`MetaMenuOverlay` / `SkillMenuPanel` 流用可否は 7a で判断 | **確認済み**（§27） |
 | **7e2** | **編成画面 M1 polish** — 見た目・読みやすさ・**選択済み 4 人枠**・**スキル説明カード**（コアは「編成だけ」）。**今すぐ大改修しない**。グラフィック方針・クラス画像反映 **後** → 現状棚卸し → 小改善。spec: [party-formation-ui.md](../spec/party-formation-ui.md) | 保留 |
 | **7f** | **戦闘終了 → リザルト導線** — `respawnAfterEnd` 廃止、リザルト表示。Exp・`stageRecords` 更新（M1 必須 2 枠）。spec: [progression.md](../spec/progression.md) | **verify OFF 勝利後 map 復帰 最小実装済み**（§28）。リザルト画面・報酬演出は未着手 |
-| **7g** | **first-play guidance / 敗北時導線** — 初回短いガイダンス文。敗北リザルトから編成見直しへ戻れる導線 | **verify OFF map 汎用ガイド 最小実装済み**（§29）。敗北導線は未着手 |
+| **7g** | **first-play guidance / 敗北時導線** — 初回短いガイダンス文。敗北リザルトから編成見直しへ戻れる導線 | **verify OFF map 汎用ガイド + 敗北後 formation 復帰 最小実装済み**（§29・§31）。敗北リザルト UI は未着手 |
 | **7h** | **`demo_ch1_07` クリア後 体験版終了画面 / debug UI 整理** — 最終クリア遷移。`DebugMenuPanel` を verify 専用化（本番非表示方針。最終ゲートは Phase 9） | 未着手 |
 
 **推奨着手順:** 7a → 7b → 7c/7d（並行可）→ 7e → **7e2（グラフィック方針・クラス画像反映後）** → 7f → 7g → 7h
@@ -431,7 +431,7 @@
 
 | 項目 | 内容 |
 | ---- | ---- |
-| 小タスク | **7d〜7g 最小実装済み**（§26〜29）。**7a 調査・§30 棚卸し済み**。未着手: **7c** トップ、**7f** リザルト、**7g** 敗北導線、**7h** 体験版終了。**7e2** 保留 |
+| 小タスク | **7d〜7g 最小実装済み**（§26〜29・§31）。**7a 調査・§30 棚卸し済み**。未着手: **7c** トップ、**7f** リザルト、**7h** 体験版終了。**7e2** 保留 |
 | 未確定 | §7「Phase 7 未確定点」表（一部 §30 で解消） |
 | 停止地点 | **verify OFF main flow 成立**（§30）。次は **7c / 7f / 7g / 7h** またはグラフィック準備 |
 
@@ -753,7 +753,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 
 - **Phase 6b 完了** — 6b-1〜6b-8 済み。§7 6b サマリが正本
 - **Phase 7 分割整理済み** — 小タスク 7a〜7h + **7e2**（編成画面 M1 polish）。未確定点・着手前正本は **§7**
-- **次にやるなら:** **7c トップ / 7f リザルト / 7g 敗北導線 / 7h 体験版終了**（§30 残タスク）。並行で **グラフィック準備** 可
+- **次にやるなら:** **7c トップ / 7f リザルト / 7h 体験版終了**（§30 残タスク）。並行で **グラフィック準備** 可
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
 - **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**。**verify OFF first-play guidance 最小実装済み（§29）**。**Phase 7d〜7g 導線棚卸し・main flow 成立確認済み（§30）**
@@ -1478,14 +1478,14 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | 勝利後 | **battle 維持**。`applyVictoryRewards` で `currentStageId` 進行。`respawnAfterEnd` 経路維持 |
 | 編成 | map 不要で `openPartyMenu()` → formation → battle。**壊れていない** |
 
-### 敗北時の現状
+### 敗北時の現状（§31 で verify OFF formation 復帰追加）
 
 | 項目 | 内容 |
 | ---- | ---- |
-| 画面 | **battle のまま**（map / formation へ戻さない） |
-| 進行 | `applyStageRollbackOnDefeat` — 先頭 stage 以外は 1 つ前へ rollback。先頭は stay |
-| 再戦 | `BattleEngine.respawnAfterEnd`（~3 秒後 `reloadBattlefield`）。verify ON/OFF 共通 |
-| 未実装 | 敗北リザルト・編成見直し導線（7g スコープ外・今回変更なし） |
+| verify OFF | **formation 復帰** — `handleDefeat` 末尾で `restartBattle` + `menuHost.open('party')`。自動再戦なし（`engine.tick` 停止） |
+| verify ON | **battle 維持** + `respawnAfterEnd`（~3 秒後 `reloadBattlefield`）— 従来どおり |
+| 進行 | `applyStageRollbackOnDefeat` — 先頭 stage 以外は 1 つ前へ rollback。先頭は stay。**formation / 再戦の stage は rollback 後** |
+| 未実装 | 敗北リザルト UI・map 復帰・retry ボタン |
 
 ### 残タスク（Phase 7 以降・今回やらない範囲）
 
@@ -1493,7 +1493,6 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | ---- | ---- | ---- |
 | **7c** | トップ画面（Continue / New Game） | 現状 verify OFF は map 直起動 |
 | **7f** | リザルト画面・報酬演出 | 勝利後は map 直行。`stageRecords` 表示未接続 |
-| **7g** | 敗北 → 編成見直し導線 | 現状 battle 再戦のみ |
 | **7h** | `demo_ch1_07` クリア後 体験版終了 / Debug UI 整理 | `unlockClassIdsOnClear` 通知も未着手 |
 | **7e2** | 編成画面 M1 polish | グラフィック方針後。大改修しない |
 | **§13** | `DEFAULT_ROSTER_EXTRAS.demo` 縮小 + `unlockClassIdsOnClear` 接続 | データ・progression 最小案あり |
@@ -1507,6 +1506,57 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | -------- | ---- |
 | `StageSelectionPanel.test.ts` | **4 passed** |
 | `stageSelectionWire.test.ts` | **4 passed** |
-| `gameSessionWire.test.ts` | **6 passed** |
+| `gameSessionWire.test.ts` | **8 passed** |
 | `victoryRewards.unlock.test.ts` | **5 passed** |
-| **合計** | **19 passed** |
+| **合計** | **21 passed** |
+
+## 31. Phase 7g — verify OFF 敗北後 formation 復帰 最小実装（2026-07-08）
+
+### 読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `src/game/GameSession.ts` | `handleDefeat` / `handleVictory` / screen state |
+| 3 | `src/progression/stageProgression.ts` | `applyStageRollbackOnDefeat` |
+| 4 | `src/battle/BattleEngine.ts` | `respawnAfterEnd` / `applyDefeatTransition` |
+| 5 | `src/platform/DomFormationScreenHost.ts` | formation 画面切替 |
+| 6 | `src/game/gameSessionWire.test.ts` | wire テスト拡張 |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/GameSession.ts` | verify OFF のみ `handleDefeat` 末尾 — `restartBattle` + `menuHost.open('party')`。先頭 stage 敗北時の early return を除去 |
+| `src/game/gameSessionWire.test.ts` | verify OFF 敗北 → formation + rollback stage。verify ON 敗北 → battle 維持 |
+| `docs/ai-handoff/current-task.md` | 本節・§30 敗北行更新 |
+
+**触らなかった:** `BattleEngine` / `respawnAfterEnd`、`classes.json` / skills、`stages-demo.json` 数値、リザルト UI、map 復帰、編成画面 UI
+
+### 敗北処理フロー確認
+
+| 段階 | 処理 |
+| ---- | ---- |
+| 終了検知 | `BattleEngine.applyDefeatTransition` → `battleEnd` defeat → `GameSession.handleDefeat` |
+| verify loop | `loopStageId` ありなら rollback なし・return（従来） |
+| rollback | `applyStageRollbackOnDefeat` — `getPreviousStageId`。先頭は同 id 維持 |
+| verify ON | battle 維持。`engine.tick` 継続 → ~3 秒後 `respawnAfterEnd` |
+| verify OFF | `restartBattle`（rollback 後 stage で battlefield 再構築）→ formation。tick 停止のため自動再戦なし |
+
+### rollback 後 `currentStageId`
+
+| ケース | rollback 後 id | formation / 再戦で使う stage |
+| ------ | -------------- | ---------------------------- |
+| 先頭 stage 敗北 | **同 id**（stay） | 敗北した stage のまま |
+| 2 番目以降敗北 | **1 つ前** | rollback 後（従来 auto-respawn と同じ） |
+
+### 実装判断
+
+**実装した** — `handleVictory` の verify OFF map 復帰と同型。`BattleEngine` 変更不要。rollback 後 stage で `restartBattle` するため既存 progression と整合。
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `gameSessionWire.test.ts` | **8 passed** |
+| `stageSelectionWire.test.ts` | **4 passed** |

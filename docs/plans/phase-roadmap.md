@@ -607,34 +607,53 @@ Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦�
 
 ## Phase 7 — M1 demo app flow / first-play guidance
 
-**ゴール:** 体験版として **起動から `demo_ch1_07` クリアまで遊べるアプリ導線** を作る。配布（zip）は **Phase 9**。**現状は戦闘画面と編成画面のみ** — トップ・ステージ選択・リザルト・体験版終了・first-play guidance は未実装。
+**ゴール:** 体験版として **起動から `demo_ch1_07` クリアまで遊べるアプリ導線** を作る。配布（zip）は **Phase 9**。
 
-**現状（Phase 4d まで）— Phase 2 放置 MVP のレガシー**
+**実装状況（2026-07-08）— verify OFF main flow 最小成立**
 
-- `GameSession` 起動 → 即 `BattleView` / 自動戦闘開始
-- 編成は戦闘中の Party HUD **編成** ボタン → `MetaMenuOverlay`（[party-formation-ui.md](../spec/party-formation-ui.md) §3）
-- **Victory** → セーブ上の `currentStageId` が **自動で次ステージ**へ（`applyVictoryRewards` / `resolveVictoryNextStageId`）。`BattleEngine` が 3 秒後 **`respawnAfterEnd()`** で **無入力再開**（最終ステージは同ステージ周回）
-- **Defeat** → `currentStageId` **自動ロールバック** 後、同様に 3 秒で再スポーン
-- **ステージ選択 UI なし（リリース経路）** — セーブの `currentStageId` と勝利時の自動進行のみ。**任意ステージの手動選択は確認モード（verify）の `DebugMenuPanel` のみ**（`BattleView` 内・「周回ステージ」`<select>` + 任意で Wave 固定）。開発・検証用の暫定 UI であり、本番マップ画面の代わりではない
-- 専用リザルト / マップ画面なし（[progression.md](../spec/progression.md) §ステージ進行「レガシー」表）
+| 小タスク | 内容 | 状態 |
+| -------- | ---- | ---- |
+| **7a** | demo app flow 調査（起動・勝敗・再スポーン経路） | **調査済み**（[current-task.md §30](../ai-handoff/current-task.md)） |
+| **7b** | 画面状態骨格（`title` / `map` / `party` / `battle` / `result` / `demoEnd`） | **一部** — `map` / `party` / `battle` のみ |
+| **7c** | トップ画面（Continue / New Game） | 未着手 |
+| **7d** | ステージ選択（一覧・詳細・出撃） | **最小実装済み** — `StageSelectionPanel` + `GameSession` 接続 |
+| **7e** | 編成 → 戦闘開始導線 | **確認済み** — sortie → `MetaMenuOverlay` → battle |
+| **7e2** | 編成画面 M1 polish | 保留（グラフィック方針後） |
+| **7f** | 戦闘終了 → リザルト | **一部** — verify OFF 勝利後 **map 復帰**のみ。リザルト画面・`stageRecords` 未着手 |
+| **7g** | first-play guidance / 敗北導線 | **一部** — map 汎用ガイド実装済み。敗北 → 編成は未着手 |
+| **7h** | `demo_ch1_07` クリア後 体験版終了 / debug UI 整理 | 未着手 |
+
+**verify OFF で成立している導線:** map（`StageSelectionPanel`）→ stage detail → 出撃（`currentStageId` 反映）→ 編成（`SkillMenuPanel`）→ 戦闘 → 勝利（`applyVictoryRewards`）→ map（次 stage 選択同期）。
+
+**未着手（M1 残）:** トップ / リザルト / 敗北時編成見直し / `demo_ch1_07` クリア後体験版終了 / `unlockClassIdsOnClear` 通知 / `stageRecords` 表示。
+
+**レガシー（Phase 2 放置 MVP）— 参照用**
+
+- `GameSession` 起動 → 即 `BattleView` / 自動戦闘開始 — **verify OFF では map 起動に置換済み**（verify ON は battle 維持）
+- 編成は戦闘中の Party HUD **編成** ボタン → `MetaMenuOverlay`（[party-formation-ui.md](../spec/party-formation-ui.md) §3）。**verify OFF では map 出撃が主導線**
+- **Victory** → `applyVictoryRewards` で `currentStageId` 進行。**verify OFF** は map 復帰（`respawnAfterEnd` 実質未使用）。**verify ON** は battle 維持 + 3 秒後 `respawnAfterEnd()`
+- **Defeat** → `applyStageRollbackOnDefeat` 後、**battle 画面のまま** 3 秒後 `respawnAfterEnd()`（verify ON/OFF 共通）。map / 編成へは戻さない
+- **ステージ選択 UI** — **verify OFF: `StageSelectionPanel` 最小実装済み**。verify ON: `DebugMenuPanel`（開発用）
+- 専用リザルト / トップ / 体験版終了画面なし（[progression.md](../spec/progression.md) §ステージ進行「レガシー」表）
 
 **現状のステージ選択（開発 vs 本番）**
 
 | 経路 | ステージの決まり方 | UI |
 | ---- | ------------------ | -- |
-| **リリースモード**（verify OFF） | 初回は `stages[0]`。以降は勝利で自動次ステージ / 敗北でロールバック | **選択 UI なし**（Canvas 左上にステージ名表示のみ） |
-| **確認モード**（verify ON） | `DebugMenuPanel` で **周回ステージ** をピン留め可能（`GameSession.setLoopStage`）。未選択時は上記と同じ自動進行 | `src/ui/DebugMenuPanel.ts` — 全ステージ `<select>`、「通常進行」、Wave 固定、プレイヤー Lv 変更 |
+| **リリースモード**（verify OFF） | 初回は `stages[0]`（demo: `demo_ch1_01`）。出撃で `currentStageId` 反映。勝利で次 ID へ進行 | **`StageSelectionPanel`** — 一覧・詳細・出撃。first-play guidance（map 上部）。`demo_ch1_05` のみ `formationHintJa` |
+| **確認モード**（verify ON） | `DebugMenuPanel` で **周回ステージ** をピン留め可能（`GameSession.setLoopStage`）。未選択時は勝利で自動進行 | `src/ui/DebugMenuPanel.ts` — 全ステージ `<select>`、「通常進行」、Wave 固定、プレイヤー Lv 変更。起動は **battle** |
 
 Phase 7 の **ステージ選択** は上記リリース経路向けの本番 UI。`DebugMenuPanel` のステージ選択は **本番非表示**（verify 専用に限定。最終的な demo ビルド無効化は **Phase 9**）。
 
-**Phase 7 で廃止するレガシー**
+**Phase 7 で廃止するレガシー（目標 vs 現状）**
 
-| 廃止対象 | 現行 | Phase 7 後 |
-| -------- | ---- | ---------- |
-| 勝利後の自動 `currentStageId` 更新 | クリアと同時に次 ID へ | クリア記録・解放のみ。**出撃ステージはステージ選択で選択** |
-| `BattleEngine.respawnAfterEnd` による連戦 | 3 秒待ち → `reloadBattlefield()` | リザルト表示 → プレイヤー操作でステージ選択へ |
-| 起動即戦闘 | `GameSession.start()` → `startBattle()` | トップ / ステージ選択経由で初回出撃 |
-| 本番向けステージ選択 UI | **なし**（自動進行のみ）。開発時は `DebugMenuPanel`（verify ON 時のみ） | **ステージ選択画面**（`DebugMenuPanel` の周回ステージは verify 専用） |
+| 廃止対象 | 現行（Phase 2） | 目標（Phase 7 完了時） | 現状（2026-07-08） |
+| -------- | --------------- | ---------------------- | ------------------ |
+| 起動即戦闘 | `start()` → `startBattle()` | トップ / ステージ選択経由 | **verify OFF: map 起動済み**。verify ON: battle（意図的） |
+| 本番向けステージ選択 UI | なし（自動進行のみ） | **ステージ選択画面** | **verify OFF: 最小実装済み** |
+| `respawnAfterEnd` による連戦 | 3 秒待ち → `reloadBattlefield()` | リザルト → ステージ選択へ | **verify OFF 勝利: map で tick 停止のため実質未使用**。敗北・verify ON: **残置** |
+| 勝利後の画面遷移 | battle 上で再スポーン | リザルト → ステージ選択 | **verify OFF: map 直行**（リザルト画面なし） |
+| 勝利時 `currentStageId` 更新タイミング | `applyVictoryRewards` で即次 ID | 出撃確定時のみ（案） | **現状維持** — 勝利時も進行。出撃時にも反映 |
 
 **目標フロー（M1 ざっくり）**
 
@@ -676,14 +695,15 @@ flowchart LR
 
 **first-play guidance / チュートリアル（M1 最小）**
 
-- 初回プレイ時の短いガイダンス文（編成・出撃・自動戦闘の要点）
-- トップ / ステージ選択 / 編成のどこで提示するかは実装時確定。長いチュートリアル戦闘はスコープ外
+- 初回プレイ時の短いガイダンス文（編成・出撃・自動戦闘の要点）— **verify OFF map 上部に実装済み**（既読フラグなし・常時表示）
+- `demo_ch1_05` の `formationHintJa`（敵編成直下・experience spotlight。必須 counter 表記ではない）— **実装済み**
+- トップ / 編成画面での追加ガイドは未着手。長いチュートリアル戦闘はスコープ外
 
 **実装の切り口（案）**
 
-- `GameSession` 上に **画面状態**（`title` / `map` / `party` / `battle` / `result` / `demoEnd`）を持ち、DOM ルートを切り替える
-- **レガシー削除:** `BattleEngine` の `restartTimer` / `respawnAfterEnd` をリリースビルドでは **リザルト待ち** に差し替え（verify モードはループ検証用に旧経路を残すか要判断）
-- **進行更新の分離:** 勝利報酬（Exp・`totalClears`・クリアフラグ）と **`currentStageId` の更新タイミング** を分ける — ID 更新は **マップで出撃確定時**（またはリザルトから「次へ」明示時）。`applyVictoryRewards` 内の `getNextStageId` 自動代入は廃止
+- `GameSession` 上に **画面状態**（`title` / `map` / `party` / `battle` / `result` / `demoEnd`）を持ち、DOM ルートを切り替える — **`map` / `party` / `battle` 接続済み**
+- **レガシー削除:** `BattleEngine` の `restartTimer` / `respawnAfterEnd` をリリースビルドでは **リザルト待ち** に差し替え（verify モードはループ検証用に旧経路を残す）— **verify OFF 勝利時は map 遷移で実質回避。敗北は未着手**
+- **進行更新の分離:** 勝利報酬（Exp・`totalClears`・クリアフラグ）と **`currentStageId` の更新タイミング** を分ける — **未着手**（現状は `applyVictoryRewards` で勝利時進行 + 出撃時反映）
 - 編成は `MetaMenuOverlay` の **ウィンドウ表示を再利用** し、独立画面として `party` 状態で全画面表示
 - マップ・トップ・リザルトは新規 DOM 画面（Canvas 戦闘と排他表示）
 - verify / debug UI の本番非表示整理（`DebugMenuPanel` は verify 専用。demo リリースビルドでは非表示 — 最終ゲートは **Phase 9**）
@@ -712,11 +732,13 @@ flowchart LR
 
 ### 進め方
 
-1. 画面状態（`title` / `map` / `party` / `battle` / `result` / `demoEnd`）の骨格 — **6b のステージ ID 確定後** にステージ選択 UI を接続
-2. レガシー進行（自動次ステージ・`respawnAfterEnd`）の廃止
-3. 敗北時の編成見直し導線・`demo_ch1_07` クリア後の体験版終了画面
-4. first-play guidance 文案（日本語）— **4e の前提**
-5. verify / debug UI の本番非表示整理
+1. ~~画面状態（`title` / `map` / `party` / `battle` / `result` / `demoEnd`）の骨格~~ — **`map` / `party` / `battle` 接続済み**（7d〜7e）。残: `title` / `result` / `demoEnd`
+2. レガシー進行（`respawnAfterEnd`）の廃止 — **verify OFF 勝利後 map 復帰済み**。敗北再戦・verify ON は残置
+3. 敗北時の編成見直し導線・`demo_ch1_07` クリア後の体験版終了画面 — **未着手**
+4. ~~first-play guidance 文案（日本語）~~ — **map 汎用ガイド実装済み**（4e の前提の一部）
+5. verify / debug UI の本番非表示整理 — **未着手**（Phase 9 最終ゲート）
+6. リザルト画面・`stageRecords` 2 枠表示 — **未着手**（7f）
+7. トップ画面（Continue / New Game）— **未着手**（7c）
 
 ### スコープ外（Phase 7）
 
@@ -738,7 +760,7 @@ flowchart LR
 | **効果音** | 最低限実装、または M1 スコープ外とする判断 |
 | **配布ゲート** | 上記を踏まえ、無音・プレースホルダー画像のまま itch 公開しない |
 
-**着手条件:** Phase 7 で通しプレイ可能であること（導線は動くが見た目・音が未整備でも可）。
+**着手条件:** Phase 7 で通しプレイ可能であること（導線は動くが見た目・音が未整備でも可）。**verify OFF main flow は最小成立**（2026-07-08 確認）。
 
 ### スコープ外（Phase 8）
 

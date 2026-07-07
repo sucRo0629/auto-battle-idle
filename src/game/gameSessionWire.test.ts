@@ -14,6 +14,12 @@ function triggerVictory(session: GameSession, survivingIndices: number[] = [0, 1
     .applyVictoryTransition(survivingIndices);
 }
 
+function triggerDefeat(session: GameSession, survivingIndices: number[] = []): void {
+  const engine = (session as unknown as { engine: BattleEngine }).engine;
+  (engine as unknown as { applyDefeatTransition: (indices: number[]) => void })
+    .applyDefeatTransition(survivingIndices);
+}
+
 function mockCanvas2d(): void {
   const ctx = {
     imageSmoothingEnabled: true,
@@ -185,5 +191,57 @@ describe('GameSession map → party → battle wire', () => {
 
     expect(session.getCurrentScreen()).toBe('battle');
     expect(session.getSaveState().stageProgress.currentStageId).toBe(initialStageId);
+  });
+
+  it('verify OFF defeat opens formation with rolled-back currentStageId', () => {
+    setVerifyModeEnabled(false);
+    session = createSession();
+    const gameData = tryLoadGameData();
+    if (!gameData.ok) throw new Error(gameData.error);
+
+    const firstStage = gameData.data.stages[0];
+    const secondStage = gameData.data.stages[1];
+    if (!firstStage || !secondStage) throw new Error('Need at least 2 stages');
+
+    const container = document.body.querySelector('div')!;
+    const listItems = container.querySelectorAll<HTMLButtonElement>(
+      '.stage-selection-list-item',
+    );
+    (listItems[1] ?? listItems[0])?.click();
+    container.querySelector<HTMLButtonElement>('.stage-selection-sortie')?.click();
+    container
+      .querySelector<HTMLButtonElement>('.skill-menu-return-to-battle-button')
+      ?.click();
+
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(secondStage.id);
+    expect(session.getCurrentScreen()).toBe('battle');
+
+    triggerDefeat(session);
+
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(firstStage.id);
+    expect(session.getCurrentScreen()).toBe('formation');
+    expect(
+      container.querySelector('.skill-menu-return-to-battle-button'),
+    ).not.toBeNull();
+  });
+
+  it('verify ON defeat stays on battle (auto-respawn path preserved)', () => {
+    setVerifyModeEnabled(true);
+    session = createSession();
+    const gameData = tryLoadGameData();
+    if (!gameData.ok) throw new Error(gameData.error);
+
+    const firstStage = gameData.data.stages[0];
+    const secondStage = gameData.data.stages[1];
+    if (!firstStage || !secondStage) throw new Error('Need at least 2 stages');
+
+    session.getSaveState().stageProgress.currentStageId = secondStage.id;
+    triggerDefeat(session);
+
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(firstStage.id);
+    expect(session.getCurrentScreen()).toBe('battle');
+    expect(
+      document.body.querySelector('.skill-menu-return-to-battle-button'),
+    ).toBeNull();
   });
 });
