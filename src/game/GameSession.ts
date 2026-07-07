@@ -486,16 +486,20 @@ export class GameSession {
       this.gameData,
       this.levelCurves,
       survivingPartyIndices,
+      { advanceCurrentStage: this.verifyMode },
     );
 
     const loopStageId = this.verifyMode ? this.loopStageId : null;
-    const nextStageId = resolveVictoryNextStageId(
-      this.gameData.stages,
-      clearedStageId,
-      loopStageId,
-    );
-    if (nextStageId !== result.nextStageId) {
-      this.save.stageProgress.currentStageId = nextStageId;
+    let nextStageId = result.nextStageId;
+    if (this.verifyMode) {
+      nextStageId = resolveVictoryNextStageId(
+        this.gameData.stages,
+        clearedStageId,
+        loopStageId,
+      );
+      if (nextStageId !== result.nextStageId) {
+        this.save.stageProgress.currentStageId = nextStageId;
+      }
     }
 
     this.stageDamageStats.resetForStage(
@@ -508,11 +512,13 @@ export class GameSession {
 
     const nextStage = getStageById(this.gameData.stages, nextStageId);
     const nextStageName = nextStage?.displayName ?? nextStageId;
-    const progressLog = loopStageId
-      ? `[progress] Stage clear: ${stageName} (loop: ${nextStageName})`
-      : nextStageId === clearedStageId
-        ? `[progress] Stage clear: ${stageName} (loop)`
-        : `[progress] Stage clear: ${stageName} → ${nextStageName}`;
+    const progressLog = !this.verifyMode
+      ? `[progress] Stage clear: ${stageName}`
+      : loopStageId
+        ? `[progress] Stage clear: ${stageName} (loop: ${nextStageName})`
+        : nextStageId === clearedStageId
+          ? `[progress] Stage clear: ${stageName} (loop)`
+          : `[progress] Stage clear: ${stageName} → ${nextStageName}`;
     console.log(progressLog);
 
     if (!this.verifyMode) {

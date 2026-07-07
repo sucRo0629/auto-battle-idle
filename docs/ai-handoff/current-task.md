@@ -15,6 +15,7 @@
 - **現状画面:** verify OFF 起動は **map**（`StageSelectionPanel`）→ 編成（`MetaMenuOverlay`）→ 戦闘。**未実装:** トップ / リザルト / 体験版終了
 - **並行・未達:** キャラ画像（並行作業中）、VFX 未実装、効果音未実装
 - **当面方針:** 新規ソース実装は止め、Phase 7 整理後は **グラフィック準備優先**。新規画面実装はグラフィック方針整理後に再開
+- **verify OFF 勝利時 currentStageId 維持済み（§33）**
 - **編成画面:** 戦闘画面より見た目・読みやすさが未達。**7e2 編成画面 M1 polish** は M1 前の改善対象だが、Cursor トークン消費を避け **今すぐ大改修しない**（グラフィック方針・クラス画像反映後に棚卸し → 小改善）
 - M1 方針（6b で固定）: **M1 ではレベル実装しない**。EXP / progression 接続は Phase 7 でも触らない。`recommendedLevel` は表示・設計メモ・将来用（体験版は **Lv1 基準、終盤は Lv2**）
 - **体験版ステージ難度（6c 着手）:** 敵 **5 体以上はダミー敵で確認済み**（再調査不要）。**敵 Lv0 固定は誤り** — 通常敵は **`recommendedLevel` Lv1 以上**（雑魚は scale 低下で表現）。`enemyGroups` + `classId` 直参照のみ
@@ -390,7 +391,7 @@
 | ---- | ---- |
 | `GameSession` 統合 smoke | **`gameSessionWire.test.ts` でカバー**（§27・§30） |
 | `respawnAfterEnd` | **verify ON:** 勝利・敗北とも 3 秒後 `reloadBattlefield`。**verify OFF 勝利:** map 遷移で tick 停止のため実質未使用。**verify OFF 敗北:** 現状も `respawnAfterEnd` で同一 battle 画面再戦 |
-| 勝利時 `currentStageId` 自動進行 | **現状維持** — `applyVictoryRewards` で進行。sortie 時も出撃 stage を反映。リザルト画面実装時に再検討 |
+| 勝利時 `currentStageId` 自動進行 | **verify OFF は維持（§33）** / verify ON は従来どおり。sortie 時に出撃 stage を反映 |
 | `DebugMenuPanel` / verify UI | 本番非表示方法（build flag / verify gate）。最終 demo ビルド無効化は Phase 9 |
 | `MetaMenuOverlay` 流用 | **成立** — sortie 後 `menuHost.open('party')` で全画面編成（§27） |
 | `stageRecords` / best record | M1 でどこまで（2 枠・☆・リザルト/詳細表示は roadmap 必須。横断 Records ビューは Phase 14） |
@@ -756,7 +757,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **7c トップ / 7f リザルト / 7h 体験版終了**（§30 残タスク）。並行で **グラフィック準備** 可
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**。**verify OFF first-play guidance 最小実装済み（§29）**。**Phase 7d〜7g 導線棚卸し・main flow 成立確認済み（§30）**。**verify OFF 敗北 rollback 停止・`currentStageId` 棚卸し済み（§32）**
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**。**verify OFF first-play guidance 最小実装済み（§29）**。**Phase 7d〜7g 導線棚卸し・main flow 成立確認済み（§30）**。**verify OFF 敗北 rollback 停止・`currentStageId` 棚卸し済み（§32）**。**verify OFF 勝利時 currentStageId 維持（§33）**
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -1630,7 +1631,7 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | verify ON | 勝利後も battle。進行 + `respawnAfterEnd` | **維持** — Debug / legacy 用に `getNextStageId` + loop 上書きを残す |
 | `handleStageSortie` | 出撃時に選択 id を **上書き** | **維持** — これが「選択中 stage」の正しい書き込み経路 |
 
-**今回の判断:** 勝利時自動進行は**変更しない**（影響大・リザルト未実装）。再設計の第一歩は敗北 rollback 停止。
+**今回の判断:** verify OFF 敗北 rollback 停止（§32）に続き、**verify OFF 勝利時も自動進行を停止（§33）**。verify ON は従来維持。
 
 ### 敗北時 rollback
 
@@ -1654,7 +1655,7 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 
 - 意味を **「最後に map で選んだ / 次に出撃する stageId」** に固定する文書化
 - verify OFF 敗北: **維持**（rollback なし）— 実装済み
-- verify OFF 勝利: **当面** 自動進行維持。7f リザルト実装時に「クリア記録のみ・id 不変」へ切替検討
+- verify OFF 勝利: **維持** — `advanceCurrentStage: false`（§33 実装済み）
 
 **中期（schema 追加は小さく、migration は薄く）**
 
@@ -1668,7 +1669,7 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 **導入順（推奨）**
 
 1. verify OFF 敗北 rollback 停止 — **完了（§32）**
-2. verify OFF 勝利で `currentStageId` を進めない + `clearedStageIds` に追加（`applyVictoryRewards` 分岐のみ）
+2. verify OFF 勝利で `currentStageId` を進めない — **完了（§33）**。`clearedStageIds` 追加は未着手
 3. map `selectStage` を `selectedStageId` 専用に（sortie / 表示）。`battleStageId` は `handleStageSortie` でセット
 4. verify ON は `currentStageId` + next/previous を **Debug 専用パス**として分離（本番 save slot とは既に分離済み）
 
@@ -1686,3 +1687,58 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | `stageProgression.test.ts` | **4 passed** |
 | `victoryRewards.unlock.test.ts` | **5 passed** |
 | **合計** | **17 passed** |
+
+## 33. verify OFF 勝利時 currentStageId 維持 — 調査・最小実装（2026-07-08）
+
+### 読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本・§32 前提 |
+| 2 | `src/progression/victoryRewards.ts` | `applyVictoryRewards` 責務 |
+| 3 | `src/game/GameSession.ts` | `handleVictory` / verify 分岐 |
+| 4 | `src/dev/verifyMode.ts` | verify 判定 |
+| 5 | `src/game/gameSessionWire.test.ts` | wire 期待値 |
+| 6 | `src/game/StageSelectionScreenHost.ts` | map 復帰時 `selectStage` |
+
+### 調査結果
+
+| # | 項目 | 結果 |
+| - | ---- | ---- |
+| 1 | `applyVictoryRewards` 責務 | EXP 付与・`unlockClassIdsOnClear` merge・`totalClears++`・**`getNextStageId` で `currentStageId` 更新**（従来は常時） |
+| 2 | 報酬と進行の分離 | **可能** — `clearedStageId` 読取後に unlock を適用し、`currentStageId` 更新だけをオプション化 |
+| 3 | verify OFF のみ維持 | **可能** — `advanceCurrentStage: this.verifyMode`。`handleVictory` の loop 上書きも verify ON のみ |
+| 4 | verify ON 維持 | **維持** — 既定 `advanceCurrentStage: true` + `resolveVictoryNextStageId` |
+| 5 | map 復帰選択表示 | `selectStage(currentStageId)` — **クリアした stage がハイライト** |
+| 6 | 影響範囲 | 小 — `victoryRewards.ts`・`GameSession.ts`・2 テストファイルのみ |
+
+**注意:** `applyVictoryRewards` だけ止めても `handleVictory` が `resolveVictoryNextStageId` で上書きするため、**両方の修正が必要**だった。
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/progression/victoryRewards.ts` | `ApplyVictoryRewardsOptions.advanceCurrentStage`（既定 `true`） |
+| `src/game/GameSession.ts` | verify OFF は `advanceCurrentStage: false`、loop 上書きは verify ON のみ |
+| `src/game/gameSessionWire.test.ts` | verify OFF 勝利後は同 stage 維持 |
+| `src/progression/victoryRewards.unlock.test.ts` | `advanceCurrentStage: false` テスト追加 |
+
+**触らなかった:** save schema、`selectedStageId` / `clearedStageIds` 本格導入、`stages-demo.json` / クラス数値、UI 大改修
+
+### 判断
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 実装 | **実施** — §32 に続く第二歩 |
+| verify OFF 勝利 | `currentStageId` **維持** |
+| verify ON 勝利 | **従来どおり** 次 stage 進行 |
+| `unlockClassIdsOnClear` | **壊れていない** |
+
+### テスト（§33）
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `gameSessionWire.test.ts` | **8 passed** |
+| `victoryRewards.unlock.test.ts` | **6 passed** |
+| `stageProgression.test.ts` | **4 passed** |
+| **合計** | **18 passed** |

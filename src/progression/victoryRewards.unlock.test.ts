@@ -92,4 +92,19 @@ describe('demo class unlock rewards', () => {
       'at_ballista',
     ]);
   });
+
+  it('advanceCurrentStage false keeps currentStageId while applying unlock', () => {
+    const gameData = createDemoGameData();
+    const save = createDefaultSave(gameData, 'demo');
+    save.stageProgress.currentStageId = 'demo_ch1_07';
+
+    const result = applyVictoryRewards(save, gameData, levelCurves, [0, 1, 2, 3], {
+      advanceCurrentStage: false,
+    });
+
+    expect(result.newlyUnlockedClassIds).toEqual(['at_ballista']);
+    expect(save.unlockedClassIds).toContain('at_ballista');
+    expect(save.stageProgress.currentStageId).toBe('demo_ch1_07');
+    expect(result.nextStageId).toBe('demo_ch1_07');
+  });
 });

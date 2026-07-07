@@ -131,7 +131,7 @@ describe('GameSession map → party → battle wire', () => {
     expect(session.getSaveState().stageProgress.currentStageId).toBe(targetStage.id);
   });
 
-  it('verify OFF returns to map after victory with progressed currentStageId', () => {
+  it('verify OFF returns to map after victory with same currentStageId', () => {
     setVerifyModeEnabled(false);
     session = createSession();
     const gameData = tryLoadGameData();
@@ -152,11 +152,11 @@ describe('GameSession map → party → battle wire', () => {
 
     triggerVictory(session);
 
-    expect(session.getSaveState().stageProgress.currentStageId).toBe(secondStage.id);
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(firstStage.id);
     expect(session.getCurrentScreen()).toBe('map');
     expect(
       container.querySelector('.stage-selection-list-item--selected')?.textContent,
-    ).toBe(secondStage.displayName);
+    ).toBe(firstStage.displayName);
   });
 
   it('verify ON stays on battle after victory (debug loop preserved)', () => {

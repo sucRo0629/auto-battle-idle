@@ -67,6 +67,11 @@ export interface VictoryRewardResult {
   newlyUnlockedClassIds: ClassId[];
 }
 
+export interface ApplyVictoryRewardsOptions {
+  /** When false, rewards apply but currentStageId is unchanged (release / stage-select flow). */
+  advanceCurrentStage?: boolean;
+}
+
 export function mergeUnlockedClassIds(
   unlockedClassIds: ClassId[] | undefined,
   toAdd: readonly ClassId[],
@@ -129,7 +134,9 @@ export function applyVictoryRewards(
   gameData: GameData,
   curves: LevelCurvesConfig,
   survivingPartyIndices: number[],
+  options?: ApplyVictoryRewardsOptions,
 ): VictoryRewardResult {
+  const advanceCurrentStage = options?.advanceCurrentStage ?? true;
   const expGranted = computeStageExpReward(
     gameData,
     save.stageProgress.currentStageId,
@@ -193,7 +200,9 @@ export function applyVictoryRewards(
   save.unlockedClassIds = mergeUnlockedClassIds(previousUnlocked, unlockIds);
 
   const nextStageId = getNextStageId(gameData.stages, clearedStageId);
-  save.stageProgress.currentStageId = nextStageId;
+  if (advanceCurrentStage) {
+    save.stageProgress.currentStageId = nextStageId;
+  }
   save.stageProgress.totalClears += 1;
 
   return { levelUps, expGranted, nextStageId, newlyUnlockedClassIds };
