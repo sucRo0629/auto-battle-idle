@@ -756,7 +756,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）** — 体験版 spotlight 候補として採用可（必須 puzzle ではない）。**M1 ターゲット分類 docs 整理済み（§19・§20）** — [balance-diagnostics.md §7.5](../dev/balance-diagnostics.md) に現行 vs 設計意図を分離。**次候補:** `targetRuleOverride` / `targetSpec` で rangedDamage 整理（別 PR）。ch1_05 数値調整は未着手
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。ch1_05 数値調整は未着手
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -1030,3 +1030,53 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 | コマンド | 結果 |
 | -------- | ---- |
 | `npm test -- src/battle/demoStageM1TargetClassification.test.ts` | **1 passed** |
+
+## 21. 弓術士 rangedDamage 整理 — 実装前影響調査（2026-07-07）
+
+**コード変更なし**。調査・最小仕様案のみ。
+
+### 読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `docs/dev/balance-diagnostics.md` | §7.5 正本 |
+| 3 | `data/classes.json`（shell rg） | rangePx / role |
+| 4 | `src/battle/skills/targetSpec.ts` | `matchesAttackType` / `resolveTargetSpec` |
+| 5 | `src/battle/data/validateGameData.ts` | `parseTargetSpec` / `targetRuleOverride` |
+| 6 | `src/battle/demoStageM1TargetClassification.test.ts` | 診断テスト |
+
+### 結論（要点）
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 推奨案 | **案B** — `attackType` に任意 `excludeRoles` を追加し、`at_ranger_passive_2` のみ `{ ranged: true, excludeRoles: ["supporter"] }` に差し替え |
+| 案A 不採用理由 | `matchesAttackType` 全体変更 → 双刃士 `enemyReelIn`・他スキルまで supporter 除外が波及 |
+| 案C 不採用理由 | 新 `classId` spec + allowlist 保守。将来クラス追加に弱い |
+| P3/P4 | 同じ `attackType.ranged` を参照。**意味整合のため同 PR で揃える推奨**（M1 は Lv10/20 未解放のため即時影響なし） |
+| approach / chase | `excludeRoles` 案なら `ranged: true` を維持 → `hasRangedPriorityChaseTargetRule` 変更不要 |
+
+### 実装時テスト候補
+
+`targetSpec.test.ts`（supporter + rangePx≥100 除外）、`demoStageM1TargetClassification.test.ts`（cleric/wardweaver ranged pool = false）、`atRangerSkills.test.ts`（P3/P4 同時変更時）、`validateGameData.test.ts`、`formatSkillText.test.ts`、回帰 `demoStageBalance.*`
+
+## 22. 弓術士 rangedDamage — excludeRoles 実装（2026-07-07）
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/battle/types.ts` | `TargetSpec` / `DamageIncreaseCondition` の `attackType` に `excludeRoles?: Role[]` |
+| `src/battle/skills/targetSpec.ts` | `matchesAttackType` で `excludeRoles` 除外 |
+| `src/battle/data/validateGameData.ts` | `parseExcludeRoles` / `parseAttackTypeFields` |
+| `data/skills/passives/at_ranger.json` | P2/P3/P4 に `excludeRoles: ["supporter"]` |
+| `src/battle/test/m1TargetClassificationReport.ts` | 弓術士 P2 spec 経由の `inRangerRangedPool` |
+| `docs/dev/balance-diagnostics.md` | §7.5 実装後状態 |
+
+**触らなかった:** `classes.json` / `stages-demo.json` / `resolveApproachBattleX.ts` / contact cap / ranged chase / approach / active_2 / 他クラス `attackType.ranged`
+
+### 要点
+
+- 案B: `attackType.ranged` + `excludeRoles: ["supporter"]` を弓術士 P2/P3/P4 に適用
+- `sp_cleric` / `sp_wardweaver` は弓術士 ranged プール **外**。双刃士 low-HP プール **内**（変更なし）
+- グローバル `rangePx >= 100` は維持。`df_duelist_active_2` 等は波及なし

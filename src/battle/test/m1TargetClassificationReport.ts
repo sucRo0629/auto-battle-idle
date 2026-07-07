@@ -1,5 +1,11 @@
-import { isRangedAttack } from '../data/entityTraits.ts';
-import type { ClassId, ClassPreset, GameData } from '../types.ts';
+import { matchesAttackType } from '../skills/targetSpec.ts';
+import type {
+  ClassId,
+  ClassPreset,
+  CombatantState,
+  GameData,
+  TargetSpec,
+} from '../types.ts';
 import { ASSASSIN_PRIORITY_TARGET_CLASS_IDS } from './assassinRoleReport.ts';
 import { isRangerPriorityEnemyClass } from './rangerTargetReport.ts';
 
@@ -21,7 +27,7 @@ export interface M1TargetClassificationRow {
   formationRow: ClassPreset['formationRow'];
   rangePx: number;
   damageType: string;
-  /** `traits.rangePx >= RANGED_ATTACK_MIN_PX` — 弓術士 P2 `attackType.ranged` プール */
+  /** 弓術士 P2 `attackType.ranged` + `excludeRoles` プール（戦闘正本） */
   inRangerRangedPool: boolean;
   /** 診断 `RANGER_PRIORITY_ENEMY_CLASS_IDS` / back / ranged ヒューリスティック */
   inRangerDiagnosticBand: boolean;
@@ -38,6 +44,50 @@ function displayNameFor(classId: ClassId, preset: ClassPreset): string {
   return preset.displayName ?? classId;
 }
 
+function presetAsCombatantProbe(
+  classId: ClassId,
+  preset: ClassPreset,
+): CombatantState {
+  return {
+    id: classId,
+    name: preset.displayName,
+    hp: 100,
+    maxHp: 100,
+    atk: 10,
+    def: 5,
+    res: 0,
+    isAlive: true,
+    role: preset.role,
+    classId,
+    formationRow: preset.formationRow,
+    traits: preset.traits,
+    build: {
+      learnedPassiveIds: [],
+      learnedActiveIds: [],
+      equippedActiveSlots: [],
+    },
+    cooldowns: [],
+    statusEffects: [],
+    barrierHp: 0,
+    spriteKey: 'placeholder',
+    iconKey: 'placeholder',
+    isEnemy: false,
+    battleX: 0,
+    corpseVisible: true,
+  };
+}
+
+export function getRangerRangedTargetSpec(
+  gameData: GameData,
+): Extract<TargetSpec, { kind: 'attackType' }> {
+  const passive = gameData.skillRegistry.passives.at_ranger_passive_2;
+  const spec = passive?.targetRuleOverride;
+  if (!spec || spec.kind !== 'attackType') {
+    throw new Error('at_ranger_passive_2 attackType targetRuleOverride missing');
+  }
+  return spec;
+}
+
 function buildSplitNote(row: Omit<M1TargetClassificationRow, 'rangerVsAssassinNote'>): string {
   if (row.classId === 'at_ballista') {
     return 'ranger ranged yes; assassin low-HP only (high MaxHP → 開幕は低HP対象になりにくい)';
@@ -45,7 +95,7 @@ function buildSplitNote(row: Omit<M1TargetClassificationRow, 'rangerVsAssassinNo
   if (row.classId === 'sp_cleric' || row.classId === 'sp_wardweaver') {
     return row.inRangerRangedPool
       ? 'support だが rangePx>=100 のため ranger ranged 対象; assassin は HP 低下後'
-      : 'support; ranger ranged 外なら assassin low-HP のみ';
+      : 'support excluded from ranger ranged; assassin low-HP when damaged';
   }
   if (row.classId === 'at_sorcerer') {
     return 'ranger ranged yes (rangePx); assassin low-HP when damaged';
@@ -66,6 +116,7 @@ export function buildM1TargetClassificationRows(
   gameData: GameData,
 ): M1TargetClassificationRow[] {
   const registry = gameData.classRegistry;
+  const rangerRangedSpec = getRangerRangedTargetSpec(gameData);
   return M1_TARGET_CLASSIFICATION_IDS.map((classId) => {
     const preset = registry[classId];
     if (!preset) {
@@ -73,7 +124,8 @@ export function buildM1TargetClassificationRows(
     }
     const rangePx = preset.traits?.rangePx ?? 0;
     const damageType = preset.traits?.damageType ?? 'physical';
-    const inRangerRangedPool = isRangedAttack(rangePx);
+    const probe = presetAsCombatantProbe(classId, preset);
+    const inRangerRangedPool = matchesAttackType(probe, rangerRangedSpec);
     const inRangerDiagnosticBand = isRangerPriorityEnemyClass(classId, registry);
     const inAssassinDiagnosticBand = ASSASSIN_PRIORITY_TARGET_CLASS_IDS.includes(classId);
     const base = {
@@ -98,9 +150,14 @@ export function buildM1TargetClassificationRows(
 
 export function logM1TargetClassificationReport(gameData: GameData): void {
   const rows = buildM1TargetClassificationRows(gameData);
+  const rangerSpec = getRangerRangedTargetSpec(gameData);
+  const excludeNote =
+    rangerSpec.excludeRoles && rangerSpec.excludeRoles.length > 0
+      ? `; excludeRoles=${rangerSpec.excludeRoles.join(',')}`
+      : '';
   console.info('[demo-m1-target-classification] M1 target priority bands (implementation + diagnostics):');
   console.info(
-    '  ranger P2 (at_ranger_passive_2): targetRuleOverride attackType.ranged — pool = enemies with rangePx>=100; fallback nearest if empty',
+    `  ranger P2 (at_ranger_passive_2): targetRuleOverride attackType.ranged — pool = enemies with rangePx>=100${excludeNote}; fallback nearest if empty`,
   );
   console.info(
     '  assassin P2 (at_assassin_passive_2): targetRuleOverride stat.hp order lowest — all living enemies; P3 bonus when targetHp<=25% maxHp',
@@ -121,7 +178,11 @@ export function logM1TargetClassificationReport(gameData: GameData): void {
   );
   if (healersRanged.length > 0) {
     console.info(
-      `[demo-m1-target-classification] healer/support in ranger ranged pool: ${healersRanged.map((r) => r.classId).join(', ')} (role ではなく rangePx>=100 で判定)`,
+      `[demo-m1-target-classification] healer/support in ranger ranged pool: ${healersRanged.map((r) => r.classId).join(', ')}`,
+    );
+  } else {
+    console.info(
+      '[demo-m1-target-classification] healer/support excluded from ranger ranged pool (excludeRoles)',
     );
   }
   console.info(

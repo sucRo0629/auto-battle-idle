@@ -21,7 +21,9 @@ describe('at_ranger combat mechanics', () => {
       specialEffectApplyTo: 'damage',
       specialEffect: {
         scale: 1.2,
-        conditions: [{ kind: 'attackType', ranged: true }],
+        conditions: [
+          { kind: 'attackType', ranged: true, excludeRoles: ['supporter'] },
+        ],
       },
     },
   };
@@ -32,7 +34,9 @@ describe('at_ranger combat mechanics', () => {
       name: '二の矢',
       effect: 'bonusBasicAttackOnHit',
       chance: 0.5,
-      bonusBasicAttackConditions: [{ kind: 'attackType', ranged: true }],
+      bonusBasicAttackConditions: [
+        { kind: 'attackType', ranged: true, excludeRoles: ['supporter'] },
+      ],
     },
   };
 
@@ -71,6 +75,32 @@ describe('at_ranger combat mechanics', () => {
     expect(meleeDamage).toBe(meleeBaseline);
   });
 
+  it('P3 specialEffect skips ranged supporter enemies', () => {
+    const attacker = mockCombatant({
+      atk: 100,
+      build: {
+        learnedPassiveIds: ['at_ranger_passive_3'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const rangedSupporter = enemyWithRange(RANGED_ATTACK_MIN_PX);
+    rangedSupporter.role = 'supporter';
+    const baseline = resolveDamage(
+      mockCombatant({ atk: 100 }),
+      rangedSupporter,
+      baseEffect,
+      {},
+    );
+    const withPassive = resolveDamage(
+      attacker,
+      rangedSupporter,
+      baseEffect,
+      p3Passives,
+    );
+    expect(withPassive).toBe(baseline);
+  });
+
   it('P4 triggers bonus basic hit only on ranged enemies when chance succeeds', () => {
     vi.restoreAllMocks();
     const actor = mockCombatant({
@@ -88,6 +118,25 @@ describe('at_ranger combat mechanics', () => {
       true,
     );
     expect(shouldTriggerBonusBasicAttackOnHit(actor, meleeTarget, p4Passives)).toBe(
+      false,
+    );
+    successSpy.mockRestore();
+  });
+
+  it('P4 does not trigger on ranged supporter enemies', () => {
+    vi.restoreAllMocks();
+    const actor = mockCombatant({
+      build: {
+        learnedPassiveIds: ['at_ranger_passive_4'],
+        learnedActiveIds: [],
+        equippedActiveSlots: [],
+      },
+    });
+    const rangedSupporter = enemyWithRange(RANGED_ATTACK_MIN_PX);
+    rangedSupporter.role = 'supporter';
+
+    const successSpy = vi.spyOn(Math, 'random').mockReturnValue(0);
+    expect(shouldTriggerBonusBasicAttackOnHit(actor, rangedSupporter, p4Passives)).toBe(
       false,
     );
     successSpy.mockRestore();

@@ -86,6 +86,32 @@ describe('damageIncrease', () => {
     expect(resolveDamageIncreaseMultiplier(attacker, melee, spec)).toBe(1);
   });
 
+  it('attackType ranged + excludeRoles skips supporter bonus', () => {
+    const attacker = unit({ id: 'a' });
+    const rangedSupporter = unit({
+      id: 's',
+      role: 'supporter',
+      traits: { rangePx: 110, damageType: 'physical', basicAttackVfx: { enabled: true } },
+    });
+    const rangedAttacker = unit({
+      id: 'r',
+      role: 'attacker',
+      traits: { rangePx: 100, damageType: 'physical', basicAttackVfx: { enabled: true } },
+    });
+    const spec = {
+      scale: 1.2,
+      conditions: [
+        {
+          kind: 'attackType' as const,
+          ranged: true,
+          excludeRoles: ['supporter' as const],
+        },
+      ],
+    };
+    expect(resolveDamageIncreaseMultiplier(attacker, rangedSupporter, spec)).toBe(1);
+    expect(resolveDamageIncreaseMultiplier(attacker, rangedAttacker, spec)).toBe(1.2);
+  });
+
   it('requires all conditions (AND)', () => {
     const attacker = unit({ id: 'a', hp: 20, maxHp: 100 });
     const target = unit({ id: 't', hp: 30, maxHp: 100 });

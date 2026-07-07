@@ -241,6 +241,37 @@ describe('getTargetPool / pickTargetFromPool', () => {
     expect(pool.map((u) => u.id)).toEqual(['e3']);
   });
 
+  it('excludeRoles removes supporter from ranged pool even when rangePx >= 100', () => {
+    const rangedSupporter = mockUnit('e3', 60, {
+      isEnemy: true,
+      rangePx: 110,
+    });
+    rangedSupporter.role = 'supporter';
+    const rangedAttacker = mockUnit('e4', 50, {
+      isEnemy: true,
+      rangePx: 100,
+    });
+    const poolEnemies = [...enemies, rangedSupporter, rangedAttacker];
+    const spec = {
+      kind: 'attackType',
+      ranged: true,
+      excludeRoles: ['supporter'],
+    } as const;
+    const pool = getTargetPool(spec, actor, allies, poolEnemies);
+    expect(pool.map((u) => u.id)).toEqual(['e4']);
+  });
+
+  it('without excludeRoles supporter with rangePx >= 100 stays in ranged pool', () => {
+    const rangedSupporter = mockUnit('e3', 60, {
+      isEnemy: true,
+      rangePx: 110,
+    });
+    rangedSupporter.role = 'supporter';
+    const spec = { kind: 'attackType', ranged: true } as const;
+    const pool = getTargetPool(spec, actor, allies, [rangedSupporter]);
+    expect(pool.map((u) => u.id)).toEqual(['e3']);
+  });
+
   it('enemy basic attack pools and picks nearest defender by battleX', () => {
     const enemyActor = mockUnit('e1', 300, { isEnemy: true });
     const guard = mockUnit('guard', 200, { def: 50 });

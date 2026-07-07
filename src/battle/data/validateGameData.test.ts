@@ -570,3 +570,36 @@ describe('stages-demo.json validation', () => {
     expect(JSON.stringify(stagesDemoJson)).not.toContain('templateId');
   });
 });
+
+describe('at_ranger passive excludeRoles', () => {
+  it('parseAndValidateGameDataJson accepts at_ranger passives with excludeRoles', () => {
+    const skills = loadMergedSkillsForValidateTest();
+    const result = parseAndValidateGameDataJson({
+      classes: classesJson,
+      enemies: enemiesJson,
+      skills,
+      stages: [],
+      parties: partiesJson,
+    });
+
+    const p2 = result.passives.find((p) => p.id === 'at_ranger_passive_2');
+    const p3 = result.passives.find((p) => p.id === 'at_ranger_passive_3');
+    const p4 = result.passives.find((p) => p.id === 'at_ranger_passive_4');
+
+    expect(p2?.targetRuleOverride).toMatchObject({
+      kind: 'attackType',
+      ranged: true,
+      excludeRoles: ['supporter'],
+    });
+    expect(p3?.specialEffect?.conditions[0]).toMatchObject({
+      kind: 'attackType',
+      ranged: true,
+      excludeRoles: ['supporter'],
+    });
+    expect(p4?.bonusBasicAttackConditions?.[0]).toMatchObject({
+      kind: 'attackType',
+      ranged: true,
+      excludeRoles: ['supporter'],
+    });
+  });
+});

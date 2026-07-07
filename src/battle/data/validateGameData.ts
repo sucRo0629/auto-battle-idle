@@ -1412,6 +1412,63 @@ function parseDebuffFilterTags(
   });
 }
 
+function parseExcludeRoles(
+  raw: unknown,
+  context: string,
+): Role[] | undefined {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw) || raw.length === 0) {
+    invalidField(context, 'excludeRoles', 'must be a non-empty array');
+  }
+  return raw.map((entry, index) => {
+    const itemContext = `${context}[${index}]`;
+    if (typeof entry !== 'string' || !ROLES_SET.has(entry as Role)) {
+      invalidField(
+        itemContext,
+        'value',
+        `must be one of ${[...ROLES_SET].join(', ')}`,
+      );
+    }
+    return entry as Role;
+  });
+}
+
+type ParsedAttackTypeFields = {
+  physical?: true;
+  magic?: true;
+  melee?: true;
+  ranged?: true;
+  excludeRoles?: Role[];
+};
+
+function parseAttackTypeFields(
+  obj: Record<string, unknown>,
+  context: string,
+): ParsedAttackTypeFields {
+  const physical = obj.physical === true;
+  const magic = obj.magic === true;
+  const melee = obj.melee === true;
+  const ranged = obj.ranged === true;
+  if (!physical && !magic && !melee && !ranged) {
+    invalidField(
+      context,
+      'attackType',
+      'requires at least one of physical, magic, melee, ranged',
+    );
+  }
+  const excludeRoles = parseExcludeRoles(
+    obj.excludeRoles,
+    `${context}.excludeRoles`,
+  );
+  return {
+    ...(physical ? { physical: true } : {}),
+    ...(magic ? { magic: true } : {}),
+    ...(melee ? { melee: true } : {}),
+    ...(ranged ? { ranged: true } : {}),
+    ...(excludeRoles ? { excludeRoles } : {}),
+  };
+}
+
 function parseDamageIncreaseCondition(
   raw: unknown,
   context: string,
@@ -1444,23 +1501,9 @@ function parseDamageIncreaseCondition(
   }
 
   if (kind === 'attackType') {
-    const physical = obj.physical === true;
-    const magic = obj.magic === true;
-    const melee = obj.melee === true;
-    const ranged = obj.ranged === true;
-    if (!physical && !magic && !melee && !ranged) {
-      invalidField(
-        context,
-        'attackType',
-        'requires at least one of physical, magic, melee, ranged',
-      );
-    }
     return {
-      kind,
-      ...(physical ? { physical: true } : {}),
-      ...(magic ? { magic: true } : {}),
-      ...(melee ? { melee: true } : {}),
-      ...(ranged ? { ranged: true } : {}),
+      kind: 'attackType',
+      ...parseAttackTypeFields(obj, context),
     };
   }
 
@@ -1824,23 +1867,9 @@ function parseTargetSpec(raw: unknown, context: string): TargetSpec {
     };
   }
   if (kind === 'attackType') {
-    const physical = obj.physical === true;
-    const magic = obj.magic === true;
-    const melee = obj.melee === true;
-    const ranged = obj.ranged === true;
-    if (!physical && !magic && !melee && !ranged) {
-      invalidField(
-        context,
-        'attackType',
-        'requires at least one of physical, magic, melee, ranged',
-      );
-    }
     return {
       kind: 'attackType',
-      ...(physical ? { physical: true } : {}),
-      ...(magic ? { magic: true } : {}),
-      ...(melee ? { melee: true } : {}),
-      ...(ranged ? { ranged: true } : {}),
+      ...parseAttackTypeFields(obj, context),
     };
   }
   if (kind === 'status') {

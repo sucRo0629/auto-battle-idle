@@ -195,6 +195,8 @@ export type TargetSpec =
       magic?: boolean;
       melee?: boolean;
       ranged?: boolean;
+      /** 指定 role のユニットをプール外にする（任意） */
+      excludeRoles?: Role[];
     }
   | {
       kind: "status";
@@ -485,6 +487,8 @@ export type DamageIncreaseCondition =
       magic?: boolean;
       melee?: boolean;
       ranged?: boolean;
+      /** 指定 role のユニットを条件対象外にする（任意） */
+      excludeRoles?: Role[];
     };
 
 export interface DamageIncreaseSpec {

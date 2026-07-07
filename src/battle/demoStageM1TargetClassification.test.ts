@@ -18,9 +18,11 @@ describe('demo M1 target classification (diagnostic)', () => {
     const ballista = rows.find((r) => r.classId === 'at_ballista');
     const sorcerer = rows.find((r) => r.classId === 'at_sorcerer');
 
-    expect(cleric?.inRangerRangedPool).toBe(true);
-    expect(wardweaver?.inRangerRangedPool).toBe(true);
+    expect(cleric?.inRangerRangedPool).toBe(false);
+    expect(wardweaver?.inRangerRangedPool).toBe(false);
     expect(cleric?.role).toBe('supporter');
+    expect(cleric?.inAssassinLowHpPool).toBe(true);
+    expect(wardweaver?.inAssassinLowHpPool).toBe(true);
     expect(ballista?.inRangerRangedPool).toBe(true);
     expect(sorcerer?.inRangerRangedPool).toBe(true);
     expect(isRangedAttack(cleric!.rangePx)).toBe(true);

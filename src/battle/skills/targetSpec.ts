@@ -158,13 +158,7 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
     if (raw.magic === true) (spec as { magic?: boolean }).magic = true;
     if (raw.melee === true) (spec as { melee?: boolean }).melee = true;
     if (raw.ranged === true) (spec as { ranged?: boolean }).ranged = true;
-    const attackSpec = spec as {
-      kind: "attackType";
-      physical?: boolean;
-      magic?: boolean;
-      melee?: boolean;
-      ranged?: boolean;
-    };
+    const attackSpec = spec as Extract<TargetSpec, { kind: "attackType" }>;
     if (
       !attackSpec.physical &&
       !attackSpec.magic &&
@@ -172,6 +166,12 @@ function parseTargetSpecObject(raw: Record<string, unknown>): TargetSpec {
       !attackSpec.ranged
     ) {
       throw new Error("target.attackType requires at least one filter");
+    }
+    if (Array.isArray(raw.excludeRoles)) {
+      attackSpec.excludeRoles = raw.excludeRoles as Extract<
+        TargetSpec,
+        { kind: "attackType" }
+      >["excludeRoles"];
     }
     return attackSpec;
   }
@@ -337,7 +337,9 @@ export function matchesAttackType(
     damageFilters.length === 0 || damageFilters.some((value) => value);
   const rangeOk =
     rangeFilters.length === 0 || rangeFilters.some((value) => value);
-  return damageOk && rangeOk;
+  if (!damageOk || !rangeOk) return false;
+  if (spec.excludeRoles?.includes(unit.role)) return false;
+  return true;
 }
 
 function compareStat(unit: CombatantState, stat: TargetStat): number {
