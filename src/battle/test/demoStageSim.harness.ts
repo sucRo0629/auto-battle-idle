@@ -1104,6 +1104,10 @@ export function logDemoCh1_04HealerPuzzleDiagnostics(
       `durationSec=${quad.universalResult.durationSec.toFixed(1)}); ` +
       `counter=${quad.counterResult.outcome}(hp=${quad.counterResult.totalRemainingHp})`,
   );
+  console.info(
+    `[demo-ch1_04-diag]   read: no-healer must lose; withHealer cleric healingDealt=${clericHeal} sustains guardian through enemy cleric wall. ` +
+      `Healer puzzle axis — sp_cleric value without UI-mandatory wording.`,
+  );
 }
 
 /** Phase 6c — demo_ch1_05 bad outcome score ≥ baseline (assassin swap ripple). */
@@ -1224,9 +1228,10 @@ export function logDemoCh1_06BadCounterDiagnostics(
       `baseline sp_cleric healingDealt=${clericBaselineHeal}`,
   );
   console.info(
-    `[demo-ch1_06-diag]   read: bad wins with fewer survivors/HP → puzzle is soft if no-healer still clears; ` +
-      `counter paladin improves margin (score delta ${counterScore - badScore}). ` +
-      `6c candidate = raise stage pressure until bad=defeat while counter stays victory.`,
+    `[demo-ch1_06-diag]   read: no-healer must lose; baseline cleric healingDealt=${clericBaselineHeal} sustains guardian. ` +
+      `universal sorcerer wins thin (${universalResult.totalRemainingHp}/${universalResult.totalMaxHp}); ` +
+      `counter paladin tank improves score (+${counterScore - badScore} vs bad). ` +
+      `Not default-answer — composition tradeoffs vs ch1_01.`,
   );
 }
 

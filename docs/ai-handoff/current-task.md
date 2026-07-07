@@ -757,7 +757,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **7c トップ / 7f リザルト / 7h 体験版終了**（§30 残タスク）。並行で **グラフィック準備** 可
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**。**verify OFF first-play guidance 最小実装済み（§29）**。**Phase 7d〜7g 導線棚卸し・main flow 成立確認済み（§30）**。**verify OFF 敗北 rollback 停止・`currentStageId` 棚卸し済み（§32）**。**verify OFF 勝利時 currentStageId 維持（§33）**
+- **6c 進行**: **§35 P1** — `demo_ch1_04` / `demo_ch1_06` scale 再調整（§34 棚卸し受け）。ch1_01 のみ default-answer。§14/§15 は履歴
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -1742,3 +1742,230 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | `victoryRewards.unlock.test.ts` | **6 passed** |
 | `stageProgression.test.ts` | **4 passed** |
 | **合計** | **18 passed** |
+
+## 34. 体験版 demo stage 編成パズル棚卸し — 順不同問題セット再分類（2026-07-08）
+
+**コード・データ変更なし**（調査・診断・文書整理のみ）。`class` / `stage` 数値 / `enemyGroups` は未変更。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本・§32/§33 前提 |
+| 2 | `data/stages-demo.json` | 7 stage 敵編成・`formationHintJa`・`unlockClassIdsOnClear` |
+| 3 | `data/parties.json` | デフォルト編成（guardian / swordsman / cleric / ranger） |
+| 4 | `src/battle/demoStageBalance.puzzle.test.ts` | baseline / bad / universal / counter 期待値 |
+| 5 | `src/battle/demoStageBalance.smoke.test.ts` | 標準編成 smoke（勝利保証なし） |
+| 6 | `src/game/GameSession.ts` | `demo_ch1_07` 体験版終了導線の有無 |
+
+**追加参照:** `src/progression/partyCompose.ts`（`DEFAULT_ROSTER_EXTRAS.demo`）、`src/ui/StageSelectionPanel.ts`（全 stage 一覧・ロックなし）
+
+### 体験版の位置づけ（今回固定）
+
+| 観点 | 内容 |
+| ---- | ---- |
+| ゲーム型 | **放置ではない** — ステージ選択型の編成解法オートバトルパズル |
+| 解放 | **全 7 stage 最初から map で選択可**（`StageSelectionPanel` にロック UI なし） |
+| 進行 | verify OFF は勝敗後も **同 stage 維持** → map / formation へ（§32/§33） |
+| 難易度 | `recommendedLevel` 表示のみ（ch1_01〜06 = **Lv1**、ch1_07 = **Lv2**）。順クリア制御なし |
+| default-answer 許容 | 体験版内 **最大 1 stage**。それも「雑通過」ではなく敵構成に筋よく刺さる tutorial 枠 |
+
+### デフォルト編成（baseline）
+
+`parties.json` demo: **`df_guardian` / `at_swordsman` / `sp_cleric` / `at_ranger`**
+
+初期解禁（`DEFAULT_ROSTER_EXTRAS.demo`）: `df_paladin`, `at_assassin`, `at_sorcerer`, `sp_wardweaver` — **`at_ballista` は含まない**（ch1_07 クリア報酬のみ）
+
+### puzzle quad 診断（今回実行・`BUILD_FLAVOR=demo`）
+
+| stage | baseline | bad | universal | counter |
+| ----- | -------- | --- | --------- | ------- |
+| ch1_01 | victory 670/670 @154s | **defeat** | victory 642/642 @58s | victory 650/650 @85s |
+| ch1_02 | victory 670/670 @123s | victory 200/480 @208s | victory 642/642 @40s | victory 642/642 @40s |
+| ch1_03 | victory 340/670 (3人) @46s | victory 285/480 @41s | victory 570/642 @76s | victory 740/740 @48s |
+| ch1_04 | victory 670/670 @181s | **victory 220/680** @136s | victory 642/642 @63s | victory 650/650 @101s |
+| ch1_05 | victory 297/670 (2人) @21s | victory 272/680 @24s | **defeat** | victory 546/650 @18s |
+| ch1_06 | victory 670/670 @74s | **victory 104/680** @81s | victory 380/642 @46s | victory 650/650 @58s |
+| ch1_07 | **defeat** @64s | defeat @40s | defeat @31s | **victory** 650/650 @112s |
+
+- **bad 定義:** ch1_01〜03 = `configureNoGuardianParty`（guardian→assassin）。ch1_04〜07 = `configureNoHealerParty`（cleric→assassin）
+- **counter 定義:** ch1_01/04/05/06/07 = paladin tank。ch1_02 = ranger→sorcerer。ch1_03 = ranger→swordsman（double melee）
+- **universal:** ranger→sorcerer
+
+### stage 別分類表
+
+| stageId | 敵編成の特徴 | 難易度表示 | 主に刺さるクラス / 編成方針 | 分類 | counter で明確改善 | 何を考えさせるか | 現状の問題点 | 調整要否 |
+| ------- | ------------ | ---------- | --------------------------- | ---- | ------------------ | ---------------- | ------------ | -------- |
+| `demo_ch1_01` | 敵 guardian×1 + swordsman×3（前衛耐久・近接圧） | Lv1・序盤 | 前衛タンク維持。速攻なら sorcerer 枠 | **default-answer 候補（1枠）** | やや（sorcerer で ~3× 短縮） | 前衛役の重要性（bad=タンク外しで即死） | baseline は遅いが満血勝利。**universal が最速** — default は「正解」だが最適ではない | 役割整理は doc のみで可。数値は後続 |
+| `demo_ch1_02` | 敵 guardian×1 + ranger×3（後衛遠隔） | Lv1 | 弓術士の後衛処理 / sorcerer AoE。前衛維持 | **default-viable** | **はい**（sorcerer で 123s→40s） | 遠隔優先・後衛への到達 | baseline 満血勝利。**通過は容易**だが後衛処理の「より良い解」は明確 | ヒント追加検討（formationHint なし）。数値は後続 |
+| `demo_ch1_03` | swordsman×5（弱 scale）+ assassin×2（**7 体ラッシュ**） | Lv1 | 前衛＋範囲/二刀流。double melee counter | **default-viable** | はい（4人生存・満血寄り） | 数の圧・前衛耐久 | baseline 勝つが **3 人残・HP 半減**。bad も勝利 — 編成欠陥が弱い | bad を defeat 寄りにする調整は**将来**（今回触らない） |
+| `demo_ch1_04` | guardian + **敵 cleric** + swordsman×2（回復耐久壁） | Lv1 | **ヒーラー必須** puzzle。paladin でも可 | **counter-required-ish** | はい（no-healer は設計上 defeat 想定） | 回復戦・耐久編成 | **no-healer が victory 220HP** — puzzle テスト **fail**（flaky）。universal は速いが healer あり | **要調整**（scale またはテスト閾値）。今回は未実施 |
+| `demo_ch1_05` | sorcerer×2 + assassin×2（優先撃破・短期決着） | Lv1 | paladin 耐久 / assassin 仕留め（spotlight）。healer 維持 | **default-viable** | **はい**（paladin で 4 人・546HP） | 低 HP 優先・短期火力。**assassin 体験枠** | baseline **雑勝ち**（297/670・2人）。bad も勝利。**puzzle counter は paladin** で assassin 必須ではない | formationHintJa は妥当。数値微調は将来 |
+| `demo_ch1_06` | 5 体混成（paladin / ranger×2 / sorcerer / swordsman） | Lv1 | healer 維持・paladin 前衛。AoE は苦戦 | **default-viable**（**通過ステージ寄り**） | 中（paladin で満血寄り） | 混成への総合対応 | baseline **満血勝利**。bad も **勝利 104HP** — §15 意図（bad=defeat）と**矛盾** | **要調整**（bad defeat 復帰）。今回は未実施 |
+| `demo_ch1_07` | Lv2・6 体フルロール（**敵 at_ballista** 含む） | Lv2・終盤 | **paladin 前衛 + healer**（M1 counter）。敵 ballista は高 MaxHP 狙い | **counter-required-ish** | **はい**（baseline/universal/bad 全滅） | 終盤総合試験・役割分担 | baseline 敗北は意図どおり。プレイヤー **at_ballista 不要** | 現状維持で puzzle 意図は成立 |
+
+### default-answer が複数あるか
+
+| 判定 | 内容 |
+| ---- | ---- |
+| **複数あり（方針違反）** | 満血または容易勝利の default 通過: **ch1_01・ch1_02・ch1_06**。ch1_05 も低 HP だが勝利 |
+| **推奨 1 枠** | **`demo_ch1_01` のみ default-answer** — 敵も前衛+近接ミラーで「基本編成が筋よく刺さる」tutorial。他は default-viable 以下に格下げ |
+| ch1_02 | 勝ちやすいが「後衛処理」の学びがあり **default-answer にはしない** |
+| ch1_06 | baseline 満血 — **通過ステージ**。default-answer から外す |
+
+### デフォルト編成で雑に勝てる通過ステージ
+
+| stage | smoke（baseline） | 判定 |
+| ----- | ----------------- | ---- |
+| ch1_01 | victory 満血 @152s | tutorial 許容枠 |
+| ch1_02 | victory 満血 @123s | **通過寄り** — 編成を考えなくても勝てる |
+| ch1_03 | victory 3人 @47s | 勝つが傷つく — やや puzzle |
+| ch1_04 | victory 満血 @184s | 遅いが楽勝 — **healer puzzle として弱い** |
+| ch1_05 | victory 2人 297HP @21s | ギリ勝ち — puzzle としては弱い |
+| ch1_06 | victory 満血 @74s | **明確な通過ステージ** |
+| ch1_07 | defeat | 意図どおり |
+
+### counter 診断とステージ意図の矛盾
+
+| stage | 矛盾 |
+| ----- | ---- |
+| **ch1_04** | healer 必須 puzzle なのに **no-healer が勝利**（今回 220HP）。テスト fail |
+| **ch1_05** | assassin spotlight だが **puzzle counter=paladin**。bad（assassin/no-healer）も勝利 — spotlight と counter 軸がずれる（§18 既知） |
+| **ch1_06** | §15 調整後 bad=defeat 想定だが **今回 bad=victory 104HP** |
+| **ch1_03** | bad（no guardian）も勝利 — 前衛欠陥のペナルティ弱い |
+| ch1_01/02/07 | 大きな矛盾なし |
+
+### formationHintJa
+
+| 項目 | 結果 |
+| ---- | ---- |
+| 設定 stage | **`demo_ch1_05` のみ** |
+| 文言 | 「双刃士は低HPの敵を優先…試してみましょう」 |
+| 問題 | **なし** — 必須 counter / 正解編成に読めない（`EXPERIENCE_SPOTLIGHT_SUBSTITUTE_OK` と整合） |
+| 不足 | ch1_02（後衛処理）・ch1_04（回復戦）・ch1_07（終盤試験）にヒントなし — **将来追加候補** |
+
+### `demo_ch1_07` 体験版終了扱い
+
+| 項目 | 結果 |
+| ---- | ---- |
+| `GameSession` / 画面 state | **`demoEnd` なし**。勝利後 verify OFF は **map 復帰**（§28/§33） |
+| クリア後遷移 | 体験版終了画面（7h）**未実装** |
+| `unlockClassIdsOnClear` | データに `at_ballista` あり。勝利報酬 merge は実装済み。UI 通知は未着手 |
+
+### `at_ballista` を ch1_07 以前の player counter 前提にしていないか
+
+| 項目 | 結果 |
+| ---- | ---- |
+| `DEFAULT_ROSTER_EXTRAS.demo` | **`at_ballista` なし**（M1 8 + 在籍 4 のみ） |
+| puzzle counter（ch1_07） | **`df_paladin`**（`configurePaladinTankParty`） |
+| harness 診断 | 「do NOT require at_ballista player side」明記 |
+| 敵 `at_ballista` | ch1_07 のみ。弓術士 P2 の高 MaxHP ターゲット / 終盤ボス枠 |
+
+### 役割が曖昧な stage（優先度順）
+
+1. **ch1_06** — baseline 通過 + bad 勝利。混成試験なのか通過枠なのか不明瞭
+2. **ch1_04** — healer puzzle の芯はあるが no-healer 勝利で信頼性低下
+3. **ch1_05** — assassin spotlight / paladin counter / baseline 雑勝ちが同居
+4. **ch1_02** — 勝ちやすいが「後衛をどう処理するか」の学びは counter でしか出ない
+5. **ch1_03** — ラッシュ枠だが bad でも勝てる
+
+### 見直し案（実装は今回しない）
+
+| 優先 | 案 | 対象 |
+| ---- | -- | ---- |
+| P1 | **default-answer を ch1_01 に 1 本化** — 他を default-viable / counter-required に doc・ヒントで明示 | 導線・文案 |
+| P1 | **ch1_04 no-healer を defeat 安定化**（scale またはテスト閾値再検討） | 6c 数値（別 PR） |
+| P2 | **ch1_06 baseline を「考えさせる」方向へ** — 満血勝利をやめ bad=defeat 復帰 | 6c 数値（別 PR） |
+| P2 | **ch1_02/04 に formationHintJa 追加**（後衛処理・回復戦。必須 counter 表現は避ける） | データ 1 行 + UI 既存経路 |
+| P3 | **ch1_03 bad を defeat 寄り** | 6c |
+| P3 | **ch1_05** — paladin counter と assassin spotlight の主軸を doc で分離（counter=安全解、assassin=体験解） | doc のみ |
+| 導線 | map 初回ガイドを「順不同で好きな stage を選べ」に寄せる（現状は汎用） | Phase 7 copy |
+| 進行 | `clearedStageIds` 導入は §32 中期案のまま送り | スコープ外 |
+
+### テスト（今回実行）
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |
+| `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **8 passed / 1 failed** — `demo_ch1_04` noHealerMarginal（bad victory hp=220）。Vitest worker `onTaskUpdate` timeout **ノイズ 1 件** |
+
+### 触らなかった範囲
+
+- `data/stages-demo.json` 数値 / `enemyGroups`
+- `data/classes.json` / skills
+- `GameSession` / progression コード
+- UI 大改修 / save schema
+
+## 35. demo_ch1_04 / demo_ch1_06 — §34 P1 scale 再調整（2026-07-08）
+
+**§34 棚卸し受けの P1**。`enemyGroups` scale のみ。class 数値・UI・save・他 stage 未変更。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本・§34 |
+| 2 | `data/stages-demo.json` | ch1_04 / ch1_06 enemyGroups |
+| 3 | `src/battle/demoStageBalance.puzzle.test.ts` | puzzle 期待値 |
+| 4 | `src/battle/test/demoStageSim.harness.ts` | 診断 harness |
+| 5 | `docs/dev/balance-diagnostics.md` | 診断方針 |
+| 6 | `src/battle/demoStageBalance.smoke.test.ts` | smoke 回帰 |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `data/stages-demo.json` | ch1_04 / ch1_06 の `enemyGroups` scale 微調整（下表） |
+| `demoStageBalance.puzzle.test.ts` | ch1_06 `badMustDefeat` + 編成差 assertion |
+| `demoStageSim.harness.ts` | ch1_04 / ch1_06 診断 read 文言 |
+| `docs/dev/balance-diagnostics.md` | §7 excludeRoles 後表の ch1_04/06 行 |
+| `docs/ai-handoff/current-task.md` | 本節 |
+
+### demo_ch1_04 scale（§14 → §35）
+
+| group | §14 後 | §35 |
+| ----- | ------ | --- |
+| `df_guardian` atkScale | 1.3 | **1.42** |
+| `sp_cleric` resScale | 1.4 | **1.48** |
+| `at_swordsman` atkScale | 1.32 | **1.45** |
+
+### demo_ch1_06 scale（§15 → §35）
+
+| group | §15 後 | §35 |
+| ----- | ------ | --- |
+| `df_paladin` atkScale | 1.05 | **1.13** |
+| `at_ranger` atkScale | 1.02 | **1.09** |
+| `at_ranger` resScale | 1.28 | **1.3** |
+| `at_sorcerer` resScale | 1.45 | **1.48** |
+| `at_swordsman` atkScale | 1.08 | **1.15** |
+
+### 調整前後（§34 診断 → §35、`BUILD_FLAVOR=demo` puzzle quad）
+
+| stage | 編成 | 調整前（§34） | 調整後（§35） |
+| ----- | ---- | ------------- | ------------- |
+| **ch1_04** | baseline | victory 670/670 @181s | victory 670/670 @~181s |
+| | bad | **victory 245/680** @137s | **defeat** 0/680 @~53s |
+| | universal | victory 642/642 @61s | victory 642/642 @~61s |
+| | counter | victory 650/650 @101s | victory 650/650 @~101s |
+| **ch1_06** | baseline | victory 670/670 @74s | victory 670/670 @~74s |
+| | bad | **victory 104/680** @81s | **defeat** 0/680 @~67s |
+| | universal | victory 380/642 @46s | victory **234**/642 @47s（3 survivors） |
+| | counter | victory 650/650 @58s | victory 650/650 @~58s |
+
+### 原因・判断
+
+| stage | 要点 |
+| ----- | ---- |
+| **ch1_04** | no-healer は戦闘短縮 + guardian 被ダメ不足で ranger DPS 勝ち。**敵 atkScale 上げ**で無ヒーラー全滅。baseline は cleric healing（~620）が guardian 被ダメを相殺し満血維持 |
+| **ch1_06** | bad が ranger 後衛処理で勝利しうる。**敵 atk / res 上げ**で bad=defeat 復帰。baseline 満血は cleric 相殺で残存 — **default-answer ではない**（universal 低 HP・counter スコア優位） |
+
+### default-answer
+
+**`demo_ch1_01` のみ** — ch1_04 / ch1_06 は default-viable 以下
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **9 passed** |
+| `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |

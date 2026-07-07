@@ -205,6 +205,7 @@ const STAGE_PUZZLES: StagePuzzleSpec[] = [
     bad: configureNoHealerParty,
     counter: configurePaladinTankParty,
     requireCounterVictory: true,
+    badMustDefeat: true,
     skipBadVsBaseline: true,
     skipCounterVsBad: true,
     rangerBasicDiagnostics: true,
@@ -390,6 +391,11 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
 
     expect(counter.outcome).toBe('victory');
     expect(counter.outcome).not.toBe('timeout');
+    expect(bad.outcome).toBe('defeat');
+    expect(demoStageOutcomeScore(counter)).toBeGreaterThan(
+      demoStageOutcomeScore(universal),
+    );
+    expect(universal.totalRemainingHp).toBeLessThan(baseline.totalRemainingHp);
     expect(baseline.rangerBasicAttackDiagnostics).toBeDefined();
     expect(counter.rangerBasicAttackDiagnostics).toBeDefined();
     expect(baseline.classStats).toHaveLength(4);
