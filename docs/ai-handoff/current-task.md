@@ -8,11 +8,11 @@
 
 ## 2. 作業テーマ
 
-- 作業名: **Phase 7 分割整理**（M1 demo app flow / first-play guidance）
-- 状態: **Phase 6b 完了**（6b-1〜6b-8）。**Phase 7 は未着手** — 本 handoff で小タスク分割のみ。production code は触らない
+- 作業名: **Phase 7 体験版導線**（M1 demo app flow / first-play guidance）
+- 状態: **Phase 6b 完了**（6b-1〜6b-8）。**Phase 7d〜7g 最小実装済み**（§26〜29）。**§30 で verify OFF main flow 成立を確認**。残タスクは §30「残タスク」
 - **2026-07 roadmap 改定:** [phase-roadmap.md](../plans/phase-roadmap.md) — 旧 6d → **Phase 7**（app flow）、新 **Phase 8**（presentation）、旧 Electron → **Phase 9**（packaging）。本編は **Phase 10** へ
 - **Phase 7 目的:** M1 体験版として、**起動から `demo_ch1_07` クリアまで迷わず進めるアプリ導線**を作る（配布 zip は Phase 9）
-- **現状画面:** 戦闘画面・編成画面（`MetaMenuOverlay`）のみ。**未実装:** トップ / ステージ選択 / リザルト / 体験版終了 / チュートリアル導線
+- **現状画面:** verify OFF 起動は **map**（`StageSelectionPanel`）→ 編成（`MetaMenuOverlay`）→ 戦闘。**未実装:** トップ / リザルト / 体験版終了 / 敗北→編成復帰
 - **並行・未達:** キャラ画像（並行作業中）、VFX 未実装、効果音未実装
 - **当面方針:** 新規ソース実装は止め、Phase 7 整理後は **グラフィック準備優先**。新規画面実装はグラフィック方針整理後に再開
 - **編成画面:** 戦闘画面より見た目・読みやすさが未達。**7e2 編成画面 M1 polish** は M1 前の改善対象だが、Cursor トークン消費を避け **今すぐ大改修しない**（グラフィック方針・クラス画像反映後に棚卸し → 小改善）
@@ -364,8 +364,8 @@
 
 | 小タスク | 内容 | 状態 |
 | -------- | ---- | ---- |
-| **7a** | **demo app flow 調査** — 現行 `GameSession` / `BattleView` / `BattleEngine` の起動・勝敗・再スポーン経路を棚卸し。レガシー廃止点と verify 残置の切り分け | 未着手 |
-| **7b** | **app screen state 骨格設計** — `title` / `map` / `party` / `battle` / `result` / `demoEnd` の画面状態と DOM ルート切替。`GameSession` 上の遷移 API 案 | 未着手 |
+| **7a** | **demo app flow 調査** — 現行 `GameSession` / `BattleView` / `BattleEngine` の起動・勝敗・再スポーン経路を棚卸し。レガシー廃止点と verify 残置の切り分け | **調査済み**（§30） |
+| **7b** | **app screen state 骨格設計** — `title` / `map` / `party` / `battle` / `result` / `demoEnd` の画面状態と DOM ルート切替。`GameSession` 上の遷移 API 案 | **一部実装**（`map` / `party` / `battle` のみ。`title` / `result` / `demoEnd` 未着手） |
 | **7c** | **トップ画面** — タイトル・Continue / New Game・設定入口 | 未着手 |
 | **7d** | **ステージ選択画面** — `stages-demo.json` 一覧・詳細・出撃。spec: [stage-selection-ui.md](../spec/stage-selection-ui.md) | **最小接続済み**（§26） |
 | **7e** | **編成 → 戦闘開始導線** — 出撃確定時に `currentStageId` 反映 → battle 開始。`MetaMenuOverlay` / `SkillMenuPanel` 流用可否は 7a で判断 | **確認済み**（§27） |
@@ -388,18 +388,18 @@
 
 | 項目 | メモ |
 | ---- | ---- |
-| `GameSession` 統合 smoke | 起動〜戦闘開始 UI 経路は 6b 未カバー。7a 調査後にテスト要否を決める |
-| `respawnAfterEnd` | verify mode だけ旧経路（3 秒再スポーン）を残すか |
-| 勝利時 `currentStageId` 自動進行 | いつ廃止するか（7b/7f と同時が自然。出撃確定時のみ ID 更新） |
+| `GameSession` 統合 smoke | **`gameSessionWire.test.ts` でカバー**（§27・§30） |
+| `respawnAfterEnd` | **verify ON:** 勝利・敗北とも 3 秒後 `reloadBattlefield`。**verify OFF 勝利:** map 遷移で tick 停止のため実質未使用。**verify OFF 敗北:** 現状も `respawnAfterEnd` で同一 battle 画面再戦 |
+| 勝利時 `currentStageId` 自動進行 | **現状維持** — `applyVictoryRewards` で進行。sortie 時も出撃 stage を反映。リザルト画面実装時に再検討 |
 | `DebugMenuPanel` / verify UI | 本番非表示方法（build flag / verify gate）。最終 demo ビルド無効化は Phase 9 |
-| `MetaMenuOverlay` 流用 | 戦闘前編成画面（`party` 状態）として全画面表示できるか |
+| `MetaMenuOverlay` 流用 | **成立** — sortie 後 `menuHost.open('party')` で全画面編成（§27） |
 | `stageRecords` / best record | M1 でどこまで（2 枠・☆・リザルト/詳細表示は roadmap 必須。横断 Records ビューは Phase 14） |
 
 **Phase 7 スコープ外（roadmap 準拠）:** Electron / itch zip（**Phase 9**）、英語 i18n 本番（**4e** — Phase 7 後）、キャラ画像・VFX・効果音判断（**Phase 8**）、6c 数値バランス
 
 **6b 未カバー（Phase 7 / 9 に送る）**
 
-- `GameSession` 統合経路（起動〜戦闘開始 UI）— 7a で調査
+- ~~`GameSession` 統合経路（起動〜戦闘開始 UI）~~ — `gameSessionWire.test.ts` でカバー（§30）
 - verify モード **ON** 時の初回体験
 - `dev:demo` script — **Phase 9**
 - Electron packaging への `BUILD_FLAVOR` 伝播 — **Phase 9**
@@ -431,9 +431,9 @@
 
 | 項目 | 内容 |
 | ---- | ---- |
-| 小タスク | 7a〜7h + **7e2**（すべて未着手。7e2 は保留 — グラフィック準備後） |
-| 未確定 | §7「Phase 7 未確定点」表 |
-| 停止地点 | **Phase 7 分割整理まで完了**。以後しばらく **グラフィック準備優先**。新規画面実装はグラフィック方針整理後 |
+| 小タスク | **7d〜7g 最小実装済み**（§26〜29）。**7a 調査・§30 棚卸し済み**。未着手: **7c** トップ、**7f** リザルト、**7g** 敗北導線、**7h** 体験版終了。**7e2** 保留 |
+| 未確定 | §7「Phase 7 未確定点」表（一部 §30 で解消） |
+| 停止地点 | **verify OFF main flow 成立**（§30）。次は **7c / 7f / 7g / 7h** またはグラフィック準備 |
 
 ### Phase 9 / その他（Phase 7 外）
 
@@ -753,10 +753,10 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 
 - **Phase 6b 完了** — 6b-1〜6b-8 済み。§7 6b サマリが正本
 - **Phase 7 分割整理済み** — 小タスク 7a〜7h + **7e2**（編成画面 M1 polish）。未確定点・着手前正本は **§7**
-- **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
+- **次にやるなら:** **7c トップ / 7f リザルト / 7g 敗北導線 / 7h 体験版終了**（§30 残タスク）。並行で **グラフィック準備** 可
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**。**verify OFF first-play guidance 最小実装済み（§29）**
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**。**verify OFF first-play guidance 最小実装済み（§29）**。**Phase 7d〜7g 導線棚卸し・main flow 成立確認済み（§30）**
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -1441,3 +1441,72 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | `StageSelectionPanel.test.ts` | **4 passed** |
 | `stageSelectionWire.test.ts` | **4 passed** |
 | `gameSessionWire.test.ts` | **6 passed** |
+
+## 30. Phase 7d〜7g 体験版導線棚卸し — verify OFF main flow 確認（2026-07-08）
+
+**production code 変更なし**。コード読取 + 既存 wire テスト再実行のみ。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `src/game/GameSession.ts` | verify ON/OFF 起動・sortie・勝敗・画面遷移 |
+| 2 | `src/game/gameSessionWire.test.ts` | main flow 統合 wire |
+| 3 | `src/game/stageSelectionWire.test.ts` | map / sortie / guidance wire |
+| 4 | `src/ui/StageSelectionPanel.ts` | first-play guidance・formationHintJa |
+| 5 | `src/progression/victoryRewards.ts` | `applyVictoryRewards` / `currentStageId` 進行 |
+| 6 | `src/dev/verifyMode.ts` | verify 既定 ON・save slot 分離 |
+
+### verify OFF main flow 確認結果
+
+| # | 項目 | 結果 |
+| - | ---- | ---- |
+| 1 | 起動画面 = map | **成立** — `setGameScreen(verifyMode ? 'battle' : 'map')`（`GameSession` L171） |
+| 2 | first-play guidance（map 上部） | **成立** — verify OFF 時 `StageSelectionScreenHost(..., !verifyMode)` → `STAGE_FIRST_PLAY_GUIDANCE_CLASS` |
+| 3 | `demo_ch1_05` `formationHintJa`（敵編成直下） | **成立** — `StageSelectionPanel.test.ts` / `stageDetailDom.ts` |
+| 4 | 出撃 → `currentStageId` 更新 → party | **成立** — `handleStageSortie` → save 更新 → `restartBattle` → `menuHost.open('party')` |
+| 5 | 編成 → battle | **成立** — `skill-menu-return-to-battle-button` → `setGameScreen('battle')` |
+| 6 | 勝利 → `applyVictoryRewards` → map 復帰 | **成立** — `currentStageId` 進行 + verify OFF のみ `setGameScreen('map')`。map 一覧は `selectStage` で同期 |
+
+**一連導線:** map → stage detail → sortie → party formation → battle → victory → next stage map — **verify OFF で成立**
+
+### verify ON Debug flow 確認結果
+
+| 項目 | 結果 |
+| ---- | ---- |
+| 起動画面 | **battle**（従来どおり） |
+| 勝利後 | **battle 維持**。`applyVictoryRewards` で `currentStageId` 進行。`respawnAfterEnd` 経路維持 |
+| 編成 | map 不要で `openPartyMenu()` → formation → battle。**壊れていない** |
+
+### 敗北時の現状
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 画面 | **battle のまま**（map / formation へ戻さない） |
+| 進行 | `applyStageRollbackOnDefeat` — 先頭 stage 以外は 1 つ前へ rollback。先頭は stay |
+| 再戦 | `BattleEngine.respawnAfterEnd`（~3 秒後 `reloadBattlefield`）。verify ON/OFF 共通 |
+| 未実装 | 敗北リザルト・編成見直し導線（7g スコープ外・今回変更なし） |
+
+### 残タスク（Phase 7 以降・今回やらない範囲）
+
+| 優先 | 項目 | 備考 |
+| ---- | ---- | ---- |
+| **7c** | トップ画面（Continue / New Game） | 現状 verify OFF は map 直起動 |
+| **7f** | リザルト画面・報酬演出 | 勝利後は map 直行。`stageRecords` 表示未接続 |
+| **7g** | 敗北 → 編成見直し導線 | 現状 battle 再戦のみ |
+| **7h** | `demo_ch1_07` クリア後 体験版終了 / Debug UI 整理 | `unlockClassIdsOnClear` 通知も未着手 |
+| **7e2** | 編成画面 M1 polish | グラフィック方針後。大改修しない |
+| **§13** | `DEFAULT_ROSTER_EXTRAS.demo` 縮小 + `unlockClassIdsOnClear` 接続 | データ・progression 最小案あり |
+| — | battle HUD から map 戻るボタン | スコープ外 |
+| — | level sync / per-group level | M1 対象外 |
+| — | `stageRecords` 横断ビュー | Phase 14 |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `StageSelectionPanel.test.ts` | **4 passed** |
+| `stageSelectionWire.test.ts` | **4 passed** |
+| `gameSessionWire.test.ts` | **6 passed** |
+| `victoryRewards.unlock.test.ts` | **5 passed** |
+| **合計** | **19 passed** |

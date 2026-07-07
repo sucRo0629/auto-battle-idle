@@ -18,7 +18,7 @@ Hensei Only の開発フェーズ一覧。**Phase 1〜14 は番号順**（概要
 | **4**  | クラスマスタ + スキル説明 + 編成 UI；4a **確定済** / 4c **完了** / **4b 完了** / **4d 完了** / **4e は Phase 7 後** | **4a〜4d 完了** → **Phase 6** |
 | **5**  | 演出アセット + VFX PNG + **演出調整ツール**；**5d Combat Feedback**（Damage / Event Popup）   | **基盤のみ**（本番 PNG 未実装） |
 | **6**  | **M1 demo content foundation** — 敵・**体験版専用ステージ**・`BUILD_FLAVOR=demo`・smoke・最低限バランス（8 クラス） | **進行中**（6b 完了）           |
-| **7**  | **M1 demo app flow / first-play guidance** — トップ・ステージ選択・編成導線・戦闘・リザルト・体験版終了・初回ガイド | 未着手                          |
+| **7**  | **M1 demo app flow / first-play guidance** — トップ・ステージ選択・編成導線・戦闘・リザルト・体験版終了・初回ガイド | **進行中**（7d〜7g 最小実装済み。§Phase 7 参照） |
 | **8**  | **M1 presentation minimum** — キャラ画像・VFX 判断・popup 演出・効果音判断・配布前見た目ゲート | 未着手                          |
 | **9**  | **M1 packaging / release** — `dev:demo` / `build:demo` / itch 用 Windows zip・debug UI 無効化 | 未着手（Release M1 直前）       |
 | **10** | **初版本編コンテンツ（Release M2）** — 敵拡張・**本編 Chapter 1 ステージ**・Lv1 バランス（13 クラス）・編集 GUI | 未着手                          |
@@ -111,7 +111,7 @@ Phase 4 作業順・4b / 4e クラス進捗: [phase-4-roadmap.md §Release M1 �
 - **6a** — 体験版に必要な敵テンプレ
 - **6b** — **体験版専用**ステージ（`data/stages-demo.json` 等。**本編 `stages.json` とは別**）・`BUILD_FLAVOR=demo` 読込・runtime smoke — **完了**
 - **6c** — Lv1・解禁 8 クラスのバランス + M1 ステージ調整（最低限）
-- **7** — **画面構成・導線**（トップ → ステージ選択 → 編成 → 戦闘 → **リザルト** → ステージ選択）。敗北時の編成見直し導線。`demo_ch1_07` クリア後の体験版終了画面。first-play guidance / 短いチュートリアル文。verify / debug UI の本番非表示整理
+- **7** — **画面構成・導線**（トップ → ステージ選択 → 編成 → 戦闘 → **リザルト** → ステージ選択）。敗北時の編成見直し導線。`demo_ch1_07` クリア後の体験版終了画面。first-play guidance / 短いチュートリアル文。verify / debug UI の本番非表示整理 — **verify OFF main flow 最小成立**（map → 出撃 → 編成 → 戦闘 → 勝利 → map）。未着手: トップ / リザルト / 敗北導線 / 体験版終了
 - **4e** — 英語 i18n（Release M1 **必須**）— **Phase 7 完了後**（トップ / ステージ選択 / リザルト / 体験版終了の日本語文言確定後）・**Phase 9 前**
 - **8** — M1 8 クラス分キャラ画像の扱い、VFX / 効果音の最低限判断、popup 演出の配布可否ゲート
 - **9** — `dev:demo` / `build:demo` / `package:demo`、`BUILD_FLAVOR` の Electron 伝播、debug UI 無効化、itch 用 Windows zip、配布前 smoke、itch ページ準備
@@ -556,7 +556,7 @@ Phase 5 の演出調整ツールで編集した JSON・タイミングを、戦�
 
 体験版は **ビルド側でステージ上限** を設けるだけでなく、**コンテンツ JSON 自体を本編と分ける**。本編 `stages.json` に体験版用ステージを混在させない。
 
-進行ルールの **データ正本**（Exp・ロールバック・`totalClears`）は [progression.md](../spec/progression.md) を参照。**戦闘後の自動次ステージ進行・即再スポーンは Phase 2 レガシー** — Phase 7 で廃止（同 doc §ステージ進行）。
+進行ルールの **データ正本**（Exp・ロールバック・`totalClears`）は [progression.md](../spec/progression.md) を参照。**戦闘後の即再スポーン・起動即戦闘は Phase 2 レガシー** — Phase 7 で刷新中（verify OFF 勝利後 map 復帰は実装済み。敗北再戦・`respawnAfterEnd` は残置。同 doc §ステージ進行）。
 
 | サブフェーズ | 内容 | Release |
 | ------------ | ---- | ------- |
