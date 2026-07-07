@@ -370,7 +370,7 @@
 | **7d** | **ステージ選択画面** — `stages-demo.json` 一覧・詳細・出撃。spec: [stage-selection-ui.md](../spec/stage-selection-ui.md) | **最小接続済み**（§26） |
 | **7e** | **編成 → 戦闘開始導線** — 出撃確定時に `currentStageId` 反映 → battle 開始。`MetaMenuOverlay` / `SkillMenuPanel` 流用可否は 7a で判断 | **確認済み**（§27） |
 | **7e2** | **編成画面 M1 polish** — 見た目・読みやすさ・**選択済み 4 人枠**・**スキル説明カード**（コアは「編成だけ」）。**今すぐ大改修しない**。グラフィック方針・クラス画像反映 **後** → 現状棚卸し → 小改善。spec: [party-formation-ui.md](../spec/party-formation-ui.md) | 保留 |
-| **7f** | **戦闘終了 → リザルト導線** — `respawnAfterEnd` 廃止、リザルト表示。Exp・`stageRecords` 更新（M1 必須 2 枠）。spec: [progression.md](../spec/progression.md) | 未着手 |
+| **7f** | **戦闘終了 → リザルト導線** — `respawnAfterEnd` 廃止、リザルト表示。Exp・`stageRecords` 更新（M1 必須 2 枠）。spec: [progression.md](../spec/progression.md) | **verify OFF 勝利後 map 復帰 最小実装済み**（§28）。リザルト画面・報酬演出は未着手 |
 | **7g** | **first-play guidance / 敗北時導線** — 初回短いガイダンス文。敗北リザルトから編成見直しへ戻れる導線 | 未着手 |
 | **7h** | **`demo_ch1_07` クリア後 体験版終了画面 / debug UI 整理** — 最終クリア遷移。`DebugMenuPanel` を verify 専用化（本番非表示方針。最終ゲートは Phase 9） | 未着手 |
 
@@ -756,7 +756,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **グラフィック準備**（キャラ画像方針・VFX/効果音判断は Phase 8 だが並行整理可）。Phase 7 実装再開時は **7a demo app flow 調査** から
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**
+- **6c 進行**: `demo_ch1_04` healer puzzle 再確立済み（§14）。`demo_ch1_06` 混成 puzzle 調整済み（§15）。**at_assassin 診断追加済み（§16）** — ch1_05 が受け皿候補。**assassin vs swordsman 同枠比較診断追加済み（§17）**。**ch1_05 正式化診断追加済み（§18）**。**M1 ターゲット分類 docs 整理済み（§19・§20）**。**弓術士 excludeRoles 実装済み（§22）** — P2/P3/P4 揃え、`sp_cleric` / `sp_wardweaver` を ranged プール外。**excludeRoles 後診断ログ再取得済み（§23）** — ch1_05 spotlight 判断維持。**ch1_05 formationHintJa 最小実装済み（§25）** — `StageSelectionPanel` 詳細・敵編成直下。**GameSession `map` 画面最小接続済み（§26）**。**map → party → battle 導線確認済み（§27）**。**verify OFF 勝利後 map 復帰最小実装済み（§28）**
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -1334,3 +1334,63 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | `stageSelectionWire.test.ts` | **2 passed** |
 | `StageSelectionPanel.test.ts` | **2 passed** |
 
+## 28. Phase 7f — verify OFF 勝利後 map 復帰 最小実装（2026-07-07）
+
+### 読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | handoff・制約 |
+| 2 | `src/game/GameSession.ts` | 勝敗処理・画面 state |
+| 3 | `src/progression/victoryRewards.ts` | `applyVictoryRewards` / `currentStageId` 進行 |
+| 4 | `src/battle/BattleEngine.ts`（`respawnAfterEnd` / `battleEnd`） | verify 側の自動再スポーン経路 |
+| 5 | `src/game/StageSelectionScreenHost.ts` | map 表示時の `selectStage` 同期 |
+| 6 | `src/game/gameSessionWire.test.ts` | 既存 wire テスト拡張 |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/GameSession.ts` | `handleVictory` 末尾 — **verify OFF のみ** `setGameScreen('map')` |
+| `src/game/gameSessionWire.test.ts` | 勝利後 map 復帰・`currentStageId` 進行・verify ON は battle 維持 |
+| `docs/ai-handoff/current-task.md` | 本節 |
+
+**触らなかった:** `BattleEngine` / `respawnAfterEnd`、`classes.json` / skills、`stages-demo.json` 数値、リザルト UI、unlock toast、`stageRecords`、敗北導線、編成画面
+
+### battle result / victory 処理
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 終了検知 | `BattleEngine` → `battleEnd` イベント（`victory` / `defeat`） |
+| 勝利 | `GameSession.handleVictory` → EXP ログ → `applyVictoryRewards` → `resolveVictoryNextStageId`（verify loop 上書き可）→ `stageDamageStats.reset` |
+| 敗北 | `handleDefeat` → verify loop 時は rollback なし。通常は `applyStageRollbackOnDefeat`（先頭 stage は stay） |
+| verify ON 再戦 | `BattleEngine.respawnAfterEnd`（3 秒後 `reloadBattlefield`）— **維持** |
+| verify OFF 勝利後 | `setGameScreen('map')` — engine tick 停止のため `respawnAfterEnd` は走らない。次出撃で `restartBattle` |
+
+### `currentStageId` 進行
+
+`applyVictoryRewards` 内で `getNextStageId(stages, clearedStageId)` → `save.stageProgress.currentStageId` 更新。最終 stage は同 id 周回。map 復帰時 `StageSelectionScreenHost.show()` が `selectStage(currentStageId)` で一覧選択を同期。
+
+### verify OFF map 復帰
+
+**実装済み** — `handleVictory` 末尾 3 行。
+
+### verify ON Debug 導線
+
+勝利後も `battle` 画面維持。`respawnAfterEnd` 経路・loop stage 上書き・party メニュー導線はテストで確認。**壊れていない**。
+
+### 敗北時
+
+**現状維持** — battle 画面のまま。rollback 後 `respawnAfterEnd` で同一画面再戦（verify OFF）。map へは戻さない。
+
+### `unlockClassIdsOnClear` 表示
+
+**後回し** — データ・`applyVictoryRewards` 処理は既存。ステージ詳細 UI への表示・解禁 toast は未実装（今回スコープ外）。
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `gameSessionWire.test.ts` | **6 passed** |
+| `stageSelectionWire.test.ts` | **2 passed** |
+| `victoryRewards.unlock.test.ts` | **5 passed** |

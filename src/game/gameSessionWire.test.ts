@@ -4,7 +4,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { tryLoadGameData } from '../battle/data/loadGameData.ts';
 import { setVerifyModeEnabled } from '../dev/verifyMode.ts';
+import type { BattleEngine } from '../battle/BattleEngine.ts';
 import { GameSession } from './GameSession.ts';
+
+function triggerVictory(session: GameSession, survivingIndices: number[] = [0, 1, 2, 3]): void {
+  const engine = (session as unknown as { engine: BattleEngine }).engine;
+  (engine as unknown as { applyVictoryTransition: (indices: number[]) => void })
+    .applyVictoryTransition(survivingIndices);
+}
 
 function mockCanvas2d(): void {
   const ctx = {
@@ -109,6 +116,50 @@ describe('GameSession map → party → battle wire', () => {
 
     expect(session.getCurrentScreen()).toBe('battle');
     expect(session.getSaveState().stageProgress.currentStageId).toBe(targetStage.id);
+  });
+
+  it('verify OFF returns to map after victory with progressed currentStageId', () => {
+    setVerifyModeEnabled(false);
+    session = createSession();
+    const gameData = tryLoadGameData();
+    if (!gameData.ok) throw new Error(gameData.error);
+
+    const firstStage = gameData.data.stages[0];
+    const secondStage = gameData.data.stages[1];
+    if (!firstStage || !secondStage) throw new Error('Need at least 2 stages');
+
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(firstStage.id);
+
+    const container = document.body.querySelector('div')!;
+    container.querySelector<HTMLButtonElement>('.stage-selection-sortie')?.click();
+    container
+      .querySelector<HTMLButtonElement>('.skill-menu-return-to-battle-button')
+      ?.click();
+    expect(session.getCurrentScreen()).toBe('battle');
+
+    triggerVictory(session);
+
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(secondStage.id);
+    expect(session.getCurrentScreen()).toBe('map');
+    expect(
+      container.querySelector('.stage-selection-list-item--selected')?.textContent,
+    ).toBe(secondStage.displayName);
+  });
+
+  it('verify ON stays on battle after victory (debug loop preserved)', () => {
+    setVerifyModeEnabled(true);
+    session = createSession();
+    const gameData = tryLoadGameData();
+    if (!gameData.ok) throw new Error(gameData.error);
+
+    const firstStage = gameData.data.stages[0];
+    const secondStage = gameData.data.stages[1];
+    if (!firstStage || !secondStage) throw new Error('Need at least 2 stages');
+
+    triggerVictory(session);
+
+    expect(session.getSaveState().stageProgress.currentStageId).toBe(secondStage.id);
+    expect(session.getCurrentScreen()).toBe('battle');
   });
 
   it('verify ON party menu does not require map sortie', () => {

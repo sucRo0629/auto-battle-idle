@@ -507,6 +507,10 @@ export class GameSession {
         ? `[progress] Stage clear: ${stageName} (loop)`
         : `[progress] Stage clear: ${stageName} → ${nextStageName}`;
     console.log(progressLog);
+
+    if (!this.verifyMode) {
+      this.setGameScreen('map');
+    }
   }
 
   private sanitizeLoopWaveIndex(): void {
