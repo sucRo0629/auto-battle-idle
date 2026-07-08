@@ -306,7 +306,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "poison",
     title: { ja: "毒" },
     description: {
-      ja: "DoTの一種。内容はスキルごとに異なる。",
+      ja: "DoTの一種。ダメージの内容・攻撃力・持続時間はスキルごとに異なる。",
     },
     aliases: { ja: ["毒"] },
     statusCategory: "poison",
@@ -315,7 +315,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "bleed",
     title: { ja: "出血" },
     description: {
-      ja: "DoTの一種。内容はスキルごとに異なる。",
+      ja: "DoTの一種。ダメージの内容・攻撃力・持続時間はスキルごとに異なる。",
     },
     aliases: { ja: ["出血"] },
     statusCategory: "bleed",
@@ -470,7 +470,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "seedFlame",
     title: { ja: "種火" },
     description: {
-      ja: "魔術師固有の。\n\n・毎秒攻撃力5%の魔法ダメージ\n・10秒持続\n・最大5スタック\n\n最大スタック時、新たに付与される代わりに「熾火」へ変化する。",
+      ja: "魔術師固有のデバフ。\n\n・毎秒攻撃力5%の魔法ダメージ\n・5秒持続\n・最大5スタック\n\n最大スタック時、新たに付与される代わりに「熾火」へ変化する。",
     },
     aliases: { ja: ["種火"] },
     statusCategory: "seedFlame",
@@ -479,7 +479,7 @@ const GAME_TERM_ENTRIES_BASE: readonly GameTermEntrySource[] = [
     id: "blazingFlame",
     title: { ja: "熾火" },
     description: {
-      ja: "種火から昇格する魔法DoT。\n\n・毎秒攻撃力35%の魔法ダメージ（無期限）\n・1スタックごとに魔法攻撃の被ダメージを10%増加\n・最大1スタック",
+      ja: "種火から昇格した魔術師固有のデバフ。\n\n・毎秒攻撃力35%の魔法ダメージ（無期限）\n・1スタックごとに魔法攻撃の被ダメージを10%増加\n・最大1スタック",
     },
     aliases: { ja: ["熾火"] },
     statusCategory: "blazingFlame",
