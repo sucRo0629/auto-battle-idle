@@ -65,7 +65,7 @@ export class GameSession {
   private currentScreen: GameScreen = 'battle';
   private readonly battleHost: HTMLElement;
   private readonly formationHost: HTMLElement;
-  private readonly mapHost: HTMLElement;
+  private readonly stageSelectHost: HTMLElement;
   private readonly stageSelectionHost: StageSelectionScreenHost;
   private readonly stageDamageStats = new StageDamageStatsTracker();
   private readonly menuHost: MenuHost;
@@ -93,14 +93,14 @@ export class GameSession {
     this.formationHost.className = 'game-shell__formation';
     this.formationHost.hidden = true;
 
-    this.mapHost = document.createElement('div');
-    this.mapHost.className = 'game-shell__map';
-    this.mapHost.hidden = true;
+    this.stageSelectHost = document.createElement('div');
+    this.stageSelectHost.className = 'game-shell__stage-select';
+    this.stageSelectHost.hidden = true;
 
-    shell.append(this.battleHost, this.formationHost, this.mapHost);
+    shell.append(this.battleHost, this.formationHost, this.stageSelectHost);
 
     this.stageSelectionHost = new StageSelectionScreenHost(
-      this.mapHost,
+      this.stageSelectHost,
       gameData,
       {
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
@@ -169,7 +169,7 @@ export class GameSession {
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
       },
     );
-    this.setGameScreen(this.verifyMode ? 'battle' : 'map');
+    this.setGameScreen(this.verifyMode ? 'battle' : 'stageSelect');
 
     this.menuHost = createMenuHost({
       gameData,
@@ -259,8 +259,8 @@ export class GameSession {
     this.menuHost.open('party');
   }
 
-  openStageSelection(): void {
-    this.setGameScreen('map');
+  openStageSelect(): void {
+    this.setGameScreen('stageSelect');
   }
 
   closeMetaMenu(): void {
@@ -272,10 +272,10 @@ export class GameSession {
     this.currentScreen = screen;
     const onBattle = screen === 'battle';
     const onFormation = screen === 'formation';
-    const onMap = screen === 'map';
+    const onStageSelect = screen === 'stageSelect';
     this.battleHost.hidden = !onBattle;
     this.formationHost.hidden = !onFormation;
-    if (onMap) {
+    if (onStageSelect) {
       this.stageSelectionHost.show();
     } else {
       this.stageSelectionHost.hide();
@@ -523,7 +523,7 @@ export class GameSession {
     console.log(progressLog);
 
     if (!this.verifyMode) {
-      this.setGameScreen('map');
+      this.setGameScreen('stageSelect');
     }
   }
 

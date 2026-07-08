@@ -60,7 +60,7 @@ function createSession(): GameSession {
   return new GameSession(loaded.data, container);
 }
 
-describe('GameSession map → party → battle wire', () => {
+describe('GameSession stageSelect → party → battle wire', () => {
   let session: GameSession | null = null;
 
   beforeEach(() => {
@@ -74,11 +74,11 @@ describe('GameSession map → party → battle wire', () => {
     document.body.replaceChildren();
   });
 
-  it('verify OFF starts on map (release flow)', () => {
+  it('verify OFF starts on stageSelect (release flow)', () => {
     setVerifyModeEnabled(false);
     session = createSession();
 
-    expect(session.getCurrentScreen()).toBe('map');
+    expect(session.getCurrentScreen()).toBe('stageSelect');
     expect(session.isVerifyMode()).toBe(false);
     expect(
       document.body.querySelector(`.${STAGE_FIRST_PLAY_GUIDANCE_CLASS}`),
@@ -131,7 +131,7 @@ describe('GameSession map → party → battle wire', () => {
     expect(session.getSaveState().stageProgress.currentStageId).toBe(targetStage.id);
   });
 
-  it('verify OFF returns to map after victory with same currentStageId', () => {
+  it('verify OFF returns to stageSelect after victory with same currentStageId', () => {
     setVerifyModeEnabled(false);
     session = createSession();
     const gameData = tryLoadGameData();
@@ -156,7 +156,7 @@ describe('GameSession map → party → battle wire', () => {
     expect(session.getSaveState().stageProgress.clearedStageIds).toContain(
       firstStage.id,
     );
-    expect(session.getCurrentScreen()).toBe('map');
+    expect(session.getCurrentScreen()).toBe('stageSelect');
     const selectedItem = container.querySelector(
       '.stage-selection-list-item--selected',
     );
@@ -184,7 +184,7 @@ describe('GameSession map → party → battle wire', () => {
     expect(session.getCurrentScreen()).toBe('battle');
   });
 
-  it('verify ON party menu does not require map sortie', () => {
+  it('verify ON party menu does not require stageSelect sortie', () => {
     setVerifyModeEnabled(true);
     session = createSession();
     const initialStageId = session.getSaveState().stageProgress.currentStageId;

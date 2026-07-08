@@ -118,7 +118,7 @@ flowchart LR
 
 ## 8. 実装タッチポイント（予定）
 
-- `GameSession` — 画面状態 **`map`**（内部名）、sortie オプション（`levelSync`）
-- 新規 DOM — ステージ選択一覧・ステージ詳細・リザルト履歴（ホスト要素 `.game-shell__map` / `mapHost` は内部名）
+- `GameSession` — 画面状態 **`stageSelect`**、sortie オプション（`levelSync`）
+- 新規 DOM — ステージ選択一覧・ステージ詳細・リザルト履歴（ホスト要素 `.game-shell__stage-select` / `stageSelectHost`）
 - `data/stages*.json` — `recommendedLevel` フィールド（validate 追加）
 - `SaveManager` / victory ハンドラ — `stageRecords` 更新（[progression.md](progression.md)）

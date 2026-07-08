@@ -46,7 +46,7 @@
   display: none !important;
 }
 
-.game-shell__map {
+.game-shell__stage-select {
   position: absolute;
   inset: 0;
   z-index: 1;
@@ -58,6 +58,6 @@
   background: var(--app-bg);
 }
 
-.game-shell__map[hidden] {
+.game-shell__stage-select[hidden] {
   display: none !important;
 }

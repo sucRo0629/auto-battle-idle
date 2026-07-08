@@ -12,8 +12,8 @@
 - 状態: **Phase 6b 完了**（6b-1〜6b-8）。**Phase 7d〜7g 最小実装済み**（§26〜29）。**§30 で verify OFF main flow 成立を確認**。残タスクは §30「残タスク」
 - **2026-07 roadmap 改定:** [phase-roadmap.md](../plans/phase-roadmap.md) — 旧 6d → **Phase 7**（app flow）、新 **Phase 8**（presentation）、旧 Electron → **Phase 9**（packaging）。本編は **Phase 10** へ
 - **Phase 7 目的:** M1 体験版として、**起動から `demo_ch1_07` クリアまで迷わず進めるアプリ導線**を作る（配布 zip は Phase 9）
-- **現状画面:** verify OFF 起動は **ステージ選択**（`StageSelectionPanel`；内部 screen `'map'` / `mapHost`）→ 編成（`MetaMenuOverlay`）→ 戦闘。**未実装:** トップ / リザルト / 体験版終了
-- **用語（ユーザー向け）:** 画面表示・spec・ガイド文案は **「ステージ選択」** に統一。コード内部名 `mapHost` / `screen: 'map'` / `.game-shell__map` は **rename しない**（後続 refactor 候補）
+- **現状画面:** verify OFF 起動は **ステージ選択**（`StageSelectionPanel`；内部 screen `'stageSelect'` / `stageSelectHost`）→ 編成（`MetaMenuOverlay`）→ 戦闘。**未実装:** トップ / リザルト / 体験版終了
+- **用語（ユーザー向け）:** 画面表示・spec・ガイド文案は **「ステージ選択」** に統一済み。**内部名 rename 済み（§45）:** `stageSelectHost` / `screen: 'stageSelect'` / `.game-shell__stage-select`
 - **並行・未達:** キャラ画像（並行作業中）、VFX 未実装、効果音未実装
 - **当面方針:** 新規ソース実装は止め、Phase 7 整理後は **グラフィック準備優先**。新規画面実装はグラフィック方針整理後に再開
 - **verify OFF 勝利時 currentStageId 維持済み（§33）**
@@ -2846,3 +2846,80 @@ counter は `configurePaladinTankParty`（`df_paladin`）— player `at_ballista
 
 - [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
 - [ ] 7h 体験版終了画面（`demo_ch1_07` クリア後）
+
+## 45. 内部名 map → stageSelect rename（2026-07-08）
+
+**§39 後続 refactor** — ステージ選択型フローに合わせ、内部 screen / host / CSS class の `map` 呼称を `stageSelect` へ改名。**挙動変更なし**。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本（§2/§39） |
+| 2 | `src/game/gameScreen.ts` | `GameScreen` 型 |
+| 3 | `src/game/GameSession.ts` | `mapHost` / `setGameScreen('map')` |
+| 4 | `src/game/gameSessionWire.test.ts` | wire テスト |
+| 5 | `src/styles/game-shell.css` | `.game-shell__map` |
+| 6 | `src/platform/menuHost.ts`（Grep） | `GameScreen` 型参照のみ・値 `'map'` なし |
+
+### 影響範囲（調査結果）
+
+| 対象 | 参照ファイル数 | 判定 |
+| ---- | -------------- | ---- |
+| `screen: 'map'` | `gameScreen.ts`・`GameSession.ts`・wire test | **小** — 実施 |
+| `mapHost` / `.game-shell__map` | `GameSession.ts`・`game-shell.css` | **小** — 実施 |
+| `openMap` / `showMap` | **存在しない** | 対象外 |
+| `openStageSelection()` | `GameSession.ts` のみ | `openStageSelect()` に改名 |
+| `menuHost.ts` | `GameScreen` 型 import のみ | 変更不要 |
+| handoff 履歴節（§26〜§44） | 多数 | **意図的に未改**（実装ログ） |
+
+### rename 実施
+
+| 変更前 | 変更後 |
+| ------ | ------ |
+| `GameScreen: 'map'` | `'stageSelect'` |
+| `mapHost` | `stageSelectHost` |
+| `.game-shell__map` | `.game-shell__stage-select` |
+| `onMap` | `onStageSelect` |
+| `openStageSelection()` | `openStageSelect()` |
+| `setGameScreen('map')` | `setGameScreen('stageSelect')` |
+
+### 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/gameScreen.ts` | `GameScreen` 型 |
+| `src/game/GameSession.ts` | host 名・screen 切替・`openStageSelect` |
+| `src/game/StageSelectionScreenHost.ts` | JSDoc |
+| `src/styles/game-shell.css` | CSS class |
+| `src/game/gameSessionWire.test.ts` | 期待値・describe 文言 |
+| `docs/spec/stage-selection-ui.md` | 実装タッチポイント注記 |
+| `docs/ai-handoff/current-task.md` | §2 + 本 §45 |
+
+### 見送り
+
+| 項目 | 理由 |
+| ---- | ---- |
+| handoff 履歴節の `mapHost` / `setGameScreen('map')` | 実装ログとして残す（§39 方針と同様） |
+| `StageSelectionPanel` / `StageSelectionScreenHost` クラス名 | 既に自然なため維持 |
+
+### 導線確認（テスト）
+
+| 導線 | 結果 |
+| ---- | ---- |
+| verify OFF 起動 → `stageSelect` | pass |
+| verify OFF sortie → formation → battle | pass |
+| verify OFF 勝利 → `stageSelect` 復帰・`currentStageId` 維持・`clearedStageIds` 記録 | pass |
+| verify OFF 敗北 → formation・`currentStageId` 維持 | pass |
+| verify ON 起動 battle・勝利 advance・敗北 rollback | pass |
+| verify ON 編成（sortie 不要） | pass |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm test -- src/game/gameSessionWire.test.ts src/game/stageSelectionWire.test.ts src/ui/StageSelectionPanel.test.ts` | **20 passed** |
+
+### 触らなかった
+
+save schema / `currentStageId` / `clearedStageIds` ロジック、UI 表示文言、`stages-demo.json` / class / `enemyGroups`、レイアウト大改修
