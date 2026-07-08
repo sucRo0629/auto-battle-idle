@@ -2262,3 +2262,184 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | コマンド | 結果 |
 | -------- | ---- |
 | `npm test -- src/ui/StageSelectionPanel.test.ts src/game/stageSelectionWire.test.ts src/game/gameSessionWire.test.ts` | **17 passed** |
+
+## 40. クリア済み状態 / stageRecords — 最小設計棚卸し（2026-07-08）
+
+**§39 後続** — ステージ選択型フロー向けの save・報酬・UI 接続点を調査。**実装・save schema 変更・migration 改修は今回行わない**。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本（§32/§33/§39 前提） |
+| 2 | `src/battle/types.ts` | `StageProgress` / `SaveGameState` 型 |
+| 3 | `src/save/SaveManager.ts` | save 読込・`parseStageProgress`・v1 migration |
+| 4 | `src/progression/victoryRewards.ts` | `applyVictoryRewards` / `createDefaultSave` |
+| 5 | `src/ui/StageSelectionPanel.ts` + `src/game/StageSelectionScreenHost.ts` | 一覧 UI・save 非接続の確認 |
+| 6 | `docs/spec/progression.md` + `docs/spec/stage-selection-ui.md`（Grep） | `stageRecords` 正本・体験版 v1 表示方針 |
+
+### 1. `save.stageProgress` 周辺の stage 別記録
+
+| フィールド | スコープ | 内容 |
+| ---------- | -------- | ---- |
+| `currentStageId` | セッション文脈 | 最後に sortie した stage（verify OFF 勝利後も **維持** §33） |
+| `totalClears` | **アカウント全体** | 勝利回数の累計。**stage 別ではない** |
+
+**結論:** `stageProgress` に **stageId 別のクリア記録は存在しない**。`totalClears` から特定 stage のクリア可否は復元できない。
+
+**関連（stage 別ではないが勝利で更新）:** `save.unlockedClassIds` — `StageDef.unlockClassIdsOnClear` 経由（例: `demo_ch1_07` → `at_ballista`）。**間接的な「この stage をクリアした」証拠にはなりうるが、汎用クリアフラグではない**（unlock 定義のない stage は痕跡ゼロ）。
+
+**`SaveGameState` ルート:** `version` / `stageProgress` / `party` / `unlockedClassIds` のみ。`progression.md` にある `stageRecords?` は **型・パーサ・実装とも未接続**（`src/` に `stageRecords` / `clearedStageIds` / `StageRecord` 参照なし）。
+
+**`SaveManager.parseStageProgress`:** `currentStageId` + `totalClears` 以外は **読み捨て**。将来フィールドを JSON に書いても、パーサ未更新なら **ロード時に消失**。
+
+### 2. `applyVictoryRewards` の stage 別記録
+
+**現状フロー（`clearedStageId = save.stageProgress.currentStageId` 読取後）:**
+
+| 処理 | stage 別記録 |
+| ---- | ------------ |
+| EXP 付与（`computeStageExpReward(clearedStageId)`） | なし（メンバー `progress` のみ） |
+| `unlockClassIdsOnClear` → `unlockedClassIds` merge | 間接のみ（上記） |
+| `advanceCurrentStage` 時のみ `currentStageId` 更新 | 次 stage へのポインタ（クリア履歴ではない） |
+| `totalClears += 1` | グローバル累計のみ |
+
+**結論:** `totalClears++` **以外に stageId 別の永続記録はない**。`clearedStageId` は unlock 判定に使われるが、**「クリア済み」リストには書き込まれない**。
+
+**拡張フック:** `applyVictoryRewards` は既に `clearedStageId` を局所変数で保持。**末尾（`totalClears++` の前後）に merge 1 行を足す形が自然**（§32 案と一致）。`GameSession.handleVictory` は `advanceCurrentStage: verifyMode` を渡すだけ — verify OFF でも **報酬関数自体は常に呼ばれる**。
+
+### 3. `StageSelectionPanel` — クリア済み表示の構造
+
+| 観点 | 現状 |
+| ---- | ---- |
+| 入力 | `GameData` のみ（`stages` 一覧）。**save 非参照** |
+| Host | `StageSelectionScreenHost` は `getCurrentStageId()` のみ save から取得 |
+| 一覧行 | `displayName` + 選択ハイライトのみ |
+| 詳細 | 想定 Lv・敵編成・出撃ボタン |
+| クリア表示 | **未実装**（§39 / `stage-selection-ui.md` §2「体験版 v1 では一覧にクリア状態なし」） |
+
+**UI 拡張の最小接点:**
+
+1. `StageSelectionPanelOptions` に `clearedStageIds?: ReadonlySet<string>` または `isStageCleared?: (id) => boolean`
+2. `renderStageList` で行ラベル横に HUD プレート（例: 「クリア」／☆ は `stageRecords` 側）
+3. `StageSelectionScreenHost.show()` で save から set を組み立てて Panel へ渡す
+
+**現状の Panel は「表示できる構造」ではない** — save 入力と render 分岐が未接続。ただし **options 追加 + list item DOM 1 箇所** で最小表示は可能（レイアウト大改修不要）。
+
+### 4. 最小 save 追加案
+
+#### A. 最小案 — `clearedStageIds`
+
+```typescript
+// stageProgress 内に置く案（進行ブロックと同居）
+interface StageProgress {
+  currentStageId: string;
+  totalClears: number;
+  clearedStageIds?: string[]; // 省略時 []
+}
+```
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 更新 | 勝利時 `clearedStageId` を重複除去 merge |
+| 読取 | `clearedStageIds.includes(stageId)` |
+| 初期値 | `createDefaultSave` → `[]` または省略 |
+| パーサ | `parseStageProgress` に optional 配列（空/欠落 → `[]`） |
+| SAVE_VERSION | **据え置き可**（optional 追加のみ） |
+| v1 migration | 変更不要（v1 も同パース経路） |
+
+**代替:** `SaveGameState` ルートに `clearedStageIds?` — stage 進行と分離できるが、handoff §32 は `stageProgress` 同居案。どちらも migration 負荷は同等。
+
+#### B. 拡張案 — `stageRecords`（spec 正本）
+
+```typescript
+// SaveGameState ルート（progression.md 正本）
+stageRecords?: Record<StageId, StageRecord>;
+// StageRecord = lowestLevelClear? + fastestTimeClear?（各 StageClearEntry）
+```
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 更新 | 勝利時 `StageClearEntry` 生成 + 2 枠比較更新 |
+| 入力データ | **`clearTimeMs` 計測未実装**、`clearLevel` / `partyClassIds` / `levelSyncUsed` も GameSession 側で未収集 |
+| ☆ 表示 | `atRecommendedLevel` 要 `stageRecords` |
+| パーサ | 新規 `parseStageRecords`（optional、欠落 → `{}`） |
+| SAVE_VERSION | optional なら据え置き可。strict 必須化時のみ bump |
+
+### 5. `clearedStageIds` vs `stageRecords` 比較
+
+| 観点 | `clearedStageIds` | `stageRecords` |
+| ---- | ----------------- | -------------- |
+| 体験版 v1「クリア済み表示」 | **十分** | 過剰（ただし ☆/ベスト値も欲しければ必要） |
+| spec 整合 | progression.md の将来 `stageRecords` と **併存可**（records のキー集合 ⊇ cleared） | **progression.md / stage-selection-ui.md 正本** |
+| 実装規模 | 型 + パーサ + merge 1 関数 + Panel 行表示 | 型 + パーサ + 計測 + 2 枠更新 + リザルト/詳細 UI |
+| 再クリア | 冪等 merge のみ | 2 枠は「上書き条件付き」— 再挑戦に相性良い |
+| データ量 | 7 stage × id 文字列 | 枠あたり party + time + level |
+| 後方互換 | optional `[]` で既存セーブ無変更相当 | optional `{}` 同様 |
+
+**Hensei-Only 向け推奨:** **段階導入** — まず `clearedStageIds` で一覧の「クリア済み」表示。`stageRecords` はリザルト 2 枠・☆・Records 横断（Phase 14）と **同じ PR または直後** にまとめるのが効率的（計測基盤を 1 回で作る）。
+
+**体験版 v1 で本当に必要なもの:** handoff / `stage-selection-ui.md` 上は **v1 一覧にクリア状態なし** と明記。**プレイヤー向け必須は未確定** — 最低限の達成感なら `clearedStageIds` のみで足りる。roadmap M1 必須 2 枠は **spec 上は `stageRecords` 必須** だが、現 handoff 残タスク（§30）ではリザルト未着手のため **実装タイミングは次フェーズ**。
+
+### 6. 最小実装案（次 PR 向け・今回は未実装）
+
+**Phase A — save + 報酬（verify ON/OFF 共通）**
+
+1. `StageProgress.clearedStageIds?: string[]` + `parseStageProgress` optional 配列
+2. `mergeClearedStageId(save, stageId)` — `applyVictoryRewards` 末尾で呼ぶ（`advanceCurrentStage` とは独立）
+3. `createDefaultSave` — 省略 or `[]`
+4. テスト: `victoryRewards` — 初クリア merge / 再クリア冪等 / verify OFF で `currentStageId` 不変と併用
+
+**Phase B — UI（verify OFF のみ表示で可）**
+
+1. `StageSelectionScreenHost` — save から `clearedStageIds` を Panel options へ
+2. `StageSelectionPanel.renderStageList` — クリア済み行に HUD ラベル（Web badge 禁止 — `game-panel-surface` 系）
+3. テスト: Panel — cleared id でラベル DOM
+
+**触らない:** `currentStageId` 意味変更、`selectedStageId` 導入、map rename、リザルト画面
+
+### 7. 後続拡張案（`stageRecords`）
+
+1. 戦闘開始〜勝利の **`clearTimeMs`** を `BattleEngine` / `GameSession` で計測
+2. `resolveEffectiveLevel` + 編成 4 クラス + Level Sync フラグで `StageClearEntry` 生成
+3. `updateStageRecords(save, stageId, entry)` — progression.md 2 枠ルール
+4. リザルト画面（7f）で 2 行表示 → 一覧サマリー（Lv / タイム）+ ☆
+5. **`clearedStageIds` との関係:** records 更新時に `clearedStageIds` も merge（単一ソースにするなら records のキーから導出も可）
+
+### 8. save migration 影響見込み
+
+| 変更 | 影響 |
+| ---- | ---- |
+| `clearedStageIds?` optional | **小** — `SAVE_VERSION` 据え置き、`migrateSaveV1` 変更不要、既存 JSON は `[]` 扱い |
+| `stageRecords?` optional | **小〜中** — パーサ追加のみなら version 据え置き可。entry バリデーション厳密化で bump 検討 |
+| `parseStageProgress` 未更新のまま JSON にだけ書く | **データ消失** — 必ずパーサ同期 |
+| verify / release スロット分離 | 既存どおり — 両スロット独立。cleared は release のみ更新でよい（verify 汚染回避は optional） |
+
+**大改修不要の条件:** optional フィールド + デフォルト空 + version 据え置き。
+
+### 9. verify ON Debug 導線への影響見込み
+
+| 方針 | 影響 |
+| ---- | ---- |
+| `applyVictoryRewards` 内で **常に** `clearedStageIds` merge | verify セーブにもクリアが溜まる — Debug ループ検証用なら許容、release 汚染なし（スロット分離済み） |
+| merge を **`!verifyMode` 時のみ** | release のみクリア記録 — **Debug 導線は無変更**（推奨: 体験版表示は release のみならこちらでも可） |
+| `advanceCurrentStage: verifyMode` | **現状維持** — verify ON は `currentStageId` 自動進行 + loopStage。cleared 追加は直交 |
+| `StageSelectionPanel` クリア表示 | verify ON 起動 `battle` — **Panel 非表示のため影響なし** |
+
+**結論:** cleared 更新を verify OFF（release save）に限定すれば **verify ON Debug 導線へ影響ゼロ**。共通 merge でもスロット分離で release は独立。
+
+### 10. 今回の判断
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 実装 | **見送り** — ユーザー指示「調査・設計整理まで」「save schema 大変更 / migration 大改修しない」 |
+| 成果 | 本 §40 の棚卸し + 次 PR の Phase A/B 手順 |
+
+**触らなかった:** save schema 実装、`StageSelectionPanel` ロジック、`GameSession` / `currentStageId`、`stages-demo.json` / class / `enemyGroups`、migration 改修、UI レイアウト
+
+### 11. 残タスク（クリア表示着手時）
+
+- [ ] Phase A: `clearedStageIds` + `applyVictoryRewards` merge + テスト
+- [ ] Phase B: Panel クリア済みラベル + Host 配線 + テスト
+- [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
+- [ ] spec 追随: 体験版 v1 で一覧クリア表示を入れるなら `stage-selection-ui.md` §2 の「v1 なし」を更新
