@@ -104,6 +104,7 @@ export class GameSession {
       gameData,
       {
         getCurrentStageId: () => this.save.stageProgress.currentStageId,
+        getClearedStageIds: () => this.save.stageProgress.clearedStageIds ?? [],
         onSortie: (stageId) => this.handleStageSortie(stageId),
       },
       !this.verifyMode,

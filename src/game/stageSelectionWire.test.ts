@@ -71,6 +71,22 @@ describe('StageSelectionScreenHost', () => {
     screenHost.destroy();
   });
 
+  it('forwards clearedStageIds from getClearedStageIds on show', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+
+    const screenHost = new StageSelectionScreenHost(host, gameData, {
+      getCurrentStageId: () => 'demo_ch1_01',
+      getClearedStageIds: () => ['demo_ch1_01', 'demo_ch1_03'],
+      onSortie: vi.fn(),
+    });
+
+    screenHost.show();
+    expect(host.querySelectorAll('.stage-selection-list-item-cleared')).toHaveLength(2);
+
+    screenHost.destroy();
+  });
+
   it('forwards sortie to onSortie with selected stage id', () => {
     const gameData = loadDemoGameDataForTest();
     const host = document.createElement('div');

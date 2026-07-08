@@ -80,7 +80,7 @@ interface PlayerProgress {
 interface SaveGameState {
   version: number;
   playerProgress: PlayerProgress;
-  stageProgress: { currentStageId: string; totalClears: number };
+  stageProgress: { currentStageId: string; totalClears: number; clearedStageIds?: string[] };
   party: {
     classId: ClassId;
     build: CharacterBuild;
@@ -96,6 +96,8 @@ interface SaveGameState {
 初回セーブは `parties.json` からパーティを生成（`playerProgress` は level 1 / exp 0）。編成画面で選べるクラスは `unlockedClassIds`（新規 demo は `parties.json` 在籍 + `DEFAULT_ROSTER_EXTRAS.demo` = M1 8 クラス）。
 
 **ステージクリア報酬（クラス解禁）:** `StageDef.unlockClassIdsOnClear`（任意 `ClassId[]`）。勝利時 `applyVictoryRewards` がクリアした stage の id を参照し、`save.unlockedClassIds` へ merge（重複除去・冪等）。体験版 `demo_ch1_07` は `["at_ballista"]`。ロード時に extras へ再同期しないため、既存セーブの `unlockedClassIds` は維持される。
+
+**クリア済み stage 一覧（最小）:** `stageProgress.clearedStageIds?: string[]`。verify OFF（リリース導線）の勝利時のみ、クリアした `stageId` を重複除去 merge。**進行制御・ロックには使わない**。verify ON（Debug ループ）では記録しない。
 
 保存タイミング：Victory/Defeat 後、60 秒ごと、`beforeunload` 時。パーティ編集時は即時。
 

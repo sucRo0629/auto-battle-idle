@@ -93,7 +93,32 @@ function parseStageProgress(raw: unknown): SaveGameState['stageProgress'] {
   if (typeof totalClears !== 'number' || totalClears < 0) {
     throw new Error('Invalid stageProgress.totalClears');
   }
-  return { currentStageId, totalClears };
+  const clearedStageIds = parseOptionalStringArray(
+    stageProgressObj.clearedStageIds,
+    'stageProgress.clearedStageIds',
+  );
+  return clearedStageIds.length > 0
+    ? { currentStageId, totalClears, clearedStageIds }
+    : { currentStageId, totalClears };
+}
+
+function parseOptionalStringArray(raw: unknown, label: string): string[] {
+  if (raw === undefined || raw === null) {
+    return [];
+  }
+  if (!Array.isArray(raw)) {
+    throw new Error(`Invalid ${label}`);
+  }
+  const ids: string[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== 'string' || entry.length === 0) {
+      throw new Error(`Invalid ${label} entry`);
+    }
+    if (!ids.includes(entry)) {
+      ids.push(entry);
+    }
+  }
+  return ids;
 }
 
 function parseLegacyPartyMembers(raw: unknown): PartyMemberState[] {

@@ -3,6 +3,7 @@ import { StageSelectionPanel } from '../ui/StageSelectionPanel.ts';
 
 export interface StageSelectionScreenHostCallbacks {
   getCurrentStageId: () => string;
+  getClearedStageIds?: () => readonly string[];
   onSortie: (stageId: string) => void;
 }
 
@@ -20,6 +21,7 @@ export class StageSelectionScreenHost {
   show(): void {
     this.host.hidden = false;
     const currentStageId = this.callbacks.getCurrentStageId();
+    const clearedStageIds = this.callbacks.getClearedStageIds?.() ?? [];
     if (!this.panel) {
       this.panel = new StageSelectionPanel(
         this.host,
@@ -28,10 +30,12 @@ export class StageSelectionScreenHost {
         {
           initialStageId: currentStageId,
           showFirstPlayGuidance: this.showFirstPlayGuidance,
+          clearedStageIds,
         },
       );
       return;
     }
+    this.panel.setClearedStageIds(clearedStageIds);
     this.panel.selectStage(currentStageId);
   }
 

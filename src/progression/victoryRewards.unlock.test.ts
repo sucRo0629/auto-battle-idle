@@ -107,4 +107,43 @@ describe('demo class unlock rewards', () => {
     expect(save.stageProgress.currentStageId).toBe('demo_ch1_07');
     expect(result.nextStageId).toBe('demo_ch1_07');
   });
+
+  it('records clearedStageIds on release flow victory (advanceCurrentStage false)', () => {
+    const gameData = createDemoGameData();
+    const save = createDefaultSave(gameData, 'demo');
+    save.stageProgress.currentStageId = 'demo_ch1_03';
+
+    applyVictoryRewards(save, gameData, levelCurves, [0, 1, 2, 3], {
+      advanceCurrentStage: false,
+    });
+
+    expect(save.stageProgress.clearedStageIds).toEqual(['demo_ch1_03']);
+    expect(save.stageProgress.currentStageId).toBe('demo_ch1_03');
+  });
+
+  it('does not record clearedStageIds on verify flow victory (advanceCurrentStage true)', () => {
+    const gameData = createDemoGameData();
+    const save = createDefaultSave(gameData, 'demo');
+    save.stageProgress.currentStageId = 'demo_ch1_03';
+
+    applyVictoryRewards(save, gameData, levelCurves, [0, 1, 2, 3], {
+      advanceCurrentStage: true,
+    });
+
+    expect(save.stageProgress.clearedStageIds ?? []).not.toContain('demo_ch1_03');
+    expect(save.stageProgress.currentStageId).toBe('demo_ch1_04');
+  });
+
+  it('merge clearedStageIds is idempotent on repeat clear', () => {
+    const gameData = createDemoGameData();
+    const save = createDefaultSave(gameData, 'demo');
+    save.stageProgress.currentStageId = 'demo_ch1_02';
+    const options = { advanceCurrentStage: false as const };
+    const survivors = [0, 1, 2, 3];
+
+    applyVictoryRewards(save, gameData, levelCurves, survivors, options);
+    applyVictoryRewards(save, gameData, levelCurves, survivors, options);
+
+    expect(save.stageProgress.clearedStageIds).toEqual(['demo_ch1_02']);
+  });
 });

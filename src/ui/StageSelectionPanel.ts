@@ -17,6 +17,7 @@ export interface StageSelectionPanelOptions {
   initialStageId?: string;
   /** verify OFF release flow — generic stage-selection guidance (no save / read flag). */
   showFirstPlayGuidance?: boolean;
+  clearedStageIds?: readonly string[];
 }
 
 export class StageSelectionPanel {
@@ -27,6 +28,7 @@ export class StageSelectionPanel {
   private readonly detailEnemySectionEl: HTMLElement;
   private readonly sortieButton: HTMLButtonElement;
   private readonly showFirstPlayGuidance: boolean;
+  private clearedStageIds: ReadonlySet<string>;
   private selectedStageId: string | null;
 
   constructor(
@@ -36,6 +38,7 @@ export class StageSelectionPanel {
     options: StageSelectionPanelOptions = {},
   ) {
     this.showFirstPlayGuidance = options.showFirstPlayGuidance ?? false;
+    this.clearedStageIds = new Set(options.clearedStageIds ?? []);
     this.selectedStageId =
       options.initialStageId ?? gameData.stages[0]?.id ?? null;
 
@@ -105,6 +108,11 @@ export class StageSelectionPanel {
     this.renderDetail();
   }
 
+  setClearedStageIds(clearedStageIds: readonly string[]): void {
+    this.clearedStageIds = new Set(clearedStageIds);
+    this.renderStageList();
+  }
+
   getSelectedStageId(): string | null {
     return this.selectedStageId;
   }
@@ -121,12 +129,25 @@ export class StageSelectionPanel {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'stage-selection-list-item';
-      button.textContent = stage.displayName;
       button.setAttribute('role', 'option');
       button.setAttribute('aria-selected', stage.id === this.selectedStageId ? 'true' : 'false');
       if (stage.id === this.selectedStageId) {
         button.classList.add('stage-selection-list-item--selected');
       }
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'stage-selection-list-item-name';
+      nameEl.textContent = stage.displayName;
+      button.appendChild(nameEl);
+
+      if (this.clearedStageIds.has(stage.id)) {
+        const clearedLabel = document.createElement('span');
+        clearedLabel.className =
+          'stage-selection-list-item-cleared game-panel-surface';
+        clearedLabel.textContent = 'クリア済み';
+        button.appendChild(clearedLabel);
+      }
+
       button.addEventListener('click', () => this.selectStage(stage.id));
       item.appendChild(button);
       this.listEl.appendChild(item);

@@ -97,6 +97,42 @@ describe('StageSelectionPanel first-play guidance', () => {
   });
 });
 
+describe('StageSelectionPanel cleared label', () => {
+  it('shows cleared label for stages in clearedStageIds', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+
+    const panel = new StageSelectionPanel(host, gameData, {}, {
+      clearedStageIds: ['demo_ch1_01', 'demo_ch1_05'],
+    });
+
+    const clearedLabels = host.querySelectorAll('.stage-selection-list-item-cleared');
+    expect(clearedLabels).toHaveLength(2);
+    expect(clearedLabels[0]?.textContent).toBe('クリア済み');
+
+    const ch1_01Button = host.querySelector(
+      '.stage-selection-list-item--selected',
+    );
+    expect(ch1_01Button?.querySelector('.stage-selection-list-item-cleared')).not.toBeNull();
+    expect(host.querySelector('.stage-selection-sortie')?.hasAttribute('disabled')).toBe(false);
+
+    panel.destroy();
+  });
+
+  it('updates cleared labels when setClearedStageIds is called', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+
+    const panel = new StageSelectionPanel(host, gameData);
+    expect(host.querySelector('.stage-selection-list-item-cleared')).toBeNull();
+
+    panel.setClearedStageIds(['demo_ch1_02']);
+    expect(host.querySelectorAll('.stage-selection-list-item-cleared')).toHaveLength(1);
+
+    panel.destroy();
+  });
+});
+
 describe('StageSelectionPanel formationHintJa', () => {
   it('shows formationHintJa below enemy composition for demo_ch1_05 only', () => {
     const gameData = loadDemoGameDataForTest();

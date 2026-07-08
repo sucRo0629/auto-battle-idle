@@ -83,6 +83,15 @@ export function mergeUnlockedClassIds(
   return [...ids];
 }
 
+export function mergeClearedStageId(
+  stageProgress: SaveGameState['stageProgress'],
+  stageId: string,
+): void {
+  const existing = stageProgress.clearedStageIds ?? [];
+  if (existing.includes(stageId)) return;
+  stageProgress.clearedStageIds = [...existing, stageId];
+}
+
 export function createDefaultSave(
   gameData: GameData,
   partyId = 'demo',
@@ -123,6 +132,7 @@ export function createDefaultSave(
     stageProgress: {
       currentStageId: firstStageId,
       totalClears: 0,
+      clearedStageIds: [],
     },
     party: normalizedParty,
     unlockedClassIds: buildDefaultUnlockedClassIds(normalizedParty, partyId),
@@ -202,6 +212,8 @@ export function applyVictoryRewards(
   const nextStageId = getNextStageId(gameData.stages, clearedStageId);
   if (advanceCurrentStage) {
     save.stageProgress.currentStageId = nextStageId;
+  } else {
+    mergeClearedStageId(save.stageProgress, clearedStageId);
   }
   save.stageProgress.totalClears += 1;
 

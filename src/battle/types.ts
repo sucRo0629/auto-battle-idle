@@ -332,6 +332,8 @@ export const SAVE_VERSION = 2;
 export interface StageProgress {
   currentStageId: string;
   totalClears: number;
+  /** Stage ids cleared at least once (release flow only; not used for unlock / progression). */
+  clearedStageIds?: string[];
 }
 
 export interface SaveGameState {

@@ -2439,7 +2439,48 @@ stageRecords?: Record<StageId, StageRecord>;
 
 ### 11. 残タスク（クリア表示着手時）
 
-- [ ] Phase A: `clearedStageIds` + `applyVictoryRewards` merge + テスト
-- [ ] Phase B: Panel クリア済みラベル + Host 配線 + テスト
 - [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
-- [ ] spec 追随: 体験版 v1 で一覧クリア表示を入れるなら `stage-selection-ui.md` §2 の「v1 なし」を更新
+- [x] spec 追随: `stage-selection-ui.md` §2 クリア済みラベル追記（§41）
+
+---
+
+## 41. clearedStageIds 最小実装（2026-07-08）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本（§40 調査結果） |
+| 2 | `src/battle/types.ts` | `StageProgress` 型 |
+| 3 | `src/save/SaveManager.ts` | `parseStageProgress` |
+| 4 | `src/progression/victoryRewards.ts` | `applyVictoryRewards` / `createDefaultSave` |
+| 5 | `src/ui/StageSelectionPanel.ts` + `src/game/StageSelectionScreenHost.ts` | 一覧 UI 配線 |
+| 6 | `docs/spec/progression.md` + `docs/spec/stage-selection-ui.md` | spec 最小更新 |
+
+### 実装内容
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 型 | `StageProgress.clearedStageIds?: string[]` |
+| parse | `parseStageProgress` — optional 配列。欠落・空 → フィールド省略（`[]` 相当） |
+| default save | `createDefaultSave` → `clearedStageIds: []` |
+| merge | `mergeClearedStageId` — `applyVictoryRewards` で **`advanceCurrentStage === false`（verify OFF / release）の勝利時のみ** |
+| UI | `StageSelectionScreenHost` → `getClearedStageIds` → Panel 一覧行に「クリア済み」HUD ラベル |
+| 進行 | `currentStageId` 勝敗時維持（§33）— 変更なし。cleared は unlock / ロックに未使用 |
+
+### テスト
+
+| ファイル | 結果 |
+| -------- | ---- |
+| `victoryRewards.unlock.test.ts` | merge / verify OFF 記録 / verify ON 非記録 / 冪等 |
+| `saveManager.clearedStageIds.test.ts` | round-trip / 欠落時 undefined |
+| `StageSelectionPanel.test.ts` | クリア済みラベル DOM |
+| `stageSelectionWire.test.ts` | Host → clearedStageIds 配線 |
+
+### 触らなかった
+
+`stageRecords` / best time / best party / 星評価、`selectedStageId` 本格導入、SAVE_VERSION bump、`stages-demo.json` / class / `enemyGroups`、UI レイアウト大改修、map rename
+
+### 残タスク
+
+- [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
