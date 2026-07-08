@@ -7,7 +7,7 @@
         "type": "damage",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.85
+          "atkScale": 1
         },
         "target": {
           "kind": "distance",
