@@ -958,12 +958,6 @@ export class BattleEngine {
       if (isUnitMovementBlocked(enemy)) continue;
       const isActorInSkillMotion =
         this.skillSequenceRunner.isActorInSkillMotion(enemy.id);
-      const skipAutoApproach = shouldSkipEngagedAutoApproach(
-        enemy,
-        this.players,
-        this.enemies,
-        this.gameData,
-      );
       const target = capEngagedEnemyApproachBattleX(
         enemy,
         resolveEnemyApproachBattleX(
@@ -972,6 +966,13 @@ export class BattleEngine {
           this.enemies,
           this.gameData,
         ),
+      );
+      const skipAutoApproach = shouldSkipEngagedAutoApproach(
+        enemy,
+        this.players,
+        this.enemies,
+        this.gameData,
+        { approachTargetX: target },
       );
       detailsById?.set(enemy.id, {
         approachTargetX: target,

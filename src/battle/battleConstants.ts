@@ -5,6 +5,7 @@ import {
   COMBAT_SAFE_CENTER_X,
   COMBAT_SAFE_LEFT,
   COMBAT_SAFE_RIGHT,
+  COMBAT_SAFE_WIDTH,
 } from './combatSafeArea.ts';
 
 /** 1280×720 battle-root の戦闘キャンバス幅（全幅フィールド） */
@@ -15,8 +16,16 @@ export {
   BATTLE_LANE_TOP as BATTLE_LANE_TOP_INSET,
 } from '../ui/battleRootLayout.ts';
 
-/** 敵 spawn オフセット基準（HUD 間の安全領域中央） */
+/** 敵 spawn オフセット基準（レガシー互換・カメラ廃止前の名称） */
 export const COMBAT_CAMERA_CENTER_X = COMBAT_SAFE_CENTER_X;
+
+/**
+ * 敵 spawnX=0 の battleX — 安全領域の右寄り。
+ * 味方左アンカー（COMBAT_SAFE_LEFT）と対称に戦場幅を使う。
+ */
+export const ENEMY_SPAWN_ORIGIN_X = Math.round(
+  COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH * (2 / 3),
+);
 
 /** 味方隊列: 最後列（左端）の battleX — 画面左マージン + gap */
 export const PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT;
@@ -27,10 +36,10 @@ export const PARTY_FORMATION_SLOT_SPACING = 48;
 export const DEFAULT_SURROUND_AURA_RADIUS_PX = 50;
 
 /**
- * 敵 spawnX: 安全領域中央からの右オフセット上限。
+ * 敵 spawnX: ENEMY_SPAWN_ORIGIN_X からの右オフセット上限。
  * 敵 deploy 目標が COMBAT_SAFE_RIGHT を超えないよう導出。
  */
-export const SPAWN_X_MAX = COMBAT_SAFE_RIGHT - COMBAT_CAMERA_CENTER_X;
+export const SPAWN_X_MAX = COMBAT_SAFE_RIGHT - ENEMY_SPAWN_ORIGIN_X;
 
 export {
   COMBAT_SAFE_LEFT,
@@ -119,10 +128,10 @@ export function resolveEnemyMarchEngageGap(
 
 export const PLAYER_VISUAL_MIN_GAP = engagedMinBodyGap();
 
-/** stages.json spawnX（中心からの右オフセット）→ battleX */
+/** stages.json spawnX（ENEMY_SPAWN_ORIGIN_X からの右オフセット）→ battleX */
 export function resolveEnemySpawnBattleX(spawnOffset: number): number {
   const clamped = Math.max(0, Math.min(spawnOffset, SPAWN_X_MAX));
-  return COMBAT_CAMERA_CENTER_X + clamped;
+  return ENEMY_SPAWN_ORIGIN_X + clamped;
 }
 
 /** @deprecated engage layout 移行中の互換（配置正本は partyFormation） */

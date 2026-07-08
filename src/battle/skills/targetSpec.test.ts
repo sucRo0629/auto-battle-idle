@@ -6,6 +6,7 @@ import {
   getTargetPool,
   orderPoolByTarget,
   normalizeTarget,
+  pickMoveAnchorOptions,
   pickTargetFromPool,
   resolveApproachTargetSpec,
   distanceSpecIncludesSelf,
@@ -143,6 +144,24 @@ describe('getTargetPool / pickTargetFromPool', () => {
     const pool = getTargetPool(spec, actor, allies, enemies);
     const picked = pickTargetFromPool(spec, actor, pool);
     expect(picked?.id).toBe('e1');
+  });
+
+  it('rear toAnchor move anchor picks enemy frontline contact not battle-line depth nearest', () => {
+    const spec = { kind: 'distance', side: 'enemy', order: 'nearest' } as const;
+    const pool = getTargetPool(spec, actor, allies, enemies);
+    const moveEffect = {
+      type: 'move',
+      moveMode: 'toAnchor',
+      anchorOffsetPx: 32,
+    } as const;
+    const picked = pickTargetFromPool(
+      spec,
+      actor,
+      pool,
+      pickMoveAnchorOptions(actor, moveEffect),
+    );
+    // 敵前衛 = min battleX（e2=40）。AttackTarget nearest の max（e1=80）ではない
+    expect(picked?.id).toBe('e2');
   });
 
   it('picks lowest hp enemy', () => {

@@ -16,7 +16,10 @@ import {
   chainStepFields,
   pierceStepFields,
 } from './powerStep.ts';
-import { getBattleX } from '../combatPosition.ts';
+import {
+  getBattleX,
+  resolvePlayerRearAssaultAttackRangePx,
+} from '../combatPosition.ts';
 import { resolveFacingSign } from '../combatFacing.ts';
 import { getEffectiveMaxHp, currentHpRatio } from '../combatMath.ts';
 import {
@@ -35,6 +38,7 @@ import {
   normalizeTarget,
   orderPoolByTarget,
   pickOptionsForEffect,
+  pickMoveAnchorOptions,
   pickTargetFromPool as pickTargetFromPoolSpec,
   resolveTargetSpec,
   targetSpecFaction,
@@ -352,7 +356,12 @@ export function resolveEffectAnchor(
   }
   if (effect.type === 'move') {
     const pool = getTargetPool(spec, actor, allies, enemies);
-    return pickTargetFromPoolSpec(spec, actor, pool, { moveAnchor: true });
+    return pickTargetFromPoolSpec(
+      spec,
+      actor,
+      pool,
+      pickMoveAnchorOptions(actor, effect),
+    );
   }
   const resolution = resolveEffectResolution(
     effect,
@@ -431,9 +440,12 @@ function resolveEffectResolutionInternal(
 
   if (sourceEffect.type === 'move') {
     const pool = getTargetPool(specForResolution, actor, allies, enemies);
-    const target = pickTargetFromPoolSpec(specForResolution, actor, pool, {
-      moveAnchor: true,
-    });
+    const target = pickTargetFromPoolSpec(
+      specForResolution,
+      actor,
+      pool,
+      pickMoveAnchorOptions(actor, sourceEffect),
+    );
     const rangePx = resolveSkillRangePx(
       actor,
       merged,
@@ -445,11 +457,19 @@ function resolveEffectResolutionInternal(
     };
   }
 
-  const rangePx = resolveSkillRangePx(
+  let rangePx = resolveSkillRangePx(
     actor,
     merged,
     livingAllies(allies).length,
   );
+  if (!actor.isEnemy) {
+    rangePx = resolvePlayerRearAssaultAttackRangePx(
+      actor,
+      allies,
+      enemies,
+      rangePx,
+    );
+  }
   const priorPool = resolvePriorEffectAttackablePool(
     specForResolution,
     priorEffectHitPools,

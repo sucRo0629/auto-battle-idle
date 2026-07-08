@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CombatantState, GameData } from './types.ts';
 import {
   BATTLE_ENEMY_VISIBLE_MAX_X,
-  COMBAT_CAMERA_CENTER_X,
+  ENEMY_SPAWN_ORIGIN_X,
   SPRITE_GAP,
   enemyRangedRearGap,
   resolvePartyDeployTravelPx,
@@ -93,8 +93,8 @@ describe('combatPosition', () => {
       { id: 'a', spawnX: 120, isAlive: true },
       { id: 'b', spawnX: 160, isAlive: true },
     ]);
-    expect(positions.get('a')).toBe(COMBAT_CAMERA_CENTER_X + 120);
-    expect(positions.get('b')).toBe(COMBAT_CAMERA_CENTER_X + 160);
+    expect(positions.get('a')).toBe(ENEMY_SPAWN_ORIGIN_X + 120);
+    expect(positions.get('b')).toBe(ENEMY_SPAWN_ORIGIN_X + 160);
   });
 
   it('separateByGap spreads enemy spawns right to stay off-screen', () => {

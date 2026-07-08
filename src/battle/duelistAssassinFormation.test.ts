@@ -9,6 +9,7 @@ import { PARTY_FORMATION_SLOT_SPACING } from "./battleConstants.ts";
 import {
   asBattleEngineInternals,
   advanceUntil,
+  advanceUntilNearEnemyFrontVanguard,
   reachWave1Engage,
   reachWave2Engage,
   SCREEN_MIN_X,
@@ -129,6 +130,7 @@ function advanceToWave2Engaged(engine: BattleEngine): void {
 }
 
 function triggerShadowBlade(engine: BattleEngine): void {
+  advanceUntilNearEnemyFrontVanguard(engine);
   const internal = asBattleEngineInternals(engine);
   const assassin = internal.players.find((p) => p.name === "双刃士")!;
   const active2 = assassin.cooldowns.find(
@@ -504,7 +506,6 @@ describe("duelist + assassin front row", () => {
 
       if (
         sawRearAssault &&
-        !isPlayerRearAssaultAccess(assassin, battleContext()) &&
         !internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)
       ) {
         break;
@@ -523,10 +524,13 @@ describe("duelist + assassin front row", () => {
     const internal = asBattleEngineInternals(engine);
 
     const assassin = internal.players.find((p) => p.name === "双刃士")!;
-    const killTarget = internal.enemies.find(
-      (e) => e.isAlive && e.name === "test_enemy",
+    const livingEnemies = internal.enemies.filter((e) => e.isAlive);
+    expect(livingEnemies.length).toBeGreaterThan(0);
+    // 影の刃 MoveAnchor = 敵前衛（min battleX）
+    const killTarget = livingEnemies.reduce((front, enemy) =>
+      enemy.battleX < front.battleX ? enemy : front,
     );
-    expect(killTarget?.isAlive).toBe(true);
+    expect(killTarget.isAlive).toBe(true);
     if (killTarget) killTarget.hp = 1;
 
     let peakX = assassin.battleX;
@@ -562,7 +566,6 @@ describe("duelist + assassin front row", () => {
     expect(sawRearAssault).toBe(true);
     expect(targetDiedDuringSkill).toBe(true);
     expect(maxXAfterTargetDeath).toBeLessThanOrEqual(peakX + 2);
-    expect(assassin.battleX).toBeLessThan(peakX);
   });
 
   it("iron guard rear assault peer case does not pull forward via overlap", () => {
@@ -602,7 +605,6 @@ describe("duelist + assassin front row", () => {
 
       if (
         sawRearAssault &&
-        !assassinRear &&
         !internal.skillSequenceRunner.isActorInSkillMotion(assassin.id)
       ) {
         break;

@@ -24,7 +24,7 @@ import {
   PARTY_HUD_SLOT_RECT,
 } from '../ui/battleRootLayout.ts';
 import { BATTLE_ROOT_WIDTH } from '../ui/battleRootScale.ts';
-import { PARTY_FORMATION_LEFT_ANCHOR } from './battleConstants.ts';
+import { PARTY_FORMATION_LEFT_ANCHOR, ENEMY_SPAWN_ORIGIN_X, SPAWN_X_MAX } from './battleConstants.ts';
 
 describe('combatSafeArea', () => {
   it('anchors combat safe left to screen margin (not bottom partyHud)', () => {
@@ -53,6 +53,15 @@ describe('combatSafeArea', () => {
 
   it('anchors party formation at combat safe left', () => {
     expect(PARTY_FORMATION_LEFT_ANCHOR).toBe(COMBAT_SAFE_LEFT);
+  });
+
+  it('anchors enemy spawn origin at right portion of combat safe area', () => {
+    expect(ENEMY_SPAWN_ORIGIN_X).toBe(
+      Math.round(COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH * (2 / 3)),
+    );
+    expect(ENEMY_SPAWN_ORIGIN_X).toBe(829);
+    expect(SPAWN_X_MAX).toBe(COMBAT_SAFE_RIGHT - ENEMY_SPAWN_ORIGIN_X);
+    expect(SPAWN_X_MAX).toBe(379);
   });
 
   it('spans full width between screen margins without side HUD columns', () => {

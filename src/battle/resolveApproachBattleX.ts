@@ -4,6 +4,8 @@ import {
   getEnemyContactX,
   isPlayerRearAssaultAccess,
   PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX,
+  resolvePlayerRearAssaultAttackRangePx,
+  resolvePlayerRearAssaultHoldBattleX,
   type PlayerRearAssaultBattleContext,
   resolveApproachAttackBattleX,
   resolveApproachFormationRangePx,
@@ -155,10 +157,16 @@ export function resolvePlayerAttackTargetEnemy(
   gameData: GameData,
 ): CombatantState | null {
   const spec = resolveUnitTargetSpec(player, players, enemies, gameData);
-  const range = resolveApproachRangePx(
+  const baseRange = resolveApproachRangePx(
     player,
     gameData,
     livingAllyCount(players),
+  );
+  const range = resolvePlayerRearAssaultAttackRangePx(
+    player,
+    players,
+    enemies,
+    baseRange,
   );
   const pool = getAttackablePool(spec, player, players, enemies, range);
   if (pool.length === 0) return null;
@@ -504,50 +512,6 @@ function capFrontRowSupporterBehindMeleeFront(
   return Math.min(approachX, maxMeleeFrontX - FORMATION_DEPTH_STEP_PX);
 }
 
-function resolvePartyReturnAnchorBattleX(
-  player: CombatantState,
-  players: CombatantState[],
-): number {
-  const living = players.filter((ally) => ally.isAlive);
-  const formation = computePartyFormationBattleX(
-    living.map((ally) => ({
-      id: ally.id,
-      role: ally.role,
-      rangePx: resolveFormationRangePx(ally),
-      damageType: ally.traits.damageType,
-      formationRow: ally.formationRow,
-    })),
-  );
-  return formation.get(player.id) ?? player.battleX;
-}
-
-function resolveRearAssaultReturnApproachBattleX(
-  player: CombatantState,
-  players: CombatantState[],
-  enemies: CombatantState[],
-  gameData: GameData,
-  contact: number,
-): number | null {
-  if (!isPlayerRearAssaultAccess(player, { players, enemies })) return null;
-  const partyReturnX = resolvePartyReturnAnchorBattleX(player, players);
-  const chase = resolvePlayerChaseTargetEnemy(
-    player,
-    players,
-    enemies,
-    gameData,
-  );
-  if (!chase) return partyReturnX;
-  const enemyReturnX = resolveApproachAttackBattleX(
-    player,
-    chase.battleX,
-    gameData,
-    livingAllyCount(players),
-    contact,
-  );
-  if (enemyReturnX >= player.battleX) return partyReturnX;
-  return Math.min(enemyReturnX, partyReturnX);
-}
-
 function resolvePlayerApproachWithoutEnemyContact(
   players: CombatantState[],
 ): Map<string, number> {
@@ -638,6 +602,28 @@ function capApproachFormationOrder(
   }
 }
 
+/**
+ * 戦線外 rear assault の接近目標は spacing で前進側へ押し出さない。
+ * 個別 base（rear return 等）より手前に出ると射程外で停止デッドロックになる。
+ */
+function clampRearAssaultApproachAfterSpacing(
+  spaced: Map<string, number>,
+  baseApproach: Map<string, number>,
+  players: CombatantState[],
+  battleContext: PlayerRearAssaultBattleContext,
+): void {
+  for (const player of players) {
+    if (!player.isAlive) continue;
+    if (!isPlayerRearAssaultAccess(player, battleContext)) continue;
+    const base = baseApproach.get(player.id);
+    const target = spaced.get(player.id);
+    if (base === undefined || target === undefined) continue;
+    if (target > base) {
+      spaced.set(player.id, base);
+    }
+  }
+}
+
 function capRangedRearChaseAfterFormationSpacing(
   targets: Map<string, number>,
   players: CombatantState[],
@@ -693,32 +679,13 @@ export function resolveAllPlayerApproachBattleX(
       gameData,
       contact,
     );
-    if (isPlayerRearAssaultAccess(player, battleContext)) {
-      const behindEnemyContact =
-        player.battleX > contact + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX;
-      if (behindEnemyContact) {
-        const rearReturn = resolveRearAssaultReturnApproachBattleX(
-          player,
-          players,
-          enemies,
-          gameData,
-          contact,
-        );
-        if (rearReturn !== null && rearReturn < player.battleX) {
-          base = rearReturn;
-        } else {
-          base = Math.min(
-            base,
-            resolveApproachAttackBattleX(
-              player,
-              contact,
-              gameData,
-              livingAllyCount(players),
-              contact,
-            ),
-          );
-        }
-      }
+    // 敵接触線（min）より奥＝敵前衛の背後。chase stop（左・味方側）へは戻さない。
+    // 絶対 battleX 固定は敵左進軍で食い込むため、接触線 + hold offset を追従する。
+    if (
+      isPlayerRearAssaultAccess(player, battleContext) &&
+      player.battleX > contact + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX
+    ) {
+      base = resolvePlayerRearAssaultHoldBattleX(player, contact);
     }
     baseApproach.set(player.id, base);
   }
@@ -727,6 +694,12 @@ export function resolveAllPlayerApproachBattleX(
 
   const spaced = applyPartyFormationApproachSpacing(baseApproach, spacingInputs);
   capApproachFormationOrder(spaced, baseApproach, players);
+  clampRearAssaultApproachAfterSpacing(
+    spaced,
+    baseApproach,
+    players,
+    battleContext,
+  );
   applyFormationMarchFollow(
     spaced,
     players.filter(

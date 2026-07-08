@@ -53,6 +53,17 @@ export function getEnemyContactX(enemies: CombatantState[]): number | null {
   return Math.min(...living.map((e) => e.battleX));
 }
 
+/**
+ * 敵戦線のプレイヤー接敵面（= `getEnemyContactX`）。
+ * 敵は min battleX がプレイヤー寄り前衛。rear assault の背後維持・射程延長に使う。
+ * （max battleX は退却側の後列であり「戦線最前」ではない）
+ */
+export function getEnemyLeadingContactX(
+  enemies: CombatantState[],
+): number | null {
+  return getEnemyContactX(enemies);
+}
+
 /** 最前線生存近接敵の battleX */
 export function getMeleeEnemyContactX(
   enemies: CombatantState[],
@@ -128,6 +139,44 @@ export function getPlayerContactX(players: CombatantState[]): number | null {
 
 /** 味方 peer frontline から外れた rear assault 判定の余白（`FRONT_ROW_SAME_RANGE_MELEE_DEPTH_PX` と同値） */
 export const PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX = 3;
+
+/** rear assault 背後停止の既定オフセット（影の刃 `anchorOffsetPx` と同値。シリアライズしない） */
+export const PLAYER_REAR_ASSAULT_DEFAULT_HOLD_OFFSET_PX = 32;
+
+/**
+ * rear assault 中の背後停止目標: 敵接触線 + hold offset。
+ * 絶対 `battleX` 固定だと敵左進軍時にスプライトへ食い込む。
+ */
+export function resolvePlayerRearAssaultHoldBattleX(
+  player: CombatantState,
+  enemyContactX: number,
+): number {
+  const offset = Math.max(
+    player.rearAssaultHoldOffsetPx ?? PLAYER_REAR_ASSAULT_DEFAULT_HOLD_OFFSET_PX,
+    PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX + 1,
+  );
+  return enemyContactX + offset;
+}
+
+/**
+ * rear assault 中・敵接触線（プレイヤー寄り前衛）より奥にいる味方の攻撃射程。
+ * 背後アンカー位置からそのまま反転攻撃するため、接触線からの奥行きまで延長する（接近復帰はしない）。
+ */
+export function resolvePlayerRearAssaultAttackRangePx(
+  player: CombatantState,
+  players: CombatantState[],
+  enemies: CombatantState[],
+  baseRangePx: number,
+): number {
+  const enemyContactX = getEnemyContactX(enemies);
+  if (enemyContactX === null) return baseRangePx;
+  const context: PlayerRearAssaultBattleContext = { players, enemies };
+  if (!isPlayerRearAssaultAccess(player, context)) return baseRangePx;
+  if (player.battleX <= enemyContactX + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX) {
+    return baseRangePx;
+  }
+  return Math.max(baseRangePx, player.battleX - enemyContactX);
+}
 
 export type PlayerRearAssaultBattleContext = {
   players: CombatantState[];
@@ -274,6 +323,20 @@ function isPlayerRearAssaultAccessInBattle(
   return false;
 }
 
+/** 味方の敵背後 toAnchor move（anchor 選定前の effect 形状判定） */
+export function isPlayerHostileRearAssaultMoveEffect(
+  actor: CombatantState,
+  effect: Pick<MoveSkillEffect, "moveMode" | "anchorOffsetPx"> & {
+    type: string;
+  },
+): boolean {
+  if (actor.isEnemy || effect.type !== "move") return false;
+  return (
+    (effect.moveMode ?? "engage") === "toAnchor" &&
+    (effect.anchorOffsetPx ?? 0) > 0
+  );
+}
+
 /** 敵対 anchor への toAnchor で anchorOffsetPx > 0（味方→敵の背後側） */
 export function isHostileRearAssaultMove(
   actor: CombatantState,
@@ -286,15 +349,24 @@ export function isHostileRearAssaultMove(
   return (effect.anchorOffsetPx ?? 0) > 0;
 }
 
-export function setPlayerRearAssaultAccess(player: CombatantState): void {
+export function setPlayerRearAssaultAccess(
+  player: CombatantState,
+  holdOffsetPx?: number,
+): void {
   if (player.isEnemy) return;
   player.accessState = "rearAssault";
+  const offset =
+    holdOffsetPx !== undefined && holdOffsetPx > 0
+      ? holdOffsetPx
+      : PLAYER_REAR_ASSAULT_DEFAULT_HOLD_OFFSET_PX;
+  player.rearAssaultHoldOffsetPx = offset;
 }
 
 export function clearPlayerRearAssaultAccess(player: CombatantState): void {
   if (player.accessState === "rearAssault") {
     delete player.accessState;
   }
+  delete player.rearAssaultHoldOffsetPx;
 }
 
 /** スキル完了 / 接近後: accessState を外しても戦線外でなければ解除 */
@@ -649,13 +721,44 @@ export function resolveApproachAttackBattleX(
   const rangePx = resolveApproachRangePx(unit, gameData, livingAllyCount);
   const stopX = resolveAttackBattleX(unit, contactX, gameData, rangePx);
   if (!unit.isEnemy && stopX < unit.battleX) {
+    const basicRange = resolveBasicAttackRangePx(
+      unit,
+      gameData,
+      livingAllyCount,
+    );
+    const readyActiveRange = resolveMinReadyEquippedActiveRangePx(
+      unit,
+      gameData,
+    );
     if (
-      enemyFrontContact !== undefined &&
-      unit.battleX > enemyFrontContact
+      readyActiveRange !== null &&
+      readyActiveRange < basicRange &&
+      contactX - unit.battleX > 0 &&
+      contactX - unit.battleX <= readyActiveRange
     ) {
-      return stopX;
+      return unit.battleX;
     }
-    return unit.battleX;
+    return stopX;
+  }
+  if (unit.isEnemy && stopX > unit.battleX) {
+    const basicRange = resolveBasicAttackRangePx(
+      unit,
+      gameData,
+      livingAllyCount,
+    );
+    const readyActiveRange = resolveMinReadyEquippedActiveRangePx(
+      unit,
+      gameData,
+    );
+    if (
+      readyActiveRange !== null &&
+      readyActiveRange < basicRange &&
+      unit.battleX - contactX > 0 &&
+      unit.battleX - contactX <= readyActiveRange
+    ) {
+      return unit.battleX;
+    }
+    return stopX;
   }
   return stopX;
 }
@@ -772,7 +875,10 @@ export function updateUnitApproach(
   unit.battleX = moveTowardX(unit.battleX, targetBattleX, approachStep);
 }
 
-/** 接敵中: 敵の自動接近は左（battleX 減少）のみ — 遠隔の右逃げを防ぐ */
+/**
+ * 接敵中: 敵の自動接近は左（battleX 減少）のみ。
+ * 過前進しても右へ後退しない（味方前進に追従して右へ流れ続けるのを防ぐ）。
+ */
 export function capEngagedEnemyApproachBattleX(
   enemy: CombatantState,
   approachX: number,

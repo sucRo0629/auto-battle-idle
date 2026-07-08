@@ -1,6 +1,6 @@
 import type { ResolvedEnemySpawnSpec } from './types.ts';
 import {
-  COMBAT_CAMERA_CENTER_X,
+  ENEMY_SPAWN_ORIGIN_X,
   PARTY_FORMATION_SLOT_SPACING,
   SPAWN_X_MAX,
   SPRITE_GAP,
@@ -35,17 +35,17 @@ export function computeEnemyFormationSpawnX(
   const sorted = [...units].sort(compareEnemyFormationSlot);
   const battleUnits = sorted.map((unit, slot) => ({
     id: unit.key,
-    battleX: COMBAT_CAMERA_CENTER_X + slot * PARTY_FORMATION_SLOT_SPACING,
+    battleX: ENEMY_SPAWN_ORIGIN_X + slot * PARTY_FORMATION_SLOT_SPACING,
     isAlive: true,
   }));
   const separated = separateByGap(battleUnits, SPRITE_GAP);
   const positions = new Map<string, number>();
 
   for (const unit of sorted) {
-    const battleX = separated.get(unit.key) ?? COMBAT_CAMERA_CENTER_X;
+    const battleX = separated.get(unit.key) ?? ENEMY_SPAWN_ORIGIN_X;
     const spawnX = Math.max(
       0,
-      Math.min(Math.round(battleX - COMBAT_CAMERA_CENTER_X), SPAWN_X_MAX),
+      Math.min(Math.round(battleX - ENEMY_SPAWN_ORIGIN_X), SPAWN_X_MAX),
     );
     positions.set(unit.key, spawnX);
   }

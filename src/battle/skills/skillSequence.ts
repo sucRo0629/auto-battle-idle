@@ -9,7 +9,11 @@ import type {
 } from '../types.ts';
 import type { GameData } from '../types.ts';
 import { resolveSkillTrigger } from '../skillTrigger.ts';
-import { getEffectTarget, getTargetPool } from './targetSpec.ts';
+import {
+  getEffectTarget,
+  getTargetPool,
+  pickMoveAnchorOptions,
+} from './targetSpec.ts';
 import {
   pickTargetFromPool,
   resolveEffectTargetSpec,
@@ -272,7 +276,7 @@ export function resolveSequenceStepAnchor(
 ): CombatantState | null {
   if (effect.type === 'move') {
     const pool = getTargetPool(spec, actor, allies, enemies);
-    return pickTargetFromPool(spec, actor, pool, { moveAnchor: true });
+    return pickTargetFromPool(spec, actor, pool, pickMoveAnchorOptions(actor, effect));
   }
   const pool = getTargetPool(spec, actor, allies, enemies);
   return pickTargetFromPool(spec, actor, pool);

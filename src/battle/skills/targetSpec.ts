@@ -6,7 +6,11 @@ import {
   getEffectiveMaxHp,
   getEffectiveRes,
 } from "../combatMath.ts";
-import { getBattleX, isPlayerRearAssaultAccess } from "../combatPosition.ts";
+import {
+  getBattleX,
+  isPlayerHostileRearAssaultMoveEffect,
+  isPlayerRearAssaultAccess,
+} from "../combatPosition.ts";
 import { hasMatchingStatus } from "../statusMatching.ts";
 import { isArenaDominanceActive } from "../arenaDominance.ts";
 import type {
@@ -16,6 +20,7 @@ import type {
   PassiveSkillDef,
   SkillEffectDef,
   SkillHitTarget,
+  MoveSkillEffect,
   TargetDistanceOrder,
   TargetRule,
   TargetRuleOverrideApplyTo,
@@ -460,6 +465,11 @@ export type PickTargetOptions = {
    * 至近/最遠は使用者との battleX 距離で決め、接近 chase の編成奥選択を使わない。
    */
   moveAnchor?: boolean;
+  /**
+   * 敵対 rear toAnchor（正 offset）の MoveAnchor。
+   * battle-line 奥（max）ではなく、敵のプレイヤー寄り前衛（min battleX = contact）を anchor にする。
+   */
+  enemyFrontlineMoveAnchor?: boolean;
   /** heal 等：味方 stat / distance 対象で使用者を候補プールに含める */
   includeActorInAllyPool?: boolean;
   /** 単体攻撃ターゲット選定（闘技場の掟の強制ターゲット用） */
@@ -480,6 +490,19 @@ export function pickOptionsForEffect(
     return { singleTargetAttack: true };
   }
   return undefined;
+}
+
+export function pickMoveAnchorOptions(
+  actor: CombatantState,
+  effect: SkillEffectDef,
+): PickTargetOptions {
+  return {
+    moveAnchor: true,
+    enemyFrontlineMoveAnchor: isPlayerHostileRearAssaultMoveEffect(
+      actor,
+      effect as MoveSkillEffect,
+    ),
+  };
 }
 
 function includeActorInAllyPool(options?: PickTargetOptions): boolean {
@@ -671,7 +694,16 @@ export function pickTargetFromPool(
 
   if (spec.kind === "distance" && spec.side === "enemy") {
     if (options?.moveAnchor) {
-      // Target Intent: MoveAnchor. Player move effects also use actor-distance anchors.
+      if (options.enemyFrontlineMoveAnchor) {
+        // 敵前衛 = プレイヤー寄り = min battleX（AttackTarget nearest の max＝奥 とは逆）
+        if (spec.order === "nearest") {
+          return pool.reduce((a, b) => (getBattleX(a) <= getBattleX(b) ? a : b));
+        }
+        if (spec.order === "farthest") {
+          return pool.reduce((a, b) => (getBattleX(a) >= getBattleX(b) ? a : b));
+        }
+      }
+      // Target Intent: MoveAnchor. 通常は使用者との battleX 距離。
       if (spec.order === "nearest" || spec.order === "farthest") {
         return pickEnemyByActorDistance(actor, pool, spec.order);
       }

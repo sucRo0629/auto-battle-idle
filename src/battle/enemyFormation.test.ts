@@ -10,7 +10,7 @@ import {
 } from './enemyFormation.ts';
 import { expandEnemyGroups } from './enemyGroupSpawn.ts';
 import {
-  COMBAT_CAMERA_CENTER_X,
+  ENEMY_SPAWN_ORIGIN_X,
   PARTY_FORMATION_SLOT_SPACING,
   SPAWN_X_MAX,
   resolveEnemySpawnBattleX,
@@ -137,7 +137,7 @@ describe('enemyFormation', () => {
       expect(spawnX).toBeGreaterThanOrEqual(0);
       expect(spawnX).toBeLessThanOrEqual(SPAWN_X_MAX);
       expect(resolveEnemySpawnBattleX(spawnX)).toBe(
-        COMBAT_CAMERA_CENTER_X + spawnX,
+        ENEMY_SPAWN_ORIGIN_X + spawnX,
       );
     }
   });

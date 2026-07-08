@@ -642,6 +642,11 @@ export interface CombatantState extends Combatant {
   corpseBattleAnchorX?: number;
   /** runtime-only: 背後滞在など一時アクセス。`isPlayerRearAssaultAccess` battle context の入力 */
   accessState?: CombatantAccessState;
+  /**
+   * runtime-only: rear assault 中の接触線追従オフセット（px）。
+   * `getEnemyContactX() + rearAssaultHoldOffsetPx` を背後停止目標にする（絶対 battleX 固定はしない）。
+   */
+  rearAssaultHoldOffsetPx?: number;
   /** periodicDispel: Wave 内の残り発動回数（passiveId → 残数） */
   passiveDispelRemainingTriggers?: Record<string, number>;
   /** damageDelay: 後払いダメージプール */

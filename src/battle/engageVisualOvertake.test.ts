@@ -17,7 +17,10 @@ import {
   TICK_DT,
   waitForEngaged,
 } from './test/battleFieldSpec.harness.ts';
-import { PARTY_FORMATION_LEFT_ANCHOR } from './battleConstants.ts';
+import {
+  PARTY_FORMATION_LEFT_ANCHOR,
+  PARTY_FORMATION_SLOT_SPACING,
+} from './battleConstants.ts';
 
 function createStage2Engine(): BattleEngine {
   const gameData = structuredClone(loadGameData());
@@ -57,9 +60,10 @@ describe('engage visual sync & overtaking', () => {
     expect(front.length).toBeGreaterThanOrEqual(2);
     const sorted = [...front].sort((a, b) => a.battleX - b.battleX);
     const gap = sorted[1]!.battleX - sorted[0]!.battleX;
-    // L10: 前列 melee は rangePx 差で停止するが、接敵 overlap 解消で gap が縮む場合あり
+    // L10: 前列 melee は rangePx 差で停止するが、接敵 overlap 解消で gap が縮む場合あり。
+    // 上限は隊形スロット間隔（48）。旧上限 30 は spacing 拡大後も縮まないケースで破れる。
     expect(gap).toBeGreaterThanOrEqual(0);
-    expect(gap).toBeLessThanOrEqual(30);
+    expect(gap).toBeLessThanOrEqual(PARTY_FORMATION_SLOT_SPACING);
   });
 
   it('stage 1: front allies never pass living enemies on screen', () => {

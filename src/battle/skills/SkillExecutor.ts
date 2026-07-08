@@ -962,7 +962,7 @@ export class SkillExecutor {
     effectDef: MoveSkillEffect
   ): void {
     if (isHostileRearAssaultMove(actor, anchor, effectDef)) {
-      setPlayerRearAssaultAccess(actor);
+      setPlayerRearAssaultAccess(actor, effectDef.anchorOffsetPx ?? 0);
       return;
     }
     clearPlayerRearAssaultAccess(actor);

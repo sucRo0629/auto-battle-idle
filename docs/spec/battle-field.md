@@ -131,10 +131,11 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | `BATTLE_CANVAS_HEIGHT`（`battleRootLayout` 導出） | 戦闘キャンバス高さ（px）。上部 enemyHud 下端〜下部 partyHud 直上。下端余白は左右余白（24px）と同値 |
 | `COMBAT_SAFE_LEFT` / `COMBAT_SAFE_RIGHT` | ユニット配置帯（`combatSafeArea.ts`）。左・右とも画面マージン + 48px gap（左右 HUD 列なし） |
 | `COMBAT_SAFE_SCREEN_TOP_Y` / `COMBAT_SAFE_SCREEN_GROUND_Y` | 縦方向の安全領域（battle-root 座標）。上部 enemyHud 下端 / 草ライン（partyHud 直上） |
-| `COMBAT_CAMERA_CENTER_X`             | 安全領域中央（敵 spawn オフセット基準） |
+| `COMBAT_CAMERA_CENTER_X`             | 安全領域中央（レガシー名称。spawn 基準ではない） |
+| `ENEMY_SPAWN_ORIGIN_X`               | 敵 `spawnX=0` の battleX（`COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH × 2/3`）。味方左アンカーと対称に右寄り |
 | `PARTY_FORMATION_LEFT_ANCHOR`       | `COMBAT_SAFE_LEFT`（味方隊列左端） |
 | `PARTY_FORMATION_SLOT_SPACING`（48） | 味方隊列スロット間隔（広い戦場で奥行きを見せる） |
-| `SPAWN_X_MAX`                        | 敵 `spawnX` 上限（`COMBAT_SAFE_RIGHT - COMBAT_CAMERA_CENTER_X`） |
+| `SPAWN_X_MAX`                        | 敵 `spawnX` 上限（`COMBAT_SAFE_RIGHT - ENEMY_SPAWN_ORIGIN_X`） |
 | `BATTLE_FIELD_SPRITE_SCALE`（2）     | 戦闘フィールド描画スケール（32px スプライトを 2 倍表示。`battleX` は 1:1 のまま）                               |
 | `PLAYER_VISUAL_MIN_GAP`              | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`）。射程加算には使わない                               |
 | `CONFIGURABLE_RANGE_PX_MAX`          | `traits.rangePx` / `effect.range` の設定上限（`COMBAT_SAFE_RIGHT - PARTY_FORMATION_LEFT_ANCHOR`）                        |
@@ -226,7 +227,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 }
 ```
 
-- `spawnX` — **`COMBAT_CAMERA_CENTER_X` からの右オフセット**。`0 <= spawnX <= SPAWN_X_MAX`（320）。`battleX = COMBAT_CAMERA_CENTER_X + spawnX`
+- `spawnX` — **`ENEMY_SPAWN_ORIGIN_X` からの右オフセット**。`0 <= spawnX <= SPAWN_X_MAX`（379）。`battleX = ENEMY_SPAWN_ORIGIN_X + spawnX`
 
 ### 3.3 プレイヤー隊形（射程順一列）
 
@@ -325,7 +326,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | ---------------- | ------------------------------ | --------------------------------------------------------------------------------------------- |
 | `ChaseTarget`    | 自動接近で追う相手             | 敵は [combat.md](combat.md) §敵の単体ターゲット選定、味方は target spec / target rule |
 | `AttackTarget`   | 射程内停止と実際の攻撃対象     | 敵は `ChaseTarget` の射程内判定。味方は同じ target spec 系の attack プール                     |
-| `MoveAnchor`     | スキル `move` の到達基準       | 使用者との `battleX` 距離                                                          |
+| `MoveAnchor`     | スキル `move` の到達基準       | 通常は使用者との `battleX` 距離。敵対 rear `toAnchor`（正 `anchorOffsetPx`）は**敵前衛＝プレイヤー寄り**（`getEnemyContactX` = min `battleX`）。AttackTarget の battle-line `nearest`（奥＝max）とは別                                                                 |
 | `FrontlineOwner` | 現在その戦線を保持している味方 | `resolvePlayerFrontlineOwners`（`combatPosition.ts`）。rear assault アクセス中は含めない      |
 | `DisplayAnchor`  | 遠隔敵の表示凍結・VFX 基準     | 描画専用。`engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper）。戦闘判定へ逆流させない |
 
@@ -350,7 +351,7 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 
 立てる条件: 味方 actor が敵対 anchor へ `moveMode: "toAnchor"` かつ `anchorOffsetPx > 0` の move を適用したとき（効果形状で判定）。解除: 非 rear の move 適用時、**`shouldClearRearAssaultAccess`（peer frontline 付近へ戻ったとき）**、スキルシーケンス完了時（同条件）、死亡・wave reset。`waitAfterSec` 中も move 完了だけでは解除しない。敵側のプレイヤー背後 move は本 spec のスコープ外。
 
-**背後侵入後の復帰:** 専用 `engage` 帰還 step に依存しない。シーケンス完了後は通常 approach（`resolveAllPlayerApproachBattleX`）が正本。`battleX` が敵最前線より右（敵背後）に残っている間は `resolveApproachAttackBattleX` が **後退（battleX 減少）を許可**し、ChaseTarget の停止 X へ戻す。射程内に入れば `shouldSkipEngagedAutoApproach` で停止し攻撃可能。
+**背後侵入後の戦闘:** 専用 `engage` 帰還 step に依存しない。シーケンス完了後も **敵接触線（`getEnemyContactX` = 生存敵 min `battleX`＝プレイヤー寄り前衛）より奥にいる間は戦線へ戻らず**、接近目標を `resolvePlayerRearAssaultHoldBattleX`（`contact + rearAssaultHoldOffsetPx`、既定は move の `anchorOffsetPx`）で接触線に追従する。絶対 `battleX` 固定は敵左進軍でスプライト食い込みになるため禁止。`resolvePlayerRearAssaultAttackRangePx` で接触線までの奥行きを攻撃射程に足し、`resolveFacingSign` で反転向き攻撃・描画する。射程内に入れば `shouldSkipEngagedAutoApproach` で停止し攻撃継続。編成復帰は peer frontline 付近へ戻ったとき（`shouldClearRearAssaultAccess`）または wave reset。
 
 **停止 X：** chase 対象の `battleX` に対し `resolveApproachAttackBattleX`（§2.5 と同じ射程式）。敵は `capEngagedEnemyApproachBattleX` により左（`battleX` 減少）のみ。味方 defender 専用の contact 停止 resolver は持たない。
 
@@ -634,7 +635,7 @@ CSS では Canvas / 画像に `image-rendering: pixelated` と `image-rendering:
 
 1280×720 `battle-root` に **全幅・高さ一杯** の `BattleCanvas` を敷き、上部敵 HUD / 下部味方 HUD はその上に浮かせる。内部基準 `CANVAS_W`（1280px）× `BATTLE_CANVAS_HEIGHT`（`battleRootLayout.ts` 導出）・描画スケール `BATTLE_FIELD_SPRITE_SCALE`（2）で 32px スプライトを観察しやすいサイズにする。
 
-**戦闘空間の使い方:** 背景・Canvas は 1280px 全幅。ユニット配置・接敵・spawn は `combatSafeArea.ts` の `COMBAT_SAFE_LEFT`〜`COMBAT_SAFE_RIGHT`（左・右とも画面マージン + 48px gap。右 HUD 列は Phase 2 以降なし）を正本とする。HUD 幾何の正本は `battleHudGeometry.ts`（`battleRootLayout` と同期）。`PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT`。`SPAWN_X_MAX = COMBAT_SAFE_RIGHT - COMBAT_CAMERA_CENTER_X`。PartyDeploy 左外開始距離は `resolvePartyDeployMarchDistancePx`（最前列 target が画面外左に収まるまで延長。移動速度は `MOVE_PX_PER_SEC` のまま）。
+**戦闘空間の使い方:** 背景・Canvas は 1280px 全幅。ユニット配置・接敵・spawn は `combatSafeArea.ts` の `COMBAT_SAFE_LEFT`〜`COMBAT_SAFE_RIGHT`（左・右とも画面マージン + 48px gap。右 HUD 列は Phase 2 以降なし）を正本とする。HUD 幾何の正本は `battleHudGeometry.ts`（`battleRootLayout` と同期）。`PARTY_FORMATION_LEFT_ANCHOR = COMBAT_SAFE_LEFT`。`ENEMY_SPAWN_ORIGIN_X` は安全領域右寄り（`COMBAT_SAFE_LEFT + COMBAT_SAFE_WIDTH × 2/3`）。`SPAWN_X_MAX = COMBAT_SAFE_RIGHT - ENEMY_SPAWN_ORIGIN_X`。PartyDeploy 左外開始距離は `resolvePartyDeployMarchDistancePx`（最前列 target が画面外左に収まるまで延長。移動速度は `MOVE_PX_PER_SEC` のまま）。
 
 **遠距離判定:** `RANGED_ATTACK_MIN_PX`（= `LONG_RANGE_THRESHOLD_PX`、100）。`rangePx >= 100` が遠隔帯（100 含む）。閾値は `types.ts` の単一定数。
 

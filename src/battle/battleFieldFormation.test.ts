@@ -74,7 +74,7 @@ describe('battle-field formation spec (F-*)', () => {
     );
   });
 
-  it('F-3.2-01: stage enemy spawnX is center-relative offset within SPAWN_X_MAX', () => {
+  it('F-3.2-01: stage enemy spawnX is origin-relative offset within SPAWN_X_MAX', () => {
     const gameData = loadGameData();
     const stage1 = gameData.stages.find((s) => s.id === '1');
     expect(stage1).toBeDefined();

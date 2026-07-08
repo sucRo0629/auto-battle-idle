@@ -2,6 +2,9 @@
  * Shared harness for battle-field.md spec compliance tests.
  * Maps spec section IDs (F-*, A-*, I-*) to reusable engine fixtures and assertions.
  */
+import { resolveMoveBattleX } from "../combatPosition.ts";
+import { mergeEffectWithSkillTargeting } from "../skills/skillSharedTargeting.ts";
+import { resolveEffectAnchor } from "../skills/targeting.ts";
 import { expect } from "vitest";
 import { BattleEngine, type BattleEngineOptions } from "../BattleEngine.ts";
 import { loadGameData } from "../data/loadGameData.ts";
@@ -289,6 +292,54 @@ export function reachWave2Engage(
     }
   }
   throw new Error("wave 2 engagement did not occur");
+}
+
+/** 影の刃など敵前衛背後 move が 1 ステップで届くまで接近（MoveAnchor = 戦線最前） */
+export function advanceUntilNearEnemyFrontVanguard(
+  engine: BattleEngine,
+  playerId?: string,
+  maxTicks = 20_000,
+): void {
+  const internal = asBattleEngineInternals(engine);
+  const skill = internal.gameData.skillRegistry.actives.at_assassin_active_2;
+  const moveEffect = skill?.effect.find((step) => step.type === "move");
+  if (!skill || !moveEffect || moveEffect.type !== "move") {
+    throw new Error("at_assassin_active_2 move effect missing");
+  }
+
+  for (let t = 0; t < maxTicks; t++) {
+    engine.tick(TICK_DT);
+    const snap = engine.getSnapshot();
+    if (!snap.engaged) continue;
+    const actor =
+      internal.players.find((p) => p.id === playerId) ??
+      internal.players.find((p) => p.classId === "at_assassin");
+    if (!actor?.isAlive) continue;
+
+    const anchor = resolveEffectAnchor(
+      moveEffect,
+      actor,
+      internal.players,
+      internal.enemies,
+      internal.gameData,
+      undefined,
+      skill,
+    );
+    if (!anchor) continue;
+    const mergedMove = mergeEffectWithSkillTargeting(skill, moveEffect);
+    const offset = mergedMove.anchorOffsetPx ?? 0;
+    const idealToX = anchor.battleX + offset;
+    const resolvedToX = resolveMoveBattleX(
+      actor,
+      anchor,
+      mergedMove,
+      internal.gameData,
+    );
+    if (Math.abs(resolvedToX - idealToX) <= 0.5) {
+      return;
+    }
+  }
+  throw new Error("player did not reach shadow blade rear move range");
 }
 
 export function enemyRangePx(enemy: { rangePx?: number }): number {
