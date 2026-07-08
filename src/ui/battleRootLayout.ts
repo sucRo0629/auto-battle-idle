@@ -45,7 +45,7 @@ export const BATTLE_BACKGROUND_RECT: BattleRootRect = {
 
 export const BATTLE_TOP_INFO_RECT: BattleRootRect = {
   x: 24,
-  y: 16,
+  y: 30,
   w: 1232,
   h: 40,
 };

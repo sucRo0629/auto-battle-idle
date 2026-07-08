@@ -10,6 +10,32 @@ export const ENEMY_HUD_CARD_HEIGHT = 52;
 export const ENEMY_HUD_CARD_STACK_OFFSET_X = 8;
 export const ENEMY_HUD_CARD_STACK_OFFSET_Y = 8;
 
+/** Card chrome padding — matches enemy-hud-overlay.css `.enemy-hud-card`. */
+export const ENEMY_HUD_CARD_PAD_LEFT = 6;
+export const ENEMY_HUD_CARD_PAD_RIGHT = 5;
+export const ENEMY_HUD_CARD_PAD_BOTTOM = 3;
+export const ENEMY_HUD_CARD_BODY_GAP = 4;
+export const ENEMY_HUD_ICON_COLUMN_WIDTH = 24;
+
+/** Shared HP track width — body column beside the 24px icon (px). */
+export const ENEMY_HUD_HP_TRACK_WIDTH =
+  ENEMY_HUD_CARD_WIDTH -
+  ENEMY_HUD_CARD_PAD_LEFT -
+  ENEMY_HUD_CARD_PAD_RIGHT -
+  ENEMY_HUD_ICON_COLUMN_WIDTH -
+  ENEMY_HUD_CARD_BODY_GAP;
+
+/** Front-card HP track inset from card left edge (px). */
+export const ENEMY_HUD_HP_TRACK_LEFT_IN_CARD =
+  ENEMY_HUD_CARD_PAD_LEFT +
+  ENEMY_HUD_ICON_COLUMN_WIDTH +
+  ENEMY_HUD_CARD_BODY_GAP;
+
+/** HP track inset from each card's left edge (px) — follows card stack offset. */
+export function enemyHudHpTrackLeftInCard(_depth = 0): number {
+  return ENEMY_HUD_HP_TRACK_LEFT_IN_CARD;
+}
+
 /** Visible stacked cards before +N overflow (back cards omitted). */
 export const ENEMY_HUD_MAX_VISIBLE_STACK = 3;
 

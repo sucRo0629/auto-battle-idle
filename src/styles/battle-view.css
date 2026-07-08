@@ -125,12 +125,19 @@
   --attack-heal-primary-width: 2.5;
   --attack-heal-secondary-width: 2;
   --attack-heal-peak-alpha: 0.95;
-  --attack-orb-fill: #74b9ff;
+  --attack-orb-fill: #ffffff;
   --attack-orb-highlight: #ffffff;
-  --attack-orb-alpha: 0.85;
+  --attack-orb-alpha: 1;
   --attack-orb-highlight-alpha: 0.45;
-  --hover-highlight-outline: rgba(180, 210, 255, 0.55);
-  --hover-highlight-glow: rgba(140, 180, 255, 0.28);
+  --hover-highlight-outline: rgba(255, 255, 255, 0.8);
+  --hover-highlight-glow: rgba(255, 255, 255, 0.6);
+  --target-indicator-arrow-fill: #e74c3c;
+  --target-indicator-arrow-width: 12;
+  --target-indicator-arrow-height: 8;
+  --target-indicator-arrow-gap: 4;
+  --target-indicator-arrow-offset-y: 30;
+  --target-indicator-bob-amplitude: 3;
+  --target-indicator-bob-period-ms: 1600;
   --target-indicator-ring-width: 2;
   --attack-arrow-shaft: #c8a165;
   --attack-arrow-tip: #8b6914;
@@ -276,7 +283,7 @@
   -webkit-app-region: drag;
   position: absolute;
   left: 24px;
-  top: 16px;
+  top: 30px;
   width: 1232px;
   height: 40px;
   z-index: 4;
@@ -367,7 +374,7 @@
 .battle-debug-verify-badge {
   -webkit-app-region: no-drag;
   position: absolute;
-  top: 16px;
+  top: 30px;
   right: 24px;
   z-index: 3;
   padding: 3px 8px;

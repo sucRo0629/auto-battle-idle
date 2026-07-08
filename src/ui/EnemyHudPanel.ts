@@ -14,8 +14,12 @@ import {
   ENEMY_HUD_CARD_STACK_OFFSET_X,
   ENEMY_HUD_CARD_STACK_OFFSET_Y,
   ENEMY_HUD_CARD_WIDTH,
+  ENEMY_HUD_CARD_PAD_BOTTOM,
+  ENEMY_HUD_HP_TRACK_LEFT_IN_CARD,
+  ENEMY_HUD_HP_TRACK_WIDTH,
   ENEMY_HUD_MAX_VISIBLE_STACK,
   enemyHudCardStackOffset,
+  enemyHudHpTrackLeftInCard,
   resolveEnemyHudCardStackLayout,
 } from './enemyHudCardStack.ts';
 import {
@@ -140,6 +144,14 @@ export class EnemyHudPanel {
       root.style.setProperty(
         '--enemy-hud-stack-offset-y',
         `${ENEMY_HUD_CARD_STACK_OFFSET_Y}px`,
+      );
+      root.style.setProperty(
+        '--enemy-hud-hp-track-w',
+        `${ENEMY_HUD_HP_TRACK_WIDTH}px`,
+      );
+      root.style.setProperty(
+        '--enemy-hud-card-pad-bottom',
+        `${ENEMY_HUD_CARD_PAD_BOTTOM}px`,
       );
     }
 
@@ -477,6 +489,11 @@ export class EnemyHudPanel {
     card.style.left = `${offset.x}px`;
     card.style.top = `${offset.y}px`;
     card.style.zIndex = String(visibleCount - depth);
+    card.style.setProperty(
+      '--enemy-hud-hp-track-left',
+      `${enemyHudHpTrackLeftInCard(depth)}px`,
+    );
+    card.style.setProperty('--enemy-hud-hp-track-z', String(depth + 1));
   }
 
   private updateFrontCard(slot: GroupSlotElements, group: EnemyHudGroup): void {

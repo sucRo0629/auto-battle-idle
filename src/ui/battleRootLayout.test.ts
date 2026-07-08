@@ -81,7 +81,7 @@ describe("battleRootLayout", () => {
   });
 
   it("reserves topInfo, top enemyHud, bottom partyHud, and battleLane rects", () => {
-    expect(BATTLE_TOP_INFO_RECT).toEqual({ x: 24, y: 16, w: 1232, h: 40 });
+    expect(BATTLE_TOP_INFO_RECT).toEqual({ x: 24, y: 30, w: 1232, h: 40 });
     expect(ENEMY_HUD_TOP_Y).toBe(BATTLE_TOP_INFO_RECT.y + BATTLE_TOP_INFO_RECT.h);
     expect(ENEMY_HUD_SLOT_RECT).toEqual({
       x: BATTLE_HUD_SIDE_MARGIN,

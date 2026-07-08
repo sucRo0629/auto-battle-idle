@@ -75,6 +75,13 @@ export interface BattleHudTheme {
   attackOrbHighlightAlpha: number;
   hoverHighlightOutline: string;
   hoverHighlightGlow: string;
+  targetIndicatorArrowFill: string;
+  targetIndicatorArrowWidth: number;
+  targetIndicatorArrowHeight: number;
+  targetIndicatorArrowGap: number;
+  targetIndicatorArrowOffsetY: number;
+  targetIndicatorBobAmplitude: number;
+  targetIndicatorBobPeriodMs: number;
   targetIndicatorRingWidth: number;
   attackArrowShaft: string;
   attackArrowTip: string;
@@ -300,6 +307,41 @@ export function readBattleHudTheme(host: HTMLElement): BattleHudTheme {
       style,
       "--hover-highlight-glow",
       "rgba(140, 180, 255, 0.28)",
+    ),
+    targetIndicatorArrowFill: readString(
+      style,
+      "--target-indicator-arrow-fill",
+      "#e74c3c",
+    ),
+    targetIndicatorArrowWidth: readNumber(
+      style,
+      "--target-indicator-arrow-width",
+      12,
+    ),
+    targetIndicatorArrowHeight: readNumber(
+      style,
+      "--target-indicator-arrow-height",
+      8,
+    ),
+    targetIndicatorArrowGap: readNumber(
+      style,
+      "--target-indicator-arrow-gap",
+      4,
+    ),
+    targetIndicatorArrowOffsetY: readNumber(
+      style,
+      "--target-indicator-arrow-offset-y",
+      -10,
+    ),
+    targetIndicatorBobAmplitude: readNumber(
+      style,
+      "--target-indicator-bob-amplitude",
+      3,
+    ),
+    targetIndicatorBobPeriodMs: readNumber(
+      style,
+      "--target-indicator-bob-period-ms",
+      1600,
     ),
     targetIndicatorRingWidth: readNumber(
       style,

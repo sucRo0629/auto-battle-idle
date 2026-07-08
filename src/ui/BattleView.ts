@@ -51,6 +51,7 @@ import { applyBattleRootScale } from "./battleRootScale.ts";
 import {
   BATTLE_GROUND_LINE_SCREEN_RATIO,
   BATTLE_HUD_SIDE_MARGIN,
+  BATTLE_TOP_INFO_RECT,
   BATTLE_LANE_RECT,
   BATTLE_SIDE_HUD_WIDTH,
   BATTLE_TRANSIENT_CONTROLS_TOP,
@@ -219,6 +220,7 @@ export class BattleView {
 
     const battleTopInfo = document.createElement("div");
     battleTopInfo.className = "battle-top-info";
+    battleTopInfo.style.cssText = battleRootRectStyle(BATTLE_TOP_INFO_RECT);
 
     const battleDebugOverlay = document.createElement("div");
     battleDebugOverlay.className = "battle-debug-overlay";
@@ -273,6 +275,7 @@ export class BattleView {
     this.verifyBadgeEl = document.createElement("button");
     this.verifyBadgeEl.type = "button";
     this.verifyBadgeEl.className = "battle-verify-badge battle-debug-verify-badge";
+    this.verifyBadgeEl.style.top = `${BATTLE_TOP_INFO_RECT.y}px`;
     this.verifyBadgeEl.hidden = !verifyModeControls;
     this.verifyBadgeEl.addEventListener("click", () => {
       if (!verifyModeControls) return;

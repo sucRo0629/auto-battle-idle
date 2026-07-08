@@ -61,6 +61,21 @@ describe('enemy-hud-overlay.css top strip layout regression', () => {
     expect(css).toMatch(
       /\.enemy-hud-card-main[\s\S]*grid-template-columns:\s*24px minmax\(0,\s*1fr\)/,
     );
+    expect(css).toMatch(
+      /\.enemy-hud-card--back \.enemy-hud-icon-wrap[\s\S]*visibility:\s*hidden/,
+    );
+    expect(css).not.toMatch(
+      /\.enemy-hud-card--back \.enemy-hud-card-main[\s\S]*grid-template-columns:\s*1fr/,
+    );
+    expect(css).toMatch(
+      /\.enemy-hud-card--back[\s\S]*background:\s*rgba\(8,\s*10,\s*18/,
+    );
+    expect(css).toMatch(
+      /\.enemy-hud-card-stack \.enemy-hud-hp-track[\s\S]*--enemy-hud-hp-track-left/,
+    );
+    expect(css).toMatch(
+      /\.enemy-hud-card--back \.enemy-hud-card-status-mini[\s\S]*--enemy-hud-hp-track-left/,
+    );
     expect(css).toMatch(/\.enemy-hud-card[\s\S]*transition:[\s\S]*left 260ms/);
   });
 

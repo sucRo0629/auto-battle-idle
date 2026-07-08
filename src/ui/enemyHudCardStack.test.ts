@@ -7,6 +7,9 @@ import {
   ENEMY_HUD_CARD_WIDTH,
   ENEMY_HUD_MAX_VISIBLE_STACK,
   enemyHudCardStackOffset,
+  enemyHudHpTrackLeftInCard,
+  ENEMY_HUD_HP_TRACK_LEFT_IN_CARD,
+  ENEMY_HUD_HP_TRACK_WIDTH,
   resolveEnemyHudCardStackLayout,
 } from './enemyHudCardStack.ts';
 
@@ -40,5 +43,13 @@ describe('resolveEnemyHudCardStackLayout', () => {
     expect(footprint.height).toBe(
       ENEMY_HUD_CARD_HEIGHT + 2 * ENEMY_HUD_CARD_STACK_OFFSET_Y,
     );
+  });
+
+  it('insets HP tracks from each card left edge', () => {
+    expect(ENEMY_HUD_HP_TRACK_WIDTH).toBe(97);
+    expect(ENEMY_HUD_HP_TRACK_LEFT_IN_CARD).toBe(34);
+    expect(enemyHudHpTrackLeftInCard(0)).toBe(34);
+    expect(enemyHudHpTrackLeftInCard(1)).toBe(34);
+    expect(enemyHudHpTrackLeftInCard(2)).toBe(34);
   });
 });

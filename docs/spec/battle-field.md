@@ -683,13 +683,13 @@ screen:
 
 topInfo:
   x: 24
-  y: 16
+  y: 30
   w: 1232
   h: 40
 
 enemyHud:
   x: 24
-  y: 56   # topInfo 直下（ENEMY_HUD_TOP_Y）
+  y: 70   # topInfo 直下（ENEMY_HUD_TOP_Y）
   w: 1232
   h: 72   # ENEMY_HUD_SLOT_BAND_HEIGHT（固定帯）
 
@@ -702,9 +702,9 @@ partyHud:
 
 battleLane:
   x: 0
-  y: 128  # BATTLE_LANE_TOP（enemyHud 下端）
+  y: 142  # BATTLE_LANE_TOP（enemyHud 下端）
   w: 1280 # CANVAS_W（全幅フィールド）
-  h: 426  # BATTLE_CANVAS_HEIGHT（下部 partyHud 直上まで）
+  h: 412  # BATTLE_CANVAS_HEIGHT（下部 partyHud 直上まで）
 
 groundLine:
   screenY: 530 # BATTLE_GROUND_LINE_SCREEN_Y（partyHud 直上の草ライン）
@@ -822,14 +822,14 @@ active_3  active_4
 
 **Phase 3 — 表示専用 groupBy:** 同種敵は HUD 表示用の `enemyGroup` にまとめる。group key は `enemyTypeId ?? classId`（未指定時は snapshot の `classId`、敵は template id）。`enemyGroup` は **HUD 専用** — 戦闘ロジック・ターゲット選定・勝敗判定では enemy entity 単位のまま。各 group は `groupId`、代表アイコン / 名前、`count`、グループ内 alive `enemies[]`、`representativeEnemy`、集約 `dangerState` / `importantStates` を持つ。撃破で `count` が減り、0 体の group は非表示。group hover 時はグループ内全敵を `hoverHighlight`（個体 hover は後続 Task）。**hover ではカード束を展開しない**（click 展開・Pause は後続 Task）。
 
-**Phase 3 Task 2 — カード束表示:** 各 `enemyGroup` は上部 HUD で **同一 `enemyCard` 要素**を `stackOffset`（8px）でずらして重ねる（HP 専用レーンは使わない）。先頭カードは icon / 名前 / `×N` / 集約状態 / 危険予兆枠 + HP。背面カードは同一 DOM だが CSS で情報欄を隠し HP 行のみ露出。HP 行はカード下端に固定し、重ねると各体の HP バーが下方向に露出してすべて読める。`maxVisibleStack` = 3、超過は `+N`。icon は `pixel-icon-frame--24` 等倍（24×24）。寸法: card 136×48、group footprint 152×64。
+**Phase 3 Task 2 — カード束表示:** 各 `enemyGroup` は上部 HUD で **同一 `enemyCard` 要素**を `stackOffset`（8px）でずらして重ねる（HP 専用レーンは使わない）。先頭カードは icon / 名前 / `×N` / 集約状態 / 危険予兆枠 + HP。背面カードは同一 DOM・同一カード枠（背景・枠線は維持）だが CSS で情報欄を隠し HP 行（と状態ミニ）を下端に露出。重ねた各 HP バーは **同じ幅**で、各カード内の同一 inset（icon 列右）に absolute 配置する（カードの `stackOffset` X 分だけ HP も右へずれる）。**背面の状態ミニ行は HP バーを押し上げない**（HP 行は常にカード下端 5px、ミニ行はその直上）。HP 行はカード下端に固定し、重ねると各体の HP バーが下方向に露出してすべて読める。`maxVisibleStack` = 3、超過は `+N`。icon は `pixel-icon-frame--24` 等倍（24×24）。寸法: card 136×48、group footprint 152×64。
 
 初期寸法目安:
 
 ```yaml
 enemyHud:
   x: 24
-  y: 56
+  y: 70
   w: 1232
   h: 72          # 固定帯（ENEMY_HUD_SLOT_BAND_HEIGHT）
 
@@ -923,8 +923,8 @@ panelHeight:
 
 表示例:
 
-- 対象の足元リング
-- 対象周囲の照準マーカー
+- 対象スプライト頭上の赤い下向き矢印（▼）。矢印は軽く上下に揺れる（ボブアニメ）
+- 対象の足元リング（二重楕円）
 
 表示条件:
 
@@ -941,6 +941,12 @@ HUD スロットと戦闘フィールド上スプライトの対応を示す UI 
 - 右 HUD の敵スロットにホバーしたとき、対応する敵スプライトをハイライトする
 - 戦闘フィールド上の敵スプライトにホバーしたとき、対応する右 HUD スロットをハイライトする
 - 味方 HUD と味方スプライトでも同様に対応表示できるなら実装対象にしてよい
+
+フィールド上スプライトの表現:
+
+- スプライト外接矩形の点線枠は使わない
+- シルエットを **2px** 膨張した **ぼかしなし** の輪郭バンド（8 近傍 dilation）を描き、ゆっくりパルスさせる（周期 3.3 秒。`hoverHighlightOutlineGlow.ts`）
+- 色は `--hover-highlight-outline` / `--hover-highlight-glow`（`battle-view.css`）を正本とする
 
 実装：`BattleView.ts` が `hoverHighlight` / `targetIndicator` を別状態で保持し、`BattleCanvas.ts`（フィールド描画）へ `targetIndicator` を配信する。`targetIndicator` は `skillWindup` / `skill` イベント由来の UI 表示（戦闘ロジックは変更しない）。
 
@@ -1064,7 +1070,7 @@ Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `s
 | 4 | スキルゲージ 2×2 固定 + 状態 2 行固定 | `party-hud-overlay.css`, `partyHudOverlayStatusGrid.ts` |
 | 5 | 上部 Enemy HUD（最大 10 group・カード束・表示専用 groupBy） | `EnemyHudPanel.ts`, `enemy-hud-overlay.css`, `enemyHudTypes.ts`, `enemyHudCardStack.ts` |
 | 6 | 敵スプライト付近 HP/状態停止 | `BattleCanvas.ts` |
-| 7 | `hoverHighlight` / `targetIndicator` 分離 | `BattleView.ts`, `battleHoverHighlight.ts`, `battleTargetIndicator.ts`, `battleFieldIndicatorDraw.ts` |
+| 7 | `hoverHighlight` / `targetIndicator` 分離 | `BattleView.ts`, `battleHoverHighlight.ts`, `battleTargetIndicator.ts`, `battleFieldIndicatorDraw.ts`, `hoverHighlightOutlineGlow.ts`, `combatantSpriteFootDraw.ts` |
 | 8 | Debug UI overlay 分離 | `BattleView.ts`, `battle-view.css` |
 
 #### 自動テスト（受け入れ補助）
@@ -1097,7 +1103,7 @@ Task 1〜8 の戦闘画面 UI 改修完了時点の整理。正本は §8 と `s
 3. スプライト・24px アイコン・状態バッジが pixelated（ぼやけなし）
 4. 敵フィールド HP/状態なし、上部 HUD に集約
 5. 敵 HUD ホバー ↔ スプライト hoverHighlight 双方向
-6. 攻撃時 targetIndicator（足元リング）が hover と区別できる
+6. HUD ホバー時の targetIndicator（頭上の赤▼）が hoverHighlight と区別できる
 7. verify ON 時 debug ドック / battle-x-debug が本体 HUD を押し下げない
 
 ---

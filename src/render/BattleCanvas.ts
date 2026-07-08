@@ -1,20 +1,14 @@
 import type { BattleSnapshot, SkillVfxDef } from "../battle/types.ts";
 import { BuffGlowManager, drawSpriteWithBuffGlow } from "./buffGlowEffect.ts";
 import {
-  getPlaceholderSpriteYOffset,
+  drawCombatantSpriteAtFootAnchor,
+  resolveCombatantSpriteDrawMetrics,
+} from "./combatantSpriteFootDraw.ts";
+import {
   beginDeathPlaceholder,
   clearDeathPlaceholder,
-  getDeathPlaceholderTransform,
 } from "./placeholderSpriteAnim.ts";
-import { hasEntityAnimSheet } from "./spriteFrameDraw.ts";
-import {
-  drawSkillAnimAtFootAnchor,
-  drawSpriteFrameAtFootAnchor,
-} from "./spriteFrameDraw.ts";
-import {
-  getSheetCellSize,
-  SPRITE_LAYOUT_SIZE,
-} from "./spriteLayout.ts";
+import { SPRITE_LAYOUT_SIZE } from "./spriteLayout.ts";
 import { SpriteAnimator } from "./SpriteAnimator.ts";
 import type { SkillAnimPlaybackOptions } from "./skillAnimPlayback.ts";
 import {
@@ -49,7 +43,6 @@ import type {
 } from "./IBattleRenderer.ts";
 import {
   readBattleHudTheme,
-  resolveSpritePlaceholderColor,
   type BattleHudTheme,
 } from "./battleHudTheme.ts";
 import { VictoryOverlay } from "./VictoryOverlay.ts";
@@ -92,7 +85,9 @@ export class BattleCanvas implements IBattleRenderer {
   private marchIdleHoldFrames = new Map<string, number>();
   private static readonly MARCH_IDLE_HOLD_FRAMES = 4;
   private hoverHighlightUnitIds: ReadonlySet<string> = new Set();
+  private hoverGlowAnimStartMs: number | null = null;
   private targetIndicatorUnitIds = new Set<string>();
+  private targetIndicatorAnimStartMs: number | null = null;
   private onFieldHoverChange: ((unitId: string | null) => void) | null = null;
 
   private readonly handleCanvasPointerMove = (event: MouseEvent): void => {
@@ -149,12 +144,30 @@ export class BattleCanvas implements IBattleRenderer {
     ) {
       return;
     }
+    if (next.size > 0 && this.hoverHighlightUnitIds.size === 0) {
+      this.hoverGlowAnimStartMs = performance.now();
+    } else if (next.size === 0) {
+      this.hoverGlowAnimStartMs = null;
+    }
     this.hoverHighlightUnitIds = next;
     this.draw();
   }
 
   setTargetIndicatorUnitIds(unitIds: readonly string[]): void {
-    this.targetIndicatorUnitIds = new Set(unitIds);
+    const next = new Set(unitIds);
+    if (
+      next.size === this.targetIndicatorUnitIds.size &&
+      [...next].every((id) => this.targetIndicatorUnitIds.has(id))
+    ) {
+      return;
+    }
+    if (next.size > 0 && this.targetIndicatorUnitIds.size === 0) {
+      this.targetIndicatorAnimStartMs = performance.now();
+    } else if (next.size === 0) {
+      this.targetIndicatorAnimStartMs = null;
+    }
+    this.targetIndicatorUnitIds = next;
+    this.draw();
   }
 
   setCombatants(layout: CombatantLayout[]): void {
@@ -539,18 +552,11 @@ export class BattleCanvas implements IBattleRenderer {
       this.drawSprite(layout, layout.x, spriteDrawY(layout), SPRITE_SCALE);
     }
 
-    for (const layout of this.layouts) {
-      if (this.targetIndicatorUnitIds.has(layout.id)) {
-        drawTargetIndicatorForLayout(
-          this.ctx,
-          layout,
-          SPRITE_SCALE,
-          this.theme,
-        );
-      }
-    }
-
     if (this.hoverHighlightUnitIds.size > 0) {
+      const hoverGlowElapsedMs =
+        this.hoverGlowAnimStartMs === null
+          ? 0
+          : performance.now() - this.hoverGlowAnimStartMs;
       for (const layout of this.layouts) {
         if (!this.hoverHighlightUnitIds.has(layout.id)) continue;
         drawHoverHighlightForLayout(
@@ -558,6 +564,26 @@ export class BattleCanvas implements IBattleRenderer {
           layout,
           SPRITE_SCALE,
           this.theme,
+          layout.x,
+          spriteDrawY(layout),
+          hoverGlowElapsedMs,
+        );
+      }
+    }
+
+    if (this.targetIndicatorUnitIds.size > 0) {
+      const targetIndicatorElapsedMs =
+        this.targetIndicatorAnimStartMs === null
+          ? 0
+          : performance.now() - this.targetIndicatorAnimStartMs;
+      for (const layout of this.layouts) {
+        if (!this.targetIndicatorUnitIds.has(layout.id)) continue;
+        drawTargetIndicatorForLayout(
+          this.ctx,
+          layout,
+          SPRITE_SCALE,
+          this.theme,
+          targetIndicatorElapsedMs,
         );
       }
     }
@@ -603,110 +629,25 @@ export class BattleCanvas implements IBattleRenderer {
     scale: number,
   ): void {
     const { ctx } = this;
-    const size = SPRITE_SIZE * scale;
-    const showingSkillAnim = layout.skillAnimKey !== null;
-    const offsetY =
-      showingSkillAnim ||
-      hasEntityAnimSheet(
-        layout.spriteKey,
-        layout.anim,
-        layout.attackSheetKey,
-      )
-        ? 0
-        : getPlaceholderSpriteYOffset(layout, scale);
-
-    const deathTransform =
-      layout.anim === "death" &&
-      !hasEntityAnimSheet(layout.spriteKey, "death")
-        ? getDeathPlaceholderTransform(layout.id, layout)
-        : null;
+    const { layoutSize, bufferSize } = resolveCombatantSpriteDrawMetrics(
+      layout,
+      scale,
+    );
     const deathAlpha = this.deathPlayback.isActive(layout.id)
       ? this.deathPlayback.getAlpha(layout.id)
       : null;
 
-    const flipSpriteHorizontal = layout.isEnemy
-      ? layout.facingSign === undefined || layout.facingSign < 0
-      : layout.facingSign !== undefined && layout.facingSign < 0;
-
-    ctx.save();
-
-    if (deathTransform) {
-      const pivotX = x + size / 2;
-      const pivotY = y + offsetY + size;
-      ctx.translate(pivotX, pivotY);
-      ctx.rotate(deathTransform.rotationRad);
-      ctx.translate(-size / 2, -size);
-      if (flipSpriteHorizontal) {
-        ctx.translate(size, 0);
-        ctx.scale(-1, 1);
-      }
-      if (deathAlpha !== null) {
-        ctx.globalAlpha = deathAlpha;
-      }
-    } else if (layout.isEnemy) {
-      ctx.translate(x + (flipSpriteHorizontal ? size : 0), y + offsetY);
-      if (flipSpriteHorizontal) {
-        ctx.scale(-1, 1);
-      }
-      if (!layout.isAlive) {
-        ctx.globalAlpha = this.theme.deadAlpha;
-      }
-    } else {
-      ctx.translate(x + (flipSpriteHorizontal ? size : 0), y + offsetY);
-      if (flipSpriteHorizontal) {
-        ctx.scale(-1, 1);
-      }
-      if (!layout.isAlive) {
-        ctx.globalAlpha = this.theme.deadAlpha;
-      }
-    }
-
-    const placeholderColor = resolveSpritePlaceholderColor(
-      layout.spriteKey,
-      this.theme,
-    );
-    const footX = size / 2;
-    const footY = size;
-
-    const drawAtFoot = (
-      targetCtx: CanvasRenderingContext2D,
-      anchorFootX: number,
-      anchorFootY: number,
-    ) => {
-      if (layout.skillAnimKey) {
-        drawSkillAnimAtFootAnchor(
-          targetCtx,
-          layout.skillAnimKey,
-          layout.skillAnimFrame,
-          anchorFootX,
-          anchorFootY,
-          scale,
-        );
-        return;
-      }
-
-      drawSpriteFrameAtFootAnchor(
-        targetCtx,
-        layout.spriteKey,
-        layout.anim,
-        layout.animFrame,
-        anchorFootX,
-        anchorFootY,
-        size,
-        size,
+    const drawLocalSprite = (localCtx: CanvasRenderingContext2D) => {
+      drawCombatantSpriteAtFootAnchor(
+        localCtx,
+        layout,
         scale,
-        placeholderColor,
-        layout.attackSheetKey,
+        this.theme,
+        x,
+        y,
+        { deathAlpha },
       );
     };
-
-    const drawLocalSprite = (localCtx: CanvasRenderingContext2D) => {
-      drawAtFoot(localCtx, footX, footY);
-    };
-
-    const tintBufferSize = Math.ceil(
-      Math.max(size, getSheetCellSize(layout.spriteKey, layout.anim) * scale),
-    );
 
     const buffGlow = this.buffGlows.getIntensity(
       layout.id,
@@ -718,11 +659,21 @@ export class BattleCanvas implements IBattleRenderer {
     } else if (buffGlow > 0) {
       drawSpriteWithBuffGlow(
         ctx,
-        tintBufferSize,
-        size,
+        bufferSize,
+        layoutSize,
         buffGlow,
         (bufferCtx) => {
-          drawAtFoot(bufferCtx, tintBufferSize / 2, tintBufferSize);
+          const { layoutSize, bufferSize, offsetY } =
+            resolveCombatantSpriteDrawMetrics(layout, scale);
+          const pixelSize = Math.ceil(bufferSize);
+          drawCombatantSpriteAtFootAnchor(
+            bufferCtx,
+            layout,
+            scale,
+            this.theme,
+            pixelSize / 2 - layoutSize / 2,
+            pixelSize - layoutSize - offsetY,
+          );
         },
         this.theme.buffGlowR,
         this.theme.buffGlowG,
@@ -731,8 +682,6 @@ export class BattleCanvas implements IBattleRenderer {
     } else {
       drawLocalSprite(ctx);
     }
-
-    ctx.restore();
   }
 
 }

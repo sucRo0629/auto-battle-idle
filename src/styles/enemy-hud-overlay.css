@@ -142,6 +142,45 @@
 .enemy-hud-card--back {
   background: rgba(8, 10, 18, 0.82);
   opacity: 0.94;
+  overflow: visible;
+}
+
+.enemy-hud-card-stack .enemy-hud-card-body {
+  overflow: visible;
+}
+
+.enemy-hud-card-stack .enemy-hud-hp-row {
+  height: 0;
+  min-height: 0;
+  flex: 0 0 0;
+  margin: 0;
+  gap: 0;
+  overflow: visible;
+}
+
+.enemy-hud-card-stack .enemy-hud-hp-track {
+  position: absolute;
+  left: var(--enemy-hud-hp-track-left, 34px);
+  bottom: var(--enemy-hud-card-pad-bottom, 3px);
+  width: var(--enemy-hud-hp-track-w, 97px);
+  z-index: var(--enemy-hud-hp-track-z, 1);
+}
+
+.enemy-hud-card--back .enemy-hud-card-info {
+  display: none;
+}
+
+.enemy-hud-card--back .enemy-hud-icon-wrap {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.enemy-hud-card--back .enemy-hud-card-status-mini {
+  position: absolute;
+  left: var(--enemy-hud-hp-track-left, 34px);
+  width: var(--enemy-hud-hp-track-w, 97px);
+  bottom: calc(var(--enemy-hud-card-pad-bottom, 3px) + 5px + 1px);
+  pointer-events: none;
 }
 
 .enemy-hud-card-main {
@@ -187,15 +226,6 @@
   min-width: 0;
   overflow: hidden;
   align-content: start;
-}
-
-.enemy-hud-card--back .enemy-hud-card-info,
-.enemy-hud-card--back .enemy-hud-icon-wrap {
-  display: none;
-}
-
-.enemy-hud-card--back .enemy-hud-card-main {
-  grid-template-columns: 1fr;
 }
 
 .enemy-hud-hp-row {
