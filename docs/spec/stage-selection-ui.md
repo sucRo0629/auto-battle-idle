@@ -1,10 +1,12 @@
 # ステージ選択 UI
 
-実装予定：`GameSession` 画面状態 `map` 配下（Phase **6d**）。敵データは `data/enemies.json`、ステージは `data/stages.json` / `data/stages-demo.json`（体験版）。
+実装：`GameSession` 画面状態 **`map`**（**内部名**。ユーザー向け表示・画面タイトルは「**ステージ選択**」）配下（Phase **6d** / **7d**）。敵データは `data/enemies.json`、ステージは `data/stages.json` / `data/stages-demo.json`（体験版）。
 
-本ドキュメントは **マップ選択 → ステージ詳細 → 出撃** の画面設計正本。クリア履歴のデータ形状・更新ルールは [progression.md §Stage Records](progression.md#stage-records)。編成画面は [party-formation-ui.md](party-formation-ui.md)。敵の設計意図は [enemy-design-concept.md](../enemy-design-concept.md)。
+本ドキュメントは **ステージ選択 → ステージ詳細 → 出撃** の画面設計正本。クリア履歴のデータ形状・更新ルールは [progression.md §Stage Records](progression.md#stage-records)。編成画面は [party-formation-ui.md](party-formation-ui.md)。敵の設計意図は [enemy-design-concept.md](../enemy-design-concept.md)。
 
-**フェーズ:** Phase **6d**（**Release M1 必須**）— マップ一覧 + ステージ詳細 + Level Sync + **リザルトのベスト 2 枠記録**（低レベル / 最速）。
+**フェーズ:** Phase **6d**（**Release M1 必須**）— ステージ選択一覧 + ステージ詳細 + Level Sync + **リザルトのベスト 2 枠記録**（低レベル / 最速）。
+
+**体験版の前提:** 各ステージは **最初から選択可能**（順不同で何度でも再挑戦）。難易度（想定 Lv・敵編成）は表示するが、**ステージ順クリアで進行制御しない**。
 
 ---
 
@@ -12,33 +14,33 @@
 
 ```mermaid
 flowchart LR
-  mapList["マップ一覧"]
+  stageSelection["ステージ選択"]
   detail["ステージ詳細"]
   party["編成選択"]
   battle["戦闘"]
 
-  mapList -->|"ステージを選ぶ"| detail
+  stageSelection -->|"ステージを選ぶ"| detail
   detail -->|"出撃"| party
   party -->|"戦闘開始"| battle
 ```
 
-- マップ一覧でステージ行を選ぶと **詳細パネル**（または詳細画面）を開く。**一覧タップだけでは戦闘開始しない**。
+- ステージ選択でステージ行を選ぶと **詳細パネル**（または詳細画面）を開く。**一覧タップだけでは戦闘開始しない**。
 - 詳細で内容を確認し **出撃** → 編成 → 戦闘（[phase-roadmap.md §6d](../plans/phase-roadmap.md#6d--画面構成導線release-m1)）。
 
 ---
 
-## 2. マップ一覧
+## 2. ステージ選択
 
 | 項目 | 内容 |
 | ---- | ---- |
-| **画面タイトル** | 「ステージ選択」（`h1`）。一本道マップではない |
+| **画面タイトル** | 「ステージ選択」（`h1`）。一本道マップ UI ではない |
 | **初回ガイド**（verify OFF 体験版のみ） | タイトル直下に汎用 1 行（挑戦 stage を選んで出撃・順不同再挑戦）。`formationHintJa` とは別。既読フラグ・save 永続化なし |
 | ステージ名 | `StageDef.displayName` |
-| 進行 | 未クリア / クリア済み / ロック（前ステージ未クリア等。ルールは [progression.md](progression.md)） |
+| クリア状態（将来） | 未クリア / クリア済み / ☆（適正クリア）。**体験版 v1 では一覧にクリア状態・ロック UI なし** — 全 stage 最初から選択可 |
 | **☆** | 当該ステージに **適正クリア** の履歴が 1 件以上あるとき表示（[§5](#5-適正クリアマーク)） |
 | サマリー（任意） | 低レベル枠の Lv・最短枠のタイム（未クリア枠は非表示） |
 
-一覧行のソートは **ステージ JSON 配列順**（進行チェーン順）を正とする。クリア履歴のソートとは別。
+一覧行のソートは **ステージ JSON 配列順**（**表示順**。解放順・進行順ではない）を正とする。クリア履歴のソートとは別。
 
 ---
 
@@ -71,7 +73,7 @@ flowchart LR
 | ラベル | 「レベルシンク」（i18n: Level Sync） |
 | 意味 | ON のとき当該出撃のみ `effectiveLevel = min(playerProgress.level, stage.recommendedLevel)`（[progression.md](progression.md)） |
 | 既定 | **OFF** |
-| 永続 | チェック状態は **セーブ必須ではない**。マップに戻るまでのセッション内で最後の選択を保持してよい |
+| 永続 | チェック状態は **セーブ必須ではない**。ステージ選択画面に戻るまでのセッション内で最後の選択を保持してよい |
 | 無効化 | `recommendedLevel` 未設定、またはプレイヤー Lv ≤ 想定 Lv のときは OFF 固定（または非表示）— 実装時にどちらかを選び spec を 1 行追記 |
 
 出撃確定時に `GameSession` / 戦闘オプションへ **当該 sortie の levelSync フラグ** を渡す。
@@ -85,7 +87,7 @@ flowchart LR
 | 表示箇所 | 条件 |
 | -------- | ---- |
 | 履歴行 | 当該 `StageClearEntry.atRecommendedLevel === true` |
-| マップ一覧の ☆ | 当該ステージの履歴に適正クリアが 1 件以上 |
+| ステージ選択一覧の ☆ | 当該ステージの履歴に適正クリアが 1 件以上 |
 
 例: アカウント Lv 35・想定 Lv 20・Level Sync ON → `clearLevel = 20` → **☆ あり**。
 
@@ -99,7 +101,7 @@ flowchart LR
 | ---- | ---- |
 | 今回の結果 | **クリア Lv（実効）**、クリアタイム、編成 4 クラス、Level Sync 使用有無、☆ |
 | **ベスト記録** | **2 枠**（「最低 Lv」「最速」。同一 run なら 1 行）。各枠は [progression.md §2 枠の更新ルール](progression.md#2-枠の更新ルールvictory-時) で上書き判定 |
-| 操作 | 「続ける」→ マップ一覧 |
+| 操作 | 「続ける」→ ステージ選択 |
 
 履歴の件数上限・Victory 時の append ルールは progression 正本。
 
@@ -107,7 +109,7 @@ flowchart LR
 
 ## 7. スコープ外（v1）
 
-- ワールドマップノードのグラフィック演出
+- ワールドマップノードのグラフィック演出（地理マップ UI）
 - 敵の HP / ATK 数値表（データ転記 UI）
 - Instant Lv20（**Phase 12b**）
 - 全ステージ横断の Records ソート画面（6d は **ステージ詳細 / リザルト内** の履歴のみ。横断ビューは **12c** で拡張可）
@@ -116,7 +118,7 @@ flowchart LR
 
 ## 8. 実装タッチポイント（予定）
 
-- `GameSession` — 画面状態 `map`、sortie オプション（`levelSync`）
-- 新規 DOM — マップ一覧・ステージ詳細・リザルト履歴
+- `GameSession` — 画面状態 **`map`**（内部名）、sortie オプション（`levelSync`）
+- 新規 DOM — ステージ選択一覧・ステージ詳細・リザルト履歴（ホスト要素 `.game-shell__map` / `mapHost` は内部名）
 - `data/stages*.json` — `recommendedLevel` フィールド（validate 追加）
 - `SaveManager` / victory ハンドラ — `stageRecords` 更新（[progression.md](progression.md)）

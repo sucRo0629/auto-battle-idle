@@ -6,7 +6,7 @@ export interface StageSelectionScreenHostCallbacks {
   onSortie: (stageId: string) => void;
 }
 
-/** Mounts StageSelectionPanel on the map screen host. */
+/** Mounts StageSelectionPanel on the stage-selection screen host (internal: mapHost / screen `'map'`). */
 export class StageSelectionScreenHost {
   private panel: StageSelectionPanel | null = null;
 

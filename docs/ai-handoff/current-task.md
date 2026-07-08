@@ -12,7 +12,8 @@
 - 状態: **Phase 6b 完了**（6b-1〜6b-8）。**Phase 7d〜7g 最小実装済み**（§26〜29）。**§30 で verify OFF main flow 成立を確認**。残タスクは §30「残タスク」
 - **2026-07 roadmap 改定:** [phase-roadmap.md](../plans/phase-roadmap.md) — 旧 6d → **Phase 7**（app flow）、新 **Phase 8**（presentation）、旧 Electron → **Phase 9**（packaging）。本編は **Phase 10** へ
 - **Phase 7 目的:** M1 体験版として、**起動から `demo_ch1_07` クリアまで迷わず進めるアプリ導線**を作る（配布 zip は Phase 9）
-- **現状画面:** verify OFF 起動は **map**（`StageSelectionPanel`）→ 編成（`MetaMenuOverlay`）→ 戦闘。**未実装:** トップ / リザルト / 体験版終了
+- **現状画面:** verify OFF 起動は **ステージ選択**（`StageSelectionPanel`；内部 screen `'map'` / `mapHost`）→ 編成（`MetaMenuOverlay`）→ 戦闘。**未実装:** トップ / リザルト / 体験版終了
+- **用語（ユーザー向け）:** 画面表示・spec・ガイド文案は **「ステージ選択」** に統一。コード内部名 `mapHost` / `screen: 'map'` / `.game-shell__map` は **rename しない**（後続 refactor 候補）
 - **並行・未達:** キャラ画像（並行作業中）、VFX 未実装、効果音未実装
 - **当面方針:** 新規ソース実装は止め、Phase 7 整理後は **グラフィック準備優先**。新規画面実装はグラフィック方針整理後に再開
 - **verify OFF 勝利時 currentStageId 維持済み（§33）**
@@ -371,8 +372,8 @@
 | **7d** | **ステージ選択画面** — `stages-demo.json` 一覧・詳細・出撃。spec: [stage-selection-ui.md](../spec/stage-selection-ui.md) | **最小接続済み**（§26） |
 | **7e** | **編成 → 戦闘開始導線** — 出撃確定時に `currentStageId` 反映 → battle 開始。`MetaMenuOverlay` / `SkillMenuPanel` 流用可否は 7a で判断 | **確認済み**（§27） |
 | **7e2** | **編成画面 M1 polish** — 見た目・読みやすさ・**選択済み 4 人枠**・**スキル説明カード**（コアは「編成だけ」）。**今すぐ大改修しない**。グラフィック方針・クラス画像反映 **後** → 現状棚卸し → 小改善。spec: [party-formation-ui.md](../spec/party-formation-ui.md) | 保留 |
-| **7f** | **戦闘終了 → リザルト導線** — `respawnAfterEnd` 廃止、リザルト表示。Exp・`stageRecords` 更新（M1 必須 2 枠）。spec: [progression.md](../spec/progression.md) | **verify OFF 勝利後 map 復帰 最小実装済み**（§28）。リザルト画面・報酬演出は未着手 |
-| **7g** | **first-play guidance / 敗北時導線** — 初回短いガイダンス文。敗北リザルトから編成見直しへ戻れる導線 | **verify OFF map 汎用ガイド + 敗北後 formation 復帰 最小実装済み**（§29・§31）。敗北リザルト UI は未着手 |
+| **7f** | **戦闘終了 → リザルト導線** — `respawnAfterEnd` 廃止、リザルト表示。Exp・`stageRecords` 更新（M1 必須 2 枠）。spec: [progression.md](../spec/progression.md) | **verify OFF 勝利後ステージ選択へ復帰 最小実装済み**（§28；内部 `setGameScreen('map')`）。リザルト画面・報酬演出は未着手 |
+| **7g** | **first-play guidance / 敗北時導線** — 初回短いガイダンス文。敗北リザルトから編成見直しへ戻れる導線 | **verify OFF ステージ選択の汎用ガイド + 敗北後 formation 復帰 最小実装済み**（§29・§31）。敗北リザルト UI は未着手 |
 | **7h** | **`demo_ch1_07` クリア後 体験版終了画面 / debug UI 整理** — 最終クリア遷移。`DebugMenuPanel` を verify 専用化（本番非表示方針。最終ゲートは Phase 9） | 未着手 |
 
 **推奨着手順:** 7a → 7b → 7c/7d（並行可）→ 7e → **7e2（グラフィック方針・クラス画像反映後）** → 7f → 7g → 7h
@@ -1879,7 +1880,7 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | P2 | **ch1_02/04 に formationHintJa 追加**（後衛処理・回復戦。必須 counter 表現は避ける） | データ 1 行 + UI 既存経路 |
 | P3 | **ch1_03 bad を defeat 寄り** | 6c |
 | P3 | **ch1_05** — paladin counter と assassin spotlight の主軸を doc で分離（counter=安全解、assassin=体験解） | doc のみ |
-| 導線 | map 初回ガイドを「順不同で好きな stage を選べ」に寄せる（現状は汎用） | Phase 7 copy |
+| 導線 | ステージ選択の初回ガイドを「順不同で好きな stage を選べ」に寄せる | **§38 で文案反映済み** |
 | 進行 | `clearedStageIds` 導入は §32 中期案のまま送り | スコープ外 |
 
 ### テスト（今回実行）
@@ -2148,7 +2149,7 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | 一覧行 | `displayName` のみ（番号・ロック・現在地ラベルなし） | **問題なし** |
 | `currentStageId` 表示 | **なし**（選択ハイライトのみ。進行地点ラベルなし） | **問題なし** |
 | `BattleView.pushLog` | verify ON のみ `Advancing to next stage...` 等 | **体験版非表示**（verify OFF では log 抑止） |
-| `docs/spec/stage-selection-ui.md` | 「マップ一覧」「進行チェーン順」等 | **spec 未改訂**（今回 UI のみ最小修正。spec 全体の用語整理は後続） |
+| `docs/spec/stage-selection-ui.md` | 「マップ一覧」「進行チェーン順」等 | **§39 で spec 用語統一済み** |
 
 **UI 上の map / next / progress 系ユーザー向け文言:** ステージ選択画面本体には **なし**（verify 専用 battle log に next/previous stage 英語のみ）。
 
@@ -2199,6 +2200,65 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 ### 後続課題（今回やらない）
 
 - `GameScreen` / `mapHost` / `.game-shell__map` の rename
-- `stage-selection-ui.md` 全体の「マップ一覧」→「ステージ選択」用語統一（ロック行・進行チェーン行は体験版実装と乖離）
 - クリア済み ☆ / `stageRecords` 表示（一覧の主情報強化）
 - 一覧の JSON 配列順以外の並び（レイアウト変更はスコープ外）
+
+## 39. spec / handoff 用語統一 — 「マップ」→「ステージ選択」（2026-07-08）
+
+**§38 後続** — ユーザー向け spec・handoff の map / マップ呼称を最小限統一。実装 rename・save / UI ロジック変更なし。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本・§38 前提 |
+| 2 | `docs/spec/stage-selection-ui.md` | ステージ選択 UI spec 正本 |
+| 3 | `src/ui/StageSelectionPanel.ts` | 画面タイトル・一覧 UI（§38 反映済み） |
+| 4 | `src/ui/stageDetailDom.ts` | タイトル定数・初回ガイド |
+| 5 | `src/game/StageSelectionScreenHost.ts` | 内部 host コメント |
+| 6 | `docs/spec/progression.md`（Grep） | 横断参照の「マップ一覧」リンク |
+
+### 「マップ / map / next / progress / current」系棚卸し結果
+
+| 対象 | 修正前の問題 | 修正後 |
+| ---- | ------------ | ------ |
+| `stage-selection-ui.md` §1 導線 | 「マップ選択」「マップ一覧」 | **ステージ選択** |
+| `stage-selection-ui.md` §2 | 「進行」行（未クリア/ロック/前ステージ）、「進行チェーン順」 | **クリア状態（将来）** + 体験版は全 stage 選択可。**JSON 配列順（表示順・解放順ではない）** |
+| `stage-selection-ui.md` §4/6/8 | 「マップに戻る」「マップ一覧」 | **ステージ選択** |
+| `stage-selection-ui.md` 実装注記 | `map` のみ | **`map` は内部名**、`mapHost` / `.game-shell__map` も注記 |
+| `current-task.md` §2 | 起動画面を **map** と表記 | **ステージ選択**（内部 screen `'map'` 注記） |
+| `current-task.md` §7f/7g | map 復帰 / map ガイド | **ステージ選択** へ復帰・ガイド |
+| `progression.md` Stage Records 節 | 「マップ一覧」×2 + 旧 §2 アンカー | **ステージ選択一覧** + 新アンカー |
+| UI 実装（`StageSelectionPanel` 等） | ユーザー向け「マップ」なし（§38 済み） | **変更なし** |
+| verify ON `BattleView` log | `Advancing to next stage...` 等 | **debug legacy のまま**（体験版非表示） |
+
+**残存（意図的）:** handoff 履歴節（§26〜§33 等）の `mapHost` / `setGameScreen('map')` は **実装ログとして内部名のまま**。§2 に用語方針を追記。
+
+**一本道連想文言:** spec から「次のステージ」「進行中」「現在地」「解放順」「前ステージ未クリアロック」を除去または「将来/表示順」に限定。UI にはもともとなし。
+
+### 修正した用語（代表）
+
+| 修正前 | 修正後 |
+| ------ | ------ |
+| マップ選択 / マップ一覧 | **ステージ選択** / **ステージ選択一覧** |
+| 進行（一覧行） | **クリア状態（将来）** |
+| 進行チェーン順 | **JSON 配列順（表示順・解放順ではない）** |
+| マップに戻る | **ステージ選択画面に戻る** |
+| 起動 **map**（handoff §2） | 起動 **ステージ選択**（内部 `'map'`） |
+
+### 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `docs/spec/stage-selection-ui.md` | 全体用語統一・体験版前提追記・内部名注記 |
+| `docs/ai-handoff/current-task.md` | §2/§7/§34 表の user-facing 整理 + 本 §39 |
+| `docs/spec/progression.md` | Stage Records 節の参照文言・アンカー 3 行（リンク切れ防止） |
+| `src/game/StageSelectionScreenHost.ts` | JSDoc コメントのみ（内部名注記） |
+
+**触らなかった:** `mapHost` / `screen: 'map'` rename、`GameSession` / save / `currentStageId`、UI レイアウト・ロジック、`stages-demo.json` / class / `enemyGroups`
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm test -- src/ui/StageSelectionPanel.test.ts src/game/stageSelectionWire.test.ts src/game/gameSessionWire.test.ts` | **17 passed** |

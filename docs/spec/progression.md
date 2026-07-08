@@ -398,14 +398,14 @@ interface StageRecord {
 - **最大 2 行**（低レベル枠・最短枠。同一 run なら **1 行** にまとめてよい）。
 - ラベル例: 「最低 Lv」「最速」— i18n は **4e**。
 - 行内ソート（2 行あるとき）: **`clearLevel` ASC** → **`clearTimeMs` ASC**。
-- マップ一覧のサマリー: `lowestLevelClear.clearLevel` / `fastestTimeClear.clearTimeMs`。
+- ステージ選択一覧のサマリー: `lowestLevelClear.clearLevel` / `fastestTimeClear.clearTimeMs`。
 
-ステージ横断の Records 一覧（Phase 12c）は、各ステージの低レベル枠・最短枠を集約して表示する。マップ一覧のステージ並びは **JSON 配列順** のまま（[stage-selection-ui.md §2](stage-selection-ui.md#2-マップ一覧)）。
+ステージ横断の Records 一覧（Phase 12c）は、各ステージの低レベル枠・最短枠を集約して表示する。ステージ選択一覧の並びは **JSON 配列順**（表示順。解放順ではない）のまま（[stage-selection-ui.md §2](stage-selection-ui.md#2-ステージ選択)）。
 
 #### 適正クリアマーク（☆）
 
 - **適正クリア:** `atRecommendedLevel === true` — 記録 **`clearLevel`（実効 Lv）≤ `recommendedLevel`**。
-- UI: 履歴行とマップ一覧に ☆（[stage-selection-ui.md §5](stage-selection-ui.md#5-適正クリアマーク)）。
+- UI: 履歴行とステージ選択一覧に ☆（[stage-selection-ui.md §5](stage-selection-ui.md#5-適正クリアマーク)）。
 - Level Sync ON で実 Lv が想定超過でも、**`clearLevel` が想定以下なら ☆ あり**（実際にその Lv 帯でクリアした記録として扱う）。
 
 #### 実装フェーズ
