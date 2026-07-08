@@ -153,10 +153,19 @@ describe('GameSession map → party → battle wire', () => {
     triggerVictory(session);
 
     expect(session.getSaveState().stageProgress.currentStageId).toBe(firstStage.id);
+    expect(session.getSaveState().stageProgress.clearedStageIds).toContain(
+      firstStage.id,
+    );
     expect(session.getCurrentScreen()).toBe('map');
+    const selectedItem = container.querySelector(
+      '.stage-selection-list-item--selected',
+    );
     expect(
-      container.querySelector('.stage-selection-list-item--selected')?.textContent,
+      selectedItem?.querySelector('.stage-selection-list-item-name')?.textContent,
     ).toBe(firstStage.displayName);
+    expect(
+      selectedItem?.querySelector('.stage-selection-list-item-cleared'),
+    ).not.toBeNull();
   });
 
   it('verify ON stays on battle after victory (debug loop preserved)', () => {

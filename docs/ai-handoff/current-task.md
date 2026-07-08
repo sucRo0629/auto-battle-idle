@@ -2484,3 +2484,93 @@ stageRecords?: Record<StageId, StageRecord>;
 ### 残タスク
 
 - [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
+
+---
+
+## 42. §34〜§41 総合回帰確認（2026-07-08）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本（§41 まで） |
+| 2 | `src/game/gameSessionWire.test.ts` | verify OFF/ON 導線 wire |
+| 3 | `src/game/stageSelectionWire.test.ts` | clearedStageIds 配線 |
+| 4 | `src/progression/victoryRewards.unlock.test.ts` | clearedStageIds merge 規則 |
+| 5 | `src/battle/demoStageBalance.smoke.test.ts` | demo runtime smoke |
+| 6 | `src/battle/demoStageBalance.puzzle.test.ts` | demo puzzle quad |
+
+### 実行テスト（7 ファイル / 51 件）
+
+| ファイル | 結果 |
+| -------- | ---- |
+| `gameSessionWire.test.ts` | 8/8 pass（§42 でクリア済みラベル DOM 期待を修正後） |
+| `stageSelectionWire.test.ts` | 5/5 pass |
+| `victoryRewards.unlock.test.ts` | 9/9 pass |
+| `saveManager.clearedStageIds.test.ts` | 2/2 pass |
+| `StageSelectionPanel.test.ts` | 7/7 pass |
+| `demoStageBalance.smoke.test.ts` | 8/8 pass |
+| `demoStageBalance.puzzle.test.ts` | **11/12 pass** — `demo_ch1_07` finale counter 勝利が **defeat** |
+
+### 確認項目
+
+| # | 項目 | 結果 |
+| - | ---- | ---- |
+| 1 | verify OFF 起動 → ステージ選択 → 出撃 → 編成 → 戦闘 | **OK** — `gameSessionWire` map 起動 / sortie / formation→battle |
+| 2 | verify OFF 勝利後 `currentStageId` 同 stage 維持 | **OK** — `gameSessionWire` + `victoryRewards.unlock` |
+| 3 | verify OFF 勝利後 `clearedStageIds` 記録 + 一覧「クリア済み」 | **OK** — `victoryRewards` / `stageSelectionWire` / `StageSelectionPanel` / `gameSessionWire`（§42 修正後） |
+| 4 | クリア済み stage 再挑戦 | **OK（コード確認）** — `StageSelectionPanel` は cleared でも出撃ボタン有効。`handleStageSortie` にロック分岐なし |
+| 5 | verify OFF 敗北後 rollback なし・同 stage 編成へ | **OK** — `gameSessionWire` defeat→formation、`currentStageId` 維持 |
+| 6 | verify ON Debug 勝利 next / 敗北 previous / loopStageId | **OK** — `gameSessionWire` verify ON 3 件 pass |
+| 7 | demo balance smoke / puzzle | smoke **8/8**。puzzle **ch1_07 のみ FAIL**（counter=paladin が全滅 defeat） |
+| 8 | default-answer = `demo_ch1_01` のみ | **維持** — ch1_01 baseline 満血勝利（154s）。ch1_02/03/05 は baseline 勝利だが doc 上 default-viable（非 default-answer）。ch1_07 は全編成 defeat で puzzle 意図から逸脱 |
+| 9 | class / stage / enemyGroups 不要変更 | **今回未変更** — 回帰確認のみ。git 作業ツリー差分なし |
+| 10 | UI / save / `currentStageId` 追加変更 | **なし**（`gameSessionWire.test.ts` の DOM 期待修正のみ） |
+
+### verify OFF 勝利導線
+
+map 起動 → 出撃 → 編成 → 戦闘 → 勝利 → map 復帰。`currentStageId` はクリア stage のまま。`clearedStageIds` に stageId が merge され、一覧に「クリア済み」HUD ラベル表示。
+
+### verify OFF 敗北導線
+
+rollback なし。`currentStageId` 維持のまま編成画面（`formation`）へ。再出撃可能。
+
+### clearedStageIds / クリア済み表示 / 再挑戦
+
+- verify OFF 勝利のみ記録（`advanceCurrentStage: false`）
+- verify ON では記録しない
+- 再クリアは冪等 merge
+- クリア済みでも出撃・再挑戦に制限なし（状態表示のみ）
+
+### verify ON Debug 導線
+
+起動 battle 維持。勝利で `currentStageId` 次 stage へ。敗北で previous stage rollback。loopStageId 時は defeat でロールバック停止。
+
+### demo balance
+
+| suite | 結果 |
+| ----- | ---- |
+| smoke（7 stage + data sanity） | **全 pass** |
+| puzzle quad | ch1_01〜06 + 個別診断 **pass**。**ch1_07 counter 勝利 FAIL**（baseline/bad/universal/counter 全 defeat） |
+
+**ch1_07 診断:** counter paladin `damageTaken=692`、baseline guardian `465`。敵 at_ballista 前の Lv2 6 体圧で sustain 不足。**§34〜§37 は ch1_07 データ未変更** — 別要因（戦闘エンジン drift または既知の未調整）の可能性。今回は stage 数値変更スコープ外のため未修正。
+
+### default-answer
+
+`demo_ch1_01` のみ — baseline 満血勝利、bad=defeat、universal 最速（57s）。他 stage は puzzle 軸（速度・編成差・healer 必須等）で default-answer ではない。
+
+### 今回の変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/gameSessionWire.test.ts` | §41 クリア済みラベル DOM 追加に伴う期待値修正 + `clearedStageIds` / ラベル DOM 断言 |
+| `docs/ai-handoff/current-task.md` | 本 §42 |
+
+### 触らなかった
+
+`stageRecords` / best time / best party / 星評価、`selectedStageId` 本格導入、map rename、UI レイアウト大改修、`stages-demo.json` / class 数値 / `enemyGroups` 変更、`demo_ch1_07` balance 調整、`GameSession` / `SaveManager` / `StageSelectionPanel` ロジック
+
+### 残タスク
+
+- [ ] `demo_ch1_07` puzzle counter 勝利の復帰（6c 調整 or 戦闘 drift 調査）— **回帰で検出、未着手**
+- [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
