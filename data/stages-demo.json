@@ -202,15 +202,15 @@
         "classId": "df_paladin",
         "count": 1,
         "hpScale": 1.05,
-        "atkScale": 0.85,
+        "atkScale": 0.78,
         "defScale": 1.05,
-        "resScale": 1.0
+        "resScale": 0.95
       },
       {
         "classId": "sp_cleric",
         "count": 1,
         "hpScale": 0.9,
-        "atkScale": 0.85,
+        "atkScale": 0.78,
         "defScale": 1.0,
         "resScale": 1.0
       },
@@ -218,15 +218,15 @@
         "classId": "sp_wardweaver",
         "count": 1,
         "hpScale": 0.9,
-        "atkScale": 0.85,
+        "atkScale": 0.78,
         "defScale": 1.0,
         "resScale": 1.0
       },
       {
         "classId": "at_ballista",
         "count": 1,
-        "hpScale": 0.9,
-        "atkScale": 0.86,
+        "hpScale": 0.86,
+        "atkScale": 0.78,
         "defScale": 1.0,
         "resScale": 1.0
       },
@@ -234,7 +234,7 @@
         "classId": "at_sorcerer",
         "count": 1,
         "hpScale": 0.9,
-        "atkScale": 1.02,
+        "atkScale": 0.9,
         "defScale": 1.0,
         "resScale": 1.0
       },
@@ -242,7 +242,7 @@
         "classId": "at_assassin",
         "count": 1,
         "hpScale": 0.9,
-        "atkScale": 0.96,
+        "atkScale": 0.86,
         "defScale": 1.0,
         "resScale": 1.0
       }

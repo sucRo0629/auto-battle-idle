@@ -2574,3 +2574,75 @@ rollback なし。`currentStageId` 維持のまま編成画面（`formation`）�
 
 - [ ] `demo_ch1_07` puzzle counter 勝利の復帰（6c 調整 or 戦闘 drift 調査）— **回帰で検出、未着手**
 - [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
+
+## 43. demo_ch1_07 puzzle counter 勝利復帰（2026-07-08）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | §42 現状・制約 |
+| 2 | `data/stages-demo.json` | `demo_ch1_07` enemyGroups scale |
+| 3 | `src/battle/demoStageBalance.puzzle.test.ts` | quad 期待値 |
+| 4 | `src/battle/test/demoStageSim.harness.ts` | counter 編成・`logDemoCh1_07FinaleDiagnostics` |
+| 5 | `docs/dev/balance-diagnostics.md` | ch1_07 診断方針 |
+| 6 | `docs/ai-handoff/current-task.md` §34 quad 表 | 調整前の目標値（counter victory @112s） |
+
+### counter defeat の原因
+
+- §42 時点で baseline / bad / universal / counter **全 defeat**（puzzle 11/12）。
+- counter（paladin + cleric）は **90.9s まで延長**するが全滅。paladin `damageTaken=686`、cleric `damageTaken=629` / `healingDealt=662` で回復が追いつかず後衛が落ちる。
+- ranger は `primaryTarget=at_ballista` だが **damageDealt=73** のみ（sorcerer 仕留めのみ）。敵 ballista の高 MaxHP + 6 体総火力（特に `at_sorcerer` atkScale 1.02）が counter を崩す主因。
+- baseline guardian は 69s で先落ち（`damageTaken=462`）— 意図どおり defeat 維持可能。
+
+### 調整内容（`demo_ch1_07` enemyGroups scale のみ）
+
+| group | 変更 |
+| ----- | ---- |
+| enemy `df_paladin` | atkScale 0.85→**0.78**、resScale 1.0→**0.95** |
+| enemy `sp_cleric` / `sp_wardweaver` | atkScale 0.85→**0.78** |
+| enemy `at_ballista` | hpScale 0.9→**0.86**、atkScale 0.86→**0.78** |
+| enemy `at_sorcerer` | atkScale 1.02→**0.9** |
+| enemy `at_assassin` | atkScale 0.96→**0.86** |
+
+HP scale 増加は行わず、atkScale / resScale 優先。ballista のみ hpScale を微減（仕留め時間短縮）。
+
+### before / after quad
+
+| 編成 | §42（調整前） | §43（調整後） |
+| ---- | ------------- | ------------- |
+| baseline | defeat @69s | defeat @106s |
+| bad | defeat @40s | defeat @53s |
+| universal | defeat @29s | defeat @35s |
+| counter | **defeat** @91s | **victory** 650/650 @111s |
+
+### 確認項目
+
+| 項目 | 結果 |
+| ---- | ---- |
+| at_ballista を player counter 前提にしていない | **OK** — counter は `configurePaladinTankParty`（`df_paladin`）のみ |
+| demo_ch1_07 を終了扱いにしていない | **OK** — `GameSession` / 体験版終了導線未変更 |
+| default-answer = ch1_01 のみ | **維持** — ch1_07 は counter-required-ish |
+| class 数値変更 | **なし** |
+| UI / save / currentStageId / clearedStageIds | **未変更** |
+
+### 実行テスト
+
+| ファイル | 結果 |
+| -------- | ---- |
+| `demoStageBalance.puzzle.test.ts` | **12/12 pass** |
+| `demoStageBalance.smoke.test.ts` | **8/8 pass** |
+
+### 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `data/stages-demo.json` | `demo_ch1_07` enemyGroups scale 微調整 |
+| `src/battle/test/demoStageSim.harness.ts` | `logDemoCh1_07FinaleDiagnostics` に counter defeat 時の調整ヒント追記 |
+| `docs/dev/balance-diagnostics.md` | §43 ch1_07 scale メモ |
+| `docs/ai-handoff/current-task.md` | 本 §43 |
+
+### 残タスク
+
+- [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
+- [ ] 7h 体験版終了画面（`demo_ch1_07` クリア後）

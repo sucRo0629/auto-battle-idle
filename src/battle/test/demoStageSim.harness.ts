@@ -1395,6 +1395,13 @@ export function logDemoCh1_07FinaleDiagnostics(
   );
 
   console.info(`[demo-ch1_07-diag]   6c adjustment direction hints (not implemented):`);
+  if (counterResult.outcome === 'defeat') {
+    console.info(
+      `[demo-ch1_07-diag]     - counter defeat: enemy atkScale/resScale on sorcerer/assassin/ballista/enemy-paladin likely too high; ` +
+        `cleric damageTaken=${statForClass(counterResult.classStats, 'sp_cleric', 'damageTaken')} ` +
+        `ranger damageDealt=${counterRangerDealt} (ballista may outlast party); prefer atkScale/resScale over hpScale increases`,
+    );
+  }
   if (
     baseline.outcome === 'victory' &&
     baseline.totalRemainingHp > baseline.totalMaxHp * 0.4

@@ -456,6 +456,21 @@ resolveApproachBattleX
 | ch1_04 / ch1_06 puzzle 意図 | **§37 P3 再調整済み** — ch1_06 bad=defeat、baseline 非満血、counter paladin が score/HP/時間で優位。universal sorcerer は defeat |
 | ch1_02 / ch1_05 puzzle 意図 | **§36 P2 再調整済み** — ch1_02 後衛処理（ranger 遅延 vs sorcerer 速攻）、ch1_05 paladin counter + bad defeat |
 | ch1_03 swarm puzzle | **§37 P3 再調整済み** — bad(no-guardian)=defeat、baseline 傷つき勝利、double-melee counter が 4 人満血 |
+| ch1_07 finale puzzle | **§43 再調整済み** — baseline/bad/universal=defeat、counter paladin=**victory 650/650 @~111s**。敵 atkScale/resScale 微減（ballista hpScale 0.9→0.86 含む）。プレイヤー `at_ballista` 不要 |
+
+### ch1_07 §43 scale 調整メモ（2026-07-08）
+
+§42 回帰で counter が全滅していた。原因は敵 6 体の総火力・耐久（特に `at_sorcerer` atkScale 1.02、`at_ballista` 高 MaxHP + 遠隔圧）が paladin+cleric sustain を上回り、ranger が ballista を仕留められないこと。
+
+| group | 変更（§42→§43） |
+| ----- | --------------- |
+| enemy `df_paladin` | atkScale 0.85→0.78、resScale 1.0→0.95 |
+| enemy `sp_cleric` / `sp_wardweaver` | atkScale 0.85→0.78 |
+| enemy `at_ballista` | hpScale 0.9→0.86、atkScale 0.86→0.78 |
+| enemy `at_sorcerer` | atkScale 1.02→0.9 |
+| enemy `at_assassin` | atkScale 0.96→0.86 |
+
+quad（調整後）: baseline defeat @106s、bad defeat @53s、universal defeat @35s、counter **victory** 650/650 @111s。
 
 ---
 
