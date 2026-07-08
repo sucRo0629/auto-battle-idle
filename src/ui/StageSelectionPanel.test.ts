@@ -13,6 +13,8 @@ import {
   FIRST_PLAY_GUIDANCE_JA,
   STAGE_DETAIL_FORMATION_HINT_CLASS,
   STAGE_FIRST_PLAY_GUIDANCE_CLASS,
+  STAGE_SELECTION_PANEL_TITLE_CLASS,
+  STAGE_SELECTION_PANEL_TITLE_JA,
   appendStageFormationHintPlate,
 } from './stageDetailDom.ts';
 import { StageSelectionPanel } from './StageSelectionPanel.ts';
@@ -50,8 +52,24 @@ function loadDemoGameDataForTest(): GameData {
   };
 }
 
+describe('StageSelectionPanel title', () => {
+  it('shows stage-selection title at panel top', () => {
+    const gameData = loadDemoGameDataForTest();
+    const host = document.createElement('div');
+
+    const panel = new StageSelectionPanel(host, gameData);
+    const title = host.querySelector(`.${STAGE_SELECTION_PANEL_TITLE_CLASS}`);
+    expect(title?.textContent).toBe(STAGE_SELECTION_PANEL_TITLE_JA);
+    expect(host.querySelector('.stage-selection-panel')?.firstElementChild).toBe(
+      title,
+    );
+
+    panel.destroy();
+  });
+});
+
 describe('StageSelectionPanel first-play guidance', () => {
-  it('shows generic guidance at panel top when showFirstPlayGuidance is true', () => {
+  it('shows generic guidance below title when showFirstPlayGuidance is true', () => {
     const gameData = loadDemoGameDataForTest();
     const host = document.createElement('div');
 
@@ -61,8 +79,8 @@ describe('StageSelectionPanel first-play guidance', () => {
 
     const guidance = host.querySelector(`.${STAGE_FIRST_PLAY_GUIDANCE_CLASS}`);
     expect(guidance?.textContent).toBe(FIRST_PLAY_GUIDANCE_JA);
-    expect(host.querySelector('.stage-selection-panel')?.firstElementChild).toBe(
-      guidance,
+    expect(guidance?.previousElementSibling?.className).toContain(
+      STAGE_SELECTION_PANEL_TITLE_CLASS,
     );
 
     panel.destroy();

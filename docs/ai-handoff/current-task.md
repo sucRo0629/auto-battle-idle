@@ -2115,13 +2115,90 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | `demo_ch1_03` | **多数近接ラッシュ** — 前衛（guardian）必須。bad=no-guardian は defeat。counter=double melee で接触処理・4 人維持 |
 | `demo_ch1_06` | **混成総合試験** — healer 維持 + 前衛役。bad=no-healer defeat。baseline は勝てるが非満血。counter=paladin が **時間・survivor** で sustain 優位 |
 
-### default-answer
-
-**`demo_ch1_01` のみ** — ch1_03 / ch1_06 は default-viable 以下
-
 ### テスト
 
 | コマンド | 結果 |
 | -------- | ---- |
 | `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **12 passed** |
 | `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |
+
+## 38. ステージ選択 UI 文言棚卸し — 順不同選択への最小修正（2026-07-08）
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本・§32/§33/§34 前提 |
+| 2 | `src/ui/StageSelectionPanel.ts` | 一覧・詳細・出撃 UI |
+| 3 | `src/ui/stageDetailDom.ts` | 初回ガイド・敵編成詳細 |
+| 4 | `src/game/StageSelectionScreenHost.ts` | map host 経由の panel mount |
+| 5 | `src/styles/stage-selection-panel.css` | panel レイアウト |
+| 6 | `src/game/GameSession.ts`（Grep） | `mapHost` / `screen: 'map'` 内部呼称 |
+
+**追加参照:** `src/ui/BattleView.ts`（verify 専用 battle log）、`docs/spec/stage-selection-ui.md`
+
+### UI 表示文言の棚卸し（map / next / progress 系）
+
+| 箇所 | 文言 | 判定 |
+| ---- | ---- | ---- |
+| `StageSelectionPanel` | （修正前）画面タイトルなし | **不足** — 「マップ」は無いがハブ名が不明瞭 |
+| `FIRST_PLAY_GUIDANCE_JA` | （修正前）「ステージ情報を見て出撃…」 | **弱い** — 順不同・再挑戦の示唆なし |
+| `aria-label` | 「ステージ一覧」 | **問題なし** |
+| 詳細 | `想定 Lv` / `敵編成` / `出撃` | **問題なし** — 難易度・敵編成が主情報 |
+| 一覧行 | `displayName` のみ（番号・ロック・現在地ラベルなし） | **問題なし** |
+| `currentStageId` 表示 | **なし**（選択ハイライトのみ。進行地点ラベルなし） | **問題なし** |
+| `BattleView.pushLog` | verify ON のみ `Advancing to next stage...` 等 | **体験版非表示**（verify OFF では log 抑止） |
+| `docs/spec/stage-selection-ui.md` | 「マップ一覧」「進行チェーン順」等 | **spec 未改訂**（今回 UI のみ最小修正。spec 全体の用語整理は後続） |
+
+**UI 上の map / next / progress 系ユーザー向け文言:** ステージ選択画面本体には **なし**（verify 専用 battle log に next/previous stage 英語のみ）。
+
+### ステージ一覧の見え方評価
+
+| 観点 | 評価 |
+| ---- | ---- |
+| 一本道マップ感 | **低〜中** — 縦リストが JSON 配列順（ch1_01→07）のため順序連想は残るが、番号・矢印・ロック・「現在地」表示はない |
+| 順不同選択感 | **修正後は改善** — 画面タイトル「ステージ選択」+ ガイドで「挑戦したいステージを選ぶ」「順不同で再挑戦」を明示 |
+| 主情報 | **想定 Lv + 敵編成** が詳細の中心。クリア済み ☆ / 履歴は未実装（将来） |
+
+### 内部名 rename 判断
+
+| 対象 | 判断 | 理由 |
+| ---- | ---- | ---- |
+| `mapHost` / `screen: 'map'` / `.game-shell__map` | **今回見送り** | `GameSession`・`gameScreen.ts`・`menuHost.ts`・wire テスト・CSS・handoff/spec 多数参照。表示文言だけでは一本道連想は解消済み |
+| `openStageSelection()` | 既に stage 寄りの公開 API あり | rename 対象外 |
+| 後続案 | `GameScreen` を `'stageSelection'` に、`mapHost` → `stageSelectionHost` 要素名に段階 rename | Phase 7 整理 or 8 前の refactor タスク |
+
+### 変更（最小 UI 文案）
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/ui/stageDetailDom.ts` | `STAGE_SELECTION_PANEL_TITLE_JA` 追加。`FIRST_PLAY_GUIDANCE_JA` を順不同・再挑戦明示に更新 |
+| `src/ui/StageSelectionPanel.ts` | 画面上部 `h1`「ステージ選択」。コメント map→stage-selection |
+| `src/styles/stage-selection-panel.css` | タイトル用スタイル |
+| `src/ui/StageSelectionPanel.test.ts` | タイトル表示・ガイド位置の期待値更新 |
+| `docs/spec/stage-selection-ui.md` | §2 画面タイトル・初回ガイド 1 行のみ同期 |
+
+**触らなかった:** `mapHost` / `screen: 'map'` rename、`GameSession` / save / `currentStageId`、`stages-demo.json` / class / `enemyGroups`、レイアウト大改修、クリア済み表示
+
+### 修正した文言
+
+| 種別 | 修正前 | 修正後 |
+| ---- | ------ | ------ |
+| 画面タイトル | （なし） | **ステージ選択** |
+| 初回ガイド | ステージ情報を見て出撃し、編成画面で役割を調整してください。戦闘は自動で進みます。 | **挑戦したいステージを選んで出撃し、編成画面で役割を調整してください。順不同で何度でも再挑戦できます。戦闘は自動で進みます。** |
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `StageSelectionPanel.test.ts` | **5 passed** |
+| `stageSelectionWire.test.ts` | **4 passed** |
+| `gameSessionWire.test.ts` | **8 passed** |
+| **合計** | **17 passed** |
+
+### 後続課題（今回やらない）
+
+- `GameScreen` / `mapHost` / `.game-shell__map` の rename
+- `stage-selection-ui.md` 全体の「マップ一覧」→「ステージ選択」用語統一（ロック行・進行チェーン行は体験版実装と乖離）
+- クリア済み ☆ / `stageRecords` 表示（一覧の主情報強化）
+- 一覧の JSON 配列順以外の並び（レイアウト変更はスコープ外）

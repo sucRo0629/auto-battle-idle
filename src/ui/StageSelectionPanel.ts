@@ -4,6 +4,8 @@ import type { GameData, StageDef } from '../battle/types.ts';
 import {
   FIRST_PLAY_GUIDANCE_JA,
   STAGE_FIRST_PLAY_GUIDANCE_CLASS,
+  STAGE_SELECTION_PANEL_TITLE_CLASS,
+  STAGE_SELECTION_PANEL_TITLE_JA,
   fillStageDetailEnemySection,
 } from './stageDetailDom.ts';
 
@@ -13,7 +15,7 @@ export interface StageSelectionPanelCallbacks {
 
 export interface StageSelectionPanelOptions {
   initialStageId?: string;
-  /** verify OFF release flow — generic map guidance (no save / read flag). */
+  /** verify OFF release flow — generic stage-selection guidance (no save / read flag). */
   showFirstPlayGuidance?: boolean;
 }
 
@@ -39,6 +41,11 @@ export class StageSelectionPanel {
 
     this.root = document.createElement('div');
     this.root.className = 'stage-selection-panel';
+
+    const title = document.createElement('h1');
+    title.className = STAGE_SELECTION_PANEL_TITLE_CLASS;
+    title.textContent = STAGE_SELECTION_PANEL_TITLE_JA;
+    this.root.appendChild(title);
 
     if (this.showFirstPlayGuidance) {
       const guidance = document.createElement('p');
