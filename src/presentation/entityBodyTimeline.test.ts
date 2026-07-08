@@ -27,9 +27,9 @@ describe('computeEntityBodyTimeline', () => {
       expect(
         computeEntityBodyTimeline('df_guardian', 'death').hasBodyAtlas,
       ).toBe(true);
-      expect(computeEntityBodyTimeline('df_guardian', 'death').frames).toBe(3);
+      expect(computeEntityBodyTimeline('df_guardian', 'death').frames).toBe(4);
       expect(computeEntityBodyTimeline('df_guardian', 'death').playbackSec).toBe(
-        0.375,
+        0.5,
       );
     } finally {
       __resetEntityAtlasForTest();

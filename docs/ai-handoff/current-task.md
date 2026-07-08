@@ -9,11 +9,11 @@
 ## 2. 作業テーマ
 
 - 作業名: **Phase 7 体験版導線**（M1 demo app flow / first-play guidance）
-- 状態: **Phase 6b 完了**（6b-1〜6b-8）。**Phase 7d〜7g 最小実装済み**（§26〜29）。**§30 で verify OFF main flow 成立を確認**。残タスクは §30「残タスク」
+- 状態: **Phase 6b 完了**（6b-1〜6b-8）。**Phase 7d〜7g 最小実装済み**（§26〜29）。**§30 で verify OFF main flow 成立を確認**。**§45 stageSelect rename 後の総合回帰は §46 で確認済み**。残タスクは §30「残タスク」
 - **2026-07 roadmap 改定:** [phase-roadmap.md](../plans/phase-roadmap.md) — 旧 6d → **Phase 7**（app flow）、新 **Phase 8**（presentation）、旧 Electron → **Phase 9**（packaging）。本編は **Phase 10** へ
 - **Phase 7 目的:** M1 体験版として、**起動から `demo_ch1_07` クリアまで迷わず進めるアプリ導線**を作る（配布 zip は Phase 9）
 - **現状画面:** verify OFF 起動は **ステージ選択**（`StageSelectionPanel`；内部 screen `'stageSelect'` / `stageSelectHost`）→ 編成（`MetaMenuOverlay`）→ 戦闘。**未実装:** トップ / リザルト / 体験版終了
-- **用語（ユーザー向け）:** 画面表示・spec・ガイド文案は **「ステージ選択」** に統一済み。**内部名 rename 済み（§45）:** `stageSelectHost` / `screen: 'stageSelect'` / `.game-shell__stage-select`
+- **用語（ユーザー向け）:** 画面表示・spec・ガイド文案は **「ステージ選択」** に統一済み。**内部名 rename 済み（§45）:** `stageSelectHost` / `screen: 'stageSelect'` / `.game-shell__stage-select`（§46 で旧名残存なし再確認）
 - **並行・未達:** キャラ画像（並行作業中）、VFX 未実装、効果音未実装
 - **当面方針:** 新規ソース実装は止め、Phase 7 整理後は **グラフィック準備優先**。新規画面実装はグラフィック方針整理後に再開
 - **verify OFF 勝利時 currentStageId 維持済み（§33）**
@@ -2923,3 +2923,141 @@ counter は `configurePaladinTankParty`（`df_paladin`）— player `at_ballista
 ### 触らなかった
 
 save schema / `currentStageId` / `clearedStageIds` ロジック、UI 表示文言、`stages-demo.json` / class / `enemyGroups`、レイアウト大改修
+
+---
+
+## 46. §45 stageSelect rename 後 総合回帰確認（2026-07-08）
+
+**方針:** テスト・確認・docs 更新のみ。production / save / balance / UI ロジックは未変更。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本（§45） |
+| 2 | `src/game/gameScreen.ts` | `GameScreen` = `'stageSelect'` |
+| 3 | `src/game/GameSession.ts` | `stageSelectHost` / 勝利・敗北導線 |
+| 4 | `src/game/StageSelectionScreenHost.ts` | host 配線 |
+| 5 | `src/game/gameSessionWire.test.ts` | verify OFF/ON wire |
+| 6 | `src/styles/game-shell.css` | `.game-shell__stage-select` |
+
+### 実行テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm test -- src/game/gameSessionWire.test.ts src/game/stageSelectionWire.test.ts src/ui/StageSelectionPanel.test.ts` | **20 passed** |
+| `npm test -- src/progression/victoryRewards.unlock.test.ts src/save/saveManager.clearedStageIds.test.ts src/progression/stageProgression.test.ts` | **15 passed** |
+| `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.smoke.test.ts src/battle/demoStageBalance.puzzle.test.ts` | **20 passed**（smoke 8 + puzzle 12）。vitest worker `onTaskUpdate` timeout の unhandled error 1 件（インフラ警告のみ・§44 と同様） |
+
+### build
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm run build`（`tsc && vite build`） | **fail** — 既存の広い `tsc` 型エラー（test 含む）。`GameSession` / `gameScreen` / `StageSelection*` / stageSelect 関連の tsc エラーは **なし**（§6b-4 時点から `npm run build` は同様に fail） |
+| `npm run build:demo` | **OK**（vite build） |
+| `npm run build:full` | **OK**（vite build） |
+
+### 確認項目
+
+| # | 項目 | 結果 |
+| - | ---- | ---- |
+| 1 | verify OFF 起動 → ステージ選択 → 出撃 → 編成 → 戦闘 → 勝利 → ステージ選択復帰 | **OK** — `gameSessionWire` 8/8（`stageSelect` 起動・sortie・勝利復帰） |
+| 2 | verify OFF 敗北 → rollback なし → 同 stage 編成復帰 | **OK** — defeat→formation、`currentStageId` 維持 |
+| 3 | `clearedStageIds` / クリア済み表示 / 再挑戦 | **OK** — unlock/save/panel/wire。クリア済みでも出撃ボタン有効 |
+| 4 | verify ON Debug 勝利 next / 敗北 previous / loopStageId | **OK** — `gameSessionWire` verify ON 3 件 |
+| 5 | demo smoke / puzzle | smoke **8/8**、puzzle **12/12** |
+| 6 | 旧 internal 名 `mapHost` / `game-shell__map` / `screen: 'map'` / `setGameScreen('map')` / `onMap` | **src/ に残存なし**（`formation.map` の Array#map のみヒット） |
+| 7 | GameScreen / GameSession / StageSelectionScreenHost 型崩れ | **なし** |
+
+### verify OFF 勝利・敗北
+
+- 勝利: `advanceCurrentStage: false` → `currentStageId` 維持 → `setGameScreen('stageSelect')`。`clearedStageIds` に stageId merge
+- 敗北: verify OFF は rollback せず `restartBattle` + formation 開く
+
+### verify ON Debug
+
+起動 battle 維持。勝利で次 stage、敗北で previous rollback。loopStageId 時は defeat ロールバック停止（既存ロジック維持）。
+
+### 今回の変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `docs/ai-handoff/current-task.md` | §2 追記 + 本 §46 |
+
+### 触らなかった
+
+class / stage / `enemyGroups`、demo balance、save schema、`currentStageId` / `clearedStageIds` ロジック、UI レイアウト、`stageRecords` / `selectedStageId`、production コード全般
+
+### 残タスク
+
+- [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
+- [ ] 7h 体験版終了画面（`demo_ch1_07` クリア後）
+
+---
+
+## 46. §45 stageSelect rename 後 総合回帰確認（2026-07-08）
+
+**方針:** テスト・確認・docs 更新のみ。production / save / balance / UI ロジックは未変更。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本（§45） |
+| 2 | `src/game/gameScreen.ts` | `GameScreen` = `'stageSelect'` |
+| 3 | `src/game/GameSession.ts` | `stageSelectHost` / 勝利・敗北導線 |
+| 4 | `src/game/StageSelectionScreenHost.ts` | host 配線 |
+| 5 | `src/game/gameSessionWire.test.ts` | verify OFF/ON wire |
+| 6 | `src/styles/game-shell.css` | `.game-shell__stage-select` |
+
+### 実行テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm test -- src/game/gameSessionWire.test.ts src/game/stageSelectionWire.test.ts src/ui/StageSelectionPanel.test.ts` | **20 passed** |
+| `npm test -- src/progression/victoryRewards.unlock.test.ts src/save/saveManager.clearedStageIds.test.ts src/progression/stageProgression.test.ts` | **15 passed** |
+| `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.smoke.test.ts src/battle/demoStageBalance.puzzle.test.ts` | **20 passed**（smoke 8 + puzzle 12）。vitest worker `onTaskUpdate` timeout の unhandled error 1 件（インフラ警告のみ・§44 と同様） |
+
+### build
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `npm run build`（`tsc && vite build`） | **fail** — 既存の広い `tsc` 型エラー（test 含む）。`GameSession` / `gameScreen` / `StageSelection*` / stageSelect 関連の tsc エラーは **なし**（§6b-4 時点から `npm run build` は同様に fail） |
+| `npm run build:demo` | **OK**（vite build） |
+| `npm run build:full` | **OK**（vite build） |
+
+### 確認項目
+
+| # | 項目 | 結果 |
+| - | ---- | ---- |
+| 1 | verify OFF 起動 → ステージ選択 → 出撃 → 編成 → 戦闘 → 勝利 → ステージ選択復帰 | **OK** — `gameSessionWire` 8/8（`stageSelect` 起動・sortie・勝利復帰） |
+| 2 | verify OFF 敗北 → rollback なし → 同 stage 編成復帰 | **OK** — defeat→formation、`currentStageId` 維持 |
+| 3 | `clearedStageIds` / クリア済み表示 / 再挑戦 | **OK** — unlock/save/panel/wire。クリア済みでも出撃ボタン有効 |
+| 4 | verify ON Debug 勝利 next / 敗北 previous / loopStageId | **OK** — `gameSessionWire` verify ON 3 件 |
+| 5 | demo smoke / puzzle | smoke **8/8**、puzzle **12/12** |
+| 6 | 旧 internal 名 `mapHost` / `game-shell__map` / `screen: 'map'` / `setGameScreen('map')` / `onMap` | **src/ に残存なし**（`formation.map` の Array#map のみヒット） |
+| 7 | GameScreen / GameSession / StageSelectionScreenHost 型崩れ | **なし** |
+
+### verify OFF 勝利・敗北
+
+- 勝利: `advanceCurrentStage: false` → `currentStageId` 維持 → `setGameScreen('stageSelect')`。`clearedStageIds` に stageId merge
+- 敗北: verify OFF は rollback せず `restartBattle` + formation 開く
+
+### verify ON Debug
+
+起動 battle 維持。勝利で次 stage、敗北で previous rollback。loopStageId 時は defeat ロールバック停止（既存ロジック維持）。
+
+### 今回の変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `docs/ai-handoff/current-task.md` | §2 追記 + 本 §46 |
+
+### 触らなかった
+
+class / stage / `enemyGroups`、demo balance、save schema、`currentStageId` / `clearedStageIds` ロジック、UI レイアウト、`stageRecords` / `selectedStageId`、production コード全般
+
+### 残タスク
+
+- [ ] （後続）`stageRecords` + 計測 + リザルト 2 枠（7f）
+- [ ] 7h 体験版終了画面（`demo_ch1_07` クリア後）

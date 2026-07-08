@@ -43,7 +43,7 @@ describe('entityAtlas layout', () => {
   });
 
   it('clamps frame index to anim length', () => {
-    expect(getEntityFrameRect('any', 'death', 99).clampedFrame).toBe(2);
+    expect(getEntityFrameRect('any', 'death', 99).clampedFrame).toBe(3);
     expect(getEntityFrameRect('any', 'idle', -3).clampedFrame).toBe(0);
   });
 
@@ -54,7 +54,7 @@ describe('entityAtlas layout', () => {
       loop: true,
     });
     expect(getEntityAnimSpriteDef('death')).toEqual({
-      frames: 3,
+      frames: 4,
       fps: 8,
       loop: false,
     });

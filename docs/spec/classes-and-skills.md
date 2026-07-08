@@ -1691,7 +1691,7 @@ Conductor は自身でダメージを与えるキャスターではない。
 ### entity 本体（idle / move / death）
 
 - **1 枚 PNG / entity:** `sheets/bodies/{classId|enemyId}.png`
-- **レイアウト正本:** `data/entityAnimLayout.json` — 味方・敵 **共通**（idle 4 / move 4 / death 3 コマ、各 48×48、fps 8）
+- **レイアウト正本:** `data/entityAnimLayout.json` — 味方・敵 **共通**（idle 4 / move 4 / death 4 コマ、各 48×48、fps 8）
 - **attack は entity に含めない** — 振り・弓引き等はすべてスキル strip
 - **実装:** `src/render/entityAtlas.ts`（layout 読込・矩形計算・body preload）、`drawSpriteFrameAtFootAnchor`（bodies atlas 優先）。未配置時は旧 `sheets/{id}/{anim}.png` または静止画フォールバック
 
