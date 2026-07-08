@@ -1,5 +1,15 @@
 [
   {
+    "id": "at_assassin_passive_1",
+    "name": "影の歩み",
+    "effect": "buff",
+    "buffSubKind": "evasion",
+    "chance": 0.25,
+    "buffTargetRule": {
+      "kind": "self"
+    }
+  },
+  {
     "id": "at_assassin_passive_2",
     "name": "薄命狩り",
     "effect": "targetRuleOverride",
@@ -8,16 +18,6 @@
       "side": "enemy",
       "stat": "hp",
       "order": "lowest"
-    }
-  },
-  {
-    "id": "at_assassin_passive_1",
-    "name": "影の歩み",
-    "effect": "buff",
-    "buffSubKind": "evasion",
-    "chance": 0.2,
-    "buffTargetRule": {
-      "kind": "self"
     }
   },
   {

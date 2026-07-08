@@ -1223,7 +1223,7 @@ Targeted Kill。高 DEF 前衛・重装敵の**防御突破**担当。DEF を下
 
 背後侵入系 move は、処理対象へ一時アクセスするためのものであり、Defender 的な前線保持を意味しない。rear assault 中の立ち位置は Kill 成立のためのアクセス状態として扱い、通常の front line ownership と分けて考える。同期間は formation / overlap / march follow の基準からも除外する（[battle-field.md](battle-field.md) の rear assault 節）。
 
-**影の刃（`at_assassin_active_2`）:** effect 順は evasion buff → 敵対 `toAnchor`（`anchorOffsetPx > 0`）→ damage。専用 `engage` 帰還 step は持たない。MoveAnchor は**敵前衛**（プレイヤー寄り＝`getEnemyContactX` / min `battleX`。AttackTarget の battle-line nearest＝奥＝max とは別）。シーケンス完了後は背後で接触線追従（`contact + anchorOffsetPx`）し、反転向きで攻撃継続（[battle-field.md](battle-field.md) rear assault 節）。
+**影の刃（`at_assassin_active_2`）:** effect 順は evasion buff → 敵対 `toAnchor`（`anchorOffsetPx > 0`）→ damage。専用 `engage` 帰還 step は持たない。MoveAnchor の distance nearest 既定は**敵前衛**（min `battleX`）だが、薄命狩り（`targetRuleOverride`）習得後は低 HP 敵へ寄せる（後衛も含む）。シーケンス完了後は**いま背後にいる敵**へ追従（`flank + anchorOffsetPx`。前衛 contact 固定で左引きしない）し、反転向きで攻撃継続（[battle-field.md](battle-field.md) rear assault 節）。
 
 ---
 
@@ -1796,7 +1796,7 @@ flowchart TD
 
 分類用途では `RANGED_ATTACK_MIN_PX`（100）を使う。`traits.rangePx >= RANGED_ATTACK_MIN_PX` で遠隔攻撃（`rangedAttackingEnemy`）とし、`traits.damageType === 'magic'` で `magicAttackingEnemy`。
 
-距離用途では [battle-field.md §2.5](./battle-field.md#25-攻撃位置move新軸) の `effectiveRangePx` 共通式を使う。`0〜MELEE_RANGE_MAX_PX` は近接帯（slash VFX）で、停止位置や移動量の計算に 100px 境界は使わない。
+距離用途では [battle-field.md §2.5](./battle-field.md#25-攻撃位置move新軸) の `effectiveRangePx` 共通式を使う。`0〜MELEE_RANGE_MAX_PX` は近接帯（slash VFX）で、停止位置や移動量の計算に 100px 境界は使わない。敵対接近・攻撃の実効射程は `engagedMinBodyGap()` を下回らない（宣言 `rangePx` が短い双刃士などでも体幅より手前で停止）。隊形順・帯分類は raw `traits.rangePx`。
 
 **クラス `rangePx`（正本は `classes.json`。以下は転記確認用）：**
 

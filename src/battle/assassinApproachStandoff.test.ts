@@ -81,7 +81,7 @@ describe('assassin approach standoff', () => {
     const enemy = buildMeleeEnemy(400);
     const assassin = buildAssassin(395, gameData);
     const rangePx = resolveApproachRangePx(assassin, gameData);
-    expect(rangePx).toBe(25);
+    expect(rangePx).toBe(32);
 
     const stopX = resolveApproachAttackBattleX(
       assassin,
@@ -116,10 +116,9 @@ describe('assassin approach standoff', () => {
     ).get(assassin.id)!;
 
     assassin.battleX = approachX;
-    expect(isWithinSkillRange(assassin, enemy, assassin.traits.rangePx)).toBe(
-      true,
-    );
-    expect(enemy.battleX - assassin.battleX).toBe(assassin.traits.rangePx);
+    const stopGap = enemy.battleX - assassin.battleX;
+    expect(stopGap).toBe(32);
+    expect(isWithinSkillRange(assassin, enemy, stopGap)).toBe(true);
   });
 });
 
@@ -165,7 +164,8 @@ describe('enemy approach standoff', () => {
       player.battleX,
       gameData,
     );
-    expect(stopX).toBe(player.battleX + 30);
+    // hostile engage floors to engagedMinBodyGap (SPRITE_WIDTH)
+    expect(stopX).toBe(player.battleX + 32);
     expect(stopX).toBeGreaterThan(enemy.battleX);
 
     const capped = capEngagedEnemyApproachBattleX(enemy, stopX);

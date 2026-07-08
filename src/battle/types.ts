@@ -448,7 +448,8 @@ export type StatusEffectStat =
   | "atk"
   | "def"
   | "res"
-  | "attackSpeed";
+  | "attackSpeed"
+  | "moveSpeed";
 
 /** 被ダメージ倍率（StatusEffectStat とは別系統） */
 export type DamageTakenStat = "damageTaken";
@@ -561,6 +562,7 @@ const STATUS_EFFECT_STAT_VALUES: readonly StatusEffectStat[] = [
   "def",
   "res",
   "attackSpeed",
+  "moveSpeed",
 ];
 
 const STAT_BUFF_TARGET_VALUES: readonly StatBuffTarget[] = [
@@ -643,8 +645,9 @@ export interface CombatantState extends Combatant {
   /** runtime-only: 背後滞在など一時アクセス。`isPlayerRearAssaultAccess` battle context の入力 */
   accessState?: CombatantAccessState;
   /**
-   * runtime-only: rear assault 中の接触線追従オフセット（px）。
-   * `getEnemyContactX() + rearAssaultHoldOffsetPx` を背後停止目標にする（絶対 battleX 固定はしない）。
+   * runtime-only: rear assault 中の背後追従オフセット（px）。
+   * いま背後にいる敵（なければ `getEnemyContactX`）+ `rearAssaultHoldOffsetPx` を背後停止目標にする
+   * （絶対 battleX 固定はしない）。
    */
   rearAssaultHoldOffsetPx?: number;
   /** periodicDispel: Wave 内の残り発動回数（passiveId → 残数） */

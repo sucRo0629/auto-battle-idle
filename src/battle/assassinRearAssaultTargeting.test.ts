@@ -207,4 +207,41 @@ describe('assassin rear assault targeting', () => {
     expect(approachX).toBe(192);
     expect(approachX - contactEnemy.battleX).toBe(32);
   });
+
+  it('holds behind backline flank while frontline contact remains', () => {
+    // 薄命狩り等で後衛背後へ着いたあと、前衛 contact+offset へ左引きしない。
+    const contactEnemy = buildEnemy('contact', 140, 500, 500);
+    const rearEnemy = buildEnemy('rear', 220, 20, 100);
+    const tank = buildTankAlly(115);
+    const assassin = buildAssassinWithPassives(gameData);
+    const behindRearX = rearEnemy.battleX + 32;
+    assassin.battleX = behindRearX;
+    setPlayerRearAssaultAccess(assassin, 32);
+
+    const players = [assassin, tank];
+    const enemies = [contactEnemy, rearEnemy];
+
+    const approachX = resolveAllPlayerApproachBattleX(
+      players,
+      enemies,
+      gameData,
+    ).get(assassin.id)!;
+
+    expect(approachX).toBe(behindRearX);
+    expect(approachX).toBeGreaterThan(contactEnemy.battleX + 32);
+    expect(
+      shouldSkipEngagedAutoApproach(assassin, players, enemies, gameData, {
+        approachTargetX: approachX,
+      }),
+    ).toBe(true);
+
+    const attackTarget = resolvePlayerAttackTargetEnemy(
+      assassin,
+      players,
+      enemies,
+      gameData,
+    );
+    expect(attackTarget?.id).toBe('rear');
+    expect(resolveFacingSign(assassin, attackTarget)).toBe(-1);
+  });
 });

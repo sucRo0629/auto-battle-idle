@@ -61,7 +61,7 @@
 - **`battleX` が唯一の横位置正本。** ロジックと描画は同じ値を参照する
 - 隊形スペーシングは `battleX` に直接反映（§3.3 スロット ideal を battle 座標として使用）
 - 攻撃・回復・自動接近・engage move の距離計算は **`effectiveRangePx` 共通式** を使う。近接/遠隔で分岐しない
-- `engagedMinBodyGap()` / `PLAYER_VISUAL_MIN_GAP` は overlap 解消専用。射程停止や range 加算には使わない
+- `engagedMinBodyGap()` / `PLAYER_VISUAL_MIN_GAP` は overlap 解消と、敵対 `effectiveRangePx` の下限に使う。宣言射程への加算はしない（§2.5）
 - `screenX` は `battleX` の別名として扱う。`battleCamera.ts` 互換層は持たない
 - `src/render` は `battleX`（= `screenX`）を描画座標として参照し、戦闘ルールを持たない
 
@@ -93,7 +93,10 @@ verify/debug mode の `battleX debug` 表は、tick 内の `battleX` 更新内�
 ### 2.5 攻撃位置・move（新軸）
 
 ```
-effectiveRangePx = effect.range ?? actor.traits.rangePx
+declaredRangePx = effect.range ?? actor.traits.rangePx
+effectiveRangePx =
+  allyHealOrBuff ? max(declaredRangePx, partyDepth)
+  : max(declaredRangePx, engagedMinBodyGap())   // resolveHostileEngageRangePx
 ```
 
 攻撃・回復・自動接近・engage move はこの共通式で扱う。
@@ -101,6 +104,8 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 - 射程内: `Math.abs(getBattleX(actor) - getBattleX(target)) <= effectiveRangePx`（`isWithinSkillRange`。敵対・味方問わず 1D 絶対距離）
 - 停止 `battleX`（プレイヤー → 対象）: `target.battleX - effectiveRangePx`
 - 停止 `battleX`（敵 → 対象）: `target.battleX + effectiveRangePx`
+- **敵対接近・攻撃**の `effectiveRangePx` は `engagedMinBodyGap()`（≈ `SPRITE_WIDTH`）を下回らない。短射程クラス（例: 双刃士 `rangePx: 25`）でも体幅より手前で止まる。**隊形順・近接/遠隔帯分類**は raw `traits.rangePx` のまま（`resolveFormationRangePx`）
+- これは body gap の**加算**ではなく下限。L10 の「射程へ加算しない」と両立する
 
 ### 2.5.1 戦闘向き（facing）
 
@@ -137,7 +142,7 @@ effectiveRangePx = effect.range ?? actor.traits.rangePx
 | `PARTY_FORMATION_SLOT_SPACING`（48） | 味方隊列スロット間隔（広い戦場で奥行きを見せる） |
 | `SPAWN_X_MAX`                        | 敵 `spawnX` 上限（`COMBAT_SAFE_RIGHT - ENEMY_SPAWN_ORIGIN_X`） |
 | `BATTLE_FIELD_SPRITE_SCALE`（2）     | 戦闘フィールド描画スケール（32px スプライトを 2 倍表示。`battleX` は 1:1 のまま）                               |
-| `PLAYER_VISUAL_MIN_GAP`              | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`）。射程加算には使わない                               |
+| `PLAYER_VISUAL_MIN_GAP`              | プレイヤー overlap 解消（≈ `SPRITE_WIDTH + bodyClearance`）。射程への加算はしない。敵対 `effectiveRangePx` 下限は `engagedMinBodyGap()`（§2.5） |
 | `CONFIGURABLE_RANGE_PX_MAX`          | `traits.rangePx` / `effect.range` の設定上限（`COMBAT_SAFE_RIGHT - PARTY_FORMATION_LEFT_ANCHOR`）                        |
 | `MOVE_PX_PER_SEC`（120）             | 1 秒あたりの戦闘移動量（px）。進軍・接敵接近・PartyDeploy・隊形復帰に使用。Victory 退場は `MOVE_PX_PER_SEC × 2` |
 
@@ -326,7 +331,7 @@ Canvas 2D の描画順（先に描いた方が下層）で重なりを決める�
 | ---------------- | ------------------------------ | --------------------------------------------------------------------------------------------- |
 | `ChaseTarget`    | 自動接近で追う相手             | 敵は [combat.md](combat.md) §敵の単体ターゲット選定、味方は target spec / target rule |
 | `AttackTarget`   | 射程内停止と実際の攻撃対象     | 敵は `ChaseTarget` の射程内判定。味方は同じ target spec 系の attack プール                     |
-| `MoveAnchor`     | スキル `move` の到達基準       | 通常は使用者との `battleX` 距離。敵対 rear `toAnchor`（正 `anchorOffsetPx`）は**敵前衛＝プレイヤー寄り**（`getEnemyContactX` = min `battleX`）。AttackTarget の battle-line `nearest`（奥＝max）とは別                                                                 |
+| `MoveAnchor`     | スキル `move` の到達基準       | 通常は使用者との `battleX` 距離。敵対 rear `toAnchor`（正 `anchorOffsetPx`）の distance nearest 既定は**敵前衛＝プレイヤー寄り**（min `battleX`）。`targetRuleOverride`（例: 双刃士 薄命狩り）が enemy scope で効くときは MoveAnchor もその選定に従う。AttackTarget の battle-line `nearest`（奥＝max）とは別                                                                 |
 | `FrontlineOwner` | 現在その戦線を保持している味方 | `resolvePlayerFrontlineOwners`（`combatPosition.ts`）。rear assault アクセス中は含めない      |
 | `DisplayAnchor`  | 遠隔敵の表示凍結・VFX 基準     | 描画専用。`engagedDisplayAnchorPlayerId`（`battleDisplay.ts` helper）。戦闘判定へ逆流させない |
 
@@ -351,7 +356,7 @@ rear assault 中の味方は `applyFormationMarchFollow`・`resolveEngagedFormat
 
 立てる条件: 味方 actor が敵対 anchor へ `moveMode: "toAnchor"` かつ `anchorOffsetPx > 0` の move を適用したとき（効果形状で判定）。解除: 非 rear の move 適用時、**`shouldClearRearAssaultAccess`（peer frontline 付近へ戻ったとき）**、スキルシーケンス完了時（同条件）、死亡・wave reset。`waitAfterSec` 中も move 完了だけでは解除しない。敵側のプレイヤー背後 move は本 spec のスコープ外。
 
-**背後侵入後の戦闘:** 専用 `engage` 帰還 step に依存しない。シーケンス完了後も **敵接触線（`getEnemyContactX` = 生存敵 min `battleX`＝プレイヤー寄り前衛）より奥にいる間は戦線へ戻らず**、接近目標を `resolvePlayerRearAssaultHoldBattleX`（`contact + rearAssaultHoldOffsetPx`、既定は move の `anchorOffsetPx`）で接触線に追従する。絶対 `battleX` 固定は敵左進軍でスプライト食い込みになるため禁止。`resolvePlayerRearAssaultAttackRangePx` で接触線までの奥行きを攻撃射程に足し、`resolveFacingSign` で反転向き攻撃・描画する。射程内に入れば `shouldSkipEngagedAutoApproach` で停止し攻撃継続。編成復帰は peer frontline 付近へ戻ったとき（`shouldClearRearAssaultAccess`）または wave reset。
+**背後侵入後の戦闘:** 専用 `engage` 帰還 step に依存しない。シーケンス完了後も **敵接触線（`getEnemyContactX` = 生存敵 min `battleX`＝プレイヤー寄り前衛）より奥にいる間は戦線へ戻らず**、接近目標を `resolvePlayerRearAssaultHoldBattleX`（**いま背後にいる敵**＝`battleX < player` の生存敵のうち最奥 + `rearAssaultHoldOffsetPx`、既定は move の `anchorOffsetPx`。背後敵が居なければ contact フォールバック）で追従する。前衛 contact 固定だと後衛背後から contact 側へ左引きになるため禁止。絶対 `battleX` 固定も敵左進軍でスプライト食い込みになるため禁止。`resolvePlayerRearAssaultAttackRangePx` で接触線までの奥行きを攻撃射程に足し、`resolveFacingSign` で反転向き攻撃・描画する。射程内に入れば `shouldSkipEngagedAutoApproach` で停止し攻撃継続。編成復帰は peer frontline 付近へ戻ったとき（`shouldClearRearAssaultAccess`）または wave reset。
 
 **停止 X：** chase 対象の `battleX` に対し `resolveApproachAttackBattleX`（§2.5 と同じ射程式）。敵は `capEngagedEnemyApproachBattleX` により左（`battleX` 減少）のみ。味方 defender 専用の contact 停止 resolver は持たない。
 
@@ -463,7 +468,7 @@ target / contact / frontline owner は **座標 snap の理由ではない**。a
 | L7         | モジュール分割 + 一方向 import                                                                             |
 | L8         | 軸反転を座標系として一括適用                                                                               |
 | L9         | layout snapshot 単体テストへ置換                                                                           |
-| L10        | overlap は `resolveOverlaps` のみ。`engagedMinBodyGap()` / `PLAYER_VISUAL_MIN_GAP` は射程加算に使わない    |
+| L10        | overlap は `resolveOverlaps` のみ。`engagedMinBodyGap()` を射程へ**加算**しない。敵対 `effectiveRangePx` の**下限**には使う（§2.5）    |
 
 **廃止：** L1（毎 tick layout tick）、L3（visual 双方向補間を approach 正本へ統合）、接敵 layout 収束タイマー（`engagedEnemyLayoutTargets`）、`engageStandoff.ts` 等の未使用 helper。
 

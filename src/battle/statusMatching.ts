@@ -17,6 +17,7 @@ const STAT_TAGS = new Set<StatBuffTarget>([
   'res',
   'damageTaken',
   'attackSpeed',
+  'moveSpeed',
 ]);
 
 export function isDebuffFilterTag(value: string): value is DebuffFilterTag {

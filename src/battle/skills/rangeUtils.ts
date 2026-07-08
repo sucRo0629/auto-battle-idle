@@ -1,6 +1,7 @@
 import type { CombatantState, SkillEffectDef, TargetSpec } from '../types.ts';
 import { getBattleX } from '../combatPosition.ts';
 import { defaultFacingSign } from '../combatFacing.ts';
+import { engagedMinBodyGap } from '../battleConstants.ts';
 import { partyFormationDepthPx } from '../partyFormation.ts';
 import {
   getEffectTarget,
@@ -8,6 +9,14 @@ import {
   isMultiTargetSpec,
   targetSpecFaction,
 } from './targetSpec.ts';
+
+/**
+ * 敵対接近・攻撃の実効射程。宣言値を footprint（`engagedMinBodyGap`）未満にしない。
+ * 隊形順・分類の正本は raw `traits.rangePx` のまま（加算ではなく下限）。
+ */
+export function resolveHostileEngageRangePx(declaredRangePx: number): number {
+  return Math.max(declaredRangePx, engagedMinBodyGap());
+}
 
 /** 味方→敵 / 敵→味方の 1D 距離（px） */
 export function battleDistance(
@@ -71,7 +80,7 @@ function isAllyTargetedBuffEffect(
   return targetSpecFaction(spec, actor) === 'ally';
 }
 
-/** 味方回復はパーティ奥行きまで届くよう射程を底上げ */
+/** 味方回復はパーティ奥行きまで届くよう射程を底上げ。それ以外は body gap 下限 */
 export function resolveSkillRangePx(
   actor: CombatantState,
   effect: Pick<SkillEffectDef, 'range' | 'type' | 'target' | 'targetRule'>,
@@ -79,15 +88,15 @@ export function resolveSkillRangePx(
 ): number {
   const base = effect.range ?? actor.traits.rangePx;
   if (
-    !isAllyTargetedHealEffect(effect, actor) &&
-    !isAllyTargetedBuffEffect(effect, actor)
+    isAllyTargetedHealEffect(effect, actor) ||
+    isAllyTargetedBuffEffect(effect, actor)
   ) {
-    return base;
+    const partyDepth = partyFormationDepthPx(
+      Math.max(1, livingAllyCount),
+    );
+    return Math.max(base, partyDepth);
   }
-  const partyDepth = partyFormationDepthPx(
-    Math.max(1, livingAllyCount),
-  );
-  return Math.max(base, partyDepth);
+  return resolveHostileEngageRangePx(base);
 }
 
 export function getAttackablePool(

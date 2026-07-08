@@ -20,7 +20,7 @@
         },
         "targetShape": "single",
         "hitCount": 2,
-        "hitDurationSec": 0.2
+        "hitDurationSec": 0.1
       }
     ]
   },
@@ -29,7 +29,7 @@
     "name": "引き裂き",
     "trigger": {
       "kind": "basicAttackCount",
-      "value": 6
+      "value": 5
     },
     "effect": [
       {
@@ -37,21 +37,13 @@
         "damageType": "physical",
         "amount": {
           "kind": "atkBased",
-          "atkScale": 1
+          "atkScale": 0.5
         },
         "targetShape": "single",
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        }
+        "hitCount": 2,
+        "hitDurationSec": 0.1
       },
       {
-        "target": {
-          "kind": "distance",
-          "side": "enemy",
-          "order": "nearest"
-        },
         "type": "debuff",
         "debuffSubKind": "dot",
         "dotFlavor": "bleed",
@@ -62,41 +54,36 @@
         "durationSec": 5,
         "amount": {
           "kind": "atkBased",
-          "atkScale": 0.1
+          "atkScale": 0.2
         },
         "damageType": "physical"
       }
     ],
     "vfx": {
       "enabled": true
-    }
+    },
+    "target": {
+      "kind": "distance",
+      "side": "enemy",
+      "order": "nearest"
+    },
+    "targetShape": "single"
   },
   {
     "id": "at_assassin_active_2",
     "name": "影の刃",
     "trigger": {
       "kind": "basicAttackCount",
-      "value": 10
+      "value": 9
     },
     "effect": [
-      {
-        "target": {
-          "kind": "self"
-        },
-        "type": "buff",
-        "buffSubKind": "evasion",
-        "buffStat": "atk",
-        "buffMultiplier": 1.2,
-        "buffDurationSec": 1.5,
-        "chance": 1
-      },
       {
         "type": "move",
         "moveMode": "toAnchor",
         "moveDurationSec": 0.2,
         "range": 150,
-        "anchorOffsetPx": 32,
-        "waitAfterSec": 0.2
+        "anchorOffsetPx": 42,
+        "waitAfterSec": 0.1
       },
       {
         "type": "damage",
@@ -121,7 +108,7 @@
     "vfx": {
       "enabled": true
     },
-    "useDurationSec": 2,
+    "useDurationSec": 0.7,
     "target": {
       "kind": "distance",
       "side": "enemy",

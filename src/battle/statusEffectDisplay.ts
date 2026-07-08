@@ -6,6 +6,7 @@ export type StatusDisplayCategory =
   | "def"
   | "res"
   | "attackSpeed"
+  | "moveSpeed"
   | "damageReduction"
   | "damageIncrease"
   | "hot"
@@ -44,6 +45,7 @@ export const STATUS_BADGE_SLOT_ORDER: StatusDisplayCategory[] = [
   "def",
   "res",
   "attackSpeed",
+  "moveSpeed",
   "damageReduction",
   "damageIncrease",
   "hot",
@@ -180,7 +182,7 @@ function effectKindFromEffectiveStat(
 function statusEffectBadgeForStat(
   effect: StatusEffect,
   base: number,
-  category: "hp" | "atk" | "def" | "res" | "attackSpeed"
+  category: "hp" | "atk" | "def" | "res" | "attackSpeed" | "moveSpeed"
 ): StatusEffectBadgeDisplay | null {
   const agg = aggregateStatEffects([effect], category);
   const kind = effectKindFromEffectiveStat(
@@ -414,6 +416,9 @@ function statusEffectBadgeForEffect(
   if (effect.stat === "attackSpeed") {
     return statusEffectBadgeForStat(effect, 1, "attackSpeed");
   }
+  if (effect.stat === "moveSpeed") {
+    return statusEffectBadgeForStat(effect, 1, "moveSpeed");
+  }
   if (effect.stat === "damageTaken") {
     return statusEffectBadgeForDamageTaken(effect);
   }
@@ -535,6 +540,9 @@ function effectsForCategory(
   }
   if (category === "attackSpeed") {
     return effects.filter((effect) => effect.stat === "attackSpeed");
+  }
+  if (category === "moveSpeed") {
+    return effects.filter((effect) => effect.stat === "moveSpeed");
   }
   if (category === "damageReduction" || category === "damageIncrease") {
     return effects.filter((effect) => effect.stat === "damageTaken");
@@ -774,6 +782,9 @@ export function aggregateStatStatusEffects(
     1
   );
   if (attackSpeedBadge) result.push(attackSpeedBadge);
+
+  const moveSpeedBadge = aggregateStatCategory(displayEffects, "moveSpeed", 1);
+  if (moveSpeedBadge) result.push(moveSpeedBadge);
 
   const damageTakenBadge = aggregateDamageTakenCategory(displayEffects);
   if (damageTakenBadge) result.push(damageTakenBadge);

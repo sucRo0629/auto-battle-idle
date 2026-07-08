@@ -4,6 +4,7 @@ import {
   BATTLE_ENEMY_VISIBLE_MAX_X,
   ENEMY_SPAWN_ORIGIN_X,
   SPRITE_GAP,
+  SPRITE_WIDTH,
   enemyRangedRearGap,
   resolvePartyDeployTravelPx,
 } from './battleConstants.ts';
@@ -153,14 +154,15 @@ describe('combatPosition', () => {
     expect(enemy.battleX).toBe(265);
   });
 
-  it('resolves melee range 0 and spear range 30', () => {
+  it('resolves melee range 0 and spear range floored to body gap', () => {
     const sword = mockCombatant({ id: 'sword', cooldowns: [{ skillId: 'basic', remaining: 0, slotKind: 'basic' }] });
     const spear = mockCombatant({
       id: 'spear',
       cooldowns: [{ skillId: 'spear', remaining: 0, slotKind: 'basic' }],
     });
-    expect(resolveMaxEffectiveRangePx(sword, gameData)).toBe(0);
-    expect(resolveMaxEffectiveRangePx(spear, gameData)).toBe(30);
+    // hostile engage floors declared 0 / 30 to engagedMinBodyGap
+    expect(resolveMaxEffectiveRangePx(sword, gameData)).toBe(SPRITE_WIDTH);
+    expect(resolveMaxEffectiveRangePx(spear, gameData)).toBe(SPRITE_WIDTH);
   });
 
   it('resolves attack battleX from contact', () => {
@@ -176,8 +178,8 @@ describe('combatPosition', () => {
       formationRow: 'back',
       cooldowns: [{ skillId: 'bow', remaining: 0, slotKind: 'basic' }],
     });
-    expect(resolveAttackBattleX(sword, contactX, gameData)).toBe(contactX);
-    expect(resolveAttackBattleX(spear, contactX, gameData)).toBe(contactX - 30);
+    expect(resolveAttackBattleX(sword, contactX, gameData)).toBe(contactX - SPRITE_WIDTH);
+    expect(resolveAttackBattleX(spear, contactX, gameData)).toBe(contactX - SPRITE_WIDTH);
     expect(resolveAttackBattleX(bow, contactX, gameData)).toBe(150);
   });
 
@@ -269,7 +271,7 @@ describe('combatPosition', () => {
     expect(getMeleeEnemyContactX([ranged], gameData)).toBeNull();
   });
 
-  it('melee player and enemy converge to shared battleX within range 0', () => {
+  it('melee player and enemy converge to body-gap standoff when declared range is 0', () => {
     const player = mockCombatant({
       id: 'paladin',
       formationRow: 'front',
@@ -296,9 +298,9 @@ describe('combatPosition', () => {
       );
     }
 
-    expect(enemy.battleX).toBeCloseTo(player.battleX, 0);
-    expect(isWithinSkillRange(player, enemy, 0)).toBe(true);
-    expect(isWithinSkillRange(enemy, player, 0)).toBe(true);
+    expect(enemy.battleX - player.battleX).toBeCloseTo(SPRITE_WIDTH, 0);
+    expect(isWithinSkillRange(player, enemy, SPRITE_WIDTH)).toBe(true);
+    expect(isWithinSkillRange(enemy, player, SPRITE_WIDTH)).toBe(true);
   });
 
   it('getPlayerContactX returns rightmost living ally battleX', () => {

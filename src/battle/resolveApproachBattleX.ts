@@ -679,13 +679,17 @@ export function resolveAllPlayerApproachBattleX(
       gameData,
       contact,
     );
-    // 敵接触線（min）より奥＝敵前衛の背後。chase stop（左・味方側）へは戻さない。
-    // 絶対 battleX 固定は敵左進軍で食い込むため、接触線 + hold offset を追従する。
+    // 敵接触線（min）より奥＝敵の背後側。chase stop（左・味方側）へは戻さない。
+    // いま背後にいる敵（最奥の左隣敵）+ hold offset を追従する。
+    // 前衛 contact 固定だと後衛背後から contact 側へ左引きになる。
     if (
       isPlayerRearAssaultAccess(player, battleContext) &&
       player.battleX > contact + PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX
     ) {
-      base = resolvePlayerRearAssaultHoldBattleX(player, contact);
+      const hold = resolvePlayerRearAssaultHoldBattleX(player, enemies);
+      if (hold !== null) {
+        base = hold;
+      }
     }
     baseApproach.set(player.id, base);
   }

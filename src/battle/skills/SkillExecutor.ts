@@ -112,6 +112,7 @@ import {
 import {
   battleDistance,
   isWithinSkillRange,
+  resolveHostileEngageRangePx,
   resolveSkillRangePx,
 } from "./rangeUtils.ts";
 import {
@@ -1001,7 +1002,7 @@ export class SkillExecutor {
         slotKind: cd.slotKind,
         skillId: skill.id,
         hpDamage: damageResult.hpDamage,
-        attackRangePx: effectDef.range ?? actor.traits.rangePx,
+        attackRangePx: resolveSkillRangePx(actor, effectDef),
       });
       this.emit({
         type: "skill",
@@ -1288,7 +1289,7 @@ export class SkillExecutor {
                     attackKind: "damage",
                     isCounterDamage: true,
                     hpDamage: damageResult.hpDamage,
-                    attackRangePx: defender.traits.rangePx,
+                    attackRangePx: resolveHostileEngageRangePx(defender.traits.rangePx),
                   }
                 );
                 if (damageResult.lethal) {
@@ -1360,7 +1361,7 @@ export class SkillExecutor {
         slotKind: cd.slotKind,
         skillId: skill.id,
         hpDamage: damageResult.hpDamage,
-        attackRangePx: effectDef.range ?? actor.traits.rangePx,
+        attackRangePx: resolveSkillRangePx(actor, effectDef),
         didBlock,
         barrierHpBefore,
         barrierDamage: damageResult.barrierDamage,
@@ -1446,7 +1447,7 @@ export class SkillExecutor {
               slotKind: cd.slotKind,
               skillId: skill.id,
               hpDamage: explosionIncoming.damageResult.hpDamage,
-              attackRangePx: effectDef.range ?? actor.traits.rangePx,
+              attackRangePx: resolveSkillRangePx(actor, effectDef),
             }
           );
           this.emit({
@@ -1506,7 +1507,7 @@ export class SkillExecutor {
             slotKind: cd.slotKind,
             skillId: skill.id,
             hpDamage: splashResult.hpDamage,
-            attackRangePx: effectDef.range ?? actor.traits.rangePx,
+            attackRangePx: resolveSkillRangePx(actor, effectDef),
           });
           this.emit({
             type: "skill",

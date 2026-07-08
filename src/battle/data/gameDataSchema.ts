@@ -470,6 +470,7 @@ export const BUFF_TARGET_KINDS = [
   "res",
   "damageTaken",
   "attackSpeed",
+  "moveSpeed",
   "evasion",
   "block",
 ] as const satisfies readonly BuffTargetKind[];
@@ -481,6 +482,7 @@ export const BUFF_TARGET_KIND_LABELS: Record<BuffTargetKind, string> = {
   res: "RES",
   damageTaken: "被ダメ",
   attackSpeed: "攻撃速度",
+  moveSpeed: "移動速度",
   evasion: "回避率",
   block: "ブロック",
 };
@@ -574,6 +576,7 @@ export const STATUS_EFFECT_STATS = [
   "def",
   "res",
   "attackSpeed",
+  "moveSpeed",
 ] as const satisfies readonly StatusEffectStat[];
 
 export const STAT_BUFF_TARGETS = [
@@ -833,6 +836,7 @@ export const DEBUFF_FILTER_TAGS = [
   { id: "res" as const, label: "RESデバフ" },
   { id: "damageTaken" as const, label: "被ダメデバフ" },
   { id: "attackSpeed" as const, label: "SPDデバフ" },
+  { id: "moveSpeed" as const, label: "移動速度デバフ" },
   { id: "dot" as const, label: "DoT（全種）" },
   { id: "bleed" as const, label: "出血" },
   { id: "poison" as const, label: "毒" },

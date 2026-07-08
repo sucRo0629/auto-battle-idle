@@ -136,6 +136,7 @@ import {
   type EngagedLayoutResult,
 } from "./battleLayout.ts";
 import { SPRITE_WIDTH } from "./battleConstants.ts";
+import { resolveHostileEngageRangePx } from "./skills/rangeUtils.ts";
 import { SkillExecutor } from "./skills/SkillExecutor.ts";
 import { tickPendingHits } from "./skills/pendingSkillHits.ts";
 import { SkillSequenceRunner } from "./skills/skillSequence.ts";
@@ -2277,7 +2278,7 @@ export class BattleEngine {
         skillId: effect.skillId,
         statusId: effect.id,
         hpDamage: damageResult.hpDamage,
-        attackRangePx: source.traits.rangePx,
+        attackRangePx: resolveHostileEngageRangePx(source.traits.rangePx),
         barrierHpBefore,
         barrierDamage: damageResult.barrierDamage,
       });

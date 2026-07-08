@@ -8,7 +8,15 @@ import {
   createStage1Engine,
   reachWave2Engage,
 } from '../test/battleFieldSpec.harness.ts';
-import { battleDistance, forwardDistancePx, isInForwardSegment, isWithinSkillRange, resolveSkillRangePx } from './rangeUtils.ts';
+import { SPRITE_WIDTH } from '../battleConstants.ts';
+import {
+  battleDistance,
+  forwardDistancePx,
+  isInForwardSegment,
+  isWithinSkillRange,
+  resolveHostileEngageRangePx,
+  resolveSkillRangePx,
+} from './rangeUtils.ts';
 
 function mockActor(rangePx: number): CombatantState {
   return mockUnit('ally', 0, { rangePx, formationRow: 'front' });
@@ -84,6 +92,12 @@ describe('resolveSkillRangePx', () => {
   it('falls back to actor traits.rangePx when omitted', () => {
     const actor = mockActor(40);
     expect(resolveSkillRangePx(actor, {})).toBe(40);
+  });
+
+  it('floors hostile range to engagedMinBodyGap when traits are shorter', () => {
+    const actor = mockActor(25);
+    expect(resolveSkillRangePx(actor, {})).toBe(SPRITE_WIDTH);
+    expect(resolveHostileEngageRangePx(25)).toBe(SPRITE_WIDTH);
   });
 
   it('extends ally-targeted heal range to party formation depth', () => {

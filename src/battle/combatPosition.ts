@@ -21,16 +21,20 @@ import {
   resolvePartyDeployMarchDistancePx,
   type PartyFormationUnit,
 } from './partyFormation.ts';
-import { resolveSkillRangePx } from './skills/rangeUtils.ts';
+import {
+  resolveHostileEngageRangePx,
+  resolveSkillRangePx,
+} from './skills/rangeUtils.ts';
 import { flattenSkillEffectsForRuntime } from './skills/effectConditions.ts';
 import { getEffectTarget, targetSpecFaction } from './skills/targetSpec.ts';
 import type { SkillEffectDef } from './types.ts';
 
+/** 隊形順・帯分類の正本（body gap 下限なし） */
 export function resolveFormationRangePx(unit: CombatantState): number {
   return unit.traits.rangePx;
 }
 
-/** 接敵停止・隊形 clamp・melee 帯判定（traits 攻撃射程のみ。回復等のスキル range は含めない） */
+/** 接敵隊形 clamp・melee 帯判定（traits 攻撃射程のみ。回復等のスキル range は含めない） */
 export function resolveApproachFormationRangePx(unit: CombatantState): number {
   return unit.traits.rangePx;
 }
@@ -144,18 +148,44 @@ export const PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX = 3;
 export const PLAYER_REAR_ASSAULT_DEFAULT_HOLD_OFFSET_PX = 32;
 
 /**
- * rear assault 中の背後停止目標: 敵接触線 + hold offset。
+ * rear assault 中、プレイヤーが背後に立っている敵（自分より左＝小さい battleX の生存敵のうち最奥）。
+ * 前衛 contact 固定だと、後衛背後へ着いたあと contact 側へ左引きされる。
+ */
+export function resolvePlayerRearAssaultFlankEnemy(
+  player: CombatantState,
+  enemies: CombatantState[],
+): CombatantState | null {
+  let flank: CombatantState | null = null;
+  for (const enemy of enemies) {
+    if (!enemy.isAlive) continue;
+    if (enemy.battleX >= player.battleX) continue;
+    if (flank === null || enemy.battleX > flank.battleX) {
+      flank = enemy;
+    }
+  }
+  return flank;
+}
+
+/**
+ * rear assault 中の背後停止目標: いま背後にいる敵 + hold offset。
  * 絶対 `battleX` 固定だと敵左進軍時にスプライトへ食い込む。
+ * フォールバックは敵接触線（`getEnemyContactX`）。
  */
 export function resolvePlayerRearAssaultHoldBattleX(
   player: CombatantState,
-  enemyContactX: number,
-): number {
+  enemies: CombatantState[],
+): number | null {
   const offset = Math.max(
     player.rearAssaultHoldOffsetPx ?? PLAYER_REAR_ASSAULT_DEFAULT_HOLD_OFFSET_PX,
     PLAYER_OFF_FRONTLINE_PEER_MARGIN_PX + 1,
   );
-  return enemyContactX + offset;
+  const flank = resolvePlayerRearAssaultFlankEnemy(player, enemies);
+  if (flank !== null) {
+    return flank.battleX + offset;
+  }
+  const contact = getEnemyContactX(enemies);
+  if (contact === null) return null;
+  return contact + offset;
 }
 
 /**
@@ -622,7 +652,7 @@ export function resolveMaxEffectiveRangePx(
       max = Math.max(max, resolveSkillRangePx(unit, effect));
     }
   }
-  return max >= 0 ? max : unit.traits.rangePx;
+  return max >= 0 ? max : resolveHostileEngageRangePx(unit.traits.rangePx);
 }
 
 /** 自動接近の停止距離: 通常攻撃射程（traits / basic の range）のみ */
@@ -638,7 +668,7 @@ export function resolveBasicAttackRangePx(
   if (effect && effect.type !== 'counter') {
     return resolveSkillRangePx(unit, effect, livingAllyCount);
   }
-  return unit.traits.rangePx;
+  return resolveHostileEngageRangePx(unit.traits.rangePx);
 }
 
 /** 装備中アクティブの最短射程（move 効果は除外） */
@@ -779,13 +809,15 @@ export function resolveMoveBattleX(
         ? anchor.battleX - offset
         : anchor.battleX + offset
       : anchor.battleX + offset;
+    // move 上限は宣言値。0 = 無制限（body gap floor の前に見る）
+    const declaredMoveRange = effect.range ?? actor.traits.rangePx;
     const toX = isHostileAnchor
       ? moveTowardX(
           actor.battleX,
           idealToX,
-          resolveSkillRangePx(actor, effect) === 0
-            ? Infinity // If melee, move without cap to achieve offset
-            : resolveSkillRangePx(actor, effect) // Otherwise, cap by skill range
+          declaredMoveRange === 0
+            ? Infinity
+            : resolveSkillRangePx(actor, effect),
         )
       : idealToX;
     return toX;

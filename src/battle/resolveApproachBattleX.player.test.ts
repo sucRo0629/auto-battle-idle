@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { GameData } from "./types.ts";
+import { SPRITE_WIDTH } from "./battleConstants.ts";
 import {
   resolveAllPlayerApproachBattleX,
   resolvePlayerApproachBattleX,
@@ -13,6 +14,8 @@ import {
 } from "./testFixtures.ts";
 
 const gameData = mockApproachGameData();
+/** declared melee 0/short ranges floor to body gap for hostile engage */
+const MELEE_STOP_GAP = SPRITE_WIDTH;
 
 describe("resolvePlayerApproachBattleX", () => {
   it("applies contact cap to melee on-field units regardless of formationRow", () => {
@@ -71,7 +74,7 @@ describe("resolvePlayerApproachBattleX", () => {
       gameData,
     );
 
-    expect(approachX).toBe(280 - 0);
+    expect(approachX).toBe(280 - MELEE_STOP_GAP);
   });
 
   it("relaxes contact cap for ranged rear chase target behind enemy contact", () => {
@@ -270,7 +273,7 @@ describe("resolvePlayerApproachBattleX", () => {
       gameData,
     );
 
-    expect(approachX).toBe(280 - 0);
+    expect(approachX).toBe(280 - MELEE_STOP_GAP);
   });
 
   it("melee band: front row separates by rangePx depth (L10)", () => {
@@ -338,11 +341,11 @@ describe("resolvePlayerApproachBattleX", () => {
       gameData,
     );
 
-    const guardianStop = 280 - 5;
-    const warriorStop = 280 - 8;
-    expect(guardianX).toBe(guardianStop);
-    expect(warriorX).toBe(warriorStop);
-    expect(guardianX - warriorX).toBe(3);
+    // Both short ranges floor to body gap → same stop line; contact cap
+    // prevents spacing from pushing past sharedStop.
+    const sharedStop = 280 - MELEE_STOP_GAP;
+    expect(warriorX).toBe(sharedStop);
+    expect(guardianX).toBe(sharedStop);
   });
 
   it("uses shared chase fallback when only melee frontline enemies exist", () => {
@@ -950,7 +953,7 @@ describe("resolvePlayerApproachBattleX", () => {
       [meleeEnemy],
       gameData as unknown as GameData,
     );
-    const soloForwardStop = 300 - 5 + 3;
+    const soloForwardStop = 300 - MELEE_STOP_GAP + 3;
     expect(assassinX).toBe(soloForwardStop);
   });
 
