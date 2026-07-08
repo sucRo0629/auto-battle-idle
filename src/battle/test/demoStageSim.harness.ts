@@ -1140,6 +1140,47 @@ export function logDemoCh1_02BacklineDiagnostics(
   );
 }
 
+/** Phase 6c — demo_ch1_03 swarm rush / frontline puzzle. */
+export function logDemoCh1_03SwarmDiagnostics(quad: DemoStageQuadResults): void {
+  const stageId = 'demo_ch1_03';
+  const { baseline, badResult, universalResult, counterResult } = quad;
+  const guardianTaken = statForClass(
+    baseline.classStats,
+    'df_guardian',
+    'damageTaken',
+  );
+  const clericHeal = statForClass(baseline.classStats, 'sp_cleric', 'healingDealt');
+  const badGuardianTaken = statForClass(
+    badResult.classStats,
+    'df_guardian',
+    'damageTaken',
+  );
+
+  console.info(`[demo-ch1_03-diag] ${stageId} swarm / frontline puzzle:`);
+  console.info(
+    `[demo-ch1_03-diag]   baseline: ${baseline.outcome} hp=${baseline.totalRemainingHp}/${baseline.totalMaxHp} ` +
+      `survivors=${baseline.survivingAllies} durationSec=${baseline.durationSec.toFixed(1)} ` +
+      `guardian damageTaken=${guardianTaken} cleric healingDealt=${clericHeal}`,
+  );
+  console.info(
+    `[demo-ch1_03-diag]   bad(no-guardian): ${badResult.outcome} hp=${badResult.totalRemainingHp} ` +
+      `durationSec=${badResult.durationSec.toFixed(1)} frontline damageTaken=${badGuardianTaken}`,
+  );
+  console.info(
+    `[demo-ch1_03-diag]   counter(double-melee): ${counterResult.outcome} ` +
+      `hp=${counterResult.totalRemainingHp}/${counterResult.totalMaxHp} survivors=${counterResult.survivingAllies} ` +
+      `durationSec=${counterResult.durationSec.toFixed(1)}`,
+  );
+  console.info(
+    `[demo-ch1_03-diag]   universal(sorcerer): ${universalResult.outcome} ` +
+      `hp=${universalResult.totalRemainingHp} durationSec=${universalResult.durationSec.toFixed(1)}`,
+  );
+  console.info(
+    `[demo-ch1_03-diag]   read: 7-enemy rush needs guardian frontline; no-guardian collapses early. ` +
+      `Double melee clears with 4 survivors; sorcerer AoE viable but same grind. Not default-answer.`,
+  );
+}
+
 /** Phase 6c — demo_ch1_05 bad outcome score ≥ baseline (assassin swap ripple). */
 export function logDemoCh1_05BadBaselineDiagnostics(
   quad: DemoStageQuadResults,
@@ -1259,10 +1300,10 @@ export function logDemoCh1_06BadCounterDiagnostics(
       `baseline sp_cleric healingDealt=${clericBaselineHeal}`,
   );
   console.info(
-    `[demo-ch1_06-diag]   read: no-healer must lose; baseline cleric healingDealt=${clericBaselineHeal} sustains guardian. ` +
-      `universal sorcerer wins thin (${universalResult.totalRemainingHp}/${universalResult.totalMaxHp}); ` +
-      `counter paladin tank improves score (+${counterScore - badScore} vs bad). ` +
-      `Not default-answer — composition tradeoffs vs ch1_01.`,
+    `[demo-ch1_06-diag]   read: no-healer must lose; baseline cleric healingDealt=${clericBaselineHeal} vs guardian taken=${guardianBaselineTaken}. ` +
+      `universal sorcerer=${universalResult.outcome} (${universalResult.totalRemainingHp}/${universalResult.totalMaxHp}). ` +
+      `counter paladin improves score (+${counterScore - demoStageOutcomeScore(baseline)} vs baseline, +${counterScore - badScore} vs bad). ` +
+      `Not default-answer — paladin/healer sustain vs ch1_01.`,
   );
 }
 

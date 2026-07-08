@@ -453,8 +453,9 @@ resolveApproachBattleX
 | ch1_07 ranger | `primaryTarget=at_ballista`、`BACKLINE_OK`（弩砲士は弓術士 priority に残る） |
 | ch1_07 bad assassin | `priorityTargetDamageShare=100%`（§16 時 0% から改善 — support 処理がログで見える） |
 | ch1_05 formalization | `EXPERIENCE_SPOTLIGHT_SUBSTITUTE_OK` **維持** |
-| ch1_04 / ch1_06 puzzle 意図 | **§35 P1 再調整済み** — ch1_04 no-healer defeat 安定、ch1_06 bad=defeat + universal 低 HP 勝利 |
+| ch1_04 / ch1_06 puzzle 意図 | **§37 P3 再調整済み** — ch1_06 bad=defeat、baseline 非満血、counter paladin が score/HP/時間で優位。universal sorcerer は defeat |
 | ch1_02 / ch1_05 puzzle 意図 | **§36 P2 再調整済み** — ch1_02 後衛処理（ranger 遅延 vs sorcerer 速攻）、ch1_05 paladin counter + bad defeat |
+| ch1_03 swarm puzzle | **§37 P3 再調整済み** — bad(no-guardian)=defeat、baseline 傷つき勝利、double-melee counter が 4 人満血 |
 
 ---
 

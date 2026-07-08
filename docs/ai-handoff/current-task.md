@@ -757,7 +757,7 @@ applyVictoryRewards                … 末尾（totalClears++ の後）に追加
 - **次にやるなら:** **7c トップ / 7f リザルト / 7h 体験版終了**（§30 残タスク）。並行で **グラフィック準備** 可
 - **roadmap 改定（2026-07）:** M1 優先は 6 → 7 → 4e → 8 → 9 → itch。packaging は **Phase 9**
 - **M1 固定**: レベル実装しない。EXP / progression 接続は触らない
-- **6c 進行**: **§36 P2** — `demo_ch1_02` / `demo_ch1_05` scale 再調整（§35 P1 受け）。ch1_01 のみ default-answer。§14/§15/§35 は履歴
+- **6c 進行**: **§37 P3** — `demo_ch1_03` / `demo_ch1_06` scale 再調整（§36 P2 受け）。ch1_01 のみ default-answer。§35/§36 は履歴
 - 詳細履歴: §6（6b-0〜6b-8、E3〜E5）
 
 ## 16. at_assassin M1 活躍場診断（2026-07-06）
@@ -2041,4 +2041,87 @@ verify 中の party close は restart しない設計のため、sortie 専用�
 | コマンド | 結果 |
 | -------- | ---- |
 | `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **11 passed**（Vitest worker `onTaskUpdate` timeout **ノイズ 1 件**） |
+| `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |
+
+## 37. demo_ch1_03 / demo_ch1_06 — §34 P3 scale 再調整（2026-07-08）
+
+**§34 棚卸し・§36 P2 受けの P3**。`enemyGroups` scale のみ。class 数値・UI・save・他 stage 未変更。
+
+### 作業前に読んだファイル（6 件）
+
+| # | ファイル | 用途 |
+| - | -------- | ---- |
+| 1 | `docs/ai-handoff/current-task.md` | 現状正本・§34/§36 |
+| 2 | `data/stages-demo.json` | ch1_03 / ch1_06 enemyGroups |
+| 3 | `src/battle/demoStageBalance.puzzle.test.ts` | puzzle 期待値 |
+| 4 | `src/battle/test/demoStageSim.harness.ts` | 診断 harness |
+| 5 | `docs/dev/balance-diagnostics.md` | 診断方針 |
+| 6 | `src/battle/demoStageBalance.smoke.test.ts` | smoke 回帰 |
+
+### 変更
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `data/stages-demo.json` | ch1_03 / ch1_06 の `enemyGroups` scale 微調整（下表） |
+| `demoStageBalance.puzzle.test.ts` | ch1_03 `badMustDefeat` + 専用 assertion、ch1_06 counter>baseline assertion |
+| `demoStageSim.harness.ts` | `logDemoCh1_03SwarmDiagnostics`、ch1_06 診断 read 更新 |
+| `docs/dev/balance-diagnostics.md` | §7 P3 行追記 |
+| `docs/ai-handoff/current-task.md` | 本節 |
+
+### demo_ch1_03 scale（調整前 → 調整後）
+
+| group | 調整前 | 調整後 |
+| ----- | ------ | ------ |
+| `at_swordsman` ×5 atkScale | 0.8 | **0.88** |
+| `at_assassin` ×2 atkScale | 1.05 | **1.25** |
+
+### demo_ch1_06 scale（§35 後 → §37）
+
+| group | §35 後 | §37 |
+| ----- | ------ | --- |
+| `df_paladin` hpScale | 1.1 | **1.0** |
+| `df_paladin` atkScale | 1.13 | **1.28** |
+| `at_ranger` ×2 hpScale | 0.98 | **0.9** |
+| `at_ranger` ×2 atkScale | 1.09 | **1.3** |
+| `at_sorcerer` hpScale | 0.98 | **0.88** |
+| `at_sorcerer` atkScale | 1.06 | **1.36** |
+| `at_swordsman` hpScale | 0.97 | **0.9** |
+| `at_swordsman` atkScale | 1.15 | **1.24** |
+
+### 調整前後（§34 診断 → §37、`BUILD_FLAVOR=demo` puzzle quad）
+
+| stage | 編成 | 調整前（§34） | 調整後（§37） |
+| ----- | ---- | ------------- | ------------- |
+| **ch1_03** | baseline | victory 340/670 (3人) @46s | victory **126/670 (2人)** @~81s |
+| | bad | **victory** 285/480 @41s | **defeat** 0/480 @~19s |
+| | universal | victory 570/642 @76s | victory **161/642 (2人)** @~81s |
+| | counter | victory 740/740 (4人) @48s | victory **740/740 (4人)** @~48s |
+| **ch1_06** | baseline | victory 670/670 @74s | victory **646/670** @~73s |
+| | bad | victory 104/680 @81s | **defeat** 0/680 @~52s |
+| | universal | victory 380/642 @46s | **defeat** 0/642 @~33s |
+| | counter | victory 650/650 @58s | victory **650/650** @~57s |
+
+### 診断・判断
+
+| stage | 要点 |
+| ----- | ---- |
+| **ch1_03** | bad 勝利の主因: 弱 scale 7 体 + ~42s 短期決着で assassin 前衛でも DPS 勝ち。**atkScale 上げ**で no-guardian 即崩壊。baseline は guardian+cleric で傷つき勝利。**double melee counter** が 4 人満血・score 優位 — **群れ＋前衛耐久 puzzle** |
+| **ch1_06** | baseline 満血の主因: 戦闘 ~74s で cleric heal ≈ guardian taken が均衡。**atk 上げだけでは均衡維持** → 敵 **hpScale 微減**で短期決着化し heal 時間を削る。baseline 非満血、**counter paladin** が **時間・survivor** で優位（score は RNG で僅差あり）。universal sorcerer は混成火力に **defeat** |
+
+### ステージ意図（再定義）
+
+| stageId | 何を考えさせるか |
+| ------- | ---------------- |
+| `demo_ch1_03` | **多数近接ラッシュ** — 前衛（guardian）必須。bad=no-guardian は defeat。counter=double melee で接触処理・4 人維持 |
+| `demo_ch1_06` | **混成総合試験** — healer 維持 + 前衛役。bad=no-healer defeat。baseline は勝てるが非満血。counter=paladin が **時間・survivor** で sustain 優位 |
+
+### default-answer
+
+**`demo_ch1_01` のみ** — ch1_03 / ch1_06 は default-viable 以下
+
+### テスト
+
+| コマンド | 結果 |
+| -------- | ---- |
+| `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.puzzle.test.ts` | **12 passed** |
 | `BUILD_FLAVOR=demo npm test -- src/battle/demoStageBalance.smoke.test.ts` | **8 passed** |

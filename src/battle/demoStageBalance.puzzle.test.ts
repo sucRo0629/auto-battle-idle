@@ -15,6 +15,7 @@ import {
   demoStageOutcomeScore,
   logDemoStageClassDiagnostics,
   logDemoCh1_02BacklineDiagnostics,
+  logDemoCh1_03SwarmDiagnostics,
   logDemoCh1_04HealerPuzzleDiagnostics,
   logDemoCh1_05BadBaselineDiagnostics,
   logDemoCh1_06BadCounterDiagnostics,
@@ -77,6 +78,9 @@ function emit6cStageDiagnostics(
   switch (stageId) {
     case 'demo_ch1_02':
       logDemoCh1_02BacklineDiagnostics(quad);
+      break;
+    case 'demo_ch1_03':
+      logDemoCh1_03SwarmDiagnostics(quad);
       break;
     case 'demo_ch1_04':
       logDemoCh1_04HealerPuzzleDiagnostics(quad);
@@ -194,6 +198,9 @@ const STAGE_PUZZLES: StagePuzzleSpec[] = [
     stageId: 'demo_ch1_03',
     bad: configureNoGuardianParty,
     counter: configureDoubleMeleeParty,
+    badMustDefeat: true,
+    skipBadVsBaseline: true,
+    sixCDiagnostics: true,
     rangerTargetDiagnostics: true,
   },
   {
@@ -397,10 +404,13 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
     expect(counter.outcome).toBe('victory');
     expect(counter.outcome).not.toBe('timeout');
     expect(bad.outcome).toBe('defeat');
+    expect(baseline.totalRemainingHp).toBeLessThan(baseline.totalMaxHp);
     expect(demoStageOutcomeScore(counter)).toBeGreaterThan(
       demoStageOutcomeScore(universal),
     );
     expect(universal.totalRemainingHp).toBeLessThan(baseline.totalRemainingHp);
+    expect(counter.durationSec).toBeLessThan(baseline.durationSec * 0.85);
+    expect(counter.survivingAllies).toBeGreaterThanOrEqual(baseline.survivingAllies);
     expect(baseline.rangerBasicAttackDiagnostics).toBeDefined();
     expect(counter.rangerBasicAttackDiagnostics).toBeDefined();
     expect(baseline.classStats).toHaveLength(4);
@@ -423,6 +433,29 @@ describe('demo stage balance / puzzle (composition deltas)', () => {
     expect(sorcererUniversal!.attackCount).toBeGreaterThanOrEqual(0);
     expect(rangerBaseline!.skillUseCount).toBeGreaterThanOrEqual(0);
     expect(sorcererUniversal!.skillUseCount).toBeGreaterThanOrEqual(0);
+  });
+
+  it('demo_ch1_03: swarm rush needs frontline; double melee counter sustains (6c swarm puzzle)', () => {
+    const quad = runCompositionQuad(
+      'demo_ch1_03',
+      gameData,
+      configureNoGuardianParty,
+      configureDoubleMeleeParty,
+      { rangerTargetDiagnostics: true, sixCDiagnostics: true },
+    );
+    const { baseline, badResult, universalResult, counterResult } = quad;
+
+    expect(baseline.outcome).toBe('victory');
+    expect(baseline.totalRemainingHp).toBeLessThanOrEqual(200);
+    expect(baseline.survivingAllies).toBeLessThanOrEqual(3);
+    expect(badResult.outcome).toBe('defeat');
+    expect(counterResult.outcome).toBe('victory');
+    expect(counterResult.survivingAllies).toBe(4);
+    expect(demoStageOutcomeScore(counterResult)).toBeGreaterThan(
+      demoStageOutcomeScore(baseline),
+    );
+    expect(counterResult.durationSec).toBeLessThan(baseline.durationSec);
+    void universalResult;
   });
 
   it('demo_ch1_02: ranger backline grind; sorcerer counter clears faster (6c backline puzzle)', () => {
