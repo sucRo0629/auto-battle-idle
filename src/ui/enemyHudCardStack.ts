@@ -83,3 +83,25 @@ export function enemyHudCardStackOffset(depth: number): { x: number; y: number }
     y: depth * ENEMY_HUD_CARD_STACK_OFFSET_Y,
   };
 }
+
+/** Vertical gap between individual cards when a group is expanded (px). */
+export const ENEMY_HUD_CARD_EXPAND_GAP = 4;
+
+/** Expanded group footprint — one full card per member in a vertical column. */
+export function computeEnemyHudExpandedFootprint(
+  memberCount: number,
+): EnemyHudCardStackFootprint {
+  const n = Math.max(1, memberCount);
+  return {
+    width: ENEMY_HUD_CARD_WIDTH,
+    height: n * ENEMY_HUD_CARD_HEIGHT + (n - 1) * ENEMY_HUD_CARD_EXPAND_GAP,
+  };
+}
+
+/** Card offset when a group is expanded — top-to-bottom, no stack overlap. */
+export function enemyHudExpandedCardOffset(index: number): { x: number; y: number } {
+  return {
+    x: 0,
+    y: index * (ENEMY_HUD_CARD_HEIGHT + ENEMY_HUD_CARD_EXPAND_GAP),
+  };
+}

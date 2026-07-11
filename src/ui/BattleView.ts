@@ -136,6 +136,7 @@ export class BattleView {
   private readonly targetIndicatorTracker = new BattleTargetIndicatorTracker();
   private battleElapsedMs = 0;
   private battlePaused = false;
+  private expandedEnemyGroupIds = new Set<string>();
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastStagePlateLabel = "";
   private lastWavePlateLabel = "";
@@ -474,6 +475,9 @@ export class BattleView {
           this.setHoverHighlight(null, null);
         }
       },
+      onGroupClick: (groupId, action) => {
+        this.onEnemyGroupClick(groupId, action);
+      },
     });
     this.enemyHud.mount(this.enemyHudSlotEl);
 
@@ -509,9 +513,7 @@ export class BattleView {
       );
       this.partyHud.update(buildPartyHudEntries(snapshot, partyMeta));
       this.partyHud.refreshLocale();
-      this.enemyHud.update(buildEnemyHudGroups(snapshot.enemies), {
-        waveIndex: snapshot.waveIndex,
-      });
+      this.syncEnemyHudFromSnapshot(snapshot);
       this.refreshMemberStatsPanel();
     });
     this.refreshLocaleChrome();
@@ -574,13 +576,66 @@ export class BattleView {
     return this.battlePaused;
   }
 
+  getExpandedEnemyGroupIds(): ReadonlySet<string> {
+    return this.expandedEnemyGroupIds;
+  }
+
   setBattlePaused(paused: boolean): void {
     if (this.battlePaused === paused) return;
     this.battlePaused = paused;
+    if (!paused) {
+      this.expandedEnemyGroupIds.clear();
+      this.syncExpandedEnemyGroups();
+    }
     this.battleRoot.classList.toggle("battle-root--paused", paused);
     this.pauseOverlayEl.hidden = !paused;
     this.pauseOverlayEl.setAttribute("aria-hidden", paused ? "false" : "true");
     this.syncPauseChrome();
+  }
+
+  private onEnemyGroupClick(
+    groupId: string,
+    action: 'expand' | 'collapse',
+  ): void {
+    if (action === 'collapse') {
+      if (!this.expandedEnemyGroupIds.has(groupId)) return;
+      this.expandedEnemyGroupIds.delete(groupId);
+      this.syncExpandedEnemyGroups();
+      return;
+    }
+
+    if (this.expandedEnemyGroupIds.has(groupId)) return;
+
+    this.expandedEnemyGroupIds.add(groupId);
+    this.syncExpandedEnemyGroups();
+    if (!this.battlePaused) {
+      this.setBattlePaused(true);
+    }
+  }
+
+  private syncExpandedEnemyGroups(): void {
+    this.enemyHud.setExpandedGroupIds(new Set(this.expandedEnemyGroupIds));
+  }
+
+  private pruneExpandedEnemyGroupIds(groupIds: ReadonlySet<string>): boolean {
+    let changed = false;
+    for (const id of this.expandedEnemyGroupIds) {
+      if (!groupIds.has(id)) {
+        this.expandedEnemyGroupIds.delete(id);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  private syncEnemyHudFromSnapshot(snapshot: BattleSnapshot): void {
+    const groups = buildEnemyHudGroups(snapshot.enemies);
+    if (
+      this.pruneExpandedEnemyGroupIds(new Set(groups.map((group) => group.groupId)))
+    ) {
+      this.syncExpandedEnemyGroups();
+    }
+    this.enemyHud.update(groups, { waveIndex: snapshot.waveIndex });
   }
 
   toggleBattlePaused(): void {
@@ -705,9 +760,7 @@ export class BattleView {
         buildPartyHudMetaBySlot(save.party, this.gameData.classRegistry),
       ),
     );
-    this.enemyHud.update(buildEnemyHudGroups(snapshot.enemies), {
-      waveIndex: snapshot.waveIndex,
-    });
+    this.syncEnemyHudFromSnapshot(snapshot);
   }
 
   private setHoverHighlight(
@@ -1061,9 +1114,7 @@ export class BattleView {
       displayRows:
         this.verifyModeControls?.getStageDamageDisplayRows?.() ?? [],
     });
-    this.enemyHud.update(buildEnemyHudGroups(snapshot.enemies), {
-      waveIndex: snapshot.waveIndex,
-    });
+    this.syncEnemyHudFromSnapshot(snapshot);
     this.canvas.tick(deltaMs);
     if (debugEnabled) {
       this.battleXDebugCanvas.tick(deltaMs);

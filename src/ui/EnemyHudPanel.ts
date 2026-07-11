@@ -18,7 +18,9 @@ import {
   ENEMY_HUD_HP_TRACK_LEFT_IN_CARD,
   ENEMY_HUD_HP_TRACK_WIDTH,
   ENEMY_HUD_MAX_VISIBLE_STACK,
+  computeEnemyHudExpandedFootprint,
   enemyHudCardStackOffset,
+  enemyHudExpandedCardOffset,
   enemyHudHpTrackLeftInCard,
   resolveEnemyHudCardStackLayout,
 } from './enemyHudCardStack.ts';
@@ -77,6 +79,7 @@ interface GroupSlotElements {
   stackOverflow: HTMLElement;
   frontCard: EnemyCardElements;
   backCards: EnemyCardElements[];
+  extraCards: EnemyCardElements[];
 }
 
 type HpBarHost = Pick<
@@ -84,12 +87,15 @@ type HpBarHost = Pick<
   'hpFill' | 'barrierLayer' | 'hpBarSignature'
 >;
 
+export type EnemyHudGroupClickAction = 'expand' | 'collapse';
+
 export interface EnemyHudPanelOptions {
   layout?: 'overlay-top';
   floatingTooltip?: PartyHudFloatingTooltip;
   gameTermPanel?: GameTermPanel;
   onHoverHighlightStart?: (unitIds: readonly string[]) => void;
   onHoverHighlightEnd?: () => void;
+  onGroupClick?: (groupId: string, action: EnemyHudGroupClickAction) => void;
 }
 
 export interface EnemyHudUpdateContext {
@@ -107,6 +113,7 @@ export class EnemyHudPanel {
   private lastWaveIndex = -1;
   private panelCollapseTimer: ReturnType<typeof setTimeout> | null = null;
   private hoverHighlightUnitIds: ReadonlySet<string> = new Set();
+  private expandedGroupIds: ReadonlySet<string> = new Set();
   private readonly unsubscribeStatusIconsReady: () => void;
 
   constructor(
@@ -211,6 +218,15 @@ export class EnemyHudPanel {
     }
   }
 
+  setExpandedGroupIds(groupIds: ReadonlySet<string>): void {
+    const next = new Set(groupIds);
+    if (areSetsEqual(this.expandedGroupIds, next)) return;
+    this.expandedGroupIds = next;
+    if (this.lastDisplayedGroups.length > 0) {
+      this.updateDisplayedGroups(this.lastDisplayedGroups, null);
+    }
+  }
+
   destroy(): void {
     this.clearPanelCollapseTimer();
     this.unsubscribeStatusIconsReady();
@@ -300,6 +316,9 @@ export class EnemyHudPanel {
       for (const back of slot.backCards) {
         back.statusMiniSignature = null;
       }
+      for (const extra of slot.extraCards) {
+        extra.statusBadgeRenderSignature = null;
+      }
     }
   }
 
@@ -329,6 +348,7 @@ export class EnemyHudPanel {
     root.appendChild(stackRoot);
 
     this.bindFieldLinkHover(root, slotIndex);
+    this.bindGroupClick(root, stackRoot);
 
     return {
       root,
@@ -337,6 +357,7 @@ export class EnemyHudPanel {
       stackOverflow,
       frontCard,
       backCards,
+      extraCards: [],
     };
   }
 
@@ -447,6 +468,31 @@ export class EnemyHudPanel {
   }
 
   private updateGroupSlot(slot: GroupSlotElements, group: EnemyHudGroup): void {
+    const expanded = this.expandedGroupIds.has(group.groupId);
+    slot.root.classList.toggle('enemy-hud-group--expanded', expanded);
+    slot.stackRoot.classList.toggle('enemy-hud-card-stack--expanded', expanded);
+
+    if (expanded) {
+      this.updateExpandedGroupSlot(slot, group);
+      return;
+    }
+
+    this.updateCollapsedGroupSlot(slot, group);
+  }
+
+  private updateCollapsedGroupSlot(
+    slot: GroupSlotElements,
+    group: EnemyHudGroup,
+  ): void {
+    slot.root.style.removeProperty('--enemy-hud-expanded-slot-h');
+    slot.root.style.height = '';
+    slot.root.style.minHeight = '';
+    slot.root.style.maxHeight = '';
+
+    for (const card of slot.extraCards) {
+      card.root.hidden = true;
+    }
+
     const stackLayout = resolveEnemyHudCardStackLayout(group.count);
     const { footprint, visibleCount, hiddenCount } = stackLayout;
 
@@ -468,6 +514,8 @@ export class EnemyHudPanel {
         const entry = group.enemies[i + 1]!;
         this.positionStackCard(card.root, i + 1, visibleCount);
         card.root.hidden = false;
+        card.root.classList.remove('enemy-hud-card--expanded-individual');
+        card.root.classList.remove('enemy-hud-card--expanded-top');
         this.updateBackCard(card, entry);
       } else {
         card.root.hidden = true;
@@ -475,9 +523,215 @@ export class EnemyHudPanel {
     }
 
     this.positionStackCard(slot.frontCard.root, 0, visibleCount);
+    slot.frontCard.root.classList.remove('enemy-hud-card--expanded-individual');
     this.updateFrontCard(slot, group);
 
     slot.root.dataset.enemyId = group.representativeEnemy.id;
+  }
+
+  private updateExpandedGroupSlot(
+    slot: GroupSlotElements,
+    group: EnemyHudGroup,
+  ): void {
+    const footprint = computeEnemyHudExpandedFootprint(group.count);
+    slot.stackRoot.style.width = `${footprint.width}px`;
+    slot.stackRoot.style.height = `${footprint.height}px`;
+    slot.stackOverflow.hidden = true;
+    slot.stackOverflow.textContent = '';
+
+    slot.root.style.setProperty('--enemy-hud-expanded-slot-h', `${footprint.height}px`);
+    slot.root.style.height = `${footprint.height}px`;
+    slot.root.style.minHeight = `${footprint.height}px`;
+    slot.root.style.maxHeight = 'none';
+
+    const cards = this.ensureExpandedCardPool(slot, group.count);
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i]!;
+      if (i < group.count) {
+        const entry = group.enemies[i]!;
+        const offset = enemyHudExpandedCardOffset(i);
+        card.root.hidden = false;
+        card.root.classList.add('enemy-hud-card--expanded-individual');
+        if (i === 0) {
+          card.root.classList.add('enemy-hud-card--expanded-top');
+          this.bindExpandedTopCardClick(card);
+        } else {
+          card.root.classList.remove('enemy-hud-card--expanded-top');
+        }
+        card.root.style.left = `${offset.x}px`;
+        card.root.style.top = `${offset.y}px`;
+        card.root.style.zIndex = String(i + 1);
+        card.root.style.setProperty(
+          '--enemy-hud-hp-track-left',
+          `${enemyHudHpTrackLeftInCard(0)}px`,
+        );
+        card.root.style.setProperty('--enemy-hud-hp-track-z', '1');
+        card.root.dataset.enemyUnitId = entry.id;
+        this.updateExpandedIndividualCard(slot, card, group, entry, i);
+        this.bindExpandedCardHover(card);
+      } else {
+        card.root.hidden = true;
+        card.root.classList.remove('enemy-hud-card--expanded-individual');
+        card.root.classList.remove('enemy-hud-card--expanded-top');
+        card.root.removeAttribute('data-enemy-unit-id');
+      }
+    }
+
+    slot.root.dataset.enemyId = group.representativeEnemy.id;
+  }
+
+  private ensureExpandedCardPool(
+    slot: GroupSlotElements,
+    count: number,
+  ): EnemyCardElements[] {
+    const pool = [slot.frontCard, ...slot.backCards, ...slot.extraCards];
+    while (pool.length < count) {
+      const card = this.createEnemyCard('front');
+      slot.extraCards.push(card);
+      slot.stackRoot.appendChild(card.root);
+      pool.push(card);
+    }
+    return pool;
+  }
+
+  private updateExpandedIndividualCard(
+    slot: GroupSlotElements,
+    card: EnemyCardElements,
+    group: EnemyHudGroup,
+    entry: EnemyHudEntry,
+    memberIndex: number,
+  ): void {
+    card.labelName.textContent =
+      group.count > 1
+        ? `${group.representativeName} ${memberIndex + 1}`
+        : group.representativeName;
+    card.countBadge.hidden = true;
+    card.countBadge.textContent = '';
+
+    const iconUrl = getClassIconUrl(group.representativeIcon);
+    if (iconUrl) {
+      card.icon.src = iconUrl;
+      card.icon.style.backgroundColor = '';
+    } else {
+      card.icon.removeAttribute('src');
+      card.icon.style.backgroundColor = resolveClassIconPlaceholderColor(
+        group.representativeIcon,
+        this.theme,
+      );
+    }
+
+    this.updateHpBar(card, entry);
+    card.statusMiniWrap.hidden = true;
+    card.statusMiniCanvas.hidden = true;
+    this.updateIndividualStatusBadges(slot, card, entry, memberIndex);
+    this.updateEntryDangerTelegraph(card, entry);
+  }
+
+  private updateIndividualStatusBadges(
+    slot: GroupSlotElements,
+    card: EnemyCardElements,
+    entry: EnemyHudEntry,
+    memberIndex: number,
+  ): void {
+    const badges = collectStatusEffectBadgeDisplays(entry.statusEffects, {
+      baseMaxHp: entry.baseMaxHp,
+      atk: entry.atk,
+      def: entry.def,
+      res: entry.res,
+    });
+    const { visible, overflowCount } = selectEnemyHudStatusBadges(badges);
+    const canvas = card.statusCanvas;
+    const theme = this.theme;
+    const scale = 1;
+    const rowLayout = measureEnemyHudStatusRow(scale, theme, overflowCount);
+    const outlinePad = statusBadgeOutlinePad(theme.statusIconOutlineWidth, scale);
+    const canvasW = snapHudCanvasCssSize(rowLayout.totalWidth + outlinePad * 2);
+    const canvasH = snapHudCanvasCssSize(rowLayout.totalHeight + outlinePad * 2);
+    const statusSlotKey = slot.slotIndex * 100 + memberIndex;
+    const canvasSignature = buildPartyHudStatusBadgeCanvasSignature(
+      visible,
+      overflowCount,
+      statusSlotKey,
+      canvasW,
+      canvasH,
+    );
+    const hitSignature = buildPartyHudStatusBadgeHitSignature(
+      visible,
+      overflowCount,
+      statusSlotKey,
+    );
+    const canvasUnchanged = canvasSignature === card.statusBadgeRenderSignature;
+    const hitsUnchanged = hitSignature === card.statusBadgeHitSignature;
+    if (canvasUnchanged && hitsUnchanged) {
+      return;
+    }
+
+    if (!canvasUnchanged) {
+      card.statusBadgeRenderSignature = canvasSignature;
+      canvas.width = canvasW;
+      canvas.height = canvasH;
+      const w = `${canvasW}px`;
+      const h = `${canvasH}px`;
+      canvas.style.width = w;
+      canvas.style.height = h;
+      canvas.style.minWidth = w;
+      canvas.style.maxWidth = w;
+      canvas.hidden = false;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvasW, canvasH);
+      drawEnemyHudStatusRow(
+        ctx,
+        outlinePad,
+        outlinePad,
+        visible,
+        overflowCount,
+        scale,
+        theme,
+      );
+    }
+
+    if (badges.length === 0) {
+      card.statusBadgeHitLayer.replaceChildren();
+      card.statusBadgeHitSignature = null;
+      canvas.hidden = true;
+      return;
+    }
+
+    if (!hitsUnchanged) {
+      card.statusBadgeHitSignature = hitSignature;
+      syncEnemyHudStatusBadgeHits(
+        card.statusBadgeHitLayer,
+        badges,
+        visible,
+        overflowCount,
+        theme,
+        statusSlotKey,
+        {
+          floatingTooltip: this.options.floatingTooltip ?? null,
+          gameTermPanel: this.options.gameTermPanel ?? null,
+        },
+      );
+    }
+  }
+
+  private updateEntryDangerTelegraph(
+    card: EnemyCardElements,
+    entry: EnemyHudEntry,
+  ): void {
+    const active = entry.dangerTelegraphActive === true;
+    const progress = Math.max(0, Math.min(1, entry.dangerTelegraphProgress ?? 0));
+
+    card.dangerTelegraph.classList.toggle(
+      'enemy-hud-danger-telegraph--active',
+      active,
+    );
+    card.dangerTelegraph.classList.toggle(
+      'enemy-hud-danger-telegraph--inactive',
+      !active,
+    );
+    card.dangerTelegraphFill.style.width = active ? `${progress * 100}%` : '0%';
   }
 
   private positionStackCard(
@@ -718,9 +972,11 @@ export class EnemyHudPanel {
     card.dangerTelegraphFill.style.width = active ? `${progress * 100}%` : '0%';
   }
 
-  private bindFieldLinkHover(root: HTMLElement, slotIndex: number): void {
+  private bindFieldLinkHover(root: HTMLElement, _slotIndex: number): void {
     root.addEventListener('mouseenter', () => {
-      const group = this.lastDisplayedGroups[slotIndex];
+      const groupId = root.dataset.enemyGroupId;
+      if (!groupId) return;
+      const group = this.lastDisplayedGroups.find((g) => g.groupId === groupId);
       if (!group) return;
       this.options.onHoverHighlightStart?.(
         group.enemies.map((enemy) => enemy.id),
@@ -728,6 +984,69 @@ export class EnemyHudPanel {
     });
     root.addEventListener('mouseleave', (event) => {
       if (this.shouldRetainFieldLinkHover(event.relatedTarget)) return;
+      this.options.onHoverHighlightEnd?.();
+    });
+  }
+
+  private bindGroupClick(root: HTMLElement, stackRoot: HTMLElement): void {
+    const handleExpandClick = (event: MouseEvent): void => {
+      const groupId = root.dataset.enemyGroupId;
+      if (!groupId) return;
+      if (this.expandedGroupIds.has(groupId)) return;
+      event.stopPropagation();
+      this.options.onGroupClick?.(groupId, 'expand');
+    };
+
+    root.addEventListener('click', handleExpandClick);
+    stackRoot.addEventListener('click', handleExpandClick);
+  }
+
+  private bindExpandedTopCardClick(card: EnemyCardElements): void {
+    if (card.root.dataset.expandedTopClickBound === '1') return;
+    card.root.dataset.expandedTopClickBound = '1';
+
+    card.root.addEventListener('click', (event) => {
+      const slotRoot = card.root.closest('.enemy-hud-group');
+      const groupId = slotRoot?.dataset.enemyGroupId;
+      if (!groupId || !this.expandedGroupIds.has(groupId)) return;
+      event.stopPropagation();
+      this.options.onGroupClick?.(groupId, 'collapse');
+    });
+  }
+
+  private bindExpandedCardHover(card: EnemyCardElements): void {
+    if (card.root.dataset.expandedHoverBound === '1') return;
+    card.root.dataset.expandedHoverBound = '1';
+
+    card.root.addEventListener('mouseenter', () => {
+      const unitId = card.root.dataset.enemyUnitId;
+      if (!unitId) return;
+      this.options.onHoverHighlightStart?.([unitId]);
+    });
+    card.root.addEventListener('mouseleave', (event) => {
+      if (this.shouldRetainFieldLinkHover(event.relatedTarget)) return;
+      const related = event.relatedTarget;
+      if (related instanceof Element) {
+        const slotRoot = card.root.closest('.enemy-hud-group');
+        if (
+          slotRoot?.contains(related) &&
+          related.closest('.enemy-hud-card--expanded-individual')
+        ) {
+          return;
+        }
+        if (slotRoot?.contains(related)) {
+          const groupId = slotRoot.dataset.enemyGroupId;
+          const group = groupId
+            ? this.lastDisplayedGroups.find((g) => g.groupId === groupId)
+            : undefined;
+          if (group) {
+            this.options.onHoverHighlightStart?.(
+              group.enemies.map((enemy) => enemy.id),
+            );
+            return;
+          }
+        }
+      }
       this.options.onHoverHighlightEnd?.();
     });
   }
@@ -744,9 +1063,38 @@ export class EnemyHudPanel {
     slot: GroupSlotElements,
     group: EnemyHudGroup,
   ): void {
-    const highlighted = group.enemies.some((enemy) =>
+    const expanded = this.expandedGroupIds.has(group.groupId);
+    const highlightedIds = group.enemies.filter((enemy) =>
       this.hoverHighlightUnitIds.has(enemy.id),
     );
-    slot.root.classList.toggle('enemy-hud-slot--hover-highlight', highlighted);
+    const hasHighlight = highlightedIds.length > 0;
+    const isIndividualHover =
+      expanded && hasHighlight && this.hoverHighlightUnitIds.size === 1;
+
+    slot.root.classList.toggle(
+      'enemy-hud-slot--hover-highlight',
+      hasHighlight && !isIndividualHover,
+    );
+
+    if (!expanded) return;
+
+    const cards = this.ensureExpandedCardPool(slot, group.count);
+    for (let i = 0; i < group.count; i++) {
+      const card = cards[i];
+      const entry = group.enemies[i];
+      if (!card || !entry) continue;
+      const strong = isIndividualHover && this.hoverHighlightUnitIds.has(entry.id);
+      const light = hasHighlight && !isIndividualHover && this.hoverHighlightUnitIds.has(entry.id);
+      card.root.classList.toggle('enemy-hud-card--hover-highlight-strong', strong);
+      card.root.classList.toggle('enemy-hud-card--hover-highlight-light', light);
+    }
   }
+}
+
+function areSetsEqual(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const value of a) {
+    if (!b.has(value)) return false;
+  }
+  return true;
 }

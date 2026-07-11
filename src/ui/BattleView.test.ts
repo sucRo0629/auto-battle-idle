@@ -115,6 +115,7 @@ vi.mock("../ui/EnemyHudPanel.ts", () => ({
     update: vi.fn(),
     setHoverHighlightUnitId: vi.fn(),
     setHoverHighlightUnitIds: vi.fn(),
+    setExpandedGroupIds: vi.fn(),
     destroy: vi.fn(),
   })),
 }));
@@ -147,6 +148,9 @@ vi.mock("../ui/GameTermPanel.ts", () => ({
 }));
 
 import { BattleView } from "./BattleView.ts";
+import { EnemyHudPanel } from "./EnemyHudPanel.ts";
+
+const EnemyHudPanelMock = vi.mocked(EnemyHudPanel);
 
 function createFakeElement() {
   return {
@@ -501,5 +505,265 @@ describe("BattleView", () => {
 
     expect(mocks.canvasInstance.tick).toHaveBeenCalledTimes(1);
     expect(view.isBattlePaused()).toBe(false);
+  });
+
+  it("pauses and expands a single enemy group when clicked during battle", () => {
+    const engine = {
+      onEvent: vi.fn(),
+      getSnapshot: vi.fn(() => ({
+        allies: [],
+        enemies: [],
+        waveIndex: 0,
+        waveCount: 1,
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: { actives: {} },
+      classRegistry: {},
+      stages: [{ id: "stage_1", displayName: "Stage 1", waves: [] }],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+      party: [],
+    }));
+
+    const container = createFakeElement();
+    const view = new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+    );
+
+    const enemyHudInstance = EnemyHudPanelMock.mock.results.at(-1)?.value as {
+      setExpandedGroupIds: ReturnType<typeof vi.fn>;
+    };
+
+    view["onEnemyGroupClick"]("df_paladin", "expand");
+
+    expect(view.isBattlePaused()).toBe(true);
+    expect([...view.getExpandedEnemyGroupIds()]).toEqual(["df_paladin"]);
+    expect(enemyHudInstance.setExpandedGroupIds).toHaveBeenCalledWith(
+      new Set(["df_paladin"]),
+    );
+  });
+
+  it("expands another group while one is already expanded", () => {
+    const engine = {
+      onEvent: vi.fn(),
+      getSnapshot: vi.fn(() => ({
+        allies: [],
+        enemies: [],
+        waveIndex: 0,
+        waveCount: 1,
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: { actives: {} },
+      classRegistry: {},
+      stages: [{ id: "stage_1", displayName: "Stage 1", waves: [] }],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+      party: [],
+    }));
+
+    const container = createFakeElement();
+    const view = new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+    );
+
+    view["onEnemyGroupClick"]("group_a", "expand");
+    view["onEnemyGroupClick"]("group_b", "expand");
+
+    const enemyHudInstance = EnemyHudPanelMock.mock.results.at(-1)?.value as {
+      setExpandedGroupIds: ReturnType<typeof vi.fn>;
+    };
+    const expandCalls = enemyHudInstance.setExpandedGroupIds.mock.calls;
+    expect(expandCalls.length).toBeGreaterThanOrEqual(2);
+    expect(expandCalls[0]![0]).toEqual(new Set(["group_a"]));
+    expect(expandCalls.at(-1)![0]).toEqual(new Set(["group_a", "group_b"]));
+
+    expect([...view.getExpandedEnemyGroupIds()].sort()).toEqual([
+      "group_a",
+      "group_b",
+    ]);
+    expect(view.isBattlePaused()).toBe(true);
+  });
+
+  it("collapses only the clicked group via top-card collapse action", () => {
+    const engine = {
+      onEvent: vi.fn(),
+      getSnapshot: vi.fn(() => ({
+        allies: [],
+        enemies: [],
+        waveIndex: 0,
+        waveCount: 1,
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: { actives: {} },
+      classRegistry: {},
+      stages: [{ id: "stage_1", displayName: "Stage 1", waves: [] }],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+      party: [],
+    }));
+
+    const container = createFakeElement();
+    const view = new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+    );
+
+    view["onEnemyGroupClick"]("group_a", "expand");
+    view["onEnemyGroupClick"]("group_b", "expand");
+    view["onEnemyGroupClick"]("group_a", "collapse");
+
+    expect([...view.getExpandedEnemyGroupIds()]).toEqual(["group_b"]);
+    expect(view.isBattlePaused()).toBe(true);
+  });
+
+  it("keeps other expanded groups while paused", () => {
+    const engine = {
+      onEvent: vi.fn(),
+      getSnapshot: vi.fn(() => ({
+        allies: [],
+        enemies: [],
+        waveIndex: 0,
+        waveCount: 1,
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: { actives: {} },
+      classRegistry: {},
+      stages: [{ id: "stage_1", displayName: "Stage 1", waves: [] }],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+      party: [],
+    }));
+
+    const container = createFakeElement();
+    const view = new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+    );
+
+    view.setBattlePaused(true);
+    view["onEnemyGroupClick"]("group_a", "expand");
+    view["onEnemyGroupClick"]("group_b", "expand");
+    expect([...view.getExpandedEnemyGroupIds()].sort()).toEqual([
+      "group_a",
+      "group_b",
+    ]);
+
+    view["onEnemyGroupClick"]("group_a", "collapse");
+    expect([...view.getExpandedEnemyGroupIds()]).toEqual(["group_b"]);
+    expect(view.isBattlePaused()).toBe(true);
+  });
+
+  it("can expand again after collapsing a group", () => {
+    const engine = {
+      onEvent: vi.fn(),
+      getSnapshot: vi.fn(() => ({
+        allies: [],
+        enemies: [],
+        waveIndex: 0,
+        waveCount: 1,
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: { actives: {} },
+      classRegistry: {},
+      stages: [{ id: "stage_1", displayName: "Stage 1", waves: [] }],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+      party: [],
+    }));
+
+    const container = createFakeElement();
+    const view = new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+    );
+
+    view["onEnemyGroupClick"]("group_a", "expand");
+    view["onEnemyGroupClick"]("group_a", "collapse");
+    expect(view.getExpandedEnemyGroupIds().size).toBe(0);
+
+    view["onEnemyGroupClick"]("group_a", "expand");
+    expect([...view.getExpandedEnemyGroupIds()]).toEqual(["group_a"]);
+    expect(view.isBattlePaused()).toBe(true);
+  });
+
+  it("clears expanded enemy groups when battle resumes", () => {
+    const engine = {
+      onEvent: vi.fn(),
+      getSnapshot: vi.fn(() => ({
+        allies: [],
+        enemies: [],
+        waveIndex: 0,
+        waveCount: 1,
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: { actives: {} },
+      classRegistry: {},
+      stages: [{ id: "stage_1", displayName: "Stage 1", waves: [] }],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+      party: [],
+    }));
+
+    const container = createFakeElement();
+    const view = new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+    );
+
+    const enemyHudInstance = EnemyHudPanelMock.mock.results.at(-1)?.value as {
+      setExpandedGroupIds: ReturnType<typeof vi.fn>;
+    };
+
+    view["onEnemyGroupClick"]("group_a", "expand");
+    view.setBattlePaused(false);
+
+    expect(view.getExpandedEnemyGroupIds().size).toBe(0);
+    expect(enemyHudInstance.setExpandedGroupIds).toHaveBeenLastCalledWith(
+      new Set(),
+    );
   });
 });

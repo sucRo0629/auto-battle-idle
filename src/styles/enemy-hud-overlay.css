@@ -32,6 +32,7 @@
 .enemy-hud-panel--overlay-top {
   height: 100%;
   --enemy-hud-panel-h: 100%;
+  pointer-events: auto;
   background: transparent;
   border: none;
   box-shadow: none;
@@ -111,6 +112,7 @@
 
 .enemy-hud-group {
   pointer-events: auto;
+  cursor: pointer;
 }
 
 /* Full enemy card — same structure for front / back; HP row pinned to bottom */
@@ -427,4 +429,65 @@
   box-shadow:
     inset 0 0 0 1px var(--hover-highlight-outline, rgba(160, 200, 255, 0.35)),
     0 0 4px var(--hover-highlight-glow, rgba(120, 170, 255, 0.15));
+}
+
+/* Phase 4 Task 2 — expanded group: individual cards in a column */
+.enemy-hud-slot.enemy-hud-group--expanded {
+  flex: 0 0 auto;
+  height: var(--enemy-hud-expanded-slot-h, var(--enemy-hud-slot-h, 68px));
+  min-height: var(--enemy-hud-expanded-slot-h, var(--enemy-hud-slot-h, 68px));
+  max-height: none;
+}
+
+.enemy-hud-card-stack--expanded .enemy-hud-card {
+  pointer-events: auto;
+  transition:
+    left 260ms ease-out,
+    top 260ms ease-out,
+    box-shadow 120ms ease-out,
+    background 120ms ease-out;
+}
+
+.enemy-hud-card--expanded-individual .enemy-hud-card-info {
+  display: grid;
+}
+
+.enemy-hud-card--expanded-individual .enemy-hud-icon-wrap {
+  visibility: visible;
+  pointer-events: none;
+}
+
+.enemy-hud-card--expanded-top {
+  cursor: pointer;
+}
+
+.enemy-hud-card-stack--expanded .enemy-hud-hp-row {
+  height: auto;
+  min-height: 0;
+  flex: 0 0 auto;
+  margin-top: auto;
+  gap: 1px;
+}
+
+.enemy-hud-card-stack--expanded .enemy-hud-hp-track {
+  position: relative;
+  left: auto;
+  bottom: auto;
+  width: 100%;
+}
+
+.enemy-hud-card--hover-highlight-light {
+  box-shadow:
+    inset 0 0 0 1px var(--hover-highlight-outline, rgba(160, 200, 255, 0.55)),
+    inset 0 0 0 2px var(--hover-highlight-glow, rgba(120, 170, 255, 0.18)),
+    0 0 8px var(--hover-highlight-glow, rgba(120, 170, 255, 0.28));
+  background: rgba(20, 30, 48, 0.9);
+}
+
+.enemy-hud-card--hover-highlight-strong {
+  box-shadow:
+    inset 0 0 0 2px var(--hover-highlight-outline, rgba(200, 230, 255, 0.95)),
+    inset 0 0 0 3px var(--hover-highlight-glow, rgba(140, 190, 255, 0.45)),
+    0 0 12px var(--hover-highlight-glow, rgba(120, 170, 255, 0.55));
+  background: rgba(28, 42, 68, 0.96);
 }

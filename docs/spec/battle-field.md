@@ -820,7 +820,7 @@ active_3  active_4
 
 敵 HUD は **画面上部**（topInfo 直下）に配置し、最大 10 group 程度の敵を **生存中のみ** 横並びで索引表示する。**全体を包む外枠パネルは表示しない**（各 group はカード束のみ）。group コンテナ footprint は固定（152×68px、帯 72px 内）。帯領域（`ENEMY_HUD_SLOT_BAND_HEIGHT`）はレイアウト予約のみで、パネル背景・枠線は描画しない。Wave 開始時はスロット列を展開、Wave 内の生存敵が 0 になったら閉じる。撃破した敵スロットはグレーアウトせず HUD から除去し、残存スロットを左方向へ詰める（表示リストのみ。戦闘ロジック上の enemy entity には影響しない）。**同一 Wave 内**の group 並び替え時は FLIP スライド（`enemyHudGroupSlide.ts`、260ms）で横移動する。敵が多い場合は暫定的に `flex-wrap` 折り返しで対応する（横スクロールは使わない）。
 
-**Phase 3 — 表示専用 groupBy:** 同種敵は HUD 表示用の `enemyGroup` にまとめる。group key は `enemyTypeId ?? classId`（未指定時は snapshot の `classId`、敵は template id）。`enemyGroup` は **HUD 専用** — 戦闘ロジック・ターゲット選定・勝敗判定では enemy entity 単位のまま。各 group は `groupId`、代表アイコン / 名前、`count`、グループ内 alive `enemies[]`、`representativeEnemy`、集約 `dangerState` / `importantStates` を持つ。撃破で `count` が減り、0 体の group は非表示。group hover 時はグループ内全敵を `hoverHighlight`（個体 hover は後続 Task）。**hover ではカード束を展開しない**（click 展開は後続 Task。Pause 基盤は §8.11.1）。
+**Phase 3 — 表示専用 groupBy:** 同種敵は HUD 表示用の `enemyGroup` にまとめる。group key は `enemyTypeId ?? classId`（未指定時は snapshot の `classId`、敵は template id）。`enemyGroup` は **HUD 専用** — 戦闘ロジック・ターゲット選定・勝敗判定では enemy entity 単位のまま。各 group は `groupId`、代表アイコン / 名前、`count`、グループ内 alive `enemies[]`、`representativeEnemy`、集約 `dangerState` / `importantStates` を持つ。撃破で `count` が減り、0 体の group は非表示。group hover 時はグループ内全敵を `hoverHighlight`。**hover ではカード束を展開しない**（click 展開は §8.11.2。Pause 基盤は §8.11.1）。
 
 **Phase 3 Task 2 — カード束表示:** 各 `enemyGroup` は上部 HUD で **同一 `enemyCard` 要素**を `stackOffset`（8px）でずらして重ねる（HP 専用レーンは使わない）。先頭カードは icon / 名前 / `×N` / 集約状態 / 危険予兆枠 + HP。背面カードは同一 DOM・同一カード枠（背景・枠線は維持）だが CSS で情報欄を隠し HP 行（と状態ミニ）を下端に露出。重ねた各 HP バーは **同じ幅**で、各カード内の同一 inset（icon 列右）に absolute 配置する（カードの `stackOffset` X 分だけ HP も右へずれる）。**背面の状態ミニ行は HP バーを押し上げない**（HP 行は常にカード下端 5px、ミニ行はその直上）。HP 行はカード下端に固定し、重ねると各体の HP バーが下方向に露出してすべて読める。`maxVisibleStack` = 3、超過は `+N`。icon は `pixel-icon-frame--24` 等倍（24×24）。寸法: card 136×48、group footprint 152×64。
 
@@ -984,11 +984,36 @@ topInfo:
 | 操作 | topInfo 左の Pause ボタン。`Space` / `Escape` でもトグル（テキスト入力 focus 時は除く。`Escape` は `GameTermPanel` 開時はパネル閉じを優先） |
 | 停止対象 | `BattleEngine.tick`、`BattleCanvas.tick`（スプライト / VFX / ポップアップ等）、`battleElapsedMs` と `targetIndicator` TTL の進行 |
 | 継続 | hover / selection / HUD 操作（`hoverHighlight`、`targetIndicator` 表示状態の維持、味方 HUD ホバー詳細、用語パネル等） |
-| 非対象 | Pause 時に敵 HUD を全展開しない。敵 group は束表示のまま（click 展開は後続 Task） |
+| 非対象 | Pause ボタンでは敵 group を展開しない（束表示のまま）。click 展開は §8.11.2 |
 | 表示 | `.battle-pause-overlay`（薄い暗幕、`pointer-events: none`）+ 中央の控えめな `PAUSE` 銘板。戦場は読める明度を維持。Debug overlay（Layer 5）とは混ぜない |
 | debug replay pause | 確認モードの battle-x replay pause（§1）とは独立。どちらかが ON なら `BattleEngine.tick` を止める |
 
 実装：`BattleView.ts`（状態・UI・`tick` ゲート）、`GameSession.ts`（`engine.tick` ゲート）、`battle-view.css`。
+
+### 8.11.2 敵 group クリック展開（観察 UI — Phase 4 Task 2）
+
+一時停止中に敵 HUD の group を観察しやすくするため、**クリックのみ**でカード束を個体カードへ展開する。hover では展開しない（§8.10.2 の `hoverHighlight` のみ）。
+
+| 項目 | 方針 |
+| ---- | ---- |
+| 状態 | `BattleView` が `expandedEnemyGroupIds: Set<groupId>` を保持（`battlePaused` と連動） |
+| 通常戦闘中 | `battlePaused = false`、`expandedEnemyGroupIds` は空。group はカード束 |
+| 通常戦闘中に group クリック | `battlePaused = true`、`expandedEnemyGroupIds` に clicked group を追加 |
+| Pause ボタン / `Space` で一時停止 | `battlePaused = true`、`expandedEnemyGroupIds` は空のまま |
+| 一時停止中に未展開 group クリック | `expandedEnemyGroupIds` へ追加。他の展開 group は維持 |
+| 展開中 group の先頭カードクリック | その group のみ `expandedEnemyGroupIds` から削除（重ね表示へ戻す） |
+| Pause 解除（ボタン / `Space` / `Escape`） | `battlePaused = false`、`expandedEnemyGroupIds` を空に戻し全 group を折りたたむ |
+| 戦闘ロジック | 変更しない。`enemyGroup` は HUD 表示専用のまま |
+| hover | group hover はグループ内全敵を薄くハイライト。展開済み個体カード hover は該当個体のみ強くハイライト。`targetIndicator` とは分離（§8.10） |
+
+**展開表示:**
+
+- 展開 group は重ねていた `enemyCard` を縦一列の個体カードとして開く（`enemyHudExpandedCardOffset`、gap 4px）
+- 各個体カードは icon / 名前 / 個体 HP / 個体状態 / 危険予兆枠を表示（集約 `×N` や `importantStates` は使わない）
+- 未展開 group は Phase 3 のカード束のまま
+- group コンテナ高さは展開体数に応じて伸びる（`--enemy-hud-expanded-slot-h`）。幅は束表示と同じ
+
+実装：`BattleView.ts`（`expandedEnemyGroupIds`・クリック / 解除）、`EnemyHudPanel.ts`（展開レイアウト・個体 hover）、`enemyHudCardStack.ts`（展開 footprint）、`enemy-hud-overlay.css`。
 
 ### 8.12 デバッグ UI
 

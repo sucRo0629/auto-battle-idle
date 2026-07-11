@@ -276,6 +276,8 @@
 
 .battle-hud-slot--enemy {
   /* Position/size from battleRootRectStyle(ENEMY_HUD_SLOT_RECT) in BattleView */
+  pointer-events: auto;
+  z-index: 1;
 }
 
 /* Layer 4 — top info overlay */

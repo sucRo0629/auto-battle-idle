@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   computeEnemyHudCardStackFootprint,
+  computeEnemyHudExpandedFootprint,
+  ENEMY_HUD_CARD_EXPAND_GAP,
   ENEMY_HUD_CARD_HEIGHT,
   ENEMY_HUD_CARD_STACK_OFFSET_X,
   ENEMY_HUD_CARD_STACK_OFFSET_Y,
   ENEMY_HUD_CARD_WIDTH,
   ENEMY_HUD_MAX_VISIBLE_STACK,
   enemyHudCardStackOffset,
+  enemyHudExpandedCardOffset,
   enemyHudHpTrackLeftInCard,
   ENEMY_HUD_HP_TRACK_LEFT_IN_CARD,
   ENEMY_HUD_HP_TRACK_WIDTH,
@@ -51,5 +54,26 @@ describe('resolveEnemyHudCardStackLayout', () => {
     expect(enemyHudHpTrackLeftInCard(0)).toBe(34);
     expect(enemyHudHpTrackLeftInCard(1)).toBe(34);
     expect(enemyHudHpTrackLeftInCard(2)).toBe(34);
+  });
+});
+
+describe('expanded enemy group layout', () => {
+  it('lays cards out vertically without stack overlap', () => {
+    expect(enemyHudExpandedCardOffset(0)).toEqual({ x: 0, y: 0 });
+    expect(enemyHudExpandedCardOffset(2)).toEqual({
+      x: 0,
+      y: 2 * (ENEMY_HUD_CARD_HEIGHT + ENEMY_HUD_CARD_EXPAND_GAP),
+    });
+  });
+
+  it('computes expanded footprint from member count', () => {
+    expect(computeEnemyHudExpandedFootprint(1)).toEqual({
+      width: ENEMY_HUD_CARD_WIDTH,
+      height: ENEMY_HUD_CARD_HEIGHT,
+    });
+    expect(computeEnemyHudExpandedFootprint(3)).toEqual({
+      width: ENEMY_HUD_CARD_WIDTH,
+      height: 3 * ENEMY_HUD_CARD_HEIGHT + 2 * ENEMY_HUD_CARD_EXPAND_GAP,
+    });
   });
 });
