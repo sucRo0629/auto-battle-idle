@@ -6,30 +6,41 @@
 - 正本仕様ではない。
 - 仕様変更が確定した場合は、必ず `docs/spec/` 配下（および `docs/` 直下の設計ドキュメント）の該当ドキュメントへ反映する。
 
-## 2. 作業テーマ
+## 2. 作業テーマ（2026-07-12 方針転換）
 
-- 作業名: **Phase 7 体験版導線**（M1 demo app flow / first-play guidance）
-- 状態: **Phase 6b 完了**（6b-1〜6b-8）。**Phase 7d〜7g 最小実装済み**（§26〜29）。**§30 で verify OFF main flow 成立を確認**。**§45 stageSelect rename 後の総合回帰は §46 で確認済み**。残タスクは §30「残タスク」
-- **2026-07 roadmap 改定:** [phase-roadmap.md](../plans/phase-roadmap.md) — 旧 6d → **Phase 7**（app flow）、新 **Phase 8**（presentation）、旧 Electron → **Phase 9**（packaging）。本編は **Phase 10** へ
-- **Phase 7 目的:** M1 体験版として、**起動から `demo_ch1_07` クリアまで迷わず進めるアプリ導線**を作る（配布 zip は Phase 9）
-- **現状画面:** verify OFF 起動は **ステージ選択**（`StageSelectionPanel`；内部 screen `'stageSelect'` / `stageSelectHost`）→ 編成（`MetaMenuOverlay`）→ 戦闘。**未実装:** トップ / リザルト / 体験版終了
-- **用語（ユーザー向け）:** 画面表示・spec・ガイド文案は **「ステージ選択」** に統一済み。**内部名 rename 済み（§45）:** `stageSelectHost` / `screen: 'stageSelect'` / `.game-shell__stage-select`（§46 で旧名残存なし再確認）
-- **並行・未達:** キャラ画像（並行作業中）、VFX 未実装、効果音未実装
-- **当面方針:** 新規ソース実装は止め、Phase 7 整理後は **グラフィック準備優先**。新規画面実装はグラフィック方針整理後に再開
-- **verify OFF 勝利時 currentStageId 維持済み（§33）**
-- **編成画面:** 戦闘画面より見た目・読みやすさが未達。**7e2 編成画面 M1 polish** は M1 前の改善対象だが、Cursor トークン消費を避け **今すぐ大改修しない**（グラフィック方針・クラス画像反映後に棚卸し → 小改善）
-- M1 方針（6b で固定）: **M1 ではレベル実装しない**。EXP / progression 接続は Phase 7 でも触らない。`recommendedLevel` は表示・設計メモ・将来用（体験版は **Lv1 基準、終盤は Lv2**）
-- **体験版ステージ難度（6c 着手）:** 敵 **5 体以上はダミー敵で確認済み**（再調査不要）。**敵 Lv0 固定は誤り** — 通常敵は **`recommendedLevel` Lv1 以上**（雑魚は scale 低下で表現）。`enemyGroups` + `classId` 直参照のみ
+- **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
+- **新ロードマップ現在地:** **R0 完了**（方針転換の正本化 — [phase-roadmap.md](../plans/phase-roadmap.md)）。
+- **次の再開タスク:** **R1 — 上位戦闘設計**の**文書更新**（対象候補: `combat-architecture.md`、`system-mechanics.md`、`class-philosophy.md`）。
+- **未確定（R0 時点）:** 個別兵科の**戦闘方式**・数値・R5 縦切り対象兵科。
+- **保留:** 移動阻害・移動速度差・ノックバック等の**移動系効果**は、将来の**作戦内パッシブ候補**として保留。**現在の実装対象ではない**（R5 最小縦切りにも含めない。R8 で再検討）。
+- **今回の doc 作業:** production code、データ JSON、テスト、**spec 本文**は**未変更**。
+
+### 新しい直近目標（要約）
+
+プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は**新試作成立後**。
+
+主な設計転換: 旧 active / passive 4 枠・gauge・Lv 成長・EXP 廃止方向、Wave ごとの**戦闘方式**選択、味方**同一兵科禁止**、秒単位**攻撃間隔**、**作戦内パッシブ**（任意取得）、Wave 間準備を含む作戦ループ。詳細は [phase-roadmap.md](../plans/phase-roadmap.md)。
+
+### legacy 扱い
+
+| 対象 | 扱い |
+| ---- | ---- |
+| `data/stages-demo.json`（7 ステージ） | legacy / reference。新仕様へ移行しない |
+| `data/stages.json` legacy 5 件 | dev / reference |
+| [skill-finalization-table.md](../plans/skill-finalization-table.md) | legacy 資料のみ。実装計画の正本から除外 |
+| 本ファイル §4 以降 | **2026-07-12 以前**の Phase 6/7 handoff ログ。**凍結**。現行計画の正本にしない |
 
 ## 3. 参照すべき正本
 
-- **v0.3.2 確定方針**（§4）
-- [docs/spec/progression.md](../spec/progression.md)
-- [docs/enemy-design-concept.md](../enemy-design-concept.md)
-- [docs/plans/enemy-editor-refactor.md](../plans/enemy-editor-refactor.md) — スキル参照分離（別 PR・本計画と並行しない）
-- [docs/plans/phase-roadmap.md](../plans/phase-roadmap.md) — Phase 6a/6b
+- [docs/plans/phase-roadmap.md](../plans/phase-roadmap.md) — **R0〜R10**（現行開発順の正本）
+- [docs/combat-architecture.md](../combat-architecture.md) — R1 更新候補
+- [docs/system-mechanics.md](../system-mechanics.md) — R1 更新候補
+- [docs/class-philosophy.md](../class-philosophy.md) — R1 更新候補
+- [docs/spec/README.md](../spec/README.md) — 現行 spec 索引（**R1 以降で新方針へ順次反映**。R0 では spec 本文未変更）
 
-## 4. v0.3.2 確定方針（要約）
+## 4. v0.3.2 確定方針（要約）— **凍結・legacy handoff**
+
+> **2026-07-12:** 以下は Phase 6/7 敵編成作業時の handoff 記録。**新ロードマップ（R0〜）の正本ではない。** 現行の敵 `enemyGroups` 実装資産の説明として参照可。
 
 - 新正本データ: `stages.json` ステージ直下 `enemyGroups`（wave 単位ではない）
 - 体験版: 1 stage = 1 `enemyGroups` = 1 wave 相当
