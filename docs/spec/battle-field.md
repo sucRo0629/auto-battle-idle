@@ -2,7 +2,7 @@
 
 実装：`src/battle/battleLayout.ts`, `combatPosition.ts`, `partyFormation.ts`, `bodyAnimMarching.ts`, `BattleEngine.ts`
 描画：`src/render/BattleCanvas.ts`（`screenX = battleX`）
-戦闘画面 UI / 戦闘中統計 UI：`src/ui/PartyHudPanel.ts`, `PartyMemberStatsDisplay.ts`（sync ヘルパー）, `PartyMemberEffectiveStatsPanel.ts`, `combatantBattleStatsDisplay.ts`, `src/ui/BattleView.ts`, `src/render/BattleCanvas.ts`, `src/styles/battle-view.css`, `src/styles/battle-stats-drawer.css`, `party-member-stats.css`, `party-member-effective-stats.css`
+戦闘画面 UI / 戦闘中統計 UI：`src/ui/PartyHudPanel.ts`, `PartyMemberStatsDisplay.ts`（sync ヘルパー）, `PartyMemberEffectiveStatsPanel.ts`, `combatantBattleStatsDisplay.ts`, `src/ui/BattleView.ts`, `src/game/GameSession.ts`, `src/render/BattleCanvas.ts`, `src/styles/battle-view.css`, `src/styles/battle-stats-drawer.css`, `party-member-stats.css`, `party-member-effective-stats.css`
 
 本ドキュメントは **横 1 軸のバトルライン** における座標・隊形・Wave・接敵・描画、および **戦闘画面 UI / HUD** の設計正本。ダメージ/CD/脅威等は [combat.md](combat.md) を参照。編成画面 DOM UI の設計は [party-formation-ui.md](party-formation-ui.md) を参照。
 
@@ -820,7 +820,7 @@ active_3  active_4
 
 敵 HUD は **画面上部**（topInfo 直下）に配置し、最大 10 group 程度の敵を **生存中のみ** 横並びで索引表示する。**全体を包む外枠パネルは表示しない**（各 group はカード束のみ）。group コンテナ footprint は固定（152×68px、帯 72px 内）。帯領域（`ENEMY_HUD_SLOT_BAND_HEIGHT`）はレイアウト予約のみで、パネル背景・枠線は描画しない。Wave 開始時はスロット列を展開、Wave 内の生存敵が 0 になったら閉じる。撃破した敵スロットはグレーアウトせず HUD から除去し、残存スロットを左方向へ詰める（表示リストのみ。戦闘ロジック上の enemy entity には影響しない）。**同一 Wave 内**の group 並び替え時は FLIP スライド（`enemyHudGroupSlide.ts`、260ms）で横移動する。敵が多い場合は暫定的に `flex-wrap` 折り返しで対応する（横スクロールは使わない）。
 
-**Phase 3 — 表示専用 groupBy:** 同種敵は HUD 表示用の `enemyGroup` にまとめる。group key は `enemyTypeId ?? classId`（未指定時は snapshot の `classId`、敵は template id）。`enemyGroup` は **HUD 専用** — 戦闘ロジック・ターゲット選定・勝敗判定では enemy entity 単位のまま。各 group は `groupId`、代表アイコン / 名前、`count`、グループ内 alive `enemies[]`、`representativeEnemy`、集約 `dangerState` / `importantStates` を持つ。撃破で `count` が減り、0 体の group は非表示。group hover 時はグループ内全敵を `hoverHighlight`（個体 hover は後続 Task）。**hover ではカード束を展開しない**（click 展開・Pause は後続 Task）。
+**Phase 3 — 表示専用 groupBy:** 同種敵は HUD 表示用の `enemyGroup` にまとめる。group key は `enemyTypeId ?? classId`（未指定時は snapshot の `classId`、敵は template id）。`enemyGroup` は **HUD 専用** — 戦闘ロジック・ターゲット選定・勝敗判定では enemy entity 単位のまま。各 group は `groupId`、代表アイコン / 名前、`count`、グループ内 alive `enemies[]`、`representativeEnemy`、集約 `dangerState` / `importantStates` を持つ。撃破で `count` が減り、0 体の group は非表示。group hover 時はグループ内全敵を `hoverHighlight`（個体 hover は後続 Task）。**hover ではカード束を展開しない**（click 展開は後続 Task。Pause 基盤は §8.11.1）。
 
 **Phase 3 Task 2 — カード束表示:** 各 `enemyGroup` は上部 HUD で **同一 `enemyCard` 要素**を `stackOffset`（8px）でずらして重ねる（HP 専用レーンは使わない）。先頭カードは icon / 名前 / `×N` / 集約状態 / 危険予兆枠 + HP。背面カードは同一 DOM・同一カード枠（背景・枠線は維持）だが CSS で情報欄を隠し HP 行（と状態ミニ）を下端に露出。重ねた各 HP バーは **同じ幅**で、各カード内の同一 inset（icon 列右）に absolute 配置する（カードの `stackOffset` X 分だけ HP も右へずれる）。**背面の状態ミニ行は HP バーを押し上げない**（HP 行は常にカード下端 5px、ミニ行はその直上）。HP 行はカード下端に固定し、重ねると各体の HP バーが下方向に露出してすべて読める。`maxVisibleStack` = 3、超過は `+N`。icon は `pixel-icon-frame--24` 等倍（24×24）。寸法: card 136×48、group footprint 152×64。
 
@@ -972,6 +972,23 @@ topInfo:
 | Wave | `WAVE {current} / {total}` 形式。14〜16px 目安 |
 | 表現 | 角丸タグ・ボタン風チップではなく、直線フレーム付き HUD 銘板（`border-radius: 0`、角欠け / 二重枠 / 内側ハイライト） |
 | Verify / DEBUG | 通常 HUD から分離し `.battle-debug-overlay` 右上に配置（Layer 5） |
+| 一時停止 | 本番観察用。`battle-top-info` 左端の Pause ボタン（Layer 4）。Debug UI とは分離 |
+
+### 8.11.1 戦闘一時停止（観察 UI — Phase 4 Task 1）
+
+戦闘画面の本番用観察機能として、戦闘シミュレーションとフィールド演出の時間だけを止める。**戦闘ルール・ダメージ計算・ターゲット選定は変更しない。**
+
+| 項目 | 方針 |
+| ---- | ---- |
+| 状態 | `BattleView` が `battlePaused: boolean` を保持 |
+| 操作 | topInfo 左の Pause ボタン。`Space` / `Escape` でもトグル（テキスト入力 focus 時は除く。`Escape` は `GameTermPanel` 開時はパネル閉じを優先） |
+| 停止対象 | `BattleEngine.tick`、`BattleCanvas.tick`（スプライト / VFX / ポップアップ等）、`battleElapsedMs` と `targetIndicator` TTL の進行 |
+| 継続 | hover / selection / HUD 操作（`hoverHighlight`、`targetIndicator` 表示状態の維持、味方 HUD ホバー詳細、用語パネル等） |
+| 非対象 | Pause 時に敵 HUD を全展開しない。敵 group は束表示のまま（click 展開は後続 Task） |
+| 表示 | `.battle-pause-overlay`（薄い暗幕、`pointer-events: none`）+ 中央の控えめな `PAUSE` 銘板。戦場は読める明度を維持。Debug overlay（Layer 5）とは混ぜない |
+| debug replay pause | 確認モードの battle-x replay pause（§1）とは独立。どちらかが ON なら `BattleEngine.tick` を止める |
+
+実装：`BattleView.ts`（状態・UI・`tick` ゲート）、`GameSession.ts`（`engine.tick` ゲート）、`battle-view.css`。
 
 ### 8.12 デバッグ UI
 

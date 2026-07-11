@@ -186,6 +186,11 @@ describe("BattleView", () => {
 
   beforeEach(() => {
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+    vi.stubGlobal("document", {
+      createElement: () => createFakeElement(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    });
   });
 
   it("shows a damage popup only once per skill damage event", () => {
@@ -222,10 +227,6 @@ describe("BattleView", () => {
       onVerifyModeChange: vi.fn(),
       onOpenMetaMenu: vi.fn(),
     };
-
-    vi.stubGlobal("document", {
-      createElement: () => createFakeElement(),
-    });
 
     const container = createFakeElement();
 
@@ -294,9 +295,6 @@ describe("BattleView", () => {
       onOpenMetaMenu: vi.fn(),
     };
 
-    vi.stubGlobal("document", {
-      createElement: () => createFakeElement(),
-    });
 
     const container = createFakeElement();
 
@@ -361,9 +359,6 @@ describe("BattleView", () => {
       onOpenMetaMenu: vi.fn(),
     };
 
-    vi.stubGlobal("document", {
-      createElement: () => createFakeElement(),
-    });
 
     const container = createFakeElement();
 
@@ -428,9 +423,6 @@ describe("BattleView", () => {
       onOpenMetaMenu: vi.fn(),
     };
 
-    vi.stubGlobal("document", {
-      createElement: () => createFakeElement(),
-    });
 
     const container = createFakeElement();
 
@@ -458,5 +450,56 @@ describe("BattleView", () => {
     expect(mocks.canvasInstance.showKnockbackPopup).toHaveBeenCalledWith(
       "target-1",
     );
+  });
+
+  it("does not advance canvas animations while battle is paused", () => {
+    const engine = {
+      onEvent: vi.fn(),
+      getSnapshot: vi.fn(() => ({
+        allies: [],
+        enemies: [],
+        waveIndex: 0,
+        waveCount: 1,
+      })),
+    };
+
+    const gameData = {
+      skillRegistry: { actives: {} },
+      classRegistry: {},
+      stages: [{ id: "stage_1", displayName: "Stage 1", waves: [] }],
+    };
+
+    const getSave = vi.fn(() => ({
+      stageProgress: { currentStageId: "stage_1" },
+      party: [],
+    }));
+
+
+    const container = createFakeElement();
+
+    const view = new BattleView(
+      container,
+      engine as never,
+      gameData as never,
+      {} as never,
+      getSave,
+    );
+
+    view.tick(16);
+    expect(mocks.canvasInstance.tick).toHaveBeenCalledTimes(1);
+
+    view.setBattlePaused(true);
+    mocks.canvasInstance.tick.mockClear();
+    view.tick(16);
+
+    expect(mocks.canvasInstance.tick).not.toHaveBeenCalled();
+    expect(view.isBattlePaused()).toBe(true);
+
+    view.setBattlePaused(false);
+    mocks.canvasInstance.tick.mockClear();
+    view.tick(16);
+
+    expect(mocks.canvasInstance.tick).toHaveBeenCalledTimes(1);
+    expect(view.isBattlePaused()).toBe(false);
   });
 });

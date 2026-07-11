@@ -113,6 +113,9 @@ export class BattleView {
   private readonly stagePlateStageEl: HTMLElement;
   private readonly stagePlateWaveEl: HTMLElement;
   private readonly verifyBadgeEl: HTMLButtonElement;
+  private readonly pauseButton: HTMLButtonElement;
+  private readonly pauseOverlayEl: HTMLElement;
+  private readonly pausePlateEl: HTMLElement;
   private readonly menuButton: HTMLButtonElement;
   private readonly canvas: BattleCanvas;
   private readonly partyHud: PartyHudPanel;
@@ -132,6 +135,7 @@ export class BattleView {
   private hoverHighlight: BattleHoverHighlightState = createEmptyHoverHighlight();
   private readonly targetIndicatorTracker = new BattleTargetIndicatorTracker();
   private battleElapsedMs = 0;
+  private battlePaused = false;
   private memberStatsHideTimer: ReturnType<typeof setTimeout> | null = null;
   private lastStagePlateLabel = "";
   private lastWavePlateLabel = "";
@@ -222,6 +226,33 @@ export class BattleView {
     battleTopInfo.className = "battle-top-info";
     battleTopInfo.style.cssText = battleRootRectStyle(BATTLE_TOP_INFO_RECT);
 
+    const battleTopInfoLeading = document.createElement("div");
+    battleTopInfoLeading.className =
+      "battle-top-info-side battle-top-info-side--leading";
+
+    this.pauseButton = document.createElement("button");
+    this.pauseButton.type = "button";
+    this.pauseButton.className = "battle-pause-button game-ui-button";
+    this.pauseButton.addEventListener("click", () => {
+      this.toggleBattlePaused();
+    });
+    battleTopInfoLeading.appendChild(this.pauseButton);
+
+    const battleTopInfoTrailing = document.createElement("div");
+    battleTopInfoTrailing.className =
+      "battle-top-info-side battle-top-info-side--trailing";
+    battleTopInfoTrailing.setAttribute("aria-hidden", "true");
+
+    const battlePauseOverlay = document.createElement("div");
+    battlePauseOverlay.className = "battle-pause-overlay";
+    battlePauseOverlay.hidden = true;
+    battlePauseOverlay.setAttribute("aria-hidden", "true");
+    this.pauseOverlayEl = battlePauseOverlay;
+
+    this.pausePlateEl = document.createElement("div");
+    this.pausePlateEl.className = "battle-pause-plate game-panel-surface";
+    battlePauseOverlay.appendChild(this.pausePlateEl);
+
     const battleDebugOverlay = document.createElement("div");
     battleDebugOverlay.className = "battle-debug-overlay";
     battleDebugOverlay.setAttribute("aria-hidden", "true");
@@ -284,7 +315,11 @@ export class BattleView {
       );
     });
 
-    battleTopInfo.append(this.stagePlateEl);
+    battleTopInfo.append(
+      battleTopInfoLeading,
+      this.stagePlateEl,
+      battleTopInfoTrailing,
+    );
 
     battleLane.appendChild(canvasWrap);
 
@@ -296,6 +331,7 @@ export class BattleView {
       battleBackground,
       battleLaneLayer,
       battleFxLayer,
+      battlePauseOverlay,
       battleHudLayer,
       battleTopInfo,
       battleDebugOverlay,
@@ -461,6 +497,8 @@ export class BattleView {
 
     this.engine.onEvent((event) => this.onBattleEvent(event));
 
+    document.addEventListener("keydown", this.onBattleKeyDown);
+
     this.unsubscribeLocale = subscribeLocaleChange(() => {
       this.refreshLocaleChrome();
       const snapshot = this.engine.getSnapshot();
@@ -479,6 +517,25 @@ export class BattleView {
     this.refreshLocaleChrome();
   }
 
+  private readonly onBattleKeyDown = (event: KeyboardEvent): void => {
+    if (this.root.hidden) return;
+    if (event.key !== " " && event.key !== "Escape") return;
+
+    const target = event.target;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement
+    ) {
+      return;
+    }
+
+    if (event.key === " ") {
+      event.preventDefault();
+    }
+    this.toggleBattlePaused();
+  };
+
   private mountBattleRootScale(): void {
     const updateScale = (): void => {
       applyBattleRootScale(
@@ -496,7 +553,38 @@ export class BattleView {
   private refreshLocaleChrome(): void {
     this.menuButton.textContent = t("battle.formation");
     this.menuButton.setAttribute("aria-label", t("battle.formationAria"));
+    this.syncPauseChrome();
     this.syncVerifyBadgeState();
+  }
+
+  private syncPauseChrome(): void {
+    const paused = this.battlePaused;
+    this.pauseButton.textContent = paused
+      ? t("battle.resume")
+      : t("battle.pause");
+    this.pauseButton.setAttribute(
+      "aria-label",
+      paused ? t("battle.resumeAria") : t("battle.pauseAria"),
+    );
+    this.pauseButton.setAttribute("aria-pressed", paused ? "true" : "false");
+    this.pausePlateEl.textContent = t("battle.pausePlate");
+  }
+
+  isBattlePaused(): boolean {
+    return this.battlePaused;
+  }
+
+  setBattlePaused(paused: boolean): void {
+    if (this.battlePaused === paused) return;
+    this.battlePaused = paused;
+    this.battleRoot.classList.toggle("battle-root--paused", paused);
+    this.pauseOverlayEl.hidden = !paused;
+    this.pauseOverlayEl.setAttribute("aria-hidden", paused ? "false" : "true");
+    this.syncPauseChrome();
+  }
+
+  toggleBattlePaused(): void {
+    this.setBattlePaused(!this.battlePaused);
   }
 
   private clearMemberStatsHideTimer(): void {
@@ -915,6 +1003,11 @@ export class BattleView {
   }
 
   tick(deltaMs: number): void {
+    if (this.battlePaused) {
+      this.refreshMemberStatsPanel();
+      return;
+    }
+
     this.battleElapsedMs += deltaMs;
     const targetIndicatorsChanged = this.targetIndicatorTracker.prune(
       this.battleElapsedMs,
@@ -1016,6 +1109,7 @@ export class BattleView {
   }
 
   destroy(): void {
+    document.removeEventListener("keydown", this.onBattleKeyDown);
     this.unsubscribeLocale();
     this.battleRootResizeObserver?.disconnect();
     this.battleRootResizeObserver = null;
