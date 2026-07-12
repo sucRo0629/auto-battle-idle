@@ -181,7 +181,7 @@ describe('createEnemiesForStage enemyGroups path', () => {
     }
   });
 
-  it('returns empty array for waveIndex > 0 on enemyGroups stage', () => {
+  it('returns empty array for waveIndex > 0 on stage-level enemyGroups only', () => {
     const stage = stageWithEnemyGroups([{ classId: 'df_paladin', count: 2 }]);
     const gameData = gameDataWithStage(stage);
 
@@ -263,6 +263,113 @@ describe('createEnemiesForStage enemyGroups path', () => {
       .flatMap((entry) => entry.skillIds)
       .filter((id) => gameData.skillRegistry.actives[id]);
     expect(activeIdsAt(20).every((id) => allLearned.includes(id))).toBe(true);
+  });
+});
+
+describe('createEnemiesForStage wave enemyGroups path (R6g-2)', () => {
+  beforeEach(() => {
+    resetEntityIdCounter();
+  });
+
+  function stageWithWaveEnemyGroups(
+    waves: StageDef['waves'],
+    options: {
+      recommendedLevel?: number;
+      id?: string;
+      enemyGroups?: StageDef['enemyGroups'];
+    } = {},
+  ): StageDef {
+    return {
+      id: options.id ?? 'wave_groups_test',
+      displayName: 'Wave Groups Test',
+      recommendedLevel: options.recommendedLevel ?? 10,
+      ...(options.enemyGroups !== undefined
+        ? { enemyGroups: options.enemyGroups }
+        : {}),
+      waves,
+    };
+  }
+
+  it('spawns from waves[waveIndex].enemyGroups per wave index', () => {
+    const stage = stageWithWaveEnemyGroups([
+      { enemies: [], enemyGroups: [{ classId: 'df_guardian', count: 2 }] },
+      { enemies: [], enemyGroups: [{ classId: 'at_sorcerer', count: 1 }] },
+    ]);
+    const gameData = gameDataWithStage(stage);
+
+    const wave0 = createEnemiesForStage(
+      gameData,
+      stage.id,
+      0,
+      levelCurves,
+    );
+    const wave1 = createEnemiesForStage(
+      gameData,
+      stage.id,
+      1,
+      levelCurves,
+    );
+
+    expect(wave0).toHaveLength(2);
+    expect(wave0.every((e) => e.classId === 'df_guardian')).toBe(true);
+    expect(wave1).toHaveLength(1);
+    expect(wave1[0]!.classId).toBe('at_sorcerer');
+  });
+
+  it('prefers wave enemyGroups over stage-level on wave 0', () => {
+    const stage = stageWithWaveEnemyGroups(
+      [
+        {
+          enemies: [],
+          enemyGroups: [{ classId: 'at_hunter', count: 1 }],
+        },
+      ],
+      {
+        enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+      },
+    );
+    const gameData = gameDataWithStage(stage);
+
+    const enemies = createEnemiesForStage(
+      gameData,
+      stage.id,
+      0,
+      levelCurves,
+    );
+
+    expect(enemies).toHaveLength(1);
+    expect(enemies[0]!.classId).toBe('at_hunter');
+  });
+
+  it('keeps legacy waves[].enemies for any wave index', () => {
+    const gameData = loadGameData();
+    const wave0 = createEnemiesForStage(gameData, '1', 0);
+    const wave1 = createEnemiesForStage(gameData, '1', 1);
+
+    expect(wave0.length).toBeGreaterThan(0);
+    expect(wave1.length).toBeGreaterThan(0);
+    expect(wave0.every((e) => e.isEnemy)).toBe(true);
+    expect(wave1.every((e) => e.isEnemy)).toBe(true);
+  });
+
+  it('falls back to stage-level enemyGroups on wave 0 when wave has no groups', () => {
+    const stage = stageWithWaveEnemyGroups(
+      [{ enemies: [] }],
+      {
+        enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+      },
+    );
+    const gameData = gameDataWithStage(stage);
+
+    const enemies = createEnemiesForStage(
+      gameData,
+      stage.id,
+      0,
+      levelCurves,
+    );
+
+    expect(enemies).toHaveLength(1);
+    expect(enemies[0]!.classId).toBe('df_paladin');
   });
 });
 

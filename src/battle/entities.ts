@@ -9,6 +9,7 @@ import type {
   PartySlotState,
   ResolvedEnemySpawnSpec,
   SkillCooldown,
+  StageEnemyGroup,
 } from './types.ts';
 import { resolveEnemySpawnBattleX } from './battleConstants.ts';
 import { copyNormalizedTraits } from './data/entityTraits.ts';
@@ -319,8 +320,11 @@ function createEnemiesFromEnemyGroups(
   stage: NonNullable<GameData['stages'][number]>,
   gameData: GameData,
   curves: LevelCurvesConfig,
+  enemyGroups?: StageEnemyGroup[],
 ): CombatantState[] {
-  const specs = expandEnemyGroups(stage);
+  const specs = expandEnemyGroups(
+    enemyGroups !== undefined ? { ...stage, enemyGroups } : stage,
+  );
   const spawnXByKey = resolveEnemyGroupSpawnX(specs, (classId) => {
     const preset = gameData.classRegistry[classId];
     if (!preset) {
@@ -355,6 +359,25 @@ export function createEnemiesForStage(
     throw new Error(`Stage not found: ${stageId}`);
   }
 
+  const wave = stage.waves[waveIndex];
+  const waveEnemyGroups = wave?.enemyGroups;
+  if (waveEnemyGroups && waveEnemyGroups.length > 0) {
+    if (!wave) {
+      throw new Error(`Wave not found: ${stageId} wave ${waveIndex}`);
+    }
+    if (!levelCurves) {
+      throw new Error(
+        `levelCurves is required for enemyGroups spawn (stage: ${stageId}, wave: ${waveIndex})`,
+      );
+    }
+    return createEnemiesFromEnemyGroups(
+      stage,
+      gameData,
+      levelCurves,
+      waveEnemyGroups,
+    );
+  }
+
   if (stage.enemyGroups) {
     if (waveIndex !== 0) {
       return [];
@@ -367,7 +390,6 @@ export function createEnemiesForStage(
     return createEnemiesFromEnemyGroups(stage, gameData, levelCurves);
   }
 
-  const wave = stage.waves[waveIndex];
   if (!wave) {
     throw new Error(`Wave not found: ${stageId} wave ${waveIndex}`);
   }

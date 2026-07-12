@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6g-1 完了** — Wave 単位 `waves[].enemyGroups` 型・validation（本 §62）。**R6f 完了**（§61）。**R6e 完了**（§60）。**R6d 完了**（§59）。
-- **次の再開タスク:** **R6g-2 — `createEnemiesForStage` の Wave 単位 spawn 対応**（handoff §62 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
+- **新ロードマップ現在地:** **R6g-2 完了** — `createEnemiesForStage` の Wave 単位 spawn（本 §63）。**R6g-1 完了**（§62）。**R6f 完了**（§61）。**R6e 完了**（§60）。**R6d 完了**（§59）。
+- **次の再開タスク:** **R6g-3 — BattleEngine / GameSession spawn 接続**（handoff §63 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5029,4 +5029,47 @@ party / module / stageId / currentWaveIndex / clearedWaveCount を checkpoint �
 
 ### 62.7 次タスク
 
-**R6g-2 — `createEnemiesForStage` の Wave 単位 spawn 対応**
+**R6g-2 — `createEnemiesForStage` の Wave 単位 spawn 対応** — §63 参照。
+
+---
+
+## 63. R6g-2 — `createEnemiesForStage` の Wave 単位 spawn 対応（2026-07-12 完了）
+
+### 63.1 目的
+
+`waves[].enemyGroups` を wave index ごとの敵生成に接続。R6g-1 の型・validation を runtime spawn へ反映。
+
+### 63.2 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/battle/entities.ts` | `createEnemiesForStage` の wave 優先分岐、`createEnemiesFromEnemyGroups` に groups override |
+| `src/battle/entities.enemyGroups.test.ts` | R6g-2 テスト 4 件追加、stage 直下のみ空配列テスト名更新 |
+| `docs/ai-handoff/current-task.md` | 本 §63 |
+
+### 63.3 敵生成元の優先・fallback 規則
+
+1. **`waves[waveIndex].enemyGroups` が非空** → 当該 wave の groups で spawn（任意 wave index）
+2. **stage 直下 `enemyGroups`** → **wave 0 のみ** spawn。`waveIndex !== 0` かつ wave 側 groups なし → **空配列**
+3. **legacy `waves[waveIndex].enemies`** → templateId 経路（従来どおり任意 index）
+4. **正規化・一本化なし** — 上記は共存。wave 0 で wave groups があれば stage 直下より **wave 優先**
+
+### 63.4 legacy 互換
+
+- stage 直下 `enemyGroups` + 空 wave placeholder — 既存テスト通過
+- legacy `waves[].enemies`（templateId）— wave 0 / 1 とも通過
+- `stages.json` / `stages-demo.json` — 変更なし
+
+### 63.5 テスト
+
+- `entities.enemyGroups.test.ts`: wave index 別 spawn、wave 優先、legacy 回帰、wave 未指定時 stage 直下 fallback
+
+### 63.6 未実装（R6g-3 以降）
+
+- `BattleEngine` / `GameSession` spawn 接続
+- `stages.json` / editor 移行
+- schema 正規化による敵生成方式の一本化
+
+### 63.7 次タスク
+
+**R6g-3 — BattleEngine / GameSession spawn 接続**
