@@ -86,6 +86,7 @@ import {
   defaultBasicAttackId,
   synthesizeBasicAttackSkill,
 } from './synthesizeBasicAttack.ts';
+import { synthesizeCombatModuleSkill } from './synthesizeCombatModuleSkill.ts';
 import { PASSIVE_DISPEL_TRIGGER_KINDS } from '../passivePeriodicTrigger.ts';
 import { GLOBAL_MAX_CHARGES_CAP } from '../skills/chargeBank.ts';
 import { STUN_MAX_DURATION_SEC } from '../ccEffects.ts';
@@ -5258,6 +5259,15 @@ function validateBasicAttackJsonOverride(
   });
 }
 
+function injectSynthesizedCombatModuleSkills(
+  combatModules: CombatModuleDef[],
+  activesById: Map<string, ActiveSkillDef>,
+): void {
+  for (const module of combatModules) {
+    activesById.set(module.id, synthesizeCombatModuleSkill(module));
+  }
+}
+
 function injectSynthesizedBasicAttacks(
   classes: ClassPresetBeforeEnrich[],
   enemies: EnemyTemplate[],
@@ -6427,6 +6437,8 @@ export function parseAndValidateGameDataJson(
     ...enemy,
     traits: normalizeEntityTraits(enemy.traits),
   }));
+
+  injectSynthesizedCombatModuleSkills(combatModules, activesById);
 
   injectSynthesizedBasicAttacks(
     classesWithTraits,

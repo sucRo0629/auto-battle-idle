@@ -25,6 +25,7 @@ import {
   hasActiveDamageDelay,
 } from "./damageDelay.ts";
 import { getBasicCooldownRate } from "../progression/levelGrowth.ts";
+import { resolveBasicAttackSkillIdFromGameData } from "./data/resolveCombatModuleBasic.ts";
 import { resolveAttackSpeedTier } from "../progression/memberStatsDisplay.ts";
 import {
   getEnemyContactX,
@@ -1696,8 +1697,12 @@ export class BattleEngine {
         member,
         this.gameData,
       );
+      const basicSkillId = resolveBasicAttackSkillIdFromGameData(
+        preset,
+        this.gameData,
+      );
       ally.cooldowns = createCooldowns(
-        preset.basicAttackSkillId,
+        basicSkillId,
         member.build,
         activeSkillIds,
       );
@@ -2343,9 +2348,21 @@ export class BattleEngine {
         const skill = this.gameData.skillRegistry.actives[cd.skillId];
         if (!skill || !shouldTickCooldown(skill, cd.slotKind)) continue;
         const prevRemaining = cd.remaining;
+        const isModuleBasic =
+          cd.slotKind === "basic" &&
+          this.gameData.combatModuleRegistry[cd.skillId] !== undefined;
         const speedMul =
-          cd.slotKind === "active" ? 1 : getEffectiveAttackSpeedMultiplier(unit);
-        const rate = cd.slotKind === "active" ? 1 : basicRate * speedMul;
+          cd.slotKind === "active"
+            ? 1
+            : isModuleBasic
+              ? 1
+              : getEffectiveAttackSpeedMultiplier(unit);
+        const rate =
+          cd.slotKind === "active"
+            ? 1
+            : isModuleBasic
+              ? 1
+              : basicRate * speedMul;
         cd.remaining = Math.max(0, cd.remaining - deltaTime * rate);
         if (
           cd.slotKind === "active" &&

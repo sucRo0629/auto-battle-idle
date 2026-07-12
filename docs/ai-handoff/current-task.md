@@ -9,14 +9,15 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R5b 完了** — 戦闘方式最小型・データ・validate（本 §48）。次は **R5c — 通常行動実行**。
-- **次の再開タスク:** **R5c — 通常行動実行**（module → ActiveSkillDef 合成、attackIntervalSec 接続、SkillExecutor / BattleEngine 接続）。
+- **新ロードマップ現在地:** **R5c 完了** — 通常行動実行（module → SkillExecutor 接続、本 §49）。次は **R5d — 作戦ループ**。
+- **次の再開タスク:** **R5d — 作戦ループ**（作戦状態・方式 A/B 選択・Wave 切替等。R5c では未接続）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
 - **保留:** 移動阻害・移動速度差・ノックバック等は将来の**作戦内パッシブ候補**（R8）。
 - **今回の doc 作業（R5a）:** production code、データ JSON、テスト、エディタは**未変更**。調査結果は §47。
 - **今回の実装（R5b）:** §48。BattleEngine / SkillExecutor / Combatant 生成 / UI / editor / Save は未接続。
+- **今回の実装（R5c）:** §49。対象 4 兵科の先頭 module を通常行動として SkillExecutor 接続。UI / editor / Save / 作戦ループ / 方式 B 選択 / 敵 selectedCombatModuleId は未接続。
 
 ### R4 で確定したデータ責務（doc 反映済）
 
@@ -3410,4 +3411,103 @@ class / stage / `enemyGroups`、demo balance、save schema、`currentStageId` / 
 - `validateGameData.test.ts` / `stageSelectionWire.test.ts` — 実データ bundle に `combatModules` 追加
 
 **次の再開タスク:** R5c「通常行動実行」
+
+---
+
+## 49. R5c — 通常行動実行（2026-07-12）
+
+**目的:** R5b の `CombatModuleDef` を既存通常行動経路（basic スロット + `SkillExecutor.tryExecute`）へ最小接続。対象 4 兵科のみ。
+
+**作業前に読んだファイル（6 件）:**
+
+1. `docs/ai-handoff/current-task.md` — §48 R5b 完了状態
+2. `src/battle/entities.ts` — Combatant 生成
+3. `src/battle/data/synthesizeCombatModuleSkill.ts`
+4. `src/battle/BattleEngine.ts` — tickCooldowns / runUnitSkills / initializeSkillCooldowns
+5. `src/battle/skills/SkillExecutor.ts` — tryExecute
+6. `src/battle/data/validateGameData.ts` — skillRegistry 注入
+
+---
+
+### 49.1 module 選択規則
+
+- `ClassPreset.combatModuleIds` がある class → **`combatModuleIds[0]` を明示選択**（registry 配列順・glob 順は使わない）
+- 未指定 class → legacy `basicAttackSkillId`
+- 実装: `src/battle/data/resolveCombatModuleBasic.ts`
+  - `resolveSelectedCombatModuleId`
+  - `resolveBasicAttackSkillId` / `resolveBasicAttackSkillIdFromGameData`
+
+---
+
+### 49.2 合成 skill と skillRegistry
+
+- `validateGameData.ts` の `injectSynthesizedCombatModuleSkills` が load 時に各 module を `synthesizeCombatModuleSkill` → `activesById` へ登録
+- 合成 skill ID = module.id（安定）
+- `trigger.value = attackIntervalSec`（初回 CD・継続周期の正本）
+
+---
+
+### 49.3 Combatant 生成接続
+
+| 経路 | 変更 |
+| ---- | ---- |
+| `createAllyFromMember` | `gameData` があるとき basic `skillId` を module 解決結果へ差し替え |
+| `createEnemyFromClassGroup` | 同上 |
+| `createAlliesFromParty` | `gameData` を渡すよう修正 |
+| `BattleEngine.syncPartyBuilds` | basic 再生成も module 解決を使用 |
+
+basic スロットのみ差し替え。旧 basic は active 枠へ入れず二重実行なし。
+
+---
+
+### 49.4 attackIntervalSec の保存・初期化・再設定
+
+| 段階 | 箇所 | 内容 |
+| ---- | ---- | ---- |
+| 正本 | `CombatModuleDef.attackIntervalSec` | module JSON |
+| 実行時 skill | 合成 `ActiveSkillDef.trigger.value` | `synthesizeCombatModuleSkill` |
+| 初回 CD | `initializeSkillCooldowns`（BattleEngine `initBattlePassiveState` / wave spawn / syncPartyBuilds） | `remaining = trigger.value`（= attackIntervalSec） |
+| CD tick | `BattleEngine.tickCooldowns` | module basic は `attackSpeedTier` 倍率を**バイパス**（rate = 1） |
+| 発火後 | `SkillExecutor.tryExecute` → `resetCooldownAfterFire` | `remaining = trigger.value`（= attackIntervalSec） |
+
+旧 `trigger.value = 2` 秒・`attackSpeedTier` は legacy 継続（削除なし）。
+
+---
+
+### 49.5 通常行動実行経路
+
+1. Combatant 生成 → basic `cooldowns[].skillId` = 選択 module ID
+2. 戦闘開始 / Wave spawn → `initializeSkillCooldowns`（初回待機 = attackIntervalSec）
+3. 毎 tick → `tickCooldowns`（module basic は tier 非適用）→ `runUnitSkills`
+4. basic `remaining <= 0` → **`SkillExecutor.tryExecute(actor, basicCd, ...)`**（既存経路）
+5. 成功 → `resetCooldownAfterFire`（次周期 = attackIntervalSec）
+
+SkillExecutor 専用第二実行系は追加していない。
+
+---
+
+### 49.6 legacy 互換
+
+- `combatModuleIds` 未指定 class: 従来 `basicAttackSkillId` + `attackSpeedTier` + `injectSynthesizedBasicAttacks` のまま
+- 旧 basic JSON / `attackSpeedTier` フィールドは削除していない
+
+---
+
+### 49.7 テスト
+
+- **新規:** `src/battle/combatModuleBasicAttack.test.ts`（11 件）
+- **更新:** `src/battle/healBasicAttack.test.ts` — sp_cleric の module basic heal を許容
+
+---
+
+### 49.8 R5d 以降へ送る未接続事項
+
+- 方式 A/B 選択 UI・Save 永続化
+- module B（`combatModuleIds[1]`）の選択ロジック（作戦状態）
+- 敵 `selectedCombatModuleId` / enemy group schema
+- 作戦ループ・作戦内パッシブ・Wave 戦闘状態
+- CombatModuleEditor / 編成 UI の module 表示
+- 全兵科への combat module 移行
+
+**次の再開タスク:** R5d「作戦ループ」
 

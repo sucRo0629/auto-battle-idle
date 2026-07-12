@@ -34,6 +34,7 @@ import {
   MAX_ACTIVE_SLOTS,
 } from '../progression/skillBuild.ts';
 import { resolveLearnedSkills } from '../progression/skillUnlocks.ts';
+import { resolveBasicAttackSkillIdFromGameData } from './data/resolveCombatModuleBasic.ts';
 
 let idCounter = 0;
 
@@ -80,6 +81,10 @@ export function createAllyFromMember(
           getUnlockedActiveSlotCount(member, gameData),
         )
       : member.build.learnedActiveIds.slice(0, MAX_ACTIVE_SLOTS);
+  const basicSkillId =
+    gameData !== undefined
+      ? resolveBasicAttackSkillIdFromGameData(classPreset, gameData)
+      : classPreset.basicAttackSkillId;
   const stats =
     curves && 'progress' in member
       ? computeStatsAtLevel(
@@ -111,7 +116,7 @@ export function createAllyFromMember(
     barrierHp: 0,
     isAlive: true,
     cooldowns: createCooldowns(
-      classPreset.basicAttackSkillId,
+      basicSkillId,
       member.build,
       activeSkillIds,
     ),
@@ -161,7 +166,7 @@ export function createAlliesFromParty(
     if (!preset) {
       throw new Error(`Class not found: ${member.classId}`);
     }
-    return createAllyFromMember(member, preset);
+    return createAllyFromMember(member, preset, undefined, gameData);
   });
 }
 
@@ -240,9 +245,10 @@ export function createEnemyFromClassGroup(
     equippedActiveSlots: [],
   };
   const activeSkillIds = resolveBattleActiveSkillIds(build, unlockedSlots);
+  const basicSkillId = resolveBasicAttackSkillIdFromGameData(classPreset, gameData);
   const battleX = resolveEnemySpawnBattleX(spawnOffset);
   const cooldowns = createCooldowns(
-    classPreset.basicAttackSkillId,
+    basicSkillId,
     build,
     activeSkillIds,
   );

@@ -28,6 +28,7 @@ import {
 } from './test/battleFieldSpec.harness.ts';
 
 const CLERIC_BASIC_ID = 'sp_cleric_basic_attack';
+const CLERIC_MODULE_BASIC_ID = 'sp_cleric_mod_single_mend';
 
 function mockHealCleric(
   battleX: number,
@@ -555,7 +556,8 @@ describe('BattleEngine heal basic attack', () => {
         event.type === 'skill' &&
         event.effect === 'heal' &&
         event.slotKind === 'basic' &&
-        event.skillId === CLERIC_BASIC_ID
+        (event.skillId === CLERIC_MODULE_BASIC_ID ||
+          event.skillId === CLERIC_BASIC_ID)
       ) {
         healFired = true;
       }
