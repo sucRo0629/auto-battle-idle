@@ -4,7 +4,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 
 **直近目標:** プレースホルダー素材で**反復可能な新ゲームループ**を成立させる。正式画像・VFX・効果音・i18n・packaging・itch.io 公開は、新しい試作が成立した**後**に再開する。
 
-**現在地:** **R6d 完了**（Wave 間状態リセット）。次は **R6e — Wave 間準備 screen と作戦中 party/module 変更**。
+**現在地:** **R6e 完了**（Wave 間準備 screen と作戦中 party/module 変更）。次は **R6f — checkpoint**。
 
 ---
 
@@ -18,7 +18,7 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R3** | Wave 作戦ループ — 初期準備 → Wave 戦闘 → Wave 間準備 → 次 Wave → 最終結果 | **完了** |
 | **R4** | データスキーマとエディタ設計 — class / combat module / passive / enemy group / stage-wave / operation state / validate / normalize / editor API / legacy 移行（**設計のみ**） | **完了** |
 | **R5** | 最小縦切り — 少数兵科・各 2 戦闘方式・active/gauge なし・秒単位攻撃間隔・固定優先ターゲット・同一兵科禁止・敵戦闘方式指定・最小データ schema・単一 Wave または最小作戦で戦闘成立 | **完了** |
-| **R6** | Wave 間準備 — 自動 Wave 進行停止、編成・戦闘方式変更、Wave 状態リセット | **R6d 完了** → R6e 次 |
+| **R6** | Wave 間準備 — 自動 Wave 進行停止、編成・戦闘方式変更、Wave 状態リセット | **R6e 完了** → R6f 次 |
 | **R7** | 反復プレイ — 倍速、Wave 再生 / 再試行、作戦最初からの再試行 | 未着手 |
 | **R8** | 作戦内パッシブ — リソース消費・任意取得・巻き戻し、**戦闘中表示整理**、**範囲パッシブ runtime 判定 + プレースホルダ範囲描画**（正式 VFX は後続） | 未着手 |
 | **R9** | エディタ実装 — クラス / 戦闘方式 / パッシブ / 敵 / Stage・Wave 各エディタ + validate / migration | 未着手 |
@@ -292,14 +292,14 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R6b** | Wave 終了停止 + 仮次 Wave 開始 API | **完了（§57）** — Wave1 クリア後停止、Debug「次Wave開始」 |
 | **R6c** | OperationState 最小型（メモリ・wave index / clearedCount / module） | **完了（§58）** |
 | **R6d** | Wave 状態リセット（HP/CC/CD/runtime）+ 次 Wave 敵生成 | **完了（§59）** — 次 Wave で味方再生成・全回復 |
-| **R6e** | Wave 間準備 screen（formation 流用・編成/module gate） | Wave 間のみ編成変更可 |
+| **R6e** | Wave 間準備 screen（formation 流用・編成/module gate） | **完了（§60）** — Wave 間のみ編成変更可 |
 | **R6f** | checkpoint（出撃確定・メモリ snapshot） | — |
 | **R6g** | 複数 Wave `waves[].enemyGroups` spawn（schema 候補） | legacy multi-wave で先行可 |
 | **R6h** | 最終 Wave → 作戦結果（`operationResult` 仮） | 最終 wave のみ結果画面 |
 | **R6i** | retry 3 種（最小経路） | — |
 | **R6j** | 統合テスト（2 wave + stop/resume） | — |
 
-**次タスク:** R6e
+**次タスク:** R6f
 
 ---
 

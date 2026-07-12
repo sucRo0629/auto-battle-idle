@@ -54,6 +54,7 @@ import { BattleView } from '../ui/BattleView.ts';
 import type { GameScreen } from './gameScreen.ts';
 import { OperationState, type OperationStateReadonlyView } from './OperationState.ts';
 import { StageSelectionScreenHost } from './StageSelectionScreenHost.ts';
+import { WavePrepScreenHost } from './WavePrepScreenHost.ts';
 import '../styles/game-shell.css';
 import levelCurvesJson from '../../data/levelCurves.json';
 
@@ -73,8 +74,10 @@ export class GameSession {
   private currentScreen: GameScreen = 'battle';
   private readonly battleHost: HTMLElement;
   private readonly formationHost: HTMLElement;
+  private readonly wavePrepHost: HTMLElement;
   private readonly stageSelectHost: HTMLElement;
   private readonly stageSelectionHost: StageSelectionScreenHost;
+  private readonly wavePrepScreenHost: WavePrepScreenHost;
   private readonly stageDamageStats = new StageDamageStatsTracker();
   private readonly menuHost: MenuHost;
   /** R5d / 作戦前: 編成画面での module 選択（作戦中は OperationState が正本） */
@@ -105,11 +108,15 @@ export class GameSession {
     this.formationHost.className = 'game-shell__formation';
     this.formationHost.hidden = true;
 
+    this.wavePrepHost = document.createElement('div');
+    this.wavePrepHost.className = 'game-shell__wave-prep';
+    this.wavePrepHost.hidden = true;
+
     this.stageSelectHost = document.createElement('div');
     this.stageSelectHost.className = 'game-shell__stage-select';
     this.stageSelectHost.hidden = true;
 
-    shell.append(this.battleHost, this.formationHost, this.stageSelectHost);
+    shell.append(this.battleHost, this.formationHost, this.wavePrepHost, this.stageSelectHost);
 
     this.stageSelectionHost = new StageSelectionScreenHost(
       this.stageSelectHost,
@@ -120,6 +127,24 @@ export class GameSession {
         onSortie: (stageId) => this.handleStageSortie(stageId),
       },
       !this.verifyMode,
+    );
+
+    this.wavePrepScreenHost = new WavePrepScreenHost(
+      this.wavePrepHost,
+      gameData,
+      {
+        getOperationView: () => this.getOperationState(),
+        getUnlockedClassIds: () => this.save.unlockedClassIds,
+        getSelectedModuleId: (slotIndex) =>
+          this.resolveCombatModuleSelection().getSelectedCombatModuleId(
+            slotIndex,
+          ),
+        onPartySlotChanged: (slotIndex, member) =>
+          this.tryUpdateOperationPartySlot(slotIndex, member),
+        onModuleChanged: (slotIndex, moduleId) =>
+          this.trySetOperationSlotCombatModule(slotIndex, moduleId),
+        onConfirmNextWave: () => this.confirmWavePrepAndStartNextWave(),
+      },
     );
 
     if (this.verifyMode && this.loopStageId) {
@@ -322,12 +347,21 @@ export class GameSession {
     ) {
       this.clearOperation();
     }
+    if (this.currentScreen === 'wavePrep' && screen !== 'wavePrep') {
+      this.operationState?.endWavePrepEditing();
+      this.wavePrepScreenHost.hide();
+    }
     this.currentScreen = screen;
     const onBattle = screen === 'battle';
     const onFormation = screen === 'formation';
+    const onWavePrep = screen === 'wavePrep';
     const onStageSelect = screen === 'stageSelect';
     this.battleHost.hidden = !onBattle;
     this.formationHost.hidden = !onFormation;
+    this.wavePrepHost.hidden = !onWavePrep;
+    if (onWavePrep) {
+      this.wavePrepScreenHost.show();
+    }
     if (onStageSelect) {
       this.stageSelectionHost.show();
     } else {
@@ -512,13 +546,67 @@ export class GameSession {
     }
   }
 
+  /** R6e: Wave 間準備 screen が表示中か */
+  isWavePrepOpen(): boolean {
+    return this.currentScreen === 'wavePrep';
+  }
+
+  /** R6e: Wave 間準備中のみ OperationState party を編集可能 */
+  canEditOperationFormation(): boolean {
+    return (
+      this.operationState?.isWavePrepEditable === true &&
+      this.isAwaitingNextWave()
+    );
+  }
+
+  tryUpdateOperationPartySlot(
+    slotIndex: number,
+    member: PartySlotState,
+  ): PartyClassAssignmentResult {
+    if (!this.canEditOperationFormation() || this.operationState === null) {
+      return { ok: false };
+    }
+    return this.operationState.tryUpdatePartySlot(
+      slotIndex,
+      member,
+      this.gameData,
+    );
+  }
+
+  trySetOperationSlotCombatModule(
+    slotIndex: number,
+    moduleId: string,
+  ): boolean {
+    if (!this.canEditOperationFormation() || this.operationState === null) {
+      return false;
+    }
+    return this.operationState.trySetCombatModuleForSlot(
+      slotIndex,
+      moduleId,
+      this.gameData,
+    );
+  }
+
+  /** R6e: Wave 間準備を確定し次 Wave を開始する */
+  confirmWavePrepAndStartNextWave(): boolean {
+    if (this.currentScreen !== 'wavePrep') return false;
+    if (!this.canEditOperationFormation()) return false;
+    return this.startNextWave();
+  }
+
   /** R6b: 中間 Wave 終了待機中のみ次 Wave を開始（Save / 進行は変更しない） */
   startNextWave(): boolean {
     const started = this.engine.startNextWave();
-    if (started && this.operationState !== null) {
-      this.operationState.syncCurrentWaveIndex(
-        this.engine.getSnapshot().waveIndex,
-      );
+    if (started) {
+      if (this.operationState !== null) {
+        this.operationState.syncCurrentWaveIndex(
+          this.engine.getSnapshot().waveIndex,
+        );
+        this.operationState.endWavePrepEditing();
+      }
+      if (this.currentScreen === 'wavePrep') {
+        this.setGameScreen('battle');
+      }
     }
     return started;
   }
@@ -539,6 +627,7 @@ export class GameSession {
 
   destroy(): void {
     this.closeMetaMenu();
+    this.wavePrepScreenHost.destroy();
     this.stageSelectionHost.destroy();
     window.removeEventListener('beforeunload', this.handleBeforeUnload);
     if (this.autoSaveTimer !== null) {
@@ -697,7 +786,15 @@ export class GameSession {
   }
 
   private clearOperation(): void {
+    this.operationState?.endWavePrepEditing();
     this.operationState = null;
+  }
+
+  /** R6e: 中間 Wave クリア後に Wave 間準備 screen を開く */
+  private openWavePrepScreen(): void {
+    if (this.operationState === null || !this.isAwaitingNextWave()) return;
+    this.operationState.beginWavePrepEditing();
+    this.setGameScreen('wavePrep');
   }
 
   /** R6c: 出撃確定時に OperationState を初期化（メモリ専用 snapshot） */
@@ -751,6 +848,7 @@ export class GameSession {
 
   private handleWaveCleared(completedWaveIndex: number): void {
     this.operationState?.recordWaveCleared(completedWaveIndex);
+    this.openWavePrepScreen();
   }
 
   private handleBattlefieldReload(): void {

@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6d 完了** — Wave 間状態リセット（本 §59）。**R6c 完了**（§58）。**R6b 完了**（§57）。**R6a 調査完了**（§56）。
-- **次の再開タスク:** **R6e** Wave 間準備 screen と作戦中 party/module 変更（handoff §59.13 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
+- **新ロードマップ現在地:** **R6e 完了** — Wave 間準備 screen と作戦中 party/module 変更（本 §60）。**R6d 完了**（§59）。**R6c 完了**（§58）。
+- **次の再開タスク:** **R6f** checkpoint（出撃確定・メモリ snapshot）（handoff §60.13 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -4826,3 +4826,81 @@ ally/enemy action、skill/basic CD、status duration、DoT/HoT、移動、target
 ### 59.13 次タスク
 
 **R6e — Wave間準備screenと作戦中party/module変更**。Wave間準備画面、OperationState.party/module編集、次Wave開始ボタン、戦闘中変更禁止を初めて接続する。
+
+---
+
+## 60. R6e — Wave 間準備 screen と作戦中 party/module 変更（2026-07-12）
+
+**目的:** 中間 Wave クリア後、戦闘画面の仮ボタン（Debug「次Wave開始」）経由ではなく、最小 Wave 間準備 screen を経由して OperationState の party/module を編集し、確定後に R6d の `startNextWave()` へ接続する。
+
+### 60.1 画面遷移
+
+- 中間 Wave クリア → `BattleEngine` は従来どおり `awaitingNextWave` → `GameSession.handleWaveCleared` → `openWavePrepScreen()` → `GameScreen = 'wavePrep'`
+- 戦闘 tick は `currentScreen === 'battle'` のときのみ進行（準備中は停止）
+- 最終 Wave 勝利は `waveCleared` を挟まず従来の victory 処理。準備 screen は開かない
+- 画面 state 名: **`wavePrep`**（`gameScreen.ts` に追加）
+
+### 60.2 OperationState 編集 API
+
+- `beginWavePrepEditing()` / `endWavePrepEditing()` / `isWavePrepEditable`
+- `tryUpdatePartySlot(slotIndex, member, gameData)` — Wave 間準備中のみ。4 slot 維持、class 重複・不正 classId・範囲外は無変更。class 変更時は module を clear（新 class 既定 module へ正規化）
+- `trySetCombatModuleForSlot(slotIndex, moduleId, gameData)` — class 所属 module のみ。同一 effective module は no-op。Combatant へ即時反映しない
+- 編集元は OperationState party/module snapshot（Save / Combatant runtime 非参照）
+
+### 60.3 GameSession 公開 API
+
+- `isWavePrepOpen()` / `canEditOperationFormation()` / `tryUpdateOperationPartySlot()` / `trySetOperationSlotCombatModule()` / `confirmWavePrepAndStartNextWave()`
+- `startNextWave()` 成功時: `endWavePrepEditing()` + `wavePrep` から `battle` へ復帰
+- Debug menu の `engine.startNextWave()` 直接呼び出しは verify 用に残置（通常経路は準備 screen）
+
+### 60.4 次 Wave 確定時の反映順（R6d 維持）
+
+`confirmWavePrepAndStartNextWave`
+→ `GameSession.startNextWave`
+→ `BattleEngine.startNextWave`（成功条件検証）
+→ **`prepareAlliesForNextWave()`**（最新 OperationState snapshot から味方再生成）
+→ `awaitingNextWave` 消費
+→ `beginWaveAnnouncement(next)` → 敵生成
+
+失敗時: 準備 screen 維持、OperationState 維持、Wave index / 敵・味方 runtime 部分生成なし。
+
+### 60.5 UI
+
+- `WavePrepScreenHost` — 最小 DOM（Wave 番号、4 slot class/module select、「次の Wave へ」）
+- `game-shell__wave-prep` host、`wave-prep-screen.css`
+
+### 60.6 変更したファイル
+
+| ファイル | 変更 |
+|----------|------|
+| `src/game/gameScreen.ts` | `'wavePrep'` 追加 |
+| `src/game/OperationState.ts` | Wave 間編集 API |
+| `src/game/GameSession.ts` | 遷移・公開 API・host 配線 |
+| `src/game/WavePrepScreenHost.ts` | 新規 — 最小準備 UI |
+| `src/styles/wave-prep-screen.css` | 新規 |
+| `src/styles/game-shell.css` | wave-prep host |
+| `src/game/wavePrepScreen.test.ts` | 新規 — R6e テスト |
+| `src/game/operationState.test.ts` | R6d 期待値更新（`isWavePrepEditable`） |
+| `docs/ai-handoff/current-task.md` | 本 §60 |
+| `docs/plans/phase-roadmap.md` | R6e 完了・次 R6f |
+
+### 60.7 テスト
+
+- R6e + R6b–R6d 関連: **71 pass / 71**（`wavePrepScreen.test.ts` 16 + `operationState.test.ts` 36 + `battleEngine.waveReset.test.ts` 15 + `battleEngine.awaitingNextWave.test.ts` 4）
+- フルスイート: **1726 pass / 60 fail / 6 worker error（19 failed files / 272）**。R6e 起因の失敗なし。失敗分類は R5g/R6d 時点と同系（status/glossary、skill 表示・unlock、demo balance、StageSelection fixture、approach 期待値）+ Vitest `onTaskUpdate` timeout
+
+### 60.8 手動確認
+
+- 未実施（自動テストで遷移・編集・確定・失敗非破壊・R6d reset 回帰を固定）
+
+### 60.9 スコープ外維持
+
+- checkpoint / retry（R6f/R6i）、Save schema、作戦内パッシブ、Wave 報酬、敵編成編集、正式 UI デザイン、R6h 作戦結果画面
+
+### 60.10 完了判定
+
+**R6e 完了扱い可。** 中間 Wave 経路が準備 screen を通り、OperationState party/module 編集と次 Wave 確定が R6d reset タイミングを崩さず接続された。
+
+### 60.11 次タスク
+
+**R6f — checkpoint（出撃確定・メモリ snapshot）**。Wave 間準備確定時または出撃確定 API で OperationState snapshot をメモリ保持し、retry 3 種の土台とする。

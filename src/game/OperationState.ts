@@ -1,9 +1,14 @@
+import { resolveSelectedCombatModuleId } from '../battle/data/resolveCombatModuleBasic.ts';
 import { PartyCombatModuleSelection } from '../battle/partyCombatModuleSelection.ts';
-import type { PartySlotState } from '../battle/types.ts';
+import type { GameData, PartySlotState } from '../battle/types.ts';
 import { PARTY_SLOT_COUNT } from '../battle/types.ts';
 import {
+  createMemberFromClass,
+  normalizePartyClassId,
   normalizePartySlots,
+  validatePartyClassAssignment,
   validatePartyClassIds,
+  type PartyClassAssignmentResult,
 } from '../progression/partyCompose.ts';
 
 export interface OperationStateReadonlyView {
@@ -14,6 +19,7 @@ export interface OperationStateReadonlyView {
   readonly isActive: boolean;
   readonly isCompleted: boolean;
   readonly isDefeated: boolean;
+  readonly isWavePrepEditable: boolean;
 }
 
 export interface BeginOperationParams {
@@ -36,6 +42,7 @@ export class OperationState {
   private isActiveValue: boolean;
   private isCompletedValue = false;
   private isDefeatedValue = false;
+  private wavePrepEditable = false;
 
   private constructor(
     stageId: string,
@@ -88,6 +95,10 @@ export class OperationState {
     return this.isDefeatedValue;
   }
 
+  get isWavePrepEditable(): boolean {
+    return this.wavePrepEditable;
+  }
+
   getCombatModuleSelection(): PartyCombatModuleSelection {
     return this.combatModuleSelection;
   }
@@ -105,7 +116,123 @@ export class OperationState {
       isActive: this.isActiveValue,
       isCompleted: this.isCompletedValue,
       isDefeated: this.isDefeatedValue,
+      isWavePrepEditable: this.wavePrepEditable,
     };
+  }
+
+  /** R6e: Wave 間準備 screen 表示中のみ編集可（GameSession が awaitingNextWave を確認してから呼ぶ）。 */
+  beginWavePrepEditing(): void {
+    if (!this.isActiveValue || this.isCompletedValue || this.isDefeatedValue) {
+      return;
+    }
+    this.wavePrepEditable = true;
+  }
+
+  endWavePrepEditing(): void {
+    this.wavePrepEditable = false;
+  }
+
+  /**
+   * R6e: Wave 間準備中のみ party slot を更新する。
+   * Save 非統合。Combatant runtime へは即時反映しない。
+   */
+  tryUpdatePartySlot(
+    slotIndex: number,
+    member: PartySlotState,
+    gameData: GameData,
+  ): PartyClassAssignmentResult {
+    if (!this.wavePrepEditable) {
+      return { ok: false };
+    }
+    if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) {
+      return { ok: false };
+    }
+    if (!member?.classId) {
+      return { ok: false };
+    }
+
+    const classId = normalizePartyClassId(member.classId);
+    if (!gameData.classRegistry[classId]) {
+      return { ok: false };
+    }
+
+    const validation = validatePartyClassAssignment(
+      this.partySlots,
+      slotIndex,
+      classId,
+    );
+    if (!validation.ok) {
+      return validation;
+    }
+
+    const current = this.partySlots[slotIndex];
+    const currentClassId = current
+      ? normalizePartyClassId(current.classId)
+      : null;
+
+    if (currentClassId === classId) {
+      this.partySlots[slotIndex] = structuredClone(member);
+      return { ok: true };
+    }
+
+    this.combatModuleSelection.clearSelectedCombatModuleId(slotIndex);
+    this.partySlots[slotIndex] = createMemberFromClass(classId, gameData);
+    return { ok: true };
+  }
+
+  /**
+   * R6e: Wave 間準備中のみ slot の combat module を更新する。
+   * 同一 module の再設定は no-op（runtime 再生成を誘発しない）。
+   */
+  trySetCombatModuleForSlot(
+    slotIndex: number,
+    moduleId: string,
+    gameData: GameData,
+  ): boolean {
+    if (!this.wavePrepEditable) {
+      return false;
+    }
+    if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) {
+      return false;
+    }
+
+    const member = this.partySlots[slotIndex];
+    if (!member) {
+      return false;
+    }
+
+    const preset = gameData.classRegistry[member.classId];
+    if (!preset) {
+      return false;
+    }
+
+    const resolvedNext = resolveSelectedCombatModuleId(
+      preset,
+      gameData.combatModuleRegistry,
+      moduleId,
+    );
+    if (resolvedNext !== moduleId) {
+      return false;
+    }
+
+    const currentSelected =
+      this.combatModuleSelection.getSelectedCombatModuleId(slotIndex);
+    const resolvedCurrent = resolveSelectedCombatModuleId(
+      preset,
+      gameData.combatModuleRegistry,
+      currentSelected,
+    );
+    if (resolvedCurrent === resolvedNext) {
+      return true;
+    }
+
+    const defaultId = preset.combatModuleIds?.[0];
+    if (defaultId !== undefined && moduleId === defaultId) {
+      this.combatModuleSelection.clearSelectedCombatModuleId(slotIndex);
+    } else {
+      this.combatModuleSelection.setSelectedCombatModuleId(slotIndex, moduleId);
+    }
+    return true;
   }
 
   /** 中間 Wave 待機突入時: 完了 Wave を記録（二重 increment 防止は GameSession 側で 1 回のみ呼ぶ）。 */
@@ -123,6 +250,7 @@ export class OperationState {
 
   /** 最終 Wave 勝利 */
   markCompleted(finalWaveIndex: number, totalWaveCount: number): void {
+    this.endWavePrepEditing();
     this.isActiveValue = false;
     this.isCompletedValue = true;
     this.isDefeatedValue = false;
@@ -132,6 +260,7 @@ export class OperationState {
 
   /** 敗北（R6f retry 用にインスタンスは保持） */
   markDefeated(): void {
+    this.endWavePrepEditing();
     this.isActiveValue = false;
     this.isDefeatedValue = true;
     this.isCompletedValue = false;
@@ -139,6 +268,7 @@ export class OperationState {
 
   /** restart / retry 前: Wave 進行を作戦開始位置へ戻す */
   prepareRetry(initialWaveIndex: number): void {
+    this.endWavePrepEditing();
     this.isActiveValue = true;
     this.isDefeatedValue = false;
     this.isCompletedValue = false;
@@ -147,6 +277,7 @@ export class OperationState {
 
   /** 敗北後 reload 用: Wave 進行のみ戻す（defeated フラグは維持） */
   resetWaveProgress(initialWaveIndex: number): void {
+    this.endWavePrepEditing();
     this.currentWaveIndexValue = initialWaveIndex;
     this.clearedWaveCountValue = 0;
   }
@@ -159,11 +290,5 @@ export class OperationState {
   /** テスト用: module map が元選択と別参照であることの検証 */
   getCombatModuleSelectionReference(): PartyCombatModuleSelection {
     return this.combatModuleSelection;
-  }
-
-  /** テスト用: 不正 slot は無視される（PartyCombatModuleSelection 委譲） */
-  setCombatModuleForSlot(slotIndex: number, moduleId: string): void {
-    if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) return;
-    this.combatModuleSelection.setSelectedCombatModuleId(slotIndex, moduleId);
   }
 }

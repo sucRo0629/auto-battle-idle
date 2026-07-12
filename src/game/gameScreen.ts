@@ -1,2 +1,2 @@
 /** Primary in-game UI surfaces (not modal overlays). */
-export type GameScreen = 'battle' | 'formation' | 'stageSelect';
+export type GameScreen = 'battle' | 'formation' | 'wavePrep' | 'stageSelect';

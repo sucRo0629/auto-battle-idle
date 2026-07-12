@@ -182,14 +182,15 @@ describe('OperationState unit (R6c)', () => {
     ).toBe('at_assassin_mod_shadow');
   });
 
-  it('9. ignores invalid slot module map writes', () => {
+  it('9. ignores invalid slot module writes during wave prep', () => {
     const op = OperationState.begin({
       stageId: '1',
       party: save.party,
       moduleSelection: new PartyCombatModuleSelection(),
     })!;
-    op.setCombatModuleForSlot(-1, 'x');
-    op.setCombatModuleForSlot(99, 'x');
+    op.beginWavePrepEditing();
+    expect(op.trySetCombatModuleForSlot(-1, 'x', gameData)).toBe(false);
+    expect(op.trySetCombatModuleForSlot(99, 'x', gameData)).toBe(false);
     expect(op.getCombatModuleSelection().getSelectedCombatModuleId(-1)).toBeUndefined();
     expect(op.getCombatModuleSelection().getSelectedCombatModuleId(99)).toBeUndefined();
   });
@@ -429,6 +430,7 @@ describe('OperationState wave sync (R6c)', () => {
     expect(current.getOperationState()).toEqual({
       ...beforeOperation,
       currentWaveIndex: 1,
+      isWavePrepEditable: false,
     });
     expect(current.getClearedWaveCount()).toBe(1);
     expect(current.getPartySlotCombatModule(0)).toBe(moduleId);
