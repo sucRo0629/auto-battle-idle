@@ -297,9 +297,9 @@ Hensei Only の開発フェーズ一覧。**2026-07-12 方針転換以降、本�
 | **R6g** | 複数 Wave `waves[].enemyGroups` spawn（schema 候補） | legacy multi-wave で先行可 |
 | **R6h** | 最終 Wave → 作戦結果（`operationResult` 仮） | 最終 wave のみ結果画面 |
 | **R6i** | retry 3 種（最小経路） | **完了（§67）** — GameSession retry API + debug 配線 |
-| **R6j** | 統合テスト（2 wave + stop/resume） | — |
+| **R6j** | 統合テスト（2 wave + stop/resume） | **完了（§68）** — legacy stage `1` 縦切り自動テスト |
 
-**次タスク:** R6j
+**次タスク:** R7 — 反復プレイ
 
 ---
 

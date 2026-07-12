@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R6i 完了** — retry 3 種（最小）（本 §67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R6j — 統合テスト**（2 wave legacy stage `1` + module 選択 + stop/resume / handoff §67 / [phase-roadmap.md §R6](../plans/phase-roadmap.md#r6--wave-間準備) 参照）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **新ロードマップ現在地:** **R6j 完了** — 統合テスト（本 §68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
+- **次の再開タスク:** **R7 — 反復プレイ**（倍速・Wave 準備からの再試行・作戦最初からの再試行 / [phase-roadmap.md §R7](../plans/phase-roadmap.md#r7--反復プレイ) 参照）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5301,4 +5301,81 @@ BattleEngine / GameSession の Wave 開始処理を、`waveIndex` に対応す�
 
 ### 67.10 次タスク
 
-**R6j — 統合テスト** — 2 wave legacy stage `1` + module 選択 + stop/resume の自動テスト縦切り。
+~~**R6j — 統合テスト**~~ → §68 完了。次は **R7 — 反復プレイ**。
+
+---
+
+## 68. R6j — 統合テスト（2026-07-12 完了）
+
+### 68.1 目的
+
+legacy 2 Wave stage `1`（`waves[].enemies`）を使い、作戦開始から最終勝利までの R6 機能を 1 本の自動統合テストで縦切り確認。production code は原則変更なし。
+
+### 68.2 読んだファイル（6 件）
+
+1. `docs/ai-handoff/current-task.md` — R6j 正本・§67 完了状態
+2. `src/game/operationRetry.test.ts` — verify harness・wave prep 縦切りパターン
+3. `src/game/operationResult.test.ts` — `operationResult` 確定パターン
+4. `src/game/operationCheckpoint.test.ts` — checkpoint / module 更新パターン
+5. `src/battle/test/battleFieldSpec.harness.ts` — `reachAwaitingNextWave` / tick 定数
+6. `docs/plans/phase-roadmap.md` — R6j スコープ
+
+### 68.3 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `src/game/operationIntegration.test.ts` | **新規** — R6j 統合テスト 1 件 |
+| `docs/ai-handoff/current-task.md` | 本 §68・ヘッダ更新 |
+| `docs/plans/phase-roadmap.md` | R6j 完了・次タスク R7 |
+
+### 68.4 統合テスト開始条件
+
+- verify mode ON、`setDebugLoopStageId('1')`
+- `GameSession.start()` → `beginOperation` + `restartBattle`（Wave 0）
+- legacy stage `1`（Wave 0/1 とも `waves[].enemies`）
+
+### 68.5 検証した状態遷移
+
+1. 作戦開始・Wave 0 戦闘（`engaged` / `waveIndex === 0`）
+2. Wave 0 クリア
+3. `awaitingNextWave` で停止 → `wavePrep` screen
+4. Wave 準備中の module 選択（`trySetOperationSlotCombatModule`）
+5. 確定（`confirmWavePrepAndStartNextWave`）と checkpoint 更新
+6. 次 Wave 開始（`waveIndex === 1`）
+7. Wave 1 敵生成（`enemy_at_hunter` のみ Wave 1）
+8. stop / resume 後も Wave index・OperationState・選択内容維持
+9. 最終 Wave 勝利（`phase === 'victory'` / `waveIndex === 1`）
+10. `operationResult` victory 確定（`reachedWaveIndex: 1`）
+
+### 68.6 checkpoint と module 選択
+
+- Wave 0 クリア直後: checkpoint は `currentWaveIndex: 0` / `clearedWaveCount: 0`（未 commit）
+- Wave 準備編集のみでは checkpoint 不変
+- 次 Wave 確定後: `currentWaveIndex: 1` / `clearedWaveCount: 1` / `combatModuleSelection` に選択 module
+- Wave 1 開始後: slot 0 の basic cooldown が選択 module ID と一致
+
+### 68.7 stop / resume
+
+- `BattleView.setBattlePaused(true)` + `GameSession.tick` — Wave 0 戦闘中・Wave 準備中・Wave 1 開始直後の 3 箇所
+- pause 中: `engine.waveIndex` / `battleTimeSec` / OperationState / checkpoint / module 選択が不変
+
+### 68.8 最終 operationResult
+
+```json
+{ "stageId": "1", "outcome": "victory", "reachedWaveIndex": 1 }
+```
+
+中間 Wave では `null`。最終 Wave index（1）で確定。勝利後 `OperationState` は `null`。
+
+### 68.9 production code 変更
+
+なし。
+
+### 68.10 テスト結果
+
+- `operationIntegration.test.ts`: **1 pass / 1**
+- 関連回帰 `operationCheckpoint.test.ts` + `operationState.test.ts` + `operationResult.test.ts` + `operationRetry.test.ts` + `battleEngine.awaitingNextWave.test.ts` + `battleEngine.waveSpawn.test.ts`: **96 pass / 96**
+
+### 68.11 次タスク
+
+**R7 — 反復プレイ** — 倍速、Wave 準備からの再試行、作戦最初からの再試行（確認ダイアログなし方針）。
