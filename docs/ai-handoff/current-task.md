@@ -9,8 +9,8 @@
 ## 2. 作業テーマ（2026-07-12 方針転換）
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
-- **新ロードマップ現在地:** **R5c 完了** — 通常行動実行（module → SkillExecutor 接続、本 §49）。次は **R5d — 作戦ループ**。
-- **次の再開タスク:** **R5d — 作戦ループ**（作戦状態・方式 A/B 選択・Wave 切替等。R5c では未接続）。
+- **新ロードマップ現在地:** **R5d 完了** — 味方 combat module 選択（Save 非統合、本 §51）。次は **R5e — 敵 group module 指定**。
+- **次の再開タスク:** **R5e — 敵 group module 指定**（`selectedCombatModuleId` / enemy group schema 接続。R5d では敵未接続）。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -19,6 +19,7 @@
 - **今回の doc 作業（R5a）:** production code、データ JSON、テスト、エディタは**未変更**。調査結果は §47。
 - **今回の実装（R5b）:** §48。BattleEngine / SkillExecutor / Combatant 生成 / UI / editor / Save は未接続。
 - **今回の実装（R5c）:** §49。対象 4 兵科の先頭 module を通常行動として SkillExecutor 接続。UI / editor / Save / 作戦ループ / 方式 B 選択 / 敵 selectedCombatModuleId は未接続。
+- **今回の実装（R5d）:** §51。味方 4 slot ごとの module A/B 選択（実行中メモリのみ）。Save / UI / 敵 / 作戦ループは未接続。
 
 ### R4 で確定したデータ責務（doc 反映済）
 
@@ -3557,16 +3558,137 @@ SkillExecutor 専用第二実行系は追加していない。
 
 ---
 
-### 49.8 R5d 以降へ送る未接続事項
+### 49.8 R5d 以降へ送る未接続事項（R5d 完了後）
 
-- 方式 A/B 選択 UI・Save 永続化
-- module B（`combatModuleIds[1]`）の選択ロジック（作戦状態）
-- 敵 `selectedCombatModuleId` / enemy group schema
-- 作戦ループ・作戦内パッシブ・Wave 戦闘状態
-- CombatModuleEditor / 編成 UI の module 表示
+→ 詳細は **§51.8**。次は **R5e**。
+
+**次の再開タスク:** R5e「敵 group module 指定」
+
+---
+
+## 51. R5d — 味方 combat module 選択（Save 非統合）（2026-07-12）
+
+**目的:** 味方 4 人それぞれについて module A/B を明示選択し、Combatant 生成と通常行動へ反映。Save / UI / 敵 / 作戦ループは未接続。
+
+**作業前に読んだファイル（6 件）:**
+
+1. `docs/ai-handoff/current-task.md` — §49 R5c 完了・§50 設計
+2. `src/battle/data/resolveCombatModuleBasic.ts`
+3. `src/battle/entities.ts`
+4. `src/battle/BattleEngine.ts`
+5. `src/game/GameSession.ts`
+6. `src/battle/combatModuleBasicAttack.test.ts`
+
+---
+
+### 51.1 選択状態の所有
+
+| 項目 | 内容 |
+| ---- | ---- |
+| 所有者 | `GameSession.partyCombatModuleSelection`（`PartyCombatModuleSelection` インスタンス） |
+| 実装 | `src/battle/partyCombatModuleSelection.ts` |
+| key | **party slot index**（`0` .. `PARTY_SLOT_COUNT - 1`）。classId は key にしない |
+| 値 | `selectedCombatModuleId: string`（Map エントリ。未エントリ = 未指定） |
+| 永続化 | **なし**（SaveGameState / localStorage 未変更） |
+| Wave 間保持 | 未実装（セッション存続中のみ保持） |
+
+---
+
+### 51.2 最小選択 API（GameSession）
+
+| メソッド | 内容 |
+| -------- | ---- |
+| `setPartySlotCombatModule(slotIndex, moduleId)` | 選択更新 → 戦闘中は `engine.syncPartyBuilds()` |
+| `getPartySlotCombatModule(slotIndex)` | 現在の選択 ID（未指定 = `undefined`） |
+| `clearPartySlotCombatModule(slotIndex)` | 未指定状態へ（= default A） |
+| `resetPartySlotCombatModuleToDefault(slotIndex)` | `clear` の alias |
+
+---
+
+### 51.3 デフォルト・不正 ID fallback
+
+`resolveSelectedCombatModuleId(class, registry, selectedCombatModuleId?)`:
+
+| 条件 | 結果 |
+| ---- | ---- |
+| `combatModuleIds` 未指定 class | `undefined` → legacy `basicAttackSkillId` |
+| 選択未指定 / 空 | `combatModuleIds[0]`（module A） |
+| class 候補外 ID | module A へ fallback |
+| 他 class の module ID | module A へ fallback |
+| registry 不在 ID | module A へ fallback |
+| 有効な選択 ID | その ID |
+
+legacy class（`df_paladin` 等）は従来 basic を維持。fallback は `resolveCombatModuleBasic.test.ts` で固定。
+
+---
+
+### 51.4 Combatant 生成への受け渡し経路
+
+```
+GameSession.partyCombatModuleSelection
+  → BattleEngineOptions.getSelectedCombatModuleId(slotIndex)
+  → createAlliesFromPartyState(..., getSelectedCombatModuleId)
+  → createAllyFromMember(..., selectedCombatModuleId)
+  → resolveBasicAttackSkillIdFromGameData(class, gameData, selectedCombatModuleId)
+  → basic cooldowns[].skillId + attackIntervalSec（合成 skill trigger.value）
+```
+
+| 経路 | 変更 |
+| ---- | ---- |
+| `createAllyFromMember` | 任意 `selectedCombatModuleId` を resolver へ |
+| `createAlliesFromPartyState` | slot ごとに getter で選択 ID 取得 |
+| `BattleEngine.reloadBattlefield` | getter を `createAlliesFromPartyState` へ |
+| `BattleEngine.syncPartyBuilds` | slot ごとに getter → basic 再生成 |
+| `createEnemyFromClassGroup` | **変更なし**（R5c どおり先頭 module） |
+
+---
+
+### 51.5 module 変更時の CD・sync 挙動
+
+- 戦闘中: `setPartySlotCombatModule` → `syncPartyBuilds`（`phase === "running"` 時のみ）
+- `syncPartyBuilds`: basic `skillId` を再解決 → `createCooldowns` で cooldown 配列を**丸ごと再生成** → `initializeSkillCooldowns`（初回 CD = 選択 module の `attackIntervalSec`）
+- 旧 module の cooldown state は残らない（配列差し替え）
+- 同じ module のまま sync した場合も cooldown は再生成される（既存 build sync と同挙動。戦闘中 module 切替 UI は未実装）
+- 戦闘開始前に B へ変更 → `restartBattle` / 次 `reloadBattlefield` で B が反映
+
+`attackSpeed` 処理は R5c のまま変更なし。
+
+---
+
+### 51.6 legacy 互換
+
+- legacy class: 従来 `basicAttackSkillId` + `attackSpeedTier`
+- 旧 basic と module basic の二重発火なし（basic スロットのみ差し替え）
+
+---
+
+### 51.7 テスト
+
+- **新規:** `src/battle/data/resolveCombatModuleBasic.test.ts`（8 件 — fallback）
+- **新規:** `src/battle/allyCombatModuleSelection.test.ts`（15 件 — 選択・CD・sync・敵非影響）
+- **既存:** `combatModuleBasicAttack.test.ts` 等 R5c テスト — 回帰なし
+
+**R5 関連 subset 結果（70/70 pass）:**
+
+- `resolveCombatModuleBasic.test.ts`（8）
+- `allyCombatModuleSelection.test.ts`（15）
+- `combatModuleBasicAttack.test.ts`（14）
+- `entities.enemyGroups.test.ts`（12）
+- `healBasicAttack.test.ts`（10）
+- `validateGameData.combatModules.test.ts`（9）
+- `battleEngine.enemyAttackSpeedTier.test.ts`（2）
+
+---
+
+### 51.8 R5e 以降へ送る未接続事項
+
+- module 選択の正式 UI / CombatModuleEditor
+- Save 永続化・Wave 間保持・checkpoint
+- 敵 `selectedCombatModuleId` / enemy group schema（**R5e**）
+- 作戦ループ・作戦状態全体・作戦内パッシブ（R8）
 - 全兵科への combat module 移行
 
-**次の再開タスク:** R5d「作戦ループ」
+**R5d 完了判定:** 本節時点で R5d 完了。次は R5e。
 
 ---
 

@@ -73,6 +73,7 @@ export function createAllyFromMember(
   classPreset: ClassPreset,
   curves?: LevelCurvesConfig,
   gameData?: GameData,
+  selectedCombatModuleId?: string | null,
 ): CombatantState {
   const activeSkillIds =
     gameData && 'progress' in member
@@ -83,7 +84,11 @@ export function createAllyFromMember(
       : member.build.learnedActiveIds.slice(0, MAX_ACTIVE_SLOTS);
   const basicSkillId =
     gameData !== undefined
-      ? resolveBasicAttackSkillIdFromGameData(classPreset, gameData)
+      ? resolveBasicAttackSkillIdFromGameData(
+          classPreset,
+          gameData,
+          selectedCombatModuleId,
+        )
       : classPreset.basicAttackSkillId;
   const stats =
     curves && 'progress' in member
@@ -137,6 +142,7 @@ export function createAlliesFromPartyState(
   gameData: GameData,
   party: PartySlotState[],
   curves: LevelCurvesConfig,
+  getSelectedCombatModuleId?: (slotIndex: number) => string | undefined,
 ): CombatantState[] {
   const allies: CombatantState[] = [];
   party.forEach((member, slotIndex) => {
@@ -146,7 +152,13 @@ export function createAlliesFromPartyState(
       throw new Error(`Class not found: ${member.classId}`);
     }
     allies.push({
-      ...createAllyFromMember(member, preset, curves, gameData),
+      ...createAllyFromMember(
+        member,
+        preset,
+        curves,
+        gameData,
+        getSelectedCombatModuleId?.(slotIndex),
+      ),
       partySlotIndex: slotIndex,
     });
   });

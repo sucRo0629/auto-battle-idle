@@ -1,4 +1,5 @@
 import { BattleEngine } from '../battle/BattleEngine.ts';
+import { PartyCombatModuleSelection } from '../battle/partyCombatModuleSelection.ts';
 import { StageDamageStatsTracker } from '../battle/stageDamageStats.ts';
 import type {
   CharacterBuild,
@@ -6,6 +7,7 @@ import type {
   PartySlotState,
   SaveGameState,
 } from '../battle/types.ts';
+import { PARTY_SLOT_COUNT } from '../battle/types.ts';
 import {
   normalizeActiveSlots,
   reconcilePartyBuilds,
@@ -69,6 +71,8 @@ export class GameSession {
   private readonly stageSelectionHost: StageSelectionScreenHost;
   private readonly stageDamageStats = new StageDamageStatsTracker();
   private readonly menuHost: MenuHost;
+  /** R5d: 味方 module 選択（Save 非統合・実行中メモリのみ） */
+  private readonly partyCombatModuleSelection = new PartyCombatModuleSelection();
 
   constructor(
     private readonly gameData: GameData,
@@ -140,6 +144,8 @@ export class GameSession {
           this.verifyMode ? this.loopWaveIndex : null,
         getBattleXDebugEnabled: () =>
           this.verifyMode && this.battleXDebugDisplayEnabled,
+        getSelectedCombatModuleId: (slotIndex) =>
+          this.partyCombatModuleSelection.getSelectedCombatModuleId(slotIndex),
       },
     );
 
@@ -300,6 +306,34 @@ export class GameSession {
     member.build = structuredClone(normalizeActiveSlots(build));
     this.persistSave();
     this.engine.syncPartyBuilds();
+  }
+
+  /** R5d: party slot の combat module 選択を更新（Save 非統合）。 */
+  setPartySlotCombatModule(slotIndex: number, moduleId: string): void {
+    if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) return;
+    this.partyCombatModuleSelection.setSelectedCombatModuleId(
+      slotIndex,
+      moduleId,
+    );
+    this.engine.syncPartyBuilds();
+  }
+
+  /** R5d: 現在の選択 module ID（未指定 = undefined → default A）。 */
+  getPartySlotCombatModule(slotIndex: number): string | undefined {
+    return this.partyCombatModuleSelection.getSelectedCombatModuleId(
+      slotIndex,
+    );
+  }
+
+  /** R5d: 選択をクリアし default module A へ戻す。 */
+  clearPartySlotCombatModule(slotIndex: number): void {
+    if (slotIndex < 0 || slotIndex >= PARTY_SLOT_COUNT) return;
+    this.partyCombatModuleSelection.clearSelectedCombatModuleId(slotIndex);
+    this.engine.syncPartyBuilds();
+  }
+
+  resetPartySlotCombatModuleToDefault(slotIndex: number): void {
+    this.clearPartySlotCombatModule(slotIndex);
   }
 
   updatePartySlot(slotIndex: number, member: PartySlotState): void {

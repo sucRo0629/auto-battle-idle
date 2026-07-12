@@ -236,6 +236,8 @@ export interface BattleEngineOptions {
   getLoopWaveIndex?: () => number | null;
   /** battleX debug 表示時のみ tick 内の位置変更を記録する */
   getBattleXDebugEnabled?: () => boolean;
+  /** R5d: party slot ごとの選択 combat module ID（未指定 = default A） */
+  getSelectedCombatModuleId?: (slotIndex: number) => string | undefined;
 }
 
 export class BattleEngine {
@@ -315,6 +317,9 @@ export class BattleEngine {
   ) => void;
   private readonly getLoopWaveIndex?: () => number | null;
   private readonly getBattleXDebugEnabled?: () => boolean;
+  private readonly getSelectedCombatModuleId?: (
+    slotIndex: number,
+  ) => string | undefined;
 
   constructor(
     private readonly gameData: GameData,
@@ -329,6 +334,7 @@ export class BattleEngine {
     this.onCombatActionExecuted = options.onCombatActionExecuted;
     this.getLoopWaveIndex = options.getLoopWaveIndex;
     this.getBattleXDebugEnabled = options.getBattleXDebugEnabled;
+    this.getSelectedCombatModuleId = options.getSelectedCombatModuleId;
     this.executor = new SkillExecutor(gameData, (e) => this.emit(e), {
       getBattleTimeSec: () => this.battleTimeSec,
       enqueuePendingHits: (hits) => {
@@ -707,6 +713,7 @@ export class BattleEngine {
       this.gameData,
       this.getParty(),
       this.levelCurves,
+      this.getSelectedCombatModuleId,
     );
     this.stageId = this.getStageId();
     const startWaveIndex = this.resolveStartWaveIndex();
@@ -1700,6 +1707,7 @@ export class BattleEngine {
       const basicSkillId = resolveBasicAttackSkillIdFromGameData(
         preset,
         this.gameData,
+        this.getSelectedCombatModuleId?.(slotIndex),
       );
       ally.cooldowns = createCooldowns(
         basicSkillId,
