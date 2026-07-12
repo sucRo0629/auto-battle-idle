@@ -5947,6 +5947,20 @@ function parseStageEnemyGroup(entry: unknown, context: string): StageEnemyGroup 
   };
 }
 
+function parseOptionalStageEnemyGroups(
+  obj: Record<string, unknown>,
+  context: string,
+): StageEnemyGroup[] | undefined {
+  const enemyGroupsRaw = obj.enemyGroups;
+  if (enemyGroupsRaw === undefined) return undefined;
+  if (!Array.isArray(enemyGroupsRaw) || enemyGroupsRaw.length === 0) {
+    invalidField(context, 'enemyGroups', 'must be a non-empty array');
+  }
+  return (enemyGroupsRaw as unknown[]).map((groupEntry, groupIndex) =>
+    parseStageEnemyGroup(groupEntry, `${context}.enemyGroups[${groupIndex}]`),
+  );
+}
+
 function parseStages(raw: unknown): StageDef[] {
   if (!Array.isArray(raw)) {
     throw new Error('stages.json must be an array');
@@ -5957,16 +5971,7 @@ function parseStages(raw: unknown): StageDef[] {
     const id = requireString(obj, 'id', context);
     const displayName = requireString(obj, 'displayName', context);
 
-    const enemyGroupsRaw = obj.enemyGroups;
-    let enemyGroups: StageEnemyGroup[] | undefined;
-    if (enemyGroupsRaw !== undefined) {
-      if (!Array.isArray(enemyGroupsRaw) || enemyGroupsRaw.length === 0) {
-        invalidField(context, 'enemyGroups', 'must be a non-empty array');
-      }
-      enemyGroups = (enemyGroupsRaw as unknown[]).map((groupEntry, groupIndex) =>
-        parseStageEnemyGroup(groupEntry, `${context}.enemyGroups[${groupIndex}]`),
-      );
-    }
+    const enemyGroups = parseOptionalStageEnemyGroups(obj, context);
 
     const recommendedLevelRaw = obj.recommendedLevel;
     let recommendedLevel: number | undefined;
@@ -5982,14 +5987,6 @@ function parseStages(raw: unknown): StageDef[] {
       recommendedLevel = recommendedLevelRaw;
     }
 
-    if (enemyGroups !== undefined && recommendedLevel === undefined) {
-      invalidField(
-        context,
-        'recommendedLevel',
-        'is required when enemyGroups is set',
-      );
-    }
-
     const unlockClassIdsOnClearRaw = obj.unlockClassIdsOnClear;
     let unlockClassIdsOnClear: string[] | undefined;
     if (unlockClassIdsOnClearRaw !== undefined) {
@@ -6003,8 +6000,6 @@ function parseStages(raw: unknown): StageDef[] {
       formationHintJa = requireString(obj, 'formationHintJa', context);
     }
 
-    const allowEmptyWaveEnemies = enemyGroups !== undefined;
-
     const wavesRaw = obj.waves;
     if (!Array.isArray(wavesRaw) || wavesRaw.length === 0) {
       invalidField(context, 'waves', 'must be a non-empty array');
@@ -6013,11 +6008,16 @@ function parseStages(raw: unknown): StageDef[] {
     const waves = (wavesRaw as unknown[]).map((waveEntry, waveIndex) => {
       const waveContext = `${context}.waves[${waveIndex}]`;
       const waveObj = requireRecord(waveEntry, waveContext);
+      const waveEnemyGroups = parseOptionalStageEnemyGroups(waveObj, waveContext);
       const enemiesRaw = waveObj.enemies;
       if (!Array.isArray(enemiesRaw)) {
         invalidField(waveContext, 'enemies', 'must be an array');
       }
-      if (enemiesRaw.length === 0 && !allowEmptyWaveEnemies) {
+      if (
+        enemiesRaw.length === 0 &&
+        enemyGroups === undefined &&
+        waveEnemyGroups === undefined
+      ) {
         invalidField(waveContext, 'enemies', 'must be a non-empty array');
       }
 
@@ -6038,8 +6038,23 @@ function parseStages(raw: unknown): StageDef[] {
         };
       });
 
-      return { enemies };
+      return {
+        enemies,
+        ...(waveEnemyGroups !== undefined ? { enemyGroups: waveEnemyGroups } : {}),
+      };
     });
+
+    const anyWaveHasEnemyGroups = waves.some((wave) => wave.enemyGroups !== undefined);
+    if (
+      (enemyGroups !== undefined || anyWaveHasEnemyGroups) &&
+      recommendedLevel === undefined
+    ) {
+      invalidField(
+        context,
+        'recommendedLevel',
+        'is required when enemyGroups is set',
+      );
+    }
 
     return {
       id,
@@ -6317,40 +6332,49 @@ function validateReferences(
   }
 
   for (const stage of stages) {
-    stage.enemyGroups?.forEach((group, groupIndex) => {
-      const groupContext = `${stage.id} enemyGroups[${groupIndex}]`;
-      const cls = classById.get(group.classId);
-      if (!cls) {
-        throw new Error(
-          `Unknown classId "${group.classId}": ${groupContext}`,
-        );
-      }
-      const selectedId = group.selectedCombatModuleId;
-      if (selectedId === undefined) return;
+    const validateEnemyGroupRefs = (
+      groups: StageEnemyGroup[],
+      contextPrefix: string,
+    ) => {
+      groups.forEach((group, groupIndex) => {
+        const groupContext = `${contextPrefix}[${groupIndex}]`;
+        const cls = classById.get(group.classId);
+        if (!cls) {
+          throw new Error(
+            `Unknown classId "${group.classId}": ${groupContext}`,
+          );
+        }
+        const selectedId = group.selectedCombatModuleId;
+        if (selectedId === undefined) return;
 
-      const moduleIds = cls.combatModuleIds;
-      if (!moduleIds || moduleIds.length === 0) {
-        throw new Error(
-          `selectedCombatModuleId is not allowed for legacy class "${group.classId}": ${groupContext}`,
-        );
-      }
-      const module = moduleById.get(selectedId);
-      if (!module) {
-        throw new Error(
-          `Unknown selectedCombatModuleId "${selectedId}": ${groupContext}`,
-        );
-      }
-      if (module.classId !== group.classId) {
-        throw new Error(
-          `selectedCombatModuleId "${selectedId}" belongs to class "${module.classId}", not "${group.classId}": ${groupContext}`,
-        );
-      }
-      if (!moduleIds.includes(selectedId)) {
-        throw new Error(
-          `selectedCombatModuleId "${selectedId}" is not listed in combatModuleIds for class "${group.classId}": ${groupContext}`,
-        );
-      }
-    });
+        const moduleIds = cls.combatModuleIds;
+        if (!moduleIds || moduleIds.length === 0) {
+          throw new Error(
+            `selectedCombatModuleId is not allowed for legacy class "${group.classId}": ${groupContext}`,
+          );
+        }
+        const module = moduleById.get(selectedId);
+        if (!module) {
+          throw new Error(
+            `Unknown selectedCombatModuleId "${selectedId}": ${groupContext}`,
+          );
+        }
+        if (module.classId !== group.classId) {
+          throw new Error(
+            `selectedCombatModuleId "${selectedId}" belongs to class "${module.classId}", not "${group.classId}": ${groupContext}`,
+          );
+        }
+        if (!moduleIds.includes(selectedId)) {
+          throw new Error(
+            `selectedCombatModuleId "${selectedId}" is not listed in combatModuleIds for class "${group.classId}": ${groupContext}`,
+          );
+        }
+      });
+    };
+
+    if (stage.enemyGroups !== undefined) {
+      validateEnemyGroupRefs(stage.enemyGroups, `${stage.id} enemyGroups`);
+    }
     stage.unlockClassIdsOnClear?.forEach((classId, index) => {
       if (!classById.has(classId)) {
         throw new Error(
@@ -6359,6 +6383,12 @@ function validateReferences(
       }
     });
     stage.waves.forEach((wave, waveIndex) => {
+      if (wave.enemyGroups !== undefined) {
+        validateEnemyGroupRefs(
+          wave.enemyGroups,
+          `${stage.id} wave[${waveIndex}].enemyGroups`,
+        );
+      }
       wave.enemies.forEach((spawn, enemyIndex) => {
         if (!enemyIds.has(spawn.templateId)) {
           throw new Error(

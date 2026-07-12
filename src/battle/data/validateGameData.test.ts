@@ -541,6 +541,186 @@ describe('stage enemyGroups validation', () => {
   });
 });
 
+describe('wave enemyGroups validation (R6g-1)', () => {
+  function loadRealBundleForWaveTests() {
+    return {
+      classes: classesJson,
+      enemies: enemiesJson,
+      skills: loadMergedSkillsForValidateTest(),
+      combatModules: loadMergedCombatModulesForValidateTest(),
+      parties: partiesJson,
+    };
+  }
+
+  it('accepts waves[].enemyGroups with recommendedLevel and empty wave enemies', () => {
+    const result = parseAndValidateGameDataJson(
+      {
+        ...loadRealBundleForWaveTests(),
+        stages: [
+          {
+            id: 'multi_wave_groups',
+            displayName: 'Multi Wave Groups',
+            recommendedLevel: 10,
+            waves: [
+              {
+                enemies: [],
+                enemyGroups: [{ classId: 'df_guardian', count: 2 }],
+              },
+              {
+                enemies: [],
+                enemyGroups: [{ classId: 'at_sorcerer', count: 1 }],
+              },
+            ],
+          },
+        ],
+      },
+      { mode: 'editor' },
+    );
+
+    expect(result.stages[0]?.waves).toEqual([
+      {
+        enemies: [],
+        enemyGroups: [{ classId: 'df_guardian', count: 2 }],
+      },
+      {
+        enemies: [],
+        enemyGroups: [{ classId: 'at_sorcerer', count: 1 }],
+      },
+    ]);
+  });
+
+  it('rejects waves[].enemyGroups with unknown classId', () => {
+    expect(() =>
+      parseAndValidateGameDataJson(
+        {
+          classes: [minimalStageClass],
+          enemies: [minimalStageEnemy],
+          skills: minimalStageSkills,
+          stages: [
+            {
+              id: 'bad_wave_class',
+              displayName: 'Bad Wave Class',
+              recommendedLevel: 5,
+              waves: [
+                {
+                  enemies: [],
+                  enemyGroups: [{ classId: 'no_such_class', count: 1 }],
+                },
+              ],
+            },
+          ],
+          parties: emptyGameDataShell.parties,
+        },
+        { mode: 'editor' },
+      ),
+    ).toThrow(/Unknown classId "no_such_class"/i);
+  });
+
+  it('rejects waves[].enemyGroups with invalid selectedCombatModuleId', () => {
+    expect(() =>
+      parseAndValidateGameDataJson(
+        {
+          ...loadRealBundleForWaveTests(),
+          stages: [
+            {
+              id: 'bad_wave_module',
+              displayName: 'Bad Wave Module',
+              recommendedLevel: 10,
+              waves: [
+                {
+                  enemies: [],
+                  enemyGroups: [
+                    {
+                      classId: 'df_guardian',
+                      count: 1,
+                      selectedCombatModuleId: 'missing_module_id',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        { mode: 'editor' },
+      ),
+    ).toThrow(/Unknown selectedCombatModuleId "missing_module_id"/);
+  });
+
+  it('rejects waves[].enemyGroups without recommendedLevel', () => {
+    expect(() =>
+      parseAndValidateGameDataJson(
+        {
+          classes: [minimalStageClass],
+          enemies: [minimalStageEnemy],
+          skills: minimalStageSkills,
+          stages: [
+            {
+              id: 'bad_wave_level',
+              displayName: 'Bad Wave Level',
+              waves: [
+                {
+                  enemies: [],
+                  enemyGroups: [{ classId: 'df_paladin', count: 1 }],
+                },
+              ],
+            },
+          ],
+          parties: emptyGameDataShell.parties,
+        },
+        { mode: 'editor' },
+      ),
+    ).toThrow(/recommendedLevel.*required when enemyGroups is set/i);
+  });
+
+  it('keeps stage-level enemyGroups and legacy waves[].enemies working', () => {
+    const stageLevel = parseAndValidateGameDataJson(
+      {
+        classes: [minimalStageClass],
+        enemies: [minimalStageEnemy],
+        skills: minimalStageSkills,
+        stages: [
+          {
+            id: 'stage_groups',
+            displayName: 'Stage Groups',
+            recommendedLevel: 10,
+            enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+            waves: [{ enemies: [] }],
+          },
+        ],
+        parties: emptyGameDataShell.parties,
+      },
+      { mode: 'editor' },
+    );
+
+    expect(stageLevel.stages[0]).toMatchObject({
+      enemyGroups: [{ classId: 'df_paladin', count: 2 }],
+      waves: [{ enemies: [] }],
+    });
+
+    const legacy = parseAndValidateGameDataJson(
+      {
+        classes: [minimalStageClass],
+        enemies: [minimalStageEnemy],
+        skills: minimalStageSkills,
+        stages: [
+          {
+            id: 'legacy_wave',
+            displayName: 'Legacy Wave',
+            waves: [{ enemies: [{ templateId: 'test_dummy', spawnX: 0 }] }],
+          },
+        ],
+        parties: emptyGameDataShell.parties,
+      },
+      { mode: 'editor' },
+    );
+
+    expect(legacy.stages[0]?.waves[0]?.enemies[0]).toEqual({
+      templateId: 'test_dummy',
+      spawnX: 0,
+    });
+  });
+});
+
 describe('stages-demo.json validation', () => {
   it('parseAndValidateGameDataJson accepts stages-demo with real game data bundle', () => {
     const result = parseAndValidateGameDataJson({
