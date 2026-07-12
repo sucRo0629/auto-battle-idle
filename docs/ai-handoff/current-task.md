@@ -10,7 +10,7 @@
 
 - **凍結:** 現行 **Phase 7 中心の M1 公開進行**（Phase 6c / 7 残タスク → 4e → Phase 8 → Phase 9 → itch.io）は**凍結**した。
 - **新ロードマップ現在地:** **R6j 完了** — 統合テスト（本 §68）。**R6i 完了** — retry 3 種（最小）（§67）。**R6h 完了** — 最終 Wave → 作戦結果（§66）。**R6g-4 完了** — `stages.json` / editor 移行（§65）。
-- **次の再開タスク:** **R7 — 反復プレイ**（倍速・Wave 準備からの再試行・作戦最初からの再試行 / [phase-roadmap.md §R7](../plans/phase-roadmap.md#r7--反復プレイ) 参照）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
+- **次の再開タスク:** **R7b — 倍速 simulation**（本 §69.11 推奨）。**R7a 完了** — 反復プレイ調査・4 タスク分割（§69）。schema 正規化による敵生成方式の一本化は R6g スコープ外の保留。
 - **R4 で確定した doc:** [combat-data-schema-refactor.md](../plans/combat-data-schema-refactor.md)（新規）、[operation-loop.md](../spec/operation-loop.md)、[classes-and-skills.md](../spec/classes-and-skills.md)、[combat.md](../spec/combat.md)、[stats.md](../spec/stats.md)（R4 注記）
 - **R4 確定事項:** 兵科 / 戦闘方式 / 作戦内パッシブ / 敵グループ / Stage-Wave / 作戦状態 / Wave 戦闘状態の責務分離、validate 層、normalize / migration 方針、エディタ各画面責務、R5 最小 schema、SkillEditorStep → CombatModuleEditor 改修推奨
 - **未確定（R4 完了時点）:** TypeScript 型名、JSON 分割、module / passive effect schema 詳細、SkillExecutor 再利用範囲、敵テンプレ最終存廃、Save schema、operation state 所有者、checkpoint 実装方式 — 一覧は [combat-data-schema-refactor.md §18](../plans/combat-data-schema-refactor.md#18-保留事項r4-完了時点)
@@ -5378,4 +5378,96 @@ legacy 2 Wave stage `1`（`waves[].enemies`）を使い、作戦開始から最�
 
 ### 68.11 次タスク
 
-**R7 — 反復プレイ** — 倍速、Wave 準備からの再試行、作戦最初からの再試行（確認ダイアログなし方針）。
+~~**R7 — 反復プレイ**~~ → §69 調査完了。**R7b** から実装。
+
+---
+
+## 69. R7a — 反復プレイ調査・タスク分割（2026-07-12 完了）
+
+### 69.1 目的
+
+R7「反復プレイ」を実装可能な小タスクへ分割する。**production code / UI 実装は行わない。**
+
+### 69.2 読んだファイル（6 件）
+
+1. `docs/ai-handoff/current-task.md` — §67–68 完了状態・R7 スコープ
+2. `docs/plans/phase-roadmap.md` — R7 要件・R6i 完了位置
+3. `src/game/GameSession.ts` — tick gate / retry API / verify 切替 / 勝敗遷移
+4. `src/ui/DebugMenuPanel.ts` — verify 専用 retry UI 配線
+5. `src/dev/verifyMode.ts` — verify 永続化・Save キー分離
+6. `src/game/operationRetry.test.ts` — R6i retry 3 種の期待挙動
+
+### 69.3 変更ファイル
+
+| ファイル | 内容 |
+| -------- | ---- |
+| `docs/ai-handoff/current-task.md` | 本 §69・ヘッダ更新 |
+| `docs/plans/phase-roadmap.md` | R7 サブフェーズ表・次タスク R7b |
+
+### 69.4 倍速の現状
+
+| 項目 | 現状 |
+| ---- | ---- |
+| **1 / 2 / 4 倍** | **未実装**。`main.ts` は `deltaSec = min(deltaMs/1000, 0.1)` を常時 1 倍で `GameSession.tick` へ渡す |
+| **simulation 所有者** | **`GameSession.tick`** — `currentScreen === 'battle'` かつ pause 中でなければ `engine.tick(deltaSec)`。倍速はここで `deltaSec` を乗算するのが単一経路 |
+| **pause** | **`BattleView`** — pause ボタン・overlay あり。`GameSession.tick` は `view.isBattlePaused()` で engine tick を止める。verify 時は BattleX debug replay pause も同 gate |
+| **描画 tick** | `GameSession.tick` は pause 中も `view.tick(deltaMs)` を呼ぶ。canvas アニメは `BattleView.tick` 内で pause 時スキップ |
+| **spec** | [operation-loop.md §5.2](../spec/operation-loop.md) — 「観察・一時停止・倍速は R7」 |
+
+**R7b 方針:** multiplier は `GameSession` が保持し tick gate で simulation のみ加速。描画同期方針（同倍率 vs sim のみ）は R7b 実装時に 1 箇所で決める。
+
+### 69.5 retry UI の現状
+
+| 種類 | API（R6i） | 現 UI 配線 | 備考 |
+| ---- | ---------- | ---------- | ---- |
+| **同設定再戦** | `retryCurrentWaveFromCheckpoint()` | verify 時 **`DebugMenuPanel` のみ**（`BattleView` → `verifyModeControls` 経由） | checkpoint 復元 + `engine.restartBattleAtWave` + `setGameScreen('battle')` |
+| **準備へ戻る** | `returnToFormationPrep()` | 同上（debug のみ） | **`menuHost.open('party')`（formation）** — spec §9 の「Wave 間準備」ではなく初期編成導線。Wave 準備 screen（`wavePrep`）へは戻さない |
+| **作戦最初から** | `restartOperationFromWaveZero()` | 同上（debug のみ） | `beginOperation(stageId, 0)` + `engine.restartBattle()` + formation へ |
+
+**利用条件:** `canUseOperationRetry()` = `operationState !== null && !operationState.isCompleted`。敗北後（`markDefeated`）・Wave 準備中（`beginWavePrepEditing`）も **API 上は true**（完了勝利後は `clearOperation` で null）。
+
+**Wave 準備中:** `wavePrep` screen 自体に retry ボタンなし。verify ON なら debug menu から 3 種すべて実行可能。
+
+**作戦結果後:** `getOperationResult()` は R6h で確定済みだが **結果画面・再戦 UI なし**。勝利後は `clearOperation()` され retry API は不可。敗北時は `operationResult` 確定後も `OperationState` 保持 → retry で `clearOperationResult()`。
+
+### 69.6 verify ON/OFF の差（画面遷移・retry 到達性）
+
+| 局面 | verify ON | verify OFF（release） |
+| ---- | --------- | --------------------- |
+| **起動 screen** | `battle` | `stageSelect` |
+| **debug menu / retry UI** | 表示（verify 必須） | **非表示** — retry 3 種に到達不可 |
+| **verify トグル** | Save 切替・`clearOperation`・`engine.restartBattle` | 同上 |
+| **敗北（作戦中）** | `operationResult` defeat 確定。loop stage 固定時は battle 留まり。それ以外は stage rollback のみ（auto retry なし） | `operationResult` defeat 確定後、**legacy `restartBattle` + formation**（operation retry API 未使用） |
+| **勝利（最終 Wave）** | `operationResult` victory 確定・`clearOperation`。battle 留まり・loop stage 進行 | `operationResult` victory 確定・`clearOperation` 後 **`stageSelect` へ** |
+| **作戦結果 screen** | **未実装**（両モード共通） | 同上 |
+
+### 69.7 R7 実装分割（最大 4 タスク・依存順）
+
+| ID | 内容 | 単独テストの焦点 | 主な変更先（予定） |
+| ---- | ---- | ---------------- | ------------------ |
+| **R7b** | **倍速 1 / 2 / 4 倍** — tick gate multiplier・pause との合成 | multiplier ごとに `battleTimeSec` / cooldown 進行が期待比率 | `GameSession.tick`、倍率 API、sim 進行テスト |
+| **R7c** | **敗北時 retry 正式導線** — release でも operation retry 3 種到達・legacy defeat 自動 restart 置換 | verify OFF で defeat → 各 retry の screen / engine 状態 | `GameSession.handleDefeat`、戦闘 HUD retry 入口（debug 以外） |
+| **R7d** | **Wave 準備 retry + spec 整合** — `wavePrep` から 3 種操作。「準備へ戻る」を Wave 間準備へ | `wavePrep` 表示中の retry・`returnToFormationPrep` vs `wavePrep` 分岐 | `GameSession.returnToFormationPrep`、`WavePrepScreenHost`、wave prep テスト |
+| **R7e** | **作戦結果後再戦 + 遷移統一** — `operationResult` から同一 stage 再開・勝利後導線 | result 確定 → rematch → 新 OperationState / result クリア | `GameSession` rematch API、勝利後 screen、verify/release 統一テスト |
+
+**採用しなかった分割案:** 倍速 UI と simulation を別 Phase にする案 — 倍速は API + tick テストだけで縦切り可能なため R7b に統合。
+
+**R6i との境界:** retry **API・checkpoint・engine 再生成**は R6i 完了。R7 は **player-facing 到達性・release 導線・spec 整合・倍速**。
+
+### 69.8 スコープ外（R7 全体）
+
+- 確認ダイアログ（方針: なし — [operation-loop.md §9](../spec/operation-loop.md#9-リトライ導線r7-接続)）
+- retry 回数制限・報酬・checkpoint Save 永続化
+- 作戦結果画面のビジュアル polish（R7e は rematch API / 最小遷移まで）
+
+### 69.9 production code 変更
+
+なし。
+
+### 69.10 次タスク
+
+**R7b — 倍速 simulation**（§69.11）。
+
+### 69.11 最初に実装する 1 タスク（推奨）
+
+**R7b** — 理由: (1) 既存 player 挙動と衝突しない、(2) `GameSession.tick` の単一 gate で完結、(3) multiplier 単体の自動テストが可能。retry 正式 UI（R7c–e）は spec 分岐（formation vs wavePrep・result rematch）の判断が R7b と独立。
